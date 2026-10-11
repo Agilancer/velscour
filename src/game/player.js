@@ -203,8 +203,11 @@ export class Player extends Creature {
         if (!c.skills[id]) { c.skills[id] = 1; out.push(id); }
         // auto-slot into the first free bar slot
         if (!c.bar.includes(id)) {
-          const free = c.bar.findIndex((x, i) => !x && i !== 0);
-          if (free >= 0) c.bar[free] = id;
+          if (id.endsWith('.0.0') && !c.bar[0]) c.bar[0] = id;
+          else {
+            const free = c.bar.findIndex((x, i) => !x && i !== 0);
+            if (free >= 0) c.bar[free] = id;
+          }
         }
       }
     }
@@ -270,6 +273,10 @@ export class Player extends Creature {
 
   tryUseSkill(sk, tx, ty, target = null) {
     if (this.dead || !sk) return false;
+    if (this.world.kind === 'town') {
+      if ((this.noManaT || 0) <= 0) { floatText(this.x, this.y, 60, 'You cannot fight in town', '#c0b090', 12); this.noManaT = 1; }
+      return false;
+    }
     if (this.castLock > 0) { this.queued = { sk, tx, ty, target }; return false; }
     if (this.channel) {
       if (!(this.channel instanceof BeamCh)) return false;

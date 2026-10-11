@@ -6,7 +6,7 @@ import { ARCH } from '../data/enemies.js';
 const S = 11; // chunk size in tiles
 
 export function generateDungeon(depth, biome, tileset, seed) {
-  if (depth >= 100) return generateThrone(biome, tileset, seed);
+  if (depth === 100) return generateThrone(biome, tileset, seed);
   const rng = new RNG(seed);
   const CW = clamp(4 + Math.floor(depth / 14) + rng.int(0, 1), 4, 8);
   const CH = clamp(4 + Math.floor(depth / 18) + rng.int(0, 1), 4, 7);

@@ -120,6 +120,21 @@ def process_ui():
     if logo.width > 1400:
         logo = logo.resize((1400, round(logo.height * 1400 / logo.width)), Image.LANCZOS)
     save(logo, os.path.join(OUT, "ui", "logo.webp"))
+    # square app icon: the logo's "V" on a dark ember background
+    icon = Image.new("RGBA", (512, 512), (10, 4, 3, 255))
+    glow = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
+    gy, gx = np.mgrid[0:512, 0:512]
+    d = np.sqrt((gx - 256) ** 2 + (gy - 300) ** 2) / 300
+    ga = np.clip(1 - d, 0, 1) ** 2
+    g = np.zeros((512, 512, 4), np.uint8)
+    g[..., 0] = 140; g[..., 1] = 30; g[..., 2] = 8; g[..., 3] = (ga * 255).astype(np.uint8)
+    icon.alpha_composite(Image.fromarray(g))
+    v = logo.crop((0, 0, int(logo.width * 0.2), logo.height))
+    v = trim(v)
+    k = min(440 / v.width, 440 / v.height)
+    v = v.resize((int(v.width * k), int(v.height * k)), Image.LANCZOS)
+    icon.alpha_composite(v, ((512 - v.width) // 2, (512 - v.height) // 2))
+    icon.save(os.path.join(OUT, "ui", "icon.png"), optimize=True)
 
     hud = Image.open(os.path.join(SRC, "hud_bar.webp")).convert("RGBA")
     oy = 146

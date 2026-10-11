@@ -64,6 +64,9 @@ export function classSprite(id, h, palette = null) {
  */
 export function biomeTileSet(biome) {
   if (A.biomeSets[biome.id]) return A.biomeSets[biome.id];
+  // keep memory bounded: each recoloured set is several MB of canvas
+  const keys = Object.keys(A.biomeSets).filter((k) => k !== 'town');
+  while (keys.length >= 2) delete A.biomeSets[keys.shift()];
   const pal = biome.palette;
   const floorImg = pal ? recolor(A.floorAtlas, pal) : A.floorAtlas;
   const wallPal = biome.wallPalette || pal;

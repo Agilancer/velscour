@@ -14,8 +14,8 @@ const PROJ_FX = { fire: 'fireball', cold: 'shard', light: 'spark', poison: 'blob
 
 export function monsterBase(level) {
   return {
-    hp: 24 * Math.pow(1.066, level - 1),
-    dmg: 4.5 * Math.pow(1.052, level - 1),
+    hp: 20 * Math.pow(1.066, level - 1),
+    dmg: (3 + Math.min(level, 10) * 0.15) * Math.pow(1.052, level - 1),
     xp: 4 * Math.pow(level, 1.5),
   };
 }

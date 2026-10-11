@@ -128,7 +128,7 @@ export const BIOME_BY_ID = Object.fromEntries(BIOMES.map((b) => [b.id, b]));
 
 /** Pick a random biome other than `exclude` (and never the throne before depth 100). */
 export function randomBiome(exclude, depth) {
-  if (depth >= 100) return 'throne';
+  if (depth === 100) return 'throne';
   const pool = BIOMES.filter((b) => b.id !== exclude && b.id !== 'throne');
   return pool[Math.floor(Math.random() * pool.length)].id;
 }
