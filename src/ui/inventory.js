@@ -113,6 +113,7 @@ function bagSlot(idx) {
   if (sel && sel.where === 'bag' && sel.idx === idx) d.classList.add('sel');
   if (it) d.appendChild(itemCell(it));
   draggable(d, {
+    key: 'bag:' + idx,
     data: () => (c.bag[idx] ? { type: 'item', where: 'bag', idx } : null),
     icon: () => d.querySelector('img') && d.querySelector('img').src,
     onClick: () => { UI.selected = c.bag[idx] ? { where: 'bag', idx } : null; sfx('ui'); UI.refresh(); },
@@ -142,6 +143,7 @@ function equipSlot(slot) {
   if (sel && sel.where === 'equip' && sel.slot === slot) d.classList.add('sel');
   if (it) d.appendChild(itemCell(it)); else d.appendChild(el('span', 'lbl', SLOT_NAMES[slot]));
   draggable(d, {
+    key: 'equip:' + slot,
     data: () => (c.equip[slot] ? { type: 'item', where: 'equip', slot } : null),
     icon: () => d.querySelector('img') && d.querySelector('img').src,
     onClick: () => { UI.selected = c.equip[slot] ? { where: 'equip', slot } : null; sfx('ui'); UI.refresh(); },

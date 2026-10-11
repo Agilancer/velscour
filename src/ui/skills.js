@@ -95,6 +95,7 @@ export function skillDetail(sk) {
 
 function makeDrag(node, sk) {
   draggable(node, {
+    key: 'skill:' + sk.id,
     data: () => ((G.char.skills[sk.id] || 0) > 0 ? { type: 'skill', id: sk.id } : null),
     icon: () => skillIconURL(sk),
     onClick: () => { selected = sk.id; sfx('ui'); UI.refresh(); },

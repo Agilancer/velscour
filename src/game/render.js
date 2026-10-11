@@ -137,7 +137,7 @@ function drawPortal(ctx, p) {
 }
 
 function drawCorpse(ctx, c) {
-  const img = pixelSprite(c.sprite, c.pal, 6, { dark: true });
+  const img = c._img || (c._img = pixelSprite(c.sprite, c.pal, 6, { dark: true }));
   const px = (c.px || 2.3) * (c.scale || 1) / 6;
   const w = img.width * px, h = img.height * px;
   const x = isoX(c.x, c.y), y = isoY(c.x, c.y);

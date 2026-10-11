@@ -1,6 +1,6 @@
 // Damage resolution, status effects, deaths, gore.
 import { G } from '../state.js';
-import { rand, chance, clamp, angleTo, TAU, fmt } from '../core/util.js';
+import { rand, chance, clamp, angleTo, TAU, fmt, mixHex } from '../core/util.js';
 import { camera } from '../core/view.js';
 import { sfx } from '../core/audio.js';
 import { floatText, bloodSpray, gibs, addDecal, addEffect, Bolt, elem, spawn, burst } from '../gfx/vfx.js';
@@ -228,7 +228,8 @@ export function kill(tgt, src, info = {}) {
   if (tgt.rank === 'boss' && world && world.onBossKilled) world.onBossKilled(tgt);
 }
 
-function shade3(c) { return c; }
+/** Gib colour: blood tinted toward raw meat so chunks read as flesh, not confetti. */
+function shade3(c) { return mixHex(c, '#5a1410', 0.55); }
 
 /** Lightning/spirit chain from a source point through up to n targets. */
 export function chainHit(world, src, x0, y0, first, n, dmg, el, color, o = {}) {

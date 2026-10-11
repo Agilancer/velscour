@@ -164,7 +164,7 @@ function findDrop(x, y) {
   return n;
 }
 
-let lastClick = { elm: null, t: 0 };
+let lastClick = { key: null, t: 0 };
 function initDnD() {
   document.addEventListener('pointermove', (e) => {
     const p = drag.pending;
@@ -204,8 +204,10 @@ function initDnD() {
       drag.active = false; drag.data = null; drag.lastOver = null;
     } else if (p && e.pointerId === p.pid) {
       const now = performance.now();
-      if (lastClick.elm === p.elm && now - lastClick.t < 320 && p.opts.onDouble) { p.opts.onDouble(e); lastClick = { elm: null, t: 0 }; }
-      else { p.opts.onClick && p.opts.onClick(e); lastClick = { elm: p.elm, t: now }; }
+      // compare a stable key: clicks often re-render the panel, replacing the element
+      const key = p.opts.key !== undefined ? p.opts.key : p.elm;
+      if (lastClick.key === key && now - lastClick.t < 350 && p.opts.onDouble) { lastClick = { key: null, t: 0 }; p.opts.onDouble(e); }
+      else { lastClick = { key, t: now }; p.opts.onClick && p.opts.onClick(e); }
     }
     drag.pending = null;
   };

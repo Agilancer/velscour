@@ -40,11 +40,11 @@ export const Vendor = {
   },
 
   open(vid) {
+    UI.closeAll();
     this.active = vid;
     this.shopSel = null;
     const v = VBY[vid];
     sfx('ui');
-    UI.closeAll();
     UI.openPanel('vendor', `${v.name} — ${v.title}`, (b) => this.render(b), { onClose: () => { this.active = null; UI.closePanel('inventory'); }, cls: 'vendor-panel' });
     UI.openPanel('inventory', 'Your Inventory', renderInventory);
   },
@@ -76,6 +76,7 @@ export const Vendor = {
       if (it) d.appendChild(itemCell(it));
       if (it) {
         draggable(d, {
+          key: 'shop:' + i,
           data: () => (list[i] ? { type: 'shop', list, i } : null),
           icon: () => d.querySelector('img') && d.querySelector('img').src,
           onClick: () => { this.shopSel = i; sfx('ui'); UI.refresh(); },

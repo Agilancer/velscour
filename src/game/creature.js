@@ -118,12 +118,18 @@ export class Creature {
 
   // ------------------------------------------------------------- drawing
   spriteImage() {
-    if (this.classId) return classSprite(this.classId, this.spriteH * 3, this.classPal || null);
-    return pixelSprite(this.sprite, this.pal, 6, this.dark ? { dark: true } : null);
+    // memoised per creature: building cache keys every frame is surprisingly costly
+    if (this._img && this._imgSprite === (this.classId || this.sprite) && this._imgPal === (this.classPal || this.pal)) return this._img;
+    this._imgSprite = this.classId || this.sprite;
+    this._imgPal = this.classPal || this.pal;
+    this._flashImg = null;
+    this._img = this.classId ? classSprite(this.classId, this.spriteH * 3, this.classPal || null) : pixelSprite(this.sprite, this.pal, 6, this.dark ? { dark: true } : null);
+    return this._img;
   }
   flashImage() {
     if (this.classId) return null;
-    return pixelSprite(this.sprite, this.pal, 6, { flash: true });
+    if (!this._flashImg) this._flashImg = pixelSprite(this.sprite, this.pal, 6, { flash: true });
+    return this._flashImg;
   }
   /** World-px size of the sprite. */
   spriteDims(img) {

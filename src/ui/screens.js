@@ -8,6 +8,18 @@ import { UI, $ } from './ui.js';
 import { listSaves, deleteSave } from '../game/save.js';
 
 let current = null;
+
+/** On phones, hide the browser chrome and prefer landscape (where supported). */
+function goFullscreen() {
+  if (!G.touch || document.fullscreenElement) return;
+  const de = document.documentElement;
+  const req = de.requestFullscreen || de.webkitRequestFullscreen;
+  if (!req) return;
+  try {
+    const p = req.call(de, { navigationUI: 'hide' });
+    if (p && p.then) p.then(() => { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* ignore */ } }).catch(() => {});
+  } catch (e) { /* not allowed - fine */ }
+}
 function show(node) {
   hide();
   current = node;
@@ -22,7 +34,7 @@ export function titleScreen() {
   const s = el('div', 'screen');
   s.innerHTML = `<img class="title-logo" src="assets/ui/logo.webp" alt="VELSCOUR"><div class="title-tag">A world built upon something that should have stayed dead.</div>`;
   const menu = el('div', 'title-menu');
-  const add = (label, fn, cls = 'btn big') => { const b = el('button', cls, label); b.onclick = () => { initAudio(); playMusic('town'); sfx('ui'); fn(); }; menu.appendChild(b); return b; };
+  const add = (label, fn, cls = 'btn big') => { const b = el('button', cls, label); b.onclick = () => { initAudio(); playMusic('town'); sfx('ui'); goFullscreen(); fn(); }; menu.appendChild(b); return b; };
   if (last) add(`Continue<br><span style="font-size:13px;color:#a8977c">${escapeHtml(last.name)} · Lv ${last.level} ${CLASSES[last.classId].name} · Depth ${last.depth}</span>`, () => G.game.loadChar(last));
   add('New Hero', classSelect);
   if (saves.length) add('Load Hero', loadScreen, 'btn');

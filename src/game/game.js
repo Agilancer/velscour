@@ -221,10 +221,11 @@ export const game = {
         continue;
       }
       const n = s.n;
+      const variant = Math.random() < Math.min(0.5, 0.2 + depth * 0.005) ? 1 : 0;
       for (let i = 0; i < n; i++) {
         const [x, y] = i === 0 ? [s.x, s.y] : gen.map.randomNear(s.x, s.y, 1.6);
         const rank = s.rank === 'unique' ? (i === 0 ? 'unique' : 'normal') : s.rank;
-        const m = makeMonster(world, s.arch, biome, lvl + (rank === 'normal' ? 0 : 1), rank, x, y);
+        const m = makeMonster(world, s.arch, biome, lvl + (rank === 'normal' ? 0 : 1), rank, x, y, variant);
         if (s.rank === 'unique' && i > 0) { m.affixes = []; m.name = m.name + ' Minion'; }
         world.add(m);
       }

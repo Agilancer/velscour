@@ -683,16 +683,18 @@ export class Monster extends Creature {
 }
 
 // ======================================================================= factories
-export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0, y = 0) {
+/** variant 1 = "greater" breed: own palette and name, tougher. */
+export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0, y = 0, variant = 0) {
   const A = ARCH[archId];
   const B = monsterBase(level);
   const depth = world.depth || 1;
   const biomeEl = biome.el && biome.el !== 'phys' ? biome.el : null;
   let el = A.el || 'phys';
   if (biomeEl && ['ranged', 'caster', 'nova', 'beamer', 'exploder'].includes(A.ai) && archId !== 'archer') el = biomeEl;
-  const pal = biome.mon ? shiftPalette(A.pal, biome.mon) : A.pal;
-  const tierName = A.names[Math.min(A.names.length - 1, Math.floor(depth / 34))];
-  const adj = biome.adj ? biome.adj[(archId.length + depth) % biome.adj.length] : '';
+  let pal = biome.mon ? shiftPalette(A.pal, biome.mon) : A.pal;
+  if (variant) pal = shiftPalette(pal, { hue: 35, sat: 1.2, light: 0.06 });
+  const tierName = A.names[Math.min(A.names.length - 1, Math.floor(depth / 34) + variant)];
+  const adj = biome.adj ? biome.adj[(archId.length + depth + variant) % biome.adj.length] : '';
   const res = {};
   if (biomeEl) res[biomeEl] = 0.3;
   if (A.undead) { res.poison = 0.5; res.shadow = 0.3; }
@@ -709,6 +711,7 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
     summoner: A.summoner && chance(A.summoner), aoeCaster: A.aoe, rank: 'normal', x, y,
   });
   if (A.ai === 'brute') m.atkReach = 0.7;
+  if (variant) { m.maxHp *= 1.4; m.hp = m.maxHp; m.dmg *= 1.2; m.xp *= 1.5; m.scale = 1.08; m.speed *= 1.05; }
   if (rank !== 'normal') makeElite(m, rank, depth, world);
   return m;
 }
@@ -726,7 +729,7 @@ export function makeElite(m, rank, depth, world) {
     m.name = uniqueName();
   } else if (rank === 'boss') {
     const vel = m.arch === 'velscour';
-    m.maxHp *= vel ? 70 : 14 + depth / 4; m.dmg *= vel ? 2.4 : 1.9; m.xp *= vel ? 200 : 25;
+    m.maxHp *= vel ? 40 : 14 + depth / 4; m.dmg *= vel ? 2.4 : 1.9; m.xp *= vel ? 200 : 25;
     m.aura = vel ? '#ff2000' : '#ff4020';
     m.scale = vel ? 1.6 : 1.9; m.r *= vel ? 1 : 1.6;
     m.ai = 'boss';
