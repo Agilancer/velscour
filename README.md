@@ -70,6 +70,8 @@ manifest.webmanifest           installable / fullscreen on mobile
 assets/source/                 your original sprite sheets
 assets/sprites, ui, tiles/     game-ready slices (generated)
 tools/process_assets.py        slices the source sheets into the above
+tools/tests/                   headless-browser test scripts (Playwright + Chromium)
+docs/HANDOFF.md, CLAUDE.md     developer hand-off notes: spec, status, open issues, subsystem reference
 src/main.js                    boot + main loop
 src/core/                      input, camera/iso math, audio synth, asset loading, utils
 src/data/                      classes, 960 skill specs, skills logic, summons, monsters, biomes, items
