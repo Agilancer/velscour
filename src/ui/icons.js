@@ -1,0 +1,179 @@
+// Procedural skill icons and cached data-URLs for DOM use.
+import { makeCanvas, TAU, shade, rgba } from '../core/util.js';
+import { elem } from '../gfx/vfx.js';
+import { drawShape } from '../gfx/shapes.js';
+import { pixelSprite } from '../gfx/pixelart.js';
+import { classSprite } from '../core/assets.js';
+import { SUMMONS } from '../data/summons.js';
+import { itemIcon } from '../game/loot.js';
+
+const cache = new Map();
+const urlCache = new Map();
+
+export function skillIcon(sk, size = 64) {
+  const key = sk.id + '|' + size;
+  let c = cache.get(key);
+  if (c) return c;
+  c = makeCanvas(size, size);
+  const x = c.getContext('2d');
+  const E = elem(sk.el);
+  const s = size / 64;
+  // background
+  const g = x.createRadialGradient(size * 0.5, size * 0.42, 2, size * 0.5, size * 0.5, size * 0.75);
+  g.addColorStop(0, shade(E.glow, -0.15)); g.addColorStop(0.45, shade(E.dark, -0.35)); g.addColorStop(1, '#070405');
+  x.fillStyle = g; x.fillRect(0, 0, size, size);
+  // subtle rune ring by tree
+  x.strokeStyle = rgba(E.glow, 0.25); x.lineWidth = 2 * s;
+  x.beginPath(); x.arc(size / 2, size / 2, size * 0.4, 0, TAU); x.stroke();
+  x.save();
+  x.translate(size / 2, size / 2);
+  x.scale(s, s);
+  x.lineCap = 'round'; x.lineJoin = 'round';
+  const core = E.core, glow = E.glow;
+  const stroke = (w, col = core) => { x.lineWidth = w; x.strokeStyle = col; x.stroke(); };
+  switch (sk.kind) {
+    case 'proj': case 'rain': {
+      const n = sk.kind === 'rain' ? 3 : Math.min(3, sk.m.n || 1);
+      for (let i = 0; i < n; i++) {
+        const off = n > 1 ? (i - (n - 1) / 2) * 12 : 0;
+        if (sk.kind === 'rain') drawShape(x, sk.fx === 'ice' ? 'shard' : sk.fx === 'acid' ? 'blob' : sk.fx, off, -4 + Math.abs(off) * 0.4, Math.PI / 2 + 0.3, 1.4, E, 0.3);
+        else drawShape(x, sk.fx, off * 0.6, off, -0.6, 2.1 - n * 0.3, E, 0.4);
+      }
+      break;
+    }
+    case 'orbit':
+      x.beginPath(); x.arc(0, 0, 17, 0, TAU); stroke(1.5, rgba(glow, 0.6));
+      for (let i = 0; i < 3; i++) { const a = (i / 3) * TAU - 0.5; drawShape(x, sk.fx, Math.cos(a) * 17, Math.sin(a) * 17, a + 1.6, 1, E, 0.2); }
+      break;
+    case 'melee': {
+      if (sk.fx === 'smash') {
+        x.save(); x.rotate(-0.7);
+        x.fillStyle = '#8a6a40'; x.fillRect(-2.5, -6, 5, 30);
+        x.fillStyle = core; x.strokeStyle = '#100808'; x.lineWidth = 2;
+        x.fillRect(-12, -18, 24, 13); x.strokeRect(-12, -18, 24, 13);
+        x.restore();
+      } else if (sk.fx === 'thrust') {
+        x.beginPath(); x.moveTo(-20, 20); x.lineTo(16, -16); stroke(4, '#a08060');
+        x.beginPath(); x.moveTo(22, -22); x.lineTo(12, -16); x.lineTo(16, -12); x.closePath(); x.fillStyle = core; x.fill();
+      } else if (sk.fx === 'claw' || sk.fx === 'bite') {
+        for (let i = -1; i <= 1; i++) { x.beginPath(); x.moveTo(-16 + i * 7, -18); x.quadraticCurveTo(i * 7, 0, -4 + i * 7, 20); stroke(4); }
+      } else if (sk.fx === 'spin') {
+        x.beginPath(); x.arc(0, 0, 18, 0.3, TAU - 0.3); stroke(5);
+        x.beginPath(); x.moveTo(18, -6); x.lineTo(14, 4); x.lineTo(24, 2); x.fillStyle = core; x.fill();
+      } else {
+        x.save(); x.rotate(-0.8);
+        x.fillStyle = core; x.strokeStyle = '#100808'; x.lineWidth = 1.5;
+        x.beginPath(); x.moveTo(0, -26); x.lineTo(4, -20); x.lineTo(4, 8); x.lineTo(-4, 8); x.lineTo(-4, -20); x.closePath(); x.fill(); x.stroke();
+        x.fillStyle = '#c0a040'; x.fillRect(-10, 8, 20, 4); x.fillStyle = '#6a4a2a'; x.fillRect(-2, 12, 4, 10);
+        x.restore();
+        x.beginPath(); x.arc(0, 0, 22, -2.4, -0.4); stroke(2, rgba(glow, 0.8));
+      }
+      if ((sk.m.n || 1) > 1) { x.fillStyle = '#fff'; x.font = 'bold 13px sans-serif'; x.fillText('x' + sk.m.n, 8, 26); }
+      break;
+    }
+    case 'nova':
+      for (let r = 6; r <= 24; r += 9) { x.beginPath(); x.arc(0, 0, r, 0, TAU); stroke(3, r > 20 ? glow : core); }
+      break;
+    case 'aoe':
+      x.beginPath();
+      for (let i = 0; i < 16; i++) { const a = (i / 16) * TAU, r = i % 2 ? 9 : 24; x.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+      x.closePath(); x.fillStyle = glow; x.fill(); x.fillStyle = core; x.beginPath(); x.arc(0, 0, 8, 0, TAU); x.fill();
+      if (sk.fx === 'meteor') drawShape(x, 'meteor', -10, -12, 0.8, 1.2, E, 0);
+      break;
+    case 'beam':
+      if (sk.m.cone) { x.beginPath(); x.moveTo(-20, 18); x.lineTo(24, -10); x.lineTo(10, -24); x.closePath(); x.fillStyle = rgba(glow, 0.8); x.fill(); }
+      else { x.beginPath(); x.moveTo(-22, 22); x.lineTo(22, -22); stroke(10, glow); x.beginPath(); x.moveTo(-22, 22); x.lineTo(22, -22); stroke(3, '#fff'); }
+      break;
+    case 'chain': case 'strike':
+      x.beginPath(); x.moveTo(6, -26); x.lineTo(-6, -4); x.lineTo(6, -2); x.lineTo(-6, 24); stroke(6, glow); x.beginPath(); x.moveTo(6, -26); x.lineTo(-6, -4); x.lineTo(6, -2); x.lineTo(-6, 24); stroke(2, '#fff');
+      break;
+    case 'wall':
+      for (let i = -1; i <= 1; i++) { x.beginPath(); x.moveTo(i * 13 - 6, 18); x.quadraticCurveTo(i * 13, -26 + Math.abs(i) * 8, i * 13 + 6, 18); x.fillStyle = i ? glow : core; x.fill(); }
+      break;
+    case 'zone': case 'trap':
+      x.beginPath(); x.ellipse(0, 6, 24, 12, 0, 0, TAU); x.fillStyle = rgba(glow, 0.5); x.fill(); stroke(2, core);
+      if (sk.kind === 'trap') for (let i = -2; i <= 2; i++) { x.beginPath(); x.moveTo(i * 8 - 3, 8); x.lineTo(i * 8, -6); x.lineTo(i * 8 + 3, 8); x.fillStyle = '#d0d0d8'; x.fill(); }
+      else for (let i = 0; i < 6; i++) { x.fillStyle = core; x.fillRect(Math.cos(i) * 14 - 2, 4 + Math.sin(i * 2) * 5 - 6 - i, 4, 4); }
+      break;
+    case 'cyclone':
+      x.beginPath();
+      for (let t = 0; t < 1; t += 0.02) { const a = t * 14, r = 4 + t * 20; x.lineTo(Math.cos(a) * r * (1 - t * 0.2), 22 - t * 44 + Math.sin(a) * r * 0.25); }
+      stroke(3, glow);
+      break;
+    case 'whirl':
+      for (let i = 0; i < 3; i++) { x.beginPath(); x.arc(0, 0, 10 + i * 6, i * 2, i * 2 + 3.6); stroke(3, i === 1 ? core : glow); }
+      break;
+    case 'leap':
+      x.beginPath(); x.moveTo(-22, 14); x.quadraticCurveTo(-4, -34, 18, 10); stroke(4, glow);
+      x.beginPath(); x.moveTo(18, 18); x.lineTo(10, 6); x.lineTo(24, 6); x.closePath(); x.fillStyle = core; x.fill();
+      x.beginPath(); x.ellipse(18, 22, 12, 4, 0, 0, TAU); stroke(2, core);
+      break;
+    case 'dash':
+      for (let i = 0; i < 3; i++) { x.beginPath(); x.moveTo(-18 + i * 12, -14); x.lineTo(-6 + i * 12, 0); x.lineTo(-18 + i * 12, 14); stroke(5, i === 2 ? core : glow); }
+      break;
+    case 'blink':
+      for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; x.beginPath(); x.moveTo(Math.cos(a) * 6, Math.sin(a) * 6); x.lineTo(Math.cos(a) * (i % 2 ? 14 : 24), Math.sin(a) * (i % 2 ? 14 : 24)); stroke(3, core); }
+      break;
+    case 'summon': {
+      const def = SUMMONS[sk.m.sum];
+      let img = null;
+      if (def && def.look && def.look.sprite) img = pixelSprite(def.look.sprite, def.look.pal, 3);
+      else if (def && def.look && def.look.cls) img = classSprite(def.look.cls === true ? sk.classId : def.look.cls, 120, def.look.pal || null);
+      else img = pixelSprite('skeleton', { w: '#a0ffa0', e: '#40ff40' }, 3);
+      const k = Math.min(46 / img.width, 48 / img.height);
+      x.globalAlpha = 0.95;
+      x.drawImage(img, -img.width * k / 2, 24 - img.height * k, img.width * k, img.height * k);
+      x.globalAlpha = 1;
+      if ((sk.m.n || 1) > 1) { x.fillStyle = '#fff'; x.font = 'bold 12px sans-serif'; x.fillText('x' + sk.m.n, 10, 26); }
+      break;
+    }
+    case 'buff':
+      if (sk.m.transform) {
+        x.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 10 : 24; x.lineTo(Math.cos(a) * r, Math.sin(a) * r); } x.closePath(); x.fillStyle = glow; x.fill(); stroke(2, core);
+      } else {
+        x.beginPath(); x.moveTo(0, -24); x.lineTo(20, -14); x.lineTo(16, 10); x.lineTo(0, 24); x.lineTo(-16, 10); x.lineTo(-20, -14); x.closePath(); x.fillStyle = rgba(glow, 0.7); x.fill(); stroke(2.5, core);
+        x.beginPath(); x.moveTo(0, -12); x.lineTo(9, 0); x.lineTo(3, 0); x.lineTo(3, 12); x.lineTo(-3, 12); x.lineTo(-3, 0); x.lineTo(-9, 0); x.closePath(); x.fillStyle = '#fff'; x.fill();
+      }
+      break;
+    case 'curse':
+      x.beginPath(); x.ellipse(0, 0, 24, 13, 0, 0, TAU); x.fillStyle = rgba(glow, 0.35); x.fill(); stroke(2.5, core);
+      x.beginPath(); x.arc(0, 0, 7, 0, TAU); x.fillStyle = core; x.fill(); x.fillStyle = '#000'; x.beginPath(); x.arc(0, 0, 3, 0, TAU); x.fill();
+      break;
+    case 'heal':
+      x.fillStyle = glow; x.fillRect(-7, -22, 14, 44); x.fillRect(-22, -7, 44, 14);
+      x.fillStyle = '#fff'; x.fillRect(-3, -18, 6, 36); x.fillRect(-18, -3, 36, 6);
+      break;
+    case 'fissure':
+      x.beginPath(); x.moveTo(-24, 20); x.lineTo(-10, 8); x.lineTo(-14, -2); x.lineTo(2, -8); x.lineTo(0, -18); x.lineTo(22, -24); stroke(5, glow);
+      for (let i = 0; i < 4; i++) { x.beginPath(); x.moveTo(-18 + i * 11, 14 - i * 10); x.lineTo(-14 + i * 11, 2 - i * 10); x.lineTo(-10 + i * 11, 14 - i * 10); x.fillStyle = core; x.fill(); }
+      break;
+    case 'corpse': {
+      const img = pixelSprite('skeleton', { w: '#e8dcc0', e: '#ff3030' }, 2);
+      x.drawImage(img, -14, -16, 28, 36);
+      x.beginPath(); for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU, r = i % 2 ? 18 : 26; x.lineTo(Math.cos(a) * r, Math.sin(a) * r); } x.closePath(); stroke(2, glow);
+      break;
+    }
+    default:
+      x.beginPath(); x.arc(0, 0, 14, 0, TAU); x.fillStyle = glow; x.fill();
+  }
+  x.restore();
+  // frame
+  x.strokeStyle = 'rgba(0,0,0,0.85)'; x.lineWidth = 3 * s; x.strokeRect(1, 1, size - 2, size - 2);
+  x.strokeStyle = rgba(E.glow, 0.5); x.lineWidth = 1; x.strokeRect(3, 3, size - 6, size - 6);
+  cache.set(key, c);
+  return c;
+}
+
+export function skillIconURL(sk) {
+  let u = urlCache.get(sk.id);
+  if (!u) { u = skillIcon(sk, 64).toDataURL(); urlCache.set(sk.id, u); }
+  return u;
+}
+
+const itemUrlCache = new Map();
+export function itemIconURL(item) {
+  const key = item.type === 'gem' ? `g|${item.gem}|${item.tier}` : item.type === 'potion' ? `p|${item.kind}` : `${item.icon}|${item.tier}|${item.rarity}|${item.base}`;
+  let u = itemUrlCache.get(key);
+  if (!u) { u = itemIcon(item, 48).toDataURL(); itemUrlCache.set(key, u); }
+  return u;
+}

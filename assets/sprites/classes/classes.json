@@ -1,0 +1,66 @@
+{
+ "paladin": {
+  "w": 154,
+  "h": 262
+ },
+ "ranger": {
+  "w": 139,
+  "h": 256
+ },
+ "wizard": {
+  "w": 134,
+  "h": 258
+ },
+ "necromancer": {
+  "w": 126,
+  "h": 261
+ },
+ "barbarian": {
+  "w": 167,
+  "h": 268
+ },
+ "dragoon": {
+  "w": 146,
+  "h": 265
+ },
+ "totem_master": {
+  "w": 148,
+  "h": 263
+ },
+ "death_knight": {
+  "w": 157,
+  "h": 268
+ },
+ "arcane_sorcerer": {
+  "w": 157,
+  "h": 250
+ },
+ "carrion_witch": {
+  "w": 167,
+  "h": 247
+ },
+ "bard": {
+  "w": 151,
+  "h": 251
+ },
+ "slime_lord": {
+  "w": 153,
+  "h": 252
+ },
+ "boomerang_knight": {
+  "w": 150,
+  "h": 266
+ },
+ "lancer": {
+  "w": 180,
+  "h": 271
+ },
+ "dragon_knight": {
+  "w": 148,
+  "h": 268
+ },
+ "gunner": {
+  "w": 149,
+  "h": 265
+ }
+}
