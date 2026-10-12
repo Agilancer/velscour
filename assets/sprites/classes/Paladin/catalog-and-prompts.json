@@ -1,0 +1,649 @@
+{
+  "status": "Generated artwork; not yet engine-ready",
+  "class": "Paladin",
+  "direction": "right",
+  "armor": [
+    {
+      "rarity": "Common",
+      "names": [
+        "Ragged Pilgrim",
+        "Rust Lamellar",
+        "Soot Chapel",
+        "Scrap Sentinel",
+        "Bone Tabard",
+        "Road Brigand",
+        "Black Rivet",
+        "Tin Votary",
+        "Prayer Cuirass",
+        "Ringmail Exile"
+      ],
+      "designs": [
+        "patched charcoal gambeson and rope belt",
+        "rusty narrow lamellar with torn brown waistcloth",
+        "battered iron breastplate over soot-grey pilgrim robes",
+        "asymmetrical scrap-steel shoulder and burgundy surcoat",
+        "chainmail with bone-white ragged tabard",
+        "riveted leather brigandine and split olive skirt",
+        "blackened studded jack with wrapped greaves",
+        "dull tin scale-mail and frayed blue sash",
+        "worn ribbed cuirass with tan prayer strips",
+        "patched ringmail with ragged long dark clerical coat"
+      ]
+    },
+    {
+      "rarity": "Uncommon",
+      "names": [
+        "Wayfarer Brigandine",
+        "Iron Penitent",
+        "Chapel Watch",
+        "Thornbound Mail",
+        "Grave Road Warden",
+        "Cinder Acolyte",
+        "Votive Guard",
+        "Ashen Hospitaller",
+        "Tollkeeper Harness",
+        "Oathbound Exile"
+      ],
+      "designs": [
+        "long split leather coat with diagonal iron plates",
+        "narrow rusted rib-cage cuirass and rope prayer knots",
+        "faded moss tabard over short chain sleeves",
+        "thorn-shaped iron lamellae and wrapped shins",
+        "asymmetric weathered shoulder mantle and slim breastplate",
+        "charcoal quilted robe with copper elbow plates",
+        "beeswax-yellow prayer strips and studded mail",
+        "bone-white split medical surcoat and black arm guards",
+        "brown knee-length brigandine with squared small steel scales",
+        "faded blue scarf and angular salvaged steel"
+      ]
+    },
+    {
+      "rarity": "Rare",
+      "names": [
+        "Raven Chapel",
+        "Sepulcher Guard",
+        "Moonlit Vow",
+        "Crimson Litany",
+        "Wolfsbane Sentinel",
+        "Drowned Reliquary",
+        "Gallows Saint",
+        "Pale Confessor",
+        "Black Rose Oath",
+        "Censer Knight"
+      ],
+      "designs": [
+        "raven-feather short mantle and thin black plate",
+        "vertical tomb-like fluted grey cuirass",
+        "crescent silver plates and dark indigo split robe",
+        "blood-red narrow tabard with crossed iron breast straps",
+        "serrated small steel shoulders and grey fur collar",
+        "verdigris chain skirt and oxidized long bronze chestguard",
+        "noose-knot cord harness over battered long plate",
+        "ivory ribbed light armor and severe clerical stole",
+        "thorn-etched black vambraces and rose-maroon split coat",
+        "tiny hanging brass censers and charcoal scale cuirass"
+      ]
+    },
+    {
+      "rarity": "Epic",
+      "names": [
+        "Eclipse Justiciar",
+        "Thorn Martyr",
+        "Ossuary Regent",
+        "Storm Vesper",
+        "Sable Seraph",
+        "Furnace Templar",
+        "Veilbreaker",
+        "Violet Inquisitor",
+        "Bleeding Sun",
+        "Hollow Basilica"
+      ],
+      "designs": [
+        "overlapping black crescent plates with pale gold seams",
+        "elongated thorn steel breastplate and ragged wine fabric",
+        "bone-rib chest armor and narrow dark steel greaves",
+        "sharp blue-grey flutes and long storm cloak scraps",
+        "small skeletal wing-shaped shoulder fins and feather hem",
+        "charred copper plates with restrained ember cracks",
+        "silver mask medallions on a narrow chain stole",
+        "deep violet split cassock with asymmetrical steel pauldron",
+        "sunburst punctured cuirass and bloodstained ivory cloth",
+        "architectural gothic arch chest plates and black draped sash"
+      ]
+    },
+    {
+      "rarity": "Legendary",
+      "names": [
+        "Saint of Ash",
+        "Last Cathedral",
+        "Kingless Oath",
+        "Wound of Dawn",
+        "Gravebell Sovereign",
+        "Fallen Halo",
+        "Obsidian Covenant",
+        "Winter Confession",
+        "Lion of Cinders",
+        "Pallbearer of Stars"
+      ],
+      "designs": [
+        "ashen ivory ceramic armor with black scorch veins and thin gold cords",
+        "slender cathedral-spire steel shoulder and long narrow tabard",
+        "shattered crown motifs on black iron chest and burgundy coat",
+        "narrow gilt fractured cuirass with white bandage wrappings",
+        "small bronze bells along battered funerary plate",
+        "broken halo filigree collar and silver-black scale armor",
+        "razor obsidian plates with bone-white oath ribbons",
+        "frost-grey articulated plate over long black clerical robe",
+        "small leonine brass chest relief and ragged ember cloak",
+        "midnight mail with restrained star-silver studs and torn mourning sash"
+      ]
+    },
+    {
+      "rarity": "Mythic",
+      "names": [
+        "Godless Benediction",
+        "End of All Suns",
+        "Saint Beyond Death",
+        "Crown of Thorns",
+        "Abyssal Absolution",
+        "First Flame Martyr",
+        "Eternal Funeral",
+        "Heaven in Ruins",
+        "Blood of the Covenant",
+        "Final Amen"
+      ],
+      "designs": [
+        "split holy/unholy narrow ivory and abyss-black plates with torn scripture",
+        "black sun disc chest motif with thin copper eclipse edges",
+        "pale bone filigree exoskeleton armor over ghost-grey robes",
+        "thorn lattice breastplate with crimson hanging prayer cloth",
+        "deep midnight jagged armor with subtle cold cyan hairline seams",
+        "charcoal-gold charred armor with tiny red ember vents",
+        "tall narrow mourning collar with grave-silver chain and long black split coat",
+        "broken marble-white arch plates with dull gold ruin fragments",
+        "dark garnet enamel narrow cuirass with blood-red twisted cords",
+        "severe matte black perfectly slender gothic armor with single pale gold vertical vow line"
+      ]
+    }
+  ],
+  "weapons": [
+    [
+      "Common",
+      "W01 Nail Sword",
+      "W02 Rust Sabre",
+      "W03 Chapel Mace",
+      "W04 Split Axe",
+      "W05 Pilgrim Spear",
+      "W06 Iron Flail",
+      "W07 Knotted Club",
+      "W08 Plank Buckler",
+      "W09 Hide Roundshield",
+      "W10 Scrap Kite"
+    ],
+    [
+      "Uncommon",
+      "W11 Votive Blade",
+      "W12 Hook Falchion",
+      "W13 Bell Hammer",
+      "W14 Thorn Axe",
+      "W15 Vigil Lance",
+      "W16 Censer Flail",
+      "W17 Copper Estoc",
+      "W18 Rivet Buckler",
+      "W19 Chapel Heater",
+      "W20 Road Pavise"
+    ],
+    [
+      "Rare",
+      "W21 Raven Edge",
+      "W22 Moon Scimitar",
+      "W23 Ossuary Mace",
+      "W24 Gallows Cleaver",
+      "W25 Tide Trident",
+      "W26 Litany Flail",
+      "W27 Wolf Glaive",
+      "W28 Bone Buckler",
+      "W29 Rose Kite",
+      "W30 Mourning Shield"
+    ],
+    [
+      "Epic",
+      "W31 Eclipse Sword",
+      "W32 Veil Rapier",
+      "W33 Furnace Maul",
+      "W34 Martyr Axe",
+      "W35 Storm Halberd",
+      "W36 Sable Scourge",
+      "W37 Inquisitor Blade",
+      "W38 Censer Ward",
+      "W39 Basilica Shield",
+      "W40 Bleeding Aegis"
+    ],
+    [
+      "Legendary",
+      "W41 Ash Saint Blade",
+      "W42 Kingless Sword",
+      "W43 Gravebell Hammer",
+      "W44 Dawn Reaver",
+      "W45 Winter Pike",
+      "W46 Halo Flail",
+      "W47 Cinder Falchion",
+      "W48 Obsidian Ward",
+      "W49 Cathedral Shield",
+      "W50 Star Pall"
+    ],
+    [
+      "Mythic",
+      "W51 Godless Edge",
+      "W52 Last Sun Sword",
+      "W53 Funeral Hammer",
+      "W54 Thorn Executioner",
+      "W55 Abyss Spear",
+      "W56 Covenant Scourge",
+      "W57 Final Amen",
+      "W58 Heaven Shard",
+      "W59 Eternal Aegis",
+      "W60 Worldend Ward"
+    ]
+  ],
+  "helmets": [
+    [
+      "Common",
+      "H01 Iron Cap",
+      "H02 Rust Sallet",
+      "H03 Mail Coif",
+      "H04 Pilgrim Hood",
+      "H05 Split Nasal",
+      "H06 Leather Skullcap",
+      "H07 Dent Bascinet",
+      "H08 Chapel Kettle",
+      "H09 Wrapped Helm",
+      "H10 Rivet Mask"
+    ],
+    [
+      "Uncommon",
+      "H11 Votive Visor",
+      "H12 Thorn Coif",
+      "H13 Road Sallet",
+      "H14 Copper Beak",
+      "H15 Vigil Hood",
+      "H16 Penitent Mask",
+      "H17 Ring Aventail",
+      "H18 Ashen Cap",
+      "H19 Bell Guard",
+      "H20 Exile Armet"
+    ],
+    [
+      "Rare",
+      "H21 Raven Helm",
+      "H22 Sepulcher Mask",
+      "H23 Moon Visor",
+      "H24 Crimson Coif",
+      "H25 Wolf Sallet",
+      "H26 Drowned Crown",
+      "H27 Gallows Hood",
+      "H28 Pale Confessor",
+      "H29 Rose Bascinet",
+      "H30 Censer Helm"
+    ],
+    [
+      "Epic",
+      "H31 Eclipse Armet",
+      "H32 Martyr Visor",
+      "H33 Ossuary Crown",
+      "H34 Storm Beak",
+      "H35 Sable Helm",
+      "H36 Furnace Mask",
+      "H37 Veil Visor",
+      "H38 Violet Hood",
+      "H39 Bleeding Sun",
+      "H40 Basilica Helm"
+    ],
+    [
+      "Legendary",
+      "H41 Ash Saint",
+      "H42 Cathedral Spire",
+      "H43 Kingless Crown",
+      "H44 Dawn Visor",
+      "H45 Gravebell Helm",
+      "H46 Fallen Halo",
+      "H47 Obsidian Mask",
+      "H48 Winter Confessor",
+      "H49 Cinder Lion",
+      "H50 Star Mourner"
+    ],
+    [
+      "Mythic",
+      "H51 Godless Crown",
+      "H52 Sunless Visor",
+      "H53 Deathless Saint",
+      "H54 Thorn Crown",
+      "H55 Abyss Mask",
+      "H56 First Flame",
+      "H57 Funeral Mitre",
+      "H58 Ruined Heaven",
+      "H59 Blood Covenant",
+      "H60 Final Amen"
+    ]
+  ],
+  "abilities": [
+    [
+      "Common",
+      [
+        "F01 Votive Spark",
+        "tiny ivory ember gathering then popping"
+      ],
+      [
+        "F02 Iron Smite",
+        "short dirty-gold angular slash impact"
+      ],
+      [
+        "F03 Dust Step",
+        "grey ground dust kick"
+      ],
+      [
+        "F04 Candle Bolt",
+        "small candle-orange dart moves right"
+      ],
+      [
+        "F05 Prayer Ring",
+        "thin ivory ellipse expands on floor"
+      ],
+      [
+        "F06 Buckler Flash",
+        "small dull silver semicircle flickers"
+      ],
+      [
+        "F07 Mercy Mote",
+        "pale green motes spiral upward"
+      ],
+      [
+        "F08 Cinder Tap",
+        "tiny red cinder impact"
+      ],
+      [
+        "F09 Oath Mark",
+        "simple gold cross-like vow rune writes then fades"
+      ],
+      [
+        "F10 Purge Puff",
+        "bone-white smoke curls and dissolves"
+      ]
+    ],
+    [
+      "Uncommon",
+      [
+        "F11 Thorn Lash",
+        "gold-brown thorn whip snaps right"
+      ],
+      [
+        "F12 Chapel Ward",
+        "small gothic arch shield forms and breaks"
+      ],
+      [
+        "F13 Bell Pulse",
+        "bronze concentric isometric ground ellipses expand"
+      ],
+      [
+        "F14 Pilgrim Dash",
+        "low dusty grey streak surges right"
+      ],
+      [
+        "F15 Litany Bolt",
+        "three ivory prayer fragments fly right"
+      ],
+      [
+        "F16 Ember Seal",
+        "orange angular seal ignites on floor"
+      ],
+      [
+        "F17 Chain Rebuke",
+        "silver chain shoots right and retracts"
+      ],
+      [
+        "F18 Mending Wisp",
+        "muted green wisps gather upward"
+      ],
+      [
+        "F19 Vigil Spark",
+        "small blue-white star ignites and sheds sparks"
+      ],
+      [
+        "F20 Censer Breath",
+        "desaturated incense cone rolls right"
+      ]
+    ],
+    [
+      "Rare",
+      [
+        "F21 Raven Judgment",
+        "black feather crescent sweeps right"
+      ],
+      [
+        "F22 Moon Cleave",
+        "pale blue narrow crescent slash"
+      ],
+      [
+        "F23 Grave Light",
+        "thin ivory flame rises from ground"
+      ],
+      [
+        "F24 Crimson Vow",
+        "blood-red angular ring pulses"
+      ],
+      [
+        "F25 Wolf Verdict",
+        "silver fang-shaped impact burst"
+      ],
+      [
+        "F26 Tide Absolution",
+        "cold turquoise splash sweeps right"
+      ],
+      [
+        "F27 Gallows Bind",
+        "grey spectral cords tighten"
+      ],
+      [
+        "F28 Confessor Halo",
+        "pale broken halo assembles and dissolves"
+      ],
+      [
+        "F29 Rose Thorns",
+        "dark crimson thorn ring erupts"
+      ],
+      [
+        "F30 Reliquary Beam",
+        "narrow pale gold beam fires right"
+      ]
+    ],
+    [
+      "Epic",
+      [
+        "F31 Eclipse Smite",
+        "black center with fine gold eclipse flare"
+      ],
+      [
+        "F32 Martyr Spikes",
+        "ivory thorns rise in ground fan"
+      ],
+      [
+        "F33 Bone Benediction",
+        "bone-white ribs form protective arc"
+      ],
+      [
+        "F34 Storm Litany",
+        "violet-white jagged lightning forks right"
+      ],
+      [
+        "F35 Sable Wings",
+        "black spectral feather arcs unfold"
+      ],
+      [
+        "F36 Furnace Wrath",
+        "red-orange cinder wave erupts right"
+      ],
+      [
+        "F37 Veil Rupture",
+        "thin silver vertical tear opens and shuts"
+      ],
+      [
+        "F38 Inquisitor Brand",
+        "purple blade-shaped glyph stamps down"
+      ],
+      [
+        "F39 Bleeding Dawn",
+        "red sun disk sheds narrow golden rays"
+      ],
+      [
+        "F40 Basilica Ward",
+        "ghostly small gothic arch rises then shatters"
+      ]
+    ],
+    [
+      "Legendary",
+      [
+        "F41 Ash Ascension",
+        "ivory fire rises amid charcoal ash"
+      ],
+      [
+        "F42 Cathedral Fall",
+        "spectral silver spire strikes ground"
+      ],
+      [
+        "F43 Kingless Edict",
+        "broken gold crown explodes into shards"
+      ],
+      [
+        "F44 Dawn Wound",
+        "long narrow gold-white slash opens right"
+      ],
+      [
+        "F45 Gravebell Toll",
+        "bronze bell-shaped flare emits floor rings"
+      ],
+      [
+        "F46 Halo Collapse",
+        "silver broken halo contracts to spark"
+      ],
+      [
+        "F47 Obsidian Oath",
+        "black glass spikes burst with white edges"
+      ],
+      [
+        "F48 Winter Mercy",
+        "pale icy blue branching healing sigil"
+      ],
+      [
+        "F49 Cinder Roar",
+        "small ember lion-like flame head lunges right"
+      ],
+      [
+        "F50 Star Requiem",
+        "silver stars spiral into midnight vortex"
+      ]
+    ],
+    [
+      "Mythic",
+      [
+        "F51 Godless Light",
+        "black-white split ray flashes right"
+      ],
+      [
+        "F52 Last Sun",
+        "tiny dying black sun flares with copper corona"
+      ],
+      [
+        "F53 Deathless Grace",
+        "ivory spectral ribs bloom into pale wings"
+      ],
+      [
+        "F54 Thorn Apotheosis",
+        "crimson thorn crown erupts and collapses"
+      ],
+      [
+        "F55 Abyssal Pardon",
+        "dark cyan void spiral closes inward"
+      ],
+      [
+        "F56 First Flame",
+        "thin white core fire with red broken edges"
+      ],
+      [
+        "F57 Eternal Funeral",
+        "silver funeral candles ignite in ring and extinguish"
+      ],
+      [
+        "F58 Heaven Shatters",
+        "pale gold arch breaks into angular shards"
+      ],
+      [
+        "F59 Covenant Blood",
+        "crimson droplets form sharp sacred seal"
+      ],
+      [
+        "F60 Final Amen",
+        "single ivory vertical line expands into cross flare then fades"
+      ]
+    ]
+  ],
+  "futureClassNote": "Slime Lord: blue with more humanoid aspects",
+  "method": "Built-in imagegen",
+  "prompts": [
+    {
+      "name": "paladin_common_armor_labeled",
+      "prompt": "Use case: stylized-concept. Create actual raster sprite-sheet art for an original grimdark isometric dungeon crawler. Strong dark fantasy anime anatomy: very slender adult male paladin, long narrow limbs, small head, angular weary face, narrow shoulders, lean waist. Right-facing three-quarter isometric view, every frame faces screen RIGHT. Hand-placed LOW RESOLUTION pixel aesthetic, approximately 24-32 pixels wide and 64 pixels high per character, crisp chunky pixel clusters, 16-24 muted colors per outfit, almost black shadows, jagged ink-like contours, worn metal, torn fabric. Restrained grim anime expression. Absolutely no chibi, no stock cute pixel art, no broad bulky heroic body, no smooth painting, no anti-aliasing, no 3D render. The attached roster is only a class identity reference; aggressively replace its bulky, polished, high-detail rendering. True transparent background, no baked checkerboard, no scenery. Consistent scale and ample empty padding in every cell.\nLABELING IS REQUIRED: use readable small pixel text in dedicated left label gutter for every row and a top header margin. Labels must never overlap art. Label atlas title, rarity, row asset ID and exact name; label animation columns. Keep all art-cell spacing uniform. Transparent background behind sprites, muted ivory lettering.\nPALADIN — COMMON ARMOR. Large square atlas, exactly TEN rows of characters with TWELVE animation columns, plus left label gutter and top titles. Do not omit the tenth row. Each row = one different outfit. Label columns 'ATK1' 'ATK2' 'ATK3' 'ATK4' 'ATK5' 'ATK6' 'CAST1' 'CAST2' 'CAST3' 'CAST4' 'CAST5' 'CAST6'. Six melee frames = ready, draw back, overhead windup, strike toward right, followthrough, recover. Six cast frames = rest, raise hand, gather, extend, release, recover. Empty hands with grips for separate weapons. No helmets, weapons, shields, magic or scenery baked into body. Bare head with same lean dark-haired masculine anime face in all cells. Repeat each row's outfit exactly over its 12 poses, with real sequential movement. Uniform cell size and consistent feet anchor. Actual low resolution hard PIXELS, not tiny high-resolution paintings. Draw ten DIFFERENT construction/silhouettes, not color swaps. Exact row labels and outfit designs top to bottom:\nP01 Ragged Pilgrim: patched charcoal gambeson and rope belt\nP02 Rust Lamellar: rusty narrow lamellar with torn brown waistcloth\nP03 Soot Chapel: battered iron breastplate over soot-grey pilgrim robes\nP04 Scrap Sentinel: asymmetrical scrap-steel shoulder and burgundy surcoat\nP05 Bone Tabard: chainmail with bone-white ragged tabard\nP06 Road Brigand: riveted leather brigandine and split olive skirt\nP07 Black Rivet: blackened studded jack with wrapped greaves\nP08 Tin Votary: dull tin scale-mail and frayed blue sash\nP09 Prayer Cuirass: worn ribbed cuirass with tan prayer strips\nP10 Ringmail Exile: patched ringmail with ragged long dark clerical coat\nDraw every listed row, including the last. Reserve generous separate gutters for readable ivory labels, nothing overlaid on art. Transparent background everywhere except art and typography. All bodies slender and right-facing."
+    },
+    {
+      "name": "paladin_uncommon_armor_labeled",
+      "prompt": "Use case: stylized-concept. Create actual raster sprite-sheet art for an original grimdark isometric dungeon crawler. Strong dark fantasy anime anatomy: very slender adult male paladin, long narrow limbs, small head, angular weary face, narrow shoulders, lean waist. Right-facing three-quarter isometric view, every frame faces screen RIGHT. Hand-placed LOW RESOLUTION pixel aesthetic, approximately 24-32 pixels wide and 64 pixels high per character, crisp chunky pixel clusters, 16-24 muted colors per outfit, almost black shadows, jagged ink-like contours, worn metal, torn fabric. Restrained grim anime expression. Absolutely no chibi, no stock cute pixel art, no broad bulky heroic body, no smooth painting, no anti-aliasing, no 3D render. The attached roster is only a class identity reference; aggressively replace its bulky, polished, high-detail rendering. True transparent background, no baked checkerboard, no scenery. Consistent scale and ample empty padding in every cell.\nLABELING IS REQUIRED: use readable small pixel text in dedicated left label gutter for every row and a top header margin. Labels must never overlap art. Label atlas title, rarity, row asset ID and exact name; label animation columns. Keep all art-cell spacing uniform. Transparent background behind sprites, muted ivory lettering.\nPALADIN — UNCOMMON ARMOR. Large square atlas, exactly TEN rows of characters with TWELVE animation columns, plus left label gutter and top titles. Do not omit the tenth row. Each row = one different outfit. Label columns 'ATK1' 'ATK2' 'ATK3' 'ATK4' 'ATK5' 'ATK6' 'CAST1' 'CAST2' 'CAST3' 'CAST4' 'CAST5' 'CAST6'. Six melee frames = ready, draw back, overhead windup, strike toward right, followthrough, recover. Six cast frames = rest, raise hand, gather, extend, release, recover. Empty hands with grips for separate weapons. No helmets, weapons, shields, magic or scenery baked into body. Bare head with same lean dark-haired masculine anime face in all cells. Repeat each row's outfit exactly over its 12 poses, with real sequential movement. Uniform cell size and consistent feet anchor. Actual low resolution hard PIXELS, not tiny high-resolution paintings. Draw ten DIFFERENT construction/silhouettes, not color swaps. Exact row labels and outfit designs top to bottom:\nP11 Wayfarer Brigandine: long split leather coat with diagonal iron plates\nP12 Iron Penitent: narrow rusted rib-cage cuirass and rope prayer knots\nP13 Chapel Watch: faded moss tabard over short chain sleeves\nP14 Thornbound Mail: thorn-shaped iron lamellae and wrapped shins\nP15 Grave Road Warden: asymmetric weathered shoulder mantle and slim breastplate\nP16 Cinder Acolyte: charcoal quilted robe with copper elbow plates\nP17 Votive Guard: beeswax-yellow prayer strips and studded mail\nP18 Ashen Hospitaller: bone-white split medical surcoat and black arm guards\nP19 Tollkeeper Harness: brown knee-length brigandine with squared small steel scales\nP20 Oathbound Exile: faded blue scarf and angular salvaged steel\nDraw every listed row, including the last. Reserve generous separate gutters for readable ivory labels, nothing overlaid on art. Transparent background everywhere except art and typography. All bodies slender and right-facing."
+    },
+    {
+      "name": "paladin_rare_armor_labeled",
+      "prompt": "Use case: stylized-concept. Create actual raster sprite-sheet art for an original grimdark isometric dungeon crawler. Strong dark fantasy anime anatomy: very slender adult male paladin, long narrow limbs, small head, angular weary face, narrow shoulders, lean waist. Right-facing three-quarter isometric view, every frame faces screen RIGHT. Hand-placed LOW RESOLUTION pixel aesthetic, approximately 24-32 pixels wide and 64 pixels high per character, crisp chunky pixel clusters, 16-24 muted colors per outfit, almost black shadows, jagged ink-like contours, worn metal, torn fabric. Restrained grim anime expression. Absolutely no chibi, no stock cute pixel art, no broad bulky heroic body, no smooth painting, no anti-aliasing, no 3D render. The attached roster is only a class identity reference; aggressively replace its bulky, polished, high-detail rendering. True transparent background, no baked checkerboard, no scenery. Consistent scale and ample empty padding in every cell.\nLABELING IS REQUIRED: use readable small pixel text in dedicated left label gutter for every row and a top header margin. Labels must never overlap art. Label atlas title, rarity, row asset ID and exact name; label animation columns. Keep all art-cell spacing uniform. Transparent background behind sprites, muted ivory lettering.\nPALADIN — RARE ARMOR. Large square atlas, exactly TEN rows of characters with TWELVE animation columns, plus left label gutter and top titles. Do not omit the tenth row. Each row = one different outfit. Label columns 'ATK1' 'ATK2' 'ATK3' 'ATK4' 'ATK5' 'ATK6' 'CAST1' 'CAST2' 'CAST3' 'CAST4' 'CAST5' 'CAST6'. Six melee frames = ready, draw back, overhead windup, strike toward right, followthrough, recover. Six cast frames = rest, raise hand, gather, extend, release, recover. Empty hands with grips for separate weapons. No helmets, weapons, shields, magic or scenery baked into body. Bare head with same lean dark-haired masculine anime face in all cells. Repeat each row's outfit exactly over its 12 poses, with real sequential movement. Uniform cell size and consistent feet anchor. Actual low resolution hard PIXELS, not tiny high-resolution paintings. Draw ten DIFFERENT construction/silhouettes, not color swaps. Exact row labels and outfit designs top to bottom:\nP21 Raven Chapel: raven-feather short mantle and thin black plate\nP22 Sepulcher Guard: vertical tomb-like fluted grey cuirass\nP23 Moonlit Vow: crescent silver plates and dark indigo split robe\nP24 Crimson Litany: blood-red narrow tabard with crossed iron breast straps\nP25 Wolfsbane Sentinel: serrated small steel shoulders and grey fur collar\nP26 Drowned Reliquary: verdigris chain skirt and oxidized long bronze chestguard\nP27 Gallows Saint: noose-knot cord harness over battered long plate\nP28 Pale Confessor: ivory ribbed light armor and severe clerical stole\nP29 Black Rose Oath: thorn-etched black vambraces and rose-maroon split coat\nP30 Censer Knight: tiny hanging brass censers and charcoal scale cuirass\nDraw every listed row, including the last. Reserve generous separate gutters for readable ivory labels, nothing overlaid on art. Transparent background everywhere except art and typography. All bodies slender and right-facing."
+    },
+    {
+      "name": "paladin_epic_armor_labeled",
+      "prompt": "Use case: stylized-concept. Create actual raster sprite-sheet art for an original grimdark isometric dungeon crawler. Strong dark fantasy anime anatomy: very slender adult male paladin, long narrow limbs, small head, angular weary face, narrow shoulders, lean waist. Right-facing three-quarter isometric view, every frame faces screen RIGHT. Hand-placed LOW RESOLUTION pixel aesthetic, approximately 24-32 pixels wide and 64 pixels high per character, crisp chunky pixel clusters, 16-24 muted colors per outfit, almost black shadows, jagged ink-like contours, worn metal, torn fabric. Restrained grim anime expression. Absolutely no chibi, no stock cute pixel art, no broad bulky heroic body, no smooth painting, no anti-aliasing, no 3D render. The attached roster is only a class identity reference; aggressively replace its bulky, polished, high-detail rendering. True transparent background, no baked checkerboard, no scenery. Consistent scale and ample empty padding in every cell.\nLABELING IS REQUIRED: use readable small pixel text in dedicated left label gutter for every row and a top header margin. Labels must never overlap art. Label atlas title, rarity, row asset ID and exact name; label animation columns. Keep all art-cell spacing uniform. Transparent background behind sprites, muted ivory lettering.\nPALADIN — EPIC ARMOR. Large square atlas, exactly TEN rows of characters with TWELVE animation columns, plus left label gutter and top titles. Do not omit the tenth row. Each row = one different outfit. Label columns 'ATK1' 'ATK2' 'ATK3' 'ATK4' 'ATK5' 'ATK6' 'CAST1' 'CAST2' 'CAST3' 'CAST4' 'CAST5' 'CAST6'. Six melee frames = ready, draw back, overhead windup, strike toward right, followthrough, recover. Six cast frames = rest, raise hand, gather, extend, release, recover. Empty hands with grips for separate weapons. No helmets, weapons, shields, magic or scenery baked into body. Bare head with same lean dark-haired masculine anime face in all cells. Repeat each row's outfit exactly over its 12 poses, with real sequential movement. Uniform cell size and consistent feet anchor. Actual low resolution hard PIXELS, not tiny high-resolution paintings. Draw ten DIFFERENT construction/silhouettes, not color swaps. Exact row labels and outfit designs top to bottom:\nP31 Eclipse Justiciar: overlapping black crescent plates with pale gold seams\nP32 Thorn Martyr: elongated thorn steel breastplate and ragged wine fabric\nP33 Ossuary Regent: bone-rib chest armor and narrow dark steel greaves\nP34 Storm Vesper: sharp blue-grey flutes and long storm cloak scraps\nP35 Sable Seraph: small skeletal wing-shaped shoulder fins and feather hem\nP36 Furnace Templar: charred copper plates with restrained ember cracks\nP37 Veilbreaker: silver mask medallions on a narrow chain stole\nP38 Violet Inquisitor: deep violet split cassock with asymmetrical steel pauldron\nP39 Bleeding Sun: sunburst punctured cuirass and bloodstained ivory cloth\nP40 Hollow Basilica: architectural gothic arch chest plates and black draped sash\nDraw every listed row, including the last. Reserve generous separate gutters for readable ivory labels, nothing overlaid on art. Transparent background everywhere except art and typography. All bodies slender and right-facing."
+    },
+    {
+      "name": "paladin_legendary_armor_labeled",
+      "prompt": "Use case: stylized-concept. Create actual raster sprite-sheet art for an original grimdark isometric dungeon crawler. Strong dark fantasy anime anatomy: very slender adult male paladin, long narrow limbs, small head, angular weary face, narrow shoulders, lean waist. Right-facing three-quarter isometric view, every frame faces screen RIGHT. Hand-placed LOW RESOLUTION pixel aesthetic, approximately 24-32 pixels wide and 64 pixels high per character, crisp chunky pixel clusters, 16-24 muted colors per outfit, almost black shadows, jagged ink-like contours, worn metal, torn fabric. Restrained grim anime expression. Absolutely no chibi, no stock cute pixel art, no broad bulky heroic body, no smooth painting, no anti-aliasing, no 3D render. The attached roster is only a class identity reference; aggressively replace its bulky, polished, high-detail rendering. True transparent background, no baked checkerboard, no scenery. Consistent scale and ample empty padding in every cell.\nLABELING IS REQUIRED: use readable small pixel text in dedicated left label gutter for every row and a top header margin. Labels must never overlap art. Label atlas title, rarity, row asset ID and exact name; label animation columns. Keep all art-cell spacing uniform. Transparent background behind sprites, muted ivory lettering.\nPALADIN — LEGENDARY ARMOR. Large square atlas, exactly TEN rows of characters with TWELVE animation columns, plus left label gutter and top titles. Do not omit the tenth row. Each row = one different outfit. Label columns 'ATK1' 'ATK2' 'ATK3' 'ATK4' 'ATK5' 'ATK6' 'CAST1' 'CAST2' 'CAST3' 'CAST4' 'CAST5' 'CAST6'. Six melee frames = ready, draw back, overhead windup, strike toward right, followthrough, recover. Six cast frames = rest, raise hand, gather, extend, release, recover. Empty hands with grips for separate weapons. No helmets, weapons, shields, magic or scenery baked into body. Bare head with same lean dark-haired masculine anime face in all cells. Repeat each row's outfit exactly over its 12 poses, with real sequential movement. Uniform cell size and consistent feet anchor. Actual low resolution hard PIXELS, not tiny high-resolution paintings. Draw ten DIFFERENT construction/silhouettes, not color swaps. Exact row labels and outfit designs top to bottom:\nP41 Saint of Ash: ashen ivory ceramic armor with black scorch veins and thin gold cords\nP42 Last Cathedral: slender cathedral-spire steel shoulder and long narrow tabard\nP43 Kingless Oath: shattered crown motifs on black iron chest and burgundy coat\nP44 Wound of Dawn: narrow gilt fractured cuirass with white bandage wrappings\nP45 Gravebell Sovereign: small bronze bells along battered funerary plate\nP46 Fallen Halo: broken halo filigree collar and silver-black scale armor\nP47 Obsidian Covenant: razor obsidian plates with bone-white oath ribbons\nP48 Winter Confession: frost-grey articulated plate over long black clerical robe\nP49 Lion of Cinders: small leonine brass chest relief and ragged ember cloak\nP50 Pallbearer of Stars: midnight mail with restrained star-silver studs and torn mourning sash\nDraw every listed row, including the last. Reserve generous separate gutters for readable ivory labels, nothing overlaid on art. Transparent background everywhere except art and typography. All bodies slender and right-facing."
+    },
+    {
+      "name": "paladin_mythic_armor_labeled",
+      "prompt": "Use case: stylized-concept. Create actual raster sprite-sheet art for an original grimdark isometric dungeon crawler. Strong dark fantasy anime anatomy: very slender adult male paladin, long narrow limbs, small head, angular weary face, narrow shoulders, lean waist. Right-facing three-quarter isometric view, every frame faces screen RIGHT. Hand-placed LOW RESOLUTION pixel aesthetic, approximately 24-32 pixels wide and 64 pixels high per character, crisp chunky pixel clusters, 16-24 muted colors per outfit, almost black shadows, jagged ink-like contours, worn metal, torn fabric. Restrained grim anime expression. Absolutely no chibi, no stock cute pixel art, no broad bulky heroic body, no smooth painting, no anti-aliasing, no 3D render. The attached roster is only a class identity reference; aggressively replace its bulky, polished, high-detail rendering. True transparent background, no baked checkerboard, no scenery. Consistent scale and ample empty padding in every cell.\nLABELING IS REQUIRED: use readable small pixel text in dedicated left label gutter for every row and a top header margin. Labels must never overlap art. Label atlas title, rarity, row asset ID and exact name; label animation columns. Keep all art-cell spacing uniform. Transparent background behind sprites, muted ivory lettering.\nPALADIN — MYTHIC ARMOR. Large square atlas, exactly TEN rows of characters with TWELVE animation columns, plus left label gutter and top titles. Do not omit the tenth row. Each row = one different outfit. Label columns 'ATK1' 'ATK2' 'ATK3' 'ATK4' 'ATK5' 'ATK6' 'CAST1' 'CAST2' 'CAST3' 'CAST4' 'CAST5' 'CAST6'. Six melee frames = ready, draw back, overhead windup, strike toward right, followthrough, recover. Six cast frames = rest, raise hand, gather, extend, release, recover. Empty hands with grips for separate weapons. No helmets, weapons, shields, magic or scenery baked into body. Bare head with same lean dark-haired masculine anime face in all cells. Repeat each row's outfit exactly over its 12 poses, with real sequential movement. Uniform cell size and consistent feet anchor. Actual low resolution hard PIXELS, not tiny high-resolution paintings. Draw ten DIFFERENT construction/silhouettes, not color swaps. Exact row labels and outfit designs top to bottom:\nP51 Godless Benediction: split holy/unholy narrow ivory and abyss-black plates with torn scripture\nP52 End of All Suns: black sun disc chest motif with thin copper eclipse edges\nP53 Saint Beyond Death: pale bone filigree exoskeleton armor over ghost-grey robes\nP54 Crown of Thorns: thorn lattice breastplate with crimson hanging prayer cloth\nP55 Abyssal Absolution: deep midnight jagged armor with subtle cold cyan hairline seams\nP56 First Flame Martyr: charcoal-gold charred armor with tiny red ember vents\nP57 Eternal Funeral: tall narrow mourning collar with grave-silver chain and long black split coat\nP58 Heaven in Ruins: broken marble-white arch plates with dull gold ruin fragments\nP59 Blood of the Covenant: dark garnet enamel narrow cuirass with blood-red twisted cords\nP60 Final Amen: severe matte black perfectly slender gothic armor with single pale gold vertical vow line\nDraw every listed row, including the last. Reserve generous separate gutters for readable ivory labels, nothing overlaid on art. Transparent background everywhere except art and typography. All bodies slender and right-facing."
+    },
+    {
+      "name": "paladin_weapons_shields_labeled",
+      "prompt": "Use case: stylized-concept. Create a labeled modular equipment sprite atlas for a grimdark anime-influenced LOW RESOLUTION isometric dungeon crawler. Exactly 60 different equipment sprites arranged in SIX ROWS and TEN COLUMNS. 42 weapons and 18 shields total. Each row has 7 weapons then 3 shields. True transparent background, isolated objects, no hands, no characters, no scenery. Pixel clusters and hard stepped edges, native asset appearance approximately 12-20 pixels wide by 35-55 pixels high, gritty and worn. No smooth illustration, no glossy icons, no colorful generic RPG look. Individual narrow weapons are designed for a slender right-facing paladin. Shields show three-quarter right-facing view; blades and shafts point diagonally up-right; obvious grips. Each item physically different in outline and construction, never just recolors. Keep sprites compact relative to text. Dedicated title 'PALADIN — WEAPONS & SHIELDS'. Label each item with the exact ID and name beneath it in a reserved label band, readable ivory pixel text. Show each rarity name once at left of corresponding row. Ten items per row, every named item required:\nCommon: W01 Nail Sword; W02 Rust Sabre; W03 Chapel Mace; W04 Split Axe; W05 Pilgrim Spear; W06 Iron Flail; W07 Knotted Club; W08 Plank Buckler; W09 Hide Roundshield; W10 Scrap Kite\nUncommon: W11 Votive Blade; W12 Hook Falchion; W13 Bell Hammer; W14 Thorn Axe; W15 Vigil Lance; W16 Censer Flail; W17 Copper Estoc; W18 Rivet Buckler; W19 Chapel Heater; W20 Road Pavise\nRare: W21 Raven Edge; W22 Moon Scimitar; W23 Ossuary Mace; W24 Gallows Cleaver; W25 Tide Trident; W26 Litany Flail; W27 Wolf Glaive; W28 Bone Buckler; W29 Rose Kite; W30 Mourning Shield\nEpic: W31 Eclipse Sword; W32 Veil Rapier; W33 Furnace Maul; W34 Martyr Axe; W35 Storm Halberd; W36 Sable Scourge; W37 Inquisitor Blade; W38 Censer Ward; W39 Basilica Shield; W40 Bleeding Aegis\nLegendary: W41 Ash Saint Blade; W42 Kingless Sword; W43 Gravebell Hammer; W44 Dawn Reaver; W45 Winter Pike; W46 Halo Flail; W47 Cinder Falchion; W48 Obsidian Ward; W49 Cathedral Shield; W50 Star Pall\nMythic: W51 Godless Edge; W52 Last Sun Sword; W53 Funeral Hammer; W54 Thorn Executioner; W55 Abyss Spear; W56 Covenant Scourge; W57 Final Amen; W58 Heaven Shard; W59 Eternal Aegis; W60 Worldend Ward\nCommon = crudely repaired iron wood leather; uncommon = worn bronze iron and religious fittings; rare = black silver bone verdigris; epic = unusual jagged gothic geometry; legendary = ruined sacred relics; mythic = austere impossible sacred forms with very restrained luminous accents. Preserve narrow functional silhouettes. No glow clouds."
+    },
+    {
+      "name": "paladin_helmets_labeled",
+      "prompt": "Use case: stylized-concept. Create a labeled modular HELMET sprite atlas for a grimdark anime-influenced LOW RESOLUTION isometric dungeon crawler. Exactly SIX ROWS by TEN COLUMNS, 60 genuinely unique helmets. Small narrow helmets sized for lean adult paladin head, all three-quarter right-facing with the opening toward screen RIGHT. Isolated wearable shell layers, no heads, no bodies, no busts, no stands. True transparent background. Native pixel art impression about 12x16 pixels per helmet, enlarged crisp hard pixel clusters, limited muted palette, near-black shadows, battered steel, old bone, torn cloth. Absolutely no cute chibi or bulky comic shapes, no smooth digital painting, no glossy icon art. Every helmet must have different construction and silhouette, including common ones. Row rarities top to bottom Common, Uncommon, Rare, Epic, Legendary, Mythic. Title 'PALADIN — HELMETS'. Each helmet has exact ID and name in a reserved label band below it, clean ivory pixel text never touching sprite. Keep a left gutter for rarity. Complete list, exactly ten in every row:\nCommon: H01 Iron Cap; H02 Rust Sallet; H03 Mail Coif; H04 Pilgrim Hood; H05 Split Nasal; H06 Leather Skullcap; H07 Dent Bascinet; H08 Chapel Kettle; H09 Wrapped Helm; H10 Rivet Mask\nUncommon: H11 Votive Visor; H12 Thorn Coif; H13 Road Sallet; H14 Copper Beak; H15 Vigil Hood; H16 Penitent Mask; H17 Ring Aventail; H18 Ashen Cap; H19 Bell Guard; H20 Exile Armet\nRare: H21 Raven Helm; H22 Sepulcher Mask; H23 Moon Visor; H24 Crimson Coif; H25 Wolf Sallet; H26 Drowned Crown; H27 Gallows Hood; H28 Pale Confessor; H29 Rose Bascinet; H30 Censer Helm\nEpic: H31 Eclipse Armet; H32 Martyr Visor; H33 Ossuary Crown; H34 Storm Beak; H35 Sable Helm; H36 Furnace Mask; H37 Veil Visor; H38 Violet Hood; H39 Bleeding Sun; H40 Basilica Helm\nLegendary: H41 Ash Saint; H42 Cathedral Spire; H43 Kingless Crown; H44 Dawn Visor; H45 Gravebell Helm; H46 Fallen Halo; H47 Obsidian Mask; H48 Winter Confessor; H49 Cinder Lion; H50 Star Mourner\nMythic: H51 Godless Crown; H52 Sunless Visor; H53 Deathless Saint; H54 Thorn Crown; H55 Abyss Mask; H56 First Flame; H57 Funeral Mitre; H58 Ruined Heaven; H59 Blood Covenant; H60 Final Amen\nMake masks, sallets, coifs, narrow greathelms, open hoods, nasals, armets, broken crowns and pointed mitres visibly distinct. Noble yet bleak dark anime knight design. Grit over ornament."
+    },
+    {
+      "name": "paladin_common_abilities_labeled",
+      "prompt": "Use case: stylized-concept. Create a labeled LOW RESOLUTION animated ability-effects sprite atlas for an original grimdark anime-influenced isometric dungeon crawler. PALADIN — COMMON ABILITIES. Exactly TEN ROWS, SIX COLUMNS of sprites plus left text gutter and top header. Each row has six successive animation frames of ONE distinct spell effect. Columns labeled '1 START' '2 GATHER' '3 RELEASE' '4 PEAK' '5 DECAY' '6 FADE'. No characters, no equipment, no scenery, true transparent background. Small compact effects, native pixel impression 24 to 48 pixels across, hard jagged pixel clusters, stepped outlines, small restrained muted palettes, no soft glow or blurred digital painting, no generic bright mobile game icon style. Grim holy magic: worn ivory, dirty gold, ash, dark crimson, near-black and cold steel. Rightward attacks and flattened 2:1 isometric ground ellipses. Real shape change over the six frames; no six identical icons. Keep consistent cell origins, generous blank padding, separate readable ivory labels, no text touching the effects. Title on top, exact ID and ability name in left gutter for each row. All ten rows MUST be included:\nF01 Votive Spark: tiny ivory ember gathering then popping\nF02 Iron Smite: short dirty-gold angular slash impact\nF03 Dust Step: grey ground dust kick\nF04 Candle Bolt: small candle-orange dart moves right\nF05 Prayer Ring: thin ivory ellipse expands on floor\nF06 Buckler Flash: small dull silver semicircle flickers\nF07 Mercy Mote: pale green motes spiral upward\nF08 Cinder Tap: tiny red cinder impact\nF09 Oath Mark: simple gold cross-like vow rune writes then fades\nF10 Purge Puff: bone-white smoke curls and dissolves\nStart with a small shape, build, release, peak, decay into fragments, finish almost invisible. These are separate small reusable VFX sprite animations, not illustrated cards."
+    },
+    {
+      "name": "paladin_uncommon_abilities_labeled",
+      "prompt": "Use case: stylized-concept. Create a labeled LOW RESOLUTION animated ability-effects sprite atlas for an original grimdark anime-influenced isometric dungeon crawler. PALADIN — UNCOMMON ABILITIES. Exactly TEN ROWS, SIX COLUMNS of sprites plus left text gutter and top header. Each row has six successive animation frames of ONE distinct spell effect. Columns labeled '1 START' '2 GATHER' '3 RELEASE' '4 PEAK' '5 DECAY' '6 FADE'. No characters, no equipment, no scenery, true transparent background. Small compact effects, native pixel impression 24 to 48 pixels across, hard jagged pixel clusters, stepped outlines, small restrained muted palettes, no soft glow or blurred digital painting, no generic bright mobile game icon style. Grim holy magic: worn ivory, dirty gold, ash, dark crimson, near-black and cold steel. Rightward attacks and flattened 2:1 isometric ground ellipses. Real shape change over the six frames; no six identical icons. Keep consistent cell origins, generous blank padding, separate readable ivory labels, no text touching the effects. Title on top, exact ID and ability name in left gutter for each row. All ten rows MUST be included:\nF11 Thorn Lash: gold-brown thorn whip snaps right\nF12 Chapel Ward: small gothic arch shield forms and breaks\nF13 Bell Pulse: bronze concentric isometric ground ellipses expand\nF14 Pilgrim Dash: low dusty grey streak surges right\nF15 Litany Bolt: three ivory prayer fragments fly right\nF16 Ember Seal: orange angular seal ignites on floor\nF17 Chain Rebuke: silver chain shoots right and retracts\nF18 Mending Wisp: muted green wisps gather upward\nF19 Vigil Spark: small blue-white star ignites and sheds sparks\nF20 Censer Breath: desaturated incense cone rolls right\nStart with a small shape, build, release, peak, decay into fragments, finish almost invisible. These are separate small reusable VFX sprite animations, not illustrated cards."
+    },
+    {
+      "name": "paladin_rare_abilities_labeled",
+      "prompt": "Use case: stylized-concept. Create a labeled LOW RESOLUTION animated ability-effects sprite atlas for an original grimdark anime-influenced isometric dungeon crawler. PALADIN — RARE ABILITIES. Exactly TEN ROWS, SIX COLUMNS of sprites plus left text gutter and top header. Each row has six successive animation frames of ONE distinct spell effect. Columns labeled '1 START' '2 GATHER' '3 RELEASE' '4 PEAK' '5 DECAY' '6 FADE'. No characters, no equipment, no scenery, true transparent background. Small compact effects, native pixel impression 24 to 48 pixels across, hard jagged pixel clusters, stepped outlines, small restrained muted palettes, no soft glow or blurred digital painting, no generic bright mobile game icon style. Grim holy magic: worn ivory, dirty gold, ash, dark crimson, near-black and cold steel. Rightward attacks and flattened 2:1 isometric ground ellipses. Real shape change over the six frames; no six identical icons. Keep consistent cell origins, generous blank padding, separate readable ivory labels, no text touching the effects. Title on top, exact ID and ability name in left gutter for each row. All ten rows MUST be included:\nF21 Raven Judgment: black feather crescent sweeps right\nF22 Moon Cleave: pale blue narrow crescent slash\nF23 Grave Light: thin ivory flame rises from ground\nF24 Crimson Vow: blood-red angular ring pulses\nF25 Wolf Verdict: silver fang-shaped impact burst\nF26 Tide Absolution: cold turquoise splash sweeps right\nF27 Gallows Bind: grey spectral cords tighten\nF28 Confessor Halo: pale broken halo assembles and dissolves\nF29 Rose Thorns: dark crimson thorn ring erupts\nF30 Reliquary Beam: narrow pale gold beam fires right\nStart with a small shape, build, release, peak, decay into fragments, finish almost invisible. These are separate small reusable VFX sprite animations, not illustrated cards."
+    },
+    {
+      "name": "paladin_epic_abilities_labeled",
+      "prompt": "Use case: stylized-concept. Create a labeled LOW RESOLUTION animated ability-effects sprite atlas for an original grimdark anime-influenced isometric dungeon crawler. PALADIN — EPIC ABILITIES. Exactly TEN ROWS, SIX COLUMNS of sprites plus left text gutter and top header. Each row has six successive animation frames of ONE distinct spell effect. Columns labeled '1 START' '2 GATHER' '3 RELEASE' '4 PEAK' '5 DECAY' '6 FADE'. No characters, no equipment, no scenery, true transparent background. Small compact effects, native pixel impression 24 to 48 pixels across, hard jagged pixel clusters, stepped outlines, small restrained muted palettes, no soft glow or blurred digital painting, no generic bright mobile game icon style. Grim holy magic: worn ivory, dirty gold, ash, dark crimson, near-black and cold steel. Rightward attacks and flattened 2:1 isometric ground ellipses. Real shape change over the six frames; no six identical icons. Keep consistent cell origins, generous blank padding, separate readable ivory labels, no text touching the effects. Title on top, exact ID and ability name in left gutter for each row. All ten rows MUST be included:\nF31 Eclipse Smite: black center with fine gold eclipse flare\nF32 Martyr Spikes: ivory thorns rise in ground fan\nF33 Bone Benediction: bone-white ribs form protective arc\nF34 Storm Litany: violet-white jagged lightning forks right\nF35 Sable Wings: black spectral feather arcs unfold\nF36 Furnace Wrath: red-orange cinder wave erupts right\nF37 Veil Rupture: thin silver vertical tear opens and shuts\nF38 Inquisitor Brand: purple blade-shaped glyph stamps down\nF39 Bleeding Dawn: red sun disk sheds narrow golden rays\nF40 Basilica Ward: ghostly small gothic arch rises then shatters\nStart with a small shape, build, release, peak, decay into fragments, finish almost invisible. These are separate small reusable VFX sprite animations, not illustrated cards."
+    },
+    {
+      "name": "paladin_legendary_abilities_labeled",
+      "prompt": "Use case: stylized-concept. Create a labeled LOW RESOLUTION animated ability-effects sprite atlas for an original grimdark anime-influenced isometric dungeon crawler. PALADIN — LEGENDARY ABILITIES. Exactly TEN ROWS, SIX COLUMNS of sprites plus left text gutter and top header. Each row has six successive animation frames of ONE distinct spell effect. Columns labeled '1 START' '2 GATHER' '3 RELEASE' '4 PEAK' '5 DECAY' '6 FADE'. No characters, no equipment, no scenery, true transparent background. Small compact effects, native pixel impression 24 to 48 pixels across, hard jagged pixel clusters, stepped outlines, small restrained muted palettes, no soft glow or blurred digital painting, no generic bright mobile game icon style. Grim holy magic: worn ivory, dirty gold, ash, dark crimson, near-black and cold steel. Rightward attacks and flattened 2:1 isometric ground ellipses. Real shape change over the six frames; no six identical icons. Keep consistent cell origins, generous blank padding, separate readable ivory labels, no text touching the effects. Title on top, exact ID and ability name in left gutter for each row. All ten rows MUST be included:\nF41 Ash Ascension: ivory fire rises amid charcoal ash\nF42 Cathedral Fall: spectral silver spire strikes ground\nF43 Kingless Edict: broken gold crown explodes into shards\nF44 Dawn Wound: long narrow gold-white slash opens right\nF45 Gravebell Toll: bronze bell-shaped flare emits floor rings\nF46 Halo Collapse: silver broken halo contracts to spark\nF47 Obsidian Oath: black glass spikes burst with white edges\nF48 Winter Mercy: pale icy blue branching healing sigil\nF49 Cinder Roar: small ember lion-like flame head lunges right\nF50 Star Requiem: silver stars spiral into midnight vortex\nStart with a small shape, build, release, peak, decay into fragments, finish almost invisible. These are separate small reusable VFX sprite animations, not illustrated cards."
+    },
+    {
+      "name": "paladin_mythic_abilities_labeled",
+      "prompt": "Use case: stylized-concept. Create a labeled LOW RESOLUTION animated ability-effects sprite atlas for an original grimdark anime-influenced isometric dungeon crawler. PALADIN — MYTHIC ABILITIES. Exactly TEN ROWS, SIX COLUMNS of sprites plus left text gutter and top header. Each row has six successive animation frames of ONE distinct spell effect. Columns labeled '1 START' '2 GATHER' '3 RELEASE' '4 PEAK' '5 DECAY' '6 FADE'. No characters, no equipment, no scenery, true transparent background. Small compact effects, native pixel impression 24 to 48 pixels across, hard jagged pixel clusters, stepped outlines, small restrained muted palettes, no soft glow or blurred digital painting, no generic bright mobile game icon style. Grim holy magic: worn ivory, dirty gold, ash, dark crimson, near-black and cold steel. Rightward attacks and flattened 2:1 isometric ground ellipses. Real shape change over the six frames; no six identical icons. Keep consistent cell origins, generous blank padding, separate readable ivory labels, no text touching the effects. Title on top, exact ID and ability name in left gutter for each row. All ten rows MUST be included:\nF51 Godless Light: black-white split ray flashes right\nF52 Last Sun: tiny dying black sun flares with copper corona\nF53 Deathless Grace: ivory spectral ribs bloom into pale wings\nF54 Thorn Apotheosis: crimson thorn crown erupts and collapses\nF55 Abyssal Pardon: dark cyan void spiral closes inward\nF56 First Flame: thin white core fire with red broken edges\nF57 Eternal Funeral: silver funeral candles ignite in ring and extinguish\nF58 Heaven Shatters: pale gold arch breaks into angular shards\nF59 Covenant Blood: crimson droplets form sharp sacred seal\nF60 Final Amen: single ivory vertical line expands into cross flare then fades\nStart with a small shape, build, release, peak, decay into fragments, finish almost invisible. These are separate small reusable VFX sprite animations, not illustrated cards."
+    }
+  ]
+}
