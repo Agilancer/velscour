@@ -8,7 +8,7 @@ const imgs = {};
 const live = new Set();
 let raf = 0, last = 0;
 const calm = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-const AURA = { slime_lord: '#4aa8ff', death_knight: '#7ab8ff' }; // where the art's colour differs from the class colour
+const AURA = { death_knight: '#7ab8ff' }; // where the art's colour differs from the class colour
 
 function portrait(id) {
   if (!imgs[id]) { imgs[id] = new Image(); imgs[id].src = `assets/sprites/select/${id}.webp`; }

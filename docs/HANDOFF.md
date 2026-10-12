@@ -76,6 +76,9 @@ Requirements, as stated (✅ = implemented in the draft):
   hold to repeat, long-press to reassign). The game asks for fullscreen and landscape when a touch device taps a
   title-screen button. A PWA manifest lets it be installed fullscreen.
 - **Sound:** procedural WebAudio sound effects and ambient music, with no audio files.
+- **The Slime Lord is blue.** The user changed his art from green to blue, so the `acid` element (only he uses it)
+  is blue in `ELEM` (`src/gfx/vfx.js`), and all his skills except Frost Jelly (cold, already blue) are `acid`.
+  His summons' palettes are blue too (`src/data/summons.js`). Enemy slimes stay green.
 
 ## 3. Status
 

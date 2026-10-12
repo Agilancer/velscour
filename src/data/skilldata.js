@@ -262,16 +262,16 @@ export const SKILLDATA = {
     [
       'Slime Ball|proj|acid|blob|free wc=0.6', 'Acid Splash|proj|acid|blob|n=3 spread=30 exp r=0.7', 'Slime Pool|zone|acid|slime|r=1.2 dur=6 slow', 'Goo Spit|proj|acid|blob|lob exp slow',
       'Ooze Wave|fissure|acid|slime|range=1.2', 'Gelatinous Wall|wall|acid|slime|block dur=6 slow', 'Acid Rain|rain|acid|acid|n=14 r=1.4', 'Corrosive Bolt|proj|acid|blob|pierce curse=amp',
-      'Slime Nova|nova|acid|slime|r=1.4 slow', 'Toxic Flood|wall|poison|slime|dur=6 len=1.6', 'Bouncing Blob|proj|acid|blob|bounce=6 r=1.3', 'Sludge Beam|beam|acid|slime|dur=2',
+      'Slime Nova|nova|acid|slime|r=1.4 slow', 'Toxic Flood|wall|acid|slime|dur=6 len=1.6', 'Bouncing Blob|proj|acid|blob|bounce=6 r=1.3', 'Sludge Beam|beam|acid|slime|dur=2',
       'Acid Geyser|aoe|acid|eruption|n=5 r=1 dur=2', 'Slime Tsunami|fissure|acid|slime|n=3 spread=40 range=1.6', 'Melt|curse|acid|slime|curse=amp,slow amt=40 r=1.4', 'Viscous Orbs|orbit|acid|blob|n=6 dur=6 cd=8',
       'Deluge|rain|acid|acid|n=40 r=2.2 cd=6', 'Primordial Ooze|zone|acid|slime|r=2.6 dur=8 cd=12', 'Acid Comet|aoe|acid|meteor|r=2 dmg=2.8 cd=4', 'Gloop Cannon|proj|acid|blob|r=3 dmg=3 exp pierce cd=3',
     ],
     [
       'Slimeling|summon|acid|slime|sum=slimeling max=4', 'Split|nova|acid|slime|r=0.9', 'Ooze Buddy|summon|acid|slime|sum=oozebuddy max=1', 'Slime Trail|zone|acid|slime|follow r=0.8 dur=10 cd=12',
-      'Brood|summon|acid|slime|sum=slimeling n=3 dur=20 cd=12', 'Volatile Slime|summon|fire|slime|sum=bombslime n=2 dur=10 cd=6', 'Frost Jelly|summon|cold|slime|sum=frostslime max=2', 'Feed|buff|acid|aura|buff=regen amt=25 party dur=20 cd=25',
+      'Brood|summon|acid|slime|sum=slimeling n=3 dur=20 cd=12', 'Volatile Slime|summon|acid|slime|sum=bombslime n=2 dur=10 cd=6', 'Frost Jelly|summon|cold|slime|sum=frostslime max=2', 'Feed|buff|acid|aura|buff=regen amt=25 party dur=20 cd=25',
       'King Slime|summon|acid|slime|sum=kingslime max=1 cd=30', 'Mitosis|summon|acid|slime|sum=slimeling n=5 dur=15 cd=20', 'Slime Rain|rain|acid|blob|n=12 r=1.5', 'Swarming Ooze|buff|acid|aura|buff=dmg,as amt=30 party dur=20 cd=30',
-      'Ooze Titan|summon|acid|slime|sum=slimetitan max=1 cd=40', 'Explosive Brood|summon|fire|slime|sum=bombslime n=6 dur=10 cd=15', 'Prismatic Jellies|summon|arcane|slime|sum=prismslime n=3 dur=20 cd=25', 'Symbiosis|heal|acid|light|amt=40 party cd=25',
-      'Slime Empire|summon|acid|slime|sum=kingslime n=3 dur=25 cd=60', 'Gelatinous Horde|summon|acid|slime|sum=slimeling n=12 dur=15 cd=40', 'Hivemind|buff|acid|aura|buff=dmg,as,speed amt=45 party dur=20 cd=50', 'Mother Ooze|summon|poison|slime|sum=motherooze max=1 cd=60',
+      'Ooze Titan|summon|acid|slime|sum=slimetitan max=1 cd=40', 'Explosive Brood|summon|acid|slime|sum=bombslime n=6 dur=10 cd=15', 'Prismatic Jellies|summon|acid|slime|sum=prismslime n=3 dur=20 cd=25', 'Symbiosis|heal|acid|light|amt=40 party cd=25',
+      'Slime Empire|summon|acid|slime|sum=kingslime n=3 dur=25 cd=60', 'Gelatinous Horde|summon|acid|slime|sum=slimeling n=12 dur=15 cd=40', 'Hivemind|buff|acid|aura|buff=dmg,as,speed amt=45 party dur=20 cd=50', 'Mother Ooze|summon|acid|slime|sum=motherooze max=1 cd=60',
     ],
     [
       'Body Slam|melee|acid|smash|knock', 'Absorb|melee|acid|bite|leech', 'Slime Armor|buff|acid|shield|buff=armor amt=50 dur=30 cd=30', 'Bounce|leap|acid|slime|range=1',
