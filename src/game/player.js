@@ -109,7 +109,7 @@ export class Player extends Creature {
       bossDmg: add.bossDmg || 0,
       summonPct: add.summonPct || 0,
       skillsAll: add.skillsAll || 0,
-      skillTree0: add.skillTree0 || 0, skillTree1: add.skillTree1 || 0, skillTree2: add.skillTree2 || 0,
+      skillTree0: add.skillTree0 || 0, skillTree1: add.skillTree1 || 0, skillTree2: add.skillTree2 || 0, skillTree3: add.skillTree3 || 0,
       dmgPct: (add.dmgPct || 0) + buffDmg + (this.furyT > 0 ? 30 : 0),
       physPct: (add.physPct || 0) + str,
       elemPct: {},

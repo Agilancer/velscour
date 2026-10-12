@@ -122,7 +122,33 @@ export const BESTIARY = [
   { id: 'all_seeing', sheet: E1, i: 9, arch: 'eye', name: 'The All-Seeing', h: 60, el: 'poison', boss: true },
 ];
 
-export const ART_BY_ID = Object.fromEntries(BESTIARY.map((a) => [a.id, a]));
+// Player minions: the Necromancer's skeletons (assets/source/enemies/minions/). Never rolled as monsters; summon
+// definitions (data/summons.js) point at them with `look: { art: id }`.
+const NW = 'minions/necro_warriors', NC = 'minions/necro_casters';
+export const SUMMON_ART = [
+  { id: 'ns_warrior', sheet: NW, i: 0, name: 'Skeleton Warrior', h: 50 },
+  { id: 'ns_archer', sheet: NW, i: 1, name: 'Skeletal Archer', h: 54 },
+  { id: 'ns_spearman', sheet: NW, i: 2, name: 'Skeletal Spearman', h: 54 },
+  { id: 'ns_reaver', sheet: NW, i: 3, name: 'Skeletal Reaver', h: 52 },
+  { id: 'ns_coffin', sheet: NW, i: 4, name: 'Coffin Guard', h: 56 },
+  { id: 'ns_crossbow', sheet: NW, i: 5, name: 'Skeletal Crossbowman', h: 50 },
+  { id: 'ns_jailer', sheet: NW, i: 6, name: 'Chained Jailer', h: 54 },
+  { id: 'ns_ramskull', sheet: NW, i: 7, name: 'Ramskull Berserker', h: 60 },
+  { id: 'ns_digger', sheet: NW, i: 8, name: 'Gravedigger', h: 50 },
+  { id: 'ns_banner', sheet: NW, i: 9, name: 'Bone Standard-Bearer', h: 66 },
+  { id: 'ns_pyro', sheet: NC, i: 0, name: 'Skeletal Pyromancer', h: 56 },
+  { id: 'ns_frost', sheet: NC, i: 1, name: 'Skeletal Mage', h: 60 },
+  { id: 'ns_plague', sheet: NC, i: 2, name: 'Skeletal Plaguecaller', h: 50 },
+  { id: 'ns_storm', sheet: NC, i: 3, name: 'Skeletal Stormcaller', h: 58 },
+  { id: 'ns_bishop', sheet: NC, i: 4, name: 'Bone Bishop', h: 60 },
+  { id: 'ns_reaper', sheet: NC, i: 5, name: 'Reaper King', h: 66 },
+  { id: 'ns_pyre', sheet: NC, i: 6, name: 'Pyre Inquisitor', h: 62 },
+  { id: 'ns_druid', sheet: NC, i: 7, name: 'Thornbone Druid', h: 58 },
+  { id: 'ns_bell', sheet: NC, i: 8, name: 'Knell Ringer', h: 60 },
+  { id: 'ns_archlich', sheet: NC, i: 9, name: 'Skeletal Archlich', h: 56 },
+];
+
+export const ART_BY_ID = Object.fromEntries([...BESTIARY, ...SUMMON_ART].map((a) => [a.id, a]));
 
 /** Looks that can play an archetype. */
 export function artPool(arch) {

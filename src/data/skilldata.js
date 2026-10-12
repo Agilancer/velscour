@@ -1,4 +1,4 @@
-// 16 classes x 3 trees x 20 skills = 960 skills.
+// 16 classes x 3 trees x 20 skills = 960 skills, plus the Necromancer's 4th tree (Skeletal Legion): 980.
 // Each line: "Name|kind|element|fx|mods"
 // Tree layout is 5 rows x 4 columns; each column is a prerequisite chain.
 // Row level requirements: 1, 6, 12, 20, 30.
@@ -95,6 +95,14 @@ export const SKILLDATA = {
       'Confuse|curse|shadow|sigil|curse=confuse', 'Toxic Burst|aoe|poison|explosion|r=1.4 poison', 'Lower Resist|curse|arcane|sigil|curse=amp amt=40', 'Plague Spear|proj|poison|spear|pierce poison exp',
       'Pestilence|zone|poison|poison|follow r=1.5 dur=10 cd=15', 'Bone Curse|curse|phys|bone|curse=decay r=1.4', 'Blight Wave|fissure|poison|plague|range=1.5', 'Soul Rend|chain|shadow|spirit|n=6 leech',
       'Plague Apocalypse|rain|poison|acid|n=30 r=2 cd=6', "Death's Embrace|curse|shadow|sigil|curse=amp,slow,fear r=2 at=self cd=10", 'Contagion|nova|poison|poison|n=3 r=1.8 cd=6', 'Doom|curse|shadow|sigil|curse=doom r=0.8 dmg=4 cd=8',
+    ],
+    // Skeletal Legion: a 4th tree, one skill per skeleton the user drew (src/data/summons.js, docs/ENEMY_ART.md)
+    [
+      'Skeletal Reaver|summon|phys|skeleton|sum=reaver max=3', 'Skeletal Crossbowman|summon|phys|skeleton|sum=crossbowman max=3', 'Skeletal Pyromancer|summon|fire|skeleton|sum=pyromancer max=3', 'Mend Bones|heal|shadow|bone|amt=12 party cd=6',
+      'Skeletal Spearman|summon|phys|skeleton|sum=spearman max=3', 'Coffin Guard|summon|phys|skeleton|sum=coffinguard max=2', 'Skeletal Plaguecaller|summon|poison|skeleton|sum=plaguecaller max=3', 'Bone Bishop|summon|holy|skeleton|sum=bishop max=1',
+      'Chained Jailer|summon|phys|skeleton|sum=jailer max=2', 'Gravedigger|summon|phys|skeleton|sum=gravedigger max=2', 'Skeletal Stormcaller|summon|light|skeleton|sum=stormcaller max=3', 'Knell Ringer|summon|shadow|skeleton|sum=bellringer max=2',
+      'Ramskull Berserker|summon|phys|skeleton|sum=berserker max=2', 'Bone Standard-Bearer|summon|phys|skeleton|sum=standard max=1', 'Pyre Inquisitor|summon|fire|skeleton|sum=pyreknight max=2', 'Thornbone Druid|summon|poison|skeleton|sum=druid max=2',
+      'Reaper King|summon|shadow|skeleton|sum=reaperking max=1 cd=10', 'Grave Warband|summon|phys|skeleton|sum=warband n=5 dur=20 cd=30', 'Skeletal Archlich|summon|shadow|skeleton|sum=archlich max=1 cd=10', 'Conclave of Bones|summon|shadow|skeleton|sum=conclave n=4 dur=20 cd=35',
     ],
   ],
   barbarian: [

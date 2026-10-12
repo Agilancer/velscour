@@ -48,6 +48,12 @@ its archetype's looks, so a level reads as a themed bestiary, and the next visit
   While the art is loading it draws the archetype's pixel sprite instead. Monsters carry
   `art`/`swap`/`artH` alongside the old `sprite`/`pal`, and corpses copy them.
 
+## Player minions (the Necromancer's skeletons)
+`assets/source/enemies/minions/necro_warriors.png` and `necro_casters.png` are sliced by the same `enemies` step and
+catalogued as `SUMMON_ART` in `src/data/bestiary.js`. They are in `ART_BY_ID` (so `enemyImage` and `Creature.draw`
+handle them) but not in `BESTIARY`, so levels never roll them as monsters. A summon uses one with `look: { art: id }`
+in `src/data/summons.js`; see `docs/HANDOFF.md` (status item 13) and `node tools/tests/legion.js`.
+
 ## Adding monsters (Set 2 and later)
 1. Put the sheets in `assets/source/enemies/set2/` with descriptive names. If they arrive as
    `assets/Enemy Assets Set 2/...`, `git mv` them there.

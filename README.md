@@ -53,7 +53,7 @@ Progress saves automatically in the browser (localStorage), and you can keep up 
 ## What's in this draft
 
 - **16 classes** (Paladin, Ranger, Wizard, Necromancer, Barbarian, Dragoon, Totem Master, Death Knight, Arcane Sorcerer, Carrion Witch, Bard, Slime Lord, Boomerang Knight, Lancer, Dragon Knight, Gunner). Each one uses its sprite from the design sheet.
-- **960 unique skills**, 60 per class: three trees of 20, laid out as 5 tiers × 4 prerequisite chains (tiers unlock at levels 1/6/12/20/30). Skills cap at level 20 and gain synergy from points in the same tree. Default abilities are granted automatically at levels 1, 2, 4, 8, 12, 16, 22, 28 and 34.
+- **980 unique skills**, 60 per class: three trees of 20 (the Necromancer has a fourth, the **Skeletal Legion**: 20 painted skeleton warriors and casters to summon), laid out as 5 tiers × 4 prerequisite chains (tiers unlock at levels 1/6/12/20/30). Skills cap at level 20 and gain synergy from points in the same tree. Default abilities are granted automatically at levels 1, 2, 4, 8, 12, 16, 22, 28 and 34.
   - 23 behaviours combine with 10 elements and around 40 visual styles: projectiles (pierce, bounce, homing, split, boomerang return, lobbed, frozen-orb spray, gravity pull), novas, meteors, channelled death lasers and breath cones, chain lightning, walls of fire/ice/slime/thorns, ground zones, orbiting blades and spinning hammers, cyclones, whirlwinds, leaps, dashes and omnislash, blinks, summons, totems and turrets, auras and transformations, curses (amplify, weaken, fear, confuse, charm, decay, life tap, iron maiden, living bomb, doom), traps and mines, rains of arrows/meteors/blades, sky strikes, fissures and corpse explosions.
 - **Skill bar**: LMB, 1–8 and RMB, plus 4 potion slots (Z X C V) built on the provided HUD art, with live life/mana orbs, XP bar and cooldowns. Drag skills onto it from the Skill Book or Skill Tree, or click a slot to choose one.
 - **Combat & gore**: crits, resistances, armor, block, leech, thorns, knockback, burn/chill/freeze/shock/poison/bleed/acid shred. Blood sprays, pooling blood decals, bouncing gibs, corpses, overkill explosions and screen shake. Gore can be set to Off, Bloody or Extreme.
@@ -77,7 +77,7 @@ tools/tests/                   headless-browser test scripts (Playwright + Chrom
 docs/HANDOFF.md, CLAUDE.md     developer hand-off notes: spec, status, open issues, subsystem reference
 src/main.js                    boot + main loop
 src/core/                      input, camera/iso math, audio synth, asset loading, utils
-src/data/                      classes, 960 skill specs, skills logic, summons, monsters, biomes, items
+src/data/                      classes, 980 skill specs, skills logic, summons, monsters, biomes, items
 src/world/                     tile map, dungeon generator, town layout
 src/gfx/                       pixel-art sprite system, VFX/gore, skill shapes, town art
 src/game/                      world, player, monsters/AI, combat, skills runtime, loot, render, save, flow
@@ -96,7 +96,7 @@ Art you provided, used directly:
 
 - **Monster sheets**: 7 sheets of 10 monsters each, cut into atlases and mapped to AI archetypes and the boss pool. See [docs/ENEMY_ART.md](docs/ENEMY_ART.md).
 
-Placeholder art: summons, Demon Lord Velscour and item icons are drawn as ASCII pixel-art in `src/gfx/pixelart.js` and palette-swapped. Town buildings and ground are drawn procedurally in `src/gfx/townart.js`.
+Placeholder art: most summons (the Necromancer's skeletons use painted art), Demon Lord Velscour and item icons are drawn as ASCII pixel-art in `src/gfx/pixelart.js` and palette-swapped. Town buildings and ground are drawn procedurally in `src/gfx/townart.js`.
 
 **To swap in real art**, replace the sheets in `assets/source/` and rerun:
 

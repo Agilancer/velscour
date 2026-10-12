@@ -172,7 +172,8 @@ export function describe(sk, L, dmg) {
     case 'blink': s = `Teleport to the target location${m.nova ? `, releasing a burst for ${D}` : ''}.`; break;
     case 'summon': {
       const S = SUMMONS[m.sum];
-      s = `Summon ${n > 1 ? n + ' ' + plural(n, S ? S.name : m.sum) : 'a ' + (S ? S.name : m.sum)}${m.dur ? ` for ${m.dur}s` : ''}${m.max ? ` (max ${m.max})` : ''}. ${S && S.desc ? S.desc : ''} Minion hits deal ${D}.`;
+      const MD = S && S.pool ? (dmg ? `<b>${dmg[0]}–${dmg[1]}</b> damage of their own element` : 'damage') : D; // a mixed band casts its own elements
+      s = `Summon ${n > 1 ? n + ' ' + plural(n, S ? S.name : m.sum) : 'a ' + (S ? S.name : m.sum)}${m.dur ? ` for ${m.dur}s` : ''}${m.max ? ` (max ${m.max})` : ''}. ${S && S.desc ? S.desc : ''} Minion hits deal ${MD}.`;
       break;
     }
     case 'buff': s = `${m.party ? 'You and your allies gain' : 'Gain'} +${buffAmount(sk, L)}% ${(m.buff || ['dmg']).map((b) => BUFFNAME[b] || b).join(', ')} for ${Math.round(skillDuration(sk, L))}s.${m.pulse ? ` Pulses for ${D} around you.` : ''}${m.transform ? ' Transforms your body.' : ''}`; break;
