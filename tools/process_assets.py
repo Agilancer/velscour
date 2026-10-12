@@ -9,6 +9,7 @@ JSON atlases under assets/. Re-run this whenever a source sheet changes:
     python3 tools/process_assets.py          # everything
     python3 tools/process_assets.py tiles    # floor/wall atlases only
     python3 tools/process_assets.py classes [paladin]   # class art packs (tools/classart.py, docs/CLASS_ART.md)
+    python3 tools/process_assets.py gear [paladin]      # armor + helm libraries (tools/gearart.py, docs/CLASS_ART.md)
 
 Outputs
   assets/sprites/classes/<class>.webp  one trimmed full-body sprite per class
@@ -482,6 +483,10 @@ def main():
         process_tiles()
     if "props" in args:
         process_props()
+    if "gear" in args:
+        from gearart import process_gear_art
+        process_gear_art(args[args.index("gear") + 1:])
+        return
     for flag in ("classes", "classart"):
         if flag in args:
             from classart import process_class_art

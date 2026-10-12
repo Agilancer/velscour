@@ -1,5 +1,5 @@
-// Class art pack check (docs/CLASS_ART.md): a Paladin with catalog gear, armor poses (idle, attack, cast,
-// both facings), the inventory with catalog icons, and a run of ability effects. Screenshots ca_*.png.
+// Class art pack check (docs/CLASS_ART.md): a Paladin with catalog weapons/shields, the inventory with catalog
+// icons, and a run of ability effects. Screenshots ca_*.png. (Body armor and helmets: gear.js.)
 //   node tools/tests/classart.js [paladin]
 const { openGame, report } = require('./harness');
 const CLS = process.argv[2] || 'paladin';
@@ -16,13 +16,13 @@ const CLS = process.argv[2] || 'paladin';
     const eq = G.char.equip;
     const { rollItem, itemName } = await import('/src/data/items.js');
     // some mythic catalog gear in the bag
-    for (const slot of ['weapon', 'offhand', 'head', 'body']) {
+    for (const slot of ['weapon', 'offhand']) {
       const it = rollItem(60, { slot, rarity: 5 });
       G.char.bag[G.char.bag.indexOf(null)] = it;
     }
     return {
-      armor: Object.keys(meta.armor).length, items: Object.keys(meta.items).length, fx: Object.keys(meta.fx).length,
-      start: ['weapon', 'offhand', 'head', 'body'].map((s) => eq[s] && `${s}: ${itemName(eq[s])} ${eq[s].art || '(generic)'}`),
+      items: Object.keys(meta.items).length, fx: Object.keys(meta.fx).length,
+      start: ['weapon', 'offhand'].map((s) => eq[s] && `${s}: ${itemName(eq[s])} ${eq[s].art || '(generic)'}`),
       bag: G.char.bag.filter(Boolean).map((it) => `${itemName(it)} ${it.art || ''} r${it.rarity}`),
     };
   }, CLS);
@@ -35,47 +35,19 @@ const CLS = process.argv[2] || 'paladin';
   await shot('ca_inventory');
   await page.keyboard.press('i');
 
-  // into a dungeon; equip a mythic body armor so the outfit changes
-  const poses = await page.evaluate(async () => {
+  // into a dungeon
+  await page.evaluate(async () => {
     const { G, game } = window.VELSCOUR;
     const { BIOME_BY_ID } = await import('/src/data/biomes.js');
     G.godMode = true;
     game.buildDungeon(1, BIOME_BY_ID.catacombs);
     await new Promise((r) => setTimeout(r, 300));
     for (const c of G.world.creatures) if (c.team === 'enemy') c.dead = true;
-    const body = G.char.bag.find((it) => it && it.slot === 'body' && it.rarity === 5);
-    G.char.equip.body = body; G.player.recompute();
-    return { body: body.uname, art: body.art };
   });
-  console.log('equipped', JSON.stringify(poses));
-  await page.waitForTimeout(800); // the armor strip loads lazily
-  const clip = await page.evaluate(async () => {
-    const { G } = window.VELSCOUR; const { camera } = await import('/src/core/view.js');
-    G.settings.zoom = 1.6; camera.computeZoom(); camera.follow(G.player.x, G.player.y, 0, true);
-    await new Promise((r) => setTimeout(r, 200));
-    const [x, y] = camera.tileToScreen(G.player.x, G.player.y, 0);
-    return { x: Math.max(0, x - 160), y: Math.max(0, y - 230), width: 320, height: 280 };
-  });
-  const frames = [];
-  for (const [label, set, t, flip] of [['idle', null, 0, false], ['atk3', 0, 0.25, false], ['atk4', 0, 0.35, false], ['cast2', 6, 0.12, false], ['cast4', 6, 0.33, true]]) {
-    const f = await page.evaluate(({ set, t, flip }) => {
-      const { G } = window.VELSCOUR; const p = G.player;
-      p.pose = set === null ? null : { set, t, dur: 0.6 };
-      p.flip = flip; p.update = () => {}; // freeze the pose for the screenshot
-      const a = p.artFrame();
-      return a ? a.frame : 'none';
-    }, { set, t, flip });
-    await page.waitForTimeout(250);
-    frames.push(`${label}=${f}`);
-    await page.screenshot({ path: require('path').join(require('./harness').OUT_DIR, 'ca_pose_' + label + '.png'), clip });
-  }
-  console.log('frames', frames.join(' '));
-  if (frames.some((f) => f.endsWith('none'))) { console.log('FAIL: armor art not drawn'); process.exitCode = 1; }
 
   // ability effects: cast a spread of skills (all points learned)
   const fx = await page.evaluate(async () => {
     const { G } = window.VELSCOUR; const p = G.player;
-    delete p.update; // restore the prototype update
     const { CLASS_SKILLS } = await import('/src/data/skills.js');
     const { skillFxPath } = await import('/src/gfx/artfx.js');
     const { artStrip } = await import('/src/core/classart.js');

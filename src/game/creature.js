@@ -190,26 +190,32 @@ export class Creature {
   }
 
   /**
-   * Draw one frame of a class-art pose strip ({img, frame, cw, ch, ax, ay, k}: cell size, feet anchor in the
-   * cell, world px per strip px). The art faces right; it is mirrored when the creature faces left.
+   * Draw a single-image hero ({img, frame, cw, ch, ax, ay, k}: cell size, feet anchor in the cell, world px
+   * per image px), with the same bob and squash as the class sprites. The art faces right; it is mirrored
+   * when the creature faces left. drawArtLayer(ctx, 'back' | 'front', where), if defined, draws effects
+   * behind and in front of it.
    */
   drawArt(ctx, a) {
     const px = isoX(this.x, this.y), py = isoY(this.x, this.y);
     let k = a.k * this.scale;
     if (this.spawnT < 0.3) k *= this.spawnT / 0.3;
     const bob = this.moving ? Math.abs(Math.sin(this.animT * 9)) * 2.2 : Math.sin(this.animT * 2) * 0.6;
+    const squash = this.moving ? 1 + Math.sin(this.animT * 18) * 0.03 : 1;
     const z = this.z + bob;
-    const w = a.cw * k, h = a.ch * k;
+    const w = a.cw * k, h = a.ch * k * squash;
     ctx.fillStyle = 'rgba(0,0,0,0.38)';
     ctx.beginPath(); ctx.ellipse(px, py, 13 * this.scale, 5.5 * this.scale, 0, 0, TAU); ctx.fill();
     const lx = this.lunge > 0 ? (Math.cos(this.facing) - Math.sin(this.facing)) * this.lunge * 8 : 0;
     const ly = this.lunge > 0 ? (Math.cos(this.facing) + Math.sin(this.facing)) * this.lunge * 4 : 0;
+    const dx = -a.ax * k, dy = -a.ay * k * squash;
+    const where = { img: a.img, x: px + lx, y: py + ly - z, dx, dy, k, flip: this.flip };
+    if (this.drawArtLayer) this.drawArtLayer(ctx, 'back', where);
     ctx.save();
     if (this.alpha !== undefined) ctx.globalAlpha = this.alpha;
     if (this.status.freeze && this.status.freeze.t > 0) ctx.filter = 'hue-rotate(180deg) saturate(1.6) brightness(1.2)';
-    ctx.translate(px + lx, py + ly - z);
+    else if (this.curses.charm && this.curses.charm.t > 0) ctx.filter = 'hue-rotate(90deg)';
+    ctx.translate(where.x, where.y);
     if (this.flip) ctx.scale(-1, 1);
-    const dx = -a.ax * k, dy = -a.ay * k;
     ctx.drawImage(a.img, a.frame * a.cw, 0, a.cw, a.ch, dx, dy, w, h);
     ctx.filter = 'none';
     if (this.flash > 0) {
@@ -218,7 +224,8 @@ export class Creature {
       ctx.drawImage(a.img, a.frame * a.cw, 0, a.cw, a.ch, dx, dy, w, h);
     }
     ctx.restore();
-    const top = py - a.ay * k * 0.95 - z;
+    if (this.drawArtLayer) this.drawArtLayer(ctx, 'front', where);
+    const top = py - this.spriteH * this.scale - z;
     this.screenTop = top;
     this.drawOverhead(ctx, px, top - 4, w * 0.6);
   }
