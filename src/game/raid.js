@@ -199,6 +199,7 @@ class Raid {
   update(dt) {
     const m = this.m, w = m.world, p = w.player;
     if (!p || p.dead) { m.moving = false; return; }
+    this.seeThrough(p, dt);
     const g = this.arena.gate;
     if (!this.announced && dist(p.x, p.y, g.x, (g.y0 + g.y1 + 1) / 2) < 9) {
       this.announced = true;
@@ -214,6 +215,7 @@ class Raid {
     }
     if (!this.sealed && this.inside(p, 1.5)) this.seal();
     this.t += dt;
+    this.minHp = Math.min(this.minHp ?? 1, p.hp / p.maxHp);
     if (!this.enraged && this.t > 300) this.enrage('Five minutes have passed');
     // next phase
     if (!this.inter && this.pi < this.marks.length && m.hp < m.maxHp * this.marks[this.pi]) { this.startInter(); return; }
@@ -234,6 +236,14 @@ class Raid {
       if (m.cd <= 0) m.startAction('melee', 0.45, { target: t });
     } else if (!this.inter) m.chase(dt, t);
     else m.moving = false;
+  }
+
+  /** The boss is three times a hero's height: fade it while the hero (and what's aimed at them) is behind it. */
+  seeThrough(p, dt) {
+    const m = this.m, h = m.artH * m.scale;
+    const dx = isoX(p.x, p.y) - isoX(m.x, m.y), dy = isoY(m.x, m.y) - isoY(p.x, p.y);
+    const behind = p.x + p.y < m.x + m.y && Math.abs(dx) < h * 0.4 && dy > -10 && dy < h;
+    m.alpha = clamp((m.alpha ?? 1) + (behind ? -4 : 4) * dt, 0.55, 1);
   }
 
   next() {
@@ -395,6 +405,8 @@ class Raid {
   onDeath() {
     const m = this.m, w = m.world;
     this.unseal();
+    // fight record, for balancing (tools/tests/autoplay.js prints it)
+    (G.raidLog || (G.raidLog = [])).push({ boss: this.tpl.id, depth: this.depth, secs: Math.round(this.t), minHp: +(this.minHp ?? 1).toFixed(2), phases: this.phases.length, mods: this.mods.join(',') });
     for (const c of [...this.wards, ...this.minions]) if (!c.dead) { c.dead = true; burst(c.x, c.y, 30, this.tpl.el, 12, 2); }
     // a raid boss pays out like three guardians
     if (w.player) { dropLoot(w, m); dropLoot(w, m); }
@@ -636,6 +648,7 @@ class Raid {
   tick(a, dt) {
     const m = this.m, w = m.world;
     const done = () => { m.state = 'idle'; m.cd = m.atkCd; };
+    if ((a.life = (a.life || 0) + dt) > 8) return done();
     switch (a.kind) {
       case 'raid_sweep':
         if (a.beams.every((b) => b.dead)) done();
@@ -715,7 +728,7 @@ class SweepBeam {
   }
   update(dt) {
     const m = this.m;
-    if (m.dead) return false;
+    if (m.dead || this.left <= 0) { this.dead = true; return false; }
     const turn = 1.7 * dt;
     this.a += this.dir * turn; this.left -= turn; this.t += dt;
     m.face(this.a);
@@ -727,7 +740,8 @@ class SweepBeam {
     }
     addLight(ex, ey, 2, 0.8);
     if (chance(dt * 30)) burst(ex, ey, 10, this.raid.tpl.el, 2, 2);
-    return this.left > 0;
+    if (this.left <= 0) this.dead = true;
+    return !this.dead;
   }
   danger(out) {
     const m = this.m, a = this.a + this.dir * 0.5;

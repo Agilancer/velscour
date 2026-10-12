@@ -27,6 +27,8 @@ node tools/tests/flow.js                           # town -> portal -> boss -> e
 node tools/tests/ui.js                             # skill tree, inventory, socketing, vendors
 node tools/tests/mobile.js                         # 844x390 touch layout + joystick
 node tools/tests/boss.js                           # Depth 100 Velscour arena + a depth 37 guardian
+node tools/tests/raid.js [5,30,55]                 # BOSS ROOMs: seal, every ability of all 8 raid bosses, phases, wards, death
+node tools/tests/mobs.js [levels]                  # monster pathing: awake monsters + guardians must reach the hero (stuck <= 2%)
 node tools/tests/bot.js paladin 2                  # bot plays depths 1..2, prints balance stats
 node tools/tests/skills.js wizard,gunner           # cast every skill of a class (all 16 if no arg; slow)
 node tools/tests/classart.js paladin               # class art pack: catalog weapons, ability effects
@@ -71,6 +73,8 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
 - After any gameplay change, run at least `flow.js` and the `skills.js` classes you touched. Run `mobile.js`
   for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
   `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`.
+  Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Raid bosses
+  (`src/game/raid.js`, every 5th depth): run `raid.js`.
 
 ## Git / GitHub
 - The working branch is `claude/amazing-rubin-kguehz`. PR https://github.com/Agilancer/velscour/pull/1

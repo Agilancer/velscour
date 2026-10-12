@@ -261,12 +261,16 @@ export class Monster extends Creature {
     N.t -= dt;
     if (N.t <= 0 || Math.abs(gx - N.gx) + Math.abs(gy - N.gy) > 2) {
       N.gx = gx; N.gy = gy; N.t = flow ? rand(0.2, 0.35) : rand(0.3, 0.5);
-      N.part = false;
+      N.part = false; N.none = false;
       if (!N.force && map.losWide(this.x, this.y, gx, gy, r)) N.path = null;
       else if (flow && (N.path = map.flowPath(this.x, this.y, r))) { N.part = true; N.force = false; }
-      else if (w.pathBudget > 0) { w.pathBudget--; N.path = map.findPath(this.x, this.y, gx, gy, 2500, r); N.force = false; }
-      else N.t = 0; // out of searches this frame: keep the old path and try again next frame
+      else if (w.pathBudget > 0) {
+        w.pathBudget--; N.path = map.findPath(this.x, this.y, gx, gy, 2500, r); N.force = false;
+        if (!N.path) N.t = rand(1.5, 2.5); // no way there (a sealed boss room...): don't search again for a while
+        N.none = !N.path;
+      } else N.t = 0; // out of searches this frame: keep the old path and try again next frame
     }
+    if (N.none && !N.path && !N.part) { this.moving = false; return d; } // unreachable: wait rather than walk into a wall
     let tx = gx, ty = gy;
     if (N.path) {
       // a flow path is only the first stretch of the way: walk all of it, then plan the next

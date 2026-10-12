@@ -284,7 +284,7 @@ export const game = {
     };
     this.setWorld(world, gen.start, old);
     c.lastBiome = biome.id;
-    HUD.setArea(`Depth ${depth}${depth > 100 ? ' — Endless Torment' : ''}${gen.raid ? ' · Boss Room' : ''}`, biome.name);
+    HUD.setArea(`Depth ${depth}${depth > 100 ? ' — Endless Torment' : ''}`, gen.raid ? `${biome.name} · Boss Room` : biome.name);
     playMusic(depth === 100 ? 'boss' : 'dungeon');
     const kin = tileset.mixed && BIOME_BY_ID[tileset.mixed];
     UI.centerMsg(biome.name.toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);
