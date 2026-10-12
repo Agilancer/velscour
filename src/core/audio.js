@@ -1,13 +1,13 @@
 // Sound: the user's samples (assets/audio/, imported by `process_assets.py audio`), with procedural Web Audio
 // fallbacks for sounds that have no sample (or until the samples finish loading), plus the music + ambience directors.
 //   sfx(name)           one-shot: a random sample from SAMPLES[name] if loaded, else the procedural SOUNDS[name]
-//   playMusic(kind)     'title' | 'town' | 'dungeon' | 'boss' | 'velscour': songs with quiet breaks between them
+//   playMusic(kind)     'title' | 'town': songs with quiet breaks between them (dungeons have ambience only)
 //   setAmbience(key)    a biome id or 'town' / 'title': a looped ambient bed that drifts louder and softer
 // Songs and beds stream through <audio> elements routed into the Web Audio graph, so they're never fully decoded.
 import { G } from '../state.js';
 
 let ac = null, master, sfxBus, musicBus, ambBus, noiseBuf, pulseWave;
-let voiceBuf = null, fanfareEnd = 0;
+let fanfareEnd = 0;
 const last = {};
 const AUDIO = 'assets/audio/';
 let manifest = null;               // assets/audio/audio.json
@@ -34,10 +34,6 @@ export function initAudio() {
   const n = 32, re = new Float32Array(n), im = new Float32Array(n);
   for (let k = 1; k < n; k++) im[k] = (2 / (k * Math.PI)) * Math.sin(k * Math.PI * 0.25);
   pulseWave = ac.createPeriodicWave(re, im);
-  // the level-up voice line (tools/levelup_voice.py); callback form for older Safari
-  fetch(AUDIO + 'voice/levelup.wav').then((r) => r.arrayBuffer())
-    .then((b) => ac.decodeAudioData(b, (buf) => { voiceBuf = buf; }, () => {}))
-    .catch(() => {});
   decks.music = [new Deck(musicBus), new Deck(musicBus)];
   decks.amb = [new Deck(ambBus), new Deck(ambBus)];
   for (const k in decks) for (const dk of decks[k]) dk.unlock();   // iOS: media elements must first play inside a gesture
@@ -156,60 +152,35 @@ export function sfx(name, vol = 1, pitch = 1) {
 const NOTE = (n) => 440 * Math.pow(2, (n - 69) / 12); // MIDI note -> Hz
 
 /**
- * Arcade level-up fanfare: a minor arpeggio climbing to a major stab, a ghostly tritone under it, then the voice.
- * Returns { voiceAt, voiceDur } in seconds from now (voiceDur 0 when the voice is off or not loaded), or null when
- * sound is off or a fanfare is still playing (several levels at once play it once).
+ * Grim level-up toll: a rising dread swell, then a sub boom, a cracked funeral bell and a low diminished choir drone.
+ * Returns { voiceAt, voiceDur } (the moment of the toll, 0), or null when sound is off or one is still ringing.
  */
 export function levelUpFanfare() {
   if (!ac || G.settings.sfx <= 0) return null;
   const now = ac.currentTime;
   if (now < fanfareEnd) return null;
-  const t0 = now + 0.02, s16 = 0.062;
+  const t0 = now + 0.02, ts = t0 + 0.55;
   try {
-    // three rising arpeggios: D minor, Bb, C, each bar kicked and bassed
-    const bars = [[62, 65, 69, 74, 38], [65, 70, 74, 77, 34], [67, 72, 76, 79, 36]];
-    bars.forEach((b, i) => {
-      const tb = t0 + i * 4 * s16;
-      b.slice(0, 4).forEach((n, j) => {
-        tone(tb + j * s16, s16 * 1.6, { wave: 'pulse', f0: NOTE(n), vol: 0.11, a: 0.003 });
-        tone(tb + j * s16, s16 * 1.4, { wave: 'square', f0: NOTE(n + 12), vol: 0.025, a: 0.003, detune: 8 });
-        noise(tb + j * s16, 0.025, { type: 'highpass', f0: 7000, vol: 0.05, a: 0.001 });
-      });
-      tone(tb, 4 * s16, { wave: 'triangle', f0: NOTE(b[4]), vol: 0.28, a: 0.004 });
-      tone(tb, 0.12, { f0: 150, f1: 42, vol: 0.45, a: 0.002 });
-    });
-    // the stab: D major (a heroic Picardy third), held with vibrato over a doom drum and a crash
-    const ts = t0 + 12 * s16, hold = 0.8;
-    [74, 78, 81, 86].forEach((n, i) => {
-      const o = ac.createOscillator(); o.setPeriodicWave(pulseWave); o.frequency.value = NOTE(n);
-      const lfo = ac.createOscillator(); lfo.frequency.value = 7; const lg = ac.createGain(); lg.gain.value = NOTE(n) * 0.012;
-      lfo.connect(lg); lg.connect(o.frequency);
-      const g = ac.createGain();
-      g.gain.setValueAtTime(0.0001, ts); g.gain.exponentialRampToValueAtTime(0.085 - i * 0.012, ts + 0.01);
-      g.gain.setValueAtTime(0.07 - i * 0.01, ts + hold * 0.5); g.gain.exponentialRampToValueAtTime(0.0001, ts + hold);
-      o.connect(g); g.connect(sfxBus); o.start(ts); lfo.start(ts); o.stop(ts + hold + 0.05); lfo.stop(ts + hold + 0.05);
-    });
-    tone(ts, hold, { wave: 'triangle', f0: NOTE(26), vol: 0.35, a: 0.004 });
-    tone(ts, hold * 0.9, { wave: 'sawtooth', f0: NOTE(38), vol: 0.06, a: 0.004 });
-    tone(ts, 0.35, { f0: 120, f1: 30, vol: 0.6, a: 0.002 });
-    noise(ts, 0.9, { type: 'highpass', f0: 5000, f1: 2500, vol: 0.22, a: 0.002 });
-    noise(ts, 0.18, { type: 'bandpass', f0: 1800, f1: 900, q: 1.5, vol: 0.35, a: 0.002 });
-    // the creepy part: a detuned tritone ghost sliding down beneath the triumph
-    tone(ts + 0.2, 1.1, { f0: NOTE(80), f1: NOTE(74), vol: 0.035, a: 0.25 });
-    tone(ts + 0.2, 1.1, { f0: NOTE(80) * 1.03, f1: NOTE(74) * 0.97, vol: 0.03, a: 0.25 });
-    tone(ts + 0.35, 1.2, { wave: 'sawtooth', f0: NOTE(32), f1: NOTE(31), vol: 0.05, a: 0.3 });
+    // dread swell into the toll
+    noise(t0, 0.6, { type: 'bandpass', f0: 120, f1: 900, q: 2, vol: 0.3, a: 0.5 });
+    tone(t0, 0.6, { f0: 40, f1: 70, vol: 0.25, a: 0.5 });
+    // the toll: sub boom, thud, a cracked low bell (inharmonic partials)
+    tone(ts, 1.4, { f0: 70, f1: 26, vol: 0.7, a: 0.003 });
+    noise(ts, 0.5, { f0: 500, f1: 60, vol: 0.6, a: 0.002 });
+    [[0.5, 0.2], [1, 0.16], [1.19, 0.1], [1.5, 0.07], [2, 0.06], [2.74, 0.04], [3.76, 0.025]].forEach(([m, v], i) =>
+      tone(ts, 3.6 - i * 0.3, { f0: 98 * m, f1: 98 * m * 0.985, vol: v, a: 0.004, detune: i % 2 ? 6 : -6 }));
+    // a low diminished choir under it (D, F, Ab), detuned saws through a dark filter
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; lp.connect(sfxBus);
+    [38, 41, 44, 50].forEach((n, i) => [-9, 9].forEach((dt) => {
+      const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = NOTE(n); o.detune.value = dt;
+      const g = ac.createGain(); g.gain.setValueAtTime(0.0001, ts); g.gain.exponentialRampToValueAtTime(0.03 - i * 0.004, ts + 0.6);
+      g.gain.exponentialRampToValueAtTime(0.0001, ts + 3.4);
+      o.connect(g); g.connect(lp); o.start(ts); o.stop(ts + 3.5);
+    }));
+    noise(ts + 0.3, 2.6, { type: 'bandpass', f0: 380, f1: 180, q: 4, vol: 0.12, a: 0.8 });   // a breath in the dark
   } catch (e) { /* audio errors are never fatal */ }
-  const voiceAt = 12 * s16 + 0.55;
-  let voiceDur = 0;
-  if (voiceBuf && G.settings.voice !== false) {
-    try {
-      const src = ac.createBufferSource(); src.buffer = voiceBuf;
-      const g = ac.createGain(); g.gain.value = 0.95;
-      src.connect(g); g.connect(sfxBus); src.start(t0 + voiceAt);
-      voiceDur = voiceBuf.duration;
-    } catch (e) { voiceDur = 0; }
-  }
-  const end = voiceAt + Math.max(voiceDur, 0.6);
+  const voiceAt = 0.57, voiceDur = 0;
+  const end = voiceAt + 3;
   fanfareEnd = now + end;
   // duck the music and ambience under it
   for (const [bus, v] of [[musicBus, G.settings.music], [ambBus, G.settings.amb ?? 0.5]]) {
@@ -342,10 +313,6 @@ const R2 = ([a, b]) => a + Math.random() * (b - a);
 const MUSIC = {
   title: { songs: ['hymn_of_the_abyss'], gap: [10, 16], vol: 0.9 },
   town: { songs: ['empty_school'], gap: [30, 70], vol: 0.75 },
-  dungeon: { songs: ['love_potion_x_spooky_night', 'the_girl_who_fell_into_a_mysterious_dream', 'brilliant_deduction_resolution',
-    'empty_station', 'empty_aquarium', 'empty_pool', 'empty_shopping_mall'], gap: [25, 60], shuffle: true, vol: 0.6 },
-  boss: { songs: ['mad_pierrot'], gap: [2, 4], vol: 0.8 },
-  velscour: { songs: ['hymn_of_the_abyss'], gap: [2, 4], vol: 0.9, at: 6.6 },
 };
 let music = null;   // { kind, def, deck, queue, next (ac time of next song or 0), gen }
 
@@ -357,10 +324,6 @@ export function playMusic(kind, opts = {}) {
   if (music && music.deck) music.deck.stop(1.5);
   const deck = decks.music.find((d) => !d.playing && (!music || d !== music.deck)) || decks.music[0];
   const queue = def.shuffle ? [...def.songs].sort(() => Math.random() - 0.5) : [...def.songs];
-  if (kind === 'dungeon' && music && music.kind === 'boss') {   // after a guardian, the level's music resumes after a breather
-    music = { kind, def, deck, queue, next: ac.currentTime + R2([6, 12]), song: null };
-    return;
-  }
   music = { kind, def, deck, queue, next: ac.currentTime + (opts.delay ?? (music ? 1.2 : 0.3)), song: null };
 }
 

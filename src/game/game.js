@@ -271,7 +271,6 @@ export const game = {
     world.onBossAwake = (m) => {
       UI.centerMsg(m.name, m.isVelscour ? 'The Demon Lord rises' : m.raid ? `${m.title}${m.raid.mods.length ? ' · ' + m.raid.modText() : ''}` : 'Guardian of the Exit', 3);
       sfx('boss');
-      playMusic(m.isVelscour ? 'velscour' : 'boss');
     };
     world.onBossKilled = (m) => {
       exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
@@ -282,7 +281,6 @@ export const game = {
       if (first) { c.skillPoints++; UI.log('Bonus skill point for clearing a new depth!', '#ffd860'); }
       addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#40a0ff', 5));
       sfx('gate');
-      playMusic('dungeon');
       UI.refresh();
       this.autosave();
       if (m.isVelscour) setTimeout(() => victoryScreen(() => {}), 3200);
@@ -290,7 +288,7 @@ export const game = {
     this.setWorld(world, gen.start, old);
     c.lastBiome = biome.id;
     HUD.setArea(`Depth ${depth}${depth > 100 ? ' — Endless Torment' : ''}`, gen.raid ? `${biome.name} · Boss Room` : biome.name);
-    playMusic('dungeon'); setAmbience(biome.id);
+    stopMusic(); setAmbience(biome.id);
     const kin = tileset.mixed && BIOME_BY_ID[tileset.mixed];
     UI.centerMsg(biome.name.toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);
     if (!c.tips.dungeon) { c.tips.dungeon = true; setTimeout(() => UI.log('Find the exit portal. It stays sealed until the depth\'s guardian is slain. The blue portal returns you to town.', '#ffe2a0'), 1500); }

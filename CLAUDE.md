@@ -74,8 +74,6 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   buttons) is cut by `python3 tools/process_assets.py ui` into `assets/ui/` (`hud.webp`, `hud.json`, `minimap_ring.webp`,
   `btn_<name>.webp`). The skill bar's slot order, keys and save migration live in `src/data/bar.js`.
   Never hand-edit the generated files in `assets/sprites|ui|tiles|audio`.
-  The level-up voice line `assets/audio/voice/levelup.wav` is not from a zip: `tools/levelup_voice.py` renders it
-  (espeak-ng + MBROLA us2), and the banner's typed subtitles in `HUD.levelUp` are timed to it.
 - Paths must stay **relative** (`assets/...`, `src/main.js`, never `/assets/...`), because the site is served
   from the `/velscour/` subpath on GitHub Pages. The `/src/...` imports in `tools/tests/` are fine, because the
   tests run against a local server at the root.

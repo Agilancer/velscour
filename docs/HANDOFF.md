@@ -81,8 +81,9 @@ Requirements, as stated (✅ = implemented in the draft):
   only format every browser decodes. Sample-backed sounds (`SAMPLES` in `src/core/audio.js`) cover melee swings, hits and
   blocks, bows, fire, cold, arcane, explosions, buffs, chests, doors, the exit gate and footsteps. Everything else, and
   anything still loading, uses the old procedural `SOUNDS`. **Music** (`MUSIC`): Hymn of the Abyss on the title screen,
-  Empty School in town (repeats after 30-70 s breaks), the other 7 songs shuffled in dungeons (25-60 s breaks),
-  Mad Pierrot for guardians, and the Hymn again (from its hit) when Velscour wakes. **Ambience** (`AMB`): every area
+  Empty School in town (repeats after 30-70 s breaks), and nothing else: the user asked for all other music to be
+  removed, so dungeons, guardians and Velscour have ambience only (the other 8 songs are skipped by `MUSIC_KEEP` in
+  `tools/audiopack.py`; their source zips stay in `assets/source/audio/`). **Ambience** (`AMB`): every area
   has 1-2 BG-loop beds. One plays at all times, drifting between soft and fuller every 10-25 s and sometimes
   crossfading to the other bed. It ducks to 45% under a song and swells in the breaks. The town uses Forest Night
   (Duskhollow is at dusk). There's a Settings slider for Ambience (`settings.amb`).
@@ -94,7 +95,7 @@ Requirements, as stated (✅ = implemented in the draft):
   replays the intro without the prompt. Returning from a sub-menu while the Hymn still plays shows the logo lit. Any
   click or key during the intro skips to the burst (it seeks the song to just before the hit). The tar drips and pile
   explosions were removed at the user's request.
-- **Level-up voice:** `assets/audio/voice/levelup.wav` is the one sound not from the user's zips. `tools/levelup_voice.py`
+- **Level-up (user request):** no voice line any more (the wav and `tools/levelup_voice.py` were removed). `levelUpFanfare()` is a grim bell toll + choir drone, the banner bleeds in from blur over a dark vignette, crit damage numbers drip blood (`drawDrips` in vfx.js). Old notes below may still mention the voice.
   pre-renders it, because a browser can't synthesize intelligible speech through WebAudio (speechSynthesis can't be
   routed through effects). The fanfare before it is procedural (`levelUpFanfare()` in `src/core/audio.js`).
 - **The Slime Lord is blue.** The user changed his art from green to blue, so the `acid` element (only he uses it)
@@ -551,7 +552,7 @@ Do these in order, unless the user asks for something else. Their feedback after
     - Elements: `swing hit crit squish gore bones fire cold light arcane holy shadow poison acid blood phys`
     - Other: `explode shoot bow pickup gold orb potion levelup portal ui error boss die summon heal buff thud roar hurt block sonic note chest door gate step critping`
     - `SAMPLES[name]` = `{s: sample slugs, v: gain, layer: procedural sound on top, max: concurrent voices (3)}` takes priority once loaded. `step_stone|dirt|water|wood` are sample-only names.
-  - `playMusic(kind, {delay})`: `'title' | 'town' | 'dungeon' | 'boss' | 'velscour'` (see `MUSIC`). No-op if that kind is already current. `'boss'` → `'dungeon'` resumes after a 6-12 s breather.
+  - `playMusic(kind, {delay})`: `'title' | 'town'` (see `MUSIC`). No-op if that kind is already current. Entering a dungeon calls `stopMusic()`.
   - `stopMusic(sec)`, `setAmbience(key)` (a biome id, `'town'` or `'title'`; see `AMB`), `stopAmbience(sec)`.
 - **assets.js**
   - `CLASS_IDS` (:4): 16 ids in sheet order.

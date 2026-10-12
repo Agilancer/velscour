@@ -3,7 +3,7 @@ import { G } from '../state.js';
 import { rand, chance, clamp, angleTo, dist, TAU } from '../core/util.js';
 import { sfx, levelUpFanfare } from '../core/audio.js';
 import { camera } from '../core/view.js';
-import { floatText, addEffect, Column, Ring, Sigil, sparkle, burst, spawn, elem, bloodSpray } from '../gfx/vfx.js';
+import { floatText, addEffect, Column, Ring, Sigil, sparkle, burst, spawn, elem, bloodSpray, smoke } from '../gfx/vfx.js';
 import { Creature } from './creature.js';
 import { CLASSES } from '../data/classes.js';
 import { SKILLS, CLASS_SKILLS, effLevel, skillBaseDamage, manaCost, cooldown, useTime, weaponCoef, grantedSkillsAt, skillRange } from '../data/skills.js';
@@ -196,22 +196,19 @@ export class Player extends Creature {
       G.ui.refresh();
     }
   }
-  /** Grimdark-arcade level-up: a freeze frame, hellfire pillar, burning sigil, shockwaves, a gore fountain, a blast. */
+  /** Grimdark level-up: a dark sigil, a column of blood-red hellfire, smoke and a blood fountain, a shove. */
   levelUpFx() {
     const { x, y } = this;
-    G.hitStop = Math.max(G.hitStop, 0.14);
-    G.flash = Math.max(G.flash || 0, 0.35);
-    camera.shake(12);
-    addEffect(new Sigil(x, y, 2.6, 3.2), 'ground');
-    addEffect(new Column(x, y, '#ff3a10', 1.3, 70, 520));
-    addEffect(new Column(x, y, '#ffd860', 0.9, 30, 420));
-    addEffect(new Ring(x, y, 0.2, 4.5, 0.7, '#ffffff', 6));
-    addEffect(new Ring(x, y, 0.2, 6, 1.1, '#ff3018', 9, { fill: true }));
-    addEffect(new Ring(x, y, 0.5, 3.4, 1.5, '#ffd860', 3));
-    sparkle(x, y, 30, '#ffe080', 40, 0.9);
-    burst(x, y, 20, 'fire', 46, 7, { up: 2.4 });
-    burst(x, y, 30, 'blood', 26, 5, { up: 2 });
-    for (let i = 0; i < 8; i++) bloodSpray(x, y, 30, (i * TAU) / 8, 6, '#8a0b08', 1.8);
+    G.hitStop = Math.max(G.hitStop, 0.08);
+    camera.shake(7);
+    addEffect(new Sigil(x, y, 2.6, 3.4, '#8a0a06', '#3a0000'), 'ground');
+    addEffect(new Column(x, y, '#7a0804', 1.6, 60, 520));
+    addEffect(new Column(x, y, '#2a0000', 1.8, 90, 380));
+    addEffect(new Ring(x, y, 0.2, 6, 1.4, '#5a0404', 9, { fill: true }));
+    smoke(x, y, 10, '#120606', 14, 14);
+    sparkle(x, y, 30, '#a01008', 24, 0.9);
+    burst(x, y, 30, 'blood', 36, 5, { up: 2.2 });
+    for (let i = 0; i < 10; i++) bloodSpray(x, y, 30, (i * TAU) / 10, 6, '#5a0604', 1.8);
     // the blast throws nearby monsters back
     for (const m of this.world ? this.world.creatures : []) {
       if (m.team !== 'enemy' || m.dead || m.rank === 'boss') continue;

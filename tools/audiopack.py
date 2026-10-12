@@ -6,7 +6,7 @@ Audio import: unpacks the user's sound zips in assets/source/audio/ and transcod
 
   SFX.zip                -> assets/audio/sfx/<slug>.mp3     mono one-shots (attacks, spells, doors, footsteps, torch)
   BG Loops N.zip         -> assets/audio/amb/<slug>.mp3     60 s stereo ambient beds (+ the river/waterfall loops)
-  Game Music / Music Pack 2 -> assets/audio/music/<slug>.mp3
+  Game Music / Music Pack 2 -> assets/audio/music/<slug>.mp3   only the MUSIC_KEEP songs (title + town); the rest are skipped
   assets/audio/audio.json   {sfx: [...], amb: {slug: seconds}, music: {slug: seconds}}  (read by src/core/audio.js)
 Needs ffmpeg + ffprobe on PATH. Slugs: lower case, spaces -> '_' ("Sword Attack 1.ogg" -> sword_attack_1).
 """
@@ -23,6 +23,7 @@ SRC = os.path.join(ROOT, "assets", "source", "audio")
 OUT = os.path.join(ROOT, "assets", "audio")
 
 SFX_SKIP = re.compile(r"(Chain |Jump|Land|Chopping and Mining|Put Away|Take Out|Sheath|Unsheath)", re.I)
+MUSIC_KEEP = {"hymn_of_the_abyss", "empty_school"}   # title screen + town; dungeons have ambience only
 LOOPS = re.compile(r"(Loop\.ogg$)", re.I)   # river / waterfall / torch loops are ambient beds, not one-shots
 
 
@@ -76,9 +77,11 @@ def process_audio():
                     elif is_amb:
                         encode(p, os.path.join(OUT, "amb", s + ".mp3"), False, 7)
                         manifest["amb"][s] = duration(p)
-                    else:
+                    elif s in MUSIC_KEEP:
                         encode(p, os.path.join(OUT, "music", s + ".mp3"), False, 4)
                         manifest["music"][s] = duration(p)
+                    else:
+                        continue
                     print("audio:", s)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
