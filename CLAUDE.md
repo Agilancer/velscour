@@ -31,6 +31,7 @@ node tools/tests/bot.js paladin 2                  # bot plays depths 1..2, prin
 node tools/tests/skills.js wizard,gunner           # cast all 60 skills per class (all 16 if no arg; slow)
 node tools/tests/classart.js paladin               # class art: poses, catalog items, ability effects
 node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners in those biomes (docs/WALLS.md)
+node tools/tests/titlefx.js                        # title logo fire, tar drips/pile, spark ignition + explosion
 ```
 Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, because layout bugs don't throw.
 - In cloud containers, Chromium is at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` and
