@@ -247,7 +247,14 @@ export const Auto = {
     // a bug in the bot must never stop the world from updating
     try { this.tick(dt); } catch (e) {
       console.error('auto-play:', e);
-      this.path = null; this.nav = null; this.town = null;
+      this.path = null; this.nav = null;
+      // skip the town errand that failed instead of starting the whole shopping round over
+      if (this.town) {
+        const st = this.town.steps[this.town.i];
+        if (st) G.ui.log(`Auto-play hit a snag (${escapeHtml(st.label.toLowerCase())}) and moved on.`, '#ff8080');
+        this.town.i++; this.town.phase = 'walk'; this.town.t = 0;
+        try { G.ui.closeAll(); } catch (e2) { /* ignore */ }
+      }
       if (++this.errors > 20) { this.toggle(false); G.ui.log('Auto-play stopped after repeated errors.', '#ff8080'); }
     }
   },
@@ -933,28 +940,30 @@ export const Auto = {
     }
     const npc = vendorNpc(w, step.vendor);
     if (!npc) { T.i++; return; }
+    T.t += dt;
     if (T.phase === 'walk') {
       this.setStatus(step.label);
-      if (this.goTo(npc.x, npc.y, (npc.reach || 1.8) - 0.3, dt)) { T.phase = 'open'; T.t = 0; }
+      // blocked short of the counter (summons, props): trade from anywhere in reach, or give up on this vendor
+      const reach = npc.reach || 1.8, d = dist(p.x, p.y, npc.x, npc.y);
+      if (this.goTo(npc.x, npc.y, reach - 0.3, dt) || (T.t > 6 && d <= reach)) { T.phase = 'open'; T.t = 0; }
+      else if (T.t > 25) { G.ui.log(`Auto-play couldn't reach the ${npc.vendor.title} and moved on.`, '#ff8080'); T.i++; T.t = 0; }
       this.watchStuck(dt);
       return;
     }
-    T.t += dt;
     if (T.phase === 'open') {
-      Vendor.open(step.vendor);
+      try { Vendor.open(step.vendor); } catch (e) { console.warn('auto-play could not open a vendor', e); }
       T.phase = 'act'; T.t = 0;
       return;
     }
     if (T.phase === 'act' && T.t > 0.5) {
       try { step.fn(); } catch (e) { console.warn('auto-play town step failed', e); }
-      this.manageHero();
-      G.ui.refresh();
+      try { this.manageHero(); G.ui.refresh(); } catch (e) { console.warn('auto-play town step failed', e); }
       T.phase = 'linger'; T.t = 0;
       return;
     }
     if (T.phase === 'linger' && T.t > 1.1) {
       G.ui.closeAll();
-      T.i++; T.phase = 'walk';
+      T.i++; T.phase = 'walk'; T.t = 0;
     }
   },
 
