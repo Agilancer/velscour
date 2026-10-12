@@ -39,6 +39,7 @@ Progress saves automatically in the browser (localStorage), and you can keep up 
 | I / K / B | Inventory & character · Skill tree · Skill book |
 | Tab / M | Map overlay |
 | Esc | Close windows / pause menu |
+| P / Auto button | Auto-play on or off |
 | Mouse wheel | Zoom |
 
 | Mobile | |
@@ -47,6 +48,7 @@ Progress saves automatically in the browser (localStorage), and you can keep up 
 | Tap the world | Move / attack / talk / pick up |
 | Right-hand button cluster | ATK (left-click skill), RMB and 1–8. Tap to cast with auto-aim, hold to repeat, long-press to change the skill |
 | Potions on the bar | Tap to drink |
+| Auto button (top right) | Auto-play on or off |
 
 ## What's in this draft
 
@@ -60,6 +62,7 @@ Progress saves automatically in the browser (localStorage), and you can keep up 
 - **Progression loop**: biomes come in random order (all 19 before any repeats). About two levels in three mix their tiles with a like-coloured biome, so a Frozen Ossuary can bleed into Crystal Caverns. Clearing a depth lets you descend into the next biome or return to town, and the town portal then leads to the next depth. Death sends you back to town at **Depth 1** with all gear, levels and skills kept. After Velscour falls, Endless Torment depths continue past 100.
 - **Loot**: Common, Uncommon, Rare, Epic and Legendary items across 7 equipment slots and 10 material tiers, with around 45 affix types and 22 legendary powers. Drops also include gold, health/mana orbs and potions. **Gems**: 12 stat gems in 6 tiers, plus shot-pattern gems (+projectiles, split, echo-cast, orbiting orbs, nova-on-cast, chain/pierce, homing, bigger areas, +skill levels). Rarer gear holds more sockets (up to 6).
 - **Town of Duskhollow**: Weaponsmith, Armorer, Blacksmith (+1…+10 upgrades), Enchanter (reroll/add affixes), Alchemist (potions), Gem Merchant (buy, or combine 3 → 1 higher tier), Jeweler (add sockets, remove gems) and Gambler. Townsfolk wander the plaza.
+- **Auto-play**: the Auto button (or P) hands the hero to an AI that plays for you. It spends skill and attribute points, keeps the skill bar sorted, fights with every skill on the bar (dodging telegraphed attacks, kiting with ranged builds, drinking potions, using cooldowns, buffs, curses and minions), picks up and equips upgrades, sockets gems, then goes to town to sell, restock potions, buy gear and gems, add sockets, upgrade, enchant and gamble, and keeps delving toward Velscour. It also gets back up after a death. Move, click or tap to take over for a moment; it resumes when you let go.
 - Procedural sound effects and ambient music (no audio files), settings, a help screen and six hero save slots.
 
 ## Project layout
