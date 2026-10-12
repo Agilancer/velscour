@@ -11,6 +11,7 @@ import { ARCH, ELITE_AFFIXES, bossName, uniqueName } from '../data/enemies.js';
 import { SUMMONS } from '../data/summons.js';
 import { ART_BY_ID, REVIVED, greaterSwap, rollLooks, uniqueSwap } from '../data/bestiary.js';
 
+const LEASH = 10; // minions fight what's within this many tiles of the hero
 const PROJ_FX = { fire: 'fireball', cold: 'shard', light: 'spark', poison: 'blob', shadow: 'skull', arcane: 'orb', holy: 'bolt', blood: 'blob', acid: 'blob', phys: 'rock' };
 
 export function monsterBase(level) {
@@ -68,11 +69,10 @@ export class Monster extends Creature {
       if (others.length) return others[0];
     }
     if (this.summon) {
-      const o = this.owner;
-      const range = this.static ? (this.atk && this.atk.range) || 8 : 9;
-      const cx = this.static ? this.x : o.x, cy = this.static ? this.y : o.y;
-      if (this.aggro && !this.aggro.dead && this.aggro.team !== this.team && dist(cx, cy, this.aggro.x, this.aggro.y) < range + 2) return this.aggro;
-      return w.nearestHostile(this.team, cx, cy, range, this.static);
+      if (!this.static && this.owner) return this.pickFoe();
+      const range = (this.atk && this.atk.range) || 8;
+      if (this.aggro && !this.aggro.dead && this.aggro.team !== this.team && dist(this.x, this.y, this.aggro.x, this.aggro.y) < range + 2) return this.aggro;
+      return w.nearestHostile(this.team, this.x, this.y, range, true);
     }
     // monsters: taunting totems first, then whatever hits them, then the closest of player/minions
     const taunt = w.query(this.x, this.y, 6, (c) => c.taunt && c.team !== this.team)[0];
@@ -155,18 +155,164 @@ export class Monster extends Creature {
     }
   }
 
-  followOwner(dt) {
-    const o = this.owner;
-    if (!o || this.static) { this.moving = false; return; }
-    const d = dist(this.x, this.y, o.x, o.y);
-    if (d > 14) { const [x, y] = this.world.map.randomNear(o.x, o.y, 1.5); this.x = x; this.y = y; return; }
-    if (d > 2.6) this.moveToward(o.x + Math.cos(this.id) * 1.4, o.y + Math.sin(this.id) * 1.4, dt, this.speed * 1.1);
-    else this.moving = false;
+  // ---------------------------------------------------------------- minions: foes, paths, following
+  /**
+   * A mobile minion's foe: a hostile near the hero that it can walk to (the flow field holds walking distances from
+   * the hero). Closest first, with the hero's attackers, its own attacker and its current foe preferred, and melee
+   * minions spread over the pack. Re-picked a few times a second, or at once when the foe is gone or too far.
+   */
+  pickFoe() {
+    const w = this.world, o = this.owner, map = w.map;
+    const f = this.foe, live = (e) => e && !e.dead && e.team !== this.team && e.targetable !== false;
+    if (dist(this.x, this.y, o.x, o.y) > LEASH + 6) return (this.foe = null); // strayed too far: go back first
+    if (live(f) && w.time < this.foeT && dist(o.x, o.y, f.x, f.y) < LEASH + 4) return f;
+    this.foeT = w.time + rand(0.35, 0.55);
+    const flow = map.flowAt(o.x, o.y) === 0; // the field is centred on this hero
+    const melee = this.ai !== 'ranged' && !this.cast;
+    let hunt = null;
+    if (melee) {
+      hunt = new Map();
+      for (const c of w.creatures) if (c !== this && c.summon && c.owner === o && c.foe && !c.dead && c.ai !== 'ranged' && !c.cast) hunt.set(c.foe, (hunt.get(c.foe) || 0) + 1);
+    }
+    let best = null, bs = Infinity;
+    const reach = melee ? 0 : this.range || (this.atk && this.atk.range) || 7;
+    for (const e of w.hostiles(this.team, o.x, o.y, LEASH)) {
+      // a foe it can't walk to (or only the long way round) is only worth it to a shooter that already has a shot
+      const walk = flow ? map.flowAt(e.x, e.y) : -1;
+      if ((walk < 0 || walk > LEASH * 1.6) && !(dist(this.x, this.y, e.x, e.y) < reach && map.los(this.x, this.y, e.x, e.y))) {
+        if (flow || !map.los(o.x, o.y, e.x, e.y)) continue;
+      }
+      let sc = dist(this.x, this.y, e.x, e.y) + 0.4 * dist(o.x, o.y, e.x, e.y);
+      if (!map.los(this.x, this.y, e.x, e.y)) sc += 3;
+      if (e.target === o) sc -= 2.5;
+      if (e === this.aggro) sc -= 2;
+      if (e === f) sc -= 1.5;
+      if (hunt) sc += 1.2 * (hunt.get(e) || 0);
+      if (sc < bs) { bs = sc; best = e; }
+    }
+    return (this.foe = best);
   }
 
-  /** Move toward a target using LOS, else the flow field (monsters) or direct steering. */
+  /**
+   * Walk to (gx,gy) around walls: straight while the way is clear, else along an A* path, re-planned as the goal
+   * moves (a few searches per frame for all minions, w.pathBudget). Blocked for a while: re-plan, then sidestep.
+   * Returns the distance left.
+   */
+  navTo(gx, gy, dt, speed = this.speed) {
+    const w = this.world, map = w.map;
+    const d = dist(this.x, this.y, gx, gy);
+    if (this.ghost) { this.moveToward(gx, gy, dt, speed); return d; }
+    const N = this.nav || (this.nav = { t: 0, path: null, gx, gy, cx: this.x, cy: this.y, ct: 0, last: 0, stuck: 0, side: 0, sa: 0, force: false });
+    const r = this.r * 0.8 + 0.03;
+    // progress check: no headway for half a second means stuck
+    if (w.time - N.last > 0.2) { N.ct = 0; N.cx = this.x; N.cy = this.y; }
+    N.last = w.time;
+    if ((N.ct += dt) >= 0.5) {
+      if (d > 0.6 && dist(this.x, this.y, N.cx, N.cy) < Math.min(0.3, speed * this.speedMul() * 0.15)) {
+        N.stuck++; N.force = true; N.t = 0;
+        if (N.stuck >= 2) { N.side = rand(0.25, 0.45); N.sa = angleTo(this.x, this.y, gx, gy) + (chance(0.5) ? 1.57 : -1.57); }
+      } else N.stuck = 0;
+      N.ct = 0; N.cx = this.x; N.cy = this.y;
+    }
+    if (N.side > 0) {
+      N.side -= dt;
+      if (!map.move(this, Math.cos(N.sa) * speed * dt, Math.sin(N.sa) * speed * dt)) N.sa += Math.PI;
+      this.moving = true; this.face(N.sa);
+      return d;
+    }
+    N.t -= dt;
+    if (N.t <= 0 || Math.abs(gx - N.gx) + Math.abs(gy - N.gy) > 2) {
+      N.gx = gx; N.gy = gy; N.t = rand(0.3, 0.5);
+      if (!N.force && map.losWide(this.x, this.y, gx, gy, r)) N.path = null;
+      else if (w.pathBudget > 0) { w.pathBudget--; N.path = map.findPath(this.x, this.y, gx, gy, 2500, r); N.force = false; }
+      else N.t = 0; // out of searches this frame: keep the old path and try again next frame
+    }
+    let tx = gx, ty = gy;
+    if (N.path) {
+      while (N.path.length > 1 && dist(this.x, this.y, N.path[0][0], N.path[0][1]) < 0.3) N.path.shift();
+      if (N.path.length > 1) { tx = N.path[0][0]; ty = N.path[0][1]; }
+    }
+    this.moveToward(tx, ty, dt, speed);
+    return d;
+  }
+
+  /**
+   * No foe: stay with the hero. Walk (around walls) to a slot in a loose formation behind the way they are heading,
+   * run to catch up when they move off, and potter about near them while they stand still.
+   */
+  followOwner(dt) {
+    const o = this.owner, w = this.world;
+    if (!o || this.static) { this.moving = false; return; }
+    const d = dist(this.x, this.y, o.x, o.y);
+    const F = this.fol || (this.fol = { ox: o.x, oy: o.y, hd: o.facing || 0, still: 0, at: false, go: false, wx: 0, wy: 0, wt: rand(0.5, 2), i: 0, n: 1, iT: 0 });
+    const mx = o.x - F.ox, my = o.y - F.oy;
+    if (mx * mx + my * my > 0.002) { F.hd = Math.atan2(my, mx); F.ox = o.x; F.oy = o.y; F.still = 0; F.go = false; } else F.still += dt;
+    // left far behind, or wedged for good: rejoin the hero
+    if (d > LEASH + 8 || (this.nav && this.nav.stuck >= 5 && d > 4)) return this.rejoin();
+    if (F.still > 1.5 && (F.go || (d < 4.5 && w.map.los(this.x, this.y, o.x, o.y)))) return this.potter(dt, F, o); // only once it has caught up
+    const [sx, sy] = this.slot(F, o) || [o.x, o.y];
+    const ds = dist(this.x, this.y, sx, sy), home = sx === o.x && sy === o.y ? 1.6 : 0.3;
+    if (F.still > 0.3 && (ds < home || (F.at && ds < 1.2))) { F.at = true; this.moving = false; return; }
+    F.at = false;
+    // keep pace with the hero, sprint when left behind
+    const sp = Math.max(this.speed * 1.1, (o.speed || 4) * (d > 4 ? 1.2 : d > 2.5 ? 1 : 0.85));
+    if (this.navTo(sx, sy, dt, sp) < home) this.moving = false;
+  }
+
+  /** This minion's spot in the formation: rings of 6, 10, 14 in an arc behind the hero, wherever there's floor. */
+  slot(F, o) {
+    const w = this.world, map = w.map, r = this.r * 0.8 + 0.03;
+    if (w.time > F.iT) {
+      let i = 0, n = 0;
+      for (const c of w.creatures) if (c.summon && c.owner === o && !c.dead && !c.static && !c.ghost) { if (c === this) i = n; n++; }
+      F.i = i; F.n = n; F.iT = w.time + 1;
+    }
+    const ring = F.i < 6 ? 0 : F.i < 16 ? 1 : 2, k = F.i - [0, 6, 16][ring];
+    const per = Math.min([6, 10, 14][ring], F.n - [0, 6, 16][ring]);
+    const base = F.hd + Math.PI + ((k + 0.5) / per - 0.5) * Math.min(per * 0.55, ring ? 4 : 3.2);
+    for (const rad of [1.6 + ring * 0.9, 1.1 + ring * 0.5]) {
+      for (const da of [0, 0.5, -0.5, 1, -1]) {
+        const x = o.x + Math.cos(base + da) * rad, y = o.y + Math.sin(base + da) * rad;
+        if (map.circleFree(x, y, r) && map.losWide(o.x, o.y, x, y, r)) return [x, y];
+      }
+    }
+    return null;
+  }
+
+  /** The hero is standing still with nothing to fight: amble to spots nearby (in sight of them), pause, look about. */
+  potter(dt, F, o) {
+    const map = this.world.map, r = this.r * 0.8 + 0.03;
+    if (F.go) {
+      if (this.navTo(F.wx, F.wy, dt, this.speed * 0.45) < 0.25 || (this.nav && this.nav.stuck >= 2)) { F.go = false; F.wt = rand(1.5, 4); this.moving = false; }
+      return;
+    }
+    this.moving = false;
+    if ((F.wt -= dt) > 0) return;
+    F.wt = rand(1.5, 4);
+    if (chance(0.25)) { this.face(rand(TAU)); return; }
+    for (let i = 0; i < 8; i++) {
+      const a = rand(TAU), rr = rand(1.3, 3.6), x = o.x + Math.cos(a) * rr, y = o.y + Math.sin(a) * rr;
+      if (dist(x, y, this.x, this.y) < 0.8 || !map.circleFree(x, y, r) || !map.losWide(o.x, o.y, x, y, r)) continue;
+      F.wx = x; F.wy = y; F.go = true;
+      if (this.nav) this.nav.stuck = 0;
+      return;
+    }
+  }
+
+  /** Blink back to the hero's side. */
+  rejoin() {
+    const o = this.owner, map = this.world.map;
+    sparkle(this.x, this.y, 10, '#80c0ff', 8, 0.4);
+    const [x, y] = map.randomNear(o.x, o.y, 1.5);
+    this.x = x; this.y = y; this.moving = false;
+    this.nav = null; this.foe = null; this.aggro = null;
+    sparkle(x, y, 10, '#80c0ff', 8, 0.4);
+  }
+
+  /** Move toward a target using LOS, else the flow field (monsters) or direct steering. Minions path round walls. */
   chase(dt, t, speed = this.speed) {
     const w = this.world;
+    if (this.summon && !this.static) { this.navTo(t.x, t.y, dt, speed); return; }
     const d = dist(this.x, this.y, t.x, t.y);
     if (this.fly || this.ghost || d < 2.2 || (d < 9 && w.map.los(this.x, this.y, t.x, t.y))) {
       this.moveToward(t.x, t.y, dt, speed);

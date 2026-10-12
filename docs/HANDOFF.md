@@ -1052,7 +1052,7 @@ TileMap (`src/world/map.js`), all coords in tiles; tile (tx,ty) covers [tx,tx+1)
 - `move(e,dx,dy,ghost=false)` :34 - axis-separated slide with radius `e.r*0.8`; ghost mode only checks `isFloor` of the new centre (passes blockers, not void). Returns moved bool.
 - `los(x0,y0,x1,y1)` :54 - ray-march 3 samples/tile on `isFloor` (blockers do NOT block LOS). `losWide(...)` :195 - 4 samples/tile with `circleFree(...,0.22)` (blockers DO block). `rayLength(x0,y0,ang,len)` :66 - 0.2 step.
 - `buildFlow(px,py,maxD=48)` :75 - 4-connected BFS distance field from the player tile over walkable tiles; early-returns if the player tile is unchanged (`flowFrom`). `flowAt(x,y)` :101 (-1 unreachable). `flowStep(x,y)` :107 - best of 8 neighbours (no diagonal corner cutting) -> `[cx,cy]` tile centre or null.
-- `findPath(sx,sy,gx,gy,maxNodes=3000)` :127 - 8-dir A* (diag 1.414, Euclid heuristic); goal snapped to nearest walkable within ring r<4; returns `smooth()`ed waypoint list (start excluded; last point replaced by raw (gx,gy)) or null. `smooth(sx,sy,path)` :182 - greedy farthest-visible via `losWide`.
+- `findPath(sx,sy,gx,gy,maxNodes=3000,r=0.28)` - 8-dir A* (diag 1.414, octile heuristic, binary heap, typed arrays reused between calls via a generation stamp, so minions can call it often); goal snapped to the nearest walkable tile within 3; returns `smooth()`ed waypoints (start excluded; the last is the raw (gx,gy) only if that tile was walkable, else the snapped tile centre) or null. `r` is the mover's collision half-size for smoothing. `smooth(sx,sy,path,r=0.28)` - greedy farthest-visible via `losWide`.
 - `randomNear(x,y,r,rng=Math.random)` :206 - 40 tries for walkable+`circleFree(0.3)`, else returns (x,y) unchanged.
 - `reveal(x,y,r)` :214 - sets `seen` in a disc.
 - `buildWalls(tileset,rng)` :229 - builds `segments`, `pillars`, `segGrid`. Must be called after `t` is final.
@@ -1095,7 +1095,7 @@ Throne (dungeon.js:212): fixed 44x80 map: entrance hall (17,68,10x9), gauntlet r
 
 Town (town.js:26): 46x46, floor on [2,44) with grass; plaza (18..30)^2; dirt roads W, N and a diagonal SE road; cobble portal platform 38..42 x 37..41. Vendor i uses `shopSpots[i]` + `palettes[i]` (:45-64); building footprint fully `block`ed; NPC stands 0.9 tiles outside the door ('sw' door -> +y side, 'se' -> +x side). 3 plain houses, well (24.5,24.5), 9 lamps (`light:5`), up to 46 trees/pines (sway, blocking), 40 tries of bush/rock/barrel/crate (bushes non-blocking), shop dressing. Generated once and cached in `game.js:123 townCache`; `seen` is cleared per visit; villagers (game.js:128) wander with `randomNear(24,25,7)`.
 
-World.update order (world.js:76): time += dt -> flow field rebuild (every 0.25 s, maxD 40, only if player alive) -> `rebuildGrid()` -> player.update -> other creatures (enemies with `!awake` farther than 26 tiles are skipped entirely) -> npc.update -> hazards (removed when update returns false or `dead`) -> `separate()` -> remove dead non-player creatures after 0.05 s -> loot.update (removed on false) -> corpses age (removed at t>40 or `used`; cap 70) -> `map.reveal(p,11)` -> `ambient(dt)` -> `updateVfx`. Spatial hash: CELL=2 tiles, key `(cx<<16)|(cy&0xffff)`, built once per frame before updates (stale within a frame). Separation pushes pairs in the SAME cell only, overlap threshold `(a.r+b.r)*0.85`, weights player 0.25 / other 0.75, static never moves, via `map.move` (so respects walls). Monsters chase via `flowStep` only when target is the player and not in LOS (monster.js:166-178); everything else steers directly. Player click-move uses `losWide` else `findPath(...,2500)` (player.js:451).
+World.update order (world.js:76): time += dt -> flow field rebuild (every 0.25 s, maxD 40, only if player alive) -> `rebuildGrid()` -> player.update -> other creatures (enemies with `!awake` farther than 26 tiles are skipped entirely) -> npc.update -> hazards (removed when update returns false or `dead`) -> `separate()` -> remove dead non-player creatures after 0.05 s -> loot.update (removed on false) -> corpses age (removed at t>40 or `used`; cap 70) -> `map.reveal(p,11)` -> `ambient(dt)` -> `updateVfx`. Spatial hash: CELL=2 tiles, key `(cx<<16)|(cy&0xffff)`, built once per frame before updates (stale within a frame). Separation pushes pairs in the SAME cell only, overlap threshold `(a.r+b.r)*0.85`, weights player 0.25 / other 0.75, static never moves, via `map.move` (so respects walls). Monsters chase via `flowStep` only when target is the player and not in LOS; minions path with `Monster.navTo` (A*, at most `w.pathBudget` = 6 searches per frame for all of them) and read the flow field as walking distance from the hero when picking foes. Player click-move uses `losWide` else `findPath(...,2500)` (player.js:451).
 
 Render pipeline (render.js:172): clear black + `lights.length=0` -> `camera.apply` (world px) -> tile bounds via inverse-iso of view corners (viewRect(40) with -40/+140 y margins) -> floors (each drawn 1.2px oversize to hide seams) -> `drawDecals` -> corpses -> hazards: `ground` drawn now, numeric `depth` sorted, others "top" -> `drawEffects('ground')` -> depth-sorted list (key d, type f): hazards f1, wall segs f2 / pillars f3 (from `wallsIn(tx0-2,ty0-2,tx1+3,ty1+3)`), props f4 (x+y), buildings f5 (footprint-centre depth), creatures f6 (x+y, +0.2 flying), npcs f7, loot f8 (x+y-0.2), chests f9, portals f10; stable `Array.sort` so ties keep that insertion order -> `drawParticles` -> top hazards -> `drawEffects('top')` additive -> screen space: `drawLighting` -> red hurt flash, white flash, low-HP (<30%) pulse -> `drawOverheadNames` -> `drawLootLabels` -> `drawTexts`. Fog of war is NOT drawn in the main view (only darkness from lighting); `seen` is minimap-only.
 Occlusion/translucency (only relative to the player, pd=p.x+p.y, player rect = iso(p) + [-16,-62]..[+16,-4]): segs alpha 0.3 if `depth>pd+0.6` and sprite rect overlaps; pillars 0.3 if `depth>pd+0.6`, |dx|<24 and base in (ppy-10, ppy+64); atlas props and trees/pines 0.35 if `d>pd+0.5`, |dx|<40, base in (ppy-8, ppy+90); buildings 0.4 if `depth>pd` and the inner 70%x85% of the sprite overlaps.
@@ -1129,8 +1129,7 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 - Two coordinate spaces for `sbox`: creatures are in CSS px (render.js:271, used by controls.js:13), NPCs are in world px (render.js:168, converted with `camera.toScreen` in controls.js:28 and render.js:361). Off-screen creatures get `sbox=null` (not clickable, no overhead name).
 - `los()` ignores `block` (towers, trees, buildings, town houses), but `losWide()`/`walkable()` honour it. As a result monsters see and target through props, while player pathing goes around them.
 - `circleFree` checks only 4 corners. With r*0.8 > 0.5 (e.g. velscour r 0.9) the corners are more than 1 tile apart, so a big creature can straddle a single blocked tile.
-- `findPath` replaces the final waypoint with the raw goal even when the goal was snapped off an unwalkable tile (map.js:161). The mover then slides against the wall at the end.
-- `buildFlow` targets the player only. If the player stands on a non-walkable tile, the field is all -1 and monsters fall back to straight steering. Summons never use the flow field.
+- `buildFlow` targets the player only. If the player stands on a non-walkable tile, the field is all -1 and monsters fall back to straight steering. Minions (`pickFoe`) then fall back to line of sight to judge reach.
 - The spatial grid is rebuilt once per frame before updates. Creatures added mid-frame are invisible to `query()` until the next frame. Separation only handles pairs inside the same 2x2 cell. Pairs where the static creature comes first in a cell are skipped (`if (a.static) continue`, world.js:123).
 - Dormant enemies more than 26 tiles away aren't updated at all (no status ticks, no regen).
 - Building sort depth is the footprint centre (town.js:70). Entities near a long building's ends can sort wrongly, and the 0.4 alpha only applies around the player.
@@ -1151,7 +1150,6 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 
 ### Open issues noticed
 - src/game/render.js:177 - `lights.length = 0` is executed at the start of renderWorld, before drawLighting consumes `lights` at render.js:329; all addLight calls happen during World.update (world.js:148/153/158, loot.js:58/61, hazards.js:127/309/567/649, monster.js:103, gfx/shapes.js:248), so only the player light ever appears in the lighting overlay. Fix: clear lights at the start of World.update (or snapshot after drawLighting), keeping paused frames in mind.
-- src/world/map.js:161 - findPath overwrites the final waypoint with the raw goal (gx,gy) even when the goal was snapped from an unwalkable tile, so the path ends at an unwalkable point.
 - src/world/map.js:60 - los() uses isFloor and ignores `block`, so monsters/ranged checks see through towers, trees and town buildings, while losWide/walkable treat them as solid.
 - src/world/map.js:29-31 - circleFree samples only 4 bounding-box corners; for creatures with r*0.8 > 0.5 (e.g. velscour r=0.9, enemies.js:27) a single blocked tile can sit between the corners undetected.
 - src/game/world.js:120-123 - separate() only resolves pairs within the same CELL=2 bucket (overlaps across cell borders persist) and skips any pair whose first element is static, so static-vs-mobile separation depends on array order.
@@ -1344,6 +1342,16 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
   10. If in `windup`/`act`: `runAction`.
   11. Bosses: `bossUpdate`.
   12. `pickTarget`. If none: `idle` (wander within 2.5 of home, or `followOwner`).
+     Mobile minions (`pickFoe`): hostiles within `LEASH` (10) of the hero that are at most 16 tiles' walk from them
+     (flow field), or that a shooter can already hit; score = distance + 0.4 x distance from the hero, -2.5 if it
+     targets the hero, -2 if it hit the minion, -1.5 for the current foe, +3 without LOS, +1.2 per other melee minion
+     on it. Re-picked every 0.35-0.55 s; dropped beyond LEASH+4 of the hero or when the minion is 16+ tiles away.
+     `chase` for minions is `navTo`: straight while `losWide` is clear, else an A* path re-planned every 0.3-0.5 s or
+     when the goal moves 2+ tiles; no headway for 0.5 s forces a re-plan, twice running a short sidestep.
+     `followOwner`: a slot in rings of 6/10/14 in an arc behind the hero's walking direction (`slot`), sprinting up
+     to 1.2x the hero's speed when behind; once caught up (within 4.5, in LOS) and the hero has stood still 1.5 s,
+     `potter` ambles to spots within 3.6 of the hero (in their LOS) every 1.5-4 s. `rejoin` blinks a minion back
+     when 18+ tiles off or stuck 5 times in a row.
   13. On first target: `awake=true` and `alertPack` (wakes allies within 6).
   14. Dispatch on `ai`: melee/brute, ranged/caster, charger, swarm, nova, beamer, exploder, turret, aura, follow.
 - **Actions.**
@@ -1581,7 +1589,9 @@ See the `open_issues` field.
   with the best damage per cast time against the local crowd that can reach (melee range, nova radius, LOS, real
   reach). Cooldown skills get a x1.6 bonus so they fire when ready; mana-costing skills are skipped below a 12% mana
   reserve except on bosses. Positioning uses `engageRange` per kind; ranged builds kite when 3+ monsters are close or
-  when hurt. Watchdog: if the target's life hasn't dropped for 12 s, utility casts are banned for 10 s; after 25 s a
+  when hurt. `boldness()` (0..1: level over depth, life, life lost per second `hurt`, a boss nearby) shrinks the
+  ranged engage range from 0.8x reach (cap 8) toward 0.4x reach (cap 5.5, never under 2.6) and raises the kite
+  thresholds (crowd 3 to 6, life 55% to 35%); below 45% life it is at most 0.15. Watchdog: if the target's life hasn't dropped for 12 s, utility casts are banned for 10 s; after 25 s a
   non-boss target is shunned for 30 s; after 6 s the hero walks right up to it.
 - **Leaving a level** (`leaveLevel`): it calls `game.enterTown()` / `enterDungeon()` directly (no dialogs). It goes to
   town when fewer than 14 bag slots are free, healing potions are low, or every 4 depths when it has gold to spend.

@@ -67,8 +67,8 @@ function castTime(p, sk) {
 }
 /** How far a skill really reaches (returning projectiles turn back halfway). */
 const reachOf = (sk) => skillRange(sk) * (sk.kind === 'proj' && sk.m.ret ? 0.48 : 1);
-/** How close the hero should stand to use a skill on target t. */
-function engageRange(sk, t) {
+/** How close the hero should stand to use a skill on target t. bold (0..1, Auto.boldness): ranged builds close in. */
+function engageRange(sk, t, bold = 0) {
   if (!sk) return 1.5;
   switch (sk.kind) {
     case 'melee': return skillRange(sk) + t.r;
@@ -77,7 +77,8 @@ function engageRange(sk, t) {
     case 'wall': return sk.m.ring ? 2 : 6;
     case 'leap': case 'dash': return Math.min(skillRange(sk), 5);
   }
-  return Math.min(reachOf(sk) * 0.8, 8);
+  const r = reachOf(sk);
+  return Math.max(Math.min(r * 0.8, 2.6), Math.min(r * (0.8 - 0.4 * bold), 8 - 2.5 * bold));
 }
 const cdOf = (p, sk) => cooldown(sk) * (1 - p.st.cdr / 100);
 const avg = (d) => (d[0] + d[1]) / 2;
@@ -223,7 +224,7 @@ export const Auto = {
     this.town = null; this.transitT = 0; this.stuck = { t: 0, x: 0, y: 0, n: 0 }; this.jiggle = null;
     this.target = null; this.dodge = null; this.retreat = false; this.ignore = new WeakSet(); this.lastSig = '';
     this.screenT = 0; this.lastCast = {}; this.stall = null; this.banT = 0; this.shun = new WeakMap(); this.giveUp = new WeakSet();
-    this.lootFor = null; this.lootT = 0; this.wantCache = new WeakMap();
+    this.lootFor = null; this.lootT = 0; this.wantCache = new WeakMap(); this.hurt = 0; this.lastHp = -1;
   },
 
   setStatus(s) {
@@ -574,6 +575,9 @@ export const Auto = {
   dungeonTick(dt) {
     const p = G.player, w = G.world, c = G.char;
     this.navT -= dt;
+    // life lost per second (share of max), smoothed over a few seconds: how hard the fight is pushing back
+    if (this.lastHp >= 0) this.hurt += (Math.max(0, this.lastHp - p.hp) / p.maxHp / dt - this.hurt) * Math.min(1, dt / 3);
+    this.lastHp = p.hp;
     if (!this.nav || this.navT <= 0) this.buildNav();
     this.potions(w);
     // danger first: step out of telegraphed attacks and enemy ground effects
@@ -782,6 +786,19 @@ export const Auto = {
     return best;
   },
 
+  /**
+   * 0..1: how hard the hero can press in. High when over-levelled for the depth, healthy and barely scratched;
+   * drops fast when life is low or melting, and near a boss. Ranged builds close in and kite less as it rises.
+   */
+  boldness() {
+    const p = G.player, w = G.world, c = G.char;
+    const hpK = p.hp / p.maxHp;
+    let k = 0.55 + clamp((c.level - (w.depth || 1)) / 8, -0.5, 0.4) + (hpK - 0.7) * 0.9 - this.hurt * 4;
+    if (w.boss && !w.boss.dead && w.boss.awake && dist(p.x, p.y, w.boss.x, w.boss.y) < 12) k -= 0.25;
+    if (hpK < 0.45) k = Math.min(k, 0.15);
+    return clamp(k, 0, 1);
+  },
+
   /** Fight: choose a skill and cast it, or move into position. */
   combat(foes, fleeing) {
     const p = G.player, w = G.world;
@@ -807,9 +824,11 @@ export const Auto = {
     if (fleeing) return;
     // positioning
     const near = foes.filter((m) => dist(p.x, p.y, m.x, m.y) < 2.2).length;
-    let reach = engageRange(SKILLS[G.char.bar[0]], t);
+    const bold = this.boldness();
+    let reach = engageRange(SKILLS[G.char.bar[0]], t, bold);
     if (this.stall && this.stall.t > 6) reach = Math.min(reach, 1.6); // nothing is landing: walk right up to it
-    if (!melee && (near >= 3 || (near >= 1 && p.hp < p.maxHp * 0.55)) && this.kite(foes)) return;
+    // ranged builds back off from a crowd: later the bolder they are, and never while healthy and over-powered
+    if (!melee && (near >= 3 + Math.round(bold * 3) || (near >= 1 && p.hp < p.maxHp * (0.55 - 0.2 * bold))) && this.kite(foes)) return;
     if (d > reach || !w.map.los(p.x, p.y, t.x, t.y)) this.goTo(t.x, t.y, Math.max(0.6, reach * 0.85));
   },
   /** Step away from the crowd (ranged builds). */

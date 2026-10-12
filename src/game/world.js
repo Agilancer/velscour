@@ -76,6 +76,7 @@ export class World {
 
   update(dt) {
     this.time += dt;
+    this.pathBudget = 6; // A* searches the minions may run this frame (Monster.navTo)
     const p = this.player;
     // flow field toward the player for monster path finding
     this.flowTimer -= dt;
