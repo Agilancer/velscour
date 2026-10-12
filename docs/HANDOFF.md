@@ -270,6 +270,18 @@ are in section 7.
      monsters; `ZSCALE` (biomepack.py) and the `cutaway` radius (render.js) are the knobs. Doors and arches are purely
      visual. Biome names like "Endless Desert" now show catacomb architecture in a sand palette until packs for them
      arrive.
+15. **Minion pathing and bolder auto-play (branch `claude/sharp-mendel-hv98wv`, PR #16).** The user asked for pets
+   (Slime Lord, Necromancer, ...) that hunt foes near the hero, never get stuck on walls, path round the dungeon to
+   follow, and potter about when the hero is idle; and for auto-play that closes in instead of sniping from max range.
+   - `Monster.pickFoe` / `navTo` / `followOwner` / `slot` / `potter` / `rejoin` (section 7, "Entities"), and a fast
+     `map.findPath` (binary heap; a snapped goal no longer ends inside a wall).
+   - Auto-play `boldness()` shrinks the ranged engage range and kites later when the hero is strong and unhurt.
+   - Verified: new `tools/tests/pets.js` (4 levels: all 12 pets round a wall, none left behind on long walks, foes
+     round a corner killed, far foes ignored, idle pottering; the old code failed most of these), 60 extra wall trials,
+     flow, skills (necromancer, slime_lord), auto-play 12 min new vs old: wizard D8 vs D7, gunner D11 vs D8,
+     necromancer D9 vs D7, all 0 deaths; slime_lord 10 min reached D7, 0 deaths.
+   - Open: `legion.js` reports FAIL for 1-3 late-cast minions (pyreknight spell, archlich, reaperking) with the old code
+     too: the crowd is dead before they get a turn. The test needs more foes, not the AI.
 
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
