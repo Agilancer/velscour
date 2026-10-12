@@ -43,10 +43,12 @@ const mobile = process.argv[4] === 'mobile';
         status: Auto.status, attrs: Object.values(c.attrs).join('/'), sp: c.skillPoints,
         bar: c.bar.map((id) => (id ? SKILLS[id].name + ':' + (c.skills[id] || 0) : '-')).join(', '),
         gear: Object.values(c.equip).filter(Boolean).map((it) => `${itemName(it)}[r${it.rarity} i${it.ilvl} g${it.gems.length}/${it.sockets}]`).join('; '),
+        raids: (G.raidLog || []).splice(0).map((r) => `${r.boss}@D${r.depth} ${r.secs}s minHp=${r.minHp} ${r.mods}`).join('; '),
         bossHp: w && w.boss ? Math.round(w.boss.hp) + '/' + Math.round(w.boss.maxHp) + (w.boss.dead ? ' dead' : '') : '',
       };
     });
     console.log(`[${min}m] ${res.where} depth=${res.depth} lvl=${res.lvl} kills=${res.kills} deaths=${res.deaths} gold=${res.gold} hp=${res.hp} pots=${res.pots} bag=${res.bag} boss=${res.bossHp} | ${res.status}`);
+    if (res.raids) console.log(`   RAID BOSS KILLED: ${res.raids}`);
     if (min % 5 === 0 || min === minutes) console.log(`   attrs=${res.attrs} sp=${res.sp}\n   bar: ${res.bar}\n   gear: ${res.gear}`);
     if (res.depth !== lastDepth || min === minutes) { lastDepth = res.depth; await shot(`auto_${cls}_m${min}`); }
   }

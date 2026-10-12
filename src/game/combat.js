@@ -63,6 +63,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     if (C.amp && C.amp.t > 0) dmg *= 1 + C.amp.amt / 100;
     if (C.mark && C.mark.t > 0) dmg *= 1 + C.mark.amt / 100;
     if (tgt.status.shred && tgt.status.shred.t > 0) dmg *= 1 + tgt.status.shred.amt;
+    if (tgt.ward !== undefined) dmg *= tgt.ward; // a raid boss behind its warding crystals
     if (src && src.curses && src.curses.weaken && src.curses.weaken.t > 0 && !fromPlayer) dmg *= 1 - src.curses.weaken.amt / 100;
     if (fromPlayer) {
       const st = owner.st;

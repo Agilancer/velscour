@@ -5,7 +5,7 @@
 // simulation: apply the change, recompute the hero, score the result with charScore(), undo.
 import { G } from '../state.js';
 import { input } from '../core/input.js';
-import { dist, clamp, TAU, fmtInt, escapeHtml } from '../core/util.js';
+import { dist, clamp, TAU, fmtInt, escapeHtml, angleDiff } from '../core/util.js';
 import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, cooldown, useTime, skillRange, buffAmount, curseAmount, skillDuration, effLevel } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
 import { SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS } from '../data/items.js';
@@ -595,12 +595,14 @@ export const Auto = {
     this.lastHp = p.hp;
     if (!this.nav || this.navT <= 0) this.buildNav();
     this.potions(w);
-    // danger first: step out of telegraphed attacks and enemy ground effects
+    // danger first: hide from a raid boss's cataclysm, step out of telegraphed attacks and enemy ground effects
+    if (this.takeCover(dt)) { this.watchStuck(dt); return; }
     if (this.dodgeDanger(dt)) { this.watchStuck(dt); return; }
     const foes = enemyNear(w, p, 13).filter((m) => w.map.los(p.x, p.y, m.x, m.y));
     // retreat to the town portal when nearly dead with nothing left to heal with
     const healLeft = c.potions.hp + c.potions.rejuv > 0 || this.readySkill((s) => s.kind === 'heal');
-    if (!this.retreat && p.hp < p.maxHp * 0.22 && !healLeft && foes.length) this.retreat = true;
+    const sealed = w.raid && w.raid.sealed; // no way out of a sealed boss room
+    if (!this.retreat && p.hp < p.maxHp * 0.22 && !healLeft && foes.length && !sealed) this.retreat = true;
     if (this.retreat && (p.hp > p.maxHp * 0.75 || !foes.length && p.hp > p.maxHp * 0.5)) this.retreat = false;
     if (this.retreat) {
       const tp = w.portals.find((q) => q.type === 'town');
@@ -704,11 +706,39 @@ export const Auto = {
   },
 
   // ---------------------------------------------------------------- dodging
+  /** A raid boss is winding up its cataclysm: get out of its sight (behind a pillar) before it lands. */
+  takeCover(dt) {
+    const p = G.player, w = G.world, m = w.map;
+    const g = w.hazards.find((h) => h.safeAt && !h.dead);
+    if (!g) { this.cover = null; return false; }
+    if (g.safeAt(p.x, p.y) && !this.cover) return false; // already hidden: fight on from here
+    if (!this.cover || !g.safeAt(this.cover[0], this.cover[1])) {
+      let best = null, bs = Infinity;
+      const x0 = Math.floor(p.x), y0 = Math.floor(p.y);
+      for (let y = y0 - 14; y <= y0 + 14; y++) {
+        for (let x = x0 - 14; x <= x0 + 14; x++) {
+          const cx = x + 0.5, cy = y + 0.5;
+          if (!m.circleFree(cx, cy, 0.35) || !g.safeAt(cx, cy)) continue;
+          // well inside the shadow: its neighbours are hidden too
+          if (!g.safeAt(cx + 0.6, cy) || !g.safeAt(cx - 0.6, cy) || !g.safeAt(cx, cy + 0.6) || !g.safeAt(cx, cy - 0.6)) continue;
+          const d = this.navDist(cx, cy);
+          if (d < bs) { bs = d; best = [cx, cy]; }
+        }
+      }
+      if (!best) return false;
+      this.cover = best;
+    }
+    this.setStatus('Taking cover!');
+    this.goTo(this.cover[0], this.cover[1], 0.3, dt);
+    return true;
+  },
+
   /** Dangerous circles and lines on the ground right now (enemy telegraphs, delayed blasts, damaging zones). */
   dangers(w) {
     const out = [];
     for (const h of w.hazards) {
       if (h.team !== 'enemy' || h.dead) continue;
+      if (h.danger) { h.danger(out); continue; } // raid hazards describe their own zones
       if (h instanceof Delayed) out.push({ x: h.x, y: h.y, r: h.r + 0.45 });
       else if (h instanceof Area && h.dmg && h.dmg[1] > 0) out.push({ x: h.x, y: h.y, r: h.r + 0.3 });
       else if (h.lob && h.exp && h.tx !== undefined) out.push({ x: h.tx, y: h.ty, r: h.exp + 0.4 });
@@ -716,13 +746,19 @@ export const Auto = {
     for (const e of effects) {
       if (!(e instanceof Telegraph) || e.color === '#40ff60' || e.t >= e.dur) continue;
       if (e.kind === 'line') out.push({ line: true, x: e.x, y: e.y, x1: e.x + Math.cos(e.ang) * e.len, y1: e.y + Math.sin(e.ang) * e.len, r: e.w / 2 + 0.45 });
+      else if (e.kind === 'cone') out.push({ cone: true, x: e.x, y: e.y, ang: e.ang, half: e.half + 0.15, r: e.len + 0.5 });
       else out.push({ x: e.x, y: e.y, r: (e.r || 1.5) + 0.45 });
     }
     return out;
   },
   inDanger(list, x, y) {
     for (const d of list) {
-      if (d.line ? segDist(x, y, d.x, d.y, d.x1, d.y1) < d.r : Math.hypot(x - d.x, y - d.y) < d.r) return true;
+      if (d.ring) {
+        const r = Math.hypot(x - d.x, y - d.y);
+        if (r > d.r0 && r < d.r1 && Math.abs(angleDiff(d.gap, Math.atan2(y - d.y, x - d.x))) > d.gapW / 2) return true;
+      } else if (d.cone) {
+        if (Math.hypot(x - d.x, y - d.y) < d.r && Math.abs(angleDiff(d.ang, Math.atan2(y - d.y, x - d.x))) < d.half) return true;
+      } else if (d.line ? segDist(x, y, d.x, d.y, d.x1, d.y1) < d.r : Math.hypot(x - d.x, y - d.y) < d.r) return true;
     }
     return false;
   },
@@ -792,7 +828,8 @@ export const Auto = {
       if ((this.shun.get(m) || 0) > w.time && foes.length > 1) continue;
       let s = dist(p.x, p.y, m.x, m.y);
       if (m === this.target) s -= 1.5;
-      if (m.rank === 'boss') s -= 2.5;
+      if (m.isWard) s -= 6; // a raid boss's warding crystals: break them first
+      else if (m.rank === 'boss') s -= m.ward < 1 ? -4 : 2.5;
       else if (m.rank === 'unique' || m.rank === 'champion') s -= 0.5;
       if (m.hp < m.maxHp * 0.3) s -= 0.7;
       if (m.ai === 'ranged' || m.ai === 'caster') s -= 0.4;

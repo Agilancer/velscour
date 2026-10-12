@@ -330,9 +330,65 @@ are in section 7.
      the world runs; it resets when another hero is loaded.
    - Verified: screenshots of the banner sequence, hits/crits/dots/hurt and the plaque on desktop and 844x390 mobile;
      data_check, flow, ui, mobile, boss, skills (paladin, necromancer) and auto-play (wizard 10 min).
+16. **Monster pathing, special moves, raid boss rooms (branch `claude/cool-volta-ko9bm6`).** The user asked that all
+   monsters and bosses move about without getting stuck on doors, corners and arches, for better pathing, more
+   interesting melee and ranged attacks, and a "BOSS ROOM" every 5 floors with a large, multi-phase, raid-style boss
+   (random bosses, random sequences, phases, custom attacks, supporting mobs). Done:
+   - **Pathing.** Measured first with the new `tools/tests/mobs.js`: on the old code 6% of awake monsters wedged and
+     half the guardians never reached the hero. Causes: guardians' collision boxes (r x 0.8, up to 1.3 tiles wide)
+     didn't fit 2-wide corridors; monsters steered straight at the hero whenever a thin ray (`map.los`, which ignores
+     props and the body's width) saw them; and pack leaders spawned overlapping walls/props, where no move is legal.
+     Fixes: `bodyR(e) = min(e.r*0.8, 0.42)` (map.js) is the collision half-size everywhere (hit radius `r` unchanged),
+     so any creature fits any 1-tile gap; monsters now use `Monster.navTo` like minions (straight only when `losWide`
+     with their body, else a path, stuck detection and sidestep), and when the target is the hero (or beside them)
+     the path is `map.flowPath` - the flow field walked 12 steps and smoothed - so it costs no A*. The flow field
+     reaches 64 steps (was 40). `World.add` nudges creatures out of walls (`map.nudge`), and `map.move` lets an
+     embedded body step out. Melee monsters surround the hero (`Monster.approach`: each takes its own bearing once
+     two others crowd the target). Now: 0.2-0.6% stuck (hovering bats), every guardian arrives.
+   - **Special moves** (`ARCH_MOVES` in data/enemies.js, `MOVES`/`trySpecial`/`beginMove`/`movePerform`/`moveTick` in
+     monster.js): melee lunge, whirl, combo, quake, hook (drags you in), frenzy (below 40% life); ranged fan, burst
+     (leads a moving target, `leadAng`), lob (leaves a pool), snipe (telegraphed piercing shot), blink (teleports away
+     when you close in), runes, orbs, sweep (beam swept across), web (slows). A normal monster rolls one of its
+     archetype's moves (45% + 1.2%/depth), a greater breed two, elites and guardians all. Guardians use them between
+     patterns too. New `Telegraph` kind `cone`.
+   - **Raid bosses** (`src/game/raid.js`). `isRaidDepth(d)` = d % 5 === 0 except 100. `generateDungeon` builds a
+     smaller maze (start in the left column) plus `carveArena`: a 30x26 chamfered hall east of the maze with four 2x2
+     void pillars (real walls: cover), a 3-wide corridor from the last column's farthest room and a forced arch at
+     the gate. Spawn rank `'raid'` -> `makeRaidBoss` (game.js). 8 templates in `RAID_BOSSES` (Ossuarch, Pyrethrax,
+     Vorthul, Mother of Maws, The All-Seeing, Mortheus, Ossified Pontiff, Chitinax), each with art from the bestiary's
+     boss pool shown at scale 2.4, an element, projectile look, add archetypes and 4 phase pools; never the same as
+     the hero's last (`c.lastRaid`). 16 abilities: cleave (cone), slam, shockwave (expanding rings with a gap:
+     `RingWave`), meteors, pools, orbs (homing, explode), nova, spiral, barrage (walls of shots with a gap), fissures,
+     sweep (`SweepBeam`, stopped by pillars), vortex (drags you in, then slams), blink_slam, adds, clones (mirror
+     images), charge3, and the cataclysm: a 4 s wind-up from the arena centre, then 75% of max life to everything in
+     the boss's sight - hide behind a pillar (`Gathering.safeAt`). Rotations: `rollRotation` makes a random 5-7 cast
+     sequence per pass (no repeats, one cataclysm/adds/clones at most), with random quick follow-ups. Phases: 3 (life
+     66/33%) or 4 from depth 25 (72/46/20%). Each change is an intermission: the boss jumps to the centre, 3-5
+     warding crystals (static `Monster`s with `wardTick`, sprite `crystal`) beam into it - `m.ward = 0.1` (combat.js
+     `hit` multiplies damage taken by `tgt.ward`), +0.2%/s regen per crystal - plus an add wave; after 30 s the
+     crystals pour in (4% heal each). Modifiers (`RAID_MODS`, 1-3 by depth): empowered, colossal, relentless,
+     swarming, volatile, warded, vampiric, storming. Enrage after 5 minutes. Entering seals the gate (`map.block` on
+     the corridor tiles + `Barrier` wall of light) until it dies; then the exit opens and it drops loot three times.
+     Stats: hp `monsterBase(L).hp x 26 x (30 + depth/2)` at level depth+3, dmg x3, crystals 7% of its life each. Tuning history at depth 5 (auto-play bots about 5 levels over): x3 hp / x2 dmg died in ~15 s; x18 / x2.8 took 31 s (paladin) and 65 s (wizard), hero down to ~55% life. `G.raidLog` records each kill
+     (seconds, lowest hero life), printed by `autoplay.js`. HUD: phase marks on the boss bar, a phase/ward line
+     (`#boss-sub`), blue bar while warded; area subtitle "... · Boss Room"; the portal dialog warns of it.
+   - Auto-play: hazards with `danger(out)` describe their zones (rings with gaps, beams), cone telegraphs count,
+     `takeCover` hides from a cataclysm, warding crystals are top targets (a warded boss is low priority), and it never
+     retreats from a sealed boss room.
+   - Verified: `mobs.js 20` (820 monsters, 0.2% stuck, all guardians arrive), new `raid.js` (depths 5/30/55 end to end,
+     and all 8 bosses cast their whole pool), flow, boss, ui, mobile (+ a raid screenshot at 844x390), pets, data_check,
+     skills (wizard, barbarian), and auto-play soaks (wizard, paladin, necromancer: every bot clears depth 5's boss room,
+     0 deaths, no errors; on the final tuning a level-10 paladin took Colossal Pyrethrax from 35.7k to 12.4k life in
+     about 1.5 game minutes, still at full health, before the run ended).
+   - Open: raid balance has only been checked at depth 5 with auto-play bots that are a few levels over the depth.
+     Deeper raids (life x (30 + depth/2) on top of the normal curve) and real players are untested. Knobs: the
+     `maxHp`/`dmg` line in `makeRaidBoss`, crystal life in `makeWard`, `marks` (phase thresholds), the gap
+     `rand(2, 3.2)` and `gapMul` in `Raid.update`. `legion.js` fails now and then on one random minion's spell
+     count (Pyre Knight); the unchanged code does the same.
 
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
+0. Get the user's playtest feedback on the boss rooms (item 16): difficulty, length, readability of the telegraphs.
 1. Get PR #1 merged (by the user) and confirm the Pages deploy works at https://agilancer.github.io/velscour/.
 2. Act on the user's playtest feedback.
 3. Pre-release hardening, which was offered to the user but not yet run:
@@ -1157,7 +1213,7 @@ Throne (dungeon.js:212): fixed 44x80 map: entrance hall (17,68,10x9), gauntlet r
 
 Town (town.js:26): 46x46, floor on [2,44) with grass; plaza (18..30)^2; dirt roads W, N and a diagonal SE road; cobble portal platform 38..42 x 37..41. Vendor i uses `shopSpots[i]` + `palettes[i]` (:45-64); building footprint fully `block`ed; NPC stands 0.9 tiles outside the door ('sw' door -> +y side, 'se' -> +x side). 3 plain houses, well (24.5,24.5), 9 lamps (`light:5`), up to 46 trees/pines (sway, blocking), 40 tries of bush/rock/barrel/crate (bushes non-blocking), shop dressing. Generated once and cached in `game.js:123 townCache`; `seen` is cleared per visit; villagers (game.js:128) wander with `randomNear(24,25,7)`.
 
-World.update order (world.js:76): time += dt -> flow field rebuild (every 0.25 s, maxD 40, only if player alive) -> `rebuildGrid()` -> player.update -> other creatures (enemies with `!awake` farther than 26 tiles are skipped entirely) -> npc.update -> hazards (removed when update returns false or `dead`) -> `separate()` -> remove dead non-player creatures after 0.05 s -> loot.update (removed on false) -> corpses age (removed at t>40 or `used`; cap 70) -> `map.reveal(p,11)` -> `ambient(dt)` -> `updateVfx`. Spatial hash: CELL=2 tiles, key `(cx<<16)|(cy&0xffff)`, built once per frame before updates (stale within a frame). Separation pushes pairs in the SAME cell only, overlap threshold `(a.r+b.r)*0.85`, weights player 0.25 / other 0.75, static never moves, via `map.move` (so respects walls). Monsters chase via `flowStep` only when target is the player and not in LOS; minions path with `Monster.navTo` (A*, at most `w.pathBudget` = 6 searches per frame for all of them) and read the flow field as walking distance from the hero when picking foes. Player click-move uses `losWide` else `findPath(...,2500)` (player.js:451).
+World.update order (world.js:76): time += dt -> flow field rebuild (every 0.25 s, maxD 40, only if player alive) -> `rebuildGrid()` -> player.update -> other creatures (enemies with `!awake` farther than 26 tiles are skipped entirely) -> npc.update -> hazards (removed when update returns false or `dead`) -> `separate()` -> remove dead non-player creatures after 0.05 s -> loot.update (removed on false) -> corpses age (removed at t>40 or `used`; cap 70) -> `map.reveal(p,11)` -> `ambient(dt)` -> `updateVfx`. Spatial hash: CELL=2 tiles, key `(cx<<16)|(cy&0xffff)`, built once per frame before updates (stale within a frame). Separation pushes pairs in the SAME cell only, overlap threshold `(a.r+b.r)*0.85`, weights player 0.25 / other 0.75, static never moves, via `map.move` (so respects walls). Monsters and minions both move with `Monster.navTo`: straight while `losWide` holds for their body, else monsters chasing the hero follow `map.flowPath` (the flow field, no search) and anything else an A* path (at most `w.pathBudget` = 10 searches per frame for everyone); minions also read the flow field as walking distance from the hero when picking foes. Player click-move uses `losWide` else `findPath(...,2500)` (player.js:451).
 
 Render pipeline (render.js:172): clear black + `lights.length=0` -> `camera.apply` (world px) -> tile bounds via inverse-iso of view corners (viewRect(40) with -40/+140 y margins) -> floors (each drawn 1.2px oversize to hide seams) -> `drawDecals` -> corpses -> hazards: `ground` drawn now, numeric `depth` sorted, others "top" -> `drawEffects('ground')` -> depth-sorted list (key d, type f): hazards f1, wall segs f2 / pillars f3 (from `wallsIn(tx0-2,ty0-2,tx1+3,ty1+3)`), props f4 (x+y), buildings f5 (footprint-centre depth), creatures f6 (x+y, +0.2 flying), npcs f7, loot f8 (x+y-0.2), chests f9, portals f10; stable `Array.sort` so ties keep that insertion order -> `drawParticles` -> top hazards -> `drawEffects('top')` additive -> screen space: `drawLighting` -> red hurt flash, white flash, low-HP (<30%) pulse -> `drawOverheadNames` -> `drawLootLabels` -> `drawTexts`. Fog of war is NOT drawn in the main view (only darkness from lighting); `seen` is minimap-only.
 Occlusion/translucency (only relative to the player, pd=p.x+p.y, player rect = iso(p) + [-16,-62]..[+16,-4]): segs alpha 0.3 if `depth>pd+0.6` and sprite rect overlaps; pillars 0.3 if `depth>pd+0.6`, |dx|<24 and base in (ppy-10, ppy+64); atlas props and trees/pines 0.35 if `d>pd+0.5`, |dx|<40, base in (ppy-8, ppy+90); buildings 0.4 if `depth>pd` and the inner 70%x85% of the sprite overlaps.
@@ -1172,7 +1228,7 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 - Pack density `1+depth*0.012` :110; packs `area/26` :126; arch bias exponent 1.35 :113; pack +1 at depth>30 (40%) :132; champions `2+floor(depth/15)` (2-4 each), uniques `1+floor(depth/30)` (3-5 each) :137-147; boss excludes bat/spider/beetle :149.
 - placeObstacles: scatter `cells/7 * U(0.7,1.3)`, 65% against walls; decor 35% (no-scatter packs only); floors: room base 70% the level's main material, feature tiles 7% rooms / 3.5% corridors (finishMap); openings decorated 75%, doors 35% of 2-wide ones (findOpenings); chests 1-3, 20% rare :172-176; torch 7% of back segs :180 (throne 12% :242); detail floor 13% :206.
 - Wall sprite mix 0.8 / 0.4 map.js:241,244; segGrid bucket B=8 :272; A* default maxNodes 3000 :127 (player uses 2500); goal snap radius <4 :134; LOS samples 3/tile :57, losWide 4/tile r 0.22 :197-200; collision radius `e.r*0.8` :40; randomNear 40 tries :207.
-- World: CELL=2 world.js:7; flow rebuild 0.25 s, maxD 40 :82-83; sleep radius 26 :91; corpse life 40 s / cap 70 :110-112; reveal radius 11 :113 (12 on entry, game.js:115); separation 0.85 overlap, weights 0.25/0.75/0.5 :127-132; ambient rate 22/s desktop, 10/s touch :164; torch light `5.5+0.3 sin`, intensity 0.9 :148; portal light 6 :158.
+- World: CELL=2 world.js:7; flow rebuild 0.25 s, maxD 64 :82-83; sleep radius 26 :91; corpse life 40 s / cap 70 :110-112; reveal radius 11 :113 (12 on entry, game.js:115); separation 0.85 overlap, weights 0.25/0.75/0.5 :127-132; ambient rate 22/s desktop, 10/s touch :164; torch light `5.5+0.3 sin`, intensity 0.9 :148; portal light 6 :158.
 - Render: wall items and scatter at `k = TW/160` (0.4); cutaway hole radius 24 + 120 px, min alpha 0.16; lighting canvas 1/4 res :306, light scale `HW*1.25*zoom*dpr/4` :315; `addLight` cap 48 (vfx.js:326); vignette 0.35*min -> 0.75*max, alpha 0.6 :337-338; NPC sprite height 58 :156; corpse fade over t 34..40 :144; minimap 0.2 s, 2.4 px/tile, enemy radius 14 :409,417,438.
 - Town: seed 1337, size 46, plaza 18..31, portal (40.5,39.5), start (24.5,28), trees <=46 of 400 tries town.js:27-92.
 
@@ -1190,7 +1246,7 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 - `lights.length = 0` at render.js:177 runs BEFORE `drawLighting` (:329), and every `addLight` call in the codebase happens during update (world.js:148,153,158, loot.js:58,61, hazards.js:127,309,567,649, monster.js:103, shapes.js:248). Net effect: only the player's light reaches the lighting overlay; torches, lamps, portals, loot beams and spell lights don't light anything. Torches have no sprite of their own (render never reads `world.torches`), so in practice they show up only as glow particles.
 - Two coordinate spaces for `sbox`: creatures are in CSS px (render.js:271, used by controls.js:13), NPCs are in world px (render.js:168, converted with `camera.toScreen` in controls.js:28 and render.js:361). Off-screen creatures get `sbox=null` (not clickable, no overhead name).
 - `los()` ignores `block` (towers, trees, buildings, town houses), but `losWide()`/`walkable()` honour it. As a result monsters see and target through props, while player pathing goes around them.
-- `circleFree` checks only 4 corners. With r*0.8 > 0.5 (e.g. velscour r 0.9) the corners are more than 1 tile apart, so a big creature can straddle a single blocked tile.
+- `circleFree` checks only 4 corners; collision uses `bodyR(e) = min(r*0.8, 0.42)`, so the corners are never a full tile apart.
 - `buildFlow` targets the player only. If the player stands on a non-walkable tile, the field is all -1 and monsters fall back to straight steering. Minions (`pickFoe`) then fall back to line of sight to judge reach.
 - The spatial grid is rebuilt once per frame before updates. Creatures added mid-frame are invisible to `query()` until the next frame. Separation only handles pairs inside the same 2x2 cell. Pairs where the static creature comes first in a cell are skipped (`if (a.static) continue`, world.js:123).
 - Dormant enemies more than 26 tiles away aren't updated at all (no status ticks, no regen).

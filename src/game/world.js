@@ -4,6 +4,7 @@ import { camera, isoX, isoY } from '../core/view.js';
 import { rand, dist2, TAU, chance } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { spawn, updateVfx, addLight, sparkle, smoke } from '../gfx/vfx.js';
+import { bodyR } from '../world/map.js';
 
 const CELL = 2;
 
@@ -31,7 +32,13 @@ export class World {
     this.lastPlayerTile = -1;
   }
 
-  add(c) { c.world = this; this.creatures.push(c); return c; }
+  add(c) {
+    c.world = this;
+    // never start inside a wall or prop: a body that overlaps one can't take a step
+    if (this.map && !c.ghost && !c.isPlayer) [c.x, c.y] = this.map.nudge(c.x, c.y, bodyR(c));
+    this.creatures.push(c);
+    return c;
+  }
   addHazard(h) { h.world = this; this.hazards.push(h); return h; }
   addLoot(l) { this.loot.push(l); return l; }
 
@@ -76,12 +83,12 @@ export class World {
 
   update(dt) {
     this.time += dt;
-    this.pathBudget = 6; // A* searches the minions may run this frame (Monster.navTo)
+    this.pathBudget = 10; // A* searches monsters and minions may run this frame (Monster.navTo)
     const p = this.player;
     // flow field toward the player for monster path finding
     this.flowTimer -= dt;
     if (p && !p.dead && this.flowTimer <= 0) {
-      this.map.buildFlow(p.x, p.y, 40);
+      this.map.buildFlow(p.x, p.y, 64);
       this.flowTimer = 0.25;
     }
     this.rebuildGrid();
