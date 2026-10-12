@@ -8,6 +8,7 @@ import { pixelSprite, gemIcon, goldIcon } from '../gfx/pixelart.js';
 import { rollItem, rollGem, itemName, itemColor, MATERIALS, GEMS, potionItem, RARITY_COLORS } from '../data/items.js';
 import { potionIcon } from '../core/assets.js';
 import { artIcon } from '../core/classart.js';
+import { gearIcon } from '../core/gearart.js';
 
 export class GroundItem {
   constructor(x, y, kind, data = {}) {
@@ -82,7 +83,7 @@ export class GroundItem {
     }
     const img = this.icon();
     if (!img) return;
-    const art = this.kind === 'item' && this.item.art && artIcon(this.item);
+    const art = this.kind === 'item' && ((this.item.art && artIcon(this.item)) || gearIcon(this.item));
     const s = this.kind === 'gold' ? 20 : art ? 30 : 22;
     if (this.kind === 'item' && this.item.rarity >= 2) {
       const col = itemColor(this.item);
@@ -97,7 +98,7 @@ export class GroundItem {
     ctx.beginPath(); ctx.ellipse(px, py + 1, 9, 4, 0, 0, TAU); ctx.fill();
     ctx.save();
     ctx.translate(px, py - s * 0.45);
-    if (this.kind === 'item' && this.item.type === 'gear' && !art) ctx.rotate(-0.6); // catalog art already lies diagonally
+    if (this.kind === 'item' && this.item.type === 'gear' && !art) ctx.rotate(-0.6); // catalog and gear art are drawn upright / diagonal already
     ctx.drawImage(img, -s / 2, -s / 2, s, s);
     ctx.restore();
   }
@@ -109,6 +110,7 @@ export function itemIcon(item, size = 48) {
   if (item.type === 'gem') return gemIcon(item.gem, GEMS[item.gem].color, item.tier, size);
   if (item.type === 'potion') return potionIcon(item.color, size);
   if (item.art) { const a = artIcon(item, size); if (a) return a; }
+  { const g = gearIcon(item, size); if (g) return g; }
   const key = `${item.icon}|${item.tier}|${item.rarity}|${item.base}`;
   let c = iconCache.get(key);
   if (c) return c;

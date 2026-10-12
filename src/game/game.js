@@ -6,6 +6,7 @@ import { sfx, playMusic, stopMusic } from '../core/audio.js';
 import { rand, pick, randi, escapeHtml, dist, makeCanvas, fmtInt } from '../core/util.js';
 import { biomeTileSet, loadBiomeArt, mixedTileSet } from '../core/assets.js';
 import { loadClassArt } from '../core/classart.js';
+import { loadGearArt } from '../core/gearart.js';
 import { preloadBarFx } from '../gfx/artfx.js';
 import { SKILLS } from '../data/skills.js';
 import { setClassItems } from '../data/items.js';
@@ -55,7 +56,7 @@ export const game = {
   async loadClassPack(classId) {
     const el = document.getElementById('loading');
     const slow = setTimeout(() => el && el.classList.remove('hidden'), 250);
-    const meta = await loadClassArt(classId);
+    const [meta] = await Promise.all([loadClassArt(classId), loadGearArt(classId)]);
     clearTimeout(slow);
     if (el) el.classList.add('hidden');
     setClassItems(classId, meta);

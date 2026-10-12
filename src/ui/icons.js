@@ -5,6 +5,7 @@ import { drawShape } from '../gfx/shapes.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { classSprite } from '../core/assets.js';
 import { artIcon } from '../core/classart.js';
+import { itemLook } from '../core/gearart.js';
 import { SUMMONS } from '../data/summons.js';
 import { itemIcon } from '../game/loot.js';
 
@@ -174,7 +175,8 @@ export function skillIconURL(sk) {
 const itemUrlCache = new Map();
 export function itemIconURL(item) {
   const art = item.art && artIcon(item, 48); // catalog art (null until the class pack has loaded)
-  const key = item.type === 'gem' ? `g|${item.gem}|${item.tier}` : item.type === 'potion' ? `p|${item.kind}` : art ? `a|${item.artCls}|${item.art}` : `${item.icon}|${item.tier}|${item.rarity}|${item.base}`;
+  const look = !art && itemLook(item); // gear art of body armor and helmets
+  const key = item.type === 'gem' ? `g|${item.gem}|${item.tier}` : item.type === 'potion' ? `p|${item.kind}` : art ? `a|${item.artCls}|${item.art}` : look ? `l|${item.slot}|${look[0]}|${look[1]}` : `${item.icon}|${item.tier}|${item.rarity}|${item.base}`;
   let u = itemUrlCache.get(key);
   if (!u) { u = itemIcon(item, 48).toDataURL(); itemUrlCache.set(key, u); }
   return u;

@@ -136,14 +136,23 @@ are in section 7.
    barricades and chest art, loaded per biome ([`ART.md`](ART.md)). Verified by screenshots of all 20 biomes, a
    300-level reachability stress run, and flow/mobile/boss/ui/bot tests.
 
-7. **Class art (branch `claude/paladin-art-import`).** The Paladin pack (moved to `assets/source/classes/paladin/`) is imported
-   by `tools/classart.py` (`process_assets.py classes`): 60 outfits x 12 poses, 120 item icons, 60 effect strips, all
-   catalog entries found. In game: catalog items + Mythic rarity, outfit by equipped body armor (ATK/CAST poses, CAST1 as
-   idle), effects per skill. The user chose: add Mythic; armor art replaces the Paladin sprite entirely. Verified with
-   `classart.js` screenshots plus flow/ui/mobile/skills/bot/boss. Details and the mapping table: [`CLASS_ART.md`](CLASS_ART.md).
-   Not done: idle/run/hit/death art (none supplied), helmet/weapon overlays on the figure (separate item art only).
+7. **Class art (branch `claude/paladin-art-import`).** The Paladin pack (`assets/source/classes/paladin/`) is imported
+   by `tools/classart.py` (`process_assets.py classes`): 60 weapon/shield icons and 60 effect strips. In game: catalog
+   weapons/shields + Mythic rarity, effects per skill. Its armor poses and helmets were later removed (item 8).
+   Details and the mapping table: [`CLASS_ART.md`](CLASS_ART.md).
 
-8. **Monster art and biome order (branch `claude/admiring-fermat-wbun4l`).** The user uploaded
+8. **Gear looks (branch `claude/fervent-hamilton-4rma97`).** The user uploaded `assets/FinalClasses/<class>.zip` for all
+   16 classes (80 armors + 80 helms each, single frames) and asked to trash the Paladin pose sprites, go back to the
+   single-sprite setup, use these for every class with many palette swaps, helms over the head without covering
+   faces that should show, the armor image tied to the chest armor's rarity/level, and glows/orbs/particles on high
+   end gear. Done: `tools/gearart.py` (`process_assets.py gear`) with face-opening and hair/skin masks;
+   `src/core/gearart.js` (looks, 51 finishes, composite), `src/gfx/gearfx.js` + `GEAR_FX` (20 auras). Verified with
+   `gear.js all` contact sheets, the aura close-ups, and flow/ui/mobile/classart/skills. Kept from the Paladin pack:
+   weapons/shields and ability effects (the user only asked to trash the sprites). Known limits: a few helms
+   keep a dark face (opening not detected) and a few skull/grille faceplates show some skin; force them with
+   `OVERRIDES` open/closed lists in `tools/gearart.py`. No idle/walk/attack frames exist, so the hero bobs as before.
+
+9. **Monster art and biome order (branch `claude/admiring-fermat-wbun4l`, PR #7).** The user uploaded
    `assets/Enemy Assets Set 1/` (7 sheets x 10 monsters, transparent) and asked for them to replace the placeholder
    enemies, some as bosses, with many palette swaps. They also asked for random biome order and for like-coloured
    biomes to mix tile sets, and said more enemy sheets will come. Done:
@@ -170,9 +179,6 @@ Do these in order, unless the user asks for something else. Their feedback after
 5. Roadmap ideas from the README: animated character sprites, set items, a stash, waypoints, rune words, multiplayer.
 6. More monster sheets are coming ("Enemy Assets Set 2", ...). Import them as [`ENEMY_ART.md`](ENEMY_ART.md)
    describes: move them, slice them, then add bestiary entries.
-7. `assets/FinalClasses/` holds class art zips for all 16 classes (uploaded with the monster sheets) and
-   `All 16 Classes.png`. Only the Paladin pack is imported so far ([`CLASS_ART.md`](CLASS_ART.md)). Ask the user
-   before importing the rest.
 
 ## 6. Working environment notes
 - Claude cloud container: Node 22 with playwright under `/opt/node22/lib/node_modules` (set `NODE_PATH`), and
