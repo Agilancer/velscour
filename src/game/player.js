@@ -15,6 +15,7 @@ import { heroLook, heroFrame, gearFxOf, finishOf } from '../core/gearart.js';
 import { castArtFx } from '../gfx/artfx.js';
 import { drawGearFx, updateGearFx } from '../gfx/gearfx.js';
 import { fxColor } from '../data/gear.js';
+import { freeSlot } from '../data/bar.js';
 
 export const xpToNext = (L) => Math.round(60 * L * L + 40 * L);
 export const MAX_LEVEL = 100;
@@ -232,7 +233,7 @@ export class Player extends Creature {
         if (!c.bar.includes(id)) {
           if (id.endsWith('.0.0') && !c.bar[0]) c.bar[0] = id;
           else {
-            const free = c.bar.findIndex((x, i) => !x && i !== 0);
+            const free = freeSlot(c.bar);
             if (free >= 0) c.bar[free] = id;
           }
         }

@@ -36,14 +36,14 @@
       <div id="auto-status" class="hidden"></div>
     </div>
     <div id="hud-top-right">
-      <canvas id="minimap" width="180" height="180"></canvas>
+      <div id="minimap-wrap"><canvas id="minimap" width="200" height="188"></canvas><img id="minimap-ring" src="assets/ui/minimap_ring.webp" alt="" draggable="false"></div>
       <div id="hud-buttons">
-        <button class="hbtn" data-act="inventory" title="Inventory (I)">&#9881;<span>Bag</span></button>
-        <button class="hbtn" data-act="skills" title="Skill Tree (K)">&#10022;<span>Skills</span><b id="sp-badge" class="badge hidden"></b></button>
-        <button class="hbtn" data-act="book" title="Skill Book (B)">&#9776;<span>Book</span></button>
-        <button class="hbtn" data-act="character" title="Character (C)">&#9876;<span>Hero</span><b id="stat-badge" class="badge hidden"></b></button>
-        <button class="hbtn" data-act="auto" id="auto-btn" title="Auto-play (P): the hero plays on autopilot">&#9654;<span>Auto</span></button>
-        <button class="hbtn" data-act="menu" title="Menu (Esc)">&#9776;<span>Menu</span></button>
+        <button class="hbtn" data-act="inventory" title="Inventory and hero (I)"><img src="assets/ui/btn_bag.webp" alt="Bag" draggable="false"><b id="stat-badge" class="badge hidden"></b></button>
+        <button class="hbtn" data-act="skills" title="Skill Tree (K)"><img src="assets/ui/btn_skills.webp" alt="Skills" draggable="false"><b id="sp-badge" class="badge hidden"></b></button>
+        <button class="hbtn" data-act="book" title="Skill Book (B)"><img src="assets/ui/btn_book.webp" alt="Book" draggable="false"></button>
+        <button class="hbtn" data-act="quest" title="Quest Log (Q)"><img src="assets/ui/btn_quest.webp" alt="Quest" draggable="false"></button>
+        <button class="hbtn" data-act="auto" id="auto-btn" title="Auto-play (P): the hero plays on autopilot"><img src="assets/ui/btn_auto.webp" alt="Auto" draggable="false"></button>
+        <button class="hbtn" data-act="menu" title="Menu (Esc)"><img src="assets/ui/btn_menu.webp" alt="Menu" draggable="false"></button>
       </div>
     </div>
     <div id="boss-bar" class="hidden"><div id="boss-name"></div><div id="boss-track"><div id="boss-fill"></div></div><div id="boss-sub"></div></div>
@@ -58,6 +58,7 @@
     </div>
     <div id="log"></div>
     <div id="hud-bar">
+      <div id="hud-rail"></div>
       <div id="xp-track"><div id="xp-fill"></div></div>
       <img id="hud-img" src="assets/ui/hud.webp" alt="" draggable="false">
       <div class="orb-cover" id="life-cover"><div class="orb-empty"></div></div>

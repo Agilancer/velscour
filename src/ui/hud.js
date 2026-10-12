@@ -14,8 +14,8 @@ import { Meter } from '../game/dpsmeter.js';
 import { heroDamage } from '../game/autoplay.js';
 
 const POTIONS = ['hp', 'mp', 'rejuv', 'fury'];
-// hud slot index -> bar index (skills) or potion kind
-const SLOT_MAP = [0, 1, 2, 3, 4, 5, 6, 7, 8, 'hp', 'mp', 'rejuv', 'fury', 9];
+// hud slot index -> bar index (skills) or potion kind: LMB, ` 1-9 0 - =, the potions, RMB
+const SLOT_MAP = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 'hp', 'mp', 'rejuv', 'fury', 14];
 
 export const HUD = {
   slots: [],
@@ -23,6 +23,9 @@ export const HUD = {
   init() {
     UI.hud = this;
     const geo = A.hudGeo;
+    // the bar's aspect (and how much room it takes at the bottom) comes from the art's geometry
+    document.documentElement.style.setProperty('--hud-k', String(geo.h / geo.w));
+    this.initFrames(geo);
     const wrap = $('#hud-slots');
     const pct = (v, total) => (v / total) * 100 + '%';
     geo.slots.forEach((s, i) => {
@@ -68,6 +71,7 @@ export const HUD = {
     lt.style.left = pct(lo.cx - 110, geo.w); lt.style.width = pct(220, geo.w); lt.style.top = pct(lo.cy - 12, geo.h);
     mt.style.left = pct(mo.cx - 110, geo.w); mt.style.width = pct(220, geo.w); mt.style.top = pct(mo.cy - 12, geo.h);
     const xp = geo.xp;
+    if (geo.barTop) $('#hud-rail').style.top = pct(geo.barTop, geo.h);
     const xt = $('#xp-track');
     xt.style.left = pct(xp.x, geo.w); xt.style.width = pct(xp.w, geo.w); xt.style.top = pct(xp.y, geo.h); xt.style.height = pct(xp.h, geo.h);
     for (const b of document.querySelectorAll('.hbtn')) {
@@ -80,6 +84,18 @@ export const HUD = {
       <div><b>Attack</b>: the average hit of your main attack (left-click skill), crits included.</div>
       <div><b>DPS</b>: what your skill bar deals to one foe per second at your current stats: crits, attack and cast speed, cooldowns, mana and minions.</div>
       <div><b>Avg DPS · 30s</b>: the damage you and your minions really dealt over the last 30 seconds, divided by 30. The bars show each second.</div>`);
+  },
+
+  /** The minimap sits in the ring's open middle (a little oval); the ring overhangs it on every side. */
+  initFrames(geo) {
+    const r = geo.ring;
+    if (!r) return;
+    const h = r.hole, ring = $('#minimap-ring'), cvs = $('#minimap');
+    $('#minimap-wrap').style.aspectRatio = `${h.rx} / ${h.ry}`;
+    ring.style.width = (r.w / (2 * h.rx)) * 100 + '%';
+    ring.style.left = -((h.cx - h.rx) / (2 * h.rx)) * 100 + '%';
+    ring.style.top = -((h.cy - h.ry) / (2 * h.ry)) * 100 + '%';
+    cvs.width = 200; cvs.height = Math.round((200 * h.ry) / h.rx);
   },
 
   refreshStatic() {

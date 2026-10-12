@@ -28,7 +28,8 @@ Requirements, as stated (✅ = implemented in the draft):
 - ✅ **Sophisticated skill trees per class, 60 unique skills/abilities per class.** New abilities unlock as you level,
   and default abilities are gained on level-up. Levels give skill points.
 - ✅ A **skill menu** to spend points, and a **skill equip menu** to read skill descriptions and drag skills onto the bar.
-- ✅ **8 abilities on keys 1–8, one on left click, one on right click; 4 potion slots on Z, X, C, V.**
+- ✅ **8 abilities on keys 1–8, one on left click, one on right click; 4 potion slots on Z, X, C, V.** Later raised to
+  **15 skills**: LMB, \` 1–9 0 - =, RMB (the user's second HUD bar, item 17).
 - ✅ **Lots of blood and gore.** Effects: walls of fire, slime, spinning hammers, cyclones, lightning, slashing,
   explosions, magic missiles, arcane blasts, energy beams, swirling blades, death lasers, "and more".
 - ✅ Placeholder isometric art, with **palette swaps** for hundreds of enemies, weapons, armor, gems, houses and NPCs.
@@ -386,6 +387,42 @@ are in section 7.
      `rand(2, 3.2)` and `gapMul` in `Raid.update`. `legion.js` fails now and then on one random minion's spell
      count (Pyre Knight); the unchanged code does the same.
 
+17. **New HUD art, 15-slot bar, build focus on auto-play (branch `claude/bold-carson-tkgxot`).** The user uploaded
+   two transparent images (in chat; now `assets/source/hud_bar.webp`, which replaced the first bar, and
+   `assets/source/hud_frames.webp`): a new main bar with **15 skill slots** (LMB, \` 1 2 3 4 5 6 7 8 9 0 - =, RMB) plus
+   the 4 potions, a ring to frame the minimap, and six buttons (Bag, Skills, Book, Quest, Auto, Menu). They asked to
+   wire everything up including auto-play, for pet classes on auto to build for the most pets possible, and for the
+   Paladin to always build around throwing hammers, especially the one that swirls hammers around him. Done:
+   - `process_assets.py ui` (`process_hud`): crops the bar (2000x296), measures 19 slots (pitch 76.33 px from x 279),
+     orbs, and empties the XP track (the art shows it half full). The ring (with the buttons' jewels masked off) goes to
+     `assets/ui/minimap_ring.webp`; each button is cut between the jewel pairs to `assets/ui/btn_<name>.webp`.
+     `hud.json` also holds `barTop`, the ring's oval hole (`ring.hole`) and the button size. Potions are still cut
+     from the first bar, kept as `assets/source/hud_bar_v1.webp` (the new art's bottles touch the slot frames).
+   - `src/data/bar.js`: `BAR_SIZE` 15, `LMB` 0, `RMB` 14, `SLOT_LABELS`, `SLOT_KEYS` (Backquote, Digit1-9, Digit0,
+     Minus, Equal), `FILL_ORDER` (where a newly learned skill lands: 1-9, 0, -, =, then \` and RMB), `freeSlot`, and
+     `migrateBar` (10-slot saves: LMB, 1-8, RMB -> the same keys in the new order). `save.migrate` calls it.
+   - HUD (`hud.js`): `SLOT_MAP` follows the art (LMB, \` .. =, potions, RMB). The bar's height comes from
+     `--hud-k` (set from hud.json), which also replaced the hard-coded `0.1575` offsets in style.css. Only the rail
+     catches clicks (`#hud-rail`); above it, between the orbs, clicks reach the world. `--hud-w` grew to
+     `min(96vw, 1180px, 130vh)` so 19 slots stay readable.
+   - Minimap: `#minimap-wrap` is sized to the ring's oval hole; `HUD.initFrames` places the ring over it.
+   - Buttons are the art. The 4th button was the Hero button, which only opened the inventory (as Bag does), so the
+     art's **Quest** label got a real panel: `src/ui/quest.js` (**Q**): this depth's objectives (guardian / boss room
+     phase, exit), the Great Quest (deepest depth cleared / 100, next boss room), boss rooms conquered, totals. The
+     attribute-point badge moved to Bag.
+   - Touch (`touch.js`): the arcs show one page of the bar: page 1 RMB, 1-8; page 2 9, 0, -, =, \`. A small ⇄ button
+     between the arcs flips pages. The touch bar is nudged 4vw left so the flip button clears the mana orb.
+   - Auto-play: `buildPower` keeps the best 15 parts; `arrangeBar` fills LMB, RMB and the 13 keys. **Build focus**
+     (`focusMul`, `PET_CLASSES` in autoplay.js; only `spendSkills`/`arrangeBar` pass `focus = true`, so the HUD's DPS
+     and gear scoring stay unbiased): pet classes (Necromancer, Totem Master, Carrion Witch, Slime Lord, Ranger,
+     Gunner) value summons x4 (timed x2.5) plus a bonus per minion, and summons past the 40-minion cap
+     (`createSummon` kills the oldest past 40) count for nothing; the bot also never casts a summon that would push past
+     the cap (it would only churn). Paladin: hammer skills x2.5, orbit hammers (Blessed Hammer, Hammerstorm, Wheel of
+     Hammers) x4, so the main attack is a swirling hammer and Wheel of Hammers fires whenever it is ready.
+   - Docs/help/README updated; new test `tools/tests/hud.js`. Verified: hud.js (migration, all 15 slots cast from their
+     key/button, ring around the map, button art, Quest Log, touch pages, flip button clear of the orb), flow, ui,
+     mobile, select, skills (wizard) and auto-play soaks (results below in this item).
+
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
 0. Get the user's playtest feedback on the boss rooms (item 16): difficulty, length, readability of the telegraphs.
@@ -429,8 +466,8 @@ Do these in order, unless the user asks for something else. Their feedback after
 ## Boot, core engine, graphics & asset pipeline
 
 ### Files
-- `index.html` - page shell. `#game` canvas (:21), DOM HUD `#hud` (:24) with `#minimap` 180x180 canvas (:31), `#hud-bar` + `<img id=hud-img src=assets/ui/hud.webp>` (:43-52), `#touch-ui` joystick (:56), `#panels`/`#screens`/`#tooltip`/`#drag-ghost` (:61-64), `#rotate-hint` (:65), `#loading` (:70). Loads Google Fonts Cinzel + Alegreya Sans over the network (:16) and `src/main.js` as a module (:72).
-- `css/style.css` - all DOM UI styles. Tokens are on `:root` (:2-20), including `--hud-w`. `body.touch` overrides start at :245. Panel and log offsets hard-code the HUD aspect `0.1575` = 315/2000 (:94, :99, :254), and `#hud-bar` has `aspect-ratio: 2000/315` (:51).
+- `index.html` - page shell. `#game` canvas (:21), DOM HUD `#hud` (:24) with `#minimap` canvas inside `#minimap-wrap` with the ring art `#minimap-ring`, six art buttons `.hbtn` (`assets/ui/btn_*.webp`), `#hud-bar` + `<img id=hud-img src=assets/ui/hud.webp>` (:43-52), `#touch-ui` joystick (:56), `#panels`/`#screens`/`#tooltip`/`#drag-ghost` (:61-64), `#rotate-hint` (:65), `#loading` (:70). Loads Google Fonts Cinzel + Alegreya Sans over the network (:16) and `src/main.js` as a module (:72).
+- `css/style.css` - all DOM UI styles. Tokens are on `:root` (:2-20), including `--hud-w`. `body.touch` overrides start at :245. The bar's height, and the panel and log offsets above it, use `--hud-k` (bar height/width, set from `hud.json`).
 - `manifest.webmanifest` - PWA metadata: fullscreen, landscape, icon `assets/ui/icon.png` (512x512). There is no service worker, so the game has no offline support.
 - `src/main.js` - `boot()`, `resize()` (DPR), the rAF `loop()`, the title-screen ember backdrop and global error reporting.
 - `src/ui/titlefx.js` - `attachTitleFx(screen, logoImg, {tag, menu, gate})`: the title intro (gate → intro → lit; see Decisions) with the logo fade driven from the Hymn's clock (`INTRO_DELAY`, `FADE0`, `HIT`), the flame burst on the hit, and the steady fire after it (flames along the logo's top contour plus embers and licks off its molten cracks, sparks and smoke). It simulates in coarse units (`PX` css px) but draws at device resolution (`.title-fx` canvas over the logo): tiny particles batched by colour/alpha, plus a low-res glow copy upscaled with smoothing. Particles are capped at 14000. **Eyes** live on a second canvas behind the logo (`.title-eyes`), drawn chunky at sim resolution and upscaled without smoothing, with a soft red bloom. A watcher is a pair (maybe slanted), one big eye, a cluster of 3-8 small ones opening one after another, or a vertical stack. Up to 7 are on screen, a new one (sometimes 2-3) every 0.7-2.4 s, placed clear of the logo and menu. They open (sometimes slowly), blink, follow the pointer with their pupils, dart aside, and close. The rAF loop and its window listeners stop when the screen leaves the DOM. Tests: `tools/tests/titlefx.js` (uses the `canvas.fx` hooks).
@@ -698,7 +735,8 @@ Do these in order, unless the user asks for something else. Their feedback after
   - HUD source rows 146-461 are cropped to 2000x315.
   - Potions are cut from slots 9-12 (Z/X/C/V → red/blue/purple/orange).
   - XP track alpha is cleared over x∈[350,872)∪[1126,1650).
-  - `hud.json`: 14 slots at y=128, h=76; `slotKeys`; orbs `{157,151,r78}` and `{1842,151,r78}`; `xp{350,262,1300,22}`.
+  - `hud.json` (second bar, item 17): 19 slots at y=112, 67x67 (LMB, \` 1-9 0 - =, Z X C V, RMB); `slotKeys`; orbs
+    `{154,145.5,r92}` and `{1845,144,r93}`; `xp{263,237,1474,18}`; `barTop` 86; `ring`; `buttons`.
 - Biome packs (`tools/biomepack.py`): see [`ART.md`](ART.md) (height raise by ray casting, depth slices, `pack.json`).
 - Chests (`process_chests`): column 1 of `assets/source/props/dungeon_mechanisms.png` (found by `grid_objects`), rows 0/1/4/5.
 
@@ -754,7 +792,7 @@ Do these in order, unless the user asks for something else. Their feedback after
   - :248 light radius `4+r*3`.
   - :281 shake `min(14, 2+3r·mul)`.
   - :282 'explode' sound when r>1.2.
-- **style.css** :17 `--hud-w: min(96vw,1000px,105vh)`; :245 touch value `min(56vw,125vh)`.
+- **style.css** `--hud-w: min(96vw,1180px,130vh)`; touch value `min(56vw,125vh)`, nudged 4vw left.
 - **render.js** :10 `WALL_K` (only the fallback wall path); seamless sections scale by `HW / section width`. **assets.js** `WALL_TIERS = 2` niche tiers per wall.
 
 ### How to extend
@@ -773,7 +811,7 @@ Do these in order, unless the user asks for something else. Their feedback after
 9. **Regenerate assets.**
    1. `pip install pillow numpy scipy && python3 tools/process_assets.py [sprites|tiles|props]` (paths resolve from the script location).
    2. Check the printed counts for classes, floors and walls.
-   3. If the HUD art changes, update the CSS `2000/315` and `0.1575` values, `SLOT_MAP` (hud.js:16) and the `slot_x`/potion slice in the script.
+   3. If the HUD art changes, update the measured constants in `process_hud` (slot pitch, orbs, XP track, `BTN_SPLIT`, `RING_BOX`/`RING_HOLE`) and `SLOT_MAP` (hud.js); the CSS follows hud.json.
    4. A new sheet layout means updating the hard-coded row/col/section/slot pixel constants.
    5. Adding a class means updating the sheet grid, `CLASS_IDS` in **both** assets.js:4 and process_assets.py:32, and data/classes.js.
 
@@ -789,7 +827,7 @@ Do these in order, unless the user asks for something else. Their feedback after
 - `biomeTileSet` eviction only removes the cache entry; re-entering an evicted biome repeats the slow recolour.
 - `thresholds`, `corners`, `arch`, `gate` and `misc` are parsed but nothing renders them.
 - `key_magenta` removes only white areas at least 60 px across (label boxes, pasted white blocks); smaller white blobs (skull highlights, snow) stay.
-- HUD geometry is duplicated: hud.js reads `hud.json` at runtime, but style.css hard-codes the aspect ratio and the 0.1575 offsets.
+- HUD geometry: hud.js reads `hud.json` at runtime and sets `--hud-k` (height/width) for style.css; the CSS default `0.148` only matters before that.
 - The canvas has `alpha:false`, so each frame must paint fully. Canvas text uses the Cinzel web font, which may not be loaded on the first frames (it falls back to Georgia).
 - `Ring` treats `opts.z || 2`, so z=0 is impossible.
 - Lights pushed during update are cleared before drawing (see open issues).
@@ -808,7 +846,7 @@ Do these in order, unless the user asks for something else. Their feedback after
 - src/core/audio.js:108-112 - each sfx call with vol!==1 creates a GainNode that is never disconnected (relies on GC). The temporary global swap of sfxBus breaks if a SOUNDS entry ever schedules work asynchronously.
 - src/core/assets.js:38,40 + src/state.js:9 - A.hud, A.logo and G.assets are loaded or declared but never used.
 - tools/process_assets.py:5 - the docstring says 'game-ready PNGs', but most outputs are WebP (save() at :66). classes.json (:109) is generated but never loaded.
-- css/style.css:51,94,99,254 - HUD aspect ratio 2000/315 and the 0.1575 offsets are hard-coded duplicates of hud.json w/h. They must be updated by hand if the HUD art changes.
+- (fixed in item 17) css/style.css used to hard-code the HUD aspect 2000/315 and 0.1575 offsets; it now reads `--hud-k` from hud.json.
 - src/gfx/vfx.js:82 - particles.shift() at the cap (3000 desktop) is O(n) per spawn under heavy load.
 - src/main.js:87 - the touch heuristic ('ontouchstart' && maxTouchPoints>0) puts touchscreen laptops into mobile mode (body.touch, autoLoot, DPR cap 1.5).
 
@@ -1687,7 +1725,9 @@ See the `open_issues` field.
   are equipped when they raise the score by more than 0.4%; gems go into the free socket where they help most; shop
   items, blacksmith upgrades and gems are bought by gain per gold.
 - **Skill bar** (`arrangeBar`): LMB = main spam skill, RMB = the free skill when the main one costs mana (else the
-  second attack), 1–8 = the rest of buildPower's top 10. The bot only casts what is on the bar.
+  second attack), the 13 keys (in `FILL_ORDER`) = the rest of buildPower's top 15. The bot only casts what is on the
+  bar. Skill points and the bar use the **build focus** (item 17): pet classes go for the most minions, the Paladin
+  for hammers.
 - **Navigation.** A BFS distance field from the hero's tile (8-way, no corner cutting) is rebuilt every 0.35 s; paths
   are read back from it and smoothed with `map.smooth`. The bot steers with `p.moveVec`, not `moveTarget` (the A* in
   `walkTo` gives up on long paths). Stuck detection re-paths, then wiggles.

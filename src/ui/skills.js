@@ -7,8 +7,9 @@ import { skillIcon, skillIconURL } from './icons.js';
 import { CLASS_SKILLS, SKILLS, MAX_SKILL_LEVEL, describe, manaCost, cooldown, ROW_LEVELS, effLevel } from '../data/skills.js';
 import { CLASSES } from '../data/classes.js';
 import { elem } from '../gfx/vfx.js';
+import { SLOT_LABELS, freeSlot } from '../data/bar.js';
 
-export const SLOT_LABELS = ['LMB', '1', '2', '3', '4', '5', '6', '7', '8', 'RMB'];
+export { SLOT_LABELS };
 let curTree = 0;
 let selected = null;
 
@@ -31,7 +32,7 @@ export function learn(sk) {
   c.skillPoints--;
   sfx('buff');
   if (first) {
-    const free = c.bar.findIndex((x, i) => !x && i !== 0);
+    const free = freeSlot(c.bar);
     if (free >= 0) { c.bar[free] = sk.id; UI.log(`<b>${escapeHtml(sk.name)}</b> assigned to slot ${SLOT_LABELS[free]}.`, '#ffd860'); }
   }
   G.player.recompute();
@@ -159,7 +160,7 @@ export function renderTree(body) {
 export function renderBook(body) {
   const c = G.char, p = G.player;
   body.innerHTML = '';
-  body.appendChild(el('div', 'dim', 'Your learned abilities. Drag one onto a skill bar slot (LMB, 1–8, RMB) or tap it and choose a slot.'));
+  body.appendChild(el('div', 'dim', 'Your learned abilities. Drag one onto a skill bar slot (LMB, `, 1–9, 0, -, =, RMB) or tap it and choose a slot.'));
   const wrap = el('div', 'inv-wrap');
   const list = el('div', 'book-list');
   list.style.minWidth = 'min(420px, 90vw)';
