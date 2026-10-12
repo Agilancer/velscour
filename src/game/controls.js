@@ -4,6 +4,7 @@ import { input } from '../core/input.js';
 import { camera, screenDirToTile } from '../core/view.js';
 import { dist, angleTo } from '../core/util.js';
 import { SKILLS, skillRange, needsTarget } from '../data/skills.js';
+import { SLOT_KEYS, RMB } from '../data/bar.js';
 
 function creatureAt(sx, sy) {
   const w = G.world;
@@ -128,14 +129,13 @@ export const controls = {
         }
       }
       if (mouse.rightPressed || (mouse.right && p.castLock <= 0)) {
-        const id = G.char.bar[9];
-        if (id) { p.moveTarget = null; this.useSlotAt(9, tx, ty); }
+        const id = G.char.bar[RMB];
+        if (id) { p.moveTarget = null; this.useSlotAt(RMB, tx, ty); }
       }
     }
 
     // ---- number keys & potions
-    const keys = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8'];
-    keys.forEach((k, i) => { if (input.consume(k) || (input.down(k) && p.castLock <= 0)) this.useSlot(i + 1); });
+    SLOT_KEYS.forEach((k, i) => { if (k && (input.consume(k) || (input.down(k) && p.castLock <= 0))) this.useSlot(i); });
     if (input.consume('KeyZ')) p.usePotion('hp');
     if (input.consume('KeyX')) p.usePotion('mp');
     if (input.consume('KeyC')) p.usePotion('rejuv');

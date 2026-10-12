@@ -27,6 +27,7 @@ node tools/tests/town.js                           # town pack: vendors/portal r
 node tools/tests/flow.js                           # town -> portal -> boss -> exit -> depth 2 -> death -> reload
 node tools/tests/ui.js                             # skill tree, inventory, socketing, vendors
 node tools/tests/mobile.js                         # 844x390 touch layout + joystick
+node tools/tests/hud.js                            # HUD art: 15-slot bar keys, save migration, minimap ring, buttons, Quest Log, touch pages
 node tools/tests/boss.js                           # Depth 100 Velscour arena + a depth 37 guardian
 node tools/tests/raid.js [5,30,55]                 # BOSS ROOMs: seal, every ability of all 8 raid bosses, phases, wards, death
 node tools/tests/mobs.js [levels]                  # monster pathing: awake monsters + guardians must reach the hero (stuck <= 2%)
@@ -69,6 +70,9 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   The user's sound zips live in `assets/source/audio/` and are transcoded to MP3 in `assets/audio/` by
   `python3 tools/process_assets.py audio` (needs ffmpeg; `tools/audiopack.py`). `src/core/audio.js` maps game sounds
   to samples (`SAMPLES`), songs to areas (`MUSIC`) and ambient beds to biomes (`AMB`).
+  The HUD art (`assets/source/hud_bar.webp`: orbs + 15 skill / 4 potion slots; `hud_frames.webp`: minimap ring + six
+  buttons) is cut by `python3 tools/process_assets.py ui` into `assets/ui/` (`hud.webp`, `hud.json`, `minimap_ring.webp`,
+  `btn_<name>.webp`). The skill bar's slot order, keys and save migration live in `src/data/bar.js`.
   Never hand-edit the generated files in `assets/sprites|ui|tiles|audio`.
 - Paths must stay **relative** (`assets/...`, `src/main.js`, never `/assets/...`), because the site is served
   from the `/velscour/` subpath on GitHub Pages. The `/src/...` imports in `tools/tests/` are fine, because the
@@ -76,7 +80,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
 - Saves live in localStorage under `velscour_saves_v1`, one hero per save slot (6 slots, `c.slot`). If you change the save shape, extend `migrate()` in
   `src/game/save.js` so existing heroes keep loading.
 - After any gameplay change, run at least `flow.js` and the `skills.js` classes you touched. Run `mobile.js`
-  for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
+  and `hud.js` for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
   `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`.
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Raid bosses
   (`src/game/raid.js`, every 5th depth): run `raid.js`.
