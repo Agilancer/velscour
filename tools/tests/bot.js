@@ -30,13 +30,13 @@ const depths = +(process.argv[3] || 2);
           const sk = list.find((s) => !canLearn(s) && s.kind !== 'summon' && s.kind !== 'buff' && s.kind !== 'curse') || list.find((s) => !canLearn(s));
           if (!sk) break;
           learn(sk);
-          if (!G.char.bar[9] && sk.id !== G.char.bar[0]) G.char.bar[9] = sk.id;
+          if (!G.char.bar[14] && sk.id !== G.char.bar[0]) G.char.bar[14] = sk.id;
         }
         if (G.char.statPoints > 0) autoAllocate();
         if (p.hp < p.maxHp * 0.4 && G.char.potions.hp > 0 && !p.potionRegen.length) { p.usePotion('hp'); potions++; }
         const tgt = w.nearestHostile('player', p.x, p.y, 9, true);
         if (tgt) {
-          const rmb = G.char.bar[9] && SKILLS[G.char.bar[9]];
+          const rmb = G.char.bar[14] && SKILLS[G.char.bar[14]];
           const useR = rmb && p.mana > p.maxMana * 0.3 && Math.random() < 0.5;
           p.tryUseSkill(useR ? rmb : SKILLS[G.char.bar[0]], tgt.x, tgt.y, tgt);
         } else if (w.boss && !w.boss.dead) {

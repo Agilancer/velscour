@@ -16,6 +16,7 @@ import { Vendor } from '../ui/vendor.js';
 import { addToBag } from './player.js';
 import { Delayed, Area } from './hazards.js';
 import { effects, Telegraph } from '../gfx/vfx.js';
+import { BAR_SIZE, LMB, RMB, FILL_ORDER, SLOT_KEYS } from '../data/bar.js';
 
 const OFFENSIVE = new Set(['melee', 'proj', 'nova', 'aoe', 'beam', 'chain', 'wall', 'zone', 'orbit', 'cyclone', 'whirl', 'leap', 'dash', 'trap', 'rain', 'strike', 'fissure', 'corpse']);
 const CROWD = 2.2; // enemies a typical cast is expected to reach, for planning
@@ -85,6 +86,25 @@ const avg = (d) => (d[0] + d[1]) / 2;
 const critMul = (p) => 1 + (p.st.critChance / 100) * (p.st.critDmg / 100);
 const summonMax = (sk) => sk.m.max || sk.m.n || 1;
 
+// ================================================================== build focus
+// How the user wants some classes played on auto-play. Pet classes raise as many minions as they can (every summon
+// skill that fits under the minion cap, kept up at all times); the Paladin builds around his hammers: Blessed Hammer
+// and Hammerstorm (hammers spiralling out around him) as the main attack, Wheel of Hammers (six hammers circling him)
+// fired whenever it is ready, and Hammer of the Gods. Only skill spending and the bar use it (focus = true); the
+// HUD's DPS and gear choices (charScore) stay unbiased.
+export const PET_CLASSES = new Set(['necromancer', 'totem_master', 'carrion_witch', 'slime_lord', 'ranger', 'gunner']);
+const PET_CAP = 40; // createSummon keeps at most 40 minions per hero; more would only kill the oldest
+const isHammer = (sk) => sk.fx === 'hammer' || /hammer/i.test(sk.name);
+const petsOf = (sk) => (sk.m.sum === 'revive' ? 0 : summonMax(sk));
+/** Skills a class pours its points into first, when it can (the Paladin's hammers), or null. */
+const focusSkills = (classId) => (classId === 'paladin' ? CLASS_SKILLS.paladin.filter(isHammer) : null);
+/** Value multiplier for a skill under the class's build focus. */
+function focusMul(classId, sk) {
+  if (classId === 'paladin') return isHammer(sk) ? (sk.kind === 'orbit' ? 4 : 2.5) : 1;
+  if (PET_CLASSES.has(classId) && sk.kind === 'summon') return sk.m.dur ? 2.5 : 4;
+  return 1;
+}
+
 /** Damage per second one skill adds when used as often as its cast time, cooldown and mana allow. */
 function skillDps(p, sk, L, crowd = CROWD) {
   const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, crowd) * critMul(p);
@@ -97,19 +117,20 @@ function skillDps(p, sk, L, crowd = CROWD) {
 
 /**
  * The hero's damage output with the current skills and gear: the best spammable skill (topped up by the free skill
- * when mana runs dry), plus every cooldown skill, minion, buff and curse that fits on the ten-slot bar.
+ * when mana runs dry), plus every cooldown skill, minion, buff and curse that fits on the 15-slot bar.
  * Returns { total, parts:[{sk, v, role}] } with parts sorted by value. `only` (a Set of skill ids) limits it to those.
  */
-export function buildPower(p, crowd = CROWD, only = null) {
+export function buildPower(p, crowd = CROWD, only = null, focus = false) {
   const c = p.char;
+  const fm = (sk) => (focus ? focusMul(c.classId, sk) : 1);
   const learned = CLASS_SKILLS[c.classId].filter((s) => (c.skills[s.id] || 0) > 0 && (!only || only.has(s.id)));
   const spam = [], parts = [];
   for (const sk of learned) {
     if (!OFFENSIVE.has(sk.kind) || sk.kind === 'corpse') continue;
     const L = effLevel(p, sk);
     const r = skillDps(p, sk, L, crowd);
-    if (cooldown(sk) >= 1.2) parts.push({ sk, v: r.dps * r.sustain * 0.85, role: 'cd' });
-    else spam.push({ sk, v: r.dps, sustain: r.sustain });
+    if (cooldown(sk) >= 1.2) parts.push({ sk, v: r.dps * r.sustain * 0.85 * fm(sk), role: 'cd' });
+    else spam.push({ sk, v: r.dps * fm(sk), sustain: r.sustain });
   }
   spam.sort((a, b) => b.v * b.sustain - a.v * a.sustain);
   let base = 0;
@@ -130,7 +151,9 @@ export function buildPower(p, crowd = CROWD, only = null) {
       const n = m.sum === 'revive' ? (m.n || 1) * 0.5 : summonMax(sk);
       const up = m.dur ? Math.min(1, m.dur / Math.max(m.dur, cooldown(sk) * (1 - p.st.cdr / 100), 1)) : 1;
       const one = avg(p.skillDamage(sk, L)) * (def.dmg || 1) * (1 + (p.st.summonPct || 0) / 100) / ((def.atk && def.atk.cd) || 1);
-      parts.push({ sk, v: one * n * up * 0.55 + ref * 0.05, role: 'summon' });
+      // under a pet focus every extra minion counts on its own too
+      const pets = focus && PET_CLASSES.has(c.classId) ? ref * 0.12 * petsOf(sk) * up : 0;
+      parts.push({ sk, v: (one * n * up * 0.55 + ref * 0.05) * fm(sk) + pets, role: 'summon' });
     } else if (sk.kind === 'buff') {
       const amt = buffAmount(sk, L) / 100, dur = skillDuration(sk, L);
       const up = Math.min(1, dur / Math.max(dur, cooldown(sk) * (1 - p.st.cdr / 100)));
@@ -150,7 +173,12 @@ export function buildPower(p, crowd = CROWD, only = null) {
     }
   }
   parts.sort((a, b) => b.v - a.v);
-  const kept = parts.slice(0, 10);
+  if (focus && PET_CLASSES.has(c.classId)) { // summons past the minion cap would only replace each other
+    let pets = 0;
+    for (const x of parts) if (x.role === 'summon') { pets += petsOf(x.sk); if (pets > PET_CAP) x.v *= 0.05; }
+    parts.sort((a, b) => b.v - a.v);
+  }
+  const kept = parts.slice(0, BAR_SIZE);
   return { total: kept.reduce((a, x) => a + x.v, 0), parts: kept };
 }
 
@@ -172,7 +200,7 @@ export function heroDamage(p) {
 /** One number for "how strong is the hero": log offense + log effective life + a little utility. */
 export function charScore(p) {
   const st = p.st, lvl = Math.max(1, (G.char && G.char.depth) || 1, p.char.level);
-  const off = buildPower(p).total;
+  const off = buildPower(p, CROWD, null, true).total; // attributes and gear follow the build focus too
   const armK = st.armor / (st.armor + 30 + lvl * 18);
   const res = ['fire', 'cold', 'light', 'poison'].reduce((a, k) => a + clamp(st.res[k], -100, 75), 0) / 4 / 100;
   const taken = (1 - armK) * 0.5 + (1 - res) * 0.4 + (1 - clamp(st.res.magic, -100, 75) / 100) * 0.1;
@@ -185,7 +213,7 @@ export function charScore(p) {
 function buildPowerWith(p, chain) {
   const c = p.char;
   for (const s of chain) c.skills[s.id] = (c.skills[s.id] || 0) + 1;
-  const v = buildPower(p).total;
+  const v = buildPower(p, CROWD, null, true).total;
   for (const s of chain) if (!--c.skills[s.id]) delete c.skills[s.id];
   return v;
 }
@@ -253,7 +281,7 @@ export const Auto = {
   noteInput() {
     if (!this.on) return;
     const k = input.keys;
-    const keys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8'];
+    const keys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ...SLOT_KEYS.filter(Boolean)];
     if (input.joy.active || input.worldTouch || keys.some((x) => k.has(x)) || ((input.mouse.left || input.mouse.right) && input.mouse.inside && input.lastPointerType === 'mouse')) this.overrideT = 1.5;
   },
 
@@ -334,9 +362,18 @@ export const Auto = {
     const list = CLASS_SKILLS[c.classId];
     let spent = false;
     while (c.skillPoints > 0) {
-      const base = buildPower(p).total;
+      const base = buildPower(p, CROWD, null, true).total;
       let best = null, bv = 0;
-      for (const sk of list) {
+      // a focused build (the Paladin's hammers) takes the point whenever one of its skills can use it
+      for (const sk of focusSkills(c.classId) || []) {
+        if (canLearn(sk)) continue;
+        const v = (buildPowerWith(p, [sk]) - base) * (sk.kind === 'orbit' ? 1.5 : 1) + 1e-6; // the swirling hammers first
+        if (v > bv) { bv = v; best = sk; }
+      }
+      if (best) bv = Infinity;
+      // none can take it yet, but one opens within a few levels (Blessed Hammer at 6): save the points for it
+      else if ((focusSkills(c.classId) || []).some((sk) => !(c.skills[sk.id] > 0) && sk.reqLevel > c.level && sk.reqLevel - c.level <= 4 && (!sk.prereq || c.skills[sk.prereq] > 0))) break;
+      for (const sk of bv === Infinity ? [] : list) {
         if ((c.skills[sk.id] || 0) >= MAX_SKILL_LEVEL || c.level < sk.reqLevel) continue;
         // the chain of unlearned prerequisites below this skill (same column)
         const chain = [];
@@ -344,7 +381,8 @@ export const Auto = {
         while (s) { if (!(c.skills[s.id] > 0) || s === sk) chain.push(s); s = s.prereq && !(c.skills[s.prereq] > 0) ? SKILLS[s.prereq] : null; }
         if (chain.length > c.skillPoints + 3) continue;
         const v = buildPowerWith(p, chain) - base;
-        const per = v / chain.length + (chain[0].tree === mainTree(p) ? base * 0.002 : 0);
+        let per = v / chain.length + (chain[0].tree === mainTree(p) ? base * 0.002 : 0);
+        if (sk.kind === 'summon' && PET_CLASSES.has(c.classId)) per *= 1.6; // pet builds grow their minions first
         if (per > bv) { bv = per; best = chain[chain.length - 1]; }
       }
       if (!best || canLearn(best)) best = [SKILLS[c.bar[0]], ...list].find((x) => x && !canLearn(x));
@@ -358,22 +396,26 @@ export const Auto = {
     return spent;
   },
 
-  /** LMB = main attack, RMB = the second attack (or the free one), 1-8 = cooldowns, minions, buffs, curses, heals. */
+  /** LMB = main attack, RMB = the second attack (or the free one), ` 1-9 0 - = = cooldowns, minions, buffs, curses, heals. */
   arrangeBar() {
     const p = G.player, c = G.char;
-    const { parts } = buildPower(p);
-    const bar = Array(10).fill(null);
+    const { parts } = buildPower(p, CROWD, null, true);
+    const bar = Array(BAR_SIZE).fill(null);
     const main = parts.find((x) => x.role === 'main');
     const alt = parts.find((x) => x.role === 'alt' || x.role === 'filler');
     const free = CLASS_SKILLS[c.classId].find((s) => c.skills[s.id] > 0 && !manaCost(s, 1) && OFFENSIVE.has(s.kind));
-    bar[0] = main ? main.sk.id : free ? free.id : c.bar[0];
-    const rmb = free && free.id !== bar[0] && main && manaCost(main.sk, 1) ? free : alt && alt.sk;
-    if (rmb && rmb.id !== bar[0]) bar[9] = rmb.id;
-    let i = 1;
+    // the Paladin's main attack is his best spammable swirling hammer (Hammerstorm, else Blessed Hammer)
+    const hammer = c.classId === 'paladin' && parts.filter((x) => x.sk.kind === 'orbit' && isHammer(x.sk) && cooldown(x.sk) < 1.2).sort((a, b) => b.v - a.v)[0];
+    bar[LMB] = hammer ? hammer.sk.id : main ? main.sk.id : free ? free.id : c.bar[LMB];
+    const lmbSk = SKILLS[bar[LMB]];
+    const rmb = free && free.id !== bar[LMB] && lmbSk && manaCost(lmbSk, 1) ? free : alt && alt.sk;
+    if (rmb && rmb.id !== bar[LMB]) bar[RMB] = rmb.id;
+    const keys = FILL_ORDER.filter((k) => k !== RMB);
+    let i = 0;
     for (const x of parts) {
-      if (i > 8) break;
+      if (i >= keys.length) break;
       if (bar.includes(x.sk.id)) continue;
-      bar[i++] = x.sk.id;
+      bar[keys[i++]] = x.sk.id;
     }
     if (bar.join() !== c.bar.join()) { c.bar = bar; G.ui.refresh(); }
   },
@@ -924,6 +966,7 @@ export const Auto = {
           continue;
         case 'summon': {
           const mine = w.creatures.filter((x) => x.summon && x.skillId === sk.id && !x.dead).length;
+          if (this.petCount(w) + (m.n || 1) > PET_CAP) continue; // past the cap a new minion only replaces an old one
           if (m.sum === 'revive') {
             if (mine < (m.max || m.n || 1) && w.corpses.some((k) => !k.used && dist(k.x, k.y, p.x, p.y) < 5)) consider(sk, 4e8, p.x, p.y);
           } else if (mine < summonMax(sk) || (m.dur && cooldown(sk) >= 3)) consider(sk, 4e8 - mine, t.x, t.y);
@@ -970,6 +1013,7 @@ export const Auto = {
       const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, Math.max(1, n));
       let score = per / Math.max(0.2, castTime(p, sk));
       if (cooldown(sk) >= 1.2) score *= 1.6; // fire cooldowns whenever they are up
+      score *= focusMul(c.classId, sk); // the build focus: the Paladin swings hammers before anything else
       if (sk.kind === 'leap' || sk.kind === 'dash') score *= d > 2.5 ? 1.2 : 0.6;
       if (cost) score *= 1 - 0.35 * clamp(1 - p.mana / p.maxMana, 0, 1);
       consider(sk, score, ax, ay);
@@ -987,13 +1031,15 @@ export const Auto = {
     }
     return best;
   },
+  /** The hero's living minions (createSummon caps them at PET_CAP). */
+  petCount(w) { const p = G.player; let n = 0; for (const x of w.creatures) if (x.summon && x.owner === p && !x.dead) n++; return n; },
   /** Out of combat: raise permanent minions. */
   preCast(w) {
     const p = G.player;
     for (const sk of this.barSkills()) {
       if (sk.kind !== 'summon' || sk.m.dur || sk.m.sum === 'revive' || p.canUse(sk)) continue;
       const mine = w.creatures.filter((x) => x.summon && x.skillId === sk.id && !x.dead).length;
-      if (mine < summonMax(sk) && p.mana > p.maxMana * 0.5) { p.tryUseSkill(sk, p.x + Math.cos(p.facing), p.y + Math.sin(p.facing)); return; }
+      if (mine < summonMax(sk) && this.petCount(w) + (sk.m.n || 1) <= PET_CAP && p.mana > p.maxMana * 0.5) { p.tryUseSkill(sk, p.x + Math.cos(p.facing), p.y + Math.sin(p.facing)); return; }
     }
   },
 

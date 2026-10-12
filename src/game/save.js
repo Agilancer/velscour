@@ -2,6 +2,7 @@
 import { CLASSES } from '../data/classes.js';
 import { rollItem } from '../data/items.js';
 import { drawBiome } from '../data/biomes.js';
+import { migrateBar, BAR_SIZE } from '../data/bar.js';
 
 const KEY = 'velscour_saves_v1';
 export const SLOTS = 6;
@@ -65,7 +66,7 @@ export function newCharData(classId, name, slot = firstFreeSlot()) {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     version: 1, name, classId, slot: slot >= 0 ? slot : null, level: 1, xp: 0,
     attrs: { ...C.base }, statPoints: 0, skillPoints: 1,
-    skills: {}, granted: {}, bar: Array(10).fill(null),
+    skills: {}, granted: {}, bar: Array(BAR_SIZE).fill(null),
     equip: { weapon: null, offhand: null, head: null, body: null, hands: null, legs: null, feet: null },
     bag: Array(60).fill(null),
     gold: 150, potions: { hp: 6, mp: 4, rejuv: 1, fury: 1 },
@@ -91,7 +92,7 @@ export function migrate(c) {
   if (!Array.isArray(c.biomeBag)) c.biomeBag = [];
   // heroes made before the shuffle bag always started in the catacombs: give an unexplored hero a random start
   if (c.nextBiome === 'catacombs' && !c.deepest && !c.lastBiome) c.nextBiome = drawBiome(c, c.depth || 1);
-  if (!Array.isArray(c.bar) || c.bar.length !== 10) c.bar = Array(10).fill(null);
+  c.bar = migrateBar(c.bar); // 10 slots (LMB, 1-8, RMB) -> 15 (LMB, ` 1-9 0 - =, RMB)
   while (c.bag.length < 60) c.bag.push(null);
   // body armor and helmets of the first Paladin art pack: their look now comes from the gear art
   for (const it of [...Object.values(c.equip), ...c.bag]) if (it && it.art && (it.slot === 'body' || it.slot === 'head')) { delete it.art; delete it.artCls; }

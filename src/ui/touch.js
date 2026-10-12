@@ -4,33 +4,37 @@ import { el } from '../core/util.js';
 import { $ } from './ui.js';
 import { skillIcon } from './icons.js';
 import { SKILLS, cooldown, manaCost, effLevel } from '../data/skills.js';
-import { SLOT_LABELS } from './skills.js';
+import { SLOT_LABELS, RMB } from '../data/bar.js';
 import { chooser } from './hud.js';
 
-// [barIndex, ring, angleDeg]  ring 0 = big attack button, 1 = inner arc, 2 = outer arc
-const LAYOUT = [
-  [0, 0, 0], [9, 1, 180], [1, 1, 225], [2, 1, 270],
-  [3, 2, 198], [4, 2, 213.4], [5, 2, 228.8], [6, 2, 244.2], [7, 2, 259.6], [8, 2, 275],
-];
+// Positions [ring, angleDeg]: ring 0 = big attack button, 1 = inner arc, 2 = outer arc. The arcs show one page of
+// the 15-slot bar at a time; the small flip button swaps pages.
+const POS = [[1, 180], [1, 225], [1, 270], [2, 198], [2, 213.4], [2, 228.8], [2, 244.2], [2, 259.6], [2, 275]];
+const PAGES = [[RMB, 2, 3, 4, 5, 6, 7, 8, 9], [10, 11, 12, 13, 1]]; // RMB 1-8 | 9 0 - = `
+const FLIP = [1.5, 186]; // between the arcs, left of RMB
 
 export const TouchUI = {
   btns: [],
+  page: 0,
   init() {
     G.touchUI = this;
     const root = $('#touch-buttons');
-    for (const [bar, ring] of LAYOUT) {
+    const slots = [[0, 0, 0], ...POS.map(([ring, ang], i) => [PAGES[0][i], ring, ang])];
+    for (const [bar, ring, ang] of slots) {
       const b = el('div', 'tbtn' + (ring === 0 ? ' main' : ''));
       const cv = document.createElement('canvas');
       cv.width = 64; cv.height = 64;
       const cd = el('div', 'cd'); cd.style.height = '0%';
-      const k = el('div', 'k', SLOT_LABELS[bar] === 'LMB' ? 'ATK' : SLOT_LABELS[bar]);
+      const k = el('div', 'k');
       b.append(cv, cd, k);
+      const t = { b, cv, cd, k, bar, ring, ang, last: {} };
       let holdT = null, longT = null, fired = false;
       b.addEventListener('pointerdown', (e) => {
         e.preventDefault(); e.stopPropagation();
         b.classList.add('pressed');
         fired = false;
         try { b.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        const bar = t.bar;
         const id = G.char && G.char.bar[bar];
         if (!id) { longT = setTimeout(() => chooser(bar), 10); return; }
         G.controls.useSlot(bar); fired = true;
@@ -40,12 +44,34 @@ export const TouchUI = {
       const up = () => { b.classList.remove('pressed'); clearInterval(holdT); clearTimeout(longT); holdT = null; longT = null; };
       b.addEventListener('pointerup', up);
       b.addEventListener('pointercancel', up);
-      b.addEventListener('contextmenu', (e) => { e.preventDefault(); chooser(bar); });
+      b.addEventListener('contextmenu', (e) => { e.preventDefault(); chooser(t.bar); });
       root.appendChild(b);
-      this.btns.push({ b, cv, cd, bar, ring, last: {} });
+      this.btns.push(t);
     }
+    const f = this.flipBtn = el('div', 'tbtn flip', '&#8644;<span>1/2</span>');
+    f.title = 'More skills';
+    f.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); this.setPage(1 - this.page); });
+    root.appendChild(f);
     window.addEventListener('resize', () => this.layout());
+    this.setPage(0);
+  },
+  /** Show page n of the bar on the arcs. */
+  setPage(n) {
+    this.page = n;
+    const page = PAGES[n];
+    this.btns.forEach((t, i) => {
+      if (!i) return;
+      const bar = page[i - 1];
+      t.b.classList.toggle('hidden', bar === undefined);
+      if (bar === undefined) return;
+      t.bar = bar; t.last = {}; t.b.style.filter = ''; t.cd.style.height = '0%';
+      t.k.textContent = SLOT_LABELS[bar];
+    });
+    this.btns[0].k.textContent = 'ATK';
+    this.flipBtn.querySelector('span').textContent = `${n + 1}/${PAGES.length}`;
+    this.flipBtn.classList.toggle('on', n > 0);
     this.layout();
+    this.refresh();
   },
   layout() {
     const W = innerWidth, H = innerHeight;
@@ -53,16 +79,17 @@ export const TouchUI = {
     const main = 72 * s, small = 44 * s;
     const cx = W - 14 - main / 2, cy = H - 14 - main / 2 - (H < 420 ? 0 : 10);
     const radii = [0, 92 * s, 170 * s];
+    const rad = (ring) => (ring % 1 ? (radii[Math.floor(ring)] + radii[Math.ceil(ring)]) / 2 : radii[ring]);
     const root = $('#touch-buttons');
     root.style.width = W + 'px'; root.style.height = H + 'px';
     root.style.left = '0'; root.style.top = '0'; root.style.right = 'auto'; root.style.bottom = 'auto';
-    for (const t of this.btns) {
-      const [, ring, ang] = LAYOUT.find((l) => l[0] === t.bar);
-      const r = radii[ring], a = (ang * Math.PI) / 180;
-      const size = ring === 0 ? main : small;
+    const put = (b, ring, ang, size) => {
+      const r = rad(ring), a = (ang * Math.PI) / 180;
       const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
-      Object.assign(t.b.style, { width: size + 'px', height: size + 'px', left: x - size / 2 + 'px', top: y - size / 2 + 'px' });
-    }
+      Object.assign(b.style, { width: size + 'px', height: size + 'px', left: x - size / 2 + 'px', top: y - size / 2 + 'px' });
+    };
+    for (const t of this.btns) put(t.b, t.ring, t.ang, t.ring === 0 ? main : small);
+    if (this.flipBtn) put(this.flipBtn, FLIP[0], FLIP[1], 32 * s);
   },
   refresh() {
     for (const t of this.btns) {

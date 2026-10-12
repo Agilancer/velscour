@@ -7,6 +7,7 @@ JSON atlases under assets/. Re-run this whenever a source sheet changes:
 
     pip install pillow numpy scipy
     python3 tools/process_assets.py          # everything
+    python3 tools/process_assets.py ui       # logo, icon, HUD bar, minimap ring, HUD buttons (part of "sprites")
     python3 tools/process_assets.py biomes [catacombs]  # biome packs: floors, walls, arches, doors, scatter (tools/biomepack.py)
     python3 tools/process_assets.py town     # the town pack: ground, transitions, buildings, trees (tools/townpack.py)
     python3 tools/process_assets.py props    # loot-chest art
@@ -19,9 +20,11 @@ JSON atlases under assets/. Re-run this whenever a source sheet changes:
 Outputs
   assets/sprites/classes/<class>.webp  one trimmed full-body sprite per class
   assets/ui/logo.webp                  trimmed title logo
-  assets/ui/hud.webp                   skill bar with an empty (transparent) XP track
-  assets/ui/hud.json                   slot / orb / xp-bar geometry in hud.webp pixels
+  assets/ui/hud.webp                   skill bar (15 skill + 4 potion slots) with an empty (transparent) XP track
+  assets/ui/hud.json                   slot / orb / xp-bar / ring / button geometry
   assets/ui/potion_<color>.png         potion icons cut out of the skill bar
+  assets/ui/minimap_ring.webp          the frame around the minimap
+  assets/ui/btn_<name>.webp            HUD buttons: bag, skills, book, quest, auto, menu
   assets/tiles/<pack>/                 biome pack atlases + pack.json (tools/biomepack.py, docs/ART.md)
   assets/props/chests.webp + .json     loot-chest art
   assets/sprites/enemies/<set>_<sheet>.webp + enemies.json   one atlas per monster sheet
@@ -153,31 +156,74 @@ def process_ui():
     icon.alpha_composite(v, ((512 - v.width) // 2, (512 - v.height) // 2))
     icon.save(os.path.join(OUT, "ui", "icon.png"), optimize=True)
 
+    process_hud()
+
+
+# The HUD art (assets/source/hud_bar.webp, 2000x667 transparent): two orbs and a 19-slot bar, LMB ` 1-9 0 - =
+# (13 keys), four potions (Z X C V), RMB; the XP track under it. Pixel positions measured from the art.
+HUD_KEYS = ["LMB", "`", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=", "Z", "X", "C", "V", "RMB"]
+# hud_frames.webp (1415x1111): the minimap ring on top, the six HUD buttons in a row under it
+HUD_BUTTONS = ["bag", "skills", "book", "quest", "auto", "menu"]
+BTN_SPLIT = [40, 270, 489, 708, 927, 1146, 1376]   # midpoints of the jewel pairs that join the buttons
+BTN_Y = (812, 1058)
+RING_BOX = (546, 26, 1392, 834)
+RING_HOLE = (969, 431.5, 303, 285.5)                # centre and radii of the open middle (it is a little oval)
+
+
+def process_hud():
     hud = Image.open(os.path.join(SRC, "hud_bar.webp")).convert("RGBA")
-    oy = 146
-    hud = hud.crop((0, oy, 2000, 461))
+    oy, h = 204, 296
+    hud = hud.crop((0, oy, 2000, oy + h))
     arr = np.asarray(hud).copy()
-    # potion icons (cut before anything else is modified)
-    slot_x = [(306, 378), (407, 476), (506, 575), (604, 677), (705, 779), (808, 882),
-              (912, 985), (1015, 1089), (1117, 1191), (1219, 1293), (1321, 1395),
-              (1423, 1497), (1524, 1598), (1621, 1697)]
-    sy0, sy1 = 274 - oy, 350 - oy
-    for name, (x0, x1) in zip(["red", "blue", "purple", "orange"], slot_x[9:13]):
-        p = arr[sy0 + 2:sy1 - 1, x0 + 3:x1 - 3].copy()
+    pitch = (1653 - 279) / 18
+    slot_x = [(round(279 + i * pitch), round(279 + i * pitch) + 67) for i in range(19)]
+    sy0, sy1 = 316 - oy, 383 - oy
+    # potion icons: cut from the first HUD art (hud_bar_v1.webp), whose bottles sit clear of the slot frames
+    v1 = np.asarray(Image.open(os.path.join(SRC, "hud_bar_v1.webp")).convert("RGBA").crop((0, 146, 2000, 461))).copy()
+    for name, (x0, x1) in zip(["red", "blue", "purple", "orange"], [(1219, 1293), (1321, 1395), (1423, 1497), (1524, 1598)]):
+        p = v1[128 + 2:204 - 1, x0 + 3:x1 - 3].copy()
         lum = p[..., :3].astype(int).sum(axis=2)
         p[..., 3] = np.where(lum < 75, 0, p[..., 3])
         trim(Image.fromarray(p)).save(os.path.join(OUT, "ui", "potion_%s.png" % name), optimize=True)
-    # empty the XP track so the game can draw its own fill underneath
-    ty0, ty1 = 408 - oy, 430 - oy
-    for xa, xb in [(350, 872), (1126, 1650)]:
-        arr[ty0:ty1, xa:xb, 3] = 0
+    # empty the XP track (the art shows it half full) so the game can draw its own fill underneath
+    ty0, ty1, tx0, tx1 = 441 - oy, 459 - oy, 263, 1737
+    arr[ty0:ty1, tx0:tx1, 3] = 0
     save(Image.fromarray(arr), os.path.join(OUT, "ui", "hud.webp"))
+
+    fr = Image.open(os.path.join(SRC, "hud_frames.webp")).convert("RGBA")
+    fa = np.asarray(fr).copy()
+    # minimap ring: drop the buttons' top jewels that reach up beside its bottom jewel
+    ring = fa[RING_BOX[1]:RING_BOX[3], RING_BOX[0]:RING_BOX[2]].copy()
+    yy, xx = np.mgrid[RING_BOX[1]:RING_BOX[3], RING_BOX[0]:RING_BOX[2]]
+    ring[..., 3] = np.where(((yy > 808) & (np.abs(xx - 969) > 42)) | (yy > 832), 0, ring[..., 3])
+    rk = 420 / ring.shape[1]
+    ring_img = Image.fromarray(ring).resize((420, round(ring.shape[0] * rk)), Image.LANCZOS)
+    save(ring_img, os.path.join(OUT, "ui", "minimap_ring.webp"))
+    buttons = []
+    for i, name in enumerate(HUD_BUTTONS):
+        x0, x1 = BTN_SPLIT[i], BTN_SPLIT[i + 1]
+        b = fa[BTN_Y[0]:BTN_Y[1], x0:x1].copy()
+        yy, xx = np.mgrid[BTN_Y[0]:BTN_Y[1], x0:x1]
+        cx = (x0 + x1) / 2
+        b[..., 3] = np.where((yy < 838) & (np.abs(xx - cx) > 30), 0, b[..., 3])   # the ring's bottom jewel
+        # pad to a common width, centred, so every button is the same size
+        W = max(BTN_SPLIT[j + 1] - BTN_SPLIT[j] for j in range(len(HUD_BUTTONS)))
+        im = Image.new("RGBA", (W, b.shape[0]), (0, 0, 0, 0))
+        im.paste(Image.fromarray(b), ((W - b.shape[1]) // 2, 0))
+        k = 120 / im.width
+        im = im.resize((120, round(im.height * k)), Image.LANCZOS)
+        save(im, os.path.join(OUT, "ui", "btn_%s.webp" % name))
+        buttons.append(name)
     geo = {
-        "w": 2000, "h": 315,
+        "w": 2000, "h": h,
         "slots": [{"x": x0, "y": sy0, "w": x1 - x0, "h": sy1 - sy0} for (x0, x1) in slot_x],
-        "slotKeys": ["LMB", "1", "2", "3", "4", "5", "6", "7", "8", "Z", "X", "C", "V", "RMB"],
-        "orbs": [{"cx": 157, "cy": 297 - oy, "r": 78}, {"cx": 1842, "cy": 297 - oy, "r": 78}],
-        "xp": {"x": 350, "y": ty0, "w": 1300, "h": ty1 - ty0},
+        "slotKeys": HUD_KEYS,
+        "orbs": [{"cx": 154, "cy": 349.5 - oy, "r": 92}, {"cx": 1845, "cy": 348 - oy, "r": 93}],
+        "xp": {"x": tx0, "y": ty0, "w": tx1 - tx0, "h": ty1 - ty0},
+        "barTop": 290 - oy,   # top edge of the slot rail (above it only the orbs' frames rise)
+        "ring": {"w": RING_BOX[2] - RING_BOX[0], "h": RING_BOX[3] - RING_BOX[1],
+                 "hole": {"cx": RING_HOLE[0] - RING_BOX[0], "cy": RING_HOLE[1] - RING_BOX[1], "rx": RING_HOLE[2], "ry": RING_HOLE[3]}},
+        "buttons": {"names": buttons, "w": max(BTN_SPLIT[j + 1] - BTN_SPLIT[j] for j in range(len(HUD_BUTTONS))), "h": BTN_Y[1] - BTN_Y[0]},
     }
     with open(os.path.join(OUT, "ui", "hud.json"), "w") as f:
         json.dump(geo, f, indent=1)
@@ -209,6 +255,8 @@ def main():
         args = ["sprites", "biomes", "town", "props", "classes", "enemies", "select"]
     if "sprites" in args:
         process_classes()
+        process_ui()
+    elif "ui" in args:
         process_ui()
     if "biomes" in args:
         from biomepack import process_biome_packs
