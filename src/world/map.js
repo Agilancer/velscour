@@ -124,45 +124,79 @@ export class TileMap {
     return [tx + bx + 0.5, ty + by + 0.5];
   }
 
-  /** A* path on tiles (8-dir), returns array of [x,y] tile centres or null. */
-  findPath(sx, sy, gx, gy, maxNodes = 3000) {
-    const W = this.w;
-    const s = Math.floor(sy) * W + Math.floor(sx);
-    let gtx = Math.floor(gx), gty = Math.floor(gy);
+  /**
+   * A* path on tiles (8-dir), returns smoothed waypoints (start excluded) or null. The goal snaps to the nearest
+   * walkable tile within 3; the last waypoint is the raw goal only when it was walkable. r: the mover's collision
+   * half-size for smoothing (move() uses e.r * 0.8). Binary heap + typed arrays reused between calls, so the
+   * minions can afford to path every few frames.
+   */
+  findPath(sx, sy, gx, gy, maxNodes = 3000, r = 0.28) {
+    const W = this.w, N = W * this.h;
+    const stx = Math.floor(sx), sty = Math.floor(sy);
+    if (!this.inb(stx, sty)) return null;
+    const s = sty * W + stx;
+    let gtx = Math.floor(gx), gty = Math.floor(gy), snapped = false;
     if (!this.walkableTile(gtx, gty)) {
       // snap goal to nearest walkable tile
-      let found = false;
-      for (let r = 1; r < 4 && !found; r++) {
-        for (let oy = -r; oy <= r && !found; oy++) {
-          for (let ox = -r; ox <= r && !found; ox++) {
-            if (this.walkableTile(gtx + ox, gty + oy)) { gtx += ox; gty += oy; found = true; }
-          }
+      let best = Infinity, bx = 0, by = 0;
+      for (let oy = -3; oy <= 3; oy++) {
+        for (let ox = -3; ox <= 3; ox++) {
+          const d = ox * ox + oy * oy;
+          if (d < best && this.walkableTile(gtx + ox, gty + oy)) { best = d; bx = ox; by = oy; }
         }
       }
-      if (!found) return null;
+      if (best === Infinity) return null;
+      gtx += bx; gty += by; snapped = true;
     }
     const g = gty * W + gtx;
-    if (s === g) return [[gx, gy]];
-    const open = [s];
-    const came = new Map();
-    const gs = new Map([[s, 0]]);
-    const fs = new Map([[s, 0]]);
-    const h = (i) => { const x = i % W, y = (i / W) | 0; return Math.hypot(x - gtx, y - gty); };
+    const end = snapped ? [gtx + 0.5, gty + 0.5] : [gx, gy];
+    if (s === g) return [end];
+    if (!this._as || this._as.g.length !== N) this._as = { g: new Float32Array(N), came: new Int32Array(N), stamp: new Uint32Array(N), closed: new Uint32Array(N), gen: 0, heap: [], hf: [] };
+    const A = this._as, gs = A.g, came = A.came, stamp = A.stamp, closed = A.closed;
+    const gen = ++A.gen;
+    const heap = A.heap, hf = A.hf;
+    heap.length = 0; hf.length = 0;
+    const h = (x, y) => { const dx = Math.abs(x - gtx), dy = Math.abs(y - gty); return dx + dy - 0.586 * Math.min(dx, dy); };
+    const push = (i, f) => {
+      let k = heap.length;
+      heap.push(i); hf.push(f);
+      while (k > 0) {
+        const p = (k - 1) >> 1;
+        if (hf[p] <= f) break;
+        heap[k] = heap[p]; hf[k] = hf[p]; k = p;
+      }
+      heap[k] = i; hf[k] = f;
+    };
+    const pop = () => {
+      const top = heap[0], li = heap.pop(), lf = hf.pop(), n = heap.length;
+      if (n) {
+        let k = 0;
+        for (;;) {
+          let c = 2 * k + 1;
+          if (c >= n) break;
+          if (c + 1 < n && hf[c + 1] < hf[c]) c++;
+          if (hf[c] >= lf) break;
+          heap[k] = heap[c]; hf[k] = hf[c]; k = c;
+        }
+        heap[k] = li; hf[k] = lf;
+      }
+      return top;
+    };
+    stamp[s] = gen; gs[s] = 0; came[s] = -1;
+    push(s, h(stx, sty));
     let n = 0;
-    while (open.length && n++ < maxNodes) {
-      let bi = 0;
-      for (let i = 1; i < open.length; i++) if (fs.get(open[i]) < fs.get(open[bi])) bi = i;
-      const cur = open[bi];
-      open.splice(bi, 1);
+    while (heap.length && n < maxNodes) {
+      const cur = pop();
+      if (closed[cur] === gen) continue;
+      closed[cur] = gen; n++;
       if (cur === g) {
         const path = [];
-        let c = cur;
-        while (c !== s) { path.push([(c % W) + 0.5, ((c / W) | 0) + 0.5]); c = came.get(c); }
+        for (let c = came[cur]; c !== s && c >= 0; c = came[c]) path.push([(c % W) + 0.5, ((c / W) | 0) + 0.5]);
         path.reverse();
-        if (path.length) path[path.length - 1] = [gx, gy];
-        return this.smooth(sx, sy, path);
+        path.push(end);
+        return this.smooth(sx, sy, path, r);
       }
-      const cx = cur % W, cy = (cur / W) | 0;
+      const cx = cur % W, cy = (cur / W) | 0, cg = gs[cur];
       for (let oy = -1; oy <= 1; oy++) {
         for (let ox = -1; ox <= 1; ox++) {
           if (!ox && !oy) continue;
@@ -170,23 +204,23 @@ export class TileMap {
           if (!this.walkableTile(nx, ny)) continue;
           if (ox && oy && (!this.walkableTile(cx + ox, cy) || !this.walkableTile(cx, cy + oy))) continue;
           const ni = ny * W + nx;
-          const ng = gs.get(cur) + (ox && oy ? 1.414 : 1);
-          if (ng < (gs.has(ni) ? gs.get(ni) : Infinity)) {
-            came.set(ni, cur); gs.set(ni, ng); fs.set(ni, ng + h(ni));
-            if (!open.includes(ni)) open.push(ni);
-          }
+          if (closed[ni] === gen) continue;
+          const ng = cg + (ox && oy ? 1.414 : 1);
+          if (stamp[ni] === gen && ng >= gs[ni]) continue;
+          stamp[ni] = gen; gs[ni] = ng; came[ni] = cur;
+          push(ni, ng + h(nx, ny));
         }
       }
     }
     return null;
   }
-  smooth(sx, sy, path) {
+  smooth(sx, sy, path, r = 0.28) {
     // drop intermediate nodes with clear line of sight
     const out = [];
     let ax = sx, ay = sy, i = 0;
     while (i < path.length) {
       let j = path.length - 1;
-      while (j > i && !this.losWide(ax, ay, path[j][0], path[j][1])) j--;
+      while (j > i && !this.losWide(ax, ay, path[j][0], path[j][1], r)) j--;
       out.push(path[j]);
       ax = path[j][0]; ay = path[j][1];
       i = j + 1;

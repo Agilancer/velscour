@@ -128,7 +128,7 @@ export const game = {
     world.add(p);
     for (const s of keep) {
       const [x, y] = world.map.randomNear(p.x, p.y, 1.5);
-      s.x = x; s.y = y; s.world = world; s.aggro = null;
+      s.x = x; s.y = y; s.world = world; s.aggro = null; s.foe = null; s.nav = null; s.fol = null;
       world.add(s);
     }
     G.world = world;

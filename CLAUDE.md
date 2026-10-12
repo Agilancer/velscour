@@ -36,6 +36,7 @@ node tools/tests/pack.js catacombs,blood          # biome pack levels: arches, d
 node tools/tests/titlefx.js                        # title logo fire, tar drips/pile, spark ignition + explosion
 node tools/tests/enemies.js                        # monster art line-ups, corpses, mixed-biome levels + guardians
 node tools/tests/legion.js                         # Necromancer skeleton summons: art line-up, every minion attacks + casts
+node tools/tests/pets.js [seeds]                   # minion pathing: round walls, keep up, fight round corners, leash, idle
 node tools/tests/select.js [mobile]                # animated class-select portraits, 6 hero save slots, slot migration
 node tools/tests/autoplay.js wizard 15 [mobile]    # auto-play soak: a new hero plays N game minutes at ~30x speed
 ```
@@ -69,7 +70,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `src/game/save.js` so existing heroes keep loading.
 - After any gameplay change, run at least `flow.js` and the `skills.js` classes you touched. Run `mobile.js`
   for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
-  `autoplay.js` for a class or two as well.
+  `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`.
 
 ## Git / GitHub
 - The working branch is `claude/amazing-rubin-kguehz`. PR https://github.com/Agilancer/velscour/pull/1
