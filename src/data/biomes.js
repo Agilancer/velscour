@@ -151,13 +151,55 @@ const BIOME_ART = {
 };
 for (const b of BIOMES) [b.art, b.palette, b.barricade, b.scatter] = BIOME_ART[b.id];
 
+// Colour families: a level can mix its tile set with another biome of the same family (mixPartner), e.g. a
+// Frozen Ossuary whose far rooms are paved like the Crystal Caverns.
+const FAMILY = {
+  sand: ['desert', 'gilded'],
+  frost: ['frozen', 'sunken', 'crystal', 'storm', 'abyss'],
+  ember: ['molten', 'blood', 'forge', 'flesh'],
+  rot: ['fungal', 'plague', 'thorn'],
+  gloom: ['catacombs', 'ashen', 'void', 'shadow', 'obsidian'],
+};
+for (const [f, ids] of Object.entries(FAMILY)) for (const id of ids) BIOMES.find((b) => b.id === id).family = f;
+
+// Monster palette swaps per biome (names from SWAPS in bestiary.js; null = the art's own colours). Each look in
+// a level rolls one of these, so the same monster art shows up in many colourings across biomes.
+const MON_SWAPS = {
+  catacombs: [null, null, 'pale', 'ash'], frozen: ['rime', 'frost', 'pale'], molten: ['ember', 'infernal', null],
+  fungal: ['venom', 'rot', 'thorn'], sunken: ['tide', 'abyss', 'pale'], blood: ['blood', 'flesh', null],
+  ashen: ['ash', 'pale', 'shadow'], void: ['void', 'abyss', 'shadow'], gilded: ['gilded', 'sand', null],
+  plague: ['rot', 'venom', 'tide'], crystal: ['crystal', 'frost', 'storm'], desert: ['sand', null, 'gilded'],
+  shadow: ['shadow', 'obsidian', 'void'], forge: ['infernal', 'ember', 'obsidian'], abyss: ['abyss', 'void', 'storm'],
+  thorn: ['thorn', 'venom', null], storm: ['storm', 'crystal', 'pale'], obsidian: ['obsidian', 'void', 'shadow'],
+  flesh: ['flesh', 'blood', null], throne: ['infernal', 'blood', 'ember'],
+};
+for (const b of BIOMES) b.swaps = MON_SWAPS[b.id];
+
+export const MIX_CHANCE = 0.65;
+/** Maybe pick a like-coloured biome to mix tiles with (one drawn differently when the family has one), or null. */
+export function mixPartner(biome, rnd = Math.random) {
+  if (!biome.family || rnd() >= MIX_CHANCE) return null;
+  const kin = BIOMES.filter((b) => b.family === biome.family && b.id !== biome.id);
+  const other = kin.filter((b) => b.art !== biome.art);
+  const pool = other.length ? other : kin;
+  return pool.length ? pool[Math.floor(rnd() * pool.length)] : null;
+}
+
 export const BIOME_BY_ID = Object.fromEntries(BIOMES.map((b) => [b.id, b]));
 
-/** Pick a random biome other than `exclude` (and never the throne before depth 100). */
-export function randomBiome(exclude, depth) {
+/**
+ * The hero's next biome, drawn from a shuffle bag kept on the save (`c.biomeBag`): all 19 biomes come up once,
+ * in random order, before any repeats, and never the same one twice in a row. The throne is only for depth 100.
+ */
+export function drawBiome(c, depth) {
   if (depth === 100) return 'throne';
-  const pool = BIOMES.filter((b) => b.id !== exclude && b.id !== 'throne');
-  return pool[Math.floor(Math.random() * pool.length)].id;
+  const all = BIOMES.filter((b) => b.id !== 'throne').map((b) => b.id);
+  let bag = (c.biomeBag || []).filter((id) => all.includes(id));
+  if (!bag.length || (bag.length === 1 && bag[0] === c.lastBiome)) bag = all.slice();
+  const pool = bag.filter((id) => id !== c.lastBiome);
+  const id = pool[Math.floor(Math.random() * pool.length)];
+  c.biomeBag = bag.filter((x) => x !== id);
+  return id;
 }
 
 export const TOWN_BIOME = {

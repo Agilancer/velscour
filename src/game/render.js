@@ -5,6 +5,7 @@ import { makeCanvas, TAU, clamp, rgba, shade, hexToRgb } from '../core/util.js';
 import { drawDecals, drawEffects, drawParticles, drawTexts, lights, glowSprite } from '../gfx/vfx.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { classSprite } from '../core/assets.js';
+import { enemyImage } from '../core/enemyart.js';
 import { drawLootLabels } from './loot.js';
 
 const WALL_K = (HW * 1.06) / 66;
@@ -161,9 +162,9 @@ function drawPortal(ctx, p) {
 }
 
 function drawCorpse(ctx, c) {
-  const img = c._img || (c._img = pixelSprite(c.sprite, c.pal, 6, { dark: true }));
+  const img = c._img || (c._img = (c.art && enemyImage(c.art, c.swap, 'dark')) || pixelSprite(c.sprite, c.pal, 6, { dark: true }));
   const px = (c.px || 2.3) * (c.scale || 1) / 6;
-  const w = img.width * px, h = img.height * px;
+  const h = img._art ? c.artH * (c.scale || 1) : img.height * px, w = img._art ? h * img.width / img.height : img.width * px;
   const x = isoX(c.x, c.y), y = isoY(c.x, c.y);
   const fade = c.t > 34 ? 1 - (c.t - 34) / 6 : 1;
   ctx.save();

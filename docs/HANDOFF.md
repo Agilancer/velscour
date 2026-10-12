@@ -60,11 +60,18 @@ Requirements, as stated (✅ = implemented in the draft):
 - **Tech stack:** vanilla JS ES modules and Canvas 2D, with no framework and no bundler. GitHub Pages can serve the
   repo as-is, and the code is easy to change.
 - **Art:** the user's sheets are sliced by `tools/process_assets.py`. Dungeons use the user's 10 floor/wall tile
-  sets, 5 scatter sheets and 20 barricade sets, mapped onto the 20 biomes (see [`ART.md`](ART.md)). Everything else
-  is placeholder ASCII pixel art with palette swaps (monsters, items) or is drawn procedurally (town buildings). The README tells the user
+  sets, 5 scatter sheets and 20 barricade sets, mapped onto the 20 biomes (see [`ART.md`](ART.md)). Monsters use the
+  user's 7 monster sheets (70 monsters, [`ENEMY_ART.md`](ENEMY_ART.md)). Everything else
+  is placeholder ASCII pixel art with palette swaps (summons, Velscour, items) or is drawn procedurally (town buildings). The README tells the user
   how to swap in real art.
-- **Enemy variety:** 22 AI archetypes. Each biome renames and recolors its roster and gives it the biome's element,
-  and adds a "greater" variant of each kind, for 24 kinds per biome and 480 in total.
+- **Enemy variety:** 22 AI archetypes, played by 70 painted monsters (`src/data/bestiary.js`; each has a main
+  archetype and maybe a few it can stand in for). Each level rolls up to 2 looks per roster archetype, each
+  palette-swapped from the biome's swap list. A darker "greater" breed exists for each, and uniques get a random swap.
+  Guardians come from 17 boss-flagged monsters. Velscour keeps his own pixel sprite: no sheet has a demon lord.
+- **Biome order:** the user asked for biomes to be random and not go in order. Biomes are drawn from a per-hero
+  shuffle bag (`drawBiome`), so all 19 come up before any repeats, and the first descent is random, no longer
+  always the catacombs. **Like-coloured mixing:** about 65% of levels borrow floors (in the far chunks) and maybe
+  walls from another biome in the same colour family ([`ART.md`](ART.md)).
 - **Mobile:** a floating virtual joystick, plus a right-hand skill-button cluster with auto-aim (tap to cast,
   hold to repeat, long-press to reassign). The game asks for fullscreen and landscape when a touch device taps a
   title-screen button. A PWA manifest lets it be installed fullscreen.
@@ -113,7 +120,8 @@ are in section 7.
    - Long-press callouts and text selection on touch.
    - `100vh` sizing on iOS.
 2. **iOS canvas memory limit.** Safari caps total canvas memory. The game caches many offscreen canvases: recolored
-   biome tile atlases (LRU keeps 2 non-town sets), memoized monster/flash sprites, and corpse images. Measure this
+   biome tile atlases (LRU keeps 3 non-town sets; a mixed level holds 2), monster art (an LRU of 160 canvases,
+   about 70 KB each, in `src/core/enemyart.js`), memoized pixel/flash sprites, and corpse images. Measure this
    before adding more caches.
 3. **Balance is a first pass.** Monster scaling is `monsterBase(L)` in `src/game/monster.js`
    (hp 20·1.066^(L−1), dmg (3+min(L,10)·0.15)·1.052^(L−1)). Player XP is `xpToNext(L) = 60L²+40L` in
@@ -144,6 +152,19 @@ are in section 7.
    keep a dark face (opening not detected) and a few skull/grille faceplates show some skin; force them with
    `OVERRIDES` open/closed lists in `tools/gearart.py`. No idle/walk/attack frames exist, so the hero bobs as before.
 
+9. **Monster art and biome order (branch `claude/admiring-fermat-wbun4l`, PR #7).** The user uploaded
+   `assets/Enemy Assets Set 1/` (7 sheets x 10 monsters, transparent) and asked for them to replace the placeholder
+   enemies, some as bosses, with many palette swaps. They also asked for random biome order and for like-coloured
+   biomes to mix tile sets, and said more enemy sheets will come. Done:
+   - The sheets were moved to `assets/source/enemies/set1/` and are sliced by `process_assets.py enemies`.
+   - The bestiary, swaps and boss pool are in `src/data/bestiary.js`, and the loader/cache in `src/core/enemyart.js`.
+   - Added the shuffle-bag biome order and mixed tile sets.
+   - Details are in [`ENEMY_ART.md`](ENEMY_ART.md) and [`ART.md`](ART.md).
+   - Verified with `data_check.mjs`, `enemies.js` screenshots (line-ups and 6 biomes with guardians), flow, boss,
+     ui, mobile, bot (paladin depths 1-2) and skills (necromancer and carrion witch, for corpse revives).
+   - The bot sometimes stalls on a level (about 1 run in 2). The unchanged base code does the same, so the cause
+     is the bot's navigation, not the new art.
+
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
 1. Get PR #1 merged (by the user) and confirm the Pages deploy works at https://agilancer.github.io/velscour/.
@@ -155,8 +176,9 @@ Do these in order, unless the user asks for something else. Their feedback after
    - phone and tablet layout checks at several viewport sizes (`mobile.js` with other sizes)
    - long soak runs with `bot.js` at deeper depths, watching for errors, NaN and softlocks
 4. A balance pass for depths 10–100, using `bot.js` with several classes.
-5. Roadmap ideas from the README: animated character sprites, unique monster art per archetype and biome tilesets,
-   set items, a stash, waypoints, rune words, multiplayer.
+5. Roadmap ideas from the README: animated character sprites, set items, a stash, waypoints, rune words, multiplayer.
+6. More monster sheets are coming ("Enemy Assets Set 2", ...). Import them as [`ENEMY_ART.md`](ENEMY_ART.md)
+   describes: move them, slice them, then add bestiary entries.
 
 ## 6. Working environment notes
 - Claude cloud container: Node 22 with playwright under `/opt/node22/lib/node_modules` (set `NODE_PATH`), and

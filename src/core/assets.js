@@ -1,5 +1,6 @@
 // Asset loading + derived (recoloured / rescaled) sprite caches.
 import { makeCanvas, recolor, scaleImage } from './util.js';
+import { loadEnemyArt } from './enemyart.js';
 
 export const CLASS_IDS = [
   'paladin', 'ranger', 'wizard', 'necromancer',
@@ -62,9 +63,10 @@ function loadPropImg(name) {
 }
 const ready = (v) => v && !(v instanceof Promise);
 
-/** Fetch a biome's tile set, scatter sheets and barricades (about 1 MB). Safe to call repeatedly. */
+/** Fetch a biome's tile set, scatter sheets and barricades (about 1 MB), and the monster art. Safe to call repeatedly. */
 export function loadBiomeArt(biome) {
   return Promise.all([
+    loadEnemyArt().catch((e) => console.warn(e)), // monsters fall back to their pixel sprites
     loadTileSet(biome.art || DEFAULT_ART),
     ...(biome.scatter || []).map(loadPropImg),
     ...(biome.barricade ? [loadPropImg('barricades_' + biome.barricade)] : []),
@@ -96,7 +98,7 @@ export function biomeTileSet(biome) {
   if (A.biomeSets[key]) return A.biomeSets[key];
   // keep memory bounded: each recoloured set is several MB of canvas
   const keys = Object.keys(A.biomeSets).filter((k) => !k.startsWith('town|'));
-  while (keys.length >= 2) delete A.biomeSets[keys.shift()];
+  while (keys.length >= 3) delete A.biomeSets[keys.shift()]; // a mixed level holds two sets
   const { floor, walls, meta } = A.tileSets[art];
   const pal = biome.palette;
   const floorImg = pal ? recolor(floor, pal) : floor;
@@ -153,6 +155,28 @@ export function biomeTileSet(biome) {
   if (bImg) for (const p of pm.barricades[biome.barricade] || []) set.barricades[p.kind].push({ img: bImg, sx: p.x, sy: p.y, w: p.w, h: p.h });
   A.biomeSets[key] = set;
   return set;
+}
+
+/**
+ * A level of `biome` mixed with a like-coloured `other` (biomes.js mixPartner): floors and floor details from both
+ * sets (`split` marks where the second set starts; dungeon.js paves whole regions with one or the other), walls,
+ * pillars and rubble from one of them (`wallsFromOther`), both biomes' scatter, and either barricade set.
+ * Falls back to the plain set while the other biome's art has not loaded.
+ */
+export function mixedTileSet(biome, other, wallsFromOther = false) {
+  const a = biomeTileSet(biome);
+  if (!other || other.art === undefined || !ready(A.tileSets[other.art])) return a;
+  const b = biomeTileSet(other);
+  if (!b.floors.length || !a.floors.length) return a;
+  const w = wallsFromOther && b.walls.length ? b : a;
+  return {
+    ...w,
+    floors: [...a.floors, ...b.floors], details: [...a.details, ...b.details], thresholds: a.thresholds,
+    split: { floors: a.floors.length, details: a.details.length },
+    scatter: [...a.scatter, ...b.scatter],
+    barricades: (wallsFromOther ? b : a).barricades.fwd.length ? (wallsFromOther ? b : a).barricades : a.barricades,
+    chest: a.chest || b.chest, mixed: other.id,
+  };
 }
 
 export const WALL_TIERS = 2; // skull-niche tiers stacked per wall (the corner posts have two as well)

@@ -9,6 +9,7 @@ import { hit, aoe, chainHit } from './combat.js';
 import { Projectile, Delayed, NovaWave, Area, explode, lineTargets, coneTargets } from './hazards.js';
 import { ARCH, ELITE_AFFIXES, bossName, uniqueName } from '../data/enemies.js';
 import { SUMMONS } from '../data/summons.js';
+import { ART_BY_ID, REVIVED, greaterSwap, rollLooks, uniqueSwap } from '../data/bestiary.js';
 
 const PROJ_FX = { fire: 'fireball', cold: 'shard', light: 'spark', poison: 'blob', shadow: 'skull', arcane: 'orb', holy: 'bolt', blood: 'blob', acid: 'blob', phys: 'rock' };
 
@@ -675,7 +676,7 @@ export class Monster extends Creature {
     w.add(c);
   }
   cloneProps() {
-    const keys = ['arch', 'sprite', 'pal', 'px', 'ai', 'team', 'speed', 'dmg', 'r', 'level', 'el', 'res', 'goreType', 'bloodColor', 'name', 'atkCd', 'range', 'proj', 'undead', 'demon', 'fly', 'atkReach'];
+    const keys = ['arch', 'art', 'swap', 'artH', 'sprite', 'pal', 'px', 'ai', 'team', 'speed', 'dmg', 'r', 'level', 'el', 'res', 'goreType', 'bloodColor', 'name', 'atkCd', 'range', 'proj', 'undead', 'demon', 'fly', 'atkReach'];
     const o = {};
     for (const k of keys) o[k] = this[k];
     return o;
@@ -683,31 +684,50 @@ export class Monster extends Creature {
 }
 
 // ======================================================================= factories
-/** variant 1 = "greater" breed: own palette and name, tougher. */
-export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0, y = 0, variant = 0) {
+const TIERS = [['', 'Greater'], ['Elder', 'Dread'], ['Ancient', 'Nightmare']];
+
+/** Which look a level gives an archetype: its rolled bestiary (rollLooks), made on first use. */
+export function lookFor(world, archId, rnd = Math.random) {
+  if (!world.looks) world.looks = rollLooks(world.biome || {});
+  return world.looks.pick(archId, rnd);
+}
+
+/**
+ * variant 1 = "greater" breed: own palette and name, tougher. `look` = {art, swap} from the level's bestiary
+ * (rollLooks in data/bestiary.js); without one the level picks. Archetypes with no art keep their pixel sprite.
+ */
+export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0, y = 0, variant = 0, look = undefined) {
   const A = ARCH[archId];
   const B = monsterBase(level);
   const depth = world.depth || 1;
+  if (look === undefined) look = lookFor(world, archId);
+  const art = look && ART_BY_ID[look.art];
   const biomeEl = biome.el && biome.el !== 'phys' ? biome.el : null;
   let el = A.el || 'phys';
-  if (biomeEl && ['ranged', 'caster', 'nova', 'beamer', 'exploder'].includes(A.ai) && archId !== 'archer') el = biomeEl;
+  // casters take the biome's element, unless the art shows its own element in its own colours
+  if (art && art.el && !look.swap && (!biomeEl || art.el === biomeEl) && A.ai !== 'melee') el = art.el;
+  else if (biomeEl && ['ranged', 'caster', 'nova', 'beamer', 'exploder'].includes(A.ai) && archId !== 'archer') el = biomeEl;
   let pal = biome.mon ? shiftPalette(A.pal, biome.mon) : A.pal;
   if (variant) pal = shiftPalette(pal, { hue: 35, sat: 1.2, light: 0.06 });
-  const tierName = A.names[Math.min(A.names.length - 1, Math.floor(depth / 34) + variant)];
+  const tier = TIERS[Math.min(TIERS.length - 1, Math.floor(depth / 34))][variant ? 1 : 0];
+  const tierName = art ? `${tier} ${art.name}`.trim() : A.names[Math.min(A.names.length - 1, Math.floor(depth / 34) + variant)];
   const adj = biome.adj ? biome.adj[(archId.length + depth + variant) % biome.adj.length] : '';
   const res = {};
   if (biomeEl) res[biomeEl] = 0.3;
-  if (A.undead) { res.poison = 0.5; res.shadow = 0.3; }
+  const undead = art && art.undead !== undefined ? art.undead : A.undead;
+  if (undead) { res.poison = 0.5; res.shadow = 0.3; }
   if (A.ghost) res.phys = 0.3;
   if (A.armor) res.phys = (res.phys || 0) + 0.15;
   if (archId === 'elemental') res[el] = 0.6;
   if (archId === 'slime') res.acid = 0.5;
+  const gore = (art && art.gore) || A.gore;
   const m = new Monster({
     arch: archId, sprite: A.sprite, pal, px: A.px || 2.3, r: A.r || 0.33, ai: A.ai, team: 'enemy',
+    art: art ? art.id : null, swap: art ? (variant ? greaterSwap(look.swap) : look.swap) : null, artH: art ? art.h : 0,
     level, maxHp: B.hp * A.hp, hp: B.hp * A.hp, dmg: B.dmg * A.dmg, xp: B.xp * (A.xp || 1),
-    speed: A.spd * rand(0.92, 1.08), el, res, goreType: A.gore, bloodColor: A.gore === 'flesh' ? biome.blood : null,
-    name: `${adj} ${tierName}`.trim(), atkCd: 1.2, range: A.range, proj: A.proj ? { ...A.proj, fx: archId === 'archer' ? 'arrow' : A.proj.fx === 'blob' ? 'blob' : PROJ_FX[el] || A.proj.fx } : null,
-    undead: A.undead, demon: A.demon, fly: A.fly, ghost: A.ghost, poison: A.poison, split: A.split,
+    speed: A.spd * rand(0.92, 1.08), el, res, goreType: gore, bloodColor: gore === 'flesh' ? biome.blood : null,
+    name: art && tier ? tierName : `${adj} ${tierName}`.trim(), atkCd: 1.2, range: A.range, proj: A.proj ? { ...A.proj, fx: archId === 'archer' ? 'arrow' : A.proj.fx === 'blob' ? 'blob' : PROJ_FX[el] || A.proj.fx } : null,
+    undead, demon: art && art.demon !== undefined ? art.demon : A.demon, fly: art && art.fly !== undefined ? art.fly : A.fly, ghost: A.ghost, poison: A.poison, split: A.split,
     summoner: A.summoner && chance(A.summoner), aoeCaster: A.aoe, rank: 'normal', x, y,
   });
   if (A.ai === 'brute') m.atkReach = 0.7;
@@ -727,6 +747,7 @@ export function makeElite(m, rank, depth, world) {
     m.maxHp *= 5; m.dmg *= 1.6; m.xp *= 6; m.aura = '#ffb030'; m.scale = 1.3;
     m.affixes = shuffle(keys).slice(0, depth > 50 ? 3 : 2);
     m.name = uniqueName();
+    if (m.art) m.swap = uniqueSwap();
   } else if (rank === 'boss') {
     const vel = m.arch === 'velscour';
     m.maxHp *= vel ? 40 : 14 + depth / 4; m.dmg *= vel ? 2.4 : 1.9; m.xp *= vel ? 200 : 25;
@@ -781,7 +802,8 @@ export function createSummon(p, sk, L, x, y, dmgRange, corpse) {
   m.skillId = sk.id;
   if (corpse) {
     m.sprite = corpse.sprite; m.pal = shiftPalette(corpse.pal || {}, { hue: 120, sat: 0.5, light: 0.05 }); m.px = corpse.px; m.fly = corpse.fly;
-    m.name = 'Revived ' + (ARCH[corpse.arch] ? ARCH[corpse.arch].names[0] : 'Monster');
+    if (corpse.art) { m.art = corpse.art; m.swap = REVIVED; m.artH = corpse.artH; }
+    m.name = 'Revived ' + (corpse.art ? ART_BY_ID[corpse.art].name : ARCH[corpse.arch] ? ARCH[corpse.arch].names[0] : 'Monster');
     m.maxHp = m.hp = Math.max(hp, corpse.maxHp * 0.6);
     m.aura = '#40ff80';
   }

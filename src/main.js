@@ -3,6 +3,7 @@ import { G, loadSettings } from './state.js';
 import { initInput, input } from './core/input.js';
 import { camera } from './core/view.js';
 import { loadAssets } from './core/assets.js';
+import { loadEnemyArt } from './core/enemyart.js';
 import { rand, TAU } from './core/util.js';
 import { UI, $ } from './ui/ui.js';
 import { HUD } from './ui/hud.js';
@@ -112,6 +113,7 @@ async function boot() {
   applyVolumes();
   $('#loading').classList.add('hidden');
   titleScreen();
+  loadEnemyArt().catch((e) => console.warn(e)); // prefetch monster art while the player is on the title screen
   // debug helpers for testing in the console
   window.VELSCOUR = { G, game };
 }

@@ -57,6 +57,20 @@ The 20 biomes map onto the 10 tile sets. Biomes that share a set get a `palette`
 (floors, walls, scatter, barricades and chests alike); `null` means the art as drawn. Each biome also
 names a barricade set and 1-2 scatter sheets. Change art per biome there.
 
+## Biome order and mixed levels
+- **Order**: `drawBiome(c, depth)` (`src/data/biomes.js`) draws each next biome from a shuffle bag stored on the
+  save (`c.biomeBag`). All 19 biomes come up once, in random order, before any repeats, and never the same one
+  twice in a row. A new hero's first descent is random too. Depth 100 is always the throne.
+- **Mixing**: biomes are grouped by colour (`FAMILY`: sand, frost, ember, rot, gloom). On entering a depth,
+  `mixPartner` picks another biome from the same family 65% of the time (`MIX_CHANCE`), preferring one drawn from a
+  different tile set. `mixedTileSet(biome, other, wallsFromOther)` (`src/core/assets.js`) then builds a set with
+  both biomes' floors and details back to back (`split` marks where the second set starts), walls, pillars and
+  rubble from one of the two (a coin flip), both biomes' scatter, and the barricades that go with the walls.
+  `generateDungeon` paves the chunks far from the start, plus a random 20% flip, with the second biome's floors.
+  The level banner reads "Depth N · bleeding into the <other biome>". Lighting, fog, monsters and the
+  name all stay the primary biome's.
+- `buildDungeon(depth, biome)` without a third argument (as the tests call it) never mixes.
+
 ## Runtime
 - `loadAssets` loads only the default set (`skull`: town walls and fallback), `props.json` and the
   `dungeon_mechanisms` sheet (default chest art).
@@ -65,7 +79,7 @@ names a barricade set and 1-2 scatter sheets. Change art per biome there.
   `buildDungeon` alone (as tests call it) uses whatever has loaded.
 - `biomeTileSet(biome)` builds `{floors, details, walls, pillars, towers, rubble, ..., scatter,
   barricades: {fwd, back}, chest: {closed, open, rareClosed, rareOpen}}`. It is cached per biome and art,
-  keeping 2 dungeon sets plus the town.
+  keeping 3 dungeon sets plus the town (a mixed level holds two).
 - `placeObstacles` (`src/world/dungeon.js`) runs before spawns. For every room except the start and exit
   rooms, it places an optional corner tower and a barricade in bigger rooms (two tiles along a diagonal,
   mirrored when the set lacks that direction). It then places about one scatter object per 7 free tiles,
