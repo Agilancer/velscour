@@ -2,7 +2,7 @@
 import { G } from '../state.js';
 import { input } from '../core/input.js';
 import { camera } from '../core/view.js';
-import { sfx, playMusic, stopMusic } from '../core/audio.js';
+import { sfx, playMusic, stopMusic, setAmbience, stopAmbience, footsteps } from '../core/audio.js';
 import { rand, pick, randi, escapeHtml, dist, makeCanvas, fmtInt } from '../core/util.js';
 import { biomeTileSet, loadBiomeArt, mixedTileSet } from '../core/assets.js';
 import { loadClassArt } from '../core/classart.js';
@@ -30,6 +30,8 @@ import { Vendor } from '../ui/vendor.js';
 import { toggleInventory } from '../ui/inventory.js';
 import { toggleTree, toggleBook } from '../ui/skills.js';
 import { titleScreen, hide as hideScreen, deathScreen, victoryScreen, pauseMenu, helpDialog } from '../ui/screens.js';
+
+const STEP_SURFACE = { sunken: 'water', plague: 'water', serpent: 'water', library: 'wood', gilded: 'wood' };   // footstep sounds; default stone
 
 let townCache = null, townTiles = null;
 let saveT = 0;
@@ -106,7 +108,7 @@ export const game = {
     HUD.show(false); TouchUI.show(false);
     G.mode = 'title';
     clearVfx();
-    stopMusic();
+    stopMusic(); stopAmbience();
     titleScreen();
   },
 
@@ -176,7 +178,7 @@ export const game = {
     }];
     this.setWorld(world, t.start, old);
     HUD.setArea('Duskhollow', 'Town — a safe haven');
-    playMusic('town');
+    playMusic('town'); setAmbience('town');
     Vendor.restock();
     const p = G.player;
     p.hp = p.maxHp; p.mana = p.maxMana;
@@ -221,7 +223,7 @@ export const game = {
       use() {
         if (this.opened) return;
         this.opened = true;
-        sfx('gold'); sfx('pickup');
+        sfx('chest'); sfx('gold');
         dropChest(world, this, depth);
         sparkle(this.x, this.y, 20, '#ffd060', 20, 0.5);
       },
@@ -259,7 +261,7 @@ export const game = {
     world.onBossAwake = (m) => {
       UI.centerMsg(m.name, m.isVelscour ? 'The Demon Lord rises' : 'Guardian of the Exit', 3);
       sfx('boss');
-      playMusic('boss');
+      playMusic(m.isVelscour ? 'velscour' : 'boss');
     };
     world.onBossKilled = (m) => {
       exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
@@ -269,6 +271,7 @@ export const game = {
       UI.centerMsg('GUARDIAN SLAIN', first ? '+1 bonus skill point · the exit is open' : 'The exit is open', 3.5);
       if (first) { c.skillPoints++; UI.log('Bonus skill point for clearing a new depth!', '#ffd860'); }
       addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#40a0ff', 5));
+      sfx('gate');
       playMusic('dungeon');
       UI.refresh();
       this.autosave();
@@ -277,7 +280,7 @@ export const game = {
     this.setWorld(world, gen.start, old);
     c.lastBiome = biome.id;
     HUD.setArea(`Depth ${depth}${depth > 100 ? ' — Endless Torment' : ''}`, biome.name);
-    playMusic(depth === 100 ? 'boss' : 'dungeon');
+    playMusic('dungeon'); setAmbience(biome.id);
     const kin = tileset.mixed && BIOME_BY_ID[tileset.mixed];
     UI.centerMsg(biome.name.toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);
     if (!c.tips.dungeon) { c.tips.dungeon = true; setTimeout(() => UI.log('Find the exit portal. It stays sealed until the depth\'s guardian is slain. The blue portal returns you to town.', '#ffe2a0'), 1500); }
@@ -372,6 +375,7 @@ export const game = {
       controls.update(dt);
       Auto.update(dt);
       w.update(dt);
+      footsteps(p, w.kind === 'town' ? 'dirt' : STEP_SURFACE[w.biome && w.biome.id] || 'stone');
     } else {
       input.endFrame();
     }

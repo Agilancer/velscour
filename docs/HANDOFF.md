@@ -75,7 +75,24 @@ Requirements, as stated (✅ = implemented in the draft):
 - **Mobile:** a floating virtual joystick, plus a right-hand skill-button cluster with auto-aim (tap to cast,
   hold to repeat, long-press to reassign). The game asks for fullscreen and landscape when a touch device taps a
   title-screen button. A PWA manifest lets it be installed fullscreen.
-- **Sound:** procedural WebAudio sound effects and ambient music, with no audio files.
+- **Sound:** the user's audio (`assets/source/audio/*.zip`: SFX, 4 BG Loops packs, 2 music packs) is transcoded to
+  MP3 in `assets/audio/` by `python3 tools/process_assets.py audio` (`tools/audiopack.py`, needs ffmpeg). MP3 is the
+  only format every browser decodes. Sample-backed sounds (`SAMPLES` in `src/core/audio.js`) cover melee swings, hits and
+  blocks, bows, fire, cold, arcane, explosions, buffs, chests, doors, the exit gate and footsteps. Everything else, and
+  anything still loading, uses the old procedural `SOUNDS`. **Music** (`MUSIC`): Hymn of the Abyss on the title screen,
+  Empty School in town (repeats after 30-70 s breaks), the other 7 songs shuffled in dungeons (25-60 s breaks),
+  Mad Pierrot for guardians, and the Hymn again (from its hit) when Velscour wakes. **Ambience** (`AMB`): every area
+  has 1-2 BG-loop beds. One plays at all times, drifting between soft and fuller every 10-25 s and sometimes
+  crossfading to the other bed. It ducks to 45% under a song and swells in the breaks. The town uses Forest Night
+  (Duskhollow is at dusk). There's a Settings slider for Ambience (`settings.amb`).
+- **Title intro** (user's spec): the song starts 2 s after the title appears. The logo fades in until the song's hit at
+  6.88 s (measured from the file's RMS envelope: the onset is at 6.88-6.89 s), then bursts upward into flames and
+  keeps burning; the menu fades in at the burst. The visuals follow the song's own clock (`musicClock()`), so a slow
+  download can't desync them. Browsers block audio until a gesture, so a fresh page shows "Click to awaken" first
+  (the eyes are already blinking) and the timeline starts on that click. Coming back to the title with audio unlocked
+  replays the intro without the prompt. Returning from a sub-menu while the Hymn still plays shows the logo lit. Any
+  click or key during the intro skips to the burst (it seeks the song to just before the hit). The tar drips and pile
+  explosions were removed at the user's request.
 - **The Slime Lord is blue.** The user changed his art from green to blue, so the `acid` element (only he uses it)
   is blue in `ELEM` (`src/gfx/vfx.js`), and all his skills except Frost Jelly (cold, already blue) are `acid`.
   His summons' palettes are blue too (`src/data/summons.js`). Enemy slimes stay green.
@@ -112,13 +129,20 @@ controls → `6657e14` fixes from browser testing → then the hand-off notes an
 - Balance past roughly Depth 10.
 - Long-session memory and performance on low-end phones.
 
+**Audio + title redesign (branch `claude/ecstatic-pascal-exm42t`):** the user's sound zips were moved to
+`assets/source/audio/` and imported into `assets/audio/` (108 sfx, 25 ambient beds, 10 songs, about 44 MB of MP3).
+Verified headless: the samples decode (53 in use), town plays Empty School + Forest Night, dungeons play a shuffled
+song + the biome's bed, `titlefx.js` measures the burst landing on the song's hit (song clock 6.88-6.99 s when it fires)
+on PC and mobile, and flow/ui/mobile/select/autoplay pass. The audio itself hasn't been listened to: volumes per sample
+(`SAMPLES[].v`, `MUSIC[].vol`) are guesses, so ask the user how the mix sounds.
+
 ## 4. Open issues and risks
 Ordered roughly by how likely they are to hurt the user's first test. The fact-checked per-subsystem issue lists
 are in section 7.
 1. **Untested on iOS Safari and Firefox.** Things to check:
    - `ctx.filter`, which only newer Safari versions support. It's used for frozen/charmed tints at
      `src/game/creature.js:168-174`. Without it the tint just doesn't show, so nothing crashes.
-   - Audio unlock on iOS.
+   - Audio unlock on iOS: the media elements are "blessed" with a silent WAV inside the first gesture (`Deck.unlock`), untested on a real device.
    - The Fullscreen API: unsupported on iPhone, so `goFullscreen()` in `src/ui/screens.js` should fail quietly.
    - Long-press callouts and text selection on touch.
    - `100vh` sizing on iOS.
@@ -317,12 +341,12 @@ Do these in order, unless the user asks for something else. Their feedback after
 - `css/style.css` - all DOM UI styles. Tokens are on `:root` (:2-20), including `--hud-w`. `body.touch` overrides start at :245. Panel and log offsets hard-code the HUD aspect `0.1575` = 315/2000 (:94, :99, :254), and `#hud-bar` has `aspect-ratio: 2000/315` (:51).
 - `manifest.webmanifest` - PWA metadata: fullscreen, landscape, icon `assets/ui/icon.png` (512x512). There is no service worker, so the game has no offline support.
 - `src/main.js` - `boot()`, `resize()` (DPR), the rAF `loop()`, the title-screen ember backdrop and global error reporting.
-- `src/ui/titlefx.js` - `attachTitleFx(screen, logoImg)`: the title logo's flames, embers and sparks, the black tar that drips from its spikes and piles on the floor, and the spark that ignites the pile into a chain of explosions. It simulates in coarse units (`PX` css px) but draws at device resolution (`.title-fx` canvas over the title screen): tiny particles batched by colour/alpha, plus a low-res glow copy upscaled with smoothing. Particles are capped at 8000. It samples the logo alpha once for emitter points, and its rAF loop stops when the screen leaves the DOM. Tuning: `REPOSE`, drip `max`/`rate`, and the fated-spark condition in `frame()`. Tests: `tools/tests/titlefx.js` (uses the `canvas.fx` hooks).
+- `src/ui/titlefx.js` - `attachTitleFx(screen, logoImg, {tag, menu, gate})`: the title intro (gate → intro → lit; see Decisions) with the logo fade driven from the Hymn's clock (`INTRO_DELAY`, `FADE0`, `HIT`), the flame burst on the hit, and the steady fire after it (flames along the logo's top contour plus embers and licks off its molten cracks, sparks and smoke). It simulates in coarse units (`PX` css px) but draws at device resolution (`.title-fx` canvas over the logo): tiny particles batched by colour/alpha, plus a low-res glow copy upscaled with smoothing. Particles are capped at 14000. **Eyes** live on a second canvas behind the logo (`.title-eyes`), drawn chunky at sim resolution and upscaled without smoothing, with a soft red bloom. A watcher is a pair (maybe slanted), one big eye, a cluster of 3-8 small ones opening one after another, or a vertical stack. Up to 7 are on screen, a new one (sometimes 2-3) every 0.7-2.4 s, placed clear of the logo and menu. They open (sometimes slowly), blink, follow the pointer with their pupils, dart aside, and close. The rAF loop and its window listeners stop when the screen leaves the DOM. Tests: `tools/tests/titlefx.js` (uses the `canvas.fx` hooks).
 - `src/state.js` - the `G` singleton and settings persistence in localStorage.
 - `src/core/util.js` - math, random and seeded RNG, colour helpers, canvas helpers (`makeCanvas`, `recolor`, `scaleImage`) and DOM helpers.
 - `src/core/view.js` - iso constants and projection, plus the `camera` object.
 - `src/core/input.js` - the `input` state object (keys, mouse, joystick, world touch) and `initInput(canvas)`.
-- `src/core/audio.js` - procedural WebAudio sound effects (38 named sounds) and drone music. The game ships no audio files.
+- `src/core/audio.js` - sound effects (samples from `assets/audio/sfx/` where `SAMPLES` maps them, procedural `SOUNDS` otherwise), the music director (`playMusic(kind)` / `stopMusic`, `musicClock`, `seekMusic`), the ambience director (`setAmbience(areaKey)` / `stopAmbience`) and `footsteps(player, surface)`. Songs and beds stream through `<audio>` elements (`Deck`) routed into Web Audio gains, so they're never decoded whole. A 250 ms `tick()` runs song breaks and ambience drift.
 - `src/core/assets.js` - loads images and JSON into `A`, caches scaled class sprites, builds recoloured per-biome tile sets from the biome packs, makes potion icons.
 - `src/gfx/pixelart.js` - ASCII sprite table `SPRITES`, the renderer (outline, rim shading, palettes), palette hue-shift, gem and gold icons.
 - `src/gfx/vfx.js` - element palette `ELEM`; pools for particles, decals, effects, texts and lights; effect classes; update and draw functions.
@@ -387,13 +411,16 @@ Do these in order, unless the user asks for something else. Their feedback after
   - `input` methods: `down(code)`, `consume(code)` (destructive edge read), `endFrame()`, `reset()`, `endJoy()`.
   - `initInput(canvas)` (:44).
 - **audio.js**
-  - `initAudio()` (:8): creates or resumes the AudioContext. The only caller is a title-menu button click (screens.js:37).
+  - `initAudio()`: creates or resumes the AudioContext, makes the 2 music + 2 ambience decks, starts loading the samples (53 files) and applies any `playMusic`/`setAmbience` made before audio existed. It's called from the title gate's click (titlefx.js) and every title-menu button.
+  - `audioReady()`, `audioStats()` (tests: `{samples, music, song, amb}`).
+  - `footsteps(p, surface)`: called every unpaused frame from `game.update`; a step every 0.85 tiles walked. Surfaces: `dirt` in town, `water`/`wood` for the biomes in `STEP_SURFACE` (game.js), else `stone`.
   - `applyVolumes()` (:25).
   - `sfx(name, vol=1, pitch=1)` (:98). Valid names are the keys of `SOUNDS` (:57):
     - Elements: `swing hit crit squish gore bones fire cold light arcane holy shadow poison acid blood phys`
-    - Other: `explode shoot bow pickup gold orb potion levelup portal ui error boss die summon heal buff thud roar hurt block sonic note`
-  - `playMusic(kind)` (:118): `'town'`, `'boss'`, or anything else, which plays as dungeon. No-op if that kind is already playing.
-  - `stopMusic()` (:149).
+    - Other: `explode shoot bow pickup gold orb potion levelup portal ui error boss die summon heal buff thud roar hurt block sonic note chest door gate step critping`
+    - `SAMPLES[name]` = `{s: sample slugs, v: gain, layer: procedural sound on top, max: concurrent voices (3)}` takes priority once loaded. `step_stone|dirt|water|wood` are sample-only names.
+  - `playMusic(kind, {delay})`: `'title' | 'town' | 'dungeon' | 'boss' | 'velscour'` (see `MUSIC`). No-op if that kind is already current. `'boss'` → `'dungeon'` resumes after a 6-12 s breather.
+  - `stopMusic(sec)`, `setAmbience(key)` (a biome id, `'town'` or `'title'`; see `AMB`), `stopAmbience(sec)`.
 - **assets.js**
   - `CLASS_IDS` (:4): 16 ids in sheet order.
   - `A`: `{classes, classScaled, hud, hudGeo, logo, potions, packs, chestImg, chestMeta, biomeSets}`. `packs[id]` holds a Promise while loading.
@@ -523,10 +550,10 @@ Do these in order, unless the user asks for something else. Their feedback after
 - Wheel (game mode only) multiplies `settings.zoom` by 0.94 or 1.06, clamped to 0.7-1.6.
 
 **Audio**:
-- Graph: `master` (gain 0.9) → destination. `sfxBus` → `DynamicsCompressor` (-16 dB, ratio 6) → master. `musicBus` (`settings.music*0.5`) → master. `sfxBus` gain is `settings.sfx`.
+- Graph: `master` (gain 0.9) → destination. `sfxBus` → `DynamicsCompressor` (-16 dB, ratio 6) → master. `musicBus` (`settings.music`) → master. `ambBus` (`settings.amb`) → master. `sfxBus` gain is `settings.sfx`.
 - `sfx` is throttled per name: at most 3 starts per sliding 45 ms window. Pitch is randomly jittered by ±8%.
 - When `vol≠1`, `sfx` temporarily swaps the module-level `sfxBus` for a temporary gain node. `SOUNDS` functions must therefore connect synchronously.
-- Music: 4 detuned oscillators (triangle in town, sawtooth elsewhere) → lowpass (900 Hz town / 420 Hz otherwise) swept by a 0.07 Hz LFO, plus random sine "bells" every 1.8 s (boss) or 5.2 s. Fade-in 3 s, fade-out 1.5 s.
+- Music and ambience are files now (see Decisions); the old oscillator drone is gone.
 
 **Assets**:
 - `loadAssets` fires all jobs in parallel. It loads:
@@ -607,7 +634,6 @@ Do these in order, unless the user asks for something else. Their feedback after
 - **audio.js**
   - :13 master 0.9.
   - :15 compressor -16 / 6.
-  - :28 music ×0.5.
   - :104 throttle 45 ms / 3 voices.
   - :124 fade-in 3 s.
   - :125 lowpass 900 / 420.
@@ -668,7 +694,7 @@ Do these in order, unless the user asks for something else. Their feedback after
 - `input.consume()` is destructive, so only the first reader gets the edge. While paused, edges are dropped (game.js:345).
 - Pointer handlers live only on `#game`; DOM widgets must `stopPropagation` (as hud.js:42 does).
 - Zoom: changes to `G.settings.zoom` do nothing until `camera.computeZoom()` runs, which happens only on resize (main.js:28) or `setWorld` (game.js:113).
-- Audio is silent until a title-menu click calls `initAudio`. iOS can suspend the context later, and nothing resumes it in-game.
+- Audio is silent until the title gate's click (or a title-menu click) calls `initAudio`. iOS can suspend the context later, and nothing resumes it in-game.
 - The touch heuristic (main.js:87) can classify a touchscreen laptop as touch: mobile layout, auto-loot, lower DPR cap.
 - The `pixelSprite` cache does a full clear at 2500 entries, which also drops gem and gold icons (shared Map). Creatures memoise `_img` (creature.js:120-128) so they don't rebuild keys every frame. `glowCache`, `splatCache` and `A.classScaled` are unbounded.
 - `biomeTileSet` eviction only removes the cache entry; re-entering an evicted biome repeats the slow recolour.
@@ -689,7 +715,7 @@ Do these in order, unless the user asks for something else. Their feedback after
 - src/game/render.js:282 + src/gfx/vfx.js:401-403 - render sets 'lighter' before drawEffects('top'), but drawEffects resets to 'source-over' after every effect. Only the first non-additive effect is drawn additively, so blending is inconsistent.
 - src/gfx/vfx.js:28,60 and src/core/assets.js:13 - glowCache, splatCache and A.classScaled are unbounded caches.
 - src/gfx/pixelart.js:927 - the shared cache is fully cleared at 2500 entries, gem/gold icons included. There is thrash risk with many palettes (biome x variant x revived-corpse shiftPalette).
-- src/core/audio.js:8 - initAudio is only called from title-menu clicks (screens.js:37). An AudioContext suspended later (iOS backgrounding) is never resumed during play.
+- src/core/audio.js - initAudio is only called from the title screen (gate click, menu buttons). An AudioContext suspended later (iOS backgrounding) is never resumed during play.
 - src/core/audio.js:108-112 - each sfx call with vol!==1 creates a GainNode that is never disconnected (relies on GC). The temporary global swap of sfxBus breaks if a SOUNDS entry ever schedules work asynchronously.
 - src/core/assets.js:38,40 + src/state.js:9 - A.hud, A.logo and G.assets are loaded or declared but never used.
 - tools/process_assets.py:5 - the docstring says 'game-ready PNGs', but most outputs are WebP (save() at :66). classes.json (:109) is generated but never loaded.

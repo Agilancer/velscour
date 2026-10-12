@@ -1,7 +1,7 @@
 // Full-screen menus: title, class select, hero save slots, death, victory, settings, help.
 import { G, saveSettings } from '../state.js';
 import { el, escapeHtml, fmtInt } from '../core/util.js';
-import { sfx, applyVolumes, initAudio, playMusic } from '../core/audio.js';
+import { sfx, applyVolumes, initAudio } from '../core/audio.js';
 import { CLASS_IDS, A } from '../core/assets.js';
 import { CLASSES, ATTRS } from '../data/classes.js';
 import { UI, $ } from './ui.js';
@@ -35,18 +35,21 @@ export function titleScreen() {
   const last = listSaves().find((c) => c.slot !== null);
   const used = slots.filter(Boolean).length;
   const s = el('div', 'screen');
-  s.innerHTML = `<img class="title-logo" src="assets/ui/logo.webp" alt="VELSCOUR"><div class="title-tag">A world built upon something that should have stayed dead.</div>`;
+  s.classList.add('title-screen');
+  s.innerHTML = `<img class="title-logo intro" src="assets/ui/logo.webp" alt="VELSCOUR"><div class="title-tag">A world built upon something that should have stayed dead.</div>`;
   const menu = el('div', 'title-menu');
-  const add = (label, fn, cls = 'btn big') => { const b = el('button', cls, label); b.onclick = () => { initAudio(); playMusic('town'); sfx('ui'); goFullscreen(); fn(); }; menu.appendChild(b); return b; };
+  const add = (label, fn, cls = 'btn big') => { const b = el('button', cls, label); b.onclick = () => { initAudio(); sfx('ui'); goFullscreen(); fn(); }; menu.appendChild(b); return b; };
   if (last) add(`Continue<br><span style="font-size:13px;color:#a8977c">${escapeHtml(last.name)} · Lv ${last.level} ${CLASSES[last.classId].name} · Depth ${last.depth}</span>`, () => G.game.loadChar(last));
   add('New Hero', () => newHero(titleScreen));
   add(`Heroes <span style="font-size:13px;color:#a8977c">· ${used}/${SLOTS} slots</span>`, heroesScreen, 'btn');
   add('Settings', settingsDialog, 'btn');
   add('How to Play', helpDialog, 'btn');
   s.appendChild(menu);
-  s.appendChild(el('div', 'title-foot', 'Rough draft · placeholder art & procedural sound · progress saves in this browser'));
+  s.appendChild(el('div', 'title-foot', 'Rough draft · placeholder art · progress saves in this browser'));
+  const gate = el('div', 'title-gate', G.touch ? 'Tap to awaken' : 'Click to awaken');
+  s.appendChild(gate);
   show(s);
-  attachTitleFx(s, s.querySelector('.title-logo'));
+  attachTitleFx(s, s.querySelector('.title-logo'), { tag: s.querySelector('.title-tag'), menu, gate });
 }
 
 /** Start a hero in the first free save slot, or show the slots if all are taken. */
@@ -199,6 +202,7 @@ export function settingsDialog() {
   const html = `<div class="settings-grid">
     <label>Sound effects</label><input type="range" min="0" max="1" step="0.05" value="${st.sfx}" data-k="sfx">
     <label>Music</label><input type="range" min="0" max="1" step="0.05" value="${st.music}" data-k="music">
+    <label>Ambience</label><input type="range" min="0" max="1" step="0.05" value="${st.amb ?? 0.5}" data-k="amb">
     <label>Camera zoom</label><input type="range" min="0.7" max="1.6" step="0.05" value="${st.zoom}" data-k="zoom">
     <label>Gore</label><select data-k="gore"><option value="0">Off</option><option value="1">Bloody</option><option value="2">Extreme</option></select>
     <label>Damage numbers</label><input type="checkbox" data-k="dmgNumbers" ${st.dmgNumbers ? 'checked' : ''}>

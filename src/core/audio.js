@@ -1,9 +1,17 @@
-// Procedural Web Audio sound effects + ambient drone music (no audio files needed).
+// Sound: the user's samples (assets/audio/, imported by `process_assets.py audio`), with procedural Web Audio
+// fallbacks for sounds that have no sample (or until the samples finish loading), plus the music + ambience directors.
+//   sfx(name)           one-shot: a random sample from SAMPLES[name] if loaded, else the procedural SOUNDS[name]
+//   playMusic(kind)     'title' | 'town' | 'dungeon' | 'boss' | 'velscour': songs with quiet breaks between them
+//   setAmbience(key)    a biome id or 'town' / 'title': a looped ambient bed that drifts louder and softer
+// Songs and beds stream through <audio> elements routed into the Web Audio graph, so they're never fully decoded.
 import { G } from '../state.js';
 
-let ac = null, master, sfxBus, musicBus, noiseBuf;
+let ac = null, master, sfxBus, musicBus, ambBus, noiseBuf;
 const last = {};
-let music = null;
+const AUDIO = 'assets/audio/';
+let manifest = null;               // assets/audio/audio.json
+const buffers = {};                // sample slug -> AudioBuffer
+const voices = {};                 // sound name -> live sample voices (capped)
 
 export function initAudio() {
   if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
@@ -16,16 +24,29 @@ export function initAudio() {
   comp.connect(master);
   sfxBus = ac.createGain(); sfxBus.connect(comp);
   musicBus = ac.createGain(); musicBus.connect(master);
+  ambBus = ac.createGain(); ambBus.connect(master);
   applyVolumes();
   noiseBuf = ac.createBuffer(1, ac.sampleRate * 1.5, ac.sampleRate);
   const d = noiseBuf.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  decks.music = [new Deck(musicBus), new Deck(musicBus)];
+  decks.amb = [new Deck(ambBus), new Deck(ambBus)];
+  for (const k in decks) for (const dk of decks[k]) dk.unlock();   // iOS: media elements must first play inside a gesture
+  loadSamples();
+  setInterval(tick, 250);
+  if (pending.music) { const m = pending.music; pending.music = null; playMusic(m.kind, m.opts); }
+  if (pending.amb) { const a = pending.amb; pending.amb = null; setAmbience(a); }
 }
+
+export const audioReady = () => !!ac && ac.state === 'running';
+/** For tests: what's loaded and playing. */
+export const audioStats = () => ({ samples: Object.keys(buffers).length, music: music && music.kind, song: music && music.song, amb: amb && amb.bed });
 
 export function applyVolumes() {
   if (!ac) return;
   sfxBus.gain.value = G.settings.sfx;
-  musicBus.gain.value = G.settings.music * 0.5;
+  musicBus.gain.value = G.settings.music;
+  ambBus.gain.value = G.settings.amb ?? 0.5;
 }
 
 function env(g, t, a, peak, dec, sus = 0.0001) {
@@ -92,6 +113,11 @@ const SOUNDS = {
   hurt: (t) => { tone(t, 0.15, { wave: 'square', f0: 220, f1: 140, vol: 0.08 }); noise(t, 0.1, { f0: 1200, f1: 300, vol: 0.2 }); },
   block: (t) => { tone(t, 0.12, { wave: 'square', f0: 900, f1: 600, vol: 0.08 }); noise(t, 0.06, { type: 'highpass', f0: 3000, vol: 0.2 }); },
   sonic: (t, p) => { tone(t, 0.3, { wave: 'square', f0: 110 * p, f1: 55, vol: 0.12 }); tone(t, 0.3, { wave: 'square', f0: 165 * p, f1: 82, vol: 0.08 }); },
+  critping: (t) => tone(t, 0.08, { wave: 'square', f0: 1400, f1: 700, vol: 0.06 }),
+  chest: (t) => { SOUNDS.thud(t, 1.4); SOUNDS.pickup(t + 0.1); },
+  door: (t) => SOUNDS.thud(t, 0.7),
+  gate: (t) => { tone(t, 0.8, { wave: 'sawtooth', f0: 70, f1: 50, vol: 0.12 }); noise(t, 0.8, { type: 'bandpass', f0: 900, f1: 400, q: 6, vol: 0.2 }); },
+  step: (t, p) => noise(t, 0.05, { f0: 700 * p, f1: 200, vol: 0.06 }),
   note: (t, p) => { const f = [523, 587, 659, 784, 880][Math.floor(Math.random() * 5)]; tone(t, 0.3, { wave: 'triangle', f0: f * p, vol: 0.12 }); },
 };
 
@@ -105,6 +131,7 @@ export function sfx(name, vol = 1, pitch = 1) {
   l.t = now;
   try {
     const p = pitch * (0.92 + Math.random() * 0.16);
+    if (playSample(name, vol, p, now)) return;
     if (vol !== 1) {
       const g = ac.createGain(); g.gain.value = vol;
       const prev = sfxBus; sfxBus = g; g.connect(prev);
@@ -114,44 +141,240 @@ export function sfx(name, vol = 1, pitch = 1) {
   } catch (e) { /* audio errors are never fatal */ }
 }
 
-// ------------------------------------------------------------------ music
-export function playMusic(kind) {
-  if (!ac) return;
-  if (music && music.kind === kind) return;
-  stopMusic();
-  const nodes = [];
-  const out = ac.createGain(); out.gain.value = 0; out.connect(musicBus);
-  out.gain.linearRampToValueAtTime(1, ac.currentTime + 3);
-  const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = kind === 'town' ? 900 : 420; lp.Q.value = 2; lp.connect(out);
-  const lfo = ac.createOscillator(); lfo.frequency.value = 0.07;
-  const lfoG = ac.createGain(); lfoG.gain.value = kind === 'town' ? 250 : 180; lfo.connect(lfoG); lfoG.connect(lp.frequency); lfo.start();
-  nodes.push(lfo);
-  const roots = kind === 'town' ? [110, 164.8, 220, 277.2] : kind === 'boss' ? [41.2, 43.65, 82.4, 61.7] : [55, 82.4, 110, 65.4];
-  roots.forEach((f, i) => {
-    const o = ac.createOscillator(); o.type = kind === 'town' ? 'triangle' : 'sawtooth'; o.frequency.value = f;
-    o.detune.value = (i % 2 ? 7 : -7);
-    const g = ac.createGain(); g.gain.value = kind === 'town' ? 0.05 : 0.07;
-    o.connect(g); g.connect(lp); o.start(); nodes.push(o);
-  });
-  // occasional bell / choir tones
-  const bell = setInterval(() => {
-    if (!ac) return;
-    const t = ac.currentTime;
-    const scale = kind === 'town' ? [440, 494, 554, 659, 740] : [110, 130.8, 146.8, 164.8, 196, 220];
-    const f = scale[Math.floor(Math.random() * scale.length)] * (kind === 'town' ? 1 : 2);
-    const o = ac.createOscillator(); o.type = 'sine'; o.frequency.value = f;
-    const g = ac.createGain(); env(g, t, 0.6, 0.05, 4);
-    o.connect(g); g.connect(out); o.start(t); o.stop(t + 5);
-  }, kind === 'boss' ? 1800 : 5200);
-  music = { kind, nodes, out, bell };
+
+// ------------------------------------------------------------------ samples
+const n3 = (base, n) => Array.from({ length: n }, (_, i) => `${base}_${i + 1}`);
+const STEP = (kind) => ({ s: n3(`${kind}_walk`, 5), v: 0.2, max: 2 });
+// sound name -> { s: sample slugs (one picked at random), v: gain, layer: procedural sound played on top, max: voices }
+const SAMPLES = {
+  swing: { s: n3('sword_attack', 3), v: 0.5 },
+  phys: { s: n3('sword_attack', 3), v: 0.5 },
+  hit: { s: n3('sword_impact_hit', 3), v: 0.55 },
+  crit: { s: n3('sword_impact_hit', 3), v: 0.75, layer: 'critping' },
+  block: { s: [...n3('sword_blocked', 3), ...n3('sword_parry', 3)], v: 0.55 },
+  bow: { s: n3('bow_attack', 2), v: 0.55 },
+  fire: { s: n3('fireball', 3), v: 0.45 },
+  cold: { s: [...n3('ice_throw', 2), ...n3('ice_freeze', 2)], v: 0.45 },
+  arcane: { s: n3('spell_impact', 3), v: 0.5 },
+  explode: { s: n3('rock_meteor_throw', 2), v: 0.55, layer: 'explode' },
+  buff: { s: n3('firebuff', 2), v: 0.4, max: 1 },
+  chest: { s: n3('chest_open', 2), v: 0.7, max: 1 },
+  door: { s: n3('door_open', 2), v: 0.45, max: 2 },
+  gate: { s: ['gate_open'], v: 0.7, max: 1 },
+  step_stone: STEP('stone'), step_dirt: STEP('dirt'), step_water: STEP('water'), step_wood: STEP('wood'),
+};
+
+async function loadSamples() {
+  try {
+    manifest = await (await fetch(AUDIO + 'audio.json')).json();
+  } catch (e) { return; }   // no audio files: everything stays procedural
+  const want = [...new Set(Object.values(SAMPLES).flatMap((d) => d.s))].filter((k) => manifest.sfx.includes(k));
+  let i = 0;
+  const worker = async () => {
+    while (i < want.length) {
+      const k = want[i++];
+      try {
+        const data = await (await fetch(`${AUDIO}sfx/${k}.mp3`)).arrayBuffer();
+        buffers[k] = await new Promise((ok, no) => ac.decodeAudioData(data, ok, no));
+      } catch (e) { /* that sound stays procedural */ }
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
 }
 
-export function stopMusic() {
-  if (!music || !ac) return;
-  const m = music; music = null;
-  clearInterval(m.bell);
-  m.out.gain.cancelScheduledValues(ac.currentTime);
-  m.out.gain.setValueAtTime(m.out.gain.value, ac.currentTime);
-  m.out.gain.linearRampToValueAtTime(0, ac.currentTime + 1.5);
-  setTimeout(() => m.nodes.forEach((n) => { try { n.stop(); } catch (e) { /* ignore */ } }), 1700);
+function playSample(name, vol, p, now) {
+  const d = SAMPLES[name];
+  if (!d) return false;
+  const ready = d.s.filter((k) => buffers[k]);
+  if (!ready.length) return false;
+  const live = voices[name] || (voices[name] = []);
+  for (let i = live.length - 1; i >= 0; i--) if (live[i] < now) live.splice(i, 1);
+  if (live.length >= (d.max || 3)) return true;   // enough of this sound already playing
+  const buf = ready[Math.floor(Math.random() * ready.length)];
+  const src = ac.createBufferSource(); src.buffer = buffers[buf]; src.playbackRate.value = p;
+  const g = ac.createGain(); g.gain.value = d.v * vol;
+  src.connect(g); g.connect(sfxBus); src.start(now);
+  live.push(now + buffers[buf].duration / p);
+  if (d.layer) {
+    const lg = ac.createGain(); lg.gain.value = vol * 0.6; lg.connect(sfxBus);
+    const prev = sfxBus; sfxBus = lg; SOUNDS[d.layer](now, p); sfxBus = prev;
+  }
+  return true;
+}
+
+/** Footsteps: call every frame with the walker; plays a step every ~0.85 tiles walked on the given surface. */
+let stepX = null, stepY = 0, stepD = 0;
+export function footsteps(p, surface) {
+  if (!ac || !p) return;
+  if (!p.moving || p.dead) { stepX = p.x; stepY = p.y; return; }
+  if (stepX === null || Math.abs(p.x - stepX) + Math.abs(p.y - stepY) > 3) { stepX = p.x; stepY = p.y; return; }   // teleported
+  stepD += Math.hypot(p.x - stepX, p.y - stepY); stepX = p.x; stepY = p.y;
+  if (stepD < 0.85) return;
+  stepD = 0;
+  sfx(SAMPLES['step_' + surface] ? 'step_' + surface : 'step_stone', 1, 1);
+}
+
+// ------------------------------------------------------------------ streamed tracks
+const decks = {};
+const pending = {};
+let silentUrl = null;
+function silence() {   // a 0.05 s silent WAV, used to unlock the media elements inside the first gesture
+  if (silentUrl) return silentUrl;
+  const n = 2205, b = new ArrayBuffer(44 + n * 2), v = new DataView(b);
+  const w = (o, str) => { for (let i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true); v.setUint32(24, 44100, true); v.setUint32(28, 88200, true); v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+  return (silentUrl = URL.createObjectURL(new Blob([b], { type: 'audio/wav' })));
+}
+
+/** One <audio> element -> gain -> bus. fade() ramps the gain; the element itself always plays at full volume. */
+class Deck {
+  constructor(bus) {
+    this.el = new Audio(); this.el.preload = 'auto';
+    this.g = ac.createGain(); this.g.gain.value = 0; this.g.connect(bus);
+    try { ac.createMediaElementSource(this.el).connect(this.g); } catch (e) { this.direct = true; }
+    this.name = null; this.gen = 0;
+  }
+  unlock() { if (this.name) return; this.el.src = silence(); const p = this.el.play(); if (p) p.then(() => { if (!this.name) this.el.pause(); }).catch(() => {}); }
+  load(name, url, loop, at = 0) {
+    this.gen++; this.name = name;
+    this.el.loop = loop;
+    if (!this.el.src.endsWith(url)) this.el.src = url;
+    try { this.el.currentTime = at; } catch (e) { /* not seekable yet */ }
+    const p = this.el.play(); if (p) p.catch(() => {});
+    return this.gen;
+  }
+  fade(v, sec) {
+    const g = this.g.gain, t = ac.currentTime;
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(v, t + Math.max(0.02, sec));
+    if (this.direct) this.el.volume = Math.min(1, v);
+  }
+  stop(sec) {
+    const gen = ++this.gen; this.fade(0, sec);
+    setTimeout(() => { if (this.gen === gen) { this.el.pause(); this.name = null; } }, sec * 1000 + 60);
+  }
+  get playing() { return !!this.name && !this.el.paused; }
+}
+
+// ------------------------------------------------------------------ music director
+const R2 = ([a, b]) => a + Math.random() * (b - a);
+// songs in order of play (shuffled when `shuffle`); `gap` = seconds of silence (ambience only) between songs
+const MUSIC = {
+  title: { songs: ['hymn_of_the_abyss'], gap: [10, 16], vol: 0.9 },
+  town: { songs: ['empty_school'], gap: [30, 70], vol: 0.75 },
+  dungeon: { songs: ['love_potion_x_spooky_night', 'the_girl_who_fell_into_a_mysterious_dream', 'brilliant_deduction_resolution',
+    'empty_station', 'empty_aquarium', 'empty_pool', 'empty_shopping_mall'], gap: [25, 60], shuffle: true, vol: 0.6 },
+  boss: { songs: ['mad_pierrot'], gap: [2, 4], vol: 0.8 },
+  velscour: { songs: ['hymn_of_the_abyss'], gap: [2, 4], vol: 0.9, at: 6.6 },
+};
+let music = null;   // { kind, def, deck, queue, next (ac time of next song or 0), gen }
+
+/** Start a music kind (no-op if it's already the current one). opts.delay: seconds before the first song starts. */
+export function playMusic(kind, opts = {}) {
+  if (!ac) { pending.music = { kind, opts }; return; }
+  if (music && music.kind === kind) return;
+  const def = MUSIC[kind]; if (!def) return;
+  if (music && music.deck) music.deck.stop(1.5);
+  const deck = decks.music.find((d) => !d.playing && (!music || d !== music.deck)) || decks.music[0];
+  const queue = def.shuffle ? [...def.songs].sort(() => Math.random() - 0.5) : [...def.songs];
+  if (kind === 'dungeon' && music && music.kind === 'boss') {   // after a guardian, the level's music resumes after a breather
+    music = { kind, def, deck, queue, next: ac.currentTime + R2([6, 12]), song: null };
+    return;
+  }
+  music = { kind, def, deck, queue, next: ac.currentTime + (opts.delay ?? (music ? 1.2 : 0.3)), song: null };
+}
+
+export function stopMusic(sec = 1.5) {
+  pending.music = null;
+  if (!music || !ac) { music = null; return; }
+  if (music.deck) music.deck.stop(sec);
+  music = null;
+}
+
+function startSong(at = 0) {
+  const m = music, def = m.def;
+  if (!m.queue.length) m.queue = def.shuffle ? [...def.songs].sort(() => Math.random() - 0.5) : [...def.songs];
+  m.song = m.queue.shift();
+  if (manifest && !(m.song in manifest.music)) { m.song = null; m.next = 0; return; }
+  const deck = m.deck;
+  deck.load(m.song, `${AUDIO}music/${m.song}.mp3`, false, at || def.at || 0);
+  deck.g.gain.cancelScheduledValues(ac.currentTime); deck.g.gain.setValueAtTime(0, ac.currentTime);
+  deck.fade(def.vol, at || def.at ? 0.4 : 0.05);
+  m.next = 0;
+}
+
+/** Current song position, for syncing visuals to it: { kind, song, t } or null while nothing is audible. */
+export function musicClock() {
+  if (!music || !music.song || !music.deck.playing) return null;
+  return { kind: music.kind, song: music.song, t: music.deck.el.currentTime };
+}
+/** Jump the current kind's song to t seconds (starting it now if it's still waiting). */
+export function seekMusic(t) {
+  if (!music) return;
+  if (!music.song || !music.deck.playing) { music.queue.unshift(music.def.songs[0]); startSong(t); return; }
+  try { music.deck.el.currentTime = t; } catch (e) { /* ignore */ }
+}
+
+// ------------------------------------------------------------------ ambience director
+// Each area gets one or more 60 s beds; one plays at a time, drifting between soft and fuller every 10-25 s and now and
+// then crossfading to another of its beds. Beds sit lower while a song plays and come up in the breaks between songs.
+const AMB = {
+  title: ['cave_storm', 'inside_night_storm'], town: ['forest_night', 'forest_night_rain'],
+  catacombs: ['inside_night', 'cave'], frozen: ['cave_storm', 'forest_night_storm'], molten: ['cave', 'torch_loop'],
+  fungal: ['cave_rain', 'cave'], sunken: ['sea', 'cave_rain'], blood: ['inside_night_rain', 'inside_night'],
+  ashen: ['cave_storm', 'inside_day_storm'], void: ['cave', 'inside_night_storm'], gilded: ['inside_day', 'inside_night'],
+  plague: ['river_stream_loop', 'cave_rain'], crystal: ['cave_rain', 'cave'], desert: ['inside_day_storm', 'beach_storm'],
+  shadow: ['inside_night', 'cave'], forge: ['torch_loop', 'cave'], abyss: ['sea_storm', 'cave_storm'],
+  thorn: ['forest_night', 'forest_night_rain'], storm: ['forest_night_storm', 'cave_storm'], obsidian: ['cave', 'inside_night'],
+  flesh: ['inside_night_rain', 'cave_rain'], serpent: ['river_loop', 'cave_rain'], shattered: ['inside_day_storm', 'cave_storm'],
+  library: ['inside_night_rain', 'inside_night'], necropolis: ['forest_night', 'forest_night_storm'],
+  amber: ['inside_day_storm', 'beach'], throne: ['cave_storm', 'waterfall_loop'],
+};
+let amb = null;   // { key, beds, deck, bed, level, nextDrift, nextSwap }
+
+export function setAmbience(key) {
+  if (!ac) { pending.amb = key; return; }
+  if (amb && amb.key === key) return;
+  const beds = AMB[key] || AMB.catacombs;
+  const old = amb;
+  amb = { key, beds, deck: null, bed: null, level: 0.7, nextDrift: 0, nextSwap: ac.currentTime + R2([50, 110]) };
+  swapBed(beds[0], old && old.deck, 3);
+}
+export function stopAmbience(sec = 2) { pending.amb = null; if (amb && amb.deck) amb.deck.stop(sec); amb = null; }
+
+function swapBed(bed, from, sec) {
+  if (manifest && !(bed in manifest.amb)) return;
+  if (from) from.stop(sec);
+  const deck = decks.amb.find((d) => d !== from) || decks.amb[0];
+  deck.load(bed, `${AUDIO}amb/${bed}.mp3`, true, Math.random() * 50);
+  deck.g.gain.cancelScheduledValues(ac.currentTime); deck.g.gain.setValueAtTime(0, ac.currentTime);
+  amb.deck = deck; amb.bed = bed;
+  deck.fade(ambTarget(), sec);
+}
+const ambTarget = () => amb.level * (music && music.song && music.deck.playing ? 0.45 : 1);
+
+let songOn = false;
+function tick() {
+  if (!ac) return;
+  const now = ac.currentTime;
+  if (music) {
+    const m = music;
+    if (m.song && !m.deck.playing && m.deck.el.ended) { m.song = null; m.next = now + R2(m.def.gap); }   // song over: a break
+    if (!m.song && m.next && now >= m.next) startSong();
+  }
+  const on = !!(music && music.song && music.deck.playing);
+  if (amb && amb.deck && on !== songOn) amb.deck.fade(ambTarget(), on ? 3 : 8);   // duck under songs, swell in the breaks
+  songOn = on;
+  if (amb && amb.deck) {
+    if (now >= amb.nextSwap && amb.beds.length > 1) {
+      amb.nextSwap = now + R2([60, 140]);
+      const others = amb.beds.filter((b) => b !== amb.bed);
+      swapBed(others[Math.floor(Math.random() * others.length)], amb.deck, 8);
+    } else if (now >= amb.nextDrift) {
+      amb.nextDrift = now + R2([10, 25]);
+      amb.level = R2([0.3, 1]);
+      amb.deck.fade(ambTarget(), R2([6, 12]));
+    }
+  }
 }

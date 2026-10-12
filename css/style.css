@@ -198,7 +198,14 @@ button { font-family: var(--font-head); }
 .title-tag { position: relative; z-index: 2; font: 400 18px var(--font-head); color: var(--text-dim); letter-spacing: 3px; margin: 6px 0 24px; text-align: center; padding: 0 12px; }
 .title-menu { position: relative; z-index: 2; display: flex; flex-direction: column; gap: 10px; min-width: 260px; }
 .title-foot { position: absolute; z-index: 2; bottom: 10px; font-size: 12px; color: #6d5a40; }
-.title-fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+.title-fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+.title-eyes { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; image-rendering: pixelated; }
+.title-logo.intro { position: relative; z-index: 1; animation: none; opacity: 0; will-change: opacity, filter, transform; }
+.title-screen .title-tag, .title-screen .title-menu, .title-screen .title-foot { z-index: 3; transition: opacity .9s ease-out; }
+.title-screen:not(.title-lit) .title-tag, .title-screen:not(.title-lit) .title-menu, .title-screen:not(.title-lit) .title-foot { opacity: 0; }
+.title-gate { position: absolute; z-index: 3; bottom: 18%; left: 0; right: 0; text-align: center; font: 400 16px var(--font-head); letter-spacing: 6px; color: #8a2a1c; text-transform: uppercase; pointer-events: none; opacity: 0; transition: opacity .6s; }
+.title-gated .title-gate { opacity: 1; animation: gate-pulse 2.6s ease-in-out infinite; }
+@keyframes gate-pulse { 50% { color: #d0402a; text-shadow: 0 0 12px #a01808; } }
 .screen-title { margin: 6px 0 2px; font: 700 22px var(--font-head); color: var(--gold-bright); letter-spacing: 3px; text-align: center; }
 .screen-title small { display: block; font-size: 12px; letter-spacing: 2px; color: var(--text-dim); }
 .class-screen, .slot-screen { justify-content: flex-start; padding-top: 6px; }
