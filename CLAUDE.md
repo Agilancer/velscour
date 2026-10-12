@@ -35,7 +35,7 @@ node tools/tests/classart.js paladin               # class art pack: catalog wea
 node tools/tests/gear.js paladin,wizard            # hero looks: armor+helm per rarity, finishes, auras (all = 16)
 node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners in those biomes (docs/ART.md)
 node tools/tests/pack.js catacombs,blood          # biome pack levels: arches, doors, reachability; door/arch shots
-node tools/tests/titlefx.js                        # title logo fire, tar drips/pile, spark ignition + explosion
+node tools/tests/titlefx.js                        # title intro: click gate, logo fade on the song clock, flame burst on the hit, eyes
 node tools/tests/enemies.js                        # monster art line-ups, corpses, mixed-biome levels + guardians
 node tools/tests/legion.js                         # Necromancer skeleton summons: art line-up, every minion attacks + casts
 node tools/tests/pets.js [seeds]                   # minion pathing: round walls, keep up, fight round corners, leash, idle
@@ -64,7 +64,12 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `assets/source/classes/<class>/` and are imported by `python3 tools/process_assets.py classes [class]`; both are in
   [`docs/CLASS_ART.md`](docs/CLASS_ART.md). The animated class-select portraits come from
   `assets/FinalClasses/All 16 Classes.png` (`python3 tools/process_assets.py select`, drawn by `src/ui/heroanim.js`).
-  Never hand-edit the generated files in `assets/sprites|ui|tiles`.
+  The user's sound zips live in `assets/source/audio/` and are transcoded to MP3 in `assets/audio/` by
+  `python3 tools/process_assets.py audio` (needs ffmpeg; `tools/audiopack.py`). `src/core/audio.js` maps game sounds
+  to samples (`SAMPLES`), songs to areas (`MUSIC`) and ambient beds to biomes (`AMB`).
+  Never hand-edit the generated files in `assets/sprites|ui|tiles|audio`.
+  The level-up voice line `assets/audio/voice/levelup.wav` is not from a zip: `tools/levelup_voice.py` renders it
+  (espeak-ng + MBROLA us2), and the banner's typed subtitles in `HUD.levelUp` are timed to it.
 - Paths must stay **relative** (`assets/...`, `src/main.js`, never `/assets/...`), because the site is served
   from the `/velscour/` subpath on GitHub Pages. The `/src/...` imports in `tools/tests/` are fine, because the
   tests run against a local server at the root.

@@ -1,7 +1,7 @@
 // Particles, blood & gore, decals, spell effects and floating combat text.
 import { G } from '../state.js';
 import { camera, isoX, isoY, HW, HH } from '../core/view.js';
-import { makeCanvas, rand, TAU, hexToRgb, shade, randi, pick } from '../core/util.js';
+import { makeCanvas, rand, TAU, hexToRgb, shade, randi, pick, fmt } from '../core/util.js';
 
 export const ELEM = {
   phys: { name: 'Physical', core: '#ffffff', glow: '#e0d8c8', dark: '#7a7060', sfx: 'phys' },
@@ -278,6 +278,34 @@ export class Column {
   }
 }
 
+export class Sigil {
+  // a burning summoning circle on the ground (level up): rings, a seven-point star and rune ticks, turning
+  constructor(x, y, r, dur, color = '#ff3018', glow = '#ffd860') { Object.assign(this, { x, y, r, dur, color, glow, t: 0, add: true }); }
+  update(dt) { this.t += dt; return this.t < this.dur; }
+  draw(ctx) {
+    const k = this.t / this.dur, a = Math.min(1, this.t / 0.25) * (k > 0.7 ? (1 - k) / 0.3 : 1);
+    const px = isoX(this.x, this.y), py = isoY(this.x, this.y);
+    const R = this.r * HW * 1.41 * (0.6 + 0.4 * Math.min(1, this.t / 0.35)), rot = this.t * 0.9;
+    ctx.save(); ctx.translate(px, py); ctx.scale(1, HH / HW);
+    ctx.lineJoin = 'miter';
+    for (let pass = 0; pass < 2; pass++) {
+      ctx.globalAlpha = a * (pass ? 1 : 0.45);
+      ctx.strokeStyle = pass ? this.glow : this.color; ctx.lineWidth = pass ? 1.6 : 6;
+      ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, R * 0.8, 0, TAU); ctx.stroke();
+      ctx.beginPath();
+      for (let i = 0; i <= 7; i++) { const q = rot + (i * 3 * TAU) / 7; ctx[i ? 'lineTo' : 'moveTo'](Math.cos(q) * R * 0.8, Math.sin(q) * R * 0.8); }
+      ctx.stroke();
+      for (let i = 0; i < 21; i++) { // rune ticks between the rings, turning the other way
+        const q = -rot * 0.6 + (i * TAU) / 21, r0 = R * 0.84, r1 = R * (i % 3 ? 0.92 : 0.97);
+        ctx.beginPath(); ctx.moveTo(Math.cos(q) * r0, Math.sin(q) * r0); ctx.lineTo(Math.cos(q + 0.06) * r1, Math.sin(q + 0.06) * r1); ctx.stroke();
+      }
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+}
+
 export class Telegraph {
   // ground warning marker for enemy attacks: circle or line
   constructor(opts) { Object.assign(this, { t: 0, color: '#ff2a10' }, opts); }
@@ -334,6 +362,79 @@ export function floatText(x, y, z, text, color = '#fff', size = 14, opts = {}) {
   texts.push({ x, y, z, text, color, size, life: opts.life || 0.9, max: opts.life || 0.9, vz: opts.vz ?? 45, dx: rand(-10, 10), crit: opts.crit, dmg: opts.dmg });
 }
 
+// --------------------------------------------------------- damage numbers
+// Comic-book damage numbers: each is rendered once (heavy outline, rim, gradient fill, offset shadow; crits on a
+// jagged starburst) at 1/PIX resolution for a chunky retro edge, cached, then slammed in, tilted and floated.
+const DMG_STYLE = {
+  hit: { size: 26, life: 1.35, pop: 2, fill: ['#fffaf0', '#f2d9a0', '#c88a40'], rim: '#6a0c06' },
+  crit: { size: 42, life: 2.2, pop: 2.8, fill: ['#fff4a8', '#ff8a20', '#c01008'], rim: '#ffd860', burst: true },
+  hurt: { size: 21, life: 1.15, pop: 1.6, fill: ['#ffc0b0', '#ff3a24', '#8a0806'], rim: '#1a0202' },
+  dot: { size: 15, life: 0.95, pop: 1.3, rim: '#120404' },
+};
+const PIX = 1.5;
+const numCache = new Map();
+
+function numSprite(text, style, color) {
+  const key = style + '|' + (color || '') + '|' + text;
+  let c = numCache.get(key);
+  if (c) { numCache.delete(key); numCache.set(key, c); return c; }
+  const S = DMG_STYLE[style], fs = Math.round(S.size / PIX), font = `900 ${fs}px Cinzel, Georgia, serif`;
+  const probe = makeCanvas(1, 1).getContext('2d'); probe.font = font;
+  const tw = Math.ceil(probe.measureText(text).width), o = Math.max(2, Math.round(fs * 0.2));
+  let w = tw + o * 2 + 4, h = Math.ceil(fs * 1.25) + o * 2 + 4;
+  const bR = S.burst ? Math.max(tw * 0.56 + fs * 0.3, fs * 0.95) : 0;
+  if (bR) { w = Math.max(w, Math.ceil(bR * 2.2)); h = Math.max(h, Math.ceil(bR * 1.7)); }
+  c = makeCanvas(w, h);
+  const g = c.getContext('2d'), cx = w / 2, cy = h / 2;
+  if (bR) {
+    // the "POW" burst: dark gore-red with a dull gold rim, jagged the same way every time for this number
+    let seed = 0;
+    for (const ch of text) seed = (seed * 31 + ch.charCodeAt(0)) % 9973;
+    const pts = 15;
+    g.beginPath();
+    for (let i = 0; i < pts * 2; i++) {
+      const a = (i / (pts * 2)) * TAU - Math.PI / 2, j = ((seed * (i + 7)) % 13) / 13;
+      const r = i % 2 ? bR * (0.62 + j * 0.1) : bR * (0.88 + j * 0.16);
+      g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.74);
+    }
+    g.closePath();
+    const rg = g.createRadialGradient(cx, cy, 0, cx, cy, bR);
+    rg.addColorStop(0, '#9a1206'); rg.addColorStop(0.6, '#4a0604'); rg.addColorStop(1, '#1c0202');
+    g.fillStyle = rg; g.fill();
+    g.lineJoin = 'miter'; g.lineWidth = 3; g.strokeStyle = '#0a0202'; g.stroke();
+    g.lineWidth = 1; g.strokeStyle = '#c8902a'; g.stroke();
+  }
+  g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+  const ty = cy + fs * 0.06;
+  // offset comic shadow, black outline, coloured rim, gradient fill
+  g.lineWidth = o * 2; g.strokeStyle = 'rgba(0,0,0,0.75)'; g.strokeText(text, cx + 2, ty + 2); g.fillStyle = 'rgba(0,0,0,0.75)'; g.fillText(text, cx + 2, ty + 2);
+  g.strokeStyle = '#0a0303'; g.strokeText(text, cx, ty);
+  g.lineWidth = Math.max(1, o * 0.8); g.strokeStyle = S.rim; g.strokeText(text, cx, ty);
+  if (S.fill) {
+    const lg = g.createLinearGradient(0, ty - fs * 0.45, 0, ty + fs * 0.45);
+    lg.addColorStop(0, S.fill[0]); lg.addColorStop(0.5, S.fill[1]); lg.addColorStop(1, S.fill[2]);
+    g.fillStyle = lg;
+  } else g.fillStyle = color || '#ffffff';
+  g.fillText(text, cx, ty);
+  // keep the fallback font out of the cache until Cinzel has loaded
+  if (!document.fonts || document.fonts.check(font)) {
+    numCache.set(key, c);
+    if (numCache.size > 400) numCache.delete(numCache.keys().next().value);
+  }
+  return c;
+}
+
+/** A comic damage number. style: hit | crit | hurt (damage the hero takes) | dot (colour = element glow). */
+export function damageText(x, y, z, amount, style = 'hit', color = null) {
+  const S = DMG_STYLE[style];
+  if (texts.length > 120) texts.shift();
+  const crit = style === 'crit', dot = style === 'dot';
+  texts.push({
+    x, y, z: z + rand(-4, 6), text: fmt(amount) + (crit ? '!' : ''), color, style, life: S.life, max: S.life, dmg: true, comic: true,
+    vz: dot ? 28 : crit ? rand(95, 115) : rand(70, 90), dx: rand(-14, 14), vx: rand(-1, 1) * (crit ? 10 : 16), rot: rand(-1, 1) * (crit ? 0.2 : 0.13),
+  });
+}
+
 export function addLight(x, y, radius, intensity = 1) {
   if (lights.length < 48) lights.push({ x, y, radius, intensity });
 }
@@ -378,7 +479,8 @@ export function updateVfx(dt, world) {
   for (let i = effects.length - 1; i >= 0; i--) if (!effects[i].update(dt)) effects.splice(i, 1);
   for (let i = texts.length - 1; i >= 0; i--) {
     const t = texts[i];
-    t.life -= dt; t.z += t.vz * dt; t.vz *= 0.94;
+    t.life -= dt; t.z += t.vz * dt;
+    if (t.comic) { t.vz *= Math.pow(0.03, dt); t.dx += t.vx * dt; } else t.vz *= 0.94;
     if (t.life <= 0) texts.splice(i, 1);
   }
 }
@@ -474,8 +576,32 @@ export function drawParticles(ctx, vr) {
 /** Floating combat text in screen space (call with identity transform). */
 export function drawTexts(ctx) {
   ctx.textAlign = 'center';
+  const dpr = G.dpr, mob = G.touch ? 0.8 : 1;
+  ctx.imageSmoothingEnabled = false;
+  for (let pass = 0; pass < 2; pass++) { // crits over everything else
+    for (const t of texts) {
+      if (!t.comic || (t.style === 'crit') !== (pass === 1) || !G.settings.dmgNumbers) continue;
+      const S = DMG_STYLE[t.style], age = t.max - t.life, k = t.life / t.max;
+      const pin = Math.min(1, age / 0.14);
+      // slam in from big, a little rebound, shrink away at the end
+      let sc = 1 + (S.pop - 1) * Math.pow(1 - pin, 3);
+      if (pin >= 1) sc *= 1 + 0.12 * Math.sin(Math.min(1, (age - 0.14) / 0.22) * Math.PI);
+      if (k < 0.22) sc *= 0.6 + 0.4 * (k / 0.22);
+      const spr = numSprite(t.text, t.style, t.color);
+      const [sx, sy] = camera.tileToScreen(t.x, t.y, t.z);
+      const jit = t.style === 'crit' && age < 0.35 ? (0.35 - age) * 9 : 0;
+      ctx.globalAlpha = Math.min(1, k / 0.22);
+      ctx.save();
+      ctx.translate((sx + t.dx + rand(-jit, jit)) * dpr, (sy + rand(-jit, jit)) * dpr);
+      ctx.rotate(t.rot * (1.6 - pin * 0.6));
+      const w = spr.width * PIX * dpr * sc * mob, h = spr.height * PIX * dpr * sc * mob;
+      ctx.drawImage(spr, -w / 2, -h / 2, w, h);
+      ctx.restore();
+    }
+  }
+  ctx.imageSmoothingEnabled = true;
   for (const t of texts) {
-    if (!G.settings.dmgNumbers && t.dmg) continue;
+    if (t.comic || (!G.settings.dmgNumbers && t.dmg)) continue;
     const [sx, sy] = camera.tileToScreen(t.x, t.y, t.z);
     const k = t.life / t.max;
     const pop = t.crit ? 1 + Math.max(0, (k - 0.75)) * 3 : 1;

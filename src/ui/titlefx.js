@@ -1,58 +1,107 @@
-// Title screen logo FX: flames and embers rise off the VELSCOUR logo, black tar drips from its spikes and piles up
-// on the floor, and now and then a falling spark lands on the pile, which catches fire and explodes.
-// Simulated in coarse units (one unit = PX css px) but drawn at device resolution with tiny particles, on a canvas
-// laid over the title screen. A low-res copy of the fire, upscaled with smoothing, gives it a soft glow.
+// Title screen: the VELSCOUR logo rises out of the dark in time with "Hymn of the Abyss" and bursts into flame on the
+// song's first hit, then burns for good; red eyes of every shape and size blink open in the background.
+// Timeline (song time, s): the song starts 2 s after the screen does (INTRO_DELAY), the logo fades in from
+// FADE0 to HIT and the flames burst at HIT. Visuals follow the song's own clock, so a slow load never puts them out of sync.
+// If the browser hasn't let audio start yet, a prompt asks for a click first (the eyes watch you meanwhile).
+// Any click or key during the intro skips ahead to the burst.
+// Flames are simulated in coarse units (one unit = PX css px) but drawn at device resolution with tiny particles,
+// on a canvas laid over the title screen. A low-res copy of the fire, upscaled with smoothing, gives it a soft glow.
 import { A } from '../core/assets.js';
-import { sfx } from '../core/audio.js';
+import { initAudio, audioReady, playMusic, setAmbience, musicClock, seekMusic } from '../core/audio.js';
 import { rand, randi, clamp } from '../core/util.js';
 
 const FLAME = ['#fff7c8', '#ffe070', '#ffb428', '#ff7a12', '#e0400a', '#9a1c06', '#4a0c04'];
-const TAR = '#0a0706', TAR_RIM = '#55392b', TAR_SHINE = '#a08474';   // glossy black, rim-lit by the fire
-const GRAV = 220;            // sim px / s^2 for tar and heavy sparks
-const REPOSE = 0.6;          // max slope of the tar pile before it creeps sideways
+export const INTRO_DELAY = 2, HIT = 6.88, FADE0 = -1.5;   // song-time seconds (FADE0 < 0: before the song starts)
+const MAX_PARTS = 14000;
 let geo = null;              // logo emitter points in native logo pixels (built once)
 
-/** Sample the logo's alpha/colour: top contour (flames), molten cracks (embers), bottom spike tips (tar drips). */
+/** Sample the logo's alpha/colour: top contour (flames) and molten cracks (embers). */
 function logoGeometry(img) {
   const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', { willReadFrequently: true }); cx.drawImage(img, 0, 0);
   const d = cx.getImageData(0, 0, w, h).data;
   const a = (x, y) => d[(y * w + x) * 4 + 3];
-  const top = [], cracks = [], bottom = new Int16Array(w).fill(-1);
-  for (let x = 0; x < w; x++) {
-    let y0 = -1, y1 = -1;
-    for (let y = 0; y < h; y++) if (a(x, y) > 110) { if (y0 < 0) y0 = y; y1 = y; }
-    bottom[x] = y1;
-    if (y0 >= 0 && x % 3 === 0) top.push([x, y0]);
+  const top = [], cracks = [];
+  for (let x = 0; x < w; x += 2) {
+    for (let y = 0; y < h; y++) if (a(x, y) > 110) { top.push([x, y]); break; }
   }
-  for (let i = 0; i < 40000 && cracks.length < 700; i++) {
+  for (let i = 0; i < 60000 && cracks.length < 1000; i++) {
     const x = randi(0, w - 1), y = randi(0, h - 1), k = (y * w + x) * 4;
     if (d[k + 3] > 200 && d[k] > 220 && d[k + 1] > 70 && d[k + 1] < 190 && d[k + 2] < 90) cracks.push([x, y]);
   }
-  // spike tips: columns that hang lowest within +-24px, at least 40px apart
-  const tips = [];
-  for (let x = 24; x < w - 24; x++) {
-    const y = bottom[x]; if (y < h * 0.55) continue;
-    let best = true;
-    for (let j = -24; j <= 24 && best; j++) if (bottom[x + j] > y || (bottom[x + j] === y && j < 0)) best = false;
-    if (best && (!tips.length || x - tips[tips.length - 1][0] >= 40)) tips.push([x, y]);
-  }
-  return { w, h, top, cracks, tips };
+  return { w, h, top, cracks };
 }
 
-/** Attach the effect to the title screen. The loop stops by itself once the screen leaves the DOM. */
-export function attachTitleFx(screen, logoEl) {
+/**
+ * Attach the title effects. els: { tag, menu, gate } fade in/out with the intro. Returns a detach function.
+ * The loop also stops by itself once the screen leaves the DOM.
+ */
+export function attachTitleFx(screen, logoEl, els = {}) {
   const cv = document.createElement('canvas');
   cv.className = 'title-fx';
-  screen.prepend(cv);
-  const ctx = cv.getContext('2d');
+  const eyeCv = document.createElement('canvas');
+  eyeCv.className = 'title-eyes';
+  screen.prepend(cv); screen.prepend(eyeCv);
+  const ctx = cv.getContext('2d'), ectx = eyeCv.getContext('2d');
   const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const glowCv = document.createElement('canvas'), gctx = glowCv.getContext('2d');
-  let W = 0, H = 0, PX = 3, D = 1, S = 3, cssW = 0, cssH = 0, pile = new Float32Array(0), burn = new Float32Array(0);
-  let parts = [], drops = [], drips = [], fires = [], blasts = [];
-  let flash = 0, shake = 0, sinceBoom = 3, last = performance.now(), map = null, raf = 0;
+  const lowCv = document.createElement('canvas'), lctx = lowCv.getContext('2d');   // eyes, drawn chunky then upscaled
+  let W = 0, H = 0, PX = 3, D = 1, S = 3, cssW = 0, cssH = 0;
+  let parts = [], eyes = [];
+  let flash = 0, shake = 0, last = performance.now(), raf = 0, ready = false;
   const lg = { s: 1, x: 0, y: 0 };
+
+  // ------------------------------------------------------------------ intro timeline
+  // phase: 'gate' (waiting for a click so audio may play) -> 'intro' (logo fading in) -> 'lit' (burning)
+  let phase = 'gate', t0 = 0, ts = FADE0 - 1, eyeT = 0.4, burstAt = 0;
+  const clockNow = () => (performance.now() - t0) / 1000 - INTRO_DELAY;   // wall clock in song time
+  function begin() {
+    if (phase !== 'gate') return;
+    phase = 'intro'; t0 = performance.now();
+    screen.classList.remove('title-gated');
+    playMusic('title', { delay: INTRO_DELAY }); setAmbience('title');
+  }
+  function light() {   // the hit: the logo bursts into flame and the menu appears
+    if (phase === 'lit') return;
+    phase = 'lit'; burstAt = performance.now();
+    screen.classList.add('title-lit');
+    if (ready) burst();
+  }
+  function skip() {
+    if (phase !== 'intro') return;
+    seekMusic(HIT - 0.35);
+    t0 = performance.now() - (HIT - 0.35 + INTRO_DELAY) * 1000;
+  }
+  const c0 = musicClock();
+  if (c0 && c0.kind === 'title') { phase = 'intro'; light(); }      // back from a sub-menu: the song is still playing
+  else if (audioReady()) begin();
+  else screen.classList.add('title-gated');
+  const onInput = () => { if (phase === 'gate') { initAudio(); begin(); } else skip(); };
+  window.addEventListener('pointerdown', onInput, true);
+  window.addEventListener('keydown', onInput, true);
+
+  function updateTimeline() {
+    if (phase !== 'intro') return;
+    const wall = clockNow(), c = musicClock();
+    let t;
+    if (c && c.kind === 'title') t = c.t;                       // the song's own clock
+    else if (wall < 0) t = wall;                                // before the song is due
+    else t = audioReady() && wall < 3 ? 0 : wall - (audioReady() ? 3 : 0);   // song still loading: hold, then give up
+    ts = Math.max(ts, t);
+    if (ts >= HIT) light();
+  }
+  function styleLogo(now) {
+    let k = phase === 'lit' ? 1 : clamp((ts - FADE0) / (HIT - FADE0), 0, 1);
+    if (phase === 'gate') k = 0;
+    const e = k * k * (3 - 2 * k), op = Math.pow(k, 1.7);
+    const burn = phase === 'lit' ? Math.max(0, 1 - (now - burstAt) / 1600) : 0;
+    logoEl.style.opacity = op.toFixed(3);
+    logoEl.style.transform = `scale(${(0.965 + 0.035 * e + burn * 0.03).toFixed(4)})`;
+    logoEl.style.filter = phase === 'lit'
+      ? `brightness(${(1 + burn * 0.6).toFixed(2)}) drop-shadow(0 0 ${(30 + burn * 50) | 0}px rgba(255,${(80 + burn * 90) | 0},10,${(0.45 + burn * 0.5).toFixed(2)}))`
+      : `brightness(${(0.15 + 0.85 * e).toFixed(3)}) blur(${((1 - e) * 7).toFixed(2)}px) drop-shadow(0 0 ${(e * 18) | 0}px rgba(120,10,4,${(e * 0.5).toFixed(2)}))`;
+  }
 
   function resize() {
     const r = cv.getBoundingClientRect();
@@ -60,239 +109,204 @@ export function attachTitleFx(screen, logoEl) {
     if (r.width === cssW && r.height === cssH && dpr === D) return;
     cssW = r.width; cssH = r.height; D = dpr;
     PX = Math.max(2, Math.round(Math.min(r.width, r.height) / 240)); S = PX * D;   // device px per sim unit
-    cv.width = Math.max(1, Math.round(r.width * D)); cv.height = Math.max(1, Math.round(r.height * D));
-    const w = Math.max(1, Math.round(r.width / PX)), h = Math.max(1, Math.round(r.height / PX));
-    glowCv.width = w; glowCv.height = h;
-    if (w === W && h === H) return;
-    const old = pile; W = w; H = h;
-    pile = new Float32Array(W); burn = new Float32Array(W);
-    pile.set(old.subarray(0, Math.min(old.length, W)));
+    cv.width = eyeCv.width = Math.max(1, Math.round(r.width * D)); cv.height = eyeCv.height = Math.max(1, Math.round(r.height * D));
+    W = Math.max(1, Math.round(r.width / PX)); H = Math.max(1, Math.round(r.height / PX));
+    glowCv.width = lowCv.width = W; glowCv.height = lowCv.height = H;
   }
-  // logo native px -> sim px, honouring object-fit: contain and the intro scale animation
+  // logo native px -> sim px, honouring object-fit: contain and the intro scale
   function place() {
     const c = cv.getBoundingClientRect(), r = logoEl.getBoundingClientRect();
     const s = Math.min(r.width / geo.w, r.height / geo.h);
     lg.s = s / PX;
     lg.x = (r.left + (r.width - geo.w * s) / 2 - c.left) / PX;
     lg.y = (r.top + (r.height - geo.h * s) / 2 - c.top) / PX;
-    if (!map || map.length !== geo.tips.length) {
-      drips = geo.tips.map(([x, y]) => ({ nx: x, ny: y, len: 0, max: rand(4, 9), rate: rand(1.2, 3.2), wait: rand(0, 4), snap: 0 }));
-      map = geo.tips;
-    }
   }
   const P = (nx, ny) => [lg.x + nx * lg.s, lg.y + ny * lg.s];
-  const floorAt = (x) => H - (pile[clamp(Math.round(x), 0, W - 1)] || 0);
 
-  // ------------------------------------------------------------------ particles
-  // kind: 0 flame (additive, ramps through FLAME), 1 spark (additive, ballistic, may ignite tar),
-  //       2 smoke (alpha), 3 tar glob (dark, ballistic; burning globs ignite tar they land on). sz is in css px.
-  const add = (o) => { if (parts.length < 8000) parts.push(o); };
+  // ------------------------------------------------------------------ flames
+  // kind: 0 flame (additive, ramps through FLAME), 1 spark (additive, ballistic), 2 smoke (alpha), 4 shockwave ring
+  const add = (o) => { if (parts.length < MAX_PARTS) parts.push(o); };
   const flame = (x, y, vx, vy, life, sz = 1) => add({ k: 0, x, y, vx, vy, t: 0, life, sz, ph: rand(6.28) });
-  const spark = (x, y, vx, vy, life, g, fated = false) => add({ k: 1, x, y, vx, vy, t: 0, life, g, fated });
+  const spark = (x, y, vx, vy, life, g) => add({ k: 1, x, y, vx, vy, t: 0, life, g });
   const smoke = (x, y, vx, vy, life, sz) => add({ k: 2, x, y, vx, vy, t: 0, life, sz });
-  const glob = (x, y, vx, vy, lit) => add({ k: 3, x, y, vx, vy, t: 0, life: 4, lit, sz: rand(0.8, 2) });
+  const topPt = () => P(...geo.top[randi(0, geo.top.length - 1)]);
+  const crackPt = () => P(...geo.cracks[randi(0, geo.cracks.length - 1)]);
 
   function emitLogo(dt) {
-    const s = lg.s;
-    for (let n = Math.floor(dt * 1700 + Math.random()); n-- > 0;) {        // flame tongues along the top edge
-      const [x, y] = P(...geo.top[randi(0, geo.top.length - 1)]);
-      flame(x + rand(-1, 1), y + rand(0, 3 * s * 8), rand(-4, 4), -rand(10, 26), rand(0.3, 0.75), rand(1, 2.2));
+    if (phase !== 'lit') {   // a few embers start to stir just before the hit
+      const k = (ts - (HIT - 1.6)) / 1.6;
+      if (phase === 'intro' && k > 0) for (let n = Math.floor(dt * 60 * k + Math.random()); n-- > 0;) { const [x, y] = crackPt(); flame(x, y, rand(-2, 2), -rand(4, 10), rand(0.6, 1.2), 1); }
+      return;
     }
-    for (let n = Math.floor(dt * 140 + Math.random()); n-- > 0;) {         // embers out of the molten cracks
-      const [x, y] = P(...geo.cracks[randi(0, geo.cracks.length - 1)]);
-      flame(x, y, rand(-3, 3), -rand(6, 16), rand(1.2, 2.6), 1);
+    const s = lg.s, surge = 1 + 1.5 * Math.max(0, 1 - (performance.now() - burstAt) / 2500);   // burns hottest right after the burst
+    for (let n = Math.floor(dt * 3200 * surge + Math.random()); n-- > 0;) {   // flame tongues along the top edge
+      const [x, y] = topPt();
+      flame(x + rand(-1, 1), y + rand(0, 3 * s * 8), rand(-4, 4), -rand(12, 30) * (0.8 + surge * 0.2), rand(0.35, 0.85), rand(1, 2.4));
     }
-    for (let n = Math.floor(dt * 22 + Math.random()); n-- > 0;) {        // drifting sparks
-      const [x, y] = P(...geo.top[randi(0, geo.top.length - 1)]);
-      const heavy = Math.random() < 0.18;
-      spark(x, y, rand(-28, 28), -rand(30, 80), heavy ? rand(2.5, 3.5) : rand(0.8, 1.8), heavy ? GRAV * 0.6 : rand(-10, 25));
+    for (let n = Math.floor(dt * 300 + Math.random()); n-- > 0;) {           // embers out of the molten cracks
+      const [x, y] = crackPt();
+      flame(x, y, rand(-3, 3), -rand(6, 18), rand(1.2, 2.8), rand(1, 1.6));
     }
+    for (let n = Math.floor(dt * 260 + Math.random()); n-- > 0;) {           // licks rising off the letters' faces
+      const [x, y] = crackPt();
+      flame(x + rand(-2, 2), y, rand(-3, 3), -rand(14, 30), rand(0.25, 0.55), rand(0.8, 1.8));
+    }
+    for (let n = Math.floor(dt * 45 + Math.random()); n-- > 0;) {            // drifting sparks
+      const [x, y] = topPt();
+      spark(x, y, rand(-28, 28), -rand(30, 90), rand(0.8, 2), rand(-10, 25));
+    }
+    if (Math.random() < dt * 6) { const [x, y] = topPt(); smoke(x, y - 4, rand(-4, 4), -rand(8, 16), rand(2, 3.2), randi(2, 3)); }
   }
 
-  // a spark that pops off the logo and arcs down onto the tallest part of the pile
-  function fatedSpark() {
-    let bx = 0; for (let x = 1; x < W; x++) if (pile[x] > pile[bx]) bx = x;
-    const tx = bx + rand(-2, 2), ty = H - pile[bx];
-    let best = null;
-    for (let i = 0; i < 12; i++) { const p = P(...geo.top[randi(0, geo.top.length - 1)]); if (!best || Math.abs(p[0] - tx) < Math.abs(best[0] - tx)) best = p; }
-    const [x0, y0] = best, T = rand(1.5, 2.1), g = GRAV * 0.6;
-    spark(x0, y0, (tx - x0) / T, (ty - y0 - 0.5 * g * T * T) / T, T + 0.5, g, true);
-  }
-
-  // ------------------------------------------------------------------ tar
-  function updateDrips(dt) {
-    for (const d of drips) {
-      if (d.snap > 0) { d.snap -= dt; d.len = Math.max(0, d.len - dt * 30); continue; }
-      if (d.wait > 0) { d.wait -= dt; continue; }
-      d.len += dt * d.rate * (0.6 + d.len * 0.35);           // stretches faster as it gets heavy
-      if (d.len >= d.max) {
-        const [x, y] = P(d.nx, d.ny);
-        drops.push({ x: Math.round(x), y: y + d.len, vy: 8, sz: d.max > 5 ? 2 : 1, vol: d.max * 2.8 });
-        d.len = d.max * 0.6; d.snap = 0.18; d.max = rand(4, 9); d.wait = rand(0.6, 3.5); d.rate = rand(1.2, 3.2);
-      }
+  // the hit: a wall of fire shoots straight up off the whole logo
+  function burst() {
+    for (let n = 0; n < 4200; n++) {
+      const [x, y] = Math.random() < 0.7 ? topPt() : crackPt();
+      flame(x + rand(-1.5, 1.5), y + rand(-1, 2), rand(-10, 10), -rand(40, 170), rand(0.4, 1.3), rand(1.2, 3));
     }
-    for (let i = drops.length - 1; i >= 0; i--) {
-      const o = drops[i];
-      o.vy += GRAV * dt; o.y += o.vy * dt;
-      const x = clamp(o.x, 0, W - 1);
-      if (o.y >= floorAt(x)) {
-        if (pile[x] < H * 0.4) for (let j = -2; j <= 2; j++) { const xx = x + j; if (xx >= 0 && xx < W) pile[xx] += o.vol * [0.1, 0.2, 0.4, 0.2, 0.1][j + 2]; }
-        for (let n = randi(2, 5); n-- > 0;) glob(x, floorAt(x) - 1, rand(-25, 25), -rand(15, 45), false);
-        if (burn[x] > 0) for (let n = 20; n-- > 0;) flame(x + rand(-2, 2), floorAt(x), rand(-10, 10), -rand(20, 50), rand(0.3, 0.6), rand(1, 2));
-        drops.splice(i, 1);
-      }
-    }
-  }
-
-  function relaxPile(dt) {
-    const k = Math.min(0.5, dt * 6);
-    const step = (x, y) => { const d = pile[x] - pile[y]; if (d > REPOSE) { const m = (d - REPOSE) * k * 0.5; pile[x] -= m; pile[y] += m; } else if (d > 0.05 && pile[x] > 1) { const m = d * dt * 0.25; pile[x] -= m; pile[y] += m; } };   // + slow sag rounds the mounds off
-    if (Math.random() < 0.5) for (let x = 0; x < W - 1; x++) { step(x, x + 1); step(x + 1, x); }
-    else for (let x = W - 2; x >= 0; x--) { step(x + 1, x); step(x, x + 1); }
-  }
-
-  // ------------------------------------------------------------------ fire + explosion
-  function segment(x) {   // contiguous run of tar around x
-    let a = x, b = x;
-    while (a > 0 && pile[a - 1] > 0.4) a--;
-    while (b < W - 1 && pile[b + 1] > 0.4) b++;
-    return [a, b];
-  }
-  function ignite(x, fated) {
-    x = clamp(Math.round(x), 0, W - 1);
-    if (pile[x] < 1.5 || burn[x] > 0) return false;
-    const [a, b] = segment(x);
-    let vol = 0; for (let i = a; i <= b; i++) vol += pile[i];
-    if (!fated && sinceBoom > 2 && (sinceBoom < 16 || vol < 60)) return false;
-    if (vol < 25) { for (let n = 25; n-- > 0;) flame(x, floorAt(x), rand(-8, 8), -rand(10, 30), rand(0.2, 0.5)); return false; }   // too little: fizzles
-    fires.push({ x, a, b, t: 0, front: 0, dur: 0.45 + (b - a) / 300 + rand(0.15, 0.35) });
-    burn[x] = 0.001;
-    sfx('fire', 0.6);
-    return true;
-  }
-  function updateFires(dt) {
-    for (let i = fires.length - 1; i >= 0; i--) {
-      const f = fires[i];
-      f.t += dt; f.front += dt * 280;                          // flames race along the pile
-      for (let x = f.a; x <= f.b; x++) if (Math.abs(x - f.x) <= f.front && pile[x] > 0.4) burn[x] += dt;
-      for (let x = f.a; x <= f.b; x++) {
-        if (burn[x] <= 0) continue;
-        const heat = Math.min(1, burn[x] * 2.5) * (1 + f.t / f.dur);
-        for (let n = Math.floor(dt * 55 * heat + Math.random()); n-- > 0;) flame(x + rand(-0.5, 0.5), floorAt(x) + rand(0, 1), rand(-5, 5), -rand(18, 45) * (0.6 + pile[x] / 12), rand(0.35, 0.9), rand(0.8, 2));
-        if (Math.random() < dt * 2 * heat) smoke(x, floorAt(x) - 4, rand(-4, 4), -rand(8, 18), rand(1.5, 2.6), 2);
-        if (Math.random() < dt * 2.5 * heat) spark(x, floorAt(x), rand(-20, 20), -rand(40, 90), rand(0.6, 1.2), GRAV * 0.4);
-      }
-      if (f.t >= f.dur) { explode(f); fires.splice(i, 1); }
-    }
-  }
-  // the burning pile goes up mound by mound, a chain of blasts racing out from where the spark landed
-  function explode(f) {
-    const peaks = [];
-    for (let x = f.a; x <= f.b; x++) {
-      let top = true;
-      for (let j = -14; j <= 14 && top; j++) { const y = x + j; if (y >= f.a && y <= f.b && (pile[y] > pile[x] || (pile[y] === pile[x] && j < 0))) top = false; }
-      if (top && pile[x] > 1.5) peaks.push(x);
-    }
-    if (!peaks.length) peaks.push(f.x);
-    let a = f.a;
-    peaks.forEach((px, i) => {
-      const b = i < peaks.length - 1 ? Math.floor((px + peaks[i + 1]) / 2) : f.b;
-      blasts.push({ a, b, delay: Math.abs(px - f.x) / 600 + i * 0.02 });
-      a = b + 1;
-    });
-    sinceBoom = 0;
-  }
-  function blast(g) {
-    let vol = 0, cx = 0, top = 0;
-    for (let x = g.a; x <= g.b; x++) { vol += pile[x]; cx += x * pile[x]; top = Math.max(top, pile[x]); }
-    if (vol < 1) return;
-    cx /= vol;
-    const pw = clamp(vol / 90, 0.4, 1.5), hy = H - top - 3;
-    for (let n = Math.round(30 * pw); n-- > 0;) {                       // flung tar, picked by height
-      let x = randi(g.a, g.b); for (let k = 0; k < 3; k++) { const y = randi(g.a, g.b); if (pile[y] > pile[x]) x = y; }
-      const dir = Math.sign(x - cx) || (Math.random() < 0.5 ? -1 : 1);
-      glob(x, H - rand(0, pile[x]), dir * rand(10, 110) * pw + rand(-30, 30), -rand(90, 270) * pw, Math.random() < 0.8);
-    }
-    for (let x = g.a; x <= g.b; x++) { pile[x] = 0; burn[x] = 0; }
-    for (let n = Math.round(220 * pw); n-- > 0;) {                      // fireball
-      const a = rand(Math.PI * 0.95, Math.PI * 2.05), v = rand(20, 190) * pw * (Math.random() < 0.3 ? 0.4 : 1);
-      flame(cx + rand(-3, 3), hy + rand(-3, 3), Math.cos(a) * v, Math.sin(a) * v * 1.2 - 30, rand(0.35, 1.2), rand(1, 2.6));
-    }
-    for (let n = Math.round(45 * pw); n-- > 0;) { const a = rand(Math.PI, Math.PI * 2), v = rand(50, 210) * pw; spark(cx, hy, Math.cos(a) * v, Math.sin(a) * v, rand(0.6, 1.8), GRAV * 0.5); }
-    for (let n = Math.round(22 * pw); n-- > 0;) smoke(cx + rand(-12, 12), hy - rand(0, 18), rand(-35, 35), -rand(20, 70), rand(1.8, 3.4), randi(2, 4));
-    parts.push({ k: 4, x: cx, y: H - 2, t: 0, life: 0.5, r: 70 * pw });   // shockwave ring
-    flash = Math.min(0.85, flash + 0.3 + pw * 0.2); shake = reduceMotion ? 0 : Math.min(0.9, shake + 0.25 + 0.2 * pw);
-    for (const d of drips) { d.wait = Math.max(d.wait, rand(0.5, 2)); d.len = Math.max(0, d.len - 2); }   // the blast shakes the drips loose
-    sinceBoom = 0;
-    sfx('explode', 1.0, rand(0.6, 0.8)); sfx('thud', 0.8, 0.6);
-  }
-  function updateBlasts(dt) {
-    for (let i = blasts.length - 1; i >= 0; i--) if ((blasts[i].delay -= dt) <= 0) { blast(blasts[i]); blasts.splice(i, 1); }
+    for (let n = 0; n < 260; n++) { const [x, y] = topPt(); spark(x, y, rand(-60, 60), -rand(80, 240), rand(0.8, 2.2), rand(20, 90)); }
+    for (let n = 0; n < 30; n++) { const [x, y] = topPt(); smoke(x, y - rand(4, 20), rand(-12, 12), -rand(20, 45), rand(2, 3.6), randi(2, 4)); }
+    const cx = lg.x + geo.w * lg.s / 2, cy = lg.y + geo.h * lg.s * 0.45;
+    parts.push({ k: 4, x: cx, y: cy, t: 0, life: 0.6, r: geo.w * lg.s * 0.6 });
+    flash = 0.55; shake = reduceMotion ? 0 : 0.45;
   }
 
   function updateParts(dt) {
     for (let i = parts.length - 1; i >= 0; i--) {
       const p = parts[i];
       p.t += dt;
-      if (p.t >= p.life) { parts[i] = parts[parts.length - 1]; parts.pop(); continue; }
+      if (p.t >= p.life || p.y < -20 || p.x < -20 || p.x > W + 20 || p.y > H + 10) { parts[i] = parts[parts.length - 1]; parts.pop(); continue; }
       if (p.k === 4) continue;
-      if (p.k === 0) { const f = 1 - Math.min(0.5, dt * Math.hypot(p.vx, p.vy) * 0.03); p.vx += Math.sin(p.t * 9 + p.ph) * 30 * dt; p.vy -= 6 * dt; p.vx *= f * (1 - dt * 1.5); p.vy *= f * (1 - dt * 0.8); }   // fast flames drag hard: blasts stay a fireball
+      if (p.k === 0) { const f = 1 - Math.min(0.5, dt * Math.hypot(p.vx, p.vy) * 0.02); p.vx += Math.sin(p.t * 9 + p.ph) * 30 * dt; p.vy -= 6 * dt; p.vx *= f * (1 - dt * 1.5); p.vy *= f * (1 - dt * 0.8); }
       else if (p.k === 1) { p.vy += p.g * dt; p.vx *= 1 - dt * 0.4; }
-      else if (p.k === 2) { p.vx *= 1 - dt * 0.8; p.vy *= 1 - dt * 0.4; }
-      else { p.vy += GRAV * dt; p.vx *= 1 - dt * 0.3; if (p.lit) for (let n = Math.floor(dt * 12 + Math.random()); n-- > 0;) flame(p.x + rand(-0.5, 0.5), p.y + rand(-0.5, 0.5), rand(-4, 4), -rand(5, 15), rand(0.2, 0.5), rand(0.7, 1.4)); if (Math.random() < dt * 4) smoke(p.x, p.y, 0, -5, rand(0.8, 1.4), 1); }
+      else { p.vx *= 1 - dt * 0.8; p.vy *= 1 - dt * 0.4; }
       p.x += p.vx * dt; p.y += p.vy * dt;
-      if ((p.k === 1 || p.k === 3) && p.vy > 0 && p.x >= 0 && p.x < W && p.y >= floorAt(p.x)) {
-        if (p.k === 1 ? (p.fated || p.t > 0.25) : p.lit) ignite(p.x, p.fated);
-        if (p.k === 3) { const x = clamp(Math.round(p.x), 0, W - 1); pile[x] += 0.5; }
-        parts[i] = parts[parts.length - 1]; parts.pop();
-      } else if (p.y > H + 10 || p.x < -20 || p.x > W + 20) { parts[i] = parts[parts.length - 1]; parts.pop(); }
     }
   }
 
-  // ------------------------------------------------------------------ draw
+  // ------------------------------------------------------------------ eyes
+  // An eye: almond (or round) socket that opens, glares (pupil follows the pointer, darts now and then), blinks, closes.
+  // A "watcher" is a group of eyes that share timing: a pair, one huge eye, a cluster, or a vertical stack.
+  const look = { x: 0.5, y: 0.5 };   // pointer in 0..1 screen space
+  const onMove = (e) => { look.x = e.clientX / Math.max(1, innerWidth); look.y = e.clientY / Math.max(1, innerHeight); };
+  window.addEventListener('pointermove', onMove, true);
+  const avoid = () => [logoEl, els.menu, els.tag].filter(Boolean).map((n) => {
+    const r = n.getBoundingClientRect(), c = cv.getBoundingClientRect();
+    return { x0: (r.left - c.left) / PX - 6, y0: (r.top - c.top) / PX - 6, x1: (r.right - c.left) / PX + 6, y1: (r.bottom - c.top) / PX + 6 };
+  });
+  function spot(rx, ry) {   // somewhere in the dark, clear of the logo and menu (and not on top of another watcher)
+    const boxes = avoid();
+    let best = null;
+    for (let i = 0; i < 30; i++) {
+      const x = rand(rx + 4, W - rx - 4), y = rand(ry + 4, H - ry - 4);
+      const hit = boxes.some((b) => x + rx > b.x0 && x - rx < b.x1 && y + ry > b.y0 && y - ry < b.y1) ||
+        eyes.some((w) => Math.abs(w.x - x) < rx + w.rx && Math.abs(w.y - y) < ry + w.ry);
+      if (!hit) return [x, y];
+      if (!best) best = [x, y];
+    }
+    return Math.random() < 0.3 ? best : null;
+  }
+  function watcher() {
+    const r = Math.random(), list = [];
+    const slit = Math.random() < 0.55, hue = rand(-12, 14);
+    let rx, ry;
+    if (r < 0.45) {                                    // a pair, maybe slanted in anger
+      const w = rand(4, 13), gap = w * rand(1.4, 2.6), tilt = rand(-0.35, 0.45);
+      list.push({ dx: -gap / 2, dy: 0, w, h: w * rand(0.35, 0.6), rot: tilt }, { dx: gap / 2, dy: 0, w, h: w * rand(0.35, 0.6), rot: -tilt });
+      rx = gap / 2 + w; ry = w;
+    } else if (r < 0.65) {                             // one big eye
+      const w = rand(18, 42);
+      list.push({ dx: 0, dy: 0, w, h: w * rand(0.4, 0.62), rot: rand(-0.12, 0.12) });
+      rx = w * 0.6; ry = w * 0.4;
+    } else if (r < 0.88) {                             // a cluster of little eyes, opening one after another
+      const n = randi(3, 8), R = rand(6, 14);
+      for (let i = 0; i < n; i++) { const a = rand(6.28), d = rand(0, R), w = rand(2.5, 6.5); list.push({ dx: Math.cos(a) * d, dy: Math.sin(a) * d * 0.7, w, h: w * rand(0.4, 0.75), rot: rand(-0.6, 0.6), lag: rand(0, 0.9) }); }
+      rx = R + 7; ry = R * 0.7 + 5;
+    } else {                                           // a vertical stack, like something tall pressed to the dark
+      const n = randi(2, 4), w = rand(4, 8);
+      for (let i = 0; i < n; i++) list.push({ dx: rand(-1.5, 1.5), dy: (i - (n - 1) / 2) * w * 0.9, w: w * rand(0.8, 1.15), h: w * 0.42, rot: rand(-0.15, 0.15), lag: i * 0.12 });
+      rx = w; ry = n * w * 0.5 + 2;
+    }
+    const at = spot(rx, ry); if (!at) return;
+    const open = Math.random() < 0.3 ? rand(0.9, 1.6) : rand(0.18, 0.4);   // sometimes they open slowly, which is worse
+    const hold = rand(1.4, 4.2);
+    const blinks = []; for (let n = randi(0, 2), t = rand(0.5, 1.2); n-- > 0 && t < hold - 0.3; t += rand(0.6, 1.6)) blinks.push(open + t);
+    eyes.push({ x: at[0], y: at[1], rx, ry, list, slit, hue, t: 0, open, hold, close: rand(0.2, 0.7), blinks,
+      gaze: [0, 0], dart: rand(0.8, 2), dartTo: null, glare: Math.random() < 0.25 });
+  }
+  function lid(w, tt) {   // 0 closed .. 1 open
+    if (tt <= 0) return 0;
+    let o = tt < w.open ? Math.pow(tt / w.open, 0.7) : tt < w.open + w.hold ? 1 : 1 - (tt - w.open - w.hold) / w.close;
+    for (const b of w.blinks) { const d = Math.abs(tt - b); if (d < 0.11) o = Math.min(o, d / 0.11); }
+    return clamp(o, 0, 1);
+  }
+  function updateEyes(dt) {
+    eyeT -= dt;
+    if (eyeT <= 0) {
+      eyeT = rand(0.7, 2.4);
+      const n = Math.random() < 0.25 ? randi(2, 3) : 1;
+      for (let i = 0; i < n && eyes.length < 7; i++) watcher();
+    }
+    for (let i = eyes.length - 1; i >= 0; i--) {
+      const w = eyes[i];
+      w.t += dt;
+      if (w.t > w.open + w.hold + w.close + 1) { eyes.splice(i, 1); continue; }
+      // gaze: toward the pointer (or a glare straight out), with sudden darts aside
+      w.dart -= dt;
+      if (w.dart <= 0) { w.dart = rand(0.7, 2.2); w.dartTo = Math.random() < 0.5 ? [rand(-1, 1), rand(-0.6, 0.6)] : null; }
+      let gx = (look.x * W - w.x) / (W * 0.35), gy = (look.y * H - w.y) / (H * 0.35);
+      if (w.glare) { gx = 0; gy = 0; }
+      if (w.dartTo) [gx, gy] = w.dartTo;
+      const m = Math.hypot(gx, gy); if (m > 1) { gx /= m; gy /= m; }
+      const k = Math.min(1, dt * (w.dartTo ? 18 : 5));
+      w.gaze[0] += (gx - w.gaze[0]) * k; w.gaze[1] += (gy - w.gaze[1]) * k;
+    }
+  }
+  function drawEyes() {
+    lctx.clearRect(0, 0, W, H);
+    const glows = [];
+    for (const w of eyes) {
+      for (const e of w.list) {
+        const o = lid(w, w.t - (e.lag || 0)); if (o <= 0.02) continue;
+        const x = w.x + e.dx, y = w.y + e.dy, hw = e.w / 2, hh = Math.max(0.5, e.h / 2 * o);
+        glows.push([x, y, e.w, o]);
+        lctx.save(); lctx.translate(x, y); lctx.rotate(e.rot);
+        lctx.beginPath(); lctx.moveTo(-hw, 0);
+        lctx.quadraticCurveTo(0, -hh * 2, hw, 0); lctx.quadraticCurveTo(0, hh * 2, -hw, 0); lctx.closePath();
+        const g = lctx.createRadialGradient(0, 0, 0, 0, 0, hw);
+        g.addColorStop(0, `hsl(${18 + w.hue},100%,62%)`); g.addColorStop(0.45, `hsl(${4 + w.hue},100%,45%)`); g.addColorStop(1, `hsl(${356 + w.hue},90%,16%)`);
+        lctx.fillStyle = g; lctx.fill();
+        lctx.save(); lctx.clip();
+        const px = w.gaze[0] * hw * 0.45, py = w.gaze[1] * hh * 0.5;   // pupil
+        lctx.fillStyle = '#ffd27a'; lctx.beginPath(); lctx.ellipse(px, py, e.w * 0.2, e.h * 0.34, 0, 0, 7); lctx.globalAlpha = 0.45; lctx.fill(); lctx.globalAlpha = 1;
+        lctx.fillStyle = '#060000'; lctx.beginPath();
+        if (w.slit) lctx.ellipse(px, py, Math.max(0.5, e.w * 0.055), e.h * 0.48, 0, 0, 7);
+        else lctx.ellipse(px, py, Math.max(0.6, e.w * 0.13), Math.max(0.6, e.w * 0.13), 0, 0, 7);
+        lctx.fill();
+        if (e.w > 9) { lctx.fillStyle = 'rgba(255,240,220,.8)'; lctx.fillRect(Math.round(px - e.w * 0.12), Math.round(py - e.h * 0.2), 1, 1); }   // a wet glint
+        lctx.restore();
+        lctx.strokeStyle = 'rgba(20,0,0,.9)'; lctx.lineWidth = 0.8; lctx.stroke();   // lids
+        lctx.restore();
+      }
+    }
+    ectx.clearRect(0, 0, eyeCv.width, eyeCv.height);
+    if (!glows.length) return;
+    ectx.globalCompositeOperation = 'lighter';
+    for (const [x, y, w, o] of glows) {   // a dim red bloom round each eye
+      const r = w * 1.6 * S, g = ectx.createRadialGradient(x * S, y * S, 0, x * S, y * S, r);
+      g.addColorStop(0, `rgba(200,20,6,${(0.22 * o).toFixed(3)})`); g.addColorStop(1, 'rgba(120,0,0,0)');
+      ectx.fillStyle = g; ectx.fillRect(x * S - r, y * S - r, r * 2, r * 2);
+    }
+    ectx.globalCompositeOperation = 'source-over';
+    ectx.imageSmoothingEnabled = false;   // chunky pixels, like the rest of the game
+    ectx.drawImage(lowCv, 0, 0, W, H, 0, 0, W * S, H * S);
+  }
+
+  // ------------------------------------------------------------------ draw fire
   const buckets = Array.from({ length: FLAME.length * 8 }, () => []);
-  function draw(time) {
+  function draw() {
     const cw = cv.width, ch = cv.height, lw = D;   // lw: one css px in device px
     ctx.clearRect(0, 0, cw, ch);
-    // tar drips hanging from the spikes: tapered strand + bulb
-    for (const d of drips) {
-      if (d.len < 0.5) continue;
-      const [x, y] = P(d.nx, d.ny), X = x * S, Y = (y - 0.5) * S, L = d.len * S, r = (0.9 + Math.min(d.len, 9) * 0.17) * lw, by = Y + L - r;
-      ctx.fillStyle = TAR;
-      ctx.beginPath(); ctx.moveTo(X - lw, Y); ctx.lineTo(X + lw, Y); ctx.lineTo(X + r * 0.55, by); ctx.lineTo(X - r * 0.55, by); ctx.fill();
-      ctx.beginPath(); ctx.arc(X, by, r, 0, 7); ctx.fill();
-      ctx.strokeStyle = TAR_RIM; ctx.lineWidth = lw * 0.8; ctx.beginPath(); ctx.arc(X, by, r, Math.PI * 0.6, Math.PI * 1.2); ctx.stroke();
-      ctx.fillStyle = TAR_SHINE; ctx.fillRect(X - r * 0.5, by - r * 0.5, lw, lw);
-    }
-    // falling drops: teardrop with a short streak
-    for (const o of drops) {
-      const X = (o.x + 0.5) * S, Y = o.y * S, r = (o.sz > 1 ? 2.4 : 1.7) * lw, tail = clamp(o.vy / 40, 1, 6) * S * 0.6;
-      ctx.fillStyle = TAR;
-      ctx.beginPath(); ctx.moveTo(X, Y - r - tail); ctx.lineTo(X + r * 0.7, Y - r); ctx.lineTo(X - r * 0.7, Y - r); ctx.fill();
-      ctx.beginPath(); ctx.arc(X, Y - r, r, 0, 7); ctx.fill();
-      ctx.fillStyle = TAR_SHINE; ctx.fillRect(X - r * 0.5, Y - r * 1.4, lw, lw);
-    }
-    // pile: smooth silhouette, rim-lit top edge (flame-coloured where burning), ember flecks and glints
-    ctx.fillStyle = TAR; ctx.beginPath(); ctx.moveTo(0, ch);
-    for (let x = 0; x < W; x++) ctx.lineTo((x + 0.5) * S, ch - pile[x] * S);
-    ctx.lineTo(cw, ch); ctx.fill();
-    const edge = (hot, style, width) => {
-      ctx.strokeStyle = style; ctx.lineWidth = width; ctx.beginPath();
-      let on = false;
-      for (let x = 0; x < W; x++) {
-        const ok = pile[x] > 0.3 && (burn[x] > 0) === hot, X = (x + 0.5) * S, Y = ch - pile[x] * S + width * 0.5;
-        if (ok) { on ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); on = true; } else on = false;
-      }
-      ctx.stroke();
-    };
-    edge(false, TAR_RIM, 1.5 * lw);
-    edge(true, FLAME[2 + ((time * 12) | 0) % 2], 2.5 * lw);
-    for (let x = 0; x < W; x++) {
-      const h = pile[x]; if (h < 2) continue;
-      if (burn[x] > 0) { for (let n = 2; n-- > 0;) if (Math.random() < 0.6) { ctx.fillStyle = FLAME[randi(2, 5)]; ctx.fillRect((x + Math.random()) * S, ch - rand(0, h - 0.5) * S, lw, lw); } }
-      else if ((x * 13 + Math.round(h * 3)) % 11 === 0) { ctx.fillStyle = TAR_SHINE; ctx.fillRect((x + 0.3) * S, ch - (h - 0.6) * S, lw, lw); }
-    }
-    // smoke + tar globs (normal blending)
     ctx.fillStyle = 'rgb(30,24,22)';
     for (let a = 0; a < 6; a++) {   // smoke, batched by fade level
       ctx.globalAlpha = 0.3 * (1 - (a + 0.5) / 6); ctx.beginPath();
@@ -300,13 +314,6 @@ export function attachTitleFx(screen, logoEl) {
       ctx.fill();
     }
     ctx.globalAlpha = 1;
-    for (const p of parts) {
-      if (p.k === 3) {
-        ctx.fillStyle = TAR; ctx.beginPath(); ctx.arc(p.x * S, p.y * S, p.sz * lw, 0, 7); ctx.fill();
-        if (p.lit) { ctx.fillStyle = FLAME[randi(1, 3)]; ctx.fillRect(p.x * S - lw * 0.5, p.y * S - p.sz * lw - lw, lw, lw); }
-      }
-    }
-    // fire: soft glow (low-res copy, smoothed upscale) then sharp particles batched by colour/alpha, all additive
     gctx.clearRect(0, 0, W, H); gctx.globalCompositeOperation = 'lighter';
     for (const b of buckets) b.length = 0;
     for (const p of parts) {
@@ -326,8 +333,7 @@ export function attachTitleFx(screen, logoEl) {
       ctx.fillStyle = FLAME[(i / 8) | 0]; ctx.globalAlpha = ((i % 8) + 0.5) / 8;
       ctx.beginPath(); for (const p of b) { const z = Math.max(1, Math.round(p.sz * lw)); ctx.rect((p.x * S) | 0, (p.y * S) | 0, z, z); } ctx.fill();
     }
-    // sparks: thin streaks along their velocity
-    for (const hot of [true, false]) {
+    for (const hot of [true, false]) {   // sparks: thin streaks along their velocity
       ctx.strokeStyle = hot ? FLAME[0] : FLAME[2]; ctx.globalAlpha = hot ? 0.95 : 0.6; ctx.lineWidth = lw; ctx.beginPath();
       for (const p of parts) {
         if (p.k !== 1 || (p.t / p.life < 0.5) !== hot) continue;
@@ -335,49 +341,57 @@ export function attachTitleFx(screen, logoEl) {
       }
       ctx.stroke();
     }
-    ctx.strokeStyle = FLAME[3]; ctx.globalAlpha = 0.6; ctx.lineWidth = lw; ctx.beginPath();   // burning tar trails
-    for (const p of parts) if (p.k === 3 && p.lit) { ctx.moveTo((p.x - p.vx * 0.025) * S, (p.y - p.vy * 0.025) * S); ctx.lineTo(p.x * S, p.y * S); }
-    ctx.stroke();
     for (const p of parts) {
       if (p.k !== 4) continue;
       const u = p.t / p.life, r = p.r * Math.sqrt(u) * S;
-      ctx.globalAlpha = 0.8 * (1 - u); ctx.strokeStyle = u < 0.3 ? FLAME[0] : FLAME[2]; ctx.lineWidth = 2 * lw;
-      ctx.beginPath(); ctx.ellipse(p.x * S, p.y * S, r, r * 0.55, 0, Math.PI, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.7 * (1 - u); ctx.strokeStyle = u < 0.3 ? FLAME[0] : FLAME[2]; ctx.lineWidth = 2 * lw;
+      ctx.beginPath(); ctx.ellipse(p.x * S, p.y * S, r, r * 0.4, 0, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-    if (flash > 0) { ctx.fillStyle = `rgba(255,${(150 + flash * 100) | 0},${(60 + flash * 120) | 0},${(flash * 0.5).toFixed(3)})`; ctx.fillRect(0, 0, cw, ch); }
+    if (flash > 0) { ctx.fillStyle = `rgba(255,${(150 + flash * 100) | 0},${(60 + flash * 120) | 0},${(flash * 0.45).toFixed(3)})`; ctx.fillRect(0, 0, cw, ch); }
   }
 
   // ------------------------------------------------------------------ loop
+  function detach() {
+    cancelAnimationFrame(raf); cv.remove(); eyeCv.remove(); screen.style.transform = '';
+    window.removeEventListener('pointerdown', onInput, true);
+    window.removeEventListener('keydown', onInput, true);
+    window.removeEventListener('pointermove', onMove, true);
+  }
   function frame(now) {
-    if (!cv.isConnected) { screen.style.transform = ''; return; }
+    if (!cv.isConnected) { detach(); return; }
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    resize(); place();
-    sinceBoom += dt;
-    emitLogo(dt);
-    updateDrips(dt); relaxPile(dt); updateFires(dt); updateBlasts(dt); updateParts(dt);
-    // occasionally send a spark onto a decent pile; always once the pile is getting tall
-    let top = 0; for (let x = 0; x < W; x++) if (pile[x] > top) top = pile[x];
-    if (!fires.length && !blasts.length && sinceBoom > 12 && top > 9 && (Math.random() < dt * 0.22 || top > H * 0.12)) { fatedSpark(); sinceBoom = 6; }
-    flash = Math.max(0, flash - dt * 2.4);
+    resize();
+    updateTimeline();
+    styleLogo(now);
+    updateEyes(dt); drawEyes();
+    if (ready) {
+      place();
+      emitLogo(dt);
+      updateParts(dt);
+      draw();
+    }
+    flash = Math.max(0, flash - dt * 2);
     if (shake > 0) {
       shake = Math.max(0, shake - dt);
-      const m = shake * 14;
+      const m = shake * 12;
       screen.style.transform = shake > 0 ? `translate(${rand(-m, m).toFixed(1)}px,${rand(-m, m).toFixed(1)}px)` : '';
     }
-    draw(now / 1000);
   }
 
-  cv.fx = { pileUp: (h) => { for (let x = 0; x < W; x++) pile[x] = Math.max(pile[x], h * (0.6 + 0.4 * Math.sin(x / 9) ** 2)); }, spark: fatedSpark, state: () => ({ W, H, parts: parts.length, drops: drops.length, fires: fires.length + blasts.length, top: Math.max(0, ...pile) }) };   // test hooks
+  cv.fx = { state: () => ({ phase, ts, W, H, parts: parts.length, eyes: eyes.length, opacity: +logoEl.style.opacity }), skip, begin, watcher };   // test hooks
   const start = (img) => {
-    try { geo = geo || logoGeometry(img); } catch (e) { cv.remove(); return; }   // never let FX break the menu
-    if (!geo.top.length || !geo.tips.length) { cv.remove(); return; }
+    try { geo = geo || logoGeometry(img); } catch (e) { return; }   // never let FX break the menu: just no flames
+    if (!geo.top.length) return;
     if (!geo.cracks.length) geo.cracks = geo.top;
-    last = performance.now(); raf = requestAnimationFrame(frame);
+    ready = true;
+    if (phase === 'lit') { place(); burst(); flash = 0; shake = 0; }
   };
+  last = performance.now(); raf = requestAnimationFrame(frame);
+  styleLogo(last);
   if (geo || A.logo) start(A.logo);
   else if (logoEl.complete && logoEl.naturalWidth) start(logoEl);
   else logoEl.addEventListener('load', () => start(logoEl), { once: true });
-  return () => { cancelAnimationFrame(raf); cv.remove(); screen.style.transform = ''; };
+  return detach;
 }

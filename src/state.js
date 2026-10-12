@@ -19,8 +19,10 @@ export const G = {
   settings: {
     sfx: 0.6,
     music: 0.35,
+    amb: 0.5,
     gore: 2, // 0 off, 1 normal, 2 extreme
     dmgNumbers: true,
+    voice: true, // the level-up voice line
     shake: true,
     zoom: 1,
   },

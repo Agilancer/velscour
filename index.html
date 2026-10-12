@@ -25,6 +25,13 @@
     <div id="hud-top-left">
       <div id="area-name"></div>
       <div id="area-sub"></div>
+      <div id="hero-stats">
+        <div class="hs-row"><span>Level</span><b id="hs-lvl"></b></div>
+        <div class="hs-row"><span>Attack</span><b id="hs-atk"></b></div>
+        <div class="hs-row"><span>DPS</span><b id="hs-dps"></b></div>
+        <div class="hs-row hs-avg"><span>Avg DPS &middot; 30s</span><b id="hs-avg"></b></div>
+        <canvas id="hs-spark" width="150" height="18"></canvas>
+      </div>
       <div id="buff-row"></div>
       <div id="auto-status" class="hidden"></div>
     </div>
@@ -41,6 +48,14 @@
     </div>
     <div id="boss-bar" class="hidden"><div id="boss-name"></div><div id="boss-track"><div id="boss-fill"></div></div><div id="boss-sub"></div></div>
     <div id="center-msg"></div>
+    <div id="levelup" class="hidden">
+      <div class="lu-flash"></div>
+      <div class="lu-burst"><div></div></div>
+      <div class="lu-title">LEVEL UP!</div>
+      <div class="lu-level"><span>Level</span><b id="lu-num"></b></div>
+      <div class="lu-sub">+5 attribute points &middot; +1 skill point</div>
+      <div class="lu-voice"><div id="lu-l1"></div><div id="lu-l2"></div></div>
+    </div>
     <div id="log"></div>
     <div id="hud-bar">
       <div id="xp-track"><div id="xp-fill"></div></div>

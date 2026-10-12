@@ -7,7 +7,7 @@
 import { G } from '../state.js';
 import { rand, chance, TAU, clamp, angleTo, angleDiff, dist, pick, randi, shuffle } from '../core/util.js';
 import { isoX, isoY, HW, HH, camera } from '../core/view.js';
-import { sfx, playMusic } from '../core/audio.js';
+import { sfx } from '../core/audio.js';
 import { addEffect, Telegraph, Slash, Ring, Bolt, Column, burst, spawn, sparkle, elem, floatText, smoke, addLight, glowSprite } from '../gfx/vfx.js';
 import { explosionFx } from '../gfx/shapes.js';
 import { hit } from './combat.js';
