@@ -1,15 +1,16 @@
 // Node-only sanity check of the skill data (no browser needed):
-// 60 skills per class, valid kinds/elements, summons exist, unique names, describe() works;
+// 20 skills per tree (3 trees per class, the Necromancer 4), valid kinds/elements, summons exist, unique names, describe() works;
 // every monster look points at a cut sheet cell and every archetype has art; biome bag and mixing rules.
 //   node tools/tests/data_check.mjs
 const { SKILLS, CLASS_SKILLS, describe, skillBaseDamage, manaCost } = await import(new URL('../../src/data/skills.js', import.meta.url));
 const { SUMMONS } = await import(new URL('../../src/data/summons.js', import.meta.url));
+const { CLASSES } = await import(new URL('../../src/data/classes.js', import.meta.url));
 
 const KINDS = 'melee proj nova aoe beam chain wall zone orbit cyclone whirl leap dash blink summon buff curse heal trap rain strike fissure corpse'.split(' ');
 const ELEMENTS = ['phys', 'fire', 'cold', 'light', 'poison', 'arcane', 'holy', 'shadow', 'blood', 'acid'];
 const kinds = {}; const fxs = {}; const bad = [];
 for (const [c, list] of Object.entries(CLASS_SKILLS)) {
-  if (list.length !== 60) bad.push(`${c} has ${list.length} skills`);
+  if (list.length !== CLASSES[c].trees.length * 20) bad.push(`${c} has ${list.length} skills for ${CLASSES[c].trees.length} trees`);
   const names = new Set();
   for (const s of list) {
     kinds[s.kind] = (kinds[s.kind] || 0) + 1;
@@ -29,7 +30,7 @@ const s = SKILLS['wizard.0.0'];
 console.log('example', s.name, 'dmg L1', skillBaseDamage(s, 1), 'dmg L20', skillBaseDamage(s, 20), 'mana wizard.0.8 L1', manaCost(SKILLS['wizard.0.8'], 1));
 
 // ---- monster art (src/data/bestiary.js vs assets/sprites/enemies/enemies.json)
-const { BESTIARY, SWAPS, artPool, rollLooks } = await import(new URL('../../src/data/bestiary.js', import.meta.url));
+const { BESTIARY, SUMMON_ART, ART_BY_ID, SWAPS, artPool, rollLooks } = await import(new URL('../../src/data/bestiary.js', import.meta.url));
 const { ARCH } = await import(new URL('../../src/data/enemies.js', import.meta.url));
 const { BIOMES, drawBiome, mixPartner } = await import(new URL('../../src/data/biomes.js', import.meta.url));
 const fs = await import('node:fs');
@@ -44,6 +45,18 @@ for (const a of BESTIARY) {
   for (const k of [a.arch, ...(a.also || [])]) if (!ARCH[k]) bad.push(`monster art ${a.id}: unknown archetype ${k}`);
   if (a.el && !ELEMENTS.includes(a.el)) bad.push(`monster art ${a.id}: bad element ${a.el}`);
   if (!(a.h > 20 && a.h < 120)) bad.push(`monster art ${a.id}: height ${a.h}`);
+}
+for (const a of SUMMON_ART) {
+  if (ids.has(a.id)) bad.push(`duplicate art id ${a.id}`);
+  ids.add(a.id);
+  if (!meta[a.sheet] || !meta[a.sheet].cells[a.i]) bad.push(`summon art ${a.id}: no cell ${a.sheet}#${a.i}`);
+  if (cells.has(a.sheet + a.i)) bad.push(`summon art ${a.id}: cell ${a.sheet}#${a.i} used twice`);
+  cells.add(a.sheet + a.i);
+}
+for (const [k, d] of Object.entries(SUMMONS)) {
+  if (d.look && d.look.art && !ART_BY_ID[d.look.art]) bad.push(`summon ${k}: unknown art ${d.look.art}`);
+  for (const x of d.pool || []) if (!SUMMONS[x] || SUMMONS[x].pool) bad.push(`summon ${k}: bad pool entry ${x}`);
+  for (const A of [d.atk, d.spell]) if (A && A.type === 'spawn' && !SUMMONS[A.what]) bad.push(`summon ${k}: spawns unknown ${A.what}`);
 }
 for (const [k, s] of Object.entries(meta)) s.cells.forEach((c, i) => { if (c && !cells.has(k + i)) console.log(`note: ${k}#${i} has no bestiary entry yet`); });
 for (const k of Object.keys(ARCH)) if (k !== 'velscour' && !artPool(k).length) bad.push(`archetype ${k} has no monster art`);

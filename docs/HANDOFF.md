@@ -220,6 +220,31 @@ are in section 7.
      screen clicked, on to Depth 101), plus flow, ui, mobile and data_check. Mobile: the touch HUD buttons shrank to
      37 px and the touch boss bar narrowed so six buttons fit beside it at 844 and 667 px wide.
 
+13. **Necromancer skeleton summons (branch `claude/upbeat-brahmagupta-nwc8xw`).** The user uploaded two sheets of 10
+   skeletons each (warriors; casters: wizards, necromancers, druids, a bishop, a reaper king...) as the Necromancer's
+   summons, and asked to add skills for any that no existing skill fits. Done:
+   - The sheets are `assets/source/enemies/minions/necro_{warriors,casters}.png` (transparent, 2 x 5), sliced by
+     `process_assets.py enemies` like the monster sheets. They are catalogued as `SUMMON_ART` in `src/data/bestiary.js`
+     (in `ART_BY_ID`, never in `BESTIARY`, so they never spawn as monsters). A summon points at one with
+     `look: { art }`; `buildSummon` sets `art/artH`, and the pixel `sprite/pal` stay as the loading fallback.
+   - Existing skills reuse three of them: Raise Skeleton (and Army of the Dead), Skeletal Archer, Skeletal Mage.
+   - The other 17 got a **4th Necromancer tree, "Skeletal Legion"** (`necromancer.3.*`; the first three trees and
+     saves are untouched). It holds 17 summons plus Mend Bones (party heal), Grave Warband (5 random warriors, 20 s) and
+     Conclave of Bones (4 random casters, 20 s). The Necromancer now has 80 skills, 980 in all. The skill tree UI
+     takes any number of tabs, and `data_check` now expects 20 skills per tree.
+   - New summon fields (`src/data/summons.js` header): `cast` (a ranged minion uses its `atk` through `summonAttack`
+     instead of the generic shot), `spell` (a second ability on its own cooldown: `Monster.castSpell`), `reach`,
+     `pool` (random key per summon), and `atk.bleed/burn/pierce`. The casters cast fireballs, chain lightning, locust
+     swarms, holy spirits, bell novas; the Bishop heals, the Standard-Bearer buffs, the Gravedigger and Archlich raise
+     skeletons, the Druid slows, the Knell Ringer amplifies damage, the Reaper King fears.
+   - Fixed while there: party buffs and banner auras now raise minion damage (`hit` in `combat.js` reads
+     `partyBuff.stats.dmg`), and `buffAllies` passes `as` to minions.
+   - Summon skill icons draw the painted art and are not cached until it has loaded. `main.js` redraws the
+     skill bar once the art arrives.
+   - Verified with the new `tools/tests/legion.js` (line-up of all 20 skeletons, then a fight where every minion
+     kind must attack and use its spell), `skills.js necromancer` (80 skills), data_check, flow, ui, mobile, and
+     auto-play (necromancer 15 min, totem_master and lancer 10 min each): no deaths, no errors.
+
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
 1. Get PR #1 merged (by the user) and confirm the Pages deploy works at https://agilancer.github.io/velscour/.
@@ -660,7 +685,7 @@ Data-only ES modules in `src/data/`. They have no side effects except the skill 
 - `src/data/classes.js` (107 lines): `CLASSES` (16 hero classes) and `ATTRS` (descriptions of str/dex/vit/int).
 - `src/data/skilldata.js` (376 lines): `SKILLDATA[classId] = [tree0[20], tree1[20], tree2[20]]`. That is 960 one-line DSL strings `"Name|kind|element|fx|mods"`.
 - `src/data/skills.js` (191 lines): parses SKILLDATA into `SKILLS` and `CLASS_SKILLS` on import. Holds the damage, mana, cooldown, range and duration formulas, `GRANTS`, and `describe()` (the tooltip text). Imports `ELEM` from `src/gfx/vfx.js`.
-- `src/data/summons.js` (94 lines): `SUMMONS` has 88 minion, totem and turret definitions, keyed by the skill mod `sum=`.
+- `src/data/summons.js`: `SUMMONS` has 105 minion, totem and turret definitions, keyed by the skill mod `sum=`.
 - `src/data/enemies.js` (66 lines): `ARCH` (22 monster archetypes plus `velscour`), `GORE`, `ELITE_AFFIXES` (names only), `bossName()`, `uniqueName()`.
 - `src/data/biomes.js` (139 lines): `BIOMES` (20, including `throne`), `BIOME_BY_ID`, `randomBiome()`, `TOWN_BIOME`.
 - `src/data/items.js` (350 lines): rarities, materials, bases, `AFFIXES` (48), `LEGENDARY` (22), `GEMS` (12 normal + 9 special), item and gem rolling, names, stats, prices, service costs, potions.
@@ -975,7 +1000,7 @@ Summon attacks (`monster.js:416 summonAttack`) by `atk.type`:
 - src/data/items.js:23-38 - The `spd` field on WEAPONS is never read anywhere, so weapon base attack speed has no effect.
 - src/game/player.js:127 - The pass-through for the Wraithwalk legendary is disabled (`!!legendary.wraith && false`). LEGENDARY.wraith.desc at src/data/items.js:114 still promises 'pass through monsters'.
 - src/data/enemies.js:47 - The 'teleport' elite affix (Teleporting) has no implementation. It can still roll on champions and uniques (monster.js:721-728) and only shows a label.
-- src/game/monster.js:106 / src/game/skillrun.js:210 / src/game/monster.js:511 - Minions read only `partyBuff.stats.as`. The dmg, armor, res and regen party buffs and the dmg/armor auras from banners, amplifiers and totems have no effect on summons. partyBuff is also a single slot that overwrites itself.
+- src/game/monster.js:106 / src/game/skillrun.js:210 / src/game/monster.js:511 - Minions read only `partyBuff.stats.as` and (since the skeleton summons) `stats.dmg` (`hit` in combat.js). The armor, res and regen party buffs still have no effect on summons. partyBuff is also a single slot that overwrites itself.
 - src/data/skills.js:178-179 vs src/game/player.js:82-94 - Buff tooltips show the raw amt%, but crit is /4, leech /4, block /2, cdr /2 and speed x0.6 in recompute. Curse tooltips use skillDuration, but applyCurse caps fear at 4s, stun at 3s, charm at 10s and fixes freeze at 1.6s (skillrun.js:316-321).
 - src/data/skills.js:77 - The rain/strike normalisation `d /= ((n||1)/6)^0.25` increases damage for n<6. A strike with n=1, such as paladin 'Divine Strike', gets x1.565; this may be unintended.
 - src/data/items.js:308-320 - rerollAffixes and addAffix do not recompute item.pre and item.suf, so Uncommon and Rare names keep prefixes and suffixes from affixes that no longer exist.
@@ -1471,9 +1496,9 @@ See the `open_issues` field.
 - src/game/combat.js:46 — `st.reduce` (damage reduction %) is read but never produced by Player.recompute (player.js:72-114). It is a dead knob.
 - src/game/combat.js:73 + :134 — boss stun is rolled twice (15% then 15% again), so the effective chance is ~2.25%.
 - src/game/hazards.js:270 — Area mode 'zone' hits use dot:true, so applyStatus is skipped. Zone skills never burn, poison, chill or freeze. 'Frozen Throne' (skilldata.js:175, `freeze`) does nothing, and `freezeZone` passed at skillrun.js:159 is never read.
-- src/game/monster.js:201-209,349-361 — summons with ai 'ranged' use generic perform('shoot') and ignore def.atk (fx, home, exp, n, spd, range, beam/cone). Affects frostwyrm/elderwyrm/voidspawn (summons.js:62,65,68), mech (:93), clone/chorus/ancestor/witch/prismslime (homing), and skelarcher/wraith (they shoot PROJ_FX.phys 'rock').
+- src/game/monster.js:201-209,349-361 — summons with ai 'ranged' and no `cast: true` use generic perform('shoot') and ignore def.atk (the Necromancer's skeletons set `cast`) (fx, home, exp, n, spd, range, beam/cone). Affects frostwyrm/elderwyrm/voidspawn (summons.js:62,65,68), mech (:93), clone/chorus/ancestor/witch/prismslime (homing), and skelarcher/wraith (they shoot PROJ_FX.phys 'rock').
 - src/game/monster.js:122-134 + summons.js:83 — Mother Ooze has ai 'melee' and atk.type 'spawn', but summonAttack is only reached from turret/aura/follow, so it never spawns slimelings.
-- src/game/monster.js:96,106,511 & skillrun.js:210 — `partyBuff.stats.dmg` (War Banner, Amplifier, party buffs) is never applied to summon damage. Only `stats.as` is read. buffAllies also drops `A.as` and `A.regen` for summons.
+- src/game/monster.js:96,106,511 & skillrun.js:210 — FIXED for dmg and as: `partyBuff.stats.dmg` now scales summon hits (combat.js `hit`), and buffAllies passes `A.as`. It still drops `A.regen` for summons.
 - src/game/combat.js:116-117 + src/game/monster.js:48 — summon leech heals the owner twice for melee via deal() (0.2 in hit plus 0.15 in deal).
 - src/game/player.js:392-397 — the legendary 'orbit' Orbit has dur 1e9 and is never removed when the item is unequipped; it persists until the world changes. The world.hazards.some() scan runs every frame.
 - src/game/player.js:127 — the 'wraith' legendary pass-through is disabled (`!!legendary.wraith && false`), but its description in data/items.js:114 still promises it.

@@ -105,6 +105,7 @@ export class Monster extends Creature {
     if (this.defAura && chance(dt * 2)) aoe(w, this, this.x, this.y, this.defAura.r, this.dmg * 0.3, this.defAura.el, { dot: true });
     if (!canAct) { this.moving = false; return; }
     this.cd -= dt * (this.partyBuff && this.partyBuff.stats.as ? 1 + this.partyBuff.stats.as / 100 : 1);
+    if (this.spell && (this.spellCd -= dt) <= 0) this.castSpell();
 
     // fear: run away
     if (this.status.fear && this.status.fear.t > 0) {
@@ -207,6 +208,7 @@ export class Monster extends Creature {
       if (this.cd <= 0) {
         if (this.summoner && chance(0.35) && !this.summon) this.startAction('summonMinions', 0.8);
         else if (this.aoeCaster && chance(0.6)) this.startAction('aoeCast', 0.4, { tx: t.x, ty: t.y });
+        else if (this.cast) this.startAction('cast', 0.12, { target: t });
         else this.startAction('shoot', this.summon ? 0.1 : 0.3, { target: t });
         return;
       }
@@ -328,7 +330,7 @@ export class Monster extends Creature {
         const t = a.target;
         if (t && !t.dead && dist(this.x, this.y, t.x, t.y) <= this.atkRange(t) + 0.5) {
           const o = { melee: true, ang: this.facing };
-          if (this.atk) { o.slow = this.atk.slow; o.freeze = this.atk.freeze; o.stun = this.atk.stun; }
+          if (this.atk) { o.slow = this.atk.slow; o.freeze = this.atk.freeze; o.stun = this.atk.stun; o.bleed = this.atk.bleed; o.burn = this.atk.burn; }
           if (this.poison) o.poison = true;
           if (this.affixes && this.affixes.includes('fiery')) o.burn = true;
           if (this.atk && this.atk.aoe) aoe(w, this, t.x, t.y, this.atk.aoe, this.dmg, this.summonEl || 'phys', o);
@@ -361,6 +363,9 @@ export class Monster extends Creature {
         this.cd = this.atkCd;
         break;
       }
+      case 'cast':
+        if (a.target && !a.target.dead) this.summonAttack(a.target);
+        break;
       case 'aoeCast': {
         w.addHazard(new Delayed({ world: w, src: this, x: a.tx, y: a.ty, r: 1.4, delay: 1.0, fx: el === 'fire' ? 'explosion' : 'explosion', el, dmg: [this.dmg * 1.1, this.dmg * 1.4] }));
         sfx(elem(el).sfx, 0.5);
@@ -413,10 +418,19 @@ export class Monster extends Creature {
     }
   }
 
-  /** Minion attacks driven by the summon definition. */
-  summonAttack(t) {
-    const w = this.world, A = this.atk, el = this.el || 'phys', E = elem(el);
-    this.cd = A.cd || 1;
+  /** A minion's second ability (def.spell), on its own cooldown; waits for a target in range when it needs one. */
+  castSpell() {
+    const A = this.spell, t = this.target && !this.target.dead ? this.target : null;
+    if (['proj', 'chain', 'strike', 'beam'].includes(A.type) && (!t || dist(this.x, this.y, t.x, t.y) > (A.range || 7))) { this.spellCd = 0.5; return; }
+    this.spellCd = A.cd || 3;
+    this.lunge = 1;
+    this.summonAttack(t, A);
+  }
+
+  /** Minion attacks driven by the summon definition (A = def.atk, or def.spell). */
+  summonAttack(t, A = this.atk) {
+    const w = this.world, el = this.el || 'phys', E = elem(el);
+    if (A === this.atk) this.cd = A.cd || 1;
     const dmg = [this.dmg * 0.85, this.dmg * 1.15];
     switch (A.type) {
       case 'proj': {
@@ -424,7 +438,7 @@ export class Monster extends Creature {
         const n = A.n || 1;
         for (let i = 0; i < n; i++) {
           const ang = angleTo(this.x, this.y, t.x, t.y) + (n > 1 ? (i - (n - 1) / 2) * 0.2 : 0);
-          w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, z: this.fly ? 40 : 26, ang, speed: A.spd || 9, range: (A.range || 7) + 2, fx: A.fx || PROJ_FX[el], el, dmg, home: A.home ? 1 : 0, exp: A.exp || 0, heal: A.heal, o: { slow: A.slow, poison: A.poison } }));
+          w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, z: this.fly ? 40 : 26, ang, speed: A.spd || 9, range: (A.range || 7) + 2, fx: A.fx || PROJ_FX[el], el, dmg, home: A.home ? 1 : 0, exp: A.exp || 0, pierce: A.pierce ? 99 : 0, heal: A.heal, o: { slow: A.slow, poison: A.poison } }));
         }
         if (chance(0.4)) sfx(A.fx === 'bullet' ? 'shoot' : A.fx === 'arrow' ? 'bow' : E.sfx, 0.35);
         break;
@@ -509,7 +523,7 @@ export class Monster extends Creature {
       if (A.regen) stats.regen = A.regen * 10;
       p.addBuff({ id: 'aura_' + this.skillId, name: this.name, el: this.el || 'holy', stats, t: 1.5, max: 1.5, hidden: false, aura: true });
     }
-    for (const c of this.world.alliesOf(this.team, this.x, this.y, r)) if (c.summon) c.partyBuff = { stats: { [stat]: amt }, t: 1.5 };
+    for (const c of this.world.alliesOf(this.team, this.x, this.y, r)) if (c.summon) c.partyBuff = { stats: { [stat]: amt, ...(A.as ? { as: A.as } : null) }, t: 1.5 };
   }
 
   // ------------------------------------------------------------------ bosses
@@ -778,21 +792,25 @@ export function makeElite(m, rank, depth, world) {
 /** Build a player minion from a summon definition. */
 export function buildSummon(owner, def, key, x, y, dmg, hp, life) {
   const look = def.look || { sprite: 'skeleton', pal: {}, px: 2.3 };
+  const caster = def.cast ? { cast: true, range: def.atk.range || 7 } : null;
   const m = new Monster({
     team: 'player', owner, summon: true, x, y, ai: def.ai, atk: def.atk, el: def.el || 'phys', summonEl: def.el,
     dmg, maxHp: hp, hp, speed: def.spd || 3, static: !!def.static, fly: !!def.fly, ghost: !!def.ghost,
     targetable: def.targetable !== false, alpha: def.alpha, level: owner.char.level, life: life || 0, taunt: def.taunt,
     atkCd: (def.atk && def.atk.cd) || 1, name: def.name, leech: def.atk && def.atk.leech, r: look.px > 3.5 ? 0.5 : 0.3,
-    defAura: def.aura, summonKey: key, awake: true,
+    defAura: def.aura, summonKey: key, awake: true, ...caster,
+    spell: def.spell || null, spellCd: def.spell ? rand(0.5, def.spell.cd || 3) : 0, atkReach: def.reach ? 0.55 + def.reach : undefined,
   });
   if (look.cls) { m.classId = look.cls === true ? owner.classId : look.cls; m.classPal = look.pal || null; m.spriteH = 50; }
   else { m.sprite = look.sprite; m.pal = look.pal; m.px = look.px || 2.3; }
+  if (look.art && ART_BY_ID[look.art]) { m.art = look.art; m.swap = null; m.artH = ART_BY_ID[look.art].h; }
   return m;
 }
 
 export function createSummon(p, sk, L, x, y, dmgRange, corpse) {
   const w = p.world;
-  const key = sk.m.sum;
+  let key = sk.m.sum;
+  if (SUMMONS[key] && SUMMONS[key].pool) key = pick(SUMMONS[key].pool); // Grave Warband, Conclave of Bones
   const def = SUMMONS[key];
   if (!def) return null;
   const sp = 1 + (p.st.summonPct || 0) / 100;

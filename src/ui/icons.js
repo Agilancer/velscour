@@ -8,6 +8,7 @@ import { artIcon } from '../core/classart.js';
 import { itemLook } from '../core/gearart.js';
 import { SUMMONS } from '../data/summons.js';
 import { itemIcon } from '../game/loot.js';
+import { enemyImage } from '../core/enemyart.js';
 
 const cache = new Map();
 const urlCache = new Map();
@@ -17,6 +18,7 @@ export function skillIcon(sk, size = 64) {
   let c = cache.get(key);
   if (c) return c;
   c = makeCanvas(size, size);
+  let keep = true; // false while a summon's painted art is still loading: draw the fallback, don't cache it
   const x = c.getContext('2d');
   const E = elem(sk.el);
   const s = size / 64;
@@ -117,11 +119,12 @@ export function skillIcon(sk, size = 64) {
       for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; x.beginPath(); x.moveTo(Math.cos(a) * 6, Math.sin(a) * 6); x.lineTo(Math.cos(a) * (i % 2 ? 14 : 24), Math.sin(a) * (i % 2 ? 14 : 24)); stroke(3, core); }
       break;
     case 'summon': {
-      const def = SUMMONS[sk.m.sum];
-      let img = null;
-      if (def && def.look && def.look.sprite) img = pixelSprite(def.look.sprite, def.look.pal, 3);
-      else if (def && def.look && def.look.cls) img = classSprite(def.look.cls === true ? sk.classId : def.look.cls, 120, def.look.pal || null);
-      else img = pixelSprite('skeleton', { w: '#a0ffa0', e: '#40ff40' }, 3);
+      const look = SUMMONS[sk.m.sum] && SUMMONS[sk.m.sum].look;
+      let img = look && look.art ? enemyImage(look.art) : null;
+      if (look && look.art && !img) keep = false;
+      if (!img && look && look.sprite) img = pixelSprite(look.sprite, look.pal, 3);
+      else if (!img && look && look.cls) img = classSprite(look.cls === true ? sk.classId : look.cls, 120, look.pal || null);
+      else if (!img) img = pixelSprite('skeleton', { w: '#a0ffa0', e: '#40ff40' }, 3);
       const k = Math.min(46 / img.width, 48 / img.height);
       x.globalAlpha = 0.95;
       x.drawImage(img, -img.width * k / 2, 24 - img.height * k, img.width * k, img.height * k);
@@ -162,13 +165,13 @@ export function skillIcon(sk, size = 64) {
   // frame
   x.strokeStyle = 'rgba(0,0,0,0.85)'; x.lineWidth = 3 * s; x.strokeRect(1, 1, size - 2, size - 2);
   x.strokeStyle = rgba(E.glow, 0.5); x.lineWidth = 1; x.strokeRect(3, 3, size - 6, size - 6);
-  cache.set(key, c);
+  if (keep) cache.set(key, c);
   return c;
 }
 
 export function skillIconURL(sk) {
   let u = urlCache.get(sk.id);
-  if (!u) { u = skillIcon(sk, 64).toDataURL(); urlCache.set(sk.id, u); }
+  if (!u) { u = skillIcon(sk, 64).toDataURL(); if (cache.has(sk.id + '|64')) urlCache.set(sk.id, u); }
   return u;
 }
 

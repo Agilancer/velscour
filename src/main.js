@@ -113,7 +113,11 @@ async function boot() {
   applyVolumes();
   $('#loading').classList.add('hidden');
   titleScreen();
-  loadEnemyArt().catch((e) => console.warn(e)); // prefetch monster art while the player is on the title screen
+  // prefetch monster art while the player is on the title screen; then redraw skill icons that show summon art
+  loadEnemyArt().then(() => {
+    for (const s of [...HUD.slots, ...(TouchUI.btns || [])]) s.last.icon = s.last.id = undefined;
+    if (G.char) HUD.refreshStatic();
+  }).catch((e) => console.warn(e));
   // debug helpers for testing in the console
   window.VELSCOUR = { G, game };
 }

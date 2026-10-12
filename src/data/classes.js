@@ -22,7 +22,7 @@ export const CLASSES = {
   necromancer: {
     name: 'Necromancer', primary: 'int', base: { str: 14, dex: 16, vit: 18, int: 28 }, life: 48, mana: 55, lifeLvl: 5, manaLvl: 4,
     weapon: 'wand', offhand: 'orb', element: 'shadow', color: '#a070ff',
-    trees: ['Bone & Blood', 'Summoning', 'Curses & Plague'],
+    trees: ['Bone & Blood', 'Summoning', 'Curses & Plague', 'Skeletal Legion'],
     desc: 'Commander of the dead. Raise skeletal armies, hurl bone spears and detonate corpses.',
   },
   barbarian: {

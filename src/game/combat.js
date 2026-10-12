@@ -26,6 +26,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
   const world = tgt.world || G.world;
   let dmg = amount;
   let crit = false;
+  if (src && src.summon && src.partyBuff && src.partyBuff.stats.dmg) dmg *= 1 + src.partyBuff.stats.dmg / 100; // banners, party buffs
   const owner = src && src.owner ? src.owner : src;
   const fromPlayer = owner && owner.isPlayer;
 

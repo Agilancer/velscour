@@ -28,12 +28,13 @@ node tools/tests/ui.js                             # skill tree, inventory, sock
 node tools/tests/mobile.js                         # 844x390 touch layout + joystick
 node tools/tests/boss.js                           # Depth 100 Velscour arena + a depth 37 guardian
 node tools/tests/bot.js paladin 2                  # bot plays depths 1..2, prints balance stats
-node tools/tests/skills.js wizard,gunner           # cast all 60 skills per class (all 16 if no arg; slow)
+node tools/tests/skills.js wizard,gunner           # cast every skill of a class (all 16 if no arg; slow)
 node tools/tests/classart.js paladin               # class art pack: catalog weapons, ability effects
 node tools/tests/gear.js paladin,wizard            # hero looks: armor+helm per rarity, finishes, auras (all = 16)
 node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners in those biomes (docs/WALLS.md)
 node tools/tests/titlefx.js                        # title logo fire, tar drips/pile, spark ignition + explosion
 node tools/tests/enemies.js                        # monster art line-ups, corpses, mixed-biome levels + guardians
+node tools/tests/legion.js                         # Necromancer skeleton summons: art line-up, every minion attacks + casts
 node tools/tests/select.js [mobile]                # animated class-select portraits, 6 hero save slots, slot migration
 node tools/tests/autoplay.js wizard 15 [mobile]    # auto-play soak: a new hero plays N game minutes at ~30x speed
 ```
