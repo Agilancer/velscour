@@ -59,8 +59,9 @@ Requirements, as stated (✅ = implemented in the draft):
   the victory screen, "Endless Torment" depths continue past 100.
 - **Tech stack:** vanilla JS ES modules and Canvas 2D, with no framework and no bundler. GitHub Pages can serve the
   repo as-is, and the code is easy to change.
-- **Art:** the user's sheets are sliced by `tools/process_assets.py`. Everything else is placeholder ASCII pixel art
-  with palette swaps (monsters, items, props) or is drawn procedurally (town buildings). The README tells the user
+- **Art:** the user's sheets are sliced by `tools/process_assets.py`. Dungeons use the user's 10 floor/wall tile
+  sets, 5 scatter sheets and 20 barricade sets, mapped onto the 20 biomes (see [`ART.md`](ART.md)). Everything else
+  is placeholder ASCII pixel art with palette swaps (monsters, items) or is drawn procedurally (town buildings). The README tells the user
   how to swap in real art.
 - **Enemy variety:** 22 AI archetypes. Each biome renames and recolors its roster and gives it the biome's element,
   and adds a "greater" variant of each kind, for 24 kinds per biome and 480 in total.
@@ -121,6 +122,11 @@ are in section 7.
    version. Right after a deploy a browser may briefly mix old and new modules, and a hard refresh fixes it.
    Consider adding a version query to `src/main.js` if this causes trouble.
 5. **Placeholder art.** Character sprites are single frames with no walk/attack animation.
+6. **Environment art** (branch `claude/relaxed-wright-tc4lrv`). Walls are built from seamless strips with posts at corners
+   and a soft cutaway behind walls ([`WALLS.md`](WALLS.md)). The user then uploaded 29 sheets: 10 floor/wall tile sets,
+   5 scatter-terrain sheets and 4 barricade sheets. Every biome now has its own floors and walls, scatter obstacles,
+   barricades and chest art, loaded per biome ([`ART.md`](ART.md)). Verified by screenshots of all 20 biomes, a
+   300-level reachability stress run, and flow/mobile/boss/ui/bot tests.
 
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
@@ -175,12 +181,13 @@ Do these in order, unless the user asks for something else. Their feedback after
 - `src/gfx/vfx.js` - element palette `ELEM`; pools for particles, decals, effects, texts and lights; effect classes; update and draw functions.
 - `src/gfx/shapes.js` - procedural projectile looks (`drawShape`), projectile trails, `explosionFx`, `hitSpark`.
 - `src/gfx/townart.js` - procedural town ground tiles and isometric building sprites.
-- `tools/process_assets.py` - offline slicer that turns `assets/source/*` into `assets/{sprites,ui,tiles}`. Needs `pip install pillow numpy scipy`.
-- `assets/source/` - the user's original sheets: `classes_sheet`, `logo`, `hud_bar`, `catacombs_floors`, `catacombs_walls` (all `.webp`). The game never loads these.
+- `tools/process_assets.py` - offline slicer that turns `assets/source/*` into `assets/{sprites,ui,tiles,props}`. Needs `pip install pillow numpy scipy`. Args: `sprites`, `tiles`, `props` (default all).
+- `assets/source/` - the user's original sheets: `classes_sheet`, `logo`, `hud_bar` (`.webp`), plus `floors/`, `walls/`, `scatter/`, `barricades/` (`.png`, see [`ART.md`](ART.md)). The game never loads these.
 - Generated files:
   - `assets/sprites/classes/<id>.webp` (16) and `classes.json` (w/h per class; the game does not load it).
   - `assets/ui/`: `logo.webp`, `hud.webp`, `hud.json`, `icon.png`, `potion_{red,blue,purple,orange}.png`.
-  - `assets/tiles/`: `catacombs_floor.webp`, `catacombs_walls.webp`, `catacombs.json`.
+  - `assets/tiles/`: `<set>_floor.webp`, `<set>_walls.webp`, `<set>.json` for the 10 tile sets.
+  - `assets/props/`: one atlas per scatter sheet, `barricades_<set>.webp` x20, `props.json`.
 
 ### Key APIs
 - **state.js**
@@ -242,10 +249,11 @@ Do these in order, unless the user asks for something else. Their feedback after
   - `stopMusic()` (:149).
 - **assets.js**
   - `CLASS_IDS` (:4): 16 ids in sheet order.
-  - `A` (:11): `{classes, classScaled, hud, hudGeo, logo, potions, floorAtlas, wallAtlas, tileMeta, biomeSets}`.
+  - `A` (:11): `{classes, classScaled, hud, hudGeo, logo, potions, tileSets, propMeta, propImgs, biomeSets}`. `tileSets`/`propImgs` hold a Promise while loading.
+  - `loadBiomeArt(biome)` fetches the biome's tile set, scatter sheets and barricades; `enterDungeon` awaits it.
   - `loadAssets(progress)` (:33).
   - `classSprite(id,h,palette)` (:49): cached, keyed `${id}|${h}|${JSON.stringify(palette)}`.
-  - `biomeTileSet(biome)` (:65) returns `{floors,details,thresholds,segFwd,segBack,pillars,corners,rubble,towers,misc,arch,gate,floorImg,wallImg}`. Entries look like `{img,sx,sy,w,h[,slope,base,kind]}`.
+  - `biomeTileSet(biome)` (:65) returns `{floors,details,thresholds,segFwd,segBack,pillars,corners,rubble,towers,misc,arch,gate,floorImg,wallImg,walls,scatter,barricades:{fwd,back},chest}`, built from `biome.art` (falls back to `skull` until loaded) and cached by `biome.id|art`. Entries look like `{img,sx,sy,w,h[,slope,base,kind]}`. `floors` are sorted calm -> busy. `walls` holds 24 composed seamless wall sections `{img(canvas),sx:0,sy:0,w:46,h,base}` from `composeWalls` (see [`WALLS.md`](WALLS.md)). `pillars` is sorted widest first.
   - `potionIcon(color,size=48)` (:100): **uncached**, makes a new canvas on every call.
 - **pixelart.js**
   - `SPRITES` (:8), 68 entries:
@@ -378,14 +386,14 @@ Do these in order, unless the user asks for something else. Their feedback after
   - 16 class webps.
   - `hud.webp`/`hud.json`, `logo.webp`.
   - 4 potion pngs.
-  - Floor and wall atlases plus `catacombs.json`.
+  - The default tile set (`skull`), `props.json` and the `dungeon_mechanisms` sheet (chest art). Biome art loads later via `loadBiomeArt`.
 - `A.hud` and `A.logo` are loaded but never used; the DOM references the URLs directly.
-- `biomeTileSet` recolours the **whole** floor atlas (1536x824) with `biome.palette`, and the wall atlas (1024 wide) with `biome.wallPalette || palette`. This runs synchronously in JS, so it causes a noticeable hitch; the dungeon build is wrapped in `setTimeout(…,40)` behind the loading overlay (game.js:182). `palette:null` (catacombs) reuses the original `Image`.
+- `biomeTileSet` recolours the **whole** floor atlas (1536x927) with `biome.palette`, and the wall atlas (1024 wide) with `biome.wallPalette || palette`. This runs synchronously in JS, so it causes a noticeable hitch; the dungeon build is wrapped in `setTimeout(…,40)` behind the loading overlay (game.js:182). `palette:null` (catacombs) reuses the original `Image`.
 - Cache: `'town'` is kept permanently plus at most **2** other biome sets (assets.js:68-69). The world holds its own reference to its set.
 - Data contract with render.js:
   - Floor entries are 192x96 (3x TW×TH) and are drawn into `TW+1.2 × TH+1.2` with 0.6 px overlap.
   - `map.v[i] >= 100` selects `details[v-100]`, otherwise `floors[v]` (render.js:14-18).
-  - Wall `slope`/`base` (the bottom-edge linear fit in piece px) anchor segments using `WALL_K = HW*1.06/66` (render.js:10, :20-26).
+  - Wall sections (`tileset.walls`) are drawn one tile edge wide (`HW`) with `base` on the edge line (`segRect`, `s.strip`). The old whole-piece fallback anchors by `slope`/`base` (the bottom-edge linear fit in piece px) with `WALL_K = HW*1.06/66`.
   - Town tiles (`groundTile`) use the same `{img,sx,sy,w:192,h:96}` shape (town.js:19-22).
 
 **Pixel art**:
@@ -428,18 +436,15 @@ Do these in order, unless the user asks for something else. Their feedback after
   - Potions are cut from slots 9-12 (Z/X/C/V → red/blue/purple/orange).
   - XP track alpha is cleared over x∈[350,872)∪[1126,1650).
   - `hud.json`: 14 slots at y=128, h=76; `slotKeys`; orbs `{157,151,r78}` and `{1842,151,r78}`; `xp{350,262,1300,22}`.
-- Floors (:180):
-  - Sections `(cat,y0,pitch,rows)`: floor `(9,102.75,8)`, detail `(840,103,4)`, threshold `(1266,110,2)`; 5 columns at `1+c*202.75`, 201 px wide.
-  - Cells with less than 60% diamond coverage are rejected.
-  - Tiles are resized to 192x96 (thresholds to 192x103) and the diamond alpha is hardened.
-  - Atlas is 8 columns with a 103 px cell height.
-  - Current result: 36 floor, 19 detail, 8 threshold.
+- Floors (`process_floors`): diamonds are found as shapes (eroded alpha components), and section breaks are row gaps >107 px. Tiles are resized to 192x96 (thresholds keep their aspect) with hardened diamond alpha, in an 8-column atlas. Base floors get a `busy` score. Current result: 36 floor, 19 detail (24 desert), 8 threshold per set.
 - Walls (:231):
   - Connected components of alpha>100 after an opening; components under 150 px and the title label are skipped.
   - The bottom profile is line-fit over the middle 60% of columns to get `slope`/`base`.
   - Pieces are classified by size, slope and position (:259-276), shelf-packed into a 1024-wide atlas.
-  - Current result: seg_fwd 27, seg_back 9, corner 11, pillar 2, rubble 8, misc 5, arch 1, gate 1, **tower 0**.
-- `catacombs.json` = `{floorSize:[192,96], floors:[{cat,x,y,w,h}], walls:[{kind,x,y,w,h,slope,base,src}]}`.
+  - The tower (bottom-right big column) is classified first; every set has 1.
+  - `build_wall_strips` then cuts the "/" panels into seamless parts with per-sheet proportions: 14-24 wall_body + 1 wall_cap + 1 wall_ledge per set (see [`WALLS.md`](WALLS.md)).
+- Props (`process_props`): see [`ART.md`](ART.md).
+- `<set>.json` = `{floorSize:[192,96], floors:[{cat,x,y,w,h}], walls:[{kind,x,y,w,h,slope,base,src} | {kind:'wall_body'|'wall_cap'|'wall_ledge',x,y,w,h,rows}]}`.
 
 ### Tuning knobs
 - **main.js**
@@ -496,7 +501,7 @@ Do these in order, unless the user asks for something else. Their feedback after
   - :282 'explode' sound when r>1.2.
 - **townart.js** :6 64x32 tile upscaled ×3; :83 supersample 2; :81 default wall height 52.
 - **style.css** :17 `--hud-w: min(96vw,1000px,105vh)`; :245 touch value `min(56vw,125vh)`.
-- **render.js** :10 `WALL_K` (owned elsewhere, but tied to the wall art scale).
+- **render.js** :10 `WALL_K` (only the fallback wall path); seamless sections scale by `HW / section width`. **assets.js** `WALL_TIERS = 2` niche tiers per wall.
 
 ### How to extend
 1. **New ASCII sprite.**
@@ -512,7 +517,7 @@ Do these in order, unless the user asks for something else. Their feedback after
 7. **New runtime asset.** Push a job inside `loadAssets` (assets.js:33-44) and store the result on `A`. Progress reporting is automatic. Keep the path relative; GitHub Pages serves the site from a sub-path.
 8. **New setting.** Add a default to `G.settings` (state.js:19), then add an input with `data-k="key"` in `settingsDialog` (screens.js:132). It auto-binds and saves.
 9. **Regenerate assets.**
-   1. `pip install pillow numpy scipy && python3 tools/process_assets.py` (paths resolve from the script location).
+   1. `pip install pillow numpy scipy && python3 tools/process_assets.py [sprites|tiles|props]` (paths resolve from the script location).
    2. Check the printed counts for classes, floors and walls.
    3. If the HUD art changes, update the CSS `2000/315` and `0.1575` values, `SLOT_MAP` (hud.js:16) and the `slot_x`/potion slice in the script.
    4. A new sheet layout means updating the hard-coded row/col/section/slot pixel constants.
@@ -528,8 +533,8 @@ Do these in order, unless the user asks for something else. Their feedback after
 - The touch heuristic (main.js:87) can classify a touchscreen laptop as touch: mobile layout, auto-loot, lower DPR cap.
 - The `pixelSprite` cache does a full clear at 2500 entries, which also drops gem and gold icons (shared Map). Creatures memoise `_img` (creature.js:120-128) so they don't rebuild keys every frame. `glowCache`, `splatCache` and `A.classScaled` are unbounded.
 - `biomeTileSet` eviction only removes the cache entry; re-entering an evicted biome repeats the slow recolour.
-- `catacombs.json` currently contains 0 `tower` pieces, so `dungeon.js:156,245` never places towers (README.md:88 claims it does). `thresholds`, `corners`, `arch`, `gate` and `misc` are parsed but nothing renders them.
-- `key_magenta` makes all near-white pixels (>215 on every channel) transparent, which can punch holes in new tile art.
+- `thresholds`, `corners`, `arch`, `gate` and `misc` are parsed but nothing renders them.
+- `key_magenta` removes only white areas at least 60 px across (label boxes, pasted white blocks); smaller white blobs (skull highlights, snow) stay.
 - HUD geometry is duplicated: hud.js reads `hud.json` at runtime, but style.css hard-codes the aspect ratio and the 0.1575 offsets.
 - The canvas has `alpha:false`, so each frame must paint fully. Canvas text uses the Cinzel web font, which may not be loaded on the first frames (it falls back to Georgia).
 - `Ring` treats `opts.z || 2`, so z=0 is impossible.
@@ -548,7 +553,6 @@ Do these in order, unless the user asks for something else. Their feedback after
 - src/core/audio.js:8 - initAudio is only called from title-menu clicks (screens.js:37). An AudioContext suspended later (iOS backgrounding) is never resumed during play.
 - src/core/audio.js:108-112 - each sfx call with vol!==1 creates a GainNode that is never disconnected (relies on GC). The temporary global swap of sfxBus breaks if a SOUNDS entry ever schedules work asynchronously.
 - src/core/assets.js:38,40 + src/state.js:9 - A.hud, A.logo and G.assets are loaded or declared but never used.
-- assets/tiles/catacombs.json - 0 'tower' wall pieces, because the classifier rule at tools/process_assets.py:267 requires y0>600. Tower props therefore never spawn (dungeon.js:156,245 guard on towers.length), contradicting README.md:88. thresholds/corners/arch/gate/misc are unused by the renderer.
 - tools/process_assets.py:5 - the docstring says 'game-ready PNGs', but most outputs are WebP (save() at :66). classes.json (:109) is generated but never loaded.
 - css/style.css:51,94,99,254 - HUD aspect ratio 2000/315 and the 0.1575 offsets are hard-coded duplicates of hud.json w/h. They must be updated by hand if the HUD art changes.
 - src/gfx/vfx.js:82 - particles.shift() at the cap (3000 desktop) is O(n) per spawn under heavy load.
@@ -932,7 +936,7 @@ Render (`src/game/render.js`):
 ### How it works
 Tile codes: `t` only uses 0/1. `v` variant: dungeon 0..floors-1 = `tileset.floors[v]`, 100+i = `tileset.details[i]` (13% chance, dungeon.js:206); town uses `makeTownTiles` codes. `render.js:14 floorEntry` picks `world.townTiles` when present, else tileset (fallback `floors[0]`).
 
-Walls (map.js:229-280): for every floor tile with a void 4-neighbour emit a segment. `dir:'f'` ("/" on screen) lies on vertical grid line `x=ex` spanning `ey0..ey1`; `dir:'b'` ("\") on `y=ey` spanning `ex0..ex1`. West/north edges have `front:false` (back walls, top of screen); east/south `front:true`. Each seg gets `mx,my` (midpoint), `lx,ly` (screen-left endpoint anchor: 'f'->(ex,ey1), 'b'->(ex0,ey)), `depth=mx+my`, `spr` (atlas entry with `base`=bottom-edge y intercept and `slope`, from tools/process_assets.py:257) and `flip`. Sprite choice (pickSeg :237): 'f' -> 80% segFwd native, 20% segBack mirrored; 'b' -> 40% segBack native, else segFwd mirrored. Vertices touched by both orientations get a pillar (`tileset.pillars[0]`, depth x+y+0.02). Everything bucketed into 8x8-tile cells (`segGrid`). Render: `segRect` :20 anchors the sprite so its bottom line passes through iso(lx,ly) (flipped sprites use `base+slope*w`), scale `WALL_K`.
+Walls (map.js:229-280): for every floor tile with a void 4-neighbour emit a segment. `dir:'f'` ("/" on screen) lies on vertical grid line `x=ex` spanning `ey0..ey1`; `dir:'b'` ("\") on `y=ey` spanning `ex0..ex1`. West/north edges have `front:false` (back walls, top of screen); east/south `front:true`. Each seg gets `mx,my` (midpoint), `lx,ly` (screen-left endpoint anchor: 'f'->(ex,ey1), 'b'->(ex0,ey)), `depth=mx+my`, `spr`, `flip` and `strip`. Sprite choice (pickSeg): when `tileset.walls` exists, a random seamless section, mirrored (`flip`) for 'b' edges, with `strip:true`. Otherwise the old fallback: 'f' -> 80% segFwd native, 20% segBack mirrored; 'b' -> 40% segBack native, else segFwd mirrored (`spr.base`/`spr.slope` anchor). Vertices touched by both orientations get a pillar (`tileset.pillars[0]`, the widest, depth x+y+0.02, `strip` = section width so it is drawn at the same scale). Everything bucketed into 8x8-tile cells (`segGrid`). Render: `segRect` puts a section's face base on the edge, `HW` wide (+0.6 px overlap); the fallback anchors the sprite's bottom line through iso(lx,ly) with `WALL_K`. Walls in front of the hero fade via `cutaway` (screen distance and depth).
 
 Dungeon algorithm (dungeon.js):
 1. Chunk grid CWxCH of S=11-tile chunks, map `W=CW*S+2`, `H=CH*S+2` (:11-13). Start chunk: left column random row, or 50% random column on top/bottom row (:20-21).
@@ -942,7 +946,7 @@ Dungeon algorithm (dungeon.js):
 5. BFS over chunk graph; exit/boss room = farthest chunk (first max) (:90-96); forced to an 8x8 'room' if not a room >=7x7 (:98-103).
 6. `finishMap` (:202): variants + `buildWalls`.
 7. Spawns (:108-150): every non-start room gets packs = `max(exit?0:1, round(area/26 * density * U(0.7,1.3)))` (cave area=28; small rooms 50% 1 pack else 0). Pack size `ARCH[arch].pack` range +1 (40%) beyond depth 30. Arch pick biased to early roster entries (`rng^1.35`). Champions `2+floor(depth/15)` packs of 2-4, uniques `1+floor(depth/30)` packs of 3-5 (not in exit room). Boss: one roster arch excluding bat/spider/beetle at exit room centre. NOTE the exit room also gets normal packs.
-8. Props (:154-169), excluding start/exit rooms: tower (45%, room >=7x7, 1 tile in from a random corner, sets `block`), 0-3 rubble (non-blocking, scale 0.6-0.9), 35% decor pixel sprite (grave/rock/barrel/crate; non-blocking).
+8. Obstacles (`placeObstacles`, right after `finishMap`, before spawns), excluding start/exit rooms: tower (45%, room >=7x7), a barricade (50%, rooms >=6x6), and scatter (about 1 per 7 free tiles), all reachability-checked (see [`ART.md`](ART.md)). Then props: 0-3 rubble (non-blocking, scale 0.6-0.9), and a 35% decor pixel sprite only when the biome has no scatter art.
 9. Chests (:171-177): 1-3, preferring dead-end chunks (degree 1), at room-centre tile, 20% rare.
 10. Torches (:179-183): 7% of back (`!front`) segments, offset 0.12 into the floor.
 11. Exit (:193): toward the exit-room side away from the start room, inset 1.5; fallback centre.
@@ -965,7 +969,7 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 - Chunk size `S=11` dungeon.js:6; chunk counts `CW=clamp(4+floor(depth/14)+int(0,1),4,8)`, `CH=clamp(4+floor(depth/18)+int(0,1),4,7)` :11-12 (map 46..90 x 46..79).
 - Loop chance 0.1 per edge :38-39; room type split 0.62/0.18/0.20 :53; room size 5..9, small 3..4 :56-57; cave blobs 3..6, r 1.8..3.4 :61-63; corridor width 3 at 25% :81; boss arena min 7x7 else 8x8 :98-100.
 - Pack density `1+depth*0.012` :110; packs `area/26` :126; arch bias exponent 1.35 :113; pack +1 at depth>30 (40%) :132; champions `2+floor(depth/15)` (2-4 each), uniques `1+floor(depth/30)` (3-5 each) :137-147; boss excludes bat/spider/beetle :149.
-- Tower 45% in rooms >=7x7 :156; rubble 0-3 :160; decor 35% :165; chests 1-3, 20% rare :172-176; torch 7% of back segs :180 (throne 12% :242); detail floor 13% :206.
+- placeObstacles: tower 45% in rooms >=7x7, barricade 50% in rooms >=6x6, scatter `cells/7 * U(0.7,1.3)`, 65% against walls; rubble 0-3; decor 35% (no-scatter biomes only); floors 70% calm half / 22% any / 8% detail (finishMap); chests 1-3, 20% rare :172-176; torch 7% of back segs :180 (throne 12% :242); detail floor 13% :206.
 - Wall sprite mix 0.8 / 0.4 map.js:241,244; segGrid bucket B=8 :272; A* default maxNodes 3000 :127 (player uses 2500); goal snap radius <4 :134; LOS samples 3/tile :57, losWide 4/tile r 0.22 :197-200; collision radius `e.r*0.8` :40; randomNear 40 tries :207.
 - World: CELL=2 world.js:7; flow rebuild 0.25 s, maxD 40 :82-83; sleep radius 26 :91; corpse life 40 s / cap 70 :110-112; reveal radius 11 :113 (12 on entry, game.js:115); separation 0.85 overlap, weights 0.25/0.75/0.5 :127-132; ambient rate 22/s desktop, 10/s touch :164; torch light `5.5+0.3 sin`, intensity 0.9 :148; portal light 6 :158.
 - Render: `WALL_K=(HW*1.06)/66` (~0.514) render.js:10, pillar scale `WALL_K*1.05` :42; prop scale tower 0.55 / other 0.5 :54; lighting canvas 1/4 res :306, light scale `HW*1.25*zoom*dpr/4` :315; `addLight` cap 48 (vfx.js:326); vignette 0.35*min -> 0.75*max, alpha 0.6 :337-338; NPC sprite height 58 :156; corpse fade over t 34..40 :144; minimap 0.2 s, 2.4 px/tile, enemy radius 14 :409,417,438.
@@ -974,7 +978,7 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 ### How to extend
 - New dungeon room type: add a branch in the room loop (dungeon.js:53-72), carve only inside `[ox+1, ox+S-2]` so chunks stay separated, and set `x,y,w,h,mx,my` to a carved rect (corridors target `floor(mx),floor(my)`, `roomFloorSpot` samples that rect). Adjust pack `area` (:125) if the rect does not reflect the real area.
 - New special level (like depth 100): branch at the top of `generateDungeon` (:9), carve `map.t`, call `finishMap(map,tileset,rng)` (mandatory: variants + walls), return the same shape (`map, rooms, spawns, props, chests, torches, start, exit, bossRoom`). Exactly one spawn should have `rank:'boss'` or the exit never opens (game.js:217/238).
-- New prop: atlas prop -> `{kind, x, y, spr: tileset.<list>[i], scale?}`; pixel-art prop -> `{kind:'sprite'|'decor', sprite:'<pixelart name>', pal, px, light?, sway?}`. If it should block, set `map.block[ty*W+tx]=1` AND place it before spawns are computed (or re-check spawn tiles). Lights for props come from `pr.light` (world.js:151) plus the glow in `drawProp`.
+- New prop: scatter/barricade-style art -> `{kind, x, y, spr, k (scale), flip}`; other atlas prop -> `{kind, x, y, spr: tileset.<list>[i], scale?}`; pixel-art prop -> `{kind:'sprite'|'decor', sprite:'<pixelart name>', pal, px, light?, sway?}`. If it should block, place it inside `placeObstacles` with `tryBlock(tiles)`, which sets `map.block` and reverts if it would cut the level apart (it runs before spawns). Lights for props come from `pr.light` (world.js:151) plus the glow in `drawProp`.
 - New vendor: append to `VENDORS`, AND add matching entries to `shopSpots` and `palettes` (town.js:45-64; index-aligned) on unblocked grass, then handle the new `id` in `ui/vendor.js`.
 - New town floor look: add a code in `makeTownTiles` and write it into `map.v` in `generateTown`; `free()` (town.js:86) treats `v<10` as grass.
 - New depth-sorted drawable: push `{d, f:<new code>, o}` in renderWorld (:222-239) and add a `case` in the switch (:243). For hazards just give them a numeric `depth` getter (or `ground=true`).
@@ -992,7 +996,7 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 - Dormant enemies more than 26 tiles away aren't updated at all (no status ticks, no regen).
 - Building sort depth is the footprint centre (town.js:70). Entities near a long building's ends can sort wrongly, and the 0.4 alpha only applies around the player.
 - Wall sorting is an approximation (seg depth = midpoint sum). Front walls rely on the translucency rule. Monsters behind walls are simply hidden.
-- `buildWalls` requires non-empty `tileset.segFwd` (and `pillars` for corners). A segment with undefined `spr` is classified as a pillar by `s.spr && s.dir ? 2 : 3` (render.js:223) and crashes in drawPillar.
+- `buildWalls` requires non-empty `tileset.walls` or `tileset.segFwd` (and `pillars` for corners). A segment with undefined `spr` is classified as a pillar by `s.spr && s.dir ? 2 : 3` (render.js:223) and crashes in drawPillar.
 - The town generator is called once per session and its map/props objects are reused. Don't mutate `townCache` objects per visit except `seen`.
 - The generator RNG is seeded, but game.js passes a fresh `Math.random()` seed, and spawn variants/`randomNear` use `Math.random`. Don't rely on reproducibility.
 - `drawPortal` reads pillars from `G.world.tileset` rather than its `world` argument (render.js:118).
@@ -1008,7 +1012,6 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 
 ### Open issues noticed
 - src/game/render.js:177 - `lights.length = 0` is executed at the start of renderWorld, before drawLighting consumes `lights` at render.js:329; all addLight calls happen during World.update (world.js:148/153/158, loot.js:58/61, hazards.js:127/309/567/649, monster.js:103, gfx/shapes.js:248), so only the player light ever appears in the lighting overlay. Fix: clear lights at the start of World.update (or snapshot after drawLighting), keeping paused frames in mind.
-- src/world/dungeon.js:131 vs :158 - pack spawn positions are chosen before towers set map.block; a pack leader (spawned exactly at s.x,s.y in game.js:226) can end up inside a blocked tower tile and be unable to move (TileMap.move -> circleFree fails).
 - src/world/map.js:161 - findPath overwrites the final waypoint with the raw goal (gx,gy) even when the goal was snapped from an unwalkable tile, so the path ends at an unwalkable point.
 - src/world/map.js:60 - los() uses isFloor and ignores `block`, so monsters/ranged checks see through towers, trees and town buildings, while losWide/walkable treat them as solid.
 - src/world/map.js:29-31 - circleFree samples only 4 bounding-box corners; for creatures with r*0.8 > 0.5 (e.g. velscour r=0.9, enemies.js:27) a single blocked tile can sit between the corners undetected.

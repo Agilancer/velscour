@@ -19,8 +19,13 @@ function floorEntry(world, v) {
 
 function segRect(s) {
   const spr = s.spr;
-  const k = WALL_K;
   const lx = isoX(s.lx, s.ly), ly = isoY(s.lx, s.ly);
+  if (s.strip) {
+    // seamless section: exactly one tile edge wide, face base on the edge line ((lx,ly) is its left end)
+    const k = HW / spr.w;
+    return [lx - 0.3, ly - (s.flip ? spr.base - spr.w / 2 : spr.base) * k, HW + 0.6, spr.h * k]; // overlap 0.3px: no hairline seams
+  }
+  const k = WALL_K;
   const yl = s.flip ? spr.base + spr.slope * spr.w : spr.base;
   return [lx - 1, ly - yl * k + 2, spr.w * k, spr.h * k];
 }
@@ -39,17 +44,23 @@ function drawSeg(ctx, s, alpha) {
 
 function drawPillar(ctx, p, alpha) {
   const spr = p.spr;
-  const k = WALL_K * 1.05;
-  const x = isoX(p.x, p.y), y = isoY(p.x, p.y);
+  // same source scale as the wall sections; the post's square base is centred on the corner
+  const k = p.strip ? HW / p.strip : WALL_K * 1.05;
+  const x = isoX(p.x, p.y), y = isoY(p.x, p.y) + (p.strip ? (spr.w * k) / 4 : 4);
   if (alpha < 1) ctx.globalAlpha = alpha;
-  ctx.drawImage(spr.img, spr.sx, spr.sy, spr.w, spr.h, x - (spr.w * k) / 2, y - spr.h * k + 4, spr.w * k, spr.h * k);
+  ctx.drawImage(spr.img, spr.sx, spr.sy, spr.w, spr.h, x - (spr.w * k) / 2, y - spr.h * k, spr.w * k, spr.h * k);
   if (alpha < 1) ctx.globalAlpha = 1;
 }
 
 function drawProp(ctx, pr, alpha) {
   const x = isoX(pr.x, pr.y), y = isoY(pr.x, pr.y);
   if (alpha < 1) ctx.globalAlpha = alpha;
-  if (pr.spr) {
+  if (pr.k) {
+    // scatter / barricade art: the footprint's centre is a quarter of the drawn width above the sprite's bottom
+    const s = pr.spr, w = s.w * pr.k, h = s.h * pr.k;
+    if (pr.flip) { ctx.save(); ctx.translate(x, 0); ctx.scale(-1, 1); ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, -w / 2, y + w / 4 - h, w, h); ctx.restore(); }
+    else ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, x - w / 2, y + w / 4 - h, w, h);
+  } else if (pr.spr) {
     const s = pr.spr;
     const k = (pr.kind === 'tower' ? 0.55 : 0.5) * (pr.scale || 1);
     ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, x - (s.w * k) / 2, y - s.h * k + HH * 0.6, s.w * k, s.h * k);
@@ -83,6 +94,19 @@ function drawBuilding(ctx, b, alpha) {
 
 function drawChest(ctx, c) {
   const x = isoX(c.x, c.y), y = isoY(c.x, c.y);
+  const art = G.world && G.world.tileset && G.world.tileset.chest;
+  const s = art && (c.opened ? (c.rare ? art.rareOpen : art.open) : (c.rare ? art.rareClosed : art.closed));
+  if (s) {
+    // the biome's chest art, sized off the closed chest so opening it doesn't change the scale
+    const k = 46 / (c.rare ? art.rareClosed : art.closed).w, w = s.w * k, h = s.h * k;
+    ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, x - w / 2, y + w / 4 - h, w, h);
+    if (!c.opened) {
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + Math.sin(G.time * 3) * 0.15;
+      ctx.drawImage(glowSprite(c.rare ? '#c080ff' : '#ffd060'), x - 28, y - 40, 56, 46);
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    }
+    return;
+  }
   ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(x, y, 16, 7, 0, 0, TAU); ctx.fill();
   const body = c.rare ? '#5a3a6a' : '#5a3a1a', trim = c.rare ? '#e0c0ff' : '#d0a040';
   // box faces
@@ -219,6 +243,12 @@ export function renderWorld(ctx, world) {
   const ppx = p ? isoX(p.x, p.y) : 0, ppy = p ? isoY(p.x, p.y) : 0;
   const prect = [ppx - 16, ppy - 62, ppx + 16, ppy - 4];
   const occludes = (r) => p && r[0] < prect[2] && r[0] + r[2] > prect[0] && r[1] < prect[3] && r[1] + r[3] > prect[1];
+  // walls in front of the hero fade with screen distance and depth, so the narrow sections form a soft see-through hole
+  const cutaway = (r, d) => {
+    if (!p || d <= pd || r[1] > prect[3] - 8 || r[1] + r[3] < prect[1]) return 1;
+    const t = clamp((Math.abs(r[0] + r[2] / 2 - ppx) - 14) / 70, 0, 1);
+    return 1 - (1 - (0.22 + 0.78 * t * t * (3 - 2 * t))) * Math.min(1, (d - pd) * 1.5);
+  };
   const walls = map.wallsIn(tx0 - 2, ty0 - 2, tx1 + 3, ty1 + 3, []);
   for (const s of walls) sorted.push({ d: s.depth, f: s.spr && s.dir ? 2 : 3, o: s });
   for (const pr of world.props) {
@@ -242,8 +272,8 @@ export function renderWorld(ctx, world) {
     const o = it.o;
     switch (it.f) {
       case 1: o.draw(ctx); break;
-      case 2: drawSeg(ctx, o, o.depth > pd + 0.6 && occludes(segRect(o)) ? 0.3 : 1); break;
-      case 3: drawPillar(ctx, o, o.depth > pd + 0.6 && p && Math.abs(isoX(o.x, o.y) - ppx) < 24 && isoY(o.x, o.y) > ppy - 10 && isoY(o.x, o.y) - 64 < ppy ? 0.3 : 1); break;
+      case 2: drawSeg(ctx, o, o.strip ? cutaway(segRect(o), o.depth) : o.depth > pd + 0.6 && occludes(segRect(o)) ? 0.3 : 1); break;
+      case 3: drawPillar(ctx, o, o.strip ? cutaway([isoX(o.x, o.y) - 12, isoY(o.x, o.y) - 90, 24, 96], o.depth) : o.depth > pd + 0.6 && p && Math.abs(isoX(o.x, o.y) - ppx) < 24 && isoY(o.x, o.y) > ppy - 10 && isoY(o.x, o.y) - 64 < ppy ? 0.3 : 1); break;
       case 4: {
         let a = 1;
         if (p && it.d > pd + 0.5 && (o.spr || (o.sprite === 'tree' || o.sprite === 'pine'))) {

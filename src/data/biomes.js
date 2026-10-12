@@ -1,5 +1,5 @@
-// Twenty dungeon biomes. Each re-tints the catacomb tile art, monsters and lighting.
-// palette -> recolor() params applied to floor/wall atlases.
+// Twenty dungeon biomes. Each has its own floor/wall/prop art (see BIOME_ART below), monster tints and lighting.
+// palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
 export const BIOMES = [
   {
@@ -124,6 +124,33 @@ export const BIOMES = [
   },
 ];
 
+// Art per biome: [tile set (assets/tiles/<id>), palette applied on top (null = as drawn), barricade set
+// (assets/props/barricades_<id>), scatter sheets (assets/props/<sheet>)]. Ten tile sets serve twenty biomes, so
+// biomes sharing a set are told apart by palette. This replaces the palettes above, which tinted the catacombs.
+const BIOME_ART = {
+  catacombs: ['skull', null, 'skull', ['catacomb_relics', 'dungeon_mechanisms']],
+  frozen: ['frozen', null, 'frozen', ['catacomb_relics']],
+  molten: ['ashen', { tint: [255, 90, 20, 0.35], sat: 1.2, contrast: 1.05 }, 'obsidian', ['dungeon_mechanisms']],
+  fungal: ['swamp', { hue: 30, sat: 1.1, tint: [120, 255, 200, 0.12] }, 'fungal', ['swamp_obstacles']],
+  sunken: ['catacombs', { colorize: [175, 0.33], light: -0.04 }, 'drowned', ['catacomb_relics', 'swamp_obstacles']],
+  blood: ['blood', null, 'blood', ['catacomb_relics', 'dungeon_mechanisms']],
+  ashen: ['ashen', null, 'ashen', ['cathedral_furnishings', 'catacomb_relics']],
+  void: ['cursed', null, 'void', ['dungeon_mechanisms']],
+  gilded: ['sand', null, 'amber', ['desert_ruins']],
+  plague: ['catacombs', { colorize: [85, 0.42], light: -0.06 }, 'plague', ['swamp_obstacles', 'dungeon_mechanisms']],
+  crystal: ['frozen', { hue: -20, sat: 1.5, contrast: 1.1 }, 'necropolis', ['catacomb_relics']],
+  desert: ['desert', null, 'desert', ['desert_ruins']],
+  shadow: ['cursed', { sat: 0.35, light: -0.12, contrast: 1.1 }, 'library', ['dungeon_mechanisms', 'catacomb_relics']],
+  forge: ['ashen', { colorize: [12, 0.65], contrast: 1.15, light: -0.03 }, 'obsidian', ['dungeon_mechanisms']],
+  abyss: ['cursed', { colorize: [232, 0.5], light: -0.06, contrast: 1.1 }, 'shattered', ['dungeon_mechanisms']],
+  thorn: ['swamp', null, 'swamp', ['swamp_obstacles']],
+  storm: ['cathedral', { colorize: [214, 0.4], contrast: 1.1 }, 'cathedral', ['cathedral_furnishings']],
+  obsidian: ['skull', { sat: 0.25, light: -0.1, contrast: 1.3 }, 'obsidian', ['dungeon_mechanisms', 'catacomb_relics']],
+  flesh: ['blood', { colorize: [342, 0.45], light: 0.02 }, 'serpent', ['catacomb_relics']],
+  throne: ['cathedral', { colorize: [4, 0.72], light: -0.1, contrast: 1.2 }, 'blood', ['cathedral_furnishings']],
+};
+for (const b of BIOMES) [b.art, b.palette, b.barricade, b.scatter] = BIOME_ART[b.id];
+
 export const BIOME_BY_ID = Object.fromEntries(BIOMES.map((b) => [b.id, b]));
 
 /** Pick a random biome other than `exclude` (and never the throne before depth 100). */
@@ -134,6 +161,6 @@ export function randomBiome(exclude, depth) {
 }
 
 export const TOWN_BIOME = {
-  id: 'town', name: 'Duskhollow', palette: { colorize: [30, 0.22], light: 0.12, contrast: 0.95 }, wallPalette: { colorize: [32, 0.2], light: 0.18 },
+  id: 'town', name: 'Duskhollow', art: 'skull', scatter: [], palette: { colorize: [30, 0.22], light: 0.12, contrast: 0.95 }, wallPalette: { colorize: [32, 0.2], light: 0.18 },
   dark: 0.45, light: 12, ambient: { type: 'firefly', color: '#ffe890' }, mon: { hue: 0, sat: 1, light: 0 }, blood: '#8a0b08', torch: '#ffb050', fog: '#0a0806',
 };
