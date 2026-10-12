@@ -12,11 +12,12 @@ import { SKILLS } from '../data/skills.js';
 import { setClassItems } from '../data/items.js';
 import { BIOME_BY_ID, TOWN_BIOME, drawBiome, mixPartner } from '../data/biomes.js';
 import { CLASSES } from '../data/classes.js';
-import { generateDungeon } from '../world/dungeon.js';
+import { generateDungeon, isRaidDepth } from '../world/dungeon.js';
 import { generateTown, makeTownTiles } from '../world/town.js';
 import { World } from './world.js';
 import { Player } from './player.js';
 import { makeMonster, Monster } from './monster.js';
+import { makeRaidBoss } from './raid.js';
 import { dropChest } from './loot.js';
 import { renderWorld, drawMinimap } from './render.js';
 import { controls } from './controls.js';
@@ -188,7 +189,7 @@ export const game = {
     const biome = BIOME_BY_ID[c.depth === 100 ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
     UI.dialog({
       title: `Depth ${c.depth}`,
-      html: `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(biome.name)}</b>.</p><p class="dim">Find the exit. It is sealed until its guardian is slain.${c.depth === 100 ? '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>' : ''}</p>`,
+      html: `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(biome.name)}</b>.</p><p class="dim">Find the exit. It is sealed until its guardian is slain.${c.depth === 100 ? '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>' : isRaidDepth(c.depth) ? '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>' : ''}</p>`,
       buttons: [{ label: 'Not yet' }, { label: 'Enter', cls: 'red', fn: () => this.enterDungeon() }],
     });
   },
@@ -240,6 +241,13 @@ export const game = {
     // monsters
     const lvl = depth;
     for (const s of gen.spawns) {
+      if (s.rank === 'raid') {
+        const m = makeRaidBoss(world, gen.raid, depth, lvl + 3);
+        world.add(m);
+        world.boss = m;
+        world.raid = m.raid;
+        continue;
+      }
       if (s.rank === 'boss') {
         const m = makeMonster(world, s.arch, biome, lvl + 2, 'boss', s.x, s.y, 0, s.look);
         world.add(m);
@@ -257,7 +265,7 @@ export const game = {
       }
     }
     world.onBossAwake = (m) => {
-      UI.centerMsg(m.name, m.isVelscour ? 'The Demon Lord rises' : 'Guardian of the Exit', 3);
+      UI.centerMsg(m.name, m.isVelscour ? 'The Demon Lord rises' : m.raid ? `${m.title}${m.raid.mods.length ? ' · ' + m.raid.modText() : ''}` : 'Guardian of the Exit', 3);
       sfx('boss');
       playMusic('boss');
     };
@@ -266,7 +274,7 @@ export const game = {
       const first = !c.cleared[depth];
       c.cleared[depth] = true;
       c.deepest = Math.max(c.deepest || 0, depth);
-      UI.centerMsg('GUARDIAN SLAIN', first ? '+1 bonus skill point · the exit is open' : 'The exit is open', 3.5);
+      UI.centerMsg(m.raid ? `${m.name} DEFEATED` : 'GUARDIAN SLAIN', first ? '+1 bonus skill point · the exit is open' : 'The exit is open', 3.5);
       if (first) { c.skillPoints++; UI.log('Bonus skill point for clearing a new depth!', '#ffd860'); }
       addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#40a0ff', 5));
       playMusic('dungeon');
@@ -276,7 +284,7 @@ export const game = {
     };
     this.setWorld(world, gen.start, old);
     c.lastBiome = biome.id;
-    HUD.setArea(`Depth ${depth}${depth > 100 ? ' — Endless Torment' : ''}`, biome.name);
+    HUD.setArea(`Depth ${depth}${depth > 100 ? ' — Endless Torment' : ''}${gen.raid ? ' · Boss Room' : ''}`, biome.name);
     playMusic(depth === 100 ? 'boss' : 'dungeon');
     const kin = tileset.mixed && BIOME_BY_ID[tileset.mixed];
     UI.centerMsg(biome.name.toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);

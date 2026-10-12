@@ -6,13 +6,43 @@ import { addEffect, Telegraph, Slash, Ring, Bolt, Column, burst, spawn, sparkle,
 import { shiftPalette } from '../gfx/pixelart.js';
 import { Creature } from './creature.js';
 import { hit, aoe, chainHit } from './combat.js';
-import { Projectile, Delayed, NovaWave, Area, explode, lineTargets, coneTargets } from './hazards.js';
-import { ARCH, ELITE_AFFIXES, bossName, uniqueName } from '../data/enemies.js';
+import { Projectile, Delayed, NovaWave, Area, Fissure, explode, lineTargets, coneTargets } from './hazards.js';
+import { ARCH, ARCH_MOVES, ELITE_AFFIXES, bossName, uniqueName } from '../data/enemies.js';
 import { SUMMONS } from '../data/summons.js';
+import { bodyR } from '../world/map.js';
 import { ART_BY_ID, REVIVED, greaterSwap, rollLooks, uniqueSwap } from '../data/bestiary.js';
 
 const LEASH = 10; // minions fight what's within this many tiles of the hero
 const PROJ_FX = { fire: 'fireball', cold: 'shard', light: 'spark', poison: 'blob', shadow: 'skull', arcane: 'orb', holy: 'bolt', blood: 'blob', acid: 'blob', phys: 'rock' };
+const POOL_FX = { fire: 'fire', cold: 'frost', poison: 'poison', acid: 'slime', shadow: 'void', arcane: 'void', blood: 'blood', light: 'storm', holy: 'holy', phys: 'poison' };
+
+// When each special move (data/enemies.js ARCH_MOVES) can be used: (monster, target, distance, line of sight), and its
+// cooldown in seconds.
+const MOVES = {
+  lunge: { cd: 5, ok: (m, t, d, los) => d > 2 && d < 4.5 && los },
+  whirl: { cd: 6, ok: (m, t, d) => d < 1.4 + m.r + t.r },
+  combo: { cd: 4.5, ok: (m, t, d) => d <= m.atkRange(t) + 0.2 },
+  quake: { cd: 7, ok: (m, t, d, los) => d > 1.4 && d < 6 && los },
+  hook: { cd: 7, ok: (m, t, d, los) => d > 2.5 && d < 6.5 && los },
+  fan: { cd: 5, ok: (m, t, d, los) => d < (m.range || 7) && los },
+  burst: { cd: 5, ok: (m, t, d, los) => d < (m.range || 7) + 1 && los },
+  lob: { cd: 6, ok: (m, t, d, los) => d > 1.5 && d < 7 && los },
+  snipe: { cd: 8, ok: (m, t, d, los) => d > 3 && d < 11 && los },
+  blink: { cd: 6, ok: (m, t, d) => d < 2.6 },
+  runes: { cd: 7, ok: (m, t, d, los) => d < 8 && los },
+  orbs: { cd: 8, ok: (m, t, d) => d < 6 },
+  sweep: { cd: 7, ok: (m, t, d, los) => d < (m.range || 7) && los },
+  web: { cd: 6, ok: (m, t, d, los) => d < 6.5 && los },
+};
+
+/** A monster's special moves: one of its archetype's for a normal (more often deeper), two for a greater breed, all for elites. */
+function rollMoves(arch, rank, variant, depth) {
+  const all = (ARCH_MOVES[arch] || []).slice();
+  if (!all.length) return null;
+  if (rank !== 'normal') return all;
+  const n = (chance(Math.min(0.9, 0.45 + depth * 0.012)) ? 1 : 0) + variant;
+  return n ? shuffle(all).slice(0, n) : null;
+}
 
 export function monsterBase(level) {
   return {
@@ -104,6 +134,7 @@ export class Monster extends Creature {
     if (this.aura) addLight(this.x, this.y, 2.5, 0.5);
     if (this.defAura && chance(dt * 2)) aoe(w, this, this.x, this.y, this.defAura.r, this.dmg * 0.3, this.defAura.el, { dot: true });
     if (!canAct) { this.moving = false; return; }
+    if (this.wardTick) return this.wardTick(dt); // raid warding crystals (game/raid.js)
     this.cd -= dt * (this.partyBuff && this.partyBuff.stats.as ? 1 + this.partyBuff.stats.as / 100 : 1);
     if (this.spell && (this.spellCd -= dt) <= 0) this.castSpell();
 
@@ -116,11 +147,17 @@ export class Monster extends Creature {
     if (this.state === 'windup' || this.state === 'act') { this.runAction(dt); return; }
 
     if (this.ai === 'boss') return this.bossUpdate(dt);
+    if (this.ai === 'raid') return this.raid.update(dt);
     const target = this.pickTarget();
     this.target = target;
     if (!target) return this.idle(dt);
     if (!this.summon && !this.awake) { this.awake = true; this.alertPack(); }
     const d = dist(this.x, this.y, target.x, target.y);
+    this.trackTarget(target, dt);
+    if (this.moves) {
+      if (!this.frenzy && this.hp < this.maxHp * 0.4 && this.moves.includes('frenzy')) this.goFrenzy();
+      if ((this.moveCd -= dt) <= 0 && this.trySpecial(target, d)) return;
+    }
     switch (this.ai) {
       case 'melee': case 'brute': return this.aiMelee(dt, target, d);
       case 'ranged': case 'caster': return this.aiRanged(dt, target, d);
@@ -194,16 +231,17 @@ export class Monster extends Creature {
   }
 
   /**
-   * Walk to (gx,gy) around walls: straight while the way is clear, else along an A* path, re-planned as the goal
-   * moves (a few searches per frame for all minions, w.pathBudget). Blocked for a while: re-plan, then sidestep.
-   * Returns the distance left.
+   * Walk to (gx,gy) around walls: straight while the body fits the way, else along a path, re-planned as the goal
+   * moves. `flow`: the goal is the hero (or beside them), so the path runs down the flow field, which costs nothing;
+   * otherwise it is an A* search (a few per frame for everyone, w.pathBudget). Blocked for a while: re-plan, then
+   * sidestep. Returns the distance left.
    */
-  navTo(gx, gy, dt, speed = this.speed) {
+  navTo(gx, gy, dt, speed = this.speed, flow = false) {
     const w = this.world, map = w.map;
     const d = dist(this.x, this.y, gx, gy);
     if (this.ghost) { this.moveToward(gx, gy, dt, speed); return d; }
-    const N = this.nav || (this.nav = { t: 0, path: null, gx, gy, cx: this.x, cy: this.y, ct: 0, last: 0, stuck: 0, side: 0, sa: 0, force: false });
-    const r = this.r * 0.8 + 0.03;
+    const N = this.nav || (this.nav = { t: 0, path: null, part: false, gx, gy, cx: this.x, cy: this.y, ct: 0, last: 0, stuck: 0, side: 0, sa: 0, force: false });
+    const r = bodyR(this) + 0.03;
     // progress check: no headway for half a second means stuck
     if (w.time - N.last > 0.2) { N.ct = 0; N.cx = this.x; N.cy = this.y; }
     N.last = w.time;
@@ -222,15 +260,19 @@ export class Monster extends Creature {
     }
     N.t -= dt;
     if (N.t <= 0 || Math.abs(gx - N.gx) + Math.abs(gy - N.gy) > 2) {
-      N.gx = gx; N.gy = gy; N.t = rand(0.3, 0.5);
+      N.gx = gx; N.gy = gy; N.t = flow ? rand(0.2, 0.35) : rand(0.3, 0.5);
+      N.part = false;
       if (!N.force && map.losWide(this.x, this.y, gx, gy, r)) N.path = null;
+      else if (flow && (N.path = map.flowPath(this.x, this.y, r))) { N.part = true; N.force = false; }
       else if (w.pathBudget > 0) { w.pathBudget--; N.path = map.findPath(this.x, this.y, gx, gy, 2500, r); N.force = false; }
       else N.t = 0; // out of searches this frame: keep the old path and try again next frame
     }
     let tx = gx, ty = gy;
     if (N.path) {
-      while (N.path.length > 1 && dist(this.x, this.y, N.path[0][0], N.path[0][1]) < 0.3) N.path.shift();
-      if (N.path.length > 1) { tx = N.path[0][0]; ty = N.path[0][1]; }
+      // a flow path is only the first stretch of the way: walk all of it, then plan the next
+      const keep = N.part ? 0 : 1;
+      while (N.path.length > keep && dist(this.x, this.y, N.path[0][0], N.path[0][1]) < 0.3) N.path.shift();
+      if (N.path.length > keep) { tx = N.path[0][0]; ty = N.path[0][1]; } else if (N.part) N.t = 0;
     }
     this.moveToward(tx, ty, dt, speed);
     return d;
@@ -261,7 +303,7 @@ export class Monster extends Creature {
 
   /** This minion's spot in the formation: rings of 6, 10, 14 in an arc behind the hero, wherever there's floor. */
   slot(F, o) {
-    const w = this.world, map = w.map, r = this.r * 0.8 + 0.03;
+    const w = this.world, map = w.map, r = bodyR(this) + 0.03;
     if (w.time > F.iT) {
       let i = 0, n = 0;
       for (const c of w.creatures) if (c.summon && c.owner === o && !c.dead && !c.static && !c.ghost) { if (c === this) i = n; n++; }
@@ -281,7 +323,7 @@ export class Monster extends Creature {
 
   /** The hero is standing still with nothing to fight: amble to spots nearby (in sight of them), pause, look about. */
   potter(dt, F, o) {
-    const map = this.world.map, r = this.r * 0.8 + 0.03;
+    const map = this.world.map, r = bodyR(this) + 0.03;
     if (F.go) {
       if (this.navTo(F.wx, F.wy, dt, this.speed * 0.45) < 0.25 || (this.nav && this.nav.stuck >= 2)) { F.go = false; F.wt = rand(1.5, 4); this.moving = false; }
       return;
@@ -309,20 +351,14 @@ export class Monster extends Creature {
     sparkle(x, y, 10, '#80c0ff', 8, 0.4);
   }
 
-  /** Move toward a target using LOS, else the flow field (monsters) or direct steering. Minions path round walls. */
+  /** Go after a target round walls and props: minions by A*, monsters down the flow field when it is the hero. */
   chase(dt, t, speed = this.speed) {
-    const w = this.world;
-    if (this.summon && !this.static) { this.navTo(t.x, t.y, dt, speed); return; }
-    const d = dist(this.x, this.y, t.x, t.y);
-    if (this.fly || this.ghost || d < 2.2 || (d < 9 && w.map.los(this.x, this.y, t.x, t.y))) {
-      this.moveToward(t.x, t.y, dt, speed);
-      return;
-    }
-    if (t === w.player || (!this.summon && t.isPlayer)) {
-      const step = w.map.flowStep(this.x, this.y);
-      if (step) { this.moveToward(step[0], step[1], dt, speed); return; }
-    }
-    this.moveToward(t.x, t.y, dt, speed);
+    if (this.static) return;
+    const w = this.world, p = w.player;
+    if (this.summon) { this.navTo(t.x, t.y, dt, speed); return; }
+    // the flow field leads to the hero: follow it to them, and to anything at their side
+    const flow = p && !p.dead && (t === p || dist(t.x, t.y, p.x, p.y) < 3) && w.map.flowAt(p.x, p.y) === 0;
+    this.navTo(t.x, t.y, dt, speed, flow);
   }
 
   atkRange(t) { return this.r + t.r + (this.atkReach || 0.55); }
@@ -343,7 +379,25 @@ export class Monster extends Creature {
         this.startAction(brute ? 'slam' : 'melee', brute ? 0.6 : (this.summon ? 0.15 : 0.32), { target: t });
         if (brute) addEffect(new Telegraph({ kind: 'circle', x: this.x + Math.cos(this.facing) * 0.8, y: this.y + Math.sin(this.facing) * 0.8, r: 1.6 * this.scale, dur: 0.6, color: this.team === 'enemy' ? '#ff2a10' : '#40ff60' }), 'ground');
       }
-    } else this.chase(dt, t);
+    } else this.approach(dt, t, d);
+  }
+
+  /**
+   * Melee closing in: once others crowd the target, go round to a free side of it (each monster has its own
+   * bearing) instead of queueing behind the pack, so a mob surrounds the hero.
+   */
+  approach(dt, t, d) {
+    const w = this.world;
+    if (!this.summon && d < 4 && d > this.atkRange(t)) {
+      let n = 0;
+      for (const c of w.query(t.x, t.y, 1.7)) if (c !== this && c.team === this.team && c !== t) n++;
+      if (n >= 2) {
+        const a = this.id * 2.39996, rr = Math.max(0.6, this.atkRange(t) - 0.15), br = bodyR(this) + 0.03;
+        const gx = t.x + Math.cos(a) * rr, gy = t.y + Math.sin(a) * rr;
+        if (w.map.circleFree(gx, gy, br) && w.map.losWide(t.x, t.y, gx, gy, br)) { this.navTo(gx, gy, dt, this.speed, t === w.player); return; }
+      }
+    }
+    this.chase(dt, t);
   }
 
   aiRanged(dt, t, d) {
@@ -384,6 +438,7 @@ export class Monster extends Creature {
 
   aiSwarm(dt, t, d) {
     if (d <= this.atkRange(t) && this.cd <= 0) { this.startAction('melee', 0.15, { target: t }); return; }
+    if (d > 3 && !this.world.map.losWide(this.x, this.y, t.x, t.y, bodyR(this) + 0.03)) { this.chase(dt, t); return; }
     const a = angleTo(t.x, t.y, this.x, this.y) + Math.sin(this.animT * 2 + this.id) * 1.3;
     const rr = this.cd > 0 ? 2.2 : 0.3;
     this.moveToward(t.x + Math.cos(a) * rr, t.y + Math.sin(a) * rr, dt, this.speed);
@@ -464,7 +519,9 @@ export class Monster extends Creature {
       const t = this.world.hostiles(this.team, this.x, this.y, this.r + 0.4)[0];
       if (t && !a.hit) { a.hit = true; this.deal(t, this.dmg * 1.4, this.el || 'phys', { knock: 1, ang: a.ang, melee: true }); }
       if (a.len <= 0 || !moved) { this.state = 'idle'; this.cd = this.atkCd; }
-    } else this.state = 'idle';
+    } else if (a.kind.startsWith('mv_')) this.moveTick(a, dt);
+    else if (a.kind.startsWith('raid_') && this.raid) this.raid.tick(a, dt);
+    else this.state = 'idle';
   }
 
   perform(a) {
@@ -561,6 +618,8 @@ export class Monster extends Creature {
         break;
       default:
         if (a.kind.startsWith('boss_')) this.bossPerform(a);
+        else if (a.kind.startsWith('mv_')) this.movePerform(a);
+        else if (a.kind.startsWith('raid_') && this.raid) this.raid.perform(a);
     }
   }
 
@@ -672,6 +731,241 @@ export class Monster extends Creature {
     for (const c of this.world.alliesOf(this.team, this.x, this.y, r)) if (c.summon) c.partyBuff = { stats: { [stat]: amt, ...(A.as ? { as: A.as } : null) }, t: 1.5 };
   }
 
+
+  // ------------------------------------------------------------------ special moves (MOVES, ARCH_MOVES)
+  /** Keep an estimate of the target's velocity, so shots can lead it. */
+  trackTarget(t, dt) {
+    const T = this.tv || (this.tv = { t: null, x: 0, y: 0, vx: 0, vy: 0 });
+    if (T.t === t && dt > 0) {
+      const k = Math.min(1, dt * 6);
+      T.vx += ((t.x - T.x) / dt - T.vx) * k; T.vy += ((t.y - T.y) / dt - T.vy) * k;
+    } else { T.vx = T.vy = 0; T.t = t; }
+    T.x = t.x; T.y = t.y;
+  }
+  /** Angle to shoot at t with a projectile of this speed, aimed where it will be (up to 3 tiles ahead). */
+  leadAng(t, speed) {
+    const T = this.tv;
+    if (!T || T.t !== t) return angleTo(this.x, this.y, t.x, t.y);
+    const k = dist(this.x, this.y, t.x, t.y) / speed;
+    let lx = T.vx * k, ly = T.vy * k;
+    const L = Math.hypot(lx, ly);
+    if (L > 3) { lx *= 3 / L; ly *= 3 / L; }
+    const ax = t.x + lx, ay = t.y + ly;
+    return this.world.map.los(this.x, this.y, ax, ay) ? angleTo(this.x, this.y, ax, ay) : angleTo(this.x, this.y, t.x, t.y);
+  }
+
+  goFrenzy() {
+    this.frenzy = true;
+    this.speed *= 1.35; this.atkCd *= 0.7; this.dmg *= 1.15;
+    this.aura = this.aura || '#ff2010';
+    floatText(this.x, this.y, 60, 'Frenzy!', '#ff5030', 13, { life: 1.2 });
+    sfx('roar', 0.5);
+  }
+
+  trySpecial(t, d) {
+    const los = this.world.map.los(this.x, this.y, t.x, t.y);
+    const ok = this.moves.filter((k) => MOVES[k] && MOVES[k].ok(this, t, d, los));
+    if (!ok.length) { this.moveCd = 0.4; return false; }
+    const k = pick(ok);
+    this.moveCd = MOVES[k].cd * rand(0.8, 1.25) * (this.rank === 'normal' ? 1 : 0.75);
+    this.face(angleTo(this.x, this.y, t.x, t.y));
+    return this.beginMove(k, t, d) !== false;
+  }
+
+  /** Wind-up and telegraph of a special move; movePerform runs it. Returns false if it can't be done from here. */
+  beginMove(k, t, d) {
+    const w = this.world, map = w.map, ang = angleTo(this.x, this.y, t.x, t.y), big = Math.sqrt(this.scale);
+    const tele = (o) => addEffect(new Telegraph(o), 'ground');
+    switch (k) {
+      case 'lunge': {
+        const L = Math.max(0, d - 0.7), tx = this.x + Math.cos(ang) * L, ty = this.y + Math.sin(ang) * L;
+        if (!map.losWide(this.x, this.y, tx, ty, bodyR(this) + 0.03)) return false;
+        tele({ kind: 'circle', x: tx, y: ty, r: 1.1 * big, dur: 0.45 });
+        this.startAction('mv_lunge', 0.45, { tx, ty, ang });
+        break;
+      }
+      case 'whirl':
+        tele({ kind: 'circle', x: this.x, y: this.y, r: 1.8 * big, dur: 0.55 });
+        this.startAction('mv_whirl', 0.55);
+        break;
+      case 'combo':
+        this.startAction('mv_combo', 0.2, { target: t, n: 3 });
+        break;
+      case 'quake':
+        tele({ kind: 'line', x: this.x, y: this.y, ang, len: 6.5, w: 1, dur: 0.6 });
+        this.startAction('mv_quake', 0.6, { ang });
+        break;
+      case 'hook': {
+        const len = Math.min(7, d + 0.5);
+        tele({ kind: 'line', x: this.x, y: this.y, ang, len, w: 0.5, dur: 0.5, color: '#d0a040' });
+        this.startAction('mv_hook', 0.5, { ang, len });
+        break;
+      }
+      case 'fan': case 'web':
+        this.startAction('mv_' + k, 0.35, { target: t });
+        break;
+      case 'burst':
+        this.startAction('mv_burst', 0.25, { target: t, n: this.rank === 'normal' ? 3 : 5 });
+        break;
+      case 'lob':
+        tele({ kind: 'circle', x: t.x, y: t.y, r: 1.2, dur: 0.35 + 0.35 + d * 0.06 });
+        this.startAction('mv_lob', 0.35, { tx: t.x, ty: t.y });
+        break;
+      case 'snipe':
+        tele({ kind: 'line', x: this.x, y: this.y, ang, len: 12, w: 0.4, dur: 0.9, color: '#ffe040' });
+        this.startAction('mv_snipe', 0.9, { ang });
+        break;
+      case 'blink': {
+        for (let i = 0; i < 12; i++) {
+          const a = angleTo(t.x, t.y, this.x, this.y) + rand(-1.4, 1.4), rr = rand(4, 6);
+          const x = t.x + Math.cos(a) * rr, y = t.y + Math.sin(a) * rr;
+          if (!map.circleFree(x, y, bodyR(this) + 0.05) || !map.los(x, y, t.x, t.y) || map.flowAt(x, y) < 0) continue;
+          sparkle(this.x, this.y, 20, elem(this.el || 'arcane').glow, 10, 0.4);
+          this.x = x; this.y = y; this.nav = null;
+          sparkle(x, y, 20, elem(this.el || 'arcane').glow, 10, 0.4);
+          sfx('arcane', 0.4);
+          this.cd = Math.min(this.cd, 0.35);
+          return true;
+        }
+        return false;
+      }
+      case 'runes':
+        this.startAction('mv_runes', 0.3, { tx: t.x, ty: t.y, ang });
+        break;
+      case 'orbs':
+        tele({ kind: 'circle', x: this.x, y: this.y, r: 1, dur: 0.5 });
+        this.startAction('mv_orbs', 0.5);
+        break;
+      case 'sweep': {
+        const dir = chance(0.5) ? 1 : -1, a0 = ang - dir * 0.9, len = this.range || 7;
+        tele({ kind: 'line', x: this.x, y: this.y, ang: a0, len, w: 0.5, dur: 0.6, color: '#ff40ff' });
+        this.startAction('mv_sweep', 0.6, { a: a0, dir, left: 1.8, len, hits: new Map() });
+        break;
+      }
+      default: return false;
+    }
+    return true;
+  }
+
+  movePerform(a) {
+    const w = this.world, el = this.el || 'phys', E = elem(el), dmg = this.dmg, big = Math.sqrt(this.scale);
+    const P = this.proj || { fx: PROJ_FX[el], speed: 7 };
+    const shot = (ang, o) => w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang, speed: P.speed || 7, range: (this.range || 7) + 2, fx: P.fx, el, dmg: [dmg * 0.75, dmg], ...o }));
+    switch (a.kind) {
+      case 'mv_lunge': case 'mv_combo': case 'mv_burst': case 'mv_sweep':
+        this.state = 'act'; a.ongoing = true; a.t = 0; a.k = 0; a.sx = this.x; a.sy = this.y;
+        if (a.kind === 'mv_lunge') sfx('swing', 0.6);
+        return;
+      case 'mv_whirl':
+        aoe(w, this, this.x, this.y, 1.8 * big, dmg * 1.3, el === 'phys' ? 'phys' : el, { melee: true, knock: 0.8 });
+        for (let i = 0; i < 4; i++) addEffect(new Slash(this.x, this.y, this.facing + i * 1.57, 2.2, 1.6 * big, 0.25, this.team === 'enemy' ? '#ffd0c0' : '#c0ffd0', { width: 8 }));
+        sfx('swing'); sfx('phys', 0.5);
+        break;
+      case 'mv_quake':
+        w.addHazard(new Fissure({ world: w, src: this, x: this.x, y: this.y, ang: a.ang, len: 6.5, dmg: [dmg * 0.9, dmg * 1.2], el, fx: el === 'fire' ? 'fire' : el === 'cold' ? 'ice' : 'earth', o: { knock: 0.5 } }));
+        sfx('thud');
+        break;
+      case 'mv_hook':
+        w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang: a.ang, speed: 14, range: a.len, fx: 'chain', el: 'phys', dmg: [dmg * 0.6, dmg * 0.8], o: { pull: true } }));
+        sfx('swing');
+        break;
+      case 'mv_fan': {
+        const base = a.target && !a.target.dead ? angleTo(this.x, this.y, a.target.x, a.target.y) : this.facing;
+        for (let i = 0; i < 5; i++) shot(base + (i - 2) * 0.2);
+        sfx(P.fx === 'arrow' ? 'bow' : E.sfx, 0.5);
+        break;
+      }
+      case 'mv_web':
+        if (a.target && !a.target.dead) shot(this.leadAng(a.target, 8), { speed: 8, fx: 'blob', el: el === 'phys' ? 'poison' : el, o: { slow: true }, size: 1.3 });
+        sfx('acid', 0.4);
+        break;
+      case 'mv_lob': {
+        const pel = el === 'phys' ? 'poison' : el;
+        w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, lob: true, tx: a.tx, ty: a.ty, range: 8, fx: 'blob', el: pel, dmg: [dmg * 0.8, dmg], exp: 1.1, size: 1.3,
+          onLand: (x, y) => w.addHazard(new Area({ world: w, src: this, x, y, r: 1.2, dur: 3.5, tick: 0.5, dmg: [dmg * 0.22, dmg * 0.3], el: pel, fx: POOL_FX[pel] || 'poison' })) }));
+        sfx(elem(pel).sfx, 0.4);
+        break;
+      }
+      case 'mv_snipe':
+        w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang: a.ang, speed: 17, range: 13, fx: P.fx || 'arrow', el, dmg: [dmg * 1.8, dmg * 2.2], size: 1.4, pierce: 99 }));
+        sfx(P.fx === 'arrow' ? 'bow' : E.sfx, 0.7);
+        break;
+      case 'mv_runes': {
+        const pts = [[a.tx, a.ty]];
+        for (const off of [2.1, -2.1]) pts.push([a.tx + Math.cos(a.ang + off) * 1.6, a.ty + Math.sin(a.ang + off) * 1.6]);
+        pts.forEach(([x, y], i) => { if (w.map.isFloor(x, y)) w.addHazard(new Delayed({ world: w, src: this, x, y, r: 1.1, delay: 0.9 + i * 0.25, fx: 'explosion', el, dmg: [dmg * 1, dmg * 1.3] })); });
+        sfx(E.sfx, 0.5);
+        break;
+      }
+      case 'mv_orbs': {
+        const a0 = rand(TAU);
+        for (let i = 0; i < 8; i++) w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang: a0 + (i / 8) * TAU, speed: 3.2, range: 7, fx: PROJ_FX[el] === 'rock' ? 'orb' : PROJ_FX[el], el, dmg: [dmg * 0.7, dmg * 0.9], size: 1.3 }));
+        sfx(E.sfx, 0.5);
+        break;
+      }
+    }
+    this.cd = this.atkCd;
+  }
+
+  /** Special moves that play out over time. */
+  moveTick(a, dt) {
+    const w = this.world, el = this.el || 'phys', dmg = this.dmg, big = Math.sqrt(this.scale);
+    const done = () => { this.state = 'idle'; this.cd = this.atkCd; this.z = 0; };
+    switch (a.kind) {
+      case 'mv_lunge': {
+        const k = Math.min(1, a.t / 0.35);
+        const want = dist(this.x, this.y, a.tx, a.ty), step = Math.min(want, dist(a.sx, a.sy, a.tx, a.ty) / 0.35 * dt);
+        if (want > 0.01) w.map.move(this, (a.tx - this.x) / want * step, (a.ty - this.y) / want * step, this.ghost);
+        this.z = 50 * 4 * k * (1 - k); this.moving = true;
+        if (k >= 1) {
+          explode(w, this, this.x, this.y, 1.1 * big, dmg * 1.3, el, { knock: 0.6, melee: true }, 'eruption');
+          sfx('thud', 0.6);
+          done();
+        }
+        break;
+      }
+      case 'mv_combo': {
+        if (a.t < a.k * 0.22) break;
+        const t = a.target;
+        if (t && !t.dead) {
+          this.face(angleTo(this.x, this.y, t.x, t.y));
+          if (dist(this.x, this.y, t.x, t.y) <= this.atkRange(t) + 0.6) this.deal(t, dmg * 0.7, this.atk ? el : 'phys', { melee: true, ang: this.facing, bleed: a.k === 2 && chance(0.4) });
+        }
+        this.lunge = 1;
+        addEffect(new Slash(this.x, this.y, this.facing, 1.8, 0.9 * this.scale, 0.15, '#ffd0c0', { width: 6, flip: a.k % 2 === 1 }));
+        sfx('swing', 0.4);
+        if (++a.k >= a.n) done();
+        break;
+      }
+      case 'mv_burst': {
+        if (a.t < a.k * 0.14) break;
+        const t = a.target, P = this.proj || { fx: PROJ_FX[el], speed: 7 };
+        if (t && !t.dead) {
+          w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang: this.leadAng(t, P.speed || 7) + rand(-0.05, 0.05), speed: P.speed || 7, range: (this.range || 7) + 2, fx: P.fx, el, dmg: [dmg * 0.6, dmg * 0.8] }));
+          this.face(angleTo(this.x, this.y, t.x, t.y));
+          if (a.k % 2 === 0) sfx(P.fx === 'arrow' ? 'bow' : elem(el).sfx, 0.35);
+        }
+        if (++a.k >= a.n) done();
+        break;
+      }
+      case 'mv_sweep': {
+        const turn = 2 * dt;
+        a.a += a.dir * turn; a.left -= turn;
+        this.face(a.a);
+        const L = w.map.rayLength(this.x, this.y, a.a, a.len), ex = this.x + Math.cos(a.a) * L, ey = this.y + Math.sin(a.a) * L;
+        for (const c of lineTargets(w, this.team, this.x, this.y, ex, ey, 0.4)) {
+          if ((a.hits.get(c) || 0) > w.time) continue;
+          a.hits.set(c, w.time + 0.35);
+          this.deal(c, dmg * 0.8, el, {});
+        }
+        if ((a.fx = (a.fx || 0) - dt) <= 0) { a.fx = 0.04; addEffect(new Bolt(this.x, this.y, 30, ex, ey, 20, elem(el).glow, 0.08, 3)); }
+        if (a.left <= 0) done();
+        break;
+      }
+      default: done();
+    }
+  }
+
   // ------------------------------------------------------------------ bosses
   bossUpdate(dt) {
     const w = this.world, p = w.player;
@@ -699,7 +993,8 @@ export class Monster extends Creature {
       this.bossT = rand(2.6, 4.2) * (this.phase === 2 ? 0.7 : 1);
       return this.bossPattern(pat, t);
     }
-    // between patterns: chase and melee
+    // between patterns: special moves, chase and melee
+    if (this.moves && (this.moveCd -= dt) <= 0 && this.trySpecial(t, d)) return;
     if (d <= this.atkRange(t) + 0.3) {
       this.face(angleTo(this.x, this.y, t.x, t.y));
       if (this.cd <= 0) this.startAction('melee', 0.35, { target: t });
@@ -891,6 +1186,8 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
     summoner: A.summoner && chance(A.summoner), aoeCaster: A.aoe, rank: 'normal', x, y,
   });
   if (A.ai === 'brute') m.atkReach = 0.7;
+  m.moves = rollMoves(archId, rank, variant, depth);
+  m.moveCd = rand(1.5, 4);
   if (variant) { m.maxHp *= 1.4; m.hp = m.maxHp; m.dmg *= 1.2; m.xp *= 1.5; m.scale = 1.08; m.speed *= 1.05; }
   if (rank !== 'normal') makeElite(m, rank, depth, world);
   return m;

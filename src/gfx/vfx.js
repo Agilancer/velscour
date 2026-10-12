@@ -291,6 +291,18 @@ export class Telegraph {
       const by = isoY(this.x + Math.cos(this.ang) * this.len, this.y + Math.sin(this.ang) * this.len);
       ctx.globalAlpha = 0.25 + k * 0.35; ctx.strokeStyle = this.color; ctx.lineWidth = this.w * HW;
       ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+    } else if (this.kind === 'cone') {
+      // a sector: ang +- half, out to len, filling from the apex as it nears
+      const pts = (L) => {
+        ctx.beginPath(); ctx.moveTo(isoX(this.x, this.y), isoY(this.x, this.y));
+        for (let i = 0; i <= 16; i++) {
+          const a = this.ang - this.half + (i / 16) * this.half * 2, x = this.x + Math.cos(a) * L, y = this.y + Math.sin(a) * L;
+          ctx.lineTo(isoX(x, y), isoY(x, y));
+        }
+        ctx.closePath();
+      };
+      ctx.globalAlpha = 0.6; ctx.strokeStyle = this.color; ctx.lineWidth = 2; pts(this.len); ctx.stroke();
+      ctx.globalAlpha = 0.15 + 0.25 * k; ctx.fillStyle = this.color; pts(this.len * k); ctx.fill();
     } else {
       const px = isoX(this.x, this.y), py = isoY(this.x, this.y);
       ctx.globalAlpha = 0.6; ctx.strokeStyle = this.color; ctx.lineWidth = 2;

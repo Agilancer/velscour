@@ -6,12 +6,20 @@ import { rollLooks } from '../data/bestiary.js';
 
 const S = 11; // chunk size in tiles
 
+/** Every fifth depth (but the throne at 100) ends in a BOSS ROOM with a raid boss (game/raid.js). */
+export const isRaidDepth = (depth) => depth % 5 === 0 && depth !== 100;
+
+// the boss room: an arena east of the maze, reached by a corridor from its far end
+const ARENA_W = 30, ARENA_H = 26, ARENA_GAP = 6;
+
 export function generateDungeon(depth, biome, tileset, seed) {
   if (depth === 100) return generateThrone(biome, tileset, seed);
   const rng = new RNG(seed);
-  const CW = clamp(4 + Math.floor(depth / 14) + rng.int(0, 1), 4, 8);
+  const raid = isRaidDepth(depth);
+  // a raid level's maze is a little smaller: the boss fight takes the time
+  const CW = clamp(4 + Math.floor(depth / 14) + rng.int(0, 1) - (raid ? 1 : 0), 4, 8);
   const CH = clamp(4 + Math.floor(depth / 18) + rng.int(0, 1), 4, 7);
-  const W = CW * S + 2, H = CH * S + 2;
+  const W = CW * S + 2 + (raid ? ARENA_GAP + ARENA_W + 2 : 0), H = Math.max(CH * S + 2, raid ? ARENA_H + 6 : 0);
   const map = new TileMap(W, H);
   const ci = (x, y) => y * CW + x;
 
@@ -19,7 +27,7 @@ export function generateDungeon(depth, biome, tileset, seed) {
   const conn = new Set();
   const ek = (a, b) => (a < b ? a + ',' + b : b + ',' + a);
   const start = { x: 0, y: rng.int(0, CH - 1) };
-  if (rng.chance(0.5)) { start.x = rng.int(0, CW - 1); start.y = rng.chance(0.5) ? 0 : CH - 1; }
+  if (rng.chance(0.5) && !raid) { start.x = rng.int(0, CW - 1); start.y = rng.chance(0.5) ? 0 : CH - 1; }
   const seen = new Uint8Array(CW * CH);
   const stack = [start];
   seen[ci(start.x, start.y)] = 1;
@@ -91,12 +99,13 @@ export function generateDungeon(depth, biome, tileset, seed) {
   const dist = new Int16Array(CW * CH).fill(-1);
   const q = [ci(start.x, start.y)]; dist[q[0]] = 0;
   while (q.length) { const c = q.shift(); for (const n of adj[c]) if (dist[n] < 0) { dist[n] = dist[c] + 1; q.push(n); } }
-  let exitIdx = 0;
-  for (let i = 0; i < dist.length; i++) if (dist[i] > dist[exitIdx]) exitIdx = i;
+  let exitIdx = raid ? ci(CW - 1, 0) : 0;
+  for (let i = 0; i < dist.length; i++) if (dist[i] > dist[exitIdx] && (!raid || i % CW === CW - 1)) exitIdx = i;
   const startRoom = rooms[ci(start.x, start.y)];
   const exitRoom = rooms[exitIdx];
+  const arena = raid ? carveArena(map, exitRoom, CW, rng) : null;
   // make sure the boss arena is roomy
-  if (exitRoom.type !== 'room' || exitRoom.w < 7 || exitRoom.h < 7) {
+  if (!raid && (exitRoom.type !== 'room' || exitRoom.w < 7 || exitRoom.h < 7)) {
     const ox = exitRoom.cx * S + 1, oy = exitRoom.cy * S + 1;
     exitRoom.x = ox + 1; exitRoom.y = oy + 1; exitRoom.w = S - 3; exitRoom.h = S - 3; exitRoom.type = 'room';
     exitRoom.mx = exitRoom.x + exitRoom.w / 2; exitRoom.my = exitRoom.y + exitRoom.h / 2;
@@ -112,8 +121,8 @@ export function generateDungeon(depth, biome, tileset, seed) {
     for (let i = 0; i < alt.length; i++) alt[i] = i !== ci(start.x, start.y) && (dist[i] > far * 0.45) !== rng.chance(0.2) ? 1 : 0;
     region = (i) => alt[ci(clamp(Math.floor((i % W - 1) / S), 0, CW - 1), clamp(Math.floor((Math.floor(i / W) - 1) / S), 0, CH - 1))];
   }
-  finishMap(map, tileset, rng, region, rooms);
-  const obstacles = placeObstacles(map, rooms.filter((r) => r !== startRoom && r !== exitRoom), tileset, rng, startRoom);
+  finishMap(map, tileset, rng, region, arena ? [...rooms, arena] : rooms, arena ? [arena.arch] : []);
+  const obstacles = placeObstacles(map, rooms.filter((r) => r !== startRoom && (raid || r !== exitRoom)), tileset, rng, startRoom);
 
   // ---- spawns
   const spawns = [];
@@ -136,7 +145,7 @@ export function generateDungeon(depth, biome, tileset, seed) {
   const packRooms = rooms.filter((r) => r !== startRoom && dist[r.idx] >= 0);
   for (const r of packRooms) {
     const area = r.type === 'cave' ? 28 : r.w * r.h;
-    let packs = Math.max(r === exitRoom ? 0 : 1, Math.round((area / 26) * density * rng.range(0.7, 1.3)));
+    let packs = Math.max(r === exitRoom && !raid ? 0 : 1, Math.round((area / 26) * density * rng.range(0.7, 1.3)));
     if (r.type === 'small') packs = rng.chance(0.5) ? 1 : 0;
     for (let p = 0; p < packs; p++) {
       const arch = pickArch();
@@ -160,9 +169,10 @@ export function generateDungeon(depth, biome, tileset, seed) {
     const arch = pickArch();
     spawns.push({ x: px, y: py, arch, n: rng.int(3, 5), rank: 'unique', look: looks.pick(arch) });
   }
-  // the guardian of the exit
+  // the guardian of the exit, or the raid boss in its arena (game/raid.js picks which)
   const guardian = looks.boss(roster);
-  if (guardian) spawns.push({ x: exitRoom.mx, y: exitRoom.my, arch: guardian.arch, n: 1, rank: 'boss', look: guardian.look });
+  if (arena) spawns.push({ x: arena.cx + 4, y: arena.cy, n: 1, rank: 'raid' });
+  else if (guardian) spawns.push({ x: exitRoom.mx, y: exitRoom.my, arch: guardian.arch, n: 1, rank: 'boss', look: guardian.look });
   else spawns.push({ x: exitRoom.mx, y: exitRoom.my, arch: rng.pick(roster.filter((a) => !['bat', 'spider', 'beetle'].includes(a))), n: 1, rank: 'boss' });
 
   // ---- props, chests, torches
@@ -183,8 +193,9 @@ export function generateDungeon(depth, biome, tileset, seed) {
     chests.push({ x: Math.floor(r.mx) + 0.5, y: Math.floor(r.my) + 0.5, rare: rng.chance(0.2) });
   }
   const torches = [];
+  const inArena = (s) => arena && s.mx >= arena.x - 0.5 && s.mx <= arena.x + arena.w + 0.5 && s.my >= arena.y - 0.5 && s.my <= arena.y + arena.h + 0.5;
   for (const s of map.segments) {
-    if (s.front || rng.next() > 0.07) continue;
+    if (s.front || rng.next() > (inArena(s) ? 0.3 : 0.07)) continue;
     const ox = s.dir === 'f' ? 0.12 : 0, oy = s.dir === 'b' ? 0.12 : 0;
     torches.push({ x: s.mx + ox, y: s.my + oy, depth: s.depth + 0.01 });
   }
@@ -192,9 +203,43 @@ export function generateDungeon(depth, biome, tileset, seed) {
   return {
     map, rooms, spawns, props, chests, torches, looks,
     start: [startRoom.mx, startRoom.my],
-    exit: exitPos(map, exitRoom, startRoom),
-    bossRoom: exitRoom,
+    exit: arena ? [arena.x + arena.w - 2.5, arena.cy] : exitPos(map, exitRoom, startRoom),
+    bossRoom: arena || exitRoom,
+    raid: arena,
   };
+}
+
+/**
+ * The BOSS ROOM: a chamfered ARENA_W x ARENA_H hall east of the maze with four 2x2 stone pillars (real walls, so
+ * they block sight and shots: cover from the boss's cataclysm), reached by a 3-wide corridor from the far room of
+ * the maze's last column, under an arch. Returns the arena {x, y, w, h, cx, cy, gate, pillars, arch}.
+ */
+function carveArena(map, from, CW, rng) {
+  const W = map.w, H = map.h;
+  const set = (x, y, v) => { if (x > 0 && y > 0 && x < W - 1 && y < H - 1) map.t[y * W + x] = v; };
+  const ax = CW * S + 1 + ARENA_GAP, ay = clamp(Math.round(from.my - ARENA_H / 2), 2, H - ARENA_H - 2);
+  const cut = 5;
+  for (let y = 0; y < ARENA_H; y++) {
+    for (let x = 0; x < ARENA_W; x++) {
+      const ex = Math.min(x, ARENA_W - 1 - x), ey = Math.min(y, ARENA_H - 1 - y);
+      if (ex + ey >= cut) set(ax + x, ay + y, 1);
+    }
+  }
+  const cx = ax + ARENA_W / 2, cy = ay + ARENA_H / 2;
+  const pillars = [];
+  for (const [dx, dy] of [[-7, -5], [7, -5], [-7, 5], [7, 5]]) {
+    const px = Math.floor(cx + dx) - 1, py = Math.floor(cy + dy) - 1;
+    for (let y = py; y < py + 2; y++) for (let x = px; x < px + 2; x++) set(x, y, 0);
+    pillars.push([px + 1, py + 1]);
+  }
+  // corridor: east out of the room, down the gap to the arena's middle rows, east into the arena
+  const gy = clamp(Math.floor(from.my), ay + cut + 2, ay + ARENA_H - cut - 3);
+  const fx = Math.floor(from.mx), fy = Math.floor(from.my), mx = CW * S + 3;
+  for (let x = fx; x <= mx + 1; x++) for (let w = -1; w <= 1; w++) set(x, fy + w, 1);
+  for (let y = Math.min(fy, gy) - 1; y <= Math.max(fy, gy) + 1; y++) for (let w = -1; w <= 1; w++) set(mx + w, y, 1);
+  for (let x = mx; x < ax; x++) for (let w = -1; w <= 1; w++) set(x, gy + w, 1);
+  const arch = { axis: 'y', line: ax, a0: gy - 1, a1: gy + 2, kind: 'arch', design: null, flip: rng.chance(0.5) };
+  return { type: 'arena', x: ax, y: ay, w: ARENA_W, h: ARENA_H, cx, cy, mx: cx, my: cy, pillars, arch, gate: { x: ax, y0: gy - 1, y1: gy + 1 } };
 }
 
 /**
@@ -284,7 +329,7 @@ function findOpenings(map, rooms, tileset, rng) {
   if (!arches.length) return out;
   const fl = (x, y) => map.tile(x, y) === 1;
   for (const r of rooms) {
-    if (r.type === 'cave') continue;
+    if (r.type === 'cave' || r.type === 'arena') continue; // the arena's gate arch is placed by carveArena
     const sides = [
       { axis: 'x', line: r.y, lo: r.x, hi: r.x + r.w, inT: (a) => [a, r.y], outT: (a) => [a, r.y - 1] },
       { axis: 'x', line: r.y + r.h, lo: r.x, hi: r.x + r.w, inT: (a) => [a, r.y + r.h - 1], outT: (a) => [a, r.y + r.h] },
@@ -327,7 +372,7 @@ function exitPos(map, room, from) {
  * mixedTileSet) holds a second palette's floors after `split`; region(i) = 1 paves tile i with those.
  * Walls come from 2-3 of the pack's wall families, one per straight run, the first most often.
  */
-function finishMap(map, tileset, rng, region = null, rooms = []) {
+function finishMap(map, tileset, rng, region = null, rooms = [], extra = []) {
   const W = map.w;
   const bases = shuffleWith(tileset.bases.slice(), rng);
   const main = bases[0], hall = bases[1 % bases.length];
@@ -359,7 +404,9 @@ function finishMap(map, tileset, rng, region = null, rooms = []) {
   }
   const fams = shuffleWith(tileset.families.slice(), rng);
   const families = [[fams[0], 5], [fams[1 % fams.length], 3], [fams[2 % fams.length], 1.5]];
-  map.buildWalls(tileset, () => rng.next(), findOpenings(map, rooms, tileset, rng), families);
+  const arches = Object.keys(tileset.arches || {});
+  for (const o of extra) if (o.kind === 'arch' && !o.design) o.design = arches.length ? rng.pick(arches) : null;
+  map.buildWalls(tileset, () => rng.next(), [...findOpenings(map, rooms, tileset, rng), ...extra.filter((o) => o.design)], families);
 }
 
 /** Depth 100: a gauntlet that ends in the demon lord's arena. */

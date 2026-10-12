@@ -128,8 +128,17 @@ export const HUD = {
     }
     // boss bar
     const boss = w && w.boss && !w.boss.dead && w.boss.awake ? w.boss : null;
-    set('boss', boss ? boss.id : 0, () => { $('#boss-bar').classList.toggle('hidden', !boss); if (boss) $('#boss-name').textContent = boss.name; });
+    set('boss', boss ? boss.id : 0, () => {
+      $('#boss-bar').classList.toggle('hidden', !boss);
+      if (boss) $('#boss-name').textContent = boss.name;
+      // a raid boss's phase changes, as marks on the bar
+      const tr = $('#boss-track');
+      tr.querySelectorAll('.boss-mark').forEach((e) => e.remove());
+      if (boss && boss.raid) for (const k of boss.raid.marks) { const d = el('div', 'boss-mark'); d.style.left = k * 100 + '%'; tr.appendChild(d); }
+    });
     if (boss) set('bossHp', Math.round((boss.hp / boss.maxHp) * 500) / 5, (v) => { $('#boss-fill').style.width = v + '%'; });
+    set('bossSub', boss && boss.raid ? boss.raid.label() : '', (v) => { $('#boss-sub').textContent = v; });
+    set('bossWard', !!(boss && boss.ward < 1), (v) => { $('#boss-bar').classList.toggle('warded', v); });
     // buffs
     this.buffT = (this.buffT || 0) - dt;
     if (this.buffT <= 0) {

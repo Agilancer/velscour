@@ -1,4 +1,11 @@
 // Tile map: floor grid, wall segments, collision, line of sight and path finding.
+
+/**
+ * Collision half-size of a creature's body. Capped below half a tile so even a huge boss fits any one-tile gap
+ * (a 2-wide corridor, a gap beside a prop); its sprite and hit radius (`r`) stay as big as they are.
+ */
+export const bodyR = (e) => Math.min(e.r * 0.8, 0.42);
+
 export class TileMap {
   constructor(w, h) {
     this.w = w; this.h = h;
@@ -38,8 +45,14 @@ export class TileMap {
       if (this.isFloor(nx, ny)) { e.x = nx; e.y = ny; return true; }
       return false;
     }
-    const r = e.r * 0.8;
+    const r = bodyR(e);
     let moved = false;
+    if (!this.circleFree(e.x, e.y, r)) {
+      // already overlapping a wall or prop (knocked, spawned or pushed there): any step onto open floor lets it out
+      const nx = e.x + dx, ny = e.y + dy;
+      if (this.walkable(nx, ny)) { e.x = nx; e.y = ny; return true; }
+      return false;
+    }
     if (dx !== 0) {
       const nx = e.x + dx;
       if (this.circleFree(nx, e.y, r)) { e.x = nx; moved = true; }
@@ -81,7 +94,7 @@ export class TileMap {
     f.fill(-1);
     if (!this.walkableTile(tx, ty)) return;
     const W = this.w;
-    const q = new Int32Array(this.w * this.h);
+    const q = this._fq || (this._fq = new Int32Array(this.w * this.h));
     let qh = 0, qt = 0;
     q[qt++] = ty * W + tx; f[ty * W + tx] = 0;
     while (qh < qt) {
@@ -103,6 +116,21 @@ export class TileMap {
     const tx = Math.floor(x), ty = Math.floor(y);
     if (!this.inb(tx, ty)) return -1;
     return this.flow[ty * this.w + tx];
+  }
+  /**
+   * The way down the flow field from (x,y): up to n tile centres, each the best of its 8 neighbours (no corner
+   * cutting), smoothed for a mover of half-size r so it heads straight for the farthest one its body can reach.
+   * null when (x,y) is off the field.
+   */
+  flowPath(x0, y0, r, n = 12) {
+    const out = [];
+    let x = x0, y = y0;
+    for (let i = 0; i < n; i++) {
+      const s = this.flowStep(x, y);
+      if (!s) break;
+      out.push(s); x = s[0]; y = s[1];
+    }
+    return out.length ? this.smooth(x0, y0, out, r) : null;
   }
   /** Direction (tile centre) of the best next step along the flow field. */
   flowStep(x, y) {
@@ -236,6 +264,19 @@ export class TileMap {
       if (!this.circleFree(x0 + dx * t, y0 + dy * t, r)) return false;
     }
     return true;
+  }
+
+  /** The nearest spot to (x,y), within 2 tiles, where a body of half-size r fits; (x,y) itself if none. */
+  nudge(x, y, r) {
+    if (this.circleFree(x, y, r)) return [x, y];
+    for (let k = 1; k <= 8; k++) {
+      const d = k * 0.25;
+      for (let i = 0; i < 8 + k * 2; i++) {
+        const a = (i / (8 + k * 2)) * Math.PI * 2, nx = x + Math.cos(a) * d, ny = y + Math.sin(a) * d;
+        if (this.circleFree(nx, ny, r)) return [nx, ny];
+      }
+    }
+    return [x, y];
   }
 
   /** Random walkable tile centre near (x,y) within r. */

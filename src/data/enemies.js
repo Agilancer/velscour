@@ -27,6 +27,22 @@ export const ARCH = {
   velscour: { sprite: 'velscour', ai: 'boss', hp: 1, dmg: 1, spd: 2.4, px: 3.6, r: 0.9, pal: { a: '#5a0c0c', b: '#1a0606', c: '#2a0808', w: '#e8d8b0', g: '#ffb020', e: '#ffee40', r: '#ff2010', k: '#000000' }, gore: 'flesh', demon: true, names: ['Velscour'] },
 };
 
+// Special attacks (Monster.trySpecial in game/monster.js). A normal monster rolls one of its archetype's (more often
+// the deeper it is), a greater breed two, champions and uniques all of them.
+//   melee:  lunge (leap onto the target), whirl (spin hitting all round), combo (three quick blows), quake (a fissure
+//           along the ground), hook (a chain that drags the target in), frenzy (faster and fiercer when badly hurt)
+//   ranged: fan (a spread of five), burst (three or more shots that lead a moving target), lob (an arcing glob that
+//           leaves a pool), snipe (a long telegraphed piercing shot), blink (teleport away from a hero up close),
+//           runes (three delayed blasts round the target), orbs (a ring of slow orbs), sweep (a beam swept across),
+//           web (a sticky shot that slows)
+export const ARCH_MOVES = {
+  skeleton: ['combo', 'lunge'], archer: ['burst', 'snipe', 'fan'], zombie: ['frenzy', 'combo'], ghoul: ['lunge', 'frenzy'],
+  imp: ['blink', 'fan', 'lob'], demon: ['whirl', 'quake', 'hook'], spider: ['lunge', 'web'], bat: ['lunge'], slime: ['lob'],
+  wraith: ['blink', 'orbs'], golem: ['quake', 'whirl'], cultist: ['runes', 'blink'], hound: ['lunge', 'frenzy'],
+  eye: ['sweep', 'orbs'], knight: ['combo', 'whirl', 'hook'], worm: ['lob', 'burst'], shroom: ['lob'], elemental: ['orbs', 'blink'],
+  scorpion: ['lunge', 'combo'], gargoyle: ['lunge', 'quake'], beetle: [], abomination: ['whirl', 'hook', 'quake'], velscour: [],
+};
+
 export const GORE = {
   flesh: { blood: null, gib: null },
   bone: { blood: '#d8ccb0', gib: '#e8dcc0', bones: true },
