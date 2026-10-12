@@ -29,7 +29,7 @@ const { openGame, report } = require('./harness');
         let s = 0; for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (!m.tile(x + dx, y + dy)) s++;
         if (s > 10 && s < 26) spots.push([x, y]);
       }
-      const [x, y] = spots[(spots.length * (0.3 + 0.2 * n)) | 0];
+      const [x, y] = spots[(spots.length * ((0.3 + 0.2 * n) % 1)) | 0];
       G.player.x = x + 0.5; G.player.y = y + 0.5;
     }, n);
     await page.evaluate(async (z) => { const { camera } = await import('/src/core/view.js'); camera.zoom = z; }, +(process.env.ZOOM || 1.5));
