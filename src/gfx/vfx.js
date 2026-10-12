@@ -13,7 +13,7 @@ export const ELEM = {
   holy: { name: 'Holy', core: '#fffff0', glow: '#ffd860', dark: '#d08a00', sfx: 'holy' },
   shadow: { name: 'Shadow', core: '#e8c0ff', glow: '#9030d0', dark: '#280038', sfx: 'shadow' },
   blood: { name: 'Blood', core: '#ffa0a0', glow: '#e01010', dark: '#5a0000', sfx: 'blood' },
-  acid: { name: 'Acid', core: '#eaffa0', glow: '#50ff30', dark: '#108020', sfx: 'acid' },
+  acid: { name: 'Acid', core: '#d8f0ff', glow: '#3a8cff', dark: '#0c2aa0', sfx: 'acid' }, // the Slime Lord's blue ooze
 };
 export const elem = (k) => ELEM[k] || ELEM.phys;
 

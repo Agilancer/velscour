@@ -69,7 +69,7 @@ export const CLASSES = {
   },
   slime_lord: {
     name: 'Slime Lord', primary: 'vit', base: { str: 18, dex: 14, vit: 32, int: 16 }, life: 85, mana: 35, lifeLvl: 9, manaLvl: 2.5,
-    weapon: 'mace', element: 'acid', color: '#50ff70',
+    weapon: 'mace', element: 'acid', color: '#4aa8ff',
     trees: ['Ooze', 'Spawn', 'Mutation'],
     desc: 'A crowned king of living ooze. Acid floods, endless slimeling broods and grotesque mutations.',
   },
