@@ -5,7 +5,7 @@ It is plain JavaScript ES modules and Canvas 2D, with **no build step and no dep
 straight from `main` at https://agilancer.github.io/velscour/.
 
 **Start every session by reading [`docs/HANDOFF.md`](docs/HANDOFF.md).** It holds the user's full original
-requirements, current status, open issues, the next steps, and a fact-checked map of every subsystem.
+requirements, current status, open issues, the next steps, and a subsystem reference.
 This file only covers the essentials.
 
 ## Run it
