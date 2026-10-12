@@ -421,7 +421,10 @@ are in section 7.
      Hammers) x4, so the main attack is a swirling hammer and Wheel of Hammers fires whenever it is ready.
    - Docs/help/README updated; new test `tools/tests/hud.js`. Verified: hud.js (migration, all 15 slots cast from their
      key/button, ring around the map, button art, Quest Log, touch pages, flip button clear of the orb), flow, ui,
-     mobile, select, skills (wizard) and auto-play soaks (results below in this item).
+     mobile, select, skills (wizard) and auto-play soaks: paladin (Blessed Hammer 7 points on LMB at level 7, depth 5 by
+     9 game minutes), necromancer (12 summons on the bar, depth 7 in 12 min), totem master and slime lord (boss room
+     at depth 5): 0 deaths, no errors. The Paladin saves early points until Blessed Hammer opens at level 6. One
+     paladin run stalled ~6 min "Dodging!" on depth 1 (the known occasional bot stall); a probe could not reproduce it.
 
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
