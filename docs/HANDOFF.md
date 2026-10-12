@@ -318,11 +318,18 @@ are in section 7.
      retreats from a sealed boss room.
    - Verified: `mobs.js 20` (820 monsters, 0.2% stuck, all guardians arrive), new `raid.js` (depths 5/30/55 end to end,
      and all 8 bosses cast their whole pool), flow, boss, ui, mobile (+ a raid screenshot at 844x390), pets, data_check,
-     skills (wizard, barbarian), auto-play (see below). `legion.js` fails now and then on one random minion's spell
+     skills (wizard, barbarian), and auto-play soaks (wizard, paladin, necromancer: every bot clears depth 5's boss room,
+     0 deaths, no errors; on the final tuning a level-10 paladin took Colossal Pyrethrax from 35.7k to 12.4k life in
+     about 1.5 game minutes, still at full health, before the run ended).
+   - Open: raid balance has only been checked at depth 5 with auto-play bots that are a few levels over the depth.
+     Deeper raids (life x (30 + depth/2) on top of the normal curve) and real players are untested. Knobs: the
+     `maxHp`/`dmg` line in `makeRaidBoss`, crystal life in `makeWard`, `marks` (phase thresholds), the gap
+     `rand(2, 3.2)` and `gapMul` in `Raid.update`. `legion.js` fails now and then on one random minion's spell
      count (Pyre Knight); the unchanged code does the same.
 
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
+0. Get the user's playtest feedback on the boss rooms (item 15): difficulty, length, readability of the telegraphs.
 1. Get PR #1 merged (by the user) and confirm the Pages deploy works at https://agilancer.github.io/velscour/.
 2. Act on the user's playtest feedback.
 3. Pre-release hardening, which was offered to the user but not yet run:
