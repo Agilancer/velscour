@@ -4,6 +4,7 @@ import { el, escapeHtml, fmtInt } from '../core/util.js';
 import { itemName, itemBaseLine, itemColor, itemStats, itemDmg, itemArmor, statLabel, RARITY, GEMS, gemStats, gemName, LEGENDARY, SLOT_NAMES, POTION_INFO } from '../data/items.js';
 import { CLASSES } from '../data/classes.js';
 import { itemIconURL } from './icons.js';
+import { classArt } from '../core/classart.js';
 
 export function itemCell(item) {
   const d = el('div', 'itemicon');
@@ -49,6 +50,8 @@ export function itemTooltip(item, opts = {}) {
       h += `<div class="tt-base">${SLOT_NAMES[item.slot]} · Item Level ${item.ilvl}</div><div class="dim">Its true nature is revealed once purchased.</div>`;
     } else {
       h += `<div class="tt-base">${escapeHtml(itemBaseLine(item))} · ${RARITY[item.rarity].name} ${SLOT_NAMES[item.slot]} · iLvl ${item.ilvl}</div>`;
+      const design = item.art && classArt(item.artCls) && (classArt(item.artCls).armor[item.art] || {}).design;
+      if (design) h += `<div class="dim" style="font-style:italic">${escapeHtml(design[0].toUpperCase() + design.slice(1))}.</div>`;
       if (item.dmg) { const [a, b] = itemDmg(item); h += `<div>Damage: <b>${a}–${b}</b>${cmp(opts.compare, item, 'dmg')}</div>`; }
       if (item.armor) h += `<div>Armor: <b>${itemArmor(item)}</b>${cmp(opts.compare, item, 'armor')}</div>`;
       if (item.upg) h += `<div style="color:#ffd34a">Upgraded +${item.upg}</div>`;

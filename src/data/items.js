@@ -7,7 +7,10 @@ export const RARITY = [
   { id: 2, name: 'Rare', color: '#4f8dff', weight: 9, affixes: [2, 3], sockets: 3, mult: 1.1 },
   { id: 3, name: 'Epic', color: '#b45cff', weight: 3.2, affixes: [3, 4], sockets: 4, mult: 1.25 },
   { id: 4, name: 'Legendary', color: '#ff9a2a', weight: 0.8, affixes: [4, 5], sockets: 6, mult: 1.4 },
+  { id: 5, name: 'Mythic', color: '#ff4058', weight: 0.12, affixes: [5, 6], sockets: 6, mult: 1.65 },
 ];
+/** Display colour per rarity id (also used for icon and staff tints). */
+export const RARITY_COLORS = RARITY.map((r) => r.color);
 
 export const MATERIALS = [
   { name: 'Rusted', color: '#8a6a50' }, { name: 'Iron', color: '#9aa0a8' }, { name: 'Steel', color: '#c4ccd4' },
@@ -127,6 +130,39 @@ export const LEGENDARY = {
   crit: { name: 'Executioner', desc: '+10% critical chance and +60% critical damage.', stats: [['critChance', 10], ['critDmg', 60]] },
 };
 
+// ---------------------------------------------------------------- class catalog items
+// A class art pack (assets/sprites/classes/<cls>/<cls>.json) names that class's weapons, shields, helmets
+// and body armor. While a hero of that class plays, every drop, vendor item and starting item of those slots
+// is one of the catalog pieces of the rolled rarity (with its own name and icon) when one fits the slot and
+// base; everything else stays a generic item.
+let classPool = null;
+const BASE_WORDS = [
+  ['sword', /Sword|Sabre|Blade|Edge|Falchion|Estoc|Rapier|Scimitar|Amen/], ['axe', /Axe|Cleaver|Executioner|Reaver/],
+  ['hammer', /Hammer|Maul/], ['spear', /Spear|Lance|Trident|Glaive|Halberd|Pike/], ['mace', /Mace|Club|Flail|Scourge/],
+];
+/** The generic weapon base a catalog weapon behaves as (by its name; swords by default). */
+export function catalogBase(name) {
+  for (const [b, re] of BASE_WORDS) if (re.test(name)) return b;
+  return 'sword';
+}
+export function setClassItems(cls, meta) {
+  if (!meta) { classPool = null; return; }
+  const rar = (r) => Math.max(0, RARITY.findIndex((x) => x.name === r));
+  classPool = { weapon: [], offhand: [], head: [], body: [] };
+  for (const [id, e] of Object.entries(meta.items)) {
+    const slot = e.kind === 'helmet' ? 'head' : e.kind === 'shield' ? 'offhand' : 'weapon';
+    const base = slot === 'head' ? 'head' : slot === 'offhand' ? 'shield' : catalogBase(e.name);
+    classPool[slot].push({ id, cls, name: e.name, rarity: rar(e.rarity), base });
+  }
+  for (const [id, e] of Object.entries(meta.armor)) classPool.body.push({ id, cls, name: e.name, rarity: rar(e.rarity), base: 'body' });
+}
+function classItem(slot, rarity, base) {
+  const list = classPool && classPool[slot];
+  if (!list) return null;
+  const fits = list.filter((e) => e.rarity === rarity && (!base || e.base === base));
+  return fits.length ? pick(fits) : null;
+}
+
 // ---------------------------------------------------------------- gems
 export const GEM_TIERS = ['Chipped', 'Flawed', '', 'Flawless', 'Perfect', 'Royal'];
 const GEM_MULT = [1, 1.8, 3, 4.5, 6.5, 9];
@@ -216,6 +252,8 @@ export function rollItem(ilvl, opts = {}) {
   const rarity = opts.rarity ?? rollRarity(opts.mf || 0, opts.bonus || 0);
   const tier = tierOf(ilvl);
   const item = { uid: newUid(), type: 'gear', slot, rarity, ilvl, tier, upg: 0, affixes: [], gems: [], sockets: 0 };
+  const art = opts.generic ? null : classItem(slot, rarity, opts.base);
+  if (art) opts = { ...opts, base: art.base };
   if (slot === 'weapon') {
     item.base = opts.base || pick(Object.keys(WEAPONS));
     const W = WEAPONS[item.base];
@@ -244,8 +282,9 @@ export function rollItem(ilvl, opts = {}) {
   rollAffixes(item, randi(R.affixes[0], R.affixes[1]));
   item.maxSockets = R.sockets;
   item.sockets = Math.min(R.sockets, chance(0.45) ? randi(0, Math.ceil(R.sockets / 2)) : 0);
-  if (rarity === 4) item.legendary = pick(Object.keys(LEGENDARY));
+  if (rarity >= 4) item.legendary = pick(Object.keys(LEGENDARY));
   if (rarity >= 3) item.title = pick(EPIC_A) + pick(EPIC_B);
+  if (art) Object.assign(item, { art: art.id, artCls: art.cls, uname: art.name });
   else if (rarity >= 1) {
     const pre = item.affixes.find((a) => !a.implicit && AFFIX_BY_STAT[a.s].pre);
     const suf = item.affixes.find((a) => !a.implicit && AFFIX_BY_STAT[a.s].suf);
@@ -260,6 +299,7 @@ export function rollItem(ilvl, opts = {}) {
 export function itemName(item) {
   if (item.type === 'gem') return gemName(item.gem, item.tier);
   if (item.type === 'potion') return item.name;
+  if (item.uname) return item.uname + (item.upg ? ` +${item.upg}` : '');
   const base = `${MATERIALS[item.tier].name} ${item.baseName}`;
   const upg = item.upg ? ` +${item.upg}` : '';
   if (item.rarity >= 3) return `${item.title}${upg}`;
@@ -296,7 +336,7 @@ export function itemArmor(item) { return Math.round((item.armor || 0) * upgMult(
 
 export function itemValue(item) {
   if (item.type === 'gem') return Math.round((GEMS[item.gem].special ? 400 : 60) * Math.pow(2.6, item.tier));
-  const base = 12 * Math.pow(1.06, item.ilvl) * [1, 2.5, 6, 15, 40][item.rarity];
+  const base = 12 * Math.pow(1.06, item.ilvl) * [1, 2.5, 6, 15, 40, 100][item.rarity];
   return Math.round(base * (1 + item.affixes.length * 0.15) * (1 + item.sockets * 0.2) * (1 + (item.upg || 0) * 0.3));
 }
 

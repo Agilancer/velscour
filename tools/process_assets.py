@@ -8,6 +8,7 @@ JSON atlases under assets/. Re-run this whenever a source sheet changes:
     pip install pillow numpy scipy
     python3 tools/process_assets.py          # everything
     python3 tools/process_assets.py tiles    # floor/wall atlases only
+    python3 tools/process_assets.py classes [paladin]   # class art packs (tools/classart.py, docs/CLASS_ART.md)
 
 Outputs
   assets/sprites/classes/<class>.webp  one trimmed full-body sprite per class
@@ -473,7 +474,7 @@ def process_tiles():
 def main():
     args = sys.argv[1:]
     if not args or "all" in args:
-        args = ["sprites", "tiles", "props"]
+        args = ["sprites", "tiles", "props", "classes"]
     if "sprites" in args:
         process_classes()
         process_ui()
@@ -481,6 +482,10 @@ def main():
         process_tiles()
     if "props" in args:
         process_props()
+    for flag in ("classes", "classart"):
+        if flag in args:
+            from classart import process_class_art
+            process_class_art(args[args.index(flag) + 1:])
 
 
 # --------------------------------------------------------------------------

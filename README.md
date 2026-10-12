@@ -87,6 +87,7 @@ Art you provided, used directly:
 - **Class sprites**, sliced from the design reference sheet. They serve as the player sprite, the class-select portraits, and (palette-swapped) the town NPCs and some summons.
 - **Logo** on the title screen; it is also the source of the app icon.
 - **HUD bar**. The orbs, XP bar and slots are wired to its exact geometry.
+- **Paladin art pack**: 60 armor outfits with attack/cast poses (the equipped body armor changes the hero's look), 42 weapons, 18 shields and 60 helmets as named catalog items, and 60 ability effects mapped onto the 60 Paladin skills. A new **Mythic** rarity sits above Legendary. See [docs/CLASS_ART.md](docs/CLASS_ART.md).
 - **Environment sheets**: 10 floor/wall tile sets (seamless walls, pillars, towers, rubble), 5 scatter-terrain sheets (obstacles and chests) and 20 barricade sets, mapped onto the 20 biomes. See [docs/ART.md](docs/ART.md).
 
 Placeholder art: monsters, summons and item icons are drawn as ASCII pixel-art in `src/gfx/pixelart.js` and palette-swapped. Town buildings and ground are drawn procedurally in `src/gfx/townart.js`.
