@@ -22,6 +22,7 @@ export const G = {
     amb: 0.5,
     gore: 2, // 0 off, 1 normal, 2 extreme
     dmgNumbers: true,
+    voice: true, // the level-up voice line
     shake: true,
     zoom: 1,
   },

@@ -64,6 +64,10 @@ Progress saves automatically in the browser (localStorage), and you can keep up 
 - **Town of Duskhollow**: Weaponsmith, Armorer, Blacksmith (+1…+10 upgrades), Enchanter (reroll/add affixes), Alchemist (potions), Gem Merchant (buy, or combine 3 → 1 higher tier), Jeweler (add sockets, remove gems) and Gambler. Townsfolk wander the plaza.
 - **Auto-play**: the Auto button (or P) hands the hero to an AI that plays for you. It spends skill and attribute points, keeps the skill bar sorted, fights with every skill on the bar (dodging telegraphed attacks, kiting with ranged builds, drinking potions, using cooldowns, buffs, curses and minions), picks up and equips upgrades, sockets gems, then goes to town to sell, restock potions, buy gear and gems, add sockets, upgrade, enchant and gamble, and keeps delving toward Velscour. It also gets back up after a death. Move, click or tap to take over for a moment; it resumes when you let go.
 - Sampled sound effects, music and drifting ambient beds (procedural fallbacks for the rest), settings, a help screen and six hero save slots.
+- An arcade level-up: freeze frame, hellfire pillar, burning sigil, chiptune fanfare, and a speech-chip voice: "YOU
+  HAVE BECOME MORE POWERFUL, BUT VELSCOUR STILL LIVES" (`assets/audio/voice/levelup.wav`, made by
+  `tools/levelup_voice.py`). Comic-book damage numbers (bigger, hellfire crits on a burst) and a stats plaque: level,
+  attack, sheet DPS and the real average DPS over the last 30 seconds.
 
 ## Project layout
 

@@ -1,9 +1,10 @@
 // Damage resolution, status effects, deaths, gore.
 import { G } from '../state.js';
-import { rand, chance, clamp, angleTo, TAU, fmt, mixHex } from '../core/util.js';
+import { rand, chance, clamp, angleTo, TAU, mixHex } from '../core/util.js';
 import { camera } from '../core/view.js';
 import { sfx } from '../core/audio.js';
-import { floatText, bloodSpray, gibs, addDecal, addEffect, Bolt, elem, spawn, burst } from '../gfx/vfx.js';
+import { floatText, damageText, bloodSpray, gibs, addDecal, addEffect, Bolt, elem, spawn, burst } from '../gfx/vfx.js';
+import { Meter } from './dpsmeter.js';
 import { explosionFx, hitSpark } from '../gfx/shapes.js';
 import { GORE } from '../data/enemies.js';
 import { dropLoot } from './loot.js';
@@ -75,6 +76,8 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
   }
   dmg = Math.max(1, dmg * rand(0.92, 1.08));
 
+  const byHero = !tgt.isPlayer && tgt.team !== 'player' && (fromPlayer || (src && src.team === 'player'));
+  if (byHero) Meter.add(Math.min(dmg, Math.max(0, tgt.hp)));
   tgt.hp -= dmg;
   tgt.flash = 0.12;
   if (tgt.onDamaged && !o.dot) tgt.onDamaged(src, dmg);
@@ -84,14 +87,12 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
 
   // ---- feedback
   if (!o.silent) {
-    const z = 30 + (tgt.fly ? 18 : 0);
+    const z = clamp((tgt.artH || tgt.spriteH || 40) * (tgt.scale || 1) * 0.85, 26, 150) + (tgt.fly ? 18 : 0);
     if (tgt.isPlayer) {
-      floatText(tgt.x, tgt.y, z, fmt(dmg), '#ff4030', 13, { dmg: true });
+      damageText(tgt.x, tgt.y, z, dmg, o.dot ? 'dot' : 'hurt', '#ff4030');
       if (!o.dot) { sfx('hurt'); G.hurtFlash = Math.min(0.5, (G.hurtFlash || 0) + dmg / tgt.maxHp * 2); camera.shake(Math.min(8, 2 + (dmg / tgt.maxHp) * 30)); }
-    } else if (fromPlayer || (src && src.team === 'player')) {
-      const E = elem(el);
-      if (crit) floatText(tgt.x, tgt.y, z, fmt(dmg) + '!', '#ffe040', 20, { crit: true, dmg: true });
-      else floatText(tgt.x, tgt.y, z, fmt(dmg), o.dot ? E.glow : '#ffffff', o.dot ? 11 : 14, { dmg: true });
+    } else if (byHero) {
+      damageText(tgt.x, tgt.y, z, dmg, crit ? 'crit' : o.dot ? 'dot' : 'hit', elem(el).glow);
     }
   }
   if (!o.dot || chance(0.15)) {

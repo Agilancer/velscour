@@ -98,11 +98,11 @@ function skillDps(p, sk, L, crowd = CROWD) {
 /**
  * The hero's damage output with the current skills and gear: the best spammable skill (topped up by the free skill
  * when mana runs dry), plus every cooldown skill, minion, buff and curse that fits on the ten-slot bar.
- * Returns { total, parts:[{sk, v, role}] } with parts sorted by value.
+ * Returns { total, parts:[{sk, v, role}] } with parts sorted by value. `only` (a Set of skill ids) limits it to those.
  */
-export function buildPower(p, crowd = CROWD) {
+export function buildPower(p, crowd = CROWD, only = null) {
   const c = p.char;
-  const learned = CLASS_SKILLS[c.classId].filter((s) => (c.skills[s.id] || 0) > 0);
+  const learned = CLASS_SKILLS[c.classId].filter((s) => (c.skills[s.id] || 0) > 0 && (!only || only.has(s.id)));
   const spam = [], parts = [];
   for (const sk of learned) {
     if (!OFFENSIVE.has(sk.kind) || sk.kind === 'corpse') continue;
@@ -152,6 +152,21 @@ export function buildPower(p, crowd = CROWD) {
   parts.sort((a, b) => b.v - a.v);
   const kept = parts.slice(0, 10);
   return { total: kept.reduce((a, x) => a + x.v, 0), parts: kept };
+}
+
+const DAMAGE_ROLES = new Set(['main', 'alt', 'cd', 'summon']);
+/**
+ * The HUD's sheet numbers. dps: what the skill bar deals to one target per second at the current stats (crits,
+ * attack/cast speed, cooldowns, mana and minions included). atk: the average hit of the main attack, crits included.
+ */
+export function heroDamage(p) {
+  const bar = p.char.bar.filter((id) => id && SKILLS[id]);
+  const { parts } = buildPower(p, 1, new Set(bar));
+  const dps = parts.reduce((a, x) => a + (DAMAGE_ROLES.has(x.role) ? x.v : 0), 0);
+  const lmb = SKILLS[p.char.bar[0]];
+  const main = lmb && OFFENSIVE.has(lmb.kind) ? lmb : (parts.find((x) => x.role === 'main') || {}).sk || SKILLS[`${p.classId}.0.0`];
+  const atk = main ? avg(p.skillDamage(main, Math.max(1, effLevel(p, main)))) * critMul(p) : 0;
+  return { dps, atk };
 }
 
 /** One number for "how strong is the hero": log offense + log effective life + a little utility. */
