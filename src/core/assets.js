@@ -71,7 +71,8 @@ export function biomeTileSet(biome) {
   const floorImg = pal ? recolor(A.floorAtlas, pal) : A.floorAtlas;
   const wallPal = biome.wallPalette || pal;
   const wallImg = wallPal ? recolor(A.wallAtlas, wallPal) : A.wallAtlas;
-  const set = { floors: [], details: [], thresholds: [], segFwd: [], segBack: [], pillars: [], corners: [], rubble: [], towers: [], misc: [], arch: null, gate: null, floorImg, wallImg };
+  const set = { floors: [], details: [], thresholds: [], segFwd: [], segBack: [], pillars: [], corners: [], rubble: [], towers: [], misc: [], arch: null, gate: null, floorImg, wallImg, walls: [] };
+  const strips = { wall_body: [], wall_cap: [], wall_ledge: [] };
   for (const f of A.tileMeta.floors) {
     const e = { img: floorImg, sx: f.x, sy: f.y, w: f.w, h: f.h };
     if (f.cat === 'floor') set.floors.push(e);
@@ -89,11 +90,43 @@ export function biomeTileSet(biome) {
       case 'tower': set.towers.push(e); break;
       case 'arch': set.arch = e; break;
       case 'gate': set.gate = e; break;
+      case 'wall_body': case 'wall_cap': case 'wall_ledge': e.rows = w.rows; strips[w.kind].push(e); break;
       default: set.misc.push(e);
     }
   }
+  set.pillars.sort((a, b) => b.w - a.w);
+  set.walls = composeWalls(strips);
   A.biomeSets[biome.id] = set;
   return set;
+}
+
+export const WALL_TIERS = 2; // skull-niche tiers stacked per wall (the corner posts have two as well)
+
+/**
+ * Stack the seamless strips from tools/process_assets.py (ledge + WALL_TIERS niche bodies + cap) into
+ * whole "/" wall sections, one tile edge wide. Each strip is already sheared to 2:1, so stacking them at
+ * their row offsets keeps every edge aligned. `base` is the row where the wall face meets the floor at
+ * the section's left column; that line rises 1px per 2px to the right.
+ */
+function composeWalls(strips) {
+  const bodies = strips.wall_body, cap = strips.wall_cap[0], ledge = strips.wall_ledge[0];
+  if (!bodies.length || !cap || !ledge) return [];
+  const w = cap.w, ext = cap.h - cap.rows;
+  const rows = cap.rows + WALL_TIERS * bodies[0].rows + ledge.rows;
+  const out = [];
+  let seed = 7;
+  const pick = () => { seed = (seed * 16807) % 2147483647; return bodies[seed % bodies.length]; };
+  for (let i = 0; i < 24; i++) {
+    const c = makeCanvas(w, rows + ext);
+    const x = c.getContext('2d');
+    const put = (s, y) => x.drawImage(s.img, s.sx, s.sy, s.w, s.h, 0, y, s.w, s.h);
+    let y = cap.rows;
+    for (let t = 0; t < WALL_TIERS; t++) { put(pick(), y); y += bodies[0].rows; }
+    put(ledge, y);
+    put(cap, 0);
+    out.push({ img: c, sx: 0, sy: 0, w, h: rows + ext, base: y + ext });
+  }
+  return out;
 }
 
 /** Make a canvas icon from a potion image (for inventory / shop). */

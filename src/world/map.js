@@ -235,7 +235,9 @@ export class TileMap {
       v[d]++; vert.set(k, v);
     };
     const pickSeg = (dir) => {
-      // native sprites for this direction are preferred, mirrored ones add variety
+      // seamless wall sections ("/" art, mirrored for "\" edges)
+      if (tileset.walls && tileset.walls.length) return { spr: tileset.walls[Math.floor(rng() * tileset.walls.length)], flip: dir === 'b', strip: true };
+      // fallback: whole wall pieces; native sprites for this direction are preferred, mirrored ones add variety
       const fwd = tileset.segFwd, back = tileset.segBack;
       if (dir === 'f') {
         if (rng() < 0.8 || !back.length) return { spr: fwd[Math.floor(rng() * fwd.length)], flip: false };
@@ -265,7 +267,7 @@ export class TileMap {
     this.pillars = [];
     if (tileset.pillars.length) {
       for (const v of vert.values()) {
-        if (v.f && v.b) this.pillars.push({ x: v.x, y: v.y, spr: tileset.pillars[0], depth: v.x + v.y + 0.02 });
+        if (v.f && v.b) this.pillars.push({ x: v.x, y: v.y, spr: tileset.pillars[0], depth: v.x + v.y + 0.02, strip: tileset.walls && tileset.walls.length ? tileset.walls[0].w : 0 });
       }
     }
     // spatial buckets (by 8x8 tile cells) for fast culling

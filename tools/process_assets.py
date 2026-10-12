@@ -6,7 +6,8 @@ Slices the hand-made source sheets in assets/source/ into game-ready PNGs and
 JSON atlases under assets/. Re-run this whenever a source sheet changes:
 
     pip install pillow numpy scipy
-    python3 tools/process_assets.py
+    python3 tools/process_assets.py          # everything
+    python3 tools/process_assets.py tiles    # floor/wall atlases only
 
 Outputs
   assets/sprites/classes/<class>.webp  one trimmed full-body sprite per class
@@ -15,11 +16,12 @@ Outputs
   assets/ui/hud.json                   slot / orb / xp-bar geometry in hud.webp pixels
   assets/ui/potion_<color>.png         potion icons cut out of the skill bar
   assets/tiles/catacombs_floor.webp    floor-tile atlas (192x96 diamonds)
-  assets/tiles/catacombs_walls.webp    wall-piece atlas
+  assets/tiles/catacombs_walls.webp    wall-piece atlas, plus seamless wall strips (see build_wall_strips)
   assets/tiles/catacombs.json          atlas rects, categories and wall anchors
 """
 import json
 import os
+import sys
 
 import numpy as np
 from PIL import Image
@@ -52,13 +54,16 @@ def key_magenta(rgb):
     alpha[mag > 110] = 0
     edge = (mag > 45) & (mag <= 110)
     alpha[edge] = ((110 - mag[edge]) * 255 // 65)
-    # white label boxes / separator lines
+    # white label boxes / separator lines; small white blobs are skull highlights and stay
     white = (r > 215) & (g > 215) & (b > 215)
-    alpha[white] = 0
+    lab, n = ndimage.label(white)
+    for i, s in enumerate(ndimage.find_objects(lab)):
+        if s[1].stop - s[1].start >= 60 or s[0].stop - s[0].start >= 60 or (s[0].start < 30 and s[1].start < 300):
+            alpha[s][lab[s] == i + 1] = 0
     # despill pink fringes toward the green channel
     spill = mag > 20
-    r2 = np.where(spill, np.minimum(r, g + 20), r)
-    b2 = np.where(spill, np.minimum(b, g + 20), b)
+    r2 = np.where(spill, np.minimum(r, g + 6), r)
+    b2 = np.where(spill, np.minimum(b, g + 6), b)
     out = np.stack([r2, g, b2, alpha], axis=-1).clip(0, 255).astype(np.uint8)
     return out
 
@@ -226,6 +231,116 @@ def process_floors():
 
 
 # --------------------------------------------------------------------------
+# Seamless wall strips
+# --------------------------------------------------------------------------
+# The sheet's "/" wall pieces are self-contained panels: a curved coping rising to an end post with a
+# finial, and a ledge with cut ends. Laid edge to edge they read as a row of separate tombstones with
+# gaps between them. They all share one layout, so each is cut into parts that tile. In "unsheared"
+# space (each column shifted so the ledge front is horizontal) a piece is, top to bottom: coping,
+# molding, skull niche (the "body"), base molding + ledge, between two stone frames. Each body keeps
+# the whole bay between the frames, so strip joints land on stonework. One shared cap (a flat run of
+# coping) and one shared ledge (wrapped so it runs unbroken) replace the per-piece ends. Every part is
+# re-sheared to an exact 2:1 slope. The game stacks ledge + N bodies + cap per tile edge.
+STRIP_W = 46   # bay width in source px; the game maps it onto one tile edge
+CAP_W = 23     # the shared cap repeats every CAP_W px (divides STRIP_W, so it is seamless)
+BODY_H = 43    # niche rows kept above the base molding
+LEDGE_H = 21   # base molding + ledge rows
+
+
+def premul(a):
+    f = a.astype(np.float32)
+    f[..., :3] *= f[..., 3:4] / 255
+    return f
+
+
+def unpremul(f):
+    o = f.copy()
+    a = o[..., 3:4]
+    o[..., :3] = np.where(a > 0, o[..., :3] * 255 / np.maximum(a, 1e-3), 0)
+    return o.clip(0, 255).round().astype(np.uint8)
+
+
+def shift_cols(f, shifts, height):
+    """Resample each column of premultiplied f: out[v, x] = f[v + shifts[x], x] (linear)."""
+    h, w = f.shape[:2]
+    out = np.zeros((height, w, 4), np.float32)
+    v = np.arange(height, dtype=np.float32)
+    for x in range(w):
+        ys = v + shifts[x]
+        y0 = np.floor(ys).astype(int)
+        t = (ys - y0)[:, None]
+        a0 = np.where(((y0 >= 0) & (y0 < h))[:, None], f[np.clip(y0, 0, h - 1), x], 0)
+        a1 = np.where(((y0 + 1 >= 0) & (y0 + 1 < h))[:, None], f[np.clip(y0 + 1, 0, h - 1), x], 0)
+        out[:, x] = a0 * (1 - t) + a1 * t
+    return out
+
+
+def reshear(f):
+    """Rectangle (rows x STRIP_W) -> "/" parallelogram rising 1px per 2px; row r of column x lands at r + W/2 - x/2."""
+    ext = STRIP_W // 2
+    return Image.fromarray(unpremul(shift_cols(f, 0.5 * np.arange(f.shape[1]) - ext, f.shape[0] + ext)))
+
+
+def wall_layout(a):
+    """Measure a "/" piece. Returns the unsheared piece and its rows/columns, or None if it doesn't fit the template."""
+    al = a[..., 3] > 128
+    h, w = al.shape
+    bot = np.array([np.nonzero(al[:, x])[0].max() if al[:, x].any() else -1 for x in range(w)])
+    xs = np.arange(int(np.argmax(bot)) + 2, w - 2)  # the ledge's front edge
+    if len(xs) < 10:
+        return None
+    s, c = np.polyfit(xs, bot[xs], 1)
+    if abs(s + 0.515) > 0.03:  # broken or skewed pieces
+        return None
+    U = shift_cols(premul(a), s * np.arange(w), h + int(np.ceil(-s * w)) + 2)
+    ua = U[..., 3] > 128
+    top = np.array([np.nonzero(ua[:, x])[0].min() if ua[:, x].any() else 1 << 20 for x in range(w)])
+    face = np.nonzero(top < c - 40)[0]
+    f0, f1 = int(face.min()), int(face.max())
+    if f1 - f0 < STRIP_W + 1 or f1 + 1 >= w or len(face) != f1 - f0 + 1:
+        return None
+    ledge = int(top[f1 + 1])  # back edge of the ledge = bottom of the niche
+    rgb = unpremul(U).astype(int)
+    warm = ((rgb[..., 0] - rgb[..., 2]) * (U[..., 3] > 200))[:, f0 + 5:f0 + 20].mean(1)  # bone vs grey stone
+    cop = int(np.median(top[f0 + 3:f0 + 12]))
+    mold = next((r for r in range(cop + 5, ledge) if warm[r] > 14 and warm[r + 1] > 14), -1)
+    if mold < 0 or not (BODY_H - 2 <= ledge - mold <= BODY_H + 3) or not (17.5 <= c - ledge <= 21):
+        return None
+    return {"U": U, "top": top, "x0": f0 + 1, "ledge": ledge, "cop": cop, "mold": mold}
+
+
+def build_wall_strips(seg_pieces):
+    lays = [l for l in (wall_layout(np.asarray(p["img"])) for p in seg_pieces) if l]
+    out = []
+    bodies = [l["U"][l["ledge"] - BODY_H:l["ledge"], l["x0"]:l["x0"] + STRIP_W].copy() for l in lays]
+    # even out brightness between pieces, so neighbouring bays don't flicker light/dark
+    lum = [b[..., :3].sum() / max(b[..., 3].sum(), 1) for b in bodies]
+    for b, v in zip(bodies, lum):
+        b[..., :3] = np.minimum(b[..., :3] * (np.median(lum) / v), b[..., 3:4])
+        out.append({"kind": "wall_body", "img": reshear(b), "rows": BODY_H})
+    # shared cap + ledge from the first piece whose coping sits low and flat on its left side
+    l = next(l for l in lays if l["cop"] > 40)
+    U, x0, ua = l["U"], l["x0"], l["U"][..., 3] > 200
+    cap_h = l["mold"] - l["cop"]
+    cap = np.stack([U[l["top"][x]:l["top"][x] + cap_h, x] for x in range(x0, x0 + CAP_W)], axis=1)
+    cap = np.concatenate([cap] * (STRIP_W // CAP_W), axis=1)
+    out.append({"kind": "wall_cap", "img": reshear(cap), "rows": cap_h})
+    ledge = np.zeros((LEDGE_H, STRIP_W, 4), np.float32)
+    for r in range(LEDGE_H):
+        cols = np.nonzero(ua[l["ledge"] + r])[0]
+        lo, hi = (cols.min() + 1, cols.max() - 1) if len(cols) else (0, U.shape[1] - 1)
+        for j in range(STRIP_W):  # wrap by one bay so the ledge has no cut ends
+            x = x0 + j
+            x = x + STRIP_W if x < lo else x - STRIP_W if x > hi else x
+            ledge[r, j] = U[l["ledge"] + r, x]
+    out.append({"kind": "wall_ledge", "img": reshear(ledge), "rows": LEDGE_H})
+    for p in out:
+        p["w"], p["h"] = p["img"].size
+    print("wall strips:", len(lays), "bodies, cap", cap_h, "rows")
+    return out
+
+
+# --------------------------------------------------------------------------
 # Walls
 # --------------------------------------------------------------------------
 def process_walls():
@@ -279,6 +394,7 @@ def process_walls():
         piece[..., 3] = np.where(ndimage.binary_dilation(m, iterations=1), piece[..., 3], 0)
         pieces.append({"kind": kind, "img": Image.fromarray(piece), "slope": float(slope),
                        "icpt": float(icpt), "w": w, "h": h, "src": [int(x0), int(y0)]})
+    pieces += build_wall_strips([p for p in pieces if p["kind"] == "seg_fwd"])
     # shelf-pack
     pieces.sort(key=lambda p: -p["h"])
     aw, x, y, shelf = 1024, 0, 0, 0
@@ -292,8 +408,11 @@ def process_walls():
     entries = []
     for p in pieces:
         atlas.paste(p["img"], (p["ax"], p["ay"]))
-        e = {"kind": p["kind"], "x": p["ax"], "y": p["ay"], "w": p["w"], "h": p["h"],
-             "slope": round(p["slope"], 3), "base": round(p["icpt"], 1), "src": p["src"]}
+        e = {"kind": p["kind"], "x": p["ax"], "y": p["ay"], "w": p["w"], "h": p["h"]}
+        if "rows" in p:
+            e["rows"] = p["rows"]
+        else:
+            e.update({"slope": round(p["slope"], 3), "base": round(p["icpt"], 1), "src": p["src"]})
         entries.append(e)
     save(atlas, os.path.join(OUT, "tiles", "catacombs_walls.webp"))
     kinds = {}
@@ -304,8 +423,9 @@ def process_walls():
 
 
 def main():
-    process_classes()
-    process_ui()
+    if "tiles" not in sys.argv[1:]:  # `process_assets.py tiles` rebuilds only the floor/wall atlases
+        process_classes()
+        process_ui()
     floors = process_floors()
     walls = process_walls()
     with open(os.path.join(OUT, "tiles", "catacombs.json"), "w") as f:

@@ -121,6 +121,9 @@ are in section 7.
    version. Right after a deploy a browser may briefly mix old and new modules, and a hard refresh fixes it.
    Consider adding a version query to `src/main.js` if this causes trouble.
 5. **Placeholder art.** Character sprites are single frames with no walk/attack animation.
+6. **Dungeon walls were rebuilt** (branch `claude/relaxed-wright-tc4lrv`) from seamless strips cut out of the wall sheet,
+   with skull posts at corners and a soft cutaway when the hero is behind a wall. See [`WALLS.md`](WALLS.md), which also
+   lists what a replacement wall/floor art pack should look like. The user plans to upload a new pack.
 
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
@@ -245,7 +248,7 @@ Do these in order, unless the user asks for something else. Their feedback after
   - `A` (:11): `{classes, classScaled, hud, hudGeo, logo, potions, floorAtlas, wallAtlas, tileMeta, biomeSets}`.
   - `loadAssets(progress)` (:33).
   - `classSprite(id,h,palette)` (:49): cached, keyed `${id}|${h}|${JSON.stringify(palette)}`.
-  - `biomeTileSet(biome)` (:65) returns `{floors,details,thresholds,segFwd,segBack,pillars,corners,rubble,towers,misc,arch,gate,floorImg,wallImg}`. Entries look like `{img,sx,sy,w,h[,slope,base,kind]}`.
+  - `biomeTileSet(biome)` (:65) returns `{floors,details,thresholds,segFwd,segBack,pillars,corners,rubble,towers,misc,arch,gate,floorImg,wallImg,walls}`. Entries look like `{img,sx,sy,w,h[,slope,base,kind]}`. `walls` holds 24 composed seamless wall sections `{img(canvas),sx:0,sy:0,w:46,h,base}` from `composeWalls` (see [`WALLS.md`](WALLS.md)). `pillars` is sorted widest first.
   - `potionIcon(color,size=48)` (:100): **uncached**, makes a new canvas on every call.
 - **pixelart.js**
   - `SPRITES` (:8), 68 entries:
@@ -385,7 +388,7 @@ Do these in order, unless the user asks for something else. Their feedback after
 - Data contract with render.js:
   - Floor entries are 192x96 (3x TW×TH) and are drawn into `TW+1.2 × TH+1.2` with 0.6 px overlap.
   - `map.v[i] >= 100` selects `details[v-100]`, otherwise `floors[v]` (render.js:14-18).
-  - Wall `slope`/`base` (the bottom-edge linear fit in piece px) anchor segments using `WALL_K = HW*1.06/66` (render.js:10, :20-26).
+  - Wall sections (`tileset.walls`) are drawn one tile edge wide (`HW`) with `base` on the edge line (`segRect`, `s.strip`). The old whole-piece fallback anchors by `slope`/`base` (the bottom-edge linear fit in piece px) with `WALL_K = HW*1.06/66`.
   - Town tiles (`groundTile`) use the same `{img,sx,sy,w:192,h:96}` shape (town.js:19-22).
 
 **Pixel art**:
@@ -439,7 +442,8 @@ Do these in order, unless the user asks for something else. Their feedback after
   - The bottom profile is line-fit over the middle 60% of columns to get `slope`/`base`.
   - Pieces are classified by size, slope and position (:259-276), shelf-packed into a 1024-wide atlas.
   - Current result: seg_fwd 27, seg_back 9, corner 11, pillar 2, rubble 8, misc 5, arch 1, gate 1, **tower 0**.
-- `catacombs.json` = `{floorSize:[192,96], floors:[{cat,x,y,w,h}], walls:[{kind,x,y,w,h,slope,base,src}]}`.
+  - `build_wall_strips` then cuts the seg_fwd pieces into seamless parts: wall_body 18, wall_cap 1, wall_ledge 1 (see [`WALLS.md`](WALLS.md)).
+- `catacombs.json` = `{floorSize:[192,96], floors:[{cat,x,y,w,h}], walls:[{kind,x,y,w,h,slope,base,src} | {kind:'wall_body'|'wall_cap'|'wall_ledge',x,y,w,h,rows}]}`.
 
 ### Tuning knobs
 - **main.js**
@@ -496,7 +500,7 @@ Do these in order, unless the user asks for something else. Their feedback after
   - :282 'explode' sound when r>1.2.
 - **townart.js** :6 64x32 tile upscaled ×3; :83 supersample 2; :81 default wall height 52.
 - **style.css** :17 `--hud-w: min(96vw,1000px,105vh)`; :245 touch value `min(56vw,125vh)`.
-- **render.js** :10 `WALL_K` (owned elsewhere, but tied to the wall art scale).
+- **render.js** :10 `WALL_K` (only the fallback wall path); seamless sections scale by `HW / section width`. **assets.js** `WALL_TIERS = 2` niche tiers per wall.
 
 ### How to extend
 1. **New ASCII sprite.**
@@ -932,7 +936,7 @@ Render (`src/game/render.js`):
 ### How it works
 Tile codes: `t` only uses 0/1. `v` variant: dungeon 0..floors-1 = `tileset.floors[v]`, 100+i = `tileset.details[i]` (13% chance, dungeon.js:206); town uses `makeTownTiles` codes. `render.js:14 floorEntry` picks `world.townTiles` when present, else tileset (fallback `floors[0]`).
 
-Walls (map.js:229-280): for every floor tile with a void 4-neighbour emit a segment. `dir:'f'` ("/" on screen) lies on vertical grid line `x=ex` spanning `ey0..ey1`; `dir:'b'` ("\") on `y=ey` spanning `ex0..ex1`. West/north edges have `front:false` (back walls, top of screen); east/south `front:true`. Each seg gets `mx,my` (midpoint), `lx,ly` (screen-left endpoint anchor: 'f'->(ex,ey1), 'b'->(ex0,ey)), `depth=mx+my`, `spr` (atlas entry with `base`=bottom-edge y intercept and `slope`, from tools/process_assets.py:257) and `flip`. Sprite choice (pickSeg :237): 'f' -> 80% segFwd native, 20% segBack mirrored; 'b' -> 40% segBack native, else segFwd mirrored. Vertices touched by both orientations get a pillar (`tileset.pillars[0]`, depth x+y+0.02). Everything bucketed into 8x8-tile cells (`segGrid`). Render: `segRect` :20 anchors the sprite so its bottom line passes through iso(lx,ly) (flipped sprites use `base+slope*w`), scale `WALL_K`.
+Walls (map.js:229-280): for every floor tile with a void 4-neighbour emit a segment. `dir:'f'` ("/" on screen) lies on vertical grid line `x=ex` spanning `ey0..ey1`; `dir:'b'` ("\") on `y=ey` spanning `ex0..ex1`. West/north edges have `front:false` (back walls, top of screen); east/south `front:true`. Each seg gets `mx,my` (midpoint), `lx,ly` (screen-left endpoint anchor: 'f'->(ex,ey1), 'b'->(ex0,ey)), `depth=mx+my`, `spr`, `flip` and `strip`. Sprite choice (pickSeg): when `tileset.walls` exists, a random seamless section, mirrored (`flip`) for 'b' edges, with `strip:true`. Otherwise the old fallback: 'f' -> 80% segFwd native, 20% segBack mirrored; 'b' -> 40% segBack native, else segFwd mirrored (`spr.base`/`spr.slope` anchor). Vertices touched by both orientations get a pillar (`tileset.pillars[0]`, the widest, depth x+y+0.02, `strip` = section width so it is drawn at the same scale). Everything bucketed into 8x8-tile cells (`segGrid`). Render: `segRect` puts a section's face base on the edge, `HW` wide (+0.6 px overlap); the fallback anchors the sprite's bottom line through iso(lx,ly) with `WALL_K`. Walls in front of the hero fade via `cutaway` (screen distance and depth).
 
 Dungeon algorithm (dungeon.js):
 1. Chunk grid CWxCH of S=11-tile chunks, map `W=CW*S+2`, `H=CH*S+2` (:11-13). Start chunk: left column random row, or 50% random column on top/bottom row (:20-21).
@@ -992,7 +996,7 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 - Dormant enemies more than 26 tiles away aren't updated at all (no status ticks, no regen).
 - Building sort depth is the footprint centre (town.js:70). Entities near a long building's ends can sort wrongly, and the 0.4 alpha only applies around the player.
 - Wall sorting is an approximation (seg depth = midpoint sum). Front walls rely on the translucency rule. Monsters behind walls are simply hidden.
-- `buildWalls` requires non-empty `tileset.segFwd` (and `pillars` for corners). A segment with undefined `spr` is classified as a pillar by `s.spr && s.dir ? 2 : 3` (render.js:223) and crashes in drawPillar.
+- `buildWalls` requires non-empty `tileset.walls` or `tileset.segFwd` (and `pillars` for corners). A segment with undefined `spr` is classified as a pillar by `s.spr && s.dir ? 2 : 3` (render.js:223) and crashes in drawPillar.
 - The town generator is called once per session and its map/props objects are reused. Don't mutate `townCache` objects per visit except `seen`.
 - The generator RNG is seeded, but game.js passes a fresh `Math.random()` seed, and spawn variants/`randomNear` use `Math.random`. Don't rely on reproducibility.
 - `drawPortal` reads pillars from `G.world.tileset` rather than its `world` argument (render.js:118).

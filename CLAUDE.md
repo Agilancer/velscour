@@ -29,6 +29,7 @@ node tools/tests/mobile.js                         # 844x390 touch layout + joys
 node tools/tests/boss.js                           # Depth 100 Velscour arena + a depth 37 guardian
 node tools/tests/bot.js paladin 2                  # bot plays depths 1..2, prints balance stats
 node tools/tests/skills.js wizard,gunner           # cast all 60 skills per class (all 16 if no arg; slow)
+node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners in those biomes (docs/WALLS.md)
 ```
 Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, because layout bugs don't throw.
 - In cloud containers, Chromium is at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` and
