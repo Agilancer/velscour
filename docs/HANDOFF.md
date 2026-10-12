@@ -310,7 +310,7 @@ are in section 7.
      crystals pour in (4% heal each). Modifiers (`RAID_MODS`, 1-3 by depth): empowered, colossal, relentless,
      swarming, volatile, warded, vampiric, storming. Enrage after 5 minutes. Entering seals the gate (`map.block` on
      the corridor tiles + `Barrier` wall of light) until it dies; then the exit opens and it drops loot three times.
-     Stats: hp `monsterBase(L).hp x 3 x (30 + depth/2)` at level depth+3, dmg x2. `G.raidLog` records each kill
+     Stats: hp `monsterBase(L).hp x 18 x (30 + depth/2)` at level depth+3, dmg x2.8, crystals 7% of its life each (first tuning, x3 hp / x2 dmg, died in ~15 s to the auto-play bots at depth 5). `G.raidLog` records each kill
      (seconds, lowest hero life), printed by `autoplay.js`. HUD: phase marks on the boss bar, a phase/ward line
      (`#boss-sub`), blue bar while warded; area subtitle "... · Boss Room"; the portal dialog warns of it.
    - Auto-play: hazards with `danger(out)` describe their zones (rings with gaps, beams), cone telegraphs count,

@@ -161,7 +161,7 @@ export function makeRaidBoss(world, arena, depth, level) {
   Object.assign(m, {
     ai: 'raid', el: tpl.el, res: { [tpl.el]: 0.4, ...(m.undead ? { poison: 0.5, shadow: 0.3 } : null) },
     scale: has('colossal') ? 2.75 : 2.4, r: 1.05, atkReach: 0.35, speed: 2.4 * (has('colossal') ? 0.88 : 1), atkCd: 1.3,
-    maxHp: B.hp * 3 * (30 + depth * 0.5) * (has('colossal') ? 1.35 : 1), dmg: B.dmg * 2 * (has('empowered') ? 1.25 : 1), xp: B.xp * 60,
+    maxHp: B.hp * 18 * (30 + depth * 0.5) * (has('colossal') ? 1.35 : 1), dmg: B.dmg * 2.8 * (has('empowered') ? 1.25 : 1), xp: B.xp * 60,
     name: tpl.name.toUpperCase(), title: tpl.title, aura: elem(tpl.el).glow, affixes: has('vampiric') ? ['vampiric'] : [],
     moves: null, patterns: [], isRaid: true, ward: 1, aggroRange: 0,
   });
@@ -365,7 +365,7 @@ class Raid {
     const m = this.m, E = this.E, raid = this;
     const c = new Monster({
       x, y, team: 'enemy', ai: 'ward', static: true, fly: true, sprite: 'crystal', pal: { a: E.glow, c: E.core, w: '#ffffff', m: '#4a4650' }, px: 3, r: 0.45,
-      maxHp: m.maxHp * 0.035, hp: m.maxHp * 0.035, level: m.level, dmg: m.dmg * 0.5, xp: m.xp * 0.01, name: 'Warding Crystal', rank: 'champion',
+      maxHp: m.maxHp * 0.07, hp: m.maxHp * 0.07, level: m.level, dmg: m.dmg * 0.5, xp: m.xp * 0.01, name: 'Warding Crystal', rank: 'champion',
       aura: E.glow, awake: true, el: this.tpl.el, res: {}, goreType: 'spark', atkCd: 3, isWard: true,
     });
     c.cd = rand(1, 3);
