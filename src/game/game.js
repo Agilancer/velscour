@@ -20,6 +20,7 @@ import { makeMonster, Monster } from './monster.js';
 import { dropChest } from './loot.js';
 import { renderWorld, drawMinimap } from './render.js';
 import { controls } from './controls.js';
+import { Auto } from './autoplay.js';
 import { writeSave, newCharData, migrate } from './save.js';
 import { clearVfx, floatText, sparkle, addEffect, Ring } from '../gfx/vfx.js';
 import { UI } from '../ui/ui.js';
@@ -64,6 +65,7 @@ export const game = {
 
   startChar(c, fresh) {
     hideScreen();
+    if (Auto.on) Auto.toggle(false);
     G.char = c;
     const p = new Player(c);
     G.player = p;
@@ -96,6 +98,7 @@ export const game = {
   },
 
   quitToTitle() {
+    if (Auto.on) Auto.toggle(false);
     this.autosave();
     UI.closeAll();
     G.world = null; G.player = null; G.char = null;
@@ -336,6 +339,7 @@ export const game = {
       case 'skills': toggleTree(); break;
       case 'book': toggleBook(); break;
       case 'menu': pauseMenu(); break;
+      case 'auto': Auto.toggle(); break;
     }
   },
 
@@ -349,6 +353,7 @@ export const game = {
       if (input.consume('KeyK') || input.consume('KeyT')) toggleTree();
       if (input.consume('KeyB')) toggleBook();
       if (input.consume('KeyH')) helpDialog();
+      if (input.consume('KeyP')) Auto.toggle();
       if (input.consume('Tab') || input.consume('KeyM')) G.showAutomap = !G.showAutomap;
       if (input.consume('Escape')) {
         if (ui.anyOpen()) ui.closeAll();
@@ -363,7 +368,9 @@ export const game = {
     G.paused = ui.modal || pauseMenus;
     if (G.hitStop > 0) { G.hitStop -= dt; controls.update(0); }
     else if (!G.paused) {
+      Auto.noteInput();
       controls.update(dt);
+      Auto.update(dt);
       w.update(dt);
     } else {
       input.endFrame();

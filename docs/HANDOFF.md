@@ -205,6 +205,21 @@ are in section 7.
      (including mixed levels), `data_check` (it now also checks each biome's tile/barricade/scatter files), `flow` and
      `boss`. Fixed `walls.js` crashing when given more than 4 biomes.
 
+12. **Auto-play (branch `claude/auto-play`).** The user asked for an "auto play" button: the hero plays on their own,
+   killing monsters, looting, equipping the best gear and gems, spending skill points, filling the skill bar, using
+   abilities well, going to town to sell, upgrade and buy, and delving as deep as possible to beat the game. Done:
+   - `src/game/autoplay.js` (`Auto`), toggled by the new HUD button `#auto-btn` (`hudAction('auto')`) or **P**. A status
+     pill `#auto-status` under the area name says what it's doing. `game.update` calls `Auto.noteInput()` before
+     `controls.update` and `Auto.update(dt)` after it (so the bot's `p.moveVec` wins); any player input hands control
+     back for 1.5 s. It never runs while paused, and an exception inside it is caught (logged with `console.error`) so
+     the world keeps updating; 20 errors switch it off.
+   - How it decides, and the tuning knobs, are in section 7, *Auto-play*.
+   - Verified with the new `tools/tests/autoplay.js` (all 16 classes for 10 game minutes each: every one descends,
+     no deaths so far; long runs of 60 game minutes for wizard and paladin), a forced death (death screen clicked,
+     town routine, back to Depth 1), a level-90 wizard in the Depth 100 throne in god mode (Velscour killed, victory
+     screen clicked, on to Depth 101), plus flow, ui, mobile and data_check. Mobile: the touch HUD buttons shrank to
+     37 px and the touch boss bar narrowed so six buttons fit beside it at 844 and 667 px wide.
+
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
 1. Get PR #1 merged (by the user) and confirm the Pages deploy works at https://agilancer.github.io/velscour/.
@@ -1476,4 +1491,72 @@ See the `open_issues` field.
 - src/game/loot.js:109-116 — the itemIcon cache key ignores `size`. Gear icons are always pixelSprite scale 4 whatever the requested size.
 - src/data/skills.js:109,113 vs src/game/skillrun.js:54,139 — skillRange (used for melee approach and UI) omits the thrust x1.15 factor and uses cone 0.5 where castSkill uses 0.55.
 - src/game/combat.js:119 — a no-op `if` statement with a comment about the thorns curse (dead code).
+- src/data/skills.js `skillRange` — returning projectiles (`ret`, the Boomerang Knight's whole first tree) turn back at
+  half their range, so touch auto-aim and the skill range shown are twice what really lands. Auto-play uses its own
+  `reachOf()` with the 0.48 factor.
+
+## Auto-play
+
+### Files
+- `src/game/autoplay.js` — everything: the power model, character management, navigation, combat, dungeon and town
+  routines. `Auto` is the only export the game needs (`buildPower`, `charScore` are exported for tests and tuning).
+- Hooks: `src/game/game.js` (`update`: `noteInput`/`update`; key P; `hudAction('auto')`; switched off by `startChar`
+  and `quitToTitle`), `index.html` (`#auto-btn`, `#auto-status`), `css/style.css` (`.hbtn.on`, `#auto-status`),
+  `tools/tests/autoplay.js`.
+
+### How it works
+- **Power model.** `buildPower(p)` estimates damage per second from the learned skills with the hero's real
+  `skillDamage` (gear, attributes, synergy, crit): `hitsPerCast` (rough expected hits per kind for a crowd of 2.2),
+  divided by the cast period (cast time with attack/cast speed, cooldown with CDR, channel or whirl duration), times a
+  mana sustain factor (regen + maxMana/40 against mana per second). The best spammable skill counts fully, topped up by
+  the free skill when mana can't keep up; cooldown skills, corpse skills, summons (from `SUMMONS` dmg and attack rate),
+  buffs (uptime x amount, damage/attack speed weighted most), curses (amp/mark) and heals add on; only the best 10
+  fit (the bar). `charScore(p)` = ln(offense) + 0.8 ln(effective life: life, armor vs depth, resists, block, leech,
+  regen) + 0.15 ln(mana) + small move speed/MF/GF/XP terms.
+- **Everything is decided by simulation** (`simulate(p, mutate)`: apply, `recompute`, score, undo, restore hp/mana):
+  each attribute point goes where charScore rises most; each skill point where buildPower rises most per point,
+  counting the unlearned prerequisites a deeper skill needs (so it will buy a chain to reach a new tier); bag items
+  are equipped when they raise the score by more than 0.4%; gems go into the free socket where they help most; shop
+  items, blacksmith upgrades and gems are bought by gain per gold.
+- **Skill bar** (`arrangeBar`): LMB = main spam skill, RMB = the free skill when the main one costs mana (else the
+  second attack), 1–8 = the rest of buildPower's top 10. The bot only casts what is on the bar.
+- **Navigation.** A BFS distance field from the hero's tile (8-way, no corner cutting) is rebuilt every 0.35 s; paths
+  are read back from it and smoothed with `map.smooth`. The bot steers with `p.moveVec`, not `moveTarget` (the A* in
+  `walkTo` gives up on long paths). Stuck detection re-paths, then wiggles.
+- **Dungeon loop** (`dungeonTick`), in priority order: drink potions (`potions`: rejuv < 28%, healing < 50% or 60%
+  near a boss, mana < 18% for mana builds, fury at a boss); dodge (step out of enemy `Telegraph` circles/lines,
+  pending `Delayed` blasts, damaging `Area`s and lobbed explosives); retreat to the town portal when nearly dead with
+  nothing to heal with; fight any enemy in line of sight within 13 tiles; raise permanent minions; loot (gear judged
+  by `wantLoot`, gems, potions, gold, orbs when hurt, chests; makes room by dropping the cheapest gear); then the exit
+  if the guardian is dead, else the nearest monster within 12 path tiles, else the guardian. When the hero is not
+  above the depth (`level < depth + 1`) it clears the whole level first.
+- **Combat** (`combat` / `chooseSkill`): target = nearest, weighted toward the boss, elites, ranged monsters and low
+  life. Heal < 55% life, keep buffs up, keep summons at their cap, curse groups/elites/bosses (never fear/freeze/
+  confuse/charm/stun on bosses, which ignore them), blink away when swarmed and hurt; otherwise the offensive skill
+  with the best damage per cast time against the local crowd that can reach (melee range, nova radius, LOS, real
+  reach). Cooldown skills get a x1.6 bonus so they fire when ready; mana-costing skills are skipped below a 12% mana
+  reserve except on bosses. Positioning uses `engageRange` per kind; ranged builds kite when 3+ monsters are close or
+  when hurt. Watchdog: if the target's life hasn't dropped for 12 s, utility casts are banned for 10 s; after 25 s a
+  non-boss target is shunned for 30 s; after 6 s the hero walks right up to it.
+- **Leaving a level** (`leaveLevel`): it calls `game.enterTown()` / `enterDungeon()` directly (no dialogs). It goes to
+  town when fewer than 14 bag slots are free, healing potions are low, or every 4 depths when it has gold to spend.
+- **Town** (`townTick`): walks to each vendor in turn, opens the shop panel so you can see it, acts, closes it:
+  weaponsmith (sell junk, buy upgrades), alchemist (potions up to 16 healing / 12 or 5 mana / 4 rejuv / 2 fury),
+  armorer, gem merchant (fuse triples, buy gems for empty sockets), jeweler (add sockets when it has spare gems),
+  blacksmith (+1 upgrades by gain per gold), enchanter (add an affix), gambler (when gold > 8 gamble prices); then the
+  portal. Budgets keep 10 healing potions' worth of gold in reserve. Selling keeps upgrades for the next 6 levels and
+  gems of the top tiers; it pries valuable gems out of gear it sells when unsocketing is cheap.
+- **Screens**: it clicks "Return to Town" on the death screen (after 2.5 s) and "Continue" on the victory screen.
+
+### Tuning knobs
+- `hitsPerCast` per kind, `CROWD`, the weights in `buildPower` (alt skill 0.15, cooldown 0.85, summon 0.55, buff and
+  curse factors) and `charScore` (0.8 defense, 0.15 mana).
+- Thresholds: potions in `potions()`, `POT_TARGET`, `needTown()`, `budget()` fractions, the loot rarity floor in
+  `wantLootNow` (by free bag slots), the farm rule in `huntGoal`.
+
+### Gotchas
+- `simulate` must restore hp/mana: `recompute` clamps hp to a lower max life.
+- The bot sets `p.moveVec` every frame, which also clears `moveTarget`/`attackTarget`/`interact` in `Player.update`.
+- In tests, drive it with `game.update(1/30)` in a loop and yield (`setTimeout`) now and then, or the portal loading
+  and the death screen (both on timers) never happen. See `tools/tests/autoplay.js`.
 
