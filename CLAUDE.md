@@ -31,7 +31,8 @@ node tools/tests/bot.js paladin 2                  # bot plays depths 1..2, prin
 node tools/tests/skills.js wizard,gunner           # cast every skill of a class (all 16 if no arg; slow)
 node tools/tests/classart.js paladin               # class art pack: catalog weapons, ability effects
 node tools/tests/gear.js paladin,wizard            # hero looks: armor+helm per rarity, finishes, auras (all = 16)
-node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners in those biomes (docs/WALLS.md)
+node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners in those biomes (docs/ART.md)
+node tools/tests/pack.js catacombs,blood          # biome pack levels: arches, doors, reachability; door/arch shots
 node tools/tests/titlefx.js                        # title logo fire, tar drips/pile, spark ignition + explosion
 node tools/tests/enemies.js                        # monster art line-ups, corpses, mixed-biome levels + guardians
 node tools/tests/legion.js                         # Necromancer skeleton summons: art line-up, every minion attacks + casts
@@ -51,7 +52,10 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `assets/source/enemies/<set>/`, imported by `python3 tools/process_assets.py enemies` and catalogued in
   `src/data/bestiary.js`; see [`docs/ENEMY_ART.md`](docs/ENEMY_ART.md). New uploads ("Enemy Assets Set N") go there too. The user's sheets are in
   `assets/source/` and get sliced by `tools/process_assets.py` (needs `pip install pillow numpy scipy`; args
-  `sprites|tiles|props`). Environment art and the biome -> art mapping are documented in [`docs/ART.md`](docs/ART.md).
+  `sprites|biomes|props`). Dungeon floors, walls, arches, doors and scatter come from **biome packs**
+  (`assets/source/biomes/<Name>_Biome_Pack.zip`, a 160x80 template; Catacombs is the first, every biome uses it
+  palette-swapped), imported by `python3 tools/process_assets.py biomes` (`tools/biomepack.py`). New packs follow the
+  same template; see [`docs/ART.md`](docs/ART.md).
   The hero's look comes from the gear libraries `assets/FinalClasses/<class>.zip` (80 armors + 80 helms per class),
   imported by `python3 tools/process_assets.py gear [class]`. Class art packs (Paladin weapons, ability effects) go in
   `assets/source/classes/<class>/` and are imported by `python3 tools/process_assets.py classes [class]`; both are in

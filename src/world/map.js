@@ -6,9 +6,10 @@ export class TileMap {
     this.v = new Uint8Array(w * h); // floor visual variant index
     this.block = new Uint8Array(w * h); // static obstacle on floor
     this.seen = new Uint8Array(w * h);
-    this.segments = []; // wall segments
+    this.segments = []; // floor/void edges
+    this.walls = []; // wall draw items (buildWalls)
+    this.doors = [];
     this.segGrid = null;
-    this.pillars = [];
     this.flow = new Int16Array(w * h);
     this.flowFrom = [-999, -999];
     this.flowTime = 0;
@@ -223,65 +224,131 @@ export class TileMap {
   }
 
   /**
-   * Place a thin wall segment on every floor/void edge (Diablo II style walls).
-   * dir 'f' = "/" edge (between x and x+1), 'b' = "\" edge (between y and y+1).
+   * Walls from the biome pack (Diablo II style thin walls on every floor/void edge). Each tile vertex on a wall gets
+   * the node piece for its connections (NE=1 -y, SE=2 +x, SW=4 +y, NW=8 -x), drawn as separate half-tile arms so
+   * each sorts on its own: arms facing the floor ("back" walls) sort just behind the creatures beside them, arms
+   * with the floor behind them ("front" walls) just in front. Every straight run of edges gets one wall family and
+   * texture variant (`families`: [[name, weight], ...]).
+   * `openings` (dungeon.js findOpenings) put an arch or a pair of doors across a gap in a room's wall:
+   * {axis: 'x'|'y', line, a0, a1 (vertex range along the line), kind: 'arch'|'door', design, flip}.
+   * Fills this.segments (edges, for torches), this.walls (draw items) and this.doors.
    */
-  buildWalls(tileset, rng = Math.random) {
+  buildWalls(tileset, rng = Math.random, openings = [], families = null) {
     const segs = [];
-    const vert = new Map(); // vertex key -> {f, b}
-    const mark = (vx, vy, d) => {
-      const k = vy * (this.w + 1) + vx;
-      const v = vert.get(k) || { f: 0, b: 0, x: vx, y: vy };
-      v[d]++; vert.set(k, v);
-    };
-    const pickSeg = (dir) => {
-      // seamless wall sections ("/" art, mirrored for "\" edges)
-      if (tileset.walls && tileset.walls.length) return { spr: tileset.walls[Math.floor(rng() * tileset.walls.length)], flip: dir === 'b', strip: true };
-      // fallback: whole wall pieces; native sprites for this direction are preferred, mirrored ones add variety
-      const fwd = tileset.segFwd, back = tileset.segBack;
-      if (dir === 'f') {
-        if (rng() < 0.8 || !back.length) return { spr: fwd[Math.floor(rng() * fwd.length)], flip: false };
-        return { spr: back[Math.floor(rng() * back.length)], flip: true };
-      }
-      if (rng() < 0.4 && back.length) return { spr: back[Math.floor(rng() * back.length)], flip: false };
-      return { spr: fwd[Math.floor(rng() * fwd.length)], flip: true };
-    };
     for (let y = 0; y < this.h; y++) {
       for (let x = 0; x < this.w; x++) {
         if (this.t[y * this.w + x] !== 1) continue;
-        // west edge (x) and east edge (x+1): "/" edges
-        if (!this.tile(x - 1, y)) { segs.push({ dir: 'f', ex: x, ey0: y, ey1: y + 1, front: false, ...pickSeg('f') }); mark(x, y, 'f'); mark(x, y + 1, 'f'); }
-        if (!this.tile(x + 1, y)) { segs.push({ dir: 'f', ex: x + 1, ey0: y, ey1: y + 1, front: true, ...pickSeg('f') }); mark(x + 1, y, 'f'); mark(x + 1, y + 1, 'f'); }
-        // north edge (y) and south edge (y+1): "\" edges
-        if (!this.tile(x, y - 1)) { segs.push({ dir: 'b', ey: y, ex0: x, ex1: x + 1, front: false, ...pickSeg('b') }); mark(x, y, 'b'); mark(x + 1, y, 'b'); }
-        if (!this.tile(x, y + 1)) { segs.push({ dir: 'b', ey: y + 1, ex0: x, ex1: x + 1, front: true, ...pickSeg('b') }); mark(x, y + 1, 'b'); mark(x + 1, y + 1, 'b'); }
+        // west edge (x) and east edge (x+1): "/" edges; north edge (y) and south edge (y+1): "\" edges
+        if (!this.tile(x - 1, y)) segs.push({ dir: 'f', ex: x, ey0: y, ey1: y + 1, front: false });
+        if (!this.tile(x + 1, y)) segs.push({ dir: 'f', ex: x + 1, ey0: y, ey1: y + 1, front: true });
+        if (!this.tile(x, y - 1)) segs.push({ dir: 'b', ey: y, ex0: x, ex1: x + 1, front: false });
+        if (!this.tile(x, y + 1)) segs.push({ dir: 'b', ey: y + 1, ex0: x, ex1: x + 1, front: true });
       }
     }
     for (const s of segs) {
-      if (s.dir === 'f') { s.mx = s.ex; s.my = (s.ey0 + s.ey1) / 2; s.lx = s.ex; s.ly = s.ey1; }
-      else { s.mx = (s.ex0 + s.ex1) / 2; s.my = s.ey; s.lx = s.ex0; s.ly = s.ey; }
+      if (s.dir === 'f') { s.mx = s.ex; s.my = (s.ey0 + s.ey1) / 2; } else { s.mx = (s.ex0 + s.ex1) / 2; s.my = s.ey; }
       s.depth = s.mx + s.my;
     }
     this.segments = segs;
-    // pillars at corners where both orientations meet
-    this.pillars = [];
-    if (tileset.pillars.length) {
-      for (const v of vert.values()) {
-        if (v.f && v.b) this.pillars.push({ x: v.x, y: v.y, spr: tileset.pillars[0], depth: v.x + v.y + 0.02, strip: tileset.walls && tileset.walls.length ? tileset.walls[0].w : 0 });
+    this.walls = [];
+    this.doors = [];
+    if (!tileset.walls) return this.indexWalls();
+    // vertex -> arms: dir -> { front, run }
+    const W1 = this.w + 1, verts = new Map();
+    const arm = (x, y, d, front) => {
+      const k = y * W1 + x;
+      let v = verts.get(k);
+      if (!v) verts.set(k, (v = { x, y, arms: {} }));
+      v.arms[d] = { front };
+    };
+    for (const s of segs) {
+      if (s.dir === 'b') { arm(s.ex0, s.ey, 'SE', s.front); arm(s.ex1, s.ey, 'NW', s.front); }
+      else { arm(s.ex, s.ey0, 'SW', s.front); arm(s.ex, s.ey1, 'NE', s.front); }
+    }
+    // a 2-wide gap's arch reaches half a tile over the wall on each side: those arms give way to it
+    for (const o of openings) {
+      if (o.kind !== 'arch' || o.a1 - o.a0 !== 2) continue;
+      const at = (a) => verts.get((o.axis === 'x' ? o.line : a) * W1 + (o.axis === 'x' ? a : o.line));
+      const v0 = at(o.a0), v1 = at(o.a1);
+      if (v0) delete v0.arms[o.axis === 'x' ? 'NW' : 'NE'];
+      if (v1) delete v1.arms[o.axis === 'x' ? 'SE' : 'SW'];
+    }
+    // runs: straight chains of edges along one line share a family and a texture variant
+    const fams = families || tileset.families.map((f) => [f, 1]);
+    const total = fams.reduce((t, f) => t + f[1], 0);
+    const pickFam = () => { let r = rng() * total; for (const [f, w] of fams) if ((r -= w) < 0) return f; return fams[0][0]; };
+    const STEP = { SE: [1, 0, 'NW'], SW: [0, 1, 'NE'] };
+    for (const v of verts.values()) {
+      for (const d of ['SE', 'SW']) {
+        if (!v.arms[d] || v.arms[d].run) continue;
+        const back = d === 'SE' ? 'NW' : 'NE';
+        if (v.arms[back] && !v.arms[back].run) continue; // start runs at their first vertex
+        const run = { fam: pickFam(), vari: Math.floor(rng() * 3) };
+        let c = v;
+        while (c && c.arms[d]) {
+          c.arms[d].run = run;
+          const [dx, dy, opp] = STEP[d];
+          c = verts.get((c.y + dy) * W1 + c.x + dx);
+          if (c && c.arms[opp]) c.arms[opp].run = run;
+        }
       }
     }
+    const OFF = { NE: [0, -0.25], SE: [0.25, 0], SW: [0, 0.25], NW: [-0.25, 0] };
+    for (const v of verts.values()) {
+      let mask = 0;
+      for (const d in v.arms) mask |= { NE: 1, SE: 2, SW: 4, NW: 8 }[d];
+      if (!mask) continue;
+      for (const d in v.arms) {
+        const a = v.arms[d], run = a.run || { fam: fams[0][0], vari: 0 };
+        const vars = (tileset.walls[run.fam] || tileset.walls[tileset.families[0]])[mask];
+        const piece = vars[run.vari % vars.length];
+        const sl = piece.find((p) => p.arm === d);
+        if (!sl) continue;
+        const [ox, oy] = OFF[d];
+        // centre of the arm, plus a bias toward the side the floor is on (see above)
+        this.walls.push({ kind: 'wall', x: v.x, y: v.y, r: sl, front: a.front, depth: v.x + v.y + ox + oy + (a.front ? 0.45 : -0.45) });
+      }
+    }
+    for (const o of openings) {
+      const ax = o.axis === 'x' ? [1, 0] : [0, 1];
+      const pos = (a) => (o.axis === 'x' ? [a, o.line] : [o.line, a]);
+      if (o.kind === 'arch') {
+        const dir = o.axis === 'x' ? (o.flip ? 'NW' : 'SE') : (o.flip ? 'NE' : 'SW');
+        const [cx, cy] = pos((o.a0 + o.a1) / 2);
+        for (const sl of tileset.arches[o.design][dir]) {
+          // slice offsets are along the piece's own direction; NW/NE run the other way
+          const a = dir === 'NW' || dir === 'NE' ? -sl.a : sl.a;
+          this.walls.push({ kind: 'arch', x: cx, y: cy, axis: o.axis, r: sl, depth: cx + cy + a * (ax[0] + ax[1]) });
+        }
+      } else {
+        // a pair of doors, hinged at the outer jambs
+        for (let a = o.a0; a < o.a1; a++) {
+          const first = a === o.a0;
+          const dir = o.axis === 'x' ? (first ? 'SE' : 'NW') : (first ? 'SW' : 'NE');
+          const [cx, cy] = pos(a + 0.5);
+          const door = { kind: 'door', x: cx, y: cy, axis: o.axis, open: false, art: tileset.doors[o.design][dir] };
+          this.doors.push(door);
+          for (const part of ['L', 'R', 'leaf']) {
+            const sl = door.art[part === 'leaf' ? 'open' : 'closed'].find((p) => p.part === part);
+            if (sl) this.walls.push({ kind: 'door', door, part, x: cx, y: cy, depth: cx + cy + sl.du + sl.dv });
+          }
+        }
+      }
+    }
+    this.indexWalls();
+  }
+
+  indexWalls() {
     // spatial buckets (by 8x8 tile cells) for fast culling
     const B = 8, bw = Math.ceil((this.w + 1) / B), bh = Math.ceil((this.h + 1) / B);
     this.segGrid = { B, bw, bh, cells: Array.from({ length: bw * bh }, () => []) };
-    const add = (o, x, y) => {
-      const cx = Math.min(bw - 1, Math.floor(x / B)), cy = Math.min(bh - 1, Math.floor(y / B));
+    for (const o of this.walls) {
+      const cx = Math.min(bw - 1, Math.max(0, Math.floor(o.x / B))), cy = Math.min(bh - 1, Math.max(0, Math.floor(o.y / B)));
       this.segGrid.cells[cy * bw + cx].push(o);
-    };
-    for (const s of segs) add(s, s.mx, s.my);
-    for (const p of this.pillars) add(p, p.x, p.y);
+    }
   }
 
-  /** Wall pieces (segments + pillars) whose midpoint lies in the tile rect. */
+  /** Wall draw items (arms, arch slices, door parts) anchored in the tile rect. */
   wallsIn(x0, y0, x1, y1, out) {
     const g = this.segGrid;
     if (!g) return out;

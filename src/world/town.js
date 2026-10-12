@@ -114,6 +114,6 @@ export function generateTown(tileset) {
   props.push({ kind: 'sprite', sprite: 'banner', pal: { b: '#8a1010', c: '#ffd060', m: '#3a3a3a', g: '#ffd060' }, x: 37.5, y: 41.5, px: 3 });
   for (const p of props) if (p.sprite === 'anvil' || p.sprite === 'cauldron') blockAt(p.x, p.y);
 
-  map.buildWalls(tileset, () => rng.next());
+  map.buildWalls(tileset, () => rng.next(), [], [['crypt_ashlar', 1]]);
   return { map, buildings, npcs, props, portal, start: [24.5, 28] };
 }

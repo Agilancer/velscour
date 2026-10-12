@@ -1,4 +1,4 @@
-// Twenty-five dungeon biomes. Each has its own floor/wall/prop art (see BIOME_ART below), monster tints and lighting.
+// Twenty-five dungeon biomes. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
 // palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
 export const BIOMES = [
@@ -117,31 +117,31 @@ export const BIOMES = [
     torch: '#ff5070', fog: '#1a0408',
   },
   {
-    id: 'serpent', name: 'Serpent Sepulcher', palette: null, dark: 0.8, light: 7.5,
+    id: 'serpent', name: 'Serpent Sepulcher', palette: { colorize: [150, 0.4], light: -0.02 }, dark: 0.8, light: 7.5,
     ambient: { type: 'dust', color: '#c8c090' }, mon: { hue: 40, sat: 0.9, light: 0 }, el: 'poison', blood: '#5a7a10',
     adj: ['Serpentine', 'Coiled', 'Venomous'], roster: ['scorpion', 'worm', 'skeleton', 'cultist', 'archer', 'spider', 'knight', 'golem', 'beetle', 'wraith', 'zombie', 'hound'],
     torch: '#a8e070', fog: '#0e0c04',
   },
   {
-    id: 'shattered', name: 'Shattered Citadel', palette: null, dark: 0.78, light: 8,
+    id: 'shattered', name: 'Shattered Citadel', palette: { sat: 0.4, light: 0.06, tint: [180, 200, 255, 0.12] }, dark: 0.78, light: 8,
     ambient: { type: 'dust', color: '#a8b0c8' }, mon: { hue: 0, sat: 0.6, light: 0 }, el: 'phys', blood: '#8a0b08',
     adj: ['Shattered', 'Fallen', 'Broken'], roster: ['knight', 'archer', 'gargoyle', 'golem', 'skeleton', 'wraith', 'cultist', 'hound', 'imp', 'elemental', 'bat', 'demon'],
     torch: '#ffb070', fog: '#0a0c12',
   },
   {
-    id: 'library', name: 'Haunted Library', palette: null, dark: 0.84, light: 7,
+    id: 'library', name: 'Haunted Library', palette: { colorize: [28, 0.35], light: -0.06 }, dark: 0.84, light: 7,
     ambient: { type: 'mote', color: '#f0d090' }, mon: { hue: 230, sat: 0.7, light: -0.02 }, el: 'arcane', blood: '#6a1010',
     adj: ['Haunted', 'Forbidden', 'Whispering'], roster: ['wraith', 'cultist', 'eye', 'imp', 'bat', 'skeleton', 'spider', 'elemental', 'gargoyle', 'zombie', 'knight', 'ghoul'],
     torch: '#ffc070', fog: '#100a06',
   },
   {
-    id: 'necropolis', name: 'Moonlit Necropolis', palette: null, dark: 0.8, light: 7.5,
+    id: 'necropolis', name: 'Moonlit Necropolis', palette: { colorize: [225, 0.25], light: 0.04, contrast: 1.1 }, dark: 0.8, light: 7.5,
     ambient: { type: 'mote', color: '#c8d8ff' }, mon: { hue: 200, sat: 0.5, light: 0.04 }, el: 'cold', blood: '#4a5a8a',
     adj: ['Moonlit', 'Gravebound', 'Silvered'], roster: ['skeleton', 'zombie', 'ghoul', 'wraith', 'archer', 'knight', 'bat', 'hound', 'gargoyle', 'cultist', 'eye', 'abomination'],
     torch: '#a0c0ff', fog: '#060a16',
   },
   {
-    id: 'amber', name: 'Amber Wastes', palette: null, dark: 0.7, light: 9,
+    id: 'amber', name: 'Amber Wastes', palette: { colorize: [32, 0.7], light: 0.02, contrast: 1.05 }, dark: 0.7, light: 9,
     ambient: { type: 'sand', color: '#ffb050' }, mon: { hue: 25, sat: 1.1, light: 0.04 }, el: 'fire', blood: '#8a3008',
     adj: ['Amber', 'Sunbaked', 'Resinous'], roster: ['scorpion', 'beetle', 'worm', 'golem', 'elemental', 'hound', 'archer', 'skeleton', 'gargoyle', 'imp', 'spider', 'cultist'],
     torch: '#ffa040', fog: '#1a0c02',
@@ -154,40 +154,11 @@ export const BIOMES = [
   },
 ];
 
-// Art per biome: [tile set (assets/tiles/<id>), palette applied on top (null = as drawn), barricade set
-// (assets/props/barricades_<id>), scatter sheets (assets/props/<sheet>)]. Twenty tile sets serve twenty-five biomes:
-// each set is shown as drawn somewhere, and biomes borrowing a set are told apart by palette. This replaces the
-// palettes above, which tinted the catacombs.
-const BIOME_ART = {
-  catacombs: ['skull', null, 'skull', ['catacomb_relics', 'dungeon_mechanisms']],
-  frozen: ['frozen', null, 'frozen', ['catacomb_relics']],
-  molten: ['ashen', { tint: [255, 90, 20, 0.35], sat: 1.2, contrast: 1.05 }, 'obsidian', ['dungeon_mechanisms']],
-  fungal: ['fungal', null, 'fungal', ['swamp_obstacles']],
-  sunken: ['drowned', null, 'drowned', ['catacomb_relics', 'swamp_obstacles']],
-  blood: ['blood', null, 'blood', ['catacomb_relics', 'dungeon_mechanisms']],
-  ashen: ['ashen', null, 'ashen', ['cathedral_furnishings', 'catacomb_relics']],
-  void: ['void', null, 'void', ['dungeon_mechanisms']],
-  gilded: ['sand', null, 'amber', ['desert_ruins']],
-  plague: ['plague', null, 'plague', ['swamp_obstacles', 'dungeon_mechanisms']],
-  crystal: ['frozen', { hue: -20, sat: 1.5, contrast: 1.1 }, 'necropolis', ['catacomb_relics']],
-  desert: ['desert', null, 'desert', ['desert_ruins']],
-  shadow: ['cursed', { sat: 0.35, light: -0.12, contrast: 1.1 }, 'library', ['dungeon_mechanisms', 'catacomb_relics']],
-  forge: ['obsidian', null, 'obsidian', ['dungeon_mechanisms']],
-  abyss: ['cursed', { colorize: [232, 0.5], light: -0.06, contrast: 1.1 }, 'shattered', ['dungeon_mechanisms']],
-  thorn: ['swamp', null, 'swamp', ['swamp_obstacles']],
-  storm: ['cathedral', { colorize: [214, 0.4], contrast: 1.1 }, 'cathedral', ['cathedral_furnishings']],
-  obsidian: ['catacombs', { sat: 0.25, light: -0.1, contrast: 1.3 }, 'obsidian', ['dungeon_mechanisms', 'catacomb_relics']],
-  flesh: ['blood', { colorize: [342, 0.45], light: 0.02 }, 'serpent', ['catacomb_relics']],
-  serpent: ['serpent', null, 'serpent', ['desert_ruins', 'catacomb_relics']],
-  shattered: ['shattered', null, 'shattered', ['dungeon_mechanisms', 'cathedral_furnishings']],
-  library: ['library', null, 'library', ['cathedral_furnishings', 'dungeon_mechanisms']],
-  necropolis: ['necropolis', null, 'necropolis', ['catacomb_relics', 'cathedral_furnishings']],
-  amber: ['amber', null, 'amber', ['desert_ruins']],
-  throne: ['cathedral', { colorize: [4, 0.72], light: -0.1, contrast: 1.2 }, 'blood', ['cathedral_furnishings']],
-};
-for (const b of BIOMES) [b.art, b.palette, b.barricade, b.scatter] = BIOME_ART[b.id];
+// Art: every biome is built from a biome pack (assets/tiles/<pack>/, docs/ART.md), recoloured by its `palette`.
+// Catacombs is the only pack so far; more biome packs will each take over the biomes they suit.
+for (const b of BIOMES) b.pack = 'catacombs';
 
-// Colour families: a level can mix its tile set with another biome of the same family (mixPartner), e.g. a
+// Colour families: a level can mix its palette with another biome of the same family (mixPartner), e.g. a
 // Frozen Ossuary whose far rooms are paved like the Crystal Caverns.
 const FAMILY = {
   sand: ['desert', 'gilded', 'serpent', 'amber'],
@@ -214,13 +185,11 @@ const MON_SWAPS = {
 for (const b of BIOMES) b.swaps = MON_SWAPS[b.id];
 
 export const MIX_CHANCE = 0.65;
-/** Maybe pick a like-coloured biome to mix tiles with (one drawn differently when the family has one), or null. */
+/** Maybe pick a like-coloured biome to mix floors (and maybe walls) with, or null. */
 export function mixPartner(biome, rnd = Math.random) {
   if (!biome.family || rnd() >= MIX_CHANCE) return null;
   const kin = BIOMES.filter((b) => b.family === biome.family && b.id !== biome.id);
-  const other = kin.filter((b) => b.art !== biome.art);
-  const pool = other.length ? other : kin;
-  return pool.length ? pool[Math.floor(rnd() * pool.length)] : null;
+  return kin.length ? kin[Math.floor(rnd() * kin.length)] : null;
 }
 
 export const BIOME_BY_ID = Object.fromEntries(BIOMES.map((b) => [b.id, b]));
@@ -241,6 +210,6 @@ export function drawBiome(c, depth) {
 }
 
 export const TOWN_BIOME = {
-  id: 'town', name: 'Duskhollow', art: 'skull', scatter: [], palette: { colorize: [30, 0.22], light: 0.12, contrast: 0.95 }, wallPalette: { colorize: [32, 0.2], light: 0.18 },
+  id: 'town', name: 'Duskhollow', pack: 'catacombs', palette: { colorize: [30, 0.22], light: 0.12, contrast: 0.95 }, wallPalette: { colorize: [32, 0.2], light: 0.18 },
   dark: 0.45, light: 12, ambient: { type: 'firefly', color: '#ffe890' }, mon: { hue: 0, sat: 1, light: 0 }, blood: '#8a0b08', torch: '#ffb050', fog: '#0a0806',
 };

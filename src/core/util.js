@@ -152,21 +152,28 @@ export function recolor(src, params, sx = 0, sy = 0, sw, sh) {
   const contrast = params.contrast ?? 1;
   const tint = params.tint;
   const colorize = params.colorize; // [h(0-360), s]
+  // colours are looked up on a 6-bit-per-channel table: big atlases hold millions of pixels but few colours
+  const lut = new Int32Array(1 << 18).fill(-1);
   for (let i = 0; i < d.length; i += 4) {
     if (d[i + 3] === 0) continue;
-    let [h, s, l] = rgbToHsl(d[i], d[i + 1], d[i + 2]);
-    if (colorize) { h = colorize[0] / 360; s = colorize[1] * (0.4 + s * 0.6); }
-    h = (h + hue + 1) % 1;
-    s = clamp(s * sat, 0, 1);
-    l = clamp((l - 0.5) * contrast + 0.5 + light, 0, 1);
-    let [r, g, b] = hslToRgb(h, s, l);
-    if (tint) {
-      const t = tint[3];
-      r = r + (tint[0] - r) * t * l * 1.4;
-      g = g + (tint[1] - g) * t * l * 1.4;
-      b = b + (tint[2] - b) * t * l * 1.4;
+    const q = ((d[i] >> 2) << 12) | ((d[i + 1] >> 2) << 6) | (d[i + 2] >> 2);
+    let v = lut[q];
+    if (v < 0) {
+      let [h, s, l] = rgbToHsl(d[i], d[i + 1], d[i + 2]);
+      if (colorize) { h = colorize[0] / 360; s = colorize[1] * (0.4 + s * 0.6); }
+      h = (h + hue + 1) % 1;
+      s = clamp(s * sat, 0, 1);
+      l = clamp((l - 0.5) * contrast + 0.5 + light, 0, 1);
+      let [r, g, b] = hslToRgb(h, s, l);
+      if (tint) {
+        const t = tint[3];
+        r = r + (tint[0] - r) * t * l * 1.4;
+        g = g + (tint[1] - g) * t * l * 1.4;
+        b = b + (tint[2] - b) * t * l * 1.4;
+      }
+      v = lut[q] = (clamp(Math.round(r), 0, 255) << 16) | (clamp(Math.round(g), 0, 255) << 8) | clamp(Math.round(b), 0, 255);
     }
-    d[i] = r; d[i + 1] = g; d[i + 2] = b;
+    d[i] = v >> 16; d[i + 1] = (v >> 8) & 255; d[i + 2] = v & 255;
   }
   ctx.putImageData(img, 0, 0);
   return c;

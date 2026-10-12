@@ -1,111 +1,101 @@
-# Environment art: sheets, slicing and how the game uses them
+# Environment art: biome packs
 
-The user's environment art lives in `assets/source/` and is sliced offline by `tools/process_assets.py`:
+Dungeon floors, walls, arches, doors and scatter terrain come from **biome packs**: the user's
+`<Name>_Biome_Pack.zip` files in `assets/source/biomes/`. The first is the **Catacombs** pack. Every biome is
+built from it for now, palette swapped (`palette` in `src/data/biomes.js`); more packs will follow, made from the
+same template, and each will take over the biomes it suits. The old per-biome tile sheets, scatter sheets and
+barricades were removed when this pack arrived.
 
 ```bash
 pip install pillow numpy scipy
-python3 tools/process_assets.py            # everything (sprites, tiles, props); ~2 min
-python3 tools/process_assets.py tiles      # floor + wall atlases for the 20 tile sets only
-python3 tools/process_assets.py tiles amber void   # ...or just the named sets (about 6 s each)
-python3 tools/process_assets.py props      # scatter terrain + barricades only
+python3 tools/process_assets.py biomes            # every pack in assets/source/biomes/ (~15 s each)
+python3 tools/process_assets.py biomes catacombs  # just one
+python3 tools/process_assets.py props             # loot-chest art (assets/props/chests.*)
 ```
+Never hand-edit the outputs in `assets/tiles/` and `assets/props/`; change `tools/biomepack.py` and rerun it.
 
-Never hand-edit the outputs in `assets/tiles/` and `assets/props/`; change the script and rerun it.
+## The pack template
+Read the pack's own `README.md`, `manifest.json` and `qa/*.png` (inside the zip) before changing anything. In short:
+- A **160 x 80** tile grid, basis `u = (+80, +40)`, `v = (-80, +40)`, height subtracts from screen y. Sprites
+  have fixed canvases and pivots (the ground point): floor 160x80 (80,40), wall 256x256 (128,192), arch 384x336
+  (192,248), door 320x288 (160,208), scatter 192x192 (pivot per sprite).
+- **60 floors**: 01-10 tile seamlessly with themselves; 11-60 are feature tiles (drains, seals, mosaics, cracks).
+- **5 wall families** (crypt ashlar, ossuary niches, funerary chapel, sealed cells, drowned crypt), each with a
+  piece for all 16 connection masks (NE=1, SE=2, SW=4, NW=8: pillar, ends, straights, L corners, tees, cross) plus
+  directed panels (front and reverse art). Walls are 128 px tall and 0.2 tile thick; a node reaches half a tile
+  along each connection, and nodes sit one tile apart. The manifest gives each wall's footprint in 0.1-tile cells.
+- **3 arches** x 4 directions, 3 tiles outer span (piers included). **3 doors** x 4 directions x open/closed,
+  one tile wide, hinged at an end, the open leaf swung 90 degrees into the next tile.
+- **40 scatter props**, one view each, with an estimated ground pivot and footprint.
+- Pack directions name the way a piece runs, not the way it faces: SE = +u, SW = +v, NW = -u, NE = -v. The game's
+  tile axes are the same: `u` = x, `v` = y.
 
-## Source sheets (`assets/source/`)
-All sheets are magenta-keyed (`key_magenta`). Every sheet of a kind uses the same template layout.
+## What the importer does (`tools/biomepack.py`)
+- **Raises the architecture** by `ZSCALE` (1.6). The pack's walls (128 px) and door leaves (112 px) are shorter than
+  the game's heroes, who stand about a tile tall (60 world px on a 64 px tile; the pack is drawn at 0.4, so a raw
+  wall would be 51 px). A plain vertical stretch would bend every ground line, so each output pixel is ray cast
+  against the piece's real geometry (thin boxes: the manifest's wall footprints, the door and arch spans, the open
+  door leaf) and the hit point is sampled from the source at 1/ZSCALE of its height. Ground contacts, 2:1 edges and
+  joins stay exact; textures are 1.6x taller. At ZSCALE 1 the geometry reaches every source pixel (checked: 0 lost),
+  which is how the boxes were validated. Set `ZSCALE = 1.0` to get the pack's own proportions.
+- **Splits it into depth slices**, because a long sprite can't be depth sorted against creatures walking past it:
+  wall nodes into their arms (half a tile each; the centre post goes with every arm), arches into six half-tile
+  slices, doors into two halves plus the open leaf. Each slice records its offset from the ground point.
+- Writes `assets/tiles/<pack>/`: `floors.webp` (as drawn), `walls.webp` (walls, arches, doors), `scatter.webp`
+  (cropped) and `pack.json`:
+  - `floors`: `{name, x, y, w, h, seamless, lum}` (`lum` = mean brightness, used to match feature tiles to paving)
+  - `walls[family][mask]`: texture variants, each a list of `[arm, x, y, w, h, ox, oy]` (arm `NE|SE|SW|NW|c`;
+    straight masks 5 and 10 have extra variants from the reverse-art panels)
+  - `arches[design][dir]`: `[a, x, y, w, h, ox, oy]` (a = slice centre, tiles along the piece's direction)
+  - `doors[design][dir].closed|open`: `[[part, du, dv], x, y, w, h, ox, oy]` (part `L|R|leaf`; du/dv = the
+    slice's depth anchor in tiles from the doorway centre)
+  - `scatter`: `{name, x, y, w, h, ox, oy, fp, block}` (`block` false for the walk-over clutter in `WALK_OVER`)
 
-| Folder | Files | Contents |
-|---|---|---|
-| `floors/` | `<set>.png` x20 | 36 base floor diamonds, 19 details (24 in `desert`), 8 thresholds |
-| `walls/` | `<set>.png` x20 | wall panels, corners, pillars, a tower, arch, gate and rubble, in the catacomb template |
-| `scatter/` | 5 sheets | 10 object types (columns) x 6 variants (rows) |
-| `barricades/` | `barricades_1..4.png` | 5 named sets per sheet (rows) x 8 facings (N, NE, E, SE, S, SW, W, NW) |
+Native pixels map to world pixels by `k = TW / 160` (0.4); `ox/oy` are native px from the ground point.
 
-The 20 **tile sets**, as printed on the sheets: `skull` Skull-Lined Catacombs, `catacombs` Catacombs,
-`cursed` Cursed Dungeon, `cathedral` Cathedral, `desert` Endless Desert, `sand` Sea of Sand,
-`swamp` Swamp of Despair, `frozen` Frozen Ossuary, `ashen` Ashen Monastery, `blood` Blood Crypt, and from the
-second upload `drowned` Drowned Temple, `obsidian` Obsidian Forge, `fungal` Fungal Depths, `serpent` Serpent
-Sepulcher, `plague` Plague Sewers, `shattered` Shattered Citadel, `library` Haunted Library, `necropolis` Moonlit
-Necropolis, `amber` Amber Wastes, `void` Void Sanctuary (`TILE_SETS` in the script). The uploaded
-`Floors N`/`Walls N` numbering is not consistent between the two kinds (floors 9/10 are Blood/Ashen, walls 9/10
-Ashen/Blood; Floors 11/13 are Drowned/Fungal, Walls 11/13 Fungal/Drowned), so files were named from the printed
-titles. The second ten use the same templates as the first, so they needed no pipeline changes (only the tower
-test was loosened: two of the new towers are 150 px tall).
+## In the game
+- `loadAssets` loads the default pack (and the chest art) at boot; `loadBiomeArt(biome)` makes sure the biome's
+  pack is loaded. `biomeTileSet(biome)` recolours the three atlases with `biome.palette` (walls with `wallPalette`
+  when set; the town uses that) and builds `{k, floors, bases, features, walls, families, arches, doors, scatter,
+  pillar, chest}`. `recolor` uses a colour lookup table, so the 2048x2244 wall atlas takes ~100 ms. The cache keeps
+  the town plus 2 biome sets (each ~25 MB of canvas).
+- **Floors** (`finishMap`, `src/world/dungeon.js`): each room is paved in one of the 10 seamless materials (70% the
+  level's main one), corridors and cave edges in another; 7% of room tiles (3.5% in corridors) get a feature tile
+  whose brightness is within 0.07 of the paving. `map.v` holds the index into `tileset.floors`.
+- **Walls** (`TileMap.buildWalls`, `src/world/map.js`): every floor/void edge is a wall edge, as before. Each tile
+  vertex on a wall gets the node piece for its mask, drawn as separate arms. An arm with the floor on its +x/+y side
+  (a "back" wall, seen from the room) sorts 0.45 behind its centre, so creatures beside it draw over it; an arm with
+  the floor behind it (a "front" wall) sorts 0.45 ahead, so it hides them. Each straight run of edges takes one
+  family and texture variant; a level uses three families weighted 5 : 3 : 1.5 (`finishMap`). The town uses
+  crypt ashlar only.
+- **Arches and doors** (`findOpenings`, `src/world/dungeon.js`): where a 2- or 3-wide corridor meets a rectangular
+  room's wall, flanked by wall on both sides, three times in four. A 3-wide gap gets an arch that fits it exactly; a
+  2-wide gap gets an arch (its piers overlap the wall half a tile each side, so those two wall arms are dropped) or,
+  35% of the time, a pair of doors hinged at the outer jambs (SE + NW, or SW + NE). Doors never block movement or
+  sight; they swing open for good when any creature comes within 1.1 tiles (`World.openDoors`).
+- **Scatter** (`placeObstacles`): each level picks 10-16 of the 40 props and places about one per 7 free room
+  tiles, 65% against walls, never in a corridor mouth or the room centre. Blocking props take one tile and are
+  undone if they would cut the level apart. Lanterns, braziers, candelabra, candles and torch stands give light.
+  The throne arena's four columns are funerary obelisks.
+- **Rendering** (`src/game/render.js`): floors are drawn 0.6 px oversized to hide seams. Wall items (`drawWall`)
+  are depth sorted with everything else. Walls in front of the hero fade in a wide soft hole around them
+  (`cutaway`). Portals use the pack's pillar for their posts.
+- **Mixed levels**: about 65% of levels pair the biome with another of its colour family (`mixPartner`); the far
+  chunks are paved in that biome's palette, and the walls, arches and doors come from one of the two.
 
-**Scatter sheets** (`SCATTER` in the script lists every column's name, whether it blocks, and its
-footprint): `catacomb_relics`, `cathedral_furnishings`, `desert_ruins`, `dungeon_mechanisms`,
-`swamp_obstacles`. Chest columns are not scattered; they become the loot-chest art.
+## Checking it
+- `node tools/tests/pack.js [biome,...]`: 24 levels across all biomes (counts arches, doors, wall arms, props;
+  fails on unreachable tiles or a level with no arch/door), and screenshots of a door (closed, open) and an arch.
+- `node tools/tests/walls.js [prefix] [biome,...]` (`ZOOM=3` for a close-up): a wall-heavy spot per biome.
+- `node tools/tests/data_check.mjs` checks every pack is complete (16 masks per family with every arm, 4
+  directions of arches and doors, open leaves, seamless floors, chest art).
 
-**Barricade sets** (`BARRICADES`, sheet order): skull, cursed, catacombs, cathedral, desert / drowned,
-obsidian, fungal, serpent, plague / shattered, library, necropolis, amber, void / sand, swamp, frozen,
-ashen, blood.
-
-## What the script makes
-- `assets/tiles/<set>_floor.webp`, `<set>_walls.webp`, `<set>.json` per tile set.
-  - Floors are found as shapes, not grid positions, because the sections shift between sheets. A gap
-    bigger than the normal row pitch marks the next section (floor -> detail -> threshold). Each base
-    floor gets a `busy` score (contrast inside the diamond). The game sorts by it and mostly uses calm
-    paving, like Diablo II, with pits and rubble now and then.
-  - Walls: whole pieces as before (pillar, tower, rubble, ...), plus seamless `wall_body`/`wall_cap`/
-    `wall_ledge` strips cut from the "/" panels. The cut proportions are measured **per sheet**, because
-    face width (46-56 px) and height vary between sets. See [`WALLS.md`](WALLS.md).
-- `assets/props/<scatter sheet>.webp`: all 60 objects of a sheet, found by `grid_objects`. It groups
-  big shapes into rows and columns at the largest gaps, so it needs no grid coordinates.
-- `assets/props/barricades_<set>.webp`: up to 2 views per diagonal direction. The art isn't exact 2:1
-  and the facing labels don't match the art consistently, so each view is classified by its measured
-  base slope (`fwd` = "/", `back` = "\\"). Front-facing and edge-on views are dropped, and the small
-  white label boxes on the 4th sheet are erased first.
-- `assets/props/props.json`: `{scatter: {sheet: [{kind,x,y,w,h,block,size,var}]}, barricades: {set: [{kind,x,y,w,h,slope}]}}`.
-
-## Biomes -> art (`BIOME_ART` in `src/data/biomes.js`)
-The 25 biomes map onto the 20 tile sets, and every set is shown as drawn (`null` palette) by at least one biome:
-the 20 original biomes, plus Serpent Sepulcher, Shattered Citadel, Haunted Library, Moonlit Necropolis and Amber
-Wastes, added for the second upload. Sunken Crypt, Fungal Grotto, Plague Sewers, Void Sanctum and Infernal Forge,
-which used to recolour a borrowed set, now use their own (Drowned Temple, Fungal Depths, Plague Sewers, Void
-Sanctuary, Obsidian Forge). Biomes that borrow a set get a `palette` recolour on top
-(floors, walls, scatter, barricades and chests alike). Each biome also
-names a barricade set and 1-2 scatter sheets. Change art per biome there.
-
-## Biome order and mixed levels
-- **Order**: `drawBiome(c, depth)` (`src/data/biomes.js`) draws each next biome from a shuffle bag stored on the
-  save (`c.biomeBag`). All 24 biomes come up once, in random order, before any repeats, and never the same one
-  twice in a row. A new hero's first descent is random too. Depth 100 is always the throne.
-- **Mixing**: biomes are grouped by colour (`FAMILY`: sand, frost, ember, rot, gloom). On entering a depth,
-  `mixPartner` picks another biome from the same family 65% of the time (`MIX_CHANCE`), preferring one drawn from a
-  different tile set. `mixedTileSet(biome, other, wallsFromOther)` (`src/core/assets.js`) then builds a set with
-  both biomes' floors and details back to back (`split` marks where the second set starts), walls, pillars and
-  rubble from one of the two (a coin flip), both biomes' scatter, and the barricades that go with the walls.
-  `generateDungeon` paves the chunks far from the start, plus a random 20% flip, with the second biome's floors.
-  The level banner reads "Depth N · bleeding into the <other biome>". Lighting, fog, monsters and the
-  name all stay the primary biome's.
-- `buildDungeon(depth, biome)` without a third argument (as the tests call it) never mixes.
-
-## Runtime
-- `loadAssets` loads only the default set (`skull`: town walls and fallback), `props.json` and the
-  `dungeon_mechanisms` sheet (default chest art).
-- `loadBiomeArt(biome)` fetches the biome's tile set, scatter sheets and barricades (about 1 MB).
-  `enterDungeon` awaits it behind the "Descending..." overlay. If it fails, the default set stands in.
-  `buildDungeon` alone (as tests call it) uses whatever has loaded.
-- `biomeTileSet(biome)` builds `{floors, details, walls, pillars, towers, rubble, ..., scatter,
-  barricades: {fwd, back}, chest: {closed, open, rareClosed, rareOpen}}`. It is cached per biome and art,
-  keeping 3 dungeon sets plus the town (a mixed level holds two).
-- `placeObstacles` (`src/world/dungeon.js`) runs before spawns. For every room except the start and exit
-  rooms, it places an optional corner tower and a barricade in bigger rooms (two tiles along a diagonal,
-  mirrored when the set lacks that direction). It then places about one scatter object per 7 free tiles,
-  65% against walls. Corridor mouths (2 tiles) and the room centre (chests) stay clear. Every blocking
-  placement is undone if the flood fill from the start no longer reaches every open tile. A stress run of
-  300 levels across all biomes found no unreachable tiles, spawns, chests or exits.
-- Rendering: scatter and barricades are `{kind, x, y, spr, k, flip}` props, drawn by `drawProp` with the
-  footprint centre a quarter of the drawn width above the sprite's bottom. Scatter is scaled per sheet,
-  so a typical one-tile object is about 50 world px wide; barricades are about 76 px wide (2 tiles).
-  Chests use the biome's chest art (`drawChest`), about 46 px wide.
-
-## Adding art
-- **A new tile set:** add `floors/<id>.png` + `walls/<id>.png` in the same template, add the id to
-  `TILE_SETS`, run `tiles`, and point biomes at it in `BIOME_ART`. Check the printed strip line for each
-  set ("wall strips: N bodies ..."), then look at it with `node tools/tests/walls.js shot <biome>`.
-- **A new scatter sheet:** add it to `scatter/`, describe its 10 columns in `SCATTER`, run `props`, and
-  list it in the biomes' `BIOME_ART` entries.
-- **A new barricade set:** add a row to a sheet (or a sheet plus a `BARRICADES` row), run `props`, and
-  name it in `BIOME_ART`.
+## Adding the next pack
+1. Put `<Name>_Biome_Pack.zip` in `assets/source/biomes/` (the template's file layout and `manifest.json`).
+2. `python3 tools/process_assets.py biomes <name>` and read the printed "source pixels outside the geometry" line:
+   it lists pixels that are hidden after raising, which is expected, but a pack whose pieces don't match the
+   manifest geometry shows up there too (run with `ZSCALE = 1.0` to check: it should be 0).
+3. Point biomes at it: `b.pack = '<name>'` for the biomes it suits (`src/data/biomes.js`), and give them palettes.
+4. If the pack names different wall families or door designs, check `crypt_ashlar` (town walls in
+   `src/world/town.js`) and `funerary_obelisk` (throne columns), and `LIT` / `WALK_OVER` (prop names).
+5. Run `pack.js`, `walls.js` and `data_check.mjs`, and look at the screenshots.

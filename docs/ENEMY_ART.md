@@ -8,7 +8,7 @@ fallback while the art loads, for Demon Lord Velscour, and for player summons.
 - Sheets: `assets/source/enemies/<set>/<sheet>.png`. Set 1 (uploaded as `assets/Enemy Assets Set 1/ChatGPT Image ...png`)
   was renamed by content: `skeletons`, `liches`, `bone_horrors`, `flesh_brutes`, `demons`, `tentacles`, `eyes`.
 - `python3 tools/process_assets.py enemies` (needs `pip install pillow numpy scipy`) cuts every monster out with
-  `grid_objects` (the same shape-based grid finder the scatter sheets use). It downscales each one by `ENEMY_SCALE`
+  `grid_objects` (the same shape-based grid finder the chest sheet uses). It downscales each one by `ENEMY_SCALE`
   (0.5, so about 165 px tall) and packs one atlas per sheet: `assets/sprites/enemies/<set>_<sheet>.webp`
   (about 150 KB each). Each cell's rectangle goes in `enemies.json`, along with `fx`, the column at the centre of
   the feet, and `oh`, the cell's height on the sheet. Cells are numbered in reading order. A sheet that isn't

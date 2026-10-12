@@ -67,15 +67,35 @@ for (const b of BIOMES) {
   if (!looks.boss(b.roster)) bad.push(`biome ${b.id}: no guardian art`);
   if (b.id !== 'throne' && !b.family) bad.push(`biome ${b.id}: no colour family`);
 }
-// every biome's tile set and barricade set exist
+// every biome's pack exists and is complete: all 16 wall connection masks per family, with an arm for each
+// connection, arches and doors in 4 directions (doors open and closed), self-seamless floors, chest art
 const { readFileSync, existsSync } = await import('node:fs');
 const asset = (f) => new URL('../../assets/' + f, import.meta.url);
-const props = JSON.parse(readFileSync(asset('props/props.json')));
+const packs = {};
 for (const b of BIOMES) {
-  for (const f of [`tiles/${b.art}.json`, `tiles/${b.art}_floor.webp`, `tiles/${b.art}_walls.webp`]) if (!existsSync(asset(f))) bad.push(`biome ${b.id}: missing ${f}`);
-  if (!props.barricades[b.barricade]) bad.push(`biome ${b.id}: no barricade set ${b.barricade}`);
-  for (const sh of b.scatter) if (!props.scatter[sh]) bad.push(`biome ${b.id}: no scatter sheet ${sh}`);
+  if (!b.pack) { bad.push(`biome ${b.id}: no pack`); continue; }
+  for (const f of ['pack.json', 'floors.webp', 'walls.webp', 'scatter.webp']) if (!existsSync(asset(`tiles/${b.pack}/${f}`))) bad.push(`biome ${b.id}: missing tiles/${b.pack}/${f}`);
+  packs[b.pack] = 1;
 }
+for (const id of Object.keys(packs)) {
+  const m = JSON.parse(readFileSync(asset(`tiles/${id}/pack.json`)));
+  if (m.floors.filter((f) => f.seamless).length < 2) bad.push(`pack ${id}: fewer than 2 seamless floors`);
+  for (const [fam, masks] of Object.entries(m.walls)) {
+    for (let mask = 0; mask < 16; mask++) {
+      if (!masks[mask]) { bad.push(`pack ${id}: ${fam} has no piece for mask ${mask}`); continue; }
+      const want = ['NE', 'SE', 'SW', 'NW'].filter((d, i) => mask & (1 << i));
+      for (const v of masks[mask]) for (const d of want) if (!v.some((r) => r[0] === d)) bad.push(`pack ${id}: ${fam} mask ${mask} has no ${d} arm`);
+    }
+  }
+  for (const [des, dirs] of Object.entries(m.arches)) for (const d of ['SE', 'SW', 'NW', 'NE']) if (!dirs[d] || dirs[d].length !== 6) bad.push(`pack ${id}: arch ${des} ${d} not in 6 slices`);
+  for (const [des, dirs] of Object.entries(m.doors)) for (const d of ['SE', 'SW', 'NW', 'NE']) {
+    if (!dirs[d] || !dirs[d].closed || !dirs[d].open) { bad.push(`pack ${id}: door ${des} ${d} missing a state`); continue; }
+    if (!dirs[d].open.some((r) => r[0][0] === 'leaf')) bad.push(`pack ${id}: door ${des} ${d} has no open leaf`);
+  }
+  console.log(`pack ${id}: ${m.floors.length} floors, ${Object.keys(m.walls).length} wall families, ${Object.keys(m.arches).length} arches, ${Object.keys(m.doors).length} doors, ${m.scatter.length} props`);
+}
+const chests = JSON.parse(readFileSync(asset('props/chests.json')));
+for (const k of ['closed', 'open', 'rareClosed', 'rareOpen']) if (!chests[k]) bad.push(`chest art: no ${k}`);
 // shuffle bag: every biome but the throne, each once per cycle, never twice in a row
 const NB = BIOMES.length - 1, hero = { biomeBag: [] }, seq = [];
 for (let i = 0; i < NB * 4; i++) { const id = drawBiome(hero, 2); if (id === hero.lastBiome) bad.push('biome repeated back to back'); hero.lastBiome = id; seq.push(id); }
