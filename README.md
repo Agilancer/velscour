@@ -63,7 +63,7 @@ Progress saves automatically in the browser (localStorage), and you can keep up 
 - **Loot**: Common, Uncommon, Rare, Epic and Legendary items across 7 equipment slots and 10 material tiers, with around 45 affix types and 22 legendary powers. Drops also include gold, health/mana orbs and potions. **Gems**: 12 stat gems in 6 tiers, plus shot-pattern gems (+projectiles, split, echo-cast, orbiting orbs, nova-on-cast, chain/pierce, homing, bigger areas, +skill levels). Rarer gear holds more sockets (up to 6).
 - **Town of Duskhollow**: Weaponsmith, Armorer, Blacksmith (+1…+10 upgrades), Enchanter (reroll/add affixes), Alchemist (potions), Gem Merchant (buy, or combine 3 → 1 higher tier), Jeweler (add sockets, remove gems) and Gambler. Townsfolk wander the plaza.
 - **Auto-play**: the Auto button (or P) hands the hero to an AI that plays for you. It spends skill and attribute points, keeps the skill bar sorted, fights with every skill on the bar (dodging telegraphed attacks, kiting with ranged builds, drinking potions, using cooldowns, buffs, curses and minions), picks up and equips upgrades, sockets gems, then goes to town to sell, restock potions, buy gear and gems, add sockets, upgrade, enchant and gamble, and keeps delving toward Velscour. It also gets back up after a death. Move, click or tap to take over for a moment; it resumes when you let go.
-- Procedural sound effects and ambient music (no audio files), settings, a help screen and six hero save slots.
+- Sampled sound effects, music and drifting ambient beds (procedural fallbacks for the rest), settings, a help screen and six hero save slots.
 
 ## Project layout
 
@@ -76,7 +76,7 @@ tools/process_assets.py        slices the source sheets into the above (biome pa
 tools/tests/                   headless-browser test scripts (Playwright + Chromium)
 docs/HANDOFF.md, CLAUDE.md     developer hand-off notes: spec, status, open issues, subsystem reference
 src/main.js                    boot + main loop
-src/core/                      input, camera/iso math, audio synth, asset loading, utils
+src/core/                      input, camera/iso math, audio (samples, music, ambience), asset loading, utils
 src/data/                      classes, 980 skill specs, skills logic, summons, monsters, biomes, items
 src/world/                     tile map, dungeon generator, town layout
 src/gfx/                       pixel-art sprite system, VFX/gore, skill shapes, town art

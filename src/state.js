@@ -19,6 +19,7 @@ export const G = {
   settings: {
     sfx: 0.6,
     music: 0.35,
+    amb: 0.5,
     gore: 2, // 0 off, 1 normal, 2 extreme
     dmgNumbers: true,
     shake: true,

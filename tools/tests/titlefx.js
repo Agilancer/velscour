@@ -1,32 +1,50 @@
-// Title screen logo FX: flames, tar drips piling up, a spark igniting the pile, the explosion.
+// Title screen intro: click-to-awaken gate, the logo fading in on the Hymn of the Abyss clock, the flame burst on the
+// song's hit (~8.9 s after the click: 2 s delay + 6.88 s into the song), skipping the intro, the blinking eyes.
 //   node tools/tests/titlefx.js            (screenshots: titlefx_*.png)
-// Uses the test hooks on the FX canvas (canvas.title-fx .fx) to pile tar up and fire the spark without waiting.
+// Uses the test hooks on the FX canvas (canvas.title-fx .fx).
 const { openGame, report } = require('./harness');
 
 (async () => {
   for (const [w, h, mobile, tag] of [[1280, 720, false, 'pc'], [844, 390, true, 'mobile']]) {
     const { browser, page, errors, shot } = await openGame({ width: w, height: h, mobile });
     const st = () => page.evaluate(() => document.querySelector('canvas.title-fx').fx.state());
+    const clock = () => page.evaluate(async () => (await import('/src/core/audio.js')).musicClock());
+    await page.evaluate(() => { const fx = document.querySelector('canvas.title-fx').fx; for (let i = 0; i < 4; i++) fx.watcher(); });
+    await page.waitForTimeout(700);
+    let s = await st();
+    console.log(tag, 'start', JSON.stringify(s));
+    await shot(`titlefx_${tag}_gate`);
+    if (s.phase === 'gate') { await page.mouse.click(w * 0.1, h * 0.9); }
+    const t0 = Date.now();
+    await page.waitForTimeout(4500);
+    s = await st();
+    console.log(tag, 'fading', JSON.stringify(s), 'song', JSON.stringify(await clock()));
+    if (s.phase !== 'intro' || !(s.opacity > 0.05 && s.opacity < 0.9)) { console.log('FAIL: logo should be part-way faded in'); process.exitCode = 1; }
+    await shot(`titlefx_${tag}_fading`);
+    while ((s = await st()).phase !== 'lit' && Date.now() - t0 < 16000) await page.waitForTimeout(30);
+    const litAt = (Date.now() - t0) / 1000, song = await clock();
+    console.log(tag, `lit ${litAt.toFixed(2)}s after the click, song at ${song ? song.t.toFixed(2) : 'n/a'}`);
+    if (s.phase !== 'lit' || (song && Math.abs(song.t - 6.88) > 0.25)) { console.log('FAIL: burst not on the hit'); process.exitCode = 1; }
+    await page.waitForTimeout(120);
+    await shot(`titlefx_${tag}_burst`);
     await page.waitForTimeout(2500);
-    await shot(`titlefx_${tag}_flames`);
-    await page.waitForTimeout(6000);
-    console.log(tag, 'after 8.5s', JSON.stringify(await st()));
-    await shot(`titlefx_${tag}_drips`);
-    await page.evaluate(() => document.querySelector('canvas.title-fx').fx.pileUp(14));
-    await page.waitForTimeout(400);
-    await shot(`titlefx_${tag}_pile`);
-    await page.evaluate(() => document.querySelector('canvas.title-fx').fx.spark());
-    let s, t0 = Date.now(), shots = 0;
-    for (let i = 0; i < 60; i++) {   // catch it burning and exploding
-      await page.waitForTimeout(100);
-      s = await st();
-      if (s.fires && shots === 0) { await page.waitForTimeout(250); await shot(`titlefx_${tag}_burning`); shots = 1; }
-      if (shots === 1 && !s.fires) { await page.waitForTimeout(60); await shot(`titlefx_${tag}_boom`); await page.waitForTimeout(450); await shot(`titlefx_${tag}_after`); shots = 2; break; }
-    }
-    console.log(tag, shots === 2 ? `ignited + exploded in ${Date.now() - t0}ms` : 'FAIL: no explosion', JSON.stringify(s));
-    if (shots !== 2) process.exitCode = 1;
-    // leaving the title screen must stop the loop and drop the canvas
-    await page.evaluate(() => document.querySelector('.title-menu .btn:nth-last-child(1)').click());
+    console.log(tag, 'burning', JSON.stringify(await st()));
+    await shot(`titlefx_${tag}_burning`);
+    // a fresh title screen (audio already unlocked) starts the intro at once; a click skips to the burst
+    await page.evaluate(async () => { const a = await import('/src/core/audio.js'); a.stopMusic(0.1); (await import('/src/ui/screens.js')).titleScreen(); });
+    await page.waitForTimeout(600);
+    s = await st();
+    if (s.phase !== 'intro') { console.log('FAIL: expected intro without gate, got', s.phase); process.exitCode = 1; }
+    await page.mouse.click(w * 0.1, h * 0.9);
+    await page.waitForTimeout(800);
+    s = await st();
+    console.log(tag, 'after skip', JSON.stringify(s));
+    if (s.phase !== 'lit') { console.log('FAIL: skip did not light the logo'); process.exitCode = 1; }
+    // leaving the title screen must stop the loop and drop the canvases
+    await page.click('text=New Hero');
+    await page.waitForTimeout(200);
+    const left = await page.evaluate(() => document.querySelectorAll('canvas.title-fx, canvas.title-eyes').length);
+    if (left) { console.log('FAIL: title canvases left behind'); process.exitCode = 1; }
     report(errors);
     await browser.close();
   }

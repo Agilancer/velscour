@@ -146,7 +146,7 @@ export class World {
     for (const d of this.map.doors) {
       if (d.open || this.query(d.x, d.y, 1.1).length === 0) continue;
       d.open = true;
-      sfx('thud', 0.35, 0.7);
+      sfx('door', 0.8);
     }
   }
 

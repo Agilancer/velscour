@@ -13,6 +13,7 @@ JSON atlases under assets/. Re-run this whenever a source sheet changes:
     python3 tools/process_assets.py gear [paladin]      # armor + helm libraries (tools/gearart.py, docs/CLASS_ART.md)
     python3 tools/process_assets.py enemies  # monster sheets in assets/source/enemies/<set>/ (docs/ENEMY_ART.md)
     python3 tools/process_assets.py select   # class-select portraits from assets/FinalClasses/All 16 Classes.png
+    python3 tools/process_assets.py audio    # sound zips in assets/source/audio/ -> assets/audio/ (tools/audiopack.py, needs ffmpeg)
 
 Outputs
   assets/sprites/classes/<class>.webp  one trimmed full-body sprite per class
@@ -24,10 +25,17 @@ Outputs
   assets/props/chests.webp + .json     loot-chest art
   assets/sprites/enemies/<set>_<sheet>.webp + enemies.json   one atlas per monster sheet
   assets/sprites/select/<class>.webp + select.json   animated menu portraits (tools/selectart.py)
+  assets/audio/{sfx,amb,music}/*.mp3 + audio.json     sound effects, ambient loops, songs (tools/audiopack.py)
 """
 import json
 import os
 import sys
+
+if sys.argv[1:] == ["audio"]:   # the audio import needs only ffmpeg, not the image libraries
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from audiopack import process_audio
+    process_audio()
+    sys.exit(0)
 
 import numpy as np
 from PIL import Image
@@ -211,6 +219,9 @@ def main():
     if "select" in args:
         from selectart import process_select_art
         process_select_art()
+    if "audio" in args:
+        from audiopack import process_audio
+        process_audio()
     if "gear" in args:
         from gearart import process_gear_art
         process_gear_art(args[args.index("gear") + 1:])
