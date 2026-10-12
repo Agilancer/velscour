@@ -32,6 +32,7 @@ node tools/tests/skills.js wizard,gunner           # cast all 60 skills per clas
 node tools/tests/classart.js paladin               # class art: poses, catalog items, ability effects
 node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners in those biomes (docs/WALLS.md)
 node tools/tests/titlefx.js                        # title logo fire, tar drips/pile, spark ignition + explosion
+node tools/tests/enemies.js                        # monster art line-ups, corpses, mixed-biome levels + guardians
 ```
 Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, because layout bugs don't throw.
 - In cloud containers, Chromium is at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` and
@@ -41,8 +42,10 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
 ## Conventions
 - Match the existing style: ES modules, 2-space indent, single quotes, dense code, short comments only where
   something is non-obvious. Shared state lives on `G` (`src/state.js`).
-- All art except the user's sprite sheets is placeholder. Monsters, props and items are ASCII pixel art in
-  `src/gfx/pixelart.js`, and town buildings are drawn in `src/gfx/townart.js`. The user's sheets are in
+- All art except the user's sprite sheets is placeholder. Summons, Velscour, decor props and items are ASCII pixel art in
+  `src/gfx/pixelart.js`, and town buildings are drawn in `src/gfx/townart.js`. Monsters use the user's sheets in
+  `assets/source/enemies/<set>/`, imported by `python3 tools/process_assets.py enemies` and catalogued in
+  `src/data/bestiary.js`; see [`docs/ENEMY_ART.md`](docs/ENEMY_ART.md). New uploads ("Enemy Assets Set N") go there too. The user's sheets are in
   `assets/source/` and get sliced by `tools/process_assets.py` (needs `pip install pillow numpy scipy`; args
   `sprites|tiles|props`). Environment art and the biome -> art mapping are documented in [`docs/ART.md`](docs/ART.md).
   Class art packs (Paladin armor poses, items, ability effects) go in `assets/source/classes/<class>/` and are imported by

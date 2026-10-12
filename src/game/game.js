@@ -4,12 +4,12 @@ import { input } from '../core/input.js';
 import { camera } from '../core/view.js';
 import { sfx, playMusic, stopMusic } from '../core/audio.js';
 import { rand, pick, randi, escapeHtml, dist, makeCanvas, fmtInt } from '../core/util.js';
-import { biomeTileSet, loadBiomeArt } from '../core/assets.js';
+import { biomeTileSet, loadBiomeArt, mixedTileSet } from '../core/assets.js';
 import { loadClassArt } from '../core/classart.js';
 import { preloadBarFx } from '../gfx/artfx.js';
 import { SKILLS } from '../data/skills.js';
 import { setClassItems } from '../data/items.js';
-import { BIOME_BY_ID, TOWN_BIOME, randomBiome } from '../data/biomes.js';
+import { BIOME_BY_ID, TOWN_BIOME, drawBiome, mixPartner } from '../data/biomes.js';
 import { CLASSES } from '../data/classes.js';
 import { generateDungeon } from '../world/dungeon.js';
 import { generateTown, makeTownTiles } from '../world/town.js';
@@ -192,25 +192,26 @@ export const game = {
   enterDungeon() {
     const c = G.char;
     const depth = c.depth;
-    if (depth !== 100 && (!c.nextBiome || c.nextBiome === 'throne')) c.nextBiome = randomBiome(c.lastBiome, depth);
+    if (depth !== 100 && (!c.nextBiome || c.nextBiome === 'throne')) c.nextBiome = drawBiome(c, depth);
     const biome = BIOME_BY_ID[depth === 100 ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
+    const mix = mixPartner(biome); // a like-coloured biome whose tiles this level borrows, or null
     const loading = document.getElementById('loading');
     document.getElementById('loading-text').textContent = `Descending to Depth ${depth} — ${biome.name}…`;
     loading.classList.remove('hidden');
     sfx('portal');
     // fetch this biome's art first (about 1 MB); if that fails the default set stands in
     setTimeout(async () => {
-      try { await loadBiomeArt(biome); } catch (e) { console.warn(e); }
-      try { this.buildDungeon(depth, biome); } finally { loading.classList.add('hidden'); }
+      try { await Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]); } catch (e) { console.warn(e); }
+      try { this.buildDungeon(depth, biome, mix); } finally { loading.classList.add('hidden'); }
     }, 40);
   },
 
-  buildDungeon(depth, biome) {
+  buildDungeon(depth, biome, mix = null) {
     const c = G.char;
     const old = G.world;
-    const tileset = biomeTileSet(biome);
+    const tileset = mix ? mixedTileSet(biome, mix, Math.random() < 0.5) : biomeTileSet(biome);
     const gen = generateDungeon(depth, biome, tileset, (Math.random() * 1e9) | 0);
-    const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches });
+    const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches, looks: gen.looks });
     world.chests = gen.chests.map((ch) => ({
       ...ch, opened: false, reach: 1.3,
       use() {
@@ -236,7 +237,7 @@ export const game = {
     const lvl = depth;
     for (const s of gen.spawns) {
       if (s.rank === 'boss') {
-        const m = makeMonster(world, s.arch, biome, lvl + 2, 'boss', s.x, s.y);
+        const m = makeMonster(world, s.arch, biome, lvl + 2, 'boss', s.x, s.y, 0, s.look);
         world.add(m);
         world.boss = m;
         continue;
@@ -246,7 +247,7 @@ export const game = {
       for (let i = 0; i < n; i++) {
         const [x, y] = i === 0 ? [s.x, s.y] : gen.map.randomNear(s.x, s.y, 1.6);
         const rank = s.rank === 'unique' ? (i === 0 ? 'unique' : 'normal') : s.rank;
-        const m = makeMonster(world, s.arch, biome, lvl + (rank === 'normal' ? 0 : 1), rank, x, y, variant);
+        const m = makeMonster(world, s.arch, biome, lvl + (rank === 'normal' ? 0 : 1), rank, x, y, variant, s.look);
         if (s.rank === 'unique' && i > 0) { m.affixes = []; m.name = m.name + ' Minion'; }
         world.add(m);
       }
@@ -273,7 +274,8 @@ export const game = {
     c.lastBiome = biome.id;
     HUD.setArea(`Depth ${depth}${depth > 100 ? ' — Endless Torment' : ''}`, biome.name);
     playMusic(depth === 100 ? 'boss' : 'dungeon');
-    UI.centerMsg(biome.name.toUpperCase(), `Depth ${depth}`, 2.4);
+    const kin = tileset.mixed && BIOME_BY_ID[tileset.mixed];
+    UI.centerMsg(biome.name.toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);
     if (!c.tips.dungeon) { c.tips.dungeon = true; setTimeout(() => UI.log('Find the exit portal. It stays sealed until the depth\'s guardian is slain. The blue portal returns you to town.', '#ffe2a0'), 1500); }
     this.autosave();
   },
@@ -291,7 +293,7 @@ export const game = {
     if (!exit.active) { floatText(exit.x, exit.y, 70, 'Sealed — slay the guardian!', '#ff6040', 13, { life: 1.6 }); sfx('error'); return; }
     const depth = world.depth;
     const next = depth + 1;
-    const nb = next === 100 ? 'throne' : randomBiome(world.biome.id, next);
+    const nb = drawBiome(c, next);
     const nbName = BIOME_BY_ID[nb].name;
     UI.dialog({
       title: `Depth ${depth} Cleared`,
@@ -315,7 +317,7 @@ export const game = {
     setTimeout(() => {
       deathScreen(depth, killer, () => {
         c.depth = 1;
-        c.nextBiome = randomBiome(null, 1);
+        c.nextBiome = drawBiome(c, 1);
         const p = G.player;
         p.dead = false;
         p.buffs = [];

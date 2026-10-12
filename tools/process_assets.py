@@ -9,6 +9,7 @@ JSON atlases under assets/. Re-run this whenever a source sheet changes:
     python3 tools/process_assets.py          # everything
     python3 tools/process_assets.py tiles    # floor/wall atlases only
     python3 tools/process_assets.py classes [paladin]   # class art packs (tools/classart.py, docs/CLASS_ART.md)
+    python3 tools/process_assets.py enemies  # monster sheets in assets/source/enemies/<set>/ (docs/ENEMY_ART.md)
 
 Outputs
   assets/sprites/classes/<class>.webp  one trimmed full-body sprite per class
@@ -19,6 +20,7 @@ Outputs
   assets/tiles/catacombs_floor.webp    floor-tile atlas (192x96 diamonds)
   assets/tiles/catacombs_walls.webp    wall-piece atlas, plus seamless wall strips (see build_wall_strips)
   assets/tiles/catacombs.json          atlas rects, categories and wall anchors
+  assets/sprites/enemies/<set>_<sheet>.webp + enemies.json   one atlas per monster sheet
 """
 import json
 import os
@@ -474,7 +476,7 @@ def process_tiles():
 def main():
     args = sys.argv[1:]
     if not args or "all" in args:
-        args = ["sprites", "tiles", "props", "classes"]
+        args = ["sprites", "tiles", "props", "classes", "enemies"]
     if "sprites" in args:
         process_classes()
         process_ui()
@@ -482,6 +484,8 @@ def main():
         process_tiles()
     if "props" in args:
         process_props()
+    if "enemies" in args:
+        process_enemies()
     for flag in ("classes", "classart"):
         if flag in args:
             from classart import process_class_art
@@ -620,6 +624,58 @@ def process_props():
             meta["barricades"][name] = entries
             print("barricades %-10s %s" % (name, count(entries, "kind")))
     with open(os.path.join(OUT, "props", "props.json"), "w") as f:
+        json.dump(meta, f, indent=1)
+
+
+# --------------------------------------------------------------------------
+# Monsters: assets/source/enemies/<set>/<sheet>.png, transparent sheets with one pose per monster
+# --------------------------------------------------------------------------
+ENEMY_SCALE = 0.5  # stored size vs. the sheet; monsters are drawn at 30-110 world px, sheets are ~330 px tall
+ENEMY_GRID = {}    # "<set>/<sheet>": (rows, cols) for sheets that are not the usual 2 x 5
+
+
+def process_enemies():
+    """Cut every monster out of its sheet (reading order: left to right, top to bottom), downscale it and
+    pack one atlas per sheet. enemies.json: {"<set>/<sheet>": {"file", "cells": [{x, y, w, h, fx, oh}]}}
+    with fx = the feet's centre column and oh = the height on the sheet. src/data/bestiary.js says what
+    each cell is (index = reading order)."""
+    root = os.path.join(SRC, "enemies")
+    out_dir = os.path.join(OUT, "sprites", "enemies")
+    ensure(out_dir)
+    meta = {}
+    for set_id in sorted(os.listdir(root)):
+        if not os.path.isdir(os.path.join(root, set_id)):
+            continue
+        for fn in sorted(os.listdir(os.path.join(root, set_id))):
+            if not fn.lower().endswith(".png"):
+                continue
+            key = set_id + "/" + fn[:-4]
+            rgba = np.asarray(Image.open(os.path.join(root, set_id, fn)).convert("RGBA")).copy()
+            rgba[..., 3] = np.where(rgba[..., 3] < 16, 0, rgba[..., 3])
+            rows, cols = ENEMY_GRID.get(key, (2, 5))
+            pieces = []
+            for r, row in enumerate(grid_objects(rgba, rows, cols, y_min=0)):
+                for c, a in enumerate(row):
+                    if a is None:
+                        continue
+                    img = Image.fromarray(a)
+                    w, h = max(1, round(img.width * ENEMY_SCALE)), max(1, round(img.height * ENEMY_SCALE))
+                    small = img.convert("RGBa").resize((w, h), Image.LANCZOS).convert("RGBA")
+                    al = np.asarray(small)[..., 3] > 100
+                    ys = np.nonzero(al.any(axis=1))[0]
+                    foot = al[max(0, ys.max() - max(2, h // 7)):ys.max() + 1] if len(ys) else al
+                    fx = float(np.nonzero(foot.any(axis=0))[0].mean()) if foot.any() else w / 2
+                    pieces.append({"kind": r * cols + c, "img": small, "w": w, "h": h, "fx": round(fx, 1), "oh": img.height})
+            atlas, entries = pack_atlas(pieces, 1024)
+            cells = [None] * (rows * cols)
+            for p, e in zip(pieces, entries):
+                cells[p["kind"]] = {"x": e["x"], "y": e["y"], "w": e["w"], "h": e["h"], "fx": p["fx"], "oh": p["oh"]}
+            name = key.replace("/", "_")
+            save(atlas, os.path.join(out_dir, name + ".webp"))
+            meta[key] = {"file": name + ".webp", "cells": cells}
+            print("%-24s %d monsters, atlas %dx%d, %d KB" % (key, len(pieces), atlas.width, atlas.height,
+                                                          os.path.getsize(os.path.join(out_dir, name + ".webp")) // 1024))
+    with open(os.path.join(out_dir, "enemies.json"), "w") as f:
         json.dump(meta, f, indent=1)
 
 

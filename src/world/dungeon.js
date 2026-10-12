@@ -2,6 +2,7 @@
 import { TileMap } from './map.js';
 import { RNG, clamp } from '../core/util.js';
 import { ARCH } from '../data/enemies.js';
+import { rollLooks } from '../data/bestiary.js';
 
 const S = 11; // chunk size in tiles
 
@@ -102,12 +103,23 @@ export function generateDungeon(depth, biome, tileset, seed) {
     for (let y = exitRoom.y; y < exitRoom.y + exitRoom.h; y++) for (let x = exitRoom.x; x < exitRoom.x + exitRoom.w; x++) carve(x, y);
   }
 
-  finishMap(map, tileset, rng);
+  // a mixed level (assets.js mixedTileSet) paves its far chunks, and a few others, with the second biome's floors
+  let region = null;
+  if (tileset.split) {
+    let far = 0;
+    for (let i = 0; i < dist.length; i++) far = Math.max(far, dist[i]);
+    const alt = new Uint8Array(CW * CH);
+    for (let i = 0; i < alt.length; i++) alt[i] = i !== ci(start.x, start.y) && (dist[i] > far * 0.45) !== rng.chance(0.2) ? 1 : 0;
+    region = (i) => alt[ci(clamp(Math.floor((i % W - 1) / S), 0, CW - 1), clamp(Math.floor((Math.floor(i / W) - 1) / S), 0, CH - 1))];
+  }
+  finishMap(map, tileset, rng, region);
   const obstacles = placeObstacles(map, rooms.filter((r) => r !== startRoom && r !== exitRoom), tileset, rng, startRoom);
 
   // ---- spawns
   const spawns = [];
   const roster = biome.roster;
+  const rnd = () => rng.next();
+  const looks = rollLooks(biome, rnd); // this level's bestiary: which art and palette swap each archetype gets
   const density = 1 + depth * 0.012;
   const pickArch = () => {
     // earlier roster entries are a bit more common
@@ -131,7 +143,7 @@ export function generateDungeon(depth, biome, tileset, seed) {
       const A = ARCH[arch];
       const [px, py] = roomFloorSpot(r);
       const n = rng.int(A.pack[0], A.pack[1]) + (depth > 30 && rng.chance(0.4) ? 1 : 0);
-      spawns.push({ x: px, y: py, arch, n, rank: 'normal' });
+      spawns.push({ x: px, y: py, arch, n, rank: 'normal', look: looks.pick(arch) });
     }
   }
   // elites
@@ -139,16 +151,19 @@ export function generateDungeon(depth, biome, tileset, seed) {
   for (let i = 0; i < champs; i++) {
     const r = rng.pick(packRooms.filter((x) => x !== exitRoom)) || exitRoom;
     const [px, py] = roomFloorSpot(r);
-    spawns.push({ x: px, y: py, arch: pickArch(), n: rng.int(2, 4), rank: 'champion' });
+    const arch = pickArch();
+    spawns.push({ x: px, y: py, arch, n: rng.int(2, 4), rank: 'champion', look: looks.pick(arch) });
   }
   for (let i = 0; i < uniques; i++) {
     const r = rng.pick(packRooms.filter((x) => x !== exitRoom)) || exitRoom;
     const [px, py] = roomFloorSpot(r);
-    spawns.push({ x: px, y: py, arch: pickArch(), n: rng.int(3, 5), rank: 'unique' });
+    const arch = pickArch();
+    spawns.push({ x: px, y: py, arch, n: rng.int(3, 5), rank: 'unique', look: looks.pick(arch) });
   }
   // the guardian of the exit
-  const bossArch = rng.pick(roster.filter((a) => !['bat', 'spider', 'beetle'].includes(a)));
-  spawns.push({ x: exitRoom.mx, y: exitRoom.my, arch: bossArch, n: 1, rank: 'boss' });
+  const guardian = looks.boss(roster);
+  if (guardian) spawns.push({ x: exitRoom.mx, y: exitRoom.my, arch: guardian.arch, n: 1, rank: 'boss', look: guardian.look });
+  else spawns.push({ x: exitRoom.mx, y: exitRoom.my, arch: rng.pick(roster.filter((a) => !['bat', 'spider', 'beetle'].includes(a))), n: 1, rank: 'boss' });
 
   // ---- props, chests, torches
   const props = obstacles;
@@ -180,7 +195,7 @@ export function generateDungeon(depth, biome, tileset, seed) {
   }
 
   return {
-    map, rooms, spawns, props, chests, torches,
+    map, rooms, spawns, props, chests, torches, looks,
     start: [startRoom.mx, startRoom.my],
     exit: exitPos(map, exitRoom, startRoom),
     bossRoom: exitRoom,
@@ -292,13 +307,18 @@ function exitPos(map, room, from) {
   return [x, y];
 }
 
-function finishMap(map, tileset, rng) {
-  // floors are sorted calm -> busy (pits, rubble); mostly plain paving like Diablo II, busier tiles now and then
-  const nf = tileset.floors.length, nd = tileset.details.length, calm = Math.max(1, Math.ceil(nf * 0.45));
+function finishMap(map, tileset, rng, region = null) {
+  // floors are sorted calm -> busy (pits, rubble); mostly plain paving like Diablo II, busier tiles now and then.
+  // A mixed set holds two biomes' floors back to back (tileset.split); region(i) = 1 paves tile i with the second.
+  const sp = tileset.split;
+  const sets = [[0, sp ? sp.floors : tileset.floors.length, 0, sp ? sp.details : tileset.details.length]];
+  if (sp) sets.push([sp.floors, tileset.floors.length - sp.floors, sp.details, tileset.details.length - sp.details]);
   for (let i = 0; i < map.t.length; i++) {
     if (!map.t[i]) continue;
+    const [f0, nf, d0, nd] = sets[region && region(i) ? 1 : 0];
+    const calm = Math.max(1, Math.ceil(nf * 0.45));
     const r = rng.next();
-    map.v[i] = r < 0.08 && nd ? 100 + rng.int(0, nd - 1) : r < 0.78 ? rng.int(0, calm - 1) : rng.int(0, nf - 1);
+    map.v[i] = r < 0.08 && nd ? 100 + d0 + rng.int(0, nd - 1) : f0 + (r < 0.78 ? rng.int(0, calm - 1) : rng.int(0, nf - 1));
   }
   map.buildWalls(tileset, () => rng.next());
 }

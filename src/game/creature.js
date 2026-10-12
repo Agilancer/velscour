@@ -5,6 +5,7 @@ import { TAU, rand, chance, clamp } from '../core/util.js';
 import { spawn, glowSprite, ELEM } from '../gfx/vfx.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { classSprite } from '../core/assets.js';
+import { enemyImage } from '../core/enemyart.js';
 
 let UID = 0;
 
@@ -119,20 +120,29 @@ export class Creature {
   // ------------------------------------------------------------- drawing
   spriteImage() {
     // memoised per creature: building cache keys every frame is surprisingly costly
-    if (this._img && this._imgSprite === (this.classId || this.sprite) && this._imgPal === (this.classPal || this.pal)) return this._img;
-    this._imgSprite = this.classId || this.sprite;
-    this._imgPal = this.classPal || this.pal;
+    const id = this.art || this.classId || this.sprite, pal = this.art ? this.swap : this.classPal || this.pal;
+    if (this._img && this._imgSprite === id && this._imgPal === pal) return this._img;
+    if (this.art) {
+      const img = enemyImage(this.art, this.swap);
+      if (!img) return pixelSprite(this.sprite, this.pal, 6); // monster art still loading: the old pixel look
+      this._imgSprite = id; this._imgPal = pal; this._flashImg = null;
+      return (this._img = img);
+    }
+    this._imgSprite = id;
+    this._imgPal = pal;
     this._flashImg = null;
     this._img = this.classId ? classSprite(this.classId, this.spriteH * 3, this.classPal || null) : pixelSprite(this.sprite, this.pal, 6, this.dark ? { dark: true } : null);
     return this._img;
   }
-  flashImage() {
+  flashImage(img) {
     if (this.classId) return null;
+    if (img && img._art) return enemyImage(this.art, this.swap, 'flash');
     if (!this._flashImg) this._flashImg = pixelSprite(this.sprite, this.pal, 6, { flash: true });
     return this._flashImg;
   }
   /** World-px size of the sprite. */
   spriteDims(img) {
+    if (img._art) { const h = this.artH * this.scale; return [h * img.width / img.height, h]; }
     if (this.classId) { const h = this.spriteH * this.scale; return [h * img.width / img.height, h]; }
     const px = (this.px || 2.3) * this.scale / 6;
     return [img.width * px, img.height * px];
@@ -151,7 +161,7 @@ export class Creature {
     const z = this.z + fly + bob;
     // shadow
     ctx.fillStyle = 'rgba(0,0,0,0.38)';
-    ctx.beginPath(); ctx.ellipse(px, py, Math.max(8, w * 0.32), Math.max(4, w * 0.14), 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(px, py, Math.max(8, Math.min(w, h) * 0.32), Math.max(4, Math.min(w, h) * 0.14), 0, 0, TAU); ctx.fill();
     // elite aura
     if (this.aura) {
       ctx.globalCompositeOperation = 'lighter';
@@ -164,7 +174,9 @@ export class Creature {
     const lx = this.lunge > 0 ? (Math.cos(this.facing) - Math.sin(this.facing)) * this.lunge * 8 : 0;
     const ly = this.lunge > 0 ? (Math.cos(this.facing) + Math.sin(this.facing)) * this.lunge * 4 : 0;
     const squash = this.moving ? 1 + Math.sin(this.animT * 18) * 0.03 : 1;
-    const dx = px - w / 2 + lx, dy = py - h * squash - z + ly;
+    // monster art is anchored at its feet (weapons stick out to one side), mirrored with the sprite
+    const ax = img._art ? (this.flip ? 1 - img._art.fx / img.width : img._art.fx / img.width) : 0.5;
+    const dx = px - w * ax + lx, dy = py - h * squash - z + ly;
     ctx.save();
     if (this.alpha !== undefined) ctx.globalAlpha = this.alpha;
     if (this.status.freeze && this.status.freeze.t > 0) ctx.filter = 'hue-rotate(180deg) saturate(1.6) brightness(1.2)';
@@ -175,7 +187,7 @@ export class Creature {
     } else ctx.drawImage(img, dx, dy, w, h * squash);
     ctx.filter = 'none';
     if (this.flash > 0) {
-      const f = this.flashImage();
+      const f = this.flashImage(img);
       ctx.globalAlpha = Math.min(1, this.flash * 8) * 0.85;
       if (f) {
         if (this.flip) ctx.drawImage(f, 0, 0, w, h * squash); else ctx.drawImage(f, dx, dy, w, h * squash);

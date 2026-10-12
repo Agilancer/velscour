@@ -1,6 +1,7 @@
 // LocalStorage persistence for heroes.
 import { CLASSES } from '../data/classes.js';
 import { rollItem } from '../data/items.js';
+import { drawBiome } from '../data/biomes.js';
 
 const KEY = 'velscour_saves_v1';
 
@@ -32,7 +33,7 @@ export function newCharData(classId, name) {
     equip: { weapon: null, offhand: null, head: null, body: null, hands: null, legs: null, feet: null },
     bag: Array(60).fill(null),
     gold: 150, potions: { hp: 6, mp: 4, rejuv: 1, fury: 1 },
-    depth: 1, deepest: 0, nextBiome: 'catacombs', cleared: {},
+    depth: 1, deepest: 0, nextBiome: null, biomeBag: [], cleared: {},
     kills: 0, deaths: 0, created: Date.now(), lastPlayed: Date.now(), tips: {},
   };
   c.equip.weapon = rollItem(1, { slot: 'weapon', base: C.weapon, rarity: 0 });
@@ -41,6 +42,7 @@ export function newCharData(classId, name) {
   c.equip.body = rollItem(1, { slot: 'body', rarity: 0 });
   c.equip.body.affixes = [];
   c.equip.weapon.sockets = 1;
+  c.nextBiome = drawBiome(c, 1); // the first descent is a random biome too
   return c;
 }
 
@@ -50,6 +52,9 @@ export function migrate(c) {
   c.cleared = c.cleared || {};
   c.granted = c.granted || {};
   c.tips = c.tips || {};
+  if (!Array.isArray(c.biomeBag)) c.biomeBag = [];
+  // heroes made before the shuffle bag always started in the catacombs: give an unexplored hero a random start
+  if (c.nextBiome === 'catacombs' && !c.deepest && !c.lastBiome) c.nextBiome = drawBiome(c, c.depth || 1);
   if (!Array.isArray(c.bar) || c.bar.length !== 10) c.bar = Array(10).fill(null);
   while (c.bag.length < 60) c.bag.push(null);
   return c;
