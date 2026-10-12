@@ -70,8 +70,6 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `python3 tools/process_assets.py audio` (needs ffmpeg; `tools/audiopack.py`). `src/core/audio.js` maps game sounds
   to samples (`SAMPLES`), songs to areas (`MUSIC`) and ambient beds to biomes (`AMB`).
   Never hand-edit the generated files in `assets/sprites|ui|tiles|audio`.
-  The level-up voice line `assets/audio/voice/levelup.wav` is not from a zip: `tools/levelup_voice.py` renders it
-  (espeak-ng + MBROLA us2), and the banner's typed subtitles in `HUD.levelUp` are timed to it.
 - Paths must stay **relative** (`assets/...`, `src/main.js`, never `/assets/...`), because the site is served
   from the `/velscour/` subpath on GitHub Pages. The `/src/...` imports in `tools/tests/` are fine, because the
   tests run against a local server at the root.

@@ -363,13 +363,13 @@ export function floatText(x, y, z, text, color = '#fff', size = 14, opts = {}) {
 }
 
 // --------------------------------------------------------- damage numbers
-// Comic-book damage numbers: each is rendered once (heavy outline, rim, gradient fill, offset shadow; crits on a
-// jagged starburst) at 1/PIX resolution for a chunky retro edge, cached, then slammed in, tilted and floated.
+// Plain, heavy serif numbers with a black outline, rendered once at 1/PIX resolution for a chunky retro edge and cached.
+// Hits drift up and fade. Crits are blood: dark red, they hang in the air while drips run off the glyphs and fall.
 const DMG_STYLE = {
-  hit: { size: 26, life: 1.35, pop: 2, fill: ['#fffaf0', '#f2d9a0', '#c88a40'], rim: '#6a0c06' },
-  crit: { size: 42, life: 2.2, pop: 2.8, fill: ['#fff4a8', '#ff8a20', '#c01008'], rim: '#ffd860', burst: true },
-  hurt: { size: 21, life: 1.15, pop: 1.6, fill: ['#ffc0b0', '#ff3a24', '#8a0806'], rim: '#1a0202' },
-  dot: { size: 15, life: 0.95, pop: 1.3, rim: '#120404' },
+  hit: { size: 19, life: 0.95, pop: 1.12, fill: ['#e8dcc4', '#c8b898', '#8a7a62'] },
+  crit: { size: 30, life: 2.1, pop: 1.3, fill: ['#e83020', '#a00a06', '#4a0202'], blood: true },
+  hurt: { size: 17, life: 1, pop: 1.1, fill: ['#e05a40', '#b01810', '#5a0604'] },
+  dot: { size: 13, life: 0.85, pop: 1 },
 };
 const PIX = 1.5;
 const numCache = new Map();
@@ -380,42 +380,26 @@ function numSprite(text, style, color) {
   if (c) { numCache.delete(key); numCache.set(key, c); return c; }
   const S = DMG_STYLE[style], fs = Math.round(S.size / PIX), font = `900 ${fs}px Cinzel, Georgia, serif`;
   const probe = makeCanvas(1, 1).getContext('2d'); probe.font = font;
-  const tw = Math.ceil(probe.measureText(text).width), o = Math.max(2, Math.round(fs * 0.2));
-  let w = tw + o * 2 + 4, h = Math.ceil(fs * 1.25) + o * 2 + 4;
-  const bR = S.burst ? Math.max(tw * 0.56 + fs * 0.3, fs * 0.95) : 0;
-  if (bR) { w = Math.max(w, Math.ceil(bR * 2.2)); h = Math.max(h, Math.ceil(bR * 1.7)); }
+  const tw = Math.ceil(probe.measureText(text).width), o = Math.max(1, Math.round(fs * 0.12));
+  const w = tw + o * 2 + 4, h = Math.ceil(fs * 1.25) + o * 2 + 4;
   c = makeCanvas(w, h);
-  const g = c.getContext('2d'), cx = w / 2, cy = h / 2;
-  if (bR) {
-    // the "POW" burst: dark gore-red with a dull gold rim, jagged the same way every time for this number
-    let seed = 0;
-    for (const ch of text) seed = (seed * 31 + ch.charCodeAt(0)) % 9973;
-    const pts = 15;
-    g.beginPath();
-    for (let i = 0; i < pts * 2; i++) {
-      const a = (i / (pts * 2)) * TAU - Math.PI / 2, j = ((seed * (i + 7)) % 13) / 13;
-      const r = i % 2 ? bR * (0.62 + j * 0.1) : bR * (0.88 + j * 0.16);
-      g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.74);
-    }
-    g.closePath();
-    const rg = g.createRadialGradient(cx, cy, 0, cx, cy, bR);
-    rg.addColorStop(0, '#9a1206'); rg.addColorStop(0.6, '#4a0604'); rg.addColorStop(1, '#1c0202');
-    g.fillStyle = rg; g.fill();
-    g.lineJoin = 'miter'; g.lineWidth = 3; g.strokeStyle = '#0a0202'; g.stroke();
-    g.lineWidth = 1; g.strokeStyle = '#c8902a'; g.stroke();
-  }
+  const g = c.getContext('2d'), cx = w / 2, cy = h / 2, ty = cy + fs * 0.06;
   g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
-  const ty = cy + fs * 0.06;
-  // offset comic shadow, black outline, coloured rim, gradient fill
-  g.lineWidth = o * 2; g.strokeStyle = 'rgba(0,0,0,0.75)'; g.strokeText(text, cx + 2, ty + 2); g.fillStyle = 'rgba(0,0,0,0.75)'; g.fillText(text, cx + 2, ty + 2);
-  g.strokeStyle = '#0a0303'; g.strokeText(text, cx, ty);
-  g.lineWidth = Math.max(1, o * 0.8); g.strokeStyle = S.rim; g.strokeText(text, cx, ty);
+  g.lineWidth = o * 2; g.strokeStyle = '#0a0303'; g.strokeText(text, cx, ty);
   if (S.fill) {
     const lg = g.createLinearGradient(0, ty - fs * 0.45, 0, ty + fs * 0.45);
     lg.addColorStop(0, S.fill[0]); lg.addColorStop(0.5, S.fill[1]); lg.addColorStop(1, S.fill[2]);
     g.fillStyle = lg;
   } else g.fillStyle = color || '#ffffff';
   g.fillText(text, cx, ty);
+  if (S.blood) {
+    // drip roots: the lowest inked pixel of a few glyph columns
+    const d = g.getImageData(0, 0, w, h).data, roots = [];
+    for (let x = 2; x < w - 2; x++) {
+      for (let y = h - 1; y > cy; y--) if (d[(y * w + x) * 4 + 3] > 200) { roots.push([x - cx, y - cy]); break; }
+    }
+    c.roots = roots;
+  }
   // keep the fallback font out of the cache until Cinzel has loaded
   if (!document.fonts || document.fonts.check(font)) {
     numCache.set(key, c);
@@ -424,15 +408,34 @@ function numSprite(text, style, color) {
   return c;
 }
 
-/** A comic damage number. style: hit | crit | hurt (damage the hero takes) | dot (colour = element glow). */
+/** A damage number. style: hit | crit (bleeds) | hurt (damage the hero takes) | dot (colour = element glow). */
 export function damageText(x, y, z, amount, style = 'hit', color = null) {
   const S = DMG_STYLE[style];
   if (texts.length > 120) texts.shift();
-  const crit = style === 'crit', dot = style === 'dot';
+  const crit = style === 'crit';
   texts.push({
-    x, y, z: z + rand(-4, 6), text: fmt(amount) + (crit ? '!' : ''), color, style, life: S.life, max: S.life, dmg: true, comic: true,
-    vz: dot ? 28 : crit ? rand(95, 115) : rand(70, 90), dx: rand(-14, 14), vx: rand(-1, 1) * (crit ? 10 : 16), rot: rand(-1, 1) * (crit ? 0.2 : 0.13),
+    x, y, z: z + rand(-4, 6), text: fmt(amount), color, style, life: S.life, max: S.life, dmg: true, comic: true,
+    vz: style === 'dot' ? 24 : crit ? 14 : rand(38, 50), dx: rand(-12, 12), vx: rand(-1, 1) * (crit ? 2 : 6),
+    drips: crit ? Array.from({ length: 4 + Math.floor(rand(0, 3)) }, () => ({ r: Math.random(), len: rand(4, 13), at: rand(0.05, 0.5), sp: rand(0.5, 1.1), w: rand(1, 2) | 0 || 1 })) : null,
   });
+}
+
+/** Blood running off a crit number, in sprite pixels around its centre (the caller scales to the screen). */
+function drawDrips(ctx, t, spr, age) {
+  if (!spr.roots || !spr.roots.length) return;
+  for (const d of t.drips) {
+    const [rx, ry] = spr.roots[Math.floor(d.r * spr.roots.length)];
+    const k = Math.max(0, Math.min(1, (age - d.at) / d.sp));
+    if (k <= 0) continue;
+    const len = d.len * (1 - Math.pow(1 - k, 2));
+    ctx.fillStyle = '#4a0202'; ctx.fillRect(rx - 1, ry - 1, d.w + 2, len + 2);
+    ctx.fillStyle = '#9a0a06'; ctx.fillRect(rx, ry - 1, d.w, len);
+    ctx.fillStyle = '#c81810'; ctx.fillRect(rx, ry + len - 1, d.w + 1, 2);   // the swelling bead
+    if (k >= 1) {   // the bead lets go and falls
+      const ft = age - d.at - d.sp, fy = ry + len + 2 + 60 * ft * ft;
+      if (ft < 0.6) { ctx.fillStyle = '#8a0806'; ctx.fillRect(rx, fy, d.w + 1, 2); }
+    }
+  }
 }
 
 export function addLight(x, y, radius, intensity = 1) {
@@ -582,20 +585,17 @@ export function drawTexts(ctx) {
     for (const t of texts) {
       if (!t.comic || (t.style === 'crit') !== (pass === 1) || !G.settings.dmgNumbers) continue;
       const S = DMG_STYLE[t.style], age = t.max - t.life, k = t.life / t.max;
-      const pin = Math.min(1, age / 0.14);
-      // slam in from big, a little rebound, shrink away at the end
-      let sc = 1 + (S.pop - 1) * Math.pow(1 - pin, 3);
-      if (pin >= 1) sc *= 1 + 0.12 * Math.sin(Math.min(1, (age - 0.14) / 0.22) * Math.PI);
-      if (k < 0.22) sc *= 0.6 + 0.4 * (k / 0.22);
+      const pin = Math.min(1, age / 0.12);
+      let sc = 1 + (S.pop - 1) * Math.pow(1 - pin, 2);
+      if (k < 0.2) sc *= 0.85 + 0.15 * (k / 0.2);
       const spr = numSprite(t.text, t.style, t.color);
       const [sx, sy] = camera.tileToScreen(t.x, t.y, t.z);
-      const jit = t.style === 'crit' && age < 0.35 ? (0.35 - age) * 9 : 0;
-      ctx.globalAlpha = Math.min(1, k / 0.22);
+      ctx.globalAlpha = Math.min(1, k / 0.25);
       ctx.save();
-      ctx.translate((sx + t.dx + rand(-jit, jit)) * dpr, (sy + rand(-jit, jit)) * dpr);
-      ctx.rotate(t.rot * (1.6 - pin * 0.6));
-      const w = spr.width * PIX * dpr * sc * mob, h = spr.height * PIX * dpr * sc * mob;
+      ctx.translate((sx + t.dx) * dpr, sy * dpr);
+      const f = PIX * dpr * sc * mob, w = spr.width * f, h = spr.height * f;
       ctx.drawImage(spr, -w / 2, -h / 2, w, h);
+      if (t.drips) { ctx.scale(f, f); drawDrips(ctx, t, spr, age); }
       ctx.restore();
     }
   }

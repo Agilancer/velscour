@@ -200,7 +200,7 @@ export const HUD = {
     if (avg > 0) { g.fillStyle = '#ffd860'; g.fillRect(0, Math.round(H - 1 - (avg / top) * (H - 2)), W, Math.max(1, G.dpr)); }
   },
 
-  /** The level-up banner: LEVEL UP!, the new level, then the voice line typed out as it is spoken. */
+  /** The level-up banner: a dark vignette, the title and new level bleeding in from blur, then an ominous line. */
   levelUp(level, sound) {
     const box = $('#levelup'), num = $('#lu-num');
     num.textContent = level;
@@ -210,22 +210,13 @@ export const HUD = {
       return;
     }
     if (this.lu) this.lu.timers.forEach(clearTimeout);
-    const at = sound ? sound.voiceAt : 1.3, dur = sound && sound.voiceDur ? sound.voiceDur : 4.8;
+    const at = sound ? sound.voiceAt : 0.55, dur = 4.2;
     const lu = this.lu = { end: now + (at + dur + 0.6) * 1000, timers: [] };
     const later = (s, fn) => lu.timers.push(setTimeout(fn, s * 1000));
     box.classList.remove('hidden', 'play', 'out'); num.classList.remove('punch');
     void box.offsetWidth;
     box.classList.add('play');
-    // typed in step with the voice (tools/levelup_voice.py: line 1 at 0-2.2 s, line 2 from 2.7 s)
-    const type = (elx, text, t0, len) => {
-      elx.textContent = ''; elx.classList.remove('typing');
-      const n = text.length;
-      later(t0, () => elx.classList.add('typing'));
-      for (let i = 1; i <= n; i++) later(t0 + (len * i) / n, () => { elx.textContent = text.slice(0, i); });
-      later(t0 + len + 0.5, () => elx.classList.remove('typing'));
-    };
-    type($('#lu-l1'), 'You have become more powerful\u2026', at, 1.9);
-    type($('#lu-l2'), 'but Velscour still lives', at + 2.7, 1.5);
+    $('#lu-l1').textContent = 'Your power festers\u2026'; $('#lu-l2').textContent = 'and Velscour still lives';
     later(at + dur + 0.1, () => box.classList.add('out'));
     later(at + dur + 0.9, () => box.classList.add('hidden'));
   },

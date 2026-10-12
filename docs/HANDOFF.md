@@ -94,7 +94,7 @@ Requirements, as stated (✅ = implemented in the draft):
   replays the intro without the prompt. Returning from a sub-menu while the Hymn still plays shows the logo lit. Any
   click or key during the intro skips to the burst (it seeks the song to just before the hit). The tar drips and pile
   explosions were removed at the user's request.
-- **Level-up voice:** `assets/audio/voice/levelup.wav` is the one sound not from the user's zips. `tools/levelup_voice.py`
+- **Level-up (user request):** no voice line any more (the wav and `tools/levelup_voice.py` were removed). `levelUpFanfare()` is a grim bell toll + choir drone, the banner bleeds in from blur over a dark vignette, crit damage numbers drip blood (`drawDrips` in vfx.js). Old notes below may still mention the voice.
   pre-renders it, because a browser can't synthesize intelligible speech through WebAudio (speechSynthesis can't be
   routed through effects). The fanfare before it is procedural (`levelUpFanfare()` in `src/core/audio.js`).
 - **The Slime Lord is blue.** The user changed his art from green to blue, so the `acid` element (only he uses it)
