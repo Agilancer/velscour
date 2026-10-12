@@ -11,6 +11,7 @@ JSON atlases under assets/. Re-run this whenever a source sheet changes:
     python3 tools/process_assets.py classes [paladin]   # class art packs (tools/classart.py, docs/CLASS_ART.md)
     python3 tools/process_assets.py gear [paladin]      # armor + helm libraries (tools/gearart.py, docs/CLASS_ART.md)
     python3 tools/process_assets.py enemies  # monster sheets in assets/source/enemies/<set>/ (docs/ENEMY_ART.md)
+    python3 tools/process_assets.py select   # class-select portraits from assets/FinalClasses/All 16 Classes.png
 
 Outputs
   assets/sprites/classes/<class>.webp  one trimmed full-body sprite per class
@@ -22,6 +23,7 @@ Outputs
   assets/tiles/catacombs_walls.webp    wall-piece atlas, plus seamless wall strips (see build_wall_strips)
   assets/tiles/catacombs.json          atlas rects, categories and wall anchors
   assets/sprites/enemies/<set>_<sheet>.webp + enemies.json   one atlas per monster sheet
+  assets/sprites/select/<class>.webp + select.json   animated menu portraits (tools/selectart.py)
 """
 import json
 import os
@@ -477,7 +479,7 @@ def process_tiles():
 def main():
     args = sys.argv[1:]
     if not args or "all" in args:
-        args = ["sprites", "tiles", "props", "classes", "enemies"]
+        args = ["sprites", "tiles", "props", "classes", "enemies", "select"]
     if "sprites" in args:
         process_classes()
         process_ui()
@@ -487,6 +489,9 @@ def main():
         process_props()
     if "enemies" in args:
         process_enemies()
+    if "select" in args:
+        from selectart import process_select_art
+        process_select_art()
     if "gear" in args:
         from gearart import process_gear_art
         process_gear_art(args[args.index("gear") + 1:])

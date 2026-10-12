@@ -4,9 +4,31 @@ import { rollItem } from '../data/items.js';
 import { drawBiome } from '../data/biomes.js';
 
 const KEY = 'velscour_saves_v1';
+export const SLOTS = 6;
 
 function readAll() {
-  try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; }
+  let list;
+  try { list = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; }
+  if (!Array.isArray(list)) return [];
+  if (assignSlots(list)) writeAll(list);
+  return list;
+}
+/** Every hero lives in one of SLOTS save slots (c.slot 0..5). Heroes from before slots existed (slot undefined)
+ * take the free ones, most recently played first. Any beyond that are parked (slot null): they stay saved and
+ * the Heroes screen offers to move them into a slot once one is free. */
+function assignSlots(list) {
+  const used = new Set();
+  let changed = false;
+  for (const c of [...list].sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0))) {
+    if (c.slot === null) continue;
+    if (Number.isInteger(c.slot) && c.slot >= 0 && c.slot < SLOTS && !used.has(c.slot)) { used.add(c.slot); continue; }
+    let f = 0;
+    while (used.has(f)) f++;
+    c.slot = f < SLOTS ? f : null;
+    if (c.slot !== null) used.add(f);
+    changed = true;
+  }
+  return changed;
 }
 function writeAll(list) {
   try { localStorage.setItem(KEY, JSON.stringify(list)); return true; } catch (e) { console.warn('Save failed', e); return false; }
@@ -22,12 +44,26 @@ export function writeSave(char) {
   return writeAll(list);
 }
 export function deleteSave(id) { writeAll(readAll().filter((c) => c.id !== id)); }
+/** The SLOTS save slots (a hero or null each), plus parked heroes that have no slot. */
+export function slotSaves() {
+  const slots = Array(SLOTS).fill(null), parked = [];
+  for (const c of listSaves()) { if (c.slot === null) parked.push(c); else slots[c.slot] = c; }
+  return { slots, parked };
+}
+export function firstFreeSlot() { return slotSaves().slots.indexOf(null); }
+export function moveToSlot(id, slot) {
+  const list = readAll();
+  if (list.some((c) => c.slot === slot)) return false;
+  const c = list.find((h) => h.id === id);
+  if (c) c.slot = slot;
+  return writeAll(list);
+}
 
-export function newCharData(classId, name) {
+export function newCharData(classId, name, slot = firstFreeSlot()) {
   const C = CLASSES[classId];
   const c = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    version: 1, name, classId, level: 1, xp: 0,
+    version: 1, name, classId, slot: slot >= 0 ? slot : null, level: 1, xp: 0,
     attrs: { ...C.base }, statPoints: 0, skillPoints: 1,
     skills: {}, granted: {}, bar: Array(10).fill(null),
     equip: { weapon: null, offhand: null, head: null, body: null, hands: null, legs: null, feet: null },
@@ -46,7 +82,7 @@ export function newCharData(classId, name) {
   return c;
 }
 
-/** Fill in fields added by later versions. */
+/** Fill in fields added by later versions. (c.slot is filled in by assignSlots, which needs every hero.) */
 export function migrate(c) {
   c.potions = Object.assign({ hp: 0, mp: 0, rejuv: 0, fury: 0 }, c.potions);
   c.cleared = c.cleared || {};

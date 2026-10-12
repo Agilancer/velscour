@@ -165,6 +165,26 @@ are in section 7.
    - The bot sometimes stalls on a level (about 1 run in 2). The unchanged base code does the same, so the cause
      is the bot's navigation, not the new art.
 
+10. **Class select portraits and save slots (branch `claude/beautiful-galileo-hz8vva`).** The user asked to use
+   `assets/FinalClasses/All 16 Classes.png` for the character selection screen, to have every hero idle "to their own
+   rhythm" and get excited when the mouse hovers over them, and for 6 save slots. Done:
+   - `tools/selectart.py` (`process_assets.py select`) cuts the sheet into `assets/sprites/select/<class>.webp`
+     (black backdrop keyed out; the sheet's name plaques hide some boot tips, so heroes end flat at the plaque top and
+     the cards draw their own plaque over the feet).
+   - `src/ui/heroanim.js`: animated canvas portraits. Breathing, a feet-planted sway and the slime's jiggle use periods
+     seeded from the class id. Hover (or a tap on touch) eases into hops with squash/stretch, a cheering lean, a glow in
+     the class colour and sparks. One shared requestAnimationFrame loop drops canvases once they leave the page.
+     `prefers-reduced-motion` tones it down.
+   - Save slots: `c.slot` (0-5) in `src/game/save.js` (`SLOTS`, `slotSaves`, `firstFreeSlot`, `moveToSlot`). Heroes
+     saved before slots existed get slots on first read (most recently played first); any past 6 are parked
+     (`slot: null`), still saved, and the Heroes screen offers "Move to Slot N" once one is free.
+   - Screens (`src/ui/screens.js`): the title has New Hero (first free slot, or the Heroes screen with a "slots full"
+     note) and "Heroes · n/6 slots"; `heroesScreen` shows the 6 slots (play, delete, or create a hero in an empty one);
+     `classSelect(slot, back)` shows which slot it fills. The old Load Hero list is gone.
+   - In-game sprites are unchanged; they still come from the gear libraries (item 8).
+   - Verified with the new `select.js` (desktop and `mobile`), plus flow, ui, mobile and data_check. Headless
+     Chromium holds 60 fps on the class grid at 844x390, DPR 2.
+
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
 1. Get PR #1 merged (by the user) and confirm the Pages deploy works at https://agilancer.github.io/velscour/.
