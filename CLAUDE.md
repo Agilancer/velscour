@@ -41,7 +41,8 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   something is non-obvious. Shared state lives on `G` (`src/state.js`).
 - All art except the user's sprite sheets is placeholder. Monsters, props and items are ASCII pixel art in
   `src/gfx/pixelart.js`, and town buildings are drawn in `src/gfx/townart.js`. The user's sheets are in
-  `assets/source/` and get sliced by `tools/process_assets.py` (needs `pip install pillow numpy scipy`).
+  `assets/source/` and get sliced by `tools/process_assets.py` (needs `pip install pillow numpy scipy`; args
+  `sprites|tiles|props`). Environment art and the biome -> art mapping are documented in [`docs/ART.md`](docs/ART.md).
   Never hand-edit the generated files in `assets/sprites|ui|tiles`.
 - Paths must stay **relative** (`assets/...`, `src/main.js`, never `/assets/...`), because the site is served
   from the `/velscour/` subpath on GitHub Pages. The `/src/...` imports in `tools/tests/` are fine, because the

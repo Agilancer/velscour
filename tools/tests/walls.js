@@ -14,6 +14,8 @@ const { openGame, report } = require('./harness');
     await page.evaluate(async (b) => {
       const { G, game } = window.VELSCOUR; G.godMode = true;
       const { BIOME_BY_ID } = await import('/src/data/biomes.js');
+      const { loadBiomeArt } = await import('/src/core/assets.js');
+      await loadBiomeArt(BIOME_BY_ID[b]);
       game.buildDungeon(3, BIOME_BY_ID[b]);
     }, biomes[n]);
     await page.waitForTimeout(1200);

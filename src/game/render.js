@@ -55,7 +55,12 @@ function drawPillar(ctx, p, alpha) {
 function drawProp(ctx, pr, alpha) {
   const x = isoX(pr.x, pr.y), y = isoY(pr.x, pr.y);
   if (alpha < 1) ctx.globalAlpha = alpha;
-  if (pr.spr) {
+  if (pr.k) {
+    // scatter / barricade art: the footprint's centre is a quarter of the drawn width above the sprite's bottom
+    const s = pr.spr, w = s.w * pr.k, h = s.h * pr.k;
+    if (pr.flip) { ctx.save(); ctx.translate(x, 0); ctx.scale(-1, 1); ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, -w / 2, y + w / 4 - h, w, h); ctx.restore(); }
+    else ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, x - w / 2, y + w / 4 - h, w, h);
+  } else if (pr.spr) {
     const s = pr.spr;
     const k = (pr.kind === 'tower' ? 0.55 : 0.5) * (pr.scale || 1);
     ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, x - (s.w * k) / 2, y - s.h * k + HH * 0.6, s.w * k, s.h * k);
@@ -89,6 +94,19 @@ function drawBuilding(ctx, b, alpha) {
 
 function drawChest(ctx, c) {
   const x = isoX(c.x, c.y), y = isoY(c.x, c.y);
+  const art = G.world && G.world.tileset && G.world.tileset.chest;
+  const s = art && (c.opened ? (c.rare ? art.rareOpen : art.open) : (c.rare ? art.rareClosed : art.closed));
+  if (s) {
+    // the biome's chest art, sized off the closed chest so opening it doesn't change the scale
+    const k = 46 / (c.rare ? art.rareClosed : art.closed).w, w = s.w * k, h = s.h * k;
+    ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, x - w / 2, y + w / 4 - h, w, h);
+    if (!c.opened) {
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + Math.sin(G.time * 3) * 0.15;
+      ctx.drawImage(glowSprite(c.rare ? '#c080ff' : '#ffd060'), x - 28, y - 40, 56, 46);
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    }
+    return;
+  }
   ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(x, y, 16, 7, 0, 0, TAU); ctx.fill();
   const body = c.rare ? '#5a3a6a' : '#5a3a1a', trim = c.rare ? '#e0c0ff' : '#d0a040';
   // box faces

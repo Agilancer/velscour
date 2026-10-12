@@ -103,6 +103,7 @@ export function generateDungeon(depth, biome, tileset, seed) {
   }
 
   finishMap(map, tileset, rng);
+  const obstacles = placeObstacles(map, rooms.filter((r) => r !== startRoom && r !== exitRoom), tileset, rng, startRoom);
 
   // ---- spawns
   const spawns = [];
@@ -150,19 +151,15 @@ export function generateDungeon(depth, biome, tileset, seed) {
   spawns.push({ x: exitRoom.mx, y: exitRoom.my, arch: bossArch, n: 1, rank: 'boss' });
 
   // ---- props, chests, torches
-  const props = [];
+  const props = obstacles;
   for (const r of rooms) {
     if (r === startRoom || r === exitRoom) continue;
-    if (r.type === 'room' && r.w >= 7 && r.h >= 7 && rng.chance(0.45) && tileset.towers.length) {
-      const tx = Math.floor(r.x + (rng.chance(0.5) ? 1 : r.w - 2)), ty = Math.floor(r.y + (rng.chance(0.5) ? 1 : r.h - 2));
-      if (map.walkableTile(tx, ty)) { map.block[ty * W + tx] = 1; props.push({ kind: 'tower', x: tx + 0.5, y: ty + 0.5, spr: rng.pick(tileset.towers) }); }
-    }
     const nr = rng.int(0, 3);
     for (let i = 0; i < nr && tileset.rubble.length; i++) {
       const [px, py] = roomFloorSpot(r);
       props.push({ kind: 'rubble', x: px, y: py, spr: rng.pick(tileset.rubble), scale: rng.range(0.6, 0.9) });
     }
-    if (rng.chance(0.35)) {
+    if (!tileset.scatter.length && rng.chance(0.35)) { // placeholder pixel-art decor when the biome has no scatter art
       const [px, py] = roomFloorSpot(r);
       props.push({ kind: 'decor', x: px, y: py, sprite: rng.pick(['grave', 'rock', 'barrel', 'crate', 'rock']), seed: rng.int(0, 9999) });
     }
@@ -190,6 +187,102 @@ export function generateDungeon(depth, biome, tileset, seed) {
   };
 }
 
+/**
+ * Scatter terrain and barricades. Objects go mostly against walls, some in the open, never next to a
+ * corridor mouth, and any placement that would cut a part of the level off from the start is undone.
+ * Footprints: scatter size 1 = one tile, 2 = a 2x2 block; a barricade blocks two tiles in a row along its
+ * diagonal ("fwd" = "/" runs along y, "back" = "\\" runs along x).
+ */
+function placeObstacles(map, rooms, tileset, rng, startRoom) {
+  const props = [];
+  const scat = tileset.scatter, bar = tileset.barricades;
+  const W = map.w;
+  const sx = Math.floor(startRoom.mx), sy = Math.floor(startRoom.my);
+  const reachable = () => {
+    const seen = new Uint8Array(map.t.length), q = [sy * W + sx];
+    seen[q[0]] = 1;
+    let n = 0;
+    while (q.length) {
+      const i = q.pop(); n++;
+      const x = i % W, y = (i / W) | 0;
+      for (const j of [i - 1, i + 1, i - W, i + W]) {
+        const jx = j % W, jy = (j / W) | 0;
+        if (Math.abs(jx - x) + Math.abs(jy - y) === 1 && !seen[j] && map.walkableTile(jx, jy)) { seen[j] = 1; q.push(j); }
+      }
+    }
+    return n;
+  };
+  let open = reachable();
+  const used = new Set();
+  const tryBlock = (tiles) => {
+    if (!tiles.every(([x, y]) => map.walkableTile(x, y))) return false;
+    for (const [x, y] of tiles) map.block[y * W + x] = 1;
+    if (reachable() === open - tiles.length) { open -= tiles.length; return true; }
+    for (const [x, y] of tiles) map.block[y * W + x] = 0;
+    return false;
+  };
+  const voidAround = (x, y) => [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => !map.tile(x + dx, y + dy)).length;
+  // per sheet scale: a typical one-tile object is ~0.8 tile wide
+  const kOf = new Map();
+  const scaleFor = (e) => {
+    if (!kOf.has(e.img)) {
+      const ws = scat.filter((o) => o.img === e.img && o.size === 1).map((o) => o.w).sort((a, b) => a - b);
+      kOf.set(e.img, 50 / (ws[ws.length >> 1] || 90));
+    }
+    return kOf.get(e.img);
+  };
+  for (const r of rooms) {
+    const inRoom = (x, y) => x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h;
+    // keep corridor mouths clear: no blocker within a tile of a floor tile outside the room
+    const nearDoor = (x, y) => {
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (map.tile(x + dx, y + dy) && !inRoom(x + dx, y + dy)) return true;
+      return false;
+    };
+    // ...and the room centre, where loot chests go
+    const ok = (x, y) => inRoom(x, y) && map.walkableTile(x, y) && !nearDoor(x, y) && !used.has(y * W + x)
+      && (Math.abs(x - Math.floor(r.mx)) > 1 || Math.abs(y - Math.floor(r.my)) > 1);
+    const cells = [];
+    for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (ok(x, y)) cells.push([x, y]);
+    if (!cells.length) continue;
+    const edge = cells.filter(([x, y]) => voidAround(x, y)), mid = cells.filter(([x, y]) => !voidAround(x, y));
+    // a free-standing column near a corner of a big room
+    if (r.type === 'room' && r.w >= 7 && r.h >= 7 && tileset.towers.length && rng.chance(0.45)) {
+      const x = Math.floor(r.x + (rng.chance(0.5) ? 1 : r.w - 2)), y = Math.floor(r.y + (rng.chance(0.5) ? 1 : r.h - 2));
+      if (ok(x, y) && tryBlock([[x, y]])) { used.add(y * W + x); props.push({ kind: 'tower', x: x + 0.5, y: y + 0.5, spr: rng.pick(tileset.towers) }); }
+    }
+    // a barricade across part of a bigger room
+    const hasBar = bar.fwd.length || bar.back.length;
+    if (hasBar && r.w >= 6 && r.h >= 6 && mid.length && rng.chance(0.5)) {
+      for (let tries = 0; tries < 8; tries++) {
+        const [x, y] = rng.pick(mid);
+        const fwd = rng.chance(0.5);
+        const tiles = fwd ? [[x, y], [x, y + 1]] : [[x, y], [x + 1, y]];
+        if (!tiles.every(([a, b]) => ok(a, b) && !voidAround(a, b)) || !tryBlock(tiles)) continue;
+        const own = fwd ? bar.fwd : bar.back, other = fwd ? bar.back : bar.fwd;
+        const spr = own.length ? rng.pick(own) : rng.pick(other);
+        for (const [a, b] of tiles) used.add(b * W + a);
+        props.push({ kind: 'barricade', x: fwd ? x + 0.5 : x + 1, y: fwd ? y + 1 : y + 0.5, spr, k: 76 / spr.w, flip: !own.length });
+        break;
+      }
+    }
+    if (!scat.length) continue;
+    const n = Math.round((cells.length / 7) * rng.range(0.7, 1.3));
+    for (let i = 0, tries = 0; i < n && tries < n * 6; tries++) {
+      const pool = edge.length && (rng.chance(0.65) || !mid.length) ? edge : mid;
+      const [x, y] = rng.pick(pool);
+      const e = rng.pick(scat);
+      const big = e.size === 2;
+      const tiles = big ? [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]] : [[x, y]];
+      if (!tiles.every(([a, b]) => ok(a, b))) continue;
+      if (e.block && !tryBlock(tiles)) continue;
+      for (const [a, b] of tiles) used.add(b * W + a);
+      props.push({ kind: 'scatter', x: big ? x + 1 : x + 0.5, y: big ? y + 1 : y + 0.5, spr: e, k: scaleFor(e), flip: rng.chance(0.5) });
+      i++;
+    }
+  }
+  return props;
+}
+
 function exitPos(map, room, from) {
   // put the exit on the side of the room farthest from where the player came in
   const dx = room.mx - from.mx, dy = room.my - from.my;
@@ -200,10 +293,12 @@ function exitPos(map, room, from) {
 }
 
 function finishMap(map, tileset, rng) {
-  const nf = tileset.floors.length, nd = tileset.details.length;
+  // floors are sorted calm -> busy (pits, rubble); mostly plain paving like Diablo II, busier tiles now and then
+  const nf = tileset.floors.length, nd = tileset.details.length, calm = Math.max(1, Math.ceil(nf * 0.45));
   for (let i = 0; i < map.t.length; i++) {
     if (!map.t[i]) continue;
-    map.v[i] = rng.next() < 0.13 && nd ? 100 + rng.int(0, nd - 1) : rng.int(0, nf - 1);
+    const r = rng.next();
+    map.v[i] = r < 0.08 && nd ? 100 + rng.int(0, nd - 1) : r < 0.78 ? rng.int(0, calm - 1) : rng.int(0, nf - 1);
   }
   map.buildWalls(tileset, () => rng.next());
 }

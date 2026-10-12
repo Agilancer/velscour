@@ -4,7 +4,7 @@ import { input } from '../core/input.js';
 import { camera } from '../core/view.js';
 import { sfx, playMusic, stopMusic } from '../core/audio.js';
 import { rand, pick, randi, escapeHtml, dist, makeCanvas, fmtInt } from '../core/util.js';
-import { biomeTileSet } from '../core/assets.js';
+import { biomeTileSet, loadBiomeArt } from '../core/assets.js';
 import { BIOME_BY_ID, TOWN_BIOME, randomBiome } from '../data/biomes.js';
 import { CLASSES } from '../data/classes.js';
 import { generateDungeon } from '../world/dungeon.js';
@@ -179,7 +179,9 @@ export const game = {
     document.getElementById('loading-text').textContent = `Descending to Depth ${depth} — ${biome.name}…`;
     loading.classList.remove('hidden');
     sfx('portal');
-    setTimeout(() => {
+    // fetch this biome's art first (about 1 MB); if that fails the default set stands in
+    setTimeout(async () => {
+      try { await loadBiomeArt(biome); } catch (e) { console.warn(e); }
       try { this.buildDungeon(depth, biome); } finally { loading.classList.add('hidden'); }
     }, 40);
   },
