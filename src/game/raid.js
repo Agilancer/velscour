@@ -161,7 +161,7 @@ export function makeRaidBoss(world, arena, depth, level) {
   Object.assign(m, {
     ai: 'raid', el: tpl.el, res: { [tpl.el]: 0.4, ...(m.undead ? { poison: 0.5, shadow: 0.3 } : null) },
     scale: has('colossal') ? 2.75 : 2.4, r: 1.05, atkReach: 0.35, speed: 2.4 * (has('colossal') ? 0.88 : 1), atkCd: 1.3,
-    maxHp: B.hp * 18 * (30 + depth * 0.5) * (has('colossal') ? 1.35 : 1), dmg: B.dmg * 2.8 * (has('empowered') ? 1.25 : 1), xp: B.xp * 60,
+    maxHp: B.hp * 26 * (30 + depth * 0.5) * (has('colossal') ? 1.35 : 1), dmg: B.dmg * 3 * (has('empowered') ? 1.25 : 1), xp: B.xp * 60,
     name: tpl.name.toUpperCase(), title: tpl.title, aura: elem(tpl.el).glow, affixes: has('vampiric') ? ['vampiric'] : [],
     moves: null, patterns: [], isRaid: true, ward: 1, aggroRange: 0,
   });
