@@ -1,0 +1,187 @@
+// World: everything that lives in the current level.
+import { G } from '../state.js';
+import { camera, isoX, isoY } from '../core/view.js';
+import { rand, dist2, TAU, chance } from '../core/util.js';
+import { spawn, updateVfx, addLight, sparkle, smoke } from '../gfx/vfx.js';
+
+const CELL = 2;
+
+export class World {
+  constructor(kind, opts) {
+    this.kind = kind; // 'town' | 'dungeon'
+    Object.assign(this, opts); // map, tileset, biome, depth, ...
+    this.creatures = [];
+    this.hazards = [];
+    this.loot = [];
+    this.corpses = [];
+    this.props = this.props || [];
+    this.buildings = this.buildings || [];
+    this.npcs = this.npcs || [];
+    this.chests = this.chests || [];
+    this.torches = this.torches || [];
+    this.portals = this.portals || [];
+    this.grid = new Map();
+    this.time = 0;
+    this.flowTimer = 0;
+    this.ambT = 0;
+    this.boss = null;
+    this.exitOpen = kind === 'town';
+    this.kills = 0;
+    this.lastPlayerTile = -1;
+  }
+
+  add(c) { c.world = this; this.creatures.push(c); return c; }
+  addHazard(h) { h.world = this; this.hazards.push(h); return h; }
+  addLoot(l) { this.loot.push(l); return l; }
+
+  rebuildGrid() {
+    this.grid.clear();
+    for (const c of this.creatures) {
+      if (c.dead) continue;
+      const k = (Math.floor(c.x / CELL) << 16) | (Math.floor(c.y / CELL) & 0xffff);
+      let a = this.grid.get(k);
+      if (!a) this.grid.set(k, (a = []));
+      a.push(c);
+    }
+  }
+
+  /** Creatures within r of (x,y). filter(c) optional. */
+  query(x, y, r, filter, out = []) {
+    const x0 = Math.floor((x - r) / CELL), x1 = Math.floor((x + r) / CELL);
+    const y0 = Math.floor((y - r) / CELL), y1 = Math.floor((y + r) / CELL);
+    for (let cy = y0; cy <= y1; cy++) {
+      for (let cx = x0; cx <= x1; cx++) {
+        const a = this.grid.get((cx << 16) | (cy & 0xffff));
+        if (!a) continue;
+        for (const c of a) {
+          if (c.dead) continue;
+          const rr = r + c.r;
+          if (dist2(x, y, c.x, c.y) <= rr * rr && (!filter || filter(c))) out.push(c);
+        }
+      }
+    }
+    return out;
+  }
+  hostiles(team, x, y, r) { return this.query(x, y, r, (c) => c.team !== team && c.targetable !== false); }
+  nearestHostile(team, x, y, r, needLos = false) {
+    let best = null, bd = Infinity;
+    for (const c of this.hostiles(team, x, y, r)) {
+      const d = dist2(x, y, c.x, c.y);
+      if (d < bd && (!needLos || this.map.los(x, y, c.x, c.y))) { bd = d; best = c; }
+    }
+    return best;
+  }
+  alliesOf(team, x, y, r) { return this.query(x, y, r, (c) => c.team === team); }
+
+  update(dt) {
+    this.time += dt;
+    const p = this.player;
+    // flow field toward the player for monster path finding
+    this.flowTimer -= dt;
+    if (p && !p.dead && this.flowTimer <= 0) {
+      this.map.buildFlow(p.x, p.y, 40);
+      this.flowTimer = 0.25;
+    }
+    this.rebuildGrid();
+    if (p && !p.dead) p.update(dt);
+    const ax = p ? p.x : 0, ay = p ? p.y : 0;
+    for (const c of this.creatures) {
+      if (c === p || c.dead) continue;
+      // only simulate creatures near the action
+      if (c.team === 'enemy' && !c.awake && dist2(c.x, c.y, ax, ay) > 26 * 26) continue;
+      c.update(dt);
+    }
+    for (const n of this.npcs) n.update && n.update(dt);
+    for (let i = this.hazards.length - 1; i >= 0; i--) {
+      const h = this.hazards[i];
+      if (h.update(dt) === false || h.dead) this.hazards.splice(i, 1);
+    }
+    this.separate();
+    for (let i = this.creatures.length - 1; i >= 0; i--) {
+      const c = this.creatures[i];
+      if (c.dead && c !== p && (c.removeT = (c.removeT || 0) + dt) > 0.05) this.creatures.splice(i, 1);
+    }
+    for (let i = this.loot.length - 1; i >= 0; i--) {
+      if (this.loot[i].update(dt, this) === false) this.loot.splice(i, 1);
+    }
+    for (let i = this.corpses.length - 1; i >= 0; i--) {
+      const c = this.corpses[i];
+      c.t += dt;
+      if (c.t > 40 || c.used) this.corpses.splice(i, 1);
+    }
+    if (this.corpses.length > 70) this.corpses.splice(0, this.corpses.length - 70);
+    if (p) this.map.reveal(p.x, p.y, 11);
+    this.ambient(dt);
+    updateVfx(dt, this);
+  }
+
+  /** Push overlapping creatures apart. */
+  separate() {
+    for (const [, cell] of this.grid) {
+      for (let i = 0; i < cell.length; i++) {
+        const a = cell[i];
+        if (a.static) continue;
+        for (let j = i + 1; j < cell.length; j++) {
+          const b = cell[j];
+          const dx = b.x - a.x, dy = b.y - a.y;
+          const rr = (a.r + b.r) * 0.85;
+          const d2 = dx * dx + dy * dy;
+          if (d2 >= rr * rr || d2 < 1e-6) continue;
+          const d = Math.sqrt(d2), push = (rr - d) * 0.5;
+          const nx = dx / d, ny = dy / d;
+          const wa = b.static ? 1 : a.isPlayer ? 0.25 : b.isPlayer ? 0.75 : 0.5;
+          const wb = 1 - wa;
+          this.map.move(a, -nx * push * wa * 2, -ny * push * wa * 2, a.ghost);
+          if (!b.static) this.map.move(b, nx * push * wb * 2, ny * push * wb * 2, b.ghost);
+        }
+      }
+    }
+  }
+
+  ambient(dt) {
+    const b = this.biome;
+    const vr = camera.viewRect(60);
+    // torches & lamps
+    for (const t of this.torches) {
+      const px = isoX(t.x, t.y), py = isoY(t.x, t.y);
+      if (px < vr.x0 || px > vr.x1 || py < vr.y0 || py > vr.y1 + 80) continue;
+      addLight(t.x, t.y, 5.5 + Math.sin(this.time * 9 + t.x) * 0.3, 0.9);
+      if (chance(dt * 18)) spawn({ type: 'glow', x: t.x + rand(-0.04, 0.04), y: t.y + rand(-0.04, 0.04), z: 40, vz: rand(15, 35), life: rand(0.3, 0.6), size: rand(2, 3.5), size1: 0.5, color: chance(0.5) ? (b.torch || '#ff9a40') : '#fff0a0', add: true });
+    }
+    for (const pr of this.props) {
+      if (!pr.light) continue;
+      addLight(pr.x, pr.y, pr.light + Math.sin(this.time * 7 + pr.x) * 0.15, 0.8);
+    }
+    // portals
+    for (const po of this.portals) {
+      if (!po.active) continue;
+      addLight(po.x, po.y, 6, 1);
+      if (chance(dt * 30)) sparkle(po.x, po.y, rand(10, 60), po.color || '#ff6030', 1, 0.6);
+    }
+    // ambient particles around the camera
+    if (!b || !b.ambient) return;
+    this.ambT += dt;
+    const rate = G.touch ? 10 : 22;
+    while (this.ambT > 1 / rate) {
+      this.ambT -= 1 / rate;
+      const [tx, ty] = camera.screenToTile(rand(0, G.W), rand(-G.H * 0.1, G.H));
+      const a = b.ambient, col = a.color;
+      switch (a.type) {
+        case 'snow': spawn({ type: 'dot', x: tx, y: ty, z: rand(80, 160), vx: rand(-0.3, 0.3), vy: rand(0.1, 0.4), vz: -rand(25, 45), life: 4, size: rand(1.2, 2.4), color: col }); break;
+        case 'ember': spawn({ type: 'glow', x: tx, y: ty, z: rand(0, 30), vx: rand(-0.3, 0.3), vy: rand(-0.3, 0.3), vz: rand(15, 40), life: rand(1.5, 3), size: rand(1, 2.2), size1: 0, color: col, add: true }); break;
+        case 'ash': spawn({ type: 'dot', x: tx, y: ty, z: rand(60, 140), vx: rand(-0.4, 0.1), vy: rand(0, 0.3), vz: -rand(10, 25), life: 5, size: rand(1, 2), color: col }); break;
+        case 'spore': case 'mote': case 'glitter': case 'firefly':
+          spawn({ type: 'glow', x: tx, y: ty, z: rand(10, 70), vx: rand(-0.25, 0.25), vy: rand(-0.25, 0.25), vz: rand(-5, 8), life: rand(2, 4), size: rand(0.8, 1.8), size1: 0.2, color: col, add: true }); break;
+        case 'drip': if (chance(0.5)) spawn({ type: 'dot', x: tx, y: ty, z: 120, vz: -60, g: 200, life: 1.2, size: 1.5, color: col }); break;
+        case 'bubble': spawn({ type: 'glow', x: tx, y: ty, z: 0, vz: rand(8, 20), life: rand(0.8, 1.6), size: rand(1, 2), size1: 2.5, color: col, add: true }); break;
+        case 'sand': spawn({ type: 'dot', x: tx, y: ty, z: rand(5, 40), vx: rand(0.6, 1.2), vy: rand(-0.6, -0.2), life: 2.5, size: 1.2, color: col }); break;
+        case 'leaf': spawn({ type: 'dot', x: tx, y: ty, z: rand(60, 120), vx: rand(-0.4, 0.4), vy: rand(0, 0.4), vz: -rand(10, 20), life: 5, size: 2, color: col }); break;
+        case 'spark': if (chance(0.3)) spawn({ type: 'glow', x: tx, y: ty, z: rand(20, 80), vx: rand(-2, 2), vy: rand(-2, 2), life: 0.3, size: 1.5, color: col, add: true }); break;
+        case 'wisp': smoke(tx, ty, 0, '#120c18', 1, 10); break;
+        default: spawn({ type: 'dot', x: tx, y: ty, z: rand(10, 90), vx: rand(-0.1, 0.1), vy: rand(-0.1, 0.1), vz: rand(-3, 3), life: 4, size: 1, color: col });
+      }
+    }
+  }
+}
+
+export { TAU };

@@ -1,0 +1,14 @@
+{
+  "name": "VELSCOUR",
+  "short_name": "Velscour",
+  "description": "An isometric retro-pixel action RPG. Descend 100 depths and slay Demon Lord Velscour.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#050303",
+  "theme_color": "#0b0706",
+  "icons": [
+    { "src": "assets/ui/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

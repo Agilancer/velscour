@@ -1,0 +1,74 @@
+// Desktop UI run: skill tree learning (click + double-click), inventory tooltips, socketing a
+// gem by drag & drop onto the equipped weapon, gem combining, +1 upgrade, gambling, and the
+// town portal dialog.
+const { openGame, report } = require('./harness');
+
+(async () => {
+  const { browser, page, errors, shot } = await openGame({ width: 1440, height: 810 });
+  await page.click('text=New Hero');
+  await page.click('.class-card[data-id="necromancer"]');
+  await page.click('text=Begin');
+  await page.waitForTimeout(1200);
+  // Give gold, gear and gems.
+  await page.evaluate(async () => {
+    const { G } = window.VELSCOUR;
+    const items = await import('/src/data/items.js');
+    const { addToBag } = await import('/src/game/player.js');
+    G.char.gold = 50000;
+    for (let i = 0; i < 6; i++) addToBag(G.char, items.rollItem(10 + i * 8, { rarity: i % 5 }));
+    addToBag(G.char, items.makeGem('ruby', 2)); addToBag(G.char, items.makeGem('prism', 4));
+    const g = items.makeGem('sapphire', 0); g.count = 3; addToBag(G.char, g);
+    G.char.level = 12; G.char.skillPoints = 8; G.char.statPoints = 10;
+    G.player.recompute(); G.ui.refresh();
+  });
+  await page.keyboard.press('KeyK');
+  await page.waitForTimeout(400);
+  await page.click('.snode >> nth=1'); await page.dblclick('.snode >> nth=1');
+  await page.waitForTimeout(200);
+  await page.click('.tab >> nth=1'); await page.waitForTimeout(200);
+  await page.dblclick('.snode >> nth=0');
+  await page.waitForTimeout(300);
+  await page.hover('.snode >> nth=0');
+  await page.waitForTimeout(300);
+  await shot('ui1_tree');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('KeyI');
+  await page.waitForTimeout(400);
+  await page.hover('.bslot >> nth=0');
+  await page.waitForTimeout(300);
+  await shot('ui2_inventory');
+  // Drag the ruby (bag slot 6) onto the weapon slot (paper doll column 1, row 2).
+  const gb = await (await page.$$('.bslot'))[6].boundingBox();
+  const wb = await page.evaluate(() => { const e = [...document.querySelectorAll('.eslot')].find((x) => x.style.gridColumn === '1' && x.style.gridRow === '2'); const r = e.getBoundingClientRect(); return { x: r.x, y: r.y }; });
+  await page.mouse.move(gb.x + 20, gb.y + 20); await page.mouse.down();
+  await page.mouse.move(gb.x + 40, gb.y + 40, { steps: 5 });
+  await page.mouse.move(wb.x + 20, wb.y + 20, { steps: 10 }); await page.mouse.up();
+  await page.waitForTimeout(300);
+  const sock = await page.evaluate(() => window.VELSCOUR.G.char.equip.weapon.gems.length);
+  console.log('weapon gems after drag:', sock);
+  if (sock < 1) { console.log('FAIL: gem was not socketed'); process.exitCode = 1; }
+  await shot('ui3_socket');
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => window.VELSCOUR.G.ui.vendor.open('gems'));
+  await page.waitForTimeout(400);
+  await shot('ui4_gems');
+  await page.click('text=/x3 →/').catch((e) => console.log('combine click failed', e.message));
+  await page.waitForTimeout(200);
+  await page.evaluate(() => window.VELSCOUR.G.ui.vendor.open('upgrade'));
+  await page.waitForTimeout(300);
+  await page.evaluate(() => { window.VELSCOUR.G.ui.selected = { where: 'equip', slot: 'weapon' }; window.VELSCOUR.G.ui.refresh(); });
+  await page.click('text=/Upgrade to \\+1/');
+  await page.waitForTimeout(200);
+  await shot('ui5_upgrade');
+  await page.evaluate(() => window.VELSCOUR.G.ui.vendor.open('gamble'));
+  await page.click('text=/Weapon/');
+  await page.waitForTimeout(200);
+  const after = await page.evaluate(() => ({ gold: window.VELSCOUR.G.char.gold, upg: window.VELSCOUR.G.char.equip.weapon.upg, bag: window.VELSCOUR.G.char.bag.filter(Boolean).map((b) => b.type + ':' + (b.gem || b.slot) + ':' + (b.tier ?? b.rarity) + 'x' + (b.count || 1)).join(' ') }));
+  console.log(JSON.stringify(after));
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => { window.VELSCOUR.G.world.portals[0].use(); });
+  await page.waitForTimeout(300);
+  await shot('ui6_portal');
+  report(errors, 20);
+  await browser.close();
+})();

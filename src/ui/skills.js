@@ -1,0 +1,194 @@
+// Skill tree (spend points) and Skill Book (equip skills to the bar).
+import { G } from '../state.js';
+import { el, escapeHtml } from '../core/util.js';
+import { sfx } from '../core/audio.js';
+import { UI, draggable } from './ui.js';
+import { skillIcon, skillIconURL } from './icons.js';
+import { CLASS_SKILLS, SKILLS, MAX_SKILL_LEVEL, describe, manaCost, cooldown, ROW_LEVELS, effLevel } from '../data/skills.js';
+import { CLASSES } from '../data/classes.js';
+import { elem } from '../gfx/vfx.js';
+
+export const SLOT_LABELS = ['LMB', '1', '2', '3', '4', '5', '6', '7', '8', 'RMB'];
+let curTree = 0;
+let selected = null;
+
+export function canLearn(sk) {
+  const c = G.char;
+  const cur = c.skills[sk.id] || 0;
+  if (c.skillPoints <= 0) return 'No skill points';
+  if (cur >= MAX_SKILL_LEVEL) return 'Maxed';
+  if (c.level < sk.reqLevel) return `Requires level ${sk.reqLevel}`;
+  if (sk.prereq && !(c.skills[sk.prereq] > 0)) return `Requires ${SKILLS[sk.prereq].name}`;
+  return null;
+}
+
+export function learn(sk) {
+  const why = canLearn(sk);
+  if (why) { UI.log(why, '#ff8080'); sfx('error'); return; }
+  const c = G.char;
+  const first = !c.skills[sk.id];
+  c.skills[sk.id] = (c.skills[sk.id] || 0) + 1;
+  c.skillPoints--;
+  sfx('buff');
+  if (first) {
+    const free = c.bar.findIndex((x, i) => !x && i !== 0);
+    if (free >= 0) { c.bar[free] = sk.id; UI.log(`<b>${escapeHtml(sk.name)}</b> assigned to slot ${SLOT_LABELS[free]}.`, '#ffd860'); }
+  }
+  G.player.recompute();
+  UI.refresh();
+  G.game.autosave();
+}
+
+export function assign(slotIdx, skillId) {
+  const c = G.char;
+  const prev = c.bar.indexOf(skillId);
+  if (prev >= 0 && prev !== slotIdx) c.bar[prev] = c.bar[slotIdx] || null;
+  c.bar[slotIdx] = skillId;
+  sfx('ui');
+  UI.refresh();
+  G.game.autosave();
+}
+
+export function skillDetail(sk) {
+  const p = G.player, c = G.char;
+  const box = el('div', 'skill-detail');
+  if (!sk) { box.innerHTML = '<div class="dim">Select a skill to see what it does. Drag learned skills onto your skill bar, or use the buttons to assign them.</div>'; return box; }
+  const base = c.skills[sk.id] || 0;
+  const L = effLevel(p, sk);
+  const E = elem(sk.el);
+  const showL = Math.max(1, L);
+  const dmg = p.skillDamage(sk, showL);
+  const tags = [sk.kind, E.name, CLASSES[sk.classId].trees[sk.tree]].map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join('');
+  let h = `<h3>${escapeHtml(sk.name)}</h3><div>${tags}</div>`;
+  h += `<div class="dim" style="margin:4px 0">Level ${base}${L > base ? ` <span style="color:#8fb4ff">(+${L - base})</span>` : ''} / ${MAX_SKILL_LEVEL} · Requires character level ${sk.reqLevel}${sk.prereq ? ` · Requires ${escapeHtml(SKILLS[sk.prereq].name)}` : ''}</div>`;
+  h += `<p style="margin:6px 0">${describe(sk, showL, dmg)}</p>`;
+  const mc = manaCost(sk, showL), cd = cooldown(sk);
+  h += `<div class="dim">Mana: <b style="color:#8fb4ff">${mc || 'Free'}</b>${cd ? ` · Cooldown: <b>${(cd * (1 - p.st.cdr / 100)).toFixed(1)}s</b>` : ''}</div>`;
+  if (base < MAX_SKILL_LEVEL) {
+    const nd = p.skillDamage(sk, Math.max(1, L + 1));
+    h += `<div class="dim" style="margin-top:4px;font-size:12px">Next level: ${nd[0]}–${nd[1]} damage, ${manaCost(sk, L + 1)} mana</div>`;
+  }
+  h += `<div class="dim" style="font-size:12px;margin-top:2px">Synergy: +3% damage per point in other ${escapeHtml(CLASSES[sk.classId].trees[sk.tree])} skills (now x${p.synergy(sk).toFixed(2)})</div>`;
+  box.innerHTML = h;
+  const row = el('div', 'row');
+  row.style.marginTop = '8px';
+  const why = canLearn(sk);
+  const lb = el('button', 'btn small', base ? 'Upgrade (+1)' : 'Learn');
+  lb.disabled = !!why;
+  if (why) lb.title = why;
+  lb.onclick = () => learn(sk);
+  row.appendChild(lb);
+  if (why && why !== 'No skill points') row.appendChild(el('span', 'dim', why));
+  box.appendChild(row);
+  if (L > 0) {
+    box.appendChild(el('div', 'dim', 'Assign to slot:'));
+    const ar = el('div', 'assign-row');
+    SLOT_LABELS.forEach((lab, i) => {
+      const b = el('button', 'btn small' + (c.bar[i] === sk.id ? ' red' : ''), lab);
+      b.onclick = () => assign(i, sk.id);
+      ar.appendChild(b);
+    });
+    box.appendChild(ar);
+  }
+  return box;
+}
+
+function makeDrag(node, sk) {
+  draggable(node, {
+    key: 'skill:' + sk.id,
+    data: () => ((G.char.skills[sk.id] || 0) > 0 ? { type: 'skill', id: sk.id } : null),
+    icon: () => skillIconURL(sk),
+    onClick: () => { selected = sk.id; sfx('ui'); UI.refresh(); },
+    onDouble: () => learn(sk),
+    onRight: () => learn(sk),
+  });
+}
+
+export function renderTree(body) {
+  const c = G.char;
+  body.innerHTML = '';
+  const C = CLASSES[c.classId];
+  const head = el('div', 'row');
+  head.style.justifyContent = 'space-between';
+  head.innerHTML = `<span>Skill Points: <b class="gold-text" style="font-size:18px">${c.skillPoints}</b></span><span class="dim" style="font-size:12px">Click to inspect · double/right-click to learn · drag to the skill bar</span>`;
+  body.appendChild(head);
+  const tabs = el('div', 'tabs');
+  C.trees.forEach((t, i) => {
+    const pts = CLASS_SKILLS[c.classId].filter((s) => s.tree === i).reduce((a, s) => a + (c.skills[s.id] || 0), 0);
+    const tb = el('div', 'tab' + (i === curTree ? ' active' : ''), `${escapeHtml(t)} <span class="dim">(${pts})</span>`);
+    tb.onclick = () => { curTree = i; sfx('ui'); UI.refresh(); };
+    tabs.appendChild(tb);
+  });
+  body.appendChild(tabs);
+  const wrap = el('div', 'inv-wrap');
+  const grid = el('div', 'tree');
+  const skills = CLASS_SKILLS[c.classId].filter((s) => s.tree === curTree);
+  for (const sk of skills) {
+    const lv = c.skills[sk.id] || 0;
+    const node = el('div', 'snode');
+    node.style.gridColumn = sk.col + 1; node.style.gridRow = sk.row + 1;
+    const icon = skillIcon(sk, 64);
+    const cv = document.createElement('canvas');
+    cv.width = 64; cv.height = 64;
+    cv.getContext('2d').drawImage(icon, 0, 0);
+    node.appendChild(cv);
+    const why = canLearn(sk);
+    if (!lv && why && why !== 'No skill points') node.classList.add('locked');
+    if (!why) node.classList.add('avail');
+    if (lv) node.classList.add('has');
+    if (selected === sk.id) node.classList.add('sel');
+    if (sk.row > 0) node.appendChild(el('div', 'link'));
+    node.appendChild(el('span', 'lvl', String(lv)));
+    node.title = sk.name;
+    makeDrag(node, sk);
+    UI.tip(node, () => `<b style="color:#ffe2a0">${escapeHtml(sk.name)}</b><div class="dim">Level ${lv}/${MAX_SKILL_LEVEL} · Req. lvl ${sk.reqLevel}</div><div style="max-width:260px">${describe(sk, Math.max(1, effLevel(G.player, sk)), G.player.skillDamage(sk, Math.max(1, effLevel(G.player, sk))))}</div>`);
+    grid.appendChild(node);
+  }
+  ROW_LEVELS.forEach((lv, r) => {
+    const lab = el('div', 'tree-row-lbl', `Lv ${lv}`);
+    lab.style.gridColumn = 1; lab.style.gridRow = r + 1;
+    lab.style.position = 'relative'; lab.style.left = '-40px'; lab.style.alignSelf = 'center'; lab.style.pointerEvents = 'none';
+    lab.style.width = '0'; lab.style.whiteSpace = 'nowrap';
+    grid.appendChild(lab);
+  });
+  wrap.appendChild(grid);
+  wrap.appendChild(skillDetail(selected && SKILLS[selected] && SKILLS[selected].tree === curTree ? SKILLS[selected] : selected ? SKILLS[selected] : null));
+  body.appendChild(wrap);
+}
+
+export function renderBook(body) {
+  const c = G.char, p = G.player;
+  body.innerHTML = '';
+  body.appendChild(el('div', 'dim', 'Your learned abilities. Drag one onto a skill bar slot (LMB, 1–8, RMB) or tap it and choose a slot.'));
+  const wrap = el('div', 'inv-wrap');
+  const list = el('div', 'book-list');
+  list.style.minWidth = 'min(420px, 90vw)';
+  const learned = CLASS_SKILLS[c.classId].filter((s) => (c.skills[s.id] || 0) > 0);
+  if (!learned.length) list.appendChild(el('div', 'dim', 'No skills learned yet.'));
+  for (const sk of learned) {
+    const L = effLevel(p, sk);
+    const it = el('div', 'book-item');
+    const cv = document.createElement('canvas');
+    cv.width = 64; cv.height = 64;
+    cv.getContext('2d').drawImage(skillIcon(sk, 64), 0, 0);
+    it.appendChild(cv);
+    const slot = c.bar.indexOf(sk.id);
+    const meta = el('div', 'meta', `<b>${escapeHtml(sk.name)}</b> <span class="dim">Lv ${L}${slot >= 0 ? ` · [${SLOT_LABELS[slot]}]` : ''}</span><p>${describe(sk, L, p.skillDamage(sk, L))}</p>`);
+    it.appendChild(meta);
+    if (selected === sk.id) it.style.borderColor = '#ffe2a0';
+    makeDrag(it, sk);
+    list.appendChild(it);
+  }
+  wrap.appendChild(list);
+  wrap.appendChild(skillDetail(selected ? SKILLS[selected] : null));
+  body.appendChild(wrap);
+}
+
+export function toggleTree() {
+  if (UI.isOpen('tree')) UI.closePanel('tree');
+  else UI.openPanel('tree', 'Skill Tree', renderTree);
+}
+export function toggleBook() {
+  if (UI.isOpen('book')) UI.closePanel('book');
+  else UI.openPanel('book', 'Skill Book', renderBook);
+}

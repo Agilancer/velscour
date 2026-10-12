@@ -1,0 +1,178 @@
+// In-game HUD built on top of the provided skill-bar art.
+import { G } from '../state.js';
+import { el, fmt, fmtInt, escapeHtml, clamp } from '../core/util.js';
+import { sfx } from '../core/audio.js';
+import { A, potionIcon } from '../core/assets.js';
+import { UI, $, droppable } from './ui.js';
+import { skillIconURL } from './icons.js';
+import { SKILLS, effLevel, manaCost, cooldown, CLASS_SKILLS } from '../data/skills.js';
+import { xpToNext } from '../game/player.js';
+import { drawMinimap } from '../game/render.js';
+import { assign, SLOT_LABELS } from './skills.js';
+import { elem } from '../gfx/vfx.js';
+
+const POTIONS = ['hp', 'mp', 'rejuv', 'fury'];
+// hud slot index -> bar index (skills) or potion kind
+const SLOT_MAP = [0, 1, 2, 3, 4, 5, 6, 7, 8, 'hp', 'mp', 'rejuv', 'fury', 9];
+
+export const HUD = {
+  slots: [],
+  last: {},
+  init() {
+    UI.hud = this;
+    const geo = A.hudGeo;
+    const wrap = $('#hud-slots');
+    const pct = (v, total) => (v / total) * 100 + '%';
+    geo.slots.forEach((s, i) => {
+      const d = el('div', 'slot');
+      d.style.left = pct(s.x, geo.w); d.style.top = pct(s.y, geo.h);
+      d.style.width = pct(s.w, geo.w); d.style.height = pct(s.h, geo.h);
+      const map = SLOT_MAP[i];
+      const icon = new Image(); icon.className = 'icon'; icon.draggable = false; icon.style.display = 'none';
+      d.appendChild(icon);
+      const nomana = el('div', 'nomana hidden');
+      const cd = el('div', 'cd'); cd.style.height = '0%';
+      const cdt = el('div', 'cdtext');
+      const cnt = el('span', 'count');
+      d.append(nomana, cd, cdt, cnt);
+      const entry = { d, icon, cd, cdt, cnt, nomana, map, last: {} };
+      this.slots.push(entry);
+      if (typeof map === 'string') {
+        d.title = { hp: 'Healing Potion (Z)', mp: 'Mana Potion (X)', rejuv: 'Rejuvenation Potion (C)', fury: 'Elixir of Fury (V)' }[map];
+        d.addEventListener('pointerdown', (e) => { e.stopPropagation(); G.player && G.player.usePotion(map); });
+      } else {
+        d.title = `Skill slot ${SLOT_LABELS[map]}`;
+        let pressT = 0, longT = null;
+        d.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          if (e.pointerType !== 'mouse') {
+            pressT = performance.now();
+            longT = setTimeout(() => { longT = null; chooser(map); }, 550);
+          }
+        });
+        d.addEventListener('pointerup', (e) => {
+          if (e.pointerType === 'mouse') { if (e.button === 0) chooser(map); return; }
+          if (longT) { clearTimeout(longT); longT = null; if (performance.now() - pressT < 550) G.controls && G.controls.useSlot(map); }
+        });
+        droppable(d, (data) => { assign(map, data.id); return true; }, (data) => data.type === 'skill');
+      }
+      UI.tip(d, () => slotTip(map));
+      wrap.appendChild(d);
+    });
+    const [lo, mo] = geo.orbs;
+    const place = (elx, o) => { elx.style.left = pct(o.cx - o.r, geo.w); elx.style.top = pct(o.cy - o.r, geo.h); elx.style.width = pct(o.r * 2, geo.w); elx.style.height = pct(o.r * 2, geo.h); };
+    place($('#life-cover'), lo); place($('#mana-cover'), mo);
+    const lt = $('#life-text'), mt = $('#mana-text');
+    lt.style.left = pct(lo.cx - 110, geo.w); lt.style.width = pct(220, geo.w); lt.style.top = pct(lo.cy - 12, geo.h);
+    mt.style.left = pct(mo.cx - 110, geo.w); mt.style.width = pct(220, geo.w); mt.style.top = pct(mo.cy - 12, geo.h);
+    const xp = geo.xp;
+    const xt = $('#xp-track');
+    xt.style.left = pct(xp.x, geo.w); xt.style.width = pct(xp.w, geo.w); xt.style.top = pct(xp.y, geo.h); xt.style.height = pct(xp.h, geo.h);
+    for (const b of document.querySelectorAll('.hbtn')) {
+      b.addEventListener('click', () => { sfx('ui'); G.game.hudAction(b.dataset.act); });
+    }
+    $('#minimap').addEventListener('click', () => { G.showAutomap = !G.showAutomap; });
+  },
+
+  refreshStatic() {
+    const c = G.char;
+    if (!c) return;
+    for (const s of this.slots) {
+      if (typeof s.map === 'string') {
+        if (s.last.icon !== s.map) { s.icon.src = potionIcon({ hp: 'red', mp: 'blue', rejuv: 'purple', fury: 'orange' }[s.map], 64).toDataURL(); s.icon.style.display = 'block'; s.icon.style.opacity = '0'; s.last.icon = s.map; }
+        continue;
+      }
+      const id = c.bar[s.map];
+      if (s.last.icon !== id) {
+        s.last.icon = id;
+        if (id && SKILLS[id]) { s.icon.src = skillIconURL(SKILLS[id]); s.icon.style.display = 'block'; } else s.icon.style.display = 'none';
+      }
+    }
+    const sp = $('#sp-badge'), stb = $('#stat-badge');
+    sp.textContent = c.skillPoints; sp.classList.toggle('hidden', !c.skillPoints);
+    stb.textContent = c.statPoints; stb.classList.toggle('hidden', !c.statPoints);
+    if (G.touchUI) G.touchUI.refresh();
+  },
+
+  update(dt) {
+    const p = G.player, c = G.char, w = G.world;
+    if (!p || !c) return;
+    const set = (key, v, fn) => { if (this.last[key] !== v) { this.last[key] = v; fn(v); } };
+    const lifeK = Math.round(clamp(1 - p.hp / p.maxHp, 0, 1) * 200) / 2;
+    set('life', lifeK, (v) => { $('#life-cover .orb-empty').style.height = v + '%'; });
+    set('mana', Math.round(clamp(1 - p.mana / p.maxMana, 0, 1) * 200) / 2, (v) => { $('#mana-cover .orb-empty').style.height = v + '%'; });
+    set('lt', `${fmt(Math.max(0, p.hp))}/${fmt(p.maxHp)}`, (v) => { $('#life-text').textContent = v; });
+    set('mt', `${fmt(p.mana)}/${fmt(p.maxMana)}`, (v) => { $('#mana-text').textContent = v; });
+    const need = xpToNext(c.level);
+    set('xp', Math.round((c.xp / need) * 1000) / 10, (v) => { $('#xp-fill').style.width = v + '%'; });
+    set('xpt', `Level ${c.level} · ${fmtInt(c.xp)} / ${fmtInt(need)} XP`, (v) => { $('#xp-text').textContent = v; });
+    for (const s of this.slots) {
+      if (typeof s.map === 'string') {
+        const n = c.potions[s.map] || 0;
+        if (s.last.n !== n) { s.last.n = n; s.cnt.textContent = n; s.d.style.opacity = n ? '1' : '0.45'; }
+        continue;
+      }
+      const id = c.bar[s.map];
+      const sk = id && SKILLS[id];
+      let cdK = 0, cdTxt = '', nm = false;
+      if (sk) {
+        const rem = p.cooldowns[id] || 0;
+        const tot = cooldown(sk) * (1 - p.st.cdr / 100);
+        if (rem > 0 && tot > 0) { cdK = Math.round((rem / tot) * 100); cdTxt = rem >= 1 ? Math.ceil(rem) + '' : ''; }
+        const L = effLevel(p, sk);
+        nm = L > 0 && p.mana < manaCost(sk, L);
+      }
+      if (s.last.cd !== cdK) { s.last.cd = cdK; s.cd.style.height = cdK + '%'; }
+      if (s.last.cdt !== cdTxt) { s.last.cdt = cdTxt; s.cdt.textContent = cdTxt; }
+      if (s.last.nm !== nm) { s.last.nm = nm; s.nomana.classList.toggle('hidden', !nm); }
+    }
+    // boss bar
+    const boss = w && w.boss && !w.boss.dead && w.boss.awake ? w.boss : null;
+    set('boss', boss ? boss.id : 0, () => { $('#boss-bar').classList.toggle('hidden', !boss); if (boss) $('#boss-name').textContent = boss.name; });
+    if (boss) set('bossHp', Math.round((boss.hp / boss.maxHp) * 500) / 5, (v) => { $('#boss-fill').style.width = v + '%'; });
+    // buffs
+    this.buffT = (this.buffT || 0) - dt;
+    if (this.buffT <= 0) {
+      this.buffT = 0.25;
+      const row = $('#buff-row');
+      const key = p.buffs.map((b) => b.id + ':' + Math.ceil(b.t)).join('|');
+      if (key !== this.last.buffs) {
+        this.last.buffs = key;
+        row.innerHTML = '';
+        for (const b of p.buffs) {
+          if (b.hidden) continue;
+          const d = el('div', 'buff');
+          const sk = SKILLS[b.id];
+          if (sk) { const im = new Image(); im.src = skillIconURL(sk); im.style.width = '100%'; d.appendChild(im); }
+          else { d.style.background = elem(b.el).glow; }
+          d.title = b.name;
+          if (!b.aura) d.appendChild(el('span', '', Math.ceil(b.t)));
+          row.appendChild(d);
+        }
+      }
+    }
+    drawMinimap(w, dt, $('#minimap'));
+  },
+
+  setArea(name, sub) { $('#area-name').textContent = name; $('#area-sub').textContent = sub || ''; },
+  show(v) { $('#hud').classList.toggle('hidden', !v); },
+};
+
+function slotTip(map) {
+  if (typeof map === 'string') return `<b>${{ hp: 'Healing Potion', mp: 'Mana Potion', rejuv: 'Rejuvenation Potion', fury: 'Elixir of Fury' }[map]}</b><div class="dim">Key ${{ hp: 'Z', mp: 'X', rejuv: 'C', fury: 'V' }[map]} · Buy more from the Alchemist</div>`;
+  const id = G.char.bar[map];
+  if (!id) return `<b>Empty slot [${SLOT_LABELS[map]}]</b><div class="dim">Click to choose a skill, or drag one here from the Skill Book (B).</div>`;
+  const sk = SKILLS[id];
+  return `<b style="color:#ffe2a0">${escapeHtml(sk.name)}</b> <span class="dim">[${SLOT_LABELS[map]}]</span><div class="dim">Click to change</div>`;
+}
+
+/** Pick a learned skill for a bar slot. */
+export function chooser(slotIdx) {
+  const c = G.char;
+  const learned = CLASS_SKILLS[c.classId].filter((s) => (c.skills[s.id] || 0) > 0);
+  const html = learned.length
+    ? `<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-height:55vh;overflow:auto">${learned.map((s) => `<button class="btn small" data-id="${s.id}" style="display:flex;align-items:center;gap:6px;padding:4px 8px"><img src="${skillIconURL(s)}" style="width:32px;height:32px">${escapeHtml(s.name)}</button>`).join('')}</div>`
+    : '<p>You have not learned any skills yet. Open the Skill Tree (K).</p>';
+  const d = UI.dialog({ title: `Assign slot ${SLOT_LABELS[slotIdx]}`, html, buttons: [{ label: 'Clear slot', fn: () => { c.bar[slotIdx] = null; UI.refresh(); } }, { label: 'Close' }] });
+  d.box.querySelectorAll('[data-id]').forEach((b) => { b.onclick = () => { d.close(); assign(slotIdx, b.dataset.id); }; });
+}
