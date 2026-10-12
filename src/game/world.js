@@ -2,6 +2,7 @@
 import { G } from '../state.js';
 import { camera, isoX, isoY } from '../core/view.js';
 import { rand, dist2, TAU, chance } from '../core/util.js';
+import { sfx } from '../core/audio.js';
 import { spawn, updateVfx, addLight, sparkle, smoke } from '../gfx/vfx.js';
 
 const CELL = 2;
@@ -92,6 +93,7 @@ export class World {
       c.update(dt);
     }
     for (const n of this.npcs) n.update && n.update(dt);
+    this.openDoors();
     for (let i = this.hazards.length - 1; i >= 0; i--) {
       const h = this.hazards[i];
       if (h.update(dt) === false || h.dead) this.hazards.splice(i, 1);
@@ -135,6 +137,15 @@ export class World {
           if (!b.static) this.map.move(b, nx * push * wb * 2, ny * push * wb * 2, b.ghost);
         }
       }
+    }
+  }
+
+  /** Doors swing open (and stay open) when anyone walks up to them. They never block: monsters path straight through. */
+  openDoors() {
+    for (const d of this.map.doors) {
+      if (d.open || this.query(d.x, d.y, 1.1).length === 0) continue;
+      d.open = true;
+      sfx('thud', 0.35, 0.7);
     }
   }
 

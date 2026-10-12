@@ -8,48 +8,32 @@ import { classSprite } from '../core/assets.js';
 import { enemyImage } from '../core/enemyart.js';
 import { drawLootLabels } from './loot.js';
 
-const WALL_K = (HW * 1.06) / 66;
-
 let lightCanvas = null, vignette = null, vigKey = '';
 
 function floorEntry(world, v) {
   if (world.townTiles) return world.townTiles[v] || world.townTiles[0];
-  const ts = world.tileset;
-  return v >= 100 ? ts.details[v - 100] || ts.floors[0] : ts.floors[v] || ts.floors[0];
+  return world.tileset.floors[v] || world.tileset.floors[0];
 }
 
-function segRect(s) {
-  const spr = s.spr;
-  const lx = isoX(s.lx, s.ly), ly = isoY(s.lx, s.ly);
-  if (s.strip) {
-    // seamless section: exactly one tile edge wide, face base on the edge line ((lx,ly) is its left end)
-    const k = HW / spr.w;
-    return [lx - 0.3, ly - (s.flip ? spr.base - spr.w / 2 : spr.base) * k, HW + 0.6, spr.h * k]; // overlap 0.3px: no hairline seams
-  }
-  const k = WALL_K;
-  const yl = s.flip ? spr.base + spr.slope * spr.w : spr.base;
-  return [lx - 1, ly - yl * k + 2, spr.w * k, spr.h * k];
+/** The atlas slice a wall item (a wall arm, an arch slice or a door part) shows now; null for a shut door's leaf. */
+function wallSlice(o) {
+  if (o.kind !== 'door') return o.r;
+  const d = o.door;
+  if (o.part === 'leaf' && !d.open) return null;
+  return d.art[d.open ? 'open' : 'closed'].find((p) => p.part === o.part) || null;
+}
+/** Its rect [x, y, w, h] in world px. */
+function wallRect(o, k) {
+  const r = wallSlice(o);
+  return r && [isoX(o.x, o.y) + r.ox * k, isoY(o.x, o.y) + r.oy * k, r.w * k, r.h * k];
 }
 
-function drawSeg(ctx, s, alpha) {
-  const spr = s.spr;
-  const [dx, dy, w, h] = segRect(s);
+function drawWall(ctx, o, k, alpha) {
+  const r = wallSlice(o);
+  if (!r) return;
   if (alpha < 1) ctx.globalAlpha = alpha;
-  if (s.flip) {
-    ctx.save(); ctx.translate(dx + w, dy); ctx.scale(-1, 1);
-    ctx.drawImage(spr.img, spr.sx, spr.sy, spr.w, spr.h, 0, 0, w, h);
-    ctx.restore();
-  } else ctx.drawImage(spr.img, spr.sx, spr.sy, spr.w, spr.h, dx, dy, w, h);
-  if (alpha < 1) ctx.globalAlpha = 1;
-}
-
-function drawPillar(ctx, p, alpha) {
-  const spr = p.spr;
-  // same source scale as the wall sections; the post's square base is centred on the corner
-  const k = p.strip ? HW / p.strip : WALL_K * 1.05;
-  const x = isoX(p.x, p.y), y = isoY(p.x, p.y) + (p.strip ? (spr.w * k) / 4 : 4);
-  if (alpha < 1) ctx.globalAlpha = alpha;
-  ctx.drawImage(spr.img, spr.sx, spr.sy, spr.w, spr.h, x - (spr.w * k) / 2, y - spr.h * k, spr.w * k, spr.h * k);
+  // 0.25px of overlap hides hairline seams between neighbouring slices
+  ctx.drawImage(r.img, r.sx, r.sy, r.w, r.h, isoX(o.x, o.y) + r.ox * k - 0.25, isoY(o.x, o.y) + r.oy * k - 0.25, r.w * k + 0.5, r.h * k + 0.5);
   if (alpha < 1) ctx.globalAlpha = 1;
 }
 
@@ -57,14 +41,10 @@ function drawProp(ctx, pr, alpha) {
   const x = isoX(pr.x, pr.y), y = isoY(pr.x, pr.y);
   if (alpha < 1) ctx.globalAlpha = alpha;
   if (pr.k) {
-    // scatter / barricade art: the footprint's centre is a quarter of the drawn width above the sprite's bottom
-    const s = pr.spr, w = s.w * pr.k, h = s.h * pr.k;
-    if (pr.flip) { ctx.save(); ctx.translate(x, 0); ctx.scale(-1, 1); ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, -w / 2, y + w / 4 - h, w, h); ctx.restore(); }
-    else ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, x - w / 2, y + w / 4 - h, w, h);
-  } else if (pr.spr) {
-    const s = pr.spr;
-    const k = (pr.kind === 'tower' ? 0.55 : 0.5) * (pr.scale || 1);
-    ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, x - (s.w * k) / 2, y - s.h * k + HH * 0.6, s.w * k, s.h * k);
+    // biome pack scatter: drawn from its ground pivot (ox/oy in native px), maybe mirrored about it
+    const s = pr.spr, w = s.w * pr.k, h = s.h * pr.k, dy = y + s.oy * pr.k;
+    if (pr.flip) { ctx.save(); ctx.translate(x, 0); ctx.scale(-1, 1); ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, s.ox * pr.k, dy, w, h); ctx.restore(); }
+    else ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, x + s.ox * pr.k, dy, w, h);
   } else if (pr.sprite) {
     const img = pixelSprite(pr.sprite, pr.pal || {}, 4);
     const px = pr.px || 2.4;
@@ -140,10 +120,10 @@ function drawPortal(ctx, p) {
   ctx.beginPath(); ctx.ellipse(x, y, 34, 17, 0, 0, TAU); ctx.stroke();
   ctx.beginPath(); ctx.ellipse(x, y, 26, 13, 0, t, t + 5); ctx.stroke();
   // side pillars
-  const ps = G.world && G.world.tileset && G.world.tileset.pillars[0];
+  const ts = G.world && G.world.tileset, ps = ts && ts.pillar;
   if (ps) {
-    const k = 0.5;
-    for (const sx of [-30, 26]) ctx.drawImage(ps.img, ps.sx, ps.sy, ps.w, ps.h, x + sx - (ps.w * k) / 2 + 2, y - ps.h * k + 6 + (sx < 0 ? -4 : 4), ps.w * k, ps.h * k);
+    const k = ts.k;
+    for (const sx of [-30, 26]) ctx.drawImage(ps.img, ps.sx, ps.sy, ps.w, ps.h, x + sx + ps.ox * k, y + (sx < 0 ? -4 : 4) + ps.oy * k, ps.w * k, ps.h * k);
   }
   // swirling vortex
   ctx.save();
@@ -244,14 +224,16 @@ export function renderWorld(ctx, world) {
   const ppx = p ? isoX(p.x, p.y) : 0, ppy = p ? isoY(p.x, p.y) : 0;
   const prect = [ppx - 16, ppy - 62, ppx + 16, ppy - 4];
   const occludes = (r) => p && r[0] < prect[2] && r[0] + r[2] > prect[0] && r[1] < prect[3] && r[1] + r[3] > prect[1];
-  // walls in front of the hero fade with screen distance and depth, so the narrow sections form a soft see-through hole
+  // walls in front of the hero fade with screen distance and depth, so the narrow slices form a soft see-through hole
+  // (a wide hole: the walls stand ~1.4 heroes tall, and fights next to the hero should stay in view)
   const cutaway = (r, d) => {
-    if (!p || d <= pd || r[1] > prect[3] - 8 || r[1] + r[3] < prect[1]) return 1;
-    const t = clamp((Math.abs(r[0] + r[2] / 2 - ppx) - 14) / 70, 0, 1);
-    return 1 - (1 - (0.22 + 0.78 * t * t * (3 - 2 * t))) * Math.min(1, (d - pd) * 1.5);
+    if (!p || !r || d <= pd || r[1] > prect[3] - 8 || r[1] + r[3] < prect[1] - 30) return 1;
+    const t = clamp((Math.abs(r[0] + r[2] / 2 - ppx) - 24) / 120, 0, 1);
+    return 1 - (1 - (0.16 + 0.84 * t * t * (3 - 2 * t))) * Math.min(1, (d - pd) * 1.5);
   };
-  const walls = map.wallsIn(tx0 - 2, ty0 - 2, tx1 + 3, ty1 + 3, []);
-  for (const s of walls) sorted.push({ d: s.depth, f: s.spr && s.dir ? 2 : 3, o: s });
+  const wk = world.tileset && world.tileset.k;
+  const walls = map.wallsIn(tx0 - 3, ty0 - 3, tx1 + 4, ty1 + 4, []);
+  for (const s of walls) sorted.push({ d: s.depth, f: 2, o: s });
   for (const pr of world.props) {
     const px = isoX(pr.x, pr.y), py = isoY(pr.x, pr.y);
     if (px < vr.x0 - 100 || px > vr.x1 + 100 || py < vr.y0 - 40 || py > vr.y1 + 220) continue;
@@ -273,8 +255,7 @@ export function renderWorld(ctx, world) {
     const o = it.o;
     switch (it.f) {
       case 1: o.draw(ctx); break;
-      case 2: drawSeg(ctx, o, o.strip ? cutaway(segRect(o), o.depth) : o.depth > pd + 0.6 && occludes(segRect(o)) ? 0.3 : 1); break;
-      case 3: drawPillar(ctx, o, o.strip ? cutaway([isoX(o.x, o.y) - 12, isoY(o.x, o.y) - 90, 24, 96], o.depth) : o.depth > pd + 0.6 && p && Math.abs(isoX(o.x, o.y) - ppx) < 24 && isoY(o.x, o.y) > ppy - 10 && isoY(o.x, o.y) - 64 < ppy ? 0.3 : 1); break;
+      case 2: drawWall(ctx, o, wk, cutaway(wallRect(o, wk), o.depth)); break;
       case 4: {
         let a = 1;
         if (p && it.d > pd + 0.5 && (o.spr || (o.sprite === 'tree' || o.sprite === 'pine'))) {
