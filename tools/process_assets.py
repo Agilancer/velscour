@@ -7,7 +7,7 @@ JSON atlases under assets/. Re-run this whenever a source sheet changes:
 
     pip install pillow numpy scipy
     python3 tools/process_assets.py          # everything
-    python3 tools/process_assets.py tiles    # floor/wall atlases only
+    python3 tools/process_assets.py tiles [set ...]   # floor/wall atlases only (all 20 sets, or the named ones)
     python3 tools/process_assets.py classes [paladin]   # class art packs (tools/classart.py, docs/CLASS_ART.md)
     python3 tools/process_assets.py gear [paladin]      # armor + helm libraries (tools/gearart.py, docs/CLASS_ART.md)
     python3 tools/process_assets.py enemies  # monster sheets in assets/source/enemies/<set>/ (docs/ENEMY_ART.md)
@@ -397,7 +397,7 @@ def process_walls(path):
         sel = slice(int(k * 0.2), int(k * 0.8))
         slope, icpt = (np.polyfit(xs[sel], ys[sel], 1) if k > 6 else (0.0, float(h)))
         # classify (every wall sheet uses the same template layout)
-        if x0 > 1700 and y0 > 600 and w > 80 and h > 150:
+        if x0 > 1700 and y0 > 600 and w > 80 and h > 140:
             kind = "tower"     # the big free-standing column, bottom right
         elif 55 <= w <= 72 and h >= 100 and slope < -0.22:
             kind = "seg_fwd"   # "/" : runs bottom-left -> top-right
@@ -461,12 +461,16 @@ TILE_SETS = {
     "skull": "Skull-Lined Catacombs", "catacombs": "Catacombs", "cursed": "Cursed Dungeon",
     "cathedral": "Cathedral", "desert": "Endless Desert", "sand": "Sea of Sand", "swamp": "Swamp of Despair",
     "frozen": "Frozen Ossuary", "ashen": "Ashen Monastery", "blood": "Blood Crypt",
+    "drowned": "Drowned Temple", "obsidian": "Obsidian Forge", "fungal": "Fungal Depths",
+    "serpent": "Serpent Sepulcher", "plague": "Plague Sewers", "shattered": "Shattered Citadel",
+    "library": "Haunted Library", "necropolis": "Moonlit Necropolis", "amber": "Amber Wastes",
+    "void": "Void Sanctuary",
 }
 
 
-def process_tiles():
+def process_tiles(only=()):
     ensure(os.path.join(OUT, "tiles"))
-    for sid in TILE_SETS:
+    for sid in [s for s in TILE_SETS if not only or s in only]:
         floor_atlas, floors = process_floors(os.path.join(SRC, "floors", sid + ".png"))
         wall_atlas, walls = process_walls(os.path.join(SRC, "walls", sid + ".png"))
         save(floor_atlas, os.path.join(OUT, "tiles", sid + "_floor.webp"))
@@ -484,7 +488,7 @@ def main():
         process_classes()
         process_ui()
     if "tiles" in args:
-        process_tiles()
+        process_tiles([a for a in args if a in TILE_SETS])
     if "props" in args:
         process_props()
     if "enemies" in args:

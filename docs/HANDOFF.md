@@ -34,7 +34,7 @@ Requirements, as stated (✅ = implemented in the draft):
 - ✅ Placeholder isometric art, with **palette swaps** for hundreds of enemies, weapons, armor, gems, houses and NPCs.
 - ✅ A **town** with weapon and armor vendors, upgraders, enchanters, gem vendors and gem-slot adders "etc.", and a
   **portal at the edge of town** into procedurally generated catacombs/dungeons.
-- ✅ **20 biomes**, with **dozens of enemy types per biome**.
+- ✅ **20 biomes**, with **dozens of enemy types per biome**. (There are now 25: 5 were added for the second tile-set upload.)
 - ✅ Each level should take **at least a couple of minutes** from entrance to exit, be a bit of a **maze**, have
   enemies throughout, and end with a **boss**.
 - ✅ Enemies drop **health/mana orbs, gold piles, and weapons/shields/armor/gems** in common/uncommon/rare/epic/
@@ -59,8 +59,8 @@ Requirements, as stated (✅ = implemented in the draft):
   the victory screen, "Endless Torment" depths continue past 100.
 - **Tech stack:** vanilla JS ES modules and Canvas 2D, with no framework and no bundler. GitHub Pages can serve the
   repo as-is, and the code is easy to change.
-- **Art:** the user's sheets are sliced by `tools/process_assets.py`. Dungeons use the user's 10 floor/wall tile
-  sets, 5 scatter sheets and 20 barricade sets, mapped onto the 20 biomes (see [`ART.md`](ART.md)). Monsters use the
+- **Art:** the user's sheets are sliced by `tools/process_assets.py`. Dungeons use the user's 20 floor/wall tile
+  sets, 5 scatter sheets and 20 barricade sets, mapped onto the 25 biomes (see [`ART.md`](ART.md)). Monsters use the
   user's 7 monster sheets (70 monsters, [`ENEMY_ART.md`](ENEMY_ART.md)). Everything else
   is placeholder ASCII pixel art with palette swaps (summons, Velscour, items) or is drawn procedurally (town buildings). The README tells the user
   how to swap in real art.
@@ -69,7 +69,7 @@ Requirements, as stated (✅ = implemented in the draft):
   palette-swapped from the biome's swap list. A darker "greater" breed exists for each, and uniques get a random swap.
   Guardians come from 17 boss-flagged monsters. Velscour keeps his own pixel sprite: no sheet has a demon lord.
 - **Biome order:** the user asked for biomes to be random and not go in order. Biomes are drawn from a per-hero
-  shuffle bag (`drawBiome`), so all 19 come up before any repeats, and the first descent is random, no longer
+  shuffle bag (`drawBiome`), so all 24 come up before any repeats, and the first descent is random, no longer
   always the catacombs. **Like-coloured mixing:** about 65% of levels borrow floors (in the far chunks) and maybe
   walls from another biome in the same colour family ([`ART.md`](ART.md)).
 - **Mobile:** a floating virtual joystick, plus a right-hand skill-button cluster with auto-aim (tap to cast,
@@ -185,6 +185,23 @@ are in section 7.
    - Verified with the new `select.js` (desktop and `mobile`), plus flow, ui, mobile and data_check. Headless
      Chromium holds 60 fps on the class grid at 844x390, DPR 2.
 
+11. **Second tile-set upload (branch `claude/wonderful-rubin-gyv7hv`).** The user uploaded `assets/Floors 11-20.png` and
+   `assets/Walls 11-20.png` ("same style as before") and asked for them to look right in game, with seamless matching,
+   and to be usable for additional biomes. Done:
+   - The sheets were moved to `assets/source/{floors,walls}/<set>.png`, named from the printed titles (the floor and
+     wall numbering differs: Floors 11/13 = Drowned/Fungal, Walls 11/13 = Fungal/Drowned). They use the original
+     templates, so `process_assets.py tiles` sliced them unchanged. The only fix was the tower test (`h > 140`), because
+     the fungal and necropolis towers are 150 px tall. `tiles` now also takes set ids, to slice only those.
+   - Wall strips: 14-26 seamless bodies per set, widths 44-54 px.
+   - Biomes (`src/data/biomes.js`): five biomes that used to recolour a borrowed set now use their own, as drawn
+     (sunken, fungal, plague, void, forge). Five new biomes were added: Serpent Sepulcher and Amber Wastes (sand
+     family), Moonlit Necropolis (frost), and Shattered Citadel and Haunted Library (gloom). Obsidian Vault moved from
+     the skull set to the otherwise unused catacombs set, with its dark palette. That makes 25 biomes; all 20 sets are
+     shown as drawn somewhere.
+   - Verified with `walls.js` (all 10 new-art biomes at zoom 1.5, three at zoom 3), `enemies.js` on the new biomes
+     (including mixed levels), `data_check` (it now also checks each biome's tile/barricade/scatter files), `flow` and
+     `boss`. Fixed `walls.js` crashing when given more than 4 biomes.
+
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
 1. Get PR #1 merged (by the user) and confirm the Pages deploy works at https://agilancer.github.io/velscour/.
@@ -245,7 +262,7 @@ Do these in order, unless the user asks for something else. Their feedback after
 - Generated files:
   - `assets/sprites/classes/<id>.webp` (16) and `classes.json` (w/h per class; the game does not load it).
   - `assets/ui/`: `logo.webp`, `hud.webp`, `hud.json`, `icon.png`, `potion_{red,blue,purple,orange}.png`.
-  - `assets/tiles/`: `<set>_floor.webp`, `<set>_walls.webp`, `<set>.json` for the 10 tile sets.
+  - `assets/tiles/`: `<set>_floor.webp`, `<set>_walls.webp`, `<set>.json` for the 20 tile sets.
   - `assets/props/`: one atlas per scatter sheet, `barricades_<set>.webp` x20, `props.json`.
 
 ### Key APIs

@@ -5,7 +5,8 @@ The user's environment art lives in `assets/source/` and is sliced offline by `t
 ```bash
 pip install pillow numpy scipy
 python3 tools/process_assets.py            # everything (sprites, tiles, props); ~2 min
-python3 tools/process_assets.py tiles      # floor + wall atlases for the 10 tile sets only
+python3 tools/process_assets.py tiles      # floor + wall atlases for the 20 tile sets only
+python3 tools/process_assets.py tiles amber void   # ...or just the named sets (about 6 s each)
 python3 tools/process_assets.py props      # scatter terrain + barricades only
 ```
 
@@ -16,16 +17,21 @@ All sheets are magenta-keyed (`key_magenta`). Every sheet of a kind uses the sam
 
 | Folder | Files | Contents |
 |---|---|---|
-| `floors/` | `<set>.png` x10 | 36 base floor diamonds, 19 details (24 in `desert`), 8 thresholds |
-| `walls/` | `<set>.png` x10 | wall panels, corners, pillars, a tower, arch, gate and rubble, in the catacomb template |
+| `floors/` | `<set>.png` x20 | 36 base floor diamonds, 19 details (24 in `desert`), 8 thresholds |
+| `walls/` | `<set>.png` x20 | wall panels, corners, pillars, a tower, arch, gate and rubble, in the catacomb template |
 | `scatter/` | 5 sheets | 10 object types (columns) x 6 variants (rows) |
 | `barricades/` | `barricades_1..4.png` | 5 named sets per sheet (rows) x 8 facings (N, NE, E, SE, S, SW, W, NW) |
 
-The 10 **tile sets**, as printed on the sheets: `skull` Skull-Lined Catacombs, `catacombs` Catacombs,
+The 20 **tile sets**, as printed on the sheets: `skull` Skull-Lined Catacombs, `catacombs` Catacombs,
 `cursed` Cursed Dungeon, `cathedral` Cathedral, `desert` Endless Desert, `sand` Sea of Sand,
-`swamp` Swamp of Despair, `frozen` Frozen Ossuary, `ashen` Ashen Monastery, `blood` Blood Crypt
-(`TILE_SETS` in the script). The uploaded `Floors N`/`Walls N` numbering is not consistent between the two
-kinds (floors 9/10 are Blood/Ashen, walls 9/10 Ashen/Blood), so files were named from the printed titles.
+`swamp` Swamp of Despair, `frozen` Frozen Ossuary, `ashen` Ashen Monastery, `blood` Blood Crypt, and from the
+second upload `drowned` Drowned Temple, `obsidian` Obsidian Forge, `fungal` Fungal Depths, `serpent` Serpent
+Sepulcher, `plague` Plague Sewers, `shattered` Shattered Citadel, `library` Haunted Library, `necropolis` Moonlit
+Necropolis, `amber` Amber Wastes, `void` Void Sanctuary (`TILE_SETS` in the script). The uploaded
+`Floors N`/`Walls N` numbering is not consistent between the two kinds (floors 9/10 are Blood/Ashen, walls 9/10
+Ashen/Blood; Floors 11/13 are Drowned/Fungal, Walls 11/13 Fungal/Drowned), so files were named from the printed
+titles. The second ten use the same templates as the first, so they needed no pipeline changes (only the tower
+test was loosened: two of the new towers are 150 px tall).
 
 **Scatter sheets** (`SCATTER` in the script lists every column's name, whether it blocks, and its
 footprint): `catacomb_relics`, `cathedral_furnishings`, `desert_ruins`, `dungeon_mechanisms`,
@@ -53,13 +59,17 @@ ashen, blood.
 - `assets/props/props.json`: `{scatter: {sheet: [{kind,x,y,w,h,block,size,var}]}, barricades: {set: [{kind,x,y,w,h,slope}]}}`.
 
 ## Biomes -> art (`BIOME_ART` in `src/data/biomes.js`)
-The 20 biomes map onto the 10 tile sets. Biomes that share a set get a `palette` recolour on top
-(floors, walls, scatter, barricades and chests alike); `null` means the art as drawn. Each biome also
+The 25 biomes map onto the 20 tile sets, and every set is shown as drawn (`null` palette) by at least one biome:
+the 20 original biomes, plus Serpent Sepulcher, Shattered Citadel, Haunted Library, Moonlit Necropolis and Amber
+Wastes, added for the second upload. Sunken Crypt, Fungal Grotto, Plague Sewers, Void Sanctum and Infernal Forge,
+which used to recolour a borrowed set, now use their own (Drowned Temple, Fungal Depths, Plague Sewers, Void
+Sanctuary, Obsidian Forge). Biomes that borrow a set get a `palette` recolour on top
+(floors, walls, scatter, barricades and chests alike). Each biome also
 names a barricade set and 1-2 scatter sheets. Change art per biome there.
 
 ## Biome order and mixed levels
 - **Order**: `drawBiome(c, depth)` (`src/data/biomes.js`) draws each next biome from a shuffle bag stored on the
-  save (`c.biomeBag`). All 19 biomes come up once, in random order, before any repeats, and never the same one
+  save (`c.biomeBag`). All 24 biomes come up once, in random order, before any repeats, and never the same one
   twice in a row. A new hero's first descent is random too. Depth 100 is always the throne.
 - **Mixing**: biomes are grouped by colour (`FAMILY`: sand, frost, ember, rot, gloom). On entering a depth,
   `mixPartner` picks another biome from the same family 65% of the time (`MIX_CHANCE`), preferring one drawn from a

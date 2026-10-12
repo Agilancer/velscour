@@ -54,10 +54,19 @@ for (const b of BIOMES) {
   if (!looks.boss(b.roster)) bad.push(`biome ${b.id}: no guardian art`);
   if (b.id !== 'throne' && !b.family) bad.push(`biome ${b.id}: no colour family`);
 }
-// shuffle bag: 19 biomes, each once per cycle, never twice in a row
-const hero = { biomeBag: [] }, seq = [];
-for (let i = 0; i < 19 * 4; i++) { const id = drawBiome(hero, 2); if (id === hero.lastBiome) bad.push('biome repeated back to back'); hero.lastBiome = id; seq.push(id); }
-if (new Set(seq.slice(0, 19)).size !== 19) bad.push('first 19 biomes are not all different');
+// every biome's tile set and barricade set exist
+const { readFileSync, existsSync } = await import('node:fs');
+const asset = (f) => new URL('../../assets/' + f, import.meta.url);
+const props = JSON.parse(readFileSync(asset('props/props.json')));
+for (const b of BIOMES) {
+  for (const f of [`tiles/${b.art}.json`, `tiles/${b.art}_floor.webp`, `tiles/${b.art}_walls.webp`]) if (!existsSync(asset(f))) bad.push(`biome ${b.id}: missing ${f}`);
+  if (!props.barricades[b.barricade]) bad.push(`biome ${b.id}: no barricade set ${b.barricade}`);
+  for (const sh of b.scatter) if (!props.scatter[sh]) bad.push(`biome ${b.id}: no scatter sheet ${sh}`);
+}
+// shuffle bag: every biome but the throne, each once per cycle, never twice in a row
+const NB = BIOMES.length - 1, hero = { biomeBag: [] }, seq = [];
+for (let i = 0; i < NB * 4; i++) { const id = drawBiome(hero, 2); if (id === hero.lastBiome) bad.push('biome repeated back to back'); hero.lastBiome = id; seq.push(id); }
+if (new Set(seq.slice(0, NB)).size !== NB) bad.push(`first ${NB} biomes are not all different`);
 let mixes = 0;
 for (let i = 0; i < 200; i++) { const m = mixPartner(BIOMES[0]); if (m) { mixes++; if (m.family !== BIOMES[0].family || m.id === BIOMES[0].id) bad.push('bad mix partner ' + m.id); } }
 console.log('monster art', BESTIARY.length, 'looks; biome order sample', seq.slice(0, 6).join(' '), '; mixed levels', mixes, '/ 200');

@@ -1,5 +1,5 @@
 // Monster archetypes. Each biome re-skins a roster of these with palette shifts,
-// names and elemental attacks to produce its own bestiary (20 biomes x 12 = 240 kinds,
+// names and elemental attacks to produce its own bestiary (25 biomes x 12 = 300 kinds,
 // plus champion / unique / boss variants).
 export const ARCH = {
   skeleton: { sprite: 'skeleton', ai: 'melee', hp: 1, dmg: 1, spd: 2.5, px: 2.3, r: 0.32, pal: { w: '#e6dcc2', m: '#a8aeb8', g: '#b08a3a', e: '#ff3a20' }, gore: 'bone', undead: true, names: ['Skeleton', 'Bonewalker', 'Rattler'], pack: [3, 6] },
