@@ -1,12 +1,13 @@
 // Title screen logo FX: flames and embers rise off the VELSCOUR logo, black tar drips from its spikes and piles up
 // on the floor, and now and then a falling spark lands on the pile, which catches fire and explodes.
-// Simulated on a low-res canvas (one sim pixel = PX css px, drawn pixelated) laid over the title screen.
+// Simulated in coarse units (one unit = PX css px) but drawn at device resolution with tiny particles, on a canvas
+// laid over the title screen. A low-res copy of the fire, upscaled with smoothing, gives it a soft glow.
 import { A } from '../core/assets.js';
 import { sfx } from '../core/audio.js';
 import { rand, randi, clamp } from '../core/util.js';
 
 const FLAME = ['#fff7c8', '#ffe070', '#ffb428', '#ff7a12', '#e0400a', '#9a1c06', '#4a0c04'];
-const TAR = '#0a0706', TAR_DIM = '#1d1512', TAR_RIM = '#55392b', TAR_SHINE = '#a08474';   // glossy black, rim-lit by the fire
+const TAR = '#0a0706', TAR_RIM = '#55392b', TAR_SHINE = '#a08474';   // glossy black, rim-lit by the fire
 const GRAV = 220;            // sim px / s^2 for tar and heavy sparks
 const REPOSE = 0.6;          // max slope of the tar pile before it creeps sideways
 let geo = null;              // logo emitter points in native logo pixels (built once)
@@ -47,17 +48,23 @@ export function attachTitleFx(screen, logoEl) {
   screen.prepend(cv);
   const ctx = cv.getContext('2d');
   const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let W = 0, H = 0, PX = 3, pile = new Float32Array(0), burn = new Float32Array(0);
+  const glowCv = document.createElement('canvas'), gctx = glowCv.getContext('2d');
+  let W = 0, H = 0, PX = 3, D = 1, S = 3, cssW = 0, cssH = 0, pile = new Float32Array(0), burn = new Float32Array(0);
   let parts = [], drops = [], drips = [], fires = [], blasts = [];
   let flash = 0, shake = 0, sinceBoom = 3, last = performance.now(), map = null, raf = 0;
   const lg = { s: 1, x: 0, y: 0 };
 
   function resize() {
     const r = cv.getBoundingClientRect();
-    PX = Math.max(2, Math.round(Math.min(r.width, r.height) / 240));
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (r.width === cssW && r.height === cssH && dpr === D) return;
+    cssW = r.width; cssH = r.height; D = dpr;
+    PX = Math.max(2, Math.round(Math.min(r.width, r.height) / 240)); S = PX * D;   // device px per sim unit
+    cv.width = Math.max(1, Math.round(r.width * D)); cv.height = Math.max(1, Math.round(r.height * D));
     const w = Math.max(1, Math.round(r.width / PX)), h = Math.max(1, Math.round(r.height / PX));
+    glowCv.width = w; glowCv.height = h;
     if (w === W && h === H) return;
-    const old = pile; W = w; H = h; cv.width = W; cv.height = H;
+    const old = pile; W = w; H = h;
     pile = new Float32Array(W); burn = new Float32Array(W);
     pile.set(old.subarray(0, Math.min(old.length, W)));
   }
@@ -78,24 +85,24 @@ export function attachTitleFx(screen, logoEl) {
 
   // ------------------------------------------------------------------ particles
   // kind: 0 flame (additive, ramps through FLAME), 1 spark (additive, ballistic, may ignite tar),
-  //       2 smoke (alpha), 3 tar glob (dark, ballistic; burning globs ignite tar they land on)
-  const add = (o) => { if (parts.length < 4000) parts.push(o); };
+  //       2 smoke (alpha), 3 tar glob (dark, ballistic; burning globs ignite tar they land on). sz is in css px.
+  const add = (o) => { if (parts.length < 8000) parts.push(o); };
   const flame = (x, y, vx, vy, life, sz = 1) => add({ k: 0, x, y, vx, vy, t: 0, life, sz, ph: rand(6.28) });
-  const spark = (x, y, vx, vy, life, g, fated = false) => add({ k: 1, x, y, vx, vy, t: 0, life, g, fated, px: x, py: y });
+  const spark = (x, y, vx, vy, life, g, fated = false) => add({ k: 1, x, y, vx, vy, t: 0, life, g, fated });
   const smoke = (x, y, vx, vy, life, sz) => add({ k: 2, x, y, vx, vy, t: 0, life, sz });
-  const glob = (x, y, vx, vy, lit) => add({ k: 3, x, y, vx, vy, t: 0, life: 4, lit, sz: randi(1, 2) });
+  const glob = (x, y, vx, vy, lit) => add({ k: 3, x, y, vx, vy, t: 0, life: 4, lit, sz: rand(0.8, 2) });
 
   function emitLogo(dt) {
     const s = lg.s;
-    for (let n = Math.floor(dt * 260 + Math.random()); n-- > 0;) {        // flame tongues along the top edge
+    for (let n = Math.floor(dt * 1700 + Math.random()); n-- > 0;) {        // flame tongues along the top edge
       const [x, y] = P(...geo.top[randi(0, geo.top.length - 1)]);
-      flame(x + rand(-1, 1), y + rand(0, 3 * s * 8), rand(-4, 4), -rand(10, 26), rand(0.3, 0.75), Math.random() < 0.25 ? 2 : 1);
+      flame(x + rand(-1, 1), y + rand(0, 3 * s * 8), rand(-4, 4), -rand(10, 26), rand(0.3, 0.75), rand(1, 2.2));
     }
-    for (let n = Math.floor(dt * 40 + Math.random()); n-- > 0;) {         // embers out of the molten cracks
+    for (let n = Math.floor(dt * 140 + Math.random()); n-- > 0;) {         // embers out of the molten cracks
       const [x, y] = P(...geo.cracks[randi(0, geo.cracks.length - 1)]);
       flame(x, y, rand(-3, 3), -rand(6, 16), rand(1.2, 2.6), 1);
     }
-    if (Math.random() < dt * 7) {                                         // drifting sparks
+    for (let n = Math.floor(dt * 22 + Math.random()); n-- > 0;) {        // drifting sparks
       const [x, y] = P(...geo.top[randi(0, geo.top.length - 1)]);
       const heavy = Math.random() < 0.18;
       spark(x, y, rand(-28, 28), -rand(30, 80), heavy ? rand(2.5, 3.5) : rand(0.8, 1.8), heavy ? GRAV * 0.6 : rand(-10, 25));
@@ -130,8 +137,8 @@ export function attachTitleFx(screen, logoEl) {
       const x = clamp(o.x, 0, W - 1);
       if (o.y >= floorAt(x)) {
         if (pile[x] < H * 0.4) for (let j = -2; j <= 2; j++) { const xx = x + j; if (xx >= 0 && xx < W) pile[xx] += o.vol * [0.1, 0.2, 0.4, 0.2, 0.1][j + 2]; }
-        for (let n = randi(1, 3); n-- > 0;) glob(x, floorAt(x) - 1, rand(-25, 25), -rand(15, 45), false);
-        if (burn[x] > 0) for (let n = 6; n-- > 0;) flame(x + rand(-2, 2), floorAt(x), rand(-10, 10), -rand(20, 50), rand(0.3, 0.6), 2);
+        for (let n = randi(2, 5); n-- > 0;) glob(x, floorAt(x) - 1, rand(-25, 25), -rand(15, 45), false);
+        if (burn[x] > 0) for (let n = 20; n-- > 0;) flame(x + rand(-2, 2), floorAt(x), rand(-10, 10), -rand(20, 50), rand(0.3, 0.6), rand(1, 2));
         drops.splice(i, 1);
       }
     }
@@ -157,7 +164,7 @@ export function attachTitleFx(screen, logoEl) {
     const [a, b] = segment(x);
     let vol = 0; for (let i = a; i <= b; i++) vol += pile[i];
     if (!fated && sinceBoom > 2 && (sinceBoom < 16 || vol < 60)) return false;
-    if (vol < 25) { for (let n = 8; n-- > 0;) flame(x, floorAt(x), rand(-8, 8), -rand(10, 30), rand(0.2, 0.5)); return false; }   // too little: fizzles
+    if (vol < 25) { for (let n = 25; n-- > 0;) flame(x, floorAt(x), rand(-8, 8), -rand(10, 30), rand(0.2, 0.5)); return false; }   // too little: fizzles
     fires.push({ x, a, b, t: 0, front: 0, dur: 0.45 + (b - a) / 300 + rand(0.15, 0.35) });
     burn[x] = 0.001;
     sfx('fire', 0.6);
@@ -171,9 +178,9 @@ export function attachTitleFx(screen, logoEl) {
       for (let x = f.a; x <= f.b; x++) {
         if (burn[x] <= 0) continue;
         const heat = Math.min(1, burn[x] * 2.5) * (1 + f.t / f.dur);
-        if (Math.random() < dt * 30 * heat) flame(x + rand(-0.5, 0.5), floorAt(x), rand(-5, 5), -rand(18, 45) * (0.6 + pile[x] / 12), rand(0.35, 0.9), Math.random() < 0.4 ? 2 : 1);
+        for (let n = Math.floor(dt * 55 * heat + Math.random()); n-- > 0;) flame(x + rand(-0.5, 0.5), floorAt(x) + rand(0, 1), rand(-5, 5), -rand(18, 45) * (0.6 + pile[x] / 12), rand(0.35, 0.9), rand(0.8, 2));
         if (Math.random() < dt * 2 * heat) smoke(x, floorAt(x) - 4, rand(-4, 4), -rand(8, 18), rand(1.5, 2.6), 2);
-        if (Math.random() < dt * 0.8 * heat) spark(x, floorAt(x), rand(-20, 20), -rand(40, 90), rand(0.6, 1.2), GRAV * 0.4);
+        if (Math.random() < dt * 2.5 * heat) spark(x, floorAt(x), rand(-20, 20), -rand(40, 90), rand(0.6, 1.2), GRAV * 0.4);
       }
       if (f.t >= f.dur) { explode(f); fires.splice(i, 1); }
     }
@@ -201,19 +208,17 @@ export function attachTitleFx(screen, logoEl) {
     if (vol < 1) return;
     cx /= vol;
     const pw = clamp(vol / 90, 0.4, 1.5), hy = H - top - 3;
-    for (let x = g.a; x <= g.b; x++) {
-      const h = pile[x];
-      for (let n = Math.ceil(h * 0.5); n-- > 0;) {
-        const dir = Math.sign(x - cx) || (Math.random() < 0.5 ? -1 : 1);
-        glob(x, H - rand(0, h), dir * rand(10, 110) * pw + rand(-30, 30), -rand(90, 270) * pw, Math.random() < 0.8);
-      }
-      pile[x] = 0; burn[x] = 0;
+    for (let n = Math.round(30 * pw); n-- > 0;) {                       // flung tar, picked by height
+      let x = randi(g.a, g.b); for (let k = 0; k < 3; k++) { const y = randi(g.a, g.b); if (pile[y] > pile[x]) x = y; }
+      const dir = Math.sign(x - cx) || (Math.random() < 0.5 ? -1 : 1);
+      glob(x, H - rand(0, pile[x]), dir * rand(10, 110) * pw + rand(-30, 30), -rand(90, 270) * pw, Math.random() < 0.8);
     }
-    for (let n = Math.round(80 * pw); n-- > 0;) {                      // fireball
+    for (let x = g.a; x <= g.b; x++) { pile[x] = 0; burn[x] = 0; }
+    for (let n = Math.round(220 * pw); n-- > 0;) {                      // fireball
       const a = rand(Math.PI * 0.95, Math.PI * 2.05), v = rand(20, 190) * pw * (Math.random() < 0.3 ? 0.4 : 1);
-      flame(cx + rand(-3, 3), hy + rand(-3, 3), Math.cos(a) * v, Math.sin(a) * v * 1.2 - 30, rand(0.35, 1.2), randi(2, 4));
+      flame(cx + rand(-3, 3), hy + rand(-3, 3), Math.cos(a) * v, Math.sin(a) * v * 1.2 - 30, rand(0.35, 1.2), rand(1, 2.6));
     }
-    for (let n = Math.round(14 * pw); n-- > 0;) { const a = rand(Math.PI, Math.PI * 2), v = rand(50, 210) * pw; spark(cx, hy, Math.cos(a) * v, Math.sin(a) * v, rand(0.6, 1.8), GRAV * 0.5); }
+    for (let n = Math.round(45 * pw); n-- > 0;) { const a = rand(Math.PI, Math.PI * 2), v = rand(50, 210) * pw; spark(cx, hy, Math.cos(a) * v, Math.sin(a) * v, rand(0.6, 1.8), GRAV * 0.5); }
     for (let n = Math.round(22 * pw); n-- > 0;) smoke(cx + rand(-12, 12), hy - rand(0, 18), rand(-35, 35), -rand(20, 70), rand(1.8, 3.4), randi(2, 4));
     parts.push({ k: 4, x: cx, y: H - 2, t: 0, life: 0.5, r: 70 * pw });   // shockwave ring
     flash = Math.min(0.85, flash + 0.3 + pw * 0.2); shake = reduceMotion ? 0 : Math.min(0.9, shake + 0.25 + 0.2 * pw);
@@ -231,10 +236,10 @@ export function attachTitleFx(screen, logoEl) {
       p.t += dt;
       if (p.t >= p.life) { parts[i] = parts[parts.length - 1]; parts.pop(); continue; }
       if (p.k === 4) continue;
-      if (p.k === 0) { p.vx += Math.sin(p.t * 9 + p.ph) * 30 * dt; p.vy -= 6 * dt; p.vx *= 1 - dt * 1.5; p.vy *= 1 - dt * 0.8; }
-      else if (p.k === 1) { p.px = p.x; p.py = p.y; p.vy += p.g * dt; p.vx *= 1 - dt * 0.4; }
+      if (p.k === 0) { const f = 1 - Math.min(0.5, dt * Math.hypot(p.vx, p.vy) * 0.03); p.vx += Math.sin(p.t * 9 + p.ph) * 30 * dt; p.vy -= 6 * dt; p.vx *= f * (1 - dt * 1.5); p.vy *= f * (1 - dt * 0.8); }   // fast flames drag hard: blasts stay a fireball
+      else if (p.k === 1) { p.vy += p.g * dt; p.vx *= 1 - dt * 0.4; }
       else if (p.k === 2) { p.vx *= 1 - dt * 0.8; p.vy *= 1 - dt * 0.4; }
-      else { p.vy += GRAV * dt; p.vx *= 1 - dt * 0.3; if (p.lit && Math.random() < dt * 16) flame(p.x, p.y, rand(-4, 4), -rand(5, 15), rand(0.2, 0.5)); if (Math.random() < dt * 4) smoke(p.x, p.y, 0, -5, rand(0.8, 1.4), 1); }
+      else { p.vy += GRAV * dt; p.vx *= 1 - dt * 0.3; if (p.lit) for (let n = Math.floor(dt * 12 + Math.random()); n-- > 0;) flame(p.x + rand(-0.5, 0.5), p.y + rand(-0.5, 0.5), rand(-4, 4), -rand(5, 15), rand(0.2, 0.5), rand(0.7, 1.4)); if (Math.random() < dt * 4) smoke(p.x, p.y, 0, -5, rand(0.8, 1.4), 1); }
       p.x += p.vx * dt; p.y += p.vy * dt;
       if ((p.k === 1 || p.k === 3) && p.vy > 0 && p.x >= 0 && p.x < W && p.y >= floorAt(p.x)) {
         if (p.k === 1 ? (p.fated || p.t > 0.25) : p.lit) ignite(p.x, p.fated);
@@ -245,73 +250,102 @@ export function attachTitleFx(screen, logoEl) {
   }
 
   // ------------------------------------------------------------------ draw
+  const buckets = Array.from({ length: FLAME.length * 8 }, () => []);
   function draw(time) {
-    ctx.clearRect(0, 0, W, H);
-    // tar drips hanging from the spikes + falling drops
+    const cw = cv.width, ch = cv.height, lw = D;   // lw: one css px in device px
+    ctx.clearRect(0, 0, cw, ch);
+    // tar drips hanging from the spikes: tapered strand + bulb
     for (const d of drips) {
       if (d.len < 0.5) continue;
-      const [x, y] = P(d.nx, d.ny), X = Math.round(x), Y = Math.round(y) - 1, L = Math.round(d.len);
-      const b = d.len > 4 ? 2 : 1;
-      ctx.fillStyle = TAR; ctx.fillRect(X, Y, 1, L); ctx.fillRect(X - (b - 1), Y + L - b, b + 1, b + 1);
-      ctx.fillStyle = TAR_RIM; ctx.fillRect(X - b, Y + L - b, 1, b);
-      ctx.fillStyle = TAR_SHINE; ctx.fillRect(X - (b - 1), Y + L - b, 1, 1);
+      const [x, y] = P(d.nx, d.ny), X = x * S, Y = (y - 0.5) * S, L = d.len * S, r = (0.9 + Math.min(d.len, 9) * 0.17) * lw, by = Y + L - r;
+      ctx.fillStyle = TAR;
+      ctx.beginPath(); ctx.moveTo(X - lw, Y); ctx.lineTo(X + lw, Y); ctx.lineTo(X + r * 0.55, by); ctx.lineTo(X - r * 0.55, by); ctx.fill();
+      ctx.beginPath(); ctx.arc(X, by, r, 0, 7); ctx.fill();
+      ctx.strokeStyle = TAR_RIM; ctx.lineWidth = lw * 0.8; ctx.beginPath(); ctx.arc(X, by, r, Math.PI * 0.6, Math.PI * 1.2); ctx.stroke();
+      ctx.fillStyle = TAR_SHINE; ctx.fillRect(X - r * 0.5, by - r * 0.5, lw, lw);
     }
+    // falling drops: teardrop with a short streak
     for (const o of drops) {
-      const len = clamp(Math.round(o.vy / 40), 1, 6);
-      const Y = Math.round(o.y);
-      ctx.fillStyle = TAR; ctx.fillRect(o.x, Y - len, 1, len); ctx.fillRect(o.x, Y - o.sz, o.sz + 1, o.sz + 1);
-      ctx.fillStyle = TAR_RIM; ctx.fillRect(o.x - 1, Y - o.sz, 1, o.sz);
-      ctx.fillStyle = TAR_SHINE; ctx.fillRect(o.x, Y - o.sz, 1, 1);
+      const X = (o.x + 0.5) * S, Y = o.y * S, r = (o.sz > 1 ? 2.4 : 1.7) * lw, tail = clamp(o.vy / 40, 1, 6) * S * 0.6;
+      ctx.fillStyle = TAR;
+      ctx.beginPath(); ctx.moveTo(X, Y - r - tail); ctx.lineTo(X + r * 0.7, Y - r); ctx.lineTo(X - r * 0.7, Y - r); ctx.fill();
+      ctx.beginPath(); ctx.arc(X, Y - r, r, 0, 7); ctx.fill();
+      ctx.fillStyle = TAR_SHINE; ctx.fillRect(X - r * 0.5, Y - r * 1.4, lw, lw);
     }
-    // pile: dark body, glossy edge, glowing when on fire
-    for (let x = 0; x < W; x++) {
-      const h = Math.round(pile[x]); if (h <= 0) continue;
-      const top = H - h;
-      ctx.fillStyle = TAR; ctx.fillRect(x, top, 1, h);
-      const hot = burn[x] > 0;
-      if (hot) {
-        ctx.fillStyle = FLAME[(x + (time * 20 | 0)) % 3 + 1]; ctx.fillRect(x, top, 1, 1);
-        if (Math.random() < 0.5) { ctx.fillStyle = FLAME[randi(3, 5)]; ctx.fillRect(x, top + randi(1, Math.max(1, h)), 1, 1); }
-      } else {
-        ctx.fillStyle = TAR_RIM; ctx.fillRect(x, top, 1, 1);
-        if (h > 2) { ctx.fillStyle = TAR_DIM; ctx.fillRect(x, top + 1, 1, Math.min(2, h - 2)); }
-        if (h > 3 && (x * 13 + Math.round(pile[x] * 3)) % 17 === 0) { ctx.fillStyle = TAR_SHINE; ctx.fillRect(x, top + 1, 1, 1); }
+    // pile: smooth silhouette, rim-lit top edge (flame-coloured where burning), ember flecks and glints
+    ctx.fillStyle = TAR; ctx.beginPath(); ctx.moveTo(0, ch);
+    for (let x = 0; x < W; x++) ctx.lineTo((x + 0.5) * S, ch - pile[x] * S);
+    ctx.lineTo(cw, ch); ctx.fill();
+    const edge = (hot, style, width) => {
+      ctx.strokeStyle = style; ctx.lineWidth = width; ctx.beginPath();
+      let on = false;
+      for (let x = 0; x < W; x++) {
+        const ok = pile[x] > 0.3 && (burn[x] > 0) === hot, X = (x + 0.5) * S, Y = ch - pile[x] * S + width * 0.5;
+        if (ok) { on ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); on = true; } else on = false;
       }
+      ctx.stroke();
+    };
+    edge(false, TAR_RIM, 1.5 * lw);
+    edge(true, FLAME[2 + ((time * 12) | 0) % 2], 2.5 * lw);
+    for (let x = 0; x < W; x++) {
+      const h = pile[x]; if (h < 2) continue;
+      if (burn[x] > 0) { for (let n = 2; n-- > 0;) if (Math.random() < 0.6) { ctx.fillStyle = FLAME[randi(2, 5)]; ctx.fillRect((x + Math.random()) * S, ch - rand(0, h - 0.5) * S, lw, lw); } }
+      else if ((x * 13 + Math.round(h * 3)) % 11 === 0) { ctx.fillStyle = TAR_SHINE; ctx.fillRect((x + 0.3) * S, ch - (h - 0.6) * S, lw, lw); }
     }
     // smoke + tar globs (normal blending)
+    ctx.fillStyle = 'rgb(30,24,22)';
+    for (let a = 0; a < 6; a++) {   // smoke, batched by fade level
+      ctx.globalAlpha = 0.3 * (1 - (a + 0.5) / 6); ctx.beginPath();
+      for (const p of parts) if (p.k === 2) { const u = p.t / p.life; if (((u * 6) | 0) !== a) continue; const r = (p.sz * 0.5 + u * 2) * S; ctx.moveTo(p.x * S + r, p.y * S); ctx.arc(p.x * S, p.y * S, r, 0, 7); }
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
     for (const p of parts) {
-      if (p.k === 2) {
-        const u = p.t / p.life, s = p.sz + Math.round(u * 3);
-        ctx.fillStyle = `rgba(30,24,22,${(0.45 * (1 - u)).toFixed(3)})`;
-        ctx.fillRect(Math.round(p.x - s / 2), Math.round(p.y - s / 2), s, s);
-      } else if (p.k === 3) {
-        const X = Math.round(p.x), Y = Math.round(p.y);
-        ctx.fillStyle = TAR; ctx.fillRect(X, Y, p.sz, p.sz);
-        if (p.lit) { ctx.fillStyle = FLAME[randi(1, 3)]; ctx.fillRect(X, Y - 1, 1, 1); }
+      if (p.k === 3) {
+        ctx.fillStyle = TAR; ctx.beginPath(); ctx.arc(p.x * S, p.y * S, p.sz * lw, 0, 7); ctx.fill();
+        if (p.lit) { ctx.fillStyle = FLAME[randi(1, 3)]; ctx.fillRect(p.x * S - lw * 0.5, p.y * S - p.sz * lw - lw, lw, lw); }
       }
     }
-    // fire (additive)
-    ctx.globalCompositeOperation = 'lighter';
+    // fire: soft glow (low-res copy, smoothed upscale) then sharp particles batched by colour/alpha, all additive
+    gctx.clearRect(0, 0, W, H); gctx.globalCompositeOperation = 'lighter';
+    for (const b of buckets) b.length = 0;
     for (const p of parts) {
-      const u = p.t / p.life;
-      if (p.k === 0) {
-        const c = FLAME[Math.min(FLAME.length - 1, (u * FLAME.length) | 0)];
-        const X = Math.round(p.x), Y = Math.round(p.y);
-        ctx.globalAlpha = 0.16 * (1 - u); ctx.fillStyle = c; ctx.fillRect(X - 1, Y - 1, p.sz + 2, p.sz + 2);
-        ctx.globalAlpha = 0.9 * (1 - u * u); ctx.fillRect(X, Y, p.sz, p.sz);
-      } else if (p.k === 1) {
-        ctx.globalAlpha = 1 - u * 0.7; ctx.fillStyle = u < 0.5 ? FLAME[0] : FLAME[2];
-        ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
-        ctx.globalAlpha *= 0.6; ctx.fillStyle = FLAME[3];
-        ctx.fillRect(Math.round(p.x - (p.x - p.px) * 2), Math.round(p.y - (p.y - p.py) * 2), 1, 1);
-      } else if (p.k === 4) {
-        const r = p.r * Math.sqrt(u);
-        ctx.globalAlpha = 0.8 * (1 - u); ctx.strokeStyle = u < 0.3 ? FLAME[0] : FLAME[2]; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.ellipse(p.x, p.y, r, r * 0.55, 0, Math.PI, Math.PI * 2); ctx.stroke();
+      if (p.k !== 0) continue;
+      const u = p.t / p.life, ci = Math.min(FLAME.length - 1, (u * FLAME.length) | 0), a = 0.95 * (1 - u * u);
+      buckets[ci * 8 + Math.min(7, (a * 8) | 0)].push(p);
+    }
+    for (let i = 0; i < buckets.length; i++) {
+      const b = buckets[i]; if (!b.length) continue;
+      gctx.fillStyle = FLAME[(i / 8) | 0]; gctx.globalAlpha = ((i % 8) + 0.5) / 8 * 0.35;
+      gctx.beginPath(); for (const p of b) gctx.rect(p.x | 0, p.y | 0, 1, 1); gctx.fill();
+    }
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(glowCv, 0, 0, W, H, -S, -S, W * S + S, H * S + S);
+    for (let i = 0; i < buckets.length; i++) {
+      const b = buckets[i]; if (!b.length) continue;
+      ctx.fillStyle = FLAME[(i / 8) | 0]; ctx.globalAlpha = ((i % 8) + 0.5) / 8;
+      ctx.beginPath(); for (const p of b) { const z = Math.max(1, Math.round(p.sz * lw)); ctx.rect((p.x * S) | 0, (p.y * S) | 0, z, z); } ctx.fill();
+    }
+    // sparks: thin streaks along their velocity
+    for (const hot of [true, false]) {
+      ctx.strokeStyle = hot ? FLAME[0] : FLAME[2]; ctx.globalAlpha = hot ? 0.95 : 0.6; ctx.lineWidth = lw; ctx.beginPath();
+      for (const p of parts) {
+        if (p.k !== 1 || (p.t / p.life < 0.5) !== hot) continue;
+        ctx.moveTo((p.x - p.vx * 0.03) * S, (p.y - p.vy * 0.03) * S); ctx.lineTo(p.x * S, p.y * S);
       }
+      ctx.stroke();
+    }
+    ctx.strokeStyle = FLAME[3]; ctx.globalAlpha = 0.6; ctx.lineWidth = lw; ctx.beginPath();   // burning tar trails
+    for (const p of parts) if (p.k === 3 && p.lit) { ctx.moveTo((p.x - p.vx * 0.025) * S, (p.y - p.vy * 0.025) * S); ctx.lineTo(p.x * S, p.y * S); }
+    ctx.stroke();
+    for (const p of parts) {
+      if (p.k !== 4) continue;
+      const u = p.t / p.life, r = p.r * Math.sqrt(u) * S;
+      ctx.globalAlpha = 0.8 * (1 - u); ctx.strokeStyle = u < 0.3 ? FLAME[0] : FLAME[2]; ctx.lineWidth = 2 * lw;
+      ctx.beginPath(); ctx.ellipse(p.x * S, p.y * S, r, r * 0.55, 0, Math.PI, Math.PI * 2); ctx.stroke();
     }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-    if (flash > 0) { ctx.fillStyle = `rgba(255,${(150 + flash * 100) | 0},${(60 + flash * 120) | 0},${(flash * 0.5).toFixed(3)})`; ctx.fillRect(0, 0, W, H); }
+    if (flash > 0) { ctx.fillStyle = `rgba(255,${(150 + flash * 100) | 0},${(60 + flash * 120) | 0},${(flash * 0.5).toFixed(3)})`; ctx.fillRect(0, 0, cw, ch); }
   }
 
   // ------------------------------------------------------------------ loop
