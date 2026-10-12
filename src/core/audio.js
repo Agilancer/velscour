@@ -1,7 +1,7 @@
 // Sound: the user's samples (assets/audio/, imported by `process_assets.py audio`), with procedural Web Audio
 // fallbacks for sounds that have no sample (or until the samples finish loading), plus the music + ambience directors.
 //   sfx(name)           one-shot: a random sample from SAMPLES[name] if loaded, else the procedural SOUNDS[name]
-//   playMusic(kind)     'title' | 'town' | 'dungeon' | 'boss' | 'velscour': songs with quiet breaks between them
+//   playMusic(kind)     'title' | 'town': songs with quiet breaks between them (dungeons have ambience only)
 //   setAmbience(key)    a biome id or 'town' / 'title': a looped ambient bed that drifts louder and softer
 // Songs and beds stream through <audio> elements routed into the Web Audio graph, so they're never fully decoded.
 import { G } from '../state.js';
@@ -342,10 +342,6 @@ const R2 = ([a, b]) => a + Math.random() * (b - a);
 const MUSIC = {
   title: { songs: ['hymn_of_the_abyss'], gap: [10, 16], vol: 0.9 },
   town: { songs: ['empty_school'], gap: [30, 70], vol: 0.75 },
-  dungeon: { songs: ['love_potion_x_spooky_night', 'the_girl_who_fell_into_a_mysterious_dream', 'brilliant_deduction_resolution',
-    'empty_station', 'empty_aquarium', 'empty_pool', 'empty_shopping_mall'], gap: [25, 60], shuffle: true, vol: 0.6 },
-  boss: { songs: ['mad_pierrot'], gap: [2, 4], vol: 0.8 },
-  velscour: { songs: ['hymn_of_the_abyss'], gap: [2, 4], vol: 0.9, at: 6.6 },
 };
 let music = null;   // { kind, def, deck, queue, next (ac time of next song or 0), gen }
 
@@ -357,10 +353,6 @@ export function playMusic(kind, opts = {}) {
   if (music && music.deck) music.deck.stop(1.5);
   const deck = decks.music.find((d) => !d.playing && (!music || d !== music.deck)) || decks.music[0];
   const queue = def.shuffle ? [...def.songs].sort(() => Math.random() - 0.5) : [...def.songs];
-  if (kind === 'dungeon' && music && music.kind === 'boss') {   // after a guardian, the level's music resumes after a breather
-    music = { kind, def, deck, queue, next: ac.currentTime + R2([6, 12]), song: null };
-    return;
-  }
   music = { kind, def, deck, queue, next: ac.currentTime + (opts.delay ?? (music ? 1.2 : 0.3)), song: null };
 }
 

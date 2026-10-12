@@ -27,16 +27,8 @@
   "waterfall_loop": 60.0
  },
  "music": {
-  "brilliant_deduction_resolution": 153.52,
-  "empty_aquarium": 149.56,
-  "empty_pool": 149.56,
   "empty_school": 149.16,
-  "empty_shopping_mall": 149.76,
-  "empty_station": 150.0,
-  "hymn_of_the_abyss": 204.08,
-  "love_potion_x_spooky_night": 177.4,
-  "mad_pierrot": 137.64,
-  "the_girl_who_fell_into_a_mysterious_dream": 128.08
+  "hymn_of_the_abyss": 204.08
  },
  "sfx": [
   "bow_attack_1",
