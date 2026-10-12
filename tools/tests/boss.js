@@ -6,7 +6,7 @@ const { openGame, report } = require('./harness');
   const { browser, page, errors, shot } = await openGame();
   const info = await page.evaluate(async () => {
     const { G, game } = window.VELSCOUR;
-    game.newChar('dragon_knight', 'Hero');
+    await game.newChar('dragon_knight', 'Hero');
     document.querySelectorAll('.screen').forEach((s) => s.remove()); G.ui.modalCount = 0;
     const { BIOME_BY_ID } = await import('/src/data/biomes.js');
     G.char.depth = 100; G.char.level = 90;

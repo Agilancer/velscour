@@ -12,7 +12,7 @@ const CLASSES = process.argv[2] ? process.argv[2].split(',') : ALL_CLASSES;
     const res = await page.evaluate(async (cls) => {
       const { G, game } = window.VELSCOUR;
       const out = [];
-      game.newChar(cls, 'T');
+      await game.newChar(cls, 'T');
       document.querySelectorAll('.screen').forEach((s) => s.remove());
       G.ui.modalCount = 0;
       const biomes = ['catacombs', 'frozen', 'molten', 'fungal', 'void', 'crystal', 'flesh', 'storm'];

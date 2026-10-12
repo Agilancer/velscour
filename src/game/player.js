@@ -10,6 +10,11 @@ import { SLOTS, itemStats, itemDmg, itemArmor, GEMS } from '../data/items.js';
 import { castSkill, Timer } from './skillrun.js';
 import { Orbit, Area, BeamCh } from './hazards.js';
 import { hit, aoe } from './combat.js';
+import { classArt, artStrip, outfitOf } from '../core/classart.js';
+import { castArtFx } from '../gfx/artfx.js';
+
+const POSE_ATK = 0, POSE_CAST = 6, POSE_REST = 6; // frame offsets in an armor strip (ATK1-6, CAST1-6)
+const ATTACK_KINDS = new Set(['melee', 'dash', 'leap', 'whirl']);
 
 export const xpToNext = (L) => Math.round(60 * L * L + 40 * L);
 export const MAX_LEVEL = 100;
@@ -309,6 +314,8 @@ export class Player extends Creature {
     this.lastEl = sk.el;
     const ok = castSkill(this, sk, L, tx, ty);
     if (ok === false) { this.mana += cost; this.cooldowns[sk.id] = 0; return false; }
+    this.startPose(sk);
+    castArtFx(this, sk, tx, ty);
     if (this.st.echoChance && chance(this.st.echoChance / 100) && sk.kind !== 'summon' && sk.kind !== 'buff') {
       this.world.addHazard(new Timer(0.2, () => { if (!this.dead) { castSkill(this, sk, L, this.aim ? this.aim[0] : tx, this.aim ? this.aim[1] : ty, { echo: true }); floatText(this.x, this.y, 64, 'Echo!', '#ff80ff', 11); } }));
     }
@@ -320,6 +327,34 @@ export class Player extends Creature {
     if (this.st.legendary.hammer && ++this.hitCounter % 6 === 0) {
       this.world.addHazard(new Orbit({ world: this.world, src: this, n: 1, radius: 1.6, dur: 2.5, spiral: true, fx: 'hammer', el: 'holy', dmg: [dmg * 0.5, dmg * 0.7], o: {}, speed: 5 }));
     }
+  }
+
+  // ------------------------------------------------------------------ class art
+  /**
+   * The pose frame to draw from the class art pack (null = no pack, or still loading: the old class sprite
+   * stands in). The equipped catalog body armor picks the outfit, else the pack's first (plainest) one.
+   * No idle or run art exists, so CAST1 (rest) stands in for both, with the usual bob.
+   */
+  artFrame() {
+    const meta = classArt(this.classId);
+    if (!meta) return null;
+    let id = outfitOf(this.classId, this.char.equip.body);
+    let img = artStrip(this.classId, 'armor/' + id);
+    if (img) this._outfit = id;
+    else if (this._outfit) { id = this._outfit; img = artStrip(this.classId, 'armor/' + id); } // until the new one loads
+    if (!img) return null;
+    const e = meta.armor[id];
+    const p = this.pose;
+    let frame = POSE_REST;
+    if (p) frame = p.set + Math.min(5, Math.floor((p.t / p.dur) * 6));
+    else if (this.channel) frame = this.channel instanceof BeamCh ? POSE_CAST + 3 : POSE_ATK + 3 + (Math.floor(this.animT * 10) % 2);
+    return { img, frame, cw: e.cell[0], ch: e.cell[1], ax: e.anchor[0], ay: e.anchor[1], k: this.spriteH / (meta.figH || 112) };
+  }
+
+  /** Play the ATK (weapon skills) or CAST (spells) pose sequence for a cast. */
+  startPose(sk) {
+    const atk = sk.attack || ATTACK_KINDS.has(sk.kind);
+    this.pose = { set: atk ? POSE_ATK : POSE_CAST, t: 0, dur: clamp(this.castLock * 1.6, 0.3, 0.6) };
   }
 
   // ------------------------------------------------------------------ death
@@ -345,6 +380,7 @@ export class Player extends Creature {
   update(dt) {
     const st = this.st;
     this.animT += dt;
+    if (this.pose && (this.pose.t += dt) >= this.pose.dur) this.pose = null;
     if (this.invuln > 0) this.invuln -= dt;
     if (this.noManaT > 0) this.noManaT -= dt;
     if (this.phoenixCd > 0) this.phoenixCd -= dt;

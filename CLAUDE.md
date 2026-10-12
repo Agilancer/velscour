@@ -29,6 +29,7 @@ node tools/tests/mobile.js                         # 844x390 touch layout + joys
 node tools/tests/boss.js                           # Depth 100 Velscour arena + a depth 37 guardian
 node tools/tests/bot.js paladin 2                  # bot plays depths 1..2, prints balance stats
 node tools/tests/skills.js wizard,gunner           # cast all 60 skills per class (all 16 if no arg; slow)
+node tools/tests/classart.js paladin               # class art: poses, catalog items, ability effects
 node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners in those biomes (docs/WALLS.md)
 ```
 Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, because layout bugs don't throw.
@@ -43,6 +44,8 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `src/gfx/pixelart.js`, and town buildings are drawn in `src/gfx/townart.js`. The user's sheets are in
   `assets/source/` and get sliced by `tools/process_assets.py` (needs `pip install pillow numpy scipy`; args
   `sprites|tiles|props`). Environment art and the biome -> art mapping are documented in [`docs/ART.md`](docs/ART.md).
+  Class art packs (Paladin armor poses, items, ability effects) go in `assets/source/classes/<class>/` and are imported by
+  `python3 tools/process_assets.py classes [class]`; see [`docs/CLASS_ART.md`](docs/CLASS_ART.md).
   Never hand-edit the generated files in `assets/sprites|ui|tiles`.
 - Paths must stay **relative** (`assets/...`, `src/main.js`, never `/assets/...`), because the site is served
   from the `/velscour/` subpath on GitHub Pages. The `/src/...` imports in `tools/tests/` are fine, because the

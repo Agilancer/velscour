@@ -5,8 +5,9 @@ import { isoX, isoY, camera } from '../core/view.js';
 import { sfx } from '../core/audio.js';
 import { spawn, glowSprite, sparkle, floatText, addLight } from '../gfx/vfx.js';
 import { pixelSprite, gemIcon, goldIcon } from '../gfx/pixelart.js';
-import { rollItem, rollGem, itemName, itemColor, MATERIALS, GEMS, potionItem } from '../data/items.js';
+import { rollItem, rollGem, itemName, itemColor, MATERIALS, GEMS, potionItem, RARITY_COLORS } from '../data/items.js';
 import { potionIcon } from '../core/assets.js';
+import { artIcon } from '../core/classart.js';
 
 export class GroundItem {
   constructor(x, y, kind, data = {}) {
@@ -81,7 +82,8 @@ export class GroundItem {
     }
     const img = this.icon();
     if (!img) return;
-    const s = this.kind === 'gold' ? 20 : 22;
+    const art = this.kind === 'item' && this.item.art && artIcon(this.item);
+    const s = this.kind === 'gold' ? 20 : art ? 30 : 22;
     if (this.kind === 'item' && this.item.rarity >= 2) {
       const col = itemColor(this.item);
       ctx.globalCompositeOperation = 'lighter';
@@ -95,7 +97,7 @@ export class GroundItem {
     ctx.beginPath(); ctx.ellipse(px, py + 1, 9, 4, 0, 0, TAU); ctx.fill();
     ctx.save();
     ctx.translate(px, py - s * 0.45);
-    if (this.kind === 'item' && this.item.type === 'gear') ctx.rotate(-0.6);
+    if (this.kind === 'item' && this.item.type === 'gear' && !art) ctx.rotate(-0.6); // catalog art already lies diagonally
     ctx.drawImage(img, -s / 2, -s / 2, s, s);
     ctx.restore();
   }
@@ -106,13 +108,14 @@ const iconCache = new Map();
 export function itemIcon(item, size = 48) {
   if (item.type === 'gem') return gemIcon(item.gem, GEMS[item.gem].color, item.tier, size);
   if (item.type === 'potion') return potionIcon(item.color, size);
+  if (item.art) { const a = artIcon(item, size); if (a) return a; }
   const key = `${item.icon}|${item.tier}|${item.rarity}|${item.base}`;
   let c = iconCache.get(key);
   if (c) return c;
   const mat = MATERIALS[item.tier].color;
-  const pal = { m: mat, w: '#ffffff', b: item.icon === 'shield' ? '#5a2a1a' : '#5a3a20', g: item.rarity >= 3 ? '#ffd040' : '#b08a3a', c: item.rarity >= 2 ? ['#e8e8e8', '#4fd65a', '#4f8dff', '#b45cff', '#ff9a2a'][item.rarity] : '#8a6a40', e: '#ff4040', k: '#101010' };
+  const pal = { m: mat, w: '#ffffff', b: item.icon === 'shield' ? '#5a2a1a' : '#5a3a20', g: item.rarity >= 3 ? '#ffd040' : '#b08a3a', c: item.rarity >= 2 ? RARITY_COLORS[item.rarity] : '#8a6a40', e: '#ff4040', k: '#101010' };
   if (item.icon === 'orb') { pal.c = mat; pal.e = '#c060ff'; }
-  if (item.icon === 'staff' || item.icon === 'wand') { pal.c = ['#a0a0a0', '#60ff60', '#60a0ff', '#c060ff', '#ffa020'][item.rarity]; pal.b = '#6a4a2a'; pal.e = '#ffffff'; }
+  if (item.icon === 'staff' || item.icon === 'wand') { pal.c = ['#a0a0a0', '#60ff60', '#60a0ff', '#c060ff', '#ffa020', '#ff4058'][item.rarity]; pal.b = '#6a4a2a'; pal.e = '#ffffff'; }
   c = pixelSprite(item.icon, pal, 4);
   iconCache.set(key, c);
   return c;

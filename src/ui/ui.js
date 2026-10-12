@@ -1,4 +1,5 @@
 // UI core: panels, dialogs, tooltips, drag & drop, message log.
+import { onArtLoad } from '../core/classart.js';
 import { G } from '../state.js';
 import { el, escapeHtml } from '../core/util.js';
 import { sfx } from '../core/audio.js';
@@ -14,6 +15,7 @@ export const UI = {
 
   init() {
     G.ui = this;
+    onArtLoad(() => this.refresh()); // armor icons and the portrait appear once their strips arrive
     this.panelsEl = $('#panels');
     this.screensEl = $('#screens');
     this.tipEl = $('#tooltip');

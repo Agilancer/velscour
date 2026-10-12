@@ -10,6 +10,7 @@ import { xpToNext } from '../game/player.js';
 import { addToBag } from '../game/player.js';
 import { GroundItem } from '../game/loot.js';
 import { classSprite } from '../core/assets.js';
+import { outfitOf, outfitImage } from '../core/classart.js';
 
 const DOLL = { head: [2, 1], weapon: [1, 2], body: [2, 2], offhand: [3, 2], hands: [1, 3], legs: [2, 3], feet: [2, 4] };
 
@@ -250,7 +251,8 @@ export function renderInventory(body) {
   const doll = el('div', 'paperdoll');
   const portrait = el('div', 'portrait');
   const img = new Image();
-  img.src = classSprite(c.classId, 260).toDataURL();
+  const outfit = outfitOf(c.classId, c.equip.body);
+  img.src = ((outfit && outfitImage(c.classId, outfit, 130, 260)) || classSprite(c.classId, 260)).toDataURL();
   portrait.appendChild(img);
   portrait.style.gridColumn = 3; portrait.style.gridRow = '3 / span 2';
   doll.appendChild(portrait);

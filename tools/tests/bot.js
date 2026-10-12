@@ -8,7 +8,7 @@ const depths = +(process.argv[3] || 2);
 
 (async () => {
   const { browser, page, errors, shot } = await openGame();
-  await page.evaluate((cls) => { window.VELSCOUR.game.newChar(cls, 'Bot'); }, cls);
+  await page.evaluate((cls) => window.VELSCOUR.game.newChar(cls, 'Bot'), cls);
   for (let d = 1; d <= depths; d++) {
     const res = await page.evaluate(async (d) => {
       const { G, game } = window.VELSCOUR;

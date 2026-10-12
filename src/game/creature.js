@@ -139,6 +139,8 @@ export class Creature {
   }
 
   draw(ctx) {
+    const art = this.artFrame && this.artFrame();
+    if (art) return this.drawArt(ctx, art);
     const px = isoX(this.x, this.y), py = isoY(this.x, this.y);
     const img = this.spriteImage();
     let [w, h] = this.spriteDims(img);
@@ -185,6 +187,40 @@ export class Creature {
     ctx.restore();
     this.screenTop = py - h - z; // for overhead UI
     this.drawOverhead(ctx, px, py - h - z - 4, w);
+  }
+
+  /**
+   * Draw one frame of a class-art pose strip ({img, frame, cw, ch, ax, ay, k}: cell size, feet anchor in the
+   * cell, world px per strip px). The art faces right; it is mirrored when the creature faces left.
+   */
+  drawArt(ctx, a) {
+    const px = isoX(this.x, this.y), py = isoY(this.x, this.y);
+    let k = a.k * this.scale;
+    if (this.spawnT < 0.3) k *= this.spawnT / 0.3;
+    const bob = this.moving ? Math.abs(Math.sin(this.animT * 9)) * 2.2 : Math.sin(this.animT * 2) * 0.6;
+    const z = this.z + bob;
+    const w = a.cw * k, h = a.ch * k;
+    ctx.fillStyle = 'rgba(0,0,0,0.38)';
+    ctx.beginPath(); ctx.ellipse(px, py, 13 * this.scale, 5.5 * this.scale, 0, 0, TAU); ctx.fill();
+    const lx = this.lunge > 0 ? (Math.cos(this.facing) - Math.sin(this.facing)) * this.lunge * 8 : 0;
+    const ly = this.lunge > 0 ? (Math.cos(this.facing) + Math.sin(this.facing)) * this.lunge * 4 : 0;
+    ctx.save();
+    if (this.alpha !== undefined) ctx.globalAlpha = this.alpha;
+    if (this.status.freeze && this.status.freeze.t > 0) ctx.filter = 'hue-rotate(180deg) saturate(1.6) brightness(1.2)';
+    ctx.translate(px + lx, py + ly - z);
+    if (this.flip) ctx.scale(-1, 1);
+    const dx = -a.ax * k, dy = -a.ay * k;
+    ctx.drawImage(a.img, a.frame * a.cw, 0, a.cw, a.ch, dx, dy, w, h);
+    ctx.filter = 'none';
+    if (this.flash > 0) {
+      ctx.globalAlpha = Math.min(1, this.flash * 8) * 0.6;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(a.img, a.frame * a.cw, 0, a.cw, a.ch, dx, dy, w, h);
+    }
+    ctx.restore();
+    const top = py - a.ay * k * 0.95 - z;
+    this.screenTop = top;
+    this.drawOverhead(ctx, px, top - 4, w * 0.6);
   }
 
   drawOverhead(ctx, px, py, w) {

@@ -5,6 +5,10 @@ import { camera } from '../core/view.js';
 import { sfx, playMusic, stopMusic } from '../core/audio.js';
 import { rand, pick, randi, escapeHtml, dist, makeCanvas, fmtInt } from '../core/util.js';
 import { biomeTileSet, loadBiomeArt } from '../core/assets.js';
+import { loadClassArt } from '../core/classart.js';
+import { preloadBarFx } from '../gfx/artfx.js';
+import { SKILLS } from '../data/skills.js';
+import { setClassItems } from '../data/items.js';
 import { BIOME_BY_ID, TOWN_BIOME, randomBiome } from '../data/biomes.js';
 import { CLASSES } from '../data/classes.js';
 import { generateDungeon } from '../world/dungeon.js';
@@ -38,11 +42,24 @@ const VILLAGERS = [
 
 export const game = {
   // ------------------------------------------------------------ characters
-  newChar(classId, name) {
+  // async: the class's art pack (if it has one) loads first, because it names the class's catalog items
+  async newChar(classId, name) {
+    await this.loadClassPack(classId);
     const c = newCharData(classId, name);
     this.startChar(c, true);
   },
-  loadChar(c) { this.startChar(migrate(c), false); },
+  async loadChar(c) {
+    await this.loadClassPack(c.classId);
+    this.startChar(migrate(c), false);
+  },
+  async loadClassPack(classId) {
+    const el = document.getElementById('loading');
+    const slow = setTimeout(() => el && el.classList.remove('hidden'), 250);
+    const meta = await loadClassArt(classId);
+    clearTimeout(slow);
+    if (el) el.classList.add('hidden');
+    setClassItems(classId, meta);
+  },
 
   startChar(c, fresh) {
     hideScreen();
@@ -81,6 +98,7 @@ export const game = {
     this.autosave();
     UI.closeAll();
     G.world = null; G.player = null; G.char = null;
+    setClassItems(null);
     HUD.show(false); TouchUI.show(false);
     G.mode = 'title';
     clearVfx();
@@ -113,6 +131,7 @@ export const game = {
     camera.computeZoom();
     camera.follow(p.x, p.y, 0, true);
     world.map.reveal(p.x, p.y, 12);
+    preloadBarFx(p, SKILLS);
   },
 
   enterTown() {

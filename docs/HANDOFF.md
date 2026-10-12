@@ -128,6 +128,13 @@ are in section 7.
    barricades and chest art, loaded per biome ([`ART.md`](ART.md)). Verified by screenshots of all 20 biomes, a
    300-level reachability stress run, and flow/mobile/boss/ui/bot tests.
 
+7. **Class art (branch `claude/paladin-art-import`).** The Paladin pack (moved to `assets/source/classes/paladin/`) is imported
+   by `tools/classart.py` (`process_assets.py classes`): 60 outfits x 12 poses, 120 item icons, 60 effect strips, all
+   catalog entries found. In game: catalog items + Mythic rarity, outfit by equipped body armor (ATK/CAST poses, CAST1 as
+   idle), effects per skill. The user chose: add Mythic; armor art replaces the Paladin sprite entirely. Verified with
+   `classart.js` screenshots plus flow/ui/mobile/skills/bot/boss. Details and the mapping table: [`CLASS_ART.md`](CLASS_ART.md).
+   Not done: idle/run/hit/death art (none supplied), helmet/weapon overlays on the figure (separate item art only).
+
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
 1. Get PR #1 merged (by the user) and confirm the Pages deploy works at https://agilancer.github.io/velscour/.
