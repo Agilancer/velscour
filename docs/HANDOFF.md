@@ -93,6 +93,9 @@ Requirements, as stated (✅ = implemented in the draft):
   replays the intro without the prompt. Returning from a sub-menu while the Hymn still plays shows the logo lit. Any
   click or key during the intro skips to the burst (it seeks the song to just before the hit). The tar drips and pile
   explosions were removed at the user's request.
+- **Level-up voice:** `assets/audio/voice/levelup.wav` is the one sound not from the user's zips. `tools/levelup_voice.py`
+  pre-renders it, because a browser can't synthesize intelligible speech through WebAudio (speechSynthesis can't be
+  routed through effects). The fanfare before it is procedural (`levelUpFanfare()` in `src/core/audio.js`).
 - **The Slime Lord is blue.** The user changed his art from green to blue, so the `acid` element (only he uses it)
   is blue in `ELEM` (`src/gfx/vfx.js`), and all his skills except Frost Jelly (cold, already blue) are `acid`.
   His summons' palettes are blue too (`src/data/summons.js`). Enemy slimes stay green.
@@ -295,6 +298,39 @@ are in section 7.
      visual. Biome names like "Endless Desert" now show catacomb architecture in a sand palette until packs for them
      arrive.
 
+15. **Spectacular level-ups, damage numbers and a DPS readout (branch `claude/laughing-dirac-kv1clj`).** The user asked
+   for grimdark-yet-arcadey level-ups with an arcade jingle and a heroic-but-creepy digital voice saying "YOU HAVE
+   BECOME MORE POWERFUL, BUT VELSCOUR STILL LIVES" on every level up; the hero's level, attack power, calculated DPS
+   and "Average DPS over last 30 seconds" updating every 0.1 s; and large, comic-style damage numbers over monsters'
+   heads, crits bigger, another colour and longer lasting. Done:
+   - Voice: `tools/levelup_voice.py` renders `assets/audio/voice/levelup.wav` (6 s, 8-bit 16 kHz, 92 KB) with
+     espeak-ng + MBROLA `us2` (`apt-get install espeak-ng mbrola mbrola-us2`): the line spoken at three pitches in
+     unison, ring-modulated, bit-crushed, cavern echo. Checked with PocketSphinx: the dry voice transcribes word for word;
+     the processed one gives "you have become more powerful ... still lives" (it has no word for Velscour). Echo and
+     heavy crushing hurt recognition most, so both are kept light.
+   - `levelUpFanfare()` (`src/core/audio.js`): D minor → Bb → C pulse-wave arpeggios with bass, kicks and hats, a held
+     D major stab with vibrato and crash, a detuned tritone "ghost" sliding under it, then the voice at 1.29 s. Music and
+     ambience duck under it. Several levels at once play it once. Settings has a "Level-up voice" toggle (`G.settings.voice`).
+   - `Player.levelUpFx()`: 0.14 s freeze frame, flash, shake, two hellfire columns, a turning seven-point `Sigil`
+     (`src/gfx/vfx.js`, ground layer), three shockwave rings, fire/blood bursts, a gore fountain, and a knockback blast
+     on non-boss monsters within 4 tiles (no damage).
+   - Banner `#levelup` (`HUD.levelUp`, CSS `lu-*`): gold-rimmed blood starburst with scanlines, "LEVEL UP!" slams in,
+     the level number punches (again on a second level-up while it's up), then the voice line is typed out in step with
+     the audio (line 1 at 0-2.2 s, line 2 from 2.7 s; change both if the voice is re-rendered). Replaces the old
+     `centerMsg('LEVEL n')`.
+   - Damage numbers: `damageText(x,y,z,amount,style,color)` in `vfx.js` (styles hit / crit / hurt / dot). Each number is
+     rendered once at 1/1.5 resolution (chunky retro edge), cached (LRU 400), then slammed in, tilted, floated and shrunk
+     away. Crits are 42 px vs 26, hellfire gradient with a gold rim on a jagged gore-red burst, and last 2.2 s vs 1.35 s.
+     They spawn at the target's head (`artH`/`spriteH` x scale). `floatText` is unchanged for messages.
+   - Stats plaque `#hero-stats` (top left, `HUD.updateStats`, refreshed every 0.1 s; tooltip explains it): Level;
+     Attack = average hit of the left-click skill with crits; DPS = `heroDamage()` in `autoplay.js`, i.e. `buildPower`
+     (new `only` arg) on the bar's skills at crowd 1, counting main/alt/cooldown/summon parts; Avg DPS · 30s =
+     `Meter` (`src/game/dpsmeter.js`): real damage by the hero and minions (overkill excluded) in 300 0.1 s buckets of
+     game time, divided by 30, plus a 30-bar sparkline with the average as a gold line. `game.update` ticks it only while
+     the world runs; it resets when another hero is loaded.
+   - Verified: screenshots of the banner sequence, hits/crits/dots/hurt and the plaque on desktop and 844x390 mobile;
+     data_check, flow, ui, mobile, boss, skills (paladin, necromancer) and auto-play (wizard 10 min).
+
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
 1. Get PR #1 merged (by the user) and confirm the Pages deploy works at https://agilancer.github.io/velscour/.
@@ -346,7 +382,7 @@ Do these in order, unless the user asks for something else. Their feedback after
 - `src/core/util.js` - math, random and seeded RNG, colour helpers, canvas helpers (`makeCanvas`, `recolor`, `scaleImage`) and DOM helpers.
 - `src/core/view.js` - iso constants and projection, plus the `camera` object.
 - `src/core/input.js` - the `input` state object (keys, mouse, joystick, world touch) and `initInput(canvas)`.
-- `src/core/audio.js` - sound effects (samples from `assets/audio/sfx/` where `SAMPLES` maps them, procedural `SOUNDS` otherwise), the music director (`playMusic(kind)` / `stopMusic`, `musicClock`, `seekMusic`), the ambience director (`setAmbience(areaKey)` / `stopAmbience`) and `footsteps(player, surface)`. Songs and beds stream through `<audio>` elements (`Deck`) routed into Web Audio gains, so they're never decoded whole. A 250 ms `tick()` runs song breaks and ambience drift.
+- `src/core/audio.js` - sound effects (samples from `assets/audio/sfx/` where `SAMPLES` maps them, procedural `SOUNDS` otherwise), the music director (`playMusic(kind)` / `stopMusic`, `musicClock`, `seekMusic`), the ambience director (`setAmbience(areaKey)` / `stopAmbience`) and `footsteps(player, surface)`. Songs and beds stream through `<audio>` elements (`Deck`) routed into Web Audio gains, so they're never decoded whole. A 250 ms `tick()` runs song breaks and ambience drift. `levelUpFanfare()` plays the procedural level-up jingle, then the voice line, ducking music and ambience.
 - `src/core/assets.js` - loads images and JSON into `A`, caches scaled class sprites, builds recoloured per-biome tile sets from the biome packs, makes potion icons.
 - `src/gfx/pixelart.js` - ASCII sprite table `SPRITES`, the renderer (outline, rim shading, palettes), palette hue-shift, gem and gold icons.
 - `src/gfx/vfx.js` - element palette `ELEM`; pools for particles, decals, effects, texts and lights; effect classes; update and draw functions.

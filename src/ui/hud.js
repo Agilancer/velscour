@@ -10,6 +10,8 @@ import { xpToNext } from '../game/player.js';
 import { drawMinimap } from '../game/render.js';
 import { assign, SLOT_LABELS } from './skills.js';
 import { elem } from '../gfx/vfx.js';
+import { Meter } from '../game/dpsmeter.js';
+import { heroDamage } from '../game/autoplay.js';
 
 const POTIONS = ['hp', 'mp', 'rejuv', 'fury'];
 // hud slot index -> bar index (skills) or potion kind
@@ -72,6 +74,12 @@ export const HUD = {
       b.addEventListener('click', () => { sfx('ui'); G.game.hudAction(b.dataset.act); });
     }
     $('#minimap').addEventListener('click', () => { G.showAutomap = !G.showAutomap; });
+    const spark = $('#hs-spark');
+    spark.width = 150 * G.dpr; spark.height = 18 * G.dpr;
+    UI.tip($('#hero-stats'), () => `<b style="color:#ffe2a0">Battle Ledger</b>
+      <div><b>Attack</b>: the average hit of your main attack (left-click skill), crits included.</div>
+      <div><b>DPS</b>: what your skill bar deals to one foe per second at your current stats: crits, attack and cast speed, cooldowns, mana and minions.</div>
+      <div><b>Avg DPS · 30s</b>: the damage you and your minions really dealt over the last 30 seconds, divided by 30. The bars show each second.</div>`);
   },
 
   refreshStatic() {
@@ -151,7 +159,66 @@ export const HUD = {
         }
       }
     }
+    this.updateStats(dt);
     drawMinimap(w, dt, $('#minimap'));
+  },
+
+  /** The stats plaque: level, attack, sheet DPS and the real 30 s average, refreshed every 0.1 s. */
+  updateStats(dt) {
+    const p = G.player, c = G.char;
+    if (Meter.char !== c) { Meter.char = c; Meter.reset(); this.sheetT = 0; }
+    this.statT = (this.statT || 0) - dt;
+    if (this.statT > 0) return;
+    this.statT = 0.1;
+    this.sheetT = (this.sheetT || 0) - 0.1;
+    if (this.sheetT <= 0) { this.sheetT = 0.5; this.sheet = heroDamage(p); }
+    const set = (key, v, fn) => { if (this.last[key] !== v) { this.last[key] = v; fn(v); } };
+    set('hsl', c.level, (v) => { $('#hs-lvl').textContent = v; });
+    set('hsa', fmt(this.sheet.atk), (v) => { $('#hs-atk').textContent = v; });
+    set('hsd', fmt(this.sheet.dps), (v) => { $('#hs-dps').textContent = v; });
+    set('hsv', fmt(Meter.avg()), (v) => { $('#hs-avg').textContent = v; });
+    // a bar per second for the last 30 s, with the average as a gold line
+    const cv = $('#hs-spark'), g = cv.getContext('2d'), W = cv.width, H = cv.height;
+    const secs = Meter.perSecond(30), avg = Meter.avg(), top = Math.max(1, avg * 1.6, ...secs);
+    g.clearRect(0, 0, W, H);
+    const bw = W / 30;
+    for (let i = 0; i < 30; i++) {
+      const h = Math.round((secs[i] / top) * (H - 2));
+      if (!h) continue;
+      g.fillStyle = i === 29 ? '#ff7a30' : i > 24 ? '#c8200e' : '#7a1008';
+      g.fillRect(Math.round(i * bw), H - h, Math.max(1, Math.round(bw) - 1), h);
+    }
+    if (avg > 0) { g.fillStyle = '#ffd860'; g.fillRect(0, Math.round(H - 1 - (avg / top) * (H - 2)), W, Math.max(1, G.dpr)); }
+  },
+
+  /** The level-up banner: LEVEL UP!, the new level, then the voice line typed out as it is spoken. */
+  levelUp(level, sound) {
+    const box = $('#levelup'), num = $('#lu-num');
+    num.textContent = level;
+    const now = performance.now();
+    if (this.lu && now < this.lu.end) { // more levels while it's up: punch the number again
+      num.classList.remove('punch'); void num.offsetWidth; num.classList.add('punch');
+      return;
+    }
+    if (this.lu) this.lu.timers.forEach(clearTimeout);
+    const at = sound ? sound.voiceAt : 1.3, dur = sound && sound.voiceDur ? sound.voiceDur : 4.8;
+    const lu = this.lu = { end: now + (at + dur + 0.6) * 1000, timers: [] };
+    const later = (s, fn) => lu.timers.push(setTimeout(fn, s * 1000));
+    box.classList.remove('hidden', 'play', 'out'); num.classList.remove('punch');
+    void box.offsetWidth;
+    box.classList.add('play');
+    // typed in step with the voice (tools/levelup_voice.py: line 1 at 0-2.2 s, line 2 from 2.7 s)
+    const type = (elx, text, t0, len) => {
+      elx.textContent = ''; elx.classList.remove('typing');
+      const n = text.length;
+      later(t0, () => elx.classList.add('typing'));
+      for (let i = 1; i <= n; i++) later(t0 + (len * i) / n, () => { elx.textContent = text.slice(0, i); });
+      later(t0 + len + 0.5, () => elx.classList.remove('typing'));
+    };
+    type($('#lu-l1'), 'You have become more powerful\u2026', at, 1.9);
+    type($('#lu-l2'), 'but Velscour still lives', at + 2.7, 1.5);
+    later(at + dur + 0.1, () => box.classList.add('out'));
+    later(at + dur + 0.9, () => box.classList.add('hidden'));
   },
 
   setArea(name, sub) { $('#area-name').textContent = name; $('#area-sub').textContent = sub || ''; },

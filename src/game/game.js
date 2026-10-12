@@ -23,6 +23,7 @@ import { controls } from './controls.js';
 import { Auto } from './autoplay.js';
 import { writeSave, newCharData, migrate } from './save.js';
 import { clearVfx, floatText, sparkle, addEffect, Ring } from '../gfx/vfx.js';
+import { Meter } from './dpsmeter.js';
 import { UI } from '../ui/ui.js';
 import { HUD } from '../ui/hud.js';
 import { TouchUI } from '../ui/touch.js';
@@ -376,6 +377,7 @@ export const game = {
       Auto.update(dt);
       w.update(dt);
       footsteps(p, w.kind === 'town' ? 'dirt' : STEP_SURFACE[w.biome && w.biome.id] || 'stone');
+      Meter.tick(dt);
     } else {
       input.endFrame();
     }
