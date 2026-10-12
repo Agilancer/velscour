@@ -443,7 +443,7 @@ Do these in order, unless the user asks for something else. Their feedback after
 - `src/gfx/pixelart.js` - ASCII sprite table `SPRITES`, the renderer (outline, rim shading, palettes), palette hue-shift, gem and gold icons.
 - `src/gfx/vfx.js` - element palette `ELEM`; pools for particles, decals, effects, texts and lights; effect classes; update and draw functions.
 - `src/gfx/shapes.js` - procedural projectile looks (`drawShape`), projectile trails, `explosionFx`, `hitSpark`.
-- `src/gfx/townart.js` - procedural town ground tiles and isometric building sprites.
+- (removed) `src/gfx/townart.js`: the town now uses the town pack, see `src/world/town.js` and docs/ART.md.
 - `tools/process_assets.py` - offline slicer that turns `assets/source/*` into `assets/{sprites,ui,tiles,props}`. Needs `pip install pillow numpy scipy`. Args: `sprites`, `biomes [pack]` (`tools/biomepack.py`), `props` (chest art), `classes`, `gear`, `enemies`, `select` (default: all but gear).
 - `assets/source/` - the user's original sheets: `classes_sheet`, `logo`, `hud_bar` (`.webp`), plus `biomes/<Name>_Biome_Pack.zip` and `props/dungeon_mechanisms.png` (chests; see [`ART.md`](ART.md)). The game never loads these.
 - Generated files:
@@ -578,9 +578,7 @@ Do these in order, unless the user asks for something else. Their feedback after
   - `trail(fx,x,y,z,E,dt,s)` (:219) takes **tile coords**.
   - `explosionFx(x,y,r,el,fx='explosion',{shake,shakeMul,sound})` (:241). Variants: meteor/nuke/eruption, pillar/holy, void, firework, sonic, blizzard/frost, default. Its radius `r` is in tiles.
   - `hitSpark(x,y,z,el)` (:286).
-- **townart.js**
-  - `groundTile(kind:'grass'|'dirt'|'cobble'|'plaza', seed)` (:18) returns a 192x96 canvas: drawn at 64x32, then nearest-neighbour upscaled 3x.
-  - `buildingSprite({w,d,wall,roof,style:'timber'|'stone',door:'sw'|'se',sign,signPal,h=52,roofH,tower,chimney,seed=7})` (:79) returns `{img (2x supersampled), ox, oy, scale:.5, w, h}`. Draw it at `(isoX(x0,y0)-ox, isoY(x0,y0)-oy)` with size `w,h` (render.js:76-82).
+- **town art**: The town (`src/world/town.js`) comes from the **Overworld and Town pack** (`assets/source/biomes/town/`, three zip parts), imported by `python3 tools/process_assets.py town` (`tools/townpack.py`) into `assets/tiles/town/` (`ground.webp`, `objects.webp`, `town.json`): the six transition base floors plus all 15x8 transition tiles, whole buildings composed from the pack's pieces (2x2 roof recipe, panels, door, windows, unlit torch, shop sign; one per vendor id plus inn/bakery/stables/cottage, specs in `BUILDINGS`), 18 trees and 40 scatter props. See docs/ART.md.
 
 ### How it works
 **Boot** (`main.js:83`), in order:
@@ -756,7 +754,6 @@ Do these in order, unless the user asks for something else. Their feedback after
   - :248 light radius `4+r*3`.
   - :281 shake `min(14, 2+3r·mul)`.
   - :282 'explode' sound when r>1.2.
-- **townart.js** :6 64x32 tile upscaled ×3; :83 supersample 2; :81 default wall height 52.
 - **style.css** :17 `--hud-w: min(96vw,1000px,105vh)`; :245 touch value `min(56vw,125vh)`.
 - **render.js** :10 `WALL_K` (only the fallback wall path); seamless sections scale by `HW / section width`. **assets.js** `WALL_TIERS = 2` niche tiers per wall.
 
@@ -1156,7 +1153,7 @@ Summon attacks (`monster.js:416 summonAttack`) by `atk.type`:
 ### Files
 - `src/world/map.js` - `TileMap`: floor grid, static blockers, Diablo-style thin wall segments + pillars, collision/sliding, LOS, BFS flow field, A* + path smoothing, fog `seen` mask.
 - `src/world/dungeon.js` - `generateDungeon()`: chunk-maze dungeon (rooms/caves/corridors/loops), spawns, props, chests, torches, exit placement; private `generateThrone()` for depth 100.
-- `src/world/town.js` - `VENDORS` table, `makeTownTiles()` (procedural ground tiles), `generateTown()` (fixed seed 1337; buildings, NPC spots, props, portal).
+- `src/world/town.js` - `VENDORS` table, `makeTownTiles()` (town-pack ground + transition tiles), `townObject(name)`, `generateTown()` (fixed seed 1337; buildings, NPC spots, props, portal).
 - `src/game/world.js` - `World` container: entity lists, spatial hash, per-frame update order, separation, ambient torches/portal lights + biome particles.
 - `src/game/render.js` - `renderWorld()` (floors -> decals -> corpses -> ground fx -> depth-sorted pass -> particles/top fx -> lighting -> overlays/names) and `drawMinimap()` (HUD minimap + full-screen automap).
 - Related, out of scope: `src/core/view.js` (TW=64, TH=32, HW=32, HH=16, `isoX=(x-y)*HW`, `isoY=(x+y)*HH`, `camera`), `src/core/assets.js:65 biomeTileSet()` (tileset shape), `src/game/game.js:118-258` (builds Worlds from generator output), `src/gfx/vfx.js` (`lights`, `addLight`, particles, decals).
@@ -1211,7 +1208,7 @@ Dungeon algorithm (dungeon.js):
 
 Throne (dungeon.js:212): fixed 44x80 map: entrance hall (17,68,10x9), gauntlet rects, elliptical arena 32x27 at (6,4); fixed spawns incl. `velscour` boss at (22,14); 12% torches; 4 funerary obelisks; one rare chest (22.5,72.5); start (22,73), exit (22,7). `biome` arg unused. Depths >100 ("Endless Torment") use the normal generator with sizes capped.
 
-Town (town.js:26): 46x46, floor on [2,44) with grass; plaza (18..30)^2; dirt roads W, N and a diagonal SE road; cobble portal platform 38..42 x 37..41. Vendor i uses `shopSpots[i]` + `palettes[i]` (:45-64); building footprint fully `block`ed; NPC stands 0.9 tiles outside the door ('sw' door -> +y side, 'se' -> +x side). 3 plain houses, well (24.5,24.5), 9 lamps (`light:5`), up to 46 trees/pines (sway, blocking), 40 tries of bush/rock/barrel/crate (bushes non-blocking), shop dressing. Generated once and cached in `game.js:123 townCache`; `seen` is cleared per visit; villagers (game.js:128) wander with `randomNear(24,25,7)`.
+Town (`generateTown`): 44x44, all floor; a per-tile material grid (`MATS`: grass, gravel, dirt, mud, stone) is painted, then each tile next to a softer material takes the pack transition with that material on the shared side (one side: axis shape; two adjacent sides: diagonal). Stone plaza 14..30 with a gravel kerb on its open sides, well at the centre (22,22). The 8 vendor shops ring the plaza: a north row (centres y 11.5, x 15.5..27.5, doors on the +y face) and a west row (x 11.5, doors on +x), with an inn in the corner; NPCs stand 0.8 tiles out from their door (`SHOPS`, `DOOR_X`). Buildings are drawn 1.5x (`BS`): a 3x3 blocked footprint, `{cx, cy, spr, k, depth: cx+cy}`; each door torch is a `kind:'flame'` prop (lit). Bakery and stables to the east, two cottages to the south, dirt road SE to the portal (39,39) on a stone/gravel yard, two dirt lanes out. The outer 3 tiles are a blocked ring of trees; more trees, shop dressing and brush from the pack; lamps are the catacombs pack's torch stands (`light: 4.5`). Generated once and cached in `game.js townCache`; `seen` is cleared per visit; villagers wander near `t.center`. Check: `node tools/tests/town.js` (vendors + portal reachable, screenshots).
 
 World.update order (world.js:76): time += dt -> flow field rebuild (every 0.25 s, maxD 40, only if player alive) -> `rebuildGrid()` -> player.update -> other creatures (enemies with `!awake` farther than 26 tiles are skipped entirely) -> npc.update -> hazards (removed when update returns false or `dead`) -> `separate()` -> remove dead non-player creatures after 0.05 s -> loot.update (removed on false) -> corpses age (removed at t>40 or `used`; cap 70) -> `map.reveal(p,11)` -> `ambient(dt)` -> `updateVfx`. Spatial hash: CELL=2 tiles, key `(cx<<16)|(cy&0xffff)`, built once per frame before updates (stale within a frame). Separation pushes pairs in the SAME cell only, overlap threshold `(a.r+b.r)*0.85`, weights player 0.25 / other 0.75, static never moves, via `map.move` (so respects walls). Monsters and minions both move with `Monster.navTo`: straight while `losWide` holds for their body, else monsters chasing the hero follow `map.flowPath` (the flow field, no search) and anything else an A* path (at most `w.pathBudget` = 10 searches per frame for everyone); minions also read the flow field as walking distance from the hero when picking foes. Player click-move uses `losWide` else `findPath(...,2500)` (player.js:451).
 
@@ -1230,14 +1227,14 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 - Wall sprite mix 0.8 / 0.4 map.js:241,244; segGrid bucket B=8 :272; A* default maxNodes 3000 :127 (player uses 2500); goal snap radius <4 :134; LOS samples 3/tile :57, losWide 4/tile r 0.22 :197-200; collision radius `e.r*0.8` :40; randomNear 40 tries :207.
 - World: CELL=2 world.js:7; flow rebuild 0.25 s, maxD 64 :82-83; sleep radius 26 :91; corpse life 40 s / cap 70 :110-112; reveal radius 11 :113 (12 on entry, game.js:115); separation 0.85 overlap, weights 0.25/0.75/0.5 :127-132; ambient rate 22/s desktop, 10/s touch :164; torch light `5.5+0.3 sin`, intensity 0.9 :148; portal light 6 :158.
 - Render: wall items and scatter at `k = TW/160` (0.4); cutaway hole radius 24 + 120 px, min alpha 0.16; lighting canvas 1/4 res :306, light scale `HW*1.25*zoom*dpr/4` :315; `addLight` cap 48 (vfx.js:326); vignette 0.35*min -> 0.75*max, alpha 0.6 :337-338; NPC sprite height 58 :156; corpse fade over t 34..40 :144; minimap 0.2 s, 2.4 px/tile, enemy radius 14 :409,417,438.
-- Town: seed 1337, size 46, plaza 18..31, portal (40.5,39.5), start (24.5,28), trees <=46 of 400 tries town.js:27-92.
+- Town: seed 1337, size 44, plaza 14..30, portal (39,39), start (22,25.5), buildings 1.5x pack scale.
 
 ### How to extend
 - New dungeon room type: add a branch in the room loop (dungeon.js:53-72), carve only inside `[ox+1, ox+S-2]` so chunks stay separated, and set `x,y,w,h,mx,my` to a carved rect (corridors target `floor(mx),floor(my)`, `roomFloorSpot` samples that rect). Adjust pack `area` (:125) if the rect does not reflect the real area.
 - New special level (like depth 100): branch at the top of `generateDungeon` (:9), carve `map.t`, call `finishMap(map,tileset,rng)` (mandatory: variants + walls), return the same shape (`map, rooms, spawns, props, chests, torches, start, exit, bossRoom`). Exactly one spawn should have `rank:'boss'` or the exit never opens (game.js:217/238).
 - New prop: pack scatter -> `{kind, x, y, spr, k (scale), flip, light?}` (drawn from `spr.ox/oy`, its ground pivot); other atlas prop -> `{kind, x, y, spr: tileset.<list>[i], scale?}`; pixel-art prop -> `{kind:'sprite'|'decor', sprite:'<pixelart name>', pal, px, light?, sway?}`. If it should block, place it inside `placeObstacles` with `tryBlock(tiles)`, which sets `map.block` and reverts if it would cut the level apart (it runs before spawns). Lights for props come from `pr.light` (world.js:151) plus the glow in `drawProp`.
-- New vendor: append to `VENDORS`, AND add matching entries to `shopSpots` and `palettes` (town.js:45-64; index-aligned) on unblocked grass, then handle the new `id` in `ui/vendor.js`.
-- New town floor look: add a code in `makeTownTiles` and write it into `map.v` in `generateTown`; `free()` (town.js:86) treats `v<10` as grass.
+- New vendor: append to `VENDORS`, add its building spec to `BUILDINGS` in `tools/townpack.py` (rerun `process_assets.py town`), a centre in `SHOPS` (and `DOOR_X` if its door is on the +x face), then handle the new `id` in `ui/vendor.js`.
+- New town floor look: paint a `MATS` index into `mat` in `generateTown`; transitions are picked automatically.
 - New depth-sorted drawable: push `{d, f:<new code>, o}` in renderWorld (:222-239) and add a `case` in the switch (:243). For hazards just give them a numeric `depth` getter (or `ground=true`).
 - New biome ambient: add `case '<type>'` in `World.ambient` (world.js:169) and set `biome.ambient={type,color}` in `src/data/biomes.js`. Biome fields read here: `fog`, `dark`, `light`, `torch`, `ambient`, `roster`.
 - Dynamic light: `addLight(x,y,radiusTiles,intensity)` from `gfx/vfx.js` - but see the lights-clearing bug below; fix that first.

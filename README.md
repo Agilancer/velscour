@@ -99,7 +99,7 @@ Art you provided, used directly:
 - **Catacombs biome pack**: 60 floors, 5 modular wall families, 3 arches, 3 doors (open and closed) and 40 scatter props on a 160×80 template. Every biome is built from it, palette-swapped, until more packs arrive. Walls, arches and doors are raised to suit the heroes' height and sliced for depth sorting at import. See [docs/ART.md](docs/ART.md).
 - **Monster sheets**: 7 sheets of 10 monsters each, cut into atlases and mapped to AI archetypes and the boss pool. See [docs/ENEMY_ART.md](docs/ENEMY_ART.md).
 
-Placeholder art: most summons (the Necromancer's skeletons use painted art), Demon Lord Velscour and item icons are drawn as ASCII pixel-art in `src/gfx/pixelart.js` and palette-swapped. Town buildings and ground are drawn procedurally in `src/gfx/townart.js`.
+Placeholder art: most summons (the Necromancer's skeletons use painted art), Demon Lord Velscour and item icons are drawn as ASCII pixel-art in `src/gfx/pixelart.js` and palette-swapped. The town uses the Overworld and Town biome pack (`tools/townpack.py`).
 
 **To swap in real art**, replace the sheets in `assets/source/` and rerun:
 

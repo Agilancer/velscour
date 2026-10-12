@@ -99,3 +99,23 @@ Native pixels map to world pixels by `k = TW / 160` (0.4); `ox/oy` are native px
 4. If the pack names different wall families or door designs, check `crypt_ashlar` (town walls in
    `src/world/town.js`) and `funerary_obelisk` (throne columns), and `LIT` / `WALK_OVER` (prop names).
 5. Run `pack.js`, `walls.js` and `data_check.mjs`, and look at the screenshots.
+
+## The town pack (Overworld and Town)
+`assets/source/biomes/town/Overworld_Town_Biome_Pack-{1,2,3}.zip` are one pack split to fit GitHub's upload limit;
+`tools/townpack.py` reads all parts (a file repeated across parts is read once). Same 160 x 80 grid as Catacombs, but
+for the outdoors: 60 floors, 15 x 8 terrain transitions, 6 wall families as directed panels, 4 roof materials, gables,
+doors, windows, shop signs, unlit torches, 40 scatter props and 18 trees. Read its `README.md` first.
+
+```bash
+python3 tools/process_assets.py town      # -> assets/tiles/town/ground.webp, objects.webp, town.json (~9 s)
+```
+- **Ground**: the six transition bases (grass 01, gravel 13, dirt 21, mud 22, stone 33, concrete 41) and every
+  transition. Shapes 1-4 put material A on the low-u, high-u, low-v, high-v half; 5-8 on the triangle at the
+  (low u, low v), (high u, high v), (low u, high v), (high u, low v) corner. A is the earlier material in the pair
+  name. `generateTown` gives a tile beside a softer material the shape with that material on the shared side(s).
+- **Buildings** are composed offline (`compose`) by the pack's 2 x 2 roof recipe: back panels, pillars, front panels
+  with one replaced by the door, windows on the other visible panels, an unlit torch at the door wall's middle
+  (its head position is saved in `lights`, and the game draws a flame and light there), gable infills under the
+  open ends of a gable roof, the roof, and a projecting shop sign. Specs per building are in `BUILDINGS`. The game
+  draws them 1.5x so the walls stand above the heroes (a 3 x 3 tile footprint).
+- **Trees and scatter** keep their pivots and are drawn at `k` (0.4).

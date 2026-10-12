@@ -23,6 +23,7 @@ Headless Chromium tests live in `tools/tests/`; see the header comment of each f
 ```bash
 export NODE_PATH=/opt/node22/lib/node_modules     # where playwright is installed in Claude cloud containers
 node tools/tests/data_check.mjs                    # skill data sanity check, no browser (fast)
+node tools/tests/town.js                           # town pack: vendors/portal reachable + screenshots
 node tools/tests/flow.js                           # town -> portal -> boss -> exit -> depth 2 -> death -> reload
 node tools/tests/ui.js                             # skill tree, inventory, socketing, vendors
 node tools/tests/mobile.js                         # 844x390 touch layout + joystick
@@ -51,7 +52,8 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
 - Match the existing style: ES modules, 2-space indent, single quotes, dense code, short comments only where
   something is non-obvious. Shared state lives on `G` (`src/state.js`).
 - All art except the user's sprite sheets is placeholder. Summons, Velscour, decor props and items are ASCII pixel art in
-  `src/gfx/pixelart.js`, and town buildings are drawn in `src/gfx/townart.js`. Monsters use the user's sheets in
+  `src/gfx/pixelart.js`, and the town (ground, transitions, buildings, trees, props) comes from the Overworld and Town pack
+  (`assets/source/biomes/town/`, `python3 tools/process_assets.py town`, `tools/townpack.py`; see docs/ART.md). Monsters use the user's sheets in
   `assets/source/enemies/<set>/`, imported by `python3 tools/process_assets.py enemies` and catalogued in
   `src/data/bestiary.js`; see [`docs/ENEMY_ART.md`](docs/ENEMY_ART.md). New uploads ("Enemy Assets Set N") go there too. The user's sheets are in
   `assets/source/` and get sliced by `tools/process_assets.py` (needs `pip install pillow numpy scipy`; args
