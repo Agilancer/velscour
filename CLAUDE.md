@@ -34,6 +34,7 @@ node tools/tests/gear.js paladin,wizard            # hero looks: armor+helm per 
 node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners in those biomes (docs/WALLS.md)
 node tools/tests/titlefx.js                        # title logo fire, tar drips/pile, spark ignition + explosion
 node tools/tests/enemies.js                        # monster art line-ups, corpses, mixed-biome levels + guardians
+node tools/tests/select.js [mobile]                # animated class-select portraits, 6 hero save slots, slot migration
 ```
 Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, because layout bugs don't throw.
 - In cloud containers, Chromium is at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` and
@@ -52,12 +53,13 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   The hero's look comes from the gear libraries `assets/FinalClasses/<class>.zip` (80 armors + 80 helms per class),
   imported by `python3 tools/process_assets.py gear [class]`. Class art packs (Paladin weapons, ability effects) go in
   `assets/source/classes/<class>/` and are imported by `python3 tools/process_assets.py classes [class]`; both are in
-  [`docs/CLASS_ART.md`](docs/CLASS_ART.md).
+  [`docs/CLASS_ART.md`](docs/CLASS_ART.md). The animated class-select portraits come from
+  `assets/FinalClasses/All 16 Classes.png` (`python3 tools/process_assets.py select`, drawn by `src/ui/heroanim.js`).
   Never hand-edit the generated files in `assets/sprites|ui|tiles`.
 - Paths must stay **relative** (`assets/...`, `src/main.js`, never `/assets/...`), because the site is served
   from the `/velscour/` subpath on GitHub Pages. The `/src/...` imports in `tools/tests/` are fine, because the
   tests run against a local server at the root.
-- Saves live in localStorage under `velscour_saves_v1`. If you change the save shape, extend `migrate()` in
+- Saves live in localStorage under `velscour_saves_v1`, one hero per save slot (6 slots, `c.slot`). If you change the save shape, extend `migrate()` in
   `src/game/save.js` so existing heroes keep loading.
 - After any gameplay change, run at least `flow.js` and the `skills.js` classes you touched. Run `mobile.js`
   for UI changes.

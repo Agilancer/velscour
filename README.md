@@ -24,7 +24,7 @@ python3 -m http.server 8000     # or: npx serve .
 # open http://localhost:8000
 ```
 
-Progress saves automatically in the browser (localStorage), and you can keep several heroes.
+Progress saves automatically in the browser (localStorage), and you can keep up to six heroes in separate save slots.
 
 ## Controls
 
@@ -60,7 +60,7 @@ Progress saves automatically in the browser (localStorage), and you can keep sev
 - **Progression loop**: biomes come in random order (all 19 before any repeats). About two levels in three mix their tiles with a like-coloured biome, so a Frozen Ossuary can bleed into Crystal Caverns. Clearing a depth lets you descend into the next biome or return to town, and the town portal then leads to the next depth. Death sends you back to town at **Depth 1** with all gear, levels and skills kept. After Velscour falls, Endless Torment depths continue past 100.
 - **Loot**: Common, Uncommon, Rare, Epic and Legendary items across 7 equipment slots and 10 material tiers, with around 45 affix types and 22 legendary powers. Drops also include gold, health/mana orbs and potions. **Gems**: 12 stat gems in 6 tiers, plus shot-pattern gems (+projectiles, split, echo-cast, orbiting orbs, nova-on-cast, chain/pierce, homing, bigger areas, +skill levels). Rarer gear holds more sockets (up to 6).
 - **Town of Duskhollow**: Weaponsmith, Armorer, Blacksmith (+1…+10 upgrades), Enchanter (reroll/add affixes), Alchemist (potions), Gem Merchant (buy, or combine 3 → 1 higher tier), Jeweler (add sockets, remove gems) and Gambler. Townsfolk wander the plaza.
-- Procedural sound effects and ambient music (no audio files), settings, a help screen and multiple save slots.
+- Procedural sound effects and ambient music (no audio files), settings, a help screen and six hero save slots.
 
 ## Project layout
 
