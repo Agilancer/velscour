@@ -536,7 +536,13 @@ export const Auto = {
       const path = this.pathTo(gx, gy);
       this.path = path && path.length ? path : [[gx, gy]];
     }
-    while (this.path.length > 1 && dist(p.x, p.y, this.path[0][0], this.path[0][1]) < 0.3) this.path.shift();
+    // move on to the next waypoint early only if the hero itself (not the waypoint) can see it; cutting a corner
+    // from a spot near the waypoint can clip a prop and leave the hero sliding along it
+    while (this.path.length > 1) {
+      const d0 = dist(p.x, p.y, this.path[0][0], this.path[0][1]);
+      if (d0 < 0.08 || (d0 < 0.3 && G.world.map.losWide(p.x, p.y, this.path[1][0], this.path[1][1]))) this.path.shift();
+      else break;
+    }
     let [nx, ny] = this.path[0];
     if (this.jiggle && this.jiggle.t > 0) { this.jiggle.t -= dt; nx = p.x + Math.cos(this.jiggle.a); ny = p.y + Math.sin(this.jiggle.a); }
     this.steer(nx, ny);
@@ -553,12 +559,15 @@ export const Auto = {
     s.t += dt;
     if (s.t < 0.6) return;
     const moved = dist(p.x, p.y, s.x, s.y);
-    if (trying && moved < 0.12) {
+    // sliding along a wall counts as stuck too: moving, but no closer to the waypoint
+    const wp = this.path && this.path[0], wd = wp ? dist(p.x, p.y, wp[0], wp[1]) : 0;
+    const noGain = wp && wp === s.wp && wd > s.wd - 0.15;
+    if (trying && (moved < 0.12 || noGain)) {
       s.n++;
       this.navT = 0; this.path = null;
       if (s.n >= 2) this.jiggle = { t: 0.35, a: Math.random() * TAU };
     } else s.n = 0;
-    s.t = 0; s.x = p.x; s.y = p.y;
+    s.t = 0; s.x = p.x; s.y = p.y; s.wp = this.path && this.path[0]; s.wd = s.wp ? dist(p.x, p.y, s.wp[0], s.wp[1]) : 0;
   },
 
   // ================================================================ dungeon

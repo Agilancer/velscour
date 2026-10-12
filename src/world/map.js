@@ -192,12 +192,13 @@ export class TileMap {
     }
     return out;
   }
-  losWide(x0, y0, x1, y1) {
+  /** Can a walker go straight from (x0,y0) to (x1,y1)? r must cover the mover's collision box (move() uses r * 0.8 = 0.24). */
+  losWide(x0, y0, x1, y1, r = 0.28) {
     const dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy);
     const steps = Math.ceil(d * 4);
     for (let i = 1; i <= steps; i++) {
       const t = i / steps;
-      if (!this.circleFree(x0 + dx * t, y0 + dy * t, 0.22)) return false;
+      if (!this.circleFree(x0 + dx * t, y0 + dy * t, r)) return false;
     }
     return true;
   }
