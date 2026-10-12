@@ -6,6 +6,7 @@ import { CLASS_IDS, A } from '../core/assets.js';
 import { CLASSES, ATTRS } from '../data/classes.js';
 import { UI, $ } from './ui.js';
 import { listSaves, deleteSave } from '../game/save.js';
+import { attachTitleFx } from './titlefx.js';
 
 let current = null;
 
@@ -43,6 +44,7 @@ export function titleScreen() {
   s.appendChild(menu);
   s.appendChild(el('div', 'title-foot', 'Rough draft · placeholder art & procedural sound · progress saves in this browser'));
   show(s);
+  attachTitleFx(s, s.querySelector('.title-logo'));
 }
 
 export function classSelect() {
