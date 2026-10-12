@@ -52,5 +52,7 @@ export function migrate(c) {
   c.tips = c.tips || {};
   if (!Array.isArray(c.bar) || c.bar.length !== 10) c.bar = Array(10).fill(null);
   while (c.bag.length < 60) c.bag.push(null);
+  // body armor and helmets of the first Paladin art pack: their look now comes from the gear art
+  for (const it of [...Object.values(c.equip), ...c.bag]) if (it && it.art && (it.slot === 'body' || it.slot === 'head')) { delete it.art; delete it.artCls; }
   return c;
 }

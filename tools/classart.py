@@ -4,23 +4,19 @@ Class art importer: turns a class art pack (assets/source/classes/<class>/) into
     python3 tools/process_assets.py classes            # every pack in assets/source/classes/
     python3 tools/process_assets.py classes paladin    # one class
 
-A pack is the folder the art generator hands over: a catalog JSON (`catalog*.json`: armor, weapons,
-helmets, abilities), a README, and labeled PNG sheets named
-  <class>_<rarity>_armor*.png      10 outfits x 12 poses (ATK1-6, CAST1-6), facing right
+A pack is the folder the art generator hands over: a catalog JSON (`catalog*.json`: weapons, abilities; its
+armor and helmet entries are ignored, those come from the gear libraries, tools/gearart.py), a README, and
+labeled PNG sheets named
   <class>_<rarity>_abilities*.png  10 effects x 6 stages (start, gather, release, peak, decay, fade)
   <class>_weapons*.png             6 rarity rows x 10 items (weapons and shields)
-  <class>_helmets*.png             6 rarity rows x 10 helmets
-When several versions of a sheet exist (`_v2`, `_v3`, `_grid_v2`), the highest version wins. Nothing is
-cut by fixed coordinates: the printed labels are found as text (bright strokes on dark boxes) and give the
-item / ability layout, and the armor figures are found as shapes. The catalog, not the printed text, names
-everything, by grid position. An optional `import.json` in the pack holds per-sheet overrides (see
-OVERRIDE_KEYS) for problems detection can't settle.
+When several versions of a sheet exist (`_v2`, `_v3`), the highest version wins. Nothing is cut by fixed
+coordinates: the printed labels are found as text (bright strokes on dark boxes) and give the item / ability
+layout. The catalog, not the printed text, names everything, by grid position. An optional `import.json` in
+the pack holds overrides (see OVERRIDE_KEYS) for problems detection can't settle.
 
 Output (generated; never hand-edit): assets/sprites/classes/<class>/
-  armor/<ID>.webp       12 pose frames in one strip, every frame the same cell size with the feet anchor
-                        at the same point, so the strips animate without jitter
   fx/<ID>.webp          6 effect stages in one strip (same cell size, centred)
-  items.webp            weapon / shield / helmet icons (max ICON px)
+  items.webp            weapon / shield icons (max ICON px)
   <class>.json          everything above keyed by catalog ID, with names, rarities and atlas rects
 """
 import glob
@@ -36,17 +32,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "assets", "source", "classes")
 OUT = os.path.join(ROOT, "assets", "sprites", "classes")
 
-POSES = ["ATK1", "ATK2", "ATK3", "ATK4", "ATK5", "ATK6", "CAST1", "CAST2", "CAST3", "CAST4", "CAST5", "CAST6"]
 STAGES = ["start", "gather", "release", "peak", "decay", "fade"]
-FIG_H = 112   # standing armor figures are scaled to this height (sheet figures are ~100-120 px)
 ICON = 96     # item icons fit in ICON x ICON
 FX_MAX = 160  # effect frames fit in FX_MAX x FX_MAX
 # weapons and shields share one sheet; a shield word in the name decides, else the shape does
 SHIELD_WORDS = re.compile(r"\b(Buckler|Shield|Roundshield|Kite|Heater|Pavise|Ward|Aegis|Targe|Bulwark)\b")
 OVERRIDE_KEYS = {
-    "drop_columns": "{sheet stem: [figure column indices to drop]}, when a sheet has an extra pose column",
-    "armor_ids": "[ID per armor entry], when the catalog doesn't list armor IDs (default: P01, P02, ...)",
-    "kinds": "{item ID: 'weapon' | 'shield' | 'helmet'}, when name and shape guess wrong",
+    "kinds": "{item ID: 'weapon' | 'shield'}, when name and shape guess wrong",
 }
 
 
@@ -362,156 +354,6 @@ def slice_effects(a, nrows, ncols, log):
     return grid
 
 
-def valleys(prof, n, lo, hi):
-    """n-1 cut points splitting prof[lo:hi] into n parts, each at the lowest point near the even split."""
-    pitch = (hi - lo) / n
-    cuts = []
-    for k in range(1, n):
-        c = lo + k * pitch
-        w0, w1 = int(c - pitch * 0.35), int(c + pitch * 0.35)
-        cuts.append(w0 + int(np.argmin(prof[w0:w1])))
-    return [lo] + cuts + [hi]
-
-
-def slice_armor(a, nrows, ncols, drop, log):
-    """Armor sheets: figures found as shapes. Headers and the name gutter are the shapes that contain printed
-    text and are dropped. Rows are cut at the emptiest lines near an even split, figures at the empty
-    columns between them (touching figures are split at their narrowest point)."""
-    labels = group_labels(text_lines(a))
-    keyed = matte_alpha(a)
-    m = keyed[..., 3] > 0
-    # the header band (pose labels and title) and everything above it go
-    head = max((bd for bd in bands(labels, "cy", 14) if len(bd) >= ncols // 2), key=lambda bd: -bd[0]["cy"], default=None)
-    head = head and min((bd for bd in bands(labels, "cy", 14) if len(bd) >= ncols // 2), key=lambda bd: bd[0]["cy"])
-    if head:
-        m[:max(b["y1"] for b in head) + 4] = False
-    # the name gutter: the left-most stack of labels; each label's box is grown out from its text while
-    # the edge lines are still solid, so a figure touching the box keeps its pixels
-    rest = [b for b in labels if not head or b["cy"] > max(h["y1"] for h in head)]
-    if rest:
-        gx = min(b["x0"] for b in rest)
-        for b in rest:
-            if b["x0"] > gx + 40:
-                continue
-            x0, y0, x1, y1 = grow_box(m, b)
-            m[max(0, y0 - 2):y1 + 2, max(0, x0 - 2):x1 + 2] = False
-    lab, n = ndimage.label(m, structure=np.ones((3, 3)))
-    thick = np.zeros(n + 1, bool)
-    thick[np.unique(lab[ndimage.binary_erosion(m, iterations=2)])] = True
-    # leftovers of boxes: solid rectangles (figures fill about half their box) and bare frame lines
-    for i, sl in enumerate(ndimage.find_objects(lab)):
-        hh, ww = sl[0].stop - sl[0].start, sl[1].stop - sl[1].start
-        if ((lab[sl] == i + 1).mean() > 0.8 and hh * ww > 400) or (not thick[i + 1] and max(hh, ww) >= 15):
-            m[sl][lab[sl] == i + 1] = False
-    keyed[..., 3][~m] = 0
-    rp = ndimage.gaussian_filter1d(m.sum(1).astype(float), 2)
-    ys = np.nonzero(rp > rp.max() * 0.02)[0]
-    rows = valleys(rp, nrows, ys.min(), ys.max() + 1)
-    grid, counts, seeds = [], [], []
-    markers = np.zeros(m.shape, np.int32)
-    markers[~m] = -1
-    for r in range(nrows):
-        y0, y1 = rows[r], rows[r + 1]
-        band = m[y0:y1]
-        cp = band.sum(0).astype(float)
-        on = ndimage.binary_closing(cp > 0, np.ones(3))
-        segs = [[sl[0].start, sl[0].stop] for sl in ndimage.find_objects(ndimage.label(on)[0])]
-        mass = lambda sg: cp[sg[0]:sg[1]].sum()
-        med = np.median([mass(sg) for sg in segs])
-        # stray bits (a detached hand, a cloth tip) join the nearer neighbour; specks go
-        segs = [sg for sg in segs if mass(sg) > med * 0.01]
-        while True:
-            small = [i for i, sg in enumerate(segs) if mass(sg) < med * 0.25]
-            if not small or len(segs) < 2:
-                break
-            i = small[0]
-            j = i - 1 if i == len(segs) - 1 or (i > 0 and segs[i][0] - segs[i - 1][1] < segs[i + 1][0] - segs[i][1]) else i + 1
-            segs[min(i, j)] = [segs[min(i, j)][0], segs[max(i, j)][1]]
-            segs.pop(max(i, j))
-        # figures that touch: split the widest segment at its thinnest column
-        while len(segs) < ncols:
-            i = int(np.argmax([mass(sg) for sg in segs]))
-            x0, x1 = segs[i]
-            q = (x1 - x0) // 4
-            c = x0 + q + int(np.argmin(cp[x0 + q:x1 - q]))
-            segs[i:i + 1] = [[x0, c], [c, x1]]
-            log.append("row %d: split touching figures at x=%d" % (r, c))
-        counts.append(len(segs))
-        # seed each figure with its centre line over the middle of the band
-        for k, (x0, x1) in enumerate(segs):
-            xc = int(round((np.arange(x0, x1) * cp[x0:x1]).sum() / max(1, cp[x0:x1].sum())))
-            ya, yb = y0 + (y1 - y0) // 5, y1 - (y1 - y0) // 5
-            col = m[ya:yb, max(x0, xc - 1):xc + 2]
-            markers[ya:yb, max(x0, xc - 1):xc + 2][col] = len(seeds) + 1
-            seeds.append((r, k))
-        grid.append([None] * len(segs))
-    # pixels go to the figure they connect to, so a raised fist or a hand reaching into the next cell
-    # stays with its own body
-    owner = ndimage.watershed_ift(np.where(m, 0, 255).astype(np.uint8), markers)
-    for i, (r, k) in enumerate(seeds):
-        ys, xs = np.nonzero(owner == i + 1)
-        sub = keyed[ys.min():ys.max() + 1, xs.min():xs.max() + 1].copy()
-        sub[..., 3] = np.where(owner[ys.min():ys.max() + 1, xs.min():xs.max() + 1] == i + 1, sub[..., 3], 0)
-        grid[r][k] = crop_rgba(keep_main(sub, frac=0.004, pad=40))
-    log.append("figures per row %s" % counts)
-    # extra pose columns: an override, else drop one of the most alike adjacent pair
-    for ri, row in enumerate(grid):
-        if drop:
-            row[:] = [f for i, f in enumerate(row) if i not in drop]
-        while len(row) > ncols:
-            sims = [frame_diff(row[i], row[i + 1]) for i in range(len(row) - 1)]
-            i = int(np.argmin(sims))
-            log.append("row %d: %d poses, dropped column %d (same as %d)" % (ri, len(row), i + 1, i))
-            row.pop(i + 1)
-    return grid
-
-
-def frame_diff(p, q):
-    s = (64, 112)
-    A = np.asarray(Image.fromarray(p).resize(s)).astype(np.float32)
-    B = np.asarray(Image.fromarray(q).resize(s)).astype(np.float32)
-    return float(np.abs(A - B).mean())
-
-
-# --------------------------------------------------------------------------
-# Armor frames: one anchor for every pose of an outfit
-# --------------------------------------------------------------------------
-def anchor(f):
-    """(x, y) of the feet anchor in a figure frame: y = lowest opaque row, x = hip centre (median of the
-    opaque columns in the 50-65% height band; arms reach out above it, feet spread below)."""
-    m = f[..., 3] > 0
-    h = m.shape[0]
-    ys = np.nonzero(m.any(1))[0]
-    top, bot = ys.min(), ys.max()
-    band = m[top + int((bot - top) * 0.5):top + int((bot - top) * 0.65) + 1]
-    cols = np.nonzero(band)[1]
-    return float(np.median(cols)) if len(cols) else m.shape[1] / 2, float(bot + 1)
-
-
-def build_armor(frames):
-    """Scale an outfit so its standing poses are FIG_H tall, then place every pose on one cell size with
-    the anchor at the same point. Returns (strip image, cell w, cell h, anchor x, anchor y)."""
-    stand = [frames[POSES.index(p)] for p in ("ATK1", "CAST1") if p in POSES]
-    k = FIG_H / np.median([s.shape[0] for s in stand])
-    imgs = []
-    for f in frames:
-        im = Image.fromarray(f)
-        im = im.resize((max(1, round(im.width * k)), max(1, round(im.height * k))), Image.LANCZOS)
-        a = np.asarray(im).copy()
-        a[..., 3] = np.where(a[..., 3] > 120, 255, 0)  # stay crisp after resampling
-        imgs.append(a)
-    anc = [anchor(a) for a in imgs]
-    left = max(ax for ax, _ in anc)
-    right = max(a.shape[1] - ax for a, (ax, _) in zip(imgs, anc))
-    up = max(ay for _, ay in anc)
-    cw, ch = int(np.ceil(left + right)) + 2, int(np.ceil(up)) + 2
-    ax, ay = int(np.ceil(left)) + 1, int(np.ceil(up)) + 1
-    strip = Image.new("RGBA", (cw * len(imgs), ch), (0, 0, 0, 0))
-    for i, (a, (fx, fy)) in enumerate(zip(imgs, anc)):
-        strip.alpha_composite(Image.fromarray(a), (i * cw + int(round(ax - fx)), int(round(ay - fy))))
-    return strip, cw, ch, ax, ay
-
-
 def build_strip(cells, mw, mh):
     """Effect stages as one strip. All stages share one crop box (cells are centred on each other first), so
     an effect keeps the motion drawn on the sheet: a bolt still travels right, a ring still grows in place.
@@ -587,12 +429,12 @@ def process_class(cid, log_all):
         with open(os.path.join(folder, "import.json")) as f:
             ov = json.load(f)
     outdir = os.path.join(OUT, cid)
-    for sub in ("armor", "fx"):
+    for sub in ("fx",):
         os.makedirs(os.path.join(outdir, sub), exist_ok=True)
         for old in glob.glob(os.path.join(outdir, sub, "*.webp")):
             os.remove(old)
-    meta = {"class": cat.get("class", cid), "direction": cat.get("direction", "right"), "poses": POSES, "stages": STAGES, "figH": FIG_H,
-            "rarities": [], "armor": {}, "items": {}, "fx": {}}
+    meta = {"class": cat.get("class", cid), "direction": cat.get("direction", "right"), "stages": STAGES,
+            "items": {}, "fx": {}}
     problems = []
 
     def report(sheet, log, got, want):
@@ -603,38 +445,9 @@ def process_class(cid, log_all):
         if got != want:
             problems.append("%s: %d of %d" % (os.path.basename(sheet) if sheet else "missing sheet", got, want))
 
-    # ---- armor
-    ids = ov.get("armor_ids")
-    prefix = cid[0].upper()
-    n = 0
-    for group in cat.get("armor", []):
-        rar = group["rarity"]
-        meta["rarities"].append(rar) if rar not in meta["rarities"] else None
-        sheet = find_sheet(folder, "%s_%s_armor*.png" % (cid, rar.lower()))
-        log = []
-        grid = []
-        if sheet:
-            stem = os.path.splitext(os.path.basename(sheet))[0]
-            grid = slice_armor(np.asarray(Image.open(sheet).convert("RGBA")), len(group["names"]), len(POSES),
-                               set(ov.get("drop_columns", {}).get(stem, [])), log)
-        got = 0
-        for i, name in enumerate(group["names"]):
-            aid = ids[n] if ids else "%s%02d" % (prefix, n + 1)
-            n += 1
-            row = grid[i] if i < len(grid) else []
-            if len(row) != len(POSES):
-                log.append("!! %s %s: %d poses" % (aid, name, len(row)))
-                continue
-            strip, cw, ch, ax, ay = build_armor(row)
-            save(strip, os.path.join(outdir, "armor", aid + ".webp"))
-            meta["armor"][aid] = {"name": name, "rarity": rar, "design": group.get("designs", [""] * 99)[i],
-                                  "cell": [cw, ch], "anchor": [ax, ay]}
-            got += 1
-        report(sheet, log, got, len(group["names"]))
-
-    # ---- weapons/shields and helmets
+    # ---- weapons and shields (helmets and body armor come from the gear libraries: tools/gearart.py)
     icons = []
-    for kind, pattern in (("weapons", "%s_weapons*.png"), ("helmets", "%s_helmets*.png")):
+    for kind, pattern in (("weapons", "%s_weapons*.png"),):
         rows = cat.get(kind, [])
         if not rows:
             continue
@@ -653,7 +466,7 @@ def process_class(cid, log_all):
                 # weapons are drawn as diagonals, shields upright and solid (flails are neither diagonal nor solid)
                 diag, fill = diagonal(np.asarray(art)), (np.asarray(art)[..., 3] > 0).mean()
                 icons.append((iid, fit(art, ICON, ICON)))
-                meta["items"][iid] = {"name": name, "rarity": rar, "kind": "helmet" if kind == "helmets" else "shield" if SHIELD_WORDS.search(name) or (diag < 0.3 and fill > 0.62) else "weapon"}
+                meta["items"][iid] = {"name": name, "rarity": rar, "kind": "shield" if SHIELD_WORDS.search(name) or (diag < 0.3 and fill > 0.62) else "weapon"}
                 got += 1
         report(sheet, log, got, sum(len(r) - 1 for r in rows))
     if icons:
@@ -692,7 +505,7 @@ def process_class(cid, log_all):
     meta["source"] = catname
     with open(os.path.join(outdir, cid + ".json"), "w") as f:
         json.dump(meta, f, indent=1)
-    print("  -> %d armor, %d items, %d effects" % (len(meta["armor"]), len(meta["items"]), len(meta["fx"])))
+    print("  -> %d items, %d effects" % (len(meta["items"]), len(meta["fx"])))
     log_all.extend(cid + ": " + p for p in problems)
 
 

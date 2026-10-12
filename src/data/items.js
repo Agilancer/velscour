@@ -131,10 +131,10 @@ export const LEGENDARY = {
 };
 
 // ---------------------------------------------------------------- class catalog items
-// A class art pack (assets/sprites/classes/<cls>/<cls>.json) names that class's weapons, shields, helmets
-// and body armor. While a hero of that class plays, every drop, vendor item and starting item of those slots
-// is one of the catalog pieces of the rolled rarity (with its own name and icon) when one fits the slot and
-// base; everything else stays a generic item.
+// A class art pack (assets/sprites/classes/<cls>/<cls>.json) names that class's weapons and shields. While a
+// hero of that class plays, every drop, vendor item and starting item of those slots is one of the catalog
+// pieces of the rolled rarity (with its own name and icon) when one fits the slot and base; everything else
+// stays a generic item. (Body armor and helmets look like the class's gear art: core/gearart.js.)
 let classPool = null;
 const BASE_WORDS = [
   ['sword', /Sword|Sabre|Blade|Edge|Falchion|Estoc|Rapier|Scimitar|Amen/], ['axe', /Axe|Cleaver|Executioner|Reaver/],
@@ -148,13 +148,12 @@ export function catalogBase(name) {
 export function setClassItems(cls, meta) {
   if (!meta) { classPool = null; return; }
   const rar = (r) => Math.max(0, RARITY.findIndex((x) => x.name === r));
-  classPool = { weapon: [], offhand: [], head: [], body: [] };
+  classPool = { weapon: [], offhand: [] };
   for (const [id, e] of Object.entries(meta.items)) {
-    const slot = e.kind === 'helmet' ? 'head' : e.kind === 'shield' ? 'offhand' : 'weapon';
-    const base = slot === 'head' ? 'head' : slot === 'offhand' ? 'shield' : catalogBase(e.name);
-    classPool[slot].push({ id, cls, name: e.name, rarity: rar(e.rarity), base });
+    if (e.kind !== 'weapon' && e.kind !== 'shield') continue;
+    const slot = e.kind === 'shield' ? 'offhand' : 'weapon';
+    classPool[slot].push({ id, cls, name: e.name, rarity: rar(e.rarity), base: slot === 'offhand' ? 'shield' : catalogBase(e.name) });
   }
-  for (const [id, e] of Object.entries(meta.armor)) classPool.body.push({ id, cls, name: e.name, rarity: rar(e.rarity), base: 'body' });
 }
 function classItem(slot, rarity, base) {
   const list = classPool && classPool[slot];

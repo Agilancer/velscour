@@ -1,20 +1,6 @@
 {
  "class": "Paladin",
  "direction": "right",
- "poses": [
-  "ATK1",
-  "ATK2",
-  "ATK3",
-  "ATK4",
-  "ATK5",
-  "ATK6",
-  "CAST1",
-  "CAST2",
-  "CAST3",
-  "CAST4",
-  "CAST5",
-  "CAST6"
- ],
  "stages": [
   "start",
   "gather",
@@ -23,797 +9,6 @@
   "decay",
   "fade"
  ],
- "figH": 112,
- "rarities": [
-  "Common",
-  "Uncommon",
-  "Rare",
-  "Epic",
-  "Legendary",
-  "Mythic"
- ],
- "armor": {
-  "P01": {
-   "name": "Ragged Pilgrim",
-   "rarity": "Common",
-   "design": "patched charcoal gambeson and rope belt",
-   "cell": [
-    107,
-    123
-   ],
-   "anchor": [
-    42,
-    122
-   ]
-  },
-  "P02": {
-   "name": "Rust Lamellar",
-   "rarity": "Common",
-   "design": "rusty narrow lamellar with torn brown waistcloth",
-   "cell": [
-    105,
-    123
-   ],
-   "anchor": [
-    45,
-    122
-   ]
-  },
-  "P03": {
-   "name": "Soot Chapel",
-   "rarity": "Common",
-   "design": "battered iron breastplate over soot-grey pilgrim robes",
-   "cell": [
-    104,
-    123
-   ],
-   "anchor": [
-    40,
-    122
-   ]
-  },
-  "P04": {
-   "name": "Scrap Sentinel",
-   "rarity": "Common",
-   "design": "asymmetrical scrap-steel shoulder and burgundy surcoat",
-   "cell": [
-    95,
-    119
-   ],
-   "anchor": [
-    40,
-    118
-   ]
-  },
-  "P05": {
-   "name": "Bone Tabard",
-   "rarity": "Common",
-   "design": "chainmail with bone-white ragged tabard",
-   "cell": [
-    105,
-    120
-   ],
-   "anchor": [
-    43,
-    119
-   ]
-  },
-  "P06": {
-   "name": "Road Brigand",
-   "rarity": "Common",
-   "design": "riveted leather brigandine and split olive skirt",
-   "cell": [
-    99,
-    124
-   ],
-   "anchor": [
-    41,
-    123
-   ]
-  },
-  "P07": {
-   "name": "Black Rivet",
-   "rarity": "Common",
-   "design": "blackened studded jack with wrapped greaves",
-   "cell": [
-    100,
-    119
-   ],
-   "anchor": [
-    41,
-    118
-   ]
-  },
-  "P08": {
-   "name": "Tin Votary",
-   "rarity": "Common",
-   "design": "dull tin scale-mail and frayed blue sash",
-   "cell": [
-    97,
-    116
-   ],
-   "anchor": [
-    40,
-    115
-   ]
-  },
-  "P09": {
-   "name": "Prayer Cuirass",
-   "rarity": "Common",
-   "design": "worn ribbed cuirass with tan prayer strips",
-   "cell": [
-    114,
-    122
-   ],
-   "anchor": [
-    45,
-    121
-   ]
-  },
-  "P10": {
-   "name": "Ringmail Exile",
-   "rarity": "Common",
-   "design": "patched ringmail with ragged long dark clerical coat",
-   "cell": [
-    106,
-    120
-   ],
-   "anchor": [
-    45,
-    119
-   ]
-  },
-  "P11": {
-   "name": "Wayfarer Brigandine",
-   "rarity": "Uncommon",
-   "design": "long split leather coat with diagonal iron plates",
-   "cell": [
-    97,
-    120
-   ],
-   "anchor": [
-    44,
-    119
-   ]
-  },
-  "P12": {
-   "name": "Iron Penitent",
-   "rarity": "Uncommon",
-   "design": "narrow rusted rib-cage cuirass and rope prayer knots",
-   "cell": [
-    94,
-    121
-   ],
-   "anchor": [
-    41,
-    120
-   ]
-  },
-  "P13": {
-   "name": "Chapel Watch",
-   "rarity": "Uncommon",
-   "design": "faded moss tabard over short chain sleeves",
-   "cell": [
-    100,
-    122
-   ],
-   "anchor": [
-    45,
-    121
-   ]
-  },
-  "P14": {
-   "name": "Thornbound Mail",
-   "rarity": "Uncommon",
-   "design": "thorn-shaped iron lamellae and wrapped shins",
-   "cell": [
-    100,
-    122
-   ],
-   "anchor": [
-    44,
-    121
-   ]
-  },
-  "P15": {
-   "name": "Grave Road Warden",
-   "rarity": "Uncommon",
-   "design": "asymmetric weathered shoulder mantle and slim breastplate",
-   "cell": [
-    97,
-    121
-   ],
-   "anchor": [
-    44,
-    120
-   ]
-  },
-  "P16": {
-   "name": "Cinder Acolyte",
-   "rarity": "Uncommon",
-   "design": "charcoal quilted robe with copper elbow plates",
-   "cell": [
-    102,
-    121
-   ],
-   "anchor": [
-    48,
-    120
-   ]
-  },
-  "P17": {
-   "name": "Votive Guard",
-   "rarity": "Uncommon",
-   "design": "beeswax-yellow prayer strips and studded mail",
-   "cell": [
-    100,
-    122
-   ],
-   "anchor": [
-    43,
-    121
-   ]
-  },
-  "P18": {
-   "name": "Ashen Hospitaller",
-   "rarity": "Uncommon",
-   "design": "bone-white split medical surcoat and black arm guards",
-   "cell": [
-    94,
-    120
-   ],
-   "anchor": [
-    42,
-    119
-   ]
-  },
-  "P19": {
-   "name": "Tollkeeper Harness",
-   "rarity": "Uncommon",
-   "design": "brown knee-length brigandine with squared small steel scales",
-   "cell": [
-    97,
-    117
-   ],
-   "anchor": [
-    46,
-    116
-   ]
-  },
-  "P20": {
-   "name": "Oathbound Exile",
-   "rarity": "Uncommon",
-   "design": "faded blue scarf and angular salvaged steel",
-   "cell": [
-    104,
-    121
-   ],
-   "anchor": [
-    44,
-    120
-   ]
-  },
-  "P21": {
-   "name": "Raven Chapel",
-   "rarity": "Rare",
-   "design": "raven-feather short mantle and thin black plate",
-   "cell": [
-    102,
-    115
-   ],
-   "anchor": [
-    44,
-    114
-   ]
-  },
-  "P22": {
-   "name": "Sepulcher Guard",
-   "rarity": "Rare",
-   "design": "vertical tomb-like fluted grey cuirass",
-   "cell": [
-    93,
-    121
-   ],
-   "anchor": [
-    42,
-    120
-   ]
-  },
-  "P23": {
-   "name": "Moonlit Vow",
-   "rarity": "Rare",
-   "design": "crescent silver plates and dark indigo split robe",
-   "cell": [
-    99,
-    123
-   ],
-   "anchor": [
-    44,
-    122
-   ]
-  },
-  "P24": {
-   "name": "Crimson Litany",
-   "rarity": "Rare",
-   "design": "blood-red narrow tabard with crossed iron breast straps",
-   "cell": [
-    103,
-    123
-   ],
-   "anchor": [
-    45,
-    122
-   ]
-  },
-  "P25": {
-   "name": "Wolfsbane Sentinel",
-   "rarity": "Rare",
-   "design": "serrated small steel shoulders and grey fur collar",
-   "cell": [
-    95,
-    118
-   ],
-   "anchor": [
-    39,
-    117
-   ]
-  },
-  "P26": {
-   "name": "Drowned Reliquary",
-   "rarity": "Rare",
-   "design": "verdigris chain skirt and oxidized long bronze chestguard",
-   "cell": [
-    94,
-    121
-   ],
-   "anchor": [
-    40,
-    120
-   ]
-  },
-  "P27": {
-   "name": "Gallows Saint",
-   "rarity": "Rare",
-   "design": "noose-knot cord harness over battered long plate",
-   "cell": [
-    96,
-    121
-   ],
-   "anchor": [
-    42,
-    120
-   ]
-  },
-  "P28": {
-   "name": "Pale Confessor",
-   "rarity": "Rare",
-   "design": "ivory ribbed light armor and severe clerical stole",
-   "cell": [
-    94,
-    116
-   ],
-   "anchor": [
-    43,
-    115
-   ]
-  },
-  "P29": {
-   "name": "Black Rose Oath",
-   "rarity": "Rare",
-   "design": "thorn-etched black vambraces and rose-maroon split coat",
-   "cell": [
-    95,
-    120
-   ],
-   "anchor": [
-    42,
-    119
-   ]
-  },
-  "P30": {
-   "name": "Censer Knight",
-   "rarity": "Rare",
-   "design": "tiny hanging brass censers and charcoal scale cuirass",
-   "cell": [
-    94,
-    121
-   ],
-   "anchor": [
-    40,
-    120
-   ]
-  },
-  "P31": {
-   "name": "Eclipse Justiciar",
-   "rarity": "Epic",
-   "design": "overlapping black crescent plates with pale gold seams",
-   "cell": [
-    116,
-    125
-   ],
-   "anchor": [
-    48,
-    124
-   ]
-  },
-  "P32": {
-   "name": "Thorn Martyr",
-   "rarity": "Epic",
-   "design": "elongated thorn steel breastplate and ragged wine fabric",
-   "cell": [
-    112,
-    118
-   ],
-   "anchor": [
-    46,
-    117
-   ]
-  },
-  "P33": {
-   "name": "Ossuary Regent",
-   "rarity": "Epic",
-   "design": "bone-rib chest armor and narrow dark steel greaves",
-   "cell": [
-    113,
-    115
-   ],
-   "anchor": [
-    45,
-    114
-   ]
-  },
-  "P34": {
-   "name": "Storm Vesper",
-   "rarity": "Epic",
-   "design": "sharp blue-grey flutes and long storm cloak scraps",
-   "cell": [
-    117,
-    121
-   ],
-   "anchor": [
-    49,
-    120
-   ]
-  },
-  "P35": {
-   "name": "Sable Seraph",
-   "rarity": "Epic",
-   "design": "small skeletal wing-shaped shoulder fins and feather hem",
-   "cell": [
-    113,
-    120
-   ],
-   "anchor": [
-    46,
-    119
-   ]
-  },
-  "P36": {
-   "name": "Furnace Templar",
-   "rarity": "Epic",
-   "design": "charred copper plates with restrained ember cracks",
-   "cell": [
-    109,
-    116
-   ],
-   "anchor": [
-    45,
-    115
-   ]
-  },
-  "P37": {
-   "name": "Veilbreaker",
-   "rarity": "Epic",
-   "design": "silver mask medallions on a narrow chain stole",
-   "cell": [
-    111,
-    122
-   ],
-   "anchor": [
-    45,
-    121
-   ]
-  },
-  "P38": {
-   "name": "Violet Inquisitor",
-   "rarity": "Epic",
-   "design": "deep violet split cassock with asymmetrical steel pauldron",
-   "cell": [
-    113,
-    120
-   ],
-   "anchor": [
-    47,
-    119
-   ]
-  },
-  "P39": {
-   "name": "Bleeding Sun",
-   "rarity": "Epic",
-   "design": "sunburst punctured cuirass and bloodstained ivory cloth",
-   "cell": [
-    111,
-    119
-   ],
-   "anchor": [
-    45,
-    118
-   ]
-  },
-  "P40": {
-   "name": "Hollow Basilica",
-   "rarity": "Epic",
-   "design": "architectural gothic arch chest plates and black draped sash",
-   "cell": [
-    108,
-    118
-   ],
-   "anchor": [
-    42,
-    117
-   ]
-  },
-  "P41": {
-   "name": "Saint of Ash",
-   "rarity": "Legendary",
-   "design": "ashen ivory ceramic armor with black scorch veins and thin gold cords",
-   "cell": [
-    113,
-    116
-   ],
-   "anchor": [
-    49,
-    115
-   ]
-  },
-  "P42": {
-   "name": "Last Cathedral",
-   "rarity": "Legendary",
-   "design": "slender cathedral-spire steel shoulder and long narrow tabard",
-   "cell": [
-    126,
-    124
-   ],
-   "anchor": [
-    63,
-    123
-   ]
-  },
-  "P43": {
-   "name": "Kingless Oath",
-   "rarity": "Legendary",
-   "design": "shattered crown motifs on black iron chest and burgundy coat",
-   "cell": [
-    120,
-    119
-   ],
-   "anchor": [
-    63,
-    118
-   ]
-  },
-  "P44": {
-   "name": "Wound of Dawn",
-   "rarity": "Legendary",
-   "design": "narrow gilt fractured cuirass with white bandage wrappings",
-   "cell": [
-    117,
-    119
-   ],
-   "anchor": [
-    57,
-    118
-   ]
-  },
-  "P45": {
-   "name": "Gravebell Sovereign",
-   "rarity": "Legendary",
-   "design": "small bronze bells along battered funerary plate",
-   "cell": [
-    120,
-    120
-   ],
-   "anchor": [
-    52,
-    119
-   ]
-  },
-  "P46": {
-   "name": "Fallen Halo",
-   "rarity": "Legendary",
-   "design": "broken halo filigree collar and silver-black scale armor",
-   "cell": [
-    117,
-    120
-   ],
-   "anchor": [
-    57,
-    119
-   ]
-  },
-  "P47": {
-   "name": "Obsidian Covenant",
-   "rarity": "Legendary",
-   "design": "razor obsidian plates with bone-white oath ribbons",
-   "cell": [
-    121,
-    119
-   ],
-   "anchor": [
-    60,
-    118
-   ]
-  },
-  "P48": {
-   "name": "Winter Confession",
-   "rarity": "Legendary",
-   "design": "frost-grey articulated plate over long black clerical robe",
-   "cell": [
-    113,
-    118
-   ],
-   "anchor": [
-    58,
-    117
-   ]
-  },
-  "P49": {
-   "name": "Lion of Cinders",
-   "rarity": "Legendary",
-   "design": "small leonine brass chest relief and ragged ember cloak",
-   "cell": [
-    134,
-    120
-   ],
-   "anchor": [
-    63,
-    119
-   ]
-  },
-  "P50": {
-   "name": "Pallbearer of Stars",
-   "rarity": "Legendary",
-   "design": "midnight mail with restrained star-silver studs and torn mourning sash",
-   "cell": [
-    133,
-    119
-   ],
-   "anchor": [
-    64,
-    118
-   ]
-  },
-  "P51": {
-   "name": "Godless Benediction",
-   "rarity": "Mythic",
-   "design": "split holy/unholy narrow ivory and abyss-black plates with torn scripture",
-   "cell": [
-    122,
-    124
-   ],
-   "anchor": [
-    53,
-    123
-   ]
-  },
-  "P52": {
-   "name": "End of All Suns",
-   "rarity": "Mythic",
-   "design": "black sun disc chest motif with thin copper eclipse edges",
-   "cell": [
-    121,
-    119
-   ],
-   "anchor": [
-    52,
-    118
-   ]
-  },
-  "P53": {
-   "name": "Saint Beyond Death",
-   "rarity": "Mythic",
-   "design": "pale bone filigree exoskeleton armor over ghost-grey robes",
-   "cell": [
-    123,
-    124
-   ],
-   "anchor": [
-    52,
-    123
-   ]
-  },
-  "P54": {
-   "name": "Crown of Thorns",
-   "rarity": "Mythic",
-   "design": "thorn lattice breastplate with crimson hanging prayer cloth",
-   "cell": [
-    116,
-    118
-   ],
-   "anchor": [
-    49,
-    117
-   ]
-  },
-  "P55": {
-   "name": "Abyssal Absolution",
-   "rarity": "Mythic",
-   "design": "deep midnight jagged armor with subtle cold cyan hairline seams",
-   "cell": [
-    120,
-    120
-   ],
-   "anchor": [
-    51,
-    119
-   ]
-  },
-  "P56": {
-   "name": "First Flame Martyr",
-   "rarity": "Mythic",
-   "design": "charcoal-gold charred armor with tiny red ember vents",
-   "cell": [
-    116,
-    122
-   ],
-   "anchor": [
-    49,
-    121
-   ]
-  },
-  "P57": {
-   "name": "Eternal Funeral",
-   "rarity": "Mythic",
-   "design": "tall narrow mourning collar with grave-silver chain and long black split coat",
-   "cell": [
-    118,
-    120
-   ],
-   "anchor": [
-    49,
-    119
-   ]
-  },
-  "P58": {
-   "name": "Heaven in Ruins",
-   "rarity": "Mythic",
-   "design": "broken marble-white arch plates with dull gold ruin fragments",
-   "cell": [
-    123,
-    123
-   ],
-   "anchor": [
-    54,
-    122
-   ]
-  },
-  "P59": {
-   "name": "Blood of the Covenant",
-   "rarity": "Mythic",
-   "design": "dark garnet enamel narrow cuirass with blood-red twisted cords",
-   "cell": [
-    122,
-    120
-   ],
-   "anchor": [
-    52,
-    119
-   ]
-  },
-  "P60": {
-   "name": "Final Amen",
-   "rarity": "Mythic",
-   "design": "severe matte black perfectly slender gothic armor with single pale gold vertical vow line",
-   "cell": [
-    125,
-    121
-   ],
-   "anchor": [
-    54,
-    120
-   ]
-  }
- },
  "items": {
   "W01": {
    "name": "Nail Sword",
@@ -842,8 +37,8 @@
    "rarity": "Common",
    "kind": "weapon",
    "rect": [
-    90,
-    588,
+    559,
+    196,
     96,
     94
    ]
@@ -853,8 +48,8 @@
    "rarity": "Common",
    "kind": "weapon",
    "rect": [
-    576,
-    685,
+    392,
+    294,
     96,
     89
    ]
@@ -864,8 +59,8 @@
    "rarity": "Common",
    "kind": "weapon",
    "rect": [
-    678,
-    588,
+    0,
+    294,
     96,
     92
    ]
@@ -875,8 +70,8 @@
    "rarity": "Common",
    "kind": "weapon",
    "rect": [
-    98,
-    778,
+    784,
+    294,
     96,
     86
    ]
@@ -952,8 +147,8 @@
    "rarity": "Uncommon",
    "kind": "weapon",
    "rect": [
-    188,
-    588,
+    657,
+    196,
     96,
     94
    ]
@@ -963,8 +158,8 @@
    "rarity": "Uncommon",
    "kind": "weapon",
    "rect": [
-    874,
-    588,
+    196,
+    294,
     96,
     91
    ]
@@ -974,8 +169,8 @@
    "rarity": "Uncommon",
    "kind": "weapon",
    "rect": [
-    286,
-    588,
+    755,
+    196,
     96,
     94
    ]
@@ -1074,7 +269,7 @@
    "kind": "weapon",
    "rect": [
     294,
-    867,
+    388,
     96,
     82
    ]
@@ -1084,8 +279,8 @@
    "rarity": "Rare",
    "kind": "weapon",
    "rect": [
-    674,
-    685,
+    490,
+    294,
     96,
     88
    ]
@@ -1096,7 +291,7 @@
    "kind": "weapon",
    "rect": [
     98,
-    867,
+    388,
     96,
     83
    ]
@@ -1106,8 +301,8 @@
    "rarity": "Rare",
    "kind": "weapon",
    "rect": [
-    482,
-    588,
+    853,
+    196,
     96,
     93
    ]
@@ -1172,8 +367,8 @@
    "rarity": "Epic",
    "kind": "weapon",
    "rect": [
-    0,
-    685,
+    294,
+    294,
     96,
     91
    ]
@@ -1184,7 +379,7 @@
    "kind": "weapon",
    "rect": [
     196,
-    867,
+    388,
     96,
     83
    ]
@@ -1205,8 +400,8 @@
    "rarity": "Epic",
    "kind": "weapon",
    "rect": [
-    775,
-    778,
+    0,
+    388,
     96,
     84
    ]
@@ -1271,8 +466,8 @@
    "rarity": "Legendary",
    "kind": "weapon",
    "rect": [
-    579,
-    778,
+    882,
+    294,
     96,
     85
    ]
@@ -1282,8 +477,8 @@
    "rarity": "Legendary",
    "kind": "weapon",
    "rect": [
-    776,
-    588,
+    98,
+    294,
     96,
     92
    ]
@@ -1293,8 +488,8 @@
    "rarity": "Legendary",
    "kind": "weapon",
    "rect": [
-    490,
-    867,
+    392,
+    388,
     96,
     79
    ]
@@ -1304,8 +499,8 @@
    "rarity": "Legendary",
    "kind": "weapon",
    "rect": [
-    0,
-    778,
+    686,
+    294,
     96,
     87
    ]
@@ -1315,8 +510,8 @@
    "rarity": "Legendary",
    "kind": "weapon",
    "rect": [
-    686,
-    867,
+    490,
+    388,
     96,
     75
    ]
@@ -1326,8 +521,8 @@
    "rarity": "Legendary",
    "kind": "weapon",
    "rect": [
-    772,
-    685,
+    588,
+    294,
     96,
     88
    ]
@@ -1370,8 +565,8 @@
    "rarity": "Mythic",
    "kind": "weapon",
    "rect": [
-    192,
-    953,
+    777,
+    388,
     76,
     66
    ]
@@ -1381,8 +576,8 @@
    "rarity": "Mythic",
    "kind": "weapon",
    "rect": [
-    98,
-    953,
+    683,
+    388,
     92,
     68
    ]
@@ -1392,8 +587,8 @@
    "rarity": "Mythic",
    "kind": "weapon",
    "rect": [
-    858,
-    953,
+    392,
+    474,
     96,
     56
    ]
@@ -1403,8 +598,8 @@
    "rarity": "Mythic",
    "kind": "weapon",
    "rect": [
-    760,
-    953,
+    294,
+    474,
     96,
     59
    ]
@@ -1414,8 +609,8 @@
    "rarity": "Mythic",
    "kind": "weapon",
    "rect": [
-    368,
-    953,
+    0,
+    474,
     96,
     61
    ]
@@ -1425,8 +620,8 @@
    "rarity": "Mythic",
    "kind": "weapon",
    "rect": [
-    270,
-    953,
+    855,
+    388,
     96,
     63
    ]
@@ -1436,8 +631,8 @@
    "rarity": "Mythic",
    "kind": "weapon",
    "rect": [
-    564,
-    953,
+    196,
+    474,
     96,
     60
    ]
@@ -1447,8 +642,8 @@
    "rarity": "Mythic",
    "kind": "shield",
    "rect": [
-    956,
-    953,
+    490,
+    474,
     68,
     36
    ]
@@ -1458,8 +653,8 @@
    "rarity": "Mythic",
    "kind": "shield",
    "rect": [
-    882,
-    867,
+    588,
+    388,
     93,
     71
    ]
@@ -1469,670 +664,10 @@
    "rarity": "Mythic",
    "kind": "shield",
    "rect": [
-    466,
-    953,
+    98,
+    474,
     96,
     61
-   ]
-  },
-  "H01": {
-   "name": "Iron Cap",
-   "rarity": "Common",
-   "kind": "helmet",
-   "rect": [
-    559,
-    196,
-    88,
-    96
-   ]
-  },
-  "H02": {
-   "name": "Rust Sallet",
-   "rarity": "Common",
-   "kind": "helmet",
-   "rect": [
-    196,
-    778,
-    96,
-    86
-   ]
-  },
-  "H03": {
-   "name": "Mail Coif",
-   "rarity": "Common",
-   "kind": "helmet",
-   "rect": [
-    649,
-    196,
-    93,
-    96
-   ]
-  },
-  "H04": {
-   "name": "Pilgrim Hood",
-   "rarity": "Common",
-   "kind": "helmet",
-   "rect": [
-    744,
-    196,
-    95,
-    96
-   ]
-  },
-  "H05": {
-   "name": "Split Nasal",
-   "rarity": "Common",
-   "kind": "helmet",
-   "rect": [
-    841,
-    196,
-    79,
-    96
-   ]
-  },
-  "H06": {
-   "name": "Leather Skullcap",
-   "rarity": "Common",
-   "kind": "helmet",
-   "rect": [
-    922,
-    196,
-    94,
-    96
-   ]
-  },
-  "H07": {
-   "name": "Dent Bascinet",
-   "rarity": "Common",
-   "kind": "helmet",
-   "rect": [
-    0,
-    294,
-    90,
-    96
-   ]
-  },
-  "H08": {
-   "name": "Chapel Kettle",
-   "rarity": "Common",
-   "kind": "helmet",
-   "rect": [
-    0,
-    953,
-    96,
-    70
-   ]
-  },
-  "H09": {
-   "name": "Wrapped Helm",
-   "rarity": "Common",
-   "kind": "helmet",
-   "rect": [
-    92,
-    294,
-    92,
-    96
-   ]
-  },
-  "H10": {
-   "name": "Rivet Mask",
-   "rarity": "Common",
-   "kind": "helmet",
-   "rect": [
-    186,
-    294,
-    81,
-    96
-   ]
-  },
-  "H11": {
-   "name": "Votive Visor",
-   "rarity": "Uncommon",
-   "kind": "helmet",
-   "rect": [
-    269,
-    294,
-    90,
-    96
-   ]
-  },
-  "H12": {
-   "name": "Thorn Coif",
-   "rarity": "Uncommon",
-   "kind": "helmet",
-   "rect": [
-    361,
-    294,
-    95,
-    96
-   ]
-  },
-  "H13": {
-   "name": "Road Sallet",
-   "rarity": "Uncommon",
-   "kind": "helmet",
-   "rect": [
-    392,
-    867,
-    96,
-    80
-   ]
-  },
-  "H14": {
-   "name": "Copper Beak",
-   "rarity": "Uncommon",
-   "kind": "helmet",
-   "rect": [
-    294,
-    778,
-    96,
-    86
-   ]
-  },
-  "H15": {
-   "name": "Vigil Hood",
-   "rarity": "Uncommon",
-   "kind": "helmet",
-   "rect": [
-    458,
-    294,
-    95,
-    96
-   ]
-  },
-  "H16": {
-   "name": "Penitent Mask",
-   "rarity": "Uncommon",
-   "kind": "helmet",
-   "rect": [
-    555,
-    294,
-    93,
-    96
-   ]
-  },
-  "H17": {
-   "name": "Ring Aventail",
-   "rarity": "Uncommon",
-   "kind": "helmet",
-   "rect": [
-    650,
-    294,
-    92,
-    96
-   ]
-  },
-  "H18": {
-   "name": "Ashen Cap",
-   "rarity": "Uncommon",
-   "kind": "helmet",
-   "rect": [
-    98,
-    685,
-    96,
-    91
-   ]
-  },
-  "H19": {
-   "name": "Bell Guard",
-   "rarity": "Uncommon",
-   "kind": "helmet",
-   "rect": [
-    744,
-    294,
-    87,
-    96
-   ]
-  },
-  "H20": {
-   "name": "Exile Armet",
-   "rarity": "Uncommon",
-   "kind": "helmet",
-   "rect": [
-    833,
-    294,
-    84,
-    96
-   ]
-  },
-  "H21": {
-   "name": "Raven Helm",
-   "rarity": "Rare",
-   "kind": "helmet",
-   "rect": [
-    919,
-    294,
-    95,
-    96
-   ]
-  },
-  "H22": {
-   "name": "Sepulcher Mask",
-   "rarity": "Rare",
-   "kind": "helmet",
-   "rect": [
-    0,
-    392,
-    82,
-    96
-   ]
-  },
-  "H23": {
-   "name": "Moon Visor",
-   "rarity": "Rare",
-   "kind": "helmet",
-   "rect": [
-    84,
-    392,
-    83,
-    96
-   ]
-  },
-  "H24": {
-   "name": "Crimson Coif",
-   "rarity": "Rare",
-   "kind": "helmet",
-   "rect": [
-    169,
-    392,
-    88,
-    96
-   ]
-  },
-  "H25": {
-   "name": "Wolf Sallet",
-   "rarity": "Rare",
-   "kind": "helmet",
-   "rect": [
-    870,
-    685,
-    96,
-    88
-   ]
-  },
-  "H26": {
-   "name": "Drowned Crown",
-   "rarity": "Rare",
-   "kind": "helmet",
-   "rect": [
-    259,
-    392,
-    86,
-    96
-   ]
-  },
-  "H27": {
-   "name": "Gallows Hood",
-   "rarity": "Rare",
-   "kind": "helmet",
-   "rect": [
-    347,
-    392,
-    80,
-    96
-   ]
-  },
-  "H28": {
-   "name": "Pale Confessor",
-   "rarity": "Rare",
-   "kind": "helmet",
-   "rect": [
-    429,
-    392,
-    72,
-    96
-   ]
-  },
-  "H29": {
-   "name": "Rose Bascinet",
-   "rarity": "Rare",
-   "kind": "helmet",
-   "rect": [
-    503,
-    392,
-    96,
-    96
-   ]
-  },
-  "H30": {
-   "name": "Censer Helm",
-   "rarity": "Rare",
-   "kind": "helmet",
-   "rect": [
-    601,
-    392,
-    89,
-    96
-   ]
-  },
-  "H31": {
-   "name": "Eclipse Armet",
-   "rarity": "Epic",
-   "kind": "helmet",
-   "rect": [
-    692,
-    392,
-    91,
-    96
-   ]
-  },
-  "H32": {
-   "name": "Martyr Visor",
-   "rarity": "Epic",
-   "kind": "helmet",
-   "rect": [
-    785,
-    392,
-    86,
-    96
-   ]
-  },
-  "H33": {
-   "name": "Ossuary Crown",
-   "rarity": "Epic",
-   "kind": "helmet",
-   "rect": [
-    873,
-    392,
-    84,
-    96
-   ]
-  },
-  "H34": {
-   "name": "Storm Beak",
-   "rarity": "Epic",
-   "kind": "helmet",
-   "rect": [
-    0,
-    490,
-    93,
-    96
-   ]
-  },
-  "H35": {
-   "name": "Sable Helm",
-   "rarity": "Epic",
-   "kind": "helmet",
-   "rect": [
-    95,
-    490,
-    86,
-    96
-   ]
-  },
-  "H36": {
-   "name": "Furnace Mask",
-   "rarity": "Epic",
-   "kind": "helmet",
-   "rect": [
-    183,
-    490,
-    84,
-    96
-   ]
-  },
-  "H37": {
-   "name": "Veil Visor",
-   "rarity": "Epic",
-   "kind": "helmet",
-   "rect": [
-    384,
-    588,
-    96,
-    94
-   ]
-  },
-  "H38": {
-   "name": "Violet Hood",
-   "rarity": "Epic",
-   "kind": "helmet",
-   "rect": [
-    269,
-    490,
-    87,
-    96
-   ]
-  },
-  "H39": {
-   "name": "Bleeding Sun",
-   "rarity": "Epic",
-   "kind": "helmet",
-   "rect": [
-    580,
-    588,
-    96,
-    93
-   ]
-  },
-  "H40": {
-   "name": "Basilica Helm",
-   "rarity": "Epic",
-   "kind": "helmet",
-   "rect": [
-    358,
-    490,
-    78,
-    96
-   ]
-  },
-  "H41": {
-   "name": "Ash Saint",
-   "rarity": "Legendary",
-   "kind": "helmet",
-   "rect": [
-    438,
-    490,
-    67,
-    96
-   ]
-  },
-  "H42": {
-   "name": "Cathedral Spire",
-   "rarity": "Legendary",
-   "kind": "helmet",
-   "rect": [
-    507,
-    490,
-    60,
-    96
-   ]
-  },
-  "H43": {
-   "name": "Kingless Crown",
-   "rarity": "Legendary",
-   "kind": "helmet",
-   "rect": [
-    677,
-    778,
-    96,
-    85
-   ]
-  },
-  "H44": {
-   "name": "Dawn Visor",
-   "rarity": "Legendary",
-   "kind": "helmet",
-   "rect": [
-    569,
-    490,
-    87,
-    96
-   ]
-  },
-  "H45": {
-   "name": "Gravebell Helm",
-   "rarity": "Legendary",
-   "kind": "helmet",
-   "rect": [
-    658,
-    490,
-    92,
-    96
-   ]
-  },
-  "H46": {
-   "name": "Fallen Halo",
-   "rarity": "Legendary",
-   "kind": "helmet",
-   "rect": [
-    196,
-    685,
-    96,
-    91
-   ]
-  },
-  "H47": {
-   "name": "Obsidian Mask",
-   "rarity": "Legendary",
-   "kind": "helmet",
-   "rect": [
-    752,
-    490,
-    95,
-    96
-   ]
-  },
-  "H48": {
-   "name": "Winter Confessor",
-   "rarity": "Legendary",
-   "kind": "helmet",
-   "rect": [
-    849,
-    490,
-    73,
-    96
-   ]
-  },
-  "H49": {
-   "name": "Cinder Lion",
-   "rarity": "Legendary",
-   "kind": "helmet",
-   "rect": [
-    380,
-    685,
-    96,
-    90
-   ]
-  },
-  "H50": {
-   "name": "Star Mourner",
-   "rarity": "Legendary",
-   "kind": "helmet",
-   "rect": [
-    924,
-    490,
-    96,
-    96
-   ]
-  },
-  "H51": {
-   "name": "Godless Crown",
-   "rarity": "Mythic",
-   "kind": "helmet",
-   "rect": [
-    873,
-    778,
-    96,
-    84
-   ]
-  },
-  "H52": {
-   "name": "Sunless Visor",
-   "rarity": "Mythic",
-   "kind": "helmet",
-   "rect": [
-    392,
-    778,
-    96,
-    86
-   ]
-  },
-  "H53": {
-   "name": "Deathless Saint",
-   "rarity": "Mythic",
-   "kind": "helmet",
-   "rect": [
-    490,
-    778,
-    87,
-    86
-   ]
-  },
-  "H54": {
-   "name": "Thorn Crown",
-   "rarity": "Mythic",
-   "kind": "helmet",
-   "rect": [
-    0,
-    867,
-    96,
-    84
-   ]
-  },
-  "H55": {
-   "name": "Abyss Mask",
-   "rarity": "Mythic",
-   "kind": "helmet",
-   "rect": [
-    588,
-    867,
-    96,
-    79
-   ]
-  },
-  "H56": {
-   "name": "First Flame",
-   "rarity": "Mythic",
-   "kind": "helmet",
-   "rect": [
-    294,
-    685,
-    84,
-    91
-   ]
-  },
-  "H57": {
-   "name": "Funeral Mitre",
-   "rarity": "Mythic",
-   "kind": "helmet",
-   "rect": [
-    0,
-    588,
-    88,
-    95
-   ]
-  },
-  "H58": {
-   "name": "Ruined Heaven",
-   "rarity": "Mythic",
-   "kind": "helmet",
-   "rect": [
-    662,
-    953,
-    96,
-    60
-   ]
-  },
-  "H59": {
-   "name": "Blood Covenant",
-   "rarity": "Mythic",
-   "kind": "helmet",
-   "rect": [
-    784,
-    867,
-    96,
-    73
-   ]
-  },
-  "H60": {
-   "name": "Final Amen",
-   "rarity": "Mythic",
-   "kind": "helmet",
-   "rect": [
-    478,
-    685,
-    96,
-    90
    ]
   }
  },
