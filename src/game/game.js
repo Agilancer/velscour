@@ -153,7 +153,7 @@ export const game = {
     const world = new World('town', { map: t.map, tileset, biome: TOWN_BIOME, depth: 0, townTiles, buildings: t.buildings, props: t.props });
     world.npcs = t.npcs.map((n) => ({ vendor: n.vendor, x: n.x, y: n.y, reach: 1.8, flip: n.x > 20, use: () => Vendor.open(n.vendor.id) }));
     for (const v of VILLAGERS) {
-      const [x, y] = t.map.randomNear(24, 25, 5);
+      const [x, y] = t.map.randomNear(t.center.x, t.center.y + 3, 5);
       const npc = {
         name: v.name, sprite: v.sprite, pal: v.pal, x, y, reach: 1.6, flip: false, tx: x, ty: y, waitT: rand(1, 4), barkT: rand(4, 12),
         use() { floatText(this.x, this.y, 70, pick(v.barks), '#e8dcc4', 12, { life: 3, vz: 8 }); },
@@ -161,10 +161,10 @@ export const game = {
           this.waitT -= dt;
           if (this.waitT <= 0) {
             const d = dist(this.x, this.y, this.tx, this.ty);
-            if (d < 0.1) { this.waitT = rand(2, 6); [this.tx, this.ty] = t.map.randomNear(24, 25, 7); return; }
+            if (d < 0.1) { this.waitT = rand(2, 6); [this.tx, this.ty] = t.map.randomNear(t.center.x, t.center.y + 3, 7); return; }
             const s = Math.min(d, 1.1 * dt);
             const nx = this.x + ((this.tx - this.x) / d) * s, ny = this.y + ((this.ty - this.y) / d) * s;
-            if (t.map.walkable(nx, ny)) { this.flip = nx < this.x; this.x = nx; this.y = ny; } else this.waitT = 0.5, [this.tx, this.ty] = t.map.randomNear(24, 25, 7);
+            if (t.map.walkable(nx, ny)) { this.flip = nx < this.x; this.x = nx; this.y = ny; } else this.waitT = 0.5, [this.tx, this.ty] = t.map.randomNear(t.center.x, t.center.y + 3, 7);
           }
           const p = G.player;
           this.barkT -= dt;

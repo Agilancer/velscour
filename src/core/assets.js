@@ -15,6 +15,7 @@ export const A = {
   classScaled: {}, // `${id}|${h}|${palette}` -> canvas
   hud: null, hudGeo: null, logo: null, potions: {},
   packs: {}, // biome pack id -> { floors, walls, scatter, meta } (assets/tiles/<id>/), a Promise while loading
+  town: null, // the town pack (assets/tiles/town/, tools/townpack.py): { ground, objects, meta }
   chestImg: null, chestMeta: null, // assets/props/chests.*
   biomeSets: {}, // `${biome}|${pack}` -> recoloured tile set (biomeTileSet)
 };
@@ -43,6 +44,8 @@ export async function loadAssets(progress) {
   jobs.push(track(loadImage('assets/ui/logo.webp').then((i) => { A.logo = i; })));
   for (const c of ['red', 'blue', 'purple', 'orange']) jobs.push(track(loadImage(`assets/ui/potion_${c}.png`).then((i) => { A.potions[c] = i; })));
   jobs.push(track(loadPack(DEFAULT_PACK)));
+  jobs.push(track(Promise.all([loadImage('assets/tiles/town/ground.webp'), loadImage('assets/tiles/town/objects.webp'), loadJSON('assets/tiles/town/town.json')])
+    .then(([ground, objects, meta]) => { A.town = { ground, objects, meta }; })));
   jobs.push(track(loadImage('assets/props/chests.webp').then((i) => { A.chestImg = i; })));
   jobs.push(track(loadJSON('assets/props/chests.json').then((j) => { A.chestMeta = j; })));
   await Promise.all(jobs);

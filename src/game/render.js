@@ -40,6 +40,20 @@ function drawWall(ctx, o, k, alpha) {
 function drawProp(ctx, pr, alpha) {
   const x = isoX(pr.x, pr.y), y = isoY(pr.x, pr.y);
   if (alpha < 1) ctx.globalAlpha = alpha;
+  if (pr.kind === 'flame') {
+    // a lit wall torch on a town building: a flickering flame over the pack's unlit torch head
+    const fx = x + pr.fx, fy = y + pr.fy, f = Math.sin(G.time * 11 + pr.x * 3) * 0.5 + Math.sin(G.time * 17 + pr.y) * 0.3;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.55 + f * 0.1;
+    ctx.drawImage(glowSprite('#ff9a40'), fx - 20, fy - 26, 40, 40);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#ff7a20';
+    ctx.beginPath(); ctx.ellipse(fx, fy - 4 - f, 2.6, 5 + f, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffe080';
+    ctx.beginPath(); ctx.ellipse(fx, fy - 3 - f * 0.5, 1.3, 2.8 + f * 0.5, 0, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    return;
+  }
   if (pr.k) {
     // biome pack scatter: drawn from its ground pivot (ox/oy in native px), maybe mirrored about it
     const s = pr.spr, w = s.w * pr.k, h = s.h * pr.k, dy = y + s.oy * pr.k;
@@ -65,11 +79,16 @@ function drawProp(ctx, pr, alpha) {
   if (alpha < 1 || pr.light) ctx.globalAlpha = 1;
 }
 
+/** A town building's rect [x, y, w, h] in world px (town-pack art drawn from the building's centre). */
+function buildingRect(b) {
+  const s = b.spr, k = b.k;
+  return [isoX(b.cx, b.cy) + s.ox * k, isoY(b.cx, b.cy) + s.oy * k, s.w * k, s.h * k];
+}
+
 function drawBuilding(ctx, b, alpha) {
-  const s = b.spr;
-  const x = isoX(b.x0, b.y0) - s.ox, y = isoY(b.x0, b.y0) - s.oy;
+  const s = b.spr, [x, y, w, h] = buildingRect(b);
   if (alpha < 1) ctx.globalAlpha = alpha;
-  ctx.drawImage(s.img, x, y, s.w, s.h);
+  ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, x, y, w, h);
   if (alpha < 1) ctx.globalAlpha = 1;
 }
 
@@ -268,8 +287,8 @@ export function renderWorld(ctx, world) {
       case 5: {
         let a = 1;
         if (p && o.depth > pd) {
-          const s = o.spr, x = isoX(o.x0, o.y0) - s.ox, y = isoY(o.x0, o.y0) - s.oy;
-          if (occludes([x + s.w * 0.15, y, s.w * 0.7, s.h * 0.85])) a = 0.4;
+          const [x, y, w, h] = buildingRect(o);
+          if (occludes([x + w * 0.15, y, w * 0.7, h * 0.85])) a = 0.4;
         }
         drawBuilding(ctx, o, a);
         break;

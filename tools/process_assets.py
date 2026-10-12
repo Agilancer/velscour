@@ -8,6 +8,7 @@ JSON atlases under assets/. Re-run this whenever a source sheet changes:
     pip install pillow numpy scipy
     python3 tools/process_assets.py          # everything
     python3 tools/process_assets.py biomes [catacombs]  # biome packs: floors, walls, arches, doors, scatter (tools/biomepack.py)
+    python3 tools/process_assets.py town     # the town pack: ground, transitions, buildings, trees (tools/townpack.py)
     python3 tools/process_assets.py props    # loot-chest art
     python3 tools/process_assets.py classes [paladin]   # class art packs (tools/classart.py, docs/CLASS_ART.md)
     python3 tools/process_assets.py gear [paladin]      # armor + helm libraries (tools/gearart.py, docs/CLASS_ART.md)
@@ -205,13 +206,16 @@ def pack_atlas(pieces, aw=1024):
 def main():
     args = sys.argv[1:]
     if not args or "all" in args:
-        args = ["sprites", "biomes", "props", "classes", "enemies", "select"]
+        args = ["sprites", "biomes", "town", "props", "classes", "enemies", "select"]
     if "sprites" in args:
         process_classes()
         process_ui()
     if "biomes" in args:
         from biomepack import process_biome_packs
         process_biome_packs(args[args.index("biomes") + 1:])
+    if "town" in args:
+        from townpack import process_town_pack
+        process_town_pack()
     if "props" in args:
         process_chests()
     if "enemies" in args:
