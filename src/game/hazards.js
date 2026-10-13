@@ -483,12 +483,12 @@ export class Leap {
     const s = this.src;
     if (s.dead) return false;
     this.t += dt;
-    const k = Math.min(1, this.t / this.dur);
+    const k = (this.k = Math.min(1, this.t / this.dur));
     s.x = this.sx + (this.tx - this.sx) * k; s.y = this.sy + (this.ty - this.sy) * k;
     s.z = 4 * (this.fx === 'dragon' || this.fx === 'meteor' ? 120 : 70) * k * (1 - k);
-    if (chance(dt * 30)) trail(this.fx === 'dragon' || this.fx === 'meteor' ? 'fireball' : 'bolt', s.x, s.y, s.z + 20, this.E, dt);
+    if (!this.lance && chance(dt * 30)) trail(this.fx === 'dragon' || this.fx === 'meteor' ? 'fireball' : 'bolt', s.x, s.y, s.z + 20, this.E, dt);
     if (k >= 1) {
-      s.z = 0; s.channel = null;
+      s.z = 0; s.channel = null; this.done = true;
       explode(this.world, s, s.x, s.y, this.r, this.dmg, this.el, { ...this.o, knock: this.o.knock || 0.6 }, this.fx === 'meteor' || this.fx === 'dragon' ? 'meteor' : this.fx === 'holy' ? 'holy' : 'eruption');
       sfx('thud');
       addDecal(s.x, s.y, 'rgba(10,6,4,0.6)', this.r * 0.5, 'scorch', 0.7);

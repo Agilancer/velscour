@@ -36,6 +36,7 @@ node tools/tests/mobs.js [levels]                  # monster pathing: awake mons
 node tools/tests/bot.js paladin 2                  # bot plays depths 1..2, prints balance stats
 node tools/tests/skills.js wizard,gunner           # cast every skill of a class (all 16 if no arg; slow)
 node tools/tests/classart.js paladin               # class art pack: catalog weapons, ability effects
+node tools/tests/lance.js [mobile]                 # Dragoon leaps: energy lance + per-skill trails, stepped frame by frame
 node tools/tests/gear.js paladin,wizard            # hero looks: armor+helm per rarity, finishes, auras (all = 16)
 node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners in those biomes (docs/ART.md)
 node tools/tests/pack.js catacombs,blood          # biome pack levels: arches, doors, reachability; door/arch shots
