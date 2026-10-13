@@ -14,6 +14,7 @@ import { augHits } from '../data/rings.js';
 import { canLearn } from '../ui/skills.js';
 import { equipFromBag, socketGem, dropFromBag, changed } from '../ui/inventory.js';
 import { Vendor, fuseAll } from '../ui/vendor.js';
+import { Stash, addToStash } from '../ui/stash.js';
 import { addToBag } from './player.js';
 import { Delayed, Area } from './hazards.js';
 import { effects, Telegraph } from '../gfx/vfx.js';
@@ -453,7 +454,18 @@ export const Auto = {
         const f = fitScore(p, it);
         if (f.s > bs) { bs = f.s; best = i; bslot = f.slot; }
       });
+      // a fresh look: body armor or a helm of the same or better rarity that's nearly as strong gets worn anyway
+      if (best < 0) {
+        this.worn = this.worn || new Set();
+        c.bag.forEach((it, i) => {
+          if (best >= 0 || !it || it.type !== 'gear' || it.unid || (it.req || 1) > c.level || (it.slot !== 'body' && it.slot !== 'head') || this.worn.has(it.uid)) return;
+          const old = c.equip[it.slot];
+          if (old && (it.rarity < old.rarity || it.ilvl < old.ilvl - 4)) return;
+          if (fitScore(p, it).s > cur * 0.975) { best = i; bslot = it.slot; }
+        });
+      }
       if (best < 0) break;
+      if (this.worn) { this.worn.add(c.bag[best].uid); if (c.equip[bslot]) this.worn.add(c.equip[bslot].uid); }
       const it = c.bag[best];
       equipFromBag(best, bslot);
       G.ui.log(`Auto-play equipped <span style="color:${itemColor(it)}">${escapeHtml(itemName(it))}</span>.`, '#8fe0ff');
@@ -508,6 +520,7 @@ export const Auto = {
     if (it.type !== 'gear') return free > 0;
     const upgrade = (it.req || 1) <= c.level && this.isUpgrade(it);
     if (upgrade) return true;
+    if ((it.slot === 'body' || it.slot === 'head') && (it.req || 1) <= c.level && (!c.equip[it.slot] || it.rarity >= c.equip[it.slot].rarity) && free > 0) return true; // new looks
     const minRarity = free > 30 ? 1 : free > 12 ? 2 : 3;
     if (it.rarity < minRarity) return false;
     return free > 0 || this.worstBag(itemValue(it)) >= 0;
@@ -1084,7 +1097,7 @@ export const Auto = {
       this.watchStuck(dt);
       return;
     }
-    const npc = vendorNpc(w, step.vendor);
+    const npc = step.stash ? w.npcs.find((n) => n.stash) : vendorNpc(w, step.vendor);
     if (!npc) { T.i++; return; }
     T.t += dt;
     if (T.phase === 'walk') {
@@ -1092,12 +1105,12 @@ export const Auto = {
       // blocked short of the counter (summons, props): trade from anywhere in reach, or give up on this vendor
       const reach = npc.reach || 1.8, d = dist(p.x, p.y, npc.x, npc.y);
       if (this.goTo(npc.x, npc.y, reach - 0.3, dt) || (T.t > 6 && d <= reach)) { T.phase = 'open'; T.t = 0; }
-      else if (T.t > 25) { G.ui.log(`Auto-play couldn't reach the ${npc.vendor.title} and moved on.`, '#ff8080'); T.i++; T.t = 0; }
+      else if (T.t > 25) { G.ui.log(`Auto-play couldn't reach the ${npc.vendor ? npc.vendor.title : npc.name} and moved on.`, '#ff8080'); T.i++; T.t = 0; }
       this.watchStuck(dt);
       return;
     }
     if (T.phase === 'open') {
-      try { Vendor.open(step.vendor); } catch (e) { console.warn('auto-play could not open a vendor', e); }
+      try { if (step.stash) Stash.open(); else Vendor.open(step.vendor); } catch (e) { console.warn('auto-play could not open a vendor', e); }
       T.phase = 'act'; T.t = 0;
       return;
     }
@@ -1116,6 +1129,7 @@ export const Auto = {
   townPlan() {
     const c = G.char;
     const steps = [];
+    if (c.stash && c.stash.some((b) => b && (b.type === 'gem' || (b.req || 1) <= c.level))) steps.push({ stash: true, label: 'Checking the storage chest', fn: () => this.unstash() });
     steps.push({ vendor: 'weapons', label: 'Selling loot', fn: () => { this.sellJunk(); this.buyGear(Vendor.stock.weapons); } });
     steps.push({ vendor: 'alchemist', label: 'Buying potions', fn: () => this.buyPotions() });
     steps.push({ vendor: 'armor', label: 'Browsing armor', fn: () => this.buyGear(Vendor.stock.armor) });
@@ -1124,7 +1138,34 @@ export const Auto = {
     steps.push({ vendor: 'upgrade', label: 'Upgrading gear', fn: () => this.blacksmith() });
     steps.push({ vendor: 'enchant', label: 'Enchanting gear', fn: () => this.enchanter() });
     steps.push({ vendor: 'gamble', label: 'Gambling', fn: () => { this.gamble(); this.sellJunk(); } });
+    steps.push({ stash: true, label: 'Stashing gems and gear for later', fn: () => this.stashExtras() });
     return steps;
+  },
+  /** Storage chest: take out the gems (for the jeweler and fusing) and any stored gear the hero can now wear. */
+  unstash() {
+    const c = G.char;
+    c.stash.forEach((it, i) => {
+      if (!it || (it.type === 'gear' && (it.req || 1) > c.level) || (it.type === 'gear' && bagFree(c) < 12)) return;
+      if (addToBag(c, it)) c.stash[i] = null;
+    });
+    this.optimizeGear();
+    changed();
+  },
+  /** Storage chest: put away every gem and the good gear the hero is still too low-level to wear. */
+  stashExtras() {
+    const c = G.char;
+    let n = 0;
+    c.bag.forEach((it, i) => {
+      if (!it || !(it.type === 'gem' || (it.type === 'gear' && (it.req || 1) > c.level && it.rarity >= 2))) return;
+      if (addToStash(c, it)) { c.bag[i] = null; n++; }
+    });
+    // a full chest: make room by dropping the weakest stored gear (lowest rarity, then item level)
+    if (c.stash.every(Boolean)) {
+      const worst = c.stash.map((b, i) => ({ b, i })).filter(({ b }) => b.type === 'gear').sort((a, b) => a.b.rarity - b.b.rarity || a.b.ilvl - b.b.ilvl).slice(0, 30);
+      for (const { b, i } of worst) { c.gold += sellPrice(b); c.stash[i] = null; }
+    }
+    if (n) G.ui.log(`Auto-play stored ${n} item${n > 1 ? 's' : ''} in the storage chest.`, '#c8f0ff');
+    changed();
   },
   budget(frac) {
     const c = G.char;

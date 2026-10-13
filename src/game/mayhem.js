@@ -184,7 +184,7 @@ export function ambush(w, kind = pick(ENTRY), n = 0) {
 }
 
 // ---------------------------------------------------------------- MADNESS
-export const MADNESS_FILL = 600; // seconds in the dungeon to fill the meter
+export const MADNESS_FILL = 420; // seconds in the dungeon to fill the meter
 export const MADNESS_DUR = 30;
 
 /** Fills in the dungeon, drains while it burns. */

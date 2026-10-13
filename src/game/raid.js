@@ -2,7 +2,7 @@
 // holding one of RAID_BOSSES, picked at random. A raid boss is huge and fights in 3 phases (4 from depth 25). Each
 // phase plays a randomly rolled rotation of its ability pool, now and then chaining a quick follow-up. At each
 // phase change it retreats to the middle of the arena behind warding crystals (it takes 90% less damage until they
-// break) while adds pour in. One to three random modifiers change each fight, and after five minutes it enrages.
+// break) while adds pour in. One to three random modifiers change each fight, and after 3.5 minutes it enrages, then frenzies every 45 s.
 // The arena seals behind the hero until the boss dies.
 import { G } from '../state.js';
 import { rand, chance, TAU, clamp, angleTo, angleDiff, dist, pick, randi, shuffle } from '../core/util.js';
@@ -18,6 +18,7 @@ import { bodyR } from '../world/map.js';
 import { makeMonster, monsterBase, Monster } from './monster.js';
 import { dropLoot } from './loot.js';
 import { UI } from '../ui/ui.js';
+import { madnessReady } from './mayhem.js';
 
 // ------------------------------------------------------------------------------------------------ the bosses
 // art: bestiary art ids (one is picked); fx: their projectile look; adds: archetypes that come to their aid;
@@ -418,7 +419,9 @@ class Raid {
     if (!this.sealed && this.inside(p, 1.5)) this.seal();
     this.t += dt;
     this.minHp = Math.min(this.minHp ?? 1, p.hp / p.maxHp);
-    if (!this.enraged && this.t > 300) this.enrage('Five minutes have passed');
+    // the DPS check: enraged after 3.5 minutes, and harder still every 45 s after that (MADNESS doubles the hero's damage)
+    if (!this.enraged && this.t > 210) this.enrage('Too slow, mortal');
+    if (this.enraged && this.t > (this.frenzyT || 255)) { this.frenzyT = this.t + 45; m.dmg *= 1.15; m.atkCd *= 0.95; floatText(m.x, m.y, 120, 'FRENZY', '#ff3010', 16, { life: 1.4 }); if (madnessReady()) UI.log('Unleash your MADNESS (G) before it is too late!', '#ff2050'); }
     // next phase
     if (!this.inter && this.pi < this.marks.length && m.hp < m.maxHp * this.marks[this.pi]) { this.startInter(); return; }
     if (this.inter) this.interTick(dt);
@@ -483,6 +486,7 @@ class Raid {
     map.flowFrom = [-9, -9];
     w.addHazard((this.barrier = new Barrier(g, this.E)));
     UI.log('The way back is sealed!', '#ff6040');
+    if (madnessReady()) UI.log('Your MADNESS is ready. Save it for the boss, or unleash it now (G).', '#ff2050');
     sfx('thud'); sfx('portal', 0.6);
   }
   unseal() {
@@ -497,7 +501,8 @@ class Raid {
   enrage(why) {
     const m = this.m;
     this.enraged = true;
-    m.speed *= 1.15; m.dmg *= 1.4; m.atkCd *= 0.8;
+    m.speed *= 1.15; m.dmg *= 1.5; m.atkCd *= 0.8;
+    if (madnessReady()) UI.log('Your MADNESS is ready: press G (or the MADNESS button) to double your damage!', '#ff2050');
     m.aura = '#ff2000';
     UI.centerMsg(`${this.tpl.name.toUpperCase()} ENRAGES`, why, 2.6);
     addEffect(new Ring(m.x, m.y, 0.2, 5, 0.9, '#ff3010', 7));

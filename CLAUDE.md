@@ -26,6 +26,7 @@ node tools/tests/data_check.mjs                    # skill data sanity check, no
 node tools/tests/town.js [seeds]                   # random towns: vendors/portal reachable + screenshots per seed
 node tools/tests/rings.js                          # ring augments in a live dungeon, skill mastery, ring/forge UI shots
 node tools/tests/flow.js                           # town -> portal -> boss -> exit -> depth 2 -> death -> reload
+node tools/tests/stash.js                          # town storage chest: 300 slots, store/take, auto-play stashing
 node tools/tests/ui.js                             # skill tree, inventory, socketing, vendors
 node tools/tests/mobile.js                         # 844x390 touch layout + joystick
 node tools/tests/hud.js                            # HUD art: 15-slot bar keys, save migration, minimap ring, buttons, Quest Log, touch pages

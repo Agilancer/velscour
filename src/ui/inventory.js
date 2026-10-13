@@ -84,6 +84,7 @@ export function dropFromBag(idx) {
 function handleDropOnBag(idx, data) {
   const c = G.char;
   if (data.type === 'shop') return G.ui.vendor && G.ui.vendor.buy(data, idx);
+  if (data.type === 'stash') return G.ui.stash && G.ui.stash.take(data.idx);
   if (data.type !== 'item') return false;
   if (data.where === 'bag') {
     if (data.idx === idx) return false;
@@ -123,8 +124,8 @@ function bagSlot(idx) {
     onRight: () => quickUse(idx),
     onDropWorld: (data) => (data.where === 'bag' ? dropFromBag(data.idx) : false),
   });
-  droppable(d, (data) => handleDropOnBag(idx, data), (data) => data.type === 'item' || data.type === 'shop');
-  if (it) UI.tip(d, () => itemTooltip(c.bag[idx], { compare: c.bag[idx] && c.bag[idx].slot ? c.equip[slotFor(c.equip, c.bag[idx])] : null, price: G.ui.vendor && G.ui.vendor.active ? Math.max(1, Math.floor(itemValue(c.bag[idx]) / 4)) : 0, priceLabel: 'Sells for', hint: G.ui.vendor && G.ui.vendor.active ? 'Right-click to sell' : it.type === 'gear' ? 'Right-click / double-click to equip' : it.type === 'gem' ? 'Drag onto gear to socket' : '' }));
+  droppable(d, (data) => handleDropOnBag(idx, data), (data) => data.type === 'item' || data.type === 'shop' || data.type === 'stash');
+  if (it) UI.tip(d, () => itemTooltip(c.bag[idx], { compare: c.bag[idx] && c.bag[idx].slot ? c.equip[slotFor(c.equip, c.bag[idx])] : null, price: G.ui.vendor && G.ui.vendor.active ? Math.max(1, Math.floor(itemValue(c.bag[idx]) / 4)) : 0, priceLabel: 'Sells for', hint: G.ui.vendor && G.ui.vendor.active ? 'Right-click to sell' : G.ui.stash && G.ui.stash.active ? 'Right-click to store' : it.type === 'gear' ? 'Right-click / double-click to equip' : it.type === 'gem' ? 'Drag onto gear to socket' : '' }));
   return d;
 }
 
@@ -132,6 +133,7 @@ function quickUse(idx) {
   const c = G.char, it = c.bag[idx];
   if (!it) return;
   if (G.ui.vendor && G.ui.vendor.active) { G.ui.vendor.sell({ where: 'bag', idx }); return; }
+  if (G.ui.stash && G.ui.stash.active) { G.ui.stash.store(idx); return; }
   if (it.type === 'gear') equipFromBag(idx);
   else if (it.type === 'gem') { UI.selected = { where: 'bag', idx }; UI.log('Drag the gem onto a socketed item to insert it.'); UI.refresh(); }
 }

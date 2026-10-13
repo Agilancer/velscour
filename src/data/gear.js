@@ -60,6 +60,30 @@ const P = [
   ['Demonheart', 5, 'black', 'flame', 'ember', 'redleather', '#ff2010'], ['Eternal Frost', 5, 'frost', 'storm', 'silver', 'greyleather', '#a0f0ff'],
   ['Nightmare', 5, 'obsidian', 'blood', 'amethyst', 'darkleather', '#ff20a0'], ['Worldtree', 5, 'jade', 'forest', 'gold', 'leather', '#a0ff60'],
 ];
+// More finishes, mixed per rarity from that rarity's materials (seeded, so a palette index means the same look
+// in every session; appended after the hand-made ones so saved looks keep their colours)
+const MIX = [
+  [['rust', 'ash', 'iron', 'bone'], ['moss', 'sable', 'navy', 'wine', 'forest', 'ochre'], ['rust', 'iron', 'bronze', 'copper']],
+  [['steel', 'iron', 'bronze', 'copper', 'bloodsteel'], ['navy', 'crimson', 'forest', 'teal', 'violet', 'wine', 'ivory'], ['silver', 'gold', 'bronze', 'copper']],
+  [['gold', 'frost', 'obsidian', 'verdigris', 'black', 'silver'], ['royal', 'ice', 'purple', 'teal', 'sable', 'rose', 'emerald', 'ochre'], ['gold', 'silver', 'amethyst', 'copper']],
+  [['ember', 'storm', 'jade', 'amethyst', 'obsidian', 'frost'], ['flame', 'royal', 'emerald', 'violet', 'toxic', 'crimson', 'ice'], ['gold', 'silver', 'bronze', 'amethyst']],
+  [['sunsteel', 'obsidian', 'ember', 'frost', 'storm', 'jade', 'bloodsteel'], ['ivory', 'void', 'blood', 'ice', 'storm', 'toxic', 'flame'], ['gold', 'silver', 'amethyst']],
+  [['sunsteel', 'obsidian', 'silver', 'frost', 'black', 'ember'], ['void', 'royal', 'flame', 'storm', 'blood', 'forest', 'purple'], ['gold', 'amethyst', 'ember', 'silver']],
+];
+const LEATHERS = ['leather', 'darkleather', 'redleather', 'greyleather'];
+const cap = (w) => w[0].toUpperCase() + w.slice(1);
+let seed = 7;
+const rnd = (a) => a[(seed = (seed * 16807) % 2147483647) % a.length];
+MIX.forEach(([metals, cloths, trims], tier) => {
+  const seen = new Set();
+  for (let n = 0; n < 12; n++) {
+    const m = rnd(metals), cl = rnd(cloths), t = rnd(trims), l = rnd(LEATHERS);
+    if (seen.has(m + cl)) continue;
+    seen.add(m + cl);
+    P.push([`${cap(m)} & ${cap(cl)}`, tier, m, cl, t, l, R[cl][2], tier ? undefined : 0.75]);
+  }
+});
+
 export const PALETTES = P.map(([name, tier, metal, cloth, trim, leather, glow, k]) => ({
   name, tier, k: metal ? k ?? 0.85 : 0,
   ramps: metal ? { metal: R[metal], cloth: R[cloth], trim: R[trim], leather: R[leather] } : null,

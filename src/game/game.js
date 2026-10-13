@@ -32,6 +32,7 @@ import { UI } from '../ui/ui.js';
 import { HUD } from '../ui/hud.js';
 import { TouchUI } from '../ui/touch.js';
 import { Vendor } from '../ui/vendor.js';
+import { Stash } from '../ui/stash.js';
 import { toggleInventory } from '../ui/inventory.js';
 import { toggleTree, toggleBook } from '../ui/skills.js';
 import { toggleQuest } from '../ui/quest.js';
@@ -158,6 +159,12 @@ export const game = {
     t.map.seen.fill(0);
     const world = new World('town', { map: t.map, tileset, biome: TOWN_BIOME, depth: 0, townTiles, buildings: t.buildings, props: t.props });
     world.npcs = t.npcs.map((n) => ({ vendor: n.vendor, x: n.x, y: n.y, reach: 1.8, flip: n.flip, use: () => Vendor.open(n.vendor.id) }));
+    // the storage chest, beside the well where the hero arrives
+    {
+      let [x, y] = [t.start[0] + 1.5, t.start[1] - 0.5];
+      if (!t.map.walkable(x, y)) [x, y] = t.map.randomNear(t.start[0], t.start[1], 2.5);
+      world.npcs.push({ stash: true, name: 'Storage Chest', x, y, reach: 1.6, flip: false, use: () => Stash.open() });
+    }
     for (const v of VILLAGERS) {
       const [x, y] = t.map.randomNear(t.center.x, t.center.y + 3, 5);
       const npc = {
@@ -345,15 +352,16 @@ export const game = {
     this.autosave();
     setTimeout(() => {
       deathScreen(depth, killer, () => {
-        c.depth = 1;
-        c.nextBiome = drawBiome(c, 1);
+        // back to the start of the five depths before the wall: grind them for XP and gear, then try again
+        c.depth = Math.max(1, Math.floor((depth - 1) / 5) * 5 - 4);
+        c.nextBiome = drawBiome(c, c.depth);
         const p = G.player;
         p.dead = false;
         p.buffs = [];
         p.recompute();
         p.hp = p.maxHp; p.mana = p.maxMana;
         this.enterTown();
-        UI.log('You awaken in Duskhollow. The descent begins anew at Depth 1.', '#ff8060');
+        UI.log(`You awaken in Duskhollow. The descent begins anew at Depth ${c.depth}.`, '#ff8060');
       });
     }, 1700);
   },
