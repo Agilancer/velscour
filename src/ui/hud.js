@@ -88,7 +88,8 @@ export const HUD = {
     UI.tip($('#hero-stats'), () => `<b style="color:#ffe2a0">Battle Ledger</b>
       <div><b>Attack</b>: the average hit of your main attack (left-click skill), crits included.</div>
       <div><b>DPS</b>: what your skill bar deals to one foe per second at your current stats: crits, attack and cast speed, cooldowns, mana and minions.</div>
-      <div><b>Avg DPS · 30s</b>: the damage you and your minions really dealt over the last 30 seconds, divided by 30. The bars show each second.</div>`);
+      <div><b>Avg DPS · 30s</b>: the damage you and your minions really dealt over the last 30 seconds, divided by 30. The bars show each second.</div>
+      <div><b>Player Deaths</b> and <b>Total Monsters Killed</b>: this hero's lifetime counts.</div>`);
   },
 
   /** The minimap sits in the ring's open middle (a little oval); the ring overhangs it on every side. */
@@ -215,6 +216,8 @@ export const HUD = {
     set('hsa', fmt(this.sheet.atk), (v) => { $('#hs-atk').textContent = v; });
     set('hsd', fmt(this.sheet.dps), (v) => { $('#hs-dps').textContent = v; });
     set('hsv', fmt(Meter.avg()), (v) => { $('#hs-avg').textContent = v; });
+    set('hsk', fmtInt(c.kills || 0), (v) => { $('#hs-kills').textContent = v; });
+    set('hsx', fmtInt(c.deaths || 0), (v) => { $('#hs-deaths').textContent = v; });
     // a bar per second for the last 30 s, with the average as a gold line
     const cv = $('#hs-spark'), g = cv.getContext('2d'), W = cv.width, H = cv.height;
     const secs = Meter.perSecond(30), avg = Meter.avg(), top = Math.max(1, avg * 1.6, ...secs);
