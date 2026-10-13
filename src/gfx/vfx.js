@@ -1,5 +1,6 @@
 // Particles, blood & gore, decals, spell effects and floating combat text.
 import { G } from '../state.js';
+import { A } from '../core/assets.js';
 import { camera, isoX, isoY, HW, HH } from '../core/view.js';
 import { makeCanvas, rand, TAU, hexToRgb, shade, randi, pick, fmt } from '../core/util.js';
 
@@ -79,7 +80,7 @@ function splatSprite(color, idx) {
  * type: 'dot' | 'glow' | 'blood' | 'gib' | 'streak' | 'smoke' | 'shard' | 'img'
  */
 export function spawn(p) {
-  if (particles.length >= MAX_P()) particles.shift();
+  if (particles.length >= MAX_P() && particles.shift().spr) spriteGibs--;
   p.life = p.life ?? 0.6; p.max = p.life;
   p.z = p.z ?? 0; p.vx = p.vx ?? 0; p.vy = p.vy ?? 0; p.vz = p.vz ?? 0;
   p.g = p.g ?? 0; p.drag = p.drag ?? 0; p.size = p.size ?? 2; p.size1 = p.size1 ?? p.size;
@@ -126,12 +127,25 @@ export function bloodSpray(x, y, z, angle, n, color, force = 1) {
   }
 }
 
-export function gibs(x, y, z, n, color, boneColor = '#e8dcc0', force = 1) {
+/** Gore chunks. `sets` names gib-sprite sets (assets/sprites/gibs.json: flesh, bone, limb, bug, demon, eye); about
+ *  half the chunks become sprites (capped), the rest stay cheap coloured rects. */
+let spriteGibs = 0;
+export function gibs(x, y, z, n, color, boneColor = '#e8dcc0', force = 1, sets = null) {
   if (G.settings.gore === 0) return;
   n = Math.round(n * (G.settings.gore === 2 ? 1.5 : 1));
+  const M = sets && A.gibImg && A.gibMeta;
   for (let i = 0; i < n; i++) {
     const a = rand(TAU), s = rand(1, 5) * force;
     const bone = Math.random() < 0.3;
+    if (M && i % 2 === 0 && spriteGibs < (G.touch ? 40 : 90)) {
+      const list = M[pick(sets)];
+      if (list) {
+        spriteGibs++;
+        spawn({ type: 'gib', spr: pick(list), x, y, z: z + rand(0, 14), vx: Math.cos(a) * s, vy: Math.sin(a) * s, vz: rand(60, 200) * force,
+          g: 420, drag: 0.5, life: rand(4, 9), size: rand(0.55, 0.85), blood: color, rot: rand(-0.6, 0.6), vr: rand(-8, 8), bounces: 0 });
+        continue;
+      }
+    }
     spawn({
       type: 'gib', x, y, z: z + rand(0, 14), vx: Math.cos(a) * s, vy: Math.sin(a) * s, vz: rand(60, 200) * force,
       g: 420, drag: 0.5, life: rand(4, 9), size: rand(2, 5.5), color: bone ? boneColor : color,
@@ -443,7 +457,7 @@ export function addLight(x, y, radius, intensity = 1) {
 }
 
 export function clearVfx() {
-  particles.length = 0; decals.length = 0; effects.length = 0; texts.length = 0; lights.length = 0;
+  particles.length = 0; spriteGibs = 0; decals.length = 0; effects.length = 0; texts.length = 0; lights.length = 0;
 }
 
 // --------------------------------------------------------------- update
@@ -451,7 +465,7 @@ export function updateVfx(dt, world) {
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.life -= dt;
-    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    if (p.life <= 0) { if (p.spr) spriteGibs--; particles.splice(i, 1); continue; }
     const drag = Math.max(0, 1 - p.drag * dt);
     p.vx *= drag; p.vy *= drag;
     p.x += p.vx * dt; p.y += p.vy * dt;
@@ -549,6 +563,13 @@ export function drawParticles(ctx, vr) {
       }
       case 'gib': {
         ctx.globalAlpha = Math.min(1, p.life);
+        if (p.spr) {
+          const [sx, sy, sw, sh] = p.spr, w = sw * p.size, h = sh * p.size;
+          ctx.save(); ctx.translate(px, py); ctx.rotate(p.rot);
+          ctx.drawImage(A.gibImg, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
+          ctx.restore();
+          break;
+        }
         ctx.save(); ctx.translate(px, py); ctx.rotate(p.rot);
         ctx.fillStyle = '#100404'; ctx.fillRect(-size * p.w - 0.6, -size / 2 - 0.6, size * p.w * 2 + 1.2, size + 1.2);
         ctx.fillStyle = p.color; ctx.fillRect(-size * p.w, -size / 2, size * p.w * 2, size);

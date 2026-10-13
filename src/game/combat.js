@@ -201,7 +201,7 @@ export function kill(tgt, src, info = {}) {
   if (G.settings.gore > 0) {
     bloodSpray(tgt.x, tgt.y, 26, src ? angleTo(src.x, src.y, tgt.x, tgt.y) : rand(TAU), Math.round((big ? 40 : 22) * goreMul), blood, big ? 1.6 : 1.2);
     if (overkill || big || chance(0.35)) {
-      gibs(tgt.x, tgt.y, 16, Math.round((overkill ? 14 : 6) * (big ? 1.8 : 1)), gore.gib || shade3(blood), gore.bones ? '#e8dcc0' : '#d8ccb0', overkill ? 1.4 : 1);
+      gibs(tgt.x, tgt.y, 16, Math.round((overkill ? 14 : 6) * (big ? 1.8 : 1)), gore.gib || shade3(blood), gore.bones ? '#e8dcc0' : '#d8ccb0', overkill ? 1.4 : 1, gibSets(tgt));
     }
     if (gore.blood !== '#ffcc40') addDecal(tgt.x, tgt.y, blood, (big ? 1.1 : 0.7) * rand(0.8, 1.2), 'pool', 0.92);
   }
@@ -229,6 +229,20 @@ export function kill(tgt, src, info = {}) {
     if (tgt.team === 'enemy') dropLoot(world, tgt);
   }
   if (tgt.rank === 'boss' && world && world.onBossKilled) world.onBossKilled(tgt);
+}
+
+/** Which gib-sprite sets a corpse bursts into (null: plain rects for rock, spark, ecto). */
+const BUG = new Set(['spider', 'scorpion', 'beetle', 'worm']);
+function gibSets(c) {
+  const g = c.goreType || 'flesh', a = c.arch;
+  if (g === 'bone') return ['bone'];
+  if (a === 'eye') return ['eye', 'demon'];
+  if (BUG.has(a)) return ['bug'];
+  if (g === 'goo') return ['bug', 'eye'];
+  if (g !== 'flesh') return null;
+  if (c.demon || a === 'imp' || a === 'demon' || a === 'velscour') return ['demon', 'flesh'];
+  if (a === 'bat' || a === 'hound') return ['flesh', 'bug'];
+  return ['flesh', 'limb'];
 }
 
 /** Gib colour: blood tinted toward raw meat so chunks read as flesh, not confetti. */

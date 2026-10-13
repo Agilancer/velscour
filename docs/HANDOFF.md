@@ -582,7 +582,7 @@ Do these in order, unless the user asks for something else. Their feedback after
   - `sparkle(x,y,z,color,n=1,spread=.3)` (:104).
   - `smoke(x,y,z,color,n=4,size=8)` (:110).
   - `bloodSpray(x,y,z,angle,n,color,force=1)` (:117).
-  - `gibs(x,y,z,n,color,boneColor,force=1)` (:129).
+  - `gibs(x,y,z,n,color,boneColor,force=1,sets)`. With `sets` (from `gibSets()` in combat.js: bone, flesh, limb, bug, demon, eye by gore type/arch) every other chunk is a sprite from `assets/sprites/gibs.webp` (cut from `assets/source/gibs/gibs_1..5.jpg` by `python3 tools/process_assets.py gibs`, `tools/gibpack.py`), capped at 90 live (40 on touch). Rock, spark and ecto keep plain rects.
   - `addDecal(x,y,color,size=1,kind='splat'|'pool'|'scorch'|'frost',alpha=.9)` (:144).
   - Effect classes:
     - `Ring(x,y,r0,r1,dur,color,width=4,{z=2,fill,add=true})` (:152)
