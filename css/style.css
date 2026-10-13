@@ -76,6 +76,19 @@ button { font-family: var(--font-head); }
 .slot.flash { animation: slotflash .25s; }
 @keyframes slotflash { from { filter: brightness(2.2); } to { filter: brightness(1); } }
 
+/* MADNESS: fills over ~10 minutes in the dungeon; the hero (never auto-play) unleashes it */
+#madness { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); width: 34%; display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none; z-index: 6; }
+#mad-track { position: relative; width: 100%; height: 9px; background: rgba(10,0,8,.8); border: 1px solid #5a1838; border-radius: 5px; overflow: hidden; box-shadow: 0 0 4px #000; }
+#mad-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #5a0a3a, #c0104a 60%, #ff3070); transition: width .3s; }
+#mad-text { position: absolute; inset: 0; text-align: center; font: 700 8px/9px var(--font-head); letter-spacing: 2px; color: #fff; text-transform: uppercase; text-shadow: 0 0 2px #000, 0 0 2px #000, 0 0 3px #000; }
+#madness.full #mad-fill { background: linear-gradient(90deg, #ff2050, #ff80b0, #c020ff); animation: madglow .8s ease-in-out infinite; }
+#madness.on #mad-fill { background: linear-gradient(90deg, #c020ff, #ff2050); }
+#madness-btn { pointer-events: auto; cursor: pointer; padding: 6px 22px; border: 2px solid #ff3070; border-radius: 6px; background: radial-gradient(#7a0828, #2a0010); color: #fff; font: 700 18px var(--font-head); letter-spacing: 3px; text-shadow: 0 0 6px #ff2050, 0 0 2px #000; box-shadow: 0 0 14px #ff2050, inset 0 0 10px #ff2050; animation: madpulse 1s ease-in-out infinite; }
+#madness-btn:active { transform: scale(.95); }
+@keyframes madpulse { 50% { box-shadow: 0 0 26px #ff3070, inset 0 0 16px #ff80b0; transform: scale(1.06); } }
+@keyframes madglow { 50% { filter: brightness(1.5); } }
+body.touch #madness-btn { padding: 8px 26px; font-size: 20px; }
+
 #hud-top-left { position: absolute; left: 12px; top: 10px; pointer-events: none; text-shadow: 0 0 4px #000, 0 0 2px #000; }
 #area-name { font: 700 20px var(--font-head); color: var(--gold-bright); letter-spacing: 1px; }
 #area-sub { font: 400 14px var(--font-body); color: var(--text-dim); }

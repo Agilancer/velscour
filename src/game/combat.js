@@ -31,6 +31,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
   if (src && src.summon && src.partyBuff && src.partyBuff.stats.dmg) dmg *= 1 + src.partyBuff.stats.dmg / 100; // banners, party buffs
   const owner = src && src.owner ? src.owner : src;
   const fromPlayer = owner && owner.isPlayer;
+  if (fromPlayer && !tgt.isPlayer && G.char && G.char.madT > 0) dmg *= 2; // MADNESS (game/mayhem.js)
 
   if (tgt.isPlayer) {
     const st = tgt.st;
@@ -76,7 +77,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     }
     if (tgt.rank === 'boss' && (o.freeze || o.stun)) { o = { ...o, freeze: false, stun: o.stun && chance(0.15) }; }
   }
-  dmg = Math.max(1, dmg * rand(0.92, 1.08));
+  dmg = tgt.isPlayer && G.godMode ? 0 : Math.max(1, dmg * rand(0.92, 1.08));
 
   const byHero = !tgt.isPlayer && tgt.team !== 'player' && (fromPlayer || (src && src.team === 'player'));
   if (byHero) Meter.add(Math.min(dmg, Math.max(0, tgt.hp)));

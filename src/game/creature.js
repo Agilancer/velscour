@@ -65,6 +65,7 @@ export class Creature {
     if (s.chill && s.chill.t > 0) m *= 1 - s.chill.amt;
     if (s.slow && s.slow.t > 0) m *= 1 - s.slow.amt;
     if (this.curses.slow && this.curses.slow.t > 0) m *= 1 - this.curses.slow.amt;
+    if (this.isPlayer && G.char && G.char.madT > 0) m *= 2; // MADNESS
     return Math.max(0.15, m);
   }
   disabled() {

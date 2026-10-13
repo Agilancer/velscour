@@ -1897,3 +1897,14 @@ See the `open_issues` field.
 - In tests, drive it with `game.update(1/30)` in a loop and yield (`setTimeout`) now and then, or the portal loading
   and the death screen (both on timers) never happen. See `tools/tests/autoplay.js`.
 
+
+## Monster traits, ambushes, MADNESS (`src/game/mayhem.js`)
+- Packs can roll a trait (more often deeper): **Hunting** (awake from the start, tracks the hero anywhere; max 2 packs a level),
+  **Hulking** tanks (4.5x life, bigger, slower, phys resist), **Hexfire** bullet-hell casters (spiral, rotating cross,
+  staggered rings, bullet wall, sky rain, homing orbs), **Phasing** (teleport strikes) and **Burrowing** (tunnel under
+  the hero and erupt). Moves live in `monster.js` MOVES/beginMove/movePerform/moveTick.
+- The ambush director (`ambushTick`, not in BOSS ROOMs or guardian fights) sends a hunting wave every ~30-55 s that
+  drops from above the screen, teleports in, claws out of the ground or tears out of a wall (`enter`).
+- MADNESS fills over 600 s in the dungeon (`G.char.madness`); when full, the MADNESS button / G key (hero input only,
+  auto-play never presses it) gives 2x damage (`combat.hit`) and 2x move speed (`Creature.speedMul`) for 30 s (`G.char.madT`).
+- `G.godMode` now really takes no damage (the 1-damage floor used to leak through). Test: `tools/tests/mayhem.js`.
