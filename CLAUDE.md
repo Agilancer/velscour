@@ -47,7 +47,7 @@ node tools/tests/mayhem.js                         # monster traits, ambush arri
 node tools/tests/legion.js                         # Necromancer skeleton summons: art line-up, every minion attacks + casts
 node tools/tests/familiars.js                      # pet art: every pet summon's look, random blue slimes rising + hopping
 node tools/tests/pets.js [seeds]                   # minion pathing: round walls, keep up, fight round corners, leash, idle
-node tools/tests/select.js [mobile]                # animated class-select portraits, 6 hero save slots, slot migration
+node tools/tests/select.js [mobile]                # hero select: one hero per class, play/new/delete, old duplicate saves
 node tools/tests/autoplay.js wizard 15 [mobile]    # auto-play soak: a new hero plays N game minutes at ~30x speed
 node tools/tests/perf.js 6 wizard 1                # frame cost on a phone-sized screen: fps, update/render ms (last arg: CPU throttle)
 ```
@@ -85,7 +85,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
 - Paths must stay **relative** (`assets/...`, `src/main.js`, never `/assets/...`), because the site is served
   from the `/velscour/` subpath on GitHub Pages. The `/src/...` imports in `tools/tests/` are fine, because the
   tests run against a local server at the root.
-- Saves live in localStorage under `velscour_saves_v1`, one hero per save slot (6 slots, `c.slot`). If you change the save shape, extend `migrate()` in
+- Saves live in localStorage under `velscour_saves_v1`, one hero per class (the newest save of a class is its hero; `heroesByClass()`). If you change the save shape, extend `migrate()` in
   `src/game/save.js` so existing heroes keep loading.
 - After any gameplay change, run at least `flow.js` and the `skills.js` classes you touched. Run `mobile.js`
   and `hud.js` for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run

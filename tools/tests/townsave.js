@@ -3,7 +3,7 @@
 const { openGame, report } = require('./harness');
 (async () => {
   const { browser, page, errors } = await openGame();
-  await page.click('text=New Hero'); await page.click('.class-card[data-id="paladin"]'); await page.click('text=Begin');
+  await page.click('text=Heroes'); await page.click('.class-card[data-id="paladin"]'); await page.click('text=Begin');
   await page.waitForTimeout(1500);
   const sig = () => page.evaluate(async () => {
     const { G, game } = window.VELSCOUR;

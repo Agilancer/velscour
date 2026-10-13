@@ -5,7 +5,7 @@
 const { openGame, report } = require('./harness');
 (async () => {
   const { browser, page, errors, shot } = await openGame();
-  await page.click('text=New Hero'); await page.click('.class-card[data-id="paladin"]'); await page.click('text=Begin');
+  await page.click('text=Heroes'); await page.click('.class-card[data-id="paladin"]'); await page.click('text=Begin');
   await page.waitForTimeout(1200);
   // a level-30 paladin with the hammer skills, in a depth-12 dungeon
   await page.evaluate(async () => {

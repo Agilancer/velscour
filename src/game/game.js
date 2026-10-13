@@ -54,9 +54,9 @@ const VILLAGERS = [
 export const game = {
   // ------------------------------------------------------------ characters
   // async: the class's art pack (if it has one) loads first, because it names the class's catalog items
-  async newChar(classId, name, slot) {
+  async newChar(classId, name) {
     await this.loadClassPack(classId);
-    const c = newCharData(classId, name, slot);
+    const c = newCharData(classId, name);
     this.startChar(c, true);
   },
   async loadChar(c) {

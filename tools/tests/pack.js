@@ -7,7 +7,7 @@ const { openGame, report } = require('./harness');
 (async () => {
   const biomes = (process.argv[2] || 'catacombs,blood,frozen').split(',');
   const { browser, page, errors, shot } = await openGame({ width: 1280, height: 720 });
-  await page.click('text=New Hero'); await page.click('.class-card[data-id="paladin"]'); await page.click('text=Begin');
+  await page.click('text=Heroes'); await page.click('.class-card[data-id="paladin"]'); await page.click('text=Begin');
   await page.waitForTimeout(800);
   const stats = await page.evaluate(async () => {
     const { G, game } = window.VELSCOUR;

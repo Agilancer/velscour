@@ -5,7 +5,7 @@ import { sfx, applyVolumes, initAudio } from '../core/audio.js';
 import { CLASS_IDS, A } from '../core/assets.js';
 import { CLASSES, ATTRS } from '../data/classes.js';
 import { UI, $ } from './ui.js';
-import { listSaves, deleteSave, slotSaves, firstFreeSlot, moveToSlot, SLOTS } from '../game/save.js';
+import { listSaves, heroesByClass, deleteClassSaves } from '../game/save.js';
 import { heroCanvas, excitable, preloadPortraits } from './heroanim.js';
 import { attachTitleFx } from './titlefx.js';
 
@@ -31,17 +31,15 @@ export function hide() { if (current) { current.remove(); current = null; } }
 
 export function titleScreen() {
   G.mode = 'title';
-  const { slots } = slotSaves();
-  const last = listSaves().find((c) => c.slot !== null);
-  const used = slots.filter(Boolean).length;
+  const last = listSaves()[0];
+  const used = Object.keys(heroesByClass()).length;
   const s = el('div', 'screen');
   s.classList.add('title-screen');
   s.innerHTML = `<img class="title-logo intro" src="assets/ui/logo.webp" alt="VELSCOUR"><div class="title-tag">A world built upon something that should have stayed dead.</div>`;
   const menu = el('div', 'title-menu');
   const add = (label, fn, cls = 'btn big') => { const b = el('button', cls, label); b.onclick = () => { if (!s.classList.contains('title-ready')) return; initAudio(); sfx('ui'); goFullscreen(); fn(); }; menu.appendChild(b); return b; };
   if (last) add(`Continue<br><span style="font-size:13px;color:#a8977c">${escapeHtml(last.name)} · Lv ${last.level} ${CLASSES[last.classId].name} · Depth ${last.depth}</span>`, () => G.game.loadChar(last));
-  add('New Hero', () => newHero(titleScreen));
-  add(`Heroes <span style="font-size:13px;color:#a8977c">· ${used}/${SLOTS} slots</span>`, heroesScreen, 'btn');
+  add(`Heroes <span style="font-size:13px;color:#a8977c">· ${used}/${CLASS_IDS.length}</span>`, () => classSelect(last ? last.classId : 'paladin'));
   add('Settings', settingsDialog, 'btn');
   add('How to Play', helpDialog, 'btn');
   s.appendChild(menu);
@@ -52,20 +50,16 @@ export function titleScreen() {
   attachTitleFx(s, s.querySelector('.title-logo'), { tag: s.querySelector('.title-tag'), menu, gate });
 }
 
-/** Start a hero in the first free save slot, or show the slots if all are taken. */
-function newHero(back) {
-  const slot = firstFreeSlot();
-  if (slot < 0) heroesScreen(`All ${SLOTS} slots are taken. Delete a hero to make room for a new one.`);
-  else classSelect(slot, back);
-}
-
 const plaque = (name) => `<div class="plaque"><span>${escapeHtml(name)}</span></div>`;
 
-export function classSelect(slot = Math.max(0, firstFreeSlot()), back = titleScreen) {
-  let sel = 'paladin';
+/** Hero select: one hero per class. A class with a hero plays it; an empty class names and starts a new one.
+ * Delete arms delete mode: the next class picked with a hero is deleted (after a confirm), freeing that class. */
+export function classSelect(sel = 'paladin', back = titleScreen) {
+  const heroes = heroesByClass();
+  let delMode = false;
   preloadPortraits(CLASS_IDS);
   const s = el('div', 'screen class-screen');
-  s.appendChild(el('h2', 'screen-title', `CHOOSE YOUR HERO <small>Slot ${slot + 1} of ${SLOTS}</small>`));
+  s.appendChild(el('h2', 'screen-title', `CHOOSE YOUR HERO <small>${Object.keys(heroes).length} of ${CLASS_IDS.length} heroes</small>`));
   const grid = el('div', 'class-grid');
   const info = el('div', 'class-info');
   const bigBox = el('div', 'class-big');
@@ -75,103 +69,68 @@ export function classSelect(slot = Math.max(0, firstFreeSlot()), back = titleScr
   const text = el('div', 'class-text');
   info.append(bigBox, text);
   const cards = {};
+  const row = el('div', 'row');
+  const name = el('input', 'name-input');
+  const go = el('button', 'btn big', 'Begin');
+  const delBtn = el('button', 'btn red', 'Delete');
   const renderInfo = () => {
-    const C = CLASSES[sel];
+    const C = CLASSES[sel], h = heroes[sel];
     big.setId(sel);
-    text.innerHTML = `<h2>${C.name}</h2><p>${escapeHtml(C.desc)}</p><p class="dim">Skill trees: <b style="color:#e9dcc4">${C.trees.join(' · ')}</b><br>Primary attribute: <b style="color:#ffd34a">${ATTRS[C.primary].name}</b> · Life ${C.life} · Mana ${C.mana}</p>`;
+    text.innerHTML = (h ? `<h2>${escapeHtml(h.name)}</h2><p><b style="color:#ffd34a">Level ${h.level} ${C.name}</b> · Depth ${h.depth} · Deepest ${h.deepest || 0} · ${fmtInt(h.gold)} gold</p>` : `<h2>${C.name}</h2>`) +
+      `<p>${escapeHtml(C.desc)}</p><p class="dim">Skill trees: <b style="color:#e9dcc4">${C.trees.join(' · ')}</b><br>Primary attribute: <b style="color:#ffd34a">${ATTRS[C.primary].name}</b> · Life ${C.life} · Mana ${C.mana}</p>`;
     for (const id in cards) cards[id].classList.toggle('sel', id === sel);
+    name.style.display = h ? 'none' : '';
+    go.innerHTML = h ? 'Play' : 'Begin';
+    s.classList.toggle('del-mode', delMode);
+    delBtn.innerHTML = delMode ? 'Cancel' : 'Delete';
+  };
+  const delHero = (id) => {
+    delMode = false;
+    renderInfo();
+    UI.confirm('Delete hero?', `Permanently delete ${escapeHtml(heroes[id].name)}, the ${CLASSES[id].name}? You can then start a new ${CLASSES[id].name}.`, () => { deleteClassSaves(id); classSelect(id, back); }, 'Delete');
   };
   for (const id of CLASS_IDS) {
-    const card = el('div', 'class-card');
+    const card = el('div', 'class-card' + (heroes[id] ? ' has-hero' : ''));
     const anim = heroCanvas(id);
     card.appendChild(anim.canvas);
-    card.insertAdjacentHTML('beforeend', plaque(CLASSES[id].name));
+    const h = heroes[id];
+    if (h) card.insertAdjacentHTML('beforeend', `<div class="card-lv">Lv ${h.level}</div>`);
+    card.insertAdjacentHTML('beforeend', plaque(h ? h.name : CLASSES[id].name));
     card.dataset.id = id;
     excitable(card, anim);
-    card.onclick = () => { if (sel !== id) { sel = id; sfx('ui'); renderInfo(); } anim.burst(1.2); big.burst(1.4); };
-    card.ondblclick = () => start();
+    card.onclick = () => {
+      if (delMode && heroes[id]) { sfx('ui'); delHero(id); return; }
+      if (sel !== id) { sel = id; sfx('ui'); renderInfo(); } anim.burst(1.2); big.burst(1.4);
+    };
+    card.ondblclick = () => { if (!delMode) start(); };
     grid.appendChild(card);
     cards[id] = card;
   }
   s.appendChild(grid);
   s.appendChild(info);
-  const row = el('div', 'row');
   row.style.justifyContent = 'center';
   row.style.margin = '6px 0 14px';
-  const name = el('input', 'name-input');
   name.placeholder = 'Hero name';
   name.maxLength = 18;
   const backBtn = el('button', 'btn', 'Back');
   backBtn.onclick = () => { sfx('ui'); back(); };
-  const go = el('button', 'btn big', 'Begin');
-  const start = () => { sfx('ui'); G.game.newChar(sel, name.value.trim() || CLASSES[sel].name, slot); };
+  delBtn.onclick = () => {
+    sfx('ui');
+    if (!Object.keys(heroes).length) return;
+    if (!delMode && heroes[sel]) { delHero(sel); return; }
+    delMode = !delMode;
+    renderInfo();
+  };
+  const start = () => {
+    sfx('ui');
+    if (heroes[sel]) G.game.loadChar(heroes[sel]);
+    else G.game.newChar(sel, name.value.trim() || CLASSES[sel].name);
+  };
   go.onclick = start;
   name.onkeydown = (e) => { if (e.key === 'Enter') start(); };
-  row.append(backBtn, name, go);
+  row.append(backBtn, delBtn, name, go);
   s.appendChild(row);
   renderInfo();
-  show(s);
-}
-
-/** The six save slots: play, delete, or start a new hero in an empty one. */
-export function heroesScreen(note = '') {
-  const { slots, parked } = slotSaves();
-  preloadPortraits(slots.filter(Boolean).map((c) => c.classId));
-  const s = el('div', 'screen slot-screen');
-  s.appendChild(el('h2', 'screen-title', `HEROES <small>${slots.filter(Boolean).length} of ${SLOTS} slots</small>`));
-  if (note) s.appendChild(el('p', 'slot-note', escapeHtml(note)));
-  const grid = el('div', 'slot-grid');
-  const reload = () => heroesScreen();
-  const del = (c) => UI.confirm('Delete hero?', `Permanently delete ${escapeHtml(c.name)}?`, () => { deleteSave(c.id); reload(); }, 'Delete');
-  slots.forEach((c, i) => {
-    const card = el('div', 'slot-card' + (c ? '' : ' empty'));
-    card.dataset.slot = i;
-    card.appendChild(el('div', 'slot-num', `Slot ${i + 1}`));
-    if (c) {
-      const box = el('div', 'slot-hero');
-      const anim = heroCanvas(c.classId);
-      box.appendChild(anim.canvas);
-      box.insertAdjacentHTML('beforeend', plaque(c.name));
-      card.appendChild(box);
-      card.insertAdjacentHTML('beforeend', `<div class="slot-info"><b>Lv ${c.level} ${CLASSES[c.classId].name}</b><div class="dim">Depth ${c.depth} · Deepest ${c.deepest || 0}</div><div class="dim">${fmtInt(c.gold)} gold</div></div>`);
-      excitable(card, anim);
-      const btns = el('div', 'slot-btns');
-      const play = el('button', 'btn small', 'Play');
-      const rm = el('button', 'btn small red', 'Delete');
-      rm.onclick = (e) => { e.stopPropagation(); sfx('ui'); del(c); };
-      btns.append(play, rm);
-      card.appendChild(btns);
-      card.onclick = () => { sfx('ui'); G.game.loadChar(c); };
-    } else {
-      card.insertAdjacentHTML('beforeend', `<div class="slot-hero"><div class="slot-plus">+</div>${plaque('Empty')}</div><div class="slot-info"><b>Create Hero</b><div class="dim">An empty slot</div></div>`);
-      card.onclick = () => { sfx('ui'); classSelect(i, reload); };
-    }
-    grid.appendChild(card);
-  });
-  s.appendChild(grid);
-  if (parked.length) {
-    // heroes saved before slots existed, beyond the first six: kept, and movable into a slot once one is free
-    s.appendChild(el('p', 'slot-note', `Heroes without a slot: free a slot to play them again.`));
-    const list = el('div', 'save-list');
-    const free = slots.indexOf(null);
-    for (const c of parked) {
-      const row = el('div', 'save-row', `<div class="info"><b>${escapeHtml(c.name)}</b><div class="dim">Level ${c.level} ${CLASSES[c.classId].name} · Depth ${c.depth} · ${fmtInt(c.gold)} gold</div></div>`);
-      if (free >= 0) {
-        const mv = el('button', 'btn small', `Move to Slot ${free + 1}`);
-        mv.onclick = () => { sfx('ui'); moveToSlot(c.id, free); reload(); };
-        row.appendChild(mv);
-      }
-      const rm = el('button', 'btn small red', 'Delete');
-      rm.onclick = () => { sfx('ui'); del(c); };
-      row.appendChild(rm);
-      list.appendChild(row);
-    }
-    s.appendChild(list);
-  }
-  const back = el('button', 'btn', 'Back');
-  back.style.margin = '12px 0';
-  back.onclick = () => { sfx('ui'); titleScreen(); };
-  s.appendChild(back);
   show(s);
 }
 

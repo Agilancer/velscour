@@ -43,7 +43,7 @@ const { openGame, report } = require('./harness');
     console.log(tag, 'after skip', JSON.stringify(s));
     if (s.phase !== 'lit') { console.log('FAIL: skip did not light the logo'); process.exitCode = 1; }
     // leaving the title screen must stop the loop and drop the canvases
-    await page.click('text=New Hero');
+    await page.click('text=Heroes');
     await page.waitForTimeout(200);
     const left = await page.evaluate(() => document.querySelectorAll('canvas.title-fx, canvas.title-eyes').length);
     if (left) { console.log('FAIL: title canvases left behind'); process.exitCode = 1; }

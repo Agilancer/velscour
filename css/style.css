@@ -478,3 +478,7 @@ body.touch .item-detail, body.touch .skill-detail { width: 230px; font-size: 12p
 .forge-row { gap: 6px; flex-wrap: wrap; margin: 4px 0; align-items: center; }
 .forge-row > span { min-width: 170px; }
 .vendor-sub { margin: 10px 0 4px; }
+.class-card .card-lv { position: absolute; top: 3px; right: 5px; font: 700 11px var(--font-head); color: var(--gold-bright); text-shadow: 0 1px 2px #000; }
+.class-card:not(.has-hero) canvas { opacity: .55; }
+.class-screen.del-mode .class-card.has-hero { border-color: #c03a2a; box-shadow: 0 0 12px rgba(220,50,30,.55); }
+.class-screen.del-mode .class-card:not(.has-hero) { opacity: .4; cursor: default; }
