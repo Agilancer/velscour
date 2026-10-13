@@ -86,7 +86,10 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   and `hud.js` for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
   `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`.
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Raid bosses
-  (`src/game/raid.js`, every 5th depth): run `raid.js`.
+  (`src/game/raid.js`, every 5th depth): run `raid.js`. Rings, augments or skill mastery (`src/data/rings.js`,
+  `src/game/augments.js`): run `rings.js`. The town generator (`src/world/town.js`): run `town.js` with a few seeds.
+- Velscour waits at `FINAL_DEPTH` (500, `src/data/depth.js`); monster levels come from `depthLevel(depth)`, never the
+  raw depth.
 
 ## Git / GitHub
 - The working branch is `claude/amazing-rubin-kguehz`. PR https://github.com/Agilancer/velscour/pull/1
