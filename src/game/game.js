@@ -10,10 +10,11 @@ import { loadClassArt } from '../core/classart.js';
 import { loadGearArt } from '../core/gearart.js';
 import { preloadBarFx } from '../gfx/artfx.js';
 import { SKILLS } from '../data/skills.js';
-import { setClassItems } from '../data/items.js';
+import { setClassItems, setRingContext } from '../data/items.js';
 import { BIOME_BY_ID, TOWN_BIOME, drawBiome, mixPartner } from '../data/biomes.js';
 import { CLASSES } from '../data/classes.js';
 import { generateDungeon, isRaidDepth } from '../world/dungeon.js';
+import { FINAL_DEPTH, depthLevel } from '../data/depth.js';
 import { generateTown, makeTownTiles } from '../world/town.js';
 import { World } from './world.js';
 import { Player } from './player.js';
@@ -73,6 +74,7 @@ export const game = {
     hideScreen();
     if (Auto.on) Auto.toggle(false);
     G.char = c;
+    setRingContext(c.classId, c.skills);
     const p = new Player(c);
     G.player = p;
     p.applyGrants();
@@ -88,7 +90,7 @@ export const game = {
     if (fresh) {
       setTimeout(() => {
         UI.centerMsg('DUSKHOLLOW', 'The last town above the abyss', 3.5);
-        UI.log(`Welcome, ${escapeHtml(c.name)}. Visit the vendors, then step into the <b style="color:#ff8050">portal</b> to the south-east.`, '#ffe2a0');
+        UI.log(`Welcome, ${escapeHtml(c.name)}. Visit the vendors, then step into the <b style="color:#ff8050">portal</b> at the edge of town.`, '#ffe2a0');
         UI.log('You have <b>1 skill point</b> — open the Skill Tree (K) to learn your first ability.', '#ffd860');
         if (!G.touch) UI.log('Left-click to move/attack, right-click, ` 1–9 0 - = for skills, Z X C V for potions, Q for the quest log.');
         else UI.log('Left thumb moves, tap to attack, skill buttons on the right.');
@@ -149,11 +151,12 @@ export const game = {
     const c = G.char;
     const tileset = biomeTileSet(TOWN_BIOME);
     if (!townTiles) townTiles = makeTownTiles();
-    if (!townCache) townCache = generateTown(tileset);
+    // every hero has a town of their own: the layout is rolled from c.townSeed
+    if (!townCache || townCache.seed !== c.townSeed) townCache = generateTown(tileset, c.townSeed);
     const t = townCache;
     t.map.seen.fill(0);
     const world = new World('town', { map: t.map, tileset, biome: TOWN_BIOME, depth: 0, townTiles, buildings: t.buildings, props: t.props });
-    world.npcs = t.npcs.map((n) => ({ vendor: n.vendor, x: n.x, y: n.y, reach: 1.8, flip: n.x > 20, use: () => Vendor.open(n.vendor.id) }));
+    world.npcs = t.npcs.map((n) => ({ vendor: n.vendor, x: n.x, y: n.y, reach: 1.8, flip: n.flip, use: () => Vendor.open(n.vendor.id) }));
     for (const v of VILLAGERS) {
       const [x, y] = t.map.randomNear(t.center.x, t.center.y + 3, 5);
       const npc = {
@@ -191,10 +194,10 @@ export const game = {
 
   confirmDungeon() {
     const c = G.char;
-    const biome = BIOME_BY_ID[c.depth === 100 ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
+    const biome = BIOME_BY_ID[c.depth === FINAL_DEPTH ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
     UI.dialog({
       title: `Depth ${c.depth}`,
-      html: `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(biome.name)}</b>.</p><p class="dim">Find the exit. It is sealed until its guardian is slain.${c.depth === 100 ? '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>' : isRaidDepth(c.depth) ? '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>' : ''}</p>`,
+      html: `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(biome.name)}</b>.</p><p class="dim">Find the exit. It is sealed until its guardian is slain.${c.depth === FINAL_DEPTH ? '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>' : isRaidDepth(c.depth) ? '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>' : ''}</p>`,
       buttons: [{ label: 'Not yet' }, { label: 'Enter', cls: 'red', fn: () => this.enterDungeon() }],
     });
   },
@@ -202,8 +205,8 @@ export const game = {
   enterDungeon() {
     const c = G.char;
     const depth = c.depth;
-    if (depth !== 100 && (!c.nextBiome || c.nextBiome === 'throne')) c.nextBiome = drawBiome(c, depth);
-    const biome = BIOME_BY_ID[depth === 100 ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
+    if (depth !== FINAL_DEPTH && (!c.nextBiome || c.nextBiome === 'throne')) c.nextBiome = drawBiome(c, depth);
+    const biome = BIOME_BY_ID[depth === FINAL_DEPTH ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
     const mix = mixPartner(biome); // a like-coloured biome whose tiles this level borrows, or null
     const loading = document.getElementById('loading');
     document.getElementById('loading-text').textContent = `Descending to Depth ${depth} — ${biome.name}…`;
@@ -249,7 +252,7 @@ export const game = {
       exit,
     ];
     // monsters
-    const lvl = depth;
+    const lvl = depthLevel(depth);
     for (const s of gen.spawns) {
       if (s.rank === 'raid') {
         const m = makeRaidBoss(world, gen.raid, depth, lvl + 3);
@@ -293,7 +296,7 @@ export const game = {
     };
     this.setWorld(world, gen.start, old);
     c.lastBiome = biome.id;
-    HUD.setArea(`Depth ${depth}${depth > 100 ? ' — Endless Torment' : ''}`, gen.raid ? `${biome.name} · Boss Room` : biome.name);
+    HUD.setArea(`Depth ${depth}${depth > FINAL_DEPTH ? ' — Endless Torment' : ''}`, gen.raid ? `${biome.name} · Boss Room` : biome.name);
     stopMusic(); setAmbience(biome.id);
     const kin = tileset.mixed && BIOME_BY_ID[tileset.mixed];
     UI.centerMsg(biome.name.toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);

@@ -1,6 +1,6 @@
 // The town of Duskhollow: vendors, buildings, props and the dungeon portal.
 import { TileMap } from './map.js';
-import { RNG } from '../core/util.js';
+import { RNG, TAU } from '../core/util.js';
 import { A } from '../core/assets.js';
 import { TW } from '../core/view.js';
 
@@ -39,60 +39,347 @@ export function townObject(name) {
   return r && { img: A.town.objects, sx: r[0], sy: r[1], w: r[2], h: r[3], ox: r[4], oy: r[5], name };
 }
 
-// Vendor shops: a north row (doors on their +y face) and a west row (doors on their +x face) around the plaza.
-const SHOPS = {
-  weapons: [15.5, 11.5], armor: [19.5, 11.5], upgrade: [23.5, 11.5], enchant: [27.5, 11.5],
-  alchemist: [11.5, 15.5], gems: [11.5, 19.5], socket: [11.5, 23.5], gamble: [11.5, 27.5],
+// Buildings: each is the pack's 2 x 2 house drawn BS x (a 3 x 3 footprint). The art puts the door on the +y face, or
+// on the +x face for DOOR_X; drawn mirrored (b.flip) the door moves to the other face, so a shop can front any street.
+const DOOR_X = new Set(['alchemist', 'gems', 'socket', 'gamble', 'bakery']);
+// what lies around each shop's door: [blocking props, small props]
+const SHOP_DRESS = {
+  weapons: [['tool_rack', 'crate_stack'], ['water_bucket']], armor: [['closed_barrel', 'cloth_crate'], []],
+  upgrade: [['anvil_stump', 'cold_forge', 'smith_bellows', 'firewood_stack'], ['tiles_and_bricks']],
+  enchant: [['scroll_rack'], ['mushrooms', 'wildflowers']], alchemist: [['potion_jars', 'water_barrel'], ['water_bucket', 'mushrooms']],
+  gems: [['market_table'], ['vegetable_basket']], socket: [['crate_stack'], ['rope_and_hook']], gamble: [['closed_barrel', 'water_barrel'], ['rope_and_hook']],
+  inn: [['closed_barrel', 'stone_bench'], ['water_bucket']], bakery: [['grain_sacks', 'grain_handmill'], ['vegetable_basket']],
+  stables: [['hay_bale', 'horse_trough'], []], cottage: [['firewood_stack'], ['water_bucket', 'wildflowers']],
 };
-const HOUSES = [['inn', 11.5, 11.5], ['bakery', 34.5, 15.5], ['stables', 34.5, 25.5], ['cottage', 18.5, 35.5], ['cottage', 26.5, 35.5]];
-const DOOR_X = new Set(['alchemist', 'gems', 'socket', 'gamble', 'bakery']); // pack door face NE (+x), else SE (+y)
+const SOLID = /barrel|crate|rack|anvil|forge|bellows|firewood|table|jars|bench|sacks|handmill|hay|trough|cart|well|workbench|boulder|boundary|fence|log|stump|cluster|wheel|debris/;
+const FOREST_TREES = ['t_medium_fir', 't_medium_fir', 't_scots_pine', 't_old_cedar', 't_young_pine', 't_medium_willow', 't_tall_elm', 't_mature_ash', 't_ancient_oak', 't_twin_birch', 't_crooked_oak', 't_wind_juniper'];
+const TOWN_TREES = ['t_ancient_willow', 't_young_birch', 't_twin_birch', 't_mature_ash', 't_crooked_oak', 't_young_apple', 't_wind_juniper', 't_medium_willow'];
 
-export function generateTown(tileset) {
-  const rng = new RNG(1337);
-  const W = 44, H = 44;
+/**
+ * Duskhollow, rolled from a seed (each hero has their own, c.townSeed): an irregular plaza with a well and market
+ * stalls, meandering roads out into the forest (one of them to the portal), the shops fronting the streets with their
+ * wares out front, houses on footpaths, and yards around them (gardens, an orchard, a lumber camp, a paddock, ruins).
+ * Retries with the next seed if a vendor or the portal can't be reached.
+ */
+export function generateTown(tileset, seed = 1337) {
+  let t = null;
+  for (let i = 0; i < 12 && !t; i++) t = rollTown(tileset, (seed + i * 7919) >>> 0, i === 11);
+  t.seed = seed;
+  return t;
+}
+
+function rollTown(tileset, seed, last) {
+  const rng = new RNG(seed);
+  const W = rng.int(50, 58), H = rng.int(50, 58);
   const map = new TileMap(W, H);
-  const mat = new Uint8Array(W * H); // MATS index per tile
   map.t.fill(1);
-  const paint = (x0, y0, x1, y1, m) => { for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (map.inb(x, y)) mat[y * W + x] = m; };
-  // plaza (stone), the road to the portal (dirt), two lanes out of town, a gravel yard around the portal, mud by the stables
-  const P = { x0: 14, y0: 14, x1: 30, y1: 30 };
-  paint(P.x0, P.y0, P.x1, P.y1, 4);
-  paint(14, 30, 30, 31, 1); paint(30, 14, 31, 31, 1); // gravel kerb on the open sides
-  for (let i = 0; i < 9; i++) paint(30 + i, 29 + i, 33 + i, 32 + i, 2);
-  paint(20, 31, 24, H - 2, 2); paint(31, 20, W - 2, 24, 2);
-  paint(36, 36, 42, 42, 1);
-  const portal = { x: 39, y: 39 };
-  paint(37, 37, 41, 41, 4);
-  paint(36, 27, 40, 31, 3);
-  const center = { x: 22, y: 22 };
+  const N = W * H;
+  const mat = new Uint8Array(N); // MATS index per tile (0 grass)
+  const use = new Uint8Array(N); // 0 open grass, 1 street, 2 building, 3 yard, 4 forest
+  const keep = new Uint8Array(N); // 1: keep clear (door fronts, the portal yard): no buildings or blocking props
+  const I = (x, y) => y * W + x;
+  const inb = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
+  const R = (a, b) => rng.range(a, b);
 
+  // ---- the forest wall: a ragged band 2-6 tiles deep
+  const ph = [R(0, 9), R(0, 9), R(0, 9)];
+  const forestAt = (x, y) => {
+    const e = Math.min(x, y, W - 1 - x, H - 1 - y);
+    const f = 3 + 1.2 * Math.sin(x * 0.5 + ph[0]) + 1.1 * Math.sin(y * 0.43 + ph[1]) + 0.8 * Math.sin((x + y) * 0.29 + ph[2]);
+    return e < Math.max(2, Math.min(6, f));
+  };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (forestAt(x, y)) use[I(x, y)] = 4;
+
+  // ---- the plaza: overlapping ellipses of flagstones around the well
+  const C = { x: Math.floor(W / 2 + R(-3, 3)), y: Math.floor(H / 2 + R(-3, 3)) };
+  const blobs = [[C.x + 0.5, C.y + 0.5, R(4, 5.5), R(4, 5.5)]];
+  for (let i = rng.int(2, 4); i > 0; i--) blobs.push([C.x + R(-3.5, 3.5), C.y + R(-3.5, 3.5), R(2.5, 4.5), R(2.5, 4.5)]);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (blobs.some(([bx, by, rx, ry]) => ((x + 0.5 - bx) / rx) ** 2 + ((y + 0.5 - by) / ry) ** 2 < 1)) { mat[I(x, y)] = 4; use[I(x, y)] = 1; }
+  }
+  if (rng.chance(0.6)) for (let y = C.y - 1; y <= C.y + 1; y++) for (let x = C.x - 1; x <= C.x + 1; x++) mat[I(x, y)] = 5; // a paved square under the well
+
+  // ---- roads: meandering lanes from the plaza out into the forest; the first leads to the portal
+  const paint = (x, y, r, m, shoulder) => {
+    for (let yy = Math.floor(y - r - 1); yy <= y + r + 1; yy++) for (let xx = Math.floor(x - r - 1); xx <= x + r + 1; xx++) {
+      if (!inb(xx, yy) || Math.min(xx, yy, W - 1 - xx, H - 1 - yy) < 1) continue;
+      const d = Math.hypot(xx + 0.5 - x, yy + 0.5 - y), i = I(xx, yy);
+      if (d <= r) { if (mat[i] < 4 && !(mat[i] === 3 && m === 2)) mat[i] = m; use[i] = 1; }
+      else if (shoulder && d <= r + 0.75 && mat[i] === 0 && use[i] !== 1) mat[i] = 1;
+    }
+  };
+  const lane = (x0, y0, x1, y1, r, m, shoulder, stopAtEdge) => {
+    let x = x0, y = y0;
+    const pts = [], phase = R(0, TAU), wig = R(0.25, 0.6);
+    for (let k = 0; k < 400; k++) {
+      const d = Math.hypot(x1 - x, y1 - y);
+      if (d < 0.6) break;
+      let a = Math.atan2(y1 - y, x1 - x) + Math.sin(k * 0.09 + phase) * wig * Math.min(1, d / 6);
+      x += Math.cos(a) * 0.5; y += Math.sin(a) * 0.5;
+      if (stopAtEdge && Math.min(x, y, W - 1 - x, H - 1 - y) < 1.5) break;
+      paint(x, y, r, m, shoulder);
+      pts.push([x, y]);
+    }
+    return pts;
+  };
+  const aP = R(0, TAU);
+  const maxD = (a) => { let d = 0; while (d < 40 && Math.min(C.x + Math.cos(a) * d, C.y + Math.sin(a) * d, W - 1 - (C.x + Math.cos(a) * d), H - 1 - (C.y + Math.sin(a) * d)) > 8) d += 0.5; return d; };
+  const dP = Math.min(maxD(aP), R(15, 21));
+  const portal = { x: Math.floor(C.x + Math.cos(aP) * dP) + 0.5, y: Math.floor(C.y + Math.sin(aP) * dP) + 0.5 };
+  const roads = [lane(C.x + 0.5, C.y + 0.5, portal.x, portal.y, 1.5, 2, rng.chance(0.7), false)];
+  const nRoads = rng.int(2, 3);
+  for (let i = 0; i < nRoads; i++) {
+    const a = aP + ((i + 1) * TAU) / (nRoads + 1) + R(-0.45, 0.45);
+    roads.push(lane(C.x + 0.5, C.y + 0.5, C.x + 0.5 + Math.cos(a) * 40, C.y + 0.5 + Math.sin(a) * 40, rng.chance(0.5) ? 1.5 : 1.1, rng.chance(0.75) ? 2 : 1, rng.chance(0.5), true));
+  }
+  // side streets off the roads
+  for (let i = rng.int(1, 3); i > 0; i--) {
+    const road = rng.pick(roads.slice(1).concat(roads)), at = road[Math.floor(R(0.3, 0.8) * road.length)];
+    if (!at) continue;
+    const a = R(0, TAU), len = R(6, 11);
+    roads.push(lane(at[0], at[1], at[0] + Math.cos(a) * len, at[1] + Math.sin(a) * len, 1, rng.chance(0.5) ? 1 : 2, false, true));
+  }
+  // the portal yard: gravel, with the portal on a stone pad; nothing gets built around it
+  for (let y = Math.floor(portal.y - 5); y <= portal.y + 5; y++) for (let x = Math.floor(portal.x - 5); x <= portal.x + 5; x++) {
+    if (!inb(x, y)) continue;
+    const d = Math.hypot(x + 0.5 - portal.x, y + 0.5 - portal.y), i = I(x, y);
+    if (d < 5) keep[i] = 1;
+    if (d < 3.1) { if (use[i] === 4) use[i] = 0; mat[i] = d < 1.2 ? 4 : 1; use[i] = 1; }
+  }
+  // puddles on the dirt
+  for (let i = rng.int(3, 7); i > 0; i--) {
+    const road = rng.pick(roads), at = road[Math.floor(R(0.2, 0.9) * road.length)];
+    if (!at) continue;
+    for (let k = rng.int(1, 3); k > 0; k--) { const x = Math.floor(at[0] + R(-1, 1)), y = Math.floor(at[1] + R(-1, 1)); if (inb(x, y) && mat[I(x, y)] === 2) mat[I(x, y)] = 3; }
+  }
+
+  // ---- buildings
   const buildings = [], npcs = [], props = [], torches = [];
   const k = TW / A.town.meta.tile[0];
-  const addBuilding = (name, cx, cy, vendor) => {
-    const spr = townObject('b_' + name);
-    buildings.push({ cx, cy, spr, k: k * BS, depth: cx + cy, vendor: vendor && vendor.id });
-    for (let y = cy - 1.5; y < cy + 1.5; y++) for (let x = cx - 1.5; x < cx + 1.5; x++) map.block[Math.floor(y) * W + Math.floor(x)] = 1;
+  const street = (x, y) => inb(x, y) && use[I(x, y)] === 1;
+  // a free 3 x 3 footprint, a tile of open ground or street round it, and two tiles between it and other buildings
+  // (the roofs overhang the footprint)
+  const fits = (x0, y0) => {
+    for (let y = y0 - 2; y <= y0 + 4; y++) for (let x = x0 - 2; x <= x0 + 4; x++) {
+      if (!inb(x, y)) return false;
+      const u = use[I(x, y)], foot = x >= x0 && y >= y0 && x < x0 + 3 && y < y0 + 3, ring = x >= x0 - 1 && y >= y0 - 1 && x <= x0 + 3 && y <= y0 + 3;
+      if (foot ? u !== 0 || keep[I(x, y)] : ring ? u === 2 || u === 4 || u === 3 || keep[I(x, y)] : u === 2) return false;
+    }
+    return true;
+  };
+  // a footprint at (x0, y0) whose door (+y face, or +x when sx) fronts tile (fx, fy)
+  const frontOf = (x0, y0, sx) => (sx ? [x0 + 3, y0 + 1] : [x0 + 1, y0 + 3]);
+  const streets = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (use[I(x, y)] === 1 && !keep[I(x, y)]) streets.push([x, y]);
+  const place = (name, vendor) => {
+    const near = vendor ? 15 : 24;
+    for (let tries = 0; tries < 160; tries++) {
+      const [tx, ty] = rng.pick(streets);
+      if (Math.hypot(tx - C.x, ty - C.y) > near + tries / 12) continue;
+      const sx = rng.chance(0.5);
+      const x0 = sx ? tx - 3 : tx - 1, y0 = sx ? ty - 1 : ty - 3;
+      if (fits(x0, y0)) return addBuilding(name, x0, y0, sx, vendor);
+    }
+    // off the streets: anywhere open, joined to the nearest street by a footpath
+    for (let tries = 0; tries < 200; tries++) {
+      const x0 = rng.int(5, W - 9), y0 = rng.int(5, H - 9), sx = rng.chance(0.5);
+      if (Math.hypot(x0 - C.x, y0 - C.y) > near + 6 || !fits(x0, y0)) continue;
+      const b = addBuilding(name, x0, y0, sx, vendor);
+      footpath(...frontOf(x0, y0, sx));
+      return b;
+    }
+    return null;
+  };
+  const footpath = (fx, fy) => {
+    // breadth-first to the nearest street, then gravel along the way back
+    const prev = new Int32Array(N).fill(-1), q = [I(fx, fy)];
+    prev[q[0]] = q[0];
+    let end = -1;
+    for (let h = 0; h < q.length && end < 0; h++) {
+      const i = q[h], x = i % W, y = (i / W) | 0;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy, j = I(nx, ny);
+        if (!inb(nx, ny) || prev[j] >= 0 || use[j] === 2 || use[j] === 4) continue;
+        prev[j] = i;
+        if (use[j] === 1) { end = j; break; }
+        q.push(j);
+      }
+    }
+    for (let i = end >= 0 ? prev[end] : -1; i >= 0; i = prev[i]) {
+      if (use[i] !== 1) { use[i] = 1; if (mat[i] === 0) mat[i] = rng.chance(0.7) ? 1 : 2; }
+      if (prev[i] === i) break;
+    }
+  };
+  const addBuilding = (name, x0, y0, sx, vendor) => {
+    const spr = townObject('b_' + name), cx = x0 + 1.5, cy = y0 + 1.5;
+    const flip = sx !== DOOR_X.has(name); // the art's door face, mirrored to the face we want
+    const b = { cx, cy, spr, k: k * BS, depth: cx + cy, vendor: vendor && vendor.id, flip, name, sx, x0, y0 };
+    buildings.push(b);
+    for (let y = y0; y < y0 + 3; y++) for (let x = x0; x < x0 + 3; x++) { use[I(x, y)] = 2; map.block[I(x, y)] = 1; if (mat[I(x, y)] !== 0) mat[I(x, y)] = 0; }
+    const [fx, fy] = frontOf(x0, y0, sx);
+    for (const [ex, ey] of sx ? [[fx, fy], [fx, fy - 1], [fx, fy + 1]] : [[fx, fy], [fx - 1, fy], [fx + 1, fy]]) if (inb(ex, ey)) keep[I(ex, ey)] = 1;
     // the torch beside the door, lit (the pack's torches are unlit)
     for (const [ox, oy] of A.town.meta.lights['b_' + name] || []) {
-      const sx = ox * k * BS, sy = oy * k * BS; // screen offset from the building centre
-      const ex = DOOR_X.has(name) ? 1.62 : 0, ey = DOOR_X.has(name) ? 0 : 1.62; // a point just off the wall
-      const gx = cx + ex, gy = cy + ey;
-      const dx = sx - (gx - cx - (gy - cy)) * TW / 2, dy = sy - (gx - cx + gy - cy) * TW / 4;
-      torches.push({ kind: 'flame', x: gx, y: gy, fx: dx, fy: dy, light: 3.4 });
+      const lx = ox * k * BS * (flip ? -1 : 1), ly = oy * k * BS; // screen offset from the building centre
+      const gx = cx + (sx ? 1.62 : 0), gy = cy + (sx ? 0 : 1.62); // a point just off the door wall
+      torches.push({ kind: 'flame', x: gx, y: gy, fx: lx - (gx - cx - (gy - cy)) * TW / 2, fy: ly - (gx - cx + gy - cy) * TW / 4, light: 3.4 });
     }
-    return DOOR_X.has(name);
+    if (vendor) npcs.push({ vendor, x: sx ? cx + 2.3 : cx + 0.75, y: sx ? cy + 0.75 : cy + 2.3, flip: !sx });
+    return b;
   };
-  VENDORS.forEach((v) => {
-    const [cx, cy] = SHOPS[v.id];
-    const dx = addBuilding(v.id, cx, cy, v);
-    npcs.push({ vendor: v, x: dx ? cx + 2.3 : cx + 0.75, y: dx ? cy + 0.75 : cy + 2.3 });
-  });
-  for (const [n, cx, cy] of HOUSES) addBuilding(n, cx, cy);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (map.block[y * W + x] && mat[y * W + x] === 2) mat[y * W + x] = 0;
+  for (const v of shuffle(VENDORS.slice(), rng)) if (!place(v.id, v) && !last) return null;
+  const houses = ['inn', 'bakery', 'stables', ...Array(rng.int(2, 5)).fill('cottage')];
+  for (const n of houses) place(n, null);
 
-  // ground tiles: a tile beside a softer material takes the transition with that material on the shared side(s)
+  // ---- props
+  const S = (name) => townObject(name);
+  const blockAt = (x, y) => { map.block[I(Math.floor(x), Math.floor(y))] = 1; };
+  const free = (x, y, solid) => {
+    const tx = Math.floor(x), ty = Math.floor(y);
+    if (!inb(tx, ty) || map.block[I(tx, ty)] || use[I(tx, ty)] === 2 || use[I(tx, ty)] === 4) return false;
+    if (solid && keep[I(tx, ty)]) return false;
+    return !props.some((p) => p.kind === 'scatter' && Math.abs(p.x - x) < 0.8 && Math.abs(p.y - y) < 0.8);
+  };
+  const prop = (name, x, y, opts = {}) => {
+    const spr = S(name), solid = opts.solid ?? SOLID.test(name);
+    if (!spr || !free(x, y, solid)) return false;
+    props.push({ kind: 'scatter', x, y, spr, k, flip: opts.flip ?? rng.chance(0.5) });
+    if (solid) blockAt(x, y);
+    return true;
+  };
+  // the well, benches round it, market stalls on the plaza's rim
+  prop('village_well', C.x + 0.5, C.y + 0.5, { flip: false });
+  for (let i = rng.int(1, 3), a = R(0, TAU); i > 0; i--, a += R(1.5, 2.6)) prop('stone_bench', C.x + 0.5 + Math.cos(a) * 2.6, C.y + 0.5 + Math.sin(a) * 2.6);
+  const ware = ['vegetable_basket', 'crate_stack', 'cloth_crate', 'grain_sacks', 'potion_jars', 'closed_barrel', 'water_bucket'];
+  for (let i = rng.int(2, 5), a = R(0, TAU); i > 0; i--, a += R(0.9, 1.8)) {
+    const d = R(3.6, 4.6), x = C.x + 0.5 + Math.cos(a) * d, y = C.y + 0.5 + Math.sin(a) * d;
+    if (!street(Math.floor(x), Math.floor(y)) || keep[I(Math.floor(x), Math.floor(y))]) continue;
+    if (prop('market_table', x, y)) { prop(rng.pick(ware), x + Math.cos(a + 1.6) * 0.9, y + Math.sin(a + 1.6) * 0.9); if (rng.chance(0.5)) prop(rng.pick(ware), x + Math.cos(a) * 0.9, y + Math.sin(a) * 0.9); }
+  }
+  // each building's wares and clutter beside its door and along its walls
+  for (const b of buildings) {
+    const [solid, small] = SHOP_DRESS[b.name] || SHOP_DRESS.cottage;
+    const spots = b.sx
+      ? [[b.x0 + 3.5, b.y0 - 0.4], [b.x0 + 3.5, b.y0 + 3.4], [b.x0 + 3.45, b.y0 + 2.6], [b.x0 - 0.5, b.y0 + 1.5], [b.x0 + 1.5, b.y0 - 0.5]]
+      : [[b.x0 - 0.4, b.y0 + 3.5], [b.x0 + 3.4, b.y0 + 3.5], [b.x0 + 2.6, b.y0 + 3.45], [b.x0 + 1.5, b.y0 - 0.5], [b.x0 - 0.5, b.y0 + 1.5]];
+    let si = 0;
+    for (const n of shuffle(solid.slice(), rng)) while (si < spots.length && !prop(n, ...spots[si++]));
+    for (const n of small) if (si < spots.length) prop(n, ...spots[si++], { solid: false });
+  }
+  // yards: gardens, an orchard, a lumber camp by the trees, a paddock, old ruins
+  const yard = (w, h, test) => {
+    for (let tries = 0; tries < 150; tries++) {
+      const x0 = rng.int(4, W - 4 - w), y0 = rng.int(4, H - 4 - h);
+      let ok = true;
+      for (let y = y0 - 1; y <= y0 + h && ok; y++) for (let x = x0 - 1; x <= x0 + w && ok; x++) if (!inb(x, y) || use[I(x, y)] !== 0 || keep[I(x, y)]) ok = false;
+      if (!ok || (test && !test(x0, y0))) continue;
+      for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) use[I(x, y)] = 3;
+      return [x0, y0];
+    }
+    return null;
+  };
+  const nearForest = (x0, y0) => { for (let d = 1; d < 4; d++) for (const [x, y] of [[x0 - d, y0], [x0, y0 - d], [x0 + 5 + d, y0], [x0, y0 + 4 + d]]) if (inb(x, y) && use[I(x, y)] === 4) return true; return false; };
+  const fenceX = (x0, x1, y) => { for (let x = x0; x < x1; x++) prop('split_rail_fence', x + 0.5, y, { flip: true }); };
+  const fenceY = (y0, y1, x) => { for (let y = y0; y < y1; y++) prop('split_rail_fence', x, y + 0.5, { flip: false }); };
+  const yards = shuffle(['garden', 'garden', 'orchard', 'lumber', 'paddock', 'ruins', 'garden', 'glade'], rng).slice(0, rng.int(4, 7));
+  for (const kind of yards) {
+    if (kind === 'garden') {
+      const at = yard(rng.int(4, 6), rng.int(3, 5));
+      if (!at) continue;
+      const [x0, y0] = at, w = 4 + ((x0 + y0) % 3), h = 3 + (x0 % 2);
+      for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) mat[I(x, y)] = (y - y0) % 2 ? 3 : 2; // furrows
+      fenceX(x0, x0 + w, y0 - 0.05); fenceY(y0, y0 + h - 1, x0 - 0.05);
+      for (let i = 0; i < 3; i++) prop(rng.pick(['vegetable_basket', 'wildflowers', 'water_bucket', 'hay_bale', 'grain_sacks']), x0 + R(0.5, w - 0.5), y0 + R(0.5, h - 0.5));
+    } else if (kind === 'orchard') {
+      const at = yard(7, 7);
+      if (!at) continue;
+      const [x0, y0] = at;
+      for (let y = y0 + 1; y < y0 + 7; y += 2) for (let x = x0 + 1; x < x0 + 7; x += 2) prop(rng.pick(['t_orchard_pear', 't_young_apple', 't_orchard_pear']), x + R(-0.2, 0.2), y + R(-0.2, 0.2), { solid: true });
+      for (let i = 0; i < 4; i++) prop(rng.pick(['wildflowers', 'vegetable_basket', 'leafy_shrub']), x0 + R(0, 7), y0 + R(0, 7), { solid: false });
+    } else if (kind === 'lumber') {
+      const at = yard(5, 4, nearForest) || yard(5, 4);
+      if (!at) continue;
+      const [x0, y0] = at;
+      for (let y = y0; y < y0 + 4; y++) for (let x = x0; x < x0 + 5; x++) if (rng.chance(0.7)) mat[I(x, y)] = rng.chance(0.6) ? 2 : 1;
+      for (const n of shuffle(['sawn_stump', 'axe_stump', 'firewood_stack', 'fallen_log', 'workbench', 'hollow_stump', 'firewood_stack'], rng)) prop(n, x0 + R(0.5, 4.5), y0 + R(0.5, 3.5));
+    } else if (kind === 'paddock') {
+      const st = buildings.find((b) => b.name === 'stables');
+      let at = null;
+      if (st) at = yard(5, 4, (x0, y0) => Math.hypot(x0 + 2.5 - st.cx, y0 + 2 - st.cy) < 8);
+      at = at || yard(5, 4);
+      if (!at) continue;
+      const [x0, y0] = at;
+      for (let y = y0; y < y0 + 4; y++) for (let x = x0; x < x0 + 5; x++) mat[I(x, y)] = rng.chance(0.65) ? 3 : 2;
+      fenceX(x0, x0 + 5, y0 - 0.05); fenceY(y0, y0 + 3, x0 + 4.95);
+      for (const n of ['hay_bale', 'horse_trough', 'handcart', 'hay_bale']) prop(n, x0 + R(0.6, 4.2), y0 + R(0.6, 3.4));
+    } else if (kind === 'ruins') {
+      const at = yard(5, 5);
+      if (!at) continue;
+      const [x0, y0] = at;
+      for (let y = y0; y < y0 + 5; y++) for (let x = x0; x < x0 + 5; x++) if (rng.chance(0.45)) mat[I(x, y)] = rng.chance(0.5) ? 1 : 4;
+      for (let x = x0; x < x0 + 5; x++) if (rng.chance(0.65)) prop('stone_boundary', x + 0.5, y0 + 0.2, { flip: true });
+      for (let y = y0 + 1; y < y0 + 5; y++) if (rng.chance(0.55)) prop('stone_boundary', x0 + 0.2, y + 0.5, { flip: false });
+      for (const n of ['tiles_and_bricks', 'broken_wheel', 'cart_debris', 'moss_boulder', 'fieldstone_cluster', 't_dead_oak']) if (rng.chance(0.7)) prop(n, x0 + R(1.2, 4.6), y0 + R(1.2, 4.6));
+    } else if (kind === 'glade') {
+      const at = yard(4, 4);
+      if (!at) continue;
+      const [x0, y0] = at;
+      prop(rng.pick(['t_ancient_oak', 't_ancient_willow', 't_storm_deadwood']), x0 + 2, y0 + 2, { solid: true });
+      for (let i = 0; i < 5; i++) prop(rng.pick(['wildflowers', 'mushrooms', 'leafy_shrub', 'fieldstone_cluster']), x0 + R(0, 4), y0 + R(0, 4));
+    }
+  }
+  // lamps along the roads (none in the portal yard), and travellers' clutter on the verges
+  const stand = tileset && tileset.scatter.find((e) => e.name === 'torch_stand');
+  const verge = (x, y) => { const tx = Math.floor(x), ty = Math.floor(y); return street(tx, ty) && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => inb(tx + dx, ty + dy) && use[I(tx + dx, ty + dy)] !== 1); };
+  let lamps = 0;
+  for (const road of roads) for (let i = 6; i < road.length && lamps < 14; i += rng.int(10, 16)) {
+    const [x, y] = road[i], a = rng.chance(0.5) ? 1 : -1, n = road[Math.min(road.length - 1, i + 1)], dir = Math.atan2(n[1] - y, n[0] - x) + a * Math.PI / 2;
+    const lx = x + Math.cos(dir) * 1.6, ly = y + Math.sin(dir) * 1.6;
+    if (!stand || Math.hypot(lx - portal.x, ly - portal.y) < 7 || !free(lx, ly, true)) continue;
+    props.push({ kind: 'scatter', x: lx, y: ly, spr: stand, k: tileset.k, light: 4.5 });
+    blockAt(lx, ly); lamps++;
+  }
+  const clutter = ['closed_barrel', 'water_barrel', 'crate_stack', 'rope_and_hook', 'handcart', 'broken_wheel', 'cart_debris', 'hay_bale', 'grain_sacks', 'firewood_stack'];
+  for (let i = 0, n = 0; i < 200 && n < rng.int(8, 14); i++) {
+    const road = rng.pick(roads), at = road[Math.floor(R(0, 1) * road.length)];
+    if (!at) continue;
+    const x = at[0] + R(-1.6, 1.6), y = at[1] + R(-1.6, 1.6);
+    if (!verge(x, y) || Math.hypot(x - portal.x, y - portal.y) < 6 || Math.hypot(x - C.x, y - C.y) < 3) continue;
+    if (prop(rng.pick(clutter), x, y)) n++;
+  }
+  // the forest: varied trees in the ragged band, and copses, single trees and brush on the open grass
+  const pine = FOREST_TREES;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = I(x, y);
+    if (use[i] !== 4) continue;
+    map.block[i] = 1;
+    const e = Math.min(x, y, W - 1 - x, H - 1 - y);
+    if ((x * 7 + y * 13) % 3 === 0 || (e >= 1 && rng.chance(0.3))) props.push({ kind: 'scatter', x: x + 0.5 + R(-0.3, 0.3), y: y + 0.5 + R(-0.3, 0.3), spr: S(rng.chance(0.06) ? rng.pick(['t_dead_oak', 't_storm_deadwood', 't_dead_thorn']) : rng.pick(pine)), k, flip: rng.chance(0.5) });
+  }
+  const open = (x, y, r) => {
+    for (let yy = Math.floor(y - r); yy <= Math.floor(y + r); yy++) for (let xx = Math.floor(x - r); xx <= Math.floor(x + r); xx++) if (!inb(xx, yy) || use[I(xx, yy)] !== 0 || keep[I(xx, yy)] || map.block[I(xx, yy)]) return false;
+    return true;
+  };
+  const nearKey = (x, y, d) => npcs.some((n) => Math.hypot(n.x - x, n.y - y) < d) || Math.hypot(x - portal.x, y - portal.y) < d + 2 || Math.hypot(x - C.x, y - C.y) < 6;
+  for (let c = rng.int(2, 4); c > 0; c--) { // copses
+    const cx = R(6, W - 6), cy = R(6, H - 6);
+    for (let i = 0; i < 6; i++) { const x = Math.floor(cx + R(-2, 2)) + 0.5, y = Math.floor(cy + R(-2, 2)) + 0.5; if (open(x, y, 0.6) && !nearKey(x, y, 2.5)) prop(rng.pick(pine), x, y, { solid: true }); }
+  }
+  for (let i = 0, n = 0; i < 500 && n < rng.int(10, 20); i++) {
+    const x = Math.floor(R(4, W - 4)) + 0.5, y = Math.floor(R(4, H - 4)) + 0.5;
+    if (!open(x, y, 1) || nearKey(x, y, 2.5)) continue;
+    if (prop(rng.pick(TOWN_TREES), x, y, { solid: true })) n++;
+  }
+  const brush = ['leafy_shrub', 'thorn_bush', 'dry_reeds', 'wildflowers', 'wildflowers', 'wildflowers', 'mushrooms', 'moss_boulder', 'fieldstone_cluster', 'hollow_stump', 'fallen_log', 'sawn_stump'];
+  for (let i = 0; i < 120; i++) {
+    const x = R(3, W - 3), y = R(3, H - 3);
+    if (!open(x, y, 0.4) || nearKey(x, y, 1.5)) continue;
+    prop(rng.pick(brush), x, y);
+  }
+
+  // ---- ground tiles: a tile beside a softer material takes the transition with that material on the shared side(s)
   makeTownTiles();
-  const at = (x, y) => (map.inb(x, y) ? mat[y * W + x] : mat[Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))]);
+  const at = (x, y) => mat[Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))];
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const m = at(x, y), sides = [at(x - 1, y), at(x + 1, y), at(x, y - 1), at(x, y + 1)];
     let n = 99;
@@ -107,70 +394,23 @@ export function generateTown(tileset) {
     }
     map.v[y * W + x] = v;
   }
-
-  // props
-  const S = (name) => townObject(name);
-  const blockAt = (x, y) => { map.block[Math.floor(y) * W + Math.floor(x)] = 1; };
-  const prop = (name, x, y, block = true, extra) => {
-    const spr = S(name);
-    if (!spr) return;
-    props.push({ kind: 'scatter', x, y, spr, k, flip: rng.chance(0.5), ...extra });
-    if (block) blockAt(x, y);
-  };
-  prop('village_well', center.x, center.y, true, { flip: false });
-  // lamps: the catacombs pack's torch stands, lit, around the plaza and along the portal road
-  const stand = tileset && tileset.scatter.find((e) => e.name === 'torch_stand');
-  for (const [lx, ly] of [[P.x0 + 0.5, P.y1 - 0.5], [P.x1 - 0.5, P.y0 + 0.5], [P.x1 - 0.5, P.y1 - 0.5], [18.5, 18.5], [25.5, 25.5], [18.5, 25.5], [25.5, 18.5], [34, 33], [36.5, 38], [38, 36.5], [21, 38], [38, 21]]) {
-    if (stand) props.push({ kind: 'scatter', x: lx, y: ly, spr: stand, k: tileset.k, light: 4.5 });
-    blockAt(lx, ly);
-  }
-  // shop dressing, in front of and beside each shop
-  const dress = [
-    ['tool_rack', 14.4, 13.6], ['crate_stack', 17.6, 13.6],
-    ['closed_barrel', 21.4, 13.6], ['cloth_crate', 18.4, 13.4],
-    ['anvil_stump', 25.4, 13.7], ['cold_forge', 22.4, 13.6], ['smith_bellows', 25.6, 10.0],
-    ['scroll_rack', 29.4, 13.6],
-    ['potion_jars', 13.6, 14.3], ['market_table', 13.6, 17.4],
-    ['vegetable_basket', 13.6, 18.3], ['market_table', 13.6, 21.4],
-    ['crate_stack', 13.6, 25.4], ['grain_sacks', 13.6, 22.3],
-    ['closed_barrel', 13.6, 29.4], ['water_bucket', 13.6, 26.3],
-    ['hay_bale', 36.6, 25], ['horse_trough', 36.6, 27.4], ['handcart', 32.2, 27.6], ['hay_bale', 37, 29.4],
-    ['firewood_stack', 36.4, 14.2], ['grain_handmill', 32.5, 17.4], ['water_barrel', 36.4, 17.6],
-    ['workbench', 20.6, 37.6], ['axe_stump', 24.5, 37.2], ['sawn_stump', 28.6, 37.5],
-    ['stone_bench', 17.2, 22], ['stone_bench', 26.8, 22], ['arrow_milestone', 31.5, 31.5],
-    ['split_rail_fence', 38.5, 26.5], ['split_rail_fence', 38.5, 28.5],
-  ];
-  for (const [n, x, y] of dress) if (map.walkable(x, y)) prop(n, x, y, !['water_bucket', 'vegetable_basket'].includes(n));
-  // a ring of trees closes the town in; more trees and brush on the grass inside
-  const tnames = Object.keys(A.town.meta.objects).filter((n) => n.startsWith('t_'));
-  const big = tnames.filter((n) => /large|medium/.test(n) && !/dead/.test(n)), small = tnames.filter((n) => /small/.test(n));
-  const free = (x, y, r) => {
-    for (let yy = Math.floor(y - r); yy <= Math.floor(y + r); yy++) for (let xx = Math.floor(x - r); xx <= Math.floor(x + r); xx++) {
-      if (!map.walkableTile(xx, yy) || mat[yy * W + xx] !== 0) return false;
-    }
-    return true;
-  };
-  const nearKey = (x, y, d) => npcs.some((n) => Math.hypot(n.x - x, n.y - y) < d) || Math.hypot(x - portal.x, y - portal.y) < d + 1;
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const edge = Math.min(x, y, W - 1 - x, H - 1 - y);
-    if (edge > 2) continue;
-    if (edge < 2) map.block[y * W + x] = 1; // the forest wall
-    if ((x + y * 3) % 2 === 0 || edge === 2 && rng.chance(0.5)) props.push({ kind: 'scatter', x: x + 0.5 + rng.range(-0.3, 0.3), y: y + 0.5 + rng.range(-0.3, 0.3), spr: S(rng.pick(big)), k, flip: rng.chance(0.5) });
-    if (edge === 2) map.block[y * W + x] = 1;
-  }
-  let trees = 0;
-  for (let i = 0; i < 600 && trees < 34; i++) {
-    const x = Math.floor(rng.range(3, W - 3)) + 0.5, y = Math.floor(rng.range(3, H - 3)) + 0.5;
-    if (!free(x, y, 1) || nearKey(x, y, 2.5) || (x > P.x0 - 3 && x < P.x1 + 3 && y > P.y0 - 3 && y < P.y1 + 3)) continue;
-    prop(rng.pick(rng.chance(0.6) ? big : small), x, y); trees++;
-  }
-  const brush = ['leafy_shrub', 'thorn_bush', 'dry_reeds', 'wildflowers', 'wildflowers', 'mushrooms', 'moss_boulder', 'fieldstone_cluster', 'hollow_stump', 'fallen_log', 'sawn_stump'];
-  for (let i = 0; i < 70; i++) {
-    const x = rng.range(3, W - 3), y = rng.range(3, H - 3);
-    if (!free(x, y, 0.4) || nearKey(x, y, 1.5)) continue;
-    const n = rng.pick(brush);
-    prop(n, x, y, /boulder|cluster|stump|log/.test(n));
-  }
   props.push(...torches);
-  return { map, buildings, npcs, props, portal, center, start: [22, 25.5] };
+
+  // ---- the start (by the well) and a reachability check from it
+  let start = [C.x + 0.5, C.y + 3.5];
+  for (let r = 0; r < 6 && !map.walkable(...start); r++) start = map.randomNear(C.x + 0.5, C.y + 2.5, 1.5 + r);
+  const seen = new Uint8Array(N), q = [I(Math.floor(start[0]), Math.floor(start[1]))];
+  seen[q[0]] = 1;
+  for (let h = 0; h < q.length; h++) {
+    const i = q[h], x = i % W, y = (i / W) | 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = I(x + dx, y + dy); if (map.walkableTile(x + dx, y + dy) && !seen[j]) { seen[j] = 1; q.push(j); } }
+  }
+  const reach = (x, y) => seen[I(Math.floor(x), Math.floor(y))];
+  if (!last && (npcs.length < VENDORS.length || !reach(portal.x, portal.y) || npcs.some((n) => !reach(n.x, n.y)))) return null;
+  return { map, buildings, npcs, props, portal, center: { x: C.x + 0.5, y: C.y + 0.5 }, start };
+}
+
+function shuffle(a, rng) {
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng.next() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
 }

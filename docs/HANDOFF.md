@@ -47,7 +47,8 @@ Requirements, as stated (✅ = implemented in the draft):
   back to town, the town portal leads into the next biome.
 - ✅ On **death**, return to town keeping all gear, XP, levels and skills, but "start over at level 1"
   (see Decisions).
-- ✅ Difficulty increases up to **level 100**, where the final boss is **"DEMON LORD VELSCOUR"**.
+- ✅ Difficulty increases up to **level 100**, where the final boss is **"DEMON LORD VELSCOUR"**. (Later moved to
+  **depth 500** at the user's request, item 20.)
 - Follow-up messages: "It's meant to be played in a web browser on PC and mobile!" Later: "Yes, into main. Push the
   build out so I can test it on GitHub." Later still: "Make sure to leave detailed notes so that you will be able
   to pick up right from where you left off in a new session." (that request produced this file).
@@ -492,10 +493,55 @@ are in section 7.
      rising and hopping, every slime summon cast in a fight, an idle wolf sits), data_check, flow, skills (slime
      lord, dragon knight, ranger, carrion witch), legion, pets, ui, auto-play slime lord 10 min (depth 7, no deaths).
      `legion.js` fails `pyreknight spells 0` on `main` too (pre-existing).
+21. **Random towns, depth 500, harder monsters, rings, skill mastery, Gem Forge (branch `claude/exciting-carson-l949yd`).**
+   The user asked for: a more random, less cookie-cutter town using the pack's assets for roads and lived-in areas;
+   the stone and flag by the portal removed; Velscour moved to depth 500; dungeons a bit harder (heroes should die now
+   and then, especially on auto); 4 ring slots whose rings augment skills significantly (e.g. lightning tethering the
+   Paladin's swirling hammers to him, fire/poison/chain lightning enchantments) for all skills of all classes; skill XP
+   and levels 1-1000 per skill with growing power and bigger effects; combining/upgrading gems in town. Done:
+   - **Town** (`src/world/town.js`, `generateTown(tileset, seed)`): rolled from `c.townSeed` (each hero their own town;
+     `migrate` gives old saves one). A ragged forest band, an irregular plaza of overlapping ellipses with the well,
+     benches and market stalls, 3-4 meandering roads out into the forest (the first to the portal yard: gravel, a stone
+     pad, nothing built within 5 tiles), side streets, mud puddles, gravel shoulders. Shops front the streets: a building
+     is drawn mirrored (`b.flip`, `render.js drawBuilding/buildingRect`) when its door must face the other way, so any
+     building can face +x or +y. Shops get their wares by the door (`SHOP_DRESS`); houses that find no street frontage
+     get a footpath. Yards: gardens (furrowed dirt/mud, fences), an orchard, a lumber camp by the trees, a paddock by
+     the stables, ruins (stone walls, rubble, a dead oak), a glade. Lamps (the catacomb torch stands) along the roads but
+     none in the portal yard; the arrow milestone (the "stone") is gone. All 18 trees are used now (the old code only
+     found the fir and the willow). A BFS from the start checks every vendor and the portal; a failed roll retries with
+     the next seed. `tools/tests/town.js [seeds]` checks reachability and screenshots each town.
+     Note: the "flag" the user meant was read as the lamp post (torch stand) beside the portal; if they meant the
+     portal's stone side pillars (`drawPortal`, `tileset.pillar`), remove those too.
+   - **Depth 500** (`src/data/depth.js`): `FINAL_DEPTH`, `isRaidDepth`, and `depthLevel(d)` (1:1 to 60, then 0.45 per
+     depth: depth 500 = monster level 258). Monsters, loot, chests, vendors and the XP penalty use the level; raid/boss
+     life multipliers and level density/elite counts are capped so depth 500 doesn't explode. `MAX_LEVEL` is 300.
+   - **Harder**: `monsterBase` life x1.15, damage about x1.27 and growth 1.054 (was 1.052); denser levels
+     (`density = 1.1 + min(depth,120) * 0.013`).
+   - **Rings** (`src/data/rings.js`, `src/game/augments.js`): slots `ring1-4` (`RING_SLOTS`; ring items have
+     `slot: 'ring'`, `fitsSlot`/`slotFor` in items.js), 2 in 10 drops, guardians drop one 60% of the time, the Jeweler
+     sells 10, the Gambler sells them. A ring has normal affixes (letter R) and 1-3 augments `{id, sk|kind|all, pow}`
+     rolled for the current hero (`setRingContext`). 15 augments: ignite, venom, frost, storm (chain lightning), tether
+     (Storm Tether: lightning from the hero to each projectile/orbiting weapon and between orbits, damaging enemies on
+     the arcs; melee/beam skills lash instead), detonate, smite, meteor, rift, blood, shatter, multiply (+count via
+     `withMore` in skillrun), colossus (+size), haste (cost/cooldown), echo. `Player.augFor(sk)` merges them; castSkill
+     puts them on `o.aug`; `combat.hit` calls `augHit` (procs carry `proc: true` and never re-proc); minions carry
+     `m.aug`; `World.update` calls `augHazard` for enchant particles and the tether. Auto-play values augments on bar
+     skills (`augScore`), tries each ring slot (`fitScore`) and buys rings at the Jeweler.
+   - **Mastery** (`augments.js` + `Player.gainMastery`): `c.mastery[id] = [level, xp]`, 1-1000. XP from casts
+     (`4 * depthLevel^1.5 * 0.15`, or x1.2 for skills that deal no damage) and from kills (the monster's XP to the skill
+     that last hit it, `tgt.lastSk`). `masteryNeed(L) = 30 L^1.5 + 10 L`; `masteryMul` (x2.4 at 100, x29 at 1000) is in
+     `skillDamage`; `masteryVis` grows sizes up to +80%; tiers at 25/100/250/500/750/1000 add cast flourishes
+     (`masteryCastFx`) and a big level-up burst. Shown in the skill tree (corner number), detail panel and book.
+   - **Gem Forge** (Gem Merchant): 10 grades (`GEM_TIERS` up to Eternal; drops stop at Celestial), Fuse 3, Fuse all,
+     Refine 1 (dear). `fuseAll` is shared with auto-play.
+   - Verified: data_check, town.js (4 seeds), rings.js (every augment in a live dungeon, mastery, UI shots), flow,
+     skills, ui, mobile, hud, autoplay soaks (see the commit/PR for numbers).
 
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
-0. Get the user's playtest feedback on the boss rooms (item 16): difficulty, length, readability of the telegraphs.
+0. Get the user's feedback on item 21: town variety, ring power (augment numbers are first guesses in rings.js and
+   augments.js), mastery speed (`masteryNeed`, cast XP in `Player.tryUseSkill`), and whether deaths now happen often
+   enough. Then the boss rooms (item 16).
 1. Get PR #1 merged (by the user) and confirm the Pages deploy works at https://agilancer.github.io/velscour/.
 2. Act on the user's playtest feedback.
 3. Pre-release hardening, which was offered to the user but not yet run:

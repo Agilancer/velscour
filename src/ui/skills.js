@@ -8,6 +8,22 @@ import { CLASS_SKILLS, SKILLS, MAX_SKILL_LEVEL, describe, manaCost, cooldown, RO
 import { CLASSES } from '../data/classes.js';
 import { elem } from '../gfx/vfx.js';
 import { SLOT_LABELS, freeSlot } from '../data/bar.js';
+import { MAX_MASTERY, masteryNeed, masteryMul, masteryTier, TIER_NAMES } from '../game/augments.js';
+import { AUGMENTS } from '../data/rings.js';
+
+/** A skill's mastery: level, tier, an XP bar, its damage multiplier, and the ring augments on it. */
+function masteryHtml(sk, compact) {
+  const c = G.char, p = G.player, m = (c.mastery && c.mastery[sk.id]) || [1, 0];
+  const M = m[0], pct = M >= MAX_MASTERY ? 100 : Math.min(100, (m[1] / masteryNeed(M)) * 100);
+  const col = elem(sk.el).glow;
+  let h = `<div class="mastery"><span>Mastery <b style="color:${col}">${M}</b>/${MAX_MASTERY} · ${TIER_NAMES[masteryTier(M)]}${compact ? '' : ` · x${masteryMul(M).toFixed(2)} damage`}</span><div class="mbar"><div style="width:${pct.toFixed(1)}%;background:${col}"></div></div></div>`;
+  if (!compact) {
+    h += '<div class="dim" style="font-size:12px">Skills gain mastery when cast and (more) when their hits kill. Each level adds power; at 25, 100, 250, 500, 750 and 1000 the effects grow bigger and wilder.</div>';
+    const aug = p.augFor(sk);
+    if (aug) h += `<div style="margin-top:4px;font-size:12px">Ring augments: ${Object.entries(aug).map(([id, pw]) => `<b style="color:${elem(AUGMENTS[id].el).glow}">${AUGMENTS[id].name}</b> <span class="dim">(${pw.toFixed(2)})</span>`).join(', ')}</div>`;
+  }
+  return h;
+}
 
 export { SLOT_LABELS };
 let curTree = 0;
@@ -69,6 +85,7 @@ export function skillDetail(sk) {
     const nd = p.skillDamage(sk, Math.max(1, L + 1));
     h += `<div class="dim" style="margin-top:4px;font-size:12px">Next level: ${nd[0]}–${nd[1]} damage, ${manaCost(sk, L + 1)} mana</div>`;
   }
+  if (base) h += masteryHtml(sk);
   h += `<div class="dim" style="font-size:12px;margin-top:2px">Synergy: +3% damage per point in other ${escapeHtml(CLASSES[sk.classId].trees[sk.tree])} skills (now x${p.synergy(sk).toFixed(2)})</div>`;
   box.innerHTML = h;
   const row = el('div', 'row');
@@ -140,6 +157,8 @@ export function renderTree(body) {
     if (selected === sk.id) node.classList.add('sel');
     if (sk.row > 0) node.appendChild(el('div', 'link'));
     node.appendChild(el('span', 'lvl', String(lv)));
+    const M = lv && c.mastery && c.mastery[sk.id] ? c.mastery[sk.id][0] : 0;
+    if (M > 1) node.appendChild(el('span', 'mlvl', String(M)));
     node.title = sk.name;
     makeDrag(node, sk);
     UI.tip(node, () => `<b style="color:#ffe2a0">${escapeHtml(sk.name)}</b><div class="dim">Level ${lv}/${MAX_SKILL_LEVEL} · Req. lvl ${sk.reqLevel}</div><div style="max-width:260px">${describe(sk, Math.max(1, effLevel(G.player, sk)), G.player.skillDamage(sk, Math.max(1, effLevel(G.player, sk))))}</div>`);
@@ -174,7 +193,7 @@ export function renderBook(body) {
     cv.getContext('2d').drawImage(skillIcon(sk, 64), 0, 0);
     it.appendChild(cv);
     const slot = c.bar.indexOf(sk.id);
-    const meta = el('div', 'meta', `<b>${escapeHtml(sk.name)}</b> <span class="dim">Lv ${L}${slot >= 0 ? ` · [${SLOT_LABELS[slot]}]` : ''}</span><p>${describe(sk, L, p.skillDamage(sk, L))}</p>`);
+    const meta = el('div', 'meta', `<b>${escapeHtml(sk.name)}</b> <span class="dim">Lv ${L}${slot >= 0 ? ` · [${SLOT_LABELS[slot]}]` : ''}</span>${masteryHtml(sk, true)}<p>${describe(sk, L, p.skillDamage(sk, L))}</p>`);
     it.appendChild(meta);
     if (selected === sk.id) it.style.borderColor = '#ffe2a0';
     makeDrag(it, sk);

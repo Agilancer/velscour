@@ -1,6 +1,7 @@
 // Twenty-six dungeon biomes. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
 // palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
+import { FINAL_DEPTH } from './depth.js';
 export const BIOMES = [
   {
     id: 'catacombs', name: 'Skull-Lined Catacombs', palette: null, dark: 0.82, light: 7.5,
@@ -242,10 +243,10 @@ export const BIOME_BY_ID = Object.fromEntries(BIOMES.map((b) => [b.id, b]));
 
 /**
  * The hero's next biome, drawn from a shuffle bag kept on the save (`c.biomeBag`): all 25 biomes come up once,
- * in random order, before any repeats, and never the same one twice in a row. The throne is only for depth 100.
+ * in random order, before any repeats, and never the same one twice in a row. The throne is only for FINAL_DEPTH.
  */
 export function drawBiome(c, depth) {
-  if (depth === 100) return 'throne';
+  if (depth === FINAL_DEPTH) return 'throne';
   const all = BIOMES.filter((b) => b.id !== 'throne').map((b) => b.id);
   let bag = (c.biomeBag || []).filter((id) => all.includes(id));
   if (!bag.length || (bag.length === 1 && bag[0] === c.lastBiome)) bag = all.slice();

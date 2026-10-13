@@ -8,6 +8,7 @@ import { Meter } from './dpsmeter.js';
 import { explosionFx, hitSpark } from '../gfx/shapes.js';
 import { GORE } from '../data/enemies.js';
 import { dropLoot } from './loot.js';
+import { augHit } from './augments.js';
 
 const PLAYER_RES = { fire: 'fire', cold: 'cold', light: 'light', poison: 'poison', acid: 'poison' };
 
@@ -119,6 +120,13 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
   } else if (src && src.summon && src.leech) {
     src.owner.heal(dmg * src.leech * 0.2, true);
   }
+  // ring augments ride on skill hits (o.aug) and on the hits of a skill's minions; the skill earns mastery for kills
+  if (byHero && !o.proc) {
+    const sk = o.sk || (src && src.summon && src.skillId);
+    if (sk) tgt.lastSk = sk;
+    const aug = o.aug || (src && src.summon && src.aug);
+    if (aug && owner && owner.isPlayer) augHit(src, owner, tgt, dmg, el, o.aug ? o : { aug, sk });
+  } else if (byHero && o.sk) tgt.lastSk = o.sk;
   if (tgt.curses.thorns && tgt.curses.thorns.t > 0 && tgt.isPlayer === false && src && src.team === 'player') { /* handled when monster attacks */ }
 
   if (tgt.hp <= 0) kill(tgt, src, { el, overkill: -tgt.hp / tgt.maxHp, crit, aoe: o.aoe });
@@ -217,7 +225,7 @@ export function kill(tgt, src, info = {}) {
     world.kills++;
     const p = G.player;
     if (p) {
-      if (tgt.team === 'enemy') p.gainXp(tgt.xp || 0);
+      if (tgt.team === 'enemy') { p.gainXp(tgt.xp || 0); if (tgt.lastSk) p.gainMastery(tgt.lastSk, tgt.xp || 0); }
       p.char.kills = (p.char.kills || 0) + 1;
       const leg = p.st.legendary;
       if (leg.bloodbath) {

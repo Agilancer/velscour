@@ -23,7 +23,8 @@ Headless Chromium tests live in `tools/tests/`; see the header comment of each f
 ```bash
 export NODE_PATH=/opt/node22/lib/node_modules     # where playwright is installed in Claude cloud containers
 node tools/tests/data_check.mjs                    # skill data sanity check, no browser (fast)
-node tools/tests/town.js                           # town pack: vendors/portal reachable + screenshots
+node tools/tests/town.js [seeds]                   # random towns: vendors/portal reachable + screenshots per seed
+node tools/tests/rings.js                          # ring augments in a live dungeon, skill mastery, ring/forge UI shots
 node tools/tests/flow.js                           # town -> portal -> boss -> exit -> depth 2 -> death -> reload
 node tools/tests/ui.js                             # skill tree, inventory, socketing, vendors
 node tools/tests/mobile.js                         # 844x390 touch layout + joystick
@@ -88,7 +89,10 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   and `hud.js` for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
   `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`.
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Raid bosses
-  (`src/game/raid.js`, every 5th depth): run `raid.js`.
+  (`src/game/raid.js`, every 5th depth): run `raid.js`. Rings, augments or skill mastery (`src/data/rings.js`,
+  `src/game/augments.js`): run `rings.js`. The town generator (`src/world/town.js`): run `town.js` with a few seeds.
+- Velscour waits at `FINAL_DEPTH` (500, `src/data/depth.js`); monster levels come from `depthLevel(depth)`, never the
+  raw depth.
 
 ## Git / GitHub
 - The working branch is `claude/amazing-rubin-kguehz`. PR https://github.com/Agilancer/velscour/pull/1

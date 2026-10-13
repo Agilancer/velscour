@@ -1,5 +1,7 @@
 // Items, affixes, gems and legendary powers.
 import { rand, randi, pick, weighted, clamp, chance } from '../core/util.js';
+import { rollAugments, RING_NAMES, AUGMENTS, KIND_NAMES } from './rings.js';
+import { SKILLS } from './skills.js';
 
 export const RARITY = [
   { id: 0, name: 'Common', color: '#e8e8e8', weight: 62, affixes: [0, 1], sockets: 1, mult: 1 },
@@ -20,8 +22,13 @@ export const MATERIALS = [
 ];
 export const tierOf = (ilvl) => clamp(Math.floor((ilvl - 1) / 10), 0, 9);
 
-export const SLOTS = ['weapon', 'offhand', 'head', 'body', 'hands', 'legs', 'feet'];
-export const SLOT_NAMES = { weapon: 'Weapon', offhand: 'Off-hand', head: 'Head', body: 'Body', hands: 'Hands', legs: 'Legs', feet: 'Feet' };
+export const RING_SLOTS = ['ring1', 'ring2', 'ring3', 'ring4'];
+export const SLOTS = ['weapon', 'offhand', 'head', 'body', 'hands', 'legs', 'feet', ...RING_SLOTS];
+export const SLOT_NAMES = { weapon: 'Weapon', offhand: 'Off-hand', head: 'Head', body: 'Body', hands: 'Hands', legs: 'Legs', feet: 'Feet', ring: 'Ring', ring1: 'Ring', ring2: 'Ring', ring3: 'Ring', ring4: 'Ring' };
+/** Can item it go in equipment slot `slot`? (A ring fits any of the four ring slots.) */
+export const fitsSlot = (it, slot) => !!it && it.type === 'gear' && (it.slot === slot || (it.slot === 'ring' && RING_SLOTS.includes(slot)));
+/** The equipment slot an item goes to: its own, or for a ring the first empty ring slot (else the first). */
+export const slotFor = (equip, it) => (it.slot !== 'ring' ? it.slot : RING_SLOTS.find((s) => !equip[s]) || RING_SLOTS[0]);
 
 export const WEAPONS = {
   sword: { names: ['Shortsword', 'Longsword', 'Broadsword', 'Bastard Sword', 'Runeblade'], icon: 'sword', dmg: 1.0, spd: 1.0 },
@@ -51,59 +58,59 @@ export const ARMORS = {
   feet: { names: ['Boots', 'Heavy Boots', 'Chain Boots', 'Sabatons', 'War Boots'], icon: 'boots', armor: 0.45 },
 };
 
-// Affixes. slots: W weapon, O offhand, H head, B body, G hands, L legs, F feet.
+// Affixes. slots: W weapon, O offhand, H head, B body, G hands, L legs, F feet, R ring.
 export const AFFIXES = [
-  { s: 'dmgPct', t: '+{v}% Damage', pre: 'Vicious', min: 6, max: 14, sc: 0.025, slots: 'WOG' },
+  { s: 'dmgPct', t: '+{v}% Damage', pre: 'Vicious', min: 6, max: 14, sc: 0.025, slots: 'WOGR' },
   { s: 'flatDmg', t: '+{v} Weapon Damage', pre: 'Jagged', min: 1, max: 4, sc: 0.07, slots: 'W' },
-  { s: 'atkSpeed', t: '+{v}% Attack Speed', pre: 'Swift', min: 4, max: 10, sc: 0.004, slots: 'WG' },
-  { s: 'castSpeed', t: '+{v}% Cast Speed', pre: 'Arcane', min: 4, max: 10, sc: 0.004, slots: 'WOH' },
-  { s: 'critChance', t: '+{v}% Critical Chance', pre: 'Keen', min: 2, max: 5, sc: 0.004, slots: 'WGH' },
-  { s: 'critDmg', t: '+{v}% Critical Damage', pre: 'Brutal', min: 10, max: 25, sc: 0.01, slots: 'WGO' },
-  { s: 'life', t: '+{v} Life', suf: 'of the Bear', min: 8, max: 20, sc: 0.06, slots: 'OHBGLF' },
-  { s: 'mana', t: '+{v} Mana', suf: 'of the Owl', min: 6, max: 15, sc: 0.05, slots: 'WOHBGLF' },
-  { s: 'lifeRegen', t: '+{v} Life per Second', suf: 'of Regrowth', min: 1, max: 3, sc: 0.05, slots: 'HBLF' },
-  { s: 'manaRegen', t: '+{v} Mana per Second', suf: 'of Clarity', min: 1, max: 2, sc: 0.04, slots: 'WOHG' },
+  { s: 'atkSpeed', t: '+{v}% Attack Speed', pre: 'Swift', min: 4, max: 10, sc: 0.004, slots: 'WGR' },
+  { s: 'castSpeed', t: '+{v}% Cast Speed', pre: 'Arcane', min: 4, max: 10, sc: 0.004, slots: 'WOHR' },
+  { s: 'critChance', t: '+{v}% Critical Chance', pre: 'Keen', min: 2, max: 5, sc: 0.004, slots: 'WGHR' },
+  { s: 'critDmg', t: '+{v}% Critical Damage', pre: 'Brutal', min: 10, max: 25, sc: 0.01, slots: 'WGOR' },
+  { s: 'life', t: '+{v} Life', suf: 'of the Bear', min: 8, max: 20, sc: 0.06, slots: 'OHBGLFR' },
+  { s: 'mana', t: '+{v} Mana', suf: 'of the Owl', min: 6, max: 15, sc: 0.05, slots: 'WOHBGLFR' },
+  { s: 'lifeRegen', t: '+{v} Life per Second', suf: 'of Regrowth', min: 1, max: 3, sc: 0.05, slots: 'HBLFR' },
+  { s: 'manaRegen', t: '+{v} Mana per Second', suf: 'of Clarity', min: 1, max: 2, sc: 0.04, slots: 'WOHGR' },
   { s: 'armor', t: '+{v} Armor', pre: 'Sturdy', min: 5, max: 15, sc: 0.07, slots: 'OHBGLF' },
   { s: 'armorPct', t: '+{v}% Armor', pre: 'Fortified', min: 10, max: 30, sc: 0.008, slots: 'OHBGLF' },
-  { s: 'str', t: '+{v} Strength', suf: 'of Might', min: 2, max: 6, sc: 0.035, slots: 'WOHBGLF' },
-  { s: 'dex', t: '+{v} Dexterity', suf: 'of the Fox', min: 2, max: 6, sc: 0.035, slots: 'WOHBGLF' },
-  { s: 'vit', t: '+{v} Vitality', suf: 'of the Ox', min: 2, max: 6, sc: 0.035, slots: 'WOHBGLF' },
-  { s: 'int', t: '+{v} Intellect', suf: 'of the Sage', min: 2, max: 6, sc: 0.035, slots: 'WOHBGLF' },
-  { s: 'allAttr', t: '+{v} All Attributes', suf: 'of the Ancients', min: 1, max: 3, sc: 0.03, slots: 'WBH', w: 0.4 },
-  { s: 'resFire', t: '+{v}% Fire Resistance', suf: 'of Embers', min: 5, max: 14, sc: 0.004, slots: 'OHBGLF' },
-  { s: 'resCold', t: '+{v}% Cold Resistance', suf: 'of Winter', min: 5, max: 14, sc: 0.004, slots: 'OHBGLF' },
-  { s: 'resLight', t: '+{v}% Lightning Resistance', suf: 'of Grounding', min: 5, max: 14, sc: 0.004, slots: 'OHBGLF' },
-  { s: 'resPoison', t: '+{v}% Poison Resistance', suf: 'of the Antidote', min: 5, max: 14, sc: 0.004, slots: 'OHBGLF' },
-  { s: 'resAll', t: '+{v}% All Resistances', suf: 'of the Prism', min: 3, max: 8, sc: 0.003, slots: 'OHB', w: 0.5 },
-  { s: 'lifeSteal', t: '{v}% Life Steal', pre: 'Vampiric', min: 1, max: 3, sc: 0.002, slots: 'WG' },
-  { s: 'manaSteal', t: '{v}% Mana Steal', pre: 'Draining', min: 1, max: 3, sc: 0.002, slots: 'WG' },
+  { s: 'str', t: '+{v} Strength', suf: 'of Might', min: 2, max: 6, sc: 0.035, slots: 'WOHBGLFR' },
+  { s: 'dex', t: '+{v} Dexterity', suf: 'of the Fox', min: 2, max: 6, sc: 0.035, slots: 'WOHBGLFR' },
+  { s: 'vit', t: '+{v} Vitality', suf: 'of the Ox', min: 2, max: 6, sc: 0.035, slots: 'WOHBGLFR' },
+  { s: 'int', t: '+{v} Intellect', suf: 'of the Sage', min: 2, max: 6, sc: 0.035, slots: 'WOHBGLFR' },
+  { s: 'allAttr', t: '+{v} All Attributes', suf: 'of the Ancients', min: 1, max: 3, sc: 0.03, slots: 'WBHR', w: 0.4 },
+  { s: 'resFire', t: '+{v}% Fire Resistance', suf: 'of Embers', min: 5, max: 14, sc: 0.004, slots: 'OHBGLFR' },
+  { s: 'resCold', t: '+{v}% Cold Resistance', suf: 'of Winter', min: 5, max: 14, sc: 0.004, slots: 'OHBGLFR' },
+  { s: 'resLight', t: '+{v}% Lightning Resistance', suf: 'of Grounding', min: 5, max: 14, sc: 0.004, slots: 'OHBGLFR' },
+  { s: 'resPoison', t: '+{v}% Poison Resistance', suf: 'of the Antidote', min: 5, max: 14, sc: 0.004, slots: 'OHBGLFR' },
+  { s: 'resAll', t: '+{v}% All Resistances', suf: 'of the Prism', min: 3, max: 8, sc: 0.003, slots: 'OHBR', w: 0.5 },
+  { s: 'lifeSteal', t: '{v}% Life Steal', pre: 'Vampiric', min: 1, max: 3, sc: 0.002, slots: 'WGR' },
+  { s: 'manaSteal', t: '{v}% Mana Steal', pre: 'Draining', min: 1, max: 3, sc: 0.002, slots: 'WGR' },
   { s: 'moveSpeed', t: '+{v}% Movement Speed', pre: 'Fleet', min: 4, max: 10, sc: 0.002, slots: 'FL' },
-  { s: 'goldFind', t: '+{v}% Gold Find', suf: 'of Greed', min: 10, max: 30, sc: 0.01, slots: 'HGF' },
-  { s: 'magicFind', t: '+{v}% Magic Find', suf: 'of Fortune', min: 5, max: 15, sc: 0.006, slots: 'HGF' },
+  { s: 'goldFind', t: '+{v}% Gold Find', suf: 'of Greed', min: 10, max: 30, sc: 0.01, slots: 'HGFR' },
+  { s: 'magicFind', t: '+{v}% Magic Find', suf: 'of Fortune', min: 5, max: 15, sc: 0.006, slots: 'HGFR' },
   { s: 'block', t: '+{v}% Block Chance', pre: 'Stalwart', min: 3, max: 8, sc: 0.002, slots: 'O' },
   { s: 'thorns', t: '{v} Thorns Damage', pre: 'Spiked', min: 2, max: 6, sc: 0.08, slots: 'OBL' },
   { s: 'physPct', t: '+{v}% Physical Damage', pre: 'Sharpened', min: 8, max: 18, sc: 0.02, slots: 'WG' },
-  { s: 'firePct', t: '+{v}% Fire Damage', pre: 'Burning', min: 8, max: 18, sc: 0.02, slots: 'WOH' },
-  { s: 'coldPct', t: '+{v}% Cold Damage', pre: 'Frozen', min: 8, max: 18, sc: 0.02, slots: 'WOH' },
-  { s: 'lightPct', t: '+{v}% Lightning Damage', pre: 'Shocking', min: 8, max: 18, sc: 0.02, slots: 'WOH' },
-  { s: 'poisonPct', t: '+{v}% Poison Damage', pre: 'Venomous', min: 8, max: 18, sc: 0.02, slots: 'WOH' },
-  { s: 'arcanePct', t: '+{v}% Arcane Damage', pre: 'Mystic', min: 8, max: 18, sc: 0.02, slots: 'WOH' },
-  { s: 'holyPct', t: '+{v}% Holy Damage', pre: 'Blessed', min: 8, max: 18, sc: 0.02, slots: 'WOH' },
-  { s: 'shadowPct', t: '+{v}% Shadow Damage', pre: 'Cursed', min: 8, max: 18, sc: 0.02, slots: 'WOH' },
-  { s: 'bloodPct', t: '+{v}% Blood Damage', pre: 'Sanguine', min: 8, max: 18, sc: 0.02, slots: 'WOH' },
-  { s: 'acidPct', t: '+{v}% Acid Damage', pre: 'Caustic', min: 8, max: 18, sc: 0.02, slots: 'WOH' },
-  { s: 'cdr', t: '+{v}% Cooldown Reduction', pre: 'Hastened', min: 3, max: 7, sc: 0.002, slots: 'HOG', w: 0.6 },
+  { s: 'firePct', t: '+{v}% Fire Damage', pre: 'Burning', min: 8, max: 18, sc: 0.02, slots: 'WOHR' },
+  { s: 'coldPct', t: '+{v}% Cold Damage', pre: 'Frozen', min: 8, max: 18, sc: 0.02, slots: 'WOHR' },
+  { s: 'lightPct', t: '+{v}% Lightning Damage', pre: 'Shocking', min: 8, max: 18, sc: 0.02, slots: 'WOHR' },
+  { s: 'poisonPct', t: '+{v}% Poison Damage', pre: 'Venomous', min: 8, max: 18, sc: 0.02, slots: 'WOHR' },
+  { s: 'arcanePct', t: '+{v}% Arcane Damage', pre: 'Mystic', min: 8, max: 18, sc: 0.02, slots: 'WOHR' },
+  { s: 'holyPct', t: '+{v}% Holy Damage', pre: 'Blessed', min: 8, max: 18, sc: 0.02, slots: 'WOHR' },
+  { s: 'shadowPct', t: '+{v}% Shadow Damage', pre: 'Cursed', min: 8, max: 18, sc: 0.02, slots: 'WOHR' },
+  { s: 'bloodPct', t: '+{v}% Blood Damage', pre: 'Sanguine', min: 8, max: 18, sc: 0.02, slots: 'WOHR' },
+  { s: 'acidPct', t: '+{v}% Acid Damage', pre: 'Caustic', min: 8, max: 18, sc: 0.02, slots: 'WOHR' },
+  { s: 'cdr', t: '+{v}% Cooldown Reduction', pre: 'Hastened', min: 3, max: 7, sc: 0.002, slots: 'HOGR', w: 0.6 },
   { s: 'areaPct', t: '+{v}% Area of Effect', pre: 'Vast', min: 5, max: 12, sc: 0.003, slots: 'WOB', w: 0.6 },
   { s: 'projSpeed', t: '+{v}% Projectile Speed', pre: 'Hurtling', min: 6, max: 15, sc: 0.003, slots: 'WG', w: 0.6 },
-  { s: 'xpPct', t: '+{v}% Experience Gained', suf: 'of Learning', min: 3, max: 8, sc: 0.002, slots: 'HB', w: 0.5 },
+  { s: 'xpPct', t: '+{v}% Experience Gained', suf: 'of Learning', min: 3, max: 8, sc: 0.002, slots: 'HBR', w: 0.5 },
   { s: 'bossDmg', t: '+{v}% Damage to Bosses', pre: 'Slayer\'s', min: 8, max: 18, sc: 0.01, slots: 'WGO', w: 0.5 },
-  { s: 'skillsAll', t: '+{v} to All Skills', pre: 'Exalted', min: 1, max: 1, sc: 0, slots: 'WOHB', w: 0.25, minRarity: 3 },
+  { s: 'skillsAll', t: '+{v} to All Skills', pre: 'Exalted', min: 1, max: 1, sc: 0, slots: 'WOHBR', w: 0.25, minRarity: 3 },
   { s: 'skillTree0', t: '+{v} to {tree0} Skills', pre: 'Adept\'s', min: 1, max: 2, sc: 0, slots: 'WOH', w: 0.25, minRarity: 2 },
   { s: 'skillTree1', t: '+{v} to {tree1} Skills', pre: 'Adept\'s', min: 1, max: 2, sc: 0, slots: 'WOH', w: 0.25, minRarity: 2 },
   { s: 'skillTree2', t: '+{v} to {tree2} Skills', pre: 'Adept\'s', min: 1, max: 2, sc: 0, slots: 'WOH', w: 0.25, minRarity: 2 },
 ];
 export const AFFIX_BY_STAT = Object.fromEntries(AFFIXES.map((a) => [a.s, a]));
-const SLOT_LETTER = { weapon: 'W', offhand: 'O', head: 'H', body: 'B', hands: 'G', legs: 'L', feet: 'F' };
+const SLOT_LETTER = { weapon: 'W', offhand: 'O', head: 'H', body: 'B', hands: 'G', legs: 'L', feet: 'F', ring: 'R' };
 
 export const LEGENDARY = {
   thunder: { name: 'Thunderstruck', desc: 'Hits have a 12% chance to call down a lightning bolt.' },
@@ -163,8 +170,12 @@ function classItem(slot, rarity, base) {
 }
 
 // ---------------------------------------------------------------- gems
-export const GEM_TIERS = ['Chipped', 'Flawed', '', 'Flawless', 'Perfect', 'Royal'];
-const GEM_MULT = [1, 1.8, 3, 4.5, 6.5, 9];
+export const GEM_TIERS = ['Chipped', 'Flawed', '', 'Flawless', 'Perfect', 'Royal', 'Imperial', 'Celestial', 'Abyssal', 'Eternal'];
+export const MAX_GEM_TIER = GEM_TIERS.length - 1;
+const GEM_MULT = [1, 1.8, 3, 4.5, 6.5, 9, 13, 18, 25, 35];
+/** Gem Forge prices: fusing three gems of a tier into one of the next, or refining a single gem (much dearer). */
+export const gemFuseCost = (tier) => Math.round(80 * Math.pow(2.2, tier));
+export const gemRefineCost = (tier, special) => Math.round((special ? 2400 : 900) * Math.pow(2.6, tier));
 export const GEMS = {
   ruby: { name: 'Ruby', color: '#e0203a', stats: [['life', 8], ['firePct', 4]] },
   sapphire: { name: 'Sapphire', color: '#2a5aff', stats: [['mana', 6], ['coldPct', 4]] },
@@ -211,11 +222,11 @@ let UID = Date.now() % 1000000;
 export const newUid = () => ++UID;
 
 export function makeGem(gem, tier) {
-  return { uid: newUid(), type: 'gem', gem, tier: clamp(tier, 0, 5), count: 1, ilvl: tier * 15 + 1 };
+  return { uid: newUid(), type: 'gem', gem, tier: clamp(tier, 0, MAX_GEM_TIER), count: 1, ilvl: tier * 15 + 1 };
 }
 export function rollGem(ilvl) {
-  const maxTier = clamp(Math.floor(ilvl / 16), 0, 5);
-  const tier = clamp(maxTier - (chance(0.6) ? randi(0, 1) : 0), 0, 5);
+  const maxTier = clamp(Math.floor(ilvl / 16), 0, 7); // the top two tiers only come from the Gem Forge
+  const tier = clamp(maxTier - (chance(0.6) ? randi(0, 1) : 0), 0, 7);
   const special = chance(0.08 + ilvl * 0.0012);
   return makeGem(special ? pick(SPECIAL_GEMS) : pick(NORMAL_GEMS), tier);
 }
@@ -247,11 +258,11 @@ const EPIC_B = ['bringer', 'reaver', 'fang', 'song', 'ward', 'call', 'bane', 'sh
 
 export function rollItem(ilvl, opts = {}) {
   ilvl = Math.max(1, Math.round(ilvl));
-  const slot = opts.slot || pick(['weapon', 'weapon', 'offhand', 'head', 'body', 'hands', 'legs', 'feet']);
+  const slot = opts.slot || pick(['weapon', 'weapon', 'offhand', 'head', 'body', 'hands', 'legs', 'feet', 'ring', 'ring']);
   const rarity = opts.rarity ?? rollRarity(opts.mf || 0, opts.bonus || 0);
   const tier = tierOf(ilvl);
   const item = { uid: newUid(), type: 'gear', slot, rarity, ilvl, tier, upg: 0, affixes: [], gems: [], sockets: 0 };
-  const art = opts.generic ? null : classItem(slot, rarity, opts.base);
+  const art = opts.generic || slot === 'ring' ? null : classItem(slot, rarity, opts.base);
   if (art) opts = { ...opts, base: art.base };
   if (slot === 'weapon') {
     item.base = opts.base || pick(Object.keys(WEAPONS));
@@ -270,6 +281,10 @@ export function rollItem(ilvl, opts = {}) {
     item.baseName = O.names[Math.min(4, Math.floor(tier / 2))];
     if (O.block) item.affixes.push({ s: 'block', v: randi(O.block[0], O.block[1]), implicit: true });
     if (O.spell) item.affixes.push({ s: 'dmgPct', v: randi(O.spell[0], O.spell[1]) + Math.floor(ilvl / 10), implicit: true });
+  } else if (slot === 'ring') {
+    item.base = 'ring'; item.icon = 'ring';
+    item.baseName = RING_NAMES[tier];
+    item.aug = rollAugments(rarity, ilvl, ringCtx.classId, ringCtx.learned || {});
   } else {
     item.base = slot;
     const A = ARMORS[slot];
@@ -279,11 +294,12 @@ export function rollItem(ilvl, opts = {}) {
   }
   const R = RARITY[rarity];
   rollAffixes(item, randi(R.affixes[0], R.affixes[1]));
-  item.maxSockets = R.sockets;
-  item.sockets = Math.min(R.sockets, chance(0.45) ? randi(0, Math.ceil(R.sockets / 2)) : 0);
+  item.maxSockets = slot === 'ring' ? [0, 0, 1, 1, 2, 2][rarity] : R.sockets;
+  item.sockets = Math.min(item.maxSockets, chance(0.45) ? randi(0, Math.ceil(item.maxSockets / 2)) : 0);
   if (rarity >= 4) item.legendary = pick(Object.keys(LEGENDARY));
   if (rarity >= 3) item.title = pick(EPIC_A) + pick(EPIC_B);
   if (art) Object.assign(item, { art: art.id, artCls: art.cls, uname: art.name });
+  else if (slot === 'ring') item.rname = ringName(item);
   else if (rarity >= 1) {
     const pre = item.affixes.find((a) => !a.implicit && AFFIX_BY_STAT[a.s].pre);
     const suf = item.affixes.find((a) => !a.implicit && AFFIX_BY_STAT[a.s].suf);
@@ -295,9 +311,27 @@ export function rollItem(ilvl, opts = {}) {
   return item;
 }
 
+// ---------------------------------------------------------------- rings
+// rollItem rolls a ring's augments for the hero who plays now (game.startChar sets this): their class, and their
+// learned skills, which rings favour.
+let ringCtx = {};
+export function setRingContext(classId, learned) { ringCtx = { classId, learned }; }
+/** What an augment targets, for names and tooltips: a skill's name, "Orbit skills" or "all skills". */
+export function augTarget(a) {
+  if (a.sk) return SKILLS[a.sk] ? SKILLS[a.sk].name : 'a lost skill';
+  if (a.kind) return `${KIND_NAMES[a.kind] || a.kind} skills`;
+  return 'all skills';
+}
+function ringName(item) {
+  const a = item.aug[0];
+  if (!a) return item.baseName;
+  return `${AUGMENTS[a.id].word} ${item.baseName} of ${augTarget(a)}`;
+}
+
 export function itemName(item) {
   if (item.type === 'gem') return gemName(item.gem, item.tier);
   if (item.type === 'potion') return item.name;
+  if (item.rname) return item.rname + (item.upg ? ` +${item.upg}` : '');
   if (item.uname) return item.uname + (item.upg ? ` +${item.upg}` : '');
   const base = `${MATERIALS[item.tier].name} ${item.baseName}`;
   const upg = item.upg ? ` +${item.upg}` : '';
@@ -306,6 +340,7 @@ export function itemName(item) {
 }
 export function itemBaseLine(item) {
   if (item.type !== 'gear') return '';
+  if (item.slot === 'ring') return item.baseName;
   return `${MATERIALS[item.tier].name} ${item.baseName}`;
 }
 export function itemColor(item) {

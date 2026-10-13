@@ -6,14 +6,15 @@ import { rollLooks } from '../data/bestiary.js';
 
 const S = 11; // chunk size in tiles
 
-/** Every fifth depth (but the throne at 100) ends in a BOSS ROOM with a raid boss (game/raid.js). */
-export const isRaidDepth = (depth) => depth % 5 === 0 && depth !== 100;
+/** Every fifth depth (but the throne at FINAL_DEPTH) ends in a BOSS ROOM with a raid boss (game/raid.js). */
+import { isRaidDepth, FINAL_DEPTH } from '../data/depth.js';
+export { isRaidDepth };
 
 // the boss room: an arena east of the maze, reached by a corridor from its far end
 const ARENA_W = 30, ARENA_H = 26, ARENA_GAP = 6;
 
 export function generateDungeon(depth, biome, tileset, seed) {
-  if (depth === 100) return generateThrone(biome, tileset, seed);
+  if (depth === FINAL_DEPTH) return generateThrone(biome, tileset, seed);
   const rng = new RNG(seed);
   const raid = isRaidDepth(depth);
   // a raid level's maze is a little smaller: the boss fight takes the time
@@ -129,7 +130,7 @@ export function generateDungeon(depth, biome, tileset, seed) {
   const roster = biome.roster;
   const rnd = () => rng.next();
   const looks = rollLooks(biome, rnd); // this level's bestiary: which art and palette swap each archetype gets
-  const density = 1 + depth * 0.012;
+  const density = 1.1 + Math.min(depth, 120) * 0.013;
   const pickArch = () => {
     // earlier roster entries are a bit more common
     const i = Math.floor(Math.pow(rng.next(), 1.35) * roster.length);
@@ -156,7 +157,7 @@ export function generateDungeon(depth, biome, tileset, seed) {
     }
   }
   // elites
-  const champs = 2 + Math.floor(depth / 15), uniques = 1 + Math.floor(depth / 30);
+  const champs = 2 + Math.floor(Math.min(depth, 150) / 15), uniques = 1 + Math.floor(Math.min(depth, 150) / 30);
   for (let i = 0; i < champs; i++) {
     const r = rng.pick(packRooms.filter((x) => x !== exitRoom)) || exitRoom;
     const [px, py] = roomFloorSpot(r);
@@ -415,7 +416,7 @@ function finishMap(map, tileset, rng, region = null, rooms = [], extra = []) {
   map.buildWalls(tileset, () => rng.next(), [...findOpenings(map, rooms, tileset, rng), ...extra.filter((o) => o.design)], families);
 }
 
-/** Depth 100: a gauntlet that ends in the demon lord's arena. */
+/** Depth FINAL_DEPTH (500): a gauntlet that ends in the demon lord's arena. */
 function generateThrone(biome, tileset, seed) {
   const rng = new RNG(seed);
   const W = 44, H = 80;

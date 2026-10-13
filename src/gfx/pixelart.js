@@ -987,7 +987,7 @@ export function gemIcon(kind, color, tier = 3, size = 48) {
   if (c) return c;
   c = makeCanvas(size, size);
   const x = c.getContext('2d');
-  const s = size / 2, R = size * (0.24 + tier * 0.035);
+  const s = size / 2, R = size * (0.24 + Math.min(tier, 5) * 0.035);
   const shape = GEM_SHAPES[kind] || 'diamond';
   x.translate(s, s);
   const grad = x.createRadialGradient(-R * 0.3, -R * 0.35, 1, 0, 0, R * 1.3);
@@ -1014,7 +1014,45 @@ export function gemIcon(kind, color, tier = 3, size = 48) {
   x.globalAlpha = 0.55; x.fillStyle = '#ffffff';
   x.beginPath(); x.ellipse(-R * 0.3, -R * 0.4, R * 0.28, R * 0.16, -0.6, 0, Math.PI * 2); x.fill();
   if (shape === 'eye') { x.globalAlpha = 1; x.fillStyle = '#000'; x.beginPath(); x.arc(0, 0, R * 0.3, 0, Math.PI * 2); x.fill(); }
+  // the Gem Forge's tiers past Royal: a halo and a star per tier
+  if (tier > 5) {
+    x.globalCompositeOperation = 'destination-over'; x.globalAlpha = 0.5 + (tier - 6) * 0.12;
+    const h = x.createRadialGradient(0, 0, R * 0.6, 0, 0, s);
+    h.addColorStop(0, color); h.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = h; x.fillRect(-s, -s, size, size);
+    x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1; x.fillStyle = '#ffffff';
+    for (let i = 0; i < tier - 5; i++) {
+      const a = -2.2 + i * 1.25, d = R * 1.25, r = size * 0.035;
+      x.beginPath(); x.moveTo(Math.cos(a) * d, Math.sin(a) * d - r * 2.2); x.lineTo(Math.cos(a) * d + r * 0.6, Math.sin(a) * d); x.lineTo(Math.cos(a) * d, Math.sin(a) * d + r * 2.2); x.lineTo(Math.cos(a) * d - r * 0.6, Math.sin(a) * d); x.fill();
+    }
+  }
   c.dataset && (c.dataset.k = key);
+  cache.set(key, c);
+  return c;
+}
+
+/** A ring: a band in the metal's colour set with a stone in the augment's colour (rarer rings get a bigger stone). */
+export function ringIcon(metal, stone, rarity = 0, size = 48) {
+  const key = `ring|${metal}|${stone}|${rarity}|${size}`;
+  let c = cache.get(key);
+  if (c) return c;
+  c = makeCanvas(size, size);
+  const x = c.getContext('2d'), s = size / 2;
+  x.translate(s, s + size * 0.06);
+  x.lineWidth = size * 0.11; x.strokeStyle = '#0a0606';
+  x.beginPath(); x.ellipse(0, 0, size * 0.26, size * 0.22, 0, 0, Math.PI * 2); x.stroke();
+  x.lineWidth = size * 0.07; x.strokeStyle = metal;
+  x.beginPath(); x.ellipse(0, 0, size * 0.26, size * 0.22, 0, 0, Math.PI * 2); x.stroke();
+  x.lineWidth = size * 0.025; x.strokeStyle = shade(metal, 0.5);
+  x.beginPath(); x.ellipse(0, -size * 0.01, size * 0.25, size * 0.2, 0, Math.PI * 1.1, Math.PI * 1.9); x.stroke();
+  const r = size * (0.09 + rarity * 0.012), gy = -size * 0.22;
+  x.fillStyle = shade(metal, -0.3); x.beginPath(); x.ellipse(0, gy + r * 0.4, r * 1.35, r * 0.9, 0, 0, Math.PI * 2); x.fill();
+  const g = x.createRadialGradient(-r * 0.3, gy - r * 0.4, 1, 0, gy, r * 1.2);
+  g.addColorStop(0, shade(stone, 0.7)); g.addColorStop(0.5, stone); g.addColorStop(1, shade(stone, -0.55));
+  x.fillStyle = g; x.strokeStyle = '#0a0606'; x.lineWidth = Math.max(1.5, size / 28);
+  x.beginPath(); x.arc(0, gy, r, 0, Math.PI * 2); x.fill(); x.stroke();
+  x.fillStyle = 'rgba(255,255,255,0.7)'; x.beginPath(); x.arc(-r * 0.35, gy - r * 0.35, r * 0.28, 0, Math.PI * 2); x.fill();
+  if (rarity >= 3) { x.globalCompositeOperation = 'destination-over'; const h = x.createRadialGradient(0, gy, r, 0, gy, s); h.addColorStop(0, stone); h.addColorStop(1, 'rgba(0,0,0,0)'); x.globalAlpha = 0.45; x.fillStyle = h; x.fillRect(-s, -s - size * 0.06, size, size); }
   cache.set(key, c);
   return c;
 }

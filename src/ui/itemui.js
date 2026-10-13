@@ -1,7 +1,9 @@
 // Item cells and tooltip HTML.
 import { G } from '../state.js';
 import { el, escapeHtml, fmtInt } from '../core/util.js';
-import { itemName, itemBaseLine, itemColor, itemStats, itemDmg, itemArmor, statLabel, RARITY, GEMS, gemStats, gemName, LEGENDARY, SLOT_NAMES, POTION_INFO } from '../data/items.js';
+import { itemName, itemBaseLine, itemColor, itemStats, itemDmg, itemArmor, statLabel, RARITY, GEMS, gemStats, gemName, LEGENDARY, SLOT_NAMES, POTION_INFO, MAX_GEM_TIER, augTarget } from '../data/items.js';
+import { AUGMENTS } from '../data/rings.js';
+import { elem } from '../gfx/vfx.js';
 import { CLASSES } from '../data/classes.js';
 import { itemIconURL } from './icons.js';
 import { finishOf, gearFxOf } from '../core/gearart.js';
@@ -40,9 +42,9 @@ export function itemTooltip(item, opts = {}) {
   let h = `<div class="tt-name" style="color:${col}">${escapeHtml(item.unid ? 'Unidentified ' + SLOT_NAMES[item.slot] : itemName(item))}</div>`;
   if (item.type === 'gem') {
     const g = GEMS[item.gem];
-    h += `<div class="tt-base">${g.special ? 'Rare Pattern Gem' : 'Gem'} · Tier ${item.tier + 1}/6${item.count > 1 ? ` · Stack of ${item.count}` : ''}</div>`;
+    h += `<div class="tt-base">${g.special ? 'Rare Pattern Gem' : 'Gem'} · Grade ${item.tier + 1}/${MAX_GEM_TIER + 1}${item.count > 1 ? ` · Stack of ${item.count}` : ''}</div>`;
     for (const [s, v] of gemStats(item.gem, item.tier)) h += `<div class="tt-gem">${escapeHtml(statLabel(s, v, trees))}</div>`;
-    h += `<div class="tt-sep"></div><div class="dim">Drag onto gear with a free socket to insert.${item.tier < 5 ? ' Combine 3 at the Gem Merchant to upgrade.' : ''}</div>`;
+    h += `<div class="tt-sep"></div><div class="dim">Drag onto gear with a free socket to insert.${item.tier < MAX_GEM_TIER ? ' Fuse 3 (or refine 1) at the Gem Forge (Gem Merchant) for the next grade.' : ''}</div>`;
   } else if (item.type === 'potion') {
     h += `<div class="dim">${POTION_INFO[item.kind]}</div>`;
   } else {
@@ -59,6 +61,10 @@ export function itemTooltip(item, opts = {}) {
       h += `<div style="color:${p && p.char.level < req ? '#ff5050' : '#a8977c'}">Requires Level ${req}</div>`;
       h += '<div class="tt-sep"></div>';
       for (const a of item.affixes) h += `<div class="tt-line" style="color:${a.implicit ? '#d8d0c0' : '#8fb4ff'}">${escapeHtml(statLabel(a.s, a.v, trees))}</div>`;
+      if (item.aug) for (const a of item.aug) {
+        const A = AUGMENTS[a.id], col = elem(A.el).glow, has = !a.sk || (p && p.char.skills[a.sk]);
+        h += `<div class="tt-aug" style="border-left:3px solid ${col};padding-left:6px;margin:4px 0"><b style="color:${col}">${A.name}</b> <span class="dim">· ${escapeHtml(augTarget(a))}${has ? '' : ' (not learned)'}</span><div style="color:#e8d8b8;font-size:12px">${escapeHtml(A.desc(a.pow))}</div></div>`;
+      }
       if (item.legendary) {
         const L = LEGENDARY[item.legendary];
         h += `<div class="tt-leg"><b>${L.name}:</b> ${escapeHtml(L.desc)}</div>`;

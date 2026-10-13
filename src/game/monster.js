@@ -46,8 +46,8 @@ function rollMoves(arch, rank, variant, depth) {
 
 export function monsterBase(level) {
   return {
-    hp: 20 * Math.pow(1.066, level - 1),
-    dmg: (3 + Math.min(level, 10) * 0.15) * Math.pow(1.052, level - 1),
+    hp: 24 * Math.pow(1.066, level - 1),
+    dmg: (4.4 + Math.min(level, 10) * 0.24) * Math.pow(1.055, level - 1),
     xp: 4 * Math.pow(level, 1.5),
   };
 }
@@ -1211,7 +1211,7 @@ export function makeElite(m, rank, depth, world) {
     if (m.art) m.swap = uniqueSwap();
   } else if (rank === 'boss') {
     const vel = m.arch === 'velscour';
-    m.maxHp *= vel ? 40 : 14 + depth / 4; m.dmg *= vel ? 2.4 : 1.9; m.xp *= vel ? 200 : 25;
+    m.maxHp *= vel ? 40 : 14 + Math.min(depth, 120) / 4; m.dmg *= vel ? 2.4 : 1.9; m.xp *= vel ? 200 : 25;
     m.aura = vel ? '#ff2000' : '#ff4020';
     m.scale = vel ? 1.6 : 1.9; m.r *= vel ? 1 : 1.6;
     m.ai = 'boss';
@@ -1270,6 +1270,8 @@ export function createSummon(p, sk, L, x, y, dmgRange, corpse) {
   const hp = Math.max(20, p.maxHp * def.hp * (1 + 0.08 * (L - 1)) * sp);
   const m = buildSummon(p, def, key, x, y, avg * def.dmg * sp, hp, sk.m.dur || 0);
   m.skillId = sk.id;
+  m.aug = p.augFor ? p.augFor(sk) : null; // ring augments ride on the minion's hits (combat.hit)
+  if (p.mastery) { const M = p.mastery(sk); m.scale = (m.scale || 1) * (1 + Math.min(1, (M - 1) / 999) * 0.35); }
   if (corpse) {
     m.sprite = corpse.sprite; m.pal = shiftPalette(corpse.pal || {}, { hue: 120, sat: 0.5, light: 0.05 }); m.px = corpse.px; m.fly = corpse.fly;
     if (corpse.art) { m.art = corpse.art; m.swap = REVIVED; m.artH = corpse.artH; }
