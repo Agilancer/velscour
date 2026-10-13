@@ -18,7 +18,7 @@ const { openGame, report } = require('./harness');
     const { camera } = await import('/src/core/view.js');
     const p = G.player, w = G.world;
     for (const c of w.creatures) if (!c.isPlayer) c.dead = true;
-    const keys = Object.keys(SUMMONS).filter((k) => SUMMONS[k].look && SUMMONS[k].look.art && !SUMMONS[k].pool);
+    const keys = Object.keys(SUMMONS).filter((k) => SUMMONS[k].look && typeof SUMMONS[k].look.art === 'string' && !SUMMONS[k].pool);
     keys.forEach((k, i) => {
       const r = Math.floor(i / 10), c = i % 10;
       const m = buildSummon(p, SUMMONS[k], k, p.x - 3.6 + c * 0.8 + r * 0.9, p.y + 3 - c * 0.8 + r * 0.9, 1, 100, 0);
