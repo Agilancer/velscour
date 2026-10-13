@@ -30,7 +30,7 @@ const s = SKILLS['wizard.0.0'];
 console.log('example', s.name, 'dmg L1', skillBaseDamage(s, 1), 'dmg L20', skillBaseDamage(s, 20), 'mana wizard.0.8 L1', manaCost(SKILLS['wizard.0.8'], 1));
 
 // ---- monster art (src/data/bestiary.js vs assets/sprites/enemies/enemies.json)
-const { BESTIARY, SUMMON_ART, ART_BY_ID, SWAPS, artPool, rollLooks } = await import(new URL('../../src/data/bestiary.js', import.meta.url));
+const { BESTIARY, SUMMON_ART, FAMILIAR_ART, ART_BY_ID, SWAPS, artPool, rollLooks } = await import(new URL('../../src/data/bestiary.js', import.meta.url));
 const { ARCH } = await import(new URL('../../src/data/enemies.js', import.meta.url));
 const { BIOMES, drawBiome, mixPartner } = await import(new URL('../../src/data/biomes.js', import.meta.url));
 const fs = await import('node:fs');
@@ -46,7 +46,7 @@ for (const a of BESTIARY) {
   if (a.el && !ELEMENTS.includes(a.el)) bad.push(`monster art ${a.id}: bad element ${a.el}`);
   if (!(a.h > 20 && a.h < 120)) bad.push(`monster art ${a.id}: height ${a.h}`);
 }
-for (const a of SUMMON_ART) {
+for (const a of [...SUMMON_ART, ...FAMILIAR_ART]) {
   if (ids.has(a.id)) bad.push(`duplicate art id ${a.id}`);
   ids.add(a.id);
   if (!meta[a.sheet] || !meta[a.sheet].cells[a.i]) bad.push(`summon art ${a.id}: no cell ${a.sheet}#${a.i}`);
@@ -54,7 +54,9 @@ for (const a of SUMMON_ART) {
   cells.add(a.sheet + a.i);
 }
 for (const [k, d] of Object.entries(SUMMONS)) {
-  if (d.look && d.look.art && !ART_BY_ID[d.look.art]) bad.push(`summon ${k}: unknown art ${d.look.art}`);
+  const look = d.look || {};
+  for (const id of [].concat(look.art || [], look.icon || [], Object.entries(look.idle || {}).flat())) if (!ART_BY_ID[id]) bad.push(`summon ${k}: unknown art ${id}`);
+  if (Array.isArray(look.art) && !(look.h > 10)) bad.push(`summon ${k}: an art list needs look.h`);
   for (const x of d.pool || []) if (!SUMMONS[x] || SUMMONS[x].pool) bad.push(`summon ${k}: bad pool entry ${x}`);
   for (const A of [d.atk, d.spell]) if (A && A.type === 'spawn' && !SUMMONS[A.what]) bad.push(`summon ${k}: spawns unknown ${A.what}`);
 }
@@ -104,4 +106,32 @@ if (new Set(seq.slice(0, NB)).size !== NB) bad.push(`first ${NB} biomes are not 
 let mixes = 0;
 for (let i = 0; i < 200; i++) { const m = mixPartner(BIOMES[0]); if (m) { mixes++; if (m.family !== BIOMES[0].family || m.id === BIOMES[0].id) bad.push('bad mix partner ' + m.id); } }
 console.log('monster art', BESTIARY.length, 'looks; biome order sample', seq.slice(0, 6).join(' '), '; mixed levels', mixes, '/ 200');
+
+// ---- Velscour's level-up lines (src/data/taunts.js): 2,000 unique two-line taunts that fit the banner, a mood never twice in a row
+const { TAUNTS, CLASS_TAUNTS, MILESTONES, pickTaunt } = await import(new URL('../../src/data/taunts.js', import.meta.url));
+const MAXLEN = 40, worst = (s) => s.replace(/\{name\}/g, 'N'.repeat(18)).replace(/\{class\}/g, 'C'.repeat(16)).replace(/\{level\}/g, '100');
+const allT = [...Object.values(TAUNTS).flat(), ...Object.values(CLASS_TAUNTS).flat().map((t) => t[1]), ...Object.values(MILESTONES).map((t) => t[1])];
+const moodsOk = [...Object.values(CLASS_TAUNTS).flat(), ...Object.values(MILESTONES)].every(([m]) => TAUNTS[m]);
+if (!moodsOk) bad.push('taunt with an unknown mood');
+for (const c of Object.keys(CLASS_TAUNTS)) if (!CLASSES[c]) bad.push('taunts for unknown class ' + c);
+const nT = Object.values(TAUNTS).flat().length;
+if (nT !== 2000) bad.push(`${nT} level-up taunts, want 2000`);
+if (new Set(allT).size !== allT.length) bad.push('duplicate level-up taunts');
+for (const t of allT) {
+  const parts = t.split('|');
+  if (parts.length !== 2 || parts.some((p) => !p.trim())) bad.push('taunt is not two lines: ' + t);
+  else for (const p of parts) if (worst(p).length > MAXLEN) bad.push(`taunt line over ${MAXLEN} chars: ${p}`);
+  if (/\{(?!name\}|class\}|level\})/.test(t)) bad.push('unknown placeholder: ' + t);
+}
+const deck = {}, bard = { name: 'Testy', classId: 'bard', level: 3 }, seen = new Set();
+let lastMood = null;
+for (let i = 0; i < 3000; i++) {
+  const t = pickTaunt(bard, deck);
+  if (t.mood === lastMood) bad.push('mood repeated back to back: ' + t.mood);
+  if (/[{}|]/.test(t.l1 + t.l2)) bad.push('unfilled taunt ' + t.l1 + ' / ' + t.l2);
+  lastMood = t.mood; seen.add(t.l1 + '|' + t.l2);
+  bard.level = bard.level >= 100 ? 2 : bard.level + 1;
+}
+if (seen.size < 1900) bad.push(`3000 picks showed only ${seen.size} different taunts`);
+console.log('level-up taunts', nT, Object.entries(TAUNTS).map(([m, l]) => `${m} ${l.length}`).join(', '), '; 3000 picks showed', seen.size);
 if (bad.length) { console.log(bad); process.exitCode = 1; } else console.log('OK');

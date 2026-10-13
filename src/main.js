@@ -3,7 +3,7 @@ import { G, loadSettings } from './state.js';
 import { initInput, input } from './core/input.js';
 import { camera } from './core/view.js';
 import { loadAssets } from './core/assets.js';
-import { loadEnemyArt } from './core/enemyart.js';
+import { loadEnemyArt, loadPetArt } from './core/enemyart.js';
 import { rand, TAU } from './core/util.js';
 import { UI, $ } from './ui/ui.js';
 import { HUD } from './ui/hud.js';
@@ -114,10 +114,11 @@ async function boot() {
   $('#loading').classList.add('hidden');
   titleScreen();
   // prefetch monster art while the player is on the title screen; then redraw skill icons that show summon art
-  loadEnemyArt().then(() => {
+  const redrawIcons = () => {
     for (const s of [...HUD.slots, ...(TouchUI.btns || [])]) s.last.icon = s.last.id = undefined;
     if (G.char) HUD.refreshStatic();
-  }).catch((e) => console.warn(e));
+  };
+  loadEnemyArt().then(redrawIcons).then(loadPetArt).then(redrawIcons).catch((e) => console.warn(e));
   // debug helpers for testing in the console
   window.VELSCOUR = { G, game };
 }

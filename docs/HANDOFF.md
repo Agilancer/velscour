@@ -98,7 +98,7 @@ Requirements, as stated (✅ = implemented in the draft):
   replays the intro without the prompt. Returning from a sub-menu while the Hymn still plays shows the logo lit. Any
   click or key during the intro skips to the burst (it seeks the song to just before the hit). The tar drips and pile
   explosions were removed at the user's request.
-- **Level-up (user request):** no voice line any more (the wav and `tools/levelup_voice.py` were removed). `levelUpFanfare()` is a grim bell toll + choir drone, the banner bleeds in from blur over a dark vignette, crit damage numbers drip blood (`drawDrips` in vfx.js). Old notes below may still mention the voice.
+- **Level-up (user request):** Velscour now says one of 2,000 two-line taunts in six moods (dread, mock, cheer, rage, unhinged, sulk; `src/data/taunts.js`, plus class and milestone lines); the second line takes the mood's colour and motion (`#levelup[data-mood]` in style.css), a mood never repeats back to back and lines do not repeat until the pool is spent (deck in localStorage `velscour_taunts_v1`). no voice line any more (the wav and `tools/levelup_voice.py` were removed). `levelUpFanfare()` is a grim bell toll + choir drone, the banner bleeds in from blur over a dark vignette, crit damage numbers drip blood (`drawDrips` in vfx.js). Old notes below may still mention the voice.
   pre-renders it, because a browser can't synthesize intelligible speech through WebAudio (speechSynthesis can't be
   routed through effects). The fanfare before it is procedural (`levelUpFanfare()` in `src/core/audio.js`).
 - **The Slime Lord is blue.** The user changed his art from green to blue, so the `acid` element (only he uses it)
@@ -458,7 +458,41 @@ are in section 7.
      template's pool), boss, legion, auto-play, and a probe that every creature's art is ready on arrival at depths
      3/5/12/40 (raid rooms included).
 
-20. **Random towns, depth 500, harder monsters, rings, skill mastery, Gem Forge (branch `claude/exciting-carson-l949yd`).**
+20. **Pet art: 616 blue slimes, dragons, wolves, crows, crabs, hamsters, capybaras (branch `claude/quirky-shannon-r8efhz`).**
+   The user uploaded 17 JPEG sheets to `assets/` for the pets that still had pixel placeholders, and asked that the
+   Slime Lord's blue slimes each get a random one of the (many) blue slime sprites, some maybe used to animate them.
+   Done:
+   - The sheets moved to `assets/source/enemies/familiars/` with short names: `blue_01..11` (9 "BLUE SLIMES
+     FAMILIARS" + 2 Gemini sheets of blue slimes; 7 x 8 each), `elemental_1/2` (20 fancy slimes each), `critters`
+     (crows, crabs, hamsters, capybaras, 4 slimes), `dragons_1/2` (20 each; `_2` is on white), `wolves` (17).
+   - `process_assets.py enemies [set]` now takes a set filter (`enemies familiars` rebuilds only these; the other
+     sheets keep their `enemies.json` entries). JPEGs are keyed by `key_flat` (border-connected background within
+     a tolerance, tight for the dark wolves/dragons, plus enclosed pockets) and cut on their even grid
+     (`even_grid_objects`: each shape goes to the cell its centre is in; two sprites joined by smoke or a drip are
+     pulled apart by `split_touching`). The wolves' rows don't line up, so they are cut as blobs. Stored scale per
+     kind in `SHEET_SCALE`. All 17 atlases are ~2.6 MB of WebP, fetched in the background after set 1
+     (`loadPetArt`; `main.js` redraws the skill icons when they arrive).
+   - `FAMILIAR_ART` in `bestiary.js` (ids `bs<sheet>_<i>`, `cr*`, `ea*`, `eb*`, `da*`, `db*`, `wf*`), in `ART_BY_ID`
+     only. `BLUE_SLIMES` lists all 614 usable blue slimes (2 halves of a stretched pair are skipped);
+     `BLUE_PUDDLES` the 26 melted ones.
+   - Summons: `look.art` may be a list; `buildSummon` picks one per minion. `look.h` sets the drawn height,
+     `look.ref` keeps a squat/tall slime's proportions, `look.icon` is the skill icon's art, `look.hop` makes it hop
+     (stretch in the air, splat on landing, wobble at rest), `look.idle` swaps to a sitting pose after 0.8 s still.
+     Blue slimes (Slimeling, Ooze Buddy, Volatile Slime, Ooze Titan, Mother Ooze and her spawn) rise out of a random
+     puddle sprite when summoned.
+   - Who got what: Slime Lord: the blue ones above draw from all 614; King Slime = the two crowned jewel/gold slimes;
+     Frost Jelly = the two ice slimes; Prismatic Jelly = any of the other 38 fancy slimes. Dragons: Drake Whelp
+     (Dragon Knight, Dragoon) any of the 40; Wyvern = 8 orange/brown/green; Elder Wyrm = 6 black/red; Frost Wyrm
+     (Death Knight) = 6 blue/white. Wolves (Ranger, Totem Master): Wolf 4 grey/brown, Spirit Wolf 2 white (the
+     frosty one sits when idle), Storm Wolf 2 (the runed black one sits), Dire Wolf the 8 dire/fire ones. Crows:
+     Raven (Carrion Witch) 3, Phoenix = the ember crow. Crabs: Fire/Ice/Blood Golem = magma/crystal/iron crab,
+     Voidspawn = the void crab (no longer flies). Capybaras: Bear 3, Spirit Bear = the royal one. Hamsters: Coven
+     Witch = wizard/hooded, Squire = knight/packer. Easy to reshuffle in `summons.js`.
+   - Verified: new `tools/tests/familiars.js` (line-up of all 26 pet summons, 40 slimelings: 38+ distinct looks,
+     rising and hopping, every slime summon cast in a fight, an idle wolf sits), data_check, flow, skills (slime
+     lord, dragon knight, ranger, carrion witch), legion, pets, ui, auto-play slime lord 10 min (depth 7, no deaths).
+     `legion.js` fails `pyreknight spells 0` on `main` too (pre-existing).
+21. **Random towns, depth 500, harder monsters, rings, skill mastery, Gem Forge (branch `claude/exciting-carson-l949yd`).**
    The user asked for: a more random, less cookie-cutter town using the pack's assets for roads and lived-in areas;
    the stone and flag by the portal removed; Velscour moved to depth 500; dungeons a bit harder (heroes should die now
    and then, especially on auto); 4 ring slots whose rings augment skills significantly (e.g. lightning tethering the
@@ -504,7 +538,7 @@ are in section 7.
 
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
-0. Get the user's feedback on item 20: town variety, ring power (augment numbers are first guesses in rings.js and
+0. Get the user's feedback on item 21: town variety, ring power (augment numbers are first guesses in rings.js and
    augments.js), mastery speed (`masteryNeed`, cast XP in `Player.tryUseSkill`), and whether deaths now happen often
    enough. Then the boss rooms (item 16).
 1. Get PR #1 merged (by the user) and confirm the Pages deploy works at https://agilancer.github.io/velscour/.

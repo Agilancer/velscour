@@ -268,7 +268,7 @@ def main():
     if "props" in args:
         process_chests()
     if "enemies" in args:
-        process_enemies()
+        process_enemies(args[args.index("enemies") + 1:])
     if "select" in args:
         from selectart import process_select_art
         process_select_art()
@@ -363,6 +363,126 @@ ENEMY_SCALE = 0.5  # stored size vs. the sheet; monsters are drawn at 30-110 wor
 ENEMY_GRID = {}    # "<set>/<sheet>": (rows, cols) for sheets that are not the usual 2 x 5
 SINGLE_MAX_H = 220  # a folder of single sprites (set2): stored at most this tall (bosses), never above SINGLE_SCALE
 SINGLE_SCALE = 0.85
+# Pet sheets (familiars/<kind>[_n].jpg) are painted on a flat dark or white background: stored scale per kind.
+SHEET_SCALE = {"blue": 0.28, "elemental": 0.24, "critters": 0.6, "dragons": 0.3, "wolves": 0.36}
+SHEET_TOL = {"blue": 26}  # keying tolerance; dark-furred wolves and black dragons need a tight one
+# The AI-painted sheets sit on an even grid (rows, cols); the wolves' rows don't line up, so they are cut as blobs.
+SHEET_GRID = {"blue": (7, 8), "elemental": (5, 4), "critters": (5, 4), "dragons": (4, 5)}
+
+
+def key_flat(rgb, tol=10):
+    """Alpha for a sprite sheet painted on one flat colour (a JPEG: black, near-black or white): everything
+    within `tol` of the border colour that touches the border, plus big enclosed pockets (between legs, inside
+    a coiled tail) that are almost exactly that colour."""
+    a = rgb.astype(np.int16)
+    border = np.concatenate([a[:4].reshape(-1, 3), a[-4:].reshape(-1, 3), a[:, :4].reshape(-1, 3), a[:, -4:].reshape(-1, 3)])
+    d = np.abs(a - np.median(border, axis=0)).max(axis=2)
+    lab, _ = ndimage.label(d < tol)
+    edge = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
+    back = np.isin(lab, list(edge))
+    white = np.median(border) > 128  # nothing in a sprite is paper white, so small white pockets go too
+    lab2, n2 = ndimage.label((d < (16 if white else min(tol, 7))) & ~back)
+    if n2:
+        sizes = ndimage.sum(np.ones_like(d), lab2, range(1, n2 + 1))
+        back |= np.isin(lab2, [i + 1 for i, s in enumerate(sizes) if s >= (120 if white else 1500)])
+    back = ndimage.binary_opening(back, iterations=1)
+    return np.dstack([rgb, np.where(back, 0, 255).astype(np.uint8)])
+
+
+def split_touching(m):
+    """Split a mask of sprites that touch by a thin bridge: erode until it falls into big cores, then give every
+    pixel to its nearest core. Returns [mask] when it never splits (one tall or wide sprite)."""
+    area = m.sum()
+    core = m
+    for _ in range(30):
+        core = ndimage.binary_erosion(core)
+        lab, n = ndimage.label(core)
+        if n < 2:
+            continue
+        sizes = ndimage.sum(core, lab, range(1, n + 1))
+        big = [i + 1 for i, s in enumerate(sizes) if s >= area * 0.06]
+        if len(big) < 2:
+            continue
+        seeds = np.where(np.isin(lab, big), lab, 0)
+        _, (iy, ix) = ndimage.distance_transform_edt(seeds == 0, return_indices=True)
+        owner = seeds[iy, ix]
+        return [m & (owner == k) for k in big]
+    return [m]
+
+
+def even_grid_objects(rgba, rows, cols):
+    """Cut a keyed sheet laid out on an even rows x cols grid: every shape belongs to the cell its centre is in
+    (so a wing or tail reaching into the next cell stays on its owner). Specks under 0.3% of the cell's area
+    are dropped. Empty cells are skipped; the rest come in reading order."""
+    alpha = ndimage.binary_opening(rgba[..., 3] > 0, iterations=1)
+    lab, n = ndimage.label(ndimage.binary_dilation(alpha, iterations=2))
+    H, W = alpha.shape
+    ch, cw = H / rows, W / cols
+    cells = {}
+    for i, sl in enumerate(ndimage.find_objects(lab)):
+        m = (lab[sl] == i + 1) & alpha[sl]
+        area = int(m.sum())
+        if area < ch * cw * 0.003:
+            continue
+        ys, xs = np.nonzero(m)
+        if np.ptp(ys) > ch * 1.3 or np.ptp(xs) > cw * 1.3:  # two sprites touching (smoke, a drip): pull apart
+            for part in split_touching(m):
+                full = np.zeros_like(alpha)
+                full[sl] = part
+                py, px = np.nonzero(part)
+                r, c = min(rows - 1, int((py.mean() + sl[0].start) / ch)), min(cols - 1, int((px.mean() + sl[1].start) / cw))
+                cells.setdefault((r, c), []).append(full)
+            continue
+        r, c = min(rows - 1, int((ys.mean() + sl[0].start) / ch)), min(cols - 1, int((xs.mean() + sl[1].start) / cw))
+        cells.setdefault((r, c), []).append(i + 1)
+    out = []
+    for r in range(rows):
+        for c in range(cols):
+            if (r, c) not in cells:
+                continue
+            ids = [x for x in cells[(r, c)] if not isinstance(x, np.ndarray)]
+            m = np.isin(lab, ids)
+            for x in cells[(r, c)]:
+                if isinstance(x, np.ndarray):
+                    m |= x
+            m &= alpha
+            ys, xs = np.nonzero(m.any(axis=1))[0], np.nonzero(m.any(axis=0))[0]
+            sl = (slice(ys[0], ys[-1] + 1), slice(xs[0], xs[-1] + 1))
+            crop = rgba[sl].copy()
+            crop[..., 3] = np.where(m[sl], crop[..., 3], 0)
+            out.append(crop)
+    return out
+
+
+def blob_objects(rgba, join=8):
+    """Cut the sprites out of a keyed sheet with no reliable grid: shapes closer than ~2*join px are one sprite
+    (sparkles, drips, a held sword), specks far from everything are dropped. Reading order: rows top to bottom
+    (a new row starts when a sprite's top is below the current row's middle), then left to right."""
+    alpha = rgba[..., 3] > 0
+    alpha = ndimage.binary_opening(alpha, iterations=1)
+    lab, n = ndimage.label(ndimage.binary_dilation(alpha, iterations=join))
+    objs = []
+    for i, sl in enumerate(ndimage.find_objects(lab)):
+        area = int((alpha[sl] & (lab[sl] == i + 1)).sum())
+        objs.append({"sl": sl, "area": area, "id": i + 1})
+    if not objs:
+        return []
+    med = float(np.median([o["area"] for o in objs]))
+    objs = [o for o in objs if o["area"] >= med * 0.12]
+    objs.sort(key=lambda o: o["sl"][0].start)
+    rows = []
+    for o in objs:
+        if rows and o["sl"][0].start < rows[-1]["mid"]:
+            rows[-1]["items"].append(o)
+        else:
+            rows.append({"mid": (o["sl"][0].start + o["sl"][0].stop) / 2, "items": [o]})
+    out = []
+    for r in rows:
+        for o in sorted(r["items"], key=lambda o: o["sl"][1].start):
+            crop = rgba[o["sl"]].copy()
+            crop[..., 3] = np.where((lab[o["sl"]] == o["id"]) & alpha[o["sl"]], crop[..., 3], 0)
+            out.append(np.asarray(trim(Image.fromarray(crop))))
+    return out
 
 
 def enemy_piece(img, kind, scale):
@@ -376,7 +496,7 @@ def enemy_piece(img, kind, scale):
     return {"kind": kind, "img": small, "w": w, "h": h, "fx": round(fx, 1), "oh": img.height}
 
 
-def process_enemies():
+def process_enemies(only=()):
     """Cut every monster out of its sheet (reading order: left to right, top to bottom), downscale it and
     pack one atlas per sheet. enemies.json: {"<set>/<sheet>": {"file", "cells": [{x, y, w, h, fx, oh}]}}
     with fx = the feet's centre column and oh = the height on the sheet. src/data/bestiary.js says what
@@ -386,8 +506,11 @@ def process_enemies():
     out_dir = os.path.join(OUT, "sprites", "enemies")
     ensure(out_dir)
     meta = {}
+    if only:  # just these sets (e.g. `enemies familiars`): the other sheets keep their entries
+        with open(os.path.join(out_dir, "enemies.json")) as f:
+            meta = json.load(f)
     for set_id in sorted(os.listdir(root)):
-        if not os.path.isdir(os.path.join(root, set_id)):
+        if not os.path.isdir(os.path.join(root, set_id)) or (only and set_id not in only):
             continue
         for fn in sorted(os.listdir(os.path.join(root, set_id))):
             path = os.path.join(root, set_id, fn)
@@ -402,15 +525,23 @@ def process_enemies():
                     img = trim(Image.fromarray(a))
                     pieces.append(enemy_piece(img, k, min(SINGLE_SCALE, SINGLE_MAX_H / img.height)))
                 rows, cols = 1, len(files)
-            elif fn.lower().endswith(".png"):
+            elif fn.lower().endswith((".png", ".jpg")):
                 key = set_id + "/" + fn[:-4]
-                rgba = np.asarray(Image.open(path).convert("RGBA")).copy()
-                rgba[..., 3] = np.where(rgba[..., 3] < 16, 0, rgba[..., 3])
-                rows, cols = ENEMY_GRID.get(key, (2, 5))
-                for r, row in enumerate(grid_objects(rgba, rows, cols, y_min=0)):
-                    for c, a in enumerate(row):
-                        if a is not None:
-                            pieces.append(enemy_piece(Image.fromarray(a), r * cols + c, ENEMY_SCALE))
+                if fn.lower().endswith(".jpg"):  # a pet sheet (familiars/): keyed, cut by blob_objects
+                    kind = fn.split("_")[0].split(".")[0]
+                    rgba = key_flat(np.asarray(Image.open(path).convert("RGB")), SHEET_TOL.get(kind, 10))
+                    sprites = even_grid_objects(rgba, *SHEET_GRID[kind]) if kind in SHEET_GRID else blob_objects(rgba)
+                    rows, cols = 1, len(sprites)
+                    for k, a in enumerate(sprites):
+                        pieces.append(enemy_piece(Image.fromarray(a), k, SHEET_SCALE.get(kind, ENEMY_SCALE)))
+                else:
+                    rgba = np.asarray(Image.open(path).convert("RGBA")).copy()
+                    rgba[..., 3] = np.where(rgba[..., 3] < 16, 0, rgba[..., 3])
+                    rows, cols = ENEMY_GRID.get(key, (2, 5))
+                    for r, row in enumerate(grid_objects(rgba, rows, cols, y_min=0)):
+                        for c, a in enumerate(row):
+                            if a is not None:
+                                pieces.append(enemy_piece(Image.fromarray(a), r * cols + c, ENEMY_SCALE))
             else:
                 continue
             atlas, entries = pack_atlas(pieces, 1024)

@@ -5,6 +5,7 @@ import { ART_BY_ID } from '../data/bestiary.js';
 
 const DIR = 'assets/sprites/enemies/';
 const EAGER = /^(set1|minions)\//; // fetched with the meta; the rest (set2, ~5 MB) loads per level as looks need it
+const PETS = /^familiars\//; // pet sheets (~2.6 MB): fetched in the background once the meta is in
 const E = { meta: null, sheets: {}, loading: null, sheet: {} }; // sheet: key -> load promise
 const cache = new Map(); // LRU: `${id}|${mode}|${swap}` -> canvas
 const CACHE_MAX = 160; // ~70 KB each; iOS caps total canvas memory
@@ -24,8 +25,17 @@ function loadSheet(key) {
 export function loadEnemyArt() {
   return E.loading || (E.loading = fetch(DIR + 'enemies.json')
     .then((r) => { if (!r.ok) throw new Error('Failed to load enemies.json'); return r.json(); })
-    .then((meta) => { E.meta = meta; return Promise.all(Object.keys(meta).filter((k) => EAGER.test(k)).map(loadSheet)); })
+    .then((meta) => {
+      E.meta = meta;
+      const keys = Object.keys(meta);
+      return Promise.all(keys.filter((k) => EAGER.test(k)).map(loadSheet)).then(() => { E.pets = Promise.all(keys.filter((k) => PETS.test(k)).map(loadSheet)); });
+    })
     .catch((e) => { E.loading = null; throw e; }));
+}
+
+/** Resolves once every pet sheet (familiars/) has loaded, too. */
+export function loadPetArt() {
+  return loadEnemyArt().then(() => E.pets);
 }
 
 /** Load these sheets (all of them if no list). A new level awaits its monsters' and looks' sheets (loadArtFor). */
@@ -43,6 +53,12 @@ function cell(a) {
   const s = E.meta && E.meta[a.sheet];
   if (s && !E.sheets[a.sheet]) loadSheet(a.sheet); // drawn before its level asked: the pixel sprite stands in meanwhile
   return s && E.sheets[a.sheet] ? s.cells[a.i] : null;
+}
+
+/** The stored cell ({x, y, w, h, fx, oh}) of an art id, or null while its sheet is loading. */
+export function artCell(id) {
+  const a = ART_BY_ID[id];
+  return a ? cell(a) : null;
 }
 
 /** True once a look's art has loaded. */

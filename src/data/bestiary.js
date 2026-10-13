@@ -491,7 +491,35 @@ export const SUMMON_ART = [
   { id: 'ns_archlich', sheet: NC, i: 9, name: 'Skeletal Archlich', h: 56 },
 ];
 
-export const ART_BY_ID = Object.fromEntries([...BESTIARY, ...SUMMON_ART].map((a) => [a.id, a]));
+// Pets from the user's familiar sheets (assets/source/enemies/familiars/, cut in reading order). Summons pick one
+// of a list at random (`look.art` = [ids]). blue_NN: 616 blue slimes, every one a Slime Lord minion; fam(): the rest.
+const BLUE_COUNT = [56, 56, 56, 56, 56, 55, 56, 56, 56, 56, 56];
+const BLUE_SKIP = new Set(['bs6_53', 'bs6_54']); // one stretched pair across two cells, cut in half
+export const BLUE_SLIMES = BLUE_COUNT.flatMap((n, s) => Array.from({ length: n }, (_, i) => `bs${s + 1}_${i}`)).filter((id) => !BLUE_SKIP.has(id));
+// The flat, melted ones: a new blue slime rises out of one (Creature.draw).
+export const BLUE_PUDDLES = ['bs1_0', 'bs1_8', 'bs1_35', 'bs3_0', 'bs3_8', 'bs3_35', 'bs4_0', 'bs4_8', 'bs4_22', 'bs4_35', 'bs5_8', 'bs5_31',
+  'bs5_35', 'bs5_37', 'bs6_8', 'bs6_9', 'bs6_15', 'bs6_23', 'bs6_24', 'bs6_36', 'bs10_31', 'bs10_37', 'bs11_8', 'bs11_31', 'bs11_35', 'bs11_37'];
+const fam = (pre, sheet, names) => names.map((name, i) => ({ id: pre + i, sheet: 'familiars/' + sheet, i, name, h: 40 }));
+export const FAMILIAR_ART = [
+  ...BLUE_SLIMES.map((id) => { const [s, i] = id.slice(2).split('_'); return { id, sheet: 'familiars/blue_' + s.padStart(2, '0'), i: +i, name: 'Blue Slime', h: 30 }; }),
+  ...fam('cr', 'critters', ['Raven', 'Spectral Crow', 'Armored Crow', 'Ember Crow', 'Magma Crab', 'Crystal Crab', 'Iron Crab', 'Void Crab',
+    'Hooded Hamster', 'Knight Hamster', 'Wizard Hamster', 'Packer Hamster', 'Mossback Capybara', 'Armored Capybara', 'Royal Capybara', 'Cinder Capybara',
+    'Toxic Slime', 'Magma Slime', 'Grave Slime', 'Jewel King Slime']),
+  ...fam('ea', 'elemental_1', ['Treasure Slime', 'Frost Slime', 'Circuit Slime', 'Lava Slime', 'Bone Slime', 'Bloom Slime', 'Gear Slime', 'Void Slime',
+    'Tide Slime', 'Sand Slime', 'Crystal Slime', 'Cursed Slime', 'Storm Slime', 'Imp Slime', 'Rainbow Mushroom Slime', 'Rock Slime',
+    'Party Slime', 'Knight Slime', 'Eye Slime', 'Foam Slime']),
+  ...fam('eb', 'elemental_2', ['Bubble Slime', 'Frost Slime', 'Ember Slime', 'Blood Slime', 'Moss Slime', 'Vine Slime', 'Amethyst Slime', 'Heart Slime',
+    'Many-Eyed Slime', 'Gremlin Slime', 'Obsidian Slime', 'Shade Slime', 'Nebula Slime', 'Galaxy Slime', 'Rainbow Slime', 'Opal Slime',
+    'Gold Slime', 'Ghost Slime', 'Thunder Slime', 'Toxic Swirl Slime']),
+  ...fam('da', 'dragons_1', ['Red', 'Gold', 'Violet', 'Frost', 'Forest', 'Emerald', 'Azure', 'Smoke', 'Steel', 'Night',
+    'Shadow', 'Crimson', 'Moss', 'Teal', 'Amethyst', 'Bone', 'Bronze', 'Obsidian', 'Copper', 'Sun'].map((c) => c + ' Dragon')),
+  ...fam('db', 'dragons_2', ['Red', 'Gold', 'Violet', 'Sapphire', 'Leaf', 'Pine', 'Ice', 'Amber', 'Pearl', 'Cobalt',
+    'Black', 'Rose', 'Bog', 'Jade', 'Plum', 'Lilac', 'Bronze', 'Iron', 'Rust', 'Brass'].map((c) => c + ' Dragon')),
+  ...fam('wf', 'wolves', ['Grey Wolf', 'Snow Wolf', 'Runed Wolf', 'Armored Wolf', 'Timber Wolf', 'Frost Wolf', 'Snow Wolf', 'Runed Wolf', 'Fire Wolf',
+    'Dire Wolf', 'Dire Wolf', 'Bone Dire Wolf', 'Storm Dire Wolf', 'Dire Wolf', 'Dire Wolf', 'Flame Dire Wolf', 'Shadow Dire Wolf']),
+];
+
+export const ART_BY_ID = Object.fromEntries([...BESTIARY, ...SUMMON_ART, ...FAMILIAR_ART].map((a) => [a.id, a]));
 
 /** Looks that can play an archetype. */
 export function artPool(arch) {
