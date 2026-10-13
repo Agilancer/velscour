@@ -332,7 +332,7 @@ export const SKILLDATA = {
       'Lance Knight|summon|light|knight|sum=kn_lance n=1 max=1 grow', 'Valor|buff|holy|aura|buff=dmg amt=15 dur=30 cd=30 party', 'Glorious Charge|dash|holy|charge|range=1.6 exp lance', 'Hold the Line|buff|phys|shield|buff=armor,res amt=35 party dur=20 cd=30',
       'Flame Templar|summon|fire|knight|sum=kn_flame n=1 max=1 grow', 'Frost Warden|summon|cold|knight|sum=kn_frost n=1 max=1 grow', 'Battle Standard|summon|fire|banner|sum=firebanner dur=20 cd=20', 'Shout of Valor|nova|holy|sonic|stun r=1.4',
       'Knight Captain|summon|holy|knight|sum=kn_captain max=1 cd=20', 'Storm Paladin|summon|light|knight|sum=kn_storm n=1 max=1 grow', 'Heroic Presence|buff|holy|aura|pulse buff=dmg amt=25 dur=20 cd=30 party', 'Valiant Leap|leap|holy|holy|r=1.6 dmg=1.8',
-      'Knights of the Round|summon|holy|knight|sum=kn_round n=9 dur=30 cd=50', 'Banner of Kings|summon|holy|banner|sum=kingbanner dur=25 cd=40', 'Grand Marshal|summon|arcane|knight|sum=kn_marshal max=1 cd=40', "Hero's Ascension|buff|holy|transform|transform buff=dmg,as,armor amt=50 dur=20 cd=60",
+      'Knights of the Round|summon|holy|knight|sum=kn_round n=4 dur=30 cd=50', 'Banner of Kings|summon|holy|banner|sum=kingbanner dur=25 cd=40', 'Grand Marshal|summon|arcane|knight|sum=kn_marshal max=1 cd=40', "Hero's Ascension|buff|holy|transform|transform buff=dmg,as,armor amt=50 dur=20 cd=60",
     ],
   ],
   dragon_knight: [

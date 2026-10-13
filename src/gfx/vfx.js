@@ -583,6 +583,13 @@ export function drawParticles(ctx, vr) {
         ctx.beginPath(); ctx.moveTo(0, -size * 1.6); ctx.lineTo(size * 0.6, 0); ctx.lineTo(0, size * 1.6); ctx.lineTo(-size * 0.6, 0); ctx.fill();
         ctx.restore();
         break;
+      case 'skull': { // a little pixel skull (the Death Knight's casts and hits)
+        ctx.globalAlpha = Math.min(1, (1 - k) * 1.6); const u = Math.max(1, size / 3), x0 = px - u * 2.5, y0 = py - u * 3;
+        ctx.fillStyle = p.color; ctx.fillRect(x0, y0, u * 5, u * 4); ctx.fillRect(x0 + u, y0 + u * 4, u * 3, u * 2);
+        ctx.fillStyle = p.eye || '#102040'; ctx.fillRect(x0 + u * 0.6, y0 + u * 1.6, u * 1.4, u * 1.4); ctx.fillRect(x0 + u * 3, y0 + u * 1.6, u * 1.4, u * 1.4);
+        ctx.fillRect(x0 + u * 2.2, y0 + u * 3.2, u * 0.6, u * 0.8); ctx.fillRect(x0 + u * 1.5, y0 + u * 5, u * 0.5, u); ctx.fillRect(x0 + u * 3, y0 + u * 5, u * 0.5, u);
+        break;
+      }
       case 'img':
         ctx.globalAlpha = 1 - k;
         ctx.drawImage(p.img, px - size / 2, py - size / 2, size, size);
