@@ -339,7 +339,7 @@ function rollTown(tileset, seed, last) {
     props.push({ kind: 'scatter', x: lx, y: ly, spr: stand, k: tileset.k, light: 4.5 });
     blockAt(lx, ly); lamps++;
   }
-  const clutter = ['closed_barrel', 'water_barrel', 'crate_stack', 'rope_and_hook', 'handcart', 'broken_wheel', 'cart_debris', 'hay_bale', 'grain_sacks', 'firewood_stack'];
+  const clutter = ['closed_barrel', 'water_barrel', 'crate_stack', 'rope_and_hook', 'handcart', 'broken_wheel', 'cart_debris', 'hay_bale', 'grain_sacks', 'firewood_stack', 'arrow_milestone'];
   for (let i = 0, n = 0; i < 200 && n < rng.int(8, 14); i++) {
     const road = rng.pick(roads), at = road[Math.floor(R(0, 1) * road.length)];
     if (!at) continue;
@@ -398,7 +398,7 @@ function rollTown(tileset, seed, last) {
 
   // ---- the start (by the well) and a reachability check from it
   let start = [C.x + 0.5, C.y + 3.5];
-  for (let r = 0; r < 6 && !map.walkable(...start); r++) start = map.randomNear(C.x + 0.5, C.y + 2.5, 1.5 + r);
+  for (let r = 0; r < 6 && !map.walkable(...start); r++) start = map.randomNear(C.x + 0.5, C.y + 2.5, 1.5 + r, rng.fn());
   const seen = new Uint8Array(N), q = [I(Math.floor(start[0]), Math.floor(start[1]))];
   seen[q[0]] = 1;
   for (let h = 0; h < q.length; h++) {

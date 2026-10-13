@@ -103,6 +103,207 @@ export const RAID_BOSSES = [
       { name: 'Final Stand', pool: { cataclysm: 1, charge3: 2, shockwave: 2, barrage: 2, fissures: 2 } },
     ],
   },
+  // ---- the second host: each has an innate modifier (on top of the rolled ones) and its own build (hp/spd/dmg)
+  {
+    id: 'hydra', name: 'Nine-Throat', title: 'the Fen Hydra', art: ['fen_trident_hydra', 'bloodcrest_hydra', 'violet_thorn_hydra', 'jade_antler_hydra'], el: 'poison', fx: 'blob',
+    adds: ['worm', 'slime', 'spider'], cata: 'HUNDRED FANGS', innate: 'relentless', hp: 1.1, spd: 0.8,
+    phases: [
+      { name: 'Many Mouths', pool: { barrage: 3, pools: 2, cleave: 2, orbs: 1 } },
+      { name: 'Regrowth', pool: { pools: 2, spiral: 2, adds: 2, barrage: 2 } },
+      { name: 'Hundred Fangs', pool: { cataclysm: 2, barrage: 2, vortex: 2, pools: 2 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, barrage: 3, spiral: 2, pools: 2, orbs: 2 } },
+    ],
+  },
+  {
+    id: 'rimehydra', name: 'Skaldrith', title: 'the Rime-Forked', art: ['rime_fork_hydra', 'azure_sail_hydra', 'glacier_crown_titan'], el: 'cold', fx: 'shard',
+    adds: ['elemental', 'wraith', 'golem'], cata: 'ENDLESS WINTER', innate: 'warded', hp: 1.15, spd: 0.85,
+    phases: [
+      { name: 'Hoarfrost', pool: { sweep: 3, fissures: 2, cleave: 2 } },
+      { name: 'Glacial Coil', pool: { nova: 3, orbs: 2, adds: 2, slam: 1 } },
+      { name: 'Endless Winter', pool: { cataclysm: 2, sweep: 2, nova: 2, fissures: 2 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, sweep: 2, nova: 2, orbs: 2, fissures: 2 } },
+    ],
+  },
+  {
+    id: 'obsidrake', name: 'Kael-Vharros', title: 'the Obsidian Wyrm', art: ['obsidian_horn_dragon', 'bonewhite_crypt_dragon'], el: 'fire', fx: 'fireball',
+    adds: ['imp', 'demon', 'gargoyle'], cata: 'WORLDBURN', innate: 'empowered', hp: 1.2, spd: 1.1,
+    phases: [
+      { name: 'Wingbeat', pool: { charge3: 3, sweep: 2, meteors: 2 } },
+      { name: 'Scorched Sky', pool: { meteors: 3, fissures: 2, adds: 1, sweep: 2 } },
+      { name: 'Worldburn', pool: { cataclysm: 2, meteors: 2, charge3: 2, spiral: 1 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, meteors: 3, sweep: 2, charge3: 2, nova: 1 } },
+    ],
+  },
+  {
+    id: 'stormdrake', name: 'Azhurak', title: 'the Storm Drake', art: ['cobalt_storm_drake', 'tempest_manta'], el: 'light', fx: 'spark',
+    adds: ['bat', 'elemental', 'gargoyle'], cata: 'SKYSPLITTER', innate: 'storming', hp: 0.9, spd: 1.3,
+    phases: [
+      { name: 'Thunderhead', pool: { blink_slam: 3, orbs: 2, nova: 2 } },
+      { name: 'Chain Lightning', pool: { barrage: 3, sweep: 2, adds: 2 } },
+      { name: 'Skysplitter', pool: { cataclysm: 2, blink_slam: 2, spiral: 2, sweep: 1 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, blink_slam: 3, barrage: 2, orbs: 2, nova: 2 } },
+    ],
+  },
+  {
+    id: 'sunscale', name: 'Aurelion', title: 'the Golden Sunscale', art: ['golden_sunscale', 'amethyst_crown_dragon'], el: 'holy', fx: 'bolt',
+    adds: ['knight', 'gargoyle', 'cultist'], cata: 'SOLAR FLARE', innate: 'colossal', hp: 1, spd: 1,
+    phases: [
+      { name: 'Dawnfire', pool: { sweep: 3, nova: 2, cleave: 2 } },
+      { name: 'Zenith', pool: { meteors: 2, sweep: 2, adds: 2, orbs: 2 } },
+      { name: 'Solar Flare', pool: { cataclysm: 2, spiral: 2, sweep: 2, slam: 1 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, sweep: 3, meteors: 2, spiral: 2, nova: 2 } },
+    ],
+  },
+  {
+    id: 'mammoth', name: 'Grundholt', title: 'the Thornback Mammoth', art: ['thornback_mammoth', 'blizzard_woolback', 'armored_boar_patriarch'], el: 'phys', fx: 'bone',
+    adds: ['hound', 'beetle', 'golem'], cata: 'STAMPEDE', innate: 'colossal', hp: 1.25, spd: 1.15,
+    phases: [
+      { name: 'Trample', pool: { charge3: 4, slam: 2, cleave: 2 } },
+      { name: 'Herd Call', pool: { charge3: 2, adds: 3, shockwave: 2 } },
+      { name: 'Stampede', pool: { cataclysm: 2, charge3: 3, fissures: 2 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, charge3: 3, slam: 2, shockwave: 2, fissures: 2 } },
+    ],
+  },
+  {
+    id: 'mantis', name: 'Kz\'tetrix', title: 'the Clockwork Mantis', art: ['clockwork_mantis_monarch', 'chainwheel_tyrant', 'quicksilver_sentinel'], el: 'light', fx: 'spark',
+    adds: ['golem', 'scorpion', 'spider'], cata: 'OVERCLOCK', innate: 'relentless', hp: 0.85, spd: 1.35,
+    phases: [
+      { name: 'Wind-Up', pool: { cleave: 3, blink_slam: 2, fissures: 2 } },
+      { name: 'Gear Grind', pool: { spiral: 2, cleave: 2, clones: 2, barrage: 2 } },
+      { name: 'Overclock', pool: { cataclysm: 2, blink_slam: 2, cleave: 2, spiral: 2 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, blink_slam: 3, cleave: 2, spiral: 2, clones: 1 } },
+    ],
+  },
+  {
+    id: 'harvester', name: 'Sanguis', title: 'the Bloodglass Harvester', art: ['bloodglass_harvester', 'carrion_butcher_king'], el: 'shadow', fx: 'skull',
+    adds: ['ghoul', 'zombie', 'bat'], cata: 'CRIMSON HARVEST', innate: 'vampiric', hp: 1, spd: 1.15,
+    phases: [
+      { name: 'First Blood', pool: { cleave: 3, charge3: 2, vortex: 2 } },
+      { name: 'Exsanguinate', pool: { vortex: 3, pools: 2, adds: 2, cleave: 1 } },
+      { name: 'Crimson Harvest', pool: { cataclysm: 2, vortex: 2, spiral: 2, cleave: 2 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, vortex: 3, cleave: 2, charge3: 2, spiral: 1 } },
+    ],
+  },
+  {
+    id: 'phoenix', name: 'Cindrel', title: 'the Ashen Phoenix', art: ['ashen_phoenix_horror', 'rotwing_vulture_queen', 'obsidian_roc_matron'], el: 'fire', fx: 'fireball',
+    adds: ['imp', 'bat', 'elemental'], cata: 'REBIRTH IN FLAME', innate: 'volatile', hp: 0.9, spd: 1.25,
+    phases: [
+      { name: 'Ember Wings', pool: { blink_slam: 2, spiral: 3, nova: 2 } },
+      { name: 'Ashfall', pool: { meteors: 3, pools: 2, adds: 2 } },
+      { name: 'Rebirth in Flame', pool: { cataclysm: 2, spiral: 2, meteors: 2, nova: 2 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, spiral: 3, meteors: 2, blink_slam: 2, nova: 2 } },
+    ],
+  },
+  {
+    id: 'cephalarch', name: 'Ulmorrah', title: 'the Black Pearl Cephalarch', art: ['black_pearl_cephalarch', 'deepwell_angler'], el: 'arcane', fx: 'orb',
+    adds: ['eye', 'slime', 'worm'], cata: 'THE DROWNING DARK', innate: 'swarming', hp: 1.05, spd: 0.9,
+    phases: [
+      { name: 'Ink Cloud', pool: { vortex: 3, orbs: 2, pools: 2 } },
+      { name: 'Tentacle Grasp', pool: { fissures: 2, vortex: 2, adds: 2, barrage: 2 } },
+      { name: 'The Drowning Dark', pool: { cataclysm: 2, vortex: 2, orbs: 2, spiral: 2 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, vortex: 2, orbs: 3, barrage: 2, fissures: 2 } },
+    ],
+  },
+  {
+    id: 'briar', name: 'The Briarheart', title: 'Sovereign of Thorns', art: ['briarheart_sovereign', 'gallows_oak_hangman', 'bogwood_devourer'], el: 'poison', fx: 'blob',
+    adds: ['shroom', 'spider', 'worm'], cata: 'OVERGROWTH', innate: 'warded', hp: 1.15, spd: 0.8,
+    phases: [
+      { name: 'Rootbind', pool: { fissures: 3, pools: 2, slam: 2 } },
+      { name: 'Spore Bloom', pool: { pools: 3, adds: 2, nova: 2 } },
+      { name: 'Overgrowth', pool: { cataclysm: 2, fissures: 2, pools: 2, shockwave: 2 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, fissures: 3, pools: 2, shockwave: 2, nova: 2 } },
+    ],
+  },
+  {
+    id: 'scarab', name: 'Khepra-Set', title: 'the Scarab Emperor', art: ['sandstone_scarab_emperor', 'gold_scarab_diabolist', 'amber_hive_monolith'], el: 'holy', fx: 'bolt',
+    adds: ['scorpion', 'beetle', 'cultist'], cata: 'THE SUN-EATER', innate: 'swarming', hp: 1.1, spd: 1,
+    phases: [
+      { name: 'Sandstorm', pool: { vortex: 2, barrage: 2, charge3: 2 } },
+      { name: 'The Swarm Rises', pool: { adds: 3, orbs: 2, shockwave: 2 } },
+      { name: 'The Sun-Eater', pool: { cataclysm: 2, sweep: 2, vortex: 2, barrage: 1 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, sweep: 2, barrage: 2, vortex: 2, charge3: 2 } },
+    ],
+  },
+  {
+    id: 'oracle', name: 'Saltmother Ysse', title: 'the Pillar Oracle', art: ['salt_pillar_oracle', 'thundercoil_idol', 'crystal_root_warden'], el: 'arcane', fx: 'orb',
+    adds: ['eye', 'elemental', 'cultist'], cata: 'PROPHECY FULFILLED', innate: 'storming', hp: 0.9, spd: 0.7,
+    phases: [
+      { name: 'Foresight', pool: { orbs: 3, sweep: 2, nova: 2 } },
+      { name: 'Many Futures', pool: { clones: 3, orbs: 2, barrage: 2 } },
+      { name: 'Prophecy Fulfilled', pool: { cataclysm: 2, spiral: 3, orbs: 2 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, spiral: 2, orbs: 3, clones: 1, sweep: 2 } },
+    ],
+  },
+  {
+    id: 'anvil', name: 'Hammerfall', title: 'the Basalt Anvil', art: ['basalt_anvil_guardian', 'magnetite_lodestone', 'blind_cave_titan', 'moss_stone_dragon'], el: 'phys', fx: 'bone',
+    adds: ['golem', 'gargoyle', 'beetle'], cata: 'TECTONIC RUIN', innate: 'colossal', hp: 1.35, spd: 0.75,
+    phases: [
+      { name: 'Forge Strike', pool: { slam: 4, shockwave: 2, cleave: 2 } },
+      { name: 'Quake', pool: { fissures: 3, slam: 2, adds: 2 } },
+      { name: 'Tectonic Ruin', pool: { cataclysm: 2, shockwave: 3, fissures: 2 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, slam: 3, shockwave: 2, fissures: 2, cleave: 2 } },
+    ],
+  },
+  {
+    id: 'moon', name: 'Hrothgeir', title: 'the Moon-Eater', art: ['antlered_moon_eater', 'frostmane_werebear'], el: 'cold', fx: 'shard',
+    adds: ['hound', 'wraith', 'bat'], cata: 'ECLIPSE', innate: 'relentless', hp: 1, spd: 1.4,
+    phases: [
+      { name: 'The Howl', pool: { charge3: 3, cleave: 3, nova: 1 } },
+      { name: 'Pack Hunt', pool: { adds: 2, blink_slam: 3, cleave: 2 } },
+      { name: 'Eclipse', pool: { cataclysm: 2, blink_slam: 2, charge3: 2, nova: 2 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, blink_slam: 3, charge3: 2, cleave: 2, nova: 1 } },
+    ],
+  },
+  {
+    id: 'centipede', name: 'Xyloth', title: 'the Ravenous Centipede', art: ['ravenous_centipede_king', 'manyhand_matriarch'], el: 'poison', fx: 'blob',
+    adds: ['worm', 'spider', 'scorpion'], cata: 'THOUSAND LEGS', innate: 'volatile', hp: 1, spd: 1.3,
+    phases: [
+      { name: 'Burrow', pool: { charge3: 3, fissures: 3, pools: 1 } },
+      { name: 'Venom Rain', pool: { barrage: 2, pools: 3, adds: 2 } },
+      { name: 'Thousand Legs', pool: { cataclysm: 2, charge3: 2, fissures: 2, spiral: 1 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, charge3: 3, pools: 2, fissures: 2, barrage: 2 } },
+    ],
+  },
+  {
+    id: 'cauldron', name: 'Mother Blight', title: 'the Plague Cauldron', art: ['plague_cauldron', 'sarcophagus_bearer', 'grief_mask_mountain'], el: 'poison', fx: 'blob',
+    adds: ['zombie', 'slime', 'abomination'], cata: 'BOIL OVER', innate: 'swarming', hp: 1.3, spd: 0.7,
+    phases: [
+      { name: 'Simmer', pool: { pools: 4, nova: 2, slam: 1 } },
+      { name: 'The Brew', pool: { adds: 2, pools: 2, vortex: 2, orbs: 2 } },
+      { name: 'Boil Over', pool: { cataclysm: 2, pools: 3, nova: 2 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, pools: 3, vortex: 2, nova: 2, orbs: 2 } },
+    ],
+  },
+  {
+    id: 'bailiff', name: 'Bailiff Grimmauld', title: 'Keeper of the Gravebell', art: ['sepulcher_bailiff', 'gravebell_behemoth', 'mausoleum_tortoise', 'joined_mourner'], el: 'shadow', fx: 'skull',
+    adds: ['skeleton', 'ghoul', 'wraith'], cata: 'THE DEATH KNELL', innate: 'warded', hp: 1.2, spd: 0.85,
+    phases: [
+      { name: 'Toll', pool: { shockwave: 3, slam: 2, cleave: 2 } },
+      { name: 'Wake the Dead', pool: { adds: 3, shockwave: 2, orbs: 2 } },
+      { name: 'The Death Knell', pool: { cataclysm: 2, shockwave: 3, vortex: 2 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, shockwave: 3, slam: 2, vortex: 2, orbs: 2 } },
+    ],
+  },
+  {
+    id: 'sorceress', name: 'Lady Vesperine', title: 'the Blood-Veiled', art: ['blood_veil_sorceress', 'obsidian_rift_sorcerer', 'ivory_swan_revenant', 'amethyst_scythe_regent'], el: 'arcane', fx: 'orb',
+    adds: ['cultist', 'imp', 'wraith'], cata: 'RIFT COLLAPSE', innate: 'empowered', hp: 0.8, spd: 1.2,
+    phases: [
+      { name: 'Hexweave', pool: { orbs: 3, blink_slam: 2, nova: 2 } },
+      { name: 'Mirror Coven', pool: { clones: 3, barrage: 2, meteors: 2 } },
+      { name: 'Rift Collapse', pool: { cataclysm: 2, vortex: 2, orbs: 2, blink_slam: 2 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, orbs: 2, blink_slam: 2, meteors: 2, clones: 1, spiral: 2 } },
+    ],
+  },
+  {
+    id: 'warlord', name: 'Warlord Brannoc', title: 'the Crimson Greatsword', art: ['crimson_greatsword_knight', 'rust_crown_chief', 'golden_horn_chieftain', 'ram_skull_axeman', 'fourblade_marauder'], el: 'phys', fx: 'bone',
+    adds: ['knight', 'archer', 'hound'], cata: 'LAST CHARGE', innate: 'empowered', hp: 1.05, spd: 1.25,
+    phases: [
+      { name: 'Duel', pool: { cleave: 4, charge3: 2, shockwave: 1 } },
+      { name: 'Rally the Host', pool: { adds: 3, cleave: 2, barrage: 2 } },
+      { name: 'Last Charge', pool: { cataclysm: 2, charge3: 3, cleave: 2, slam: 1 } },
+      { name: 'Final Stand', pool: { cataclysm: 1, cleave: 3, charge3: 2, shockwave: 2, barrage: 2 } },
+    ],
+  },
 ];
 
 export const RAID_MODS = {
@@ -155,13 +356,14 @@ export function makeRaidBoss(world, arena, depth, level) {
   const artId = pick(tpl.art.filter((id) => ART_BY_ID[id]));
   const art = ART_BY_ID[artId];
   const mods = rollMods(depth);
+  if (tpl.innate && !mods.includes(tpl.innate)) mods.unshift(tpl.innate);
   const has = (k) => mods.includes(k);
   const m = makeMonster(world, art.arch, world.biome, level, 'boss', arena.cx + 4, arena.cy, 0, { art: artId, swap: null });
   const B = monsterBase(level);
   Object.assign(m, {
     ai: 'raid', el: tpl.el, res: { [tpl.el]: 0.4, ...(m.undead ? { poison: 0.5, shadow: 0.3 } : null) },
-    scale: has('colossal') ? 2.75 : 2.4, r: 1.05, atkReach: 0.35, speed: 2.4 * (has('colossal') ? 0.88 : 1), atkCd: 1.3,
-    maxHp: B.hp * 26 * (30 + Math.min(depth, 150) * 0.5) * (has('colossal') ? 1.35 : 1), dmg: B.dmg * 3 * (has('empowered') ? 1.25 : 1), xp: B.xp * 60,
+    scale: has('colossal') ? 2.75 : 2.4, r: 1.05, atkReach: 0.35, speed: 2.4 * (tpl.spd || 1) * (has('colossal') ? 0.88 : 1), atkCd: 1.3,
+    maxHp: B.hp * 26 * (30 + Math.min(depth, 150) * 0.5) * (has('colossal') ? 1.35 : 1) * (tpl.hp || 1) * 1.3, dmg: B.dmg * 3.6 * (has('empowered') ? 1.25 : 1), xp: B.xp * 60,
     name: tpl.name.toUpperCase(), title: tpl.title, aura: elem(tpl.el).glow, affixes: has('vampiric') ? ['vampiric'] : [],
     moves: null, patterns: [], isRaid: true, ward: 1, aggroRange: 0,
   });
