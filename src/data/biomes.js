@@ -1,4 +1,4 @@
-// Twenty-five dungeon biomes. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
+// Twenty-six dungeon biomes. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
 // palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
 export const BIOMES = [
@@ -164,6 +164,13 @@ export const BIOMES = [
     torch: '#a0c0ff', fog: '#060a16',
   },
   {
+    id: 'cathedral', name: 'Desecrated Cathedral', palette: null, dark: 0.8, light: 8,
+    ambient: { type: 'mote', color: '#e8d8b0' }, mon: { hue: 0, sat: 0.9, light: 0.02 }, el: 'holy', blood: '#7a0a10',
+    adj: ['Desecrated', 'Profane', 'Fallen'], roster: ['knight', 'wraith', 'gargoyle', 'cultist', 'skeleton', 'archer', 'zombie', 'ghoul', 'bat', 'eye', 'imp', 'abomination'],
+    prefer: ['set2/undead', 'set2/warriors', 'set1/liches'],
+    torch: '#ffc070', fog: '#120c08',
+  },
+  {
     id: 'amber', name: 'Amber Wastes', palette: { colorize: [32, 0.7], light: 0.02, contrast: 1.05 }, dark: 0.7, light: 9,
     ambient: { type: 'sand', color: '#ffb050' }, mon: { hue: 25, sat: 1.1, light: 0.04 }, el: 'fire', blood: '#8a3008',
     adj: ['Amber', 'Sunbaked', 'Resinous'], roster: ['scorpion', 'beetle', 'worm', 'golem', 'elemental', 'hound', 'archer', 'skeleton', 'gargoyle', 'imp', 'spider', 'cultist'],
@@ -180,8 +187,22 @@ export const BIOMES = [
 ];
 
 // Art: every biome is built from a biome pack (assets/tiles/<pack>/, docs/ART.md), recoloured by its `palette`.
-// Catacombs is the only pack so far; more biome packs will each take over the biomes they suit.
+// A pack can hold more than one setting: `part` limits a biome to some of its floors (1-based ranges), wall
+// families, props, arches and doors (assets.js biomeTileSet).
 for (const b of BIOMES) b.pack = 'catacombs';
+const CG = 'cathedral_graveyard';
+Object.assign(BIOMES.find((b) => b.id === 'cathedral'), {
+  pack: CG, part: {
+    floors: [[1, 5], [11, 30]], scatter: [[21, 35]], families: ['nave_ashlar', 'stained_glass_chapel', 'buttressed_masonry'],
+    arches: ['chapel_lancet', 'nave_triumphal', 'grand_westwork'], doors: ['cathedral_oak', 'sacristy_bronze'],
+  },
+});
+Object.assign(BIOMES.find((b) => b.id === 'necropolis'), {
+  pack: CG, part: {
+    floors: [[6, 10], [31, 60]], scatter: [[1, 20], [36, 40]], families: ['cemetery_limestone', 'cemetery_iron'],
+    arches: ['churchyard_cross', 'ruined_cloister', 'processional_cemetery'], doors: ['cemetery_gate'],
+  },
+});
 
 // Colour families: a level can mix its palette with another biome of the same family (mixPartner), e.g. a
 // Frozen Ossuary whose far rooms are paved like the Crystal Caverns.
@@ -190,7 +211,7 @@ const FAMILY = {
   frost: ['frozen', 'sunken', 'crystal', 'storm', 'abyss', 'necropolis'],
   ember: ['molten', 'blood', 'forge', 'flesh'],
   rot: ['fungal', 'plague', 'thorn'],
-  gloom: ['catacombs', 'ashen', 'void', 'shadow', 'obsidian', 'shattered', 'library'],
+  gloom: ['catacombs', 'ashen', 'void', 'shadow', 'obsidian', 'shattered', 'library', 'cathedral'],
 };
 for (const [f, ids] of Object.entries(FAMILY)) for (const id of ids) BIOMES.find((b) => b.id === id).family = f;
 
@@ -204,23 +225,23 @@ const MON_SWAPS = {
   shadow: ['shadow', 'obsidian', 'void', 'midnight'], forge: ['infernal', 'ember', 'obsidian', 'rust', 'bronze'], abyss: ['abyss', 'void', 'storm', 'midnight'],
   thorn: ['thorn', 'venom', null, 'verdigris'], storm: ['storm', 'crystal', 'pale', 'midnight'], obsidian: ['obsidian', 'void', 'shadow', 'midnight'],
   flesh: ['flesh', 'blood', null, 'coral'], serpent: ['venom', 'sand', null, 'verdigris'], shattered: ['pale', 'storm', null, 'bronze'],
-  library: ['shadow', 'pale', 'void', 'amethyst'], necropolis: ['pale', 'frost', 'shadow', 'spectral', 'bone'], amber: ['sand', 'ember', 'gilded', 'bronze'],
+  library: ['shadow', 'pale', 'void', 'amethyst'], cathedral: [null, 'pale', 'shadow', 'bone'], necropolis: ['pale', 'frost', 'shadow', 'spectral', 'bone'], amber: ['sand', 'ember', 'gilded', 'bronze'],
   throne: ['infernal', 'blood', 'ember', 'rust'],
 };
 for (const b of BIOMES) b.swaps = MON_SWAPS[b.id];
 
 export const MIX_CHANCE = 0.65;
-/** Maybe pick a like-coloured biome to mix floors (and maybe walls) with, or null. */
+/** Maybe pick a like-coloured biome on the same pack (and part) to mix floors (and maybe walls) with, or null. */
 export function mixPartner(biome, rnd = Math.random) {
   if (!biome.family || rnd() >= MIX_CHANCE) return null;
-  const kin = BIOMES.filter((b) => b.family === biome.family && b.id !== biome.id);
+  const kin = BIOMES.filter((b) => b.family === biome.family && b.id !== biome.id && b.pack === biome.pack && b.part === biome.part);
   return kin.length ? kin[Math.floor(rnd() * kin.length)] : null;
 }
 
 export const BIOME_BY_ID = Object.fromEntries(BIOMES.map((b) => [b.id, b]));
 
 /**
- * The hero's next biome, drawn from a shuffle bag kept on the save (`c.biomeBag`): all 24 biomes come up once,
+ * The hero's next biome, drawn from a shuffle bag kept on the save (`c.biomeBag`): all 25 biomes come up once,
  * in random order, before any repeats, and never the same one twice in a row. The throne is only for depth 100.
  */
 export function drawBiome(c, depth) {

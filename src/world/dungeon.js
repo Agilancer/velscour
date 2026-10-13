@@ -311,7 +311,7 @@ function placeObstacles(map, rooms, tileset, rng, startRoom) {
 }
 
 // light radius (tiles) of the props that burn
-const LIT = { grave_lantern: 2.2, torch_stand: 3.2, incense_brazier: 3, iron_candelabrum: 2.6, vigil_candles: 2 };
+const LIT = { grave_lantern: 2.2, torch_stand: 3.2, incense_brazier: 3, iron_candelabrum: 2.6, vigil_candles: 2, votive_candles: 2 };
 
 function shuffleWith(a, rng) {
   for (let i = a.length - 1; i > 0; i--) { const j = rng.int(0, i); [a[i], a[j]] = [a[j], a[i]]; }
@@ -319,10 +319,16 @@ function shuffleWith(a, rng) {
 }
 
 /**
- * Gaps in a rectangular room's wall where a 2- or 3-wide corridor meets it, flanked by wall on both sides.
- * Three in four get an arch (spanning 3 tiles, so a 2-wide gap's arch overlaps the wall by half a tile each side) or, in
- * a 2-wide gap, a pair of doors. See TileMap.buildWalls.
+ * Gaps in a rectangular room's wall where a corridor meets it, flanked by wall on both sides.
+ * Three in four get an arch (one spanning 3 tiles for a 2-3 wide gap, so a 2-wide gap's arch overlaps the wall by half a
+ * tile each side; 5 or 7 tiles for wider gaps when the pack has them) or, in a 2-wide gap, a pair of doors.
+ * See TileMap.buildWalls.
  */
+export function archesFor(tileset, n) {
+  const span = n + (n % 2 ? 0 : 1), sp = tileset.archSpan || {};
+  return Object.keys(tileset.arches || {}).filter((d) => (sp[d] || 3) === span);
+}
+
 function findOpenings(map, rooms, tileset, rng) {
   const out = [];
   const arches = Object.keys(tileset.arches || {}), doors = Object.keys(tileset.doors || {});
@@ -345,9 +351,10 @@ function findOpenings(map, rooms, tileset, rng) {
         const n = b - a;
         // flanked by real wall (room floor inside, void outside) on both ends
         const wall = (t) => t >= s.lo && t < s.hi && fl(...s.inT(t)) && !fl(...s.outT(t));
-        if ((n === 2 || n === 3) && wall(a - 1) && wall(b) && rng.chance(0.75)) {
+        const fit = archesFor(tileset, n);
+        if (fit.length && wall(a - 1) && wall(b) && rng.chance(0.75)) {
           const door = n === 2 && doors.length && rng.chance(0.35);
-          out.push({ axis: s.axis, line: s.line, a0: a, a1: b, kind: door ? 'door' : 'arch', design: rng.pick(door ? doors : arches), flip: rng.chance(0.5) });
+          out.push({ axis: s.axis, line: s.line, a0: a, a1: b, kind: door ? 'door' : 'arch', design: rng.pick(door ? doors : fit), flip: rng.chance(0.5) });
         }
         a = b;
       }
@@ -404,8 +411,7 @@ function finishMap(map, tileset, rng, region = null, rooms = [], extra = []) {
   }
   const fams = shuffleWith(tileset.families.slice(), rng);
   const families = [[fams[0], 5], [fams[1 % fams.length], 3], [fams[2 % fams.length], 1.5]];
-  const arches = Object.keys(tileset.arches || {});
-  for (const o of extra) if (o.kind === 'arch' && !o.design) o.design = arches.length ? rng.pick(arches) : null;
+  for (const o of extra) if (o.kind === 'arch' && !o.design) { const fit = archesFor(tileset, o.a1 - o.a0); o.design = fit.length ? rng.pick(fit) : null; }
   map.buildWalls(tileset, () => rng.next(), [...findOpenings(map, rooms, tileset, rng), ...extra.filter((o) => o.design)], families);
 }
 

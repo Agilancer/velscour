@@ -341,9 +341,9 @@ export class TileMap {
       if (s.dir === 'b') { arm(s.ex0, s.ey, 'SE', s.front); arm(s.ex1, s.ey, 'NW', s.front); }
       else { arm(s.ex, s.ey0, 'SW', s.front); arm(s.ex, s.ey1, 'NE', s.front); }
     }
-    // a 2-wide gap's arch reaches half a tile over the wall on each side: those arms give way to it
+    // an even gap's arch (one tile wider) reaches half a tile over the wall on each side: those arms give way to it
     for (const o of openings) {
-      if (o.kind !== 'arch' || o.a1 - o.a0 !== 2) continue;
+      if (o.kind !== 'arch' || (o.a1 - o.a0) % 2) continue;
       const at = (a) => verts.get((o.axis === 'x' ? o.line : a) * W1 + (o.axis === 'x' ? a : o.line));
       const v0 = at(o.a0), v1 = at(o.a1);
       if (v0) delete v0.arms[o.axis === 'x' ? 'NW' : 'NE'];

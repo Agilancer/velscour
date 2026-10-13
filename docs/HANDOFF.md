@@ -429,7 +429,12 @@ are in section 7.
      at depth 5): 0 deaths, no errors. The Paladin saves early points until Blessed Hammer opens at level 6. One
      paladin run stalled ~6 min "Dodging!" on depth 1 (the known occasional bot stall); a probe could not reproduce it.
 
-18. **Enemy_300: 300 new monsters and bosses (branch `claude/intelligent-cori-a9glw8`).** The user uploaded
+18. **Cathedral and Graveyard biome pack (branch `claude/dreamy-edison-r6fxz0`).** The user uploaded
+   `assets/Cathedral_Graveyard_Biome_Pack-{1,2}.zip` (moved to `assets/source/biomes/`), the second template pack.
+   `biomepack.py` now reads split packs and arches of any span (this pack has 3, 5 and 7 tile arches; `archSpan`).
+   New biome **Desecrated Cathedral** (`cathedral`, gloom family, as drawn) uses the cathedral half of the pack; the
+   **Moonlit Necropolis** moved to its graveyard half (`b.part`, see ART.md). Wide arches go over 4-7 wide gaps.
+19. **Enemy_300: 300 new monsters and bosses (branch `claude/intelligent-cori-a9glw8`).** The user uploaded
    `assets/Enemy_300.zip`: 300 single 512x512 transparent PNGs (`ene_NNN_<name>.png`) of new monsters and bosses,
    and suggested palette swaps for even more variety. Done:
    - The zip was unpacked into `assets/source/enemies/set2/<family>/` (undead, fiends, titans, colossi, dragons,
@@ -469,7 +474,7 @@ Do these in order, unless the user asks for something else. Their feedback after
    sprites like set 2): move it, slice it, then add bestiary entries. Set 2's dragons and hydras currently borrow the
    demon/abomination brute AI; a dedicated `dragon` archetype (breath attacks) would suit them, but needs roster
    places in the biomes.
-7. More biome packs are coming (same template as the Catacombs pack). Import them as [`ART.md`](ART.md) "Adding the
+7. More biome packs are coming (same template as the Catacombs pack; the Cathedral and Graveyard pack is in, see ART.md). Import them as [`ART.md`](ART.md) "Adding the
    next pack" describes, and point the biomes they suit at them (`b.pack`).
 
 ## 6. Working environment notes
