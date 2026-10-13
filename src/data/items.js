@@ -258,7 +258,7 @@ const EPIC_B = ['bringer', 'reaver', 'fang', 'song', 'ward', 'call', 'bane', 'sh
 
 export function rollItem(ilvl, opts = {}) {
   ilvl = Math.max(1, Math.round(ilvl));
-  const slot = opts.slot || pick(['weapon', 'weapon', 'offhand', 'head', 'body', 'hands', 'legs', 'feet', 'ring', 'ring']);
+  const slot = opts.slot || pick(['weapon', 'weapon', 'offhand', 'head', 'head', 'body', 'body', 'body', 'hands', 'legs', 'feet', 'ring', 'ring']);
   const rarity = opts.rarity ?? rollRarity(opts.mf || 0, opts.bonus || 0);
   const tier = tierOf(ilvl);
   const item = { uid: newUid(), type: 'gear', slot, rarity, ilvl, tier, upg: 0, affixes: [], gems: [], sockets: 0 };

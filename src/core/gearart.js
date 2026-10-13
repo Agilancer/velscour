@@ -59,7 +59,7 @@ function designFor(band, ilvl) {
   return clamp(Math.round(a + t * (b - a)) + randi(-1, 1), a, b);
 }
 function finishFor(rarity) {
-  if (chance(0.25)) return 0; // the original colours
+  if (chance(0.1)) return 0; // the original colours
   const ok = PALETTES.map((p, i) => i).filter((i) => i && PALETTES[i].tier <= rarity && PALETTES[i].tier >= rarity - 2);
   return pick(ok);
 }

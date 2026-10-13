@@ -10,6 +10,7 @@ import { HUD } from './ui/hud.js';
 import { TouchUI } from './ui/touch.js';
 import { titleScreen } from './ui/screens.js';
 import { Vendor } from './ui/vendor.js';
+import { Stash } from './ui/stash.js';
 import { game } from './game/game.js';
 import { controls } from './game/controls.js';
 import { glowSprite } from './gfx/vfx.js';
@@ -96,6 +97,7 @@ async function boot() {
   initInput(G.canvas);
   UI.init();
   UI.vendor = Vendor;
+  UI.stash = Stash;
   $('#rotate-dismiss').onclick = () => { G.dismissedRotate = true; resize(); };
   window.addEventListener('error', (e) => reportError(e.error || e.message));
   window.addEventListener('unhandledrejection', (e) => reportError(e.reason));

@@ -178,6 +178,12 @@ function drawCorpse(ctx, c) {
 }
 
 function drawNpc(ctx, n) {
+  if (n.stash) {
+    drawChest(ctx, { x: n.x, y: n.y, rare: true, opened: !!(G.ui.stash && G.ui.stash.active) });
+    const x = isoX(n.x, n.y), y = isoY(n.x, n.y);
+    n.sbox = [x - 24, y - 40, x + 24, y + 6];
+    return;
+  }
   const img = classSprite(n.vendor ? n.vendor.sprite : n.sprite, 180, n.vendor ? n.vendor.pal : n.pal);
   const h = 58, w = (h * img.width) / img.height;
   const x = isoX(n.x, n.y), y = isoY(n.x, n.y);
@@ -413,7 +419,7 @@ function drawOverheadNames(ctx, world) {
     const label = n.vendor ? n.vendor.name : n.name;
     ctx.lineWidth = 3 * d; ctx.strokeStyle = '#000';
     ctx.strokeText(label, sx * d, sy * d);
-    ctx.fillStyle = n.vendor ? '#ffe090' : '#c8c0b0';
+    ctx.fillStyle = n.vendor || n.stash ? '#ffe090' : '#c8c0b0';
     ctx.fillText(label, sx * d, sy * d);
     if (n.vendor) {
       ctx.font = `${Math.round(10 * d)}px "Alegreya Sans", sans-serif`;

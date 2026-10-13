@@ -177,7 +177,7 @@ export function heroesScreen(note = '') {
 
 export function deathScreen(depth, killer, onReturn) {
   const s = el('div', 'screen');
-  s.innerHTML = `<div class="death-title">YOU HAVE DIED</div><p style="font-size:18px">Slain on Depth ${depth}${killer ? ` by <b style="color:#ff8060">${escapeHtml(killer)}</b>` : ''}.</p><p class="dim" style="max-width:520px;text-align:center;padding:0 12px">Your gear, levels and skills endure — but the descent begins again from Depth 1.</p>`;
+  s.innerHTML = `<div class="death-title">YOU HAVE DIED</div><p style="font-size:18px">Slain on Depth ${depth}${killer ? ` by <b style="color:#ff8060">${escapeHtml(killer)}</b>` : ''}.</p><p class="dim" style="max-width:520px;text-align:center;padding:0 12px">Your gear, levels and skills endure — but you must fight back down from Depth ${Math.max(1, Math.floor((depth - 1) / 5) * 5 - 4)}.</p>`;
   const b = el('button', 'btn big red', 'Return to Town');
   b.onclick = () => { sfx('ui'); hide(); onReturn(); };
   s.appendChild(b);
@@ -242,7 +242,7 @@ export function helpDialog() {
     <div>Tap potions on the bar to drink</div>
     <div><b style="color:#ffe2a0">Goal</b></div>
     <div>Enter the portal in town. Find the exit of each depth — it is sealed until its guardian falls.</div>
-    <div>Die and you restart at Depth 1, keeping everything else.</div>
+    <div>Die and you restart a few depths back (the start of the previous five), keeping everything else.</div>
     <div>Reach Depth 500 and slay Demon Lord Velscour.</div>
     <div><b style="color:#ffe2a0">Growing stronger</b></div>
     <div><b>Rings</b> (four slots): each carries augments that change a skill, a kind of skill or every skill — burning or venomous hits, chain lightning, a storm tether to your orbiting weapons, meteors, extra projectiles and more. The Jeweler sells them; guardians drop them.</div>

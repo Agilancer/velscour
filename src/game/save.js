@@ -70,6 +70,7 @@ export function newCharData(classId, name, slot = firstFreeSlot()) {
     equip: { weapon: null, offhand: null, head: null, body: null, hands: null, legs: null, feet: null, ring1: null, ring2: null, ring3: null, ring4: null },
     mastery: {}, townSeed: (Math.random() * 1e9) | 0,
     bag: Array(60).fill(null),
+    stash: Array(300).fill(null),
     gold: 150, potions: { hp: 6, mp: 4, rejuv: 1, fury: 1 },
     depth: 1, deepest: 0, nextBiome: null, biomeBag: [], cleared: {},
     kills: 0, deaths: 0, created: Date.now(), lastPlayed: Date.now(), tips: {},
@@ -98,6 +99,8 @@ export function migrate(c) {
   if (c.nextBiome === 'catacombs' && !c.deepest && !c.lastBiome) c.nextBiome = drawBiome(c, c.depth || 1);
   c.bar = migrateBar(c.bar); // 10 slots (LMB, 1-8, RMB) -> 15 (LMB, ` 1-9 0 - =, RMB)
   while (c.bag.length < 60) c.bag.push(null);
+  if (!Array.isArray(c.stash)) c.stash = [];
+  while (c.stash.length < 300) c.stash.push(null);
   // body armor and helmets of the first Paladin art pack: their look now comes from the gear art
   for (const it of [...Object.values(c.equip), ...c.bag]) if (it && it.art && (it.slot === 'body' || it.slot === 'head')) { delete it.art; delete it.artCls; }
   return c;
