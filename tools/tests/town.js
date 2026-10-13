@@ -4,7 +4,7 @@
 const { openGame, report } = require('./harness');
 (async () => {
   const { browser, page, errors, shot } = await openGame();
-  await page.click('text=New Hero'); await page.click('.class-card[data-id="paladin"]'); await page.click('text=Begin');
+  await page.click('text=Heroes'); await page.click('.class-card[data-id="paladin"]'); await page.click('text=Begin');
   await page.waitForTimeout(1500);
   const seeds = process.argv[2] ? process.argv[2].split(',').map(Number) : [1337, ...[0, 1, 2].map(() => (Math.random() * 1e9) | 0)];
   for (const seed of seeds) {

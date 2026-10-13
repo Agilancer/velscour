@@ -5,7 +5,7 @@ const { openGame, report } = require('./harness');
 
 (async () => {
   const { browser, page, errors, shot } = await openGame({ width: 1440, height: 810 });
-  await page.click('text=New Hero');
+  await page.click('text=Heroes');
   await page.click('.class-card[data-id="necromancer"]');
   await page.click('text=Begin');
   await page.waitForTimeout(1200);

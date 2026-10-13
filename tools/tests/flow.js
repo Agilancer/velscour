@@ -5,7 +5,7 @@ const { openGame, report } = require('./harness');
 
 (async () => {
   const { browser, page, errors, shot } = await openGame();
-  await page.click('text=New Hero'); await page.click('.class-card[data-id="bard"]'); await page.click('text=Begin');
+  await page.click('text=Heroes'); await page.click('.class-card[data-id="bard"]'); await page.click('text=Begin');
   await page.waitForTimeout(1000);
   // Stand next to the town portal and interact with it.
   await page.evaluate(() => { const { G } = window.VELSCOUR; const po = G.world.portals[0]; G.player.x = po.x - 1; G.player.y = po.y; G.player.interact = po; });

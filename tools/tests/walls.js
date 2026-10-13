@@ -8,7 +8,7 @@ const { openGame, report } = require('./harness');
   const prefix = process.argv[2] || 'walls';
   const biomes = (process.argv[3] || 'catacombs,catacombs,catacombs').split(',');
   const { browser, page, errors, shot } = await openGame({ width: 1280, height: 720 });
-  await page.click('text=New Hero'); await page.click('.class-card[data-id="paladin"]'); await page.click('text=Begin');
+  await page.click('text=Heroes'); await page.click('.class-card[data-id="paladin"]'); await page.click('text=Begin');
   await page.waitForTimeout(800);
   for (let n = 0; n < biomes.length; n++) {
     await page.evaluate(async (b) => {

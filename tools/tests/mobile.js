@@ -6,7 +6,7 @@ const { openGame, report } = require('./harness');
 (async () => {
   const { browser, ctx, page, errors, shot } = await openGame({ width: 844, height: 390, mobile: true });
   await shot('m1_title');
-  await page.tap('text=New Hero');
+  await page.tap('text=Heroes');
   await page.waitForTimeout(500);
   await shot('m2_class');
   await page.tap('.class-card[data-id="gunner"]');

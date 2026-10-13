@@ -4,7 +4,7 @@ const { openGame, report } = require('./harness');
 
 (async () => {
   const { browser, page, errors, shot } = await openGame();
-  await page.click('text=New Hero'); await page.click('.class-card[data-id="wizard"]'); await page.click('text=Begin');
+  await page.click('text=Heroes'); await page.click('.class-card[data-id="wizard"]'); await page.click('text=Begin');
   await page.waitForTimeout(800);
   await page.evaluate(() => { const { G, game } = window.VELSCOUR; G.godMode = true; G.char.depth = 30; game.enterDungeon(); });
   await page.waitForTimeout(2500);
