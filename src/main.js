@@ -13,7 +13,7 @@ import { Vendor } from './ui/vendor.js';
 import { game } from './game/game.js';
 import { controls } from './game/controls.js';
 import { glowSprite } from './gfx/vfx.js';
-import { applyVolumes } from './core/audio.js';
+import { applyVolumes, preloadSong, TITLE_SONG } from './core/audio.js';
 
 function resize() {
   G.W = window.innerWidth;
@@ -103,7 +103,10 @@ async function boot() {
   document.addEventListener('visibilitychange', () => { if (document.hidden && G.char) game.autosave(); });
   requestAnimationFrame(loop);
   try {
-    await loadAssets((p) => { $('#loading-text').textContent = `Summoning the depths… ${Math.round(p * 100)}%`; $('#loading-fill').style.width = `${(p * 100).toFixed(1)}%`; });
+    // the title song downloads in full alongside the art, so on mobile its intro never waits on the network
+    let pa = 0, ps = 0;
+    const show = () => { const p = pa * 0.8 + ps * 0.2; $('#loading-text').textContent = `Summoning the depths… ${Math.round(p * 100)}%`; $('#loading-fill').style.width = `${(p * 100).toFixed(1)}%`; };
+    await Promise.all([loadAssets((p) => { pa = p; show(); }), preloadSong(TITLE_SONG, (p) => { ps = p; show(); }).then(() => { ps = 1; show(); })]);
   } catch (e) {
     $('#loading-text').innerHTML = `Could not load game assets.<br><small>${e.message}</small><br><small>If you opened index.html directly from disk, serve the folder over http instead (see README).</small>`;
     return;

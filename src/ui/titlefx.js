@@ -7,11 +7,12 @@
 // Flames are simulated in coarse units (one unit = PX css px) but drawn at device resolution with tiny particles,
 // on a canvas laid over the title screen. A low-res copy of the fire, upscaled with smoothing, gives it a soft glow.
 import { A } from '../core/assets.js';
-import { initAudio, audioReady, playMusic, setAmbience, musicClock, seekMusic } from '../core/audio.js';
+import { initAudio, audioReady, playMusic, primeMusic, setAmbience, musicClock, seekMusic } from '../core/audio.js';
 import { rand, randi, clamp } from '../core/util.js';
 
 const FLAME = ['#fff7c8', '#ffe070', '#ffb428', '#ff7a12', '#e0400a', '#9a1c06', '#4a0c04'];
 export const INTRO_DELAY = 2, HIT = 6.88, FADE0 = -1.5;   // song-time seconds (FADE0 < 0: before the song starts)
+// phones: fewer, slightly bigger particles at a lower canvas resolution; Q also drops further if frames run slow
 const MAX_PARTS = 14000;
 let geo = null;              // logo emitter points in native logo pixels (built once)
 
@@ -50,31 +51,43 @@ export function attachTitleFx(screen, logoEl, els = {}) {
   let W = 0, H = 0, PX = 3, D = 1, S = 3, cssW = 0, cssH = 0;
   let parts = [], eyes = [];
   let flash = 0, shake = 0, last = performance.now(), raf = 0, ready = false;
+  const LITE = document.body.classList.contains('touch');
+  let Q = LITE ? 0.4 : 1, slow = 0;   // particle budget scale (adaptive)
+  const ZS = LITE ? 1.35 : 1;         // particle size boost when the budget is cut
   const lg = { s: 1, x: 0, y: 0 };
 
   // ------------------------------------------------------------------ intro timeline
   // phase: 'gate' (waiting for a click so audio may play) -> 'intro' (logo fading in) -> 'lit' (burning)
   let phase = 'gate', t0 = 0, ts = FADE0 - 1, eyeT = 0.4, burstAt = 0;
   const clockNow = () => (performance.now() - t0) / 1000 - INTRO_DELAY;   // wall clock in song time
-  function begin() {
+  let priming = false;
+  function begin() {   // called inside the tap: buffer the song first, then start the clock and the song together
     if (phase !== 'gate') return;
-    phase = 'intro'; t0 = performance.now();
+    phase = 'intro'; priming = true; t0 = performance.now() + 1e9;
     screen.classList.remove('title-gated');
-    playMusic('title', { delay: INTRO_DELAY }); setAmbience('title');
+    setAmbience('title');
+    primeMusic('title').then(() => {
+      if (!cv.isConnected) return;
+      priming = false; t0 = performance.now();
+      playMusic('title', { delay: INTRO_DELAY });
+    });
   }
-  function light() {   // the hit: the logo bursts into flame and the menu appears
+  function light(instant) {   // the hit: the logo bursts into flame and the menu appears
     if (phase === 'lit') return;
     phase = 'lit'; burstAt = performance.now();
     screen.classList.add('title-lit');
+    // buttons take taps only once they've faded in (and never from the tap that skipped the intro)
+    setTimeout(() => screen.classList.add('title-ready'), instant ? 0 : 950);
     if (ready) burst();
   }
   function skip() {
-    if (phase !== 'intro') return;
+    if (phase !== 'intro' || priming) return;
     seekMusic(HIT - 0.35);
     t0 = performance.now() - (HIT - 0.35 + INTRO_DELAY) * 1000;
   }
+  if (window.VELSCOUR_TEST_MENU) screen.classList.add('title-ready');   // headless tests click the menu straight away
   const c0 = musicClock();
-  if (c0 && c0.kind === 'title') { phase = 'intro'; light(); }      // back from a sub-menu: the song is still playing
+  if (c0 && c0.kind === 'title') { phase = 'intro'; light(true); }      // back from a sub-menu: the song is still playing
   else if (audioReady()) begin();
   else screen.classList.add('title-gated');
   const onInput = () => { if (phase === 'gate') { initAudio(); begin(); } else skip(); };
@@ -85,7 +98,7 @@ export function attachTitleFx(screen, logoEl, els = {}) {
     if (phase !== 'intro') return;
     const wall = clockNow(), c = musicClock();
     let t;
-    if (c && c.kind === 'title') t = c.t;                       // the song's own clock
+    if (c && c.kind === 'title' && (c.t > 0.02 || wall < 3)) t = c.t;   // the song's own clock (unless it never starts)
     else if (wall < 0) t = wall;                                // before the song is due
     else t = audioReady() && wall < 3 ? 0 : wall - (audioReady() ? 3 : 0);   // song still loading: hold, then give up
     ts = Math.max(ts, t);
@@ -105,7 +118,7 @@ export function attachTitleFx(screen, logoEl, els = {}) {
 
   function resize() {
     const r = cv.getBoundingClientRect();
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(LITE ? 1.5 : 2, window.devicePixelRatio || 1);
     if (r.width === cssW && r.height === cssH && dpr === D) return;
     cssW = r.width; cssH = r.height; D = dpr;
     PX = Math.max(2, Math.round(Math.min(r.width, r.height) / 240)); S = PX * D;   // device px per sim unit
@@ -125,8 +138,8 @@ export function attachTitleFx(screen, logoEl, els = {}) {
 
   // ------------------------------------------------------------------ flames
   // kind: 0 flame (additive, ramps through FLAME), 1 spark (additive, ballistic), 2 smoke (alpha), 4 shockwave ring
-  const add = (o) => { if (parts.length < MAX_PARTS) parts.push(o); };
-  const flame = (x, y, vx, vy, life, sz = 1) => add({ k: 0, x, y, vx, vy, t: 0, life, sz, ph: rand(6.28) });
+  const add = (o) => { if (parts.length < MAX_PARTS * Q) parts.push(o); };
+  const flame = (x, y, vx, vy, life, sz = 1) => add({ k: 0, x, y, vx, vy, t: 0, life, sz: sz * ZS, ph: rand(6.28) });
   const spark = (x, y, vx, vy, life, g) => add({ k: 1, x, y, vx, vy, t: 0, life, g });
   const smoke = (x, y, vx, vy, life, sz) => add({ k: 2, x, y, vx, vy, t: 0, life, sz });
   const topPt = () => P(...geo.top[randi(0, geo.top.length - 1)]);
@@ -135,23 +148,23 @@ export function attachTitleFx(screen, logoEl, els = {}) {
   function emitLogo(dt) {
     if (phase !== 'lit') {   // a few embers start to stir just before the hit
       const k = (ts - (HIT - 1.6)) / 1.6;
-      if (phase === 'intro' && k > 0) for (let n = Math.floor(dt * 60 * k + Math.random()); n-- > 0;) { const [x, y] = crackPt(); flame(x, y, rand(-2, 2), -rand(4, 10), rand(0.6, 1.2), 1); }
+      if (phase === 'intro' && k > 0) for (let n = Math.floor(dt * 60 * k * Q + Math.random()); n-- > 0;) { const [x, y] = crackPt(); flame(x, y, rand(-2, 2), -rand(4, 10), rand(0.6, 1.2), 1); }
       return;
     }
     const s = lg.s, surge = 1 + 1.5 * Math.max(0, 1 - (performance.now() - burstAt) / 2500);   // burns hottest right after the burst
-    for (let n = Math.floor(dt * 3200 * surge + Math.random()); n-- > 0;) {   // flame tongues along the top edge
+    for (let n = Math.floor(dt * 3200 * surge * Q + Math.random()); n-- > 0;) {   // flame tongues along the top edge
       const [x, y] = topPt();
       flame(x + rand(-1, 1), y + rand(0, 3 * s * 8), rand(-4, 4), -rand(12, 30) * (0.8 + surge * 0.2), rand(0.35, 0.85), rand(1, 2.4));
     }
-    for (let n = Math.floor(dt * 300 + Math.random()); n-- > 0;) {           // embers out of the molten cracks
+    for (let n = Math.floor(dt * 300 * Q + Math.random()); n-- > 0;) {           // embers out of the molten cracks
       const [x, y] = crackPt();
       flame(x, y, rand(-3, 3), -rand(6, 18), rand(1.2, 2.8), rand(1, 1.6));
     }
-    for (let n = Math.floor(dt * 260 + Math.random()); n-- > 0;) {           // licks rising off the letters' faces
+    for (let n = Math.floor(dt * 260 * Q + Math.random()); n-- > 0;) {           // licks rising off the letters' faces
       const [x, y] = crackPt();
       flame(x + rand(-2, 2), y, rand(-3, 3), -rand(14, 30), rand(0.25, 0.55), rand(0.8, 1.8));
     }
-    for (let n = Math.floor(dt * 45 + Math.random()); n-- > 0;) {            // drifting sparks
+    for (let n = Math.floor(dt * 45 * Q + Math.random()); n-- > 0;) {            // drifting sparks
       const [x, y] = topPt();
       spark(x, y, rand(-28, 28), -rand(30, 90), rand(0.8, 2), rand(-10, 25));
     }
@@ -160,12 +173,12 @@ export function attachTitleFx(screen, logoEl, els = {}) {
 
   // the hit: a wall of fire shoots straight up off the whole logo
   function burst() {
-    for (let n = 0; n < 4200; n++) {
+    for (let n = 0; n < 4200 * Q; n++) {
       const [x, y] = Math.random() < 0.7 ? topPt() : crackPt();
       flame(x + rand(-1.5, 1.5), y + rand(-1, 2), rand(-10, 10), -rand(40, 170), rand(0.4, 1.3), rand(1.2, 3));
     }
-    for (let n = 0; n < 260; n++) { const [x, y] = topPt(); spark(x, y, rand(-60, 60), -rand(80, 240), rand(0.8, 2.2), rand(20, 90)); }
-    for (let n = 0; n < 30; n++) { const [x, y] = topPt(); smoke(x, y - rand(4, 20), rand(-12, 12), -rand(20, 45), rand(2, 3.6), randi(2, 4)); }
+    for (let n = 0; n < 260 * Q; n++) { const [x, y] = topPt(); spark(x, y, rand(-60, 60), -rand(80, 240), rand(0.8, 2.2), rand(20, 90)); }
+    for (let n = 0; n < 30 * Q; n++) { const [x, y] = topPt(); smoke(x, y - rand(4, 20), rand(-12, 12), -rand(20, 45), rand(2, 3.6), randi(2, 4)); }
     const cx = lg.x + geo.w * lg.s / 2, cy = lg.y + geo.h * lg.s * 0.45;
     parts.push({ k: 4, x: cx, y: cy, t: 0, life: 0.6, r: geo.w * lg.s * 0.6 });
     flash = 0.55; shake = reduceMotion ? 0 : 0.45;
@@ -361,7 +374,11 @@ export function attachTitleFx(screen, logoEl, els = {}) {
   function frame(now) {
     if (!cv.isConnected) { detach(); return; }
     raf = requestAnimationFrame(frame);
-    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    const raw = (now - last) / 1000, dt = Math.min(0.05, raw); last = now;
+    if (phase === 'lit' && raw < 0.5) {   // frames over ~22 ms for a while: thin the fire (never below 15%)
+      slow = raw > 0.022 ? slow + 1 : Math.max(0, slow - 1);
+      if (slow > 20) { slow = 0; Q = Math.max(0.15, Q * 0.8); }
+    }
     resize();
     updateTimeline();
     styleLogo(now);
@@ -380,7 +397,7 @@ export function attachTitleFx(screen, logoEl, els = {}) {
     }
   }
 
-  cv.fx = { state: () => ({ phase, ts, W, H, parts: parts.length, eyes: eyes.length, opacity: +logoEl.style.opacity }), skip, begin, watcher };   // test hooks
+  cv.fx = { state: () => ({ phase, ts, Q, ready: screen.classList.contains('title-ready'), W, H, parts: parts.length, eyes: eyes.length, opacity: +logoEl.style.opacity }), skip, begin, watcher };   // test hooks
   const start = (img) => {
     try { geo = geo || logoGeometry(img); } catch (e) { return; }   // never let FX break the menu: just no flames
     if (!geo.top.length) return;

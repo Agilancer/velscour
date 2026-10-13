@@ -298,6 +298,7 @@ body.touch #madness-btn { padding: 8px 26px; font-size: 20px; }
 .title-logo.intro { position: relative; z-index: 1; animation: none; opacity: 0; will-change: opacity, filter, transform; }
 .title-screen .title-tag, .title-screen .title-menu, .title-screen .title-foot { z-index: 3; transition: opacity .9s ease-out; }
 .title-screen:not(.title-lit) .title-tag, .title-screen:not(.title-lit) .title-menu, .title-screen:not(.title-lit) .title-foot { opacity: 0; }
+.title-screen:not(.title-ready) .title-menu, .title-screen:not(.title-ready) .title-foot { pointer-events: none; }
 .title-gate { position: absolute; z-index: 3; bottom: 18%; left: 0; right: 0; text-align: center; font: 400 16px var(--font-head); letter-spacing: 6px; color: #8a2a1c; text-transform: uppercase; pointer-events: none; opacity: 0; transition: opacity .6s; }
 .title-screen { overflow: hidden; justify-content: safe center; padding: max(4vh, env(safe-area-inset-top)) env(safe-area-inset-right) max(2vh, env(safe-area-inset-bottom)) env(safe-area-inset-left); }
 .title-screen .title-logo { flex: 0 1 auto; min-height: 0; margin-top: 3vh; }

@@ -312,8 +312,9 @@ class Deck {
 // ------------------------------------------------------------------ music director
 const R2 = ([a, b]) => a + Math.random() * (b - a);
 // songs in order of play (shuffled when `shuffle`); `gap` = seconds of silence (ambience only) between songs
+export const TITLE_SONG = 'hymn_of_the_abyss';
 const MUSIC = {
-  title: { songs: ['hymn_of_the_abyss'], gap: [10, 16], vol: 0.9 },
+  title: { songs: [TITLE_SONG], gap: [10, 16], vol: 0.9 },
   town: { songs: ['empty_school'], gap: [30, 70], vol: 0.75 },
 };
 let music = null;   // { kind, def, deck, queue, next (ac time of next song or 0), gen }
@@ -329,6 +330,20 @@ export function preloadSong(song, progress) {
     for (;;) { const { done, value } = await rd.read(); if (done) break; parts.push(value); got += value.length; progress && progress(Math.min(1, got / total)); }
     songUrls[song] = URL.createObjectURL(new Blob(parts, { type: 'audio/mpeg' }));
   }).catch((e) => console.warn('song preload failed, it will stream:', song, e));
+}
+
+/** Inside a tap/click: point a free music deck at the kind's first song and buffer it (silently), so on mobile the
+ *  song is decoded and allowed to play the moment playMusic's delay runs out. Resolves once it can play through
+ *  (or after `wait` ms). */
+export function primeMusic(kind, wait = 4000) {
+  const def = MUSIC[kind]; if (!ac || !def) return Promise.resolve();
+  const song = def.songs[0], url = songUrls[song] || `${AUDIO}music/${song}.mp3`;
+  const deck = decks.music.find((d) => !d.playing) || decks.music[0], el = deck.el;
+  if (deck.playing) return Promise.resolve();
+  if (!el.src.endsWith(url)) { el.loop = false; el.src = url; }
+  const p = el.play(); if (p) p.then(() => { if (!deck.name) el.pause(); }).catch(() => {}); else el.pause();
+  if (el.readyState >= 4) return Promise.resolve();
+  return new Promise((ok) => { const t = setTimeout(ok, wait); el.addEventListener('canplaythrough', () => { clearTimeout(t); ok(); }, { once: true }); });
 }
 
 /** Start a music kind (no-op if it's already the current one). opts.delay: seconds before the first song starts. */
