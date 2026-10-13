@@ -201,7 +201,10 @@ export function renderWorld(ctx, world) {
   lights.length = 0;
   camera.apply(ctx);
   ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'medium';
+  // 'medium' (mipmapped) downscaling of the big floor/wall atlases costs several times 'low' per draw, and those are
+  // most of the frame: the tiles and walls always draw 'low', the sprites 'medium' (or 'low' on touch screens)
+  const hq = G.touch ? 'low' : 'medium';
+  ctx.imageSmoothingQuality = 'low';
   const vr = camera.viewRect(40);
   const map = world.map;
 
@@ -223,6 +226,7 @@ export function renderWorld(ctx, world) {
       ctx.drawImage(f.img, f.sx, f.sy, f.w, f.h, px - HW - 0.6, py - 0.6, TW + 1.2, TH + 1.2);
     }
   }
+  ctx.imageSmoothingQuality = hq;
   drawDecals(ctx, vr);
   for (const c of world.corpses) {
     const px = isoX(c.x, c.y), py = isoY(c.x, c.y);
@@ -270,8 +274,10 @@ export function renderWorld(ctx, world) {
   for (const c of world.chests) sorted.push({ d: c.x + c.y, f: 9, o: c });
   for (const po of world.portals) sorted.push({ d: po.x + po.y, f: 10, o: po });
   sorted.sort((a, b) => a.d - b.d);
+  let q = hq;
   for (const it of sorted) {
-    const o = it.o;
+    const o = it.o, lq = it.f === 2 ? 'low' : hq;
+    if (lq !== q) ctx.imageSmoothingQuality = q = lq;
     switch (it.f) {
       case 1: o.draw(ctx); break;
       case 2: drawWall(ctx, o, wk, cutaway(wallRect(o, wk), o.depth)); break;
@@ -308,6 +314,7 @@ export function renderWorld(ctx, world) {
       case 10: drawPortal(ctx, o); break;
     }
   }
+  if (q !== hq) ctx.imageSmoothingQuality = hq;
   drawParticles(ctx, vr);
   for (const h of top) h.draw(ctx);
   ctx.globalCompositeOperation = 'lighter';
@@ -331,6 +338,17 @@ export function renderWorld(ctx, world) {
   drawTexts(ctx);
 }
 
+/** The light falloff (alpha 1 at the centre to 0 at the rim), drawn with 'destination-out' to cut the darkness. */
+let falloff = null;
+function lightSprite() {
+  if (falloff) return falloff;
+  falloff = makeCanvas(64, 64);
+  const x = falloff.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.55, 'rgba(0,0,0,0.6)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  return falloff;
+}
+
 function drawLighting(ctx, world) {
   const W = G.W * G.dpr, H = G.H * G.dpr;
   const b = world.biome;
@@ -338,38 +356,38 @@ function drawLighting(ctx, world) {
   if (!lightCanvas || lightCanvas.width !== lw || lightCanvas.height !== lh) lightCanvas = makeCanvas(lw, lh);
   const lc = lightCanvas.getContext('2d');
   lc.globalCompositeOperation = 'source-over';
+  lc.globalAlpha = 1;
   lc.clearRect(0, 0, lw, lh);
   const [fr, fg, fb] = hexToRgb(b.fog || '#000000');
   lc.fillStyle = `rgba(${fr},${fg},${fb},${b.dark})`;
   lc.fillRect(0, 0, lw, lh);
   lc.globalCompositeOperation = 'destination-out';
   const scale = (HW * 1.25 * camera.zoom * G.dpr) / 4;
-  const p = world.player;
+  const p = world.player, spr = lightSprite();
   const add = (x, y, r, inten) => {
     const [sx, sy] = camera.tileToScreen(x, y, 20);
     const cx = (sx * G.dpr) / 4, cy = (sy * G.dpr) / 4, rr = r * scale;
     if (cx + rr < 0 || cy + rr < 0 || cx - rr > lw || cy - rr > lh) return;
-    const g = lc.createRadialGradient(cx, cy, 0, cx, cy, rr);
-    g.addColorStop(0, `rgba(0,0,0,${Math.min(1, inten)})`);
-    g.addColorStop(0.55, `rgba(0,0,0,${Math.min(1, inten) * 0.6})`);
-    g.addColorStop(1, 'rgba(0,0,0,0)');
-    lc.fillStyle = g;
-    lc.fillRect(cx - rr, cy - rr, rr * 2, rr * 2);
+    lc.globalAlpha = Math.min(1, inten);
+    lc.drawImage(spr, cx - rr, cy - rr, rr * 2, rr * 2);
   };
   if (p) add(p.x, p.y, b.light * (1 + (p.st.lightPct || 0)), 1);
   for (const l of lights) add(l.x, l.y, l.radius, l.intensity * 0.85);
-  ctx.drawImage(lightCanvas, 0, 0, W, H);
-  // vignette
-  const key = W + 'x' + H;
+  // the vignette is baked into the same quarter-res layer, so the screen takes one full-size blit, not two
+  const key = lw + 'x' + lh;
   if (vigKey !== key) {
     vigKey = key;
-    vignette = makeCanvas(W, H);
+    vignette = makeCanvas(lw, lh);
     const v = vignette.getContext('2d');
-    const g = v.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+    const g = v.createRadialGradient(lw / 2, lh / 2, Math.min(lw, lh) * 0.35, lw / 2, lh / 2, Math.max(lw, lh) * 0.75);
     g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.6)');
-    v.fillStyle = g; v.fillRect(0, 0, W, H);
+    v.fillStyle = g; v.fillRect(0, 0, lw, lh);
   }
-  ctx.drawImage(vignette, 0, 0);
+  lc.globalAlpha = 1;
+  lc.globalCompositeOperation = 'source-over';
+  lc.drawImage(vignette, 0, 0);
+  ctx.imageSmoothingQuality = 'low';
+  ctx.drawImage(lightCanvas, 0, 0, W, H);
 }
 
 function drawOverheadNames(ctx, world) {

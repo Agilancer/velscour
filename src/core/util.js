@@ -141,10 +141,13 @@ export function makeCanvas(w, h) {
 export function recolor(src, params, sx = 0, sy = 0, sw, sh) {
   sw = sw ?? src.width; sh = sh ?? src.height;
   const c = makeCanvas(sw, sh);
-  const ctx = c.getContext('2d', { willReadFrequently: true });
-  ctx.drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh);
-  if (!params) return c;
-  const img = ctx.getImageData(0, 0, sw, sh);
+  if (!params) { c.getContext('2d').drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh); return c; }
+  // read the pixels on a throwaway CPU canvas: a willReadFrequently canvas stays CPU-backed, and drawing from one
+  // every frame (tile atlases, monster art) re-uploads it to the GPU each time, which crawls on iOS Safari
+  const tmp = makeCanvas(sw, sh), tx = tmp.getContext('2d', { willReadFrequently: true });
+  tx.drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh);
+  const img = tx.getImageData(0, 0, sw, sh);
+  tmp.width = tmp.height = 0; // free its backing store now (iOS counts canvas memory until GC)
   const d = img.data;
   const hue = (params.hue || 0) / 360;
   const sat = params.sat ?? 1;
@@ -175,7 +178,7 @@ export function recolor(src, params, sx = 0, sy = 0, sw, sh) {
     }
     d[i] = v >> 16; d[i + 1] = (v >> 8) & 255; d[i + 2] = v & 255;
   }
-  ctx.putImageData(img, 0, 0);
+  c.getContext('2d').putImageData(img, 0, 0);
   return c;
 }
 

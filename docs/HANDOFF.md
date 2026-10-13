@@ -687,6 +687,15 @@ Do these in order, unless the user asks for something else. Their feedback after
   4. `drawParticles`; top hazards; `drawEffects('top')`.
   5. Identity transform; lighting (light canvas at 1/4 resolution, punched with `lights`); flash overlays; names and loot labels; `drawTexts`.
 
+**Render performance rules** (from the mobile perf pass; measure with `node tools/tests/perf.js [depth] [class] [throttle]`):
+- Floors and walls draw with `imageSmoothingQuality = 'low'`; sprites use `'medium'` on desktop and `'low'` on touch.
+  `'medium'` downscaling of the big atlases tripled the frame cost (headless 844x390: 14 fps, now 40-53).
+- `recolor()` does its pixel work on a throwaway `willReadFrequently` canvas and returns a normal (GPU) canvas. Never
+  draw every frame from a `willReadFrequently` canvas: it stays CPU-backed and gets re-uploaded.
+- No per-draw `ctx.filter` (a slow software path in Safari): frozen/charmed tints come from cached copies (`tinted()` in creature.js).
+- Lighting: one cached falloff sprite per light (no per-frame gradients), and the vignette is baked into the 1/4-res
+  light layer, so the screen takes a single full-size blit.
+
 **DPR, resize and zoom** (`main.js:17`):
 - `dpr = min(devicePixelRatio, touch?1.5:2)`.
 - If `W*H*dpr² > (touch?1.6e6:4.2e6)`, then `dpr = sqrt(max/(W*H))`. The floor is 0.75.

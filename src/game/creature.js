@@ -1,13 +1,31 @@
 // Base class for every living thing: player, monsters, summons.
 import { G } from '../state.js';
 import { isoX, isoY, screenDirToTile } from '../core/view.js';
-import { TAU, rand, chance, clamp } from '../core/util.js';
+import { TAU, rand, chance, clamp, makeCanvas } from '../core/util.js';
 import { spawn, glowSprite, ELEM } from '../gfx/vfx.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { classSprite } from '../core/assets.js';
 import { enemyImage } from '../core/enemyart.js';
 
 let UID = 0;
+
+// frozen / charmed tints: the CSS filter runs once into a cached copy of the image, not on every draw (a per-draw
+// ctx.filter is a slow software path, in Safari above all); without ctx.filter support the tint just doesn't show
+const FREEZE = 'hue-rotate(180deg) saturate(1.6) brightness(1.2)', CHARM = 'hue-rotate(90deg)';
+const tints = { [FREEZE]: new WeakMap(), [CHARM]: new WeakMap() };
+function tinted(img, f) {
+  if (!f) return img;
+  let c = tints[f].get(img);
+  if (!c) {
+    c = makeCanvas(img.width, img.height);
+    const x = c.getContext('2d');
+    if (!('filter' in x)) return img;
+    x.filter = f; x.drawImage(img, 0, 0);
+    c._art = img._art;
+    tints[f].set(img, c);
+  }
+  return c;
+}
 
 export class Creature {
   constructor(o = {}) {
@@ -134,6 +152,9 @@ export class Creature {
     this._img = this.classId ? classSprite(this.classId, this.spriteH * 3, this.classPal || null) : pixelSprite(this.sprite, this.pal, 6, this.dark ? { dark: true } : null);
     return this._img;
   }
+  tintFilter() {
+    return this.status.freeze && this.status.freeze.t > 0 ? FREEZE : this.curses.charm && this.curses.charm.t > 0 ? CHARM : '';
+  }
   flashImage(img) {
     if (this.classId) return null;
     if (img && img._art) return enemyImage(this.art, this.swap, 'flash');
@@ -179,13 +200,11 @@ export class Creature {
     const dx = px - w * ax + lx, dy = py - h * squash - z + ly;
     ctx.save();
     if (this.alpha !== undefined) ctx.globalAlpha = this.alpha;
-    if (this.status.freeze && this.status.freeze.t > 0) ctx.filter = 'hue-rotate(180deg) saturate(1.6) brightness(1.2)';
-    else if (this.curses.charm && this.curses.charm.t > 0) ctx.filter = 'hue-rotate(90deg)';
+    const ti = tinted(img, this.tintFilter());
     if (this.flip) {
       ctx.translate(dx + w, dy); ctx.scale(-1, 1);
-      ctx.drawImage(img, 0, 0, w, h * squash);
-    } else ctx.drawImage(img, dx, dy, w, h * squash);
-    ctx.filter = 'none';
+      ctx.drawImage(ti, 0, 0, w, h * squash);
+    } else ctx.drawImage(ti, dx, dy, w, h * squash);
     if (this.flash > 0) {
       const f = this.flashImage(img);
       ctx.globalAlpha = Math.min(1, this.flash * 8) * 0.85;
@@ -224,12 +243,9 @@ export class Creature {
     if (this.drawArtLayer) this.drawArtLayer(ctx, 'back', where);
     ctx.save();
     if (this.alpha !== undefined) ctx.globalAlpha = this.alpha;
-    if (this.status.freeze && this.status.freeze.t > 0) ctx.filter = 'hue-rotate(180deg) saturate(1.6) brightness(1.2)';
-    else if (this.curses.charm && this.curses.charm.t > 0) ctx.filter = 'hue-rotate(90deg)';
     ctx.translate(where.x, where.y);
     if (this.flip) ctx.scale(-1, 1);
-    ctx.drawImage(a.img, a.frame * a.cw, 0, a.cw, a.ch, dx, dy, w, h);
-    ctx.filter = 'none';
+    ctx.drawImage(tinted(a.img, this.tintFilter()), a.frame * a.cw, 0, a.cw, a.ch, dx, dy, w, h);
     if (this.flash > 0) {
       ctx.globalAlpha = Math.min(1, this.flash * 8) * 0.6;
       ctx.globalCompositeOperation = 'lighter';
