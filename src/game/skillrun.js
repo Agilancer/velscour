@@ -10,6 +10,7 @@ import { hit, aoe, chainHit } from './combat.js';
 import { Projectile, Delayed, Area, makeWall, Orbit, Whirl, Leap, Dash, NovaWave, BeamCh, Trap, Rain, Fissure, AuraFx, explode, coneTargets } from './hazards.js';
 import { buffAmount, curseAmount, skillDuration } from '../data/skills.js';
 import { createSummon } from './monster.js';
+import { lanceLeap } from '../gfx/lancefx.js';
 
 const roll = (d) => rand(d[0], d[1]);
 
@@ -180,7 +181,8 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       break;
     case 'leap': {
       const [x, y] = clampTarget(w, p, tx, ty, 6.5 * (m.range ?? 1));
-      w.addHazard(new Leap({ world: w, src: p, tx: x, ty: y, r: 1.6 * (m.r ?? 1) * area, dmg, el, fx, o, nova: m.nova }));
+      const lp = w.addHazard(new Leap({ world: w, src: p, tx: x, ty: y, r: 1.6 * (m.r ?? 1) * area, dmg, el, fx, o, nova: m.nova }));
+      if (sk.classId === 'dragoon') lanceLeap(lp, sk.name); // energy lance + a trail per leap skill
       sfx('swing');
       break;
     }
