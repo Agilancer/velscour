@@ -22,12 +22,13 @@ const OUT_DIR = process.env.OUT_DIR || path.join(__dirname, 'out');
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 /** Launch Chromium and open the game. Returns { browser, ctx, page, errors, shot }. */
-async function openGame({ width = 1280, height = 720, mobile = false } = {}) {
+async function openGame({ width = 1280, height = 720, mobile = false, intro = false } = {}) {
   const browser = await chromium.launch(fs.existsSync(CHROMIUM_PATH) ? { executablePath: CHROMIUM_PATH } : {});
   const ctx = await browser.newContext(mobile
     ? { viewport: { width, height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }
     : { viewport: { width, height } });
   const page = await ctx.newPage();
+  if (!intro) await page.addInitScript(() => { window.VELSCOUR_TEST_MENU = true; });   // title buttons take clicks at once
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push('[console] ' + m.text()); });
   page.on('pageerror', (e) => errors.push('[pageerror] ' + e.message + ' ' + (e.stack || '').split('\n').slice(1, 3).join(' | ')));

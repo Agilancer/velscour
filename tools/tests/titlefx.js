@@ -6,7 +6,7 @@ const { openGame, report } = require('./harness');
 
 (async () => {
   for (const [w, h, mobile, tag] of [[1280, 720, false, 'pc'], [844, 390, true, 'mobile']]) {
-    const { browser, page, errors, shot } = await openGame({ width: w, height: h, mobile });
+    const { browser, page, errors, shot } = await openGame({ width: w, height: h, mobile, intro: true });
     const st = () => page.evaluate(() => document.querySelector('canvas.title-fx').fx.state());
     const clock = () => page.evaluate(async () => (await import('/src/core/audio.js')).musicClock());
     await page.evaluate(() => { const fx = document.querySelector('canvas.title-fx').fx; for (let i = 0; i < 4; i++) fx.watcher(); });
@@ -20,6 +20,7 @@ const { openGame, report } = require('./harness');
     s = await st();
     console.log(tag, 'fading', JSON.stringify(s), 'song', JSON.stringify(await clock()));
     if (s.phase !== 'intro' || !(s.opacity > 0.05 && s.opacity < 0.9)) { console.log('FAIL: logo should be part-way faded in'); process.exitCode = 1; }
+    if (s.ready) { console.log('FAIL: menu clickable before it is visible'); process.exitCode = 1; }
     await shot(`titlefx_${tag}_fading`);
     while ((s = await st()).phase !== 'lit' && Date.now() - t0 < 16000) await page.waitForTimeout(30);
     const litAt = (Date.now() - t0) / 1000, song = await clock();
@@ -28,7 +29,8 @@ const { openGame, report } = require('./harness');
     await page.waitForTimeout(120);
     await shot(`titlefx_${tag}_burst`);
     await page.waitForTimeout(2500);
-    console.log(tag, 'burning', JSON.stringify(await st()));
+    s = await st(); console.log(tag, 'burning', JSON.stringify(s));
+    if (!s.ready) { console.log('FAIL: menu still locked after the burst'); process.exitCode = 1; }
     await shot(`titlefx_${tag}_burning`);
     // a fresh title screen (audio already unlocked) starts the intro at once; a click skips to the burst
     await page.evaluate(async () => { const a = await import('/src/core/audio.js'); a.stopMusic(0.1); (await import('/src/ui/screens.js')).titleScreen(); });

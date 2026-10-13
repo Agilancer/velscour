@@ -38,7 +38,7 @@ export function titleScreen() {
   s.classList.add('title-screen');
   s.innerHTML = `<img class="title-logo intro" src="assets/ui/logo.webp" alt="VELSCOUR"><div class="title-tag">A world built upon something that should have stayed dead.</div>`;
   const menu = el('div', 'title-menu');
-  const add = (label, fn, cls = 'btn big') => { const b = el('button', cls, label); b.onclick = () => { initAudio(); sfx('ui'); goFullscreen(); fn(); }; menu.appendChild(b); return b; };
+  const add = (label, fn, cls = 'btn big') => { const b = el('button', cls, label); b.onclick = () => { if (!s.classList.contains('title-ready')) return; initAudio(); sfx('ui'); goFullscreen(); fn(); }; menu.appendChild(b); return b; };
   if (last) add(`Continue<br><span style="font-size:13px;color:#a8977c">${escapeHtml(last.name)} · Lv ${last.level} ${CLASSES[last.classId].name} · Depth ${last.depth}</span>`, () => G.game.loadChar(last));
   add('New Hero', () => newHero(titleScreen));
   add(`Heroes <span style="font-size:13px;color:#a8977c">· ${used}/${SLOTS} slots</span>`, heroesScreen, 'btn');
