@@ -2,7 +2,7 @@
 // holding one of RAID_BOSSES, picked at random. A raid boss is huge and fights in 3 phases (4 from depth 25). Each
 // phase plays a randomly rolled rotation of its ability pool, now and then chaining a quick follow-up. At each
 // phase change it retreats to the middle of the arena behind warding crystals (it takes 90% less damage until they
-// break) while adds pour in. One to three random modifiers change each fight, and after 3.5 minutes it enrages, then frenzies every 45 s.
+// break) while adds pour in. One to three random modifiers change each fight, it enrages after 2 minutes (frenzying every 45 s), and after 3 it executes the hero outright.
 // The arena seals behind the hero until the boss dies.
 import { G } from '../state.js';
 import { rand, chance, TAU, clamp, angleTo, angleDiff, dist, pick, randi, shuffle } from '../core/util.js';
@@ -350,6 +350,8 @@ function rollMods(depth) {
 }
 
 /** Build the raid boss for this arena: a random one of RAID_BOSSES (not the same as the hero's last). */
+const EXECUTE_T = 180; // seconds from waking until the boss executes the hero
+
 export function makeRaidBoss(world, arena, depth, level) {
   const c = G.char;
   const tpl = pick(RAID_BOSSES.filter((b) => b.id !== (c && c.lastRaid)));
@@ -390,8 +392,9 @@ class Raid {
   get phase() { return this.phases[this.pi]; }
   /** The HUD line under the boss bar. */
   label() {
-    if (this.inter) return `Warded — break the crystals! (${this.wards.filter((c) => !c.dead).length} left)`;
-    return `Phase ${this.pi + 1}/${this.phases.length} · ${this.phase.name}${this.enraged ? ' · ENRAGED' : ''}`;
+    const left = Math.max(0, Math.ceil(EXECUTE_T - this.t)), ex = this.m.awake ? ` · Execute ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : '';
+    if (this.inter) return `Warded — break the crystals! (${this.wards.filter((c) => !c.dead).length} left)${ex}`;
+    return `Phase ${this.pi + 1}/${this.phases.length} · ${this.phase.name}${this.enraged ? ' · ENRAGED' : ''}${ex}`;
   }
   modText() { return this.mods.map((k) => RAID_MODS[k].name).join(' · '); }
   inside(c, pad = 0) {
@@ -419,9 +422,21 @@ class Raid {
     if (!this.sealed && this.inside(p, 1.5)) this.seal();
     this.t += dt;
     this.minHp = Math.min(this.minHp ?? 1, p.hp / p.maxHp);
-    // the DPS check: enraged after 3.5 minutes, and harder still every 45 s after that (MADNESS doubles the hero's damage)
-    if (!this.enraged && this.t > 210) this.enrage('Too slow, mortal');
-    if (this.enraged && this.t > (this.frenzyT || 255)) { this.frenzyT = this.t + 45; m.dmg *= 1.15; m.atkCd *= 0.95; floatText(m.x, m.y, 120, 'FRENZY', '#ff3010', 16, { life: 1.4 }); if (madnessReady()) UI.log('Unleash your MADNESS (G) before it is too late!', '#ff2050'); }
+    // the execute timer: after 3 minutes the boss winds up a killing blow nothing survives (the hero restarts the dungeon)
+    if (this.t > EXECUTE_T && !this.execT) {
+      this.execT = this.t + 2.5;
+      UI.centerMsg('EXECUTE', `${this.tpl.name} ends this`, 2.5);
+      addEffect(new Ring(m.x, m.y, 0.2, 9, 2.5, '#ff1010', 9));
+      sfx('roar'); sfx('boss');
+    }
+    if (this.execT && this.t > this.execT) {
+      addEffect(new Column(p.x, p.y, '#ff1010', 1.2, 60, 400)); burst(p.x, p.y, 30, 'blood', 50, 6); sfx('thud');
+      if (!G.godMode) { p.phoenixCd = Math.max(p.phoenixCd || 0, 1); p.hp = 0; p.die(m); return; }
+      this.execT = this.t + 5;
+    }
+    // the DPS check: enraged after 2 minutes, and harder still every 45 s after that (MADNESS doubles the hero's damage)
+    if (!this.enraged && this.t > 120) this.enrage('Too slow, mortal');
+    if (this.enraged && this.t > (this.frenzyT || 165)) { this.frenzyT = this.t + 45; m.dmg *= 1.15; m.atkCd *= 0.95; floatText(m.x, m.y, 120, 'FRENZY', '#ff3010', 16, { life: 1.4 }); if (madnessReady()) UI.log('Unleash your MADNESS (G) before it is too late!', '#ff2050'); }
     // next phase
     if (!this.inter && this.pi < this.marks.length && m.hp < m.maxHp * this.marks[this.pi]) { this.startInter(); return; }
     if (this.inter) this.interTick(dt);
