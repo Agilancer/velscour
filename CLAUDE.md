@@ -56,7 +56,8 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `src/gfx/pixelart.js`, and the town (ground, transitions, buildings, trees, props) comes from the Overworld and Town pack
   (`assets/source/biomes/town/`, `python3 tools/process_assets.py town`, `tools/townpack.py`; see docs/ART.md). Monsters use the user's sheets in
   `assets/source/enemies/<set>/`, imported by `python3 tools/process_assets.py enemies` and catalogued in
-  `src/data/bestiary.js`; see [`docs/ENEMY_ART.md`](docs/ENEMY_ART.md). New uploads ("Enemy Assets Set N") go there too. The user's sheets are in
+  `src/data/bestiary.js`; see [`docs/ENEMY_ART.md`](docs/ENEMY_ART.md). New uploads ("Enemy Assets Set N") go there too;
+  set 2 (`Enemy_300.zip`, 300 single sprites) lives in `set2/<family>/` folders, each packed as one sheet and loaded per level. The user's sheets are in
   `assets/source/` and get sliced by `tools/process_assets.py` (needs `pip install pillow numpy scipy`; args
   `sprites|biomes|props`). Dungeon floors, walls, arches, doors and scatter come from **biome packs**
   (`assets/source/biomes/<Name>_Biome_Pack.zip`, a 160x80 template; Catacombs is the first, every biome uses it

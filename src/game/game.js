@@ -5,6 +5,7 @@ import { camera } from '../core/view.js';
 import { sfx, playMusic, stopMusic, setAmbience, stopAmbience, footsteps } from '../core/audio.js';
 import { rand, pick, randi, escapeHtml, dist, makeCanvas, fmtInt } from '../core/util.js';
 import { biomeTileSet, loadBiomeArt, mixedTileSet } from '../core/assets.js';
+import { loadArtFor } from '../core/enemyart.js';
 import { loadClassArt } from '../core/classart.js';
 import { loadGearArt } from '../core/gearart.js';
 import { preloadBarFx } from '../gfx/artfx.js';
@@ -211,7 +212,12 @@ export const game = {
     // fetch this biome's art first (about 1 MB); if that fails the default set stands in
     setTimeout(async () => {
       try { await Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]); } catch (e) { console.warn(e); }
-      try { this.buildDungeon(depth, biome, mix); } finally { loading.classList.add('hidden'); }
+      try {
+        this.buildDungeon(depth, biome, mix);
+        // the level's monster art (set 2 sheets load per level); a failed sheet falls back to pixel sprites
+        const w = G.world;
+        await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])]).catch((e) => console.warn(e));
+      } finally { loading.classList.add('hidden'); }
     }, 40);
   },
 

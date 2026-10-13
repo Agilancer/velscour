@@ -12,8 +12,8 @@ const BIOMES = (process.argv[2] || 'catacombs,frozen,molten,fungal,void,flesh').
     await game.newChar('paladin', 'Bestiary');
     document.querySelectorAll('.screen').forEach((s) => s.remove()); G.ui.modalCount = 0;
     G.godMode = true;
-    const { loadEnemyArt } = await import('/src/core/enemyart.js');
-    await loadEnemyArt();
+    const { loadEnemySheets } = await import('/src/core/enemyart.js');
+    await loadEnemySheets(); // every sheet: set 2 normally loads per level
   });
 
   // ---- lineups: 14 looks per shot in two rows beside the hero, frozen in place
