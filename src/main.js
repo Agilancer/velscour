@@ -103,7 +103,7 @@ async function boot() {
   document.addEventListener('visibilitychange', () => { if (document.hidden && G.char) game.autosave(); });
   requestAnimationFrame(loop);
   try {
-    await loadAssets((p) => { $('#loading-text').textContent = `Summoning the depths… ${Math.round(p * 100)}%`; });
+    await loadAssets((p) => { $('#loading-text').textContent = `Summoning the depths… ${Math.round(p * 100)}%`; $('#loading-fill').style.width = `${(p * 100).toFixed(1)}%`; });
   } catch (e) {
     $('#loading-text').innerHTML = `Could not load game assets.<br><small>${e.message}</small><br><small>If you opened index.html directly from disk, serve the folder over http instead (see README).</small>`;
     return;
