@@ -62,13 +62,15 @@ Requirements, as stated (✅ = implemented in the draft):
   repo as-is, and the code is easy to change.
 - **Art:** the user's sheets are sliced by `tools/process_assets.py`. Dungeons are built from the user's **biome
   packs** (the Catacombs pack so far, palette swapped for all 25 biomes; see [`ART.md`](ART.md)). Monsters use the
-  user's 7 monster sheets (70 monsters, [`ENEMY_ART.md`](ENEMY_ART.md)). Everything else
+  user's art: 7 monster sheets (set 1, 70 monsters) and `Enemy_300.zip` (set 2, 300 single sprites); see
+  [`ENEMY_ART.md`](ENEMY_ART.md). Everything else
   is placeholder ASCII pixel art with palette swaps (summons, Velscour, items) or is drawn procedurally (town buildings). The README tells the user
   how to swap in real art.
-- **Enemy variety:** 22 AI archetypes, played by 70 painted monsters (`src/data/bestiary.js`; each has a main
-  archetype and maybe a few it can stand in for). Each level rolls up to 2 looks per roster archetype, each
-  palette-swapped from the biome's swap list. A darker "greater" breed exists for each, and uniques get a random swap.
-  Guardians come from 17 boss-flagged monsters. Velscour keeps his own pixel sprite: no sheet has a demon lord.
+- **Enemy variety:** 22 AI archetypes, played by 370 painted monsters (`src/data/bestiary.js`; each has a main
+  archetype and maybe a few it can stand in for). Each level rolls up to 2 looks per roster archetype, favouring the
+  biome's art families (`prefer`) and element, each palette-swapped from the biome's swap list (29 swaps). A darker
+  "greater" breed exists for each, and uniques get a random swap. Guardians come from 99 boss-flagged
+  monsters; set 2's 66 giants (`lone`) only ever play guardians and raid bosses. Velscour keeps his own pixel sprite: no sheet has a demon lord.
 - **Biome order:** the user asked for biomes to be random and not go in order. Biomes are drawn from a per-hero
   shuffle bag (`drawBiome`), so all 24 come up before any repeats, and the first descent is random, no longer
   always the catacombs. **Like-coloured mixing:** about 65% of levels borrow floors (in the far chunks) and maybe
@@ -432,6 +434,28 @@ are in section 7.
    `biomepack.py` now reads split packs and arches of any span (this pack has 3, 5 and 7 tile arches; `archSpan`).
    New biome **Desecrated Cathedral** (`cathedral`, gloom family, as drawn) uses the cathedral half of the pack; the
    **Moonlit Necropolis** moved to its graveyard half (`b.part`, see ART.md). Wide arches go over 4-7 wide gaps.
+19. **Enemy_300: 300 new monsters and bosses (branch `claude/intelligent-cori-a9glw8`).** The user uploaded
+   `assets/Enemy_300.zip`: 300 single 512x512 transparent PNGs (`ene_NNN_<name>.png`) of new monsters and bosses,
+   and suggested palette swaps for even more variety. Done:
+   - The zip was unpacked into `assets/source/enemies/set2/<family>/` (undead, fiends, titans, colossi, dragons,
+     mages, warriors, goblins, slimes, kobolds, birdfolk) and removed. `process_assets.py enemies` packs each folder
+     as one sheet (cells in file order; `SINGLE_SCALE` 0.85, at most `SINGLE_MAX_H` 220 px tall), so the existing
+     loader and bestiary format apply unchanged.
+   - 300 `BESTIARY` entries (compact `set2()` rows in `bestiary.js`), all mapped onto the existing 22 archetypes
+     with overrides (living folk playing skeleton/knight/archer/wraith are `undead: false`, `gore: 'flesh'`; birdfolk
+     and liches walk). Heights follow the art's own proportions (goblins/kobolds 34-44, slimes 22-46, humans 58-66,
+     giants 66-90). The 50 titans/colossi, 10 hydras and 6 great dragons are `lone`: guardians and raid bosses
+     only, never pack monsters (one first rolled into a spider pack). Boss-flagged art grew from 17 to 99.
+   - Biomes got `prefer` lists of art families (x3 weight in `rollLooks`), e.g. goblins in the Thornwood, knights and
+     mages in the Shattered Citadel, kobolds in the deserts, birdfolk in the Storm Spire. 9 new palette swaps
+     (hue turns suit set 2's multi-coloured art) joined the biomes' `MON_SWAPS`.
+   - Raid boss templates gained 22 new art choices (e.g. Pyrethrax can be the Kilnheart Juggernaut).
+   - Loading: set 2 is ~5 MB of WebP, so only set 1 and the minion sheets load at the title. A new level awaits
+     the sheets its monsters and rolled looks use (`loadArtFor` in `enterDungeon`), about 0.6-1.5 s behind the
+     existing loading screen; anything drawn before its sheet loads triggers the load and shows its pixel sprite.
+   - Verified: data_check, enemies.js (all 370 line-ups; catacombs/thorn/storm levels), flow, raid (5, 30, every
+     template's pool), boss, legion, auto-play, and a probe that every creature's art is ready on arrival at depths
+     3/5/12/40 (raid rooms included).
 
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
@@ -446,8 +470,10 @@ Do these in order, unless the user asks for something else. Their feedback after
    - long soak runs with `bot.js` at deeper depths, watching for errors, NaN and softlocks
 4. A balance pass for depths 10–100, using `bot.js` with several classes.
 5. Roadmap ideas from the README: animated character sprites, set items, a stash, waypoints, rune words, multiplayer.
-6. More monster sheets are coming ("Enemy Assets Set 2", ...). Import them as [`ENEMY_ART.md`](ENEMY_ART.md)
-   describes: move them, slice them, then add bestiary entries.
+6. More monster art may come. Import it as [`ENEMY_ART.md`](ENEMY_ART.md) describes (sheets, or a folder of single
+   sprites like set 2): move it, slice it, then add bestiary entries. Set 2's dragons and hydras currently borrow the
+   demon/abomination brute AI; a dedicated `dragon` archetype (breath attacks) would suit them, but needs roster
+   places in the biomes.
 7. More biome packs are coming (same template as the Catacombs pack; the Cathedral and Graveyard pack is in, see ART.md). Import them as [`ART.md`](ART.md) "Adding the
    next pack" describes, and point the biomes they suit at them (`b.pack`).
 

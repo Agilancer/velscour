@@ -4,25 +4,44 @@ import { makeCanvas, recolor } from './util.js';
 import { ART_BY_ID } from '../data/bestiary.js';
 
 const DIR = 'assets/sprites/enemies/';
-const E = { meta: null, sheets: {}, loading: null };
+const EAGER = /^(set1|minions)\//; // fetched with the meta; the rest (set2, ~5 MB) loads per level as looks need it
+const E = { meta: null, sheets: {}, loading: null, sheet: {} }; // sheet: key -> load promise
 const cache = new Map(); // LRU: `${id}|${mode}|${swap}` -> canvas
 const CACHE_MAX = 160; // ~70 KB each; iOS caps total canvas memory
 
-/** Fetch enemies.json and every sheet atlas (about 1.1 MB). Safe to call repeatedly. */
+function loadSheet(key) {
+  const s = E.meta && E.meta[key];
+  if (!s) return Promise.resolve();
+  return E.sheet[key] || (E.sheet[key] = new Promise((res) => {
+    const img = new Image();
+    img.onload = () => { E.sheets[key] = img; res(); };
+    img.onerror = () => { console.warn('Failed to load ' + s.file); res(); }; // not retried: pixel sprites stand in
+    img.src = DIR + s.file;
+  }));
+}
+
+/** Fetch enemies.json and the set 1 / minion atlases (about 1.4 MB). Safe to call repeatedly. */
 export function loadEnemyArt() {
   return E.loading || (E.loading = fetch(DIR + 'enemies.json')
     .then((r) => { if (!r.ok) throw new Error('Failed to load enemies.json'); return r.json(); })
-    .then((meta) => Promise.all(Object.entries(meta).map(([key, s]) => new Promise((res) => {
-      const img = new Image();
-      img.onload = () => { E.sheets[key] = img; res(); };
-      img.onerror = () => { console.warn('Failed to load ' + s.file); res(); };
-      img.src = DIR + s.file;
-    }))).then(() => { E.meta = meta; }))
+    .then((meta) => { E.meta = meta; return Promise.all(Object.keys(meta).filter((k) => EAGER.test(k)).map(loadSheet)); })
     .catch((e) => { E.loading = null; throw e; }));
+}
+
+/** Load these sheets (all of them if no list). A new level awaits its monsters' and looks' sheets (loadArtFor). */
+export async function loadEnemySheets(keys) {
+  await loadEnemyArt();
+  await Promise.all((keys || Object.keys(E.meta)).map(loadSheet));
+}
+
+/** Load the sheets these art ids are on (unknown or empty ids are skipped). */
+export function loadArtFor(ids) {
+  return loadEnemySheets([...new Set(ids.filter((id) => ART_BY_ID[id]).map((id) => ART_BY_ID[id].sheet))]);
 }
 
 function cell(a) {
   const s = E.meta && E.meta[a.sheet];
+  if (s && !E.sheets[a.sheet]) loadSheet(a.sheet); // drawn before its level asked: the pixel sprite stands in meanwhile
   return s && E.sheets[a.sheet] ? s.cells[a.i] : null;
 }
 

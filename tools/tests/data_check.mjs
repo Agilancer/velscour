@@ -62,6 +62,7 @@ for (const [k, s] of Object.entries(meta)) s.cells.forEach((c, i) => { if (c && 
 for (const k of Object.keys(ARCH)) if (k !== 'velscour' && !artPool(k).length) bad.push(`archetype ${k} has no monster art`);
 for (const b of BIOMES) {
   for (const sw of b.swaps || []) if (sw && !SWAPS[sw]) bad.push(`biome ${b.id}: unknown swap ${sw}`);
+  for (const k of b.prefer || []) if (!meta[k]) bad.push(`biome ${b.id}: prefers unknown art sheet ${k}`);
   const looks = rollLooks(b);
   for (const k of b.roster) if (!looks.pick(k)) bad.push(`biome ${b.id}: no look for ${k}`);
   if (!looks.boss(b.roster)) bad.push(`biome ${b.id}: no guardian art`);

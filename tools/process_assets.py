@@ -361,13 +361,27 @@ def process_chests():
 # --------------------------------------------------------------------------
 ENEMY_SCALE = 0.5  # stored size vs. the sheet; monsters are drawn at 30-110 world px, sheets are ~330 px tall
 ENEMY_GRID = {}    # "<set>/<sheet>": (rows, cols) for sheets that are not the usual 2 x 5
+SINGLE_MAX_H = 220  # a folder of single sprites (set2): stored at most this tall (bosses), never above SINGLE_SCALE
+SINGLE_SCALE = 0.85
+
+
+def enemy_piece(img, kind, scale):
+    """Downscale one cut-out monster and find its feet's centre column (fx)."""
+    w, h = max(1, round(img.width * scale)), max(1, round(img.height * scale))
+    small = img.convert("RGBa").resize((w, h), Image.LANCZOS).convert("RGBA")
+    al = np.asarray(small)[..., 3] > 100
+    ys = np.nonzero(al.any(axis=1))[0]
+    foot = al[max(0, ys.max() - max(2, h // 7)):ys.max() + 1] if len(ys) else al
+    fx = float(np.nonzero(foot.any(axis=0))[0].mean()) if foot.any() else w / 2
+    return {"kind": kind, "img": small, "w": w, "h": h, "fx": round(fx, 1), "oh": img.height}
 
 
 def process_enemies():
     """Cut every monster out of its sheet (reading order: left to right, top to bottom), downscale it and
     pack one atlas per sheet. enemies.json: {"<set>/<sheet>": {"file", "cells": [{x, y, w, h, fx, oh}]}}
     with fx = the feet's centre column and oh = the height on the sheet. src/data/bestiary.js says what
-    each cell is (index = reading order)."""
+    each cell is (index = reading order). A folder inside a set (set2/<family>/, one monster per PNG) is
+    packed as one sheet too, its cells in file name order."""
     root = os.path.join(SRC, "enemies")
     out_dir = os.path.join(OUT, "sprites", "enemies")
     ensure(out_dir)
@@ -376,25 +390,29 @@ def process_enemies():
         if not os.path.isdir(os.path.join(root, set_id)):
             continue
         for fn in sorted(os.listdir(os.path.join(root, set_id))):
-            if not fn.lower().endswith(".png"):
-                continue
-            key = set_id + "/" + fn[:-4]
-            rgba = np.asarray(Image.open(os.path.join(root, set_id, fn)).convert("RGBA")).copy()
-            rgba[..., 3] = np.where(rgba[..., 3] < 16, 0, rgba[..., 3])
-            rows, cols = ENEMY_GRID.get(key, (2, 5))
+            path = os.path.join(root, set_id, fn)
             pieces = []
-            for r, row in enumerate(grid_objects(rgba, rows, cols, y_min=0)):
-                for c, a in enumerate(row):
-                    if a is None:
-                        continue
-                    img = Image.fromarray(a)
-                    w, h = max(1, round(img.width * ENEMY_SCALE)), max(1, round(img.height * ENEMY_SCALE))
-                    small = img.convert("RGBa").resize((w, h), Image.LANCZOS).convert("RGBA")
-                    al = np.asarray(small)[..., 3] > 100
-                    ys = np.nonzero(al.any(axis=1))[0]
-                    foot = al[max(0, ys.max() - max(2, h // 7)):ys.max() + 1] if len(ys) else al
-                    fx = float(np.nonzero(foot.any(axis=0))[0].mean()) if foot.any() else w / 2
-                    pieces.append({"kind": r * cols + c, "img": small, "w": w, "h": h, "fx": round(fx, 1), "oh": img.height})
+            if os.path.isdir(path):
+                key = set_id + "/" + fn
+                files = sorted(f for f in os.listdir(path) if f.lower().endswith(".png"))
+                for k, f in enumerate(files):
+                    img = Image.open(os.path.join(path, f)).convert("RGBA")
+                    a = np.asarray(img).copy()
+                    a[..., 3] = np.where(a[..., 3] < 16, 0, a[..., 3])
+                    img = trim(Image.fromarray(a))
+                    pieces.append(enemy_piece(img, k, min(SINGLE_SCALE, SINGLE_MAX_H / img.height)))
+                rows, cols = 1, len(files)
+            elif fn.lower().endswith(".png"):
+                key = set_id + "/" + fn[:-4]
+                rgba = np.asarray(Image.open(path).convert("RGBA")).copy()
+                rgba[..., 3] = np.where(rgba[..., 3] < 16, 0, rgba[..., 3])
+                rows, cols = ENEMY_GRID.get(key, (2, 5))
+                for r, row in enumerate(grid_objects(rgba, rows, cols, y_min=0)):
+                    for c, a in enumerate(row):
+                        if a is not None:
+                            pieces.append(enemy_piece(Image.fromarray(a), r * cols + c, ENEMY_SCALE))
+            else:
+                continue
             atlas, entries = pack_atlas(pieces, 1024)
             cells = [None] * (rows * cols)
             for p, e in zip(pieces, entries):

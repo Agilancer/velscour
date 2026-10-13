@@ -24,7 +24,7 @@ import { UI } from '../ui/ui.js';
 // cata: the name of their cataclysm; phases: [{name, pool: {ability: weight}}], the 4th only used from depth 25.
 export const RAID_BOSSES = [
   {
-    id: 'colossus', name: 'Ossuarch', title: 'the Bone Colossus', art: ['bone_colossus', 'ossuary_golem', 'bone_juggernaut'], el: 'phys', fx: 'bone',
+    id: 'colossus', name: 'Ossuarch', title: 'the Bone Colossus', art: ['bone_colossus', 'ossuary_golem', 'bone_juggernaut', 'catacomb_colossus', 'ossuary_cathedral', 'granite_knuckle_titan'], el: 'phys', fx: 'bone',
     adds: ['skeleton', 'archer', 'knight'], cata: 'BONE STORM',
     phases: [
       { name: 'The Grinding March', pool: { cleave: 3, slam: 2, fissures: 2, charge3: 2 } },
@@ -34,7 +34,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'pyre', name: 'Pyrethrax', title: 'the Molten Behemoth', art: ['molten_behemoth', 'butcher'], el: 'fire', fx: 'fireball',
+    id: 'pyre', name: 'Pyrethrax', title: 'the Molten Behemoth', art: ['molten_behemoth', 'butcher', 'kilnheart_juggernaut', 'obsidian_volcano_beast', 'obsidian_crown_hydra'], el: 'fire', fx: 'fireball',
     adds: ['imp', 'elemental', 'beetle'], cata: 'SUPERNOVA',
     phases: [
       { name: 'Smoldering', pool: { meteors: 3, cleave: 2, pools: 2, slam: 1 } },
@@ -44,7 +44,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'lich', name: 'Vorthul', title: 'the Lich Sovereign', art: ['lich_king', 'sunstaff_lich'], el: 'cold', fx: 'shard',
+    id: 'lich', name: 'Vorthul', title: 'the Lich Sovereign', art: ['lich_king', 'sunstaff_lich', 'rime_antler_lich', 'tide_bell_necromancer'], el: 'cold', fx: 'shard',
     adds: ['wraith', 'skeleton', 'cultist'], cata: "DEATH'S WINTER",
     phases: [
       { name: 'The Cold Court', pool: { orbs: 3, spiral: 2, blink_slam: 2, nova: 1 } },
@@ -54,7 +54,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'maws', name: 'The Mother of Maws', title: 'Queen of the Brood', art: ['hive_of_mouths', 'many_armed_horror', 'conjoined_horror'], el: 'poison', fx: 'blob',
+    id: 'maws', name: 'The Mother of Maws', title: 'Queen of the Brood', art: ['hive_of_mouths', 'many_armed_horror', 'conjoined_horror', 'crypt_maw_patriarch', 'chitin_brood_duchess', 'leech_crown_abomination', 'fungal_mire_mother'], el: 'poison', fx: 'blob',
     adds: ['spider', 'worm', 'slime'], cata: 'DEVOURING HUNGER',
     phases: [
       { name: 'Brood Call', pool: { pools: 3, cleave: 2, vortex: 2, adds: 1 } },
@@ -64,7 +64,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'eye', name: 'The All-Seeing', title: 'Tyrant of a Thousand Gazes', art: ['eye_tyrant', 'all_seeing'], el: 'arcane', fx: 'orb',
+    id: 'eye', name: 'The All-Seeing', title: 'Tyrant of a Thousand Gazes', art: ['eye_tyrant', 'all_seeing', 'void_shell_emperor'], el: 'arcane', fx: 'orb',
     adds: ['eye', 'wraith'], cata: 'GAZE OF ANNIHILATION',
     phases: [
       { name: 'The Watching', pool: { sweep: 3, orbs: 2, nova: 2 } },
@@ -74,7 +74,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'reaper', name: 'Mortheus', title: 'Reaper of the Depths', art: ['grim_reaper', 'four_armed_reaver', 'ramskull_headsman'], el: 'shadow', fx: 'skull',
+    id: 'reaper', name: 'Mortheus', title: 'Reaper of the Depths', art: ['grim_reaper', 'four_armed_reaver', 'ramskull_headsman', 'shroud_reaper', 'umbral_jaw_nun'], el: 'shadow', fx: 'skull',
     adds: ['ghoul', 'hound', 'wraith'], cata: 'HARVEST OF SOULS',
     phases: [
       { name: 'The Hunt', pool: { cleave: 3, blink_slam: 2, charge3: 2 } },
@@ -84,7 +84,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'pontiff', name: 'The Ossified Pontiff', title: 'Voice of the Bone Choir', art: ['ossified_bishop'], el: 'holy', fx: 'bolt',
+    id: 'pontiff', name: 'The Ossified Pontiff', title: 'Voice of the Bone Choir', art: ['ossified_bishop', 'wax_cathedral_saint', 'cathedral_organ_walker'], el: 'holy', fx: 'bolt',
     adds: ['cultist', 'zombie', 'knight'], cata: 'THE FINAL RITE',
     phases: [
       { name: 'Sermon of Ash', pool: { meteors: 2, nova: 2, orbs: 2, cleave: 1 } },
@@ -94,7 +94,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'carapace', name: 'Chitinax', title: 'the Thunder Carapace', art: ['shell_horror'], el: 'light', fx: 'spark',
+    id: 'carapace', name: 'Chitinax', title: 'the Thunder Carapace', art: ['shell_horror', 'prison_crab_sovereign', 'coral_throne_leviathan'], el: 'light', fx: 'spark',
     adds: ['scorpion', 'beetle', 'spider'], cata: 'STORMBREAK',
     phases: [
       { name: 'Armored Advance', pool: { charge3: 3, slam: 2, pools: 1, cleave: 2 } },
