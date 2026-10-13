@@ -113,6 +113,7 @@ export class Creature {
     if (this.hpShow > 0) this.hpShow -= dt;
     if (this.lunge > 0) this.lunge = Math.max(0, this.lunge - dt * 4);
     this.spawnT += dt;
+    if (this.idleArt) { this.stillT = this.x === this._sx && this.y === this._sy ? (this.stillT || 0) + dt : 0; this._sx = this.x; this._sy = this.y; }
     return !this.disabled();
   }
 
@@ -138,10 +139,11 @@ export class Creature {
   // ------------------------------------------------------------- drawing
   spriteImage() {
     // memoised per creature: building cache keys every frame is surprisingly costly
-    const id = this.art || this.classId || this.sprite, pal = this.art ? this.swap : this.classPal || this.pal;
+    const art = this.idleArt && this.stillT > 0.8 ? this.idleArt : this.art; // a pet that sits when it stands still
+    const id = art || this.classId || this.sprite, pal = art ? this.swap : this.classPal || this.pal;
     if (this._img && this._imgSprite === id && this._imgPal === pal) return this._img;
-    if (this.art) {
-      const img = enemyImage(this.art, this.swap);
+    if (art) {
+      const img = enemyImage(art, this.swap);
       if (!img) return pixelSprite(this.sprite, this.pal, 6); // monster art still loading: the old pixel look
       this._imgSprite = id; this._imgPal = pal; this._flashImg = null;
       return (this._img = img);
@@ -157,13 +159,13 @@ export class Creature {
   }
   flashImage(img) {
     if (this.classId) return null;
-    if (img && img._art) return enemyImage(this.art, this.swap, 'flash');
+    if (img && img._art) return enemyImage(img === this._img ? this._imgSprite : this.riseArt, this.swap, 'flash');
     if (!this._flashImg) this._flashImg = pixelSprite(this.sprite, this.pal, 6, { flash: true });
     return this._flashImg;
   }
   /** World-px size of the sprite. */
   spriteDims(img) {
-    if (img._art) { const h = this.artH * this.scale; return [h * img.width / img.height, h]; }
+    if (img._art) { const h = this.artH * this.scale * (this.artRef ? img.height / this.artRef : 1); return [h * img.width / img.height, h]; }
     if (this.classId) { const h = this.spriteH * this.scale; return [h * img.width / img.height, h]; }
     const px = (this.px || 2.3) * this.scale / 6;
     return [img.width * px, img.height * px];
@@ -173,11 +175,21 @@ export class Creature {
     const art = this.artFrame && this.artFrame();
     if (art) return this.drawArt(ctx, art);
     const px = isoX(this.x, this.y), py = isoY(this.x, this.y);
-    const img = this.spriteImage();
+    let img = this.spriteImage();
+    const rising = this.riseArt && this.spawnT < 0.5 && enemyImage(this.riseArt);
+    if (rising && this.spawnT < 0.22) img = rising; // a blue slime pools up as a puddle, then pops up out of it
     let [w, h] = this.spriteDims(img);
     // appear animation
-    if (this.spawnT < 0.3) { const k = this.spawnT / 0.3; w *= k; h *= k; }
-    const bob = this.moving ? Math.abs(Math.sin(this.animT * 9)) * 2.2 : Math.sin(this.animT * 2) * 0.6;
+    if (rising) { const k = this.spawnT < 0.22 ? 0.35 + this.spawnT / 0.22 * 0.65 : 1; w *= k; if (this.spawnT >= 0.22) { const t = (this.spawnT - 0.22) / 0.28; h *= 1 + 0.3 * Math.sin(t * Math.PI); w *= 1 - 0.15 * Math.sin(t * Math.PI); } }
+    else if (this.spawnT < 0.3) { const k = this.spawnT / 0.3; w *= k; h *= k; }
+    let bob = this.moving ? Math.abs(Math.sin(this.animT * 9)) * 2.2 : Math.sin(this.animT * 2) * 0.6;
+    let squash = this.moving ? 1 + Math.sin(this.animT * 18) * 0.03 : 1;
+    if (this.hop) { // slimes: stretch in the air, splat on landing; a slow wobble at rest
+      const s = this.moving ? Math.sin(this.animT * 8) : 0;
+      bob = Math.max(0, s) * 7 * this.scale;
+      squash = this.moving ? 1 + (s > 0 ? s * 0.14 : s * 0.22) : 1 + Math.sin(this.animT * 3) * 0.04;
+      w *= 2 - squash;
+    }
     const fly = this.fly ? 16 + Math.sin(this.animT * 3) * 4 : 0;
     const z = this.z + fly + bob;
     // shadow
@@ -194,7 +206,6 @@ export class Creature {
     // lunge offset (screen-space direction of facing)
     const lx = this.lunge > 0 ? (Math.cos(this.facing) - Math.sin(this.facing)) * this.lunge * 8 : 0;
     const ly = this.lunge > 0 ? (Math.cos(this.facing) + Math.sin(this.facing)) * this.lunge * 4 : 0;
-    const squash = this.moving ? 1 + Math.sin(this.animT * 18) * 0.03 : 1;
     // monster art is anchored at its feet (weapons stick out to one side), mirrored with the sprite
     const ax = img._art ? (this.flip ? 1 - img._art.fx / img.width : img._art.fx / img.width) : 0.5;
     const dx = px - w * ax + lx, dy = py - h * squash - z + ly;

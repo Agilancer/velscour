@@ -10,7 +10,7 @@ import { Projectile, Delayed, NovaWave, Area, Fissure, explode, lineTargets, con
 import { ARCH, ARCH_MOVES, ELITE_AFFIXES, bossName, uniqueName } from '../data/enemies.js';
 import { SUMMONS } from '../data/summons.js';
 import { bodyR } from '../world/map.js';
-import { ART_BY_ID, REVIVED, greaterSwap, rollLooks, uniqueSwap } from '../data/bestiary.js';
+import { ART_BY_ID, BLUE_PUDDLES, BLUE_SLIMES, REVIVED, greaterSwap, rollLooks, uniqueSwap } from '../data/bestiary.js';
 
 const LEASH = 10; // minions fight what's within this many tiles of the hero
 const PROJ_FX = { fire: 'fireball', cold: 'shard', light: 'spark', poison: 'blob', shadow: 'skull', arcane: 'orb', holy: 'bolt', blood: 'blob', acid: 'blob', phys: 'rock' };
@@ -1250,7 +1250,12 @@ export function buildSummon(owner, def, key, x, y, dmg, hp, life) {
   });
   if (look.cls) { m.classId = look.cls === true ? owner.classId : look.cls; m.classPal = look.pal || null; m.spriteH = 50; }
   else { m.sprite = look.sprite; m.pal = look.pal; m.px = look.px || 2.3; }
-  if (look.art && ART_BY_ID[look.art]) { m.art = look.art; m.swap = null; m.artH = ART_BY_ID[look.art].h; }
+  const art = Array.isArray(look.art) ? pick(look.art) : look.art; // pets: a random one of the list
+  if (art && ART_BY_ID[art]) {
+    m.art = art; m.swap = null; m.artH = look.h || ART_BY_ID[art].h; m.artRef = look.ref || 0;
+    m.hop = !!look.hop; m.idleArt = look.idle && look.idle[art];
+    if (look.art === BLUE_SLIMES) m.riseArt = pick(BLUE_PUDDLES); // rises out of a puddle
+  }
   return m;
 }
 

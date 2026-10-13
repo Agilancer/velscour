@@ -120,8 +120,9 @@ export function skillIcon(sk, size = 64) {
       break;
     case 'summon': {
       const look = SUMMONS[sk.m.sum] && SUMMONS[sk.m.sum].look;
-      let img = look && look.art ? enemyImage(look.art) : null;
-      if (look && look.art && !img) keep = false;
+      const art = look && (look.icon || (Array.isArray(look.art) ? look.art[0] : look.art));
+      let img = art ? enemyImage(art) : null;
+      if (art && !img) keep = false;
       if (!img && look && look.sprite) img = pixelSprite(look.sprite, look.pal, 3);
       else if (!img && look && look.cls) img = classSprite(look.cls === true ? sk.classId : look.cls, 120, look.pal || null);
       else if (!img) img = pixelSprite('skeleton', { w: '#a0ffa0', e: '#40ff40' }, 3);

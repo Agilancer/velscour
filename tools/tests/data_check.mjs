@@ -30,7 +30,7 @@ const s = SKILLS['wizard.0.0'];
 console.log('example', s.name, 'dmg L1', skillBaseDamage(s, 1), 'dmg L20', skillBaseDamage(s, 20), 'mana wizard.0.8 L1', manaCost(SKILLS['wizard.0.8'], 1));
 
 // ---- monster art (src/data/bestiary.js vs assets/sprites/enemies/enemies.json)
-const { BESTIARY, SUMMON_ART, ART_BY_ID, SWAPS, artPool, rollLooks } = await import(new URL('../../src/data/bestiary.js', import.meta.url));
+const { BESTIARY, SUMMON_ART, FAMILIAR_ART, ART_BY_ID, SWAPS, artPool, rollLooks } = await import(new URL('../../src/data/bestiary.js', import.meta.url));
 const { ARCH } = await import(new URL('../../src/data/enemies.js', import.meta.url));
 const { BIOMES, drawBiome, mixPartner } = await import(new URL('../../src/data/biomes.js', import.meta.url));
 const fs = await import('node:fs');
@@ -46,7 +46,7 @@ for (const a of BESTIARY) {
   if (a.el && !ELEMENTS.includes(a.el)) bad.push(`monster art ${a.id}: bad element ${a.el}`);
   if (!(a.h > 20 && a.h < 120)) bad.push(`monster art ${a.id}: height ${a.h}`);
 }
-for (const a of SUMMON_ART) {
+for (const a of [...SUMMON_ART, ...FAMILIAR_ART]) {
   if (ids.has(a.id)) bad.push(`duplicate art id ${a.id}`);
   ids.add(a.id);
   if (!meta[a.sheet] || !meta[a.sheet].cells[a.i]) bad.push(`summon art ${a.id}: no cell ${a.sheet}#${a.i}`);
@@ -54,7 +54,9 @@ for (const a of SUMMON_ART) {
   cells.add(a.sheet + a.i);
 }
 for (const [k, d] of Object.entries(SUMMONS)) {
-  if (d.look && d.look.art && !ART_BY_ID[d.look.art]) bad.push(`summon ${k}: unknown art ${d.look.art}`);
+  const look = d.look || {};
+  for (const id of [].concat(look.art || [], look.icon || [], Object.entries(look.idle || {}).flat())) if (!ART_BY_ID[id]) bad.push(`summon ${k}: unknown art ${id}`);
+  if (Array.isArray(look.art) && !(look.h > 10)) bad.push(`summon ${k}: an art list needs look.h`);
   for (const x of d.pool || []) if (!SUMMONS[x] || SUMMONS[x].pool) bad.push(`summon ${k}: bad pool entry ${x}`);
   for (const A of [d.atk, d.spell]) if (A && A.type === 'spawn' && !SUMMONS[A.what]) bad.push(`summon ${k}: spawns unknown ${A.what}`);
 }

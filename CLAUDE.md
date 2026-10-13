@@ -40,6 +40,7 @@ node tools/tests/pack.js catacombs,blood          # biome pack levels: arches, d
 node tools/tests/titlefx.js                        # title intro: click gate, logo fade on the song clock, flame burst on the hit, eyes
 node tools/tests/enemies.js                        # monster art line-ups, corpses, mixed-biome levels + guardians
 node tools/tests/legion.js                         # Necromancer skeleton summons: art line-up, every minion attacks + casts
+node tools/tests/familiars.js                      # pet art: every pet summon's look, random blue slimes rising + hopping
 node tools/tests/pets.js [seeds]                   # minion pathing: round walls, keep up, fight round corners, leash, idle
 node tools/tests/select.js [mobile]                # animated class-select portraits, 6 hero save slots, slot migration
 node tools/tests/autoplay.js wizard 15 [mobile]    # auto-play soak: a new hero plays N game minutes at ~30x speed
@@ -58,7 +59,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   (`assets/source/biomes/town/`, `python3 tools/process_assets.py town`, `tools/townpack.py`; see docs/ART.md). Monsters use the user's sheets in
   `assets/source/enemies/<set>/`, imported by `python3 tools/process_assets.py enemies` and catalogued in
   `src/data/bestiary.js`; see [`docs/ENEMY_ART.md`](docs/ENEMY_ART.md). New uploads ("Enemy Assets Set N") go there too;
-  set 2 (`Enemy_300.zip`, 300 single sprites) lives in `set2/<family>/` folders, each packed as one sheet and loaded per level. The user's sheets are in
+  set 2 (`Enemy_300.zip`, 300 single sprites) lives in `set2/<family>/` folders, each packed as one sheet and loaded per level. Pet sheets (JPEGs on a flat background) live in `familiars/` (`process_assets.py enemies familiars`). The user's sheets are in
   `assets/source/` and get sliced by `tools/process_assets.py` (needs `pip install pillow numpy scipy`; args
   `sprites|biomes|props`). Dungeon floors, walls, arches, doors and scatter come from **biome packs**
   (`assets/source/biomes/<Name>_Biome_Pack.zip`, a 160x80 template; Catacombs is the first, every biome uses it

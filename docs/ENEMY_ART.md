@@ -72,6 +72,13 @@ catalogued as `SUMMON_ART` in `src/data/bestiary.js`. They are in `ART_BY_ID` (s
 handle them) but not in `BESTIARY`, so levels never roll them as monsters. A summon uses one with `look: { art: id }`
 in `src/data/summons.js`; see `docs/HANDOFF.md` (status item 13) and `node tools/tests/legion.js`.
 
+## Pets (familiar sheets)
+`assets/source/enemies/familiars/*.jpg` are JPEG sheets on a flat black or white background. The `enemies` step keys
+them (`key_flat`), cuts them on their even grid (`SHEET_GRID`; the wolves as blobs) and scales them per kind
+(`SHEET_SCALE`); `python3 tools/process_assets.py enemies familiars` redoes only these. They are `FAMILIAR_ART` in
+`bestiary.js` and load in the background after set 1 (`loadPetArt`). Summons take a list (`look: { art: [ids], h }`)
+and each minion gets one at random; see HANDOFF status item 20 and `node tools/tests/familiars.js`.
+
 ## Adding monsters (Set 3 and later)
 1. Put the sheets in `assets/source/enemies/set3/` with descriptive names (or single sprites in
    `set3/<family>/` folders, like set 2). If they arrive as `assets/Enemy Assets Set 3/...` or a zip, move or
