@@ -15,6 +15,7 @@ import { pickTaunt } from '../data/taunts.js';
 const TAUNT_KEY = 'velscour_taunts_v1'; // Velscour's level-up deck: the last mood and the lines already shown
 import { Meter } from '../game/dpsmeter.js';
 import { heroDamage } from '../game/autoplay.js';
+import { madnessReady, madnessOn, unleashMadness } from '../game/mayhem.js';
 
 const POTIONS = ['hp', 'mp', 'rejuv', 'fury'];
 // hud slot index -> bar index (skills) or potion kind: LMB, ` 1-9 0 - =, the potions, RMB
@@ -29,6 +30,7 @@ export const HUD = {
     // the bar's aspect (and how much room it takes at the bottom) comes from the art's geometry
     document.documentElement.style.setProperty('--hud-k', String(geo.h / geo.w));
     this.initFrames(geo);
+    $('#madness-btn').addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); unleashMadness(); });
     const wrap = $('#hud-slots');
     const pct = (v, total) => (v / total) * 100 + '%';
     geo.slots.forEach((s, i) => {
@@ -130,6 +132,14 @@ export const HUD = {
     set('mana', Math.round(clamp(1 - p.mana / p.maxMana, 0, 1) * 200) / 2, (v) => { $('#mana-cover .orb-empty').style.height = v + '%'; });
     set('lt', `${fmt(Math.max(0, p.hp))}/${fmt(p.maxHp)}`, (v) => { $('#life-text').textContent = v; });
     set('mt', `${fmt(p.mana)}/${fmt(p.maxMana)}`, (v) => { $('#mana-text').textContent = v; });
+    const ready = madnessReady(), on = madnessOn();
+    set('mad', Math.round(clamp(c.madness || 0, 0, 1) * 1000) / 10, (v) => { $('#mad-fill').style.width = v + '%'; });
+    set('madst', ready ? 'full' : on ? 'on' : '', (v) => {
+      $('#madness').className = v;
+      $('#madness-btn').classList.toggle('hidden', v !== 'full');
+      if (v === 'full') { sfx('levelup', 0.4); UI.log('MADNESS is full: press the MADNESS button (G) to unleash it.', '#ff6090'); }
+    });
+    set('madt', on ? `MADNESS ${Math.ceil(c.madT)}s` : ready ? 'Madness — ready' : `Madness ${Math.floor((c.madness || 0) * 100)}%`, (v) => { $('#mad-text').textContent = v; });
     const need = xpToNext(c.level);
     set('xp', Math.round((c.xp / need) * 1000) / 10, (v) => { $('#xp-fill').style.width = v + '%'; });
     set('xpt', `Level ${c.level} · ${fmtInt(c.xp)} / ${fmtInt(need)} XP`, (v) => { $('#xp-text').textContent = v; });

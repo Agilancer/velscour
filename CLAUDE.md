@@ -42,6 +42,7 @@ node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners
 node tools/tests/pack.js catacombs,blood          # biome pack levels: arches, doors, reachability; door/arch shots
 node tools/tests/titlefx.js                        # title intro: click gate, logo fade on the song clock, flame burst on the hit, eyes
 node tools/tests/enemies.js                        # monster art line-ups, corpses, mixed-biome levels + guardians
+node tools/tests/mayhem.js                         # monster traits, ambush arrivals (drop/teleport/burrow/wall), bullet patterns, MADNESS
 node tools/tests/legion.js                         # Necromancer skeleton summons: art line-up, every minion attacks + casts
 node tools/tests/familiars.js                      # pet art: every pet summon's look, random blue slimes rising + hopping
 node tools/tests/pets.js [seeds]                   # minion pathing: round walls, keep up, fight round corners, leash, idle
@@ -88,7 +89,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
 - After any gameplay change, run at least `flow.js` and the `skills.js` classes you touched. Run `mobile.js`
   and `hud.js` for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
   `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`.
-  Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Raid bosses
+  Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. Raid bosses
   (`src/game/raid.js`, every 5th depth): run `raid.js`. Rings, augments or skill mastery (`src/data/rings.js`,
   `src/game/augments.js`): run `rings.js`. The town generator (`src/world/town.js`): run `town.js` with a few seeds.
 - Velscour waits at `FINAL_DEPTH` (500, `src/data/depth.js`); monster levels come from `depthLevel(depth)`, never the

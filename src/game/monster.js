@@ -33,6 +33,15 @@ const MOVES = {
   orbs: { cd: 8, ok: (m, t, d) => d < 6 },
   sweep: { cd: 7, ok: (m, t, d, los) => d < (m.range || 7) && los },
   web: { cd: 6, ok: (m, t, d, los) => d < 6.5 && los },
+  // bullet patterns and odd ways in (game/mayhem.js traits)
+  spiral: { cd: 8, ok: (m, t, d) => d < 8 },
+  cross: { cd: 8, ok: (m, t, d) => d < 8 },
+  rings: { cd: 7, ok: (m, t, d) => d < 7 },
+  wall: { cd: 6, ok: (m, t, d, los) => d > 2 && d < 9 && los },
+  rain: { cd: 8, ok: (m, t, d) => d < 10 },
+  homing: { cd: 7, ok: (m, t, d, los) => d < 10 && los },
+  phase: { cd: 6, ok: (m, t, d) => d > 3 && d < 14 },
+  burrow: { cd: 7, ok: (m, t, d) => d > 3 && d < 12 && !m.fly },
 };
 
 /** A monster's special moves: one of its archetype's for a normal (more often deeper), two for a greater breed, all for elites. */
@@ -109,7 +118,9 @@ export class Monster extends Creature {
     const taunt = w.query(this.x, this.y, 6, (c) => c.taunt && c.team !== this.team)[0];
     if (taunt) return taunt;
     if (this.aggro && !this.aggro.dead && this.aggro.team !== this.team && dist(this.x, this.y, this.aggro.x, this.aggro.y) < 14) return this.aggro;
-    return w.nearestHostile(this.team, this.x, this.y, this.awake ? 30 : this.aggroRange, !this.awake);
+    const near = w.nearestHostile(this.team, this.x, this.y, this.awake ? 30 : this.aggroRange, !this.awake);
+    if (!near && this.hunter && w.player && !w.player.dead && this.team === 'enemy') return w.player; // hunters track the hero anywhere
+    return near;
   }
 
   // ---------------------------------------------------------------- main update
@@ -121,6 +132,7 @@ export class Monster extends Creature {
     if (this.invuln > 0) this.invuln -= dt;
     const canAct = this.tickStatus(dt, (k, amount, src) => hit(src, this, amount, k === 'burn' ? 'fire' : k === 'poison' ? 'poison' : k === 'bleed' ? 'blood' : 'shadow', { dot: true, crit: false }));
     if (this.dead) return;
+    if (this.entering) { this.entering(dt); return; } // ambush arrivals (game/mayhem.js)
     if (this.life && this.lifeT > this.life) { this.dead = true; burst(this.x, this.y, 20, this.el || 'arcane', 10, 2); return; }
     // charm wears off
     const ch = this.curses.charm;
@@ -847,6 +859,41 @@ export class Monster extends Creature {
         this.startAction('mv_sweep', 0.6, { a: a0, dir, left: 1.8, len, hits: new Map() });
         break;
       }
+      case 'spiral': case 'cross': case 'rings':
+        tele({ kind: 'circle', x: this.x, y: this.y, r: 1.3 * big, dur: 0.5, color: '#ff40c0' });
+        this.startAction('mv_' + k, 0.5, { a0: ang, dir: chance(0.5) ? 1 : -1 });
+        break;
+      case 'wall':
+        this.startAction('mv_wall', 0.45, { ang });
+        break;
+      case 'rain':
+        this.startAction('mv_rain', 0.35, { tx: t.x, ty: t.y });
+        break;
+      case 'homing':
+        tele({ kind: 'circle', x: this.x, y: this.y, r: 0.9, dur: 0.4, color: '#c060ff' });
+        this.startAction('mv_homing', 0.4);
+        break;
+      case 'phase': {
+        for (let i = 0; i < 12; i++) {
+          const a = rand(TAU), rr = rand(1.3, 2.2), x = t.x + Math.cos(a) * rr, y = t.y + Math.sin(a) * rr;
+          if (!map.circleFree(x, y, bodyR(this) + 0.05) || map.flowAt(x, y) < 0) continue;
+          const g = elem(this.el || 'arcane').glow;
+          sparkle(this.x, this.y, 30, g, 24, 0.5); addEffect(new Ring(this.x, this.y, 0.2, 1.4, 0.35, g, 3));
+          this.x = x; this.y = y; this.nav = null; this.alpha = 0.3;
+          sparkle(x, y, 30, g, 24, 0.5); addEffect(new Ring(x, y, 1.6, 0.2, 0.35, g, 3));
+          sfx('arcane', 0.5);
+          tele({ kind: 'circle', x, y, r: 1.6 * big, dur: 0.55 });
+          this.startAction('mv_phase', 0.55);
+          return true;
+        }
+        return false;
+      }
+      case 'burrow':
+        smoke(this.x, this.y, 5, '#4a3a2a', 8, 12); burst(this.x, this.y, 5, 'phys', 14, 3);
+        sfx('thud', 0.5);
+        this.targetable = false;
+        this.state = 'act'; this.action = { kind: 'mv_burrow', t: 0, ongoing: true, target: t, stage: 0 };
+        break;
       default: return false;
     }
     return true;
@@ -857,7 +904,7 @@ export class Monster extends Creature {
     const P = this.proj || { fx: PROJ_FX[el], speed: 7 };
     const shot = (ang, o) => w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang, speed: P.speed || 7, range: (this.range || 7) + 2, fx: P.fx, el, dmg: [dmg * 0.75, dmg], ...o }));
     switch (a.kind) {
-      case 'mv_lunge': case 'mv_combo': case 'mv_burst': case 'mv_sweep':
+      case 'mv_lunge': case 'mv_combo': case 'mv_burst': case 'mv_sweep': case 'mv_spiral': case 'mv_cross': case 'mv_rings':
         this.state = 'act'; a.ongoing = true; a.t = 0; a.k = 0; a.sx = this.x; a.sy = this.y;
         if (a.kind === 'mv_lunge') sfx('swing', 0.6);
         return;
@@ -902,6 +949,33 @@ export class Monster extends Creature {
         sfx(E.sfx, 0.5);
         break;
       }
+      case 'mv_wall': {
+        const px = -Math.sin(a.ang), py = Math.cos(a.ang);
+        for (let i = -3; i <= 3; i++) shot(a.ang, { x: this.x + px * i * 0.55, y: this.y + py * i * 0.55, speed: 5, range: 10, size: 1.2 });
+        sfx(E.sfx, 0.5);
+        break;
+      }
+      case 'mv_rain': {
+        const g = E.glow;
+        for (let i = 0; i < 7; i++) {
+          const r = i ? rand(0.8, 3) : 0, an = rand(TAU), x = a.tx + Math.cos(an) * r, y = a.ty + Math.sin(an) * r;
+          if (!w.map.isFloor(x, y)) continue;
+          w.addHazard(new Delayed({ world: w, src: this, x, y, r: 1, delay: 0.8 + i * 0.18, fx: el === 'phys' ? 'meteor' : 'explosion', el, dmg: [dmg * 0.8, dmg * 1.1] }));
+        }
+        addEffect(new Column(this.x, this.y, g, 0.5, 14, 200));
+        sfx(E.sfx, 0.6);
+        break;
+      }
+      case 'mv_homing':
+        for (let i = 0; i < 3; i++) w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang: this.facing + (i - 1) * 1.1, speed: 3.6, range: 13, home: 0.45, fx: PROJ_FX[el] === 'rock' ? 'orb' : PROJ_FX[el], el, dmg: [dmg * 0.7, dmg * 0.9], size: 1.4 }));
+        sfx('arcane', 0.5);
+        break;
+      case 'mv_phase':
+        this.alpha = undefined;
+        aoe(w, this, this.x, this.y, 1.6 * big, dmg * 1.25, el, { melee: true, knock: 0.6 });
+        for (let i = 0; i < 3; i++) addEffect(new Slash(this.x, this.y, this.facing + i * 2.1, 2, 1.4 * big, 0.25, elem(el === 'phys' ? 'arcane' : el).glow, { width: 7 }));
+        sfx('swing'); sfx(E.sfx, 0.4);
+        break;
       case 'mv_orbs': {
         const a0 = rand(TAU);
         for (let i = 0; i < 8; i++) w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang: a0 + (i / 8) * TAU, speed: 3.2, range: 7, fx: PROJ_FX[el] === 'rock' ? 'orb' : PROJ_FX[el], el, dmg: [dmg * 0.7, dmg * 0.9], size: 1.3 }));
@@ -965,6 +1039,47 @@ export class Monster extends Creature {
         }
         if ((a.fx = (a.fx || 0) - dt) <= 0) { a.fx = 0.04; addEffect(new Bolt(this.x, this.y, 30, ex, ey, 20, elem(el).glow, 0.08, 3)); }
         if (a.left <= 0) done();
+        break;
+      }
+      case 'mv_spiral': case 'mv_cross': case 'mv_rings': {
+        const P = this.proj || { fx: PROJ_FX[el], speed: 7 }, fx = P.fx === 'arrow' || P.fx === 'rock' ? 'orb' : P.fx || 'orb';
+        const fire = (ang, sp) => w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang, speed: sp, range: 9, fx, el, dmg: [dmg * 0.45, dmg * 0.6], size: 1.1 }));
+        const spec = a.kind === 'mv_spiral' ? [0.07, 1.8, 2] : a.kind === 'mv_cross' ? [0.13, 1.7, 4] : [0.32, 1.0, 14];
+        if (a.t < a.k * spec[0]) break;
+        if (a.kind === 'mv_rings') { for (let i = 0; i < spec[2]; i++) fire(a.a0 + (i + (a.k % 2) * 0.5) / spec[2] * TAU, 3.4); sfx(elem(el).sfx, 0.35); }
+        else {
+          const base = a.a0 + a.dir * a.t * (a.kind === 'mv_spiral' ? 4.2 : 1.3);
+          for (let i = 0; i < spec[2]; i++) fire(base + i / spec[2] * TAU, a.kind === 'mv_spiral' ? 4.2 : 5);
+          if (a.k % 4 === 0) sfx(elem(el).sfx, 0.2);
+        }
+        a.k++;
+        if (a.t >= spec[1]) done();
+        break;
+      }
+      case 'mv_burrow': {
+        // 0: underground, tunnelling to the target; 1: telegraph under it; 2: erupt
+        const t = a.target;
+        if (a.stage === 0) {
+          this.alpha = Math.max(0, 1 - a.t * 4); this.z = -a.t * 40;
+          if (a.t > 0.25 && t && !t.dead) {
+            const want = dist(this.x, this.y, t.x, t.y), step = Math.min(want, 7 * dt);
+            if (want > 0.3) w.map.move(this, (t.x - this.x) / want * step, (t.y - this.y) / want * step, false);
+            if (chance(dt * 30)) spawn({ type: 'dot', x: this.x + rand(-0.3, 0.3), y: this.y + rand(-0.3, 0.3), z: 2, vz: rand(20, 50), g: 200, life: 0.5, size: rand(2, 3.5), color: '#5a4630' });
+          }
+          if (a.t > 2 || (t && dist(this.x, this.y, t.x, t.y) < 0.6) || !t || t.dead) {
+            a.stage = 1; a.t = 0;
+            addEffect(new Telegraph({ kind: 'circle', x: this.x, y: this.y, r: 1.5 * big, dur: 0.5 }), 'ground');
+          }
+        } else if (a.stage === 1) {
+          if (chance(dt * 40)) spawn({ type: 'dot', x: this.x + rand(-0.8, 0.8), y: this.y + rand(-0.8, 0.8), z: 2, vz: rand(30, 70), g: 200, life: 0.5, size: rand(2, 4), color: '#6a5438' });
+          if (a.t > 0.5) {
+            this.alpha = undefined; this.z = 0; this.targetable = true;
+            explode(w, this, this.x, this.y, 1.5 * big, dmg * 1.4, el, { knock: 0.8, melee: true }, 'eruption');
+            smoke(this.x, this.y, 5, '#4a3a2a', 10, 14);
+            sfx('thud', 0.8);
+            done();
+          }
+        }
         break;
       }
       default: done();

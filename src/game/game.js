@@ -19,6 +19,7 @@ import { generateTown, makeTownTiles } from '../world/town.js';
 import { World } from './world.js';
 import { Player } from './player.js';
 import { makeMonster, Monster } from './monster.js';
+import { applyTrait, rollTrait, ambushTick, madnessTick, unleashMadness } from './mayhem.js';
 import { makeRaidBoss } from './raid.js';
 import { dropChest } from './loot.js';
 import { renderWorld, drawMinimap } from './render.js';
@@ -269,14 +270,18 @@ export const game = {
       }
       const n = s.n;
       const variant = Math.random() < Math.min(0.5, 0.2 + depth * 0.005) ? 1 : 0;
+      const trait = rollTrait(world, depth);
       for (let i = 0; i < n; i++) {
         const [x, y] = i === 0 ? [s.x, s.y] : gen.map.randomNear(s.x, s.y, 1.6);
         const rank = s.rank === 'unique' ? (i === 0 ? 'unique' : 'normal') : s.rank;
         const m = makeMonster(world, s.arch, biome, lvl + (rank === 'normal' ? 0 : 1), rank, x, y, variant, s.look);
         if (s.rank === 'unique' && i > 0) { m.affixes = []; m.name = m.name + ' Minion'; }
+        // tanks and bullet-hell casters lead their pack; hunters, phasers and burrowers come as a pack
+        if (trait && (i === 0 || ['hunter', 'phaser', 'burrower'].includes(trait))) applyTrait(m, trait);
         world.add(m);
       }
     }
+    world.roster = [...new Set(gen.spawns.filter((s) => s.arch && !['raid', 'boss'].includes(s.rank)).map((s) => s.arch))];
     world.onBossAwake = (m) => {
       UI.centerMsg(m.name, m.isVelscour ? 'The Demon Lord rises' : m.raid ? `${m.title}${m.raid.mods.length ? ' · ' + m.raid.modText() : ''}` : 'Guardian of the Exit', 3);
       sfx('boss');
@@ -376,6 +381,7 @@ export const game = {
       if (input.consume('KeyQ')) toggleQuest();
       if (input.consume('KeyH')) helpDialog();
       if (input.consume('KeyP')) Auto.toggle();
+      if (input.consume('KeyG')) unleashMadness();
       if (input.consume('Tab') || input.consume('KeyM')) G.showAutomap = !G.showAutomap;
       if (input.consume('Escape')) {
         if (ui.anyOpen()) ui.closeAll();
@@ -394,6 +400,8 @@ export const game = {
       controls.update(dt);
       Auto.update(dt);
       w.update(dt);
+      ambushTick(w, dt);
+      madnessTick(dt);
       footsteps(p, w.kind === 'town' ? 'dirt' : STEP_SURFACE[w.biome && w.biome.id] || 'stone');
       Meter.tick(dt);
     } else {
