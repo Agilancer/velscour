@@ -104,4 +104,32 @@ if (new Set(seq.slice(0, NB)).size !== NB) bad.push(`first ${NB} biomes are not 
 let mixes = 0;
 for (let i = 0; i < 200; i++) { const m = mixPartner(BIOMES[0]); if (m) { mixes++; if (m.family !== BIOMES[0].family || m.id === BIOMES[0].id) bad.push('bad mix partner ' + m.id); } }
 console.log('monster art', BESTIARY.length, 'looks; biome order sample', seq.slice(0, 6).join(' '), '; mixed levels', mixes, '/ 200');
+
+// ---- Velscour's level-up lines (src/data/taunts.js): 2,000 unique two-line taunts that fit the banner, a mood never twice in a row
+const { TAUNTS, CLASS_TAUNTS, MILESTONES, pickTaunt } = await import(new URL('../../src/data/taunts.js', import.meta.url));
+const MAXLEN = 40, worst = (s) => s.replace(/\{name\}/g, 'N'.repeat(18)).replace(/\{class\}/g, 'C'.repeat(16)).replace(/\{level\}/g, '100');
+const allT = [...Object.values(TAUNTS).flat(), ...Object.values(CLASS_TAUNTS).flat().map((t) => t[1]), ...Object.values(MILESTONES).map((t) => t[1])];
+const moodsOk = [...Object.values(CLASS_TAUNTS).flat(), ...Object.values(MILESTONES)].every(([m]) => TAUNTS[m]);
+if (!moodsOk) bad.push('taunt with an unknown mood');
+for (const c of Object.keys(CLASS_TAUNTS)) if (!CLASSES[c]) bad.push('taunts for unknown class ' + c);
+const nT = Object.values(TAUNTS).flat().length;
+if (nT !== 2000) bad.push(`${nT} level-up taunts, want 2000`);
+if (new Set(allT).size !== allT.length) bad.push('duplicate level-up taunts');
+for (const t of allT) {
+  const parts = t.split('|');
+  if (parts.length !== 2 || parts.some((p) => !p.trim())) bad.push('taunt is not two lines: ' + t);
+  else for (const p of parts) if (worst(p).length > MAXLEN) bad.push(`taunt line over ${MAXLEN} chars: ${p}`);
+  if (/\{(?!name\}|class\}|level\})/.test(t)) bad.push('unknown placeholder: ' + t);
+}
+const deck = {}, bard = { name: 'Testy', classId: 'bard', level: 3 }, seen = new Set();
+let lastMood = null;
+for (let i = 0; i < 3000; i++) {
+  const t = pickTaunt(bard, deck);
+  if (t.mood === lastMood) bad.push('mood repeated back to back: ' + t.mood);
+  if (/[{}|]/.test(t.l1 + t.l2)) bad.push('unfilled taunt ' + t.l1 + ' / ' + t.l2);
+  lastMood = t.mood; seen.add(t.l1 + '|' + t.l2);
+  bard.level = bard.level >= 100 ? 2 : bard.level + 1;
+}
+if (seen.size < 1900) bad.push(`3000 picks showed only ${seen.size} different taunts`);
+console.log('level-up taunts', nT, Object.entries(TAUNTS).map(([m, l]) => `${m} ${l.length}`).join(', '), '; 3000 picks showed', seen.size);
 if (bad.length) { console.log(bad); process.exitCode = 1; } else console.log('OK');
