@@ -16,9 +16,9 @@ const depth = +(process.argv[2] || 6), cls = process.argv[3] || 'wizard', rate =
     game.update = function (dt) { const t = performance.now(); u.call(this, dt); s.u += performance.now() - t; };
     game.render = function () { const t = performance.now(); rd.call(this); s.r += performance.now() - t; s.n++; };
     const t0 = performance.now();
-    setTimeout(() => { game.update = u; game.render = rd; res({ fps: s.n / ((performance.now() - t0) / 1000), update: s.u / s.n, render: s.r / s.n }); }, 5000);
+    setTimeout(() => { game.update = u; game.render = rd; res({ res: (window.VELSCOUR.G.resScale || 1).toFixed(2) + ' dpr ' + window.VELSCOUR.G.dpr.toFixed(2), fps: s.n / ((performance.now() - t0) / 1000), update: s.u / s.n, render: s.r / s.n }); }, 5000);
   }));
-  console.log(`depth ${depth} ${cls}: ${r.fps.toFixed(1)} fps, update ${r.update.toFixed(2)} ms, render ${r.render.toFixed(2)} ms per frame (${rate}x CPU throttle)`);
+  console.log(`depth ${depth} ${cls}: ${r.fps.toFixed(1)} fps, update ${r.update.toFixed(2)} ms, render ${r.render.toFixed(2)} ms per frame (${rate}x CPU throttle, resScale ${r.res})`);
   await shot('perf');
   report(errors);
   await browser.close();
