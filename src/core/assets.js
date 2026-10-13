@@ -17,6 +17,7 @@ export const A = {
   packs: {}, // biome pack id -> { floors, walls, scatter, meta } (assets/tiles/<id>/), a Promise while loading
   town: null, // the town pack (assets/tiles/town/, tools/townpack.py): { ground, objects, meta }
   chestImg: null, chestMeta: null, // assets/props/chests.*
+  gibImg: null, gibMeta: null, // assets/sprites/gibs.* (tools/gibpack.py): { set: [[x, y, w, h], ...] }
   biomeSets: {}, // `${biome}|${pack}` -> recoloured tile set (biomeTileSet)
 };
 
@@ -47,6 +48,8 @@ export async function loadAssets(progress) {
   jobs.push(track(Promise.all([loadImage('assets/tiles/town/ground.webp'), loadImage('assets/tiles/town/objects.webp'), loadJSON('assets/tiles/town/town.json')])
     .then(([ground, objects, meta]) => { A.town = { ground, objects, meta }; })));
   jobs.push(track(loadImage('assets/props/chests.webp').then((i) => { A.chestImg = i; })));
+  jobs.push(track(loadImage('assets/sprites/gibs.webp').then((i) => { A.gibImg = i; })));
+  jobs.push(track(loadJSON('assets/sprites/gibs.json').then((j) => { A.gibMeta = j; })));
   jobs.push(track(loadJSON('assets/props/chests.json').then((j) => { A.chestMeta = j; })));
   await Promise.all(jobs);
 }

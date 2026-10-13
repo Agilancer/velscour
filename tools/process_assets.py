@@ -15,6 +15,7 @@ JSON atlases under assets/. Re-run this whenever a source sheet changes:
     python3 tools/process_assets.py gear [paladin]      # armor + helm libraries (tools/gearart.py, docs/CLASS_ART.md)
     python3 tools/process_assets.py enemies  # monster sheets in assets/source/enemies/<set>/ (docs/ENEMY_ART.md)
     python3 tools/process_assets.py select   # class-select portraits from assets/FinalClasses/All 16 Classes.png
+    python3 tools/process_assets.py gibs     # gore chunks from assets/source/gibs/ -> assets/sprites/gibs.webp + .json (tools/gibpack.py)
     python3 tools/process_assets.py audio    # sound zips in assets/source/audio/ -> assets/audio/ (tools/audiopack.py, needs ffmpeg)
 
 Outputs
@@ -252,7 +253,7 @@ def pack_atlas(pieces, aw=1024):
 def main():
     args = sys.argv[1:]
     if not args or "all" in args:
-        args = ["sprites", "biomes", "town", "props", "classes", "enemies", "select"]
+        args = ["sprites", "biomes", "town", "props", "classes", "enemies", "select", "gibs"]
     if "sprites" in args:
         process_classes()
         process_ui()
@@ -271,6 +272,9 @@ def main():
     if "select" in args:
         from selectart import process_select_art
         process_select_art()
+    if "gibs" in args:
+        from gibpack import process_gibs
+        process_gibs(SRC, OUT, save, pack_atlas)
     if "audio" in args:
         from audiopack import process_audio
         process_audio()
