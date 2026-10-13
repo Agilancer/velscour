@@ -47,8 +47,8 @@ function rollMoves(arch, rank, variant, depth) {
 export function monsterBase(level) {
   return {
     // tuned hard: heroes should have to grind gear and levels to get past the BOSS ROOMs
-    hp: 36 * Math.pow(1.07, level - 1),
-    dmg: 1.4 * (4.4 + Math.min(level, 10) * 0.24) * Math.pow(1.06, level - 1),
+    hp: 30 * Math.pow(1.068, level - 1),
+    dmg: 1.2 * (4.4 + Math.min(level, 10) * 0.24) * Math.pow(1.058, level - 1),
     xp: 4 * Math.pow(level, 1.5),
   };
 }
