@@ -15,10 +15,17 @@ const buffers = {};                // sample slug -> AudioBuffer
 const voices = {};                 // sound name -> live sample voices (capped)
 
 export function initAudio() {
-  if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+  if (ac) { if (ac.state !== 'running') ac.resume().catch(() => {}); return; }
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return;
+  // iOS: play like a media app, not through the ringer (the silent switch would otherwise mute everything)
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older Safari */ }
   ac = new AC();
+  if (ac.state !== 'running') ac.resume().catch(() => {});
+  // a Home Screen app comes back from the background with its context suspended/'interrupted': resume on the next touch
+  const wake = () => { if (ac.state !== 'running') ac.resume().catch(() => {}); };
+  for (const k of ['touchend', 'pointerup', 'keydown', 'click']) window.addEventListener(k, wake, true);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
   master = ac.createGain(); master.gain.value = 0.9; master.connect(ac.destination);
   const comp = ac.createDynamicsCompressor();
   comp.threshold.value = -16; comp.ratio.value = 6;
