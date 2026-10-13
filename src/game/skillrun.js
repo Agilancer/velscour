@@ -11,6 +11,7 @@ import { Projectile, Delayed, Area, makeWall, Orbit, Whirl, Leap, Dash, NovaWave
 import { buffAmount, curseAmount, skillDuration } from '../data/skills.js';
 import { createSummon } from './monster.js';
 import { lanceLeap } from '../gfx/lancefx.js';
+import { classCastFx, energyLance } from '../gfx/classfx.js';
 import { masteryVis, masteryCastFx } from './augments.js';
 import { multN } from '../data/rings.js';
 
@@ -56,7 +57,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
   const o = statusOpts(m);
   o.sk = sk.id; o.vis = vis;
   if (aug) o.aug = aug;
-  if (!opts.echo) masteryCastFx(p, sk, M, tx, ty);
+  if (!opts.echo) { masteryCastFx(p, sk, M, tx, ty); classCastFx(p, sk, L, tx, ty); }
   p.face(ang);
 
   switch (sk.kind) {
@@ -77,6 +78,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
           const fxX = p.x + Math.cos(a) * range * 0.6, fxY = p.y + Math.sin(a) * range * 0.6;
           if (m.exp) explode(w, p, targets[0] ? targets[0].x : fxX, targets[0] ? targets[0].y : fxY, 1.2 * (m.r ?? 1) * area, dmg.map((v) => v * 0.6), el, o, el === 'fire' ? 'explosion' : 'eruption');
           meleeFx(p, a, range, arc, fx, E, i);
+          if (m.lance) energyLance(p, a, range + 0.6, el, 0.2 + Math.min(20, L) * 0.008, L, m.prism); // Lancer: a huge energy lance
           p.lunge = 1;
           sfx(targets.length ? (el === 'phys' ? 'swing' : E.sfx) : 'swing', 0.8);
         });
@@ -149,6 +151,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       const len = 8 * (m.range ?? 1) * (m.cone ? 0.55 : 1);
       const channel = (m.dur || 0) > 0;
       w.addHazard(new BeamCh({ world: w, src: p, ang, len, dur: m.dur || 0, cone: m.cone, fx, el, dmg: channel ? dmg.map((v) => v * 0.32) : dmg, o: { ...o, leech: m.leech }, n: m.n || 1 }));
+      if (m.lance) energyLance(p, ang, len, el, Math.max(0.3, m.dur || 0), L, m.prism).aim = true;
       break;
     }
     case 'chain': {
@@ -172,7 +175,10 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
     }
     case 'orbit': {
       const extra = ['blade', 'hammer', 'axe', 'rang', 'orb', 'bone', 'shard', 'feather'].includes(fx) ? Math.floor(st.extraProj || 0) : 0;
-      w.addHazard(new Orbit({ world: w, src: p, n: (m.n || 3) + extra, radius: 1.6 * (m.r ?? 1) * area, dur: m.dur || 4, spiral: m.spiral, fx, el, dmg, o, speed: m.spiral ? 5 : 4.2, size: vis }));
+      // Lancer tower shields: one more shield every 2 ranks, up to 10; a recast replaces that skill's ring
+      const n = m.shields ? Math.min(10, (m.n || 1) + Math.floor((L - 1) / 2)) : (m.n || 3) + extra;
+      if (m.shields) for (const h of w.hazards) if (h instanceof Orbit && h.o.sk === sk.id) h.dead = true;
+      w.addHazard(new Orbit({ world: w, src: p, n, radius: 1.6 * (m.r ?? 1) * area, dur: m.dur || 4, spiral: m.spiral, fx, el, dmg, o, speed: m.spiral ? 5 : m.shields ? 2.4 : 4.2, size: vis * (m.shields ? 1.4 : 1) }));
       sfx('swing');
       break;
     }
@@ -197,6 +203,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
     }
     case 'dash':
       w.addHazard(new Dash({ world: w, src: p, ang, len: Math.min(5 * (m.range ?? 1), Math.max(2, dist(p.x, p.y, tx, ty) + 0.5)), dmg, el, fx, o, n: m.n || 1, exp: m.exp }));
+      if (m.lance) energyLance(p, ang, 2.2 + Math.min(20, L) * 0.05, el, 0.45 * (m.n || 1) + 0.2, L, m.prism).ride = true; // couched lance rides the charge
       sfx('swing');
       break;
     case 'blink': {
@@ -440,7 +447,7 @@ function corpseFx(p, c, sk, dmg, el, fx, area, o) {
 
 function summonCast(p, sk, L, tx, ty, dmg) {
   const w = p.world, m = sk.m;
-  const n = m.n || 1;
+  const n = (m.n || 1) + (m.grow ? Math.floor((L - 1) / 5) : 0); // grow: one more every 5 ranks (the Lancer's knights)
   const [x, y] = clampTarget(w, p, tx, ty, 4);
   if (m.sum === 'revive') {
     const list = w.corpses.filter((c) => !c.used && dist(c.x, c.y, tx, ty) < 5).slice(0, n);

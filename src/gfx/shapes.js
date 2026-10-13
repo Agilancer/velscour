@@ -49,6 +49,20 @@ export function drawShape(ctx, fx, x, y, a, s, E, t, extra = {}) {
       ctx.fillRect(-7 * s, -8 * s, 14 * s, 7 * s); ctx.strokeRect(-7 * s, -8 * s, 14 * s, 7 * s);
       break;
     }
+    case 'tshield': { // the Lancer's tower shield: upright, steel-rimmed, its face lit by the skill's element
+      const sw = 11 * s * (0.7 + 0.3 * Math.abs(Math.cos(a))), sh = 24 * s;
+      glow(ctx, 0, 0, 22 * s, E.glow, 0.55 + 0.15 * Math.sin(t * 8));
+      ctx.fillStyle = '#20242c';
+      ctx.beginPath(); ctx.moveTo(-sw - 1.5, -sh / 2 - 1.5); ctx.lineTo(sw + 1.5, -sh / 2 - 1.5); ctx.lineTo(sw + 1.5, sh * 0.3); ctx.lineTo(0, sh / 2 + 3); ctx.lineTo(-sw - 1.5, sh * 0.3); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#b8c4d4';
+      ctx.beginPath(); ctx.moveTo(-sw, -sh / 2); ctx.lineTo(sw, -sh / 2); ctx.lineTo(sw, sh * 0.3); ctx.lineTo(0, sh / 2 + 1); ctx.lineTo(-sw, sh * 0.3); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = E.name === 'Physical' ? '#5a6a88' : E.dark;
+      ctx.beginPath(); ctx.moveTo(-sw * 0.72, -sh * 0.4); ctx.lineTo(sw * 0.72, -sh * 0.4); ctx.lineTo(sw * 0.72, sh * 0.24); ctx.lineTo(0, sh * 0.4); ctx.lineTo(-sw * 0.72, sh * 0.24); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = E.name === 'Physical' ? '#e8eef8' : E.core; // a glowing cross emblem
+      ctx.fillRect(-1.4 * s, -sh * 0.32, 2.8 * s, sh * 0.6); ctx.fillRect(-sw * 0.5, -sh * 0.12, sw, 2.8 * s);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(-sw, -sh / 2, sw * 0.35, sh * 0.75);
+      break;
+    }
     case 'blade': case 'axe': case 'chakram': case 'rang': case 'disc': {
       glow(ctx, 0, 0, 14 * s, E.glow, E.name === 'Physical' ? 0.35 : 0.75);
       ctx.rotate(spin);
