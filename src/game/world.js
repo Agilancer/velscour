@@ -4,7 +4,7 @@ import { G } from '../state.js';
 import { camera, isoX, isoY } from '../core/view.js';
 import { rand, dist2, TAU, chance } from '../core/util.js';
 import { sfx } from '../core/audio.js';
-import { spawn, updateVfx, addLight, sparkle, smoke } from '../gfx/vfx.js';
+import { spawn, updateVfx, addLight, sparkle, smoke, lights } from '../gfx/vfx.js';
 import { bodyR } from '../world/map.js';
 
 const CELL = 2;
@@ -84,6 +84,7 @@ export class World {
 
   update(dt) {
     this.time += dt;
+    lights.length = 0; // refilled by this update's addLight calls, drawn by the next render (paused frames keep the last set)
     this.pathBudget = 10; // A* searches monsters and minions may run this frame (Monster.navTo)
     const p = this.player;
     // flow field toward the player for monster path finding

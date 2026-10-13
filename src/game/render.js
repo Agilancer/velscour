@@ -60,7 +60,7 @@ function drawProp(ctx, pr, alpha) {
     if (pr.flip) { ctx.save(); ctx.translate(x, 0); ctx.scale(-1, 1); ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, s.ox * pr.k, dy, w, h); ctx.restore(); }
     else ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, x + s.ox * pr.k, dy, w, h);
   } else if (pr.sprite) {
-    const img = pixelSprite(pr.sprite, pr.pal || {}, 4);
+    const img = pr._img || (pr._img = pixelSprite(pr.sprite, pr.pal || {}, 4));
     const px = pr.px || 2.4;
     const w = (img.width / 4) * px, h = (img.height / 4) * px;
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
@@ -206,7 +206,6 @@ export function renderWorld(ctx, world) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-  lights.length = 0;
   camera.apply(ctx);
   ctx.imageSmoothingEnabled = true;
   // 'medium' (mipmapped) downscaling of the big floor/wall atlases costs several times 'low' per draw, and those are

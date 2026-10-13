@@ -24,7 +24,8 @@ function resize() {
   // cap the backing store to keep fill-rate sane on huge / high-dpi screens
   const maxPixels = G.touch ? 1.6e6 : 4.2e6;
   if (G.W * G.H * dpr * dpr > maxPixels) dpr = Math.sqrt(maxPixels / (G.W * G.H));
-  G.dpr = Math.max(0.75, dpr);
+  // resScale < 1 when the frame rate is too low (adaptRes): fewer pixels to fill, same layout
+  G.dpr = Math.max(0.6, Math.max(0.75, dpr) * (G.resScale || 1));
   G.canvas.width = Math.round(G.W * G.dpr);
   G.canvas.height = Math.round(G.H * G.dpr);
   camera.computeZoom();
@@ -54,10 +55,25 @@ function renderTitle(dt) {
   ctx.globalCompositeOperation = 'source-over';
 }
 
+// Adaptive resolution (touch only): phone GPUs are fill-rate bound, so a slow phone trades backing-store
+// pixels for frame rate in 2 s windows, and earns them back after 10 s of headroom.
+const ar = { t: 0, n: 0, good: 0 };
+function adaptRes(raw) {
+  if (!G.touch || G.mode !== 'game' || document.hidden || raw > 0.25) { ar.t = ar.n = 0; return; }
+  ar.t += raw; ar.n++;
+  if (ar.t < 2) return;
+  const fps = ar.n / ar.t, s = G.resScale || 1;
+  ar.t = ar.n = 0;
+  if (fps < 45 && s > 0.7) { G.resScale = Math.max(0.7, s * 0.85); ar.good = 0; resize(); }
+  else if (fps > 57 && s < 1) { if (++ar.good >= 5) { G.resScale = Math.min(1, s / 0.85); ar.good = 0; resize(); } }
+  else ar.good = 0;
+}
+
 let last = performance.now();
 function loop(now) {
-  const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+  const raw = Math.max(0, (now - last) / 1000), dt = Math.min(0.05, raw);
   last = now;
+  adaptRes(raw);
   G.time += dt;
   G.dt = dt;
   G.frame++;
