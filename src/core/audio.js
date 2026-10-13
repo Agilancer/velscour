@@ -194,23 +194,25 @@ export function levelUpFanfare() {
 
 // ------------------------------------------------------------------ samples
 const n3 = (base, n) => Array.from({ length: n }, (_, i) => `${base}_${i + 1}`);
-const STEP = (kind) => ({ s: n3(`${kind}_walk`, 5), v: 0.2, max: 2 });
+const STEP = (kind) => ({ s: [...n3(`${kind}_walk`, 5), ...n3(`${kind}_run`, 5)], v: 0.2, max: 2 }); // missing slugs are skipped
 // sound name -> { s: sample slugs (one picked at random), v: gain, layer: procedural sound played on top, max: voices }
 const SAMPLES = {
-  swing: { s: n3('sword_attack', 3), v: 0.5 },
+  swing: { s: [...n3('sword_attack', 3), ...n3('torch_attack_strike', 2)], v: 0.5 },
   phys: { s: n3('sword_attack', 3), v: 0.5 },
-  hit: { s: n3('sword_impact_hit', 3), v: 0.55 },
+  hit: { s: [...n3('sword_impact_hit', 3), ...n3('bow_impact_hit', 3), ...n3('torch_impact', 2)], v: 0.55 },
   crit: { s: n3('sword_impact_hit', 3), v: 0.75, layer: 'critping' },
-  block: { s: [...n3('sword_blocked', 3), ...n3('sword_parry', 3)], v: 0.55 },
+  block: { s: [...n3('sword_blocked', 3), ...n3('sword_parry', 3), ...n3('bow_blocked', 3)], v: 0.55 },
   bow: { s: n3('bow_attack', 2), v: 0.55 },
-  fire: { s: n3('fireball', 3), v: 0.45 },
-  cold: { s: [...n3('ice_throw', 2), ...n3('ice_freeze', 2)], v: 0.45 },
+  fire: { s: [...n3('fireball', 3), ...n3('firespray', 2)], v: 0.45 },
+  cold: { s: [...n3('ice_throw', 2), ...n3('ice_freeze', 2), ...n3('ice_barrage', 2), ...n3('ice_wall', 2)], v: 0.45 },
+  acid: { s: [...n3('waterspray', 2), ...n3('wave_attack', 2)], v: 0.4 },
+  thud: { s: n3('rock_wall', 2), v: 0.35, max: 2 },
   arcane: { s: n3('spell_impact', 3), v: 0.5 },
-  explode: { s: n3('rock_meteor_throw', 2), v: 0.55, layer: 'explode' },
-  buff: { s: n3('firebuff', 2), v: 0.4, max: 1 },
-  chest: { s: n3('chest_open', 2), v: 0.7, max: 1 },
-  door: { s: n3('door_open', 2), v: 0.45, max: 2 },
-  gate: { s: ['gate_open'], v: 0.7, max: 1 },
+  explode: { s: [...n3('rock_meteor_throw', 2), ...n3('rock_meteor_swarm', 2)], v: 0.55, layer: 'explode' },
+  buff: { s: [...n3('firebuff', 2), ...n3('light_torch', 2), ...n3('light_torch_with_starting_loop', 2)], v: 0.4, max: 1 },
+  chest: { s: [...n3('chest_open', 2), ...n3('chest_close', 2), 'lock_unlock'], v: 0.7, max: 1 },
+  door: { s: [...n3('door_open', 2), ...n3('door_close', 2)], v: 0.45, max: 2 },
+  gate: { s: ['gate_open', 'gate_close', 'portcullis_gate'], v: 0.7, max: 1 },
   step_stone: STEP('stone'), step_dirt: STEP('dirt'), step_water: STEP('water'), step_wood: STEP('wood'),
 };
 
@@ -375,13 +377,13 @@ export function seekMusic(t) {
 // Each area gets one or more 60 s beds; one plays at a time, drifting between soft and fuller every 10-25 s and now and
 // then crossfading to another of its beds. Beds sit lower while a song plays and come up in the breaks between songs.
 const AMB = {
-  title: ['cave_storm', 'inside_night_storm'], town: ['forest_night', 'forest_night_rain'],
+  title: ['cave_storm', 'inside_night_storm'], town: ['forest_night', 'forest_night_rain', 'forest_day'],
   catacombs: ['inside_night', 'cave'], frozen: ['cave_storm', 'forest_night_storm'], molten: ['cave', 'torch_loop'],
-  fungal: ['cave_rain', 'cave'], sunken: ['sea', 'cave_rain'], blood: ['inside_night_rain', 'inside_night'],
-  ashen: ['cave_storm', 'inside_day_storm'], void: ['cave', 'inside_night_storm'], gilded: ['inside_day', 'inside_night'],
+  fungal: ['cave_rain', 'cave'], sunken: ['sea', 'cave_rain', 'beach_rain'], blood: ['inside_night_rain', 'inside_night'],
+  ashen: ['cave_storm', 'inside_day_storm'], void: ['cave', 'inside_night_storm'], gilded: ['inside_day', 'inside_night', 'inside_day_rain'],
   plague: ['river_stream_loop', 'cave_rain'], crystal: ['cave_rain', 'cave'], desert: ['inside_day_storm', 'beach_storm'],
-  shadow: ['inside_night', 'cave'], forge: ['torch_loop', 'cave'], abyss: ['sea_storm', 'cave_storm'],
-  thorn: ['forest_night', 'forest_night_rain'], storm: ['forest_night_storm', 'cave_storm'], obsidian: ['cave', 'inside_night'],
+  shadow: ['inside_night', 'cave'], forge: ['torch_loop', 'cave'], abyss: ['sea_storm', 'cave_storm', 'sea_rain'],
+  thorn: ['forest_night', 'forest_day_rain'], storm: ['forest_night_storm', 'cave_storm', 'forest_day_storm'], obsidian: ['cave', 'inside_night'],
   flesh: ['inside_night_rain', 'cave_rain'], serpent: ['river_loop', 'cave_rain'], shattered: ['inside_day_storm', 'cave_storm'],
   library: ['inside_night_rain', 'inside_night'], necropolis: ['forest_night', 'forest_night_storm'],
   amber: ['inside_day_storm', 'beach'], throne: ['cave_storm', 'waterfall_loop'],

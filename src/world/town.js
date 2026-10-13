@@ -339,7 +339,7 @@ function rollTown(tileset, seed, last) {
     props.push({ kind: 'scatter', x: lx, y: ly, spr: stand, k: tileset.k, light: 4.5 });
     blockAt(lx, ly); lamps++;
   }
-  const clutter = ['closed_barrel', 'water_barrel', 'crate_stack', 'rope_and_hook', 'handcart', 'broken_wheel', 'cart_debris', 'hay_bale', 'grain_sacks', 'firewood_stack'];
+  const clutter = ['closed_barrel', 'water_barrel', 'crate_stack', 'rope_and_hook', 'handcart', 'broken_wheel', 'cart_debris', 'hay_bale', 'grain_sacks', 'firewood_stack', 'arrow_milestone'];
   for (let i = 0, n = 0; i < 200 && n < rng.int(8, 14); i++) {
     const road = rng.pick(roads), at = road[Math.floor(R(0, 1) * road.length)];
     if (!at) continue;
