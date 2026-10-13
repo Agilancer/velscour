@@ -37,7 +37,10 @@ BITS = {"NE": 1, "SE": 2, "SW": 4, "NW": 8}
 # scatter that does not block movement (flat, or small enough to step around)
 WALK_OVER = {"supine_skeleton", "vigil_candles", "rolled_shroud", "chain_and_shackle", "offering_bowl",
              "hourglass_and_prayer_book", "burial_boots_and_belt", "long_bone_heap", "coffin_plank_heap",
-             "grave_lantern", "ossuary_urn"}
+             "grave_lantern", "ossuary_urn",
+             # cathedral_graveyard
+             "bordered_fresh_grave", "old_grave_mound", "dry_wreath", "coffin_boards", "fallen_railing",
+             "votive_candles", "tracery_rubble", "resting_censer", "ivy_roots", "funeral_flowers"}
 
 
 def box(u0, u1, v0, v1, h, tag):
@@ -149,16 +152,22 @@ def pieces(arr, pivot, tags, groups):
     return out
 
 
-def import_pack(zpath, pack_id):
-    z = zipfile.ZipFile(zpath)
-    root = next(n for n in z.namelist() if n.endswith("manifest.json")).rsplit("manifest.json", 1)[0]
-    man = json.loads(z.read(root + "manifest.json"))
-    load = lambda a: np.array(Image.open(io.BytesIO(z.read(root + a["file"]))).convert("RGBA"))
+def import_pack(zpaths, pack_id):
+    # a pack may be split into parts (<Name>_Biome_Pack-1.zip, -2, ...) to fit GitHub's upload limit
+    files = {}
+    for zp in zpaths:
+        z = zipfile.ZipFile(zp)
+        for n in z.namelist():
+            files.setdefault(n, z)
+    root = next(n for n in files if n.endswith("manifest.json")).rsplit("manifest.json", 1)[0]
+    read = lambda f: files[root + f].read(root + f)
+    man = json.loads(read("manifest.json"))
+    load = lambda a: np.array(Image.open(io.BytesIO(read(a["file"]))).convert("RGBA"))
     assets = man["assets"]
     out_dir = os.path.join(OUT, pack_id)
     os.makedirs(out_dir, exist_ok=True)
     meta = {"pack": man["pack"], "tile": man["coordinate_system"]["tile_size_px"], "zscale": ZSCALE,
-            "floors": [], "walls": {}, "arches": {}, "doors": {}, "scatter": []}
+            "floors": [], "walls": {}, "arches": {}, "archSpan": {}, "doors": {}, "scatter": []}
     lost_report = []
 
     # ---- floors: as drawn
@@ -226,20 +235,22 @@ def import_pack(zpath, pack_id):
             put(var, g, img, ox, oy)
         meta["walls"].setdefault(fam, {}).setdefault(str(mask), []).append(var)
 
-    # ---- arches: six half-tile slices along the span
+    # ---- arches: half-tile slices along the span (3, 5 or 7 tiles; archSpan[design])
     for a in [a for a in assets if a["category"] == "arches"]:
         d, h = a["orientation"], a["height_px"]
+        n = int(a.get("outer_span_tiles") or a.get("span_tiles") or 3)
         bx = []
-        for k in range(30):
-            a0 = -1.5 + k * 0.1
+        for k in range(10 * n):
+            a0 = -n / 2 + k * 0.1
             bx.append(span_box(d, a0, a0 + 0.1, -0.1, 0.1, h, k // 5))
         arr, piv, tags, lost = raycast(load(a), a["pivot_px"], bx, ZSCALE)
         lost_report.append((a["id"], lost))
-        groups = {g: [i for i, b in enumerate(bx) if b[5] == g] for g in range(6)}
+        groups = {g: [i for i, b in enumerate(bx) if b[5] == g] for g in range(2 * n)}
         sl = []
         for g, img, ox, oy in pieces(arr, piv, tags, groups):
-            put(sl, round(-1.25 + g * 0.5, 2), img, ox, oy)
+            put(sl, round(-n / 2 + 0.25 + g * 0.5, 2), img, ox, oy)
         meta["arches"].setdefault(a["arch_design"], {})[d] = sl
+        meta["archSpan"][a["arch_design"]] = n
 
     # ---- doors: two wall slices + the open leaf (whichever side of the hinge it swings to)
     for a in [a for a in assets if a["category"] == "doors"]:
@@ -306,13 +317,15 @@ def import_pack(zpath, pack_id):
 
 
 def process_biome_packs(only=()):
+    import re
+    packs = {}
     for fn in sorted(os.listdir(SRC)):
-        if not fn.endswith("_Biome_Pack.zip"):
-            continue
-        pid = fn[: -len("_Biome_Pack.zip")].lower()
-        if only and pid not in only:
-            continue
-        import_pack(os.path.join(SRC, fn), pid)
+        m = re.match(r"(.+)_Biome_Pack(-\d+)?\.zip$", fn)
+        if m:
+            packs.setdefault(m.group(1).lower(), []).append(os.path.join(SRC, fn))
+    for pid, parts in packs.items():
+        if not only or pid in only:
+            import_pack(parts, pid)
 
 
 if __name__ == "__main__":

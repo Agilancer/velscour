@@ -100,6 +100,16 @@ Native pixels map to world pixels by `k = TW / 160` (0.4); `ox/oy` are native px
    `src/world/town.js`) and `funerary_obelisk` (throne columns), and `LIT` / `WALK_OVER` (prop names).
 5. Run `pack.js`, `walls.js` and `data_check.mjs`, and look at the screenshots.
 
+## Cathedral and Graveyard pack
+`assets/source/biomes/Cathedral_Graveyard_Biome_Pack-{1,2}.zip` (part 2 is only reference and QA sheets; split packs
+are read like one) -> `assets/tiles/cathedral_graveyard/`. Same template, two settings: floors 1-5 and 11-30, props
+21-35, the nave/stained-glass/buttressed wall families, arches chapel_lancet / nave_triumphal / grand_westwork and doors
+cathedral_oak / sacristy_bronze are the **Desecrated Cathedral** biome; the rest (graveyard soil and paths, headstones,
+cemetery limestone and iron fence walls, cemetery gate) is the **Moonlit Necropolis**. A biome's `part`
+(`src/data/biomes.js`) picks its share and `biomeTileSet` filters the set. Its arches come in outer spans of 3, 5 and
+7 tiles: the importer slices each into 2 x span half-tile slices (`pack.json archSpan`), and `findOpenings` puts a
+span-n arch over an n- or (n-1)-wide gap (`archesFor`). Levels only mix with biomes on the same pack and part.
+
 ## The town pack (Overworld and Town)
 `assets/source/biomes/town/Overworld_Town_Biome_Pack-{1,2,3}.zip` are one pack split to fit GitHub's upload limit;
 `tools/townpack.py` reads all parts (a file repeated across parts is read once). Same 160 x 80 grid as Catacombs, but

@@ -427,6 +427,12 @@ are in section 7.
      at depth 5): 0 deaths, no errors. The Paladin saves early points until Blessed Hammer opens at level 6. One
      paladin run stalled ~6 min "Dodging!" on depth 1 (the known occasional bot stall); a probe could not reproduce it.
 
+18. **Cathedral and Graveyard biome pack (branch `claude/dreamy-edison-r6fxz0`).** The user uploaded
+   `assets/Cathedral_Graveyard_Biome_Pack-{1,2}.zip` (moved to `assets/source/biomes/`), the second template pack.
+   `biomepack.py` now reads split packs and arches of any span (this pack has 3, 5 and 7 tile arches; `archSpan`).
+   New biome **Desecrated Cathedral** (`cathedral`, gloom family, as drawn) uses the cathedral half of the pack; the
+   **Moonlit Necropolis** moved to its graveyard half (`b.part`, see ART.md). Wide arches go over 4-7 wide gaps.
+
 ## 5. Next steps
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
 0. Get the user's playtest feedback on the boss rooms (item 16): difficulty, length, readability of the telegraphs.
@@ -442,7 +448,7 @@ Do these in order, unless the user asks for something else. Their feedback after
 5. Roadmap ideas from the README: animated character sprites, set items, a stash, waypoints, rune words, multiplayer.
 6. More monster sheets are coming ("Enemy Assets Set 2", ...). Import them as [`ENEMY_ART.md`](ENEMY_ART.md)
    describes: move them, slice them, then add bestiary entries.
-7. More biome packs are coming (same template as the Catacombs pack). Import them as [`ART.md`](ART.md) "Adding the
+7. More biome packs are coming (same template as the Catacombs pack; the Cathedral and Graveyard pack is in, see ART.md). Import them as [`ART.md`](ART.md) "Adding the
    next pack" describes, and point the biomes they suit at them (`b.pack`).
 
 ## 6. Working environment notes
