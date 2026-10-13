@@ -4,6 +4,7 @@ import { camera, isoX, isoY, HW, HH, TW, TH } from '../core/view.js';
 import { makeCanvas, TAU, clamp, rgba, shade, hexToRgb } from '../core/util.js';
 import { drawDecals, drawEffects, drawParticles, drawTexts, lights, glowSprite } from '../gfx/vfx.js';
 import { pixelSprite } from '../gfx/pixelart.js';
+import { gritAt } from '../gfx/grit.js';
 import { classSprite } from '../core/assets.js';
 import { enemyImage } from '../core/enemyart.js';
 import { drawLootLabels } from './loot.js';
@@ -231,6 +232,8 @@ export function renderWorld(ctx, world) {
       if (px < vr.x0 - TW || px > vr.x1 + TW || py < vr.y0 - TH || py > vr.y1 + TH) continue;
       const f = floorEntry(world, map.v[i]);
       ctx.drawImage(f.img, f.sx, f.sy, f.w, f.h, px - HW - 0.6, py - 0.6, TW + 1.2, TH + 1.2);
+      const gr = gritAt(world, f, map.v[i], tx, ty);
+      if (gr) ctx.drawImage(gr, px - HW, py);
     }
   }
   ctx.imageSmoothingQuality = hq;
