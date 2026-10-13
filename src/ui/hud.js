@@ -10,6 +10,9 @@ import { xpToNext } from '../game/player.js';
 import { drawMinimap } from '../game/render.js';
 import { assign, SLOT_LABELS } from './skills.js';
 import { elem } from '../gfx/vfx.js';
+import { pickTaunt } from '../data/taunts.js';
+
+const TAUNT_KEY = 'velscour_taunts_v1'; // Velscour's level-up deck: the last mood and the lines already shown
 import { Meter } from '../game/dpsmeter.js';
 import { heroDamage } from '../game/autoplay.js';
 
@@ -216,7 +219,7 @@ export const HUD = {
     if (avg > 0) { g.fillStyle = '#ffd860'; g.fillRect(0, Math.round(H - 1 - (avg / top) * (H - 2)), W, Math.max(1, G.dpr)); }
   },
 
-  /** The level-up banner: a dark vignette, the title and new level bleeding in from blur, then an ominous line. */
+  /** The level-up banner: a dark vignette, the title and new level bleeding in from blur, then Velscour's two lines. */
   levelUp(level, sound) {
     const box = $('#levelup'), num = $('#lu-num');
     num.textContent = level;
@@ -226,13 +229,18 @@ export const HUD = {
       return;
     }
     if (this.lu) this.lu.timers.forEach(clearTimeout);
-    const at = sound ? sound.voiceAt : 0.55, dur = 4.2;
+    const at = sound ? sound.voiceAt : 0.55, dur = 5;
     const lu = this.lu = { end: now + (at + dur + 0.6) * 1000, timers: [] };
     const later = (s, fn) => lu.timers.push(setTimeout(fn, s * 1000));
+    let deck = {};
+    try { deck = JSON.parse(localStorage.getItem(TAUNT_KEY) || '{}') || {}; } catch (e) { /* a fresh deck */ }
+    const t = pickTaunt(G.char, deck);
+    try { localStorage.setItem(TAUNT_KEY, JSON.stringify(deck)); } catch (e) { /* ignore */ }
     box.classList.remove('hidden', 'play', 'out'); num.classList.remove('punch');
+    box.dataset.mood = t.mood;
+    $('#lu-l1').textContent = t.l1; $('#lu-l2').textContent = t.l2;
     void box.offsetWidth;
     box.classList.add('play');
-    $('#lu-l1').textContent = 'Your power festers\u2026'; $('#lu-l2').textContent = 'and Velscour still lives';
     later(at + dur + 0.1, () => box.classList.add('out'));
     later(at + dur + 0.9, () => box.classList.add('hidden'));
   },

@@ -97,7 +97,7 @@ Requirements, as stated (✅ = implemented in the draft):
   replays the intro without the prompt. Returning from a sub-menu while the Hymn still plays shows the logo lit. Any
   click or key during the intro skips to the burst (it seeks the song to just before the hit). The tar drips and pile
   explosions were removed at the user's request.
-- **Level-up (user request):** no voice line any more (the wav and `tools/levelup_voice.py` were removed). `levelUpFanfare()` is a grim bell toll + choir drone, the banner bleeds in from blur over a dark vignette, crit damage numbers drip blood (`drawDrips` in vfx.js). Old notes below may still mention the voice.
+- **Level-up (user request):** Velscour now says one of 2,000 two-line taunts in six moods (dread, mock, cheer, rage, unhinged, sulk; `src/data/taunts.js`, plus class and milestone lines); the second line takes the mood's colour and motion (`#levelup[data-mood]` in style.css), a mood never repeats back to back and lines do not repeat until the pool is spent (deck in localStorage `velscour_taunts_v1`). no voice line any more (the wav and `tools/levelup_voice.py` were removed). `levelUpFanfare()` is a grim bell toll + choir drone, the banner bleeds in from blur over a dark vignette, crit damage numbers drip blood (`drawDrips` in vfx.js). Old notes below may still mention the voice.
   pre-renders it, because a browser can't synthesize intelligible speech through WebAudio (speechSynthesis can't be
   routed through effects). The fanfare before it is procedural (`levelUpFanfare()` in `src/core/audio.js`).
 - **The Slime Lord is blue.** The user changed his art from green to blue, so the `acid` element (only he uses it)
