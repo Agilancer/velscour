@@ -165,17 +165,21 @@ export class EnergyLance {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineCap = 'round';
-    // outer haze, body, white-hot core
+    // a medieval lance: a short haft, a round vamplate, then a long cone tapering to a needle tip (same overall reach)
+    const hl = w * 3.4, tx = bx + ux * hl, ty = by + uy * hl;
+    const vx = ax + (tx - ax) * 0.25, vy = ay + (ty - ay) * 0.25, hw = w * 1.5;
     for (const [a, lw, col] of [[0.25, w * 3.2, c[0]], [0.7, w * 1.4, c[0]], [1, w * 0.5, c[1]]]) {
       ctx.globalAlpha = a * fade; ctx.strokeStyle = col; ctx.lineWidth = lw;
-      ctx.beginPath(); ctx.moveTo(ax - ux * 10, ay - uy * 10); ctx.lineTo(bx - ux * w, by - uy * w); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ax - ux * 10, ay - uy * 10); ctx.lineTo(vx, vy); ctx.stroke();
     }
-    // spearhead
-    const hl = w * 3.4, hw = w * 1.7;
-    ctx.globalAlpha = 0.9 * fade; ctx.fillStyle = c[0];
-    ctx.beginPath(); ctx.moveTo(bx + ux * hl, by + uy * hl); ctx.lineTo(bx + nx * hw, by + ny * hw); ctx.lineTo(bx - ux * w * 0.6, by - uy * w * 0.6); ctx.lineTo(bx - nx * hw, by - ny * hw); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = c[1];
-    ctx.beginPath(); ctx.moveTo(bx + ux * hl * 0.8, by + uy * hl * 0.8); ctx.lineTo(bx + nx * hw * 0.4, by + ny * hw * 0.4); ctx.lineTo(bx - nx * hw * 0.4, by - ny * hw * 0.4); ctx.closePath(); ctx.fill();
+    for (const [a, sw, col] of [[0.3, 1.8, c[0]], [0.9, 1, c[0]], [1, 0.35, c[1]]]) {
+      ctx.globalAlpha = a * fade; ctx.fillStyle = col;
+      ctx.beginPath(); ctx.moveTo(tx + ux * (sw - 1) * w, ty + uy * (sw - 1) * w);
+      ctx.lineTo(vx + nx * hw * sw, vy + ny * hw * sw); ctx.lineTo(vx - ux * w * 0.3, vy - uy * w * 0.3); ctx.lineTo(vx - nx * hw * sw, vy - ny * hw * sw);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.globalAlpha = 0.85 * fade; ctx.strokeStyle = c[1]; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(vx, vy, w * 0.5, hw * 1.15, Math.atan2(uy, ux), 0, TAU); ctx.stroke();
     // a guard of spinning rings round the haft at high ranks
     if (this.L >= 10) for (let i = 0; i < 3; i++) {
       const f = ((G.time * 1.5 + i / 3) % 1), rx = ax + dx * f, ry = ay + dy * f;
