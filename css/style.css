@@ -184,7 +184,7 @@ button { font-family: var(--font-head); }
 
 /* inventory */
 .inv-wrap { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-.paperdoll { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(4, 64px); gap: 6px; position: relative; padding: 6px; background: radial-gradient(#2a1a10, #0d0805); border: 1px solid var(--line); border-radius: 4px; }
+.paperdoll { display: grid; grid-template-columns: repeat(4, 64px); grid-template-rows: repeat(4, 64px); gap: 6px; position: relative; padding: 6px; background: radial-gradient(#2a1a10, #0d0805); border: 1px solid var(--line); border-radius: 4px; }
 .paperdoll .portrait { display: flex; align-items: flex-end; justify-content: center; opacity: .9; pointer-events: none; }
 .paperdoll .portrait img { max-height: 132px; max-width: 64px; object-fit: contain; filter: drop-shadow(0 0 6px #000); }
 .eslot { position: relative; border: 1px solid #4a3620; background: rgba(0,0,0,.55); border-radius: 3px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -385,7 +385,7 @@ body.touch .shop-grid { grid-template-columns: repeat(6, 36px); grid-auto-rows: 
 body.touch .vendor-panel { max-width: 46vw; }
 body.touch .vendor-panel .vendor-greet { font-size: 12px; margin-bottom: 4px; }
 body.touch .panel { max-width: 100%; }
-body.touch .paperdoll { grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(4, 52px); }
+body.touch .paperdoll { grid-template-columns: repeat(4, 52px); grid-template-rows: repeat(4, 52px); }
 body.touch .tree { grid-template-columns: repeat(4, 50px); gap: 12px 14px; }
 body.touch .snode { width: 50px; height: 50px; }
 body.touch #panels { bottom: 0; padding: 4px; }
@@ -415,3 +415,11 @@ body.touch .item-detail, body.touch .skill-detail { width: 230px; font-size: 12p
   .class-info h2 { font-size: 20px; }
   .class-info p { font-size: 13px; }
 }
+/* skill mastery (ui/skills.js) and the Gem Forge (ui/vendor.js) */
+.mastery { margin: 6px 0 2px; font-size: 12px; }
+.mastery .mbar { height: 5px; background: #1a120c; border: 1px solid #3a2a1a; border-radius: 3px; margin-top: 2px; overflow: hidden; }
+.mastery .mbar > div { height: 100%; box-shadow: 0 0 6px currentColor; }
+.snode .mlvl { position: absolute; left: 2px; top: 1px; font-size: 10px; color: #8fe0ff; text-shadow: 0 0 3px #000, 0 0 2px #000; }
+.forge-row { gap: 6px; flex-wrap: wrap; margin: 4px 0; align-items: center; }
+.forge-row > span { min-width: 170px; }
+.vendor-sub { margin: 10px 0 4px; }

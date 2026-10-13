@@ -7,7 +7,10 @@ import { floatText, addEffect, Column, Ring, Sigil, sparkle, burst, spawn, elem,
 import { Creature } from './creature.js';
 import { CLASSES } from '../data/classes.js';
 import { SKILLS, CLASS_SKILLS, effLevel, skillBaseDamage, manaCost, cooldown, useTime, weaponCoef, grantedSkillsAt, skillRange } from '../data/skills.js';
-import { SLOTS, itemStats, itemDmg, itemArmor, GEMS } from '../data/items.js';
+import { SLOTS, RING_SLOTS, itemStats, itemDmg, itemArmor, GEMS } from '../data/items.js';
+import { augHits, augmentable } from '../data/rings.js';
+import { depthLevel } from '../data/depth.js';
+import { MAX_MASTERY, masteryNeed, masteryMul, masteryTier, TIER_NAMES } from './augments.js';
 import { castSkill, Timer } from './skillrun.js';
 import { Orbit, Area, BeamCh } from './hazards.js';
 import { hit, aoe } from './combat.js';
@@ -18,7 +21,7 @@ import { fxColor } from '../data/gear.js';
 import { freeSlot } from '../data/bar.js';
 
 export const xpToNext = (L) => Math.round(60 * L * L + 40 * L);
-export const MAX_LEVEL = 100;
+export const MAX_LEVEL = 300;
 
 const ELEM_KEYS = ['fire', 'cold', 'light', 'poison', 'arcane', 'holy', 'shadow', 'blood', 'acid'];
 
@@ -127,6 +130,8 @@ export class Player extends Creature {
     st.lifeRegen = 0.6 + c.level * 0.12 + vit * 0.05 + (add.lifeRegen || 0) + this.maxHp * st.regenPct / 100;
     st.manaRegen = 1.6 + c.level * 0.15 + int * 0.06 + (add.manaRegen || 0);
     this.st = st;
+    this.augs = RING_SLOTS.flatMap((s) => (c.equip[s] && c.equip[s].aug) || []);
+    this.augCache = new Map();
     if (this.hp > this.maxHp) this.hp = this.maxHp;
     if (this.mana > this.maxMana) this.mana = this.maxMana;
     this.speed = 4.2 * (1 + st.moveSpeed / 100);
@@ -135,6 +140,45 @@ export class Player extends Creature {
   }
 
   skillLevel(sk) { return effLevel(this, sk); }
+
+  /** The ring augments on skill sk as {id: power} (powers of the same augment add up), or null. */
+  augFor(sk) {
+    if (!this.augs || !this.augs.length || !sk) return null;
+    let a = this.augCache.get(sk.id);
+    if (a !== undefined) return a;
+    a = null;
+    for (const x of this.augs) if (augHits(x, sk)) { a = a || {}; a[x.id] = (a[x.id] || 0) + x.pow; }
+    this.augCache.set(sk.id, a);
+    return a;
+  }
+
+  // ------------------------------------------------------------------ skill mastery (1-1000, per skill)
+  mastery(sk) { const m = this.char.mastery && this.char.mastery[sk.id || sk]; return m ? m[0] : 1; }
+  gainMastery(id, xp) {
+    const c = this.char;
+    if (!c.skills[id] || xp <= 0) return;
+    const m = c.mastery[id] || (c.mastery[id] = [1, 0]);
+    if (m[0] >= MAX_MASTERY) return;
+    m[1] += xp * (1 + this.st.xpPct / 100);
+    let up = 0;
+    while (m[0] < MAX_MASTERY && m[1] >= masteryNeed(m[0])) { m[1] -= masteryNeed(m[0]); m[0]++; up++; }
+    if (m[0] >= MAX_MASTERY) m[1] = 0;
+    if (up) this.masteryUp(SKILLS[id], m[0], masteryTier(m[0]) > masteryTier(m[0] - up));
+  }
+  masteryUp(sk, M, tierUp) {
+    if (!sk) return;
+    const E = elem(sk.el);
+    floatText(this.x, this.y, 84, `${sk.name} ${M}`, E.glow, tierUp ? 16 : 12, { life: tierUp ? 2 : 1.2, vz: 30 });
+    sparkle(this.x, this.y, 30, E.glow, tierUp ? 30 : 8, 0.6);
+    if (tierUp) {
+      addEffect(new Column(this.x, this.y, E.glow, 0.9, 40, 420));
+      addEffect(new Ring(this.x, this.y, 0.2, 3.5, 0.9, E.glow, 6));
+      burst(this.x, this.y, 30, sk.el, 30, 4, { up: 2 });
+      sfx('levelup', 0.6);
+      if (G.ui) G.ui.log(`<b style="color:${E.glow}">${sk.name}</b> reaches mastery ${M}: <b>${TIER_NAMES[masteryTier(M)]}</b>. Its power and effects grow.`, '#ffd860');
+    } else if (M % 10 === 0 && G.ui) G.ui.log(`${sk.name} mastery ${M}.`, E.glow);
+    if (G.ui) G.ui.refresh();
+  }
 
   synergy(sk) {
     let pts = 0;
@@ -147,7 +191,7 @@ export class Player extends Creature {
     const base = skillBaseDamage(sk, L);
     const wc = weaponCoef(sk);
     const elBonus = sk.el === 'phys' ? st.physPct : st.elemPct[sk.el] || 0;
-    let mult = (1 + (st.dmgPct + st.primary + elBonus) / 100) * this.synergy(sk);
+    let mult = (1 + (st.dmgPct + st.primary + elBonus) / 100) * this.synergy(sk) * masteryMul(this.mastery(sk));
     if (st.legendary.berserk) mult *= 1 + 0.04 * Math.floor((1 - this.hp / this.maxHp) * 10);
     const lo = (base * 0.85 + st.weapon[0] * wc) * mult, hi = (base * 1.15 + st.weapon[1] * wc) * mult;
     return [Math.max(1, Math.round(lo)), Math.max(2, Math.round(hi))];
@@ -172,7 +216,7 @@ export class Player extends Creature {
   gainXp(n) {
     const c = this.char;
     if (c.level >= MAX_LEVEL) return;
-    const depth = (this.world && this.world.depth) || 1;
+    const depth = depthLevel((this.world && this.world.depth) || 1);
     const diff = c.level - depth;
     const pen = diff > 5 ? Math.max(0.1, 1 - (diff - 5) * 0.1) : 1;
     c.xp += Math.round(n * pen * (1 + this.st.xpPct / 100));
@@ -270,7 +314,7 @@ export class Player extends Creature {
     if (this.dead || this.potionCd > 0) return;
     if (!c.potions[kind]) { floatText(this.x, this.y, 50, 'No potions', '#ccc', 11); sfx('error'); return; }
     c.potions[kind]--;
-    this.potionCd = 0.4;
+    this.potionCd = 0.9;
     sfx('potion');
     switch (kind) {
       case 'hp': this.potionRegen.push({ hp: this.maxHp * 0.45 / 2, mp: 0, t: 2 }); break;
@@ -310,7 +354,8 @@ export class Player extends Creature {
     const L = this.skillLevel(sk);
     if (!L) return false;
     if ((this.cooldowns[sk.id] || 0) > 0) return false;
-    const cost = manaCost(sk, L);
+    const aug = this.augFor(sk), quick = aug && aug.haste ? 1 - Math.min(0.6, 0.25 * aug.haste) : 1;
+    const cost = Math.round(manaCost(sk, L) * quick);
     if (this.mana < cost) {
       if ((this.noManaT || 0) <= 0) { floatText(this.x, this.y, 60, 'Not enough mana', '#6a8aff', 12); sfx('error'); this.noManaT = 0.8; }
       return false;
@@ -329,13 +374,17 @@ export class Player extends Creature {
     if (this.st.legendary.surge && chance(0.15)) { this.mana += cost; sparkle(this.x, this.y, 30, '#c060ff', 6, 0.3); }
     const spd = sk.attack ? this.st.atkSpeed : this.st.castSpeed;
     this.castLock = useTime(sk) / (1 + spd / 100);
-    this.cooldowns[sk.id] = cooldown(sk) * (1 - this.st.cdr / 100);
+    this.cooldowns[sk.id] = cooldown(sk) * (1 - this.st.cdr / 100) * quick;
     this.aim = [tx, ty];
     this.lastEl = sk.el;
     const ok = castSkill(this, sk, L, tx, ty);
     if (ok === false) { this.mana += cost; this.cooldowns[sk.id] = 0; return false; }
     castArtFx(this, sk, tx, ty);
-    if (this.st.echoChance && chance(this.st.echoChance / 100) && sk.kind !== 'summon' && sk.kind !== 'buff') {
+    // casting trains the skill a little (kills with it train it more: combat.kill); skills that deal no damage train on casts alone
+    const dl = depthLevel(this.world.depth || 1);
+    this.gainMastery(sk.id, 4 * Math.pow(dl, 1.5) * (augmentable(sk) ? 0.15 : 1.2));
+    const echo = (this.st.echoChance || 0) / 100 + (aug && aug.echo ? Math.min(0.6, 0.2 * aug.echo) : 0);
+    if (echo && chance(echo) && sk.kind !== 'summon' && sk.kind !== 'buff') {
       this.world.addHazard(new Timer(0.2, () => { if (!this.dead) { castSkill(this, sk, L, this.aim ? this.aim[0] : tx, this.aim ? this.aim[1] : ty, { echo: true }); floatText(this.x, this.y, 64, 'Echo!', '#ff80ff', 11); } }));
     }
     this.moving = false;

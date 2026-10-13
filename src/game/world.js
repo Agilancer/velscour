@@ -1,4 +1,5 @@
 // World: everything that lives in the current level.
+import { augHazard } from './augments.js';
 import { G } from '../state.js';
 import { camera, isoX, isoY } from '../core/view.js';
 import { rand, dist2, TAU, chance } from '../core/util.js';
@@ -105,6 +106,7 @@ export class World {
     for (let i = this.hazards.length - 1; i >= 0; i--) {
       const h = this.hazards[i];
       if (h.update(dt) === false || h.dead) this.hazards.splice(i, 1);
+      else if (h.o && h.o.aug) augHazard(h, dt);
     }
     this.separate();
     for (let i = this.creatures.length - 1; i >= 0; i--) {

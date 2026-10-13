@@ -67,7 +67,8 @@ export function newCharData(classId, name, slot = firstFreeSlot()) {
     version: 1, name, classId, slot: slot >= 0 ? slot : null, level: 1, xp: 0,
     attrs: { ...C.base }, statPoints: 0, skillPoints: 1,
     skills: {}, granted: {}, bar: Array(BAR_SIZE).fill(null),
-    equip: { weapon: null, offhand: null, head: null, body: null, hands: null, legs: null, feet: null },
+    equip: { weapon: null, offhand: null, head: null, body: null, hands: null, legs: null, feet: null, ring1: null, ring2: null, ring3: null, ring4: null },
+    mastery: {}, townSeed: (Math.random() * 1e9) | 0,
     bag: Array(60).fill(null),
     gold: 150, potions: { hp: 6, mp: 4, rejuv: 1, fury: 1 },
     depth: 1, deepest: 0, nextBiome: null, biomeBag: [], cleared: {},
@@ -89,6 +90,9 @@ export function migrate(c) {
   c.cleared = c.cleared || {};
   c.granted = c.granted || {};
   c.tips = c.tips || {};
+  c.mastery = c.mastery || {}; // skill mastery: {skillId: [level 1-1000, xp]}
+  for (const s of ['ring1', 'ring2', 'ring3', 'ring4']) if (!(s in c.equip)) c.equip[s] = null;
+  if (c.townSeed === undefined) c.townSeed = (Math.random() * 1e9) | 0;
   if (!Array.isArray(c.biomeBag)) c.biomeBag = [];
   // heroes made before the shuffle bag always started in the catacombs: give an unexplored hero a random start
   if (c.nextBiome === 'catacombs' && !c.deepest && !c.lastBiome) c.nextBiome = drawBiome(c, c.depth || 1);

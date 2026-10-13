@@ -81,14 +81,16 @@ function drawProp(ctx, pr, alpha) {
 
 /** A town building's rect [x, y, w, h] in world px (town-pack art drawn from the building's centre). */
 function buildingRect(b) {
-  const s = b.spr, k = b.k;
-  return [isoX(b.cx, b.cy) + s.ox * k, isoY(b.cx, b.cy) + s.oy * k, s.w * k, s.h * k];
+  const s = b.spr, k = b.k, X = isoX(b.cx, b.cy);
+  return [b.flip ? X - (s.ox + s.w) * k : X + s.ox * k, isoY(b.cx, b.cy) + s.oy * k, s.w * k, s.h * k];
 }
 
+// b.flip: mirrored, which moves the door to the building's other street face (world/town.js)
 function drawBuilding(ctx, b, alpha) {
   const s = b.spr, [x, y, w, h] = buildingRect(b);
   if (alpha < 1) ctx.globalAlpha = alpha;
-  ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, x, y, w, h);
+  if (b.flip) { ctx.save(); ctx.translate(x + w, y); ctx.scale(-1, 1); ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, 0, 0, w, h); ctx.restore(); }
+  else ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, x, y, w, h);
   if (alpha < 1) ctx.globalAlpha = 1;
 }
 

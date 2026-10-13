@@ -52,7 +52,7 @@ const { openGame, report } = require('./harness');
   await page.evaluate(() => window.VELSCOUR.G.ui.vendor.open('gems'));
   await page.waitForTimeout(400);
   await shot('ui4_gems');
-  await page.click('text=/x3 →/').catch((e) => console.log('combine click failed', e.message));
+  await page.click('text=/Fuse 3 →/').catch((e) => console.log('combine click failed', e.message));
   await page.waitForTimeout(200);
   await page.evaluate(() => window.VELSCOUR.G.ui.vendor.open('upgrade'));
   await page.waitForTimeout(300);

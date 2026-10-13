@@ -4,7 +4,7 @@ import { el, fmtInt, escapeHtml } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { UI, draggable, droppable } from './ui.js';
 import { itemCell, itemTooltip, rarityClass } from './itemui.js';
-import { SLOTS, SLOT_NAMES, itemName, itemColor, GEMS, gemName, itemValue } from '../data/items.js';
+import { SLOTS, SLOT_NAMES, itemName, itemColor, GEMS, gemName, itemValue, fitsSlot, slotFor } from '../data/items.js';
 import { CLASSES, ATTRS } from '../data/classes.js';
 import { xpToNext } from '../game/player.js';
 import { addToBag } from '../game/player.js';
@@ -12,7 +12,7 @@ import { GroundItem } from '../game/loot.js';
 import { classSprite } from '../core/assets.js';
 import { heroPortrait } from '../core/gearart.js';
 
-const DOLL = { head: [2, 1], weapon: [1, 2], body: [2, 2], offhand: [3, 2], hands: [1, 3], legs: [2, 3], feet: [2, 4] };
+const DOLL = { head: [2, 1], weapon: [1, 2], body: [2, 2], offhand: [3, 2], hands: [1, 3], legs: [2, 3], feet: [2, 4], ring1: [4, 1], ring2: [4, 2], ring3: [4, 3], ring4: [4, 4] };
 
 export function getItem(ref) {
   const c = G.char;
@@ -28,16 +28,17 @@ export function changed() {
   G.game && G.game.autosave();
 }
 
-export function equipFromBag(idx) {
+export function equipFromBag(idx, slot) {
   const c = G.char, it = c.bag[idx];
   if (!it || it.type !== 'gear') return false;
   if (it.unid) { UI.log('Identify it first (buy it from the Gambler).', '#ff8080'); return false; }
   if ((it.req || 1) > c.level) { UI.log(`Requires level ${it.req}.`, '#ff8080'); sfx('error'); return false; }
-  const old = c.equip[it.slot];
-  c.equip[it.slot] = it;
+  const to = slot && fitsSlot(it, slot) ? slot : slotFor(c.equip, it);
+  const old = c.equip[to];
+  c.equip[to] = it;
   c.bag[idx] = old || null;
   sfx('pickup');
-  UI.selected = { where: 'equip', slot: it.slot };
+  UI.selected = { where: 'equip', slot: to };
   changed();
   return true;
 }
@@ -47,7 +48,7 @@ export function unequip(slot, toIdx) {
   let i = toIdx ?? c.bag.findIndex((b) => !b);
   if (i < 0 || (toIdx !== undefined && c.bag[toIdx])) {
     const other = toIdx !== undefined ? c.bag[toIdx] : null;
-    if (other && other.type === 'gear' && other.slot === slot && (other.req || 1) <= c.level) { c.bag[toIdx] = it; c.equip[slot] = other; changed(); return true; }
+    if (fitsSlot(other, slot) && (other.req || 1) <= c.level) { c.bag[toIdx] = it; c.equip[slot] = other; changed(); return true; }
     if (i < 0) { UI.log('Inventory full.', '#ff8080'); sfx('error'); return false; }
     i = c.bag.findIndex((b) => !b);
   }
@@ -103,8 +104,8 @@ function handleDropOnEquip(slot, data) {
   const it = c.bag[data.idx];
   if (!it) return false;
   if (it.type === 'gem') return c.equip[slot] ? socketGem(data.idx, { where: 'equip', slot }) : false;
-  if (it.type !== 'gear' || it.slot !== slot) { sfx('error'); return false; }
-  return equipFromBag(data.idx);
+  if (!fitsSlot(it, slot)) { sfx('error'); return false; }
+  return equipFromBag(data.idx, slot);
 }
 
 function bagSlot(idx) {
@@ -123,7 +124,7 @@ function bagSlot(idx) {
     onDropWorld: (data) => (data.where === 'bag' ? dropFromBag(data.idx) : false),
   });
   droppable(d, (data) => handleDropOnBag(idx, data), (data) => data.type === 'item' || data.type === 'shop');
-  if (it) UI.tip(d, () => itemTooltip(c.bag[idx], { compare: c.bag[idx] && c.bag[idx].slot ? c.equip[c.bag[idx].slot] : null, price: G.ui.vendor && G.ui.vendor.active ? Math.max(1, Math.floor(itemValue(c.bag[idx]) / 4)) : 0, priceLabel: 'Sells for', hint: G.ui.vendor && G.ui.vendor.active ? 'Right-click to sell' : it.type === 'gear' ? 'Right-click / double-click to equip' : it.type === 'gem' ? 'Drag onto gear to socket' : '' }));
+  if (it) UI.tip(d, () => itemTooltip(c.bag[idx], { compare: c.bag[idx] && c.bag[idx].slot ? c.equip[slotFor(c.equip, c.bag[idx])] : null, price: G.ui.vendor && G.ui.vendor.active ? Math.max(1, Math.floor(itemValue(c.bag[idx]) / 4)) : 0, priceLabel: 'Sells for', hint: G.ui.vendor && G.ui.vendor.active ? 'Right-click to sell' : it.type === 'gear' ? 'Right-click / double-click to equip' : it.type === 'gem' ? 'Drag onto gear to socket' : '' }));
   return d;
 }
 
@@ -151,7 +152,7 @@ function equipSlot(slot) {
     onDouble: () => unequip(slot),
     onRight: () => (G.ui.vendor && G.ui.vendor.active ? (UI.selected = { where: 'equip', slot }, UI.refresh()) : unequip(slot)),
   });
-  droppable(d, (data) => handleDropOnEquip(slot, data), (data) => data.type === 'item' && data.where === 'bag' && G.char.bag[data.idx] && (G.char.bag[data.idx].slot === slot || G.char.bag[data.idx].type === 'gem'));
+  droppable(d, (data) => handleDropOnEquip(slot, data), (data) => data.type === 'item' && data.where === 'bag' && G.char.bag[data.idx] && (fitsSlot(G.char.bag[data.idx], slot) || G.char.bag[data.idx].type === 'gem'));
   if (it) UI.tip(d, () => itemTooltip(c.equip[slot], { hint: 'Right-click to unequip' }));
   return d;
 }
@@ -161,7 +162,7 @@ function detailBox() {
   const sel = UI.selected;
   const it = getItem(sel);
   if (!it) { box.innerHTML = '<div class="dim">Tap or click an item to inspect it. Drag items to equip, move, socket gems or sell. Drag out of the window to drop.</div>'; return box; }
-  box.innerHTML = itemTooltip(it, { compare: sel.where === 'bag' && it.slot ? G.char.equip[it.slot] : null });
+  box.innerHTML = itemTooltip(it, { compare: sel.where === 'bag' && it.slot ? G.char.equip[slotFor(G.char.equip, it)] : null });
   const row = el('div', 'row');
   row.style.marginTop = '8px';
   const btn = (label, fn, cls = 'small') => { const b = el('button', 'btn ' + cls, label); b.onclick = () => { sfx('ui'); fn(); }; row.appendChild(b); };

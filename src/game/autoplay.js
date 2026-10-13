@@ -8,11 +8,12 @@ import { input } from '../core/input.js';
 import { dist, clamp, TAU, fmtInt, escapeHtml, angleDiff } from '../core/util.js';
 import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, cooldown, useTime, skillRange, buffAmount, curseAmount, skillDuration, effLevel } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
-import { SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS } from '../data/items.js';
+import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS } from '../data/items.js';
 import { drawBiome } from '../data/biomes.js';
+import { augHits } from '../data/rings.js';
 import { canLearn } from '../ui/skills.js';
 import { equipFromBag, socketGem, dropFromBag, changed } from '../ui/inventory.js';
-import { Vendor } from '../ui/vendor.js';
+import { Vendor, fuseAll } from '../ui/vendor.js';
 import { addToBag } from './player.js';
 import { Delayed, Area } from './hazards.js';
 import { effects, Telegraph } from '../gfx/vfx.js';
@@ -205,8 +206,27 @@ export function charScore(p) {
   const res = ['fire', 'cold', 'light', 'poison'].reduce((a, k) => a + clamp(st.res[k], -100, 75), 0) / 4 / 100;
   const taken = (1 - armK) * 0.5 + (1 - res) * 0.4 + (1 - clamp(st.res.magic, -100, 75) / 100) * 0.1;
   const ehp = (p.maxHp / Math.max(0.1, taken) / (1 - Math.min(0.6, st.block / 100))) * (1 + Math.min(st.lifeSteal, 15) * 0.03) + st.lifeRegen * 10;
-  return Math.log(off + 1) + 0.8 * Math.log(ehp + 1) + 0.15 * Math.log(p.maxMana + 10)
+  return Math.log(off + 1) + 0.8 * Math.log(ehp + 1) + 0.15 * Math.log(p.maxMana + 10) + augScore(p)
     + st.moveSpeed * 0.003 + st.magicFind * 0.0008 + st.goldFind * 0.0003 + st.xpPct * 0.002;
+}
+
+/** What the ring augments on the bar's skills are worth (they change how skills play, so buildPower can't see them). */
+function augScore(p) {
+  if (!p.augs || !p.augs.length) return 0;
+  const bar = p.char.bar.filter(Boolean).map((id) => SKILLS[id]).filter(Boolean);
+  let v = 0;
+  for (const a of p.augs) { const n = bar.filter((sk) => augHits(a, sk)).length; if (n) v += a.pow * (0.12 + 0.03 * Math.min(4, n - 1)); }
+  return v;
+}
+/** Score with item `it` equipped (a ring tries each ring slot): {s, slot}. */
+function fitScore(p, it) {
+  const c = p.char;
+  let best = { s: -Infinity, slot: it.slot };
+  for (const slot of it.slot === 'ring' ? RING_SLOTS : [it.slot]) {
+    const s = simulate(p, () => { const old = c.equip[slot]; c.equip[slot] = it; return () => { c.equip[slot] = old; }; });
+    if (s > best.s) best = { s, slot };
+  }
+  return best;
 }
 
 /** buildPower with one more point in each skill of `chain`. */
@@ -427,15 +447,15 @@ export const Auto = {
     let any = false;
     for (let pass = 0; pass < 3; pass++) {
       const cur = simulate(p, () => () => {});
-      let best = -1, bs = cur * 1.004 + 0.002;
+      let best = -1, bs = cur * 1.004 + 0.002, bslot = null;
       c.bag.forEach((it, i) => {
         if (!it || it.type !== 'gear' || it.unid || (it.req || 1) > c.level) return;
-        const s = simulate(p, () => { const old = c.equip[it.slot]; c.equip[it.slot] = it; return () => { c.equip[it.slot] = old; }; });
-        if (s > bs) { bs = s; best = i; }
+        const f = fitScore(p, it);
+        if (f.s > bs) { bs = f.s; best = i; bslot = f.slot; }
       });
       if (best < 0) break;
       const it = c.bag[best];
-      equipFromBag(best);
+      equipFromBag(best, bslot);
       G.ui.log(`Auto-play equipped <span style="color:${itemColor(it)}">${escapeHtml(itemName(it))}</span>.`, '#8fe0ff');
       any = true;
     }
@@ -495,7 +515,7 @@ export const Auto = {
   isUpgrade(it) {
     const p = G.player, c = G.char;
     const cur = simulate(p, () => () => {});
-    return simulate(p, () => { const old = c.equip[it.slot]; c.equip[it.slot] = it; return () => { c.equip[it.slot] = old; }; }) > cur * 1.004 + 0.002;
+    return fitScore(p, it).s > cur * 1.004 + 0.002;
   },
   /** Index of the cheapest sellable bag item worth less than `than`, or -1. */
   worstBag(than) {
@@ -1124,7 +1144,7 @@ export const Auto = {
         const top = Math.max(0, ...SLOTS.flatMap((s) => (c.equip[s] ? c.equip[s].gems.map((g) => g.tier) : [])), ...c.bag.filter((b) => b && b.type === 'gem').map((b) => b.tier));
         if (bagFree(c) > 15 || GEMS[it.gem].special || it.tier >= top - 1) return;
       } else if (it.type === 'gear' && (it.req || 1) > c.level && (it.req || 1) <= c.level + 6 && it.rarity >= 2 && !future[it.slot]) {
-        const s = simulate(p, () => { const old = c.equip[it.slot]; c.equip[it.slot] = it; return () => { c.equip[it.slot] = old; }; });
+        const s = fitScore(p, it).s;
         if (s > simulate(p, () => () => {}) * 1.02) { future[it.slot] = true; return; }
       }
       // gems socketed in gear we're selling: pry them out when that's cheap compared to their worth
@@ -1168,7 +1188,7 @@ export const Auto = {
         if (!it || it.type !== 'gear' || (it.req || 1) > c.level) return;
         const price = itemValue(it);
         if (price > this.budget(0.85)) return;
-        const gain = simulate(p, () => { const old = c.equip[it.slot]; c.equip[it.slot] = it; return () => { c.equip[it.slot] = old; }; }) - cur;
+        const gain = fitScore(p, it).s - cur;
         if (gain < 0.012) return;
         const v = gain / (0.3 + price / Math.max(1, c.gold));
         if (v > bv) { bv = v; best = i; }
@@ -1181,16 +1201,9 @@ export const Auto = {
 
   gemShop() {
     const p = G.player, c = G.char;
-    // fuse triples, best tiers first
-    for (let guard = 0; guard < 8; guard++) {
-      const i = c.bag.findIndex((b) => b && b.type === 'gem' && (b.count || 1) >= 3 && b.tier < 5 && Math.round(80 * Math.pow(2.2, b.tier)) <= this.budget(0.3));
-      if (i < 0) break;
-      const b = c.bag[i], cost = Math.round(80 * Math.pow(2.2, b.tier));
-      c.gold -= cost; b.count -= 3;
-      if (b.count <= 0) c.bag[i] = null;
-      addToBag(c, makeGem(b.gem, b.tier + 1));
-      G.ui.log(`Auto-play fused three gems into a better one.`, '#c8f0ff');
-    }
+    // the Gem Forge: fuse every triple it can afford, lowest grades first
+    const fused = fuseAll(c, this.budget(0.3));
+    if (fused) G.ui.log(`Auto-play fused ${fused} gem${fused > 1 ? 's' : ''} at the Gem Forge.`, '#c8f0ff');
     // buy gems for empty sockets when the bag has none that help
     const empty = SLOTS.reduce((a, s) => a + (c.equip[s] ? c.equip[s].sockets - c.equip[s].gems.length : 0), 0);
     for (let k = 0; k < empty; k++) {
@@ -1225,6 +1238,7 @@ export const Auto = {
       G.ui.log(`Auto-play had a socket added to ${escapeHtml(itemName(it))}.`, '#c8f0ff');
     }
     this.socketGems();
+    this.buyGear(Vendor.stock.rings || []); // the jeweler's rings: augments for the bar's skills
     changed();
   },
 
@@ -1277,7 +1291,7 @@ export const Auto = {
         const v = it ? it.ilvl * (1 + it.rarity * 0.4) : -1;
         if (v < low) { low = v; slot = s; }
       }
-      const btn = [...document.querySelectorAll('.panel[data-panel="vendor"] .btn')].find((b) => b.textContent.startsWith({ weapon: 'Weapon', offhand: 'Off-hand', head: 'Head', body: 'Body', hands: 'Hands', legs: 'Legs', feet: 'Feet' }[slot]));
+      const btn = [...document.querySelectorAll('.panel[data-panel="vendor"] .btn')].find((b) => b.textContent.startsWith({ weapon: 'Weapon', offhand: 'Off-hand', head: 'Head', body: 'Body', hands: 'Hands', legs: 'Legs', feet: 'Feet' }[slot] || 'Ring'));
       if (!btn || btn.disabled) break;
       btn.click();
       this.optimizeGear();
