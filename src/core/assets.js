@@ -2,6 +2,7 @@
 import { makeCanvas, recolor, scaleImage } from './util.js';
 import { TW } from './view.js';
 import { loadEnemyArt } from './enemyart.js';
+import { preloadSong } from './audio.js';
 
 export const CLASS_IDS = [
   'paladin', 'ranger', 'wizard', 'necromancer',
@@ -37,8 +38,10 @@ async function loadJSON(src) {
 
 export async function loadAssets(progress) {
   const jobs = [];
-  let done = 0;
-  const track = (p) => p.then((v) => { done++; progress && progress(done / jobs.length); return v; });
+  let done = 0, song = 0;   // the title song is ~3.6 MB, so it counts as a third of the bar by its own bytes
+  const report = () => progress && progress(done / jobs.length * 2 / 3 + song / 3);
+  const track = (p) => p.then((v) => { done++; report(); return v; });
+  jobs.push(track(preloadSong('hymn_of_the_abyss', (k) => { song = k; report(); }).then(() => { song = 1; })));
   for (const id of CLASS_IDS) jobs.push(track(loadImage(`assets/sprites/classes/${id}.webp`).then((img) => { A.classes[id] = img; })));
   jobs.push(track(loadImage('assets/ui/hud.webp').then((i) => { A.hud = i; })));
   jobs.push(track(loadJSON('assets/ui/hud.json').then((j) => { A.hudGeo = j; })));

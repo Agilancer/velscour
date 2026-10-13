@@ -315,6 +315,19 @@ const MUSIC = {
   town: { songs: ['empty_school'], gap: [30, 70], vol: 0.75 },
 };
 let music = null;   // { kind, def, deck, queue, next (ac time of next song or 0), gen }
+const songUrls = {};   // song -> blob URL of a fully downloaded copy (preloadSong)
+
+/** Download a song completely before the title shows, so its intro never waits on the network. Never rejects. */
+export function preloadSong(song, progress) {
+  return fetch(`${AUDIO}music/${song}.mp3`).then(async (r) => {
+    if (!r.ok) throw new Error(r.status);
+    const total = +r.headers.get('content-length') || 0, rd = r.body && r.body.getReader();
+    if (!rd || !total) { songUrls[song] = URL.createObjectURL(await r.blob()); return; }
+    const parts = []; let got = 0;
+    for (;;) { const { done, value } = await rd.read(); if (done) break; parts.push(value); got += value.length; progress && progress(Math.min(1, got / total)); }
+    songUrls[song] = URL.createObjectURL(new Blob(parts, { type: 'audio/mpeg' }));
+  }).catch((e) => console.warn('song preload failed, it will stream:', song, e));
+}
 
 /** Start a music kind (no-op if it's already the current one). opts.delay: seconds before the first song starts. */
 export function playMusic(kind, opts = {}) {
@@ -340,7 +353,7 @@ function startSong(at = 0) {
   m.song = m.queue.shift();
   if (manifest && !(m.song in manifest.music)) { m.song = null; m.next = 0; return; }
   const deck = m.deck;
-  deck.load(m.song, `${AUDIO}music/${m.song}.mp3`, false, at || def.at || 0);
+  deck.load(m.song, songUrls[m.song] || `${AUDIO}music/${m.song}.mp3`, false, at || def.at || 0);
   deck.g.gain.cancelScheduledValues(ac.currentTime); deck.g.gain.setValueAtTime(0, ac.currentTime);
   deck.fade(def.vol, at || def.at ? 0.4 : 0.05);
   m.next = 0;

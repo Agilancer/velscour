@@ -283,6 +283,8 @@ button { font-family: var(--font-head); }
 .title-screen .title-tag, .title-screen .title-menu, .title-screen .title-foot { z-index: 3; transition: opacity .9s ease-out; }
 .title-screen:not(.title-lit) .title-tag, .title-screen:not(.title-lit) .title-menu, .title-screen:not(.title-lit) .title-foot { opacity: 0; }
 .title-gate { position: absolute; z-index: 3; bottom: 18%; left: 0; right: 0; text-align: center; font: 400 16px var(--font-head); letter-spacing: 6px; color: #8a2a1c; text-transform: uppercase; pointer-events: none; opacity: 0; transition: opacity .6s; }
+.title-screen { overflow: hidden; justify-content: safe center; padding: max(4vh, env(safe-area-inset-top)) env(safe-area-inset-right) max(2vh, env(safe-area-inset-bottom)) env(safe-area-inset-left); }
+.title-screen .title-logo { flex: 0 1 auto; min-height: 0; margin-top: 3vh; }
 .title-gated .title-gate { opacity: 1; animation: gate-pulse 2.6s ease-in-out infinite; }
 @keyframes gate-pulse { 50% { color: #d0402a; text-shadow: 0 0 12px #a01808; } }
 .screen-title { margin: 6px 0 2px; font: 700 22px var(--font-head); color: var(--gold-bright); letter-spacing: 3px; text-align: center; }
@@ -350,7 +352,9 @@ button { font-family: var(--font-head); }
 #rotate-hint { position: absolute; inset: 0; z-index: 80; background: rgba(0,0,0,.92); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; font-size: 18px; }
 #rotate-hint div { font-size: 64px; color: var(--gold); animation: spin 2s infinite ease-in-out; }
 @keyframes spin { 50% { transform: rotate(90deg); } }
-#loading { position: absolute; inset: 0; z-index: 90; background: #050303; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; font: 700 16px var(--font-head); color: var(--gold); letter-spacing: 2px; }
+#loading { position: absolute; inset: 0; z-index: 90; background: #050303; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 0 16px; text-align: center; font: 700 clamp(13px, 3.6vmin, 16px) var(--font-head); color: var(--gold); letter-spacing: 2px; }
+#loading-bar { width: min(320px, 70vw); height: 6px; border: 1px solid #3a2410; border-radius: 3px; background: #120a06; overflow: hidden; }
+#loading-fill { height: 100%; width: 0; background: linear-gradient(90deg, #8a1c06, #e2502a, #ffb428); box-shadow: 0 0 8px #e2502a; transition: width .2s; }
 .spinner { width: 46px; height: 46px; border: 4px solid #3a2410; border-top-color: #e2502a; border-radius: 50%; animation: spin2 .9s linear infinite; }
 @keyframes spin2 { to { transform: rotate(360deg); } }
 .quest-log { min-width: min(340px, 86vw); }
@@ -415,15 +419,28 @@ body.touch .item-detail, body.touch .skill-detail { width: 230px; font-size: 12p
 }
 @media (max-width: 600px) {
   .class-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .class-card { height: min(24vh, 34vw); }
+  .title-menu { min-width: min(260px, 86vw); }
   .slot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .slot-hero { height: 24vh; }
 }
 @media (max-height: 500px) {
   .title-logo { max-height: 34vh; }
+  .title-screen .title-logo { max-height: 30vh; margin-top: 5vh; }
+  .title-screen .title-tag { font-size: 11px; letter-spacing: 2px; margin: 2px 0 8px; }
+  .title-screen .title-menu { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 6px 8px; max-width: min(640px, 94vw); min-width: 0; }
+  .title-screen .title-menu .btn { font-size: 14px; padding: 6px 14px; }
+  .title-screen .title-menu .btn.big { font-size: 17px; padding: 7px 20px; flex: 1 1 40%; }
+  .title-screen .title-menu .btn.big span { font-size: 11px !important; }
+  .title-gate { bottom: 14%; font-size: 13px; }
+  .class-screen .btn.big { font-size: 17px; padding: 6px 22px; }
+  .class-screen .name-input { padding: 5px 8px; font-size: 14px; }
+  .class-screen .btn { padding-top: 5px; padding-bottom: 5px; }
+  .class-info { gap: 10px; padding: 0 12px; }
   .title-foot { display: none; }
   .screen-title { font-size: 16px; margin: 2px 0 0; }
-  .class-card { height: 21vh; }
-  .class-big { height: 27vh; width: 18vh; }
+  .class-card { height: 20vh; }
+  .class-big { height: 25vh; width: 17vh; }
   .class-screen .row { margin: 2px 0 6px !important; }
   .slot-info { font-size: 11px; min-height: 0; }
   .slot-btns .btn { padding: 2px 7px; font-size: 11px; }
