@@ -1368,7 +1368,7 @@ export function buildSummon(owner, def, key, x, y, dmg, hp, life) {
   else { m.sprite = look.sprite; m.pal = look.pal; m.px = look.px || 2.3; }
   const art = Array.isArray(look.art) ? pick(look.art) : look.art; // pets: a random one of the list
   if (art && ART_BY_ID[art]) {
-    m.art = art; m.swap = null; m.artH = look.h || ART_BY_ID[art].h; m.artRef = look.ref || 0;
+    m.art = art; m.swap = look.swap || null; m.artH = look.h || ART_BY_ID[art].h; m.artRef = look.ref || 0;
     m.hop = !!look.hop; m.idleArt = look.idle && look.idle[art];
     if (look.art === BLUE_SLIMES) m.riseArt = pick(BLUE_PUDDLES); // rises out of a puddle
   }
@@ -1397,7 +1397,7 @@ export function createSummon(p, sk, L, x, y, dmgRange, corpse) {
   }
   // enforce per-skill maximum and a global cap
   const mine = w.creatures.filter((c) => c.summon && c.skillId === sk.id && !c.dead);
-  const max = sk.m.max || (sk.m.dur ? 99 : (sk.m.n || 1));
+  const max = (sk.m.max || (sk.m.dur ? 99 : (sk.m.n || 1))) + (sk.m.grow ? Math.floor((L - 1) / 5) : 0);
   while (mine.length >= max) { const old = mine.shift(); old.dead = true; burst(old.x, old.y, 20, old.el || 'arcane', 8, 2); }
   const all = w.creatures.filter((c) => c.summon && !c.dead && c.owner === p);
   if (all.length >= 40) all[0].dead = true;

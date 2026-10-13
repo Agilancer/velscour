@@ -9,6 +9,7 @@ import { explosionFx, hitSpark } from '../gfx/shapes.js';
 import { GORE } from '../data/enemies.js';
 import { dropLoot } from './loot.js';
 import { augHit } from './augments.js';
+import { classHitFx } from '../gfx/classfx.js';
 
 const PLAYER_RES = { fire: 'fire', cold: 'cold', light: 'light', poison: 'poison', acid: 'poison' };
 
@@ -81,6 +82,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
 
   const byHero = !tgt.isPlayer && tgt.team !== 'player' && (fromPlayer || (src && src.team === 'player'));
   if (byHero) Meter.add(Math.min(dmg, Math.max(0, tgt.hp)));
+  if (byHero && src && src.isPlayer && o.sk && !o.dot) classHitFx(src, tgt, o.sk, el); // the class's own splash (gfx/classfx.js)
   tgt.hp -= dmg;
   tgt.flash = 0.12;
   if (tgt.onDamaged && !o.dot) tgt.onDamaged(src, dmg);

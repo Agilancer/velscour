@@ -313,26 +313,26 @@ export const SKILLDATA = {
     ],
   ],
   lancer: [
-    [
-      'Spear Thrust|melee|phys|thrust|free wc=1.1 range=1.4', 'Shield Wall|buff|phys|shield|buff=block,armor amt=30 dur=20 cd=25', 'Shield Slam|melee|phys|smash|stun knock', 'Brace|buff|phys|shield|buff=armor amt=60 dur=10 cd=20',
-      'Impale|melee|blood|thrust|range=1.6 bleed dmg=1.5', 'Phalanx Charge|dash|phys|charge|range=1.3 knock', 'Sweep the Leg|melee|phys|slash|arc=200 stun', 'Tortoise|buff|phys|shield|buff=res amt=40 dur=15 cd=25',
-      'Spear Wall|wall|phys|spike|block dur=6', 'Skewer Line|melee|phys|thrust|range=2.4 dmg=1.4', 'Shield Bash Nova|nova|phys|shield|stun r=1.2', 'Unbreakable|buff|phys|shield|buff=armor,res,block amt=40 dur=12 cd=40',
-      'Hoplite Rush|dash|phys|charge|range=1.8 dmg=1.8 cd=3', 'Spear Cyclone|whirl|phys|spear|dur=3', 'Ironclad|buff|phys|transform|transform buff=armor,dmg amt=50 dur=15 cd=45', 'Pinning Strike|melee|phys|thrust|range=1.6 stun dmg=2',
-      'Spartan Kick|melee|phys|smash|knock dmg=3 r=1.4 cd=3', 'Legion Phalanx|summon|phys|hoplite|sum=hoplite n=4 dur=20 cd=45', 'Aegis Nova|nova|holy|shield|n=3 r=2.2 stun cd=8', 'Line Breaker|fissure|phys|earth|range=2.2 dmg=2.4 cd=4',
+    [ // Energy Lance: a huge spear of raw element for every attack ('lance'), some of them charges
+      'Lance Thrust|melee|light|thrust|free wc=1.1 range=1.5 lance', 'Flame Lance|melee|fire|thrust|range=1.8 burn lance', 'Lance Charge|dash|light|charge|range=1.2 knock lance', 'Frost Lance|melee|cold|thrust|range=1.8 slow lance',
+      'Thunder Lance|melee|light|thrust|range=2 chain=3 lance', 'Inferno Charge|dash|fire|charge|range=1.4 exp lance', 'Lance of Light|beam|holy|laser|dur=0.35 range=0.7 dmg=1.4 lance', 'Glacial Pike|melee|cold|thrust|range=2.2 freeze dmg=1.3 lance',
+      'Storm Lance|beam|light|laser|dur=0.4 range=0.9 dmg=1.6 lance', 'Comet Charge|dash|fire|charge|range=1.6 exp dmg=1.5 lance', 'Void Lance|melee|shadow|thrust|range=2.4 dmg=1.5 lance', 'Venom Pike|melee|poison|thrust|range=2.2 poison exp lance',
+      'Lance Barrage|melee|arcane|thrust|n=4 dmg=0.7 range=2 lance', 'Blizzard Charge|dash|cold|charge|n=2 range=1.6 freeze lance', 'Sunspear|beam|holy|laser|dur=0.6 range=1.1 dmg=2 cd=3 lance', 'Blood Lance|melee|blood|thrust|range=2.4 bleed leech dmg=1.6 lance',
+      'Dragon Lance|beam|fire|laser|dur=0.8 range=1.3 dmg=2.4 cd=4 lance', 'Omni-Charge|dash|light|charge|n=6 range=1.2 dmg=1.5 cd=6 lance', 'Lance of Ruin|melee|shadow|thrust|range=3 dmg=3 exp cd=3 lance', 'Prismatic Lance|beam|arcane|laser|dur=1 range=1.5 dmg=3 cd=5 lance prism',
     ],
-    [
-      'Javelin|proj|phys|javelin|pierce', 'Power Throw|proj|phys|javelin|dmg=1.5 knock', 'Twin Javelins|proj|phys|javelin|n=2 spread=15', 'Poison Javelin|proj|poison|javelin|poison',
-      'Lightning Javelin|proj|light|javelin|chain=4', 'Javelin Fan|proj|phys|javelin|n=5 spread=50', 'Plague Javelin|proj|poison|javelin|exp poison r=1.4', 'Frost Javelin|proj|cold|javelin|pierce freeze',
-      'Charged Strike|melee|light|thrust|chain=5', 'Javelin Rain|rain|phys|javelin|n=16 r=1.5', 'Fire Javelin|proj|fire|javelin|exp burn r=1.3', 'Splitting Javelin|proj|phys|javelin|split pierce',
-      'Lightning Fury|proj|light|javelin|exp chain=6 dmg=1.4', 'Storm of Javelins|rain|light|javelin|n=24 r=1.8', 'Seeking Javelins|proj|phys|javelin|n=4 home spread=60', 'Meteor Javelin|aoe|fire|meteor|r=1.8 dmg=2.4 delay=0.7',
-      'Thunderbolt|strike|light|lightning|n=10 r=1.4 cd=6', 'Javelin Apocalypse|rain|phys|javelin|n=50 r=2.2 cd=7', 'Gae Bolg|proj|blood|javelin|split pierce dmg=2.6 bleed cd=3', "Valkyrie's Spear|proj|holy|spear|pierce dmg=3 r=2 cd=4",
+    [ // Bulwark: tower shields ('shields': 1 more every 2 ranks, up to 10) circle and batter foes; armor and walls
+      'Tower Shield|orbit|phys|tshield|shields dur=20 cd=6', 'Shield Wall|buff|phys|shield|buff=block,armor amt=30 dur=20 cd=25', 'Shield Slam|melee|phys|smash|stun knock', 'Brace|buff|phys|shield|buff=armor amt=60 dur=10 cd=20',
+      'Storm Bulwark|orbit|light|tshield|shields n=2 dur=20 cd=6 r=1.1', 'Tortoise|buff|phys|shield|buff=res amt=40 dur=15 cd=25', 'Shield Bash Nova|nova|phys|shield|stun r=1.2', 'Iron Skin|buff|phys|shield|buff=armor,life amt=30 dur=20 cd=30',
+      'Burning Aegis|orbit|fire|tshield|shields n=3 dur=20 cd=6 burn r=1.2', 'Shield Throw|proj|phys|disc|bounce=4', 'Unbreakable|buff|phys|shield|buff=armor,res,block amt=40 dur=12 cd=40', 'Bulwark Slam|nova|phys|shock|r=1.6 stun knock',
+      'Frost Rampart|orbit|cold|tshield|shields n=4 dur=20 cd=6 slow r=1.3', 'Spear Wall|wall|phys|spike|block dur=6', 'Ironclad|buff|phys|transform|transform buff=armor,dmg amt=50 dur=15 cd=45', 'Aegis Nova|nova|holy|shield|n=3 r=2.2 stun cd=8',
+      'Holy Citadel|orbit|holy|tshield|shields n=5 dur=25 cd=6 r=1.4 dmg=1.4', 'Shield Storm|orbit|arcane|tshield|shields n=5 spiral dur=4 cd=5 dmg=1.6', 'Living Fortress|buff|phys|aura|buff=armor,res,regen amt=60 dur=15 cd=50', 'Bastion of Ten|orbit|light|tshield|shields n=10 dur=30 cd=10 r=1.6 dmg=2',
     ],
-    [
-      'War Banner|summon|holy|banner|sum=banner dur=20 cd=20', 'Rally|heal|holy|light|amt=20 party cd=12', 'Taunt|curse|phys|shout|curse=amp at=self', 'Valor|buff|holy|aura|buff=dmg amt=15 dur=30 cd=30 party',
-      'Inspire|buff|holy|aura|buff=as amt=25 dur=30 cd=30 party', 'Challenge|curse|phys|shout|curse=weaken at=self r=1.4', 'Battle Standard|summon|fire|banner|sum=firebanner dur=20 cd=20', 'Second Wind|heal|phys|light|amt=35 cd=20',
-      'Hold the Line|buff|phys|shield|buff=armor,res amt=35 party dur=20 cd=30', 'Squire|summon|phys|hoplite|sum=squire max=2', 'Glorious Charge|dash|holy|charge|range=1.6 exp', 'Shout of Valor|nova|holy|sonic|stun r=1.4',
-      'Heroic Presence|buff|holy|aura|pulse buff=dmg amt=25 dur=20 cd=30 party', 'Captain|summon|holy|hoplite|sum=captain max=1 cd=30', 'Valiant Leap|leap|holy|holy|r=1.6 dmg=1.8', 'Last Stand|buff|blood|aura|buff=regen,dmg amt=50 dur=10 cd=60',
-      'Army of Valor|summon|holy|hoplite|sum=hoplite n=6 dur=25 cd=60', 'Banner of Kings|summon|holy|banner|sum=kingbanner dur=25 cd=40', "Hero's Ascension|buff|holy|transform|transform buff=dmg,as,armor amt=50 dur=20 cd=60", 'Divine Spear Storm|strike|holy|spear|n=14 cd=8',
+    [ // Knight Order: knights that follow and fight for him ('grow': one more every 5 ranks), banners and battle cries
+      'Squire Knight|summon|phys|knight|sum=kn_squire n=1 max=1 grow', 'Rally|heal|holy|light|amt=20 party cd=12', 'War Banner|summon|holy|banner|sum=banner dur=20 cd=20', 'Taunt|curse|phys|shout|curse=amp at=self',
+      'Lance Knight|summon|light|knight|sum=kn_lance n=1 max=1 grow', 'Valor|buff|holy|aura|buff=dmg amt=15 dur=30 cd=30 party', 'Glorious Charge|dash|holy|charge|range=1.6 exp lance', 'Hold the Line|buff|phys|shield|buff=armor,res amt=35 party dur=20 cd=30',
+      'Flame Templar|summon|fire|knight|sum=kn_flame n=1 max=1 grow', 'Frost Warden|summon|cold|knight|sum=kn_frost n=1 max=1 grow', 'Battle Standard|summon|fire|banner|sum=firebanner dur=20 cd=20', 'Shout of Valor|nova|holy|sonic|stun r=1.4',
+      'Knight Captain|summon|holy|knight|sum=kn_captain max=1 cd=20', 'Storm Paladin|summon|light|knight|sum=kn_storm n=1 max=1 grow', 'Heroic Presence|buff|holy|aura|pulse buff=dmg amt=25 dur=20 cd=30 party', 'Valiant Leap|leap|holy|holy|r=1.6 dmg=1.8',
+      'Knights of the Round|summon|holy|knight|sum=kn_round n=6 dur=30 cd=50', 'Banner of Kings|summon|holy|banner|sum=kingbanner dur=25 cd=40', 'Grand Marshal|summon|arcane|knight|sum=kn_marshal max=1 cd=40', "Hero's Ascension|buff|holy|transform|transform buff=dmg,as,armor amt=50 dur=20 cd=60",
     ],
   ],
   dragon_knight: [

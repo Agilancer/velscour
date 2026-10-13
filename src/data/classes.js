@@ -80,10 +80,10 @@ export const CLASSES = {
     desc: 'A dashing knight whose blades always come back. Ricochets, swirling sword storms and gale cyclones.',
   },
   lancer: {
-    name: 'Lancer', primary: 'str', base: { str: 26, dex: 20, vit: 26, int: 8 }, life: 78, mana: 25, lifeLvl: 8, manaLvl: 1.5,
+    name: 'Lancer', primary: 'str', base: { str: 26, dex: 18, vit: 30, int: 8 }, life: 88, mana: 28, lifeLvl: 9, manaLvl: 1.6,
     weapon: 'spear', offhand: 'shield', element: 'light', color: '#c0c0d0',
-    trees: ['Phalanx', 'Javelin', 'Valor'],
-    desc: 'An iron-clad spearman. Shield walls, storms of lightning javelins and banners that rally the brave.',
+    trees: ['Energy Lance', 'Bulwark', 'Knight Order'],
+    desc: 'An unbreakable knight-captain. Huge elemental energy lances, up to ten tower shields circling him, and an order of knights at his back.',
   },
   dragon_knight: {
     name: 'Dragon Knight', primary: 'str', base: { str: 26, dex: 18, vit: 24, int: 12 }, life: 72, mana: 30, lifeLvl: 8, manaLvl: 2,

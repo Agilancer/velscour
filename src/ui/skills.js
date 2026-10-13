@@ -10,6 +10,7 @@ import { elem } from '../gfx/vfx.js';
 import { SLOT_LABELS, freeSlot } from '../data/bar.js';
 import { MAX_MASTERY, masteryNeed, masteryMul, masteryTier, TIER_NAMES } from '../game/augments.js';
 import { AUGMENTS } from '../data/rings.js';
+import { skillUp } from './skillup.js';
 
 /** A skill's mastery: level, tier, an XP bar, its damage multiplier, and the ring augments on it. */
 function masteryHtml(sk, compact) {
@@ -47,6 +48,7 @@ export function learn(sk) {
   c.skills[sk.id] = (c.skills[sk.id] || 0) + 1;
   c.skillPoints--;
   sfx('buff');
+  skillUp(sk, c.skills[sk.id]);
   if (first) {
     const free = freeSlot(c.bar);
     if (free >= 0) { c.bar[free] = sk.id; UI.log(`<b>${escapeHtml(sk.name)}</b> assigned to slot ${SLOT_LABELS[free]}.`, '#ffd860'); }
