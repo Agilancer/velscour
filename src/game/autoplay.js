@@ -816,7 +816,7 @@ export const Auto = {
       if (h.danger) { h.danger(out); continue; } // raid hazards describe their own zones
       if (h instanceof Delayed) out.push({ x: h.x, y: h.y, r: h.r + 0.45 });
       else if (h instanceof Area && h.dmg && h.dmg[1] > 0) out.push({ x: h.x, y: h.y, r: h.r + 0.3 });
-      else if (h.lob && h.exp && h.tx !== undefined) out.push({ x: h.tx, y: h.ty, r: h.exp + 0.4 });
+      else if (h.lob && h.exp && h.tx !== undefined) out.push({ x: h.tx, y: h.ty, r: h.exp + 0.4, minor: true });
     }
     for (const e of effects) {
       if (!(e instanceof Telegraph) || e.color === '#40ff60' || e.t >= e.dur) continue;
@@ -840,7 +840,10 @@ export const Auto = {
   dodgeDanger(dt) {
     const p = G.player, w = G.world, m = w.map;
     if (p.channel) return false;
-    const list = this.dangers(w);
+    let list = this.dangers(w);
+    // a lobbed shot is worth eating once or twice to close on a shooter: healthy and not melting, push through
+    const tough = p.hp > p.maxHp * 0.7 && this.hurt < 0.03 && enemyNear(w, p, 4).length < 3 && this.target && !this.target.dead && dist(p.x, p.y, this.target.x, this.target.y) > 2.2;
+    if (tough) list = list.filter((d) => !d.minor);
     if (this.dodge) {
       this.dodge.t -= dt;
       if (this.dodge.t > 0 && this.inDanger(list, p.x, p.y)) { this.setStatus('Dodging!'); this.steer(this.dodge.x, this.dodge.y); return true; }
@@ -856,6 +859,9 @@ export const Auto = {
         if (!m.circleFree(x, y, 0.3) || !m.losWide(p.x, p.y, x, y) || this.inDanger(list, x, y)) continue;
         let s = -r;
         for (const f of foes) s += Math.min(3, dist(x, y, f.x, f.y)) * 0.15;
+        // side-step toward a shooter rather than away from it, so the gap still closes
+        const t = this.target;
+        if (t && !t.dead && (t.ai === 'ranged' || t.ai === 'caster')) s -= dist(x, y, t.x, t.y) * 0.35;
         if (s > bs) { bs = s; best = [x, y]; }
       }
     }
@@ -954,6 +960,8 @@ export const Auto = {
     const bold = this.boldness();
     let reach = engageRange(SKILLS[G.char.bar[0]], t, bold);
     if (this.stall && this.stall.t > 6) reach = Math.min(reach, 1.6); // nothing is landing: walk right up to it
+    // shooters and casters: don't trade shots from the edge of range (they win that), close in to a sure hit
+    else if ((t.ai === 'ranged' || t.ai === 'caster') && p.hp > p.maxHp * 0.55) reach = Math.min(reach, Math.max(2.4, reach * (0.65 - 0.25 * bold)));
     // ranged builds back off from a crowd: later the bolder they are, and never while healthy and over-powered
     if (!melee && (near >= 3 + Math.round(bold * 3) || (near >= 1 && p.hp < p.maxHp * (0.55 - 0.2 * bold))) && this.kite(foes)) return;
     if (d > reach || !w.map.los(p.x, p.y, t.x, t.y)) this.goTo(t.x, t.y, Math.max(0.6, reach * 0.85));
@@ -1083,6 +1091,9 @@ export const Auto = {
     if (!this.nav || this.navT <= 0) this.buildNav();
     if (!this.town) this.town = { steps: this.townPlan(), i: 0, phase: 'walk', t: 0 };
     const T = this.town;
+    // skip errands with nothing to do there (a fresh hero heads straight for the portal); checked on arrival at
+    // each step, so gold from the first sale still counts
+    while (T.phase === 'walk' && T.t === 0 && T.steps[T.i] && T.steps[T.i].want && !this.wants(T.steps[T.i].want)) T.i++;
     const step = T.steps[T.i];
     if (!step) {
       // done: through the portal
@@ -1130,16 +1141,30 @@ export const Auto = {
     const c = G.char;
     const steps = [];
     if (c.stash && c.stash.some((b) => b && (b.type === 'gem' || (b.req || 1) <= c.level))) steps.push({ stash: true, label: 'Checking the storage chest', fn: () => this.unstash() });
-    steps.push({ vendor: 'weapons', label: 'Selling loot', fn: () => { this.sellJunk(); this.buyGear(Vendor.stock.weapons); } });
-    steps.push({ vendor: 'alchemist', label: 'Buying potions', fn: () => this.buyPotions() });
-    steps.push({ vendor: 'armor', label: 'Browsing armor', fn: () => this.buyGear(Vendor.stock.armor) });
+    const gear = (k) => () => this.gearGain(Vendor.stock[k]);
+    steps.push({ vendor: 'weapons', label: 'Selling loot', want: () => c.bag.some((b) => b && b.type !== 'gem') || this.gearGain(Vendor.stock.weapons), fn: () => { this.sellJunk(); this.buyGear(Vendor.stock.weapons); } });
+    steps.push({ vendor: 'alchemist', label: 'Buying potions', want: () => this.potionsWanted(), fn: () => this.buyPotions() });
+    steps.push({ vendor: 'armor', label: 'Browsing armor', want: gear('armor'), fn: () => this.buyGear(Vendor.stock.armor) });
     if (c.bag.some((b) => b && b.type === 'gem') || c.gold > 2000) steps.push({ vendor: 'gems', label: 'Visiting the gem merchant', fn: () => this.gemShop() });
-    steps.push({ vendor: 'socket', label: 'Visiting the jeweler', fn: () => this.jeweler() });
-    steps.push({ vendor: 'upgrade', label: 'Upgrading gear', fn: () => this.blacksmith() });
-    steps.push({ vendor: 'enchant', label: 'Enchanting gear', fn: () => this.enchanter() });
-    steps.push({ vendor: 'gamble', label: 'Gambling', fn: () => { this.gamble(); this.sellJunk(); } });
-    steps.push({ stash: true, label: 'Stashing gems and gear for later', fn: () => this.stashExtras() });
+    steps.push({ vendor: 'socket', label: 'Visiting the jeweler', want: () => c.bag.some((b) => b && b.type === 'gem') || this.equipped().some((it) => it.sockets < it.maxSockets && socketCost(it) <= this.budget(0.3)) || this.gearGain(Vendor.stock.rings), fn: () => this.jeweler() });
+    steps.push({ vendor: 'upgrade', label: 'Upgrading gear', want: () => this.equipped().some((it) => (it.upg || 0) < 10 && upgradeCost(it) <= this.budget(0.45)), fn: () => this.blacksmith() });
+    steps.push({ vendor: 'enchant', label: 'Enchanting gear', want: () => this.equipped().some((it) => it.rarity >= 1 && enchantCost(it, true) <= this.budget(0.2)), fn: () => this.enchanter() });
+    steps.push({ vendor: 'gamble', label: 'Gambling', want: () => c.gold >= Math.round(180 * Math.pow(1.065, Math.max(c.level, c.depth || 1))) * 8 && bagFree(c) >= 3, fn: () => { this.gamble(); this.sellJunk(); } });
+    steps.push({ stash: true, label: 'Stashing gems and gear for later', want: () => c.bag.some((b) => b && (b.type === 'gem' || (b.type === 'gear' && (b.req || 1) > c.level && b.rarity >= 2))), fn: () => this.stashExtras() });
     return steps;
+  },
+  wants(f) { try { return !!f(); } catch (e) { return true; } },
+  equipped() { return SLOTS.map((s) => G.char.equip[s]).filter(Boolean); },
+  /** Is anything in this shop list an affordable upgrade (same test as buyGear)? */
+  gearGain(list) {
+    const p = G.player, c = G.char;
+    if (!list || !bagFree(c)) return false;
+    const cur = simulate(p, () => () => {});
+    return list.some((it) => it && it.type === 'gear' && (it.req || 1) <= c.level && itemValue(it) <= this.budget(0.85) && fitScore(p, it).s - cur >= 0.012);
+  },
+  potionsWanted() {
+    const c = G.char;
+    return ['hp', 'mp', 'rejuv'].some((k) => c.potions[k] < (k === 'mp' ? 5 : POT_TARGET[k]) && c.gold >= potionPrice(k, c) && (k === 'hp' || c.gold - potionPrice(k, c) > potionPrice('hp', c) * 4));
   },
   /** Storage chest: take out the gems (for the jeweler and fusing) and any stored gear the hero can now wear. */
   unstash() {
