@@ -1399,9 +1399,9 @@ export function createSummon(p, sk, L, x, y, dmgRange, corpse) {
   const mine = w.creatures.filter((c) => c.summon && c.skillId === sk.id && !c.dead);
   const max = (sk.m.max || (sk.m.dur ? 99 : (sk.m.n || 1))) + (sk.m.grow ? Math.floor((L - 1) / 5) : 0);
   while (mine.length >= max) { const old = mine.shift(); old.dead = true; burst(old.x, old.y, 20, old.el || 'arcane', 8, 2); }
-  if (key.startsWith('kn_')) { // the Lancer's Knight Order: at most 9 knights in the field
+  if (key.startsWith('kn_')) { // the Lancer's Knight Order: at most 4 knights in the field
     const kn = w.creatures.filter((c) => c.summon && !c.dead && c.owner === p && c.summonKey && c.summonKey.startsWith('kn_'));
-    while (kn.length >= 9) { const old = kn.shift(); old.dead = true; burst(old.x, old.y, 20, old.el || 'arcane', 8, 2); }
+    while (kn.length >= 4) { const old = kn.shift(); old.dead = true; burst(old.x, old.y, 20, old.el || 'arcane', 8, 2); }
   }
   const all = w.creatures.filter((c) => c.summon && !c.dead && c.owner === p);
   if (all.length >= 40) all[0].dead = true;
