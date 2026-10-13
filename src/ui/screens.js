@@ -190,7 +190,7 @@ export function victoryScreen(onContinue) {
   s.innerHTML = `<img class="title-logo" src="assets/ui/logo.webp" style="max-height:28vh"><div class="death-title" style="color:#ffb030;text-shadow:0 0 30px #f80">VELSCOUR HAS FALLEN</div>
   <p style="font-size:18px;text-align:center;max-width:620px;padding:0 12px">${escapeHtml(c.name)} the ${CLASSES[c.classId].name} has slain the Demon Lord at the bottom of the world.</p>
   <p class="dim">Level ${c.level} · ${fmtInt(c.kills || 0)} kills · ${c.deaths || 0} deaths</p>
-  <p class="dim" style="text-align:center;max-width:560px">The abyss stirs still. Endless Torment depths beyond 100 now await the truly mad.</p>`;
+  <p class="dim" style="text-align:center;max-width:560px">The abyss stirs still. Endless Torment depths beyond 500 now await the truly mad.</p>`;
   const b = el('button', 'btn big', 'Continue');
   b.onclick = () => { sfx('ui'); hide(); onContinue(); };
   s.appendChild(b);
@@ -243,7 +243,11 @@ export function helpDialog() {
     <div><b style="color:#ffe2a0">Goal</b></div>
     <div>Enter the portal in town. Find the exit of each depth — it is sealed until its guardian falls.</div>
     <div>Die and you restart at Depth 1, keeping everything else.</div>
-    <div>Reach Depth 100 and slay Demon Lord Velscour.</div>
+    <div>Reach Depth 500 and slay Demon Lord Velscour.</div>
+    <div><b style="color:#ffe2a0">Growing stronger</b></div>
+    <div><b>Rings</b> (four slots): each carries augments that change a skill, a kind of skill or every skill — burning or venomous hits, chain lightning, a storm tether to your orbiting weapons, meteors, extra projectiles and more. The Jeweler sells them; guardians drop them.</div>
+    <div><b>Skill mastery</b>: every skill levels from 1 to 1000 as you use it and kill with it, growing stronger and its effects bigger.</div>
+    <div><b>Gem Forge</b> (Gem Merchant): fuse three gems into the next grade, or refine one, up to Eternal.</div>
   </div>`;
   UI.dialog({ title: 'How to Play', html, buttons: [{ label: 'Got it' }] });
 }

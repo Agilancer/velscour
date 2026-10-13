@@ -1,4 +1,4 @@
-// Builds the Depth 100 throne arena (DEMON LORD VELSCOUR) and a normal Depth 37 guardian,
+// Builds the Depth 500 throne arena (DEMON LORD VELSCOUR) and a normal Depth 37 guardian,
 // lets each fight for a few seconds with god mode on, and prints the boss setup.
 const { openGame, report } = require('./harness');
 
@@ -9,9 +9,9 @@ const { openGame, report } = require('./harness');
     await game.newChar('dragon_knight', 'Hero');
     document.querySelectorAll('.screen').forEach((s) => s.remove()); G.ui.modalCount = 0;
     const { BIOME_BY_ID } = await import('/src/data/biomes.js');
-    G.char.depth = 100; G.char.level = 90;
+    G.char.depth = 500; G.char.level = 250;
     G.player.recompute(); G.player.hp = G.player.maxHp;
-    game.buildDungeon(100, BIOME_BY_ID.throne);
+    game.buildDungeon(500, BIOME_BY_ID.throne);
     const b = G.world.boss;
     G.player.x = b.x; G.player.y = b.y + 6;
     G.godMode = true;

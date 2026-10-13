@@ -3,12 +3,14 @@ import { G } from '../state.js';
 import { rand, chance, randi, TAU, pick, clamp } from '../core/util.js';
 import { isoX, isoY, camera } from '../core/view.js';
 import { sfx } from '../core/audio.js';
-import { spawn, glowSprite, sparkle, floatText, addLight } from '../gfx/vfx.js';
-import { pixelSprite, gemIcon, goldIcon } from '../gfx/pixelart.js';
+import { spawn, glowSprite, sparkle, floatText, addLight, elem } from '../gfx/vfx.js';
+import { pixelSprite, gemIcon, goldIcon, ringIcon } from '../gfx/pixelart.js';
 import { rollItem, rollGem, itemName, itemColor, MATERIALS, GEMS, potionItem, RARITY_COLORS } from '../data/items.js';
 import { potionIcon } from '../core/assets.js';
 import { artIcon } from '../core/classart.js';
 import { gearIcon } from '../core/gearart.js';
+import { AUGMENTS } from '../data/rings.js';
+import { depthLevel } from '../data/depth.js';
 
 export class GroundItem {
   constructor(x, y, kind, data = {}) {
@@ -109,6 +111,7 @@ const iconCache = new Map();
 export function itemIcon(item, size = 48) {
   if (item.type === 'gem') return gemIcon(item.gem, GEMS[item.gem].color, item.tier, size);
   if (item.type === 'potion') return potionIcon(item.color, size);
+  if (item.slot === 'ring') return ringIcon(MATERIALS[item.tier].color, elem((AUGMENTS[(item.aug && item.aug[0] || {}).id] || {}).el || 'arcane').glow, item.rarity, size);
   if (item.art) { const a = artIcon(item, size); if (a) return a; }
   { const g = gearIcon(item, size); if (g) return g; }
   const key = `${item.icon}|${item.tier}|${item.rarity}|${item.base}`;
@@ -150,6 +153,8 @@ export function dropLoot(world, m) {
     const ilvl = lvl + (rank === 'boss' ? 3 : rank === 'normal' ? 0 : 1) + randi(-1, 1);
     add('item', { item: rollItem(ilvl, { mf: st.magicFind, bonus }) });
   }
+  // rings: a guardian usually drops one
+  if ((rank === 'boss' && chance(0.6)) || (rank === 'unique' && chance(0.2))) add('item', { item: rollItem(lvl + 2, { slot: 'ring', mf: st.magicFind, bonus }) });
   // gems
   const gems = rank === 'boss' ? randi(1, 3) : chance(rank === 'normal' ? 0.025 : 0.25) ? 1 : 0;
   for (let i = 0; i < gems; i++) add('item', { item: rollGem(lvl + (rank === 'boss' ? 6 : 0)) });
@@ -159,9 +164,9 @@ export function dropChest(world, chest, depth) {
   const st = G.player ? G.player.st : { magicFind: 0, goldFind: 0 };
   const n = chest.rare ? randi(3, 5) : randi(1, 3);
   const add = (kind, data) => world.addLoot(new GroundItem(chest.x, chest.y + 0.3, kind, data));
-  for (let i = 0; i < n; i++) add('item', { item: rollItem(depth + 1, { mf: st.magicFind, bonus: chest.rare ? 0.8 : 0.25 }) });
-  for (let i = 0; i < randi(2, 4); i++) add('gold', { amount: Math.round((10 + depth * 4) * rand(0.6, 1.4) * (1 + st.goldFind / 100)) });
-  if (chance(chest.rare ? 0.8 : 0.3)) add('item', { item: rollGem(depth + 4) });
+  for (let i = 0; i < n; i++) add('item', { item: rollItem(depthLevel(depth) + 1, { mf: st.magicFind, bonus: chest.rare ? 0.8 : 0.25 }) });
+  for (let i = 0; i < randi(2, 4); i++) add('gold', { amount: Math.round((10 + depthLevel(depth) * 4) * rand(0.6, 1.4) * (1 + st.goldFind / 100)) });
+  if (chance(chest.rare ? 0.8 : 0.3)) add('item', { item: rollGem(depthLevel(depth) + 4) });
   if (chance(0.5)) add('potion', { item: potionItem(pick(['hp', 'mp', 'rejuv'])) });
 }
 

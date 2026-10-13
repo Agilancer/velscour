@@ -8,11 +8,12 @@ import { getItem, changed, renderInventory } from './inventory.js';
 import { addToBag } from '../game/player.js';
 import {
   rollItem, rollGem, makeGem, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost,
-  rerollAffixes, addAffix, RARITY, POTION_PRICE, POTION_INFO, GEMS, gemName, SLOT_NAMES, WEAPONS,
+  rerollAffixes, addAffix, RARITY, POTION_PRICE, POTION_INFO, GEMS, gemName, SLOT_NAMES, WEAPONS, MAX_GEM_TIER, gemFuseCost, gemRefineCost, slotFor,
 } from '../data/items.js';
 import { CLASSES } from '../data/classes.js';
 import { potionIcon } from '../core/assets.js';
 import { VENDORS } from '../world/town.js';
+import { depthLevel } from '../data/depth.js';
 
 const VBY = Object.fromEntries(VENDORS.map((v) => [v.id, v]));
 
@@ -23,7 +24,7 @@ export const Vendor = {
 
   restock() {
     const c = G.char;
-    const lvl = Math.max(1, Math.max(c.level, c.depth || 1));
+    const lvl = Math.max(1, Math.max(c.level, depthLevel(c.depth || 1)));
     const cls = CLASSES[c.classId];
     const shopRarity = () => (chance(0.03) ? 3 : chance(0.15) ? 2 : chance(0.45) ? 1 : 0);
     const weapons = [];
@@ -36,7 +37,9 @@ export const Vendor = {
     for (let i = 0; i < 18; i++) armor.push(rollItem(lvl + randi(-2, 1), { slot: ['head', 'body', 'hands', 'legs', 'feet', 'offhand'][i % 6], rarity: shopRarity(), base: i % 6 === 5 ? 'shield' : undefined }));
     const gems = [];
     for (let i = 0; i < 14; i++) gems.push(rollGem(Math.max(1, lvl - 5)));
-    this.stock = { weapons, armor, gems };
+    const rings = [];
+    for (let i = 0; i < 10; i++) rings.push(rollItem(lvl + randi(-2, 1), { slot: 'ring', rarity: Math.max(1, shopRarity()) }));
+    this.stock = { weapons, armor, gems, rings };
   },
 
   open(vid) {
@@ -63,7 +66,7 @@ export const Vendor = {
       case 'alchemist': this.potionBox(body); break;
       case 'upgrade': this.serviceBox(body, 'upgrade'); break;
       case 'enchant': this.serviceBox(body, 'enchant'); break;
-      case 'socket': this.serviceBox(body, 'socket'); break;
+      case 'socket': this.serviceBox(body, 'socket'); body.appendChild(el('div', 'vendor-sub', '<b>Rings</b> <span class="dim">· each ring augments your skills</span>')); this.shopGrid(body, this.stock.rings || []); break;
       case 'gamble': this.gambleBox(body); break;
     }
   },
@@ -83,7 +86,7 @@ export const Vendor = {
           onDouble: () => this.buy({ type: 'shop', list, i }),
           onRight: () => this.buy({ type: 'shop', list, i }),
         });
-        UI.tip(d, () => itemTooltip(list[i], { price: itemValue(list[i]), compare: list[i].slot ? G.char.equip[list[i].slot] : null, hint: 'Right-click or double-click to buy' }));
+        UI.tip(d, () => itemTooltip(list[i], { price: itemValue(list[i]), compare: list[i].slot ? G.char.equip[slotFor(G.char.equip, list[i])] : null, hint: 'Right-click or double-click to buy' }));
       }
       grid.appendChild(d);
     });
@@ -93,7 +96,7 @@ export const Vendor = {
       const box = el('div', 'item-detail');
       box.style.width = 'auto';
       box.style.marginTop = '8px';
-      box.innerHTML = itemTooltip(sel, { price: itemValue(sel), compare: sel.slot ? G.char.equip[sel.slot] : null });
+      box.innerHTML = itemTooltip(sel, { price: itemValue(sel), compare: sel.slot ? G.char.equip[slotFor(G.char.equip, sel)] : null });
       const b = el('button', 'btn small', `Buy for ${fmtInt(itemValue(sel))}g`);
       b.disabled = G.char.gold < itemValue(sel);
       b.onclick = () => this.buy({ type: 'shop', list, i: this.shopSel });
@@ -112,7 +115,7 @@ export const Vendor = {
     if (toIdx !== undefined && !c.bag[toIdx] && it.type !== 'gem') { c.bag[toIdx] = it; ok = true; } else ok = addToBag(c, { ...it });
     if (!ok) { UI.log('Inventory full.', '#ff8080'); sfx('error'); return false; }
     c.gold -= price;
-    data.list[data.i] = it.type === 'gem' ? rollGem(Math.max(1, c.level - 4)) : null;
+    data.list[data.i] = it.type === 'gem' ? rollGem(Math.max(1, Math.max(c.level, depthLevel(c.depth || 1)) - 4)) : null;
     if (this.shopSel === data.i) this.shopSel = null;
     sfx('gold');
     UI.log(`Bought <span style="color:${itemColor(it)}">${escapeHtml(itemName(it))}</span> for ${fmtInt(price)} gold.`);
@@ -158,27 +161,39 @@ export const Vendor = {
     }
   },
 
+  /** The Gem Forge: fuse three gems of a kind into the next grade, fuse everything at once, or refine one gem. */
   combineBox(body) {
     const c = G.char;
     const box = el('div', 'service-box');
-    box.innerHTML = '<b>Gem Combining</b><div class="dim" style="font-size:12px">Fuse three identical gems into one of the next tier.</div>';
-    const stacks = c.bag.map((b, i) => ({ b, i })).filter(({ b }) => b && b.type === 'gem' && (b.count || 1) >= 3 && b.tier < 5);
-    if (!stacks.length) box.appendChild(el('div', 'dim', 'You have no stack of 3 matching gems.'));
-    for (const { b, i } of stacks) {
-      const cost = Math.round(80 * Math.pow(2.2, b.tier));
-      const btn = el('button', 'btn small', `${escapeHtml(gemName(b.gem, b.tier))} x3 → ${escapeHtml(gemName(b.gem, b.tier + 1))} (${fmtInt(cost)}g)`);
-      btn.style.display = 'block'; btn.style.margin = '4px 0';
-      btn.disabled = c.gold < cost;
-      btn.onclick = () => {
-        c.gold -= cost;
-        b.count -= 3;
-        if (b.count <= 0) c.bag[i] = null;
+    box.innerHTML = `<b>Gem Forge</b><div class="dim" style="font-size:12px">Fuse three identical gems into one of the next grade, or pay to refine a single gem. Grades: Chipped → Flawed → Gem → Flawless → Perfect → Royal → Imperial → Celestial → Abyssal → Eternal.</div>`;
+    const gems = c.bag.map((b, i) => ({ b, i })).filter(({ b }) => b && b.type === 'gem' && b.tier < MAX_GEM_TIER);
+    const fusable = gems.filter(({ b }) => (b.count || 1) >= 3);
+    if (fusable.length) {
+      const all = el('button', 'btn small', 'Fuse all');
+      all.style.margin = '6px 0'; all.title = 'Fuse every stack of three, lowest grades first, repeating while you can pay';
+      all.onclick = () => { const n = fuseAll(c); if (n) { sfx('levelup'); UI.log(`The forge fused <b>${n}</b> gem${n > 1 ? 's' : ''} into finer stones.`, '#c8f0ff'); changed(); } else sfx('error'); };
+      box.appendChild(all);
+    }
+    if (!gems.length) box.appendChild(el('div', 'dim', 'You carry no gems the forge can work.'));
+    for (const { b, i } of gems) {
+      const row = el('div', 'row forge-row');
+      row.appendChild(el('span', '', `<span style="color:${GEMS[b.gem].color}">◆</span> ${escapeHtml(gemName(b.gem, b.tier))}${(b.count || 1) > 1 ? ` <span class="dim">x${b.count}</span>` : ''}`));
+      const fuse = gemFuseCost(b.tier), refine = gemRefineCost(b.tier, GEMS[b.gem].special);
+      const f = el('button', 'btn small', `Fuse 3 → ${escapeHtml(gemName(b.gem, b.tier + 1))} (${fmtInt(fuse)}g)`);
+      f.disabled = (b.count || 1) < 3 || c.gold < fuse;
+      f.onclick = () => { if (fuseGem(c, i)) { sfx('levelup'); UI.log(`Forged <span style="color:#c8f0ff">${escapeHtml(gemName(b.gem, b.tier + 1))}</span>!`); changed(); } };
+      const u = el('button', 'btn small', `Refine 1 (${fmtInt(refine)}g)`);
+      u.disabled = c.gold < refine;
+      u.onclick = () => {
+        c.gold -= refine;
+        if ((b.count || 1) > 1) b.count--; else c.bag[i] = null;
         addToBag(c, makeGem(b.gem, b.tier + 1));
-        sfx('levelup');
-        UI.log(`Created <span style="color:#c8f0ff">${escapeHtml(gemName(b.gem, b.tier + 1))}</span>!`);
+        sfx('arcane');
+        UI.log(`Refined into <span style="color:#c8f0ff">${escapeHtml(gemName(b.gem, b.tier + 1))}</span>.`);
         changed();
       };
-      box.appendChild(btn);
+      row.appendChild(f); row.appendChild(u);
+      box.appendChild(row);
     }
     body.appendChild(box);
   },
@@ -227,12 +242,12 @@ export const Vendor = {
 
   gambleBox(body) {
     const c = G.char;
-    const lvl = Math.max(c.level, c.depth || 1);
+    const lvl = Math.max(c.level, depthLevel(c.depth || 1));
     const price = Math.round(180 * Math.pow(1.065, lvl));
     body.appendChild(el('div', 'dim', 'Buy an unidentified item. Gambled items are far more likely to be Rare, Epic or Legendary.'));
     const grid = el('div', 'row');
     grid.style.marginTop = '8px';
-    for (const slot of ['weapon', 'offhand', 'head', 'body', 'hands', 'legs', 'feet', 'gem']) {
+    for (const slot of ['weapon', 'offhand', 'head', 'body', 'hands', 'legs', 'feet', 'ring', 'gem']) {
       const b = el('button', 'btn small', `${slot === 'gem' ? 'Mystery Gem' : SLOT_NAMES[slot]}<br><span class="gold-text">${fmtInt(slot === 'gem' ? Math.round(price * 0.6) : price)}g</span>`);
       const cost = slot === 'gem' ? Math.round(price * 0.6) : price;
       b.disabled = c.gold < cost;
@@ -249,5 +264,30 @@ export const Vendor = {
     body.appendChild(grid);
   },
 };
+
+/** Fuse three gems of the stack at bag index i into one of the next grade. */
+export function fuseGem(c, i) {
+  const b = c.bag[i];
+  if (!b || b.type !== 'gem' || (b.count || 1) < 3 || b.tier >= MAX_GEM_TIER) return false;
+  const cost = gemFuseCost(b.tier);
+  if (c.gold < cost) return false;
+  c.gold -= cost;
+  b.count = (b.count || 1) - 3;
+  if (b.count <= 0) c.bag[i] = null;
+  addToBag(c, makeGem(b.gem, b.tier + 1));
+  return true;
+}
+/** Fuse every stack of three, lowest grades first, until nothing more fuses (or gold runs out). Returns fusions. */
+export function fuseAll(c, budget = Infinity) {
+  let n = 0;
+  for (let guard = 0; guard < 200; guard++) {
+    let best = -1;
+    c.bag.forEach((b, i) => { if (b && b.type === 'gem' && (b.count || 1) >= 3 && b.tier < MAX_GEM_TIER && gemFuseCost(b.tier) <= Math.min(c.gold, budget) && (best < 0 || b.tier < c.bag[best].tier)) best = i; });
+    if (best < 0) break;
+    budget -= gemFuseCost(c.bag[best].tier);
+    fuseGem(c, best); n++;
+  }
+  return n;
+}
 
 export { pick, GEMS };

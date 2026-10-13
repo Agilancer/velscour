@@ -10,6 +10,8 @@ import { hit, aoe, chainHit } from './combat.js';
 import { Projectile, Delayed, Area, makeWall, Orbit, Whirl, Leap, Dash, NovaWave, BeamCh, Trap, Rain, Fissure, AuraFx, explode, coneTargets } from './hazards.js';
 import { buffAmount, curseAmount, skillDuration } from '../data/skills.js';
 import { createSummon } from './monster.js';
+import { masteryVis, masteryCastFx } from './augments.js';
+import { multN } from '../data/rings.js';
 
 const roll = (d) => rand(d[0], d[1]);
 
@@ -41,17 +43,24 @@ function clampTarget(w, p, tx, ty, range) {
  * Returns false if the skill could not be used (e.g. no corpses).
  */
 export function castSkill(p, sk, L, tx, ty, opts = {}) {
+  // ring augments (Multiplicity adds to the skill's count, Colossus to its size) and mastery (bigger effects)
+  const aug = p.augFor ? p.augFor(sk) : null, M = p.mastery ? p.mastery(sk) : 1;
+  const vis = masteryVis(M) * (aug && aug.colossus ? 1 + 0.35 * aug.colossus : 1);
+  if (aug && aug.multiply) sk = withMore(sk, multN(aug.multiply));
   const w = p.world, m = sk.m, st = p.st;
   const el = sk.el, fx = sk.fx, E = elem(el);
   const dmg = p.skillDamage(sk, L);
-  const area = 1 + (st.areaPct || 0) / 100;
+  const area = (1 + (st.areaPct || 0) / 100) * vis;
   const ang = angleTo(p.x, p.y, tx, ty);
   const o = statusOpts(m);
+  o.sk = sk.id; o.vis = vis;
+  if (aug) o.aug = aug;
+  if (!opts.echo) masteryCastFx(p, sk, M, tx, ty);
   p.face(ang);
 
   switch (sk.kind) {
     case 'melee': {
-      const range = 1.5 * (m.range ?? 1) * (fx === 'thrust' ? 1.15 : 1) * (m.r ?? 1);
+      const range = 1.5 * (m.range ?? 1) * (fx === 'thrust' ? 1.15 : 1) * (m.r ?? 1) * Math.sqrt(vis);
       const arc = (m.arc ?? (m.cleave ? 170 : fx === 'thrust' ? 36 : fx === 'spin' ? 360 : 115)) * DEG;
       const strikes = m.n || 1;
       for (let i = 0; i < strikes; i++) {
@@ -89,7 +98,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
             home: m.home || st.homing ? 1 : 0, split: m.split || chance((st.splitChance || 0) / 100), ret: m.ret, lob: m.lob,
             tx: tx + (m.lob && n > 1 ? rand(-1, 1) : 0), ty: ty + (m.lob && n > 1 ? rand(-1, 1) : 0),
             exp: m.exp ? 1.1 * (m.r ?? 1) * area : 0, chain: m.chain ? m.chain + Math.floor(st.chainPlus || 0) : 0,
-            spray: m.spray, pull: m.pull, size: (m.r ?? 1), r: 0.3 * (m.r ?? 1), dur: m.dur, light: el !== 'phys',
+            spray: m.spray, pull: m.pull, size: (m.r ?? 1) * vis, r: 0.3 * (m.r ?? 1) * Math.sqrt(vis), dur: m.dur, light: el !== 'phys',
           }));
         });
       }
@@ -162,7 +171,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
     }
     case 'orbit': {
       const extra = ['blade', 'hammer', 'axe', 'rang', 'orb', 'bone', 'shard', 'feather'].includes(fx) ? Math.floor(st.extraProj || 0) : 0;
-      w.addHazard(new Orbit({ world: w, src: p, n: (m.n || 3) + extra, radius: 1.6 * (m.r ?? 1) * area, dur: m.dur || 4, spiral: m.spiral, fx, el, dmg, o, speed: m.spiral ? 5 : 4.2 }));
+      w.addHazard(new Orbit({ world: w, src: p, n: (m.n || 3) + extra, radius: 1.6 * (m.r ?? 1) * area, dur: m.dur || 4, spiral: m.spiral, fx, el, dmg, o, speed: m.spiral ? 5 : 4.2, size: vis }));
       sfx('swing');
       break;
     }
@@ -303,6 +312,17 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
     if (st.orbitOnCast && chance(st.orbitOnCast / 100)) w.addHazard(new Orbit({ world: w, src: p, n: 1, radius: 1.4, dur: 5, fx: 'orb', el, dmg: dmg.map((v) => v * 0.4), o: {} }));
   }
   return true;
+}
+
+/** A copy of sk with `extra` more of whatever it makes: projectiles, orbiting weapons, strikes, waves, minions. */
+function withMore(sk, extra) {
+  const m = { ...sk.m };
+  if (sk.kind === 'rain') m.n = (m.n || 12) + extra * 4;
+  else if (sk.kind === 'chain') m.n = (m.n || 4) + extra * 2;
+  else if (sk.kind === 'orbit') m.n = (m.n || 3) + extra;
+  else if (['proj', 'strike', 'nova', 'cyclone', 'fissure', 'trap', 'summon', 'melee', 'corpse', 'dash'].includes(sk.kind) || m.n) m.n = (m.n || 1) + extra;
+  if (m.max) m.max += extra;
+  return { ...sk, m };
 }
 
 export function applyCurse(src, t, c, amt, dur, dmg, area = 1) {
