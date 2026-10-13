@@ -87,7 +87,7 @@ for (const id of Object.keys(packs)) {
       for (const v of masks[mask]) for (const d of want) if (!v.some((r) => r[0] === d)) bad.push(`pack ${id}: ${fam} mask ${mask} has no ${d} arm`);
     }
   }
-  for (const [des, dirs] of Object.entries(m.arches)) for (const d of ['SE', 'SW', 'NW', 'NE']) if (!dirs[d] || dirs[d].length !== 6) bad.push(`pack ${id}: arch ${des} ${d} not in 6 slices`);
+  for (const [des, dirs] of Object.entries(m.arches)) for (const d of ['SE', 'SW', 'NW', 'NE']) { const n = 2 * ((m.archSpan || {})[des] || 3); if (!dirs[d] || dirs[d].length !== n) bad.push(`pack ${id}: arch ${des} ${d} not in ${n} slices`); }
   for (const [des, dirs] of Object.entries(m.doors)) for (const d of ['SE', 'SW', 'NW', 'NE']) {
     if (!dirs[d] || !dirs[d].closed || !dirs[d].open) { bad.push(`pack ${id}: door ${des} ${d} missing a state`); continue; }
     if (!dirs[d].open.some((r) => r[0][0] === 'leaf')) bad.push(`pack ${id}: door ${des} ${d} has no open leaf`);

@@ -91,7 +91,7 @@ export function classSprite(id, h, palette = null) {
  * - floors [{lum, seamless, name}]: `bases` are the self-seamless ones (indices), `features` the rest
  * - walls[family][mask] = variants, each a list of arm slices {arm:'NE'|'SE'|'SW'|'NW'|'c', ox, oy}
  *   (ox/oy: native px from the node's ground point; draw at `k` world px per native px)
- * - arches[design][dir] = slices {a (tiles along the span), ox, oy}; doors[design][dir].closed|open = slices
+ * - arches[design][dir] = slices {a (tiles along the span), ox, oy}; archSpan[design] = outer span in tiles (3, 5, 7); doors[design][dir].closed|open = slices
  *   {part:'L'|'R'|'leaf', du, dv (depth anchor, tiles from the doorway centre), ox, oy}
  * - scatter [{name, ox, oy, fp (footprint in tiles), block}], chest {closed, open, rareClosed, rareOpen}
  */
@@ -117,7 +117,9 @@ export function biomeTileSet(biome) {
     for (const [mask, vars] of Object.entries(masks)) set.walls[fam][mask] = vars.map((v) => v.map((r) => ({ ...rect(wallImg, r), arm: r[0] })));
   }
   set.families = Object.keys(set.walls);
+  set.archSpan = {};
   for (const [des, dirs] of Object.entries(m.arches)) {
+    set.archSpan[des] = (m.archSpan && m.archSpan[des]) || 3;
     set.arches[des] = {};
     for (const [d, sl] of Object.entries(dirs)) set.arches[des][d] = sl.map((r) => ({ ...rect(wallImg, r), a: r[0] }));
   }
@@ -129,6 +131,15 @@ export function biomeTileSet(biome) {
     }
   }
   for (const s of m.scatter) set.scatter.push({ img: scatImg, sx: s.x, sy: s.y, w: s.w, h: s.h, ox: s.ox, oy: s.oy, fp: s.fp, block: s.block, name: s.name });
+  const part = biome.part;
+  if (part) {
+    const inR = (rs, i) => rs.some(([a, b]) => i + 1 >= a && i + 1 <= b);
+    set.bases = set.bases.filter((i) => inR(part.floors, i));
+    set.features = set.features.filter((i) => inR(part.floors, i));
+    set.scatter = set.scatter.filter((s, i) => inR(part.scatter, i));
+    set.families = set.families.filter((f) => part.families.includes(f));
+    for (const k of ['arches', 'doors']) for (const d of Object.keys(set[k])) if (!part[k].includes(d)) delete set[k][d];
+  }
   set.pillar = set.walls[set.families[0]]['0'][0][0];
   if (A.chestImg && A.chestMeta) {
     const img = pal ? recolor(A.chestImg, pal) : A.chestImg;
