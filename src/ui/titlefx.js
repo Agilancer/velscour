@@ -90,9 +90,15 @@ export function attachTitleFx(screen, logoEl, els = {}) {
   if (c0 && c0.kind === 'title') { phase = 'intro'; light(true); }      // back from a sub-menu: the song is still playing
   else if (audioReady()) begin();
   else screen.classList.add('title-gated');
-  const onInput = () => { if (phase === 'gate') { initAudio(); begin(); } else skip(); };
-  window.addEventListener('pointerdown', onInput, true);
-  window.addEventListener('keydown', onInput, true);
+  // iOS only lets audio start from a touch's *end* (pointerup), never its pointerdown, so a touch opens the gate on
+  // release; a mouse button or key opens it on press. Every input also re-tries the unlock.
+  const onInput = (e) => {
+    if (e.type !== 'keydown' && (e.pointerType === 'mouse') !== (e.type === 'pointerdown')) return;
+    initAudio();
+    if (phase === 'gate') begin(); else skip();
+  };
+  const EVTS = ['pointerdown', 'pointerup', 'keydown'];
+  for (const k of EVTS) window.addEventListener(k, onInput, true);
 
   function updateTimeline() {
     if (phase !== 'intro') return;
@@ -367,8 +373,7 @@ export function attachTitleFx(screen, logoEl, els = {}) {
   // ------------------------------------------------------------------ loop
   function detach() {
     cancelAnimationFrame(raf); cv.remove(); eyeCv.remove(); screen.style.transform = '';
-    window.removeEventListener('pointerdown', onInput, true);
-    window.removeEventListener('keydown', onInput, true);
+    for (const k of EVTS) window.removeEventListener(k, onInput, true);
     window.removeEventListener('pointermove', onMove, true);
   }
   function frame(now) {
