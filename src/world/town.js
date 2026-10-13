@@ -398,7 +398,7 @@ function rollTown(tileset, seed, last) {
 
   // ---- the start (by the well) and a reachability check from it
   let start = [C.x + 0.5, C.y + 3.5];
-  for (let r = 0; r < 6 && !map.walkable(...start); r++) start = map.randomNear(C.x + 0.5, C.y + 2.5, 1.5 + r);
+  for (let r = 0; r < 6 && !map.walkable(...start); r++) start = map.randomNear(C.x + 0.5, C.y + 2.5, 1.5 + r, rng.fn());
   const seen = new Uint8Array(N), q = [I(Math.floor(start[0]), Math.floor(start[1]))];
   seen[q[0]] = 1;
   for (let h = 0; h < q.length; h++) {
