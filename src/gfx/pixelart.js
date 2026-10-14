@@ -1,6 +1,7 @@
 // Retro pixel-art placeholder sprites defined as ASCII, rendered with palette swaps,
-// automatic rim shading and dark outlines. Every monster, summon, prop and item icon
-// in the game comes from here until real art replaces it.
+// automatic rim shading and dark outlines. Kept for missing/loading art; live painted
+// replacements are in core/replacementart.js. Gem/ring/gold helpers retain fallback rendering.
+import { replacementIcon } from '../core/replacementart.js';
 import { makeCanvas, shade, hexToRgb, rgbToHex } from '../core/util.js';
 
 // palette keys: a/A primary, b/B secondary, c/C accent, e eyes, w bone/white, k black,
@@ -988,8 +989,11 @@ export function gemIcon(kind, color, tier = 3, size = 48) {
   c = makeCanvas(size, size);
   const x = c.getContext('2d');
   const s = size / 2, R = size * (0.24 + Math.min(tier, 5) * 0.035);
+  const painted = replacementIcon('gem_' + kind, size, color, 0.48 + Math.min(tier, 5) * 0.07);
   const shape = GEM_SHAPES[kind] || 'diamond';
   x.translate(s, s);
+  if (painted) x.drawImage(painted, -s, -s);
+  else {
   const grad = x.createRadialGradient(-R * 0.3, -R * 0.35, 1, 0, 0, R * 1.3);
   grad.addColorStop(0, shade(color, 0.7)); grad.addColorStop(0.45, color); grad.addColorStop(1, shade(color, -0.6));
   x.fillStyle = grad; x.strokeStyle = '#0a0606'; x.lineWidth = Math.max(2, size / 20);
@@ -1014,6 +1018,7 @@ export function gemIcon(kind, color, tier = 3, size = 48) {
   x.globalAlpha = 0.55; x.fillStyle = '#ffffff';
   x.beginPath(); x.ellipse(-R * 0.3, -R * 0.4, R * 0.28, R * 0.16, -0.6, 0, Math.PI * 2); x.fill();
   if (shape === 'eye') { x.globalAlpha = 1; x.fillStyle = '#000'; x.beginPath(); x.arc(0, 0, R * 0.3, 0, Math.PI * 2); x.fill(); }
+  }
   // the Gem Forge's tiers past Royal: a halo and a star per tier
   if (tier > 5) {
     x.globalCompositeOperation = 'destination-over'; x.globalAlpha = 0.5 + (tier - 6) * 0.12;
@@ -1038,6 +1043,8 @@ export function ringIcon(metal, stone, rarity = 0, size = 48) {
   if (c) return c;
   c = makeCanvas(size, size);
   const x = c.getContext('2d'), s = size / 2;
+  const painted = replacementIcon('ring_' + Math.min(2, Math.floor(rarity / 2)), size, stone);
+  if (painted) { x.drawImage(painted, 0, 0); cache.set(key, c); return c; }
   x.translate(s, s + size * 0.06);
   x.lineWidth = size * 0.11; x.strokeStyle = '#0a0606';
   x.beginPath(); x.ellipse(0, 0, size * 0.26, size * 0.22, 0, 0, Math.PI * 2); x.stroke();
@@ -1058,6 +1065,8 @@ export function ringIcon(metal, stone, rarity = 0, size = 48) {
 }
 
 export function goldIcon(size = 48, amount = 100) {
+  const painted = replacementIcon('gold_' + (amount > 500 ? 3 : amount > 100 ? 2 : 1), size);
+  if (painted) return painted;
   const key = `gold|${size}|${amount > 500 ? 3 : amount > 100 ? 2 : 1}`;
   let c = cache.get(key);
   if (c) return c;

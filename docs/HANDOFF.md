@@ -108,6 +108,13 @@ Requirements, as stated (✅ = implemented in the draft):
 
 ## 3. Status
 
+**October 2026 sprite replacement pass (`codex/replace-placeholder-sprites`):** 122 generated
+painted sprites replace the remaining 56 unpainted summons, Velscour/ward crystal, 12 NPCs,
+generic equipment/loot and two projectile silhouettes. Existing supplied artwork is preserved.
+See [SPRITE_REPLACEMENTS.md](SPRITE_REPLACEMENTS.md) for coverage, reproduction and checks.
+Source: `assets/source/replacements/`; rebuild with `python tools/replacementart.py`.
+The older branch/status notes below describe earlier sessions.
+
 **Branch / PR:** all work is on `claude/amazing-rubin-kguehz`. PR https://github.com/Agilancer/velscour/pull/1
 (→ `main`) is open, and the user is to click Merge. The auto-mode permission check blocked Claude from merging,
 with the reason "Merge Without Review". GitHub Pages is already enabled on the repo and deploys from `main` (an
@@ -146,6 +153,10 @@ on PC and mobile, and flow/ui/mobile/select/autoplay pass. The audio itself hasn
 (`SAMPLES[].v`, `MUSIC[].vol`) are guesses, so ask the user how the mix sounds.
 
 ## 4. Open issues and risks
+
+Sprite pass: Chromium desktop/mobile checks pass; Safari/iOS and Firefox remain unverified.
+The new atlas adds about 3 MB download / 9 MB decoded storage at boot. General procedural
+VFX, dedicated skill icons and full-frame character animation remain expansion work.
 Ordered roughly by how likely they are to hurt the user's first test. The fact-checked per-subsystem issue lists
 are in section 7.
 1. **Untested on iOS Safari and Firefox.** Things to check:
@@ -538,6 +549,9 @@ are in section 7.
      skills, ui, mobile, hud, autoplay soaks (see the commit/PR for numbers).
 
 ## 5. Next steps
+
+- Review the sprite replacement PR and its gallery; merge to publish through the existing
+  Pages workflow when the art is approved. Keep future art expansion separate from this pass.
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
 0. Get the user's feedback on item 21: town variety, ring power (augment numbers are first guesses in rings.js and
    augments.js), mastery speed (`masteryNeed`, cast XP in `Player.tryUseSkill`), and whether deaths now happen often

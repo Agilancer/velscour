@@ -1,3 +1,4 @@
+import { hexToRgb } from '../core/util.js';
 // Raid bosses. Every fifth depth (but 100) ends in a BOSS ROOM (world/dungeon.js carveArena): a pillared arena
 // holding one of RAID_BOSSES, picked at random. A raid boss is huge and fights in 3 phases (4 from depth 25). Each
 // phase plays a randomly rolled rotation of its ability pool, now and then chaining a quick follow-up. At each
@@ -586,7 +587,7 @@ class Raid {
   makeWard(x, y) {
     const m = this.m, E = this.E, raid = this;
     const c = new Monster({
-      x, y, team: 'enemy', ai: 'ward', static: true, fly: true, sprite: 'crystal', pal: { a: E.glow, c: E.core, w: '#ffffff', m: '#4a4650' }, px: 3, r: 0.45,
+      x, y, team: 'enemy', ai: 'ward', static: true, fly: true, sprite: 'crystal', art: 'va_crystal', artH: 42, swap: { tint: [...hexToRgb(E.glow), 0.75] }, pal: { a: E.glow, c: E.core, w: '#ffffff', m: '#4a4650' }, px: 3, r: 0.45,
       maxHp: m.maxHp * 0.07, hp: m.maxHp * 0.07, level: m.level, dmg: m.dmg * 0.5, xp: m.xp * 0.01, name: 'Warding Crystal', rank: 'champion',
       aura: E.glow, awake: true, el: this.tpl.el, res: {}, goreType: 'spark', atkCd: 3, isWard: true,
     });

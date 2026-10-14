@@ -1327,6 +1327,7 @@ export function makeElite(m, rank, depth, world) {
     if (m.art) m.swap = uniqueSwap();
   } else if (rank === 'boss') {
     const vel = m.arch === 'velscour';
+    if (vel) { m.art = 'va_velscour'; m.artH = 94; m.swap = null; }
     m.maxHp *= vel ? 40 : 14 + Math.min(depth, 120) / 4; m.dmg *= vel ? 2.4 : 1.9; m.xp *= vel ? 200 : 25;
     m.aura = vel ? '#ff2000' : '#ff4020';
     m.scale = vel ? 1.6 : 1.9; m.r *= vel ? 1 : 1.6;

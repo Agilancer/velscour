@@ -4,6 +4,7 @@ import { rand, chance, randi, TAU, pick, clamp } from '../core/util.js';
 import { isoX, isoY, camera } from '../core/view.js';
 import { sfx } from '../core/audio.js';
 import { spawn, glowSprite, sparkle, floatText, addLight, elem } from '../gfx/vfx.js';
+import { replacementIcon } from '../core/replacementart.js';
 import { pixelSprite, gemIcon, goldIcon, ringIcon } from '../gfx/pixelart.js';
 import { rollItem, rollGem, itemName, itemColor, MATERIALS, GEMS, potionItem, RARITY_COLORS } from '../data/items.js';
 import { potionIcon } from '../core/assets.js';
@@ -79,6 +80,8 @@ export class GroundItem {
       ctx.globalCompositeOperation = 'lighter';
       ctx.drawImage(glowSprite(c), px - b * 2.2, py - 10 - b * 2.2, b * 4.4, b * 4.4);
       ctx.globalCompositeOperation = 'source-over';
+      const orb = replacementIcon(this.kind, 20);
+      if (orb) { ctx.drawImage(orb, px - 10, py - 20 - Math.sin(this.t * 4) * 2); return; }
       ctx.fillStyle = c; ctx.beginPath(); ctx.arc(px, py - 10 - Math.sin(this.t * 4) * 2, 4.5, 0, TAU); ctx.fill();
       ctx.fillStyle = '#ffffff'; ctx.fillRect(px - 2, py - 13 - Math.sin(this.t * 4) * 2, 2, 2);
       return;
@@ -114,14 +117,14 @@ export function itemIcon(item, size = 48) {
   if (item.slot === 'ring') return ringIcon(MATERIALS[item.tier].color, elem((AUGMENTS[(item.aug && item.aug[0] || {}).id] || {}).el || 'arcane').glow, item.rarity, size);
   if (item.art) { const a = artIcon(item, size); if (a) return a; }
   { const g = gearIcon(item, size); if (g) return g; }
-  const key = `${item.icon}|${item.tier}|${item.rarity}|${item.base}`;
+  const key = `${item.icon}|${item.tier}|${item.rarity}|${item.base}|${size}`;
   let c = iconCache.get(key);
   if (c) return c;
   const mat = MATERIALS[item.tier].color;
   const pal = { m: mat, w: '#ffffff', b: item.icon === 'shield' ? '#5a2a1a' : '#5a3a20', g: item.rarity >= 3 ? '#ffd040' : '#b08a3a', c: item.rarity >= 2 ? RARITY_COLORS[item.rarity] : '#8a6a40', e: '#ff4040', k: '#101010' };
   if (item.icon === 'orb') { pal.c = mat; pal.e = '#c060ff'; }
   if (item.icon === 'staff' || item.icon === 'wand') { pal.c = ['#a0a0a0', '#60ff60', '#60a0ff', '#c060ff', '#ffa020', '#ff4058'][item.rarity]; pal.b = '#6a4a2a'; pal.e = '#ffffff'; }
-  c = pixelSprite(item.icon, pal, 4);
+  c = replacementIcon('item_' + item.icon, size, mat) || pixelSprite(item.icon, pal, 4);
   iconCache.set(key, c);
   return c;
 }

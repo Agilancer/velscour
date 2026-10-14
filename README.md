@@ -4,7 +4,7 @@
 
 An isometric, retro-pixel action RPG in the spirit of Diablo II that runs in the browser on **PC and mobile**. Choose one of sixteen classes, gear up in the town of Duskhollow, then descend 500 procedurally generated depths to slay **Demon Lord Velscour**.
 
-> **Status: rough draft.** Everything is playable end to end, but most art is placeholder (see [Art](#art)) and balance is a first pass.
+> **Status: rough draft.** Everything is playable end to end. Live placeholder sprites have painted replacements (see [Art](#art)); full animation and broader effect art remain future work, and balance is a first pass.
 
 ## Play it
 
@@ -100,7 +100,7 @@ Art you provided, used directly:
 - **Catacombs biome pack**: 60 floors, 5 modular wall families, 3 arches, 3 doors (open and closed) and 40 scatter props on a 160×80 template. Every biome is built from it, palette-swapped, until more packs arrive. Walls, arches and doors are raised to suit the heroes' height and sliced for depth sorting at import. See [docs/ART.md](docs/ART.md).
 - **Monster art**: 7 sheets of 10 monsters each plus 300 single sprites (`Enemy_300.zip`), cut into atlases and mapped to AI archetypes and the boss pool. See [docs/ENEMY_ART.md](docs/ENEMY_ART.md).
 
-Placeholder art: most summons (the Necromancer's skeletons use painted art), Demon Lord Velscour and item icons are drawn as ASCII pixel-art in `src/gfx/pixelart.js` and palette-swapped. The town uses the Overworld and Town biome pack (`tools/townpack.py`).
+The remaining summon, Velscour, ward, NPC and generic loot placeholders now use 122 painted sprites generated from the project's art references. See [the replacement audit and gallery](docs/SPRITE_REPLACEMENTS.md). Sources live in `assets/source/replacements/`; rebuild with `python tools/replacementart.py`. ASCII art in `src/gfx/pixelart.js` remains as a loading/missing-art fallback. The town uses the Overworld and Town biome pack (`tools/townpack.py`).
 
 **To swap in real art**, replace the sheets in `assets/source/` and rerun:
 

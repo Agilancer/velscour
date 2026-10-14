@@ -1,8 +1,10 @@
+import { hexToRgb } from '../core/util.js';
 // Procedural drawing of skill projectiles / orbiters and impact explosions.
 import { G } from '../state.js';
 import { TAU, rand, shade } from '../core/util.js';
 import { isoX, isoY, HW, HH, camera } from '../core/view.js';
 import { glowSprite, spawn, burst, addDecal, addEffect, Ring, Column, smoke, sparkle, addLight, elem } from './vfx.js';
+import { replacementImage } from '../core/replacementart.js';
 import { pixelSprite, shiftPalette } from './pixelart.js';
 import { sfx } from '../core/audio.js';
 
@@ -182,11 +184,13 @@ export function drawShape(ctx, fx, x, y, a, s, E, t, extra = {}) {
     }
     case 'wolf': case 'dragon': {
       glow(ctx, 0, 0, 18 * s, E.glow, 0.7);
-      const img = pixelSprite(fx === 'wolf' ? 'hound' : 'dragon', fx === 'wolf' ? { a: E.glow, e: '#ffffff', r: E.core } : { a: E.glow, c: E.dark, w: E.core, e: '#ffffff' }, 3);
+      const painted = replacementImage('fx_' + fx, { tint: [...hexToRgb(E.glow), 0.7] });
+      const img = painted || pixelSprite(fx === 'wolf' ? 'hound' : 'dragon', fx === 'wolf' ? { a: E.glow, e: '#ffffff', r: E.core } : { a: E.glow, c: E.dark, w: E.core, e: '#ffffff' }, 3);
       const flip = Math.cos(a) < 0;
       ctx.globalAlpha = 0.9;
       if (flip) ctx.scale(-1, 1);
-      ctx.drawImage(img, -img.width * 0.22 * s, -img.height * 0.3 * s, img.width * 0.44 * s, img.height * 0.44 * s);
+      const k = painted ? 24 * s / img.height : 0.44 * s;
+      ctx.drawImage(img, -img.width * k / 2, -img.height * k * 0.68, img.width * k, img.height * k);
       break;
     }
     case 'rune': case 'card': {
