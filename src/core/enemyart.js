@@ -1,6 +1,7 @@
 // Monster art from assets/sprites/enemies (tools/process_assets.py enemies): atlas loading plus a bounded
 // cache of cut-out, palette-swapped, flash (white) and corpse (dark) canvases. See docs/ENEMY_ART.md.
 import { makeCanvas, recolor } from './util.js';
+import { loadReplacementArt, replacementImage } from './replacementart.js';
 import { ART_BY_ID } from '../data/bestiary.js';
 
 const DIR = 'assets/sprites/enemies/';
@@ -46,7 +47,10 @@ export async function loadEnemySheets(keys) {
 
 /** Load the sheets these art ids are on (unknown or empty ids are skipped). */
 export function loadArtFor(ids) {
-  return loadEnemySheets([...new Set(ids.filter((id) => ART_BY_ID[id]).map((id) => ART_BY_ID[id].sheet))]);
+  return Promise.all([
+    ids.some((id) => id && id.startsWith('va_')) ? loadReplacementArt() : null,
+    loadEnemySheets([...new Set(ids.filter((id) => ART_BY_ID[id] && ART_BY_ID[id].sheet).map((id) => ART_BY_ID[id].sheet))]),
+  ]);
 }
 
 function cell(a) {
@@ -63,6 +67,7 @@ export function artCell(id) {
 
 /** True once a look's art has loaded. */
 export function enemyArtReady(id) {
+  if (id && id.startsWith('va_')) return !!replacementImage(id);
   const a = ART_BY_ID[id];
   return !!(a && cell(a));
 }
@@ -72,6 +77,7 @@ export function enemyArtReady(id) {
  * silhouette for hit flashes) or 'dark' (corpse). The canvas carries `_art = {fx}`: the feet's centre column.
  */
 export function enemyImage(id, swap = null, mode = '') {
+  if (id && id.startsWith('va_')) return replacementImage(id, swap, mode);
   const a = ART_BY_ID[id];
   const c = a && cell(a);
   if (!c) return null;

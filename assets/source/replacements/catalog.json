@@ -1,0 +1,832 @@
+{
+  "generator": "Built-in image_gen",
+  "references": [
+    "assets/source/enemies/set1/demons.png",
+    "assets/FinalClasses/All 16 Classes.png"
+  ],
+  "sheets": [
+    {
+      "file": "velscour.png",
+      "columns": 1,
+      "rows": 1,
+      "entries": [
+        {
+          "id": "velscour",
+          "cell": 0,
+          "kind": "boss",
+          "height": 94
+        }
+      ]
+    },
+    {
+      "file": "undead.png",
+      "columns": 5,
+      "rows": 2,
+      "entries": [
+        {
+          "id": "deathknight",
+          "cell": 0,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "claygolem",
+          "cell": 1,
+          "kind": "summon",
+          "height": 60
+        },
+        {
+          "id": "bonecolossus",
+          "cell": 2,
+          "kind": "summon",
+          "height": 80
+        },
+        {
+          "id": "wraith",
+          "cell": 3,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "abomination",
+          "cell": 4,
+          "kind": "summon",
+          "height": 70
+        },
+        {
+          "id": "plaguebearer",
+          "cell": 5,
+          "kind": "summon",
+          "height": 65
+        },
+        {
+          "id": "hawk",
+          "cell": 7,
+          "kind": "summon",
+          "height": 30
+        },
+        {
+          "id": "stormhawk",
+          "cell": 8,
+          "kind": "summon",
+          "height": 30
+        },
+        {
+          "id": "crystal",
+          "cell": 9,
+          "kind": "summon",
+          "height": 42
+        }
+      ]
+    },
+    {
+      "file": "sentries.png",
+      "columns": 5,
+      "rows": 2,
+      "entries": [
+        {
+          "id": "sentry",
+          "cell": 0,
+          "kind": "summon",
+          "height": 36
+        },
+        {
+          "id": "deathsentry",
+          "cell": 1,
+          "kind": "summon",
+          "height": 36
+        },
+        {
+          "id": "chainsentry",
+          "cell": 2,
+          "kind": "summon",
+          "height": 36
+        },
+        {
+          "id": "tesla",
+          "cell": 3,
+          "kind": "summon",
+          "height": 48
+        },
+        {
+          "id": "hydra",
+          "cell": 4,
+          "kind": "summon",
+          "height": 48
+        },
+        {
+          "id": "stormcloud",
+          "cell": 5,
+          "kind": "summon",
+          "height": 40
+        },
+        {
+          "id": "banner",
+          "cell": 6,
+          "kind": "summon",
+          "height": 60
+        },
+        {
+          "id": "firebanner",
+          "cell": 7,
+          "kind": "summon",
+          "height": 60
+        },
+        {
+          "id": "kingbanner",
+          "cell": 8,
+          "kind": "summon",
+          "height": 70
+        },
+        {
+          "id": "grimward",
+          "cell": 9,
+          "kind": "summon",
+          "height": 50
+        }
+      ]
+    },
+    {
+      "file": "spirits.png",
+      "columns": 5,
+      "rows": 2,
+      "entries": [
+        {
+          "id": "ancient",
+          "cell": 1,
+          "kind": "summon",
+          "height": 65
+        },
+        {
+          "id": "ancientstorm",
+          "cell": 2,
+          "kind": "summon",
+          "height": 65
+        },
+        {
+          "id": "ancestor",
+          "cell": 3,
+          "kind": "summon",
+          "height": 55
+        },
+        {
+          "id": "hoplite",
+          "cell": 5,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "runeweapon",
+          "cell": 7,
+          "kind": "summon",
+          "height": 45
+        },
+        {
+          "id": "scarecrow",
+          "cell": 8,
+          "kind": "summon",
+          "height": 55
+        },
+        {
+          "id": "effigy",
+          "cell": 9,
+          "kind": "summon",
+          "height": 45
+        }
+      ]
+    },
+    {
+      "file": "totems.png",
+      "columns": 5,
+      "rows": 3,
+      "entries": [
+        {
+          "id": "totem_fire",
+          "cell": 0,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "totem_heal",
+          "cell": 1,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "totem_stone",
+          "cell": 2,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "totem_storm",
+          "cell": 3,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "totem_frost",
+          "cell": 4,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "totem_wind",
+          "cell": 5,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "totem_magma",
+          "cell": 6,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "totem_poison",
+          "cell": 7,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "totem_link",
+          "cell": 8,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "totem_thunder",
+          "cell": 9,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "totem_pillar",
+          "cell": 10,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "totem_earthbind",
+          "cell": 11,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "totem_grand",
+          "cell": 12,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "totem_volcano",
+          "cell": 13,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "totem_bone",
+          "cell": 14,
+          "kind": "summon",
+          "height": 50
+        }
+      ]
+    },
+    {
+      "file": "machines.png",
+      "columns": 4,
+      "rows": 3,
+      "entries": [
+        {
+          "id": "dragonstatue",
+          "cell": 0,
+          "kind": "summon",
+          "height": 50
+        },
+        {
+          "id": "cauldron",
+          "cell": 1,
+          "kind": "summon",
+          "height": 35
+        },
+        {
+          "id": "lantern",
+          "cell": 2,
+          "kind": "summon",
+          "height": 36
+        },
+        {
+          "id": "drum",
+          "cell": 3,
+          "kind": "summon",
+          "height": 36
+        },
+        {
+          "id": "amp",
+          "cell": 4,
+          "kind": "summon",
+          "height": 36
+        },
+        {
+          "id": "turret",
+          "cell": 5,
+          "kind": "summon",
+          "height": 40
+        },
+        {
+          "id": "flameturret",
+          "cell": 6,
+          "kind": "summon",
+          "height": 40
+        },
+        {
+          "id": "rocketturret",
+          "cell": 7,
+          "kind": "summon",
+          "height": 44
+        },
+        {
+          "id": "cryoturret",
+          "cell": 8,
+          "kind": "summon",
+          "height": 40
+        },
+        {
+          "id": "drone",
+          "cell": 9,
+          "kind": "summon",
+          "height": 26
+        },
+        {
+          "id": "bombdrone",
+          "cell": 10,
+          "kind": "summon",
+          "height": 26
+        },
+        {
+          "id": "mech",
+          "cell": 11,
+          "kind": "summon",
+          "height": 75
+        }
+      ]
+    },
+    {
+      "file": "vendors.png",
+      "columns": 5,
+      "rows": 2,
+      "entries": [
+        {
+          "id": "npc_weapons",
+          "cell": 0,
+          "kind": "character",
+          "height": 50
+        },
+        {
+          "id": "npc_armor",
+          "cell": 1,
+          "kind": "character",
+          "height": 50
+        },
+        {
+          "id": "npc_upgrade",
+          "cell": 2,
+          "kind": "character",
+          "height": 50
+        },
+        {
+          "id": "npc_enchant",
+          "cell": 3,
+          "kind": "character",
+          "height": 50
+        },
+        {
+          "id": "npc_alchemist",
+          "cell": 4,
+          "kind": "character",
+          "height": 50
+        },
+        {
+          "id": "npc_gems",
+          "cell": 5,
+          "kind": "character",
+          "height": 50
+        },
+        {
+          "id": "npc_socket",
+          "cell": 6,
+          "kind": "character",
+          "height": 50
+        },
+        {
+          "id": "npc_gamble",
+          "cell": 7,
+          "kind": "character",
+          "height": 50
+        },
+        {
+          "id": "captain",
+          "cell": 8,
+          "kind": "character",
+          "height": 50
+        },
+        {
+          "id": "chorus",
+          "cell": 9,
+          "kind": "character",
+          "height": 50
+        }
+      ]
+    },
+    {
+      "file": "equipment.png",
+      "columns": 5,
+      "rows": 4,
+      "entries": [
+        {
+          "id": "item_sword",
+          "cell": 0,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_axe",
+          "cell": 1,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_mace",
+          "cell": 2,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_hammer",
+          "cell": 3,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_dagger",
+          "cell": 4,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_staff",
+          "cell": 5,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_wand",
+          "cell": 6,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_bow",
+          "cell": 7,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_crossbow",
+          "cell": 8,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_spear",
+          "cell": 9,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_scythe",
+          "cell": 10,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_pistol",
+          "cell": 11,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_boomerang",
+          "cell": 12,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_lute",
+          "cell": 13,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_shield",
+          "cell": 14,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_orb",
+          "cell": 15,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_helm",
+          "cell": 16,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_armor",
+          "cell": 17,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_gloves",
+          "cell": 18,
+          "kind": "icon",
+          "height": 50
+        }
+      ]
+    },
+    {
+      "file": "loot.png",
+      "columns": 5,
+      "rows": 2,
+      "entries": [
+        {
+          "id": "item_legs",
+          "cell": 0,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "item_boots",
+          "cell": 1,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "ring_0",
+          "cell": 2,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "ring_1",
+          "cell": 3,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "ring_2",
+          "cell": 4,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gold_1",
+          "cell": 5,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gold_2",
+          "cell": 6,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gold_3",
+          "cell": 7,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "orb_hp",
+          "cell": 8,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "orb_mp",
+          "cell": 9,
+          "kind": "icon",
+          "height": 50
+        }
+      ]
+    },
+    {
+      "file": "gems.png",
+      "columns": 7,
+      "rows": 3,
+      "entries": [
+        {
+          "id": "gem_ruby",
+          "cell": 0,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_sapphire",
+          "cell": 1,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_topaz",
+          "cell": 2,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_emerald",
+          "cell": 3,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_amethyst",
+          "cell": 4,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_diamond",
+          "cell": 5,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_onyx",
+          "cell": 6,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_opal",
+          "cell": 7,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_jade",
+          "cell": 8,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_bloodstone",
+          "cell": 9,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_moonstone",
+          "cell": 10,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_sunstone",
+          "cell": 11,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_prism",
+          "cell": 12,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_twinsoul",
+          "cell": 13,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_splitter",
+          "cell": 14,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_orbit",
+          "cell": 15,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_novacore",
+          "cell": 16,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_chainlink",
+          "cell": 17,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_titan",
+          "cell": 18,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_seeker",
+          "cell": 19,
+          "kind": "icon",
+          "height": 50
+        },
+        {
+          "id": "gem_classgem",
+          "cell": 20,
+          "kind": "icon",
+          "height": 50
+        }
+      ]
+    },
+    {
+      "file": "townsfolk.png",
+      "columns": 3,
+      "rows": 2,
+      "entries": [
+        {
+          "id": "npc_tobin",
+          "cell": 0,
+          "kind": "character",
+          "height": 50
+        },
+        {
+          "id": "npc_mira",
+          "cell": 1,
+          "kind": "character",
+          "height": 50
+        },
+        {
+          "id": "npc_cael",
+          "cell": 2,
+          "kind": "character",
+          "height": 50
+        },
+        {
+          "id": "npc_gorm",
+          "cell": 3,
+          "kind": "character",
+          "height": 50
+        },
+        {
+          "id": "fx_wolf",
+          "cell": 4,
+          "kind": "character",
+          "height": 50
+        },
+        {
+          "id": "fx_dragon",
+          "cell": 5,
+          "kind": "character",
+          "height": 50
+        }
+      ]
+    },
+    {
+      "file": "guardian.png",
+      "columns": 1,
+      "rows": 1,
+      "entries": [
+        {
+          "id": "guardian",
+          "cell": 0,
+          "kind": "summon",
+          "height": 60
+        }
+      ]
+    },
+    {
+      "file": "hive.png",
+      "columns": 1,
+      "rows": 1,
+      "entries": [
+        {
+          "id": "hive",
+          "cell": 0,
+          "kind": "summon",
+          "height": 35
+        }
+      ]
+    }
+  ]
+}

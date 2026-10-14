@@ -159,8 +159,8 @@ export class Creature {
     return this.status.freeze && this.status.freeze.t > 0 ? FREEZE : this.curses.charm && this.curses.charm.t > 0 ? CHARM : '';
   }
   flashImage(img) {
-    if (this.classId) return null;
     if (img && img._art) return enemyImage(img === this._img ? this._imgSprite : this.riseArt, this.swap, 'flash');
+    if (this.classId) return null;
     if (!this._flashImg) this._flashImg = pixelSprite(this.sprite, this.pal, 6, { flash: true });
     return this._flashImg;
   }

@@ -59,7 +59,9 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
 ## Conventions
 - Match the existing style: ES modules, 2-space indent, single quotes, dense code, short comments only where
   something is non-obvious. Shared state lives on `G` (`src/state.js`).
-- All art except the user's sprite sheets is placeholder. Summons, Velscour, decor props and items are ASCII pixel art in
+- Remaining unpainted live sprites now use the generated pack in `assets/source/replacements/`
+  (`python tools/replacementart.py`; see `docs/SPRITE_REPLACEMENTS.md`). Preserve these and the user's art.
+  ASCII fallbacks for missing/loading art remain in
   `src/gfx/pixelart.js`, and the town (ground, transitions, buildings, trees, props) comes from the Overworld and Town pack
   (`assets/source/biomes/town/`, `python3 tools/process_assets.py town`, `tools/townpack.py`; see docs/ART.md). Monsters use the user's sheets in
   `assets/source/enemies/<set>/`, imported by `python3 tools/process_assets.py enemies` and catalogued in

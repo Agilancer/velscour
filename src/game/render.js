@@ -3,6 +3,7 @@ import { G } from '../state.js';
 import { camera, isoX, isoY, HW, HH, TW, TH } from '../core/view.js';
 import { makeCanvas, TAU, clamp, rgba, shade, hexToRgb } from '../core/util.js';
 import { drawDecals, drawEffects, drawParticles, drawTexts, lights, glowSprite } from '../gfx/vfx.js';
+import { replacementImage } from '../core/replacementart.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { gritAt } from '../gfx/grit.js';
 import { classSprite } from '../core/assets.js';
@@ -185,7 +186,8 @@ function drawNpc(ctx, n) {
     n.sbox = [x - 24, y - 40, x + 24, y + 6];
     return;
   }
-  const img = classSprite(n.vendor ? n.vendor.sprite : n.sprite, 180, n.vendor ? n.vendor.pal : n.pal);
+  const npcArt = n.vendor ? 'npc_' + n.vendor.id : ({ 'Old Tobin': 'npc_tobin', Mira: 'npc_mira', 'Brother Cael': 'npc_cael', Gorm: 'npc_gorm' })[n.name];
+  const img = (npcArt && replacementImage(npcArt)) || classSprite(n.vendor ? n.vendor.sprite : n.sprite, 180, n.vendor ? n.vendor.pal : n.pal);
   const h = 58, w = (h * img.width) / img.height;
   const x = isoX(n.x, n.y), y = isoY(n.x, n.y);
   ctx.fillStyle = 'rgba(0,0,0,0.38)';

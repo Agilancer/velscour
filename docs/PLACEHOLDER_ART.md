@@ -1,5 +1,10 @@
 # VELSCOUR: placeholder art inventory and art brief
 
+**Historical expansion brief:** the live sprite audit and October 2026 replacement pass are
+in [SPRITE_REPLACEMENTS.md](SPRITE_REPLACEMENTS.md). Summons, NPCs, boss/ward and generic
+loot sprites listed here have since been replaced; existing familiar imports also supersede
+many entries. Use the new audit and current code before generating more art.
+
 This file lists every graphic in VELSCOUR that is still placeholder art: ASCII pixel art in `src/gfx/pixelart.js`, shapes
 drawn in code, or real art borrowed and recoloured for something it wasn't made for. It is written so you can give it
 to an image generator (ChatGPT) as the brief: what to draw, how many, what size, and the sheet layout the game's

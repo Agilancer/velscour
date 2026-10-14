@@ -519,7 +519,8 @@ export const FAMILIAR_ART = [
     'Dire Wolf', 'Dire Wolf', 'Bone Dire Wolf', 'Storm Dire Wolf', 'Dire Wolf', 'Dire Wolf', 'Flame Dire Wolf', 'Shadow Dire Wolf']),
 ];
 
-export const ART_BY_ID = Object.fromEntries([...BESTIARY, ...SUMMON_ART, ...FAMILIAR_ART].map((a) => [a.id, a]));
+import { REPLACEMENT_ART } from './replacementart.js';
+export const ART_BY_ID = Object.fromEntries([...BESTIARY, ...SUMMON_ART, ...FAMILIAR_ART, ...REPLACEMENT_ART].map((a) => [a.id, a]));
 
 /** Looks that can play an archetype. */
 export function artPool(arch) {
