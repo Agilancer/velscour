@@ -35,7 +35,21 @@ const { openGame, report } = require('./harness');
         if (!main || (cls === 'barbarian' && main.name !== 'Whirlwind') ||
           (cls === 'lancer' && !main.m.shields) || (cls === 'dragoon' && main.kind !== 'leap'))
           problems.push(cls + ' has the wrong primary class ability');
+        // Mobility must work as an actual combat decision, not merely appear
+        // in a skill slot. Each focused melee class should close a five-tile gap.
+        Auto.reset();
+        const start = G.player;
+        const target = { x: start.x + 5, y: start.y, r: 0.35,
+          rank: 'normal', curses: {}, status: {} };
+        const oldLos = G.world.map.los;
+        G.world.map.los = () => true;
+        let gapCast;
+        try { gapCast = Auto.chooseSkill([target], target, 5, false); }
+        finally { G.world.map.los = oldLos; }
+        if (!gapCast || !['leap', 'dash', 'blink'].includes(gapCast.sk.kind))
+          problems.push(cls + ' did not select a gap-closing skill at five tiles');
         details[cls] = { learned: learned.length, signature: signature.map((sk) => sk.name),
+          gapCast: gapCast?.sk.name || null,
           bar: G.char.bar.filter(Boolean).map((id) => SKILLS[id].name) };
       }
 
