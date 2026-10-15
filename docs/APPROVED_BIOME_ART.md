@@ -30,8 +30,12 @@ For each of the five themed generated packs:
 
 - Existing 160 × 80 floor atlas cells **10–17** receive the eight paintings.
   The first ten seamless bases are untouched so maze floors still repeat.
-- Existing 160 × 160 scatter cells **0–7** receive eight corresponding
-  fully transparent painted props.
+- Eight semantically matched native 160 × 160 scatter cells receive
+  the eight transparent painted props (obelisk, brazier, sarcophagus,
+  column, banner, urn, statue and altar). The destination indexes differ
+  per biome to preserve each existing named object's footprint and
+  collision rule. The exact per-biome lookup lives in
+  `NATIVE_PROP_INDICES` within `src/gfx/approvedbiomeart.js`.
 - Desktop builds that generate the additional 60-floor/40-prop expansion
   also replace **eight appended decorative floors** (expansion start +10)
   and **eight appended props** (expansion scatter start +0), so the newer
@@ -41,7 +45,7 @@ For each of the five themed generated packs:
 - Sprite metadata, tile indices, material family names, wall slices,
   doorway masks, pivots, object collision/footprints and dungeon logic
   are preserved exactly. The loaded pack receives
-  `meta.approvedArt={row,floorStart,propStart,floorCount,propCount}`
+  `meta.approvedArt={row,floorStart,propStart,propIndices,floorCount,propCount}`
   for inspection.
 
 If an atlas is missing, existing generated art remains as the fallback.
