@@ -39,12 +39,14 @@ const fs = await import('node:fs');
 const meta = JSON.parse(fs.readFileSync(new URL('../../assets/sprites/enemies/enemies.json', import.meta.url)));
 const ids = new Set(), cells = new Set();
 for (const a of BESTIARY) {
-  if (a.sheet === 'heavenly/generated') {
-    if (!a.id.startsWith('hv_') || !a.name || !ARCH[a.arch]) bad.push('invalid Heavenly monster '+a.id);
-    continue; // generated Canvas art, no static enemies.json cell
-  }
   if (ids.has(a.id)) bad.push(`duplicate monster art id ${a.id}`);
   ids.add(a.id);
+  if (a.sheet === 'heavenly/generated') {
+    if (!a.id.startsWith('hv_') || !a.name || !ARCH[a.arch] ||
+        !ELEMENTS.includes(a.el) || !(a.h > 20 && a.h < 120))
+      bad.push('invalid Heavenly monster '+a.id);
+    continue; // generated Canvas art, no static enemies.json cell
+  }
   if (!meta[a.sheet] || !meta[a.sheet].cells[a.i]) bad.push(`monster art ${a.id}: no cell ${a.sheet}#${a.i}`);
   if (cells.has(a.sheet + a.i)) bad.push(`monster art ${a.id}: cell ${a.sheet}#${a.i} used twice`);
   cells.add(a.sheet + a.i);
