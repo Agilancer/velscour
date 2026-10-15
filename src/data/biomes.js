@@ -1,4 +1,4 @@
-// Twenty-eight dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
+// Twenty-nine dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
 // palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
 import { FINAL_DEPTH } from './depth.js';
@@ -16,6 +16,18 @@ export const BIOMES = [
     adj: ['Frostbitten', 'Rime', 'Glacial'], roster: ['skeleton', 'archer', 'wraith', 'golem', 'hound', 'elemental', 'knight', 'bat', 'ghoul', 'eye', 'gargoyle', 'zombie'],
     prefer: ['set2/undead', 'set2/birdfolk'],
     torch: '#8ad8ff', fog: '#0a1420',
+  },
+  {
+    id: 'ice_temple', name: 'Palace of the Everfrost', pack: 'ice_temple',
+    palette: null, dark: 0.78, light: 8,
+    ambient: { type: 'snow', color: '#c5f4ff' },
+    mon: { hue: 185, sat: 0.72, light: 0.09 },
+    el: 'cold', blood: '#4185bd',
+    adj: ['Everfrozen', 'Rimebound', 'Sapphire', 'Wintersworn'],
+    roster: ['skeleton', 'archer', 'wraith', 'golem', 'hound', 'elemental',
+      'knight', 'bat', 'ghoul', 'eye', 'gargoyle', 'zombie'],
+    prefer: ['set2/undead', 'set2/birdfolk', 'set1/liches'],
+    torch: '#89d9fc', fog: '#091629',
   },
   {
     id: 'molten', name: 'Molten Depths', palette: { tint: [255, 90, 20, 0.45], sat: 1.3, contrast: 1.1, light: -0.02 }, dark: 0.72, light: 8,
@@ -228,7 +240,7 @@ Object.assign(BIOMES.find((b) => b.id === 'necropolis'), {
 // Frozen Ossuary whose far rooms are paved like the Crystal Caverns.
 const FAMILY = {
   sand: ['desert', 'gilded', 'serpent', 'amber', 'desert_temple'],
-  frost: ['frozen', 'sunken', 'crystal', 'storm', 'abyss', 'necropolis'],
+  frost: ['frozen', 'ice_temple', 'sunken', 'crystal', 'storm', 'abyss', 'necropolis'],
   ember: ['molten', 'blood', 'forge', 'flesh'],
   rot: ['fungal', 'plague', 'thorn'],
   gloom: ['catacombs', 'ashen', 'void', 'shadow', 'obsidian', 'shattered', 'library', 'cathedral'],
@@ -238,7 +250,8 @@ for (const [f, ids] of Object.entries(FAMILY)) for (const id of ids) BIOMES.find
 // Monster palette swaps per biome (names from SWAPS in bestiary.js; null = the art's own colours). Each look in
 // a level rolls one of these, so the same monster art shows up in many colourings across biomes.
 const MON_SWAPS = {
-  catacombs: [null, null, 'pale', 'ash', 'bone'], frozen: ['rime', 'frost', 'pale', 'spectral'], molten: ['ember', 'infernal', null, 'rust'],
+  catacombs: [null, null, 'pale', 'ash', 'bone'], frozen: ['rime', 'frost', 'pale', 'spectral'],
+  ice_temple: ['rime', 'frost', 'crystal', 'pale', 'spectral'], molten: ['ember', 'infernal', null, 'rust'],
   fungal: ['venom', 'rot', 'thorn', 'bile', 'verdigris'], sunken: ['tide', 'abyss', 'pale', 'spectral'], blood: ['blood', 'flesh', null, 'coral'],
   ashen: ['ash', 'pale', 'shadow', 'bone'], void: ['void', 'abyss', 'shadow', 'amethyst'], gilded: ['gilded', 'sand', null, 'bronze'],
   plague: ['rot', 'venom', 'tide', 'bile'], crystal: ['crystal', 'frost', 'storm', 'amethyst'], desert: ['sand', null, 'gilded', 'bone', 'bronze'],
