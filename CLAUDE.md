@@ -23,6 +23,7 @@ Headless Chromium tests live in `tools/tests/`; see the header comment of each f
 ```bash
 export NODE_PATH=/opt/node22/lib/node_modules     # where playwright is installed in Claude cloud containers
 node tools/tests/data_check.mjs                    # skill data sanity check, no browser (fast)
+node tools/tests/lancer_shields.js                 # four 8-angle Lancer turntables, sprite alpha/frames, in-front/behind QA
 node tools/tests/town.js [seeds]                   # random towns: vendors/portal reachable + screenshots per seed
 node tools/tests/rings.js                          # ring augments in a live dungeon, skill mastery, ring/forge UI shots
 node tools/tests/flow.js                           # town -> portal -> boss -> exit -> depth 2 -> death -> reload
