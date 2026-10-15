@@ -97,6 +97,8 @@ src/game/                      world, player, monsters/AI, combat, skills runtim
 src/ui/                        HUD, touch controls, inventory, skill tree/book, vendors, menus
 ```
 
+## Art
+
 The five themed dungeons (Desert Temple, Ice Temple, Hell, Astral Plane and Heavenly) now use 40 painted floor diamonds and 40 painted props cut from three approved sprite sheets, with 12 painted celestial monster designs replacing procedural first-rank Heavenly variants. All wall geometry, monster IDs and gameplay systems are preserved; see [Approved Biome Artwork](docs/APPROVED_BIOME_ART.md).
 
 
