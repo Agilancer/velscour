@@ -164,3 +164,20 @@ QA can export real game-ready WebP atlases and `pack.json`. See [ICE_TEMPLE.md](
 node tools/tests/ice_temple.js
 node tools/tests/walls.js ice ice_temple
 ```
+
+## HELL — the Infernal Dominion dungeon pack
+
+`src/gfx/hellpack.js` generates a complete independent infernal `{floors,walls,scatter,meta}` pack
+lazily through `loadPack('hell')`. It includes 60 isometric floors (10 repeating bases),
+five demonic wall material families with all 16 topology masks, three 4-direction arches,
+three 4-direction opening gates, and forty lava, bone, iron and torture props.
+Like the Ice/Desert Temple generators, it preserves the Catacombs architecture's
+**geometry and depth-sliced alpha silhouettes only**, while painting new relief/material
+surfaces; this prevents broken hero occlusion, door geometry and wall joining.
+Its floor and prop sprites are wholly programmatically drawn. Full integration instructions,
+validation and browser-exported atlas handoff: [HELL.md](HELL.md).
+
+```bash
+node tools/tests/hell.js
+node tools/tests/walls.js hell hell
+```

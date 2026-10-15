@@ -2,6 +2,7 @@
 import { makeCanvas, recolor, scaleImage } from './util.js';
 import { generateDesertTemplePack } from '../gfx/deserttemple.js';
 import { generateIceTemplePack } from '../gfx/icetemple.js';
+import { generateHellPack } from '../gfx/hellpack.js';
 import { TW } from './view.js';
 import { loadReplacementArt } from './replacementart.js';
 import { loadEnemyArt } from './enemyart.js';
@@ -66,6 +67,11 @@ export async function loadAssets(progress) {
 const DEFAULT_PACK = 'catacombs';
 
 function loadPack(id) {
+  if (id === 'hell') {
+    // Reuse the proven wall/arch/door geometry and generate original Hell material art.
+    return A.packs[id] || (A.packs[id] = loadPack('catacombs').then((base) =>
+      (A.packs[id] = generateHellPack(base))).catch((e) => { delete A.packs[id]; throw e; }));
+  }
   if (id === 'ice_temple') {
     // Ice Temple material/prop atlas, preserving exact Catacombs geometry and depth slices.
     return A.packs[id] || (A.packs[id] = loadPack('catacombs').then((base) =>

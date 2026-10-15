@@ -108,6 +108,18 @@ Requirements, as stated (✅ = implemented in the draft):
 
 ## 3. Status
 
+**HELL biome (October 2026, draft `feature/hell-dungeon-biome`):** Added The
+Infernal Dominion as a standalone indoor dungeon, separate from Molten Depths and
+Depth-500 Velscour's Throne. Its runtime Canvas pack in `src/gfx/hellpack.js`
+provides 60 new floor designs, 40 infernal props, 5×16 modular wall masks and
+three directional arches/doors with opening states; architectural *geometry*
+reuses original validated Catacombs depth slices. Normal dungeon selection,
+monster rewards, boss/exit flow, audio and lights work through the existing
+systems. Documentation: [HELL.md](HELL.md). **Review before merge:** run
+`node tools/tests/hell.js`, inspect generated atlases/actual gameplay and
+measure mobile Safari frame rate. Earlier dated status follows.
+
+
 **Ice Temple (October 2026 — `feature/ice-temple-dungeon` draft):**
 Added Palace of the Everfrost, a full ice-temple indoor dungeon with 60 Canvas-generated
 frozen floor tiles, five modular ice-wall families (all 16 topology masks), three

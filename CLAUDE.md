@@ -44,6 +44,7 @@ node tools/tests/pack.js catacombs,blood          # biome pack levels: arches, d
 node tools/tests/overworld.js                      # 60 outdoor seeds, 20 scenarios, forced scheduling, landscape previews
 node tools/tests/desert_temple.js                 # new 60-tile/40-prop temple pack, modular walls, directional doors, screenshots
 node tools/tests/ice_temple.js                    # 60 floor tiles, full frost architecture, 40 props, sixteen layouts, art export
+node tools/tests/hell.js                          # HELL: 60 infernal floors, 80 wall masks, 40 props, gameplay and atlas exports
 node tools/tests/titlefx.js                        # title intro: click gate, logo fade on the song clock, flame burst on the hit, eyes
 node tools/tests/enemies.js                        # monster art line-ups, corpses, mixed-biome levels + guardians
 node tools/tests/mayhem.js                         # monster traits, ambush arrivals (drop/teleport/burrow/wall), bullet patterns, MADNESS
@@ -74,7 +75,8 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `sprites|biomes|props`). Dungeon floors, walls, arches, doors and scatter come from **biome packs**
   (`assets/source/biomes/<Name>_Biome_Pack.zip`, a 160x80 template; Catacombs is the first, every biome uses it
   palette-swapped), imported by `python3 tools/process_assets.py biomes` (`tools/biomepack.py`). New packs follow the
-  same template; see [`docs/ART.md`](docs/ART.md). Ice Temple is another complete Canvas-generated dungeon pack (`src/gfx/icetemple.js`); see `docs/ICE_TEMPLE.md`.
+  same template; see [`docs/ART.md`](docs/ART.md). HELL follows the same runtime pack API: `src/gfx/hellpack.js` makes the infernal floors, walls, arch/door materials and 40 props; see `docs/HELL.md`.
+  Ice Temple is another complete Canvas-generated dungeon pack (`src/gfx/icetemple.js`); see `docs/ICE_TEMPLE.md`.
   The Desert Temple is a generated exception: `src/gfx/deserttemple.js` creates
   a full pack from Canvas art and existing Catacombs slice silhouettes, without writing files in `assets/tiles/`.
   See `docs/DESERT_TEMPLE.md`.

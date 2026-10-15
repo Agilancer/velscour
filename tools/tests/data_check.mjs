@@ -77,6 +77,10 @@ const asset = (f) => new URL('../../assets/' + f, import.meta.url);
 const packs = {};
 for (const b of BIOMES) {
   if (!b.pack) { bad.push(`biome ${b.id}: no pack`); continue; }
+  if (b.pack === 'hell') {
+    if (!existsSync(new URL('../../src/gfx/hellpack.js', import.meta.url))) bad.push('missing HELL art generator');
+    continue; // full pack generated lazily at runtime; browser QA tests geometry
+  }
   if (b.pack === 'ice_temple') {
     if (!existsSync(new URL('../../src/gfx/icetemple.js', import.meta.url))) bad.push('missing Ice Temple art generator');
     continue; // runtime-generated full pack: browser QA validates all geometry
