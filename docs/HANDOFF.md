@@ -14,7 +14,25 @@ Contents
 
 ---
 
-## October 15, 2026 — continuation of codebase review, PR #56 (DRAFT)
+## October 15, 2026 — Lancer shield animation/direction follow-up
+
+**Branch:** `fix/lancer-reverse-orbit-and-frames-20261015` from `main`.
+PR #56 has since been **merged**. The prior Lancer shield orbit direction
+(-2.4 rad/s) was reversed again to **+2.4 rad/s**, and the *actual sprite
+turntable* now selects atlas frames in reverse (0,7,6,5,4,3,2,1,0 as
+world angle increases). Front frame 0 and rear frame 4 remain aligned with
+the correct isometric near/far sides. All seven Bulwark orbit base radii
+are now 1.40/1.95/2.50/3.05/3.60/4.15/4.70 tiles, separated by 0.55
+rather than 0.22. Shield Storm retains its expanding spiral. No PNGs,
+damage logic, or character animation artwork were altered.
+
+Regression expectations were added to `tools/tests/lancer_shields.js`:
+reverse frame order, exact wrap, increasing concentric radius gaps, and
+all seven skill casts producing +2.4 rad/s orbit hazards. **Actual Chromium
+and iOS Safari visual QA is still required**; do not claim it has run
+without executing it.
+
+## October 15, 2026 — continuation of codebase review, PR #56 (MERGED)
 
 **Branch:** `fix/mobile-biome-performance-saved-hero-preview` → `main`. The
 October 15 environment/shield art PRs #48–55 have been merged. PR #56 adds
@@ -35,7 +53,7 @@ See [BARBARIAN_RAGE_AND_LANCER.md](BARBARIAN_RAGE_AND_LANCER.md) and
 select, Lancer, biome, and flow regression tests. JavaScript syntax was
 checked through the connected repository's source; **actual Chromium and iOS
 Safari runtime/performance/screenshot verification remains outstanding.**
-Keep PR #56 in draft until those checks are complete. Do not create new
+PR #56 has already merged; run the outstanding QA against the latest branch. Do not create new
 sprite art; preserve current character/attack animations and source packs.
 
 ## 1. The user's requirements
