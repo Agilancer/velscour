@@ -452,8 +452,8 @@ function drawDrips(ctx, t, spr, age) {
   }
 }
 
-export function addLight(x, y, radius, intensity = 1) {
-  if (lights.length < 48) lights.push({ x, y, radius, intensity });
+export function addLight(x, y, radius, intensity = 1, z = 20) {
+  if (lights.length < 48) lights.push({ x, y, radius, intensity, z });
 }
 
 export function clearVfx() {

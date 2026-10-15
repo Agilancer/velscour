@@ -7,6 +7,20 @@ import { isoBarrier } from '../gfx/isobarriers.js';
 
 const S = 11; // chunk size in tiles
 
+/** Attach a torch to the true edge midpoint, not a freestanding prop.
+ * The authored holder faces into the adjacent walkable side of the wall.
+ * The light/particles are offset towards the cup, not the mounting plate.
+ */
+export function torchAtWallSegment(s) {
+  const cupRight=s.dir==='f'?!s.front:s.front;
+  const screenOffset=cupRight?18:-18;
+  return {
+    x:s.mx+screenOffset/64, y:s.my-screenOffset/64,
+    mountX:s.mx, mountY:s.my, dir:s.dir, front:!!s.front,
+    depth:s.depth+(s.front?0.57:-0.34), flameZ:60,
+  };
+}
+
 /** Every fifth depth (but the throne at FINAL_DEPTH) ends in a BOSS ROOM with a raid boss (game/raid.js). */
 import { isRaidDepth, FINAL_DEPTH } from '../data/depth.js';
 export { isRaidDepth };
@@ -197,9 +211,10 @@ export function generateDungeon(depth, biome, tileset, seed) {
   const torches = [];
   const inArena = (s) => arena && s.mx >= arena.x - 0.5 && s.mx <= arena.x + arena.w + 0.5 && s.my >= arena.y - 0.5 && s.my <= arena.y + arena.h + 0.5;
   for (const s of map.segments) {
+    // Keep the original wall-light placement rate exactly; only the
+    // holder's artwork/angle and bowl anchor are new.
     if (s.front || rng.next() > (inArena(s) ? 0.3 : 0.07)) continue;
-    const ox = s.dir === 'f' ? 0.12 : 0, oy = s.dir === 'b' ? 0.12 : 0;
-    torches.push({ x: s.mx + ox, y: s.my + oy, depth: s.depth + 0.01 });
+    torches.push(torchAtWallSegment(s));
   }
 
   return {
@@ -482,7 +497,8 @@ function generateThrone(biome, tileset, seed) {
     }
   }
   const torches = [];
-  for (const s of map.segments) if (!s.front && rng.next() < 0.12) torches.push({ x: s.mx + (s.dir === 'f' ? 0.12 : 0), y: s.my + (s.dir === 'b' ? 0.12 : 0), depth: s.depth + 0.01 });
+  for (const s of map.segments)
+    if (!s.front && rng.next() < 0.12) torches.push(torchAtWallSegment(s));
   const props = [];
   const ob = tileset.scatter.find((e) => e.name === 'funerary_obelisk') || tileset.scatter[0];
   for (const [x, y] of [[12, 10], [32, 10], [12, 24], [32, 24]]) {
