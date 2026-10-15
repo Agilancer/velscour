@@ -14,6 +14,42 @@ Contents
 
 ---
 
+## October 15, 2026 — compact shields, class-focused autoplay, town cleanup (draft PR)
+
+**Branch:** `feature/autoplay-focus-town-shields-20261015` from latest `main`
+(after PR #59 merged). See [AUTOPLAY_COMBAT_FOCUS.md](AUTOPLAY_COMBAT_FOCUS.md)
+for behavior and the QA checklist.
+
+- The Lancer's **seven distinct spinning shield base orbit radii are halved** to
+  0.70/0.975/1.25/1.525/1.80/2.075/2.35 tiles (0.275 gaps). The +2.4
+  rad/s rotation, inverted eight-angle atlas frame order, depth sorting,
+  shield opacity handling, counts, damage and spiral formulas stay unchanged.
+- Duskhollow has fewer roadside props, decorative ground accents, plants,
+  random trees, yards, market wares and scattered relics while the road network,
+  vendors, town portal and walkability gates remain unchanged.
+- Autoplay's skill bar now draws from every *learned* skill (not only the
+  `buildPower` damage shortlist), with class-defining and mobility skills
+  prioritized. During combat it rotates through actual ready/usable skills,
+  promotes gap-closing leaps/charges/blinks when needed, and maintains safety,
+  ranges, line of sight and resource checks.
+- Auto Barbarian learns and uses its Whirlwind suite, Earthquake, and
+  leap/charge mobility; Whirlwind remains the LMB focus. Earthquake now costs
+  **25 Rage and no mana**, with a **5-second cooldown**; auto only uses it
+  when 85+ Rage is available and a real crowd or boss justifies spending it.
+  Manual Whirlwind remains usable from 10 Rage, while auto spins with 40+.
+- Auto Lancer prioritizes all seven orbit skills and lets active rings
+  coexist until near expiry. Dragoon prioritizes its lance leaps and mobility
+  even where those are not the highest DPS skills. All level gates and
+  prerequisites are still enforced.
+
+**Validation so far:** JS source parse checks passed for changed modules;
+isolated JS simulations of level-35/45-point auto builds found all focused
+Barbarian (8), Lancer (14), and Dragoon (12) skills learned and equipped,
+and distinct attacks were selected in repeated combat. Full Playwright tests,
+gameplay screenshots and iOS Safari testing **were not run** in this
+GitHub-connector session. Run `node tools/tests/autoplay_focus.js` as well
+as existing tests from the new detailed doc before merging.
+
 ## October 15, 2026 — approved painted biome artwork (draft PR)
 
 Branch: `art/approved-themed-biomes-20261015`. Three approved sprite
