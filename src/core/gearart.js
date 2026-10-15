@@ -1,7 +1,7 @@
 // Gear art (tools/gearart.py, docs/CLASS_ART.md): per class 80 body armors and 80 helms, single frames of the
 // same hero. The hero is drawn as the equipped body armor's design in its finish (palette), with the
-// equipped helm composited over the head: the face shows through the helm's opening, and hair that would
-// poke out of the shell is clipped. Only the played class is loaded (about 600 KB).
+// equipped helm composited over the head. Open face cavities are fitted with metal faceplates rather
+// than exposing the base character's face; crown hair is clipped. Only the played class is loaded (~600 KB).
 import { makeCanvas, hexToRgb, clamp, randi, pick, chance } from './util.js';
 import { RARITY } from '../data/items.js';
 import { PALETTES, GEAR_FX, FX_CHANCE } from '../data/gear.js';
@@ -151,7 +151,69 @@ function armorPixels(id, pi) {
   return out;
 }
 
-/** One helm cell (1-based id) as RGBA bytes + its mask (255 opening, 128 crown zone), recoloured. */
+/**
+ * Fit a closed, shaded faceplate into a helm's existing open-face mask. The importer identifies
+ * the dark opening as mask 255. Sampling the adjacent *already recoloured* shell keeps every
+ * plate in the same material and finish as its own helmet, rather than painting a generic grey
+ * patch over the class art. All work stays within the 48x56 atlas cell / original silhouette.
+ *
+ * Other details (crowns, horns, trim, visor/grille pixels) remain the supplied artwork.
+ * This deliberately avoids scaling, positioning, or replacing the source atlases.
+ */
+function closeHelmOpening(px, mask, w, h, id) {
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (mask[y * w + x] !== 255) continue;
+    x0 = Math.min(x0, x); y0 = Math.min(y0, y);
+    x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+  }
+  if (x1 < x0) return; // already closed (leave the artist's face/visor intact)
+
+  // Pick up the helmet's native, palette-swapped metal, favoring the brow and cheek rim,
+  // and excluding nearly black interiors and vivid cloth/trim whenever possible.
+  const sample = (neutralOnly) => {
+    let r = 0, g = 0, b = 0, weight = 0;
+    for (let y = Math.max(0, y0 - 8); y <= Math.min(h - 1, y1 + 3); y++) {
+      for (let x = Math.max(0, x0 - 9); x <= Math.min(w - 1, x1 + 3); x++) {
+        const i = y * w + x, k = i * 4;
+        if (mask[i] || px[k + 3] < 128) continue;
+        const rr = px[k], gg = px[k + 1], bb = px[k + 2];
+        const hi = Math.max(rr, gg, bb), lo = Math.min(rr, gg, bb);
+        if (hi < 65 || hi > 238 || (neutralOnly && hi - lo > 75)) continue;
+        const near = Math.abs(x - x0) + Math.abs(y - y0);
+        const wt = (x <= x1 && y <= y1 ? 2 : 1) / (1 + near * 0.09);
+        r += rr * wt; g += gg * wt; b += bb * wt; weight += wt;
+      }
+    }
+    return weight ? [r / weight, g / weight, b / weight] : null;
+  };
+  const metal = sample(true) || sample(false) || [120, 120, 124];
+  const mid = (x0 + x1) / 2, spanX = Math.max(1, x1 - x0), spanY = Math.max(1, y1 - y0);
+  const style = (id - 1) % 5; // small, repeatable facet differences; no new item ids or save changes
+
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const i = y * w + x;
+    if (mask[i] !== 255) continue;
+    const u = (x - x0) / spanX, v = (y - y0) / spanY;
+    // High-left light, dark turned cheek, raised nasal ridge and inset steel jaw.
+    let light = 0.74 + 0.24 * (1 - v) + 0.16 * (1 - u);
+    if (x === x0 || x === x1 || y === y1) light *= 0.67; // inset plate edge
+    if (Math.abs(x - mid) < 0.65) light *= style === 1 ? 0.67 : 1.3; // ridge / recessed seam
+    if (style === 2 && y > y0 + spanY * 0.5 && (x - x0) % 3 === 0) light *= 0.66;
+    if (style === 3 && Math.abs(x - mid) > spanX * (0.28 - 0.12 * v)) light *= 0.77;
+    if (style === 4 && y > y0 + spanY * 0.65 && y % 3 === 0) light *= 0.76;
+    // A one-pixel, unbroken dark eye slit is helmet material, never the character's face.
+    if (spanX >= 5 && spanY >= 7 && y === y0 + Math.round(spanY * 0.34) &&
+        x > x0 && x < x1) light *= 0.18;
+    const k = i * 4;
+    px[k] = clamp(Math.round(metal[0] * light), 0, 255);
+    px[k + 1] = clamp(Math.round(metal[1] * light), 0, 255);
+    px[k + 2] = clamp(Math.round(metal[2] * light), 0, 255);
+    px[k + 3] = 255;
+  }
+}
+
+/** One helm cell (1-based id), with its open faces plated shut and palette recoloured. */
 function helmPixels(id, pi) {
   const { meta, helms, hmask } = S, [, , hw, hh] = meta.helmCell;
   const sx = ((id - 1) % meta.cols) * hw, sy = Math.floor((id - 1) / meta.cols) * hh, aw = helms.width;
@@ -166,6 +228,7 @@ function helmPixels(id, pi) {
       if (L && hmask[si] !== 255) recolorPx(out, o, pi, L, pal.k);
     }
   }
+  closeHelmOpening(out, m, hw, hh, id);
   return { px: out, m };
 }
 
@@ -191,13 +254,18 @@ export function heroLook(cls, body, head) {
   const px = armorPixels(bl[0], bl[1]);
   if (hl) {
     const [hx, hy, hw, hh] = meta.helmCell, { px: hp, m } = helmPixels(hl[0], hl[1]);
+    const ax = ((bl[0] - 1) % meta.cols) * fw;
+    const ay = Math.floor((bl[0] - 1) / meta.cols) * fh;
     for (let y = 0; y < hh; y++) {
       for (let x = 0; x < hw; x++) {
         const hi = y * hw + x, o = ((hy + y) * fw + hx + x) * 4;
         const mk = m[hi], shell = hp[hi * 4 + 3] > 0;
-        if (mk === 128) { px[o + 3] = 0; continue; }          // crown zone: hair poking out of the shell
+        if (mk === 128) { // Crown clip: remove the base head's protected skin/hair, never armor/trim.
+          if (S.amask[(ay + hy + y) * S.armor.width + ax + hx + x]) px[o + 3] = 0;
+          continue;
+        }
         if (!shell) continue;
-        if (mk === 255 && px[o + 3]) continue;                // opening: the face shows through
+        // Mask 255 is now a shaded opaque faceplate, not a hole into the base face.
         px[o] = hp[hi * 4]; px[o + 1] = hp[hi * 4 + 1]; px[o + 2] = hp[hi * 4 + 2]; px[o + 3] = 255;
       }
     }
@@ -233,8 +301,8 @@ export function gearIcon(item, w = 48, h = w) {
     const { meta } = S;
     if (item.slot === 'body') c = fitCanvas(toCanvas(armorPixels(l[0], l[1]), meta.frame[0], meta.frame[1]), meta.armor.box[l[0] - 1], w, h);
     else {
-      const [, , hw, hh] = meta.helmCell, { px, m } = helmPixels(l[0], l[1]);
-      for (let i = 0; i < m.length; i++) if (m[i] === 255) px[i * 4 + 3] = 0; // an empty helm: see through its opening
+      const [, , hw, hh] = meta.helmCell, { px } = helmPixels(l[0], l[1]);
+      // The inventory icon uses the same closed-face plate as the equipped hero.
       c = fitCanvas(toCanvas(px, hw, hh), meta.helms.box[l[0] - 1], w, h);
     }
     if (icons.size > 300) icons.clear();
