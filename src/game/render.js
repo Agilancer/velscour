@@ -3,6 +3,7 @@ import { G } from '../state.js';
 import { camera, isoX, isoY, HW, HH, TW, TH } from '../core/view.js';
 import { makeCanvas, TAU, clamp, rgba, shade, hexToRgb } from '../core/util.js';
 import { drawDecals, drawEffects, drawParticles, drawTexts, lights, glowSprite } from '../gfx/vfx.js';
+import { orbitShieldDepth } from '../gfx/lancershields.js';
 import { replacementImage } from '../core/replacementart.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { gritAt } from '../gfx/grit.js';
@@ -270,6 +271,15 @@ export function renderWorld(ctx, world) {
   const sorted = [], top = [];
   for (const h of world.hazards) {
     if (h.ground) h.draw(ctx);
+    else if (h.shieldVariant && h.pos) {
+      // Each rotating shield has its own world depth! The far-side shields
+      // render BEFORE the Lancer; the near-side shields render AFTER him.
+      // They also sort naturally between wall/door and creature slices.
+      for (let i = 0; i < h.pos.length; i++) {
+        const [x,y,a]=h.pos[i];
+        sorted.push({d:orbitShieldDepth(x,y,a),f:11,o:h,index:i});
+      }
+    }
     else if (typeof h.depth === 'number') sorted.push({ d: h.depth, f: 1, o: h });
     else top.push(h);
   }
@@ -354,6 +364,7 @@ export function renderWorld(ctx, world) {
       case 8: o.draw(ctx); break;
       case 9: drawChest(ctx, o); break;
       case 10: drawPortal(ctx, o); break;
+      case 11: o.drawShield(ctx,it.index); break;
     }
   }
   if (q !== hq) ctx.imageSmoothingQuality = hq;
