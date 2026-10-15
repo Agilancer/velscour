@@ -193,7 +193,7 @@ export const BIOMES = [
     ambient: { type: 'sand', color: '#d9ac70' },
     mon: { hue: 28, sat: 0.95, light: 0.04 }, el: 'holy', blood: '#8a2a14',
     adj: ['Sunless', 'Goldbound', 'Dynastic', 'Entombed'],
-    roster: ['skeleton', 'archer', 'knight', 'golem', 'cultist', 'scorpion', 'worm', 'wraith', 'mummy', 'beetle', 'gargoyle', 'elemental'],
+    roster: ['skeleton', 'archer', 'knight', 'golem', 'cultist', 'scorpion', 'worm', 'wraith', 'zombie', 'beetle', 'gargoyle', 'elemental'],
     prefer: ['set2/undead', 'set2/kobolds', 'set2/warriors', 'set1/skeletons'],
     torch: '#ffb860', fog: '#140e0b',
   },
