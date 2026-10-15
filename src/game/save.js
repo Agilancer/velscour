@@ -42,7 +42,7 @@ export function newCharData(classId, name) {
     attrs: { ...C.base }, statPoints: 0, skillPoints: 1,
     skills: {}, granted: {}, bar: Array(BAR_SIZE).fill(null),
     equip: { weapon: null, offhand: null, head: null, body: null, hands: null, legs: null, feet: null, ring1: null, ring2: null, ring3: null, ring4: null },
-    mastery: {}, townSeed: (Math.random() * 1e9) | 0,
+    mastery: {}, rage: 0, townSeed: (Math.random() * 1e9) | 0,
     bag: Array(60).fill(null),
     stash: Array(300).fill(null),
     gold: 150, potions: { hp: 6, mp: 4, rejuv: 1, fury: 1 },
@@ -65,6 +65,7 @@ export function migrate(c) {
   c.cleared = c.cleared || {};
   c.granted = c.granted || {};
   c.tips = c.tips || {};
+  if (c.classId === 'barbarian') c.rage = Math.max(0, Math.min(100, Number(c.rage) || 0));
   c.mastery = c.mastery || {}; // skill mastery: {skillId: [level 1-1000, xp]}
   for (const s of ['ring1', 'ring2', 'ring3', 'ring4']) if (!(s in c.equip)) c.equip[s] = null;
   if (c.townSeed === undefined) c.townSeed = (Math.random() * 1e9) | 0;
