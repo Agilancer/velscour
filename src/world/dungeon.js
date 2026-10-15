@@ -13,11 +13,11 @@ const S = 11; // chunk size in tiles
  */
 export function torchAtWallSegment(s) {
   const cupRight=s.dir==='f'?!s.front:s.front;
-  const screenOffset=cupRight?25:-25;
+  const screenOffset=cupRight?18:-18;
   return {
     x:s.mx+screenOffset/64, y:s.my-screenOffset/64,
     mountX:s.mx, mountY:s.my, dir:s.dir, front:!!s.front,
-    depth:s.depth+(s.front?0.57:-0.34), flameZ:63,
+    depth:s.depth+(s.front?0.57:-0.34), flameZ:60,
   };
 }
 
