@@ -1,4 +1,4 @@
-// Twenty-nine dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
+// Thirty dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
 // palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
 import { FINAL_DEPTH } from './depth.js';
@@ -210,6 +210,18 @@ export const BIOMES = [
     torch: '#ffb860', fog: '#140e0b',
   },
   {
+    id: 'hell', name: 'HELL — The Infernal Dominion', pack: 'hell',
+    palette: null, dark: 0.87, light: 7.1,
+    ambient: { type: 'ember', color: '#ff5a25' },
+    mon: { hue: -10, sat: 1.36, light: -0.03 },
+    el: 'fire', blood: '#b31214',
+    adj: ['Hellbound', 'Hellsworn', 'Damned', 'Abyssal'],
+    roster: ['demon','imp','knight','gargoyle','abomination','hound',
+      'wraith','cultist','elemental','golem','eye','skeleton'],
+    prefer: ['set1/demons','set2/fiends','set2/titans'],
+    torch: '#ff5420', fog: '#17030b',
+  },
+  {
     id: 'throne', name: "Velscour's Throne", palette: { colorize: [4, 0.72], light: -0.1, contrast: 1.2 }, dark: 0.8, light: 8,
     ambient: { type: 'ember', color: '#ff3a10' }, mon: { hue: -10, sat: 1.5, light: -0.06 }, el: 'fire', blood: '#c00000',
     adj: ['Hellsworn', 'Doom', 'Archfiend'], roster: ['demon', 'imp', 'knight', 'gargoyle', 'abomination', 'hound', 'wraith', 'cultist', 'elemental', 'golem', 'eye', 'skeleton'],
@@ -241,7 +253,7 @@ Object.assign(BIOMES.find((b) => b.id === 'necropolis'), {
 const FAMILY = {
   sand: ['desert', 'gilded', 'serpent', 'amber', 'desert_temple'],
   frost: ['frozen', 'ice_temple', 'sunken', 'crystal', 'storm', 'abyss', 'necropolis'],
-  ember: ['molten', 'blood', 'forge', 'flesh'],
+  ember: ['molten', 'blood', 'forge', 'flesh', 'hell'],
   rot: ['fungal', 'plague', 'thorn'],
   gloom: ['catacombs', 'ashen', 'void', 'shadow', 'obsidian', 'shattered', 'library', 'cathedral'],
 };
@@ -260,6 +272,7 @@ const MON_SWAPS = {
   flesh: ['flesh', 'blood', null, 'coral'], serpent: ['venom', 'sand', null, 'verdigris'], shattered: ['pale', 'storm', null, 'bronze'],
   library: ['shadow', 'pale', 'void', 'amethyst'], cathedral: [null, 'pale', 'shadow', 'bone'], necropolis: ['pale', 'frost', 'shadow', 'spectral', 'bone'], amber: ['sand', 'ember', 'gilded', 'bronze'],
   desert_temple: ['sand', 'gilded', 'bronze', 'bone', null],
+  hell: ['infernal', 'ember', 'blood', 'rust', 'obsidian'],
   overworld: [null, 'thorn', 'rot', 'ash', 'bone'], throne: ['infernal', 'blood', 'ember', 'rust'],
 };
 for (const b of BIOMES) b.swaps = MON_SWAPS[b.id];
