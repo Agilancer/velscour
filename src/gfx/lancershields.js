@@ -1,6 +1,6 @@
 // Eight-angle, sprite-based Lancer spinning shields, from the four supplied
 // golden shield turntables. One complete 360-degree frame cycle per orbit.
-// Sheets: 4 columns x 2 rows; each cell 104x128 native source pixels.
+// Sheets: 4 columns x 2 rows; each cell 68x84 transparent game pixels.
 import { isoX, isoY } from '../core/view.js';
 import { TAU } from '../core/util.js';
 import { drawShape } from './shapes.js';
@@ -11,7 +11,7 @@ export const SHIELD_SHEET = Object.freeze({
   kite:    'assets/fx/lancer/spinning_kite.png',
   tower:   'assets/fx/lancer/spinning_tower.png',
 });
-export const SHIELD_FRAME = Object.freeze({w:104,h:128,columns:4,count:8});
+export const SHIELD_FRAME = Object.freeze({w:68,h:84,columns:4,count:8});
 
 // Every Bulwark spinning shield ability is assigned one of the four sets.
 // Later abilities intentionally reuse upgraded styles, not a generic oval.
@@ -80,7 +80,7 @@ export function drawLancerOrbitShield(ctx, orbit, position) {
   const sy=Math.floor(frame/4)*SHIELD_FRAME.h;
   // At the original attack size this occupies approx. 42x54 world pixels
   // within its padded transparent 104x128 source frame.
-  const scale=0.50 * orbit.size;
+  const scale=0.765 * orbit.size;
   const w=SHIELD_FRAME.w*scale,h=SHIELD_FRAME.h*scale;
   ctx.save();ctx.imageSmoothingEnabled=false;
   ctx.drawImage(record.image,sx,sy,SHIELD_FRAME.w,SHIELD_FRAME.h,
