@@ -118,7 +118,7 @@ async function expandedPack(biome) {
   const promise=loadPack(biome.pack || DEFAULT_PACK).then(base=>expandBiomePack(base,biome))
     .then(pack=>{
       A.packs[id]=pack;
-      while(EXPANSION_ORDER.length>3){
+      while(EXPANSION_ORDER.length>2){
         const old=EXPANSION_ORDER.shift();
         if(old===id)continue;
         delete A.packs[old];
