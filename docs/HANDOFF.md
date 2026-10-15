@@ -14,6 +14,26 @@ Contents
 
 ---
 
+## October 15, 2026 — approved painted biome artwork (draft PR)
+
+Branch: `art/approved-themed-biomes-20261015`. Three approved sprite
+sheets (40 floor diamonds, 40 environmental props, 12 Heavenly creatures)
+were cut to transparent low-memory WebP atlases and uploaded to
+`assets/tiles/approved_biomes/`. The five floor/prop atlas rows are mapped
+in order to Desert Temple, Ice Temple, Hell, Astral Plane and Heavenly.
+`src/gfx/approvedbiomeart.js` paints eight floor and eight prop atlas slots
+per biome at pack creation, including corresponding appended expansion
+cells on desktop. On mobile the native generated pack alone receives the
+art and no expanded wall atlas is duplicated. Twelve Heavenly paintings
+replace only the first monster variant of each existing family in
+`src/gfx/heavenlymonsters.js`; remaining 48 designs and all AI are retained.
+No other biomes, wall slices, collision data, skill art or class sprites change.
+
+See `docs/APPROVED_BIOME_ART.md`; run
+`node tools/tests/approved_biome_art.js` and existing Heavenly/biome/mobile
+regressions with a local HTTP server. Real desktop and iOS Safari visual QA,
+including alpha edges and foot anchors, remains outstanding.
+
 ## October 15, 2026 — Lancer shield animation/direction follow-up
 
 **Branch:** `fix/lancer-reverse-orbit-and-frames-20261015` from `main`.
