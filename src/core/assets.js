@@ -3,6 +3,7 @@ import { makeCanvas, recolor, scaleImage } from './util.js';
 import { generateDesertTemplePack } from '../gfx/deserttemple.js';
 import { generateIceTemplePack } from '../gfx/icetemple.js';
 import { generateHellPack } from '../gfx/hellpack.js';
+import { generateAstralPlanePack } from '../gfx/astralplane.js';
 import { TW } from './view.js';
 import { loadReplacementArt } from './replacementart.js';
 import { loadEnemyArt } from './enemyart.js';
@@ -67,6 +68,11 @@ export async function loadAssets(progress) {
 const DEFAULT_PACK = 'catacombs';
 
 function loadPack(id) {
+  if (id === 'astral_plane') {
+    // Celestial artwork is generated once, matching the existing tile/door silhouette metadata.
+    return A.packs[id] || (A.packs[id] = loadPack('catacombs').then((base) =>
+      (A.packs[id] = generateAstralPlanePack(base))).catch((e) => { delete A.packs[id]; throw e; }));
+  }
   if (id === 'hell') {
     // Reuse the proven wall/arch/door geometry and generate original Hell material art.
     return A.packs[id] || (A.packs[id] = loadPack('catacombs').then((base) =>
