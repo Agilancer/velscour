@@ -8,10 +8,11 @@ const {openGame,report,OUT_DIR}=require('./harness');
  try {
   const result=await page.evaluate(async()=>{
    const {G,game}=window.VELSCOUR;
-   const {SHIELD_SHEET,SHIELD_FRAME,LANCER_SHIELD_ABILITY,
-     shieldVariantForSkill,shieldFrameForAngle,orbitShieldDepth,preloadLancerShield}
+   const {SHIELD_SHEET,SHIELD_FRAME,LANCER_SHIELD_ABILITY,SHIELD_ORBIT_RADIUS,
+     shieldVariantForSkill,shieldOrbitRadius,shieldFrameForAngle,orbitShieldDepth,preloadLancerShield}
       =await import('/src/gfx/lancershields.js');
-   const {SKILLS}=await import('/src/data/skills.js');
+   const {SKILLS,CLASS_SKILLS}=await import('/src/data/skills.js');
+   const {castSkill}=await import('/src/game/skillrun.js');
    const {Orbit}=await import('/src/game/hazards.js');
    const {BIOME_BY_ID}=await import('/src/data/biomes.js');
    const problems=[],detail={};
@@ -25,10 +26,21 @@ const {openGame,report,OUT_DIR}=require('./harness');
      if(!Object.values(SKILLS).some(sk=>sk.name===name&&sk.kind==='orbit'))
        problems.push('No existing orbit skill named '+name);
    }
+   // Positive world-angle travel now plays the turntable BACKWARDS:
+   // frame 0 is still the front, frame 4 still the rear.
    for(let i=0;i<8;i++){
-     const f=shieldFrameForAngle(Math.PI/4+i*Math.PI/4);
-     if(f!==i)problems.push('Rotating angle/frame mismatch: '+i+' -> '+f);
+     const a=Math.PI/4+i*Math.PI/4,expected=(8-i)%8;
+     const f=shieldFrameForAngle(a);
+     if(f!==expected)problems.push('Reversed angle/frame mismatch: '+i+' -> '+f);
+     if(shieldFrameForAngle(a+Math.PI*2)!==f||
+        shieldFrameForAngle(a-Math.PI*2)!==f)
+       problems.push('Frame wrap mismatch at angle '+i);
    }
+   const distances=Object.values(SHIELD_ORBIT_RADIUS);
+   if(distances.length!==7)problems.push('Expected seven shield ability radii');
+   for(let i=1;i<distances.length;i++)
+     if(distances[i]-distances[i-1]<0.54)
+       problems.push('Shield ability orbits too close: '+distances[i-1]+' / '+distances[i]);
    if(orbitShieldDepth(0,0,Math.PI*5/4)>=0)
      problems.push('Back-facing shield sorts after Lancer');
    if(orbitShieldDepth(0,0,Math.PI/4)<=0)
@@ -67,6 +79,24 @@ const {openGame,report,OUT_DIR}=require('./harness');
    G.ui.modalCount=0;G.godMode=true;
    game.buildDungeon(8,BIOME_BY_ID.catacombs);
    const src=G.player,w=G.world;
+   // Confirm the production cast path uses the opposite orbital direction
+   // for EACH shield spell, not just for manually constructed hazards.
+   const initialHazards=w.hazards.length;
+   for(const name of Object.keys(LANCER_SHIELD_ABILITY)){
+     const sk=CLASS_SKILLS.lancer.find(s=>s.name===name);
+     if(!sk){problems.push('Missing Lancer cast skill '+name);continue;}
+     try{
+       castSkill(src,sk,1,src.x+1,src.y);
+       const h=w.hazards.findLast(h=>h instanceof Orbit&&h.o?.sk===sk.id);
+       if(!h){problems.push('No orbit spawned for '+name);continue;}
+       if(h.speed!==2.4)problems.push('Orbit should rotate at +2.4 rad/s: '+name+'='+h.speed);
+       if(h.shieldVariant!==LANCER_SHIELD_ABILITY[name])
+         problems.push('Incorrect shield art on cast: '+name);
+       if(Math.abs(h.radius/shieldOrbitRadius(name)-1)>0.05)
+         problems.push('Unexpected scaled orbit radius: '+name+'='+h.radius);
+     }catch(e){problems.push('Shield cast error '+name+': '+e.message);}
+   }
+   w.hazards.splice(initialHazards);
    // Spawn four shield variants explicitly and force opposite positions
    // around the same Lancer to confirm that front and back render passes
    // really interleave with the player and nearby walls.
