@@ -536,7 +536,7 @@ export const ART_BY_ID = Object.fromEntries([...BESTIARY, ...SUMMON_ART, ...FAMI
  */
 export function artPool(arch, heavenly=false) {
  return BESTIARY.filter(a=>!a.lone && !a.homeBiome &&
-   (a.sheet === 'heavenly/generated') === heavenly &&
+   (a.sheet !== 'heavenly/generated' || heavenly) &&
    (a.arch===arch || (a.also&&a.also.includes(arch))));
 }
 const compat=(a,arch)=>a.arch===arch||(a.also&&a.also.includes(arch));
@@ -568,7 +568,7 @@ const weighted=(array,weight,rand)=>{
 export function rollLooks(biome,rnd=Math.random){
  const id=biome.id||'',bel=biome.el&&biome.el!=='phys'?biome.el:null;
  const swaps=biome.swaps||[null],isHeaven=id==='heavenly';
- const original=artPool; // original illustrations are always an option
+ const original=artPool; // normal bestiary always eligible, including inside HEAVENLY
  const globalsByArch=new Map(),homeByArch=new Map(),visitorsByArch=new Map();
  const nHome=NATIVE_BY_BIOME.get(id)||[];
  const affinity=a=>(a.el&&a.el===bel?4:1)*
@@ -579,10 +579,9 @@ export function rollLooks(biome,rnd=Math.random){
    return key?SWAPS[key]:null;
  };
  const select=(arch,r,excluded=[],boss=false)=>{
-   if(!globalsByArch.has(arch))globalsByArch.set(arch,original(arch,isHeaven).filter(a=>!boss||a.boss));
+   if(!globalsByArch.has(arch))globalsByArch.set(arch,original(arch,isHeaven).filter(a=>boss?!!a.boss:!a.lone));
    if(!homeByArch.has(arch))homeByArch.set(arch,nHome.filter(a=>compat(a,arch)&&(!boss||a.boss)));
    if(!visitorsByArch.has(arch))visitorsByArch.set(arch,(NATIVE_BY_ARCH.get(arch)||[]).filter(a=>a.homeBiome!==id&&(!boss||a.boss)));
-   const home=homeByArch.get(arch).filter(a=>!a.lone===!boss&&!excluded.includes(a.id));
    // home monster definition reserves 5 boss-only entries.
    const domestic=homeByArch.get(arch).filter(a=>boss?!!a.boss:!a.lone).filter(a=>!excluded.includes(a.id));
    const global=globalsByArch.get(arch).filter(a=>!excluded.includes(a.id));
