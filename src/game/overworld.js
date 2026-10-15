@@ -85,7 +85,15 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
     report('Wave '+S.stage+'/'+target+' is attacking!');
   };
   const person=(name,x,y,cls='ranger')=>{
-    const n={name,sprite:cls,pal:{hue:25,sat:.75,light:.08},x,y,flip:rng.chance(.5),hp:100};
+    const n={name,sprite:cls,pal:{hue:25,sat:.75,light:.08},x,y,flip:rng.chance(.5),hp:100,reach:1.6,
+      use:()=>{
+        // NPCs are normally click targets; give each one a safe and useful interaction.
+        if(type==='rescue'){
+          const marker=S.markers.find(m=>norm([m.x,m.y],[n.x,n.y])<2.5);
+          if(marker)return marker.use();
+        }
+        UI.log('['+name+'] Stay close, and help keep the Wilds safe.','#e2d6aa');
+      }};
     world.npcs.push(n);S.civilians.push(n);return n;
   };
   const fail=(reason)=>{
