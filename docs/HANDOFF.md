@@ -108,6 +108,21 @@ Requirements, as stated (✅ = implemented in the draft):
 
 ## 3. Status
 
+**ASTRAL PLANE dungeon (October 2026, draft branch `feature/astral-plane-dungeon`):**
+Added The Celestial Expanse, a randomly selected indoor-style dungeon separate
+from Void Sanctum, HELL, and the Forsaken Wilds scenario overworld. A lazy
+Canvas generator (`src/gfx/astralplane.js`) supplies 60 star/constellation
+floor tiles, 40 unique celestial props, 5×16 compatible masonry connection
+masks and three sets each of directional celestial arches and opening doors.
+The source Catacombs alpha geometry/depth slices remain intact to protect
+isometric alignment and actor occlusion; all surface pixels and props have
+astral artwork. Existing guardian progression, loot, shuffled biome selection,
+light/spectral enemies, ambience, and the forced-overworld rule remain in place.
+Documentation: [ASTRAL_PLANE.md](ASTRAL_PLANE.md). Browser QA and mobile visual
+checks (`node tools/tests/astral_plane.js`) are required before merge.
+
+
+
 **HELL biome (October 2026, draft `feature/hell-dungeon-biome`):** Added The
 Infernal Dominion as a standalone indoor dungeon, separate from Molten Depths and
 Depth-500 Velscour's Throne. Its runtime Canvas pack in `src/gfx/hellpack.js`
