@@ -211,10 +211,9 @@ export function generateDungeon(depth, biome, tileset, seed) {
   const torches = [];
   const inArena = (s) => arena && s.mx >= arena.x - 0.5 && s.mx <= arena.x + arena.w + 0.5 && s.my >= arena.y - 0.5 && s.my <= arena.y + arena.h + 0.5;
   for (const s of map.segments) {
-    // A few outward/front wall faces receive torches too, exposing all four
-    // authored isometric views. Behind-wall faces remain most common.
-    const chance=(inArena(s)?0.3:0.07)*(s.front?0.4:1);
-    if (rng.next()>chance)continue;
+    // Keep the original wall-light placement rate exactly; only the
+    // holder's artwork/angle and bowl anchor are new.
+    if (s.front || rng.next() > (inArena(s) ? 0.3 : 0.07)) continue;
     torches.push(torchAtWallSegment(s));
   }
 
@@ -499,7 +498,7 @@ function generateThrone(biome, tileset, seed) {
   }
   const torches = [];
   for (const s of map.segments)
-    if (rng.next() < 0.12*(s.front?0.4:1)) torches.push(torchAtWallSegment(s));
+    if (!s.front && rng.next() < 0.12) torches.push(torchAtWallSegment(s));
   const props = [];
   const ob = tileset.scatter.find((e) => e.name === 'funerary_obelisk') || tileset.scatter[0];
   for (const [x, y] of [[12, 10], [32, 10], [12, 24], [32, 24]]) {
