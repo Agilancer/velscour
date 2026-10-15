@@ -318,6 +318,9 @@ const LIT = { grave_lantern: 2.2, torch_stand: 3.2, incense_brazier: 3, iron_can
   icicle_chandelier: 2.6, crystal_heart: 4.1, aurora_shrine: 3.9,
   hellfire_brazier: 4.2, balefire_brazier: 3.9, bloodfire_brazier: 4.0,
   lava_vent: 3.1, lava_pool: 3.0, soul_furnace: 4.1, soul_obelisk: 2.4,
+  radiant_brazier: 3.8, azure_altar_flame: 3.7, holy_censer: 3.1,
+  blessing_shrine: 4.1, luminous_font: 3.0, cloud_fountain: 3.0,
+  sun_disk_dais: 3.8, halo_ring: 3.6, dawn_relic_chest: 2.9,
   starfall_brazier: 3.5, voidflame_brazier: 3.7, aether_lantern: 2.5,
   stellar_conduit: 3.8, nebula_shrine: 4.1, astral_fountain: 3.2,
   convergence_dais: 3.6, singularity_heart: 4.5, portal_anchor: 3.7 };
