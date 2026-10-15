@@ -128,5 +128,5 @@ export function generateOverworld(depth,biome,seed) {
     throw new Error('Overworld generator produced unreachable objective; seed '+seed);
   return {map,props,buildings,townTiles,looks,spawns,chests,torches:[],
     start:ENTRY,exit:EXIT,shrine:SHRINE,sites:OVERWORLD_SITES,
-    scenarioId:(Math.abs(seed)^depth)%20,seed};
+    scenarioId:(((seed >>> 0) ^ depth) >>> 0) % 20,seed};
 }
