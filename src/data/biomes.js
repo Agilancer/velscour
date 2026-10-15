@@ -1,4 +1,4 @@
-// Twenty-six dungeon biomes. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
+// Twenty-seven dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
 // palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
 import { FINAL_DEPTH } from './depth.js';
