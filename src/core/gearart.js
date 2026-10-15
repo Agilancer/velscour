@@ -254,11 +254,16 @@ export function heroLook(cls, body, head) {
   const px = armorPixels(bl[0], bl[1]);
   if (hl) {
     const [hx, hy, hw, hh] = meta.helmCell, { px: hp, m } = helmPixels(hl[0], hl[1]);
+    const ax = ((bl[0] - 1) % meta.cols) * fw;
+    const ay = Math.floor((bl[0] - 1) / meta.cols) * fh;
     for (let y = 0; y < hh; y++) {
       for (let x = 0; x < hw; x++) {
         const hi = y * hw + x, o = ((hy + y) * fw + hx + x) * 4;
         const mk = m[hi], shell = hp[hi * 4 + 3] > 0;
-        if (mk === 128) { px[o + 3] = 0; continue; }          // crown zone: hair poking out of the shell
+        if (mk === 128) { // Crown clip: remove the base head's protected skin/hair, never armor/trim.
+          if (S.amask[(ay + hy + y) * S.armor.width + ax + hx + x]) px[o + 3] = 0;
+          continue;
+        }
         if (!shell) continue;
         // Mask 255 is now a shaded opaque faceplate, not a hole into the base face.
         px[o] = hp[hi * 4]; px[o + 1] = hp[hi * 4 + 1]; px[o + 2] = hp[hi * 4 + 2]; px[o + 3] = 255;
