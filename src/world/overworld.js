@@ -7,7 +7,7 @@ import { A } from '../core/assets.js';
 import { TW } from '../core/view.js';
 import { townObject, makeTownTiles } from './town.js';
 import { overworldObject, EXTRA_TREES, EXTRA_SCATTER, SHRINES } from '../gfx/overworldart.js';
-import { outdoorBiomeProp, TOWN_FLOOR_EXPANSION } from '../gfx/biomeexpansion.js';
+import { outdoorBiomeProp, extendedOverworldFloors, OVERWORLD_FLOOR_EXPANSION } from '../gfx/biomeexpansion.js';
 import { isoBarrier } from '../gfx/isobarriers.js';
 import { rollLooks } from '../data/bestiary.js';
 
@@ -110,12 +110,13 @@ export function generateOverworld(depth,biome,seed) {
       OVERWORLD_SITES[i][0]+1.2,OVERWORLD_SITES[i][1]+1.2);
   // Reuse the town tiles and chest art; do NOT build indoor wall segments.
   const townTiles=makeTownTiles();
-  // A full additional terrain set is shared with Duskhollow's art engine;
+  townTiles.push(...extendedOverworldFloors(A.town.ground,A.town.meta));
+  // A dedicated 60-cell wilderness floor set extends the original town art;
   // original 6+120 terrain-transition indices stay untouched.
   for(let y=3;y<H-3;y++)for(let x=3;x<W-3;x++){
     const i=y*W+x;
     if(!map.block[i]&&map.v[i]<6&&(x*17+y*23+seed)%8===0)
-      map.v[i]=TOWN_FLOOR_EXPANSION.start+((x*13+y*19+seed)>>>0)%TOWN_FLOOR_EXPANSION.count;
+      map.v[i]=OVERWORLD_FLOOR_EXPANSION.start+((x*13+y*19+seed)>>>0)%OVERWORLD_FLOOR_EXPANSION.count;
   }
   // Living barriers outline the northwestern forest rather than obstructing
   // the guaranteed entrance/shrine/exit paths. Each segment has exact 2:1
