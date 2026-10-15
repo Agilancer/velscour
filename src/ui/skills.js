@@ -4,7 +4,7 @@ import { el, escapeHtml } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { UI, draggable } from './ui.js';
 import { skillIcon, skillIconURL } from './icons.js';
-import { CLASS_SKILLS, SKILLS, MAX_SKILL_LEVEL, describe, manaCost, cooldown, ROW_LEVELS, effLevel } from '../data/skills.js';
+import { CLASS_SKILLS, SKILLS, MAX_SKILL_LEVEL, describe, manaCost, rageCost, cooldown, ROW_LEVELS, effLevel } from '../data/skills.js';
 import { CLASSES } from '../data/classes.js';
 import { elem } from '../gfx/vfx.js';
 import { SLOT_LABELS, freeSlot } from '../data/bar.js';
@@ -81,11 +81,11 @@ export function skillDetail(sk) {
   let h = `<h3>${escapeHtml(sk.name)}</h3><div>${tags}</div>`;
   h += `<div class="dim" style="margin:4px 0">Level ${base}${L > base ? ` <span style="color:#8fb4ff">(+${L - base})</span>` : ''} / ${MAX_SKILL_LEVEL} · Requires character level ${sk.reqLevel}${sk.prereq ? ` · Requires ${escapeHtml(SKILLS[sk.prereq].name)}` : ''}</div>`;
   h += `<p style="margin:6px 0">${describe(sk, showL, dmg)}</p>`;
-  const mc = manaCost(sk, showL), cd = cooldown(sk);
-  h += `<div class="dim">Mana: <b style="color:#8fb4ff">${mc || 'Free'}</b>${cd ? ` · Cooldown: <b>${(cd * (1 - p.st.cdr / 100)).toFixed(1)}s</b>` : ''}</div>`;
+  const mc = manaCost(sk, showL), rc = rageCost(sk), cd = cooldown(sk);
+  h += `<div class="dim">${rc ? 'Rage' : 'Mana'}: <b style="color:${rc ? '#ff9933' : '#8fb4ff'}">${rc || mc || (sk.classId === 'barbarian' && sk.kind === 'whirl' ? '10 to start · 10/s' : 'Free')}</b>${cd ? ` · Cooldown: <b>${(cd * (1 - p.st.cdr / 100)).toFixed(1)}s</b>` : ''}</div>`;
   if (base < MAX_SKILL_LEVEL) {
     const nd = p.skillDamage(sk, Math.max(1, L + 1));
-    h += `<div class="dim" style="margin-top:4px;font-size:12px">Next level: ${nd[0]}–${nd[1]} damage, ${manaCost(sk, L + 1)} mana</div>`;
+    h += `<div class="dim" style="margin-top:4px;font-size:12px">Next level: ${nd[0]}–${nd[1]} damage, ${rageCost(sk) ? rageCost(sk) + ' Rage' : manaCost(sk, L + 1) + ' mana'}</div>`;
   }
   if (base) h += masteryHtml(sk);
   h += `<div class="dim" style="font-size:12px;margin-top:2px">Synergy: +3% damage per point in other ${escapeHtml(CLASSES[sk.classId].trees[sk.tree])} skills (now x${p.synergy(sk).toFixed(2)})</div>`;
