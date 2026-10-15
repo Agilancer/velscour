@@ -102,7 +102,7 @@ const petsOf = (sk) => (sk.m.sum === 'revive' ? 0 : summonMax(sk));
 const focusSkills = (classId) => {
   const list = CLASS_SKILLS[classId];
   if (classId === 'paladin') return list.filter(isHammer);
-  if (classId === 'barbarian') return list.filter((sk) => sk.kind === 'whirl' || sk.kind === 'leap' || sk.kind === 'dash');
+  if (classId === 'barbarian') return list.filter((sk) => sk.kind === 'whirl' || sk.kind === 'leap' || sk.kind === 'dash' || sk.name === 'Earthquake');
   if (classId === 'lancer') return list.filter((sk) => sk.m.shields || sk.kind === 'leap' || sk.kind === 'dash');
   if (classId === 'dragoon') return list.filter((sk) => sk.kind === 'leap' || sk.kind === 'dash');
   return null;
@@ -1077,8 +1077,10 @@ export const Auto = {
         h.t < h.dur - 2)) continue;
       // Four seconds of useful Whirlwind at minimum, not a 0.1s spin at 10 Rage.
       if (sk.classId === 'barbarian' && sk.kind === 'whirl' && p.rage < 40) continue;
-      // Earthquake should not exhaust Rage that the Barbarian needs for spinning.
-      if (rageCost(sk) && this.barSkills().some((s) => s.kind === 'whirl') && p.rage < 85) continue;
+      // Spend 25 Rage on Earthquake only with surplus Rage and a real crowd,
+      // keeping enough in reserve to initiate another Whirlwind.
+      if (rageCost(sk) && this.barSkills().some((s) => s.kind === 'whirl') &&
+        (p.rage < 85 || (t.rank !== 'boss' && foes.filter((m) => dist(m.x, m.y, t.x, t.y) < 2.5).length < 2))) continue;
       if (sk.kind === 'summon' && now - (this.lastCast[sk.id] || -99) < 1.5) continue;
       if (this.banT > 0 && !OFFENSIVE.has(sk.kind) && sk.kind !== 'heal') continue;
       const L = effLevel(p, sk), m = sk.m, cost = manaCost(sk, L);
