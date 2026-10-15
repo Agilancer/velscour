@@ -108,6 +108,18 @@ Requirements, as stated (✅ = implemented in the draft):
 
 ## 3. Status
 
+**Ice Temple (October 2026 — `feature/ice-temple-dungeon` draft):**
+Added Palace of the Everfrost, a full ice-temple indoor dungeon with 60 Canvas-generated
+frozen floor tiles, five modular ice-wall families (all 16 topology masks), three
+arches, three animated door sets, 40 original glacial props, cold lighting and
+ambient audio. Separate from Frozen Ossuary and outdoor Forsaken Wilds; uses the
+existing procedural dungeon/guardian path. Integration: `src/gfx/icetemple.js`,
+`src/core/assets.js`, `src/data/biomes.js`, `src/world/dungeon.js`, and
+`src/core/audio.js`. Full details: [ICE_TEMPLE.md](ICE_TEMPLE.md).
+**Remaining:** Run browser QA (`tools/tests/ice_temple.js`), inspect the exported
+atlas/contact sheets and mobile frame rates, and merge only after visual approval.
+
+
 **Desert Temple biome (October 2026, draft branch `feature/desert-temple-dungeon`):**
 Added Temple of the Sunless Dynasty as an indoor dungeon, not an overworld map or
 replacement for Bone Desert Tombs. See [DESERT_TEMPLE.md](DESERT_TEMPLE.md).
