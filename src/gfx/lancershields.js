@@ -24,7 +24,46 @@ export const LANCER_SHIELD_ABILITY = Object.freeze({
   'Shield Storm': 'diamond',
   'Bastion of Ten': 'tower',
 });
+// Fixed, distinct world-space distances; no two Bulwark abilities share an orbit.
+export const SHIELD_ORBIT_RADIUS = Object.freeze({
+  'Tower Shield': 1.18, 'Storm Bulwark': 1.40, 'Burning Aegis': 1.62,
+  'Frost Rampart': 1.84, 'Holy Citadel': 2.06,
+  'Shield Storm': 2.28, 'Bastion of Ten': 2.50,
+});
+export function shieldOrbitRadius(name) { return SHIELD_ORBIT_RADIUS[name] ?? 1.6; }
 const cached = new Map();
+
+// Keep atlas padding transparent but seal translucent/empty pixels INSIDE each
+// shield's row silhouette. No new artwork or smoothing is introduced.
+function opaqueAtlas(image) {
+  if (typeof document === 'undefined') return image;
+  const canvas = document.createElement('canvas');
+  canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return image;
+  ctx.drawImage(image, 0, 0);
+  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height), d = pixels.data;
+  for (let frame = 0; frame < SHIELD_FRAME.count; frame++) {
+    const ox = (frame % 4) * SHIELD_FRAME.w, oy = Math.floor(frame / 4) * SHIELD_FRAME.h;
+    for (let y = oy; y < oy + SHIELD_FRAME.h; y++) {
+      let first = -1, last = -1;
+      for (let x = ox; x < ox + SHIELD_FRAME.w; x++) {
+        if (d[(y * canvas.width + x) * 4 + 3] > 24) { if (first < 0) first = x; last = x; }
+      }
+      if (first < 0) continue;
+      let previous = (y * canvas.width + first) * 4;
+      for (let x = first; x <= last; x++) {
+        const i = (y * canvas.width + x) * 4;
+        if (d[i + 3] <= 24) {
+          d[i] = d[previous]; d[i + 1] = d[previous + 1]; d[i + 2] = d[previous + 2];
+        } else previous = i;
+        d[i + 3] = 255;
+      }
+    }
+  }
+  ctx.putImageData(pixels, 0, 0);
+  return canvas;
+}
 
 export function shieldVariantForSkill(name) {
   return LANCER_SHIELD_ABILITY[name] || 'round';
@@ -34,12 +73,16 @@ export function shieldVariantForSkill(name) {
 export function preloadLancerShield(variant) {
   if (!SHIELD_SHEET[variant] || typeof Image === 'undefined') return null;
   if (cached.has(variant)) return cached.get(variant);
-  const record = {image: new Image(), ready:false, error:false};
+  const record = {image: new Image(), atlas:null, ready:false, error:false};
   cached.set(variant, record);
   record.image.onload = () => {
     record.ready = record.image.naturalWidth === SHIELD_FRAME.w * SHIELD_FRAME.columns &&
       record.image.naturalHeight === SHIELD_FRAME.h * 2;
     record.error = !record.ready;
+    if (record.ready) {
+      try { record.atlas = opaqueAtlas(record.image); }
+      catch (e) { console.warn('Shield opacity processing failed', variant, e); record.atlas = record.image; }
+    }
   };
   record.image.onerror = () => {record.error = true;};
   record.image.src = SHIELD_SHEET[variant];
@@ -83,7 +126,7 @@ export function drawLancerOrbitShield(ctx, orbit, position) {
   const scale=1.09 * orbit.size;
   const w=SHIELD_FRAME.w*scale,h=SHIELD_FRAME.h*scale;
   ctx.save();ctx.imageSmoothingEnabled=false;
-  ctx.drawImage(record.image,sx,sy,SHIELD_FRAME.w,SHIELD_FRAME.h,
+  ctx.drawImage(record.atlas || record.image,sx,sy,SHIELD_FRAME.w,SHIELD_FRAME.h,
     px-w/2,py-h/2,w,h);
   ctx.restore();
   return true;

@@ -2,9 +2,11 @@
 // each floor tile's own (palette-swapped) art, so they always fit the biome; town transition tiles get the most, mixing
 // both materials they blend. Baked once per world into a few overlay sprites per floor variant, one drawImage a tile.
 import { makeCanvas } from '../core/util.js';
+import { G } from '../state.js';
 import { TW, TH, HW, HH } from '../core/view.js';
 
 const VARIANTS = 4, U = 2; // U: world px per grit pixel (the camera shows tiles small)
+let gritFrame = -1, gritMade = 0;
 const hash = (x, y, s) => { let h = (x * 374761393 + y * 668265263 + s * 2246822519) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return (h ^ (h >>> 16)) >>> 0; };
 const css = (c, f, a = 1) => {
   const m = f >= 0 ? (v) => v + (255 - v) * f : (v) => v * (1 + f);
@@ -71,6 +73,14 @@ export function gritAt(world, f, v, tx, ty) {
   const key = v * VARIANTS + ((h >>> 8) % VARIANTS);
   let s = g.spr.get(key);
   if (s === undefined) {
+    // Spread fresh tile sampling/canvas baking over multiple phone frames.
+    // Heavy new biome floors may contain dozens of variants in one viewport;
+    // synchronous getImageData on all of them in one render causes a hitch.
+    if (G.touch) {
+      if (gritFrame !== G.frame) { gritFrame = G.frame; gritMade = 0; }
+      if (gritMade >= 2) return null;
+      gritMade++;
+    }
     let cols = g.cols.get(v);
     if (cols === undefined) g.cols.set(v, cols = sample(f));
     s = cols ? bake(cols, key * 9973 + 17, trans ? 22 : town ? 12 : 8) : null;

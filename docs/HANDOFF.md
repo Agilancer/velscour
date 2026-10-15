@@ -14,6 +14,30 @@ Contents
 
 ---
 
+## October 15, 2026 — continuation of codebase review, PR #56 (DRAFT)
+
+**Branch:** `fix/mobile-biome-performance-saved-hero-preview` → `main`. The
+October 15 environment/shield art PRs #48–55 have been merged. PR #56 adds
+mobile-biome renderer/cache/grit/lighting optimizations, independent saved-gear
+class portraits and equipment text, plus the subsequent Barbarian Rage and
+Lancer shield orbit fixes. The Barbarian's existing Whirlwind/Rampage/Eternal
+Whirlwind IDs now use Rage (100 max, 12/sec regeneration out of the spin,
+10/sec spend while spinning; up to ten seconds on a full meter), can attract
+ordinary nearby monsters, fire higher-rank lightning/tornadoes, and move more
+quickly. Barbarian offhand now accepts a second weapon; three hammer/axe
+orbit skills use cyclone spells. The seven Lancer spinning abilities each
+have distinct radii, spin in reverse and use pixel-opaque interior shield
+atlases while keeping the approved PNG files and world-depth order.
+
+See [BARBARIAN_RAGE_AND_LANCER.md](BARBARIAN_RAGE_AND_LANCER.md) and
+[MOBILE_PERFORMANCE.md](MOBILE_PERFORMANCE.md). New test:
+`node tools/tests/barbarian_rage.js`, in addition to the existing mobile,
+select, Lancer, biome, and flow regression tests. JavaScript syntax was
+checked through the connected repository's source; **actual Chromium and iOS
+Safari runtime/performance/screenshot verification remains outstanding.**
+Keep PR #56 in draft until those checks are complete. Do not create new
+sprite art; preserve current character/attack animations and source packs.
+
 ## 1. The user's requirements
 
 The user (GitHub `Agilancer`) asked for a rough draft of **"VELSCOUR"**, an epic isometric retro-pixel-art

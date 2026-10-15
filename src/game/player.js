@@ -12,7 +12,7 @@ import { augHits, augmentable } from '../data/rings.js';
 import { depthLevel } from '../data/depth.js';
 import { MAX_MASTERY, masteryNeed, masteryMul, masteryTier, TIER_NAMES } from './augments.js';
 import { castSkill, Timer } from './skillrun.js';
-import { Orbit, Area, BeamCh } from './hazards.js';
+import { Orbit, Area, BeamCh, Whirl } from './hazards.js';
 import { hit, aoe } from './combat.js';
 import { heroLook, heroFrame, gearFxOf, finishOf } from '../core/gearart.js';
 import { castArtFx } from '../gfx/artfx.js';
@@ -32,6 +32,7 @@ export class Player extends Creature {
     this.char = char;
     this.classId = char.classId;
     this.cls = CLASSES[char.classId];
+    this.rage = char.classId === 'barbarian' ? clamp(Number(char.rage) || 0, 0, 100) : 0;
     this.spriteH = 60;
     this.cooldowns = {};
     this.castLock = 0;
@@ -123,6 +124,13 @@ export class Player extends Creature {
     };
     for (const k of ELEM_KEYS) st.elemPct[k] = (add[k + 'Pct'] || 0) + int;
     st.weapon = weapon ? itemDmg(weapon) : [1, 3];
+    // Barbarians can carry an actual second melee weapon instead of a shield.
+    const second = c.equip.offhand;
+    if (this.classId === 'barbarian' && second?.slot === 'weapon') {
+      const pair = itemDmg(second);
+      st.weapon = st.weapon.map((v, i) => (v + pair[i]) * 0.6);
+      st.atkSpeed = Math.min(150, st.atkSpeed + 12);
+    }
     if (weapon) { const fd = add.flatDmg || 0; st.weapon = [st.weapon[0] + fd, st.weapon[1] + fd]; }
     const lifePct = (add.lifePct || 0) + buffLife;
     this.maxHp = Math.round((C.life + (c.level - 1) * C.lifeLvl + vit * 3 + (add.life || 0)) * (1 + lifePct / 100));
@@ -134,7 +142,7 @@ export class Player extends Creature {
     this.augCache = new Map();
     if (this.hp > this.maxHp) this.hp = this.maxHp;
     if (this.mana > this.maxMana) this.mana = this.maxMana;
-    this.speed = 4.2 * (1 + st.moveSpeed / 100);
+    this.speed = 4.2 * (this.classId === 'barbarian' ? 1.25 : 1) * (1 + st.moveSpeed / 100);
     this.ghost = !!legendary.wraith && false;
     this.dirty = false;
   }
@@ -336,12 +344,17 @@ export class Player extends Creature {
     const L = this.skillLevel(sk);
     if (!L) return 'unlearned';
     if ((this.cooldowns[sk.id] || 0) > 0) return 'cooldown';
+    if (sk.classId === 'barbarian' && sk.kind === 'whirl' && this.rage < 10) return 'rage';
     if (this.mana < manaCost(sk, L)) return 'mana';
     return null;
   }
 
   tryUseSkill(sk, tx, ty, target = null) {
     if (this.dead || !sk) return false;
+    if (sk.classId === 'barbarian' && sk.kind === 'whirl' && this.rage < 10) {
+      if ((this.noRageT || 0) <= 0) { floatText(this.x, this.y, 60, 'Need Rage', '#ff9933', 12); this.noRageT = 0.8; }
+      return false;
+    }
     if (this.world.kind === 'town') {
       if ((this.noManaT || 0) <= 0) { floatText(this.x, this.y, 60, 'You cannot fight in town', '#c0b090', 12); this.noManaT = 1; }
       return false;
@@ -449,6 +462,11 @@ export class Player extends Creature {
     if (this.noManaT > 0) this.noManaT -= dt;
     if (this.phoenixCd > 0) this.phoenixCd -= dt;
     if (this.furyT > 0) this.furyT -= dt;
+    if (this.noRageT > 0) this.noRageT -= dt;
+    if (this.classId === 'barbarian' && !(this.channel instanceof Whirl)) {
+      this.rage = Math.min(100, this.rage + 12 * dt);
+      this.char.rage = this.rage;
+    }
     const canAct = this.tickStatus(dt, (k, amount, src) => {
       hit(src, this, amount, k === 'burn' ? 'fire' : k === 'poison' ? 'poison' : 'blood', { dot: true });
     });

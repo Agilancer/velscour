@@ -80,6 +80,7 @@ export function skillBaseDamage(sk, L) {
 }
 
 export function manaCost(sk, L) {
+  if (sk.classId === 'barbarian' && sk.kind === 'whirl') return 0; // channel consumes Rage, not mana
   if (sk.m.free) return 0;
   return Math.round((2.5 + sk.row * 2.4) * (1 + 0.07 * (L - 1)) * (sk.m.mana ?? 1) * (KIND_MANA[sk.kind] ?? 1));
 }

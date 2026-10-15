@@ -26,9 +26,9 @@ export const RING_SLOTS = ['ring1', 'ring2', 'ring3', 'ring4'];
 export const SLOTS = ['weapon', 'offhand', 'head', 'body', 'hands', 'legs', 'feet', ...RING_SLOTS];
 export const SLOT_NAMES = { weapon: 'Weapon', offhand: 'Off-hand', head: 'Head', body: 'Body', hands: 'Hands', legs: 'Legs', feet: 'Feet', ring: 'Ring', ring1: 'Ring', ring2: 'Ring', ring3: 'Ring', ring4: 'Ring' };
 /** Can item it go in equipment slot `slot`? (A ring fits any of the four ring slots.) */
-export const fitsSlot = (it, slot) => !!it && it.type === 'gear' && (it.slot === slot || (it.slot === 'ring' && RING_SLOTS.includes(slot)));
+export const fitsSlot = (it, slot, classId = null) => !!it && it.type === 'gear' && (it.slot === slot || (it.slot === 'ring' && RING_SLOTS.includes(slot)) || (classId === 'barbarian' && slot === 'offhand' && it.slot === 'weapon'));
 /** The equipment slot an item goes to: its own, or for a ring the first empty ring slot (else the first). */
-export const slotFor = (equip, it) => (it.slot !== 'ring' ? it.slot : RING_SLOTS.find((s) => !equip[s]) || RING_SLOTS[0]);
+export const slotFor = (equip, it, classId = null) => (classId === 'barbarian' && it.slot === 'weapon' && equip.weapon && !equip.offhand ? 'offhand' : it.slot !== 'ring' ? it.slot : RING_SLOTS.find((s) => !equip[s]) || RING_SLOTS[0]);
 
 export const WEAPONS = {
   sword: { names: ['Shortsword', 'Longsword', 'Broadsword', 'Bastard Sword', 'Runeblade'], icon: 'sword', dmg: 1.0, spd: 1.0 },

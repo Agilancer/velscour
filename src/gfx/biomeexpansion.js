@@ -3,6 +3,7 @@
 // source pack provides approved material grain and proven architectural depth
 // slices, not pre-existing re-labelled sprite geometry.
 import { makeCanvas } from '../core/util.js';
+import { G } from '../state.js';
 
 // Town has 6 base materials and 15 transition pairs * 8 masks. Additional
 // source floor cells are APPENDED so every existing transition ID stays intact.
@@ -187,8 +188,26 @@ function drawProp(g,biome,i){
 }
 function recolorArchitecture(source,meta,biome){
   const canvas=makeCanvas(source.width,source.height);
-  const g=canvas.getContext('2d',{willReadFrequently:true});
+  const g=canvas.getContext('2d',G.touch?undefined:{willReadFrequently:true});
   g.drawImage(source,0,0);
+  // Fast mobile path: tint individual validated atlas slices on the canvas.
+  // Avoid full-atlas getImageData + one JS iteration per RGBA pixel (and its
+  // multi-megabyte owner mask), which is particularly slow in iOS Safari.
+  if (G.touch) {
+    const hue=HUES[biome]??35;
+    g.save();g.globalCompositeOperation='source-atop';g.globalAlpha=.42;
+    Object.values(meta.walls).forEach((masks,fam)=>{
+      g.fillStyle=`hsl(${(hue+(fam-2)*16+360)%360},38%,45%)`;
+      const seen=new Set();
+      for(const variants of Object.values(masks))for(const parts of variants)for(const r of parts){
+        const [,sx,sy,w,h]=r,key=sx+':'+sy+':'+w+':'+h;
+        if(seen.has(key))continue;
+        seen.add(key);g.fillRect(sx,sy,w,h);
+      }
+    });
+    g.restore();
+    return canvas;
+  }
   const img=g.getImageData(0,0,source.width,source.height),rgba=img.data;
   const W=source.width,H=source.height,owner=new Uint8Array(W*H);
   // Metadata is the authoritative atlas map. Per-family overlays are based

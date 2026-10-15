@@ -33,7 +33,7 @@ export function equipFromBag(idx, slot) {
   if (!it || it.type !== 'gear') return false;
   if (it.unid) { UI.log('Identify it first (buy it from the Gambler).', '#ff8080'); return false; }
   if ((it.req || 1) > c.level) { UI.log(`Requires level ${it.req}.`, '#ff8080'); sfx('error'); return false; }
-  const to = slot && fitsSlot(it, slot) ? slot : slotFor(c.equip, it);
+  const to = slot && fitsSlot(it, slot, c.classId) ? slot : slotFor(c.equip, it, c.classId);
   const old = c.equip[to];
   c.equip[to] = it;
   c.bag[idx] = old || null;
@@ -48,7 +48,7 @@ export function unequip(slot, toIdx) {
   let i = toIdx ?? c.bag.findIndex((b) => !b);
   if (i < 0 || (toIdx !== undefined && c.bag[toIdx])) {
     const other = toIdx !== undefined ? c.bag[toIdx] : null;
-    if (fitsSlot(other, slot) && (other.req || 1) <= c.level) { c.bag[toIdx] = it; c.equip[slot] = other; changed(); return true; }
+    if (fitsSlot(other, slot, c.classId) && (other.req || 1) <= c.level) { c.bag[toIdx] = it; c.equip[slot] = other; changed(); return true; }
     if (i < 0) { UI.log('Inventory full.', '#ff8080'); sfx('error'); return false; }
     i = c.bag.findIndex((b) => !b);
   }
@@ -105,7 +105,7 @@ function handleDropOnEquip(slot, data) {
   const it = c.bag[data.idx];
   if (!it) return false;
   if (it.type === 'gem') return c.equip[slot] ? socketGem(data.idx, { where: 'equip', slot }) : false;
-  if (!fitsSlot(it, slot)) { sfx('error'); return false; }
+  if (!fitsSlot(it, slot, c.classId)) { sfx('error'); return false; }
   return equipFromBag(data.idx, slot);
 }
 

@@ -108,10 +108,10 @@ export const SKILLDATA = {
   barbarian: [
     [
       'Bash|melee|phys|smash|free wc=1.1 knock', 'Double Swing|melee|phys|slash|n=2', 'Frenzy|melee|phys|slash|n=3 dmg=0.7', 'Leap|leap|phys|smash|range=0.9',
-      'Whirlwind|whirl|phys|blade|dur=2', 'Berserk|melee|shadow|slash|dmg=1.8', 'Leap Attack|leap|phys|smash|dmg=1.5', 'Double Throw|proj|phys|axe|n=2 spread=15 ret',
-      'Cleave|melee|phys|slash|cleave arc=200 dmg=1.3', 'Rampage|whirl|blood|blade|dur=3 leech', 'Ground Breaker|melee|phys|smash|exp r=1.4 stun', 'Axe Storm|proj|phys|axe|n=5 spread=60 ret',
-      'Bloodlust|buff|blood|aura|buff=as,leech amt=30 dur=12 cd=25', 'Furious Charge|dash|phys|charge|range=1.5 knock', 'Executioner|melee|blood|slash|dmg=3 cd=1.5', 'Spinning Axes|orbit|phys|axe|n=4 dur=6 cd=10',
-      'Annihilate|melee|phys|smash|dmg=4 r=1.6 exp cd=4', 'Eternal Whirlwind|whirl|phys|blade|dur=5 cd=6 r=1.4', 'Wrath of the Berserker|buff|blood|transform|transform buff=dmg,as,speed amt=50 dur=15 cd=45', 'Thousand Cuts|melee|phys|slash|n=12 dmg=0.4 cd=3',
+      'Whirlwind|whirl|phys|blade|dur=12 r=1.35 suck=0.35', 'Berserk|melee|shadow|slash|dmg=1.8', 'Leap Attack|leap|phys|smash|range=1.4 dmg=1.6', 'Double Throw|proj|phys|axe|n=2 spread=15 ret',
+      'Cleave|melee|phys|slash|cleave arc=200 dmg=1.3', 'Rampage|whirl|blood|blade|dur=12 r=1.5 leech suck=0.7', 'Ground Breaker|melee|phys|smash|exp r=1.4 stun', 'Axe Storm|proj|phys|axe|n=5 spread=60 ret',
+      'Bloodlust|buff|blood|aura|buff=as,leech amt=30 dur=12 cd=25', 'Furious Charge|dash|phys|charge|range=2 knock', 'Executioner|melee|blood|slash|dmg=3 cd=1.5', 'Razor Cyclones|cyclone|phys|wind|n=3 r=1.1 dur=5 cd=8',
+      'Annihilate|melee|phys|smash|dmg=4 r=1.6 exp cd=4', 'Eternal Whirlwind|whirl|phys|blade|dur=12 cd=2 r=1.8 suck=1.1 lightning tornado=2', 'Wrath of the Berserker|buff|blood|transform|transform buff=dmg,as,speed amt=50 dur=15 cd=45', 'Thousand Cuts|melee|phys|slash|n=12 dmg=0.4 cd=3',
     ],
     [
       'Howl|curse|phys|shout|curse=fear at=self r=1.2', 'Shout|buff|phys|shout|buff=armor amt=50 dur=30 cd=30 party', 'Taunt|curse|phys|shout|curse=amp at=self amt=20', 'Find Potion|heal|phys|light|amt=25 cd=15',
@@ -121,11 +121,11 @@ export const SKILLDATA = {
       "Warlord's Roar|nova|blood|sonic|r=2.4 n=2 dmg=2 cd=6", 'Undying Rage|buff|blood|aura|buff=regen,armor amt=60 dur=10 cd=60', 'Call of the Ancients|summon|light|ancient|sum=ancientstorm n=3 dur=25 cd=60', 'Battle Trance|buff|phys|aura|buff=as,crit amt=40 dur=15 cd=40 party',
     ],
     [
-      'Ground Slam|nova|phys|shock|r=0.8', 'Stomp|melee|phys|smash|stun arc=360 r=0.9', 'Rock Throw|proj|phys|rock|lob exp', 'Seismic Step|dash|phys|charge|range=0.9',
+      'Ground Slam|nova|phys|shock|r=0.8', 'Stomp|melee|phys|smash|stun arc=360 r=0.9', 'Rock Throw|proj|phys|rock|lob exp', 'Seismic Step|dash|phys|charge|range=1.3 knock',
       'Fissure|fissure|phys|earth|range=1.2', 'Earthquake|aoe|phys|eruption|r=2 dur=3', 'Boulder Toss|proj|phys|rock|lob exp r=1.5 dmg=1.5', 'Tremor|nova|phys|shock|n=2 slow',
       'Seismic Slam|fissure|phys|earth|range=1.4 dmg=1.3', 'Avalanche|rain|phys|rock|n=10 r=1.6', 'Stone Skin|buff|phys|shield|buff=armor amt=80 dur=20 cd=30', 'Magma Rift|fissure|fire|fire|range=1.4 burn',
-      'Earthen Spikes|nova|phys|earth|r=1.6', 'Hammer of the Mountain|orbit|phys|hammer|n=3 dur=6 cd=8', 'Landslide|fissure|phys|earth|n=3 spread=50', 'Volcanic Eruption|aoe|fire|eruption|n=6 r=1 dur=3 cd=4',
-      'Cataclysm|aoe|fire|eruption|r=3 dmg=3 cd=8', 'Mountain King|buff|phys|transform|transform buff=armor,dmg amt=50 dur=20 cd=45', 'Ancestral Hammers|orbit|light|hammer|n=6 spiral dur=4 cd=6', 'Worldsplitter|fissure|phys|earth|range=2.5 dmg=2.5 cd=4',
+      'Earthen Spikes|nova|phys|earth|r=1.6', 'Mountain Vortex|cyclone|phys|wind|n=3 r=1.3 dur=5 cd=8', 'Landslide|fissure|phys|earth|n=3 spread=50', 'Volcanic Eruption|aoe|fire|eruption|n=6 r=1 dur=3 cd=4',
+      'Cataclysm|aoe|fire|eruption|r=3 dmg=3 cd=8', 'Mountain King|buff|phys|transform|transform buff=armor,dmg amt=50 dur=20 cd=45', 'Ancestral Storm|cyclone|light|storm|n=4 r=1.4 dur=6 cd=6', 'Worldsplitter|fissure|phys|earth|range=2.5 dmg=2.5 cd=4',
     ],
   ],
   dragoon: [
