@@ -5,6 +5,7 @@ import { isoX, isoY, HW, HH } from '../core/view.js';
 import { sfx } from '../core/audio.js';
 import { spawn, burst, addEffect, Ring, Bolt, Beam, Slash, Telegraph, elem, glowSprite, addLight, smoke, addDecal, sparkle } from '../gfx/vfx.js';
 import { drawShape, trail, explosionFx, hitSpark } from '../gfx/shapes.js';
+import { drawLancerOrbitShield } from '../gfx/lancershields.js';
 import { screenAngle } from '../gfx/vfx.js';
 import { hit, aoe, chainHit } from './combat.js';
 
@@ -421,7 +422,16 @@ export class Orbit {
     }
     return true;
   }
+  drawShield(ctx, index) {
+    return drawLancerOrbitShield(ctx, this, this.pos[index]);
+  }
   draw(ctx) {
+    // Normal orbit weapons render as before. Each shield is primarily drawn
+    // in the global depth-sorted pass via drawShield(ctx,index).
+    if (this.shieldVariant) {
+      for (let i=0;i<this.pos.length;i++) this.drawShield(ctx,i);
+      return;
+    }
     for (const [x, y, a] of this.pos) drawShape(ctx, this.fx, isoX(x, y), isoY(x, y) - 24, screenAngle(a + Math.PI / 2), this.size, this.E, this.t);
   }
 }
