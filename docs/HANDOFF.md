@@ -108,6 +108,17 @@ Requirements, as stated (✅ = implemented in the draft):
 
 ## 3. Status
 
+**Desert Temple biome (October 2026, draft branch `feature/desert-temple-dungeon`):**
+Added Temple of the Sunless Dynasty as an indoor dungeon, not an overworld map or
+replacement for Bone Desert Tombs. See [DESERT_TEMPLE.md](DESERT_TEMPLE.md).
+All 60 isometric floors, 40 themed props and five × 16 wall-material families are drawn at
+runtime; three arch sets and three opening door sets preserve the engine's original
+alpha geometry/depth slices. The biome uses the same guardian, procedural layout,
+loot and dungeon transitions. Tests are provided in `tools/tests/desert_temple.js`.
+**Review required:** run browser tests, inspect actual screenshots and door animation,
+and performance-check on iOS Safari before merge. Older dated status below is retained.
+
+
 **October 2026 sprite replacement pass (`codex/replace-placeholder-sprites`):** 122 generated
 painted sprites replace the remaining 56 unpainted summons, Velscour/ward crystal, 12 NPCs,
 generic equipment/loot and two projectile silhouettes. Existing supplied artwork is preserved.
