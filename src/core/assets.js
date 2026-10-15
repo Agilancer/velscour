@@ -7,6 +7,7 @@ import { generateHellPack } from '../gfx/hellpack.js';
 import { generateAstralPlanePack } from '../gfx/astralplane.js';
 import { generateHeavenlyPack } from '../gfx/heavenlypack.js';
 import { expandBiomePack } from '../gfx/biomeexpansion.js';
+import { preloadWallTorchHolders } from '../gfx/walltorches.js';
 import { applyApprovedBiomeArt } from '../gfx/approvedbiomeart.js';
 import { preloadApprovedHeavenlyArtwork } from '../gfx/heavenlymonsters.js';
 import { TW } from './view.js';
@@ -146,6 +147,8 @@ export function loadBiomeArt(biome) {
     loadEnemyArt().catch((e) => console.warn(e)), // monsters fall back to their pixel sprites
     biome && !biome.overworld && biome.id !== 'town' ? expandedPack(biome) : loadPack(biome.pack || DEFAULT_PACK),
     biome?.id === 'heavenly' ? preloadApprovedHeavenlyArtwork() : Promise.resolve(null),
+    biome && !biome.overworld && biome.id!=='town' ?
+      preloadWallTorchHolders(biome) : Promise.resolve(null),
   ]);
 }
 
