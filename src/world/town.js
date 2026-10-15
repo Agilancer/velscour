@@ -10,10 +10,10 @@ export const VENDORS = [
   { id: 'weapons', name: 'Garrick Ironhand', title: 'Weaponsmith', sprite: 'barbarian', pal: { hue: 25, sat: 0.6, light: -0.02 }, sign: 'sword', greet: 'Steel for the slaughter. Pick your poison - edges, hafts or bows.' },
   { id: 'armor', name: 'Hilde Stonewall', title: 'Armorer', sprite: 'lancer', pal: { hue: -25, sat: 0.9 }, sign: 'shield', greet: 'The dead hit hard down there. Wear something thicker than hope.' },
   { id: 'upgrade', name: 'Durgan Emberforge', title: 'Blacksmith', sprite: 'dragoon', pal: { hue: 20, sat: 0.7, light: 0.03 }, sign: 'hammer', greet: 'Bring me your gear and your gold. I\'ll hammer both into something better.' },
-  { id: 'enchant', name: 'Lysandra the Veiled', title: 'Enchanter', sprite: 'arcane_sorcerer', pal: { hue: 120, sat: 1 }, sign: 'orb', greet: 'Magic is merely a negotiation. Let us renegotiate your equipment.' },
+  { id: 'enchant', name: 'Lily Belle the Veiled', title: 'Enchanter', sprite: 'arcane_sorcerer', pal: { hue: 120, sat: 1 }, sign: 'orb', greet: 'Magic is merely a negotiation. Let us renegotiate your equipment.' },
   { id: 'alchemist', name: 'Old Mother Wren', title: 'Alchemist', sprite: 'carrion_witch', pal: { hue: 150, sat: 0.8 }, sign: 'lantern', greet: 'Red for blood, blue for wits, purple for both. Orange... for when you mean it.' },
   { id: 'gems', name: 'Zafir the Lapidary', title: 'Gem Merchant', sprite: 'totem_master', pal: { hue: 200, sat: 0.9 }, sign: 'orb', greet: 'Every stone remembers the light. Three of a kind, and I can make them sing louder.' },
-  { id: 'socket', name: 'Brother Anselm', title: 'Jeweler', sprite: 'wizard', pal: { hue: 60, sat: 0.7 }, sign: 'boots', greet: 'A socket is a promise. I can drill your gear - or pry those gems back out.' },
+  { id: 'socket', name: 'Jamie the Curator', title: 'Jeweler', sprite: 'wizard', pal: { hue: 60, sat: 0.7 }, sign: 'boots', greet: 'A socket is a promise. I can drill your gear - or pry those gems back out.' },
   { id: 'gamble', name: 'Fortunato', title: 'Gambler', sprite: 'bard', pal: { hue: 180, sat: 1 }, sign: 'bow', greet: 'Fortune favours the foolish! Unidentified treasures - who knows what lurks inside?' },
 ];
 

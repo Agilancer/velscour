@@ -14,6 +14,12 @@ Contents
 
 ---
 
+## October 15, 2026 — Duskhollow vendor display names
+
+- Renamed the town's Jeweler (`socket`) from **Brother Anselm** to **Jamie the Curator**, and the Enchanter (`enchant`) from **Lysandra the Veiled** to **Lily Belle the Veiled** in `src/world/town.js`.
+- Both vendor IDs, jobs, greeting dialogue, art mapping, shop inventory, and interactions are unchanged. NPC art reference text was updated in `docs/PLACEHOLDER_ART.md` and `assets/source/replacements/README.md`.
+- Verification: checked central vendor definitions, dependent UI/render code, and related art metadata; static content assertions passed. Live browser gameplay/mobile tests were not run in this connector-only change.
+
 ## October 15, 2026 — compact shields, class-focused autoplay, town cleanup (draft PR)
 
 **Branch:** `feature/autoplay-focus-town-shields-20261015` from latest `main`
