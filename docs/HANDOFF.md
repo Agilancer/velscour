@@ -108,6 +108,23 @@ Requirements, as stated (✅ = implemented in the draft):
 
 ## 3. Status
  
+**Worldwide biome overhaul (October 2026, draft `feature/worldwide-biome-art-and-spawns`):**
+Across 31 indoor dungeons, 1 combat overworld and noncombat Duskhollow,
+added 60 ground tiles per environment and 40 terrain props per environment.
+Dungeon walls receive per-biome/per-wall-family new material treatments
+while preserving exact 16-mask connections and architectural depth slices.
+Old mirrored town fences/barricades are replaced with mathematically
+correct joined X/Y 2:1 isometric geometry, plus boundary fixes in Wilds
+and dungeon scatter. 50 new named monster identities per combat biome
+(1,600 total), drawn using original painted source silhouettes plus
+new pixel-art morphology and loadable via existing monster renderer.
+Spawn choices combine ~74% home-native, 24% legacy/global and 2% rare
+other-biome visitors. Town has no combat.
+**Review blockers:** run all real browser/town/overworld/pack/mobile tests
+and inspect the ground/contact sheet images before merging.
+Complete technical handoff: [WORLD_BIOME_OVERHAUL.md](WORLD_BIOME_OVERHAUL.md).
+
+ 
 **HEAVENLY biome (October 2026, draft branch `feature/heavenly-biome-60-monsters`):**
 Added the Empyrean Citadel as a normal indoor dungeon biome with
 60 newly drawn isometric floor designs, five unique wall texture families
