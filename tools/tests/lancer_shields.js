@@ -15,13 +15,15 @@ const {openGame,report,OUT_DIR}=require('./harness');
    const {Orbit}=await import('/src/game/hazards.js');
    const {BIOME_BY_ID}=await import('/src/data/biomes.js');
    const problems=[],detail={};
-   if(SHIELD_FRAME.count!==8||SHIELD_FRAME.w!==68||SHIELD_FRAME.h!==84)
-     problems.push('Expected exactly eight 68x84 frames in a 4x2 sheet');
+   if(SHIELD_FRAME.count!==8||SHIELD_FRAME.w!==44||SHIELD_FRAME.h!==56)
+     problems.push('Expected exactly eight 44x56 frames in a 4x2 sheet');
    const variants=new Set(Object.values(LANCER_SHIELD_ABILITY));
    if(variants.size!==4||Object.keys(SHIELD_SHEET).length!==4)
      problems.push('Four unique shield images not assigned');
    for(const [name,variant]of Object.entries(LANCER_SHIELD_ABILITY)){
      if(shieldVariantForSkill(name)!==variant)problems.push('Unassigned ability '+name);
+     if(!Object.values(SKILLS).some(sk=>sk.name===name&&sk.kind==='orbit'))
+       problems.push('No existing orbit skill named '+name);
    }
    for(let i=0;i<8;i++){
      const f=shieldFrameForAngle(Math.PI/4+i*Math.PI/4);
