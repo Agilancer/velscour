@@ -1309,7 +1309,31 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
   m.moves = rollMoves(archId, rank, variant, depth);
   m.moveCd = rand(1.5, 4);
   if (variant) { m.maxHp *= 1.4; m.hp = m.maxHp; m.dmg *= 1.2; m.xp *= 1.5; m.scale = 1.08; m.speed *= 1.05; }
+  if (art && art.heavenlyFamily && biome.id === 'heavenly') {
+    // The sixty Heaven opponents share the project's proven AI controllers
+    // but vary their combat stats, elemental defenses and threat profile by
+    // individual design. This is gameplay distinction, not just new names.
+    const v = art.heavenlyVariant, family = art.heavenlyFamily;
+    const elite = ['throne','judgement','warden'].includes(family);
+    const quick = ['cherub','beast','griffin','oracle'].includes(family);
+    const magical = ['ophanim','luminary','herald','oracle'].includes(family);
+    m.maxHp *= (1 + v * .075) * (elite ? 1.18 : 1);
+    m.hp = m.maxHp;
+    m.dmg *= 1 + v * .055;
+    m.speed *= quick ? 1.12 + .025*v : elite ? .85 + .02*v : 1 + .015*v;
+    m.xp *= 1 + v * .12;
+    m.res.holy = (m.res.holy || 0) + .08 + v*.025;
+    if (magical) {
+      m.res.arcane = (m.res.arcane || 0) + .10;
+      if (m.range) m.range += v*.18;
+    }
+    if (family === 'ophanim' || family === 'luminary') m.fly = true;
+  }
   if (rank !== 'normal') makeElite(m, rank, depth, world);
+  if (art && art.heavenlyFamily && rank === 'boss') {
+    m.name = art.name.toUpperCase();
+    m.aura = '#f5d78d';
+  }
   return m;
 }
 

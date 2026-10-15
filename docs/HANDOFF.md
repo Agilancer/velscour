@@ -107,6 +107,20 @@ Requirements, as stated (✅ = implemented in the draft):
   His summons' palettes are blue too (`src/data/summons.js`). Enemy slimes stay green.
 
 ## 3. Status
+ 
+**HEAVENLY biome (October 2026, draft branch `feature/heavenly-biome-60-monsters`):**
+Added the Empyrean Citadel as a normal indoor dungeon biome with
+60 newly drawn isometric floor designs, five unique wall texture families
+(80 junction masks), three arches, three opening gates and forty shrine
+and landscape props. Its **60 new procedural monster sprites** are generated
+from twelve unique silhouette families, five designs each; art-only IDs
+`hv_` integrate into the actual combat bestiary, art renderer,
+boss pool, corpse/hit states and scaling. The original engine's
+AI and geometry are unchanged. Developer guide: [HEAVENLY.md](HEAVENLY.md).
+**Do not merge without browser QA:** `node tools/tests/heavenly.js` and
+`node tools/tests/data_check.mjs`. Inspect the sixty-sprite visual atlas
+and character scale, gate pivots, room occlusion and mobile performance.
+
 
 **ASTRAL PLANE dungeon (October 2026, draft branch `feature/astral-plane-dungeon`):**
 Added The Celestial Expanse, a randomly selected indoor-style dungeon separate
