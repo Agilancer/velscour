@@ -11,6 +11,7 @@ import { Projectile, Delayed, Area, makeWall, Orbit, Whirl, Leap, Dash, NovaWave
 import { buffAmount, curseAmount, skillDuration } from '../data/skills.js';
 import { createSummon } from './monster.js';
 import { lanceLeap } from '../gfx/lancefx.js';
+import { shieldVariantForSkill, preloadLancerShield } from '../gfx/lancershields.js';
 import { classCastFx, energyLance } from '../gfx/classfx.js';
 import { masteryVis, masteryCastFx } from './augments.js';
 import { multN } from '../data/rings.js';
@@ -178,7 +179,11 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       // Lancer tower shields: one more shield every 2 ranks, up to 10; a recast replaces that skill's ring
       const n = m.shields ? Math.min(10, (m.n || 1) + Math.floor((L - 1) / 2)) : (m.n || 3) + extra;
       if (m.shields) for (const h of w.hazards) if (h instanceof Orbit && h.o.sk === sk.id) h.dead = true;
-      w.addHazard(new Orbit({ world: w, src: p, n, radius: 1.6 * (m.r ?? 1) * area, dur: m.dur || 4, spiral: m.spiral, fx, el, dmg, o, speed: m.spiral ? 5 : m.shields ? 2.4 : 4.2, size: vis * (m.shields ? 1.4 : 1) }));
+      // All seven Lancer shield-spin skills use one of the four uploaded
+      // eight-angle designs, without altering orbit count or damage behavior.
+      const shieldVariant = m.shields ? shieldVariantForSkill(sk.name) : null;
+      if(shieldVariant) preloadLancerShield(shieldVariant);
+      w.addHazard(new Orbit({ world: w, src: p, n, radius: 1.6 * (m.r ?? 1) * area, dur: m.dur || 4, spiral: m.spiral, fx, el, dmg, o, speed: m.spiral ? 5 : m.shields ? 2.4 : 4.2, size: vis * (m.shields ? 1.4 : 1), shieldVariant }));
       sfx('swing');
       break;
     }
