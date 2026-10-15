@@ -66,6 +66,20 @@ function shrine(name) {
   for(let j=0;j<10;j++){const px=12+(i*13+j*23)%89,py=25+(i*19+j*31)%58;pixel(x,px,py,2,2,glow);}
   return format(c,w,h,name,.45);
 }
+function caravan(name) {
+  const src=baseSprite('handcart'),w=170,h=145,c=makeCanvas(w,h),x=c.getContext('2d');
+  // Travelling wagon: built from the pack's handcart, with original timber,
+  // leather tarpaulin, gold fittings and a pair of visible axle wheels.
+  pixel(x,18,108,128,15,'#35261f');pixel(x,24,93,117,20,'#936644');
+  pixel(x,25,84,115,12,'#ba9266');pixel(x,31,54,101,33,'#46392e');
+  pixel(x,37,48,89,11,'#d2b081');pixel(x,42,41,80,8,'#82674c');
+  pixel(x,29,86,7,28,'#d4b274');pixel(x,128,85,7,29,'#443024');
+  pixel(x,25,113,24,24,'#221c1a');pixel(x,29,118,15,15,'#b99459');
+  pixel(x,119,108,23,25,'#25201b');pixel(x,124,115,12,13,'#c7a06b');
+  for(let j=0;j<6;j++){pixel(x,37+j*15,57,5,25,j%2?'#bda073':'#8a704e');}
+  if(src)x.drawImage(src.image,src.sx,src.sy,src.w,src.h,34,80,100,56);
+  return format(c,w,h,name,.95);
+}
 function scattered(name) {
   const i=EXTRA_SCATTER.indexOf(name),w=88,h=92,c=makeCanvas(w,h),x=c.getContext('2d');
   const stone=['#77796b','#373e40','#9c9382','#5b624c','#ccc5a2'];
@@ -106,6 +120,7 @@ export function overworldObject(name) {
   if(EXTRA_TREES.includes(name))obj=tree(name);
   else if(EXTRA_SCATTER.includes(name))obj=scattered(name);
   else if(SHRINES.includes(name))obj=shrine(name);
+  else if(name==='ow_caravan')obj=caravan(name);
   if(obj)CACHED.set(name,obj);
   return obj;
 }
