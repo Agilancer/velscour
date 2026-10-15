@@ -5,7 +5,9 @@ This implementation replaces the Lancer's generic procedural orbiting
 the four approved uploaded golden shield turntables. It preserves all
 existing shield ability damage, knockback, hit frequency, duration, cooldown,
 shield counts and upgrade scaling. The seven orbit radii and the
-visible animation-frame direction were revised on October 15, 2026.
+visible animation-frame direction were revised on October 15, 2026. A later
+compact-orbit balance pass halved every base radius while retaining the spin
+direction, per-shield depth sorting and distinct orbit spacing.
 
 ## Art assets (real committed binary PNGs)
 
@@ -67,20 +69,22 @@ on the near side; at **a=5π/4**, frame 4 remains the wooden/metal rear on
 the far side. Individual shields still depth-sort in front of and behind
 the Lancer as they physically travel around him.
 
-All seven abilities have larger concentric orbit spacing. Base radii
+All seven abilities have compact concentric orbit spacing. Base radii
 (in world tiles; multiplied by the existing area/visual scaling) are:
 
 | Ability | Radius |
 | --- | ---: |
-| Tower Shield | 1.40 |
-| Storm Bulwark | 1.95 |
-| Burning Aegis | 2.50 |
-| Frost Rampart | 3.05 |
-| Holy Citadel | 3.60 |
-| Shield Storm | 4.15 |
-| Bastion of Ten | 4.70 |
+| Tower Shield | 0.70 |
+| Storm Bulwark | 0.975 |
+| Burning Aegis | 1.25 |
+| Frost Rampart | 1.525 |
+| Holy Citadel | 1.80 |
+| Shield Storm | 2.075 |
+| Bastion of Ten | 2.35 |
 
-Adjacent base radii are separated by **0.55 tiles** (previously 0.22).
+Adjacent base radii are separated by **0.275 tiles**. These are exactly half of
+the previous 1.40–4.70 tile radii (0.55-tile spacing); older PR documentation
+reflects that historical, wider arrangement.
 **Shield Storm** keeps its intentionally expanding spiral rather than a
 fixed ring: the existing spiral radius formula still applies. This
 change does not alter hit frequency, damage, shield counts, duration or
