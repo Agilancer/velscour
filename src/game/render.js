@@ -133,7 +133,29 @@ function drawChest(ctx, c) {
   }
 }
 
+/** Scenario shrines and objective markers are not teleport portals: render a fitted
+ * isometric glyph/stone marker over the separate sculpted shrine prop.
+ */
+function drawScenarioGlyph(ctx, p) {
+  const x=isoX(p.x,p.y),y=isoY(p.x,p.y),t=G.time,col=p.color||'#80c8ff';
+  const shrine=p.type==='shrine',radius=shrine?21:14;
+  ctx.save();
+  ctx.globalAlpha=.52+Math.sin(t*3+p.x)*.16;
+  ctx.strokeStyle=col;ctx.lineWidth=shrine?2:1.5;
+  ctx.beginPath();ctx.ellipse(x,y+1,radius,radius*.46,0,0,TAU);ctx.stroke();
+  ctx.beginPath();ctx.ellipse(x,y+1,radius*.69,radius*.28,0,-t*.4,4.4-t*.4);ctx.stroke();
+  ctx.globalAlpha=.66;
+  ctx.fillStyle=col;
+  const z=shrine?68:36,tipY=y-z+Math.sin(t*2+p.y)*2;
+  ctx.beginPath();ctx.moveTo(x,tipY-9);ctx.lineTo(x+7,tipY);
+  ctx.lineTo(x,tipY+11);ctx.lineTo(x-7,tipY);ctx.closePath();ctx.fill();
+  ctx.globalAlpha=.85;ctx.fillStyle='#f7f1d6';
+  ctx.beginPath();ctx.moveTo(x,tipY-6);ctx.lineTo(x+2,tipY);
+  ctx.lineTo(x,tipY+5);ctx.lineTo(x-2,tipY);ctx.closePath();ctx.fill();
+  ctx.restore();
+}
 function drawPortal(ctx, p) {
+  if (p.type === 'shrine' || p.type === 'objective') return drawScenarioGlyph(ctx, p);
   const x = isoX(p.x, p.y), y = isoY(p.x, p.y);
   const active = p.active;
   const col = active ? p.color || '#ff5020' : '#5a5a60';
