@@ -11,7 +11,7 @@ import { Projectile, Delayed, Area, makeWall, Orbit, Whirl, Leap, Dash, NovaWave
 import { buffAmount, curseAmount, skillDuration } from '../data/skills.js';
 import { createSummon } from './monster.js';
 import { lanceLeap } from '../gfx/lancefx.js';
-import { shieldVariantForSkill, preloadLancerShield } from '../gfx/lancershields.js';
+import { shieldVariantForSkill, shieldOrbitRadius, preloadLancerShield } from '../gfx/lancershields.js';
 import { classCastFx, energyLance } from '../gfx/classfx.js';
 import { masteryVis, masteryCastFx } from './augments.js';
 import { multN } from '../data/rings.js';
@@ -183,7 +183,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       // eight-angle designs, without altering orbit count or damage behavior.
       const shieldVariant = m.shields ? shieldVariantForSkill(sk.name) : null;
       if(shieldVariant) preloadLancerShield(shieldVariant);
-      w.addHazard(new Orbit({ world: w, src: p, n, radius: 1.6 * (m.r ?? 1) * area, dur: m.dur || 4, spiral: m.spiral, fx, el, dmg, o, speed: m.spiral ? 5 : m.shields ? 2.4 : 4.2, size: vis * (m.shields ? 1.4 : 1), shieldVariant }));
+      w.addHazard(new Orbit({ world: w, src: p, n, radius: m.shields ? shieldOrbitRadius(sk.name) * area : 1.6 * (m.r ?? 1) * area, dur: m.dur || 4, spiral: m.spiral, fx, el, dmg, o, speed: m.shields ? -2.4 : m.spiral ? 5 : 4.2, size: vis * (m.shields ? 1.4 : 1), shieldVariant }));
       sfx('swing');
       break;
     }
@@ -196,9 +196,16 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       sfx('swing'); sfx(E.sfx, 0.5);
       break;
     }
-    case 'whirl':
-      w.addHazard(new Whirl({ world: w, src: p, tx, ty, dur: m.dur || 2, r: 1.35 * (m.r ?? 1) * area, dmg, el, fx, o }));
+    case 'whirl': {
+      const barbarian = sk.classId === 'barbarian';
+      w.addHazard(new Whirl({ world: w, src: p, tx, ty, dur: m.dur || 2,
+        r: 1.35 * (m.r ?? 1) * area, dmg, el, fx, o,
+        speed: barbarian ? Math.max(5.4, p.speed * 1.15) : 4.2,
+        rage: barbarian, pull: barbarian ? (m.suck || 0) + (L >= 6 ? 0.55 : 0) : 0,
+        lightning: barbarian && (m.lightning || L >= 12),
+        tornadoes: barbarian ? (m.tornado || 0) + (L >= 16 ? 2 : 0) : 0 }));
       break;
+    }
     case 'leap': {
       const [x, y] = clampTarget(w, p, tx, ty, 6.5 * (m.range ?? 1));
       const lp = w.addHazard(new Leap({ world: w, src: p, tx: x, ty: y, r: 1.6 * (m.r ?? 1) * area, dmg, el, fx, o, nova: m.nova }));
