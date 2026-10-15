@@ -1,3 +1,4 @@
+import { HEAVENLY_MONSTERS } from './heavenly.js';
 // Monster art catalogue: every monster cut from the sheets in assets/source/enemies/<set>/ (see docs/ENEMY_ART.md).
 // Each entry is one cell of a sheet (i = reading order, left to right then top to bottom) and says which AI
 // archetype it plays (ARCH in enemies.js). `also` lists other archetypes it can stand in for, `h` is its height
@@ -54,6 +55,7 @@ const D1 = 'set1/demons', T1 = 'set1/tentacles', E1 = 'set1/eyes';
 const bone = { gore: 'bone', undead: true };
 
 export const BESTIARY = [
+  ...HEAVENLY_MONSTERS,
   // ---- set 1: skeleton warband
   { id: 'bone_cleaver', sheet: S1, i: 0, arch: 'skeleton', name: 'Bone Cleaver', h: 54, ...bone },
   { id: 'skeleton_bowman', sheet: S1, i: 1, arch: 'archer', name: 'Skeleton Bowman', h: 56, ...bone },
@@ -523,8 +525,10 @@ import { REPLACEMENT_ART } from './replacementart.js';
 export const ART_BY_ID = Object.fromEntries([...BESTIARY, ...SUMMON_ART, ...FAMILIAR_ART, ...REPLACEMENT_ART].map((a) => [a.id, a]));
 
 /** Looks that can play an archetype. */
-export function artPool(arch) {
-  return BESTIARY.filter((a) => !a.lone && (a.arch === arch || (a.also && a.also.includes(arch))));
+export function artPool(arch, heavenly = false) {
+  return BESTIARY.filter(a => !a.lone &&
+    (a.sheet === 'heavenly/generated') === heavenly &&
+    (a.arch === arch || (a.also && a.also.includes(arch))));
 }
 
 const weighted = (list, w, rnd) => {
@@ -553,7 +557,7 @@ export function rollLooks(biome, rnd = Math.random) {
   const chosen = {}, bosses = [];
   const looksFor = (arch) => {
     if (chosen[arch]) return chosen[arch];
-    const pool = artPool(arch);
+    const pool = artPool(arch, biome.id === 'heavenly');
     const out = [];
     for (let n = 0; n < 2 && pool.length; n++) {
       const a = weighted(pool, affinity, rnd);
@@ -568,7 +572,7 @@ export function rollLooks(biome, rnd = Math.random) {
       return l.length ? l[Math.floor(r() * l.length)] : null;
     },
     boss(roster, r = rnd) {
-      const pool = BESTIARY.filter((a) => a.boss);
+      const pool = BESTIARY.filter(a => a.boss && (a.sheet === 'heavenly/generated') === (biome.id === 'heavenly'));
       const a = weighted(pool, (x) => affinity(x) * (roster && roster.includes(x.arch) ? 3 : 1), r);
       if (a) bosses.push(a.id);
       return a ? { arch: a.arch, look: { art: a.id, swap: swapFor(a) } } : null;
