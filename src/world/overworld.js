@@ -62,7 +62,7 @@ export function generateOverworld(depth,biome,seed) {
       flags[i]=2;map.block[i]=1;
       // One tree per blocked tile would flood the renderer with oversized overlapping crowns;
       // staggering crowns maintains a solid, readable "living wall" without 1,500 draw calls.
-      if((x+y)%2===0||rng.chance(.19)) {
+      if((x+y)%3===0||rng.chance(.12)) {
         const t=rng.chance(.6)?rng.pick(SOURCE_TREES):rng.pick(EXTRA_TREES);
         add(t,cx+rng.range(-.18,.18),cy+rng.range(-.15,.15));
       }
