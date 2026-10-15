@@ -80,7 +80,7 @@ export function generateOverworld(depth,biome,seed) {
   }
 
   // Small neutral settlement in the western clearing. Reserve entire footprints and keep
-  // buildings off roads; their graphics use the same native 3x3 footprint as Duskhollow.
+  // buildings off roads; their graphics use the same native 3x3 footprint as Herrington Hollow.
   const houses=[['cottage',28,39],['inn',26,45],['bakery',36,44]];
   for(const [name,x0,y0] of houses){
     const spr=townObject('b_'+name);

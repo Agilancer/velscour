@@ -1,4 +1,4 @@
-// The town of Duskhollow: vendors, buildings, props and the dungeon portal.
+// The town of Herrington Hollow: vendors, buildings, props and the dungeon portal.
 import { TileMap } from './map.js';
 import { RNG, TAU } from '../core/util.js';
 import { A } from '../core/assets.js';
@@ -8,7 +8,7 @@ import { extendedTownFloors, outdoorBiomeProp, TOWN_FLOOR_EXPANSION } from '../g
 
 export const VENDORS = [
   { id: 'weapons', name: 'Garrick Ironhand', title: 'Weaponsmith', sprite: 'barbarian', pal: { hue: 25, sat: 0.6, light: -0.02 }, sign: 'sword', greet: 'Steel for the slaughter. Pick your poison - edges, hafts or bows.' },
-  { id: 'armor', name: 'Hilde Stonewall', title: 'Armorer', sprite: 'lancer', pal: { hue: -25, sat: 0.9 }, sign: 'shield', greet: 'The dead hit hard down there. Wear something thicker than hope.' },
+  { id: 'armor', name: 'Stevie the Stronger', title: 'Armorer', sprite: 'lancer', pal: { hue: -25, sat: 0.9 }, sign: 'shield', greet: 'The dead hit hard down there. Wear something thicker than hope.' },
   { id: 'upgrade', name: 'Durgan Emberforge', title: 'Blacksmith', sprite: 'dragoon', pal: { hue: 20, sat: 0.7, light: 0.03 }, sign: 'hammer', greet: 'Bring me your gear and your gold. I\'ll hammer both into something better.' },
   { id: 'enchant', name: 'Lily Belle the Veiled', title: 'Enchanter', sprite: 'arcane_sorcerer', pal: { hue: 120, sat: 1 }, sign: 'orb', greet: 'Magic is merely a negotiation. Let us renegotiate your equipment.' },
   { id: 'alchemist', name: 'Old Mother Wren', title: 'Alchemist', sprite: 'carrion_witch', pal: { hue: 150, sat: 0.8 }, sign: 'lantern', greet: 'Red for blood, blue for wits, purple for both. Orange... for when you mean it.' },
@@ -59,7 +59,7 @@ const FOREST_TREES = ['t_medium_fir', 't_medium_fir', 't_scots_pine', 't_old_ced
 const TOWN_TREES = ['t_ancient_willow', 't_young_birch', 't_twin_birch', 't_mature_ash', 't_crooked_oak', 't_young_apple', 't_wind_juniper', 't_medium_willow'];
 
 /**
- * Duskhollow, rolled from a seed (each hero has their own, c.townSeed): an irregular plaza with a well and market
+ * Herrington Hollow, rolled from a seed (each hero has their own, c.townSeed): an irregular plaza with a well and market
  * stalls, meandering roads out into the forest (one of them to the portal), the shops fronting the streets with their
  * wares out front, houses on footpaths, and yards around them (gardens, an orchard, a lumber camp, a paddock, ruins).
  * Retries with the next seed if a vendor or the portal can't be reached.
@@ -390,7 +390,7 @@ function rollTown(tileset, seed, last) {
   }
 
   // Spread a sampled set of the 40 available town decorations out instead of
-  // saturating the playable town with props. No combat spawns in Duskhollow.
+  // saturating the playable town with props. No combat spawns in Herrington Hollow.
   for(let i=0;i<40;i+=2){
     const spr=outdoorBiomeProp('town',i);
     for(let attempt=0;attempt<14;attempt++){

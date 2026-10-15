@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Town pack: import the "Overworld and Town" biome pack into the town of Duskhollow.
+Town pack: import the "Overworld and Town" biome pack into the town of Herrington Hollow.
 
     python3 tools/process_assets.py town
 

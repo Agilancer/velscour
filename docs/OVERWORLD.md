@@ -2,7 +2,7 @@
 
 The **Forsaken Wilds** is a procedurally selected dungeon biome, built using the supplied
 **Overworld and Town** ground / building / vegetation pack. It is intentionally **not**
-Duskhollow: there are enemies, a town-return portal, a separate dungeon exit, and a
+Herrington Hollow: there are enemies, a town-return portal, a separate dungeon exit, and a
 shrine-triggered combat/objective encounter. Clearing that encounter replaces the
 normal single-guardian condition for opening the exit.
 
@@ -68,7 +68,7 @@ to use the regular game systems.
 | 8 | Last Light | Defend a shrine's hit points through three waves |
 | 9 | Bandit Encampments | Eliminate the four camp leaders |
 | 10 | Prisoners of the Wild | Free four visible prisoners under guard |
-| 11 | Relics of Old Duskhollow | Recover five guarded relics |
+| 11 | Relics of Old Herrington Hollow | Recover five guarded relics |
 | 12 | The Black Conclave | Slay three elite necromancers and their guards |
 | 13 | Hold the Crossing | Protect a vulnerable crossing watchman across four waves |
 | 14 | The Killing Fields | Repel five larger battlefield waves |

@@ -347,6 +347,6 @@ export function recordBiomeVisit(c, biome, depth) {
   else c.overworldMisses = Math.min(6, (c.overworldMisses || 0) + 1);
 }
 export const TOWN_BIOME = {
-  id: 'town', name: 'Duskhollow', pack: 'catacombs', palette: { colorize: [30, 0.22], light: 0.12, contrast: 0.95 }, wallPalette: { colorize: [32, 0.2], light: 0.18 },
+  id: 'town', name: 'Herrington Hollow', pack: 'catacombs', palette: { colorize: [30, 0.22], light: 0.12, contrast: 0.95 }, wallPalette: { colorize: [32, 0.2], light: 0.18 },
   dark: 0.45, light: 12, ambient: { type: 'firefly', color: '#ffe890' }, mon: { hue: 0, sat: 1, light: 0 }, blood: '#8a0b08', torch: '#ffb050', fog: '#0a0806',
 };

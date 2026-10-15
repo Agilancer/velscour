@@ -48,7 +48,7 @@ in tiles: `0.70, 0.975, 1.25, 1.525, 1.80, 2.075, 2.35`. Gaps are
 near/far depth sorting, opacity treatment, sprites, scaling, and Shield Storm
 spiral remain unchanged.
 
-## Duskhollow town
+## Herrington Hollow town
 
 Random outdoor decorations were reduced considerably: roadside clutter 8–14
 to 3–6, open brush attempts 120 to 45, isolated trees 10–20 to 5–9,

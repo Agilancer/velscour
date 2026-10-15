@@ -17,7 +17,7 @@ export function renderQuest(body) {
   if (!w || w.kind === 'town') {
     const b = BIOME_BY_ID[c.depth === FINAL_DEPTH ? 'throne' : c.nextBiome];
     h += `<div class="q-title">Descend to Depth ${c.depth}</div>`;
-    h += step(false, `Step into the <b style="color:#ff8050">portal</b> at the edge of Duskhollow${b ? `. It opens on <b>${escapeHtml(b.name)}</b>` : ''}.`);
+    h += step(false, `Step into the <b style="color:#ff8050">portal</b> at the edge of Herrington Hollow${b ? `. It opens on <b>${escapeHtml(b.name)}</b>` : ''}.`);
     if (c.depth === FINAL_DEPTH) h += step(false, '<b style="color:#ff4020">Demon Lord Velscour</b> waits on his throne.');
     else if (isRaidDepth(c.depth) && !b?.overworld) h += step(false, '<b style="color:#ff6030">A BOSS ROOM</b> lies at the end of this depth.');
     if (b?.overworld) h += step(false, 'A Forsaken Wilds scenario shrine guards the way forward.');

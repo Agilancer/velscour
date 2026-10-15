@@ -14,7 +14,14 @@ Contents
 
 ---
 
-## October 15, 2026 — Duskhollow vendor display names
+## October 15, 2026 — Herrington Hollow town and armorer rename
+
+- The town's in-game display name is now **Herrington Hollow**, including the biome label, HUD, first-entry banner, return/death messages, Quest Log and the Forsaken Wilds relic scenario title.
+- Armorer vendor `armor` is now **Stevie the Stronger**. Vendor ID, services, greeting, art atlas IDs, position, and save/quest identifiers are unchanged. Existing characters and generated towns remain compatible.
+- Updated gameplay documentation, original art briefs and test comments to match. No art was modified.
+- Static cross-reference checks were used for this label-only change. Live Chromium/iOS visual tests were not performed in the GitHub connector session.
+
+## October 15, 2026 — Herrington Hollow vendor display names
 
 - Renamed the town's Jeweler (`socket`) from **Brother Anselm** to **Jamie the Curator**, and the Enchanter (`enchant`) from **Lysandra the Veiled** to **Lily Belle the Veiled** in `src/world/town.js`.
 - Both vendor IDs, jobs, greeting dialogue, art mapping, shop inventory, and interactions are unchanged. NPC art reference text was updated in `docs/PLACEHOLDER_ART.md` and `assets/source/replacements/README.md`.
@@ -30,7 +37,7 @@ for behavior and the QA checklist.
   0.70/0.975/1.25/1.525/1.80/2.075/2.35 tiles (0.275 gaps). The +2.4
   rad/s rotation, inverted eight-angle atlas frame order, depth sorting,
   shield opacity handling, counts, damage and spiral formulas stay unchanged.
-- Duskhollow has fewer roadside props, decorative ground accents, plants,
+- Herrington Hollow has fewer roadside props, decorative ground accents, plants,
   random trees, yards, market wares and scattered relics while the road network,
   vendors, town portal and walkability gates remain unchanged.
 - Autoplay's skill bar now draws from every *learned* skill (not only the
@@ -195,7 +202,7 @@ Requirements, as stated (✅ = implemented in the draft):
   `tools/audiopack.py`; their source zips stay in `assets/source/audio/`). **Ambience** (`AMB`): every area
   has 1-2 BG-loop beds. One plays at all times, drifting between soft and fuller every 10-25 s and sometimes
   crossfading to the other bed. It ducks to 45% under a song and swells in the breaks. The town uses Forest Night
-  (Duskhollow is at dusk). There's a Settings slider for Ambience (`settings.amb`).
+  (Herrington Hollow is at dusk). There's a Settings slider for Ambience (`settings.amb`).
 - **Title intro** (user's spec): the song starts 2 s after the title appears. The logo fades in until the song's hit at
   6.88 s (measured from the file's RMS envelope: the onset is at 6.88-6.89 s), then bursts upward into flames and
   keeps burning; the menu fades in at the burst. The visuals follow the song's own clock (`musicClock()`), so a slow
@@ -215,7 +222,7 @@ Requirements, as stated (✅ = implemented in the draft):
 ## 3. Status
  
 **Worldwide biome overhaul (October 2026, draft `feature/worldwide-biome-art-and-spawns`):**
-Across 31 indoor dungeons, 1 combat overworld and noncombat Duskhollow,
+Across 31 indoor dungeons, 1 combat overworld and noncombat Herrington Hollow,
 added 60 ground tiles per environment and 40 terrain props per environment.
 Dungeon walls receive per-biome/per-wall-family new material treatments
 while preserving exact 16-mask connections and architectural depth slices.

@@ -18,7 +18,7 @@ export const SCENARIOS = [
   ['Last Light','ward','Defend the sacred shrine from attackers.'],
   ['Bandit Encampments','camps','Eliminate the leaders of four hostile camps.'],
   ['Prisoners of the Wild','rescue','Free four imprisoned wanderers.'],
-  ['Relics of Old Duskhollow','relics','Recover five ancient artifacts.'],
+  ['Relics of Old Herrington Hollow','relics','Recover five ancient artifacts.'],
   ['The Black Conclave','necros','Slay the three necromancers and their undead guards.'],
   ['Hold the Crossing','bridge','Protect a crossing from four assault waves.'],
   ['The Killing Fields','battle','Repel five waves across the battlefield.'],
