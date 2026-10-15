@@ -103,6 +103,32 @@ export function extendedTownFloors(source,meta){
   townCache={source,entries};
   return entries;
 }
+// Overworld and town share the approved town source textures, but have
+// SEPARATE accent atlases: forty wilderness terrain motifs and the full
+// 60-cell Wilds floor set never appear as ordinary Duskhollow accents.
+export const OVERWORLD_FLOOR_EXPANSION={
+  start:TOWN_FLOOR_EXPANSION.start+TOWN_FLOOR_EXPANSION.count,count:60,
+};
+let overworldCache=null;
+export function extendedOverworldFloors(source,meta){
+ if(overworldCache?.source===source)return overworldCache.entries;
+ const count=OVERWORLD_FLOOR_EXPANSION.count;
+ const canvas=makeCanvas(1620,492),g=canvas.getContext('2d');
+ g.imageSmoothingEnabled=false;
+ const names=['dense_meadow','trampled_verge','grass','mud','dirt','stone',
+   'irregular_flagstone','slate_paving','bleached_boards','gravel'];
+ for(let i=0;i<count;i++){
+   const name=names[i%names.length],pos=meta.floors[name]||meta.floors.grass;
+   const x=i%10*162,y=Math.floor(i/10)*82;
+   g.drawImage(source,pos[0],pos[1],160,80,x,y,160,80);
+   decorateFloor(g,'overworld',i%10,i,source,x,y);
+ }
+ const entries=Array.from({length:count},(_,i)=>({
+   img:canvas,sx:i%10*162,sy:Math.floor(i/10)*82,
+   w:160,h:80,name:'forsaken_wilds_floor_'+String(i+1).padStart(2,'0'),
+ }));
+ overworldCache={source,entries};return entries;
+}
 function drawProp(g,biome,i){
   const p=getPalette(biome,i%5),type=TYPES[i%TYPES.length],v=(i/20)|0;
   const x=80,y=151;
