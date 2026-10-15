@@ -168,7 +168,7 @@ export class World {
       const px = isoX(t.x, t.y), py = isoY(t.x, t.y);
       if (px < vr.x0 || px > vr.x1 || py < vr.y0 || py > vr.y1 + 80) continue;
       addLight(t.x, t.y, 5.5 + Math.sin(this.time * 9 + t.x) * 0.3, 0.9);
-      if (chance(dt * 18)) spawn({ type: 'glow', x: t.x + rand(-0.04, 0.04), y: t.y + rand(-0.04, 0.04), z: 40, vz: rand(15, 35), life: rand(0.3, 0.6), size: rand(2, 3.5), size1: 0.5, color: chance(0.5) ? (b.torch || '#ff9a40') : '#fff0a0', add: true });
+      if (chance(dt * 18)) spawn({ type: 'glow', x: t.x + rand(-0.04, 0.04), y: t.y + rand(-0.04, 0.04), z: t.flameZ ?? 40, vz: rand(15, 35), life: rand(0.3, 0.6), size: rand(2, 3.5), size1: 0.5, color: chance(0.5) ? (b.torch || '#ff9a40') : '#fff0a0', add: true });
     }
     for (const pr of this.props) {
       if (!pr.light) continue;
