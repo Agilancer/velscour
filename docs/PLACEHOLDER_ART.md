@@ -341,10 +341,10 @@ rules as the monster sheets.
 | 1 | Garrick Ironhand | Weaponsmith | burly smith, leather apron, a sword over his shoulder |
 | 2 | Hilde Stonewall | Armorer | broad armoured woman with a tower shield |
 | 3 | Durgan Emberforge | Blacksmith (upgrades) | soot-covered dwarf-ish smith with a hammer and tongs |
-| 4 | Lysandra the Veiled | Enchanter | veiled sorceress in green, floating runes |
+| 4 | Lily Belle the Veiled | Enchanter | veiled sorceress in green, floating runes |
 | 5 | Old Mother Wren | Alchemist | hunched crone in green rags with potion bottles |
 | 6 | Zafir the Lapidary | Gem merchant | turbaned gem trader with a loupe and gem pouches |
-| 7 | Brother Anselm | Jeweler (sockets) | a monk with a hand drill and jeweler's lenses |
+| 7 | Jamie the Curator | Jeweler (sockets) | a monk with a hand drill and jeweler's lenses |
 | 8 | Fortunato | Gambler | a flamboyant gambler: hat, cards, dice |
 | 9 | Old Tobin | Townsfolk | a frail old man with a lantern |
 | 10 | Mira | Townsfolk | a young village girl |
