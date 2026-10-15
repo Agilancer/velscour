@@ -313,7 +313,9 @@ function placeObstacles(map, rooms, tileset, rng, startRoom) {
 
 // light radius (tiles) of the props that burn
 const LIT = { grave_lantern: 2.2, torch_stand: 3.2, incense_brazier: 3, iron_candelabrum: 2.6, vigil_candles: 2, votive_candles: 2,
-  gold_brazier: 3.6, blue_flame_brazier: 3.8, temple_censer: 2.8, burial_lantern: 2.6, sun_torch: 3.2, royal_censer: 3.0 };
+  gold_brazier: 3.6, blue_flame_brazier: 3.8, temple_censer: 2.8, burial_lantern: 2.6, sun_torch: 3.2, royal_censer: 3.0,
+  winter_brazier: 3.2, azure_brazier: 3.7, violet_brazier: 3.7, frost_lantern: 2.6,
+  icicle_chandelier: 2.6, crystal_heart: 4.1, aurora_shrine: 3.9 };
 
 function shuffleWith(a, rng) {
   for (let i = a.length - 1; i > 0; i--) { const j = rng.int(0, i); [a[i], a[j]] = [a[j], a[i]]; }

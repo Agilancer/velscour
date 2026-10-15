@@ -400,7 +400,8 @@ export function seekMusic(t) {
 // then crossfading to another of its beds. Beds sit lower while a song plays and come up in the breaks between songs.
 const AMB = {
   title: ['cave_storm', 'inside_night_storm'], town: ['forest_night', 'forest_night_rain', 'forest_day'],
-  catacombs: ['inside_night', 'cave'], frozen: ['cave_storm', 'forest_night_storm'], molten: ['cave', 'torch_loop'],
+  catacombs: ['inside_night', 'cave'], frozen: ['cave_storm', 'forest_night_storm'],
+  ice_temple: ['cave_storm', 'inside_night_storm', 'cave'], molten: ['cave', 'torch_loop'],
   fungal: ['cave_rain', 'cave'], sunken: ['sea', 'cave_rain', 'beach_rain'], blood: ['inside_night_rain', 'inside_night'],
   ashen: ['cave_storm', 'inside_day_storm'], void: ['cave', 'inside_night_storm'], gilded: ['inside_day', 'inside_night', 'inside_day_rain'],
   plague: ['river_stream_loop', 'cave_rain'], crystal: ['cave_rain', 'cave'], desert: ['inside_day_storm', 'beach_storm'],
