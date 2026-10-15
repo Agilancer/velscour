@@ -5,6 +5,7 @@ import { generateIceTemplePack } from '../gfx/icetemple.js';
 import { generateHellPack } from '../gfx/hellpack.js';
 import { generateAstralPlanePack } from '../gfx/astralplane.js';
 import { generateHeavenlyPack } from '../gfx/heavenlypack.js';
+import { expandBiomePack } from '../gfx/biomeexpansion.js';
 import { TW } from './view.js';
 import { loadReplacementArt } from './replacementart.js';
 import { loadEnemyArt } from './enemyart.js';
@@ -100,11 +101,41 @@ function loadPack(id) {
 }
 const ready = (v) => v && !(v instanceof Promise);
 
+// Materialize only the currently used expanded packs: the original wall atlas
+// is several MB, and retaining one full transformed atlas per 32 biomes would
+// blow past iOS Safari's Canvas memory budget.
+const EXPANSION_ORDER=[];
+async function expandedPack(biome) {
+  if (!biome || biome.overworld || biome.id === 'town') return;
+  const id='expanded_'+biome.id;
+  const previous=A.packs[id];
+  if(previous) {
+    const i=EXPANSION_ORDER.indexOf(id);
+    if(i>=0)EXPANSION_ORDER.splice(i,1);
+    EXPANSION_ORDER.push(id);
+    return await previous;
+  }
+  const promise=loadPack(biome.pack || DEFAULT_PACK).then(base=>expandBiomePack(base,biome))
+    .then(pack=>{
+      A.packs[id]=pack;
+      while(EXPANSION_ORDER.length>3){
+        const old=EXPANSION_ORDER.shift();
+        if(old===id)continue;
+        delete A.packs[old];
+        for(const key of Object.keys(A.biomeSets))
+          if(key.endsWith('|'+old))delete A.biomeSets[key];
+      }
+      return pack;
+    }).catch(e=>{delete A.packs[id];throw e;});
+  A.packs[id]=promise;
+  EXPANSION_ORDER.push(id);
+  return await promise;
+}
 /** Fetch a biome's pack and the monster art. Safe to call repeatedly. */
 export function loadBiomeArt(biome) {
   return Promise.all([
     loadEnemyArt().catch((e) => console.warn(e)), // monsters fall back to their pixel sprites
-    loadPack(biome.pack || DEFAULT_PACK),
+    biome && !biome.overworld && biome.id !== 'town' ? expandedPack(biome) : loadPack(biome.pack || DEFAULT_PACK),
   ]);
 }
 
@@ -132,13 +163,18 @@ export function classSprite(id, h, palette = null) {
  * - scatter [{name, ox, oy, fp (footprint in tiles), block}], chest {closed, open, rareClosed, rareOpen}
  */
 export function biomeTileSet(biome) {
-  const id = ready(A.packs[biome.pack || DEFAULT_PACK]) ? biome.pack || DEFAULT_PACK : DEFAULT_PACK;
+  const ext='expanded_'+biome.id;
+  const id = ready(A.packs[ext]) ? ext :
+    ready(A.packs[biome.pack || DEFAULT_PACK]) ? biome.pack || DEFAULT_PACK : DEFAULT_PACK;
   const key = biome.id + '|' + id;
   if (A.biomeSets[key]) return A.biomeSets[key];
   // keep memory bounded: each recoloured set is ~25 MB of canvas
   const keys = Object.keys(A.biomeSets).filter((k) => !k.startsWith('town|'));
   while (keys.length >= 2) delete A.biomeSets[keys.shift()]; // a mixed level holds two sets
-  const pk = A.packs[id], m = pk.meta, pal = biome.palette, wallPal = biome.wallPalette || pal;
+  // The expanded atlas is already tinted and sculpted for THIS biome;
+  // applying its old blanket palette again would flatten the new pigments.
+  const pk=A.packs[id],m=pk.meta,pal=m.expansion?null:biome.palette,
+    wallPal=m.expansion?null:(biome.wallPalette||pal);
   const floorImg = pal ? recolor(pk.floors, pal) : pk.floors;
   const wallImg = wallPal ? recolor(pk.walls, wallPal) : pk.walls;
   const scatImg = pal ? recolor(pk.scatter, pal) : pk.scatter;
@@ -152,7 +188,11 @@ export function biomeTileSet(biome) {
     set.walls[fam] = {};
     for (const [mask, vars] of Object.entries(masks)) set.walls[fam][mask] = vars.map((v) => v.map((r) => ({ ...rect(wallImg, r), arm: r[0] })));
   }
-  set.families = Object.keys(set.walls);
+  set.families=Object.keys(set.walls);
+  if(m.expansion){
+    set.bases=set.bases.filter(i=>i>=m.expansion.floorStart);
+    set.features=set.features.filter(i=>i>=m.expansion.floorStart);
+  }
   set.archSpan = {};
   for (const [des, dirs] of Object.entries(m.arches)) {
     set.archSpan[des] = (m.archSpan && m.archSpan[des]) || 3;
@@ -170,9 +210,9 @@ export function biomeTileSet(biome) {
   const part = biome.part;
   if (part) {
     const inR = (rs, i) => rs.some(([a, b]) => i + 1 >= a && i + 1 <= b);
-    set.bases = set.bases.filter((i) => inR(part.floors, i));
-    set.features = set.features.filter((i) => inR(part.floors, i));
-    set.scatter = set.scatter.filter((s, i) => inR(part.scatter, i));
+    set.bases=set.bases.filter(i=>(m.expansion&&i>=m.expansion.floorStart)||inR(part.floors,i));
+    set.features=set.features.filter(i=>(m.expansion&&i>=m.expansion.floorStart)||inR(part.floors,i));
+    set.scatter=set.scatter.filter((s,i)=>(m.expansion&&i>=m.expansion.scatterStart)||inR(part.scatter,i));
     set.families = set.families.filter((f) => part.families.includes(f));
     for (const k of ['arches', 'doors']) for (const d of Object.keys(set[k])) if (!part[k].includes(d)) delete set[k][d];
   }
