@@ -4,7 +4,7 @@ import { RNG, TAU } from '../core/util.js';
 import { A } from '../core/assets.js';
 import { TW } from '../core/view.js';
 import { isoBarrier, isoBarrierProp } from '../gfx/isobarriers.js';
-import { extendedTownFloors, TOWN_FLOOR_EXPANSION } from '../gfx/biomeexpansion.js';
+import { extendedTownFloors, outdoorBiomeProp, TOWN_FLOOR_EXPANSION } from '../gfx/biomeexpansion.js';
 
 export const VENDORS = [
   { id: 'weapons', name: 'Garrick Ironhand', title: 'Weaponsmith', sprite: 'barbarian', pal: { hue: 25, sat: 0.6, light: -0.02 }, sign: 'sword', greet: 'Steel for the slaughter. Pick your poison - edges, hafts or bows.' },
@@ -244,7 +244,8 @@ function rollTown(tileset, seed, last) {
     return !props.some((p) => p.kind === 'scatter' && Math.abs(p.x - x) < 0.8 && Math.abs(p.y - y) < 0.8);
   };
   const prop = (name, x, y, opts = {}) => {
-    const spr = S(name), solid = opts.solid ?? SOLID.test(name);
+    const spr = typeof name === 'string' ? S(name) : name;
+    const solid = opts.solid ?? (typeof name === 'string' && SOLID.test(name));
     if (!spr || !free(x, y, solid)) return false;
     props.push({ kind: 'scatter', x, y, spr, k, flip: opts.flip ?? rng.chance(0.5) });
     if (solid) blockAt(x, y);
@@ -388,6 +389,16 @@ function rollTown(tileset, seed, last) {
     prop(rng.pick(brush), x, y);
   }
 
+  // Forty NEW town-specific scatter designs (statuary, shrine stones, relics,
+  // shop furnishings and walk-over details). No combat spawns in Duskhollow.
+  for(let i=0;i<40;i++){
+    const spr=outdoorBiomeProp('town',i);
+    for(let attempt=0;attempt<14;attempt++){
+      const x=Math.floor(R(4,W-4))+.5,y=Math.floor(R(4,H-4))+.5;
+      if(!open(x,y,.25)||nearKey(x,y,1.6))continue;
+      if(prop(spr,x,y,{solid:false,flip:false}))break;
+    }
+  }
   // ---- ground tiles: a tile beside a softer material takes the transition with that material on the shared side(s)
   makeTownTiles();
   const at = (x, y) => mat[Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))];
@@ -403,7 +414,7 @@ function rollTown(tileset, seed, last) {
       const pi = TPAIRS.indexOf(MATS[n] + '__' + MATS[m]);
       v = shape < 0 || pi < 0 ? n : 6 + pi * 8 + shape;
     }
-    // Use 24 new original town material accents only inside same-material
+    // Use 60 new original town material accents only inside same-material
     // stretches. Existing shoreline/road transition indices remain intact.
     if(v===m && n===99 && !keep[y*W+x] && use[y*W+x]!==2 &&
       (x*29+y*37+seed)%13===0)
