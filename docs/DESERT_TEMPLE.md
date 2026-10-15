@@ -44,8 +44,12 @@ caches the derived Desert Temple art using that geometry. It does not write into
 `assets/tiles/`, and all file URLs remain relative for GitHub Pages.
 
 The art is new at runtime; **it does not require committing large static binary
-atlases**. For teams that need exported PNG/WebP assets, render the three
-cached Canvas objects or use the browser QA contact-sheet screenshot.
+atlases**. The browser QA script automatically exports real game-ready files into
+`tools/tests/out/desert_temple_export/`: `floors.webp`, `walls.webp`,
+`scatter.webp`, and `pack.json`. This is a complete atlas-and-metadata handoff
+and can be provided directly to another developer or art editor. The exported
+files are ignored by Git; the live game continues to use the deterministic
+source generator, ensuring one source of truth.
 The source generator is the place to modify colors, prop drawings, materials,
 and floor pattern density. Changing geometry or creating truly independent
 architectural silhouettes would require a complete `manifest.json` source
