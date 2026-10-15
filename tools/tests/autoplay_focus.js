@@ -39,6 +39,12 @@ const { openGame, report } = require('./harness');
         // in a skill slot. Each focused melee class should close a five-tile gap.
         Auto.reset();
         const start = G.player;
+        // Once short-term maintenance buffs are active, gap closing should
+        // win over damage skills when the target is still outside melee range.
+        for (const id of G.char.bar.filter(Boolean)) {
+          if (SKILLS[id].kind === 'buff' && !start.buffs.some((b) => b.id === id))
+            start.buffs.push({ id, t: 100 });
+        }
         const target = { x: start.x + 5, y: start.y, r: 0.35,
           rank: 'normal', curses: {}, status: {} };
         const oldLos = G.world.map.los;
