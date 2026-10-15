@@ -275,7 +275,8 @@ export function outdoorBiomeProp(biome,index){
   const canvas=makeCanvas(160,160),g=canvas.getContext('2d');
   g.imageSmoothingEnabled=false;drawProp(g,biome,index%40);
   const item={img:canvas,sx:0,sy:0,w:160,h:160,ox:-80,oy:-151,
-    name:biome+'_wild_prop_'+index,block:index%9===0,fp:index%9===0?.6:.2};
+    name:biome==='town'?'town_scatter_'+index:biome+'_wild_prop_'+index,
+    block:index%9===0,fp:index%9===0?.6:.2};
   if(outdoorCache.size>60)outdoorCache.delete(outdoorCache.keys().next().value);
   outdoorCache.set(key,item);return item;
 }
