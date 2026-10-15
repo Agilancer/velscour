@@ -200,3 +200,25 @@ Exports to WebP with `tools/tests/astral_plane.js`; see
 node tools/tests/astral_plane.js
 node tools/tests/walls.js astral astral_plane
 ```
+
+## HEAVENLY — Empyrean Citadel complete indoor dungeon
+
+`src/gfx/heavenlypack.js` draws a new cached `{floors,walls,scatter,meta}`
+pack with **60 distinct isometric floor tiles** (ten seamless marble/cloudstone
+bases), five individual pearl/lapis/sunstone/opal/gilded wall palettes using
+the **complete set of 16 connection masks each**, three four-direction
+arches, three opening four-direction doors and 40 terrain and shrine
+sprites. The wall materials are recolored separately using each family's
+own source-coordinate regions, not merely given a different label.
+The proven Catacombs alpha geometry remains as the wall/door occlusion
+template; native tile size stays 160×80.
+
+Unlike previous biome generators, HEAVENLY also supplies **60 completely
+new procedurally illustrated monster sprites** from
+`src/gfx/heavenlymonsters.js`; see `docs/HEAVENLY.md` for bestiary and
+sprite alignment, screenshot contact sheets and WebP atlas export.
+
+```bash
+node tools/tests/heavenly.js
+node tools/tests/pack.js heavenly
+```
