@@ -103,6 +103,16 @@ const FULL=process.argv.includes('--all');
         for(const [family,masks]of Object.entries(set.walls))
           for(let i=0;i<16;i++)if(!masks[i]?.length)
             issues.push('Missing wall mask '+b.id+'/'+family+'/'+i);
+        for(const [design,dirs]of Object.entries(set.arches))
+          for(const dir of ['NE','NW','SE','SW'])
+            if(dirs[dir]?.length!==2*(set.archSpan[design]||3))
+              issues.push('Invalid arch slices '+b.id+'/'+design+'/'+dir);
+        for(const [design,dirs]of Object.entries(set.doors))
+          for(const dir of ['NE','NW','SE','SW'])
+            if(!dirs[dir]?.closed?.length || !dirs[dir]?.open?.some(v=>v.part==='leaf'))
+              issues.push('Invalid opening door '+b.id+'/'+design+'/'+dir);
+        if(set.floors.length>255)
+          issues.push('Too many floors for Uint8Array tile variants '+b.id);
         if(m.scatter.slice(nScat).some(v=>v.x+v.w>pack.scatter.width||v.y+v.h>pack.scatter.height))
           issues.push('Scatter crop overflow '+b.id);
         game.buildDungeon(13,b);
@@ -158,8 +168,8 @@ const FULL=process.argv.includes('--all');
     await page.evaluate(async()=>{
       const {isoBarrier,BARRIER_STYLES}=await import('/src/gfx/isobarriers.js');
       const cv=document.createElement('canvas');cv.id='barrier-contact';
-      cv.width=1440;cv.height=900;const g=cv.getContext('2d');
-      g.fillStyle='#171921';g.fillRect(0,0,1440,900);
+      cv.width=1440;cv.height=1120;const g=cv.getContext('2d');
+      g.fillStyle='#171921';g.fillRect(0,0,1440,1120);
       g.fillStyle='#edc492';g.font='bold 24px monospace';
       g.fillText('ISOMETRIC BARRICADES: X and Y axes, 10 material families',30,38);
       for(let i=0;i<BARRIER_STYLES.length;i++){
