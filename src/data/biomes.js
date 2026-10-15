@@ -179,6 +179,15 @@ export const BIOMES = [
     torch: '#ffa040', fog: '#1a0c02',
   },
   {
+    id: 'overworld', name: 'The Forsaken Wilds', pack: 'town', overworld: true,
+    palette: null, dark: 0.57, light: 12,
+    ambient: { type: 'leaf', color: '#9fb777' }, mon: { hue: 16, sat: 0.85, light: 0.04 },
+    el: 'phys', blood: '#7c1610', adj: ['Wilderness', 'Outcast', 'Wayward'],
+    roster: ['zombie', 'ghoul', 'hound', 'skeleton', 'archer', 'knight', 'cultist', 'golem', 'spider', 'shroom', 'abomination', 'wraith'],
+    prefer: ['set2/undead', 'set2/warriors', 'set2/goblins'],
+    torch: '#ffc078', fog: '#0a160d',
+  },
+  {
     id: 'throne', name: "Velscour's Throne", palette: { colorize: [4, 0.72], light: -0.1, contrast: 1.2 }, dark: 0.8, light: 8,
     ambient: { type: 'ember', color: '#ff3a10' }, mon: { hue: -10, sat: 1.5, light: -0.06 }, el: 'fire', blood: '#c00000',
     adj: ['Hellsworn', 'Doom', 'Archfiend'], roster: ['demon', 'imp', 'knight', 'gargoyle', 'abomination', 'hound', 'wraith', 'cultist', 'elemental', 'golem', 'eye', 'skeleton'],
@@ -190,7 +199,7 @@ export const BIOMES = [
 // Art: every biome is built from a biome pack (assets/tiles/<pack>/, docs/ART.md), recoloured by its `palette`.
 // A pack can hold more than one setting: `part` limits a biome to some of its floors (1-based ranges), wall
 // families, props, arches and doors (assets.js biomeTileSet).
-for (const b of BIOMES) b.pack = 'catacombs';
+for (const b of BIOMES) if (!b.overworld) b.pack = 'catacombs';
 const CG = 'cathedral_graveyard';
 Object.assign(BIOMES.find((b) => b.id === 'cathedral'), {
   pack: CG, part: {
@@ -227,7 +236,7 @@ const MON_SWAPS = {
   thorn: ['thorn', 'venom', null, 'verdigris'], storm: ['storm', 'crystal', 'pale', 'midnight'], obsidian: ['obsidian', 'void', 'shadow', 'midnight'],
   flesh: ['flesh', 'blood', null, 'coral'], serpent: ['venom', 'sand', null, 'verdigris'], shattered: ['pale', 'storm', null, 'bronze'],
   library: ['shadow', 'pale', 'void', 'amethyst'], cathedral: [null, 'pale', 'shadow', 'bone'], necropolis: ['pale', 'frost', 'shadow', 'spectral', 'bone'], amber: ['sand', 'ember', 'gilded', 'bronze'],
-  throne: ['infernal', 'blood', 'ember', 'rust'],
+  overworld: [null, 'thorn', 'rot', 'ash', 'bone'], throne: ['infernal', 'blood', 'ember', 'rust'],
 };
 for (const b of BIOMES) b.swaps = MON_SWAPS[b.id];
 
@@ -242,12 +251,18 @@ export function mixPartner(biome, rnd = Math.random) {
 export const BIOME_BY_ID = Object.fromEntries(BIOMES.map((b) => [b.id, b]));
 
 /**
- * The hero's next biome, drawn from a shuffle bag kept on the save (`c.biomeBag`): all 25 biomes come up once,
- * in random order, before any repeats, and never the same one twice in a row. The throne is only for FINAL_DEPTH.
+ * A shuffled pool of biomes for the hero's next depth. Wilds may be rolled naturally, but a visit
+ * is guaranteed after six actual non-overworld dungeon entries. Only record visits when entering a
+ * depth, not when previewing/drawing the next choice or returning to town.
+ * The throne at FINAL_DEPTH is never overridden.
  */
 export function drawBiome(c, depth) {
   if (depth === FINAL_DEPTH) return 'throne';
   const all = BIOMES.filter((b) => b.id !== 'throne').map((b) => b.id);
+  if ((c.overworldMisses || 0) >= 6) {
+    c.biomeBag = (c.biomeBag || []).filter((id) => id !== 'overworld' && all.includes(id));
+    return 'overworld';
+  }
   let bag = (c.biomeBag || []).filter((id) => all.includes(id));
   if (!bag.length || (bag.length === 1 && bag[0] === c.lastBiome)) bag = all.slice();
   const pool = bag.filter((id) => id !== c.lastBiome);
@@ -256,6 +271,17 @@ export function drawBiome(c, depth) {
   return id;
 }
 
+/** Count actual dungeon *visits* once per depth; town re-entry cannot farm the counter.
+ * Saved per hero and reset immediately on visiting any town-tileset overworld biome.
+ */
+export function recordBiomeVisit(c, biome, depth) {
+  if (!c || !biome || depth === FINAL_DEPTH) return;
+  const key = String(depth) + ':' + biome.id;
+  if (c.overworldLastVisit === key) return;
+  c.overworldLastVisit = key;
+  if (biome.overworld || biome.pack === 'town') c.overworldMisses = 0;
+  else c.overworldMisses = Math.min(6, (c.overworldMisses || 0) + 1);
+}
 export const TOWN_BIOME = {
   id: 'town', name: 'Duskhollow', pack: 'catacombs', palette: { colorize: [30, 0.22], light: 0.12, contrast: 0.95 }, wallPalette: { colorize: [32, 0.2], light: 0.18 },
   dark: 0.45, light: 12, ambient: { type: 'firefly', color: '#ffe890' }, mon: { hue: 0, sat: 1, light: 0 }, blood: '#8a0b08', torch: '#ffb050', fog: '#0a0806',
