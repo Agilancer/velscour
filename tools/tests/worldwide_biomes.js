@@ -165,8 +165,13 @@ const FULL=process.argv.includes('--all');
         g.fillStyle='#fff2d5';g.font='16px monospace';g.fillText(name,25,y+37);
         for(let j=0;j<2;j++){
           const axis=j?'y':'x',s=isoBarrier(name,axis);
-          for(let t=0;t<4;t++)
-            g.drawImage(s.img,0,0,160,152,205+j*485+t*84,y-25+t*0,128,121);
+          for(let t=0;t<4;t++){
+            // The exact 2:1 isometric projected step at 80% native size
+            // is (+/-64,+32), matching this sprite's ±40×20 endpoints.
+            const x0=j?895:215,dx=j?-64:64;
+            g.drawImage(s.img,0,0,160,152,
+              x0+t*dx,y-25+t*32,128,121);
+          }
         }
       }
       Object.assign(cv.style,{position:'fixed',left:0,top:0,zIndex:999999,maxWidth:'100vw',maxHeight:'100vh'});
