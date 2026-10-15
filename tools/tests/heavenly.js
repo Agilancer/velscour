@@ -49,13 +49,25 @@ const {openGame,report,OUT_DIR}=require('./harness');
           issues.push('Monster finish missing '+a.id);
         tested++;
       }
-      const looks=rollLooks(b);
-      for(const arch of b.roster){
-        const choice=looks.pick(arch);
-        if(!choice?.art?.startsWith('hv_'))issues.push('Non-Heavenly roster art '+arch);
+      // The worldwide expansion keeps all sixty original Heavenly sprites,
+      // adds fifty new Empyrean-native designs, and lets ordinary legacy art
+      // plus rare foreign natives appear. Do not require hv_ exclusively.
+      const seen={heavenly:0,native:0,global:0,visitors:0};
+      for(let run=0;run<160;run++){
+        const looks=rollLooks(b);
+        for(const arch of b.roster){
+          const choice=looks.pick(arch),a=choice&&ART_BY_ID[choice.art];
+          if(!a)issues.push('Unresolved Heavenly roster look '+arch);
+          else if(a.id.startsWith('hv_'))seen.heavenly++;
+          else if(a.homeBiome==='heavenly')seen.native++;
+          else if(a.homeBiome)seen.visitors++;
+          else seen.global++;
+        }
+        if(!looks.boss(b.roster)?.look?.art)
+          issues.push('Heavenly guardian lacks artwork');
       }
-      if(!looks.boss(b.roster)?.look?.art?.startsWith('hv_'))
-        issues.push('Heavenly guardian does not have custom art');
+      if(!seen.heavenly||!seen.native||!seen.global||!seen.visitors)
+        issues.push('Heavenly/global/visitor spawn mix missing: '+JSON.stringify(seen));
       await loadBiomeArt(b);
       const p=A.packs.heavenly,meta=p.meta,tiles=biomeTileSet(b);
       if(meta.floors.length!==60||meta.floors.filter(t=>t.seamless).length!==10)issues.push('Floor count or seamless bases incorrect');
