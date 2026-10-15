@@ -4,6 +4,8 @@ import { makeMonster } from './monster.js';
 import { depthLevel } from '../data/depth.js';
 import { UI } from '../ui/ui.js';
 import { RNG } from '../core/util.js';
+import { overworldObject } from '../gfx/overworldart.js';
+import { TW } from '../core/view.js';
 
 export const SCENARIOS = [
   ['Siege of the Forgotten','waves','Survive four escalating enemy waves.'],
@@ -92,6 +94,7 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
     for(const m of S.foes)if(!m.dead)m.dead=true; // reset the encounter without granting loot
     clearMarkers();
     for(const n of S.civilians){const i=world.npcs.indexOf(n);if(i>=0)world.npcs.splice(i,1);}
+    if(S.wagon){const i=world.props.indexOf(S.wagon);if(i>=0)world.props.splice(i,1);S.wagon=null;}
     S.civilians=[];S.escort=null;S.foes=[];
     report('FAILED — '+reason+' Return to the scenario shrine to try again.');
     UI.centerMsg('SCENARIO FAILED','Activate the shrine to retry',3);
@@ -126,7 +129,9 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
       S.goal=n;S.remaining=n;
       for(let i=0;i<n;i++){
         const at=site(i+1),idx=i+1;
+        const captive=type==='rescue'?person('Prisoner '+idx,at[0]+1.2,at[1]+.8,'wizard'):null;
         mark(label+' '+idx,at,(m)=>{
+          if(captive){const j=world.npcs.indexOf(captive);if(j>=0)world.npcs.splice(j,1);}
           unmark(m);S.remaining--;S.stage++;report(label+': '+S.stage+'/'+S.goal);
           if(['rifts','totems','siege'].includes(type))group(idx+2,3,type==='rifts'?'wraith':type==='totems'?'shroom':'knight');
           if(S.remaining===0&&(!['rifts','totems','siege'].includes(type)||!live()))finish();
@@ -135,7 +140,9 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
       }
     };
     switch(type){
-      case 'waves':case 'battle':case 'bridge': wave(type==='battle'?5:4);break;
+      case 'waves':case 'battle':case 'bridge':
+        if(type==='bridge'){S.escort=person('Crossing Watchman',CENTER[0]+2,CENTER[1]+3,'paladin');S.escort.hp=170;}
+        wave(type==='battle'?5:4);break;
       case 'bosses': bosses(3,['demon','knight','abomination']);break;
       case 'defend':case 'infestation':
         for(let i=0;i<4;i++)person('Villager '+(i+1),25+(i%2)*3,40+Math.floor(i/2)*3);
@@ -143,6 +150,8 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
       case 'escort':
         S.escort=person('Caravan Guard',CENTER[0],CENTER[1]+3,'paladin');
         S.escort.hp=140;S.goal=4;S.routeIndex=0;
+        S.wagon={kind:'scatter',x:S.escort.x,y:S.escort.y,spr:overworldObject('ow_caravan'),k:TW/160,flip:false};
+        world.props.push(S.wagon);
         S.route=[site(0),site(5),site(2),gen.exit];
         group(2,5,'hound');group(5,4,'archer');break;
       case 'zones':
@@ -190,9 +199,11 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
         const attackers=S.foes.filter(m=>!m.dead&&norm([m.x,m.y],CENTER)<5).length;
         S.wardHp-=dt*attackers*2;
         if(S.wardHp<=0){fail('The shrine was destroyed.');return;}
-      }else if(type==='bridge'&&norm([p.x,p.y],CENTER)>18&&S.seconds>16){
-        // Leaving the crossing does not automatically end the challenge, but gives
-        // the enemy a greater chance to overwhelm the player on return.
+      }else if(type==='bridge'){
+        const n=S.escort;
+        const attackers=S.foes.filter(m=>!m.dead&&norm([n.x,n.y],[m.x,m.y])<6).length;
+        n.hp-=dt*attackers*(norm([p.x,p.y],CENTER)<7?1.2:4.5);
+        if(n.hp<=0){fail('The crossing was overrun.');return;}
       }
       trackWaves(required,at,arch);
     }else if(type==='bosses'||type==='beasts'){
@@ -226,6 +237,7 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
             const next=world.map.randomNear(nx,ny,1.2,rng.fn());
             if(world.map.circleFree(next[0],next[1],.3)){n.x=next[0];n.y=next[1];}
           }
+          if(S.wagon){S.wagon.x=n.x;S.wagon.y=n.y;}
         }
       }
     }else if(['rifts','siege','totems'].includes(type)){
