@@ -26,10 +26,14 @@ changing approved PNG sheets, base combat art or the other fifteen classes.
 
 ## Lancer
 
-- The seven Bulwark shield skills use their existing four approved eight-angle
-  golden PNG sprite sheets and seven nonidentical radii, 1.18–2.50 tiles.
-  All spin at -2.4 radians/second rather than +2.4 radians/second; the
-  original frame order and world-depth foreground/background sorting remain.
+- PR #56 originally changed the seven Bulwark spells to distinct radii
+  (1.18–2.50 tiles) and -2.4 radians/second, but kept the source
+  eight-angle atlas frame order. **Superseded October 15, 2026:** the orbit
+  direction has been reversed again to +2.4 radians/second and the actual
+  eight-frame animation lookup reversed independently. The seven new
+  radii are 1.40, 1.95, 2.50, 3.05, 3.60, 4.15 and 4.70 tiles;
+  all near/far world-depth sorting remains intact. See
+  [LANCER_SPINNING_SHIELDS.md](LANCER_SPINNING_SHIELDS.md).
 - A one-time alpha treatment of each tiny atlas (on load) makes pixels
   between the shield silhouette's first and last visible pixels on each row
   opaque, while maintaining transparent exterior padding. The binary source
