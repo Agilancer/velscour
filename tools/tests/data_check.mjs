@@ -89,14 +89,15 @@ for (const b of BIOMES) {
   const testNative=BIOME_NATIVES.find(a=>a.homeBiome===b.id);
   if(!testNative)bad.push(`biome ${b.id}: no custom monster pool`);
 }
+// every biome's pack exists and is complete: all 16 wall connection masks per family, with an arm for each
+// connection, arches and doors in 4 directions (doors open and closed), self-seamless floors, chest art
+const { readFileSync, existsSync } = await import('node:fs');
 // Every combat biome also generates 60 new floors / 40 new props and per-family wall
 // texture treatments at runtime while retaining the source geometry below.
 for(const path of ['biomeexpansion.js','biomenativeart.js','isobarriers.js'])
   if(!existsSync(new URL('../../src/gfx/'+path,import.meta.url)))
     bad.push('Missing shared expansion renderer '+path);
-// every biome's pack exists and is complete: all 16 wall connection masks per family, with an arm for each
-// connection, arches and doors in 4 directions (doors open and closed), self-seamless floors, chest art
-const { readFileSync, existsSync } = await import('node:fs');
+
 const asset = (f) => new URL('../../assets/' + f, import.meta.url);
 const packs = {};
 for (const b of BIOMES) {
