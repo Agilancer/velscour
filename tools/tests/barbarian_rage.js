@@ -78,6 +78,8 @@ const {openGame,report}=require('./harness');
         if(Math.abs(p.rage-12)>0.2)problems.push('Rage regeneration should be 12 points/sec, got '+p.rage);
         if(Math.abs(p.char.rage-p.rage)>0.01)problems.push('Rage not included in save data');
       }
+      // Allow the HUD to refresh rather than testing its pre-frame state.
+      (await import('/src/ui/hud.js')).HUD.update(0.1);
       if(document.querySelector('#barbarian-rage')?.classList.contains('hidden'))problems.push('Rage HUD hidden');
       return {problems,character:p.char.classId,whirlwind:whirlwind.name,rage:p.rage,shieldRadii:a};
     });
