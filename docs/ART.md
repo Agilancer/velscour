@@ -181,3 +181,22 @@ validation and browser-exported atlas handoff: [HELL.md](HELL.md).
 node tools/tests/hell.js
 node tools/tests/walls.js hell hell
 ```
+
+## ASTRAL PLANE — star-lit Celestial Expanse dungeon art
+
+`src/gfx/astralplane.js` is a lazy runtime **complete biome pack** generator,
+containing 60 cosmic floor tiles (ten seamlessly repeatable base materials),
+40 individually named celestial props, and five astronomical architectural
+wall families with all 16 connection masks. Three sets each of directional
+arches and opening doors retain the original Catacombs **silhouette and
+depth-slice geometry only**; their star-blue, amethyst and aether material
+surfaces are regenerated with pixel-level shading and runic relief.
+The floors and objects are new procedural Canvas drawings with constellations,
+orbital rings, crystal stars, floating-stone forms and celestial instruments.
+Exports to WebP with `tools/tests/astral_plane.js`; see
+[ASTRAL_PLANE.md](ASTRAL_PLANE.md) for details and QA limits.
+
+```bash
+node tools/tests/astral_plane.js
+node tools/tests/walls.js astral astral_plane
+```
