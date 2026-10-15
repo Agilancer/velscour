@@ -964,7 +964,7 @@ export const Auto = {
   // ---------------------------------------------------------------- combat
   barSkills() {
     const c = G.char, p = G.player;
-    return c.bar.map((id) => id && SKILLS[id]).filter((sk) => sk && effLevel(p, sk) > 0);
+    return [...new Set(c.bar)].map((id) => id && SKILLS[id]).filter((sk) => sk && effLevel(p, sk) > 0);
   },
   readySkill(pred) {
     const p = G.player;
@@ -1064,11 +1064,21 @@ export const Auto = {
     const boss = t.rank === 'boss';
     const crowdAt = (x, y, r) => foes.filter((m) => dist(x, y, m.x, m.y) <= r).length;
     const los = w.map.los(p.x, p.y, t.x, t.y);
-    let best = null, bs = 0;
-    const consider = (sk, score, x = t.x, y = t.y) => { if (score > bs) { bs = score; best = { sk, x, y }; } };
+    const choices = [];
+    const consider = (sk, score, x = t.x, y = t.y) => {
+      if (score > 0) choices.push({ sk, score, x, y });
+    };
     const now = G.world.time;
     for (const sk of this.barSkills()) {
       if (p.canUse(sk)) continue;
+      // Do not repeatedly overwrite a still-active spinning ring; this also
+      // gives other shield abilities a turn in the rotation.
+      if (sk.m.shields && w.hazards.some((h) => !h.dead && h.o?.sk === sk.id &&
+        h.t < h.dur - 2)) continue;
+      // Four seconds of useful Whirlwind at minimum, not a 0.1s spin at 10 Rage.
+      if (sk.classId === 'barbarian' && sk.kind === 'whirl' && p.rage < 40) continue;
+      // Earthquake should not exhaust Rage that the Barbarian needs for spinning.
+      if (rageCost(sk) && this.barSkills().some((s) => s.kind === 'whirl') && p.rage < 85) continue;
       if (sk.kind === 'summon' && now - (this.lastCast[sk.id] || -99) < 1.5) continue;
       if (this.banT > 0 && !OFFENSIVE.has(sk.kind) && sk.kind !== 'heal') continue;
       const L = effLevel(p, sk), m = sk.m, cost = manaCost(sk, L);
@@ -1102,7 +1112,7 @@ export const Auto = {
           if (fleeing || (crowded && hpK < 0.45)) {
             const away = this.escapePoint(foes, 6);
             if (away) consider(sk, 6e8, away[0], away[1]);
-          } else if (this.meleeBuild() && d > 3 && d < 6.5 && los && !lowMana) consider(sk, 1, t.x, t.y);
+          } else if (this.meleeBuild() && d > 3 && d <= skillRange(sk) && los && !lowMana) consider(sk, 1e6, t.x, t.y);
           else if (m.nova && d < 3 && !lowMana) consider(sk, avg(p.skillDamage(sk, L)) * crowdAt(p.x, p.y, 2.2), p.x, p.y);
           continue;
         }
@@ -1113,7 +1123,8 @@ export const Auto = {
       switch (sk.kind) {
         case 'melee': ok = d <= skillRange(sk) + t.r + 0.1; n = isWide(sk) ? crowdAt(p.x, p.y, skillRange(sk) + 0.4) : 1; break;
         case 'nova': { const r = 3 * (m.r ?? 1) * (1 + p.st.areaPct / 100); n = crowdAt(p.x, p.y, r * 0.95); ok = n > 0; ax = p.x; ay = p.y; break; }
-        case 'orbit': case 'whirl': n = crowdAt(p.x, p.y, 2.6); ok = n > 0 && d < 3; break;
+        case 'orbit': n = crowdAt(p.x, p.y, sk.m.shields ? Math.max(1.5, 0.75 * (sk.m.r || 1) + 2.2) : 2.6); ok = n > 0 && d < 4; break;
+        case 'whirl': n = crowdAt(p.x, p.y, 2.6); ok = n > 0 && d < 3; break;
         case 'zone': if (m.follow) { n = crowdAt(p.x, p.y, 2); ok = n > 0; } else { ok = d < 8.5 && los; n = crowdAt(t.x, t.y, 1.8); } break;
         case 'wall': ok = m.ring ? d < 2.6 : d < 7 && los; n = crowdAt(t.x, t.y, 2); break;
         case 'leap': ok = d <= 6.5 * (m.range ?? 1) && los; n = crowdAt(t.x, t.y, 1.6); break;
@@ -1128,11 +1139,29 @@ export const Auto = {
       let score = per / Math.max(0.2, castTime(p, sk));
       if (cooldown(sk) >= 1.2) score *= 1.6; // fire cooldowns whenever they are up
       score *= focusMul(c.classId, sk); // the build focus: the Paladin swings hammers before anything else
-      if (sk.kind === 'leap' || sk.kind === 'dash') score *= d > 2.5 ? 1.2 : 0.6;
+      if (sk.kind === 'leap' || sk.kind === 'dash') score *= d > 3 ? 2.5 : d > 1.8 ? 1.2 : 0.5;
       if (cost) score *= 1 - 0.35 * clamp(1 - p.mana / p.maxMana, 0, 1);
       consider(sk, score, ax, ay);
     }
-    return best;
+    if (!choices.length) return null;
+    // Keep emergency heals, missing buffs, and summons ahead of DPS rotation.
+    const urgent = choices.filter((x) => x.score >= 1e8).sort((a, b) => b.score - a.score);
+    if (urgent.length) return urgent[0];
+    // Leap/charge/blink replaces slow walking when a melee fighter is out of
+    // range. A jump is only chosen after its usual range/LOS checks above.
+    if (!fleeing && d > 3.3 && this.meleeBuild()) {
+      const gap = choices.filter((x) => mobility(x.sk) && ['leap', 'dash', 'blink'].includes(x.sk.kind))
+        .sort((a, b) => b.score - a.score);
+      if (gap.length) return gap[0];
+    }
+    // A valid skill that has been ignored in recent combat gets a turn even
+    // when its raw damage is lower. Never override reach, Rage, mana, or CD checks.
+    const lastUsed = (x) => this.lastCast[x.sk.id] ?? -1000;
+    const overdue = choices.filter((x) => now - lastUsed(x) >= 9)
+      .sort((a, b) => lastUsed(a) - lastUsed(b) || b.score - a.score);
+    if (overdue.length) return overdue[0];
+    choices.sort((a, b) => b.score - a.score);
+    return choices[0];
   },
   escapePoint(foes, r) {
     const p = G.player, m = G.world.map;
