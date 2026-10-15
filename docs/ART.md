@@ -129,3 +129,21 @@ python3 tools/process_assets.py town      # -> assets/tiles/town/ground.webp, ob
   open ends of a gable roof, the roof, and a projecting shop sign. Specs per building are in `BUILDINGS`. The game
   draws them 1.5x so the walls stand above the heroes (a 3 x 3 tile footprint).
 - **Trees and scatter** keep their pivots and are drawn at `k` (0.4).
+
+## Desert Temple — programmatically generated dungeon pack
+
+The **Temple of the Sunless Dynasty** is a conventional dungeon using a special lazy-loaded Canvas
+pack (`src/gfx/deserttemple.js`). It produces 60 floor graphics (10 seamless), five decorated
+stone wall families with all 16 connection masks, three arches in four orientations, three
+animated door designs in four orientations, and 40 completely drawn desert-themed scatter props.
+The renderer uses the Catacombs pack **only as a geometric depth-slice/alpha stencil** for the
+walls and doors, preserving exact pivots, raised geometry, cutaway and door-leaf alignment.
+Its floor and scatter artworks are produced independently from shapes, patterns and pixels.
+The game draws the resulting canvases through its ordinary `biomeTileSet` adapter; no generated
+binary files are hand-edited. See [DESERT_TEMPLE.md](DESERT_TEMPLE.md) for the full design,
+visual language, tests and instructions.
+
+```bash
+node tools/tests/desert_temple.js
+node tools/tests/walls.js temple desert_temple
+```
