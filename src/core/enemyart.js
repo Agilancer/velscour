@@ -3,6 +3,7 @@
 import { makeCanvas, recolor } from './util.js';
 import { loadReplacementArt, replacementImage } from './replacementart.js';
 import { ART_BY_ID } from '../data/bestiary.js';
+import { heavenlyEnemyImage } from '../gfx/heavenlymonsters.js';
 
 const DIR = 'assets/sprites/enemies/';
 const EAGER = /^(set1|minions)\//; // fetched with the meta; the rest (set2, ~5 MB) loads per level as looks need it
@@ -49,7 +50,7 @@ export async function loadEnemySheets(keys) {
 export function loadArtFor(ids) {
   return Promise.all([
     ids.some((id) => id && id.startsWith('va_')) ? loadReplacementArt() : null,
-    loadEnemySheets([...new Set(ids.filter((id) => ART_BY_ID[id] && ART_BY_ID[id].sheet).map((id) => ART_BY_ID[id].sheet))]),
+    loadEnemySheets([...new Set(ids.filter((id) => ART_BY_ID[id] && ART_BY_ID[id].sheet && ART_BY_ID[id].sheet !== 'heavenly/generated').map((id) => ART_BY_ID[id].sheet))]),
   ]);
 }
 
@@ -77,6 +78,7 @@ export function enemyArtReady(id) {
  * silhouette for hit flashes) or 'dark' (corpse). The canvas carries `_art = {fx}`: the feet's centre column.
  */
 export function enemyImage(id, swap = null, mode = '') {
+  if (id && id.startsWith('hv_')) return heavenlyEnemyImage(id, swap, mode);
   if (id && id.startsWith('va_')) return replacementImage(id, swap, mode);
   const a = ART_BY_ID[id];
   const c = a && cell(a);
