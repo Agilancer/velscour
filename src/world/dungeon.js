@@ -305,7 +305,7 @@ function placeObstacles(map, rooms, tileset, rng, startRoom) {
       if (e.block && !tryBlock(x, y)) continue;
       used.add(y * W + x);
       const j = e.block ? 0.08 : 0.25; // walk-over clutter can sit anywhere in its tile
-      const fence=/_barricade_|_fence_|_boundary_/.test(e.name);
+      const fence=/_barricade_|_fence_|_boundary_|railing|palisade/.test(e.name);
       // A mirrored rail can never become the other projected tile axis.
       // Barricades are now complete 1-tile X/Y isometric edge segments.
       const axis = voidAround(x,y) && !map.tile(x,y-1) ? 'x'
