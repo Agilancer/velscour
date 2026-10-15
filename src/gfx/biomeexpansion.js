@@ -6,7 +6,7 @@ import { makeCanvas } from '../core/util.js';
 
 // Town has 6 base materials and 15 transition pairs * 8 masks. Additional
 // source floor cells are APPENDED so every existing transition ID stays intact.
-export const TOWN_FLOOR_EXPANSION={start:6+15*8,count:24};
+export const TOWN_FLOOR_EXPANSION={start:6+15*8,count:60};
 const HUES={
   catacombs:38,frozen:205,ice_temple:207,molten:13,fungal:103,sunken:185,
   blood:356,ashen:30,void:277,gilded:47,plague:92,crystal:189,desert:35,
@@ -87,7 +87,7 @@ function decorateFloor(g,id,style,idx,base,regionX,regionY){
 let townCache=null;
 export function extendedTownFloors(source,meta){
   if(townCache&&townCache.source===source)return townCache.entries;
-  const canvas=makeCanvas(1620,246),g=canvas.getContext('2d');
+  const canvas=makeCanvas(1620,492),g=canvas.getContext('2d');
   g.imageSmoothingEnabled=false;
   const names=Object.keys(meta.floors);
   for(let i=0;i<TOWN_FLOOR_EXPANSION.count;i++){
@@ -103,9 +103,8 @@ export function extendedTownFloors(source,meta){
   townCache={source,entries};
   return entries;
 }
-// Overworld and town share the approved town source textures, but have
-// SEPARATE accent atlases: forty wilderness terrain motifs and the full
-// 60-cell Wilds floor set never appear as ordinary Duskhollow accents.
+// The town and the wilderness share approved source pixel density, but have
+// SEPARATE 60-cell atlases. Each biome gets its own floor motifs.
 export const OVERWORLD_FLOOR_EXPANSION={
   start:TOWN_FLOOR_EXPANSION.start+TOWN_FLOOR_EXPANSION.count,count:60,
 };
