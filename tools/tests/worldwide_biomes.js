@@ -23,7 +23,7 @@ const FULL=process.argv.includes('--all');
       const {isoBarrier,BARRIER_STYLES}=await import('/src/gfx/isobarriers.js');
       const {TOWN_FLOOR_EXPANSION,OVERWORLD_FLOOR_EXPANSION}=await import('/src/gfx/biomeexpansion.js');
       const issues=[],stats={biomes:BIOMES.length,natives:BIOME_NATIVES.length,
-        rendered:[],townFences:0,townFloors:0,wildFloors:0,wildProps:0,monsterImages:0};
+        rendered:[],townFences:0,townFloors:0,townProps:0,wildFloors:0,wildProps:0,monsterImages:0};
       if(BIOMES.length*50!==BIOME_NATIVES.length)issues.push('50 native monsters per biome missing');
       if(new Set(BIOME_NATIVES.map(a=>a.id)).size!==BIOME_NATIVES.length)issues.push('Duplicate native monster ID');
       for(const b of BIOMES){
@@ -43,6 +43,7 @@ const FULL=process.argv.includes('--all');
         const props=G.world.props;
         const rails=props.filter(p=>p.spr?.name?.startsWith('iso_'));
         stats.townFences+=rails.length;
+        stats.townProps+=props.filter(p=>p.spr?.name?.startsWith('town_scatter_')).length;
         for(const f of rails){
           const s=f.spr;
           if(f.flip||!['x','y'].includes(s.axis)||!s.isometric)
@@ -57,6 +58,7 @@ const FULL=process.argv.includes('--all');
       }
       stats.townFloors=makeTownTiles().length;
       if(stats.townFences===0)issues.push('No replacement fences ever appeared');
+      if(stats.townProps<12)issues.push('New Duskhollow terrain props are not being placed');
       if(stats.townFloors!==TOWN_FLOOR_EXPANSION.start+TOWN_FLOOR_EXPANSION.count)
         issues.push('Town floor atlas indices incorrect');
       // Validate all ten material families in both tile axes and their exact
