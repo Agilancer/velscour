@@ -471,6 +471,16 @@ function generateThrone(biome, tileset, seed) {
     { x: 22, y: 38, arch: 'abomination', n: 2, rank: 'unique' },
     { x: 22, y: 14, arch: 'velscour', n: 1, rank: 'boss' },
   ];
+  // The throne remains Velscour's scripted boss arena, but its corridors
+  // now also draw gauntlet guards from the FULL biome roster. This allows
+  // all 50 registered throne-native look variants (and the existing global
+  // bestiary) to be encountered across differently seeded final levels.
+  const throneGuards=(biome.roster||[]).filter(a=>a!=='velscour');
+  if(throneGuards.length){
+    for(const [x,y] of [[22,61],[10,48],[32,48],[12,38],[22,34]]){
+      spawns.push({x,y,arch:rng.pick(throneGuards),n:rng.int(1,3),rank:'normal'});
+    }
+  }
   const torches = [];
   for (const s of map.segments) if (!s.front && rng.next() < 0.12) torches.push({ x: s.mx + (s.dir === 'f' ? 0.12 : 0), y: s.my + (s.dir === 'b' ? 0.12 : 0), depth: s.depth + 0.01 });
   const props = [];
