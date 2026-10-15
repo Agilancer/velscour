@@ -13,7 +13,7 @@ const S = 11; // chunk size in tiles
  */
 export function torchAtWallSegment(s) {
   const cupRight=s.dir==='f'?!s.front:s.front;
-  const screenOffset=cupRight?29:-29;
+  const screenOffset=cupRight?25:-25;
   return {
     x:s.mx+screenOffset/64, y:s.my-screenOffset/64,
     mountX:s.mx, mountY:s.my, dir:s.dir, front:!!s.front,
