@@ -25,7 +25,9 @@ function resize() {
   const maxPixels = G.touch ? 1.6e6 : 4.2e6;
   if (G.W * G.H * dpr * dpr > maxPixels) dpr = Math.sqrt(maxPixels / (G.W * G.H));
   // resScale < 1 when the frame rate is too low (adaptRes): fewer pixels to fill, same layout
-  G.dpr = Math.max(0.6, Math.max(0.75, dpr) * (G.resScale || 1));
+  // Apply the pixel budget AFTER adaptive scaling; a minimum 0.75 DPR could otherwise
+  // undo the cap on large phones/tablets and silently allocate oversized buffers.
+  G.dpr = Math.max(0.5, Math.min(dpr * (G.resScale || 1), Math.sqrt(maxPixels / (G.W * G.H))));
   G.canvas.width = Math.round(G.W * G.dpr);
   G.canvas.height = Math.round(G.H * G.dpr);
   camera.computeZoom();
@@ -59,8 +61,10 @@ function renderTitle(dt) {
 // pixels for frame rate in 2 s windows, and earns them back after 10 s of headroom.
 const ar = { t: 0, n: 0, good: 0 };
 function adaptRes(raw) {
-  if (!G.touch || G.mode !== 'game' || document.hidden || raw > 0.25) { ar.t = ar.n = 0; return; }
-  ar.t += raw; ar.n++;
+  if (!G.touch || G.mode !== 'game' || document.hidden) { ar.t = ar.n = 0; return; }
+  // Do not discard very slow frames: that prevented adaptation precisely when
+  // biome generation/painting made the phone stall for >250 ms.
+  ar.t += Math.min(raw, 0.25); ar.n++;
   if (ar.t < 2) return;
   const fps = ar.n / ar.t, s = G.resScale || 1;
   ar.t = ar.n = 0;

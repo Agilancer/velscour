@@ -1,5 +1,6 @@
 // Asset loading + derived (recoloured / rescaled) sprite caches.
 import { makeCanvas, recolor, scaleImage } from './util.js';
+import { G } from '../state.js';
 import { generateDesertTemplePack } from '../gfx/deserttemple.js';
 import { generateIceTemplePack } from '../gfx/icetemple.js';
 import { generateHellPack } from '../gfx/hellpack.js';
@@ -69,32 +70,33 @@ export async function loadAssets(progress) {
 // palette swapped. Desert Temple is a Canvas-generated pack with source in gfx/deserttemple.js.
 const DEFAULT_PACK = 'catacombs';
 
+// These large, Canvas-generated source packs are used only while a dungeon is
+// active. Keep at most two on phones; the world/tileset holds any pack it still
+// needs after eviction. Mixed-biome loads can require two simultaneously.
+const GENERATED = {
+  heavenly: generateHeavenlyPack,
+  astral_plane: generateAstralPlanePack,
+  hell: generateHellPack,
+  ice_temple: generateIceTemplePack,
+  desert_temple: generateDesertTemplePack,
+};
+const generatedOrder = [];
+function retainGenerated(id) {
+  const i = generatedOrder.indexOf(id);
+  if (i >= 0) generatedOrder.splice(i, 1);
+  generatedOrder.push(id);
+  while (generatedOrder.length > (G.touch ? 2 : 3)) {
+    const old = generatedOrder.shift();
+    delete A.packs[old];
+  }
+}
 function loadPack(id) {
-  if (id === 'heavenly') {
-    return A.packs[id] || (A.packs[id] = loadPack('catacombs').then(base =>
-      (A.packs[id] = generateHeavenlyPack(base))).catch(e => { delete A.packs[id]; throw e; }));
-  }
-  if (id === 'astral_plane') {
-    // Celestial artwork is generated once, matching the existing tile/door silhouette metadata.
-    return A.packs[id] || (A.packs[id] = loadPack('catacombs').then((base) =>
-      (A.packs[id] = generateAstralPlanePack(base))).catch((e) => { delete A.packs[id]; throw e; }));
-  }
-  if (id === 'hell') {
-    // Reuse the proven wall/arch/door geometry and generate original Hell material art.
-    return A.packs[id] || (A.packs[id] = loadPack('catacombs').then((base) =>
-      (A.packs[id] = generateHellPack(base))).catch((e) => { delete A.packs[id]; throw e; }));
-  }
-  if (id === 'ice_temple') {
-    // Ice Temple material/prop atlas, preserving exact Catacombs geometry and depth slices.
-    return A.packs[id] || (A.packs[id] = loadPack('catacombs').then((base) =>
-      (A.packs[id] = generateIceTemplePack(base))).catch((e) => { delete A.packs[id]; throw e; }));
-  }
-  if (id === 'desert_temple') {
-    // New art is built once from the already-supported isometric mask/slice geometry.
-    // All 60 floor cells, 40 temple props and sandstone/relief textures are generated
-    // as original Canvas art; geometry and door animation remain battle-tested.
-    return A.packs[id] || (A.packs[id] = loadPack('catacombs').then((base) =>
-      (A.packs[id] = generateDesertTemplePack(base))).catch((e) => { delete A.packs[id]; throw e; }));
+  if (GENERATED[id]) {
+    const previous = A.packs[id];
+    if (previous) { if (!(previous instanceof Promise)) retainGenerated(id); return previous; }
+    return A.packs[id] = loadPack('catacombs').then(base => GENERATED[id](base))
+      .then(pack => { A.packs[id] = pack; retainGenerated(id); return pack; })
+      .catch(e => { delete A.packs[id]; throw e; });
   }
   return A.packs[id] || (A.packs[id] = Promise.all(['floors', 'walls', 'scatter'].map((n) => loadImage(`assets/tiles/${id}/${n}.webp`)).concat(loadJSON(`assets/tiles/${id}/pack.json`)))
     .then(([floors, walls, scatter, meta]) => (A.packs[id] = { floors, walls, scatter, meta })).catch((e) => { delete A.packs[id]; throw e; }));
@@ -107,6 +109,10 @@ const ready = (v) => v && !(v instanceof Promise);
 const EXPANSION_ORDER=[];
 async function expandedPack(biome) {
   if (!biome || biome.overworld || biome.id === 'town') return;
+  // The five standalone generated temples/worlds already have 60 unique floors,
+  // complete wall families and props. On memory-limited phones, use that native
+  // art instead of duplicating entire atlases with a second expansion layer.
+  if (G.touch && GENERATED[biome.pack]) return loadPack(biome.pack);
   const id='expanded_'+biome.id;
   const previous=A.packs[id];
   if(previous) {

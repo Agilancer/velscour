@@ -314,17 +314,28 @@ export function renderWorld(ctx, world) {
     } else if (px < vr.x0 - 100 || px > vr.x1 + 100 || py < vr.y0 - 40 || py > vr.y1 + 220) continue;
     sorted.push({ d: pr.x + pr.y, f: 4, o: pr });
   }
-  for (const b of world.buildings) sorted.push({ d: b.depth, f: 5, o: b });
+  for (const b of world.buildings) {
+    const [x,y,w,h] = buildingRect(b);
+    if (x > vr.x1+24 || x+w < vr.x0-24 || y > vr.y1+24 || y+h < vr.y0-24) continue;
+    sorted.push({ d: b.depth, f: 5, o: b });
+  }
   for (const c of world.creatures) {
     if (c.dead) continue;
     const px = isoX(c.x, c.y), py = isoY(c.x, c.y);
     if (px < vr.x0 - 80 || px > vr.x1 + 80 || py < vr.y0 - 40 || py > vr.y1 + 160) { c.sbox = null; continue; }
     sorted.push({ d: c.x + c.y + (c.fly ? 0.2 : 0), f: 6, o: c });
   }
-  for (const n of world.npcs) sorted.push({ d: n.x + n.y, f: 7, o: n });
-  for (const l of world.loot) sorted.push({ d: l.x + l.y - 0.2, f: 8, o: l });
-  for (const c of world.chests) sorted.push({ d: c.x + c.y, f: 9, o: c });
-  for (const po of world.portals) sorted.push({ d: po.x + po.y, f: 10, o: po });
+  const closeEnough = (x,y,marginX=90,marginY=130) => {
+    const px=isoX(x,y),py=isoY(x,y);
+    return px >= vr.x0-marginX && px <= vr.x1+marginX && py >= vr.y0-marginY && py <= vr.y1+marginY;
+  };
+  for (const n of world.npcs) {
+    if (!closeEnough(n.x,n.y)) { n.sbox=null; continue; }
+    sorted.push({ d: n.x + n.y, f: 7, o: n });
+  }
+  for (const l of world.loot) if (closeEnough(l.x,l.y,50,75)) sorted.push({ d: l.x + l.y - 0.2, f: 8, o: l });
+  for (const c of world.chests) if (closeEnough(c.x,c.y,70,80)) sorted.push({ d: c.x + c.y, f: 9, o: c });
+  for (const po of world.portals) if (closeEnough(po.x,po.y,95,150)) sorted.push({ d: po.x + po.y, f: 10, o: po });
   sorted.sort((a, b) => a.d - b.d);
   let q = hq;
   for (const it of sorted) {
@@ -405,7 +416,11 @@ function lightSprite() {
 function drawLighting(ctx, world) {
   const W = G.W * G.dpr, H = G.H * G.dpr;
   const b = world.biome;
-  const lw = Math.ceil(W / 4), lh = Math.ceil(H / 4);
+  // The quarter-resolution lighting framebuffer is still expensive at retina
+  // resolutions. A sixth-resolution buffer keeps the same falloff and avoids
+  // repeated full-screen GPU traffic on memory-limited phones.
+  const divisor = G.touch ? 6 : 4;
+  const lw = Math.ceil(W / divisor), lh = Math.ceil(H / divisor);
   if (!lightCanvas || lightCanvas.width !== lw || lightCanvas.height !== lh) lightCanvas = makeCanvas(lw, lh);
   const lc = lightCanvas.getContext('2d');
   lc.globalCompositeOperation = 'source-over';
@@ -415,17 +430,22 @@ function drawLighting(ctx, world) {
   lc.fillStyle = `rgba(${fr},${fg},${fb},${b.dark})`;
   lc.fillRect(0, 0, lw, lh);
   lc.globalCompositeOperation = 'destination-out';
-  const scale = (HW * 1.25 * camera.zoom * G.dpr) / 4;
+  const scale = (HW * 1.25 * camera.zoom * G.dpr) / divisor;
   const p = world.player, spr = lightSprite();
   const add = (x, y, r, inten) => {
     const [sx, sy] = camera.tileToScreen(x, y, 20);
-    const cx = (sx * G.dpr) / 4, cy = (sy * G.dpr) / 4, rr = r * scale;
-    if (cx + rr < 0 || cy + rr < 0 || cx - rr > lw || cy - rr > lh) return;
+    const cx = (sx * G.dpr) / divisor, cy = (sy * G.dpr) / divisor, rr = r * scale;
+    if (cx + rr < 0 || cy + rr < 0 || cx - rr > lw || cy - rr > lh) return false;
     lc.globalAlpha = Math.min(1, inten);
     lc.drawImage(spr, cx - rr, cy - rr, rr * 2, rr * 2);
+    return true;
   };
   if (p) add(p.x, p.y, b.light * (1 + (p.st.lightPct || 0)), 1);
-  for (const l of lights) add(l.x, l.y, l.radius, l.intensity * 0.85);
+  let visibleLights=0;
+  for (const l of lights) {
+    if (add(l.x, l.y, l.radius, l.intensity * 0.85)) visibleLights++;
+    if (G.touch && visibleLights >= 48) break;
+  }
   // the vignette is baked into the same quarter-res layer, so the screen takes one full-size blit, not two
   const key = lw + 'x' + lh;
   if (vigKey !== key) {
