@@ -3,6 +3,7 @@
 //  node tools/tests/desert_temple.js
 const { openGame, report, OUT_DIR } = require('./harness');
 const path = require('path');
+const fs = require('fs');
 (async () => {
   const { browser, page, errors, shot } = await openGame({ width: 1366, height: 900 });
   try {
@@ -78,10 +79,22 @@ const path = require('path');
     if (info.errors.length) errors.push(...info.errors);
     await page.waitForTimeout(550);
     await shot('desert_temple_gameplay');
-    const preview = await page.evaluate(() => {
-      const { A } = window.VELSCOUR.G.assets || {};
-      return !!window.VELSCOUR;
+    // Export the actual game-consumed WebP atlases as production handoff files.
+    // This also permits pixel QA outside the browser and lets an artist redraw
+    // individual crops using the ordinary pack.json metadata if desired.
+    const exportData = await page.evaluate(async () => {
+      const { A } = await import('/src/core/assets.js');
+      const pack = A.packs.desert_temple;
+      const encode = (cv) => cv.toDataURL('image/webp',.93).split(',')[1];
+      return { floors:encode(pack.floors), walls:encode(pack.walls),
+        scatter:encode(pack.scatter), meta:JSON.stringify(pack.meta) };
     });
+    const exportDir = path.join(OUT_DIR,'desert_temple_export');
+    fs.mkdirSync(exportDir,{recursive:true});
+    for (const key of ['floors','walls','scatter'])
+      fs.writeFileSync(path.join(exportDir,key+'.webp'),Buffer.from(exportData[key],'base64'));
+    fs.writeFileSync(path.join(exportDir,'pack.json'),exportData.meta);
+    console.log('Exported game-ready Desert Temple atlas + metadata to',exportDir);
     // Prop contact sheet: exact runtime-sampled sprite images, not reference art.
     await page.evaluate(async () => {
       const { A } = await import('/src/core/assets.js');
