@@ -4,9 +4,17 @@
 // corpse/palette-swap contract; original geometry is drawn, not re-skinned enemies.
 import { makeCanvas, recolor } from '../core/util.js';
 import { HEAVENLY_MONSTERS } from '../data/heavenly.js';
+import { approvedHeavenlyMonsterCanvas, preloadApprovedHeavenlySprites } from './approvedbiomeart.js';
 
 const BY_ID = Object.fromEntries(HEAVENLY_MONSTERS.map(e=>[e.id,e]));
 const CACHE = new Map(), MAX=88;
+let preloadPromise = null;
+export function preloadApprovedHeavenlyArtwork() {
+  return preloadPromise || (preloadPromise=preloadApprovedHeavenlySprites().then(image=>{
+    if(image) CACHE.clear(); // Evict procedural previews created before image decode.
+    return image;
+  }));
+}
 const PALETTES = [
   {shell:'#f2e8c9',light:'#fffbe9',shadow:'#b2a488',metal:'#e4bb62',edge:'#715b51',gem:'#52bddd',aura:'#c9e7ef'},
   {shell:'#c8e3f0',light:'#f4f9ff',shadow:'#799fb8',metal:'#b2c6e7',edge:'#526e91',gem:'#4e88eb',aura:'#98befa'},
@@ -252,6 +260,12 @@ function ornament(g,p,v,code){
  }
 }
 function baseSprite(a) {
+ // Replace one sprite per Heavenly family without duplicating painted art
+ // across different named variants or changing their gameplay definitions.
+ if(a.heavenlyVariant===0) {
+   const approved=approvedHeavenlyMonsterCanvas(a.heavenlyFamily);
+   if(approved) return approved;
+ }
  const canvas=makeCanvas(160,186),g=canvas.getContext('2d');
  g.imageSmoothingEnabled=false;
  const p=PALETTES[a.heavenlyVariant],v=a.heavenlyVariant,code=a.heavenlyFamily;

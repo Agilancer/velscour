@@ -13,6 +13,13 @@ source sheets or moving any class rig, sprite pivot or architectural
 depth slice. It is deliberately a **draft** until browser screenshots,
 door/wall occlusion, actual tiling and iOS Safari performance are reviewed.
 
+**Later painted-art update:** Desert Temple, Ice Temple, Hell, Astral Plane
+and Heavenly now overlay eight hand-painted floors and eight hand-painted
+props from user-supplied artwork in both their native generated pack and
+the appended expansion cells on desktop. The 60/40 additional cell counts,
+terrain topology, and original global/native monster roster remain unchanged;
+see [Approved Biome Artwork](APPROVED_BIOME_ART.md).
+
 ## Exact content counts
 
 | Environment | Additional floors | Additional terrain / props | Walls / barriers | Additional monsters |

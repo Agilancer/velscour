@@ -99,6 +99,9 @@ src/ui/                        HUD, touch controls, inventory, skill tree/book, 
 
 ## Art
 
+The five themed dungeons (Desert Temple, Ice Temple, Hell, Astral Plane and Heavenly) now use 40 painted floor diamonds and 40 painted props cut from three approved sprite sheets, with 12 painted celestial monster designs replacing procedural first-rank Heavenly variants. All wall geometry, monster IDs and gameplay systems are preserved; see [Approved Biome Artwork](docs/APPROVED_BIOME_ART.md).
+
+
 Art you provided, used directly:
 - **Class sprites**, sliced from the design reference sheet. They serve as the player sprite, the class-select portraits, and (palette-swapped) the town NPCs and some summons.
 - **Logo** on the title screen; it is also the source of the app icon.

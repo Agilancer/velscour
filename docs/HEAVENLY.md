@@ -14,6 +14,16 @@ class gear and all usual melee/ranged/caster/charger combat. Completing its
 guardian opens the exit as usual. The already-implemented six-dungeon
 Forsaken Wilds visit counter counts HEAVENLY as a non-overworld dungeon.
 
+**Approved artwork update (October 15, 2026):** eight native floor
+cells and eight matching named native scatter cells now use hand-painted sprites from the
+user-supplied five-biome artwork sheets, alongside eight corresponding
+expanded-pack cells on desktop. The first variant of each of the twelve
+Heavenly monster families now uses its own supplied painted sprite.
+The other 48 variants keep their original individually generated looks.
+The 60 existing IDs, stats, spawning, combat AI, collisions and
+architectural geometry are unchanged. See
+[Approved Biome Artwork](APPROVED_BIOME_ART.md).
+
 ### Graphics: an editable, game-compatible source pipeline
 
 `src/gfx/heavenlypack.js` lazily generates the following ordinary
