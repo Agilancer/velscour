@@ -71,7 +71,8 @@ export class TileMap {
     const steps = Math.ceil(d * 3);
     for (let i = 1; i < steps; i++) {
       const t = i / steps;
-      if (!this.isFloor(x0 + dx * t, y0 + dy * t)) return false;
+      const tx = Math.floor(x0 + dx * t), ty = Math.floor(y0 + dy * t);
+      if (!this.tile(tx,ty) || (this.losBlocks && this.block[ty*this.w+tx])) return false;
     }
     return true;
   }

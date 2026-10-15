@@ -7,6 +7,9 @@ const { openGame, report } = require('./harness');
   const { browser, page, errors, shot } = await openGame();
   await page.click('text=Heroes'); await page.click('.class-card[data-id="bard"]'); await page.click('text=Begin');
   await page.waitForTimeout(1000);
+  // This regression tests the traditional boss dungeon flow. The new overworld
+  // flow has its own scenario completion test (tools/tests/overworld.js).
+  await page.evaluate(() => { window.VELSCOUR.G.char.nextBiome = 'catacombs'; });
   // Stand next to the town portal and interact with it.
   await page.evaluate(() => { const { G } = window.VELSCOUR; const po = G.world.portals[0]; G.player.x = po.x - 1; G.player.y = po.y; G.player.interact = po; });
   await page.waitForTimeout(800);

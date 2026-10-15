@@ -133,7 +133,29 @@ function drawChest(ctx, c) {
   }
 }
 
+/** Scenario shrines and objective markers are not teleport portals: render a fitted
+ * isometric glyph/stone marker over the separate sculpted shrine prop.
+ */
+function drawScenarioGlyph(ctx, p) {
+  const x=isoX(p.x,p.y),y=isoY(p.x,p.y),t=G.time,col=p.color||'#80c8ff';
+  const shrine=p.type==='shrine',radius=shrine?21:14;
+  ctx.save();
+  ctx.globalAlpha=.52+Math.sin(t*3+p.x)*.16;
+  ctx.strokeStyle=col;ctx.lineWidth=shrine?2:1.5;
+  ctx.beginPath();ctx.ellipse(x,y+1,radius,radius*.46,0,0,TAU);ctx.stroke();
+  ctx.beginPath();ctx.ellipse(x,y+1,radius*.69,radius*.28,0,-t*.4,4.4-t*.4);ctx.stroke();
+  ctx.globalAlpha=.66;
+  ctx.fillStyle=col;
+  const z=shrine?68:36,tipY=y-z+Math.sin(t*2+p.y)*2;
+  ctx.beginPath();ctx.moveTo(x,tipY-9);ctx.lineTo(x+7,tipY);
+  ctx.lineTo(x,tipY+11);ctx.lineTo(x-7,tipY);ctx.closePath();ctx.fill();
+  ctx.globalAlpha=.85;ctx.fillStyle='#f7f1d6';
+  ctx.beginPath();ctx.moveTo(x,tipY-6);ctx.lineTo(x+2,tipY);
+  ctx.lineTo(x,tipY+5);ctx.lineTo(x-2,tipY);ctx.closePath();ctx.fill();
+  ctx.restore();
+}
 function drawPortal(ctx, p) {
+  if (p.type === 'shrine' || p.type === 'objective') return drawScenarioGlyph(ctx, p);
   const x = isoX(p.x, p.y), y = isoY(p.x, p.y);
   const active = p.active;
   const col = active ? p.color || '#ff5020' : '#5a5a60';
@@ -271,7 +293,15 @@ export function renderWorld(ctx, world) {
   for (const s of walls) sorted.push({ d: s.depth, f: 2, o: s });
   for (const pr of world.props) {
     const px = isoX(pr.x, pr.y), py = isoY(pr.x, pr.y);
-    if (px < vr.x0 - 100 || px > vr.x1 + 100 || py < vr.y0 - 40 || py > vr.y1 + 220) continue;
+    // Tall outdoor trees are grounded well below their canopy; cull by the full
+    // sprite bounds, not just its trunk's ground pivot, to prevent popping.
+    if (pr.spr && pr.k) {
+      const s = pr.spr, k = pr.k;
+      const x0 = px + (pr.flip ? -s.ox - s.w : s.ox) * k;
+      const y0 = py + s.oy * k;
+      if (x0 > vr.x1 + 8 || x0 + s.w * k < vr.x0 - 8 ||
+          y0 > vr.y1 + 8 || y0 + s.h * k < vr.y0 - 8) continue;
+    } else if (px < vr.x0 - 100 || px > vr.x1 + 100 || py < vr.y0 - 40 || py > vr.y1 + 220) continue;
     sorted.push({ d: pr.x + pr.y, f: 4, o: pr });
   }
   for (const b of world.buildings) sorted.push({ d: b.depth, f: 5, o: b });
