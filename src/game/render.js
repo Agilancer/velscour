@@ -271,7 +271,15 @@ export function renderWorld(ctx, world) {
   for (const s of walls) sorted.push({ d: s.depth, f: 2, o: s });
   for (const pr of world.props) {
     const px = isoX(pr.x, pr.y), py = isoY(pr.x, pr.y);
-    if (px < vr.x0 - 100 || px > vr.x1 + 100 || py < vr.y0 - 40 || py > vr.y1 + 220) continue;
+    // Tall outdoor trees are grounded well below their canopy; cull by the full
+    // sprite bounds, not just its trunk's ground pivot, to prevent popping.
+    if (pr.spr && pr.k) {
+      const s = pr.spr, k = pr.k;
+      const x0 = px + (pr.flip ? -s.ox - s.w : s.ox) * k;
+      const y0 = py + s.oy * k;
+      if (x0 > vr.x1 + 8 || x0 + s.w * k < vr.x0 - 8 ||
+          y0 > vr.y1 + 8 || y0 + s.h * k < vr.y0 - 8) continue;
+    } else if (px < vr.x0 - 100 || px > vr.x1 + 100 || py < vr.y0 - 40 || py > vr.y1 + 220) continue;
     sorted.push({ d: pr.x + pr.y, f: 4, o: pr });
   }
   for (const b of world.buildings) sorted.push({ d: b.depth, f: 5, o: b });
