@@ -75,7 +75,8 @@ function engageRange(sk, t, bold = 0) {
   if (!sk) return 1.5;
   switch (sk.kind) {
     case 'melee': return skillRange(sk) + t.r;
-    case 'whirl': case 'orbit': case 'nova': return 2;
+    case 'whirl': case 'nova': return 2;
+    case 'orbit': return sk.m.shields ? 1.1 : 2;
     case 'zone': return sk.m.follow ? 1.8 : 7;
     case 'wall': return sk.m.ring ? 2 : 6;
     case 'leap': case 'dash': return Math.min(skillRange(sk), 5);
@@ -972,7 +973,8 @@ export const Auto = {
   },
   meleeBuild() {
     const sk = SKILLS[G.char.bar[0]];
-    return !!sk && ['melee', 'whirl', 'leap', 'dash'].includes(sk.kind);
+    return ['lancer', 'barbarian', 'dragoon'].includes(G.char.classId) ||
+      !!sk && ['melee', 'whirl', 'leap', 'dash'].includes(sk.kind);
   },
 
   pickTarget(foes) {
@@ -1151,8 +1153,11 @@ export const Auto = {
     if (urgent.length) return urgent[0];
     // Leap/charge/blink replaces slow walking when a melee fighter is out of
     // range. A jump is only chosen after its usual range/LOS checks above.
-    if (!fleeing && d > 3.3 && this.meleeBuild()) {
-      const gap = choices.filter((x) => mobility(x.sk) && ['leap', 'dash', 'blink'].includes(x.sk.kind))
+    const main = SKILLS[c.bar[LMB]];
+    const closing = d > 3.3 && (this.meleeBuild() ||
+      (main && d > engageRange(main, t, this.boldness()) + 1.2));
+    if (!fleeing && closing) {
+      const gap = choices.filter((x) => ['leap', 'dash', 'blink'].includes(x.sk.kind))
         .sort((a, b) => b.score - a.score);
       if (gap.length) return gap[0];
     }
