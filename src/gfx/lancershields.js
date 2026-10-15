@@ -24,12 +24,12 @@ export const LANCER_SHIELD_ABILITY = Object.freeze({
   'Shield Storm': 'diamond',
   'Bastion of Ten': 'tower',
 });
-// Each Bulwark skill uses its own concentric orbit, spaced 0.55 world tiles
-// apart so even the larger shield sprites remain visually distinguishable.
+// Compact Bulwark rings: half the original radius and 0.275-tile separation.
+// Each skill keeps its own concentric orbit and eight-angle shield artwork.
 export const SHIELD_ORBIT_RADIUS = Object.freeze({
-  'Tower Shield': 1.40, 'Storm Bulwark': 1.95, 'Burning Aegis': 2.50,
-  'Frost Rampart': 3.05, 'Holy Citadel': 3.60,
-  'Shield Storm': 4.15, 'Bastion of Ten': 4.70,
+  'Tower Shield': 0.70, 'Storm Bulwark': 0.975, 'Burning Aegis': 1.25,
+  'Frost Rampart': 1.525, 'Holy Citadel': 1.80,
+  'Shield Storm': 2.075, 'Bastion of Ten': 2.35,
 });
 export function shieldOrbitRadius(name) { return SHIELD_ORBIT_RADIUS[name] ?? 1.6; }
 const cached = new Map();

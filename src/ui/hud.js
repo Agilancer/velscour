@@ -5,7 +5,7 @@ import { sfx } from '../core/audio.js';
 import { A, potionIcon } from '../core/assets.js';
 import { UI, $, droppable } from './ui.js';
 import { skillIconURL } from './icons.js';
-import { SKILLS, effLevel, manaCost, cooldown, CLASS_SKILLS } from '../data/skills.js';
+import { SKILLS, effLevel, manaCost, rageCost, cooldown, CLASS_SKILLS } from '../data/skills.js';
 import { xpToNext } from '../game/player.js';
 import { drawMinimap } from '../game/render.js';
 import { assign, SLOT_LABELS } from './skills.js';
@@ -162,7 +162,8 @@ export const HUD = {
         const tot = cooldown(sk) * (1 - p.st.cdr / 100);
         if (rem > 0 && tot > 0) { cdK = Math.round((rem / tot) * 100); cdTxt = rem >= 1 ? Math.ceil(rem) + '' : ''; }
         const L = effLevel(p, sk);
-        nm = L > 0 && (p.mana < manaCost(sk, L) || (sk.classId === 'barbarian' && sk.kind === 'whirl' && p.rage < 10));
+        nm = L > 0 && (p.mana < manaCost(sk, L) || p.rage < rageCost(sk) ||
+          (sk.classId === 'barbarian' && sk.kind === 'whirl' && p.rage < 10));
       }
       if (s.last.cd !== cdK) { s.last.cd = cdK; s.cd.style.height = cdK + '%'; }
       if (s.last.cdt !== cdTxt) { s.last.cdt = cdTxt; s.cdt.textContent = cdTxt; }

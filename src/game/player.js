@@ -6,7 +6,7 @@ import { camera } from '../core/view.js';
 import { floatText, addEffect, Column, Ring, Sigil, sparkle, burst, spawn, elem, bloodSpray, smoke } from '../gfx/vfx.js';
 import { Creature } from './creature.js';
 import { CLASSES } from '../data/classes.js';
-import { SKILLS, CLASS_SKILLS, effLevel, skillBaseDamage, manaCost, cooldown, useTime, weaponCoef, grantedSkillsAt, skillRange } from '../data/skills.js';
+import { SKILLS, CLASS_SKILLS, effLevel, skillBaseDamage, manaCost, rageCost, cooldown, useTime, weaponCoef, grantedSkillsAt, skillRange } from '../data/skills.js';
 import { SLOTS, RING_SLOTS, itemStats, itemDmg, itemArmor, GEMS } from '../data/items.js';
 import { augHits, augmentable } from '../data/rings.js';
 import { depthLevel } from '../data/depth.js';
@@ -344,14 +344,14 @@ export class Player extends Creature {
     const L = this.skillLevel(sk);
     if (!L) return 'unlearned';
     if ((this.cooldowns[sk.id] || 0) > 0) return 'cooldown';
-    if (sk.classId === 'barbarian' && sk.kind === 'whirl' && this.rage < 10) return 'rage';
+    if (sk.classId === 'barbarian' && ((sk.kind === 'whirl' && this.rage < 10) || this.rage < rageCost(sk))) return 'rage';
     if (this.mana < manaCost(sk, L)) return 'mana';
     return null;
   }
 
   tryUseSkill(sk, tx, ty, target = null) {
     if (this.dead || !sk) return false;
-    if (sk.classId === 'barbarian' && sk.kind === 'whirl' && this.rage < 10) {
+    if (sk.classId === 'barbarian' && ((sk.kind === 'whirl' && this.rage < 10) || this.rage < rageCost(sk))) {
       if ((this.noRageT || 0) <= 0) { floatText(this.x, this.y, 60, 'Need Rage', '#ff9933', 12); this.noRageT = 0.8; }
       return false;
     }
@@ -392,6 +392,7 @@ export class Player extends Creature {
     this.lastEl = sk.el;
     const ok = castSkill(this, sk, L, tx, ty);
     if (ok === false) { this.mana += cost; this.cooldowns[sk.id] = 0; return false; }
+    if (rageCost(sk)) { this.rage -= rageCost(sk); this.char.rage = this.rage; }
     castArtFx(this, sk, tx, ty);
     // casting trains the skill a little (kills with it train it more: combat.kill); skills that deal no damage train on casts alone
     const dl = depthLevel(this.world.depth || 1);

@@ -3,7 +3,7 @@ import { G } from '../state.js';
 import { el } from '../core/util.js';
 import { $ } from './ui.js';
 import { skillIcon } from './icons.js';
-import { SKILLS, cooldown, manaCost, effLevel } from '../data/skills.js';
+import { SKILLS, cooldown, manaCost, rageCost, effLevel } from '../data/skills.js';
 import { SLOT_LABELS, RMB } from '../data/bar.js';
 import { chooser } from './hud.js';
 
@@ -113,7 +113,8 @@ export const TouchUI = {
         const rem = p.cooldowns[id] || 0, tot = cooldown(sk) * (1 - p.st.cdr / 100);
         if (rem > 0 && tot > 0) k = Math.round((rem / tot) * 100);
         const L = effLevel(p, sk);
-        const nm = L > 0 && p.mana < manaCost(sk, L);
+        const nm = L > 0 && (p.mana < manaCost(sk, L) || p.rage < rageCost(sk) ||
+          (sk.classId === 'barbarian' && sk.kind === 'whirl' && p.rage < 10));
         if (t.last.nm !== nm) { t.last.nm = nm; t.b.style.filter = nm ? 'saturate(0.3) brightness(0.7)' : ''; }
       }
       if (t.last.k !== k) { t.last.k = k; t.cd.style.height = k + '%'; }

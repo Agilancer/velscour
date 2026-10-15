@@ -122,7 +122,7 @@ export const SKILLDATA = {
     ],
     [
       'Ground Slam|nova|phys|shock|r=0.8', 'Stomp|melee|phys|smash|stun arc=360 r=0.9', 'Rock Throw|proj|phys|rock|lob exp', 'Seismic Step|dash|phys|charge|range=1.3 knock',
-      'Fissure|fissure|phys|earth|range=1.2', 'Earthquake|aoe|phys|eruption|r=2 dur=3', 'Boulder Toss|proj|phys|rock|lob exp r=1.5 dmg=1.5', 'Tremor|nova|phys|shock|n=2 slow',
+      'Fissure|fissure|phys|earth|range=1.2', 'Earthquake|aoe|phys|eruption|r=2 dur=3 rage=25 cd=5', 'Boulder Toss|proj|phys|rock|lob exp r=1.5 dmg=1.5', 'Tremor|nova|phys|shock|n=2 slow',
       'Seismic Slam|fissure|phys|earth|range=1.4 dmg=1.3', 'Avalanche|rain|phys|rock|n=10 r=1.6', 'Stone Skin|buff|phys|shield|buff=armor amt=80 dur=20 cd=30', 'Magma Rift|fissure|fire|fire|range=1.4 burn',
       'Earthen Spikes|nova|phys|earth|r=1.6', 'Mountain Vortex|cyclone|phys|wind|n=3 r=1.3 dur=5 cd=8', 'Landslide|fissure|phys|earth|n=3 spread=50', 'Volcanic Eruption|aoe|fire|eruption|n=6 r=1 dur=3 cd=4',
       'Cataclysm|aoe|fire|eruption|r=3 dmg=3 cd=8', 'Mountain King|buff|phys|transform|transform buff=armor,dmg amt=50 dur=20 cd=45', 'Ancestral Storm|cyclone|light|storm|n=4 r=1.4 dur=6 cd=6', 'Worldsplitter|fissure|phys|earth|range=2.5 dmg=2.5 cd=4',

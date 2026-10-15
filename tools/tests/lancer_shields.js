@@ -39,7 +39,7 @@ const {openGame,report,OUT_DIR}=require('./harness');
    const distances=Object.values(SHIELD_ORBIT_RADIUS);
    if(distances.length!==7)problems.push('Expected seven shield ability radii');
    for(let i=1;i<distances.length;i++)
-     if(distances[i]-distances[i-1]<0.54)
+     if(distances[i]-distances[i-1]<0.274)
        problems.push('Shield ability orbits too close: '+distances[i-1]+' / '+distances[i]);
    if(orbitShieldDepth(0,0,Math.PI*5/4)>=0)
      problems.push('Back-facing shield sorts after Lancer');
