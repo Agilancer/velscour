@@ -51,7 +51,7 @@ const path=require('path');
         const seenFloors=new Set(),seenProps=new Set();
         for(let i=0;i<8;i++){
           const f=pack.meta.floors[annotated.floorStart+i];
-          const p=pack.meta.scatter[annotated.propStart+i];
+          const p=pack.meta.scatter[annotated.propIndices[i]];
           if(!f||!p){issues.push('Missing sprite slot '+id+'/'+i);continue;}
           const fh=signature(pack.floors,f),ph=signature(pack.scatter,p);
           if(fh.count<1000 || ph.count<500)
@@ -62,6 +62,8 @@ const path=require('path');
           ctx.drawImage(pack.floors,f.x,f.y,f.w,f.h,20+i*142,row*177+65,128,64);
           ctx.drawImage(pack.scatter,p.x,p.y,p.w,p.h,40+i*142,row*177+127,72,72);
         }
+        if(new Set(annotated.propIndices).size!==8)
+          issues.push('Painted prop slot aliases in '+id);
         if(seenFloors.size!==8||seenProps.size!==8)
           issues.push('Duplicate approved art detected in '+id);
         checks.push({biome:id,approvedFloors:seenFloors.size,approvedProps:seenProps.size});
