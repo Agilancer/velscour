@@ -50,9 +50,19 @@ lossless), `helms_mask.png`, `gear.json` (frame, feet / head top, helm cell, rar
   bright warm trim, dark warm leather), each mapped through the finish's 4-stop ramp by luminance, then rescaled
   to the original luminance so the shading survives, blended at the finish's strength (0.7-0.85). Protected
   pixels are skipped.
-- **Composite** (`heroLook`, cached for 8 looks): armor in its finish; then per helm cell pixel: crown zone clears
-  the armor (hair poking out), shell pixels draw the helm in its finish, opening pixels keep the armor (the face)
-  where there is one and the helm's dark interior elsewhere. No body armor = design 1 in original colours.
+- **Closed-face composite** (`heroLook`, cached for 8 looks): armor in its finish; then each helm is
+  recoloured before its detected face openings (mask 255) receive a fitted opaque, shaded metal plate. The plate
+  samples metal tones from the *same recoloured helmet*, so its finish tracks the armor/helm palette system.
+  Several deterministic plate facets, a raised or recessed central ridge and a thin black visor slit distinguish
+  designs without changing their original crown, horns, trim, or silhouette. Crown zone (mask 128) still clips
+  hair, and the entire helmet shell/faceplate overlays the body rather than revealing the original face.
+  No body armor = design 1 in original colours. The original source ZIPs and generated atlas sizes are preserved;
+  closing happens when `helmPixels` prepares the in-game pixels, including inventory icons and portraits.
+  **Note:** the source PNGs are not redrawn; this is a rendering-level closed-face redesign. If new handmade helm
+  paintings replace the old source, regenerate with `tools/process_assets.py gear` as usual.
+- **Helm QA**: `node tools/tests/closed_helms.js [paladin|all]` verifies every helmet overlay's 48x56 cell,
+  the 128x192 body frame, face-opening coverage, and that pixels outside the helmet cell remain unchanged. It
+  produces 10x8 close-up screenshots for visual fit review under `tools/tests/out/`.
 - **Drawing**: `Player.artFrame()` gives the composite to `Creature.drawArt` (single frame, same bob/squash/flip as
   the class sprites, 60 px from head top to feet). Without gear art the old class sprite stands in.
 - **Auras** (`src/gfx/gearfx.js`): outline glow (stacked offset silhouettes, no ctx.filter) and a light, orbiting
