@@ -444,6 +444,8 @@ export class Whirl {
     this.team = this.src.team;
     this.src.channel = this;
     this.slashT = 0;
+    this.lightningT = 0.9;
+    this.tornadoT = 1.4;
   }
   get depth() { return this.src.x + this.src.y + 0.1; }
   update(dt) {
@@ -451,6 +453,12 @@ export class Whirl {
     if (s.dead || s.channel !== this) return false;
     this.t += dt;
     if (this.t > this.dur) { s.channel = null; return false; }
+    // The Barbarian's full 100 Rage lasts ten seconds while spinning.
+    if (this.rage) {
+      s.rage = Math.max(0, (s.rage || 0) - 10 * dt);
+      s.char.rage = s.rage;
+      if (s.rage <= 0) { s.channel = null; return false; }
+    }
     // follow the player's live aim if available
     if (s.isPlayer && s.aim) { this.tx = s.aim[0]; this.ty = s.aim[1]; }
     const d = dist(s.x, s.y, this.tx, this.ty);
@@ -459,14 +467,48 @@ export class Whirl {
     this.tickT -= dt;
     if (this.tickT <= 0) {
       this.tickT = this.tick;
-      for (const c of this.world.hostiles(this.team, s.x, s.y, this.r)) hit(s, c, roll(this.dmg), this.el, { ...this.o, ang: angleTo(s.x, s.y, c.x, c.y) });
+      for (const c of this.world.hostiles(this.team, s.x, s.y, this.r)) {
+        hit(s, c, roll(this.dmg), this.el, { ...this.o, ang: angleTo(s.x, s.y, c.x, c.y) });
+        // Pull normal enemies toward the eye of the storm, but never through a wall.
+        if (this.pull && !c.dead && c.rank !== 'boss') {
+          const d = dist(c.x, c.y, s.x, s.y);
+          if (d > 0.45) {
+            const step = Math.min(d - 0.45, this.pull * dt * 5);
+            const nx = c.x + (s.x - c.x) / d * step, ny = c.y + (s.y - c.y) / d * step;
+            if (this.world.map.walkable(nx, ny)) { c.x = nx; c.y = ny; }
+          }
+        }
+      }
     }
     this.slashT -= dt;
     if (this.slashT <= 0) {
       this.slashT = 0.12;
-      addEffect(new Slash(s.x, s.y, this.t * 20, 4, this.r * 0.9, 0.2, this.E.glow, { z: 20, width: 6 }));
+      addEffect(new Slash(s.x, s.y, this.t * 20, 4, this.r * 1.05, 0.2, this.E.glow, { z: 20, width: this.rage ? 9 : 6 }));
+      if (this.rage) addEffect(new Slash(s.x, s.y, this.t * 20 + Math.PI, 4, this.r * 0.85, 0.22, '#c8e0ff', { z: 23, width: 7 }));
       if (this.fx === 'fire') burst(s.x, s.y, 20, 'fire', 4, 3);
       sfx('swing', 0.5);
+    }
+    if (this.rage && this.lightning) {
+      this.lightningT -= dt;
+      if (this.lightningT <= 0) {
+        this.lightningT += 0.9;
+        aoe(this.world, s, s.x, s.y, this.r * 1.35, roll(this.dmg) * 0.6, 'light', this.o);
+        sparkle(s.x, s.y, 32, '#9fdcff', 16, 0.3);
+      }
+    }
+    if (this.rage && this.tornadoes) {
+      this.tornadoT -= dt;
+      if (this.tornadoT <= 0) {
+        this.tornadoT += 1.4;
+        for (let i = 0; i < Math.min(3, this.tornadoes); i++) {
+          const a = this.t * 5 + i * TAU / Math.min(3, this.tornadoes);
+          this.world.addHazard(new Area({ mode: 'cyclone', world: this.world, src: s,
+            x: s.x + Math.cos(a) * 0.7, y: s.y + Math.sin(a) * 0.7,
+            vx: Math.cos(a), vy: Math.sin(a), r: 0.55, dur: 2.3,
+            tick: 0.3, dmg: this.dmg.map(v => v * 0.32), el: 'phys', fx: 'wind',
+            o: this.o, speed: 2.2 }));
+        }
+      }
     }
     return true;
   }
