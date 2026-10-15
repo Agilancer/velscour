@@ -158,7 +158,9 @@ export function describe(sk, L, dmg) {
   if (m.pull) flags.push('Pulls enemies');
   let s;
   switch (sk.kind) {
-    case 'melee': s = `Strike ${n > 1 ? n + ' times ' : ''}${m.arc >= 300 || sk.fx === 'spin' ? 'all around you' : 'in front of you'} for ${D}.`; break;
+    case 'melee': s = sk.id === 'barbarian.0.0'
+      ? `Bash in front of you for ${D}, then fan five short lightning bolts forward. Builds 3 Rage on cast and 15 more on the first hit.`
+      : `Strike ${n > 1 ? n + ' times ' : ''}${m.arc >= 300 || sk.fx === 'spin' ? 'all around you' : 'in front of you'} for ${D}.`; break;
     case 'proj': s = `${m.lob ? 'Lob' : 'Launch'} ${n > 1 ? n + ' ' + plural(n, fx) : 'a ' + fx}${m.ring ? ' in every direction' : ''}, each dealing ${D}.`; break;
     case 'nova': s = `Release ${n > 1 ? n + ' waves' : 'a nova'} of ${el} energy around you for ${D}.`; break;
     case 'aoe': s = `${n > 1 ? `Erupt the ground ${n} times` : `Call down ${sk.fx === 'meteor' ? 'a meteor' : 'a blast'}`} at the target for ${D}${m.dur ? ` over ${m.dur}s` : ''}.`; break;

@@ -57,6 +57,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
   const ang = angleTo(p.x, p.y, tx, ty);
   const o = statusOpts(m);
   o.sk = sk.id; o.vis = vis;
+  if (sk.id === 'barbarian.0.0') o.rageCast = p.bashCastSerial;
   if (aug) o.aug = aug;
   if (!opts.echo) { masteryCastFx(p, sk, M, tx, ty); classCastFx(p, sk, L, tx, ty); }
   p.face(ang);
@@ -79,6 +80,19 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
           const fxX = p.x + Math.cos(a) * range * 0.6, fxY = p.y + Math.sin(a) * range * 0.6;
           if (m.exp) explode(w, p, targets[0] ? targets[0].x : fxX, targets[0] ? targets[0].y : fxY, 1.2 * (m.r ?? 1) * area, dmg.map((v) => v * 0.6), el, o, el === 'fire' ? 'explosion' : 'eruption');
           meleeFx(p, a, range, arc, fx, E, i);
+          // Barbarian Bash fires five SHORT lightning arcs in a forward fan, never orbiting hammers.
+          if (sk.id === 'barbarian.0.0') {
+            for (let b = -2; b <= 2; b++) {
+              const ba = a + b * 0.23, bx = p.x + Math.cos(ba) * 0.36, by = p.y + Math.sin(ba) * 0.36;
+              w.addHazard(new Projectile({ world: w, src: p, x: bx, y: by, ang: ba,
+                speed: 12, range: 3.1, fx: 'bolt', el: 'light', z: 22, r: 0.18, size: 0.68,
+                dmg: dmg.map((v) => v * 0.24), o: { ...o, bashBolt: true }, light: true }));
+              addEffect(new Bolt(bx, by, 25, bx + Math.cos(ba) * 1.4, by + Math.sin(ba) * 1.4, 22,
+                '#9ddcff', 0.16, 2.2));
+            }
+            sparkle(fxX, fxY, 24, '#d9efff', 6, 0.22);
+            sfx('light', 0.65);
+          }
           if (m.lance) energyLance(p, a, range + 0.6, el, 0.2 + Math.min(20, L) * 0.008, L, m.prism); // Lancer: a huge energy lance
           p.lunge = 1;
           sfx(targets.length ? (el === 'phys' ? 'swing' : E.sfx) : 'swing', 0.8);

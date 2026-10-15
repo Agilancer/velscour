@@ -14,6 +14,28 @@ Contents
 
 ---
 
+## October 15, 2026 — Barbarian Bash, hit-built Rage, and Whirlwind cyclone
+
+- Bash (stable ID `barbarian.0.0`) now fires five short directional lightning bolts;
+  its main hit stays physical. It never emits a rotating hammer, even from the
+  legendary on-hit proc. Each Bash cast earns 3 Rage plus 15 on its first
+  successful hit, rather than 15 for every lightning bolt.
+- Rage starts at **0 / 100** and **does not regenerate passively**. Other attacks
+  build a small amount. Whirlwind still drains 10 Rage/second (with minimal
+  Rage earned from hits), while Earthquake remains 25 Rage / 5-second cooldown.
+  Existing saves persist Rage without schema changes.
+- During Whirlwind the hero now follows the existing manual move vector or
+  autoplay's pathfinding waypoints, including between rooms; the old aimed
+  straight-line movement no longer overrides route finding.
+- Whirlwind draws layered, rising isometric cyclone ribbons with continuous
+  metal-blue wind, dust, ember and blood-tinted spiral particles. Appropriate
+  gibs burst from hits; nearby gibs are captured into a moving spiral toward
+  the eye. Gore Off is honored; mobile particle counts are lower.
+- Updated `tools/tests/barbarian_rage.js` for zero idle Rage, five Bash bolts,
+  hit payout caps, pathing during spin and gib capture. **No live Chromium or
+  iOS Safari tests were run in this GitHub-only session.**
+  See [BARBARIAN_WHIRLWIND_REWORK.md](BARBARIAN_WHIRLWIND_REWORK.md).
+
 ## October 15, 2026 — Herrington Hollow town and armorer rename
 
 - The town's in-game display name is now **Herrington Hollow**, including the biome label, HUD, first-entry banner, return/death messages, Quest Log and the Forsaken Wilds relic scenario title.
