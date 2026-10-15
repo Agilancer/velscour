@@ -183,7 +183,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       // eight-angle designs, without altering orbit count or damage behavior.
       const shieldVariant = m.shields ? shieldVariantForSkill(sk.name) : null;
       if(shieldVariant) preloadLancerShield(shieldVariant);
-      w.addHazard(new Orbit({ world: w, src: p, n, radius: m.shields ? shieldOrbitRadius(sk.name) * area : 1.6 * (m.r ?? 1) * area, dur: m.dur || 4, spiral: m.spiral, fx, el, dmg, o, speed: m.shields ? -2.4 : m.spiral ? 5 : 4.2, size: vis * (m.shields ? 1.4 : 1), shieldVariant }));
+      w.addHazard(new Orbit({ world: w, src: p, n, radius: m.shields ? shieldOrbitRadius(sk.name) * area : 1.6 * (m.r ?? 1) * area, dur: m.dur || 4, spiral: m.spiral, fx, el, dmg, o, speed: m.shields ? 2.4 : m.spiral ? 5 : 4.2, size: vis * (m.shields ? 1.4 : 1), shieldVariant }));
       sfx('swing');
       break;
     }
