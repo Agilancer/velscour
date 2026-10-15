@@ -1,4 +1,4 @@
-// Thirty-one dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
+// Thirty-two dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
 // palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
 import { FINAL_DEPTH } from './depth.js';
@@ -234,6 +234,17 @@ export const BIOMES = [
     torch: '#a08bff', fog: '#0b0921',
   },
   {
+    id: 'heavenly', name: 'HEAVENLY — The Empyrean Citadel', pack: 'heavenly',
+    palette: null, dark: 0.51, light: 12.2,
+    ambient: { type: 'glitter', color: '#ffe6aa' },
+    mon: { hue: 27, sat: 0.88, light: 0.10 },
+    el: 'holy', blood: '#d2bf93',
+    adj: ['Anointed', 'Hallowed', 'Dawnforged', 'Empyrean'],
+    roster: ['knight','wraith','eye','golem','cultist','hound','gargoyle',
+      'elemental','abomination','archer','demon'],
+    torch: '#ffdfab', fog: '#383647',
+  },
+  {
     id: 'throne', name: "Velscour's Throne", palette: { colorize: [4, 0.72], light: -0.1, contrast: 1.2 }, dark: 0.8, light: 8,
     ambient: { type: 'ember', color: '#ff3a10' }, mon: { hue: -10, sat: 1.5, light: -0.06 }, el: 'fire', blood: '#c00000',
     adj: ['Hellsworn', 'Doom', 'Archfiend'], roster: ['demon', 'imp', 'knight', 'gargoyle', 'abomination', 'hound', 'wraith', 'cultist', 'elemental', 'golem', 'eye', 'skeleton'],
@@ -269,6 +280,7 @@ const FAMILY = {
   rot: ['fungal', 'plague', 'thorn'],
   gloom: ['catacombs', 'ashen', 'void', 'shadow', 'obsidian', 'shattered', 'library', 'cathedral'],
   aether: ['astral_plane'],
+  celestial: ['heavenly'],
 };
 for (const [f, ids] of Object.entries(FAMILY)) for (const id of ids) BIOMES.find((b) => b.id === id).family = f;
 
@@ -287,6 +299,7 @@ const MON_SWAPS = {
   desert_temple: ['sand', 'gilded', 'bronze', 'bone', null],
   hell: ['infernal', 'ember', 'blood', 'rust', 'obsidian'],
   astral_plane: ['spectral', 'amethyst', 'crystal', 'void', 'midnight'],
+  heavenly: [null, null, 'gilded', 'pale', 'bronze'],
   overworld: [null, 'thorn', 'rot', 'ash', 'bone'], throne: ['infernal', 'blood', 'ember', 'rust'],
 };
 for (const b of BIOMES) b.swaps = MON_SWAPS[b.id];
