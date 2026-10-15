@@ -11,11 +11,13 @@ import { loadGearArt } from '../core/gearart.js';
 import { preloadBarFx } from '../gfx/artfx.js';
 import { SKILLS } from '../data/skills.js';
 import { setClassItems, setRingContext } from '../data/items.js';
-import { BIOME_BY_ID, TOWN_BIOME, drawBiome, mixPartner } from '../data/biomes.js';
+import { BIOME_BY_ID, TOWN_BIOME, drawBiome, mixPartner, recordBiomeVisit } from '../data/biomes.js';
 import { CLASSES } from '../data/classes.js';
 import { generateDungeon, isRaidDepth } from '../world/dungeon.js';
 import { FINAL_DEPTH, depthLevel } from '../data/depth.js';
 import { generateTown, makeTownTiles } from '../world/town.js';
+import { generateOverworld } from '../world/overworld.js';
+import { createOverworldScenario } from './overworld.js';
 import { World } from './world.js';
 import { Player } from './player.js';
 import { makeMonster, Monster } from './monster.js';
@@ -222,7 +224,7 @@ export const game = {
     sfx('portal');
     // fetch this biome's art first (about 1 MB); if that fails the default set stands in
     setTimeout(async () => {
-      try { await Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]); } catch (e) { console.warn(e); }
+      try { if (!biome.overworld) await Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]); } catch (e) { console.warn(e); }
       try {
         this.buildDungeon(depth, biome, mix);
         // the level's monster art (set 2 sheets load per level); a failed sheet falls back to pixel sprites
@@ -235,9 +237,10 @@ export const game = {
   buildDungeon(depth, biome, mix = null) {
     const c = G.char;
     const old = G.world;
-    const tileset = mix ? mixedTileSet(biome, mix, Math.random() < 0.5) : biomeTileSet(biome);
-    const gen = generateDungeon(depth, biome, tileset, (Math.random() * 1e9) | 0);
-    const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches, looks: gen.looks });
+    const tileset = biome.overworld ? biomeTileSet(TOWN_BIOME) : mix ? mixedTileSet(biome, mix, Math.random() < 0.5) : biomeTileSet(biome);
+    const seed = (Math.random() * 1e9) | 0;
+    const gen = biome.overworld ? generateOverworld(depth, biome, seed) : generateDungeon(depth, biome, tileset, seed);
+    const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches, looks: gen.looks, townTiles: gen.townTiles || null, buildings: gen.buildings || [] });
     world.chests = gen.chests.map((ch) => ({
       ...ch, opened: false, reach: 1.3,
       use() {
@@ -294,6 +297,7 @@ export const game = {
       sfx('boss');
     };
     world.onBossKilled = (m) => {
+      if (biome.overworld) return;
       exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
       const first = !c.cleared[depth];
       c.cleared[depth] = true;
@@ -306,7 +310,17 @@ export const game = {
       this.autosave();
       if (m.isVelscour) setTimeout(() => victoryScreen(() => {}), 3200);
     };
+    if (biome.overworld) world.overworldScenario = createOverworldScenario(world, gen, biome, () => {
+      exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
+      const first = !c.cleared[depth];
+      c.cleared[depth] = true;
+      c.deepest = Math.max(c.deepest || 0, depth);
+      if (first) { c.skillPoints++; UI.log('Bonus skill point for completing the overworld scenario!', '#ffd860'); }
+      addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#40a0ff', 5));
+      sfx('gate'); UI.refresh(); this.autosave();
+    });
     this.setWorld(world, gen.start, old);
+    recordBiomeVisit(c, biome, depth);
     c.lastBiome = biome.id;
     HUD.setArea(`Depth ${depth}${depth > FINAL_DEPTH ? ' — Endless Torment' : ''}`, gen.raid ? `${biome.name} · Boss Room` : biome.name);
     stopMusic(); setAmbience(biome.id);
@@ -408,6 +422,7 @@ export const game = {
       controls.update(dt);
       Auto.update(dt);
       w.update(dt);
+      if (w.overworldScenario) w.overworldScenario.update(dt);
       ambushTick(w, dt);
       madnessTick(dt);
       footsteps(p, w.kind === 'town' ? 'dirt' : STEP_SURFACE[w.biome && w.biome.id] || 'stone');
