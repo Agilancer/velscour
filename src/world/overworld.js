@@ -7,6 +7,8 @@ import { A } from '../core/assets.js';
 import { TW } from '../core/view.js';
 import { townObject, makeTownTiles } from './town.js';
 import { overworldObject, EXTRA_TREES, EXTRA_SCATTER, SHRINES } from '../gfx/overworldart.js';
+import { outdoorBiomeProp, TOWN_FLOOR_EXPANSION } from '../gfx/biomeexpansion.js';
+import { isoBarrier } from '../gfx/isobarriers.js';
 import { rollLooks } from '../data/bestiary.js';
 
 const W = 72, H = 72;
@@ -40,9 +42,9 @@ export function generateOverworld(depth,biome,seed) {
   ];
   const props=[],buildings=[];
   const add=(name,x,y,opts={})=>{
-    const sprite=overworldObject(name)||townObject(name);
+    const sprite=typeof name==='string'?(overworldObject(name)||townObject(name)):name;
     if(!sprite)return false;
-    props.push({kind:'scatter',x,y,spr:sprite,k:K,flip:opts.flip??rng.chance(.5),
+    props.push({kind:'scatter',x,y,spr:sprite,k:K,flip:sprite.isometric?false:(opts.flip??rng.chance(.5)),
       light:opts.light||0});
     return true;
   };
@@ -88,7 +90,8 @@ export function generateOverworld(depth,biome,seed) {
     const x=rng.int(2,W-3),y=rng.int(2,H-3),cx=x+.5,cy=y+.5;
     if(!map.walkable(cx,cy)||reserved(cx,cy)&&rng.chance(.9))continue;
     if(!map.circleFree(cx,cy,.35))continue;
-    const name=rng.chance(.65)?rng.pick(EXTRA_SCATTER):
+    const name=rng.chance(.35)?outdoorBiomeProp(biome.id,rng.int(0,39)):
+      rng.chance(.55)?rng.pick(EXTRA_SCATTER):
       rng.pick(['wildflowers','mushrooms','fieldstone_cluster','leafy_shrub','hollow_stump',
         'stone_boundary','dry_reeds','cart_debris','fallen_log','moss_boulder']);
     add(name,cx+rng.range(-.22,.22),cy+rng.range(-.22,.22));
@@ -101,6 +104,21 @@ export function generateOverworld(depth,biome,seed) {
       OVERWORLD_SITES[i][0]+1.2,OVERWORLD_SITES[i][1]+1.2);
   // Reuse the town tiles and chest art; do NOT build indoor wall segments.
   const townTiles=makeTownTiles();
+  // A full additional terrain set is shared with Duskhollow's art engine;
+  // original 6+120 terrain-transition indices stay untouched.
+  for(let y=3;y<H-3;y++)for(let x=3;x<W-3;x++){
+    const i=y*W+x;
+    if(!map.block[i]&&map.v[i]<6&&(x*17+y*23+seed)%8===0)
+      map.v[i]=TOWN_FLOOR_EXPANSION.start+((x*13+y*19+seed)>>>0)%TOWN_FLOOR_EXPANSION.count;
+  }
+  // Living barriers outline the northwestern forest rather than obstructing
+  // the guaranteed entrance/shrine/exit paths. Each segment has exact 2:1
+  // endpoint geometry and no incorrect mirrored orientation.
+  for(let j=0;j<7;j++){
+    const x=6+j+.5,y=8.5;
+    if(map.block[Math.floor(y)*W+Math.floor(x)])
+      add(isoBarrier('thorn','x'),x,y,{flip:false});
+  }
   const looks=rollLooks(biome,rng.fn()),spawns=[];
   const archs=biome.roster.filter(a=>!['golem','abomination'].includes(a));
   for(let i=0;i<24;i++){
