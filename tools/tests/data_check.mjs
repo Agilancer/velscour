@@ -32,11 +32,17 @@ console.log('example', s.name, 'dmg L1', skillBaseDamage(s, 1), 'dmg L20', skill
 // ---- monster art (src/data/bestiary.js vs assets/sprites/enemies/enemies.json)
 const { BESTIARY, SUMMON_ART, FAMILIAR_ART, ART_BY_ID, SWAPS, artPool, rollLooks } = await import(new URL('../../src/data/bestiary.js', import.meta.url));
 const { ARCH } = await import(new URL('../../src/data/enemies.js', import.meta.url));
+const { HEAVENLY_MONSTERS } = await import(new URL('../../src/data/heavenly.js', import.meta.url));
+if (HEAVENLY_MONSTERS.length !== 60 || new Set(HEAVENLY_MONSTERS.map(m=>m.id)).size !== 60) bad.push('Expected 60 distinct Heavenly monsters');
 const { BIOMES, drawBiome, mixPartner } = await import(new URL('../../src/data/biomes.js', import.meta.url));
 const fs = await import('node:fs');
 const meta = JSON.parse(fs.readFileSync(new URL('../../assets/sprites/enemies/enemies.json', import.meta.url)));
 const ids = new Set(), cells = new Set();
 for (const a of BESTIARY) {
+  if (a.sheet === 'heavenly/generated') {
+    if (!a.id.startsWith('hv_') || !a.name || !ARCH[a.arch]) bad.push('invalid Heavenly monster '+a.id);
+    continue; // generated Canvas art, no static enemies.json cell
+  }
   if (ids.has(a.id)) bad.push(`duplicate monster art id ${a.id}`);
   ids.add(a.id);
   if (!meta[a.sheet] || !meta[a.sheet].cells[a.i]) bad.push(`monster art ${a.id}: no cell ${a.sheet}#${a.i}`);
@@ -77,6 +83,10 @@ const asset = (f) => new URL('../../assets/' + f, import.meta.url);
 const packs = {};
 for (const b of BIOMES) {
   if (!b.pack) { bad.push(`biome ${b.id}: no pack`); continue; }
+  if (b.pack === 'heavenly') {
+    if (!existsSync(new URL('../../src/gfx/heavenlypack.js', import.meta.url))) bad.push('missing Heavenly environment generator');
+    continue;
+  }
   if (b.pack === 'astral_plane') {
     if (!existsSync(new URL('../../src/gfx/astralplane.js', import.meta.url))) bad.push('missing Astral Plane art generator');
     continue; // lazy full biome pack tested by browser and source mock
