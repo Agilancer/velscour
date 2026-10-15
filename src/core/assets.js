@@ -1,6 +1,7 @@
 // Asset loading + derived (recoloured / rescaled) sprite caches.
 import { makeCanvas, recolor, scaleImage } from './util.js';
 import { generateDesertTemplePack } from '../gfx/deserttemple.js';
+import { generateIceTemplePack } from '../gfx/icetemple.js';
 import { TW } from './view.js';
 import { loadReplacementArt } from './replacementart.js';
 import { loadEnemyArt } from './enemyart.js';
@@ -65,6 +66,11 @@ export async function loadAssets(progress) {
 const DEFAULT_PACK = 'catacombs';
 
 function loadPack(id) {
+  if (id === 'ice_temple') {
+    // Ice Temple material/prop atlas, preserving exact Catacombs geometry and depth slices.
+    return A.packs[id] || (A.packs[id] = loadPack('catacombs').then((base) =>
+      (A.packs[id] = generateIceTemplePack(base))).catch((e) => { delete A.packs[id]; throw e; }));
+  }
   if (id === 'desert_temple') {
     // New art is built once from the already-supported isometric mask/slice geometry.
     // All 60 floor cells, 40 temple props and sandstone/relief textures are generated
