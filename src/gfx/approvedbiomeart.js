@@ -9,6 +9,17 @@ const ROWS = Object.freeze({
   astral_plane: 3,
   heavenly: 4,
 });
+// Match the painted object type to the name/collision already used by each
+// native pack: obelisk, brazier, sarcophagus, column, banner, urn, statue,
+// altar. This avoids, for example, making Hell's nonblocking lava pools
+// look like solid statues or mixing up NPC-facing decoration names.
+const NATIVE_PROP_INDICES = Object.freeze({
+  desert_temple: [0,10,5,7,26,4,1,2],
+  ice_temple: [0,18,10,8,36,15,5,12],
+  hell: [0,2,28,13,25,31,10,19],
+  astral_plane: [0,2,21,12,36,9,24,17],
+  heavenly: [8,5,12,0,33,31,3,28],
+});
 const FLOOR = Object.freeze({w:80,h:40,cols:8,rows:5});
 const PROP = Object.freeze({w:80,h:80,cols:8,rows:5});
 const MONSTER = Object.freeze({w:120,h:150,cols:4,rows:3});
@@ -58,6 +69,8 @@ export async function applyApprovedBiomeArt(pack, biomeId) {
   const meta=pack.meta, expanded=meta.expansion;
   const floorStart=(expanded ? expanded.floorStart : 0)+10; // after seamless bases
   const propStart=expanded ? expanded.scatterStart : 0;
+  const propIndices=expanded ? Array.from({length:8},(_,i)=>propStart+i) :
+    NATIVE_PROP_INDICES[biomeId];
   let floorCount=0,propCount=0;
   if (floors && pack.floors?.getContext) {
     const g=pack.floors.getContext('2d');
@@ -80,7 +93,7 @@ export async function applyApprovedBiomeArt(pack, biomeId) {
     if(g){
       g.save();g.imageSmoothingEnabled=false;
       for(let i=0;i<8;i++){
-        const cell=meta.scatter[propStart+i];
+        const cell=meta.scatter[propIndices[i]];
         if(!cell)continue;
         g.clearRect(cell.x,cell.y,cell.w,cell.h);
         g.drawImage(props,i*PROP.w,row*PROP.h,PROP.w,PROP.h,
@@ -90,7 +103,8 @@ export async function applyApprovedBiomeArt(pack, biomeId) {
       g.restore();
     }
   }
-  meta.approvedArt={row,floorStart,propStart,floorCount,propCount};
+  meta.approvedArt={row,floorStart,propStart,propIndices:[...propIndices],
+    floorCount,propCount};
   return pack;
 }
 
