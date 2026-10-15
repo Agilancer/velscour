@@ -131,6 +131,10 @@ export const HUD = {
     const lifeK = Math.round(clamp(1 - p.hp / p.maxHp, 0, 1) * 200) / 2;
     set('life', lifeK, (v) => { $('#life-cover .orb-empty').style.height = v + '%'; });
     set('mana', Math.round(clamp(1 - p.mana / p.maxMana, 0, 1) * 200) / 2, (v) => { $('#mana-cover .orb-empty').style.height = v + '%'; });
+    set('rageClass', p.classId === 'barbarian', v => { $('#barbarian-rage').classList.toggle('hidden', !v); });
+    if (p.classId === 'barbarian') {
+      set('rageAmount', Math.round(p.rage), v => { $('#barbarian-rage-fill').style.width = v + '%'; $('#barbarian-rage-text').textContent = `Rage ${v}%`; });
+    }
     set('lt', `${fmt(Math.max(0, p.hp))}/${fmt(p.maxHp)}`, (v) => { $('#life-text').textContent = v; });
     set('mt', `${fmt(p.mana)}/${fmt(p.maxMana)}`, (v) => { $('#mana-text').textContent = v; });
     const ready = madnessReady(), on = madnessOn();
@@ -158,7 +162,7 @@ export const HUD = {
         const tot = cooldown(sk) * (1 - p.st.cdr / 100);
         if (rem > 0 && tot > 0) { cdK = Math.round((rem / tot) * 100); cdTxt = rem >= 1 ? Math.ceil(rem) + '' : ''; }
         const L = effLevel(p, sk);
-        nm = L > 0 && p.mana < manaCost(sk, L);
+        nm = L > 0 && (p.mana < manaCost(sk, L) || (sk.classId === 'barbarian' && sk.kind === 'whirl' && p.rage < 10));
       }
       if (s.last.cd !== cdK) { s.last.cd = cdK; s.cd.style.height = cdK + '%'; }
       if (s.last.cdt !== cdTxt) { s.last.cdt = cdTxt; s.cdt.textContent = cdTxt; }
