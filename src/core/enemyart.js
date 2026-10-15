@@ -4,6 +4,7 @@ import { makeCanvas, recolor } from './util.js';
 import { loadReplacementArt, replacementImage } from './replacementart.js';
 import { ART_BY_ID } from '../data/bestiary.js';
 import { heavenlyEnemyImage } from '../gfx/heavenlymonsters.js';
+import { biomeNativeImage } from '../gfx/biomenativeart.js';
 
 const DIR = 'assets/sprites/enemies/';
 const EAGER = /^(set1|minions)\//; // fetched with the meta; the rest (set2, ~5 MB) loads per level as looks need it
@@ -50,7 +51,11 @@ export async function loadEnemySheets(keys) {
 export function loadArtFor(ids) {
   return Promise.all([
     ids.some((id) => id && id.startsWith('va_')) ? loadReplacementArt() : null,
-    loadEnemySheets([...new Set(ids.filter((id) => ART_BY_ID[id] && ART_BY_ID[id].sheet && ART_BY_ID[id].sheet !== 'heavenly/generated').map((id) => ART_BY_ID[id].sheet))]),
+    loadEnemySheets([...new Set(ids.map(id=>{
+      const a=ART_BY_ID[id];
+      return a?.sourceArt ? ART_BY_ID[a.sourceArt]?.sheet :
+        a?.sheet !== 'heavenly/generated' ? a?.sheet : null;
+    }).filter(Boolean))]),
   ]);
 }
 
@@ -63,14 +68,15 @@ function cell(a) {
 /** The stored cell ({x, y, w, h, fx, oh}) of an art id, or null while its sheet is loading. */
 export function artCell(id) {
   const a = ART_BY_ID[id];
-  return a ? cell(a) : null;
+  return a ? cell(a.sourceArt ? ART_BY_ID[a.sourceArt] : a) : null;
 }
 
 /** True once a look's art has loaded. */
 export function enemyArtReady(id) {
   if (id && id.startsWith('va_')) return !!replacementImage(id);
-  const a = ART_BY_ID[id];
-  return !!(a && cell(a));
+  if (id && id.startsWith('hv_')) return !!heavenlyEnemyImage(id);
+  const a=ART_BY_ID[id];
+  return !!(a && cell(a.sourceArt ? ART_BY_ID[a.sourceArt] : a));
 }
 
 /**
@@ -79,6 +85,7 @@ export function enemyArtReady(id) {
  */
 export function enemyImage(id, swap = null, mode = '') {
   if (id && id.startsWith('hv_')) return heavenlyEnemyImage(id, swap, mode);
+  if (id && id.startsWith('bn_')) return biomeNativeImage(id,swap,mode,baseId=>enemyImage(baseId));
   if (id && id.startsWith('va_')) return replacementImage(id, swap, mode);
   const a = ART_BY_ID[id];
   const c = a && cell(a);
