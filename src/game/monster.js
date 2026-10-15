@@ -1329,6 +1329,19 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
     }
     if (family === 'ophanim' || family === 'luminary') m.fly = true;
   }
+  if(art?.homeBiome) {
+    const rarity=art.nativeVariant%5,foreign=art.homeBiome!==biome.id;
+    m.maxHp*=1+rarity*.065+(art.nativeVariant>=45?.22:0);
+    m.hp=m.maxHp;
+    m.dmg*=1+rarity*.045;
+    m.speed*=rarity%2?1.07:.96;
+    m.xp*=1+rarity*.07+(foreign?.2:0);
+    if(art.el&&art.el!=='phys')
+      m.res[art.el]=(m.res[art.el]||0)+(foreign?.12:.20);
+    // A traveling native is still visually and mechanically recognizable,
+    // but all existing AI, projectiles, rank affixes and drops keep working.
+    if(foreign)m.name='Wayward '+m.name;
+  }
   if (rank !== 'normal') makeElite(m, rank, depth, world);
   if (art && art.heavenlyFamily && rank === 'boss') {
     m.name = art.name.toUpperCase();
