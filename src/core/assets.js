@@ -1,5 +1,6 @@
 // Asset loading + derived (recoloured / rescaled) sprite caches.
 import { makeCanvas, recolor, scaleImage } from './util.js';
+import { generateDesertTemplePack } from '../gfx/deserttemple.js';
 import { TW } from './view.js';
 import { loadReplacementArt } from './replacementart.js';
 import { loadEnemyArt } from './enemyart.js';
@@ -60,10 +61,17 @@ export async function loadAssets(progress) {
 }
 
 // Biome packs (assets/tiles/<pack>/, imported by tools/biomepack.py; docs/ART.md). Every biome draws from one,
-// palette swapped. Catacombs is the only pack so far.
+// palette swapped. Desert Temple is a Canvas-generated pack with source in gfx/deserttemple.js.
 const DEFAULT_PACK = 'catacombs';
 
 function loadPack(id) {
+  if (id === 'desert_temple') {
+    // New art is built once from the already-supported isometric mask/slice geometry.
+    // All 60 floor cells, 40 temple props and sandstone/relief textures are generated
+    // as original Canvas art; geometry and door animation remain battle-tested.
+    return A.packs[id] || (A.packs[id] = loadPack('catacombs').then((base) =>
+      (A.packs[id] = generateDesertTemplePack(base))).catch((e) => { delete A.packs[id]; throw e; }));
+  }
   return A.packs[id] || (A.packs[id] = Promise.all(['floors', 'walls', 'scatter'].map((n) => loadImage(`assets/tiles/${id}/${n}.webp`)).concat(loadJSON(`assets/tiles/${id}/pack.json`)))
     .then(([floors, walls, scatter, meta]) => (A.packs[id] = { floors, walls, scatter, meta })).catch((e) => { delete A.packs[id]; throw e; }));
 }
