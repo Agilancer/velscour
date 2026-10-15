@@ -94,3 +94,27 @@ and each minion gets one at random; see HANDOFF status item 20 and `node tools/t
   with a like-coloured biome (`en_<biome>.png`, `en_<biome>_boss.png`). It prints each level's looks; `*` marks
   a swapped look.
 - `node tools/tests/data_check.mjs`: bestiary and sheet consistency, plus the biome bag and mixing rules.
+
+## HEAVENLY: sixty self-contained procedural monsters
+
+The HEAVENLY dungeon is a specialized exception to the uploaded enemy
+sheet workflow. `src/data/heavenly.js` defines **60 unique named monsters**
+across twelve species/families (five ranks each), with dedicated 160×186
+transparent Canvas sprite drawings in `src/gfx/heavenlymonsters.js`.
+
+These entries use the reserved `sheet: 'heavenly/generated'` identifier.
+`src/data/bestiary.js` includes them in `BESTIARY` / `ART_BY_ID`
+but filters the level-roll pool: HEAVENLY chooses only generated monsters,
+and ordinary biomes do not see them. `src/core/enemyart.js` recognizes
+the `hv_` prefix and bypasses the static metadata/fetch pipeline while
+preserving swap/flash/corpse behavior and the `_art.fx` foot anchor.
+The source shapes are not hand-painted PNG sprite sheets; a browser
+export in `tools/tests/heavenly.js` produces an optional
+`monsters.webp` atlas and `monsters.json` cell metadata, plus
+the full `heavenly_60_monsters.png` contact sheet.
+
+The fifth rank in each family is a potential named guardian; the
+others occur as regular packs with elite/champion/unique variants.
+Existing enemy archetypes supply combat AI while custom per-variant
+health, damage, speed, magical range, resistance and wings determine
+the feel of fighting them. See [HEAVENLY.md](HEAVENLY.md).
