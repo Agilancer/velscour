@@ -118,3 +118,31 @@ others occur as regular packs with elite/champion/unique variants.
 Existing enemy archetypes supply combat AI while custom per-variant
 health, damage, speed, magical range, resistance and wings determine
 the feel of fighting them. See [HEAVENLY.md](HEAVENLY.md).
+
+## Native bestiary for every combat biome — 50 each
+
+`src/data/biomenatives.js` now defines **1,600 new monsters**, 50 for
+each of the 32 combat biomes including the Forsaken Wilds and Depth 500
+throne. There are **none in Duskhollow town**, which is a no-combat zone.
+They are registered in `BESTIARY` under the `bn_` prefix. Each new
+monster has a unique ID and name, a matching original VELSCOUR monster
+art source/AI archetype and new procedural silhouette/bodygear additions
+from `src/gfx/biomenativeart.js`, preserving the artwork's pixel density
+and foot pivot. Source sheets load normally using `loadArtFor`.
+
+`rollLooks` selects a *monster look* from a home-native pool (74%), the
+existing global painted bestiary (24%), or a native from some *other*
+biome (2%). Probabilities shift if a requested AI archetype has no
+eligible art in a channel. Up to four looks per archetype are rolled for
+each level, so a single run won't show all fifty, but multiple floors
+feature different characters. The final five of each roster are
+guardian-only; ordinary combatants preserve existing health scaling,
+elite/champion affixes, loot and spell/projectile behavior.
+
+The original 60 HEAVENLY sprites continue to exist in the global look
+pool *within HEAVENLY*, beside the fifty added new locals and existing
+random bestiary entries.
+
+`tools/tests/worldwide_biomes.js` checks biome-native IDs and source
+sprites in live Chromium; `tools/tests/data_check.mjs` validates static
+catalog completeness. Details: [WORLD_BIOME_OVERHAUL.md](WORLD_BIOME_OVERHAUL.md).

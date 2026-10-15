@@ -47,6 +47,8 @@ node tools/tests/ice_temple.js                    # 60 floor tiles, full frost a
 node tools/tests/hell.js                          # HELL: 60 infernal floors, 80 wall masks, 40 props, gameplay and atlas exports
 node tools/tests/astral_plane.js                   # astral floor, wall/door, props, 20 levels, gameplay and WebP export
 node tools/tests/heavenly.js                       # 60 distinct generated Heavenly monsters; 60 floors, 5 wall families and in-game export
+node tools/tests/worldwide_biomes.js               # 32 combat biomes, home/visitor/legacy spawns, town/wilds art and exact iso fences
+node tools/tests/worldwide_biomes.js --all         # all 31 indoor expansions (memory/performance intensive)
 node tools/tests/titlefx.js                        # title intro: click gate, logo fade on the song clock, flame burst on the hit, eyes
 node tools/tests/enemies.js                        # monster art line-ups, corpses, mixed-biome levels + guardians
 node tools/tests/mayhem.js                         # monster traits, ambush arrivals (drop/teleport/burrow/wall), bullet patterns, MADNESS
@@ -77,7 +79,8 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `sprites|biomes|props`). Dungeon floors, walls, arches, doors and scatter come from **biome packs**
   (`assets/source/biomes/<Name>_Biome_Pack.zip`, a 160x80 template; Catacombs is the first, every biome uses it
   palette-swapped), imported by `python3 tools/process_assets.py biomes` (`tools/biomepack.py`). New packs follow the
-  same template; see [`docs/ART.md`](docs/ART.md). HEAVENLY uses `src/gfx/heavenlypack.js` for complete temple environments and `src/gfx/heavenlymonsters.js` for **60 new procedural enemy sprites**; see `docs/HEAVENLY.md`.
+  same template; see [`docs/ART.md`](docs/ART.md). Every biome also has expanded artwork and 50 new native monster variants through `src/gfx/biomeexpansion.js`, `src/gfx/biomenativeart.js`, `src/data/biomenatives.js` and exact X/Y `src/gfx/isobarriers.js`; see `docs/WORLD_BIOME_OVERHAUL.md`.
+  HEAVENLY uses `src/gfx/heavenlypack.js` for complete temple environments and `src/gfx/heavenlymonsters.js` for **60 new procedural enemy sprites**; see `docs/HEAVENLY.md`.
   ASTRAL PLANE uses the same generated pack API in `src/gfx/astralplane.js`: cosmic floors, prismatic stellar wall materials and 40 props; see `docs/ASTRAL_PLANE.md`.
   HELL follows the same runtime pack API: `src/gfx/hellpack.js` makes the infernal floors, walls, arch/door materials and 40 props; see `docs/HELL.md`.
   Ice Temple is another complete Canvas-generated dungeon pack (`src/gfx/icetemple.js`); see `docs/ICE_TEMPLE.md`.

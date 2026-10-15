@@ -30,17 +30,26 @@ const s = SKILLS['wizard.0.0'];
 console.log('example', s.name, 'dmg L1', skillBaseDamage(s, 1), 'dmg L20', skillBaseDamage(s, 20), 'mana wizard.0.8 L1', manaCost(SKILLS['wizard.0.8'], 1));
 
 // ---- monster art (src/data/bestiary.js vs assets/sprites/enemies/enemies.json)
-const { BESTIARY, SUMMON_ART, FAMILIAR_ART, ART_BY_ID, SWAPS, artPool, rollLooks } = await import(new URL('../../src/data/bestiary.js', import.meta.url));
+const { BESTIARY, BIOME_NATIVES, SUMMON_ART, FAMILIAR_ART, ART_BY_ID, SWAPS, artPool, rollLooks } = await import(new URL('../../src/data/bestiary.js', import.meta.url));
 const { ARCH } = await import(new URL('../../src/data/enemies.js', import.meta.url));
 const { HEAVENLY_MONSTERS } = await import(new URL('../../src/data/heavenly.js', import.meta.url));
 if (HEAVENLY_MONSTERS.length !== 60 || new Set(HEAVENLY_MONSTERS.map(m=>m.id)).size !== 60) bad.push('Expected 60 distinct Heavenly monsters');
 const { BIOMES, drawBiome, mixPartner } = await import(new URL('../../src/data/biomes.js', import.meta.url));
+if (BIOME_NATIVES.length !== BIOMES.length*50) bad.push('Each combat biome needs 50 newly generated native monsters');
+for (const b of BIOMES) if(BIOME_NATIVES.filter(a=>a.homeBiome===b.id).length!==50) bad.push('Bad native monster count '+b.id);
 const fs = await import('node:fs');
 const meta = JSON.parse(fs.readFileSync(new URL('../../assets/sprites/enemies/enemies.json', import.meta.url)));
 const ids = new Set(), cells = new Set();
 for (const a of BESTIARY) {
   if (ids.has(a.id)) bad.push(`duplicate monster art id ${a.id}`);
   ids.add(a.id);
+  if(a.sheet==='biome/generated'){
+    if(!a.id.startsWith('bn_')||!BIOMES.some(b=>b.id===a.homeBiome)||
+       !ART_BY_ID[a.sourceArt]||!ARCH[a.arch]||!ELEMENTS.includes(a.el)||
+       !(a.h>20&&a.h<120))
+      bad.push('Invalid generated biome monster '+a.id);
+    continue; // procedural overlay sources are covered by source-art validation
+  }
   if (a.sheet === 'heavenly/generated') {
     if (!a.id.startsWith('hv_') || !a.name || !ARCH[a.arch] ||
         !ELEMENTS.includes(a.el) || !(a.h > 20 && a.h < 120))
@@ -77,10 +86,18 @@ for (const b of BIOMES) {
   for (const k of b.roster) if (!looks.pick(k)) bad.push(`biome ${b.id}: no look for ${k}`);
   if (!looks.boss(b.roster)) bad.push(`biome ${b.id}: no guardian art`);
   if (b.id !== 'throne' && !b.overworld && !b.family) bad.push(`biome ${b.id}: no colour family`);
+  const testNative=BIOME_NATIVES.find(a=>a.homeBiome===b.id);
+  if(!testNative)bad.push(`biome ${b.id}: no custom monster pool`);
 }
 // every biome's pack exists and is complete: all 16 wall connection masks per family, with an arm for each
 // connection, arches and doors in 4 directions (doors open and closed), self-seamless floors, chest art
 const { readFileSync, existsSync } = await import('node:fs');
+// Every combat biome also generates 60 new floors / 40 new props and per-family wall
+// texture treatments at runtime while retaining the source geometry below.
+for(const path of ['biomeexpansion.js','biomenativeart.js','isobarriers.js'])
+  if(!existsSync(new URL('../../src/gfx/'+path,import.meta.url)))
+    bad.push('Missing shared expansion renderer '+path);
+
 const asset = (f) => new URL('../../assets/' + f, import.meta.url);
 const packs = {};
 for (const b of BIOMES) {

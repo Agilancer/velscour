@@ -68,7 +68,7 @@ family each variant changes proportions, weapon/ornament shapes, headgear,
 palette, insignia and halo arrangements. The fifth variant is deliberately
 reserved for the biome's guardian/boss pool. **48** of the monsters can
 appear in normal packs and **12** are possible guardians, guaranteeing
-that this biome never uses old monster sprites in its rolled level looks.
+that these original designs remain available alongside newly added natives and existing global monster looks.
 
 The `BESTIARY` registers each generated ID (`hv_<family>_<1..5>`)
 under `sheet: 'heavenly/generated'`; it is intentionally excluded from
@@ -86,7 +86,7 @@ drop tables and status effects.
 
 `rollLooks` explicitly confines the 60 generated designs to HEAVENLY:
 normal dungeon biomes keep their original painted monster lineups and
-HEAVENLY's archetypes exclusively choose `hv_` art. Five palette finishes
+HEAVENLY's archetypes can now choose `hv_` originals, one of 50 new native looks, an existing global monster or a rare visitor. Five palette finishes
 are available per level, while the originals are preserved when matching
 the holy element.
 
@@ -122,7 +122,7 @@ node tools/tests/mobile.js
 
 The dedicated browser test checks all 60 rendered monster IDs for a unique
 pixel hash, nonempty opaque pixels, stable 160×186 frame/pivot, hit/flash
-and corpse modes, palette swaps, exclusive heavenly spawning, 12 generated
+and corpse modes, palette swaps, weighted Heavenly/global/visitor spawning, 12 generated
 dungeons, and 50 simulated 80-depth shuffle runs. It also validates
 the floor/prop/door/arch/wall metadata.
 
@@ -151,3 +151,15 @@ registration and randomized selection were tested in the connected
 GitHub session. Browser-rendering and mobile Safari performance, wall
 cutaway, actual character overlap, and appearance should be visually
 reviewed before merging the draft PR into main.
+
+## Worldwide expansion compatibility
+
+In the later `feature/worldwide-biome-art-and-spawns` overhaul, the original
+60 unique Heavenly sprites and artwork remain unchanged and available.
+The Empyrean Citadel additionally receives 60 new floor cells (120 total),
+40 additional props (80 total), unique updated wall materials and **50 new
+biome-native monster designs** with normal/global/rare-visitor spawning.
+The existing 60-sprite art export in this document still exports the original
+canonical collection; `node tools/tests/worldwide_biomes.js` verifies the
+new native set and full combined environment pack. See
+[WORLD_BIOME_OVERHAUL.md](WORLD_BIOME_OVERHAUL.md).

@@ -3,6 +3,7 @@ import { TileMap } from './map.js';
 import { RNG, clamp } from '../core/util.js';
 import { ARCH } from '../data/enemies.js';
 import { rollLooks } from '../data/bestiary.js';
+import { isoBarrier } from '../gfx/isobarriers.js';
 
 const S = 11; // chunk size in tiles
 
@@ -304,7 +305,20 @@ function placeObstacles(map, rooms, tileset, rng, startRoom) {
       if (e.block && !tryBlock(x, y)) continue;
       used.add(y * W + x);
       const j = e.block ? 0.08 : 0.25; // walk-over clutter can sit anywhere in its tile
-      props.push({ kind: 'scatter', x: x + 0.5 + rng.range(-j, j), y: y + 0.5 + rng.range(-j, j), spr: e, k: tileset.k, flip: rng.chance(0.5), light: LIT[e.name] });
+      const fence=/_barricade_|_fence_|_boundary_|railing|palisade/.test(e.name);
+      // A mirrored rail can never become the other projected tile axis.
+      // Barricades are now complete 1-tile X/Y isometric edge segments.
+      const axis = voidAround(x,y) && !map.tile(x,y-1) ? 'x'
+        : voidAround(x,y) && !map.tile(x-1,y) ? 'y'
+        : rng.chance(.5)?'x':'y';
+      const style=tileset.pack.includes('ice')?'crystal':
+        tileset.pack.includes('heaven')?'heavenly':
+        tileset.pack.includes('hell')?'hell':
+        tileset.pack.includes('astral')?'astral':'stone';
+      const spr=fence?isoBarrier(style,axis):e;
+      props.push({kind:'scatter',x:x+.5+(fence?0:rng.range(-j,j)),
+        y:y+.5+(fence?0:rng.range(-j,j)),spr,k:tileset.k,
+        flip:fence?false:rng.chance(.5),light:LIT[e.name]});
       i++;
     }
   }
@@ -457,6 +471,16 @@ function generateThrone(biome, tileset, seed) {
     { x: 22, y: 38, arch: 'abomination', n: 2, rank: 'unique' },
     { x: 22, y: 14, arch: 'velscour', n: 1, rank: 'boss' },
   ];
+  // The throne remains Velscour's scripted boss arena, but its corridors
+  // now also draw gauntlet guards from the FULL biome roster. This allows
+  // all 50 registered throne-native look variants (and the existing global
+  // bestiary) to be encountered across differently seeded final levels.
+  const throneGuards=(biome.roster||[]).filter(a=>a!=='velscour');
+  if(throneGuards.length){
+    for(const [x,y] of [[22,61],[10,48],[32,48],[12,38],[22,34]]){
+      spawns.push({x,y,arch:rng.pick(throneGuards),n:rng.int(1,3),rank:'normal'});
+    }
+  }
   const torches = [];
   for (const s of map.segments) if (!s.front && rng.next() < 0.12) torches.push({ x: s.mx + (s.dir === 'f' ? 0.12 : 0), y: s.my + (s.dir === 'b' ? 0.12 : 0), depth: s.depth + 0.01 });
   const props = [];

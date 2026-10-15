@@ -3,6 +3,8 @@ import { TileMap } from './map.js';
 import { RNG, TAU } from '../core/util.js';
 import { A } from '../core/assets.js';
 import { TW } from '../core/view.js';
+import { isoBarrier, isoBarrierProp } from '../gfx/isobarriers.js';
+import { extendedTownFloors, outdoorBiomeProp, TOWN_FLOOR_EXPANSION } from '../gfx/biomeexpansion.js';
 
 export const VENDORS = [
   { id: 'weapons', name: 'Garrick Ironhand', title: 'Weaponsmith', sprite: 'barbarian', pal: { hue: 25, sat: 0.6, light: -0.02 }, sign: 'sword', greet: 'Steel for the slaughter. Pick your poison - edges, hafts or bows.' },
@@ -30,6 +32,7 @@ export function makeTownTiles() {
   for (const n of MATS) tiles.push(ent(m.floors[n]));
   TPAIRS = Object.keys(m.transitions);
   for (const p of TPAIRS) for (const r of m.transitions[p]) tiles.push(ent(r));
+  tiles.push(...extendedTownFloors(t.ground,m));
   return tiles;
 }
 
@@ -241,7 +244,8 @@ function rollTown(tileset, seed, last) {
     return !props.some((p) => p.kind === 'scatter' && Math.abs(p.x - x) < 0.8 && Math.abs(p.y - y) < 0.8);
   };
   const prop = (name, x, y, opts = {}) => {
-    const spr = S(name), solid = opts.solid ?? SOLID.test(name);
+    const spr = typeof name === 'string' ? S(name) : name;
+    const solid = opts.solid ?? (typeof name === 'string' && SOLID.test(name));
     if (!spr || !free(x, y, solid)) return false;
     props.push({ kind: 'scatter', x, y, spr, k, flip: opts.flip ?? rng.chance(0.5) });
     if (solid) blockAt(x, y);
@@ -279,8 +283,16 @@ function rollTown(tileset, seed, last) {
     return null;
   };
   const nearForest = (x0, y0) => { for (let d = 1; d < 4; d++) for (const [x, y] of [[x0 - d, y0], [x0, y0 - d], [x0 + 5 + d, y0], [x0, y0 + 4 + d]]) if (inb(x, y) && use[I(x, y)] === 4) return true; return false; };
-  const fenceX = (x0, x1, y) => { for (let x = x0; x < x1; x++) prop('split_rail_fence', x + 0.5, y, { flip: true }); };
-  const fenceY = (y0, y1, x) => { for (let y = y0; y < y1; y++) prop('split_rail_fence', x, y + 0.5, { flip: false }); };
+  // Fence axes are distinct isometric projections. Flipping a single fence
+  // sprite (the previous implementation) did NOT rotate it, breaking joins.
+  const barrier = (style,axis,x,y,solid=true) => {
+    if (!free(x,y,solid)) return false;
+    props.push(isoBarrierProp(style,axis,x,y,k));
+    if (solid) blockAt(x,y);
+    return true;
+  };
+  const fenceX = (x0, x1, y) => { for(let x=x0;x<x1;x++) barrier('rail','x',x+.5,y); };
+  const fenceY = (y0, y1, x) => { for(let y=y0;y<y1;y++) barrier('rail','y',x,y+.5); };
   const yards = shuffle(['garden', 'garden', 'orchard', 'lumber', 'paddock', 'ruins', 'garden', 'glade'], rng).slice(0, rng.int(4, 7));
   for (const kind of yards) {
     if (kind === 'garden') {
@@ -317,8 +329,8 @@ function rollTown(tileset, seed, last) {
       if (!at) continue;
       const [x0, y0] = at;
       for (let y = y0; y < y0 + 5; y++) for (let x = x0; x < x0 + 5; x++) if (rng.chance(0.45)) mat[I(x, y)] = rng.chance(0.5) ? 1 : 4;
-      for (let x = x0; x < x0 + 5; x++) if (rng.chance(0.65)) prop('stone_boundary', x + 0.5, y0 + 0.2, { flip: true });
-      for (let y = y0 + 1; y < y0 + 5; y++) if (rng.chance(0.55)) prop('stone_boundary', x0 + 0.2, y + 0.5, { flip: false });
+      for (let x = x0; x < x0 + 5; x++) if (rng.chance(0.65)) barrier('stone','x',x + 0.5, y0 + 0.2);
+      for (let y = y0 + 1; y < y0 + 5; y++) if (rng.chance(0.55)) barrier('stone','y',x0 + 0.2, y + 0.5);
       for (const n of ['tiles_and_bricks', 'broken_wheel', 'cart_debris', 'moss_boulder', 'fieldstone_cluster', 't_dead_oak']) if (rng.chance(0.7)) prop(n, x0 + R(1.2, 4.6), y0 + R(1.2, 4.6));
     } else if (kind === 'glade') {
       const at = yard(4, 4);
@@ -377,6 +389,16 @@ function rollTown(tileset, seed, last) {
     prop(rng.pick(brush), x, y);
   }
 
+  // Forty NEW town-specific scatter designs (statuary, shrine stones, relics,
+  // shop furnishings and walk-over details). No combat spawns in Duskhollow.
+  for(let i=0;i<40;i++){
+    const spr=outdoorBiomeProp('town',i);
+    for(let attempt=0;attempt<14;attempt++){
+      const x=Math.floor(R(4,W-4))+.5,y=Math.floor(R(4,H-4))+.5;
+      if(!open(x,y,.25)||nearKey(x,y,1.6))continue;
+      if(prop(spr,x,y,{solid:false,flip:false}))break;
+    }
+  }
   // ---- ground tiles: a tile beside a softer material takes the transition with that material on the shared side(s)
   makeTownTiles();
   const at = (x, y) => mat[Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))];
@@ -392,7 +414,12 @@ function rollTown(tileset, seed, last) {
       const pi = TPAIRS.indexOf(MATS[n] + '__' + MATS[m]);
       v = shape < 0 || pi < 0 ? n : 6 + pi * 8 + shape;
     }
-    map.v[y * W + x] = v;
+    // Use 60 new original town material accents only inside same-material
+    // stretches. Existing shoreline/road transition indices remain intact.
+    if(v===m && n===99 && !keep[y*W+x] && use[y*W+x]!==2 &&
+      (x*29+y*37+seed)%13===0)
+      v=TOWN_FLOOR_EXPANSION.start + ((x*7+y*13+seed)>>>0)%TOWN_FLOOR_EXPANSION.count;
+    map.v[y*W+x]=v;
   }
   props.push(...torches);
 
