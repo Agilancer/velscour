@@ -77,6 +77,10 @@ const asset = (f) => new URL('../../assets/' + f, import.meta.url);
 const packs = {};
 for (const b of BIOMES) {
   if (!b.pack) { bad.push(`biome ${b.id}: no pack`); continue; }
+  if (b.pack === 'ice_temple') {
+    if (!existsSync(new URL('../../src/gfx/icetemple.js', import.meta.url))) bad.push('missing Ice Temple art generator');
+    continue; // runtime-generated full pack: browser QA validates all geometry
+  }
   if (b.pack === 'desert_temple') {
     // Original Canvas asset generator delivers a complete pack at runtime using
     // the proven Catacombs wall/arch/door slicing and geometry contract.
