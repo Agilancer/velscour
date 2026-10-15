@@ -222,3 +222,37 @@ sprite alignment, screenshot contact sheets and WebP atlas export.
 node tools/tests/heavenly.js
 node tools/tests/pack.js heavenly
 ```
+
+## Worldwide biome/environment and barricade expansion
+
+As of the `feature/worldwide-biome-art-and-spawns` branch, every indoor
+combat dungeon receives an extra 60 isometric 160×80 floor sprites, 40 new
+biome-specific props and separate overlays for each wall-family's entire
+16-mask metadata topology. The original architecture's silhouette slices
+and door hinges are preserved. The `src/gfx/biomeexpansion.js` renderer
+uses source material grain and precise pixel-sized decorations to keep
+the same overall native 2D iso-art contract. New atlases are cached lazily.
+
+Duskhollow **and** the Forsaken Wilds each get an *independent* set of 60
+new 160×80 environment floors, plus 40 extra scatter designs. The normal
+town transitions and vendor buildings are left at their original indexes
+so they do not suddenly point at the wrong ground sprite.
+
+**Fence fix:** the former town split-rail and stone-boundary sprites were
+mirrored to approximate 90-degree turns, which cannot work on a 2:1
+isometric tile grid. `src/gfx/isobarriers.js` now generates true X and Y
+segments with endpoints offset `(±40,±20)` in native pixels and
+identical pivot logic for each material. The same generator is used for
+wall-like dungeon scatter, town gardens/paddocks/ruins and wilderness
+stone boundaries.
+
+The new monsters are separate from architectural assets:
+`src/data/biomenatives.js` (50 native identities per combat biome)
+and `src/gfx/biomenativeart.js` (source-painted silhouettes with unique
+gear/appendages/materials) keep VELSCOUR's actual monster renderer and
+foot-anchor alignment. This is procedural art, not 1,600 independently
+hand-painted animation sets.
+
+**Review/testing:** [WORLD_BIOME_OVERHAUL.md](WORLD_BIOME_OVERHAUL.md).
+Run `node tools/tests/worldwide_biomes.js` and screenshot-review all
+barrier joins at game zoom before merging.
