@@ -3,6 +3,7 @@ import { TileMap } from './map.js';
 import { RNG, clamp } from '../core/util.js';
 import { ARCH } from '../data/enemies.js';
 import { rollLooks } from '../data/bestiary.js';
+import { isoBarrier } from '../gfx/isobarriers.js';
 
 const S = 11; // chunk size in tiles
 
@@ -304,7 +305,20 @@ function placeObstacles(map, rooms, tileset, rng, startRoom) {
       if (e.block && !tryBlock(x, y)) continue;
       used.add(y * W + x);
       const j = e.block ? 0.08 : 0.25; // walk-over clutter can sit anywhere in its tile
-      props.push({ kind: 'scatter', x: x + 0.5 + rng.range(-j, j), y: y + 0.5 + rng.range(-j, j), spr: e, k: tileset.k, flip: rng.chance(0.5), light: LIT[e.name] });
+      const fence=/_barricade_|_fence_|_boundary_/.test(e.name);
+      // A mirrored rail can never become the other projected tile axis.
+      // Barricades are now complete 1-tile X/Y isometric edge segments.
+      const axis = voidAround(x,y) && !map.tile(x,y-1) ? 'x'
+        : voidAround(x,y) && !map.tile(x-1,y) ? 'y'
+        : rng.chance(.5)?'x':'y';
+      const style=tileset.pack.includes('ice')?'crystal':
+        tileset.pack.includes('heaven')?'heavenly':
+        tileset.pack.includes('hell')?'hell':
+        tileset.pack.includes('astral')?'astral':'stone';
+      const spr=fence?isoBarrier(style,axis):e;
+      props.push({kind:'scatter',x:x+.5+(fence?0:rng.range(-j,j)),
+        y:y+.5+(fence?0:rng.range(-j,j)),spr,k:tileset.k,
+        flip:fence?false:rng.chance(.5),light:LIT[e.name]});
       i++;
     }
   }
