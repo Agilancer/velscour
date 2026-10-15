@@ -30,6 +30,10 @@ function rhythm(id) {
 }
 
 function tick(now) {
+  // Sixteen animated cards at retina resolution needlessly saturate phone GPUs.
+  if (last && window.matchMedia('(pointer: coarse)').matches && now - last < 32) {
+    raf = requestAnimationFrame(tick); return;
+  }
   const dt = Math.min(0.05, (now - (last || now)) / 1000);
   last = now;
   for (const a of live) { if (!a.canvas.isConnected) live.delete(a); else a.frame(dt); }
@@ -46,18 +50,20 @@ export function heroCanvas(id, cls = 'hero-cv') {
   canvas.className = cls;
   const ctx = canvas.getContext('2d');
   const a = {
-    canvas, id: null, R: null, t: Math.random() * 20, ex: 0, hov: false, burstT: 0, hopT: 0, sparks: [], color: '#ffd860',
-    setId(nid) { if (nid === this.id) return; this.id = nid; this.R = rhythm(nid); this.color = AURA[nid] || (CLASSES[nid] && CLASSES[nid].color) || '#ffd860'; this.sparks.length = 0; },
+    canvas, id: null, art: null, R: null, t: Math.random() * 20, ex: 0, hov: false, burstT: 0, hopT: 0, sparks: [], color: '#ffd860',
+    setId(nid) { if (nid === this.id) return; this.id = nid; this.art = null; this.R = rhythm(nid); this.color = AURA[nid] || (CLASSES[nid] && CLASSES[nid].color) || '#ffd860'; this.sparks.length = 0; },
+    setArt(image) { this.art = image || null; },
     hover(on) { this.hov = on; },
     burst(sec = 1.6) { this.burstT = Math.max(this.burstT, sec); },
     frame(dt) {
-      const img = portrait(this.id);
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const img = this.art || portrait(this.id);
+      const nw = img.naturalWidth || img.width, nh = img.naturalHeight || img.height;
+      const dpr = Math.min(window.matchMedia('(pointer: coarse)').matches ? 1.4 : 2, window.devicePixelRatio || 1);
       const cw = Math.round(canvas.clientWidth * dpr), ch = Math.round(canvas.clientHeight * dpr);
       if (!cw || !ch) return;
       if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
       ctx.clearRect(0, 0, cw, ch);
-      if (!img.complete || !img.naturalWidth) return;
+      if (!nw || !nh) return;
       this.t += dt;
       this.burstT = Math.max(0, this.burstT - dt);
       const want = this.hov || this.burstT > 0 ? 1 : 0;
@@ -65,8 +71,8 @@ export function heroCanvas(id, cls = 'hero-cv') {
       const R = this.R, t = this.t, ex = calm ? this.ex * 0.4 : this.ex, idle = calm ? 0.5 : 1;
       if (ex > 0.01) this.hopT += dt * R.hopHz; else this.hopT = 0;
       // fit: leave headroom for the hop and stretch; the feet sit just above the card's name plaque edge
-      const k = Math.min(cw / (img.naturalWidth * 1.12), ch / (img.naturalHeight * 1.1));
-      const W = img.naturalWidth * k, H = img.naturalHeight * k;
+      const k = Math.min(cw / (nw * 1.12), ch / (nh * 1.1));
+      const W = nw * k, H = nh * k;
       const cx = cw / 2, base = ch - Math.max(2, ch * 0.02);
       const b = Math.sin(t * 6.283 / R.breath + R.ph) * idle;                  // breathing, -1..1
       const s = (Math.sin(t * 6.283 / R.sway + R.ph2) + 0.35 * Math.sin(t * 2.1 + R.ph)) * R.swayAmp * idle;
@@ -97,7 +103,7 @@ export function heroCanvas(id, cls = 'hero-cv') {
       // the body, in strips from the feet up: the chest rises with each breath, the top bends further than the hips
       const strip = Math.max(2, Math.round(2 * dpr));
       const n = Math.max(8, Math.ceil(H * sy / strip));
-      const srcH = img.naturalHeight / n, sw = img.naturalWidth;
+      const srcH = nh / n, sw = nw;
       const lift = (v) => H * sy * (v + 0.022 * b * Math.max(0, v - 0.45));
       const jig = R.wobble * 0.02 * (0.5 + ex);
       for (let i = 0; i < n; i++) {
@@ -105,7 +111,7 @@ export function heroCanvas(id, cls = 'hero-cv') {
         const y1 = feet - lift(v1), y0 = feet - lift(v0);
         const wx = W * sx * (1 + jig * Math.sin(t * 6 + vm * 9));
         const x = cx - wx / 2 + lean * vm * vm;
-        ctx.drawImage(img, 0, img.naturalHeight - (i + 1) * srcH, sw, srcH, x, y1, wx, y0 - y1 + 0.6);
+        ctx.drawImage(img, 0, nh - (i + 1) * srcH, sw, srcH, x, y1, wx, y0 - y1 + 0.6);
       }
       // sparks rising off an excited hero
       if (ex > 0.25 && !calm) {

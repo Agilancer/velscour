@@ -7,6 +7,7 @@ import { CLASSES, ATTRS } from '../data/classes.js';
 import { UI, $ } from './ui.js';
 import { listSaves, heroesByClass, deleteClassSaves } from '../game/save.js';
 import { heroCanvas, excitable, preloadPortraits } from './heroanim.js';
+import { savedGearPreview } from '../core/gearart.js';
 import { attachTitleFx } from './titlefx.js';
 
 let current = null;
@@ -69,6 +70,15 @@ export function classSelect(sel = 'paladin', back = titleScreen) {
   const text = el('div', 'class-text');
   info.append(bigBox, text);
   const cards = {};
+  const showSavedGear = (id, anim) => {
+    const h = heroes[id];
+    if (!h || !h.equip) return;
+    savedGearPreview(id, h.equip.body, h.equip.head).then(art => {
+      if (!art || !s.isConnected || anim.id !== id) return;
+      anim.setArt(art);
+      anim.canvas.dataset.gearPreview = 'ready';
+    });
+  };
   const row = el('div', 'row');
   const name = el('input', 'name-input');
   const go = el('button', 'btn big', 'Begin');
@@ -76,8 +86,13 @@ export function classSelect(sel = 'paladin', back = titleScreen) {
   const renderInfo = () => {
     const C = CLASSES[sel], h = heroes[sel];
     big.setId(sel);
+    showSavedGear(sel, big);
+    const slots = { weapon: 'Weapon', offhand: 'Offhand', body: 'Armor', head: 'Helm', hands: 'Gloves', legs: 'Legs', feet: 'Boots', ring1: 'Ring I', ring2: 'Ring II', ring3: 'Ring III', ring4: 'Ring IV' };
+    const gear = h && h.equip ? Object.entries(slots).filter(([slot]) => h.equip[slot])
+      .map(([slot, label]) => '<span><b>' + label + ':</b> ' + escapeHtml(h.equip[slot].name || h.equip[slot].base || 'Equipped') + '</span>').join('') : '';
     text.innerHTML = (h ? `<h2>${escapeHtml(h.name)}</h2><p><b style="color:#ffd34a">Level ${h.level} ${C.name}</b> · Depth ${h.depth} · Deepest ${h.deepest || 0} · ${fmtInt(h.gold)} gold</p>` : `<h2>${C.name}</h2>`) +
-      `<p>${escapeHtml(C.desc)}</p><p class="dim">Skill trees: <b style="color:#e9dcc4">${C.trees.join(' · ')}</b><br>Primary attribute: <b style="color:#ffd34a">${ATTRS[C.primary].name}</b> · Life ${C.life} · Mana ${C.mana}</p>`;
+      `<p>${escapeHtml(C.desc)}</p><p class="dim">Skill trees: <b style="color:#e9dcc4">${C.trees.join(' · ')}</b><br>Primary attribute: <b style="color:#ffd34a">${ATTRS[C.primary].name}</b> · Life ${C.life} · Mana ${C.mana}</p>` +
+      (gear ? '<div class="class-gear-summary" aria-label="Saved equipped gear">' + gear + '</div>' : '');
     for (const id in cards) cards[id].classList.toggle('sel', id === sel);
     name.style.display = h ? 'none' : '';
     go.innerHTML = h ? 'Play' : 'Begin';
@@ -93,6 +108,7 @@ export function classSelect(sel = 'paladin', back = titleScreen) {
     const card = el('div', 'class-card' + (heroes[id] ? ' has-hero' : ''));
     const anim = heroCanvas(id);
     card.appendChild(anim.canvas);
+    showSavedGear(id, anim);
     const h = heroes[id];
     if (h) card.insertAdjacentHTML('beforeend', `<div class="card-lv">Lv ${h.level}</div>`);
     card.insertAdjacentHTML('beforeend', plaque(h ? h.name : CLASSES[id].name));

@@ -74,9 +74,9 @@ function fxFor(rarity) {
  * The look of a body armor or helm for the played class: [design, finish, effect] (effect -1 = none). Rolled on
  * first use from the item's rarity and level and kept on the item (so saves keep it); null without gear art.
  */
-export function itemLook(item) {
-  if (!item || item.type !== 'gear' || (item.slot !== 'body' && item.slot !== 'head') || !S.meta) return null;
-  const lib = S.meta[item.slot === 'body' ? 'armor' : 'helms'];
+export function itemLook(item, src = S) {
+  if (!item || item.type !== 'gear' || (item.slot !== 'body' && item.slot !== 'head') || !src.meta) return null;
+  const lib = src.meta[item.slot === 'body' ? 'armor' : 'helms'];
   if (!item.look || item.look[0] > lib.n) {
     const band = lib.bands[rarityName(item.rarity)] || lib.bands.common;
     item.look = [designFor(band, item.ilvl), finishFor(item.rarity), item.slot === 'body' ? fxFor(item.rarity) : -1];
@@ -135,8 +135,8 @@ function recolorPx(d, i, pi, L, k) {
 }
 
 /** One armor frame (1-based id) as RGBA bytes, recoloured by palette `pi`. */
-function armorPixels(id, pi) {
-  const { meta, armor, amask } = S, [fw, fh] = meta.frame;
+function armorPixels(id, pi, src = S) {
+  const { meta, armor, amask } = src, [fw, fh] = meta.frame;
   const sx = ((id - 1) % meta.cols) * fw, sy = Math.floor((id - 1) / meta.cols) * fh, aw = armor.width;
   const out = new Uint8ClampedArray(fw * fh * 4);
   const pal = PALETTES[pi] || PALETTES[0], L = pal.k ? luts(pi) : null;
@@ -214,8 +214,8 @@ function closeHelmOpening(px, mask, w, h, id) {
 }
 
 /** One helm cell (1-based id), with its open faces plated shut and palette recoloured. */
-function helmPixels(id, pi) {
-  const { meta, helms, hmask } = S, [, , hw, hh] = meta.helmCell;
+function helmPixels(id, pi, src = S) {
+  const { meta, helms, hmask } = src, [, , hw, hh] = meta.helmCell;
   const sx = ((id - 1) % meta.cols) * hw, sy = Math.floor((id - 1) / meta.cols) * hh, aw = helms.width;
   const out = new Uint8ClampedArray(hw * hh * 4), m = new Uint8Array(hw * hh);
   const pal = PALETTES[pi] || PALETTES[0], L = pal.k ? luts(pi) : null;
@@ -244,16 +244,16 @@ const looks = new Map();
  * The hero's full-frame canvas wearing `body` and `head` (gear items or null), or null without gear art.
  * No body armor shows the first, plainest design; no helm shows the bare head.
  */
-export function heroLook(cls, body, head) {
-  if (!gearMeta(cls)) return null;
-  const bl = body ? itemLook(body) : [1, 0, -1], hl = head ? itemLook(head) : null;
+export function heroLook(cls, body, head, src = S, outCache = looks) {
+  if (src.cls !== cls || !src.meta) return null;
+  const bl = body ? itemLook(body, src) : [1, 0, -1], hl = head ? itemLook(head, src) : null;
   const key = bl[0] + '|' + bl[1] + '|' + (hl ? hl[0] + '|' + hl[1] : '-');
-  let c = looks.get(key);
+  let c = outCache.get(key);
   if (c) return c;
-  const { meta } = S, [fw, fh] = meta.frame;
-  const px = armorPixels(bl[0], bl[1]);
+  const { meta } = src, [fw, fh] = meta.frame;
+  const px = armorPixels(bl[0], bl[1], src);
   if (hl) {
-    const [hx, hy, hw, hh] = meta.helmCell, { px: hp, m } = helmPixels(hl[0], hl[1]);
+    const [hx, hy, hw, hh] = meta.helmCell, { px: hp, m } = helmPixels(hl[0], hl[1], src);
     const ax = ((bl[0] - 1) % meta.cols) * fw;
     const ay = Math.floor((bl[0] - 1) / meta.cols) * fh;
     for (let y = 0; y < hh; y++) {
@@ -261,7 +261,7 @@ export function heroLook(cls, body, head) {
         const hi = y * hw + x, o = ((hy + y) * fw + hx + x) * 4;
         const mk = m[hi], shell = hp[hi * 4 + 3] > 0;
         if (mk === 128) { // Crown clip: remove the base head's protected skin/hair, never armor/trim.
-          if (S.amask[(ay + hy + y) * S.armor.width + ax + hx + x]) px[o + 3] = 0;
+          if (src.amask[(ay + hy + y) * src.armor.width + ax + hx + x]) px[o + 3] = 0;
           continue;
         }
         if (!shell) continue;
@@ -271,8 +271,8 @@ export function heroLook(cls, body, head) {
     }
   }
   c = toCanvas(px, fw, fh);
-  if (looks.size >= 8) looks.delete(looks.keys().next().value);
-  looks.set(key, c);
+  if (outCache.size >= 8) outCache.delete(outCache.keys().next().value);
+  outCache.set(key, c);
   return c;
 }
 
@@ -321,4 +321,35 @@ export function heroPortrait(cls, body, head, w, h) {
   b[0] = ab[0]; b[1] = ab[1]; b[2] = ab[2]; b[3] = ab[3];
   if (head) { const hb = m.helms.box[itemLook(head)[0] - 1]; b[1] = Math.min(b[1], hb[1] + m.helmCell[1]); }
   return fitCanvas(c, b, w, h);
+}
+
+// Independent, sequential save previews: never replace the active game's gear state
+// while class cards are loading. Decode one class at a time and discard full atlases
+// immediately after composing its body/helm. Existing saved item looks are reused.
+const savedPreviews = new Map();
+let previewQueue = Promise.resolve();
+export function savedGearPreview(cls, body, head) {
+  const signature = cls + '|' + JSON.stringify([body && [body.look, body.ilvl, body.rarity],
+    head && [head.look, head.ilvl, head.rarity]]);
+  if (savedPreviews.has(signature)) return savedPreviews.get(signature);
+  const work = previewQueue.then(async () => {
+    const dir = BASE + cls + '/';
+    const [meta, armor, amask, helms, hmask] = await Promise.all([
+      fetch(dir + 'gear.json').then(r => { if (!r.ok) throw new Error('gear ' + cls); return r.json(); }),
+      loadImage(dir + 'armor.webp'), loadImage(dir + 'armor_mask.png'),
+      loadImage(dir + 'helms.webp'), loadImage(dir + 'helms_mask.png'),
+    ]);
+    const src = { cls, meta, armor: pixels(armor), amask: channel(amask),
+      helms: pixels(helms), hmask: channel(hmask) };
+    return heroLook(cls, body, head, src, new Map());
+  });
+  previewQueue = work.catch(() => {});
+  const result = work.catch(e => {
+    savedPreviews.delete(signature);
+    console.warn('Saved hero preview unavailable for', cls, e);
+    return null;
+  });
+  savedPreviews.set(signature, result);
+  if (savedPreviews.size > 18) savedPreviews.delete(savedPreviews.keys().next().value);
+  return result;
 }
