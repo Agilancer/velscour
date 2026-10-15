@@ -3,7 +3,8 @@ import { G } from '../state.js';
 import { rand, chance, TAU, clamp, angleTo, angleDiff, dist, randi } from '../core/util.js';
 import { isoX, isoY, HW, HH } from '../core/view.js';
 import { sfx } from '../core/audio.js';
-import { spawn, burst, addEffect, Ring, Bolt, Beam, Slash, Telegraph, elem, glowSprite, addLight, smoke, addDecal, sparkle } from '../gfx/vfx.js';
+import { spawn, burst, addEffect, Ring, Bolt, Beam, Slash, Telegraph, elem, glowSprite, addLight, smoke, addDecal, sparkle, gibs } from '../gfx/vfx.js';
+import { emitWhirlCyclone, captureWhirlGibs, drawWhirlCyclone } from '../gfx/barbarianwhirl.js';
 import { drawShape, trail, explosionFx, hitSpark } from '../gfx/shapes.js';
 import { drawLancerOrbitShield } from '../gfx/lancershields.js';
 import { screenAngle } from '../gfx/vfx.js';
@@ -446,6 +447,8 @@ export class Whirl {
     this.slashT = 0;
     this.lightningT = 0.9;
     this.tornadoT = 1.4;
+    this.cycloneT = 0;
+    this.gibT = 0;
   }
   get depth() { return this.src.x + this.src.y + 0.1; }
   update(dt) {
@@ -459,16 +462,35 @@ export class Whirl {
       s.char.rage = s.rage;
       if (s.rage <= 0) { s.channel = null; return false; }
     }
-    // follow the player's live aim if available
+    // While spinning, honor the normal autopilot waypoint / manual movement vector.
+    // Never drive straight at an old target through a room's walls.
     if (s.isPlayer && s.aim) { this.tx = s.aim[0]; this.ty = s.aim[1]; }
-    const d = dist(s.x, s.y, this.tx, this.ty);
-    if (d > 0.3) s.moveToward(this.tx, this.ty, dt, this.speed);
-    s.moving = true;
+    const [vx, vy] = s.moveVec || [0, 0], moving = Math.hypot(vx, vy);
+    if (this.rage && moving > 0.01) {
+      s.moving = this.world.map.move(s, vx / moving * this.speed * s.speedMul() * dt,
+        vy / moving * this.speed * s.speedMul() * dt, s.ghost);
+      if (s.moving) s.face(Math.atan2(vy, vx));
+    } else if (this.rage && s.moveTarget && !s.whirlAuto) {
+      s.walkTo(s.moveTarget[0], s.moveTarget[1], dt);
+    } else {
+      const d = dist(s.x, s.y, this.tx, this.ty);
+      const closeEnemy = this.world.hostiles(this.team, s.x, s.y, 7).some((c) =>
+        this.world.map.los(s.x, s.y, c.x, c.y));
+      if (d > 0.3 && (!s.whirlAuto || closeEnemy) &&
+        this.world.map.losWide(s.x, s.y, this.tx, this.ty)) s.moveToward(this.tx, this.ty, dt, this.speed);
+      else s.moving = false;
+    }
     this.tickT -= dt;
     if (this.tickT <= 0) {
       this.tickT = this.tick;
       for (const c of this.world.hostiles(this.team, s.x, s.y, this.r)) {
         hit(s, c, roll(this.dmg), this.el, { ...this.o, ang: angleTo(s.x, s.y, c.x, c.y) });
+        if (this.rage && !c.dead && this.gibT <= 0 && G.settings.gore > 0 &&
+          !['spark', 'ecto', 'rock'].includes(c.goreType)) {
+          this.gibT = 0.45;
+          const set = c.goreType === 'bone' ? ['bone'] : c.demon ? ['demon'] : ['flesh', 'limb'];
+          gibs(c.x, c.y, 15, G.touch ? 1 : 3, '#9e2022', '#ddd5c5', 0.72, set);
+        }
         // Pull normal enemies toward the eye of the storm, but never through a wall.
         if (this.pull && !c.dead && c.rank !== 'boss') {
           const d = dist(c.x, c.y, s.x, s.y);
@@ -479,6 +501,15 @@ export class Whirl {
           }
         }
       }
+    }
+    if (this.rage) {
+      this.gibT -= dt;
+      this.cycloneT -= dt;
+      if (this.cycloneT <= 0) {
+        this.cycloneT += G.touch ? 0.11 : 0.075;
+        emitWhirlCyclone(s, this.t, this.r);
+      }
+      captureWhirlGibs(s, this.r);
     }
     this.slashT -= dt;
     if (this.slashT <= 0) {
@@ -512,7 +543,7 @@ export class Whirl {
     }
     return true;
   }
-  draw() {}
+  draw(ctx) { if (this.rage) drawWhirlCyclone(ctx, this.src, this.t, this.r); }
 }
 
 // ===================================================================== Leap

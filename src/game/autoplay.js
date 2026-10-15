@@ -16,7 +16,7 @@ import { equipFromBag, socketGem, dropFromBag, changed } from '../ui/inventory.j
 import { Vendor, fuseAll } from '../ui/vendor.js';
 import { Stash, addToStash } from '../ui/stash.js';
 import { addToBag } from './player.js';
-import { Delayed, Area } from './hazards.js';
+import { Delayed, Area, Whirl } from './hazards.js';
 import { effects, Telegraph } from '../gfx/vfx.js';
 import { BAR_SIZE, LMB, RMB, FILL_ORDER, SLOT_KEYS } from '../data/bar.js';
 
@@ -289,7 +289,7 @@ export const Auto = {
     this.errors = 0;
     this.reset();
     const p = G.player;
-    if (!v && p) { p.moveVec = [0, 0]; p.lootTarget = null; }
+    if (!v && p) { p.moveVec = [0, 0]; p.lootTarget = null; p.whirlAuto = false; }
     if (v && G.ui) G.ui.log(`<b>Auto-play on.</b> ${G.touch ? 'Use the controls to take over for a moment; tap Auto to stop.' : 'Move or click to take over for a moment; P or the Auto button stops it.'}`, '#8fe0ff');
     else if (G.ui) G.ui.log('Auto-play off.', '#8fe0ff');
     this.setStatus(v ? 'Thinking…' : '');
@@ -341,10 +341,11 @@ export const Auto = {
     const p = G.player, w = G.world, c = G.char;
     if (!p || !w || !c) return;
     if (w !== this.world) { const keep = this.ignore; this.reset(); this.ignore = keep; this.world = w; }
+    p.whirlAuto = this.overrideT <= 0;
     if (this.handleScreens(dt)) return;
     if (p.dead) { this.setStatus('Fallen…'); return; }
     if (this.transitT > 0) { this.transitT -= dt; this.setStatus('Travelling…'); return; }
-    if (this.overrideT > 0) { this.overrideT -= dt; this.setStatus('Manual control'); return; }
+    if (this.overrideT > 0) { p.whirlAuto = false; this.overrideT -= dt; this.setStatus('Manual control'); return; }
     this.thinkT -= dt;
     if (this.thinkT <= 0) { this.thinkT = 1; this.manageHero(); }
     p.moveVec = [0, 0];
@@ -462,7 +463,7 @@ export const Auto = {
     const bar = Array(BAR_SIZE).fill(null);
     const main = parts.find((x) => x.role === 'main');
     const alt = parts.find((x) => x.role === 'alt' || x.role === 'filler');
-    const free = learned.find((sk) => !manaCost(sk, 1) && !rageCost(sk) &&
+    const free = (c.classId === 'barbarian' && learned.find((sk) => sk.id === 'barbarian.0.0')) || learned.find((sk) => !manaCost(sk, 1) && !rageCost(sk) &&
       !(sk.classId === 'barbarian' && sk.kind === 'whirl') && OFFENSIVE.has(sk.kind));
     const hammer = c.classId === 'paladin' && parts.filter((x) => x.sk.kind === 'orbit' &&
       isHammer(x.sk) && cooldown(x.sk) < 1.2).sort((a, b) => b.v - a.v)[0];
@@ -694,7 +695,8 @@ export const Auto = {
   /** Notice when the hero walks into a wall or a crowd and wiggle free. */
   watchStuck(dt) {
     const p = G.player, s = this.stuck;
-    const trying = (p.moveVec[0] || p.moveVec[1]) && p.castLock <= 0 && !p.channel;
+    const trying = (p.moveVec[0] || p.moveVec[1]) && p.castLock <= 0 &&
+      (!p.channel || (p.channel instanceof Whirl && p.classId === 'barbarian'));
     s.t += dt;
     if (s.t < 0.6) return;
     const moved = dist(p.x, p.y, s.x, s.y);
@@ -1022,7 +1024,14 @@ export const Auto = {
     if (this.banT > 0) this.banT -= 1 / 30;
     p.aim = [t.x, t.y];
     if (!fleeing) this.setStatus(`Fighting ${t.name || 'a monster'}`);
-    if (p.channel) return; // channelled beams follow p.aim
+    // A Barbarian can run at distant visible foes WHILE channeling Whirlwind.
+    // This feeds the same goTo/steer path waypoints as ordinary movement.
+    if (p.channel instanceof Whirl && p.classId === 'barbarian') {
+      if (!fleeing && dist(p.x, p.y, t.x, t.y) > Math.max(0.7, p.channel.r * 0.65))
+        this.goTo(t.x, t.y, Math.max(0.6, p.channel.r * 0.6), 1 / 30);
+      return;
+    }
+    if (p.channel) return;
     const d = dist(p.x, p.y, t.x, t.y);
     const melee = this.meleeBuild();
     if (p.castLock <= 0) {

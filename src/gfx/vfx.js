@@ -466,6 +466,19 @@ export function updateVfx(dt, world) {
     const p = particles[i];
     p.life -= dt;
     if (p.life <= 0) { if (p.spr) spriteGibs--; particles.splice(i, 1); continue; }
+    // Cyclone wind (and captured gib sprites) follow the caster's moving isometric spiral.
+    if (p.vortex && !p.vortex.owner.dead) {
+      const v = p.vortex;
+      v.angle += v.omega * dt;
+      v.radius = Math.max(v.gib ? 0.12 : 0.24, v.radius + v.radial * dt);
+      p.vx = -Math.sin(v.angle) * v.radius * v.omega;
+      p.vy = Math.cos(v.angle) * v.radius * v.omega;
+      p.x = v.owner.x + Math.cos(v.angle) * v.radius;
+      p.y = v.owner.y + Math.sin(v.angle) * v.radius;
+      p.z = Math.min(110, p.z + v.rise * dt);
+      p.rot += p.vr * dt;
+      continue;
+    }
     const drag = Math.max(0, 1 - p.drag * dt);
     p.vx *= drag; p.vy *= drag;
     p.x += p.vx * dt; p.y += p.vy * dt;

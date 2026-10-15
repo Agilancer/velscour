@@ -38,7 +38,9 @@ October 15, 2026. Implemented on branch `feature/autoplay-focus-town-shields-202
   enemies (or a boss). This avoids starving the class's primary mechanic.
 - Barbarian Whirlwind retains its existing 10-Rage activation minimum for
   *manual* play and 10-Rage/s channel drain; only auto-play has the extra
-  threshold. Rage regenerates at 12/s outside Whirlwind.
+  threshold. **Superseded:** Rage now starts at 0 and is built by attacks,
+  with Bash earning the most. There is no idle regeneration.
+  See [BARBARIAN_WHIRLWIND_REWORK.md](BARBARIAN_WHIRLWIND_REWORK.md).
 
 ## Lancer shields
 

@@ -5,8 +5,10 @@ changing approved PNG sheets, base combat art or the other fifteen classes.
 
 ## Barbarian
 
-- A distinct Rage meter (0–100) is saved on each Barbarian character. It builds at
-  12 points/second while not channelling the Barbarian's whirlwind skills.
+- A distinct Rage meter (0–100) is saved on each Barbarian character. **Superseded:**
+  The earlier implementation regenerated 12 points/second outside Whirlwind.
+  Rage now starts at 0 and is earned from attacks, especially Bash; it does not regenerate at rest.
+  See [BARBARIAN_WHIRLWIND_REWORK.md](BARBARIAN_WHIRLWIND_REWORK.md).
 - The three existing whirlwind skill IDs use Rage rather than mana. Casting requires
   at least 10 Rage. Channelling drains 10 Rage/second and ends when empty.
   At 100 Rage a 12-second skill can sustain at most 10 seconds of spinning.

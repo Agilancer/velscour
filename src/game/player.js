@@ -45,6 +45,9 @@ export class Player extends Creature {
     this.path = null;
     this.aim = null;
     this.hitCounter = 0;
+    this.bashCastSerial = 0;
+    this.bashRageClaim = -1;
+    this.whirlAuto = false;
     this.phoenixCd = 0;
     this.infernoT = 0;
     this.st = {};
@@ -390,9 +393,12 @@ export class Player extends Creature {
     this.cooldowns[sk.id] = cooldown(sk) * (1 - this.st.cdr / 100) * quick;
     this.aim = [tx, ty];
     this.lastEl = sk.el;
+    if (sk.id === 'barbarian.0.0') this.bashCastSerial++;
     const ok = castSkill(this, sk, L, tx, ty);
     if (ok === false) { this.mana += cost; this.cooldowns[sk.id] = 0; return false; }
     if (rageCost(sk)) { this.rage -= rageCost(sk); this.char.rage = this.rage; }
+    // Attacks build Rage; no passive regeneration. Hits award most of the resource.
+    if (this.classId === 'barbarian' && sk.attack) this.gainRage(sk.id === 'barbarian.0.0' ? 3 : sk.kind === 'whirl' ? 0 : 0.7);
     castArtFx(this, sk, tx, ty);
     // casting trains the skill a little (kills with it train it more: combat.kill); skills that deal no damage train on casts alone
     const dl = depthLevel(this.world.depth || 1);
@@ -405,8 +411,24 @@ export class Player extends Creature {
     return true;
   }
 
-  onHit(tgt, dmg) {
-    if (this.st.legendary.hammer && ++this.hitCounter % 6 === 0) {
+  gainRage(amount) {
+    if (this.classId !== 'barbarian' || amount <= 0) return;
+    this.rage = Math.min(100, this.rage + amount);
+    this.char.rage = this.rage;
+  }
+
+  onHit(tgt, dmg, el, o = {}) {
+    if (this.classId === 'barbarian' && !o.dot && o.sk?.startsWith('barbarian.')) {
+      if (o.sk === 'barbarian.0.0') {
+        // One large payout per landed Bash, not one payout for each lightning-fan bolt.
+        if (this.bashRageClaim !== o.rageCast) {
+          this.bashRageClaim = o.rageCast;
+          this.gainRage(15);
+        }
+      } else this.gainRage(SKILLS[o.sk]?.kind === 'whirl' ? 0.35 : 2.5);
+    }
+    // Bash must not inherit the Paladin-like spiralling hammer from legendary procs.
+    if (this.st.legendary.hammer && !(this.classId === 'barbarian' && o.sk === 'barbarian.0.0') && ++this.hitCounter % 6 === 0) {
       this.world.addHazard(new Orbit({ world: this.world, src: this, n: 1, radius: 1.6, dur: 2.5, spiral: true, fx: 'hammer', el: 'holy', dmg: [dmg * 0.5, dmg * 0.7], o: {}, speed: 5 }));
     }
   }
@@ -464,10 +486,6 @@ export class Player extends Creature {
     if (this.phoenixCd > 0) this.phoenixCd -= dt;
     if (this.furyT > 0) this.furyT -= dt;
     if (this.noRageT > 0) this.noRageT -= dt;
-    if (this.classId === 'barbarian' && !(this.channel instanceof Whirl)) {
-      this.rage = Math.min(100, this.rage + 12 * dt);
-      this.char.rage = this.rage;
-    }
     const canAct = this.tickStatus(dt, (k, amount, src) => {
       hit(src, this, amount, k === 'burn' ? 'fire' : k === 'poison' ? 'poison' : 'blood', { dot: true });
     });
