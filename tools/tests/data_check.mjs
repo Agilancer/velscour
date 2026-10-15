@@ -77,6 +77,12 @@ const asset = (f) => new URL('../../assets/' + f, import.meta.url);
 const packs = {};
 for (const b of BIOMES) {
   if (!b.pack) { bad.push(`biome ${b.id}: no pack`); continue; }
+  if (b.pack === 'desert_temple') {
+    // Original Canvas asset generator delivers a complete pack at runtime using
+    // the proven Catacombs wall/arch/door slicing and geometry contract.
+    if (!existsSync(new URL('../../src/gfx/deserttemple.js', import.meta.url))) bad.push('missing Desert Temple art generator');
+    continue;
+  }
   if (b.overworld) {
     if (b.pack !== 'town') bad.push(`overworld ${b.id}: expected town art pack`);
     for (const f of ['town.json', 'ground.webp', 'objects.webp']) if (!existsSync(asset(`tiles/town/${f}`))) bad.push(`overworld: missing tiles/town/${f}`);

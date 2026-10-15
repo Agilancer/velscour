@@ -1,4 +1,4 @@
-// Twenty-seven dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
+// Twenty-eight dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
 // palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
 import { FINAL_DEPTH } from './depth.js';
@@ -188,6 +188,16 @@ export const BIOMES = [
     torch: '#ffc078', fog: '#0a160d',
   },
   {
+    id: 'desert_temple', name: 'Temple of the Sunless Dynasty', pack: 'desert_temple',
+    palette: null, dark: 0.77, light: 8.2,
+    ambient: { type: 'sand', color: '#d9ac70' },
+    mon: { hue: 28, sat: 0.95, light: 0.04 }, el: 'holy', blood: '#8a2a14',
+    adj: ['Sunless', 'Goldbound', 'Dynastic', 'Entombed'],
+    roster: ['skeleton', 'archer', 'knight', 'golem', 'cultist', 'scorpion', 'worm', 'wraith', 'zombie', 'beetle', 'gargoyle', 'elemental'],
+    prefer: ['set2/undead', 'set2/kobolds', 'set2/warriors', 'set1/skeletons'],
+    torch: '#ffb860', fog: '#140e0b',
+  },
+  {
     id: 'throne', name: "Velscour's Throne", palette: { colorize: [4, 0.72], light: -0.1, contrast: 1.2 }, dark: 0.8, light: 8,
     ambient: { type: 'ember', color: '#ff3a10' }, mon: { hue: -10, sat: 1.5, light: -0.06 }, el: 'fire', blood: '#c00000',
     adj: ['Hellsworn', 'Doom', 'Archfiend'], roster: ['demon', 'imp', 'knight', 'gargoyle', 'abomination', 'hound', 'wraith', 'cultist', 'elemental', 'golem', 'eye', 'skeleton'],
@@ -199,7 +209,7 @@ export const BIOMES = [
 // Art: every biome is built from a biome pack (assets/tiles/<pack>/, docs/ART.md), recoloured by its `palette`.
 // A pack can hold more than one setting: `part` limits a biome to some of its floors (1-based ranges), wall
 // families, props, arches and doors (assets.js biomeTileSet).
-for (const b of BIOMES) if (!b.overworld) b.pack = 'catacombs';
+for (const b of BIOMES) if (!b.pack) b.pack = 'catacombs';
 const CG = 'cathedral_graveyard';
 Object.assign(BIOMES.find((b) => b.id === 'cathedral'), {
   pack: CG, part: {
@@ -217,7 +227,7 @@ Object.assign(BIOMES.find((b) => b.id === 'necropolis'), {
 // Colour families: a level can mix its palette with another biome of the same family (mixPartner), e.g. a
 // Frozen Ossuary whose far rooms are paved like the Crystal Caverns.
 const FAMILY = {
-  sand: ['desert', 'gilded', 'serpent', 'amber'],
+  sand: ['desert', 'gilded', 'serpent', 'amber', 'desert_temple'],
   frost: ['frozen', 'sunken', 'crystal', 'storm', 'abyss', 'necropolis'],
   ember: ['molten', 'blood', 'forge', 'flesh'],
   rot: ['fungal', 'plague', 'thorn'],
@@ -236,6 +246,7 @@ const MON_SWAPS = {
   thorn: ['thorn', 'venom', null, 'verdigris'], storm: ['storm', 'crystal', 'pale', 'midnight'], obsidian: ['obsidian', 'void', 'shadow', 'midnight'],
   flesh: ['flesh', 'blood', null, 'coral'], serpent: ['venom', 'sand', null, 'verdigris'], shattered: ['pale', 'storm', null, 'bronze'],
   library: ['shadow', 'pale', 'void', 'amethyst'], cathedral: [null, 'pale', 'shadow', 'bone'], necropolis: ['pale', 'frost', 'shadow', 'spectral', 'bone'], amber: ['sand', 'ember', 'gilded', 'bronze'],
+  desert_temple: ['sand', 'gilded', 'bronze', 'bone', null],
   overworld: [null, 'thorn', 'rot', 'ash', 'bone'], throne: ['infernal', 'blood', 'ember', 'rust'],
 };
 for (const b of BIOMES) b.swaps = MON_SWAPS[b.id];
