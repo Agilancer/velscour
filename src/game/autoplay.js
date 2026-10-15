@@ -6,7 +6,7 @@
 import { G } from '../state.js';
 import { input } from '../core/input.js';
 import { dist, clamp, TAU, fmtInt, escapeHtml, angleDiff } from '../core/util.js';
-import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, cooldown, useTime, skillRange, buffAmount, curseAmount, skillDuration, effLevel } from '../data/skills.js';
+import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, buffAmount, curseAmount, skillDuration, effLevel } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
 import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS } from '../data/items.js';
 import { drawBiome } from '../data/biomes.js';
@@ -99,10 +99,22 @@ const PET_CAP = 40; // createSummon keeps at most 40 minions per hero; more woul
 const isHammer = (sk) => sk.fx === 'hammer' || /hammer/i.test(sk.name);
 const petsOf = (sk) => (sk.m.sum === 'revive' ? 0 : summonMax(sk));
 /** Skills a class pours its points into first, when it can (the Paladin's hammers), or null. */
-const focusSkills = (classId) => (classId === 'paladin' ? CLASS_SKILLS.paladin.filter(isHammer) : null);
+const focusSkills = (classId) => {
+  const list = CLASS_SKILLS[classId];
+  if (classId === 'paladin') return list.filter(isHammer);
+  if (classId === 'barbarian') return list.filter((sk) => sk.kind === 'whirl' || sk.kind === 'leap' || sk.kind === 'dash');
+  if (classId === 'lancer') return list.filter((sk) => sk.m.shields || sk.kind === 'leap' || sk.kind === 'dash');
+  if (classId === 'dragoon') return list.filter((sk) => sk.kind === 'leap' || sk.kind === 'dash');
+  return null;
+};
+const mobility = (sk) => ['leap', 'dash', 'blink'].includes(sk.kind) ||
+  (sk.kind === 'buff' && (sk.m.buff || []).includes('speed'));
 /** Value multiplier for a skill under the class's build focus. */
 function focusMul(classId, sk) {
   if (classId === 'paladin') return isHammer(sk) ? (sk.kind === 'orbit' ? 4 : 2.5) : 1;
+  if (classId === 'barbarian') return sk.kind === 'whirl' ? 6 : mobility(sk) ? 1.8 : 1;
+  if (classId === 'lancer') return sk.m.shields ? 5 : mobility(sk) ? 1.8 : 1;
+  if (classId === 'dragoon') return sk.kind === 'leap' ? 5 : mobility(sk) ? 1.8 : 1;
   if (PET_CLASSES.has(classId) && sk.kind === 'summon') return sk.m.dur ? 2.5 : 4;
   return 1;
 }
@@ -111,9 +123,10 @@ function focusMul(classId, sk) {
 function skillDps(p, sk, L, crowd = CROWD) {
   const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, crowd) * critMul(p);
   const period = Math.max(castTime(p, sk), cdOf(p, sk), 0.05);
-  const cost = manaCost(sk, L);
+  const cost = manaCost(sk, L), rage = rageCost(sk);
   const supply = p.st.manaRegen + p.maxMana / 40;
-  const sustain = cost ? Math.min(1, supply / (cost / period)) : 1;
+  const sustain = cost ? Math.min(1, supply / (cost / period)) :
+    rage ? Math.min(1, 12 / (rage / period)) : 1;
   return { dps: per / period, sustain, period };
 }
 
@@ -385,6 +398,28 @@ export const Auto = {
     while (c.skillPoints > 0) {
       const base = buildPower(p, CROWD, null, true).total;
       let best = null, bv = 0;
+      const focus = focusSkills(c.classId) || [];
+      // Unlock each class-defining skill as soon as its level gate opens.
+      // Walk backwards through prerequisites, instead of endlessly maxing
+      // the first high-DPS skill and leaving the rest of the build locked.
+      if (focus.length && c.classId !== 'paladin') {
+        for (const goal of focus.filter((sk) => sk.reqLevel <= c.level && !c.skills[sk.id])
+          .sort((a, b) => a.reqLevel - b.reqLevel || a.tree - b.tree || a.idx - b.idx)) {
+          let step = goal;
+          while (step.prereq && !c.skills[step.prereq]) step = SKILLS[step.prereq];
+          if (!canLearn(step)) { best = step; break; }
+        }
+        // Spread later points through the focused rotation, not one spell.
+        if (!best) best = focus.filter((sk) => !canLearn(sk))
+          .sort((a, b) => (c.skills[a.id] || 0) - (c.skills[b.id] || 0) ||
+            (a.kind === 'whirl' ? -1 : 0) - (b.kind === 'whirl' ? -1 : 0) || a.idx - b.idx)[0];
+        if (best) {
+          c.skills[best.id] = (c.skills[best.id] || 0) + 1;
+          c.skillPoints--; spent = true;
+          if (c.skills[best.id] === 1) G.ui.log(`Auto-play learned <b>${escapeHtml(best.name)}</b>.`, '#8fe0ff');
+          continue;
+        }
+      }
       // a focused build (the Paladin's hammers) takes the point whenever one of its skills can use it
       for (const sk of focusSkills(c.classId) || []) {
         if (canLearn(sk)) continue;
@@ -421,22 +456,34 @@ export const Auto = {
   arrangeBar() {
     const p = G.player, c = G.char;
     const { parts } = buildPower(p, CROWD, null, true);
+    const learned = CLASS_SKILLS[c.classId].filter((sk) => effLevel(p, sk) > 0);
+    const focused = (focusSkills(c.classId) || []).filter((sk) => effLevel(p, sk) > 0);
     const bar = Array(BAR_SIZE).fill(null);
     const main = parts.find((x) => x.role === 'main');
     const alt = parts.find((x) => x.role === 'alt' || x.role === 'filler');
-    const free = CLASS_SKILLS[c.classId].find((s) => c.skills[s.id] > 0 && !manaCost(s, 1) && OFFENSIVE.has(s.kind));
-    // the Paladin's main attack is his best spammable swirling hammer (Hammerstorm, else Blessed Hammer)
-    const hammer = c.classId === 'paladin' && parts.filter((x) => x.sk.kind === 'orbit' && isHammer(x.sk) && cooldown(x.sk) < 1.2).sort((a, b) => b.v - a.v)[0];
-    bar[LMB] = hammer ? hammer.sk.id : main ? main.sk.id : free ? free.id : c.bar[LMB];
+    const free = learned.find((sk) => !manaCost(sk, 1) && !rageCost(sk) &&
+      !(sk.classId === 'barbarian' && sk.kind === 'whirl') && OFFENSIVE.has(sk.kind));
+    const hammer = c.classId === 'paladin' && parts.filter((x) => x.sk.kind === 'orbit' &&
+      isHammer(x.sk) && cooldown(x.sk) < 1.2).sort((a, b) => b.v - a.v)[0];
+    const signature = c.classId === 'barbarian' ? learned.find((sk) => sk.name === 'Whirlwind') || learned.find((sk) => sk.kind === 'whirl') :
+      c.classId === 'lancer' ? learned.find((sk) => sk.m.shields) :
+      c.classId === 'dragoon' ? learned.find((sk) => sk.kind === 'leap') : null;
+    bar[LMB] = signature?.id || hammer?.sk.id || main?.sk.id || free?.id || c.bar[LMB];
     const lmbSk = SKILLS[bar[LMB]];
-    const rmb = free && free.id !== bar[LMB] && lmbSk && manaCost(lmbSk, 1) ? free : alt && alt.sk;
+    const rmb = free && free.id !== bar[LMB] && (lmbSk && (manaCost(lmbSk, 1) || rageCost(lmbSk) || lmbSk.kind === 'whirl' || lmbSk.kind === 'orbit' || lmbSk.kind === 'leap')) ? free :
+      alt && alt.sk;
     if (rmb && rmb.id !== bar[LMB]) bar[RMB] = rmb.id;
+    // All learned bar skills participate, including low-ranked gap closers.
+    // Put signature and mobility skills before pure damage picks if slots fill.
+    const priority = [...focused, ...learned.filter(mobility), ...parts.map((x) => x.sk),
+      ...learned.filter((sk) => OFFENSIVE.has(sk.kind)),
+      ...learned];
     const keys = FILL_ORDER.filter((k) => k !== RMB);
     let i = 0;
-    for (const x of parts) {
+    for (const sk of priority) {
       if (i >= keys.length) break;
-      if (bar.includes(x.sk.id)) continue;
-      bar[keys[i++]] = x.sk.id;
+      if (bar.includes(sk.id)) continue;
+      bar[keys[i++]] = sk.id;
     }
     if (bar.join() !== c.bar.join()) { c.bar = bar; G.ui.refresh(); }
   },
