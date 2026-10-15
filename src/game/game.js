@@ -93,7 +93,7 @@ export const game = {
     this.enterTown();
     if (fresh) {
       setTimeout(() => {
-        UI.centerMsg('DUSKHOLLOW', 'The last town above the abyss', 3.5);
+        UI.centerMsg('HERRINGTON HOLLOW', 'The last town above the abyss', 3.5);
         UI.log(`Welcome, ${escapeHtml(c.name)}. Visit the vendors, then step into the <b style="color:#ff8050">portal</b> at the edge of town.`, '#ffe2a0');
         UI.log('You have <b>1 skill point</b> — open the Skill Tree (K) to learn your first ability.', '#ffd860');
         if (!G.touch) UI.log('Left-click to move/attack, right-click, ` 1–9 0 - = for skills, Z X C V for potions, Q for the quest log.');
@@ -194,7 +194,7 @@ export const game = {
       use: () => this.confirmDungeon(),
     }];
     this.setWorld(world, t.start, old);
-    HUD.setArea('Duskhollow', 'Town — a safe haven');
+    HUD.setArea('Herrington Hollow', 'Town — a safe haven');
     playMusic('town'); setAmbience('town');
     Vendor.restock();
     const p = G.player;
@@ -334,7 +334,7 @@ export const game = {
   useTownPortal() {
     UI.dialog({
       title: 'Return to Town?',
-      html: `<p>You will return to Duskhollow. Depth ${G.char.depth} will be re-forged when you come back.</p>`,
+      html: `<p>You will return to Herrington Hollow. Depth ${G.char.depth} will be re-forged when you come back.</p>`,
       buttons: [{ label: 'Stay' }, { label: 'Return', fn: () => { sfx('portal'); this.enterTown(); } }],
     });
   },
@@ -376,7 +376,7 @@ export const game = {
         p.recompute();
         p.hp = p.maxHp; p.mana = p.maxMana;
         this.enterTown();
-        UI.log(`You awaken in Duskhollow. The descent begins anew at Depth ${c.depth}.`, '#ff8060');
+        UI.log(`You awaken in Herrington Hollow. The descent begins anew at Depth ${c.depth}.`, '#ff8060');
       });
     }, 1700);
   },

@@ -339,7 +339,7 @@ rules as the monster sheets.
 | # | Name | Role | Brief |
 |---|---|---|---|
 | 1 | Garrick Ironhand | Weaponsmith | burly smith, leather apron, a sword over his shoulder |
-| 2 | Hilde Stonewall | Armorer | broad armoured woman with a tower shield |
+| 2 | Stevie the Stronger | Armorer | broad armoured woman with a tower shield |
 | 3 | Durgan Emberforge | Blacksmith (upgrades) | soot-covered dwarf-ish smith with a hammer and tongs |
 | 4 | Lily Belle the Veiled | Enchanter | veiled sorceress in green, floating runes |
 | 5 | Old Mother Wren | Alchemist | hunched crone in green rags with potion bottles |

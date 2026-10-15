@@ -1,4 +1,4 @@
-// Town persistence: a hero's Duskhollow is rolled once (c.townSeed) and comes back identical after a save + reload.
+// Town persistence: a hero's Herrington Hollow is rolled once (c.townSeed) and comes back identical after a save + reload.
 // node tools/tests/townsave.js
 const { openGame, report } = require('./harness');
 (async () => {

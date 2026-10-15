@@ -233,7 +233,7 @@ and door hinges are preserved. The `src/gfx/biomeexpansion.js` renderer
 uses source material grain and precise pixel-sized decorations to keep
 the same overall native 2D iso-art contract. New atlases are cached lazily.
 
-Duskhollow **and** the Forsaken Wilds each get an *independent* set of 60
+Herrington Hollow **and** the Forsaken Wilds each get an *independent* set of 60
 new 160×80 environment floors, plus 40 extra scatter designs. The normal
 town transitions and vendor buildings are left at their original indexes
 so they do not suddenly point at the wrong ground sprite.

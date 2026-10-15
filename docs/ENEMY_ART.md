@@ -123,7 +123,7 @@ the feel of fighting them. See [HEAVENLY.md](HEAVENLY.md).
 
 `src/data/biomenatives.js` now defines **1,600 new monsters**, 50 for
 each of the 32 combat biomes including the Forsaken Wilds and Depth 500
-throne. There are **none in Duskhollow town**, which is a no-combat zone.
+throne. There are **none in Herrington Hollow town**, which is a no-combat zone.
 They are registered in `BESTIARY` under the `bn_` prefix. Each new
 monster has a unique ID and name, a matching original VELSCOUR monster
 art source/AI archetype and new procedural silhouette/bodygear additions

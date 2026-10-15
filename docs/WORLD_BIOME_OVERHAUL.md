@@ -5,8 +5,8 @@
 The `feature/worldwide-biome-art-and-spawns` branch extends **all 32 combat
 biomes** in VELSCOUR: **31 indoor dungeons** (including HELL, HEAVENLY,
 ASTRAL PLANE, Ice Temple, Desert Temple, and the Depth 500 throne) plus the
-**Forsaken Wilds overworld**. **Duskhollow town** is a separate **noncombat**
-environment. No monsters or enemy spawn logic are added to Duskhollow.
+**Forsaken Wilds overworld**. **Herrington Hollow town** is a separate **noncombat**
+environment. No monsters or enemy spawn logic are added to Herrington Hollow.
 
 The branch expands existing runtime art instead of replacing approved
 source sheets or moving any class rig, sprite pivot or architectural
@@ -26,7 +26,7 @@ see [Approved Biome Artwork](APPROVED_BIOME_ART.md).
 |---|---:|---:|---|---:|
 | 31 indoor combat dungeons | **60 per biome** (1,860) | **40 per biome** (1,240) | 5 independent material treatments, original full 16-mask topology per pack; all arches/door states retained | **50 per biome** (1,550) |
 | Forsaken Wilds overworld | **60** unique-to-wilderness accents | **40** native designs available in the outdoors | axis-correct 2:1 iso forest fencing + reworked stone boundaries | **50** |
-| Duskhollow town | **60** unique-to-town accents | **40** new decorative assets plus existing shop/forest props | X/Y wooden fences and masonry boundaries that project/tile correctly | **0** |
+| Herrington Hollow town | **60** unique-to-town accents | **40** new decorative assets plus existing shop/forest props | X/Y wooden fences and masonry boundaries that project/tile correctly | **0** |
 
 Overall: **1,600 new generated native monster entries** (50 × 32 biomes);
 **1,980 extra floor drawings**, and **1,320 extra terrain/prop drawings**
@@ -145,7 +145,7 @@ spike silhouettes all follow the actual 2:1 axes, with **no mirroring**.
 Materials include wooden rail, masonry, thorn, bone, iron, crystal,
 gilded, infernal, astral and heavenly.
 
-Duskhollow's garden/paddock fences and ruined-yard stone boundaries now
+Herrington Hollow's garden/paddock fences and ruined-yard stone boundaries now
 use these pieces; wilderness stone boundaries and planned tree-line rails
 use the same orientation metadata. Dungeon scatter items whose name
 identifies rail/barricade/boundary are replaced with matching one-tile

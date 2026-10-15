@@ -1,4 +1,4 @@
-// Town check: for a few town seeds (each hero rolls their own Duskhollow), every vendor and the portal must be
+// Town check: for a few town seeds (each hero rolls their own Herrington Hollow), every vendor and the portal must be
 // reachable from the start; screenshots of the plaza, the portal yard and a zoomed-out view of each town.
 // node tools/tests/town.js [seeds]   (default 3 random seeds plus 1337)
 const { openGame, report } = require('./harness');
