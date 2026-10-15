@@ -253,9 +253,9 @@ function rollTown(tileset, seed, last) {
   };
   // the well, benches round it, market stalls on the plaza's rim
   prop('village_well', C.x + 0.5, C.y + 0.5, { flip: false });
-  for (let i = rng.int(1, 3), a = R(0, TAU); i > 0; i--, a += R(1.5, 2.6)) prop('stone_bench', C.x + 0.5 + Math.cos(a) * 2.6, C.y + 0.5 + Math.sin(a) * 2.6);
+  for (let i = rng.int(1, 2), a = R(0, TAU); i > 0; i--, a += R(1.5, 2.6)) prop('stone_bench', C.x + 0.5 + Math.cos(a) * 2.6, C.y + 0.5 + Math.sin(a) * 2.6);
   const ware = ['vegetable_basket', 'crate_stack', 'cloth_crate', 'grain_sacks', 'potion_jars', 'closed_barrel', 'water_bucket'];
-  for (let i = rng.int(2, 5), a = R(0, TAU); i > 0; i--, a += R(0.9, 1.8)) {
+  for (let i = rng.int(1, 3), a = R(0, TAU); i > 0; i--, a += R(0.9, 1.8)) {
     const d = R(3.6, 4.6), x = C.x + 0.5 + Math.cos(a) * d, y = C.y + 0.5 + Math.sin(a) * d;
     if (!street(Math.floor(x), Math.floor(y)) || keep[I(Math.floor(x), Math.floor(y))]) continue;
     if (prop('market_table', x, y)) { prop(rng.pick(ware), x + Math.cos(a + 1.6) * 0.9, y + Math.sin(a + 1.6) * 0.9); if (rng.chance(0.5)) prop(rng.pick(ware), x + Math.cos(a) * 0.9, y + Math.sin(a) * 0.9); }
@@ -268,7 +268,7 @@ function rollTown(tileset, seed, last) {
       : [[b.x0 - 0.4, b.y0 + 3.5], [b.x0 + 3.4, b.y0 + 3.5], [b.x0 + 2.6, b.y0 + 3.45], [b.x0 + 1.5, b.y0 - 0.5], [b.x0 - 0.5, b.y0 + 1.5]];
     let si = 0;
     for (const n of shuffle(solid.slice(), rng)) while (si < spots.length && !prop(n, ...spots[si++]));
-    for (const n of small) if (si < spots.length) prop(n, ...spots[si++], { solid: false });
+    for (const n of small.slice(0, 1)) if (si < spots.length) prop(n, ...spots[si++], { solid: false });
   }
   // yards: gardens, an orchard, a lumber camp by the trees, a paddock, old ruins
   const yard = (w, h, test) => {
@@ -293,7 +293,7 @@ function rollTown(tileset, seed, last) {
   };
   const fenceX = (x0, x1, y) => { for(let x=x0;x<x1;x++) barrier('rail','x',x+.5,y); };
   const fenceY = (y0, y1, x) => { for(let y=y0;y<y1;y++) barrier('rail','y',x,y+.5); };
-  const yards = shuffle(['garden', 'garden', 'orchard', 'lumber', 'paddock', 'ruins', 'garden', 'glade'], rng).slice(0, rng.int(4, 7));
+  const yards = shuffle(['garden', 'garden', 'orchard', 'lumber', 'paddock', 'ruins', 'garden', 'glade'], rng).slice(0, rng.int(3, 5));
   for (const kind of yards) {
     if (kind === 'garden') {
       const at = yard(rng.int(4, 6), rng.int(3, 5));
@@ -301,13 +301,13 @@ function rollTown(tileset, seed, last) {
       const [x0, y0] = at, w = 4 + ((x0 + y0) % 3), h = 3 + (x0 % 2);
       for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) mat[I(x, y)] = (y - y0) % 2 ? 3 : 2; // furrows
       fenceX(x0, x0 + w, y0 - 0.05); fenceY(y0, y0 + h - 1, x0 - 0.05);
-      for (let i = 0; i < 3; i++) prop(rng.pick(['vegetable_basket', 'wildflowers', 'water_bucket', 'hay_bale', 'grain_sacks']), x0 + R(0.5, w - 0.5), y0 + R(0.5, h - 0.5));
+      for (let i = 0; i < 2; i++) prop(rng.pick(['vegetable_basket', 'wildflowers', 'water_bucket', 'hay_bale', 'grain_sacks']), x0 + R(0.5, w - 0.5), y0 + R(0.5, h - 0.5));
     } else if (kind === 'orchard') {
       const at = yard(7, 7);
       if (!at) continue;
       const [x0, y0] = at;
       for (let y = y0 + 1; y < y0 + 7; y += 2) for (let x = x0 + 1; x < x0 + 7; x += 2) prop(rng.pick(['t_orchard_pear', 't_young_apple', 't_orchard_pear']), x + R(-0.2, 0.2), y + R(-0.2, 0.2), { solid: true });
-      for (let i = 0; i < 4; i++) prop(rng.pick(['wildflowers', 'vegetable_basket', 'leafy_shrub']), x0 + R(0, 7), y0 + R(0, 7), { solid: false });
+      for (let i = 0; i < 2; i++) prop(rng.pick(['wildflowers', 'vegetable_basket', 'leafy_shrub']), x0 + R(0, 7), y0 + R(0, 7), { solid: false });
     } else if (kind === 'lumber') {
       const at = yard(5, 4, nearForest) || yard(5, 4);
       if (!at) continue;
@@ -337,14 +337,14 @@ function rollTown(tileset, seed, last) {
       if (!at) continue;
       const [x0, y0] = at;
       prop(rng.pick(['t_ancient_oak', 't_ancient_willow', 't_storm_deadwood']), x0 + 2, y0 + 2, { solid: true });
-      for (let i = 0; i < 5; i++) prop(rng.pick(['wildflowers', 'mushrooms', 'leafy_shrub', 'fieldstone_cluster']), x0 + R(0, 4), y0 + R(0, 4));
+      for (let i = 0; i < 3; i++) prop(rng.pick(['wildflowers', 'mushrooms', 'leafy_shrub', 'fieldstone_cluster']), x0 + R(0, 4), y0 + R(0, 4));
     }
   }
   // lamps along the roads (none in the portal yard), and travellers' clutter on the verges
   const stand = tileset && tileset.scatter.find((e) => e.name === 'torch_stand');
   const verge = (x, y) => { const tx = Math.floor(x), ty = Math.floor(y); return street(tx, ty) && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => inb(tx + dx, ty + dy) && use[I(tx + dx, ty + dy)] !== 1); };
   let lamps = 0;
-  for (const road of roads) for (let i = 6; i < road.length && lamps < 14; i += rng.int(10, 16)) {
+  for (const road of roads) for (let i = 6; i < road.length && lamps < 10; i += rng.int(10, 16)) {
     const [x, y] = road[i], a = rng.chance(0.5) ? 1 : -1, n = road[Math.min(road.length - 1, i + 1)], dir = Math.atan2(n[1] - y, n[0] - x) + a * Math.PI / 2;
     const lx = x + Math.cos(dir) * 1.6, ly = y + Math.sin(dir) * 1.6;
     if (!stand || Math.hypot(lx - portal.x, ly - portal.y) < 7 || !free(lx, ly, true)) continue;
@@ -352,7 +352,7 @@ function rollTown(tileset, seed, last) {
     blockAt(lx, ly); lamps++;
   }
   const clutter = ['closed_barrel', 'water_barrel', 'crate_stack', 'rope_and_hook', 'handcart', 'broken_wheel', 'cart_debris', 'hay_bale', 'grain_sacks', 'firewood_stack', 'arrow_milestone'];
-  for (let i = 0, n = 0; i < 200 && n < rng.int(8, 14); i++) {
+  for (let i = 0, n = 0; i < 200 && n < rng.int(3, 6); i++) {
     const road = rng.pick(roads), at = road[Math.floor(R(0, 1) * road.length)];
     if (!at) continue;
     const x = at[0] + R(-1.6, 1.6), y = at[1] + R(-1.6, 1.6);
@@ -373,25 +373,25 @@ function rollTown(tileset, seed, last) {
     return true;
   };
   const nearKey = (x, y, d) => npcs.some((n) => Math.hypot(n.x - x, n.y - y) < d) || Math.hypot(x - portal.x, y - portal.y) < d + 2 || Math.hypot(x - C.x, y - C.y) < 6;
-  for (let c = rng.int(2, 4); c > 0; c--) { // copses
+  for (let c = rng.int(1, 2); c > 0; c--) { // copses
     const cx = R(6, W - 6), cy = R(6, H - 6);
     for (let i = 0; i < 6; i++) { const x = Math.floor(cx + R(-2, 2)) + 0.5, y = Math.floor(cy + R(-2, 2)) + 0.5; if (open(x, y, 0.6) && !nearKey(x, y, 2.5)) prop(rng.pick(pine), x, y, { solid: true }); }
   }
-  for (let i = 0, n = 0; i < 500 && n < rng.int(10, 20); i++) {
+  for (let i = 0, n = 0; i < 500 && n < rng.int(5, 9); i++) {
     const x = Math.floor(R(4, W - 4)) + 0.5, y = Math.floor(R(4, H - 4)) + 0.5;
     if (!open(x, y, 1) || nearKey(x, y, 2.5)) continue;
     if (prop(rng.pick(TOWN_TREES), x, y, { solid: true })) n++;
   }
   const brush = ['leafy_shrub', 'thorn_bush', 'dry_reeds', 'wildflowers', 'wildflowers', 'wildflowers', 'mushrooms', 'moss_boulder', 'fieldstone_cluster', 'hollow_stump', 'fallen_log', 'sawn_stump'];
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < 45; i++) {
     const x = R(3, W - 3), y = R(3, H - 3);
     if (!open(x, y, 0.4) || nearKey(x, y, 1.5)) continue;
     prop(rng.pick(brush), x, y);
   }
 
-  // Forty NEW town-specific scatter designs (statuary, shrine stones, relics,
-  // shop furnishings and walk-over details). No combat spawns in Duskhollow.
-  for(let i=0;i<40;i++){
+  // Spread a sampled set of the 40 available town decorations out instead of
+  // saturating the playable town with props. No combat spawns in Duskhollow.
+  for(let i=0;i<40;i+=2){
     const spr=outdoorBiomeProp('town',i);
     for(let attempt=0;attempt<14;attempt++){
       const x=Math.floor(R(4,W-4))+.5,y=Math.floor(R(4,H-4))+.5;
@@ -417,7 +417,7 @@ function rollTown(tileset, seed, last) {
     // Use 60 new original town material accents only inside same-material
     // stretches. Existing shoreline/road transition indices remain intact.
     if(v===m && n===99 && !keep[y*W+x] && use[y*W+x]!==2 &&
-      (x*29+y*37+seed)%13===0)
+      (x*29+y*37+seed)%29===0)
       v=TOWN_FLOOR_EXPANSION.start + ((x*7+y*13+seed)>>>0)%TOWN_FLOOR_EXPANSION.count;
     map.v[y*W+x]=v;
   }
