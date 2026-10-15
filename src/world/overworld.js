@@ -42,7 +42,13 @@ export function generateOverworld(depth,biome,seed) {
   ];
   const props=[],buildings=[];
   const add=(name,x,y,opts={})=>{
-    const sprite=typeof name==='string'?(overworldObject(name)||townObject(name)):name;
+    // Legacy town 'stone_boundary' was drawn in one fixed direction and
+    // mirrored as a second direction. Replace that old scatter, too.
+    const normalized=name==='stone_boundary'
+      ? isoBarrier('stone',((Math.floor(x)+Math.floor(y))%2)?'x':'y')
+      : name;
+    const sprite=typeof normalized==='string'?
+      (overworldObject(normalized)||townObject(normalized)):normalized;
     if(!sprite)return false;
     props.push({kind:'scatter',x,y,spr:sprite,k:K,flip:sprite.isometric?false:(opts.flip??rng.chance(.5)),
       light:opts.light||0});
