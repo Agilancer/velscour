@@ -691,6 +691,32 @@ export const Auto = {
     this.target = null;
     // keep pets and buffs up between fights
     if (p.castLock <= 0 && !p.channel) this.preCast(w);
+    // Outdoor trials are explicitly shrine-started; auto-play must participate instead of
+    // roaming forever after killing ambient enemies. Combat and self-preservation take priority.
+    const ow = w.overworldScenario;
+    if (ow && !ow.completed && !ow.failed) {
+      const nearEnemy = foes.some((m) => !m.dead && Math.hypot(m.x - p.x, m.y - p.y) < 6);
+      if (!ow.active) {
+        this.setStatus('Finding the scenario shrine');
+        if (this.goTo(ow.shrine.x, ow.shrine.y, 1.4, dt)) ow.shrine.use();
+        this.watchStuck(dt); return;
+      }
+      let objective = null;
+      if (ow.type === 'zones' && ow.route && ow.route[ow.stage]) {
+        const spot = ow.route[ow.stage];
+        objective = { x: spot[0], y: spot[1], reach: 2.5 };
+      } else if (ow.type === 'escort' && ow.escort && ow.routeIndex < ow.route.length) {
+        objective = { x: ow.escort.x, y: ow.escort.y, reach: 3.5 };
+      } else if (ow.markers.length && !nearEnemy) {
+        objective = ow.markers.reduce((a,b) =>
+          !a || Math.hypot(b.x-p.x,b.y-p.y) < Math.hypot(a.x-p.x,a.y-p.y) ? b : a, null);
+      }
+      if (objective && !nearEnemy) {
+        this.setStatus('Completing '+ow.title);
+        if (this.goTo(objective.x, objective.y, objective.reach||1.4, dt) && objective.use) objective.use();
+        this.watchStuck(dt); return;
+      }
+    }
     // loot, chests, then the job at hand
     if (this.lootStep(w, dt)) { this.watchStuck(dt); return; }
     const exit = w.portals.find((q) => q.type === 'exit');
