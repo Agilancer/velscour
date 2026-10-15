@@ -4,6 +4,7 @@ import { camera, isoX, isoY, HW, HH, TW, TH } from '../core/view.js';
 import { makeCanvas, TAU, clamp, rgba, shade, hexToRgb } from '../core/util.js';
 import { drawDecals, drawEffects, drawParticles, drawTexts, lights, glowSprite } from '../gfx/vfx.js';
 import { orbitShieldDepth } from '../gfx/lancershields.js';
+import { drawWallTorch, wallTorchRect } from '../gfx/walltorches.js';
 import { replacementImage } from '../core/replacementart.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { gritAt } from '../gfx/grit.js';
@@ -301,6 +302,14 @@ export function renderWorld(ctx, world) {
   const wk = world.tileset && world.tileset.k;
   const walls = map.wallsIn(tx0 - 3, ty0 - 3, tx1 + 4, ty1 + 4, []);
   for (const s of walls) sorted.push({ d: s.depth, f: 2, o: s });
+  // A wall-holder shares the same depth pass as its wall, so it fades with
+  // an occluding front wall and doesn't float above the player or doors.
+  for (const t of world.torches) {
+    const px=isoX(t.mountX??t.x,t.mountY??t.y);
+    const py=isoY(t.mountX??t.x,t.mountY??t.y);
+    if(px<vr.x0-120||px>vr.x1+120||py<vr.y0-120||py>vr.y1+90)continue;
+    sorted.push({d:t.depth??(t.x+t.y),f:12,o:t});
+  }
   for (const pr of world.props) {
     const px = isoX(pr.x, pr.y), py = isoY(pr.x, pr.y);
     // Tall outdoor trees are grounded well below their canopy; cull by the full
@@ -376,6 +385,8 @@ export function renderWorld(ctx, world) {
       case 9: drawChest(ctx, o); break;
       case 10: drawPortal(ctx, o); break;
       case 11: o.drawShield(ctx,it.index); break;
+      case 12: drawWallTorch(ctx,o,world.biome,G.time,
+        cutaway(wallTorchRect(o),it.d)); break;
     }
   }
   if (q !== hq) ctx.imageSmoothingQuality = hq;
