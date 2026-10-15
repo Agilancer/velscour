@@ -48,6 +48,9 @@ function floorCell(c,i) {
  ['#b78c5b','#d7ae6b'],['#916f48','#b99560'],['#b79b73','#dec7a1'],
  ['#bb784b','#d19b66'],['#978267','#bda57a'],['#35383d','#55575a'],['#5f6d67','#80969a']];
  rect(c,0,0,160,80,palette[base][0]);
+ // Materials touch the world-tile boundary with identical colors. All pattern
+ // pixels are inset, so repeated floor cells do not show a visible seam.
+ c.save();c.beginPath();c.moveTo(80,7);c.lineTo(146,40);c.lineTo(80,73);c.lineTo(14,40);c.closePath();c.clip();
  // Low-contrast tesserae: nested diamonds remain level with the existing 2:1 world geometry.
  for(let y=-40;y<120;y+=16)for(let x=-40;x<200;x+=32){
    const xx=x+((Math.floor(y/16)&1)?16:0),u=H(xx,y,base);
@@ -68,7 +71,8 @@ function floorCell(c,i) {
    }
    if(i%7===0){rect(c,66,35,28,11,'rgba(17,26,28,.7)');line(c,[[68,38],[92,42]],'#e0bf7b',2);}
  }
- c.restore();
+ c.restore(); // finish inset material details
+ c.restore(); // finish outer diamond clip
 }
 function floorAtlas(meta) {
  const canvas=makeCanvas(1620,492),c=canvas.getContext('2d');c.imageSmoothingEnabled=false;
