@@ -68,7 +68,7 @@ for (const b of BIOMES) {
   const looks = rollLooks(b);
   for (const k of b.roster) if (!looks.pick(k)) bad.push(`biome ${b.id}: no look for ${k}`);
   if (!looks.boss(b.roster)) bad.push(`biome ${b.id}: no guardian art`);
-  if (b.id !== 'throne' && !b.family) bad.push(`biome ${b.id}: no colour family`);
+  if (b.id !== 'throne' && !b.overworld && !b.family) bad.push(`biome ${b.id}: no colour family`);
 }
 // every biome's pack exists and is complete: all 16 wall connection masks per family, with an arm for each
 // connection, arches and doors in 4 directions (doors open and closed), self-seamless floors, chest art
@@ -77,6 +77,11 @@ const asset = (f) => new URL('../../assets/' + f, import.meta.url);
 const packs = {};
 for (const b of BIOMES) {
   if (!b.pack) { bad.push(`biome ${b.id}: no pack`); continue; }
+  if (b.overworld) {
+    if (b.pack !== 'town') bad.push(`overworld ${b.id}: expected town art pack`);
+    for (const f of ['town.json', 'ground.webp', 'objects.webp']) if (!existsSync(asset(`tiles/town/${f}`))) bad.push(`overworld: missing tiles/town/${f}`);
+    continue; // the outdoor pack has no indoor floor/wall/door atlas
+  }
   for (const f of ['pack.json', 'floors.webp', 'walls.webp', 'scatter.webp']) if (!existsSync(asset(`tiles/${b.pack}/${f}`))) bad.push(`biome ${b.id}: missing tiles/${b.pack}/${f}`);
   packs[b.pack] = 1;
 }
