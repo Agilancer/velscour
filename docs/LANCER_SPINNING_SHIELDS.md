@@ -4,7 +4,8 @@ This implementation replaces the Lancer's generic procedural orbiting
 `tshield` graphics with **four transparent PNG spritesheets** derived from
 the four approved uploaded golden shield turntables. It preserves all
 existing shield ability damage, knockback, hit frequency, duration, cooldown,
-shield counts, radius and upgrade scaling.
+shield counts and upgrade scaling. The seven orbit radii and the
+visible animation-frame direction were revised on October 15, 2026.
 
 ## Art assets (real committed binary PNGs)
 
@@ -49,16 +50,41 @@ The game is isometric:
 `isoX(x,y)=(x-y)*32`, `isoY(x,y)=(x+y)*16`.
 
 The orbit angle `a` is measured in **world tile coordinates**, not the
-screen-space tangent of the shield. Frame indices use:
+screen-space tangent of the shield. The source atlas is arranged clockwise
+from frame 0 through frame 7. As of the October 15 rotation correction,
+the atlas index is **reversed** relative to increasing world angle:
 
 ```js
-Math.round((a - Math.PI / 4) * 8 / (Math.PI * 2)) modulo 8
+const clockwise = ((Math.round((a - Math.PI / 4) * 8 / (Math.PI * 2)) % 8) + 8) % 8;
+const frame = (8 - clockwise) % 8;
 ```
 
-Consequently at **a=π/4** the shield is centered **in front of** the Lancer
-and shows its gold front. At **a=5π/4** it is behind the Lancer and shows
-its wooden/metal rear. Each 45° of orbit changes the sprite angle by
-one of the eight source frames; frame order loops continuously.
+The new orbit uses **+2.4 rad/s**, opposite the previous −2.4 rad/s.
+The visible turntable therefore displays frames **0 → 7 → 6 → 5 → 4
+→ 3 → 2 → 1 → 0** as the world angle increases, rather than following the
+original clockwise sequence. At **a=π/4**, frame 0 remains the gold front
+on the near side; at **a=5π/4**, frame 4 remains the wooden/metal rear on
+the far side. Individual shields still depth-sort in front of and behind
+the Lancer as they physically travel around him.
+
+All seven abilities have larger concentric orbit spacing. Base radii
+(in world tiles; multiplied by the existing area/visual scaling) are:
+
+| Ability | Radius |
+| --- | ---: |
+| Tower Shield | 1.40 |
+| Storm Bulwark | 1.95 |
+| Burning Aegis | 2.50 |
+| Frost Rampart | 3.05 |
+| Holy Citadel | 3.60 |
+| Shield Storm | 4.15 |
+| Bastion of Ten | 4.70 |
+
+Adjacent base radii are separated by **0.55 tiles** (previously 0.22).
+**Shield Storm** keeps its intentionally expanding spiral rather than a
+fixed ring: the existing spiral radius formula still applies. This
+change does not alter hit frequency, damage, shield counts, duration or
+spritesheet binary files.
 
 The renderer uses nearest-neighbor scaling; no smoothing or automatic
 horizontal flip changes the intended 8-angle artwork.
