@@ -77,6 +77,10 @@ const asset = (f) => new URL('../../assets/' + f, import.meta.url);
 const packs = {};
 for (const b of BIOMES) {
   if (!b.pack) { bad.push(`biome ${b.id}: no pack`); continue; }
+  if (b.pack === 'astral_plane') {
+    if (!existsSync(new URL('../../src/gfx/astralplane.js', import.meta.url))) bad.push('missing Astral Plane art generator');
+    continue; // lazy full biome pack tested by browser and source mock
+  }
   if (b.pack === 'hell') {
     if (!existsSync(new URL('../../src/gfx/hellpack.js', import.meta.url))) bad.push('missing HELL art generator');
     continue; // full pack generated lazily at runtime; browser QA tests geometry
