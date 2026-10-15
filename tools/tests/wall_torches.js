@@ -28,9 +28,9 @@ const {openGame,report,OUT_DIR}=require('./harness');
         const t=torchAtWallSegment(s);
         const sx=isoX(t.x,t.y)-isoX(t.mountX,t.mountY);
         const sy=isoY(t.x,t.y)-isoY(t.mountX,t.mountY);
-        if(Math.abs(sx-([25,-25,25,-25][k]))>.001||Math.abs(sy)>.001)
+        if(Math.abs(sx-([18,-18,18,-18][k]))>.001||Math.abs(sy)>.001)
           issues.push('Incorrect torch bowl attachment '+k);
-        if(!Array.isArray(wallTorchRect(t))||t.flameZ!==63||
+        if(!Array.isArray(wallTorchRect(t))||t.flameZ!==60||
           !Number.isFinite(t.depth))issues.push('Invalid torch drawing anchor '+k);
       }
       await preloadWallTorchHolders('catacombs');
@@ -73,7 +73,7 @@ const {openGame,report,OUT_DIR}=require('./harness');
       for(const t of world.torches){
         if(!segments.has([t.mountX,t.mountY,t.dir,t.front].join(':')))
           issues.push('Free-floating torch without matching wall segment');
-        if(t.flameZ!==63||!Number.isFinite(t.depth))
+        if(t.flameZ!==60||!Number.isFinite(t.depth))
           issues.push('Bad torch depth or flame anchor');
       }
       const cv=document.createElement('canvas');
