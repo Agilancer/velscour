@@ -24,11 +24,12 @@ export const LANCER_SHIELD_ABILITY = Object.freeze({
   'Shield Storm': 'diamond',
   'Bastion of Ten': 'tower',
 });
-// Fixed, distinct world-space distances; no two Bulwark abilities share an orbit.
+// Each Bulwark skill uses its own concentric orbit, spaced 0.55 world tiles
+// apart so even the larger shield sprites remain visually distinguishable.
 export const SHIELD_ORBIT_RADIUS = Object.freeze({
-  'Tower Shield': 1.18, 'Storm Bulwark': 1.40, 'Burning Aegis': 1.62,
-  'Frost Rampart': 1.84, 'Holy Citadel': 2.06,
-  'Shield Storm': 2.28, 'Bastion of Ten': 2.50,
+  'Tower Shield': 1.40, 'Storm Bulwark': 1.95, 'Burning Aegis': 2.50,
+  'Frost Rampart': 3.05, 'Holy Citadel': 3.60,
+  'Shield Storm': 4.15, 'Bastion of Ten': 4.70,
 });
 export function shieldOrbitRadius(name) { return SHIELD_ORBIT_RADIUS[name] ?? 1.6; }
 const cached = new Map();
@@ -89,13 +90,16 @@ export function preloadLancerShield(variant) {
   return record;
 }
 
-/** Eight angular views in their authored clockwise sequence.
- * In tile space a=pi/4 is toward the screen/front, and a=5*pi/4
- * is away from the camera. This keeps the actual shield front and wooden
- * back consistent with where it sits in the isometric orbit.
+/** The source atlas is authored in clockwise frame order. The shields now
+ * orbit in the opposite direction from the previous build, so reverse the
+ * visible turntable frame order independently of their world-space motion.
+ * Keep frame 0 facing the camera at a=pi/4 and frame 4 showing the shield
+ * back at a=5*pi/4; an increasing angle selects 0,7,6,...,1,0.
  */
 export function shieldFrameForAngle(angle) {
-  return ((Math.round((angle - Math.PI/4) * 8 / TAU) % 8) + 8) % 8;
+  const clockwise = ((Math.round((angle - Math.PI/4) * SHIELD_FRAME.count / TAU) %
+    SHIELD_FRAME.count) + SHIELD_FRAME.count) % SHIELD_FRAME.count;
+  return (SHIELD_FRAME.count - clockwise) % SHIELD_FRAME.count;
 }
 /** World-space depth of a single shield, not of its containing orbit.
  * Negative sum = behind the lancer; positive sum = in front of lancer.
