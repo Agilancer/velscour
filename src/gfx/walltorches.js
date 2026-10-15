@@ -8,8 +8,8 @@ const ROOT='assets/fx/wall_torches/';
 export const HOLDER_CELL=96;
 export const HOLDER_COUNT=20;
 export const HOLDER_ANGLES=4;
-const DISPLAY=60, HANG=74, FLAME_Z=63;
-const ATLAS_COUNT=4;
+// Wall decoration rather than a full-size freestanding light fixture.
+const DISPLAY=40, HANG=70, FLAME_Z=60;
 const atlases=new Map(), loading=new Map();
 
 // Five motifs per source sheet; the themed pools deliberately overlap so
