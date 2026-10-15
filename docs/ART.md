@@ -147,3 +147,20 @@ visual language, tests and instructions.
 node tools/tests/desert_temple.js
 node tools/tests/walls.js temple desert_temple
 ```
+
+## Ice Temple — generated frozen palace pack
+
+**Palace of the Everfrost** is the independent indoor `ice_temple` biome built from
+`src/gfx/icetemple.js`, rather than recolouring Frozen Ossuary. It generates 60 original
+frozen floor tiles (ten repeating bases), 40 new sculpted crystal/tomb/ruin props, and
+five ice architecture families with all sixteen connector masks. Three directional arches
+and three opening doors inherit the original template's geometry, pivots and depth slices,
+while acquiring hoarfrost, sapphire, blue ice and rune-painted materials.
+The generated Canvas images load lazily in `src/core/assets.js` and appear as an ordinary
+`biomeTileSet` without changing the existing dungeon engine. The dedicated browser
+QA can export real game-ready WebP atlases and `pack.json`. See [ICE_TEMPLE.md](ICE_TEMPLE.md).
+
+```bash
+node tools/tests/ice_temple.js
+node tools/tests/walls.js ice ice_temple
+```
