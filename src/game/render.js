@@ -443,8 +443,8 @@ function drawLighting(ctx, world) {
   lc.globalCompositeOperation = 'destination-out';
   const scale = (HW * 1.25 * camera.zoom * G.dpr) / divisor;
   const p = world.player, spr = lightSprite();
-  const add = (x, y, r, inten) => {
-    const [sx, sy] = camera.tileToScreen(x, y, 20);
+  const add = (x, y, r, inten, z = 20) => {
+    const [sx, sy] = camera.tileToScreen(x, y, z);
     const cx = (sx * G.dpr) / divisor, cy = (sy * G.dpr) / divisor, rr = r * scale;
     if (cx + rr < 0 || cy + rr < 0 || cx - rr > lw || cy - rr > lh) return false;
     lc.globalAlpha = Math.min(1, inten);
@@ -454,7 +454,7 @@ function drawLighting(ctx, world) {
   if (p) add(p.x, p.y, b.light * (1 + (p.st.lightPct || 0)), 1);
   let visibleLights=0;
   for (const l of lights) {
-    if (add(l.x, l.y, l.radius, l.intensity * 0.85)) visibleLights++;
+    if (add(l.x, l.y, l.radius, l.intensity * 0.85, l.z ?? 20)) visibleLights++;
     if (G.touch && visibleLights >= 48) break;
   }
   // the vignette is baked into the same quarter-res layer, so the screen takes one full-size blit, not two
