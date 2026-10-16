@@ -2,6 +2,7 @@
 from pathlib import Path
 from PIL import Image
 import json
+import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'assets/source/pet_animations'
@@ -81,9 +82,69 @@ def main():
                 top, bottom = y_ranges[row]
                 slot = src.crop((left, top, right, bottom))
                 alpha = slot.getchannel('A')
-                # Ignore isolated semitransparent edge noise from the source
-                # export when finding a pose's true visible bounds.
-                mask = slot.getchannel('A').point(lambda value: 255 if value > 24 else 0)
+                # Remove faint export/compositing residue before measuring a
+                # pose. The old code used this threshold only for the bounds,
+                # then retained the low-alpha pixels and lossy WebP halos.
+                rgba = np.array(slot)
+                rgba[rgba[:, :, 3] <= 24, 3] = 0
+                # Neighboring poses sometimes extend a few pixels past their
+                # measured frame boundary. Clear the seam on the left of each
+                # frame and the right seam where the next pose is not an
+                # intentional attack/flight effect.
+                seam = min(8, max(1, rgba.shape[1] // 20))
+                rgba[:, :seam, 3] = 0
+                if frame < frames - 2:
+                    rgba[:, -seam:, 3] = 0
+                # Frame names are printed just below several creatures. Their
+                # clipped black strokes sit in the final few source pixels.
+                bottom = rgba.shape[0]
+                edge_pixels = rgba[bottom - 8:bottom, :, :3]
+                dark_caption = np.max(edge_pixels, axis=2) < 72
+                alpha_strip = rgba[bottom - 8:bottom, :, 3]
+                alpha_strip[dark_caption] = 0
+                slot = Image.fromarray(rgba, 'RGBA')
+                mask = slot.getchannel('A').point(lambda value: 255 if value else 0)
+
+                # The source sheets place frame captions right against the
+                # crop edges. Drop small disconnected marks touching an edge;
+                # real pose parts and attack effects remain connected to the
+                # pose or are large enough to stand on their own.
+                pixels = np.asarray(mask) > 0
+                h, w = pixels.shape
+                seen = np.zeros((h, w), dtype=bool)
+                clean = np.array(slot)
+                for sy, sx in zip(*np.where(pixels & ~seen)):
+                    if seen[sy, sx]:
+                        continue
+                    stack = [(int(sy), int(sx))]
+                    seen[sy, sx] = True
+                    component = []
+                    min_x = max_x = int(sx)
+                    min_y = max_y = int(sy)
+                    while stack:
+                        cy, cx = stack.pop()
+                        component.append((cy, cx))
+                        min_x, max_x = min(min_x, cx), max(max_x, cx)
+                        min_y, max_y = min(min_y, cy), max(max_y, cy)
+                        for ny in range(max(0, cy - 1), min(h, cy + 2)):
+                            for nx in range(max(0, cx - 1), min(w, cx + 2)):
+                                if pixels[ny, nx] and not seen[ny, nx]:
+                                    seen[ny, nx] = True
+                                    stack.append((ny, nx))
+                    area = len(component)
+                    edge = min_x <= 16 or min_y == 0 or max_x >= w - 17 or max_y == h - 1
+                    text_band = min_y >= h - 24 or max_y <= 8
+                    edge_area_limit = 4000 if frame < frames - 2 else 700
+                    small_edge_mark = edge and area <= edge_area_limit and max_x - min_x + 1 <= 100 and max_y - min_y + 1 <= 28
+                    caption_mark = text_band and area <= 2200 and max_x - min_x + 1 <= 130 and max_y - min_y + 1 <= 30
+                    if small_edge_mark or caption_mark:
+                        yy, xx = zip(*component)
+                        clean[yy, xx, 3] = 0
+                slot = Image.fromarray(clean, 'RGBA')
+
+                # Recompute after caption/edge cleanup so discarded source
+                # marks cannot expand the crop around the creature.
+                mask = slot.getchannel('A').point(lambda value: 255 if value else 0)
                 box = mask.getbbox()
                 if box:
                     pad = 4
@@ -109,7 +170,9 @@ def main():
             catalog[key] = {'sheet': name, 'row': row, 'frames': frames,
                             'cellW': out_w, 'cellH': out_h,
                             'kind': 'winged' if frames == 6 else 'land'}
-        atlas.save(OUT / f'{name}.webp', 'WEBP', quality=88, method=2)
+        # Lossy WebP creates colored blocks around transparent magic glows.
+        # Keep the existing runtime format, but encode it losslessly.
+        atlas.save(OUT / f'{name}.webp', 'WEBP', lossless=True, quality=100, method=6)
         print(f'{name}: {len(keys)} rows, {frames} frames, {atlas.width}x{atlas.height}')
 
     (OUT / 'catalog.json').write_text(json.dumps(catalog, separators=(',', ':')) + '\n', encoding='utf-8')
