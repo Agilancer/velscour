@@ -1,0 +1,17 @@
+{
+  "frame": [192, 224],
+  "cols": 16,
+  "classes": [
+    "paladin", "ranger", "wizard", "necromancer", "barbarian", "dragoon", "totem_master", "death_knight",
+    "arcane_sorcerer", "carrion_witch", "bard", "slime_lord", "boomerang_knight", "lancer", "dragon_knight", "gunner"
+  ],
+  "rarity": "common",
+  "designs": [
+    { "id": 1, "name": "Cap", "catalog": "Common 01" },
+    { "id": 2, "name": "Helm", "catalog": "Common 02" },
+    { "id": 3, "name": "Great Helm", "catalog": "Common 03" },
+    { "id": 4, "name": "Winged Helm", "catalog": "Common 04" },
+    { "id": 5, "name": "Crown", "catalog": "Common 05" }
+  ],
+  "fit": { "scaleX": 0.21, "scaleY": 0.22, "xAnchor": 65, "baselineOffset": 25, "sourceBaseline": 216 }
+}

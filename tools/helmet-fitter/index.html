@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>VELSCOUR · Helmet fitter</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><div><h1>Helmet fitter</h1><p>Drag the helmet onto the head. Use the wheel to resize it.</p></div><div class="actions"><button id="png">Export PNG</button><button id="export">Export JSON</button><button id="import">Import JSON</button><button id="save" class="primary">Save to game</button></div></header>
+  <div id="draft" hidden>There is an unsaved browser draft. <button id="restore">Restore draft</button><button id="dismiss">Dismiss</button></div>
+  <main>
+    <aside>
+      <label>Character<select id="class"></select></label>
+      <label>Helmet design<select id="design"></select></label>
+      <div class="row"><button id="previous">← Previous</button><button id="next">Next →</button></div>
+      <p id="progress"></p>
+      <fieldset id="controls"><legend>Helmet placement</legend>
+        <div class="row"><label>X <input id="x" type="number" min="-512" max="512" step="0.25"></label><label>Y <input id="y" type="number" min="-512" max="512" step="0.25"></label></div>
+        <label>Size <input id="size" type="range" min="5" max="100" step="0.1"></label>
+        <label class="check"><input id="lock" type="checkbox" checked> Keep proportions when resizing</label>
+        <div class="row"><label>Width % <input id="sx" type="number" min="1" max="400" step="0.1"></label><label>Height % <input id="sy" type="number" min="1" max="400" step="0.1"></label></div>
+        <label>Helmet opacity <input id="opacity" type="range" min="0" max="100" value="100"></label>
+        <label class="check"><input id="show" type="checkbox" checked> Show helmet</label>
+        <div class="row"><button id="undo" disabled>Undo</button><button id="reset">Reset this fit</button></div>
+        <button id="copyClass">Copy as starting point for all 5</button>
+      </fieldset>
+      <fieldset><legend>Preview</legend>
+        <label>Body armor <input id="armor" type="number" min="1" max="80" value="1"></label>
+        <label>View zoom <input id="zoom" type="range" min="3" max="12" step="0.5" value="6"></label>
+        <label>Background<select id="background"><option value="dark">Dark</option><option value="light">Light</option><option value="checker">Checkerboard</option></select></label>
+      </fieldset>
+      <p class="help">Arrow keys move ¼ pixel. Shift + arrows move 1 pixel. + / − resize. Ctrl+Z undoes. Ctrl+S saves. Hold Space to see the bare head.</p>
+    </aside>
+    <section class="workspace">
+      <div class="stage"><canvas id="editor" tabindex="0" aria-label="Drag to move the helmet; arrow keys nudge it"></canvas></div>
+      <div class="readout"><strong id="caption"></strong><code id="numbers"></code><span id="status" role="status">Loading…</span></div>
+      <section class="overview"><div><h2>Whole character</h2><canvas id="full" width="256" height="384"></canvas></div><div><h2>This class · all five helmets</h2><div id="thumbnails"></div><p class="help">Click a helmet preview to adjust it. A dot marks a fit you have set.</p></div></section>
+    </section>
+  </main>
+  <input id="file" type="file" accept="application/json,.json" hidden>
+  <script type="module" src="editor.js"></script>
+</body>
+</html>
