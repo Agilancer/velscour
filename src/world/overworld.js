@@ -50,7 +50,7 @@ export function generateOverworld(depth,biome,seed) {
     const sprite=typeof normalized==='string'?
       (overworldObject(normalized)||townObject(normalized)):normalized;
     if(!sprite)return false;
-    props.push({kind:'scatter',x,y,spr:sprite,k:K,flip:sprite.isometric?false:(opts.flip??rng.chance(.5)),
+    props.push({kind:'scatter',x,y,spr:sprite,k:K*(sprite.pixelScale||1),flip:sprite.isometric?false:(opts.flip??rng.chance(.5)),
       light:opts.light||0});
     return true;
   };

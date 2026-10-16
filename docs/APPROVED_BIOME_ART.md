@@ -51,6 +51,13 @@ For each of the five themed generated packs:
 If an atlas is missing, existing generated art remains as the fallback.
 Only loaded sheets are painted, and no unrelated biome is changed.
 
+## Additional low-resolution variants
+
+The separate [`BIOME_VARIANT_ART.md`](BIOME_VARIANT_ART.md) atlas adds one floor and one
+scatter design to each of these five themes, plus five Forsaken Wilds trees.
+It uses spare decorative cells and preserves the approved paintings listed
+above.
+
 ## Celestial monsters
 
 The twelve paintings are assigned one-to-one to the **first variant** of
