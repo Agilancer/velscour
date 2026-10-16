@@ -67,7 +67,7 @@ function bake(cols, seed, n) {
 /** The grit overlay for floor tile (tx, ty) of variant v drawn with entry f, or null. */
 export function gritAt(world, f, v, tx, ty) {
   const g = world.grit || (world.grit = { cols: new Map(), spr: new Map() });
-  const town = !!world.townTiles, trans = town && v >= 6;
+  const town = !!world.townTiles && !['castle','sea_of_sand'].includes(world.biome?.id), trans = town && v >= 6;
   const h = hash(tx, ty, 7);
   if ((h & 255) >= (trans ? 256 : town ? 150 : 105)) return null;
   const key = v * VARIANTS + ((h >>> 8) % VARIANTS);

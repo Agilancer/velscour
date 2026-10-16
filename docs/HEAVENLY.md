@@ -11,8 +11,7 @@ Desecrated Cathedral, ASTRAL PLANE, HELL, Ice Temple, or the Depth 500 throne.
 The normal dungeon engine supplies maze rooms/corridors, guardian bosses,
 chests, the town-return and exit portals, XP/loot, player character rendering,
 class gear and all usual melee/ranged/caster/charger combat. Completing its
-guardian opens the exit as usual. The already-implemented six-dungeon
-Forsaken Wilds visit counter counts HEAVENLY as a non-overworld dungeon.
+guardian opens the exit as usual. The three-dungeon overworld visit counter counts HEAVENLY as a non-overworld dungeon.
 
 **Approved artwork update (October 15, 2026):** eight native floor
 cells and eight matching named native scatter cells now use hand-painted sprites from the

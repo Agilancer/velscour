@@ -151,7 +151,7 @@ const FULL=process.argv.includes('--all');
         const hero={biomeBag:[],lastBiome:null,overworldMisses:0};
         for(let d=1;d<55;d++){
           const picked=drawBiome(hero,d);
-          if(hero.overworldMisses>=6&&picked!=='overworld')
+          if(hero.overworldMisses>=3&&!BIOME_BY_ID[picked]?.overworld)
             issues.push('Forced overworld visit was bypassed');
           recordBiomeVisit(hero,BIOME_BY_ID[picked],d);
           hero.lastBiome=picked;

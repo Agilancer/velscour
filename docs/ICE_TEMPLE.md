@@ -67,7 +67,7 @@ greater monsters retain VELSCOUR's original enemy-art/palette-swap framework.
 The ordinary end guardian guards the usual sealed dungeon exit.
 
 This biome counts as a **non-overworld** visit for the Forsaken Wilds
-six-dungeon guarantee. The exact Depth 500 throne remains non-negotiable.
+three-dungeon overworld guarantee. The exact Depth 500 throne remains non-negotiable.
 
 ## Exporting actual art
 

@@ -139,6 +139,10 @@ for (const b of BIOMES) {
       if(b.pack!=='sea_of_sand')bad.push('Sea of Sand must use its native art pack');
       for(const f of ['pack.json','floor.webp','scatter.webp','tree.webp','monster.webp','boss.webp','cliff.webp'])
         if(!existsSync(asset(`tiles/sea_of_sand/${f}`)))bad.push(`Sea of Sand: missing tiles/sea_of_sand/${f}`);
+    }else if(b.id==='castle'){
+      if(b.pack!=='castle')bad.push('Castle must use its native art pack');
+      for(const f of ['pack.json','floors.webp','walls.webp','castle_bridges.webp','wall_hangings.webp'])
+        if(!existsSync(asset(`tiles/castle/${f}`)))bad.push(`Castle: missing tiles/castle/${f}`);
     }else{
       if (b.pack !== 'town') bad.push(`overworld ${b.id}: expected town art pack`);
       for (const f of ['town.json', 'ground.webp', 'objects.webp']) if (!existsSync(asset(`tiles/town/${f}`))) bad.push(`overworld: missing tiles/town/${f}`);

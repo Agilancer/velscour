@@ -20,6 +20,7 @@ import { generateOverworld } from '../world/overworld.js';
 import { createOverworldScenario } from './overworld.js';
 import { createSeaOfSandScenario } from './seaofsand.js';
 import { loadSeaOfSandPack } from '../gfx/seaofsand.js';
+import { loadCastlePack } from '../gfx/castle.js';
 import { World } from './world.js';
 import { Player } from './player.js';
 import { makeMonster, Monster } from './monster.js';
@@ -229,6 +230,7 @@ export const game = {
     setTimeout(async () => {
       try {
         if (biome.id === 'sea_of_sand') await loadSeaOfSandPack();
+        else if (biome.id === 'castle') await loadCastlePack();
         else if (!biome.overworld) await Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]);
       } catch (e) { console.warn(e); }
       try {

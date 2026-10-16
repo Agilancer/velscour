@@ -393,10 +393,15 @@ export function renderWorld(ctx, world) {
         break;
       }
       case 6: {
+        const deckI=world.map.rampartDeck?Math.floor(o.y)*world.map.w+Math.floor(o.x):-1;
+        const deckZ=deckI>=0&&world.map.rampartDeck[deckI]?world.map.rampartHeight||0:0;
+        const oldZ=o.z||0;
+        if(deckZ)o.z=oldZ+deckZ;
         o.draw(ctx);
+        if(deckZ)o.z=oldZ;
         const img = o.spriteImage();
         const [w, h] = o.spriteDims(img);
-        const [sx, sy] = camera.tileToScreen(o.x, o.y, o.z + (o.fly ? 16 : 0));
+        const [sx, sy] = camera.tileToScreen(o.x, o.y, oldZ + deckZ + (o.fly ? 16 : 0));
         const z = camera.zoom;
         o.sbox = [sx - (w / 2) * z, sy - h * z, sx + (w / 2) * z, sy];
         break;
@@ -477,7 +482,11 @@ function drawLighting(ctx, world) {
     lc.drawImage(spr, cx - rr, cy - rr, rr * 2, rr * 2);
     return true;
   };
-  if (p) add(p.x, p.y, b.light * (1 + (p.st.lightPct || 0)), 1);
+  if (p) {
+    const i=world.map.rampartDeck?Math.floor(p.y)*world.map.w+Math.floor(p.x):-1;
+    const deck=i>=0&&world.map.rampartDeck[i]?world.map.rampartHeight||0:0;
+    add(p.x,p.y,b.light*(1+(p.st.lightPct||0)),1,20+deck);
+  }
   let visibleLights=0;
   for (const l of lights) {
     if (add(l.x, l.y, l.radius, l.intensity * 0.85, l.z ?? 20)) visibleLights++;

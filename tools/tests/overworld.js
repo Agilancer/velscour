@@ -57,17 +57,17 @@ const { openGame, report } = require('./harness');
       if(minTrees<150)errors.push('too few forest wall trees');
       if(minClear<1800)errors.push('too little free combat space');
 
-      // Verify the shuffle bag and the six-dungeon safety rule, including town
+      // Verify the shuffle bag and the three-dungeon safety rule, including town
       // re-entry and the un-overridable throne at Depth 500.
       for(let run=0;run<50;run++){
         const hero={biomeBag:[],lastBiome:null,overworldMisses:0,overworldLastVisit:null};
         let count=0;
         for(let d=1;d<=100;d++){
           const biomeId=drawBiome(hero,d),pick=BIOME_BY_ID[biomeId];
-          if(count>=6&&biomeId!=='overworld')errors.push('missed forced visit at '+d);
+          if(count>=3&&!pick.overworld)errors.push('missed forced visit at '+d);
           if(biomeId===hero.lastBiome)errors.push('back-to-back biome repeat');
           recordBiomeVisit(hero,pick,d);
-          count=biomeId==='overworld'?0:count+1;
+          count=pick.overworld?0:count+1;
           recordBiomeVisit(hero,pick,d);
           if(hero.overworldMisses!==count)errors.push('double-counted same depth '+d);
           hero.lastBiome=biomeId;
