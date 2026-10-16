@@ -22,10 +22,12 @@ const selected = ['catacombs', 'ice_temple', 'desert_temple', 'hell',
           const { G, game } = window.VELSCOUR;
           const { BIOME_BY_ID } = await import('/src/data/biomes.js');
           const { loadBiomeArt } = await import('/src/core/assets.js');
+          const { loadSeaOfSandPack } = await import('/src/gfx/seaofsand.js');
           const biome = BIOME_BY_ID[id], depth = id === 'throne' ? 500 : 8;
           G.godMode = true;
           G.char.depth = depth;
-          await loadBiomeArt(biome);
+          if (id === 'sea_of_sand') await loadSeaOfSandPack();
+          else await loadBiomeArt(biome);
           game.buildDungeon(depth, biome);
         }, id);
         await page.waitForTimeout(300);

@@ -477,7 +477,7 @@ export const Auto = {
     const signature = c.classId === 'barbarian' ? learned.find((sk) => sk.name === 'Whirlwind') || learned.find((sk) => sk.kind === 'whirl') :
       c.classId === 'lancer' ? learned.find((sk) => sk.m.shields) :
       c.classId === 'dragoon' ? learned.find((sk) => sk.kind === 'leap') : null;
-    bar[LMB] = signature?.id || hammer?.sk.id || main?.sk.id || free?.id || c.bar[LMB];
+    bar[LMB] = signature?.id || hammer?.sk?.id || main?.sk.id || free?.id || c.bar[LMB];
     const lmbSk = SKILLS[bar[LMB]];
     const rmb = free && free.id !== bar[LMB] && (lmbSk && (manaCost(lmbSk, 1) || rageCost(lmbSk) || lmbSk.kind === 'whirl' || lmbSk.kind === 'orbit' || lmbSk.kind === 'leap')) ? free :
       alt && alt.sk;

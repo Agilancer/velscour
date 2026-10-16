@@ -462,10 +462,17 @@ export function clearVfx() {
 
 // --------------------------------------------------------------- update
 export function updateVfx(dt, world) {
+  // Bursts often expire hundreds of particles together. Compact once instead
+  // of shifting the surviving array on every expired particle (quadratic work).
+  let live = 0;
+  for (const p of particles) {
+    p.life -= dt;
+    if (p.life <= 0) { if (p.spr) spriteGibs--; }
+    else particles[live++] = p;
+  }
+  particles.length = live;
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
-    p.life -= dt;
-    if (p.life <= 0) { if (p.spr) spriteGibs--; particles.splice(i, 1); continue; }
     // Cyclone wind (and captured gib sprites) follow the caster's moving isometric spiral.
     if (p.vortex && !p.vortex.owner.dead) {
       const v = p.vortex;

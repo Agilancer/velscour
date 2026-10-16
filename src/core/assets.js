@@ -98,7 +98,7 @@ function retainGenerated(id) {
     delete A.packs[old];
   }
 }
-function loadPack(id) {
+async function loadPack(id) {
   if (GENERATED[id]) {
     const previous = A.packs[id];
     if (previous) { if (!(previous instanceof Promise)) retainGenerated(id); return previous; }
@@ -150,7 +150,7 @@ async function expandedPack(biome) {
 export function loadBiomeArt(biome) {
   return Promise.all([
     loadEnemyArt().catch((e) => console.warn(e)), // monsters fall back to their pixel sprites
-    biome && !biome.overworld && biome.id !== 'town' ? expandedPack(biome) : loadPack(biome.pack || DEFAULT_PACK),
+    biome && !biome.overworld && biome.id !== 'town' ? expandedPack(biome) : Promise.resolve(null),
     biome?.id === 'heavenly' ? preloadApprovedHeavenlyArtwork() : Promise.resolve(null),
     biome && !biome.overworld && biome.id!=='town' ?
       preloadWallTorchHolders(biome) : Promise.resolve(null),

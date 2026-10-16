@@ -44,6 +44,23 @@ Contents
 - Updated `tools/tests/town.js` to check nearby entry-axis consistency and all approach tiles for continuity and walkability. Chromium screenshots were inspected for the plaza and zoomed-out town.
 - Verified seeds 1337, 2929, 7853, 12345 and 65535 with `tools/tests/town.js`, and ran `tools/tests/flow.js`; both reported no errors.
 
+## October 15, 2026 — effect-preserving performance pass
+
+- Branch `perf/biome-effects`: cull offscreen wall slices before sorting/drawing,
+  reuse render records and spatial buckets, scan sparse grids for nearest-target
+  searches, and compact expired particles in one stable pass. No particle caps,
+  effect density, art, lighting quality or resolution settings were reduced.
+- Fixed cached biome-pack Promise handling and outdoor asset loading; updated
+  the mobile biome sweep to use the dedicated Sea of Sand loader.
+- Same-world desktop/touch Chromium comparisons against original main showed
+  zero changed pixels in six biomes at existing maximum particle counts, with
+  matching particle states and target selections. Gameplay, mobile, wizard,
+  monster/pet/minion and Lancer regressions passed. Existing Barbarian regression
+  failures were reproduced with original code. See
+  [EFFECTS_PERFORMANCE.md](EFFECTS_PERFORMANCE.md) for measurements and limitations.
+- Next: profile physical iOS/Android devices and long-session memory; desktop
+  touch emulation does not establish real-device FPS.
+
 ## October 15, 2026 — Herrington Hollow tiles and weather
 
 - Removed generic generated monuments (rune stones, obelisks, idols, crystals,
