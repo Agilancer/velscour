@@ -25,6 +25,7 @@ const PROP = Object.freeze({w:80,h:80,cols:8,rows:5});
 const MONSTER = Object.freeze({w:120,h:150,cols:4,rows:3});
 const VARIANT = Object.freeze({w:80,h:80,cols:5,rows:3});
 const WORLD_SCATTER = Object.freeze({w:80,h:80,cols:5,rows:4});
+const WILD_SUPPLEMENTAL = Object.freeze({w:128,h:128,cols:4,rows:4});
 const VARIANT_ART = Object.freeze({
   desert_temple:{column:0,nativeProp:32,expandedProp:20},
   ice_temple:{column:1,nativeProp:33,expandedProp:25},
@@ -38,7 +39,8 @@ const FAMILIES = Object.freeze([
   'luminary','judgement','oracle','throne',
 ]);
 const urls = {floors:'floors.webp',props:'props.webp',monsters:'heavenly_monsters.webp',
-  variants:'velscour_variants.webp',worldScatter:'velscour_overworld_scatter.webp'};
+  variants:'velscour_variants.webp',worldScatter:'velscour_overworld_scatter.webp',
+  wildSupplemental:'forsaken_wilds_supplemental.webp'};
 const sheetPromises = new Map(), sheets = new Map();
 const monsterFrames = new Map();
 
@@ -49,7 +51,8 @@ function loadSheet(kind) {
     const img = new Image();
     img.onload = () => {
       const size = kind==='floors'?FLOOR:kind==='props'?PROP:
-        kind==='variants'?VARIANT:kind==='worldScatter'?WORLD_SCATTER:MONSTER;
+        kind==='variants'?VARIANT:kind==='worldScatter'?WORLD_SCATTER:
+        kind==='wildSupplemental'?WILD_SUPPLEMENTAL:MONSTER;
       if (img.naturalWidth !== size.w*size.cols ||
           img.naturalHeight !== size.h*size.rows) {
         console.warn('VELSCOUR approved art has wrong atlas dimensions:',kind);
@@ -156,11 +159,39 @@ export async function applyApprovedBiomeArt(pack, biomeId) {
 const WILD_TREE_COLUMNS=Object.freeze({
   t_gnarled_ash:0,t_old_cedar:1,t_wind_pine:2,t_dead_oak_painted:3,t_silver_birch:4,
 });
+const WILD_TREE_INDICES=Object.freeze({
+  t_ember_maple:0,t_silver_elm:1,t_moon_birch:2,t_gnarled_yew:3,
+  t_dusk_cedar:4,t_frost_fir:5,t_gold_aspens:6,t_copper_beech:7,
+  t_blight_oak:8,t_wild_apple:9,
+});
 export function approvedOverworldTree(name){
+  const index=WILD_TREE_INDICES[name];
+  if(index!==undefined){
+    const image=sheets.get('wildSupplemental');
+    if(!image)return null;
+    return{img:image,sx:index%WILD_SUPPLEMENTAL.cols*WILD_SUPPLEMENTAL.w,
+      sy:Math.floor(index/WILD_SUPPLEMENTAL.cols)*WILD_SUPPLEMENTAL.h,
+      w:WILD_SUPPLEMENTAL.w,h:WILD_SUPPLEMENTAL.h,ox:-64,oy:-123,name,fp:.4,
+      block:true,isometric:true,pixelScale:1.25};
+  }
   const image=sheets.get('variants'),column=WILD_TREE_COLUMNS[name];
   if(!image||column===undefined)return null;
   return{img:image,sx:column*VARIANT.w,sy:VARIANT.h*2,w:VARIANT.w,h:VARIANT.h,
     ox:-40,oy:-76,name,fp:.4,block:true,isometric:true,pixelScale:2};
+}
+
+const WILD_OBJECT_INDICES=Object.freeze({
+  ow_shrine_azure:10,ow_shrine_ember:11,ow_shrine_verdant:12,
+  ow_shrine_violet:13,ow_shrine_gold:14,ow_caravan:15,
+});
+export function approvedOverworldSupplemental(name){
+  const index=WILD_OBJECT_INDICES[name],image=sheets.get('wildSupplemental');
+  if(!image||index===undefined)return null;
+  return{img:image,sx:index%WILD_SUPPLEMENTAL.cols*WILD_SUPPLEMENTAL.w,
+    sy:Math.floor(index/WILD_SUPPLEMENTAL.cols)*WILD_SUPPLEMENTAL.h,
+    w:WILD_SUPPLEMENTAL.w,h:WILD_SUPPLEMENTAL.h,ox:-64,oy:-123,name,
+    fp:name==='ow_caravan'?.95:.45,block:name==='ow_caravan',isometric:true,
+    pixelScale:name==='ow_caravan'?1.33:1};
 }
 
 export function preloadBiomeVariantArt(){return loadSheet('variants');}
@@ -180,7 +211,9 @@ export function approvedOverworldScatter(name){
     w:WORLD_SCATTER.w,h:WORLD_SCATTER.h,ox:-40,oy:-76,name,fp:.28,block:false,
     isometric:true};
 }
-export function preloadOverworldScatterArt(){return loadSheet('worldScatter');}
+export function preloadOverworldScatterArt(){
+  return Promise.all([loadSheet('worldScatter'),loadSheet('wildSupplemental')]);
+}
 
 export function preloadApprovedHeavenlySprites() {
   return loadSheet('monsters');

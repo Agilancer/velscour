@@ -2,7 +2,7 @@
 // generated shrine/caravan sprites share the town-pack ground-pivot contract.
 import { A } from '../core/assets.js';
 import { makeCanvas } from '../core/util.js';
-import { approvedOverworldScatter, approvedOverworldTree } from './approvedbiomeart.js';
+import { approvedOverworldScatter, approvedOverworldSupplemental, approvedOverworldTree } from './approvedbiomeart.js';
 
 export const EXTRA_TREES = [
   't_ember_maple', 't_silver_elm', 't_moon_birch', 't_gnarled_yew', 't_dusk_cedar',
@@ -55,6 +55,8 @@ function tree(name) {
   return {img:c,sx:0,sy:0,w,h,ox:src.ox,oy:src.oy,name,fp:.4,block:true};
 }
 function shrine(name) {
+  const approved=approvedOverworldSupplemental(name);
+  if(approved)return approved;
   const i=SHRINES.indexOf(name), colors=['#459bff','#ed543b','#59db96','#c479ff','#f5bd4f'], glow=colors[i];
   const w=112,h=140,c=makeCanvas(w,h),x=c.getContext('2d');
   // Isometric stone plinth, metal corner bindings and a bright multi-faceted crystal.
@@ -70,6 +72,8 @@ function shrine(name) {
   return format(c,w,h,name,.45);
 }
 function caravan(name) {
+  const approved=approvedOverworldSupplemental(name);
+  if(approved)return approved;
   const src=baseSprite('handcart'),w=170,h=145,c=makeCanvas(w,h),x=c.getContext('2d');
   // Travelling wagon: built from the pack's handcart, with original timber,
   // leather tarpaulin, gold fittings and a pair of visible axle wheels.

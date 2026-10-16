@@ -1,5 +1,15 @@
 // Each sheet is 8x8: 32 isometric floor motifs followed by 32 terrain props.
-const BIOMES = new Set(['desert_temple','ice_temple','hell','astral_plane','heavenly']);
+const BIOMES = new Set([
+  'desert_temple','ice_temple','hell','astral_plane','heavenly',
+  'frozen','molten','fungal','sunken','blood','ashen','void','gilded','plague',
+  'crystal','desert','shadow','forge','abyss','thorn','storm','obsidian','flesh',
+  'serpent','shattered','library','necropolis','amber',
+]);
+const DISTINCT_WALLS = new Set([
+  'frozen','molten','fungal','sunken','blood','ashen','void','gilded','plague',
+  'crystal','desert','shadow','forge','abyss','thorn','storm','obsidian','flesh',
+  'serpent','shattered','library','necropolis','amber',
+]);
 const CACHE = new Map();
 
 function loadAtlas(id) {
@@ -50,7 +60,7 @@ export async function applyAIBiomeArt(pack, biomeId) {
     // wall/arch/door silhouettes. Connection masks and depth slices stay exact.
     walls.save();
     walls.globalCompositeOperation = 'source-atop';
-    walls.globalAlpha = 0.34;
+    walls.globalAlpha = DISTINCT_WALLS.has(biomeId) ? 1 : 0.34;
     walls.fillStyle = walls.createPattern(architecture, 'repeat');
     walls.fillRect(0, 0, pack.walls.width, pack.walls.height);
     walls.restore();
