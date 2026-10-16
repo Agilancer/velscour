@@ -4,7 +4,7 @@ import { el, fmtInt, escapeHtml } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { UI, draggable, droppable } from './ui.js';
 import { itemCell, itemTooltip, rarityClass } from './itemui.js';
-import { SLOTS, SLOT_NAMES, itemName, itemColor, GEMS, gemName, itemValue, fitsSlot, slotFor } from '../data/items.js';
+import { SLOTS, SLOT_NAMES, itemName, itemColor, GEMS, gemName, itemValue, fitsSlot, slotFor, unsocketCost, makeGem } from '../data/items.js';
 import { CLASSES, ATTRS } from '../data/classes.js';
 import { xpToNext } from '../game/player.js';
 import { addToBag } from '../game/player.js';
@@ -178,6 +178,23 @@ function detailBox() {
     btn('Drop', () => dropFromBag(sel.idx), 'small red');
   } else {
     btn('Unequip', () => unequip(sel.slot));
+  }
+  if (it.type === 'gear' && it.gems.length) {
+    const cost = unsocketCost(it);
+    const needed = new Set(it.gems.filter((g) => !G.char.bag.some((b) => b && b.type === 'gem' && b.gem === g.gem && b.tier === g.tier)).map((g) => `${g.gem}:${g.tier}`)).size;
+    const free = G.char.bag.filter((b) => !b).length;
+    const remove = el('button', 'btn small', `Remove gems (${fmtInt(cost)}g)`);
+    remove.disabled = G.char.gold < cost || free < needed;
+    remove.title = free < needed ? 'Make room in your inventory first.' : '';
+    remove.onclick = () => {
+      if (G.char.gold < cost || free < needed) return;
+      G.char.gold -= cost;
+      for (const gem of it.gems) addToBag(G.char, makeGem(gem.gem, gem.tier));
+      it.gems = [];
+      sfx('gold');
+      changed();
+    };
+    row.appendChild(remove);
   }
   box.appendChild(row);
   return box;
