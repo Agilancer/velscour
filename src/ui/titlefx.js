@@ -1,4 +1,4 @@
-// Title screen: the Blastorama and Jamie Herrington credits fade together before the VELSCOUR logo rises out of the
+// Title screen: the Blastorama and Jamie Herrington credits fade in sequence before the VELSCOUR logo rises out of the
 // dark in time with "Hymn of the Abyss" and bursts into flame on the song's first hit; red eyes blink in the background.
 // Timeline (song time, s): after the credits, the song starts 2 s after the logo intro begins (INTRO_DELAY), which fades in from
 // FADE0 to HIT and the flames burst at HIT. Visuals follow the song's own clock, so a slow load never puts them out of sync.
@@ -12,7 +12,7 @@ import { rand, randi, clamp } from '../core/util.js';
 
 const FLAME = ['#fff7c8', '#ffe070', '#ffb428', '#ff7a12', '#e0400a', '#9a1c06', '#4a0c04'];
 export const INTRO_DELAY = 2, HIT = 6.88, FADE0 = -1.5;   // song-time seconds (FADE0 < 0: before the song starts)
-const CREDITS_MS = 4000;
+const CREDIT_CARD_MS = 3600, CREDITS_MS = CREDIT_CARD_MS * 2;
 // phones: fewer, slightly bigger particles at a lower canvas resolution; Q also drops further if frames run slow
 const MAX_PARTS = 14000;
 let geo = null;              // logo emitter points in native logo pixels (built once)
@@ -65,7 +65,7 @@ export function attachTitleFx(screen, logoEl, els = {}) {
   function startIntro(skipNow = false) {
     if (phase !== 'credits') return;
     phase = 'intro'; t0 = performance.now();
-    if (els.credits) els.credits.style.opacity = '0';
+    if (els.credits) for (const card of els.credits.children) card.style.opacity = '0';
     playMusic('title', { delay: INTRO_DELAY });
     if (skipNow) {
       seekMusic(HIT - 0.35);
@@ -94,7 +94,7 @@ export function attachTitleFx(screen, logoEl, els = {}) {
   function skip() {
     if (phase === 'credits') {
       skipAfterCredits = true;
-      if (els.credits) els.credits.style.opacity = '0';
+      if (els.credits) for (const card of els.credits.children) card.style.opacity = '0';
       if (!priming) startIntro(true);
       return;
     }
@@ -121,9 +121,13 @@ export function attachTitleFx(screen, logoEl, els = {}) {
     if (phase === 'credits') {
       const elapsed = performance.now() - creditsAt;
       if (els.credits && !skipAfterCredits) {
-        const k = elapsed < 900 ? elapsed / 900 : elapsed < 3100 ? 1 : clamp((CREDITS_MS - elapsed) / 900, 0, 1);
+        const active = Math.min(1, Math.floor(elapsed / CREDIT_CARD_MS));
+        const cardTime = elapsed - active * CREDIT_CARD_MS;
+        const k = cardTime < 900 ? cardTime / 900 : cardTime < 2700 ? 1 : clamp((CREDIT_CARD_MS - cardTime) / 900, 0, 1);
         const eased = k * k * (3 - 2 * k);
-        els.credits.style.opacity = reduceMotion ? '1' : eased.toFixed(3);
+        for (let i = 0; i < els.credits.children.length; i++) {
+          els.credits.children[i].style.opacity = i === active ? (reduceMotion ? '1' : eased.toFixed(3)) : '0';
+        }
       }
       if ((skipAfterCredits || elapsed >= CREDITS_MS) && !priming) startIntro(skipAfterCredits);
       return;
