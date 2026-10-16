@@ -652,6 +652,7 @@ export class Monster extends Creature {
   /** Minion attacks driven by the summon definition (A = def.atk, or def.spell). */
   summonAttack(t, A = this.atk) {
     const w = this.world, el = this.el || 'phys', E = elem(el);
+    this.attackAnimT = 0.32;
     if (A === this.atk) this.cd = A.cd || 1;
     const dmg = [this.dmg * 0.85, this.dmg * 1.15];
     switch (A.type) {
