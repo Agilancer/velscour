@@ -83,6 +83,7 @@ export const HUD = {
       b.addEventListener('click', () => { sfx('ui'); G.game.hudAction(b.dataset.act); });
     }
     $('#minimap').addEventListener('click', () => { G.showAutomap = !G.showAutomap; });
+    $('#velscour-skull').addEventListener('click', () => { sfx('ui'); G.game.openVelscourContact(); });
     const spark = $('#hs-spark');
     spark.width = 150 * G.dpr; spark.height = 18 * G.dpr;
     UI.tip($('#hero-stats'), () => `<b style="color:#ffe2a0">Battle Ledger</b>
