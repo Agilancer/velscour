@@ -41,7 +41,7 @@ export function petAnimation(c) {
   if (!meta || !c.summon || !c.alive) return null;
   const img = atlas(meta.sheet);
   if (!img.complete || !img.naturalWidth || !img._pet) return null;
-  const cw = img.naturalWidth / meta.frames, ch = img.naturalHeight / meta.rows;
+  const cw = img.naturalWidth / meta.frames, ch = img.naturalHeight / meta.rows.length;
   let frame;
   if (meta.frames === 6) {
     frame = c.moving ? 3 + (Math.floor(c.animT * 8) % 3) : Math.floor(c.animT * 2.5) % 3;
