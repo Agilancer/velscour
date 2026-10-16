@@ -2,9 +2,9 @@
   <defs>
     <mask id="skull-aperture">
       <rect width="1400" height="591" fill="white"/>
-      <ellipse cx="881.5" cy="295.5" rx="110.9" ry="147.7" fill="black"/>
+      <ellipse cx="881.5" cy="295.5" rx="67" ry="99" fill="black"/>
     </mask>
   </defs>
   <image href="../logo.webp" width="1400" height="591" mask="url(#skull-aperture)"/>
-  <ellipse cx="881.5" cy="295.5" rx="110.9" ry="147.7" fill="none" stroke="#d69337" stroke-width="2" stroke-dasharray="7 5"/>
+  <ellipse cx="881.5" cy="295.5" rx="67" ry="99" fill="none" stroke="#d69337" stroke-width="2" stroke-dasharray="7 5"/>
 </svg>

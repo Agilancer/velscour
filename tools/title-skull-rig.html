@@ -17,8 +17,8 @@
     canvas { display: block; width: 100%; height: auto; background: #000; }
     #template { cursor: grab; touch-action: none; }
     #template:active { cursor: grabbing; }
-    .cutout-frame { position: relative; width: 256px; max-width: 100%; aspect-ratio: 256 / 341; margin: auto; overflow: hidden; clip-path: ellipse(49.2% 49.3% at 50% 50%); background: repeating-conic-gradient(#201b16 0% 25%,#100e0c 0% 50%) 50% / 18px 18px; }
-    #cutout { position: absolute; left: 0; top: -16.3%; width: 100%; height: 197%; transform: scaleY(.673); transform-origin: top left; }
+    .cutout-frame { width: 135px; max-width: 100%; margin: auto; background: repeating-conic-gradient(#201b16 0% 25%,#100e0c 0% 50%) 50% / 18px 18px; }
+    #cutout { display: block; width: 100%; height: auto; }
     .controls { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin-top: 14px; padding: 14px; border: 1px solid var(--line); background: var(--panel); }
     label { display: grid; gap: 4px; color: #b9a984; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
     select, button { min-height: 38px; padding: 7px 11px; color: #ecdcb7; background: #100d0a; border: 1px solid #805b2e; font: inherit; }
@@ -46,7 +46,7 @@
     <section class="previews" style="margin-top:14px;grid-template-columns:1fr">
       <figure>
         <figcaption>Starting oval cutout — exact source crop coordinates</figcaption>
-        <div class="cutout-frame"><img id="cutout" src="../assets/ui/title_skull_animations/source_overlay.png" alt="Transparent oval cutout containing the Velscour skull and O spikes"></div>
+        <div class="cutout-frame"><img id="cutout" src="../assets/ui/title_skull_rig/skull_oval_cutout.png" alt="Transparent oval cutout containing the Velscour skull and O spikes"></div>
       </figure>
     </section>
     <div class="controls" aria-label="Animation controls">
@@ -62,12 +62,11 @@
   <script>
     const ROOT = '../assets/ui/';
     const FRAME_W = 256, FRAME_H = 341, COLS = 6;
-    const DEFAULT_ELLIPSE = { x: 881.5, y: 295.5, rx: 110.9, ry: 147.7 };
+    const DEFAULT_ELLIPSE = { x: 881.5, y: 295.5, rx: 67, ry: 99 };
     const ELLIPSE = { ...DEFAULT_ELLIPSE };
-    const logo = new Image(), atlas = new Image(), cutout = new Image();
+    const logo = new Image(), atlas = new Image();
     logo.src = ROOT + 'logo.webp';
     atlas.src = ROOT + 'title_skull_rig/talking_normal_3x6.png';
-    cutout.src = ROOT + 'title_skull_rig/starting_cutout.svg';
     const template = document.querySelector('#template'), preview = document.querySelector('#preview');
     const tctx = template.getContext('2d'), pctx = preview.getContext('2d');
     const loop = document.querySelector('#loop'), speed = document.querySelector('#speed');
@@ -75,7 +74,7 @@
     let frame = 0, playing = true, last = 0;
 
     function draw() {
-      if (!logo.complete || !atlas.complete || !cutout.complete) return;
+      if (!logo.complete || !atlas.complete) return;
       tctx.clearRect(0, 0, template.width, template.height);
       pctx.clearRect(0, 0, preview.width, preview.height);
       tctx.fillStyle = pctx.fillStyle = '#000';
@@ -105,7 +104,7 @@
       readout.textContent = `Loop ${Number(loop.value) + 1} · frame ${frame + 1} / 6 · oval center ${ELLIPSE.x.toFixed(1)}, ${ELLIPSE.y.toFixed(1)} · radii ${ELLIPSE.rx.toFixed(1)}×${ELLIPSE.ry.toFixed(1)}`;
     }
 
-    for (const image of [logo, atlas, cutout]) image.addEventListener('load', draw);
+    for (const image of [logo, atlas]) image.addEventListener('load', draw);
     loop.addEventListener('change', () => { frame = 0; draw(); });
     reset.addEventListener('click', () => { Object.assign(ELLIPSE, DEFAULT_ELLIPSE); draw(); });
     toggle.addEventListener('click', () => { playing = !playing; toggle.textContent = playing ? 'Pause' : 'Play'; });
