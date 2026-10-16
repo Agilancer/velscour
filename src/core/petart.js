@@ -3,7 +3,7 @@
 import { makeCanvas } from './util.js';
 
 const SHEETS = {
-  companions_land: { frames: 9, rows: ['wolf', 'spiritwolf', 'direwolf', 'stormwolf', 'bear', 'spiritbear', 'ghoul'] },
+  companions_land: { frames: 9, rows: ['wolf', 'spiritwolf', 'direwolf', 'stormwolf'] },
   creatures_land: { frames: 9, rows: ['bear', 'spiritbear', 'ghoul', 'abomination'] },
   companions_winged: { frames: 6, rows: ['hawk', 'stormhawk', 'raven', 'phoenix'] },
   companions_dragons: { frames: 6, rows: ['whelp', 'wyvern', 'frostwyrm', 'elderwyrm'] },
