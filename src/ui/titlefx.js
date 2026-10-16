@@ -134,7 +134,7 @@ export function attachTitleFx(screen, logoEl, els = {}) {
         const k = Math.min(clamp(cardTime / CREDIT_FADE_MS, 0, 1), clamp((CREDIT_CARD_MS - cardTime) / CREDIT_FADE_MS, 0, 1));
         const eased = k * k * (3 - 2 * k);
         for (let i = 0; i < els.credits.children.length; i++) {
-          els.credits.children[i].style.opacity = i === active ? (reduceMotion ? '1' : eased.toFixed(3)) : '0';
+          els.credits.children[i].style.opacity = i === active ? eased.toFixed(3) : '0';
         }
       }
       if ((skipAfterCredits || elapsed >= CREDITS_MS) && !priming) startIntro(skipAfterCredits);
