@@ -188,6 +188,10 @@ function rollTown(tileset, seed, last) {
   };
   const streets = [];
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (use[I(x, y)] === 1 && !keep[I(x, y)]) streets.push([x, y]);
+  // A permanent root by the well: every approach joins this protected network.
+  const connected = new Uint8Array(N), root = I(C.x, C.y + 3);
+  connected[root] = keep[root] = use[root] = 1;
+  mat[root] = 4;
   const place = (name, vendor) => {
     const near = vendor ? 15 : 24;
     for (let tries = 0; tries < 160; tries++) {
@@ -207,9 +211,7 @@ function rollTown(tileset, seed, last) {
       if (side === 'conflict') continue;
       const sx = side ?? rng.chance(0.5);
       if (Math.hypot(x0 - C.x, y0 - C.y) > near + 6 || !fits(x0, y0)) continue;
-      const b = addBuilding(name, x0, y0, sx, vendor);
-      footpath(...frontOf(x0, y0, sx));
-      return b;
+      return addBuilding(name, x0, y0, sx, vendor);
     }
     return null;
   };
@@ -222,10 +224,10 @@ function rollTown(tileset, seed, last) {
     for (let c = 0; c < queue.length && end < 0; c++) for (const i of queue[c]) {
       if (cost[i] !== c) continue;
       const x = i % W, y = (i / W) | 0;
-      if (use[i] === 1 && mat[i] === 4 && i !== start) { end = i; break; }
+      if (connected[i]) { end = i; break; }
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const nx = x + dx, ny = y + dy, j = I(nx, ny);
-        if (!inb(nx, ny) || use[j] === 2 || use[j] === 3 || use[j] === 4 || (map.block[j] && j !== start)) continue;
+        if (!inb(nx, ny) || use[j] === 2 || use[j] === 3 || use[j] === 4 || map.block[j] || (nx === C.x && ny === C.y)) continue;
         const next = c + (use[j] === 1 ? 1 : 4);
         if (next >= cost[j]) continue;
         cost[j] = next; prev[j] = i;
@@ -235,7 +237,9 @@ function rollTown(tileset, seed, last) {
     }
     const route = [];
     for (let i = end; i >= 0; i = prev[i]) {
-      use[i] = 1; mat[i] = 1; keep[i] = 1;
+      use[i] = connected[i] = keep[i] = 1;
+      if (mat[i] === 0) mat[i] = 1;
+      else if (mat[i] === 3) mat[i] = 2;
       route.push([i % W, (i / W) | 0]);
       if (i === start) break;
     }
@@ -435,7 +439,9 @@ function rollTown(tileset, seed, last) {
       const shape = lu && !hu && !lv && !hv ? 0 : hu && !lu && !lv && !hv ? 1 : lv && !hv && !lu && !hu ? 2 : hv && !lv && !lu && !hu ? 3
         : lu && lv && !hu && !hv ? 4 : hu && hv && !lu && !lv ? 5 : lu && hv && !hu && !lv ? 6 : hu && lv && !lu && !hv ? 7 : -1;
       const pi = TPAIRS.indexOf(MATS[n] + '__' + MATS[m]);
-      v = shape < 0 || pi < 0 ? n : 6 + pi * 8 + shape;
+      // The pack has no opposite-edge/three-edge transition. Keep a narrow
+      // lane's material in that case, rather than erasing it back to grass.
+      v = shape < 0 || pi < 0 ? (use[I(x, y)] === 1 ? m : n) : 6 + pi * 8 + shape;
     }
     map.v[y*W+x]=v;
   }
@@ -451,6 +457,10 @@ function rollTown(tileset, seed, last) {
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = I(x + dx, y + dy); if (map.walkableTile(x + dx, y + dy) && !seen[j]) { seen[j] = 1; q.push(j); } }
   }
   const reach = (x, y) => seen[I(Math.floor(x), Math.floor(y))];
+  if (buildings.some((b) => !b.approach.length || b.approach.some(([x, y]) => !reach(x, y)))) {
+    if (last) throw new Error('Could not connect every town entrance');
+    return null;
+  }
   if (!last && (npcs.length < VENDORS.length || !reach(portal.x, portal.y) || npcs.some((n) => !reach(n.x, n.y)))) return null;
   return { map, buildings, npcs, props, torches, wallHangings, portal, center: { x: C.x + 0.5, y: C.y + 0.5 }, start };
 }
