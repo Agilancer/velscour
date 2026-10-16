@@ -1,6 +1,7 @@
 // Monster archetypes. Each biome re-skins a roster of these with palette shifts,
 // names and elemental attacks to produce its own bestiary (25 biomes x 12 = 300 kinds,
 // plus champion / unique / boss variants).
+import { SAND_CREATURES, SAND_BOSSES, SAND_AI } from './seaofsand.js';
 export const ARCH = {
   skeleton: { sprite: 'skeleton', ai: 'melee', hp: 1, dmg: 1, spd: 2.5, px: 2.3, r: 0.32, pal: { w: '#e6dcc2', m: '#a8aeb8', g: '#b08a3a', e: '#ff3a20' }, gore: 'bone', undead: true, names: ['Skeleton', 'Bonewalker', 'Rattler'], pack: [3, 6] },
   archer: { sprite: 'archer', ai: 'ranged', hp: 0.7, dmg: 0.8, spd: 2.3, px: 2.3, r: 0.32, proj: { fx: 'arrow', speed: 9 }, el: 'phys', range: 7, pal: { w: '#e6dcc2', c: '#8a5a2a', e: '#ff3a20' }, gore: 'bone', undead: true, names: ['Skeleton Archer', 'Bone Sniper', 'Deadshot'], pack: [2, 4] },
@@ -27,6 +28,25 @@ export const ARCH = {
   velscour: { sprite: 'velscour', ai: 'boss', hp: 1, dmg: 1, spd: 2.4, px: 3.6, r: 0.9, pal: { a: '#5a0c0c', b: '#1a0606', c: '#2a0808', w: '#e8d8b0', g: '#ffb020', e: '#ffee40', r: '#ff2010', k: '#000000' }, gore: 'flesh', demon: true, names: ['Velscour'] },
 };
 
+const SAND_BASE = {
+  charger: 'hound', pack_flanker: 'hound', elite_hunter: 'knight', burrower: 'scorpion', ranged: 'archer',
+  ambusher: 'ghoul', brute: 'golem', tank: 'knight', swarm: 'bat', caster: 'cultist', flyer: 'gargoyle',
+  melee: 'skeleton', skirmisher: 'ghoul', illusionist: 'wraith', teleporter: 'imp', summoner: 'cultist',
+  support: 'elemental', hunter: 'hound',
+};
+function addSandArchetype(id, name, role, boss = false, bossIndex = 0) {
+  const base = ARCH[SAND_BASE[role] || 'skeleton'];
+  ARCH[id] = {
+    ...base, ai: boss ? 'boss' : (SAND_AI[role] || base.ai),
+    hp: base.hp * (boss ? 1.85 + bossIndex * 0.13 : 0.72 + (id.length % 7) * 0.1),
+    dmg: base.dmg * (boss ? 1.15 + (bossIndex % 3) * 0.16 : 0.8 + (id.length % 5) * 0.1),
+    spd: base.spd * (boss ? 0.84 + (bossIndex % 4) * 0.11 : role === 'tank' || role === 'brute' ? 0.78 : 0.94 + (id.length % 4) * 0.08),
+    pal: { ...base.pal }, names: [name], ...(boss ? { bossName: name, bossPatterns:SAND_BOSSES[bossIndex][4] } : {}), seaOfSand: true,
+  };
+}
+for (const [id, name, role] of SAND_CREATURES) addSandArchetype(id, name, role);
+for (const [i, [id, name]] of SAND_BOSSES.entries()) addSandArchetype(id, name, 'brute', true, i);
+
 // Special attacks (Monster.trySpecial in game/monster.js). A normal monster rolls one of its archetype's (more often
 // the deeper it is), a greater breed two, champions and uniques all of them.
 //   melee:  lunge (leap onto the target), whirl (spin hitting all round), combo (three quick blows), quake (a fissure
@@ -42,6 +62,8 @@ export const ARCH_MOVES = {
   eye: ['sweep', 'orbs'], knight: ['combo', 'whirl', 'hook'], worm: ['lob', 'burst'], shroom: ['lob'], elemental: ['orbs', 'blink'],
   scorpion: ['lunge', 'combo'], gargoyle: ['lunge', 'quake'], beetle: [], abomination: ['whirl', 'hook', 'quake'], velscour: [],
 };
+for (const [id, , role] of SAND_CREATURES) ARCH_MOVES[id] = ARCH_MOVES[SAND_BASE[role] || 'skeleton'] || [];
+for (const [id, , role] of SAND_BOSSES) ARCH_MOVES[id] = ARCH_MOVES[role] || ['quake', 'slam'];
 
 export const GORE = {
   flesh: { blood: null, gib: null },

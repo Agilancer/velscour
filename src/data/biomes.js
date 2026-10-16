@@ -200,6 +200,23 @@ export const BIOMES = [
     torch: '#ffc078', fog: '#0a160d',
   },
   {
+    id: 'sea_of_sand', name: 'Sea of Sand', pack: 'sea_of_sand', overworld: true,
+    palette: null, dark: 0.58, light: 11.5,
+    ambient: { type:'sand', color:'#e3b768' }, mon: { hue:22, sat:0.92, light:0.06 },
+    el:'fire', blood:'#9f361a', adj:['Sunscorched','Dune-Bound','Saltworn','Mirage'],
+    roster:['sandjackal_dune_stalker','sandjackal_red_mane','sandjackal_sunscar','viper_glassfang','viper_copperhood','viper_nightcoil',
+      'scorpion_saltclaw','scorpion_duneburrower','scorpion_embertail','beetle_tombshell','beetle_turquoise_borer','beetle_ironback',
+      'locust_suncloud','locust_razorwing','locust_saltmoth','vulture_bonebeak','roclet_ashplume','kitehawk_lapis_eye',
+      'skeleton_sunburied','skeleton_jar_guard','skeleton_copper_archer','mummy_saltwrapped','mummy_amberbinder','mummy_lanternbearer',
+      'raider_redveil','raider_drygulch','raider_sunlance','wraith_saltworn','wraith_mirage','wraith_drysea',
+      'golem_sunbaked','golem_lapisvein','golem_saltpillar','worm_duneborer','worm_glassmaw','worm_fossilcoil',
+      'djinn_cinderjar','djinn_bluehour','djinn_sunstung','cultist_sunscarab','cultist_hollowdisc','cultist_dryoracle',
+      'hyena_ironjaw','hyena_dustlaugh','hyena_bloodtrack','crab_fossilbreaker','crab_saltglass','crab_copperreef',
+      'moth_sunshard','moth_turquoiseveil','moth_nightglass','statue_sphinxling','statue_lionward','statue_bronzebeak',
+      'elemental_sirocco','elemental_saltspire','elemental_amberdust','bandit_chainhook','shade_sunmirror','shade_glasspilgrim'],
+    torch:'#f2ad55', fog:'#24150a',
+  },
+  {
     id: 'desert_temple', name: 'Temple of the Sunless Dynasty', pack: 'desert_temple',
     palette: null, dark: 0.77, light: 8.2,
     ambient: { type: 'sand', color: '#d9ac70' },
@@ -274,7 +291,7 @@ Object.assign(BIOMES.find((b) => b.id === 'necropolis'), {
 // Colour families: a level can mix its palette with another biome of the same family (mixPartner), e.g. a
 // Frozen Ossuary whose far rooms are paved like the Crystal Caverns.
 const FAMILY = {
-  sand: ['desert', 'gilded', 'serpent', 'amber', 'desert_temple'],
+  sand: ['desert', 'gilded', 'serpent', 'amber', 'desert_temple', 'sea_of_sand'],
   frost: ['frozen', 'ice_temple', 'sunken', 'crystal', 'storm', 'abyss', 'necropolis'],
   ember: ['molten', 'blood', 'forge', 'flesh', 'hell'],
   rot: ['fungal', 'plague', 'thorn'],

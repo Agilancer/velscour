@@ -10,6 +10,8 @@ import { overworldObject, EXTRA_TREES, SHRINES } from '../gfx/overworldart.js';
 import { isoBarrier } from '../gfx/isobarriers.js';
 import { rollLooks } from '../data/bestiary.js';
 import { wallHangingAtBuilding } from '../gfx/wallhangings.js';
+import { seaOfSandFloorTiles, seaOfSandObject, seaOfSandCliff, seaOfSandFrames } from '../gfx/seaofsand.js';
+import { SAND_SCATTER, SAND_TREES, SAND_BOSSES } from '../data/seaofsand.js';
 
 const W = 72, H = 72, N = W * H;
 const K = TW / 160; // town-pack source 160 x 80 base tiles
@@ -25,12 +27,14 @@ export const OVERWORLD_SITES = Object.freeze([
   [36.5,17.5],[36.5,56.5],[16.5,35.5],[57.5,35.5],
 ]);
 const ENTRY=[9.5,62.5], EXIT=[63.5,9.5], SHRINE=[36.5,35.5];
+const SAND_SITES=[[18.5,19.5],[52.5,19.5],[18.5,51.5],[53.5,51.5],[36.5,35.5]];
 function lineDist(x,y,a,b) {
   const dx=b[0]-a[0],dy=b[1]-a[1];
   const t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/(dx*dx+dy*dy)));
   return Math.hypot(x-a[0]-dx*t,y-a[1]-dy*t);
 }
 export function generateOverworld(depth,biome,seed) {
+  if (biome.id === 'sea_of_sand') return generateSeaOfSand(depth,biome,seed);
   const rng=new RNG(seed), map=new TileMap(W,H), flags=new Uint8Array(W*H);
   map.t.fill(1);map.losBlocks=true;
   const id=(x,y)=>y*W+x, dist=(x,y,a)=>Math.hypot(x-a[0],y-a[1]);
@@ -185,4 +189,79 @@ export function generateOverworld(depth,biome,seed) {
   return {map,props,buildings,wallHangings,townTiles,looks,spawns,chests,torches:[],
     start:ENTRY,exit:EXIT,shrine:SHRINE,sites:OVERWORLD_SITES,
     scenarioId:(((seed >>> 0) ^ depth) >>> 0) % 20,seed};
+}
+
+function generateSeaOfSand(depth,biome,seed) {
+  if (!seaOfSandFloorTiles().length) throw new Error('Sea of Sand art must load before generating its overworld.');
+  const rng=new RNG(seed),map=new TileMap(W,H),floors=seaOfSandFloorTiles(),props=[];
+  const scenarioCount=1+((seed>>>5)%5),scenarioSites=SAND_SITES.slice(0,scenarioCount);
+  map.t.fill(1);map.losBlocks=true;
+  const I=(x,y)=>y*W+x,dist=(x,y,p)=>Math.hypot(x-p[0],y-p[1]);
+  const links=[[ENTRY,SAND_SITES[0]],[SAND_SITES[0],SAND_SITES[4]],[SAND_SITES[4],SAND_SITES[1]],
+    [SAND_SITES[4],SAND_SITES[2]],[SAND_SITES[4],SAND_SITES[3]],[SAND_SITES[1],EXIT]];
+  const reserved=(x,y)=>[ENTRY,EXIT,...SAND_SITES].some(p=>dist(x,y,p)<9.5)||links.some(([a,b])=>lineDist(x,y,a,b)<2.8);
+  const add=(spr,x,y,options={})=>{if(!spr)return;props.push({kind:'scatter',x,y,spr,k:TW/160*(options.scale||1),flip:false,light:options.light||0});};
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const i=I(x,y),cx=x+.5,cy=y+.5;
+    map.v[i]=rng.int(0,59);
+    if(x===0||y===0||x===W-1||y===H-1){map.block[i]=1;continue;}
+    const corridor=links.some(([a,b])=>lineDist(cx,cy,a,b)<2.65);
+    // Low ridges and broken ruin walls form a connected maze. Objective roads
+    // remain clear so every selected scenario area is reachable.
+    const maze=(x%11===0&&y%9!==4&&y%9!==5)||(y%13===0&&x%15!==7&&x%15!==8);
+    const dune=((Math.sin(x*.27+seed*.00003)+Math.cos(y*.31-x*.12))/2)>.72;
+    if(!reserved(cx,cy)&&!corridor&&(maze||dune&&rng.chance(.17))){map.block[i]=1;}
+  }
+  const cliffs=seaOfSandFrames('cliff');
+  const cliffByMask=new Map();
+  for(const f of cliffs)if(f.connection_mask!=null){if(!cliffByMask.has(f.connection_mask))cliffByMask.set(f.connection_mask,[]);cliffByMask.get(f.connection_mask).push(f);}
+  const dirs=[[0,-1,1],[1,0,2],[0,1,4],[-1,0,8]];
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(map.block[I(x,y)]){
+    let mask=0;for(const [dx,dy,bit] of dirs)if(map.block[I(x+dx,y+dy)])mask|=bit;
+    const variants=cliffByMask.get(mask)||cliffByMask.get(0),f=rng.pick(variants);
+    add(seaOfSandCliff(f?.name),x+.5,y+.5,{scale:.5});
+  }
+  const treeNames=SAND_TREES.filter(n=>!['dry_reeds','spiny_aloe','saltbush'].includes(n));
+  for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++){
+    const i=I(x,y),cx=x+.5,cy=y+.5;
+    if(map.block[i]||reserved(cx,cy))continue;
+    if(rng.chance(.022)){
+      const name=rng.pick(treeNames),tree=seaOfSandObject(name,'tree');
+      if(tree){map.block[i]=1;add(tree,cx,cy,{scale:rng.range(.43,.6)});}
+    }
+  }
+  for(let n=0;n<360;n++){
+    const x=rng.int(2,W-3)+.5,y=rng.int(2,H-3)+.5;
+    if(!map.walkable(x,y)||reserved(x,y)&&rng.chance(.82))continue;
+    add(seaOfSandObject(rng.pick(SAND_SCATTER)),x+rng.range(-.2,.2),y+rng.range(-.2,.2),{scale:rng.range(.32,.48)});
+  }
+  // Oasis palms ring the central caravan rest and provide recognizable landmarks.
+  for(const [x,y] of [[34.5,33.5],[39.5,34.5],[34.5,38.5],[39.5,38.5]]){
+    const t=seaOfSandObject(rng.pick(['date_palm','doum_palm','fruiting_oasis_palm']),'tree');
+    add(t,x,y,{scale:.55});
+  }
+  for(let i=0;i<scenarioSites.length;i++){
+    const [x,y]=scenarioSites[i];
+    add(seaOfSandObject('quest_shrine'),x,y,{scale:.48,light:4.5});
+  }
+  const chests=SAND_SITES.slice(0,3).map(([x,y],i)=>({x:x+2.5,y:y+1,rare:i===0||rng.chance(.2)}));
+  const looks=rollLooks(biome,rng.fn()),spawns=[];
+  for(let i=0;i<38;i++){
+    const x=rng.int(7,64)+.5,y=rng.int(7,64)+.5;
+    if(!map.circleFree(x,y,.35)||dist(x,y,ENTRY)<9)continue;
+    const arch=rng.pick(biome.roster);
+    spawns.push({x,y,arch,n:rng.int(1,3),rank:i%13===0?'champion':'normal',look:looks.pick(arch)});
+  }
+  // Named boss archetypes are included in the biome boss pool and rotate as
+  // site guardians. They retain the normal boss patterns, loot and progression.
+  const boss=SAND_BOSSES[(seed>>>0)%SAND_BOSSES.length];
+  const [bx,by]=SAND_SITES[(seed>>>3)%SAND_SITES.length];
+  spawns.push({x:bx+2,y:by-2,arch:boss[0],n:1,rank:'boss'});
+  const seen=new Uint8Array(W*H),q=[I(Math.floor(ENTRY[0]),Math.floor(ENTRY[1]))];seen[q[0]]=1;
+  for(let a=0;a<q.length;a++){const i=q[a],x=i%W,y=(i/W)|0;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy,j=I(nx,ny);if(map.walkableTile(nx,ny)&&!seen[j]){seen[j]=1;q.push(j);}}}
+  if([EXIT,...SAND_SITES].some(p=>!seen[I(Math.floor(p[0]),Math.floor(p[1]))]))throw new Error('Sea of Sand maze blocked an objective at seed '+seed);
+  return {map,props,buildings:[],wallHangings:[],townTiles:floors,looks,spawns,chests,torches:[],
+    start:ENTRY,exit:EXIT,shrine:scenarioSites[0],sites:Array.from({length:9},(_,i)=>{
+      const [cx,cy]=scenarioSites[0];const a=i*Math.PI*2/8;return [cx+Math.cos(a)*7,cy+Math.sin(a)*6];
+    }),scenarioSites,scenarioCount,scenarioId:(((seed>>>0)^depth)>>>0)%20,seed};
 }
