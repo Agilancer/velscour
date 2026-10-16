@@ -6,6 +6,8 @@ Two kinds of art drive a class's look:
 - **Class art packs** (`assets/source/classes/<class>/`, Paladin only so far): weapon/shield catalog items and the
   60 ability effects.
 
+> **CURRENT HELMET PIPELINE (October 2026):** The older 80-helmet/closed-faceplate sections below are historical implementation notes only. Actual head gear is now rendered using the **640 approved standalone helmet sprites** at `assets/sprites/helmets/<class>.webp`, with class-specific fit and opaque dark eye/face openings. See [HELMETS_REBUILD.md](HELMETS_REBUILD.md). Body armor gear libraries and aura rendering remain in use.
+
 ## Gear libraries
 ### Zip format (as delivered)
 `<class>/armor/<class>_armor_NNN_<rarity>.png` and `<class>/helms/<class>_helms_NNN_<rarity>.png`, 80 each,
