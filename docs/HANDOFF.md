@@ -14,6 +14,18 @@ Contents
 
 ---
 
+## October 15, 2026 — Herrington Hollow tiles and weather
+
+- Removed generic generated monuments (rune stones, obelisks, idols, crystals,
+  and similar props) and procedural sigil-like floor accents from the base town.
+  The native town-pack transitions, grit, dirt and pebble overlays remain.
+- Town entry now rolls rain at a 25% threshold and draws ambient rain streaks
+  with a reduced rate on touch devices.
+- Updated `tools/tests/town.js` to check town props/floor IDs, exact rain-roll
+  threshold, rain particle emission, and reachability of all vendors and the
+  portal. Chromium screenshots were inspected for seeds 1337 and 2929; all
+  targets were reachable and the test reported no errors.
+
 ## October 15, 2026 — Barbarian Bash, hit-built Rage, and Whirlwind cyclone
 
 - Bash (stable ID `barbarian.0.0`) now fires five short directional lightning bolts;

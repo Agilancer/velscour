@@ -4,7 +4,7 @@ import { RNG, TAU } from '../core/util.js';
 import { A } from '../core/assets.js';
 import { TW } from '../core/view.js';
 import { isoBarrier, isoBarrierProp } from '../gfx/isobarriers.js';
-import { extendedTownFloors, outdoorBiomeProp, TOWN_FLOOR_EXPANSION } from '../gfx/biomeexpansion.js';
+import { extendedTownFloors } from '../gfx/biomeexpansion.js';
 import { wallHangingAtBuilding } from '../gfx/wallhangings.js';
 
 export const VENDORS = [
@@ -21,6 +21,7 @@ export const VENDORS = [
 // Ground materials in the pack's transition order; a pair's A side is the earlier one.
 const MATS = ['grass', 'gravel', 'dirt', 'mud', 'stone', 'concrete'];
 const BS = 1.5; // buildings are the pack's 2 x 2 houses drawn 1.5x: a 3 x 3 tile footprint, walls ~1.3 heroes tall
+export const rollTownWeather = (random = Math.random) => random() < 0.25;
 
 /**
  * The town's ground tiles from the town pack: [{img,sx,sy,w,h}]; 0-5 are the MATS bases, then 8 transition shapes
@@ -391,16 +392,8 @@ function rollTown(tileset, seed, last) {
     prop(rng.pick(brush), x, y);
   }
 
-  // Spread a sampled set of the 40 available town decorations out instead of
-  // saturating the playable town with props. No combat spawns in Herrington Hollow.
-  for(let i=0;i<40;i+=2){
-    const spr=outdoorBiomeProp('town',i);
-    for(let attempt=0;attempt<14;attempt++){
-      const x=Math.floor(R(4,W-4))+.5,y=Math.floor(R(4,H-4))+.5;
-      if(!open(x,y,.25)||nearKey(x,y,1.6))continue;
-      if(prop(spr,x,y,{solid:false,flip:false}))break;
-    }
-  }
+  // Keep the town pack's own readable props; the generic biome monuments
+  // (rune stones, obelisks and idols) look out of place in a lived-in village.
   // ---- ground tiles: a tile beside a softer material takes the transition with that material on the shared side(s)
   makeTownTiles();
   const at = (x, y) => mat[Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))];
@@ -416,10 +409,6 @@ function rollTown(tileset, seed, last) {
       const pi = TPAIRS.indexOf(MATS[n] + '__' + MATS[m]);
       v = shape < 0 || pi < 0 ? n : 6 + pi * 8 + shape;
     }
-    // Use the 120 new original town material accents only inside same-material
-    // stretches. Existing shoreline/road transition indices remain intact.
-    if(v===m && n===99 && !keep[y*W+x] && use[y*W+x]!==2 && rng.chance(0.035))
-      v=TOWN_FLOOR_EXPANSION.start + rng.int(0,TOWN_FLOOR_EXPANSION.count-1);
     map.v[y*W+x]=v;
   }
   props.push(...torches);
