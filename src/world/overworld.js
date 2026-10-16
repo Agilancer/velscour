@@ -6,16 +6,20 @@ import { RNG } from '../core/util.js';
 import { A } from '../core/assets.js';
 import { TW } from '../core/view.js';
 import { townObject, makeTownTiles } from './town.js';
-import { overworldObject, EXTRA_TREES, EXTRA_SCATTER, SHRINES } from '../gfx/overworldart.js';
-import { outdoorBiomeProp, extendedOverworldFloors, OVERWORLD_FLOOR_EXPANSION } from '../gfx/biomeexpansion.js';
+import { overworldObject, EXTRA_TREES, SHRINES } from '../gfx/overworldart.js';
 import { isoBarrier } from '../gfx/isobarriers.js';
 import { rollLooks } from '../data/bestiary.js';
 import { wallHangingAtBuilding } from '../gfx/wallhangings.js';
 
-const W = 72, H = 72;
+const W = 72, H = 72, N = W * H;
 const K = TW / 160; // town-pack source 160 x 80 base tiles
+const FLOOR_MATERIALS = ['grass', 'gravel', 'dirt', 'mud'];
+const DOOR_X = new Set(['bakery']);
 const SOURCE_TREES = ['t_medium_fir','t_old_cedar','t_scots_pine','t_mature_ash',
   't_twin_birch','t_crooked_oak','t_wind_juniper','t_ancient_oak','t_dead_oak'];
+const SCENARIO_SCATTER = ['ow_pale_mushrooms','ow_blue_flowers','ow_red_flowers','ow_fallen_banner',
+  'ow_rotten_crate','ow_tattered_tent','ow_bone_pile','ow_discarded_shield','ow_mossy_log',
+  'ow_cart_wreck','ow_sunken_chest'];
 export const OVERWORLD_SITES = Object.freeze([
   [36.5,35.5],[20.5,20.5],[51.5,23.5],[21.5,49.5],[54.5,49.5],
   [36.5,17.5],[36.5,56.5],[16.5,35.5],[57.5,35.5],
@@ -31,7 +35,8 @@ export function generateOverworld(depth,biome,seed) {
   map.t.fill(1);map.losBlocks=true;
   const id=(x,y)=>y*W+x, dist=(x,y,a)=>Math.hypot(x-a[0],y-a[1]);
   const roads=[[ENTRY,SHRINE],[SHRINE,EXIT],[[14,35],SHRINE],[SHRINE,[58,36]],
-    [[36,17],[36,57]],[[20,20],[51,23]],[[20,49],[54,49]]];
+    [[36,17],[36,57]],[[20,20],[51,23]],[[20,49],[54,49]],
+    [[14,35],[27,42]],[[27,42],[36,44]]];
   const reserved=(x,y)=>[ENTRY,EXIT,...OVERWORLD_SITES].some(p=>dist(x,y,p)<6.4)
     || roads.some(([a,b])=>lineDist(x,y,a,b)<3.1);
   // The playable map is mainly grassland and ruin-pocked clearings. Forest stands form
@@ -58,7 +63,8 @@ export function generateOverworld(depth,biome,seed) {
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){
     const i=id(x,y),cx=x+.5,cy=y+.5;
     if(x===0||y===0||x===W-1||y===H-1){map.block[i]=1;flags[i]=2;continue;}
-    const road=roads.some(([a,b])=>lineDist(cx,cy,a,b)<2.9);
+    const roadDistance=Math.min(...roads.map(([a,b])=>lineDist(cx,cy,a,b)));
+    const road=roadDistance<2.15;
     const landmark=OVERWORLD_SITES.some(p=>dist(cx,cy,p)<5);
     const noise=(Math.sin(x*.53+y*.13+seed*.00003)+Math.cos(y*.41-x*.29))/4;
     const woodland=groves.some(g=>{
@@ -75,7 +81,7 @@ export function generateOverworld(depth,biome,seed) {
         const t=rng.chance(.6)?rng.pick(SOURCE_TREES):rng.pick(EXTRA_TREES);
         add(t,cx+rng.range(-.18,.18),cy+rng.range(-.15,.15));
       }
-    }else if(road){flags[i]=1;map.v[i]=rng.chance(.3)?1:2;}
+    }else if(road){flags[i]=1;map.v[i]=roadDistance<1.35?1:2;}
     else if(landmark){map.v[i]=rng.chance(.25)?1:0;}
     else map.v[i]=rng.chance(.035)?2:rng.chance(.04)?3:0;
   }
@@ -91,36 +97,58 @@ export function generateOverworld(depth,biome,seed) {
     for(let y=y0;y<y0+3;y++)for(let x=x0;x<x0+3;x++)if(map.block[id(x,y)])valid=false;
     if(!valid)continue;
     for(let y=y0;y<y0+3;y++)for(let x=x0;x<x0+3;x++)map.block[id(x,y)]=1;
-    const building={cx,cy,spr,k:K*1.5,depth:cx+cy,flip:false,name,x0,y0};
+    const flip=DOOR_X.has(name); // mirror the bakery so all settlement doors face the same way
+    const building={cx,cy,spr,k:K*1.5,depth:cx+cy,flip,name,x0,y0,entryAxis:'y'};
     buildings.push(building);
     if(rng.chance(.8))wallHangings.push(wallHangingAtBuilding(building,false,rng.int(0,49)));
+    const door=[x0+1,y0+3],start=id(door[0],door[1]);
+    const previous=new Int32Array(N).fill(-1),q=[start];previous[start]=start;
+    let end=-1;
+    for(let head=0;head<q.length&&end<0;head++){
+      const i=q[head],x=i%W,y=(i/W)|0;
+      if(i!==start&&flags[i]===1){end=i;break;}
+      for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+        const nx=x+dx,ny=y+dy,j=id(nx,ny);
+        if(map.walkableTile(nx,ny)&&previous[j]<0){previous[j]=i;q.push(j);}
+      }
+    }
+    const approach=[];
+    for(let i=end;i>=0;i=previous[i]){
+      const x=i%W,y=(i/W)|0;
+      if(flags[i]!==1){map.v[i]=1;flags[i]=3;}
+      approach.push([x,y]);
+      if(i===start)break;
+    }
+    building.approach=approach;
+  }
+  // Encode native transitions at the seams between grass, gravel, dirt and mud.
+  // This gives the lanes soft, connected edges instead of scattered full-tile decals.
+  const transitionPairs=Object.keys(A.town.meta.transitions),material=map.v.slice();
+  const at=(x,y)=>material[Math.min(H-1,Math.max(0,y))*W+Math.min(W-1,Math.max(0,x))];
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const i=id(x,y),m=material[i],sides=[at(x-1,y),at(x+1,y),at(x,y-1),at(x,y+1)];
+    let n=99;for(const s of sides)if(s<m&&s<n)n=s;
+    if(n===99)continue;
+    const [left,right,up,down]=sides.map(s=>s===n);
+    const shape=left&&!right&&!up&&!down?0:right&&!left&&!up&&!down?1:up&&!down&&!left&&!right?2:down&&!up&&!left&&!right?3:
+      left&&up&&!right&&!down?4:right&&down&&!left&&!up?5:left&&down&&!right&&!up?6:right&&up&&!left&&!down?7:-1;
+    const pair=transitionPairs.indexOf(FLOOR_MATERIALS[n]+'__'+FLOOR_MATERIALS[m]);
+    map.v[i]=shape<0||pair<0?n:6+pair*8+shape;
   }
   for(let i=0;i<260;i++){
     const x=rng.int(2,W-3),y=rng.int(2,H-3),cx=x+.5,cy=y+.5;
-    if(!map.walkable(cx,cy)||reserved(cx,cy)&&rng.chance(.9))continue;
+    if(!map.walkable(cx,cy)||flags[id(x,y)]!==0||reserved(cx,cy))continue;
     if(!map.circleFree(cx,cy,.35))continue;
-    const name=rng.chance(.35)?outdoorBiomeProp(biome.id,rng.int(0,39)):
-      rng.chance(.55)?rng.pick(EXTRA_SCATTER):
+    const name=rng.chance(.58)?rng.pick(SCENARIO_SCATTER):
       rng.pick(['wildflowers','mushrooms','fieldstone_cluster','leafy_shrub','hollow_stump',
         'stone_boundary','dry_reeds','cart_debris','fallen_log','moss_boulder']);
     add(name,cx+rng.range(-.22,.22),cy+rng.range(-.22,.22));
-    // Scatter is primarily decorative: open-space combat should not turn into
-    // a pathfinding nightmare of invisible one-tile collisions.
+    // Scatter stays off routes, objective clearings and road lanes so it reads
+    // as natural edge dressing without cluttering combat space.
   }
   add(SHRINES[rng.int(0,SHRINES.length-1)],SHRINE[0],SHRINE[1],{light:5});
-  for(let i=1;i<OVERWORLD_SITES.length;i++)if(i%3===0)
-    add(rng.pick(['ow_ancient_stone','ow_forest_totem','ow_standing_stone']),
-      OVERWORLD_SITES[i][0]+1.2,OVERWORLD_SITES[i][1]+1.2);
   // Reuse the town tiles and chest art; do NOT build indoor wall segments.
   const townTiles=makeTownTiles();
-  townTiles.push(...extendedOverworldFloors(A.town.ground,A.town.meta));
-  // A dedicated 120-cell wilderness floor set extends the original town art;
-  // original 6+120 terrain-transition indices stay untouched.
-  for(let y=3;y<H-3;y++)for(let x=3;x<W-3;x++){
-    const i=y*W+x;
-    if(!map.block[i]&&map.v[i]<6&&rng.chance(0.07))
-      map.v[i]=OVERWORLD_FLOOR_EXPANSION.start+rng.int(0,OVERWORLD_FLOOR_EXPANSION.count-1);
-  }
   // Living barriers outline the northwestern forest rather than obstructing
   // the guaranteed entrance/shrine/exit paths. Each segment has exact 2:1
   // endpoint geometry and no incorrect mirrored orientation.

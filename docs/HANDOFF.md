@@ -14,6 +14,12 @@ Contents
 
 ---
 
+## October 16, 2026 — Forsaken Wilds layout and terrain cleanup
+
+- Removed randomly scattered full-tile floor accents and generic monument props that broke up the outdoor scenario map. Grass, gravel, dirt and mud now blend through the town pack's native terrain transitions.
+- Narrowed the gravel road centers, added dirt shoulders and a road spur through the western settlement. All three houses now face the same way and have a clear gravel approach; scatter stays off roads and objective clearings.
+- Updated `tools/tests/overworld.js` to capture close and wide screenshots and check approaches, forbidden monument scatter and floor IDs across 60 seeds. All 20 scenario completions passed. `tools/tests/flow.js` also reported no errors.
+
 ## October 15, 2026 — Town approaches and neighborhood alignment
 
 - House fronts now inherit the entry axis used by all buildings within an eight-tile radius. Placements that would introduce mixed nearby axes are skipped, keeping each local cluster visually consistent.
