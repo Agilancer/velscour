@@ -26,12 +26,12 @@ def validate(data, index):
         for design, fit in designs.items():
             if design not in {str(d['id']) for d in index['designs']} or not isinstance(fit, dict):
                 raise ValueError('Unknown helmet design.')
-            if set(fit) != {'x', 'y', 'scaleX', 'scaleY'}:
-                raise ValueError('Each fit needs x, y, scaleX and scaleY.')
+            if set(fit) not in ({'x', 'y', 'scaleX', 'scaleY'}, {'x', 'y', 'scaleX', 'scaleY', 'rotation'}):
+                raise ValueError('Each fit needs x, y, scaleX, scaleY and optional rotation.')
             for key, value in fit.items():
                 if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
                     raise ValueError('Fit values must be finite numbers.')
-                lo, hi = (0.01, 4) if key.startswith('scale') else (-512, 512)
+                lo, hi = (0.01, 4) if key.startswith('scale') else (-180, 180) if key == 'rotation' else (-512, 512)
                 if not lo <= value <= hi:
                     raise ValueError(f'{key} must be between {lo} and {hi}.')
             clean['classes'][cls][design] = fit

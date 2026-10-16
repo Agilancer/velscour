@@ -221,10 +221,28 @@ function helmetPixels(cls, id, pi, set, src = S) {
 function helmetPlacement(meta, box, design, set, src = S) {
   const helmets = src[set + 'Helms'], [cw, ch] = helmets.meta.frame;
   const f = resolveHelmetFit(helmets.meta, helmets.placements, src.cls, design, meta.headTop);
-  const { x: dx, y: dy, scaleX: sx, scaleY: sy } = f;
+  const { x: dx, y: dy, scaleX: sx, scaleY: sy, rotation = 0 } = f;
   const [x0, y0, x1, y1] = box;
-  return { dx, dy, dw: cw * sx, dh: ch * sy,
-    box: [Math.floor(dx + x0 * sx), Math.floor(dy + y0 * sy), Math.ceil(dx + x1 * sx), Math.ceil(dy + y1 * sy)] };
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const mx = dx + cx * sx, my = dy + cy * sy, rad = rotation * Math.PI / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad), corners = [[x0,y0],[x1,y0],[x0,y1],[x1,y1]].map(([x,y]) => {
+    const vx = (x - cx) * sx, vy = (y - cy) * sy;
+    return [mx + vx * cos - vy * sin, my + vx * sin + vy * cos];
+  });
+  const xs = corners.map(p => p[0]), ys = corners.map(p => p[1]);
+  return { dx, dy, dw: cw * sx, dh: ch * sy, rotation,
+    center: [mx, my], box: [Math.floor(Math.min(...xs)), Math.floor(Math.min(...ys)), Math.ceil(Math.max(...xs)), Math.ceil(Math.max(...ys))] };
+}
+
+function rotatedHelmetCanvas(px, frame, box, rotation) {
+  const [w, h] = frame, [x0, y0, x1, y1] = box, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const rad = rotation * Math.PI / 180, bw = x1 - x0, bh = y1 - y0;
+  const rw = Math.max(1, Math.ceil(Math.abs(bw * Math.cos(rad)) + Math.abs(bh * Math.sin(rad))));
+  const rh = Math.max(1, Math.ceil(Math.abs(bw * Math.sin(rad)) + Math.abs(bh * Math.cos(rad))));
+  const c = makeCanvas(rw + 2, rh + 2), x = c.getContext('2d');
+  x.translate(c.width / 2, c.height / 2); x.rotate(rad);
+  x.drawImage(toCanvas(px, w, h), -cx, -cy);
+  return c;
 }
 
 function toCanvas(px, w, h) {
@@ -248,8 +266,11 @@ export function heroLook(cls, body, head, src = S, outCache = looks) {
   c = toCanvas(px, fw, fh);
   if (hl) {
     const { px: hp, box } = helmetPixels(cls, hl[0], hl[1], set, src);
-    const place = helmetPlacement(meta, box, hl[0], set, src), x = c.getContext('2d');
-    x.drawImage(toCanvas(hp, ...src[set + 'Helms'].meta.frame), place.dx, place.dy, place.dw, place.dh);
+    const place = helmetPlacement(meta, box, hl[0], set, src), [x0,y0,x1,y1] = box;
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, x = c.getContext('2d');
+    x.save(); x.translate(place.center[0], place.center[1]); x.rotate(place.rotation * Math.PI / 180);
+    x.scale(place.dw / src[set + 'Helms'].meta.frame[0], place.dh / src[set + 'Helms'].meta.frame[1]);
+    x.drawImage(toCanvas(hp, ...src[set + 'Helms'].meta.frame), -cx, -cy); x.restore();
   }
   if (outCache.size >= 8) outCache.delete(outCache.keys().next().value);
   outCache.set(key, c);
@@ -283,7 +304,9 @@ export function gearIcon(item, w = 48, h = w) {
     if (item.slot === 'body') c = fitCanvas(toCanvas(armorPixels(l[0], l[1]), meta.frame[0], meta.frame[1]), meta.armor.box[l[0] - 1], w, h);
     else {
       const { px, box } = helmetPixels(S.cls, l[0], l[1], set);
-      c = fitCanvas(toCanvas(px, ...S[set + 'Helms'].meta.frame), box, w, h);
+      const placement = helmetPlacement(meta, box, l[0], set);
+      const rotated = rotatedHelmetCanvas(px, S[set + 'Helms'].meta.frame, box, placement.rotation);
+      c = fitCanvas(rotated, [0, 0, rotated.width, rotated.height], w, h);
     }
     if (icons.size > 300) icons.clear();
     icons.set(key, c);

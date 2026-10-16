@@ -58,11 +58,14 @@ opens `tools/helmet-fitter/` in a browser. Choose a helmet set and class, drag t
 the size slider to resize it. Width and height can be adjusted separately by unchecking the proportions option.
 Arrow keys nudge by 0.25 body-frame pixels; Shift increases the step to 1 pixel. Space temporarily hides the helmet.
 The enlarged view rasterizes the composite at the game's 128×192 resolution before zooming, and the whole-character
-and all-design previews update alongside it. Change body armor to inspect the same placement on other frames.
+and all-design previews update alongside it. Width and height can be resized independently by unlocking proportions;
+the rotation slider or numeric field turns the helm around its visible center. Change body armor to inspect the same
+placement on other frames.
 
 **Save to game** writes placements for the selected set; reload the game afterward. The server keeps the previous file
-as `placements.json.bak`. Each entry stores `{x, y, scaleX, scaleY}`: the top-left of the
-entire source cell in body-frame pixels and its scale factors. Export/Import JSON supports moving fits between
+as `placements.json.bak`. Each entry stores `{x, y, scaleX, scaleY, rotation}`: the top-left of the
+entire source cell in body-frame pixels, its scale factors, and an optional angle in degrees around the visible center.
+Old entries without a rotation use 0 degrees. Export/Import JSON supports moving fits between
 machines. **Export PNG** downloads a labeled head close-up and whole-character preview with exact fit values;
 a screenshot showing the class, design, and numeric readout also provides enough information to transcribe a fit.
 Browser drafts preserve unsaved edits and can be restored on the next visit. Keep the launcher window open

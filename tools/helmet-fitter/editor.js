@@ -6,7 +6,7 @@ const draftKey = () => `velscour-helmet-fitter-v3-${activeSet}`;
 const camera = { x: 24, y: 0, w: 80, h: 96 };
 const canvas = $('editor'), ctx = canvas.getContext('2d');
 let index, atlas, data, persisted, current, loaded, activeSet = 'common', sets = {}, zoom = 6, history = [], dragging = null, space = false;
-let serial = 0, dirty = false;
+let serial = 0, dirty = false, angleChanging = false;
 const cache = new Map(), bounds = new Map();
 const round = (n) => Math.round(n * 10000) / 10000;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -41,6 +41,7 @@ function setFit(value, record = true) {
   const clean = {
     x: round(clamp(value.x, -512, 512)), y: round(clamp(value.y, -512, 512)),
     scaleX: round(clamp(value.scaleX, .01, 4)), scaleY: round(clamp(value.scaleY, .01, 4)),
+    rotation: round(clamp(value.rotation ?? 0, -180, 180)),
   };
   (data.classes[current] ||= {})[design()] = clean;
   changed();
@@ -68,10 +69,10 @@ function resize(sx, sy, record = true) {
 function updateControls() {
   if (!loaded) return;
   const f = fit();
-  for (const [id, value] of Object.entries({ x: round(f.x), y: round(f.y), sx: round(f.scaleX * 100), sy: round(f.scaleY * 100), size: f.scaleX * 100 })) $(id).value = value;
+  for (const [id, value] of Object.entries({ x: round(f.x), y: round(f.y), sx: round(f.scaleX * 100), sy: round(f.scaleY * 100), size: f.scaleX * 100, rotation: round(f.rotation || 0), angle: round(f.rotation || 0) })) $(id).value = value;
   const label = index.designs.find(d => d.id === design());
   $('caption').textContent = `${title(current)} · ${label.catalog} (${label.name})`;
-  $('numbers').textContent = `x=${f.x.toFixed(3)}  y=${f.y.toFixed(3)}  width=${(f.scaleX * 100).toFixed(2)}%  height=${(f.scaleY * 100).toFixed(2)}%  | armor ${$('armor').value}`;
+  $('numbers').textContent = `x=${f.x.toFixed(3)}  y=${f.y.toFixed(3)}  width=${(f.scaleX * 100).toFixed(2)}%  height=${(f.scaleY * 100).toFixed(2)}%  rotation=${(f.rotation || 0).toFixed(1)}°  | armor ${$('armor').value}`;
   const count = Object.values(data.classes).reduce((n, obj) => n + Object.keys(obj).length, 0);
   $('progress').textContent = `${count} / ${index.classes.length * index.designs.length} placements set · ${Object.keys(data.classes[current] || {}).length} / ${index.designs.length} for this class`;
   $('thumbTitle').textContent = `This class · all ${index.designs.length} ${activeSet} helmets`;
@@ -93,9 +94,11 @@ function body(x) {
   x.drawImage(loaded.image, (id % loaded.meta.cols) * fw, Math.floor(id / loaded.meta.cols) * fh, fw, fh, 0, 0, fw, fh);
 }
 function helmet(x, id, opacity = 1) {
-  const f = fit(id), [w, h] = index.frame, col = index.classes.indexOf(current);
+  const f = fit(id), [w, h] = index.frame, col = index.classes.indexOf(current), b = solidBounds(id);
+  const cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
   x.save(); x.globalAlpha = opacity;
-  x.drawImage(atlas, col * w, (id - 1) * h, w, h, f.x, f.y, w * f.scaleX, h * f.scaleY); x.restore();
+  x.translate(f.x + cx * f.scaleX, f.y + cy * f.scaleY); x.rotate((f.rotation || 0) * Math.PI / 180);
+  x.scale(f.scaleX, f.scaleY); x.drawImage(atlas, col * w, (id - 1) * h, w, h, -cx, -cy, w, h); x.restore();
 }
 function composite(id, opacity = 1, visible = true) {
   // Rasterize at the game's native body-frame resolution before enlarging it.
@@ -197,6 +200,15 @@ $('size').addEventListener('input', () => {
   const f = fit(), sx = Number($('size').value) / 100;
   resize(sx, $('lock').checked ? f.scaleY * sx / f.scaleX : f.scaleY);
 });
+$('rotation').addEventListener('change', () => {
+  const value = Number($('rotation').value);
+  if (Number.isFinite(value)) setFit({ ...fit(), rotation: value }); else updateControls();
+});
+$('angle').addEventListener('input', () => {
+  if (!angleChanging) { remember(); angleChanging = true; }
+  setFit({ ...fit(), rotation: Number($('angle').value) }, false);
+});
+$('angle').addEventListener('change', () => { angleChanging = false; });
 $('class').addEventListener('change', () => { stopDrag(); selectClass(); });
 $('set').addEventListener('change', () => selectSet($('set').value));
 $('design').addEventListener('change', () => selectDesign(design()));
@@ -221,9 +233,11 @@ function validate(value) {
   for (const [cls, fits] of Object.entries(value.classes)) {
     if (!index.classes.includes(cls) || !fits || typeof fits !== 'object' || Array.isArray(fits)) throw new Error('Unknown character in file.');
     for (const [id, f] of Object.entries(fits)) {
-      if (!index.designs.some(d => String(d.id) === id) || !f || Object.keys(f).sort().join() !== 'scaleX,scaleY,x,y') throw new Error('Invalid helmet placement.');
+      const keys = f && Object.keys(f).sort().join();
+      if (!index.designs.some(d => String(d.id) === id) || !f || !['scaleX,scaleY,x,y', 'rotation,scaleX,scaleY,x,y'].includes(keys)) throw new Error('Invalid helmet placement.');
       for (const [key, n] of Object.entries(f)) {
-        if (typeof n !== 'number' || !Number.isFinite(n) || (key.startsWith('scale') ? n < .01 || n > 4 : Math.abs(n) > 512)) throw new Error('Invalid position or scale in file.');
+        const valid = key.startsWith('scale') ? n >= .01 && n <= 4 : key === 'rotation' ? n >= -180 && n <= 180 : Math.abs(n) <= 512;
+        if (typeof n !== 'number' || !Number.isFinite(n) || !valid) throw new Error('Invalid position, scale, or rotation in file.');
       }
     }
   }
@@ -252,7 +266,7 @@ $('png').onclick = () => {
   const x = output.getContext('2d'); x.fillStyle = '#272930'; x.fillRect(0, 0, 800, 720);
   x.fillStyle = '#ece7dd'; x.font = 'bold 20px sans-serif'; x.fillText($('caption').textContent, 16, 30);
   const f = fit(); x.font = '15px monospace';
-  x.fillText(`x=${f.x.toFixed(4)}  y=${f.y.toFixed(4)}  scaleX=${f.scaleX.toFixed(4)}  scaleY=${f.scaleY.toFixed(4)}`, 16, 60);
+  x.fillText(`x=${f.x.toFixed(4)}  y=${f.y.toFixed(4)}  scaleX=${f.scaleX.toFixed(4)}  scaleY=${f.scaleY.toFixed(4)}  rotation=${(f.rotation || 0).toFixed(2)}°`, 16, 60);
   x.fillText(`Body armor ${$('armor').value} | ${current} | design ${design()} | full opacity`, 16, 86);
   const frame = composite(design()); x.imageSmoothingEnabled = false;
   x.drawImage(frame, camera.x, camera.y, camera.w, camera.h, 16, 110, 480, 576);
