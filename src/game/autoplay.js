@@ -9,6 +9,7 @@ import { dist, clamp, TAU, fmtInt, escapeHtml, angleDiff } from '../core/util.js
 import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, buffAmount, curseAmount, skillDuration, effLevel } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
 import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS } from '../data/items.js';
+import { depthLevel } from '../data/depth.js';
 import { drawBiome } from '../data/biomes.js';
 import { augHits } from '../data/rings.js';
 import { canLearn } from '../ui/skills.js';
@@ -238,8 +239,14 @@ function fitScore(p, it) {
   const c = p.char;
   let best = { s: -Infinity, slot: it.slot };
   for (const slot of it.slot === 'ring' ? RING_SLOTS : [it.slot]) {
-    const s = simulate(p, () => { const old = c.equip[slot]; c.equip[slot] = it; return () => { c.equip[slot] = old; }; });
-    if (s > best.s) best = { s, slot };
+    const old = c.equip[slot];
+    const s = simulate(p, () => { c.equip[slot] = it; return () => { c.equip[slot] = old; }; });
+    // The aggregate stat score can make an upgraded, socketed low-level item look "good enough"
+    // forever. Give gear a modest progression value so auto-play actually replaces stale pieces.
+    const targetIlvl = Math.max(1, c.level, depthLevel(c.depth || 1));
+    const freshness = (gear) => gear ? clamp((gear.ilvl || 1) / targetIlvl, 0, 1) : 0;
+    const ageGain = 0.28 * (freshness(it) - freshness(old));
+    if (s + ageGain > best.s) best = { s: s + ageGain, slot };
   }
   return best;
 }
