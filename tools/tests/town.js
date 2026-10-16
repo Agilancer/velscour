@@ -14,7 +14,12 @@ const { openGame, report } = require('./harness');
       const w = G.world, m = w.map, p = G.player;
       const out = { size: `${m.w}x${m.h}`, buildings: w.buildings.length, props: w.props.length,
         oddTownProps: w.props.filter((p) => p.spr && p.spr.name && p.spr.name.startsWith('town_scatter_')).length,
-        sigilFloors: m.v.filter((v) => v >= 126).length, reach: {} };
+        sigilFloors: m.v.filter((v) => v >= 126).length, reach: {},
+        missingApproaches: w.buildings.filter((b) => !b.approach || !b.approach.length).length,
+        blockedApproaches: w.buildings.filter((b) => !b.approach || b.approach.some(([x, y], i, a) =>
+          !m.walkable(x + 0.5, y + 0.5) || (i > 0 && Math.abs(x - a[i - 1][0]) + Math.abs(y - a[i - 1][1]) !== 1))).length,
+        angleMismatches: w.buildings.filter((b, i, all) => all.some((other, j) => j < i &&
+          Math.hypot(b.cx - other.cx, b.cy - other.cy) < 8 && b.sx !== other.sx)).length };
       for (const t of [...w.npcs.filter((n) => n.vendor), ...w.portals]) {
         const path = m.findPath(p.x, p.y, t.x, t.y, 6000);
         out.reach[t.vendor ? t.vendor.id : 'portal'] = !!(path && path.length);
@@ -26,6 +31,8 @@ const { openGame, report } = require('./harness');
     console.log('seed', seed, info.size, 'buildings', info.buildings, 'props', info.props, 'reachable', JSON.stringify(info.reach));
     if (Object.values(info.reach).some((v) => !v) || Object.keys(info.reach).length < 9) errors.push(`town ${seed}: unreachable or missing target`);
     if (info.oddTownProps || info.sigilFloors) errors.push(`town ${seed}: out-of-place monuments or sigil floors remain`);
+    if (info.missingApproaches || info.blockedApproaches) errors.push(`town ${seed}: missing, blocked, or discontinuous gravel approach`);
+    if (info.angleMismatches) errors.push(`town ${seed}: nearby buildings have inconsistent entry angles`);
     const view = async (name, [x, y], zoom = 1) => {
       await page.evaluate(([x, y, zoom]) => {
         const { G } = window.VELSCOUR; G.player.x = x; G.player.y = y;
