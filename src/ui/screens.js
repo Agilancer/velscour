@@ -37,7 +37,7 @@ export function titleScreen() {
   const used = Object.keys(heroesByClass()).length;
   const s = el('div', 'screen');
   s.classList.add('title-screen');
-  s.innerHTML = `<img class="title-logo intro" src="assets/ui/logo.webp" alt="VELSCOUR"><div class="title-tag">A world built upon something that should have stayed dead.</div>`;
+  s.innerHTML = `<div class="title-credits" aria-hidden="true"><img src="assets/ui/intro-blastorama.png" alt=""><img src="assets/ui/intro-curator.png" alt=""></div><img class="title-logo intro" src="assets/ui/logo.webp" alt="VELSCOUR"><div class="title-tag">A world built upon something that should have stayed dead.</div>`;
   const menu = el('div', 'title-menu');
   const add = (label, fn, cls = 'btn big') => { const b = el('button', cls, label); b.onclick = () => { if (!s.classList.contains('title-ready')) return; initAudio(); sfx('ui'); goFullscreen(); fn(); }; menu.appendChild(b); return b; };
   if (last) add(`Continue<br><span style="font-size:13px;color:#a8977c">${escapeHtml(last.name)} · Lv ${last.level} ${CLASSES[last.classId].name} · Depth ${last.depth}</span>`, () => G.game.loadChar(last));
@@ -49,7 +49,7 @@ export function titleScreen() {
   const gate = el('div', 'title-gate', G.touch ? 'Tap to awaken' : 'Click to awaken');
   s.appendChild(gate);
   show(s);
-  attachTitleFx(s, s.querySelector('.title-logo'), { tag: s.querySelector('.title-tag'), menu, gate });
+  attachTitleFx(s, s.querySelector('.title-logo'), { tag: s.querySelector('.title-tag'), menu, gate, credits: s.querySelector('.title-credits') });
 }
 
 const plaque = (name) => `<div class="plaque"><span>${escapeHtml(name)}</span></div>`;

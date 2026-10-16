@@ -14,6 +14,12 @@ Contents
 
 ---
 
+## October 15, 2026 — intro credits ahead of the Velscour logo
+
+- The title intro now fades the supplied Blastorama Gaming Presents and Jamie Herrington curator cards in and out together before the existing song-synced Velscour logo reveal and flame strike.
+- Added responsive desktop/phone layout and kept the credits as a four-second prelude before the existing music and flame timeline. The intro skip also works during the credits.
+- The desktop/mobile `titlefx.js` test was attempted but could not start because Playwright is not installed in this checkout. Runtime visual QA remains outstanding.
+
 ## October 15, 2026 — Barbarian Bash, hit-built Rage, and Whirlwind cyclone
 
 - Bash (stable ID `barbarian.0.0`) now fires five short directional lightning bolts;
