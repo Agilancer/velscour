@@ -33,4 +33,10 @@ export function castleFloorTiles(palette=null){
  return castleFrames('floors').map(f=>({img,sx:f.x,sy:f.y,w:f.w,h:f.h,lum:0.02,seamless:true,name:f.id,castle:true}));
 }
 export function castleFloorIndex(fragment){return castleFrames('floors').findIndex(f=>f.id.includes(fragment)||f.name?.includes(fragment));}
+export function castleKeepFloorTiles(){
+ const img=imageFor('keep_floors');
+ return castleFrames('keep_floors').map(f=>({img,sx:f.x,sy:f.y,w:f.w,h:f.h,lum:0.02,seamless:true,name:f.id,castle:true}));
+}
+export function castleKeepFloorIndex(fragment){return castleFrames('keep_floors').findIndex(f=>f.id.includes(fragment)||f.name?.includes(fragment));}
+export function castleKeepWallFrames(){return castleFrames('keep_walls');}
 export function castlePackMetadata(){return meta;}

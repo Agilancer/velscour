@@ -32,17 +32,20 @@ def atlas(category, width=2048, gap=2):
             if bounds:
                 left, top, right, bottom = bounds
                 src = src.crop(bounds)
-                pivot = [pivot[0] - left, pivot[1] - top]
+            # Cropped world props need one stable ground anchor. Source-sheet
+            # pivots referenced the uncropped cells and varied between sheets.
+            pivot = [src.width / 2, src.height]
         w, h = src.size
         if x + w + gap > width:
             x, y, row_h = gap, y + row_h + gap, 0
-        placed.append((entry, src, x, y))
+        # Store the pivot with its frame instead of reusing the previous frame's.
+        placed.append((entry, src, x, y, pivot))
         x += w + gap
         row_h = max(row_h, h)
     height = y + row_h + gap
     sheet = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     records = []
-    for entry, src, px, py in placed:
+    for entry, src, px, py, pivot in placed:
         sheet.alpha_composite(src, (px, py))
         record = {k: entry[k] for k in ('id', 'name', 'category') if k in entry}
         record.update(x=px, y=py, w=src.width, h=src.height, pivot=pivot)

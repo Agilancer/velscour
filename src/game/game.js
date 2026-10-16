@@ -38,6 +38,7 @@ import { HUD } from '../ui/hud.js';
 import { TouchUI } from '../ui/touch.js';
 import { Vendor } from '../ui/vendor.js';
 import { Stash } from '../ui/stash.js';
+import { TOWNSFOLK, townLine, townEvent, townConversation } from '../data/townsfolk.js';
 import { toggleInventory } from '../ui/inventory.js';
 import { toggleTree, toggleBook } from '../ui/skills.js';
 import { toggleQuest } from '../ui/quest.js';
@@ -77,13 +78,6 @@ const VELSCOUR_TAUNTS = VELSCOUR_TAUNT_STARTS.flatMap((start) => VELSCOUR_TAUNT_
 let townCache = null, townTiles = null;
 let saveT = 0;
 let automapCanvas = null;
-
-const VILLAGERS = [
-  { name: 'Old Tobin', sprite: 'necromancer', pal: { hue: 30, sat: 0.3, light: 0.05 }, barks: ['The dead walk louder every night...', 'My boy went through that portal. Never came back.'] },
-  { name: 'Mira', sprite: 'ranger', pal: { hue: 200, sat: 0.4 }, barks: ['Bring back something shiny, hero!', 'They say a demon sleeps at the bottom of the world.'] },
-  { name: 'Brother Cael', sprite: 'paladin', pal: { hue: 160, sat: 0.3, light: -0.05 }, barks: ['Light preserve you, wanderer.', 'Velscour... do not speak that name aloud.'] },
-  { name: 'Gorm', sprite: 'barbarian', pal: { hue: -20, sat: 0.4 }, barks: ['Hah! I would go down there myself if not for my knees.', 'Gold buys steel. Steel buys life.'] },
-];
 
 export const game = {
   // ------------------------------------------------------------ characters
@@ -200,23 +194,64 @@ export const game = {
       if (!t.map.walkable(x, y)) [x, y] = t.map.randomNear(t.start[0], t.start[1], 2.5);
       world.npcs.push({ stash: true, name: 'Storage Chest', x, y, reach: 1.6, flip: false, use: () => Stash.open() });
     }
-    for (const v of VILLAGERS) {
-      const [x, y] = t.map.randomNear(t.center.x, t.center.y + 3, 5);
+    c.townVisitCount = (c.townVisitCount || 0) + 1;
+    const visit = c.townVisitCount, rand01 = (()=>{let s=((c.townSeed||1)+visit*0x9e3779b9)>>>0;return ()=>{s=(s+0x6d2b79f5)>>>0;let z=s;z=Math.imul(z^(z>>>15),z|1);z^=z+Math.imul(z^(z>>>7),z|61);return ((z^(z>>>14))>>>0)/4294967296;};})();
+    const ordinary=TOWNSFOLK.filter(v=>!v.royal&&!v.regular&&!v.child&&!v.courtier);
+    const shuffled=ordinary.slice().sort(()=>rand01()-.5);
+    const regulars=TOWNSFOLK.filter(v=>v.regular);
+    const familyId=`family_${1+Math.floor(rand01()*5)}`;
+    const family=TOWNSFOLK.filter(v=>v.familyId===familyId),familyParent=family.find(v=>!v.child),familyChildren=family.filter(v=>v.child);
+    const visitors=[regulars[(visit-1)%regulars.length],regulars[visit%regulars.length],...shuffled.slice(0,4+Math.floor(rand01()*3)),familyParent,...familyChildren];
+    if(visit%3===0){const court=TOWNSFOLK.filter(v=>v.royal||v.courtier);visitors.push(...court);}
+    const uniqueVisitors=new Map(visitors.map(v=>[v.id,v]));
+    visitors.splice(0,visitors.length,...uniqueVisitors.values());
+    const eventSlot=Math.floor(rand01()*2000);
+    world.townEvent=townEvent(visit,eventSlot);world.townEventIndex=eventSlot;
+    const addCast=people=>{for(const person of people)if(person&&!visitors.some(v=>v.id===person.id))visitors.push(person);};
+    const kind=world.townEvent.kind;
+    if(kind==='royal_visit')addCast(TOWNSFOLK.filter(v=>v.royal||v.courtier));
+    if(kind==='returning_knights')addCast(TOWNSFOLK.filter(v=>v.knight).slice(0,3));
+    if(kind==='birth')addCast([TOWNSFOLK.find(v=>v.role==='midwife'),...TOWNSFOLK.filter(v=>v.child&&v.familyId===familyId).slice(0,1)]);
+    if(kind==='wedding'||kind==='engagement')addCast(shuffled.filter(v=>!v.child).slice(0,2));
+    if(kind==='funeral')addCast(regulars.slice(0,2));
+    if(kind==='harvest_fair'||kind==='market_show'||kind==='caravan')addCast(TOWNSFOLK.filter(v=>['musician','merchant','storyteller','town crier'].includes(v.role)).slice(0,2));
+    if(world.townEvent.attack||kind==='enemy_scouts'||kind==='siege_warning'||kind==='monster_sighting')addCast([...TOWNSFOLK.filter(v=>v.knight).slice(0,2),...TOWNSFOLK.filter(v=>v.role==='guard').slice(0,1)]);
+    const visitorById=new Map(visitors.map(v=>[v.id,v]));visitors.splice(0,visitors.length,...visitorById.values());
+    const eventActor=v=>kind==='royal_visit'?v.royal||v.courtier:kind==='returning_knights'?v.knight:kind==='birth'?v.role==='midwife'||v.familyId===familyId:kind==='wedding'||kind==='engagement'?!v.child&&!v.royal:kind==='funeral'?v.regular:kind==='street_fight'?v.knight:kind==='enemy_scouts'||kind==='siege_warning'||kind==='monster_sighting'?v.knight||v.role==='guard':kind==='harvest_fair'||kind==='market_show'||kind==='caravan'?['merchant','musician','storyteller','town crier'].includes(v.role):false;
+    const eventActors=visitors.filter(eventActor).slice(0,4),eventActorIds=new Set(eventActors.map(v=>v.id));
+    const eventChatter=eventActors.length>1?townConversation(eventActors[0],eventActors[1],visit,eventSlot):[];
+    const fightSpots=world.townEvent.attack?[t.map.randomNear(t.center.x,t.center.y+2,1.8),t.map.randomNear(t.center.x+1.1,t.center.y+2,1.8)]:null;
+    const destinations=[...t.npcs.map(n=>[n.x+(rand01()-.5)*1.4,n.y+(rand01()-.5)*1.4]),[t.center.x,t.center.y+2],[t.center.x+2,t.center.y+1]];
+    const chooseDestination=()=>{const target=destinations[Math.floor(rand01()*destinations.length)];const [x,y]=t.map.randomNear(target[0],target[1],1.7);return [x,y];};
+    for (let vi=0;vi<visitors.length;vi++) {
+      const v=visitors[vi], [x,y] = t.map.randomNear(t.center.x, t.center.y + 3, 5), knightRank=visitors.filter(q=>q.knight).findIndex(q=>q.id===v.id), staged=eventActorIds.has(v.id), [tx,ty]=fightSpots&&v.knight&&knightRank<2?fightSpots[knightRank]:staged?t.map.randomNear(t.center.x,t.center.y+2,2.6):chooseDestination();
       const npc = {
-        name: v.name, sprite: v.sprite, pal: v.pal, x, y, reach: 1.6, flip: false, tx: x, ty: y, waitT: rand(1, 4), barkT: rand(4, 12),
-        use() { floatText(this.x, this.y, 70, pick(v.barks), '#e8dcc4', 12, { life: 3, vz: 8 }); },
+        id:v.id,name: v.name,role:v.role,sprite: v.sprite,spriteId:v.spriteId,townsfolkSpriteId:v.spriteId,pal:v.palette,townsfolkId:v.id,frameCount:v.frame.count,child:v.child,royal:v.royal,courtier:v.courtier,knight:v.knight,familyId:v.familyId,
+        x, y, reach: 1.6, flip: false, tx, ty, waitT: rand(1, 4), barkT: rand(7, 15),
+        talkText:eventActorIds.has(v.id)?(v.id===eventActors[0]?.id?world.townEvent.text:eventChatter[eventActors.findIndex(a=>a.id===v.id)%2]||''): '',talkT:eventActorIds.has(v.id)?8:0,chatT:rand(2,8),
+        townMood:eventActorIds.has(v.id)?world.townEvent.emote:null,
+        townMoodT:eventActorIds.has(v.id)?18:0,
+        townPoseFrame:eventActorIds.has(v.id)?({celebration:10,affection:9,birth:9,alarm:vi%2?8:7,fight:8,royal:10,relief:9})[world.townEvent.emote]??1:1,
+        townPoseT:eventActorIds.has(v.id)?7:0,
+        townAttackT:world.townEvent.attack&&v.knight&&knightRank<2?5.5:0,townAttackSeed:vi*2.3,
+        use() { this.talkText=townLine(v.id,visit);this.talkT=4.5;floatText(this.x,this.y,70,this.talkText,'#e8dcc4',12,{life:3,vz:8}); },
         update(dt) {
-          this.waitT -= dt;
+          this.talkT=Math.max(0,this.talkT-dt);this.townMoodT=Math.max(0,this.townMoodT-dt);this.townPoseT=Math.max(0,this.townPoseT-dt);this.townAttackT=Math.max(0,this.townAttackT-dt);this.chatT=Math.max(0,this.chatT-dt);this.waitT -= dt;
           if (this.waitT <= 0) {
             const d = dist(this.x, this.y, this.tx, this.ty);
-            if (d < 0.1) { this.waitT = rand(2, 6); [this.tx, this.ty] = t.map.randomNear(t.center.x, t.center.y + 3, 7); return; }
+            if (d < 0.65) {
+              this.walking=false;this.waitT=rand(3,7);
+              if(this.chatT<=0){const other=world.npcs.find(q=>q!==this&&!q.vendor&&!q.stash&&dist(q.x,q.y,this.x,this.y)<2.2&&(!q.chatT||q.chatT<=0));
+                if(other){const [one,two]=townConversation(v,other,visit,world.townEventIndex);this.talkText=one;this.talkT=3.8;other.talkText=two;other.talkT=3.8;this.chatT=other.chatT=rand(12,22);}}
+              [this.tx, this.ty] = chooseDestination(); return;
+            }
             const s = Math.min(d, 1.1 * dt);
             const nx = this.x + ((this.tx - this.x) / d) * s, ny = this.y + ((this.ty - this.y) / d) * s;
-            if (t.map.walkable(nx, ny)) { this.flip = nx < this.x; this.x = nx; this.y = ny; } else this.waitT = 0.5, [this.tx, this.ty] = t.map.randomNear(t.center.x, t.center.y + 3, 7);
+            if (t.map.walkable(nx, ny)) { this.walking=true;this.flip = nx < this.x; this.x = nx; this.y = ny; } else this.waitT = 0.5, [this.tx, this.ty] = chooseDestination();
           }
           const p = G.player;
           this.barkT -= dt;
-          if (p && this.barkT <= 0 && dist(p.x, p.y, this.x, this.y) < 4) { this.barkT = rand(14, 26); this.use(); }
+          if (p && this.barkT <= 0 && dist(p.x, p.y, this.x, this.y) < 4) { this.barkT = rand(18, 32);this.talkText=townLine(v.id,visit,Math.floor(rand01()*8));this.talkT=3.6; }
         },
       };
       world.npcs.push(npc);

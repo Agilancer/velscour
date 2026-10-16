@@ -15,13 +15,15 @@ Sea of Sand is a second outdoor scenario biome alongside the Forsaken Wilds. It 
 | Persistent timer, current beat and objective HUD | `index.html`, `css/style.css`, `src/ui/hud.js` |
 | Browser QA | `tools/tests/sea_of_sand.js` |
 
-The committed lossless atlases are generated from the Velscour Overworld Biome Set. To rebuild them from that pack, run:
+The committed lossless atlases are generated from the Velscour Overworld Biome Set. The packer uses each floor's authored pivot and anchors cropped world props at the bottom center of their visible art. To rebuild them from that pack, run:
 
 ```bash
 python tools/seaofsandpack.py path/to/Sea_of_Sand_Biome_Pack
 ```
 
-This writes the runtime atlases and `pack.json` under `assets/tiles/sea_of_sand/`. The atlas metadata preserves each source pivot, cliff connection mask and cliff height. Do not edit the generated atlases by hand.
+This writes the runtime atlases and `pack.json` under `assets/tiles/sea_of_sand/`. The metadata preserves floor pivots, cliff connection masks, and cliff heights. Do not edit the generated atlases by hand.
+
+The overworld uses coherent terrain fields: open dunes dominate, narrow caravan tracks connect the objectives, and dry washes and ruin paving follow their landmarks. Wind-shaped outcrops replace the old rigid grid maze; sandstone defines the cliffs, with brick near objective sites. Deterministic, scattered 2–4 world-pixel flecks mark floor-material boundaries without adding a black outline. Floor frames remain the original 160×80 Catacombs-compatible isometric footprint; trimmed props and cliffs use bottom-center anchors so they sit on the ground without black seams or floating.
 
 ## Scenarios and rewards
 

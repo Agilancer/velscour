@@ -57,12 +57,27 @@ images while preserving each enemy's existing 160 × 186 canvas, foot anchor,
 IDs, hit flash, corpse shading, and recolor behavior. Attack and ability
 animation logic is unchanged.
 
-`assets/tiles/ai_biomes/<biome>_architecture.webp` is a 128 × 128 generated
-material texture per biome. The renderer tiles it over architecture with
-source-atop compositing, so artwork stays within the existing wall, arch, and
-door pixels while each setting gains its own carved motif and surface detail.
-The new 23 biomes use the complete generated material within those silhouettes;
-the original five packs retain their lighter material overlay.
+`assets/tiles/ai_biomes/<biome>_wall_materials.webp` is a **1280 × 128** strip
+with ten full-bleed, seamless **128 × 128** material tiles per biome. The ten
+materials cover two surface variants for each of the Catacombs pack's five wall
+families. The runtime assigns those variants by wall family and connection
+mask, then textures the existing wall, arch, and door alpha silhouettes with
+source-atop compositing. No black atlas background or frame is drawn around a
+tile. The original **160 × 80 floor, 256 × 256 wall, 384 × 336 arch,
+320 × 288 door, and 192 × 192 scatter canvases and pivots** remain unchanged.
+The biome's generated architecture art is blended at 48% into each material,
+so its stone, ornament and palette are visible while all ten authored masonry
+motifs stay distinct. These are ten unique wall surface textures per biome;
+they are painted onto the shared Catacombs wall silhouettes and geometry.
+
+`tools/build_biome_wall_materials.py` rebuilds every wall-material strip from
+`wall_materials_source.png` and that biome's `*_architecture.webp` detail map.
+It edge-matches a 12 px band on each tile so all ten materials repeat without
+dark border seams.
+
+The renderer adds deterministic, scattered 2–4 world-pixel flecks along floor
+edges where the material family changes. This applies to semantic floor names
+in the dungeon atlases and named terrain classes in Sea of Sand and Castle.
 
 `assets/tiles/approved_biomes/forsaken_wilds_supplemental.webp` contains ten
 distinct 128 × 128 generated Forsaken Wilds tree sprites, five shrine designs,
@@ -70,13 +85,12 @@ and a caravan. These named props are loaded through the same ground-pivot
 contract as the existing overworld art; collision and scenario placement stay
 unchanged.
 
-`tools/build_ai_biome_atlases.py` converts the generated grids to compact
+`tools/build_ai_biome_atlases.py` converts the generated floor/prop grids to compact
 lossless WebP using nearest-neighbor downsampling. The generator emits
 transparent sprite atlases; it does not make gameplay screenshots or large
-background images. The runtime keeps the original wall, arch, and door
-geometry metadata and depth slices for reliable occlusion and opening states.
-Pass the five-panel source image with `--architecture-source` to rebuild the
-architecture material textures.
+background images. The runtime keeps the original Catacombs wall, arch, and
+door geometry metadata and depth slices for reliable occlusion and opening
+states.
 
 ## Generation prompt set
 

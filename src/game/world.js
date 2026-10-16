@@ -197,7 +197,7 @@ export class World {
     }
     for (const pr of this.props) {
       if (!pr.light) continue;
-      addLight(pr.x, pr.y, pr.light + Math.sin(this.time * 7 + pr.x) * 0.15, 0.8);
+      addLight(pr.x, pr.y, pr.light + Math.sin(this.time * 7 + pr.x) * 0.15, 0.8, 20 + (pr.z || 0));
     }
     // portals
     for (const po of this.portals) {

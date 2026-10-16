@@ -1,14 +1,19 @@
 # CASTLE overworld biome
 
-CASTLE is the third playable overworld beside the Forsaken Wilds and Sea of Sand. Its complete 961-frame source pack is converted into lossless runtime atlases while preserving pivots, frame IDs, wall masks, orientation, and topology.
+CASTLE is the third playable overworld beside the Forsaken Wilds and Sea of Sand. Its runtime atlases preserve the 160×80 floor grid, pivots, frame IDs, wall masks, orientation, and topology. The keep has its own six-frame floor atlas and three complete 20-piece interior wall families.
 
 ## Game integration
 
 - `src/data/biomes.js` registers Castle as an overworld with a siege-ready monster roster.
-- `src/gfx/castle.js` loads the atlas set on descent and exposes indexed floors and pivot-aware props. Optional palette arguments pass through the game's colorize transform for stone variants.
-- `src/world/overworld.js` creates a grass, dirt, and stone courtyard, a blocked moat with four traversable bridge decks, walkable rampart lanes that raise player and creature rendering to the wall deck, stair access, a gatehouse, keep, towers, banners, trees, and 780 scatter placements drawn from 120 authored pieces.
-- The existing overworld scenario system supplies the 20 shrine-activated defense, siege, rescue, escort, and hunt scenarios. Its civilian groups and combat objectives stay connected to the common encounter logic.
+- `src/gfx/castle.js` loads the atlas set on descent and exposes indexed exterior and keep floors, topology-aware walls, and pivot-aware props.
+- `src/world/overworld.js` builds a 192×176 Castle board by expanding the 96×88 authored layout twofold in each dimension, giving four times the tile area. The irregular fortress has a continuous five-base-tile-wide walkable rampart, ten masonry families, four moat bridges, a defended drawbridge, nine towers, and eight stair approaches. The keep contains enterable throne, cathedral, and great-hall rooms with dedicated floors and walls, open doors, combat space, encounters, and furnishings.
+- Castle pathing expands with the board: spawn points, doors, scenario sites, stairs, exits, and rampart objectives are rescaled onto walkable tiles. Ramparts connect through bends, corners, gates, and broad stair landings.
+- The shared shrine-activated system supplies 35 challenges. It retains the twenty general scenarios, adds five rampart encounters, and adds ten room-focused keep scenarios. Other overworlds continue to select from their applicable general scenario set.
+- Sea of Sand caravan paths remain connected to the authored oasis and ruin anchors while their intermediate curves, phases, and widths vary by seed. Dune and stone seams use scattered 3–6px transition flecks in the matching terrain colors.
 - `src/game/game.js` loads Castle atlases before map generation. The art remains lazy-loaded, so ordinary dungeons do not fetch the castle sheets.
+- `src/data/townsfolk.js` defines 100 named town visitors backed by 25 distinct generated designs and game-engine palette variants, including ten children, linked families, four persistent regulars, the royal family, court members, and four knights. Each return brings a purposeful handful of visitors who route to shops, the plaza, and event staging spots. `TOWN_SITUATIONS` contains 2,000 distinct event cards across royal arrivals, weddings, births, parties, funerals, fairs, fights, enemy sightings, and other town life; `TOWN_CONVERSATIONS` contains 2,000 distinct two-line exchanges. Double-ruled parchment bubbles avoid nearby characters, while events animate hearts, grief tears, celebration sparks, royal crowns, alarm marks, and clashing swords.
+- `assets/sprites/townsfolk/townsfolk_animation_pack.zip` contains 25 transparent identity sheets and source PNGs. Each non-knight sheet has exactly eleven 128×192 frames: three idle poses, two walk poses, dying, lying dead, scared/screaming, scared/pointing, happy, and celebration. The four distinct knight designs append two individual attack frames after the shared eleven-frame sequence. All designs match the original generated Velscour civilian finish and are not cut from playable-class or helmet sprites. Clothing and hair colors are varied at runtime. `tools/build_townsfolk_pack.py` rebuilds the standardized sheets, manifest, review sheet, and ZIP. Missing sheets use a plain civilian placeholder while loading.
+- Castle wall review sheets are in `art-review/castle-wall-*.png`: each shows all 20 corner, end, straight, junction and panel pieces for one of ten masonry families. `castle-rampart-stairs.png` shows all sixteen stair pieces; `castle-walltops-landmarks.png` shows all nineteen wall-top, tower, stair-access and bridge modules. The throne dais was rescaled to sit more naturally in its open hall.
 - After three non-overworld dungeon visits, the selector chooses among every registered overworld: Forsaken Wilds, Sea of Sand, or Castle. The final throne at Depth 500 still takes precedence.
 
 ## Rebuild runtime atlases
@@ -29,4 +34,4 @@ node tools/tests/overworld.js
 node tools/tests/sea_of_sand_generation.mjs
 ```
 
-The Castle check covers the 961-frame atlas contract, 100 seeded maps, all 20 scenarios, bridge and rampart access, the 780-piece scatter count, objective reachability, and three-dungeon rotation among all overworlds.
+The Castle check covers the documented tile dimensions, fourfold board area, dedicated keep atlas contracts, 100 seeded maps, all 35 scenarios, four bridge approaches, the wide wall walk, eight stairs, interior doors and combat rooms, ten exterior wall families, objective reachability, and three-dungeon rotation among all overworlds. The Sea of Sand check covers 100 seeded maps and all route-anchor reachability. `python tools/build_townsfolk_pack.py` rebuilds the civilian sheets and ZIP from the included original generated art.
