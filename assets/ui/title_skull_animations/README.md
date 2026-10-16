@@ -5,3 +5,7 @@
 The 16 long-form atlases are 5 columns × 2 rows. Each cell is 310×814 (atlas: 1550×1628; 10 frames per animation). The 5 blink and 5 wink atlases are 5 columns × 1 row (atlas: 1550×814; 5 frames each). Names map directly to the requested animation labels; `escape_o` means “Trying to escape the O.”
 
 These are art assets only; no game UI or animation code was changed.
+
+## Preview
+
+tools/title-skull-preview.html is a standalone browser preview. It draws the selected first logo concept on black, then composites each atlas frame at the original crop coordinates (x=1060, y=0). Use the animation picker, play/pause, restart, and speed slider.

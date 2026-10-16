@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VELSCOUR Skull Animation Preview</title>
+  <style>
+    :root { color-scheme: dark; --gold: #d6a850; --muted: #9b8b72; }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; margin: 0; background: #000; color: #eee5d2; font-family: Georgia, "Times New Roman", serif; }
+    body { display: flex; flex-direction: column; align-items: center; padding: 18px clamp(12px, 3vw, 36px) 24px; }
+    header { width: min(100%, 1120px); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 10px 24px; margin: 0 0 10px; }
+    h1 { margin: 0; color: var(--gold); font-size: clamp(17px, 2.5vw, 25px); letter-spacing: .16em; text-transform: uppercase; }
+    .hint { color: var(--muted); font: 12px/1.4 system-ui, sans-serif; }
+    .stage { width: min(96vw, 1500px); min-height: 0; flex: 1 1 auto; display: flex; justify-content: center; align-items: center; }
+    canvas { display: block; width: min(96vw, 1500px); height: auto; max-height: 69vh; aspect-ratio: 1931 / 814; background: #000; image-rendering: auto; }
+    .controls { width: min(100%, 1120px); display: grid; grid-template-columns: minmax(190px, 1.4fr) auto auto minmax(130px, .8fr) auto; align-items: end; gap: 10px; padding: 13px; border: 1px solid #4b3822; background: linear-gradient(180deg, #17120d, #090807); box-shadow: 0 0 24px #2d1706; }
+    label { display: grid; gap: 5px; color: #bba77f; font: 11px system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+    select, button, input { min-height: 38px; border: 1px solid #72572d; border-radius: 3px; background: #100d09; color: #f5e8cc; font: 14px system-ui, sans-serif; }
+    select { width: 100%; padding: 0 9px; }
+    button { padding: 0 14px; cursor: pointer; }
+    button:hover, select:hover { border-color: var(--gold); }
+    button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid #f3c76a; outline-offset: 2px; }
+    input[type="range"] { width: 100%; accent-color: var(--gold); }
+    .fps-value { color: #e8d9b8; font: 12px system-ui, sans-serif; text-align: right; }
+    .readout { min-width: 100px; padding-bottom: 10px; color: var(--muted); font: 12px/1.4 system-ui, sans-serif; text-align: right; }
+    .error { display: none; width: min(100%, 1120px); margin: 8px 0 0; color: #ff8b7c; font: 13px system-ui, sans-serif; }
+    @media (max-width: 700px) {
+      body { padding: 12px 10px 14px; }
+      .stage { min-height: 40vh; }
+      canvas { width: 96vw; max-height: 48vh; }
+      .controls { grid-template-columns: 1fr 1fr; gap: 8px; padding: 9px; }
+      .animation-field { grid-column: 1 / -1; }
+      .readout { text-align: left; padding: 0 0 8px; }
+      .hint { max-width: 45%; text-align: right; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Velscour — Skull Animation Preview</h1>
+    <span class="hint">Black backdrop · frame overlay locked to the title logo</span>
+  </header>
+  <main class="stage" aria-label="Animated Velscour title logo">
+    <canvas id="preview" width="1931" height="814" aria-label="Velscour logo with selected skull animation"></canvas>
+  </main>
+  <section class="controls" aria-label="Animation controls">
+    <label class="animation-field" for="animation">Animation
+      <select id="animation">
+        <optgroup label="Talking and expressions">
+          <option value="normal_talking_1">Normal talking 1</option>
+          <option value="normal_talking_2">Normal talking 2</option>
+          <option value="angry_talking_1">Angry talking 1</option>
+          <option value="angry_talking_2">Angry talking 2</option>
+          <option value="happy_talking_1">Happy talking 1</option>
+          <option value="happy_talking_2">Happy talking 2</option>
+          <option value="sad_talking_1">Sad talking 1</option>
+          <option value="sad_talking_2">Sad talking 2</option>
+          <option value="sleeping_1">Sleeping 1</option>
+          <option value="sleeping_2">Sleeping 2</option>
+          <option value="spinning_1">Spinning 1</option>
+          <option value="spinning_2">Spinning 2</option>
+          <option value="spitting_1">Spitting 1</option>
+          <option value="spitting_2">Spitting 2</option>
+          <option value="escape_o_1">Trying to escape the O 1</option>
+          <option value="escape_o_2">Trying to escape the O 2</option>
+        </optgroup>
+        <optgroup label="Blink — five frames each">
+          <option value="blink_1">Blink 1</option>
+          <option value="blink_2">Blink 2</option>
+          <option value="blink_3">Blink 3</option>
+          <option value="blink_4">Blink 4</option>
+          <option value="blink_5">Blink 5</option>
+        </optgroup>
+        <optgroup label="Wink — five frames each">
+          <option value="wink_1">Wink 1 — left</option>
+          <option value="wink_2">Wink 2 — right</option>
+          <option value="wink_3">Wink 3 — alternating</option>
+          <option value="wink_4">Wink 4 — double</option>
+          <option value="wink_5">Wink 5 — rapid</option>
+        </optgroup>
+      </select>
+    </label>
+    <button id="play" type="button" aria-pressed="true">Pause</button>
+    <button id="restart" type="button">Restart</button>
+    <label for="speed">Speed <span id="speed-value" class="fps-value">8 fps</span>
+      <input id="speed" type="range" min="2" max="20" value="8">
+    </label>
+    <output id="frame-readout" class="readout">Loading…</output>
+  </section>
+  <p id="error" class="error" role="alert"></p>
+
+  <script>
+    (() => {
+      const ROOT = '../assets/ui/title_skull_animations/';
+      const FRAME_W = 310, FRAME_H = 814, LOGO_W = 1931, LOGO_H = 814;
+      const OVERLAY_X = 1060, OVERLAY_Y = 0, COLUMNS = 5;
+      const longAnimations = new Set([
+        'normal_talking_1','normal_talking_2','angry_talking_1','angry_talking_2',
+        'happy_talking_1','happy_talking_2','sad_talking_1','sad_talking_2',
+        'sleeping_1','sleeping_2','spinning_1','spinning_2','spitting_1','spitting_2',
+        'escape_o_1','escape_o_2'
+      ]);
+      const canvas = document.querySelector('#preview');
+      const ctx = canvas.getContext('2d');
+      const selector = document.querySelector('#animation');
+      const playButton = document.querySelector('#play');
+      const restartButton = document.querySelector('#restart');
+      const speed = document.querySelector('#speed');
+      const speedValue = document.querySelector('#speed-value');
+      const readout = document.querySelector('#frame-readout');
+      const error = document.querySelector('#error');
+      let logoImage = null, atlas = null, frame = 0, frameCount = 10, playing = true, lastTick = 0;
+      const cache = new Map();
+
+      function loadImage(src) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error(`Could not load ${src}`));
+          img.src = src;
+        });
+      }
+      async function loadAssets() {
+        try {
+          logoImage = await loadImage(ROOT + 'velscour_title_logo_reference.png');
+          if (logoImage.naturalWidth !== LOGO_W || logoImage.naturalHeight !== LOGO_H) {
+            throw new Error(`Logo is ${logoImage.naturalWidth}×${logoImage.naturalHeight}; expected ${LOGO_W}×${LOGO_H}.`);
+          }
+          await loadAnimation(selector.value);
+          requestAnimationFrame(tick);
+        } catch (err) {
+          error.textContent = `${err.message}. Open this page from the project folder so its relative image paths can load.`;
+          error.style.display = 'block';
+          readout.textContent = 'Asset load failed';
+        }
+      }
+      async function loadAnimation(name) {
+        try {
+          atlas = cache.get(name) || await loadImage(ROOT + name + '.png');
+          cache.set(name, atlas);
+          frameCount = longAnimations.has(name) ? 10 : 5;
+          const expected = frameCount === 10 ? [FRAME_W * 5, FRAME_H * 2] : [FRAME_W * 5, FRAME_H];
+          if (atlas.naturalWidth !== expected[0] || atlas.naturalHeight !== expected[1]) {
+            throw new Error(`${name} atlas is ${atlas.naturalWidth}×${atlas.naturalHeight}; expected ${expected[0]}×${expected[1]}.`);
+          }
+          frame = 0;
+          lastTick = 0;
+          error.style.display = 'none';
+          draw();
+        } catch (err) {
+          atlas = null;
+          error.textContent = err.message;
+          error.style.display = 'block';
+        }
+      }
+      function draw() {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, LOGO_W, LOGO_H);
+        if (logoImage) ctx.drawImage(logoImage, 0, 0, LOGO_W, LOGO_H);
+        if (atlas) {
+          const sx = (frame % COLUMNS) * FRAME_W;
+          const sy = Math.floor(frame / COLUMNS) * FRAME_H;
+          // The complete 310×814 source crop overlays its original x=1060,y=0 logo location.
+          ctx.drawImage(atlas, sx, sy, FRAME_W, FRAME_H, OVERLAY_X, OVERLAY_Y, FRAME_W, FRAME_H);
+        }
+        readout.textContent = `Frame ${frame + 1} / ${frameCount} · x ${OVERLAY_X}, y ${OVERLAY_Y} · ${FRAME_W}×${FRAME_H}`;
+      }
+      function tick(now) {
+        if (playing && atlas && now - lastTick >= 1000 / Number(speed.value)) {
+          frame = (frame + 1) % frameCount;
+          lastTick = now;
+          draw();
+        }
+        requestAnimationFrame(tick);
+      }
+
+      selector.addEventListener('change', () => loadAnimation(selector.value));
+      playButton.addEventListener('click', () => {
+        playing = !playing;
+        playButton.textContent = playing ? 'Pause' : 'Play';
+        playButton.setAttribute('aria-pressed', String(playing));
+        lastTick = 0;
+      });
+      restartButton.addEventListener('click', () => { frame = 0; lastTick = 0; draw(); });
+      speed.addEventListener('input', () => { speedValue.textContent = `${speed.value} fps`; });
+      document.addEventListener('keydown', (event) => {
+        if (event.code === 'Space' && !['SELECT','INPUT','BUTTON'].includes(document.activeElement.tagName)) {
+          event.preventDefault(); playButton.click();
+        } else if (event.code === 'ArrowRight' && !['SELECT','INPUT','BUTTON'].includes(document.activeElement.tagName)) {
+          frame = (frame + 1) % frameCount; draw();
+        } else if (event.code === 'ArrowLeft' && !['SELECT','INPUT','BUTTON'].includes(document.activeElement.tagName)) {
+          frame = (frame - 1 + frameCount) % frameCount; draw();
+        }
+      });
+      loadAssets();
+    })();
+  </script>
+</body>
+</html>
