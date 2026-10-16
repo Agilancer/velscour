@@ -1,5 +1,5 @@
-// Title screen intro: click-to-awaken gate, the logo fading in on the Hymn of the Abyss clock, the flame burst on the
-// song's hit (~8.9 s after the click: 2 s delay + 6.88 s into the song), skipping the intro, the blinking eyes.
+// Title screen intro: click-to-awaken gate, sequential credit cards starting with Hymn of the Abyss, the logo fade and
+// flame burst on the song's hit, skipping the intro, and the blinking eyes.
 //   node tools/tests/titlefx.js            (screenshots: titlefx_*.png)
 // Uses the test hooks on the FX canvas (canvas.title-fx .fx).
 const { openGame, report } = require('./harness');
@@ -16,7 +16,8 @@ const { openGame, report } = require('./harness');
     await shot(`titlefx_${tag}_gate`);
     if (s.phase === 'gate') { await page.mouse.click(w * 0.1, h * 0.9); }
     const t0 = Date.now();
-    await page.waitForTimeout(4500);
+    const introDeadline = Date.now() + 12000;
+    while ((s = await st()).phase !== 'intro' && Date.now() < introDeadline) await page.waitForTimeout(30);
     s = await st();
     console.log(tag, 'fading', JSON.stringify(s), 'song', JSON.stringify(await clock()));
     if (s.phase !== 'intro' || !(s.opacity > 0.05 && s.opacity < 0.9)) { console.log('FAIL: logo should be part-way faded in'); process.exitCode = 1; }
@@ -34,9 +35,9 @@ const { openGame, report } = require('./harness');
     await shot(`titlefx_${tag}_burning`);
     // a fresh title screen (audio already unlocked) starts the intro at once; a click skips to the burst
     await page.evaluate(async () => { const a = await import('/src/core/audio.js'); a.stopMusic(0.1); (await import('/src/ui/screens.js')).titleScreen(); });
-    await page.waitForTimeout(600);
-    s = await st();
-    if (s.phase !== 'intro') { console.log('FAIL: expected intro without gate, got', s.phase); process.exitCode = 1; }
+    const creditsDeadline = Date.now() + 8000;
+    while (!['credits', 'intro'].includes((s = await st()).phase) && Date.now() < creditsDeadline) await page.waitForTimeout(30);
+    if (!['credits', 'intro'].includes(s.phase)) { console.log('FAIL: expected credits or intro without gate, got', s.phase); process.exitCode = 1; }
     await page.mouse.click(w * 0.1, h * 0.9);
     await page.waitForTimeout(800);
     s = await st();
