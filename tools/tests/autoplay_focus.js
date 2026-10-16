@@ -10,6 +10,13 @@ const { openGame, report } = require('./harness');
       const { SKILLS, CLASS_SKILLS, rageCost, manaCost, cooldown } = await import('/src/data/skills.js');
       const { Auto } = await import('/src/game/autoplay.js');
       const problems = [], details = {};
+      // Non-Paladins have a false hammer candidate, not a null one. Bar setup
+      // must fall through to their main attack without throwing on false.sk.id.
+      for (const cls of Object.keys(CLASS_SKILLS)) {
+        await game.newChar(cls, 'Starter ' + cls);
+        Auto.arrangeBar();
+        if (!SKILLS[G.char.bar[0]]) problems.push(cls + ' has no starter main attack');
+      }
       const earthquake = SKILLS['barbarian.2.5'];
       if (!earthquake || rageCost(earthquake) !== 25 || manaCost(earthquake, 1) !== 0 || cooldown(earthquake) !== 5)
         problems.push('Earthquake must cost 25 Rage, zero mana and have a five-second cooldown');

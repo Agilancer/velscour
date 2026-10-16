@@ -270,7 +270,15 @@ export function renderWorld(ctx, world) {
     if (px > vr.x0 - 40 && px < vr.x1 + 40 && py > vr.y0 - 40 && py < vr.y1 + 40) drawCorpse(ctx, c);
   }
   // ground layer hazards & effects
-  const sorted = [], top = [];
+  // Reuse records by insertion index (sort rearranges the active array only).
+  const frame = world.renderFrame || (world.renderFrame = { pool: [], sorted: [], top: [], walls: [] });
+  const { pool, sorted, top, walls } = frame;
+  sorted.length = 0; top.length = 0; walls.length = 0;
+  const enqueue = (d, f, o, index = 0) => {
+    const i = sorted.length, item = pool[i] || (pool[i] = {});
+    item.d = d; item.f = f; item.o = o; item.index = index;
+    sorted.push(item);
+  };
   for (const h of world.hazards) {
     if (h.ground) h.draw(ctx);
     else if (h.shieldVariant && h.pos) {
@@ -279,10 +287,10 @@ export function renderWorld(ctx, world) {
       // They also sort naturally between wall/door and creature slices.
       for (let i = 0; i < h.pos.length; i++) {
         const [x,y,a]=h.pos[i];
-        sorted.push({d:orbitShieldDepth(x,y,a),f:11,o:h,index:i});
+        enqueue(orbitShieldDepth(x,y,a),11,h,i);
       }
     }
-    else if (typeof h.depth === 'number') sorted.push({ d: h.depth, f: 1, o: h });
+    else if (typeof h.depth === 'number') enqueue(h.depth, 1, h);
     else top.push(h);
   }
   drawEffects(ctx, 'ground');
@@ -301,20 +309,27 @@ export function renderWorld(ctx, world) {
     return 1 - (1 - (0.16 + 0.84 * t * t * (3 - 2 * t))) * Math.min(1, (d - pd) * 1.5);
   };
   const wk = world.tileset && world.tileset.k;
-  const walls = map.wallsIn(tx0 - 3, ty0 - 3, tx1 + 4, ty1 + 4, []);
-  for (const s of walls) sorted.push({ d: s.depth, f: 2, o: s });
+  map.wallsIn(tx0 - 3, ty0 - 3, tx1 + 4, ty1 + 4, walls);
+  for (const s of walls) {
+    const r = wallSlice(s);
+    if (!r) continue;
+    const x = isoX(s.x, s.y) + r.ox * wk, y = isoY(s.x, s.y) + r.oy * wk;
+    if (x - 1 > vr.x1 || x + r.w * wk + 1 < vr.x0 ||
+        y - 1 > vr.y1 || y + r.h * wk + 1 < vr.y0) continue;
+    enqueue(s.depth, 2, s);
+  }
   // A wall-holder shares the same depth pass as its wall, so it fades with
   // an occluding front wall and doesn't float above the player or doors.
   for (const t of world.torches) {
     const px=isoX(t.mountX??t.x,t.mountY??t.y);
     const py=isoY(t.mountX??t.x,t.mountY??t.y);
     if(px<vr.x0-120||px>vr.x1+120||py<vr.y0-120||py>vr.y1+90)continue;
-    sorted.push({d:t.depth??(t.x+t.y),f:12,o:t});
+    enqueue(t.depth??(t.x+t.y),12,t);
   }
   for (const item of world.wallHangings) {
     const px=isoX(item.mountX,item.mountY), py=isoY(item.mountX,item.mountY);
     if(px<vr.x0-100||px>vr.x1+100||py<vr.y0-110||py>vr.y1+70)continue;
-    sorted.push({d:item.depth??(item.mountX+item.mountY),f:13,o:item});
+    enqueue(item.depth??(item.mountX+item.mountY),13,item);
   }
   for (const pr of world.props) {
     const px = isoX(pr.x, pr.y), py = isoY(pr.x, pr.y);
@@ -327,18 +342,18 @@ export function renderWorld(ctx, world) {
       if (x0 > vr.x1 + 8 || x0 + s.w * k < vr.x0 - 8 ||
           y0 > vr.y1 + 8 || y0 + s.h * k < vr.y0 - 8) continue;
     } else if (px < vr.x0 - 100 || px > vr.x1 + 100 || py < vr.y0 - 40 || py > vr.y1 + 220) continue;
-    sorted.push({ d: pr.x + pr.y, f: 4, o: pr });
+    enqueue(pr.x + pr.y, 4, pr);
   }
   for (const b of world.buildings) {
     const [x,y,w,h] = buildingRect(b);
     if (x > vr.x1+24 || x+w < vr.x0-24 || y > vr.y1+24 || y+h < vr.y0-24) continue;
-    sorted.push({ d: b.depth, f: 5, o: b });
+    enqueue(b.depth, 5, b);
   }
   for (const c of world.creatures) {
     if (c.dead) continue;
     const px = isoX(c.x, c.y), py = isoY(c.x, c.y);
     if (px < vr.x0 - 80 || px > vr.x1 + 80 || py < vr.y0 - 40 || py > vr.y1 + 160) { c.sbox = null; continue; }
-    sorted.push({ d: c.x + c.y + (c.fly ? 0.2 : 0), f: 6, o: c });
+    enqueue(c.x + c.y + (c.fly ? 0.2 : 0), 6, c);
   }
   const closeEnough = (x,y,marginX=90,marginY=130) => {
     const px=isoX(x,y),py=isoY(x,y);
@@ -346,11 +361,11 @@ export function renderWorld(ctx, world) {
   };
   for (const n of world.npcs) {
     if (!closeEnough(n.x,n.y)) { n.sbox=null; continue; }
-    sorted.push({ d: n.x + n.y, f: 7, o: n });
+    enqueue(n.x + n.y, 7, n);
   }
-  for (const l of world.loot) if (closeEnough(l.x,l.y,50,75)) sorted.push({ d: l.x + l.y - 0.2, f: 8, o: l });
-  for (const c of world.chests) if (closeEnough(c.x,c.y,70,80)) sorted.push({ d: c.x + c.y, f: 9, o: c });
-  for (const po of world.portals) if (closeEnough(po.x,po.y,95,150)) sorted.push({ d: po.x + po.y, f: 10, o: po });
+  for (const l of world.loot) if (closeEnough(l.x,l.y,50,75)) enqueue(l.x + l.y - 0.2, 8, l);
+  for (const c of world.chests) if (closeEnough(c.x,c.y,70,80)) enqueue(c.x + c.y, 9, c);
+  for (const po of world.portals) if (closeEnough(po.x,po.y,95,150)) enqueue(po.x + po.y, 10, po);
   sorted.sort((a, b) => a.d - b.d);
   let q = hq;
   for (const it of sorted) {
@@ -419,6 +434,9 @@ export function renderWorld(ctx, world) {
   drawOverheadNames(ctx, world);
   G.lootBoxes = drawLootLabels(ctx, world, G.input && G.input.lastPointerType === 'mouse' ? G.input.mouse : null);
   drawTexts(ctx);
+  // Keep capacity without retaining creatures/loot that have left the world.
+  for (const item of pool) item.o = null;
+  top.length = 0;
 }
 
 /** The light falloff (alpha 1 at the centre to 0 at the rim), drawn with 'destination-out' to cut the darkness. */
