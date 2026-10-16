@@ -181,6 +181,16 @@ export class World {
       addLight(po.x, po.y, 6, 1);
       if (chance(dt * 30)) sparkle(po.x, po.y, rand(10, 60), po.color || '#ff6030', 1, 0.6);
     }
+    if (this.raining) {
+      this.rainT = (this.rainT || 0) + dt;
+      const rate = G.touch ? 26 : 70;
+      while (this.rainT >= 1 / rate) {
+        this.rainT -= 1 / rate;
+        const [x, y] = camera.screenToTile(rand(0, G.W), rand(-G.H * 0.1, G.H));
+        spawn({ type: 'streak', x, y, z: rand(100, 180), vx: 0.35, vy: 0.1, vz: -105,
+          life: 1.4, size: G.touch ? 1 : 1.25, color: '#c6dbe5' });
+      }
+    }
     // ambient particles around the camera
     if (!b || !b.ambient) return;
     this.ambT += dt;
