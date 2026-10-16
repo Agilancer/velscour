@@ -199,27 +199,58 @@ function generateSeaOfSand(depth,biome,seed) {
   const I=(x,y)=>y*W+x,dist=(x,y,p)=>Math.hypot(x-p[0],y-p[1]);
   const links=[[ENTRY,SAND_SITES[0]],[SAND_SITES[0],SAND_SITES[4]],[SAND_SITES[4],SAND_SITES[1]],
     [SAND_SITES[4],SAND_SITES[2]],[SAND_SITES[4],SAND_SITES[3]],[SAND_SITES[1],EXIT]];
+  const outcrops=Array.from({length:36},()=>({
+    x:rng.range(4,W-4),y:rng.range(4,H-4),rx:rng.range(2.2,5.2),ry:rng.range(.8,1.8),a:rng.range(0,Math.PI),
+  }));
+  const floorAt=(x,y)=>{
+    // Fine dune sand stays dominant. Terrain changes follow long fields and
+    // the dry wash; paving is confined to objective courtyards.
+    const nearestSite=Math.min(...SAND_SITES.map(p=>dist(x,y,p)));
+    if(nearestSite<1.8)return nearestSite<0.8?30:31;
+    if(links.some(([a,b])=>lineDist(x,y,a,b)<1.05))return 15; // caravan trail
+    const washX=13+y*.49+Math.sin(y*.14+seed*.0003)*4;
+    if(Math.abs(x-washX)<1.15)return 21;
+    const dunes=(Math.sin(x*.12+seed*.0007)+Math.cos(y*.1-x*.055+seed*.0003))/2;
+    if(dunes>.72)return 3;
+    if(dunes<-.78)return 2;
+    return 0;
+  };
   const reserved=(x,y)=>[ENTRY,EXIT,...SAND_SITES].some(p=>dist(x,y,p)<9.5)||links.some(([a,b])=>lineDist(x,y,a,b)<2.8);
   const add=(spr,x,y,options={})=>{if(!spr)return;props.push({kind:'scatter',x,y,spr,k:TW/160*(options.scale||1),flip:false,light:options.light||0});};
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){
     const i=I(x,y),cx=x+.5,cy=y+.5;
-    map.v[i]=rng.int(0,59);
+    map.v[i]=floorAt(cx,cy);
     if(x===0||y===0||x===W-1||y===H-1){map.block[i]=1;continue;}
     const corridor=links.some(([a,b])=>lineDist(cx,cy,a,b)<2.65);
-    // Low ridges and broken ruin walls form a connected maze. Objective roads
-    // remain clear so every selected scenario area is reachable.
-    const maze=(x%11===0&&y%9!==4&&y%9!==5)||(y%13===0&&x%15!==7&&x%15!==8);
-    const dune=((Math.sin(x*.27+seed*.00003)+Math.cos(y*.31-x*.12))/2)>.72;
-    if(!reserved(cx,cy)&&!corridor&&(maze||dune&&rng.chance(.17))){map.block[i]=1;}
+    // Eroded, wind-shaped outcrops replace the old rigid checkerboard wall
+    // maze. The objective corridors remain clear and visually marked by tracks.
+    const outcrop=outcrops.some(o=>{
+      const dx=cx-o.x,dy=cy-o.y,ca=Math.cos(o.a),sa=Math.sin(o.a);
+      const u=(dx*ca+dy*sa)/o.rx,v=(-dx*sa+dy*ca)/o.ry;
+      const edge=1+.14*Math.sin(cx*1.7+seed*.013)*Math.cos(cy*1.9-seed*.009);
+      return u*u+v*v<edge;
+    });
+    const dune=((Math.sin(x*.27+seed*.00003)+Math.cos(y*.31-x*.12))/2)>.82&&rng.chance(.12);
+    if(!reserved(cx,cy)&&!corridor&&(outcrop||dune))map.block[i]=1;
   }
   const cliffs=seaOfSandFrames('cliff');
+  const sandstone=cliffs.find(f=>f.material==='sunbaked_sandstone')?.material;
+  const ruinBrick=cliffs.find(f=>f.material==='ruin_brick')?.material;
   const cliffByMask=new Map();
   for(const f of cliffs)if(f.connection_mask!=null){if(!cliffByMask.has(f.connection_mask))cliffByMask.set(f.connection_mask,[]);cliffByMask.get(f.connection_mask).push(f);}
   const dirs=[[0,-1,1],[1,0,2],[0,1,4],[-1,0,8]];
-  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(map.block[I(x,y)]){
-    let mask=0;for(const [dx,dy,bit] of dirs)if(map.block[I(x+dx,y+dy)])mask|=bit;
-    const variants=cliffByMask.get(mask)||cliffByMask.get(0),f=rng.pick(variants);
-    add(seaOfSandCliff(f?.name),x+.5,y+.5,{scale:.5});
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(map.block[I(x,y)]){
+    // The blocked perimeter also gets cliff pieces, so the camera never looks
+    // through an unfinished map edge into black void.
+    let mask=0;for(const [dx,dy,bit] of dirs){const nx=x+dx,ny=y+dy;if(nx>=0&&ny>=0&&nx<W&&ny<H&&map.block[I(nx,ny)])mask|=bit;}
+    const variants=cliffByMask.get(mask)||cliffByMask.get(0);
+    // One cliff material per broad region prevents a randomly patched wall
+    // maze while retaining matching corner/end/tee topology pieces.
+    const nearRuin=SAND_SITES.some(p=>dist(x+.5,y+.5,p)<4);
+    const material=nearRuin&&ruinBrick?ruinBrick:sandstone;
+    const family=variants.filter(v=>v.material===material);
+    const f=rng.pick(family.length?family:variants);
+    add(seaOfSandCliff(f?.name),x+.5,y+.5,{scale:1});
   }
   const treeNames=SAND_TREES.filter(n=>!['dry_reeds','spiny_aloe','saltbush'].includes(n));
   for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++){
@@ -230,16 +261,32 @@ function generateSeaOfSand(depth,biome,seed) {
       if(tree){map.block[i]=1;add(tree,cx,cy,{scale:rng.range(.43,.6)});}
     }
   }
-  for(let n=0;n<360;n++){
+  for(let n=0;n<185;n++){
     const x=rng.int(2,W-3)+.5,y=rng.int(2,H-3)+.5;
     if(!map.walkable(x,y)||reserved(x,y)&&rng.chance(.82))continue;
-    add(seaOfSandObject(rng.pick(SAND_SCATTER)),x+rng.range(-.2,.2),y+rng.range(-.2,.2),{scale:rng.range(.32,.48)});
+    add(seaOfSandObject(rng.pick(SAND_SCATTER)),x+rng.range(-.2,.2),y+rng.range(-.2,.2),{scale:rng.range(.42,.58)});
+  }
+  // Small debris and hardy plants collect in natural clusters at the base of
+  // the wind-carved outcrops, giving the open dunes scale without cluttering trails.
+  const groundCluster=['dry_scrub','spiny_aloe','reed_bundle','wind_carved_boulder','basalt_shards','broken_pottery'];
+  for(let patch=0;patch<42;patch++){
+    const x=rng.int(3,W-4)+.5,y=rng.int(3,H-4)+.5;
+    if(!map.walkable(x,y)||reserved(x,y))continue;
+    const count=rng.int(2,4);
+    for(let n=0;n<count;n++){
+      const px=x+rng.range(-1.1,1.1),py=y+rng.range(-.8,.8);
+      if(map.walkable(px,py)&&!reserved(px,py))add(seaOfSandObject(rng.pick(groundCluster)),px,py,{scale:rng.range(.42,.6)});
+    }
   }
   // Oasis palms ring the central caravan rest and provide recognizable landmarks.
   for(const [x,y] of [[34.5,33.5],[39.5,34.5],[34.5,38.5],[39.5,38.5]]){
     const t=seaOfSandObject(rng.pick(['date_palm','doum_palm','fruiting_oasis_palm']),'tree');
     add(t,x,y,{scale:.55});
   }
+  for(const [name,x,y,scale] of [
+    ['canvas_tent',35.4,31.8,.66],['canvas_tent',39.8,36.8,.62],
+    ['bronze_brazier',37.2,32.8,.58],['clay_water_jar',33.7,37.2,.62],
+  ])add(seaOfSandObject(name),x,y,{scale});
   for(let i=0;i<scenarioSites.length;i++){
     const [x,y]=scenarioSites[i];
     add(seaOfSandObject('quest_shrine'),x,y,{scale:.48,light:4.5});
