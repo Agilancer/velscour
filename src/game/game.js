@@ -11,7 +11,7 @@ import { loadGearArt } from '../core/gearart.js';
 import { preloadBarFx } from '../gfx/artfx.js';
 import { SKILLS } from '../data/skills.js';
 import { setClassItems, setRingContext } from '../data/items.js';
-import { BIOME_BY_ID, TOWN_BIOME, drawBiome, mixPartner, recordBiomeVisit } from '../data/biomes.js';
+import { BIOMES, BIOME_BY_ID, TOWN_BIOME, drawBiome, mixPartner, recordBiomeVisit } from '../data/biomes.js';
 import { CLASSES } from '../data/classes.js';
 import { generateDungeon, isRaidDepth } from '../world/dungeon.js';
 import { FINAL_DEPTH, depthLevel } from '../data/depth.js';
@@ -44,6 +44,35 @@ import { toggleQuest } from '../ui/quest.js';
 import { titleScreen, hide as hideScreen, deathScreen, victoryScreen, pauseMenu, helpDialog } from '../ui/screens.js';
 
 const STEP_SURFACE = { sunken: 'water', plague: 'water', serpent: 'water', library: 'wood', gilded: 'wood', sea_of_sand:'sand' };   // footstep sounds; default stone
+
+const VELSCOUR_TAUNT_STARTS = [
+  'WHY ARE YOU TRYING TO CONTACT VELSCOUR', 'WHAT MADE YOU THINK VELSCOUR WANTS TO HEAR FROM YOU',
+  'DID YOU REALLY EXPECT VELSCOUR TO ANSWER', 'WHO TOLD YOU VELSCOUR TAKES MESSAGES',
+  'IS THIS HOW YOU PLAN TO CHALLENGE VELSCOUR', 'DO YOU HAVE A DEATH WISH OR JUST POOR MANNERS',
+  'WHY SUMMON A DEMON LORD WHEN YOU CAN BOTHER ANYONE ELSE', 'DID THE GRAVEYARD RECOMMEND THIS CONTACT METHOD',
+  'ARE YOU LOST OR JUST COMMITTED TO MAKING THINGS WORSE', 'WHAT PART OF DOOM DID YOU MISTAKE FOR CUSTOMER SERVICE',
+  'DID YOU BRING A MESSAGE OR JUST YOUR LAST WORDS', 'WHY IS YOUR FIRST IDEA ALWAYS THE MOST CURSED ONE',
+  'DO YOU THINK HELL HAS A RECEPTION DESK', 'HOW MANY BAD DECISIONS FIT IN ONE SHORT MESSAGE',
+  'ARE YOU TRYING TO NEGOTIATE WITH THE END OF YOU', 'DID YOUR COMMON SENSE DIE BEFORE YOU GOT HERE',
+  'WHAT COULD POSSIBLY GO WRONG THIS TIME', 'WHY ASK THE ABYSS TO NOTICE YOU',
+  'IS THIS BRAVERY OR A VERY SPECIFIC KIND OF STUPID', 'DID YOU THINK THE DEMON LORD WAS BETWEEN APPOINTMENTS',
+];
+const VELSCOUR_TAUNT_ENDS = [
+  'He is busy polishing the thing that will end your adventure.', 'The abyss has a strict no refunds policy.',
+  'Your courage is adorable. Your odds are not.', 'Hell called; it said to stop making it awkward.',
+  'Please leave a message after the screaming.', 'The last visitor left as a cautionary stain.',
+  'He read your aura and marked it spam.', 'Your odds are somewhere beneath the floor.',
+  'This conversation may be recorded for the inquest.', 'Even the skeletons are embarrassed for you.',
+  'The waiting room is just a pit with better lighting.', 'He is currently unavailable for mortal nonsense.',
+  'Your bravery has been forwarded to the nearest grave.', 'The reply window is sealed until the heat death of hope.',
+  'A single black candle is being lit in your honor.', 'The demons drew lots. Nobody wanted to answer.',
+  'You have reached the bottom of the bad idea barrel.', 'Please hold. Eternity is estimated at eternity.',
+  'Your message will be delivered by a very nervous imp.', 'There is no safe word in the terms of service.',
+  'Somewhere, a lich just sighed at your decision.', 'The abyss knows your name and still declined.',
+  'This is why the dead keep their phones on silent.', 'Try again when your survival instinct returns.',
+  'Your next of kin may appreciate the initiative.',
+];
+const VELSCOUR_TAUNTS = VELSCOUR_TAUNT_STARTS.flatMap((start) => VELSCOUR_TAUNT_ENDS.map((end) => `${start}? ${end}`));
 
 let townCache = null, townTiles = null;
 let saveT = 0;
@@ -214,6 +243,76 @@ export const game = {
       html: `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(biome.name)}</b>.</p><p class="dim">${biome.id === 'sea_of_sand' ? 'Follow the cliff maze and clear every marked scenario area to open the exit.' : biome.overworld ? 'Activate the scenario shrine and complete its trial to open the exit.' : 'Find the exit. It is sealed until its guardian is slain.'}${c.depth === FINAL_DEPTH ? '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>' : !biome.overworld && isRaidDepth(c.depth) ? '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>' : ''}</p>`,
       buttons: [{ label: 'Not yet' }, { label: 'Enter', cls: 'red', fn: () => this.enterDungeon() }],
     });
+  },
+
+  openVelscourContact() {
+    const taunt = VELSCOUR_TAUNTS[(Math.random() * VELSCOUR_TAUNTS.length) | 0];
+    const dialog = UI.dialog({
+      title: 'WHY ARE YOU TRYING TO CONTACT VELSCOUR',
+      cls: 'velscour-contact-dialog',
+      html: `<p class="velscour-taunt">${escapeHtml(taunt)}</p><label class="velscour-message-label" for="velscour-message">Send a message into the abyss</label><div class="velscour-message-row"><input id="velscour-message" class="name-input" type="text" maxlength="50" autocomplete="off" placeholder="50 characters, tops"><span id="velscour-message-count">0 / 50</span></div>`,
+      buttons: [
+        { label: 'Close' },
+        { label: 'Send', cls: 'red', keepOpen: true, fn: (close) => {
+          const message = document.getElementById('velscour-message')?.value || '';
+          if (message === 'HAIL VELSCOUR!') {
+            close();
+            this.openVelscourTeleport();
+          }
+        } },
+      ],
+    });
+    const inputEl = dialog.box.querySelector('#velscour-message');
+    const countEl = dialog.box.querySelector('#velscour-message-count');
+    inputEl.addEventListener('input', () => { countEl.textContent = `${inputEl.value.length} / 50`; });
+  },
+
+  openVelscourTeleport() {
+    const options = BIOMES.map((biome) => `<option value="${escapeHtml(biome.id)}">${escapeHtml(biome.name)}${biome.overworld ? ' · Overworld' : ''}</option>`).join('');
+    const dialog = UI.dialog({
+      title: 'CHOOSE YOUR DOOM',
+      cls: 'velscour-teleport-dialog',
+      html: `<p>Select a biome. Your current depth will be reforged with a fresh path.</p><label class="velscour-message-label" for="velscour-biome">Destination biome</label><select id="velscour-biome" class="velscour-biome-select">${options}</select>`,
+      buttons: [
+        { label: 'Cancel' },
+        { label: 'Teleport', cls: 'red', fn: () => {
+          const id = dialog.box.querySelector('#velscour-biome').value;
+          const biome = BIOME_BY_ID[id];
+          if (biome) this.teleportToBiome(biome);
+        } },
+      ],
+    });
+  },
+
+  async teleportToBiome(biome) {
+    const c = G.char;
+    if (!c || !biome) return;
+    if (Auto.on) Auto.toggle(false);
+    const depth = Math.max(1, G.world?.kind === 'dungeon' ? G.world.depth : c.depth || 1);
+    c.depth = depth;
+    c.nextBiome = biome.id;
+    if (biome.id === 'sea_of_sand') {
+      c.seaOfSandRuns ||= {};
+      delete c.seaOfSandRuns[depth];
+    }
+    const loading = document.getElementById('loading');
+    document.getElementById('loading-text').textContent = `Answering Velscour — Depth ${depth} · ${biome.name}…`;
+    loading.classList.remove('hidden');
+    try {
+      if (biome.id === 'sea_of_sand') await loadSeaOfSandPack();
+      else if (!biome.overworld) await loadBiomeArt(biome);
+      const mix = mixPartner(biome);
+      if (mix && !biome.overworld) await loadBiomeArt(mix);
+      this.buildDungeon(depth, biome, mix);
+      const w = G.world;
+      await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])]).catch((e) => console.warn(e));
+    } catch (e) {
+      console.warn(e);
+      UI.log('The abyss rejected that destination. Try the skull again.', '#ff8060');
+    } finally {
+      loading.classList.add('hidden');
+      this.autosave();
+    }
   },
 
   enterDungeon() {
