@@ -12,7 +12,7 @@ The 20 Forsaken Wilds scatter placeholders have also been replaced; see
 ## Current static-art audit
 
 - The 122 commonly used character, summon, NPC, loot and projectile-silhouette placeholders are already painted in [SPRITE_REPLACEMENTS.md](SPRITE_REPLACEMENTS.md).
-- The five newest themed biomes retain their approved 40-floor and 40-prop art, plus the low-resolution extra floor/prop variants in [APPROVED_BIOME_ART.md](APPROVED_BIOME_ART.md) and [BIOME_VARIANT_ART.md](BIOME_VARIANT_ART.md).
+- Desert Temple, Ice Temple, HELL, ASTRAL PLANE and HEAVENLY use dedicated AI-generated low-resolution atlases for all floor and scatter indices, and unique AI-generated architecture textures clipped to walls, arches and doors. HEAVENLY's 60 monster portraits use a separate AI-generated atlas. See [AI_BIOME_ART.md](AI_BIOME_ART.md). Architecture geometry/depth slices remain the validated Catacombs template.
 - The Forsaken Wilds now has five imported trees and 20 imported scatter sprites. Its other ten tree variants are derived from distinct supplied tree silhouettes, and its shrines and caravan are authored as bespoke pixel sprites.
 - The dungeon's ASCII decor path is a defensive fallback used only when a tileset has no scatter atlas. All current biome packs provide scatter art; normal play uses those pack assets.
 - Remaining generated biome expansions create authored floor motifs and 40 distinct environment props per pack. They are not missing-asset placeholders. UI art and character attack/ability animation assets are outside this pass.
