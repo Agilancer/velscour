@@ -196,36 +196,53 @@ export const game = {
     }
     c.townVisitCount = (c.townVisitCount || 0) + 1;
     const visit = c.townVisitCount, rand01 = (()=>{let s=((c.townSeed||1)+visit*0x9e3779b9)>>>0;return ()=>{s=(s+0x6d2b79f5)>>>0;let z=s;z=Math.imul(z^(z>>>15),z|1);z^=z+Math.imul(z^(z>>>7),z|61);return ((z^(z>>>14))>>>0)/4294967296;};})();
-    const ordinary=TOWNSFOLK.filter(v=>!v.royal&&!v.regular&&!v.child);
+    const ordinary=TOWNSFOLK.filter(v=>!v.royal&&!v.regular&&!v.child&&!v.courtier);
     const shuffled=ordinary.slice().sort(()=>rand01()-.5);
     const regulars=TOWNSFOLK.filter(v=>v.regular);
     const familyId=`family_${1+Math.floor(rand01()*5)}`;
     const family=TOWNSFOLK.filter(v=>v.familyId===familyId),familyParent=family.find(v=>!v.child),familyChildren=family.filter(v=>v.child);
     const visitors=[regulars[(visit-1)%regulars.length],regulars[visit%regulars.length],...shuffled.slice(0,4+Math.floor(rand01()*3)),familyParent,...familyChildren];
-    if(visit%3===0){const court=TOWNSFOLK.filter(v=>v.royal);visitors.push(...court);}
+    if(visit%3===0){const court=TOWNSFOLK.filter(v=>v.royal||v.courtier);visitors.push(...court);}
     const uniqueVisitors=new Map(visitors.map(v=>[v.id,v]));
     visitors.splice(0,visitors.length,...uniqueVisitors.values());
-    world.townEvent=townEvent(visit,Math.floor(rand01()*8));
-    const fightSpots=world.townEvent.mood==='fight'?[t.map.randomNear(t.center.x,t.center.y+2,1.8),t.map.randomNear(t.center.x+1.1,t.center.y+2,1.8)]:null;
+    const eventSlot=Math.floor(rand01()*2000);
+    world.townEvent=townEvent(visit,eventSlot);world.townEventIndex=eventSlot;
+    const addCast=people=>{for(const person of people)if(person&&!visitors.some(v=>v.id===person.id))visitors.push(person);};
+    const kind=world.townEvent.kind;
+    if(kind==='royal_visit')addCast(TOWNSFOLK.filter(v=>v.royal||v.courtier));
+    if(kind==='returning_knights')addCast(TOWNSFOLK.filter(v=>v.knight).slice(0,3));
+    if(kind==='birth')addCast([TOWNSFOLK.find(v=>v.role==='midwife'),...TOWNSFOLK.filter(v=>v.child&&v.familyId===familyId).slice(0,1)]);
+    if(kind==='wedding'||kind==='engagement')addCast(shuffled.filter(v=>!v.child).slice(0,2));
+    if(kind==='funeral')addCast(regulars.slice(0,2));
+    if(kind==='harvest_fair'||kind==='market_show'||kind==='caravan')addCast(TOWNSFOLK.filter(v=>['musician','merchant','storyteller','town crier'].includes(v.role)).slice(0,2));
+    if(world.townEvent.attack||kind==='enemy_scouts'||kind==='siege_warning'||kind==='monster_sighting')addCast([...TOWNSFOLK.filter(v=>v.knight).slice(0,2),...TOWNSFOLK.filter(v=>v.role==='guard').slice(0,1)]);
+    const visitorById=new Map(visitors.map(v=>[v.id,v]));visitors.splice(0,visitors.length,...visitorById.values());
+    const eventActor=v=>kind==='royal_visit'?v.royal||v.courtier:kind==='returning_knights'?v.knight:kind==='birth'?v.role==='midwife'||v.familyId===familyId:kind==='wedding'||kind==='engagement'?!v.child&&!v.royal:kind==='funeral'?v.regular:kind==='street_fight'?v.knight:kind==='enemy_scouts'||kind==='siege_warning'||kind==='monster_sighting'?v.knight||v.role==='guard':kind==='harvest_fair'||kind==='market_show'||kind==='caravan'?['merchant','musician','storyteller','town crier'].includes(v.role):false;
+    const eventActors=visitors.filter(eventActor).slice(0,4),eventActorIds=new Set(eventActors.map(v=>v.id));
+    const eventChatter=eventActors.length>1?townConversation(eventActors[0],eventActors[1],visit,eventSlot):[];
+    const fightSpots=world.townEvent.attack?[t.map.randomNear(t.center.x,t.center.y+2,1.8),t.map.randomNear(t.center.x+1.1,t.center.y+2,1.8)]:null;
     const destinations=[...t.npcs.map(n=>[n.x+(rand01()-.5)*1.4,n.y+(rand01()-.5)*1.4]),[t.center.x,t.center.y+2],[t.center.x+2,t.center.y+1]];
     const chooseDestination=()=>{const target=destinations[Math.floor(rand01()*destinations.length)];const [x,y]=t.map.randomNear(target[0],target[1],1.7);return [x,y];};
     for (let vi=0;vi<visitors.length;vi++) {
-      const v=visitors[vi], [x,y] = t.map.randomNear(t.center.x, t.center.y + 3, 5), [tx,ty]=fightSpots&&vi<2?fightSpots[1-vi]:chooseDestination();
+      const v=visitors[vi], [x,y] = t.map.randomNear(t.center.x, t.center.y + 3, 5), knightRank=visitors.filter(q=>q.knight).findIndex(q=>q.id===v.id), staged=eventActorIds.has(v.id), [tx,ty]=fightSpots&&v.knight&&knightRank<2?fightSpots[knightRank]:staged?t.map.randomNear(t.center.x,t.center.y+2,2.6):chooseDestination();
       const npc = {
-        id:v.id,name: v.name,role:v.role,sprite: v.sprite, pal:v.palette, townsfolkId:v.id, child:v.child, royal:v.royal,
+        id:v.id,name: v.name,role:v.role,sprite: v.sprite,spriteId:v.spriteId,townsfolkSpriteId:v.spriteId,pal:v.palette,townsfolkId:v.id,frameCount:v.frame.count,child:v.child,royal:v.royal,courtier:v.courtier,knight:v.knight,familyId:v.familyId,
         x, y, reach: 1.6, flip: false, tx, ty, waitT: rand(1, 4), barkT: rand(7, 15),
-        talkText:vi===0?world.townEvent.text.slice(0,76):'',talkT:vi===0?6:0,chatT:rand(2,8),
-        townMood:world.townEvent.mood!=='friendly'&&vi<(world.townEvent.mood==='fight'?2:1)?world.townEvent.mood:null,
-        townMoodT:world.townEvent.mood!=='friendly'&&vi<(world.townEvent.mood==='fight'?2:1)?14:0,
+        talkText:eventActorIds.has(v.id)?(v.id===eventActors[0]?.id?world.townEvent.text:eventChatter[eventActors.findIndex(a=>a.id===v.id)%2]||''): '',talkT:eventActorIds.has(v.id)?8:0,chatT:rand(2,8),
+        townMood:eventActorIds.has(v.id)?world.townEvent.emote:null,
+        townMoodT:eventActorIds.has(v.id)?18:0,
+        townPoseFrame:eventActorIds.has(v.id)?({celebration:10,affection:9,birth:9,alarm:vi%2?8:7,fight:8,royal:10,relief:9})[world.townEvent.emote]??1:1,
+        townPoseT:eventActorIds.has(v.id)?7:0,
+        townAttackT:world.townEvent.attack&&v.knight&&knightRank<2?5.5:0,townAttackSeed:vi*2.3,
         use() { this.talkText=townLine(v.id,visit);this.talkT=4.5;floatText(this.x,this.y,70,this.talkText,'#e8dcc4',12,{life:3,vz:8}); },
         update(dt) {
-          this.talkT=Math.max(0,this.talkT-dt);this.townMoodT=Math.max(0,this.townMoodT-dt);this.chatT=Math.max(0,this.chatT-dt);this.waitT -= dt;
+          this.talkT=Math.max(0,this.talkT-dt);this.townMoodT=Math.max(0,this.townMoodT-dt);this.townPoseT=Math.max(0,this.townPoseT-dt);this.townAttackT=Math.max(0,this.townAttackT-dt);this.chatT=Math.max(0,this.chatT-dt);this.waitT -= dt;
           if (this.waitT <= 0) {
             const d = dist(this.x, this.y, this.tx, this.ty);
             if (d < 0.65) {
               this.walking=false;this.waitT=rand(3,7);
               if(this.chatT<=0){const other=world.npcs.find(q=>q!==this&&!q.vendor&&!q.stash&&dist(q.x,q.y,this.x,this.y)<2.2&&(!q.chatT||q.chatT<=0));
-                if(other){const [one,two]=townConversation(v,other,visit);this.talkText=one;this.talkT=3.8;other.talkText=two;other.talkT=3.8;this.chatT=other.chatT=rand(12,22);}}
+                if(other){const [one,two]=townConversation(v,other,visit,world.townEventIndex);this.talkText=one;this.talkT=3.8;other.talkText=two;other.talkT=3.8;this.chatT=other.chatT=rand(12,22);}}
               [this.tx, this.ty] = chooseDestination(); return;
             }
             const s = Math.min(d, 1.1 * dt);
