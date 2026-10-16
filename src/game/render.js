@@ -17,6 +17,22 @@ let lightCanvas = null, vignette = null, vigKey = '';
 const transitionSprites = new Map();
 const townSheets=new Map();
 function townSheet(id){let img=townSheets.get(id);if(img||!id)return img||null;img=new Image();img.src=`assets/sprites/townsfolk/${id}.png`;townSheets.set(id,img);return img;}
+const townFallbacks=new Map();
+function townFallback(id,palette={}){
+  if(townFallbacks.has(id))return townFallbacks.get(id);
+  // Used only while a generated civilian sheet is loading. Keep this generic
+  // silhouette civilian-shaped; never flash a playable class or helmet sprite.
+  const c=document.createElement('canvas');c.width=32;c.height=48;const q=c.getContext('2d');
+  const seed=(Number(String(id).match(/\d+/)?.[0])||1),hue=((seed*37)%360);
+  const coat=`hsl(${hue} 24% 29%)`,trim=`hsl(${hue} 20% 42%)`;
+  q.fillStyle='#221a17';q.fillRect(12,4,9,3);q.fillRect(10,7,13,8);
+  q.fillStyle='#b68a67';q.fillRect(11,8,11,9);q.fillStyle='#30231e';q.fillRect(10,6,13,4);
+  q.fillStyle=coat;q.fillRect(8,17,18,17);q.fillRect(5,20,4,12);q.fillRect(25,20,4,12);
+  q.fillStyle=trim;q.fillRect(12,18,10,3);q.fillRect(15,22,4,12);
+  q.fillStyle='#3a2922';q.fillRect(9,34,7,10);q.fillRect(18,34,7,10);
+  q.fillStyle='#231b18';q.fillRect(8,43,8,3);q.fillRect(18,43,9,3);
+  townFallbacks.set(id,c);return c;
+}
 function drawTownMood(ctx,n,x,y){
   if(!n.townMood||n.townMoodT<=0)return;
   const bob=Math.sin(G.time*8)*2,px=Math.round(x+18),py=Math.round(y-70+bob);ctx.save();
@@ -326,7 +342,7 @@ function drawNpc(ctx, n) {
     return;
   }
   const npcArt = n.vendor ? 'npc_' + n.vendor.id : ({ 'Old Tobin': 'npc_tobin', Mira: 'npc_mira', 'Brother Cael': 'npc_cael', Gorm: 'npc_gorm' })[n.name];
-  const sheet=n.townsfolkId&&townSheet(n.townsfolkId),img = (npcArt && replacementImage(npcArt)) || classSprite(n.vendor ? n.vendor.sprite : n.sprite, 180, n.vendor ? n.vendor.pal : n.pal);
+  const sheet=n.townsfolkId&&townSheet(n.townsfolkId),img = n.townsfolkId?townFallback(n.townsfolkId,n.pal):((npcArt && replacementImage(npcArt)) || classSprite(n.vendor ? n.vendor.sprite : n.sprite, 180, n.vendor ? n.vendor.pal : n.pal));
   const h=n.child?42:58,w=(h*128)/192;
   const x = isoX(n.x, n.y), y = isoY(n.x, n.y);
   ctx.fillStyle = 'rgba(0,0,0,0.38)';

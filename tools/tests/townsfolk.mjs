@@ -11,6 +11,8 @@ if(TOWNSFOLK.filter(p=>p.child).length!==10)throw Error('town catalog must conta
 if(TOWNSFOLK.filter(p=>p.royal).length!==4||TOWNSFOLK.filter(p=>p.regular).length!==4)throw Error('royal family or regular roster incomplete');
 if(TOWN_SITUATIONS.length!==2000||new Set(TOWN_SITUATIONS.map(e=>e.text)).size!==2000)throw Error('town situation deck must contain 2,000 distinct cards');
 if(manifest.characters.length!==100||manifest.frameCount!==11||manifest.frameSize.join('x')!=='128x192'||manifest.order.join('|')!==order.join('|'))throw Error('town sprite pack animation contract mismatch');
+if(manifest.generatedIdentityCount!==10||manifest.paletteVariantsPerIdentity!==10||manifest.characters.some(p=>!p.generatedSource||p.helmet!==false||!p.framesUnique||!p.animationFramesReferenceIdleIdentity))throw Error('town sprite pack must use original generated civilian designs, with unique idle-led poses and no helmets');
+for(const source of ['baker','charcoal_burner','boy','girl','merchant','healer','watchman','noblewoman','smith','king'])if(!fs.existsSync(path.join(dir,'generated_sources',source+'.png')))throw Error('missing original generated civilian source '+source);
 for(const p of manifest.characters){
   const file=path.join(dir,p.id+'.png');if(!fs.existsSync(file))throw Error('missing '+p.id+'.png');
   const png=fs.readFileSync(file);if(png.toString('ascii',1,4)!=='PNG')throw Error('invalid PNG '+p.id);

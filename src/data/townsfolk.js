@@ -1,17 +1,15 @@
-// Reusable town visitor catalog. Each record keeps its source class art and a
-// palette recipe, so all 100 identities work with the existing 128x192 body
-// renderer and can later be exported into authored 11-cell animation sheets.
+// Reusable town visitor catalog. Every townsfolk uses an original generated
+// civilian sheet; playable class and helmet sprites are not part of this set.
 const first=['Alden','Anwen','Bram','Brina','Cedric','Celia','Dain','Della','Eamon','Eira','Fenn','Freya','Gareth','Greta','Hale','Hilda','Ivo','Isolde','Jory','Junia','Kellan','Kelda','Lorin','Lysa','Marek','Maren','Niall','Nessa','Orin','Oona','Perrin','Petra','Quill','Questa','Rowan','Runa','Soren','Sylva','Tobin','Talia','Ulf','Una','Valen','Vera','Wystan','Willa','Yorick','Ysolde','Zeph','Zora'];
 const last=['Ashford','Bell','Cobbler','Dale','Ember','Fletcher','Grove','Hearth','Ironwood','Juniper','Kettle','Loom','Miller','North','Oak','Pike','Quarry','Reed','Stone','Thatcher'];
 const jobs=['baker','carter','shepherd','weaver','herbalist','mason','fisher','scribe','tanner','woodcutter','beekeeper','midwife','cobbler','cook','candlemaker','farmer','stablehand','tailor','apothecary','musician','porter','ferryman','guard','merchant','priest','blacksmith','falconer','innkeeper','jeweler','messenger'];
-const classes=['ranger','bard','wizard','paladin','barbarian','necromancer','lancer','totem_master','arcane_sorcerer','carrion_witch','dragoon','gunner','death_knight','boomerang_knight','dragon_knight','slime_lord'];
-const royal=[['King Edric','king','paladin'],['Queen Elowen','queen','wizard'],['Prince Rowan','prince','ranger'],['Princess Mira','princess','bard']];
-const regular=[['Old Tobin','retired veteran','necromancer'],['Mira','apprentice ranger','ranger'],['Brother Cael','chaplain','paladin'],['Gorm','retired guard','barbarian']];
+const royal=[['King Edric','king'],['Queen Elowen','queen'],['Prince Rowan','prince'],['Princess Mira','princess']];
+const regular=[['Old Tobin','retired veteran'],['Mira','apprentice ranger'],['Brother Cael','chaplain'],['Gorm','retired guard']];
 export const TOWNSFOLK=Object.freeze(Array.from({length:100},(_,i)=>{
   const isChild=i<10, isRoyal=i>=90&&i<94, isRegular=i>=94&&i<98;
   const name=isRoyal?royal[i-90][0]:isRegular?regular[i-94][0]:`${first[i%50]} ${last[Math.floor(i/5)%20]}`;
   const role=isRoyal?royal[i-90][1]:isRegular?regular[i-94][1]:isChild?['young baker','stable child','farmer’s child','page','choir child','weaver’s child','herbalist’s child','market runner','young squire','miller’s child'][i]:jobs[(i-10)%jobs.length];
-  const sprite=isRoyal?royal[i-90][2]:isRegular?regular[i-94][2]:classes[(i*7+Math.floor(i/4))%classes.length];
+  const sprite='townsfolk';
   const palette={hue:((i*37)%360)-180,sat:.22+((i*13)%55)/100,light:((i%5)-2)*.025};
   return Object.freeze({id:`townsfolk_${String(i+1).padStart(3,'0')}`,name,role,sprite,palette,child:isChild,royal:isRoyal,regular:isRegular,
     familyId:isChild?`family_${Math.floor(i/2)+1}`:!isRoyal&&!isRegular?`family_${Math.floor((i-10)/16)+1}`:null,

@@ -370,7 +370,7 @@ function generateCastleBase(depth,biome,seed){
   };
   // Throne hall: a raised dais at the north end, clear central combat space,
   // paired banquet tables and wall-side guard seats.
-  furnish('furniture_01_throne_dais',47.5,36.2,.56,0);
+  furnish('furniture_01_throne_dais',47.5,36.2,.38,0);
   for(const [asset,x,y] of [['scatter_09_trestle_table',42.5,40.5],['scatter_09_trestle_table',52.5,40.5],
     ['scatter_10_guard_bench',41.5,44.5],['scatter_10_guard_bench',53.5,44.5],['scatter_31_shield_rack',39.5,38.5],['scatter_32_spear_bundle',54.5,38.5]])
       add(asset,'scatter',x,y,asset.includes('table')?.66:asset.includes('bench')?.55:.42);

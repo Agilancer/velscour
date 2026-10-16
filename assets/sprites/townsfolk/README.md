@@ -1,5 +1,5 @@
-# Velscour Townsfolk Animation Pack
+# Velscour Original Grimdark Townsfolk Pack
 
-100 transparent PNG sprite sheets, each with eleven fixed 128×192 cells in one horizontal row. The order is idle 1–3, walk 1–2, dying, lying dead, scared/screaming, scared/pointing, happy, celebration. See manifest.json for class art source, atlas coordinates, helmet selection, and the clothing/hair palette recipes baked into each sheet. Helmets and crowns use the game’s fitted shared helmet atlas.
+100 transparent RGBA PNG sprite sheets, each 1408×192 pixels: eleven exact 128×192 cells in a row. Frame order: three distinct idle beats, two alternating walking beats, dying, lying dead, frightened scream, frightened point, happy, celebration. Every pose is unique and generated as part of the same identity sheet; pose frames preserve the idle character's face, clothing and proportions.
 
-The sheets are derived from the project’s existing 16-class equipment art to preserve Velscour’s character rendering style and body bounds. Breathing and footfall variants preserve the silhouette; the dying sequence ends in a horizontal lying pose. Emotion frames retain the source face expression.
+All ten base identities were newly generated as civilians in Velscour's detailed rendered-sprite style with a gritty Diablo II mood. They are not cut from playable-class, armor or helmet assets. Ten restrained clothing/hair palette variants per generated identity make the 100 visitor sheets; the original generated source sheets are included in `generated_sources/`. Child, merchant, healer, guard, noble, blacksmith and royal identities are included. See manifest.json for each sheet's source identity, source grid and palette variant.

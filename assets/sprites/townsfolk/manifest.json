@@ -1,6 +1,9 @@
 {
-  "name": "Velscour Townsfolk Animation Pack",
-  "version": 1,
+  "name": "Velscour Original Grimdark Townsfolk Animation Pack",
+  "version": 2,
+  "sourceStyle": "Velscour rendered character art; Diablo II grimdark mood",
+  "generatedIdentityCount": 10,
+  "paletteVariantsPerIdentity": 10,
   "frameSize": [
     128,
     192
@@ -24,8 +27,57 @@
   "characters": [
     {
       "id": "townsfolk_001",
-      "classArt": "paladin",
-      "sourceArmorFrame": 0,
+      "generatedIdentity": "Village boy",
+      "generatedSource": "generated_sources/boy.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 0,
       "frameSize": [
         128,
         192
@@ -45,17 +97,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 1,
-      "paletteSwap": {
-        "clothesHue": 0.02,
-        "hairHue": 0.045
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_002",
-      "classArt": "death_knight",
-      "sourceArmorFrame": 13,
+      "generatedIdentity": "Village girl",
+      "generatedSource": "generated_sources/girl.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 0,
       "frameSize": [
         128,
         192
@@ -76,16 +174,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.62,
-        "hairHue": 0.83
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_003",
-      "classArt": "dragon_knight",
-      "sourceArmorFrame": 26,
+      "generatedIdentity": "Village boy",
+      "generatedSource": "generated_sources/boy.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 1,
       "frameSize": [
         128,
         192
@@ -106,16 +250,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.14,
-        "hairHue": 0.58
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_004",
-      "classArt": "dragoon",
-      "sourceArmorFrame": 39,
+      "generatedIdentity": "Village girl",
+      "generatedSource": "generated_sources/girl.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 1,
       "frameSize": [
         128,
         192
@@ -136,16 +326,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.91,
-        "hairHue": 0.015
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_005",
-      "classArt": "boomerang_knight",
-      "sourceArmorFrame": 52,
+      "generatedIdentity": "Village boy",
+      "generatedSource": "generated_sources/boy.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 2,
       "frameSize": [
         128,
         192
@@ -166,16 +402,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.56,
-        "hairHue": 0.1
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_006",
-      "classArt": "necromancer",
-      "sourceArmorFrame": 65,
+      "generatedIdentity": "Village girl",
+      "generatedSource": "generated_sources/girl.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 2,
       "frameSize": [
         128,
         192
@@ -195,17 +477,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 6,
-      "paletteSwap": {
-        "clothesHue": 0.11,
-        "hairHue": 0.075
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_007",
-      "classArt": "bard",
-      "sourceArmorFrame": 78,
+      "generatedIdentity": "Village boy",
+      "generatedSource": "generated_sources/boy.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 3,
       "frameSize": [
         128,
         192
@@ -226,16 +554,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.83,
-        "hairHue": 0.045
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_008",
-      "classArt": "ranger",
-      "sourceArmorFrame": 11,
+      "generatedIdentity": "Village girl",
+      "generatedSource": "generated_sources/girl.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 3,
       "frameSize": [
         128,
         192
@@ -256,16 +630,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.43,
-        "hairHue": 0.83
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_009",
-      "classArt": "arcane_sorcerer",
-      "sourceArmorFrame": 24,
+      "generatedIdentity": "Village boy",
+      "generatedSource": "generated_sources/boy.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 4,
       "frameSize": [
         128,
         192
@@ -286,16 +706,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.07,
-        "hairHue": 0.58
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_010",
-      "classArt": "gunner",
-      "sourceArmorFrame": 37,
+      "generatedIdentity": "Village girl",
+      "generatedSource": "generated_sources/girl.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 4,
       "frameSize": [
         128,
         192
@@ -316,16 +782,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.72,
-        "hairHue": 0.015
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_011",
-      "classArt": "totem_master",
-      "sourceArmorFrame": 50,
+      "generatedIdentity": "Baker",
+      "generatedSource": "generated_sources/baker.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 0,
       "frameSize": [
         128,
         192
@@ -345,17 +857,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 1,
-      "paletteSwap": {
-        "clothesHue": 0.3,
-        "hairHue": 0.1
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_012",
-      "classArt": "dragon_knight",
-      "sourceArmorFrame": 63,
+      "generatedIdentity": "Charcoal burner",
+      "generatedSource": "generated_sources/charcoal_burner.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 0,
       "frameSize": [
         128,
         192
@@ -376,16 +934,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.02,
-        "hairHue": 0.075
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_013",
-      "classArt": "dragoon",
-      "sourceArmorFrame": 76,
+      "generatedIdentity": "Village boy",
+      "generatedSource": "generated_sources/boy.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 0,
       "frameSize": [
         128,
         192
@@ -406,16 +1010,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.62,
-        "hairHue": 0.045
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_014",
-      "classArt": "boomerang_knight",
-      "sourceArmorFrame": 9,
+      "generatedIdentity": "Village girl",
+      "generatedSource": "generated_sources/girl.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 0,
       "frameSize": [
         128,
         192
@@ -436,16 +1086,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.14,
-        "hairHue": 0.83
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_015",
-      "classArt": "necromancer",
-      "sourceArmorFrame": 22,
+      "generatedIdentity": "Merchant",
+      "generatedSource": "generated_sources/merchant.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 0,
       "frameSize": [
         128,
         192
@@ -466,16 +1162,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.91,
-        "hairHue": 0.58
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_016",
-      "classArt": "bard",
-      "sourceArmorFrame": 35,
+      "generatedIdentity": "Healer",
+      "generatedSource": "generated_sources/healer.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 0,
       "frameSize": [
         128,
         192
@@ -495,17 +1237,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 6,
-      "paletteSwap": {
-        "clothesHue": 0.56,
-        "hairHue": 0.015
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_017",
-      "classArt": "ranger",
-      "sourceArmorFrame": 55,
+      "generatedIdentity": "Watchman",
+      "generatedSource": "generated_sources/watchman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 0,
       "frameSize": [
         128,
         192
@@ -526,16 +1314,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.11,
-        "hairHue": 0.1
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_018",
-      "classArt": "arcane_sorcerer",
-      "sourceArmorFrame": 68,
+      "generatedIdentity": "Noblewoman",
+      "generatedSource": "generated_sources/noblewoman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 0,
       "frameSize": [
         128,
         192
@@ -556,16 +1390,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.83,
-        "hairHue": 0.075
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_019",
-      "classArt": "gunner",
-      "sourceArmorFrame": 1,
+      "generatedIdentity": "Blacksmith",
+      "generatedSource": "generated_sources/smith.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 0,
       "frameSize": [
         128,
         192
@@ -586,16 +1466,84 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.43,
-        "hairHue": 0.045
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_020",
-      "classArt": "totem_master",
-      "sourceArmorFrame": 14,
+      "generatedIdentity": "King",
+      "generatedSource": "generated_sources/king.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          36,
+          0,
+          252,
+          362
+        ],
+        [
+          371,
+          0,
+          551,
+          362
+        ],
+        [
+          618,
+          0,
+          819,
+          362
+        ],
+        [
+          893,
+          0,
+          1125,
+          362
+        ],
+        [
+          1170,
+          0,
+          1426,
+          362
+        ],
+        [
+          24,
+          362,
+          359,
+          724
+        ],
+        [
+          380,
+          362,
+          807,
+          724
+        ],
+        [
+          835,
+          362,
+          1081,
+          724
+        ],
+        [
+          1142,
+          362,
+          1426,
+          724
+        ],
+        [
+          46,
+          724,
+          333,
+          1086
+        ],
+        [
+          456,
+          724,
+          739,
+          1086
+        ]
+      ],
+      "paletteVariant": 0,
       "frameSize": [
         128,
         192
@@ -616,16 +1564,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.07,
-        "hairHue": 0.83
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_021",
-      "classArt": "lancer",
-      "sourceArmorFrame": 27,
+      "generatedIdentity": "Baker",
+      "generatedSource": "generated_sources/baker.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 1,
       "frameSize": [
         128,
         192
@@ -645,17 +1639,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 1,
-      "paletteSwap": {
-        "clothesHue": 0.72,
-        "hairHue": 0.58
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_022",
-      "classArt": "barbarian",
-      "sourceArmorFrame": 40,
+      "generatedIdentity": "Charcoal burner",
+      "generatedSource": "generated_sources/charcoal_burner.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 1,
       "frameSize": [
         128,
         192
@@ -676,16 +1716,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.3,
-        "hairHue": 0.015
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_023",
-      "classArt": "boomerang_knight",
-      "sourceArmorFrame": 53,
+      "generatedIdentity": "Village boy",
+      "generatedSource": "generated_sources/boy.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 1,
       "frameSize": [
         128,
         192
@@ -706,16 +1792,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.02,
-        "hairHue": 0.1
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_024",
-      "classArt": "necromancer",
-      "sourceArmorFrame": 66,
+      "generatedIdentity": "Village girl",
+      "generatedSource": "generated_sources/girl.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 1,
       "frameSize": [
         128,
         192
@@ -736,16 +1868,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.62,
-        "hairHue": 0.075
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_025",
-      "classArt": "bard",
-      "sourceArmorFrame": 79,
+      "generatedIdentity": "Merchant",
+      "generatedSource": "generated_sources/merchant.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 1,
       "frameSize": [
         128,
         192
@@ -766,16 +1944,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.14,
-        "hairHue": 0.045
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_026",
-      "classArt": "ranger",
-      "sourceArmorFrame": 12,
+      "generatedIdentity": "Healer",
+      "generatedSource": "generated_sources/healer.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 1,
       "frameSize": [
         128,
         192
@@ -795,17 +2019,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 6,
-      "paletteSwap": {
-        "clothesHue": 0.91,
-        "hairHue": 0.83
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_027",
-      "classArt": "arcane_sorcerer",
-      "sourceArmorFrame": 25,
+      "generatedIdentity": "Watchman",
+      "generatedSource": "generated_sources/watchman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 1,
       "frameSize": [
         128,
         192
@@ -826,16 +2096,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.56,
-        "hairHue": 0.58
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_028",
-      "classArt": "gunner",
-      "sourceArmorFrame": 38,
+      "generatedIdentity": "Noblewoman",
+      "generatedSource": "generated_sources/noblewoman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 1,
       "frameSize": [
         128,
         192
@@ -856,16 +2172,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.11,
-        "hairHue": 0.015
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_029",
-      "classArt": "totem_master",
-      "sourceArmorFrame": 51,
+      "generatedIdentity": "Blacksmith",
+      "generatedSource": "generated_sources/smith.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 1,
       "frameSize": [
         128,
         192
@@ -886,16 +2248,84 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.83,
-        "hairHue": 0.1
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_030",
-      "classArt": "lancer",
-      "sourceArmorFrame": 64,
+      "generatedIdentity": "King",
+      "generatedSource": "generated_sources/king.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          36,
+          0,
+          252,
+          362
+        ],
+        [
+          371,
+          0,
+          551,
+          362
+        ],
+        [
+          618,
+          0,
+          819,
+          362
+        ],
+        [
+          893,
+          0,
+          1125,
+          362
+        ],
+        [
+          1170,
+          0,
+          1426,
+          362
+        ],
+        [
+          24,
+          362,
+          359,
+          724
+        ],
+        [
+          380,
+          362,
+          807,
+          724
+        ],
+        [
+          835,
+          362,
+          1081,
+          724
+        ],
+        [
+          1142,
+          362,
+          1426,
+          724
+        ],
+        [
+          46,
+          724,
+          333,
+          1086
+        ],
+        [
+          456,
+          724,
+          739,
+          1086
+        ]
+      ],
+      "paletteVariant": 1,
       "frameSize": [
         128,
         192
@@ -916,16 +2346,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.43,
-        "hairHue": 0.075
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_031",
-      "classArt": "barbarian",
-      "sourceArmorFrame": 77,
+      "generatedIdentity": "Baker",
+      "generatedSource": "generated_sources/baker.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 2,
       "frameSize": [
         128,
         192
@@ -945,17 +2421,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 1,
-      "paletteSwap": {
-        "clothesHue": 0.07,
-        "hairHue": 0.045
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_032",
-      "classArt": "slime_lord",
-      "sourceArmorFrame": 10,
+      "generatedIdentity": "Charcoal burner",
+      "generatedSource": "generated_sources/charcoal_burner.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 2,
       "frameSize": [
         128,
         192
@@ -976,16 +2498,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.72,
-        "hairHue": 0.83
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_033",
-      "classArt": "wizard",
-      "sourceArmorFrame": 30,
+      "generatedIdentity": "Village boy",
+      "generatedSource": "generated_sources/boy.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 2,
       "frameSize": [
         128,
         192
@@ -1006,16 +2574,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.3,
-        "hairHue": 0.58
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_034",
-      "classArt": "bard",
-      "sourceArmorFrame": 43,
+      "generatedIdentity": "Village girl",
+      "generatedSource": "generated_sources/girl.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 2,
       "frameSize": [
         128,
         192
@@ -1036,16 +2650,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.02,
-        "hairHue": 0.015
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_035",
-      "classArt": "ranger",
-      "sourceArmorFrame": 56,
+      "generatedIdentity": "Merchant",
+      "generatedSource": "generated_sources/merchant.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 2,
       "frameSize": [
         128,
         192
@@ -1066,16 +2726,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.62,
-        "hairHue": 0.1
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_036",
-      "classArt": "arcane_sorcerer",
-      "sourceArmorFrame": 69,
+      "generatedIdentity": "Healer",
+      "generatedSource": "generated_sources/healer.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 2,
       "frameSize": [
         128,
         192
@@ -1095,17 +2801,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 6,
-      "paletteSwap": {
-        "clothesHue": 0.14,
-        "hairHue": 0.075
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_037",
-      "classArt": "gunner",
-      "sourceArmorFrame": 2,
+      "generatedIdentity": "Watchman",
+      "generatedSource": "generated_sources/watchman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 2,
       "frameSize": [
         128,
         192
@@ -1126,16 +2878,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.91,
-        "hairHue": 0.045
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_038",
-      "classArt": "totem_master",
-      "sourceArmorFrame": 15,
+      "generatedIdentity": "Noblewoman",
+      "generatedSource": "generated_sources/noblewoman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 2,
       "frameSize": [
         128,
         192
@@ -1156,16 +2954,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.56,
-        "hairHue": 0.83
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_039",
-      "classArt": "lancer",
-      "sourceArmorFrame": 28,
+      "generatedIdentity": "Blacksmith",
+      "generatedSource": "generated_sources/smith.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 2,
       "frameSize": [
         128,
         192
@@ -1186,16 +3030,84 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.11,
-        "hairHue": 0.58
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_040",
-      "classArt": "barbarian",
-      "sourceArmorFrame": 41,
+      "generatedIdentity": "King",
+      "generatedSource": "generated_sources/king.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          36,
+          0,
+          252,
+          362
+        ],
+        [
+          371,
+          0,
+          551,
+          362
+        ],
+        [
+          618,
+          0,
+          819,
+          362
+        ],
+        [
+          893,
+          0,
+          1125,
+          362
+        ],
+        [
+          1170,
+          0,
+          1426,
+          362
+        ],
+        [
+          24,
+          362,
+          359,
+          724
+        ],
+        [
+          380,
+          362,
+          807,
+          724
+        ],
+        [
+          835,
+          362,
+          1081,
+          724
+        ],
+        [
+          1142,
+          362,
+          1426,
+          724
+        ],
+        [
+          46,
+          724,
+          333,
+          1086
+        ],
+        [
+          456,
+          724,
+          739,
+          1086
+        ]
+      ],
+      "paletteVariant": 2,
       "frameSize": [
         128,
         192
@@ -1216,16 +3128,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.83,
-        "hairHue": 0.015
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_041",
-      "classArt": "slime_lord",
-      "sourceArmorFrame": 54,
+      "generatedIdentity": "Baker",
+      "generatedSource": "generated_sources/baker.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 3,
       "frameSize": [
         128,
         192
@@ -1245,17 +3203,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 1,
-      "paletteSwap": {
-        "clothesHue": 0.43,
-        "hairHue": 0.1
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_042",
-      "classArt": "wizard",
-      "sourceArmorFrame": 67,
+      "generatedIdentity": "Charcoal burner",
+      "generatedSource": "generated_sources/charcoal_burner.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 3,
       "frameSize": [
         128,
         192
@@ -1276,16 +3280,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.07,
-        "hairHue": 0.075
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_043",
-      "classArt": "carrion_witch",
-      "sourceArmorFrame": 0,
+      "generatedIdentity": "Village boy",
+      "generatedSource": "generated_sources/boy.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 3,
       "frameSize": [
         128,
         192
@@ -1306,16 +3356,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.72,
-        "hairHue": 0.045
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_044",
-      "classArt": "paladin",
-      "sourceArmorFrame": 13,
+      "generatedIdentity": "Village girl",
+      "generatedSource": "generated_sources/girl.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 3,
       "frameSize": [
         128,
         192
@@ -1336,16 +3432,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.3,
-        "hairHue": 0.83
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_045",
-      "classArt": "arcane_sorcerer",
-      "sourceArmorFrame": 26,
+      "generatedIdentity": "Merchant",
+      "generatedSource": "generated_sources/merchant.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 3,
       "frameSize": [
         128,
         192
@@ -1366,16 +3508,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.02,
-        "hairHue": 0.58
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_046",
-      "classArt": "gunner",
-      "sourceArmorFrame": 39,
+      "generatedIdentity": "Healer",
+      "generatedSource": "generated_sources/healer.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 3,
       "frameSize": [
         128,
         192
@@ -1395,17 +3583,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 6,
-      "paletteSwap": {
-        "clothesHue": 0.62,
-        "hairHue": 0.015
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_047",
-      "classArt": "totem_master",
-      "sourceArmorFrame": 52,
+      "generatedIdentity": "Watchman",
+      "generatedSource": "generated_sources/watchman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 3,
       "frameSize": [
         128,
         192
@@ -1426,16 +3660,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.14,
-        "hairHue": 0.1
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_048",
-      "classArt": "lancer",
-      "sourceArmorFrame": 65,
+      "generatedIdentity": "Noblewoman",
+      "generatedSource": "generated_sources/noblewoman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 3,
       "frameSize": [
         128,
         192
@@ -1456,16 +3736,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.91,
-        "hairHue": 0.075
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_049",
-      "classArt": "barbarian",
-      "sourceArmorFrame": 5,
+      "generatedIdentity": "Blacksmith",
+      "generatedSource": "generated_sources/smith.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 3,
       "frameSize": [
         128,
         192
@@ -1486,16 +3812,84 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.56,
-        "hairHue": 0.045
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_050",
-      "classArt": "slime_lord",
-      "sourceArmorFrame": 18,
+      "generatedIdentity": "King",
+      "generatedSource": "generated_sources/king.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          36,
+          0,
+          252,
+          362
+        ],
+        [
+          371,
+          0,
+          551,
+          362
+        ],
+        [
+          618,
+          0,
+          819,
+          362
+        ],
+        [
+          893,
+          0,
+          1125,
+          362
+        ],
+        [
+          1170,
+          0,
+          1426,
+          362
+        ],
+        [
+          24,
+          362,
+          359,
+          724
+        ],
+        [
+          380,
+          362,
+          807,
+          724
+        ],
+        [
+          835,
+          362,
+          1081,
+          724
+        ],
+        [
+          1142,
+          362,
+          1426,
+          724
+        ],
+        [
+          46,
+          724,
+          333,
+          1086
+        ],
+        [
+          456,
+          724,
+          739,
+          1086
+        ]
+      ],
+      "paletteVariant": 3,
       "frameSize": [
         128,
         192
@@ -1516,16 +3910,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.11,
-        "hairHue": 0.83
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_051",
-      "classArt": "wizard",
-      "sourceArmorFrame": 31,
+      "generatedIdentity": "Baker",
+      "generatedSource": "generated_sources/baker.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 4,
       "frameSize": [
         128,
         192
@@ -1545,17 +3985,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 1,
-      "paletteSwap": {
-        "clothesHue": 0.83,
-        "hairHue": 0.58
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_052",
-      "classArt": "carrion_witch",
-      "sourceArmorFrame": 44,
+      "generatedIdentity": "Charcoal burner",
+      "generatedSource": "generated_sources/charcoal_burner.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 4,
       "frameSize": [
         128,
         192
@@ -1576,16 +4062,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.43,
-        "hairHue": 0.015
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_053",
-      "classArt": "paladin",
-      "sourceArmorFrame": 57,
+      "generatedIdentity": "Village boy",
+      "generatedSource": "generated_sources/boy.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 4,
       "frameSize": [
         128,
         192
@@ -1606,16 +4138,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.07,
-        "hairHue": 0.1
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_054",
-      "classArt": "death_knight",
-      "sourceArmorFrame": 70,
+      "generatedIdentity": "Village girl",
+      "generatedSource": "generated_sources/girl.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 4,
       "frameSize": [
         128,
         192
@@ -1636,16 +4214,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.72,
-        "hairHue": 0.075
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_055",
-      "classArt": "dragon_knight",
-      "sourceArmorFrame": 3,
+      "generatedIdentity": "Merchant",
+      "generatedSource": "generated_sources/merchant.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 4,
       "frameSize": [
         128,
         192
@@ -1666,16 +4290,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.3,
-        "hairHue": 0.045
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_056",
-      "classArt": "totem_master",
-      "sourceArmorFrame": 16,
+      "generatedIdentity": "Healer",
+      "generatedSource": "generated_sources/healer.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 4,
       "frameSize": [
         128,
         192
@@ -1695,17 +4365,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 6,
-      "paletteSwap": {
-        "clothesHue": 0.02,
-        "hairHue": 0.83
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_057",
-      "classArt": "lancer",
-      "sourceArmorFrame": 29,
+      "generatedIdentity": "Watchman",
+      "generatedSource": "generated_sources/watchman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 4,
       "frameSize": [
         128,
         192
@@ -1726,16 +4442,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.62,
-        "hairHue": 0.58
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_058",
-      "classArt": "barbarian",
-      "sourceArmorFrame": 42,
+      "generatedIdentity": "Noblewoman",
+      "generatedSource": "generated_sources/noblewoman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 4,
       "frameSize": [
         128,
         192
@@ -1756,16 +4518,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.14,
-        "hairHue": 0.015
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_059",
-      "classArt": "slime_lord",
-      "sourceArmorFrame": 55,
+      "generatedIdentity": "Blacksmith",
+      "generatedSource": "generated_sources/smith.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 4,
       "frameSize": [
         128,
         192
@@ -1786,16 +4594,84 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.91,
-        "hairHue": 0.1
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_060",
-      "classArt": "wizard",
-      "sourceArmorFrame": 68,
+      "generatedIdentity": "King",
+      "generatedSource": "generated_sources/king.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          36,
+          0,
+          252,
+          362
+        ],
+        [
+          371,
+          0,
+          551,
+          362
+        ],
+        [
+          618,
+          0,
+          819,
+          362
+        ],
+        [
+          893,
+          0,
+          1125,
+          362
+        ],
+        [
+          1170,
+          0,
+          1426,
+          362
+        ],
+        [
+          24,
+          362,
+          359,
+          724
+        ],
+        [
+          380,
+          362,
+          807,
+          724
+        ],
+        [
+          835,
+          362,
+          1081,
+          724
+        ],
+        [
+          1142,
+          362,
+          1426,
+          724
+        ],
+        [
+          46,
+          724,
+          333,
+          1086
+        ],
+        [
+          456,
+          724,
+          739,
+          1086
+        ]
+      ],
+      "paletteVariant": 4,
       "frameSize": [
         128,
         192
@@ -1816,16 +4692,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.56,
-        "hairHue": 0.075
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_061",
-      "classArt": "carrion_witch",
-      "sourceArmorFrame": 1,
+      "generatedIdentity": "Baker",
+      "generatedSource": "generated_sources/baker.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 5,
       "frameSize": [
         128,
         192
@@ -1845,17 +4767,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 1,
-      "paletteSwap": {
-        "clothesHue": 0.11,
-        "hairHue": 0.045
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_062",
-      "classArt": "paladin",
-      "sourceArmorFrame": 14,
+      "generatedIdentity": "Charcoal burner",
+      "generatedSource": "generated_sources/charcoal_burner.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 5,
       "frameSize": [
         128,
         192
@@ -1876,16 +4844,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.83,
-        "hairHue": 0.83
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_063",
-      "classArt": "death_knight",
-      "sourceArmorFrame": 27,
+      "generatedIdentity": "Village boy",
+      "generatedSource": "generated_sources/boy.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 5,
       "frameSize": [
         128,
         192
@@ -1906,16 +4920,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.43,
-        "hairHue": 0.58
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_064",
-      "classArt": "dragon_knight",
-      "sourceArmorFrame": 40,
+      "generatedIdentity": "Village girl",
+      "generatedSource": "generated_sources/girl.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 5,
       "frameSize": [
         128,
         192
@@ -1936,16 +4996,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.07,
-        "hairHue": 0.015
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_065",
-      "classArt": "dragoon",
-      "sourceArmorFrame": 60,
+      "generatedIdentity": "Merchant",
+      "generatedSource": "generated_sources/merchant.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 5,
       "frameSize": [
         128,
         192
@@ -1966,16 +5072,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.72,
-        "hairHue": 0.1
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_066",
-      "classArt": "boomerang_knight",
-      "sourceArmorFrame": 73,
+      "generatedIdentity": "Healer",
+      "generatedSource": "generated_sources/healer.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 5,
       "frameSize": [
         128,
         192
@@ -1995,17 +5147,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 6,
-      "paletteSwap": {
-        "clothesHue": 0.3,
-        "hairHue": 0.075
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_067",
-      "classArt": "barbarian",
-      "sourceArmorFrame": 6,
+      "generatedIdentity": "Watchman",
+      "generatedSource": "generated_sources/watchman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 5,
       "frameSize": [
         128,
         192
@@ -2026,16 +5224,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.02,
-        "hairHue": 0.045
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_068",
-      "classArt": "slime_lord",
-      "sourceArmorFrame": 19,
+      "generatedIdentity": "Noblewoman",
+      "generatedSource": "generated_sources/noblewoman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 5,
       "frameSize": [
         128,
         192
@@ -2056,16 +5300,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.62,
-        "hairHue": 0.83
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_069",
-      "classArt": "wizard",
-      "sourceArmorFrame": 32,
+      "generatedIdentity": "Blacksmith",
+      "generatedSource": "generated_sources/smith.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 5,
       "frameSize": [
         128,
         192
@@ -2086,16 +5376,84 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.14,
-        "hairHue": 0.58
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_070",
-      "classArt": "carrion_witch",
-      "sourceArmorFrame": 45,
+      "generatedIdentity": "King",
+      "generatedSource": "generated_sources/king.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          36,
+          0,
+          252,
+          362
+        ],
+        [
+          371,
+          0,
+          551,
+          362
+        ],
+        [
+          618,
+          0,
+          819,
+          362
+        ],
+        [
+          893,
+          0,
+          1125,
+          362
+        ],
+        [
+          1170,
+          0,
+          1426,
+          362
+        ],
+        [
+          24,
+          362,
+          359,
+          724
+        ],
+        [
+          380,
+          362,
+          807,
+          724
+        ],
+        [
+          835,
+          362,
+          1081,
+          724
+        ],
+        [
+          1142,
+          362,
+          1426,
+          724
+        ],
+        [
+          46,
+          724,
+          333,
+          1086
+        ],
+        [
+          456,
+          724,
+          739,
+          1086
+        ]
+      ],
+      "paletteVariant": 5,
       "frameSize": [
         128,
         192
@@ -2116,16 +5474,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.91,
-        "hairHue": 0.015
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_071",
-      "classArt": "paladin",
-      "sourceArmorFrame": 58,
+      "generatedIdentity": "Baker",
+      "generatedSource": "generated_sources/baker.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 6,
       "frameSize": [
         128,
         192
@@ -2145,17 +5549,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 1,
-      "paletteSwap": {
-        "clothesHue": 0.56,
-        "hairHue": 0.1
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_072",
-      "classArt": "death_knight",
-      "sourceArmorFrame": 71,
+      "generatedIdentity": "Charcoal burner",
+      "generatedSource": "generated_sources/charcoal_burner.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 6,
       "frameSize": [
         128,
         192
@@ -2176,16 +5626,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.11,
-        "hairHue": 0.075
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_073",
-      "classArt": "dragon_knight",
-      "sourceArmorFrame": 4,
+      "generatedIdentity": "Village boy",
+      "generatedSource": "generated_sources/boy.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 6,
       "frameSize": [
         128,
         192
@@ -2206,16 +5702,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.83,
-        "hairHue": 0.045
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_074",
-      "classArt": "dragoon",
-      "sourceArmorFrame": 17,
+      "generatedIdentity": "Village girl",
+      "generatedSource": "generated_sources/girl.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 6,
       "frameSize": [
         128,
         192
@@ -2236,16 +5778,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.43,
-        "hairHue": 0.83
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_075",
-      "classArt": "boomerang_knight",
-      "sourceArmorFrame": 30,
+      "generatedIdentity": "Merchant",
+      "generatedSource": "generated_sources/merchant.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 6,
       "frameSize": [
         128,
         192
@@ -2266,16 +5854,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.07,
-        "hairHue": 0.58
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_076",
-      "classArt": "necromancer",
-      "sourceArmorFrame": 43,
+      "generatedIdentity": "Healer",
+      "generatedSource": "generated_sources/healer.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 6,
       "frameSize": [
         128,
         192
@@ -2295,17 +5929,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 6,
-      "paletteSwap": {
-        "clothesHue": 0.72,
-        "hairHue": 0.015
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_077",
-      "classArt": "bard",
-      "sourceArmorFrame": 56,
+      "generatedIdentity": "Watchman",
+      "generatedSource": "generated_sources/watchman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 6,
       "frameSize": [
         128,
         192
@@ -2326,16 +6006,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.3,
-        "hairHue": 0.1
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_078",
-      "classArt": "wizard",
-      "sourceArmorFrame": 69,
+      "generatedIdentity": "Noblewoman",
+      "generatedSource": "generated_sources/noblewoman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 6,
       "frameSize": [
         128,
         192
@@ -2356,16 +6082,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.02,
-        "hairHue": 0.075
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_079",
-      "classArt": "carrion_witch",
-      "sourceArmorFrame": 2,
+      "generatedIdentity": "Blacksmith",
+      "generatedSource": "generated_sources/smith.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 6,
       "frameSize": [
         128,
         192
@@ -2386,16 +6158,84 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.62,
-        "hairHue": 0.045
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_080",
-      "classArt": "paladin",
-      "sourceArmorFrame": 15,
+      "generatedIdentity": "King",
+      "generatedSource": "generated_sources/king.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          36,
+          0,
+          252,
+          362
+        ],
+        [
+          371,
+          0,
+          551,
+          362
+        ],
+        [
+          618,
+          0,
+          819,
+          362
+        ],
+        [
+          893,
+          0,
+          1125,
+          362
+        ],
+        [
+          1170,
+          0,
+          1426,
+          362
+        ],
+        [
+          24,
+          362,
+          359,
+          724
+        ],
+        [
+          380,
+          362,
+          807,
+          724
+        ],
+        [
+          835,
+          362,
+          1081,
+          724
+        ],
+        [
+          1142,
+          362,
+          1426,
+          724
+        ],
+        [
+          46,
+          724,
+          333,
+          1086
+        ],
+        [
+          456,
+          724,
+          739,
+          1086
+        ]
+      ],
+      "paletteVariant": 6,
       "frameSize": [
         128,
         192
@@ -2416,16 +6256,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.14,
-        "hairHue": 0.83
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_081",
-      "classArt": "death_knight",
-      "sourceArmorFrame": 35,
+      "generatedIdentity": "Baker",
+      "generatedSource": "generated_sources/baker.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 7,
       "frameSize": [
         128,
         192
@@ -2445,17 +6331,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 1,
-      "paletteSwap": {
-        "clothesHue": 0.91,
-        "hairHue": 0.58
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_082",
-      "classArt": "dragon_knight",
-      "sourceArmorFrame": 48,
+      "generatedIdentity": "Charcoal burner",
+      "generatedSource": "generated_sources/charcoal_burner.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 7,
       "frameSize": [
         128,
         192
@@ -2476,16 +6408,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.56,
-        "hairHue": 0.015
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_083",
-      "classArt": "dragoon",
-      "sourceArmorFrame": 61,
+      "generatedIdentity": "Village boy",
+      "generatedSource": "generated_sources/boy.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 7,
       "frameSize": [
         128,
         192
@@ -2506,16 +6484,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.11,
-        "hairHue": 0.1
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_084",
-      "classArt": "boomerang_knight",
-      "sourceArmorFrame": 74,
+      "generatedIdentity": "Village girl",
+      "generatedSource": "generated_sources/girl.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 7,
       "frameSize": [
         128,
         192
@@ -2536,16 +6560,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.83,
-        "hairHue": 0.075
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_085",
-      "classArt": "necromancer",
-      "sourceArmorFrame": 7,
+      "generatedIdentity": "Merchant",
+      "generatedSource": "generated_sources/merchant.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 7,
       "frameSize": [
         128,
         192
@@ -2566,16 +6636,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.43,
-        "hairHue": 0.045
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_086",
-      "classArt": "bard",
-      "sourceArmorFrame": 20,
+      "generatedIdentity": "Healer",
+      "generatedSource": "generated_sources/healer.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 7,
       "frameSize": [
         128,
         192
@@ -2595,17 +6711,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 6,
-      "paletteSwap": {
-        "clothesHue": 0.07,
-        "hairHue": 0.83
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_087",
-      "classArt": "ranger",
-      "sourceArmorFrame": 33,
+      "generatedIdentity": "Watchman",
+      "generatedSource": "generated_sources/watchman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 7,
       "frameSize": [
         128,
         192
@@ -2626,16 +6788,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.72,
-        "hairHue": 0.58
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_088",
-      "classArt": "arcane_sorcerer",
-      "sourceArmorFrame": 46,
+      "generatedIdentity": "Noblewoman",
+      "generatedSource": "generated_sources/noblewoman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 7,
       "frameSize": [
         128,
         192
@@ -2656,16 +6864,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.3,
-        "hairHue": 0.015
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_089",
-      "classArt": "paladin",
-      "sourceArmorFrame": 59,
+      "generatedIdentity": "Blacksmith",
+      "generatedSource": "generated_sources/smith.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 7,
       "frameSize": [
         128,
         192
@@ -2686,16 +6940,84 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.02,
-        "hairHue": 0.1
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_090",
-      "classArt": "death_knight",
-      "sourceArmorFrame": 72,
+      "generatedIdentity": "King",
+      "generatedSource": "generated_sources/king.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          36,
+          0,
+          252,
+          362
+        ],
+        [
+          371,
+          0,
+          551,
+          362
+        ],
+        [
+          618,
+          0,
+          819,
+          362
+        ],
+        [
+          893,
+          0,
+          1125,
+          362
+        ],
+        [
+          1170,
+          0,
+          1426,
+          362
+        ],
+        [
+          24,
+          362,
+          359,
+          724
+        ],
+        [
+          380,
+          362,
+          807,
+          724
+        ],
+        [
+          835,
+          362,
+          1081,
+          724
+        ],
+        [
+          1142,
+          362,
+          1426,
+          724
+        ],
+        [
+          46,
+          724,
+          333,
+          1086
+        ],
+        [
+          456,
+          724,
+          739,
+          1086
+        ]
+      ],
+      "paletteVariant": 7,
       "frameSize": [
         128,
         192
@@ -2716,16 +7038,84 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.62,
-        "hairHue": 0.075
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_091",
-      "classArt": "dragon_knight",
-      "sourceArmorFrame": 5,
+      "generatedIdentity": "King",
+      "generatedSource": "generated_sources/king.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          36,
+          0,
+          252,
+          362
+        ],
+        [
+          371,
+          0,
+          551,
+          362
+        ],
+        [
+          618,
+          0,
+          819,
+          362
+        ],
+        [
+          893,
+          0,
+          1125,
+          362
+        ],
+        [
+          1170,
+          0,
+          1426,
+          362
+        ],
+        [
+          24,
+          362,
+          359,
+          724
+        ],
+        [
+          380,
+          362,
+          807,
+          724
+        ],
+        [
+          835,
+          362,
+          1081,
+          724
+        ],
+        [
+          1142,
+          362,
+          1426,
+          724
+        ],
+        [
+          46,
+          724,
+          333,
+          1086
+        ],
+        [
+          456,
+          724,
+          739,
+          1086
+        ]
+      ],
+      "paletteVariant": 1,
       "frameSize": [
         128,
         192
@@ -2745,17 +7135,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 1,
-      "paletteSwap": {
-        "clothesHue": 0.14,
-        "hairHue": 0.045
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_092",
-      "classArt": "dragoon",
-      "sourceArmorFrame": 18,
+      "generatedIdentity": "Noblewoman",
+      "generatedSource": "generated_sources/noblewoman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 2,
       "frameSize": [
         128,
         192
@@ -2775,17 +7211,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 2,
-      "paletteSwap": {
-        "clothesHue": 0.91,
-        "hairHue": 0.83
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_093",
-      "classArt": "boomerang_knight",
-      "sourceArmorFrame": 31,
+      "generatedIdentity": "Village boy",
+      "generatedSource": "generated_sources/boy.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 3,
       "frameSize": [
         128,
         192
@@ -2805,17 +7287,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 3,
-      "paletteSwap": {
-        "clothesHue": 0.56,
-        "hairHue": 0.58
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_094",
-      "classArt": "necromancer",
-      "sourceArmorFrame": 44,
+      "generatedIdentity": "Village girl",
+      "generatedSource": "generated_sources/girl.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 4,
       "frameSize": [
         128,
         192
@@ -2835,17 +7363,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 4,
-      "paletteSwap": {
-        "clothesHue": 0.11,
-        "hairHue": 0.015
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_095",
-      "classArt": "bard",
-      "sourceArmorFrame": 57,
+      "generatedIdentity": "Charcoal burner",
+      "generatedSource": "generated_sources/charcoal_burner.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 0,
       "frameSize": [
         128,
         192
@@ -2866,16 +7440,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.83,
-        "hairHue": 0.1
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_096",
-      "classArt": "ranger",
-      "sourceArmorFrame": 70,
+      "generatedIdentity": "Village girl",
+      "generatedSource": "generated_sources/girl.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 1,
       "frameSize": [
         128,
         192
@@ -2895,17 +7515,63 @@
         "celebrate"
       ],
       "transparent": true,
-      "helmet": true,
-      "helmetDesign": 6,
-      "paletteSwap": {
-        "clothesHue": 0.43,
-        "hairHue": 0.075
-      }
+      "helmet": false,
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_097",
-      "classArt": "arcane_sorcerer",
-      "sourceArmorFrame": 10,
+      "generatedIdentity": "Healer",
+      "generatedSource": "generated_sources/healer.png",
+      "sourceGridColumns": 5,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "paletteVariant": 2,
       "frameSize": [
         128,
         192
@@ -2926,16 +7592,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.07,
-        "hairHue": 0.045
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_098",
-      "classArt": "gunner",
-      "sourceArmorFrame": 23,
+      "generatedIdentity": "Watchman",
+      "generatedSource": "generated_sources/watchman.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 3,
       "frameSize": [
         128,
         192
@@ -2956,16 +7668,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.72,
-        "hairHue": 0.83
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_099",
-      "classArt": "totem_master",
-      "sourceArmorFrame": 36,
+      "generatedIdentity": "Blacksmith",
+      "generatedSource": "generated_sources/smith.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 4,
       "frameSize": [
         128,
         192
@@ -2986,16 +7744,62 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.3,
-        "hairHue": 0.58
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     },
     {
       "id": "townsfolk_100",
-      "classArt": "dragon_knight",
-      "sourceArmorFrame": 49,
+      "generatedIdentity": "Merchant",
+      "generatedSource": "generated_sources/merchant.png",
+      "sourceGridColumns": 4,
+      "sourceGridRows": 3,
+      "sourceCellMap": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "paletteVariant": 5,
       "frameSize": [
         128,
         192
@@ -3016,11 +7820,8 @@
       ],
       "transparent": true,
       "helmet": false,
-      "helmetDesign": null,
-      "paletteSwap": {
-        "clothesHue": 0.02,
-        "hairHue": 0.015
-      }
+      "framesUnique": true,
+      "animationFramesReferenceIdleIdentity": true
     }
   ]
 }

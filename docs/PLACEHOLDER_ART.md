@@ -91,7 +91,7 @@ Priority: **P1** is seen constantly or is a showpiece, **P2** is seen often, **P
 | B | Player summons for 15 classes | ASCII pixel art, or a recoloured hero sprite | ~80 creatures and objects (9 sheets) | **P1** | summon sheets (2x5) |
 | C | Class art packs for the other 15 classes (weapons/shields + ability effects) | pixel weapon icons; skills only have code-drawn VFX | 15 x (60 items + 60 effects) | **P1** | Paladin pack format |
 | D | Biome packs for 24 dungeon biomes | the Catacombs pack, recoloured | 24 packs (8 source images each) | **P2** | Catacombs template |
-| E | Town NPCs (8 vendors + 4 townsfolk) | recoloured hero sprites | 12 characters | **P2** | NPC sheet (2x6) |
+| E | Town NPCs (8 vendors + 100 townsfolk) | new Velscour-rendered civilian designs + palette variants | 10 generated identity sheets, 100 runtime sheets | Complete | 11-frame sheets (128×192 per frame) |
 | F | Generic item icons: gloves, leg armour, boots, off-hand orbs | ASCII pixel art | 3 x 60 + 30 | **P2** | icon sheets (6x10) |
 | G | Gems (21 kinds x 6 tiers), gold piles, health/mana globes | drawn in code | 126 + 3 + 2 | **P2** | icon sheets |
 | H | Skill icons (980 skills) | drawn in code (glow + shape) | 980 (or 16 sheets of 60/80) | P3 | icon sheets (6x10) |
