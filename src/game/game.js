@@ -15,7 +15,7 @@ import { BIOME_BY_ID, TOWN_BIOME, drawBiome, mixPartner, recordBiomeVisit } from
 import { CLASSES } from '../data/classes.js';
 import { generateDungeon, isRaidDepth } from '../world/dungeon.js';
 import { FINAL_DEPTH, depthLevel } from '../data/depth.js';
-import { generateTown, makeTownTiles } from '../world/town.js';
+import { generateTown, makeTownTiles, rollTownWeather } from '../world/town.js';
 import { generateOverworld } from '../world/overworld.js';
 import { createOverworldScenario } from './overworld.js';
 import { World } from './world.js';
@@ -160,6 +160,7 @@ export const game = {
     const t = townCache;
     t.map.seen.fill(0);
     const world = new World('town', { map: t.map, tileset, biome: TOWN_BIOME, depth: 0, townTiles, buildings: t.buildings, props: t.props, wallHangings: t.wallHangings });
+    world.raining = rollTownWeather();
     world.npcs = t.npcs.map((n) => ({ vendor: n.vendor, x: n.x, y: n.y, reach: 1.8, flip: n.flip, use: () => Vendor.open(n.vendor.id) }));
     // the storage chest, beside the well where the hero arrives
     {
