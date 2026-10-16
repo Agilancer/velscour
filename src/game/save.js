@@ -72,7 +72,7 @@ export function migrate(c) {
   if (c.townSeed === undefined) c.townSeed = (Math.random() * 1e9) | 0;
   if (!Array.isArray(c.biomeBag)) c.biomeBag = [];
   if (!Number.isInteger(c.overworldMisses)) c.overworldMisses = 0;
-  c.overworldMisses = Math.max(0, Math.min(6, c.overworldMisses));
+  c.overworldMisses = Math.max(0, Math.min(3, c.overworldMisses));
   if (!('overworldLastVisit' in c)) c.overworldLastVisit = c.lastBiome ? String(c.depth) + ':' + c.lastBiome : null;
   // heroes made before the shuffle bag always started in the catacombs: give an unexplored hero a random start
   if (c.nextBiome === 'catacombs' && !c.deepest && !c.lastBiome) c.nextBiome = drawBiome(c, c.depth || 1);

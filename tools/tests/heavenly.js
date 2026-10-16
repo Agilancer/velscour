@@ -86,14 +86,14 @@ const {openGame,report,OUT_DIR}=require('./harness');
       for(const p0 of meta.scatter)
         if(p0.x<0||p0.y<0||p0.x+p0.w>p.scatter.width||p0.y+p0.h>p.scatter.height)
           issues.push('Prop outside atlas '+p0.name);
-      if(drawBiome({overworldMisses:6},500)!=='throne'||drawBiome({overworldMisses:6},20)!=='overworld')
+      if(drawBiome({overworldMisses:6},500)!=='throne'||!BIOME_BY_ID[drawBiome({overworldMisses:3},20)]?.overworld)
         issues.push('Overworld or throne priority regressed');
       let hasHeaven=false;
       for(let run=0;run<50;run++){
         let c={biomeBag:[],lastBiome:null,overworldMisses:0};
         for(let depth=1;depth<=80;depth++){
           const selected=drawBiome(c,depth);
-          if(c.overworldMisses>=6&&selected!=='overworld')issues.push('Missed forced overworld');
+          if(c.overworldMisses>=3&&!BIOME_BY_ID[selected]?.overworld)issues.push('Missed forced overworld');
           if(selected==='heavenly')hasHeaven=true;
           recordBiomeVisit(c,BIOME_BY_ID[selected],depth);c.lastBiome=selected;
         }

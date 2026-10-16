@@ -46,7 +46,7 @@ const { openGame, report, OUT_DIR } = require('./harness');
       // The throne and the scheduled overworld must remain more important
       // than an ordinary shuffle-bag Ice Temple draw.
       if (drawBiome({overworldMisses:6},500) !== 'throne') problems.push('Throne priority regressed');
-      if (drawBiome({overworldMisses:6,biomeBag:[]},17) !== 'overworld')
+      if (!BIOME_BY_ID[drawBiome({overworldMisses:3,biomeBag:[]},17)]?.overworld)
         problems.push('Overworld guarantee regressed');
       const stats = { levels:0, guardians:0, doors:0, arches:0, props:0, unreachable:0, frozenFloors:meta.floors.length };
       for (let i=0; i<16; i++) {
