@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="341" viewBox="0 0 256 341">
+  <defs>
+    <clipPath id="oval-cutout">
+      <ellipse cx="128" cy="170.5" rx="126" ry="168"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#oval-cutout)">
+    <g transform="scale(1 0.673)">
+      <image href="../title_skull_animations/source_overlay.png" x="0" y="-82.5" width="256" height="671.5"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Velscour Skull Animation Rig</title>
+  <style>
+    :root { color-scheme: dark; --gold: #d9a347; --panel: #17120e; --line: #654522; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; background: #050505; color: #ead7ae; font: 14px/1.45 system-ui, sans-serif; }
+    main { width: min(1180px, 100%); margin: auto; }
+    h1 { margin: 0; color: var(--gold); font: 700 clamp(22px, 4vw, 34px)/1.2 Georgia, serif; letter-spacing: .08em; }
+    .intro { color: #b4a387; margin: 8px 0 20px; }
+    .previews { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    figure { margin: 0; min-width: 0; padding: 14px; background: var(--panel); border: 1px solid var(--line); }
+    figcaption { color: var(--gold); font-weight: 700; letter-spacing: .07em; margin: 0 0 10px; text-transform: uppercase; }
+    canvas { display: block; width: 100%; height: auto; background: #000; }
+    #template { cursor: grab; touch-action: none; }
+    #template:active { cursor: grabbing; }
+    .cutout-frame { position: relative; width: 256px; max-width: 100%; aspect-ratio: 256 / 341; margin: auto; overflow: hidden; clip-path: ellipse(49.2% 49.3% at 50% 50%); background: repeating-conic-gradient(#201b16 0% 25%,#100e0c 0% 50%) 50% / 18px 18px; }
+    #cutout { position: absolute; left: 0; top: -16.3%; width: 100%; height: 197%; transform: scaleY(.673); transform-origin: top left; }
+    .controls { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin-top: 14px; padding: 14px; border: 1px solid var(--line); background: var(--panel); }
+    label { display: grid; gap: 4px; color: #b9a984; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+    select, button { min-height: 38px; padding: 7px 11px; color: #ecdcb7; background: #100d0a; border: 1px solid #805b2e; font: inherit; }
+    button { cursor: pointer; }
+    button:hover { border-color: var(--gold); }
+    output { color: #ddc18c; padding: 9px 4px; }
+    .note { color: #95866f; font-size: 12px; margin: 12px 2px; }
+    @media (max-width: 700px) { body { padding: 14px; } .previews { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>VELSCOUR — SKULL ANIMATION RIG</h1>
+    <p class="intro">Select and shape the oval O aperture, then preview three six-frame normal-talking loops.</p>
+    <section class="previews">
+      <figure>
+        <figcaption>Logo cutout template</figcaption>
+        <canvas id="template" width="1400" height="591" aria-label="Velscour logo with oval opening cut from the O"></canvas>
+      </figure>
+      <figure>
+        <figcaption>Animation aligned in the O</figcaption>
+        <canvas id="preview" width="1400" height="591" aria-label="Velscour logo with selected animated skull frame aligned in the O"></canvas>
+      </figure>
+    </section>
+    <section class="previews" style="margin-top:14px;grid-template-columns:1fr">
+      <figure>
+        <figcaption>Starting oval cutout — exact source crop coordinates</figcaption>
+        <div class="cutout-frame"><img id="cutout" src="../assets/ui/title_skull_animations/source_overlay.png" alt="Transparent oval cutout containing the Velscour skull and O spikes"></div>
+      </figure>
+    </section>
+    <div class="controls" aria-label="Animation controls">
+      <label>Talking loop<select id="loop"><option value="0">Loop 1</option><option value="1">Loop 2</option><option value="2">Loop 3</option></select></label>
+      <button id="reset" type="button">Reset oval</button>
+      <button id="toggle" type="button">Pause</button>
+      <button id="step" type="button">Next frame</button>
+      <label>Speed<select id="speed"><option value="4">4 FPS</option><option value="6">6 FPS</option><option value="8" selected>8 FPS</option><option value="12">12 FPS</option></select></label>
+      <output id="readout" aria-live="polite">Loading…</output>
+    </div>
+    <p class="note">Drag inside the oval to move it. Drag the right handle to change width or the bottom handle to change height. The animation follows the selected aperture. Atlas: 6 columns × 3 rows; each cell 256×341.</p>
+  </main>
+  <script>
+    const ROOT = '../assets/ui/';
+    const FRAME_W = 256, FRAME_H = 341, COLS = 6;
+    const DEFAULT_ELLIPSE = { x: 881.5, y: 295.5, rx: 110.9, ry: 147.7 };
+    const ELLIPSE = { ...DEFAULT_ELLIPSE };
+    const logo = new Image(), atlas = new Image(), cutout = new Image();
+    logo.src = ROOT + 'logo.webp';
+    atlas.src = ROOT + 'title_skull_rig/talking_normal_3x6.png';
+    cutout.src = ROOT + 'title_skull_rig/starting_cutout.svg';
+    const template = document.querySelector('#template'), preview = document.querySelector('#preview');
+    const tctx = template.getContext('2d'), pctx = preview.getContext('2d');
+    const loop = document.querySelector('#loop'), speed = document.querySelector('#speed');
+    const toggle = document.querySelector('#toggle'), step = document.querySelector('#step'), reset = document.querySelector('#reset'), readout = document.querySelector('#readout');
+    let frame = 0, playing = true, last = 0;
+
+    function draw() {
+      if (!logo.complete || !atlas.complete || !cutout.complete) return;
+      tctx.clearRect(0, 0, template.width, template.height);
+      pctx.clearRect(0, 0, preview.width, preview.height);
+      tctx.fillStyle = pctx.fillStyle = '#000';
+      tctx.fillRect(0, 0, template.width, template.height);
+      pctx.fillRect(0, 0, preview.width, preview.height);
+      tctx.drawImage(logo, 0, 0);
+      tctx.save();
+      tctx.globalCompositeOperation = 'destination-out';
+      tctx.beginPath(); tctx.ellipse(ELLIPSE.x, ELLIPSE.y, ELLIPSE.rx, ELLIPSE.ry, 0, 0, Math.PI * 2); tctx.fill();
+      tctx.restore();
+      tctx.save();
+      tctx.strokeStyle = '#d69337'; tctx.lineWidth = 2; tctx.setLineDash([7, 5]);
+      tctx.beginPath(); tctx.ellipse(ELLIPSE.x, ELLIPSE.y, ELLIPSE.rx, ELLIPSE.ry, 0, 0, Math.PI * 2); tctx.stroke();
+      tctx.restore();
+      for (const [hx, hy] of [[ELLIPSE.x + ELLIPSE.rx, ELLIPSE.y], [ELLIPSE.x, ELLIPSE.y + ELLIPSE.ry]]) {
+        tctx.beginPath(); tctx.arc(hx, hy, 8, 0, Math.PI * 2); tctx.fillStyle = '#e5ae54'; tctx.fill();
+        tctx.strokeStyle = '#170f07'; tctx.lineWidth = 2; tctx.stroke();
+      }
+
+      pctx.drawImage(logo, 0, 0);
+      const atlasFrame = Number(loop.value) * 6 + frame;
+      const sx = (atlasFrame % COLS) * FRAME_W, sy = Math.floor(atlasFrame / COLS) * FRAME_H;
+      pctx.save();
+      pctx.beginPath(); pctx.ellipse(ELLIPSE.x, ELLIPSE.y, ELLIPSE.rx, ELLIPSE.ry, 0, 0, Math.PI * 2); pctx.clip();
+      pctx.drawImage(atlas, sx, sy, FRAME_W, FRAME_H, ELLIPSE.x - ELLIPSE.rx, ELLIPSE.y - ELLIPSE.ry, ELLIPSE.rx * 2, ELLIPSE.ry * 2);
+      pctx.restore();
+      readout.textContent = `Loop ${Number(loop.value) + 1} · frame ${frame + 1} / 6 · oval center ${ELLIPSE.x.toFixed(1)}, ${ELLIPSE.y.toFixed(1)} · radii ${ELLIPSE.rx.toFixed(1)}×${ELLIPSE.ry.toFixed(1)}`;
+    }
+
+    for (const image of [logo, atlas, cutout]) image.addEventListener('load', draw);
+    loop.addEventListener('change', () => { frame = 0; draw(); });
+    reset.addEventListener('click', () => { Object.assign(ELLIPSE, DEFAULT_ELLIPSE); draw(); });
+    toggle.addEventListener('click', () => { playing = !playing; toggle.textContent = playing ? 'Pause' : 'Play'; });
+    step.addEventListener('click', () => { frame = (frame + 1) % 6; draw(); });
+    let dragMode = '', pointerStart = null, ellipseStart = null;
+    function toCanvasPoint(event) {
+      const rect = template.getBoundingClientRect();
+      return { x: (event.clientX - rect.left) * template.width / rect.width, y: (event.clientY - rect.top) * template.height / rect.height };
+    }
+    template.addEventListener('pointerdown', event => {
+      const p = toCanvasPoint(event);
+      const rightDistance = Math.hypot(p.x - (ELLIPSE.x + ELLIPSE.rx), p.y - ELLIPSE.y);
+      const bottomDistance = Math.hypot(p.x - ELLIPSE.x, p.y - (ELLIPSE.y + ELLIPSE.ry));
+      const inside = ((p.x - ELLIPSE.x) / ELLIPSE.rx) ** 2 + ((p.y - ELLIPSE.y) / ELLIPSE.ry) ** 2 <= 1.15;
+      dragMode = rightDistance < 22 ? 'width' : bottomDistance < 22 ? 'height' : inside ? 'move' : '';
+      if (!dragMode) return;
+      pointerStart = p; ellipseStart = { ...ELLIPSE }; template.setPointerCapture(event.pointerId); event.preventDefault();
+    });
+    template.addEventListener('pointermove', event => {
+      if (!dragMode) return;
+      const p = toCanvasPoint(event), dx = p.x - pointerStart.x, dy = p.y - pointerStart.y;
+      if (dragMode === 'move') { ELLIPSE.x = Math.max(ELLIPSE.rx, Math.min(1400 - ELLIPSE.rx, ellipseStart.x + dx)); ELLIPSE.y = Math.max(ELLIPSE.ry, Math.min(591 - ELLIPSE.ry, ellipseStart.y + dy)); }
+      if (dragMode === 'width') ELLIPSE.rx = Math.max(45, Math.min(250, ellipseStart.rx + dx));
+      if (dragMode === 'height') ELLIPSE.ry = Math.max(55, Math.min(280, ellipseStart.ry + dy));
+      draw();
+    });
+    for (const name of ['pointerup', 'pointercancel']) template.addEventListener(name, () => { dragMode = ''; });
+    function tick(now) {
+      if (playing && now - last > 1000 / Number(speed.value)) { frame = (frame + 1) % 6; last = now; draw(); }
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
