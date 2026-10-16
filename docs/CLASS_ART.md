@@ -2,7 +2,8 @@
 
 Two kinds of art drive a class's look:
 - **Gear libraries** (`assets/FinalClasses/<class>.zip`, all 16 classes): 80 body armors + legacy helms as single
-  frames. Only the body armor frames are used at runtime; the shared common helmet atlas supplies all hero helms.
+  frames. Only the body armor frames are used at runtime; the shared Common and Rare helmet atlases supply those
+  rarity bands' hero helms.
 - **Class art packs** (`assets/source/classes/<class>/`, Paladin only so far): weapon/shield catalog items and the
   60 ability effects.
 
@@ -39,25 +40,28 @@ q90 with lossless alpha), `armor_mask.png`, legacy `helms.webp` / `helms_mask.pn
 top, and bounding boxes); plus `assets/sprites/gear/classes.json`. Legacy helm atlases remain in the generated pack
 for reference, but the game no longer loads or composites them.
 
-### Shared common helmet atlas
+### Shared Common and Rare helmet atlases
 `assets/sprites/gear/common_helmets/atlas.png` is a 16-column by 10-row transparent atlas of 192 x 224 cells.
-`index.json` maps columns to playable classes and rows to the Common 01–10 catalog labels. The labeled catalog is
-metadata only and contributes no sprite pixels. Every head item uses one of the ten designs and a rarity-appropriate
-palette swap. Its placement comes from `placements.json`, keyed by class and design ID. The first five rows preserve
-the saved manual fits. Rows 6–10 use the visible size and anchor measured from those manual fits, scaled to each
-new sprite's opaque bounds. The game and fitter share `src/core/helmetfit.js` so saved coordinates drive equipped
-characters and portraits directly. The same sprite and palette drive item icons and ground pickups.
+`assets/sprites/gear/rare_helmets/atlas.png` is a 16-column by 5-row transparent atlas of the same cell size.
+Each `index.json` maps columns to playable classes and rows to that set's labels. The labeled catalogs are metadata
+only and contribute no sprite pixels. Rare head items use the Rare designs; other head items use the Common designs.
+Both sets receive a rarity-appropriate palette swap. Placements come from each set's `placements.json`, keyed by class
+and design ID. The Common first five rows preserve the saved manual fits; Common 06–10 use the visible size and anchor
+measured from those fits. Rare fits use each class's manually curated Common 01–05 placements as the visible size and
+head-anchor reference, adjusted to each Rare sprite's opaque bounds. The game and fitter share `src/core/helmetfit.js`
+so saved coordinates drive equipped characters and portraits directly. The same sprite and palette drive item icons
+and ground pickups.
 
 ### Visual helmet fitting
 Double-click `Fit Helmets.cmd` in the repository root, or run `python tools/helmet_fit_server.py`. The local server
-opens `tools/helmet-fitter/` in a browser. Pick a class and design, drag the helmet into position, and scroll or use
+opens `tools/helmet-fitter/` in a browser. Choose a helmet set and class, drag the helmet into position, and scroll or use
 the size slider to resize it. Width and height can be adjusted separately by unchecking the proportions option.
 Arrow keys nudge by 0.25 body-frame pixels; Shift increases the step to 1 pixel. Space temporarily hides the helmet.
 The enlarged view rasterizes the composite at the game's 128×192 resolution before zooming, and the whole-character
-and all-ten-design previews update alongside it. Change body armor to inspect the same placement on other frames.
+and all-design previews update alongside it. Change body armor to inspect the same placement on other frames.
 
-**Save to game** writes `assets/sprites/gear/common_helmets/placements.json`; reload the game afterward. The server
-keeps the previous file as `placements.json.bak`. Each entry stores `{x, y, scaleX, scaleY}`: the top-left of the
+**Save to game** writes placements for the selected set; reload the game afterward. The server keeps the previous file
+as `placements.json.bak`. Each entry stores `{x, y, scaleX, scaleY}`: the top-left of the
 entire source cell in body-frame pixels and its scale factors. Export/Import JSON supports moving fits between
 machines. **Export PNG** downloads a labeled head close-up and whole-character preview with exact fit values;
 a screenshot showing the class, design, and numeric readout also provides enough information to transcribe a fit.
@@ -65,10 +69,11 @@ Browser drafts preserve unsaved edits and can be restored on the next visit. Kee
 while editing; Ctrl+C stops the local server.
 
 ### Game
-- `src/core/gearart.js` loads the played class's body armor library (`game.loadClassPack`) and the shared helmet atlas.
+- `src/core/gearart.js` loads the played class's body armor library (`game.loadClassPack`) and the shared Common/Rare helmet atlases.
 - **Item looks**: body armor and helmets get `item.look = [design, finish, aura]` on first use (saved with the
   item). Armor design comes from the rarity's band, positioned by item level (sqrt curve over 1..100, so early
-  levels get the plain designs) +-1 at random. Helm design follows item level across all ten Common atlas rows.
+  levels get the plain designs) +-1 at random. Rare helmet design follows item level across the five Rare atlas rows;
+  other helmet rarities use the ten Common atlas rows.
   Helmets always use a non-original rarity-appropriate palette; armor uses one of 51 palettes (`PALETTES` in
   `src/data/gear.js`) whose tier fits the rarity (tier r-2..r), or the original colours 10% of the time. Aura (body armor only): `GEAR_FX`, 45% of Rares,
   every Epic, Legendary and Mythic (now and then one tier down).

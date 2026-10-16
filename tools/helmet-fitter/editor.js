@@ -2,10 +2,10 @@ import { resolveHelmetFit } from '../../src/core/helmetfit.js';
 
 const $ = (id) => document.getElementById(id);
 const base = '../../assets/sprites/gear/';
-const draftKey = 'velscour-helmet-fitter-v2';
+const draftKey = () => `velscour-helmet-fitter-v3-${activeSet}`;
 const camera = { x: 24, y: 0, w: 80, h: 96 };
 const canvas = $('editor'), ctx = canvas.getContext('2d');
-let index, atlas, data, persisted, current, loaded, zoom = 6, history = [], dragging = null, space = false;
+let index, atlas, data, persisted, current, loaded, activeSet = 'common', sets = {}, zoom = 6, history = [], dragging = null, space = false;
 let serial = 0, dirty = false;
 const cache = new Map(), bounds = new Map();
 const round = (n) => Math.round(n * 10000) / 10000;
@@ -28,8 +28,9 @@ function remember() {
   $('undo').disabled = false;
 }
 function changed() {
+  if (sets[activeSet]) sets[activeSet].data = data;
   dirty = JSON.stringify(data) !== persisted;
-  try { localStorage.setItem(draftKey, JSON.stringify(data)); } catch { /* Export/save still work without browser storage. */ }
+  try { localStorage.setItem(draftKey(), JSON.stringify(data)); } catch { /* Export/save still work without browser storage. */ }
   $('save').textContent = dirty ? 'Save to game •' : 'Save to game';
   updateControls(); draw();
   status(dirty ? 'Unsaved changes. Save to game when ready; a browser draft is also kept.' : 'All placements match the saved file.');
@@ -72,7 +73,8 @@ function updateControls() {
   $('caption').textContent = `${title(current)} · ${label.catalog} (${label.name})`;
   $('numbers').textContent = `x=${f.x.toFixed(3)}  y=${f.y.toFixed(3)}  width=${(f.scaleX * 100).toFixed(2)}%  height=${(f.scaleY * 100).toFixed(2)}%  | armor ${$('armor').value}`;
   const count = Object.values(data.classes).reduce((n, obj) => n + Object.keys(obj).length, 0);
-  $('progress').textContent = `${count} / ${index.classes.length * index.designs.length} placements set · ${Object.keys(data.classes[current] || {}).length} / 10 for this class`;
+  $('progress').textContent = `${count} / ${index.classes.length * index.designs.length} placements set · ${Object.keys(data.classes[current] || {}).length} / ${index.designs.length} for this class`;
+  $('thumbTitle').textContent = `This class · all ${index.designs.length} ${activeSet} helmets`;
   document.querySelectorAll('#thumbnails button').forEach((button, i) => {
     button.classList.toggle('active', i + 1 === design());
     button.lastChild.textContent = `${index.designs[i].catalog}${data.classes[current]?.[i + 1] ? ' •' : ''}`;
@@ -131,6 +133,36 @@ async function selectClass() {
   } catch (e) { status(e.message); }
 }
 function selectDesign(id) { $('design').value = id; updateControls(); draw(); }
+function showDesigns() {
+  $('design').replaceChildren(); $('thumbnails').replaceChildren();
+  for (const d of index.designs) {
+    $('design').add(new Option(`${d.catalog} · ${d.name}`, d.id));
+    const button = document.createElement('button'), thumb = document.createElement('canvas'), label = document.createElement('span');
+    thumb.width = 110; thumb.height = 130; button.append(thumb, label); button.onclick = () => selectDesign(d.id); $('thumbnails').append(button);
+  }
+}
+async function selectSet(next) {
+  if (!sets[next]) return;
+  stopDrag(); activeSet = next;
+  ({ index, atlas, data, persisted } = sets[next]);
+  history = []; $('undo').disabled = true;
+  dirty = JSON.stringify(data) !== persisted;
+  $('save').textContent = dirty ? 'Save to game •' : 'Save to game';
+  $('draft').hidden = true;
+  showDesigns();
+  let draft;
+  try { const raw = localStorage.getItem(draftKey()); if (raw && raw !== persisted) draft = validate(JSON.parse(raw)); } catch { /* A stale draft cannot block loading. */ }
+  if (draft) {
+    $('draft').hidden = false;
+    $('restore').onclick = () => { remember(); data = draft; sets[activeSet].data = data; $('draft').hidden = true; changed(); };
+    $('dismiss').onclick = () => { localStorage.removeItem(draftKey()); $('draft').hidden = true; };
+  }
+  const max = index.designs.length;
+  const chosen = Math.min(Number($('design').value) || 1, max);
+  $('design').value = chosen;
+  if (loaded) { updateControls(); draw(); }
+  status(`${index.rarity[0].toUpperCase()}${index.rarity.slice(1)} placements loaded.`);
+}
 function point(event) {
   const rect = canvas.getBoundingClientRect();
   return { x: camera.x + (event.clientX - rect.left) * canvas.width / rect.width / zoom, y: camera.y + (event.clientY - rect.top) * canvas.height / rect.height / zoom };
@@ -166,6 +198,7 @@ $('size').addEventListener('input', () => {
   resize(sx, $('lock').checked ? f.scaleY * sx / f.scaleX : f.scaleY);
 });
 $('class').addEventListener('change', () => { stopDrag(); selectClass(); });
+$('set').addEventListener('change', () => selectSet($('set').value));
 $('design').addEventListener('change', () => selectDesign(design()));
 for (const id of ['opacity', 'show', 'background', 'armor']) $(id).addEventListener('input', () => { updateControls(); draw(); });
 $('zoom').addEventListener('input', viewZoom);
@@ -200,11 +233,11 @@ $('save').onclick = async () => {
   $('save').disabled = true;
   try {
     const text = JSON.stringify(validate(data));
-    const response = await fetch('/api/helmet-placements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: text });
+    const response = await fetch(`/api/helmet-placements?set=${activeSet}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: text });
     let result; try { result = await response.json(); } catch { throw new Error('Saving needs Fit Helmets.cmd. You can still export JSON.'); }
     if (!response.ok) throw new Error(result.error || 'Could not save.');
-    persisted = text; dirty = JSON.stringify(data) !== persisted;
-    if (!dirty) { localStorage.removeItem(draftKey); $('save').textContent = 'Save to game'; }
+    persisted = text; sets[activeSet].persisted = persisted; dirty = JSON.stringify(data) !== persisted;
+    if (!dirty) { localStorage.removeItem(draftKey()); $('save').textContent = 'Save to game'; }
     status(`Saved to ${result.path}. Reload the game to use these placements.`);
   } catch (e) { status(e.message); } finally { $('save').disabled = false; }
 };
@@ -250,21 +283,15 @@ window.addEventListener('beforeunload', event => { if (dirty) { event.preventDef
 
 async function init() {
   $('controls').disabled = true;
-  [index, atlas, data] = await Promise.all([json(base + 'common_helmets/index.json'), image(base + 'common_helmets/atlas.png'), json(base + 'common_helmets/placements.json')]);
-  validate(data); persisted = JSON.stringify(data);
+  for (const set of ['common', 'rare']) {
+    const dir = `${set}_helmets/`;
+    const [setIndex, setAtlas, setData] = await Promise.all([json(base + dir + 'index.json'), image(base + dir + 'atlas.png'), json(base + dir + 'placements.json')]);
+    index = setIndex; validate(setData);
+    sets[set] = { index: setIndex, atlas: setAtlas, data: setData, persisted: JSON.stringify(setData) };
+  }
+  index = sets.common.index;
   for (const cls of index.classes) $('class').add(new Option(title(cls), cls));
-  for (const d of index.designs) {
-    $('design').add(new Option(`${d.catalog} · ${d.name}`, d.id));
-    const button = document.createElement('button'), thumb = document.createElement('canvas'), label = document.createElement('span');
-    thumb.width = 110; thumb.height = 130; button.append(thumb, label); button.onclick = () => selectDesign(d.id); $('thumbnails').append(button);
-  }
-  let draft;
-  try { const raw = localStorage.getItem(draftKey); if (raw && raw !== persisted) draft = validate(JSON.parse(raw)); } catch { /* A stale draft cannot block loading. */ }
-  if (draft) {
-    $('draft').hidden = false;
-    $('restore').onclick = () => { remember(); data = draft; $('draft').hidden = true; changed(); };
-    $('dismiss').onclick = () => { localStorage.removeItem(draftKey); $('draft').hidden = true; };
-  }
+  await selectSet('common');
   await selectClass();
 }
 init().catch(e => status('Could not start fitter: ' + e.message));
