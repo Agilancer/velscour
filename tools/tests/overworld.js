@@ -13,12 +13,20 @@ const { openGame, report } = require('./harness');
       game.buildDungeon(13,BIOME_BY_ID.overworld);
       const s=G.world.overworldScenario;
       if(!s||G.world.map.w!==72||G.world.map.h!==72)throw Error('Overworld not built');
+      G.world.creatures.length=0;G.world.rebuildGrid(); // keep visual captures free of stacked spawn labels
       G.player.x=s.shrine.x-2;G.player.y=s.shrine.y+2;
       const {camera}=await import('/src/core/view.js');
       camera.zoom=1.2;camera.follow(G.player.x,G.player.y,0,true);
     });
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(4000); // clear the depth intro before visual review
     await shot('overworld_shrine_and_forest');
+    await page.evaluate(async()=>{
+      const {G}=window.VELSCOUR; G.player.x=36.5;G.player.y=35.5;
+      const {camera}=await import('/src/core/view.js');
+      camera.zoom=.42;camera.follow(G.player.x,G.player.y,0,true);
+    });
+    await page.waitForTimeout(500);
+    await shot('overworld_wide_layout');
     const stats=await page.evaluate(async()=>{
       const {G}=window.VELSCOUR;
       const {BIOME_BY_ID,drawBiome,recordBiomeVisit}=await import('/src/data/biomes.js');
@@ -28,6 +36,8 @@ const { openGame, report } = require('./harness');
       const errors=[],b=BIOME_BY_ID.overworld;
       const locations=[ [63.5,9.5],[36.5,35.5],[20.5,20.5],[51.5,23.5],
         [21.5,49.5],[54.5,49.5],[36.5,17.5],[36.5,56.5],[16.5,35.5],[57.5,35.5] ];
+      const oddMonuments=new Set(['ow_ancient_stone','ow_broken_column','ow_shattered_urn',
+        'ow_ritual_candles','ow_forest_totem','ow_spectral_brazier','ow_stone_idol','ow_standing_stone']);
       let minTrees=Infinity,minClear=Infinity,maxProps=0;
       for(let seed=1;seed<=60;seed++){
         let gen;
@@ -38,6 +48,10 @@ const { openGame, report } = require('./harness');
         minTrees=Math.min(minTrees,gen.props.filter(p=>p.spr.name.startsWith('t_')).length);
         maxProps=Math.max(maxProps,gen.props.length);
         if(locations.some(([x,y])=>!m.walkable(x,y)))errors.push('unwalkable marker at '+seed);
+        if(gen.buildings.some(b=>b.entryAxis!=='y'||!b.approach?.length||b.approach.some(([x,y],i,a)=>
+          !m.walkable(x+.5,y+.5)||(i>0&&Math.abs(x-a[i-1][0])+Math.abs(y-a[i-1][1])!==1))))errors.push('invalid settlement approach at '+seed);
+        if(m.v.some(v=>v>=126))errors.push('out-of-place floor accents at '+seed);
+        if(gen.props.some(p=>oddMonuments.has(p.spr.name)))errors.push('random monument scatter at '+seed);
         if(gen.scenarioId<0||gen.scenarioId>=20)errors.push('invalid scenario id at '+seed);
       }
       if(minTrees<150)errors.push('too few forest wall trees');
@@ -88,7 +102,7 @@ const { openGame, report } = require('./harness');
     });
     console.log('overworld QA',JSON.stringify(stats));
     if(stats.errors.length||stats.successfulScenarios!==20) errors.push('[overworld] '+JSON.stringify(stats));
-    await page.evaluate(()=>{const {G}=window.VELSCOUR;G.world.overworldScenario.start();});
+    await page.evaluate(()=>{const {G}=window.VELSCOUR;G.world.overworldScenario.start();G.world.creatures.length=0;G.world.rebuildGrid();});
     await page.waitForTimeout(400);
     await shot('overworld_active_scenario');
   }catch(e){errors.push('[overworld] '+(e.stack||e));}
