@@ -35,7 +35,7 @@ Contents
   (100 deterministic map seeds), JavaScript parse checks, and `git diff
   --check`. Browser Playwright could not launch because the local Chromium
   headless-shell binary is absent; repository guidance says not to install it.
-- Work is on `feat/sea-of-sand-overworld`; PR link to be recorded after push.
+- Work is on `feat/sea-of-sand-overworld`; PR: https://github.com/Agilancer/velscour/pull/82.
 
 ## October 15, 2026 — Town approaches and neighborhood alignment
 
