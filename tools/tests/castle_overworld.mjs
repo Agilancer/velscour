@@ -28,7 +28,7 @@ for(let seed=1;seed<=100;seed++){
  for(const [x,y] of [[36.5,19.5],[36.5,49.5],[21.5,35.5],[50.5,35.5]])if(!m.walkable(x,y))throw Error(`blocked bridge deck seed ${seed} at ${x},${y}`);
  const categories=new Set(gen.props.map(p=>p.spr.category));for(const c of ['walls','castle_bridges','castle_landmarks','castle_stairs','wall_hangings','trees'])if(!categories.has(c))throw Error(`missing placed ${c} seed ${seed}`);
 }
-if(minScatter<780)throw Error(`expected 780 scatter placements; got ${minScatter}`);
+if(minScatter<360)throw Error(`expected 360 scatter placements; got ${minScatter}`);
 if(minFree<1500)throw Error(`too little free combat space (${minFree})`);
 if(scenarios.size!==20)throw Error(`expected all 20 scenarios; saw ${scenarios.size}`);
 const selected=new Set();for(let i=0;i<120;i++)selected.add(drawBiome({overworldMisses:3,lastBiome:null,biomeBag:[]},22));

@@ -198,16 +198,20 @@ const CASTLE_SITES=[[36.5,40.5],[29.5,35.5],[43.5,35.5],[30.5,43.5],[42.5,43.5],
   [27.5,31.5],[45.5,31.5],[32.5,38.5],[40.5,38.5]];
 const CASTLE_ENTRY=[9.5,62.5],CASTLE_EXIT=[63.5,9.5],CASTLE_SHRINE=CASTLE_SITES[0];
 function generateCastle(depth,biome,seed){
-  const floors=castleFloorTiles(),metaNames=floors.map(f=>f.name),
-    grass=metaNames.filter(n=>/floor_0[1-9]|floor_10_/.test(n)).map(n=>metaNames.indexOf(n)),
-    dirt=metaNames.filter(n=>/floor_(2[1-9]|30)_/.test(n)).map(n=>metaNames.indexOf(n)),
-    stone=metaNames.filter(n=>/floor_(3[1-9]|4[0-9])_/.test(n)).map(n=>metaNames.indexOf(n)),
+  const floors=castleFloorTiles(),
+    grass=castleFloorIndex('courtyard_meadow'),
+    shaded=castleFloorIndex('trimmed_battlement_grass'),
+    damp=castleFloorIndex('damp_grass'),
+    dry=castleFloorIndex('dry_grass'),
+    earth=castleFloorIndex('sandy_soil'),
+    stone=castleFloorIndex('grey_flagstone'),
     water=castleFloorIndex('moat_water_rippled'),
     rng=new RNG(seed),map=new TileMap(W,H),props=[],id=(x,y)=>y*W+x,
     dist=(x,y,p)=>Math.hypot(x-p[0],y-p[1]);
   if(!floors.length||water<0)throw new Error('Castle floors and moat water must load before generating the overworld.');
   map.t.fill(1);map.losBlocks=true;map.rampartDeck=new Uint8Array(W*H);map.rampartHeight=128*TW/160*.48;
-  const paths=[[CASTLE_ENTRY,[36,54]],[[36,54],CASTLE_SHRINE],[CASTLE_SHRINE,[36,17]],[[36,17],CASTLE_EXIT],
+  const paths=[[CASTLE_ENTRY,[36,54]],[[36,54],[36,49]],[[36,47],CASTLE_SHRINE],
+    [CASTLE_SHRINE,[36,31]],[[36,29],[36,21]],[[36,19],[36,16]],[[36,16],CASTLE_EXIT],
     [[13,36],[36,36]],[[36,36],[59,36]]];
   const nearPath=(x,y,r)=>paths.some(([a,b])=>lineDist(x,y,a,b)<r);
   const reserved=(x,y)=>[CASTLE_ENTRY,CASTLE_EXIT,...CASTLE_SITES].some(p=>dist(x,y,p)<5.2)||nearPath(x,y,2.6);
@@ -217,9 +221,17 @@ function generateCastle(depth,biome,seed){
   };
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){
     const i=id(x,y),cx=x+.5,cy=y+.5;
-    const base=rng.pick(grass.length?grass:[0]);map.v[i]=base;
-    if(rng.chance(.07))map.v[i]=rng.pick(dirt.length?dirt:[20]);
-    if(rng.chance(.045))map.v[i]=rng.pick(stone.length?stone:[30]);
+    // Keep the lawn in broad authored fields; independent random floor picks
+    // made every tile a different material and read as a checkerboard.
+    const edge=Math.min(x,y,W-x-1,H-y-1);
+    const westGrove=((x-12)**2/150+(y-34)**2/480<1),eastGrove=((x-59)**2/200+(y-34)**2/500<1);
+    const grove=westGrove||eastGrove||edge<2;
+    let floor=westGrove||eastGrove||edge<2?shaded:grass;
+    if((x<19||x>53||y<15||y>53)&&floor===grass&&((x+y)%13<2))floor=dry;
+    else if((x>=19&&x<=53&&y>=16&&y<=52)&&floor===grass&&((x*3+y*5)%23===0))floor=damp;
+    if(nearPath(cx,cy,2.4)&&!grove)floor=earth;
+    if(nearPath(cx,cy,1.2))floor=stone;
+    map.v[i]=floor<0?0:floor;
     if(x===0||y===0||x===W-1||y===H-1){map.block[i]=1;continue;}
     // A broad, two-tile moat surrounds the fortified inner ward. Four stone bridges
     // provide connected approaches; all other water cells block walking and line of sight.
@@ -227,11 +239,9 @@ function generateCastle(depth,biome,seed){
     const bridge=(Math.abs(x-36)<=2&&((y>=17&&y<=21)||(y>=47&&y<=51)))||
       (Math.abs(y-35)<=2&&((x>=20&&x<=23)||(x>=49&&x<=52)));
     if(moat&&!bridge){map.v[i]=water;map.block[i]=1;}
-    else if(bridge||x>=24&&x<=48&&y>=21&&y<=47)map.v[i]=rng.pick(stone.length?stone:[30]);
+    else if(bridge)map.v[i]=stone;
     if(reserved(cx,cy))continue;
-    // Ruined outer ground is wooded and cluttered while the paved approaches stay clear.
-    const edge=Math.min(x,y,W-x-1,H-y-1),grove=((x-12)**2/150+(y-34)**2/480<1)||
-      ((x-59)**2/200+(y-34)**2/500<1)||edge<2;
+    // The groves remain rough terrain, while open courtyard lawns stay traversable.
     if(grove&&rng.chance(.34)){map.block[i]=1;}
   }
   // Curtain wall and gatehouse. The rampart cells are an actual traversable route;
@@ -239,10 +249,10 @@ function generateCastle(depth,biome,seed){
   const wallAlongX='wall_02_aged_castle_brick_straight_SE_NW';
   const wallAlongY='wall_02_aged_castle_brick_straight_NE_SW';
   for(let x=25;x<=47;x++)for(const y of [23,45]){
-    const gate=Math.abs(x-36)<=1;map.rampartDeck[id(x,y)]=1;if(!gate){map.block[id(x,y)]=0;if(x%2===0)add(wallAlongX,'walls',x+.5,y+.5,.48);}
+    const gate=Math.abs(x-36)<=1;map.rampartDeck[id(x,y)]=1;if(!gate){map.block[id(x,y)]=0;add(wallAlongX,'walls',x+.5,y+.5,.8);}
   }
   for(let y=24;y<45;y++)for(const x of [25,47]){
-    map.block[id(x,y)]=0;map.rampartDeck[id(x,y)]=1;if(y%2===0)add(wallAlongY,'walls',x+.5,y+.5,.48);
+    map.block[id(x,y)]=0;map.rampartDeck[id(x,y)]=1;add(wallAlongY,'walls',x+.5,y+.5,.8);
   }
   // Water edges and isometric stone crossings on all four cardinal approaches.
   add('castle_moat_edge_north_bank','moat_edges',36.5,17.5,.52);
@@ -251,14 +261,14 @@ function generateCastle(depth,biome,seed){
   add('castle_moat_edge_east_bank','moat_edges',52.5,35.5,.52);
   for(const [asset,x,y] of [
     ['castle_bridge_standard_arch_NW',36.5,19.5],['castle_bridge_long_arch_SE',36.5,49.5],
-    ['castle_bridge_short_arch_SW',21.5,35.5],['castle_bridge_short_arch_NE',50.5,35.5]])add(asset,'castle_bridges',x,y,.72);
-  add('castle_landmark_02_gatehouse_wall_turn','castle_landmarks',36.5,45.5,.56);
-  add('castle_landmark_09_small_keep_complex','castle_landmarks',36.5,27.5,.68);
+    ['castle_bridge_short_arch_SW',21.5,35.5],['castle_bridge_short_arch_NE',50.5,35.5]])add(asset,'castle_bridges',x,y,.82);
+  add('castle_landmark_02_gatehouse_wall_turn','castle_landmarks',36.5,45.5,.78);
+  add('castle_landmark_09_small_keep_complex','castle_landmarks',36.5,27.5,.9);
   for(const [asset,x,y] of [
     ['castle_landmark_03_round_tower_upper',27.5,25.5],['castle_landmark_05_square_tower_upper',45.5,25.5],
-    ['castle_landmark_08_corner_tower_cluster',27.5,42.5],['castle_landmark_03_round_tower_upper',45.5,42.5]])add(asset,'castle_landmarks',x,y,.52);
-  add('castle_stairs_broad_NW','castle_stairs',36.5,46.5,.48);
-  add('castle_stairs_tower_SE','castle_stairs',46.5,42.5,.46);
+    ['castle_landmark_08_corner_tower_cluster',27.5,42.5],['castle_landmark_03_round_tower_upper',45.5,42.5]])add(asset,'castle_landmarks',x,y,.72);
+  add('castle_stairs_broad_NW','castle_stairs',36.5,46.5,.58);
+  add('castle_stairs_tower_SE','castle_stairs',46.5,42.5,.54);
   // Hangings are their own authored set of 32 motifs in four wall orientations.
   for(const [asset,x,y] of [['castle_hanging_01_01_eclipse_sun_NE',30.5,23.5],['castle_hanging_01_07_wingless_raven_NE',42.5,23.5],
     ['castle_hanging_01_10_triple_moon_NE',30.5,45.5],['castle_hanging_01_09_crossed_hammers_NE',42.5,45.5]])
@@ -268,13 +278,17 @@ function generateCastle(depth,biome,seed){
     const i=id(x,y);if(!map.block[i]||map.v[i]===water||x>=24&&x<=48&&y>=22&&y<=46)continue;
     if(rng.chance(.22))add(rng.pick(castleFrames('trees')).id,'trees',x+.5,y+.5,.5);
   }
-  // Scatter exceeds the standard overworld's 260 placements by 3x, using the full 120-piece set.
+  // Focus dressing in grove margins and around the inner ward. The previous
+  // 780 tiny scatter sprites covered the lawn with visual noise.
   let scatterCount=0;
-  for(let n=0;n<2600&&scatterCount<780;n++){
+  for(let n=0;n<6000&&scatterCount<360;n++){
     const x=rng.int(2,W-3)+.5,y=rng.int(2,H-3)+.5;
     if(!map.walkable(x,y)||reserved(x,y)||!map.circleFree(x,y,.32))continue;
+    const grove=((x-12)**2/150+(y-34)**2/480<1)||((x-59)**2/200+(y-34)**2/500<1);
+    const wardEdge=x>=24&&x<=48&&y>=21&&y<=47&&(x<=29||x>=43||y<=26||y>=42);
+    if(!grove&&!wardEdge&&!rng.chance(.035))continue;
     const frame=rng.pick(castleFrames('scatter'));
-    if(add(frame.id,'scatter',x,y,.36))scatterCount++;
+    if(add(frame.id,'scatter',x,y,.46))scatterCount++;
   }
   const looks=rollLooks(biome,rng.fn()),spawns=[];
   for(let i=0;i<26;i++){
