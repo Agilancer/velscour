@@ -15,6 +15,26 @@ import { drawLootLabels } from './loot.js';
 
 let lightCanvas = null, vignette = null, vigKey = '';
 const transitionSprites = new Map();
+const townSheets=new Map();
+function townSheet(id){let img=townSheets.get(id);if(img||!id)return img||null;img=new Image();img.src=`assets/sprites/townsfolk/${id}.png`;townSheets.set(id,img);return img;}
+function drawTownMood(ctx,n,x,y){
+  if(!n.townMood||n.townMoodT<=0)return;
+  const bob=Math.sin(G.time*8)*2,px=Math.round(x+18),py=Math.round(y-70+bob);ctx.save();
+  if(n.townMood==='affection'||n.townMood==='celebration'){
+    ctx.fillStyle=n.townMood==='affection'?'#f24e72':'#ffd45c';
+    for(const [dx,dy,w,h] of [[3,0,5,3],[1,3,9,3],[2,6,7,3],[4,9,3,2]])ctx.fillRect(px+dx-7,py+dy-5,w,h);
+    if(n.townMood==='celebration'){ctx.fillStyle='#fff0a0';for(let i=0;i<3;i++){const a=G.time*3+i*2.1;ctx.fillRect(px+Math.cos(a)*12,py+Math.sin(a)*10,3,3);}}
+  }else if(n.townMood==='argument'){
+    ctx.fillStyle='#ffc14d';ctx.fillRect(px-7,py-7,14,14);ctx.fillStyle='#42251d';
+    ctx.fillRect(px-4,py-3,2,2);ctx.fillRect(px+2,py-3,2,2);ctx.fillRect(px-3,py+3,6,2);
+    ctx.fillStyle='#e95039';ctx.fillRect(px-5,py-6,4,2);ctx.fillRect(px+1,py-6,4,2);
+  }else if(n.townMood==='fight'){
+    ctx.lineCap='square';ctx.lineWidth=3;ctx.strokeStyle='#d9e5ec';ctx.beginPath();ctx.moveTo(px-6,py+6);ctx.lineTo(px+6,py-6);ctx.moveTo(px-6,py-6);ctx.lineTo(px+6,py+6);ctx.stroke();
+    ctx.fillStyle='#8b5831';for(const [dx,dy] of [[-8,8],[5,-8],[5,8],[-8,-8]])ctx.fillRect(px+dx,py+dy,4,3);
+    ctx.fillStyle='#fff3a0';for(let i=0;i<4;i++){const a=G.time*7+i*Math.PI/2;ctx.fillRect(Math.round(px+Math.cos(a)*11),Math.round(py+Math.sin(a)*10),3,3);}
+  }
+  ctx.restore();
+}
 
 const MATERIALS = [
   [/water|moat|pond|river|stream|lake/, '#75b9be'],
@@ -82,7 +102,9 @@ function buildTransitionParticles(world) {
       // Scatter along and just across the seam instead of making a dotted line.
       const t = 0.12 + ((seed >>> 8) % 77) / 100;
       const offset = ((seed >>> 16) % 9) - 4;
-      const size = 2 + ((seed >>> 21) % 3);
+      // Larger flecks survive normal zoom and read as scattered grit at dune
+      // and stone seams, rather than a hairline dotted border.
+      const size = 3 + ((seed >>> 21) % 4);
       particles.push({ x: x1 + (x2 - x1) * t + offset, y: y1 + (y2 - y1) * t - offset, color: colors[i], size });
     }
   };
@@ -135,7 +157,7 @@ function drawWall(ctx, o, k, alpha) {
 }
 
 function drawProp(ctx, pr, alpha) {
-  const x = isoX(pr.x, pr.y), y = isoY(pr.x, pr.y);
+  const x = isoX(pr.x, pr.y), y = isoY(pr.x, pr.y) - (pr.z || 0);
   if (alpha < 1) ctx.globalAlpha = alpha;
   if (pr.kind === 'flame') {
     // a lit wall torch on a town building: a flickering flame over the pack's unlit torch head
@@ -304,20 +326,44 @@ function drawNpc(ctx, n) {
     return;
   }
   const npcArt = n.vendor ? 'npc_' + n.vendor.id : ({ 'Old Tobin': 'npc_tobin', Mira: 'npc_mira', 'Brother Cael': 'npc_cael', Gorm: 'npc_gorm' })[n.name];
-  const img = (npcArt && replacementImage(npcArt)) || classSprite(n.vendor ? n.vendor.sprite : n.sprite, 180, n.vendor ? n.vendor.pal : n.pal);
-  const h = 58, w = (h * img.width) / img.height;
+  const sheet=n.townsfolkId&&townSheet(n.townsfolkId),img = (npcArt && replacementImage(npcArt)) || classSprite(n.vendor ? n.vendor.sprite : n.sprite, 180, n.vendor ? n.vendor.pal : n.pal);
+  const h=n.child?42:58,w=(h*128)/192;
   const x = isoX(n.x, n.y), y = isoY(n.x, n.y);
   ctx.fillStyle = 'rgba(0,0,0,0.38)';
   ctx.beginPath(); ctx.ellipse(x, y, 13, 6, 0, 0, TAU); ctx.fill();
-  const bob = Math.sin(G.time * 2 + n.x) * 0.6;
-  if (n.flip) { ctx.save(); ctx.translate(x + w / 2, y - h + bob); ctx.scale(-1, 1); ctx.drawImage(img, 0, 0, w, h); ctx.restore(); }
-  else ctx.drawImage(img, x - w / 2, y - h + bob, w, h);
+  const bob=n.walking?Math.abs(Math.sin(G.time*10+n.x))*1.5:Math.sin(G.time*2+n.x)*.6;
+  const frame=n.walking?3+(Math.floor(G.time*7)%2):Math.floor(G.time*.7+n.x)%3;
+  const custom=sheet?.complete&&sheet.naturalWidth>=128*11;
+  if(n.flip){ctx.save();ctx.translate(x+w/2,y-h+bob);ctx.scale(-1,1);if(custom)ctx.drawImage(sheet,frame*128,0,128,192,-w/2,-h,w,h);else ctx.drawImage(img,-w/2,-h,w,h);ctx.restore();}
+  else if(custom)ctx.drawImage(sheet,frame*128,0,128,192,x-w/2,y-h+bob,w,h);
+  else ctx.drawImage(img,x-w/2,y-h+bob,w,h);
   if (n.vendor) {
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + Math.sin(G.time * 3) * 0.1;
     ctx.drawImage(glowSprite('#ffd060'), x - 6, y - h - 18, 12, 12);
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
   n.sbox = [x - w / 2, y - h, x + w / 2, y];
+  drawTownMood(ctx,n,x,y);
+  n.bubbleRect=null;
+  if(n.talkText&&n.talkT>0){
+    const words=String(n.talkText).split(/\s+/),lines=[];let line='';
+    for(const word of words){const next=line?line+' '+word:word;if(next.length>25&&line){lines.push(line);line=word;}else line=next;}
+    if(line)lines.push(line);
+    ctx.save();ctx.font='11px Georgia, "Times New Roman", serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    const bw=Math.min(190,Math.max(96,...lines.map(s=>ctx.measureText(s).width+18))),bh=lines.length*14+14,baseX=x-bw/2,baseY=y-h-bh-12;
+    const occupied=[...(G.world?.npcs||[]).filter(q=>q!==n).flatMap(q=>[q.sbox,q.bubbleRect]),...(G.world?.creatures||[]).filter(q=>q!==G.player&&!q.dead).map(q=>q.sbox)].filter(Boolean);
+    const overlaps=(bx,by)=>occupied.some(([l,t,r,b])=>bx<r+3&&bx+bw>l-3&&by<b+3&&by+bh>t-3);
+    const shifts=[[0,0],[-34,0],[34,0],[-56,0],[56,0],[0,-bh-8],[-32,-bh-8],[32,-bh-8]];
+    const [dx,dy]=shifts.find(([sx,sy])=>!overlaps(baseX+sx,baseY+sy))||[0,0],bx=Math.round(baseX+dx),by=Math.round(baseY+dy);
+    n.bubbleRect=[bx,by,bx+bw,by+bh];
+    // Crisp double-ruled parchment with a small directional tail, sized to keep
+    // the speaker visible and the dialogue readable over the dimetric scene.
+    ctx.fillStyle='#211b16';ctx.fillRect(bx-2,by-2,bw+4,bh+4);ctx.fillStyle='#c6a86c';ctx.fillRect(bx-1,by-1,bw+2,bh+2);
+    ctx.fillStyle='#eee0bb';ctx.fillRect(bx,by,bw,bh);ctx.fillStyle='#37291b';ctx.fillRect(bx+4,by+4,bw-8,bh-8);
+    ctx.fillStyle='#eee0bb';ctx.fillRect(bx+5,by+5,bw-10,bh-10);
+    const tailX=Math.max(bx+10,Math.min(bx+bw-10,x));ctx.beginPath();ctx.moveTo(tailX-5,by+bh-1);ctx.lineTo(tailX+4,by+bh-1);ctx.lineTo(x,by+bh+7);ctx.closePath();ctx.fillStyle='#eee0bb';ctx.fill();ctx.strokeStyle='#37291b';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#20170f';lines.forEach((s,i)=>ctx.fillText(s,x,by+12+i*14));ctx.restore();
+  }
 }
 
 /** Main world render. */
@@ -487,7 +533,7 @@ export function renderWorld(ctx, world) {
       }
       case 6: {
         const deckI=world.map.rampartDeck?Math.floor(o.y)*world.map.w+Math.floor(o.x):-1;
-        const deckZ=deckI>=0&&world.map.rampartDeck[deckI]?world.map.rampartHeight||0:0;
+        const deckZ=deckI>=0?(world.map.rampartElev?.[deckI]??(world.map.rampartDeck[deckI]?world.map.rampartHeight||0:0)):0;
         const oldZ=o.z||0;
         if(deckZ)o.z=oldZ+deckZ;
         o.draw(ctx);
@@ -577,7 +623,7 @@ function drawLighting(ctx, world) {
   };
   if (p) {
     const i=world.map.rampartDeck?Math.floor(p.y)*world.map.w+Math.floor(p.x):-1;
-    const deck=i>=0&&world.map.rampartDeck[i]?world.map.rampartHeight||0:0;
+    const deck=i>=0?(world.map.rampartElev?.[i]??(world.map.rampartDeck[i]?world.map.rampartHeight||0:0)):0;
     add(p.x,p.y,b.light*(1+(p.st.lightPct||0)),1,20+deck);
   }
   let visibleLights=0;

@@ -38,6 +38,7 @@ import { HUD } from '../ui/hud.js';
 import { TouchUI } from '../ui/touch.js';
 import { Vendor } from '../ui/vendor.js';
 import { Stash } from '../ui/stash.js';
+import { TOWNSFOLK, townLine, townEvent, townConversation } from '../data/townsfolk.js';
 import { toggleInventory } from '../ui/inventory.js';
 import { toggleTree, toggleBook } from '../ui/skills.js';
 import { toggleQuest } from '../ui/quest.js';
@@ -77,13 +78,6 @@ const VELSCOUR_TAUNTS = VELSCOUR_TAUNT_STARTS.flatMap((start) => VELSCOUR_TAUNT_
 let townCache = null, townTiles = null;
 let saveT = 0;
 let automapCanvas = null;
-
-const VILLAGERS = [
-  { name: 'Old Tobin', sprite: 'necromancer', pal: { hue: 30, sat: 0.3, light: 0.05 }, barks: ['The dead walk louder every night...', 'My boy went through that portal. Never came back.'] },
-  { name: 'Mira', sprite: 'ranger', pal: { hue: 200, sat: 0.4 }, barks: ['Bring back something shiny, hero!', 'They say a demon sleeps at the bottom of the world.'] },
-  { name: 'Brother Cael', sprite: 'paladin', pal: { hue: 160, sat: 0.3, light: -0.05 }, barks: ['Light preserve you, wanderer.', 'Velscour... do not speak that name aloud.'] },
-  { name: 'Gorm', sprite: 'barbarian', pal: { hue: -20, sat: 0.4 }, barks: ['Hah! I would go down there myself if not for my knees.', 'Gold buys steel. Steel buys life.'] },
-];
 
 export const game = {
   // ------------------------------------------------------------ characters
@@ -200,23 +194,47 @@ export const game = {
       if (!t.map.walkable(x, y)) [x, y] = t.map.randomNear(t.start[0], t.start[1], 2.5);
       world.npcs.push({ stash: true, name: 'Storage Chest', x, y, reach: 1.6, flip: false, use: () => Stash.open() });
     }
-    for (const v of VILLAGERS) {
-      const [x, y] = t.map.randomNear(t.center.x, t.center.y + 3, 5);
+    c.townVisitCount = (c.townVisitCount || 0) + 1;
+    const visit = c.townVisitCount, rand01 = (()=>{let s=((c.townSeed||1)+visit*0x9e3779b9)>>>0;return ()=>{s=(s+0x6d2b79f5)>>>0;let z=s;z=Math.imul(z^(z>>>15),z|1);z^=z+Math.imul(z^(z>>>7),z|61);return ((z^(z>>>14))>>>0)/4294967296;};})();
+    const ordinary=TOWNSFOLK.filter(v=>!v.royal&&!v.regular&&!v.child);
+    const shuffled=ordinary.slice().sort(()=>rand01()-.5);
+    const regulars=TOWNSFOLK.filter(v=>v.regular);
+    const familyId=`family_${1+Math.floor(rand01()*5)}`;
+    const family=TOWNSFOLK.filter(v=>v.familyId===familyId),familyParent=family.find(v=>!v.child),familyChildren=family.filter(v=>v.child);
+    const visitors=[regulars[(visit-1)%regulars.length],regulars[visit%regulars.length],...shuffled.slice(0,4+Math.floor(rand01()*3)),familyParent,...familyChildren];
+    if(visit%3===0){const court=TOWNSFOLK.filter(v=>v.royal);visitors.push(...court);}
+    const uniqueVisitors=new Map(visitors.map(v=>[v.id,v]));
+    visitors.splice(0,visitors.length,...uniqueVisitors.values());
+    world.townEvent=townEvent(visit,Math.floor(rand01()*8));
+    const fightSpots=world.townEvent.mood==='fight'?[t.map.randomNear(t.center.x,t.center.y+2,1.8),t.map.randomNear(t.center.x+1.1,t.center.y+2,1.8)]:null;
+    const destinations=[...t.npcs.map(n=>[n.x+(rand01()-.5)*1.4,n.y+(rand01()-.5)*1.4]),[t.center.x,t.center.y+2],[t.center.x+2,t.center.y+1]];
+    const chooseDestination=()=>{const target=destinations[Math.floor(rand01()*destinations.length)];const [x,y]=t.map.randomNear(target[0],target[1],1.7);return [x,y];};
+    for (let vi=0;vi<visitors.length;vi++) {
+      const v=visitors[vi], [x,y] = t.map.randomNear(t.center.x, t.center.y + 3, 5), [tx,ty]=fightSpots&&vi<2?fightSpots[1-vi]:chooseDestination();
       const npc = {
-        name: v.name, sprite: v.sprite, pal: v.pal, x, y, reach: 1.6, flip: false, tx: x, ty: y, waitT: rand(1, 4), barkT: rand(4, 12),
-        use() { floatText(this.x, this.y, 70, pick(v.barks), '#e8dcc4', 12, { life: 3, vz: 8 }); },
+        id:v.id,name: v.name,role:v.role,sprite: v.sprite, pal:v.palette, townsfolkId:v.id, child:v.child, royal:v.royal,
+        x, y, reach: 1.6, flip: false, tx, ty, waitT: rand(1, 4), barkT: rand(7, 15),
+        talkText:vi===0?world.townEvent.text.slice(0,76):'',talkT:vi===0?6:0,chatT:rand(2,8),
+        townMood:world.townEvent.mood!=='friendly'&&vi<(world.townEvent.mood==='fight'?2:1)?world.townEvent.mood:null,
+        townMoodT:world.townEvent.mood!=='friendly'&&vi<(world.townEvent.mood==='fight'?2:1)?14:0,
+        use() { this.talkText=townLine(v.id,visit);this.talkT=4.5;floatText(this.x,this.y,70,this.talkText,'#e8dcc4',12,{life:3,vz:8}); },
         update(dt) {
-          this.waitT -= dt;
+          this.talkT=Math.max(0,this.talkT-dt);this.townMoodT=Math.max(0,this.townMoodT-dt);this.chatT=Math.max(0,this.chatT-dt);this.waitT -= dt;
           if (this.waitT <= 0) {
             const d = dist(this.x, this.y, this.tx, this.ty);
-            if (d < 0.1) { this.waitT = rand(2, 6); [this.tx, this.ty] = t.map.randomNear(t.center.x, t.center.y + 3, 7); return; }
+            if (d < 0.65) {
+              this.walking=false;this.waitT=rand(3,7);
+              if(this.chatT<=0){const other=world.npcs.find(q=>q!==this&&!q.vendor&&!q.stash&&dist(q.x,q.y,this.x,this.y)<2.2&&(!q.chatT||q.chatT<=0));
+                if(other){const [one,two]=townConversation(v,other,visit);this.talkText=one;this.talkT=3.8;other.talkText=two;other.talkT=3.8;this.chatT=other.chatT=rand(12,22);}}
+              [this.tx, this.ty] = chooseDestination(); return;
+            }
             const s = Math.min(d, 1.1 * dt);
             const nx = this.x + ((this.tx - this.x) / d) * s, ny = this.y + ((this.ty - this.y) / d) * s;
-            if (t.map.walkable(nx, ny)) { this.flip = nx < this.x; this.x = nx; this.y = ny; } else this.waitT = 0.5, [this.tx, this.ty] = t.map.randomNear(t.center.x, t.center.y + 3, 7);
+            if (t.map.walkable(nx, ny)) { this.walking=true;this.flip = nx < this.x; this.x = nx; this.y = ny; } else this.waitT = 0.5, [this.tx, this.ty] = chooseDestination();
           }
           const p = G.player;
           this.barkT -= dt;
-          if (p && this.barkT <= 0 && dist(p.x, p.y, this.x, this.y) < 4) { this.barkT = rand(14, 26); this.use(); }
+          if (p && this.barkT <= 0 && dist(p.x, p.y, this.x, this.y) < 4) { this.barkT = rand(18, 32);this.talkText=townLine(v.id,visit,Math.floor(rand01()*8));this.talkT=3.6; }
         },
       };
       world.npcs.push(npc);

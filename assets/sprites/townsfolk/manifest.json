@@ -1,0 +1,3026 @@
+{
+  "name": "Velscour Townsfolk Animation Pack",
+  "version": 1,
+  "frameSize": [
+    128,
+    192
+  ],
+  "columns": 11,
+  "frameCount": 11,
+  "transparent": true,
+  "order": [
+    "idle_1",
+    "idle_2",
+    "idle_3",
+    "walk_1",
+    "walk_2",
+    "dying_1",
+    "dead",
+    "scared_scream",
+    "scared_point",
+    "happy",
+    "celebrate"
+  ],
+  "characters": [
+    {
+      "id": "townsfolk_001",
+      "classArt": "paladin",
+      "sourceArmorFrame": 0,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 1,
+      "paletteSwap": {
+        "clothesHue": 0.02,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_002",
+      "classArt": "death_knight",
+      "sourceArmorFrame": 13,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.62,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_003",
+      "classArt": "dragon_knight",
+      "sourceArmorFrame": 26,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.14,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_004",
+      "classArt": "dragoon",
+      "sourceArmorFrame": 39,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.91,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_005",
+      "classArt": "boomerang_knight",
+      "sourceArmorFrame": 52,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.56,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_006",
+      "classArt": "necromancer",
+      "sourceArmorFrame": 65,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 6,
+      "paletteSwap": {
+        "clothesHue": 0.11,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_007",
+      "classArt": "bard",
+      "sourceArmorFrame": 78,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.83,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_008",
+      "classArt": "ranger",
+      "sourceArmorFrame": 11,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.43,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_009",
+      "classArt": "arcane_sorcerer",
+      "sourceArmorFrame": 24,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.07,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_010",
+      "classArt": "gunner",
+      "sourceArmorFrame": 37,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.72,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_011",
+      "classArt": "totem_master",
+      "sourceArmorFrame": 50,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 1,
+      "paletteSwap": {
+        "clothesHue": 0.3,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_012",
+      "classArt": "dragon_knight",
+      "sourceArmorFrame": 63,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.02,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_013",
+      "classArt": "dragoon",
+      "sourceArmorFrame": 76,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.62,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_014",
+      "classArt": "boomerang_knight",
+      "sourceArmorFrame": 9,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.14,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_015",
+      "classArt": "necromancer",
+      "sourceArmorFrame": 22,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.91,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_016",
+      "classArt": "bard",
+      "sourceArmorFrame": 35,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 6,
+      "paletteSwap": {
+        "clothesHue": 0.56,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_017",
+      "classArt": "ranger",
+      "sourceArmorFrame": 55,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.11,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_018",
+      "classArt": "arcane_sorcerer",
+      "sourceArmorFrame": 68,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.83,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_019",
+      "classArt": "gunner",
+      "sourceArmorFrame": 1,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.43,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_020",
+      "classArt": "totem_master",
+      "sourceArmorFrame": 14,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.07,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_021",
+      "classArt": "lancer",
+      "sourceArmorFrame": 27,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 1,
+      "paletteSwap": {
+        "clothesHue": 0.72,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_022",
+      "classArt": "barbarian",
+      "sourceArmorFrame": 40,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.3,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_023",
+      "classArt": "boomerang_knight",
+      "sourceArmorFrame": 53,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.02,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_024",
+      "classArt": "necromancer",
+      "sourceArmorFrame": 66,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.62,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_025",
+      "classArt": "bard",
+      "sourceArmorFrame": 79,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.14,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_026",
+      "classArt": "ranger",
+      "sourceArmorFrame": 12,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 6,
+      "paletteSwap": {
+        "clothesHue": 0.91,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_027",
+      "classArt": "arcane_sorcerer",
+      "sourceArmorFrame": 25,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.56,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_028",
+      "classArt": "gunner",
+      "sourceArmorFrame": 38,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.11,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_029",
+      "classArt": "totem_master",
+      "sourceArmorFrame": 51,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.83,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_030",
+      "classArt": "lancer",
+      "sourceArmorFrame": 64,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.43,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_031",
+      "classArt": "barbarian",
+      "sourceArmorFrame": 77,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 1,
+      "paletteSwap": {
+        "clothesHue": 0.07,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_032",
+      "classArt": "slime_lord",
+      "sourceArmorFrame": 10,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.72,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_033",
+      "classArt": "wizard",
+      "sourceArmorFrame": 30,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.3,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_034",
+      "classArt": "bard",
+      "sourceArmorFrame": 43,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.02,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_035",
+      "classArt": "ranger",
+      "sourceArmorFrame": 56,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.62,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_036",
+      "classArt": "arcane_sorcerer",
+      "sourceArmorFrame": 69,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 6,
+      "paletteSwap": {
+        "clothesHue": 0.14,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_037",
+      "classArt": "gunner",
+      "sourceArmorFrame": 2,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.91,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_038",
+      "classArt": "totem_master",
+      "sourceArmorFrame": 15,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.56,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_039",
+      "classArt": "lancer",
+      "sourceArmorFrame": 28,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.11,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_040",
+      "classArt": "barbarian",
+      "sourceArmorFrame": 41,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.83,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_041",
+      "classArt": "slime_lord",
+      "sourceArmorFrame": 54,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 1,
+      "paletteSwap": {
+        "clothesHue": 0.43,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_042",
+      "classArt": "wizard",
+      "sourceArmorFrame": 67,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.07,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_043",
+      "classArt": "carrion_witch",
+      "sourceArmorFrame": 0,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.72,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_044",
+      "classArt": "paladin",
+      "sourceArmorFrame": 13,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.3,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_045",
+      "classArt": "arcane_sorcerer",
+      "sourceArmorFrame": 26,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.02,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_046",
+      "classArt": "gunner",
+      "sourceArmorFrame": 39,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 6,
+      "paletteSwap": {
+        "clothesHue": 0.62,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_047",
+      "classArt": "totem_master",
+      "sourceArmorFrame": 52,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.14,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_048",
+      "classArt": "lancer",
+      "sourceArmorFrame": 65,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.91,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_049",
+      "classArt": "barbarian",
+      "sourceArmorFrame": 5,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.56,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_050",
+      "classArt": "slime_lord",
+      "sourceArmorFrame": 18,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.11,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_051",
+      "classArt": "wizard",
+      "sourceArmorFrame": 31,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 1,
+      "paletteSwap": {
+        "clothesHue": 0.83,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_052",
+      "classArt": "carrion_witch",
+      "sourceArmorFrame": 44,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.43,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_053",
+      "classArt": "paladin",
+      "sourceArmorFrame": 57,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.07,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_054",
+      "classArt": "death_knight",
+      "sourceArmorFrame": 70,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.72,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_055",
+      "classArt": "dragon_knight",
+      "sourceArmorFrame": 3,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.3,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_056",
+      "classArt": "totem_master",
+      "sourceArmorFrame": 16,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 6,
+      "paletteSwap": {
+        "clothesHue": 0.02,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_057",
+      "classArt": "lancer",
+      "sourceArmorFrame": 29,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.62,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_058",
+      "classArt": "barbarian",
+      "sourceArmorFrame": 42,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.14,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_059",
+      "classArt": "slime_lord",
+      "sourceArmorFrame": 55,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.91,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_060",
+      "classArt": "wizard",
+      "sourceArmorFrame": 68,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.56,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_061",
+      "classArt": "carrion_witch",
+      "sourceArmorFrame": 1,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 1,
+      "paletteSwap": {
+        "clothesHue": 0.11,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_062",
+      "classArt": "paladin",
+      "sourceArmorFrame": 14,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.83,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_063",
+      "classArt": "death_knight",
+      "sourceArmorFrame": 27,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.43,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_064",
+      "classArt": "dragon_knight",
+      "sourceArmorFrame": 40,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.07,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_065",
+      "classArt": "dragoon",
+      "sourceArmorFrame": 60,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.72,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_066",
+      "classArt": "boomerang_knight",
+      "sourceArmorFrame": 73,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 6,
+      "paletteSwap": {
+        "clothesHue": 0.3,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_067",
+      "classArt": "barbarian",
+      "sourceArmorFrame": 6,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.02,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_068",
+      "classArt": "slime_lord",
+      "sourceArmorFrame": 19,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.62,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_069",
+      "classArt": "wizard",
+      "sourceArmorFrame": 32,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.14,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_070",
+      "classArt": "carrion_witch",
+      "sourceArmorFrame": 45,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.91,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_071",
+      "classArt": "paladin",
+      "sourceArmorFrame": 58,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 1,
+      "paletteSwap": {
+        "clothesHue": 0.56,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_072",
+      "classArt": "death_knight",
+      "sourceArmorFrame": 71,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.11,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_073",
+      "classArt": "dragon_knight",
+      "sourceArmorFrame": 4,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.83,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_074",
+      "classArt": "dragoon",
+      "sourceArmorFrame": 17,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.43,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_075",
+      "classArt": "boomerang_knight",
+      "sourceArmorFrame": 30,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.07,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_076",
+      "classArt": "necromancer",
+      "sourceArmorFrame": 43,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 6,
+      "paletteSwap": {
+        "clothesHue": 0.72,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_077",
+      "classArt": "bard",
+      "sourceArmorFrame": 56,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.3,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_078",
+      "classArt": "wizard",
+      "sourceArmorFrame": 69,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.02,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_079",
+      "classArt": "carrion_witch",
+      "sourceArmorFrame": 2,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.62,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_080",
+      "classArt": "paladin",
+      "sourceArmorFrame": 15,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.14,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_081",
+      "classArt": "death_knight",
+      "sourceArmorFrame": 35,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 1,
+      "paletteSwap": {
+        "clothesHue": 0.91,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_082",
+      "classArt": "dragon_knight",
+      "sourceArmorFrame": 48,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.56,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_083",
+      "classArt": "dragoon",
+      "sourceArmorFrame": 61,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.11,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_084",
+      "classArt": "boomerang_knight",
+      "sourceArmorFrame": 74,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.83,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_085",
+      "classArt": "necromancer",
+      "sourceArmorFrame": 7,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.43,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_086",
+      "classArt": "bard",
+      "sourceArmorFrame": 20,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 6,
+      "paletteSwap": {
+        "clothesHue": 0.07,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_087",
+      "classArt": "ranger",
+      "sourceArmorFrame": 33,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.72,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_088",
+      "classArt": "arcane_sorcerer",
+      "sourceArmorFrame": 46,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.3,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_089",
+      "classArt": "paladin",
+      "sourceArmorFrame": 59,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.02,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_090",
+      "classArt": "death_knight",
+      "sourceArmorFrame": 72,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.62,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_091",
+      "classArt": "dragon_knight",
+      "sourceArmorFrame": 5,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 1,
+      "paletteSwap": {
+        "clothesHue": 0.14,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_092",
+      "classArt": "dragoon",
+      "sourceArmorFrame": 18,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 2,
+      "paletteSwap": {
+        "clothesHue": 0.91,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_093",
+      "classArt": "boomerang_knight",
+      "sourceArmorFrame": 31,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 3,
+      "paletteSwap": {
+        "clothesHue": 0.56,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_094",
+      "classArt": "necromancer",
+      "sourceArmorFrame": 44,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 4,
+      "paletteSwap": {
+        "clothesHue": 0.11,
+        "hairHue": 0.015
+      }
+    },
+    {
+      "id": "townsfolk_095",
+      "classArt": "bard",
+      "sourceArmorFrame": 57,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.83,
+        "hairHue": 0.1
+      }
+    },
+    {
+      "id": "townsfolk_096",
+      "classArt": "ranger",
+      "sourceArmorFrame": 70,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": true,
+      "helmetDesign": 6,
+      "paletteSwap": {
+        "clothesHue": 0.43,
+        "hairHue": 0.075
+      }
+    },
+    {
+      "id": "townsfolk_097",
+      "classArt": "arcane_sorcerer",
+      "sourceArmorFrame": 10,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.07,
+        "hairHue": 0.045
+      }
+    },
+    {
+      "id": "townsfolk_098",
+      "classArt": "gunner",
+      "sourceArmorFrame": 23,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.72,
+        "hairHue": 0.83
+      }
+    },
+    {
+      "id": "townsfolk_099",
+      "classArt": "totem_master",
+      "sourceArmorFrame": 36,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.3,
+        "hairHue": 0.58
+      }
+    },
+    {
+      "id": "townsfolk_100",
+      "classArt": "dragon_knight",
+      "sourceArmorFrame": 49,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "helmetDesign": null,
+      "paletteSwap": {
+        "clothesHue": 0.02,
+        "hairHue": 0.015
+      }
+    }
+  ]
+}

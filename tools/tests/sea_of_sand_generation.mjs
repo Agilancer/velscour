@@ -23,10 +23,11 @@ const first=rollSandScenarioRewards(0,40,()=>.99),second=rollSandScenarioRewards
 if(first.items.length!==1||first.items[0].rarity!==4||first.items[0].slot!=='weapon')throw Error('first beat weapon reward mismatch');
 if(second.items.length!==1||second.items[0].rarity!==4||second.items[0].slot!=='offhand'||second.items[0].base!=='shield')throw Error('second beat shield reward mismatch');
 if(last.items.length!==2||last.items[0].rarity!==4||last.items[1].rarity!==5||last.mythicChance!==.95)throw Error('five-beat reward roll mismatch');
-const biome=BIOME_BY_ID.sea_of_sand,counts=new Set();let minCliffs=Infinity,minFree=Infinity;
+const biome=BIOME_BY_ID.sea_of_sand,counts=new Set(),routeShapes=new Set();let minCliffs=Infinity,minFree=Infinity;
 for(let n=1;n<=100;n++){
   const gen=generateOverworld(13,biome,n*32+1),m=gen.map,I=(x,y)=>y*m.w+x;
   counts.add(gen.scenarioCount);
+  if(n<=12)routeShapes.add(Array.from(m.v,(v,i)=>v===15?i:null).filter(i=>i!==null).join(','));
   minCliffs=Math.min(minCliffs,gen.props.filter(p=>p.spr.cliff).length);
   minFree=Math.min(minFree,m.block.reduce((sum,v)=>sum+!v,0));
   const seen=new Uint8Array(m.w*m.h),q=[I(Math.floor(gen.start[0]),Math.floor(gen.start[1]))];seen[q[0]]=1;
