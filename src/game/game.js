@@ -159,7 +159,7 @@ export const game = {
     if (!townCache || townCache.seed !== c.townSeed) townCache = generateTown(tileset, c.townSeed);
     const t = townCache;
     t.map.seen.fill(0);
-    const world = new World('town', { map: t.map, tileset, biome: TOWN_BIOME, depth: 0, townTiles, buildings: t.buildings, props: t.props });
+    const world = new World('town', { map: t.map, tileset, biome: TOWN_BIOME, depth: 0, townTiles, buildings: t.buildings, props: t.props, wallHangings: t.wallHangings });
     world.npcs = t.npcs.map((n) => ({ vendor: n.vendor, x: n.x, y: n.y, reach: 1.8, flip: n.flip, use: () => Vendor.open(n.vendor.id) }));
     // the storage chest, beside the well where the hero arrives
     {
@@ -240,7 +240,7 @@ export const game = {
     const tileset = biome.overworld ? biomeTileSet(TOWN_BIOME) : mix ? mixedTileSet(biome, mix, Math.random() < 0.5) : biomeTileSet(biome);
     const seed = (Math.random() * 1e9) | 0;
     const gen = biome.overworld ? generateOverworld(depth, biome, seed) : generateDungeon(depth, biome, tileset, seed);
-    const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches, looks: gen.looks, townTiles: gen.townTiles || null, buildings: gen.buildings || [] });
+    const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches, wallHangings: gen.wallHangings, looks: gen.looks, townTiles: gen.townTiles || null, buildings: gen.buildings || [] });
     world.chests = gen.chests.map((ch) => ({
       ...ch, opened: false, reach: 1.3,
       use() {

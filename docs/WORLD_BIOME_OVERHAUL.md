@@ -10,7 +10,7 @@ environment. No monsters or enemy spawn logic are added to Herrington Hollow.
 
 The branch expands existing runtime art instead of replacing approved
 source sheets or moving any class rig, sprite pivot or architectural
-depth slice. It is deliberately a **draft** until browser screenshots,
+depth slice. The art expansion remains a **draft** until browser screenshots,
 door/wall occlusion, actual tiling and iOS Safari performance are reviewed.
 
 **Later painted-art update:** Desert Temple, Ice Temple, Hell, Astral Plane
@@ -24,13 +24,15 @@ see [Approved Biome Artwork](APPROVED_BIOME_ART.md).
 
 | Environment | Additional floors | Additional terrain / props | Walls / barriers | Additional monsters |
 |---|---:|---:|---|---:|
-| 31 indoor combat dungeons | **60 per biome** (1,860) | **40 per biome** (1,240) | 5 independent material treatments, original full 16-mask topology per pack; all arches/door states retained | **50 per biome** (1,550) |
-| Forsaken Wilds overworld | **60** unique-to-wilderness accents | **40** native designs available in the outdoors | axis-correct 2:1 iso forest fencing + reworked stone boundaries | **50** |
-| Herrington Hollow town | **60** unique-to-town accents | **40** new decorative assets plus existing shop/forest props | X/Y wooden fences and masonry boundaries that project/tile correctly | **0** |
+| 31 indoor combat dungeons | **120 per biome** (3,720) | **40 per biome** (1,240) | Five biome-treated wall families with new face reliefs; full 16-mask joins and original arches/doors retained | **50 per biome** (1,550) |
+| Forsaken Wilds overworld | **120** wilderness accents | **40** native designs available outdoors | Axis-correct forest fences, building facade hangings | **50** |
+| Herrington Hollow town | **120** town accents | **40** new decorative assets plus existing shop/forest props | X/Y fences and building facade hangings | **0** |
 
 Overall: **1,600 new generated native monster entries** (50 × 32 biomes);
-**1,980 extra floor drawings**, and **1,320 extra terrain/prop drawings**
-counting the wilderness and town. The original base materials, textures,
+**3,960 extra floor drawings**, and **1,320 extra terrain/prop drawings**
+counting the wilderness and town. A shared catalog adds **50 wall-hanging
+designs × 4 authored wall views = 200 frames** for dungeon walls and town or
+wilderness building facades. The original base materials, textures,
 architectural wall/door geometry, scatter and global monster catalog remain.
 
 ### Visual style and limitations
@@ -92,11 +94,10 @@ designation. No town roster or town combat spawn was introduced.
 ## Biome environment rendering
 
 `src/gfx/biomeexpansion.js` uses the existing source floor/stone pixels,
-a stable isometric clip and native-pixel motifs to add **60** ground cells,
-including **ten new repeatable floor bases** and **50 decorative feature
-cells** per indoor biome. These are appended to the source atlas and
-metadata. Fifty new floor entries cannot overwrite existing pivots,
-floor IDs or texture transitions.
+a stable isometric clip and native-pixel motifs to add **120** ground cells,
+including **ten new repeatable floor bases** and **110 decorative feature
+cells** per indoor biome. A second set of 60 motifs appends after the original
+60; existing pivots, floor IDs and town terrain transitions stay in place.
 
 It also adds **40 distinct prop entries** to each of the 31 indoor packs:
 the new art includes isometric stone pedestals, obelisks, magical braziers,
@@ -105,8 +106,11 @@ barrier motifs. The palette is keyed to the biome identity so Frost,
 Blood, Abyss, Crystal, Heaven, Hell and others have different treatments.
 All 5 wall material families in the source pack retain their full
 mask/connector variations; material pixels receive biome/individual-family
-treatment in the correct source atlas regions. Directional arches/doors
-retain their original hinges and depth slices.
+treatments plus new carved face motifs in the correct source atlas regions.
+Directional arches/doors retain their original hinges and depth slices.
+The five standalone Canvas-generated temples receive the same additional floor
+cells on touch devices, while reusing their native wall and scatter canvases to
+avoid cloning the large atlases; desktop also applies the expanded wall treatment.
 
 `src/core/assets.js` lazily generates an expanded art pack when a dungeon
 is visited. Old generated packs and indexed cell keys still work; only
@@ -117,11 +121,21 @@ unchanged.
 
 The original town source-ground atlas retains six standard material
 bases and 120 existing edge transitions **at their original indices**.
-`src/world/town.js` adds its own 60 accent tiles and 40 new scenery
+`src/world/town.js` adds its own 120 accent tiles and 40 new scenery
 designs while retaining vendors, buildings, portals and reachability checks.
-`src/world/overworld.js` appends a **separate 60-cell wilderness atlas**,
+`src/world/overworld.js` appends a **separate 120-cell wilderness atlas**,
 and uses custom vegetation/ruins. Town and wilderness artwork use different
 indexes and are not aliases of the same drawn cells.
+
+## Wall-hanging catalog
+
+`src/gfx/wallhangings.js` selects from a 50-item, five-atlas catalog, with four
+authored views per item. The column contract matches `walltorches.js`: f/back,
+b/back, b/front, f/front. Runtime selection reads a segment's actual axis and
+side; the renderer never mirrors a sprite. Dungeon walls receive sparse
+decorations, and Herrington Hollow/Forsaken Wilds buildings receive facade
+decorations. See [WALL_HANGINGS.md](WALL_HANGINGS.md) for the catalog, source
+art location, and atlas build command.
 
 ## Isometric fences and barricades
 
@@ -165,10 +179,10 @@ and original biome-pack metadata:
   archetype and a resolvable approved monster-art source.
 - **1,600/1,600** generated monster overlays returned valid sprite
   canvases and foot-anchor metadata in a mocked draw context.
-- **31/31** indoor expansion generators produced the extra 60 floors,
+- **31/31** indoor expansion generators produced the extra 120 floors,
   10 repeating bases and 40 props with valid crop bounds and retained
   original wall/door/arch metadata.
-- Town and wilderness generated their own 60-floor image sets.
+- Town and wilderness generate separate 120-floor image sets.
 - All 10 barrier materials passed exact X and Y tile-axis endpoint maths.
 - Sampled **76,600+ monster-look rolls** included home-native, legacy and
   low-frequency foreign monster IDs with the intended ordering.
