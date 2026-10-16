@@ -14,15 +14,6 @@ Contents
 
 ---
 
-## October 15, 2026 — Approved 640-sprite helmet overhaul
-
-- Replaced the old 80-helmet/mask/faceplate runtime with **16 class-specific atlas images** of 40 approved variants each, cropped from the eight user-supplied sheets.
-- Every class includes 10 Common (two sheets), five Uncommon, five Rare, 10 Epic (two sheets), five Legendary, and five Mythic helmets. Every variant is selectable through the existing rarity and persisted item.look field; per-class alignment overrides fit the existing 128x192 hero silhouettes.
-- **Black face/eye recesses are preserved**. Only the exterior of the artwork is alpha-matted; no faceplates or helmet opening filler is rendered. Restrained palette variation leaves dark recesses unchanged.
-- Helmet icon rendering, ground drops, equipped hero images, inventory dolls and saved-character class previews all share the new atlas compositor. Body armor art and existing saves remain supported.
-- Legacy closed-face Playwright checks are rewritten to validate the approved atlas count, opaque dark features, class positioning and composite icons. Browser/mobile rendering and real-device placement inspection still require execution.
-- See [HELMETS_REBUILD.md](HELMETS_REBUILD.md) for atlas layouts and testing.
-
 ## October 15, 2026 — Barbarian Bash, hit-built Rage, and Whirlwind cyclone
 
 - Bash (stable ID `barbarian.0.0`) now fires five short directional lightning bolts;
