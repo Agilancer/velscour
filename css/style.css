@@ -314,8 +314,8 @@ body.touch #madness-btn { padding: 8px 26px; font-size: 20px; }
 .title-gate { position: absolute; z-index: 3; bottom: 18%; left: 0; right: 0; text-align: center; font: 400 16px var(--font-head); letter-spacing: 6px; color: #8a2a1c; text-transform: uppercase; pointer-events: none; opacity: 0; transition: opacity .6s; }
 .title-screen { overflow: hidden; justify-content: safe center; padding: max(4vh, env(safe-area-inset-top)) env(safe-area-inset-right) max(2vh, env(safe-area-inset-bottom)) env(safe-area-inset-left); }
 .title-screen .title-logo { flex: 0 1 auto; min-height: 0; margin-top: 3vh; }
-.title-credits { position: absolute; z-index: 4; inset: 0; display: flex; align-items: center; justify-content: center; gap: clamp(8px, 2vw, 30px); padding: max(4vh, env(safe-area-inset-top)) max(3vw, env(safe-area-inset-right)) max(4vh, env(safe-area-inset-bottom)) max(3vw, env(safe-area-inset-left)); opacity: 0; pointer-events: none; }
-.title-credits img { display: block; width: min(44vw, 790px); max-height: 38vh; object-fit: contain; }
+.title-credits { position: absolute; z-index: 4; inset: 0; pointer-events: none; }
+.title-credits img { position: absolute; inset: 0; display: block; width: min(88vw, 1120px); max-height: 56vh; margin: auto; object-fit: contain; opacity: 0; }
 .title-gated .title-gate { opacity: 1; animation: gate-pulse 2.6s ease-in-out infinite; }
 @keyframes gate-pulse { 50% { color: #d0402a; text-shadow: 0 0 12px #a01808; } }
 .screen-title { margin: 6px 0 2px; font: 700 22px var(--font-head); color: var(--gold-bright); letter-spacing: 3px; text-align: center; }
@@ -462,10 +462,7 @@ body.touch .item-detail, body.touch .skill-detail { width: 230px; font-size: 12p
   .slot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .slot-hero { height: 24vh; }
 }
-@media (orientation: portrait) and (max-width: 700px) {
-  .title-credits { flex-direction: column; gap: 1vh; }
-  .title-credits img { width: min(88vw, 560px); max-height: 30vh; }
-}
+@media (orientation: portrait) and (max-width: 700px) { .title-credits img { max-height: 42vh; } }
 @media (max-height: 500px) {
   .title-logo { max-height: 34vh; }
   .title-screen .title-logo { max-height: 30vh; margin-top: 5vh; }
