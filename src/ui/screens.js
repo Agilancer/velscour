@@ -1,5 +1,6 @@
 // Full-screen menus: title, class select, hero save slots, death, victory, settings, help.
 import { G, saveSettings } from '../state.js';
+import { camera } from '../core/view.js';
 import { el, escapeHtml, fmtInt } from '../core/util.js';
 import { sfx, applyVolumes, initAudio } from '../core/audio.js';
 import { CLASS_IDS, A } from '../core/assets.js';
@@ -186,7 +187,7 @@ export function settingsDialog() {
     <label>Pause while menus open</label><input type="checkbox" data-k="pauseMenus" ${st.pauseMenus !== false ? 'checked' : ''}>
     <label>Show gold labels</label><input type="checkbox" data-k="showGoldLabels" ${st.showGoldLabels ? 'checked' : ''}>
   </div>`;
-  const d = UI.dialog({ title: 'Settings', html, buttons: [{ label: 'Done', fn: () => saveSettings() }] });
+  const d = UI.dialog({ title: 'Settings', html, buttons: [{ label: 'Done', fn: () => { camera.computeZoom(); saveSettings(); } }] });
   d.box.querySelector('select').value = String(st.gore);
   d.box.querySelectorAll('[data-k]').forEach((inp) => {
     inp.oninput = inp.onchange = () => {
