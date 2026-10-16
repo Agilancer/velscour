@@ -1,6 +1,7 @@
 // Title screen: the Blastorama and Jamie Herrington credits fade in sequence before the VELSCOUR logo rises out of the
 // dark in time with "Hymn of the Abyss" and bursts into flame on the song's first hit; red eyes blink in the background.
-// Timeline (song time, s): after the credits, the song starts 2 s after the logo intro begins (INTRO_DELAY), which fades in from
+// The credits start with the title song; the logo emerges under the second fade and strikes on the song's first hit.
+// Timeline (song time, s): the song and first credit start together, the logo fades in from
 // FADE0 to HIT and the flames burst at HIT. Visuals follow the song's own clock, so a slow load never puts them out of sync.
 // If the browser hasn't let audio start yet, a prompt asks for a click first (the eyes watch you meanwhile).
 // Any click or key during the intro skips ahead to the burst.
@@ -11,8 +12,8 @@ import { initAudio, audioReady, playMusic, primeMusic, setAmbience, musicClock, 
 import { rand, randi, clamp } from '../core/util.js';
 
 const FLAME = ['#fff7c8', '#ffe070', '#ffb428', '#ff7a12', '#e0400a', '#9a1c06', '#4a0c04'];
-export const INTRO_DELAY = 2, HIT = 6.88, FADE0 = -1.5;   // song-time seconds (FADE0 < 0: before the song starts)
-const CREDIT_CARD_MS = 3600, CREDITS_MS = CREDIT_CARD_MS * 2;
+export const INTRO_DELAY = 0, HIT = 6.88, FADE0 = -1.5;   // song-time seconds (FADE0 < 0: before the song starts)
+const CREDIT_CARD_MS = 2750, CREDITS_MS = CREDIT_CARD_MS * 2;
 // phones: fewer, slightly bigger particles at a lower canvas resolution; Q also drops further if frames run slow
 const MAX_PARTS = 14000;
 let geo = null;              // logo emitter points in native logo pixels (built once)
@@ -60,13 +61,12 @@ export function attachTitleFx(screen, logoEl, els = {}) {
   // ------------------------------------------------------------------ intro timeline
   // phase: 'gate' (waiting for a click so audio may play) -> 'credits' -> 'intro' (logo fading in) -> 'lit' (burning)
   let phase = 'gate', t0 = 0, ts = FADE0 - 1, eyeT = 0.4, burstAt = 0, creditsAt = 0, skipAfterCredits = false;
-  const clockNow = () => (performance.now() - t0) / 1000 - INTRO_DELAY;   // wall clock in song time
+  const clockNow = () => (performance.now() - t0) / 1000;   // wall clock in song time
   let priming = false;
   function startIntro(skipNow = false) {
     if (phase !== 'credits') return;
     phase = 'intro'; t0 = performance.now();
     if (els.credits) for (const card of els.credits.children) card.style.opacity = '0';
-    playMusic('title', { delay: INTRO_DELAY });
     if (skipNow) {
       seekMusic(HIT - 0.35);
       t0 = performance.now() - (HIT - 0.35 + INTRO_DELAY) * 1000;
@@ -74,12 +74,14 @@ export function attachTitleFx(screen, logoEl, els = {}) {
   }
   function begin() {   // called inside the tap: show the credits while the title song buffers
     if (phase !== 'gate') return;
-    phase = 'credits'; creditsAt = performance.now(); priming = true;
+    phase = 'audio-pending'; priming = true;
     screen.classList.remove('title-gated');
     setAmbience('title');
     primeMusic('title').then(() => {
       if (!cv.isConnected) return;
       priming = false;
+      playMusic('title', { delay: 0 });
+      phase = 'credits'; creditsAt = 0;
       if (skipAfterCredits) startIntro(true);
     });
   }
@@ -119,6 +121,11 @@ export function attachTitleFx(screen, logoEl, els = {}) {
 
   function updateTimeline() {
     if (phase === 'credits') {
+      if (!creditsAt) {
+        const c = musicClock();
+        if (!c || c.kind !== 'title') return;
+        creditsAt = performance.now();
+      }
       const elapsed = performance.now() - creditsAt;
       if (els.credits && !skipAfterCredits) {
         const active = Math.min(1, Math.floor(elapsed / CREDIT_CARD_MS));
