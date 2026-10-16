@@ -13,7 +13,7 @@
     h1 { margin: 0; color: var(--gold); font-size: clamp(17px, 2.5vw, 25px); letter-spacing: .16em; text-transform: uppercase; }
     .hint { color: var(--muted); font: 12px/1.4 system-ui, sans-serif; }
     .stage { width: min(96vw, 1500px); min-height: 0; flex: 1 1 auto; display: flex; justify-content: center; align-items: center; }
-    canvas { display: block; width: min(96vw, 1500px); height: auto; max-height: 69vh; aspect-ratio: 1931 / 814; background: #000; image-rendering: auto; }
+    canvas { display: block; width: min(96vw, 1500px); height: auto; max-height: 69vh; aspect-ratio: 1400 / 591; background: #000; image-rendering: auto; }
     .controls { width: min(100%, 1120px); display: grid; grid-template-columns: minmax(190px, 1.4fr) auto auto minmax(130px, .8fr) auto; align-items: end; gap: 10px; padding: 13px; border: 1px solid #4b3822; background: linear-gradient(180deg, #17120d, #090807); box-shadow: 0 0 24px #2d1706; }
     label { display: grid; gap: 5px; color: #bba77f; font: 11px system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
     select, button, input { min-height: 38px; border: 1px solid #72572d; border-radius: 3px; background: #100d09; color: #f5e8cc; font: 14px system-ui, sans-serif; }
@@ -39,10 +39,10 @@
 <body>
   <header>
     <h1>Velscour — Skull Animation Preview</h1>
-    <span class="hint">Black backdrop · frame overlay locked to the title logo</span>
+    <span class="hint">Black backdrop · full skull sprite-sheet frames over the game logo</span>
   </header>
   <main class="stage" aria-label="Animated Velscour title logo">
-    <canvas id="preview" width="1931" height="814" aria-label="Velscour logo with selected skull animation"></canvas>
+    <canvas id="preview" width="1400" height="591" aria-label="Velscour logo with selected skull animation"></canvas>
   </main>
   <section class="controls" aria-label="Animation controls">
     <label class="animation-field" for="animation">Animation
@@ -93,8 +93,15 @@
   <script>
     (() => {
       const ROOT = '../assets/ui/title_skull_animations/';
-      const FRAME_W = 310, FRAME_H = 814, LOGO_W = 1931, LOGO_H = 814;
-      const OVERLAY_X = 1060, OVERLAY_Y = 0, COLUMNS = 5;
+      const FRAME_W = 310, FRAME_H = 814, LOGO_W = 1400, LOGO_H = 591;
+      // The atlas cells are crops from the 1931×814 source logo. Scale that
+      // coordinate system onto the actual in-game logo canvas as one unit.
+      const SOURCE_LOGO_W = 1931, SOURCE_LOGO_H = 814, SOURCE_X = 1060, SOURCE_Y = 0;
+      const OVERLAY_X = SOURCE_X * LOGO_W / SOURCE_LOGO_W;
+      const OVERLAY_Y = SOURCE_Y * LOGO_H / SOURCE_LOGO_H;
+      const OVERLAY_W = FRAME_W * LOGO_W / SOURCE_LOGO_W;
+      const OVERLAY_H = FRAME_H * LOGO_H / SOURCE_LOGO_H;
+      const COLUMNS = 5;
       const longAnimations = new Set([
         'normal_talking_1','normal_talking_2','angry_talking_1','angry_talking_2',
         'happy_talking_1','happy_talking_2','sad_talking_1','sad_talking_2',
@@ -123,9 +130,9 @@
       }
       async function loadAssets() {
         try {
-          logoImage = await loadImage(ROOT + 'velscour_title_logo_reference.png');
+          logoImage = await loadImage('../assets/ui/logo.webp');
           if (logoImage.naturalWidth !== LOGO_W || logoImage.naturalHeight !== LOGO_H) {
-            throw new Error(`Logo is ${logoImage.naturalWidth}×${logoImage.naturalHeight}; expected ${LOGO_W}×${LOGO_H}.`);
+            throw new Error(`Game logo is ${logoImage.naturalWidth}×${logoImage.naturalHeight}; expected ${LOGO_W}×${LOGO_H}.`);
           }
           await loadAnimation(selector.value);
           requestAnimationFrame(tick);
@@ -161,10 +168,10 @@
         if (atlas) {
           const sx = (frame % COLUMNS) * FRAME_W;
           const sy = Math.floor(frame / COLUMNS) * FRAME_H;
-          // The complete 310×814 source crop overlays its original x=1060,y=0 logo location.
-          ctx.drawImage(atlas, sx, sy, FRAME_W, FRAME_H, OVERLAY_X, OVERLAY_Y, FRAME_W, FRAME_H);
+          // Draw the selected complete atlas cell; no facial details are drawn in code.
+          ctx.drawImage(atlas, sx, sy, FRAME_W, FRAME_H, OVERLAY_X, OVERLAY_Y, OVERLAY_W, OVERLAY_H);
         }
-        readout.textContent = `Frame ${frame + 1} / ${frameCount} · x ${OVERLAY_X}, y ${OVERLAY_Y} · ${FRAME_W}×${FRAME_H}`;
+        readout.textContent = `Frame ${frame + 1} / ${frameCount} · x ${Math.round(OVERLAY_X)}, y 0 · ${Math.round(OVERLAY_W)}×${Math.round(OVERLAY_H)}`;
       }
       function tick(now) {
         if (playing && atlas && now - lastTick >= 1000 / Number(speed.value)) {

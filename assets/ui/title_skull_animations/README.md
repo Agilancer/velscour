@@ -8,4 +8,4 @@ These are art assets only; no game UI or animation code was changed.
 
 ## Preview
 
-tools/title-skull-preview.html is a standalone browser preview. It draws the selected first logo concept on black, then composites each atlas frame at the original crop coordinates (x=1060, y=0). Use the animation picker, play/pause, restart, and speed slider.
+tools/title-skull-preview.html is a standalone browser preview. It draws the in-game logo (assets/ui/logo.webp) on black, then composites the selected complete atlas cell over the logo. Atlas cells use the original 1931×814 crop coordinate system (x=1060, y=0), scaled together with the logo to preserve placement. The page selects the image cells directly; it does not draw or modify facial details.
