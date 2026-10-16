@@ -2,7 +2,7 @@ import { resolveHelmetFit } from '../../src/core/helmetfit.js';
 
 const $ = (id) => document.getElementById(id);
 const base = '../../assets/sprites/gear/';
-const draftKey = 'velscour-helmet-fitter-v1';
+const draftKey = 'velscour-helmet-fitter-v2';
 const camera = { x: 24, y: 0, w: 80, h: 96 };
 const canvas = $('editor'), ctx = canvas.getContext('2d');
 let index, atlas, data, persisted, current, loaded, zoom = 6, history = [], dragging = null, space = false;
@@ -72,7 +72,7 @@ function updateControls() {
   $('caption').textContent = `${title(current)} · ${label.catalog} (${label.name})`;
   $('numbers').textContent = `x=${f.x.toFixed(3)}  y=${f.y.toFixed(3)}  width=${(f.scaleX * 100).toFixed(2)}%  height=${(f.scaleY * 100).toFixed(2)}%  | armor ${$('armor').value}`;
   const count = Object.values(data.classes).reduce((n, obj) => n + Object.keys(obj).length, 0);
-  $('progress').textContent = `${count} / ${index.classes.length * index.designs.length} placements set · ${Object.keys(data.classes[current] || {}).length} / 5 for this class`;
+  $('progress').textContent = `${count} / ${index.classes.length * index.designs.length} placements set · ${Object.keys(data.classes[current] || {}).length} / 10 for this class`;
   document.querySelectorAll('#thumbnails button').forEach((button, i) => {
     button.classList.toggle('active', i + 1 === design());
     button.lastChild.textContent = `${index.designs[i].catalog}${data.classes[current]?.[i + 1] ? ' •' : ''}`;
@@ -170,10 +170,11 @@ $('design').addEventListener('change', () => selectDesign(design()));
 for (const id of ['opacity', 'show', 'background', 'armor']) $(id).addEventListener('input', () => { updateControls(); draw(); });
 $('zoom').addEventListener('input', viewZoom);
 function navigate(delta) {
-  const n = index.classes.indexOf(current) * 5 + design() - 1 + delta;
-  const wrapped = (n + index.classes.length * 5) % (index.classes.length * 5);
-  $('design').value = wrapped % 5 + 1;
-  const cls = index.classes[Math.floor(wrapped / 5)];
+  const perClass = index.designs.length;
+  const n = index.classes.indexOf(current) * perClass + design() - 1 + delta;
+  const wrapped = (n + index.classes.length * perClass) % (index.classes.length * perClass);
+  $('design').value = wrapped % perClass + 1;
+  const cls = index.classes[Math.floor(wrapped / perClass)];
   if (cls !== current) { $('class').value = cls; selectClass(); } else selectDesign(design());
 }
 $('previous').onclick = () => navigate(-1); $('next').onclick = () => navigate(1);

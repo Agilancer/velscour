@@ -1,5 +1,5 @@
-// Gear art: per-class body armors plus the shared class-indexed common helmet atlas. Helmet row is chosen by
-// the item's base type; rarity changes its palette. The catalog sheet supplies labels only, never sprite pixels.
+// Gear art: per-class body armors plus the shared class-indexed common helmet atlas. Helmet design follows item
+// level; rarity changes its palette. The catalog sheet supplies labels only, never sprite pixels.
 import { makeCanvas, hexToRgb, clamp, randi, pick, chance } from './util.js';
 import { RARITY } from '../data/items.js';
 import { PALETTES, GEAR_FX, FX_CHANCE } from '../data/gear.js';
@@ -112,15 +112,9 @@ export function itemLook(item, src = S) {
   if (item.slot === 'head') {
     const designs = src.commonHelms?.meta.designs;
     if (!designs?.length) return null;
-    const baseName = String(item.baseName || '').toLowerCase();
-    const baseDesign = Math.max(1, designs.findIndex((d) => d.name.toLowerCase() === baseName) + 1);
     if (!item.look || item.look[0] > designs.length) {
-      item.look = [baseDesign, finishFor(item.rarity, true), -1];
+      item.look = [designFor([1, designs.length], item.ilvl), finishFor(item.rarity, true), -1];
     } else {
-      if (item.look[0] !== baseDesign) {
-        // Old saves stored an arbitrary 1..80 per-class helm id. Match the new shared sprite to its base type.
-        item.look[0] = baseDesign;
-      }
       if (!item.look[1]) item.look[1] = finishFor(item.rarity, true);
       item.look[2] = -1;
     }
@@ -202,7 +196,7 @@ function armorPixels(id, pi, src = S) {
 }
 
 const recolouredHelms = new Map();
-/** The shared atlas cell for this class and base type, with the item's finish applied. */
+/** The shared atlas cell for this class and design, with the item's finish applied. */
 function commonHelmPixels(cls, id, pi, src = S) {
   const data = src.commonHelms, [cw, ch] = data.meta.frame;
   const col = data.meta.classes.indexOf(cls), sx = col * cw, sy = (id - 1) * ch, aw = data.atlas.width;
