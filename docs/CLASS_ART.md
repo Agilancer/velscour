@@ -1,8 +1,8 @@
 # Class art: gear libraries (hero look) and class art packs (weapons, effects)
 
 Two kinds of art drive a class's look:
-- **Gear libraries** (`assets/FinalClasses/<class>.zip`, all 16 classes): 80 body armors + 80 helms as single
-  frames. The hero is drawn as the equipped body armor with the helm over the head, palette swapped, plus auras.
+- **Gear libraries** (`assets/FinalClasses/<class>.zip`, all 16 classes): 80 body armors + legacy helms as single
+  frames. Only the body armor frames are used at runtime; the shared common helmet atlas supplies all hero helms.
 - **Class art packs** (`assets/source/classes/<class>/`, Paladin only so far): weapon/shield catalog items and the
   60 ability effects.
 
@@ -35,34 +35,51 @@ face opening, whether bare body skin is protected, and the output size (~600 KB)
   rejected), plus specks inside it. The crown zone is above the shell and beside its upper half.
 
 Output (generated, never hand-edit), `assets/sprites/gear/<class>/`: `armor.webp` (10 x 8 atlas of frames, lossy
-q90 with lossless alpha), `armor_mask.png`, `helms.webp` (10 x 8 atlas of 48 x 56 helm cells cut at x 40, y 0,
-lossless), `helms_mask.png`, `gear.json` (frame, feet / head top, helm cell, rarity bands, bounding boxes); plus
-`assets/sprites/gear/classes.json`.
+q90 with lossless alpha), `armor_mask.png`, legacy `helms.webp` / `helms_mask.png`, `gear.json` (frame, feet / head
+top, and bounding boxes); plus `assets/sprites/gear/classes.json`. Legacy helm atlases remain in the generated pack
+for reference, but the game no longer loads or composites them.
+
+### Shared common helmet atlas
+`assets/sprites/gear/common_helmets/atlas.png` is a 16-column by 5-row transparent atlas of 192 x 224 cells.
+`index.json` maps columns to playable classes in the same order as the labeled catalog; its five Common rows map to
+Cap, Helm, Great Helm, Winged Helm and Crown. The catalog is metadata only and contributes no sprite pixels.
+Every head item uses the row matching its base type, with a rarity-appropriate palette swap. Its sprite placement
+comes from `placements.json`, keyed by class and design ID. Unset entries retain the provisional global fit in
+`index.json`; those defaults still need manual calibration. The game and fitter share `src/core/helmetfit.js` so
+saved coordinates drive the equipped character and its portraits directly. The same sprite and palette drive item
+icons and ground pickups. Future atlas additions can replace these five palette-swapped placeholders.
+
+### Visual helmet fitting
+Double-click `Fit Helmets.cmd` in the repository root, or run `python tools/helmet_fit_server.py`. The local server
+opens `tools/helmet-fitter/` in a browser. Pick a class and design, drag the helmet into position, and scroll or use
+the size slider to resize it. Width and height can be adjusted separately by unchecking the proportions option.
+Arrow keys nudge by 0.25 body-frame pixels; Shift increases the step to 1 pixel. Space temporarily hides the helmet.
+The enlarged view rasterizes the composite at the game's 128×192 resolution before zooming, and the whole-character
+and all-five-design previews update alongside it. Change body armor to inspect the same placement on other frames.
+
+**Save to game** writes `assets/sprites/gear/common_helmets/placements.json`; reload the game afterward. The server
+keeps the previous file as `placements.json.bak`. Each entry stores `{x, y, scaleX, scaleY}`: the top-left of the
+entire source cell in body-frame pixels and its scale factors. Export/Import JSON supports moving fits between
+machines. **Export PNG** downloads a labeled head close-up and whole-character preview with exact fit values;
+a screenshot showing the class, design, and numeric readout also provides enough information to transcribe a fit.
+Browser drafts preserve unsaved edits and can be restored on the next visit. Keep the launcher window open
+while editing; Ctrl+C stops the local server.
 
 ### Game
-- `src/core/gearart.js` loads the played class's library (`game.loadClassPack`, ~600 KB, kept as pixel data).
-- **Item looks**: every body armor and helmet gets `item.look = [design, finish, aura]` on first use (saved with
-  the item). Design: the rarity's band, positioned by item level (sqrt curve over 1..100, so early levels get the
-  plain designs) +-1 at random. Finish: one of 51 palettes (`PALETTES` in `src/data/gear.js`) whose tier fits the
-  rarity (tier r-2..r), or the original colours 25% of the time. Aura (body armor only): `GEAR_FX`, 45% of Rares,
+- `src/core/gearart.js` loads the played class's body armor library (`game.loadClassPack`) and the shared helmet atlas.
+- **Item looks**: body armor and helmets get `item.look = [design, finish, aura]` on first use (saved with the
+  item). Armor design comes from the rarity's band, positioned by item level (sqrt curve over 1..100, so early
+  levels get the plain designs) +-1 at random. Helm design comes from its base type (the five Common atlas rows).
+  Helmets always use a non-original rarity-appropriate palette; armor uses one of 51 palettes (`PALETTES` in
+  `src/data/gear.js`) whose tier fits the rarity (tier r-2..r), or the original colours 10% of the time. Aura (body armor only): `GEAR_FX`, 45% of Rares,
   every Epic, Legendary and Mythic (now and then one tier down).
 - **Palette swap** (`recolorPx`): each pixel is split into four materials by colour (neutral metal, saturated cloth,
   bright warm trim, dark warm leather), each mapped through the finish's 4-stop ramp by luminance, then rescaled
   to the original luminance so the shading survives, blended at the finish's strength (0.7-0.85). Protected
   pixels are skipped.
-- **Closed-face composite** (`heroLook`, cached for 8 looks): armor in its finish; then each helm is
-  recoloured before its detected face openings (mask 255) receive a fitted opaque, shaded metal plate. The plate
-  samples metal tones from the *same recoloured helmet*, so its finish tracks the armor/helm palette system.
-  Several deterministic plate facets, a raised or recessed central ridge and a thin black visor slit distinguish
-  designs without changing their original crown, horns, trim, or silhouette. Crown zone (mask 128) still clips
-  hair, and the entire helmet shell/faceplate overlays the body rather than revealing the original face.
-  No body armor = design 1 in original colours. The original source ZIPs and generated atlas sizes are preserved;
-  closing happens when `helmPixels` prepares the in-game pixels, including inventory icons and portraits.
-  **Note:** the source PNGs are not redrawn; this is a rendering-level closed-face redesign. If new handmade helm
-  paintings replace the old source, regenerate with `tools/process_assets.py gear` as usual.
-- **Helm QA**: `node tools/tests/closed_helms.js [paladin|all]` verifies every helmet overlay's 48x56 cell,
-  the 128x192 body frame, face-opening coverage, and that pixels outside the helmet cell remain unchanged. It
-  produces 10x8 close-up screenshots for visual fit review under `tools/tests/out/`.
+- **Helmet composite** (`heroLook`, cached): armor in its finish, then the shared class-specific sprite is palette
+  swapped and drawn over the full head. The icon uses the same atlas cell and palette; player portraits include its
+  scaled bounds. Existing saved helm designs are remapped from their old random atlas index to the item's base type.
 - **Drawing**: `Player.artFrame()` gives the composite to `Creature.drawArt` (single frame, same bob/squash/flip as
   the class sprites, 60 px from head top to feet). Without gear art the old class sprite stands in.
 - **Auras** (`src/gfx/gearfx.js`): outline glow (stacked offset silhouettes, no ctx.filter) and a light, orbiting

@@ -3,3 +3,5 @@ __pycache__/
 .DS_Store
 node_modules/
 tools/tests/out/
+assets/sprites/gear/common_helmets/placements.json.bak
+assets/sprites/gear/common_helmets/placements.json.tmp
