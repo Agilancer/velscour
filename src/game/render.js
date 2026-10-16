@@ -14,6 +14,81 @@ import { enemyImage } from '../core/enemyart.js';
 import { drawLootLabels } from './loot.js';
 
 let lightCanvas = null, vignette = null, vigKey = '';
+const transitionSprites = new Map();
+
+const MATERIALS = [
+  [/water|moat|pond|river|stream|lake/, '#75b9be'],
+  [/dune|desert|sand(?!stone)/, '#e0bd78'],
+  [/gravel|scree|pebble|salt|gypsum|grit|chips/, '#c7b19a'],
+  [/clay|mud|earth|loam|silt|wadi|rut|soil/, '#a97952'],
+  [/pav|brick|slab|stone|rock|basalt|bedrock|slate|limestone/, '#aaa69a'],
+  [/ore|quartz|crystal|gem|seam/, '#8bc4c2'],
+  [/ice|snow|frost/, '#b5d9df'],
+  [/ash|lava|volcanic/, '#bd7654'],
+  [/grass|moss|root|reed|oasis|meadow|lawn|clover|wildflower|battlement|shaded/, '#a2ad72'],
+  [/wood|plank|board|palm/, '#c49a60'],
+];
+
+function floorMaterial(world, variant) {
+  const floor = floorEntry(world, variant);
+  const key = `${floor?.material || ''} ${floor?.surface || ''} ${floor?.name || ''}`.toLowerCase();
+  for (const [pattern, color] of MATERIALS) if (pattern.test(key))
+    return { key: key.match(pattern)[0], color };
+  return null;
+}
+
+function stableHash(x, y, salt) {
+  let h = Math.imul(x ^ 0x45d9f3b, 0x45d9f3b) ^ Math.imul(y ^ salt, 0x27d4eb2d);
+  h = Math.imul(h ^ (h >>> 15), 0x85ebca6b);
+  return (h ^ (h >>> 13)) >>> 0;
+}
+
+function transitionSprite(color) {
+  if (!transitionSprites.has(color)) {
+    const sprite = makeCanvas(1, 1), g = sprite.getContext('2d');
+    g.fillStyle = color; g.fillRect(0, 0, 1, 1);
+    transitionSprites.set(color, sprite);
+  }
+  return transitionSprites.get(color);
+}
+
+/** Cache deterministic 1-world-pixel flecks on shared edges between unlike materials. */
+function buildTransitionParticles(world) {
+  if (world.transitionParticles) return world.transitionParticles;
+  const { map } = world, particles = [];
+  const addEdge = (x, y, variant, nx, ny, nextVariant, x1, y1, x2, y2, salt) => {
+    if (map.t[ny * map.w + nx] !== 1) return;
+    const a = floorMaterial(world, variant), b = floorMaterial(world, nextVariant);
+    if (!a || !b || a.key === b.key) return;
+    const hash = stableHash(x, y, salt), count = 2 + (hash % 2);
+    const colors = [a.color, b.color, a.color];
+    for (let i = 0; i < count; i++) {
+      const seed = stableHash(x + i * 13, y - i * 7, salt ^ hash);
+      const t = 0.18 + ((i + ((seed >>> 8) % 23) / 100) / count) * 0.64;
+      const offset = ((seed >>> 16) % 5) - 2;
+      particles.push({ x: x1 + (x2 - x1) * t + offset, y: y1 + (y2 - y1) * t - offset, color: colors[i] });
+    }
+  };
+  for (let y = 0; y < map.h; y++) for (let x = 0; x < map.w; x++) {
+    const i = y * map.w + x;
+    if (map.t[i] !== 1) continue;
+    const cx = (x - y) * HW, cy = (x + y) * HH;
+    if (x + 1 < map.w) addEdge(x, y, map.v[i], x + 1, y, map.v[i + 1], cx + HW, cy, cx, cy + HH, 0x1b);
+    if (y + 1 < map.h) addEdge(x, y, map.v[i], x, y + 1, map.v[i + map.w], cx, cy + HH, cx - HW, cy, 0x71);
+  }
+  world.transitionParticles = particles;
+  return particles;
+}
+
+function drawTransitionParticles(ctx, world, vr) {
+  const particles = buildTransitionParticles(world);
+  if (!particles.length) return;
+  ctx.imageSmoothingEnabled = false;
+  for (const particle of particles) {
+    if (particle.x < vr.x0 - 2 || particle.x > vr.x1 + 2 || particle.y < vr.y0 - 2 || particle.y > vr.y1 + 2) continue;
+    ctx.drawImage(transitionSprite(particle.color), particle.x, particle.y);
+  }
+}
 
 function floorEntry(world, v) {
   if (world.townTiles) return world.townTiles[v] || world.townTiles[0];
@@ -263,6 +338,7 @@ export function renderWorld(ctx, world) {
       if (gr) ctx.drawImage(gr, px - HW, py);
     }
   }
+  drawTransitionParticles(ctx, world, vr);
   ctx.imageSmoothingQuality = hq;
   drawDecals(ctx, vr);
   for (const c of world.corpses) {

@@ -5,11 +5,6 @@ const BIOMES = new Set([
   'crystal','desert','shadow','forge','abyss','thorn','storm','obsidian','flesh',
   'serpent','shattered','library','necropolis','amber',
 ]);
-const DISTINCT_WALLS = new Set([
-  'frozen','molten','fungal','sunken','blood','ashen','void','gilded','plague',
-  'crystal','desert','shadow','forge','abyss','thorn','storm','obsidian','flesh',
-  'serpent','shattered','library','necropolis','amber',
-]);
 const CACHE = new Map();
 
 function loadAtlas(id) {
@@ -27,8 +22,8 @@ function loadAtlas(id) {
 /** Replace the generated floor and scatter cells after the authored pack is built. */
 export async function applyAIBiomeArt(pack, biomeId) {
   if (!BIOMES.has(biomeId) || !pack?.meta) return pack;
-  const [image, architecture] = await Promise.all([
-    loadAtlas(biomeId), loadAtlas(`${biomeId}_architecture`),
+  const [image, wallMaterials] = await Promise.all([
+    loadAtlas(biomeId), loadAtlas(`${biomeId}_wall_materials`),
   ]);
   const floors = pack.floors?.getContext?.('2d');
   if (floors) {
@@ -56,16 +51,50 @@ export async function applyAIBiomeArt(pack, biomeId) {
   }
   const walls = pack.walls?.getContext?.('2d');
   if (walls) {
-    // Add the compact generated material atlas only inside the established
-    // wall/arch/door silhouettes. Connection masks and depth slices stay exact.
+    // Each biome has ten seamless materials: two per Catacombs wall family.
+    // Alternate them by topology mask so long runs gain surface variation,
+    // while each node's arms and depth slices keep one matching material.
+    const materials = Array.from({length: 10}, (_, index) => {
+      const tile = document.createElement('canvas');
+      tile.width = tile.height = 128;
+      const g = tile.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      g.drawImage(wallMaterials, index * 128, 0, 128, 128, 0, 0, 128, 128);
+      return tile;
+    });
+    const paint = (rect, index) => {
+      if (!Array.isArray(rect) || rect.length < 5) return;
+      const [x, y, w, h, ox = 0, oy = 0] = rect.slice(1, 7);
+      if (![x, y, w, h].every(Number.isFinite) || w <= 0 || h <= 0) return;
+      const pattern = walls.createPattern(materials[index % materials.length], 'repeat');
+      if (pattern?.setTransform && typeof DOMMatrix !== 'undefined')
+        pattern.setTransform(new DOMMatrix().translate(x + ox, y + oy));
+      walls.fillStyle = pattern;
+      walls.fillRect(x, y, w, h);
+    };
     walls.save();
     walls.globalCompositeOperation = 'source-atop';
-    walls.globalAlpha = DISTINCT_WALLS.has(biomeId) ? 1 : 0.34;
-    walls.fillStyle = walls.createPattern(architecture, 'repeat');
-    walls.fillRect(0, 0, pack.walls.width, pack.walls.height);
+    walls.globalAlpha = 1;
+    Object.entries(pack.meta.walls || {}).forEach(([family, masks], familyIndex) => {
+      Object.entries(masks).forEach(([mask, variants]) => {
+        const texture = familyIndex * 2 + (Number(mask) & 1);
+        variants.forEach(variant => variant.forEach(rect => paint(rect, texture)));
+      });
+    });
+    let designIndex = 0;
+    Object.values(pack.meta.arches || {}).forEach(directions => {
+      Object.values(directions).forEach(slices => slices.forEach(rect => paint(rect, designIndex++)));
+    });
+    Object.values(pack.meta.doors || {}).forEach(directions => {
+      Object.values(directions).forEach(states => Object.values(states).forEach(slices =>
+        slices.forEach(rect => paint(rect, designIndex++))));
+    });
     walls.restore();
   }
-  pack.meta.aiBiomeArt = {atlas: biomeId, sourceCell: 64, floorMotifs: 32, props: 32};
+  pack.meta.aiBiomeArt = {
+    atlas: biomeId, sourceCell: 64, floorMotifs: 32, props: 32,
+    wallMaterials: 10, wallMaterialSize: 128,
+  };
   return pack;
 }
 
