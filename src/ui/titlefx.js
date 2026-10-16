@@ -1,6 +1,5 @@
-// Title screen: the Blastorama and Jamie Herrington credits fade in sequence before the VELSCOUR logo rises out of the
-// dark in time with "Hymn of the Abyss" and bursts into flame on the song's first hit; red eyes blink in the background.
-// The credits start with the title song; the logo fades in under the second card's fade-out and strikes on the first hit.
+// Title screen: the VELSCOUR logo rises out of the dark in time with "Hymn of the Abyss" and bursts into flame on the
+// song's first hit; red eyes blink in the background. The separate Credits screen owns the studio credit cards.
 // Timeline (song time, s): visuals start with scheduled music, then re-sync to its clock when playback is available.
 // If the browser hasn't let audio start yet, a prompt asks for a click first (the eyes watch you meanwhile).
 // Any click or key during the intro skips ahead to the burst.
@@ -85,6 +84,7 @@ export function attachTitleFx(screen, logoEl, els = {}) {
       playMusic('title', { delay: 0 });
       phase = 'credits'; creditsAt = performance.now(); creditsClockAnchored = false;
       if (skipAfterCredits) startIntro(true);
+      else if (!els.credits) startIntro();
     });
   }
   function light(instant) {   // the hit: the logo bursts into flame and the menu appears

@@ -402,11 +402,15 @@ body.touch #madness-btn { padding: 8px 26px; font-size: 20px; }
 /* Credits are a separate, continuously animated lava scene. */
 .credits-screen { padding: 0 !important; background: #030304; isolation: isolate; }
 .credits-canvas { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; display: block; }
-.credits-title { position: absolute; z-index: 2; left: 50%; top: 35%; transform: translate(-50%,-50%); width: min(78vw, 900px); height: min(45vh, 420px); pointer-events: none; }
-.credits-logo { display: block; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: none; }
-.credits-speech { position: absolute; z-index: 2; left: 50%; top: 58%; transform: translate(-50%,-50%); max-width: min(88vw,600px); padding: 8px 14px; border: 1px solid rgba(255,192,98,.8); border-radius: 10px; background: rgba(20,8,4,.88); color: #fff2d2; font: 700 clamp(13px,2.2vw,20px) var(--font-head); text-align: center; text-shadow: 0 1px 3px #000,0 0 12px #f50; box-shadow: 0 0 16px rgba(255,105,20,.45); opacity: 0; transition: opacity .18s; pointer-events: none; }
+.credits-title { position: absolute; z-index: 2; left: 50%; top: 33%; transform: translate(-50%,-50%); width: min(82vw, 1040px); height: min(48vh, 500px); pointer-events: none; }
+.credits-logo { position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: none; }
+.credits-logo-fire { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; mix-blend-mode: screen; }
+.credits-speech { position: absolute; z-index: 4; left: 50%; top: 61%; transform: translate(-50%,-50%); max-width: min(88vw,600px); padding: 8px 14px; border: 1px solid rgba(255,192,98,.8); border-radius: 10px; background: rgba(20,8,4,.88); color: #fff2d2; font: 700 clamp(13px,2.2vw,20px) var(--font-head); text-align: center; text-shadow: 0 1px 3px #000,0 0 12px #f50; box-shadow: 0 0 16px rgba(255,105,20,.45); opacity: 0; transition: opacity .18s; pointer-events: none; }
+.credits-event { position: absolute; z-index: 4; left: 50%; top: 70%; transform: translate(-50%,-50%); color: #ffe4ad; font: 900 clamp(12px,2vw,20px) var(--font-head); letter-spacing: .12em; text-align: center; text-shadow: 0 0 8px #ff3700, 0 2px 4px #000; opacity: 0; pointer-events: none; }
 .credits-back { position: absolute; z-index: 3; left: 50%; bottom: max(18px,env(safe-area-inset-bottom)); transform: translateX(-50%); font-size: clamp(13px,2vw,17px); padding: 9px 18px; }
-body.touch .credits-speech { top: 47%; }
+body.touch .credits-title { top: 30%; width: min(90vw, 780px); height: min(38vh, 340px); }
+body.touch .credits-speech { top: 53%; }
+body.touch .credits-event { top: 67%; }
 
 #rotate-hint { position: absolute; inset: 0; z-index: 80; background: rgba(0,0,0,.92); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; font-size: 18px; }
 #rotate-hint div { font-size: 64px; color: var(--gold); animation: spin 2s infinite ease-in-out; }
