@@ -1275,6 +1275,7 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
   const A = ARCH[archId];
   const B = monsterBase(level);
   const depth = world.depth || 1;
+  if (A.seaOfSand && biome.id === 'sea_of_sand') look = { art:'ss_'+archId, swap:null };
   if (look === undefined) look = lookFor(world, archId);
   const art = look && ART_BY_ID[look.art];
   const biomeEl = biome.el && biome.el !== 'phys' ? biome.el : null;
@@ -1370,10 +1371,10 @@ export function makeElite(m, rank, depth, world) {
     m.scale = vel ? 1.6 : 1.9; m.r *= vel ? 1 : 1.6;
     m.ai = 'boss';
     m.affixes = depth > 20 && !vel ? shuffle(keys.filter((k) => !['teleport', 'multishot', 'fast'].includes(k))).slice(0, 1) : [];
-    m.name = vel ? 'DEMON LORD VELSCOUR' : bossName();
+    m.name = vel ? 'DEMON LORD VELSCOUR' : (ARCH[m.arch]?.bossName || bossName());
     m.isVelscour = vel;
     const base = ['slam', 'nova', 'volley', 'charge', 'summon', 'meteor', 'spiral', 'beam'];
-    m.patterns = vel ? base : shuffle(base.slice()).slice(0, 3 + Math.min(3, Math.floor(depth / 20)));
+    m.patterns = vel ? base : ARCH[m.arch]?.bossPatterns ? ARCH[m.arch].bossPatterns.slice() : shuffle(base.slice()).slice(0, 3 + Math.min(3, Math.floor(depth / 20)));
     if (!m.patterns.includes('slam')) m.patterns.push('slam');
     m.atkCd = 1.1;
     m.aggroRange = 9;

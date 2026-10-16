@@ -6,6 +6,8 @@ Herrington Hollow: there are enemies, a town-return portal, a separate dungeon e
 shrine-triggered combat/objective encounter. Clearing that encounter replaces the
 normal single-guardian condition for opening the exit.
 
+Its sibling **Sea of Sand** uses a native 60-floor desert atlas, a 60-monster bestiary, ten bosses, and modular cliff mazes. Routes connect one to five timed scenario areas and show live progress in the HUD. See [SEA_OF_SAND.md](SEA_OF_SAND.md) for implementation details.
+
 ## Code and data
 
 | Responsibility | Location |

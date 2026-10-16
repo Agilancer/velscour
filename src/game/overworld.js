@@ -34,6 +34,7 @@ const norm=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
 const pos=(p)=>[p[0],p[1]];
 export function createOverworldScenario(world,gen,biome,onSuccess) {
   const rng=new RNG((gen.seed ^ 0x71bb5eed)>>>0), selected=gen.scenarioId%SCENARIOS.length;
+  const center=gen.shrine||CENTER;
   const [title,baseType,description]=SCENARIOS[selected];
   const type=baseType==='random'?rng.pick(['waves','bosses','rifts','zones']):baseType;
   const S={id:selected,title,type,description,active:false,completed:false,failed:false,
@@ -74,7 +75,7 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
     spawn(species,world.map.randomNear(at[0],at[1],2,rng.fn()),rank,1);
     if(count>1)spawn(species,world.map.randomNear(at[0],at[1],3,rng.fn()),'normal',count-1);
   };
-  const wave=(target=4,at=CENTER,arch=null)=>{
+  const wave=(target=4,at=center,arch=null)=>{
     S.stage++;
     S.foes=[];
     const n=4+S.stage*3;
@@ -124,12 +125,13 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
     for(const n of S.civilians){const i=world.npcs.indexOf(n);if(i>=0)world.npcs.splice(i,1);}
     Object.assign(S,{active:true,failed:false,stage:0,kills:0,seconds:0,remaining:0,
       foes:[],markers:[],civilians:[],escort:null,routeIndex:0,wardHp:0,spawnedTotal:0,capture:0});
+    S.timer=biome.id==='sea_of_sand'?rng.int(90,181):0;
     report(description);UI.centerMsg(title.toUpperCase(),description,3.2);
     const bosses=(n,archs)=>{
       S.goal=n;
       for(let i=0;i<n;i++){
         const angle=(i/n)*Math.PI*2;
-        const at=[CENTER[0]+Math.cos(angle)*8,CENTER[1]+Math.sin(angle)*8];
+        const at=[center[0]+Math.cos(angle)*8,center[1]+Math.sin(angle)*8];
         spawn(archs[i%archs.length],world.map.randomNear(at[0],at[1],3,rng.fn()),'boss',1);
       }
     };
@@ -149,14 +151,14 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
     };
     switch(type){
       case 'waves':case 'battle':case 'bridge':
-        if(type==='bridge'){S.escort=person('Crossing Watchman',CENTER[0]+2,CENTER[1]+3,'paladin');S.escort.hp=170;}
+        if(type==='bridge'){S.escort=person('Crossing Watchman',center[0]+2,center[1]+3,'paladin');S.escort.hp=170;}
         wave(type==='battle'?5:4);break;
       case 'bosses': bosses(3,['demon','knight','abomination']);break;
       case 'defend':case 'infestation':
         for(let i=0;i<4;i++)person('Villager '+(i+1),25+(i%2)*3,40+Math.floor(i/2)*3);
         S.wardHp=4;wave(type==='infestation'?4:3,[27,42],'zombie');break;
       case 'escort':
-        S.escort=person('Caravan Guard',CENTER[0],CENTER[1]+3,'paladin');
+        S.escort=person('Caravan Guard',center[0],center[1]+3,'paladin');
         S.escort.hp=140;S.goal=4;S.routeIndex=0;
         S.wagon={kind:'scatter',x:S.escort.x,y:S.escort.y,spr:overworldObject('ow_caravan'),k:TW/160,flip:false};
         world.props.push(S.wagon);
@@ -188,10 +190,13 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
   const update=(dt)=>{
     if(!S.active||S.completed||S.failed)return;
     S.seconds+=dt;
+    if(biome.id==='sea_of_sand'){
+      if(S.seconds>=S.timer){fail('The scenario timer expired.');return;}
+    }
     const p=player();
     if(type==='waves'||type==='battle'||type==='bridge'||type==='defend'||type==='infestation'||type==='ward'){
       const required=type==='battle'?5:type==='defend'?3:type==='ward'?3:4;
-      const at=type==='defend'||type==='infestation'?[27,42]:CENTER;
+      const at=type==='defend'||type==='infestation'?[center[0]-9,center[1]+7]:center;
       const arch=type==='defend'||type==='infestation'?'zombie':null;
       // Simulated NPC defensive damage scales with actual nearby living attackers.
       if(type==='defend'||type==='infestation'){
@@ -204,13 +209,13 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
         }
         if(!S.civilians.some(n=>n.hp>0)){fail('The villagers have fallen.');return;}
       }else if(type==='ward'){
-        const attackers=S.foes.filter(m=>!m.dead&&norm([m.x,m.y],CENTER)<5).length;
+        const attackers=S.foes.filter(m=>!m.dead&&norm([m.x,m.y],center)<5).length;
         S.wardHp-=dt*attackers*2;
         if(S.wardHp<=0){fail('The shrine was destroyed.');return;}
       }else if(type==='bridge'){
         const n=S.escort;
         const attackers=S.foes.filter(m=>!m.dead&&norm([n.x,n.y],[m.x,m.y])<6).length;
-        n.hp-=dt*attackers*(norm([p.x,p.y],CENTER)<7?1.2:4.5);
+        n.hp-=dt*attackers*(norm([p.x,p.y],center)<7?1.2:4.5);
         if(n.hp<=0){fail('The crossing was overrun.');return;}
       }
       trackWaves(required,at,arch);

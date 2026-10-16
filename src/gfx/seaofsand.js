@@ -1,0 +1,72 @@
+// Runtime access to the authored Sea of Sand frame atlases.
+import { makeCanvas, recolor } from '../core/util.js';
+
+const DIR = 'assets/tiles/sea_of_sand/';
+let loading = null, meta = null, images = null;
+const cache = new Map();
+
+function loadImage(name) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`Failed to load ${DIR}${name}.webp`));
+    img.src = `${DIR}${name}.webp`;
+  });
+}
+
+export function loadSeaOfSandPack() {
+  if (images) return Promise.resolve();
+  return loading || (loading = Promise.all([
+    fetch(`${DIR}pack.json`).then((r) => { if (!r.ok) throw new Error('Sea of Sand metadata missing'); return r.json(); }),
+    ...['floor','scatter','tree','monster','boss','cliff'].map(loadImage),
+  ]).then(([m, ...atlas]) => {
+    meta = m;
+    images = Object.fromEntries(['floor','scatter','tree','monster','boss','cliff'].map((k, i) => [k, atlas[i]]));
+  }).catch((e) => { loading = null; throw e; }));
+}
+
+export function seaOfSandFrames(category) { return meta?.atlases[category] || []; }
+export function seaOfSandFloorTiles() {
+  return seaOfSandFrames('floor').map((f) => ({ img: images.floor, sx:f.x, sy:f.y, w:f.w, h:f.h, lum:0.02, seamless:true, name:f.name }));
+}
+
+export function seaOfSandObject(name, category = 'scatter') {
+  const frame = seaOfSandFrames(category).find((f) => f.name === name || f.name.endsWith('_'+name) || f.id === name);
+  if (!frame) return null;
+  const [px, py] = frame.pivot || [frame.w / 2, frame.h];
+  const footprint = category === 'tree' ? 0.72 : frame.w > 190 ? 0.6 : 0.42;
+  return { img: images[category], sx:frame.x, sy:frame.y, w:frame.w, h:frame.h,
+    ox:-px, oy:-py, fp:footprint, block:category === 'tree', name:frame.name, isometric:true };
+}
+
+export function seaOfSandCliff(name) {
+  const f = seaOfSandFrames('cliff').find((v) => v.name === name || v.id === name);
+  if (!f) return null;
+  const [px, py] = f.pivot || [f.w / 2, f.h];
+  return { img:images.cliff, sx:f.x, sy:f.y, w:f.w, h:f.h, ox:-px, oy:-py,
+    fp:0.2, block:true, name:f.name, isometric:true, cliff:true };
+}
+
+export function seaOfSandArtCell(i) {
+  const f = [...seaOfSandFrames('monster'), ...seaOfSandFrames('boss')][i];
+  return f ? { x:f.x, y:f.y, w:f.w, h:f.h, fx:(f.pivot?.[0] ?? f.w/2), oh:f.h, source:'sea_of_sand' } : null;
+}
+
+export function seaOfSandEnemyImage(id, swap = null, mode = '') {
+  if (!images || !id?.startsWith('ss_')) return null;
+  const a = [...seaOfSandFrames('monster'), ...seaOfSandFrames('boss')].find((f) => f.id === id.slice(3));
+  if (!a) return null;
+  const key = `${id}|${mode}|${swap ? JSON.stringify(swap) : ''}`;
+  if (cache.has(key)) return cache.get(key);
+  let img = makeCanvas(a.w, a.h), g = img.getContext('2d');
+  if (swap) {
+    const temp = makeCanvas(a.w, a.h), t = temp.getContext('2d');
+    t.drawImage(images[a.category], a.x, a.y, a.w, a.h, 0, 0, a.w, a.h);
+    img = recolor(temp, swap); g = img.getContext('2d');
+  } else g.drawImage(images[a.category], a.x, a.y, a.w, a.h, 0, 0, a.w, a.h);
+  if (mode) { g.globalCompositeOperation = 'source-atop'; g.fillStyle = mode === 'flash' ? '#fff' : 'rgba(24,8,6,.62)'; g.fillRect(0,0,a.w,a.h); }
+  img._art = { fx:(a.pivot?.[0] ?? a.w/2) };
+  cache.set(key, img);
+  while (cache.size > 100) cache.delete(cache.keys().next().value);
+  return img;
+}

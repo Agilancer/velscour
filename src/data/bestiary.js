@@ -1,6 +1,7 @@
 import { HEAVENLY_MONSTERS } from './heavenly.js';
 import { BIOMES } from './biomes.js';
 import { buildBiomeNatives } from './biomenatives.js';
+import { SAND_CREATURES, SAND_BOSSES } from './seaofsand.js';
 // Monster art catalogue: every monster cut from the sheets in assets/source/enemies/<set>/ (see docs/ENEMY_ART.md).
 // Each entry is one cell of a sheet (i = reading order, left to right then top to bottom) and says which AI
 // archetype it plays (ARCH in enemies.js). `also` lists other archetypes it can stand in for, `h` is its height
@@ -58,6 +59,8 @@ const bone = { gore: 'bone', undead: true };
 
 export const BESTIARY = [
   ...HEAVENLY_MONSTERS,
+  ...SAND_CREATURES.map(([arch, name], i) => ({ id:`ss_${arch}`, sheet:'sea_of_sand', i, arch, name, h:52+(i%5)*3, homeBiome:'sea_of_sand', seaOfSand:true, nativeVariant:i })),
+  ...SAND_BOSSES.map(([arch, name], i) => ({ id:`ss_${arch}`, sheet:'sea_of_sand', i:SAND_CREATURES.length+i, arch, name, h:82+(i%3)*4, homeBiome:'sea_of_sand', seaOfSand:true, nativeVariant:60+i, boss:true, lone:true })),
   // ---- set 1: skeleton warband
   { id: 'bone_cleaver', sheet: S1, i: 0, arch: 'skeleton', name: 'Bone Cleaver', h: 54, ...bone },
   { id: 'skeleton_bowman', sheet: S1, i: 1, arch: 'archer', name: 'Skeleton Bowman', h: 56, ...bone },
@@ -535,6 +538,7 @@ export const ART_BY_ID = Object.fromEntries([...BESTIARY, ...SUMMON_ART, ...FAMI
  * sheets. This preserves all original default/random monsters in every biome.
  */
 export function artPool(arch, heavenly=false) {
+ if(BESTIARY.some(a=>a.seaOfSand&&a.arch===arch))return BESTIARY.filter(a=>a.seaOfSand&&a.arch===arch);
  return BESTIARY.filter(a=>!a.lone && !a.homeBiome &&
    (a.sheet !== 'heavenly/generated' || heavenly) &&
    (a.arch===arch || (a.also&&a.also.includes(arch))));

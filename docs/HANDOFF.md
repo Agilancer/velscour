@@ -20,6 +20,23 @@ Contents
 - Narrowed the gravel road centers, added dirt shoulders and a road spur through the western settlement. All three houses now face the same way and have a clear gravel approach; scatter stays off roads and objective clearings.
 - Updated `tools/tests/overworld.js` to capture close and wide screenshots and check approaches, forbidden monument scatter and floor IDs across 60 seeds. All 20 scenario completions passed. `tools/tests/flow.js` also reported no errors.
 
+## October 15, 2026 — Sea of Sand overworld biome
+
+- Added the standalone `sea_of_sand` biome with 60 creatures, 10 bosses, 60
+  floor tiles, 40 scatter props, 18 trees, and 216 isometric cliff modules.
+  Runtime-ready lossless atlases are in `assets/tiles/sea_of_sand/`; the
+  offline atlas packer is `tools/seaofsandpack.py`.
+- The biome generates connected desert maps with 1–5 scenario areas and
+  labyrinth-like cliff barriers. Scenario HUD shows the area, beat progress,
+  and timer. Each cleared beat grants a guaranteed Legendary (weapon on beat
+  one, shield on beat two); Mythic chance rises to 95% on a five-beat run.
+- Added `docs/SEA_OF_SAND.md` and the runtime and generation checks. Passed
+  `tools/tests/data_check.mjs`, `tools/tests/sea_of_sand_generation.mjs`
+  (100 deterministic map seeds), JavaScript parse checks, and `git diff
+  --check`. Browser Playwright could not launch because the local Chromium
+  headless-shell binary is absent; repository guidance says not to install it.
+- Work is on `feat/sea-of-sand-overworld`; PR link to be recorded after push.
+
 ## October 15, 2026 — Town approaches and neighborhood alignment
 
 - House fronts now inherit the entry axis used by all buildings within an eight-tile radius. Placements that would introduce mixed nearby axes are skipped, keeping each local cluster visually consistent.
