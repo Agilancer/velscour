@@ -24,6 +24,7 @@ export const G = {
     dmgNumbers: true,
     shake: true,
     zoom: 1,
+    mobileSkillBar: true,
   },
 };
 

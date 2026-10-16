@@ -22,6 +22,7 @@ Outputs
   assets/sprites/classes/<class>.webp  one trimmed full-body sprite per class
   assets/ui/logo.webp                  trimmed title logo
   assets/ui/hud.webp                   skill bar (15 skill + 4 potion slots) with an empty (transparent) XP track
+  assets/ui/hud-orbs.webp              health and mana orbs, cropped from the standard HUD art
   assets/ui/hud.json                   slot / orb / xp-bar / ring / button geometry
   assets/ui/potion_<color>.png         potion icons cut out of the skill bar
   assets/ui/minimap_ring.webp          the frame around the minimap
@@ -190,6 +191,12 @@ def process_hud():
     ty0, ty1, tx0, tx1 = 441 - oy, 459 - oy, 263, 1737
     arr[ty0:ty1, tx0:tx1, 3] = 0
     save(Image.fromarray(arr), os.path.join(OUT, "ui", "hud.webp"))
+    orbs = np.zeros_like(arr)
+    orbs[:, :270] = arr[:, :270]
+    orbs[:, 1730:] = arr[:, 1730:]
+    save(Image.fromarray(orbs), os.path.join(OUT, "ui", "hud-orbs.webp"))
+    save(Image.fromarray(arr[:, :270]), os.path.join(OUT, "ui", "hud-orb-life.webp"))
+    save(Image.fromarray(arr[:, 1730:]), os.path.join(OUT, "ui", "hud-orb-mana.webp"))
 
     fr = Image.open(os.path.join(SRC, "hud_frames.webp")).convert("RGBA")
     fa = np.asarray(fr).copy()
