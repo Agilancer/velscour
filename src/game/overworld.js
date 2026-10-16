@@ -157,13 +157,16 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
       case 'defend':case 'infestation':
         for(let i=0;i<4;i++)person('Villager '+(i+1),25+(i%2)*3,40+Math.floor(i/2)*3);
         S.wardHp=4;wave(type==='infestation'?4:3,[27,42],'zombie');break;
-      case 'escort':
+      case 'escort': {
         S.escort=person('Caravan Guard',center[0],center[1]+3,'paladin');
         S.escort.hp=140;S.goal=4;S.routeIndex=0;
-        S.wagon={kind:'scatter',x:S.escort.x,y:S.escort.y,spr:overworldObject('ow_caravan'),k:TW/160,flip:false};
+        const wagon=overworldObject('ow_caravan');
+        S.wagon={kind:'scatter',x:S.escort.x,y:S.escort.y,spr:wagon,
+          k:TW/160*(wagon?.pixelScale||1),flip:false};
         world.props.push(S.wagon);
         S.route=[site(0),site(5),site(2),gen.exit];
         group(2,5,'hound');group(5,4,'archer');break;
+      }
       case 'zones':
         S.goal=3;S.route=[site(1),site(2),site(3)];S.remaining=3;
         for(let i=0;i<3;i++)group(i+1,5);

@@ -1,11 +1,37 @@
 
-The morning biome additions were PRs **#49–#53**: Desert Temple, Ice Temple,
-HELL, ASTRAL PLANE, and HEAVENLY. Their original art notes describe the
-settings below. The replacement atlases are distinct generated illustrations
-for those settings, not palette variants of one shared biome sheet.
-Five separate low-resolution architecture materials are also generated from a
-distinct panel for each setting and composited into the biome's wall, arch,
-and door silhouettes.
+The replacement atlases cover the 23 dungeon biomes that previously reused
+the same base art with palette swaps, in addition to the original five
+generated biome atlases. Every newly covered setting has its own generated
+floor, terrain prop, and architecture material art. The original five
+generated dungeon packs retain their existing dedicated atlases.
+
+| Biome | Distinct setting used for the atlas |
+|---|---|
+| Frozen Ossuary | Glacial bone crypts, frostbound sarcophagi, blue ice, and frozen relics |
+| Molten Depths | Basalt chambers, magma channels, iron furnaces, and ember shrines |
+| Fungal Grotto | Mycelial caverns, luminous mushrooms, spore pools, and tangled roots |
+| Sunken Crypt | Flooded tombs, drowned masonry, barnacles, and bioluminescent growth |
+| Halls of Blood | Crimson sanctums, bloodstone floors, ritual vessels, and gore-carved masonry |
+| Ashen Wastes | Charred halls, ash drifts, burned relics, and soot-dark stone |
+| Void Sanctum | Starless vaults, fractured voidstone, spectral runes, and drifting fragments |
+| Gilded Tomb | Golden burial halls, lacquered coffers, sun disks, and royal statuary |
+| Plague Sewers | Foul drainage tunnels, diseased growth, corroded grates, and toxic pools |
+| Crystal Caverns | Prismatic geodes, crystal bridges, mineral growths, and shard formations |
+| Bone Desert Tombs | Sand-buried sepulchers, bone markers, sandstone, and buried relics |
+| Shadow Labyrinth | Umbral corridors, dark arches, occult marks, and low-lit stone |
+| Infernal Forge | Hellforged foundry chambers, anvils, chains, furnaces, and slag |
+| Abyssal Rift | Deep chasms, alien stone, rift fragments, and cold blue fissures |
+| Thornwood Barrow | Root-choked barrows, brambles, weathered standing stones, and moss |
+| Storm Spire | Lightning-struck towers, charged crystals, storm runes, and fractured masonry |
+| Obsidian Vault | Polished volcanic glass, black stone, reflective shards, and dark metal |
+| Flesh Pits | Visceral chambers, organic growth, sinew-bound structures, and living stone |
+| Serpent Sepulcher | Coiled tomb halls, scale mosaics, serpent idols, and desert stone |
+| Shattered Citadel | Ruined fortifications, broken arches, fallen masonry, and faded heraldry |
+| Haunted Library | Forbidden stacks, arcane lecterns, scattered tomes, and haunted fixtures |
+| Moonlit Necropolis | Silvered mausoleums, moonlit grave markers, blue stone, and pale relics |
+| Amber Wastes | Resinous tombs, amber deposits, fossil inclusions, and sunbaked stone |
+
+## Original generated dungeon atlases
 
 | Biome | Distinct setting used for the atlas |
 |---|---|
@@ -35,6 +61,14 @@ animation logic is unchanged.
 material texture per biome. The renderer tiles it over architecture with
 source-atop compositing, so artwork stays within the existing wall, arch, and
 door pixels while each setting gains its own carved motif and surface detail.
+The new 23 biomes use the complete generated material within those silhouettes;
+the original five packs retain their lighter material overlay.
+
+`assets/tiles/approved_biomes/forsaken_wilds_supplemental.webp` contains ten
+distinct 128 × 128 generated Forsaken Wilds tree sprites, five shrine designs,
+and a caravan. These named props are loaded through the same ground-pivot
+contract as the existing overworld art; collision and scenario placement stay
+unchanged.
 
 `tools/build_ai_biome_atlases.py` converts the generated grids to compact
 lossless WebP using nearest-neighbor downsampling. The generator emits
