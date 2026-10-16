@@ -1,8 +1,8 @@
 // Title screen: the Blastorama and Jamie Herrington credits fade in sequence before the VELSCOUR logo rises out of the
 // dark in time with "Hymn of the Abyss" and bursts into flame on the song's first hit; red eyes blink in the background.
-// The credits start with the title song; the logo emerges under the second fade and strikes on the song's first hit.
-// Timeline (song time, s): the song and first credit start together, the logo fades in from
-// FADE0 to HIT and the flames burst at HIT. Visuals follow the song's own clock, so a slow load never puts them out of sync.
+// The credits start with the title song; after both cards clear, the logo fades in and strikes on the song's first hit.
+// Timeline (song time, s): the song and first credit start together, then the logo fades in from the end of the credits
+// to HIT and the flames burst at HIT. Visuals follow the song's own clock, so a slow load never puts them out of sync.
 // If the browser hasn't let audio start yet, a prompt asks for a click first (the eyes watch you meanwhile).
 // Any click or key during the intro skips ahead to the burst.
 // Flames are simulated in coarse units (one unit = PX css px) but drawn at device resolution with tiny particles,
@@ -14,6 +14,7 @@ import { rand, randi, clamp } from '../core/util.js';
 const FLAME = ['#fff7c8', '#ffe070', '#ffb428', '#ff7a12', '#e0400a', '#9a1c06', '#4a0c04'];
 export const INTRO_DELAY = 0, HIT = 6.88, FADE0 = -1.5;   // song-time seconds (FADE0 < 0: before the song starts)
 const CREDIT_CARD_MS = 2750, CREDIT_FADE_MS = 800, CREDITS_MS = CREDIT_CARD_MS * 2;
+const LOGO_FADE_START = CREDITS_MS / 1000;
 // phones: fewer, slightly bigger particles at a lower canvas resolution; Q also drops further if frames run slow
 const MAX_PARTS = 14000;
 let geo = null;              // logo emitter points in native logo pixels (built once)
@@ -150,7 +151,7 @@ export function attachTitleFx(screen, logoEl, els = {}) {
     if (ts >= HIT) light();
   }
   function styleLogo(now) {
-    let k = phase === 'lit' ? 1 : clamp((ts - FADE0) / (HIT - FADE0), 0, 1);
+    let k = phase === 'lit' ? 1 : clamp((ts - LOGO_FADE_START) / (HIT - LOGO_FADE_START), 0, 1);
     if (phase === 'gate') k = 0;
     const e = k * k * (3 - 2 * k), op = Math.pow(k, 1.7);
     const burn = phase === 'lit' ? Math.max(0, 1 - (now - burstAt) / 1600) : 0;
