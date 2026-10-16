@@ -8,7 +8,7 @@ import { generateAstralPlanePack } from '../gfx/astralplane.js';
 import { generateHeavenlyPack } from '../gfx/heavenlypack.js';
 import { expandBiomePack } from '../gfx/biomeexpansion.js';
 import { preloadWallTorchHolders } from '../gfx/walltorches.js';
-import { applyApprovedBiomeArt } from '../gfx/approvedbiomeart.js';
+import { applyApprovedBiomeArt, preloadBiomeVariantArt, preloadOverworldScatterArt } from '../gfx/approvedbiomeart.js';
 import { preloadApprovedHeavenlyArtwork } from '../gfx/heavenlymonsters.js';
 import { TW } from './view.js';
 import { loadReplacementArt } from './replacementart.js';
@@ -53,6 +53,8 @@ export async function loadAssets(progress) {
   const report = () => progress && progress(done / jobs.length * 2 / 3 + song / 3);
   const track = (p) => p.then((v) => { done++; report(); return v; });
   jobs.push(track(loadReplacementArt()));
+  jobs.push(track(preloadBiomeVariantArt()));
+  jobs.push(track(preloadOverworldScatterArt()));
   jobs.push(track(preloadSong('hymn_of_the_abyss', (k) => { song = k; report(); }).then(() => { song = 1; })));
   for (const id of CLASS_IDS) jobs.push(track(loadImage(`assets/sprites/classes/${id}.webp`).then((img) => { A.classes[id] = img; })));
   jobs.push(track(loadImage('assets/ui/hud.webp').then((i) => { A.hud = i; })));

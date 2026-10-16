@@ -1,13 +1,13 @@
-// Original procedural decorations for the outdoor scenario biome.
-// All new pieces are native Canvas image objects with a town-pack style / ground-pivot
-// and reuse the original atlas as material. No new network downloads or external fonts.
-// 10 additional classically shaped trees + 20 scatter props + 5 scenario shrines.
+// Decorations for the outdoor scenario biome. Imported tree/scatter crops and
+// generated shrine/caravan sprites share the town-pack ground-pivot contract.
 import { A } from '../core/assets.js';
 import { makeCanvas } from '../core/util.js';
+import { approvedOverworldScatter, approvedOverworldTree } from './approvedbiomeart.js';
 
 export const EXTRA_TREES = [
   't_ember_maple', 't_silver_elm', 't_moon_birch', 't_gnarled_yew', 't_dusk_cedar',
   't_frost_fir', 't_gold_aspens', 't_copper_beech', 't_blight_oak', 't_wild_apple',
+  't_gnarled_ash','t_old_cedar','t_wind_pine','t_dead_oak_painted','t_silver_birch',
 ];
 export const EXTRA_SCATTER = [
   'ow_ancient_stone','ow_broken_column','ow_shattered_urn','ow_pale_mushrooms',
@@ -31,13 +31,16 @@ function format(image, w, h, name, fp=0.3) {
   return {img:image,sx:0,sy:0,w,h,ox:-Math.floor(w/2),oy:-h+5,name,fp,block:fp>0.7};
 }
 function tree(name) {
-  const index=EXTRA_TREES.indexOf(name), src=baseSprite(TREE_SOURCES[index]);
+  const approved=approvedOverworldTree(name);
+  if(approved)return approved;
+  const index=EXTRA_TREES.indexOf(name),sourceIndex=index%TREE_SOURCES.length;
+  const src=baseSprite(TREE_SOURCES[sourceIndex]);
   if(!src)return null;
   const w=src.w,h=src.h,c=makeCanvas(w,h),x=c.getContext('2d');
   x.drawImage(src.image,src.sx,src.sy,w,h,0,0,w,h);
   // Material tint remains constrained to original silhouette and keeps artwork shadow/light.
   x.globalCompositeOperation='source-atop';
-  x.globalAlpha=.12+index%3*.07;x.fillStyle=TREE_COLORS[index];x.fillRect(0,0,w,h);
+  x.globalAlpha=.12+index%3*.07;x.fillStyle=TREE_COLORS[sourceIndex];x.fillRect(0,0,w,h);
   x.globalCompositeOperation='source-over';x.globalAlpha=1;
   const seed=index*1171+31;
   for(let i=0;i<34+index*3;i++){
@@ -46,7 +49,7 @@ function tree(name) {
     // Overlay tiny leaves, berries and moonfire highlights only where foliage exists.
     const rgba=x.getImageData(Math.floor(vx),Math.floor(vy),1,1).data;
     if(rgba[3]<150)continue;
-    const col=i%7===0?'#e5c982':i%3===0?TREE_COLORS[index]:'#6f8b61';
+    const col=i%7===0?'#e5c982':i%3===0?TREE_COLORS[sourceIndex]:'#6f8b61';
     pixel(x,vx,vy,2+(i%2),2,col);
   }
   return {img:c,sx:0,sy:0,w,h,ox:src.ox,oy:src.oy,name,fp:.4,block:true};
@@ -81,6 +84,8 @@ function caravan(name) {
   return format(c,w,h,name,.95);
 }
 function scattered(name) {
+  const approved=approvedOverworldScatter(name);
+  if(approved)return approved;
   const i=EXTRA_SCATTER.indexOf(name),w=88,h=92,c=makeCanvas(w,h),x=c.getContext('2d');
   const stone=['#77796b','#373e40','#9c9382','#5b624c','#ccc5a2'];
   // Original game-palette pixel pieces made from combinations of carved masonry,

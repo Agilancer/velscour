@@ -13,7 +13,7 @@ normal single-guardian condition for opening the exit.
 | Biome definition, shuffle bag, forced scheduling, visit records | `src/data/biomes.js` |
 | Map generator (72×72, trees, roads, village, ground) | `src/world/overworld.js` |
 | 20 shrine-activated mini scenarios | `src/game/overworld.js` |
-| 10 extra tree sprites, 20 scatter sprites, 5 shrines, caravan | `src/gfx/overworldart.js` |
+| 15 extra tree sprites (5 painted), 20 painted scatter sprites, 5 shrines, caravan | `src/gfx/overworldart.js` |
 | Dungeon entry, reward/exit, autosaving | `src/game/game.js` |
 | Forest line of sight | `src/world/map.js` |
 | Sprite depth sorting/culling and shrine markers | `src/game/render.js` |
@@ -30,16 +30,15 @@ from the existing Town pack imported by `tools/townpack.py`. The map's
 No competing indoor `pack.json` or dungeon wall atlas is needed; the game uses
 the already-loaded catacombs tileset for fallback shared chest and portal art.
 
-The new art is **generated as Canvas sprite images at runtime** and cached by name.
-Ten trees are derived from distinct source silhouettes with unique colors,
-leaf overlays and texture accents; 20 additional scatter objects are constructed
-from masonry, props, floral and camp-object pixels. Five shrine designs are
-drawn as stone pedestals with colored crystals, and the caravan encounter has a
-covered wagon. They fit the renderer's existing per-sprite `{img,sx,sy,w,h,ox,oy}`
-rect and pivot convention. These are **procedural/derived sprites**, not a new
-set of hand-painted PNGs or a replacement for the user's original town pack.
-To swap in manually painted artwork, change `overworldObject` to return the
-corresponding sprite crop; level-generation placement does not need changing.
+The five additional low-resolution tree sprites in
+[`BIOME_VARIANT_ART.md`](BIOME_VARIANT_ART.md) are imported as 80 × 80 crops
+and returned through the same `{img,sx,sy,w,h,ox,oy}` pivot contract. The
+other ten trees remain derived from supplied tree sprites. Five shrines and
+the caravan remain generated in code, with the existing renderer and placement
+behavior. The 20 scatter objects use a separate 400 × 320
+transparent atlas of 80 × 80 crops; see
+[`OVERWORLD_SCATTER_ART.md`](OVERWORLD_SCATTER_ART.md). Their names, ground
+pivots, placement and nonblocking footprint are unchanged.
 
 The world is 72×72 tiles. All tiles have outdoor floor art. Dense forest zones
 set `map.block` (collision) and have overlapping canopies, making them behave as
