@@ -32,8 +32,18 @@ const MATERIALS = [
 function floorMaterial(world, variant) {
   const floor = floorEntry(world, variant);
   const key = `${floor?.material || ''} ${floor?.surface || ''} ${floor?.name || ''}`.toLowerCase();
-  for (const [pattern, color] of MATERIALS) if (pattern.test(key))
-    return { key: key.match(pattern)[0], color };
+  for (const [pattern, color] of MATERIALS) if (pattern.test(key)) {
+    const material = key.match(pattern)[0];
+    if (world.biome?.id === 'castle') {
+      const castleColors = {
+        water: '#477f8b', grass: '#a4ad6c', gravel: '#c2b69a',
+        clay: '#a77b52', mud: '#9b704d', earth: '#ae8155',
+        stone: '#a7a69b', brick: '#ae8d70', wood: '#9a7048',
+      };
+      return { key: material, color: castleColors[material] || color };
+    }
+    return { key: material, color };
+  }
   return null;
 }
 
@@ -43,16 +53,17 @@ function stableHash(x, y, salt) {
   return (h ^ (h >>> 13)) >>> 0;
 }
 
-function transitionSprite(color) {
-  if (!transitionSprites.has(color)) {
-    const sprite = makeCanvas(1, 1), g = sprite.getContext('2d');
-    g.fillStyle = color; g.fillRect(0, 0, 1, 1);
-    transitionSprites.set(color, sprite);
+function transitionSprite(color, size) {
+  const key = `${color}:${size}`;
+  if (!transitionSprites.has(key)) {
+    const sprite = makeCanvas(size, size), g = sprite.getContext('2d');
+    g.fillStyle = color; g.fillRect(0, 0, size, size);
+    transitionSprites.set(key, sprite);
   }
-  return transitionSprites.get(color);
+  return transitionSprites.get(key);
 }
 
-/** Cache deterministic 1-world-pixel flecks on shared edges between unlike materials. */
+/** Cache crisp, deterministic 2–4px flecks on shared edges between unlike materials. */
 function buildTransitionParticles(world) {
   if (world.transitionParticles) return world.transitionParticles;
   const { map } = world, particles = [];
@@ -60,13 +71,19 @@ function buildTransitionParticles(world) {
     if (map.t[ny * map.w + nx] !== 1) return;
     const a = floorMaterial(world, variant), b = floorMaterial(world, nextVariant);
     if (!a || !b || a.key === b.key) return;
-    const hash = stableHash(x, y, salt), count = 2 + (hash % 2);
-    const colors = [a.color, b.color, a.color];
+    const hash = stableHash(x, y, salt);
+    // Leave gaps along long boundaries so particles read as scattered debris,
+    // not a dotted outline around every material patch.
+    if (hash % 3 !== 0) return;
+    const count = 1 + ((hash >>> 1) % 2);
+    const colors = [a.color, b.color];
     for (let i = 0; i < count; i++) {
       const seed = stableHash(x + i * 13, y - i * 7, salt ^ hash);
-      const t = 0.18 + ((i + ((seed >>> 8) % 23) / 100) / count) * 0.64;
-      const offset = ((seed >>> 16) % 5) - 2;
-      particles.push({ x: x1 + (x2 - x1) * t + offset, y: y1 + (y2 - y1) * t - offset, color: colors[i] });
+      // Scatter along and just across the seam instead of making a dotted line.
+      const t = 0.12 + ((seed >>> 8) % 77) / 100;
+      const offset = ((seed >>> 16) % 9) - 4;
+      const size = 2 + ((seed >>> 21) % 3);
+      particles.push({ x: x1 + (x2 - x1) * t + offset, y: y1 + (y2 - y1) * t - offset, color: colors[i], size });
     }
   };
   for (let y = 0; y < map.h; y++) for (let x = 0; x < map.w; x++) {
@@ -86,7 +103,7 @@ function drawTransitionParticles(ctx, world, vr) {
   ctx.imageSmoothingEnabled = false;
   for (const particle of particles) {
     if (particle.x < vr.x0 - 2 || particle.x > vr.x1 + 2 || particle.y < vr.y0 - 2 || particle.y > vr.y1 + 2) continue;
-    ctx.drawImage(transitionSprite(particle.color), particle.x, particle.y);
+    ctx.drawImage(transitionSprite(particle.color, particle.size), particle.x - particle.size / 2, particle.y - particle.size / 2);
   }
 }
 

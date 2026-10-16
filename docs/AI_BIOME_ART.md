@@ -75,9 +75,9 @@ they are painted onto the shared Catacombs wall silhouettes and geometry.
 It edge-matches a 12 px band on each tile so all ten materials repeat without
 dark border seams.
 
-The renderer adds deterministic, single-world-pixel flecks along floor edges
-where the material family changes. This applies to the semantic floor names in
-the dungeon atlases and the named terrain classes in Sea of Sand and Castle.
+The renderer adds deterministic, scattered 2–4 world-pixel flecks along floor
+edges where the material family changes. This applies to semantic floor names
+in the dungeon atlases and named terrain classes in Sea of Sand and Castle.
 
 `assets/tiles/approved_biomes/forsaken_wilds_supplemental.webp` contains ten
 distinct 128 × 128 generated Forsaken Wilds tree sprites, five shrine designs,

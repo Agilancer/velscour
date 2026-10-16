@@ -26,6 +26,9 @@ for(let seed=1;seed<=100;seed++){
  for(const [x,y] of [gen.exit,...gen.sites])if(!seen[I(m,x,y)])throw Error(`unreachable seed ${seed} at ${x},${y}`);
  for(const x of [25,26,27,28,29,30,31,32,33,34,35,37,38,39,40,41,42,43,44,45,46,47])if(!m.rampartDeck[I(m,x+.5,45.5)]||!m.walkable(x+.5,45.5)||m.rampartHeight<20)throw Error(`rampart deck not walkable seed ${seed}`);
  for(const [x,y] of [[36.5,19.5],[36.5,49.5],[21.5,35.5],[50.5,35.5]])if(!m.walkable(x,y))throw Error(`blocked bridge deck seed ${seed} at ${x},${y}`);
+ for(let y=45;y<=51;y++)if(!m.walkable(36.5,y+.5))throw Error(`drawbridge or keep gate entrance blocked seed ${seed} at y=${y}`);
+ if(!gen.props.some(p=>p.spr.name==='castle_drawbridge_closed_SE'))throw Error(`usable drawbridge art missing seed ${seed}`);
+ if(!gen.props.some(p=>p.spr.name==='castle_landmark_09_small_keep_complex'&&p.k>64/160))throw Error(`scaled keep missing seed ${seed}`);
  const categories=new Set(gen.props.map(p=>p.spr.category));for(const c of ['walls','castle_bridges','castle_landmarks','castle_stairs','wall_hangings','trees'])if(!categories.has(c))throw Error(`missing placed ${c} seed ${seed}`);
 }
 if(minScatter<360)throw Error(`expected 360 scatter placements; got ${minScatter}`);

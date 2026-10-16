@@ -260,10 +260,11 @@ function generateCastle(depth,biome,seed){
   add('castle_moat_edge_west_bank','moat_edges',20.5,35.5,.52);
   add('castle_moat_edge_east_bank','moat_edges',52.5,35.5,.52);
   for(const [asset,x,y] of [
-    ['castle_bridge_standard_arch_NW',36.5,19.5],['castle_bridge_long_arch_SE',36.5,49.5],
+    ['castle_bridge_standard_arch_NW',36.5,19.5],['castle_drawbridge_closed_SE',36.5,49.5]])add(asset,'castle_bridges',x,y,.98);
+  for(const [asset,x,y] of [
     ['castle_bridge_short_arch_SW',21.5,35.5],['castle_bridge_short_arch_NE',50.5,35.5]])add(asset,'castle_bridges',x,y,.82);
   add('castle_landmark_02_gatehouse_wall_turn','castle_landmarks',36.5,45.5,.78);
-  add('castle_landmark_09_small_keep_complex','castle_landmarks',36.5,27.5,.9);
+  add('castle_landmark_09_small_keep_complex','castle_landmarks',36.5,27.5,1.25);
   for(const [asset,x,y] of [
     ['castle_landmark_03_round_tower_upper',27.5,25.5],['castle_landmark_05_square_tower_upper',45.5,25.5],
     ['castle_landmark_08_corner_tower_cluster',27.5,42.5],['castle_landmark_03_round_tower_upper',45.5,42.5]])add(asset,'castle_landmarks',x,y,.72);

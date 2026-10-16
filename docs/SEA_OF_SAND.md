@@ -23,7 +23,7 @@ python tools/seaofsandpack.py path/to/Sea_of_Sand_Biome_Pack
 
 This writes the runtime atlases and `pack.json` under `assets/tiles/sea_of_sand/`. The metadata preserves floor pivots, cliff connection masks, and cliff heights. Do not edit the generated atlases by hand.
 
-The overworld uses coherent terrain fields: open dunes dominate, narrow caravan tracks connect the objectives, and dry washes and ruin paving follow their landmarks. Wind-shaped outcrops replace the old rigid grid maze; sandstone defines the cliffs, with brick near objective sites. Deterministic one-pixel flecks mark floor-material boundaries without adding a black outline. Floor frames remain the original 160×80 Catacombs-compatible isometric footprint; trimmed props and cliffs use bottom-center anchors so they sit on the ground without black seams or floating.
+The overworld uses coherent terrain fields: open dunes dominate, narrow caravan tracks connect the objectives, and dry washes and ruin paving follow their landmarks. Wind-shaped outcrops replace the old rigid grid maze; sandstone defines the cliffs, with brick near objective sites. Deterministic, scattered 2–4 world-pixel flecks mark floor-material boundaries without adding a black outline. Floor frames remain the original 160×80 Catacombs-compatible isometric footprint; trimmed props and cliffs use bottom-center anchors so they sit on the ground without black seams or floating.
 
 ## Scenarios and rewards
 
