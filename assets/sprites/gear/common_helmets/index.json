@@ -11,7 +11,12 @@
     { "id": 2, "name": "Helm", "catalog": "Common 02" },
     { "id": 3, "name": "Great Helm", "catalog": "Common 03" },
     { "id": 4, "name": "Winged Helm", "catalog": "Common 04" },
-    { "id": 5, "name": "Crown", "catalog": "Common 05" }
+    { "id": 5, "name": "Crown", "catalog": "Common 05" },
+    { "id": 6, "name": "Common Helm 06", "catalog": "Common 06" },
+    { "id": 7, "name": "Common Helm 07", "catalog": "Common 07" },
+    { "id": 8, "name": "Common Helm 08", "catalog": "Common 08" },
+    { "id": 9, "name": "Common Helm 09", "catalog": "Common 09" },
+    { "id": 10, "name": "Common Helm 10", "catalog": "Common 10" }
   ],
   "fit": { "scaleX": 0.21, "scaleY": 0.22, "xAnchor": 65, "baselineOffset": 25, "sourceBaseline": 216 }
 }

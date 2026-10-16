@@ -40,14 +40,13 @@ top, and bounding boxes); plus `assets/sprites/gear/classes.json`. Legacy helm a
 for reference, but the game no longer loads or composites them.
 
 ### Shared common helmet atlas
-`assets/sprites/gear/common_helmets/atlas.png` is a 16-column by 5-row transparent atlas of 192 x 224 cells.
-`index.json` maps columns to playable classes in the same order as the labeled catalog; its five Common rows map to
-Cap, Helm, Great Helm, Winged Helm and Crown. The catalog is metadata only and contributes no sprite pixels.
-Every head item uses the row matching its base type, with a rarity-appropriate palette swap. Its sprite placement
-comes from `placements.json`, keyed by class and design ID. Unset entries retain the provisional global fit in
-`index.json`; those defaults still need manual calibration. The game and fitter share `src/core/helmetfit.js` so
-saved coordinates drive the equipped character and its portraits directly. The same sprite and palette drive item
-icons and ground pickups. Future atlas additions can replace these five palette-swapped placeholders.
+`assets/sprites/gear/common_helmets/atlas.png` is a 16-column by 10-row transparent atlas of 192 x 224 cells.
+`index.json` maps columns to playable classes and rows to the Common 01–10 catalog labels. The labeled catalog is
+metadata only and contributes no sprite pixels. Every head item uses one of the ten designs and a rarity-appropriate
+palette swap. Its placement comes from `placements.json`, keyed by class and design ID. The first five rows preserve
+the saved manual fits. Rows 6–10 use the visible size and anchor measured from those manual fits, scaled to each
+new sprite's opaque bounds. The game and fitter share `src/core/helmetfit.js` so saved coordinates drive equipped
+characters and portraits directly. The same sprite and palette drive item icons and ground pickups.
 
 ### Visual helmet fitting
 Double-click `Fit Helmets.cmd` in the repository root, or run `python tools/helmet_fit_server.py`. The local server
@@ -55,7 +54,7 @@ opens `tools/helmet-fitter/` in a browser. Pick a class and design, drag the hel
 the size slider to resize it. Width and height can be adjusted separately by unchecking the proportions option.
 Arrow keys nudge by 0.25 body-frame pixels; Shift increases the step to 1 pixel. Space temporarily hides the helmet.
 The enlarged view rasterizes the composite at the game's 128×192 resolution before zooming, and the whole-character
-and all-five-design previews update alongside it. Change body armor to inspect the same placement on other frames.
+and all-ten-design previews update alongside it. Change body armor to inspect the same placement on other frames.
 
 **Save to game** writes `assets/sprites/gear/common_helmets/placements.json`; reload the game afterward. The server
 keeps the previous file as `placements.json.bak`. Each entry stores `{x, y, scaleX, scaleY}`: the top-left of the
@@ -69,7 +68,7 @@ while editing; Ctrl+C stops the local server.
 - `src/core/gearart.js` loads the played class's body armor library (`game.loadClassPack`) and the shared helmet atlas.
 - **Item looks**: body armor and helmets get `item.look = [design, finish, aura]` on first use (saved with the
   item). Armor design comes from the rarity's band, positioned by item level (sqrt curve over 1..100, so early
-  levels get the plain designs) +-1 at random. Helm design comes from its base type (the five Common atlas rows).
+  levels get the plain designs) +-1 at random. Helm design follows item level across all ten Common atlas rows.
   Helmets always use a non-original rarity-appropriate palette; armor uses one of 51 palettes (`PALETTES` in
   `src/data/gear.js`) whose tier fits the rarity (tier r-2..r), or the original colours 10% of the time. Aura (body armor only): `GEAR_FX`, 45% of Rares,
   every Epic, Legendary and Mythic (now and then one tier down).
@@ -79,7 +78,7 @@ while editing; Ctrl+C stops the local server.
   pixels are skipped.
 - **Helmet composite** (`heroLook`, cached): armor in its finish, then the shared class-specific sprite is palette
   swapped and drawn over the full head. The icon uses the same atlas cell and palette; player portraits include its
-  scaled bounds. Existing saved helm designs are remapped from their old random atlas index to the item's base type.
+  scaled bounds. Saved design IDs from the prior common set remain valid.
 - **Drawing**: `Player.artFrame()` gives the composite to `Creature.drawArt` (single frame, same bob/squash/flip as
   the class sprites, 60 px from head top to feet). Without gear art the old class sprite stands in.
 - **Auras** (`src/gfx/gearfx.js`): outline glow (stacked offset silhouettes, no ctx.filter) and a light, orbiting
