@@ -8,7 +8,7 @@ import { SLOT_LABELS, RMB } from '../data/bar.js';
 import { chooser } from './hud.js';
 
 // Landscape uses the original radial skill cluster; portrait shows all 14 skill
-// slots as a compact two-row tray, with LMB kept as the large attack control.
+// slots as a compact bottom tray, with LMB kept as the large attack control.
 const POS = [[1, 180], [1, 225], [1, 270], [2, 198], [2, 213.4], [2, 228.8], [2, 244.2], [2, 259.6], [2, 275]];
 const PAGES = [[RMB, 2, 3, 4, 5, 6, 7, 8, 9], [10, 11, 12, 13, 1]]; // RMB 1-8 | 9 0 - = `
 const FLIP = [1.5, 186]; // between the arcs, left of RMB
@@ -87,15 +87,19 @@ export const TouchUI = {
       if (this.madnessBtn.parentElement !== root) root.appendChild(this.madnessBtn);
       const tile = Math.min(44, Math.max(32, (W - 40 - 24) / 7)), gap = 4;
       const trayH = tile * 2 + gap;
-      const logTop = $('#log').getBoundingClientRect().top;
-      const trayTop = Math.max(H * .42, logTop - 9 - trayH);
+      const safeBottom = parseFloat(getComputedStyle(document.body).getPropertyValue('--portrait-safe-bottom')) || 0;
+      const trayTop = Math.max(H * .34, H - trayH - safeBottom - 12);
+      const mainSize = Math.min(92, Math.max(72, W * .22));
+      const logHeight = Math.min(H * .13, 100);
+      const logTop = Math.max(H * .34, trayTop - mainSize - logHeight - 32);
+      Object.assign($('#log').style, { left: '8px', right: '8px', top: `${logTop}px`, bottom: 'auto', height: `${logHeight}px`, maxHeight: 'none' });
       const trayW = tile * 7 + gap * 6, x0 = (W - trayW) / 2;
       this.btns.forEach((t, i) => {
         if (t.bar !== i) { t.last = {}; t.b.style.filter = ''; t.cd.style.height = '0%'; }
         t.bar = i; t.k.textContent = i === 0 ? 'ATK' : SLOT_LABELS[i];
         t.b.classList.remove('hidden');
         if (i === 0) {
-          const size = Math.min(92, Math.max(72, W * .22)), x = W - size / 2 - 16, y = trayTop - size / 2 - 12;
+          const size = mainSize, x = W - size / 2 - 16, y = trayTop - size / 2 - 12;
           Object.assign(t.b.style, { width: size + 'px', height: size + 'px', left: x - size / 2 + 'px', top: y - size / 2 + 'px' });
         } else {
           const n = i - 1, col = n % 7, row = Math.floor(n / 7);
@@ -106,6 +110,7 @@ export const TouchUI = {
       const madnessW = Math.min(W * .36, 132);
       Object.assign(this.madnessBtn.style, { boxSizing: 'border-box', width: madnessW + 'px', height: '36px', left: ((W - madnessW) / 2) + 'px', top: (trayTop - 46) + 'px', transform: 'none' });
     } else {
+      Object.assign($('#log').style, { left: '', right: '', top: '', bottom: '', height: '', maxHeight: '' });
       if (this.madnessBtn.parentElement !== this.madnessHome) this.madnessHome.insertBefore(this.madnessBtn, this.madnessHome.firstChild);
       this.btns.forEach((t, i) => {
         if (i === 0) { t.bar = 0; t.k.textContent = 'ATK'; t.b.classList.remove('hidden'); put(t.b, 0, 0, main); return; }
