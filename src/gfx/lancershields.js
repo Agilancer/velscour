@@ -34,38 +34,6 @@ export const SHIELD_ORBIT_RADIUS = Object.freeze({
 export function shieldOrbitRadius(name) { return SHIELD_ORBIT_RADIUS[name] ?? 1.6; }
 const cached = new Map();
 
-// Keep atlas padding transparent but seal translucent/empty pixels INSIDE each
-// shield's row silhouette. No new artwork or smoothing is introduced.
-function opaqueAtlas(image) {
-  if (typeof document === 'undefined') return image;
-  const canvas = document.createElement('canvas');
-  canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return image;
-  ctx.drawImage(image, 0, 0);
-  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height), d = pixels.data;
-  for (let frame = 0; frame < SHIELD_FRAME.count; frame++) {
-    const ox = (frame % 4) * SHIELD_FRAME.w, oy = Math.floor(frame / 4) * SHIELD_FRAME.h;
-    for (let y = oy; y < oy + SHIELD_FRAME.h; y++) {
-      let first = -1, last = -1;
-      for (let x = ox; x < ox + SHIELD_FRAME.w; x++) {
-        if (d[(y * canvas.width + x) * 4 + 3] > 24) { if (first < 0) first = x; last = x; }
-      }
-      if (first < 0) continue;
-      let previous = (y * canvas.width + first) * 4;
-      for (let x = first; x <= last; x++) {
-        const i = (y * canvas.width + x) * 4;
-        if (d[i + 3] <= 24) {
-          d[i] = d[previous]; d[i + 1] = d[previous + 1]; d[i + 2] = d[previous + 2];
-        } else previous = i;
-        d[i + 3] = 255;
-      }
-    }
-  }
-  ctx.putImageData(pixels, 0, 0);
-  return canvas;
-}
-
 export function shieldVariantForSkill(name) {
   return LANCER_SHIELD_ABILITY[name] || 'round';
 }
@@ -81,8 +49,8 @@ export function preloadLancerShield(variant) {
       record.image.naturalHeight === SHIELD_FRAME.h * 2;
     record.error = !record.ready;
     if (record.ready) {
-      try { record.atlas = opaqueAtlas(record.image); }
-      catch (e) { console.warn('Shield opacity processing failed', variant, e); record.atlas = record.image; }
+      // Preserve the authored transparent gaps and antialiased alpha as-is.
+      record.atlas = record.image;
     }
   };
   record.image.onerror = () => {record.error = true;};
@@ -109,7 +77,7 @@ export function orbitShieldDepth(x,y,angle) {
   return x+y+(Math.cos(angle)+Math.sin(angle)>=0 ? 0.0001 : -0.0001);
 }
 
-/** Render one individual shield as an opaque, correctly turned sprite.
+/** Render one individual shield as a correctly turned sprite.
  * The source cell is deliberately larger than the art to prevent cropped
  * spikes on the ornate gold rims. Pixel edges use nearest-neighbour scaling.
  */
@@ -120,14 +88,14 @@ export function drawLancerOrbitShield(ctx, orbit, position) {
   const px=isoX(x,y),py=isoY(x,y)-24;
   if (!record?.ready) {
     // Keep the skill visually functional on the first frame/offline.
-    drawShape(ctx,'tshield',px,py,0,orbit.size,orbit.E,orbit.t);
+    drawShape(ctx,'tshield',px,py,0,0.82*orbit.size,orbit.E,orbit.t);
     return false;
   }
   const frame=shieldFrameForAngle(a),sx=(frame%4)*SHIELD_FRAME.w;
   const sy=Math.floor(frame/4)*SHIELD_FRAME.h;
   // Pixel-art shield source is smaller than its padded cell; this scale
   // gives readable, class-proportional shield sprites on the map.
-  const scale=1.09 * orbit.size;
+  const scale=0.72 * orbit.size;
   const w=SHIELD_FRAME.w*scale,h=SHIELD_FRAME.h*scale;
   ctx.save();ctx.imageSmoothingEnabled=false;
   ctx.drawImage(record.atlas || record.image,sx,sy,SHIELD_FRAME.w,SHIELD_FRAME.h,
