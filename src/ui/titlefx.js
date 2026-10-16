@@ -13,7 +13,7 @@ import { rand, randi, clamp } from '../core/util.js';
 
 const FLAME = ['#fff7c8', '#ffe070', '#ffb428', '#ff7a12', '#e0400a', '#9a1c06', '#4a0c04'];
 export const INTRO_DELAY = 0, HIT = 6.88, FADE0 = -1.5;   // song-time seconds (FADE0 < 0: before the song starts)
-const CREDIT_CARD_MS = 2750, CREDITS_MS = CREDIT_CARD_MS * 2;
+const CREDIT_CARD_MS = 2750, CREDIT_FADE_MS = 800, CREDITS_MS = CREDIT_CARD_MS * 2;
 // phones: fewer, slightly bigger particles at a lower canvas resolution; Q also drops further if frames run slow
 const MAX_PARTS = 14000;
 let geo = null;              // logo emitter points in native logo pixels (built once)
@@ -124,13 +124,14 @@ export function attachTitleFx(screen, logoEl, els = {}) {
       if (!creditsAt) {
         const c = musicClock();
         if (!c || c.kind !== 'title') return;
-        creditsAt = performance.now();
+        // Anchor the card timeline to the song clock, including the first rendered frame after playback starts.
+        creditsAt = performance.now() - c.t * 1000;
       }
       const elapsed = performance.now() - creditsAt;
       if (els.credits && !skipAfterCredits) {
         const active = Math.min(1, Math.floor(elapsed / CREDIT_CARD_MS));
         const cardTime = elapsed - active * CREDIT_CARD_MS;
-        const k = cardTime < 900 ? cardTime / 900 : cardTime < 2700 ? 1 : clamp((CREDIT_CARD_MS - cardTime) / 900, 0, 1);
+        const k = Math.min(clamp(cardTime / CREDIT_FADE_MS, 0, 1), clamp((CREDIT_CARD_MS - cardTime) / CREDIT_FADE_MS, 0, 1));
         const eased = k * k * (3 - 2 * k);
         for (let i = 0; i < els.credits.children.length; i++) {
           els.credits.children[i].style.opacity = i === active ? (reduceMotion ? '1' : eased.toFixed(3)) : '0';
