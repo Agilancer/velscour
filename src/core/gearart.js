@@ -1,14 +1,14 @@
-// Gear art: per-class body armors plus the shared class-indexed common helmet atlas. Helmet design follows item
-// level; rarity changes its palette. The catalog sheet supplies labels only, never sprite pixels.
+// Gear art: per-class body armors plus class-indexed Common and Rare helmet atlases. The catalog sheets supply
+// labels only, never sprite pixels.
 import { makeCanvas, hexToRgb, clamp, randi, pick, chance } from './util.js';
 import { RARITY } from '../data/items.js';
 import { PALETTES, GEAR_FX, FX_CHANCE } from '../data/gear.js';
 import { resolveHelmetFit } from './helmetfit.js';
 
 const BASE = 'assets/sprites/gear/';
-const COMMON_HELMETS = BASE + 'common_helmets/';
-const S = { list: null, cls: null, meta: null, armor: null, amask: null, commonHelms: null };
-let commonHelmsPromise = null;
+const HELMET_DIR = { common: BASE + 'common_helmets/', rare: BASE + 'rare_helmets/' };
+const S = { list: null, cls: null, meta: null, armor: null, amask: null, commonHelms: null, rareHelms: null };
+const helmetPromises = { common: null, rare: null };
 
 function loadImage(src) {
   return new Promise((res, rej) => {
@@ -42,22 +42,22 @@ function atlasBoxes(atlas, meta) {
   return boxes;
 }
 
-async function loadCommonHelmets() {
-  if (!commonHelmsPromise) commonHelmsPromise = Promise.all([
-    fetch(COMMON_HELMETS + 'index.json').then((r) => { if (!r.ok) throw new Error('common helmet index'); return r.json(); }),
-    loadImage(COMMON_HELMETS + 'atlas.png'),
-    fetch(COMMON_HELMETS + 'placements.json', { cache: 'no-store' }).then((r) => {
-      if (!r.ok) throw new Error('common helmet placements');
+async function loadHelmetSet(set) {
+  if (!helmetPromises[set]) helmetPromises[set] = Promise.all([
+    fetch(HELMET_DIR[set] + 'index.json').then((r) => { if (!r.ok) throw new Error(set + ' helmet index'); return r.json(); }),
+    loadImage(HELMET_DIR[set] + 'atlas.png'),
+    fetch(HELMET_DIR[set] + 'placements.json', { cache: 'no-store' }).then((r) => {
+      if (!r.ok) throw new Error(set + ' helmet placements');
       return r.json();
     }),
   ]).then(([meta, img, placements]) => {
     if (img.width !== meta.frame[0] * meta.cols || img.height < meta.frame[1] * meta.designs.length) {
-      throw new Error('Common helmet atlas dimensions do not match its index');
+      throw new Error(set + ' helmet atlas dimensions do not match its index');
     }
     const atlas = pixels(img);
     return { meta, placements, atlas, boxes: atlasBoxes(atlas, meta) };
-  }).catch((e) => { commonHelmsPromise = null; throw e; });
-  return commonHelmsPromise;
+  }).catch((e) => { helmetPromises[set] = null; throw e; });
+  return helmetPromises[set];
 }
 
 /** Load a class's gear art. Resolves to its meta, or null if the class has none (it then keeps its old sprite). */
@@ -67,12 +67,12 @@ export async function loadGearArt(cls) {
     if (!S.list) S.list = await fetch(BASE + 'classes.json').then((r) => (r.ok ? r.json() : []));
     if (!S.list.includes(cls)) { Object.assign(S, { cls, meta: null }); return null; }
     const dir = BASE + cls + '/';
-    const [meta, a, am, commonHelms] = await Promise.all([
+    const [meta, a, am, commonHelms, rareHelms] = await Promise.all([
       fetch(dir + 'gear.json').then((r) => { if (!r.ok) throw new Error('gear ' + cls); return r.json(); }),
-      loadImage(dir + 'armor.webp'), loadImage(dir + 'armor_mask.png'), loadCommonHelmets(),
+      loadImage(dir + 'armor.webp'), loadImage(dir + 'armor_mask.png'), loadHelmetSet('common'), loadHelmetSet('rare'),
     ]);
-    if (!commonHelms.meta.classes.includes(cls)) throw new Error('No common helmet art for ' + cls);
-    Object.assign(S, { cls, meta, armor: pixels(a), amask: channel(am), commonHelms });
+    if (!commonHelms.meta.classes.includes(cls) || !rareHelms.meta.classes.includes(cls)) throw new Error('No helmet art for ' + cls);
+    Object.assign(S, { cls, meta, armor: pixels(a), amask: channel(am), commonHelms, rareHelms });
     looks.clear(); icons.clear(); recolouredHelms.clear();
     return meta;
   } catch (e) {
@@ -110,7 +110,7 @@ function fxFor(rarity) {
 export function itemLook(item, src = S) {
   if (!item || item.type !== 'gear' || (item.slot !== 'body' && item.slot !== 'head') || !src.meta) return null;
   if (item.slot === 'head') {
-    const designs = src.commonHelms?.meta.designs;
+    const designs = src[helmetSet(item) + 'Helms']?.meta.designs;
     if (!designs?.length) return null;
     if (!item.look || item.look[0] > designs.length) {
       item.look = [designFor([1, designs.length], item.ilvl), finishFor(item.rarity, true), -1];
@@ -127,6 +127,7 @@ export function itemLook(item, src = S) {
   }
   return item.look;
 }
+const helmetSet = (item) => item?.rarity === 2 ? 'rare' : 'common';
 export const finishOf = (item) => { const l = itemLook(item); return l && l[1] ? PALETTES[l[1]] : null; };
 export const gearFxOf = (item) => { const l = itemLook(item); return l && l[2] >= 0 ? GEAR_FX[l[2]] || null : null; };
 
@@ -197,10 +198,10 @@ function armorPixels(id, pi, src = S) {
 
 const recolouredHelms = new Map();
 /** The shared atlas cell for this class and design, with the item's finish applied. */
-function commonHelmPixels(cls, id, pi, src = S) {
-  const data = src.commonHelms, [cw, ch] = data.meta.frame;
+function helmetPixels(cls, id, pi, set, src = S) {
+  const data = src[set + 'Helms'], [cw, ch] = data.meta.frame;
   const col = data.meta.classes.indexOf(cls), sx = col * cw, sy = (id - 1) * ch, aw = data.atlas.width;
-  const key = cls + '|' + id + '|' + pi;
+  const key = set + '|' + cls + '|' + id + '|' + pi;
   let result = recolouredHelms.get(key);
   if (result) return result;
   const out = new Uint8ClampedArray(cw * ch * 4), pal = PALETTES[pi] || PALETTES[0], L = pal.k ? luts(pi) : null;
@@ -217,13 +218,31 @@ function commonHelmPixels(cls, id, pi, src = S) {
   return result;
 }
 
-function helmetPlacement(meta, box, design, src = S) {
-  const [cw, ch] = src.commonHelms.meta.frame;
-  const f = resolveHelmetFit(src.commonHelms.meta, src.commonHelms.placements, src.cls, design, meta.headTop);
-  const { x: dx, y: dy, scaleX: sx, scaleY: sy } = f;
+function helmetPlacement(meta, box, design, set, src = S) {
+  const helmets = src[set + 'Helms'], [cw, ch] = helmets.meta.frame;
+  const f = resolveHelmetFit(helmets.meta, helmets.placements, src.cls, design, meta.headTop);
+  const { x: dx, y: dy, scaleX: sx, scaleY: sy, rotation = 0 } = f;
   const [x0, y0, x1, y1] = box;
-  return { dx, dy, dw: cw * sx, dh: ch * sy,
-    box: [Math.floor(dx + x0 * sx), Math.floor(dy + y0 * sy), Math.ceil(dx + x1 * sx), Math.ceil(dy + y1 * sy)] };
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const mx = dx + cx * sx, my = dy + cy * sy, rad = rotation * Math.PI / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad), corners = [[x0,y0],[x1,y0],[x0,y1],[x1,y1]].map(([x,y]) => {
+    const vx = (x - cx) * sx, vy = (y - cy) * sy;
+    return [mx + vx * cos - vy * sin, my + vx * sin + vy * cos];
+  });
+  const xs = corners.map(p => p[0]), ys = corners.map(p => p[1]);
+  return { dx, dy, dw: cw * sx, dh: ch * sy, rotation,
+    center: [mx, my], box: [Math.floor(Math.min(...xs)), Math.floor(Math.min(...ys)), Math.ceil(Math.max(...xs)), Math.ceil(Math.max(...ys))] };
+}
+
+function rotatedHelmetCanvas(px, frame, box, rotation) {
+  const [w, h] = frame, [x0, y0, x1, y1] = box, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const rad = rotation * Math.PI / 180, bw = x1 - x0, bh = y1 - y0;
+  const rw = Math.max(1, Math.ceil(Math.abs(bw * Math.cos(rad)) + Math.abs(bh * Math.sin(rad))));
+  const rh = Math.max(1, Math.ceil(Math.abs(bw * Math.sin(rad)) + Math.abs(bh * Math.cos(rad))));
+  const c = makeCanvas(rw + 2, rh + 2), x = c.getContext('2d');
+  x.translate(c.width / 2, c.height / 2); x.rotate(rad);
+  x.drawImage(toCanvas(px, w, h), -cx, -cy);
+  return c;
 }
 
 function toCanvas(px, w, h) {
@@ -238,16 +257,20 @@ const looks = new Map();
 export function heroLook(cls, body, head, src = S, outCache = looks) {
   if (src.cls !== cls || !src.meta) return null;
   const bl = body ? itemLook(body, src) : [1, 0, -1], hl = head ? itemLook(head, src) : null;
-  const key = bl[0] + '|' + bl[1] + '|' + (hl ? hl[0] + '|' + hl[1] : '-');
+  const set = head ? helmetSet(head) : 'common';
+  const key = bl[0] + '|' + bl[1] + '|' + (hl ? set + '|' + hl[0] + '|' + hl[1] : '-');
   let c = outCache.get(key);
   if (c) return c;
   const { meta } = src, [fw, fh] = meta.frame;
   const px = armorPixels(bl[0], bl[1], src);
   c = toCanvas(px, fw, fh);
   if (hl) {
-    const { px: hp, box } = commonHelmPixels(cls, hl[0], hl[1], src);
-    const place = helmetPlacement(meta, box, hl[0], src), x = c.getContext('2d');
-    x.drawImage(toCanvas(hp, ...src.commonHelms.meta.frame), place.dx, place.dy, place.dw, place.dh);
+    const { px: hp, box } = helmetPixels(cls, hl[0], hl[1], set, src);
+    const place = helmetPlacement(meta, box, hl[0], set, src), [x0,y0,x1,y1] = box;
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, x = c.getContext('2d');
+    x.save(); x.translate(place.center[0], place.center[1]); x.rotate(place.rotation * Math.PI / 180);
+    x.scale(place.dw / src[set + 'Helms'].meta.frame[0], place.dh / src[set + 'Helms'].meta.frame[1]);
+    x.drawImage(toCanvas(hp, ...src[set + 'Helms'].meta.frame), -cx, -cy); x.restore();
   }
   if (outCache.size >= 8) outCache.delete(outCache.keys().next().value);
   outCache.set(key, c);
@@ -273,14 +296,17 @@ function fitCanvas(src, box, w, h) {
 export function gearIcon(item, w = 48, h = w) {
   const l = itemLook(item);
   if (!l) return null;
-  const key = item.slot + l[0] + '|' + l[1] + '|' + w + 'x' + h;
+  const set = helmetSet(item);
+  const key = item.slot + set + l[0] + '|' + l[1] + '|' + w + 'x' + h;
   let c = icons.get(key);
   if (!c) {
     const { meta } = S;
     if (item.slot === 'body') c = fitCanvas(toCanvas(armorPixels(l[0], l[1]), meta.frame[0], meta.frame[1]), meta.armor.box[l[0] - 1], w, h);
     else {
-      const { px, box } = commonHelmPixels(S.cls, l[0], l[1]);
-      c = fitCanvas(toCanvas(px, ...S.commonHelms.meta.frame), box, w, h);
+      const { px, box } = helmetPixels(S.cls, l[0], l[1], set);
+      const placement = helmetPlacement(meta, box, l[0], set);
+      const rotated = rotatedHelmetCanvas(px, S[set + 'Helms'].meta.frame, box, placement.rotation);
+      c = fitCanvas(rotated, [0, 0, rotated.width, rotated.height], w, h);
     }
     if (icons.size > 300) icons.clear();
     icons.set(key, c);
@@ -297,8 +323,8 @@ export function heroPortrait(cls, body, head, w, h) {
   const ab = m.armor.box[(body ? itemLook(body)[0] : 1) - 1];
   b[0] = ab[0]; b[1] = ab[1]; b[2] = ab[2]; b[3] = ab[3];
   if (head) {
-    const { box } = commonHelmPixels(cls, itemLook(head)[0], itemLook(head)[1]);
-    const hb = helmetPlacement(m, box, itemLook(head)[0]).box;
+    const set = helmetSet(head), { box } = helmetPixels(cls, itemLook(head)[0], itemLook(head)[1], set);
+    const hb = helmetPlacement(m, box, itemLook(head)[0], set).box;
     b[0] = Math.min(b[0], hb[0]); b[1] = Math.min(b[1], hb[1]);
     b[2] = Math.max(b[2], hb[2]); b[3] = Math.max(b[3], hb[3]);
   }
@@ -316,12 +342,12 @@ export function savedGearPreview(cls, body, head) {
   if (savedPreviews.has(signature)) return savedPreviews.get(signature);
   const work = previewQueue.then(async () => {
     const dir = BASE + cls + '/';
-    const [meta, armor, amask, commonHelms] = await Promise.all([
+    const [meta, armor, amask, commonHelms, rareHelms] = await Promise.all([
       fetch(dir + 'gear.json').then(r => { if (!r.ok) throw new Error('gear ' + cls); return r.json(); }),
       loadImage(dir + 'armor.webp'), loadImage(dir + 'armor_mask.png'),
-      loadCommonHelmets(),
+      loadHelmetSet('common'), loadHelmetSet('rare'),
     ]);
-    const src = { cls, meta, armor: pixels(armor), amask: channel(amask), commonHelms };
+    const src = { cls, meta, armor: pixels(armor), amask: channel(amask), commonHelms, rareHelms };
     return heroLook(cls, body, head, src, new Map());
   });
   previewQueue = work.catch(() => {});
