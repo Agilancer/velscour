@@ -24,6 +24,11 @@ The 60 existing IDs, stats, spawning, combat AI, collisions and
 architectural geometry are unchanged. See
 [Approved Biome Artwork](APPROVED_BIOME_ART.md).
 
+**AI art update (October 15, 2026):** the floor and scatter atlases now use
+a dedicated generated Empyrean sheet, and all 60 Heavenly monster images use
+the compact generated monster atlas. See [AI Biome Art](AI_BIOME_ART.md)
+for the atlas layout and setting notes.
+
 ### Graphics: an editable, game-compatible source pipeline
 
 `src/gfx/heavenlypack.js` lazily generates the following ordinary

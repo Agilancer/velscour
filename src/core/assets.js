@@ -10,6 +10,7 @@ import { expandBiomePack } from '../gfx/biomeexpansion.js';
 import { preloadWallTorchHolders } from '../gfx/walltorches.js';
 import { preloadWallHangings } from '../gfx/wallhangings.js';
 import { applyApprovedBiomeArt, preloadBiomeVariantArt, preloadOverworldScatterArt } from '../gfx/approvedbiomeart.js';
+import { applyAIBiomeArt } from '../gfx/aibiomeart.js';
 import { preloadApprovedHeavenlyArtwork } from '../gfx/heavenlymonsters.js';
 import { TW } from './view.js';
 import { loadReplacementArt } from './replacementart.js';
@@ -102,7 +103,7 @@ function loadPack(id) {
     const previous = A.packs[id];
     if (previous) { if (!(previous instanceof Promise)) retainGenerated(id); return previous; }
     return A.packs[id] = loadPack('catacombs').then(base => GENERATED[id](base))
-      .then(async pack => { await applyApprovedBiomeArt(pack,id); A.packs[id] = pack; retainGenerated(id); return pack; })
+      .then(async pack => { await applyApprovedBiomeArt(pack,id); await applyAIBiomeArt(pack,id); A.packs[id] = pack; retainGenerated(id); return pack; })
       .catch(e => { delete A.packs[id]; throw e; });
   }
   return A.packs[id] || (A.packs[id] = Promise.all(['floors', 'walls', 'scatter'].map((n) => loadImage(`assets/tiles/${id}/${n}.webp`)).concat(loadJSON(`assets/tiles/${id}/pack.json`)))
@@ -130,6 +131,7 @@ async function expandedPack(biome) {
     expandBiomePack(base,biome,{floorsOnly:G.touch&&!!GENERATED[biome.pack]}))
     .then(async pack=>{
       await applyApprovedBiomeArt(pack,biome.id);
+      await applyAIBiomeArt(pack,biome.id);
       A.packs[id]=pack;
       while(EXPANSION_ORDER.length>2){
         const old=EXPANSION_ORDER.shift();
