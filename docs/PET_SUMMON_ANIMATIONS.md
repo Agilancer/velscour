@@ -24,6 +24,12 @@ This art pass adds labeled animation sprite sheets for VELScour's animal compani
 | Other humanoid allies | Death Knight, Hoplite, Squire, Captain, Ancient, Storm Ancient, Ancestral Elder, Holy Guardian |
 | Other humanoid summons | Mirror Image, Chorus Singer, Coven Witch, Bone Colossus |
 
+## Runtime integration
+
+Summon keys now select the matching row from the compact atlases in `assets/sprites/pets/`. Land companions switch between idle, spawn, run, and lunge/attack frames; winged companions loop through wing-flap frames at rest and forward-flight frames while moving. The original labeled sheets in `assets/source/pet_animations/` remain the reviewable source art. Run `python tools/build_pet_animations.py` after changing those sheets to regenerate the runtime atlases.
+
+Static structures, Slime Lord summons, and revived monsters keep their existing sprite rendering. The runtime mapping only covers rows created for animal companions and humanoid allies in this art pass.
+
 ## Sheet gallery
 
 ### Land animals
