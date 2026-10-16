@@ -2,7 +2,7 @@
 
 ## Changes
 - New worldwide-biome wall atlases no longer run a full-canvas pixel readback and pixel-by-pixel recolor on touch devices. The mobile path applies unique family tinting using compositing on the existing pack's alpha shapes; the full desktop path is unchanged.
-- The five standalone Canvas-generated biomes already have 60 native floors, wall families and props. On phones, they use these original complete packs without a second memory-heavy worldwide expansion pass. Desktop keeps the full expanded packs.
+- The five standalone Canvas-generated biomes keep their native wall and prop atlases on phones, while a floor-only pass appends the 120-cell worldwide set. Desktop keeps the full expanded packs, including recolored and etched wall atlases.
 - Only two generated source packs are kept in memory on touch devices (three on desktop). Expanded biomes and tile-set caches retain their existing two-pack limits.
 - Onscreen objects are culled earlier, mobile lighting uses a smaller framebuffer, grit tiles are generated at most twice per frame, and adaptive resolution now responds to severe frame stalls and honors the actual device-pixel budget.
 - Existing saved heroes display their currently equipped **armor/helm design and finish**, using the same compositor as gameplay, with equipped weapon, offhand, armor, gloves, boots, and rings listed by name in the selection details. Unused classes keep their original animated portraits. Preview decoding is serialized and does not mutate the game's active gear-art state.

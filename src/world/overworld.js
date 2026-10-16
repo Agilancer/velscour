@@ -10,6 +10,7 @@ import { overworldObject, EXTRA_TREES, EXTRA_SCATTER, SHRINES } from '../gfx/ove
 import { outdoorBiomeProp, extendedOverworldFloors, OVERWORLD_FLOOR_EXPANSION } from '../gfx/biomeexpansion.js';
 import { isoBarrier } from '../gfx/isobarriers.js';
 import { rollLooks } from '../data/bestiary.js';
+import { wallHangingAtBuilding } from '../gfx/wallhangings.js';
 
 const W = 72, H = 72;
 const K = TW / 160; // town-pack source 160 x 80 base tiles
@@ -40,7 +41,7 @@ export function generateOverworld(depth,biome,seed) {
     {x:12,y:42,rx:14,ry:16},{x:60,y:59,rx:22,ry:20},
     {x:35,y:69,rx:21,ry:11},{x:35,y:7,rx:19,ry:9},
   ];
-  const props=[],buildings=[];
+  const props=[],buildings=[],wallHangings=[];
   const add=(name,x,y,opts={})=>{
     // Legacy town 'stone_boundary' was drawn in one fixed direction and
     // mirrored as a second direction. Replace that old scatter, too.
@@ -90,7 +91,9 @@ export function generateOverworld(depth,biome,seed) {
     for(let y=y0;y<y0+3;y++)for(let x=x0;x<x0+3;x++)if(map.block[id(x,y)])valid=false;
     if(!valid)continue;
     for(let y=y0;y<y0+3;y++)for(let x=x0;x<x0+3;x++)map.block[id(x,y)]=1;
-    buildings.push({cx,cy,spr,k:K*1.5,depth:cx+cy,flip:false,name,x0,y0});
+    const building={cx,cy,spr,k:K*1.5,depth:cx+cy,flip:false,name,x0,y0};
+    buildings.push(building);
+    if(rng.chance(.8))wallHangings.push(wallHangingAtBuilding(building,false,rng.int(0,49)));
   }
   for(let i=0;i<260;i++){
     const x=rng.int(2,W-3),y=rng.int(2,H-3),cx=x+.5,cy=y+.5;
@@ -111,12 +114,12 @@ export function generateOverworld(depth,biome,seed) {
   // Reuse the town tiles and chest art; do NOT build indoor wall segments.
   const townTiles=makeTownTiles();
   townTiles.push(...extendedOverworldFloors(A.town.ground,A.town.meta));
-  // A dedicated 60-cell wilderness floor set extends the original town art;
+  // A dedicated 120-cell wilderness floor set extends the original town art;
   // original 6+120 terrain-transition indices stay untouched.
   for(let y=3;y<H-3;y++)for(let x=3;x<W-3;x++){
     const i=y*W+x;
-    if(!map.block[i]&&map.v[i]<6&&(x*17+y*23+seed)%8===0)
-      map.v[i]=OVERWORLD_FLOOR_EXPANSION.start+((x*13+y*19+seed)>>>0)%OVERWORLD_FLOOR_EXPANSION.count;
+    if(!map.block[i]&&map.v[i]<6&&rng.chance(0.07))
+      map.v[i]=OVERWORLD_FLOOR_EXPANSION.start+rng.int(0,OVERWORLD_FLOOR_EXPANSION.count-1);
   }
   // Living barriers outline the northwestern forest rather than obstructing
   // the guaranteed entrance/shrine/exit paths. Each segment has exact 2:1
@@ -151,7 +154,7 @@ export function generateOverworld(depth,biome,seed) {
   const targets=[EXIT,...OVERWORLD_SITES];
   if(targets.some(([x,y])=>!seen[id(Math.floor(x),Math.floor(y))]))
     throw new Error('Overworld generator produced unreachable objective; seed '+seed);
-  return {map,props,buildings,townTiles,looks,spawns,chests,torches:[],
+  return {map,props,buildings,wallHangings,townTiles,looks,spawns,chests,torches:[],
     start:ENTRY,exit:EXIT,shrine:SHRINE,sites:OVERWORLD_SITES,
     scenarioId:(((seed >>> 0) ^ depth) >>> 0) % 20,seed};
 }

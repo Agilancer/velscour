@@ -5,6 +5,7 @@ import { A } from '../core/assets.js';
 import { TW } from '../core/view.js';
 import { isoBarrier, isoBarrierProp } from '../gfx/isobarriers.js';
 import { extendedTownFloors, outdoorBiomeProp, TOWN_FLOOR_EXPANSION } from '../gfx/biomeexpansion.js';
+import { wallHangingAtBuilding } from '../gfx/wallhangings.js';
 
 export const VENDORS = [
   { id: 'weapons', name: 'Garrick Ironhand', title: 'Weaponsmith', sprite: 'barbarian', pal: { hue: 25, sat: 0.6, light: -0.02 }, sign: 'sword', greet: 'Steel for the slaughter. Pick your poison - edges, hafts or bows.' },
@@ -157,7 +158,7 @@ function rollTown(tileset, seed, last) {
   }
 
   // ---- buildings
-  const buildings = [], npcs = [], props = [], torches = [];
+  const buildings = [], npcs = [], props = [], torches = [], wallHangings = [];
   const k = TW / A.town.meta.tile[0];
   const street = (x, y) => inb(x, y) && use[I(x, y)] === 1;
   // a free 3 x 3 footprint, a tile of open ground or street round it, and two tiles between it and other buildings
@@ -218,6 +219,7 @@ function rollTown(tileset, seed, last) {
     const flip = sx !== DOOR_X.has(name); // the art's door face, mirrored to the face we want
     const b = { cx, cy, spr, k: k * BS, depth: cx + cy, vendor: vendor && vendor.id, flip, name, sx, x0, y0 };
     buildings.push(b);
+    if (rng.chance(0.62)) wallHangings.push(wallHangingAtBuilding(b, sx, rng.int(0, 49)));
     for (let y = y0; y < y0 + 3; y++) for (let x = x0; x < x0 + 3; x++) { use[I(x, y)] = 2; map.block[I(x, y)] = 1; if (mat[I(x, y)] !== 0) mat[I(x, y)] = 0; }
     const [fx, fy] = frontOf(x0, y0, sx);
     for (const [ex, ey] of sx ? [[fx, fy], [fx, fy - 1], [fx, fy + 1]] : [[fx, fy], [fx - 1, fy], [fx + 1, fy]]) if (inb(ex, ey)) keep[I(ex, ey)] = 1;
@@ -414,11 +416,10 @@ function rollTown(tileset, seed, last) {
       const pi = TPAIRS.indexOf(MATS[n] + '__' + MATS[m]);
       v = shape < 0 || pi < 0 ? n : 6 + pi * 8 + shape;
     }
-    // Use 60 new original town material accents only inside same-material
+    // Use the 120 new original town material accents only inside same-material
     // stretches. Existing shoreline/road transition indices remain intact.
-    if(v===m && n===99 && !keep[y*W+x] && use[y*W+x]!==2 &&
-      (x*29+y*37+seed)%29===0)
-      v=TOWN_FLOOR_EXPANSION.start + ((x*7+y*13+seed)>>>0)%TOWN_FLOOR_EXPANSION.count;
+    if(v===m && n===99 && !keep[y*W+x] && use[y*W+x]!==2 && rng.chance(0.035))
+      v=TOWN_FLOOR_EXPANSION.start + rng.int(0,TOWN_FLOOR_EXPANSION.count-1);
     map.v[y*W+x]=v;
   }
   props.push(...torches);
@@ -434,7 +435,7 @@ function rollTown(tileset, seed, last) {
   }
   const reach = (x, y) => seen[I(Math.floor(x), Math.floor(y))];
   if (!last && (npcs.length < VENDORS.length || !reach(portal.x, portal.y) || npcs.some((n) => !reach(n.x, n.y)))) return null;
-  return { map, buildings, npcs, props, portal, center: { x: C.x + 0.5, y: C.y + 0.5 }, start };
+  return { map, buildings, npcs, props, torches, wallHangings, portal, center: { x: C.x + 0.5, y: C.y + 0.5 }, start };
 }
 
 function shuffle(a, rng) {

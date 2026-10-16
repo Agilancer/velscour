@@ -226,17 +226,29 @@ node tools/tests/pack.js heavenly
 ## Worldwide biome/environment and barricade expansion
 
 As of the `feature/worldwide-biome-art-and-spawns` branch, every indoor
-combat dungeon receives an extra 60 isometric 160×80 floor sprites, 40 new
-biome-specific props and separate overlays for each wall-family's entire
-16-mask metadata topology. The original architecture's silhouette slices
-and door hinges are preserved. The `src/gfx/biomeexpansion.js` renderer
-uses source material grain and precise pixel-sized decorations to keep
-the same overall native 2D iso-art contract. New atlases are cached lazily.
+combat dungeon receives 120 added isometric 160×80 floor sprites, 40 new
+biome-specific props and separate relief treatments for each wall family's
+entire 16-mask metadata topology. A second set of sixty floor motifs expands
+the original sixty without moving existing cells. The original architecture's
+silhouette slices and door hinges are preserved. The
+`src/gfx/biomeexpansion.js` renderer uses source material grain and precise
+pixel-sized decorations to keep the same overall native 2D iso-art contract.
+New atlases are cached lazily.
 
-Herrington Hollow **and** the Forsaken Wilds each get an *independent* set of 60
+Herrington Hollow **and** the Forsaken Wilds each get an *independent* set of 120
 new 160×80 environment floors, plus 40 extra scatter designs. The normal
 town transitions and vendor buildings are left at their original indexes
 so they do not suddenly point at the wrong ground sprite.
+
+## Four-angle wall hangings
+
+`src/gfx/wallhangings.js` uses 50 isolated designs in five compact atlases,
+each with four authored views. The atlas order follows `walltorches.js`:
+constant-X back, constant-Y back, constant-Y front, and constant-X front.
+`wallHangingAngle` chooses the view from the actual wall axis and front/back
+side; it does not mirror sprites. Dungeon walls receive sparse décor, and
+town/Forsaken Wilds buildings receive facade pieces. The catalog, pivots,
+source sheets, and build command are in [WALL_HANGINGS.md](WALL_HANGINGS.md).
 
 **Fence fix:** the former town split-rail and stone-boundary sprites were
 mirrored to approximate 90-degree turns, which cannot work on a 2:1

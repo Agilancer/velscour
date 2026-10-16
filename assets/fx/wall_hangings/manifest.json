@@ -1,0 +1,825 @@
+{
+  "name": "VELSCOUR wall hangings",
+  "count": 50,
+  "directions_per_item": 4,
+  "cell_px": [
+    96,
+    96
+  ],
+  "atlas_layout": "4 columns by 10 rows per atlas; one item per row",
+  "angle_order": [
+    "f_back",
+    "b_back",
+    "b_front",
+    "f_front"
+  ],
+  "angle_contract": {
+    "f_back": "constant-X wall, back/interior-facing",
+    "b_back": "constant-Y wall, back/interior-facing",
+    "b_front": "constant-Y wall, front-facing",
+    "f_front": "constant-X wall, front-facing",
+    "render_rule": "use authored views; never mirror or rotate a flat sprite"
+  },
+  "items": [
+    {
+      "id": "cracked_heraldic_shield",
+      "index": 0,
+      "atlas": 1,
+      "row": 0,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "parchment_wayfinder_map",
+      "index": 1,
+      "atlas": 1,
+      "row": 1,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "antlered_hunt_skull",
+      "index": 2,
+      "atlas": 1,
+      "row": 2,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "chained_iron_reliquary",
+      "index": 3,
+      "atlas": 1,
+      "row": 3,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "cracked_stone_visage",
+      "index": 4,
+      "atlas": 1,
+      "row": 4,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "apothecary_bottle_shelf",
+      "index": 5,
+      "atlas": 1,
+      "row": 5,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "crossed_swords_plaque",
+      "index": 6,
+      "atlas": 1,
+      "row": 6,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "carved_votive_shrine",
+      "index": 7,
+      "atlas": 1,
+      "row": 7,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "torn_crimson_banner",
+      "index": 8,
+      "atlas": 1,
+      "row": 8,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "brass_astrolabe_clock",
+      "index": 9,
+      "atlas": 1,
+      "row": 9,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "ornate_handbell",
+      "index": 10,
+      "atlas": 2,
+      "row": 0,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "perched_raven_bracket",
+      "index": 11,
+      "atlas": 2,
+      "row": 1,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "pressed_herbarium_frame",
+      "index": 12,
+      "atlas": 2,
+      "row": 2,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "chained_rune_tablet",
+      "index": 13,
+      "atlas": 2,
+      "row": 3,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "cracked_bronze_mirror",
+      "index": 14,
+      "atlas": 2,
+      "row": 4,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "wyvern_jaw_trophy",
+      "index": 15,
+      "atlas": 2,
+      "row": 5,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "three_iron_keys",
+      "index": 16,
+      "atlas": 2,
+      "row": 6,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "laced_war_drum",
+      "index": 17,
+      "atlas": 2,
+      "row": 7,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "skull_reliquary_cabinet",
+      "index": 18,
+      "atlas": 2,
+      "row": 8,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "moonstar_medallion",
+      "index": 19,
+      "atlas": 2,
+      "row": 9,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "portcullis_warning_plaque",
+      "index": 20,
+      "atlas": 3,
+      "row": 0,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "saint_portrait_frame",
+      "index": 21,
+      "atlas": 3,
+      "row": 1,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "three_bone_charms",
+      "index": 22,
+      "atlas": 3,
+      "row": 2,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "spiked_demon_mask",
+      "index": 23,
+      "atlas": 3,
+      "row": 3,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "blue_moon_glass_medallion",
+      "index": 24,
+      "atlas": 3,
+      "row": 4,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "three_blade_rack",
+      "index": 25,
+      "atlas": 3,
+      "row": 5,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "hooked_chain_bundle",
+      "index": 26,
+      "atlas": 3,
+      "row": 6,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "gargoyle_relief",
+      "index": 27,
+      "atlas": 3,
+      "row": 7,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "niche_funeral_urn",
+      "index": 28,
+      "atlas": 3,
+      "row": 8,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "pendant_bell",
+      "index": 29,
+      "atlas": 3,
+      "row": 9,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "iron_keyhole_plate",
+      "index": 30,
+      "atlas": 4,
+      "row": 0,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "rootbound_emerald_wreath",
+      "index": 31,
+      "atlas": 4,
+      "row": 1,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "plague_doctor_mask",
+      "index": 32,
+      "atlas": 4,
+      "row": 2,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "carved_spider_tablet",
+      "index": 33,
+      "atlas": 4,
+      "row": 3,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "three_tonic_vials",
+      "index": 34,
+      "atlas": 4,
+      "row": 4,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "cracked_sunburst_crest",
+      "index": 35,
+      "atlas": 4,
+      "row": 5,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "spiked_mace_bracket",
+      "index": 36,
+      "atlas": 4,
+      "row": 6,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "caged_sandglass",
+      "index": 37,
+      "atlas": 4,
+      "row": 7,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "bone_tally_board",
+      "index": 38,
+      "atlas": 4,
+      "row": 8,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "serpent_ring_knocker",
+      "index": 39,
+      "atlas": 4,
+      "row": 9,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "teardrop_silver_mirror",
+      "index": 40,
+      "atlas": 5,
+      "row": 0,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "stone_moth_relief",
+      "index": 41,
+      "atlas": 5,
+      "row": 1,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "ravenfall_tapestry",
+      "index": 42,
+      "atlas": 5,
+      "row": 2,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "green_idol_niche",
+      "index": 43,
+      "atlas": 5,
+      "row": 3,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "crescent_candle_sconce",
+      "index": 44,
+      "atlas": 5,
+      "row": 4,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "copper_pressure_gauge",
+      "index": 45,
+      "atlas": 5,
+      "row": 5,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "leather_chart_case",
+      "index": 46,
+      "atlas": 5,
+      "row": 6,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "antler_crown_plaque",
+      "index": 47,
+      "atlas": 5,
+      "row": 7,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "clawed_crystal_cluster",
+      "index": 48,
+      "atlas": 5,
+      "row": 8,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    },
+    {
+      "id": "clockwork_moth_automaton",
+      "index": 49,
+      "atlas": 5,
+      "row": 9,
+      "angles": {
+        "f_back": 0,
+        "b_back": 1,
+        "b_front": 2,
+        "f_front": 3
+      },
+      "pivot_px": [
+        48,
+        90
+      ]
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import { generateAstralPlanePack } from '../gfx/astralplane.js';
 import { generateHeavenlyPack } from '../gfx/heavenlypack.js';
 import { expandBiomePack } from '../gfx/biomeexpansion.js';
 import { preloadWallTorchHolders } from '../gfx/walltorches.js';
+import { preloadWallHangings } from '../gfx/wallhangings.js';
 import { applyApprovedBiomeArt, preloadBiomeVariantArt, preloadOverworldScatterArt } from '../gfx/approvedbiomeart.js';
 import { preloadApprovedHeavenlyArtwork } from '../gfx/heavenlymonsters.js';
 import { TW } from './view.js';
@@ -55,6 +56,7 @@ export async function loadAssets(progress) {
   jobs.push(track(loadReplacementArt()));
   jobs.push(track(preloadBiomeVariantArt()));
   jobs.push(track(preloadOverworldScatterArt()));
+  jobs.push(track(preloadWallHangings()));
   jobs.push(track(preloadSong('hymn_of_the_abyss', (k) => { song = k; report(); }).then(() => { song = 1; })));
   for (const id of CLASS_IDS) jobs.push(track(loadImage(`assets/sprites/classes/${id}.webp`).then((img) => { A.classes[id] = img; })));
   jobs.push(track(loadImage('assets/ui/hud.webp').then((i) => { A.hud = i; })));
@@ -114,10 +116,8 @@ const ready = (v) => v && !(v instanceof Promise);
 const EXPANSION_ORDER=[];
 async function expandedPack(biome) {
   if (!biome || biome.overworld || biome.id === 'town') return;
-  // The five standalone generated temples/worlds already have 60 unique floors,
-  // complete wall families and props. On memory-limited phones, use that native
-  // art instead of duplicating entire atlases with a second expansion layer.
-  if (G.touch && GENERATED[biome.pack]) return loadPack(biome.pack);
+  // On memory-limited phones, append the biome's floor set while reusing its
+  // native wall/scatter atlases instead of cloning the large wall canvas.
   const id='expanded_'+biome.id;
   const previous=A.packs[id];
   if(previous) {
@@ -126,7 +126,8 @@ async function expandedPack(biome) {
     EXPANSION_ORDER.push(id);
     return await previous;
   }
-  const promise=loadPack(biome.pack || DEFAULT_PACK).then(base=>expandBiomePack(base,biome))
+  const promise=loadPack(biome.pack || DEFAULT_PACK).then(base=>
+    expandBiomePack(base,biome,{floorsOnly:G.touch&&!!GENERATED[biome.pack]}))
     .then(async pack=>{
       await applyApprovedBiomeArt(pack,biome.id);
       A.packs[id]=pack;
@@ -151,6 +152,7 @@ export function loadBiomeArt(biome) {
     biome?.id === 'heavenly' ? preloadApprovedHeavenlyArtwork() : Promise.resolve(null),
     biome && !biome.overworld && biome.id!=='town' ?
       preloadWallTorchHolders(biome) : Promise.resolve(null),
+      preloadWallHangings(),
   ]);
 }
 

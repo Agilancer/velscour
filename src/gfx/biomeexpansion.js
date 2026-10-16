@@ -7,7 +7,7 @@ import { G } from '../state.js';
 
 // Town has 6 base materials and 15 transition pairs * 8 masks. Additional
 // source floor cells are APPENDED so every existing transition ID stays intact.
-export const TOWN_FLOOR_EXPANSION={start:6+15*8,count:60};
+export const TOWN_FLOOR_EXPANSION={start:6+15*8,count:120};
 const HUES={
   catacombs:38,frozen:205,ice_temple:207,molten:13,fungal:103,sunken:185,
   blood:356,ashen:30,void:277,gilded:47,plague:92,crystal:189,desert:35,
@@ -53,7 +53,7 @@ function decorateFloor(g,id,style,idx,base,regionX,regionY){
   // material; adjacent floor tiles never have chopped pattern ends.
   g.save();g.translate(x,y);g.beginPath();g.moveTo(80,9);g.lineTo(142,40);
   g.lineTo(80,71);g.lineTo(18,40);g.closePath();g.clip();
-  const motif=(idx+style)%8;
+  const motif=idx<60?(idx+style)%8:8+((idx+style*3)%8);
   const xx=80,yy=40;
   if(motif===0){
     diamond(g,xx,yy,30,15,pal.dark,pal.light);
@@ -74,9 +74,38 @@ function decorateFloor(g,id,style,idx,base,regionX,regionY){
     diamond(g,xx,yy,9,8,pal.edge);
   }else if(motif===6){
     for(let j=0;j<5;j++){const a=j*2.51;diamond(g,80+Math.cos(a)*23,40+Math.sin(a)*12,7,4,pal.light,pal.dark);}
-  }else{
+  }else if(motif===7){
     diamond(g,xx,yy,29,15,pal.base,pal.edge);
     line(g,[[53,42],[68,35],[79,44],[99,36],[108,40]],pal.glow,2);
+  }else if(motif===8){
+    for(let j=0;j<3;j++)diamond(g,xx,yy,29-j*8,14-j*4,j%2?pal.mid:pal.dark,j%2?pal.edge:pal.light);
+    diamond(g,xx,yy,5,3,pal.glow,pal.edge);
+  }else if(motif===9){
+    for(let j=0;j<5;j++){const x0=42+j*18;line(g,[[x0,26],[x0+8,34],[x0,42],[x0+8,50]],j%2?pal.light:pal.dark,2);}
+    diamond(g,xx,yy,9,5,pal.glow,pal.edge);
+  }else if(motif===10){
+    line(g,[[49,28],[66,36],[61,43],[80,48],[91,39],[112,46]],pal.light,3);
+    line(g,[[66,36],[69,25],[77,22]],pal.edge,2);
+    for(let j=0;j<4;j++)diamond(g,54+j*19,53-j%2*7,4,3,pal.glow,pal.dark);
+  }else if(motif===11){
+    line(g,[[80,57],[80,24],[67,34],[60,29],[68,42],[55,47],[73,46]],pal.light,3);
+    line(g,[[80,40],[94,29],[101,32],[94,42],[108,47],[88,46]],pal.edge,3);
+    diamond(g,80,24,4,3,pal.glow,pal.dark);
+  }else if(motif===12){
+    for(let j=0;j<5;j++)line(g,[[47+j*13,29],[53+j*13,39],[47+j*13,49]],j%2?pal.edge:pal.mid,2);
+    diamond(g,xx,yy,12,6,pal.dark,pal.light);
+  }else if(motif===13){
+    diamond(g,xx,yy,31,15,pal.dark,pal.edge);
+    for(let j=0;j<3;j++)diamond(g,65+j*15,40+(j%2?6:-5),6,4,j%2?pal.glow:pal.light,pal.dark);
+  }else if(motif===14){
+    diamond(g,xx,yy,24,12,pal.mid,pal.light);
+    line(g,[[80,27],[80,53]],pal.edge,3);line(g,[[66,34],[94,46]],pal.glow,2);line(g,[[94,34],[66,46]],pal.glow,2);
+    diamond(g,xx,yy,5,3,pal.dark,pal.edge);
+  }else{
+    for(let j=0;j<3;j++){
+      const x0=59+j*21;g.beginPath();g.ellipse(x0,40,13,7,j*.7,0,Math.PI*2);
+      g.strokeStyle=j%2?pal.edge:pal.light;g.lineWidth=2;g.stroke();
+    }
   }
   // Native pixel density: never smooth these marks.
   for(let n=0;n<22;n++){
@@ -88,7 +117,7 @@ function decorateFloor(g,id,style,idx,base,regionX,regionY){
 let townCache=null;
 export function extendedTownFloors(source,meta){
   if(townCache&&townCache.source===source)return townCache.entries;
-  const canvas=makeCanvas(1620,492),g=canvas.getContext('2d');
+  const canvas=makeCanvas(1620,984),g=canvas.getContext('2d');
   g.imageSmoothingEnabled=false;
   const names=Object.keys(meta.floors);
   for(let i=0;i<TOWN_FLOOR_EXPANSION.count;i++){
@@ -105,15 +134,15 @@ export function extendedTownFloors(source,meta){
   return entries;
 }
 // The town and the wilderness share approved source pixel density, but have
-// SEPARATE 60-cell atlases. Each biome gets its own floor motifs.
+// SEPARATE 120-cell atlases. Each biome gets its own floor motifs.
 export const OVERWORLD_FLOOR_EXPANSION={
-  start:TOWN_FLOOR_EXPANSION.start+TOWN_FLOOR_EXPANSION.count,count:60,
+  start:TOWN_FLOOR_EXPANSION.start+TOWN_FLOOR_EXPANSION.count,count:120,
 };
 let overworldCache=null;
 export function extendedOverworldFloors(source,meta){
  if(overworldCache?.source===source)return overworldCache.entries;
  const count=OVERWORLD_FLOOR_EXPANSION.count;
- const canvas=makeCanvas(1620,492),g=canvas.getContext('2d');
+ const canvas=makeCanvas(1620,984),g=canvas.getContext('2d');
  g.imageSmoothingEnabled=false;
  const names=['dense_meadow','trampled_verge','grass','mud','dirt','stone',
    'irregular_flagstone','slate_paving','bleached_boards','gravel'];
@@ -246,15 +275,53 @@ function recolorArchitecture(source,meta,biome){
   g.restore();
   return canvas;
 }
-/** For an indoor biome, append 60 NEW floor variants and 40 NEW environmental
+function etchWallArchitecture(canvas,meta,biome){
+  const g=canvas.getContext('2d');
+  const families=Object.entries(meta.walls);
+  const seen=new Set();
+  g.save();g.globalCompositeOperation='source-atop';g.globalAlpha=.34;
+  families.forEach(([,masks],fam)=>{
+    const p=getPalette(biome,fam+2);
+    for(const variants of Object.values(masks))for(const parts of variants)for(const r of parts){
+      const [,x,y,w,h]=r,key=[x,y,w,h].join(':');
+      if(seen.has(key)||w<16||h<14)continue;
+      seen.add(key);
+      const cx=x+w/2,cy=y+h/2,rx=Math.max(3,Math.min(12,w*.22)),ry=Math.max(3,Math.min(24,h*.2));
+      g.strokeStyle=p.edge;g.fillStyle=p.glow;g.lineWidth=1.6;
+      if(fam%5===0){
+        line(g,[[cx-rx,cy-ry],[cx-rx,cy+ry],[cx+rx,cy+ry],[cx+rx,cy-ry]],p.edge,1.6);
+        diamond(g,cx-rx,cy-ry,2,2,p.glow,p.edge);diamond(g,cx+rx,cy+ry,2,2,p.glow,p.edge);
+      }else if(fam%5===1){
+        line(g,[[cx,cy+ry],[cx,cy-ry],[cx-rx,cy-ry/2],[cx-rx/2,cy],[cx+rx/2,cy-ry/3],[cx+rx,cy-ry]],p.edge,2);
+        for(let j=-1;j<=1;j++)diamond(g,cx+j*rx*.55,cy+ry*.35,2,3,p.glow,p.edge);
+      }else if(fam%5===2){
+        for(let j=-1;j<=1;j++){
+          const yy=cy+j*ry*.65;line(g,[[cx-rx,yy],[cx+rx,yy]],p.edge,1.6);
+          diamond(g,cx-rx,yy,2,2,p.glow,p.edge);
+        }
+      }else if(fam%5===3){
+        diamond(g,cx,cy,rx,ry,p.mid,p.edge);
+        diamond(g,cx,cy,rx*.48,ry*.48,p.dark,p.glow);
+        line(g,[[cx,cy-ry],[cx,cy+ry]],p.edge,1.3);
+      }else{
+        g.beginPath();g.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);g.stroke();
+        line(g,[[cx-rx*.7,cy],[cx+rx*.7,cy]],p.edge,1.5);
+        line(g,[[cx,cy-ry*.7],[cx,cy+ry*.7]],p.edge,1.5);
+        diamond(g,cx,cy,3,3,p.glow,p.edge);
+      }
+    }
+  });
+  g.restore();
+}
+/** For an indoor biome, append 120 NEW floor variants and 40 NEW environmental
  * objects to its pack, tint each real wall family individually, and preserve
  * original (unchanged) arch/door geometry and metadata indexing.
  */
-export function expandBiomePack(base,biome){
+export function expandBiomePack(base,biome,{floorsOnly=false}={}){
   const meta=JSON.parse(JSON.stringify(base.meta));
   const floorStart=meta.floors.length,scatterStart=meta.scatter.length;
-  const nFloor=60,nScatter=40,cell=166;
-  const floorCanvas=makeCanvas(Math.max(1620,base.floors.width),base.floors.height+492);
+  const nFloor=120,nScatter=floorsOnly?0:40,cell=166;
+  const floorCanvas=makeCanvas(Math.max(1620,base.floors.width),base.floors.height+984);
   const fg=floorCanvas.getContext('2d');fg.imageSmoothingEnabled=false;
   fg.drawImage(base.floors,0,0);
   // Starting each cell from the game-approved pack preserves grain, pixel
@@ -270,21 +337,26 @@ export function expandBiomePack(base,biome){
     meta.floors.push({name:biome.id+'_extended_floor_'+String(i+1).padStart(2,'0'),
       x,y,w:160,h:80,seamless:i<10,lum:(biome.light||8)/18});
   }
-  const scatterY=base.scatter.height+4;
-  const scatterCanvas=makeCanvas(Math.max(base.scatter.width,cell*8),scatterY+cell*5);
-  const sg=scatterCanvas.getContext('2d');sg.imageSmoothingEnabled=false;
-  sg.drawImage(base.scatter,0,0);
-  for(let i=0;i<nScatter;i++){
-    const x=i%8*cell,y=scatterY+Math.floor(i/8)*cell;
-    sg.save();sg.translate(x,y);drawProp(sg,biome.id,i);sg.restore();
-    meta.scatter.push({name:biome.id+'_extended_'+TYPES[i%TYPES.length]+'_'+(i/20|0),
-      x,y,w:160,h:160,ox:-80,oy:-151,
-      fp:TYPES[i%TYPES.length]==='barricade'?.15:.58,
-      block:!['rubble','cairn','roots'].includes(TYPES[i%TYPES.length])});
+  let scatterCanvas=base.scatter;
+  if(!floorsOnly){
+    const scatterY=base.scatter.height+4;
+    scatterCanvas=makeCanvas(Math.max(base.scatter.width,cell*8),scatterY+cell*5);
+    const sg=scatterCanvas.getContext('2d');sg.imageSmoothingEnabled=false;
+    sg.drawImage(base.scatter,0,0);
+    for(let i=0;i<nScatter;i++){
+      const x=i%8*cell,y=scatterY+Math.floor(i/8)*cell;
+      sg.save();sg.translate(x,y);drawProp(sg,biome.id,i);sg.restore();
+      meta.scatter.push({name:biome.id+'_extended_'+TYPES[i%TYPES.length]+'_'+(i/20|0),
+        x,y,w:160,h:160,ox:-80,oy:-151,
+        fp:TYPES[i%TYPES.length]==='barricade'?.15:.58,
+        block:!['rubble','cairn','roots'].includes(TYPES[i%TYPES.length])});
+    }
   }
   meta.expansion={floorStart,scatterStart,newFloors:nFloor,newScatter:nScatter,biome:biome.id};
   meta.pack=(meta.pack||base.meta.pack)+' — '+biome.name+' Expanded';
-  return{meta,floors:floorCanvas,scatter:scatterCanvas,walls:recolorArchitecture(base.walls,base.meta,biome.id)};
+  const walls=floorsOnly?base.walls:recolorArchitecture(base.walls,base.meta,biome.id);
+  if(!floorsOnly)etchWallArchitecture(walls,base.meta,biome.id);
+  return{meta,floors:floorCanvas,scatter:scatterCanvas,walls};
 }
 /** New individual prop for wilderness while retaining town-pack-native pivot. */
 const outdoorCache=new Map();

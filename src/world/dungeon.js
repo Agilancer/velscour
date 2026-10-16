@@ -4,8 +4,20 @@ import { RNG, clamp } from '../core/util.js';
 import { ARCH } from '../data/enemies.js';
 import { rollLooks } from '../data/bestiary.js';
 import { isoBarrier } from '../gfx/isobarriers.js';
+import { wallHangingAtWallSegment } from '../gfx/wallhangings.js';
 
 const S = 11; // chunk size in tiles
+
+function nextHangingDesign(rng, bag) {
+  if (!bag.length) {
+    for (let i = 0; i < 50; i++) bag.push(i);
+    for (let i = bag.length - 1; i > 0; i--) {
+      const j = rng.int(0, i);
+      [bag[i], bag[j]] = [bag[j], bag[i]];
+    }
+  }
+  return bag.pop();
+}
 
 /** Attach a torch to the true edge midpoint, not a freestanding prop.
  * The authored holder faces into the adjacent walkable side of the wall.
@@ -216,9 +228,19 @@ export function generateDungeon(depth, biome, tileset, seed) {
     if (s.front || rng.next() > (inArena(s) ? 0.3 : 0.07)) continue;
     torches.push(torchAtWallSegment(s));
   }
+    const wallHangings = [], hangingDesigns = [];
+    for (const s of map.segments) {
+      if (rng.next() > 0.035) continue;
+      // Keep mounted displays from covering an existing lit holder.
+      if (torches.some((t) => Math.abs((t.mountX ?? t.x) - s.mx) < 0.4 &&
+        Math.abs((t.mountY ?? t.y) - s.my) < 0.4)) continue;
+      // Cycle through a shuffled catalog so a level does not repeat a motif
+      // until all fifty authored designs have had a chance to appear.
+      wallHangings.push(wallHangingAtWallSegment(s, nextHangingDesign(rng, hangingDesigns)));
+    }
 
   return {
-    map, rooms, spawns, props, chests, torches, looks,
+      map, rooms, spawns, props, chests, torches, wallHangings, looks,
     start: [startRoom.mx, startRoom.my],
     exit: arena ? [arena.x + arena.w - 2.5, arena.cy] : exitPos(map, exitRoom, startRoom),
     bossRoom: arena || exitRoom,
@@ -499,13 +521,20 @@ function generateThrone(biome, tileset, seed) {
   const torches = [];
   for (const s of map.segments)
     if (!s.front && rng.next() < 0.12) torches.push(torchAtWallSegment(s));
+  const wallHangings = [], hangingDesigns = [];
+  for (const s of map.segments) {
+    if (rng.next() > 0.055) continue;
+    if (torches.some((t) => Math.abs((t.mountX ?? t.x) - s.mx) < 0.4 &&
+      Math.abs((t.mountY ?? t.y) - s.my) < 0.4)) continue;
+    wallHangings.push(wallHangingAtWallSegment(s, nextHangingDesign(rng, hangingDesigns)));
+  }
   const props = [];
   const ob = tileset.scatter.find((e) => e.name === 'funerary_obelisk') || tileset.scatter[0];
   for (const [x, y] of [[12, 10], [32, 10], [12, 24], [32, 24]]) {
     if (ob && map.walkableTile(x, y)) { map.block[y * W + x] = 1; props.push({ kind: 'scatter', x: x + 0.5, y: y + 0.5, spr: ob, k: tileset.k }); }
   }
   return {
-    map, rooms: [{ x: ar.x, y: ar.y, w: ar.w, h: ar.h, mx: 22, my: 17 }], spawns, props, chests: [{ x: 22.5, y: 72.5, rare: true }], torches,
+    map, rooms: [{ x: ar.x, y: ar.y, w: ar.w, h: ar.h, mx: 22, my: 17 }], spawns, props, chests: [{ x: 22.5, y: 72.5, rare: true }], torches, wallHangings,
     start: [22, 73], exit: [22, 7], bossRoom: { x: ar.x, y: ar.y, w: ar.w, h: ar.h, mx: 22, my: 17 }, throne: true,
   };
 }

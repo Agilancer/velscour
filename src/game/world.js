@@ -22,6 +22,7 @@ export class World {
     this.npcs = this.npcs || [];
     this.chests = this.chests || [];
     this.torches = this.torches || [];
+    this.wallHangings = this.wallHangings || [];
     this.portals = this.portals || [];
     this.grid = new Map();
     this.time = 0;

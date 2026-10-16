@@ -5,6 +5,7 @@ import { makeCanvas, TAU, clamp, rgba, shade, hexToRgb } from '../core/util.js';
 import { drawDecals, drawEffects, drawParticles, drawTexts, lights, glowSprite } from '../gfx/vfx.js';
 import { orbitShieldDepth } from '../gfx/lancershields.js';
 import { drawWallTorch, wallTorchRect } from '../gfx/walltorches.js';
+import { drawWallHanging, wallHangingRect } from '../gfx/wallhangings.js';
 import { replacementImage } from '../core/replacementart.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { gritAt } from '../gfx/grit.js';
@@ -310,6 +311,11 @@ export function renderWorld(ctx, world) {
     if(px<vr.x0-120||px>vr.x1+120||py<vr.y0-120||py>vr.y1+90)continue;
     sorted.push({d:t.depth??(t.x+t.y),f:12,o:t});
   }
+  for (const item of world.wallHangings) {
+    const px=isoX(item.mountX,item.mountY), py=isoY(item.mountX,item.mountY);
+    if(px<vr.x0-100||px>vr.x1+100||py<vr.y0-110||py>vr.y1+70)continue;
+    sorted.push({d:item.depth??(item.mountX+item.mountY),f:13,o:item});
+  }
   for (const pr of world.props) {
     const px = isoX(pr.x, pr.y), py = isoY(pr.x, pr.y);
     // Tall outdoor trees are grounded well below their canopy; cull by the full
@@ -387,6 +393,8 @@ export function renderWorld(ctx, world) {
       case 11: o.drawShield(ctx,it.index); break;
       case 12: drawWallTorch(ctx,o,world.biome,G.time,
         cutaway(wallTorchRect(o),it.d)); break;
+      case 13: drawWallHanging(ctx,o,world.biome,
+        cutaway(wallHangingRect(o),it.d)); break;
     }
   }
   if (q !== hq) ctx.imageSmoothingQuality = hq;
