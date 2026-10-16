@@ -14,6 +14,13 @@ Contents
 
 ---
 
+## October 15, 2026 — Town approaches and neighborhood alignment
+
+- House fronts now inherit the entry axis used by all buildings within an eight-tile radius. Placements that would introduce mixed nearby axes are skipped, keeping each local cluster visually consistent.
+- Every house and vendor door gets a continuous gravel route to the plaza, preferring existing roads. Route tiles stay clear of later props and obstructions.
+- Updated `tools/tests/town.js` to check nearby entry-axis consistency and all approach tiles for continuity and walkability. Chromium screenshots were inspected for the plaza and zoomed-out town.
+- Verified seeds 1337, 2929, 7853, 12345 and 65535 with `tools/tests/town.js`, and ran `tools/tests/flow.js`; both reported no errors.
+
 ## October 15, 2026 — Herrington Hollow tiles and weather
 
 - Removed generic generated monuments (rune stones, obelisks, idols, crystals,

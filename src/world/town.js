@@ -21,6 +21,7 @@ export const VENDORS = [
 // Ground materials in the pack's transition order; a pair's A side is the earlier one.
 const MATS = ['grass', 'gravel', 'dirt', 'mud', 'stone', 'concrete'];
 const BS = 1.5; // buildings are the pack's 2 x 2 houses drawn 1.5x: a 3 x 3 tile footprint, walls ~1.3 heroes tall
+const ISO_NEIGHBOR_RADIUS = 8;
 export const rollTownWeather = (random = Math.random) => random() < 0.25;
 
 /**
@@ -63,7 +64,7 @@ const TOWN_TREES = ['t_ancient_willow', 't_young_birch', 't_twin_birch', 't_matu
 /**
  * Herrington Hollow, rolled from a seed (each hero has their own, c.townSeed): an irregular plaza with a well and market
  * stalls, meandering roads out into the forest (one of them to the portal), the shops fronting the streets with their
- * wares out front, houses on footpaths, and yards around them (gardens, an orchard, a lumber camp, a paddock, ruins).
+ * wares out front, gravel approaches to every door, and yards around them (gardens, orchard, lumber camp, paddock, ruins).
  * Retries with the next seed if a vendor or the portal can't be reached.
  */
 export function generateTown(tileset, seed = 1337) {
@@ -174,6 +175,17 @@ function rollTown(tileset, seed, last) {
   };
   // a footprint at (x0, y0) whose door (+y face, or +x when sx) fronts tile (fx, fy)
   const frontOf = (x0, y0, sx) => (sx ? [x0 + 3, y0 + 1] : [x0 + 1, y0 + 3]);
+  const nearbySide = (x, y) => {
+    let side = null;
+    for (const b of buildings) {
+      const d = Math.hypot(b.cx - x, b.cy - y);
+      if (d < ISO_NEIGHBOR_RADIUS) {
+        if (side !== null && side !== b.sx) return 'conflict';
+        side = b.sx;
+      }
+    }
+    return side;
+  };
   const streets = [];
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (use[I(x, y)] === 1 && !keep[I(x, y)]) streets.push([x, y]);
   const place = (name, vendor) => {
@@ -181,13 +193,19 @@ function rollTown(tileset, seed, last) {
     for (let tries = 0; tries < 160; tries++) {
       const [tx, ty] = rng.pick(streets);
       if (Math.hypot(tx - C.x, ty - C.y) > near + tries / 12) continue;
-      const sx = rng.chance(0.5);
-      const x0 = sx ? tx - 3 : tx - 1, y0 = sx ? ty - 1 : ty - 3;
+      let sx = rng.chance(0.5), x0 = sx ? tx - 3 : tx - 1, y0 = sx ? ty - 1 : ty - 3;
+      let side = nearbySide(x0 + 1.5, y0 + 1.5);
+      if (side === 'conflict') continue;
+      if (side !== null) { sx = side; x0 = sx ? tx - 3 : tx - 1; y0 = sx ? ty - 1 : ty - 3; }
+      side = nearbySide(x0 + 1.5, y0 + 1.5);
+      if (side === 'conflict' || (side !== null && side !== sx)) continue;
       if (fits(x0, y0)) return addBuilding(name, x0, y0, sx, vendor);
     }
     // off the streets: anywhere open, joined to the nearest street by a footpath
     for (let tries = 0; tries < 200; tries++) {
-      const x0 = rng.int(5, W - 9), y0 = rng.int(5, H - 9), sx = rng.chance(0.5);
+      const x0 = rng.int(5, W - 9), y0 = rng.int(5, H - 9), side = nearbySide(x0 + 1.5, y0 + 1.5);
+      if (side === 'conflict') continue;
+      const sx = side ?? rng.chance(0.5);
       if (Math.hypot(x0 - C.x, y0 - C.y) > near + 6 || !fits(x0, y0)) continue;
       const b = addBuilding(name, x0, y0, sx, vendor);
       footpath(...frontOf(x0, y0, sx));
@@ -196,24 +214,32 @@ function rollTown(tileset, seed, last) {
     return null;
   };
   const footpath = (fx, fy) => {
-    // breadth-first to the nearest street, then gravel along the way back
-    const prev = new Int32Array(N).fill(-1), q = [I(fx, fy)];
-    prev[q[0]] = q[0];
+    // Prefer the road network (cost 1) over open ground (cost 4), so door
+    // paths join the existing lanes instead of cutting arbitrary shortcuts.
+    const start = I(fx, fy), cost = new Int16Array(N).fill(0x3fff), prev = new Int32Array(N).fill(-1), queue = [[start]];
+    cost[start] = 0;
     let end = -1;
-    for (let h = 0; h < q.length && end < 0; h++) {
-      const i = q[h], x = i % W, y = (i / W) | 0;
+    for (let c = 0; c < queue.length && end < 0; c++) for (const i of queue[c]) {
+      if (cost[i] !== c) continue;
+      const x = i % W, y = (i / W) | 0;
+      if (use[i] === 1 && mat[i] === 4 && i !== start) { end = i; break; }
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const nx = x + dx, ny = y + dy, j = I(nx, ny);
-        if (!inb(nx, ny) || prev[j] >= 0 || use[j] === 2 || use[j] === 4) continue;
-        prev[j] = i;
-        if (use[j] === 1) { end = j; break; }
-        q.push(j);
+        if (!inb(nx, ny) || use[j] === 2 || use[j] === 3 || use[j] === 4 || (map.block[j] && j !== start)) continue;
+        const next = c + (use[j] === 1 ? 1 : 4);
+        if (next >= cost[j]) continue;
+        cost[j] = next; prev[j] = i;
+        while (queue.length <= next) queue.push([]);
+        queue[next].push(j);
       }
     }
-    for (let i = end >= 0 ? prev[end] : -1; i >= 0; i = prev[i]) {
-      if (use[i] !== 1) { use[i] = 1; if (mat[i] === 0) mat[i] = rng.chance(0.7) ? 1 : 2; }
-      if (prev[i] === i) break;
+    const route = [];
+    for (let i = end; i >= 0; i = prev[i]) {
+      use[i] = 1; mat[i] = 1; keep[i] = 1;
+      route.push([i % W, (i / W) | 0]);
+      if (i === start) break;
     }
+    return route;
   };
   const addBuilding = (name, x0, y0, sx, vendor) => {
     const spr = townObject('b_' + name), cx = x0 + 1.5, cy = y0 + 1.5;
@@ -224,6 +250,7 @@ function rollTown(tileset, seed, last) {
     for (let y = y0; y < y0 + 3; y++) for (let x = x0; x < x0 + 3; x++) { use[I(x, y)] = 2; map.block[I(x, y)] = 1; if (mat[I(x, y)] !== 0) mat[I(x, y)] = 0; }
     const [fx, fy] = frontOf(x0, y0, sx);
     for (const [ex, ey] of sx ? [[fx, fy], [fx, fy - 1], [fx, fy + 1]] : [[fx, fy], [fx - 1, fy], [fx + 1, fy]]) if (inb(ex, ey)) keep[I(ex, ey)] = 1;
+    b.approach = footpath(fx, fy);
     // the torch beside the door, lit (the pack's torches are unlit)
     for (const [ox, oy] of A.town.meta.lights['b_' + name] || []) {
       const lx = ox * k * BS * (flip ? -1 : 1), ly = oy * k * BS; // screen offset from the building centre
@@ -243,14 +270,15 @@ function rollTown(tileset, seed, last) {
   const free = (x, y, solid) => {
     const tx = Math.floor(x), ty = Math.floor(y);
     if (!inb(tx, ty) || map.block[I(tx, ty)] || use[I(tx, ty)] === 2 || use[I(tx, ty)] === 4) return false;
-    if (solid && keep[I(tx, ty)]) return false;
+    if (keep[I(tx, ty)]) return false;
     return !props.some((p) => p.kind === 'scatter' && Math.abs(p.x - x) < 0.8 && Math.abs(p.y - y) < 0.8);
   };
   const prop = (name, x, y, opts = {}) => {
     const spr = typeof name === 'string' ? S(name) : name;
     const solid = opts.solid ?? (typeof name === 'string' && SOLID.test(name));
     if (!spr || !free(x, y, solid)) return false;
-    props.push({ kind: 'scatter', x, y, spr, k, flip: opts.flip ?? rng.chance(0.5) });
+    const side = nearbySide(x, y);
+    props.push({ kind: 'scatter', x, y, spr, k, flip: opts.flip ?? (side === 'conflict' ? rng.chance(0.5) : side ?? rng.chance(0.5)) });
     if (solid) blockAt(x, y);
     return true;
   };
