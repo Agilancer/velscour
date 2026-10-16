@@ -237,8 +237,8 @@ export function renderWorld(ctx, world) {
   camera.apply(ctx);
   ctx.imageSmoothingEnabled = true;
   // 'medium' (mipmapped) downscaling of the big floor/wall atlases costs several times 'low' per draw, and those are
-  // most of the frame: the tiles and walls always draw 'low', the sprites 'medium' (or 'low' on touch screens)
-  const hq = G.touch ? 'low' : 'medium';
+  // most of the frame: tiles and walls always draw 'low'; sprites use 'low' on touch or when resolution is reduced.
+  const hq = G.touch || (G.resScale || 1) < 0.95 ? 'low' : 'medium';
   ctx.imageSmoothingQuality = 'low';
   const vr = camera.viewRect(40);
   const map = world.map;

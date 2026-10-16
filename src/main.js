@@ -57,18 +57,20 @@ function renderTitle(dt) {
   ctx.globalCompositeOperation = 'source-over';
 }
 
-// Adaptive resolution (touch only): phone GPUs are fill-rate bound, so a slow phone trades backing-store
-// pixels for frame rate in 2 s windows, and earns them back after 10 s of headroom.
+// Adaptive resolution: when a device misses its frame budget, trade backing-store
+// pixels for frame rate in 2 s windows, and earn them back after 10 s of headroom.
 const ar = { t: 0, n: 0, good: 0 };
 function adaptRes(raw) {
-  if (!G.touch || G.mode !== 'game' || document.hidden) { ar.t = ar.n = 0; return; }
+  if (G.mode !== 'game' || document.hidden) { ar.t = ar.n = 0; return; }
   // Do not discard very slow frames: that prevented adaptation precisely when
   // biome generation/painting made the phone stall for >250 ms.
   ar.t += Math.min(raw, 0.25); ar.n++;
   if (ar.t < 2) return;
   const fps = ar.n / ar.t, s = G.resScale || 1;
   ar.t = ar.n = 0;
-  if (fps < 45 && s > 0.7) { G.resScale = Math.max(0.7, s * 0.85); ar.good = 0; resize(); }
+  const minScale = G.touch ? 0.7 : 0.75;
+  const slowFps = G.touch ? 45 : 50;
+  if (fps < slowFps && s > minScale) { G.resScale = Math.max(minScale, s * 0.85); ar.good = 0; resize(); }
   else if (fps > 57 && s < 1) { if (++ar.good >= 5) { G.resScale = Math.min(1, s / 0.85); ar.good = 0; resize(); } }
   else ar.good = 0;
 }
