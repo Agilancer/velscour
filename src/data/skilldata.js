@@ -1,4 +1,4 @@
-// 16 classes x 3 trees x 20 skills = 960 skills, plus the Necromancer's 4th tree (Skeletal Legion): 980.
+// 16 classes x 3 trees x 20 skills = 960 skills, plus Necromancer's Skeletal Legion and Dragoon's Spearstorm trees: 1000.
 // Each line: "Name|kind|element|fx|mods"
 // Tree layout is 5 rows x 4 columns; each column is a prerequisite chain.
 // Row level requirements: 1, 6, 12, 20, 30.
@@ -149,6 +149,14 @@ export const SKILLDATA = {
       'Storm Breath|beam|light|breath|dur=1.5 cone', 'Wyrmfire Pool|zone|fire|fire|r=1.4 dur=6', 'Blood Frenzy|buff|blood|aura|buff=as amt=35 dur=15 cd=25', 'Drake Whelps|summon|fire|dragon|sum=whelp n=3 dur=20 cd=20',
       'Venom Breath|beam|poison|breath|dur=2 cone poison', 'Dragon Heart|buff|fire|aura|buff=regen,dmg amt=30 dur=20 cd=40', 'Wyrm Coil|orbit|fire|dragon|n=2 dur=8 cd=12', 'Inferno Breath|beam|fire|breath|dur=2.5 cone dmg=1.4 cd=4',
       'Elder Wyrm|summon|fire|dragon|sum=elderwyrm max=1 dur=25 cd=60', 'Prismatic Breath|beam|arcane|breath|dur=3 cone dmg=1.6 cd=5', 'Bloodfire Nova|nova|blood|fire|r=2.2 leech cd=5', 'Dragonsoul|buff|fire|transform|transform buff=dmg,armor,res amt=50 dur=20 cd=60',
+    ],
+    // Spearstorm: a full fourth tree. All 60 original Dragoon IDs stay stable.
+    [
+      'Thousandfold Impalement|aoe|phys|spear|barrage=1 r=1.55 dmg=3 wc=0 cd=8', 'Triune Spearfall|aoe|phys|spear|barrage=3 r=1.55 dmg=4.5 wc=0 cd=14', 'Spearstep|dash|phys|charge|range=1.3 dmg=1.1 cd=2 weave', 'Rallying Standard|buff|phys|aura|buff=as,speed amt=22 dur=12 cd=24 weave',
+      'Pinning Volley|rain|phys|javelin|n=12 r=1.35 slow cd=4', 'Storm of Barbs|nova|light|lightning|r=1.25 n=2 cd=6', 'Vaulting Reprisal|leap|phys|smash|range=1.4 dmg=1.7 cd=2', 'Wyrmblood Momentum|buff|fire|aura|buff=dmg,speed amt=25 dur=12 cd=24',
+      'Spear Vortex|cyclone|phys|blade|n=2 dur=3.5 r=1.3 cd=6', 'Crimson Impact|aoe|blood|eruption|r=2 bleed dmg=2 cd=7', 'Falling Stars|rain|arcane|star|n=14 r=1.6 cd=7', 'Phalanx Breaker|dash|phys|charge|range=1.7 dmg=2 cd=4',
+      'Impaler Spiral|orbit|phys|spear|n=6 dur=6 cd=10', 'Thunderhead Pierce|strike|light|lightning|n=8 cd=8', 'Sunfall Lance|leap|fire|meteor|r=1.8 dmg=2.5 cd=5', 'Fury of the Nine|buff|fire|transform|buff=crit,dmg amt=32 dur=15 cd=40',
+      'Sovereign Spearstorm|rain|phys|javelin|n=40 r=2.2 cd=8', 'Heavenbreaker|aoe|holy|star|r=2.7 dmg=3.5 cd=10', 'Cataclysm Descent|leap|fire|dragon|r=2.2 dmg=3.3 cd=6', 'Aegis of the Wyrm|buff|fire|shield|buff=armor,res amt=50 dur=15 cd=35',
     ],
   ],
   totem_master: [
