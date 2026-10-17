@@ -40,6 +40,9 @@ WALK_OVER = {"supine_skeleton", "vigil_candles", "rolled_shroud", "chain_and_sha
              "grave_lantern", "ossuary_urn",
              # cathedral_graveyard
              "bordered_fresh_grave", "old_grave_mound", "dry_wreath", "coffin_boards", "fallen_railing",
+             # Castle Keep
+             "fallen_tapestry", "stained_glass_shards", "cannonball_pile", "cracked_tile_rubble",
+             "brazier_ash", "keep_keyring", "prison_shackle", "spear_bundle",
              "votive_candles", "tracery_rubble", "resting_censer", "ivy_roots", "funeral_flowers"}
 
 
