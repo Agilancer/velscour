@@ -82,6 +82,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
 
   const byHero = !tgt.isPlayer && tgt.team !== 'player' && (fromPlayer || (src && src.team === 'player'));
   if (byHero) Meter.add(Math.min(dmg, Math.max(0, tgt.hp)));
+  if (byHero && src && src.isPlayer && !o.dot) G.lastHit = tgt; // the HUD's target window
   if (byHero && src && src.isPlayer && o.sk && !o.dot) classHitFx(src, tgt, o.sk, el); // the class's own splash (gfx/classfx.js)
   tgt.hp -= dmg;
   tgt.flash = 0.12;
