@@ -1,4 +1,4 @@
-// Thirty-three dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
+// Thirty-four dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
 // palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
 import { FINAL_DEPTH } from './depth.js';
@@ -181,6 +181,13 @@ export const BIOMES = [
     torch: '#ffc070', fog: '#100a06',
   },
   {
+    id: 'sewers', name: 'The Fetid Sewers', palette: null, dark: 0.8, light: 7.5,
+    ambient: { type: 'drip', color: '#9ad070' }, mon: { hue: 75, sat: 0.85, light: -0.02 }, el: 'poison', blood: '#4a6a18',
+    adj: ['Fetid', 'Sodden', 'Rat-Gnawed', 'Brackish'], roster: ['zombie', 'slime', 'worm', 'spider', 'beetle', 'ghoul', 'bat', 'abomination', 'cultist', 'shroom', 'scorpion', 'archer'],
+    prefer: ['set2/slimes', 'set1/tentacles', 'set2/goblins', 'set2/kobolds'],
+    torch: '#a8ff60', fog: '#070c05',
+  },
+  {
     id: 'necropolis', name: 'Moonlit Necropolis', palette: { colorize: [225, 0.25], light: 0.04, contrast: 1.1 }, dark: 0.8, light: 7.5,
     ambient: { type: 'mote', color: '#c8d8ff' }, mon: { hue: 200, sat: 0.5, light: 0.04 }, el: 'cold', blood: '#4a5a8a',
     adj: ['Moonlit', 'Gravebound', 'Silvered'], roster: ['skeleton', 'zombie', 'ghoul', 'wraith', 'archer', 'knight', 'bat', 'hound', 'gargoyle', 'cultist', 'eye', 'abomination'],
@@ -300,6 +307,7 @@ export const BIOMES = [
 // (walls by `wallPalette` when set). The five temple biomes add their approved painted floors and props
 // (gfx/approvedbiomeart.js).
 const CAT = 'catacombs', CG = 'cathedral_graveyard', CK = 'castle_keep';
+// Sewers is the first ChatGPT-sheet pack (docs/CHATGPT_BIOME_SPRITES.md), drawn in its own colours.
 const CAT_ARCH = { arches: ['roman_ossuary', 'pointed_funerary', 'ironbound_segmental'], doors: ['ironbound_oak', 'iron_grille', 'bone_reliquary'] };
 const NAVE_ARCH = { arches: ['chapel_lancet', 'nave_triumphal', 'grand_westwork'], doors: ['cathedral_oak', 'sacristy_bronze'] };
 const GRAVE_ARCH = { arches: ['churchyard_cross', 'ruined_cloister', 'processional_cemetery'], doors: ['cemetery_gate'] };
@@ -321,6 +329,7 @@ const SOIL = { floors: [[6, 10], [31, 60]], scatter: [[1, 20], [36, 40]] };
 const CAVE_WALLS = crypt('drowned_crypt', 'crypt_ashlar', 'sealed_cells');
 const ART = {
   castle_keep: { pack: CK },
+  sewers: { pack: 'sewers' },
   frozen: { pack: CAT, part: crypt('ossuary_niches', 'crypt_ashlar', 'sealed_cells') },
   ice_temple: { pack: CK, wallPack: CG, part: { ...KEEP_HALLS, ...NAVE_ARCH, families: ['stained_glass_chapel', 'nave_ashlar', 'buttressed_masonry'] },
     palette: { colorize: [202, 0.42], light: 0.1, contrast: 1.12 } },
@@ -373,7 +382,7 @@ const FAMILY = {
   keep: ['castle_keep'],
   frost: ['frozen', 'ice_temple', 'sunken', 'crystal', 'storm', 'abyss', 'necropolis'],
   ember: ['molten', 'blood', 'forge', 'flesh', 'hell'],
-  rot: ['fungal', 'plague', 'thorn'],
+  rot: ['fungal', 'plague', 'thorn', 'sewers'],
   gloom: ['catacombs', 'ashen', 'void', 'shadow', 'obsidian', 'shattered', 'library', 'cathedral'],
   aether: ['astral_plane'],
   celestial: ['heavenly'],
@@ -387,7 +396,7 @@ const MON_SWAPS = {
   ice_temple: ['rime', 'frost', 'crystal', 'pale', 'spectral'], molten: ['ember', 'infernal', null, 'rust'],
   fungal: ['venom', 'rot', 'thorn', 'bile', 'verdigris'], sunken: ['tide', 'abyss', 'pale', 'spectral'], blood: ['blood', 'flesh', null, 'coral'],
   ashen: ['ash', 'pale', 'shadow', 'bone'], void: ['void', 'abyss', 'shadow', 'amethyst'], gilded: ['gilded', 'sand', null, 'bronze'],
-  plague: ['rot', 'venom', 'tide', 'bile'], crystal: ['crystal', 'frost', 'storm', 'amethyst'], desert: ['sand', null, 'gilded', 'bone', 'bronze'],
+  plague: ['rot', 'venom', 'tide', 'bile'], sewers: [null, null, 'rot', 'bile', 'rust'], crystal: ['crystal', 'frost', 'storm', 'amethyst'], desert: ['sand', null, 'gilded', 'bone', 'bronze'],
   shadow: ['shadow', 'obsidian', 'void', 'midnight'], forge: ['infernal', 'ember', 'obsidian', 'rust', 'bronze'], abyss: ['abyss', 'void', 'storm', 'midnight'],
   thorn: ['thorn', 'venom', null, 'verdigris'], storm: ['storm', 'crystal', 'pale', 'midnight'], obsidian: ['obsidian', 'void', 'shadow', 'midnight'],
   flesh: ['flesh', 'blood', null, 'coral'], serpent: ['venom', 'sand', null, 'verdigris'], shattered: ['pale', 'storm', null, 'bronze'],

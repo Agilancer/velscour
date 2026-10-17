@@ -209,3 +209,9 @@ python tools/chatgpt_biome.py <folder> <folder>/names.json --install      # + zi
 Tested end to end with stand-in sheets (`node tools/chatgpt_biome_kit.js <pack dir> --clean <dir>` renders the
 Catacombs examples without labels or outlines): 236 sprites, every builder QA check passes, and a dungeon renders
 in game on the imported pack.
+
+## Packs made this way
+- **Sewers** (`assets/source/biomes/Sewers_Biome_Pack.zip` -> `assets/tiles/sewers/`): the first real ChatGPT pack, used
+  as drawn (no palette) by the Fetid Sewers biome (`ART.sewers` in `src/data/biomes.js`). Its light props are in `LIT`
+  and its flat clutter in `WALK_OVER`. Imported from the normalized 1024/1536 sheets. Those sheets had a thin pale frame
+  around the prop sheets, so prep now ignores a 4 px border on object sheets.

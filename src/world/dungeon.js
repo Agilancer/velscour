@@ -513,7 +513,8 @@ function placeObstacles(map, rooms, tileset, rng, startRoom) {
 }
 
 // light radius (tiles) of the props that burn
-const LIT = { grave_lantern: 2.2, torch_stand: 3.2, incense_brazier: 3, iron_candelabrum: 2.6, vigil_candles: 2, votive_candles: 2,
+const LIT = { grave_lantern: 2.2,
+  yellow_cage_lantern: 2.4, dripping_candle_cluster: 2, tall_iron_candelabrum: 2.6, green_fire_brazier: 3.4, green_flame_torch: 3.2, torch_stand: 3.2, incense_brazier: 3, iron_candelabrum: 2.6, vigil_candles: 2, votive_candles: 2,
   wall_brazier: 3.1, keep_candelabrum: 2.8, iron_chandelier: 2.6,
   gold_brazier: 3.6, blue_flame_brazier: 3.8, temple_censer: 2.8, burial_lantern: 2.6, sun_torch: 3.2, royal_censer: 3.0,
   winter_brazier: 3.2, azure_brazier: 3.7, violet_brazier: 3.7, frost_lantern: 2.6,
