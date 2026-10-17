@@ -6,45 +6,62 @@ import { drawDecals, drawEffects, drawParticles, drawTexts, lights, glowSprite }
 import { orbitShieldDepth } from '../gfx/lancershields.js';
 import { drawWallTorch, wallTorchRect } from '../gfx/walltorches.js';
 import { drawWallHanging, wallHangingRect } from '../gfx/wallhangings.js';
-import { replacementImage } from '../core/replacementart.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { gritAt } from '../gfx/grit.js';
-import { classSprite } from '../core/assets.js';
 import { enemyImage } from '../core/enemyart.js';
 import { drawLootLabels } from './loot.js';
 
 let lightCanvas = null, vignette = null, vigKey = '';
 const transitionSprites = new Map();
+// All town people use the original 25-identity townsfolk animation pack.
+// Cache original PNG sheets and recolored variants separately. Recolored
+// sheets are Canvas elements, not HTMLImageElements (no .complete/.naturalWidth).
+const TOWN_FRAME_W=128, TOWN_FRAME_H=192;
 const townSheets=new Map();
 const townPaletteSheets=new Map();
-function townSheet(id){let img=townSheets.get(id);if(img||!id)return img||null;img=new Image();img.src=`assets/sprites/townsfolk/${id}.png`;townSheets.set(id,img);return img;}
-function townPaletteSheet(id,img,palette){
+function townSheet(id) {
+  if(!id)return null;
+  let img=townSheets.get(id);
+  if(!img){
+    img=new Image();
+    townSheets.set(id,img);
+    img.src=`assets/sprites/townsfolk/${id}.png`;
+  }
+  return img;
+}
+export function preloadTownSheets(ids) {
+  const unique=[...new Set(ids.filter(Boolean))];
+  return Promise.all(unique.map(id=>{
+    const img=townSheet(id);
+    if(img.complete)return Promise.resolve(img.naturalWidth>0);
+    return new Promise(resolve=>{
+      img.addEventListener('load',()=>resolve(true),{once:true});
+      img.addEventListener('error',()=>resolve(false),{once:true});
+    });
+  }));
+}
+function townPaletteSheet(id,img,palette) {
   if(!img?.complete||!img.naturalWidth||!palette)return img;
-  const key=`${id}:${palette.hue||0}:${palette.sat||1}:${palette.light||0}`;
+  const key=`${id}:${palette.hue||0}:${palette.sat??1}:${palette.light||0}`;
   if(townPaletteSheets.has(key))return townPaletteSheets.get(key);
   const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
   const q=c.getContext('2d',{willReadFrequently:true});q.drawImage(img,0,0);
-  const pixels=q.getImageData(0,0,c.width,c.height),d=pixels.data,hueShift=(palette.hue||0)/360,hairShift=hueShift*.38,satScale=palette.sat||1,light=palette.light||0;
+  const pixels=q.getImageData(0,0,c.width,c.height),d=pixels.data,hueShift=(palette.hue||0)/360,hairShift=hueShift*.38,satScale=palette.sat??1,light=palette.light||0;
   const rgbToHsv=(r,g,b)=>{r/=255;g/=255;b/=255;const max=Math.max(r,g,b),min=Math.min(r,g,b),delta=max-min;let h=0;if(delta){if(max===r)h=((g-b)/delta)%6;else if(max===g)h=(b-r)/delta+2;else h=(r-g)/delta+4;h/=6;if(h<0)h++;}return [h,max?delta/max:0,max];};
   const hsvToRgb=(h,s,v)=>{const k=n=>(n+h*6)%6,f=n=>v-v*s*Math.max(0,Math.min(k(n),4-k(n),1));return [f(5),f(3),f(1)];};
-  for(let y=0;y<c.height;y++){const localY=y%192;for(let x=0;x<c.width;x++){const i=(y*c.width+x)*4;if(d[i+3]<8)continue;let [h,s,v]=rgbToHsv(d[i],d[i+1],d[i+2]);const skin=h>=.012&&h<=.12&&v>.32;if(localY>38&&s>.16&&!skin)h=(h+hueShift+1)%1;else if(localY>8&&localY<66&&s>.14&&v<.46)h=(h+hairShift+1)%1;s=Math.max(0,Math.min(1,s*satScale));v=Math.max(0,Math.min(1,v+light));const rgb=hsvToRgb(h,s,v);d[i]=Math.round(rgb[0]*255);d[i+1]=Math.round(rgb[1]*255);d[i+2]=Math.round(rgb[2]*255);}}
-  q.putImageData(pixels,0,0);townPaletteSheets.set(key,c);if(townPaletteSheets.size>64)townPaletteSheets.delete(townPaletteSheets.keys().next().value);return c;
+  for(let y=0;y<c.height;y++){const localY=y%TOWN_FRAME_H;for(let x=0;x<c.width;x++){const i=(y*c.width+x)*4;if(d[i+3]<8)continue;let [h,s,v]=rgbToHsv(d[i],d[i+1],d[i+2]);const skin=h>=.012&&h<=.12&&v>.32;if(localY>38&&s>.16&&!skin)h=(h+hueShift+1)%1;else if(localY>8&&localY<66&&s>.14&&v<.46)h=(h+hairShift+1)%1;s=Math.max(0,Math.min(1,s*satScale));v=Math.max(0,Math.min(1,v+light));const rgb=hsvToRgb(h,s,v);d[i]=Math.round(rgb[0]*255);d[i+1]=Math.round(rgb[1]*255);d[i+2]=Math.round(rgb[2]*255);}}
+  q.putImageData(pixels,0,0);townPaletteSheets.set(key,c);
+  if(townPaletteSheets.size>48)townPaletteSheets.delete(townPaletteSheets.keys().next().value);
+  return c;
 }
-const townFallbacks=new Map();
-function townFallback(id,palette={}){
-  if(townFallbacks.has(id))return townFallbacks.get(id);
-  // Used only while a generated civilian sheet is loading. Keep this generic
-  // silhouette civilian-shaped; never flash a playable class or helmet sprite.
-  const c=document.createElement('canvas');c.width=32;c.height=48;const q=c.getContext('2d');
-  const seed=(Number(String(id).match(/\d+/)?.[0])||1),hue=((seed*37)%360);
-  const coat=`hsl(${hue} 24% 29%)`,trim=`hsl(${hue} 20% 42%)`;
-  q.fillStyle='#221a17';q.fillRect(12,4,9,3);q.fillRect(10,7,13,8);
-  q.fillStyle='#b68a67';q.fillRect(11,8,11,9);q.fillStyle='#30231e';q.fillRect(10,6,13,4);
-  q.fillStyle=coat;q.fillRect(8,17,18,17);q.fillRect(5,20,4,12);q.fillRect(25,20,4,12);
-  q.fillStyle=trim;q.fillRect(12,18,10,3);q.fillRect(15,22,4,12);
-  q.fillStyle='#3a2922';q.fillRect(9,34,7,10);q.fillRect(18,34,7,10);
-  q.fillStyle='#231b18';q.fillRect(8,43,8,3);q.fillRect(18,43,9,3);
-  townFallbacks.set(id,c);return c;
+/** A decoded PNG or a palette-adjusted Canvas both satisfy the frame contract. */
+export function townFrameReady(sheet,count=11) {
+  const width=sheet?.naturalWidth||sheet?.width||0,height=sheet?.naturalHeight||sheet?.height||0;
+  return width>=TOWN_FRAME_W*count && height>=TOWN_FRAME_H;
+}
+export function townSprite(id,palette=null) {
+  const img=townSheet(id);
+  return img?.complete&&img.naturalWidth ? townPaletteSheet(id,img,palette) : null;
 }
 function drawTownMood(ctx,n,x,y){
   if(!n.townMood||n.townMoodT<=0)return;
@@ -368,20 +385,23 @@ function drawNpc(ctx, n) {
     n.sbox = [x - 24, y - 40, x + 24, y + 6];
     return;
   }
-  const npcArt = n.vendor ? 'npc_' + n.vendor.id : ({ 'Old Tobin': 'npc_tobin', Mira: 'npc_mira', 'Brother Cael': 'npc_cael', Gorm: 'npc_gorm' })[n.name];
-  const spriteId=n.townsfolkSpriteId||n.spriteId||n.townsfolkId;
-  const sourceSheet=n.townsfolkId&&townSheet(spriteId),sheet=n.townsfolkId?townPaletteSheet(spriteId,sourceSheet,n.pal):null;
-  const img = n.townsfolkId?townFallback(spriteId,n.pal):((npcArt && replacementImage(npcArt)) || classSprite(n.vendor ? n.vendor.sprite : n.sprite, 180, n.vendor ? n.vendor.pal : n.pal));
+  const spriteId=n.townsfolkSpriteId||n.vendor?.townsfolkSpriteId||n.spriteId||n.townsfolkId;
+  const sheet=townSprite(spriteId,n.pal||n.vendor?.pal);
   const h=n.child?42:58,w=(h*128)/192;
   const x = isoX(n.x, n.y), y = isoY(n.x, n.y);
   ctx.fillStyle = 'rgba(0,0,0,0.38)';
   ctx.beginPath(); ctx.ellipse(x, y, 13, 6, 0, 0, TAU); ctx.fill();
   const bob=n.walking?Math.abs(Math.sin(G.time*10+n.x))*1.5:Math.sin(G.time*2+n.x)*.6;
   const frame=n.knight&&n.townAttackT>0?11+(Math.floor(G.time*7+n.townAttackSeed)%2):n.townPoseT>0?n.townPoseFrame:n.walking?3+(Math.floor(G.time*7)%2):Math.floor(G.time*.7+n.x)%3;
-  const custom=sheet?.complete&&sheet.naturalWidth>=128*(n.frameCount||11);
-  if(n.flip){ctx.save();ctx.translate(x+w/2,y-h+bob);ctx.scale(-1,1);if(custom)ctx.drawImage(sheet,frame*128,0,128,192,-w/2,-h,w,h);else ctx.drawImage(img,-w/2,-h,w,h);ctx.restore();}
-  else if(custom)ctx.drawImage(sheet,frame*128,0,128,192,x-w/2,y-h+bob,w,h);
-  else ctx.drawImage(img,x-w/2,y-h+bob,w,h);
+  // HTMLCanvasElement does not expose Image.complete or Image.naturalWidth.
+  // The old guard failed for every recolored sheet and drew placeholders forever.
+  const ready=townFrameReady(sheet,n.frameCount||11);
+  if(ready){
+    ctx.save();
+    if(n.flip){ctx.translate(x,0);ctx.scale(-1,1);ctx.drawImage(sheet,frame*TOWN_FRAME_W,0,TOWN_FRAME_W,TOWN_FRAME_H,-w/2,y-h+bob,w,h);}
+    else ctx.drawImage(sheet,frame*TOWN_FRAME_W,0,TOWN_FRAME_W,TOWN_FRAME_H,x-w/2,y-h+bob,w,h);
+    ctx.restore();
+  }
   if (n.vendor) {
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + Math.sin(G.time * 3) * 0.1;
     ctx.drawImage(glowSprite('#ffd060'), x - 6, y - h - 18, 12, 12);
