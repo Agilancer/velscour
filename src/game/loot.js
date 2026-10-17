@@ -141,7 +141,7 @@ export function dropLoot(world, m) {
   // gold
   if (chance(rank === 'normal' ? 0.45 : 1)) {
     const n = rank === 'boss' ? 5 : 1;
-    for (let i = 0; i < n; i++) add('gold', { amount: Math.max(1, Math.round((3 + lvl * 2.2) * rand(0.6, 1.4) * Math.sqrt(R) * (1 + st.goldFind / 100))) });
+    for (let i = 0; i < n; i++) add('gold', { amount: Math.max(1, Math.round((3 + lvl * 2.2) * rand(0.6, 1.4) * Math.sqrt(R) * (1 + st.goldFind / 100) * (world.goldMul || 1))) });
   }
   if (st.legendary.greed && chance(0.15)) for (let i = 0; i < 4; i++) add('gold', { amount: Math.round((2 + lvl) * (1 + st.goldFind / 100)) });
   // orbs
@@ -150,7 +150,7 @@ export function dropLoot(world, m) {
   // potions
   if (chance(0.035 * R)) add('potion', { item: potionItem(pick(['hp', 'hp', 'mp', 'mp', 'rejuv', 'fury'])) });
   // gear
-  const items = rank === 'boss' ? randi(4, 6) + (world.depth % 10 === 0 ? 2 : 0) : rank === 'unique' ? randi(2, 3) : rank === 'champion' ? (chance(0.6) ? randi(1, 2) : 0) : (chance(0.085) ? 1 : 0);
+  const items = rank === 'boss' ? randi(4, 6) + (world.depth % 10 === 0 ? 2 : 0) : rank === 'unique' ? randi(2, 3) : rank === 'champion' ? (chance(0.6) ? randi(1, 2) : 0) : (chance(0.085 * (world.lootMul || 1)) ? 1 : 0); // lootMul: omens (game/happenings.js)
   const bonus = rank === 'boss' ? 1.2 : rank === 'unique' ? 0.6 : rank === 'champion' ? 0.3 : 0;
   for (let i = 0; i < items; i++) {
     const ilvl = lvl + (rank === 'boss' ? 3 : rank === 'normal' ? 0 : 1) + randi(-1, 1);

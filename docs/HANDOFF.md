@@ -14,6 +14,54 @@ Contents
 
 ---
 
+## October 17, 2026 — balance sweep (depths 60-500) and happenings (branch `feat/balance-sweep`)
+
+The user's ask: get past depths 150-160 without dying and resetting 30+ times; a death now and then, never more than
+6-10 per threshold; a challenge for auto-play without 8-hour walls; and lots of random things to keep it fun to watch.
+
+- **Why 150-160 was a wall.** Offense kept up (geared heroes kill depth-150 raid bosses in 16-20 s), defense did
+  not: monster damage grew 1.058 a level while hero life grew linearly, so a normal hit took ~40% of a geared hero's
+  life at depth 150 and a raid boss one-shot them. Three bugs made it worse past depth 60, where monster level stops
+  matching depth: BOSS ROOM adds spawned at level = raw depth (`raid.js`, `raidsigs.js`; ~16x their damage at
+  depth 150), and auto-play compared hero level to the raw depth (`huntGoal` farm mode cleared whole maps before the
+  guardian, `boldness` stayed at minimum, gear scoring and gamble prices used the wrong level). And a death sent the
+  hero back to the start of the *previous* five-depth block (up to 9 depths).
+- **Curves** (`src/data/depth.js`, `monsterBase`): monster damage keeps 1.058/level to level 60, then 1.04 to 140,
+  then 1.016. Hero life x `fortitude(level)` (+2.2% per level past 60, shown on the character sheet). Armor's divisor
+  `armorDiv(lvl)` also grows 1.045/level past monster level 100 (item armor does, so deep heroes had become immune to
+  physical). `st.reduce` (damage reduction, cap 60%) is now real: buffs, Defiance and a new `reduce` affix feed it.
+  `tools/tests/balance_model.mjs` prints the curve: a normal hit is ~9% of life from depth 60 to 160 (was 37-45% at
+  150-160), 17% at 200, 27% at 250, 65% at 500.
+- **Gear:** life affix scales 0.1/ilvl (was 0.06), resistances 0.006 (0.004), all-res 0.005 (0.003); new affixes
+  `+% Maximum Life` (of Vigor) and `% Damage Reduction` (Warded). Rarity now raises base weapon damage and armor
+  (`RARITY_BASE`: +4% Uncommon ... +32% Mythic) so a rarer drop is an upgrade. Wands 0.8 (0.7), staves 0.95 (0.9).
+- **Death and Defiance** (`src/game/defiance.js`): a death returns the hero to the start of the *current* block
+  (`blockStart`; BOSS ROOMs are checkpoints) and adds a Defiance stack (+10% life, +8% damage, 5% less damage taken,
+  up to 8). Clearing the block's BOSS ROOM spends it. Shown in the buff row and logged. Saves gain `c.defiance`,
+  `c.blessing`, `c.nemesis`, `c.bestStreak` (all optional, no migrate needed).
+- **Happenings** (`src/game/happenings.js`). Dungeons roll an omen (22-45%: Blood Moon, Golden Hour, The Horde,
+  Gathering of Champions, Starfall, Arcane Surge, Treasure Vault, Feeding Frenzy), 0-2 shrines (Frenzy, Fortune,
+  Bulwark, Wisdom, Wrath, Storm, Renewal), a fallen adventurer's remains with an epitaph, a cursed chest (three
+  ambush waves, then a hoard), a Treasure Imp (flees, sheds gold, bursts into loot, escapes after 32 s), Velscour's
+  Challenge (slay N in 40 s), and the Nemesis (the monster that last killed you returns as a named unique; killing it
+  is a REVENGE with loot). Kill streaks (10/20/35/50/75/100/150) call out and pay XP. Every new tenth depth gets
+  fireworks and a gift. Town visits can bring a festival (potions, fireworks), a 3-depth blessing (Priestess,
+  Fortune Teller, Scholar, Watch Captain), the blacksmith's apprentice (+1 upgrade), a peddler's Epic+ gift, the
+  lottery or the gem fair. Shrines/remains/cursed chests live in `world.chests` with their own `draw()`, so
+  auto-play walks to them (`far` reach), grabs a shrine within 5 tiles even mid-fight, and chases the imp.
+- **Tests:** `tools/tests/balance.js [classes] [depths] [minutes] [god]` sets up a realistic hero for a depth (level,
+  auto-play's own stat/skill spending, the best of `BAL_GEAR`x25 drops, gems, upgrades, mastery) and lets auto-play
+  run; `god` measures DPS and fight lengths instead. `tools/tests/happenings.js` forces every event and checks it.
+  Results, 30 game minutes from depth 146 with `BAL_GEAR=3`: Paladin 0 deaths (to 155), Wizard 1 (153), Gunner 0
+  (155), Barbarian 6 (150 cleared; it started with a weak kit, and Defiance carried it through the BOSS ROOM).
+  Before the sweep, a better-geared Paladin died twice in its first 8 minutes at 150 and was sent back to 141.
+- **Pre-existing crash fixed:** a splitting guardian (slime) left children with `ai: 'boss'` and no patterns, so
+  `bossUpdate` threw every frame (`spawnChild` in `monster.js` now gives them the archetype's AI).
+- Regression: `flow`, `hud`, `mobile`, `raid`, `rings`, `skills paladin,barbarian`, `mobs`, `autoplay wizard 6`,
+  `data_check`, `happenings` pass.
+- **Open:** melee Barbarians die most (dual wielding leaves ~half the armor of a shield build). Depths 250-500 are
+  modelled, not played. Event odds are first guesses; ask the user what they like seeing.
+
 ## October 17, 2026 — Bard overhaul: musical-notation projectiles, particle staves, the composing gimmick
 
 - **Notation** (`src/data/notation.js`): 20 glyphs (whole/half/quarter/eighth/sixteenth notes, tied eighths, 2-4 beamed
@@ -39,6 +87,7 @@ Contents
   Discords per game minute.
 - Test: `tools/tests/bard.js [minutes] [mobile]`: glyph sheet + icons, the composition rules, 30 showcase shots
   (stepped, in the Wilds), and an auto-play soak.
+
 
 ## October 17, 2026 — grand sweep: FPS, room shapes, 20 raid bosses, 4th skill trees, overworld wanderers (branch `feat/grand-sweep`)
 
@@ -595,7 +644,7 @@ are in section 7.
    biome tile atlases (LRU keeps 3 non-town sets; a mixed level holds 2), monster art (an LRU of 160 canvases,
    about 70 KB each, in `src/core/enemyart.js`), memoized pixel/flash sprites, and corpse images. Measure this
    before adding more caches.
-3. **Balance is a first pass.** Monster scaling is `monsterBase(L)` in `src/game/monster.js`
+3. **Balance:** see the Oct 17 balance sweep entry (curves past depth 60, Defiance). Monster scaling is `monsterBase(L)` in `src/game/monster.js`
    (hp 20·1.066^(L−1), dmg (3+min(L,10)·0.15)·1.052^(L−1)). Player XP is `xpToNext(L) = 60L²+40L` in
    `src/game/player.js`. Depths 50–100 have never been played.
 4. **Caching on GitHub Pages:** pages are served with about a 10-minute cache and the module imports carry no

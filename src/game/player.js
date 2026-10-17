@@ -9,7 +9,8 @@ import { CLASSES } from '../data/classes.js';
 import { SKILLS, CLASS_SKILLS, effLevel, skillBaseDamage, manaCost, rageCost, cooldown, useTime, weaponCoef, grantedSkillsAt, skillRange } from '../data/skills.js';
 import { SLOTS, RING_SLOTS, itemStats, itemDmg, itemArmor, GEMS } from '../data/items.js';
 import { augHits, augmentable } from '../data/rings.js';
-import { depthLevel } from '../data/depth.js';
+import { depthLevel, fortitude } from '../data/depth.js';
+import { heroBonus } from './defiance.js';
 import { MAX_MASTERY, masteryNeed, masteryMul, masteryTier, TIER_NAMES } from './augments.js';
 import { castSkill, Timer } from './skillrun.js';
 import { Orbit, Area, BeamCh, Whirl } from './hazards.js';
@@ -75,12 +76,17 @@ export class Player extends Creature {
     }
     // buffs
     let buffDmg = 0, buffAs = 0, buffArmor = 0, buffRes = 0, buffRegen = 0, buffSpeed = 0, buffCrit = 0, buffThorns = 0, buffLeech = 0, buffBlock = 0, buffLife = 0, buffCdr = 0;
+    let buffReduce = 0, buffMf = 0, buffGf = 0, buffXp = 0;
     for (const b of this.buffs) {
       const s = b.stats;
       buffDmg += s.dmg || 0; buffAs += s.as || 0; buffArmor += s.armor || 0; buffRes += s.res || 0; buffRegen += s.regen || 0;
       buffSpeed += s.speed || 0; buffCrit += s.crit || 0; buffThorns += s.thorns || 0; buffLeech += s.leech || 0; buffBlock += s.block || 0;
       buffLife += s.life || 0; buffCdr += s.cdr || 0;
+      buffReduce += s.reduce || 0; buffMf += s.mf || 0; buffGf += s.gf || 0; buffXp += s.xp || 0;
     }
+    // Defiance (deaths in this five-depth block) and the town's blessing (game/defiance.js)
+    const hb = heroBonus(c);
+    buffDmg += hb.dmg; buffLife += hb.life; buffReduce += hb.reduce; buffMf += hb.mf; buffGf += hb.gf; buffXp += hb.xp;
     const attr = (k) => c.attrs[k] + (add[k] || 0) + (add.allAttr || 0);
     const str = attr('str'), dex = attr('dex'), vit = attr('vit'), int = attr('int');
     const st = {
@@ -102,9 +108,11 @@ export class Player extends Creature {
       manaSteal: add.manaSteal || 0,
       block: Math.min(60, (add.block || 0) + buffBlock / 2),
       thorns: (add.thorns || 0) + buffThorns * c.level * 0.2,
-      goldFind: add.goldFind || 0,
-      magicFind: add.magicFind || 0,
-      xpPct: add.xpPct || 0,
+      goldFind: (add.goldFind || 0) + buffGf,
+      magicFind: (add.magicFind || 0) + buffMf,
+      xpPct: (add.xpPct || 0) + buffXp,
+      reduce: Math.min(60, (add.reduce || 0) + buffReduce),
+      fortitude: fortitude(c.level),
       cdr: Math.min(60, (add.cdr || 0) + buffCdr / 2),
       areaPct: add.areaPct || 0,
       projSpeed: add.projSpeed || 0,
@@ -137,7 +145,7 @@ export class Player extends Creature {
     }
     if (weapon) { const fd = add.flatDmg || 0; st.weapon = [st.weapon[0] + fd, st.weapon[1] + fd]; }
     const lifePct = (add.lifePct || 0) + buffLife;
-    this.maxHp = Math.round((C.life + (c.level - 1) * C.lifeLvl + vit * 3 + (add.life || 0)) * (1 + lifePct / 100));
+    this.maxHp = Math.round((C.life + (c.level - 1) * C.lifeLvl + vit * 3 + (add.life || 0)) * (1 + lifePct / 100) * st.fortitude);
     this.maxMana = Math.round(C.mana + (c.level - 1) * C.manaLvl + int * 2 + (add.mana || 0));
     st.lifeRegen = 0.6 + c.level * 0.12 + vit * 0.05 + (add.lifeRegen || 0) + this.maxHp * st.regenPct / 100;
     st.manaRegen = 1.6 + c.level * 0.15 + int * 0.06 + (add.manaRegen || 0);

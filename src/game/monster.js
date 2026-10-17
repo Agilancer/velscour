@@ -57,7 +57,9 @@ export function monsterBase(level) {
   return {
     // tuned hard: heroes should have to grind gear and levels to get past the BOSS ROOMs
     hp: 30 * Math.pow(1.068, level - 1),
-    dmg: 1.2 * (4.4 + Math.min(level, 10) * 0.24) * Math.pow(1.058, level - 1),
+    // damage keeps its 1.058 a level to level 60, then grows slower (1.04, then 1.016 past 140): hero life and
+    // armor only grow with levels and gear, and at 1.058 a normal hit took ~45% of a geared hero's life by depth 160
+    dmg: 1.2 * (4.4 + Math.min(level, 10) * 0.24) * Math.pow(1.058, Math.min(level, 60) - 1) * Math.pow(1.04, clamp(level - 60, 0, 80)) * Math.pow(1.016, Math.max(0, level - 140)),
     xp: 4 * Math.pow(level, 1.5),
   };
 }
@@ -1251,6 +1253,7 @@ export class Monster extends Creature {
     const [x, y] = w.map.randomNear(this.x, this.y, 0.8);
     const c = new Monster({ ...this.cloneProps(), x, y, scale: this.scale * 0.65, maxHp: this.maxHp * 0.35, hp: this.maxHp * 0.35, xp: this.xp * 0.3, rank: 'normal', aura: null, affixes: null, awake: true });
     c.split = this.scale * 0.65 > 0.6;
+    if (c.ai === 'boss' || c.ai === 'raid') c.ai = (ARCH[this.arch] && ARCH[this.arch].ai) || 'melee'; // a split guardian's young have no boss patterns
     w.add(c);
   }
   cloneProps() {

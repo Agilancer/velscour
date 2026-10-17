@@ -11,6 +11,8 @@ export const RARITY = [
   { id: 4, name: 'Legendary', color: '#ff9a2a', weight: 0.8, affixes: [4, 5], sockets: 6, mult: 1.4 },
   { id: 5, name: 'Mythic', color: '#ff4058', weight: 0.12, affixes: [5, 6], sockets: 6, mult: 1.65 },
 ];
+/** Base weapon damage and armor by rarity: a rarer drop of the same item level is a real upgrade, not just more affixes. */
+export const RARITY_BASE = [1, 1.04, 1.08, 1.14, 1.22, 1.32];
 /** Display colour per rarity id (also used for icon and staff tints). */
 export const RARITY_COLORS = RARITY.map((r) => r.color);
 
@@ -36,8 +38,8 @@ export const WEAPONS = {
   mace: { names: ['Club', 'Mace', 'Flanged Mace', 'Morning Star', 'Reliquary Mace'], icon: 'mace', dmg: 1.05, spd: 0.97 },
   hammer: { names: ['War Hammer', 'Maul', 'Great Maul', 'Earthbreaker', 'Titan Hammer'], icon: 'hammer', dmg: 1.25, spd: 0.85 },
   dagger: { names: ['Knife', 'Dirk', 'Stiletto', 'Kris', 'Soul Blade'], icon: 'dagger', dmg: 0.75, spd: 1.25, crit: 4 },
-  staff: { names: ['Quarterstaff', 'Gnarled Staff', 'Battle Staff', 'Archon Staff', 'Elder Staff'], icon: 'staff', dmg: 0.9, spd: 1.0, cast: 8 },
-  wand: { names: ['Twig Wand', 'Bone Wand', 'Grim Wand', 'Lich Wand', 'Unearthed Wand'], icon: 'wand', dmg: 0.7, spd: 1.1, cast: 10 },
+  staff: { names: ['Quarterstaff', 'Gnarled Staff', 'Battle Staff', 'Archon Staff', 'Elder Staff'], icon: 'staff', dmg: 0.95, spd: 1.0, cast: 8 },
+  wand: { names: ['Twig Wand', 'Bone Wand', 'Grim Wand', 'Lich Wand', 'Unearthed Wand'], icon: 'wand', dmg: 0.8, spd: 1.1, cast: 10 },
   bow: { names: ['Short Bow', 'Hunter\'s Bow', 'Composite Bow', 'Long War Bow', 'Matriarchal Bow'], icon: 'bow', dmg: 1.0, spd: 1.05 },
   crossbow: { names: ['Light Crossbow', 'Arbalest', 'Siege Crossbow', 'Ballista', 'Demon Crossbow'], icon: 'crossbow', dmg: 1.2, spd: 0.85 },
   spear: { names: ['Spear', 'Pike', 'Partizan', 'War Lance', 'Dragon Lance'], icon: 'spear', dmg: 1.1, spd: 0.95 },
@@ -66,7 +68,9 @@ export const AFFIXES = [
   { s: 'castSpeed', t: '+{v}% Cast Speed', pre: 'Arcane', min: 4, max: 10, sc: 0.004, slots: 'WOHR' },
   { s: 'critChance', t: '+{v}% Critical Chance', pre: 'Keen', min: 2, max: 5, sc: 0.004, slots: 'WGHR' },
   { s: 'critDmg', t: '+{v}% Critical Damage', pre: 'Brutal', min: 10, max: 25, sc: 0.01, slots: 'WGOR' },
-  { s: 'life', t: '+{v} Life', suf: 'of the Bear', min: 8, max: 20, sc: 0.06, slots: 'OHBGLFR' },
+  { s: 'life', t: '+{v} Life', suf: 'of the Bear', min: 8, max: 20, sc: 0.1, slots: 'OHBGLFR' },
+  { s: 'lifePct', t: '+{v}% Maximum Life', suf: 'of Vigor', min: 3, max: 7, sc: 0.004, slots: 'OHBLR', w: 0.6 },
+  { s: 'reduce', t: '{v}% Damage Reduction', pre: 'Warded', min: 1, max: 3, sc: 0.002, slots: 'OBL', w: 0.45 },
   { s: 'mana', t: '+{v} Mana', suf: 'of the Owl', min: 6, max: 15, sc: 0.05, slots: 'WOHBGLFR' },
   { s: 'lifeRegen', t: '+{v} Life per Second', suf: 'of Regrowth', min: 1, max: 3, sc: 0.05, slots: 'HBLFR' },
   { s: 'manaRegen', t: '+{v} Mana per Second', suf: 'of Clarity', min: 1, max: 2, sc: 0.04, slots: 'WOHGR' },
@@ -77,11 +81,11 @@ export const AFFIXES = [
   { s: 'vit', t: '+{v} Vitality', suf: 'of the Ox', min: 2, max: 6, sc: 0.035, slots: 'WOHBGLFR' },
   { s: 'int', t: '+{v} Intellect', suf: 'of the Sage', min: 2, max: 6, sc: 0.035, slots: 'WOHBGLFR' },
   { s: 'allAttr', t: '+{v} All Attributes', suf: 'of the Ancients', min: 1, max: 3, sc: 0.03, slots: 'WBHR', w: 0.4 },
-  { s: 'resFire', t: '+{v}% Fire Resistance', suf: 'of Embers', min: 5, max: 14, sc: 0.004, slots: 'OHBGLFR' },
-  { s: 'resCold', t: '+{v}% Cold Resistance', suf: 'of Winter', min: 5, max: 14, sc: 0.004, slots: 'OHBGLFR' },
-  { s: 'resLight', t: '+{v}% Lightning Resistance', suf: 'of Grounding', min: 5, max: 14, sc: 0.004, slots: 'OHBGLFR' },
-  { s: 'resPoison', t: '+{v}% Poison Resistance', suf: 'of the Antidote', min: 5, max: 14, sc: 0.004, slots: 'OHBGLFR' },
-  { s: 'resAll', t: '+{v}% All Resistances', suf: 'of the Prism', min: 3, max: 8, sc: 0.003, slots: 'OHBR', w: 0.5 },
+  { s: 'resFire', t: '+{v}% Fire Resistance', suf: 'of Embers', min: 5, max: 14, sc: 0.006, slots: 'OHBGLFR' },
+  { s: 'resCold', t: '+{v}% Cold Resistance', suf: 'of Winter', min: 5, max: 14, sc: 0.006, slots: 'OHBGLFR' },
+  { s: 'resLight', t: '+{v}% Lightning Resistance', suf: 'of Grounding', min: 5, max: 14, sc: 0.006, slots: 'OHBGLFR' },
+  { s: 'resPoison', t: '+{v}% Poison Resistance', suf: 'of the Antidote', min: 5, max: 14, sc: 0.006, slots: 'OHBGLFR' },
+  { s: 'resAll', t: '+{v}% All Resistances', suf: 'of the Prism', min: 3, max: 8, sc: 0.005, slots: 'OHBR', w: 0.5 },
   { s: 'lifeSteal', t: '{v}% Life Steal', pre: 'Vampiric', min: 1, max: 3, sc: 0.002, slots: 'WGR' },
   { s: 'manaSteal', t: '{v}% Mana Steal', pre: 'Draining', min: 1, max: 3, sc: 0.002, slots: 'WGR' },
   { s: 'moveSpeed', t: '+{v}% Movement Speed', pre: 'Fleet', min: 4, max: 10, sc: 0.002, slots: 'FL' },
@@ -268,7 +272,7 @@ export function rollItem(ilvl, opts = {}) {
   if (slot === 'weapon') {
     item.base = opts.base || pick(Object.keys(WEAPONS));
     const W = WEAPONS[item.base];
-    const avg = 3.4 * Math.pow(1.052, ilvl - 1) * W.dmg * (1 + ilvl * 0.012);
+    const avg = 3.4 * Math.pow(1.052, ilvl - 1) * W.dmg * (1 + ilvl * 0.012) * RARITY_BASE[rarity];
     item.dmg = [Math.max(1, Math.round(avg * 0.75)), Math.max(2, Math.round(avg * 1.25))];
     item.icon = W.icon;
     item.baseName = W.names[Math.min(4, Math.floor(tier / 2))];
@@ -277,7 +281,7 @@ export function rollItem(ilvl, opts = {}) {
   } else if (slot === 'offhand') {
     item.base = opts.base || pick(Object.keys(OFFHANDS));
     const O = OFFHANDS[item.base];
-    item.armor = Math.round(6 * O.armor * Math.pow(1.045, ilvl - 1) * (0.85 + Math.random() * 0.3));
+    item.armor = Math.round(6 * O.armor * Math.pow(1.045, ilvl - 1) * (0.85 + Math.random() * 0.3) * RARITY_BASE[rarity]);
     item.icon = O.icon;
     item.baseName = O.names[Math.min(4, Math.floor(tier / 2))];
     if (O.block) item.affixes.push({ s: 'block', v: randi(O.block[0], O.block[1]), implicit: true });
@@ -289,7 +293,7 @@ export function rollItem(ilvl, opts = {}) {
   } else {
     item.base = slot;
     const A = ARMORS[slot];
-    item.armor = Math.round(6 * A.armor * Math.pow(1.045, ilvl - 1) * (0.85 + Math.random() * 0.3));
+    item.armor = Math.round(6 * A.armor * Math.pow(1.045, ilvl - 1) * (0.85 + Math.random() * 0.3) * RARITY_BASE[rarity]);
     item.icon = A.icon;
     item.baseName = A.names[Math.min(4, Math.floor(tier / 2))];
   }
