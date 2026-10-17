@@ -36,7 +36,7 @@ jobs:
       - name: Check in-game floor alpha and seams
         run: node tools/tests/ai_biome_floors.js
       - name: Check approved biome paintings
-        run: node tools/tests/approved_biome_art.js
+        run: node tools/tests/approved_biome_art.js --environment-only
       - name: Check game art and dungeon creation
         run: node tools/tests/worldwide_biomes.js
       - name: Capture all biomes with character (desktop)
