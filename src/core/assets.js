@@ -103,7 +103,7 @@ async function loadPack(id) {
     const previous = A.packs[id];
     if (previous) { if (!(previous instanceof Promise)) retainGenerated(id); return previous; }
     return A.packs[id] = loadPack('catacombs').then(base => GENERATED[id](base))
-      .then(async pack => { await applyApprovedBiomeArt(pack,id); await applyAIBiomeArt(pack,id); A.packs[id] = pack; retainGenerated(id); return pack; })
+      .then(async pack => { await applyAIBiomeArt(pack,id); await applyApprovedBiomeArt(pack,id); A.packs[id] = pack; retainGenerated(id); return pack; })
       .catch(e => { delete A.packs[id]; throw e; });
   }
   return A.packs[id] || (A.packs[id] = Promise.all(['floors', 'walls', 'scatter'].map((n) => loadImage(`assets/tiles/${id}/${n}.webp`)).concat(loadJSON(`assets/tiles/${id}/pack.json`)))
@@ -130,8 +130,9 @@ async function expandedPack(biome) {
   const promise=loadPack(biome.pack || DEFAULT_PACK).then(base=>
     expandBiomePack(base,biome,{floorsOnly:G.touch&&!!GENERATED[biome.pack]}))
     .then(async pack=>{
-      await applyApprovedBiomeArt(pack,biome.id);
+      // Apply unique biome motifs first; hand-approved art has final priority.
       await applyAIBiomeArt(pack,biome.id);
+      await applyApprovedBiomeArt(pack,biome.id);
       A.packs[id]=pack;
       while(EXPANSION_ORDER.length>2){
         const old=EXPANSION_ORDER.shift();
