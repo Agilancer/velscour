@@ -19,6 +19,7 @@ import { castArtFx } from '../gfx/artfx.js';
 import { drawGearFx, updateGearFx } from '../gfx/gearfx.js';
 import { fxColor } from '../data/gear.js';
 import { freeSlot } from '../data/bar.js';
+import { bardCompose, bardUpdate, harmonyMul } from './bard.js';
 
 export const xpToNext = (L) => Math.round(60 * L * L + 40 * L);
 export const MAX_LEVEL = 300;
@@ -204,6 +205,7 @@ export class Player extends Creature {
     const elBonus = sk.el === 'phys' ? st.physPct : st.elemPct[sk.el] || 0;
     let mult = (1 + (st.dmgPct + st.primary + elBonus) / 100) * this.synergy(sk) * masteryMul(this.mastery(sk));
     if (st.legendary.berserk) mult *= 1 + 0.04 * Math.floor((1 - this.hp / this.maxHp) * 10);
+    if (this.score) mult *= harmonyMul(this); // the Bard's Harmony
     const lo = (base * 0.85 + st.weapon[0] * wc) * mult, hi = (base * 1.15 + st.weapon[1] * wc) * mult;
     return [Math.max(1, Math.round(lo)), Math.max(2, Math.round(hi))];
   }
@@ -400,6 +402,7 @@ export class Player extends Creature {
     // Attacks build Rage; no passive regeneration. Hits award most of the resource.
     if (this.classId === 'barbarian' && sk.attack) this.gainRage(sk.id === 'barbarian.0.0' ? 3 : sk.kind === 'whirl' ? 0 : 0.7);
     castArtFx(this, sk, tx, ty);
+    if (this.classId === 'bard') bardCompose(this, sk, L); // write the note into the measure (may play a Cadence)
     // casting trains the skill a little (kills with it train it more: combat.kill); skills that deal no damage train on casts alone
     const dl = depthLevel(this.world.depth || 1);
     this.gainMastery(sk.id, 4 * Math.pow(dl, 1.5) * (augmentable(sk) ? 0.15 : 1.2));
@@ -486,6 +489,7 @@ export class Player extends Creature {
     if (this.phoenixCd > 0) this.phoenixCd -= dt;
     if (this.furyT > 0) this.furyT -= dt;
     if (this.noRageT > 0) this.noRageT -= dt;
+    if (this.classId === 'bard' && this.world) bardUpdate(this, dt);
     const canAct = this.tickStatus(dt, (k, amount, src) => {
       hit(src, this, amount, k === 'burn' ? 'fire' : k === 'poison' ? 'poison' : 'blood', { dot: true });
     });

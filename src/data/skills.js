@@ -3,6 +3,7 @@ import { SKILLDATA } from './skilldata.js';
 import { CLASSES } from './classes.js';
 import { SUMMONS } from './summons.js';
 import { ELEM } from '../gfx/vfx.js';
+import { NOTES, NOTE_MODS } from './notation.js';
 
 export const ROW_LEVELS = [1, 6, 12, 20, 30];
 export const MAX_SKILL_LEVEL = 20;
@@ -50,6 +51,7 @@ for (const [cls, trees] of Object.entries(SKILLDATA)) {
         id: `${cls}.${t}.${i}`, classId: cls, tree: t, idx: i, row, col, name, kind, el, fx, m: parseMods(mods || ''),
         reqLevel: ROW_LEVELS[row], prereq: i >= 4 ? `${cls}.${t}.${i - 4}` : null,
       };
+      if (!sk.m.note && fx.startsWith('n_')) sk.m.note = fx.slice(2); // a Bard note projectile writes its own glyph
       sk.attack = ['melee', 'whirl', 'leap', 'dash'].includes(kind) || (kind === 'proj' && ATTACK_FX.has(fx)) || (kind === 'rain' && ATTACK_FX.has(fx));
       SKILLS[sk.id] = sk;
       CLASS_SKILLS[cls].push(sk);
@@ -156,7 +158,7 @@ export function describe(sk, L, dmg) {
   const m = sk.m, el = (ELEM[sk.el] || ELEM.phys).name.toLowerCase();
   const D = dmg ? `<b>${dmg[0]}–${dmg[1]}</b> ${el} damage` : `${el} damage`;
   const n = m.n || 1;
-  const fx = FXNAME[sk.fx] || sk.fx;
+  const fx = sk.fx.startsWith('n_') ? (NOTES[sk.fx.slice(2)] || NOTES.q).name.toLowerCase() : FXNAME[sk.fx] || sk.fx;
   const flags = [];
   if (m.pierce) flags.push('Pierces');
   if (m.home) flags.push('Homing');
@@ -211,7 +213,11 @@ export function describe(sk, L, dmg) {
     case 'corpse': s = `Consume up to ${n} corpses near the target${m.heal ? ', healing you and' : ','} dealing ${D} plus a share of each corpse's life.`; break;
     default: s = `Deals ${D}.`;
   }
-  return s + (flags.length ? ` <i>${flags.join(' · ')}.</i>` : '');
+  for (const k in NOTE_MODS) if (m[k]) flags.push(NOTE_MODS[k]);
+  const N = NOTES[m.note];
+  if (N && m.free) flags.push('Fills the bar: with less than a beat left it plays a shorter note');
+  const score = N ? `<br><span style="color:#ffd88a">&#9835; ${N.name} · ${N.clef ? `no beats: changes the key to ${N.clef}` : `${N.beats} beat${N.beats === 1 ? '' : 's'} of the measure${N.rest ? ' (rests restore mana and life at the Cadence)' : ''}`}</span>` : '';
+  return s + (flags.length ? ` <i>${flags.join(' · ')}.</i>` : '') + score;
 }
 
 export function classTrees(cls) { return CLASSES[cls].trees; }

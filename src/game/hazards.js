@@ -6,6 +6,7 @@ import { sfx } from '../core/audio.js';
 import { spawn, burst, addEffect, Ring, Bolt, Beam, Slash, Telegraph, elem, glowSprite, addLight, smoke, addDecal, sparkle, gibs } from '../gfx/vfx.js';
 import { emitWhirlCyclone, captureWhirlGibs, drawWhirlCyclone } from '../gfx/barbarianwhirl.js';
 import { drawShape, trail, explosionFx, hitSpark } from '../gfx/shapes.js';
+import { bardProjInit, bardProjUpdate, bardProjHit, bardProjDraw, bardOrbitDraw, bardRainDraw, bardBeamDraw } from './bard.js';
 import { drawLancerOrbitShield } from '../gfx/lancershields.js';
 import { screenAngle } from '../gfx/vfx.js';
 import { hit, aoe, chainHit } from './combat.js';
@@ -57,16 +58,18 @@ export class Projectile {
     }
     this.sprayT = 0;
     this.sprayN = 0;
+    if (typeof this.fx === 'string' && this.fx.startsWith('n_')) bardProjInit(this); // a Bard note: staff trail + note behaviours
   }
   get depth() { return this.x + this.y + 0.3; }
   update(dt) {
     const w = this.world;
     this.t += dt;
+    if (this.note) bardProjUpdate(this, dt);
     if (this.lob) {
       const k = Math.min(1, this.t / this.flight);
       this.x = this.sx + (this.tx - this.sx) * k; this.y = this.sy + (this.ty - this.sy) * k;
       this.z = 10 + this.arcH * 4 * k * (1 - k);
-      trail(this.fx, this.x, this.y, this.z, this.E, dt, this.size);
+      if (!this.note) trail(this.fx, this.x, this.y, this.z, this.E, dt, this.size);
       if (k >= 1) { this.land(); return false; }
       return true;
     }
@@ -108,7 +111,7 @@ export class Projectile {
       while (this.sprayT > 0.07) {
         this.sprayT -= 0.07;
         const a = this.t * 9 + this.sprayN++ * 2.4;
-        w.addHazard(new Projectile({ world: w, src: this.src, team: this.team, x: this.x, y: this.y, ang: a, speed: 8, range: 3.5, fx: 'shard', el: this.el, dmg: [this.dmg[0] * 0.35, this.dmg[1] * 0.35], o: this.o, size: 0.7, child: true }));
+        w.addHazard(new Projectile({ world: w, src: this.src, team: this.team, x: this.x, y: this.y, ang: a, speed: 8, range: 3.5, fx: this.note ? 'n_s' : 'shard', el: this.el, dmg: [this.dmg[0] * 0.35, this.dmg[1] * 0.35], o: this.o, size: 0.7, child: true, tier: this.tier }));
       }
     }
     if (this.pull) {
@@ -125,7 +128,7 @@ export class Projectile {
       this.onHit(c);
       if (this.dead) return false;
     }
-    trail(this.fx, this.x, this.y, this.z, this.E, dt, this.size);
+    if (!this.note) trail(this.fx, this.x, this.y, this.z, this.E, dt, this.size);
     if (this.light) addLight(this.x, this.y, 2.5, 0.8, 20, this.E.glow);
     if (this.t > this.life && !this.ret) { if (this.exp) this.impact(); return false; }
     return !this.dead;
@@ -135,6 +138,7 @@ export class Projectile {
     this.hitSet.add(c.id);
     const d = roll(this.dmg);
     hit(this.src, c, d, this.el, { ...this.o, ang: Math.atan2(this.vy, this.vx) });
+    if (this.note) bardProjHit(this, c, d);
     if (this.heal && this.src && this.src.owner) this.src.owner.heal(d * 0.2, true);
     if (this.chain > 0) chainHit(w, this.src, c.x, c.y, w.hostiles(this.team, c.x, c.y, 5).find((x) => x !== c), this.chain - 1, d * 0.7, this.el, this.E.glow);
     if (this.exp) explode(w, this.src, c.x, c.y, this.exp, this.dmg.map((v) => v * 0.6), this.el, { ...this.o, sound: true, exclude: new Set([c.id]) }, this.fx === 'rocket' || this.fx === 'bomb' ? 'explosion' : 'explosion');
@@ -184,6 +188,7 @@ export class Projectile {
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
       ctx.beginPath(); ctx.ellipse(px, isoY(this.x, this.y), 5, 2.5, 0, 0, TAU); ctx.fill();
     }
+    if (this.note) return bardProjDraw(ctx, this, px, py);
     const a = screenAngle(Math.atan2(this.vy, this.vx));
     drawShape(ctx, this.fx, px, py, a, this.size, this.E, this.t);
     if (this.fx === 'chain' && this.src) {
@@ -406,7 +411,7 @@ export class Orbit {
     this.t += dt;
     if (this.t > this.dur) return false;
     const w = this.world;
-    const rad = this.spiral ? Math.min(this.radius * 2.2, 0.4 + this.t * 2.1) : this.radius * Math.min(1, this.t * 4);
+    const rad = this.rad = this.spiral ? Math.min(this.radius * 2.2, 0.4 + this.t * 2.1) : this.radius * Math.min(1, this.t * 4);
     this.pos.length = 0;
     for (let i = 0; i < this.n; i++) {
       const a = this.base + this.t * this.speed + (i * TAU) / this.n;
@@ -433,7 +438,8 @@ export class Orbit {
       for (let i=0;i<this.pos.length;i++) this.drawShield(ctx,i);
       return;
     }
-    for (const [x, y, a] of this.pos) drawShape(ctx, this.fx, isoX(x, y), isoY(x, y) - 24, screenAngle(a + Math.PI / 2), this.size, this.E, this.t);
+    if (this.fx?.startsWith('n_')) bardOrbitDraw(ctx, this);
+    for (const [x, y, a] of this.pos) drawShape(ctx, this.fx, isoX(x, y), isoY(x, y) - 24, screenAngle(a + Math.PI / 2), this.size, this.E, this.t, this.o);
   }
 }
 
@@ -741,6 +747,7 @@ export class BeamCh {
     for (const [ex, ey] of this.ends) {
       const ax = isoX(s.x, s.y), ay = isoY(s.x, s.y) - 26;
       const bx = isoX(ex, ey), by = isoY(ex, ey) - 16;
+      if (this.fx?.startsWith('n_')) { bardBeamDraw(ctx, this, ax, ay, bx, by); continue; }
       ctx.globalCompositeOperation = 'lighter';
       ctx.lineCap = 'round';
       if (this.fx === 'lightning' || this.fx === 'storm') {
@@ -867,7 +874,8 @@ export class Rain {
     for (const f of this.fallers) {
       const k = f.z / 300;
       const x = f.x + f.ox * k * 0.5, y = f.y + f.ox * k * 0.5;
-      drawShape(ctx, this.fx === 'ice' ? 'shard' : this.fx === 'acid' ? 'blob' : this.fx, isoX(x, y), isoY(x, y) - f.z, Math.PI / 2 + 0.25, this.fx === 'meteor' ? 0.9 : 1, this.E, this.t);
+      if (this.fx?.startsWith('n_')) bardRainDraw(ctx, this, f, x, y);
+      drawShape(ctx, this.fx === 'ice' ? 'shard' : this.fx === 'acid' ? 'blob' : this.fx, isoX(x, y), isoY(x, y) - f.z, Math.PI / 2 + 0.25, this.fx === 'meteor' ? 0.9 : 1, this.E, this.t, this.o);
     }
   }
 }

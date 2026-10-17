@@ -7,6 +7,7 @@ import { glowSprite, spawn, burst, addDecal, addEffect, Ring, Column, smoke, spa
 import { replacementImage } from '../core/replacementart.js';
 import { pixelSprite, shiftPalette } from './pixelart.js';
 import { sfx } from '../core/audio.js';
+import { drawNoteShape } from './notation.js';
 
 function glow(ctx, x, y, r, color, a = 1) {
   ctx.globalCompositeOperation = 'lighter';
@@ -21,6 +22,10 @@ function glow(ctx, x, y, r, color, a = 1) {
  * s = size scale (1 = normal), E = element palette, t = time alive (for spin).
  */
 export function drawShape(ctx, fx, x, y, a, s, E, t, extra = {}) {
+  if (fx && fx[1] === '_' && fx[0] === 'n') { // a Bard note glyph
+    ctx.save(); ctx.translate(x, y); drawNoteShape(ctx, fx.slice(2), s, t, (extra && extra.bardT) || 0); ctx.restore();
+    return;
+  }
   ctx.save();
   ctx.translate(x, y);
   const spin = t * 18;

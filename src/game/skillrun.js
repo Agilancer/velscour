@@ -15,6 +15,8 @@ import { shieldVariantForSkill, shieldOrbitRadius, preloadLancerShield } from '.
 import { classCastFx, energyLance } from '../gfx/classfx.js';
 import { masteryVis, masteryCastFx } from './augments.js';
 import { multN } from '../data/rings.js';
+import { noteTier } from '../data/notation.js';
+import { bardCastFx, bardNoteFor } from './bard.js';
 
 const roll = (d) => rand(d[0], d[1]);
 
@@ -51,7 +53,8 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
   const vis = masteryVis(M) * (aug && aug.colossus ? 1 + 0.35 * aug.colossus : 1);
   if (aug && aug.multiply) sk = withMore(sk, multN(aug.multiply));
   const w = p.world, m = sk.m, st = p.st;
-  const el = sk.el, fx = sk.fx, E = elem(el);
+  const el = sk.el, E = elem(el);
+  let fx = sk.fx;
   const dmg = p.skillDamage(sk, L);
   const area = (1 + (st.areaPct || 0) / 100) * vis;
   const ang = angleTo(p.x, p.y, tx, ty);
@@ -59,7 +62,11 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
   o.sk = sk.id; o.vis = vis;
   if (sk.id === 'barbarian.0.0') o.rageCast = p.bashCastSerial;
   if (aug) o.aug = aug;
-  if (!opts.echo) { masteryCastFx(p, sk, M, tx, ty); classCastFx(p, sk, L, tx, ty); }
+  const bard = sk.classId === 'bard' && m.note ? noteTier(L) : -1; // the Bard's notes: staff colour/particle tier
+  if (bard >= 0) { o.bardT = bard; if (m.free) fx = 'n_' + bardNoteFor(p, sk); } // the basic note shrinks to fit the bar
+  if (!opts.echo) { masteryCastFx(p, sk, M, tx, ty); classCastFx(p, sk, L, tx, ty); if (bard >= 0) bardCastFx(p, sk, L, tx, ty); }
+  // Canon: the same phrase answers itself a moment later
+  if (bard >= 0 && m.canon && !opts.echo) later(w, 0.32, () => { if (!p.dead && p.world === w) castSkill(p, sk, L, p.aim ? p.aim[0] : tx, p.aim ? p.aim[1] : ty, { echo: true }); });
   p.face(ang);
 
   switch (sk.kind) {
@@ -117,10 +124,11 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
             tx: tx + (m.lob && n > 1 ? rand(-1, 1) : 0), ty: ty + (m.lob && n > 1 ? rand(-1, 1) : 0),
             exp: m.exp ? 1.1 * (m.r ?? 1) * area : 0, chain: m.chain ? m.chain + Math.floor(st.chainPlus || 0) : 0,
             spray: m.spray, pull: m.pull, size: (m.r ?? 1) * vis, r: 0.3 * (m.r ?? 1) * Math.sqrt(vis), dur: m.dur, light: el !== 'phys',
+            ...(bard >= 0 ? { bm: m, tier: bard } : null),
           }));
         });
       }
-      sfx(fx === 'arrow' || fx === 'javelin' ? 'bow' : fx === 'bullet' || fx === 'rocket' ? 'shoot' : fx === 'note' ? 'note' : fx === 'rang' || fx === 'blade' || fx === 'axe' ? 'swing' : E.sfx, 0.7);
+      sfx(fx === 'arrow' || fx === 'javelin' ? 'bow' : fx === 'bullet' || fx === 'rocket' ? 'shoot' : fx === 'note' || bard >= 0 ? 'note' : fx === 'rang' || fx === 'blade' || fx === 'axe' ? 'swing' : E.sfx, 0.7);
       p.lunge = 0.6;
       break;
     }
@@ -269,7 +277,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       burst(p.x, p.y, 20, el, 24, 3, { up: 1.5 });
       addEffect(new Ring(p.x, p.y, 0.2, 1.6, 0.5, E.glow, 4));
       if (m.transform) { addEffect(new Column(p.x, p.y, E.glow, 0.6, 30, 200)); sfx('roar'); }
-      sfx(fx === 'shout' ? 'roar' : fx === 'note' ? 'note' : 'buff');
+      sfx(fx === 'shout' ? 'roar' : fx === 'note' || bard >= 0 ? 'note' : 'buff');
       break;
     }
     case 'curse': {
@@ -284,7 +292,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       if (fx === 'shout') { addEffect(new Ring(x, y, 0.1, r * 1.2, 0.4, '#ffffff', 3)); sfx('roar'); }
       else if (fx === 'flash') { G.flash = 0.35; sfx('explode', 0.5); }
       else if (fx === 'smoke') smoke(x, y, 6, '#3a3640', 14, 16);
-      else sfx(fx === 'note' ? 'note' : 'shadow');
+      else sfx(fx === 'note' || bard >= 0 ? 'note' : 'shadow');
       if (!targets.length && !self) floatText(x, y, 30, 'Cursed ground', E.glow, 11);
       break;
     }

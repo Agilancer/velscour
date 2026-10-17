@@ -1,6 +1,6 @@
 // Procedural skill icons and cached data-URLs for DOM use.
 import { makeCanvas, TAU, shade, rgba } from '../core/util.js';
-import { elem } from '../gfx/vfx.js';
+import { elem, glowSprite } from '../gfx/vfx.js';
 import { drawShape } from '../gfx/shapes.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { classSprite } from '../core/assets.js';
@@ -9,6 +9,8 @@ import { itemLook } from '../core/gearart.js';
 import { SUMMONS } from '../data/summons.js';
 import { itemIcon } from '../game/loot.js';
 import { enemyImage } from '../core/enemyart.js';
+import { NOTES } from '../data/notation.js';
+import { drawGlyph } from '../gfx/notation.js';
 
 const cache = new Map();
 const urlCache = new Map();
@@ -30,8 +32,20 @@ export function skillIcon(sk, size = 64) {
   x.strokeStyle = rgba(E.glow, 0.25); x.lineWidth = 2 * s;
   x.beginPath(); x.arc(size / 2, size / 2, size * 0.4, 0, TAU); x.stroke();
   x.save();
-  x.translate(size / 2, size / 2);
-  x.scale(s, s);
+  const note = NOTES[sk.m.note] ? sk.m.note : null;
+  if (note) { // a Bard skill: its glyph on a staff, with the kind's emblem shrunk into the corner
+    x.strokeStyle = rgba('#f2e6c4', 0.4); x.lineWidth = Math.max(1, s);
+    for (let i = 0; i < 5; i++) { const y = size * (0.34 + i * 0.075); x.beginPath(); x.moveTo(size * 0.08, y); x.lineTo(size * 0.92, y); x.stroke(); }
+    x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.8;
+    x.drawImage(glowSprite(E.glow), size * 0.12, size * 0.08, size * 0.76, size * 0.76);
+    x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
+    drawGlyph(x, note, size * 0.46, size * 0.46, s * (note === 's4' ? 1.25 : 1.55), '#fff8e2');
+    x.translate(size * 0.8, size * 0.8);
+    x.scale(s * 0.3, s * 0.3);
+  } else {
+    x.translate(size / 2, size / 2);
+    x.scale(s, s);
+  }
   x.lineCap = 'round'; x.lineJoin = 'round';
   const core = E.core, glow = E.glow;
   const stroke = (w, col = core) => { x.lineWidth = w; x.strokeStyle = col; x.stroke(); };

@@ -41,6 +41,7 @@ node tools/tests/biome_perf.js [ids] [depth]       # per-biome frame cost with a
 node tools/tests/mobs.js [levels]                  # monster pathing: awake monsters + guardians must reach the hero (stuck <= 2%)
 node tools/tests/bot.js paladin 2                  # bot plays depths 1..2, prints balance stats
 node tools/tests/skills.js wizard,gunner           # cast every skill of a class (all 16 if no arg; slow)
+node tools/tests/bard.js [minutes] [mobile]        # Bard notation: glyph sheet, measure/Cadence rules, showcase shots, auto-play soak
 node tools/tests/classart.js paladin               # class art pack: catalog weapons, ability effects
 node tools/tests/lance.js [mobile]                 # Dragoon leaps: energy lance + per-skill trails, stepped frame by frame
 node tools/tests/gear.js paladin,wizard            # hero looks: armor+helm per rarity, finishes, auras (all = 16)
@@ -113,7 +114,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   and `hud.js` for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
   `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`.
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Overworld scenarios
-  (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. Raid bosses
+  (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. The Bard's notes, measure and Cadences (`src/game/bard.js`, `src/gfx/notation.js`, `src/data/notation.js`): run `bard.js`. Raid bosses
   (`src/game/raid.js`, every 5th depth): run `raid.js` (and `raid_sigs.js` for `src/game/raidsigs.js`). Rings, augments or skill mastery (`src/data/rings.js`,
   `src/game/augments.js`): run `rings.js`. The town generator (`src/world/town.js`): run `town.js` with a few seeds.
 - Velscour waits at `FINAL_DEPTH` (500, `src/data/depth.js`); monster levels come from `depthLevel(depth)`, never the

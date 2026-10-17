@@ -6,6 +6,8 @@
 import { G } from '../state.js';
 import { input } from '../core/input.js';
 import { dist, clamp, TAU, fmtInt, escapeHtml, angleDiff, angleTo } from '../core/util.js';
+import { MEASURE, NOTES, beatsOf } from '../data/notation.js';
+import { bardNoteFor } from './bard.js';
 import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, spearBarrageAreas, buffAmount, curseAmount, skillDuration, effLevel } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
 import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS } from '../data/items.js';
@@ -119,6 +121,7 @@ function focusMul(classId, sk) {
   if (classId === 'lancer') return sk.m.shields ? 5 : mobility(sk) ? 1.8 : 1;
   if (classId === 'dragoon') return sk.m.barrage ? 5 : sk.kind === 'leap' ? 5 : sk.m.weave ? 2.5 : mobility(sk) ? 1.8 : 1;
   if (PET_CLASSES.has(classId) && sk.kind === 'summon') return sk.m.dur ? 2.5 : 4;
+  if (classId === 'bard') return sk.m.dacapo ? 2 : sk.kind === 'proj' || sk.kind === 'orbit' || sk.kind === 'rain' ? 1.5 : 1; // notes in the air
   return 1;
 }
 
@@ -1278,6 +1281,7 @@ export const Auto = {
       if (cost) score *= 1 - 0.35 * clamp(1 - p.mana / p.maxMana, 0, 1);
       consider(sk, score, ax, ay);
     }
+    if (c.classId === 'bard' && p.score) this.bardMeasure(choices);
     if (!choices.length) return null;
     // Keep emergency heals, missing buffs, and summons ahead of DPS rotation.
     const urgent = choices.filter((x) => x.score >= 1e8).sort((a, b) => b.score - a.score);
@@ -1319,6 +1323,23 @@ export const Auto = {
     choices.sort((a, b) => b.score - a.score);
     return choices[0];
   },
+  /**
+   * The Bard plays to the measure: a note that completes the 4/4 bar (a Cadence) is worth triple, one that would
+   * overfill it (a Discord, which breaks Harmony) is dropped while anything else fits, and Da Capo waits for a
+   * well-filled bar. Emergency heals are never held back.
+   */
+  bardMeasure(choices) {
+    const p = G.player, sc = p.score, rem = MEASURE - sc.beats, rub = p.buffs.some((b) => b.t > 0 && SKILLS[b.id] && SKILLS[b.id].m.rubato);
+    const beats = (sk) => (NOTES[bardNoteFor(p, sk)] || { beats: 0 }).beats; // the basic note shrinks to fit
+    for (const ch of choices) {
+      const b = beats(ch.sk);
+      if (ch.sk.m.dacapo) ch.score *= sc.beats >= 2 ? 4 : 0.2;
+      else if (b && Math.abs(b - rem) < 1e-6) ch.score *= 3;
+    }
+    if (rub) return;
+    const fits = choices.filter((ch) => ch.sk.kind === 'heal' || beats(ch.sk) <= rem + 1e-6);
+    if (fits.length) choices.splice(0, choices.length, ...fits);
+  },
   escapePoint(foes, r) {
     const p = G.player, m = G.world.map;
     let best = null, bs = -Infinity;
@@ -1337,6 +1358,7 @@ export const Auto = {
     const p = G.player;
     for (const sk of this.barSkills()) {
       if (sk.kind !== 'summon' || sk.m.dur || sk.m.sum === 'revive' || p.canUse(sk)) continue;
+      if (p.score && beatsOf(sk) > MEASURE - p.score.beats + 1e-6) continue; // the Bard never breaks his measure for it
       const mine = w.creatures.filter((x) => x.summon && x.skillId === sk.id && !x.dead).length;
       if (mine < summonMax(sk) && this.petCount(w) + (sk.m.n || 1) <= PET_CAP && p.mana > p.maxMana * 0.5) { p.tryUseSkill(sk, p.x + Math.cos(p.facing), p.y + Math.sin(p.facing)); return; }
     }
