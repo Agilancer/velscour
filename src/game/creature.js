@@ -366,6 +366,7 @@ export class Creature {
   }
 
   drawOverhead(ctx, px, py, w) {
+    if (this.ghostDraw) return; // a see-through copy (the Astronomer's Celestial Mirror) carries no overhead marks
     // stun stars / curse marks
     const s = this.status;
     if ((s.stun && s.stun.t > 0) || (s.fear && s.fear.t > 0)) {

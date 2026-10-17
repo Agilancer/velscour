@@ -8,6 +8,7 @@ import { emitWhirlCyclone, captureWhirlGibs, drawWhirlCyclone } from '../gfx/bar
 import { drawShape, trail, explosionFx, hitSpark } from '../gfx/shapes.js';
 import { bardProjInit, bardProjUpdate, bardProjHit, bardProjDraw, bardOrbitDraw, bardRainDraw, bardBeamDraw } from './bard.js';
 import { drawLancerOrbitShield } from '../gfx/lancershields.js';
+import { drawCosmicBeam } from '../gfx/cosmos.js';
 import { screenAngle } from '../gfx/vfx.js';
 import { hit, aoe, chainHit } from './combat.js';
 
@@ -59,6 +60,7 @@ export class Projectile {
     this.sprayT = 0;
     this.sprayN = 0;
     if (typeof this.fx === 'string' && this.fx.startsWith('n_')) bardProjInit(this); // a Bard note: staff trail + note behaviours
+    if (this.fx === 'starmissile' || this.fx === 'stardust') { this.weave = rand(5, 9); this.seed = rand(TAU); } // the Astronomer's stars dart and weave
   }
   get depth() { return this.x + this.y + 0.3; }
   update(dt) {
@@ -83,6 +85,10 @@ export class Projectile {
         const sp = Math.hypot(this.vx, this.vy);
         this.vx = Math.cos(cur + turn) * sp; this.vy = Math.sin(cur + turn) * sp;
       }
+    }
+    if (this.weave && !this.returning) {
+      const turn = Math.cos(this.t * this.weave + this.seed) * 7 * dt * Math.max(0.25, 1 - this.t * 1.2), c = Math.cos(turn), s = Math.sin(turn), vx = this.vx;
+      this.vx = vx * c - this.vy * s; this.vy = vx * s + this.vy * c;
     }
     // boomerang return
     if (this.ret && !this.returning && this.t > this.life * 0.5) { this.returning = true; this.hitSet.clear(); }
@@ -439,7 +445,8 @@ export class Orbit {
       return;
     }
     if (this.fx?.startsWith('n_')) bardOrbitDraw(ctx, this);
-    for (const [x, y, a] of this.pos) drawShape(ctx, this.fx, isoX(x, y), isoY(x, y) - 24, screenAngle(a + Math.PI / 2), this.size, this.E, this.t, this.o);
+    const each = this.fx === 'planet' || this.fx === 'zodiac' || this.fx === 'accretion'; // the Astronomer's orbiters differ one by one
+    this.pos.forEach(([x, y, a], i) => drawShape(ctx, this.fx, isoX(x, y), isoY(x, y) - 24, screenAngle(a + Math.PI / 2), this.size, this.E, this.t, each ? { i } : this.o));
   }
 }
 
@@ -748,6 +755,7 @@ export class BeamCh {
       const ax = isoX(s.x, s.y), ay = isoY(s.x, s.y) - 26;
       const bx = isoX(ex, ey), by = isoY(ex, ey) - 16;
       if (this.fx?.startsWith('n_')) { bardBeamDraw(ctx, this, ax, ay, bx, by); continue; }
+      if (drawCosmicBeam(ctx, this.fx, ax, ay, bx, by, this.t)) continue;
       ctx.globalCompositeOperation = 'lighter';
       ctx.lineCap = 'round';
       if (this.fx === 'lightning' || this.fx === 'storm') {

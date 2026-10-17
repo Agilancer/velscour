@@ -11,6 +11,7 @@ import { itemIcon } from '../game/loot.js';
 import { enemyImage } from '../core/enemyart.js';
 import { NOTES } from '../data/notation.js';
 import { drawGlyph } from '../gfx/notation.js';
+import { drawSun, drawMoon, drawBlackHole, drawChartStar } from '../gfx/cosmos.js';
 
 const cache = new Map();
 const urlCache = new Map();
@@ -22,7 +23,7 @@ export function skillIcon(sk, size = 64) {
   c = makeCanvas(size, size);
   let keep = true; // false while a summon's painted art is still loading: draw the fallback, don't cache it
   const x = c.getContext('2d');
-  const E = elem(sk.el);
+  const E = elem(sk.classId === 'arcane_sorcerer' && sk.el === 'arcane' ? 'astral' : sk.el); // the Astronomer's blue starlight
   const s = size / 64;
   // background
   const g = x.createRadialGradient(size * 0.5, size * 0.42, 2, size * 0.5, size * 0.5, size * 0.75);
@@ -33,6 +34,29 @@ export function skillIcon(sk, size = 64) {
   x.beginPath(); x.arc(size / 2, size / 2, size * 0.4, 0, TAU); x.stroke();
   x.save();
   const note = NOTES[sk.m.note] ? sk.m.note : null;
+  const body = { sunslam: 1, moonfall: 1, blackhole: 1, well: 1, singularity: 1, mirror: 1, bigbang: 1, eclipse: 1, heavensmap: 1, chart: 1, ignite: 1 }[sk.m.astro];
+  if (sk.classId === 'arcane_sorcerer') { // a starfield behind every Astronomer icon
+    for (let i = 0; i < 14; i++) { x.fillStyle = rgba('#ffffff', 0.25 + (i % 3) * 0.2); const a = i * 2.39996, r = size * (0.18 + (i * 0.037) % 0.3); x.fillRect(size / 2 + Math.cos(a) * r, size / 2 + Math.sin(a) * r, Math.max(1, s), Math.max(1, s)); }
+  }
+  if (body) { // the special spells show their heavenly body
+    const h = size / 2, m = sk.m.astro;
+    if (m === 'sunslam') drawSun(x, h, h, size * 0.24, 1.3, 0.8);
+    else if (m === 'moonfall') drawMoon(x, h, h, size * 0.26, 0.5);
+    else if (m === 'blackhole' || m === 'well') drawBlackHole(x, h, h + size * 0.06, size * (m === 'well' ? 0.2 : 0.26), 0.7, 1);
+    else if (m === 'eclipse') { drawSun(x, h, h, size * 0.22, 0.4, 0.5); x.fillStyle = '#05040a'; x.beginPath(); x.arc(h + size * 0.05, h, size * 0.22, 0, TAU); x.fill(); }
+    else if (m === 'bigbang') { for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; x.strokeStyle = ['#4aa8ff', '#ffd060', '#ff80e0'][i % 3]; x.lineWidth = 2 * s; x.beginPath(); x.moveTo(h + Math.cos(a) * size * 0.08, h + Math.sin(a) * size * 0.08); x.lineTo(h + Math.cos(a) * size * 0.4, h + Math.sin(a) * size * 0.4); x.stroke(); } drawChartStar(x, h, h, 1.3 * s, 0); }
+    else if (m === 'mirror') for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; drawChartStar(x, h + Math.cos(a) * size * 0.3, h + Math.sin(a) * size * 0.3, 0.55 * s, i); }
+    else { // the chart skills: a little constellation
+      const P = [[0.2, 0.7], [0.38, 0.45], [0.55, 0.55], [0.7, 0.3], [0.84, 0.42]];
+      x.strokeStyle = rgba('#9fe6ff', 0.8); x.lineWidth = 1.5 * s; x.beginPath(); P.forEach(([a, b], i) => (i ? x.lineTo(a * size, b * size) : x.moveTo(a * size, b * size))); x.stroke();
+      for (const [a, b] of P) drawChartStar(x, a * size, b * size, 0.5 * s, a * 9);
+    }
+    x.restore();
+    x.strokeStyle = 'rgba(0,0,0,0.85)'; x.lineWidth = 3 * s; x.strokeRect(1, 1, size - 2, size - 2);
+    x.strokeStyle = rgba(E.glow, 0.5); x.lineWidth = 1; x.strokeRect(3, 3, size - 6, size - 6);
+    cache.set(key, c);
+    return c;
+  }
   if (note) { // a Bard skill: its glyph on a staff, with the kind's emblem shrunk into the corner
     x.strokeStyle = rgba('#f2e6c4', 0.4); x.lineWidth = Math.max(1, s);
     for (let i = 0; i < 5; i++) { const y = size * (0.34 + i * 0.075); x.beginPath(); x.moveTo(size * 0.08, y); x.lineTo(size * 0.92, y); x.stroke(); }

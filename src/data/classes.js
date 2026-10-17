@@ -51,10 +51,11 @@ export const CLASSES = {
     desc: 'A fallen champion bound by runic frost. Obliterating strikes, plague and life-stealing blood magic.',
   },
   arcane_sorcerer: {
-    name: 'Arcane Sorcerer', primary: 'int', base: { str: 12, dex: 16, vit: 16, int: 34 }, life: 44, mana: 65, lifeLvl: 5, manaLvl: 4.5,
-    weapon: 'wand', offhand: 'orb', element: 'arcane', color: '#d070ff',
-    trees: ['Arcane', 'Chronomancy', 'Void'],
-    desc: 'A scholar of raw magic. Homing missiles, time manipulation and void-born death lasers.',
+    // the id stays arcane_sorcerer (saves, sprites and gear packs use it); he is the Astronomer now
+    name: 'Astronomer', primary: 'int', base: { str: 12, dex: 16, vit: 16, int: 34 }, life: 44, mana: 65, lifeLvl: 5, manaLvl: 4.5,
+    weapon: 'wand', offhand: 'orb', element: 'arcane', color: '#4aa8ff',
+    trees: ['Starfire', 'Celestial Bodies', 'Gravity'],
+    desc: 'A stargazer who wields the heavens. Swarms of star missiles, meteors, falling suns and black holes; every spell charts a star, and finished constellations grant zodiac boons.',
   },
   carrion_witch: {
     name: 'Carrion Witch', primary: 'int', base: { str: 12, dex: 18, vit: 18, int: 30 }, life: 48, mana: 55, lifeLvl: 5, manaLvl: 4,

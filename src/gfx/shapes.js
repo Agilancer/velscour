@@ -8,6 +8,7 @@ import { replacementImage } from '../core/replacementart.js';
 import { pixelSprite, shiftPalette } from './pixelart.js';
 import { sfx } from '../core/audio.js';
 import { drawNoteShape } from './notation.js';
+import { drawCosmic, cosmicTrail } from './cosmos.js';
 
 function glow(ctx, x, y, r, color, a = 1) {
   ctx.globalCompositeOperation = 'lighter';
@@ -26,6 +27,7 @@ export function drawShape(ctx, fx, x, y, a, s, E, t, extra = {}) {
     ctx.save(); ctx.translate(x, y); drawNoteShape(ctx, fx.slice(2), s, t, (extra && extra.bardT) || 0); ctx.restore();
     return;
   }
+  if (drawCosmic(ctx, fx, x, y, a, s, E, t, extra)) return; // the Astronomer's stars, comets, moons, planets
   ctx.save();
   ctx.translate(x, y);
   const spin = t * 18;
@@ -240,6 +242,7 @@ export function drawShape(ctx, fx, x, y, a, s, E, t, extra = {}) {
 
 /** Trail particles emitted by projectiles each frame. */
 export function trail(fx, x, y, z, E, dt, s = 1) {
+  if (cosmicTrail(fx, x, y, z, E, dt, s)) return;
   const p = Math.random();
   switch (fx) {
     case 'fireball': case 'meteor': case 'rocket':
