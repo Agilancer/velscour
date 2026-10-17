@@ -219,9 +219,9 @@ function generateCastleBase(depth,biome,seed){
     dist=(x,y,p)=>Math.hypot(x-p[0],y-p[1]);
   if(!floors.length||water<0)throw new Error('Castle floors and moat water must load before generating the overworld.');
   const rooms=[
-    {id:'throne_hall',name:'Throne Hall',rect:[38,33,56,49],floor:hallFloor,wallStyle:'keep_wall_01_pale_quarry',doors:[[47,49,'door_01_oak_keep_door_SE_open'],[48,49,'door_01_oak_keep_door_SE_open'],[49,49,'door_01_oak_keep_door_SE_open']]},
-    {id:'cathedral',name:'Cathedral',rect:[29,42,41,59],floor:chapelFloor,wallStyle:'keep_wall_02_honey_chapel',doors:[[41,51,'door_05_carved_chapel_door_NE_open'],[34,59,'door_05_carved_chapel_door_SE_open'],[35,59,'door_05_carved_chapel_door_SE_open'],[36,59,'door_05_carved_chapel_door_SE_open']]},
-    {id:'great_hall',name:'Great Hall',rect:[43,51,57,60],floor:greatFloor,wallStyle:'keep_wall_03_aged_keep',doors:[[43,55,'door_04_arched_stable_door_SW_open'],[43,56,'door_04_arched_stable_door_SW_open']]},
+    {id:'throne_hall',name:'Throne Hall',rect:[42,33,56,49],floor:hallFloor,wallStyle:'keep_wall_01_pale_quarry',doors:[[47,49,'door_01_oak_keep_door_SE_open'],[48,49,'door_01_oak_keep_door_SE_open'],[49,49,'door_01_oak_keep_door_SE_open']]},
+    {id:'cathedral',name:'Cathedral',rect:[29,42,41,59],floor:chapelFloor,wallStyle:'keep_wall_01_pale_quarry',doors:[[41,51,'door_05_carved_chapel_door_NE_open'],[34,59,'door_05_carved_chapel_door_SE_open'],[35,59,'door_05_carved_chapel_door_SE_open'],[36,59,'door_05_carved_chapel_door_SE_open']]},
+    {id:'great_hall',name:'Great Hall',rect:[43,51,57,60],floor:greatFloor,wallStyle:'keep_wall_01_pale_quarry',doors:[[43,55,'door_04_arched_stable_door_SW_open'],[43,56,'door_04_arched_stable_door_SW_open']]},
   ];
   map.t.fill(1);map.losBlocks=true;map.rampartDeck=new Uint8Array(CN);map.rampartHeight=0;
   const wallPath=[[34,26],[47,26],[47,28],[52,28],[52,31],[61,31],[66,31],[66,36],[66,43],[63,43],[63,46],[63,52],[59,52],[59,61],[53,65],[45,65],[45,62],[41,62],[34,62],[30,58],[30,50],[33,50],[33,46],[33,41],[30,41],[30,34],[34,34],[34,30],[34,26]];
@@ -271,9 +271,9 @@ function generateCastleBase(depth,biome,seed){
     const a=poly[i],b=poly[j];if(((a[1]>y)!==(b[1]>y))&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])c=!c;}return c;};
   const gates=new Set();
   for(const [x,y] of [[47,65],[48,65],[49,65],[41,26],[42,26],[43,26],[30,36],[30,37],[66,36],[66,37]])gates.add(id(x,y));
-  const wallStyles=['wall_01_quarry_limestone','wall_02_aged_castle','wall_03_mossed_limestone',
-    'wall_04_rain_darkened','wall_05_pale_dressed','wall_06_soot_marked','wall_07_honey_ashlar',
-    'wall_08_red_sandstone','wall_09_blue_slate','wall_10_olive_granite'];
+  // Families 01/07 are half-timber and 02/08 wooden planks despite their names; a curtain wall is stone only.
+  const wallStyles=['wall_03_mossed_limestone','wall_04_rain_darkened','wall_05_pale_dressed',
+    'wall_06_soot_marked','wall_09_blue_slate','wall_10_olive_granite'];
   // Five full cells of playable parapet behind one continuous curtain wall.
   // Intentional gates are the only openings; every other corner is joined 4-way.
   const deck=new Set(wallCells);
@@ -405,8 +405,8 @@ function generateCastleBase(depth,biome,seed){
   // Throne hall: a raised dais at the north end, clear central combat space,
   // paired banquet tables and wall-side guard seats.
   furnish('furniture_01_throne_dais',47.5,36.2,.38,0);
-  for(const [asset,x,y] of [['scatter_09_trestle_table',42.5,40.5],['scatter_09_trestle_table',52.5,40.5],
-    ['scatter_10_guard_bench',41.5,44.5],['scatter_10_guard_bench',53.5,44.5],['scatter_31_shield_rack',39.5,38.5],['scatter_32_spear_bundle',54.5,38.5]])
+  for(const [asset,x,y] of [['scatter_09_trestle_table',44.5,40.5],['scatter_09_trestle_table',52.5,40.5],
+    ['scatter_10_guard_bench',43.5,44.5],['scatter_10_guard_bench',53.5,44.5],['scatter_31_shield_rack',43.5,37.5],['scatter_32_spear_bundle',54.5,38.5]])
       add(asset,'scatter',x,y,asset.includes('table')?.66:asset.includes('bench')?.55:.42);
   // Cathedral: long nave, a broad aisle, side chapels, and a raised pulpit.
   furnish('furniture_03_cathedral_pulpit',35.5,44.5,.30,1.8);
@@ -421,7 +421,8 @@ function generateCastleBase(depth,biome,seed){
   // Outer groves frame the fort rather than filling the lawns with noisy debris.
   for(let y=2;y<CH-2;y++)for(let x=2;x<CW-2;x++){
     const i=id(x,y);if(!map.block[i]||map.v[i]===water||x>=28&&x<=68&&y>=23&&y<=68)continue;
-    if(rng.chance(.2))add(rng.pick(castleFrames('trees')).id,'trees',x+.5,y+.5,.55);
+    // a grove blocker without a tree would be an invisible wall
+    if(!(rng.chance(.2)&&add(rng.pick(castleFrames('trees')).id,'trees',x+.5,y+.5,.55)))map.block[i]=0;
   }
   let scatterCount=0;
   for(let n=0;n<9000&&scatterCount<460;n++){
