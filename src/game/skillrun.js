@@ -8,7 +8,7 @@ import { GroundItem } from './loot.js';
 import { explosionFx } from '../gfx/shapes.js';
 import { hit, aoe, chainHit } from './combat.js';
 import { Projectile, Delayed, Area, makeWall, Orbit, Whirl, Leap, Dash, NovaWave, BeamCh, Trap, Rain, Fissure, AuraFx, explode, coneTargets } from './hazards.js';
-import { buffAmount, curseAmount, skillDuration } from '../data/skills.js';
+import { buffAmount, curseAmount, skillDuration, spearBarrageAreas } from '../data/skills.js';
 import { createSummon } from './monster.js';
 import { lanceLeap, lanceSpearBarrage } from '../gfx/lancefx.js';
 import { shieldVariantForSkill, shieldOrbitRadius, preloadLancerShield } from '../gfx/lancershields.js';
@@ -133,20 +133,14 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
     case 'aoe': {
       const [x, y] = clampTarget(w, p, tx, ty, 10);
       if (m.barrage) {
-        const r = 1.6 * (m.r ?? 1) * area;
-        const side = r * 1.12, nx = -Math.sin(ang), ny = Math.cos(ang);
-        const centers = [[x, y]];
-        if (m.barrage === 3) {
-          for (const sign of [-1, 1]) {
-            const cx = x + nx * side * sign, cy = y + ny * side * sign;
-            centers.push(w.map.isFloor(cx, cy) ? [cx, cy] : [x, y]);
-          }
-        }
+        // An impact centered on the Dragoon: clicking distant ground cannot
+        // remotely land a spear barrage. Only jumping into the pack will hit it.
+        const { radius, centers } = spearBarrageAreas(sk, p.x, p.y, ang, area, (cx, cy) => w.map.isFloor(cx, cy));
         // Instant damage, one hit per enemy even if multiple circles overlap.
         const victims = new Set();
-        for (const [cx, cy] of centers) for (const t of w.hostiles(p.team, cx, cy, r)) victims.add(t);
+        for (const [cx, cy] of centers) for (const t of w.hostiles(p.team, cx, cy, radius)) victims.add(t);
         for (const t of victims) hit(p, t, roll(dmg), el, { ...o, aoe: true });
-        lanceSpearBarrage(centers, r, m.barrage === 3);
+        lanceSpearBarrage(centers, radius, m.barrage === 3);
         sfx('swing', 0.8);
         p.lunge = 0.5;
         break;
