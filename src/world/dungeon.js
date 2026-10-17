@@ -4,13 +4,14 @@ import { RNG, clamp } from '../core/util.js';
 import { ARCH } from '../data/enemies.js';
 import { rollLooks } from '../data/bestiary.js';
 import { isoBarrier } from '../gfx/isobarriers.js';
-import { wallHangingAtWallSegment } from '../gfx/wallhangings.js';
+import { wallHangingAtWallSegment, wallHangingCount } from '../gfx/wallhangings.js';
+import { CASTLE_KEEP_LAYOUTS } from '../data/castlekeeplayouts.js';
 
 const S = 11; // chunk size in tiles
 
-function nextHangingDesign(rng, bag) {
+function nextHangingDesign(rng, bag, count = 50) {
   if (!bag.length) {
-    for (let i = 0; i < 50; i++) bag.push(i);
+    for (let i = 0; i < count; i++) bag.push(i);
     for (let i = bag.length - 1; i > 0; i--) {
       const j = rng.int(0, i);
       [bag[i], bag[j]] = [bag[j], bag[i]];
@@ -40,8 +41,88 @@ export { isRaidDepth };
 // the boss room: an arena east of the maze, reached by a corridor from its far end
 const ARENA_W = 30, ARENA_H = 26, ARENA_GAP = 6;
 
+/** Build one of Castle Keep's authored room/corridor configurations. */
+function generateCastleKeepLayout(depth, biome, tileset, seed, layout) {
+  const rng = new RNG(seed), W = layout.width, H = layout.height;
+  const map = new TileMap(W, H);
+  const carve = (x, y, w, h) => {
+    for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++)
+      if (xx > 0 && yy > 0 && xx < W - 1 && yy < H - 1) map.t[yy * W + xx] = 1;
+  };
+  const rooms = layout.rooms.map((r, idx) => ({ ...r, idx, type: 'room',
+    mx: r.x + r.w / 2, my: r.y + r.h / 2 }));
+  for (const r of rooms) carve(r.x, r.y, r.w, r.h);
+  for (const [x, y, w, h] of layout.corridors) carve(x, y, w, h);
+  const nearestRoom = (point) => rooms.reduce((best, r) => {
+    const distance = Math.hypot(r.mx - point[0], r.my - point[1]);
+    return !best || distance < best.distance ? { room: r, distance } : best;
+  }, null).room;
+  const startRoom = nearestRoom(layout.start), guardianRoom = nearestRoom(layout.guardian);
+  const exitRoom = guardianRoom;
+  if (!map.walkable(layout.start[0], layout.start[1]) ||
+      !map.walkable(layout.guardian[0], layout.guardian[1]) ||
+      !map.walkable(layout.exit[0], layout.exit[1]))
+    throw new Error(`Castle Keep layout has a marker outside its floor: ${layout.id}`);
+
+  finishMap(map, tileset, rng, null, rooms);
+  const eligibleRooms = rooms.filter((r) => r !== startRoom && r !== guardianRoom && r.w * r.h >= 16);
+  const props = placeObstacles(map, eligibleRooms, tileset, rng, startRoom);
+  const looks = rollLooks(biome, () => rng.next()), roster = biome.roster;
+  const pickArch = () => roster[Math.floor(Math.pow(rng.next(), 1.35) * roster.length)];
+  const roomSpot = (r) => {
+    for (let i = 0; i < 30; i++) {
+      const x = r.x + rng.range(0.6, r.w - 0.6), y = r.y + rng.range(0.6, r.h - 0.6);
+      if (map.walkable(x, y)) return [x, y];
+    }
+    return [r.mx, r.my];
+  };
+  const spawns = [], packRooms = eligibleRooms.length ? eligibleRooms : [guardianRoom];
+  for (const r of packRooms) {
+    const [x, y] = roomSpot(r), arch = pickArch(), A = ARCH[arch];
+    spawns.push({ x, y, arch, n: rng.int(A.pack[0], A.pack[1]), rank: 'normal', look: looks.pick(arch) });
+  }
+  const nonGuard = rooms.filter((r) => r !== startRoom && r !== guardianRoom);
+  const champs = 1 + Math.floor(Math.min(depth, 120) / 18);
+  for (let i = 0; i < champs; i++) {
+    const r = rng.pick(nonGuard.length ? nonGuard : packRooms), [x, y] = roomSpot(r), arch = pickArch();
+    spawns.push({ x, y, arch, n: rng.int(2, 4), rank: 'champion', look: looks.pick(arch) });
+  }
+  const uniques = 1 + Math.floor(Math.min(depth, 120) / 35);
+  for (let i = 0; i < uniques; i++) {
+    const r = rng.pick(nonGuard.length ? nonGuard : packRooms), [x, y] = roomSpot(r), arch = pickArch();
+    spawns.push({ x, y, arch, n: rng.int(2, 3), rank: 'unique', look: looks.pick(arch) });
+  }
+  const guardian = looks.boss(roster);
+  spawns.push(guardian
+    ? { x: layout.guardian[0], y: layout.guardian[1], n: 1, rank: 'boss', arch: guardian.arch, look: guardian.look }
+    : { x: layout.guardian[0], y: layout.guardian[1], n: 1, rank: 'boss', arch: pickArch() });
+
+  const chests = [], chestRooms = nonGuard.length ? shuffleWith(nonGuard.slice(), rng) : [];
+  const chestCount = Math.min(2, Math.max(1, Math.floor(chestRooms.length / 3)));
+  for (const r of chestRooms.slice(0, chestCount)) chests.push({ x: r.mx, y: r.my, rare: rng.chance(0.15) });
+  const torches = [];
+  for (const s of map.segments) if (!s.front && rng.next() < 0.09) torches.push(torchAtWallSegment(s));
+  const wallHangings = [], hangingDesigns = [];
+  for (const s of map.segments) {
+    if (rng.next() > 0.04) continue;
+    if (torches.some((t) => Math.abs((t.mountX ?? t.x) - s.mx) < 0.4 &&
+      Math.abs((t.mountY ?? t.y) - s.my) < 0.4)) continue;
+    wallHangings.push(wallHangingAtWallSegment(s,
+      nextHangingDesign(rng, hangingDesigns, wallHangingCount(biome))));
+  }
+  return {
+    map, rooms, spawns, props, chests, torches, wallHangings, looks,
+    start: layout.start.slice(), exit: layout.exit.slice(), bossRoom: guardianRoom,
+    raid: null, layoutId: layout.id, layoutName: layout.name,
+  };
+}
+
 export function generateDungeon(depth, biome, tileset, seed) {
   if (depth === FINAL_DEPTH) return generateThrone(biome, tileset, seed);
+  if (biome.id === 'castle_keep' && !isRaidDepth(depth)) {
+    const layout = CASTLE_KEEP_LAYOUTS[Math.abs((depth - 1) % CASTLE_KEEP_LAYOUTS.length)];
+    return generateCastleKeepLayout(depth, biome, tileset, seed, layout);
+  }
   const rng = new RNG(seed);
   const raid = isRaidDepth(depth);
   // a raid level's maze is a little smaller: the boss fight takes the time
@@ -236,7 +317,7 @@ export function generateDungeon(depth, biome, tileset, seed) {
         Math.abs((t.mountY ?? t.y) - s.my) < 0.4)) continue;
       // Cycle through a shuffled catalog so a level does not repeat a motif
       // until all fifty authored designs have had a chance to appear.
-      wallHangings.push(wallHangingAtWallSegment(s, nextHangingDesign(rng, hangingDesigns)));
+      wallHangings.push(wallHangingAtWallSegment(s, nextHangingDesign(rng, hangingDesigns, wallHangingCount(biome))));
     }
 
   return {
@@ -364,6 +445,7 @@ function placeObstacles(map, rooms, tileset, rng, startRoom) {
 
 // light radius (tiles) of the props that burn
 const LIT = { grave_lantern: 2.2, torch_stand: 3.2, incense_brazier: 3, iron_candelabrum: 2.6, vigil_candles: 2, votive_candles: 2,
+  wall_brazier: 3.1, keep_candelabrum: 2.8, iron_chandelier: 2.6,
   gold_brazier: 3.6, blue_flame_brazier: 3.8, temple_censer: 2.8, burial_lantern: 2.6, sun_torch: 3.2, royal_censer: 3.0,
   winter_brazier: 3.2, azure_brazier: 3.7, violet_brazier: 3.7, frost_lantern: 2.6,
   icicle_chandelier: 2.6, crystal_heart: 4.1, aurora_shrine: 3.9,
