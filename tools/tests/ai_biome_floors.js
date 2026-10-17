@@ -71,6 +71,14 @@ const APPROVED = new Set(['desert_temple', 'ice_temple', 'hell', 'astral_plane',
           await loadBiomeArt(biome);
           const pack = A.packs['expanded_' + id];
           const issues = [];
+          if(id==='catacombs'){
+            if(pack)issues.push('Catacombs master must not be expanded');
+            const {biomeTileSet}=await import('/src/core/assets.js');
+            const set=biomeTileSet(biome);
+            if(set.bases.length!==10)issues.push('Catacombs base paving was altered');
+            game.buildDungeon(15,biome);
+            return {issues};
+          }
           if (!pack?.meta?.expansion) return { issues: ['No expanded pack for ' + id] };
           const meta = pack.meta;
           const start = meta.expansion.floorStart;
