@@ -109,6 +109,8 @@ export function skillDuration(sk, L) {
 
 /** Approximate useful range in tiles (used for auto-aim and melee approach). */
 export function skillRange(sk) {
+  // Spearstorm strikes around the Dragoon, not at an arbitrary distant cursor.
+  if (sk.m.barrage) return 2.5;
   switch (sk.kind) {
     case 'melee': return 1.5 * (sk.m.range ?? 1) * (sk.m.r ?? 1);
     case 'whirl': return 6;
@@ -121,6 +123,20 @@ export function skillRange(sk) {
     default: return 10 * (sk.m.range ?? 1);
   }
 }
+/** Shared point-blank hit/visual footprint of the Dragoon's one- and three-circle spear barrages. */
+export function spearBarrageAreas(sk, x, y, angle, area = 1, floor = () => true) {
+  const radius = 1.6 * (sk.m.r ?? 1) * area;
+  const centers = [[x, y]];
+  if (sk.m.barrage === 3) {
+    const offset = radius * 0.6, nx = -Math.sin(angle), ny = Math.cos(angle);
+    for (const sign of [-1, 1]) {
+      const cx = x + nx * offset * sign, cy = y + ny * offset * sign;
+      centers.push(floor(cx, cy) ? [cx, cy] : [x, y]);
+    }
+  }
+  return { radius, centers };
+}
+
 export function needsTarget(sk) { return !['buff', 'heal', 'summon'].includes(sk.kind) && !(sk.kind === 'curse' && sk.m.at === 'self') && sk.kind !== 'nova'; }
 
 const FXNAME = {
@@ -159,8 +175,8 @@ export function describe(sk, L, dmg) {
   if (m.leech) flags.push('Life steal');
   if (m.pull) flags.push('Pulls enemies');
   if (m.barrage) return m.barrage === 3
-    ? `Instantly impale enemies in three circles with spectral Dragoon lances for ${D}. Each enemy is struck once, even where circles overlap. Visuals last 1.65s.`
-    : `Instantly impale enemies in a broad circle with spectral Dragoon lances for ${D}. Visuals last 1.35s.`;
+    ? `Impale nearby enemies in three tight circles surrounding you for ${D}, with spectral Dragoon lances. Instant damage, one hit per enemy (even in overlaps). Visuals last 1.65s.`
+    : `Impale nearby enemies in a circle around you for ${D}, with spectral Dragoon lances. Instant damage; visuals last 1.35s.`;
   let s;
   switch (sk.kind) {
     case 'melee': s = sk.id === 'barbarian.0.0'
