@@ -65,7 +65,7 @@ function bake(cols, seed, n) {
 }
 
 /** The grit overlay for floor tile (tx, ty) of variant v drawn with entry f, or null. */
-export function gritAt(world, f, v, tx, ty) {
+export function gritAt(world, f, v, tx, ty, force = false) {
   const g = world.grit || (world.grit = { cols: new Map(), spr: new Map() });
   const town = !!world.townTiles && !['castle','sea_of_sand'].includes(world.biome?.id), trans = town && v >= 6;
   const h = hash(tx, ty, 7);
@@ -76,7 +76,7 @@ export function gritAt(world, f, v, tx, ty) {
     // Spread fresh tile sampling/canvas baking over multiple phone frames.
     // Heavy new biome floors may contain dozens of variants in one viewport;
     // synchronous getImageData on all of them in one render causes a hitch.
-    if (G.touch) {
+    if (G.touch && !force) {
       if (gritFrame !== G.frame) { gritFrame = G.frame; gritMade = 0; }
       if (gritMade >= 2) return null;
       gritMade++;

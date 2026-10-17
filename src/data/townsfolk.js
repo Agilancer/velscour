@@ -11,6 +11,7 @@ const court=[['Lord Steward Halric','royal steward',23],['Lady Ysabet','court la
 const regular=[['Old Tobin','retired veteran',7],['Mira','apprentice ranger',16],['Brother Cael','chaplain',6],['Gorm','retired guard',7]];
 const knights=[['Sir Aldric Vane','knight',19],['Dame Maeve Thorn','knight',20],['Sir Bastian Vale','knight',21],['Dame Rosette Marr','knight',22]];
 
+const wayTurn={};
 export const TOWNSFOLK=Object.freeze(Array.from({length:100},(_,i)=>{
   let name,role,child=false,royal=false,regularVisitor=false,courtier=false,knight=false,spriteIndex,familyId=null;
   if(i<10){name=children[i];role=childRoles[i];child=true;spriteIndex=[3,4,3,4,3,4,15,3,4,16][i];familyId=`family_${1+Math.floor(i/2)}`;}
@@ -22,8 +23,14 @@ export const TOWNSFOLK=Object.freeze(Array.from({length:100},(_,i)=>{
   else {const n=i-94;role=['beekeeper','fisher','woodcutter','jeweler','porter','village cook'][n];name=`${first[40+n]} ${last[15+n]}`;spriteIndex=spriteForJob(role);}
   // Small earthy hue nudges only: full-wheel shifts turned clothes and skin-adjacent tones green.
   const hue=[-16,-9,-4,0,5,10,15][(i*3)%7];
-  return Object.freeze({id:`townsfolk_${String(i+1).padStart(3,'0')}`,name,role,sprite:'townsfolk',spriteId:`townsfolk_${String(spriteIndex).padStart(3,'0')}`,
-    palette:{hue,sat:.84+((i*7)%24)/100,light:((i%5)-2)*.025},child,royal,regular:regularVisitor,courtier,knight,familyId,
+  // Sheets 26-100 are pre-painted colourways of the ten source identities (sheet k shows identity (k-1)%10+1):
+  // ordinary folk wear one of those, so all 100 sheets appear and no runtime recolour is needed.
+  const plain=!royal&&!courtier&&!knight&&!regularVisitor&&spriteIndex<=10;
+  const ways=plain?Array.from({length:75},(_,k)=>k+26).filter(k=>(k-1)%10+1===spriteIndex):[];
+  const turn=wayTurn[spriteIndex]=(wayTurn[spriteIndex]||0)+1;
+  const sheet=ways.length&&turn%(ways.length+1)?ways[(turn-1)%ways.length]:spriteIndex;
+  return Object.freeze({id:`townsfolk_${String(i+1).padStart(3,'0')}`,name,role,sprite:'townsfolk',spriteId:`townsfolk_${String(sheet).padStart(3,'0')}`,
+    palette:sheet>25?null:{hue,sat:.84+((i*7)%24)/100,light:((i%5)-2)*.025},child,royal,regular:regularVisitor,courtier,knight,familyId,
     frame:{w:128,h:192,count:knight?13:11,order:knight?['idle_1','idle_2','idle_3','walk_1','walk_2','dying_1','dead','scared_scream','scared_point','happy','celebrate','attack_1','attack_2']:['idle_1','idle_2','idle_3','walk_1','walk_2','dying_1','dead','scared_scream','scared_point','happy','celebrate']}});
 }));
 
@@ -56,7 +63,10 @@ export const TOWN_SITUATIONS=Object.freeze(Array.from({length:2000},(_,i)=>{
   const archetype=events[Math.floor(i/100)],v=i%100,place=places[v%10],detail=details[Math.floor(v/10)],time=details[(v*3+Math.floor(i/100))%10];
   const [kind,title,mood,emote,intro,beat]=archetype;
   // One short sentence: it has to fit a speech bubble.
-  const text=`${v%2?beat:intro}${kind.includes('alarm')||kind.includes('scout')||kind==='monster_sighting'?'!':'.'}`;
+  // ...three bubble lines at most: a short where and when keep all 2,000 cards distinct
+  const when=['at dawn','at noon','at dusk','in the rain','by lantern light','at the bells','in the frost','on market day','after vespers','at first light'][Math.floor(v/10)];
+  const where=['by the well','in the square','at the gate','by the chapel','near the inn'][(v>>1)%5];
+  const text=`${v%2?beat:intro} ${where} ${when}${kind.includes('alarm')||kind.includes('scout')||kind==='monster_sighting'?'!':'.'}`;
   const visualMood=emotes[emote]||emote;
   return Object.freeze({id:`town_event_${String(i+1).padStart(4,'0')}`,kind,title,text,mood,emote:visualMood,
     actors:kind==='royal_visit'?['royal','courtier']:kind.includes('knight')?['knight']:kind==='wedding'||kind==='engagement'?['adult','child']:kind==='birth'?['midwife','family']:kind.includes('fight')?['knight','adult']:kind.includes('alarm')||kind.includes('scout')?['knight','watch']:['adult','child'],

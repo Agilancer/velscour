@@ -1,3 +1,4 @@
+import { TREE4 } from './skilltrees4.js';
 // 16 classes x 3 trees x 20 skills = 960 skills, plus Necromancer's Skeletal Legion and Dragoon's Spearstorm trees: 1000.
 // Each line: "Name|kind|element|fx|mods"
 // Tree layout is 5 rows x 4 columns; each column is a prerequisite chain.
@@ -390,3 +391,5 @@ export const SKILLDATA = {
     ],
   ],
 };
+// every class gets a fourth tree (data/skilltrees4.js); the Necromancer's and Dragoon's are already in
+for (const [c, tree] of Object.entries(TREE4)) if (SKILLDATA[c].length === 3) SKILLDATA[c].push(tree);

@@ -5,7 +5,7 @@
 // simulation: apply the change, recompute the hero, score the result with charScore(), undo.
 import { G } from '../state.js';
 import { input } from '../core/input.js';
-import { dist, clamp, TAU, fmtInt, escapeHtml, angleDiff } from '../core/util.js';
+import { dist, clamp, TAU, fmtInt, escapeHtml, angleDiff, angleTo } from '../core/util.js';
 import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, buffAmount, curseAmount, skillDuration, effLevel } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
 import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS } from '../data/items.js';
@@ -18,6 +18,7 @@ import { Vendor, fuseAll } from '../ui/vendor.js';
 import { Stash, addToStash } from '../ui/stash.js';
 import { addToBag } from './player.js';
 import { Delayed, Area, Whirl } from './hazards.js';
+import { bountyGoal } from './wanderers.js';
 import { effects, Telegraph } from '../gfx/vfx.js';
 import { BAR_SIZE, LMB, RMB, FILL_ORDER, SLOT_KEYS } from '../data/bar.js';
 
@@ -293,6 +294,7 @@ export const Auto = {
 
   toggle(v = !this.on) {
     this.on = v;
+    G.autoplayOn = v;
     this.errors = 0;
     this.reset();
     const p = G.player;
@@ -732,6 +734,8 @@ export const Auto = {
     // danger first: hide from a raid boss's cataclysm, step out of telegraphed attacks and enemy ground effects
     if (this.takeCover(dt)) { this.watchStuck(dt); return; }
     if (this.dodgeDanger(dt)) { this.watchStuck(dt); return; }
+    // raid mechanics (game/raidsigs.js): be where the fight says to be (beacons, conduits, the safe half...)
+    if (this.mechGoal(dt)) { this.watchStuck(dt); return; }
     // Instant damage already landed, but hold the pose while the lances rain down.
     if (p.classId === 'dragoon' && w.time < this.dragoonCastUntil) {
       this.setStatus('Spearstorm!'); p.moveVec = [0, 0]; return;
@@ -754,6 +758,15 @@ export const Auto = {
     this.target = null;
     // keep pets and buffs up between fights
     if (p.castLock <= 0 && !p.channel) this.preCast(w);
+    // townsfolk bounties on the overworld maps (game/wanderers.js): take them, fetch the heirloom, hunt the mark
+    const bg = w.kind === 'dungeon' && w.overworldScenario && bountyGoal(w);
+    if (bg && this.navDist(bg.x, bg.y) < 80 && !(this.bountySkip > w.time)) {
+      if (this.bountyFor !== bg.what) { this.bountyFor = bg.what; this.bountyT = 0; }
+      if ((this.bountyT += dt) > 25) this.bountySkip = w.time + 60; // can't get there: leave it a while
+      this.setStatus(bg.what);
+      if (this.goTo(bg.x, bg.y, bg.reach, dt) && bg.use) bg.use();
+      this.watchStuck(dt); return;
+    }
     // Outdoor trials are explicitly shrine-started; auto-play must participate instead of
     // roaming forever after killing ambient enemies. Combat and self-preservation take priority.
     const ow = w.overworldScenario;
@@ -794,8 +807,31 @@ export const Auto = {
     if (goal) {
       this.setStatus(goal === w.boss ? `Hunting the guardian${w.boss.name ? ' — ' + w.boss.name : ''}` : 'Clearing the level');
       this.goTo(goal.x, goal.y, 1, dt);
-    } else this.setStatus('Exploring');
+    } else {
+      // nothing known to hunt: walk to the nearest reachable tile not yet revealed, else to the exit
+      const f = this.frontier(w);
+      this.setStatus('Exploring');
+      if (f) this.goTo(f[0], f[1], 1.2, dt);
+      else if (exit) this.goTo(exit.x, exit.y, 1.1, dt);
+    }
     this.watchStuck(dt);
+  },
+  /** The closest (by path) walkable tile next to an unrevealed one, or null. Cached for a second. */
+  frontier(w) {
+    const m = w.map, d = this.nav && this.nav.d;
+    if (!d) return null;
+    if (this.front && this.front.t > w.time) return this.front.at;
+    let best = -1, bd = Infinity;
+    for (let i = 0; i < d.length; i++) {
+      const v = d[i];
+      if (v < 2 || v >= bd) continue;
+      const x = i % m.w, y = (i / m.w) | 0;
+      if (!m.seen[i] || [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([ox, oy]) => m.tile(x + ox, y + oy) === 1 && !m.seen[(y + oy) * m.w + x + ox])) { bd = v; best = i; }
+    }
+    if (best < 0) return null;
+    const at = [(best % m.w) + 0.5, ((best / m.w) | 0) + 0.5];
+    this.front = { i: best, at, t: w.time + 1 };
+    return at;
   },
 
   /** The next monster to walk to: the boss, unless the hero is under-levelled or something is close by. */
@@ -894,6 +930,35 @@ export const Auto = {
     }
     this.setStatus('Taking cover!');
     this.goTo(this.cover[0], this.cover[1], 0.3, dt);
+    return true;
+  },
+
+  /** The raid's rules for the hero right now: {goal, holdFire, still, move} read off the live hazards. */
+  mechRules(w) {
+    const p = G.player, r = { goal: null, holdFire: false, still: false, move: false };
+    let bd = Infinity;
+    for (const h of w.hazards) {
+      if (h.dead) continue;
+      if (h.holdFire) r.holdFire = true;
+      if (h.autoStill) r.still = true;
+      if (h.autoMove) r.move = true;
+      const g = h.autoGoal && h.autoGoal();
+      if (g) { const d = dist(p.x, p.y, g.x, g.y) - g.r; if (d < bd) { bd = d; r.goal = g; } }
+    }
+    return r;
+  },
+  mechGoal(dt) {
+    const p = G.player, w = G.world;
+    if (!w.raid && !w.hazards.some((h) => h.autoGoal)) { this.rules = null; return false; }
+    const r = this.rules = this.mechRules(w);
+    if (!r.goal) return false;
+    const g = r.goal;
+    if (dist(p.x, p.y, g.x, g.y) <= g.r) return false; // in place: fight from here (combat() holds position)
+    this.setStatus('Raid mechanic!');
+    // keep shooting on the way when the hero can
+    const foes = enemyNear(w, p, 13);
+    if (foes.length && p.castLock <= 0 && !r.holdFire) { const t = this.pickTarget(foes); if (t) { const pick = this.chooseSkill(foes, t, dist(p.x, p.y, t.x, t.y), true); if (pick && !['leap', 'dash'].includes(pick.sk.kind)) p.tryUseSkill(pick.sk, pick.x, pick.y, pick.sk.kind === 'melee' ? t : null); } }
+    this.goTo(g.x, g.y, Math.max(0.3, g.r * 0.6), dt);
     return true;
   },
 
@@ -1000,6 +1065,8 @@ export const Auto = {
       let s = dist(p.x, p.y, m.x, m.y);
       if (m === this.target) s -= 1.5;
       if (m.isWard) s -= 6; // a raid boss's warding crystals: break them first
+      if (m.raidPriority) s -= m.raidPriority; // heads, thralls, pipes, corpses (game/raidsigs.js)
+      if (this.rules && this.rules.holdFire && m.rank === 'boss') s += 50;
       else if (m.rank === 'boss') s -= m.ward < 1 ? -4 : 2.5;
       else if (m.rank === 'unique' || m.rank === 'champion') s -= 0.5;
       if (m.hp < m.maxHp * 0.3) s -= 0.7;
@@ -1047,6 +1114,13 @@ export const Auto = {
     if (p.channel) return;
     const d = dist(p.x, p.y, t.x, t.y);
     const melee = this.meleeBuild();
+    const R = this.rules;
+    if (R && R.holdFire && t.rank === 'boss') { this.setStatus('Holding fire — riposte!'); if (!this.kite([t])) p.moveVec = [0, 0]; return; }
+    if (R && R.move && !fleeing && p.castLock <= 0 && Math.hypot(p.moveVec[0], p.moveVec[1]) < 0.1) {
+      // static builds while standing: circle the target between casts
+      const a = angleTo(t.x, t.y, p.x, p.y) + (this.strafe || (this.strafe = 1)) * 0.9, sx = t.x + Math.cos(a) * Math.max(2, d), sy = t.y + Math.sin(a) * Math.max(2, d);
+      if (!G.world.map.circleFree(sx, sy, 0.3)) this.strafe = -this.strafe; else this.steer(sx, sy);
+    }
     if (p.castLock <= 0) {
       const pick = this.chooseSkill(foes, t, d, fleeing);
       if (pick && p.tryUseSkill(pick.sk, pick.x, pick.y, pick.sk.kind === 'melee' ? t : null)) {
@@ -1066,6 +1140,8 @@ export const Auto = {
       }
     }
     if (fleeing) return;
+    // a raid rule pins the hero: stand still, or hold the spot the mechanic needs
+    if (R && (R.still || (R.goal && dist(p.x, p.y, R.goal.x, R.goal.y) <= R.goal.r))) { if (R.still) p.moveVec = [0, 0]; return; }
     // positioning
     const near = foes.filter((m) => dist(p.x, p.y, m.x, m.y) < 2.2).length;
     const bold = this.boldness();
@@ -1079,7 +1155,10 @@ export const Auto = {
   },
   /** Step away from the crowd (ranged builds). */
   kite(foes) {
-    const p = G.player, m = G.world.map;
+    const p = G.player, m = G.world.map, w = G.world;
+    // commit to a retreat line for a moment: re-picking every tick zig-zagged the hero and strobed its facing
+    const k = this.kiteTo;
+    if (k && k.until > w.time && m.circleFree(k.x, k.y, 0.3) && dist(p.x, p.y, k.x, k.y) > 0.4) { this.setStatus('Kiting'); this.steer(k.x, k.y); return true; }
     let best = null, bs = -Infinity;
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * TAU, x = p.x + Math.cos(a) * 2.2, y = p.y + Math.sin(a) * 2.2;
@@ -1090,6 +1169,7 @@ export const Auto = {
       if (s > bs) { bs = s; best = [x, y]; }
     }
     if (!best) return false;
+    this.kiteTo = { x: best[0], y: best[1], until: w.time + 0.45 };
     this.setStatus('Kiting');
     this.steer(best[0], best[1]);
     return true;

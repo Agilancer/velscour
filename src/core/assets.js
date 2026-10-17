@@ -1,5 +1,5 @@
 // Asset loading + derived (recoloured / rescaled) sprite caches.
-import { makeCanvas, recolor, scaleImage } from './util.js';
+import { makeCanvas, recolor, scaleImage, pageAtlas } from './util.js';
 import { G } from '../state.js';
 import { preloadWallTorchHolders } from '../gfx/walltorches.js';
 import { preloadWallHangings } from '../gfx/wallhangings.js';
@@ -146,7 +146,8 @@ export function biomeTileSet(biome) {
   const floorImg = clipFloors(pal ? recolor(pk.floors, pal) : pk.floors, m.floors);
   const wallImg = wallPal ? recolor(A.packs[wid].walls, wallPal) : A.packs[wid].walls;
   const scatImg = pal ? recolor(pk.scatter, pal) : pk.scatter;
-  const rect = (img, r) => ({ img, sx: r[1], sy: r[2], w: r[3], h: r[4], ox: r[5], oy: r[6] });
+  const wallPage = pageAtlas(wallImg);
+  const rect = (img, r) => ({ ...(img === wallImg ? wallPage(r[1], r[2]) : { img, sx: r[1], sy: r[2] }), w: r[3], h: r[4], ox: r[5], oy: r[6] });
   const set = { pack: id, k: TW / m.tile[0], zscale: m.zscale, floors: [], bases: [], features: [], walls: {}, arches: {}, doors: {}, scatter: [], chest: null };
   m.floors.forEach((f, i) => {
     set.floors.push({ img: floorImg, sx: f.x, sy: f.y, w: f.w, h: f.h, lum: f.lum, seamless: f.seamless, name: f.name });

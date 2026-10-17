@@ -6,6 +6,8 @@ import { UI } from '../ui/ui.js';
 import { RNG } from '../core/util.js';
 import { overworldObject } from '../gfx/overworldart.js';
 import { TW } from '../core/view.js';
+import { TOWNSFOLK } from '../data/townsfolk.js';
+import { townFacingFlip } from './townsfolkvisuals.js';
 
 export const SCENARIOS = [
   ['Siege of the Forgotten','waves','Survive four escalating enemy waves.'],
@@ -104,7 +106,11 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
   const person=(name,x,y,cls='ranger')=>{
     // Painted townsfolk/guard art; recoloured class sprites read as green ghosts.
     const art=cls==='paladin'?'captain':cls==='wizard'?'npc_tobin':['npc_mira','npc_gorm','npc_cael','npc_tobin'][S.civilians.length%4];
-    const n={name,sprite:cls,art,x,y,flip:rng.chance(.5),hp:100,reach:1.6,
+    // ...and townsfolk from Herrington Hollow (animated sheets: they walk, flinch and cheer) for everyone else
+    const folk=cls==='paladin'?null:rng.pick(TOWNSFOLK.filter(v=>!v.royal&&!v.courtier&&(cls==='ranger'?!v.child:true)));
+    const n={name:folk?folk.name.split(' ')[0]+' the '+folk.role:name,sprite:cls,art,x,y,flip:rng.chance(.5),hp:100,reach:1.6,
+      townsfolkSpriteId:folk?.spriteId,pal:folk?.palette,frameCount:folk?.frame.count,child:folk?.child,knight:folk?.knight,animT:rng.next()*3,walkT:0,idleSeed:rng.int(0,2),
+      update(dt){this.animT+=dt;if(!this.walking)this.walkT=0;this.walking=false;},
       use:()=>{
         // NPCs are normally click targets; give each one a safe and useful interaction.
         if(type==='rescue'){
@@ -379,7 +385,7 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
           while(S.escortPath.length>1&&norm([n.x,n.y],S.escortPath[0])<.35)S.escortPath.shift();
           const [tx,ty]=S.escortPath[0],step=norm([n.x,n.y],[tx,ty]),k=Math.min(1,dt*2.4/Math.max(step,1e-3));
           const nx=n.x+(tx-n.x)*k,ny=n.y+(ty-n.y)*k;
-          if(world.map.walkable(nx,ny)){n.x=nx;n.y=ny;}
+          if(world.map.walkable(nx,ny)){n.flip=townFacingFlip(nx-n.x,ny-n.y,n.flip);n.walking=true;n.walkT=(n.walkT||0)+dt;n.x=nx;n.y=ny;}
           else S.escortPath=null;
           if(S.wagon){S.wagon.x=n.x;S.wagon.y=n.y;}
         }

@@ -49,6 +49,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     const res = rk ? st.res[rk] : st.res.magic;
     dmg *= 1 - clamp(res, -100, 75) / 100;
     dmg *= 1 - clamp(st.reduce || 0, 0, 60) / 100;
+    if (tgt.raidTakenMul) dmg *= tgt.raidTakenMul; // raid mechanics (game/raidsigs.js): sunder stacks
     if (src && src.curses && src.curses.weaken && src.curses.weaken.t > 0) dmg *= 1 - src.curses.weaken.amt / 100;
     if (G.godMode) dmg = 0;
     // thorns
@@ -68,6 +69,13 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     if (tgt.status.shred && tgt.status.shred.t > 0) dmg *= 1 + tgt.status.shred.amt;
     if (tgt.ward !== undefined) dmg *= tgt.ward; // a raid boss behind its warding crystals
     if (src && src.curses && src.curses.weaken && src.curses.weaken.t > 0 && !fromPlayer) dmg *= 1 - src.curses.weaken.amt / 100;
+    if (tgt.reflect && src && src.isPlayer && !o.dot && !o.force) {
+      // a raid boss's riposte (game/raidsigs.js): the hero's own blow comes back (minions' don't)
+      hit(tgt, owner, Math.min(dmg * 0.4, owner.maxHp * 0.08), el, { force: true, crit: false, noArc: true });
+      floatText(tgt.x, tgt.y, 90, 'RIPOSTE', '#e0f0ff', 13);
+      return 0;
+    }
+    if (fromPlayer && owner.raidDmgMul) dmg *= owner.raidDmgMul;
     if (fromPlayer) {
       const st = owner.st;
       if (tgt.rank === 'boss' && st.bossDmg) dmg *= 1 + st.bossDmg / 100;

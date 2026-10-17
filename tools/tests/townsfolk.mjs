@@ -9,7 +9,9 @@ const order=['idle_1','idle_2','idle_3','walk_1','walk_2','dying_1','dead','scar
 if(TOWNSFOLK.length!==100||new Set(TOWNSFOLK.map(p=>p.id)).size!==100)throw Error('town visitor catalog must contain 100 unique IDs');
 if(TOWNSFOLK.filter(p=>p.child).length!==10)throw Error('town catalog must contain ten children');
 if(TOWNSFOLK.filter(p=>p.royal).length!==4||TOWNSFOLK.filter(p=>p.regular).length!==4)throw Error('royal family or regular roster incomplete');
-if(new Set(TOWNSFOLK.map(p=>p.spriteId)).size!==25||TOWNSFOLK.some(p=>!p.spriteId))throw Error('town roster must use all 25 original designs with engine palette variants');
+{const ids=TOWNSFOLK.map(p=>+p.spriteId.slice(-3)),base=new Set(ids.map(k=>k>25?(k-1)%10+1:k));
+if(base.size!==25||new Set(ids).size<60||TOWNSFOLK.some(p=>!p.spriteId))throw Error('town roster must use all 25 original designs and most of the pre-painted colourway sheets');
+if(TOWNSFOLK.some(p=>+p.spriteId.slice(-3)>25&&p.palette))throw Error('pre-painted colourway sheets must not be recoloured again');}
 if(TOWN_SITUATIONS.length!==2000||new Set(TOWN_SITUATIONS.map(e=>e.text)).size!==2000)throw Error('town situation deck must contain 2,000 distinct cards');
 if(TOWN_CONVERSATIONS.length!==2000||new Set(TOWN_CONVERSATIONS.map(e=>e.lines.join('|'))).size!==2000)throw Error('town conversation bank must contain 2,000 distinct exchanges');
 for(const kind of ['royal_visit','wedding','birth','birthday','funeral','harvest_fair','street_fight','enemy_scouts','siege_warning','monster_sighting'])if(!TOWN_SITUATIONS.some(e=>e.kind===kind))throw Error('missing town event kind '+kind);

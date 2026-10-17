@@ -33,7 +33,11 @@ node tools/tests/mobile.js                         # 844x390 touch layout + joys
 node tools/tests/hud.js                            # HUD art: 15-slot bar keys, save migration, minimap ring, buttons, Quest Log, touch pages
 node tools/tests/levelup.js                        # level-up banner: Velscour's 2,000 taunts, mood colours, no mood twice in a row, lines fit
 node tools/tests/boss.js                           # Depth 100 Velscour arena + a depth 37 guardian
-node tools/tests/raid.js [5,30,55]                 # BOSS ROOMs: seal, every ability of all 8 raid bosses, phases, wards, death
+node tools/tests/raid.js [5,30,55]                 # BOSS ROOMs: seal, every ability of all raid bosses, phases, wards, death
+node tools/tests/raid_sigs.js [ids] [secs]         # the 20 signature raid bosses (raidsigs.js): cast all, shots, auto-play fights each
+node tools/tests/rooms.js [biomes] [levels]        # shaped rooms + scatter set pieces: reachability, chests, screenshots
+node tools/tests/wanderers.js [minutes]            # overworld townsfolk walk/flee, bounties taken and paid by auto-play
+node tools/tests/biome_perf.js [ids] [depth]       # per-biome frame cost with auto-play on + CPU profile hot spots
 node tools/tests/mobs.js [levels]                  # monster pathing: awake monsters + guardians must reach the hero (stuck <= 2%)
 node tools/tests/bot.js paladin 2                  # bot plays depths 1..2, prints balance stats
 node tools/tests/skills.js wizard,gunner           # cast every skill of a class (all 16 if no arg; slow)
@@ -110,7 +114,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`.
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Overworld scenarios
   (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. Raid bosses
-  (`src/game/raid.js`, every 5th depth): run `raid.js`. Rings, augments or skill mastery (`src/data/rings.js`,
+  (`src/game/raid.js`, every 5th depth): run `raid.js` (and `raid_sigs.js` for `src/game/raidsigs.js`). Rings, augments or skill mastery (`src/data/rings.js`,
   `src/game/augments.js`): run `rings.js`. The town generator (`src/world/town.js`): run `town.js` with a few seeds.
 - Velscour waits at `FINAL_DEPTH` (500, `src/data/depth.js`); monster levels come from `depthLevel(depth)`, never the
   raw depth.

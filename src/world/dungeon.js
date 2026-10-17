@@ -181,7 +181,7 @@ export function generateDungeon(depth, biome, tileset, seed) {
 
   // ---- rooms
   const carve = (x, y) => { if (x > 0 && y > 0 && x < W - 1 && y < H - 1) map.t[y * W + x] = 1; };
-  const rooms = [];
+  const rooms = [], holesBy = new Map();
   for (let cy = 0; cy < CH; cy++) {
     for (let cx = 0; cx < CW; cx++) {
       const ox = cx * S + 1, oy = cy * S + 1;
@@ -189,7 +189,8 @@ export function generateDungeon(depth, biome, tileset, seed) {
       const roll = rng.next();
       let type = roll < 0.62 ? 'room' : roll < 0.8 ? 'cave' : 'small';
       if (isStart) type = 'room';
-      let rw, rh, rx, ry;
+      let rw, rh, rx, ry, shape = 'rect';
+      const holes = [];
       if (type === 'small') { rw = rng.int(3, 4); rh = rng.int(3, 4); }
       else { rw = rng.int(5, S - 2); rh = rng.int(5, S - 2); }
       rx = ox + rng.int(1, S - rw - 1); ry = oy + rng.int(1, S - rh - 1);
@@ -204,10 +205,25 @@ export function generateDungeon(depth, biome, tileset, seed) {
         }
         rx = Math.floor(ccx - 2); ry = Math.floor(ccy - 2); rw = 4; rh = 4;
         for (let y = ry; y < ry + rh; y++) for (let x = rx; x < rx + rw; x++) carve(x, y);
+      } else if (type === 'room' && !isStart && rw >= 7 && rh >= 7) {
+        // shaped rooms: chamfered, round, cross, pillared halls and cloisters (holes are stamped after the corridors)
+        shape = rng.pick(['rect', 'rect', 'octagon', 'round', 'cross', 'pillars', 'cloister', 'octagon', 'pillars']);
+        const cc = Math.min(rw, rh) >= 9 ? 3 : 2, mx = rx + rw / 2, my = ry + rh / 2;
+        for (let y = ry; y < ry + rh; y++) for (let x = rx; x < rx + rw; x++) {
+          const ex = Math.min(x - rx, rx + rw - 1 - x), ey = Math.min(y - ry, ry + rh - 1 - y);
+          if (shape === 'octagon' && ex + ey < cc) continue;
+          if (shape === 'round' && ((x + 0.5 - mx) / (rw / 2)) ** 2 + ((y + 0.5 - my) / (rh / 2)) ** 2 > 1.02) continue;
+          if (shape === 'cross' && ex < Math.floor(rw / 4) && ey < Math.floor(rh / 4)) continue;
+          carve(x, y);
+        }
+        if (shape === 'pillars' && rw >= 8 && rh >= 8) for (const [px, py] of [[rx + 2, ry + 2], [rx + rw - 4, ry + 2], [rx + 2, ry + rh - 4], [rx + rw - 4, ry + rh - 4]]) holes.push([px, py, 2, 2]);
+        else if (shape === 'cloister' && rw >= 8 && rh >= 8) holes.push([rx + 3, ry + 3, rw - 6, rh - 6]);
+        else if (shape === 'pillars' || shape === 'cloister') shape = 'octagon';
+        if (holes.length) holesBy.set(ci(cx, cy), holes);
       } else {
         for (let y = ry; y < ry + rh; y++) for (let x = rx; x < rx + rw; x++) carve(x, y);
       }
-      rooms.push({ cx, cy, x: rx, y: ry, w: rw, h: rh, type, mx: rx + rw / 2, my: ry + rh / 2, idx: ci(cx, cy) });
+      rooms.push({ cx, cy, x: rx, y: ry, w: rw, h: rh, type: shape === 'round' ? 'round' : type, shape, mx: rx + rw / 2, my: ry + rh / 2, idx: ci(cx, cy) });
     }
   }
 
@@ -238,6 +254,14 @@ export function generateDungeon(depth, biome, tileset, seed) {
     exitRoom.x = ox + 1; exitRoom.y = oy + 1; exitRoom.w = S - 3; exitRoom.h = S - 3; exitRoom.type = 'room';
     exitRoom.mx = exitRoom.x + exitRoom.w / 2; exitRoom.my = exitRoom.y + exitRoom.h / 2;
     for (let y = exitRoom.y; y < exitRoom.y + exitRoom.h; y++) for (let x = exitRoom.x; x < exitRoom.x + exitRoom.w; x++) carve(x, y);
+  }
+
+  // pillars and cloister courts: void blocks inside shaped rooms become real walls (cover, sight lines)
+  for (const [idx, hs] of holesBy) {
+    const r = rooms[idx];
+    if (r === startRoom || r === exitRoom || r.type !== 'room') continue;
+    for (const [hx, hy, hw, hh] of hs) for (let y = hy; y < hy + hh; y++) for (let x = hx; x < hx + hw; x++) map.t[y * W + x] = 0;
+    r.holes = hs;
   }
 
   // a mixed level (assets.js mixedTileSet) paves its far chunks, and a few others, with the second biome's floors
@@ -318,7 +342,8 @@ export function generateDungeon(depth, biome, tileset, seed) {
   for (let i = 0; i < nChests; i++) {
     const r = deadEnds.length ? deadEnds.splice(rng.int(0, deadEnds.length - 1), 1)[0] : rng.pick(packRooms);
     if (!r) break;
-    chests.push({ x: Math.floor(r.mx) + 0.5, y: Math.floor(r.my) + 0.5, rare: rng.chance(0.2) });
+    const [chx, chy] = map.walkable(r.mx, r.my) ? [Math.floor(r.mx) + 0.5, Math.floor(r.my) + 0.5] : roomFloorSpot(r);
+    chests.push({ x: chx, y: chy, rare: rng.chance(0.2) });
   }
   const inArena = (s) => arena && s.mx >= arena.x - 0.5 && s.mx <= arena.x + arena.w + 0.5 && s.my >= arena.y - 0.5 && s.my <= arena.y + arena.h + 0.5;
   // the rate counts only the edges that may hold a mount (about half of them)
@@ -418,7 +443,47 @@ function placeObstacles(map, rooms, tileset, rng, startRoom) {
     for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (ok(x, y)) cells.push([x, y]);
     if (!cells.length) continue;
     const edge = cells.filter(([x, y]) => voidAround(x, y)), mid = cells.filter(([x, y]) => !voidAround(x, y));
-    const n = Math.round((cells.length / 7) * rng.range(0.7, 1.3));
+    // set pieces: some rooms are dressed to a plan, the rest get loose clutter
+    const blockers = pool.filter((e) => e.block && !/_barricade_|_fence_|_boundary_|railing|palisade/.test(e.name)), clutter = pool.filter((e) => !e.block);
+    const lit = scat.filter((e) => LIT[e.name]);
+    const put = (x, y, e, jit = 0) => {
+      if (!e || !ok(x, y)) return false;
+      if (e.block && !tryBlock(x, y)) return false;
+      used.add(y * W + x);
+      props.push({ kind: 'scatter', x: x + 0.5 + (jit ? rng.range(-jit, jit) : 0), y: y + 0.5 + (jit ? rng.range(-jit, jit) : 0), spr: e, k: tileset.k, flip: rng.chance(0.5), light: LIT[e.name] });
+      return true;
+    };
+    const cx = Math.floor(r.mx), cy = Math.floor(r.my), plan = r.w >= 6 && r.h >= 6 && rng.chance(0.55) ? rng.pick(['nave', 'shrine', 'rows', 'rubble', 'ring']) : null;
+    r.plan = plan;
+    if (plan === 'nave' && blockers.length) {
+      // two colonnades of one prop down the long axis, a clear aisle between
+      const e = rng.pick(blockers), alongX = r.w >= r.h;
+      for (let a = 1; a < (alongX ? r.w : r.h) - 1; a += 2) for (const side of [1, -2]) {
+        const off = side > 0 ? 1 : (alongX ? r.h : r.w) + side;
+        put(alongX ? r.x + a : r.x + off, alongX ? r.y + off : r.y + a, e);
+      }
+    } else if (plan === 'shrine') {
+      // a burning centrepiece just off centre, ringed by clutter and candles
+      const e = rng.pick(lit.length ? lit : blockers.length ? blockers : clutter), c = rng.pick(clutter.length ? clutter : pool);
+      const ax = cx + (rng.chance(0.5) ? 2 : -2), ay = cy + (rng.chance(0.5) ? 2 : -2);
+      put(ax, ay, e);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1]]) if (rng.chance(0.7)) put(ax + dx, ay + dy, rng.chance(0.5) && lit.length ? rng.pick(lit.filter((l) => !l.block).concat(c)) : c, 0.2);
+    } else if (plan === 'rows' && blockers.length) {
+      // graves, pews or crates in neat rows filling one half of the room
+      const e = rng.pick(blockers), half = rng.chance(0.5);
+      for (let y = r.y + 1; y < r.y + r.h - 1; y += 2) for (let x = r.x + 1; x < r.x + r.w - 1; x += 2) if ((x < cx) === half) put(x, y, e);
+    } else if (plan === 'rubble' && clutter.length) {
+      // collapsed corners: dense drifts of walk-over debris
+      for (let k = 0; k < 3; k++) {
+        const [bx, by] = rng.pick(edge.length ? edge : cells), e = rng.pick(clutter);
+        for (let j = 0; j < 5; j++) put(bx + rng.int(-1, 1), by + rng.int(-1, 1), rng.chance(0.7) ? e : rng.pick(clutter), 0.3);
+      }
+    } else if (plan === 'ring') {
+      // a ring of props around the room's heart (blockers spaced so it stays open)
+      const e = rng.pick(lit.length && rng.chance(0.5) ? lit : blockers.length ? blockers : pool), rad = Math.min(r.w, r.h) / 2 - 1.5;
+      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; put(Math.floor(r.mx + Math.cos(a) * rad), Math.floor(r.my + Math.sin(a) * rad), e); }
+    }
+    const n = Math.round((cells.length / (plan ? 14 : 7)) * rng.range(0.7, 1.3));
     for (let i = 0, tries = 0; i < n && tries < n * 6; tries++) {
       const cs = edge.length && (rng.chance(0.65) || !mid.length) ? edge : mid;
       const [x, y] = rng.pick(cs);

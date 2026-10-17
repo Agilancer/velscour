@@ -1,3 +1,4 @@
+import { TREE4_NAMES } from './skilltrees4.js';
 // The sixteen playable classes.
 // primary: attribute that adds +1% damage to all of the class' skills per point.
 export const CLASSES = {
@@ -98,6 +99,7 @@ export const CLASSES = {
     desc: 'A powder-stained engineer. Bullet hell, rocket barrages, turrets, drones and a death laser.',
   },
 };
+for (const [c, name] of Object.entries(TREE4_NAMES)) if (CLASSES[c].trees.length === 3) CLASSES[c].trees.push(name);
 
 export const ATTRS = {
   str: { name: 'Strength', short: 'STR', desc: '+1% physical damage, +1 armor' },
