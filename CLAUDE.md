@@ -23,6 +23,7 @@ Headless Chromium tests live in `tools/tests/`; see the header comment of each f
 ```bash
 export NODE_PATH=/opt/node22/lib/node_modules     # where playwright is installed in Claude cloud containers
 node tools/tests/data_check.mjs                    # skill data sanity check, no browser (fast)
+python tools/tests/chatgpt_art.py                  # ChatGPT art kits: examples round-trip through tools/chatgpt_art.py (no browser)
 node tools/tests/lancer_shields.js                 # four 8-angle Lancer turntables, sprite alpha/frames, in-front/behind QA
 node tools/tests/town.js [seeds]                   # random towns: vendors/portal reachable + screenshots per seed
 node tools/tests/rings.js                          # ring augments in a live dungeon, skill mastery, ring/forge UI shots
@@ -91,7 +92,9 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   (`src/gfx/approvedbiomeart.js`). Torches and wall hangings are placed by `wallMounts()` in `src/world/dungeon.js`.
   See [`docs/BIOME_ART.md`](docs/BIOME_ART.md). New biome packs can come from 9 ChatGPT sheets (outlined templates
   and prompts in [`docs/CHATGPT_BIOME_SPRITES.md`](docs/CHATGPT_BIOME_SPRITES.md)), imported by
-  `python tools/chatgpt_biome.py <folder> <names.json> --install`. Each biome has 50 native monster variants (`src/gfx/biomenativeart.js`,
+  `python tools/chatgpt_biome.py <folder> <names.json> --install`. Enemies, bosses, pets, NPCs and class armor have
+  ChatGPT kits too (`docs/art_kits/*.zip`, built by `python tools/chatgpt_art_kits.py`), imported by
+  `python tools/chatgpt_art.py <kind> <sheet> <names.json>`; see [`docs/CHATGPT_ART_KITS.md`](docs/CHATGPT_ART_KITS.md). Each biome has 50 native monster variants (`src/gfx/biomenativeart.js`,
   `src/data/biomenatives.js`) and exact X/Y barricades (`src/gfx/isobarriers.js`); see `docs/WORLD_BIOME_OVERHAUL.md`.
   HEAVENLY's 60 enemy sprites come from `src/gfx/heavenlymonsters.js`; see `docs/HEAVENLY.md`.
   The hero's look comes from the gear libraries `assets/FinalClasses/<class>.zip` (80 armors + 80 helms per class),

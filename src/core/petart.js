@@ -27,7 +27,15 @@ const loaded = {};
 // Frames share one scale per character, so the rest pose may not fill its cell; restH maps it to the pet's height.
 let restH = {};
 fetch('assets/sprites/pets/catalog.json').then((r) => r.json())
-  .then((cat) => { for (const [k, v] of Object.entries(cat)) restH[k] = v.restH / v.cellH; })
+  .then((cat) => {
+    for (const [k, v] of Object.entries(cat)) {
+      restH[k] = v.restH / v.cellH;
+      if (BY_KEY[k]) continue; // a sheet added by tools/chatgpt_art.py: known only from the catalog
+      const s = SHEETS[v.sheet] ||= { frames: v.frames, rows: [] };
+      s.rows[v.row] = k;
+      BY_KEY[k] = { sheet: v.sheet, row: v.row, frames: v.frames, rows: s.rows };
+    }
+  })
   .catch(() => { restH = {}; });
 
 function atlas(sheet) {
