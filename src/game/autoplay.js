@@ -1179,7 +1179,9 @@ export const Auto = {
               1 + (p.st.areaPct || 0) / 100, (x, y) => w.map.isFloor(x, y));
             n = foes.filter((foe) => centers.some(([x, y]) => dist(x, y, foe.x, foe.y) <= radius + (foe.r || 0))).length;
             ok = d <= skillRange(sk) + (t.r || 0) && n > 0 && los;
-            ax = p.x; ay = p.y;
+            // Keep the enemy aim vector so the three circles rotate with the target;
+            // spearBarrageAreas() still anchors their damage and visuals on the hero.
+            ax = t.x; ay = t.y;
             break;
           }
           // fall through for ordinary ranged AoE skills
