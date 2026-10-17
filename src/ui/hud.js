@@ -21,6 +21,27 @@ const POTIONS = ['hp', 'mp', 'rejuv', 'fury'];
 // hud slot index -> bar index (skills) or potion kind: LMB, ` 1-9 0 - =, the potions, RMB
 const SLOT_MAP = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 'hp', 'mp', 'rejuv', 'fury', 14];
 
+/** [x, y, w, h] of a sprite's non-transparent pixels (monster sheets carry lots of padding), memoised per image. */
+const boxes = new WeakMap();
+function opaqueBox(img) {
+  let b = boxes.get(img);
+  if (b) return b;
+  b = [0, 0, img.width, img.height];
+  try {
+    const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+    for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+      if (d[(y * c.width + x) * 4 + 3] < 24) continue;
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+    if (x1 >= x0) b = [x0, y0, x1 - x0 + 1, y1 - y0 + 1];
+  } catch (e) { /* tainted or not ready: draw it whole */ }
+  boxes.set(img, b);
+  return b;
+}
+
 export const HUD = {
   slots: [],
   last: {},
@@ -235,6 +256,39 @@ export const HUD = {
       g.fillRect(Math.round(i * bw), H - h, Math.max(1, Math.round(bw) - 1), h);
     }
     if (avg > 0) { g.fillStyle = '#ffd860'; g.fillRect(0, Math.round(H - 1 - (avg / top) * (H - 2)), W, Math.max(1, G.dpr)); }
+    this.updateTarget();
+  },
+
+  /** The target window: the hovered / attacked / last-hit monster's picture and name; it stays up, greyed, once slain. */
+  updateTarget() {
+    const p = G.player, w = G.world, box = $('#target-box');
+    if (this.tbWorld !== w) { this.tbWorld = w; this.tb = null; if (G.lastHit && !w.creatures.includes(G.lastHit)) G.lastHit = null; }
+    const live = (m) => m && !m.dead && m.team === 'enemy' && m.targetable !== false;
+    const at = p.attackTarget && p.attackTarget.target;
+    const cur = live(G.hover) ? G.hover : live(at) ? at : live(G.lastHit) ? G.lastHit : null;
+    if (cur) this.tb = cur;
+    const t = this.tb, set = (key, v, fn) => { if (this.last[key] !== v) { this.last[key] = v; fn(v); } };
+    set('tbOn', !!t, (v) => box.classList.toggle('hidden', !v));
+    if (!t) return;
+    const dead = !!t.dead || t.hp <= 0;
+    set('tbCls', (dead ? 'dead ' : '') + 'r-' + (t.rank || 'normal'), (v) => { box.className = v; });
+    set('tbName', t.name || '???', (v) => { $('#tb-name').textContent = v; box.title = v; });
+    set('tbHp', dead ? 0 : Math.ceil(clamp(t.hp / t.maxHp, 0, 1) * 100), (v) => { $('#tb-fill').style.width = v + '%'; });
+    const rank = { champion: 'Champion', unique: 'Unique', boss: 'Boss' }[t.rank] || '';
+    set('tbSub', dead ? 'Slain' : [t.level ? 'Level ' + t.level : '', rank].filter(Boolean).join(' · '), (v) => { $('#tb-sub').textContent = v; });
+    if (dead) return; // keep the last living picture
+    const img = t.spriteImage && t.spriteImage();
+    if (!img || !img.width || (this.tbImg === img && this.tbFor === t)) return;
+    this.tbImg = img; this.tbFor = t;
+    const cv = $('#tb-pic'), g = cv.getContext('2d'), S = cv.width, pad = Math.round(S * 0.05);
+    const [bx, by, bw, bh] = opaqueBox(img);
+    const k = Math.min((S - pad * 2) / bw, (S - pad * 2) / bh);
+    const dw = bw * k, dh = bh * k;
+    g.clearRect(0, 0, S, S);
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    g.filter = 'brightness(1.35) contrast(1.1)'; // dungeon art is dark; lift it so it reads small
+    g.drawImage(img, bx, by, bw, bh, (S - dw) / 2, S - pad - dh, dw, dh);
+    g.filter = 'none';
   },
 
   /** The level-up banner: a dark vignette, the title and new level bleeding in from blur, then Velscour's two lines. */

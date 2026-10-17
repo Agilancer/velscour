@@ -146,6 +146,22 @@ body.touch #madness-btn { padding: 8px 26px; font-size: 20px; }
 #hero-stats .hs-tally b { font-size: 13px; color: #e8c890; }
 #hero-stats .hs-first { margin-top: 3px; padding-top: 2px; border-top: 1px solid rgba(92,58,28,.6); }
 #hs-spark { display: block; width: 100%; height: 18px; margin-top: 3px; border-top: 1px solid rgba(92,58,28,.6); image-rendering: pixelated; }
+/* target window: portrait + name of the monster being fought (or the last one, once slain) */
+#target-box { pointer-events: none; display: flex; flex-direction: column; align-items: center; margin-top: 4px; width: 162px; box-sizing: border-box; padding: 5px 6px 5px;
+  border: 1px solid #5c3a1c; border-radius: 3px; background: linear-gradient(180deg, rgba(34,10,6,.86), rgba(10,4,3,.86)); box-shadow: inset 0 0 10px #000, 0 0 0 1px rgba(0,0,0,.8), 0 2px 8px rgba(0,0,0,.7); }
+#target-box.hidden { display: none; }
+#tb-pic { flex: none; width: 96px; height: 96px; border: 1px solid #3a2412; border-radius: 2px; background: radial-gradient(circle at 50% 60%, #2a1810, #070302 75%); }
+#tb-info { width: 100%; margin-top: 4px; text-align: center; }
+#tb-name { font: 700 11px var(--font-head); color: #f0e0c0; letter-spacing: .5px; line-height: 1.15; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; text-shadow: 0 1px 0 #000; }
+#tb-track { height: 5px; margin-top: 3px; border: 1px solid #000; background: #1a0503; }
+#tb-fill { height: 100%; width: 100%; background: linear-gradient(#e03a20, #7a0a02); transition: width .15s; }
+#tb-sub { font: 600 9px var(--font-head); color: #a8876a; letter-spacing: .8px; text-transform: uppercase; line-height: 1.2; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#target-box.r-champion #tb-name { color: #8ab4ff; } #target-box.r-champion #tb-fill { background: linear-gradient(#5a9aff, #1a3a8a); }
+#target-box.r-unique #tb-name { color: #ffc860; } #target-box.r-unique #tb-fill { background: linear-gradient(#f0b040, #8a5a08); }
+#target-box.r-boss #tb-name { color: #ff7a4a; }
+#target-box.dead #tb-pic { filter: grayscale(1) brightness(.55); }
+#target-box.dead #tb-name { color: #8a7a6a; }
+#target-box.dead #tb-sub { color: #c0302a; }
 
 /* level-up banner */
 #levelup { position: absolute; top: 9%; left: 0; right: 0; text-align: center; pointer-events: none; z-index: 5; }
@@ -427,6 +443,12 @@ body.touch #hero-stats b { font-size: 12px; }
 body.touch #hero-stats .hs-tally span { font-size: 7px; letter-spacing: .3px; }
 body.touch #hero-stats .hs-tally b { font-size: 10px; }
 body.touch #hs-spark { height: 12px; margin-top: 2px; }
+body.touch #target-box { width: 88px; margin-top: 3px; padding: 3px 4px 4px; }
+body.touch #tb-pic { width: 56px; height: 56px; }
+body.touch #tb-info { margin-top: 2px; }
+body.touch #tb-name { font-size: 8px; letter-spacing: .3px; }
+body.touch #tb-track { height: 4px; margin-top: 2px; }
+body.touch #tb-sub { display: none; }
 body.touch #levelup { top: 21%; }
 body.touch #levelup .lu-burst { width: 58vw; margin-left: -29vw; height: 21vw; top: -10px; }
 body.touch #levelup .lu-title { font-size: min(6.4vw, 54px); }
