@@ -91,18 +91,15 @@ const FULL=process.argv.includes('--all');
       const checkArt=[];
       for(const b of chosen){
         await loadBiomeArt(b);
-        const id='expanded_'+b.id,pack=A.packs[id],m=pack?.meta;
-        if(!m?.expansion){issues.push('Missing expanded pack '+b.id);continue;}
-        const nBase=m.expansion.floorStart,nScat=m.expansion.scatterStart;
-        // 120 new floors (doubled in dbdd511) and 40 new scatter props per biome
-        const nFloor=m.expansion.newFloors;
-        if(nFloor!==120||m.floors.length!==nBase+nFloor||m.scatter.length!==nScat+40)
-          issues.push('Incomplete terrain expansion '+b.id);
-        if(m.floors.slice(nBase).filter(f=>f.seamless).length!==10)
-          issues.push('Missing 10 extra base floors '+b.id);
+        // dungeon biomes are built only from the painted packs, palette swapped (data/biomes.js ART)
+        const PAINTED=['catacombs','cathedral_graveyard','castle_keep'];
+        if(!PAINTED.includes(b.pack)||(b.wallPack&&!PAINTED.includes(b.wallPack)))
+          issues.push('Biome not on a painted pack '+b.id);
         const set=biomeTileSet(b);
-        if(set.bases.length!==10||set.features.length!==nFloor-10)
-          issues.push('Expanded paving not selected in '+b.id);
+        if(set.pack!==b.pack)issues.push('Painted pack not loaded for '+b.id);
+        if(set.bases.length<2||set.features.length<20||set.scatter.length<10||!set.families.length)
+          issues.push('Thin themed tile set '+b.id+' '+[set.bases.length,set.features.length,set.scatter.length,set.families.length]);
+        if(set.bases.some(i=>!set.floors[i]?.seamless))issues.push('Non-seamless base floor in '+b.id);
         for(const [family,masks]of Object.entries(set.walls))
           for(let i=0;i<16;i++)if(!masks[i]?.length)
             issues.push('Missing wall mask '+b.id+'/'+family+'/'+i);
@@ -116,8 +113,6 @@ const FULL=process.argv.includes('--all');
               issues.push('Invalid opening door '+b.id+'/'+design+'/'+dir);
         if(set.floors.length>255)
           issues.push('Too many floors for Uint8Array tile variants '+b.id);
-        if(m.scatter.slice(nScat).some(v=>v.x+v.w>pack.scatter.width||v.y+v.h>pack.scatter.height))
-          issues.push('Scatter crop overflow '+b.id);
         game.buildDungeon(13,b);
         if(!G.world.boss)issues.push('Missing boss '+b.id);
         if(!G.world.map.walkable(G.player.x,G.player.y))

@@ -14,6 +14,23 @@ Contents
 
 ---
 
+## October 17, 2026 — dungeon biome art clean-up (branch `fix/biome-art-cleanup`)
+
+- Surveyed all 32 dungeon biomes in Chromium (`tools/tests/biome_survey.js`). The mess came from three layers on
+  top of the packs: the per-biome expansion (geometric diamond-motif floors, crude procedural props, etched walls),
+  the AI atlases (64 px cells pasted over floors as dark noisy squares, mis-sliced props, a patchwork of ten wall
+  materials) and the flat Canvas-drawn temple packs. All three are gone (code and tests deleted).
+- Every dungeon biome now uses the painted Catacombs, Cathedral and Graveyard or Castle Keep pack, palette swapped,
+  with a themed subset of floors/props/wall families/arches/doors, and can take its walls from a different pack
+  (`ART` in `src/data/biomes.js`, `wallPack`/`morePacks` in `biomeTileSet`). The five temple biomes add their
+  approved painted floors and props. Floors are cut to their diamonds (Castle Keep slab edges showed as black marks).
+- Torches and wall hangings: `wallMounts()` puts them only on back walls, mid-run, away from arches/doors and each
+  other (hangings used to land on front walls' outer faces, at corners and in clusters).
+- Tests: `data_check`, `flow`, `pack`, `walls`, `mobs`, `boss`, `raid`, `wall_torches`, `enemies`, `mobile_biomes`,
+  `worldwide_biomes`, `approved_biome_art`, `heavenly` pass. See [BIOME_ART.md](BIOME_ART.md).
+- Known: some Castle Keep layouts show thin black diagonal strips between wall runs (layout gaps, not tile art);
+  Desert Temple still reads a little like a castle because it uses Castle Keep walls.
+
 ## October 17, 2026 — test suite back to green
 
 Fixes for the 15 failing scripts from the Oct 17 health check (next entry). Most tests had fallen behind deliberate
@@ -411,7 +428,7 @@ The source Catacombs alpha geometry/depth slices remain intact to protect
 isometric alignment and actor occlusion; all surface pixels and props have
 astral artwork. Existing guardian progression, loot, shuffled biome selection,
 light/spectral enemies, ambience, and the forced-overworld rule remain in place.
-Documentation: [ASTRAL_PLANE.md](ASTRAL_PLANE.md). Browser QA and mobile visual
+Documentation: [BIOME_ART.md](BIOME_ART.md) (the ASTRAL_PLANE pack was removed). Browser QA and mobile visual
 checks (`node tools/tests/astral_plane.js`) are required before merge.
 
 
@@ -423,7 +440,7 @@ provides 60 new floor designs, 40 infernal props, 5×16 modular wall masks and
 three directional arches/doors with opening states; architectural *geometry*
 reuses original validated Catacombs depth slices. Normal dungeon selection,
 monster rewards, boss/exit flow, audio and lights work through the existing
-systems. Documentation: [HELL.md](HELL.md). **Review before merge:** run
+systems. Documentation: [BIOME_ART.md](BIOME_ART.md) (the HELL pack was removed). **Review before merge:** run
 `node tools/tests/hell.js`, inspect generated atlases/actual gameplay and
 measure mobile Safari frame rate. Earlier dated status follows.
 
@@ -435,14 +452,14 @@ arches, three animated door sets, 40 original glacial props, cold lighting and
 ambient audio. Separate from Frozen Ossuary and outdoor Forsaken Wilds; uses the
 existing procedural dungeon/guardian path. Integration: `src/gfx/icetemple.js`,
 `src/core/assets.js`, `src/data/biomes.js`, `src/world/dungeon.js`, and
-`src/core/audio.js`. Full details: [ICE_TEMPLE.md](ICE_TEMPLE.md).
+`src/core/audio.js`. Full details: [BIOME_ART.md](BIOME_ART.md) (the ICE_TEMPLE pack was removed).
 **Remaining:** Run browser QA (`tools/tests/ice_temple.js`), inspect the exported
 atlas/contact sheets and mobile frame rates, and merge only after visual approval.
 
 
 **Desert Temple biome (October 2026, draft branch `feature/desert-temple-dungeon`):**
 Added Temple of the Sunless Dynasty as an indoor dungeon, not an overworld map or
-replacement for Bone Desert Tombs. See [DESERT_TEMPLE.md](DESERT_TEMPLE.md).
+replacement for Bone Desert Tombs. See [BIOME_ART.md](BIOME_ART.md) (the DESERT_TEMPLE pack was removed).
 All 60 isometric floors, 40 themed props and five × 16 wall-material families are drawn at
 runtime; three arch sets and three opening door sets preserve the engine's original
 alpha geometry/depth slices. The biome uses the same guardian, procedural layout,

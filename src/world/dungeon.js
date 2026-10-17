@@ -20,6 +20,34 @@ function nextHangingDesign(rng, bag, count = 50) {
   return bag.pop();
 }
 
+/**
+ * Torches and wall hangings for a level. Both go only on the room side of back walls (a front wall shows its
+ * outer face to the camera), in the middle of a straight run at least three edges long (never at a corner), at
+ * least two tiles from an arch or a door, and spaced apart: torches 3 tiles, hangings 2.5 tiles from any mount.
+ * `torchRate(s)` / `hangRate` are the per-edge chances.
+ */
+function wallMounts(map, rng, biome, torchRate, hangRate, count) {
+  const edges = new Set(map.segments.map((s) => s.dir + s.mx + ',' + s.my + (s.front ? 'f' : '')));
+  const along = (s, d) => s.dir === 'f' ? s.dir + s.mx + ',' + (s.my + d) : s.dir + (s.mx + d) + ',' + s.my;
+  const midRun = (s) => [-1, 1].every((d) => edges.has(along(s, d)));
+  const gaps = map.walls.filter((w) => w.kind === 'arch' || w.kind === 'door');
+  const clearOfGaps = (s) => gaps.every((g) => Math.abs(g.x - s.mx) + Math.abs(g.y - s.my) > 2.2);
+  const spots = map.segments.filter((s) => !s.front && midRun(s) && clearOfGaps(s));
+  const taken = [];
+  const free = (s, d) => taken.every(([x, y]) => Math.hypot(x - s.mx, y - s.my) >= d);
+  const torches = [], wallHangings = [], designs = [];
+  for (const s of spots) {
+    if (rng.next() > torchRate(s) || !free(s, 3)) continue;
+    torches.push(torchAtWallSegment(s)); taken.push([s.mx, s.my]);
+  }
+  for (const s of spots) {
+    if (rng.next() > hangRate || !free(s, 2.5)) continue;
+    // cycle a shuffled catalog so a level repeats no motif until every design has appeared
+    wallHangings.push(wallHangingAtWallSegment(s, nextHangingDesign(rng, designs, count))); taken.push([s.mx, s.my]);
+  }
+  return { torches, wallHangings };
+}
+
 /** Attach a torch to the true edge midpoint, not a freestanding prop.
  * The authored holder faces into the adjacent walkable side of the wall.
  * The light/particles are offset towards the cup, not the mounting plate.
@@ -100,16 +128,7 @@ function generateCastleKeepLayout(depth, biome, tileset, seed, layout) {
   const chests = [], chestRooms = nonGuard.length ? shuffleWith(nonGuard.slice(), rng) : [];
   const chestCount = Math.min(2, Math.max(1, Math.floor(chestRooms.length / 3)));
   for (const r of chestRooms.slice(0, chestCount)) chests.push({ x: r.mx, y: r.my, rare: rng.chance(0.15) });
-  const torches = [];
-  for (const s of map.segments) if (!s.front && rng.next() < 0.09) torches.push(torchAtWallSegment(s));
-  const wallHangings = [], hangingDesigns = [];
-  for (const s of map.segments) {
-    if (rng.next() > 0.04) continue;
-    if (torches.some((t) => Math.abs((t.mountX ?? t.x) - s.mx) < 0.4 &&
-      Math.abs((t.mountY ?? t.y) - s.my) < 0.4)) continue;
-    wallHangings.push(wallHangingAtWallSegment(s,
-      nextHangingDesign(rng, hangingDesigns, wallHangingCount(biome))));
-  }
+  const { torches, wallHangings } = wallMounts(map, rng, biome, () => 0.35, 0.3, wallHangingCount(biome));
   return {
     map, rooms, spawns, props, chests, torches, wallHangings, looks,
     start: layout.start.slice(), exit: layout.exit.slice(), bossRoom: guardianRoom,
@@ -301,24 +320,9 @@ export function generateDungeon(depth, biome, tileset, seed) {
     if (!r) break;
     chests.push({ x: Math.floor(r.mx) + 0.5, y: Math.floor(r.my) + 0.5, rare: rng.chance(0.2) });
   }
-  const torches = [];
   const inArena = (s) => arena && s.mx >= arena.x - 0.5 && s.mx <= arena.x + arena.w + 0.5 && s.my >= arena.y - 0.5 && s.my <= arena.y + arena.h + 0.5;
-  for (const s of map.segments) {
-    // Keep the original wall-light placement rate exactly; only the
-    // holder's artwork/angle and bowl anchor are new.
-    if (s.front || rng.next() > (inArena(s) ? 0.3 : 0.07)) continue;
-    torches.push(torchAtWallSegment(s));
-  }
-    const wallHangings = [], hangingDesigns = [];
-    for (const s of map.segments) {
-      if (rng.next() > 0.035) continue;
-      // Keep mounted displays from covering an existing lit holder.
-      if (torches.some((t) => Math.abs((t.mountX ?? t.x) - s.mx) < 0.4 &&
-        Math.abs((t.mountY ?? t.y) - s.my) < 0.4)) continue;
-      // Cycle through a shuffled catalog so a level does not repeat a motif
-      // until all fifty authored designs have had a chance to appear.
-      wallHangings.push(wallHangingAtWallSegment(s, nextHangingDesign(rng, hangingDesigns, wallHangingCount(biome))));
-    }
+  // the rate counts only the edges that may hold a mount (about half of them)
+  const { torches, wallHangings } = wallMounts(map, rng, biome, (s) => inArena(s) ? 0.45 : 0.16, 0.2, wallHangingCount(biome));
 
   return {
       map, rooms, spawns, props, chests, torches, wallHangings, looks,
@@ -600,16 +604,7 @@ function generateThrone(biome, tileset, seed) {
       spawns.push({x,y,arch:rng.pick(throneGuards),n:rng.int(1,3),rank:'normal'});
     }
   }
-  const torches = [];
-  for (const s of map.segments)
-    if (!s.front && rng.next() < 0.12) torches.push(torchAtWallSegment(s));
-  const wallHangings = [], hangingDesigns = [];
-  for (const s of map.segments) {
-    if (rng.next() > 0.055) continue;
-    if (torches.some((t) => Math.abs((t.mountX ?? t.x) - s.mx) < 0.4 &&
-      Math.abs((t.mountY ?? t.y) - s.my) < 0.4)) continue;
-    wallHangings.push(wallHangingAtWallSegment(s, nextHangingDesign(rng, hangingDesigns)));
-  }
+  const { torches, wallHangings } = wallMounts(map, rng, biome, () => 0.25, 0.12, 50);
   const props = [];
   const ob = tileset.scatter.find((e) => e.name === 'funerary_obelisk') || tileset.scatter[0];
   for (const [x, y] of [[12, 10], [32, 10], [12, 24], [32, 24]]) {

@@ -1,4 +1,9 @@
 
+
+> **October 17, 2026:** the Canvas-generated temple packs, the per-biome floor/prop/wall expansion and the AI
+> floor/prop/wall atlases described below were removed. Dungeon biomes now use the painted packs only; see
+> [BIOME_ART.md](BIOME_ART.md).
+
 The replacement atlases cover the 23 dungeon biomes that previously reused
 the same base art with palette swaps, in addition to the original five
 generated biome atlases. Every newly covered setting has its own generated

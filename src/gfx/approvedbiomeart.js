@@ -9,30 +9,12 @@ const ROWS = Object.freeze({
   astral_plane: 3,
   heavenly: 4,
 });
-// Match the painted object type to the name/collision already used by each
-// native pack: obelisk, brazier, sarcophagus, column, banner, urn, statue,
-// altar. This avoids, for example, making Hell's nonblocking lava pools
-// look like solid statues or mixing up NPC-facing decoration names.
-const NATIVE_PROP_INDICES = Object.freeze({
-  desert_temple: [0,10,5,7,26,4,1,2],
-  ice_temple: [0,18,10,8,36,15,5,12],
-  hell: [0,2,28,13,25,31,10,19],
-  astral_plane: [0,2,21,12,36,9,24,17],
-  heavenly: [8,5,12,0,33,31,3,28],
-});
 const FLOOR = Object.freeze({w:80,h:40,cols:8,rows:5});
 const PROP = Object.freeze({w:80,h:80,cols:8,rows:5});
 const MONSTER = Object.freeze({w:120,h:150,cols:4,rows:3});
 const VARIANT = Object.freeze({w:80,h:80,cols:5,rows:3});
 const WORLD_SCATTER = Object.freeze({w:80,h:80,cols:5,rows:4});
 const WILD_SUPPLEMENTAL = Object.freeze({w:128,h:128,cols:4,rows:4});
-const VARIANT_ART = Object.freeze({
-  desert_temple:{column:0,nativeProp:32,expandedProp:20},
-  ice_temple:{column:1,nativeProp:33,expandedProp:25},
-  hell:{column:2,nativeProp:3,expandedProp:21},
-  astral_plane:{column:3,nativeProp:28,expandedProp:30},
-  heavenly:{column:4,nativeProp:32,expandedProp:25},
-});
 const FAMILIES = Object.freeze([
   'seraph','cherub','ophanim','warden',
   'herald','templar','beast','griffin',
@@ -90,84 +72,94 @@ function drawApprovedFloor(g, sheet, cell, sx, sy, sw, sh) {
   g.restore();
 }
 
-/** Overwrite only eight approved floor and eight prop cells in the active
- * biome's existing atlas. For expanded packs, replace appended cells rather
- * than legacy ones. Do not alter counts, sprite pivots, terrain collision,
- * wall slices, source palettes, tile IDs or established selection ranges.
+// The eight painted objects of each row: obelisk, brazier, sarcophagus, column, banner, urn, statue, altar.
+// The brazier takes a lit prop name so dungeon.js gives it a light.
+const PROP_TYPES = ['obelisk', 'brazier', 'sarcophagus', 'column', 'banner', 'urn', 'statue', 'altar'];
+const BRAZIER = { desert_temple: 'gold_brazier', ice_temple: 'azure_brazier', hell: 'hellfire_brazier',
+  astral_plane: 'voidflame_brazier', heavenly: 'radiant_brazier' };
+const extraCache = new Map();
+
+/** Load the approved floor/prop sheets a biome uses (only the five temple biomes have rows). */
+export function preloadApprovedBiomeArt(biomeId) {
+  return ROWS[biomeId] === undefined ? Promise.resolve(null) : Promise.all([loadSheet('floors'), loadSheet('props')]);
+}
+
+/** Copy one 80×80 painted prop at 2x into a 160×160 pack-sized cell, dropping slivers of neighbouring cells
+ * (small alpha blobs apart from the object) and returning its ground pivot. */
+function propCell(sheet, sx, sy) {
+  const c = document.createElement('canvas');
+  c.width = PROP.w; c.height = PROP.h;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.drawImage(sheet, sx, sy, PROP.w, PROP.h, 0, 0, PROP.w, PROP.h);
+  const img = g.getImageData(0, 0, PROP.w, PROP.h), d = img.data, W = PROP.w, H = PROP.h;
+  // label the opaque blobs; keep the biggest (the object) and any big enough to be part of it
+  const label = new Int32Array(W * H).fill(-1), sizes = [];
+  for (let start = 0; start < W * H; start++) {
+    if (label[start] >= 0 || d[start * 4 + 3] <= 24) continue;
+    const id = sizes.length, stack = [start];
+    let size = 0;
+    label[start] = id;
+    while (stack.length) {
+      const q = stack.pop(), x = q % W, y = (q / W) | 0;
+      size++;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx, ny = y + dy, nq = ny * W + nx;
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H || label[nq] >= 0 || d[nq * 4 + 3] <= 24) continue;
+        label[nq] = id; stack.push(nq);
+      }
+    }
+    sizes.push(size);
+  }
+  const big = Math.max(0, ...sizes);
+  let bottom = 0, sum = 0, n = 0;
+  for (let q = 0; q < W * H; q++) {
+    if (label[q] < 0 || sizes[label[q]] < big * 0.15) { d[q * 4 + 3] = 0; continue; }
+    bottom = Math.max(bottom, (q / W) | 0);
+  }
+  for (let y = Math.max(0, bottom - 6); y <= bottom; y++) for (let x = 0; x < W; x++)
+    if (d[(y * W + x) * 4 + 3] > 24) { sum += x; n++; }
+  g.putImageData(img, 0, 0);
+  const out = document.createElement('canvas');
+  out.width = PROP.w * 2; out.height = PROP.h * 2;
+  const o = out.getContext('2d');
+  o.imageSmoothingEnabled = false;
+  o.drawImage(c, 0, 0, out.width, out.height);
+  return { img: out, cx: (n ? sum / n : W / 2) * 2, foot: bottom * 2 - 6 };
+}
+
+/**
+ * The temple biomes' approved painted floors and props as extra tile-set entries, or null for other biomes.
+ * Floors are composed over `baseFloor` (the biome's own recoloured paving) so a transparent corner never shows
+ * through; props are pack-sized 160×160 cells drawn at the pack's scale.
  */
-export async function applyApprovedBiomeArt(pack, biomeId) {
-  const row = ROWS[biomeId];
-  if (row === undefined || !pack?.meta) return pack;
-  const [floors,props,variants] = await Promise.all([
-    loadSheet('floors'),loadSheet('props'),loadSheet('variants'),
-  ]);
-  const meta=pack.meta, expanded=meta.expansion;
-  const floorStart=(expanded ? expanded.floorStart : 0)+10; // after seamless bases
-  const propStart=expanded ? expanded.scatterStart : 0;
-  const propIndices=expanded ? Array.from({length:8},(_,i)=>propStart+i) :
-    NATIVE_PROP_INDICES[biomeId];
-  let floorCount=0,propCount=0;
-  if (floors && pack.floors?.getContext) {
-    const g=pack.floors.getContext('2d');
-    if(g){
-      g.save();g.imageSmoothingEnabled=false;
-      for(let i=0;i<8;i++){
-        const cell=meta.floors[floorStart+i];
-        if(!cell)continue;
-        drawApprovedFloor(g,floors,cell,i*FLOOR.w,row*FLOOR.h,FLOOR.w,FLOOR.h);
-        cell.seamless=false;
-        floorCount++;
-      }
-      g.restore();
-    }
+export function approvedBiomeArt(biomeId, baseFloor) {
+  const row = ROWS[biomeId], floors = sheets.get('floors'), props = sheets.get('props');
+  if (row === undefined || !floors || !props || !baseFloor) return null;
+  const key = biomeId + '|' + baseFloor.sx + ',' + baseFloor.sy + '|' + (baseFloor.img.width || 0);
+  if (extraCache.has(key)) return extraCache.get(key);
+  const strip = document.createElement('canvas');
+  strip.width = 160 * FLOOR.cols; strip.height = 80;
+  const g = strip.getContext('2d', { willReadFrequently: true });
+  g.imageSmoothingEnabled = false;
+  const out = { floors: [], scatter: [] };
+  for (let i = 0; i < FLOOR.cols; i++) {
+    const cell = { x: i * 160, y: 0, w: 160, h: 80 };
+    g.drawImage(baseFloor.img, baseFloor.sx, baseFloor.sy, baseFloor.w, baseFloor.h, cell.x, 0, 160, 80);
+    drawApprovedFloor(g, floors, cell, i * FLOOR.w, row * FLOOR.h, FLOOR.w, FLOOR.h);
+    const px = g.getImageData(cell.x + 40, 20, 80, 40).data;
+    let l = 0, n = 0;
+    for (let p = 0; p < px.length; p += 16) if (px[p + 3]) { l += (px[p] * 0.3 + px[p + 1] * 0.59 + px[p + 2] * 0.11) / 255; n++; }
+    out.floors.push({ img: strip, sx: cell.x, sy: 0, w: 160, h: 80, lum: n ? l / n : 0.4, seamless: false,
+      name: biomeId + '_painted_floor_' + (i + 1) });
   }
-  if (props && pack.scatter?.getContext) {
-    const g=pack.scatter.getContext('2d');
-    if(g){
-      g.save();g.imageSmoothingEnabled=false;
-      for(let i=0;i<8;i++){
-        const cell=meta.scatter[propIndices[i]];
-        if(!cell)continue;
-        g.clearRect(cell.x,cell.y,cell.w,cell.h);
-        g.drawImage(props,i*PROP.w,row*PROP.h,PROP.w,PROP.h,
-          cell.x,cell.y,cell.w,cell.h);
-        propCount++;
-      }
-      g.restore();
-    }
+  for (let i = 0; i < PROP.cols; i++) {
+    const type = PROP_TYPES[i], p = propCell(props, i * PROP.w, row * PROP.h);
+    out.scatter.push({ img: p.img, sx: 0, sy: 0, w: p.img.width, h: p.img.height, ox: -Math.round(p.cx), oy: -p.foot,
+      fp: type === 'sarcophagus' || type === 'altar' ? 0.7 : 0.5, block: true, painted: true,
+      name: type === 'brazier' ? BRAZIER[biomeId] : biomeId + '_painted_' + type });
   }
-  // Add one generated native-size art variant to spare decorative cells.
-  // The seamless bases and the existing approved paintings remain untouched.
-  const variant=VARIANT_ART[biomeId];
-  if(variants&&variant){
-    const floorIndex=(expanded?expanded.floorStart:0)+18;
-    const propIndex=expanded?expanded.scatterStart+variant.expandedProp:variant.nativeProp;
-    const floorCell=meta.floors[floorIndex],propCell=meta.scatter[propIndex];
-    if(floorCell&&pack.floors?.getContext){
-      const g=pack.floors.getContext('2d');
-      if(g){
-        g.save();g.imageSmoothingEnabled=false;
-        // The centered 80×40 crop retains the native 2:1 isometric diamond.
-        drawApprovedFloor(g,variants,floorCell,variant.column*VARIANT.w,20,VARIANT.w,40);
-        g.restore();
-        floorCell.seamless=false;
-      }
-    }
-    if(propCell&&pack.scatter?.getContext){
-      const g=pack.scatter.getContext('2d');
-      if(g){
-        g.save();g.imageSmoothingEnabled=false;
-        g.clearRect(propCell.x,propCell.y,propCell.w,propCell.h);
-        g.drawImage(variants,variant.column*VARIANT.w,VARIANT.h,
-          VARIANT.w,VARIANT.h,propCell.x,propCell.y,propCell.w,propCell.h);
-        g.restore();
-      }
-    }
-    meta.approvedVariantArt={floorIndex,propIndex,column:variant.column};
-  }
-  meta.approvedArt={row,floorStart,propStart,propIndices:[...propIndices],
-    floorCount,propCount};
-  return pack;
+  extraCache.set(key, out);
+  return out;
 }
 
 // Compact 80×80 tree sprites for the Forsaken Wilds, indexed by catalog name.

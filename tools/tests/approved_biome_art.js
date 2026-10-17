@@ -8,7 +8,7 @@ const path=require('path');
   try{
     const result=await page.evaluate(async()=>{
       const {G,game}=window.VELSCOUR;
-      const {A,loadBiomeArt}=await import('/src/core/assets.js');
+      const {loadBiomeArt,biomeTileSet}=await import('/src/core/assets.js');
       const {BIOME_BY_ID}=await import('/src/data/biomes.js');
       const {HEAVENLY_MONSTERS}=await import('/src/data/heavenly.js');
       const {enemyImage}=await import('/src/core/enemyart.js');
@@ -39,31 +39,31 @@ const path=require('path');
         const id=ids[row],biome=BIOME_BY_ID[id];
         if(!biome){issues.push('Missing biome '+id);continue;}
         await loadBiomeArt(biome);
-        const pack=A.packs['expanded_'+id]||A.packs[id];
-        const annotated=pack?.meta?.approvedArt;
-        if(!annotated || annotated.row!==row ||
-           annotated.floorCount!==8 || annotated.propCount!==8){
-          issues.push('Approved art did not load for '+id+': '+JSON.stringify(annotated));
+        // the painted cells are extra tile-set entries over the biome's palette-swapped pack (assets.js biomeTileSet)
+        const set=biomeTileSet(biome);
+        const floors=set.floors.filter(f=>f.name?.startsWith(id+'_painted_floor_'));
+        const props=set.scatter.filter(e=>e.painted);
+        if(floors.length!==8||props.length!==8){
+          issues.push('Approved art did not load for '+id+': '+floors.length+' floors, '+props.length+' props');
           continue;
         }
+        const featured=floors.map(f=>set.features.includes(set.floors.indexOf(f)));
+        if(featured.includes(false))issues.push('Painted floor never paved in '+id);
         ctx.fillStyle='#e4d7bf';ctx.font='16px monospace';
         ctx.fillText(biome.name||id,18,row*177+62);
         const seenFloors=new Set(),seenProps=new Set();
         for(let i=0;i<8;i++){
-          const f=pack.meta.floors[annotated.floorStart+i];
-          const p=pack.meta.scatter[annotated.propIndices[i]];
-          if(!f||!p){issues.push('Missing sprite slot '+id+'/'+i);continue;}
-          const fh=signature(pack.floors,f),ph=signature(pack.scatter,p);
+          const f=floors[i],p=props[i];
+          const fh=signature(f.img,{x:f.sx,y:f.sy,w:f.w,h:f.h}),ph=signature(p.img,{x:p.sx,y:p.sy,w:p.w,h:p.h});
           if(fh.count<1000 || ph.count<500)
             issues.push('Mostly empty approved sprite '+id+'/'+i+
               ' floor='+fh.count+' prop='+ph.count);
+          if(p.oy>-100||p.oy<-160||p.ox>-50||p.ox<-110)issues.push('Odd painted prop pivot '+id+'/'+i+' '+p.ox+','+p.oy);
           seenFloors.add(fh.hash);seenProps.add(ph.hash);
           ctx.imageSmoothingEnabled=false;
-          ctx.drawImage(pack.floors,f.x,f.y,f.w,f.h,20+i*142,row*177+65,128,64);
-          ctx.drawImage(pack.scatter,p.x,p.y,p.w,p.h,40+i*142,row*177+127,72,72);
+          ctx.drawImage(f.img,f.sx,f.sy,f.w,f.h,20+i*142,row*177+65,128,64);
+          ctx.drawImage(p.img,p.sx,p.sy,p.w,p.h,40+i*142,row*177+127,72,72);
         }
-        if(new Set(annotated.propIndices).size!==8)
-          issues.push('Painted prop slot aliases in '+id);
         if(seenFloors.size!==8||seenProps.size!==8)
           issues.push('Duplicate approved art detected in '+id);
         checks.push({biome:id,approvedFloors:seenFloors.size,approvedProps:seenProps.size});

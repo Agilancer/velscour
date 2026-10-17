@@ -1,16 +1,9 @@
 // Asset loading + derived (recoloured / rescaled) sprite caches.
 import { makeCanvas, recolor, scaleImage } from './util.js';
 import { G } from '../state.js';
-import { generateDesertTemplePack } from '../gfx/deserttemple.js';
-import { generateIceTemplePack } from '../gfx/icetemple.js';
-import { generateHellPack } from '../gfx/hellpack.js';
-import { generateAstralPlanePack } from '../gfx/astralplane.js';
-import { generateHeavenlyPack } from '../gfx/heavenlypack.js';
-import { expandBiomePack } from '../gfx/biomeexpansion.js';
 import { preloadWallTorchHolders } from '../gfx/walltorches.js';
 import { preloadWallHangings } from '../gfx/wallhangings.js';
-import { applyApprovedBiomeArt, preloadBiomeVariantArt, preloadOverworldScatterArt } from '../gfx/approvedbiomeart.js';
-import { applyAIBiomeArt } from '../gfx/aibiomeart.js';
+import { approvedBiomeArt, preloadApprovedBiomeArt, preloadBiomeVariantArt, preloadOverworldScatterArt } from '../gfx/approvedbiomeart.js';
 import { preloadApprovedHeavenlyArtwork } from '../gfx/heavenlymonsters.js';
 import { TW } from './view.js';
 import { loadReplacementArt } from './replacementart.js';
@@ -74,89 +67,29 @@ export async function loadAssets(progress) {
   await Promise.all(jobs);
 }
 
-// Biome packs (assets/tiles/<pack>/, imported by tools/biomepack.py; docs/ART.md). Every biome draws from one,
-// palette swapped. Desert Temple is a Canvas-generated pack with source in gfx/deserttemple.js.
+// Biome packs (assets/tiles/<pack>/, imported by tools/biomepack.py; docs/ART.md). Every dungeon biome draws from
+// one of the painted packs, palette swapped and limited to its themed `part` (data/biomes.js).
 const DEFAULT_PACK = 'catacombs';
 
-// These large, Canvas-generated source packs are used only while a dungeon is
-// active. Keep at most two on phones; the world/tileset holds any pack it still
-// needs after eviction. Mixed-biome loads can require two simultaneously.
-const GENERATED = {
-  heavenly: generateHeavenlyPack,
-  astral_plane: generateAstralPlanePack,
-  hell: generateHellPack,
-  ice_temple: generateIceTemplePack,
-  desert_temple: generateDesertTemplePack,
-};
-const generatedOrder = [];
-function retainGenerated(id) {
-  const i = generatedOrder.indexOf(id);
-  if (i >= 0) generatedOrder.splice(i, 1);
-  generatedOrder.push(id);
-  while (generatedOrder.length > (G.touch ? 2 : 3)) {
-    const old = generatedOrder.shift();
-    delete A.packs[old];
-  }
-}
 async function loadPack(id) {
-  if (GENERATED[id]) {
-    const previous = A.packs[id];
-    if (previous) { if (!(previous instanceof Promise)) retainGenerated(id); return previous; }
-    return A.packs[id] = loadPack('catacombs').then(base => GENERATED[id](base))
-      .then(async pack => { await applyAIBiomeArt(pack,id); await applyApprovedBiomeArt(pack,id); A.packs[id] = pack; retainGenerated(id); return pack; })
-      .catch(e => { delete A.packs[id]; throw e; });
-  }
   return A.packs[id] || (A.packs[id] = Promise.all(['floors', 'walls', 'scatter'].map((n) => loadImage(`assets/tiles/${id}/${n}.webp`)).concat(loadJSON(`assets/tiles/${id}/pack.json`)))
     .then(([floors, walls, scatter, meta]) => (A.packs[id] = { floors, walls, scatter, meta })).catch((e) => { delete A.packs[id]; throw e; }));
 }
 const ready = (v) => v && !(v instanceof Promise);
+/** Every pack a biome's tile set draws on: floors and props from `pack`, walls/arches/doors from `wallPack`,
+ * more props from `morePacks` ([[pack, 1-based ranges], ...]). */
+const biomePacks = (b) => [...new Set([b.pack || DEFAULT_PACK, b.wallPack, ...(b.morePacks || []).map((m) => m[0])].filter(Boolean))];
 
-// Materialize only the currently used expanded packs: the original wall atlas
-// is several MB, and retaining one full transformed atlas per 32 biomes would
-// blow past iOS Safari's Canvas memory budget.
-const EXPANSION_ORDER=[];
-async function expandedPack(biome) {
-  if (!biome || biome.overworld || biome.id === 'town') return;
-  // On memory-limited phones, append the biome's floor set while reusing its
-  // native wall/scatter atlases instead of cloning the large wall canvas.
-  const id='expanded_'+biome.id;
-  const previous=A.packs[id];
-  if(previous) {
-    const i=EXPANSION_ORDER.indexOf(id);
-    if(i>=0)EXPANSION_ORDER.splice(i,1);
-    EXPANSION_ORDER.push(id);
-    return await previous;
-  }
-  const promise=loadPack(biome.pack || DEFAULT_PACK).then(base=>
-    expandBiomePack(base,biome,{floorsOnly:G.touch&&!!GENERATED[biome.pack]}))
-    .then(async pack=>{
-      // Apply unique biome motifs first; hand-approved art has final priority.
-      await applyAIBiomeArt(pack,biome.id);
-      await applyApprovedBiomeArt(pack,biome.id);
-      A.packs[id]=pack;
-      while(EXPANSION_ORDER.length>2){
-        const old=EXPANSION_ORDER.shift();
-        if(old===id)continue;
-        delete A.packs[old];
-        for(const key of Object.keys(A.biomeSets))
-          if(key.endsWith('|'+old))delete A.biomeSets[key];
-      }
-      return pack;
-    }).catch(e=>{delete A.packs[id];throw e;});
-  A.packs[id]=promise;
-  EXPANSION_ORDER.push(id);
-  return await promise;
-}
 /** Fetch a biome's pack and the monster art. Safe to call repeatedly. */
 export function loadBiomeArt(biome) {
+  const dungeon = biome && !biome.overworld && biome.id !== 'town';
   return Promise.all([
     loadEnemyArt().catch((e) => console.warn(e)), // monsters fall back to their pixel sprites
-    biome && !biome.overworld && biome.id !== 'town' ?
-      (biome.pack === 'castle_keep' ? loadPack('castle_keep') : expandedPack(biome)) : Promise.resolve(null),
+    ...(dungeon ? biomePacks(biome).map(loadPack) : []),
+    dungeon ? preloadApprovedBiomeArt(biome.id) : Promise.resolve(null),
     biome?.id === 'heavenly' ? preloadApprovedHeavenlyArtwork() : Promise.resolve(null),
-    biome && !biome.overworld && biome.id!=='town' ?
-      preloadWallTorchHolders(biome) : Promise.resolve(null),
-      preloadWallHangings(biome?.id),
+    dungeon ? preloadWallTorchHolders(biome) : Promise.resolve(null),
+    preloadWallHangings(biome?.id),
   ]);
 }
 
@@ -173,6 +106,23 @@ export function classSprite(id, h, palette = null) {
   return c;
 }
 
+/** Floors cut to their diamonds (plus a pixel for the seams): some packs' feature tiles carry a dark slab edge
+ * below the diamond that would show over the next tile. Recoloured atlases are cut in place. */
+function clipFloors(img, cells) {
+  const c = img instanceof HTMLCanvasElement ? img : makeCanvas(img.width, img.height);
+  const g = c.getContext('2d');
+  if (c !== img) g.drawImage(img, 0, 0);
+  g.save();
+  g.globalCompositeOperation = 'destination-in';
+  g.beginPath();
+  for (const { x, y, w, h } of cells) {
+    g.moveTo(x + w / 2, y - 1); g.lineTo(x + w + 2, y + h / 2); g.lineTo(x + w / 2, y + h + 1); g.lineTo(x - 2, y + h / 2); g.closePath();
+  }
+  g.fill();
+  g.restore();
+  return c;
+}
+
 /**
  * Build (and cache) the tile set for a biome: its pack (loadBiomeArt first; until then the default pack stands in),
  * recoloured by `biome.palette` (walls by `wallPalette` when set). Entries are {img,sx,sy,w,h} rects plus:
@@ -184,20 +134,17 @@ export function classSprite(id, h, palette = null) {
  * - scatter [{name, ox, oy, fp (footprint in tiles), block}], chest {closed, open, rareClosed, rareOpen}
  */
 export function biomeTileSet(biome) {
-  const ext='expanded_'+biome.id;
-  const id = ready(A.packs[ext]) ? ext :
-    ready(A.packs[biome.pack || DEFAULT_PACK]) ? biome.pack || DEFAULT_PACK : DEFAULT_PACK;
-  const key = biome.id + '|' + id;
+  // until all of the biome's packs are in, the default pack stands in
+  const full = biomePacks(biome).every((p) => ready(A.packs[p]));
+  const id = full ? biome.pack || DEFAULT_PACK : DEFAULT_PACK, wid = full ? biome.wallPack || id : id;
+  const key = biome.id + '|' + id + '|' + wid;
   if (A.biomeSets[key]) return A.biomeSets[key];
   // keep memory bounded: each recoloured set is ~25 MB of canvas
   const keys = Object.keys(A.biomeSets).filter((k) => !k.startsWith('town|'));
   while (keys.length >= 2) delete A.biomeSets[keys.shift()]; // a mixed level holds two sets
-  // The expanded atlas is already tinted and sculpted for THIS biome;
-  // applying its old blanket palette again would flatten the new pigments.
-  const pk=A.packs[id],m=pk.meta,pal=m.expansion?null:biome.palette,
-    wallPal=m.expansion?null:(biome.wallPalette||pal);
-  const floorImg = pal ? recolor(pk.floors, pal) : pk.floors;
-  const wallImg = wallPal ? recolor(pk.walls, wallPal) : pk.walls;
+  const pk = A.packs[id], m = pk.meta, wm = A.packs[wid].meta, pal = biome.palette, wallPal = biome.wallPalette || pal;
+  const floorImg = clipFloors(pal ? recolor(pk.floors, pal) : pk.floors, m.floors);
+  const wallImg = wallPal ? recolor(A.packs[wid].walls, wallPal) : A.packs[wid].walls;
   const scatImg = pal ? recolor(pk.scatter, pal) : pk.scatter;
   const rect = (img, r) => ({ img, sx: r[1], sy: r[2], w: r[3], h: r[4], ox: r[5], oy: r[6] });
   const set = { pack: id, k: TW / m.tile[0], zscale: m.zscale, floors: [], bases: [], features: [], walls: {}, arches: {}, doors: {}, scatter: [], chest: null };
@@ -205,37 +152,45 @@ export function biomeTileSet(biome) {
     set.floors.push({ img: floorImg, sx: f.x, sy: f.y, w: f.w, h: f.h, lum: f.lum, seamless: f.seamless, name: f.name });
     (f.seamless ? set.bases : set.features).push(i);
   });
-  for (const [fam, masks] of Object.entries(m.walls)) {
+  for (const [fam, masks] of Object.entries(wm.walls)) {
     set.walls[fam] = {};
     for (const [mask, vars] of Object.entries(masks)) set.walls[fam][mask] = vars.map((v) => v.map((r) => ({ ...rect(wallImg, r), arm: r[0] })));
   }
-  set.families=Object.keys(set.walls);
-  if(m.expansion){
-    set.bases=set.bases.filter(i=>i>=m.expansion.floorStart);
-    set.features=set.features.filter(i=>i>=m.expansion.floorStart);
-  }
+  set.families = Object.keys(set.walls);
   set.archSpan = {};
-  for (const [des, dirs] of Object.entries(m.arches)) {
-    set.archSpan[des] = (m.archSpan && m.archSpan[des]) || 3;
+  for (const [des, dirs] of Object.entries(wm.arches)) {
+    set.archSpan[des] = (wm.archSpan && wm.archSpan[des]) || 3;
     set.arches[des] = {};
     for (const [d, sl] of Object.entries(dirs)) set.arches[des][d] = sl.map((r) => ({ ...rect(wallImg, r), a: r[0] }));
   }
-  for (const [des, dirs] of Object.entries(m.doors)) {
+  for (const [des, dirs] of Object.entries(wm.doors)) {
     set.doors[des] = {};
     for (const [d, st] of Object.entries(dirs)) {
       set.doors[des][d] = {};
       for (const [k, sl] of Object.entries(st)) set.doors[des][d][k] = sl.map((r) => ({ ...rect(wallImg, r), part: r[0][0], du: r[0][1], dv: r[0][2] }));
     }
   }
-  for (const s of m.scatter) set.scatter.push({ img: scatImg, sx: s.x, sy: s.y, w: s.w, h: s.h, ox: s.ox, oy: s.oy, fp: s.fp, block: s.block, name: s.name });
-  const part = biome.part;
+  const scat = (p, img) => p.meta.scatter.map((s) => ({ img, sx: s.x, sy: s.y, w: s.w, h: s.h, ox: s.ox, oy: s.oy, fp: s.fp, block: s.block, name: s.name }));
+  const inR = (rs, i) => !rs || rs.some(([a, b]) => i + 1 >= a && i + 1 <= b);
+  const part = full && biome.part;
+  set.scatter = scat(pk, scatImg).filter((s, i) => !part || inR(part.scatter, i));
   if (part) {
-    const inR = (rs, i) => rs.some(([a, b]) => i + 1 >= a && i + 1 <= b);
-    set.bases=set.bases.filter(i=>(m.expansion&&i>=m.expansion.floorStart)||inR(part.floors,i));
-    set.features=set.features.filter(i=>(m.expansion&&i>=m.expansion.floorStart)||inR(part.floors,i));
-    set.scatter=set.scatter.filter((s,i)=>(m.expansion&&i>=m.expansion.scatterStart)||inR(part.scatter,i));
-    set.families = set.families.filter((f) => part.families.includes(f));
-    for (const k of ['arches', 'doors']) for (const d of Object.keys(set[k])) if (!part[k].includes(d)) delete set[k][d];
+    set.bases = set.bases.filter((i) => inR(part.floors, i));
+    set.features = set.features.filter((i) => inR(part.floors, i));
+    if (part.families) set.families = set.families.filter((f) => part.families.includes(f));
+    for (const k of ['arches', 'doors']) if (part[k]) for (const d of Object.keys(set[k])) if (!part[k].includes(d)) delete set[k][d];
+  }
+  if (full) for (const [p, ranges] of biome.morePacks || []) {
+    const src = A.packs[p];
+    set.scatter.push(...scat(src, pal ? recolor(src.scatter, pal) : src.scatter).filter((s, i) => inR(ranges, i)));
+  }
+  // the temple biomes' approved painted floors and props, unrecoloured, on top of the pack's own; their floors
+  // are listed several times so they show about as often as all of the pack's feature tiles together
+  const extra = full && set.bases.length && approvedBiomeArt(biome.id, set.floors[set.bases[0]]);
+  if (extra) {
+    const n = set.features.length;
+    for (const f of extra.floors) { for (let j = 0; j < Math.max(1, n / extra.floors.length); j++) set.features.push(set.floors.length); set.floors.push(f); }
+    set.scatter.push(...extra.scatter);
   }
   set.pillar = set.walls[set.families[0]]['0'][0][0];
   if (A.chestImg && A.chestMeta) {
