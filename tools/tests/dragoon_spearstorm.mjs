@@ -30,7 +30,7 @@ assert.deepEqual(triune.centers[0], [12, 15], 'Triple AoE central circle must or
 assert.equal(close.radius, triune.radius);
 assert(triune.centers.every(([x, y]) => Math.hypot(x - 12, y - 15) < 1.6), 'Triple AoE must stay tight to the Dragoon');
 const nearWall = spearBarrageAreas(three, 12, 15, 0, 1, (_x, y) => y <= 15);
-assert.deepEqual(nearWall.centers[1], [12, 15], 'Out-of-bounds spear circle should collapse onto caster');
+assert.deepEqual(nearWall.centers[2], [12, 15], 'Out-of-bounds spear circle should collapse onto caster');
 assert.equal(nearWall.centers.length, 3);
 assert.equal(one.reqLevel, 1);
 assert.equal(three.reqLevel, 1);
