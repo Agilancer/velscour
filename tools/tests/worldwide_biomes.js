@@ -79,7 +79,7 @@ const FULL=process.argv.includes('--all');
       stats.wildProps=ow.props.filter(p=>p.spr?.name?.startsWith('overworld_wild_prop_')).length;
       if(stats.wildFloors!==stats.townFloors)
         issues.push('60 standalone wilderness tiles missing');
-      if(stats.wildProps<10)issues.push('Generated wilderness props not used');
+      if(stats.wildProps!==0)issues.push('Procedural wilderness scatter unexpectedly used');
       if((ow.map.v||[]).some(v=>v>=stats.wildFloors))
         issues.push('Out-of-bounds wilderness floor index');
       // Use the original monster artwork loaded by the core asset pipeline,
