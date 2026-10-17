@@ -6,7 +6,7 @@
 import { G } from '../state.js';
 import { input } from '../core/input.js';
 import { dist, clamp, TAU, fmtInt, escapeHtml, angleDiff } from '../core/util.js';
-import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, buffAmount, curseAmount, skillDuration, effLevel } from '../data/skills.js';
+import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, spearBarrageAreas, buffAmount, curseAmount, skillDuration, effLevel } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
 import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS } from '../data/items.js';
 import { depthLevel } from '../data/depth.js';
@@ -1070,6 +1070,9 @@ export const Auto = {
     const near = foes.filter((m) => dist(p.x, p.y, m.x, m.y) < 2.2).length;
     const bold = this.boldness();
     let reach = engageRange(SKILLS[G.char.bar[0]], t, bold);
+    // If a point-blank Spearstorm is ready, finish approaching after a leap
+    // instead of idling at the primary jump attack's much greater reach.
+    if (p.classId === 'dragoon' && this.readySkill((sk) => sk.m.barrage)) reach = Math.min(reach, 1.8);
     if (this.stall && this.stall.t > 6) reach = Math.min(reach, 1.6); // nothing is landing: walk right up to it
     // shooters and casters: don't trade shots from the edge of range (they win that), close in to a sure hit
     else if ((t.ai === 'ranged' || t.ai === 'caster') && p.hp > p.maxHp * 0.55) reach = Math.min(reach, Math.max(2.4, reach * (0.65 - 0.25 * bold)));
@@ -1170,7 +1173,17 @@ export const Auto = {
         case 'leap': ok = d <= 6.5 * (m.range ?? 1) && los; n = crowdAt(t.x, t.y, 1.6); break;
         case 'dash': ok = d <= 5 * (m.range ?? 1) && los; n = crowdAt(t.x, t.y, 1.5); break;
         case 'corpse': ok = w.corpses.some((k) => !k.used && dist(k.x, k.y, t.x, t.y) < 4 * (m.r ?? 1)) && d < 9 && los; n = crowdAt(t.x, t.y, 2); break;
-        case 'aoe': case 'rain': case 'strike': case 'trap': n = crowdAt(t.x, t.y, 2); ok = d <= Math.min(9.5, skillRange(sk)) && los; break;
+        case 'aoe':
+          if (m.barrage) {
+            const { centers, radius } = spearBarrageAreas(sk, p.x, p.y, Math.atan2(t.y - p.y, t.x - p.x),
+              1 + (p.st.areaPct || 0) / 100, (x, y) => w.map.isFloor(x, y));
+            n = foes.filter((foe) => centers.some(([x, y]) => dist(x, y, foe.x, foe.y) <= radius + (foe.r || 0))).length;
+            ok = d <= skillRange(sk) + (t.r || 0) && n > 0 && los;
+            ax = p.x; ay = p.y;
+            break;
+          }
+          // fall through for ordinary ranged AoE skills
+        case 'rain': case 'strike': case 'trap': n = crowdAt(t.x, t.y, 2); ok = d <= Math.min(9.5, skillRange(sk)) && los; break;
         default: ok = d <= reachOf(sk) * 0.92 && los; n = crowdAt(t.x, t.y, 2.2);
       }
       if (!ok) continue;
@@ -1196,7 +1209,10 @@ export const Auto = {
         .sort((a, b) => (this.lastCast[a.sk.id] ?? -1000) - (this.lastCast[b.sk.id] ?? -1000) || b.score - a.score);
       const jumps = this.dragoonJumps || 0, goal = this.dragoonJumpGoal || 3;
       if (bursts.length && (jumps >= goal || !leaps.length)) return bursts[0];
-      if (leaps.length && jumps < goal) return leaps[0];
+      // A barrage can be ready but outside its point-blank range: jump INTO
+      // the mob before considering utility casts, even past the jump quota.
+      const barrageWaiting = this.barSkills().some((sk) => sk.m.barrage && !p.canUse(sk));
+      if (leaps.length && (jumps < goal || (barrageWaiting && !bursts.length && d > skillRange(SKILLS['dragoon.3.0'])))) return leaps[0];
       if (weave.length && jumps >= 2 && this.dragoonLastWeaveAt !== jumps && (jumps >= 8 || jumps % 3 === 0)) return weave[0];
       if (leaps.length && jumps < 8) return leaps[0];
       if (weave.length) return weave[0];
