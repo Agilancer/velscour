@@ -12,6 +12,7 @@ import { rollLooks } from '../data/bestiary.js';
 import { wallHangingAtBuilding } from '../gfx/wallhangings.js';
 import { seaOfSandFloorTiles, seaOfSandObject, seaOfSandCliff, seaOfSandFrames } from '../gfx/seaofsand.js';
 import { SAND_SCATTER, SAND_TREES, SAND_BOSSES } from '../data/seaofsand.js';
+import { scaledCastlePropK, castleWallFamilyAt } from '../gfx/castlescale.js';
 import { castleFloorTiles, castleFloorIndex, castleKeepFloorTiles, castleKeepFloorIndex,
   castleKeepWallFrames, castleFrames, castleObject } from '../gfx/castle.js';
 
@@ -287,15 +288,22 @@ function generateCastleBase(depth,biome,seed){
   const keepFamilyFrames=new Map();
   for(const f of castleKeepWallFrames()){const key=f.family+'|'+f.connection_mask,items=keepFamilyFrames.get(key)||[];items.push(f);keepFamilyFrames.set(key,items);}
   const isGate=(x,y)=>gates.has(id(x,y));
-  let prev=wallPath[0],segment=0;
+  // Historic curtain walls read as continuous masonry runs, not a patchwork
+  // that swaps stone color at every bend. Spread ten existing family variants
+  // across the length of the wall while keeping all authored corner masks.
   const segmentStyle=new Int8Array(CN).fill(-1);
-  for(let s=1;s<wallPath.length;s++){
-    const a=wallPath[s-1],b=wallPath[s],steps=Math.abs(b[0]-a[0])+Math.abs(b[1]-a[1]);
+  const wallLength=wallPath.slice(1).reduce((sum,b,i)=>sum+
+    Math.abs(b[0]-wallPath[i][0])+Math.abs(b[1]-wallPath[i][1]),0);
+  let distanceAlongWall=0;
+  for(let segment=1;segment<wallPath.length;segment++){
+    const a=wallPath[segment-1],b=wallPath[segment];
+    const steps=Math.abs(b[0]-a[0])+Math.abs(b[1]-a[1]);
     for(let q=0;q<=steps;q++){
       const x=a[0]+Math.sign(b[0]-a[0])*q,y=a[1]+Math.sign(b[1]-a[1])*q,i=id(x,y);
-      if(segmentStyle[i]<0)segmentStyle[i]=segment%10;
+      if(segmentStyle[i]<0)
+        segmentStyle[i]=castleWallFamilyAt(distanceAlongWall+q,wallLength,wallStyles.length);
     }
-    segment++;prev=b;
+    distanceAlongWall+=steps;
   }
   for(const i of wallCells){const x=i%CW,y=(i/CW)|0;if(isGate(x,y))continue;
     const joined=(nx,ny)=>wallCells.has(id(nx,ny))&&!gates.has(id(nx,ny));
@@ -327,6 +335,20 @@ function generateCastleBase(depth,biome,seed){
   for(const [asset,x,y,scale] of [['castle_bridge_standard_arch_NW',43.5,20.5,.92],['castle_drawbridge_closed_SE',48.5,68.5,1.2],
     ['castle_bridge_short_arch_SW',25.5,38.5,.88],['castle_bridge_short_arch_NE',71.5,38.5,.88]])add(asset,'castle_bridges',x,y,scale);
   add('castle_landmark_02_gatehouse_wall_turn','castle_landmarks',48.5,64.5,1.25);
+  // Use the original authored arches at the three lesser posterns instead
+  // of leaving gate openings as bare missing wall modules. These are visual
+  // overlays; pathing still uses the existing explicit gate openings.
+  for(const [asset,x,y] of [
+    ['gateway_01_arched_castle_gate_SE',42.5,26.5],
+    ['gateway_01_arched_castle_gate_SW',30.5,36.5],
+    ['gateway_01_arched_castle_gate_NE',66.5,36.5],
+  ])add(asset,'gateways',x,y,.72);
+  // The 200-piece wall atlas preserves every connection mask; authored
+  // curtain-wall battlements break up the timber-like surface on long straight
+  // runs, without replacing or mirroring the correctly oriented wall pieces.
+  for(const [x,y] of [[40.5,26.5],[58.5,31.5],[61.5,52.5],[38.5,62.5],[48.5,65.5]])
+    if(!isGate(Math.floor(x),Math.floor(y)))
+      add('castle_landmark_04_curtain_wall_battlement','castle_landmarks',x,y,.62);
   const towers=[[34.5,26.5,'castle_landmark_03_round_tower_upper'],[55.5,31.5,'castle_landmark_05_square_tower_upper'],
     [66.5,36.5,'castle_landmark_08_corner_tower_cluster'],[63.5,46.5,'castle_landmark_03_round_tower_upper'],
     [59.5,61.5,'castle_landmark_05_square_tower_upper'],[53.5,65.5,'castle_landmark_08_corner_tower_cluster'],
@@ -364,6 +386,18 @@ function generateCastleBase(depth,biome,seed){
   for(const d of roomDoors){const spr=castleObject(d.asset,'doors');if(!spr)throw new Error('Missing keep door '+d.asset);
     props.push({kind:'scatter',x:d.x+.5,y:d.y+.5,spr,k:TW/160*.78,flip:false,z:0,roomDoor:true});
   }
+  // The atlas already has oriented stone-window and room-plaque sprites.
+  // Mount them on real keep walls, with the original authored pivots, rather
+  // than on the floor or across any open doorway.
+  for(const [asset,category,x,y,scale] of [
+    ['window_03_lancet_keep_SE','windows',43.5,33.5,.7],
+    ['window_03_lancet_keep_SE','windows',51.5,33.5,.7],
+    ['window_05_twin_lancet_SW','windows',29.5,47.5,.65],
+    ['window_05_twin_lancet_SW','windows',29.5,54.5,.65],
+    ['window_02_round_barred_SE','windows',48.5,51.5,.65],
+    ['sign_05_chapel_plaque_SE','signs',35.5,59.5,.6],
+    ['sign_02_hall_plaque_SW','signs',43.5,55.5,.6],
+  ])add(asset,category,x,y,scale);
   const furnish=(id,x,y,scale,light=0,flip=false,z=0)=>{
     const spr=castleObject(id,'furniture');if(!spr)throw new Error('Missing keep furnishing '+id);
     props.push({kind:'scatter',x,y,spr,k:TW/160*scale,flip,light,z});return spr;
@@ -439,7 +473,12 @@ function generateCastle(depth,biome,seed){
   for(const key of ['start','exit','shrine'])base[key]=point(base[key]);
   base.sites=base.sites.map(point);
   for(const k of ['spawns','chests'])for(const item of base[k]||[]){item.x*=factor;item.y*=factor;}
-  for(const p of base.props||[]){p.x*=factor;p.y*=factor;p.k*=factor;}
+  for(const p of base.props||[]){
+    p.x*=factor;p.y*=factor;
+    // Structural wall connectors must follow the enlarged grid; small props
+    // and interior furniture must stay proportional to the 60px-tall hero.
+    p.k=scaledCastlePropK(p,factor,TW);
+  }
   for(const d of map.castleDoors||[]) { d.x*=factor;d.y*=factor; }
   if(map.castleRooms)map.castleRooms=map.castleRooms.map(r=>({...r,rect:r.rect.map(n=>n*factor)}));
   base.map=map;return base;

@@ -43,6 +43,34 @@ for(let seed=1;seed<=100;seed++){
  for(const d of gen.map.castleDoors)if(!seen[I(m,d.x,d.y)]||!m.walkable(d.x,d.y))throw Error(`unreachable or blocked keep door seed ${seed} at ${d.x},${d.y}`);
  for(const [cx,cy,need] of [[94,82,380],[70,102,380],[100,110,320]]){let free=0;for(let y=cy-10;y<cy+10;y++)for(let x=cx-10;x<cx+10;x++)if(m.walkableTile(x,y))free++;if(free<need)throw Error(`combat room too crowded seed ${seed} at ${cx},${cy}: ${free}`);}
  if(gen.props.filter(p=>p.spr.category==='furniture').length<22)throw Error(`throne/chapel furniture not placed seed ${seed}`);
+ // The map grows 2x in both directions, but props must not all become 2x
+ // the player's size. These are world-pixel height contracts for a 60px hero.
+ const furnitureHeights={
+   furniture_01_throne_dais:92,furniture_02_cathedral_pew:34,
+   furniture_03_cathedral_pulpit:78,furniture_04_hanging_chandelier:55,
+   furniture_05_floor_candelabrum:48,
+ };
+ for(const p of gen.props.filter(p=>p.spr.category==='furniture')){
+   const expected=furnitureHeights[p.spr.name];
+   if(expected&&Math.abs(p.spr.h*p.k-expected)>.05)
+     throw Error(`oversized Castle furniture ${p.spr.name}: ${p.spr.h*p.k} vs ${expected}`);
+ }
+ const caps={scatter:46,trees:170,castle_landmarks:238,castle_stairs:150,
+   castle_bridges:135,torches:48,wall_hangings:76,doors:125,gateways:225};
+ for(const p of gen.props){
+   const max=caps[p.spr.category];
+   if(max&&p.spr.h*p.k>max+.001)throw Error(`oversized Castle ${p.spr.name}: ${p.spr.h*p.k} > ${max}`);
+   if(p.spr.category==='castle_landmarks'&&p.spr.w*p.k>320+.001)
+     throw Error(`oversized Castle landmark width: ${p.spr.name}`);
+   if(p.spr.category==='moat_edges'&&Math.abs(p.spr.w*p.k-64)>.01)
+     throw Error(`moat border doesn't match a 64px floor diamond: ${p.spr.name}`);
+ }
+ for(const category of ['gateways','windows','signs']){
+   if(!gen.props.some(p=>p.spr.category===category))
+     throw Error(`missing authored Castle ${category} decorative placements`);
+ }
+ if(gen.props.filter(p=>p.spr.name==='castle_landmark_04_curtain_wall_battlement').length<4)
+   throw Error('Castle curtain wall needs actual crenellated stonework');
  for(const id of ['furniture_01_throne_dais','furniture_02_cathedral_pew','furniture_03_cathedral_pulpit','furniture_04_hanging_chandelier','furniture_05_floor_candelabrum'])if(!gen.props.some(p=>p.spr.name===id))throw Error(`missing placed furnishing ${id} seed ${seed}`);
  if(gen.spawns.filter(s=>s.castleRoom).length<3||gen.spawns.some(s=>s.castleRoom&&!m.circleFree(s.x,s.y,.7)))throw Error(`room encounter spawns blocked seed ${seed}`);
  const categories=new Set(gen.props.map(p=>p.spr.category));for(const c of ['walls','doors','furniture','castle_bridges','castle_landmarks','castle_stairs','wall_hangings','trees'])if(!categories.has(c))throw Error(`missing placed ${c} seed ${seed}`);
