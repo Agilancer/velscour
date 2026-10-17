@@ -16,6 +16,9 @@ const STYLES = {
   'Storm Dive': { trail: 'storm', glow: '#7ab0ff', core: '#ffffff', dark: '#2030e0', len: 66, life: 0.3 },
   'Dragonfall': { trail: 'wings', glow: '#ff3818', core: '#ffe070', dark: '#700400', len: 82, life: 0.55 },
   'Cyclone Dive': { trail: 'cyclone', glow: '#50f0b8', core: '#f0fff8', dark: '#0a7050', len: 66, life: 0.5 },
+  'Vaulting Reprisal': { trail: 'ghost', glow: '#b0d8ff', core: '#ffffff', dark: '#304880', len: 62, life: 0.4 },
+  'Sunfall Lance': { trail: 'comet', glow: '#ff9a38', core: '#fff6b0', dark: '#993018', len: 74, life: 0.48 },
+  'Cataclysm Descent': { trail: 'wings', glow: '#ff5830', core: '#fff2bc', dark: '#8d150a', len: 86, life: 0.6 },
 };
 export const LANCE_LEAPS = Object.keys(STYLES);
 
