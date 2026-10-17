@@ -11,7 +11,9 @@ const profiles={
   blood:{wall:[3,5,0],base:[6,8,0]},
   ashen:{wall:dark,base:[0,8,2]},
   void:{wall:[8,0,2],base:[8,0,2]},
-  gilded:{wall:warm,base:[5,6,9]},
+  // Lighter crypt limestone with restrained mortuary tesserae, distinct
+  // from Amber's rust-colored burial paving.
+  gilded:{wall:warm,base:[5,9]},
   plague:{wall:damp,base:[4,7,1]},
   crystal:{wall:cool,base:[2,5,8]},
   desert:{wall:warm,base:[5,6,1]},
@@ -26,10 +28,13 @@ const profiles={
   shattered:{wall:[1,2,9],base:[5,2,1]},
   library:{wall:[2,0,9],base:[0,2,5]},
   necropolis:{wall:[0,2,6],base:[5,6,8]},
-  cathedral:{wall:[1,2,9],base:[0,2,3]},
-  amber:{wall:warm,base:[5,6,9]},
+  // Nave flagstone + choir slate: exclude black/white marble_checker (#3).
+  cathedral:{wall:[1,2,9],base:[0,2]},
+  amber:{wall:[1,3,9],base:[6,7]},
   desert_temple:{wall:[1,9,2],base:[5,6,1]},
-  ice_temple:{wall:[6,0,2],base:[2,5,0]},
+  // Dark ice, sapphire slate and quiet snowbound stone. Reject the oversized
+  // repeated white rhombus grids (#0 and #5) that overwhelm room geometry.
+  ice_temple:{wall:[6,0,2],base:[2,6,7]},
   hell:{wall:hot,base:[8,0,6]},
   astral_plane:{wall:[8,2,6],base:[8,2,0]},
   heavenly:{wall:[9,1,2],base:[5,9,2]},
