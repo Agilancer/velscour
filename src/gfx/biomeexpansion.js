@@ -124,7 +124,6 @@ export function extendedTownFloors(source,meta){
     const [sx,sy]=meta.floors[names[i%6]];
     const x=(i%10)*162,y=Math.floor(i/10)*82;
     g.drawImage(source,sx,sy,160,80,x,y,160,80);
-    decorateFloor(g,'town',i%6,i,source,x,y);
   }
   const entries=Array.from({length:TOWN_FLOOR_EXPANSION.count},(_,i)=>({
     img:canvas,sx:i%10*162,sy:Math.floor(i/10)*82,w:160,h:80,
@@ -150,7 +149,6 @@ export function extendedOverworldFloors(source,meta){
    const name=names[i%names.length],pos=meta.floors[name]||meta.floors.grass;
    const x=i%10*162,y=Math.floor(i/10)*82;
    g.drawImage(source,pos[0],pos[1],160,80,x,y,160,80);
-   decorateFloor(g,'overworld',i%10,i,source,x,y);
  }
  const entries=Array.from({length:count},(_,i)=>({
    img:canvas,sx:i%10*162,sy:Math.floor(i/10)*82,
@@ -324,18 +322,21 @@ export function expandBiomePack(base,biome,{floorsOnly=false}={}){
   const floorCanvas=makeCanvas(Math.max(1620,base.floors.width),base.floors.height+984);
   const fg=floorCanvas.getContext('2d');fg.imageSmoothingEnabled=false;
   fg.drawImage(base.floors,0,0);
-  // Starting each cell from the game-approved pack preserves grain, pixel
-  // size and iso edges; NEW inset geometry creates sixty distinct decorations.
+  // The approved source pack is the standard: copy complete 2:1 diamonds,
+  // NEVER paint procedurally generated symbols, line art, glow diamonds or
+  // invented paving. Each of the first ten bases is genuinely seamless;
+  // feature slots reuse complete authored details, not unrelated base tiles.
+  const baseFloors=base.meta.floors.filter(f=>f.seamless);
+  const featureFloors=base.meta.floors.filter(f=>!f.seamless);
+  if(!baseFloors.length||!featureFloors.length)throw new Error('Biome source floor contract missing');
   for(let i=0;i<nFloor;i++){
-    const src=base.meta.floors[(i*7)%base.meta.floors.length];
+    const seamless=i<10;
+    const src=seamless?baseFloors[i%baseFloors.length]:
+      featureFloors[(i-10)%featureFloors.length];
     const x=i%10*162,y=base.floors.height+Math.floor(i/10)*82;
     fg.drawImage(base.floors,src.x,src.y,src.w,src.h,x,y,160,80);
-    const pal=getPalette(biome.id,Math.floor(i/12));
-    fg.save();fg.globalCompositeOperation='source-atop';fg.globalAlpha=.37;
-    fg.fillStyle=pal.mid;fg.fillRect(x,y,160,80);fg.restore();
-    decorateFloor(fg,biome.id,i%5,i,base.floors,x,y);
-    meta.floors.push({name:biome.id+'_extended_floor_'+String(i+1).padStart(2,'0'),
-      x,y,w:160,h:80,seamless:i<10,lum:(biome.light||8)/18});
+    meta.floors.push({name:biome.id+'_curated_'+src.name+'_'+String(i+1).padStart(2,'0'),
+      x,y,w:160,h:80,seamless,lum:src.lum});
   }
   let scatterCanvas=base.scatter;
   if(!floorsOnly){
@@ -343,19 +344,25 @@ export function expandBiomePack(base,biome,{floorsOnly=false}={}){
     scatterCanvas=makeCanvas(Math.max(base.scatter.width,cell*8),scatterY+cell*5);
     const sg=scatterCanvas.getContext('2d');sg.imageSmoothingEnabled=false;
     sg.drawImage(base.scatter,0,0);
+    // Source-authored scatter is the fallback for imported AI art. No
+    // placeholder obelisks, rectangles, line carvings or synthesized props.
+    const authored=base.meta.scatter;
+    if(!authored.length)throw new Error('Biome scatter source missing');
     for(let i=0;i<nScatter;i++){
+      const src=authored[i%authored.length];
       const x=i%8*cell,y=scatterY+Math.floor(i/8)*cell;
-      sg.save();sg.translate(x,y);drawProp(sg,biome.id,i);sg.restore();
-      meta.scatter.push({name:biome.id+'_extended_'+TYPES[i%TYPES.length]+'_'+(i/20|0),
-        x,y,w:160,h:160,ox:-80,oy:-151,
-        fp:TYPES[i%TYPES.length]==='barricade'?.15:.58,
-        block:!['rubble','cairn','roots'].includes(TYPES[i%TYPES.length])});
+      sg.drawImage(base.scatter,src.x,src.y,src.w,src.h,x,y,src.w,src.h);
+      meta.scatter.push({...src,x,y,
+        name:biome.id+'_curated_'+src.name+'_'+String(i+1).padStart(2,'0')});
     }
   }
   meta.expansion={floorStart,scatterStart,newFloors:nFloor,newScatter:nScatter,biome:biome.id};
   meta.pack=(meta.pack||base.meta.pack)+' — '+biome.name+' Expanded';
-  const walls=floorsOnly?base.walls:recolorArchitecture(base.walls,base.meta,biome.id);
-  if(!floorsOnly)etchWallArchitecture(walls,base.meta,biome.id);
+  // Preserve the Catacombs-standard source silhouettes, texture detail,
+  // alpha masks and depth slices. The generated biome-specific wall-material
+  // atlas (where present) supplies the color/material, not synthetic etching.
+  const walls=floorsOnly?base.walls:makeCanvas(base.walls.width,base.walls.height);
+  if(!floorsOnly)walls.getContext('2d').drawImage(base.walls,0,0);
   return{meta,floors:floorCanvas,scatter:scatterCanvas,walls};
 }
 /** New individual prop for wilderness while retaining town-pack-native pivot. */
