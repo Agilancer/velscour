@@ -3,8 +3,10 @@
 import { isoX, isoY } from '../core/view.js';
 
 const ROOT = 'assets/fx/wall_hangings/';
+const CASTLE_KEEP_ATLAS = 'assets/tiles/castle_keep/wall_hangings.webp';
 const CELL = 96, DISPLAY = 42, HANG = 78;
 const atlases = new Map(), loading = new Map();
+let castleKeepAtlas = null, castleKeepLoading = null;
 const HUE = Object.freeze({
   frozen: 190, ice_temple: 194, sunken: 160, storm: 200, crystal: 170,
   abyss: 210, necropolis: 220, void: 260, shadow: 250, astral_plane: 245,
@@ -33,8 +35,40 @@ function fetchAtlas(sheet) {
 }
 
 /** Preload the catalog once before placing its wall-mounted views. */
-export function preloadWallHangings() {
-  return Promise.all([0, 1, 2, 3, 4].map(fetchAtlas));
+export function preloadWallHangings(biome = null) {
+  const jobs = [0, 1, 2, 3, 4].map(fetchAtlas);
+  if ((typeof biome === 'string' ? biome : biome?.id) === 'castle_keep')
+    jobs.push(fetchCastleKeepAtlas());
+  return Promise.all(jobs);
+}
+
+function fetchCastleKeepAtlas() {
+  if (castleKeepAtlas) return Promise.resolve(castleKeepAtlas);
+  if (castleKeepLoading) return castleKeepLoading;
+  castleKeepLoading = new Promise((resolve) => {
+    if (typeof Image === 'undefined') { resolve(null); return; }
+    const img = new Image();
+    img.onload = () => {
+      if (img.naturalWidth === CELL * 2 && img.naturalHeight === CELL * 16) {
+        castleKeepAtlas = img; resolve(img);
+      } else {
+        console.warn('Castle Keep wall-hanging atlas has incorrect dimensions');
+        resolve(null);
+      }
+    };
+    img.onerror = () => { console.warn('Castle Keep wall-hanging artwork unavailable'); resolve(null); };
+    img.src = CASTLE_KEEP_ATLAS;
+  });
+  return castleKeepLoading;
+}
+
+/** Number of designs available to the wall placer for a biome. */
+export function wallHangingCount(biome) {
+  return (typeof biome === 'string' ? biome : biome?.id) === 'castle_keep' ? 16 : 50;
+}
+
+export function preloadCastleKeepWallHangings() {
+  return fetchCastleKeepAtlas();
 }
 
 /** Match the established wall-torch contract: f/back, b/back, b/front, f/front. */
@@ -59,8 +93,11 @@ export function wallHangingAtBuilding(building, sx, design) {
     depth: mountX + mountY + 0.05, design };
 }
 
-export function wallHangingRect(item) {
-  const frame = wallHangingAngle(item.dir, item.front);
+export function wallHangingRect(item, biome = null) {
+  const castleKeep = (typeof biome === 'string' ? biome : biome?.id) === 'castle_keep';
+  // Castle Keep supplies the two front-facing wall planes only. Use those
+  // views for either depth side so its authored art is always player-facing.
+  const frame = castleKeep ? (item.dir === 'f' ? 3 : 2) : wallHangingAngle(item.dir, item.front);
   const x = isoX(item.mountX, item.mountY), y = isoY(item.mountX, item.mountY);
   const plateLeft = frame === 0 || frame === 2;
   return [x - (plateLeft ? 0.22 : 0.78) * DISPLAY,
@@ -68,12 +105,27 @@ export function wallHangingRect(item) {
 }
 
 export function drawWallHanging(ctx, item, biome, alpha = 1) {
-  if (!item || !Number.isInteger(item.design) || item.design < 0 || item.design >= 50) return;
+  const castleKeep = biome?.id === 'castle_keep';
+  const count = castleKeep ? 16 : 50;
+  if (!item || !Number.isInteger(item.design) || item.design < 0 || item.design >= count) return;
+  if (castleKeep) {
+    const img = castleKeepAtlas;
+    if (!img) return;
+    const [x, y, w, h] = wallHangingRect(item, biome);
+    const view = item.dir === 'f' ? 0 : 1;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.imageSmoothingEnabled = false;
+    ctx.filter = 'none';
+    ctx.drawImage(img, view * CELL, item.design * CELL, CELL, CELL, x, y, w, h);
+    ctx.restore();
+    return;
+  }
   const atlasIndex = Math.floor(item.design / 10), row = item.design % 10;
   const img = atlases.get(atlasIndex);
   if (!img) return;
   const frame = wallHangingAngle(item.dir, item.front);
-  const [x, y, w, h] = wallHangingRect(item);
+  const [x, y, w, h] = wallHangingRect(item, biome);
   const hue = HUE[biome?.id] ?? 34;
   ctx.save();
   ctx.globalAlpha = alpha;

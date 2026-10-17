@@ -150,11 +150,12 @@ async function expandedPack(biome) {
 export function loadBiomeArt(biome) {
   return Promise.all([
     loadEnemyArt().catch((e) => console.warn(e)), // monsters fall back to their pixel sprites
-    biome && !biome.overworld && biome.id !== 'town' ? expandedPack(biome) : Promise.resolve(null),
+    biome && !biome.overworld && biome.id !== 'town' ?
+      (biome.pack === 'castle_keep' ? loadPack('castle_keep') : expandedPack(biome)) : Promise.resolve(null),
     biome?.id === 'heavenly' ? preloadApprovedHeavenlyArtwork() : Promise.resolve(null),
     biome && !biome.overworld && biome.id!=='town' ?
       preloadWallTorchHolders(biome) : Promise.resolve(null),
-      preloadWallHangings(),
+      preloadWallHangings(biome?.id),
   ]);
 }
 

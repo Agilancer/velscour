@@ -249,6 +249,7 @@ export const game = {
       ? c.seaOfSandRuns[depth].seed : (Math.random() * 1e9) | 0;
     const gen = biome.overworld ? generateOverworld(depth, biome, seed) : generateDungeon(depth, biome, tileset, seed);
     const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches, wallHangings: gen.wallHangings, looks: gen.looks, townTiles: gen.townTiles || null, buildings: gen.buildings || [] });
+    if (gen.layoutId) { world.layoutId = gen.layoutId; world.layoutName = gen.layoutName; }
     world.chests = gen.chests.map((ch) => ({
       ...ch, opened: false, reach: 1.3,
       use() {

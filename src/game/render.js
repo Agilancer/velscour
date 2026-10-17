@@ -485,7 +485,7 @@ export function renderWorld(ctx, world) {
       case 12: drawWallTorch(ctx,o,world.biome,G.time,
         cutaway(wallTorchRect(o),it.d)); break;
       case 13: drawWallHanging(ctx,o,world.biome,
-        cutaway(wallHangingRect(o),it.d)); break;
+        cutaway(wallHangingRect(o,world.biome),it.d)); break;
     }
   }
   if (q !== hq) ctx.imageSmoothingQuality = hq;

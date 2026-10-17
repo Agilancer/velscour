@@ -268,3 +268,8 @@ hand-painted animation sets.
 **Review/testing:** [WORLD_BIOME_OVERHAUL.md](WORLD_BIOME_OVERHAUL.md).
 Run `node tools/tests/worldwide_biomes.js` and screenshot-review all
 barrier joins at game zoom before merging.
+
+**Castle Keep:** [CASTLE_KEEP.md](CASTLE_KEEP.md) documents its 160×80 floor
+mask, generated source pack, wall-hanging views, and 23 rotating room layouts.
+Run `python tools/castlekeeppack.py` then `python tools/biomepack.py castle_keep`
+to rebuild its source art and runtime atlases.

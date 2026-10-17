@@ -1,4 +1,4 @@
-// Thirty-two dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
+// Thirty-three dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
 // palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
 import { FINAL_DEPTH } from './depth.js';
@@ -9,6 +9,17 @@ export const BIOMES = [
     adj: ['Grave', 'Crypt', 'Ossuary'], roster: ['skeleton', 'archer', 'zombie', 'ghoul', 'wraith', 'cultist', 'spider', 'bat', 'knight', 'abomination', 'beetle', 'eye'],
     prefer: ['set1/skeletons', 'set1/bone_horrors', 'set2/undead'], // monster art families favoured here (bestiary.js rollLooks)
     torch: '#ff9a40', fog: '#1a0e08',
+  },
+  {
+    id: 'castle_keep', name: 'Castle Keep', pack: 'castle_keep', palette: null,
+    dark: 0.77, light: 8.4,
+    ambient: { type: 'dust', color: '#e5b86c' },
+    mon: { hue: 30, sat: 0.95, light: 0.03 }, el: 'phys', blood: '#8a0b08',
+    adj: ['Royal', 'Black-Iron', 'Oathsworn', 'Siege-Worn'],
+    roster: ['knight', 'archer', 'cultist', 'gargoyle', 'golem', 'skeleton',
+      'wraith', 'zombie', 'hound', 'imp', 'abomination', 'elemental'],
+    prefer: ['set2/warriors', 'set2/goblins', 'set2/undead'],
+    torch: '#ffb45d', fog: '#15100b',
   },
   {
     id: 'frozen', name: 'Frozen Ossuary', palette: { colorize: [205, 0.35], light: 0.06, contrast: 1.05 }, dark: 0.76, light: 8,
@@ -292,6 +303,7 @@ Object.assign(BIOMES.find((b) => b.id === 'necropolis'), {
 // Frozen Ossuary whose far rooms are paved like the Crystal Caverns.
 const FAMILY = {
   sand: ['desert', 'gilded', 'serpent', 'amber', 'desert_temple', 'sea_of_sand'],
+  keep: ['castle_keep'],
   frost: ['frozen', 'ice_temple', 'sunken', 'crystal', 'storm', 'abyss', 'necropolis'],
   ember: ['molten', 'blood', 'forge', 'flesh', 'hell'],
   rot: ['fungal', 'plague', 'thorn'],
@@ -317,6 +329,7 @@ const MON_SWAPS = {
   hell: ['infernal', 'ember', 'blood', 'rust', 'obsidian'],
   astral_plane: ['spectral', 'amethyst', 'crystal', 'void', 'midnight'],
   heavenly: [null, null, 'gilded', 'pale', 'bronze'],
+  castle_keep: ['gilded', 'bronze', 'rust', 'pale', 'ash'],
   overworld: [null, 'thorn', 'rot', 'ash', 'bone'], throne: ['infernal', 'blood', 'ember', 'rust'],
 };
 for (const b of BIOMES) b.swaps = MON_SWAPS[b.id];
