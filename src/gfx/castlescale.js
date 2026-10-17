@@ -18,9 +18,9 @@ export function scaledCastlePropK(prop, factor = 2, nativeTileWorldWidth = 64) {
   const raw = k * factor;
   const targetHeight = CASTLE_FURNITURE_HEIGHT[spr.name];
   if (category === 'furniture' && targetHeight) return targetHeight / height;
-  // Props are decorations, not two-tile-wide structural masonry. Enlarging
-  // 460 loose objects 2x makes crates, bowls and barrels hero-sized.
-  if (category === 'scatter') return k;
+  // Scatter can keep its authored scale for barrels and stalls, but cap
+  // its tallest silhouettes (no hero-sized loose crates or debris).
+  if (category === 'scatter') return Math.min(raw, 46 / height);
   // Moat banks are a single native 160x80 floor diamond each. Expanding
   // them introduces overlaps into adjacent water tiles.
   if (category === 'moat_edges') return nativeTileWorldWidth / 160;
@@ -31,7 +31,10 @@ export function scaledCastlePropK(prop, factor = 2, nativeTileWorldWidth = 64) {
     castle_bridges: 135, torches: 48, wall_hangings: 76,
     doors: 125, gateways: 225,
   };
-  return Math.min(raw, (caps[category] ?? Infinity) / height);
+  // Wide landmark collages include their own walls and ground. In addition
+  // to their height limit, prevent a gatehouse from spanning half the bailey.
+  const maxWidth = category === 'castle_landmarks' ? 320 / spr.w : Infinity;
+  return Math.min(raw, (caps[category] ?? Infinity) / height, maxWidth);
 }
 
 /** Allocate wall families in long contiguous runs, not a different material
