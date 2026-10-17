@@ -107,7 +107,10 @@ floor cells receive new motifs).
 
 The asset loader applies generic AI motifs **before** the user-approved
 paintings, so approved floors and props have final priority in their designated
-atlas cells. No source atlas needs to be discarded or manually edited.
+atlas cells. The approved floor painter also keeps native diamond artwork
+underneath its image and clips the painted source to the full isometric
+diamond, preventing transparent corners or rectangular backgrounds from
+exposing the black frame. No source atlas needs to be discarded or manually edited.
 
 Run the visual and pixel regression from the repository root after starting a
 local HTTP server:
