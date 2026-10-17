@@ -10,7 +10,7 @@ let castleKeepAtlas = null, castleKeepLoading = null;
 const HUE = Object.freeze({
   frozen: 190, ice_temple: 194, sunken: 160, storm: 200, crystal: 170,
   abyss: 210, necropolis: 220, void: 260, shadow: 250, astral_plane: 245,
-  fungal: 80, plague: 78, thorn: 100, serpent: 130,
+  fungal: 80, plague: 78, sewers: 84, thorn: 100, serpent: 130,
   blood: 350, flesh: 340, throne: 350, hell: 5, forge: 12, molten: 15,
   ashen: 25, desert: 32, desert_temple: 36, gilded: 42, amber: 30,
   heavenly: 46, cathedral: 34, library: 28, shattered: 210,

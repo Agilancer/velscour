@@ -2,7 +2,7 @@
 // flashier, combo-heavy spells that lean on the class's own look. Same line format and 5x4 layout as skilldata.js.
 export const TREE4_NAMES = {
   paladin: 'Radiant Ascension', ranger: 'Starshot', wizard: 'Prismatic', barbarian: 'Bloodrage', totem_master: 'Spirit Walk',
-  death_knight: 'Runeblade', arcane_sorcerer: 'Starweave', carrion_witch: 'Grave Moon', bard: 'Grand Finale', slime_lord: 'Primordial',
+  death_knight: 'Runeblade', arcane_sorcerer: 'Constellations', carrion_witch: 'Grave Moon', bard: 'Grand Finale', slime_lord: 'Primordial',
   boomerang_knight: 'Tempest Orbit', lancer: 'Radiant Lance', dragon_knight: 'Wyrmfire Ascendant', gunner: 'Heavy Ordnance',
 };
 
@@ -49,12 +49,12 @@ export const TREE4 = {
     'Rune Storm|rain|shadow|blade|n=16 r=1.6', 'Glyph of Doom|curse|shadow|sigil|curse=decay r=1.4', 'Runic Whirl|whirl|cold|blade|dur=2.5', 'Shatter Rune|aoe|cold|eruption|r=1.8 dmg=1.8 freeze cd=4',
     'Runeforged Avatar|buff|shadow|transform|buff=dmg,armor amt=40 dur=15 cd=40', 'Rune of Ending|aoe|shadow|void|r=2.4 dmg=2.8 cd=8', 'Endless Runes|orbit|shadow|blade|n=6 dur=8 cd=10', 'Soulreaver Beam|beam|shadow|laser|dur=2.5 dmg=1.5 cd=6',
   ],
-  arcane_sorcerer: [
-    'Star Missile|proj|arcane|missile|free wc=0.6', 'Starlight Lance|beam|arcane|laser|dur=1.5 range=0.6', 'Astral Shell|buff|arcane|shield|buff=res amt=30 dur=20 cd=25', 'Comet Mote|proj|arcane|star|home',
-    'Starfall Seed|aoe|arcane|explosion|r=1.3 delay=0.6', 'Gravity Well|zone|arcane|void|r=1.4 dur=5 slow', 'Moonlit Blink|blink|arcane|smoke|range=1.3', 'Orbiting Stars|orbit|arcane|star|n=4 dur=6 cd=8',
-    'Celestial Chain|chain|light|lightning|n=6', 'Constellation Nova|nova|arcane|arcane|n=2 r=1.4', 'Star Clone|summon|arcane|clone|sum=clone n=1 dur=12 cd=20', 'Nebula|cyclone|arcane|storm|n=2',
-    'Meteor Ward|rain|arcane|meteor|n=12 r=1.8', 'Horizon Collapse|curse|arcane|void|curse=slow,amp r=1.5', 'Starweave Spiral|proj|arcane|orb|n=10 ring', 'Pulsar|aoe|light|eruption|r=1.8 dmg=1.9 cd=4',
-    'Cosmic Crunch|aoe|arcane|void|r=2.6 dmg=2.8 cd=8', 'Astral Ascension|buff|arcane|transform|buff=dmg,crit amt=40 dur=12 cd=40', 'Galaxy|orbit|arcane|star|n=10 dur=8 cd=12', 'Starweaver Beam|beam|arcane|laser|dur=3 dmg=1.6 cd=8',
+  arcane_sorcerer: [ // the Astronomer's star chart: drawing, igniting and wearing constellations
+    'Twinkle|proj|arcane|stardust|n=2 spread=14 spd=1.5', 'Star Chart|aoe|arcane|starfall|astro=chart r=0.9', 'Lodestar|zone|arcane|lodestar|r=1.2 dur=6 slow', 'Stargazer|buff|arcane|aura|buff=crit amt=40 dur=25 cd=25',
+    'Constellation|aoe|arcane|starfall|astro=ignite r=1 cd=4', 'Shooting Star|dash|arcane|shootingstar|range=1.4', 'Ursa Major|summon|arcane|ursa|sum=ursa max=1 dur=20 cd=30', 'Celestial Sphere|orbit|arcane|zodiac|n=6 dur=8 cd=10',
+    'Astral Projection|summon|arcane|clone|sum=clone n=2 dur=12 cd=20', 'Starlines|wall|arcane|starline|len=1.2 dur=6 cd=6', 'Polaris|strike|arcane|polaris|n=1 dmg=1.6', 'Zodiac Wheel|nova|arcane|zodiac|n=2 r=1.6',
+    "Orion's Volley|proj|arcane|starmissile|n=7 spread=20 pierce dmg=1.2", 'Draco|cyclone|arcane|draco|n=2 dur=5', 'Northern Cross|fissure|arcane|starline|n=4 spread=270', 'Astrolabe|buff|arcane|aura|buff=cdr,res amt=40 dur=20 cd=40',
+    'Grand Conjunction|buff|arcane|transform|astro=conjunction transform buff=dmg,crit,as amt=45 dur=12 cd=60', 'Starfall|rain|arcane|starfall|n=36 r=2.6 dur=2.5 cd=6', "Heaven's Map|aoe|arcane|starfall|astro=heavensmap r=1 cd=20", 'Orrery|orbit|arcane|planet|n=8 r=1.4 dur=10 cd=14',
   ],
   carrion_witch: [
     'Moonlit Hex|proj|shadow|feather|free wc=0.6', 'Moon Moths|proj|poison|locust|n=4 spread=50 home', 'Bone Charm|buff|shadow|shield|buff=armor amt=40 dur=20 cd=25', 'Witchlight|zone|poison|poison|r=1.1 dur=5',
@@ -64,11 +64,11 @@ export const TREE4 = {
     'Eclipse Hex|curse|shadow|void|curse=decay,slow r=1.8 cd=6', 'Night Mother|buff|shadow|transform|buff=dmg,leech amt=35 dur=12 cd=40', 'Lantern Procession|summon|fire|lantern|sum=lantern n=3 dur=15 cd=25', 'Moonfall|rain|shadow|meteor|n=14 r=2.2 dur=3 cd=10',
   ],
   bard: [
-    'Opening Act|melee|phys|smash|free wc=1', 'Bright Note|proj|light|note|home', 'Rousing Chorus|buff|holy|aura|buff=as amt=20 dur=15 cd=20 party', 'Drum Roll|nova|phys|drum|r=1 stun',
-    'Spotlight|zone|light|flash|r=1.2 dur=5', 'Pyro Finale|proj|fire|firework|exp r=1.2', 'Backup Singers|summon|light|clone|sum=chorus n=2 dur=20 cd=20', 'Stage Dive|leap|phys|eruption|r=1.4 dmg=1.3',
-    'Crescendo Wave|fissure|light|sonic|range=1.5 knock', 'Confetti Bombs|rain|fire|firework|n=14 r=1.6', 'Curtain Call|curse|light|flash|curse=slow,stun r=1.4', 'Mic Drop|aoe|light|eruption|r=1.6 dmg=1.8 cd=4',
-    'Grand Fireworks|rain|fire|firework|n=22 r=2 cd=5', 'Standing Ovation|buff|holy|aura|buff=dmg,speed amt=35 dur=12 cd=30 party', 'Amp Overload|chain|light|sonic|n=6', 'Spinning Records|orbit|phys|card|n=5 dur=6 cd=8',
-    'Grand Finale|aoe|fire|nuke|r=2.6 dmg=3 cd=8', 'Rock Legend|buff|light|transform|buff=dmg,as amt=40 dur=12 cd=40', 'Sonic Bulwark|wall|light|sonic|dur=6', 'Final Bow|nova|holy|wave|n=3 r=1.6 cd=6',
+    'Opening Act|proj|light|n_q|free wc=1 canon dmg=0.6', 'Bright Note|proj|light|n_e|home cresc', 'Rousing Chorus|buff|holy|aura|buff=as amt=20 dur=15 cd=20 party note=s4', 'Drum Roll|nova|phys|drum|n=3 r=1 stun note=t32',
+    'Spotlight|zone|light|flash|r=1.2 dur=5 note=rq', 'Pyro Finale|proj|fire|n_h|exp r=1.2', 'Backup Singers|summon|light|clone|sum=chorus n=2 dur=20 cd=20 note=s2', 'Stage Dive|leap|phys|eruption|r=1.4 dmg=1.3 note=bass',
+    'Crescendo Wave|fissure|light|sonic|range=1.5 knock note=s3', 'Confetti Bombs|rain|fire|n_t16|n=14 r=1.6', 'Curtain Call|curse|light|flash|curse=slow,stun r=1.4 note=rh', 'Mic Drop|aoe|light|eruption|r=1.6 dmg=1.8 cd=4 note=w',
+    'Grand Fireworks|rain|fire|n_t8|n=22 r=2 cd=5', 'Tempo Rubato|buff|holy|aura|buff=as,speed amt=35 dur=12 cd=30 party rubato note=treble', 'Amp Overload|chain|light|sonic|n=6 note=e2', 'Spinning Records|orbit|phys|n_w|n=5 dur=6 cd=8',
+    'Grand Finale|aoe|fire|nuke|r=2.6 dmg=3 cd=8 note=w', 'Rock Legend|buff|light|transform|buff=dmg,as amt=40 dur=12 cd=40 note=s3', 'Sonic Bulwark|wall|light|sonic|dur=6 cd=6 note=rq', 'Da Capo|nova|arcane|wave|n=2 r=1.6 dacapo cd=6 note=rt',
   ],
   slime_lord: [
     'Ooze Slap|melee|acid|smash|free wc=1', 'Primal Glob|proj|acid|blob|exp r=1', 'Gel Coat|buff|acid|shield|buff=armor amt=45 dur=20 cd=25', 'Puddle|zone|acid|slime|r=1.2 dur=6 slow',

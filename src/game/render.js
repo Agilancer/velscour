@@ -569,10 +569,25 @@ export function renderWorld(ctx, world) {
   const occludes = (r) => p && r[0] < prect[2] && r[0] + r[2] > prect[0] && r[1] < prect[3] && r[1] + r[3] > prect[1];
   // walls in front of the hero fade with screen distance and depth, so the narrow slices form a soft see-through hole
   // (a wide hole: the walls stand ~1.4 heroes tall, and fights next to the hero should stay in view)
+  // in dungeons the hero's summons cut their own smaller holes, so a pet behind a wall stays in sight
+  const views = frame.views || (frame.views = []);
+  views.length = 0;
+  if (p) views.push({ x: ppx, y0: prect[1], y1: prect[3], d: pd, r: 24, fall: 120 });
+  if (p && world.kind !== 'town') for (const c of world.creatures) {
+    if (!c.summon || c.owner !== p || c.dead || c.static) continue;
+    const x = isoX(c.x, c.y), y = isoY(c.x, c.y), s = c.scale || 1;
+    if (x < vr.x0 - 60 || x > vr.x1 + 60 || y < vr.y0 - 20 || y > vr.y1 + 140) continue;
+    views.push({ x, y0: y - 46 * s, y1: y - 4, d: c.x + c.y, r: 10 * s, fall: 56 * s });
+  }
   const cutaway = (r, d) => {
-    if (!p || !r || d <= pd || r[1] > prect[3] - 8 || r[1] + r[3] < prect[1] - 30) return 1;
-    const t = clamp((Math.abs(r[0] + r[2] / 2 - ppx) - 24) / 120, 0, 1);
-    return 1 - (1 - (0.16 + 0.84 * t * t * (3 - 2 * t))) * Math.min(1, (d - pd) * 1.5);
+    if (!r) return 1;
+    let a = 1;
+    for (const v of views) {
+      if (d <= v.d || r[1] > v.y1 - 8 || r[1] + r[3] < v.y0 - 30) continue;
+      const t = clamp((Math.abs(r[0] + r[2] / 2 - v.x) - v.r) / v.fall, 0, 1);
+      a = Math.min(a, 1 - (1 - (0.16 + 0.84 * t * t * (3 - 2 * t))) * Math.min(1, (d - v.d) * 1.5));
+    }
+    return a;
   };
   const wk = world.tileset && world.tileset.k;
   map.wallsIn(tx0 - 3, ty0 - 3, tx1 + 4, ty1 + 4, walls);

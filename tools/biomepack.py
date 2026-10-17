@@ -43,7 +43,11 @@ WALK_OVER = {"supine_skeleton", "vigil_candles", "rolled_shroud", "chain_and_sha
              # Castle Keep
              "fallen_tapestry", "stained_glass_shards", "cannonball_pile", "cracked_tile_rubble",
              "brazier_ash", "keep_keyring", "prison_shackle", "spear_bundle",
-             "votive_candles", "tracery_rubble", "resting_censer", "ivy_roots", "funeral_flowers"}
+             "votive_candles", "tracery_rubble", "resting_censer", "ivy_roots", "funeral_flowers",
+             # Sewers
+             "muck_rubble_scatter", "sludge_soaked_remains", "dripping_candle_cluster", "mildewed_bedroll",
+             "rotten_timber_heap", "rusty_chains_shackles", "stagnant_offering_bowl", "sewer_tools_and_ledger",
+             "filthy_boots_and_kit"}
 
 
 def box(u0, u1, v0, v1, h, tag):

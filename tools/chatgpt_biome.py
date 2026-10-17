@@ -80,6 +80,7 @@ def texture_cells(a, size, cols, rows, inset=0.04):
 def object_cells(a, size, cols, rows, label):
     """Per cell: the largest opaque component plus every piece within reach of it, cropped to its bounds."""
     solid = key_background(a)
+    solid[:4] = solid[-4:] = False; solid[:, :4] = solid[:, -4:] = False   # sheet frame lines (objects never touch it)
     lab, n = ndimage.label(solid, structure=np.ones((3, 3)))
     if not n:
         sys.exit("%s: nothing but background" % label)

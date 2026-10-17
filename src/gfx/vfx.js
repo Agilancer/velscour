@@ -15,6 +15,8 @@ export const ELEM = {
   shadow: { name: 'Shadow', core: '#e8c0ff', glow: '#9030d0', dark: '#280038', sfx: 'shadow' },
   blood: { name: 'Blood', core: '#ffa0a0', glow: '#e01010', dark: '#5a0000', sfx: 'blood' },
   acid: { name: 'Acid', core: '#d8f0ff', glow: '#3a8cff', dark: '#0c2aa0', sfx: 'acid' }, // the Slime Lord's blue ooze
+  // the Astronomer's starlight: his arcane spells fly as 'astral' (blue) and hit as arcane (combat.js)
+  astral: { name: 'Arcane', core: '#f2fbff', glow: '#4aa8ff', dark: '#1430a0', sfx: 'arcane' },
 };
 export const elem = (k) => ELEM[k] || ELEM.phys;
 

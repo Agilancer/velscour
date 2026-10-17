@@ -10,6 +10,7 @@ import { GORE } from '../data/enemies.js';
 import { dropLoot } from './loot.js';
 import { augHit } from './augments.js';
 import { classHitFx } from '../gfx/classfx.js';
+import { astroOnKill } from './astronomer.js';
 
 const PLAYER_RES = { fire: 'fire', cold: 'cold', light: 'light', poison: 'poison', acid: 'poison' };
 
@@ -59,8 +60,8 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     }
   } else {
     // monster / summon
-    let res = (tgt.res && tgt.res[el]) || 0;
-    if (el === 'arcane') res *= 0.5;
+    let res = (tgt.res && tgt.res[el === 'astral' ? 'arcane' : el]) || 0;
+    if (el === 'arcane' || el === 'astral') res *= 0.5;
     dmg *= 1 - clamp(res, -1, 0.9);
     if (el === 'holy' && (tgt.undead || tgt.demon)) dmg *= 1.5;
     const C = tgt.curses;
@@ -245,6 +246,7 @@ export function kill(tgt, src, info = {}) {
         aoe(world, p, tgt.x, tgt.y, 1.6, tgt.maxHp * 0.35, 'blood', { dot: true, crit: false });
       }
       if (leg.vamp) p.heal(p.maxHp * 0.02, true);
+      if (p.chart && tgt.team === 'enemy') astroOnKill(p, tgt); // the fallen may become a star on the Astronomer's chart
     }
     if (tgt.team === 'enemy') dropLoot(world, tgt);
   }

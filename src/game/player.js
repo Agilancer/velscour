@@ -19,6 +19,8 @@ import { castArtFx } from '../gfx/artfx.js';
 import { drawGearFx, updateGearFx } from '../gfx/gearfx.js';
 import { fxColor } from '../data/gear.js';
 import { freeSlot } from '../data/bar.js';
+import { bardCompose, bardUpdate, harmonyMul } from './bard.js';
+import { ASTRONOMER, astroAfterCast, astroUpdate } from './astronomer.js';
 
 export const xpToNext = (L) => Math.round(60 * L * L + 40 * L);
 export const MAX_LEVEL = 300;
@@ -73,12 +75,12 @@ export class Player extends Creature {
       if (it.legendary) legendary[it.legendary] = true;
     }
     // buffs
-    let buffDmg = 0, buffAs = 0, buffArmor = 0, buffRes = 0, buffRegen = 0, buffSpeed = 0, buffCrit = 0, buffThorns = 0, buffLeech = 0, buffBlock = 0, buffLife = 0, buffCdr = 0;
+    let buffDmg = 0, buffAs = 0, buffArmor = 0, buffRes = 0, buffRegen = 0, buffSpeed = 0, buffCrit = 0, buffThorns = 0, buffLeech = 0, buffBlock = 0, buffLife = 0, buffCdr = 0, buffProj = 0;
     for (const b of this.buffs) {
       const s = b.stats;
       buffDmg += s.dmg || 0; buffAs += s.as || 0; buffArmor += s.armor || 0; buffRes += s.res || 0; buffRegen += s.regen || 0;
       buffSpeed += s.speed || 0; buffCrit += s.crit || 0; buffThorns += s.thorns || 0; buffLeech += s.leech || 0; buffBlock += s.block || 0;
-      buffLife += s.life || 0; buffCdr += s.cdr || 0;
+      buffLife += s.life || 0; buffCdr += s.cdr || 0; buffProj += s.proj || 0;
     }
     const attr = (k) => c.attrs[k] + (add[k] || 0) + (add.allAttr || 0);
     const str = attr('str'), dex = attr('dex'), vit = attr('vit'), int = attr('int');
@@ -107,7 +109,7 @@ export class Player extends Creature {
       cdr: Math.min(60, (add.cdr || 0) + buffCdr / 2),
       areaPct: add.areaPct || 0,
       projSpeed: add.projSpeed || 0,
-      extraProj: add.extraProj || 0,
+      extraProj: (add.extraProj || 0) + buffProj,
       pierce: add.pierce || 0,
       chainPlus: add.chainPlus || 0,
       splitChance: add.splitChance || 0,
@@ -204,6 +206,7 @@ export class Player extends Creature {
     const elBonus = sk.el === 'phys' ? st.physPct : st.elemPct[sk.el] || 0;
     let mult = (1 + (st.dmgPct + st.primary + elBonus) / 100) * this.synergy(sk) * masteryMul(this.mastery(sk));
     if (st.legendary.berserk) mult *= 1 + 0.04 * Math.floor((1 - this.hp / this.maxHp) * 10);
+    if (this.score) mult *= harmonyMul(this); // the Bard's Harmony
     const lo = (base * 0.85 + st.weapon[0] * wc) * mult, hi = (base * 1.15 + st.weapon[1] * wc) * mult;
     return [Math.max(1, Math.round(lo)), Math.max(2, Math.round(hi))];
   }
@@ -400,6 +403,8 @@ export class Player extends Creature {
     // Attacks build Rage; no passive regeneration. Hits award most of the resource.
     if (this.classId === 'barbarian' && sk.attack) this.gainRage(sk.id === 'barbarian.0.0' ? 3 : sk.kind === 'whirl' ? 0 : 0.7);
     castArtFx(this, sk, tx, ty);
+    if (this.classId === 'bard') bardCompose(this, sk, L); // write the note into the measure (may play a Cadence)
+    if (this.classId === ASTRONOMER) astroAfterCast(this, sk, L, tx, ty); // chart the star the spell lands on
     // casting trains the skill a little (kills with it train it more: combat.kill); skills that deal no damage train on casts alone
     const dl = depthLevel(this.world.depth || 1);
     this.gainMastery(sk.id, 4 * Math.pow(dl, 1.5) * (augmentable(sk) ? 0.15 : 1.2));
@@ -486,6 +491,8 @@ export class Player extends Creature {
     if (this.phoenixCd > 0) this.phoenixCd -= dt;
     if (this.furyT > 0) this.furyT -= dt;
     if (this.noRageT > 0) this.noRageT -= dt;
+    if (this.classId === 'bard' && this.world) bardUpdate(this, dt);
+    if (this.classId === ASTRONOMER && this.world) astroUpdate(this, dt);
     const canAct = this.tickStatus(dt, (k, amount, src) => {
       hit(src, this, amount, k === 'burn' ? 'fire' : k === 'poison' ? 'poison' : 'blood', { dot: true });
     });

@@ -46,7 +46,7 @@ import { toggleTree, toggleBook } from '../ui/skills.js';
 import { toggleQuest } from '../ui/quest.js';
 import { titleScreen, hide as hideScreen, deathScreen, victoryScreen, pauseMenu, helpDialog } from '../ui/screens.js';
 
-const STEP_SURFACE = { sunken: 'water', plague: 'water', serpent: 'water', library: 'wood', gilded: 'wood', sea_of_sand:'sand' };   // footstep sounds; default stone
+const STEP_SURFACE = { sunken: 'water', plague: 'water', sewers: 'water', serpent: 'water', library: 'wood', gilded: 'wood', sea_of_sand:'sand' };   // footstep sounds; default stone
 
 const VELSCOUR_TAUNT_STARTS = [
   'WHY ARE YOU TRYING TO CONTACT VELSCOUR', 'WHAT MADE YOU THINK VELSCOUR WANTS TO HEAR FROM YOU',
@@ -380,10 +380,8 @@ export const game = {
     document.getElementById('loading-text').textContent = `Answering Velscour — Depth ${depth} · ${biome.name}…`;
     loading.classList.remove('hidden');
     try {
-      if (biome.id === 'sea_of_sand') await loadSeaOfSandPack();
-      else if (!biome.overworld) await loadBiomeArt(biome);
       const mix = mixPartner(biome);
-      if (mix && !biome.overworld) await loadBiomeArt(mix);
+      await this.loadLevelArt(biome, mix);
       this.buildDungeon(depth, biome, mix);
       const w = G.world;
       await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])]).catch((e) => console.warn(e));
@@ -394,6 +392,14 @@ export const game = {
       loading.classList.add('hidden');
       this.autosave();
     }
+  },
+
+  // the art a level of this biome needs before it can be generated (the portal and Velscour's level select share it)
+  loadLevelArt(biome, mix = null) {
+    if (biome.id === 'sea_of_sand') return loadSeaOfSandPack();
+    if (biome.id === 'castle') return loadCastlePack();
+    if (!biome.overworld) return Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]);
+    return Promise.resolve();
   },
 
   enterDungeon() {
@@ -408,11 +414,7 @@ export const game = {
     sfx('portal');
     // fetch this biome's art first (about 1 MB); if that fails the default set stands in
     setTimeout(async () => {
-      try {
-        if (biome.id === 'sea_of_sand') await loadSeaOfSandPack();
-        else if (biome.id === 'castle') await loadCastlePack();
-        else if (!biome.overworld) await Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]);
-      } catch (e) { console.warn(e); }
+      try { await this.loadLevelArt(biome, mix); } catch (e) { console.warn(e); }
       try {
         this.buildDungeon(depth, biome, mix);
         // the level's monster art (set 2 sheets load per level); a failed sheet falls back to pixel sprites

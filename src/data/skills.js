@@ -3,6 +3,7 @@ import { SKILLDATA } from './skilldata.js';
 import { CLASSES } from './classes.js';
 import { SUMMONS } from './summons.js';
 import { ELEM } from '../gfx/vfx.js';
+import { NOTES, NOTE_MODS, REGISTERS, registerOf } from './notation.js';
 
 export const ROW_LEVELS = [1, 6, 12, 20, 30];
 export const MAX_SKILL_LEVEL = 20;
@@ -50,6 +51,7 @@ for (const [cls, trees] of Object.entries(SKILLDATA)) {
         id: `${cls}.${t}.${i}`, classId: cls, tree: t, idx: i, row, col, name, kind, el, fx, m: parseMods(mods || ''),
         reqLevel: ROW_LEVELS[row], prereq: i >= 4 ? `${cls}.${t}.${i - 4}` : null,
       };
+      if (!sk.m.note && fx.startsWith('n_')) sk.m.note = fx.slice(2); // a Bard note projectile writes its own glyph
       sk.attack = ['melee', 'whirl', 'leap', 'dash'].includes(kind) || (kind === 'proj' && ATTACK_FX.has(fx)) || (kind === 'rain' && ATTACK_FX.has(fx));
       SKILLS[sk.id] = sk;
       CLASS_SKILLS[cls].push(sk);
@@ -145,6 +147,29 @@ const FXNAME = {
   spear: 'spear', shard: 'shard', crow: 'crow', note: 'note', blob: 'glob', star: 'star', wave: 'wave', missile: 'missile', locust: 'locust',
   wolf: 'ghost wolf', dragon: 'drake', rune: 'rune', tooth: 'tooth', bone: 'bone shard', card: 'card', spark: 'spark', spirit: 'spirit', chain: 'chain',
   feather: 'feather', totem: 'totem', meteor: 'meteor', ice: 'ice shard', acid: 'acid drop', firework: 'firework', blood: 'blood drop',
+  starmissile: 'star missile', starfall: 'falling star', stardust: 'stardust mote', moon: 'crescent moon', comet: 'comet', flare: 'solar flare',
+  gravorb: 'gravity orb', darkmatter: 'dark matter orb', antimatter: 'antimatter orb', planet: 'planet', zodiac: 'zodiac sign', accretion: 'accretion shard',
+};
+// the Astronomer's special spells (game/astronomer.js), by their `astro=` mod
+const ASTRO_TEXT = {
+  meteor: (D, m) => `Call ${(m.r ?? 1) < 1.2 ? 'a falling star' : 'a meteor'} down on the target for ${D}${m.burn ? ', leaving the crater burning' : ''}.`,
+  shower: (D, m) => `${m.n} meteors rain on the target area over ${m.dur}s, each dealing ${D}.`,
+  sunslam: (D) => `A sun slowly falls out of the sky onto the target, scorching what stands beneath it, then crashes for ${D} and leaves the ground burning.`,
+  moonfall: (D) => `The moon falls on the target, chilling what stands beneath it, then crashes for ${D}.`,
+  blackhole: (D, m) => `Open a black hole for ${m.dur}s: it drags enemies in, swallows enemy missiles and deals ${D} per tick, then collapses for double damage.`,
+  well: (D, m) => `Open a small gravity well for ${m.dur}s that drags enemies in for ${D} per tick, then collapses.`,
+  bigbang: (D) => `Light gathers to a single point, then explodes for ${D} in a huge area, hurling enemies away.`,
+  pulsar: (D, m) => `A pulsar flares at your chest for ${m.dur}s, sweeping two beams round and round for ${D} per tick. You can move and cast meanwhile.`,
+  neutron: (D, m) => `Set a neutron star over the target for ${m.dur}s: it pulses around itself and fires star missiles at nearby enemies (${D}).`,
+  wormhole: (D) => `Step through a wormhole to the target, bursting out for ${D}.`,
+  mirror: () => 'Eight see-through Astronomers ring you: you cannot be harmed while they shine, each fires star missiles of its own, and your projectile spells leave every image too. The ring charts the Northern Crown.',
+  supernova: (D) => `Collapse into a blinding supernova that blasts everything around you for ${D}.`,
+  eclipse: (D) => `A moon slides over the sun above the target: enemies there take more damage and flee, and at totality the corona burns them for ${D}.`,
+  align: () => 'The planets align over your head.',
+  conjunction: () => 'Grants four zodiac boons at once and begins a Grand Conjunction: meteors fall on everything near you.',
+  chart: (D) => `Light three stars between you and the target, each a small starfall for ${D}.`,
+  ignite: (D) => `Ascend your star chart now, at 25% more power (needs two stars); with fewer, light a star at the target for ${D}.`,
+  heavensmap: (D) => `Chart seven stars around the target, then ascend them as the Northern Crown at 50% more power (${D} base).`,
 };
 const BUFFNAME = { dmg: 'Damage', as: 'Attack & Cast Speed', armor: 'Armor', res: 'All Resistances', regen: 'Life Regen', speed: 'Move Speed', crit: 'Critical Chance', thorns: 'Thorns', leech: 'Life Steal', block: 'Block Chance', life: 'Maximum Life', cdr: 'Cooldown Reduction' };
 const CURSENAME = { amp: 'take increased damage', weaken: 'deal less damage', slow: 'are slowed', fear: 'flee in terror', confuse: 'attack each other', charm: 'fight for you', decay: 'rot over time', leech: 'heal you when struck', thorns: 'hurt themselves when attacking', mark: 'are marked for death', stun: 'are stunned', freeze: 'are frozen', bomb: 'explode after a delay', doom: 'suffer a delayed doom' };
@@ -156,7 +181,7 @@ export function describe(sk, L, dmg) {
   const m = sk.m, el = (ELEM[sk.el] || ELEM.phys).name.toLowerCase();
   const D = dmg ? `<b>${dmg[0]}–${dmg[1]}</b> ${el} damage` : `${el} damage`;
   const n = m.n || 1;
-  const fx = FXNAME[sk.fx] || sk.fx;
+  const fx = sk.fx.startsWith('n_') ? (NOTES[sk.fx.slice(2)] || NOTES.q).name.toLowerCase() : FXNAME[sk.fx] || sk.fx;
   const flags = [];
   if (m.pierce) flags.push('Pierces');
   if (m.home) flags.push('Homing');
@@ -211,7 +236,13 @@ export function describe(sk, L, dmg) {
     case 'corpse': s = `Consume up to ${n} corpses near the target${m.heal ? ', healing you and' : ','} dealing ${D} plus a share of each corpse's life.`; break;
     default: s = `Deals ${D}.`;
   }
-  return s + (flags.length ? ` <i>${flags.join(' · ')}.</i>` : '');
+  if (ASTRO_TEXT[m.astro]) s = ASTRO_TEXT[m.astro](D, m) + (sk.kind === 'buff' ? ' ' + s : '');
+  if (sk.classId === 'arcane_sorcerer' && !['buff', 'heal', 'summon'].includes(sk.kind) && !['chart', 'ignite', 'heavensmap'].includes(m.astro)) flags.push(m.free ? 'Every third cast charts a star' : 'Charts a star where it lands');
+  for (const k in NOTE_MODS) if (m[k]) flags.push(NOTE_MODS[k]);
+  const N = NOTES[m.note];
+  if (N && m.free) flags.push('Fills the bar: with less than a beat left it plays a shorter note');
+  const score = N ? `<br><span style="color:#ffd88a">&#9835; ${N.name} · ${N.clef ? `no beats: changes the key to ${N.clef}` : `${N.beats} beat${N.beats === 1 ? '' : 's'} of the measure${N.rest ? ' (rests restore mana and life at the Cadence)' : ` · ${REGISTERS[registerOf(sk)].name}`}`}</span>` : '';
+  return s + (flags.length ? ` <i>${flags.join(' · ')}.</i>` : '') + score;
 }
 
 export function classTrees(cls) { return CLASSES[cls].trees; }

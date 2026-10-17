@@ -28,6 +28,30 @@ function tinted(img, f) {
   return c;
 }
 
+// A 1px screen-space rim round every monster, coloured like the target window's name (normal red, champion blue,
+// unique gold, boss orange), green round the hero's summons and pale gold round the hero. Each sprite frame's rim
+// (its silhouette stamped 8 ways, in source px) is baked once per colour and thickness: one extra draw per creature.
+const RIM = { normal: '#e0302a', champion: '#5a9aff', unique: '#ffc040', boss: '#ff7a1a', ally: '#48e868', hero: '#ffe9a8' };
+const RIM_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [0.71, 0.71], [-0.71, 0.71], [0.71, -0.71], [-0.71, -0.71]];
+const rims = new WeakMap(); // img -> Map(frame/colour/thickness key -> padded rim canvas)
+function rimCanvas(img, sx, sy, sw, sh, col, o) {
+  let m = rims.get(img);
+  if (!m) rims.set(img, (m = new Map()));
+  const key = sx + ',' + sy + ',' + sw + ',' + sh + col + o;
+  let c = m.get(key);
+  if (!c) {
+    if (m.size > 400) m.clear(); // a creature rescaled endlessly can't grow the cache without bound
+    const p = Math.ceil(o) + 1;
+    c = makeCanvas(sw + p * 2, sh + p * 2);
+    const x = c.getContext('2d');
+    for (const [ux, uy] of RIM_DIRS) x.drawImage(img, sx, sy, sw, sh, p + ux * o, p + uy * o, sw, sh);
+    x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height);
+    c._pad = p;
+    m.set(key, c);
+  }
+  return c;
+}
+
 export class Creature {
   constructor(o = {}) {
     this.id = ++UID;
@@ -174,6 +198,22 @@ export class Creature {
     if (!this._flashImg) this._flashImg = pixelSprite(this.sprite, this.pal, 6, { flash: true });
     return this._flashImg;
   }
+  rimColor() {
+    if (this.dead || this.targetable === false) return null;
+    if (this.isPlayer) return RIM.hero;
+    return this.team === 'enemy' ? RIM[this.rank] || RIM.normal : this.summon ? RIM.ally : null;
+  }
+  /** The rim under the sprite: drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh) args in the sprite's current transform. */
+  drawRim(ctx, img, sx, sy, sw, sh, dx, dy, dw, dh) {
+    const col = this.rimColor();
+    if (!col || !img || !img.width) return;
+    // 1 CSS px in the sprite's source px, snapped to 2^(n/4) steps so zoom, squash and spawn growth reuse a few bakes
+    const t = ctx.getTransform(), kx = dw / sw, ky = dh / sh;
+    if (dw < 4 || dh < 4) return;
+    const o = Math.min(32, Math.max(0.25, 2 ** (Math.round(Math.log2(G.dpr / ((Math.hypot(t.a, t.b) || 1) * (kx + ky) / 2)) * 4) / 4)));
+    const c = rimCanvas(img, sx, sy, sw, sh, col, o), p = c._pad;
+    ctx.drawImage(c, dx - p * kx, dy - p * ky, dw + p * 2 * kx, dh + p * 2 * ky);
+  }
   /** World-px size of the sprite. */
   spriteDims(img) {
     if (img._art) { const h = this.artH * this.scale * (this.artRef ? img.height / this.artRef : 1); return [h * img.width / img.height, h]; }
@@ -227,8 +267,9 @@ export class Creature {
     const ti = tinted(img, this.tintFilter());
     if (this.flip) {
       ctx.translate(dx + w, dy); ctx.scale(-1, 1);
+      this.drawRim(ctx, img, 0, 0, img.width, img.height, 0, 0, w, h * squash);
       ctx.drawImage(ti, 0, 0, w, h * squash);
-    } else ctx.drawImage(ti, dx, dy, w, h * squash);
+    } else { this.drawRim(ctx, img, 0, 0, img.width, img.height, dx, dy, w, h * squash); ctx.drawImage(ti, dx, dy, w, h * squash); }
     if (this.flash > 0) {
       const f = this.flashImage(img);
       ctx.globalAlpha = Math.min(1, this.flash * 8) * 0.85;
@@ -271,8 +312,9 @@ export class Creature {
     const img = petTintImage(a.img, this.tintFilter());
     if (this.flip) {
       ctx.translate(dx + dw, dy); ctx.scale(-1, 1);
+      this.drawRim(ctx, a.img, a.sx, a.sy, a.cw, a.ch, 0, 0, dw, dh);
       ctx.drawImage(img, a.sx, a.sy, a.cw, a.ch, 0, 0, dw, dh);
-    } else ctx.drawImage(img, a.sx, a.sy, a.cw, a.ch, dx, dy, dw, dh);
+    } else { this.drawRim(ctx, a.img, a.sx, a.sy, a.cw, a.ch, dx, dy, dw, dh); ctx.drawImage(img, a.sx, a.sy, a.cw, a.ch, dx, dy, dw, dh); }
     if (this.flash > 0) {
       ctx.globalAlpha = Math.min(1, this.flash * 8) * 0.6;
       ctx.globalCompositeOperation = 'lighter';
@@ -309,6 +351,7 @@ export class Creature {
     if (this.alpha !== undefined) ctx.globalAlpha = this.alpha;
     ctx.translate(where.x, where.y);
     if (this.flip) ctx.scale(-1, 1);
+    this.drawRim(ctx, a.img, a.frame * a.cw, 0, a.cw, a.ch, dx, dy, w, h);
     ctx.drawImage(tinted(a.img, this.tintFilter()), a.frame * a.cw, 0, a.cw, a.ch, dx, dy, w, h);
     if (this.flash > 0) {
       ctx.globalAlpha = Math.min(1, this.flash * 8) * 0.6;
@@ -323,6 +366,7 @@ export class Creature {
   }
 
   drawOverhead(ctx, px, py, w) {
+    if (this.ghostDraw) return; // a see-through copy (the Astronomer's Celestial Mirror) carries no overhead marks
     // stun stars / curse marks
     const s = this.status;
     if ((s.stun && s.stun.t > 0) || (s.fear && s.fear.t > 0)) {

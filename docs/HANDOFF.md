@@ -14,6 +14,102 @@ Contents
 
 ---
 
+## October 17, 2026 — the Arcane Sorcerer is now the Astronomer (branch `feat/grand-sweep`)
+
+- **Rename, id kept.** The class id stays `arcane_sorcerer` (saves, sprites, gear packs, `CLASS_IDS`); only the name,
+  trees, description and colour changed (`src/data/classes.js`). Trees: Starfire, Celestial Bodies, Gravity, and
+  Constellations (4th, `skilltrees4.js`). All 80 skills rewritten in place, so saved points map onto the new skills.
+- **Blue starlight:** his arcane skills fly as the visual-only element `astral` (`ELEM.astral` in `vfx.js`; castSkill
+  maps `arcane` -> `astral` for this class). Hits still count as arcane: `combat.js` reads arcane resistance and halves
+  it, and `skillDamage` still uses the skill's own `arcane` for gear bonuses. Art is procedural in `src/gfx/cosmos.js`
+  (star missiles that weave, comets, crescent moons, banded/ringed planets, suns, moons, black holes, starry beams);
+  `shapes.js`, `BeamCh.draw` and `Orbit.draw` call into it. Skill icons get a starfield and the special spells show
+  their body (sun, moon, black hole...).
+- **Special spells** (`astro=` mod, `astroCast` in `src/game/astronomer.js`, called before castSkill's kind switch;
+  true replaces the kind, undefined adds to it): Sun Slam and Moonfall (a sun/moon slowly drops from the sky, heat or
+  chill beneath it, then a huge crash), Black Hole / Singularity / Gravity Well (drags enemies in, bosses at 20%,
+  swallows enemy missiles, collapses for double damage), Meteor / Great Meteor / Falling Star, Meteor Shower and
+  Extinction Event, Big Bang and Annihilation, Pulsar (two sweeping beams, no channel), Neutron Star, Wormhole,
+  Supernova, Eclipse, Syzygy, Grand Conjunction, Star Chart, Constellation, Heaven's Map. **Celestial Mirror**: eight
+  see-through copies of the hero (drawn by `MirrorImage`, which redraws the hero at each spot with `ghostDraw`) ring
+  him; he is invulnerable (`p.invuln`) while they last, each fires star missiles, and his projectile spells also leave
+  every image (`mirrorShots`, up to 3 each at 30%).
+- **Gimmick: the star chart.** Each non-basic cast lights a star where it lands (every third basic cast; slain
+  monsters 35%); the same spot only brightens its star; a star more than 9 tiles from the last one starts a new chart.
+  Consecutive stars are joined by starlines that tick damage and slow. The fifth star **ascends** the constellation:
+  starfalls on every star, the lines flare, and `readSky` names it from the shape: straight = the Hunter (crit),
+  closed loop = Northern Crown (cooldowns), tight cluster = Twins (+1 projectile via buff stat `proj`), zigzag =
+  Serpent (leech), one-way curve = Swan (speed), long = Draco (damage), wide = Great Bear (armor, life), else Scales
+  (regen, resist, mana). Boons last 15 s; three at once start a **Grand Conjunction** (40 s cooldown): meteors rain on
+  everything near him for 4.5 s under a starry sky. An orrery over his head shows the chart (5 slots) and his boons as
+  orbiting planets. Auto-play favours `astro=` skills and star missiles (`focusMul`).
+- New summon `ursa` (Ursa Major). Test: `tools/tests/astronomer.js [minutes] [mobile]`. See [ASTRONOMER.md](ASTRONOMER.md).
+
+## October 17, 2026 — Bard music: a piano/harpsichord sampler, 300 jingles, real sheet music over his head
+
+- **Samples** (user's packs, `assets/source/audio/instruments/`): piano C3-B4 (24 keys), harpsichord C4-C5 (13 keys).
+  `python tools/process_assets.py instruments` (`tools/instrumentpack.py`, numpy + `pip install lameenc`, no ffmpeg)
+  trims each WAV, mixes to mono, cuts it to 3.6 s (piano) / 2.6 s (harpsichord) with a fade, and writes 96 kbps MP3s to
+  `assets/audio/inst/<inst>/<midi>.mp3` + `instruments.json` (1.5 MB in all).
+- **Sampler + sequencer** (`src/core/sampler.js`): `loadInstruments()` (the Bard asks once the audio context exists),
+  `playNote(inst, midi, {at, dur, vel})` (missing keys are repitched from the nearest sample), `playSequence(events,
+  {bpm})` on the Web Audio clock, a 36-voice cap. Routed through the sfx bus, so the SFX volume applies.
+- **300 jingles** (`src/data/jingles.js`, generated at load from a fixed seed, so they never change between loads): 14 keys
+  (7 major, 7 harmonic minor, up to 3 sharps/flats), 120-168 BPM, one chord per beat ending on the dominant
+  (I-vi-ii-V, i-iv-V-V, ...) and a tonic landing on the next downbeat, so every bar is an authentic cadence. Melody rules:
+  a note on every beat, chord tones on beats, non-chord tones in and out by step, steps over leaps, leaps turn back,
+  no tritone/seventh leaps, no augmented second, at most two repeats, last note leads by step into the landing.
+  Every melody fits one octave C..B so any register can play it. `jingleFaults()` checks the rules (the test runs it).
+- **Registers** (`REGISTERS`/`registerOf` in `data/notation.js`): Songs = piano C4-B4, Sonic Arts = piano C3-B3,
+  Trickery = harpsichord, Grand Finale by note length (long low, quick on the harpsichord); `inst=` mod overrides.
+  The tooltip names it.
+- **Composing** (`game/bard.js`, pure helpers in `game/bardmusic.js`): each bar gets a random jingle (never the same twice
+  running; its key signature shows on the empty staff). A written glyph's noteheads take the tune's note at their beat
+  position (`pitchHeads`; extra notes inside one tune note walk by step toward the next, or turn on a neighbour) and
+  sound at once on the skill's register. A Cadence **performs** the bar (`Performance`, `bardArrangement`): every head at
+  its beat in the jingle's tempo, the chord's root + fifth in the bass where it changes, then the tonic chord lands on
+  beat 4 (or after a part-filled Da Capo bar). Gameplay rides it: treble-key notes launch as the playhead reaches them,
+  the bass-key chord AoE lands with the tonic. A new Cadence flushes the previous performance (its remaining notes fire
+  at once, its audio fades). A Discord is a piano cluster.
+- **Engraving** (`drawMeasure` in `gfx/notation.js`): clef, key signature, 4/4, notes at their true pitch for the clef
+  (`sc.key`; treble bottom line E4, bass G2), ledger lines, accidentals against the key signature and earlier ones in the
+  bar, stems (up below the middle line), flags, straight beams, triplet 3s, rests on their lines, proportional spacing.
+  The performed bar takes the staff's place (and floats above once the next bar has notes) with a playhead and the
+  jingle's name; notes glow as they sound.
+- **Songbook** (`tools/songbook.html`): keyboard synth (C3-C5, tracker keys) and a sequencer that writes any jingle in a
+  chosen register and rhythm and plays it with the playhead. Serve the repo root and open `/tools/songbook.html`.
+- Tests: `tools/tests/bard.js` now also checks the 300 jingles (distinct, rule-clean), engraves 12 of them in every glyph
+  (`bard_engraving.png`), loads the 37 samples and checks a performed bar's tempo and staggered note launches.
+- Not tested: real audio output (headless Chromium decodes and schedules but nobody listened), Safari/iOS decoding.
+  Later: more instruments (add a pack to `assets/source/audio/instruments/`, a `KEEP` entry in `instrumentpack.py`, an
+  `INSTRUMENTS` entry in `sampler.js` and a register in `REGISTERS`).
+
+## October 17, 2026 — Bard overhaul: musical-notation projectiles, particle staves, the composing gimmick
+
+- **Notation** (`src/data/notation.js`): 20 glyphs (whole/half/quarter/eighth/sixteenth notes, tied eighths, 2-4 beamed
+  sixteenths, eighth/sixteenth/thirty-second triplets, six rests, treble and bass clefs), each with a beat value.
+  Every one of the 80 Bard skills (all four trees rewritten in place, ids kept) writes one glyph: `n_<glyph>` fx on
+  proj/orbit/rain/beam skills, `note=<glyph>` on the rest.
+- **Art** (`src/gfx/notation.js`): glyphs are procedural paths cut into cached sprites; every note projectile trails a
+  wavy five-line staff of glowing particle dots. Rank tiers (1/5/10/15/20) change the staff colour (parchment, sky,
+  green, magenta, rainbow) and add motes, shed mini notes and rainbow sparks. Orbiters ride a ring staff, rain notes
+  trail vertical staves, Harmonic Beam is a straight staff with notes streaming along it, and every non-projectile
+  skill flings its glyph as a cosmetic `NoteFlight` (buffs float it up, novas fling a ring, area spells drop it).
+  Bard skill icons show the glyph on a staff with the kind emblem in the corner. The Bard skips the generic rank
+  bloom (filled ring + column) so his notes stay readable.
+- **Gimmick: he composes** (`src/game/bard.js`). Each cast adds its beats to the 4/4 measure drawn over his head.
+  Exactly 4 beats = Cadence: treble key replays every written note off the staff as homing notes, bass key lands one
+  chord (knockback + stun); rests restore 4% mana and 1.5% life each. Perfect cadences build Harmony (+6% Bard damage
+  per stack, max 5, 12 s); overfilling is a Discord (notes scatter, Harmony lost). Clefs take 0 beats and change the
+  key. The free basic notes shrink to fit (eighth, sixteenth, 32nd rest), so they never cause a Discord. New note
+  mods: `wavy` vibrato, `stac` staccato hops, `ferm hold=` fermata hover, `cresc`, `gliss`, `canon` echo, `scatter`
+  (a beamed group splits), `trip` (3 hits), `hush` (rest, mana on hit), `gold`, `dacapo`, `rubato`.
+- **Auto-play** (`bardMeasure` in autoplay.js) triples the value of a note that completes the bar, drops notes that
+  would overfill it while anything else fits, and saves Da Capo for a well-filled bar: about 25 Cadences and 0
+  Discords per game minute.
+- Test: `tools/tests/bard.js [minutes] [mobile]`: glyph sheet + icons, the composition rules, 30 showcase shots
+  (stepped, in the Wilds), and an auto-play soak.
+
 ## October 17, 2026 — grand sweep: FPS, room shapes, 20 raid bosses, 4th skill trees, overworld wanderers (branch `feat/grand-sweep`)
 
 - **FPS.** `tools/tests/biome_perf.js` profiles every biome (phone screen, 4x CPU throttle, auto-play on). Two fixes
@@ -341,7 +437,7 @@ floor-tile sheet and a catacomb wall sheet.
 
 Requirements, as stated (✅ = implemented in the draft):
 - ✅ **16 selectable classes** from the class sheet, using the full-body sprite as the placeholder character sprite:
-  Paladin, Ranger, Wizard, Necromancer, Barbarian, Dragoon, Totem Master, Death Knight, Arcane Sorcerer,
+  Paladin, Ranger, Wizard, Necromancer, Barbarian, Dragoon, Totem Master, Death Knight, Arcane Sorcerer (now the Astronomer),
   Carrion Witch, Bard, Slime Lord, Boomerang Knight, Lancer, Dragon Knight, Gunner.
 - ✅ **Sophisticated skill trees per class, 60 unique skills/abilities per class.** New abilities unlock as you level,
   and default abilities are gained on level-up. Levels give skill points.
@@ -1627,7 +1723,7 @@ Summon attacks (`monster.js:416 summonAttack`) by `atk.type`:
   - dragoon: str, spear, 65/30 (7/2), Lancework, Sky Dive, Wyrmblood
   - totem_master: int, staff, 60/45 (7/3), Totems, Ancestors, Earth & Storm
   - death_knight: str, sword, 75/30 (8/2), Frost, Unholy, Blood
-  - arcane_sorcerer: int, wand+orb, 44/65 (5/4.5), Arcane, Chronomancy, Void
+  - arcane_sorcerer (the Astronomer): int, wand+orb, 44/65 (5/4.5), Starfire, Celestial Bodies, Gravity (+ Constellations)
   - carrion_witch: int, staff, 48/55 (5/4), Plague, Murder of Crows, Hexes
   - bard: dex, lute, 55/40 (6/3), Songs, Sonic Arts, Trickery
   - slime_lord: vit, mace, 85/35 (9/2.5), Ooze, Spawn, Mutation

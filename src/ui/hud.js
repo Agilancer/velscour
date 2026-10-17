@@ -53,6 +53,8 @@ export const HUD = {
     document.documentElement.style.setProperty('--hud-k', String(geo.h / geo.w));
     this.initFrames(geo);
     $('#madness-btn').addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); unleashMadness(); });
+    // tap / click the target window to blow it up (about 2.25x, capped to the screen); again to shrink it back
+    $('#target-box').addEventListener('click', (e) => { e.stopPropagation(); this.tbBig = !this.tbBig; this.last.tbCls = null; this.updateTarget(); });
     const wrap = $('#hud-slots');
     const pct = (v, total) => (v / total) * 100 + '%';
     geo.slots.forEach((s, i) => {
@@ -356,7 +358,7 @@ export const HUD = {
     set('tbOn', !!t, (v) => box.classList.toggle('hidden', !v));
     if (!t) return;
     const dead = !!t.dead || t.hp <= 0;
-    set('tbCls', (dead ? 'dead ' : '') + 'r-' + (t.rank || 'normal'), (v) => { box.className = v; });
+    set('tbCls', (dead ? 'dead ' : '') + (this.tbBig ? 'big ' : '') + 'r-' + (t.rank || 'normal'), (v) => { box.className = v; });
     set('tbName', t.name || '???', (v) => { $('#tb-name').textContent = v; box.title = v; });
     set('tbHp', dead ? 0 : Math.ceil(clamp(t.hp / t.maxHp, 0, 1) * 100), (v) => { $('#tb-fill').style.width = v + '%'; });
     const rank = { champion: 'Champion', unique: 'Unique', boss: 'Boss' }[t.rank] || '';

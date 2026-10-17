@@ -2070,10 +2070,10 @@ export const CLASS_TAUNTS = {
     ['dread', 'Death already knows you|it is only waiting for the paperwork'],
   ],
   arcane_sorcerer: [
-    ['mock', 'An Arcane Sorcerer|A wizard who reads the footnotes'],
-    ['rage', 'Stop warping my halls!|You bent my corridor! BENT IT!'],
-    ['cheer', 'Such sparkly magic!|Ooh! Purple! My favorite!'],
-    ['unhinged', 'I tried arcane magic once|Now I have three left elbows'],
+    ['mock', 'An Astronomer|A wizard who looks up instead'],
+    ['rage', 'Stop dropping suns on me!|That was my good ceiling!'],
+    ['cheer', 'Such pretty stars!|Draw me as a constellation!'],
+    ['unhinged', 'I looked into your black hole|Now I live there. Rent is free'],
   ],
   carrion_witch: [
     ['cheer', 'A Carrion Witch! How dreadful!|I mean that as a compliment!'],

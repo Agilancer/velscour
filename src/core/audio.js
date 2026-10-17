@@ -51,6 +51,9 @@ export function initAudio() {
 }
 
 export const audioReady = () => !!ac && ac.state === 'running';
+/** The shared context and the sfx bus, for the instrument sampler (src/core/sampler.js). */
+export const audioCtx = () => ac;
+export const audioOut = () => sfxBus;
 /** For tests: what's loaded and playing. */
 export const audioStats = () => ({ samples: Object.keys(buffers).length, music: music && music.kind, song: music && music.song, amb: amb && amb.bed });
 
@@ -405,7 +408,7 @@ const AMB = {
   ice_temple: ['cave_storm', 'inside_night_storm', 'cave'], molten: ['cave', 'torch_loop'],
   fungal: ['cave_rain', 'cave'], sunken: ['sea', 'cave_rain', 'beach_rain'], blood: ['inside_night_rain', 'inside_night'],
   ashen: ['cave_storm', 'inside_day_storm'], void: ['cave', 'inside_night_storm'], gilded: ['inside_day', 'inside_night', 'inside_day_rain'],
-  plague: ['river_stream_loop', 'cave_rain'], crystal: ['cave_rain', 'cave'], desert: ['inside_day_storm', 'beach_storm'],
+  plague: ['river_stream_loop', 'cave_rain'], sewers: ['river_stream_loop', 'cave_rain', 'cave'], crystal: ['cave_rain', 'cave'], desert: ['inside_day_storm', 'beach_storm'],
   shadow: ['inside_night', 'cave'], forge: ['torch_loop', 'cave'], abyss: ['sea_storm', 'cave_storm', 'sea_rain'],
   thorn: ['forest_night', 'forest_day_rain'], storm: ['forest_night_storm', 'cave_storm', 'forest_day_storm'], obsidian: ['cave', 'inside_night'],
   flesh: ['inside_night_rain', 'cave_rain'], serpent: ['river_loop', 'cave_rain'], shattered: ['inside_day_storm', 'cave_storm'],
