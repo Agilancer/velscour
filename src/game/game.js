@@ -27,7 +27,7 @@ import { makeMonster, Monster } from './monster.js';
 import { applyTrait, rollTrait, ambushTick, madnessTick, unleashMadness } from './mayhem.js';
 import { makeRaidBoss } from './raid.js';
 import { dropChest } from './loot.js';
-import { renderWorld, drawMinimap } from './render.js';
+import { renderWorld, drawMinimap, preloadTownSheets } from './render.js';
 import { controls } from './controls.js';
 import { Auto } from './autoplay.js';
 import { writeSave, newCharData, migrate } from './save.js';
@@ -217,6 +217,11 @@ export const game = {
     if(kind==='harvest_fair'||kind==='market_show'||kind==='caravan')addCast(TOWNSFOLK.filter(v=>['musician','merchant','storyteller','town crier'].includes(v.role)).slice(0,2));
     if(world.townEvent.attack||kind==='enemy_scouts'||kind==='siege_warning'||kind==='monster_sighting')addCast([...TOWNSFOLK.filter(v=>v.knight).slice(0,2),...TOWNSFOLK.filter(v=>v.role==='guard').slice(0,1)]);
     const visitorById=new Map(visitors.map(v=>[v.id,v]));visitors.splice(0,visitors.length,...visitorById.values());
+    // Begin fetching only the civilian/knight sprite sheets actually used by
+    // this visit. Vendors intentionally retain the original painted NPC art.
+    // This is nonblocking: the renderer displays the sprites as soon as the
+    // image finishes loading and never substitutes playable-class artwork.
+    void preloadTownSheets(visitors.map(v=>v.spriteId));
     const eventActor=v=>kind==='royal_visit'?v.royal||v.courtier:kind==='returning_knights'?v.knight:kind==='birth'?v.role==='midwife'||v.familyId===familyId:kind==='wedding'||kind==='engagement'?!v.child&&!v.royal:kind==='funeral'?v.regular:kind==='street_fight'?v.knight:kind==='enemy_scouts'||kind==='siege_warning'||kind==='monster_sighting'?v.knight||v.role==='guard':kind==='harvest_fair'||kind==='market_show'||kind==='caravan'?['merchant','musician','storyteller','town crier'].includes(v.role):false;
     const eventActors=visitors.filter(eventActor).slice(0,4),eventActorIds=new Set(eventActors.map(v=>v.id));
     const eventChatter=eventActors.length>1?townConversation(eventActors[0],eventActors[1],visit,eventSlot):[];
