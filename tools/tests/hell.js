@@ -39,7 +39,7 @@ const { openGame, report, OUT_DIR } = require('./harness');
       for (const s of m.scatter) if(s.x<0||s.y<0||s.x+s.w>p.scatter.width||s.y+s.h>p.scatter.height)
         problems.push('Out-of-bounds prop '+s.name);
       if (drawBiome({overworldMisses:6},500) !== 'throne') problems.push('Final throne replaced');
-      if (drawBiome({overworldMisses:6,biomeBag:[]},27) !== 'overworld')
+      if (!BIOME_BY_ID[drawBiome({overworldMisses:3,biomeBag:[]},27)]?.overworld)
         problems.push('Forced overworld visit broken');
 
       // Use real level generation and game world composition; the player starts

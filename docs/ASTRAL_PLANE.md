@@ -8,7 +8,7 @@ and does not replace the Depth 500 Demon Lord throne or the Forsaken Wilds
 outdoor scenario. Rooms, branches, corridors, caves, chests, locked-until-guardian
 exit, monsters, levels, loot and boss fights use the normal `generateDungeon`
 pipeline. A visit is a normal non-overworld depth for the overworld's
-six-dungeon guarantee.
+three-dungeon overworld guarantee.
 
 Visual setting: a shattered celestial domain beyond physical space,
 with midnight-violet masonry, holographic constellations, prismatic aether,
@@ -65,7 +65,7 @@ lanterns, celestial shrines and the central singularity to existing
 light emitters; the ambient particle type is `glitter`.
 
 `astral_plane` can be rolled naturally but never forces its own appearance.
-The existing rule—force the **Forsaken Wilds overworld** after six consecutive
+The existing rule—force one of the overworld biomes after three consecutive
 other dungeon visits—continues untouched, as does the Depth 500 throne.
 Astral levels continue to use original guardian completion and item rewards.
 

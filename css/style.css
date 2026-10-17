@@ -111,6 +111,11 @@ body.touch #madness-btn { padding: 8px 26px; font-size: 20px; }
 .buff canvas { width: 100%; height: 100%; }
 .buff span { position: absolute; bottom: 0; right: 1px; font: 700 10px var(--font-body); color: #fff; text-shadow: 0 0 2px #000; }
 #hud-top-right { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+#minimap-row { display: flex; align-items: center; }
+#velscour-skull { pointer-events: auto; display: grid; place-items: center; width: 38px; height: 42px; padding: 3px; border: 1px solid #765b38; border-radius: 5px; background: linear-gradient(#29180f, #0c0705); box-shadow: 0 2px 6px #000; cursor: pointer; }
+#velscour-skull img { display: block; width: 30px; height: 30px; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 0 2px #000); }
+#velscour-skull:hover { border-color: var(--gold-bright); box-shadow: 0 0 10px rgba(255,170,70,.55); }
+#velscour-skull:active { transform: scale(.94); }
 /* the minimap fills the open middle of the ring art, which overhangs it by about a fifth on every side */
 #minimap-wrap { position: relative; width: 150px; aspect-ratio: 303 / 285.5; margin: 30px 32px 32px; }
 #minimap { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; background: rgba(0,0,0,.6); cursor: pointer; }
@@ -365,6 +370,13 @@ body.touch #madness-btn { padding: 8px 26px; font-size: 20px; }
 .dialog-box h2 { font: 900 24px var(--font-head); color: var(--gold-bright); margin: 0 0 8px; letter-spacing: 2px; }
 .dialog-box p { margin: 6px 0 14px; }
 .dialog-box .row { justify-content: center; }
+.velscour-contact-dialog { width: min(560px, 92vw); }
+.velscour-taunt { color: #d2b994; font: 700 15px/1.5 var(--font-head); }
+.velscour-message-label { display: block; margin: 16px 0 6px; color: var(--gold); font: 700 12px var(--font-head); letter-spacing: 1px; text-transform: uppercase; }
+.velscour-message-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.velscour-message-row .name-input { width: min(360px, 68vw); }
+#velscour-message-count { min-width: 44px; color: var(--text-dim); font-size: 11px; }
+.velscour-biome-select { max-width: 82vw; padding: 9px 12px; border: 2px solid var(--gold-dim); border-radius: 4px; background: #120a06; color: var(--gold-bright); font: 700 15px var(--font-head); }
 .death-title { font: 900 clamp(40px, 9vw, 96px) var(--font-head); color: #b3140c; text-shadow: 0 0 30px #f00, 0 0 4px #000; letter-spacing: 6px; animation: logo-in 2s; }
 .settings-grid { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; align-items: center; text-align: left; }
 .help-keys { text-align: left; font-size: 14px; columns: 2; column-gap: 24px; }
@@ -386,6 +398,19 @@ body.touch #madness-btn { padding: 8px 26px; font-size: 20px; }
 .tbtn.flip { flex-direction: column; color: var(--gold-bright); font: 700 15px/1 var(--font-body); background: rgba(30,16,8,.8); }
 .tbtn.flip span { font-size: 8px; color: var(--text-dim); }
 .tbtn.flip.on { border-color: var(--gold-bright); box-shadow: 0 0 8px rgba(255,190,90,.6); }
+
+/* Credits are a separate, continuously animated lava scene. */
+.credits-screen { padding: 0 !important; background: #030304; isolation: isolate; }
+.credits-canvas { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; display: block; }
+.credits-title { position: absolute; z-index: 2; left: 50%; top: 33%; transform: translate(-50%,-50%); width: min(82vw, 1040px); height: min(48vh, 500px); pointer-events: none; }
+.credits-logo { position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: none; }
+.credits-logo-fire { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; mix-blend-mode: screen; }
+.credits-speech { position: absolute; z-index: 4; left: 50%; top: 61%; transform: translate(-50%,-50%); max-width: min(88vw,600px); padding: 8px 14px; border: 1px solid rgba(255,192,98,.8); border-radius: 10px; background: rgba(20,8,4,.88); color: #fff2d2; font: 700 clamp(13px,2.2vw,20px) var(--font-head); text-align: center; text-shadow: 0 1px 3px #000,0 0 12px #f50; box-shadow: 0 0 16px rgba(255,105,20,.45); opacity: 0; transition: opacity .18s; pointer-events: none; }
+.credits-event { position: absolute; z-index: 4; left: 50%; top: 70%; transform: translate(-50%,-50%); color: #ffe4ad; font: 900 clamp(12px,2vw,20px) var(--font-head); letter-spacing: .12em; text-align: center; text-shadow: 0 0 8px #ff3700, 0 2px 4px #000; opacity: 0; pointer-events: none; }
+.credits-back { position: absolute; z-index: 3; left: 50%; bottom: max(18px,env(safe-area-inset-bottom)); transform: translateX(-50%); font-size: clamp(13px,2vw,17px); padding: 9px 18px; }
+body.touch .credits-title { top: 30%; width: min(90vw, 780px); height: min(38vh, 340px); }
+body.touch .credits-speech { top: 53%; }
+body.touch .credits-event { top: 67%; }
 
 #rotate-hint { position: absolute; inset: 0; z-index: 80; background: rgba(0,0,0,.92); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; font-size: 18px; }
 #rotate-hint div { font-size: 64px; color: var(--gold); animation: spin 2s infinite ease-in-out; }
@@ -445,6 +470,55 @@ body.touch .bag { grid-template-columns: repeat(10, 36px); grid-auto-rows: 36px;
 body.touch .shop-grid { grid-template-columns: repeat(6, 36px); grid-auto-rows: 36px; }
 body.touch .vendor-panel { max-width: 46vw; }
 body.touch .stash-panel { max-width: 46vw; }
+
+/* Portrait uses the same game canvas with a compact orb and potion HUD. The mobile skill cluster
+   moves into the lower-right safe area, leaving the left side clear for the thumb joystick. */
+body.touch.compact-mobile-hud { --hud-w: min(100vw, 1180px); }
+body.touch.compact-mobile-hud #hud-bar { width: min(100vw, 1180px); }
+body.touch #hud.compact-mobile #hud-rail,
+body.touch #hud.compact-mobile #xp-track,
+body.touch #hud.compact-mobile #xp-text { display: none; }
+body.touch #hud.compact-mobile .orb-text { font-size: clamp(8px, 2.2vw, 12px); }
+body.touch #hud.compact-mobile .potion-slot { z-index: 8; border: 2px solid #98703b; border-radius: 8px; background: rgba(17,9,5,.84); box-shadow: 0 1px 6px #000, inset 0 0 8px rgba(218,145,45,.2); }
+body.touch.portrait { --hud-w: 100vw; --portrait-safe-bottom: env(safe-area-inset-bottom, 0px); }
+body.touch.portrait #hud-bar { width: 100vw; left: 50%; }
+body.touch.portrait #hud-img { display: none; }
+.portrait-orb-frame { position: absolute; z-index: 2; display: none; pointer-events: none; }
+body.touch.portrait #hud-top-left { left: max(8px, env(safe-area-inset-left)); top: max(8px, env(safe-area-inset-top)); width: 47vw; }
+body.touch.portrait #hero-stats { min-width: 0; width: 100%; }
+body.touch.portrait #hero-stats .hs-first,
+body.touch.portrait #hero-stats .hs-tally,
+body.touch.portrait #hs-spark { display: none; }
+body.touch.portrait #hud-top-right { right: max(5px, env(safe-area-inset-right)); top: max(5px, env(safe-area-inset-top)); max-width: 45vw; }
+body.touch.portrait #minimap-wrap { width: 64px; margin: 4px 8px; }
+body.touch.portrait .hbtn { width: 32px; height: 34px; }
+body.touch.portrait #hud-buttons { max-width: 44vw; }
+body.touch.portrait #boss-bar { top: max(92px, calc(env(safe-area-inset-top) + 84px)); left: 50%; width: min(66vw, 320px); }
+body.touch.portrait #madness { position: absolute; left: 50%; top: calc(max(154px, env(safe-area-inset-top) + 146px) - 100vh + var(--hud-w) * var(--hud-k)); bottom: auto; width: 42vw; }
+body.touch.portrait #barbarian-rage { position: absolute; left: 50%; top: calc(max(178px, env(safe-area-inset-top) + 170px) - 100vh + var(--hud-w) * var(--hud-k)); bottom: auto; width: 42vw; }
+body.touch.portrait #center-msg { top: 32%; }
+body.touch.portrait #log { left: 8px; right: 8px; top: auto; bottom: auto; height: min(13vh,100px); max-height: none; overflow: hidden; }
+body.touch.portrait #touch-buttons { z-index: 7; }
+body.touch.portrait #touch-buttons.portrait-grid .tbtn.portrait-tile { border-radius: 9px; border-color: rgba(194,151,81,.82); background: linear-gradient(145deg,rgba(41,25,14,.94),rgba(10,7,6,.96)); box-shadow: 0 2px 8px #000, inset 0 1px 0 rgba(255,224,160,.12); }
+body.touch.portrait #touch-buttons.portrait-grid .tbtn.portrait-tile canvas { border-radius: 6px; width: 88%; height: 88%; }
+body.touch.portrait #touch-buttons.portrait-grid .tbtn.portrait-tile .k { top: 2px; left: 3px; right: auto; min-width: 12px; padding: 0 2px; border-radius: 3px; background: rgba(7,5,4,.75); color: #f5d89e; font-size: 8px; line-height: 11px; }
+body.touch.portrait #touch-buttons.portrait-grid .tbtn.portrait-tile.pressed { border-color: #ffe1a0; box-shadow: 0 0 12px rgba(255,202,104,.8), inset 0 0 10px rgba(255,202,104,.25); }
+body.touch.portrait #touch-buttons.portrait-grid .tbtn.main { border-width: 4px; background: radial-gradient(circle at 35% 30%,#86704b,#302417 58%,#100c08); box-shadow: 0 0 15px rgba(0,0,0,.95), inset 0 0 12px rgba(255,220,150,.22), 0 0 16px rgba(239,178,84,.35); }
+body.touch.portrait #touch-buttons.portrait-grid .tbtn.main canvas { width: 82%; height: 82%; }
+body.touch.portrait #touch-buttons .touch-madness { position: absolute; z-index: 9; margin: 0; padding: 0 8px; display: flex; align-items: center; justify-content: center; border-radius: 9px; font-size: 13px; letter-spacing: 1.5px; line-height: 1; text-shadow: 0 0 7px #ff2050,0 1px 2px #000; box-shadow: 0 0 12px rgba(255,32,80,.62),inset 0 0 9px rgba(255,80,130,.35); }
+body.touch.portrait #touch-buttons .touch-madness:active { transform: scale(.95); }
+body.touch.portrait .screen { padding: max(14px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom)); overflow-y: auto; }
+body.touch.portrait .class-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+body.touch.portrait .class-card { height: min(14vh, 26vw); }
+body.touch.portrait .class-info { display: grid; grid-template-columns: minmax(96px, 30vw) minmax(0, 1fr); gap: 8px; max-width: 96vw; padding: 4px 8px; }
+body.touch.portrait .class-text { min-width: 0; }
+body.touch.portrait .settings-grid { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; }
+body.touch.portrait .help-keys { columns: 1; }
+@media (max-width: 420px) {
+  body.touch.portrait #hero-stats { padding: 2px 4px; }
+  body.touch.portrait #hero-stats b { font-size: 11px; }
+  body.touch.portrait #buff-row { max-width: 48vw; }
+}
 body.touch .stash-panel .stash-grid { grid-template-columns: repeat(6, 36px); max-height: 52vh; }
 body.touch .vendor-panel .vendor-greet { font-size: 12px; margin-bottom: 4px; }
 body.touch .panel { max-width: 100%; }

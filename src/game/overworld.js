@@ -1,4 +1,4 @@
-// Twenty playable, shrine-activated overworld challenge scenarios.
+// Thirty-five playable, shrine-activated overworld challenge scenarios.
 // The original monster, loot, XP, rarity, combat and portal systems remain authoritative.
 import { makeMonster } from './monster.js';
 import { depthLevel } from '../data/depth.js';
@@ -28,6 +28,21 @@ export const SCENARIOS = [
   ['The Corrupted Totems','totems','Cleanse four blighted forest totems.'],
   ['Trial of the Hourglass','trial','Slay twenty enemies before time runs out.'],
   ['Fate of the Wilds','random','A random ancient test is waiting behind the shrine.'],
+  ['Fire on the Ramparts','rampart_siege','Repel a coordinated assault along the castle wall walk.'],
+  ['The Wallbreaker Captains','rampart_captains','Defeat three siege captains holding the battlements.'],
+  ['Breach at the Battlements','rampart_breach','Drive the invaders off four breaches in the curtain wall.'],
+  ['The Sconce Ward','rampart_ward','Keep the wall torches lit while enemies storm the parapet.'],
+  ['Last Stand Above the Moat','rampart_last','Survive five waves across the elevated wall walk.'],
+  ['The Hall of Banners','keep_banners','Clear the throne hall while the royal banners burn.'],
+  ['Ashes in the Chapel','keep_chapel','Drive the invaders from the cathedral nave and sanctuary.'],
+  ['The Feast Interrupted','keep_feast','Defeat the raiders who have breached the great hall.'],
+  ['The Crown Vault','keep_vault','Recover the crown relic from the guarded inner chamber.'],
+  ['Trial of the Lord Marshal','keep_trial','Best the keep guard in a three-stage martial trial.'],
+  ['The Royal Procession','keep_procession','Protect the royal party as it crosses the keep.'],
+  ['Armory Under Siege','keep_armory','Repel the enemy force trying to seize the castle armory.'],
+  ['The Oathsworn Guard','keep_guard','Defeat the corrupted guard captain and sworn knights.'],
+  ['The Bell Tower Breach','keep_belltower','Clear the attackers from the cathedral stair and bell landing.'],
+  ['Coronation at Dawn','keep_coronation','Defend the throne hall through a final assault.'],
 ];
 const CENTER=[36.5,35.5];
 const norm=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
@@ -127,6 +142,54 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
       foes:[],markers:[],civilians:[],escort:null,routeIndex:0,wardHp:0,spawnedTotal:0,capture:0});
     S.timer=biome.id==='sea_of_sand'?rng.int(90,181):0;
     report(description);UI.centerMsg(title.toUpperCase(),description,3.2);
+    if(type.startsWith('rampart_')){
+      const posts=[[35.5,29.5],[48.5,27.5],[62.5,34.5],[64.5,48.5],
+        [58.5,58.5],[48.5,63.5],[32.5,55.5],[31.5,38.5]]
+        .map(([x,y])=>[x*2,y*2])
+        .filter(([x,y])=>world.map.rampartDeck?.[Math.floor(y)*world.map.w+Math.floor(x)]);
+      const roster=biome.roster;
+      const put=(post,arch,rank='normal')=>{
+        const [cx,cy]=posts[post%posts.length],offsets=[[0,0],[-.65,0],[.65,0],[0,-.65],[0,.65],[-.65,-.65],[.65,-.65],[-.65,.65],[.65,.65]];
+        const occupied=S.foes.filter(m=>!m.dead),at=offsets.map(([dx,dy])=>[cx+dx,cy+dy]).find(([x,y])=>
+          world.map.rampartDeck[Math.floor(y)*world.map.w+Math.floor(x)]&&world.map.walkable(x,y)&&
+          occupied.every(m=>norm([m.x,m.y],[x,y])>.62))||[cx,cy];
+        spawn(arch||rng.pick(roster),at,rank,1);
+      };
+      if(type==='rampart_siege'||type==='rampart_last'){
+        S.goal=type==='rampart_last'?5:4;S.stage=0;
+        const n=type==='rampart_last'?20:16;
+        for(let i=0;i<n;i++)put(i, i%3===0?'knight':null, i%8===0?'champion':'normal');
+      }else if(type==='rampart_captains'){
+        S.goal=3;for(let i=0;i<3;i++){put(i*2,['knight','abomination','demon'][i],'boss');put(i*2+1,'cultist','champion');}
+      }else if(type==='rampart_breach'){
+        S.goal=4;for(let i=0;i<4;i++){put(i*2,'knight','champion');put(i*2+1,null,'normal');put(i*2+1,null,'normal');}
+      }else{
+        S.goal=18;S.wardHp=220;for(let i=0;i<18;i++)put(i,i%4===0?'cultist':null,i%9===0?'champion':'normal');
+      }
+      return;
+    }
+    if(type.startsWith('keep_')){
+      const rooms={
+        keep_banners:[[[95,82]],'knight'],keep_chapel:[[[70,102]],'cultist'],
+        keep_feast:[[[100,110]],'abomination'],keep_vault:[[[96,82],[70,102]],'wraith'],
+        keep_trial:[[[95,82],[100,110]],'knight'],keep_procession:[[[70,102],[100,110]],'demon'],
+        keep_armory:[[[100,110]],'knight'],keep_guard:[[[95,82],[100,110]],'knight'],
+        keep_belltower:[[[70,102]],'wraith'],keep_coronation:[[[95,82],[70,102],[100,110]],'demon'],
+      };
+      const [roomsToUse,arch]=rooms[type],at=roomsToUse[rng.int(0,roomsToUse.length-1)];
+      S.goal=type==='keep_trial'?12:type==='keep_coronation'?18:10;
+      S.wardHp=type==='keep_procession'?240:0;
+      const count=S.goal;
+      for(let i=0;i<count;i++){
+        const p=world.map.randomNear(at[0]+(i%2?1.4:-1.4),at[1]+(i%3-1)*1.2,2,rng.fn());
+        spawn(i%5===0?arch:rng.pick(biome.roster),p,i%7===0?'champion':'normal',1);
+      }
+      if(type==='keep_procession'){
+        const family=[['Queen Elowen',95,82,'wizard'],['Prince Rowan',96.5,83,'ranger'],['Princess Mira',93.5,83,'bard']];
+        for(const [name,x,y,sprite] of family)person(name,x,y,sprite);
+      }
+      return;
+    }
     const bosses=(n,archs)=>{
       S.goal=n;
       for(let i=0;i<n;i++){
@@ -193,6 +256,16 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
   const update=(dt)=>{
     if(!S.active||S.completed||S.failed)return;
     S.seconds+=dt;
+    if(type.startsWith('rampart_')){
+      if(type==='rampart_ward'){
+        const torches=world.props.filter(pr=>pr.spr?.category==='torches');
+        const attackers=S.foes.filter(m=>!m.dead&&torches.some(t=>norm([t.x,t.y],[m.x,m.y])<3)).length;
+        S.wardHp-=dt*attackers*2.4;
+        if(S.wardHp<=0){fail('The wall torches were extinguished.');return;}
+      }
+      if(!live())finish();
+      return;
+    }
     if(biome.id==='sea_of_sand'){
       if(S.seconds>=S.timer){fail('The scenario timer expired.');return;}
     }

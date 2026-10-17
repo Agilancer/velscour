@@ -10,6 +10,7 @@ import { listSaves, heroesByClass, deleteClassSaves } from '../game/save.js';
 import { heroCanvas, excitable, preloadPortraits } from './heroanim.js';
 import { savedGearPreview } from '../core/gearart.js';
 import { attachTitleFx } from './titlefx.js';
+import { creditsScreen } from './credits.js';
 
 let current = null;
 
@@ -19,10 +20,7 @@ function goFullscreen() {
   const de = document.documentElement;
   const req = de.requestFullscreen || de.webkitRequestFullscreen;
   if (!req) return;
-  try {
-    const p = req.call(de, { navigationUI: 'hide' });
-    if (p && p.then) p.then(() => { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* ignore */ } }).catch(() => {});
-  } catch (e) { /* not allowed - fine */ }
+  try { const p = req.call(de, { navigationUI: 'hide' }); if (p && p.catch) p.catch(() => {}); } catch (e) { /* not allowed - fine */ }
 }
 function show(node) {
   hide();
@@ -37,19 +35,20 @@ export function titleScreen() {
   const used = Object.keys(heroesByClass()).length;
   const s = el('div', 'screen');
   s.classList.add('title-screen');
-  s.innerHTML = `<div class="title-credits" aria-hidden="true"><img src="assets/ui/intro-blastorama.png" alt=""><img src="assets/ui/intro-curator.png" alt=""></div><img class="title-logo intro" src="assets/ui/logo.webp" alt="VELSCOUR"><div class="title-tag">A world built upon something that should have stayed dead.</div>`;
+  s.innerHTML = `<img class="title-logo intro" src="assets/ui/logo.webp" alt="VELSCOUR"><div class="title-tag">A world built upon something that should have stayed dead.</div>`;
   const menu = el('div', 'title-menu');
   const add = (label, fn, cls = 'btn big') => { const b = el('button', cls, label); b.onclick = () => { if (!s.classList.contains('title-ready')) return; initAudio(); sfx('ui'); goFullscreen(); fn(); }; menu.appendChild(b); return b; };
   if (last) add(`Continue<br><span style="font-size:13px;color:#a8977c">${escapeHtml(last.name)} · Lv ${last.level} ${CLASSES[last.classId].name} · Depth ${last.depth}</span>`, () => G.game.loadChar(last));
   add(`Heroes <span style="font-size:13px;color:#a8977c">· ${used}/${CLASS_IDS.length}</span>`, () => classSelect(last ? last.classId : 'paladin'));
   add('Settings', settingsDialog, 'btn');
+  add('Credits', () => creditsScreen(titleScreen), 'btn');
   add('How to Play', helpDialog, 'btn');
   s.appendChild(menu);
   s.appendChild(el('div', 'title-foot', 'Rough draft · placeholder art · progress saves in this browser'));
   const gate = el('div', 'title-gate', G.touch ? 'Tap to awaken' : 'Click to awaken');
   s.appendChild(gate);
   show(s);
-  attachTitleFx(s, s.querySelector('.title-logo'), { tag: s.querySelector('.title-tag'), menu, gate, credits: s.querySelector('.title-credits') });
+  attachTitleFx(s, s.querySelector('.title-logo'), { tag: s.querySelector('.title-tag'), menu, gate });
 }
 
 const plaque = (name) => `<div class="plaque"><span>${escapeHtml(name)}</span></div>`;
@@ -184,6 +183,7 @@ export function settingsDialog() {
     <label>Damage numbers</label><input type="checkbox" data-k="dmgNumbers" ${st.dmgNumbers ? 'checked' : ''}>
     <label>Screen shake</label><input type="checkbox" data-k="shake" ${st.shake ? 'checked' : ''}>
     <label>Auto-pickup items</label><input type="checkbox" data-k="autoLoot" ${st.autoLoot ? 'checked' : ''}>
+    <label>Standard skill bar on mobile (landscape)</label><input type="checkbox" data-k="mobileSkillBar" ${st.mobileSkillBar !== false ? 'checked' : ''}>
     <label>Pause while menus open</label><input type="checkbox" data-k="pauseMenus" ${st.pauseMenus !== false ? 'checked' : ''}>
     <label>Show gold labels</label><input type="checkbox" data-k="showGoldLabels" ${st.showGoldLabels ? 'checked' : ''}>
   </div>`;
@@ -193,6 +193,7 @@ export function settingsDialog() {
     inp.oninput = inp.onchange = () => {
       const k = inp.dataset.k;
       st[k] = inp.type === 'checkbox' ? inp.checked : inp.tagName === 'SELECT' ? Number(inp.value) : Number(inp.value);
+      if (k === 'mobileSkillBar' && UI.hud) UI.hud.layoutMobile();
       applyVolumes();
       saveSettings();
     };

@@ -7,14 +7,99 @@ import { orbitShieldDepth } from '../gfx/lancershields.js';
 import { drawWallTorch, wallTorchRect } from '../gfx/walltorches.js';
 import { drawWallHanging, wallHangingRect } from '../gfx/wallhangings.js';
 import { replacementImage } from '../core/replacementart.js';
+import { classSprite } from '../core/assets.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { gritAt } from '../gfx/grit.js';
-import { classSprite } from '../core/assets.js';
+import { townFrame, townMotion } from './townsfolkvisuals.js';
+import { drawTownSpeech } from './townspeech.js';
 import { enemyImage } from '../core/enemyart.js';
 import { drawLootLabels } from './loot.js';
 
 let lightCanvas = null, vignette = null, vigKey = '';
 const transitionSprites = new Map();
+// Non-vendor town residents use the original 25-identity townsfolk animation pack.
+// Vendors keep their existing painted replacement sprites.
+// Cache original PNG sheets and recolored variants separately. Recolored
+// sheets are Canvas elements, not HTMLImageElements (no .complete/.naturalWidth).
+const TOWN_FRAME_W=128, TOWN_FRAME_H=192;
+const townSheets=new Map();
+const townPaletteSheets=new Map();
+function townSheet(id) {
+  if(!id)return null;
+  let img=townSheets.get(id);
+  if(!img){
+    img=new Image();
+    townSheets.set(id,img);
+    img.src=`assets/sprites/townsfolk/${id}.png`;
+  }
+  return img;
+}
+export function preloadTownSheets(ids) {
+  const unique=[...new Set(ids.filter(Boolean))];
+  return Promise.all(unique.map(id=>{
+    const img=townSheet(id);
+    if(img.complete)return Promise.resolve(img.naturalWidth>0);
+    return new Promise(resolve=>{
+      img.addEventListener('load',()=>resolve(true),{once:true});
+      img.addEventListener('error',()=>resolve(false),{once:true});
+    });
+  }));
+}
+function townPaletteSheet(id,img,palette) {
+  if(!img?.complete||!img.naturalWidth||!palette)return img;
+  const key=`${id}:${palette.hue||0}:${palette.sat??1}:${palette.light||0}`;
+  if(townPaletteSheets.has(key))return townPaletteSheets.get(key);
+  const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+  const q=c.getContext('2d',{willReadFrequently:true});q.drawImage(img,0,0);
+  const pixels=q.getImageData(0,0,c.width,c.height),d=pixels.data,hueShift=(palette.hue||0)/360,hairShift=hueShift*.38,satScale=palette.sat??1,light=palette.light||0;
+  const rgbToHsv=(r,g,b)=>{r/=255;g/=255;b/=255;const max=Math.max(r,g,b),min=Math.min(r,g,b),delta=max-min;let h=0;if(delta){if(max===r)h=((g-b)/delta)%6;else if(max===g)h=(b-r)/delta+2;else h=(r-g)/delta+4;h/=6;if(h<0)h++;}return [h,max?delta/max:0,max];};
+  const hsvToRgb=(h,s,v)=>{const k=n=>(n+h*6)%6,f=n=>v-v*s*Math.max(0,Math.min(k(n),4-k(n),1));return [f(5),f(3),f(1)];};
+  for(let y=0;y<c.height;y++){const localY=y%TOWN_FRAME_H;for(let x=0;x<c.width;x++){const i=(y*c.width+x)*4;if(d[i+3]<8)continue;let [h,s,v]=rgbToHsv(d[i],d[i+1],d[i+2]);const skin=h>=.012&&h<=.12&&v>.32;if(localY>38&&s>.16&&!skin)h=(h+hueShift+1)%1;else if(localY>8&&localY<66&&s>.14&&v<.46)h=(h+hairShift+1)%1;s=Math.max(0,Math.min(1,s*satScale));v=Math.max(0,Math.min(1,v+light));const rgb=hsvToRgb(h,s,v);d[i]=Math.round(rgb[0]*255);d[i+1]=Math.round(rgb[1]*255);d[i+2]=Math.round(rgb[2]*255);}}
+  q.putImageData(pixels,0,0);townPaletteSheets.set(key,c);
+  if(townPaletteSheets.size>48)townPaletteSheets.delete(townPaletteSheets.keys().next().value);
+  return c;
+}
+/** A decoded PNG or a palette-adjusted Canvas both satisfy the frame contract. */
+export function townFrameReady(sheet,count=11) {
+  const width=sheet?.naturalWidth||sheet?.width||0,height=sheet?.naturalHeight||sheet?.height||0;
+  return width>=TOWN_FRAME_W*count && height>=TOWN_FRAME_H;
+}
+export function townSprite(id,palette=null) {
+  const img=townSheet(id);
+  return img?.complete&&img.naturalWidth ? townPaletteSheet(id,img,palette) : null;
+}
+function drawTownMood(ctx,n,x,y){
+  if(!n.townMood||n.townMoodT<=0)return;
+  const bob=Math.sin(G.time*8)*2,px=Math.round(x+18),py=Math.round(y-70+bob);ctx.save();
+  if(n.townMood==='affection'||n.townMood==='celebration'){
+    ctx.fillStyle=n.townMood==='affection'?'#f24e72':'#ffd45c';
+    for(const [dx,dy,w,h] of [[3,0,5,3],[1,3,9,3],[2,6,7,3],[4,9,3,2]])ctx.fillRect(px+dx-7,py+dy-5,w,h);
+    if(n.townMood==='celebration'){ctx.fillStyle='#fff0a0';for(let i=0;i<3;i++){const a=G.time*3+i*2.1;ctx.fillRect(px+Math.cos(a)*12,py+Math.sin(a)*10,3,3);}}
+  }else if(n.townMood==='argument'){
+    ctx.fillStyle='#ffc14d';ctx.fillRect(px-7,py-7,14,14);ctx.fillStyle='#42251d';
+    ctx.fillRect(px-4,py-3,2,2);ctx.fillRect(px+2,py-3,2,2);ctx.fillRect(px-3,py+3,6,2);
+    ctx.fillStyle='#e95039';ctx.fillRect(px-5,py-6,4,2);ctx.fillRect(px+1,py-6,4,2);
+  }else if(n.townMood==='fight'){
+    ctx.lineCap='square';ctx.lineWidth=3;ctx.strokeStyle='#d9e5ec';ctx.beginPath();ctx.moveTo(px-6,py+6);ctx.lineTo(px+6,py-6);ctx.moveTo(px-6,py-6);ctx.lineTo(px+6,py+6);ctx.stroke();
+    ctx.fillStyle='#8b5831';for(const [dx,dy] of [[-8,8],[5,-8],[5,8],[-8,-8]])ctx.fillRect(px+dx,py+dy,4,3);
+    ctx.fillStyle='#fff3a0';for(let i=0;i<4;i++){const a=G.time*7+i*Math.PI/2;ctx.fillRect(Math.round(px+Math.cos(a)*11),Math.round(py+Math.sin(a)*10),3,3);}
+  }else if(n.townMood==='royal'){
+    ctx.fillStyle='#f2c75a';ctx.fillRect(px-8,py-3,16,7);ctx.fillRect(px-7,py-7,3,5);ctx.fillRect(px-1,py-10,3,8);ctx.fillRect(px+5,py-7,3,5);
+    ctx.fillStyle='#fff0a0';for(let i=0;i<4;i++){const a=G.time*2+i*Math.PI/2;ctx.fillRect(Math.round(px+Math.cos(a)*14),Math.round(py+Math.sin(a)*9),2,2);}
+  }else if(n.townMood==='alarm'){
+    const pulse=1+Math.sin(G.time*9)*.15;ctx.translate(px,py);ctx.scale(pulse,pulse);ctx.fillStyle='#d84c35';ctx.fillRect(-2,-11,4,13);ctx.fillRect(-2,5,4,4);ctx.restore();ctx.save();
+    ctx.strokeStyle='rgba(229,94,62,.8)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(px,py,13+Math.sin(G.time*5)*2,0,Math.PI*2);ctx.stroke();
+  }else if(n.townMood==='grief'){
+    ctx.fillStyle='#8fc3d0';ctx.beginPath();ctx.moveTo(px,py-8);ctx.quadraticCurveTo(px+7,py,px,py+7);ctx.quadraticCurveTo(px-7,py,px,py-8);ctx.fill();
+    ctx.fillStyle='#f3dd9a';ctx.fillRect(px-11,py+9,4,3);ctx.fillRect(px+7,py+8,4,3);
+  }else if(n.townMood==='birth'){
+    ctx.fillStyle='#ffd4e3';for(let i=0;i<3;i++){const a=G.time*2+i*2.1;ctx.fillRect(Math.round(px+Math.cos(a)*12),Math.round(py+Math.sin(a)*9),3,3);}
+    ctx.fillStyle='#fff2cb';ctx.fillRect(px-1,py-8,3,16);ctx.fillRect(px-7,py-2,15,3);
+  }else if(n.townMood==='relief'){
+    ctx.fillStyle='#9bd28f';ctx.fillRect(px-7,py-4,14,7);ctx.fillRect(px-4,py-7,8,13);ctx.fillStyle='#e9f5ca';ctx.fillRect(px-2,py-3,4,5);
+  }
+  ctx.restore();
+}
 
 const MATERIALS = [
   [/water|moat|pond|river|stream|lake/, '#75b9be'],
@@ -32,8 +117,18 @@ const MATERIALS = [
 function floorMaterial(world, variant) {
   const floor = floorEntry(world, variant);
   const key = `${floor?.material || ''} ${floor?.surface || ''} ${floor?.name || ''}`.toLowerCase();
-  for (const [pattern, color] of MATERIALS) if (pattern.test(key))
-    return { key: key.match(pattern)[0], color };
+  for (const [pattern, color] of MATERIALS) if (pattern.test(key)) {
+    const material = key.match(pattern)[0];
+    if (world.biome?.id === 'castle') {
+      const castleColors = {
+        water: '#477f8b', grass: '#a4ad6c', gravel: '#c2b69a',
+        clay: '#a77b52', mud: '#9b704d', earth: '#ae8155',
+        stone: '#a7a69b', brick: '#ae8d70', wood: '#9a7048',
+      };
+      return { key: material, color: castleColors[material] || color };
+    }
+    return { key: material, color };
+  }
   return null;
 }
 
@@ -43,16 +138,17 @@ function stableHash(x, y, salt) {
   return (h ^ (h >>> 13)) >>> 0;
 }
 
-function transitionSprite(color) {
-  if (!transitionSprites.has(color)) {
-    const sprite = makeCanvas(1, 1), g = sprite.getContext('2d');
-    g.fillStyle = color; g.fillRect(0, 0, 1, 1);
-    transitionSprites.set(color, sprite);
+function transitionSprite(color, size) {
+  const key = `${color}:${size}`;
+  if (!transitionSprites.has(key)) {
+    const sprite = makeCanvas(size, size), g = sprite.getContext('2d');
+    g.fillStyle = color; g.fillRect(0, 0, size, size);
+    transitionSprites.set(key, sprite);
   }
-  return transitionSprites.get(color);
+  return transitionSprites.get(key);
 }
 
-/** Cache deterministic 1-world-pixel flecks on shared edges between unlike materials. */
+/** Cache crisp, deterministic 2–4px flecks on shared edges between unlike materials. */
 function buildTransitionParticles(world) {
   if (world.transitionParticles) return world.transitionParticles;
   const { map } = world, particles = [];
@@ -60,13 +156,21 @@ function buildTransitionParticles(world) {
     if (map.t[ny * map.w + nx] !== 1) return;
     const a = floorMaterial(world, variant), b = floorMaterial(world, nextVariant);
     if (!a || !b || a.key === b.key) return;
-    const hash = stableHash(x, y, salt), count = 2 + (hash % 2);
-    const colors = [a.color, b.color, a.color];
+    const hash = stableHash(x, y, salt);
+    // Leave gaps along long boundaries so particles read as scattered debris,
+    // not a dotted outline around every material patch.
+    if (hash % 3 !== 0) return;
+    const count = 1 + ((hash >>> 1) % 2);
+    const colors = [a.color, b.color];
     for (let i = 0; i < count; i++) {
       const seed = stableHash(x + i * 13, y - i * 7, salt ^ hash);
-      const t = 0.18 + ((i + ((seed >>> 8) % 23) / 100) / count) * 0.64;
-      const offset = ((seed >>> 16) % 5) - 2;
-      particles.push({ x: x1 + (x2 - x1) * t + offset, y: y1 + (y2 - y1) * t - offset, color: colors[i] });
+      // Scatter along and just across the seam instead of making a dotted line.
+      const t = 0.12 + ((seed >>> 8) % 77) / 100;
+      const offset = ((seed >>> 16) % 9) - 4;
+      // Larger flecks survive normal zoom and read as scattered grit at dune
+      // and stone seams, rather than a hairline dotted border.
+      const size = 3 + ((seed >>> 21) % 4);
+      particles.push({ x: x1 + (x2 - x1) * t + offset, y: y1 + (y2 - y1) * t - offset, color: colors[i], size });
     }
   };
   for (let y = 0; y < map.h; y++) for (let x = 0; x < map.w; x++) {
@@ -86,7 +190,7 @@ function drawTransitionParticles(ctx, world, vr) {
   ctx.imageSmoothingEnabled = false;
   for (const particle of particles) {
     if (particle.x < vr.x0 - 2 || particle.x > vr.x1 + 2 || particle.y < vr.y0 - 2 || particle.y > vr.y1 + 2) continue;
-    ctx.drawImage(transitionSprite(particle.color), particle.x, particle.y);
+    ctx.drawImage(transitionSprite(particle.color, particle.size), particle.x - particle.size / 2, particle.y - particle.size / 2);
   }
 }
 
@@ -118,7 +222,7 @@ function drawWall(ctx, o, k, alpha) {
 }
 
 function drawProp(ctx, pr, alpha) {
-  const x = isoX(pr.x, pr.y), y = isoY(pr.x, pr.y);
+  const x = isoX(pr.x, pr.y), y = isoY(pr.x, pr.y) - (pr.z || 0);
   if (alpha < 1) ctx.globalAlpha = alpha;
   if (pr.kind === 'flame') {
     // a lit wall torch on a town building: a flickering flame over the pack's unlit torch head
@@ -286,21 +390,45 @@ function drawNpc(ctx, n) {
     n.sbox = [x - 24, y - 40, x + 24, y + 6];
     return;
   }
-  const npcArt = n.vendor ? 'npc_' + n.vendor.id : ({ 'Old Tobin': 'npc_tobin', Mira: 'npc_mira', 'Brother Cael': 'npc_cael', Gorm: 'npc_gorm' })[n.name];
-  const img = (npcArt && replacementImage(npcArt)) || classSprite(n.vendor ? n.vendor.sprite : n.sprite, 180, n.vendor ? n.vendor.pal : n.pal);
-  const h = 58, w = (h * img.width) / img.height;
+  // Vendors retain their existing hand-painted artwork, names and shops.
+  // Only visitors/civilians use the animated townsfolk collection.
+  const spriteId=n.vendor?null:(n.townsfolkSpriteId||n.spriteId||n.townsfolkId);
+  const sheet=spriteId?townSprite(spriteId,n.pal):null;
+  const vendorArt=n.vendor
+    ? replacementImage('npc_'+n.vendor.id) || classSprite(n.vendor.sprite,180,n.vendor.pal)
+    : null;
+  const h=n.child?42:58,w=(h*128)/192;
   const x = isoX(n.x, n.y), y = isoY(n.x, n.y);
   ctx.fillStyle = 'rgba(0,0,0,0.38)';
   ctx.beginPath(); ctx.ellipse(x, y, 13, 6, 0, 0, TAU); ctx.fill();
-  const bob = Math.sin(G.time * 2 + n.x) * 0.6;
-  if (n.flip) { ctx.save(); ctx.translate(x + w / 2, y - h + bob); ctx.scale(-1, 1); ctx.drawImage(img, 0, 0, w, h); ctx.restore(); }
-  else ctx.drawImage(img, x - w / 2, y - h + bob, w, h);
+  const {bob,squash}=townMotion(n.animT||0,!!n.walking);
+  const frame=townFrame(n);
+  const drawH=h*squash, spriteY=y-drawH-bob;
+  // HTMLCanvasElement does not expose Image.complete or Image.naturalWidth.
+  // The old guard failed for every recolored sheet and drew placeholders forever.
+  const ready=townFrameReady(sheet,n.frameCount||11);
+  if(n.vendor && vendorArt){
+    // Keep the old vendor image (including fallback if the replacement atlas
+    // cannot load). Match the same ground point and flip as the townsfolk.
+    ctx.save();
+    if(n.flip){ctx.translate(x,0);ctx.scale(-1,1);ctx.drawImage(vendorArt,-w/2,spriteY,w,drawH);}
+    else ctx.drawImage(vendorArt,x-w/2,spriteY,w,drawH);
+    ctx.restore();
+  } else if(!n.vendor && ready){
+    ctx.save();
+    // One centered facing transform for idle, walk, reactions and attacks.
+    if(n.flip){ctx.translate(x,0);ctx.scale(-1,1);ctx.drawImage(sheet,frame*TOWN_FRAME_W,0,TOWN_FRAME_W,TOWN_FRAME_H,-w/2,spriteY,w,drawH);}
+    else ctx.drawImage(sheet,frame*TOWN_FRAME_W,0,TOWN_FRAME_W,TOWN_FRAME_H,x-w/2,spriteY,w,drawH);
+    ctx.restore();
+  }
   if (n.vendor) {
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + Math.sin(G.time * 3) * 0.1;
     ctx.drawImage(glowSprite('#ffd060'), x - 6, y - h - 18, 12, 12);
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
-  n.sbox = [x - w / 2, y - h, x + w / 2, y];
+  n.sbox = [x - w / 2, spriteY, x + w / 2, y];
+  drawTownMood(ctx,n,x,y);
+  drawTownSpeech(ctx,n,x,spriteY);
 }
 
 /** Main world render. */
@@ -469,10 +597,15 @@ export function renderWorld(ctx, world) {
         break;
       }
       case 6: {
+        const deckI=world.map.rampartDeck?Math.floor(o.y)*world.map.w+Math.floor(o.x):-1;
+        const deckZ=deckI>=0?(world.map.rampartElev?.[deckI]??(world.map.rampartDeck[deckI]?world.map.rampartHeight||0:0)):0;
+        const oldZ=o.z||0;
+        if(deckZ)o.z=oldZ+deckZ;
         o.draw(ctx);
+        if(deckZ)o.z=oldZ;
         const img = o.spriteImage();
         const [w, h] = o.spriteDims(img);
-        const [sx, sy] = camera.tileToScreen(o.x, o.y, o.z + (o.fly ? 16 : 0));
+        const [sx, sy] = camera.tileToScreen(o.x, o.y, oldZ + deckZ + (o.fly ? 16 : 0));
         const z = camera.zoom;
         o.sbox = [sx - (w / 2) * z, sy - h * z, sx + (w / 2) * z, sy];
         break;
@@ -553,7 +686,11 @@ function drawLighting(ctx, world) {
     lc.drawImage(spr, cx - rr, cy - rr, rr * 2, rr * 2);
     return true;
   };
-  if (p) add(p.x, p.y, b.light * (1 + (p.st.lightPct || 0)), 1);
+  if (p) {
+    const i=world.map.rampartDeck?Math.floor(p.y)*world.map.w+Math.floor(p.x):-1;
+    const deck=i>=0?(world.map.rampartElev?.[i]??(world.map.rampartDeck[i]?world.map.rampartHeight||0:0)):0;
+    add(p.x,p.y,b.light*(1+(p.st.lightPct||0)),1,20+deck);
+  }
   let visibleLights=0;
   for (const l of lights) {
     if (add(l.x, l.y, l.radius, l.intensity * 0.85, l.z ?? 20)) visibleLights++;

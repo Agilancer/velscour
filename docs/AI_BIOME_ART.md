@@ -75,9 +75,9 @@ they are painted onto the shared Catacombs wall silhouettes and geometry.
 It edge-matches a 12 px band on each tile so all ten materials repeat without
 dark border seams.
 
-The renderer adds deterministic, single-world-pixel flecks along floor edges
-where the material family changes. This applies to the semantic floor names in
-the dungeon atlases and the named terrain classes in Sea of Sand and Castle.
+The renderer adds deterministic, scattered 2–4 world-pixel flecks along floor
+edges where the material family changes. This applies to semantic floor names
+in the dungeon atlases and named terrain classes in Sea of Sand and Castle.
 
 `assets/tiles/approved_biomes/forsaken_wilds_supplemental.webp` contains ten
 distinct 128 × 128 generated Forsaken Wilds tree sprites, five shrine designs,
@@ -91,6 +91,40 @@ transparent sprite atlases; it does not make gameplay screenshots or large
 background images. The runtime keeps the original Catacombs wall, arch, and
 door geometry metadata and depth slices for reliable occlusion and opening
 states.
+
+## Floor alpha and seamless paving safeguards
+
+The generated 64 × 32 floor crops may contain opaque rectangular source
+backgrounds, incomplete diamonds, or pixels beyond their intended edges.
+`src/gfx/aibiomeart.js` now treats them as **inset decorative overlays** on
+the original full 160 × 80 isometric floor art rather than clearing and
+replacing the whole cell. Overlays are clipped to an inner 2:1 diamond, leaving
+the original edge-matched ground visible around each motif and any missing
+source pixels. Tiles flagged `seamless` remain untouched so that procedural
+rooms and corridors continue to share the same paving at their boundaries.
+For expanded packs, existing source cells are skipped (only the appended
+floor cells receive new motifs).
+
+The asset loader applies generic AI motifs **before** the user-approved
+paintings, so approved floors and props have final priority in their designated
+atlas cells. The approved floor painter also keeps native diamond artwork
+underneath its image and clips the painted source to the full isometric
+diamond, preventing transparent corners or rectangular backgrounds from
+exposing the black frame. No source atlas needs to be discarded or manually edited.
+
+Run the visual and pixel regression from the repository root after starting a
+local HTTP server:
+
+```bash
+python3 -m http.server 8123
+node tools/tests/ai_biome_floors.js
+node tools/tests/ai_biome_floors.js --all  # each indoor biome with a character
+node tools/tests/approved_biome_art.js
+```
+
+The screenshot sweep writes to `tools/tests/out/ai_biome_floor_*.png`
+(git-ignored), and the synthetic test uses an intentionally opaque
+rectangular AI source to verify the diamond-edge protection.
 
 ## Generation prompt set
 

@@ -32,7 +32,8 @@ function resize() {
   G.canvas.height = Math.round(G.H * G.dpr);
   camera.computeZoom();
   const portrait = G.touch && G.H > G.W;
-  $('#rotate-hint').classList.toggle('hidden', !portrait || G.dismissedRotate);
+  document.body.classList.toggle('portrait', portrait);
+  document.body.classList.toggle('compact-mobile-hud', G.touch && (portrait || !G.settings.mobileSkillBar));
 }
 
 // ---------------------------------------------------------- title backdrop
@@ -120,7 +121,6 @@ async function boot() {
   UI.init();
   UI.vendor = Vendor;
   UI.stash = Stash;
-  $('#rotate-dismiss').onclick = () => { G.dismissedRotate = true; resize(); };
   window.addEventListener('error', (e) => reportError(e.error || e.message));
   window.addEventListener('unhandledrejection', (e) => reportError(e.reason));
   window.addEventListener('beforeunload', () => { if (G.char) game.autosave(); });

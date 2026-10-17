@@ -69,7 +69,7 @@ generator: rooms, corridors, caves, loops, an arena, doors, arches, scattered
 obstacles, guardians, bosses, chests, normal XP/loot, two portals and one
 sealed exit. The exit opens when the guardian is defeated. Depth 500 is still
 Velscour's Throne. The Desert Temple counts as a non-overworld visit for
-the six-dungeon Forsaken Wilds guarantee.
+the three-dungeon overworld guarantee.
 
 ## Implementation and review
 

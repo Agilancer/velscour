@@ -7,8 +7,8 @@ import { SKILLS, cooldown, manaCost, rageCost, effLevel } from '../data/skills.j
 import { SLOT_LABELS, RMB } from '../data/bar.js';
 import { chooser } from './hud.js';
 
-// Positions [ring, angleDeg]: ring 0 = big attack button, 1 = inner arc, 2 = outer arc. The arcs show one page of
-// the 15-slot bar at a time; the small flip button swaps pages.
+// Landscape uses the original radial skill cluster; portrait shows all 14 skill
+// slots as a compact bottom tray, with LMB kept as the large attack control.
 const POS = [[1, 180], [1, 225], [1, 270], [2, 198], [2, 213.4], [2, 228.8], [2, 244.2], [2, 259.6], [2, 275]];
 const PAGES = [[RMB, 2, 3, 4, 5, 6, 7, 8, 9], [10, 11, 12, 13, 1]]; // RMB 1-8 | 9 0 - = `
 const FLIP = [1.5, 186]; // between the arcs, left of RMB
@@ -19,9 +19,10 @@ export const TouchUI = {
   init() {
     G.touchUI = this;
     const root = $('#touch-buttons');
-    const slots = [[0, 0, 0], ...POS.map(([ring, ang], i) => [PAGES[0][i], ring, ang])];
-    for (const [bar, ring, ang] of slots) {
-      const b = el('div', 'tbtn' + (ring === 0 ? ' main' : ''));
+    for (let bar = 0; bar < 15; bar++) {
+      const pos = POS[bar - 1] || [0, 0];
+      const [ring, ang] = bar === 0 ? [0, 0] : pos;
+      const b = el('div', 'tbtn' + (bar === 0 ? ' main' : ' skill'));
       const cv = document.createElement('canvas');
       cv.width = 64; cv.height = 64;
       const cd = el('div', 'cd'); cd.style.height = '0%';
@@ -52,44 +53,85 @@ export const TouchUI = {
     f.title = 'More skills';
     f.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); this.setPage(1 - this.page); });
     root.appendChild(f);
+    this.madnessBtn = $('#madness-btn');
+    this.madnessHome = $('#madness');
+    this.madnessBtn.classList.add('touch-madness');
     window.addEventListener('resize', () => this.layout());
     this.setPage(0);
   },
-  /** Show page n of the bar on the arcs. */
+  /** Select a landscape skill page; portrait keeps every slot visible. */
   setPage(n) {
     this.page = n;
-    const page = PAGES[n];
-    this.btns.forEach((t, i) => {
-      if (!i) return;
-      const bar = page[i - 1];
-      t.b.classList.toggle('hidden', bar === undefined);
-      if (bar === undefined) return;
-      t.bar = bar; t.last = {}; t.b.style.filter = ''; t.cd.style.height = '0%';
-      t.k.textContent = SLOT_LABELS[bar];
-    });
-    this.btns[0].k.textContent = 'ATK';
-    this.flipBtn.querySelector('span').textContent = `${n + 1}/${PAGES.length}`;
-    this.flipBtn.classList.toggle('on', n > 0);
     this.layout();
     this.refresh();
   },
   layout() {
     const W = innerWidth, H = innerHeight;
+    const portrait = H > W;
     const s = Math.max(0.72, Math.min(1.15, Math.min(W, H) / 400));
     const main = 72 * s, small = 44 * s;
-    const cx = W - 14 - main / 2, cy = H - 14 - main / 2 - (H < 420 ? 0 : 10);
+    const cx = W - 14 - main / 2;
+    const cy = H - 14 - main / 2 - (H < 420 ? 0 : 10);
     const radii = [0, 92 * s, 170 * s];
     const rad = (ring) => (ring % 1 ? (radii[Math.floor(ring)] + radii[Math.ceil(ring)]) / 2 : radii[ring]);
     const root = $('#touch-buttons');
     root.style.width = W + 'px'; root.style.height = H + 'px';
     root.style.left = '0'; root.style.top = '0'; root.style.right = 'auto'; root.style.bottom = 'auto';
+    root.classList.toggle('portrait-grid', portrait);
     const put = (b, ring, ang, size) => {
       const r = rad(ring), a = (ang * Math.PI) / 180;
       const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
       Object.assign(b.style, { width: size + 'px', height: size + 'px', left: x - size / 2 + 'px', top: y - size / 2 + 'px' });
     };
-    for (const t of this.btns) put(t.b, t.ring, t.ang, t.ring === 0 ? main : small);
-    if (this.flipBtn) put(this.flipBtn, FLIP[0], FLIP[1], 32 * s);
+    if (portrait) {
+      if (this.madnessBtn.parentElement !== root) root.appendChild(this.madnessBtn);
+      const tile = Math.min(44, Math.max(32, (W - 40 - 24) / 7)), gap = 4;
+      const trayH = tile * 2 + gap;
+      const safeBottom = parseFloat(getComputedStyle(document.body).getPropertyValue('--portrait-safe-bottom')) || 0;
+      const trayTop = Math.max(H * .34, H - trayH - safeBottom - 12);
+      const mainSize = Math.min(92, Math.max(72, W * .22));
+      const logHeight = Math.min(H * .13, 100);
+      const logTop = Math.max(H * .34, trayTop - mainSize - logHeight - 32);
+      Object.assign($('#log').style, { left: '8px', right: '8px', top: `${logTop}px`, bottom: 'auto', height: `${logHeight}px`, maxHeight: 'none' });
+      const trayW = tile * 7 + gap * 6, x0 = (W - trayW) / 2;
+      this.btns.forEach((t, i) => {
+        if (t.bar !== i) { t.last = {}; t.b.style.filter = ''; t.cd.style.height = '0%'; }
+        t.bar = i; t.k.textContent = i === 0 ? 'ATK' : SLOT_LABELS[i];
+        t.b.classList.remove('hidden');
+        if (i === 0) {
+          const size = mainSize, x = W - size / 2 - 16, y = trayTop - size / 2 - 12;
+          Object.assign(t.b.style, { width: size + 'px', height: size + 'px', left: x - size / 2 + 'px', top: y - size / 2 + 'px' });
+        } else {
+          const n = i - 1, col = n % 7, row = Math.floor(n / 7);
+          Object.assign(t.b.style, { width: tile + 'px', height: tile + 'px', left: (x0 + col * (tile + gap)) + 'px', top: (trayTop + row * (tile + gap)) + 'px' });
+        }
+        t.b.classList.toggle('portrait-tile', i > 0);
+      });
+      const madnessW = Math.min(W * .36, 132);
+      Object.assign(this.madnessBtn.style, { boxSizing: 'border-box', width: madnessW + 'px', height: '36px', left: ((W - madnessW) / 2) + 'px', top: (trayTop - 46) + 'px', transform: 'none' });
+    } else {
+      Object.assign($('#log').style, { left: '', right: '', top: '', bottom: '', height: '', maxHeight: '' });
+      if (this.madnessBtn.parentElement !== this.madnessHome) this.madnessHome.insertBefore(this.madnessBtn, this.madnessHome.firstChild);
+      this.btns.forEach((t, i) => {
+        if (i === 0) { t.bar = 0; t.k.textContent = 'ATK'; t.b.classList.remove('hidden'); put(t.b, 0, 0, main); return; }
+        const bar = i <= POS.length ? PAGES[this.page][i - 1] : undefined;
+        t.b.classList.toggle('hidden', bar === undefined);
+        t.b.classList.remove('portrait-tile');
+        if (bar === undefined) return;
+        if (t.bar !== bar) { t.last = {}; t.b.style.filter = ''; t.cd.style.height = '0%'; }
+        t.bar = bar; t.k.textContent = SLOT_LABELS[bar];
+        put(t.b, t.ring, t.ang, small);
+      });
+      if (this.flipBtn) {
+        this.flipBtn.classList.remove('hidden');
+        this.flipBtn.querySelector('span').textContent = `${this.page + 1}/${PAGES.length}`;
+        this.flipBtn.classList.toggle('on', this.page > 0);
+        put(this.flipBtn, FLIP[0], FLIP[1], 32 * s);
+      }
+      Object.assign(this.madnessBtn.style, { width: '', height: '', left: '', top: '', transform: '' });
+    }
+    this.flipBtn?.classList.toggle('hidden', portrait);
+    this.refresh();
   },
   refresh() {
     for (const t of this.btns) {

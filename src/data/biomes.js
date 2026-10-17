@@ -211,6 +211,14 @@ export const BIOMES = [
     torch: '#ffc078', fog: '#0a160d',
   },
   {
+    id: 'castle', name: 'Castle', pack: 'castle', overworld: true,
+    palette: null, dark: 0.56, light: 11,
+    ambient: { type:'mote', color:'#d6c49b' }, mon: { hue:0, sat:0.86, light:0.03 },
+    el:'phys', blood:'#7c1610', adj:['Stonebound','Besieged','Iron-Crowned'],
+    roster:['zombie','ghoul','bat','gargoyle','skeleton','cultist','abomination','imp','wraith','archer','knight','golem'],
+    prefer:['set2/undead','set2/warriors','set2/goblins'], torch:'#ffc078', fog:'#0a0e13',
+  },
+  {
     id: 'sea_of_sand', name: 'Sea of Sand', pack: 'sea_of_sand', overworld: true,
     palette: null, dark: 0.58, light: 11.5,
     ambient: { type:'sand', color:'#e3b768' }, mon: { hue:22, sat:0.92, light:0.06 },
@@ -344,18 +352,22 @@ export function mixPartner(biome, rnd = Math.random) {
 
 export const BIOME_BY_ID = Object.fromEntries(BIOMES.map((b) => [b.id, b]));
 
+/** Overworlds share the regular biome bag, with a hard visit guarantee after three combat dungeons. */
+export const OVERWORLD_BIOME_IDS = BIOMES.filter((b) => b.overworld).map((b) => b.id);
+
 /**
- * A shuffled pool of biomes for the hero's next depth. Wilds may be rolled naturally, but a visit
- * is guaranteed after six actual non-overworld dungeon entries. Only record visits when entering a
- * depth, not when previewing/drawing the next choice or returning to town.
- * The throne at FINAL_DEPTH is never overridden.
+ * A shuffled pool of biomes for the hero's next depth. An overworld is guaranteed after three
+ * actual non-overworld dungeon entries. When forced, choose among all registered overworlds so
+ * Forsaken Wilds, Sea of Sand and Castle all remain in the rotation. The throne is never overridden.
  */
 export function drawBiome(c, depth) {
   if (depth === FINAL_DEPTH) return 'throne';
   const all = BIOMES.filter((b) => b.id !== 'throne').map((b) => b.id);
-  if ((c.overworldMisses || 0) >= 6) {
-    c.biomeBag = (c.biomeBag || []).filter((id) => id !== 'overworld' && all.includes(id));
-    return 'overworld';
+  if ((c.overworldMisses || 0) >= 3) {
+    c.biomeBag = (c.biomeBag || []).filter((id) => !OVERWORLD_BIOME_IDS.includes(id) && all.includes(id));
+    let options = OVERWORLD_BIOME_IDS.filter((id) => id !== c.lastBiome);
+    if (!options.length) options = OVERWORLD_BIOME_IDS;
+    return options[Math.floor(Math.random() * options.length)];
   }
   let bag = (c.biomeBag || []).filter((id) => all.includes(id));
   if (!bag.length || (bag.length === 1 && bag[0] === c.lastBiome)) bag = all.slice();
@@ -374,7 +386,7 @@ export function recordBiomeVisit(c, biome, depth) {
   if (c.overworldLastVisit === key) return;
   c.overworldLastVisit = key;
   if (biome.overworld || biome.pack === 'town') c.overworldMisses = 0;
-  else c.overworldMisses = Math.min(6, (c.overworldMisses || 0) + 1);
+  else c.overworldMisses = Math.min(3, (c.overworldMisses || 0) + 1);
 }
 export const TOWN_BIOME = {
   id: 'town', name: 'Herrington Hollow', pack: 'catacombs', palette: { colorize: [30, 0.22], light: 0.12, contrast: 0.95 }, wallPalette: { colorize: [32, 0.2], light: 0.18 },

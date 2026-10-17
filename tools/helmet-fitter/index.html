@@ -10,6 +10,7 @@
   <div id="draft" hidden>There is an unsaved browser draft. <button id="restore">Restore draft</button><button id="dismiss">Dismiss</button></div>
   <main>
     <aside>
+      <label>Helmet set<select id="set"><option value="common">Common · 10 designs</option><option value="rare">Rare · 5 designs</option></select></label>
       <label>Character<select id="class"></select></label>
       <label>Helmet design<select id="design"></select></label>
       <div class="row"><button id="previous">← Previous</button><button id="next">Next →</button></div>
@@ -19,10 +20,12 @@
         <label>Size <input id="size" type="range" min="5" max="100" step="0.1"></label>
         <label class="check"><input id="lock" type="checkbox" checked> Keep proportions when resizing</label>
         <div class="row"><label>Width % <input id="sx" type="number" min="1" max="400" step="0.1"></label><label>Height % <input id="sy" type="number" min="1" max="400" step="0.1"></label></div>
+        <label>Rotation ° <input id="rotation" type="number" min="-180" max="180" step="0.5" value="0"></label>
+        <label>Rotate <input id="angle" type="range" min="-180" max="180" step="0.5" value="0"></label>
         <label>Helmet opacity <input id="opacity" type="range" min="0" max="100" value="100"></label>
         <label class="check"><input id="show" type="checkbox" checked> Show helmet</label>
         <div class="row"><button id="undo" disabled>Undo</button><button id="reset">Reset this fit</button></div>
-        <button id="copyClass">Copy as starting point for all 10</button>
+        <button id="copyClass">Copy as starting point for all designs</button>
       </fieldset>
       <fieldset><legend>Preview</legend>
         <label>Body armor <input id="armor" type="number" min="1" max="80" value="1"></label>
@@ -34,7 +37,7 @@
     <section class="workspace">
       <div class="stage"><canvas id="editor" tabindex="0" aria-label="Drag to move the helmet; arrow keys nudge it"></canvas></div>
       <div class="readout"><strong id="caption"></strong><code id="numbers"></code><span id="status" role="status">Loading…</span></div>
-      <section class="overview"><div><h2>Whole character</h2><canvas id="full" width="256" height="384"></canvas></div><div><h2>This class · all ten helmets</h2><div id="thumbnails"></div><p class="help">Click a helmet preview to adjust it. A dot marks a fit you have set.</p></div></section>
+      <section class="overview"><div><h2>Whole character</h2><canvas id="full" width="256" height="384"></canvas></div><div><h2 id="thumbTitle">This class · all helmets</h2><div id="thumbnails"></div><p class="help">Click a helmet preview to adjust it. A dot marks a fit you have set.</p></div></section>
     </section>
   </main>
   <input id="file" type="file" accept="application/json,.json" hidden>

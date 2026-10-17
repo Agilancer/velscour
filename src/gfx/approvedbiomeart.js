@@ -71,6 +71,25 @@ function loadSheet(kind) {
   return promise;
 }
 
+/** Keep the original complete diamond beneath painted accents, and clip
+ * sheet backgrounds to the exact native 2:1 silhouette. Some art sources
+ * have transparent corners or rectangular background pixels; neither should
+ * cause an exposed black tile rectangle in gameplay.
+ */
+function drawApprovedFloor(g, sheet, cell, sx, sy, sw, sh) {
+  const {x,y,w,h}=cell;
+  g.save();
+  g.beginPath();
+  g.moveTo(x+w/2,y);
+  g.lineTo(x+w,y+h/2);
+  g.lineTo(x+w/2,y+h);
+  g.lineTo(x,y+h/2);
+  g.closePath();
+  g.clip();
+  g.drawImage(sheet,sx,sy,sw,sh,x,y,w,h);
+  g.restore();
+}
+
 /** Overwrite only eight approved floor and eight prop cells in the active
  * biome's existing atlas. For expanded packs, replace appended cells rather
  * than legacy ones. Do not alter counts, sprite pivots, terrain collision,
@@ -95,9 +114,7 @@ export async function applyApprovedBiomeArt(pack, biomeId) {
       for(let i=0;i<8;i++){
         const cell=meta.floors[floorStart+i];
         if(!cell)continue;
-        g.clearRect(cell.x,cell.y,cell.w,cell.h);
-        g.drawImage(floors,i*FLOOR.w,row*FLOOR.h,FLOOR.w,FLOOR.h,
-          cell.x,cell.y,cell.w,cell.h);
+        drawApprovedFloor(g,floors,cell,i*FLOOR.w,row*FLOOR.h,FLOOR.w,FLOOR.h);
         cell.seamless=false;
         floorCount++;
       }
@@ -130,10 +147,8 @@ export async function applyApprovedBiomeArt(pack, biomeId) {
       const g=pack.floors.getContext('2d');
       if(g){
         g.save();g.imageSmoothingEnabled=false;
-        g.clearRect(floorCell.x,floorCell.y,floorCell.w,floorCell.h);
         // The centered 80×40 crop retains the native 2:1 isometric diamond.
-        g.drawImage(variants,variant.column*VARIANT.w,20,VARIANT.w,40,
-          floorCell.x,floorCell.y,floorCell.w,floorCell.h);
+        drawApprovedFloor(g,variants,floorCell,variant.column*VARIANT.w,20,VARIANT.w,40);
         g.restore();
         floorCell.seamless=false;
       }

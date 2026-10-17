@@ -19,24 +19,52 @@ function loadAtlas(id) {
   return promise;
 }
 
-/** Replace the generated floor and scatter cells after the authored pack is built. */
+/** Paint decorative AI motifs on top of existing floor art, never in place of it.
+ * Imported AI cells may contain opaque rectangular backgrounds and do not
+ * always reach the edges of a complete 2:1 diamond. Keeping the native tile
+ * underneath avoids black holes; clipping the motif inside the diamond keeps
+ * those backgrounds away from neighboring tiles and prevents visible seams.
+ *
+ * The ten generated seamless bases remain untouched. On expanded packs, only
+ * the appended cells are decorated: the original pack was already processed.
+ */
+export function paintAIBiomeFloors(pack, image) {
+  const floors = pack.floors?.getContext?.('2d');
+  if (!floors || !pack.meta?.floors) return;
+  const start = pack.meta.expansion?.floorStart ?? 0;
+  floors.save();
+  floors.imageSmoothingEnabled = false;
+  floors.globalCompositeOperation = 'source-over';
+  for (let index = start; index < pack.meta.floors.length; index++) {
+    const cell = pack.meta.floors[index];
+    if (cell.seamless) continue;
+    const source = index % 32;
+    const { x, y, w, h } = cell;
+    // Reserve the outer band for the original, edge-matched floor material.
+    // Even a fully opaque, rectangular source cell cannot paint outside this
+    // inset rhombus or expose the black screen background between tiles.
+    floors.save();
+    floors.beginPath();
+    floors.moveTo(x + w * .5, y + h * .12);
+    floors.lineTo(x + w * .88, y + h * .5);
+    floors.lineTo(x + w * .5, y + h * .88);
+    floors.lineTo(x + w * .12, y + h * .5);
+    floors.closePath();
+    floors.clip();
+    floors.drawImage(image, (source % 8) * 64, Math.floor(source / 8) * 64 + 16,
+      64, 32, x, y, w, h);
+    floors.restore();
+  }
+  floors.restore();
+}
+
+/** Overlay the authored floor motifs and replace the biome's prop and wall art. */
 export async function applyAIBiomeArt(pack, biomeId) {
   if (!BIOMES.has(biomeId) || !pack?.meta) return pack;
   const [image, wallMaterials] = await Promise.all([
     loadAtlas(biomeId), loadAtlas(`${biomeId}_wall_materials`),
   ]);
-  const floors = pack.floors?.getContext?.('2d');
-  if (floors) {
-    floors.save();
-    floors.imageSmoothingEnabled = false;
-    pack.meta.floors.forEach((cell, index) => {
-      const source = index % 32;
-      floors.clearRect(cell.x, cell.y, cell.w, cell.h);
-      floors.drawImage(image, (source % 8) * 64, Math.floor(source / 8) * 64 + 16,
-        64, 32, cell.x, cell.y, cell.w, cell.h);
-    });
-    floors.restore();
-  }
+  paintAIBiomeFloors(pack, image);
   const scatter = pack.scatter?.getContext?.('2d');
   if (scatter) {
     scatter.save();

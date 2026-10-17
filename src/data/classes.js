@@ -34,7 +34,7 @@ export const CLASSES = {
   dragoon: {
     name: 'Dragoon', primary: 'str', base: { str: 24, dex: 22, vit: 22, int: 12 }, life: 65, mana: 30, lifeLvl: 7, manaLvl: 2,
     weapon: 'spear', element: 'fire', color: '#6aa8ff',
-    trees: ['Lancework', 'Sky Dive', 'Wyrmblood'],
+    trees: ['Lancework', 'Sky Dive', 'Wyrmblood', 'Spearstorm'],
     desc: 'A lance-wielding knight who leaps from the heavens. Dragon dives, lance flurries and wyrm breath.',
   },
   totem_master: {

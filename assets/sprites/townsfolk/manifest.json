@@ -1,0 +1,784 @@
+{
+  "name": "Velscour Townsfolk Original Identity Animation Pack",
+  "version": 3,
+  "sourceStyle": "Velscour rendered character art; gritty Diablo II mood",
+  "generatedIdentityCount": 25,
+  "runtimePaletteVariants": true,
+  "frameSize": [
+    128,
+    192
+  ],
+  "order": [
+    "idle_1",
+    "idle_2",
+    "idle_3",
+    "walk_1",
+    "walk_2",
+    "dying_1",
+    "dead",
+    "scared_scream",
+    "scared_point",
+    "happy",
+    "celebrate"
+  ],
+  "characters": [
+    {
+      "id": "townsfolk_001",
+      "name": "Village Baker",
+      "source": "generated_sources/baker.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_002",
+      "name": "Charcoal Burner",
+      "source": "generated_sources/charcoal_burner.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_003",
+      "name": "Village Boy",
+      "source": "generated_sources/boy.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_004",
+      "name": "Village Girl",
+      "source": "generated_sources/girl.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_005",
+      "name": "Traveling Merchant",
+      "source": "generated_sources/merchant.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_006",
+      "name": "Village Healer",
+      "source": "generated_sources/healer.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_007",
+      "name": "Town Watchman",
+      "source": "generated_sources/watchman.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_008",
+      "name": "Noblewoman",
+      "source": "generated_sources/noblewoman.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_009",
+      "name": "Blacksmith",
+      "source": "generated_sources/smith.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_010",
+      "name": "King",
+      "source": "generated_sources/king.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_011",
+      "name": "Ferryman",
+      "source": "generated_sources/ferryman.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_012",
+      "name": "Tavern Keeper",
+      "source": "generated_sources/tavern_keeper.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_013",
+      "name": "Midwife",
+      "source": "generated_sources/midwife.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_014",
+      "name": "Carpenter",
+      "source": "generated_sources/carpenter.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_015",
+      "name": "Herbalist",
+      "source": "generated_sources/herbalist.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_016",
+      "name": "Shepherd",
+      "source": "generated_sources/shepherd.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_017",
+      "name": "Miller",
+      "source": "generated_sources/miller.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_018",
+      "name": "Seamstress",
+      "source": "generated_sources/seamstress.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_019",
+      "name": "Knight Aldric",
+      "source": "generated_sources/knight_aldric.png",
+      "attackSource": "generated_sources/knight_aldric_attacks.png",
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 13,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate",
+        "attack_1",
+        "attack_2"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": true,
+      "attackFrameCount": 2,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_020",
+      "name": "Knight Maeve",
+      "source": "generated_sources/knight_maeve.png",
+      "attackSource": "generated_sources/knight_maeve_attacks.png",
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 13,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate",
+        "attack_1",
+        "attack_2"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": true,
+      "attackFrameCount": 2,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_021",
+      "name": "Knight Bastian",
+      "source": "generated_sources/knight_bastian.png",
+      "attackSource": "generated_sources/knight_bastian_attacks.png",
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 13,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate",
+        "attack_1",
+        "attack_2"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": true,
+      "attackFrameCount": 2,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_022",
+      "name": "Knight Rosette",
+      "source": "generated_sources/knight_rosette.png",
+      "attackSource": "generated_sources/knight_rosette_attacks.png",
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 13,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate",
+        "attack_1",
+        "attack_2"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": true,
+      "attackFrameCount": 2,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_023",
+      "name": "Royal Steward",
+      "source": "generated_sources/royal_steward.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_024",
+      "name": "Lady of the Court",
+      "source": "generated_sources/court_lady.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    },
+    {
+      "id": "townsfolk_025",
+      "name": "Royal Scribe",
+      "source": "generated_sources/royal_scribe.png",
+      "attackSource": null,
+      "frameSize": [
+        128,
+        192
+      ],
+      "frameCount": 11,
+      "frameOrder": [
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "walk_1",
+        "walk_2",
+        "dying_1",
+        "dead",
+        "scared_scream",
+        "scared_point",
+        "happy",
+        "celebrate"
+      ],
+      "transparent": true,
+      "helmet": false,
+      "generatedUniqueIdentity": true,
+      "isKnight": false,
+      "attackFrameCount": 0,
+      "paletteVariants": "runtime"
+    }
+  ]
+}
