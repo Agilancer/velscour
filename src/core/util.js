@@ -135,6 +135,33 @@ export function makeCanvas(w, h) {
 }
 
 /**
+ * Atlases over 4096 px on a side exceed many GPUs' texture limit, and Chrome then draws every slice from them on the
+ * slow path. pageAtlas(img) cuts such an atlas into overlapping 3072 px pages along its long side (step 2048, so any
+ * sprite under 1024 px fits a page whole) and returns rect => {img, sx, sy} on the right page; small atlases pass through.
+ */
+const atlasPages = new WeakMap();
+export function pageAtlas(img) {
+  const W = img.naturalWidth || img.width, H = img.naturalHeight || img.height;
+  if (W <= 4096 && H <= 4096) return (sx, sy) => ({ img, sx, sy });
+  let pages = atlasPages.get(img);
+  const vert = H >= W, L = vert ? H : W, STEP = 2048, SIZE = 3072;
+  if (!pages) {
+    pages = [];
+    for (let s = 0; s < L; s += STEP) {
+      const n = Math.min(SIZE, L - s), c = vert ? makeCanvas(W, n) : makeCanvas(n, H);
+      c.getContext('2d').drawImage(img, vert ? 0 : -s, vert ? -s : 0);
+      pages.push(c);
+      if (s + SIZE >= L) break;
+    }
+    atlasPages.set(img, pages);
+  }
+  return (sx, sy) => {
+    const i = Math.min(pages.length - 1, Math.floor((vert ? sy : sx) / STEP));
+    return vert ? { img: pages[i], sx, sy: sy - i * STEP } : { img: pages[i], sx: sx - i * STEP, sy };
+  };
+}
+
+/**
  * Palette-swap an image region. params:
  *  hue (degrees shift), sat (multiplier), light (-1..1 add), contrast (mult around .5),
  *  tint [r,g,b,amount] blended in after the HSL shift, keepHue (bool: colourize to hue)

@@ -1,5 +1,5 @@
 // Runtime access to the complete, pivot-preserving CASTLE biome atlas pack.
-import { recolor } from '../core/util.js';
+import { recolor, pageAtlas } from '../core/util.js';
 const DIR='assets/tiles/castle/';
 let loading=null,meta=null,images=null;
 const recolored=new Map();
@@ -24,7 +24,7 @@ export function castleObject(id,category='scatter',palette=null){
  if(!f)return null;
  const [px,py]=f.pivot||[f.w/2,f.h];
  const tree=category==='trees';
- return {img:imageFor(category,palette),sx:f.x,sy:f.y,w:f.w,h:f.h,ox:-px,oy:-py,
+ return {...pageAtlas(imageFor(category,palette))(f.x,f.y),w:f.w,h:f.h,ox:-px,oy:-py,
   fp:tree ? 0.72 : (f.w > 260 ? 0.7 : 0.42),block:tree,name:f.id,isometric:true,castle:true,
   category,connectionMask:f.connection_mask??f.mask??null,orientation:f.orientation||null};
 }

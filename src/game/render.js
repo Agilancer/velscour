@@ -15,7 +15,7 @@ import { drawTownSpeech } from './townspeech.js';
 import { enemyImage } from '../core/enemyart.js';
 import { drawLootLabels } from './loot.js';
 
-let lightCanvas = null, vignette = null, vigKey = '';
+let lightCanvas = null, glowCanvas = null, vignette = null, vigKey = '';
 const transitionSprites = new Map();
 // Non-vendor town residents use the original 25-identity townsfolk animation pack.
 // Vendors keep their existing painted replacement sprites.
@@ -429,7 +429,81 @@ function drawNpc(ctx, n) {
   }
   n.sbox = [x - w / 2, spriteY, x + w / 2, y];
   drawTownMood(ctx,n,x,y);
+  if(n.bounty&&n.bounty.state!=='paid'){
+    // a wanderer's bounty (game/wanderers.js): a bobbing gold "!" to take it, a silver "?" while it runs
+    const offer=n.bounty.state==='offer',by=spriteY-16+Math.sin(G.time*4)*3;
+    ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=0.7;ctx.drawImage(glowSprite(offer?'#ffd040':'#c0d0ff'),x-16,by-22,32,32);ctx.restore();
+    ctx.save();ctx.font='900 22px Cinzel, Georgia, serif';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#1a1006';ctx.fillStyle=offer?'#ffd040':'#d8e0ff';
+    ctx.strokeText(offer?'!':'?',x,by);ctx.fillText(offer?'!':'?',x,by);ctx.restore();
+  }
   drawTownSpeech(ctx,n,x,spriteY);
+}
+
+// Floors (tiles, grit, seam flecks) never change after generation, so they are baked into screen-aligned chunks of
+// CW world px at the current device scale and blitted: ~6 drawImages a frame instead of hundreds. Chunks rebuild when
+// the zoom/DPR changes; at most two are baked per frame, the rest of the view draws tile by tile until its turn.
+const CW = 384, CHUNK_MAX = 24;
+let chunkBudgetFrame = -1, chunkBudget = 0;
+function drawFloorTiles(ctx, world, x0, y0, x1, y1, force) {
+  const map = world.map;
+  const tl = [(x0 / HW + y0 / HH) / 2, (y0 / HH - x0 / HW) / 2], br = [(x1 / HW + y1 / HH) / 2, (y1 / HH - x1 / HW) / 2];
+  const tr = [(x1 / HW + y0 / HH) / 2, (y0 / HH - x1 / HW) / 2], bl = [(x0 / HW + y1 / HH) / 2, (y1 / HH - x0 / HW) / 2];
+  const tx0 = clamp(Math.floor(tl[0]) - 1, 0, map.w - 1), tx1 = clamp(Math.ceil(br[0]) + 1, 0, map.w - 1);
+  const ty0 = clamp(Math.floor(tr[1]) - 1, 0, map.h - 1), ty1 = clamp(Math.ceil(bl[1]) + 1, 0, map.h - 1);
+  for (let ty = ty0; ty <= ty1; ty++) {
+    for (let tx = tx0; tx <= tx1; tx++) {
+      const i = ty * map.w + tx;
+      if (map.t[i] !== 1) continue;
+      const px = (tx - ty) * HW, py = (tx + ty) * HH;
+      if (px < x0 - TW || px > x1 + TW || py < y0 - TH || py > y1 + TH) continue;
+      const f = floorEntry(world, map.v[i]);
+      ctx.drawImage(f.img, f.sx, f.sy, f.w, f.h, px - HW - 0.6, py - 0.6, TW + 1.2, TH + 1.2);
+      const gr = gritAt(world, f, map.v[i], tx, ty, force);
+      if (gr) ctx.drawImage(gr, px - HW, py);
+    }
+  }
+}
+function drawFloors(ctx, world, vr) {
+  const z = camera.zoom * G.dpr;
+  const fc = world.floorChunks && world.floorChunks.z === z ? world.floorChunks : (world.floorChunks = { z, map: new Map() });
+  const tf = ctx.getTransform(), ox = tf.e, oy = tf.f;
+  if (chunkBudgetFrame !== G.frame) { chunkBudgetFrame = G.frame; chunkBudget = G.touch ? 1 : 2; }
+  const parts = buildTransitionParticles(world);
+  const cx0 = Math.floor((vr.x0 - 8) / CW), cx1 = Math.floor((vr.x1 + 8) / CW);
+  const cy0 = Math.floor((vr.y0 - 8) / CW), cy1 = Math.floor((vr.y1 + 8) / CW);
+  for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
+    const key = cx + ',' + cy;
+    let c = fc.map.get(key);
+    const wx = cx * CW, wy = cy * CW;
+    // device-px edges from the same rounding on both sides, so neighbouring chunks meet with no seam
+    const dx0 = Math.round(ox + wx * z), dy0 = Math.round(oy + wy * z), dx1 = Math.round(ox + (wx + CW) * z), dy1 = Math.round(oy + (wy + CW) * z);
+    if (!c && chunkBudget > 0) {
+      chunkBudget--;
+      const n = Math.ceil(CW * z);
+      c = makeCanvas(n, n);
+      const g = c.getContext('2d');
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'low';
+      g.setTransform(n / CW, 0, 0, n / CW, -wx * n / CW, -wy * n / CW);
+      drawFloorTiles(g, world, wx, wy, wx + CW, wy + CW, true);
+      g.imageSmoothingEnabled = false;
+      for (const pt of parts) {
+        if (pt.x < wx - 4 || pt.x > wx + CW + 4 || pt.y < wy - 4 || pt.y > wy + CW + 4) continue;
+        g.drawImage(transitionSprite(pt.color, pt.size), pt.x - pt.size / 2, pt.y - pt.size / 2);
+      }
+      fc.map.set(key, c);
+      if (fc.map.size > CHUNK_MAX) fc.map.delete(fc.map.keys().next().value);
+    } else if (c) { fc.map.delete(key); fc.map.set(key, c); } // LRU touch
+    if (c) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(c, dx0, dy0, dx1 - dx0, dy1 - dy0);
+      ctx.setTransform(tf);
+    } else {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(wx, wy, CW, CW); ctx.clip();
+      drawFloorTiles(ctx, world, Math.max(wx, vr.x0), Math.max(wy, vr.y0), Math.min(wx + CW, vr.x1), Math.min(wy + CW, vr.y1), false);
+      ctx.restore();
+    }
+  }
 }
 
 /** Main world render. */
@@ -454,20 +528,7 @@ export function renderWorld(ctx, world) {
   const ty0 = clamp(Math.floor(Math.min(...corners.map((c) => c[1]))) - 1, 0, map.h - 1);
   const ty1 = clamp(Math.ceil(Math.max(...corners.map((c) => c[1]))) + 1, 0, map.h - 1);
 
-  // floors
-  for (let ty = ty0; ty <= ty1; ty++) {
-    for (let tx = tx0; tx <= tx1; tx++) {
-      const i = ty * map.w + tx;
-      if (map.t[i] !== 1) continue;
-      const px = (tx - ty) * HW, py = (tx + ty) * HH;
-      if (px < vr.x0 - TW || px > vr.x1 + TW || py < vr.y0 - TH || py > vr.y1 + TH) continue;
-      const f = floorEntry(world, map.v[i]);
-      ctx.drawImage(f.img, f.sx, f.sy, f.w, f.h, px - HW - 0.6, py - 0.6, TW + 1.2, TH + 1.2);
-      const gr = gritAt(world, f, map.v[i], tx, ty);
-      if (gr) ctx.drawImage(gr, px - HW, py);
-    }
-  }
-  drawTransitionParticles(ctx, world, vr);
+  drawFloors(ctx, world, vr);
   ctx.imageSmoothingQuality = hq;
   drawDecals(ctx, vr);
   for (const c of world.corpses) {
@@ -674,7 +735,7 @@ function drawLighting(ctx, world) {
   lc.globalAlpha = 1;
   lc.clearRect(0, 0, lw, lh);
   const [fr, fg, fb] = hexToRgb(b.fog || '#000000');
-  lc.fillStyle = `rgba(${fr},${fg},${fb},${b.dark})`;
+  lc.fillStyle = `rgba(${fr},${fg},${fb},${Math.max(b.dark, (world.darkK || 0) * 0.94)})`;
   lc.fillRect(0, 0, lw, lh);
   lc.globalCompositeOperation = 'destination-out';
   const scale = (HW * 1.25 * camera.zoom * G.dpr) / divisor;
@@ -712,6 +773,30 @@ function drawLighting(ctx, world) {
   lc.drawImage(vignette, 0, 0);
   ctx.imageSmoothingQuality = 'low';
   ctx.drawImage(lightCanvas, 0, 0, W, H);
+  // coloured glow: torches, portals and spells wash their colour over the scene (one more low-res blit)
+  if (G.settings.glow !== false) {
+    if (!glowCanvas || glowCanvas.width !== lw || glowCanvas.height !== lh) glowCanvas = makeCanvas(lw, lh);
+    const gc = glowCanvas.getContext('2d');
+    gc.globalCompositeOperation = 'source-over'; gc.globalAlpha = 1;
+    gc.clearRect(0, 0, lw, lh);
+    gc.globalCompositeOperation = 'lighter';
+    let n = 0;
+    for (const l of lights) {
+      if (!l.color) continue;
+      const [sx, sy] = camera.tileToScreen(l.x, l.y, l.z ?? 20);
+      const cx = (sx * G.dpr) / divisor, cy = (sy * G.dpr) / divisor, rr = l.radius * scale * 0.9;
+      if (cx + rr < 0 || cy + rr < 0 || cx - rr > lw || cy - rr > lh) continue;
+      gc.globalAlpha = Math.min(1, l.intensity) * 0.55;
+      gc.drawImage(glowSprite(l.color), cx - rr, cy - rr, rr * 2, rr * 2);
+      n++;
+    }
+    if (n) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.32 + (b.dark || 0) * 0.25;
+      ctx.drawImage(glowCanvas, 0, 0, W, H);
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    }
+  }
 }
 
 function drawOverheadNames(ctx, world) {

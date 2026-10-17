@@ -137,7 +137,14 @@ export class Creature {
     this.facing = ang;
     // screen-space horizontal component decides sprite flip
     const sx = Math.cos(ang) - Math.sin(ang);
-    if (Math.abs(sx) > 0.15) this.flip = sx < 0;
+    if (Math.abs(sx) <= 0.15) return;
+    // a facing change must hold for a moment: auto-play and kiting alternate move/attack directions frame to frame,
+    // which strobed the sprite left-right. Deliberate turns (a held direction) still land within a tenth of a second.
+    const want = sx < 0;
+    if (want === this.flip) { this.flipAt = -1; return; }
+    const t = G.time || 0;
+    if (!(this.flipAt >= 0) || t < this.flipAt) this.flipAt = t;
+    if (t - this.flipAt >= (this.isPlayer && !G.autoplayOn ? 0.06 : 0.14)) { this.flip = want; this.flipAt = -1; }
   }
 
   // ------------------------------------------------------------- drawing

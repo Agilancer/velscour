@@ -84,6 +84,8 @@ export const UI = {
   },
   centerMsg(title, sub = '', dur = 2.6) {
     this.msgEl.innerHTML = `${escapeHtml(title)}${sub ? `<small>${escapeHtml(sub)}</small>` : ''}`;
+    const lu = this.hud && this.hud.lu;
+    this.msgEl.classList.toggle('below', !!(lu && performance.now() < lu.end));
     this.msgEl.style.opacity = '1';
     clearTimeout(this.msgT);
     this.msgT = setTimeout(() => { this.msgEl.style.opacity = '0'; }, dur * 1000);

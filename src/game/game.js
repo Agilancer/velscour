@@ -18,6 +18,7 @@ import { FINAL_DEPTH, depthLevel } from '../data/depth.js';
 import { generateTown, makeTownTiles, rollTownWeather } from '../world/town.js';
 import { generateOverworld } from '../world/overworld.js';
 import { createOverworldScenario } from './overworld.js';
+import { addWanderers } from './wanderers.js';
 import { createSeaOfSandScenario } from './seaofsand.js';
 import { loadSeaOfSandPack } from '../gfx/seaofsand.js';
 import { loadCastlePack } from '../gfx/castle.js';
@@ -431,6 +432,7 @@ export const game = {
     const gen = biome.overworld ? generateOverworld(depth, biome, seed) : generateDungeon(depth, biome, tileset, seed);
     const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches, wallHangings: gen.wallHangings, looks: gen.looks, townTiles: gen.townTiles || null, buildings: gen.buildings || [] });
     if (gen.layoutId) { world.layoutId = gen.layoutId; world.layoutName = gen.layoutName; }
+    world.rooms = gen.rooms || [];
     world.chests = gen.chests.map((ch) => ({
       ...ch, opened: false, reach: 1.3,
       use() {
@@ -519,12 +521,24 @@ export const game = {
       sfx('gate'); UI.refresh(); this.autosave();
     });
     this.setWorld(world, gen.start, old);
+    if (biome.overworld) {
+      // townsfolk on the road: reachable landmarks to walk between (game/wanderers.js)
+      const spots = [], map = gen.map;
+      for (let i = 0; i < 60 && spots.length < 9; i++) {
+        const x = 3 + Math.random() * (map.w - 6), y = 3 + Math.random() * (map.h - 6);
+        if (map.walkable(x, y) && map.findPath(gen.start[0], gen.start[1], x, y, 9000)) spots.push([x, y]);
+      }
+      if (spots.length >= 2) addWanderers(world, spots, biome.id === 'castle' ? 6 : 5);
+      world.raining = biome.id !== 'sea_of_sand' && Math.random() < 0.3; // a wet day in the Wilds or on the walls
+      if (Math.random() < 0.25) { world.darkK = biome.id === 'sea_of_sand' ? 0.45 : 0.6; world.night = true; } // nightfall: torches, spells and portals glow
+    }
     recordBiomeVisit(c, biome, depth);
     c.lastBiome = biome.id;
     HUD.setArea(`Depth ${depth}${depth > FINAL_DEPTH ? ' — Endless Torment' : ''}`, biome.overworld ? `${biome.name} · ${world.overworldScenario.title}` : gen.raid ? `${biome.name} · Boss Room` : biome.name);
     stopMusic(); setAmbience(biome.id);
     const kin = tileset.mixed && BIOME_BY_ID[tileset.mixed];
     UI.centerMsg(biome.name.toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);
+    if (world.night) UI.log(world.raining ? 'Night has fallen, and the rain with it.' : 'Night has fallen over the land.', '#a0b0d0');
     if (biome.id === 'sea_of_sand') UI.log(`Secure ${gen.scenarioCount} marked scenario area${gen.scenarioCount===1?'':'s'} to open the exit. Rewards improve with each clear.`, '#ffe2a0');
     else if (biome.overworld) UI.log('Activate the glowing shrine and complete its objective to open the exit.', '#ffe2a0');
     else if (!c.tips.dungeon) { c.tips.dungeon = true; setTimeout(() => UI.log('Find the exit portal. It stays sealed until the depth\'s guardian is slain. The blue portal returns you to town.', '#ffe2a0'), 1500); }

@@ -108,6 +108,7 @@ export const AFFIXES = [
   { s: 'skillTree0', t: '+{v} to {tree0} Skills', pre: 'Adept\'s', min: 1, max: 2, sc: 0, slots: 'WOH', w: 0.25, minRarity: 2 },
   { s: 'skillTree1', t: '+{v} to {tree1} Skills', pre: 'Adept\'s', min: 1, max: 2, sc: 0, slots: 'WOH', w: 0.25, minRarity: 2 },
   { s: 'skillTree2', t: '+{v} to {tree2} Skills', pre: 'Adept\'s', min: 1, max: 2, sc: 0, slots: 'WOH', w: 0.25, minRarity: 2 },
+  { s: 'skillTree3', t: '+{v} to {tree3} Skills', pre: 'Adept\'s', min: 1, max: 2, sc: 0, slots: 'WOH', w: 0.25, minRarity: 2 },
 ];
 export const AFFIX_BY_STAT = Object.fromEntries(AFFIXES.map((a) => [a.s, a]));
 const SLOT_LETTER = { weapon: 'W', offhand: 'O', head: 'H', body: 'B', hands: 'G', legs: 'L', feet: 'F', ring: 'R' };
@@ -404,7 +405,7 @@ export function statLabel(s, v, classTrees) {
   if (special[s]) return special[s];
   if (!a) return `${s}: ${v}`;
   let t = a.t.replace('{v}', v);
-  if (classTrees) t = t.replace('{tree0}', classTrees[0]).replace('{tree1}', classTrees[1]).replace('{tree2}', classTrees[2]);
+  if (classTrees) t = t.replace('{tree0}', classTrees[0]).replace('{tree1}', classTrees[1]).replace('{tree2}', classTrees[2]).replace('{tree3}', classTrees[3] || classTrees[0]);
   return t;
 }
 

@@ -126,7 +126,7 @@ export class Projectile {
       if (this.dead) return false;
     }
     trail(this.fx, this.x, this.y, this.z, this.E, dt, this.size);
-    if (this.light) addLight(this.x, this.y, 2.5, 0.8);
+    if (this.light) addLight(this.x, this.y, 2.5, 0.8, 20, this.E.glow);
     if (this.t > this.life && !this.ret) { if (this.exp) this.impact(); return false; }
     return !this.dead;
   }
@@ -308,7 +308,7 @@ export class Area {
         spawn({ type: this.fx === 'locust' || this.fx === 'crow' ? 'dot' : 'glow', x: this.x + Math.cos(a) * rr, y: this.y + Math.sin(a) * rr, z: h, vz: 30, life: 0.3, size: this.fx === 'crow' ? 3 : 2.2, size1: 0.6, color: this.fx === 'crow' ? '#140c18' : this.fx === 'locust' ? '#3a4010' : chance(0.5) ? E.glow : E.core, add: !(this.fx === 'crow' || this.fx === 'locust') });
       }
     }
-    addLight(this.x, this.y, r * 1.6, 0.5);
+    addLight(this.x, this.y, r * 1.6, 0.5, 20, this.E && this.E.glow);
   }
   draw(ctx) {
     const px = isoX(this.x, this.y), py = isoY(this.x, this.y);
@@ -647,7 +647,7 @@ export class NovaWave {
     }
     if (this.fx === 'lightning' || this.fx === 'storm') for (let i = 0; i < 6; i++) { const a = rand(TAU); addEffect(new Bolt(this.x, this.y, 20, this.x + Math.cos(a) * this.r, this.y + Math.sin(a) * this.r, 10, this.E.glow, 0.25, 2)); }
     sfx(this.E.sfx);
-    addLight(this.x, this.y, this.r * 1.5, 1.2);
+    addLight(this.x, this.y, this.r * 1.5, 1.2, 20, this.E && this.E.glow);
   }
   update(dt) {
     this.t += dt;

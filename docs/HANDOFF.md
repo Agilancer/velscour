@@ -14,6 +14,45 @@ Contents
 
 ---
 
+## October 17, 2026 — grand sweep: FPS, room shapes, 20 raid bosses, 4th skill trees, overworld wanderers (branch `feat/grand-sweep`)
+
+- **FPS.** `tools/tests/biome_perf.js` profiles every biome (phone screen, 4x CPU throttle, auto-play on). Two fixes
+  carried most of it: floors (tiles, grit, seam flecks) are baked into 384 px screen-aligned chunks at the device
+  scale and blitted (`drawFloors` in `render.js`; at most 1-2 chunks baked a frame, the rest drawn tile by tile until
+  baked); and atlases over 4096 px (the Cathedral pack's 2048x4463 walls, the Castle's 4608 px furniture) are cut
+  into GPU-sized pages (`pageAtlas` in `util.js`), which took wall drawing in every Cathedral-walled biome from ~6 ms
+  to ~2 ms. Render ms before → after (4x throttle): town 4.4→2.4, castle 4.5→1.7, Sea of Sand 11.4→3.4,
+  heavenly 17.4→8, thorn 17.2→~6, astral 16.5→~6. Light records are pooled.
+- **Flashier:** a coloured glow pass (`drawLighting`): torches, portals, burning props and projectiles wash their
+  colour over the scene through one low-res additive blit (`addLight(..., color)`; `G.settings.glow = false` turns
+  it off). Overworld maps roll rain (30%) and nightfall (25%).
+- **Dungeon rooms** (`world/dungeon.js`): rooms 7x7+ may be octagons, rounds, crosses, pillared halls (four 2x2 wall
+  pillars) or cloisters (a walled court with a 3-wide ambulatory). Holes are stamped after the corridors and never in
+  the start/exit room. Scatter set pieces (`placeObstacles` `plan`): naves (two colonnades), shrines (a lit
+  centrepiece ringed with clutter), rows (graves/pews), rubble drifts and prop rings, all behind the reachability
+  guard. Chests fall back to a walkable spot. `world.rooms` keeps the room list. Test: `tools/tests/rooms.js`.
+- **Town sprites:** all 100 townsfolk sheets are used now (26-100 are pre-painted colourways of the ten source
+  identities: sheet k shows identity (k-1)%10+1; those visitors skip the runtime recolour). Scenario civilians in
+  the Wilds wear townsfolk sheets and the escort walks/turns properly. The 2,000 town event cards are distinct again.
+- **Hero flicker:** `Creature.face` only turns the sprite after the new facing holds for 0.14 s (0.06 s for a manual
+  hero); auto-play's kiting commits to a retreat point for 0.45 s.
+- **Auto-play:** frontier exploration when nothing is known to hunt, committed kiting, raid mechanic rules
+  (`mechRules`/`mechGoal`: autoGoal, holdFire, autoStill, autoMove, `raidPriority` adds), and overworld bounties.
+- **20 new raid bosses** (`game/raidsigs.js`, `sigs: true` in `RAID_BOSSES`): each has one fight-long WoW-style
+  mechanic and two signature attacks used by no other boss — Soul Tether, Petrifying Gaze (get behind it), Overload
+  Conduits (stand on pads), Hymn of Ending (beacons), Polarity halves, wandering Eclipse light, Three Heads
+  (priority adds), Amber Entomb, Spark Minefield + Magnetic Pulse, Sunder stacks + Silver Riposte (hold fire),
+  Lunar Tide, Floor of Magma quadrants, Defile + Null Orbs, Prism Lattice, Static (keep moving), Deep Chill +
+  braziers, Danse Macabre rows + Organ Pipes, Blood Thralls + Hemorrhage (stand still), Wrecking Charge (pillar
+  between you), Curse of Exchange (swap places) + Scarab Carpet. Test: `tools/tests/raid_sigs.js` (casts everything,
+  screenshots, then auto-play fights each one for real and prints damage taken per ability).
+  Raid boss life is gentler before depth 40 (`12 + depth*0.9` instead of `30 + depth*0.5`).
+- **Fourth skill tree** for the 14 classes that had three (`data/skilltrees4.js`, 280 spells; `+N to {tree3}` affix).
+- **Overworld wanderers** (`game/wanderers.js`): 5-6 townsfolk walk the Wilds/Castle/Sea of Sand on real paths,
+  flee monsters, cheer a won scenario, and 1-2 carry bounties (kills, a marked champion, a fetched heirloom) shown by
+  a gold "!" — auto-play takes and finishes them. Test: `tools/tests/wanderers.js`.
+- Level-up banner no longer overlaps the area title (`#center-msg.below`).
+
 ## October 17, 2026 — dungeon biome art clean-up (branch `fix/biome-art-cleanup`)
 
 - Surveyed all 32 dungeon biomes in Chromium (`tools/tests/biome_survey.js`). The mess came from three layers on

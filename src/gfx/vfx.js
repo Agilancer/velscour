@@ -452,8 +452,14 @@ function drawDrips(ctx, t, spr, age) {
   }
 }
 
-export function addLight(x, y, radius, intensity = 1, z = 20) {
-  if (lights.length < 48) lights.push({ x, y, radius, intensity, z });
+// light records are pooled: dozens are added every frame
+const lightPool = [];
+/** A light for this frame; `color` also tints the scene around it (render.js drawLighting's glow pass). */
+export function addLight(x, y, radius, intensity = 1, z = 20, color = null) {
+  if (lights.length >= 48) return;
+  const l = lightPool[lights.length] || (lightPool[lights.length] = {});
+  l.x = x; l.y = y; l.radius = radius; l.intensity = intensity; l.z = z; l.color = color;
+  lights.push(l);
 }
 
 export function clearVfx() {
