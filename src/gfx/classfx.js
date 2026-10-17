@@ -48,9 +48,9 @@ const THEMES = {
     smoke(x, y, 4, '#a8d8ff', Math.ceil(n / 6), 7 * k);
     for (let i = 0; i < Math.max(2, n / 3); i++) P({ type: 'skull', x: x + rand(-0.6, 0.6), y: y + rand(-0.6, 0.6), z: rand(8, 30), vx: rand(-0.8, 0.8), vy: rand(-0.8, 0.8), vz: rand(30, 70), drag: 1, life: rand(0.6, 1.1), size: rand(4, 6.5) * k, size1: rand(4, 6.5) * k, color: i % 3 ? '#e8f4ff' : '#bfeaff', eye: i % 2 ? '#1a3a80' : '#40c0ff', add: false });
   } },
-  arcane_sorcerer: { c: ['#d070ff', '#ffe0ff', '#5a10c0'], fx(x, y, n, k) { // star glints and a spinning sigil
-    for (let i = 0; i < n; i++) fling(x, y, 30, i % 3 ? '#d070ff' : '#80e0ff', 2.5 * k, 'glow', { g: 0, drag: 3 });
-    spiral(x, y, 30, '#ffe0ff', Math.min(12, n / 2), 0.7 * k, 0);
+  arcane_sorcerer: { c: ['#4aa8ff', '#f2fbff', '#1430a0'], fx(x, y, n, k) { // the Astronomer: blue star glints and a spinning ring of stardust
+    for (let i = 0; i < n; i++) fling(x, y, 30, i % 4 ? (i % 2 ? '#4aa8ff' : '#9fe6ff') : '#ffffff', 2.8 * k, 'glow', { g: 0, drag: 3 });
+    spiral(x, y, 30, '#9fe6ff', Math.min(14, n / 2), 0.8 * k, 0);
   } },
   carrion_witch: { c: ['#9ac84a', '#e8ff90', '#203010'], fx(x, y, n, k) { // bile drops and buzzing flies
     for (let i = 0; i < n; i++) fling(x, y, 26, '#9ac84a', 2.5 * k, 'dot', { g: 260, size: rand(2, 3.5), add: false });

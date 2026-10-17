@@ -14,6 +14,37 @@ Contents
 
 ---
 
+## October 17, 2026 — the Arcane Sorcerer is now the Astronomer (branch `feat/astronomer`)
+
+- **Rename, id kept.** The class id stays `arcane_sorcerer` (saves, sprites, gear packs, `CLASS_IDS`); only the name,
+  trees, description and colour changed (`src/data/classes.js`). Trees: Starfire, Celestial Bodies, Gravity, and
+  Constellations (4th, `skilltrees4.js`). All 80 skills rewritten in place, so saved points map onto the new skills.
+- **Blue starlight:** his arcane skills fly as the visual-only element `astral` (`ELEM.astral` in `vfx.js`; castSkill
+  maps `arcane` -> `astral` for this class). Hits still count as arcane: `combat.js` reads arcane resistance and halves
+  it, and `skillDamage` still uses the skill's own `arcane` for gear bonuses. Art is procedural in `src/gfx/cosmos.js`
+  (star missiles that weave, comets, crescent moons, banded/ringed planets, suns, moons, black holes, starry beams);
+  `shapes.js`, `BeamCh.draw` and `Orbit.draw` call into it. Skill icons get a starfield and the special spells show
+  their body (sun, moon, black hole...).
+- **Special spells** (`astro=` mod, `astroCast` in `src/game/astronomer.js`, called before castSkill's kind switch;
+  true replaces the kind, undefined adds to it): Sun Slam and Moonfall (a sun/moon slowly drops from the sky, heat or
+  chill beneath it, then a huge crash), Black Hole / Singularity / Gravity Well (drags enemies in, bosses at 20%,
+  swallows enemy missiles, collapses for double damage), Meteor / Great Meteor / Falling Star, Meteor Shower and
+  Extinction Event, Big Bang and Annihilation, Pulsar (two sweeping beams, no channel), Neutron Star, Wormhole,
+  Supernova, Eclipse, Syzygy, Grand Conjunction, Star Chart, Constellation, Heaven's Map. **Celestial Mirror**: eight
+  see-through copies of the hero (drawn by `MirrorImage`, which redraws the hero at each spot with `ghostDraw`) ring
+  him; he is invulnerable (`p.invuln`) while they last, each fires star missiles, and his projectile spells also leave
+  every image (`mirrorShots`, up to 3 each at 30%).
+- **Gimmick: the star chart.** Each non-basic cast lights a star where it lands (every third basic cast; slain
+  monsters 35%); the same spot only brightens its star; a star more than 9 tiles from the last one starts a new chart.
+  Consecutive stars are joined by starlines that tick damage and slow. The fifth star **ascends** the constellation:
+  starfalls on every star, the lines flare, and `readSky` names it from the shape: straight = the Hunter (crit),
+  closed loop = Northern Crown (cooldowns), tight cluster = Twins (+1 projectile via buff stat `proj`), zigzag =
+  Serpent (leech), one-way curve = Swan (speed), long = Draco (damage), wide = Great Bear (armor, life), else Scales
+  (regen, resist, mana). Boons last 15 s; three at once start a **Grand Conjunction** (40 s cooldown): meteors rain on
+  everything near him for 4.5 s under a starry sky. An orrery over his head shows the chart (5 slots) and his boons as
+  orbiting planets. Auto-play favours `astro=` skills and star missiles (`focusMul`).
+- New summon `ursa` (Ursa Major). Test: `tools/tests/astronomer.js [minutes] [mobile]`. See [ASTRONOMER.md](ASTRONOMER.md).
+
 ## October 17, 2026 — balance sweep (depths 60-500) and happenings (branch `feat/balance-sweep`)
 
 The user's ask: get past depths 150-160 without dying and resetting 30+ times; a death now and then, never more than
@@ -416,7 +447,7 @@ floor-tile sheet and a catacomb wall sheet.
 
 Requirements, as stated (✅ = implemented in the draft):
 - ✅ **16 selectable classes** from the class sheet, using the full-body sprite as the placeholder character sprite:
-  Paladin, Ranger, Wizard, Necromancer, Barbarian, Dragoon, Totem Master, Death Knight, Arcane Sorcerer,
+  Paladin, Ranger, Wizard, Necromancer, Barbarian, Dragoon, Totem Master, Death Knight, Arcane Sorcerer (now the Astronomer),
   Carrion Witch, Bard, Slime Lord, Boomerang Knight, Lancer, Dragon Knight, Gunner.
 - ✅ **Sophisticated skill trees per class, 60 unique skills/abilities per class.** New abilities unlock as you level,
   and default abilities are gained on level-up. Levels give skill points.
@@ -1702,7 +1733,7 @@ Summon attacks (`monster.js:416 summonAttack`) by `atk.type`:
   - dragoon: str, spear, 65/30 (7/2), Lancework, Sky Dive, Wyrmblood
   - totem_master: int, staff, 60/45 (7/3), Totems, Ancestors, Earth & Storm
   - death_knight: str, sword, 75/30 (8/2), Frost, Unholy, Blood
-  - arcane_sorcerer: int, wand+orb, 44/65 (5/4.5), Arcane, Chronomancy, Void
+  - arcane_sorcerer (the Astronomer): int, wand+orb, 44/65 (5/4.5), Starfire, Celestial Bodies, Gravity (+ Constellations)
   - carrion_witch: int, staff, 48/55 (5/4), Plague, Murder of Crows, Hexes
   - bard: dex, lute, 55/40 (6/3), Songs, Sonic Arts, Trickery
   - slime_lord: vit, mace, 85/35 (9/2.5), Ooze, Spawn, Mutation

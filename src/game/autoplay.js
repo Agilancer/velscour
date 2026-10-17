@@ -122,6 +122,7 @@ function focusMul(classId, sk) {
   if (classId === 'dragoon') return sk.m.barrage ? 5 : sk.kind === 'leap' ? 5 : sk.m.weave ? 2.5 : mobility(sk) ? 1.8 : 1;
   if (PET_CLASSES.has(classId) && sk.kind === 'summon') return sk.m.dur ? 2.5 : 4;
   if (classId === 'bard') return sk.m.dacapo ? 2 : sk.kind === 'proj' || sk.kind === 'orbit' || sk.kind === 'rain' ? 1.5 : 1; // notes in the air
+  if (classId === 'arcane_sorcerer') return sk.m.astro ? 2.5 : sk.fx === 'starmissile' ? 1.5 : 1; // the Astronomer: falling suns, black holes, star swarms
   return 1;
 }
 

@@ -43,6 +43,7 @@ node tools/tests/mobs.js [levels]                  # monster pathing: awake mons
 node tools/tests/bot.js paladin 2                  # bot plays depths 1..2, prints balance stats
 node tools/tests/skills.js wizard,gunner           # cast every skill of a class (all 16 if no arg; slow)
 node tools/tests/bard.js [minutes] [mobile]        # Bard notation: glyph sheet, measure/Cadence rules, showcase shots, auto-play soak
+node tools/tests/astronomer.js [minutes] [mobile]  # Astronomer: icons, star chart/zodiac/Conjunction/Mirror rules, showcase shots, auto-play soak
 node tools/tests/classart.js paladin               # class art pack: catalog weapons, ability effects
 node tools/tests/lance.js [mobile]                 # Dragoon leaps: energy lance + per-skill trails, stepped frame by frame
 node tools/tests/gear.js paladin,wizard            # hero looks: armor+helm per rarity, finishes, auras (all = 16)
@@ -122,7 +123,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Overworld scenarios
   (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. Monster/hero scaling, affixes, drops or death
   rules (`monsterBase`, `src/data/depth.js`, `src/data/items.js`, `src/game/defiance.js`): run `balance_model.mjs` and
-  `balance.js` at a few depths. Dungeon/town events (`src/game/happenings.js`): run `happenings.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. The Bard's notes, measure and Cadences (`src/game/bard.js`, `src/gfx/notation.js`, `src/data/notation.js`): run `bard.js`. Raid bosses
+  `balance.js` at a few depths. Dungeon/town events (`src/game/happenings.js`): run `happenings.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. The Bard's notes, measure and Cadences (`src/game/bard.js`, `src/gfx/notation.js`, `src/data/notation.js`): run `bard.js`. The Astronomer (class id `arcane_sorcerer`; `src/game/astronomer.js`, `src/gfx/cosmos.js`): run `astronomer.js`. Raid bosses
   (`src/game/raid.js`, every 5th depth): run `raid.js` (and `raid_sigs.js` for `src/game/raidsigs.js`). Rings, augments or skill mastery (`src/data/rings.js`,
   `src/game/augments.js`): run `rings.js`. The town generator (`src/world/town.js`): run `town.js` with a few seeds.
 - Velscour waits at `FINAL_DEPTH` (500, `src/data/depth.js`); monster levels come from `depthLevel(depth)`, never the
