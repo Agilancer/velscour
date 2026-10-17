@@ -77,7 +77,7 @@ const FULL=process.argv.includes('--all');
       const ow=generateOverworld(9,wild,904731);
       stats.wildFloors=ow.townTiles?.length||0;
       stats.wildProps=ow.props.filter(p=>p.spr?.name?.startsWith('overworld_wild_prop_')).length;
-      if(stats.wildFloors!==OVERWORLD_FLOOR_EXPANSION.start+60)
+      if(stats.wildFloors!==OVERWORLD_FLOOR_EXPANSION.start+OVERWORLD_FLOOR_EXPANSION.count)
         issues.push('60 standalone wilderness tiles missing');
       if(stats.wildProps<10)issues.push('Generated wilderness props not used');
       if((ow.map.v||[]).some(v=>v>=stats.wildFloors))
@@ -91,15 +91,24 @@ const FULL=process.argv.includes('--all');
       for(const b of chosen){
         await loadBiomeArt(b);
         const id='expanded_'+b.id,pack=A.packs[id],m=pack?.meta;
+        if(b.id==='catacombs'){
+          if(pack)issues.push('Master Catacombs unexpectedly regenerated');
+          const master=biomeTileSet(b);
+          if(master.bases.length!==10||master.features.length<30)
+            issues.push('Master Catacombs floor library was altered');
+          game.buildDungeon(13,b);
+          stats.rendered.push(b.id);
+          continue;
+        }
         if(!m?.expansion){issues.push('Missing expanded pack '+b.id);continue;}
         const nBase=m.expansion.floorStart,nScat=m.expansion.scatterStart;
-        if(m.floors.length!==nBase+60||m.scatter.length!==nScat+40)
+        if(m.floors.length!==nBase+120||m.scatter.length!==nScat+40)
           issues.push('Incomplete terrain expansion '+b.id);
         if(m.floors.slice(nBase).filter(f=>f.seamless).length!==10)
           issues.push('Missing 10 extra base floors '+b.id);
         const set=biomeTileSet(b);
-        if(set.bases.length!==10||set.features.length!==50)
-          issues.push('Expanded paving not selected in '+b.id);
+        if(set.bases.length<2||set.bases.length>3||set.features.length<1||set.features.length>25)
+          issues.push('Curated paving selection missing in '+b.id);
         for(const [family,masks]of Object.entries(set.walls))
           for(let i=0;i<16;i++)if(!masks[i]?.length)
             issues.push('Missing wall mask '+b.id+'/'+family+'/'+i);
