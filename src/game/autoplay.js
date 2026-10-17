@@ -43,7 +43,7 @@ function hitsPerCast(sk, crowd) {
       return h;
     }
     case 'nova': return (m.n || 1) * crowd * 0.9;
-    case 'aoe': return m.n && m.dur ? m.n * 0.5 * crowd * 0.8 : m.dur ? (m.dur / 0.3) * 0.4 * crowd * 0.7 : crowd;
+    case 'aoe': return m.barrage ? crowd * (m.barrage === 3 ? 1.6 : 1) : m.n && m.dur ? m.n * 0.5 * crowd * 0.8 : m.dur ? (m.dur / 0.3) * 0.4 * crowd * 0.7 : crowd;
     case 'beam': return m.dur ? (m.dur / 0.13) * 0.32 * Math.min(crowd, 1.6) : 1 + extra * 0.4;
     case 'chain': return 1 + Math.min(m.n || 4, extra + 2) * 0.6;
     case 'wall': return m.block ? 0.4 : m.ring ? 2 * crowd : 1.2 * crowd; // monsters walk through a wall, or are kept out by it
@@ -106,7 +106,7 @@ const focusSkills = (classId) => {
   if (classId === 'paladin') return list.filter(isHammer);
   if (classId === 'barbarian') return list.filter((sk) => sk.kind === 'whirl' || sk.kind === 'leap' || sk.kind === 'dash' || sk.name === 'Earthquake');
   if (classId === 'lancer') return list.filter((sk) => sk.m.shields || sk.kind === 'leap' || sk.kind === 'dash');
-  if (classId === 'dragoon') return list.filter((sk) => sk.kind === 'leap' || sk.kind === 'dash');
+  if (classId === 'dragoon') return list.filter((sk) => sk.kind === 'leap' || sk.kind === 'dash' || sk.m.barrage || sk.m.weave);
   return null;
 };
 const mobility = (sk) => ['leap', 'dash', 'blink'].includes(sk.kind) ||
@@ -116,7 +116,7 @@ function focusMul(classId, sk) {
   if (classId === 'paladin') return isHammer(sk) ? (sk.kind === 'orbit' ? 4 : 2.5) : 1;
   if (classId === 'barbarian') return sk.kind === 'whirl' ? 6 : mobility(sk) ? 1.8 : 1;
   if (classId === 'lancer') return sk.m.shields ? 5 : mobility(sk) ? 1.8 : 1;
-  if (classId === 'dragoon') return sk.kind === 'leap' ? 5 : mobility(sk) ? 1.8 : 1;
+  if (classId === 'dragoon') return sk.m.barrage ? 5 : sk.kind === 'leap' ? 5 : sk.m.weave ? 2.5 : mobility(sk) ? 1.8 : 1;
   if (PET_CLASSES.has(classId) && sk.kind === 'summon') return sk.m.dur ? 2.5 : 4;
   return 1;
 }
@@ -310,6 +310,8 @@ export const Auto = {
     this.target = null; this.dodge = null; this.retreat = false; this.ignore = new WeakSet(); this.lastSig = '';
     this.screenT = 0; this.lastCast = {}; this.stall = null; this.banT = 0; this.shun = new WeakMap(); this.giveUp = new WeakSet();
     this.lootFor = null; this.lootT = 0; this.wantCache = new WeakMap(); this.hurt = 0; this.lastHp = -1;
+    this.dragoonJumps = 0; this.dragoonJumpGoal = 3 + Math.floor(Math.random() * 6);
+    this.dragoonCastUntil = 0; this.dragoonLastBarrage = 0; this.dragoonLastWeaveAt = -1;
   },
 
   setStatus(s) {
@@ -477,7 +479,7 @@ export const Auto = {
     const signature = c.classId === 'barbarian' ? learned.find((sk) => sk.name === 'Whirlwind') || learned.find((sk) => sk.kind === 'whirl') :
       c.classId === 'lancer' ? learned.find((sk) => sk.m.shields) :
       c.classId === 'dragoon' ? learned.find((sk) => sk.kind === 'leap') : null;
-    bar[LMB] = signature?.id || hammer?.sk.id || main?.sk.id || free?.id || c.bar[LMB];
+    bar[LMB] = signature?.id || hammer?.sk?.id || main?.sk.id || free?.id || c.bar[LMB];
     const lmbSk = SKILLS[bar[LMB]];
     const rmb = free && free.id !== bar[LMB] && (lmbSk && (manaCost(lmbSk, 1) || rageCost(lmbSk) || lmbSk.kind === 'whirl' || lmbSk.kind === 'orbit' || lmbSk.kind === 'leap')) ? free :
       alt && alt.sk;
@@ -730,6 +732,10 @@ export const Auto = {
     // danger first: hide from a raid boss's cataclysm, step out of telegraphed attacks and enemy ground effects
     if (this.takeCover(dt)) { this.watchStuck(dt); return; }
     if (this.dodgeDanger(dt)) { this.watchStuck(dt); return; }
+    // Instant damage already landed, but hold the pose while the lances rain down.
+    if (p.classId === 'dragoon' && w.time < this.dragoonCastUntil) {
+      this.setStatus('Spearstorm!'); p.moveVec = [0, 0]; return;
+    }
     const foes = enemyNear(w, p, 13).filter((m) => w.map.los(p.x, p.y, m.x, m.y));
     // retreat to the town portal when nearly dead with nothing left to heal with
     const healLeft = c.potions.hp + c.potions.rejuv > 0 || this.readySkill((s) => s.kind === 'heal');
@@ -1043,7 +1049,21 @@ export const Auto = {
     const melee = this.meleeBuild();
     if (p.castLock <= 0) {
       const pick = this.chooseSkill(foes, t, d, fleeing);
-      if (pick && p.tryUseSkill(pick.sk, pick.x, pick.y, pick.sk.kind === 'melee' ? t : null)) { this.lastCast[pick.sk.id] = w.time; return; }
+      if (pick && p.tryUseSkill(pick.sk, pick.x, pick.y, pick.sk.kind === 'melee' ? t : null)) {
+        this.lastCast[pick.sk.id] = w.time;
+        if (p.classId === 'dragoon') {
+          if (pick.sk.m.barrage) {
+            this.dragoonLastBarrage = pick.sk.m.barrage;
+            this.dragoonCastUntil = w.time + (pick.sk.m.barrage === 3 ? 1.65 : 1.35);
+            this.dragoonJumps = 0;
+            this.dragoonJumpGoal = 3 + Math.floor(Math.random() * 6);
+            this.dragoonLastWeaveAt = -1;
+          } else if (pick.sk.kind === 'leap' || pick.sk.kind === 'dash') {
+            this.dragoonJumps = Math.min(8, (this.dragoonJumps || 0) + 1);
+          } else this.dragoonLastWeaveAt = this.dragoonJumps;
+        }
+        return;
+      }
     }
     if (fleeing) return;
     // positioning
@@ -1167,6 +1187,21 @@ export const Auto = {
     // Keep emergency heals, missing buffs, and summons ahead of DPS rotation.
     const urgent = choices.filter((x) => x.score >= 1e8).sort((a, b) => b.score - a.score);
     if (urgent.length) return urgent[0];
+    if (c.classId === 'dragoon' && !fleeing) {
+      const leaps = choices.filter((x) => x.sk.kind === 'leap' || x.sk.kind === 'dash')
+        .sort((a, b) => (this.lastCast[a.sk.id] ?? -1000) - (this.lastCast[b.sk.id] ?? -1000) || b.score - a.score);
+      const bursts = choices.filter((x) => x.sk.m.barrage)
+        .sort((a, b) => this.dragoonLastBarrage === 1 ? b.sk.m.barrage - a.sk.m.barrage : a.sk.m.barrage - b.sk.m.barrage);
+      const weave = choices.filter((x) => !x.sk.m.barrage && x.sk.kind !== 'leap' && x.sk.kind !== 'dash')
+        .sort((a, b) => (this.lastCast[a.sk.id] ?? -1000) - (this.lastCast[b.sk.id] ?? -1000) || b.score - a.score);
+      const jumps = this.dragoonJumps || 0, goal = this.dragoonJumpGoal || 3;
+      if (bursts.length && (jumps >= goal || !leaps.length)) return bursts[0];
+      if (leaps.length && jumps < goal) return leaps[0];
+      if (weave.length && jumps >= 2 && this.dragoonLastWeaveAt !== jumps && (jumps >= 8 || jumps % 3 === 0)) return weave[0];
+      if (leaps.length && jumps < 8) return leaps[0];
+      if (weave.length) return weave[0];
+      if (bursts.length) return bursts[0];
+    }
     // Leap/charge/blink replaces slow walking when a melee fighter is out of
     // range. A jump is only chosen after its usual range/LOS checks above.
     const main = SKILLS[c.bar[LMB]];

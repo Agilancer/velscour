@@ -90,8 +90,10 @@ fixed ring: the existing spiral radius formula still applies. This
 change does not alter hit frequency, damage, shield counts, duration or
 spritesheet binary files.
 
-The renderer uses nearest-neighbor scaling; no smoothing or automatic
-horizontal flip changes the intended 8-angle artwork.
+The renderer preserves the PNG alpha, including transparent gaps, and uses
+nearest-neighbor scaling; no smoothing or automatic horizontal flip changes
+the intended 8-angle artwork. The 44×56 atlas cell is drawn at `0.72 ×
+orbit.size`, keeping each visible shield close to the Lancer's scale.
 
 ## Critical foreground/background sorting fix
 
@@ -127,10 +129,11 @@ If an image is still loading or unavailable, the ability temporarily
 uses the original procedural shape, so **gameplay and hits continue**.
 The caster and Lancer gear overlays do not change.
 
-The same shader and foot-anchor/center offset are used for each of the
-four designs. The displayed size is `1.09 * orbit.size` relative to
-the padded atlas cell; tune this constant to increase or decrease shield
-appearance without changing combat area-of-effect.
+The same foot-anchor/center offset is used for each of the four designs.
+Transparent atlas pixels stay transparent so gaps between shield details do
+not fill in. The loading fallback uses a matching compact size. Tune the
+`0.72 * orbit.size` factor to change shield appearance without changing
+combat area-of-effect.
 
 ## Validation
 

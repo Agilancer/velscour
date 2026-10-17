@@ -1,4 +1,4 @@
-// Thirty-two dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
+// Thirty-three dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
 // palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
 import { FINAL_DEPTH } from './depth.js';
@@ -9,6 +9,17 @@ export const BIOMES = [
     adj: ['Grave', 'Crypt', 'Ossuary'], roster: ['skeleton', 'archer', 'zombie', 'ghoul', 'wraith', 'cultist', 'spider', 'bat', 'knight', 'abomination', 'beetle', 'eye'],
     prefer: ['set1/skeletons', 'set1/bone_horrors', 'set2/undead'], // monster art families favoured here (bestiary.js rollLooks)
     torch: '#ff9a40', fog: '#1a0e08',
+  },
+  {
+    id: 'castle_keep', name: 'Castle Keep', pack: 'castle_keep', palette: null,
+    dark: 0.77, light: 8.4,
+    ambient: { type: 'dust', color: '#e5b86c' },
+    mon: { hue: 30, sat: 0.95, light: 0.03 }, el: 'phys', blood: '#8a0b08',
+    adj: ['Royal', 'Black-Iron', 'Oathsworn', 'Siege-Worn'],
+    roster: ['knight', 'archer', 'cultist', 'gargoyle', 'golem', 'skeleton',
+      'wraith', 'zombie', 'hound', 'imp', 'abomination', 'elemental'],
+    prefer: ['set2/warriors', 'set2/goblins', 'set2/undead'],
+    torch: '#ffb45d', fog: '#15100b',
   },
   {
     id: 'frozen', name: 'Frozen Ossuary', palette: { colorize: [205, 0.35], light: 0.06, contrast: 1.05 }, dark: 0.76, light: 8,
@@ -200,6 +211,31 @@ export const BIOMES = [
     torch: '#ffc078', fog: '#0a160d',
   },
   {
+    id: 'castle', name: 'Castle', pack: 'castle', overworld: true,
+    palette: null, dark: 0.56, light: 11,
+    ambient: { type:'mote', color:'#d6c49b' }, mon: { hue:0, sat:0.86, light:0.03 },
+    el:'phys', blood:'#7c1610', adj:['Stonebound','Besieged','Iron-Crowned'],
+    roster:['zombie','ghoul','bat','gargoyle','skeleton','cultist','abomination','imp','wraith','archer','knight','golem'],
+    prefer:['set2/undead','set2/warriors','set2/goblins'], torch:'#ffc078', fog:'#0a0e13',
+  },
+  {
+    id: 'sea_of_sand', name: 'Sea of Sand', pack: 'sea_of_sand', overworld: true,
+    palette: null, dark: 0.58, light: 11.5,
+    ambient: { type:'sand', color:'#e3b768' }, mon: { hue:22, sat:0.92, light:0.06 },
+    el:'fire', blood:'#9f361a', adj:['Sunscorched','Dune-Bound','Saltworn','Mirage'],
+    roster:['sandjackal_dune_stalker','sandjackal_red_mane','sandjackal_sunscar','viper_glassfang','viper_copperhood','viper_nightcoil',
+      'scorpion_saltclaw','scorpion_duneburrower','scorpion_embertail','beetle_tombshell','beetle_turquoise_borer','beetle_ironback',
+      'locust_suncloud','locust_razorwing','locust_saltmoth','vulture_bonebeak','roclet_ashplume','kitehawk_lapis_eye',
+      'skeleton_sunburied','skeleton_jar_guard','skeleton_copper_archer','mummy_saltwrapped','mummy_amberbinder','mummy_lanternbearer',
+      'raider_redveil','raider_drygulch','raider_sunlance','wraith_saltworn','wraith_mirage','wraith_drysea',
+      'golem_sunbaked','golem_lapisvein','golem_saltpillar','worm_duneborer','worm_glassmaw','worm_fossilcoil',
+      'djinn_cinderjar','djinn_bluehour','djinn_sunstung','cultist_sunscarab','cultist_hollowdisc','cultist_dryoracle',
+      'hyena_ironjaw','hyena_dustlaugh','hyena_bloodtrack','crab_fossilbreaker','crab_saltglass','crab_copperreef',
+      'moth_sunshard','moth_turquoiseveil','moth_nightglass','statue_sphinxling','statue_lionward','statue_bronzebeak',
+      'elemental_sirocco','elemental_saltspire','elemental_amberdust','bandit_chainhook','shade_sunmirror','shade_glasspilgrim'],
+    torch:'#f2ad55', fog:'#24150a',
+  },
+  {
     id: 'desert_temple', name: 'Temple of the Sunless Dynasty', pack: 'desert_temple',
     palette: null, dark: 0.77, light: 8.2,
     ambient: { type: 'sand', color: '#d9ac70' },
@@ -274,7 +310,8 @@ Object.assign(BIOMES.find((b) => b.id === 'necropolis'), {
 // Colour families: a level can mix its palette with another biome of the same family (mixPartner), e.g. a
 // Frozen Ossuary whose far rooms are paved like the Crystal Caverns.
 const FAMILY = {
-  sand: ['desert', 'gilded', 'serpent', 'amber', 'desert_temple'],
+  sand: ['desert', 'gilded', 'serpent', 'amber', 'desert_temple', 'sea_of_sand'],
+  keep: ['castle_keep'],
   frost: ['frozen', 'ice_temple', 'sunken', 'crystal', 'storm', 'abyss', 'necropolis'],
   ember: ['molten', 'blood', 'forge', 'flesh', 'hell'],
   rot: ['fungal', 'plague', 'thorn'],
@@ -300,6 +337,7 @@ const MON_SWAPS = {
   hell: ['infernal', 'ember', 'blood', 'rust', 'obsidian'],
   astral_plane: ['spectral', 'amethyst', 'crystal', 'void', 'midnight'],
   heavenly: [null, null, 'gilded', 'pale', 'bronze'],
+  castle_keep: ['gilded', 'bronze', 'rust', 'pale', 'ash'],
   overworld: [null, 'thorn', 'rot', 'ash', 'bone'], throne: ['infernal', 'blood', 'ember', 'rust'],
 };
 for (const b of BIOMES) b.swaps = MON_SWAPS[b.id];
@@ -314,18 +352,22 @@ export function mixPartner(biome, rnd = Math.random) {
 
 export const BIOME_BY_ID = Object.fromEntries(BIOMES.map((b) => [b.id, b]));
 
+/** Overworlds share the regular biome bag, with a hard visit guarantee after three combat dungeons. */
+export const OVERWORLD_BIOME_IDS = BIOMES.filter((b) => b.overworld).map((b) => b.id);
+
 /**
- * A shuffled pool of biomes for the hero's next depth. Wilds may be rolled naturally, but a visit
- * is guaranteed after six actual non-overworld dungeon entries. Only record visits when entering a
- * depth, not when previewing/drawing the next choice or returning to town.
- * The throne at FINAL_DEPTH is never overridden.
+ * A shuffled pool of biomes for the hero's next depth. An overworld is guaranteed after three
+ * actual non-overworld dungeon entries. When forced, choose among all registered overworlds so
+ * Forsaken Wilds, Sea of Sand and Castle all remain in the rotation. The throne is never overridden.
  */
 export function drawBiome(c, depth) {
   if (depth === FINAL_DEPTH) return 'throne';
   const all = BIOMES.filter((b) => b.id !== 'throne').map((b) => b.id);
-  if ((c.overworldMisses || 0) >= 6) {
-    c.biomeBag = (c.biomeBag || []).filter((id) => id !== 'overworld' && all.includes(id));
-    return 'overworld';
+  if ((c.overworldMisses || 0) >= 3) {
+    c.biomeBag = (c.biomeBag || []).filter((id) => !OVERWORLD_BIOME_IDS.includes(id) && all.includes(id));
+    let options = OVERWORLD_BIOME_IDS.filter((id) => id !== c.lastBiome);
+    if (!options.length) options = OVERWORLD_BIOME_IDS;
+    return options[Math.floor(Math.random() * options.length)];
   }
   let bag = (c.biomeBag || []).filter((id) => all.includes(id));
   if (!bag.length || (bag.length === 1 && bag[0] === c.lastBiome)) bag = all.slice();
@@ -344,7 +386,7 @@ export function recordBiomeVisit(c, biome, depth) {
   if (c.overworldLastVisit === key) return;
   c.overworldLastVisit = key;
   if (biome.overworld || biome.pack === 'town') c.overworldMisses = 0;
-  else c.overworldMisses = Math.min(6, (c.overworldMisses || 0) + 1);
+  else c.overworldMisses = Math.min(3, (c.overworldMisses || 0) + 1);
 }
 export const TOWN_BIOME = {
   id: 'town', name: 'Herrington Hollow', pack: 'catacombs', palette: { colorize: [30, 0.22], light: 0.12, contrast: 0.95 }, wallPalette: { colorize: [32, 0.2], light: 0.18 },

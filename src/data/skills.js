@@ -11,6 +11,7 @@ export const CLASS_SKILLS = {};
 
 // Skills granted for free as the hero levels up: [character level, tree, index]
 export const GRANTS = [[1, 0, 0], [2, 1, 0], [4, 2, 0], [8, 0, 4], [12, 1, 4], [16, 2, 4], [22, 0, 8], [28, 1, 8], [34, 2, 8]];
+const DRAGOON_GRANTS = [[1, 3, 0], [2, 3, 1], [4, 3, 2], [6, 3, 3]];
 
 const KIND_DMG = {
   melee: 1.15, proj: 1.0, nova: 0.95, aoe: 1.35, beam: 1.2, chain: 0.95, wall: 0.32, zone: 0.3, orbit: 0.5, cyclone: 0.38,
@@ -57,7 +58,8 @@ for (const [cls, trees] of Object.entries(SKILLDATA)) {
 }
 
 export function grantedSkillsAt(cls, level) {
-  return GRANTS.filter((g) => g[0] <= level).map(([, t, i]) => `${cls}.${t}.${i}`);
+  const grants = cls === 'dragoon' ? [...GRANTS, ...DRAGOON_GRANTS] : GRANTS;
+  return grants.filter((g) => g[0] <= level).map(([, t, i]) => `${cls}.${t}.${i}`);
 }
 
 /** Effective level of a skill for a player: invested + item bonuses. */
@@ -86,7 +88,7 @@ export function manaCost(sk, L) {
   return Math.round((2.5 + sk.row * 2.4) * (1 + 0.07 * (L - 1)) * (sk.m.mana ?? 1) * (KIND_MANA[sk.kind] ?? 1));
 }
 export function cooldown(sk) { return sk.m.cd ?? KIND_CD[sk.kind] ?? 0; }
-export function useTime(sk) { return KIND_USE[sk.kind] ?? 0.42; }
+export function useTime(sk) { return sk.m.barrage ? 0 : KIND_USE[sk.kind] ?? 0.42; }
 export function weaponCoef(sk) {
   if (sk.m.wc !== undefined) return sk.m.wc;
   if (sk.attack) return 0.8;
@@ -156,6 +158,9 @@ export function describe(sk, L, dmg) {
   if (m.knock) flags.push('Knockback');
   if (m.leech) flags.push('Life steal');
   if (m.pull) flags.push('Pulls enemies');
+  if (m.barrage) return m.barrage === 3
+    ? `Instantly impale enemies in three circles with spectral Dragoon lances for ${D}. Each enemy is struck once, even where circles overlap. Visuals last 1.65s.`
+    : `Instantly impale enemies in a broad circle with spectral Dragoon lances for ${D}. Visuals last 1.35s.`;
   let s;
   switch (sk.kind) {
     case 'melee': s = sk.id === 'barbarian.0.0'

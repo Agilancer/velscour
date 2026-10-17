@@ -6,6 +6,8 @@ Herrington Hollow: there are enemies, a town-return portal, a separate dungeon e
 shrine-triggered combat/objective encounter. Clearing that encounter replaces the
 normal single-guardian condition for opening the exit.
 
+Its sibling **Sea of Sand** uses a native 60-floor desert atlas, a 60-monster bestiary, ten bosses, and modular cliff mazes. Routes connect one to five timed scenario areas and show live progress in the HUD. See [SEA_OF_SAND.md](SEA_OF_SAND.md) for implementation details.
+
 ## Code and data
 
 | Responsibility | Location |
@@ -88,9 +90,10 @@ dungeon world resets).
 ### Biome guarantee and old saves
 
 `c.overworldMisses` counts dungeon **entries**, not calls to `drawBiome`.
-After six consecutive entries into non-overworld dungeon packs, the next
-`drawBiome` returns `overworld`. It can also be picked naturally from the
-regular shuffle bag. Visiting it resets the miss count to zero. Reentering the
+After three consecutive entries into non-overworld dungeon packs, the next
+`drawBiome` selects one registered overworld: Forsaken Wilds, Sea of Sand, or Castle.
+Overworlds can also appear naturally from the regular shuffle bag. Visiting any
+overworld resets the miss count to zero. Reentering the
 same depth and biome after a town trip is protected from double counting by
 `c.overworldLastVisit`. Those fields migrate safely for old saves. Depth 500
 always remains Velscour's throne; the guarantee does not override it.
@@ -108,7 +111,7 @@ node tools/tests/town.js
 ```
 
 The new browser test checks 60 random seeds for map connectivity and open area,
-validates the six-dungeon guarantee over 50 runs, steps all 20 scenarios through
+validates the three-dungeon overworld guarantee over 50 runs, steps all 20 scenarios through
 their objective-completion logic, and captures:
 `tools/tests/out/overworld_shrine_and_forest.png` and
 `tools/tests/out/overworld_active_scenario.png`.
@@ -118,3 +121,6 @@ wave combat, all five shrine colors, clickable objectives, escort pathing, and
 the frame rate in densely wooded regions. This branch has source/synthetic
 checks, but was not verified with a full game-browser run in the development
 environment; perform the browser QA before merging.
+
+
+The overworld rotation includes the Forsaken Wilds, Sea of Sand, and Castle. A forced visit randomly selects among the registered overworld biomes, while naturally rolled overworlds also reset the visit counter.

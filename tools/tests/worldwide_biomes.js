@@ -58,7 +58,8 @@ const FULL=process.argv.includes('--all');
       }
       stats.townFloors=makeTownTiles().length;
       if(stats.townFences===0)issues.push('No replacement fences ever appeared');
-      if(stats.townProps<12)issues.push('New Duskhollow terrain props are not being placed');
+      // The generic biome monuments were taken out of the lived-in village on purpose (6d40aa1).
+      if(stats.townProps)issues.push('Generic monument props are back in town');
       if(stats.townFloors!==TOWN_FLOOR_EXPANSION.start+TOWN_FLOOR_EXPANSION.count)
         issues.push('Town floor atlas indices incorrect');
       // Validate all ten material families in both tile axes and their exact
@@ -70,21 +71,21 @@ const FULL=process.argv.includes('--all');
            s.edgeB[0]-s.edgeA[0] !== (axis==='x'?80:-80))
           issues.push('Bad '+name+' '+axis+' tileable barricade');
       }
-      // The wilderness gets sixty *additional, wilderness-specific* floor
-      // designs rather than borrowing the 24 Duskhollow accent tiles.
+      // The Forsaken Wilds dropped their scattered full-tile accent floors and monument props (611b7e8):
+      // grass, gravel, dirt and mud blend through the town pack's own transitions.
       const wild=BIOME_BY_ID.overworld;
       await loadBiomeArt(wild);
       const ow=generateOverworld(9,wild,904731);
       stats.wildFloors=ow.townTiles?.length||0;
       stats.wildProps=ow.props.filter(p=>p.spr?.name?.startsWith('overworld_wild_prop_')).length;
-      if(stats.wildFloors!==OVERWORLD_FLOOR_EXPANSION.start+60)
-        issues.push('60 standalone wilderness tiles missing');
-      if(stats.wildProps<10)issues.push('Generated wilderness props not used');
+      if(stats.wildFloors!==OVERWORLD_FLOOR_EXPANSION.start)
+        issues.push('Wilderness accent floors are back');
+      if(stats.wildProps)issues.push('Wilderness monument props are back');
       if((ow.map.v||[]).some(v=>v>=stats.wildFloors))
         issues.push('Out-of-bounds wilderness floor index');
       // Use the original monster artwork loaded by the core asset pipeline,
       // then check new native sprite overlays are actual alpha images.
-      const chosen=FULL?BIOMES.filter(b=>!b.overworld):
+      const chosen=full?BIOMES.filter(b=>!b.overworld):
         BIOMES.filter(b=>['catacombs','necropolis','desert_temple',
           'heavenly','ice_temple','hell','astral_plane'].includes(b.id));
       const checkArt=[];
@@ -93,12 +94,14 @@ const FULL=process.argv.includes('--all');
         const id='expanded_'+b.id,pack=A.packs[id],m=pack?.meta;
         if(!m?.expansion){issues.push('Missing expanded pack '+b.id);continue;}
         const nBase=m.expansion.floorStart,nScat=m.expansion.scatterStart;
-        if(m.floors.length!==nBase+60||m.scatter.length!==nScat+40)
+        // 120 new floors (doubled in dbdd511) and 40 new scatter props per biome
+        const nFloor=m.expansion.newFloors;
+        if(nFloor!==120||m.floors.length!==nBase+nFloor||m.scatter.length!==nScat+40)
           issues.push('Incomplete terrain expansion '+b.id);
         if(m.floors.slice(nBase).filter(f=>f.seamless).length!==10)
           issues.push('Missing 10 extra base floors '+b.id);
         const set=biomeTileSet(b);
-        if(set.bases.length!==10||set.features.length!==50)
+        if(set.bases.length!==10||set.features.length!==nFloor-10)
           issues.push('Expanded paving not selected in '+b.id);
         for(const [family,masks]of Object.entries(set.walls))
           for(let i=0;i<16;i++)if(!masks[i]?.length)
@@ -151,7 +154,7 @@ const FULL=process.argv.includes('--all');
         const hero={biomeBag:[],lastBiome:null,overworldMisses:0};
         for(let d=1;d<55;d++){
           const picked=drawBiome(hero,d);
-          if(hero.overworldMisses>=6&&picked!=='overworld')
+          if(hero.overworldMisses>=3&&!BIOME_BY_ID[picked]?.overworld)
             issues.push('Forced overworld visit was bypassed');
           recordBiomeVisit(hero,BIOME_BY_ID[picked],d);
           hero.lastBiome=picked;

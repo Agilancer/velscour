@@ -49,13 +49,14 @@ const { openGame, report } = require('./harness');
   console.log('moves', JSON.stringify(res));
   if (Object.values(res).some((v) => !v)) fail = true;
   await shot('mayhem_moves');
-  // MADNESS: fills over 600 s, button only for the hero
+  // MADNESS: fills over MADNESS_FILL (420 s), button only for the hero
   const mad = await page.evaluate(async () => {
     const { G } = window.VELSCOUR; const M = await import('/src/game/mayhem.js');
     G.char.madness = 0; G.char.madT = 0;
-    for (let i = 0; i < 300 * 30; i++) M.madnessTick(1 / 30);
+    const halfway = M.MADNESS_FILL / 2;
+    for (let i = 0; i < halfway * 30; i++) M.madnessTick(1 / 30);
     const half = G.char.madness;
-    for (let i = 0; i < 301 * 30; i++) M.madnessTick(1 / 30);
+    for (let i = 0; i < (halfway + 1) * 30; i++) M.madnessTick(1 / 30);
     return { half, full: G.char.madness, ready: M.madnessReady() };
   });
   await page.waitForFunction(() => !document.querySelector('#madness-btn').classList.contains('hidden'), null, { timeout: 3000 }).catch(() => {});

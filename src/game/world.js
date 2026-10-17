@@ -25,6 +25,7 @@ export class World {
     this.wallHangings = this.wallHangings || [];
     this.portals = this.portals || [];
     this.grid = new Map();
+    this.gridPool = [];
     this.time = 0;
     this.flowTimer = 0;
     this.ambT = 0;
@@ -45,12 +46,13 @@ export class World {
   addLoot(l) { this.loot.push(l); return l; }
 
   rebuildGrid() {
+    for (const cell of this.grid.values()) { cell.length = 0; this.gridPool.push(cell); }
     this.grid.clear();
     for (const c of this.creatures) {
       if (c.dead) continue;
       const k = (Math.floor(c.x / CELL) << 16) | (Math.floor(c.y / CELL) & 0xffff);
       let a = this.grid.get(k);
-      if (!a) this.grid.set(k, (a = []));
+      if (!a) this.grid.set(k, (a = this.gridPool.pop() || []));
       a.push(c);
     }
   }
@@ -75,9 +77,31 @@ export class World {
   hostiles(team, x, y, r) { return this.query(x, y, r, (c) => c.team !== team && c.targetable !== false); }
   nearestHostile(team, x, y, r, needLos = false) {
     let best = null, bd = Infinity;
-    for (const c of this.hostiles(team, x, y, r)) {
-      const d = dist2(x, y, c.x, c.y);
-      if (d < bd && (!needLos || this.map.los(x, y, c.x, c.y))) { bd = d; best = c; }
+    let bestX = Infinity, bestY = Infinity;
+    const x0 = Math.floor((x - r) / CELL), x1 = Math.floor((x + r) / CELL);
+    const y0 = Math.floor((y - r) / CELL), y1 = Math.floor((y + r) / CELL);
+    const visit = (cell, cx, cy) => {
+      for (const c of cell) {
+        if (c.dead || c.team === team || c.targetable === false) continue;
+        const d = dist2(x, y, c.x, c.y), rr = r + c.r;
+        // Preserve query's row/column tie order even when scanning occupied cells.
+        if (d > rr * rr || d > bd || (d === bd && (cy > bestY || (cy === bestY && cx >= bestX)))) continue;
+        if (needLos && !this.map.los(x, y, c.x, c.y)) continue;
+        bd = d; best = c; bestX = cx; bestY = cy;
+      }
+    };
+    if ((x1 - x0 + 1) * (y1 - y0 + 1) > this.grid.size) {
+      // Awake monsters search thirty tiles: visiting hundreds of empty buckets
+      // per monster costs much more than scanning the sparse occupied grid.
+      for (const [key, cell] of this.grid) {
+        const cx = key >> 16, cy = (key << 16) >> 16;
+        if (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) visit(cell, cx, cy);
+      }
+    } else {
+      for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
+        const cell = this.grid.get((cx << 16) | (cy & 0xffff));
+        if (cell) visit(cell, cx, cy);
+      }
     }
     return best;
   }
@@ -173,7 +197,7 @@ export class World {
     }
     for (const pr of this.props) {
       if (!pr.light) continue;
-      addLight(pr.x, pr.y, pr.light + Math.sin(this.time * 7 + pr.x) * 0.15, 0.8);
+      addLight(pr.x, pr.y, pr.light + Math.sin(this.time * 7 + pr.x) * 0.15, 0.8, 20 + (pr.z || 0));
     }
     // portals
     for (const po of this.portals) {

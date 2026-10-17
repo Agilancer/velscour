@@ -272,13 +272,15 @@ export class Monster extends Creature {
       return d;
     }
     N.t -= dt;
-    if (N.t <= 0 || Math.abs(gx - N.gx) + Math.abs(gy - N.gy) > 2) {
-      N.gx = gx; N.gy = gy; N.t = flow ? rand(0.2, 0.35) : rand(0.3, 0.5);
+    // Hunters far beyond the hero's flow field (big overworld maps) need long searches: allow more nodes, re-plan less.
+    const far = this.hunter && d > 24;
+    if (N.t <= 0 || Math.abs(gx - N.gx) + Math.abs(gy - N.gy) > (far ? 6 : 2)) {
+      N.gx = gx; N.gy = gy; N.t = far ? rand(1.2, 2) : flow ? rand(0.2, 0.35) : rand(0.3, 0.5);
       N.part = false; N.none = false;
       if (!N.force && map.losWide(this.x, this.y, gx, gy, r)) N.path = null;
       else if (flow && (N.path = map.flowPath(this.x, this.y, r))) { N.part = true; N.force = false; }
       else if (w.pathBudget > 0) {
-        w.pathBudget--; N.path = map.findPath(this.x, this.y, gx, gy, 2500, r); N.force = false;
+        w.pathBudget--; N.path = map.findPath(this.x, this.y, gx, gy, far ? 12000 : 2500, r); N.force = false;
         if (!N.path) N.t = rand(1.5, 2.5); // no way there (a sealed boss room...): don't search again for a while
         N.none = !N.path;
       } else N.t = 0; // out of searches this frame: keep the old path and try again next frame
@@ -652,6 +654,7 @@ export class Monster extends Creature {
   /** Minion attacks driven by the summon definition (A = def.atk, or def.spell). */
   summonAttack(t, A = this.atk) {
     const w = this.world, el = this.el || 'phys', E = elem(el);
+    this.attackAnimT = 0.32;
     if (A === this.atk) this.cd = A.cd || 1;
     const dmg = [this.dmg * 0.85, this.dmg * 1.15];
     switch (A.type) {
@@ -1275,6 +1278,7 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
   const A = ARCH[archId];
   const B = monsterBase(level);
   const depth = world.depth || 1;
+  if (A.seaOfSand && biome.id === 'sea_of_sand') look = { art:'ss_'+archId, swap:null };
   if (look === undefined) look = lookFor(world, archId);
   const art = look && ART_BY_ID[look.art];
   const biomeEl = biome.el && biome.el !== 'phys' ? biome.el : null;
@@ -1370,10 +1374,10 @@ export function makeElite(m, rank, depth, world) {
     m.scale = vel ? 1.6 : 1.9; m.r *= vel ? 1 : 1.6;
     m.ai = 'boss';
     m.affixes = depth > 20 && !vel ? shuffle(keys.filter((k) => !['teleport', 'multishot', 'fast'].includes(k))).slice(0, 1) : [];
-    m.name = vel ? 'DEMON LORD VELSCOUR' : bossName();
+    m.name = vel ? 'DEMON LORD VELSCOUR' : (ARCH[m.arch]?.bossName || bossName());
     m.isVelscour = vel;
     const base = ['slam', 'nova', 'volley', 'charge', 'summon', 'meteor', 'spiral', 'beam'];
-    m.patterns = vel ? base : shuffle(base.slice()).slice(0, 3 + Math.min(3, Math.floor(depth / 20)));
+    m.patterns = vel ? base : ARCH[m.arch]?.bossPatterns ? ARCH[m.arch].bossPatterns.slice() : shuffle(base.slice()).slice(0, 3 + Math.min(3, Math.floor(depth / 20)));
     if (!m.patterns.includes('slam')) m.patterns.push('slam');
     m.atkCd = 1.1;
     m.aggroRange = 9;

@@ -46,7 +46,7 @@ export function newCharData(classId, name) {
     bag: Array(60).fill(null),
     stash: Array(300).fill(null),
     gold: 150, potions: { hp: 6, mp: 4, rejuv: 1, fury: 1 },
-    depth: 1, deepest: 0, nextBiome: null, biomeBag: [], cleared: {}, overworldMisses: 0, overworldLastVisit: null,
+    depth: 1, deepest: 0, nextBiome: null, biomeBag: [], cleared: {}, overworldMisses: 0, overworldLastVisit: null, seaOfSandRuns: {},
     kills: 0, deaths: 0, created: Date.now(), lastPlayed: Date.now(), tips: {},
   };
   c.equip.weapon = rollItem(1, { slot: 'weapon', base: C.weapon, rarity: 0 });
@@ -63,6 +63,7 @@ export function newCharData(classId, name) {
 export function migrate(c) {
   c.potions = Object.assign({ hp: 0, mp: 0, rejuv: 0, fury: 0 }, c.potions);
   c.cleared = c.cleared || {};
+  c.seaOfSandRuns = c.seaOfSandRuns || {};
   c.granted = c.granted || {};
   c.tips = c.tips || {};
   if (c.classId === 'barbarian') c.rage = Math.max(0, Math.min(100, Number(c.rage) || 0));
@@ -71,7 +72,7 @@ export function migrate(c) {
   if (c.townSeed === undefined) c.townSeed = (Math.random() * 1e9) | 0;
   if (!Array.isArray(c.biomeBag)) c.biomeBag = [];
   if (!Number.isInteger(c.overworldMisses)) c.overworldMisses = 0;
-  c.overworldMisses = Math.max(0, Math.min(6, c.overworldMisses));
+  c.overworldMisses = Math.max(0, Math.min(3, c.overworldMisses));
   if (!('overworldLastVisit' in c)) c.overworldLastVisit = c.lastBiome ? String(c.depth) + ':' + c.lastBiome : null;
   // heroes made before the shuffle bag always started in the catacombs: give an unexplored hero a random start
   if (c.nextBiome === 'catacombs' && !c.deepest && !c.lastBiome) c.nextBiome = drawBiome(c, c.depth || 1);

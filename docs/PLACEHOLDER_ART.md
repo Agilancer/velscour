@@ -12,7 +12,7 @@ The 20 Forsaken Wilds scatter placeholders have also been replaced; see
 ## Current static-art audit
 
 - The 122 commonly used character, summon, NPC, loot and projectile-silhouette placeholders are already painted in [SPRITE_REPLACEMENTS.md](SPRITE_REPLACEMENTS.md).
-- The five newest themed biomes retain their approved 40-floor and 40-prop art, plus the low-resolution extra floor/prop variants in [APPROVED_BIOME_ART.md](APPROVED_BIOME_ART.md) and [BIOME_VARIANT_ART.md](BIOME_VARIANT_ART.md).
+- Desert Temple, Ice Temple, HELL, ASTRAL PLANE and HEAVENLY use dedicated AI-generated low-resolution atlases for all floor and scatter indices, and unique AI-generated architecture textures clipped to walls, arches and doors. HEAVENLY's 60 monster portraits use a separate AI-generated atlas. See [AI_BIOME_ART.md](AI_BIOME_ART.md). Architecture geometry/depth slices remain the validated Catacombs template.
 - The Forsaken Wilds now has five imported trees and 20 imported scatter sprites. Its other ten tree variants are derived from distinct supplied tree silhouettes, and its shrines and caravan are authored as bespoke pixel sprites.
 - The dungeon's ASCII decor path is a defensive fallback used only when a tileset has no scatter atlas. All current biome packs provide scatter art; normal play uses those pack assets.
 - Remaining generated biome expansions create authored floor motifs and 40 distinct environment props per pack. They are not missing-asset placeholders. UI art and character attack/ability animation assets are outside this pass.
@@ -91,7 +91,7 @@ Priority: **P1** is seen constantly or is a showpiece, **P2** is seen often, **P
 | B | Player summons for 15 classes | ASCII pixel art, or a recoloured hero sprite | ~80 creatures and objects (9 sheets) | **P1** | summon sheets (2x5) |
 | C | Class art packs for the other 15 classes (weapons/shields + ability effects) | pixel weapon icons; skills only have code-drawn VFX | 15 x (60 items + 60 effects) | **P1** | Paladin pack format |
 | D | Biome packs for 24 dungeon biomes | the Catacombs pack, recoloured | 24 packs (8 source images each) | **P2** | Catacombs template |
-| E | Town NPCs (8 vendors + 4 townsfolk) | recoloured hero sprites | 12 characters | **P2** | NPC sheet (2x6) |
+| E | Town NPCs (8 vendors + 100 townsfolk) | 25 unique generated Velscour civilian designs + runtime palette variants | 25 identity sheets, 100 visitor identities | Complete | 11 frames (128×192); knight sheets append 2 attacks |
 | F | Generic item icons: gloves, leg armour, boots, off-hand orbs | ASCII pixel art | 3 x 60 + 30 | **P2** | icon sheets (6x10) |
 | G | Gems (21 kinds x 6 tiers), gold piles, health/mana globes | drawn in code | 126 + 3 + 2 | **P2** | icon sheets |
 | H | Skill icons (980 skills) | drawn in code (glow + shape) | 980 (or 16 sheets of 60/80) | P3 | icon sheets (6x10) |

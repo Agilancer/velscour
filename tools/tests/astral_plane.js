@@ -41,8 +41,8 @@ const {openGame,report,OUT_DIR}=require('./harness');
             problems.push('Missing directional opening door '+name+'/'+d);
       if(drawBiome({overworldMisses:6},500)!=='throne')
         problems.push('Astral biome broke final throne precedence');
-      if(drawBiome({overworldMisses:6,biomeBag:[]},20)!=='overworld')
-        problems.push('Astral biome broke six-depth overworld guarantee');
+      if(!BIOME_BY_ID[drawBiome({overworldMisses:3,biomeBag:[]},20)]?.overworld)
+        problems.push('Astral biome broke three-dungeon overworld guarantee');
 
       const stats={levels:0,guardians:0,props:0,doors:0,arches:0,wallArms:0,unreachable:0};
       for(let run=0;run<20;run++){

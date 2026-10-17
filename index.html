@@ -39,7 +39,12 @@
       <div id="auto-status" class="hidden"></div>
     </div>
     <div id="hud-top-right">
-      <div id="minimap-wrap"><canvas id="minimap" width="200" height="188"></canvas><img id="minimap-ring" src="assets/ui/minimap_ring.webp" alt="" draggable="false"></div>
+      <div id="minimap-row">
+        <button id="velscour-skull" type="button" title="Contact Velscour" aria-label="Contact Velscour">
+          <img src="assets/ui/velscour_contact_skull.png" alt="" draggable="false">
+        </button>
+        <div id="minimap-wrap"><canvas id="minimap" width="200" height="188"></canvas><img id="minimap-ring" src="assets/ui/minimap_ring.webp" alt="" draggable="false"></div>
+      </div>
       <div id="hud-buttons">
         <button class="hbtn" data-act="inventory" title="Inventory and hero (I)"><img src="assets/ui/btn_bag.webp" alt="Bag" draggable="false"><b id="stat-badge" class="badge hidden"></b></button>
         <button class="hbtn" data-act="skills" title="Skill Tree (K)"><img src="assets/ui/btn_skills.webp" alt="Skills" draggable="false"><b id="sp-badge" class="badge hidden"></b></button>
@@ -50,6 +55,7 @@
       </div>
     </div>
     <div id="boss-bar" class="hidden"><div id="boss-name"></div><div id="boss-track"><div id="boss-fill"></div></div><div id="boss-sub"></div></div>
+    <div id="sand-objective" class="hidden" aria-live="polite"><b id="sand-title"></b><span id="sand-beat"></span><span id="sand-progress"></span><span id="sand-timer"></span></div>
     <div id="center-msg"></div>
     <div id="levelup" class="hidden">
       <div class="lu-flash"></div>
@@ -85,11 +91,6 @@
   <div id="screens"></div>
   <div id="tooltip" class="hidden"></div>
   <div id="drag-ghost" class="hidden"></div>
-  <div id="rotate-hint" class="hidden">
-    <div>&#10227;</div>
-    <p>Turn your device sideways for the best experience.</p>
-    <button class="btn" id="rotate-dismiss">Play anyway</button>
-  </div>
   <div id="loading"><div class="spinner"></div><div id="loading-bar"><div id="loading-fill"></div></div><div id="loading-text">Summoning the depths&hellip;</div></div>
 </div>
 <script type="module" src="src/main.js"></script>

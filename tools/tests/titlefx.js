@@ -1,5 +1,5 @@
-// Title screen intro: click-to-awaken gate, the logo fading in on the Hymn of the Abyss clock, the flame burst on the
-// song's hit (~8.9 s after the click: 2 s delay + 6.88 s into the song), skipping the intro, the blinking eyes.
+// Title screen intro: click-to-awaken gate, the logo fade with Hymn of the Abyss and the flame burst on the song's hit,
+// skipping the intro, and the blinking eyes.
 //   node tools/tests/titlefx.js            (screenshots: titlefx_*.png)
 // Uses the test hooks on the FX canvas (canvas.title-fx .fx).
 const { openGame, report } = require('./harness');
@@ -16,13 +16,27 @@ const { openGame, report } = require('./harness');
     await shot(`titlefx_${tag}_gate`);
     if (s.phase === 'gate') { await page.mouse.click(w * 0.1, h * 0.9); }
     const t0 = Date.now();
-    await page.waitForTimeout(4500);
-    s = await st();
+    const introDeadline = Date.now() + 12000;
+    while ((s = await st()).phase !== 'intro' && Date.now() < introDeadline) await page.waitForTimeout(30);
     console.log(tag, 'fading', JSON.stringify(s), 'song', JSON.stringify(await clock()));
-    if (s.phase !== 'intro' || !(s.opacity > 0.05 && s.opacity < 0.9)) { console.log('FAIL: logo should be part-way faded in'); process.exitCode = 1; }
+    if (s.phase !== 'intro') { console.log('FAIL: the logo intro did not start after the click'); process.exitCode = 1; }
+    // The studio credit cards moved to the Credits screen (61568fd "Polish credits spectacle and restore clean intro").
+    if (await page.$('.title-credits')) { console.log('FAIL: credit cards are back on the title screen'); process.exitCode = 1; }
     if (s.ready) { console.log('FAIL: menu clickable before it is visible'); process.exitCode = 1; }
     await shot(`titlefx_${tag}_fading`);
-    while ((s = await st()).phase !== 'lit' && Date.now() - t0 < 16000) await page.waitForTimeout(30);
+    let lastLogoOpacity = s.opacity, logoFadeMonotonic = true, logoFadePeak = s.opacity, logoMidShot = false;
+    while ((s = await st()).phase !== 'lit' && Date.now() - t0 < 16000) {
+      if (s.phase === 'intro') {
+        if (s.opacity < lastLogoOpacity - 0.005) logoFadeMonotonic = false;
+        lastLogoOpacity = s.opacity;
+        logoFadePeak = Math.max(logoFadePeak, s.opacity);
+        if (!logoMidShot && s.opacity >= 0.4 && s.opacity <= 0.75) { logoMidShot = true; await shot(`titlefx_${tag}_logo_midfade`); }
+      }
+      await page.waitForTimeout(30);
+    }
+    if (!logoFadeMonotonic || logoFadePeak < 0.9 || !logoMidShot) { console.log('FAIL: Velscour logo should visibly fade up to full opacity'); process.exitCode = 1; }
+    s = await st();
+    if (s.opacity < 0.98) { console.log('FAIL: logo should be at full opacity when the flame hit begins'); process.exitCode = 1; }
     const litAt = (Date.now() - t0) / 1000, song = await clock();
     console.log(tag, `lit ${litAt.toFixed(2)}s after the click, song at ${song ? song.t.toFixed(2) : 'n/a'}`);
     if (s.phase !== 'lit' || (song && Math.abs(song.t - 6.88) > 0.25)) { console.log('FAIL: burst not on the hit'); process.exitCode = 1; }
@@ -34,9 +48,9 @@ const { openGame, report } = require('./harness');
     await shot(`titlefx_${tag}_burning`);
     // a fresh title screen (audio already unlocked) starts the intro at once; a click skips to the burst
     await page.evaluate(async () => { const a = await import('/src/core/audio.js'); a.stopMusic(0.1); (await import('/src/ui/screens.js')).titleScreen(); });
-    await page.waitForTimeout(600);
-    s = await st();
-    if (s.phase !== 'intro') { console.log('FAIL: expected intro without gate, got', s.phase); process.exitCode = 1; }
+    const creditsDeadline = Date.now() + 8000;
+    while (!['credits', 'intro'].includes((s = await st()).phase) && Date.now() < creditsDeadline) await page.waitForTimeout(30);
+    if (!['credits', 'intro'].includes(s.phase)) { console.log('FAIL: expected credits or intro without gate, got', s.phase); process.exitCode = 1; }
     await page.mouse.click(w * 0.1, h * 0.9);
     await page.waitForTimeout(800);
     s = await st();

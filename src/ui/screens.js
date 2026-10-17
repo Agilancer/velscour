@@ -10,6 +10,7 @@ import { listSaves, heroesByClass, deleteClassSaves } from '../game/save.js';
 import { heroCanvas, excitable, preloadPortraits } from './heroanim.js';
 import { savedGearPreview } from '../core/gearart.js';
 import { attachTitleFx } from './titlefx.js';
+import { creditsScreen } from './credits.js';
 
 let current = null;
 
@@ -19,10 +20,7 @@ function goFullscreen() {
   const de = document.documentElement;
   const req = de.requestFullscreen || de.webkitRequestFullscreen;
   if (!req) return;
-  try {
-    const p = req.call(de, { navigationUI: 'hide' });
-    if (p && p.then) p.then(() => { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* ignore */ } }).catch(() => {});
-  } catch (e) { /* not allowed - fine */ }
+  try { const p = req.call(de, { navigationUI: 'hide' }); if (p && p.catch) p.catch(() => {}); } catch (e) { /* not allowed - fine */ }
 }
 function show(node) {
   hide();
@@ -43,6 +41,7 @@ export function titleScreen() {
   if (last) add(`Continue<br><span style="font-size:13px;color:#a8977c">${escapeHtml(last.name)} · Lv ${last.level} ${CLASSES[last.classId].name} · Depth ${last.depth}</span>`, () => G.game.loadChar(last));
   add(`Heroes <span style="font-size:13px;color:#a8977c">· ${used}/${CLASS_IDS.length}</span>`, () => classSelect(last ? last.classId : 'paladin'));
   add('Settings', settingsDialog, 'btn');
+  add('Credits', () => creditsScreen(titleScreen), 'btn');
   add('How to Play', helpDialog, 'btn');
   s.appendChild(menu);
   s.appendChild(el('div', 'title-foot', 'Rough draft · placeholder art · progress saves in this browser'));
@@ -184,6 +183,7 @@ export function settingsDialog() {
     <label>Damage numbers</label><input type="checkbox" data-k="dmgNumbers" ${st.dmgNumbers ? 'checked' : ''}>
     <label>Screen shake</label><input type="checkbox" data-k="shake" ${st.shake ? 'checked' : ''}>
     <label>Auto-pickup items</label><input type="checkbox" data-k="autoLoot" ${st.autoLoot ? 'checked' : ''}>
+    <label>Standard skill bar on mobile (landscape)</label><input type="checkbox" data-k="mobileSkillBar" ${st.mobileSkillBar !== false ? 'checked' : ''}>
     <label>Pause while menus open</label><input type="checkbox" data-k="pauseMenus" ${st.pauseMenus !== false ? 'checked' : ''}>
     <label>Show gold labels</label><input type="checkbox" data-k="showGoldLabels" ${st.showGoldLabels ? 'checked' : ''}>
   </div>`;
@@ -193,6 +193,7 @@ export function settingsDialog() {
     inp.oninput = inp.onchange = () => {
       const k = inp.dataset.k;
       st[k] = inp.type === 'checkbox' ? inp.checked : inp.tagName === 'SELECT' ? Number(inp.value) : Number(inp.value);
+      if (k === 'mobileSkillBar' && UI.hud) UI.hud.layoutMobile();
       applyVolumes();
       saveSettings();
     };

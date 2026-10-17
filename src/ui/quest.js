@@ -20,7 +20,8 @@ export function renderQuest(body) {
     h += step(false, `Step into the <b style="color:#ff8050">portal</b> at the edge of Herrington Hollow${b ? `. It opens on <b>${escapeHtml(b.name)}</b>` : ''}.`);
     if (c.depth === FINAL_DEPTH) h += step(false, '<b style="color:#ff4020">Demon Lord Velscour</b> waits on his throne.');
     else if (isRaidDepth(c.depth) && !b?.overworld) h += step(false, '<b style="color:#ff6030">A BOSS ROOM</b> lies at the end of this depth.');
-    if (b?.overworld) h += step(false, 'A Forsaken Wilds scenario shrine guards the way forward.');
+    if (b?.id === 'sea_of_sand') h += step(false, 'A linked Sea of Sand route with one to five timed scenario areas lies beyond.');
+    else if (b?.overworld) h += step(false, 'A Forsaken Wilds scenario shrine guards the way forward.');
   } else {
     const boss = w.boss, slain = !!(boss && boss.dead);
     const raid = boss && boss.raid;
@@ -28,6 +29,16 @@ export function renderQuest(body) {
     const who = boss && (boss.awake || slain) ? `<b>${escapeHtml(boss.name)}</b>` : raid || isRaidDepth(w.depth) ? 'the lord of the <b>Boss Room</b>' : w.depth === FINAL_DEPTH ? '<b>Demon Lord Velscour</b>' : 'the guardian of this depth';
     if (w.overworldScenario) {
       const sc = w.overworldScenario;
+      if (w.biome?.id === 'sea_of_sand') {
+        const beat=sc.current, total=sc.total||1, done=sc.beat||0;
+        h += step(done>0, `Secure the marked Sea of Sand areas: <b>${Math.min(done+1,total)}/${total}</b> current · ${done}/${total} complete.`);
+        if (beat) {
+          const timer=beat.timer>0?` Timer: ${Math.max(0,Math.ceil(beat.timer-beat.seconds))}s.`:'';
+          const progress=beat.failed?'Failed — return to the shrine to retry.':beat.goal>0?`${beat.kills||0}/${beat.goal} objective progress.`:beat.description||'Scenario in progress.';
+          h += step(beat.completed, `${escapeHtml(beat.title)} — ${escapeHtml(progress)}${timer}`);
+        }
+        h += step(sc.completed, sc.completed ? 'The exit is open — descend or return to town.' : 'Clear each scenario shrine to unseal the exit. Every area grants Legendary gear.');
+      } else {
       h += step(sc.active || sc.completed, `Activate the glowing scenario shrine: <b>${escapeHtml(sc.title)}</b>.`);
       let progress = sc.description;
       if (sc.active && ['waves','battle','bridge','ward','defend','infestation'].includes(sc.type)) progress += ` Wave ${sc.stage} in progress.`;
@@ -37,6 +48,7 @@ export function renderQuest(body) {
       if (sc.failed) progress = 'Scenario failed. Return to the shrine to retry.';
       h += step(sc.completed, escapeHtml(progress));
       h += step(sc.completed, sc.completed ? 'The exit is open — descend or return to town.' : 'Complete the scenario to unseal the exit.');
+      }
     } else {
       h += step(slain, `Slay ${who}${raid && !slain ? ` <span class="dim">(phase ${raid.pi + 1} of ${raid.phases.length})</span>` : ''}.`);
       h += step(false, slain ? 'The exit is open: pass through it to go deeper or return to town.' : 'Reach the exit. It stays sealed until the guardian falls.');

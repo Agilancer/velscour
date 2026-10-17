@@ -10,6 +10,7 @@ import { expandBiomePack } from '../gfx/biomeexpansion.js';
 import { preloadWallTorchHolders } from '../gfx/walltorches.js';
 import { preloadWallHangings } from '../gfx/wallhangings.js';
 import { applyApprovedBiomeArt, preloadBiomeVariantArt, preloadOverworldScatterArt } from '../gfx/approvedbiomeart.js';
+import { applyAIBiomeArt } from '../gfx/aibiomeart.js';
 import { preloadApprovedHeavenlyArtwork } from '../gfx/heavenlymonsters.js';
 import { TW } from './view.js';
 import { loadReplacementArt } from './replacementart.js';
@@ -97,12 +98,12 @@ function retainGenerated(id) {
     delete A.packs[old];
   }
 }
-function loadPack(id) {
+async function loadPack(id) {
   if (GENERATED[id]) {
     const previous = A.packs[id];
     if (previous) { if (!(previous instanceof Promise)) retainGenerated(id); return previous; }
     return A.packs[id] = loadPack('catacombs').then(base => GENERATED[id](base))
-      .then(async pack => { await applyApprovedBiomeArt(pack,id); A.packs[id] = pack; retainGenerated(id); return pack; })
+      .then(async pack => { await applyAIBiomeArt(pack,id); await applyApprovedBiomeArt(pack,id); A.packs[id] = pack; retainGenerated(id); return pack; })
       .catch(e => { delete A.packs[id]; throw e; });
   }
   return A.packs[id] || (A.packs[id] = Promise.all(['floors', 'walls', 'scatter'].map((n) => loadImage(`assets/tiles/${id}/${n}.webp`)).concat(loadJSON(`assets/tiles/${id}/pack.json`)))
@@ -129,6 +130,8 @@ async function expandedPack(biome) {
   const promise=loadPack(biome.pack || DEFAULT_PACK).then(base=>
     expandBiomePack(base,biome,{floorsOnly:G.touch&&!!GENERATED[biome.pack]}))
     .then(async pack=>{
+      // Apply unique biome motifs first; hand-approved art has final priority.
+      await applyAIBiomeArt(pack,biome.id);
       await applyApprovedBiomeArt(pack,biome.id);
       A.packs[id]=pack;
       while(EXPANSION_ORDER.length>2){
@@ -148,11 +151,12 @@ async function expandedPack(biome) {
 export function loadBiomeArt(biome) {
   return Promise.all([
     loadEnemyArt().catch((e) => console.warn(e)), // monsters fall back to their pixel sprites
-    biome && !biome.overworld && biome.id !== 'town' ? expandedPack(biome) : loadPack(biome.pack || DEFAULT_PACK),
+    biome && !biome.overworld && biome.id !== 'town' ?
+      (biome.pack === 'castle_keep' ? loadPack('castle_keep') : expandedPack(biome)) : Promise.resolve(null),
     biome?.id === 'heavenly' ? preloadApprovedHeavenlyArtwork() : Promise.resolve(null),
     biome && !biome.overworld && biome.id!=='town' ?
       preloadWallTorchHolders(biome) : Promise.resolve(null),
-      preloadWallHangings(),
+      preloadWallHangings(biome?.id),
   ]);
 }
 

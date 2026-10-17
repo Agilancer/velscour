@@ -45,6 +45,7 @@ function opaqueBox(img) {
 export const HUD = {
   slots: [],
   last: {},
+  portraitOrbFrames: null,
   init() {
     UI.hud = this;
     const geo = A.hudGeo;
@@ -59,6 +60,7 @@ export const HUD = {
       d.style.left = pct(s.x, geo.w); d.style.top = pct(s.y, geo.h);
       d.style.width = pct(s.w, geo.w); d.style.height = pct(s.h, geo.h);
       const map = SLOT_MAP[i];
+      if (typeof map === 'string') { d.classList.add('potion-slot'); d.dataset.potion = map; }
       const icon = new Image(); icon.className = 'icon'; icon.draggable = false; icon.style.display = 'none';
       d.appendChild(icon);
       const nomana = el('div', 'nomana hidden');
@@ -103,7 +105,10 @@ export const HUD = {
     for (const b of document.querySelectorAll('.hbtn')) {
       b.addEventListener('click', () => { sfx('ui'); G.game.hudAction(b.dataset.act); });
     }
+    window.addEventListener('resize', () => this.layoutMobile());
+    this.layoutMobile();
     $('#minimap').addEventListener('click', () => { G.showAutomap = !G.showAutomap; });
+    $('#velscour-skull').addEventListener('click', () => { sfx('ui'); G.game.openVelscourContact(); });
     const spark = $('#hs-spark');
     spark.width = 150 * G.dpr; spark.height = 18 * G.dpr;
     UI.tip($('#hero-stats'), () => `<b style="color:#ffe2a0">Battle Ledger</b>
@@ -125,12 +130,81 @@ export const HUD = {
     cvs.width = 200; cvs.height = Math.round((200 * h.ry) / h.rx);
   },
 
+  layoutMobile() {
+    const portrait = G.touch && innerHeight > innerWidth;
+    const compact = G.touch && (portrait || !G.settings.mobileSkillBar);
+    document.body.classList.toggle('compact-mobile-hud', compact);
+    const hud = $('#hud'), img = $('#hud-img'), xp = $('#xp-track'), rail = $('#hud-rail');
+    hud.classList.toggle('compact-mobile', compact);
+    img.src = compact ? 'assets/ui/hud-orbs.webp' : 'assets/ui/hud.webp';
+    xp.classList.toggle('hidden', compact);
+    rail.classList.toggle('hidden', compact);
+    const size = innerHeight > innerWidth ? 38 : 42;
+    const bar = $('#hud-bar').getBoundingClientRect();
+    if (portrait) {
+      if (!this.portraitOrbFrames) {
+        const makeFrame = (name, src) => {
+          const frame = new Image();
+          frame.className = 'portrait-orb-frame';
+          frame.alt = '';
+          frame.draggable = false;
+          frame.src = src;
+          frame.dataset.orb = name;
+          $('#hud-bar').appendChild(frame);
+          return frame;
+        };
+        this.portraitOrbFrames = [
+          makeFrame('life', 'assets/ui/hud-orb-life.webp'),
+          makeFrame('mana', 'assets/ui/hud-orb-mana.webp'),
+        ];
+      }
+      const frameW = Math.max(74, Math.min(98, innerWidth * .24));
+      const scale = frameW / 270;
+      const frameH = 296 * scale;
+      const inset = Math.max(5, innerWidth * .015);
+      const x = [inset, innerWidth - frameW - inset];
+      const y = bar.height - frameH;
+      this.portraitOrbFrames.forEach((frame, i) => Object.assign(frame.style, {
+        display: 'block', left: `${x[i]}px`, top: `${y}px`, width: `${frameW}px`, height: `${frameH}px`,
+      }));
+      const [lifeGeo, manaGeo] = A.hudGeo.orbs;
+      const orbPos = [
+        { frameX: x[0], cx: lifeGeo.cx, cy: lifeGeo.cy, r: lifeGeo.r },
+        { frameX: x[1], cx: manaGeo.cx - 1730, cy: manaGeo.cy, r: manaGeo.r },
+      ];
+      const placePortraitOrb = (cover, text, p) => {
+        const cx = p.frameX + p.cx * scale;
+        const cy = y + p.cy * scale;
+        const diameter = p.r * 2 * scale;
+        Object.assign(cover.style, { left: `${cx - diameter / 2}px`, top: `${cy - diameter / 2}px`, width: `${diameter}px`, height: `${diameter}px` });
+        Object.assign(text.style, { left: `${cx - 42}px`, top: `${cy - 7}px`, width: '84px', fontSize: '10px' });
+      };
+      placePortraitOrb($('#life-cover'), $('#life-text'), orbPos[0]);
+      placePortraitOrb($('#mana-cover'), $('#mana-text'), orbPos[1]);
+    } else if (this.portraitOrbFrames) {
+      this.portraitOrbFrames.forEach((frame) => { frame.style.display = 'none'; });
+    }
+    const gap = 8, x0 = (bar.width - (size * 4 + gap * 3)) / 2, y = bar.height - size - (innerHeight > innerWidth ? 10 : 8);
+    this.slots.forEach((s) => {
+      const potion = typeof s.map === 'string';
+      if (potion) s.icon.style.opacity = compact ? '1' : '0';
+      s.d.classList.toggle('hidden', compact && !potion);
+      if (compact && potion) Object.assign(s.d.style, { left: `${x0 + POTIONS.indexOf(s.map) * (size + gap)}px`, top: `${y}px`, width: `${size}px`, height: `${size}px` });
+      else {
+        const g = A.hudGeo, m = SLOT_MAP.indexOf(s.map);
+        const slot = g.slots[m];
+        if (slot) Object.assign(s.d.style, { left: `${(slot.x / g.w) * 100}%`, top: `${(slot.y / g.h) * 100}%`, width: `${(slot.w / g.w) * 100}%`, height: `${(slot.h / g.h) * 100}%` });
+      }
+    });
+  },
+
   refreshStatic() {
     const c = G.char;
     if (!c) return;
     for (const s of this.slots) {
       if (typeof s.map === 'string') {
-        if (s.last.icon !== s.map) { s.icon.src = potionIcon({ hp: 'red', mp: 'blue', rejuv: 'purple', fury: 'orange' }[s.map], 64).toDataURL(); s.icon.style.display = 'block'; s.icon.style.opacity = '0'; s.last.icon = s.map; }
+        if (s.last.icon !== s.map) { s.icon.src = potionIcon({ hp: 'red', mp: 'blue', rejuv: 'purple', fury: 'orange' }[s.map], 64).toDataURL(); s.icon.style.display = 'block'; s.last.icon = s.map; }
+        s.icon.style.opacity = $('#hud').classList.contains('compact-mobile') ? '1' : '0';
         continue;
       }
       const id = c.bar[s.map];
@@ -203,6 +277,17 @@ export const HUD = {
     if (boss) set('bossHp', Math.round((boss.hp / boss.maxHp) * 500) / 5, (v) => { $('#boss-fill').style.width = v + '%'; });
     set('bossSub', boss && boss.raid ? boss.raid.label() : '', (v) => { $('#boss-sub').textContent = v; });
     set('bossWard', !!(boss && boss.ward < 1), (v) => { $('#boss-bar').classList.toggle('warded', v); });
+    const sand = w?.biome?.id === 'sea_of_sand' && w.overworldScenario?.hud ? w.overworldScenario.hud : null;
+    set('sandHud', sand ? `${sand.title}|${sand.beat}|${sand.total}|${sand.progress}|${sand.timer}` : '', (v) => {
+      const panel=$('#sand-objective');
+      panel.classList.toggle('hidden',!sand);
+      if(sand){
+        $('#sand-title').textContent=sand.title;
+        $('#sand-beat').textContent=`Area ${sand.beat}/${sand.total}`;
+        $('#sand-progress').textContent=sand.progress;
+        $('#sand-timer').textContent=sand.timer?`Time ${sand.timer}`:'';
+      }
+    });
     // buffs
     this.buffT = (this.buffT || 0) - dt;
     if (this.buffT <= 0) {
@@ -318,7 +403,7 @@ export const HUD = {
   },
 
   setArea(name, sub) { $('#area-name').textContent = name; $('#area-sub').textContent = sub || ''; },
-  show(v) { $('#hud').classList.toggle('hidden', !v); },
+  show(v) { $('#hud').classList.toggle('hidden', !v); if (v) this.layoutMobile(); },
 };
 
 function slotTip(map) {

@@ -5,6 +5,7 @@ import { loadReplacementArt, replacementImage } from './replacementart.js';
 import { ART_BY_ID } from '../data/bestiary.js';
 import { heavenlyEnemyImage } from '../gfx/heavenlymonsters.js';
 import { biomeNativeImage } from '../gfx/biomenativeart.js';
+import { loadSeaOfSandPack, seaOfSandArtCell, seaOfSandEnemyImage } from '../gfx/seaofsand.js';
 
 const DIR = 'assets/sprites/enemies/';
 const EAGER = /^(set1|minions)\//; // fetched with the meta; the rest (set2, ~5 MB) loads per level as looks need it
@@ -51,8 +52,10 @@ export async function loadEnemySheets(keys) {
 export function loadArtFor(ids) {
   return Promise.all([
     ids.some((id) => id && id.startsWith('va_')) ? loadReplacementArt() : null,
+    ids.some((id) => id && id.startsWith('ss_')) ? loadSeaOfSandPack() : null,
     loadEnemySheets([...new Set(ids.map(id=>{
       const a=ART_BY_ID[id];
+      if (a?.sheet === 'sea_of_sand') return null;
       return a?.sourceArt ? ART_BY_ID[a.sourceArt]?.sheet :
         a?.sheet !== 'heavenly/generated' ? a?.sheet : null;
     }).filter(Boolean))]),
@@ -60,6 +63,7 @@ export function loadArtFor(ids) {
 }
 
 function cell(a) {
+  if (a?.sheet === 'sea_of_sand') return seaOfSandArtCell(a.i);
   const s = E.meta && E.meta[a.sheet];
   if (s && !E.sheets[a.sheet]) loadSheet(a.sheet); // drawn before its level asked: the pixel sprite stands in meanwhile
   return s && E.sheets[a.sheet] ? s.cells[a.i] : null;
@@ -84,6 +88,7 @@ export function enemyArtReady(id) {
  * silhouette for hit flashes) or 'dark' (corpse). The canvas carries `_art = {fx}`: the feet's centre column.
  */
 export function enemyImage(id, swap = null, mode = '') {
+  if (id && id.startsWith('ss_')) return seaOfSandEnemyImage(id, swap, mode);
   if (id && id.startsWith('hv_')) return heavenlyEnemyImage(id, swap, mode);
   if (id && id.startsWith('bn_')) return biomeNativeImage(id,swap,mode,baseId=>enemyImage(baseId));
   if (id && id.startsWith('va_')) return replacementImage(id, swap, mode);

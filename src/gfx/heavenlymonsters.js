@@ -5,13 +5,16 @@
 import { makeCanvas, recolor } from '../core/util.js';
 import { HEAVENLY_MONSTERS } from '../data/heavenly.js';
 import { approvedHeavenlyMonsterCanvas, preloadApprovedHeavenlySprites } from './approvedbiomeart.js';
+import { aiHeavenlyMonsterCanvas, preloadAIGeneratedHeavenlySprites } from './aibiomeart.js';
 
 const BY_ID = Object.fromEntries(HEAVENLY_MONSTERS.map(e=>[e.id,e]));
 const CACHE = new Map(), MAX=88;
 let preloadPromise = null;
 export function preloadApprovedHeavenlyArtwork() {
-  return preloadPromise || (preloadPromise=preloadApprovedHeavenlySprites().then(image=>{
-    if(image) CACHE.clear(); // Evict procedural previews created before image decode.
+  return preloadPromise || (preloadPromise=Promise.all([
+    preloadApprovedHeavenlySprites(), preloadAIGeneratedHeavenlySprites(),
+  ]).then(([image])=>{
+    CACHE.clear(); // Evict procedural previews created before both sheets decoded.
     return image;
   }));
 }
@@ -260,12 +263,14 @@ function ornament(g,p,v,code){
  }
 }
 function baseSprite(a) {
- // Replace one sprite per Heavenly family without duplicating painted art
- // across different named variants or changing their gameplay definitions.
+ // The user-approved paintings win for one sprite per Heavenly family (variant 0),
+ // without duplicating painted art across named variants; AI art covers the rest.
  if(a.heavenlyVariant===0) {
    const approved=approvedHeavenlyMonsterCanvas(a.heavenlyFamily);
    if(approved) return approved;
  }
+ const generated=aiHeavenlyMonsterCanvas(HEAVENLY_MONSTERS.indexOf(a));
+ if(generated)return generated;
  const canvas=makeCanvas(160,186),g=canvas.getContext('2d');
  g.imageSmoothingEnabled=false;
  const p=PALETTES[a.heavenlyVariant],v=a.heavenlyVariant,code=a.heavenlyFamily;

@@ -1,0 +1,60 @@
+{
+  "frame": [
+    192,
+    224
+  ],
+  "cols": 16,
+  "classes": [
+    "paladin",
+    "ranger",
+    "wizard",
+    "necromancer",
+    "barbarian",
+    "dragoon",
+    "totem_master",
+    "death_knight",
+    "arcane_sorcerer",
+    "carrion_witch",
+    "bard",
+    "slime_lord",
+    "boomerang_knight",
+    "lancer",
+    "dragon_knight",
+    "gunner"
+  ],
+  "rarity": "rare",
+  "designs": [
+    {
+      "id": 1,
+      "name": "Rare Helm 01",
+      "catalog": "Rare 01"
+    },
+    {
+      "id": 2,
+      "name": "Rare Helm 02",
+      "catalog": "Rare 02"
+    },
+    {
+      "id": 3,
+      "name": "Rare Helm 03",
+      "catalog": "Rare 03"
+    },
+    {
+      "id": 4,
+      "name": "Rare Helm 04",
+      "catalog": "Rare 04"
+    },
+    {
+      "id": 5,
+      "name": "Rare Helm 05",
+      "catalog": "Rare 05"
+    }
+  ],
+  "fit": {
+    "scaleX": 0.21,
+    "scaleY": 0.22,
+    "xAnchor": 65,
+    "baselineOffset": 25,
+    "sourceBaseline": 216
+  }
+}

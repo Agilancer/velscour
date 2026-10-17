@@ -50,6 +50,13 @@ for (const a of BESTIARY) {
       bad.push('Invalid generated biome monster '+a.id);
     continue; // procedural overlay sources are covered by source-art validation
   }
+  if(a.sheet==='sea_of_sand'){
+    if(!a.seaOfSand||!a.id.startsWith('ss_')||!ARCH[a.arch]||!(a.h>20&&a.h<120))
+      bad.push('Invalid Sea of Sand monster art '+a.id);
+    if(cells.has(a.sheet+a.i))bad.push(`monster art ${a.id}: cell ${a.sheet}#${a.i} used twice`);
+    cells.add(a.sheet+a.i);
+    continue; // atlas frames are validated from the generated runtime pack below
+  }
   if (a.sheet === 'heavenly/generated') {
     if (!a.id.startsWith('hv_') || !a.name || !ARCH[a.arch] ||
         !ELEMENTS.includes(a.el) || !(a.h > 20 && a.h < 120))
@@ -92,6 +99,9 @@ for (const b of BIOMES) {
 // every biome's pack exists and is complete: all 16 wall connection masks per family, with an arm for each
 // connection, arches and doors in 4 directions (doors open and closed), self-seamless floors, chest art
 const { readFileSync, existsSync } = await import('node:fs');
+const sandPack=JSON.parse(readFileSync(new URL('../../assets/tiles/sea_of_sand/pack.json',import.meta.url)));
+for(const [kind,count] of Object.entries({floor:60,scatter:40,tree:18,monster:60,boss:10,cliff:216}))
+  if(sandPack.atlases[kind]?.length!==count)bad.push(`Sea of Sand ${kind} atlas expected ${count} frames`);
 // Every combat biome also generates 60 new floors / 40 new props and per-family wall
 // texture treatments at runtime while retaining the source geometry below.
 for(const path of ['biomeexpansion.js','biomenativeart.js','isobarriers.js'])
@@ -125,8 +135,18 @@ for (const b of BIOMES) {
     continue;
   }
   if (b.overworld) {
-    if (b.pack !== 'town') bad.push(`overworld ${b.id}: expected town art pack`);
-    for (const f of ['town.json', 'ground.webp', 'objects.webp']) if (!existsSync(asset(`tiles/town/${f}`))) bad.push(`overworld: missing tiles/town/${f}`);
+    if(b.id==='sea_of_sand'){
+      if(b.pack!=='sea_of_sand')bad.push('Sea of Sand must use its native art pack');
+      for(const f of ['pack.json','floor.webp','scatter.webp','tree.webp','monster.webp','boss.webp','cliff.webp'])
+        if(!existsSync(asset(`tiles/sea_of_sand/${f}`)))bad.push(`Sea of Sand: missing tiles/sea_of_sand/${f}`);
+    }else if(b.id==='castle'){
+      if(b.pack!=='castle')bad.push('Castle must use its native art pack');
+      for(const f of ['pack.json','floors.webp','walls.webp','castle_bridges.webp','wall_hangings.webp'])
+        if(!existsSync(asset(`tiles/castle/${f}`)))bad.push(`Castle: missing tiles/castle/${f}`);
+    }else{
+      if (b.pack !== 'town') bad.push(`overworld ${b.id}: expected town art pack`);
+      for (const f of ['town.json', 'ground.webp', 'objects.webp']) if (!existsSync(asset(`tiles/town/${f}`))) bad.push(`overworld: missing tiles/town/${f}`);
+    }
     continue; // the outdoor pack has no indoor floor/wall/door atlas
   }
   for (const f of ['pack.json', 'floors.webp', 'walls.webp', 'scatter.webp']) if (!existsSync(asset(`tiles/${b.pack}/${f}`))) bad.push(`biome ${b.id}: missing tiles/${b.pack}/${f}`);

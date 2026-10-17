@@ -1,0 +1,353 @@
+{
+  "canvas_px": [
+    96,
+    96
+  ],
+  "atlas_px": [
+    192,
+    1536
+  ],
+  "angles": [
+    "f_front",
+    "b_front"
+  ],
+  "count": 16,
+  "items": [
+    {
+      "id": 0,
+      "name": "rose_stained_glass",
+      "row": 0,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 0,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 0,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "blue_lancet_glass",
+      "row": 1,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 96,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 96,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "crimson_crown_glass",
+      "row": 2,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 192,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 192,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "green_lion_glass",
+      "row": 3,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 288,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 288,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "plain_arrow_slit",
+      "row": 4,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 384,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 384,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "iron_lattice_arrow_slit",
+      "row": 5,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 480,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 480,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "keyhole_arrow_slit",
+      "row": 6,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 576,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 576,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "double_arrow_slit",
+      "row": 7,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 672,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 672,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "crimson_tower_banner",
+      "row": 8,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 768,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 768,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "navy_crossed_lances_banner",
+      "row": 9,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 864,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 864,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "ivory_lion_banner",
+      "row": 10,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 960,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 960,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "name": "black_keep_banner",
+      "row": 11,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 1056,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 1056,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "name": "war_map_tapestry",
+      "row": 12,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 1152,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 1152,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "name": "royal_genealogy_cloth",
+      "row": 13,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 1248,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 1248,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "name": "carved_shield_plaque",
+      "row": 14,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 1344,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 1344,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "name": "chapel_icon_frame",
+      "row": 15,
+      "views": [
+        {
+          "name": "f_front",
+          "x": 0,
+          "y": 1440,
+          "w": 96,
+          "h": 96
+        },
+        {
+          "name": "b_front",
+          "x": 96,
+          "y": 1440,
+          "w": 96,
+          "h": 96
+        }
+      ]
+    }
+  ]
+}
