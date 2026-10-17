@@ -71,7 +71,15 @@ new gate/window/battlement placements, and the scale/size caps:
 
 ```sh
 node tools/tests/castle_overworld.mjs
+# With the repo served locally by: python3 -m http.server 8123
+node tools/tests/castle_visual.js
+node tools/tests/castle_visual.js --mobile
 ```
+
+`castle_visual.js` produces ten player-anchored screenshots per display
+size under `tools/tests/out/castle_corrected_*.png`; the camera samples
+the south drawbridge, side posterns, curtain wall, stairs, all three
+interior rooms, and a whole-keep view.
 
 Visual QA: compare screens of all three keep rooms, the main drawbridge,
 both side posterns, stairs, outer walls and towers at the same zoom as
