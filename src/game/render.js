@@ -6,6 +6,8 @@ import { drawDecals, drawEffects, drawParticles, drawTexts, lights, glowSprite }
 import { orbitShieldDepth } from '../gfx/lancershields.js';
 import { drawWallTorch, wallTorchRect } from '../gfx/walltorches.js';
 import { drawWallHanging, wallHangingRect } from '../gfx/wallhangings.js';
+import { replacementImage } from '../core/replacementart.js';
+import { classSprite } from '../core/assets.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { gritAt } from '../gfx/grit.js';
 import { enemyImage } from '../core/enemyart.js';
@@ -13,7 +15,8 @@ import { drawLootLabels } from './loot.js';
 
 let lightCanvas = null, vignette = null, vigKey = '';
 const transitionSprites = new Map();
-// All town people use the original 25-identity townsfolk animation pack.
+// Non-vendor town residents use the original 25-identity townsfolk animation pack.
+// Vendors keep their existing painted replacement sprites.
 // Cache original PNG sheets and recolored variants separately. Recolored
 // sheets are Canvas elements, not HTMLImageElements (no .complete/.naturalWidth).
 const TOWN_FRAME_W=128, TOWN_FRAME_H=192;
@@ -385,8 +388,13 @@ function drawNpc(ctx, n) {
     n.sbox = [x - 24, y - 40, x + 24, y + 6];
     return;
   }
-  const spriteId=n.townsfolkSpriteId||n.vendor?.townsfolkSpriteId||n.spriteId||n.townsfolkId;
-  const sheet=townSprite(spriteId,n.pal||n.vendor?.pal);
+  // Vendors retain their existing hand-painted artwork, names and shops.
+  // Only visitors/civilians use the animated townsfolk collection.
+  const spriteId=n.vendor?null:(n.townsfolkSpriteId||n.spriteId||n.townsfolkId);
+  const sheet=spriteId?townSprite(spriteId,n.pal):null;
+  const vendorArt=n.vendor
+    ? replacementImage('npc_'+n.vendor.id) || classSprite(n.vendor.sprite,180,n.vendor.pal)
+    : null;
   const h=n.child?42:58,w=(h*128)/192;
   const x = isoX(n.x, n.y), y = isoY(n.x, n.y);
   ctx.fillStyle = 'rgba(0,0,0,0.38)';
@@ -396,7 +404,14 @@ function drawNpc(ctx, n) {
   // HTMLCanvasElement does not expose Image.complete or Image.naturalWidth.
   // The old guard failed for every recolored sheet and drew placeholders forever.
   const ready=townFrameReady(sheet,n.frameCount||11);
-  if(ready){
+  if(n.vendor && vendorArt){
+    // Keep the old vendor image (including fallback if the replacement atlas
+    // cannot load). Match the same ground point and flip as the townsfolk.
+    ctx.save();
+    if(n.flip){ctx.translate(x,0);ctx.scale(-1,1);ctx.drawImage(vendorArt,-w/2,y-h+bob,w,h);}
+    else ctx.drawImage(vendorArt,x-w/2,y-h+bob,w,h);
+    ctx.restore();
+  } else if(!n.vendor && ready){
     ctx.save();
     if(n.flip){ctx.translate(x,0);ctx.scale(-1,1);ctx.drawImage(sheet,frame*TOWN_FRAME_W,0,TOWN_FRAME_W,TOWN_FRAME_H,-w/2,y-h+bob,w,h);}
     else ctx.drawImage(sheet,frame*TOWN_FRAME_W,0,TOWN_FRAME_W,TOWN_FRAME_H,x-w/2,y-h+bob,w,h);
