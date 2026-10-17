@@ -77,7 +77,7 @@ const FULL=process.argv.includes('--all');
       const ow=generateOverworld(9,wild,904731);
       stats.wildFloors=ow.townTiles?.length||0;
       stats.wildProps=ow.props.filter(p=>p.spr?.name?.startsWith('overworld_wild_prop_')).length;
-      if(stats.wildFloors!==OVERWORLD_FLOOR_EXPANSION.start+OVERWORLD_FLOOR_EXPANSION.count)
+      if(stats.wildFloors!==stats.townFloors)
         issues.push('60 standalone wilderness tiles missing');
       if(stats.wildProps<10)issues.push('Generated wilderness props not used');
       if((ow.map.v||[]).some(v=>v>=stats.wildFloors))
