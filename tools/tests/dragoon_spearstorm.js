@@ -9,7 +9,7 @@ const mobile = process.argv.includes('mobile');
       const problems = [];
       const { G, game } = window.VELSCOUR;
       const { BIOME_BY_ID } = await import('/src/data/biomes.js');
-      const { SKILLS, cooldown, useTime, grantedSkillsAt } = await import('/src/data/skills.js');
+      const { SKILLS, cooldown, useTime, skillRange, grantedSkillsAt } = await import('/src/data/skills.js');
       const { effects } = await import('/src/gfx/vfx.js');
       const { Auto } = await import('/src/game/autoplay.js');
       await game.newChar('dragoon', 'Spearstorm QA');
@@ -57,6 +57,18 @@ const mobile = process.argv.includes('mobile');
           const oneFx = effects.slice(n1).find((e) => e.constructor.name === 'SpearBarrage');
           if (!oneFx || oneFx.life !== 1.35 || oneFx.spears.length !== (G.touch ? 7 : 11))
             problems.push('Single spear visual instance missing or wrong count');
+          if (skillRange(single) !== 2.5 || skillRange(triple) !== 2.5)
+            problems.push('Spearstorm must require point-blank range');
+          // Manual long-range aiming must not let either spearstorm hit from afar.
+          foe.x = p.x + 8; foe.y = p.y; foe.hp = 999999;
+          w.hostiles = (_team, x, y, radius) =>
+            Math.hypot(x - foe.x, y - foe.y) <= radius ? [foe] : [];
+          for (const sk of [single, triple]) {
+            p.castLock = 0; p.cooldowns[sk.id] = 0;
+            const start = foe.hp;
+            if (!p.tryUseSkill(sk, foe.x, foe.y)) problems.push(sk.name + ' fails to cast with a distant aim');
+            if (foe.hp !== start) problems.push(sk.name + ' hit a distant enemy despite point-blank casting');
+          }
         } finally { w.hostiles = oldHostiles; }
       }
       // Existing Dragoon jump must stay the primary hotbar skill, while both
@@ -77,7 +89,11 @@ const mobile = process.argv.includes('mobile');
         Auto.dragoonJumps = 3;
         const barrage = Auto.chooseSkill([target], target, 2, false);
         if (!barrage || !barrage.sk.m.barrage)
-          problems.push('Dragoon did not choose barrage after 3 jumps');
+          problems.push('Dragoon did not choose point-blank barrage after 3 jumps');
+        const far = { ...target, x: p.x + 5.5 };
+        const jumpBackIn = Auto.chooseSkill([far], far, 5.5, false);
+        if (!jumpBackIn || !['leap', 'dash'].includes(jumpBackIn.sk.kind))
+          problems.push('Dragoon did not leap to close a 5.5-tile gap with the barrage ready');
       } finally { w.map.los = oldLos; }
       return { problems, level: G.char.level, bar: G.char.bar.filter(Boolean),
         spearEffects: effects.filter((e) => e.constructor.name === 'SpearBarrage').length };
