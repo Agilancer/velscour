@@ -12,6 +12,7 @@ import { rollLooks } from '../data/bestiary.js';
 import { wallHangingAtBuilding } from '../gfx/wallhangings.js';
 import { seaOfSandFloorTiles, seaOfSandObject, seaOfSandCliff, seaOfSandFrames } from '../gfx/seaofsand.js';
 import { SAND_SCATTER, SAND_TREES, SAND_BOSSES } from '../data/seaofsand.js';
+import { scaledCastlePropK, castleWallFamilyAt } from '../gfx/castlescale.js';
 import { castleFloorTiles, castleFloorIndex, castleKeepFloorTiles, castleKeepFloorIndex,
   castleKeepWallFrames, castleFrames, castleObject } from '../gfx/castle.js';
 
@@ -287,15 +288,22 @@ function generateCastleBase(depth,biome,seed){
   const keepFamilyFrames=new Map();
   for(const f of castleKeepWallFrames()){const key=f.family+'|'+f.connection_mask,items=keepFamilyFrames.get(key)||[];items.push(f);keepFamilyFrames.set(key,items);}
   const isGate=(x,y)=>gates.has(id(x,y));
-  let prev=wallPath[0],segment=0;
+  // Historic curtain walls read as continuous masonry runs, not a patchwork
+  // that swaps stone color at every bend. Spread ten existing family variants
+  // across the length of the wall while keeping all authored corner masks.
   const segmentStyle=new Int8Array(CN).fill(-1);
-  for(let s=1;s<wallPath.length;s++){
-    const a=wallPath[s-1],b=wallPath[s],steps=Math.abs(b[0]-a[0])+Math.abs(b[1]-a[1]);
+  const wallLength=wallPath.slice(1).reduce((sum,b,i)=>sum+
+    Math.abs(b[0]-wallPath[i][0])+Math.abs(b[1]-wallPath[i][1]),0);
+  let distanceAlongWall=0;
+  for(let segment=1;segment<wallPath.length;segment++){
+    const a=wallPath[segment-1],b=wallPath[segment];
+    const steps=Math.abs(b[0]-a[0])+Math.abs(b[1]-a[1]);
     for(let q=0;q<=steps;q++){
       const x=a[0]+Math.sign(b[0]-a[0])*q,y=a[1]+Math.sign(b[1]-a[1])*q,i=id(x,y);
-      if(segmentStyle[i]<0)segmentStyle[i]=segment%10;
+      if(segmentStyle[i]<0)
+        segmentStyle[i]=castleWallFamilyAt(distanceAlongWall+q,wallLength,wallStyles.length);
     }
-    segment++;prev=b;
+    distanceAlongWall+=steps;
   }
   for(const i of wallCells){const x=i%CW,y=(i/CW)|0;if(isGate(x,y))continue;
     const joined=(nx,ny)=>wallCells.has(id(nx,ny))&&!gates.has(id(nx,ny));
@@ -439,7 +447,12 @@ function generateCastle(depth,biome,seed){
   for(const key of ['start','exit','shrine'])base[key]=point(base[key]);
   base.sites=base.sites.map(point);
   for(const k of ['spawns','chests'])for(const item of base[k]||[]){item.x*=factor;item.y*=factor;}
-  for(const p of base.props||[]){p.x*=factor;p.y*=factor;p.k*=factor;}
+  for(const p of base.props||[]){
+    p.x*=factor;p.y*=factor;
+    // Structural wall connectors must follow the enlarged grid; small props
+    // and interior furniture must stay proportional to the 60px-tall hero.
+    p.k=scaledCastlePropK(p,factor,TW);
+  }
   for(const d of map.castleDoors||[]) { d.x*=factor;d.y*=factor; }
   if(map.castleRooms)map.castleRooms=map.castleRooms.map(r=>({...r,rect:r.rect.map(n=>n*factor)}));
   base.map=map;return base;
