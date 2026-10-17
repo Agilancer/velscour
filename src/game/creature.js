@@ -242,7 +242,8 @@ export class Creature {
     const px = isoX(this.x, this.y), py = isoY(this.x, this.y);
     const h = a.h * this.scale, w = h * a.cw / a.ch;
     const spawning = a.frames === 9 && this.spawnT < 0.54;
-    const appear = spawning ? 0.22 + Math.min(1, this.spawnT / 0.54) * 0.78 : this.spawnT < 0.3 ? this.spawnT / 0.3 : 1;
+    // Spawn frames are already drawn small and rising, so only ease them in lightly.
+    const appear = spawning ? 0.75 + Math.min(1, this.spawnT / 0.54) * 0.25 : this.spawnT < 0.3 ? this.spawnT / 0.3 : 1;
     const z = this.z + (this.fly ? 16 + Math.sin(this.animT * 3) * 4 : 0) +
       (this.moving ? Math.abs(Math.sin(this.animT * 9)) * 2.2 : Math.sin(this.animT * 2) * 0.6);
     const dw = w * appear, dh = h * appear;

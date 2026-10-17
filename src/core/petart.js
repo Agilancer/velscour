@@ -24,6 +24,11 @@ const BY_KEY = {};
 for (const [sheet, meta] of Object.entries(SHEETS))
   meta.rows.forEach((key, row) => { BY_KEY[key] = { sheet, row, ...meta }; });
 const loaded = {};
+// Frames share one scale per character, so the rest pose may not fill its cell; restH maps it to the pet's height.
+let restH = {};
+fetch('assets/sprites/pets/catalog.json').then((r) => r.json())
+  .then((cat) => { for (const [k, v] of Object.entries(cat)) restH[k] = v.restH / v.cellH; })
+  .catch(() => { restH = {}; });
 
 function atlas(sheet) {
   if (loaded[sheet]) return loaded[sheet];
@@ -52,7 +57,7 @@ export function petAnimation(c) {
   } else if (c.moving) {
     frame = 4 + (Math.floor(c.animT * 8) % 3);
   } else frame = 0;
-  return { img, sx: frame * cw, sy: meta.row * ch, cw, ch, frames: meta.frames, h: c.artH || c.spriteH || 48 };
+  return { img, sx: frame * cw, sy: meta.row * ch, cw, ch, frames: meta.frames, h: (c.artH || c.spriteH || 48) / (restH[c.summonKey] || 1) };
 }
 
 /** Keep hit tint generation bounded to the shared source atlas. */

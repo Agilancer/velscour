@@ -77,7 +77,8 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
       const [x,y]=i?world.map.randomNear(at[0],at[1],Math.min(2.6,i*.7+1),rng.fn()):at;
       const p=world.map.walkable(x,y)?[x,y]:world.map.randomNear(at[0],at[1],3,rng.fn());
       const m=makeMonster(world,arch,biome,depthLevel(world.depth)+(rank==='boss'?2:0),rank,p[0],p[1],0);
-      m.awake=true;
+      // Scenario foes track the hero across the whole map, so a phase never stalls on stragglers out of sight.
+      m.awake=true;m.hunter=true;
       // Quest outcomes are driven by real combat deaths, not a fake counter.
       const previous=m.onDeath;
       m.onDeath=(source)=>{if(previous)previous.call(m,source);S.kills++;};
@@ -134,12 +135,24 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
     if(S.stage>=n)finish();
     else wave(n,at,arch);
   };
+  // Multi-phase fights: the next phase spawns the moment the current one is dead; `then` runs after the last.
+  const phases=(list,then=finish)=>{
+    S.phaseList=list;S.phaseDone=then;S.goal=list.length;S.stage=1;list[0]();
+  };
+  const trackPhases=()=>{
+    if(live()||!S.phaseList)return;
+    if(S.stage<S.phaseList.length){
+      S.stage++;S.foes=S.foes.filter(m=>!m.dead);S.phaseList[S.stage-1]();
+      report('Phase '+S.stage+'/'+S.phaseList.length+' — they keep coming!');
+    }else{const then=S.phaseDone;S.phaseList=null;then();}
+  };
   const start=()=>{
     if(S.active||S.completed)return;
     if(S.foes.length)for(const m of S.foes)if(!m.dead)m.dead=true;
     for(const n of S.civilians){const i=world.npcs.indexOf(n);if(i>=0)world.npcs.splice(i,1);}
     Object.assign(S,{active:true,failed:false,stage:0,kills:0,seconds:0,remaining:0,
-      foes:[],markers:[],civilians:[],escort:null,routeIndex:0,wardHp:0,spawnedTotal:0,capture:0});
+      foes:[],markers:[],civilians:[],escort:null,routeIndex:0,wardHp:0,spawnedTotal:0,capture:0,
+      phaseList:null,phaseDone:null,escortPath:null,zoneWave:-1});
     S.timer=biome.id==='sea_of_sand'?rng.int(90,181):0;
     report(description);UI.centerMsg(title.toUpperCase(),description,3.2);
     if(type.startsWith('rampart_')){
@@ -156,9 +169,12 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
         spawn(arch||rng.pick(roster),at,rank,1);
       };
       if(type==='rampart_siege'||type==='rampart_last'){
-        S.goal=type==='rampart_last'?5:4;S.stage=0;
-        const n=type==='rampart_last'?20:16;
-        for(let i=0;i<n;i++)put(i, i%3===0?'knight':null, i%8===0?'champion':'normal');
+        // Real assault waves along the wall walk, each arriving the moment the last falls.
+        const waves=type==='rampart_last'?5:4;
+        phases(Array.from({length:waves},(_,w)=>()=>{
+          const n=4+w*2;
+          for(let i=0;i<n;i++)put(w*3+i,i%3===0?'knight':null,i===n-1&&w===waves-1?'champion':'normal');
+        }));
       }else if(type==='rampart_captains'){
         S.goal=3;for(let i=0;i<3;i++){put(i*2,['knight','abomination','demon'][i],'boss');put(i*2+1,'cultist','champion');}
       }else if(type==='rampart_breach'){
@@ -177,17 +193,30 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
         keep_belltower:[[[70,102]],'wraith'],keep_coronation:[[[95,82],[70,102],[100,110]],'demon'],
       };
       const [roomsToUse,arch]=rooms[type],at=roomsToUse[rng.int(0,roomsToUse.length-1)];
-      S.goal=type==='keep_trial'?12:type==='keep_coronation'?18:10;
-      S.wardHp=type==='keep_procession'?240:0;
-      const count=S.goal;
-      for(let i=0;i<count;i++){
-        const p=world.map.randomNear(at[0]+(i%2?1.4:-1.4),at[1]+(i%3-1)*1.2,2,rng.fn());
-        spawn(i%5===0?arch:rng.pick(biome.roster),p,i%7===0?'champion':'normal',1);
-      }
+      const squad=(count,lead='normal',boss=null)=>()=>{
+        for(let i=0;i<count;i++){
+          const p=world.map.randomNear(at[0]+(i%2?1.4:-1.4),at[1]+(i%3-1)*1.2,2,rng.fn());
+          spawn(i%4===0?arch:rng.pick(biome.roster),p,i===0?lead:'normal',1);
+        }
+        if(boss)spawn(boss,world.map.randomNear(at[0],at[1],1.5,rng.fn()),'boss',1);
+      };
       if(type==='keep_procession'){
+        S.wardHp=240;
         const family=[['Queen Elowen',95,82,'wizard'],['Prince Rowan',96.5,83,'ranger'],['Princess Mira',93.5,83,'bard']];
-        for(const [name,x,y,sprite] of family)person(name,x,y,sprite);
+        for(const [name,x,y,sprite] of family){const [px,py]=world.map.walkable(x,y)?[x,y]:world.map.randomNear(x,y,2,rng.fn());person(name,px,py,sprite);}
       }
+      const plan={
+        keep_trial:[squad(4),squad(5,'champion'),squad(2,'champion','knight')],                 // three-stage trial
+        keep_coronation:[squad(6),squad(7,'champion'),squad(4,'champion','demon')],
+        keep_procession:[squad(5),squad(6,'champion')],
+        keep_guard:[squad(6),squad(3,'champion','knight')],
+        keep_vault:[squad(5),squad(5,'champion')],
+      }[type]||[squad(6),squad(5,'champion')];
+      // The crown vault ends at the relic itself, claimed once its guards are down.
+      phases(plan,type==='keep_vault'?()=>{
+        mark('Claim the Crown Relic',at,(m)=>{unmark(m);finish();},'#ffd860');
+        report('The vault is clear — claim the crown relic!');
+      }:finish);
       return;
     }
     const bosses=(n,archs)=>{
@@ -217,9 +246,12 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
         if(type==='bridge'){S.escort=person('Crossing Watchman',center[0]+2,center[1]+3,'paladin');S.escort.hp=170;}
         wave(type==='battle'?5:4);break;
       case 'bosses': bosses(3,['demon','knight','abomination']);break;
-      case 'defend':case 'infestation':
-        for(let i=0;i<4;i++)person('Villager '+(i+1),25+(i%2)*3,40+Math.floor(i/2)*3);
-        S.wardHp=4;wave(type==='infestation'?4:3,[27,42],'zombie');break;
+      case 'defend':case 'infestation': {
+        // The settlement sits beside this map's shrine (fixed Wilds coordinates broke on larger maps).
+        const v=world.map.randomNear(center[0]-9,center[1]+7,2,rng.fn());S.village=v;
+        for(let i=0;i<4;i++){const q=world.map.randomNear(v[0]+(i%2)*2.5-1.2,v[1]+Math.floor(i/2)*2.5-1.2,1.5,rng.fn());person('Villager '+(i+1),q[0],q[1]);}
+        S.wardHp=4;wave(type==='infestation'?4:3,v,'zombie');break;
+      }
       case 'escort': {
         S.escort=person('Caravan Guard',center[0],center[1]+3,'paladin');
         S.escort.hp=140;S.goal=4;S.routeIndex=0;
@@ -257,13 +289,24 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
     if(!S.active||S.completed||S.failed)return;
     S.seconds+=dt;
     if(type.startsWith('rampart_')){
-      if(type==='rampart_ward'){
-        const torches=world.props.filter(pr=>pr.spr?.category==='torches');
+      if(type==='rampart_ward'&&S.seconds>8){
+        // A short grace lets the hero reach the wall before the torches start to gutter.
+        const torches=S.torches||(S.torches=world.props.filter(pr=>pr.spr?.category==='torches'));
         const attackers=S.foes.filter(m=>!m.dead&&torches.some(t=>norm([t.x,t.y],[m.x,m.y])<3)).length;
-        S.wardHp-=dt*attackers*2.4;
+        S.wardHp-=dt*attackers*0.6;
         if(S.wardHp<=0){fail('The wall torches were extinguished.');return;}
       }
-      if(!live())finish();
+      if(S.phaseList)trackPhases();
+      else if(!live())finish();
+      return;
+    }
+    if(type.startsWith('keep_')){
+      if(type==='keep_procession'){
+        const attackers=S.foes.filter(m=>!m.dead&&S.civilians.some(n=>norm([n.x,n.y],[m.x,m.y])<3)).length;
+        S.wardHp-=dt*attackers*1.5;
+        if(S.wardHp<=0){fail('The royal party has fallen.');return;}
+      }
+      trackPhases();
       return;
     }
     if(biome.id==='sea_of_sand'){
@@ -272,7 +315,7 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
     const p=player();
     if(type==='waves'||type==='battle'||type==='bridge'||type==='defend'||type==='infestation'||type==='ward'){
       const required=type==='battle'?5:type==='defend'?3:type==='ward'?3:4;
-      const at=type==='defend'||type==='infestation'?[center[0]-9,center[1]+7]:center;
+      const at=type==='defend'||type==='infestation'?S.village:center;
       const arch=type==='defend'||type==='infestation'?'zombie':null;
       // Simulated NPC defensive damage scales with actual nearby living attackers.
       if(type==='defend'||type==='infestation'){
@@ -303,10 +346,12 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
     }else if(type==='zones'){
       const at=S.route[S.stage];
       if(!at){finish();return;}
-      if(norm([p.x,p.y],at)<3.5&&
-          !S.foes.some(m=>!m.dead&&norm([m.x,m.y],at)<6))S.capture+=dt;
+      const inside=norm([p.x,p.y],at)<3.5;
+      // Stepping onto a watchpost calls its counter-attack, so holding it is a fight rather than a wait.
+      if(inside&&S.zoneWave!==S.stage){S.zoneWave=S.stage;spawn(rng.pick(biome.roster),world.map.randomNear(at[0],at[1],5,rng.fn()),'normal',3+S.stage);report('Watchpost '+(S.stage+1)+' is under attack!');}
+      if(inside&&!S.foes.some(m=>!m.dead&&norm([m.x,m.y],at)<4.5))S.capture+=dt;
       else S.capture=Math.max(0,S.capture-dt*.3);
-      if(S.capture>=10){S.stage++;S.remaining--;S.capture=0;report('Watchpost '+S.stage+'/3 secured!');if(S.stage>=3)finish();}
+      if(S.capture>=4){S.stage++;S.remaining--;S.capture=0;report('Watchpost '+S.stage+'/3 secured!');if(S.stage>=3)finish();}
     }else if(type==='escort'){
       const n=S.escort;
       if(!n)return;
@@ -315,17 +360,25 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
       if(n.hp<=0){fail('The caravan was lost.');return;}
       const target=S.route[S.routeIndex];
       if(!target){finish();return;}
-      if(norm([p.x,p.y],[n.x,n.y])<7){
+      if(norm([p.x,p.y],[n.x,n.y])<9){
         const d=norm([n.x,n.y],target);
-        if(d<1.5){S.routeIndex++;report('Caravan checkpoint '+S.routeIndex+'/4');if(S.routeIndex>=4)finish();}
+        if(d<1.5){
+          S.routeIndex++;S.escortPath=null;report('Caravan checkpoint '+S.routeIndex+'/4');
+          if(S.routeIndex>=4)finish();
+          else{spawn(rng.pick(biome.roster),world.map.randomNear(n.x,n.y,6,rng.fn()),'normal',2+S.routeIndex);report('Ambush on the road!');}
+        }
         else{
-          const speed=dt*.95/d;
-          const nx=n.x+(target[0]-n.x)*speed,ny=n.y+(target[1]-n.y)*speed;
-          if(world.map.circleFree(nx,ny,.3)){n.x=nx;n.y=ny;}
-          else{
-            const next=world.map.randomNear(nx,ny,1.2,rng.fn());
-            if(world.map.circleFree(next[0],next[1],.3)){n.x=next[0];n.y=next[1];}
+          // Follow a real path around walls and moats instead of grinding into them.
+          if(!S.escortPath&&(S.escortRetry=(S.escortRetry||0)-dt)<=0){
+            S.escortPath=world.map.findPath(n.x,n.y,target[0],target[1],40000,.3);
+            if(!S.escortPath){S.escortRetry=1;return;}
           }
+          if(!S.escortPath)return;
+          while(S.escortPath.length>1&&norm([n.x,n.y],S.escortPath[0])<.35)S.escortPath.shift();
+          const [tx,ty]=S.escortPath[0],step=norm([n.x,n.y],[tx,ty]),k=Math.min(1,dt*2.4/Math.max(step,1e-3));
+          const nx=n.x+(tx-n.x)*k,ny=n.y+(ty-n.y)*k;
+          if(world.map.walkable(nx,ny)){n.x=nx;n.y=ny;}
+          else S.escortPath=null;
           if(S.wagon){S.wagon.x=n.x;S.wagon.y=n.y;}
         }
       }

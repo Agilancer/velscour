@@ -23,6 +23,10 @@ python tools/seaofsandpack.py path/to/Sea_of_Sand_Biome_Pack
 
 This writes the runtime atlases and `pack.json` under `assets/tiles/sea_of_sand/`. The metadata preserves floor pivots, cliff connection masks, and cliff heights. Do not edit the generated atlases by hand.
 
+Floors and cliffs come from the pack's per-frame sprites. Scatter, trees, monsters and bosses are cut from the pack's `source_art/` sheets instead: the pack's own sprites were sliced on an even grid the generated sheets do not follow (clipped art, neighbours' fragments). The packer finds rows and columns at the gaps between art, gives every connected piece whole to the cell holding its centre, drops the sheets' faint haze (alpha below 96), and scales each sprite into the old frame boxes. The creature sheet is not in roster order, so `CREATURE_ART` names the sheet sprite for each roster monster. The pack itself lives outside the repo (`~/.codex/.chatgpt-projects/<project>/output/Sea_of_Sand_Biome_Pack`).
+
+A cleared area starts the next one at once (no shrine click): its foes hunt the hero and its timer allows for the walk.
+
 The overworld uses coherent terrain fields: open dunes dominate, narrow caravan tracks connect the objectives, and dry washes and ruin paving follow their landmarks. Wind-shaped outcrops replace the old rigid grid maze; sandstone defines the cliffs, with brick near objective sites. Deterministic, scattered 2–4 world-pixel flecks mark floor-material boundaries without adding a black outline. Floor frames remain the original 160×80 Catacombs-compatible isometric footprint; trimmed props and cliffs use bottom-center anchors so they sit on the ground without black seams or floating.
 
 ## Scenarios and rewards
