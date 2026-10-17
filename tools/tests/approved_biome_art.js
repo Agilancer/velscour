@@ -3,10 +3,13 @@
 // Then: node tools/tests/approved_biome_art.js
 const {openGame,report,OUT_DIR}=require('./harness');
 const path=require('path');
+// Scope the biomes-only art workflow to environmental sprites. The full
+// monster-art selection test remains available unchanged without this flag.
+const environmentOnly=process.argv.includes('--environment-only');
 (async()=>{
   const {browser,page,errors,shot}=await openGame({width:1440,height:960});
   try{
-    const result=await page.evaluate(async()=>{
+    const result=await page.evaluate(async(environmentOnly)=>{
       const {G,game}=window.VELSCOUR;
       const {A,loadBiomeArt}=await import('/src/core/assets.js');
       const {BIOME_BY_ID}=await import('/src/data/biomes.js');
@@ -69,6 +72,7 @@ const path=require('path');
         checks.push({biome:id,approvedFloors:seenFloors.size,approvedProps:seenProps.size});
       }
       const paintings=[];
+      if(!environmentOnly){
       for(const a of HEAVENLY_MONSTERS.filter(a=>a.heavenlyVariant===0)){
         const painted=approvedHeavenlyMonsterCanvas(a.heavenlyFamily);
         const actual=enemyImage(a.id);
@@ -81,12 +85,13 @@ const path=require('path');
       if(paintings.length!==12)issues.push('Expected twelve Heavenly art mappings');
       if(enemyImage('hv_seraph_2')===approvedHeavenlyMonsterCanvas('seraph'))
         issues.push('Second monster variant should keep its unique original art');
+      }
       Object.assign(cv.style,{position:'fixed',left:0,top:0,zIndex:999999,
         maxWidth:'100vw',maxHeight:'100vh'});
       document.body.appendChild(cv);
       game.buildDungeon(15,BIOME_BY_ID.heavenly);
       return {checks,paintedHeavenly:paintings,issues};
-    });
+    },environmentOnly);
     console.log('APPROVED BIOME ART',JSON.stringify(result));
     if(result.issues.length)errors.push(...result.issues);
     await page.locator('#approved-biome-contact').screenshot({
