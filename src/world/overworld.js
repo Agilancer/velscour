@@ -335,6 +335,20 @@ function generateCastleBase(depth,biome,seed){
   for(const [asset,x,y,scale] of [['castle_bridge_standard_arch_NW',43.5,20.5,.92],['castle_drawbridge_closed_SE',48.5,68.5,1.2],
     ['castle_bridge_short_arch_SW',25.5,38.5,.88],['castle_bridge_short_arch_NE',71.5,38.5,.88]])add(asset,'castle_bridges',x,y,scale);
   add('castle_landmark_02_gatehouse_wall_turn','castle_landmarks',48.5,64.5,1.25);
+  // Use the original authored arches at the three lesser posterns instead
+  // of leaving gate openings as bare missing wall modules. These are visual
+  // overlays; pathing still uses the existing explicit gate openings.
+  for(const [asset,x,y] of [
+    ['gateway_01_arched_castle_gate_SE',42.5,26.5],
+    ['gateway_01_arched_castle_gate_SW',30.5,36.5],
+    ['gateway_01_arched_castle_gate_NE',66.5,36.5],
+  ])add(asset,'gateways',x,y,.72);
+  // The 200-piece wall atlas preserves every connection mask; authored
+  // curtain-wall battlements break up the timber-like surface on long straight
+  // runs, without replacing or mirroring the correctly oriented wall pieces.
+  for(const [x,y] of [[40.5,26.5],[58.5,31.5],[61.5,52.5],[38.5,62.5],[48.5,65.5]])
+    if(!isGate(Math.floor(x),Math.floor(y)))
+      add('castle_landmark_04_curtain_wall_battlement','castle_landmarks',x,y,.62);
   const towers=[[34.5,26.5,'castle_landmark_03_round_tower_upper'],[55.5,31.5,'castle_landmark_05_square_tower_upper'],
     [66.5,36.5,'castle_landmark_08_corner_tower_cluster'],[63.5,46.5,'castle_landmark_03_round_tower_upper'],
     [59.5,61.5,'castle_landmark_05_square_tower_upper'],[53.5,65.5,'castle_landmark_08_corner_tower_cluster'],
@@ -372,6 +386,18 @@ function generateCastleBase(depth,biome,seed){
   for(const d of roomDoors){const spr=castleObject(d.asset,'doors');if(!spr)throw new Error('Missing keep door '+d.asset);
     props.push({kind:'scatter',x:d.x+.5,y:d.y+.5,spr,k:TW/160*.78,flip:false,z:0,roomDoor:true});
   }
+  // The atlas already has oriented stone-window and room-plaque sprites.
+  // Mount them on real keep walls, with the original authored pivots, rather
+  // than on the floor or across any open doorway.
+  for(const [asset,category,x,y,scale] of [
+    ['window_03_lancet_keep_SE','windows',43.5,33.5,.7],
+    ['window_03_lancet_keep_SE','windows',51.5,33.5,.7],
+    ['window_05_twin_lancet_SW','windows',29.5,47.5,.65],
+    ['window_05_twin_lancet_SW','windows',29.5,54.5,.65],
+    ['window_02_round_barred_SE','windows',48.5,51.5,.65],
+    ['sign_05_chapel_plaque_SE','signs',35.5,59.5,.6],
+    ['sign_02_hall_plaque_SW','signs',43.5,55.5,.6],
+  ])add(asset,category,x,y,scale);
   const furnish=(id,x,y,scale,light=0,flip=false,z=0)=>{
     const spr=castleObject(id,'furniture');if(!spr)throw new Error('Missing keep furnishing '+id);
     props.push({kind:'scatter',x,y,spr,k:TW/160*scale,flip,light,z});return spr;
