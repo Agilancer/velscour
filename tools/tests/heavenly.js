@@ -1,4 +1,4 @@
-// HEAVENLY regression + content export. Serve repo root then run:
+// HEAVENLY regression + monster export. Serve repo root then run:
 //   python3 -m http.server 8123
 //   node tools/tests/heavenly.js
 const fs=require('fs');
@@ -18,7 +18,7 @@ const {openGame,report,OUT_DIR}=require('./harness');
       const {loadBiomeArt,A,biomeTileSet}=await import('/src/core/assets.js');
       const {enemyImage}=await import('/src/core/enemyart.js');
       const b=BIOME_BY_ID.heavenly,issues=[];
-      if(!b||b.pack!=='heavenly'||b.overworld)throw Error('HEAVENLY is not an indoor dungeon');
+      if(!b||b.pack!=='cathedral_graveyard'||b.overworld)throw Error('HEAVENLY is not a Cathedral-pack indoor dungeon');
       if(HEAVENLY_MONSTERS.length!==60||HEAVENLY_FAMILIES.length!==12)issues.push('60 monsters / 12 families missing');
       if(new Set(HEAVENLY_MONSTERS.map(m=>m.id)).size!==60||
          new Set(HEAVENLY_MONSTERS.map(m=>m.name)).size!==60)issues.push('Monster IDs or names not unique');
@@ -69,23 +69,12 @@ const {openGame,report,OUT_DIR}=require('./harness');
       if(!seen.heavenly||!seen.native||!seen.global||!seen.visitors)
         issues.push('Heavenly/global/visitor spawn mix missing: '+JSON.stringify(seen));
       await loadBiomeArt(b);
-      const p=A.packs.heavenly,meta=p.meta,tiles=biomeTileSet(b);
-      if(meta.floors.length!==60||meta.floors.filter(t=>t.seamless).length!==10)issues.push('Floor count or seamless bases incorrect');
-      if(Object.keys(meta.walls).length!==5||tiles.families.length!==5)issues.push('Five Heavenly wall families missing');
-      for(const [family,masks] of Object.entries(meta.walls))
-        for(let mask=0;mask<16;mask++)if(!masks[mask]?.length)issues.push('Missing '+family+' mask '+mask);
-      if(Object.keys(meta.arches).length!==3||Object.keys(meta.doors).length!==3)issues.push('Arches and doors missing');
-      for(const [n,dirs] of Object.entries(meta.arches))
-        for(const dir of ['NE','NW','SE','SW'])if(dirs[dir]?.length!==6)issues.push('Broken arch '+n+'/'+dir);
-      for(const [n,dirs] of Object.entries(meta.doors))
-        for(const dir of ['NE','NW','SE','SW'])
-          if(!dirs[dir]?.closed?.length||!dirs[dir]?.open?.some(x=>x[0][0]==='leaf'))
-            issues.push('Broken opening door '+n+'/'+dir);
-      if(meta.scatter.length!==40||new Set(meta.scatter.map(p=>p.name)).size!==40)
-        issues.push('Expected 40 unique terrain props');
-      for(const p0 of meta.scatter)
-        if(p0.x<0||p0.y<0||p0.x+p0.w>p.scatter.width||p0.y+p0.h>p.scatter.height)
-          issues.push('Prop outside atlas '+p0.name);
+      // floors, walls and props: the Cathedral nave palette swapped, plus the eight approved painted floors/props
+      const tiles=biomeTileSet(b);
+      if(tiles.pack!=='cathedral_graveyard'||tiles.bases.length<2)issues.push('Heavenly paving missing');
+      if(tiles.floors.filter(f=>f.name?.startsWith('heavenly_painted_floor_')).length!==8)issues.push('Painted Heavenly floors missing');
+      if(tiles.scatter.filter(e=>e.painted).length!==8)issues.push('Painted Heavenly props missing');
+      if(tiles.families.length!==3)issues.push('Three nave wall families expected');
       if(drawBiome({overworldMisses:6},500)!=='throne'||!BIOME_BY_ID[drawBiome({overworldMisses:3},20)]?.overworld)
         issues.push('Overworld or throne priority regressed');
       let hasHeaven=false;
@@ -115,8 +104,8 @@ const {openGame,report,OUT_DIR}=require('./harness');
       const {camera}=await import('/src/core/view.js');
       camera.zoom=1.6;camera.follow(G.player.x,G.player.y,0,true);
       return{testedMonsters:tested,uniqueVisuals:sigs.size,
-        art:{floor:meta.floors.length,wallFamilies:Object.keys(meta.walls).length,
-          scatter:meta.scatter.length,arches:Object.keys(meta.arches).length,doors:Object.keys(meta.doors).length},
+        art:{floor:tiles.floors.length,wallFamilies:tiles.families.length,
+          scatter:tiles.scatter.length,arches:Object.keys(tiles.arches).length,doors:Object.keys(tiles.doors).length},
         levels,issues};
     });
     console.log('HEAVENLY QA',JSON.stringify(info));
@@ -128,7 +117,6 @@ const {openGame,report,OUT_DIR}=require('./harness');
       const {A}=await import('/src/core/assets.js');
       const {HEAVENLY_MONSTERS}=await import('/src/data/heavenly.js');
       const {enemyImage}=await import('/src/core/enemyart.js');
-      const pack=A.packs.heavenly;
       const encode=cv=>cv.toDataURL('image/webp',.95).split(',')[1];
       const tileW=160,tileH=186,columns=10;
       const atlas=document.createElement('canvas');
@@ -141,17 +129,13 @@ const {openGame,report,OUT_DIR}=require('./harness');
         return{id:a.id,name:a.name,family:a.heavenlyFamily,variant:a.heavenlyVariant,
           arch:a.arch,boss:a.boss,cell:{x,y,w:tileW,h:tileH,fx:80}};
       });
-      return{floors:encode(pack.floors),walls:encode(pack.walls),
-        scatter:encode(pack.scatter),monsters:encode(atlas),
-        meta:JSON.stringify(pack.meta),monsterMeta:JSON.stringify(entries,null,2)};
+      return{monsters:encode(atlas),monsterMeta:JSON.stringify(entries,null,2)};
     });
     const folder=path.join(OUT_DIR,'heavenly_export');
     fs.mkdirSync(folder,{recursive:true});
-    for(const key of ['floors','walls','scatter','monsters'])
-      fs.writeFileSync(path.join(folder,key+'.webp'),Buffer.from(data[key],'base64'));
-    fs.writeFileSync(path.join(folder,'pack.json'),data.meta);
+    fs.writeFileSync(path.join(folder,'monsters.webp'),Buffer.from(data.monsters,'base64'));
     fs.writeFileSync(path.join(folder,'monsters.json'),data.monsterMeta);
-    console.log('HEAVENLY pack and 60 monster atlas exported:',folder);
+    console.log('HEAVENLY 60 monster atlas exported:',folder);
 
     await page.evaluate(async()=>{
       const {HEAVENLY_MONSTERS}=await import('/src/data/heavenly.js');
@@ -173,28 +157,6 @@ const {openGame,report,OUT_DIR}=require('./harness');
     });
     await page.locator('#heavenly-gallery').screenshot({path:path.join(OUT_DIR,'heavenly_60_monsters.png')});
     await page.evaluate(()=>document.querySelector('#heavenly-gallery').remove());
-    await page.evaluate(async()=>{
-      const {A}=await import('/src/core/assets.js');
-      const p=A.packs.heavenly,cv=document.createElement('canvas');cv.id='heavenly-tiles';
-      cv.width=1550;cv.height=1170;const g=cv.getContext('2d');
-      g.fillStyle='#3f3b4a';g.fillRect(0,0,cv.width,cv.height);
-      g.fillStyle='#ffeed1';g.font='bold 25px monospace';
-      g.fillText('HEAVENLY | 60 FLOORS / 40 TERRAIN PROPS',21,34);
-      p.meta.floors.forEach((tile,i)=>{
-        const x=(i%10)*152,y=Math.floor(i/10)*100+45;
-        g.drawImage(p.floors,tile.x,tile.y,tile.w,tile.h,x+4,y+2,136,68);
-        g.fillStyle='#e5d8b9';g.font='11px monospace';g.fillText(String(i+1),x+5,y+84);
-      });
-      p.meta.scatter.forEach((obj,i)=>{
-        const x=(i%10)*152,y=Math.floor(i/10)*115+655;
-        g.drawImage(p.scatter,obj.x,obj.y,obj.w,obj.h,x+14,y,100,89);
-        g.fillStyle='#e5d8b9';g.font='10px monospace';g.fillText(obj.name.slice(0,20),x+5,y+104);
-      });
-      Object.assign(cv.style,{position:'fixed',left:0,top:0,zIndex:999999,
-        maxWidth:'100vw',maxHeight:'100vh'});
-      document.body.appendChild(cv);
-    });
-    await page.locator('#heavenly-tiles').screenshot({path:path.join(OUT_DIR,'heavenly_terrain_contact.png')});
   }catch(e){errors.push('[HEAVENLY] '+(e.stack||e));}
   report(errors);
   await browser.close();

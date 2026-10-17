@@ -102,38 +102,10 @@ const { readFileSync, existsSync } = await import('node:fs');
 const sandPack=JSON.parse(readFileSync(new URL('../../assets/tiles/sea_of_sand/pack.json',import.meta.url)));
 for(const [kind,count] of Object.entries({floor:60,scatter:40,tree:18,monster:60,boss:10,cliff:216}))
   if(sandPack.atlases[kind]?.length!==count)bad.push(`Sea of Sand ${kind} atlas expected ${count} frames`);
-// Every combat biome also generates 60 new floors / 40 new props and per-family wall
-// texture treatments at runtime while retaining the source geometry below.
-for(const path of ['biomeexpansion.js','biomenativeart.js','isobarriers.js'])
-  if(!existsSync(new URL('../../src/gfx/'+path,import.meta.url)))
-    bad.push('Missing shared expansion renderer '+path);
-
 const asset = (f) => new URL('../../assets/' + f, import.meta.url);
 const packs = {};
 for (const b of BIOMES) {
   if (!b.pack) { bad.push(`biome ${b.id}: no pack`); continue; }
-  if (b.pack === 'heavenly') {
-    if (!existsSync(new URL('../../src/gfx/heavenlypack.js', import.meta.url))) bad.push('missing Heavenly environment generator');
-    continue;
-  }
-  if (b.pack === 'astral_plane') {
-    if (!existsSync(new URL('../../src/gfx/astralplane.js', import.meta.url))) bad.push('missing Astral Plane art generator');
-    continue; // lazy full biome pack tested by browser and source mock
-  }
-  if (b.pack === 'hell') {
-    if (!existsSync(new URL('../../src/gfx/hellpack.js', import.meta.url))) bad.push('missing HELL art generator');
-    continue; // full pack generated lazily at runtime; browser QA tests geometry
-  }
-  if (b.pack === 'ice_temple') {
-    if (!existsSync(new URL('../../src/gfx/icetemple.js', import.meta.url))) bad.push('missing Ice Temple art generator');
-    continue; // runtime-generated full pack: browser QA validates all geometry
-  }
-  if (b.pack === 'desert_temple') {
-    // Original Canvas asset generator delivers a complete pack at runtime using
-    // the proven Catacombs wall/arch/door slicing and geometry contract.
-    if (!existsSync(new URL('../../src/gfx/deserttemple.js', import.meta.url))) bad.push('missing Desert Temple art generator');
-    continue;
-  }
   if (b.overworld) {
     if(b.id==='sea_of_sand'){
       if(b.pack!=='sea_of_sand')bad.push('Sea of Sand must use its native art pack');
@@ -149,8 +121,24 @@ for (const b of BIOMES) {
     }
     continue; // the outdoor pack has no indoor floor/wall/door atlas
   }
-  for (const f of ['pack.json', 'floors.webp', 'walls.webp', 'scatter.webp']) if (!existsSync(asset(`tiles/${b.pack}/${f}`))) bad.push(`biome ${b.id}: missing tiles/${b.pack}/${f}`);
-  packs[b.pack] = 1;
+  // dungeons use only the painted packs (data/biomes.js ART), floors/props from `pack`, walls from `wallPack`
+  for (const p of [b.pack, b.wallPack, ...(b.morePacks || []).map((m) => m[0])].filter(Boolean)) {
+    if (!['catacombs', 'cathedral_graveyard', 'castle_keep'].includes(p)) bad.push(`biome ${b.id}: ${p} is not a painted pack`);
+    for (const f of ['pack.json', 'floors.webp', 'walls.webp', 'scatter.webp']) if (!existsSync(asset(`tiles/${p}/${f}`))) bad.push(`biome ${b.id}: missing tiles/${p}/${f}`);
+    packs[p] = 1;
+  }
+}
+const packMeta = (id) => JSON.parse(readFileSync(asset(`tiles/${id}/pack.json`)));
+for (const b of BIOMES.filter((b) => !b.overworld && b.part)) {
+  const fm = packMeta(b.pack), wm = packMeta(b.wallPack || b.pack), part = b.part;
+  const inR = (rs, i) => !rs || rs.some(([x, y]) => i + 1 >= x && i + 1 <= y);
+  const seamless = fm.floors.filter((f, i) => f.seamless && inR(part.floors, i)).length;
+  if (seamless < 2) bad.push(`biome ${b.id}: part has ${seamless} seamless floors`);
+  if (fm.floors.filter((f, i) => !f.seamless && inR(part.floors, i)).length < 10) bad.push(`biome ${b.id}: part has few feature floors`);
+  if (fm.scatter.filter((s, i) => inR(part.scatter, i)).length < 8) bad.push(`biome ${b.id}: part has few props`);
+  for (const f of part.families || []) if (!wm.walls[f]) bad.push(`biome ${b.id}: no wall family ${f}`);
+  for (const k of ['arches', 'doors']) for (const d of part[k] || []) if (!wm[k][d]) bad.push(`biome ${b.id}: no ${k} design ${d}`);
+  if (part.arches && !part.arches.length) bad.push(`biome ${b.id}: no arches`);
 }
 for (const id of Object.keys(packs)) {
   const m = JSON.parse(readFileSync(asset(`tiles/${id}/pack.json`)));

@@ -292,20 +292,79 @@ export const BIOMES = [
 // Art: every biome is built from a biome pack (assets/tiles/<pack>/, docs/ART.md), recoloured by its `palette`.
 // A pack can hold more than one setting: `part` limits a biome to some of its floors (1-based ranges), wall
 // families, props, arches and doors (assets.js biomeTileSet).
-for (const b of BIOMES) if (!b.pack) b.pack = 'catacombs';
-const CG = 'cathedral_graveyard';
-Object.assign(BIOMES.find((b) => b.id === 'cathedral'), {
-  pack: CG, part: {
-    floors: [[1, 5], [11, 30]], scatter: [[21, 35]], families: ['nave_ashlar', 'stained_glass_chapel', 'buttressed_masonry'],
-    arches: ['chapel_lancet', 'nave_triumphal', 'grand_westwork'], doors: ['cathedral_oak', 'sacristy_bronze'],
-  },
-});
-Object.assign(BIOMES.find((b) => b.id === 'necropolis'), {
-  pack: CG, part: {
-    floors: [[6, 10], [31, 60]], scatter: [[1, 20], [36, 40]], families: ['cemetery_limestone', 'cemetery_iron'],
-    arches: ['churchyard_cross', 'ruined_cloister', 'processional_cemetery'], doors: ['cemetery_gate'],
-  },
-});
+// Only the three painted packs (Catacombs, Cathedral and Graveyard, Castle Keep) are used for dungeons: the
+// Canvas-drawn temple packs (since removed) were flat placeholders that clashed with the painted art.
+// A biome takes its floors and props from `pack` and may take its walls, arches and doors from another pack
+// (`wallPack`) and extra props from others (`morePacks`); `part` limits each to the pieces that fit the theme
+// (1-based floor/prop ranges, wall families, arch and door designs). Everything is recoloured by `palette`
+// (walls by `wallPalette` when set). The five temple biomes add their approved painted floors and props
+// (gfx/approvedbiomeart.js).
+const CAT = 'catacombs', CG = 'cathedral_graveyard', CK = 'castle_keep';
+const CAT_ARCH = { arches: ['roman_ossuary', 'pointed_funerary', 'ironbound_segmental'], doors: ['ironbound_oak', 'iron_grille', 'bone_reliquary'] };
+const NAVE_ARCH = { arches: ['chapel_lancet', 'nave_triumphal', 'grand_westwork'], doors: ['cathedral_oak', 'sacristy_bronze'] };
+const GRAVE_ARCH = { arches: ['churchyard_cross', 'ruined_cloister', 'processional_cemetery'], doors: ['cemetery_gate'] };
+const KEEP_GATES = { arches: ['portcullis_arch', 'great_hall_arch'], doors: ['blackiron_gate', 'armory_door'] };
+const NAVE = { ...NAVE_ARCH, floors: [[1, 5], [11, 30]], scatter: [[21, 35]], families: ['nave_ashlar', 'stained_glass_chapel', 'buttressed_masonry'] };
+const GRAVEYARD = { ...GRAVE_ARCH, floors: [[6, 10], [31, 60]], scatter: [[1, 20], [36, 40]], families: ['cemetery_limestone', 'cemetery_iron'] };
+// Castle Keep pale stone halls: limestone, marble and slate floors, carved ashlar walls (palaces, temples, spires).
+const KEEP_HALLS = { floors: [[1, 2], [5, 7], [9, 9], [11, 17], [19, 36], [38, 60]],
+  scatter: [[1, 3], [8, 13], [16, 21], [27, 30], [37, 38], [40, 40]], families: ['royal_ashlar', 'chapel_carving'] };
+// Castle Keep dark iron and brick: guardstone, brick and soot floors (forges, vaults, the throne).
+const KEEP_IRON = { floors: [[2, 4], [6, 6], [8, 8], [10, 60]],
+  scatter: [[4, 7], [11, 14], [17, 18], [22, 26], [31, 37], [39, 39]], families: ['armory_ironstone', 'underkeep_brick'] };
+const KEEP_STUDY = { floors: [[1, 1], [3, 3], [7, 7], [9, 10], [11, 60]],
+  scatter: [[2, 3], [10, 13], [15, 21], [28, 30], [35, 38], [40, 40]], families: ['great_hall_paneling', 'chapel_carving', 'royal_ashlar'] };
+// All of the Catacombs floors and props with chosen wall families.
+const crypt = (...families) => ({ ...CAT_ARCH, floors: [[1, 60]], scatter: [[1, 40]], families });
+// Graveyard soil, moss and gravel floors and its outdoor props, under another pack's walls.
+const SOIL = { floors: [[6, 10], [31, 60]], scatter: [[1, 20], [36, 40]] };
+const CAVE_WALLS = crypt('drowned_crypt', 'crypt_ashlar', 'sealed_cells');
+const ART = {
+  castle_keep: { pack: CK },
+  frozen: { pack: CAT, part: crypt('ossuary_niches', 'crypt_ashlar', 'sealed_cells') },
+  ice_temple: { pack: CK, wallPack: CG, part: { ...KEEP_HALLS, ...NAVE_ARCH, families: ['stained_glass_chapel', 'nave_ashlar', 'buttressed_masonry'] },
+    palette: { colorize: [202, 0.42], light: 0.1, contrast: 1.12 } },
+  molten: { pack: CAT, wallPack: CK, part: { ...KEEP_GATES, floors: [[1, 60]], scatter: [[1, 40]], families: ['armory_ironstone', 'underkeep_brick'] },
+    palette: { colorize: [22, 0.92], light: 0.05, contrast: 1.3 } },
+  fungal: { pack: CG, wallPack: CAT, part: { ...CAVE_WALLS, ...SOIL }, palette: { colorize: [98, 0.5], light: 0.07, contrast: 1.1 } },
+  sunken: { pack: CAT, part: CAVE_WALLS, palette: { colorize: [176, 0.38], light: 0.03, contrast: 1.08 } },
+  blood: { pack: CAT, part: crypt('ossuary_niches', 'funerary_chapel', 'sealed_cells'), palette: { colorize: [356, 0.62], light: -0.02, contrast: 1.15 } },
+  ashen: { pack: CG, wallPack: CAT, part: { ...crypt('crypt_ashlar', 'funerary_chapel', 'sealed_cells'), ...SOIL }, palette: { sat: 0.1, light: 0.04, contrast: 1.05 } },
+  void: { pack: CAT, part: crypt('funerary_chapel', 'sealed_cells', 'crypt_ashlar'), palette: { colorize: [275, 0.48], light: -0.04, contrast: 1.12 } },
+  gilded: { pack: CK, wallPack: CAT, part: { ...KEEP_HALLS, ...CAT_ARCH, families: ['funerary_chapel', 'ossuary_niches'] },
+    morePacks: [[CAT, [[1, 3], [7, 7], [9, 10], [13, 15], [24, 25], [32, 34]]]], palette: { colorize: [44, 0.62], light: 0.03, contrast: 1.12 } },
+  plague: { pack: CAT, part: CAVE_WALLS, palette: { colorize: [85, 0.45], light: -0.03, contrast: 1.08 } },
+  crystal: { pack: CG, part: NAVE, palette: { colorize: [188, 0.62], light: 0.09, contrast: 1.22 } },
+  desert: { pack: CAT, part: crypt('crypt_ashlar', 'funerary_chapel', 'ossuary_niches'), palette: { colorize: [36, 0.45], light: 0.1 } },
+  shadow: { pack: CAT, part: crypt('sealed_cells', 'crypt_ashlar', 'funerary_chapel'), palette: { sat: 0.3, light: -0.05, contrast: 1.12 } },
+  forge: { pack: CK, part: { ...KEEP_IRON, ...KEEP_GATES }, palette: { colorize: [18, 0.7], contrast: 1.2, light: 0.03 } },
+  abyss: { pack: CAT, part: crypt('drowned_crypt', 'sealed_cells'), palette: { colorize: [226, 0.55], light: 0.03, contrast: 1.15 } },
+  thorn: { pack: CG, part: GRAVEYARD, palette: { colorize: [100, 0.36], light: -0.04 } },
+  storm: { pack: CK, part: { ...KEEP_HALLS, families: ['royal_ashlar', 'armory_ironstone'], arches: ['keep_lancet', 'portcullis_arch'] },
+    palette: { colorize: [216, 0.36], light: 0, contrast: 1.18 } },
+  obsidian: { pack: CK, part: KEEP_IRON, palette: { sat: 0.22, light: -0.01, contrast: 1.35 } },
+  flesh: { pack: CAT, part: crypt('ossuary_niches', 'drowned_crypt', 'sealed_cells'), palette: { colorize: [342, 0.5], light: 0.02 } },
+  serpent: { pack: CAT, part: crypt('funerary_chapel', 'drowned_crypt', 'crypt_ashlar'), palette: { colorize: [150, 0.42], light: -0.01, contrast: 1.06 } },
+  shattered: { pack: CK, part: KEEP_HALLS, palette: { sat: 0.4, light: 0.04, tint: [180, 200, 255, 0.12] } },
+  library: { pack: CK, part: KEEP_STUDY, palette: { colorize: [30, 0.38], light: -0.03 } },
+  cathedral: { pack: CG, part: NAVE },
+  necropolis: { pack: CG, part: GRAVEYARD },
+  amber: { pack: CG, wallPack: CAT, part: { ...crypt('crypt_ashlar', 'funerary_chapel'), ...SOIL }, palette: { colorize: [32, 0.7], light: 0.04, contrast: 1.05 } },
+  desert_temple: { pack: CK, part: KEEP_HALLS, palette: { colorize: [36, 0.5], light: 0.06, contrast: 1.05 } },
+  hell: { pack: CAT, wallPack: CK, part: { floors: [[1, 60]], scatter: [[1, 40]], families: ['underkeep_brick', 'armory_ironstone'],
+    arches: ['portcullis_arch', 'great_hall_arch', 'keep_lancet'], doors: ['blackiron_gate', 'crimson_oak'] },
+    palette: { colorize: [9, 0.88], light: 0.09, contrast: 1.2 } },
+  astral_plane: { pack: CG, part: NAVE, palette: { colorize: [256, 0.58], light: 0.05, contrast: 1.18 } },
+  heavenly: { pack: CG, part: NAVE, palette: { sat: 0.22, light: 0.24, contrast: 0.9, tint: [255, 238, 196, 0.22] } },
+  throne: { pack: CK, part: KEEP_IRON, palette: { colorize: [2, 0.7], light: -0.06, contrast: 1.2 } },
+};
+for (const b of BIOMES) {
+  const a = ART[b.id];
+  if (a) { b.pack = a.pack; b.part = a.part || null; b.wallPack = a.wallPack || null; b.morePacks = a.morePacks || null; if (a.palette) b.palette = a.palette; }
+  b.painted = ['desert_temple', 'ice_temple', 'hell', 'astral_plane', 'heavenly'].includes(b.id);
+  if (!b.pack) b.pack = CAT;
+  b.wallPack = b.wallPack || null;
+}
 
 // Colour families: a level can mix its palette with another biome of the same family (mixPartner), e.g. a
 // Frozen Ossuary whose far rooms are paved like the Crystal Caverns.
@@ -343,10 +402,11 @@ const MON_SWAPS = {
 for (const b of BIOMES) b.swaps = MON_SWAPS[b.id];
 
 export const MIX_CHANCE = 0.65;
-/** Maybe pick a like-coloured biome on the same pack (and part) to mix floors (and maybe walls) with, or null. */
+/** Maybe pick a like-coloured biome on the same packs to mix floors (and maybe walls) with, or null. The temple biomes'
+ * extra painted floors (`painted`) would shift the partner's tile indices, so they never mix. */
 export function mixPartner(biome, rnd = Math.random) {
   if (!biome.family || rnd() >= MIX_CHANCE) return null;
-  const kin = BIOMES.filter((b) => b.family === biome.family && b.id !== biome.id && b.pack === biome.pack && b.part === biome.part);
+  const kin = BIOMES.filter((b) => b.family === biome.family && b.id !== biome.id && b.pack === biome.pack && b.wallPack === biome.wallPack && !b.painted && !biome.painted);
   return kin.length ? kin[Math.floor(rnd() * kin.length)] : null;
 }
 

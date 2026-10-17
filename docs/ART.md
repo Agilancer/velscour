@@ -1,5 +1,9 @@
 # Environment art: biome packs
 
+> **October 17, 2026:** the Canvas-generated temple packs, the per-biome floor/prop/wall expansion and the AI
+> floor/prop/wall atlases described below were removed. Dungeon biomes now use the painted packs only; see
+> [BIOME_ART.md](BIOME_ART.md).
+
 Dungeon floors, walls, arches, doors and scatter terrain come from **biome packs**: the user's
 `<Name>_Biome_Pack.zip` files in `assets/source/biomes/`. The first is the **Catacombs** pack. Every biome is
 built from it for now, palette swapped (`palette` in `src/data/biomes.js`); more packs will follow, made from the
@@ -140,7 +144,7 @@ The renderer uses the Catacombs pack **only as a geometric depth-slice/alpha ste
 walls and doors, preserving exact pivots, raised geometry, cutaway and door-leaf alignment.
 Its floor and scatter artworks are produced independently from shapes, patterns and pixels.
 The game draws the resulting canvases through its ordinary `biomeTileSet` adapter; no generated
-binary files are hand-edited. See [DESERT_TEMPLE.md](DESERT_TEMPLE.md) for the full design,
+binary files are hand-edited. See [BIOME_ART.md](BIOME_ART.md) (the DESERT_TEMPLE pack was removed) for the full design,
 visual language, tests and instructions.
 
 ```bash
@@ -158,7 +162,7 @@ and three opening doors inherit the original template's geometry, pivots and dep
 while acquiring hoarfrost, sapphire, blue ice and rune-painted materials.
 The generated Canvas images load lazily in `src/core/assets.js` and appear as an ordinary
 `biomeTileSet` without changing the existing dungeon engine. The dedicated browser
-QA can export real game-ready WebP atlases and `pack.json`. See [ICE_TEMPLE.md](ICE_TEMPLE.md).
+QA can export real game-ready WebP atlases and `pack.json`. See [BIOME_ART.md](BIOME_ART.md) (the ICE_TEMPLE pack was removed).
 
 ```bash
 node tools/tests/ice_temple.js
@@ -175,7 +179,7 @@ Like the Ice/Desert Temple generators, it preserves the Catacombs architecture's
 **geometry and depth-sliced alpha silhouettes only**, while painting new relief/material
 surfaces; this prevents broken hero occlusion, door geometry and wall joining.
 Its floor and prop sprites are wholly programmatically drawn. Full integration instructions,
-validation and browser-exported atlas handoff: [HELL.md](HELL.md).
+validation and browser-exported atlas handoff: [BIOME_ART.md](BIOME_ART.md) (the HELL pack was removed).
 
 ```bash
 node tools/tests/hell.js
@@ -194,7 +198,7 @@ surfaces are regenerated with pixel-level shading and runic relief.
 The floors and objects are new procedural Canvas drawings with constellations,
 orbital rings, crystal stars, floating-stone forms and celestial instruments.
 Exports to WebP with `tools/tests/astral_plane.js`; see
-[ASTRAL_PLANE.md](ASTRAL_PLANE.md) for details and QA limits.
+[BIOME_ART.md](BIOME_ART.md) (the ASTRAL_PLANE pack was removed) for details and QA limits.
 
 ```bash
 node tools/tests/astral_plane.js

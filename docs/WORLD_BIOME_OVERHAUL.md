@@ -1,5 +1,9 @@
 # World-wide Biome Expansion & Isometric Barrier Audit
 
+> **October 17, 2026:** the Canvas-generated temple packs, the per-biome floor/prop/wall expansion and the AI
+> floor/prop/wall atlases described below were removed. Dungeon biomes now use the painted packs only; see
+> [BIOME_ART.md](BIOME_ART.md).
+
 ## Scope and current status
 
 The `feature/worldwide-biome-art-and-spawns` branch extends **all 32 combat
