@@ -23,7 +23,7 @@ const mobile = process.argv.includes('mobile');
       if (!grantedSkillsAt('dragoon', 2).includes(triple.id)) problems.push('Triple Spearfall not granted at level 2');
       G.char.skills[single.id] = G.char.skills[triple.id] = 2;
       G.char.skills['dragoon.1.0'] = 1;
-      p.recompute(); p.mana = p.maxMana = 99999;
+      p.recompute(); p.mana = p.maxMana = 99999; p.st.critChance = 0;
       const foe = w.creatures.find((c) => c.team === 'enemy' && !c.dead);
       if (!foe) problems.push('No enemy found for spear overlap check');
       else {
