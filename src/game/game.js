@@ -14,7 +14,9 @@ import { setClassItems, setRingContext } from '../data/items.js';
 import { BIOMES, BIOME_BY_ID, TOWN_BIOME, drawBiome, mixPartner, recordBiomeVisit } from '../data/biomes.js';
 import { CLASSES } from '../data/classes.js';
 import { generateDungeon, isRaidDepth } from '../world/dungeon.js';
-import { FINAL_DEPTH, depthLevel } from '../data/depth.js';
+import { FINAL_DEPTH, depthLevel, blockStart } from '../data/depth.js';
+import { addDefiance, clearDefiance, defianceText, tickBlessing } from './defiance.js';
+import { setupHappenings, announceHappenings, happeningsTick, townHappening, townTick, recordDepth, markNemesis } from './happenings.js';
 import { generateTown, makeTownTiles, rollTownWeather } from '../world/town.js';
 import { generateOverworld } from '../world/overworld.js';
 import { createOverworldScenario } from './overworld.js';
@@ -312,6 +314,7 @@ export const game = {
     playMusic('town'); setAmbience('town');
     Vendor.restock();
     const p = G.player;
+    townHappening(world); // a festival, a blessing, a gift (game/happenings.js)
     p.hp = p.maxHp; p.mana = p.maxMana;
     this.autosave();
   },
@@ -484,6 +487,8 @@ export const game = {
       }
     }
     world.roster = [...new Set(gen.spawns.filter((s) => s.arch && !['raid', 'boss'].includes(s.rank)).map((s) => s.arch))];
+    setupHappenings(world, gen.start, gen); // omens, shrines, treasure imps, cursed chests (game/happenings.js)
+    tickBlessing(c);
     world.onBossAwake = (m) => {
       UI.centerMsg(m.name, m.isVelscour ? 'The Demon Lord rises' : m.raid ? `${m.title}${m.raid.mods.length ? ' · ' + m.raid.modText() : ''}` : 'Guardian of the Exit', 3);
       sfx('boss');
@@ -494,8 +499,9 @@ export const game = {
       const first = !c.cleared[depth];
       c.cleared[depth] = true;
       c.deepest = Math.max(c.deepest || 0, depth);
+      this.brokeThrough(depth);
       UI.centerMsg(m.raid ? `${m.name} DEFEATED` : 'GUARDIAN SLAIN', first ? '+1 bonus skill point · the exit is open' : 'The exit is open', 3.5);
-      if (first) { c.skillPoints++; UI.log('Bonus skill point for clearing a new depth!', '#ffd860'); }
+      if (first) { c.skillPoints++; UI.log('Bonus skill point for clearing a new depth!', '#ffd860'); recordDepth(world, depth); }
       addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#40a0ff', 5));
       sfx('gate');
       UI.refresh();
@@ -507,6 +513,7 @@ export const game = {
       const first = !c.cleared[depth];
       c.cleared[depth] = true;
       c.deepest = Math.max(c.deepest || 0, depth);
+      this.brokeThrough(depth);
       if (first) { c.skillPoints++; UI.log('Bonus skill point for completing the Sea of Sand route!', '#ffd860'); }
       addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#40a0ff', 5));
       sfx('gate'); UI.refresh(); this.autosave();
@@ -516,11 +523,13 @@ export const game = {
       const first = !c.cleared[depth];
       c.cleared[depth] = true;
       c.deepest = Math.max(c.deepest || 0, depth);
+      this.brokeThrough(depth);
       if (first) { c.skillPoints++; UI.log('Bonus skill point for completing the overworld scenario!', '#ffd860'); }
       addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#40a0ff', 5));
       sfx('gate'); UI.refresh(); this.autosave();
     });
     this.setWorld(world, gen.start, old);
+    announceHappenings(world);
     if (biome.overworld) {
       // townsfolk on the road: reachable landmarks to walk between (game/wanderers.js)
       const spots = [], map = gen.map;
@@ -571,18 +580,28 @@ export const game = {
     });
   },
 
+  /** A cleared depth: if it ends the Defiance block, the stacks are spent (and say so). */
+  brokeThrough(depth) {
+    const c = G.char, had = c.defiance && c.defiance.n;
+    if (!clearDefiance(c, depth)) return;
+    if (G.player) G.player.recompute();
+    UI.log(`The wall is broken. <b style="color:#ff6a3a">Defiance ${had}</b> fades — Velscour takes note.`, '#ffb080');
+  },
+
   onPlayerDeath(src) {
     const c = G.char;
     const w = G.world;
     c.deaths = (c.deaths || 0) + 1;
-    const depth = w ? w.depth : c.depth;
+    const depth = w && w.kind === 'dungeon' ? w.depth : c.depth;
+    const n = addDefiance(c, depth);
+    markNemesis(c, src, depth); // the killer comes back as a unique (game/happenings.js)
     const killer = src ? (src.owner ? src.owner.name : src.name) : null;
     stopMusic();
     this.autosave();
     setTimeout(() => {
       deathScreen(depth, killer, () => {
-        // back to the start of the five depths before the wall: grind them for XP and gear, then try again
-        c.depth = Math.max(1, Math.floor((depth - 1) / 5) * 5 - 4);
+        // back to the start of this five-depth block (BOSS ROOMs are checkpoints), a Defiance stack stronger
+        c.depth = blockStart(depth);
         c.nextBiome = drawBiome(c, c.depth);
         const p = G.player;
         p.dead = false;
@@ -591,6 +610,7 @@ export const game = {
         p.hp = p.maxHp; p.mana = p.maxMana;
         this.enterTown();
         UI.log(`You awaken in Herrington Hollow. The descent begins anew at Depth ${c.depth}.`, '#ff8060');
+        UI.log(`<b style="color:#ff6a3a">Defiance ${n}</b>: ${defianceText(n)} until you break past Depth ${c.defiance.block + 4}.`, '#ffb080');
       });
     }, 1700);
   },
@@ -639,6 +659,7 @@ export const game = {
       w.update(dt);
       if (w.overworldScenario) w.overworldScenario.update(dt);
       ambushTick(w, dt);
+      if (w.kind === 'town') townTick(w, dt); else happeningsTick(w, dt);
       madnessTick(dt);
       footsteps(p, w.kind === 'town' ? 'dirt' : STEP_SURFACE[w.biome && w.biome.id] || 'stone');
       Meter.tick(dt);

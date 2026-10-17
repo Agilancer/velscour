@@ -11,7 +11,7 @@ import { bardNoteFor } from './bard.js';
 import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, spearBarrageAreas, buffAmount, curseAmount, skillDuration, effLevel } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
 import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS } from '../data/items.js';
-import { depthLevel } from '../data/depth.js';
+import { depthLevel, armorDiv } from '../data/depth.js';
 import { drawBiome } from '../data/biomes.js';
 import { augHits } from '../data/rings.js';
 import { canLearn } from '../ui/skills.js';
@@ -220,12 +220,12 @@ export function heroDamage(p) {
 
 /** One number for "how strong is the hero": log offense + log effective life + a little utility. */
 export function charScore(p) {
-  const st = p.st, lvl = Math.max(1, (G.char && G.char.depth) || 1, p.char.level);
+  const st = p.st, lvl = Math.max(1, depthLevel((G.char && G.char.depth) || 1), p.char.level);
   const off = buildPower(p, CROWD, null, true).total; // attributes and gear follow the build focus too
-  const armK = st.armor / (st.armor + 30 + lvl * 18);
+  const armK = st.armor / (st.armor + armorDiv(lvl));
   const res = ['fire', 'cold', 'light', 'poison'].reduce((a, k) => a + clamp(st.res[k], -100, 75), 0) / 4 / 100;
   const taken = (1 - armK) * 0.5 + (1 - res) * 0.4 + (1 - clamp(st.res.magic, -100, 75) / 100) * 0.1;
-  const ehp = (p.maxHp / Math.max(0.1, taken) / (1 - Math.min(0.6, st.block / 100))) * (1 + Math.min(st.lifeSteal, 15) * 0.03) + st.lifeRegen * 10;
+  const ehp = (p.maxHp / Math.max(0.1, taken) / (1 - Math.min(0.6, st.block / 100)) / (1 - Math.min(0.6, (st.reduce || 0) / 100))) * (1 + Math.min(st.lifeSteal, 15) * 0.03) + st.lifeRegen * 10;
   return Math.log(off + 1) + 0.8 * Math.log(ehp + 1) + 0.15 * Math.log(p.maxMana + 10) + augScore(p)
     + st.moveSpeed * 0.003 + st.magicFind * 0.0008 + st.goldFind * 0.0003 + st.xpPct * 0.002;
 }
@@ -757,6 +757,15 @@ export const Auto = {
       this.watchStuck(dt);
       return;
     }
+    // a shrine a few steps away is worth grabbing even mid-fight (game/happenings.js)
+    const sh = w.chests.find((ch) => ch.shrine && !ch.opened && !this.giveUp.has(ch) && dist(p.x, p.y, ch.x, ch.y) < 5);
+    if (sh && this.navDist(sh.x, sh.y) < 7) {
+      if (this.lootFor !== sh) { this.lootFor = sh; this.lootT = 0; }
+      if ((this.lootT += dt) > 6) this.giveUp.add(sh);
+      this.setStatus(`Activating the ${sh.label}`);
+      if (this.goTo(sh.x, sh.y, sh.reach - 0.2, dt)) sh.use();
+      this.watchStuck(dt); return;
+    }
     if (foes.length) { this.combat(foes, false); this.watchStuck(dt); return; }
     this.target = null;
     // keep pets and buffs up between fights
@@ -840,15 +849,15 @@ export const Auto = {
   /** The next monster to walk to: the boss, unless the hero is under-levelled or something is close by. */
   huntGoal(w) {
     const p = G.player, c = G.char;
-    const farm = c.level < w.depth + 1;
+    const farm = c.level < depthLevel(w.depth) + 1; // the monster level, not the raw depth (they part after depth 60)
     let best = null, bd = Infinity;
     for (const m of w.creatures) {
       if (m.dead || m.team !== 'enemy' || m.targetable === false || this.giveUp.has(m)) continue;
       const d = this.navDist(m.x, m.y);
       if (d === Infinity) continue;
-      const lim = farm ? 999 : 12;
+      const lim = m.goblin ? 60 : farm ? 999 : 12;
       if (m !== w.boss && d > lim) continue;
-      const v = m === w.boss ? d + (farm ? 40 : 0) : d;
+      const v = m === w.boss ? d + (farm ? 40 : 0) : m.goblin ? d - 30 : d;
       if (v < bd) { bd = v; best = m; }
     }
     if (!best && w.boss && !w.boss.dead) return w.boss;
@@ -867,16 +876,16 @@ export const Auto = {
       bd = d; best = g;
     }
     for (const ch of w.chests) {
-      if (ch.opened) continue;
+      if (ch.opened || this.giveUp.has(ch)) continue;
       const d = this.navDist(ch.x, ch.y);
-      if (d < 14 && d < bd) { bd = d; best = ch; }
+      if (d < (ch.far || 14) && d - (ch.far ? 6 : 0) < bd) { bd = d - (ch.far ? 6 : 0); best = ch; } // shrines and caches are worth a walk
     }
     if (!best) { this.lootT = 0; return false; }
     if (this.lootFor !== best) { this.lootFor = best; this.lootT = 0; }
     this.lootT += dt;
-    if (this.lootT > 8) { this.giveUp.add(best); return false; } // unreachable
+    if (this.lootT > (best.far ? 20 : 8)) { this.giveUp.add(best); return false; } // unreachable
     if (best.use) {
-      this.setStatus('Opening a chest');
+      this.setStatus(best.shrine ? `Activating the ${best.label}` : best.label ? `Opening the ${best.label}` : 'Opening a chest');
       if (this.goTo(best.x, best.y, (best.reach || 1.3) - 0.2, dt)) best.use();
       return true;
     }
@@ -1068,6 +1077,7 @@ export const Auto = {
       let s = dist(p.x, p.y, m.x, m.y);
       if (m === this.target) s -= 1.5;
       if (m.isWard) s -= 6; // a raid boss's warding crystals: break them first
+      if (m.goblin) s -= 5; // a treasure imp before it escapes (game/happenings.js)
       if (m.raidPriority) s -= m.raidPriority; // heads, thralls, pipes, corpses (game/raidsigs.js)
       if (this.rules && this.rules.holdFire && m.rank === 'boss') s += 50;
       else if (m.rank === 'boss') s -= m.ward < 1 ? -4 : 2.5;
@@ -1086,7 +1096,7 @@ export const Auto = {
   boldness() {
     const p = G.player, w = G.world, c = G.char;
     const hpK = p.hp / p.maxHp;
-    let k = 0.55 + clamp((c.level - (w.depth || 1)) / 8, -0.5, 0.4) + (hpK - 0.7) * 0.9 - this.hurt * 4;
+    let k = 0.55 + clamp((c.level - depthLevel(w.depth || 1)) / 8, -0.5, 0.4) + (hpK - 0.7) * 0.9 - this.hurt * 4;
     if (w.boss && !w.boss.dead && w.boss.awake && dist(p.x, p.y, w.boss.x, w.boss.y) < 12) k -= 0.25;
     if (hpK < 0.45) k = Math.min(k, 0.15);
     return clamp(k, 0, 1);
@@ -1429,7 +1439,7 @@ export const Auto = {
     steps.push({ vendor: 'socket', label: 'Visiting the jeweler', want: () => c.bag.some((b) => b && b.type === 'gem') || this.equipped().some((it) => it.sockets < it.maxSockets && socketCost(it) <= this.budget(0.3)) || this.gearGain(Vendor.stock.rings), fn: () => this.jeweler() });
     steps.push({ vendor: 'upgrade', label: 'Upgrading gear', want: () => this.equipped().some((it) => (it.upg || 0) < 10 && upgradeCost(it) <= this.budget(0.45)), fn: () => this.blacksmith() });
     steps.push({ vendor: 'enchant', label: 'Enchanting gear', want: () => this.equipped().some((it) => it.rarity >= 1 && enchantCost(it, true) <= this.budget(0.2)), fn: () => this.enchanter() });
-    steps.push({ vendor: 'gamble', label: 'Gambling', want: () => c.gold >= Math.round(180 * Math.pow(1.065, Math.max(c.level, c.depth || 1))) * 8 && bagFree(c) >= 3, fn: () => { this.gamble(); this.sellJunk(); } });
+    steps.push({ vendor: 'gamble', label: 'Gambling', want: () => c.gold >= Math.round(180 * Math.pow(1.065, Math.max(c.level, depthLevel(c.depth || 1)))) * 8 && bagFree(c) >= 3, fn: () => { this.gamble(); this.sellJunk(); } });
     steps.push({ stash: true, label: 'Stashing gems and gear for later', want: () => c.bag.some((b) => b && (b.type === 'gem' || (b.type === 'gear' && (b.req || 1) > c.level && b.rarity >= 2))), fn: () => this.stashExtras() });
     return steps;
   },
@@ -1626,7 +1636,7 @@ export const Auto = {
 
   gamble() {
     const c = G.char;
-    const lvl = Math.max(c.level, c.depth || 1);
+    const lvl = Math.max(c.level, depthLevel(c.depth || 1));
     const price = Math.round(180 * Math.pow(1.065, lvl));
     for (let k = 0; k < 3; k++) {
       if (c.gold < price * 8 || bagFree(c) < 3) break;

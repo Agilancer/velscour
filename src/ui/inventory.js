@@ -244,6 +244,8 @@ function statsBlock() {
     ['Block', `${Math.round(st.block)}%`], ['Life Regen', `${st.lifeRegen.toFixed(1)}/s`],
     ['Magic Find', `+${Math.round(st.magicFind)}%`], ['Gold Find', `+${Math.round(st.goldFind)}%`],
   ];
+  if (st.reduce) rows.push(['Damage Reduction', `${Math.round(st.reduce)}%`]);
+  if (st.fortitude > 1) rows.push(['Fortitude', `+${Math.round((st.fortitude - 1) * 100)}% Life`]);
   if (st.extraProj) rows.push(['Extra Projectiles', '+' + Math.floor(st.extraProj)]);
   if (st.skillsAll) rows.push(['All Skills', '+' + Math.floor(st.skillsAll)]);
   for (const [k, v] of rows) g.innerHTML += `<span class="dim">${k}</span><span class="v">${v}</span>`;

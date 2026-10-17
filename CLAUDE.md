@@ -64,6 +64,9 @@ node tools/tests/familiars.js                      # pet art: every pet summon's
 node tools/tests/pets.js [seeds]                   # minion pathing: round walls, keep up, fight round corners, leash, idle
 node tools/tests/select.js [mobile]                # hero select: one hero per class, play/new/delete, old duplicate saves
 node tools/tests/autoplay.js wizard 15 [mobile]    # auto-play soak: a new hero plays N game minutes at ~30x speed
+node tools/tests/balance.js paladin,wizard 146 30  # a geared hero for depth D, auto-play: deaths, depths cleared (BAL_GEAR=3 weaker gear; 'god' 4th arg: DPS)
+node tools/tests/balance_model.mjs paladin         # no browser: hero life vs monster hits by depth (the curve in src/data/depth.js)
+node tools/tests/happenings.js                     # omens, shrines, treasure imp, cursed chest, challenge, nemesis, town events, Defiance
 node tools/tests/perf.js 6 wizard 1                # frame cost on a phone-sized screen: fps, update/render ms (last arg: CPU throttle)
 ```
 Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, because layout bugs don't throw.
@@ -114,7 +117,9 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   and `hud.js` for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
   `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`.
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Overworld scenarios
-  (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. The Bard's notes, measure and Cadences (`src/game/bard.js`, `src/gfx/notation.js`, `src/data/notation.js`): run `bard.js`. Raid bosses
+  (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. Monster/hero scaling, affixes, drops or death
+  rules (`monsterBase`, `src/data/depth.js`, `src/data/items.js`, `src/game/defiance.js`): run `balance_model.mjs` and
+  `balance.js` at a few depths. Dungeon/town events (`src/game/happenings.js`): run `happenings.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. The Bard's notes, measure and Cadences (`src/game/bard.js`, `src/gfx/notation.js`, `src/data/notation.js`): run `bard.js`. Raid bosses
   (`src/game/raid.js`, every 5th depth): run `raid.js` (and `raid_sigs.js` for `src/game/raidsigs.js`). Rings, augments or skill mastery (`src/data/rings.js`,
   `src/game/augments.js`): run `rings.js`. The town generator (`src/world/town.js`): run `town.js` with a few seeds.
 - Velscour waits at `FINAL_DEPTH` (500, `src/data/depth.js`); monster levels come from `depthLevel(depth)`, never the

@@ -10,6 +10,7 @@ import { GORE } from '../data/enemies.js';
 import { dropLoot } from './loot.js';
 import { augHit } from './augments.js';
 import { classHitFx } from '../gfx/classfx.js';
+import { armorDiv } from '../data/depth.js';
 
 const PLAYER_RES = { fire: 'fire', cold: 'cold', light: 'light', poison: 'poison', acid: 'poison' };
 
@@ -43,7 +44,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     }
     if (el === 'phys') {
       const lvl = (src && src.level) || G.world.depth || 1;
-      dmg *= 1 - st.armor / (st.armor + 30 + lvl * 18);
+      dmg *= 1 - st.armor / (st.armor + armorDiv(lvl));
     }
     const rk = PLAYER_RES[el];
     const res = rk ? st.res[rk] : st.res.magic;
@@ -247,6 +248,7 @@ export function kill(tgt, src, info = {}) {
       if (leg.vamp) p.heal(p.maxHp * 0.02, true);
     }
     if (tgt.team === 'enemy') dropLoot(world, tgt);
+    if (world.onKill) world.onKill(tgt); // streaks, challenges (game/happenings.js)
   }
   if (tgt.rank === 'boss' && world && world.onBossKilled) world.onBossKilled(tgt);
 }
