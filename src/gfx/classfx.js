@@ -5,6 +5,7 @@ import { G } from '../state.js';
 import { isoX, isoY, camera } from '../core/view.js';
 import { rand, TAU, chance } from '../core/util.js';
 import { spawn, smoke, addEffect, Ring, Column, Bolt, addLight, addDecal, elem, glowSprite } from './vfx.js';
+import { glyphSprite } from './notation.js';
 
 const P = (o) => spawn(o);
 // a mote that rises from (x,y)
@@ -55,9 +56,10 @@ const THEMES = {
     for (let i = 0; i < n; i++) fling(x, y, 26, '#9ac84a', 2.5 * k, 'dot', { g: 260, size: rand(2, 3.5), add: false });
     for (let i = 0; i < n / 2; i++) P({ type: 'dot', x: x + rand(-0.6, 0.6), y: y + rand(-0.6, 0.6), z: rand(10, 40), vx: rand(-3, 3), vy: rand(-3, 3), vz: rand(-20, 20), life: rand(0.5, 1), size: 1.5, color: '#141808' });
   } },
-  bard: { c: ['#ff6a8a', '#fff0f8', '#7a1040'], fx(x, y, n, k) { // a rainbow of notes on the air
+  bard: { c: ['#ff6a8a', '#fff0f8', '#7a1040'], fx(x, y, n, k) { // a few rainbow motes and little notes drifting up (the skill's own glyph does the rest)
     const hues = ['#ff6a8a', '#ffd860', '#70e0ff', '#a0ff80', '#d080ff'];
-    for (let i = 0; i < n; i++) P({ type: 'glow', x, y, z: 30, vx: rand(-2, 2) * k, vy: rand(-2, 2) * k, vz: rand(20, 60), drag: 2, life: rand(0.6, 1.1), size: rand(2, 3.5) * k, size1: 0, color: hues[i % 5], add: true });
+    for (let i = 0; i < n / 3; i++) P({ type: 'glow', x, y, z: 30, vx: rand(-2, 2) * k, vy: rand(-2, 2) * k, vz: rand(20, 60), drag: 2, life: rand(0.5, 0.9), size: rand(1.5, 2.5) * k, size1: 0, color: hues[i % 5], add: true });
+    for (let i = 0; i < Math.min(4, n / 6); i++) P({ type: 'img', img: glyphSprite(['q', 'e', 'e2', 's'][i % 4], hues[i % 5]), x: x + rand(-0.4, 0.4), y: y + rand(-0.4, 0.4), z: 30, vx: rand(-0.6, 0.6), vy: rand(-0.6, 0.6), vz: rand(30, 60), drag: 1, life: rand(0.7, 1.1), size: rand(16, 22) * Math.min(1.4, k), size1: 8 });
   } },
   slime_lord: { c: ['#3a8cff', '#d8f0ff', '#0c2aa0'], fx(x, y, n, k, at) { // blue goo globs that splat
     for (let i = 0; i < n; i++) fling(x, y, 20, i % 3 ? '#3a8cff' : '#a8d8ff', 3 * k, 'dot', { g: 320, vz: rand(60, 160), size: rand(2.5, 5) * k, size1: 1.5, add: false });
@@ -110,10 +112,11 @@ export function classCastFx(p, sk, L, tx, ty) {
   const g = p._classGlow;
   if (g && g.t < g.dur) { g.t = 0; g.k = Math.max(g.k, k); } else addEffect(p._classGlow = new HeroGlow(p, T.c, k, 0.45 + tier * 0.12));
   if (tier >= 1) addEffect(new Ring(p.x, p.y, 0.1, 0.9 + tier * 0.3, 0.45, T.c[0], 2 + tier));
-  if (tier >= 2) { addEffect(new Ring(p.x, p.y, 0.05, 0.6 + tier * 0.2, 0.55, T.c[1], 2, { fill: true })); addLight(p.x, p.y, 3 + tier, 0.6); }
+  const bard = p.classId === 'bard'; // the Bard's ranks show on his notes and staves instead of a bloom over him
+  if (tier >= 2 && !bard) { addEffect(new Ring(p.x, p.y, 0.05, 0.6 + tier * 0.2, 0.55, T.c[1], 2, { fill: true })); addLight(p.x, p.y, 3 + tier, 0.6); }
   const far = Math.hypot(tx - p.x, ty - p.y) > 0.8 && Math.hypot(tx - p.x, ty - p.y) < 14;
   if (tier >= 3 && far) { T.fx(tx, ty, Math.round(n * 0.6), k, 'hit', E); addEffect(new Ring(tx, ty, 0.1, 1.4, 0.5, T.c[0], 4)); }
-  if (tier >= 4) { addEffect(new Column(p.x, p.y, T.c[0], 0.45, 16, 180)); if (!sk.m.free) camera.shake(1.2); }
+  if (tier >= 4 && !bard) { addEffect(new Column(p.x, p.y, T.c[0], 0.45, 16, 180)); if (!sk.m.free) camera.shake(1.2); }
 }
 
 let hitBudget = 0, hitAt = 0;

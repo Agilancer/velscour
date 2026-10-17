@@ -64,11 +64,11 @@ export const TREE4 = {
     'Eclipse Hex|curse|shadow|void|curse=decay,slow r=1.8 cd=6', 'Night Mother|buff|shadow|transform|buff=dmg,leech amt=35 dur=12 cd=40', 'Lantern Procession|summon|fire|lantern|sum=lantern n=3 dur=15 cd=25', 'Moonfall|rain|shadow|meteor|n=14 r=2.2 dur=3 cd=10',
   ],
   bard: [
-    'Opening Act|melee|phys|smash|free wc=1', 'Bright Note|proj|light|note|home', 'Rousing Chorus|buff|holy|aura|buff=as amt=20 dur=15 cd=20 party', 'Drum Roll|nova|phys|drum|r=1 stun',
-    'Spotlight|zone|light|flash|r=1.2 dur=5', 'Pyro Finale|proj|fire|firework|exp r=1.2', 'Backup Singers|summon|light|clone|sum=chorus n=2 dur=20 cd=20', 'Stage Dive|leap|phys|eruption|r=1.4 dmg=1.3',
-    'Crescendo Wave|fissure|light|sonic|range=1.5 knock', 'Confetti Bombs|rain|fire|firework|n=14 r=1.6', 'Curtain Call|curse|light|flash|curse=slow,stun r=1.4', 'Mic Drop|aoe|light|eruption|r=1.6 dmg=1.8 cd=4',
-    'Grand Fireworks|rain|fire|firework|n=22 r=2 cd=5', 'Standing Ovation|buff|holy|aura|buff=dmg,speed amt=35 dur=12 cd=30 party', 'Amp Overload|chain|light|sonic|n=6', 'Spinning Records|orbit|phys|card|n=5 dur=6 cd=8',
-    'Grand Finale|aoe|fire|nuke|r=2.6 dmg=3 cd=8', 'Rock Legend|buff|light|transform|buff=dmg,as amt=40 dur=12 cd=40', 'Sonic Bulwark|wall|light|sonic|dur=6', 'Final Bow|nova|holy|wave|n=3 r=1.6 cd=6',
+    'Opening Act|proj|light|n_q|free wc=1 canon dmg=0.6', 'Bright Note|proj|light|n_e|home cresc', 'Rousing Chorus|buff|holy|aura|buff=as amt=20 dur=15 cd=20 party note=s4', 'Drum Roll|nova|phys|drum|n=3 r=1 stun note=t32',
+    'Spotlight|zone|light|flash|r=1.2 dur=5 note=rq', 'Pyro Finale|proj|fire|n_h|exp r=1.2', 'Backup Singers|summon|light|clone|sum=chorus n=2 dur=20 cd=20 note=s2', 'Stage Dive|leap|phys|eruption|r=1.4 dmg=1.3 note=bass',
+    'Crescendo Wave|fissure|light|sonic|range=1.5 knock note=s3', 'Confetti Bombs|rain|fire|n_t16|n=14 r=1.6', 'Curtain Call|curse|light|flash|curse=slow,stun r=1.4 note=rh', 'Mic Drop|aoe|light|eruption|r=1.6 dmg=1.8 cd=4 note=w',
+    'Grand Fireworks|rain|fire|n_t8|n=22 r=2 cd=5', 'Tempo Rubato|buff|holy|aura|buff=as,speed amt=35 dur=12 cd=30 party rubato note=treble', 'Amp Overload|chain|light|sonic|n=6 note=e2', 'Spinning Records|orbit|phys|n_w|n=5 dur=6 cd=8',
+    'Grand Finale|aoe|fire|nuke|r=2.6 dmg=3 cd=8 note=w', 'Rock Legend|buff|light|transform|buff=dmg,as amt=40 dur=12 cd=40 note=s3', 'Sonic Bulwark|wall|light|sonic|dur=6 cd=6 note=rq', 'Da Capo|nova|arcane|wave|n=2 r=1.6 dacapo cd=6 note=rt',
   ],
   slime_lord: [
     'Ooze Slap|melee|acid|smash|free wc=1', 'Primal Glob|proj|acid|blob|exp r=1', 'Gel Coat|buff|acid|shield|buff=armor amt=45 dur=20 cd=25', 'Puddle|zone|acid|slime|r=1.2 dur=6 slow',

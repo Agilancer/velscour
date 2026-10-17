@@ -14,6 +14,32 @@ Contents
 
 ---
 
+## October 17, 2026 — Bard overhaul: musical-notation projectiles, particle staves, the composing gimmick
+
+- **Notation** (`src/data/notation.js`): 20 glyphs (whole/half/quarter/eighth/sixteenth notes, tied eighths, 2-4 beamed
+  sixteenths, eighth/sixteenth/thirty-second triplets, six rests, treble and bass clefs), each with a beat value.
+  Every one of the 80 Bard skills (all four trees rewritten in place, ids kept) writes one glyph: `n_<glyph>` fx on
+  proj/orbit/rain/beam skills, `note=<glyph>` on the rest.
+- **Art** (`src/gfx/notation.js`): glyphs are procedural paths cut into cached sprites; every note projectile trails a
+  wavy five-line staff of glowing particle dots. Rank tiers (1/5/10/15/20) change the staff colour (parchment, sky,
+  green, magenta, rainbow) and add motes, shed mini notes and rainbow sparks. Orbiters ride a ring staff, rain notes
+  trail vertical staves, Harmonic Beam is a straight staff with notes streaming along it, and every non-projectile
+  skill flings its glyph as a cosmetic `NoteFlight` (buffs float it up, novas fling a ring, area spells drop it).
+  Bard skill icons show the glyph on a staff with the kind emblem in the corner. The Bard skips the generic rank
+  bloom (filled ring + column) so his notes stay readable.
+- **Gimmick: he composes** (`src/game/bard.js`). Each cast adds its beats to the 4/4 measure drawn over his head.
+  Exactly 4 beats = Cadence: treble key replays every written note off the staff as homing notes, bass key lands one
+  chord (knockback + stun); rests restore 4% mana and 1.5% life each. Perfect cadences build Harmony (+6% Bard damage
+  per stack, max 5, 12 s); overfilling is a Discord (notes scatter, Harmony lost). Clefs take 0 beats and change the
+  key. The free basic notes shrink to fit (eighth, sixteenth, 32nd rest), so they never cause a Discord. New note
+  mods: `wavy` vibrato, `stac` staccato hops, `ferm hold=` fermata hover, `cresc`, `gliss`, `canon` echo, `scatter`
+  (a beamed group splits), `trip` (3 hits), `hush` (rest, mana on hit), `gold`, `dacapo`, `rubato`.
+- **Auto-play** (`bardMeasure` in autoplay.js) triples the value of a note that completes the bar, drops notes that
+  would overfill it while anything else fits, and saves Da Capo for a well-filled bar: about 25 Cadences and 0
+  Discords per game minute.
+- Test: `tools/tests/bard.js [minutes] [mobile]`: glyph sheet + icons, the composition rules, 30 showcase shots
+  (stepped, in the Wilds), and an auto-play soak.
+
 ## October 17, 2026 — grand sweep: FPS, room shapes, 20 raid bosses, 4th skill trees, overworld wanderers (branch `feat/grand-sweep`)
 
 - **FPS.** `tools/tests/biome_perf.js` profiles every biome (phone screen, 4x CPU throttle, auto-play on). Two fixes
