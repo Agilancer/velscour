@@ -228,7 +228,7 @@ export function biomeTileSet(biome) {
     // Native authored feature textures are the conservative fallback when an
     // AI atlas fails alpha/background hygiene. No synthetic symbols get added.
     if(allowed.size===0)for(let i=from+10;i<from+18;i++)allowed.add(i);
-    set.features=set.features.filter(i=>allowed.has(i));
+    set.features=set.features.filter(i=>allowed.has(i)).slice(0,12);
     if(!set.bases.length||!set.features.length)
       throw new Error('Missing curated floor families in '+biome.id);
     if(Array.isArray(m.curatedPropIndices)){
