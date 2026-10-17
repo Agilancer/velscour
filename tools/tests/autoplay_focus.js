@@ -33,7 +33,12 @@ const { openGame, report } = require('./harness');
           cls === 'lancer' ? !!sk.m.shields : sk.kind === 'leap');
         const mobility = learned.filter((sk) => ['leap', 'dash', 'blink'].includes(sk.kind));
         const barred = (sk) => G.char.bar.includes(sk.id);
-        if (signature.length < (cls === 'lancer' ? 7 : 3) || signature.some((sk) => !barred(sk)))
+        // Dragoon learns more leaps than the bar holds: since the Spearstorm work (PR #109) its barrages
+        // (Thousandfold Impalement, Triune Spearfall) take bar slots, so only most leaps have to be barred.
+        const barrages = learned.filter((sk) => sk.m.barrage);
+        if (signature.length < (cls === 'lancer' ? 7 : 3) || (cls === 'dragoon'
+          ? signature.filter(barred).length < 6 || barrages.some((sk) => !barred(sk))
+          : signature.some((sk) => !barred(sk))))
           problems.push(cls + ' failed to learn/equip its class signature skills');
         if (mobility.length && !mobility.some(barred)) problems.push(cls + ' did not equip mobility');
         if (new Set(G.char.bar.filter(Boolean)).size !== G.char.bar.filter(Boolean).length)

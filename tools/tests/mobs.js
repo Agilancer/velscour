@@ -30,6 +30,9 @@ const LEVELS = +(process.argv[2] || 10);
       const biome = list[(li * 7) % list.length];
       const depth = [3, 12, 24, 38, 55, 71, 88, 7, 15, 44][li % 10] + Math.floor(li / 10);
       G.char.level = Math.min(90, depth + 5); G.player.recompute();
+      // the outdoor packs must load before their generators run, as enterDungeon does
+      if (biome.id === 'sea_of_sand') await (await import('/src/gfx/seaofsand.js')).loadSeaOfSandPack();
+      else if (biome.id === 'castle') await (await import('/src/gfx/castle.js')).loadCastlePack();
       game.buildDungeon(depth, biome);
       const p = G.player, w = G.world, map = w.map;
       G.godMode = true; G.paused = true;

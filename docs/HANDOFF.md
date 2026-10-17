@@ -14,6 +14,27 @@ Contents
 
 ---
 
+## October 17, 2026 — test suite back to green
+
+Fixes for the 15 failing scripts from the Oct 17 health check (next entry). Most tests had fallen behind deliberate
+changes; each fix cites the commit that made the change.
+- **Code:** `heavenlymonsters.js` `baseSprite()` now checks the 12 user-approved Heavenly paintings (variant 0 of each
+  family) before the AI art, which had been hiding them. In `audio.js`, `preloadSong` only calls `getReader()` when it
+  streams, so the no-`content-length` `r.blob()` fallback works.
+- **Stale tests updated:** `mayhem.js` reads `MADNESS_FILL`. `autoplay_focus.js` lets Dragoon Spearstorm barrages
+  take bar slots (≥6 leaps plus every barrage). `barbarian_rage.js` accepts transparent Lancer shields (0cdd86e) and
+  levels the hero up for an ilvl-3 axe that needs level 2. `titlefx.js` no longer expects title credit cards, which
+  moved to the Credits screen in 61568fd. `worldwide_biomes.js` fixes the undefined `FULL` and expects 120
+  expansion floors (dbdd511), no town monuments (6d40aa1), and no wilds accent floors or props (611b7e8).
+  `closed_helms.js` is rewritten for the fitted Common/Rare helmet atlases (2af0460): every helm must reach the face,
+  stay on the head anchor, leave the body untouched and keep its silhouette under a palette swap. The old test checked
+  the retired `helms_mask.png`.
+- **Test bugs:** `select.js` used `page.$` where it needed `page.$$`. `mobs.js` now loads the Sea of Sand and Castle
+  packs before `buildDungeon`. In `legion.js` the crowd was cleared before the Pyre Inquisitor (4 s spell) had a
+  target, so the crowd is now topped up during the final fight; it passed 3 of 3 runs. `bot.js` and
+  `effects_performance.js` passed without changes. Their earlier failures were boot timeouts.
+- **Windows note:** do not wrap test runs in Git Bash `timeout`. Under it, every `openGame` boot timed out at 30 s.
+
 ## October 17, 2026 — beatable Castle, faster overworld scenarios, Sea of Sand and pet sprite recuts
 
 - **Castle could not be won in 11 of its 35 scenarios.** The ten `keep_*` scenarios had no completion branch in

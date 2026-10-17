@@ -1,8 +1,10 @@
-// Full closed-face helmet QA: verify 80 composite overlays per class, every palette-compatible
-// opening mask, stable body coordinates, and generate real in-game head previews.
+// Fitted helmet QA: every Common and Rare helmet of the shared atlases (assets/sprites/gear/{common,rare}_helmets/)
+// must draw on the hero's head through its placements.json fit, leave the body below the head untouched, and look
+// the same through a palette swap. Writes a head preview sheet per class.
 //   node tools/tests/closed_helms.js paladin
 //   node tools/tests/closed_helms.js all
-// Requires the same test server and Playwright installation as tools/tests/gear.js.
+// (The legacy per-class helms.webp / helms_mask.png closed-faceplate check retired when the fitted atlases replaced
+// them, 2af0460 "Replace helmet overlays with fitted class atlas and visual editor".)
 const path = require('path');
 const { openGame, report, ALL_CLASSES, OUT_DIR } = require('./harness');
 const arg = process.argv[2] || 'paladin';
@@ -16,99 +18,52 @@ const CLASSES = arg === 'all' ? ALL_CLASSES : arg.split(',');
       const result = await page.evaluate(async (cid) => {
         const ga = await import('/src/core/gearart.js');
         const meta = await ga.loadGearArt(cid);
-        if (!meta) return { error: 'Missing gear metadata for ' + cid };
-        const [fw, fh] = meta.frame;
-        const [hx, hy, hw, hh] = meta.helmCell;
-        if (fw !== 128 || fh !== 192 || hx !== 40 || hy !== 0 || hw !== 48 || hh !== 56) {
-          return { error: 'Unexpected helmet alignment metadata for ' + cid, frame: meta.frame, cell: meta.helmCell };
-        }
-        const mask = new Image();
-        await new Promise((resolve, reject) => {
-          mask.onload = resolve;
-          mask.onerror = reject;
-          mask.src = '/assets/sprites/gear/' + cid + '/helms_mask.png';
-        });
-        const mcv = document.createElement('canvas');
-        mcv.width = mask.naturalWidth; mcv.height = mask.naturalHeight;
-        const mx = mcv.getContext('2d', { willReadFrequently: true });
-        mx.drawImage(mask, 0, 0);
-        const md = mx.getImageData(0, 0, mcv.width, mcv.height).data;
-
+        if (!meta) return { issues: ['Missing gear metadata for ' + cid] };
+        const [fw, fh] = meta.frame, [ax] = meta.anchor, headTop = meta.headTop;
+        const sets = {};
+        for (const set of ['common', 'rare']) sets[set] = (await fetch('/assets/sprites/gear/' + set + '_helmets/index.json').then((r) => r.json())).designs.length;
+        const issues = [], stats = [];
+        const cv = document.createElement('canvas'); cv.width = fw; cv.height = fh;
+        const xx = cv.getContext('2d', { willReadFrequently: true });
+        const read = (c) => { xx.clearRect(0, 0, fw, fh); xx.drawImage(c, 0, 0); return xx.getImageData(0, 0, fw, fh).data; };
+        const body = { type: 'gear', slot: 'body', rarity: 0, look: [1, 0, -1] };
+        const bare = read(ga.heroLook(cid, body, null));
+        const total = sets.common + sets.rare, cell = 64;
         const preview = document.createElement('canvas');
-        preview.id = 'helmqa';
-        preview.width = 10 * hw * 3;
-        preview.height = 8 * hh * 3;
+        preview.id = 'helmqa'; preview.width = 10 * cell * 2; preview.height = Math.ceil(total / 10) * cell * 2;
         Object.assign(preview.style, { position: 'fixed', zIndex: 100000, left: '0', top: '0', background: '#26242a' });
-        const pv = preview.getContext('2d');
-        pv.imageSmoothingEnabled = false;
-        let openings = 0, openCells = 0, covered = 0, unchangedOutside = 0, err = null;
-
-        const look = (slot, design, finish) =>
-          ({ type: 'gear', slot, look: [design, finish, -1] });
-        for (let design = 1; design <= meta.helms.n && !err; design++) {
-          const a = ga.heroLook(cid, look('body', design, 0), null);
-          const b = ga.heroLook(cid, look('body', design, 0), look('head', design, 0));
-          const original = document.createElement('canvas');
-          original.width = fw; original.height = fh;
-          const xx = original.getContext('2d', { willReadFrequently: true });
-          xx.drawImage(a, 0, 0);
-          const ad = xx.getImageData(0, 0, fw, fh).data;
-          xx.clearRect(0, 0, fw, fh);
-          xx.drawImage(b, 0, 0);
-          const bd = xx.getImageData(0, 0, fw, fh).data;
-          let hasOpening = false;
-          for (let y = 0; y < fh && !err; y++) for (let x = 0; x < fw; x++) {
+        const pv = preview.getContext('2d'); pv.imageSmoothingEnabled = false;
+        let n = 0;
+        for (const [set, count] of Object.entries(sets)) for (let design = 1; design <= count; design++, n++) {
+          const helm = (finish) => ({ type: 'gear', slot: 'head', rarity: set === 'rare' ? 2 : 0, look: [design, finish, -1] });
+          const name = set + ' ' + design;
+          const worn = ga.heroLook(cid, body, helm(1)), d = read(worn);
+          let changed = 0, x0 = fw, y0 = fh, x1 = -1, y1 = -1;
+          for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) {
             const k = (y * fw + x) * 4;
-            const inside = x >= hx && x < hx + hw && y >= hy && y < hy + hh;
-            if (!inside) {
-              for (let c = 0; c < 4; c++) if (ad[k + c] !== bd[k + c]) {
-                err = 'Helmet ' + design + ' altered body outside helmet cell at (' + x + ',' + y + ')';
-                break;
-              }
-              unchangedOutside++;
-              if (err) break;
-            } else {
-              const sx = (design - 1) % meta.cols * hw + (x - hx);
-              const sy = Math.floor((design - 1) / meta.cols) * hh + (y - hy);
-              if (md[(sy * mask.naturalWidth + sx) * 4] === 255) {
-                hasOpening = true; openings++;
-                if (bd[k + 3] !== 255) {
-                  err = 'Helmet ' + design + ' has a transparent faceplate at (' + x + ',' + y + ')';
-                  break;
-                }
-                covered++;
-              }
-            }
+            if (d[k] === bare[k] && d[k + 1] === bare[k + 1] && d[k + 2] === bare[k + 2] && d[k + 3] === bare[k + 3]) continue;
+            changed++; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
           }
-          if (hasOpening) openCells++;
-          const col = (design - 1) % 10, row = Math.floor((design - 1) / 10);
-          pv.drawImage(b, hx, hy, hw, hh, col * hw * 3, row * hh * 3, hw * 3, hh * 3);
-          // Verify palette swapping also composes an opaque plate (sample designs, two finishes).
-          if (design % 10 === 1 && !err) {
-            const tinted = ga.heroLook(cid, look('body', design, 2), look('head', design, 2));
-            xx.clearRect(0, 0, fw, fh); xx.drawImage(tinted, 0, 0);
-            const td = xx.getImageData(0, 0, fw, fh).data;
-            for (let y = 0; y < hh && !err; y++) for (let x = 0; x < hw; x++) {
-              const sx = (design - 1) % meta.cols * hw + x;
-              const sy = Math.floor((design - 1) / meta.cols) * hh + y;
-              if (md[(sy * mask.naturalWidth + sx) * 4] === 255 &&
-                  td[((y + hy) * fw + x + hx) * 4 + 3] !== 255) {
-                err = 'Palette-swapped helmet ' + design + ' has transparent face opening';
-                break;
-              }
-            }
-          }
+          stats.push([name, changed, x0, y0, x1, y1]);
+          if (changed < 150) { issues.push(name + ' helmet barely visible (' + changed + ' px)'); continue; }
+          // masks (Gunner, Death Knight Rare) leave the hair showing, so the art only has to reach the face
+          if (y0 > headTop + 16) issues.push(name + ' helmet does not reach the face (starts at y ' + y0 + ')');
+          if (y1 > headTop + 64) issues.push(name + ' helmet alters the body below the head (down to y ' + y1 + ')');
+          if (Math.abs((x0 + x1) / 2 - ax) > 20) issues.push(name + ' helmet is off the head anchor (centre x ' + (x0 + x1) / 2 + ')');
+          // a different finish recolours the same silhouette
+          const t = read(ga.heroLook(cid, body, helm(2)));
+          let tChanged = 0;
+          for (let k = 3; k < t.length; k += 4) if (t[k - 3] !== bare[k - 3] || t[k - 2] !== bare[k - 2] || t[k - 1] !== bare[k - 1] || t[k] !== bare[k]) tChanged++;
+          if (Math.abs(tChanged - changed) > changed * 0.25) issues.push(name + ' palette swap changes the silhouette (' + changed + ' vs ' + tChanged + ' px)');
+          pv.drawImage(worn, ax - cell / 2, Math.max(0, headTop - 16), cell, cell, (n % 10) * cell * 2, Math.floor(n / 10) * cell * 2, cell * 2, cell * 2);
         }
         document.body.appendChild(preview);
-        return { helmets: meta.helms.n, openedSourceHelms: openCells, openingPixels: openings, opaqueFaceplatePixels: covered, unchangedOutside, error: err };
+        return { helmets: sets, issues, stats };
       }, cls);
-      console.log(cls + ': ' + JSON.stringify(result));
-      if (result.error || result.helmets !== 80 || result.openingPixels !== result.opaqueFaceplatePixels) {
-        failed = true;
-      }
-      if (!result.error) {
-        await page.locator('#helmqa').screenshot({ path: path.join(OUT_DIR, 'closed_helms_' + cls + '.png') });
-      }
+      console.log(cls + ': ' + JSON.stringify({ helmets: result.helmets, issues: result.issues }));
+      if (process.env.HELM_DEBUG) console.log(JSON.stringify(result.stats));
+      if (!result.helmets || result.issues.length) failed = true;
+      if (result.helmets) await page.locator('#helmqa').screenshot({ path: path.join(OUT_DIR, 'closed_helms_' + cls + '.png') });
       await page.evaluate(() => document.querySelector('#helmqa')?.remove());
     }
   } finally {

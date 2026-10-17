@@ -331,8 +331,9 @@ const songUrls = {};   // song -> blob URL of a fully downloaded copy (preloadSo
 export function preloadSong(song, progress) {
   return fetch(`${AUDIO}music/${song}.mp3`).then(async (r) => {
     if (!r.ok) throw new Error(r.status);
-    const total = +r.headers.get('content-length') || 0, rd = r.body && r.body.getReader();
-    if (!rd || !total) { songUrls[song] = URL.createObjectURL(await r.blob()); return; }
+    const total = +r.headers.get('content-length') || 0;   // getReader() locks the body, so take it only when streaming
+    if (!r.body || !total) { songUrls[song] = URL.createObjectURL(await r.blob()); return; }
+    const rd = r.body.getReader();
     const parts = []; let got = 0;
     for (;;) { const { done, value } = await rd.read(); if (done) break; parts.push(value); got += value.length; progress && progress(Math.min(1, got / total)); }
     songUrls[song] = URL.createObjectURL(new Blob(parts, { type: 'audio/mpeg' }));
