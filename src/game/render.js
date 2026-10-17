@@ -394,9 +394,10 @@ function drawNpc(ctx, n) {
   // Only visitors/civilians use the animated townsfolk collection.
   const spriteId=n.vendor?null:(n.townsfolkSpriteId||n.spriteId||n.townsfolkId);
   const sheet=spriteId?townSprite(spriteId,n.pal):null;
+  // Painted art for vendors and scenario civilians (n.art); never hue-shifted class sprites (they came out green).
   const vendorArt=n.vendor
-    ? replacementImage('npc_'+n.vendor.id) || classSprite(n.vendor.sprite,180,n.vendor.pal)
-    : null;
+    ? replacementImage('npc_'+n.vendor.id) || classSprite(n.vendor.sprite,180)
+    : !spriteId && (n.art && replacementImage(n.art) || classSprite(n.sprite||'paladin',180));
   const h=n.child?42:58,w=(h*128)/192;
   const x = isoX(n.x, n.y), y = isoY(n.x, n.y);
   ctx.fillStyle = 'rgba(0,0,0,0.38)';
@@ -407,7 +408,7 @@ function drawNpc(ctx, n) {
   // HTMLCanvasElement does not expose Image.complete or Image.naturalWidth.
   // The old guard failed for every recolored sheet and drew placeholders forever.
   const ready=townFrameReady(sheet,n.frameCount||11);
-  if(n.vendor && vendorArt){
+  if(vendorArt){
     // Keep the old vendor image (including fallback if the replacement atlas
     // cannot load). Match the same ground point and flip as the townsfolk.
     ctx.save();

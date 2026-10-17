@@ -6,7 +6,7 @@ import { clamp } from '../core/util.js';
 export function drawTownSpeech(ctx, n, x, spriteTop) {
   if (!n.talkText || n.talkT <= 0) { n.bubbleRect=null; return; }
   ctx.save();
-  ctx.font='12px Georgia, "Times New Roman", serif';
+  ctx.font='600 12px "Alegreya Sans", "Segoe UI", sans-serif';
   ctx.textAlign='center';
   ctx.textBaseline='middle';
   const maxWidth=170, maxLines=3;

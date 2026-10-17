@@ -102,7 +102,9 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
     report('Wave '+S.stage+'/'+target+' is attacking!');
   };
   const person=(name,x,y,cls='ranger')=>{
-    const n={name,sprite:cls,pal:{hue:25,sat:.75,light:.08},x,y,flip:rng.chance(.5),hp:100,reach:1.6,
+    // Painted townsfolk/guard art; recoloured class sprites read as green ghosts.
+    const art=cls==='paladin'?'captain':cls==='wizard'?'npc_tobin':['npc_mira','npc_gorm','npc_cael','npc_tobin'][S.civilians.length%4];
+    const n={name,sprite:cls,art,x,y,flip:rng.chance(.5),hp:100,reach:1.6,
       use:()=>{
         // NPCs are normally click targets; give each one a safe and useful interaction.
         if(type==='rescue'){

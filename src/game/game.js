@@ -242,7 +242,7 @@ export const game = {
         townPoseFrame:eventActorIds.has(v.id)?({celebration:10,affection:9,birth:9,alarm:vi%2?8:7,fight:8,royal:10,relief:9})[world.townEvent.emote]??1:1,
         townPoseT:eventActorIds.has(v.id)?7:0,
         townAttackT:world.townEvent.attack&&v.knight&&knightRank<2?5.5:0,townAttackSeed:vi*2.3,
-        use() { this.talkText=townLine(v.id,visit);this.talkT=4.5;floatText(this.x,this.y,70,this.talkText,'#e8dcc4',12,{life:3,vz:8}); },
+        use() { this.talkText=townLine(v.id,visit);this.talkT=4.5; },
         update(dt) {
           this.animT+=dt;
           this.walking=false;

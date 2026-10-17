@@ -20,7 +20,8 @@ export const TOWNSFOLK=Object.freeze(Array.from({length:100},(_,i)=>{
   else if(i<90){[name,role,spriteIndex]=royals[i-86];royal=true;}
   else if(i<94){[name,role,spriteIndex]=regular[i-90];regularVisitor=true;}
   else {const n=i-94;role=['beekeeper','fisher','woodcutter','jeweler','porter','village cook'][n];name=`${first[40+n]} ${last[15+n]}`;spriteIndex=spriteForJob(role);}
-  const hue=((i*37)%360)-180;
+  // Small earthy hue nudges only: full-wheel shifts turned clothes and skin-adjacent tones green.
+  const hue=[-16,-9,-4,0,5,10,15][(i*3)%7];
   return Object.freeze({id:`townsfolk_${String(i+1).padStart(3,'0')}`,name,role,sprite:'townsfolk',spriteId:`townsfolk_${String(spriteIndex).padStart(3,'0')}`,
     palette:{hue,sat:.84+((i*7)%24)/100,light:((i%5)-2)*.025},child,royal,regular:regularVisitor,courtier,knight,familyId,
     frame:{w:128,h:192,count:knight?13:11,order:knight?['idle_1','idle_2','idle_3','walk_1','walk_2','dying_1','dead','scared_scream','scared_point','happy','celebrate','attack_1','attack_2']:['idle_1','idle_2','idle_3','walk_1','walk_2','dying_1','dead','scared_scream','scared_point','happy','celebrate']}});
@@ -54,7 +55,8 @@ const emotes={royal:'royal',wedding:'affection',birth:'birth',party:'celebration
 export const TOWN_SITUATIONS=Object.freeze(Array.from({length:2000},(_,i)=>{
   const archetype=events[Math.floor(i/100)],v=i%100,place=places[v%10],detail=details[Math.floor(v/10)],time=details[(v*3+Math.floor(i/100))%10];
   const [kind,title,mood,emote,intro,beat]=archetype;
-  const text=`${intro}: ${title.toLowerCase()} unfolds at ${place} ${detail}; ${beat.toLowerCase()} ${time}.`;
+  // One short sentence: it has to fit a speech bubble.
+  const text=`${v%2?beat:intro}${kind.includes('alarm')||kind.includes('scout')||kind==='monster_sighting'?'!':'.'}`;
   const visualMood=emotes[emote]||emote;
   return Object.freeze({id:`town_event_${String(i+1).padStart(4,'0')}`,kind,title,text,mood,emote:visualMood,
     actors:kind==='royal_visit'?['royal','courtier']:kind.includes('knight')?['knight']:kind==='wedding'||kind==='engagement'?['adult','child']:kind==='birth'?['midwife','family']:kind.includes('fight')?['knight','adult']:kind.includes('alarm')||kind.includes('scout')?['knight','watch']:['adult','child'],
@@ -66,7 +68,8 @@ const replies=['The whole square is talking','All are well, and send their love'
 const topics=['royal visit','wedding bells','a newborn child','the harvest fair','a neighbor’s funeral','the missing patrol','enemy torches on the ridge','the market brawl','the winter feast','the new bridge','a lost dog','the caravan','the rain damage','the chapel choir','the old well','the watch captain','the orchard bloom','a knight’s return','the fiddler’s tune','the baker’s new oven'];
 export const TOWN_CONVERSATIONS=Object.freeze(Array.from({length:2000},(_,i)=>{
   const a=Math.floor(i/100),b=Math.floor(i/5)%20,c=i%5;
-  return Object.freeze({id:`town_chat_${String(i+1).padStart(4,'0')}`,lines:[`${openings[a]} about ${topics[(a+c*3)%topics.length]}?`,`${replies[b]}; I will ask ${topics[(b+c*5)%topics.length]} when we meet.`]});
+  const ask=['Have you heard about','Any news of','What do you make of','Did you see','Still thinking about'][c];
+  return Object.freeze({id:`town_chat_${String(i+1).padStart(4,'0')}`,lines:[`${ask} ${topics[a]}?`,`${replies[b]}.`]});
 }));
 
 const greetings=['The flour came in before sunrise.','Your boots need a good resole, friend.','The keep bells carry farther on cold mornings.','I saved you a honey cake for the road.','The children have been practicing their song.','The north wall looks handsome in this light.','I saw the royal falcons circling the orchard.','May your next journey bring you home safely.','That old joke gets funnier every winter.','The chapel garden is blooming again.'];
