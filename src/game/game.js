@@ -28,6 +28,7 @@ import { applyTrait, rollTrait, ambushTick, madnessTick, unleashMadness } from '
 import { makeRaidBoss } from './raid.js';
 import { dropChest } from './loot.js';
 import { renderWorld, drawMinimap, preloadTownSheets } from './render.js';
+import { townFacingFlip } from './townsfolkvisuals.js';
 import { controls } from './controls.js';
 import { Auto } from './autoplay.js';
 import { writeSave, newCharData, migrate } from './save.js';
@@ -224,7 +225,7 @@ export const game = {
     void preloadTownSheets(visitors.map(v=>v.spriteId));
     const eventActor=v=>kind==='royal_visit'?v.royal||v.courtier:kind==='returning_knights'?v.knight:kind==='birth'?v.role==='midwife'||v.familyId===familyId:kind==='wedding'||kind==='engagement'?!v.child&&!v.royal:kind==='funeral'?v.regular:kind==='street_fight'?v.knight:kind==='enemy_scouts'||kind==='siege_warning'||kind==='monster_sighting'?v.knight||v.role==='guard':kind==='harvest_fair'||kind==='market_show'||kind==='caravan'?['merchant','musician','storyteller','town crier'].includes(v.role):false;
     const eventActors=visitors.filter(eventActor).slice(0,4),eventActorIds=new Set(eventActors.map(v=>v.id));
-    const eventChatter=eventActors.length>1?townConversation(eventActors[0],eventActors[1],visit,eventSlot):[];
+    const activeSpeakers=()=>world.npcs.filter(q=>q.townsfolkId&&q.talkT>0).length;
     const fightSpots=world.townEvent.attack?[t.map.randomNear(t.center.x,t.center.y+2,1.8),t.map.randomNear(t.center.x+1.1,t.center.y+2,1.8)]:null;
     const destinations=[...t.npcs.map(n=>[n.x+(rand01()-.5)*1.4,n.y+(rand01()-.5)*1.4]),[t.center.x,t.center.y+2],[t.center.x+2,t.center.y+1]];
     const chooseDestination=()=>{const target=destinations[Math.floor(rand01()*destinations.length)];const [x,y]=t.map.randomNear(target[0],target[1],1.7);return [x,y];};
@@ -232,8 +233,10 @@ export const game = {
       const v=visitors[vi], [x,y] = t.map.randomNear(t.center.x, t.center.y + 3, 5), knightRank=visitors.filter(q=>q.knight).findIndex(q=>q.id===v.id), staged=eventActorIds.has(v.id), [tx,ty]=fightSpots&&v.knight&&knightRank<2?fightSpots[knightRank]:staged?t.map.randomNear(t.center.x,t.center.y+2,2.6):chooseDestination();
       const npc = {
         id:v.id,name: v.name,role:v.role,sprite: v.sprite,spriteId:v.spriteId,townsfolkSpriteId:v.spriteId,pal:v.palette,townsfolkId:v.id,frameCount:v.frame.count,child:v.child,royal:v.royal,courtier:v.courtier,knight:v.knight,familyId:v.familyId,
-        x, y, reach: 1.6, flip: false, tx, ty, waitT: rand(1, 4), barkT: rand(7, 15),
-        talkText:eventActorIds.has(v.id)?(v.id===eventActors[0]?.id?world.townEvent.text:eventChatter[eventActors.findIndex(a=>a.id===v.id)%2]||''): '',talkT:eventActorIds.has(v.id)?8:0,chatT:rand(2,8),
+        x, y, reach: 1.6, flip: false, tx, ty, waitT: rand(1, 4),
+        animT:vi*.73,walkT:0,idleSeed:vi%3,walking:false,barkT:rand(28,52),
+        // Ambient town chatter is sparse; only one event actor introduces an event.
+        talkText:v.id===eventActors[0]?.id?world.townEvent.text:'',talkT:v.id===eventActors[0]?.id?4:0,chatT:rand(28,55),
         townMood:eventActorIds.has(v.id)?world.townEvent.emote:null,
         townMoodT:eventActorIds.has(v.id)?18:0,
         townPoseFrame:eventActorIds.has(v.id)?({celebration:10,affection:9,birth:9,alarm:vi%2?8:7,fight:8,royal:10,relief:9})[world.townEvent.emote]??1:1,
@@ -241,22 +244,59 @@ export const game = {
         townAttackT:world.townEvent.attack&&v.knight&&knightRank<2?5.5:0,townAttackSeed:vi*2.3,
         use() { this.talkText=townLine(v.id,visit);this.talkT=4.5;floatText(this.x,this.y,70,this.talkText,'#e8dcc4',12,{life:3,vz:8}); },
         update(dt) {
-          this.talkT=Math.max(0,this.talkT-dt);this.townMoodT=Math.max(0,this.townMoodT-dt);this.townPoseT=Math.max(0,this.townPoseT-dt);this.townAttackT=Math.max(0,this.townAttackT-dt);this.chatT=Math.max(0,this.chatT-dt);this.waitT -= dt;
-          if (this.waitT <= 0) {
-            const d = dist(this.x, this.y, this.tx, this.ty);
-            if (d < 0.65) {
-              this.walking=false;this.waitT=rand(3,7);
-              if(this.chatT<=0){const other=world.npcs.find(q=>q!==this&&!q.vendor&&!q.stash&&dist(q.x,q.y,this.x,this.y)<2.2&&(!q.chatT||q.chatT<=0));
-                if(other){const [one,two]=townConversation(v,other,visit,world.townEventIndex);this.talkText=one;this.talkT=3.8;other.talkText=two;other.talkT=3.8;this.chatT=other.chatT=rand(12,22);}}
-              [this.tx, this.ty] = chooseDestination(); return;
+          this.animT+=dt;
+          this.walking=false;
+          this.talkT=Math.max(0,this.talkT-dt);
+          this.townMoodT=Math.max(0,this.townMoodT-dt);
+          this.townPoseT=Math.max(0,this.townPoseT-dt);
+          this.townAttackT=Math.max(0,this.townAttackT-dt);
+          this.chatT=Math.max(0,this.chatT-dt);
+          this.waitT-=dt;
+          if(this.waitT<=0){
+            const d=dist(this.x,this.y,this.tx,this.ty);
+            if(d<0.65){
+              this.waitT=rand(3,7);
+              // Let one natural two-person conversation happen at a time.
+              if(this.chatT<=0&&this.talkT<=0&&activeSpeakers()===0){
+                const other=world.npcs.find(q=>q!==this&&q.townsfolkId
+                  &&dist(q.x,q.y,this.x,this.y)<2.2&&(!q.chatT||q.chatT<=0)
+                  &&(!q.talkT||q.talkT<=0));
+                if(other){
+                  const [one,two]=townConversation(v,other,visit,world.townEventIndex);
+                  this.talkText=one;this.talkT=3;
+                  other.talkText=two;other.talkT=3;
+                  this.chatT=other.chatT=rand(55,95);
+                }
+              }
+              [this.tx,this.ty]=chooseDestination();
+            }else{
+              const step=Math.min(d,1.1*dt);
+              const nx=this.x+((this.tx-this.x)/d)*step;
+              const ny=this.y+((this.ty-this.y)/d)*step;
+              if(t.map.walkable(nx,ny)){
+                this.walking=true;
+                this.walkT+=dt;
+                // Project world movement to screen X; keep orientation
+                // consistent through idle, walk and event animations.
+                this.flip=townFacingFlip(nx-this.x,ny-this.y,this.flip);
+                this.x=nx;this.y=ny;
+              }else{
+                this.waitT=.5;
+                [this.tx,this.ty]=chooseDestination();
+              }
             }
-            const s = Math.min(d, 1.1 * dt);
-            const nx = this.x + ((this.tx - this.x) / d) * s, ny = this.y + ((this.ty - this.y) / d) * s;
-            if (t.map.walkable(nx, ny)) { this.walking=true;this.flip = nx < this.x; this.x = nx; this.y = ny; } else this.waitT = 0.5, [this.tx, this.ty] = chooseDestination();
           }
-          const p = G.player;
-          this.barkT -= dt;
-          if (p && this.barkT <= 0 && dist(p.x, p.y, this.x, this.y) < 4) { this.barkT = rand(18, 32);this.talkText=townLine(v.id,visit,Math.floor(rand01()*8));this.talkT=3.6; }
+          if(!this.walking)this.walkT=0;
+          const p=G.player;
+          this.barkT-=dt;
+          if(p&&this.barkT<=0){
+            this.barkT=rand(48,85);
+            if(this.talkT<=0&&dist(p.x,p.y,this.x,this.y)<3
+              &&activeSpeakers()<2){
+              this.talkText=townLine(v.id,visit,Math.floor(rand01()*8));
+              this.talkT=2.7;
+            }
+          }
         },
       };
       world.npcs.push(npc);
