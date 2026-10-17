@@ -16,6 +16,9 @@ const STYLES = {
   'Storm Dive': { trail: 'storm', glow: '#7ab0ff', core: '#ffffff', dark: '#2030e0', len: 66, life: 0.3 },
   'Dragonfall': { trail: 'wings', glow: '#ff3818', core: '#ffe070', dark: '#700400', len: 82, life: 0.55 },
   'Cyclone Dive': { trail: 'cyclone', glow: '#50f0b8', core: '#f0fff8', dark: '#0a7050', len: 66, life: 0.5 },
+  'Vaulting Reprisal': { trail: 'ghost', glow: '#b0d8ff', core: '#ffffff', dark: '#304880', len: 62, life: 0.4 },
+  'Sunfall Lance': { trail: 'comet', glow: '#ff9a38', core: '#fff6b0', dark: '#993018', len: 74, life: 0.48 },
+  'Cataclysm Descent': { trail: 'wings', glow: '#ff5830', core: '#fff2bc', dark: '#8d150a', len: 86, life: 0.6 },
 };
 export const LANCE_LEAPS = Object.keys(STYLES);
 
@@ -25,6 +28,45 @@ export function lanceLeap(leap, name) {
   if (!st) return;
   leap.lance = true;
   addEffect(new LanceLeap(leap, st));
+}
+
+// Spectral spear barrages borrow every existing Dragoon leap's elaborate lance
+// design. The actual hit lands instantly in skillrun; these shafts keep stabbing.
+export function lanceSpearBarrage(centers, r, triune = false) {
+  const count = G.touch ? 7 : 11; // three circles must remain cheap on phones
+  for (const [x, y] of centers)
+    addEffect(new Ring(x, y, 0.15, r, 0.5, triune ? '#d6b6ff' : '#95d8ff', 3, { fill: true }));
+  addEffect(new SpearBarrage(centers, r, count, triune));
+}
+
+class SpearBarrage {
+  constructor(centers, r, count, triune) {
+    this.t = 0;
+    this.life = triune ? 1.65 : 1.35;
+    this.spears = [];
+    for (let c = 0; c < centers.length; c++) {
+      const [x, y] = centers[c];
+      for (let i = 0; i < count; i++) {
+        const a = i * 2.39996 + c * 1.2, d = Math.sqrt((i + 0.5) / count) * r * 0.92;
+        this.spears.push({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d,
+          start: (i % 4) * 0.16 + c * 0.06, len: 52 + (i % 4) * 7,
+          st: STYLES[LANCE_LEAPS[(i + c * 3) % LANCE_LEAPS.length]] });
+      }
+    }
+  }
+  update(dt) { this.t += dt; return this.t < this.life; }
+  draw(ctx) {
+    for (const s of this.spears) {
+      const age = this.t - s.start;
+      if (age < 0 || age > 0.95) continue;
+      const k = Math.min(1, age / 0.22);
+      const alpha = Math.min(1, age / 0.09) * Math.min(1, (0.95 - age) / 0.35);
+      const px = isoX(s.x, s.y), py = isoY(s.x, s.y) - 24 - (1 - k) * 130;
+      // Reuse the nine leap lances' original shaft, wings, blade and glow painter.
+      LanceLeap.prototype.drawLance.call({ st: s.st, t: this.t, blade: LanceLeap.prototype.blade },
+        ctx, px, py, Math.PI / 2 + Math.sin(s.start * 9) * 0.14, s.len, alpha, -0.38);
+    }
+  }
 }
 
 // screen offset (world px) -> tile offset + height, for spawning particles at a point on the lance
