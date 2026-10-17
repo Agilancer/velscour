@@ -336,7 +336,7 @@ export const game = {
         { label: 'Close' },
         { label: 'Send', cls: 'red', keepOpen: true, fn: (close) => {
           const message = document.getElementById('velscour-message')?.value || '';
-          if (message === 'HAIL VELSCOUR!') {
+          if (['HAIL VELSCOUR!', '13', '65', '69', '666', '6669'].includes(message)) {
             close();
             this.openVelscourTeleport();
           }
