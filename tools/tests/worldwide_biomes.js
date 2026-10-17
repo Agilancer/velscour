@@ -84,7 +84,7 @@ const FULL=process.argv.includes('--all');
         issues.push('Out-of-bounds wilderness floor index');
       // Use the original monster artwork loaded by the core asset pipeline,
       // then check new native sprite overlays are actual alpha images.
-      const chosen=FULL?BIOMES.filter(b=>!b.overworld):
+      const chosen=full?BIOMES.filter(b=>!b.overworld):
         BIOMES.filter(b=>['catacombs','necropolis','desert_temple',
           'heavenly','ice_temple','hell','astral_plane'].includes(b.id));
       const checkArt=[];
