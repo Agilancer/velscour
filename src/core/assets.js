@@ -11,6 +11,7 @@ import { preloadWallTorchHolders } from '../gfx/walltorches.js';
 import { preloadWallHangings } from '../gfx/wallhangings.js';
 import { applyApprovedBiomeArt, preloadBiomeVariantArt, preloadOverworldScatterArt } from '../gfx/approvedbiomeart.js';
 import { applyAIBiomeArt } from '../gfx/aibiomeart.js';
+import { curatedBaseOffsets } from '../gfx/biomecuration.js';
 import { preloadApprovedHeavenlyArtwork } from '../gfx/heavenlymonsters.js';
 import { TW } from './view.js';
 import { loadReplacementArt } from './replacementart.js';
@@ -116,7 +117,8 @@ const ready = (v) => v && !(v instanceof Promise);
 // blow past iOS Safari's Canvas memory budget.
 const EXPANSION_ORDER=[];
 async function expandedPack(biome) {
-  if (!biome || biome.overworld || biome.id === 'town') return;
+  // Catacombs is the untouched master art-direction reference.
+  if (!biome || biome.overworld || biome.id === 'town' || biome.id === 'catacombs') return;
   // On memory-limited phones, append the biome's floor set while reusing its
   // native wall/scatter atlases instead of cloning the large wall canvas.
   const id='expanded_'+biome.id;
@@ -210,8 +212,31 @@ export function biomeTileSet(biome) {
   }
   set.families=Object.keys(set.walls);
   if(m.expansion){
-    set.bases=set.bases.filter(i=>i>=m.expansion.floorStart);
-    set.features=set.features.filter(i=>i>=m.expansion.floorStart);
+    // Keep just two or three mutually compatible, correctly seamless native
+    // paving materials per biome. The previous 10 randomized bases and 110
+    // equally weighted feature cells made all rooms appear patchwork.
+    const from=m.expansion.floorStart;
+    const primary=curatedBaseOffsets(biome.id);
+    set.bases=set.bases.filter(i=>i>=from&&primary.includes(i-from));
+    const allowed=new Set(m.curatedFloorIndices||[]);
+    if(m.approvedArt?.floorCount){
+      for(let i=0;i<m.approvedArt.floorCount;i++)
+        allowed.add(m.approvedArt.floorStart+i);
+    }
+    if(m.approvedVariantArt?.floorIndex!==undefined)
+      allowed.add(m.approvedVariantArt.floorIndex);
+    // Native authored feature textures are the conservative fallback when an
+    // AI atlas fails alpha/background hygiene. No synthetic symbols get added.
+    if(allowed.size===0)for(let i=from+10;i<from+18;i++)allowed.add(i);
+    set.features=set.features.filter(i=>allowed.has(i));
+    if(!set.bases.length||!set.features.length)
+      throw new Error('Missing curated floor families in '+biome.id);
+    if(m.curatedPropIndices?.length){
+      const props=new Set(m.curatedPropIndices);
+      if(m.approvedArt?.propIndices)for(const i of m.approvedArt.propIndices)props.add(i);
+      if(m.approvedVariantArt?.propIndex!==undefined)props.add(m.approvedVariantArt.propIndex);
+      set.scatter=set.scatter.filter((_,i)=>props.has(i));
+    }
   }
   set.archSpan = {};
   for (const [des, dirs] of Object.entries(m.arches)) {
