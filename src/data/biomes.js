@@ -329,7 +329,10 @@ const MON_SWAPS = {
 };
 for (const b of BIOMES) b.swaps = MON_SWAPS[b.id];
 
-export const MIX_CHANCE = 0.65;
+// Art-direction hold: do not splice the floor palette of a neighboring
+// biome into a level. These mixes introduced ice, lava, moss and gilded stone
+// into otherwise coherent rooms. Re-enable only with curated mixed sets.
+export const MIX_CHANCE = 0;
 /** Maybe pick a like-coloured biome on the same pack (and part) to mix floors (and maybe walls) with, or null. */
 export function mixPartner(biome, rnd = Math.random) {
   if (!biome.family || rnd() >= MIX_CHANCE) return null;
