@@ -54,7 +54,7 @@ const shortlist=['catacombs','fungal','frozen','molten','obsidian','cathedral',
             dimensions:[G.world.map.w,G.world.map.h]};
         },id);
         errors.push(...review.problems.map(x=>id+': '+x));
-        await page.waitForTimeout(350);
+        await page.waitForTimeout(3200); // wait for the biome title/banner to clear before visual review
         await shot('biome_curated_'+id+'_entry'+(mobile?'_mobile':''));
         const relocated=await page.evaluate(()=>{
           const {G}=window.VELSCOUR,map=G.world.map;
