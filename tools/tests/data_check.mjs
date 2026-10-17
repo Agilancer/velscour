@@ -123,7 +123,7 @@ for (const b of BIOMES) {
   }
   // dungeons use only the painted packs and the ChatGPT-sheet packs (data/biomes.js ART), floors/props from `pack`, walls from `wallPack`
   for (const p of [b.pack, b.wallPack, ...(b.morePacks || []).map((m) => m[0])].filter(Boolean)) {
-    if (!['catacombs', 'cathedral_graveyard', 'castle_keep', 'sewers'].includes(p)) bad.push(`biome ${b.id}: ${p} is not a painted pack`);
+    if (!['catacombs', 'cathedral_graveyard', 'castle_keep', 'sewers', 'shattered_citadel', 'hell', 'crystal_castle', 'velscours_castle', 'velscours_temple'].includes(p)) bad.push(`biome ${b.id}: ${p} is not a painted pack`);
     for (const f of ['pack.json', 'floors.webp', 'walls.webp', 'scatter.webp']) if (!existsSync(asset(`tiles/${p}/${f}`))) bad.push(`biome ${b.id}: missing tiles/${p}/${f}`);
     packs[p] = 1;
   }

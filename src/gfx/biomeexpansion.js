@@ -10,7 +10,7 @@ import { G } from '../state.js';
 export const TOWN_FLOOR_EXPANSION={start:6+15*8,count:120};
 const HUES={
   catacombs:38,frozen:205,ice_temple:207,molten:13,fungal:103,sunken:185,
-  blood:356,ashen:30,void:277,gilded:47,plague:92,sewers:82,crystal:189,desert:35,
+  blood:356,ashen:30,void:277,gilded:47,plague:92,sewers:82,crystal_castle:258,velscours_castle:358,velscours_temple:218,crystal:189,desert:35,
   shadow:251,forge:18,abyss:226,thorn:119,storm:217,obsidian:260,
   flesh:345,serpent:151,shattered:216,library:33,necropolis:225,
   cathedral:42,amber:31,overworld:110,desert_temple:38,hell:8,

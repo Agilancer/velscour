@@ -514,7 +514,12 @@ function placeObstacles(map, rooms, tileset, rng, startRoom) {
 
 // light radius (tiles) of the props that burn
 const LIT = { grave_lantern: 2.2,
-  yellow_cage_lantern: 2.4, dripping_candle_cluster: 2, tall_iron_candelabrum: 2.6, green_fire_brazier: 3.4, green_flame_torch: 3.2, torch_stand: 3.2, incense_brazier: 3, iron_candelabrum: 2.6, vigil_candles: 2, votive_candles: 2,
+  yellow_cage_lantern: 2.4, dripping_candle_cluster: 2, tall_iron_candelabrum: 2.6, green_fire_brazier: 3.4, green_flame_torch: 3.2,
+  fortress_floor_lantern: 2.4, votive_candle_cluster: 2, crown_iron_brazier: 3.4, royal_torch_stand: 3.2,
+  infernal_lantern: 2.4, ritual_candle_cluster: 2, skull_candelabrum: 2.6, infernal_brazier: 3.4, chain_torch_stand: 3.2,
+  crystal_floor_lantern: 2.4, crystal_candle_cluster: 2, crystal_candelabrum: 2.6, crystal_flame_brazier: 3.4, prismatic_torch_stand: 3.2,
+  castle_lantern: 2.4, castle_votive_candles: 2, castle_candelabrum: 2.6, castle_brazier: 3.4, castle_torch_stand: 3.2,
+  sapphire_lantern: 2.6, temple_votive_candles: 2, temple_candelabrum: 2.6, sapphire_censer_stand: 2.8, sapphire_flame_brazier: 3.6, crystal_reliquary_candles: 3.2, gold_cross_candelabrum: 2.6, banner_candelabrum: 2.6, torch_stand: 3.2, incense_brazier: 3, iron_candelabrum: 2.6, vigil_candles: 2, votive_candles: 2,
   wall_brazier: 3.1, keep_candelabrum: 2.8, iron_chandelier: 2.6,
   gold_brazier: 3.6, blue_flame_brazier: 3.8, temple_censer: 2.8, burial_lantern: 2.6, sun_torch: 3.2, royal_censer: 3.0,
   winter_brazier: 3.2, azure_brazier: 3.7, violet_brazier: 3.7, frost_lantern: 2.6,
@@ -672,7 +677,7 @@ function generateThrone(biome, tileset, seed) {
   }
   const { torches, wallHangings } = wallMounts(map, rng, biome, () => 0.25, 0.12, 50);
   const props = [];
-  const ob = tileset.scatter.find((e) => e.name === 'funerary_obelisk') || tileset.scatter[0];
+  const ob = tileset.scatter.find((e) => /obelisk/.test(e.name)) || tileset.scatter[0];
   for (const [x, y] of [[12, 10], [32, 10], [12, 24], [32, 24]]) {
     if (ob && map.walkableTile(x, y)) { map.block[y * W + x] = 1; props.push({ kind: 'scatter', x: x + 0.5, y: y + 0.5, spr: ob, k: tileset.k }); }
   }

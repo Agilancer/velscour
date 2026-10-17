@@ -48,7 +48,7 @@ import { toggleTree, toggleBook } from '../ui/skills.js';
 import { toggleQuest } from '../ui/quest.js';
 import { titleScreen, hide as hideScreen, deathScreen, victoryScreen, pauseMenu, helpDialog } from '../ui/screens.js';
 
-const STEP_SURFACE = { sunken: 'water', plague: 'water', sewers: 'water', serpent: 'water', library: 'wood', gilded: 'wood', sea_of_sand:'sand' };   // footstep sounds; default stone
+const STEP_SURFACE = { sunken: 'water', plague: 'water', sewers: 'water', serpent: 'water', library: 'wood', sea_of_sand:'sand' };   // footstep sounds; default stone
 
 const VELSCOUR_TAUNT_STARTS = [
   'WHY ARE YOU TRYING TO CONTACT VELSCOUR', 'WHAT MADE YOU THINK VELSCOUR WANTS TO HEAR FROM YOU',

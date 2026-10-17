@@ -1,4 +1,4 @@
-// Thirty-four dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
+// Thirty-seven dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
 // palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
 import { FINAL_DEPTH } from './depth.js';
@@ -167,7 +167,7 @@ export const BIOMES = [
     torch: '#a8e070', fog: '#0e0c04',
   },
   {
-    id: 'shattered', name: 'Shattered Citadel', palette: { sat: 0.4, light: 0.06, tint: [180, 200, 255, 0.12] }, dark: 0.78, light: 8,
+    id: 'shattered', name: 'Shattered Citadel', palette: null, dark: 0.78, light: 8,
     ambient: { type: 'dust', color: '#a8b0c8' }, mon: { hue: 0, sat: 0.6, light: 0 }, el: 'phys', blood: '#8a0b08',
     adj: ['Shattered', 'Fallen', 'Broken'], roster: ['knight', 'archer', 'gargoyle', 'golem', 'skeleton', 'wraith', 'cultist', 'hound', 'imp', 'elemental', 'bat', 'demon'],
     prefer: ['set2/warriors', 'set2/mages'],
@@ -186,6 +186,27 @@ export const BIOMES = [
     adj: ['Fetid', 'Sodden', 'Rat-Gnawed', 'Brackish'], roster: ['zombie', 'slime', 'worm', 'spider', 'beetle', 'ghoul', 'bat', 'abomination', 'cultist', 'shroom', 'scorpion', 'archer'],
     prefer: ['set2/slimes', 'set1/tentacles', 'set2/goblins', 'set2/kobolds'],
     torch: '#a8ff60', fog: '#070c05',
+  },
+  {
+    id: 'crystal_castle', name: 'The Crystal Castle', palette: null, dark: 0.78, light: 8.5,
+    ambient: { type: 'glitter', color: '#b8a0ff' }, mon: { hue: 250, sat: 1.15, light: 0.03 }, el: 'arcane', blood: '#6040c0',
+    adj: ['Prismatic', 'Amethyst', 'Shardbound', 'Glass-Crowned'], roster: ['golem', 'gargoyle', 'elemental', 'knight', 'wraith', 'eye', 'spider', 'beetle', 'cultist', 'archer', 'skeleton', 'bat'],
+    prefer: ['set2/mages', 'set1/liches', 'set2/warriors'],
+    torch: '#a890ff', fog: '#0a0718',
+  },
+  {
+    id: 'velscours_castle', name: "Velscour's Castle", palette: null, dark: 0.8, light: 8,
+    ambient: { type: 'dust', color: '#d8b890' }, mon: { hue: -8, sat: 1.05, light: -0.02 }, el: 'phys', blood: '#8a0b08',
+    adj: ['Royal', 'Crimson', 'Sworn', 'Usurping'], roster: ['knight', 'archer', 'cultist', 'gargoyle', 'skeleton', 'wraith', 'hound', 'demon', 'imp', 'golem', 'ghoul', 'abomination'],
+    prefer: ['set2/warriors', 'set2/undead', 'set1/demons'],
+    torch: '#ffa040', fog: '#140806',
+  },
+  {
+    id: 'velscours_temple', name: "Velscour's Temple", palette: null, dark: 0.72, light: 9,
+    ambient: { type: 'mote', color: '#a8c4ff' }, mon: { hue: 210, sat: 0.9, light: 0.05 }, el: 'holy', blood: '#7a0a10',
+    adj: ['Sanctified', 'Sapphire', 'Haloed', 'Fallen'], roster: ['knight', 'wraith', 'gargoyle', 'cultist', 'skeleton', 'archer', 'elemental', 'golem', 'eye', 'imp', 'bat', 'zombie'],
+    prefer: ['set2/warriors', 'set2/mages', 'set1/liches'],
+    torch: '#6aa0ff', fog: '#080c18',
   },
   {
     id: 'necropolis', name: 'Moonlit Necropolis', palette: { colorize: [225, 0.25], light: 0.04, contrast: 1.1 }, dark: 0.8, light: 7.5,
@@ -307,7 +328,10 @@ export const BIOMES = [
 // (walls by `wallPalette` when set). The five temple biomes add their approved painted floors and props
 // (gfx/approvedbiomeart.js).
 const CAT = 'catacombs', CG = 'cathedral_graveyard', CK = 'castle_keep';
-// Sewers is the first ChatGPT-sheet pack (docs/CHATGPT_BIOME_SPRITES.md), drawn in its own colours.
+// ChatGPT-sheet packs (docs/CHATGPT_BIOME_SPRITES.md), used as drawn by their own biomes and recoloured by a few others.
+// the Crystal Castle without its two maroon velvet floors, which turn whole rooms pink against the violet
+const CC_FLOORS = [[1, 6], [8, 22], [24, 60]];
+const SEW = 'sewers', SC = 'shattered_citadel', HELL = 'hell', CC = 'crystal_castle', VC = 'velscours_castle', VT = 'velscours_temple';
 const CAT_ARCH = { arches: ['roman_ossuary', 'pointed_funerary', 'ironbound_segmental'], doors: ['ironbound_oak', 'iron_grille', 'bone_reliquary'] };
 const NAVE_ARCH = { arches: ['chapel_lancet', 'nave_triumphal', 'grand_westwork'], doors: ['cathedral_oak', 'sacristy_bronze'] };
 const GRAVE_ARCH = { arches: ['churchyard_cross', 'ruined_cloister', 'processional_cemetery'], doors: ['cemetery_gate'] };
@@ -329,43 +353,47 @@ const SOIL = { floors: [[6, 10], [31, 60]], scatter: [[1, 20], [36, 40]] };
 const CAVE_WALLS = crypt('drowned_crypt', 'crypt_ashlar', 'sealed_cells');
 const ART = {
   castle_keep: { pack: CK },
-  sewers: { pack: 'sewers' },
+  sewers: { pack: SEW },
+  crystal_castle: { pack: CC, part: { floors: CC_FLOORS } },
+  velscours_castle: { pack: VC },
+  velscours_temple: { pack: VT },
+  shattered: { pack: SC },
+  hell: { pack: HELL },
+  // Velscour's own hall at depth 500, darker than the castle levels
+  throne: { pack: VC, part: { floors: [[5, 5], [7, 7], [10, 60]], families: ['dark_castle_ashlar', 'fleur_banner_panel', 'lion_heraldry_relief'] }, palette: { light: -0.07, contrast: 1.12, tint: [120, 10, 0, 0.12] } },
   frozen: { pack: CAT, part: crypt('ossuary_niches', 'crypt_ashlar', 'sealed_cells') },
   ice_temple: { pack: CK, wallPack: CG, part: { ...KEEP_HALLS, ...NAVE_ARCH, families: ['stained_glass_chapel', 'nave_ashlar', 'buttressed_masonry'] },
     palette: { colorize: [202, 0.42], light: 0.1, contrast: 1.12 } },
-  molten: { pack: CAT, wallPack: CK, part: { ...KEEP_GATES, floors: [[1, 60]], scatter: [[1, 40]], families: ['armory_ironstone', 'underkeep_brick'] },
-    palette: { colorize: [22, 0.92], light: 0.05, contrast: 1.3 } },
+  // lava-cracked Hell floors and ember walls, without its sigils, burning orange
+  molten: { pack: HELL, part: { floors: [[1, 2], [4, 5], [8, 8], [11, 11], [19, 19], [23, 23], [28, 28], [33, 33], [42, 42], [44, 44], [47, 47], [52, 52], [56, 56], [60, 60]],
+    scatter: [[5, 5], [8, 8], [17, 19], [24, 26], [29, 29]], families: ['ember_ashlar', 'chain_seep_ruins', 'furnace_prison_bars'] }, palette: { colorize: [24, 0.85], light: 0.05, contrast: 1.15 } },
   fungal: { pack: CG, wallPack: CAT, part: { ...CAVE_WALLS, ...SOIL }, palette: { colorize: [98, 0.5], light: 0.07, contrast: 1.1 } },
   sunken: { pack: CAT, part: CAVE_WALLS, palette: { colorize: [176, 0.38], light: 0.03, contrast: 1.08 } },
   blood: { pack: CAT, part: crypt('ossuary_niches', 'funerary_chapel', 'sealed_cells'), palette: { colorize: [356, 0.62], light: -0.02, contrast: 1.15 } },
   ashen: { pack: CG, wallPack: CAT, part: { ...crypt('crypt_ashlar', 'funerary_chapel', 'sealed_cells'), ...SOIL }, palette: { sat: 0.1, light: 0.04, contrast: 1.05 } },
   void: { pack: CAT, part: crypt('funerary_chapel', 'sealed_cells', 'crypt_ashlar'), palette: { colorize: [275, 0.48], light: -0.04, contrast: 1.12 } },
-  gilded: { pack: CK, wallPack: CAT, part: { ...KEEP_HALLS, ...CAT_ARCH, families: ['funerary_chapel', 'ossuary_niches'] },
-    morePacks: [[CAT, [[1, 3], [7, 7], [9, 10], [13, 15], [24, 25], [32, 34]]]], palette: { colorize: [44, 0.62], light: 0.03, contrast: 1.12 } },
-  plague: { pack: CAT, part: CAVE_WALLS, palette: { colorize: [85, 0.45], light: -0.03, contrast: 1.08 } },
-  crystal: { pack: CG, part: NAVE, palette: { colorize: [188, 0.62], light: 0.09, contrast: 1.22 } },
+  // Velscour's Temple marble, gold on gold
+  gilded: { pack: VT, palette: { colorize: [44, 0.6], light: 0.02, contrast: 1.1 } },
+  plague: { pack: SEW, palette: { colorize: [86, 0.42], light: -0.02, contrast: 1.06 } },
+  // the Crystal Castle's geode and vein walls, crystal floors and props, cold cyan
+  crystal: { pack: CC, part: { floors: CC_FLOORS, families: ['ruined_geode_chains', 'obsidian_vein_ashlar'] }, palette: { colorize: [190, 0.55], light: 0.04, contrast: 1.15 } },
   desert: { pack: CAT, part: crypt('crypt_ashlar', 'funerary_chapel', 'ossuary_niches'), palette: { colorize: [36, 0.45], light: 0.1 } },
   shadow: { pack: CAT, part: crypt('sealed_cells', 'crypt_ashlar', 'funerary_chapel'), palette: { sat: 0.3, light: -0.05, contrast: 1.12 } },
   forge: { pack: CK, part: { ...KEEP_IRON, ...KEEP_GATES }, palette: { colorize: [18, 0.7], contrast: 1.2, light: 0.03 } },
   abyss: { pack: CAT, part: crypt('drowned_crypt', 'sealed_cells'), palette: { colorize: [226, 0.55], light: 0.03, contrast: 1.15 } },
   thorn: { pack: CG, part: GRAVEYARD, palette: { colorize: [100, 0.36], light: -0.04 } },
-  storm: { pack: CK, part: { ...KEEP_HALLS, families: ['royal_ashlar', 'armory_ironstone'], arches: ['keep_lancet', 'portcullis_arch'] },
-    palette: { colorize: [216, 0.36], light: 0, contrast: 1.18 } },
+  // the Shattered Citadel's breached basalt keep, struck blue
+  storm: { pack: SC, part: { families: ['basalt_ashlar', 'arcane_breached_masonry', 'royal_sword_chapel'] }, palette: { colorize: [214, 0.42], light: 0.03, contrast: 1.15 } },
   obsidian: { pack: CK, part: KEEP_IRON, palette: { sat: 0.22, light: -0.01, contrast: 1.35 } },
   flesh: { pack: CAT, part: crypt('ossuary_niches', 'drowned_crypt', 'sealed_cells'), palette: { colorize: [342, 0.5], light: 0.02 } },
   serpent: { pack: CAT, part: crypt('funerary_chapel', 'drowned_crypt', 'crypt_ashlar'), palette: { colorize: [150, 0.42], light: -0.01, contrast: 1.06 } },
-  shattered: { pack: CK, part: KEEP_HALLS, palette: { sat: 0.4, light: 0.04, tint: [180, 200, 255, 0.12] } },
   library: { pack: CK, part: KEEP_STUDY, palette: { colorize: [30, 0.38], light: -0.03 } },
   cathedral: { pack: CG, part: NAVE },
   necropolis: { pack: CG, part: GRAVEYARD },
   amber: { pack: CG, wallPack: CAT, part: { ...crypt('crypt_ashlar', 'funerary_chapel'), ...SOIL }, palette: { colorize: [32, 0.7], light: 0.04, contrast: 1.05 } },
   desert_temple: { pack: CK, part: KEEP_HALLS, palette: { colorize: [36, 0.5], light: 0.06, contrast: 1.05 } },
-  hell: { pack: CAT, wallPack: CK, part: { floors: [[1, 60]], scatter: [[1, 40]], families: ['underkeep_brick', 'armory_ironstone'],
-    arches: ['portcullis_arch', 'great_hall_arch', 'keep_lancet'], doors: ['blackiron_gate', 'crimson_oak'] },
-    palette: { colorize: [9, 0.88], light: 0.09, contrast: 1.2 } },
   astral_plane: { pack: CG, part: NAVE, palette: { colorize: [256, 0.58], light: 0.05, contrast: 1.18 } },
   heavenly: { pack: CG, part: NAVE, palette: { sat: 0.22, light: 0.24, contrast: 0.9, tint: [255, 238, 196, 0.22] } },
-  throne: { pack: CK, part: KEEP_IRON, palette: { colorize: [2, 0.7], light: -0.06, contrast: 1.2 } },
 };
 for (const b of BIOMES) {
   const a = ART[b.id];
@@ -379,13 +407,13 @@ for (const b of BIOMES) {
 // Frozen Ossuary whose far rooms are paved like the Crystal Caverns.
 const FAMILY = {
   sand: ['desert', 'gilded', 'serpent', 'amber', 'desert_temple', 'sea_of_sand'],
-  keep: ['castle_keep'],
-  frost: ['frozen', 'ice_temple', 'sunken', 'crystal', 'storm', 'abyss', 'necropolis'],
+  keep: ['castle_keep', 'velscours_castle'],
+  frost: ['frozen', 'ice_temple', 'sunken', 'crystal', 'storm', 'abyss', 'necropolis', 'crystal_castle'],
   ember: ['molten', 'blood', 'forge', 'flesh', 'hell'],
   rot: ['fungal', 'plague', 'thorn', 'sewers'],
   gloom: ['catacombs', 'ashen', 'void', 'shadow', 'obsidian', 'shattered', 'library', 'cathedral'],
   aether: ['astral_plane'],
-  celestial: ['heavenly'],
+  celestial: ['heavenly', 'velscours_temple'],
 };
 for (const [f, ids] of Object.entries(FAMILY)) for (const id of ids) BIOMES.find((b) => b.id === id).family = f;
 
@@ -406,6 +434,8 @@ const MON_SWAPS = {
   astral_plane: ['spectral', 'amethyst', 'crystal', 'void', 'midnight'],
   heavenly: [null, null, 'gilded', 'pale', 'bronze'],
   castle_keep: ['gilded', 'bronze', 'rust', 'pale', 'ash'],
+  crystal_castle: ['amethyst', 'crystal', 'spectral', 'void', null], velscours_castle: [null, 'blood', 'rust', 'ash', 'bronze'],
+  velscours_temple: [null, 'pale', 'gilded', 'spectral', 'frost'],
   overworld: [null, 'thorn', 'rot', 'ash', 'bone'], throne: ['infernal', 'blood', 'ember', 'rust'],
 };
 for (const b of BIOMES) b.swaps = MON_SWAPS[b.id];

@@ -62,6 +62,27 @@ def key_background(a):
     return solid
 
 
+def strip_guides(solid, a, size, cols, rows):
+    """Drops the guide marks ChatGPT leaves on object sheets: pale grid lines across the sheet and the
+    white labels it copies from the template into the top of each cell."""
+    rgb = a[:, :, :3].astype(int); lo, hi = rgb.min(2), rgb.max(2)
+    light = solid & ((lo > 170) | ((rgb[:, :, 0] > 200) & (rgb[:, :, 2] > 200)))
+    for axis in (1, 0):
+        for i in np.where(light.mean(axis) > 0.3)[0]:
+            sl = slice(max(0, i - 1), i + 2)
+            if axis == 1: solid[sl] = False
+            else: solid[:, sl] = False
+    white = solid & (lo > 205) & (hi - lo < 40)
+    for r in range(rows):
+        for c in range(cols):
+            x0, y0, x1, y1 = cell_box(None, size, cols, rows, c, r)
+            band = slice(y0, y0 + round((y1 - y0) * 0.16))
+            ys, xs = np.nonzero(white[band, x0:x1])
+            if len(ys) > 30:
+                solid[y0 + max(0, ys.min() - 4):y0 + ys.max() + 5, x0 + max(0, xs.min() - 4):x0 + xs.max() + 5] = False
+    return solid
+
+
 def cell_box(kind, size, cols, rows, c, r):
     w, h = size
     return round(c * w / cols), round(r * h / rows), round((c + 1) * w / cols), round((r + 1) * h / rows)
@@ -77,10 +98,12 @@ def texture_cells(a, size, cols, rows, inset=0.04):
     return out
 
 
-def object_cells(a, size, cols, rows, label):
-    """Per cell: the largest opaque component plus every piece within reach of it, cropped to its bounds."""
+def object_cells(a, size, cols, rows, label, whole=False):
+    """Per cell: the largest opaque component plus every piece within reach of it (with `whole`, every piece of
+    40+ px: a barred door is many separate bars), cropped to its bounds."""
     solid = key_background(a)
     solid[:4] = solid[-4:] = False; solid[:, :4] = solid[:, -4:] = False   # sheet frame lines (objects never touch it)
+    solid = strip_guides(solid, a, size, cols, rows)
     lab, n = ndimage.label(solid, structure=np.ones((3, 3)))
     if not n:
         sys.exit("%s: nothing but background" % label)
@@ -104,7 +127,7 @@ def object_cells(a, size, cols, rows, label):
         keep = [mid]
         for s, i, sl in comps[1:]:
             gap = max(x0 - sl[1].stop, sl[1].start - x1, y0 - sl[0].stop, sl[0].start - y1, 0)
-            if gap <= reach and s >= 20:
+            if (gap <= reach and s >= 20) or (whole and s >= 40):
                 keep.append(i)
                 y0, y1, x0, x1 = min(y0, sl[0].start), max(y1, sl[0].stop), min(x0, sl[1].start), max(x1, sl[1].stop)
         crop = a[y0:y1, x0:x1].copy()
@@ -211,7 +234,7 @@ def main():
         elif kind == "walls":
             walls = texture_cells(a, size, cols, rows, inset=0.03)
         else:
-            objs = object_cells(a, size, cols, rows, label)
+            objs = object_cells(a, size, cols, rows, label, whole=kind == "doors")
             {"arches": arches, "doors": doors, "props": props}[kind].extend(objs)
     floors = floors[:60]
     for b in range(3):

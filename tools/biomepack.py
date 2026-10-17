@@ -47,7 +47,17 @@ WALK_OVER = {"supine_skeleton", "vigil_candles", "rolled_shroud", "chain_and_sha
              # Sewers
              "muck_rubble_scatter", "sludge_soaked_remains", "dripping_candle_cluster", "mildewed_bedroll",
              "rotten_timber_heap", "rusty_chains_shackles", "stagnant_offering_bowl", "sewer_tools_and_ledger",
-             "filthy_boots_and_kit"}
+             "filthy_boots_and_kit",
+             # Shattered Citadel
+             "broken_shield_debris", "fallen_armored_remains", "votive_candle_cluster", "torn_banner_bedrolls", "broken_siege_planks", "prison_chains_shackles", "royal_offering_bowl", "scattered_royal_codex", "abandoned_guard_kit",
+             # Hell
+             "sundered_armory_rubble", "fallen_horned_remains", "ritual_candle_cluster", "bloodied_bedroll", "charred_plank_stack", "rusted_shackle_coils", "bone_offering_bowl", "occult_book_tools", "infernal_boots_kit",
+             # Crystal Castle
+             "crystal_rubble_scatter", "crystal_skeleton_remains", "crystal_candle_cluster", "rolled_ceremonial_bedroll", "fractured_castle_beams", "crystal_chain_shackles", "crystal_offering_bowl", "relic_book_and_scrolls", "adventurer_crystal_boot_kit",
+             # Velscour's Castle
+             "shield_rubble_heap", "fallen_knight_remains", "castle_votive_candles", "rolled_royal_banner", "castle_plank_heap", "castle_chains", "castle_offering_bowl", "royal_books_clutter", "castle_boots_and_belt",
+             # Velscour's Temple
+             "fallen_banner_slab", "haloed_saint_remains", "temple_votive_candles"}
 
 
 def box(u0, u1, v0, v1, h, tag):

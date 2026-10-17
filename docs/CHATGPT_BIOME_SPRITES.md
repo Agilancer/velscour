@@ -215,3 +215,18 @@ in game on the imported pack.
   as drawn (no palette) by the Fetid Sewers biome (`ART.sewers` in `src/data/biomes.js`). Its light props are in `LIT`
   and its flat clutter in `WALK_OVER`. Imported from the normalized 1024/1536 sheets. Those sheets had a thin pale frame
   around the prop sheets, so prep now ignores a 4 px border on object sheets.
+- **Shattered Citadel, Hell, Crystal Castle** (`shattered_citadel`, `hell`, `crystal_castle`): used as drawn by the
+  Shattered Citadel, HELL and the new Crystal Castle biome. The Crystal Castle leaves out its two maroon floors (7, 23).
+  Hell keeps its approved painted floors and props on top.
+- **Velscour's Castle** (`velscours_castle`): the new Velscour's Castle biome, and the depth-500 throne (only the
+  ashlar, banner and lion walls and the marble, checker and inlay floors, darkened). ChatGPT put 12 floors on sheet 2 and
+  16 on sheet 4, and no names file came with it, so the sheets were repacked and named by hand before import.
+- **Velscour's Temple** (`velscours_temple`): the new Velscour's Temple biome. It came as reference atlases. Its wall
+  faces were on magenta, so they were made opaque: the ragged tops were trimmed and the holes filled from the plain panel.
+  Its plain paving moved into floors 01-10, and its own prop widths are in `scatter_widths_px`, because sheet 9 doesn't
+  follow the role order.
+- Palette-swap biomes now on these packs: Plague Sewers (Sewers, green), Crystal Caverns (the Crystal Castle's geode
+  and vein walls, cyan), Storm Spire (Shattered Citadel, blue), Molten Depths (Hell's lava floors and ember walls without
+  its sigils, orange), Gilded Tomb (Velscour's Temple, gold).
+- Prep now also drops guide marks on object sheets: pale grid lines across the sheet and the white labels ChatGPT copies
+  into each cell. Door leaves keep every piece in the cell, because a barred gate is many separate bars.

@@ -90,9 +90,10 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `sprites|biomes|props`). Dungeon floors, walls, arches, doors and scatter come from **biome packs**
   (`assets/source/biomes/<Name>_Biome_Pack.zip`, a 160x80 template; Catacombs is the first, every biome uses it
   palette-swapped), imported by `python3 tools/process_assets.py biomes` (`tools/biomepack.py`). New packs follow the
-  same template; see [`docs/ART.md`](docs/ART.md). **Dungeon biomes use only the three painted packs** (Catacombs,
-  Cathedral and Graveyard, Castle Keep), palette swapped, with a themed `part` and optionally walls from another pack
-  (`ART` in `src/data/biomes.js`); the five temple biomes add their approved painted floors/props
+  same template; see [`docs/ART.md`](docs/ART.md). **Dungeon biomes use the three painted packs** (Catacombs,
+  Cathedral and Graveyard, Castle Keep) **and six ChatGPT-sheet packs** (Sewers, Shattered Citadel, Hell, Crystal Castle,
+  Velscour's Castle, Velscour's Temple), palette swapped or as drawn, with a themed `part` and optionally walls from
+  another pack (`ART` in `src/data/biomes.js`); the five temple biomes add their approved painted floors/props
   (`src/gfx/approvedbiomeart.js`). Torches and wall hangings are placed by `wallMounts()` in `src/world/dungeon.js`.
   See [`docs/BIOME_ART.md`](docs/BIOME_ART.md). New biome packs can come from 9 ChatGPT sheets (outlined templates
   and prompts in [`docs/CHATGPT_BIOME_SPRITES.md`](docs/CHATGPT_BIOME_SPRITES.md)), imported by
