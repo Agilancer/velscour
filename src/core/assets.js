@@ -231,11 +231,11 @@ export function biomeTileSet(biome) {
     set.features=set.features.filter(i=>allowed.has(i));
     if(!set.bases.length||!set.features.length)
       throw new Error('Missing curated floor families in '+biome.id);
-    if(m.curatedPropIndices?.length){
+    if(Array.isArray(m.curatedPropIndices)){
       const props=new Set(m.curatedPropIndices);
       if(m.approvedArt?.propIndices)for(const i of m.approvedArt.propIndices)props.add(i);
       if(m.approvedVariantArt?.propIndex!==undefined)props.add(m.approvedVariantArt.propIndex);
-      set.scatter=set.scatter.filter((_,i)=>props.has(i));
+      set.scatter=set.scatter.filter(s=>props.has(s.packIndex));
     }
   }
   set.archSpan = {};
@@ -251,13 +251,15 @@ export function biomeTileSet(biome) {
       for (const [k, sl] of Object.entries(st)) set.doors[des][d][k] = sl.map((r) => ({ ...rect(wallImg, r), part: r[0][0], du: r[0][1], dv: r[0][2] }));
     }
   }
-  for (const s of m.scatter) set.scatter.push({ img: scatImg, sx: s.x, sy: s.y, w: s.w, h: s.h, ox: s.ox, oy: s.oy, fp: s.fp, block: s.block, name: s.name });
+  for (const [index,s] of m.scatter.entries()) set.scatter.push({ img: scatImg, sx: s.x, sy: s.y, w: s.w, h: s.h, ox: s.ox, oy: s.oy, fp: s.fp, block: s.block, name: s.name, packIndex: index });
   const part = biome.part;
   if (part) {
     const inR = (rs, i) => rs.some(([a, b]) => i + 1 >= a && i + 1 <= b);
     set.bases=set.bases.filter(i=>(m.expansion&&i>=m.expansion.floorStart)||inR(part.floors,i));
     set.features=set.features.filter(i=>(m.expansion&&i>=m.expansion.floorStart)||inR(part.floors,i));
-    set.scatter=set.scatter.filter((s,i)=>(m.expansion&&i>=m.expansion.scatterStart)||inR(part.scatter,i));
+    // Curated props are sparse; preserve original atlas IDs rather than using
+    // their compressed array positions when enforcing Cathedral/Graveyard ranges.
+    set.scatter=set.scatter.filter(s=>(m.expansion&&s.packIndex>=m.expansion.scatterStart)||inR(part.scatter,s.packIndex));
     set.families = set.families.filter((f) => part.families.includes(f));
     for (const k of ['arches', 'doors']) for (const d of Object.keys(set[k])) if (!part[k].includes(d)) delete set[k][d];
   }
