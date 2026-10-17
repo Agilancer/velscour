@@ -25,7 +25,7 @@ function loadAtlas(id) {
 // rectangular bleed instead of painting a colored box into an iso diamond.
 export function cleanAuthoredCell(pixels,width,height,diamond=false) {
   const p=pixels.data||pixels;
-  let colored=0,edge=0,edgeCount=0,solid=0,all=0;
+  let colored=0,edge=0,edgeCount=0,all=0;
   for(let y=0;y<height;y++)for(let x=0;x<width;x++){
     const i=(y*width+x)*4,a=p[i+3];
     if(a<32)continue;
@@ -46,7 +46,9 @@ export function cleanAuthoredCell(pixels,width,height,diamond=false) {
     if(outside)edgeCount++;
   }
   if(all<20)return false;
-  if(colored/all>.08)return false;
+  // A few true fire, ruby or frost highlights are legitimate; only reject
+  // a large, almost uniformly saturated chroma-key backdrop.
+  if(colored/all>.28)return false;
   return edge/Math.max(1,edgeCount)<(diamond?.15:.3);
 }
 function selectCleanCells(image,firstRow,count,width,height,diamond,allowed=null){
@@ -128,9 +130,14 @@ export async function applyAIBiomeArt(pack, biomeId) {
   // All native props in the five original authored dungeon packs stay usable.
   // Other biomes retain a smaller set of source-pack accents plus only the
   // fully transparent, biome-specific authored replacements that passed QA.
+  const sourceProps=biomeId==='cathedral'
+    ? [20,21,22,23,25,27,29,31,32,34]
+    : biomeId==='necropolis'
+      ? [0,1,3,4,8,10,15,18,35,37]
+      : [0,1,3,4,9,10,15,18,25,31];
   const originalProps=approved
     ? Array.from({length:Math.min(propStart,40)},(_,i)=>i)
-    : [0,1,3,4,9,10,15,18,25,31].filter(i=>i<propStart);
+    : sourceProps.filter(i=>i<propStart);
   pack.meta.curatedPropIndices=[...originalProps,
     ...Array.from({length:pack.meta.scatter.length-propStart},(_,i)=>
       cleanProps.has(i%32)?propStart+i:-1).filter(i=>i>=0)];
