@@ -1,0 +1,20 @@
+{
+  "biome_name": "REPLACE_ME",
+  "floor_names": [
+    "base_01", "base_02", "base_03", "base_04", "base_05", "base_06", "base_07", "base_08", "base_09", "base_10",
+    "feature_11", "feature_12", "feature_13", "feature_14", "feature_15", "feature_16", "feature_17", "feature_18", "feature_19", "feature_20",
+    "feature_21", "feature_22", "feature_23", "feature_24", "feature_25", "feature_26", "feature_27", "feature_28", "feature_29", "feature_30",
+    "feature_31", "feature_32", "feature_33", "feature_34", "feature_35", "feature_36", "feature_37", "feature_38", "feature_39", "feature_40",
+    "feature_41", "feature_42", "feature_43", "feature_44", "feature_45", "feature_46", "feature_47", "feature_48", "feature_49", "feature_50",
+    "feature_51", "feature_52", "feature_53", "feature_54", "feature_55", "feature_56", "feature_57", "feature_58", "feature_59", "feature_60"
+  ],
+  "wall_names": ["wall_1", "wall_2", "wall_3", "wall_4", "wall_5"],
+  "arch_names": ["arch_1", "arch_2", "arch_3"],
+  "door_names": ["door_1", "door_2", "door_3"],
+  "scatter_names": [
+    "prop_01", "prop_02", "prop_03", "prop_04", "prop_05", "prop_06", "prop_07", "prop_08", "prop_09", "prop_10",
+    "prop_11", "prop_12", "prop_13", "prop_14", "prop_15", "prop_16", "prop_17", "prop_18", "prop_19", "prop_20",
+    "prop_21", "prop_22", "prop_23", "prop_24", "prop_25", "prop_26", "prop_27", "prop_28", "prop_29", "prop_30",
+    "prop_31", "prop_32", "prop_33", "prop_34", "prop_35", "prop_36", "prop_37", "prop_38", "prop_39", "prop_40"
+  ]
+}

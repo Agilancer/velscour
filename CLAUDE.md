@@ -89,7 +89,9 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   Cathedral and Graveyard, Castle Keep), palette swapped, with a themed `part` and optionally walls from another pack
   (`ART` in `src/data/biomes.js`); the five temple biomes add their approved painted floors/props
   (`src/gfx/approvedbiomeart.js`). Torches and wall hangings are placed by `wallMounts()` in `src/world/dungeon.js`.
-  See [`docs/BIOME_ART.md`](docs/BIOME_ART.md). Each biome has 50 native monster variants (`src/gfx/biomenativeart.js`,
+  See [`docs/BIOME_ART.md`](docs/BIOME_ART.md). New biome packs can come from 9 ChatGPT sheets (outlined templates
+  and prompts in [`docs/CHATGPT_BIOME_SPRITES.md`](docs/CHATGPT_BIOME_SPRITES.md)), imported by
+  `python tools/chatgpt_biome.py <folder> <names.json> --install`. Each biome has 50 native monster variants (`src/gfx/biomenativeart.js`,
   `src/data/biomenatives.js`) and exact X/Y barricades (`src/gfx/isobarriers.js`); see `docs/WORLD_BIOME_OVERHAUL.md`.
   HEAVENLY's 60 enemy sprites come from `src/gfx/heavenlymonsters.js`; see `docs/HEAVENLY.md`.
   The hero's look comes from the gear libraries `assets/FinalClasses/<class>.zip` (80 armors + 80 helms per class),
