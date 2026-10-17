@@ -92,6 +92,37 @@ background images. The runtime keeps the original Catacombs wall, arch, and
 door geometry metadata and depth slices for reliable occlusion and opening
 states.
 
+## Floor alpha and seamless paving safeguards
+
+The generated 64 × 32 floor crops may contain opaque rectangular source
+backgrounds, incomplete diamonds, or pixels beyond their intended edges.
+`src/gfx/aibiomeart.js` now treats them as **inset decorative overlays** on
+the original full 160 × 80 isometric floor art rather than clearing and
+replacing the whole cell. Overlays are clipped to an inner 2:1 diamond, leaving
+the original edge-matched ground visible around each motif and any missing
+source pixels. Tiles flagged `seamless` remain untouched so that procedural
+rooms and corridors continue to share the same paving at their boundaries.
+For expanded packs, existing source cells are skipped (only the appended
+floor cells receive new motifs).
+
+The asset loader applies generic AI motifs **before** the user-approved
+paintings, so approved floors and props have final priority in their designated
+atlas cells. No source atlas needs to be discarded or manually edited.
+
+Run the visual and pixel regression from the repository root after starting a
+local HTTP server:
+
+```bash
+python3 -m http.server 8123
+node tools/tests/ai_biome_floors.js
+node tools/tests/ai_biome_floors.js --all  # each indoor biome with a character
+node tools/tests/approved_biome_art.js
+```
+
+The screenshot sweep writes to `tools/tests/out/ai_biome_floor_*.png`
+(git-ignored), and the synthetic test uses an intentionally opaque
+rectangular AI source to verify the diamond-edge protection.
+
 ## Generation prompt set
 
 - **Desert Temple:** “Temple of the Sunless Dynasty; sandstone and terracotta tombs, lapis mosaics, ankhs, solar disks, jackal guardians, canopic urns, scarab seals, and royal sarcophagi.”
