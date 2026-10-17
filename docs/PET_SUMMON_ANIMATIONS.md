@@ -26,6 +26,8 @@ This art pass adds labeled animation sprite sheets for VELScour's animal compani
 
 ## Runtime integration
 
+The builder never slices art along a line except where the source poses physically overlap: every connected piece of solid art (alpha 96+) goes whole to the frame nearest it, faint glow joins the nearest frame, and caption plaques, row names and frame numbers are erased. All frames of a character share one scale (its tallest pose fills the 128 px cell, feet on the cell floor), so crouched spawn poses and folded wings keep their true size. `catalog.json` records each rest pose's height (`restH`); `petart.js` uses it to draw the rest pose at the pet's usual height.
+
 Summon keys now select the matching row from the compact atlases in `assets/sprites/pets/`. Land companions switch between idle, spawn, run, and lunge/attack frames; winged companions loop through wing-flap frames at rest and forward-flight frames while moving. The original labeled sheets in `assets/source/pet_animations/` remain the reviewable source art. Run `python tools/build_pet_animations.py` after changing those sheets to regenerate the runtime atlases.
 
 Static structures, Slime Lord summons, and revived monsters keep their existing sprite rendering. The runtime mapping only covers rows created for animal companions and humanoid allies in this art pass.

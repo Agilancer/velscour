@@ -47,7 +47,7 @@ export function createSeaOfSandScenario(world, gen, biome, onSuccess) {
     record.rewarded=index+1;
     UI.log(`Sea of Sand reward ${index+1}/${total}: guaranteed Legendary gear.`,'#ffb044');
   };
-  const beginBeat=(index)=>{
+  const beginBeat=(index,chained=false)=>{
     if(index>=total){finishRun();return;}
     beat=index;run.active=true;run.completed=false;
     const p=sites[index],subgen={...gen,scenarioId:(gen.scenarioId+index*7)%20,shrine:p,
@@ -60,11 +60,17 @@ export function createSeaOfSandScenario(world, gen, biome, onSuccess) {
       record.completed=Math.max(record.completed||0,index+1);
       UI.refresh();
       if(index+1<total){
-        UI.centerMsg(`AREA ${index+1} SECURED`,`Scenario ${index+2} is marked on the route`,2.4);
-        beginBeat(index+1);
+        UI.centerMsg(`AREA ${index+1} SECURED`,`Area ${index+2} is already under way — its foes are coming`,2.4);
+        beginBeat(index+1,true);
       } else finishRun();
       if(G.game?.autosave)G.game.autosave();
     });
+    // A chained area starts at once: its foes hunt the hero, and the timer allows for the walk to its landmark.
+    if(chained){
+      current.start();
+      const pl=world.player;
+      if(pl&&current.timer>0)current.timer+=Math.hypot(p[0]-pl.x,p[1]-pl.y)/3;
+    }
   };
   if(beat>=total){run.completed=true;finishRun();}
   else beginBeat(beat);

@@ -14,6 +14,47 @@ Contents
 
 ---
 
+## October 17, 2026 — beatable Castle, faster overworld scenarios, Sea of Sand and pet sprite recuts
+
+- **Castle could not be won in 11 of its 35 scenarios.** The ten `keep_*` scenarios had no completion branch in
+  `update()`, so they never finished even with every enemy dead. The Sconce Ward (`rampart_ward`) lost its torches in
+  ~40 s while the hero was still on the ground, because its drain ran at full rate from the first frame. Rampart
+  enemies spawned ~37 tiles away and never moved (awake monsters only target within 30 tiles, and A* was capped at
+  2,500 nodes, too few for a 192×176 map).
+- **Scenario pacing** (`src/game/overworld.js`): every scenario foe is a `hunter` and tracks the hero anywhere
+  (`Monster.navTo` gives far hunters 12,000-node searches with slower re-planning). New `phases()` helper chains
+  multi-stage fights: the next phase spawns the moment the last foe dies. Rampart siege/last stand are real waves;
+  keep fights are 2–3 phases (trial, coronation, guard, vault ending at a claimable relic, procession with a royal
+  party to protect). The ward drains at 0.6/s per attacker after an 8 s grace. Zones capture in 6 s (was 10). The
+  escort caravan follows `map.findPath` instead of grinding into walls, moves at 2.4 tiles/s and is ambushed at each
+  checkpoint. Defend/infestation villagers sit beside the shrine (they used fixed Wilds coordinates on every map).
+  Sea of Sand areas chain without a shrine click: the next area starts at once, with travel time added to its timer.
+- **New test `tools/tests/scenarios.js`** plays every scenario with a pathing bot (Wilds 20, Castle 35, Sea of Sand
+  routes) and fails on a stuck/failed scenario or a long idle stretch. The older checks only flagged foes dead.
+- **Sea of Sand sprites** were cut from their source sheets on an even grid the generated sheets do not follow:
+  clipped sprites, neighbours' fragments, and names drifting from the art. `tools/seaofsandpack.py` now cuts scatter,
+  trees, monsters and bosses straight from the pack's `source_art/` by connected silhouette, and maps each roster
+  monster to the sheet sprite that depicts it (`CREATURE_ART`). The pack lives outside the repo at
+  `.codex/.chatgpt-projects/.../output/Sea_of_Sand_Biome_Pack`.
+- **Pet animation sprites** (`tools/build_pet_animations.py`, rewritten): hand-measured row bounds sliced through
+  12 of 15 sheets (Ancients lost their legs, heads were clipped, neighbour rows leaked in) and every frame was scaled
+  separately, so pets pulsed in size. Pieces now go whole to their frame (solid art links pieces; faint glows join the
+  nearest frame), caption plaques are erased, and each character shares one scale; `catalog.json` gains `restH` so
+  `petart.js` keeps the rest pose at its old on-screen size.
+- **Not done: the Castle's look.** Its curtain walls use the pack's timber-framed wall panels (they read as fences),
+  the drawbridge floats on a flagstone plaza, and the 2× board leaves rooms huge and empty. The pack's stone curtain
+  wall, tower and bridge modules (`art-review/castle-walltops-landmarks.png`) are barely used. That rebuild is its own job.
+- **Health check of `main` (Oct 17):** 44 of 59 test scripts passed. Most failures were tests never updated after
+  later intentional changes (MADNESS fill 600→420 s; Dragoon Spearstorm bar priority; transparent Lancer shields;
+  `mobs.js` predates Sea of Sand's art loader), plus a `select.js` bug (`page.$` instead of `page.$$`),
+  `effects_performance.js` needing a baseline file, and `worldwide_biomes.js` referencing an undefined `FULL`. Real
+  regressions: the approved Heavenly paintings are shadowed by `aiHeavenlyMonsterCanvas`; `closed_helms.js` reports a
+  helmet altering pixels outside its cell; title-intro credit fades fail `titlefx.js`. `audio.js` `preloadSong` locks
+  the body before its no-length fallback.
+- **Local environment (Windows desktop):** no system Node/Python; use Codex's runtime at
+  `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/{node/bin/node.exe,python/python.exe}` (Playwright is in
+  its `node/node_modules`) with `CHROMIUM_PATH` pointing at the installed Chrome. Git and `gh` are installed.
+
 ## October 16, 2026 — Forsaken Wilds layout and terrain cleanup
 
 - Removed randomly scattered full-tile floor accents and generic monument props that broke up the outdoor scenario map. Grass, gravel, dirt and mud now blend through the town pack's native terrain transitions.
