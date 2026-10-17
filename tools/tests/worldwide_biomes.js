@@ -58,7 +58,7 @@ const FULL=process.argv.includes('--all');
       }
       stats.townFloors=makeTownTiles().length;
       if(stats.townFences===0)issues.push('No replacement fences ever appeared');
-      if(stats.townProps<12)issues.push('New Duskhollow terrain props are not being placed');
+      if(stats.townProps!==0)issues.push('Procedurally drawn town terrain props reintroduced');
       if(stats.townFloors!==TOWN_FLOOR_EXPANSION.start+TOWN_FLOOR_EXPANSION.count)
         issues.push('Town floor atlas indices incorrect');
       // Validate all ten material families in both tile axes and their exact
