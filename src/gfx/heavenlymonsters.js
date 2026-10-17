@@ -263,14 +263,14 @@ function ornament(g,p,v,code){
  }
 }
 function baseSprite(a) {
- const generated=aiHeavenlyMonsterCanvas(HEAVENLY_MONSTERS.indexOf(a));
- if(generated)return generated;
- // Replace one sprite per Heavenly family without duplicating painted art
- // across different named variants or changing their gameplay definitions.
+ // The user-approved paintings win for one sprite per Heavenly family (variant 0),
+ // without duplicating painted art across named variants; AI art covers the rest.
  if(a.heavenlyVariant===0) {
    const approved=approvedHeavenlyMonsterCanvas(a.heavenlyFamily);
    if(approved) return approved;
  }
+ const generated=aiHeavenlyMonsterCanvas(HEAVENLY_MONSTERS.indexOf(a));
+ if(generated)return generated;
  const canvas=makeCanvas(160,186),g=canvas.getContext('2d');
  g.imageSmoothingEnabled=false;
  const p=PALETTES[a.heavenlyVariant],v=a.heavenlyVariant,code=a.heavenlyFamily;

@@ -21,7 +21,9 @@ const {openGame,report}=require('./harness');
         const record=preloadLancerShield(key);
         try{await record.image.decode();}catch(e){problems.push('Shield failed to load '+key);continue;}
         await new Promise(resolve=>setTimeout(resolve,0));
-        if(!record.atlas)problems.push('Shield opaque atlas missing '+key);
+        // The authored transparent gaps and antialiased alpha are kept as-is (0cdd86e, "Fix Lancer spinning
+        // shield sprites"), so only check that every turntable frame has art (edge-on frames are thin).
+        if(!record.atlas)problems.push('Shield atlas missing '+key);
         else{
           const can=document.createElement('canvas');
           can.width=record.atlas.width;can.height=record.atlas.height;
@@ -30,16 +32,10 @@ const {openGame,report}=require('./harness');
           const {data:d}=g.getImageData(0,0,can.width,can.height);
           for(let frame=0;frame<SHIELD_FRAME.count;frame++){
             const ox=(frame%4)*SHIELD_FRAME.w,oy=Math.floor(frame/4)*SHIELD_FRAME.h;
-            for(let y=oy;y<oy+SHIELD_FRAME.h;y++){
-              let first=-1,last=-1;
-              for(let x=ox;x<ox+SHIELD_FRAME.w;x++){
-                const alpha=d[(y*can.width+x)*4+3];
-                if(alpha>24){if(first<0)first=x;last=x;}
-              }
-              for(let x=first;x<=last;x++)if(d[(y*can.width+x)*4+3]!==255){
-                problems.push('Shield interior alpha '+key+' frame '+frame);break;
-              }
-            }
+            let solid=0;
+            for(let y=oy;y<oy+SHIELD_FRAME.h;y++)for(let x=ox;x<ox+SHIELD_FRAME.w;x++)
+              if(d[(y*can.width+x)*4+3]>24)solid++;
+            if(solid<20)problems.push('Shield frame empty '+key+' frame '+frame);
           }
         }
       }
@@ -82,7 +78,7 @@ const {openGame,report}=require('./harness');
       const sp=p.speed;
       if(sp<5.2)problems.push('Barbarian move speed not boosted');
       const axe=rollItem(3,{slot:'weapon',base:'axe',rarity:0});
-      p.char.bag[0]=axe;
+      p.char.bag[0]=axe;p.char.level=Math.max(p.char.level,axe.req||1);   // an ilvl-3 axe can require level 2
       if(!equipFromBag(0,'offhand'))problems.push('Cannot equip second axe');
       if(p.char.equip.offhand!==axe)problems.push('Offhand axe not installed');
       const cast=p.tryUseSkill(whirlwind,p.x+0.5,p.y+0.5);

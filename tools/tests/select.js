@@ -22,7 +22,7 @@ const { openGame, report } = require('./harness');
   await toSelect();
   await shot(p + '1_select');
   if (!(await page.textContent('.class-card[data-id="ranger"]')).includes('New Ranger')) fail('ranger card should show the newest ranger');
-  if ((await page.$('.class-card.has-hero')).length !== 2) fail('expected 2 class cards with heroes');
+  if ((await page.$$('.class-card.has-hero')).length !== 2) fail('expected 2 class cards with heroes');
   // Both saved classes must preview their own current body/helm rather than the generic class portrait.
   await page.waitForFunction(() => document.querySelectorAll('.class-card.has-hero canvas[data-gear-preview="ready"]').length === 2, null, { timeout: 15000 }).catch(() => fail('saved gear preview did not finish for both classes'));
   if (!(await page.textContent('.class-gear-summary')).includes('Armor')) fail('saved gear summary is missing');

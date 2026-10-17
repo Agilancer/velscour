@@ -1,5 +1,5 @@
-// Title screen intro: click-to-awaken gate, sequential credit cards starting with Hymn of the Abyss, the logo fade and
-// flame burst on the song's hit, skipping the intro, and the blinking eyes.
+// Title screen intro: click-to-awaken gate, the logo fade with Hymn of the Abyss and the flame burst on the song's hit,
+// skipping the intro, and the blinking eyes.
 //   node tools/tests/titlefx.js            (screenshots: titlefx_*.png)
 // Uses the test hooks on the FX canvas (canvas.title-fx .fx).
 const { openGame, report } = require('./harness');
@@ -8,7 +8,6 @@ const { openGame, report } = require('./harness');
   for (const [w, h, mobile, tag] of [[1280, 720, false, 'pc'], [844, 390, true, 'mobile']]) {
     const { browser, page, errors, shot } = await openGame({ width: w, height: h, mobile, intro: true });
     const st = () => page.evaluate(() => document.querySelector('canvas.title-fx').fx.state());
-    const creditOpacity = () => page.evaluate(() => [...document.querySelectorAll('.title-credits img')].map((img) => +getComputedStyle(img).opacity));
     const clock = () => page.evaluate(async () => (await import('/src/core/audio.js')).musicClock());
     await page.evaluate(() => { const fx = document.querySelector('canvas.title-fx').fx; for (let i = 0; i < 4; i++) fx.watcher(); });
     await page.waitForTimeout(700);
@@ -18,28 +17,11 @@ const { openGame, report } = require('./harness');
     if (s.phase === 'gate') { await page.mouse.click(w * 0.1, h * 0.9); }
     const t0 = Date.now();
     const introDeadline = Date.now() + 12000;
-    let maxCreditOpacity = [0, 0], creditPeaked = [false, false], creditFadeOut = [false, false];
-    let creditFadeShot = [false, false], previousCreditOpacity = [0, 0];
-    while ((s = await st()).phase !== 'intro' && Date.now() < introDeadline) {
-      const op = await creditOpacity();
-      for (let i = 0; i < op.length; i++) {
-        maxCreditOpacity[i] = Math.max(maxCreditOpacity[i], op[i]);
-        if (op[i] >= 0.98) creditPeaked[i] = true;
-        if (creditPeaked[i] && op[i] < previousCreditOpacity[i] - 0.01) creditFadeOut[i] = true;
-        if (creditPeaked[i] && !creditFadeShot[i] && op[i] > 0.15 && op[i] < 0.85) {
-          creditFadeShot[i] = true;
-          await shot(`${tag}_credit${i + 1}_fadeout`);
-        }
-        previousCreditOpacity[i] = op[i];
-      }
-      await page.waitForTimeout(30);
-    }
-    const finalCreditOpacity = await creditOpacity();
-    maxCreditOpacity = maxCreditOpacity.map((v, i) => Math.max(v, finalCreditOpacity[i]));
-    s = await st();
-    console.log(tag, 'fading', JSON.stringify(s), 'credits', JSON.stringify(maxCreditOpacity), 'song', JSON.stringify(await clock()));
-    if (s.phase !== 'intro' || !(s.opacity > 0.05 && s.opacity < 0.9)) { console.log('FAIL: logo should be visibly fading in as the second credit clears'); process.exitCode = 1; }
-    if (maxCreditOpacity.some((v) => v < 0.98) || finalCreditOpacity.some((v) => v > 0.02) || creditFadeOut.some((v) => !v)) { console.log('FAIL: both credits must reach full opacity and fade fully out'); process.exitCode = 1; }
+    while ((s = await st()).phase !== 'intro' && Date.now() < introDeadline) await page.waitForTimeout(30);
+    console.log(tag, 'fading', JSON.stringify(s), 'song', JSON.stringify(await clock()));
+    if (s.phase !== 'intro') { console.log('FAIL: the logo intro did not start after the click'); process.exitCode = 1; }
+    // The studio credit cards moved to the Credits screen (61568fd "Polish credits spectacle and restore clean intro").
+    if (await page.$('.title-credits')) { console.log('FAIL: credit cards are back on the title screen'); process.exitCode = 1; }
     if (s.ready) { console.log('FAIL: menu clickable before it is visible'); process.exitCode = 1; }
     await shot(`titlefx_${tag}_fading`);
     let lastLogoOpacity = s.opacity, logoFadeMonotonic = true, logoFadePeak = s.opacity, logoMidShot = false;

@@ -79,7 +79,7 @@ const { openGame, report } = require('./harness');
     w.loot.length = 0; // no item labels in the shot
     G.paused = true;
     game.render();
-    window.legionTest = { tally, legion, out, step };
+    window.legionTest = { tally, legion, out, step, crowd };
   });
   await page.waitForTimeout(200);
   await shot('legion_battle');
@@ -88,10 +88,14 @@ const { openGame, report } = require('./harness');
   const out = await page.evaluate(async () => {
     const { G } = window.VELSCOUR;
     const { SUMMONS } = await import('/src/data/summons.js');
-    const { tally, legion, out, step } = window.legionTest;
+    const { tally, legion, out, step, crowd } = window.legionTest;
     const w = G.world;
     G.paused = false;
-    step(30 * 12);
+    // keep foes coming: the legion clears a crowd before slow casters (Pyre Inquisitor, cd 4 s) get a target
+    for (let sec = 0; sec < 12; sec++) {
+      if (w.creatures.filter((c) => c.team === 'enemy' && !c.dead).length < 6) crowd(8);
+      step(30);
+    }
     const mine = w.creatures.filter((c) => c.summon && !c.dead);
     out.push(`minions alive ${mine.length}: ` + Object.entries(mine.reduce((a, c) => ((a[c.summonKey] = (a[c.summonKey] || 0) + 1), a), {})).map((e) => e.join('x')).join(' '));
     const want = new Set(legion.filter((s) => s.kind === 'summon').map((s) => s.m.sum).flatMap((k) => SUMMONS[k].pool || [k]));
