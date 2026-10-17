@@ -125,6 +125,15 @@ export async function applyAIBiomeArt(pack, biomeId) {
   const scatter=pack.scatter?.getContext?.('2d');
   const propStart=pack.meta.expansion?.scatterStart??pack.meta.scatter.length;
   const cleanProps=approved?new Set():selectCleanCells(image,4,32,64,64,false);
+  // All native props in the five original authored dungeon packs stay usable.
+  // Other biomes retain a smaller set of source-pack accents plus only the
+  // fully transparent, biome-specific authored replacements that passed QA.
+  const originalProps=approved
+    ? Array.from({length:Math.min(propStart,40)},(_,i)=>i)
+    : [0,1,3,4,9,10,15,18,25,31].filter(i=>i<propStart);
+  pack.meta.curatedPropIndices=[...originalProps,
+    ...Array.from({length:pack.meta.scatter.length-propStart},(_,i)=>
+      cleanProps.has(i%32)?propStart+i:-1).filter(i=>i>=0)];
   if(scatter){
     scatter.save();
     scatter.imageSmoothingEnabled=false;
