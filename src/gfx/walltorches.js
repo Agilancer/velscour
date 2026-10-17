@@ -26,6 +26,7 @@ export const TORCH_STYLES=Object.freeze({
   void:[0,10,15,19],
   gilded:[1,6,11,16],
   plague:[3,9,14,18],
+  sewers:[3,9,13,14],
   crystal:[1,10,16,19],
   desert:[1,6,16],
   shadow:[0,5,10,18],
@@ -53,7 +54,7 @@ const PALETTE=Object.freeze({
   ice_temple:'#86d6ff',frozen:'#a6dbff',hell:'#ff782b',molten:'#ff782b',
   astral_plane:'#ad9bff',void:'#ac7cfa',heavenly:'#ffe3a0',
   desert_temple:'#ffc56a',desert:'#ffc56a',blood:'#ff6143',
-  throne:'#ff6b30',storm:'#99bbff'
+  throne:'#ff6b30',storm:'#99bbff',sewers:'#a8ff60'
 });
 const imageURL=i=>ROOT+'holders_'+(i+1)+'.webp';
 function fetchAtlas(sheet) {

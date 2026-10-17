@@ -92,7 +92,7 @@ const FULL=process.argv.includes('--all');
       for(const b of chosen){
         await loadBiomeArt(b);
         // dungeon biomes are built only from the painted packs, palette swapped (data/biomes.js ART)
-        const PAINTED=['catacombs','cathedral_graveyard','castle_keep'];
+        const PAINTED=['catacombs','cathedral_graveyard','castle_keep','sewers'];
         if(!PAINTED.includes(b.pack)||(b.wallPack&&!PAINTED.includes(b.wallPack)))
           issues.push('Biome not on a painted pack '+b.id);
         const set=biomeTileSet(b);
