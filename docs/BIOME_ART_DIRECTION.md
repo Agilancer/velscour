@@ -59,6 +59,31 @@ Palette goals by visual family:
 | Astral Plane | Dark blue-violet stone, subtle cold highlights |
 | Heavenly | Pearl stone, aged gold and muted blue inlays |
 
+## Visual review corrections — same camera, desktop and mobile
+
+The complete 34-biome desktop sweep and representative mobile sweep from
+the PR workflow are compared against Catacombs, including a second scene
+with larger open rooms in each biome. These screenshots revealed lingering
+**preexisting source-art patterns** even after removing the extra procedural
+expansion overlays:
+
+- **Cathedral:** the native `marble_checker` base (slot #3) turns whole
+  chambers into a hard black-and-white checkerboard on mobile. It has been
+  excluded from random seamless bases, leaving `nave_flagstone` and
+  `choir_slate`. The authored Cathedral props remain in place.
+- **Ice Temple:** `frosted_flagstone` (#0) and `white_ice` (#5) have
+  large repeated bright diamonds that compete with characters, loot and
+  torches. The now-selected `blue_black_ice`, `sapphire_slate` and
+  `snowbound_court` are a quieter cold stone family.
+- **Amber versus Gilded:** both used to pick identical native paving slots.
+  Gilded now favors light limestone and subtle tesserae, while Amber uses
+  rust-colored terracotta and gravel, with complementary existing wall
+  materials. This creates distinct visual identities without recoloring,
+  drawing or importing any additional sprites.
+
+No cross-biome artwork is introduced, and all visually rejected tile
+variants remain in their original asset packs for possible future reuse.
+
 ## Checks and screenshots
 
 A new PR GitHub Actions workflow validates artwork and uploads actual
