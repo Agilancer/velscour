@@ -1,0 +1,53 @@
+name: Biome art direction and screenshot review
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/gfx/aibiomeart.js"
+      - "src/gfx/biomecuration.js"
+      - "src/gfx/biomeexpansion.js"
+      - "src/core/assets.js"
+      - "src/data/biomes.js"
+      - "tools/tests/biome_*"
+      - "tools/tests/worldwide_biomes.js"
+      - ".github/workflows/biome-art-review.yml"
+
+jobs:
+  art-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out current PR
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate all biome curation contracts
+        run: node tools/tests/biome_art_direction.mjs
+      - name: Install browser automation
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Start local game web server
+        run: |
+          python3 -m http.server 8123 > /tmp/velscour-biome-server.log 2>&1 &
+      - name: Check in-game floor alpha and seams
+        run: node tools/tests/ai_biome_floors.js
+      - name: Check approved biome paintings
+        run: node tools/tests/approved_biome_art.js
+      - name: Check game art and dungeon creation
+        run: node tools/tests/worldwide_biomes.js
+      - name: Capture all biomes with character (desktop)
+        run: node tools/tests/biome_visual_review.js --all
+      - name: Capture representative biomes (mobile)
+        run: node tools/tests/biome_visual_review.js --mobile
+      - name: Upload visual comparison screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: curated-biome-screenshots
+          path: tools/tests/out/*.png
+          if-no-files-found: warn
+          retention-days: 7
