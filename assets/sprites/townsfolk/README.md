@@ -25,3 +25,38 @@ Run `node tools/tests/townsfolk.mjs` for manifest checks and
 `node tools/tests/town_sprite_display.js` with the local game server running
 (`python3 -m http.server 8123`) to verify browser sprite rendering, vendor
 preservation and capture town screenshots for visual review.
+
+## Herrington Hollow movement and conversation polish
+
+Town residents now share the main character's small upward stepping bob
+(maximum 2.2 world pixels) and 3% body squash/stretch while walking. The
+two authored walk frames advance at 4.25 fps, independently from the bob,
+instead of the previous 7 fps. Each NPC's own animation clock advances only
+while the town is updating; the walk-frame clock advances only on actual
+movement. A single consistent left/right mirror transform is used by idle,
+walking, reactions, celebrations and knight attacks. Facing follows the
+**isometric screen X direction** (world X minus world Y), preserving the
+previous facing when moving straight up/down on screen.
+
+Unprompted villagers speak less often: initial ambient greetings are spaced
+out, two-person conversations take place one pair at a time with long
+cooldowns, and automatic speech bubbles stay visible for less time. Interacting
+directly with a villager still produces their normal reply. At town events,
+only the first actor shows the introductory speech while the other actors
+continue their appropriate event animations.
+
+Speech uses rounded, gold-trimmed parchment panels with drop shadows, a
+directional tail, three-line wrapping, and obstacle avoidance. The eight
+original painted vendor sprites and vendor interaction behaviors remain
+unchanged.
+
+Regression commands, from the repository root:
+
+```sh
+node tools/tests/town_visuals.mjs
+# With `python3 -m http.server 8123` serving the repo:
+node tools/tests/town_sprite_display.js
+```
+
+The browser test saves a rounded-bubble preview to
+`tools/tests/out/town_rounded_dialogue.png`.
