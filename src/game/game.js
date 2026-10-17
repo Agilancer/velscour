@@ -46,12 +46,19 @@ let townCache = null, townTiles = null;
 let saveT = 0;
 let automapCanvas = null;
 
+// Painted townsfolk (replacement art); barks stay short enough for a two-line speech bubble.
 const VILLAGERS = [
-  { name: 'Old Tobin', sprite: 'necromancer', pal: { hue: 30, sat: 0.3, light: 0.05 }, barks: ['The dead walk louder every night...', 'My boy went through that portal. Never came back.'] },
-  { name: 'Mira', sprite: 'ranger', pal: { hue: 200, sat: 0.4 }, barks: ['Bring back something shiny, hero!', 'They say a demon sleeps at the bottom of the world.'] },
-  { name: 'Brother Cael', sprite: 'paladin', pal: { hue: 160, sat: 0.3, light: -0.05 }, barks: ['Light preserve you, wanderer.', 'Velscour... do not speak that name aloud.'] },
-  { name: 'Gorm', sprite: 'barbarian', pal: { hue: -20, sat: 0.4 }, barks: ['Hah! I would go down there myself if not for my knees.', 'Gold buys steel. Steel buys life.'] },
+  { name: 'Old Tobin', title: 'Lamplighter', art: 'npc_tobin', sprite: 'necromancer', barks: ['The dead walk louder every night.', 'My boy went through that portal...', 'Keep a lamp lit. Always.', 'I hear scratching under the well.', 'Mind the shadows, friend.'] },
+  { name: 'Mira', title: 'Farmhand', art: 'npc_mira', sprite: 'ranger', barks: ['Bring back something shiny!', 'A demon sleeps beneath the world.', 'The crows left this morning.', 'Be careful down there, hero.', 'Nothing grows near the portal.'] },
+  { name: 'Brother Cael', title: 'Pilgrim', art: 'npc_cael', sprite: 'paladin', barks: ['Light preserve you, wanderer.', 'Do not speak that name aloud.', 'I pray for every soul you save.', 'Faith is a blade too, child.', 'The abyss hungers. Stay strong.'] },
+  { name: 'Gorm', title: 'Old Soldier', art: 'npc_gorm', sprite: 'barbarian', barks: ['Hah! If not for my knees...', 'Gold buys steel. Steel buys life.', 'Swing first. Ask later.', 'I fought at depth ten, once.', 'Drink a potion BEFORE you die.'] },
 ];
+/** Show a speech bubble over a town NPC; only one villager talks at a time so bubbles never stack. */
+export function npcSay(npc, text, life = 3.6) {
+  const w = G.world;
+  if (w) for (const n of w.npcs) if (n !== npc && n.say) n.say = null;
+  npc.say = { text, t: life, max: life };
+}
 
 export const game = {
   // ------------------------------------------------------------ characters
@@ -160,6 +167,7 @@ export const game = {
     const t = townCache;
     t.map.seen.fill(0);
     const world = new World('town', { map: t.map, tileset, biome: TOWN_BIOME, depth: 0, townTiles, buildings: t.buildings, props: t.props, wallHangings: t.wallHangings });
+    world.townPaths = t.townPaths;
     world.raining = rollTownWeather();
     world.npcs = t.npcs.map((n) => ({ vendor: n.vendor, x: n.x, y: n.y, reach: 1.8, flip: n.flip, use: () => Vendor.open(n.vendor.id) }));
     // the storage chest, beside the well where the hero arrives
@@ -171,9 +179,15 @@ export const game = {
     for (const v of VILLAGERS) {
       const [x, y] = t.map.randomNear(t.center.x, t.center.y + 3, 5);
       const npc = {
-        name: v.name, sprite: v.sprite, pal: v.pal, x, y, reach: 1.6, flip: false, tx: x, ty: y, waitT: rand(1, 4), barkT: rand(4, 12),
-        use() { floatText(this.x, this.y, 70, pick(v.barks), '#e8dcc4', 12, { life: 3, vz: 8 }); },
+        name: v.name, title: v.title, art: v.art, sprite: v.sprite, villager: true, x, y, reach: 1.6, flip: false, tx: x, ty: y, waitT: rand(1, 4), barkT: rand(4, 12),
+        use() {
+          let line = pick(v.barks);
+          if (this.say && v.barks.length > 1) while (line === this.say.text) line = pick(v.barks);
+          npcSay(this, line);
+        },
         update(dt) {
+          if (this.say && (this.say.t -= dt) <= 0) this.say = null;
+          if (this.say) return; // stand still while talking
           this.waitT -= dt;
           if (this.waitT <= 0) {
             const d = dist(this.x, this.y, this.tx, this.ty);
@@ -184,7 +198,10 @@ export const game = {
           }
           const p = G.player;
           this.barkT -= dt;
-          if (p && this.barkT <= 0 && dist(p.x, p.y, this.x, this.y) < 4) { this.barkT = rand(14, 26); this.use(); }
+          if (p && this.barkT <= 0 && dist(p.x, p.y, this.x, this.y) < 4) {
+            this.barkT = rand(14, 26);
+            if (!world.npcs.some((n) => n.say)) this.use();
+          }
         },
       };
       world.npcs.push(npc);
