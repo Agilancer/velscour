@@ -32,6 +32,34 @@ const {openGame,report}=require('./harness');
       document.querySelectorAll('.screen').forEach(s=>s.remove());
       G.ui.modalCount=0; G.godMode=true;
     });
+    // Render a sample bubble on a transparent canvas and check that the
+    // complete parchment panel, rounded trim and tail are drawn.
+    const bubbleIssues=await page.evaluate(async()=>{
+      const {drawTownSpeech}=await import('/src/game/townspeech.js');
+      const canvas=document.createElement('canvas');
+      canvas.id='town-speech-preview';
+      canvas.width=550;canvas.height=250;
+      const ctx=canvas.getContext('2d');
+      const npc={talkText:'The watch has news from the northern gate. Traders are gathering by the market square, and winter is coming.',talkT:3};
+      drawTownSpeech(ctx,npc,275,200);
+      const problems=[];
+      const rect=npc.bubbleRect;
+      if(!rect||rect.length!==4||rect.some(v=>!Number.isFinite(v)))
+        problems.push('Speech bubble bounds missing');
+      else{
+        const cx=Math.floor((rect[0]+rect[2])/2),cy=Math.floor((rect[1]+rect[3])/2);
+        if(ctx.getImageData(cx,cy,1,1).data[3]===0)
+          problems.push('Rounded parchment bubble has transparent middle');
+      }
+      Object.assign(canvas.style,{position:'fixed',left:'24px',top:'24px',zIndex:999999,
+        background:'#30241c'});
+      document.body.appendChild(canvas);
+      return problems;
+    });
+    errors.push(...bubbleIssues);
+    await page.locator('#town-speech-preview').screenshot({
+      path:require('path').join(require('./harness').OUT_DIR,'town_rounded_dialogue.png')});
+    await page.evaluate(()=>document.querySelector('#town-speech-preview')?.remove());
     for(const seed of [1337,42301]){
       const issues=await page.evaluate(async(seed)=>{
         const {G,game}=window.VELSCOUR;
@@ -53,6 +81,10 @@ const {openGame,report}=require('./harness');
             issues.push('Vendor interaction lost: '+n.vendor.id);
         }
         if(visitors.length<5)issues.push('Town residents did not spawn');
+        if(visitors.filter(n=>n.talkT>0).length>1)
+          issues.push('Town opens with too many simultaneous conversations');
+        if(visitors.some(n=>!Number.isFinite(n.animT)||!Number.isFinite(n.walkT)))
+          issues.push('Some visitors lack independent gait clocks');
         const loaded=await preloadTownSheets(visitors.map(n=>n.townsfolkSpriteId));
         if(!loaded.every(Boolean))issues.push('Some generated civilian sheets failed to load');
         for(const n of visitors){

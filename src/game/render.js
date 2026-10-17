@@ -10,6 +10,8 @@ import { replacementImage } from '../core/replacementart.js';
 import { classSprite } from '../core/assets.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { gritAt } from '../gfx/grit.js';
+import { townFrame, townMotion } from './townsfolkvisuals.js';
+import { drawTownSpeech } from './townspeech.js';
 import { enemyImage } from '../core/enemyart.js';
 import { drawLootLabels } from './loot.js';
 
@@ -399,8 +401,9 @@ function drawNpc(ctx, n) {
   const x = isoX(n.x, n.y), y = isoY(n.x, n.y);
   ctx.fillStyle = 'rgba(0,0,0,0.38)';
   ctx.beginPath(); ctx.ellipse(x, y, 13, 6, 0, 0, TAU); ctx.fill();
-  const bob=n.walking?Math.abs(Math.sin(G.time*10+n.x))*1.5:Math.sin(G.time*2+n.x)*.6;
-  const frame=n.knight&&n.townAttackT>0?11+(Math.floor(G.time*7+n.townAttackSeed)%2):n.townPoseT>0?n.townPoseFrame:n.walking?3+(Math.floor(G.time*7)%2):Math.floor(G.time*.7+n.x)%3;
+  const {bob,squash}=townMotion(n.animT||0,!!n.walking);
+  const frame=townFrame(n);
+  const drawH=h*squash, spriteY=y-drawH-bob;
   // HTMLCanvasElement does not expose Image.complete or Image.naturalWidth.
   // The old guard failed for every recolored sheet and drew placeholders forever.
   const ready=townFrameReady(sheet,n.frameCount||11);
@@ -408,13 +411,14 @@ function drawNpc(ctx, n) {
     // Keep the old vendor image (including fallback if the replacement atlas
     // cannot load). Match the same ground point and flip as the townsfolk.
     ctx.save();
-    if(n.flip){ctx.translate(x,0);ctx.scale(-1,1);ctx.drawImage(vendorArt,-w/2,y-h+bob,w,h);}
-    else ctx.drawImage(vendorArt,x-w/2,y-h+bob,w,h);
+    if(n.flip){ctx.translate(x,0);ctx.scale(-1,1);ctx.drawImage(vendorArt,-w/2,spriteY,w,drawH);}
+    else ctx.drawImage(vendorArt,x-w/2,spriteY,w,drawH);
     ctx.restore();
   } else if(!n.vendor && ready){
     ctx.save();
-    if(n.flip){ctx.translate(x,0);ctx.scale(-1,1);ctx.drawImage(sheet,frame*TOWN_FRAME_W,0,TOWN_FRAME_W,TOWN_FRAME_H,-w/2,y-h+bob,w,h);}
-    else ctx.drawImage(sheet,frame*TOWN_FRAME_W,0,TOWN_FRAME_W,TOWN_FRAME_H,x-w/2,y-h+bob,w,h);
+    // One centered facing transform for idle, walk, reactions and attacks.
+    if(n.flip){ctx.translate(x,0);ctx.scale(-1,1);ctx.drawImage(sheet,frame*TOWN_FRAME_W,0,TOWN_FRAME_W,TOWN_FRAME_H,-w/2,spriteY,w,drawH);}
+    else ctx.drawImage(sheet,frame*TOWN_FRAME_W,0,TOWN_FRAME_W,TOWN_FRAME_H,x-w/2,spriteY,w,drawH);
     ctx.restore();
   }
   if (n.vendor) {
@@ -422,28 +426,9 @@ function drawNpc(ctx, n) {
     ctx.drawImage(glowSprite('#ffd060'), x - 6, y - h - 18, 12, 12);
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
-  n.sbox = [x - w / 2, y - h, x + w / 2, y];
+  n.sbox = [x - w / 2, spriteY, x + w / 2, y];
   drawTownMood(ctx,n,x,y);
-  n.bubbleRect=null;
-  if(n.talkText&&n.talkT>0){
-    const words=String(n.talkText).split(/\s+/),lines=[];let line='';
-    for(const word of words){const next=line?line+' '+word:word;if(next.length>25&&line){lines.push(line);line=word;}else line=next;}
-    if(line)lines.push(line);
-    ctx.save();ctx.font='11px Georgia, "Times New Roman", serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    const bw=Math.min(190,Math.max(96,...lines.map(s=>ctx.measureText(s).width+18))),bh=lines.length*14+14,baseX=x-bw/2,baseY=y-h-bh-12;
-    const occupied=[...(G.world?.npcs||[]).filter(q=>q!==n).flatMap(q=>[q.sbox,q.bubbleRect]),...(G.world?.creatures||[]).filter(q=>q!==G.player&&!q.dead).map(q=>q.sbox)].filter(Boolean);
-    const overlaps=(bx,by)=>occupied.some(([l,t,r,b])=>bx<r+3&&bx+bw>l-3&&by<b+3&&by+bh>t-3);
-    const shifts=[[0,0],[-34,0],[34,0],[-56,0],[56,0],[0,-bh-8],[-32,-bh-8],[32,-bh-8]];
-    const [dx,dy]=shifts.find(([sx,sy])=>!overlaps(baseX+sx,baseY+sy))||[0,0],bx=Math.round(baseX+dx),by=Math.round(baseY+dy);
-    n.bubbleRect=[bx,by,bx+bw,by+bh];
-    // Crisp double-ruled parchment with a small directional tail, sized to keep
-    // the speaker visible and the dialogue readable over the dimetric scene.
-    ctx.fillStyle='#211b16';ctx.fillRect(bx-2,by-2,bw+4,bh+4);ctx.fillStyle='#c6a86c';ctx.fillRect(bx-1,by-1,bw+2,bh+2);
-    ctx.fillStyle='#eee0bb';ctx.fillRect(bx,by,bw,bh);ctx.fillStyle='#37291b';ctx.fillRect(bx+4,by+4,bw-8,bh-8);
-    ctx.fillStyle='#eee0bb';ctx.fillRect(bx+5,by+5,bw-10,bh-10);
-    const tailX=Math.max(bx+10,Math.min(bx+bw-10,x));ctx.beginPath();ctx.moveTo(tailX-5,by+bh-1);ctx.lineTo(tailX+4,by+bh-1);ctx.lineTo(x,by+bh+7);ctx.closePath();ctx.fillStyle='#eee0bb';ctx.fill();ctx.strokeStyle='#37291b';ctx.lineWidth=1;ctx.stroke();
-    ctx.fillStyle='#20170f';lines.forEach((s,i)=>ctx.fillText(s,x,by+12+i*14));ctx.restore();
-  }
+  drawTownSpeech(ctx,n,x,spriteY);
 }
 
 /** Main world render. */
