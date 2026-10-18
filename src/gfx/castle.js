@@ -24,9 +24,19 @@ export function castleObject(id,category='scatter',palette=null){
  if(!f)return null;
  const [px,py]=f.pivot||[f.w/2,f.h];
  const tree=category==='trees';
- return {...pageAtlas(imageFor(category,palette))(f.x,f.y),w:f.w,h:f.h,ox:-px,oy:-py,
+ const spr={...pageAtlas(imageFor(category))(f.x,f.y),w:f.w,h:f.h,ox:-px,oy:-py,
   fp:tree ? 0.72 : (f.w > 260 ? 0.7 : 0.42),block:tree,name:f.id,isometric:true,castle:true,
   category,connectionMask:f.connection_mask??f.mask??null,orientation:f.orientation||null};
+ // A recoloured copy is built on first draw (small atlases only, so page offsets don't change);
+ // map generation stays canvas-free and can run under Node.
+ if(palette)Object.defineProperty(spr,'img',{get:()=>imageFor(category,palette),enumerable:true});
+ return spr;
+}
+// A vertical slice of a wide authored sprite (e.g. one tile's worth of the crenellated
+// curtain wall), pivoted at (px,py) inside the slice, so long walls tile and depth-sort per cell.
+export function castleStrip(id,category,sx,w,px,py){
+ const s=castleObject(id,category);if(!s)return null;
+ return {...s,sx:s.sx+sx,w,ox:-px,oy:-py,strip:true};
 }
 export function castleFloorTiles(palette=null){
  const img=imageFor('floors',palette);

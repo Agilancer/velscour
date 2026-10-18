@@ -6,7 +6,7 @@ CASTLE is the third playable overworld beside the Forsaken Wilds and Sea of Sand
 
 - `src/data/biomes.js` registers Castle as an overworld with a siege-ready monster roster.
 - `src/gfx/castle.js` loads the atlas set on descent and exposes indexed exterior and keep floors, topology-aware walls, and pivot-aware props.
-- `src/world/overworld.js` builds a 192×176 Castle board by expanding the 96×88 authored layout twofold in each dimension, giving four times the tile area. The irregular fortress has a continuous five-base-tile-wide walkable rampart, ten masonry families, four moat bridges, a defended drawbridge, nine towers, and eight stair approaches. The keep contains enterable throne, cathedral, and great-hall rooms with dedicated floors and walls, open doors, combat space, encounters, and furnishings.
+- `src/world/castleworld.js` builds a 192×176 Castle board by expanding a 96×88 layout twofold in each dimension. The layout follows real quadrangular castles (see the layout section below): a moat ring, one continuous crenellated curtain wall, round corner towers, square flanking towers, a twin-towered gatehouse with drawbridge and stone bridge on the south, a postern and bridge on the north, and three enterable halls (throne hall, chapel, great hall) round an open courtyard behind a paved wall-walk lane. Scenario code reads the halls from `map.castleRooms` and the wall-walk muster points from `map.rampartPosts`, never fixed coordinates.
 - Every Castle scenario is winnable and verified by `tools/tests/scenarios.js`. Scenario foes hunt the hero across the board; rampart sieges and last stands arrive as waves along the wall walk; keep fights run as two or three back-to-back phases (the Crown Vault ends at a claimable relic, the Royal Procession must keep the royal party alive); the Sconce Ward gives the hero 8 s to reach the wall before torches start to gutter.
 - Castle pathing expands with the board: spawn points, doors, scenario sites, stairs, exits, and rampart objectives are rescaled onto walkable tiles. Ramparts connect through bends, corners, gates, and broad stair landings.
 - The shared shrine-activated system supplies 35 challenges. It retains the twenty general scenarios, adds five rampart encounters, and adds ten room-focused keep scenarios. Other overworlds continue to select from their applicable general scenario set.
@@ -17,75 +17,41 @@ CASTLE is the third playable overworld beside the Forsaken Wilds and Sea of Sand
 - Castle wall review sheets are in `art-review/castle-wall-*.png`: each shows all 20 corner, end, straight, junction and panel pieces for one of ten masonry families. `castle-rampart-stairs.png` shows all sixteen stair pieces; `castle-walltops-landmarks.png` shows all nineteen wall-top, tower, stair-access and bridge modules. The throne dais was rescaled to sit more naturally in its open hall.
 - After three non-overworld dungeon visits, the selector chooses among every registered overworld: Forsaken Wilds, Sea of Sand, or Castle. The final throne at Depth 500 still takes precedence.
 
-## Castle architecture and sprite scale audit (October 2026)
+## Castle layout (October 2026 rebuild)
 
-The visual composition is guided by real medieval fortifications rather than
-a flat row of decorative wall tiles. Reference examples: [English Heritage,
-stone castles](https://historicengland.org.uk/images-books/publications/iha-stone-castles/heag235-stone-castles/),
-[Conisbrough curtain walls and gatehouse](https://production.english-heritage.org.uk/visit/places/conisbrough-castle/history/description/),
-and [Dunstanburgh's outer ward](https://www.english-heritage.org.uk/visit/places/dunstanburgh-castle/history/description/).
-Real defensive architecture has linked curtain walls, projecting towers,
-protected entrances, crenellated parapets and circulation between courtyards,
-gatehouses and inner rooms. The Castle uses its original isometric assets
-for these parts, with no new procedural or placeholder walls.
+The layout is modelled on [Bodiam](https://en.wikipedia.org/wiki/Bodiam_Castle) (quadrangular plan, round corner
+towers, square towers mid-wall, a twin-towered gatehouse facing a bridge, a postern opposite, domestic ranges built
+round a central courtyard, a moat on every side) and [Beaumaris](https://en.wikipedia.org/wiki/Beaumaris_Castle)
+(square plan inside a wet moat). The previous build traced a jagged diagonal wall path; Bresenham's diagonal steps
+left cells touching only at corners, so walls had holes and towers floated off the wall line.
 
-**The critical scale fix:** Castle expands its original 96×88 layout to
-192×176 while the player's height remains about **60 world pixels**.
-Previously *every* sprite was blindly enlarged by 2 along with wall
-positions, including furniture and loose clutter. This put the throne
-dais at about 272 world pixels high and a cathedral pew at about 90
-pixels high—physically oversized for the player. Geometry remains
-expanded, but `src/gfx/castlescale.js` sets category-appropriate
-dimensions for decorative items and caps unusually large atlas sprites:
+- **Curtain wall** (`CASTLE_WALL`, base cells 28..68 × 20..68): solid one-cell-thick wall, blocked for pathing,
+  open only at the gate (x 47..49 on the south wall) and the postern (x 61..62 on the north wall). It is drawn from
+  one 66px slice of `castle_landmark_04_curtain_wall_battlement` per wall cell (`castleStrip`), tiled along the run;
+  west/east runs mirror the slice. Each slice is anchored at the low end of its cell's face so heroes in front of the
+  wall always draw in front and heroes behind it draw behind.
+- **Towers and gatehouse** are cut into the same 64px screen columns as the wall (`sliced()` in `castleworld.js`);
+  each column is drawn just in front of the wall cell it stands on, so towers always cover the wall behind them with
+  no slivers and nothing drawn across them. Round towers (`landmark_01`) take the corners; square towers
+  (`landmark_03`) flank the walls and the postern; `landmark_08` is the gatehouse.
+- **Moat**: a 4-cell ring one berm cell outside the curtain. Stone causeways line up with the gate and postern, and
+  `landmark_17` stone bridges are drawn over them (sorted from their far end so walkers draw on the deck).
+- **Ward**: a paved wall-walk lane (`map.rampartDeck`, 3 cells wide) inside the curtain; the throne hall stands on
+  the processional axis opposite the gate, the chapel and great hall on either side of the courtyard. Keep walls
+  are tinted to the curtain's limestone (`KEEP_STONE`, recoloured lazily on first draw).
+- Floor tiles are chosen by how they look: several atlas names don't describe their art (`mossy_lawn` is brown
+  dirt, `castle_road_gravel` is green grass).
 
-| Existing artwork | Intended world height |
-|---|---:|
-| Throne dais | 92 px |
-| Cathedral pew | 34 px |
-| Cathedral pulpit | 78 px |
-| Hanging chandelier | 55 px |
-| Floor candelabrum | 48 px |
-| Existing straight curtain wall module | ~132 px |
-| Trees | up to 170 px |
-| Castle landmarks / gatehouses | up to 238 px high; up to 320 px wide |
-| Stair modules | up to 150 px |
-| Loose scatter | up to 46 px |
-
-The 160px-wide source moat-bank tiles now map to exactly one **64px**
-world diamond, so their backgrounds no longer spill across adjacent
-water cells. Renderers continue to honor original transparent margins,
-ground pivots and the non-mirrored, authored isometric orientations.
-
-The ten approved exterior wall styles are now placed in long contiguous
-runs rather than swapping at every change of direction. Topology masks
-(ends, straights, corners, tees and crosses) are untouched. Existing
-authored crenellated modules accent key straight walls, with original
-arch-gate artwork filling the three side posterns. Keep walls also receive
-a few authored directional windows and room plaques. The open-roof
-throne room, cathedral and great hall remain navigable for combat and
-retain all encounter and doorway logic. No character, combat or skill
-art was modified.
-
-The following command checks the 100 seeded boards, playable wall
-walk, gate connectivity, all ten masonry families, existing encounters,
-new gate/window/battlement placements, and the scale/size caps:
+Scale: the curtain and towers share one stone scale (`ART_K`, 64/66); the wall face is about 2× the 60px hero,
+corner towers about 6×, the gatehouse about 8×. Furniture and loose props keep the hero-relative heights in
+`src/gfx/castlescale.js`; props flagged `fixedK` are already in world scale and skip the 2× expansion.
 
 ```sh
-node tools/tests/castle_overworld.mjs
-# With the repo served locally by: python3 -m http.server 8123
-node tools/tests/castle_visual.js
-node tools/tests/castle_visual.js --mobile
+node tools/tests/castle_overworld.mjs        # 100 seeds: no wall holes (ward sealed without its gates), every wall
+                                             # cell drawn, towers/gatehouse/bridges, lane, gates, halls, size caps
+node tools/tests/castle_visual.js [views]    # screenshots: overview, approach, gatehouse, corners, postern, halls
 ```
-
-`castle_visual.js` produces ten player-anchored screenshots per display
-size under `tools/tests/out/castle_corrected_*.png`; the camera samples
-the south drawbridge, side posterns, curtain wall, stairs, all three
-interior rooms, and a whole-keep view.
-
-Visual QA: compare screens of all three keep rooms, the main drawbridge,
-both side posterns, stairs, outer walls and towers at the same zoom as
-a 60px hero. Automated metadata and code checks cannot replace an
-actual in-game visual inspection, especially for wall layering.
+Look at the screenshots (`tools/tests/out/castle_*.png`): layering mistakes don't throw.
 
 ## Rebuild runtime atlases
 
@@ -105,4 +71,4 @@ node tools/tests/overworld.js
 node tools/tests/sea_of_sand_generation.mjs
 ```
 
-The Castle check covers the documented tile dimensions, fourfold board area, dedicated keep atlas contracts, 100 seeded maps, all 35 scenarios, four bridge approaches, the wide wall walk, eight stairs, interior doors and combat rooms, ten exterior wall families, objective reachability, and three-dungeon rotation among all overworlds. The Sea of Sand check covers 100 seeded maps and all route-anchor reachability. `python tools/build_townsfolk_pack.py` rebuilds the civilian sheets and ZIP from the included original generated art.
+The Castle check covers the documented tile dimensions, fourfold board area, dedicated keep atlas contracts, 100 seeded maps, all 35 scenarios, a closed curtain wall, the gate and postern crossings, the wall-walk lane, interior doors and combat rooms, objective reachability, and three-dungeon rotation among all overworlds. The Sea of Sand check covers 100 seeded maps and all route-anchor reachability. `python tools/build_townsfolk_pack.py` rebuilds the civilian sheets and ZIP from the included original generated art.

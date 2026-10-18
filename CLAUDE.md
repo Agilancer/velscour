@@ -54,6 +54,8 @@ node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners
 node tools/tests/pack.js catacombs,blood          # biome pack levels: arches, doors, reachability; door/arch shots
 node tools/tests/overworld.js                      # 60 outdoor seeds, 20 scenarios, forced scheduling, landscape previews
 node tools/tests/scenarios.js                      # a bot plays every Wilds/Castle scenario and Sea of Sand route to the end
+node tools/tests/castle_overworld.mjs              # 100 Castle seeds: closed curtain wall, gates, wall-walk, halls, art caps (no browser)
+node tools/tests/castle_visual.js [views]          # Castle screenshots: overview, gatehouse, corners, postern, halls
 node tools/tests/sea_of_sand_generation.mjs         # 100 desert maze seeds, route reachability, one-to-five area rolls
 node tools/tests/sea_of_sand.js                     # atlas frames, desert HUD, monster frames, screenshots (browser)
 node tools/tests/heavenly.js                       # 60 distinct Heavenly monsters, painted floors/props, monster atlas export
@@ -128,7 +130,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   and `hud.js` for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
   `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`.
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Overworld scenarios
-  (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. The Bard's notes, measure, jingles, sampler and Cadences (`src/game/bard.js`, `src/game/bardmusic.js`, `src/gfx/notation.js`, `src/data/notation.js`, `src/data/jingles.js`, `src/core/sampler.js`): run `bard.js`. The Astronomer (class id `arcane_sorcerer`; `src/game/astronomer.js`, `src/gfx/cosmos.js`): run `astronomer.js`. Raid bosses
+  (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. The Castle layout (`src/world/castleworld.js`, `src/gfx/castle.js`; docs/CASTLE_OVERWORLD.md): run `castle_overworld.mjs`, `castle_visual.js` (look at the shots) and `scenarios.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. The Bard's notes, measure, jingles, sampler and Cadences (`src/game/bard.js`, `src/game/bardmusic.js`, `src/gfx/notation.js`, `src/data/notation.js`, `src/data/jingles.js`, `src/core/sampler.js`): run `bard.js`. The Astronomer (class id `arcane_sorcerer`; `src/game/astronomer.js`, `src/gfx/cosmos.js`): run `astronomer.js`. Raid bosses
   (`src/game/raid.js`, every 5th depth): run `raid.js` (and `raid_sigs.js` for `src/game/raidsigs.js`). Rings, augments or skill mastery (`src/data/rings.js`,
   `src/game/augments.js`): run `rings.js`. The town generator (`src/world/town.js`): run `town.js` with a few seeds. Town life (`src/game/townlife.js`, `src/data/townscripts.js`, `src/game/townsfolkvisuals.js`, `src/gfx/emotes.js`): run `townlife.js`, `townsfolk.mjs` and `town_visuals.mjs`; rebuild the townsfolk sheets with `python tools/build_townsfolk_pack.py`.
 - Velscour waits at `FINAL_DEPTH` (500, `src/data/depth.js`); monster levels come from `depthLevel(depth)`, never the
