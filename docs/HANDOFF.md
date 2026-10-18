@@ -14,6 +14,34 @@ Contents
 
 ---
 
+## October 18, 2026 — class signatures: a unique build-and-payoff mechanic for 14 classes (branch `feat/grand-sweep`, not committed)
+
+- **What:** in the spirit of the Bard's notation, every class except the Bard and the Astronomer (they keep theirs) gets a
+  signature that charges from ordinary play, is drawn over or behind the hero, and pays off by itself when full.
+  Framework `src/game/signature.js` (dispatcher, `SIGNATURES`, `sigFire` for tests, `G.settings.signatures = false` turns
+  them off); one module per class in `src/game/sigs/` (shared helpers in `common.js`). Hooks: `Player.tryUseSkill`
+  (`sigCast`), `Player.onHit` (`sigHit`), `Player.update` (`sigUpdate`), `combat.kill` (`sigKill`). Signature hits carry
+  `o.sig` and their kills pass `info.sig`, so a payoff never charges itself. `p.sigScale` (Slime Lord) multiplies the
+  hero's draw scale.
+- **The fourteen:** Paladin Halo of Judgement (7 runes, hammer of light, cross beams, consecration). Ranger The Hunt (spirit
+  hawk marks a quarry; 6 feathers, it stoops; quarry kill = Hunter's Focus). Wizard Confluence (fire/frost/storm orbs;
+  3 each = meteor + ice ring + lightning; one orb alone OVERLOADS). Necromancer Soul Harvest (souls stream into a skull
+  lantern; 13 = Danse Macabre skulls, corpse bone spikes, minions healed). Barbarian Bloodlust (hit combo counter; at
+  25/50/100/200/+100 a giant ancestor ghost slams). Dragoon Sky Lances (8 light spears fan behind him like wings;
+  Heaven's Rain + Highwind). Totem Master Spirit Pole (a face per 2 spells by tree; 4 = Great Totem for 8 s). Death
+  Knight Runeblade (6 frost/unholy/blood runes on a floating sword; Runic Obliteration cleave, majority rune decides the
+  rider). Carrion Witch Hex Poppet (pins + hex threads to struck foes, dead foes leave rot pins; 6 = Squeeze). Slime Lord
+  Gelatinous Mass (goo from kills slithers in, he grows up to 40%; Royal Belly Flop + 3 slimelings). Boomerang Knight
+  Trick Shot (8 mini boomerangs; a gold ricochet web that snaps). Lancer Rally the Order (war banner unfurls with Valor
+  from hits, kills and wounds; 5 phantom knights charge + Rallied). Dragon Knight Dragonheart (flame wings grow with heat;
+  a dragon head breathes fire + Wyrmblood). Gunner Bombing Run (marks foes on a radar; 10 marks = biplane drops 8 bombs).
+- **Rates** (auto-play, early depths, payoffs a minute): Ranger ~9, Totem ~7, Wizard/Barbarian/Dragoon ~6, Boomerang/Witch
+  ~5, Lancer ~4, Paladin/DK/Dragon Knight/Gunner ~3, Slime ~2, Necromancer ~1.5. Damage is in units of `power(p)` (the
+  running average of the hero's damaging casts), mostly 6-12x per payoff. Not balance-tested at deep depths
+  (`balance.js` not run).
+- Test: `tools/tests/signatures.js [classes|all] [autoplay secs] [noplay] [noshots]` (charges from casting, showcase
+  shots `sig_<class>_0..3.png`, auto-play). Regression run: `flow`, `mobile`, `skills slime_lord,gunner,carrion_witch` pass.
+
 ## October 18, 2026 — the Castle overworld rebuilt as a moated quadrangular castle (branch `feat/grand-sweep`)
 
 - **Why:** the old wall traced a jagged diagonal path; Bresenham's diagonal steps left cells touching only at corners,
