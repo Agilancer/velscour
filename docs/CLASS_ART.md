@@ -36,9 +36,9 @@ face opening, whether bare body skin is protected, and the output size (~600 KB)
   rejected), plus specks inside it. The crown zone is above the shell and beside its upper half.
 
 Output (generated, never hand-edit), `assets/sprites/gear/<class>/`: `armor.webp` (10 x 8 atlas of frames, lossy
-q90 with lossless alpha), `armor_mask.png`, legacy `helms.webp` / `helms_mask.png`, `gear.json` (frame, feet / head
-top, and bounding boxes); plus `assets/sprites/gear/classes.json`. Legacy helm atlases remain in the generated pack
-for reference, but the game no longer loads or composites them.
+q90 with lossless alpha), `armor_mask.png`, `gear.json` (frame, feet / head top, and bounding boxes, plus the helm metadata); plus
+`assets/sprites/gear/classes.json`. The legacy per-class `helms.webp` / `helms_mask.png` atlases are no longer written
+or shipped (removed October 18, 2026): helmets come from the fitted common/rare atlases.
 
 ### Shared Common and Rare helmet atlases
 `assets/sprites/gear/common_helmets/atlas.png` is a 16-column by 10-row transparent atlas of 192 x 224 cells.
