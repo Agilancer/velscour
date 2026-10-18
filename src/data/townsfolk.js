@@ -1,5 +1,6 @@
-// Town visitor roster: 25 individually generated designs, expanded in play by
-// engine palette swaps rather than duplicate exported character sheets.
+// Herrington Hollow's 100 residents: 25 painted identities plus 75 pre-painted colourway sheets of the first ten
+// (tools/build_townsfolk_pack.py). What they do and say lives in src/game/townlife.js and src/data/townscripts.js.
+import { townFrameCount } from '../game/townsfolkvisuals.js';
 const first=['Alden','Anwen','Bram','Brina','Cedric','Celia','Dain','Della','Eamon','Eira','Fenn','Freya','Gareth','Greta','Hale','Hilda','Ivo','Isolde','Jory','Junia','Kellan','Kelda','Lorin','Lysa','Marek','Maren','Niall','Nessa','Orin','Oona','Perrin','Petra','Quill','Questa','Rowan','Runa','Soren','Sylva','Tobin','Talia','Ulf','Una','Valen','Vera','Wystan','Willa','Yorick','Ysolde','Zeph','Zora'];
 const last=['Ashford','Bell','Cobbler','Dale','Ember','Fletcher','Grove','Hearth','Ironwood','Juniper','Kettle','Loom','Miller','North','Oak','Pike','Quarry','Reed','Stone','Thatcher'];
 const children=['Pip Ashford','Miri Bell','Toma Dale','Elsie Ember','Ned Fletcher','Lottie Grove','Finn Hearth','Ada Loom','Robin Oak','Willa Reed'];
@@ -21,68 +22,18 @@ export const TOWNSFOLK=Object.freeze(Array.from({length:100},(_,i)=>{
   else if(i<90){[name,role,spriteIndex]=royals[i-86];royal=true;}
   else if(i<94){[name,role,spriteIndex]=regular[i-90];regularVisitor=true;}
   else {const n=i-94;role=['beekeeper','fisher','woodcutter','jeweler','porter','village cook'][n];name=`${first[40+n]} ${last[15+n]}`;spriteIndex=spriteForJob(role);}
-  // Small earthy hue nudges only: full-wheel shifts turned clothes and skin-adjacent tones green.
-  const hue=[-16,-9,-4,0,5,10,15][(i*3)%7];
   // Sheets 26-100 are pre-painted colourways of the ten source identities (sheet k shows identity (k-1)%10+1):
-  // ordinary folk wear one of those, so all 100 sheets appear and no runtime recolour is needed.
+  // ordinary folk wear one of those, so all 100 sheets appear.
   const plain=!royal&&!courtier&&!knight&&!regularVisitor&&spriteIndex<=10;
   const ways=plain?Array.from({length:75},(_,k)=>k+26).filter(k=>(k-1)%10+1===spriteIndex):[];
   const turn=wayTurn[spriteIndex]=(wayTurn[spriteIndex]||0)+1;
   const sheet=ways.length&&turn%(ways.length+1)?ways[(turn-1)%ways.length]:spriteIndex;
-  return Object.freeze({id:`townsfolk_${String(i+1).padStart(3,'0')}`,name,role,sprite:'townsfolk',spriteId:`townsfolk_${String(sheet).padStart(3,'0')}`,
-    palette:sheet>25?null:{hue,sat:.84+((i*7)%24)/100,light:((i%5)-2)*.025},child,royal,regular:regularVisitor,courtier,knight,familyId,
-    frame:{w:128,h:192,count:knight?13:11,order:knight?['idle_1','idle_2','idle_3','walk_1','walk_2','dying_1','dead','scared_scream','scared_point','happy','celebrate','attack_1','attack_2']:['idle_1','idle_2','idle_3','walk_1','walk_2','dying_1','dead','scared_scream','scared_point','happy','celebrate']}});
+  const spriteId=`townsfolk_${String(sheet).padStart(3,'0')}`;
+  // who they talk like (townscripts.js BARKS / CHATS tags)
+  const group=child?'kids':royal||courtier?'royal':knight?'knight':/guard|veteran/.test(role)?'guard':/retired|storyteller|midwife|chaplain|priest/.test(role)?'old':'any';
+  const worker=/baker|carter|mason|tanner|woodcutter|carpenter|blacksmith|porter|miller|farmer|stablehand|cobbler|weaver|glassblower/.test(role);
+  return Object.freeze({id:`townsfolk_${String(i+1).padStart(3,'0')}`,name,role,sprite:'townsfolk',spriteId,
+    palette:null,child,royal,regular:regularVisitor,courtier,knight,familyId,group,worker,
+    frame:{w:256,h:192,count:townFrameCount(spriteId)}});
 }));
 
-const places=['the market square','the old well','the north gate','the chapel steps','the orchard lane','the inn yard','the smithy green','the riverside path','the town bridge','the watchtower walk'];
-const details=['under the first frost','as the bells ring vespers','while the rain clears','before the bread ovens open','beneath bright festival ribbons','as the evening watch changes','after a long road home','while lanterns are being lit','during the noon market rush','before dawn breaks'];
-const events=[
- ['royal_visit','Royal Procession','royal','royal','The royal family arrives to greet the town','A courtier calls for room as the banners rise'],
- ['wedding','Wedding Feast','affection','wedding','Two villagers join hands in a town wedding','The fiddlers strike a joyful tune for the newlyweds'],
- ['birth','New Child','celebration','birth','The midwife announces a healthy newborn','Neighbors bring warm broth and a soft blanket'],
- ['birthday','Name Day Party','celebration','party','A family begins a lively name-day party','Children chase ribbons while the musicians play'],
- ['funeral','Town Funeral','grief','funeral','The town gathers to mourn a beloved neighbor','Friends share memories beside a candlelit bier'],
- ['harvest_fair','Harvest Fair','celebration','fair','The harvest fair opens with food stalls and games','A juggler draws a crowd by the cider barrels'],
- ['victory_feast','Victory Feast','celebration','party','The returning patrol is welcomed with a feast','The watch captain raises a cup to those who came home'],
- ['street_fight','Market Brawl','fight','fight','A quarrel spills into a brief market scuffle','Two rivals square off as friends rush to separate them'],
- ['enemy_scouts','Enemy Scouts','alarm','alarm','A lookout spots enemy scouts beyond the walls','The gate watch signals danger and townsfolk hurry indoors'],
- ['siege_warning','Looming Threat','alarm','alarm','Smoke rises beyond the distant road','A messenger warns that a hostile force is gathering'],
- ['returning_knights','Knights Return','celebration','royal','The town knights return from a hard patrol','The crowd cheers as the battered banners come into view'],
- ['lost_child','Lost Child Found','relief','affection','A missing child is found safe near the orchard','The family embraces as the search party lets out a cheer'],
- ['engagement','Betrothal','affection','affection','A pair announces their betrothal to the town','A ring catches the candlelight as the neighbors applaud'],
- ['winter_feast','Winter Feast','celebration','party','The inn hosts a warm winter gathering','A fiddler begins a reel while bowls of stew are passed'],
- ['market_show','Market Performance','happy','celebration','A traveling performer entertains the square','A clever tale earns laughter and a shower of copper coins'],
- ['caravan','Caravan Arrival','happy','celebration','A distant caravan reaches the town at last','Merchants unpack bright cloth and stories from far away'],
- ['healers_call','Healers Needed','grief','alarm','The healer calls for help after a rough night','Neighbors bring clean linen and water to the infirmary'],
- ['storm_damage','Storm Repairs','friendly','celebration','Neighbors gather to mend storm damage','The carpenter and masons organize a willing repair crew'],
- ['monster_sighting','Monster Sighting','alarm','alarm','A creature is seen prowling beyond the outer fields','The watch raises the warning horn while the gate is barred'],
- ['peace_treaty','Truce and Toast','relief','celebration','A tense border truce is celebrated in the square','Old rivals share bread while the watch keeps careful guard'],
-];
-const emotes={royal:'royal',wedding:'affection',birth:'birth',party:'celebration',funeral:'grief',fair:'celebration',fight:'fight',alarm:'alarm',affection:'affection',celebration:'celebration',grief:'grief',relief:'relief',happy:'celebration',friendly:'friendly'};
-export const TOWN_SITUATIONS=Object.freeze(Array.from({length:2000},(_,i)=>{
-  const archetype=events[Math.floor(i/100)],v=i%100,place=places[v%10],detail=details[Math.floor(v/10)],time=details[(v*3+Math.floor(i/100))%10];
-  const [kind,title,mood,emote,intro,beat]=archetype;
-  // One short sentence: it has to fit a speech bubble.
-  // ...three bubble lines at most: a short where and when keep all 2,000 cards distinct
-  const when=['at dawn','at noon','at dusk','in the rain','by lantern light','at the bells','in the frost','on market day','after vespers','at first light'][Math.floor(v/10)];
-  const where=['by the well','in the square','at the gate','by the chapel','near the inn'][(v>>1)%5];
-  const text=`${v%2?beat:intro} ${where} ${when}${kind.includes('alarm')||kind.includes('scout')||kind==='monster_sighting'?'!':'.'}`;
-  const visualMood=emotes[emote]||emote;
-  return Object.freeze({id:`town_event_${String(i+1).padStart(4,'0')}`,kind,title,text,mood,emote:visualMood,
-    actors:kind==='royal_visit'?['royal','courtier']:kind.includes('knight')?['knight']:kind==='wedding'||kind==='engagement'?['adult','child']:kind==='birth'?['midwife','family']:kind.includes('fight')?['knight','adult']:kind.includes('alarm')||kind.includes('scout')?['knight','watch']:['adult','child'],
-    particle:visualMood,attack:kind==='street_fight'});
-}));
-
-const openings=['Did you hear the bell','How fares your household','The road brought a strange tale','I saved you a place','The market was lively','The watch changed early','The baker has fresh loaves','A traveler spoke of','The chapel candles burned late','Your work looks fine','The children found','I saw the royal colors','The river ran high','The inn has room','The smith sang','A raven dropped','The orchard smells of','The old wall needs','The fiddler promised','I brought news from'];
-const replies=['The whole square is talking','All are well, and send their love','We should tell the captain','Then let us share a cup','I traded for a fine ribbon','That explains the hurried patrol','Save one for the gate watch','The elders remember it too','We will light another candle','Thank you; the neighbors helped','They have made a game of it','The banners looked bright at dusk','The ferry rope held through it','There is always room for a friend','It kept the evening cheerful','The children will want to hear','I will walk there after supper','I can bring stone at dawn','The town will gather to listen','I will carry word to the keep'];
-const topics=['royal visit','wedding bells','a newborn child','the harvest fair','a neighbor’s funeral','the missing patrol','enemy torches on the ridge','the market brawl','the winter feast','the new bridge','a lost dog','the caravan','the rain damage','the chapel choir','the old well','the watch captain','the orchard bloom','a knight’s return','the fiddler’s tune','the baker’s new oven'];
-export const TOWN_CONVERSATIONS=Object.freeze(Array.from({length:2000},(_,i)=>{
-  const a=Math.floor(i/100),b=Math.floor(i/5)%20,c=i%5;
-  const ask=['Have you heard about','Any news of','What do you make of','Did you see','Still thinking about'][c];
-  return Object.freeze({id:`town_chat_${String(i+1).padStart(4,'0')}`,lines:[`${ask} ${topics[a]}?`,`${replies[b]}.`]});
-}));
-
-const greetings=['The flour came in before sunrise.','Your boots need a good resole, friend.','The keep bells carry farther on cold mornings.','I saved you a honey cake for the road.','The children have been practicing their song.','The north wall looks handsome in this light.','I saw the royal falcons circling the orchard.','May your next journey bring you home safely.','That old joke gets funnier every winter.','The chapel garden is blooming again.'];
-export function townLine(id,visit,beat=0){const n=TOWNSFOLK.findIndex(p=>p.id===id);return greetings[Math.abs((n*7+visit*11+beat*3)%greetings.length)];}
-export function townEvent(visit,slot=0){return TOWN_SITUATIONS[(visit*37+slot*113)%TOWN_SITUATIONS.length];}
-export function townConversation(a,b,visit,eventIndex=0){const ai=TOWNSFOLK.findIndex(p=>p.id===a.id),bi=TOWNSFOLK.findIndex(p=>p.id===b.id),n=Math.abs(ai*31+bi*17+visit*13+eventIndex*7)%TOWN_CONVERSATIONS.length;return TOWN_CONVERSATIONS[n].lines;}

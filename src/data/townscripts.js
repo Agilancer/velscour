@@ -1,0 +1,206 @@
+// Herrington Hollow's words: conversations, passing remarks, haggling at the shops, adventurers' talk and the lines
+// of the special events. Every line is short enough for a two-line bubble.
+// A line is [speaker, text, emotion?]: speaker 0/1/2 is the cast slot, emotion a key of EMOTIONS (townsfolkvisuals.js).
+// Conversation tags pick who may hold them: any, kids, guard, old, couple, gossip, worker, royal.
+
+export const CHATS = [
+  // ---- gossip and neighbours
+  { tags: ['any'], lines: [[0, 'Did the miller ever pay you back?', 'question'], [1, 'In flour. Damp flour.', 'sad'], [0, 'That man.', 'angry']] },
+  { tags: ['any'], lines: [[0, 'The well water tastes of iron again.', 'think'], [1, 'Better iron than whatever was in it last spring.', 'scared']] },
+  { tags: ['any'], lines: [[0, 'Another hero went through the portal.', 'point'], [1, 'How many came back this month?', 'question'], [0, 'Let\'s not count.', 'sad']] },
+  { tags: ['any'], lines: [[0, 'My hens stopped laying.', 'sad'], [1, 'Mine too. They stare at the portal all night.', 'scared']] },
+  { tags: ['any'], lines: [[0, 'Lovely morning!', 'happy'], [1, 'Is it? The sky\'s the colour of a bruise.', 'think'], [0, 'Lovely bruise, though.', 'laugh']] },
+  { tags: ['any'], lines: [[0, 'I swear that crow follows me.', 'scared'], [1, 'It owes you money?', 'mischief'], [0, 'I owe IT money.', 'sad']] },
+  { tags: ['any'], lines: [[0, 'Fortunato took my last silver.', 'angry'], [1, 'You gambled again?', 'surprised'], [0, 'He said the box was humming!', 'argue']] },
+  { tags: ['any'], lines: [[0, 'Old Mother Wren sold me a "calming tonic".', 'think'], [1, 'And?', 'question'], [0, 'I can hear colours now.', 'surprised']] },
+  { tags: ['any'], lines: [[0, 'Garrick sharpened my bread knife.', 'happy'], [1, 'You can\'t afford a bread knife.', 'question'], [0, 'I can\'t afford bread either.', 'laugh']] },
+  { tags: ['any'], lines: [[0, 'Saw lights in the old ruins.', 'scared'], [1, 'Children with lanterns.', 'think'], [0, 'At three in the morning?', 'panic']] },
+  { tags: ['any'], lines: [[0, 'The roof leaks right over my bed.', 'sad'], [1, 'Move the bed.', 'think'], [0, 'It follows the bed.', 'surprised']] },
+  { tags: ['any'], lines: [[0, 'Bread\'s up a copper again.', 'angry'], [1, 'Blame the wolves on the mill road.', 'think'], [0, 'I blame the baker.', 'mischief']] },
+  { tags: ['any'], lines: [[0, 'They say the dead walk at Depth Nine.', 'scared'], [1, 'The dead walk at Depth One.', 'think'], [0, 'Then why go deeper?', 'question'], [1, 'Better loot.', 'greedy']] },
+  { tags: ['any'], lines: [[0, 'You look tired.', 'question'], [1, 'Someone sang under my window all night.', 'tired'], [0, 'Sorry. I was practising.', 'shy']] },
+  { tags: ['any'], lines: [[0, 'Stevie lifted a cart by himself today.', 'surprised'], [1, 'With the horse still in it?', 'question'], [0, 'The horse looked impressed.', 'laugh']] },
+  { tags: ['any'], lines: [[0, 'Smell that? Fresh bread!', 'hungry'], [1, 'That\'s the tannery.', 'sick'], [0, '...I\'m still hungry.', 'sad']] },
+  { tags: ['any'], lines: [[0, 'Jamie the Curator has a new gem.', 'idea'], [1, 'Is it the one that whispers?', 'scared'], [0, 'They all whisper, dear.', 'think']] },
+  { tags: ['any'], lines: [[0, 'Lily Belle enchanted my spoon.', 'happy'], [1, 'What does it do?', 'question'], [0, 'It refuses to touch soup.', 'sad']] },
+  { tags: ['any'], lines: [[0, 'The portal hummed a tune last night.', 'music'], [1, 'Was it a nice tune?', 'question'], [0, 'It was a funeral march.', 'sad']] },
+  { tags: ['any'], lines: [[0, 'Rain tomorrow, my knee says.', 'think'], [1, 'Your knee said that yesterday.', 'mischief'], [0, 'And was it wrong?', 'proud']] },
+  { tags: ['any'], lines: [[0, 'Durgan\'s forge burned blue today.', 'surprised'], [1, 'He says that\'s good.', 'think'], [0, 'He also says that about burns.', 'scared']] },
+  { tags: ['any'], lines: [[0, 'I\'m thinking of going down there.', 'proud'], [1, 'Into the dungeon? You?', 'surprised'], [0, 'Just to the first step.', 'shy'], [1, 'Bring a lantern.', 'think']] },
+  { tags: ['any'], lines: [[0, 'Have you seen my goat?', 'panic'], [1, 'Brown, one horn, eats hats?', 'question'], [0, 'That\'s her!', 'happy'], [1, 'She ate my hat.', 'angry']] },
+  { tags: ['any'], lines: [[0, 'Zafir says gems remember the light.', 'think'], [1, 'My mother remembers every slight.', 'sad'], [0, 'Different sort of stone.', 'laugh']] },
+  { tags: ['gossip'], lines: [[0, 'Did you hear about the cooper\'s wife?', 'mischief'], [1, 'No! Tell me everything.', 'surprised'], [0, 'Not here. Later.', 'shy']] },
+  { tags: ['gossip'], lines: [[0, 'The innkeeper waters his ale.', 'mischief'], [1, 'Everyone knows.', 'think'], [0, 'Now he waters the water.', 'laugh']] },
+  { tags: ['gossip'], lines: [[0, 'Two suitors for the miller\'s girl!', 'love'], [1, 'Three. The third\'s a poet.', 'mischief'], [0, 'Poor girl.', 'laugh']] },
+  { tags: ['gossip'], lines: [[0, 'Someone left flowers on the hero\'s doorstep.', 'love'], [1, 'Which hero?', 'question'], [0, 'The one who keeps coming back alive.', 'shy']] },
+  { tags: ['gossip'], lines: [[0, 'I heard Fortunato is a duke in disguise.', 'mischief'], [1, 'I heard he\'s three goblins in a coat.', 'think'], [0, 'Why not both?', 'laugh']] },
+  { tags: ['old'], lines: [[0, 'In my day the dungeon was one floor deep.', 'proud'], [1, 'And you walked it uphill both ways.', 'mischief'], [0, 'In the snow!', 'angry']] },
+  { tags: ['old'], lines: [[0, 'My back aches.', 'tired'], [1, 'Rain coming.', 'think'], [0, 'Or the grave.', 'sad'], [1, 'Rain first, I hope.', 'laugh']] },
+  { tags: ['old'], lines: [[0, 'I knew a lad who killed a demon with a spoon.', 'proud'], [1, 'Lily Belle\'s spoon?', 'question'], [0, 'Different spoon.', 'think']] },
+  { tags: ['kids'], lines: [[0, 'Bet you won\'t touch the portal.', 'mischief'], [1, 'Bet I will!', 'proud'], [0, 'Go on then!', 'laugh'], [1, 'Tomorrow.', 'scared']] },
+  { tags: ['kids'], lines: [[0, 'When I grow up I\'ll slay Velscour!', 'proud'], [1, 'You\'re scared of the dark.', 'mischief'], [0, 'I\'ll slay him in daytime.', 'angry']] },
+  { tags: ['kids'], lines: [[0, 'Tag! You\'re it!', 'laugh'], [1, 'No fair, I wasn\'t ready!', 'argue']] },
+  { tags: ['kids'], lines: [[0, 'I found a skeleton finger!', 'celebrate'], [1, 'Can I hold it?', 'question'], [0, 'It\'s holding ME.', 'panic']] },
+  { tags: ['kids'], lines: [[0, 'The hero looked at me!', 'celebrate'], [1, 'The hero looked at a pig too.', 'mischief']] },
+  { tags: ['guard'], lines: [[0, 'Quiet night on the wall.', 'think'], [1, 'Too quiet.', 'scared'], [0, 'You always say that.', 'impatient'], [1, 'And I\'m always right.', 'proud']] },
+  { tags: ['guard'], lines: [[0, 'Saw tracks by the north fence.', 'point'], [1, 'Wolf?', 'question'], [0, 'Wolves don\'t wear boots.', 'scared']] },
+  { tags: ['guard'], lines: [[0, 'Captain wants double watches.', 'impatient'], [1, 'With what men?', 'angry'], [0, 'You, and you again.', 'laugh']] },
+  { tags: ['guard'], lines: [[0, 'Polish your armour, recruit.', 'proud'], [1, 'It\'s rust holding it together.', 'sad']] },
+  { tags: ['couple'], lines: [[0, 'Walk with me to the orchard?', 'love'], [1, 'Only if you carry the basket.', 'mischief'], [0, 'I\'d carry the orchard.', 'love']] },
+  { tags: ['couple'], lines: [[0, 'You forgot my name day.', 'angry'], [1, 'I did not! It\'s... soon.', 'scared'], [0, 'It was Tuesday.', 'argue']] },
+  { tags: ['couple'], lines: [[0, 'I wrote you a poem.', 'shy'], [1, 'Read it!', 'love'], [0, 'Roses are red...', 'shy'], [1, 'Stop there. It\'s perfect.', 'laugh']] },
+  { tags: ['worker'], lines: [[0, 'Need a hand with that beam?', 'question'], [1, 'Need two, and a back.', 'tired']] },
+  { tags: ['worker'], lines: [[0, 'Order\'s due by sundown.', 'impatient'], [1, 'Sundown or the end of days?', 'mischief'], [0, 'Whichever comes first.', 'think']] },
+  { tags: ['worker'], lines: [[0, 'Wagon wheel snapped again.', 'angry'], [1, 'Third one this week.', 'sad'], [0, 'The road eats them.', 'scared']] },
+  { tags: ['royal'], lines: [[0, 'The town looks... rustic.', 'fan'], [1, 'Charmingly so, my lady.', 'gesture'], [0, 'Is that a pig?', 'surprised']] },
+  { tags: ['royal'], lines: [[0, 'Note it, scribe: the people love us.', 'proud'], [1, 'One man threw a turnip, sire.', 'read'], [0, 'Lovingly.', 'think']] },
+];
+
+// One-liners when the hero walks past (by role group; `any` for everyone)
+export const BARKS = {
+  any: [
+    ['Back again? The portal likes you.', 'happy'], ['Mind the puddles, friend.', 'point'], ['Fine weather for dying. I mean, drying.', 'shy'],
+    ['Bring us something shiny!', 'greedy'], ['You smell of crypts.', 'sick'], ['Good luck down there.', 'pray'],
+    ['My cousin went in once. Once.', 'sad'], ['Is it true there\'s a dragon?', 'question'], ['Thank you for keeping us safe.', 'bow'],
+    ['Wipe your boots before the inn.', 'impatient'], ['Heroes eat free at the inn! ...Not really.', 'mischief'], ['Light keep you.', 'pray'],
+  ],
+  kids: [['Are you a REAL hero?', 'celebrate'], ['Can I hold your sword?', 'question'], ['Teach me a spell!', 'wave'], ['Bet I could beat you!', 'mischief']],
+  old: [['In my day heroes wore proper boots.', 'proud'], ['Mind your back, it goes first.', 'tired'], ['I remember when the portal was a well.', 'think']],
+  guard: [['Keep your weapon sheathed in town.', 'proud'], ['Report anything strange.', 'point'], ['All quiet. For now.', 'think']],
+  royal: [['Kneel? No? Very well.', 'proud'], ['You may admire us.', 'fan'], ['The crown thanks you.', 'gesture']],
+  knight: [['Steel and faith, adventurer.', 'proud'], ['We hold the town. You hold the depths.', 'point'], ['Spar later?', 'mischief']],
+};
+
+// A shopper at a vendor: [customer, vendor, customer] lines with emotions (the vendor speaks as slot 1)
+export const SHOPPING = {
+  weapons: [
+    [['How much for the axe?', 'haggle'], ['More than you have.', 'proud'], ['I\'ll come back.', 'sad']],
+    [['Can you make it sharper?', 'question'], ['It cuts the wind already.', 'proud'], ['Then I\'ll take two!', 'celebrate']],
+    [['I need a sword for my son.', 'think'], ['Wooden, then. For now.', 'laugh'], ['He\'ll be thrilled.', 'happy']],
+  ],
+  armor: [
+    [['Will this stop a ghoul?', 'question'], ['It\'ll make it think twice.', 'proud'], ['Ghouls think?', 'scared']],
+    [['Does it come in blue?', 'question'], ['It comes in bloodstains.', 'mischief'], ['...I\'ll take it.', 'shy']],
+    [['My helmet\'s dented.', 'sad'], ['So was its last owner.', 'think'], ['Not encouraging, Stevie.', 'angry']],
+  ],
+  upgrade: [
+    [['Can you mend my plough?', 'question'], ['I mend swords, not ploughs.', 'impatient'], ['Pretend it\'s a sword.', 'mischief']],
+    [['Is it supposed to glow?', 'surprised'], ['Only for a week.', 'think'], ['And after?', 'scared']],
+  ],
+  enchant: [
+    [['Can you make my cat love me?', 'love'], ['No magic is that strong.', 'think'], ['Worth asking.', 'sad']],
+    [['What does this rune do?', 'question'], ['It hums when you lie.', 'mischief'], ['It\'s humming now.', 'scared']],
+  ],
+  alchemist: [
+    [['Something for a cough?', 'sick'], ['Red, then purple, never orange.', 'think'], ['What does orange do?', 'question']],
+    [['Do you have love potions?', 'shy'], ['I have honesty potions. Worse.', 'mischief'], ['Never mind!', 'panic']],
+    [['My tonic made me float.', 'surprised'], ['That\'s the good batch!', 'celebrate'], ['I was in the river!', 'angry']],
+  ],
+  gems: [
+    [['Is this ruby real?', 'question'], ['Everything is real, friend.', 'think'], ['That\'s not a yes.', 'impatient']],
+    [['Three of these make one better?', 'question'], ['Three of anything make one better.', 'proud'], ['Even husbands?', 'mischief']],
+  ],
+  socket: [
+    [['Can you put a hole in my shield?', 'question'], ['Carefully, yes.', 'think'], ['Please be careful.', 'scared']],
+    [['What\'s this gem do?', 'question'], ['Sit in a socket and shine.', 'proud'], ['Like my uncle.', 'laugh']],
+  ],
+  gamble: [
+    [['One box, please!', 'greedy'], ['Ooh, a lucky one!', 'celebrate'], ['It\'s... a sock.', 'sad']],
+    [['Is this game fair?', 'question'], ['As fair as fate!', 'gesture'], ['So no.', 'angry']],
+    [['I feel lucky today.', 'greedy'], ['Fortune adores you!', 'cheer'], ['Then why am I poorer?', 'argue']],
+  ],
+};
+
+// Adventurers at their camp or passing through (class-agnostic; speaker 0 and 1)
+export const ADVENTURER_CHATS = [
+  { lines: [[0, 'Depth twelve took my left boot.', 'sad'], [1, 'Just the boot?', 'question'], [0, 'And the foot in it.', 'laugh']] },
+  { lines: [[0, 'Saw a chest with teeth.', 'scared'], [1, 'You opened it anyway.', 'think'], [0, 'It had gold teeth!', 'greedy']] },
+  { lines: [[0, 'Who\'s buying the round?', 'question'], [1, 'Whoever dies last.', 'mischief'], [0, 'So nobody.', 'laugh']] },
+  { lines: [[0, 'That guardian nearly had me.', 'tired'], [1, 'You ran screaming.', 'mischief'], [0, 'Tactically screaming.', 'proud']] },
+  { lines: [[0, 'Heard a new hero\'s in town.', 'point'], [1, 'Looks tough.', 'think'], [0, 'Looks lucky.', 'mischief']] },
+  { lines: [[0, 'Map says go left.', 'read'], [1, 'Map\'s upside down.', 'impatient'], [0, 'Then go right!', 'idea']] },
+  { lines: [[0, 'I\'m retiring after this run.', 'proud'], [1, 'You said that forty runs ago.', 'laugh']] },
+  { lines: [[0, 'Velscour waits at the bottom.', 'scared'], [1, 'Let him wait.', 'proud'], [0, 'I\'ll bring a chair.', 'laugh']] },
+];
+export const ADVENTURER_BARKS = [
+  ['Seen anything worth killing?', 'question'], ['The deep floors pay better.', 'greedy'], ['Watch the bone traps on six.', 'point'],
+  ['Race you to the next depth!', 'mischief'], ['Share a fire, friend?', 'wave'], ['I hear the boss rooms reset.', 'think'],
+];
+
+// Lines spoken by event casts: key -> list of beats; each beat [castRole, text, emotion]
+export const EVENT_LINES = {
+  wedding: {
+    title: 'A Wedding at the Well', intro: 'Bells! There\'s a wedding at the well!',
+    vows: [['priest', 'Do you take each other, come plague or portal?', 'gesture'], ['groom', 'I do!', 'love'], ['bride', 'I do. Obviously.', 'love'],
+      ['priest', 'Then kiss, before the bread goes stale!', 'celebrate']],
+    crowd: [['Kiss her!', 'cheer'], ['Long life!', 'cheer'], ['I\'m not crying!', 'cry'], ['Save me some cake!', 'hungry'], ['Huzzah!', 'celebrate']],
+  },
+  royal: {
+    title: 'The Royal Progress', intro: 'Make way! Make way for the King!',
+    beats: [['herald', 'His Majesty, King Edric of the Hollow!', 'gesture'], ['king', 'Good people! We are... here.', 'proud'],
+      ['queen', 'How quaint. Is that mud?', 'fan'], ['king', 'Taxes are lowered! Slightly!', 'celebrate'], ['princess', 'Can we see the portal?', 'question'],
+      ['king', 'Absolutely not.', 'angry']],
+    crowd: [['Long live the King!', 'cheer'], ['Lower them more!', 'argue'], ['The princess waved at me!', 'love'], ['God save the Queen!', 'bow']],
+  },
+  funeral: {
+    title: 'A Funeral Procession', intro: 'Hush now. They\'re bringing old Hale home.',
+    beats: [['priest', 'He went into the dark so we would not.', 'pray'], ['mourner', 'He owed me two coppers.', 'cry'],
+      ['priest', 'Light keep him.', 'pray'], ['mourner', 'Light keep him.', 'grief']],
+    crowd: [['Light keep him.', 'pray'], ['He was kind to my children.', 'cry'], ['Too young.', 'grief']],
+  },
+  fair: {
+    title: 'Harvest Fair', intro: 'The Harvest Fair is open! Come and see!',
+    beats: [['crier', 'Pumpkins the size of goblins!', 'celebrate'], ['merchant', 'Fresh pies! Only slightly haunted!', 'haggle'],
+      ['musician', 'A reel! Everyone dance!', 'music']],
+    crowd: [['I\'ll take three pies!', 'greedy'], ['Look at that marrow!', 'surprised'], ['Dance with me!', 'dance'], ['Best fair in years!', 'happy']],
+  },
+  brawl: {
+    title: 'A Market Brawl', intro: 'Fight! Fight by the stalls!',
+    beats: [['a', 'You sold me a cursed turnip!', 'argue'], ['b', 'It was blessed when I sold it!', 'argue'], ['a', 'Say that again!', 'angry'],
+      ['guard', 'Break it up, the pair of you!', 'alarm'], ['b', 'He started it!', 'point'], ['guard', 'And I\'m finishing it. Home!', 'angry'],
+      ['a', 'Sorry, Bram.', 'shy'], ['b', 'Sorry. Pint later?', 'happy']],
+    crowd: [['Hit him!', 'cheer'], ['Not the turnips!', 'panic'], ['My money\'s on the baker!', 'greedy']],
+  },
+  tourney: {
+    title: 'Knights\' Sparring Match', intro: 'The knights are sparring in the square!',
+    beats: [['k1', 'Ready yourself, Sir!', 'proud'], ['k2', 'Always ready, Dame.', 'proud'], ['k1', 'Hah! First touch to me!', 'celebrate'],
+      ['k2', 'A lucky blow.', 'angry'], ['k2', 'Match to me, I think.', 'proud'], ['k1', 'Well fought. Ale?', 'happy']],
+    crowd: [['Go on, Sir Aldric!', 'cheer'], ['Dame Maeve! Dame Maeve!', 'cheer'], ['Ooh, that had to hurt!', 'surprised'], ['Again!', 'celebrate']],
+  },
+  alarm: {
+    title: 'Monster Sighting!', intro: 'Something in the trees! Everyone inside!',
+    beats: [['watch', 'Beast at the treeline! Bar the doors!', 'alarm'], ['knight', 'With me! Shields up!', 'fight'],
+      ['knight', '...It ran off. All clear!', 'proud'], ['watch', 'All clear! Come out, all clear!', 'happy']],
+    crowd: [['Run!', 'panic'], ['My children!', 'panic'], ['Not again!', 'scared'], ['Is it gone?', 'question'], ['Thank the knights!', 'cheer']],
+  },
+  birth: {
+    title: 'A New Arrival', intro: 'It\'s a baby! A healthy baby!',
+    beats: [['midwife', 'A strong little one, loud as a bell!', 'celebrate'], ['parent', 'I\'m a parent! Me!', 'cry'],
+      ['midwife', 'Go on, tell everyone.', 'happy'], ['parent', 'EVERYONE! A BABY!', 'cheer']],
+    crowd: [['Bless the child!', 'celebrate'], ['What\'s the name?', 'question'], ['Another mouth at the inn!', 'laugh'], ['Wonderful!', 'happy']],
+  },
+  party: {
+    title: 'A Name-Day Party', intro: 'Name-day games! Everyone\'s invited!',
+    beats: [['child', 'I\'m seven! SEVEN!', 'celebrate'], ['parent', 'Seven years of noise.', 'laugh'], ['child', 'Can I have a sword?', 'question'],
+      ['parent', 'You can have a cake.', 'happy']],
+    crowd: [['Happy name day!', 'cheer'], ['Seven! So old!', 'laugh'], ['Is there cake?', 'hungry']],
+  },
+  caravan: {
+    title: 'A Caravan Arrives', intro: 'A caravan! Traders from the south!',
+    beats: [['trader', 'Silks! Spices! Bottled thunder!', 'haggle'], ['trader', 'Exotic goods for brave folk!', 'gesture'],
+      ['buyer', 'What does bottled thunder do?', 'question'], ['trader', 'Opens loudly.', 'mischief']],
+    crowd: [['Look at the cloth!', 'surprised'], ['I\'ll trade my goat for it!', 'greedy'], ['Real pepper!', 'happy']],
+  },
+  wounded: {
+    title: 'A Hero Returns, Barely', intro: 'Someone came out of the portal! Get the healer!',
+    beats: [['hurt', 'Depth... thirty... so many teeth...', 'hurt'], ['healer', 'Lie still. Breathe.', 'think'],
+      ['healer', 'Bandages! Hot water!', 'alarm'], ['hurt', 'Am I... alive?', 'question'], ['healer', 'Barely. Lie still.', 'happy']],
+    crowd: [['Is he dead?', 'scared'], ['Poor soul.', 'sad'], ['Give them room!', 'point'], ['The portal took his boots!', 'surprised']],
+  },
+  lost_child: {
+    title: 'The Lost Child', intro: 'Has anyone seen my little one?',
+    beats: [['parent', 'Pip! PIP! Where are you?', 'panic'], ['watch', 'We\'ll search the orchard.', 'point'],
+      ['child', 'I was chasing a frog!', 'celebrate'], ['parent', 'Oh thank the Light!', 'cry'], ['parent', 'You\'re grounded forever.', 'angry']],
+    crowd: [['Found! The child\'s found!', 'cheer'], ['Thank goodness!', 'happy'], ['Check the well!', 'scared']],
+  },
+};

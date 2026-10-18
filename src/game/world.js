@@ -127,6 +127,7 @@ export class World {
       if (c.team === 'enemy' && !c.awake && dist2(c.x, c.y, ax, ay) > 26 * 26) continue;
       c.update(dt);
     }
+    if (this.townLife) this.townLife.update(dt);
     for (const n of this.npcs) n.update && n.update(dt);
     this.openDoors();
     for (let i = this.hazards.length - 1; i >= 0; i--) {

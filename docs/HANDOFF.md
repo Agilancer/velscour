@@ -14,6 +14,48 @@ Contents
 
 ---
 
+## October 18, 2026 — Herrington Hollow comes alive: re-cut townsfolk, emotions, town life director (branch `feat/grand-sweep`)
+
+- **Arrival:** the hero enters town 3.2 tiles down the portal's road toward the square (`enterTown` in game.js), every
+  visit including a new game. The storage chest stays by the well.
+- **Sprites re-cut** (`tools/build_townsfolk_pack.py`): poses are found as connected alpha components and labelled by
+  hand (`SPECS`), so no pose is clipped or carries a neighbour's limbs; one scale per character from its idle poses;
+  hips/feet anchored. Cells are now **256 x 192** (the dying/dead/sword poses fit). Extras: knights `attack_1/2`, the
+  steward `gesture`, the court lady `fan`/`shy`, the scribe `read`. Colourways 26-100 are rebuilt from the clean cuts
+  (dyed cloth and dark browns shift; skin stays). No runtime recolour any more (`palette: null`). Review sheet:
+  `art-review/townsfolk-cuts.jpg`.
+- **Animation** (`src/game/townsfolkvisuals.js`): frames by name (`townFrameOf`), a four-beat walk (stride, pass,
+  stride, pass), a run, idle weight shifts, and **45 emotions** (pose + motion + bubble icon): happy, laugh, cheer,
+  love, sad, cry, grief, pray, angry, argue, scared, panic, alarm, surprised, think, question, idea, proud, impatient,
+  shy, fan, read, gesture, music, dance, drunk, sleep (lying + zzz), work, haggle, greedy, fight, spar, hurt, dead, ...
+  Motion styles (`townMotion`): squash/stretch walking and running with a lean, hop, bounce, laugh, sway, dance, slump,
+  sob, shake, tremble, jolt, tilt, puff, tap, stagger, snore, work, lunge, bow.
+- **Emotion bubbles** (`src/gfx/emotes.js`): 35 hand-placed 11x11 pixel icons in an outlined parchment bubble (thought
+  bubbles for think/question/idea/zzz/...), baked once, drawn pixel-crisp with a pop-in and shrink-out. Shown for the
+  first ~2.8 s of an emotion and never under a speech bubble.
+- **Speech** (`townspeech.js`): 11 px, two lines max, pops in and fades; dodges only other bubbles and the hero.
+  Townsfolk names show only for the one nearest the hero (vendors keep theirs).
+- **Town director** (`src/game/townlife.js`, `world.townLife`, ticked by `World.update`): scenes are generator
+  functions (`yield` seconds or a condition; helpers `go`, `line`, `say`, `feel`, `face`, `hide`/`show`). Agents walk
+  `map.findPath` routes. Everyday routines: wander, shop at a vendor (3-line haggles, the vendor answers), gossip
+  (tag-matched chats), work at workbenches/anvils/troughs, nap on benches or under trees, go home (they vanish indoors
+  and come out later; a third start indoors so the square fills in), guard patrols, kids playing tag, kids running up
+  to the hero. Set pieces built from scatter: an adventurers' camp (campfire, bedrolls, 2-3 visiting adventurers drawn
+  from the class portraits, who chat and shop), a hawker's stall, a busker with listeners, a picnic, washing at the well.
+  Procedural props in `src/gfx/townprops.js` (campfire, candle, bunting, bedroll); scene props go on the visit's own copy
+  of `world.props`.
+- **Special events on ~25% of visits** (`TOWN_EVENT_CHANCE`, seeded per hero and visit; `G.townEventForce = kind | null`
+  forces one for tests): wedding, royal progress, funeral, harvest fair, market brawl, knights' sparring, monster alarm
+  (folk run indoors), birth, name-day party, caravan, a wounded hero from the portal, the lost child. Each is cast,
+  staged, scripted and ends by handing its people back to their routines. Lines: `src/data/townscripts.js` (all new:
+  57 conversations, barks per group, haggles per vendor, adventurer talk, event beats).
+- **Bubble budget:** silence for the first 5.5 s of a visit; at most 2 ambient bubbles (3 in an event) within 12 tiles
+  of the hero; a 1.5-4 s gap after each ambient line near him; a line that can't get a slot within a few seconds is
+  acted out silently.
+- Removed: the 2,000 generated event cards and conversations, `townLine/townEvent/townConversation`, `drawTownMood`.
+- Tests: `tools/tests/townlife.js` (new), `townsfolk.mjs`, `town_visuals.mjs`, `villagers.js`, `town_sprite_display.js`
+  (updated to the new contract).
+
 ## October 17, 2026 — the Arcane Sorcerer is now the Astronomer (branch `feat/grand-sweep`)
 
 - **Rename, id kept.** The class id stays `arcane_sorcerer` (saves, sprites, gear packs, `CLASS_IDS`); only the name,

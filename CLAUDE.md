@@ -26,6 +26,8 @@ node tools/tests/data_check.mjs                    # skill data sanity check, no
 python tools/tests/chatgpt_art.py                  # ChatGPT art kits (and Grim Nocturne pixel-locked imports) round-trip, no browser
 node tools/tests/lancer_shields.js                 # four 8-angle Lancer turntables, sprite alpha/frames, in-front/behind QA
 node tools/tests/town.js [seeds]                   # random towns: vendors/portal reachable + screenshots per seed
+node tools/tests/townlife.js [events|none]         # town life: arrival by the portal, quiet start, bubble budget, ~25% events, every event, emotion sheet
+node tools/tests/townsfolk.mjs                      # townsfolk sheets (256x192 cells), roster, scripts fit their bubbles, no browser
 node tools/tests/rings.js                          # ring augments in a live dungeon, skill mastery, ring/forge UI shots
 node tools/tests/flow.js                           # town -> portal -> boss -> exit -> depth 2 -> death -> reload
 node tools/tests/stash.js                          # town storage chest: 300 slots, store/take, auto-play stashing
@@ -128,7 +130,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Overworld scenarios
   (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. The Bard's notes, measure, jingles, sampler and Cadences (`src/game/bard.js`, `src/game/bardmusic.js`, `src/gfx/notation.js`, `src/data/notation.js`, `src/data/jingles.js`, `src/core/sampler.js`): run `bard.js`. The Astronomer (class id `arcane_sorcerer`; `src/game/astronomer.js`, `src/gfx/cosmos.js`): run `astronomer.js`. Raid bosses
   (`src/game/raid.js`, every 5th depth): run `raid.js` (and `raid_sigs.js` for `src/game/raidsigs.js`). Rings, augments or skill mastery (`src/data/rings.js`,
-  `src/game/augments.js`): run `rings.js`. The town generator (`src/world/town.js`): run `town.js` with a few seeds.
+  `src/game/augments.js`): run `rings.js`. The town generator (`src/world/town.js`): run `town.js` with a few seeds. Town life (`src/game/townlife.js`, `src/data/townscripts.js`, `src/game/townsfolkvisuals.js`, `src/gfx/emotes.js`): run `townlife.js`, `townsfolk.mjs` and `town_visuals.mjs`; rebuild the townsfolk sheets with `python tools/build_townsfolk_pack.py`.
 - Velscour waits at `FINAL_DEPTH` (500, `src/data/depth.js`); monster levels come from `depthLevel(depth)`, never the
   raw depth.
 
