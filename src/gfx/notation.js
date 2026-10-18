@@ -375,18 +375,14 @@ export function scoreWorld(p, at) {
   return [p.x + d, p.y - d, by - sy];
 }
 export class ScoreFx {
-  constructor(p) { this.p = p; this.layer = 'top'; this.t = 0; this.lift = 0; }
-  update(dt) {
-    this.t += dt;
-    const sc = this.p.score; // the performed bar takes the staff's place until the next bar has notes, then floats above
-    if (sc) this.lift += ((sc.notes.length ? 1 : 0) - this.lift) * Math.min(1, dt * 12);
-    return !this.p.dead && this.p.score && this.p.world && G.player === this.p;
-  }
+  constructor(p) { this.p = p; this.layer = 'top'; this.t = 0; }
+  update(dt) { this.t += dt; return !this.p.dead && this.p.score && this.p.world && G.player === this.p; }
   draw(ctx) {
     const p = this.p, sc = p.score;
     if (!sc || (p.world && p.world.kind === 'town') || G.settings.bardScore === false) return;
-    const { u, w, x, top } = scoreLayout(p), J = jingleOf(sc), pl = sc.play, playing = pl && !pl.done && pl.w === p.world;
-    const base = playing ? Math.min(1, this.lift * 2) : 1;   // hidden under the performed bar while that sits in its place
+    const { u, w, x, top } = scoreLayout(p), J = jingleOf(sc), pl = sc.play, playing = pl && !pl.done && pl.w === p.world && pl.w.hazards.includes(pl);
+    // one song at a time: while a bar is performed it takes the staff's place and nothing new is written
+    const base = playing ? 0 : 1;
     const busy = sc.notes.length || sc.flash > 0 || sc.discord > 0, a = busy ? 1 : 0.5;
     const shake = sc.discord > 0 ? Math.sin(this.t * 70) * 2.5 * sc.discord : 0;
     const col = sc.discord > 0 ? '#ff5050' : HARM[Math.min(5, sc.harmony)];
@@ -411,8 +407,8 @@ export class ScoreFx {
     }
     // the measure being performed floats above, read by a playhead
     if (playing) {
-      const [phi, plo] = measureSpan(pl.clef, pl.notes), k = Math.min(1, pl.t / 0.12), out = Math.max(0, Math.min(1, (pl.end + 0.45 - pl.t) / 0.45));
-      const ptop = top + this.lift * (cy0 - 5 - (4 * u + Math.max(0, -plo) * u / 2 + 1.6 * u) - top) - this.lift * Math.min(pl.t, pl.end) * 3, beat = pl.t / pl.spb;
+      const [phi, plo] = measureSpan(pl.clef, pl.notes), k = 1, out = Math.max(0, Math.min(1, (pl.end + 0.35 - pl.t) / 0.25));
+      const ptop = top, beat = pl.t / pl.spb;
       const py0 = ptop - Math.max(0, phi - 8) * u / 2 - (G.touch ? 1.4 * u : 3.6 * u), py1 = ptop + 4 * u + Math.max(0, -plo) * u / 2 + 1.4 * u;
       ctx.globalAlpha = 0.75 * k * out; ctx.fillStyle = '#0a0610'; ctx.fillRect(x - 4, py0, w + 8, py1 - py0);
       ctx.globalAlpha = k * out;

@@ -8,7 +8,8 @@
 // The music: each bar is written from one of 300 jingles (data/jingles.js). Every note sounds as it is written, on
 // its skill's register (a piano octave or the harpsichord, data/notation.js REGISTERS), pitched from the tune at its
 // beat (bardmusic.js); a Cadence performs the bar in the jingle's tempo while a playhead reads the staff, and the
-// gameplay rides the music (treble: each note launches as it plays; bass: the chord lands with the tonic).
+// gameplay rides the music (treble: each note launches as it plays; bass: the chord lands with the tonic). One song
+// at a time: nothing is written while a bar is performed.
 import { G } from '../state.js';
 import { rand, chance, TAU, angleTo, dist } from '../core/util.js';
 import { sfx, audioCtx } from '../core/audio.js';
@@ -73,7 +74,17 @@ function sing(sc, note) {
   for (const h of note.heads) playNote(inst, h.midi, { at: t + (h.at - note.at) * spb, dur: Math.max(0.12, each), vel: 0.6 });
 }
 
-/** A Bard skill was cast: write its note into the measure (called by Player.tryUseSkill). */
+const TAIL = 0.35;   // seconds the landing chord rings before the next bar can be written
+/** Is a bar being performed? One song at a time: nothing is written until it has landed. */
+export function bardPerforming(p) {
+  const pl = p.score && p.score.play;
+  return !!pl && !pl.done && pl.w === p.world && pl.w.hazards.includes(pl);
+}
+
+/**
+ * A Bard skill was cast: write its note into the measure (called by Player.tryUseSkill). While a bar is performed
+ * the skill still works but writes nothing (a clef still changes the key of the next bar).
+ */
 export function bardCompose(p, sk, L) {
   const g = bardNoteFor(p, sk);
   if (!g || !p.world || p.world.kind === 'town') return;
@@ -82,12 +93,14 @@ export function bardCompose(p, sk, L) {
   if (N.clef) {
     if (sc.key !== N.clef) { sc.key = N.clef; floatText(p.x, p.y, 92, N.clef === 'bass' ? 'Bass Clef' : 'Treble Clef', TIERS[tier].staff, 11); }
     sc.flash = Math.max(sc.flash, 0.5);
-    if (instReady('piano')) { // a rolled tonic chord in the clef's octave
+    if (instReady('piano') && !bardPerforming(p)) { // a rolled tonic chord in the clef's octave
       const J = JINGLES[sc.jingle], base = N.clef === 'bass' ? 48 : 60, t = audioNow();
       chordPcs(J.key, { root: 0 }).forEach((pc, i) => playNote('piano', base + pc, { at: t + i * 0.045, dur: 0.5, vel: 0.45 }));
     }
     return;
   }
+  if (bardPerforming(p)) return;
+  if (!sc.notes.length && sc.play) stopVoices(sc.play.voices, 0.25); // the last landing chord gives way to the new song
   if (sk.m.dacapo && sc.notes.length) cadence(p, sc, 1.5, false, 'Da Capo!');
   if (sc.beats + N.beats > MEASURE + EPS) {
     if (rubato(p)) cadence(p, sc, 1, true, 'Rubato!');
@@ -164,7 +177,7 @@ class Performance {
     if (this.done) return false;
     this.t += dt;
     while (this.i < this.ev.length && this.ev[this.i].t <= this.t) this.ev[this.i++].fn();
-    if (this.t > this.end + 0.5) { this.done = true; return false; }
+    if (this.t > this.end + TAIL) { this.done = true; return false; }
     return true;
   }
   /** A new cadence cuts this one short: what was still to come happens now, the music fades. */

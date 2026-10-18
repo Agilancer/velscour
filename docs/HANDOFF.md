@@ -117,13 +117,14 @@ The user's ask: get past depths 150-160 without dying and resetting 30+ times; a
   sound at once on the skill's register. A Cadence **performs** the bar (`Performance`, `bardArrangement`): every head at
   its beat in the jingle's tempo, the chord's root + fifth in the bass where it changes, then the tonic chord lands on
   beat 4 (or after a part-filled Da Capo bar). Gameplay rides it: treble-key notes launch as the playhead reaches them,
-  the bass-key chord AoE lands with the tonic. A new Cadence flushes the previous performance (its remaining notes fire
-  at once, its audio fades). A Discord is a piano cluster.
+  the bass-key chord AoE lands with the tonic. **One song at a time**: while a bar is performed (until 0.35 s after the
+  landing, `bardPerforming`) casts still work but write nothing (a clef still sets the next bar's key), and the first note
+  of the next bar fades the landing chord. Auto-play gets ~8-10 Cadences a minute (was ~20). A Discord is a piano cluster.
 - **Engraving** (`drawMeasure` in `gfx/notation.js`): clef, key signature, 4/4, notes at their true pitch for the clef
   (`sc.key`; treble bottom line E4, bass G2), ledger lines, accidentals against the key signature and earlier ones in the
   bar, stems (up below the middle line), flags, straight beams, triplet 3s, rests on their lines, proportional spacing.
-  The performed bar takes the staff's place (and floats above once the next bar has notes) with a playhead and the
-  jingle's name; notes glow as they sound.
+  The performed bar takes the staff's place (only one staff is ever shown) with a playhead and the jingle's name;
+  notes glow as they sound.
 - **Songbook** (`tools/songbook.html`): keyboard synth (C3-C5, tracker keys) and a sequencer that writes any jingle in a
   chosen register and rhythm and plays it with the playhead. Serve the repo root and open `/tools/songbook.html`.
 - Tests: `tools/tests/bard.js` now also checks the 300 jingles (distinct, rule-clean), engraves 12 of them in every glyph

@@ -40,11 +40,11 @@ export function bardArrangement(J, notes, clef = 'treble', land = MEASURE) {
     }
   }
   const ton = chordPcs(J.key, { root: 0 }), R = REGISTERS[lastReg], ln = degNote(J.key, J.land), big = clef === 'bass';
-  add('piano', bass + ton[0], land, 3, big ? 0.95 : 0.78, 1);
-  add('piano', bass + ton[0] + ((ton[2] - ton[0] + 12) % 12), land, 3, 0.5, 1);
-  if (big && bass === 48) add('piano', 36 + ton[0], land, 3, 0.8, 1);
-  for (const pc of ton) add('piano', 60 + pc, land, 2.6, 0.5, 1);
-  add(R.inst, 12 * (R.oct + 1) + ln.m, land, 2.8, 0.92, 1);
-  if (R.inst !== 'harpsichord') add('harpsichord', 60 + ton[0], land, 2, 0.42, 1);
+  add('piano', bass + ton[0], land, 1.6, big ? 0.95 : 0.78, 1);
+  add('piano', bass + ton[0] + ((ton[2] - ton[0] + 12) % 12), land, 1.6, 0.5, 1);
+  if (big && bass === 48) add('piano', 36 + ton[0], land, 1.6, 0.8, 1);
+  for (const pc of ton) add('piano', 60 + pc, land, 1.5, 0.5, 1);
+  add(R.inst, 12 * (R.oct + 1) + ln.m, land, 1.6, 0.92, 1);
+  if (R.inst !== 'harpsichord') add('harpsichord', 60 + ton[0], land, 1.4, 0.42, 1);
   return ev;
 }
