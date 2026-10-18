@@ -16,6 +16,7 @@ const { openGame, report } = require('./harness');
     const { createOverworldScenario, SCENARIOS } = await import('/src/game/overworld.js');
     const { hit } = await import('/src/game/combat.js');
     await (await import('/src/gfx/castle.js')).loadCastlePack();
+    await (await import('/src/gfx/darkforest.js')).loadDarkForestTrees();
     await (await import('/src/gfx/seaofsand.js')).loadSeaOfSandPack();
     const dt = 1 / 15, out = [], bad = [];
     // One bot step: kill what is in reach, pick the objective a player would head for, walk the map path to it.
@@ -42,7 +43,8 @@ const { openGame, report } = require('./harness');
       const biome = BIOME_BY_ID[biomeId];
       for (let id = 0; id < count; id++) {
         game.buildDungeon(19, biome);
-        const W = G.world, P = G.player, gen = generateOverworld(19, biome, seed);
+        // the Castle places its shrine and sites by scenario (world/castleworld.js): use a seed that rolls this one
+        const W = G.world, P = G.player, gen = generateOverworld(19, biome, biomeId === 'castle' ? ((35 * seed + id) ^ 19) >>> 0 : seed);
         W.map = gen.map; W.creatures = W.creatures.filter((c) => c === P || c.team === 'player');
         W.portals = W.portals.slice(0, 2); W.npcs = []; W.overworldScenario = null; W.rebuildGrid?.();
         P.x = gen.shrine[0] + 1; P.y = gen.shrine[1] + 1;

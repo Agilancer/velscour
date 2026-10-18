@@ -16,6 +16,7 @@ import { drawTownProp, TOWN_PROP_KINDS } from '../gfx/townprops.js';
 import { drawTownSpeech } from './townspeech.js';
 import { enemyImage } from '../core/enemyart.js';
 import { drawLootLabels } from './loot.js';
+import { castleTileDressing, drawCastleParticles, drawCastleWater } from '../gfx/castleground.js';
 import { drawRim, RIM } from './creature.js';
 
 let lightCanvas = null, glowCanvas = null, vignette = null, vigKey = '';
@@ -123,6 +124,7 @@ function transitionSprite(color, size) {
 function buildTransitionParticles(world) {
   if (world.transitionParticles) return world.transitionParticles;
   const { map } = world, particles = [];
+  if (map.castleMat) return (world.transitionParticles = particles);   // the Castle dresses its own seams (gfx/castleground.js)
   const addEdge = (x, y, variant, nx, ny, nextVariant, x1, y1, x2, y2, salt) => {
     if (map.t[ny * map.w + nx] !== 1) return;
     const a = floorMaterial(world, variant), b = floorMaterial(world, nextVariant);
@@ -495,6 +497,7 @@ function drawFloorTiles(ctx, world, x0, y0, x1, y1, force) {
       ctx.drawImage(f.img, f.sx, f.sy, f.w, f.h, px - HW - 0.6, py - 0.6, TW + 1.2, TH + 1.2);
       const gr = gritAt(world, f, map.v[i], tx, ty, force);
       if (gr) ctx.drawImage(gr, px - HW, py);
+      if (map.castleMat) castleTileDressing(ctx, world, tx, ty, px, py, floorEntry);
     }
   }
 }
@@ -525,6 +528,7 @@ function drawFloors(ctx, world, vr) {
         if (pt.x < wx - 4 || pt.x > wx + CW + 4 || pt.y < wy - 4 || pt.y > wy + CW + 4) continue;
         g.drawImage(transitionSprite(pt.color, pt.size), pt.x - pt.size / 2, pt.y - pt.size / 2);
       }
+      if (world.map.castleMat) drawCastleParticles(g, world, wx, wy);
       fc.map.set(key, c);
       if (fc.map.size > CHUNK_MAX) fc.map.delete(fc.map.keys().next().value);
     } else if (c) { fc.map.delete(key); fc.map.set(key, c); } // LRU touch
@@ -564,6 +568,7 @@ export function renderWorld(ctx, world) {
   const ty1 = clamp(Math.ceil(Math.max(...corners.map((c) => c[1]))) + 1, 0, map.h - 1);
 
   drawFloors(ctx, world, vr);
+  if (map.castleMat) drawCastleWater(ctx, world, vr, G.time, G.touch);
   ctx.imageSmoothingQuality = hq;
   drawDecals(ctx, vr);
   for (const c of world.corpses) {
@@ -760,6 +765,15 @@ export function renderWorld(ctx, world) {
     }
   }
   if (q !== hq) ctx.imageSmoothingQuality = hq;
+  if (G.debugWalk) {
+    // test shots only: blocked tiles red and the tiles a test points at (G.debugMarks) cyan, to check art against collision
+    const tile = (tx, ty, c) => {
+      const px = (tx - ty) * HW, py = (tx + ty) * HH;
+      ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + HW, py + HH); ctx.lineTo(px, py + TH); ctx.lineTo(px - HW, py + HH); ctx.fill();
+    };
+    for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) if (map.block[ty * map.w + tx]) tile(tx, ty, 'rgba(255,0,0,0.22)');
+    for (const [tx, ty] of G.debugMarks || []) tile(tx, ty, 'rgba(0,255,255,0.55)');
+  }
   drawParticles(ctx, vr);
   for (const h of top) h.draw(ctx);
   ctx.globalCompositeOperation = 'lighter';
