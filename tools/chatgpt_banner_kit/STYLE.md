@@ -28,7 +28,7 @@ Square-era sprite nobody has seen, never like "AI dark-fantasy pixel art".
 7. **Light** comes from the upper left. Top-left planes are brightest; forms fall into shadow toward the bottom right.
    No cast shadows (the game draws the shadow).
 8. **Dithering** only as texture (frayed wool, scorch), at most 10% of the area. Never as a blend.
-9. **Readability:** in game the whole banner is about 70 world pixels tall. The swallowtail silhouette, the gold border
+9. **Readability:** in game the cloth is about 50 world pixels tall and the whole banner about 95. The swallowtail silhouette, the gold border
    and the shield emblem must read at that size. Big shape, then medium shape, then detail.
 10. **Emissive** (RALLY frames only): the Holy ramp, brightest step in the core, glow 1-2 AP inside the shape, never a
     soft halo outside it. The game adds its own glow.

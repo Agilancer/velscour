@@ -77,7 +77,8 @@ Start at [art_style/00_START_HERE.md](art_style/00_START_HERE.md).
 `ChatGPT_Lancer_Banner_Kit.zip` (built by `python tools/chatgpt_banner_kit.py`; text in `tools/chatgpt_banner_kit/`)
 is for the Lancer's class signature banner (`src/game/sigs/lancer.js`, drawn with shapes today). Two 1536 x 1024
 sheets at 3x (1 AP = 3 x 3 px): the cloth (CALM 1-6 and RALLIED 1-6 wave loops) and the parts (pole, RALLY 1-4, ROLL
-1-3), every cell 64 x 128 AP with the hero's centre line at x 32 and the crossbar at y 16. `SPEC.md` in the zip has the
+1-3), every cell 64 AP wide with the hero's centre line at x 32 and the crossbar at y 16 (cloth cells 64 x 112, the
+pole 64 x 180; the crossbar rides 114 world px above his feet, so the full cloth clears his head). `SPEC.md` in the zip has the
 anchors, timing and how the game layers and unrolls it; `PROMPT.txt` has the ChatGPT messages. No importer yet: write
 one when the sheets come back.
 

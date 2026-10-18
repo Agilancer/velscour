@@ -24,17 +24,30 @@ strapped to his back, like a samurai's sashimono. The banner fills up with **Val
 - **Density:** the same as the heroes. The Lancer is 108 AP tall from the crown of his head to his soles. In game,
   1.8 AP = 1 world pixel, so he is 60 world pixels tall.
 
-## The frame (every cell on both sheets)
+## The frames
 
-Each cell is **64 x 128 AP** (192 x 384 px on the sheet), except the ROLL cells, which are **64 x 32 AP**.
+Every cell is **64 AP wide**, with the hero's centre line at **x = 32** and the crossbar line at **y = 16**. That
+crossbar point is the anchor that lines every piece up. Heights differ by piece:
 
-| Landmark | Cell position (AP) | On the hero (hero frame 128 x 192, soles y 183) |
+| Cell | Size (AP) | On the sheet (px) |
+|---|---|---|
+| CALM, RALLIED, RALLY (the cloth) | 64 x 112 | 192 x 336 |
+| POLE | 64 x 180 | 192 x 540 |
+| ROLL | 64 x 32 | 192 x 96 |
+
+The banner is mounted **high**: even the fully unfurled cloth hangs clear above the Lancer's head, so the whole
+banner reads over him in a fight.
+
+| Landmark | Cell position (AP) | On the hero (hero frame 128 x 192, crown y 75, soles y 183) |
 |---|---|---|
 | Hero's centre line | x = 32 | x = 64 |
-| Crossbar line (the cloth hangs from here) | y = 16 | y = 28 (47 AP above the crown of his head) |
-| Finial tip | y = about 1-4 | y = about 13-16 |
-| Pole mount (bottom end of the pole, at his upper back) | y = 124 | y = 136 |
-| Cloth at full length (bottom of the swallowtail) | y = 104 | y = 116 (his chest; that part is hidden behind him) |
+| Crossbar line (the cloth hangs from here) | y = 16 | y = -22: 97 AP above his crown, 114 world px above his feet |
+| Finial tip | y = about 1-4 | y = about -37 to -34 |
+| Cloth at full length (tip of the swallowtail) | y = 104 | y = 82: just above his crown and hair |
+| Pole mount (bottom of the pole, POLE cell only) | y = 174 | y = 136, his upper back |
+
+Between the cloth's tip and his head, about 4-7 AP of bare pole shows. Below that the pole runs behind his head and
+shoulders and is hidden by him.
 
 **Centring is the point of this whole set:** the pole runs straight up the centre line x = 32; the crossbar is
 centred on the pole; the cloth hangs centred on the pole and covers it. Nothing leans off to one side. The waves move
@@ -56,11 +69,11 @@ Two rows of six frames. **Only the cloth: no pole, no crossbar, no finial** (the
 
 ## Sheet 2: the parts (`templates/banner_sheet2_parts_template.png`, 1536 x 1024)
 
-- **POLE (1 frame):** a straight ash-wood pole up the centre line from the mount line (y 124) to just above the
-  crossbar, 3 AP thick, with 2-3 iron bands; a crossbar centred on it at y 16, 46 AP wide (x 9 to 55), 2-3 AP thick,
+- **POLE (1 frame, 64 x 180 AP):** a straight ash-wood pole up the centre line from the mount line (y 174) to just
+  above the crossbar, 3 AP thick, with 3-4 iron bands spread along its length; a crossbar centred on it at y 16, 46 AP wide (x 9 to 55), 2-3 AP thick,
   with a small gilt knob on each end; a gilt finial on top shaped like a **tower merlon or a small portcullis spike**
   (the Lancer's motif), 8-12 AP tall. Strapping at the bottom end. Nothing else.
-- **RALLY 1-4:** the fully unfurled cloth (same size and anchors as sheet 1) at the moment the Order charges. Frame 1:
+- **RALLY 1-4:** the fully unfurled cloth (64 x 112 AP, same anchors as sheet 1) at the moment the Order charges. Frame 1:
   the cloth snaps taut; frame 2: the emblem and border ignite with holy light; frame 3: brightest, light bleeding
   1-2 AP inside the edges; frame 4: settling, still glowing. Emissive pixels use the Holy ramp only. Plays once at
   12 frames a second, then the RALLIED loop takes over.
@@ -84,7 +97,7 @@ Two rows of six frames. **Only the cloth: no pole, no crossbar, no finial** (the
 1. Drawn in the depth-sorted pass just behind the Lancer, so his body covers the lower pole and the lower cloth.
    Layer order, back to front: POLE, cloth frame, ROLL, then the hero.
 2. Every frame is placed so cell (32, 16) (the crossbar on the centre line) sits on the hero's crossbar point: his
-   centre x, and 86 world px above his feet (at 1.8 AP per world px). The banner follows him and his jump height.
+   centre x, and 114 world px above his feet (at 1.8 AP per world px). The banner follows him and his jump height.
 3. **Valor f (0-1):** the cloth frame is clipped to its top `4 + 88 * f` AP rows; the ROLL is drawn with its top
    edge on that clip line. At f = 0 the roll sits right under the crossbar.
 4. f < 1: CALM loop. f = 1: RALLIED loop plus the game's own soft glow. Payoff: RALLY 1-4 once, then f falls to 0

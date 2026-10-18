@@ -44,8 +44,8 @@ size, same twelve frame positions, same flat magenta #FF00FF background.
 Draw sheet 2, the banner parts, as one 1536 x 1024 image. Use the attached template as the exact layout, with the same
 pixel grid (one art pixel = 3 x 3), palette and cloth design as the attached sheet 1.
 
-- POLE: a straight ash-wood pole up the centre line from the bottom yellow line to just above the crossbar, 3 art
-  pixels thick, with iron bands; a crossbar centred on it on the top yellow line, about 46 art pixels wide, with gilt
+- POLE: a tall, straight ash-wood pole up the centre line from the bottom yellow line to just above the crossbar
+  (the banner rides high, clear above his head), 3 art pixels thick, with iron bands along it; a crossbar centred on it on the top yellow line, about 46 art pixels wide, with gilt
   knobs on both ends; a gilt finial shaped like a tower merlon or a portcullis spike. Strapping at the bottom end.
 - RALLY 1-4: the fully unfurled cloth from sheet 1 at the moment the knights charge: it snaps taut, then the emblem and
   the border ignite with holy light (the Holy ramp), brightest on frame 3, still glowing on frame 4. The glow stays

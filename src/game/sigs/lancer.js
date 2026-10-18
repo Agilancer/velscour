@@ -85,8 +85,9 @@ export default {
     stat('lancer', 'fire');
   },
   back(ctx, p, s, t) {
-    // centred on his back: the pole rises from between his shoulders, the cloth hangs centred on it and hides it
-    const f = s.valor / MAX, px = isoX(p.x, p.y), py = isoY(p.x, p.y) - (p.z || 0) - 26 * (p.scale || 1), top = py - 62;
+    // centred on his back: the pole rises from between his shoulders, the cloth hangs centred on it and hides it;
+    // the crossbar sits 114 px above his feet, so even the fully unfurled cloth (49 px) clears his head
+    const f = s.valor / MAX, px = isoX(p.x, p.y), py = isoY(p.x, p.y) - (p.z || 0) - 26 * (p.scale || 1), top = py - 90;
     const L = 8 + 36 * f, W = 22, h = W / 2, sp = f >= 1 ? 9 : 4;
     ctx.strokeStyle = '#5a4a30'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, top); ctx.stroke(); // the pole
     ctx.strokeStyle = '#8a7a50'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(px - h - 2, top + 2); ctx.lineTo(px + h + 2, top + 2); ctx.stroke(); // crossbar
