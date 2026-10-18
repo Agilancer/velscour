@@ -13,7 +13,7 @@ const AUTO = process.argv[3] !== undefined ? +process.argv[3] : 60;
 // frames (at 60 fps) after the payoff starts for the three payoff shots
 const SHOTS = {
   paladin: [20, 36, 70], ranger: [14, 30, 50], wizard: [18, 42, 62], necromancer: [10, 30, 55], barbarian: [18, 37, 50],
-  dragoon: [12, 40, 60], totem_master: [20, 70, 110], death_knight: [12, 21, 32], carrion_witch: [18, 29, 40],
+  dragoon: [44, 64, 98], totem_master: [20, 70, 110], death_knight: [12, 21, 32], carrion_witch: [18, 29, 40],
   slime_lord: [30, 56, 66], boomerang_knight: [30, 62, 96], lancer: [20, 36, 52], dragon_knight: [40, 70, 95], gunner: [40, 62, 84],
 };
 let bad = 0;
@@ -165,7 +165,8 @@ const fail = (m) => { console.log('FAIL ' + m); bad++; };
       S.sigFire(p);
     });
     let at = 0;
-    for (let i = 0; i < 3; i++) { await step(SHOTS[cls][i] - at); at = SHOTS[cls][i]; await page.screenshot({ path: `${OUT_DIR}/sig_${cls}_${i + 1}.png`, clip }); }
+    const shots = process.env.SIG_SHOTS ? process.env.SIG_SHOTS.split(',').map(Number) : SHOTS[cls]; // SIG_SHOTS=40,60,.. for more frames
+    for (let i = 0; i < shots.length; i++) { await step(shots[i] - at); at = shots[i]; await page.screenshot({ path: `${OUT_DIR}/sig_${cls}_${i + 1}.png`, clip }); }
     meta[cls] = { ...info, charge: ch };
     console.log(`${cls.padEnd(17)} shots: charge fill ${ch.fill}`);
   }
