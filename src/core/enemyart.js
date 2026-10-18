@@ -1,6 +1,6 @@
 // Monster art from assets/sprites/enemies (tools/process_assets.py enemies): atlas loading plus a bounded
 // cache of cut-out, palette-swapped, flash (white) and corpse (dark) canvases. See docs/ENEMY_ART.md.
-import { makeCanvas, recolor } from './util.js';
+import { recolor, silhouette, swapKey, decoded } from './util.js';
 import { loadReplacementArt, replacementImage } from './replacementart.js';
 import { ART_BY_ID } from '../data/bestiary.js';
 import { heavenlyEnemyImage } from '../gfx/heavenlymonsters.js';
@@ -11,15 +11,16 @@ const DIR = 'assets/sprites/enemies/';
 const EAGER = /^(set1|minions)\//; // fetched with the meta; the rest (set2, ~5 MB) loads per level as looks need it
 const PETS = /^familiars\//; // pet sheets (~2.6 MB): fetched in the background once the meta is in
 const E = { meta: null, sheets: {}, loading: null, sheet: {} }; // sheet: key -> load promise
-const cache = new Map(); // LRU: `${id}|${mode}|${swap}` -> canvas
+const cache = new Map(); // LRU: `${id}|${swap}` -> base canvas (flash/corpse silhouettes hang off it: util.silhouette)
 const CACHE_MAX = 160; // ~70 KB each; iOS caps total canvas memory
+export const FLASH = '#ffffff', CORPSE = 'rgba(24,8,6,0.62)';
 
 function loadSheet(key) {
   const s = E.meta && E.meta[key];
   if (!s) return Promise.resolve();
   return E.sheet[key] || (E.sheet[key] = new Promise((res) => {
     const img = new Image();
-    img.onload = () => { E.sheets[key] = img; res(); };
+    img.onload = () => decoded(img).then((d) => { E.sheets[key] = d; res(); });
     img.onerror = () => { console.warn('Failed to load ' + s.file); res(); }; // not retried: pixel sprites stand in
     img.src = DIR + s.file;
   }));
@@ -95,19 +96,14 @@ export function enemyImage(id, swap = null, mode = '') {
   const a = ART_BY_ID[id];
   const c = a && cell(a);
   if (!c) return null;
-  const key = id + '|' + mode + '|' + (swap ? JSON.stringify(swap) : '');
+  const key = id + '|' + swapKey(swap);
   let img = cache.get(key);
-  if (img) { cache.delete(key); cache.set(key, img); return img; }
-  if (mode) {
-    img = makeCanvas(c.w, c.h);
-    const x = img.getContext('2d');
-    x.drawImage(enemyImage(id, swap), 0, 0);
-    x.globalCompositeOperation = 'source-atop';
-    x.fillStyle = mode === 'flash' ? '#ffffff' : 'rgba(24,8,6,0.62)';
-    x.fillRect(0, 0, c.w, c.h);
-  } else img = recolor(E.sheets[a.sheet], swap, c.x, c.y, c.w, c.h);
-  img._art = { fx: c.fx };
-  cache.set(key, img);
-  while (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);
-  return img;
+  if (img) { cache.delete(key); cache.set(key, img); }
+  else {
+    img = recolor(E.sheets[a.sheet], swap, c.x, c.y, c.w, c.h);
+    img._art = { fx: c.fx };
+    cache.set(key, img);
+    while (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);
+  }
+  return mode ? silhouette(img, mode === 'flash' ? FLASH : CORPSE) : img;
 }

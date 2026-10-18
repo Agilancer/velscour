@@ -31,7 +31,7 @@ function townSheet(id) {
   if(!img){
     img=new Image();
     townSheets.set(id,img);
-    img.src=`assets/sprites/townsfolk/${id}.png`;
+    img.src=`assets/sprites/townsfolk/${id}.webp`;
   }
   return img;
 }
@@ -796,18 +796,40 @@ function drawLighting(ctx, world) {
   }
 }
 
+// Outlined name labels baked once per text/colour/size: strokeText + fillText shape the glyphs again on every call,
+// and a pack of champions put a dozen of those in every frame. Drawn at whole device px, so they stay crisp.
+const labels = new Map();
+function nameLabel(text, font, fill, lw) {
+  const key = font + '|' + fill + '|' + lw + '|' + text;
+  let c = labels.get(key);
+  if (c) { labels.delete(key); labels.set(key, c); return c; }
+  const probe = makeCanvas(1, 1).getContext('2d'); probe.font = font;
+  const m = probe.measureText(text), pad = Math.ceil(lw) + 2;
+  const asc = Math.ceil(m.actualBoundingBoxAscent || parseFloat(font.match(/(\d+)px/)[1]) * 0.8), desc = Math.ceil(m.actualBoundingBoxDescent || 0);
+  c = makeCanvas(Math.ceil(m.width) + pad * 2, asc + desc + pad * 2);
+  const g = c.getContext('2d');
+  g.font = font; g.textAlign = 'center';
+  if (lw > 0) { g.lineWidth = lw; g.strokeStyle = '#000'; g.strokeText(text, c.width / 2, pad + asc); }
+  g.fillStyle = fill; g.fillText(text, c.width / 2, pad + asc);
+  c._ox = c.width / 2; c._oy = pad + asc;
+  // the fallback face draws until Cinzel loads: don't keep that one
+  if (!document.fonts || document.fonts.check(font)) { labels.set(key, c); if (labels.size > 160) labels.delete(labels.keys().next().value); }
+  return c;
+}
+function drawLabel(ctx, text, x, y, font, fill, lw) {
+  const c = nameLabel(text, font, fill, lw);
+  ctx.drawImage(c, Math.round(x - c._ox), Math.round(y - c._oy));
+}
+
 function drawOverheadNames(ctx, world) {
   ctx.textAlign = 'center';
   const d = G.dpr;
-  ctx.font = `700 ${Math.round(11 * d)}px Cinzel, Georgia, serif`;
+  const nameFont = `700 ${Math.round(11 * d)}px Cinzel, Georgia, serif`;
   for (const c of world.creatures) {
     if (c.dead || !c.sbox) continue;
     if (c.rank === 'champion' || c.rank === 'unique') {
       const x = (c.sbox[0] + c.sbox[2]) / 2, y = c.sbox[1] - 8;
-      ctx.lineWidth = 3 * d; ctx.strokeStyle = '#000';
-      ctx.strokeText(c.name, x * d, y * d);
-      ctx.fillStyle = c.rank === 'unique' ? '#ffc040' : '#80b0ff';
-      ctx.fillText(c.name, x * d, y * d);
+      drawLabel(ctx, c.name, x * d, y * d, nameFont, c.rank === 'unique' ? '#ffc040' : '#80b0ff', 3 * d);
     }
   }
   // townsfolk names: only the one nearest the hero (a crowd of labels hides the crowd)
@@ -820,24 +842,15 @@ function drawOverheadNames(ctx, world) {
     const x = (n.sbox[0] + n.sbox[2]) / 2;
     const [sx, sy] = camera.toScreen(x, n.sbox[1] - 10);
     const label = n.vendor ? n.vendor.name : n.name;
-    ctx.lineWidth = 3 * d; ctx.strokeStyle = '#000';
-    ctx.strokeText(label, sx * d, sy * d);
-    ctx.fillStyle = n.vendor || n.stash ? '#ffe090' : '#c8c0b0';
-    ctx.fillText(label, sx * d, sy * d);
-    if (n.vendor) {
-      ctx.font = `${Math.round(10 * d)}px "Alegreya Sans", sans-serif`;
-      ctx.fillStyle = '#b0a080';
-      ctx.fillText(n.vendor.title, sx * d, (sy + 12) * d);
-      ctx.font = `700 ${Math.round(11 * d)}px Cinzel, Georgia, serif`;
-    }
+    if (label) drawLabel(ctx, label, sx * d, sy * d, nameFont, n.vendor || n.stash ? '#ffe090' : '#c8c0b0', 3 * d);
+    if (n.vendor && n.vendor.title) drawLabel(ctx, n.vendor.title, sx * d, (sy + 12) * d, `${Math.round(10 * d)}px "Alegreya Sans", sans-serif`, '#b0a080', 0);
   }
   // portal labels
   for (const po of world.portals) {
+    if (!po.label) continue;
     const [sx, sy] = camera.tileToScreen(po.x, po.y, 82);
-    ctx.lineWidth = 3 * d; ctx.strokeStyle = '#000';
-    ctx.strokeText(po.label, sx * d, sy * d);
-    ctx.fillStyle = po.active ? '#ffd0a0' : '#909090';
-    ctx.fillText(po.label, sx * d, sy * d);
+    if (sx < -200 || sy < -40 || sx > G.W + 200 || sy > G.H + 40) continue;
+    drawLabel(ctx, po.label, sx * d, sy * d, nameFont, po.active ? '#ffd0a0' : '#909090', 3 * d);
   }
   // hovered monster info (desktop)
   const h = G.hover;

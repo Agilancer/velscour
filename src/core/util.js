@@ -73,13 +73,25 @@ export function fmt(n) {
   return String(n);
 }
 
-export function fmtInt(n) { return Math.round(n).toLocaleString('en-US'); }
+// en-US digit grouping by hand: toLocaleString goes through ICU, and the HUD and tooltips format numbers every frame
+export function fmtInt(n) {
+  const r = Math.round(n);
+  if (!Number.isFinite(r) || Math.abs(r) >= 1e21 || Object.is(r, -0)) return r.toLocaleString('en-US');
+  const s = String(Math.abs(r)), g = s.length > 3 ? s.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : s;
+  return r < 0 ? '-' + g : g;
+}
 
 // ---------------------------------------------------------------- colours
+// memoised (lighting and glows ask every frame); the shared array is frozen so a caller can't change it for others
+const rgbCache = new Map();
 export function hexToRgb(hex) {
+  let c = rgbCache.get(hex);
+  if (c) return c;
   const h = hex.replace('#', '');
   const v = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
-  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+  c = Object.freeze([(v >> 16) & 255, (v >> 8) & 255, v & 255]);
+  if (rgbCache.size < 512) rgbCache.set(hex, c);
+  return c;
 }
 export function rgbToHex(r, g, b) {
   return '#' + [r, g, b].map((v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0')).join('');
@@ -88,9 +100,17 @@ export function mixHex(a, b, t) {
   const A = hexToRgb(a), B = hexToRgb(b);
   return rgbToHex(lerp(A[0], B[0], t), lerp(A[1], B[1], t), lerp(A[2], B[2], t));
 }
+const shadeCache = new Map();
 export function shade(hex, f) {
-  // f > 0 lighten toward white, f < 0 darken toward black
-  return f >= 0 ? mixHex(hex, '#ffffff', f) : mixHex(hex, '#000000', -f);
+  // f > 0 lighten toward white, f < 0 darken toward black (memoised: particles and props shade colours per draw)
+  const key = hex + '|' + f;
+  let c = shadeCache.get(key);
+  if (c === undefined) {
+    c = f >= 0 ? mixHex(hex, '#ffffff', f) : mixHex(hex, '#000000', -f);
+    if (shadeCache.size >= 2048) shadeCache.clear();
+    shadeCache.set(key, c);
+  }
+  return c;
 }
 export function rgba(hex, a) {
   const [r, g, b] = hexToRgb(hex);
@@ -132,6 +152,45 @@ export function makeCanvas(w, h) {
   c.width = Math.max(1, Math.ceil(w));
   c.height = Math.max(1, Math.ceil(h));
   return c;
+}
+
+/**
+ * A loaded image as a decoded ImageBitmap, for atlases that palette swaps read on the CPU (recolor): Chrome may drop
+ * an <img>'s decoded pixels, and every swap of a level then decoded the whole multi-MB sheet again (100+ ms on a
+ * phone). Falls back to the image itself where createImageBitmap is missing or fails.
+ */
+export function decoded(img) {
+  if (typeof createImageBitmap !== 'function') return Promise.resolve(img);
+  return createImageBitmap(img).catch(() => img);
+}
+
+/**
+ * A sprite's silhouette filled with `fill` (hit flash, corpse shade), made on the GPU from an already built sprite
+ * (no pixel readback) and kept as long as the sprite is: art caches store only the base sprite, so a flash or a
+ * corpse never evicts a look or rebuilds its palette swap.
+ */
+const silhouettes = new WeakMap();
+export function silhouette(img, fill) {
+  let m = silhouettes.get(img);
+  if (!m) silhouettes.set(img, (m = new Map()));
+  let c = m.get(fill);
+  if (!c) {
+    c = makeCanvas(img.width, img.height);
+    const x = c.getContext('2d');
+    x.drawImage(img, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = fill; x.fillRect(0, 0, c.width, c.height);
+    if (img._art) c._art = img._art;
+    m.set(fill, c);
+  }
+  return c;
+}
+
+/** A stable cache key for a palette swap object (memoised: JSON.stringify per draw adds up). */
+const swapKeys = new WeakMap();
+export function swapKey(swap) {
+  if (!swap || typeof swap !== 'object') return '';
+  let k = swapKeys.get(swap);
+  if (k === undefined) swapKeys.set(swap, (k = JSON.stringify(swap)));
+  return k;
 }
 
 /**

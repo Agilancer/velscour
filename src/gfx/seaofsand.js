@@ -1,5 +1,5 @@
 // Runtime access to the authored Sea of Sand frame atlases.
-import { makeCanvas, recolor } from '../core/util.js';
+import { makeCanvas, recolor, silhouette, swapKey } from '../core/util.js';
 
 const DIR = 'assets/tiles/sea_of_sand/';
 let loading = null, meta = null, images = null;
@@ -54,19 +54,17 @@ export function seaOfSandArtCell(i) {
 
 export function seaOfSandEnemyImage(id, swap = null, mode = '') {
   if (!images || !id?.startsWith('ss_')) return null;
-  const a = [...seaOfSandFrames('monster'), ...seaOfSandFrames('boss')].find((f) => f.id === id.slice(3));
-  if (!a) return null;
-  const key = `${id}|${mode}|${swap ? JSON.stringify(swap) : ''}`;
-  if (cache.has(key)) return cache.get(key);
-  let img = makeCanvas(a.w, a.h), g = img.getContext('2d');
-  if (swap) {
-    const temp = makeCanvas(a.w, a.h), t = temp.getContext('2d');
-    t.drawImage(images[a.category], a.x, a.y, a.w, a.h, 0, 0, a.w, a.h);
-    img = recolor(temp, swap); g = img.getContext('2d');
-  } else g.drawImage(images[a.category], a.x, a.y, a.w, a.h, 0, 0, a.w, a.h);
-  if (mode) { g.globalCompositeOperation = 'source-atop'; g.fillStyle = mode === 'flash' ? '#fff' : 'rgba(24,8,6,.62)'; g.fillRect(0,0,a.w,a.h); }
-  img._art = { fx:(a.pivot?.[0] ?? a.w/2) };
-  cache.set(key, img);
-  while (cache.size > 100) cache.delete(cache.keys().next().value);
-  return img;
+  const key = `${id}|${swapKey(swap)}`;
+  let img = cache.get(key);
+  if (!img) {
+    const a = [...seaOfSandFrames('monster'), ...seaOfSandFrames('boss')].find((f) => f.id === id.slice(3));
+    if (!a) return null;
+    img = swap ? recolor(images[a.category], swap, a.x, a.y, a.w, a.h) : makeCanvas(a.w, a.h);
+    if (!swap) img.getContext('2d').drawImage(images[a.category], a.x, a.y, a.w, a.h, 0, 0, a.w, a.h);
+    img._art = { fx:(a.pivot?.[0] ?? a.w/2) };
+    cache.set(key, img);
+    while (cache.size > 100) cache.delete(cache.keys().next().value);
+  }
+  // flash/corpse silhouettes hang off the base sprite (util.silhouette)
+  return mode ? silhouette(img, mode === 'flash' ? '#fff' : 'rgba(24,8,6,.62)') : img;
 }

@@ -1,5 +1,5 @@
 // Painted replacements. Loaded at boot; one atlas and a bounded cache for phones.
-import { makeCanvas, recolor } from './util.js';
+import { makeCanvas, recolor, silhouette, swapKey, decoded } from './util.js';
 
 let sheet, meta, loading;
 const cache = new Map();
@@ -11,28 +11,24 @@ export function loadReplacementArt() {
       img.onload = () => resolve(img); img.onerror = () => reject(new Error('Replacement atlas unavailable'));
       img.src = 'assets/sprites/replacements/atlas.webp';
     }),
-  ]).then(([m, image]) => { meta = m; sheet = image; }).catch((e) => { loading = null; throw e; }));
+  ]).then(async ([m, image]) => { meta = m; sheet = await decoded(image); }).catch((e) => { loading = null; throw e; }));
 }
 
 export function replacementImage(id, swap = null, mode = '') {
   id = id.replace(/^va_/, '');
   const cell = meta && meta[id];
   if (!cell || !sheet) return null;
-  const key = `${id}|${JSON.stringify(swap)}|${mode}`;
+  const key = `${id}|${swapKey(swap)}`;
   let image = cache.get(key);
-  if (image) { cache.delete(key); cache.set(key, image); return image; }
-  image = recolor(sheet, swap, cell.x, cell.y, cell.w, cell.h);
-  if (mode) {
-    const ctx = image.getContext('2d');
-    ctx.globalCompositeOperation = 'source-atop';
-    ctx.fillStyle = mode === 'flash' ? '#ffffff' : 'rgba(24,8,6,0.62)';
-    ctx.fillRect(0, 0, image.width, image.height);
-    ctx.globalCompositeOperation = 'source-over';
+  if (image) { cache.delete(key); cache.set(key, image); }
+  else {
+    image = recolor(sheet, swap, cell.x, cell.y, cell.w, cell.h);
+    image._art = { fx: cell.fx };
+    cache.set(key, image);
+    while (cache.size > 192) cache.delete(cache.keys().next().value);
   }
-  image._art = { fx: cell.fx };
-  cache.set(key, image);
-  while (cache.size > 192) cache.delete(cache.keys().next().value);
-  return image;
+  // flash/corpse silhouettes hang off the base sprite (util.silhouette)
+  return mode ? silhouette(image, mode === 'flash' ? '#ffffff' : 'rgba(24,8,6,0.62)') : image;
 }
 
 // Fit without stretching. Tint overlays preserve the original pixel texture and alpha.

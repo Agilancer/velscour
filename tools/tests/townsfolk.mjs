@@ -9,6 +9,14 @@ const {CHATS,BARKS,SHOPPING,ADVENTURER_CHATS,ADVENTURER_BARKS,EVENT_LINES}=await
 const {EMOTIONS,STD_FRAMES}=await imp('src/game/townsfolkvisuals.js');
 const dir=path.join(root,'assets/sprites/townsfolk'),manifest=JSON.parse(fs.readFileSync(path.join(dir,'manifest.json'),'utf8'));
 const fail=(m)=>{throw Error(m);};
+// lossless WebP sheets (VP8L, or VP8X with an alpha flag): size and transparency from the header
+function webpInfo(b,id){
+  if(b.toString('ascii',0,4)!=='RIFF'||b.toString('ascii',8,12)!=='WEBP')fail('invalid WebP '+id);
+  const kind=b.toString('ascii',12,16);
+  if(kind==='VP8L'){const v=b.readUInt32LE(21);return {w:(v&0x3fff)+1,h:((v>>>14)&0x3fff)+1,alpha:!!((v>>>28)&1)};}
+  if(kind==='VP8X')return {w:b.readUIntLE(24,3)+1,h:b.readUIntLE(27,3)+1,alpha:!!(b[20]&0x10)};
+  fail(id+': expected a lossless WebP, got '+kind);
+}
 if(TOWNSFOLK.length!==100||new Set(TOWNSFOLK.map(p=>p.id)).size!==100)fail('town visitor catalog must contain 100 unique IDs');
 if(TOWNSFOLK.filter(p=>p.child).length!==10)fail('town catalog must contain ten children');
 if(TOWNSFOLK.filter(p=>p.royal).length!==4||TOWNSFOLK.filter(p=>p.regular).length!==4)fail('royal family or regular roster incomplete');
@@ -18,10 +26,9 @@ if(TOWNSFOLK.some(p=>p.palette))fail('sheets are pre-painted: no runtime recolou
 // sheets
 if(manifest.characters.length!==100||manifest.identities!==25||manifest.frameSize.join('x')!=='256x192'||manifest.standardFrames.join('|')!==STD_FRAMES.join('|'))fail('town sprite pack contract mismatch');
 for(const p of manifest.characters){
-  const file=path.join(dir,p.id+'.png');if(!fs.existsSync(file))fail('missing '+p.id+'.png');
-  const png=fs.readFileSync(file);if(png.toString('ascii',1,4)!=='PNG')fail('invalid PNG '+p.id);
-  const w=png.readUInt32BE(16),h=png.readUInt32BE(20);if(w!==256*p.frameCount||h!==192)fail(`${p.id}: expected ${256*p.frameCount}x192, got ${w}x${h}`);
-  if(png[25]!==6)fail(`${p.id}: expected RGBA transparency`);
+  const file=path.join(dir,p.id+'.webp');if(!fs.existsSync(file))fail('missing '+p.id+'.webp');
+  const {w,h,alpha}=webpInfo(fs.readFileSync(file),p.id);if(w!==256*p.frameCount||h!==192)fail(`${p.id}: expected ${256*p.frameCount}x192, got ${w}x${h}`);
+  if(!alpha)fail(`${p.id}: expected RGBA transparency`);
   if(p.frames.slice(0,11).join('|')!==STD_FRAMES.join('|'))fail(p.id+': standard frames out of order');
   const roster=TOWNSFOLK.find(v=>v.spriteId===p.id);if(roster&&roster.frame.count!==p.frameCount)fail(p.id+': roster frame count '+roster.frame.count+' != '+p.frameCount);
 }

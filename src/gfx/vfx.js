@@ -44,6 +44,19 @@ export function glowSprite(color) {
   return c;
 }
 
+// a filled antialiased disc per colour, for smoke puffs: one drawImage instead of building and filling an arc path
+const discCache = new Map();
+function discSprite(color) {
+  let c = discCache.get(color);
+  if (!c) {
+    c = makeCanvas(64, 64);
+    const x = c.getContext('2d');
+    x.fillStyle = color; x.beginPath(); x.arc(32, 32, 32, 0, TAU); x.fill();
+    discCache.set(color, c);
+  }
+  return c;
+}
+
 const splatMasks = [];
 function makeSplatMasks() {
   for (let i = 0; i < 8; i++) {
@@ -81,8 +94,15 @@ function splatSprite(color, idx) {
 /**
  * type: 'dot' | 'glow' | 'blood' | 'gib' | 'streak' | 'smoke' | 'shard' | 'img'
  */
+// At the cap the oldest particle goes, as before, but by marking it dead (life -1: not drawn, compacted out in
+// updateVfx) instead of particles.shift(), which moved the whole array on every spawn in a busy fight.
+let evict = 0, dead = 0;
+function kill(p) { if (p.life > 0) { p.life = -1; dead++; if (p.spr) spriteGibs--; } }
 export function spawn(p) {
-  if (particles.length >= MAX_P() && particles.shift().spr) spriteGibs--;
+  if (particles.length - dead >= MAX_P()) {
+    while (evict < particles.length && particles[evict].life <= 0) evict++;
+    if (evict < particles.length) kill(particles[evict++]);
+  }
   p.life = p.life ?? 0.6; p.max = p.life;
   p.z = p.z ?? 0; p.vx = p.vx ?? 0; p.vy = p.vy ?? 0; p.vz = p.vz ?? 0;
   p.g = p.g ?? 0; p.drag = p.drag ?? 0; p.size = p.size ?? 2; p.size1 = p.size1 ?? p.size;
@@ -465,7 +485,7 @@ export function addLight(x, y, radius, intensity = 1, z = 20, color = null) {
 }
 
 export function clearVfx() {
-  particles.length = 0; spriteGibs = 0; decals.length = 0; effects.length = 0; texts.length = 0; lights.length = 0;
+  particles.length = 0; spriteGibs = 0; evict = 0; dead = 0; decals.length = 0; effects.length = 0; texts.length = 0; lights.length = 0;
 }
 
 // --------------------------------------------------------------- update
@@ -474,11 +494,12 @@ export function updateVfx(dt, world) {
   // of shifting the surviving array on every expired particle (quadratic work).
   let live = 0;
   for (const p of particles) {
+    if (p.life <= 0) continue; // killed since the last update (kill() already counted its gib)
     p.life -= dt;
     if (p.life <= 0) { if (p.spr) spriteGibs--; }
     else particles[live++] = p;
   }
-  particles.length = live;
+  particles.length = live; evict = 0; dead = 0;
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     // Cyclone wind (and captured gib sprites) follow the caster's moving isometric spiral.
@@ -501,7 +522,7 @@ export function updateVfx(dt, world) {
     if (p.type === 'blood') {
       if (p.z <= 0) {
         if (world && world.map.isFloor(p.x, p.y) && Math.random() < 0.55) addDecal(p.x, p.y, p.color, rand(0.12, 0.3) * p.size / 2);
-        particles.splice(i, 1);
+        kill(p); // gone from the next update's compaction (a splice here was O(n) per landing drop)
       }
     } else if (p.type === 'gib') {
       if (world && !world.map.isFloor(p.x, p.y)) { p.vx *= -0.5; p.vy *= -0.5; p.x += p.vx * dt * 2; p.y += p.vy * dt * 2; }
@@ -532,6 +553,8 @@ export function updateVfx(dt, world) {
 
 // ----------------------------------------------------------------- draw
 export function drawDecals(ctx, vr) {
+  // a splat's translate/scale(1, .5)/rotate folded into one setTransform on the camera matrix (5 state calls -> 1)
+  const B = ctx.getTransform(), ba = B.a, bb = B.b, bc = B.c, bd = B.d, be = B.e, bf = B.f;
   for (const d of decals) {
     const px = isoX(d.x, d.y), py = isoY(d.x, d.y);
     if (px < vr.x0 - 80 || px > vr.x1 + 80 || py < vr.y0 - 60 || py > vr.y1 + 60) continue;
@@ -540,9 +563,11 @@ export function drawDecals(ctx, vr) {
     if (d.life < 3) a *= d.life / 3;
     ctx.globalAlpha = a;
     if (d.kind === 'splat' || d.kind === 'pool') {
-      ctx.save(); ctx.translate(px, py); ctx.scale(1, 0.5); ctx.rotate(d.rot);
+      const c = d.cos ?? (d.cos = Math.cos(d.rot)), sn = d.sin ?? (d.sin = Math.sin(d.rot));
+      const la = c, lb = 0.5 * sn, lc = -sn, ld = 0.5 * c;
+      ctx.setTransform(ba * la + bc * lb, bb * la + bd * lb, ba * lc + bc * ld, bb * lc + bd * ld, ba * px + bc * py + be, bb * px + bd * py + bf);
       ctx.drawImage(splatSprite(d.color, d.idx), -s, -s, s * 2, s * 2);
-      ctx.restore();
+      ctx.setTransform(ba, bb, bc, bd, be, bf);
     } else if (d.kind === 'scorch') {
       ctx.fillStyle = d.color;
       ctx.beginPath(); ctx.ellipse(px, py, s, s * 0.5, 0, 0, TAU); ctx.fill();
@@ -565,7 +590,9 @@ export function drawEffects(ctx, layer) {
 
 export function drawParticles(ctx, vr) {
   let mode = 'source-over';
+  const B = ctx.getTransform(), ba = B.a, bb = B.b, bc = B.c, bd = B.d, be = B.e, bf = B.f; // rotated particles reset to it (cheaper than a full save/restore each)
   for (const p of particles) {
+    if (p.life <= 0) continue;
     const px = isoX(p.x, p.y), py = isoY(p.x, p.y) - p.z;
     if (px < vr.x0 - 20 || px > vr.x1 + 20 || py < vr.y0 - 40 || py > vr.y1 + 20) continue;
     const k = 1 - p.life / p.max;
@@ -581,7 +608,7 @@ export function drawParticles(ctx, vr) {
       }
       case 'smoke':
         ctx.globalAlpha = (p.alpha ?? 0.4) * (1 - k);
-        ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(px, py, size, 0, TAU); ctx.fill();
+        if (size > 0) ctx.drawImage(discSprite(p.color), px - size, py - size, size * 2, size * 2);
         break;
       case 'streak': {
         ctx.globalAlpha = 1 - k; ctx.strokeStyle = p.color; ctx.lineWidth = size;
@@ -593,23 +620,23 @@ export function drawParticles(ctx, vr) {
         ctx.globalAlpha = Math.min(1, p.life);
         if (p.spr) {
           const [sx, sy, sw, sh] = p.spr, w = sw * p.size, h = sh * p.size;
-          ctx.save(); ctx.translate(px, py); ctx.rotate(p.rot);
+          ctx.translate(px, py); ctx.rotate(p.rot);
           ctx.drawImage(A.gibImg, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
-          ctx.restore();
+          ctx.setTransform(ba, bb, bc, bd, be, bf);
           break;
         }
-        ctx.save(); ctx.translate(px, py); ctx.rotate(p.rot);
+        ctx.translate(px, py); ctx.rotate(p.rot);
         ctx.fillStyle = '#100404'; ctx.fillRect(-size * p.w - 0.6, -size / 2 - 0.6, size * p.w * 2 + 1.2, size + 1.2);
         ctx.fillStyle = p.color; ctx.fillRect(-size * p.w, -size / 2, size * p.w * 2, size);
-        ctx.fillStyle = shade(p.color, 0.25); ctx.fillRect(-size * p.w, -size / 2, size * p.w, size / 2.5);
-        ctx.restore();
+        ctx.fillStyle = p.shade || (p.shade = shade(p.color, 0.25)); ctx.fillRect(-size * p.w, -size / 2, size * p.w, size / 2.5);
+        ctx.setTransform(ba, bb, bc, bd, be, bf);
         break;
       }
       case 'shard':
         ctx.globalAlpha = 1 - k; ctx.fillStyle = p.color;
-        ctx.save(); ctx.translate(px, py); ctx.rotate(p.rot);
+        ctx.translate(px, py); ctx.rotate(p.rot);
         ctx.beginPath(); ctx.moveTo(0, -size * 1.6); ctx.lineTo(size * 0.6, 0); ctx.lineTo(0, size * 1.6); ctx.lineTo(-size * 0.6, 0); ctx.fill();
-        ctx.restore();
+        ctx.setTransform(ba, bb, bc, bd, be, bf);
         break;
       case 'skull': { // a little pixel skull (the Death Knight's casts and hits)
         ctx.globalAlpha = Math.min(1, (1 - k) * 1.6); const u = Math.max(1, size / 3), x0 = px - u * 2.5, y0 = py - u * 3;
