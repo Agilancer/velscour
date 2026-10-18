@@ -5,7 +5,7 @@ import { camera } from '../core/view.js';
 import { sfx, playMusic, stopMusic, setAmbience, stopAmbience, footsteps } from '../core/audio.js';
 import { rand, pick, randi, escapeHtml, dist, makeCanvas, fmtInt, swapKey } from '../core/util.js';
 import { biomeTileSet, loadBiomeArt, mixedTileSet, keepTileSets } from '../core/assets.js';
-import { loadArtFor, enemyImage } from '../core/enemyart.js';
+import { loadArtFor, enemyImage, markArtCaches, trimArtCaches } from '../core/enemyart.js';
 import { loadClassArt } from '../core/classart.js';
 import { loadGearArt } from '../core/gearart.js';
 import { preloadBarFx } from '../gfx/artfx.js';
@@ -22,15 +22,16 @@ import { generateOverworld } from '../world/overworld.js';
 import { createOverworldScenario } from './overworld.js';
 import { addWanderers } from './wanderers.js';
 import { createSeaOfSandScenario } from './seaofsand.js';
-import { loadSeaOfSandPack } from '../gfx/seaofsand.js';
-import { loadCastlePack } from '../gfx/castle.js';
+import { loadSeaOfSandPack, releaseSeaOfSandPack } from '../gfx/seaofsand.js';
+import { loadCastlePack, releaseCastlePack } from '../gfx/castle.js';
 import { World } from './world.js';
 import { Player } from './player.js';
 import { makeMonster, Monster } from './monster.js';
+import { clearRims } from './creature.js';
 import { applyTrait, rollTrait, ambushTick, madnessTick, unleashMadness } from './mayhem.js';
 import { makeRaidBoss } from './raid.js';
 import { dropChest } from './loot.js';
-import { renderWorld, drawMinimap, preloadTownSheets } from './render.js';
+import { renderWorld, drawMinimap, preloadTownSheets, releaseTownSheets } from './render.js';
 import { controls } from './controls.js';
 import { Auto } from './autoplay.js';
 import { writeSave, newCharData, migrate } from './save.js';
@@ -88,6 +89,7 @@ let automapCanvas = null;
 async function warmLevelArt(w) {
   const seen = new Set();
   let t = performance.now();
+  markArtCaches();
   for (const c of w.creatures) {
     if (!c.art || G.world !== w) continue;
     const k = c.art + '|' + swapKey(c.swap);
@@ -96,6 +98,21 @@ async function warmLevelArt(w) {
     if (enemyImage(c.art, c.swap)) { enemyImage(c.art, c.swap, 'flash'); enemyImage(c.art, c.swap, 'dark'); }
     if (performance.now() - t > 40) { await new Promise((r) => setTimeout(r, 0)); t = performance.now(); }
   }
+  // what earlier levels built and this one never asked for goes (a long run carried every level's sprites)
+  if (G.world === w) { trimArtCaches(); clearRims(); }
+}
+
+// Let go of the art the level being built doesn't use: the Castle (~120 MB decoded) and Sea of Sand packs,
+// townsfolk sheets. Called by the level-entry flows once the new level's art is in (never on the way through town:
+// a hero going back to the same biome keeps its pack); buildDungeon alone keeps everything, for tests and tools.
+// A run through many biomes kept all of it, plus every level's monster sprites, rims and silhouettes (~590 MB of
+// images and canvases after 30 levels, ~290 MB now). Everything reloads from the HTTP cache when needed.
+// (The painted biome packs stay: there are only a few, and fetching one again decoded a second copy while the
+// browser still held the first, which cost more renderer memory than it saved.)
+function releaseLevelArt(biome) {
+  if (biome?.id !== 'castle') releaseCastlePack();
+  if (biome?.id !== 'sea_of_sand') releaseSeaOfSandPack(); // loadArtFor fetches it again for ss_ monsters elsewhere
+  if (!biome?.overworld && biome?.id !== 'town') releaseTownSheets();
 }
 
 export const game = {
@@ -239,6 +256,7 @@ export const game = {
     if (best) arrive = best;
     else if (!m.walkable(...arrive)) arrive = m.randomNear(arrive[0], arrive[1], 1.5) || t.start;
     this.setWorld(world, arrive, old);
+    void warmLevelArt(world); // the hero's summons; trims the last level's monster sprites
     HUD.setArea('Herrington Hollow', 'Town — a safe haven');
     playMusic('town'); setAmbience('town');
     Vendor.restock();
@@ -316,8 +334,9 @@ export const game = {
       await this.loadLevelArt(biome, mix);
       this.buildDungeon(depth, biome, mix);
       const w = G.world;
-      await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])]).catch((e) => console.warn(e));
+      await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])], true).catch((e) => console.warn(e));
       await warmLevelArt(w);
+      releaseLevelArt(biome);
     } catch (e) {
       console.warn(e);
       UI.log('The abyss rejected that destination. Try the skull again.', '#ff8060');
@@ -355,8 +374,9 @@ export const game = {
         this.buildDungeon(depth, biome, mix);
         // the level's monster art (set 2 sheets load per level); a failed sheet falls back to pixel sprites
         const w = G.world;
-        await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])]).catch((e) => console.warn(e));
+        await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])], true).catch((e) => console.warn(e));
         await warmLevelArt(w);
+        releaseLevelArt(biome);
       } finally { loading.classList.add('hidden'); }
     }, 40);
   },

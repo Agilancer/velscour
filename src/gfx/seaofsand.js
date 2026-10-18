@@ -3,7 +3,7 @@ import { makeCanvas, recolor, silhouette, swapKey } from '../core/util.js';
 
 const DIR = 'assets/tiles/sea_of_sand/';
 let loading = null, meta = null, images = null;
-const cache = new Map();
+export const cache = new Map(); // ss_ monster sprites, LRU (enemyart.js trims it per level)
 
 function loadImage(name) {
   return new Promise((resolve, reject) => {
@@ -24,6 +24,9 @@ export function loadSeaOfSandPack() {
     images = Object.fromEntries(['floor','scatter','tree','monster','boss','cliff'].map((k, i) => [k, atlas[i]]));
   }).catch((e) => { loading = null; throw e; }));
 }
+
+/** Let the pack's atlases and monster sprites go once no level needs them; loadSeaOfSandPack fetches them again. */
+export function releaseSeaOfSandPack() { if (!images) return; images = null; loading = null; cache.clear(); }
 
 export function seaOfSandFrames(category) { return meta?.atlases[category] || []; }
 export function seaOfSandFloorTiles() {
@@ -56,7 +59,8 @@ export function seaOfSandEnemyImage(id, swap = null, mode = '') {
   if (!images || !id?.startsWith('ss_')) return null;
   const key = `${id}|${swapKey(swap)}`;
   let img = cache.get(key);
-  if (!img) {
+  if (img) { cache.delete(key); cache.set(key, img); }
+  else {
     const a = [...seaOfSandFrames('monster'), ...seaOfSandFrames('boss')].find((f) => f.id === id.slice(3));
     if (!a) return null;
     img = swap ? recolor(images[a.category], swap, a.x, a.y, a.w, a.h) : makeCanvas(a.w, a.h);

@@ -12,6 +12,8 @@ export function loadCastlePack(){
   .catch(e=>{loading=null;throw e;});
  return loading;
 }
+/** Let the pack's atlases go (~120 MB decoded) once the Castle is left; loadCastlePack fetches them again. */
+export function releaseCastlePack(){if(!images)return;images=null;loading=null;recolored.clear();}
 export function castleFrames(category){return meta?.atlases[category]||[];}
 function imageFor(category,palette){
  const src=images?.[category];if(!src||!palette)return src;

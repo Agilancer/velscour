@@ -42,10 +42,31 @@ Contents
   Full `biome_perf.js` sweep (4x throttle, real GPU), fps before -> after: Blood 49 -> 60, Ashen 44 -> 60, Shadow
   39 -> 58, Abyss 38 -> 58, Thorn 35 -> 56 (worst frame 179 -> 33 ms), Flesh 36 -> 52, Desert Temple 36 -> 55,
   Astral 37 -> 59, Throne worst frame 207 -> 22 ms.
-- **Still open:** one page that visits all 37 biomes in a row still slows down late in the run (both before and
-  after; e.g. Sea of Sand alone 60 fps, 60 -> 42 fps when visited 33rd): GPU memory from every pack, sheet and
-  sprite ever drawn. Biomes measured alone match. Next candidates: drop `A.packs` and enemy-sheet bitmaps no
-  level needs, decal baking into the floor chunks, and real-device (iOS/Android) profiling.
+- **Long runs (second pass).** A page that visited 30 levels held ~590 MB of images and canvases from levels long
+  gone. Now each level lets go of what it doesn't use (`releaseLevelArt` in game.js, called by `enterDungeon` /
+  `teleportToBiome` once the new level's art is in; a bare `buildDungeon` keeps everything): the Castle pack (~120 MB
+  decoded) and Sea of Sand pack outside those biomes, townsfolk sheets in dungeons, set-2 enemy sheets the level
+  doesn't need (`loadArtFor(ids, true)`), and the monster sprite caches are trimmed to what the level's warm-up touched
+  (`markArtCaches`/`trimArtCaches`, `util.lruMark`/`lruTrim`) with the rims cleared. ~290 MB after 30 levels.
+  **Don't** release the painted biome packs (`A.packs`): measured, fetching one again decodes a second copy while
+  the browser still caches the first (+300 MB renderer working set). With a phone-sized GPU budget
+  (`--force-gpu-mem-available-mb=256`) GPU memory after 30 levels went 447 -> 410 MB, renderer 723 -> 689 MB.
+  Measuring drift needs seeded levels (Math.random seeded around `buildDungeon`) and a forced GC; unseeded probes
+  vary 2x from level to level, which is most of what looked like "late-run slowdown" in the sweep.
+- **Blood is baked into the floor.** Finished splats and grown pools (`vfx.js bakedDecals`, each with a `seq`) are
+  stamped once into the floor chunks that show them (`stampDecals`, called from `drawFloors`; a chunk keeps the last
+  `seq` it has); `drawDecals` only draws live decals (growing pools, scorch, frost) and baked ones whose on-screen
+  chunks aren't baked yet (`decalStamped`). Decals went from 12-20% of a gory frame to ~2%, and finished blood is no
+  longer capped at 500/1100 (up to 8000 a level). The floor chunk cache is ~2 screens (`cap`) instead of a fixed 24.
+- **Monster targeting:** `World.rebuildGrid` also keeps each team's creatures and a taunter count;
+  `nearestHostile` scans the other teams' lists when they're fewer than the cells (a monster looking for the hero and
+  his summons among hundreds), with identical results (checked on 48,000 random queries); `pickTarget` skips the
+  taunt query when nothing taunts. Loot labels and plain floating texts are baked sprites.
+- **Result:** one page through all 37 biomes (`biome_perf.js`, 4x throttle, real GPU) now holds 52-60 fps from the
+  first biome to the last (original code: 34-44 fps in the late biomes; first pass: 35-51). `biome_perf.js` now enters
+  levels like the game does (sheet release, warm-up, cache trim).
+- **Still open:** real-device (iOS/Android) profiling; wall slices are now the largest single cost in Cathedral-walled
+  biomes (~20% at 6x throttle; per-call overhead, not texture size — ImageBitmap sources didn't help).
 - **Assets removed:** 85 unused AI-biome floor/prop/wall atlases (`assets/tiles/ai_biomes/`, all but
   `heavenly_monsters.webp`) and `tools/build_biome_wall_materials.py`, the retired per-class `helms.webp` /
   `helms_mask.png` (no longer written by `tools/gearart.py`), the unused `intro-blastorama.png` /

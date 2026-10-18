@@ -48,12 +48,22 @@ export class World {
   rebuildGrid() {
     for (const cell of this.grid.values()) { cell.length = 0; this.gridPool.push(cell); }
     this.grid.clear();
+    // also: the creatures of each team (in grid order) with the cell each was bucketed in, and whether anything
+    // taunts, so nearestHostile/pickTarget can skip the grid when the other side is a handful (the hero and summons)
+    const teams = this.teams || (this.teams = new Map());
+    for (const a of teams.values()) a.length = 0;
+    this.taunters = 0;
     for (const c of this.creatures) {
       if (c.dead) continue;
-      const k = (Math.floor(c.x / CELL) << 16) | (Math.floor(c.y / CELL) & 0xffff);
+      const gx = Math.floor(c.x / CELL), gy = Math.floor(c.y / CELL), k = (gx << 16) | (gy & 0xffff);
       let a = this.grid.get(k);
       if (!a) this.grid.set(k, (a = this.gridPool.pop() || []));
       a.push(c);
+      c._gx = (k >> 16); c._gy = (k << 16) >> 16; // the cell as the grid key encodes it
+      let t = teams.get(c.team);
+      if (!t) teams.set(c.team, (t = []));
+      t.push(c);
+      if (c.taunt) this.taunters++;
     }
   }
 
@@ -90,7 +100,24 @@ export class World {
         bd = d; best = c; bestX = cx; bestY = cy;
       }
     };
-    if ((x1 - x0 + 1) * (y1 - y0 + 1) > this.grid.size) {
+    // the other teams' creatures, when they are fewer than the cells to scan (a monster looking for the hero and his
+    // summons among hundreds of monsters): same cells, same distance test and tie order as the grid scans below
+    let others = 0;
+    if (this.teams) for (const [t, a] of this.teams) if (t !== team) others += a.length;
+    if (this.teams && others < Math.min(this.grid.size, (x1 - x0 + 1) * (y1 - y0 + 1))) {
+      for (const [t, a] of this.teams) {
+        if (t === team) continue;
+        for (const c of a) {
+          const cx = c._gx, cy = c._gy;
+          if (cx < x0 || cx > x1 || cy < y0 || cy > y1) continue;
+          if (c.dead || c.targetable === false) continue;
+          const d = dist2(x, y, c.x, c.y), rr = r + c.r;
+          if (d > rr * rr || d > bd || (d === bd && (cy > bestY || (cy === bestY && cx >= bestX)))) continue;
+          if (needLos && !this.map.los(x, y, c.x, c.y)) continue;
+          bd = d; best = c; bestX = cx; bestY = cy;
+        }
+      }
+    } else if ((x1 - x0 + 1) * (y1 - y0 + 1) > this.grid.size) {
       // Awake monsters search thirty tiles: visiting hundreds of empty buckets
       // per monster costs much more than scanning the sparse occupied grid.
       for (const [key, cell] of this.grid) {

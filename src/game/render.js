@@ -2,7 +2,7 @@
 import { G } from '../state.js';
 import { camera, isoX, isoY, HW, HH, TW, TH } from '../core/view.js';
 import { makeCanvas, TAU, clamp, rgba, shade, hexToRgb } from '../core/util.js';
-import { drawDecals, drawEffects, drawParticles, drawTexts, lights, glowSprite } from '../gfx/vfx.js';
+import { drawDecals, drawEffects, drawParticles, drawTexts, lights, glowSprite, stampDecals, bakedDecals } from '../gfx/vfx.js';
 import { orbitShieldDepth } from '../gfx/lancershields.js';
 import { drawWallTorch, wallTorchRect } from '../gfx/walltorches.js';
 import { drawWallHanging, wallHangingRect } from '../gfx/wallhangings.js';
@@ -35,6 +35,8 @@ function townSheet(id) {
   }
   return img;
 }
+/** Let the townsfolk sheets go (a town visit decodes ~20-30 of them, 2 MB each) in levels without townsfolk. */
+export function releaseTownSheets() { townSheets.clear(); townPaletteSheets.clear(); advPortraits.clear(); }
 export function preloadTownSheets(ids) {
   const unique=[...new Set(ids.filter(Boolean))];
   return Promise.all(unique.map(id=>{
@@ -424,7 +426,7 @@ function drawNpc(ctx, n) {
 // Floors (tiles, grit, seam flecks) never change after generation, so they are baked into screen-aligned chunks of
 // CW world px at the current device scale and blitted: ~6 drawImages a frame instead of hundreds. Chunks rebuild when
 // the zoom/DPR changes; at most two are baked per frame, the rest of the view draws tile by tile until its turn.
-const CW = 384, CHUNK_MAX = 24;
+const CW = 384;
 let chunkBudgetFrame = -1, chunkBudget = 0;
 function drawFloorTiles(ctx, world, x0, y0, x1, y1, force) {
   const map = world.map;
@@ -445,7 +447,19 @@ function drawFloorTiles(ctx, world, x0, y0, x1, y1, force) {
     }
   }
 }
-function drawFloors(ctx, world, vr) {
+const chunkKey = (cx, cy) => (cx + 32768) * 65536 + (cy + 32768);
+/** Is a baked decal (vfx.js) already in every on-screen floor chunk it touches? Then the chunks draw it and drawDecals
+ * skips it (chunks off screen don't count: they aren't drawn this frame). */
+function decalStamped(fc, d, px, py) {
+  const cx0 = Math.max(fc.cx0, Math.floor((px - d.r) / CW)), cx1 = Math.min(fc.cx1, Math.floor((px + d.r) / CW));
+  const cy0 = Math.max(fc.cy0, Math.floor((py - d.r) / CW)), cy1 = Math.min(fc.cy1, Math.floor((py + d.r) / CW));
+  for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
+    const c = fc.map.get(chunkKey(cx, cy));
+    if (!c || c.dseq < d.seq) return false;
+  }
+  return true;
+}
+function drawFloors(ctx, world, vr, hq) {
   const z = camera.zoom * G.dpr;
   const fc = world.floorChunks && world.floorChunks.z === z ? world.floorChunks : (world.floorChunks = { z, map: new Map() });
   const tf = ctx.getTransform(), ox = tf.e, oy = tf.f;
@@ -453,8 +467,12 @@ function drawFloors(ctx, world, vr) {
   const parts = buildTransitionParticles(world);
   const cx0 = Math.floor((vr.x0 - 8) / CW), cx1 = Math.floor((vr.x1 + 8) / CW);
   const cy0 = Math.floor((vr.y0 - 8) / CW), cy1 = Math.floor((vr.y1 + 8) / CW);
+  // keep about two screens of baked chunks (each is (384 * zoom * dpr)^2 px of GPU memory; a fixed 24 was ~50 MB on
+  // a high-DPI phone), enough to walk back and forth without rebaking
+  const cap = Math.max(10, 2 * (cx1 - cx0 + 1) * (cy1 - cy0 + 1));
+  fc.cx0 = cx0; fc.cx1 = cx1; fc.cy0 = cy0; fc.cy1 = cy1;
   for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
-    const key = cx + ',' + cy;
+    const key = chunkKey(cx, cy);
     let c = fc.map.get(key);
     const wx = cx * CW, wy = cy * CW;
     // device-px edges from the same rounding on both sides, so neighbouring chunks meet with no seam
@@ -472,9 +490,17 @@ function drawFloors(ctx, world, vr) {
         if (pt.x < wx - 4 || pt.x > wx + CW + 4 || pt.y < wy - 4 || pt.y > wy + CW + 4) continue;
         g.drawImage(transitionSprite(pt.color, pt.size), pt.x - pt.size / 2, pt.y - pt.size / 2);
       }
+      c.dseq = 0;
       fc.map.set(key, c);
-      if (fc.map.size > CHUNK_MAX) fc.map.delete(fc.map.keys().next().value);
+      while (fc.map.size > cap) fc.map.delete(fc.map.keys().next().value);
     } else if (c) { fc.map.delete(key); fc.map.set(key, c); } // LRU touch
+    // finished blood is stamped into the chunk once (vfx.js bakedDecals): no per-frame cost after that
+    if (c && bakedDecals.length && bakedDecals[bakedDecals.length - 1].seq > c.dseq) {
+      const g = c.getContext('2d'), n = c.width;
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = hq;
+      g.setTransform(n / CW, 0, 0, n / CW, -wx * n / CW, -wy * n / CW);
+      c.dseq = stampDecals(g, c.dseq, wx, wy, wx + CW, wy + CW);
+    }
     if (c) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.drawImage(c, dx0, dy0, dx1 - dx0, dy1 - dy0);
@@ -510,9 +536,10 @@ export function renderWorld(ctx, world) {
   const ty0 = clamp(Math.floor(Math.min(...corners.map((c) => c[1]))) - 1, 0, map.h - 1);
   const ty1 = clamp(Math.ceil(Math.max(...corners.map((c) => c[1]))) + 1, 0, map.h - 1);
 
-  drawFloors(ctx, world, vr);
+  drawFloors(ctx, world, vr, hq);
   ctx.imageSmoothingQuality = hq;
-  drawDecals(ctx, vr);
+  const fc = world.floorChunks;
+  drawDecals(ctx, vr, (d, px, py) => decalStamped(fc, d, px, py));
   for (const c of world.corpses) {
     const px = isoX(c.x, c.y), py = isoY(c.x, c.y);
     if (px > vr.x0 - 40 && px < vr.x1 + 40 && py > vr.y0 - 40 && py < vr.y1 + 40) drawCorpse(ctx, c);

@@ -5,7 +5,7 @@
 import { makeCanvas, recolor, silhouette, swapKey } from '../core/util.js';
 import { ART_BY_ID } from '../data/bestiary.js';
 
-const CACHE=new Map(),MAX=128; // base sprites only: flash/corpse silhouettes hang off them (util.silhouette)
+export const CACHE=new Map(),MAX=128; // base sprites only: flash/corpse silhouettes hang off them (util.silhouette)
 const HUES={
  catacombs:38,frozen:205,ice_temple:207,molten:13,fungal:103,sunken:185,
  blood:356,ashen:30,void:277,gilded:47,plague:92,sewers:82,crystal:189,desert:35,

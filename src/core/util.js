@@ -184,6 +184,19 @@ export function silhouette(img, fill) {
   return c;
 }
 
+/**
+ * Level-scoped trimming for the LRU art caches (Map insertion order = recency): lruMark drops a sentinel at the
+ * newest end; every entry read or added after it moves past it; lruTrim then deletes everything still in front of
+ * it, i.e. what the new level never asked for. Caches keep their size caps; this just stops a long run carrying
+ * every earlier level's monsters (and their GPU textures) along.
+ */
+const LRU_MARK = Symbol('lru-mark');
+export function lruMark(map) { map.delete(LRU_MARK); map.set(LRU_MARK, null); }
+export function lruTrim(map) {
+  if (!map.has(LRU_MARK)) return;
+  for (const k of map.keys()) { map.delete(k); if (k === LRU_MARK) break; }
+}
+
 /** A stable cache key for a palette swap object (memoised: JSON.stringify per draw adds up). */
 const swapKeys = new WeakMap();
 export function swapKey(swap) {

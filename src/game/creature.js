@@ -56,6 +56,9 @@ function rimCanvas(img, sx, sy, sw, sh, col, o) {
   return c;
 }
 
+/** A new level starts the rim cache over (rims are cheap GPU bakes; the last level's would just sit there). */
+export function clearRims() { rims.clear(); }
+
 export class Creature {
   constructor(o = {}) {
     this.id = ++UID;

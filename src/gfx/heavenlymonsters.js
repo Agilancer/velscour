@@ -8,7 +8,7 @@ import { approvedHeavenlyMonsterCanvas, preloadApprovedHeavenlySprites } from '.
 import { aiHeavenlyMonsterCanvas, preloadAIGeneratedHeavenlySprites } from './aibiomeart.js';
 
 const BY_ID = Object.fromEntries(HEAVENLY_MONSTERS.map(e=>[e.id,e]));
-const CACHE = new Map(), MAX=88;
+export const CACHE = new Map(), MAX=88;
 let preloadPromise = null;
 export function preloadApprovedHeavenlyArtwork() {
   return preloadPromise || (preloadPromise=Promise.all([

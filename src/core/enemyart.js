@@ -1,11 +1,11 @@
 // Monster art from assets/sprites/enemies (tools/process_assets.py enemies): atlas loading plus a bounded
 // cache of cut-out, palette-swapped, flash (white) and corpse (dark) canvases. See docs/ENEMY_ART.md.
-import { recolor, silhouette, swapKey, decoded } from './util.js';
+import { recolor, silhouette, swapKey, decoded, lruMark, lruTrim } from './util.js';
 import { loadReplacementArt, replacementImage } from './replacementart.js';
 import { ART_BY_ID } from '../data/bestiary.js';
-import { heavenlyEnemyImage } from '../gfx/heavenlymonsters.js';
-import { biomeNativeImage } from '../gfx/biomenativeart.js';
-import { loadSeaOfSandPack, seaOfSandArtCell, seaOfSandEnemyImage } from '../gfx/seaofsand.js';
+import { heavenlyEnemyImage, CACHE as heavenlyCache } from '../gfx/heavenlymonsters.js';
+import { biomeNativeImage, CACHE as nativeCache } from '../gfx/biomenativeart.js';
+import { loadSeaOfSandPack, seaOfSandArtCell, seaOfSandEnemyImage, cache as sandCache } from '../gfx/seaofsand.js';
 
 const DIR = 'assets/sprites/enemies/';
 const EAGER = /^(set1|minions)\//; // fetched with the meta; the rest (set2, ~5 MB) loads per level as looks need it
@@ -49,19 +49,31 @@ export async function loadEnemySheets(keys) {
   await Promise.all((keys || Object.keys(E.meta)).map(loadSheet));
 }
 
-/** Load the sheets these art ids are on (unknown or empty ids are skipped). */
-export function loadArtFor(ids) {
+/** Load the sheets these art ids are on (unknown or empty ids are skipped). A level's call also lets go of the
+ * per-level sheets (set 2) it doesn't use: decoded, each is 2-7 MB that a long run would otherwise keep. */
+export function loadArtFor(ids, release = false) {
+  const keys = [...new Set(ids.map(id=>{
+    const a=ART_BY_ID[id];
+    if (a?.sheet === 'sea_of_sand') return null;
+    return a?.sourceArt ? ART_BY_ID[a.sourceArt]?.sheet :
+      a?.sheet !== 'heavenly/generated' ? a?.sheet : null;
+  }).filter(Boolean))];
+  if (release) for (const k of Object.keys(E.sheets)) {
+    if (EAGER.test(k) || PETS.test(k) || keys.includes(k)) continue;
+    E.sheets[k].close?.(); delete E.sheets[k]; delete E.sheet[k]; // fetched again (HTTP cache) if a later level wants it
+  }
   return Promise.all([
     ids.some((id) => id && id.startsWith('va_')) ? loadReplacementArt() : null,
     ids.some((id) => id && id.startsWith('ss_')) ? loadSeaOfSandPack() : null,
-    loadEnemySheets([...new Set(ids.map(id=>{
-      const a=ART_BY_ID[id];
-      if (a?.sheet === 'sea_of_sand') return null;
-      return a?.sourceArt ? ART_BY_ID[a.sourceArt]?.sheet :
-        a?.sheet !== 'heavenly/generated' ? a?.sheet : null;
-    }).filter(Boolean))]),
+    loadEnemySheets(keys),
   ]);
 }
+
+// The monster sprite caches: marked before a level's warm-up, trimmed after it (util.lruMark/lruTrim), so sprites
+// only earlier levels used (and their flash/corpse silhouettes and GPU textures) don't pile up over a long run.
+const levelCaches = () => [cache, nativeCache, heavenlyCache, sandCache];
+export function markArtCaches() { levelCaches().forEach(lruMark); }
+export function trimArtCaches() { levelCaches().forEach(lruTrim); }
 
 function cell(a) {
   if (a?.sheet === 'sea_of_sand') return seaOfSandArtCell(a.i);
