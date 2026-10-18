@@ -30,6 +30,13 @@ export function lanceLeap(leap, name) {
   addEffect(new LanceLeap(leap, st));
 }
 
+/** Paint leap style i's lance (wrapping round the styles) with its tip at screen (x, y), pointing along ang. */
+export function drawLeapLance(ctx, i, x, y, ang, len, alpha, t) {
+  LanceLeap.prototype.drawLance.call({ st: STYLES[LANCE_LEAPS[i % LANCE_LEAPS.length]], t, blade: LanceLeap.prototype.blade }, ctx, x, y, ang, len, alpha, -1);
+}
+/** Leap style i's colours (glow, core, dark). */
+export const leapStyle = (i) => STYLES[LANCE_LEAPS[i % LANCE_LEAPS.length]];
+
 // Spectral spear barrages borrow every existing Dragoon leap's elaborate lance
 // design. The actual hit lands instantly in skillrun; these shafts keep stabbing.
 export function lanceSpearBarrage(centers, r, triune = false) {
