@@ -243,6 +243,16 @@ export const BIOMES = [
     torch:'#f2ad55', fog:'#24150a',
   },
   {
+    // the largest overworld: thick woods, trail mazes, walled labyrinths and twelve forest trials (docs/DARK_FOREST.md)
+    id: 'dark_forest', name: 'The Dark Forest', pack: 'dark_forest', overworld: true, packArt: true,
+    palette: null, dark: 0.64, light: 11.5,
+    ambient: { type: 'firefly', color: '#b8f07a' }, mon: { hue: 70, sat: 0.8, light: -0.02 },
+    el: 'poison', blood: '#5e1410', adj: ['Gloomwood', 'Briar-Bound', 'Moonless', 'Root-Choked'],
+    roster: ['spider', 'hound', 'shroom', 'wraith', 'golem', 'archer', 'cultist', 'ghoul', 'zombie', 'bat', 'skeleton', 'slime'],
+    prefer: ['set2/goblins', 'set2/undead', 'set2/slimes', 'set2/birdfolk', 'set2/fiends'],
+    torch: '#ffc070', fog: '#060c07',
+  },
+  {
     id: 'desert_temple', name: 'Temple of the Sunless Dynasty', pack: 'desert_temple',
     palette: null, dark: 0.77, light: 8.2,
     ambient: { type: 'sand', color: '#d9ac70' },
@@ -406,7 +416,7 @@ const MON_SWAPS = {
   astral_plane: ['spectral', 'amethyst', 'crystal', 'void', 'midnight'],
   heavenly: [null, null, 'gilded', 'pale', 'bronze'],
   castle_keep: ['gilded', 'bronze', 'rust', 'pale', 'ash'],
-  overworld: [null, 'thorn', 'rot', 'ash', 'bone'], throne: ['infernal', 'blood', 'ember', 'rust'],
+  overworld: [null, 'thorn', 'rot', 'ash', 'bone'], dark_forest: [null, 'thorn', 'rot', 'shadow', 'verdigris', 'midnight'], throne: ['infernal', 'blood', 'ember', 'rust'],
 };
 for (const b of BIOMES) b.swaps = MON_SWAPS[b.id];
 
@@ -427,7 +437,7 @@ export const OVERWORLD_BIOME_IDS = BIOMES.filter((b) => b.overworld).map((b) => 
 /**
  * A shuffled pool of biomes for the hero's next depth. An overworld is guaranteed after three
  * actual non-overworld dungeon entries. When forced, choose among all registered overworlds so
- * Forsaken Wilds, Sea of Sand and Castle all remain in the rotation. The throne is never overridden.
+ * Forsaken Wilds, Sea of Sand, Castle and the Dark Forest all remain in the rotation. The throne is never overridden.
  */
 export function drawBiome(c, depth) {
   if (depth === FINAL_DEPTH) return 'throne';

@@ -30,9 +30,7 @@ const depth = +(process.argv[3] || 24), rate = +(process.argv[4] || 4), secs = +
       if (id === 'town') { game.enterTown(); }
       else {
         const b = BIOME_BY_ID[id];
-        if (id === 'sea_of_sand') await (await import('/src/gfx/seaofsand.js')).loadSeaOfSandPack?.();
-        else if (id === 'castle') await (await import('/src/gfx/castle.js')).loadCastlePack?.();
-        else if (!b.overworld) await loadBiomeArt(b);
+        if (id !== 'town') await game.loadLevelArt(b); // each biome's own packs (Sea of Sand, Castle, Dark Forest, dungeon packs)
         G.char.depth = depth;
         game.buildDungeon(depth, b);
         // as enterDungeon does: the level's sheets (letting go of the rest), then its sprites built and the caches trimmed

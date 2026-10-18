@@ -75,6 +75,34 @@ Contents
 - Left alone: `assets/PrelimMonsters/` (22 MB of unreferenced Gemini images — the user's; ask before deleting) and
   `assets/sprites/townsfolk/generated_sources/` (build inputs inside a served folder; never downloaded by players).
 
+## October 18, 2026 — class signatures: a unique build-and-payoff mechanic for 14 classes (branch `feat/grand-sweep`, not committed)
+
+- **What:** in the spirit of the Bard's notation, every class except the Bard and the Astronomer (they keep theirs) gets a
+  signature that charges from ordinary play, is drawn over or behind the hero, and pays off by itself when full.
+  Framework `src/game/signature.js` (dispatcher, `SIGNATURES`, `sigFire` for tests, `G.settings.signatures = false` turns
+  them off); one module per class in `src/game/sigs/` (shared helpers in `common.js`). Hooks: `Player.tryUseSkill`
+  (`sigCast`), `Player.onHit` (`sigHit`), `Player.update` (`sigUpdate`), `combat.kill` (`sigKill`). Signature hits carry
+  `o.sig` and their kills pass `info.sig`, so a payoff never charges itself. `p.sigScale` (Slime Lord) multiplies the
+  hero's draw scale.
+- **The fourteen:** Paladin Halo of Judgement (7 runes, hammer of light, cross beams, consecration). Ranger The Hunt (spirit
+  hawk marks a quarry; 6 feathers, it stoops; quarry kill = Hunter's Focus). Wizard Confluence (fire/frost/storm orbs;
+  3 each = meteor + ice ring + lightning; one orb alone OVERLOADS). Necromancer Soul Harvest (souls stream into a skull
+  lantern; 13 = Danse Macabre skulls, corpse bone spikes, minions healed). Barbarian Bloodlust (hit combo counter; at
+  25/50/100/200/+100 a giant ancestor ghost slams). Dragoon Sky Lances (8 light spears fan behind him like wings;
+  Heaven's Rain + Highwind). Totem Master Spirit Pole (a face per 2 spells by tree; 4 = Great Totem for 8 s). Death
+  Knight Runeblade (6 frost/unholy/blood runes on a floating sword; Runic Obliteration cleave, majority rune decides the
+  rider). Carrion Witch Hex Poppet (pins + hex threads to struck foes, dead foes leave rot pins; 6 = Squeeze). Slime Lord
+  Gelatinous Mass (goo from kills slithers in, he grows up to 40%; Royal Belly Flop + 3 slimelings). Boomerang Knight
+  Trick Shot (8 mini boomerangs; a gold ricochet web that snaps). Lancer Rally the Order (war banner unfurls with Valor
+  from hits, kills and wounds; 5 phantom knights charge + Rallied). Dragon Knight Dragonheart (flame wings grow with heat;
+  a dragon head breathes fire + Wyrmblood). Gunner Bombing Run (marks foes on a radar; 10 marks = biplane drops 8 bombs).
+- **Rates** (auto-play, early depths, payoffs a minute): Ranger ~9, Totem ~7, Wizard/Barbarian/Dragoon ~6, Boomerang/Witch
+  ~5, Lancer ~4, Paladin/DK/Dragon Knight/Gunner ~3, Slime ~2, Necromancer ~1.5. Damage is in units of `power(p)` (the
+  running average of the hero's damaging casts), mostly 6-12x per payoff. Not balance-tested at deep depths
+  (`balance.js` not run).
+- Test: `tools/tests/signatures.js [classes|all] [autoplay secs] [noplay] [noshots]` (charges from casting, showcase
+  shots `sig_<class>_0..3.png`, auto-play). Regression run: `flow`, `mobile`, `skills slime_lord,gunner,carrion_witch` pass.
+
 ## October 18, 2026 — the Castle overworld rebuilt as a moated quadrangular castle (branch `feat/grand-sweep`)
 
 - **Why:** the old wall traced a jagged diagonal path; Bresenham's diagonal steps left cells touching only at corners,
@@ -90,6 +118,34 @@ Contents
   Several floor atlas names don't match their art; floors are picked by look.
 - Tests: `castle_overworld.mjs` (100 seeds; the ward must be sealed with its gates closed; every wall cell drawn),
   `castle_visual.js` (screenshots), `scenarios.js` (all 35 Castle scenarios finish). See CASTLE_OVERWORLD.md.
+
+## October 18, 2026 — THE DARK FOREST, the largest overworld (branch `feat/grand-sweep`)
+
+- **New overworld biome `dark_forest`** from the user's THE DARK FOREST Biome Pack (60 floors, 5 wall families with
+  arches/doors on the Catacombs rig, 40 props, 15 towering trees with trunk/canopy layers). 192 x 192 tiles, larger
+  than the Castle. Full write-up: [DARK_FOREST.md](DARK_FOREST.md).
+- **Assets:** `python tools/darkforestpack.py <zip>` -> `assets/tiles/dark_forest/` (floors/walls/scatter via
+  `biomepack.import_pack`, plus `trees.webp/json`, halved). The 101.7 MB zip is over GitHub's limit and stays outside
+  the repo (`F:\!  VELSCOUR\AI ASSETS\Biome Packs\`). Biome flag `packArt: true` makes `loadBiomeArt` load the pack
+  for an overworld; `game.loadLevelArt` also loads the trees.
+- **Map** (`src/world/darkforest.js`): a DFS trail maze over 24 x 24 macro cells (main paths to every objective, side
+  trails, dead ends with chests, deep-wood blobs), three walled labyrinths (3-tile corridors; mossy ruins around the
+  Heart, thorn hedge, roots/blackwood) entered through arch gates, five glades, six landmarks, a timber stockade on the
+  bandit glade, ~18,500 Poisson-spaced trees. Walls are centre-line nodes on wall tiles, pushed into `map.walls`.
+  Trees live in `map.treeCells` (8 x 8 buckets), not `world.props`.
+- **Rendering:** `drawTree`/`treeFade` in render.js: trunk and canopy drawn apart; the canopy (and trunk) fade over
+  the hero.
+- **Trials** (`src/game/darkforest.js`, texts in `src/data/darkforest.js`): twelve glade trials (Witch-Lights,
+  Brood Mother, Hanging Effigies, Lantern Vigil, Druid Circle, Wolf Moon, Lost in the Woods, Bandit Stockade, Fairy
+  Ring, Hollow King's Barrow, Woodcutters' Last Stand, Creeping Thorns), five per map, optional, each a Legendary drop;
+  the Heart's Elder Heartwood (roots, the Heartwood Warden, last waves) opens the exit. Progress and seed saved in
+  `c.darkForestRuns` (migrated). Auto-play reads the new `ow.objective` hook.
+- **Design calls made without the user's answers** (they declined the questions and said "continue"): 192 x 192;
+  optional glades + Heart; existing bestiary for monsters; tree woods plus walled labyrinths. Worth confirming.
+- Tests: `tools/tests/dark_forest.js` (new). `biome_perf.js` now loads each biome through `game.loadLevelArt`.
+- Open: frame cost on the throttled phone profile is below the Wilds (~11 vs ~17 fps headless, software raster
+  overdraw from the tall trees); not yet tried on a real phone. No native forest monsters yet; a ChatGPT enemy kit
+  brief for forest creatures would be the natural follow-up.
 
 ## October 18, 2026 — Herrington Hollow comes alive: re-cut townsfolk, emotions, town life director (branch `feat/grand-sweep`)
 

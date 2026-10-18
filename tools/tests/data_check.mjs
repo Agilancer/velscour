@@ -115,6 +115,10 @@ for (const b of BIOMES) {
       if(b.pack!=='castle')bad.push('Castle must use its native art pack');
       for(const f of ['pack.json','floors.webp','walls.webp','castle_bridges.webp','wall_hangings.webp'])
         if(!existsSync(asset(`tiles/castle/${f}`)))bad.push(`Castle: missing tiles/castle/${f}`);
+    }else if(b.id==='dark_forest'){
+      if(b.pack!=='dark_forest'||!b.packArt)bad.push('Dark Forest must load its own biome pack (packArt)');
+      for(const f of ['pack.json','floors.webp','walls.webp','scatter.webp','trees.webp','trees.json'])
+        if(!existsSync(asset(`tiles/dark_forest/${f}`)))bad.push(`Dark Forest: missing tiles/dark_forest/${f}`);
     }else{
       if (b.pack !== 'town') bad.push(`overworld ${b.id}: expected town art pack`);
       for (const f of ['town.json', 'ground.webp', 'objects.webp']) if (!existsSync(asset(`tiles/town/${f}`))) bad.push(`overworld: missing tiles/town/${f}`);
