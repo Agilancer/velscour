@@ -18,8 +18,7 @@ What the importer adds (the game composites armor + helm + palette at run time, 
   the opening, through which the hero's own face shows (visor slits and grille gaps stay dark). The crown zone
   (above the helm and beside its upper half) hides hair that would poke out of the shell.
 
-Output (generated; never hand-edit): assets/sprites/gear/<class>/armor.webp, armor_mask.png, helms.webp,
-helms_mask.png, gear.json; and assets/sprites/gear/classes.json (the classes that have gear art).
+Output (generated; never hand-edit): assets/sprites/gear/<class>/armor.webp, armor_mask.png, gear.json; and assets/sprites/gear/classes.json (the classes that have gear art).
 """
 import csv
 import io
@@ -267,8 +266,8 @@ def process_class(cid, zpath):
     os.makedirs(outdir, exist_ok=True)
     atlas(armors, FW, FH).save(os.path.join(outdir, "armor.webp"), "WEBP", quality=90, alpha_quality=100, method=6)
     atlas(amasks, FW, FH, "L").save(os.path.join(outdir, "armor_mask.png"), optimize=True)
-    atlas(hcells, HW, HH).save(os.path.join(outdir, "helms.webp"), "WEBP", lossless=True, method=6)
-    atlas(hmasks, HW, HH, "L").save(os.path.join(outdir, "helms_mask.png"), optimize=True)
+    # the per-class helms.webp / helms_mask.png atlases retired when the fitted common/rare helmet atlases took over;
+    # their metadata stays in gear.json (rarity bands, boxes)
     meta = {
         "class": cid, "frame": [FW, FH], "cols": COLS, "anchor": [64, 40],
         "feet": int(np.median([b[3] for b in abox])), "headTop": int(np.median([b[1] for b in abox])),

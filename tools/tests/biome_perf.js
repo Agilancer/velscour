@@ -33,7 +33,9 @@ const depth = +(process.argv[3] || 24), rate = +(process.argv[4] || 4), secs = +
         if (id !== 'town') await game.loadLevelArt(b); // each biome's own packs (Sea of Sand, Castle, Dark Forest, dungeon packs)
         G.char.depth = depth;
         game.buildDungeon(depth, b);
-        await loadArtFor([...G.world.creatures.map((m) => m.art)]).catch(() => {});
+        // as enterDungeon does: the level's sheets (letting go of the rest), then its sprites built and the caches trimmed
+        await loadArtFor([...G.world.creatures.map((m) => m.art), ...(G.world.looks ? G.world.looks.ids() : [])], true).catch(() => {});
+        await game.warmArt();
       }
       document.querySelectorAll('.screen').forEach((s) => s.remove());
       G.ui.modalCount = 0;

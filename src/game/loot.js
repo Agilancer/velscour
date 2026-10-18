@@ -174,11 +174,28 @@ export function dropChest(world, chest, depth) {
 }
 
 /** Draw D2-style ground labels for nearby items (screen space). Returns hit boxes. */
+// Loot label text baked once per text/colour/font (measureText + fillText every frame for every label on the ground
+// added up on phones); the box behind it still draws live (it lights up under the mouse).
+const labelCache = new Map();
+function labelSprite(text, color, font) {
+  const key = font + '|' + color + '|' + text;
+  let e = labelCache.get(key);
+  if (e) return e;
+  const probe = document.createElement('canvas').getContext('2d'); probe.font = font;
+  const tw = probe.measureText(text).width, fs = parseFloat(font), pad = 2;
+  const c = document.createElement('canvas'); c.width = Math.ceil(tw) + pad * 2; c.height = Math.ceil(fs * 1.6) + pad * 2;
+  const g = c.getContext('2d'); g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = color;
+  g.fillText(text, c.width / 2, c.height / 2);
+  e = { c, tw };
+  // the fallback face draws until the web font loads: don't keep that one
+  if (!document.fonts || document.fonts.check(font)) { labelCache.set(key, e); if (labelCache.size > 256) labelCache.delete(labelCache.keys().next().value); }
+  return e;
+}
+
 export function drawLootLabels(ctx, world, mouse) {
   const boxes = [];
   const p = world.player;
-  ctx.font = `${Math.round(12 * G.dpr)}px "Alegreya Sans", sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const font = `${Math.round(12 * G.dpr)}px "Alegreya Sans", sans-serif`;
   const placed = [];
   for (const l of world.loot) {
     if (l.kind !== 'item' && l.kind !== 'potion' && !(l.kind === 'gold' && l.amount > 0)) continue;
@@ -186,8 +203,8 @@ export function drawLootLabels(ctx, world, mouse) {
     if (l.kind === 'gold' && !G.settings.showGoldLabels) continue;
     const [sx, sy0] = camera.tileToScreen(l.x, l.y, 26);
     let sy = sy0;
-    const text = l.label;
-    const w = ctx.measureText(text).width / G.dpr + 10, h = 16;
+    const text = l.label, spr = labelSprite(text, l.color, font);
+    const w = spr.tw / G.dpr + 10, h = 16;
     // avoid overlapping labels
     for (let k = 0; k < 8; k++) {
       if (!placed.some((b) => Math.abs(b.x - sx) < (b.w + w) / 2 && Math.abs(b.y - sy) < h)) break;
@@ -198,11 +215,9 @@ export function drawLootLabels(ctx, world, mouse) {
     const hover = mouse && Math.abs(mouse.x - sx) < w / 2 && Math.abs(mouse.y - sy) < h / 2;
     ctx.fillStyle = hover ? 'rgba(40,30,80,0.9)' : 'rgba(0,0,0,0.72)';
     ctx.fillRect((sx - w / 2) * G.dpr, (sy - h / 2) * G.dpr, w * G.dpr, h * G.dpr);
-    ctx.fillStyle = l.color;
-    ctx.fillText(text, sx * G.dpr, (sy + 1) * G.dpr);
+    ctx.drawImage(spr.c, Math.round(sx * G.dpr - spr.c.width / 2), Math.round((sy + 1) * G.dpr - spr.c.height / 2));
     boxes.push(box);
   }
-  ctx.textBaseline = 'alphabetic';
   return boxes;
 }
 

@@ -2,13 +2,13 @@
 // Twelve independent body silhouettes with five named, individually ornamented
 // variants each. Uses the existing bestiary's pixel-art foot anchor and flash/
 // corpse/palette-swap contract; original geometry is drawn, not re-skinned enemies.
-import { makeCanvas, recolor } from '../core/util.js';
+import { makeCanvas, recolor, silhouette, swapKey } from '../core/util.js';
 import { HEAVENLY_MONSTERS } from '../data/heavenly.js';
 import { approvedHeavenlyMonsterCanvas, preloadApprovedHeavenlySprites } from './approvedbiomeart.js';
 import { aiHeavenlyMonsterCanvas, preloadAIGeneratedHeavenlySprites } from './aibiomeart.js';
 
 const BY_ID = Object.fromEntries(HEAVENLY_MONSTERS.map(e=>[e.id,e]));
-const CACHE = new Map(), MAX=88;
+export const CACHE = new Map(), MAX=88;
 let preloadPromise = null;
 export function preloadApprovedHeavenlyArtwork() {
   return preloadPromise || (preloadPromise=Promise.all([
@@ -293,18 +293,16 @@ function baseSprite(a) {
 /** Same interface as core/enemyart's enemyImage; bounded to avoid iOS canvas leaks. */
 export function heavenlyEnemyImage(id,swap=null,mode=''){
  const a=BY_ID[id];if(!a)return null;
- const key=id+'|'+mode+'|'+(swap?JSON.stringify(swap):'');
- if(CACHE.has(key)){const hit=CACHE.get(key);CACHE.delete(key);CACHE.set(key,hit);return hit;}
- let image=baseSprite(a);
- if(swap)image=recolor(image,swap);
- if(mode){
-   const overlay=makeCanvas(image.width,image.height),ctx=overlay.getContext('2d');
-   ctx.drawImage(image,0,0);ctx.globalCompositeOperation='source-atop';
-   ctx.fillStyle=mode==='flash'?'#ffffff':'rgba(23,9,15,.67)';
-   ctx.fillRect(0,0,image.width,image.height);image=overlay;
+ const key=id+'|'+swapKey(swap);
+ let image=CACHE.get(key);
+ if(image){CACHE.delete(key);CACHE.set(key,image);}
+ else{
+   image=baseSprite(a);
+   if(swap)image=recolor(image,swap);
+   image._art={fx:80};
+   CACHE.set(key,image);
+   while(CACHE.size>MAX)CACHE.delete(CACHE.keys().next().value);
  }
- image._art={fx:80};
- CACHE.set(key,image);
- while(CACHE.size>MAX)CACHE.delete(CACHE.keys().next().value);
- return image;
+ // flash/corpse silhouettes hang off the base sprite (util.silhouette), so they never evict a look
+ return mode?silhouette(image,mode==='flash'?'#ffffff':'rgba(23,9,15,.67)'):image;
 }

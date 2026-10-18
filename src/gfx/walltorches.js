@@ -110,7 +110,8 @@ export function drawWallTorch(ctx,t,biome,time,alpha=1){
   if(!t || !Number.isFinite(t.x) || !Number.isFinite(t.y))return;
   const id=design(t,biome),sheet=Math.floor(id/5),row=id%5;
   const img=atlases.get(sheet),p=placement(t);
-  ctx.save();
+  // only alpha, compositing and smoothing change: put those back by hand (a full save/restore per torch adds up)
+  const a0=ctx.globalAlpha,sm=ctx.imageSmoothingEnabled;
   ctx.globalAlpha=alpha;
   if(img){
     ctx.imageSmoothingEnabled=false;
@@ -133,5 +134,5 @@ export function drawWallTorch(ctx,t,biome,time,alpha=1){
   ctx.quadraticCurveTo(fx+6,fy-3,fx+3,fy+2);ctx.closePath();ctx.fill();
   ctx.fillStyle='#fff1ad';
   ctx.beginPath();ctx.ellipse(fx,fy-1,1.35,3.3,0,0,Math.PI*2);ctx.fill();
-  ctx.restore();
+  ctx.globalAlpha=a0;ctx.imageSmoothingEnabled=sm;
 }

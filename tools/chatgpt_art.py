@@ -323,20 +323,20 @@ def import_npcs(sheet, names, args):
     tf = os.path.join(ROOT, 'assets', 'sprites', 'townsfolk')
     man_path = os.path.join(tf, 'manifest.json')
     man = json.load(open(man_path, encoding='utf-8'))
-    have = [int(m.group(1)) for f in os.listdir(tf) if (m := re.match(r'townsfolk_(\d+)\.png$', f))]
+    have = [int(m.group(1)) for f in os.listdir(tf) if (m := re.match(r'townsfolk_(\d+)\.(?:png|webp)$', f))]
     num = max(have + [100]) + 1
     order = NPC_ORDER + (['attack_1', 'attack_2'] if knights else [])
     for strip, row in zip(strips, rows):
         sid = 'townsfolk_%03d' % num; num += 1
         src = 'generated_sources/chatgpt_%s_%s.png' % (sid[-3:], slug(row['name']))  # never over an existing source
-        strip.save(os.path.join(tf, sid + '.png'))
+        strip.save(os.path.join(tf, sid + '.webp'), 'WEBP', lossless=True, method=6)
         strip.save(os.path.join(tf, src))
         man['characters'].append({'id': sid, 'name': row['name'], 'source': src, 'attackSource': None,
                                   'frameSize': [128, 192], 'frameCount': cols, 'frameOrder': order, 'transparent': True,
                                   'helmet': bool(knights), 'generatedUniqueIdentity': True, 'isKnight': knights,
                                   'attackFrameCount': 2 if knights else 0, 'paletteVariants': 'runtime',
                                   'role': row.get('role', ''), 'chatgpt': True})
-        print('  wrote %s.png  (%s, %s)' % (sid, row['name'], row.get('role', '')))
+        print('  wrote %s.webp  (%s, %s)' % (sid, row['name'], row.get('role', '')))
     with open(man_path, 'w', encoding='utf-8') as f:
         json.dump(man, f, indent=2, ensure_ascii=False)
     print('\nThe sheets are ready. To put them in town, point townsfolk at the new numbers in src/data/townsfolk.js\n'

@@ -14,6 +14,67 @@ Contents
 
 ---
 
+## October 18, 2026 — performance sweep: hitches, canvas memory, per-biome frame cost (branch `perf/full-sweep`)
+
+- **Measure on a real GPU.** Headless Chromium on Windows renders through SwiftShader (a software GPU), whose
+  numbers swing 5-10x between runs and land on whichever canvas call blocks. `CHROMIUM_ARGS='--use-angle=d3d11
+  --enable-gpu --ignore-gpu-blocklist'` (new in `harness.js`) uses the machine's GPU; with `biome_perf.js` and its
+  4x CPU throttle that is the phone proxy used below. Linux/cloud containers: `--use-gl=angle --use-angle=vulkan`
+  if a GPU exists, otherwise expect SwiftShader noise.
+- **Hitches (the big one).** Monster sprites were palette-swapped (a GPU readback) on a monster's first hit or death,
+  and the flash/corpse variants of biome-native, Heavenly, Sea of Sand and replacement art were rebuilt from scratch
+  with their own readbacks, sharing small LRUs with the base sprites, so deep levels thrashed and rebuilt sprites
+  on every hit. Now art caches hold base sprites only and flash/corpse are `silhouette()`s hung off them
+  (`util.js`), the level's looks are built behind the loading screen (`warmLevelArt` in game.js;
+  `game.warmArt()` for tests), recolour-source atlases (enemy sheets, the replacement atlas) are held decoded as
+  `ImageBitmap`s (`decoded()`), and swap keys are memoised (`swapKey`). Worst frames at 4x throttle fell from
+  50-200 ms to ~10-35 ms in most biomes; the first 120 frames of a level, 200-550 ms worst before, now ~20-30 ms.
+  Cost: the warm-up adds ~0.6-0.9 s to the loading screen at 4x throttle (~0.2 s unthrottled).
+- **Canvas memory (iOS caps it).** Monster rims were baked per image/frame/colour/thickness and never evicted
+  (~20 per spawn while a monster grew in; 100 MB after 8 levels). Now one 256-entry LRU and full-size thickness
+  during spawn growth. Wall-hanging tints, the last level's recoloured tile set (`keepTileSets`) and the town
+  visit's dungeon set are dropped when not in use. Live canvas memory after 8 levels: 217 MB -> 119 MB.
+- **Per-frame cost:** wall hangings baked their biome tint once per atlas instead of a `ctx.filter` per draw (13% of
+  a frame in Obsidian); decals and rotated particles use one `setTransform` instead of save/translate/scale/rotate/
+  restore; smoke puffs draw a cached disc; particles past the cap and landed blood are killed in place instead of
+  `shift()`/`splice()` (quadratic in gory fights); overhead, NPC and portal labels are baked sprites; `fmtInt`
+  (was `toLocaleString`), `hexToRgb` and `shade` are fast/memoised; the level-up banner no longer forces a layout.
+  Full `biome_perf.js` sweep (4x throttle, real GPU), fps before -> after: Blood 49 -> 60, Ashen 44 -> 60, Shadow
+  39 -> 58, Abyss 38 -> 58, Thorn 35 -> 56 (worst frame 179 -> 33 ms), Flesh 36 -> 52, Desert Temple 36 -> 55,
+  Astral 37 -> 59, Throne worst frame 207 -> 22 ms.
+- **Long runs (second pass).** A page that visited 30 levels held ~590 MB of images and canvases from levels long
+  gone. Now each level lets go of what it doesn't use (`releaseLevelArt` in game.js, called by `enterDungeon` /
+  `teleportToBiome` once the new level's art is in; a bare `buildDungeon` keeps everything): the Castle pack (~120 MB
+  decoded) and Sea of Sand pack outside those biomes, townsfolk sheets in dungeons, set-2 enemy sheets the level
+  doesn't need (`loadArtFor(ids, true)`), and the monster sprite caches are trimmed to what the level's warm-up touched
+  (`markArtCaches`/`trimArtCaches`, `util.lruMark`/`lruTrim`) with the rims cleared. ~290 MB after 30 levels.
+  **Don't** release the painted biome packs (`A.packs`): measured, fetching one again decodes a second copy while
+  the browser still caches the first (+300 MB renderer working set). With a phone-sized GPU budget
+  (`--force-gpu-mem-available-mb=256`) GPU memory after 30 levels went 447 -> 410 MB, renderer 723 -> 689 MB.
+  Measuring drift needs seeded levels (Math.random seeded around `buildDungeon`) and a forced GC; unseeded probes
+  vary 2x from level to level, which is most of what looked like "late-run slowdown" in the sweep.
+- **Blood is baked into the floor.** Finished splats and grown pools (`vfx.js bakedDecals`, each with a `seq`) are
+  stamped once into the floor chunks that show them (`stampDecals`, called from `drawFloors`; a chunk keeps the last
+  `seq` it has); `drawDecals` only draws live decals (growing pools, scorch, frost) and baked ones whose on-screen
+  chunks aren't baked yet (`decalStamped`). Decals went from 12-20% of a gory frame to ~2%, and finished blood is no
+  longer capped at 500/1100 (up to 8000 a level). The floor chunk cache is ~2 screens (`cap`) instead of a fixed 24.
+- **Monster targeting:** `World.rebuildGrid` also keeps each team's creatures and a taunter count;
+  `nearestHostile` scans the other teams' lists when they're fewer than the cells (a monster looking for the hero and
+  his summons among hundreds), with identical results (checked on 48,000 random queries); `pickTarget` skips the
+  taunt query when nothing taunts. Loot labels and plain floating texts are baked sprites.
+- **Result:** one page through all 37 biomes (`biome_perf.js`, 4x throttle, real GPU) now holds 52-60 fps from the
+  first biome to the last (original code: 34-44 fps in the late biomes; first pass: 35-51). `biome_perf.js` now enters
+  levels like the game does (sheet release, warm-up, cache trim).
+- **Still open:** real-device (iOS/Android) profiling; wall slices are now the largest single cost in Cathedral-walled
+  biomes (~20% at 6x throttle; per-call overhead, not texture size — ImageBitmap sources didn't help).
+- **Assets removed:** 85 unused AI-biome floor/prop/wall atlases (`assets/tiles/ai_biomes/`, all but
+  `heavenly_monsters.webp`) and `tools/build_biome_wall_materials.py`, the retired per-class `helms.webp` /
+  `helms_mask.png` (no longer written by `tools/gearart.py`), the unused `intro-blastorama.png` /
+  `intro-curator.png`. Townsfolk sheets are lossless WebP now (31.9 -> 23.5 MB, pixel-identical; ~3 MB less per
+  first town visit); `build_townsfolk_pack.py` and `chatgpt_art.py` write WebP.
+- Left alone: `assets/PrelimMonsters/` (22 MB of unreferenced Gemini images — the user's; ask before deleting) and
+  `assets/sprites/townsfolk/generated_sources/` (build inputs inside a served folder; never downloaded by players).
+
 ## October 18, 2026 — the Castle overworld overhauled into a concentric castle, 3x the area (branch `feat/castle-overhaul`)
 
 - **Why:** the user called the old Castle "a garbled mess" and asked for a significant overhaul: triple the size, a

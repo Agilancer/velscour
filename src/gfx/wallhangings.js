@@ -104,6 +104,24 @@ export function wallHangingRect(item, biome = null) {
     y - HANG, DISPLAY, DISPLAY];
 }
 
+// The biome tint is baked once per atlas and hue: a ctx.filter on every draw is a slow path (a filter layer per
+// hanging, every frame). Hue/saturation are per-pixel, so tinting the atlas then scaling it nearest-neighbour is the
+// same picture. Only the current biomes' tints are kept.
+const tinted = new Map();
+function tintedAtlas(img, sheet, hue) {
+  const key = sheet + '|' + hue;
+  let c = tinted.get(key);
+  if (!c) {
+    c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const g = c.getContext('2d');
+    g.filter = `hue-rotate(${hue - 34}deg) saturate(${hue === 34 ? 0.88 : 1.08})`;
+    g.drawImage(img, 0, 0);
+    tinted.set(key, c);
+    while (tinted.size > 5) tinted.delete(tinted.keys().next().value); // one biome's hue: the five atlases
+  }
+  return c;
+}
+
 export function drawWallHanging(ctx, item, biome, alpha = 1) {
   const castleKeep = biome?.id === 'castle_keep';
   const count = castleKeep ? 16 : 50;
@@ -113,12 +131,10 @@ export function drawWallHanging(ctx, item, biome, alpha = 1) {
     if (!img) return;
     const [x, y, w, h] = wallHangingRect(item, biome);
     const view = item.dir === 'f' ? 0 : 1;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.imageSmoothingEnabled = false;
-    ctx.filter = 'none';
+    const a0 = ctx.globalAlpha, sm = ctx.imageSmoothingEnabled;
+    ctx.globalAlpha = alpha; ctx.imageSmoothingEnabled = false;
     ctx.drawImage(img, view * CELL, item.design * CELL, CELL, CELL, x, y, w, h);
-    ctx.restore();
+    ctx.globalAlpha = a0; ctx.imageSmoothingEnabled = sm;
     return;
   }
   const atlasIndex = Math.floor(item.design / 10), row = item.design % 10;
@@ -127,12 +143,10 @@ export function drawWallHanging(ctx, item, biome, alpha = 1) {
   const frame = wallHangingAngle(item.dir, item.front);
   const [x, y, w, h] = wallHangingRect(item, biome);
   const hue = HUE[biome?.id] ?? 34;
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.imageSmoothingEnabled = false;
   // Shift the shared hand-painted metal, stone, and cloth into the current
   // biome family while preserving the atlas alpha and four authored views.
-  ctx.filter = `hue-rotate(${hue - 34}deg) saturate(${hue === 34 ? 0.88 : 1.08})`;
-  ctx.drawImage(img, frame * CELL, row * CELL, CELL, CELL, x, y, w, h);
-  ctx.restore();
+  const src = tintedAtlas(img, atlasIndex, hue), a0 = ctx.globalAlpha, sm = ctx.imageSmoothingEnabled;
+  ctx.globalAlpha = alpha; ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(src, frame * CELL, row * CELL, CELL, CELL, x, y, w, h);
+  ctx.globalAlpha = a0; ctx.imageSmoothingEnabled = sm;
 }

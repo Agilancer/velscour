@@ -192,7 +192,7 @@ def pet_rows(spec, strong=True):
 def npc_rows(ids):
     rows = []
     for sid in ids:
-        st = Image.open(os.path.join(ROOT, 'assets', 'sprites', 'townsfolk', 'townsfolk_%03d.png' % sid)).convert('RGBA')
+        st = Image.open(os.path.join(ROOT, 'assets', 'sprites', 'townsfolk', 'townsfolk_%03d.webp' % sid)).convert('RGBA')
         rows.append([despeck(st.crop((f * 128, 0, f * 128 + 128, 192))) for f in range(st.width // 128)])
     return rows
 
@@ -406,7 +406,7 @@ def readme(kind):
                 'Knights: use `knights_template.png` and add "...cheer, attack 1 (sword raised), attack 2 (sword swung down)".\n\n'
                 '## Step 2: the names file\n\n```text\nFill in this JSON for the 4 people in order: "name", "role" (their job), '
                 'and "child" true for children.\nSet "knights" true if this is the knights sheet. Reply with the JSON only.\n```\n\n'
-                + run + '\nEach person becomes `assets/sprites/townsfolk/townsfolk_NNN.png` (numbered after 100) with a '
+                + run + '\nEach person becomes `assets/sprites/townsfolk/townsfolk_NNN.webp` (numbered after 100) with a '
                 '`manifest.json` entry. To put them in town, point townsfolk at the new numbers in `src/data/townsfolk.js` '
                 '(`spriteForJob`, or a row in `knights` / `court` / `regular`).\n\n' + check)
     else:

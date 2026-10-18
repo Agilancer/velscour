@@ -3,9 +3,9 @@ import { G } from '../state.js';
 import { input } from '../core/input.js';
 import { camera } from '../core/view.js';
 import { sfx, playMusic, stopMusic, setAmbience, stopAmbience, footsteps } from '../core/audio.js';
-import { rand, pick, randi, escapeHtml, dist, makeCanvas, fmtInt } from '../core/util.js';
-import { biomeTileSet, loadBiomeArt, mixedTileSet } from '../core/assets.js';
-import { loadArtFor } from '../core/enemyart.js';
+import { rand, pick, randi, escapeHtml, dist, makeCanvas, fmtInt, swapKey } from '../core/util.js';
+import { biomeTileSet, loadBiomeArt, mixedTileSet, keepTileSets } from '../core/assets.js';
+import { loadArtFor, enemyImage, markArtCaches, trimArtCaches } from '../core/enemyart.js';
 import { loadClassArt } from '../core/classart.js';
 import { loadGearArt } from '../core/gearart.js';
 import { preloadBarFx } from '../gfx/artfx.js';
@@ -22,18 +22,19 @@ import { generateOverworld } from '../world/overworld.js';
 import { createOverworldScenario } from './overworld.js';
 import { addWanderers } from './wanderers.js';
 import { createSeaOfSandScenario } from './seaofsand.js';
-import { loadSeaOfSandPack } from '../gfx/seaofsand.js';
+import { loadSeaOfSandPack, releaseSeaOfSandPack } from '../gfx/seaofsand.js';
 import { createDarkForestRun } from './darkforest.js';
 import { generateDarkForest } from '../world/darkforest.js';
 import { loadDarkForestTrees } from '../gfx/darkforest.js';
-import { loadCastlePack } from '../gfx/castle.js';
+import { loadCastlePack, releaseCastlePack } from '../gfx/castle.js';
 import { World } from './world.js';
 import { Player } from './player.js';
 import { makeMonster, Monster } from './monster.js';
+import { clearRims } from './creature.js';
 import { applyTrait, rollTrait, ambushTick, madnessTick, unleashMadness } from './mayhem.js';
 import { makeRaidBoss } from './raid.js';
 import { dropChest } from './loot.js';
-import { renderWorld, drawMinimap, preloadTownSheets } from './render.js';
+import { renderWorld, drawMinimap, preloadTownSheets, releaseTownSheets } from './render.js';
 import { controls } from './controls.js';
 import { Auto } from './autoplay.js';
 import { writeSave, newCharData, migrate } from './save.js';
@@ -84,6 +85,38 @@ const VELSCOUR_TAUNTS = VELSCOUR_TAUNT_STARTS.flatMap((start) => VELSCOUR_TAUNT_
 let townCache = null, townTiles = null;
 let saveT = 0;
 let automapCanvas = null;
+
+// Build the level's monster sprites (palette swap, hit flash, corpse shade) behind the loading screen: each swap reads
+// pixels back from the GPU, and doing that on a monster's first hit or death stalled the frame (worst on phones).
+// Yields every ~40 ms so the loading screen keeps painting.
+async function warmLevelArt(w) {
+  const seen = new Set();
+  let t = performance.now();
+  markArtCaches();
+  for (const c of w.creatures) {
+    if (!c.art || G.world !== w) continue;
+    const k = c.art + '|' + swapKey(c.swap);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    if (enemyImage(c.art, c.swap)) { enemyImage(c.art, c.swap, 'flash'); enemyImage(c.art, c.swap, 'dark'); }
+    if (performance.now() - t > 40) { await new Promise((r) => setTimeout(r, 0)); t = performance.now(); }
+  }
+  // what earlier levels built and this one never asked for goes (a long run carried every level's sprites)
+  if (G.world === w) { trimArtCaches(); clearRims(); }
+}
+
+// Let go of the art the level being built doesn't use: the Castle (~120 MB decoded) and Sea of Sand packs,
+// townsfolk sheets. Called by the level-entry flows once the new level's art is in (never on the way through town:
+// a hero going back to the same biome keeps its pack); buildDungeon alone keeps everything, for tests and tools.
+// A run through many biomes kept all of it, plus every level's monster sprites, rims and silhouettes (~590 MB of
+// images and canvases after 30 levels, ~290 MB now). Everything reloads from the HTTP cache when needed.
+// (The painted biome packs stay: there are only a few, and fetching one again decoded a second copy while the
+// browser still held the first, which cost more renderer memory than it saved.)
+function releaseLevelArt(biome) {
+  if (biome?.id !== 'castle') releaseCastlePack();
+  if (biome?.id !== 'sea_of_sand') releaseSeaOfSandPack(); // loadArtFor fetches it again for ss_ monsters elsewhere
+  if (!biome?.overworld && biome?.id !== 'town') releaseTownSheets();
+}
 
 export const game = {
   // ------------------------------------------------------------ characters
@@ -186,6 +219,7 @@ export const game = {
     const old = G.world;
     const c = G.char;
     const tileset = biomeTileSet(TOWN_BIOME);
+    keepTileSets(null); // the last dungeon's recoloured set: rebuilt behind the loading screen if we go back
     if (!townTiles) townTiles = makeTownTiles();
     // every hero has a town of their own: the layout is rolled from c.townSeed
     if (!townCache || townCache.seed !== c.townSeed) townCache = generateTown(tileset, c.townSeed);
@@ -212,8 +246,20 @@ export const game = {
     // the hero steps out of the portal, a little way down its road toward the square
     const P = t.portal, C = t.center, l = Math.hypot(C.x - P.x, C.y - P.y) || 1;
     let arrive = [P.x + ((C.x - P.x) / l) * 3.2, P.y + ((C.y - P.y) / l) * 3.2];
-    if (!t.map.walkable(...arrive)) arrive = t.map.randomNear(arrive[0], arrive[1], 1.5) || t.start;
+    // roads bend, so the straight line can end on the grass beside it: take the nearest paved tile (floor variant
+    // 1..125; 0 is grass) 2 to 4.6 tiles from the portal
+    const m = t.map;
+    let best = null, bd = 9;
+    for (let ty = Math.floor(arrive[1]) - 3; ty <= Math.floor(arrive[1]) + 3; ty++) for (let tx = Math.floor(arrive[0]) - 3; tx <= Math.floor(arrive[0]) + 3; tx++) {
+      if (!m.walkableTile(tx, ty)) continue;
+      const v = m.v[ty * m.w + tx], d = Math.hypot(tx + 0.5 - arrive[0], ty + 0.5 - arrive[1]);
+      const fromPortal = Math.hypot(tx + 0.5 - P.x, ty + 0.5 - P.y);
+      if (v > 0 && v < 126 && d < bd && fromPortal >= 2 && fromPortal <= 4.6) { bd = d; best = [tx + 0.5, ty + 0.5]; }
+    }
+    if (best) arrive = best;
+    else if (!m.walkable(...arrive)) arrive = m.randomNear(arrive[0], arrive[1], 1.5) || t.start;
     this.setWorld(world, arrive, old);
+    void warmLevelArt(world); // the hero's summons; trims the last level's monster sprites
     HUD.setArea('Herrington Hollow', 'Town — a safe haven');
     playMusic('town'); setAmbience('town');
     Vendor.restock();
@@ -292,7 +338,9 @@ export const game = {
       await this.loadLevelArt(biome, mix);
       this.buildDungeon(depth, biome, mix);
       const w = G.world;
-      await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])]).catch((e) => console.warn(e));
+      await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])], true).catch((e) => console.warn(e));
+      await warmLevelArt(w);
+      releaseLevelArt(biome);
     } catch (e) {
       console.warn(e);
       UI.log('The abyss rejected that destination. Try the skull again.', '#ff8060');
@@ -301,6 +349,9 @@ export const game = {
       this.autosave();
     }
   },
+
+  /** Pre-build the current level's monster sprites (what the loading screen does after buildDungeon; for tests). */
+  warmArt() { return warmLevelArt(G.world); },
 
   // the art a level of this biome needs before it can be generated (the portal and Velscour's level select share it)
   loadLevelArt(biome, mix = null) {
@@ -328,7 +379,9 @@ export const game = {
         this.buildDungeon(depth, biome, mix);
         // the level's monster art (set 2 sheets load per level); a failed sheet falls back to pixel sprites
         const w = G.world;
-        await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])]).catch((e) => console.warn(e));
+        await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])], true).catch((e) => console.warn(e));
+        await warmLevelArt(w);
+        releaseLevelArt(biome);
       } finally { loading.classList.add('hidden'); }
     }, 40);
   },
@@ -338,6 +391,7 @@ export const game = {
     const old = G.world;
     const forest = biome.id === 'dark_forest';
     const tileset = forest ? biomeTileSet(biome) : biome.overworld ? biomeTileSet(TOWN_BIOME) : mix ? mixedTileSet(biome, mix, Math.random() < 0.5) : biomeTileSet(biome);
+    keepTileSets(tileset);
     c.seaOfSandRuns ||= {}; c.darkForestRuns ||= {};
     // the two overworlds that save their progress per depth rebuild the same map after a town trip
     const kept = biome.id === 'sea_of_sand' ? c.seaOfSandRuns[depth] : forest ? c.darkForestRuns[depth] : null;

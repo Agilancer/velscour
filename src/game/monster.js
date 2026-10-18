@@ -117,7 +117,7 @@ export class Monster extends Creature {
       return w.nearestHostile(this.team, this.x, this.y, range, true);
     }
     // monsters: taunting totems first, then whatever hits them, then the closest of player/minions
-    const taunt = w.query(this.x, this.y, 6, (c) => c.taunt && c.team !== this.team)[0];
+    const taunt = w.taunters && w.query(this.x, this.y, 6, (c) => c.taunt && c.team !== this.team)[0]; // most levels have none
     if (taunt) return taunt;
     if (this.aggro && !this.aggro.dead && this.aggro.team !== this.team && dist(this.x, this.y, this.aggro.x, this.aggro.y) < 14) return this.aggro;
     const near = w.nearestHostile(this.team, this.x, this.y, this.awake ? 30 : this.aggroRange, !this.awake);

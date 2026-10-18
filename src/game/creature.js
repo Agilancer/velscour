@@ -34,31 +34,40 @@ function tinted(img, f) {
 // (its silhouette stamped 8 ways, in source px) is baked once per colour and thickness: one extra draw per creature.
 export const RIM = { normal: '#e0302a', champion: '#5a9aff', unique: '#ffc040', boss: '#ff7a1a', ally: '#48e868', hero: '#ffe9a8', folk: '#c08cff', vendor: '#3ee0e0' };
 const RIM_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [0.71, 0.71], [-0.71, 0.71], [0.71, -0.71], [-0.71, -0.71]];
-const rims = new WeakMap(); // img -> Map(frame/colour/thickness key -> padded rim canvas)
+// One LRU over every sprite's rims (img id + frame/colour/thickness -> padded rim canvas): per-image maps kept every
+// rim of every look ever seen, ~100 MB after a few levels, more than iOS lets a page hold in canvases.
+const rims = new Map(), rimIds = new WeakMap(), RIM_MAX = 256;
+let rimSeq = 0;
 function rimCanvas(img, sx, sy, sw, sh, col, o) {
-  let m = rims.get(img);
-  if (!m) rims.set(img, (m = new Map()));
-  const key = sx + ',' + sy + ',' + sw + ',' + sh + col + o;
-  let c = m.get(key);
-  if (!c) {
-    if (m.size > 400) m.clear(); // a creature rescaled endlessly can't grow the cache without bound
+  let id = rimIds.get(img);
+  if (!id) rimIds.set(img, (id = ++rimSeq));
+  const key = id + ':' + sx + ',' + sy + ',' + sw + ',' + sh + col + o;
+  let c = rims.get(key);
+  if (c) { rims.delete(key); rims.set(key, c); }
+  else {
+    if (rims.size >= RIM_MAX) rims.delete(rims.keys().next().value);
     const p = Math.ceil(o) + 1;
     c = makeCanvas(sw + p * 2, sh + p * 2);
     const x = c.getContext('2d');
     for (const [ux, uy] of RIM_DIRS) x.drawImage(img, sx, sy, sw, sh, p + ux * o, p + uy * o, sw, sh);
     x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height);
     c._pad = p;
-    m.set(key, c);
+    rims.set(key, c);
   }
   return c;
 }
 
-/** A col rim under a sprite: drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh) args in the sprite's current transform. */
-export function drawRim(ctx, col, img, sx, sy, sw, sh, dx, dy, dw, dh) {
+/** A new level starts the rim cache over (rims are cheap GPU bakes; the last level's would just sit there). */
+export function clearRims() { rims.clear(); }
+
+/** A col rim under a sprite: drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh) args in the sprite's current transform.
+ * grow: how far a spawning creature has grown in (0..1); the rim keeps its full-size thickness meanwhile (it shrinks
+ * with the sprite): a thickness per growth step baked ~20 rims per spawn, some padded 33 px. */
+export function drawRim(ctx, col, img, sx, sy, sw, sh, dx, dy, dw, dh, grow = 1) {
   if (!col || !img || !img.width || dw < 4 || dh < 4) return;
   // 1 CSS px in the sprite's source px, snapped to 2^(n/4) steps so zoom, squash and spawn growth reuse a few bakes
-  const t = ctx.getTransform(), kx = dw / sw, ky = dh / sh;
-  const o = Math.min(32, Math.max(0.25, 2 ** (Math.round(Math.log2(G.dpr / ((Math.hypot(t.a, t.b) || 1) * (kx + ky) / 2)) * 4) / 4)));
+  const t = ctx.getTransform(), kx = dw / sw, ky = dh / sh, g = Math.max(0.1, Math.min(1, grow));
+  const o = Math.min(32, Math.max(0.25, 2 ** (Math.round(Math.log2(G.dpr / ((Math.hypot(t.a, t.b) || 1) * (kx + ky) / 2 / g)) * 4) / 4)));
   const c = rimCanvas(img, sx, sy, sw, sh, col, o), p = c._pad;
   ctx.drawImage(c, dx - p * kx, dy - p * ky, dw + p * 2 * kx, dh + p * 2 * ky);
 }
@@ -215,7 +224,9 @@ export class Creature {
     return this.team === 'enemy' ? RIM[this.rank] || RIM.normal : this.summon ? RIM.ally : null;
   }
   /** The rim under the sprite: drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh) args in the sprite's current transform. */
-  drawRim(ctx, img, sx, sy, sw, sh, dx, dy, dw, dh) { drawRim(ctx, this.rimColor(), img, sx, sy, sw, sh, dx, dy, dw, dh); }
+  drawRim(ctx, img, sx, sy, sw, sh, dx, dy, dw, dh) {
+    drawRim(ctx, this.rimColor(), img, sx, sy, sw, sh, dx, dy, dw, dh, this.spawnT < 0.3 ? this.spawnT / 0.3 : 1);
+  }
   /** World-px size of the sprite. */
   spriteDims(img) {
     if (img._art) { const h = this.artH * this.scale * (this.artRef ? img.height / this.artRef : 1); return [h * img.width / img.height, h]; }

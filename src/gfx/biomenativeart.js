@@ -2,10 +2,10 @@
 // Uses the existing painted VELSCOUR bestiary as a pixel-art body silhouette
 // (same resolution, pose and foot pivot), adding authored-in-code armor,
 // growths, weapons, halos and surface inlays; NOT a simple palette swap.
-import { makeCanvas, recolor } from '../core/util.js';
+import { makeCanvas, recolor, silhouette, swapKey } from '../core/util.js';
 import { ART_BY_ID } from '../data/bestiary.js';
 
-const CACHE=new Map(),MAX=96;
+export const CACHE=new Map(),MAX=128; // base sprites only: flash/corpse silhouettes hang off them (util.silhouette)
 const HUES={
  catacombs:38,frozen:205,ice_temple:207,molten:13,fungal:103,sunken:185,
  blood:356,ashen:30,void:277,gilded:47,plague:92,sewers:82,crystal:189,desert:35,
@@ -105,24 +105,18 @@ function nSprite(a,source){
  */
 export function biomeNativeImage(id,swap,mode,sourceResolver){
  const a=ART_BY_ID[id];if(!a?.sourceArt)return null;
- const key=id+'|'+mode+'|'+JSON.stringify(swap||null);
- if(CACHE.has(key)){
-   const c=CACHE.get(key);CACHE.delete(key);CACHE.set(key,c);return c;
+ const key=id+'|'+swapKey(swap);
+ let sprite=CACHE.get(key);
+ if(sprite){CACHE.delete(key);CACHE.set(key,sprite);}
+ else{
+   const original=sourceResolver(a.sourceArt);
+   if(!original)return null;
+   sprite=nSprite(a,original);
+   if(swap){
+     const recolored=recolor(sprite,swap);
+     recolored._art={...sprite._art};sprite=recolored;
+   }
+   CACHE.set(key,sprite);while(CACHE.size>MAX)CACHE.delete(CACHE.keys().next().value);
  }
- const original=sourceResolver(a.sourceArt);
- if(!original)return null;
- let sprite=nSprite(a,original);
- if(swap){
-   const recolored=recolor(sprite,swap);
-   recolored._art={...sprite._art};sprite=recolored;
- }
- if(mode){
-   const output=makeCanvas(sprite.width,sprite.height),g=output.getContext('2d');
-   g.drawImage(sprite,0,0);g.globalCompositeOperation='source-atop';
-   g.fillStyle=mode==='flash'?'#fff':'rgba(21,11,15,.65)';
-   g.fillRect(0,0,output.width,output.height);
-   output._art={...sprite._art};sprite=output;
- }
- CACHE.set(key,sprite);while(CACHE.size>MAX)CACHE.delete(CACHE.keys().next().value);
- return sprite;
+ return mode?silhouette(sprite,mode==='flash'?'#fff':'rgba(21,11,15,.65)'):sprite;
 }

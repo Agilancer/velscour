@@ -217,8 +217,15 @@ export function mixedTileSet(biome, other, wallsFromOther = false) {
   return {
     ...w,
     floors: [...a.floors, ...b.floors], bases: a.bases, features: a.features,
-    split: n, chest: a.chest, mixed: other.id,
+    split: n, chest: a.chest, mixed: other.id, parts: [a, b],
   };
+}
+
+/** Drop cached recoloured tile sets the new level doesn't use (~30 MB of canvas each; iOS caps a page's canvas
+ * memory). The town's set stays. Call with the level's tile set once it is built. */
+export function keepTileSets(tileset) {
+  const keep = tileset ? tileset.parts || [tileset] : [];
+  for (const k of Object.keys(A.biomeSets)) if (!k.startsWith('town|') && !keep.includes(A.biomeSets[k])) delete A.biomeSets[k];
 }
 
 /** Make a canvas icon from a potion image (for inventory / shop). */

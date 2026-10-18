@@ -84,6 +84,9 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
 - In cloud containers, Chromium is at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` and
   `harness.js` uses it automatically. Never run `playwright install`.
 - Only Chromium is available, so Safari/iOS and Firefox have never been tested.
+- Perf numbers: headless Chromium without a GPU renders through SwiftShader, whose frame times are noisy and
+  misleading. On a machine with a GPU set `CHROMIUM_ARGS="--use-angle=d3d11 --enable-gpu --ignore-gpu-blocklist"`
+  (Windows; `--use-angle=vulkan` on Linux) before `biome_perf.js` / `perf.js`; its 4x CPU throttle is the phone proxy.
 
 ## Conventions
 - Match the existing style: ES modules, 2-space indent, single quotes, dense code, short comments only where

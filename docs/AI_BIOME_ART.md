@@ -3,6 +3,10 @@
 > **October 17, 2026:** the Canvas-generated temple packs, the per-biome floor/prop/wall expansion and the AI
 > floor/prop/wall atlases described below were removed. Dungeon biomes now use the painted packs only; see
 > [BIOME_ART.md](BIOME_ART.md).
+>
+> **October 18, 2026:** the unused atlas files went too: `assets/tiles/ai_biomes/` now holds only
+> `heavenly_monsters.webp` (the 60 Heavenly enemies), and `tools/build_biome_wall_materials.py` was deleted. The
+> rest of this page is history; `tools/build_ai_biome_atlases.py` still rebuilds the Heavenly monster atlas.
 
 The replacement atlases cover the 23 dungeon biomes that previously reused
 the same base art with palette swaps, in addition to the original five

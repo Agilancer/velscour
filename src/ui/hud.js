@@ -412,8 +412,8 @@ export const HUD = {
     $('#center-msg')?.classList.add('below'); // a showing area title steps out of the banner's way
     box.dataset.mood = t.mood;
     $('#lu-l1').textContent = t.l1; $('#lu-l2').textContent = t.l2;
-    void box.offsetWidth;
-    box.classList.add('play');
+    // restart the animation on the next frame, not with a forced synchronous layout (offsetWidth) mid game frame
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (this.lu === lu) box.classList.add('play'); }));
     later(at + dur + 0.1, () => box.classList.add('out'));
     later(at + dur + 0.9, () => box.classList.add('hidden'));
   },

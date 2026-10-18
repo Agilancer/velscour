@@ -212,7 +212,7 @@ def main():
         sid = f'townsfolk_{i:03d}'
         atlas = Image.new('RGBA', (FRAME_W * len(frames), FRAME_H), (0, 0, 0, 0))
         for j, f in enumerate(frames): atlas.alpha_composite(f, (j * FRAME_W, 0))
-        atlas.save(OUT / f'{sid}.png', optimize=True)
+        atlas.save(OUT / f'{sid}.webp', 'WEBP', lossless=True, method=6)  # lossless WebP: ~30% under PNG
         sheets[i] = atlas
         records.append({'id': sid, 'name': spec[1], 'source': f'generated_sources/{spec[0]}.png', 'size': spec[2],
                         'isKnight': spec[5], 'frameCount': len(frames), 'frames': names})
@@ -220,7 +220,7 @@ def main():
     for k in range(26, 101):
         base = (k - 1) % 10 + 1
         shift, sat, light = WAYS[((k - 26) // 10) % len(WAYS)]
-        recolour(sheets[base], shift, sat, light).save(OUT / f'townsfolk_{k:03d}.png', optimize=True)
+        recolour(sheets[base], shift, sat, light).save(OUT / f'townsfolk_{k:03d}.webp', 'WEBP', lossless=True, method=6)
         b = records[base - 1]
         records.append({**b, 'id': f'townsfolk_{k:03d}', 'name': b['name'] + ' (colourway)', 'colourwayOf': b['id']})
     manifest = {'name': 'Velscour Townsfolk Animation Pack', 'version': 4, 'frameSize': [FRAME_W, FRAME_H],

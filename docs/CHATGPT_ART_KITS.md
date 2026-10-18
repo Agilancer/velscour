@@ -47,7 +47,7 @@ A sheet of another size with the same 3:2 shape is rescaled.
   atlases. `src/core/petart.js` registers rows it finds only in `catalog.json`, so any summon whose `SUMMONS` key
   equals a row key animates (the script prints stub entries). Keys already used by another sheet are refused.
 - **npcs**: one scale per person from the first idle pose (adults 169 px tall, children 128, feet at y 183, like the
-  existing sheets), each frame centred in its 128 x 192 slot. Writes `assets/sprites/townsfolk/townsfolk_NNN.png`
+  existing sheets), each frame centred in its 128 x 192 slot. Writes `assets/sprites/townsfolk/townsfolk_NNN.webp`
   (from 101), a copy in `generated_sources/chatgpt_NNN_<name>.png`, and a `manifest.json` entry. Using them in town
   is a code change in `src/data/townsfolk.js` (`spriteForJob`, or the `knights`/`court`/`regular` rows).
 - **armor**: scales and moves each armor so its head top, feet and head centre match the class's armor 001 (so the

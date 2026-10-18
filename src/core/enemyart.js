@@ -1,25 +1,26 @@
 // Monster art from assets/sprites/enemies (tools/process_assets.py enemies): atlas loading plus a bounded
 // cache of cut-out, palette-swapped, flash (white) and corpse (dark) canvases. See docs/ENEMY_ART.md.
-import { makeCanvas, recolor } from './util.js';
+import { recolor, silhouette, swapKey, decoded, lruMark, lruTrim } from './util.js';
 import { loadReplacementArt, replacementImage } from './replacementart.js';
 import { ART_BY_ID } from '../data/bestiary.js';
-import { heavenlyEnemyImage } from '../gfx/heavenlymonsters.js';
-import { biomeNativeImage } from '../gfx/biomenativeart.js';
-import { loadSeaOfSandPack, seaOfSandArtCell, seaOfSandEnemyImage } from '../gfx/seaofsand.js';
+import { heavenlyEnemyImage, CACHE as heavenlyCache } from '../gfx/heavenlymonsters.js';
+import { biomeNativeImage, CACHE as nativeCache } from '../gfx/biomenativeart.js';
+import { loadSeaOfSandPack, seaOfSandArtCell, seaOfSandEnemyImage, cache as sandCache } from '../gfx/seaofsand.js';
 
 const DIR = 'assets/sprites/enemies/';
 const EAGER = /^(set1|minions)\//; // fetched with the meta; the rest (set2, ~5 MB) loads per level as looks need it
 const PETS = /^familiars\//; // pet sheets (~2.6 MB): fetched in the background once the meta is in
 const E = { meta: null, sheets: {}, loading: null, sheet: {} }; // sheet: key -> load promise
-const cache = new Map(); // LRU: `${id}|${mode}|${swap}` -> canvas
+const cache = new Map(); // LRU: `${id}|${swap}` -> base canvas (flash/corpse silhouettes hang off it: util.silhouette)
 const CACHE_MAX = 160; // ~70 KB each; iOS caps total canvas memory
+export const FLASH = '#ffffff', CORPSE = 'rgba(24,8,6,0.62)';
 
 function loadSheet(key) {
   const s = E.meta && E.meta[key];
   if (!s) return Promise.resolve();
   return E.sheet[key] || (E.sheet[key] = new Promise((res) => {
     const img = new Image();
-    img.onload = () => { E.sheets[key] = img; res(); };
+    img.onload = () => decoded(img).then((d) => { E.sheets[key] = d; res(); });
     img.onerror = () => { console.warn('Failed to load ' + s.file); res(); }; // not retried: pixel sprites stand in
     img.src = DIR + s.file;
   }));
@@ -48,19 +49,31 @@ export async function loadEnemySheets(keys) {
   await Promise.all((keys || Object.keys(E.meta)).map(loadSheet));
 }
 
-/** Load the sheets these art ids are on (unknown or empty ids are skipped). */
-export function loadArtFor(ids) {
+/** Load the sheets these art ids are on (unknown or empty ids are skipped). A level's call also lets go of the
+ * per-level sheets (set 2) it doesn't use: decoded, each is 2-7 MB that a long run would otherwise keep. */
+export function loadArtFor(ids, release = false) {
+  const keys = [...new Set(ids.map(id=>{
+    const a=ART_BY_ID[id];
+    if (a?.sheet === 'sea_of_sand') return null;
+    return a?.sourceArt ? ART_BY_ID[a.sourceArt]?.sheet :
+      a?.sheet !== 'heavenly/generated' ? a?.sheet : null;
+  }).filter(Boolean))];
+  if (release) for (const k of Object.keys(E.sheets)) {
+    if (EAGER.test(k) || PETS.test(k) || keys.includes(k)) continue;
+    E.sheets[k].close?.(); delete E.sheets[k]; delete E.sheet[k]; // fetched again (HTTP cache) if a later level wants it
+  }
   return Promise.all([
     ids.some((id) => id && id.startsWith('va_')) ? loadReplacementArt() : null,
     ids.some((id) => id && id.startsWith('ss_')) ? loadSeaOfSandPack() : null,
-    loadEnemySheets([...new Set(ids.map(id=>{
-      const a=ART_BY_ID[id];
-      if (a?.sheet === 'sea_of_sand') return null;
-      return a?.sourceArt ? ART_BY_ID[a.sourceArt]?.sheet :
-        a?.sheet !== 'heavenly/generated' ? a?.sheet : null;
-    }).filter(Boolean))]),
+    loadEnemySheets(keys),
   ]);
 }
+
+// The monster sprite caches: marked before a level's warm-up, trimmed after it (util.lruMark/lruTrim), so sprites
+// only earlier levels used (and their flash/corpse silhouettes and GPU textures) don't pile up over a long run.
+const levelCaches = () => [cache, nativeCache, heavenlyCache, sandCache];
+export function markArtCaches() { levelCaches().forEach(lruMark); }
+export function trimArtCaches() { levelCaches().forEach(lruTrim); }
 
 function cell(a) {
   if (a?.sheet === 'sea_of_sand') return seaOfSandArtCell(a.i);
@@ -95,19 +108,14 @@ export function enemyImage(id, swap = null, mode = '') {
   const a = ART_BY_ID[id];
   const c = a && cell(a);
   if (!c) return null;
-  const key = id + '|' + mode + '|' + (swap ? JSON.stringify(swap) : '');
+  const key = id + '|' + swapKey(swap);
   let img = cache.get(key);
-  if (img) { cache.delete(key); cache.set(key, img); return img; }
-  if (mode) {
-    img = makeCanvas(c.w, c.h);
-    const x = img.getContext('2d');
-    x.drawImage(enemyImage(id, swap), 0, 0);
-    x.globalCompositeOperation = 'source-atop';
-    x.fillStyle = mode === 'flash' ? '#ffffff' : 'rgba(24,8,6,0.62)';
-    x.fillRect(0, 0, c.w, c.h);
-  } else img = recolor(E.sheets[a.sheet], swap, c.x, c.y, c.w, c.h);
-  img._art = { fx: c.fx };
-  cache.set(key, img);
-  while (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);
-  return img;
+  if (img) { cache.delete(key); cache.set(key, img); }
+  else {
+    img = recolor(E.sheets[a.sheet], swap, c.x, c.y, c.w, c.h);
+    img._art = { fx: c.fx };
+    cache.set(key, img);
+    while (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);
+  }
+  return mode ? silhouette(img, mode === 'flash' ? FLASH : CORPSE) : img;
 }

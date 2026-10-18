@@ -22,7 +22,19 @@ export const elem = (k) => ELEM[k] || ELEM.phys;
 
 const MAX_P = () => (G.touch ? 1400 : 3000);
 export const particles = [];
-export const decals = [];
+export const decals = []; // live decals: growing pools, scorch, frost (capped, drawn every frame)
+// Finished blood (splats, grown pools) never changes again: it is stamped once into the baked floor chunks
+// (render.js drawFloors -> stampDecals) and costs nothing per frame after that, so it isn't capped like the live ones.
+// Each has a rising `seq`; a chunk remembers the last seq it has stamped.
+export const bakedDecals = [];
+let decalSeq = 0;
+const BAKED_MAX = 8000; // bounds what a chunk rebake has to replay
+function bake(d) {
+  d.seq = ++decalSeq; d.spr = splatSprite(d.color, d.idx);
+  d.r = d.size * HW * 1.6 * 1.42; // bounding radius in world px (the rotated square, squashed to half height)
+  bakedDecals.push(d);
+  if (bakedDecals.length > BAKED_MAX) bakedDecals.shift();
+}
 export const effects = [];
 export const texts = [];
 export const lights = [];
@@ -41,6 +53,19 @@ export function glowSprite(color) {
   grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
   x.fillStyle = grad; x.fillRect(0, 0, 64, 64);
   glowCache.set(color, c);
+  return c;
+}
+
+// a filled antialiased disc per colour, for smoke puffs: one drawImage instead of building and filling an arc path
+const discCache = new Map();
+function discSprite(color) {
+  let c = discCache.get(color);
+  if (!c) {
+    c = makeCanvas(64, 64);
+    const x = c.getContext('2d');
+    x.fillStyle = color; x.beginPath(); x.arc(32, 32, 32, 0, TAU); x.fill();
+    discCache.set(color, c);
+  }
   return c;
 }
 
@@ -81,8 +106,15 @@ function splatSprite(color, idx) {
 /**
  * type: 'dot' | 'glow' | 'blood' | 'gib' | 'streak' | 'smoke' | 'shard' | 'img'
  */
+// At the cap the oldest particle goes, as before, but by marking it dead (life -1: not drawn, compacted out in
+// updateVfx) instead of particles.shift(), which moved the whole array on every spawn in a busy fight.
+let evict = 0, dead = 0;
+function kill(p) { if (p.life > 0) { p.life = -1; dead++; if (p.spr) spriteGibs--; } }
 export function spawn(p) {
-  if (particles.length >= MAX_P() && particles.shift().spr) spriteGibs--;
+  if (particles.length - dead >= MAX_P()) {
+    while (evict < particles.length && particles[evict].life <= 0) evict++;
+    if (evict < particles.length) kill(particles[evict++]);
+  }
   p.life = p.life ?? 0.6; p.max = p.life;
   p.z = p.z ?? 0; p.vx = p.vx ?? 0; p.vy = p.vy ?? 0; p.vz = p.vz ?? 0;
   p.g = p.g ?? 0; p.drag = p.drag ?? 0; p.size = p.size ?? 2; p.size1 = p.size1 ?? p.size;
@@ -160,8 +192,10 @@ export function gibs(x, y, z, n, color, boneColor = '#e8dcc0', force = 1, sets =
 export function addDecal(x, y, color, size = 1, kind = 'splat', alpha = 0.9) {
   if (kind === 'splat' && G.settings.gore === 0) return;
   const max = G.touch ? 500 : 1100;
+  const d = { x, y, color, size, kind, alpha, rot: rand(TAU), idx: randi(0, 7), grow: kind === 'pool' ? 0 : 1, life: kind === 'scorch' || kind === 'frost' ? 14 : 9999, t: 0 };
+  if (kind === 'splat') { bake(d); return; }
   if (decals.length >= max) decals.shift();
-  decals.push({ x, y, color, size, kind, alpha, rot: rand(TAU), idx: randi(0, 7), grow: kind === 'pool' ? 0 : 1, life: kind === 'scorch' || kind === 'frost' ? 14 : 9999, t: 0 });
+  decals.push(d);
 }
 
 // ---------------------------------------------------------------- effects
@@ -465,7 +499,7 @@ export function addLight(x, y, radius, intensity = 1, z = 20, color = null) {
 }
 
 export function clearVfx() {
-  particles.length = 0; spriteGibs = 0; decals.length = 0; effects.length = 0; texts.length = 0; lights.length = 0;
+  particles.length = 0; spriteGibs = 0; evict = 0; dead = 0; decals.length = 0; bakedDecals.length = 0; effects.length = 0; texts.length = 0; lights.length = 0;
 }
 
 // --------------------------------------------------------------- update
@@ -474,11 +508,12 @@ export function updateVfx(dt, world) {
   // of shifting the surviving array on every expired particle (quadratic work).
   let live = 0;
   for (const p of particles) {
+    if (p.life <= 0) continue; // killed since the last update (kill() already counted its gib)
     p.life -= dt;
     if (p.life <= 0) { if (p.spr) spriteGibs--; }
     else particles[live++] = p;
   }
-  particles.length = live;
+  particles.length = live; evict = 0; dead = 0;
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     // Cyclone wind (and captured gib sprites) follow the caster's moving isometric spiral.
@@ -501,7 +536,7 @@ export function updateVfx(dt, world) {
     if (p.type === 'blood') {
       if (p.z <= 0) {
         if (world && world.map.isFloor(p.x, p.y) && Math.random() < 0.55) addDecal(p.x, p.y, p.color, rand(0.12, 0.3) * p.size / 2);
-        particles.splice(i, 1);
+        kill(p); // gone from the next update's compaction (a splice here was O(n) per landing drop)
       }
     } else if (p.type === 'gib') {
       if (world && !world.map.isFloor(p.x, p.y)) { p.vx *= -0.5; p.vy *= -0.5; p.x += p.vx * dt * 2; p.y += p.vy * dt * 2; }
@@ -520,7 +555,11 @@ export function updateVfx(dt, world) {
     if (d.grow < 1) d.grow = Math.min(1, d.grow + dt * 1.2);
     if (d.life < 9999) d.life -= dt;
   }
-  for (let i = decals.length - 1; i >= 0; i--) if (decals[i].life <= 0) decals.splice(i, 1);
+  for (let i = decals.length - 1; i >= 0; i--) {
+    const d = decals[i];
+    if (d.life <= 0) decals.splice(i, 1);
+    else if (d.kind === 'pool' && d.grow >= 1) { decals.splice(i, 1); bake(d); } // a grown pool is finished blood
+  }
   for (let i = effects.length - 1; i >= 0; i--) if (!effects[i].update(dt)) effects.splice(i, 1);
   for (let i = texts.length - 1; i >= 0; i--) {
     const t = texts[i];
@@ -531,7 +570,44 @@ export function updateVfx(dt, world) {
 }
 
 // ----------------------------------------------------------------- draw
-export function drawDecals(ctx, vr) {
+// a splat's translate/scale(1, .5)/rotate folded into one setTransform on the base matrix (5 state calls -> 1)
+function drawSplat(ctx, d, s, ba, bb, bc, bd, be, bf) {
+  const px = isoX(d.x, d.y), py = isoY(d.x, d.y);
+  const c = d.cos ?? (d.cos = Math.cos(d.rot)), sn = d.sin ?? (d.sin = Math.sin(d.rot));
+  const la = c, lb = 0.5 * sn, lc = -sn, ld = 0.5 * c;
+  ctx.setTransform(ba * la + bc * lb, bb * la + bd * lb, ba * lc + bc * ld, bb * lc + bd * ld, ba * px + bc * py + be, bb * px + bd * py + bf);
+  ctx.drawImage(d.spr || splatSprite(d.color, d.idx), -s, -s, s * 2, s * 2);
+  ctx.setTransform(ba, bb, bc, bd, be, bf);
+}
+
+/** Stamp the baked decals with seq > `after` that touch the world rect into a floor chunk (its context carries the
+ * chunk's world transform). Returns the last seq stamped. */
+export function stampDecals(g, after, x0, y0, x1, y1) {
+  const n = bakedDecals.length;
+  if (!n || bakedDecals[n - 1].seq <= after) return after;
+  let i = n - 1;
+  while (i > 0 && bakedDecals[i - 1].seq > after) i--;
+  const B = g.getTransform(), ba = B.a, bb = B.b, bc = B.c, bd = B.d, be = B.e, bf = B.f;
+  for (; i < n; i++) {
+    const d = bakedDecals[i], px = isoX(d.x, d.y), py = isoY(d.x, d.y);
+    if (px + d.r < x0 || px - d.r > x1 || py + d.r < y0 || py - d.r > y1) continue;
+    g.globalAlpha = d.alpha;
+    drawSplat(g, d, d.size * HW * 1.6, ba, bb, bc, bd, be, bf);
+  }
+  g.globalAlpha = 1;
+  return bakedDecals[n - 1].seq;
+}
+
+/** Live decals, plus baked ones over floor that isn't in a stamped chunk yet (`stamped(d)`: render.js). */
+export function drawDecals(ctx, vr, stamped = null) {
+  const B = ctx.getTransform(), ba = B.a, bb = B.b, bc = B.c, bd = B.d, be = B.e, bf = B.f;
+  for (const d of bakedDecals) {
+    const px = isoX(d.x, d.y), py = isoY(d.x, d.y);
+    if (px < vr.x0 - 80 || px > vr.x1 + 80 || py < vr.y0 - 60 || py > vr.y1 + 60) continue;
+    if (stamped && stamped(d, px, py)) continue;
+    ctx.globalAlpha = d.alpha;
+    drawSplat(ctx, d, d.size * HW * 1.6, ba, bb, bc, bd, be, bf);
+  }
   for (const d of decals) {
     const px = isoX(d.x, d.y), py = isoY(d.x, d.y);
     if (px < vr.x0 - 80 || px > vr.x1 + 80 || py < vr.y0 - 60 || py > vr.y1 + 60) continue;
@@ -539,11 +615,8 @@ export function drawDecals(ctx, vr) {
     let a = d.alpha;
     if (d.life < 3) a *= d.life / 3;
     ctx.globalAlpha = a;
-    if (d.kind === 'splat' || d.kind === 'pool') {
-      ctx.save(); ctx.translate(px, py); ctx.scale(1, 0.5); ctx.rotate(d.rot);
-      ctx.drawImage(splatSprite(d.color, d.idx), -s, -s, s * 2, s * 2);
-      ctx.restore();
-    } else if (d.kind === 'scorch') {
+    if (d.kind === 'splat' || d.kind === 'pool') drawSplat(ctx, d, s, ba, bb, bc, bd, be, bf);
+    else if (d.kind === 'scorch') {
       ctx.fillStyle = d.color;
       ctx.beginPath(); ctx.ellipse(px, py, s, s * 0.5, 0, 0, TAU); ctx.fill();
     } else if (d.kind === 'frost') {
@@ -565,7 +638,9 @@ export function drawEffects(ctx, layer) {
 
 export function drawParticles(ctx, vr) {
   let mode = 'source-over';
+  const B = ctx.getTransform(), ba = B.a, bb = B.b, bc = B.c, bd = B.d, be = B.e, bf = B.f; // rotated particles reset to it (cheaper than a full save/restore each)
   for (const p of particles) {
+    if (p.life <= 0) continue;
     const px = isoX(p.x, p.y), py = isoY(p.x, p.y) - p.z;
     if (px < vr.x0 - 20 || px > vr.x1 + 20 || py < vr.y0 - 40 || py > vr.y1 + 20) continue;
     const k = 1 - p.life / p.max;
@@ -581,7 +656,7 @@ export function drawParticles(ctx, vr) {
       }
       case 'smoke':
         ctx.globalAlpha = (p.alpha ?? 0.4) * (1 - k);
-        ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(px, py, size, 0, TAU); ctx.fill();
+        if (size > 0) ctx.drawImage(discSprite(p.color), px - size, py - size, size * 2, size * 2);
         break;
       case 'streak': {
         ctx.globalAlpha = 1 - k; ctx.strokeStyle = p.color; ctx.lineWidth = size;
@@ -593,23 +668,23 @@ export function drawParticles(ctx, vr) {
         ctx.globalAlpha = Math.min(1, p.life);
         if (p.spr) {
           const [sx, sy, sw, sh] = p.spr, w = sw * p.size, h = sh * p.size;
-          ctx.save(); ctx.translate(px, py); ctx.rotate(p.rot);
+          ctx.translate(px, py); ctx.rotate(p.rot);
           ctx.drawImage(A.gibImg, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
-          ctx.restore();
+          ctx.setTransform(ba, bb, bc, bd, be, bf);
           break;
         }
-        ctx.save(); ctx.translate(px, py); ctx.rotate(p.rot);
+        ctx.translate(px, py); ctx.rotate(p.rot);
         ctx.fillStyle = '#100404'; ctx.fillRect(-size * p.w - 0.6, -size / 2 - 0.6, size * p.w * 2 + 1.2, size + 1.2);
         ctx.fillStyle = p.color; ctx.fillRect(-size * p.w, -size / 2, size * p.w * 2, size);
-        ctx.fillStyle = shade(p.color, 0.25); ctx.fillRect(-size * p.w, -size / 2, size * p.w, size / 2.5);
-        ctx.restore();
+        ctx.fillStyle = p.shade || (p.shade = shade(p.color, 0.25)); ctx.fillRect(-size * p.w, -size / 2, size * p.w, size / 2.5);
+        ctx.setTransform(ba, bb, bc, bd, be, bf);
         break;
       }
       case 'shard':
         ctx.globalAlpha = 1 - k; ctx.fillStyle = p.color;
-        ctx.save(); ctx.translate(px, py); ctx.rotate(p.rot);
+        ctx.translate(px, py); ctx.rotate(p.rot);
         ctx.beginPath(); ctx.moveTo(0, -size * 1.6); ctx.lineTo(size * 0.6, 0); ctx.lineTo(0, size * 1.6); ctx.lineTo(-size * 0.6, 0); ctx.fill();
-        ctx.restore();
+        ctx.setTransform(ba, bb, bc, bd, be, bf);
         break;
       case 'skull': { // a little pixel skull (the Death Knight's casts and hits)
         ctx.globalAlpha = Math.min(1, (1 - k) * 1.6); const u = Math.max(1, size / 3), x0 = px - u * 2.5, y0 = py - u * 3;
@@ -633,6 +708,25 @@ export function drawParticles(ctx, vr) {
 }
 
 /** Floating combat text in screen space (call with identity transform). */
+// Floating text with a black outline, baked once per text/font/colour while its size holds still (stroke + fill
+// shape the glyphs again on every call; a fight keeps dozens of these up).
+const textCache = new Map();
+function outlinedText(text, font, color, lw) {
+  const key = font + '|' + color + '|' + text;
+  let c = textCache.get(key);
+  if (c) return c;
+  const probe = makeCanvas(1, 1).getContext('2d'); probe.font = font;
+  const m = probe.measureText(text), pad = Math.ceil(lw) + 2, fs = parseFloat(font.split(' ')[1]) || 12;
+  const asc = Math.ceil(m.actualBoundingBoxAscent || fs * 0.8), desc = Math.ceil(m.actualBoundingBoxDescent || fs * 0.25);
+  c = makeCanvas(Math.ceil(m.width) + pad * 2, asc + desc + pad * 2);
+  const g = c.getContext('2d');
+  g.font = font; g.textAlign = 'center'; g.lineWidth = lw; g.strokeStyle = '#000';
+  g.strokeText(text, c.width / 2, pad + asc); g.fillStyle = color; g.fillText(text, c.width / 2, pad + asc);
+  c._ox = c.width / 2; c._oy = pad + asc;
+  if (!document.fonts || document.fonts.check(font)) { textCache.set(key, c); if (textCache.size > 240) textCache.delete(textCache.keys().next().value); }
+  return c;
+}
+
 export function drawTexts(ctx) {
   ctx.textAlign = 'center';
   const dpr = G.dpr, mob = G.touch ? 0.8 : 1;
@@ -647,11 +741,12 @@ export function drawTexts(ctx) {
       const spr = numSprite(t.text, t.style, t.color);
       const [sx, sy] = camera.tileToScreen(t.x, t.y, t.z);
       ctx.globalAlpha = Math.min(1, k / 0.25);
+      const f = PIX * dpr * sc * mob, w = spr.width * f, h = spr.height * f, tx = (sx + t.dx) * dpr, ty = sy * dpr;
+      if (!t.drips) { ctx.drawImage(spr, tx - w / 2, ty - h / 2, w, h); continue; } // screen space: no transform needed
       ctx.save();
-      ctx.translate((sx + t.dx) * dpr, sy * dpr);
-      const f = PIX * dpr * sc * mob, w = spr.width * f, h = spr.height * f;
+      ctx.translate(tx, ty);
       ctx.drawImage(spr, -w / 2, -h / 2, w, h);
-      if (t.drips) { ctx.scale(f, f); drawDrips(ctx, t, spr, age); }
+      ctx.scale(f, f); drawDrips(ctx, t, spr, age);
       ctx.restore();
     }
   }
@@ -662,7 +757,13 @@ export function drawTexts(ctx) {
     const k = t.life / t.max;
     const pop = t.crit ? 1 + Math.max(0, (k - 0.75)) * 3 : 1;
     ctx.globalAlpha = Math.min(1, k * 2.5);
-    ctx.font = `${t.crit ? 900 : 700} ${Math.round(t.size * pop * G.dpr)}px Cinzel, Georgia, serif`;
+    const font = `${t.crit ? 900 : 700} ${Math.round(t.size * pop * G.dpr)}px Cinzel, Georgia, serif`;
+    if (pop === 1) {
+      const c = outlinedText(t.text, font, t.color, 3 * G.dpr);
+      ctx.drawImage(c, Math.round((sx + t.dx) * G.dpr - c._ox), Math.round(sy * G.dpr - c._oy));
+      continue;
+    }
+    ctx.font = font;
     ctx.lineWidth = 3 * G.dpr; ctx.strokeStyle = '#000';
     ctx.strokeText(t.text, (sx + t.dx) * G.dpr, sy * G.dpr);
     ctx.fillStyle = t.color;

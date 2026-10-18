@@ -23,7 +23,9 @@ fs.mkdirSync(OUT_DIR, { recursive: true });
 
 /** Launch Chromium and open the game. Returns { browser, ctx, page, errors, shot }. */
 async function openGame({ width = 1280, height = 720, mobile = false, intro = false } = {}) {
-  const browser = await chromium.launch(fs.existsSync(CHROMIUM_PATH) ? { executablePath: CHROMIUM_PATH } : {});
+  // CHROMIUM_ARGS: extra flags, e.g. '--use-angle=d3d11 --enable-gpu' to measure on the machine's real GPU, not SwiftShader
+  const args = (process.env.CHROMIUM_ARGS || '').split(' ').filter(Boolean);
+  const browser = await chromium.launch(fs.existsSync(CHROMIUM_PATH) ? { executablePath: CHROMIUM_PATH, args } : { args });
   const ctx = await browser.newContext(mobile
     ? { viewport: { width, height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }
     : { viewport: { width, height } });

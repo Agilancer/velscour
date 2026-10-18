@@ -2,7 +2,7 @@
 import { G } from '../state.js';
 import { camera, isoX, isoY, HW, HH, TW, TH } from '../core/view.js';
 import { makeCanvas, TAU, clamp, rgba, shade, hexToRgb } from '../core/util.js';
-import { drawDecals, drawEffects, drawParticles, drawTexts, lights, glowSprite } from '../gfx/vfx.js';
+import { drawDecals, drawEffects, drawParticles, drawTexts, lights, glowSprite, stampDecals, bakedDecals } from '../gfx/vfx.js';
 import { orbitShieldDepth } from '../gfx/lancershields.js';
 import { drawWallTorch, wallTorchRect } from '../gfx/walltorches.js';
 import { drawWallHanging, wallHangingRect } from '../gfx/wallhangings.js';
@@ -33,10 +33,12 @@ function townSheet(id) {
   if(!img){
     img=new Image();
     townSheets.set(id,img);
-    img.src=`assets/sprites/townsfolk/${id}.png`;
+    img.src=`assets/sprites/townsfolk/${id}.webp`;
   }
   return img;
 }
+/** Let the townsfolk sheets go (a town visit decodes ~20-30 of them, 2 MB each) in levels without townsfolk. */
+export function releaseTownSheets() { townSheets.clear(); townPaletteSheets.clear(); advPortraits.clear(); }
 export function preloadTownSheets(ids) {
   const unique=[...new Set(ids.filter(Boolean))];
   return Promise.all(unique.map(id=>{
@@ -479,7 +481,7 @@ function drawNpc(ctx, n) {
 // Floors (tiles, grit, seam flecks) never change after generation, so they are baked into screen-aligned chunks of
 // CW world px at the current device scale and blitted: ~6 drawImages a frame instead of hundreds. Chunks rebuild when
 // the zoom/DPR changes; at most two are baked per frame, the rest of the view draws tile by tile until its turn.
-const CW = 384, CHUNK_MAX = 24;
+const CW = 384;
 let chunkBudgetFrame = -1, chunkBudget = 0;
 function drawFloorTiles(ctx, world, x0, y0, x1, y1, force) {
   const map = world.map;
@@ -501,7 +503,19 @@ function drawFloorTiles(ctx, world, x0, y0, x1, y1, force) {
     }
   }
 }
-function drawFloors(ctx, world, vr) {
+const chunkKey = (cx, cy) => (cx + 32768) * 65536 + (cy + 32768);
+/** Is a baked decal (vfx.js) already in every on-screen floor chunk it touches? Then the chunks draw it and drawDecals
+ * skips it (chunks off screen don't count: they aren't drawn this frame). */
+function decalStamped(fc, d, px, py) {
+  const cx0 = Math.max(fc.cx0, Math.floor((px - d.r) / CW)), cx1 = Math.min(fc.cx1, Math.floor((px + d.r) / CW));
+  const cy0 = Math.max(fc.cy0, Math.floor((py - d.r) / CW)), cy1 = Math.min(fc.cy1, Math.floor((py + d.r) / CW));
+  for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
+    const c = fc.map.get(chunkKey(cx, cy));
+    if (!c || c.dseq < d.seq) return false;
+  }
+  return true;
+}
+function drawFloors(ctx, world, vr, hq) {
   const z = camera.zoom * G.dpr;
   const fc = world.floorChunks && world.floorChunks.z === z ? world.floorChunks : (world.floorChunks = { z, map: new Map() });
   const tf = ctx.getTransform(), ox = tf.e, oy = tf.f;
@@ -509,8 +523,12 @@ function drawFloors(ctx, world, vr) {
   const parts = buildTransitionParticles(world);
   const cx0 = Math.floor((vr.x0 - 8) / CW), cx1 = Math.floor((vr.x1 + 8) / CW);
   const cy0 = Math.floor((vr.y0 - 8) / CW), cy1 = Math.floor((vr.y1 + 8) / CW);
+  // keep about two screens of baked chunks (each is (384 * zoom * dpr)^2 px of GPU memory; a fixed 24 was ~50 MB on
+  // a high-DPI phone), enough to walk back and forth without rebaking
+  const cap = Math.max(10, 2 * (cx1 - cx0 + 1) * (cy1 - cy0 + 1));
+  fc.cx0 = cx0; fc.cx1 = cx1; fc.cy0 = cy0; fc.cy1 = cy1;
   for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
-    const key = cx + ',' + cy;
+    const key = chunkKey(cx, cy);
     let c = fc.map.get(key);
     const wx = cx * CW, wy = cy * CW;
     // device-px edges from the same rounding on both sides, so neighbouring chunks meet with no seam
@@ -529,9 +547,17 @@ function drawFloors(ctx, world, vr) {
         g.drawImage(transitionSprite(pt.color, pt.size), pt.x - pt.size / 2, pt.y - pt.size / 2);
       }
       if (world.map.castleMat) drawCastleParticles(g, world, wx, wy);
+      c.dseq = 0;
       fc.map.set(key, c);
-      if (fc.map.size > CHUNK_MAX) fc.map.delete(fc.map.keys().next().value);
+      while (fc.map.size > cap) fc.map.delete(fc.map.keys().next().value);
     } else if (c) { fc.map.delete(key); fc.map.set(key, c); } // LRU touch
+    // finished blood is stamped into the chunk once (vfx.js bakedDecals): no per-frame cost after that
+    if (c && bakedDecals.length && bakedDecals[bakedDecals.length - 1].seq > c.dseq) {
+      const g = c.getContext('2d'), n = c.width;
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = hq;
+      g.setTransform(n / CW, 0, 0, n / CW, -wx * n / CW, -wy * n / CW);
+      c.dseq = stampDecals(g, c.dseq, wx, wy, wx + CW, wy + CW);
+    }
     if (c) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.drawImage(c, dx0, dy0, dx1 - dx0, dy1 - dy0);
@@ -567,10 +593,11 @@ export function renderWorld(ctx, world) {
   const ty0 = clamp(Math.floor(Math.min(...corners.map((c) => c[1]))) - 1, 0, map.h - 1);
   const ty1 = clamp(Math.ceil(Math.max(...corners.map((c) => c[1]))) + 1, 0, map.h - 1);
 
-  drawFloors(ctx, world, vr);
+  drawFloors(ctx, world, vr, hq);
   if (map.castleMat) drawCastleWater(ctx, world, vr, G.time, G.touch);
   ctx.imageSmoothingQuality = hq;
-  drawDecals(ctx, vr);
+  const fc = world.floorChunks;
+  drawDecals(ctx, vr, (d, px, py) => decalStamped(fc, d, px, py));
   for (const c of world.corpses) {
     const px = isoX(c.x, c.y), py = isoY(c.x, c.y);
     if (px > vr.x0 - 40 && px < vr.x1 + 40 && py > vr.y0 - 40 && py < vr.y1 + 40) drawCorpse(ctx, c);
@@ -889,18 +916,40 @@ function drawLighting(ctx, world) {
   }
 }
 
+// Outlined name labels baked once per text/colour/size: strokeText + fillText shape the glyphs again on every call,
+// and a pack of champions put a dozen of those in every frame. Drawn at whole device px, so they stay crisp.
+const labels = new Map();
+function nameLabel(text, font, fill, lw) {
+  const key = font + '|' + fill + '|' + lw + '|' + text;
+  let c = labels.get(key);
+  if (c) { labels.delete(key); labels.set(key, c); return c; }
+  const probe = makeCanvas(1, 1).getContext('2d'); probe.font = font;
+  const m = probe.measureText(text), pad = Math.ceil(lw) + 2;
+  const asc = Math.ceil(m.actualBoundingBoxAscent || parseFloat(font.match(/(\d+)px/)[1]) * 0.8), desc = Math.ceil(m.actualBoundingBoxDescent || 0);
+  c = makeCanvas(Math.ceil(m.width) + pad * 2, asc + desc + pad * 2);
+  const g = c.getContext('2d');
+  g.font = font; g.textAlign = 'center';
+  if (lw > 0) { g.lineWidth = lw; g.strokeStyle = '#000'; g.strokeText(text, c.width / 2, pad + asc); }
+  g.fillStyle = fill; g.fillText(text, c.width / 2, pad + asc);
+  c._ox = c.width / 2; c._oy = pad + asc;
+  // the fallback face draws until Cinzel loads: don't keep that one
+  if (!document.fonts || document.fonts.check(font)) { labels.set(key, c); if (labels.size > 160) labels.delete(labels.keys().next().value); }
+  return c;
+}
+function drawLabel(ctx, text, x, y, font, fill, lw) {
+  const c = nameLabel(text, font, fill, lw);
+  ctx.drawImage(c, Math.round(x - c._ox), Math.round(y - c._oy));
+}
+
 function drawOverheadNames(ctx, world) {
   ctx.textAlign = 'center';
   const d = G.dpr;
-  ctx.font = `700 ${Math.round(11 * d)}px Cinzel, Georgia, serif`;
+  const nameFont = `700 ${Math.round(11 * d)}px Cinzel, Georgia, serif`;
   for (const c of world.creatures) {
     if (c.dead || !c.sbox) continue;
     if (c.rank === 'champion' || c.rank === 'unique') {
       const x = (c.sbox[0] + c.sbox[2]) / 2, y = c.sbox[1] - 8;
-      ctx.lineWidth = 3 * d; ctx.strokeStyle = '#000';
-      ctx.strokeText(c.name, x * d, y * d);
-      ctx.fillStyle = c.rank === 'unique' ? '#ffc040' : '#80b0ff';
-      ctx.fillText(c.name, x * d, y * d);
+      drawLabel(ctx, c.name, x * d, y * d, nameFont, c.rank === 'unique' ? '#ffc040' : '#80b0ff', 3 * d);
     }
   }
   // townsfolk names: only the one nearest the hero (a crowd of labels hides the crowd)
@@ -913,24 +962,15 @@ function drawOverheadNames(ctx, world) {
     const x = (n.sbox[0] + n.sbox[2]) / 2;
     const [sx, sy] = camera.toScreen(x, n.sbox[1] - 10);
     const label = n.vendor ? n.vendor.name : n.name;
-    ctx.lineWidth = 3 * d; ctx.strokeStyle = '#000';
-    ctx.strokeText(label, sx * d, sy * d);
-    ctx.fillStyle = n.vendor || n.stash ? '#ffe090' : '#c8c0b0';
-    ctx.fillText(label, sx * d, sy * d);
-    if (n.vendor) {
-      ctx.font = `${Math.round(10 * d)}px "Alegreya Sans", sans-serif`;
-      ctx.fillStyle = '#b0a080';
-      ctx.fillText(n.vendor.title, sx * d, (sy + 12) * d);
-      ctx.font = `700 ${Math.round(11 * d)}px Cinzel, Georgia, serif`;
-    }
+    if (label) drawLabel(ctx, label, sx * d, sy * d, nameFont, n.vendor || n.stash ? '#ffe090' : '#c8c0b0', 3 * d);
+    if (n.vendor && n.vendor.title) drawLabel(ctx, n.vendor.title, sx * d, (sy + 12) * d, `${Math.round(10 * d)}px "Alegreya Sans", sans-serif`, '#b0a080', 0);
   }
   // portal labels
   for (const po of world.portals) {
+    if (!po.label) continue;
     const [sx, sy] = camera.tileToScreen(po.x, po.y, 82);
-    ctx.lineWidth = 3 * d; ctx.strokeStyle = '#000';
-    ctx.strokeText(po.label, sx * d, sy * d);
-    ctx.fillStyle = po.active ? '#ffd0a0' : '#909090';
-    ctx.fillText(po.label, sx * d, sy * d);
+    if (sx < -200 || sy < -40 || sx > G.W + 200 || sy > G.H + 40) continue;
+    drawLabel(ctx, po.label, sx * d, sy * d, nameFont, po.active ? '#ffd0a0' : '#909090', 3 * d);
   }
   // hovered monster info (desktop)
   const h = G.hover;
