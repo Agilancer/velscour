@@ -28,18 +28,24 @@ Contents
   (`util.js`), the level's looks are built behind the loading screen (`warmLevelArt` in game.js;
   `game.warmArt()` for tests), recolour-source atlases (enemy sheets, the replacement atlas) are held decoded as
   `ImageBitmap`s (`decoded()`), and swap keys are memoised (`swapKey`). Worst frames at 4x throttle fell from
-  50-200 ms to ~10-35 ms in most biomes.
+  50-200 ms to ~10-35 ms in most biomes; the first 120 frames of a level, 200-550 ms worst before, now ~20-30 ms.
+  Cost: the warm-up adds ~0.6-0.9 s to the loading screen at 4x throttle (~0.2 s unthrottled).
 - **Canvas memory (iOS caps it).** Monster rims were baked per image/frame/colour/thickness and never evicted
   (~20 per spawn while a monster grew in; 100 MB after 8 levels). Now one 256-entry LRU and full-size thickness
   during spawn growth. Wall-hanging tints, the last level's recoloured tile set (`keepTileSets`) and the town
-  visit's dungeon set are dropped when not in use. Live canvas memory after 8 levels: 217 MB -> ~130 MB.
+  visit's dungeon set are dropped when not in use. Live canvas memory after 8 levels: 217 MB -> 119 MB.
 - **Per-frame cost:** wall hangings baked their biome tint once per atlas instead of a `ctx.filter` per draw (13% of
   a frame in Obsidian); decals and rotated particles use one `setTransform` instead of save/translate/scale/rotate/
   restore; smoke puffs draw a cached disc; particles past the cap and landed blood are killed in place instead of
   `shift()`/`splice()` (quadratic in gory fights); overhead, NPC and portal labels are baked sprites; `fmtInt`
   (was `toLocaleString`), `hexToRgb` and `shade` are fast/memoised; the level-up banner no longer forces a layout.
-  Render ms at 4x throttle (before -> after): Obsidian 10.3 -> 5.5, Flesh 10.6 -> 6.2, Thorn 19.7 -> 12.6, Throne
-  17.7 -> 13.2; fps in the later biomes 34-44 -> 45-60.
+  Full `biome_perf.js` sweep (4x throttle, real GPU), fps before -> after: Blood 49 -> 60, Ashen 44 -> 60, Shadow
+  39 -> 58, Abyss 38 -> 58, Thorn 35 -> 56 (worst frame 179 -> 33 ms), Flesh 36 -> 52, Desert Temple 36 -> 55,
+  Astral 37 -> 59, Throne worst frame 207 -> 22 ms.
+- **Still open:** one page that visits all 37 biomes in a row still slows down late in the run (both before and
+  after; e.g. Sea of Sand alone 60 fps, 60 -> 42 fps when visited 33rd): GPU memory from every pack, sheet and
+  sprite ever drawn. Biomes measured alone match. Next candidates: drop `A.packs` and enemy-sheet bitmaps no
+  level needs, decal baking into the floor chunks, and real-device (iOS/Android) profiling.
 - **Assets removed:** 85 unused AI-biome floor/prop/wall atlases (`assets/tiles/ai_biomes/`, all but
   `heavenly_monsters.webp`) and `tools/build_biome_wall_materials.py`, the retired per-class `helms.webp` /
   `helms_mask.png` (no longer written by `tools/gearart.py`), the unused `intro-blastorama.png` /
