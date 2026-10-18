@@ -29,9 +29,10 @@ function tinted(img, f) {
 }
 
 // A 1px screen-space rim round every monster, coloured like the target window's name (normal red, champion blue,
-// unique gold, boss orange), green round the hero's summons and pale gold round the hero. Each sprite frame's rim
+// unique gold, boss orange), green round the hero's summons and pale gold round the hero; in town and on the roads
+// townsfolk get violet and vendors (shops, crafters) cyan (drawNpc in render.js). Each sprite frame's rim
 // (its silhouette stamped 8 ways, in source px) is baked once per colour and thickness: one extra draw per creature.
-const RIM = { normal: '#e0302a', champion: '#5a9aff', unique: '#ffc040', boss: '#ff7a1a', ally: '#48e868', hero: '#ffe9a8' };
+export const RIM = { normal: '#e0302a', champion: '#5a9aff', unique: '#ffc040', boss: '#ff7a1a', ally: '#48e868', hero: '#ffe9a8', folk: '#c08cff', vendor: '#3ee0e0' };
 const RIM_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [0.71, 0.71], [-0.71, 0.71], [0.71, -0.71], [-0.71, -0.71]];
 // One LRU over every sprite's rims (img id + frame/colour/thickness -> padded rim canvas): per-image maps kept every
 // rim of every look ever seen, ~100 MB after a few levels, more than iOS lets a page hold in canvases.
@@ -58,6 +59,18 @@ function rimCanvas(img, sx, sy, sw, sh, col, o) {
 
 /** A new level starts the rim cache over (rims are cheap GPU bakes; the last level's would just sit there). */
 export function clearRims() { rims.clear(); }
+
+/** A col rim under a sprite: drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh) args in the sprite's current transform.
+ * grow: how far a spawning creature has grown in (0..1); the rim keeps its full-size thickness meanwhile (it shrinks
+ * with the sprite): a thickness per growth step baked ~20 rims per spawn, some padded 33 px. */
+export function drawRim(ctx, col, img, sx, sy, sw, sh, dx, dy, dw, dh, grow = 1) {
+  if (!col || !img || !img.width || dw < 4 || dh < 4) return;
+  // 1 CSS px in the sprite's source px, snapped to 2^(n/4) steps so zoom, squash and spawn growth reuse a few bakes
+  const t = ctx.getTransform(), kx = dw / sw, ky = dh / sh, g = Math.max(0.1, Math.min(1, grow));
+  const o = Math.min(32, Math.max(0.25, 2 ** (Math.round(Math.log2(G.dpr / ((Math.hypot(t.a, t.b) || 1) * (kx + ky) / 2 / g)) * 4) / 4)));
+  const c = rimCanvas(img, sx, sy, sw, sh, col, o), p = c._pad;
+  ctx.drawImage(c, dx - p * kx, dy - p * ky, dw + p * 2 * kx, dh + p * 2 * ky);
+}
 
 export class Creature {
   constructor(o = {}) {
@@ -212,16 +225,7 @@ export class Creature {
   }
   /** The rim under the sprite: drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh) args in the sprite's current transform. */
   drawRim(ctx, img, sx, sy, sw, sh, dx, dy, dw, dh) {
-    const col = this.rimColor();
-    if (!col || !img || !img.width) return;
-    // 1 CSS px in the sprite's source px, snapped to 2^(n/4) steps so zoom, squash and spawn growth reuse a few bakes
-    // while it grows in on spawn the rim keeps its full-size thickness (it shrinks with the sprite): a thickness per
-    // growth step baked ~20 rims per spawn, some padded 33 px
-    const t = ctx.getTransform(), g = this.spawnT < 0.3 ? Math.max(0.1, this.spawnT / 0.3) : 1, kx = dw / sw / g, ky = dh / sh / g;
-    if (dw < 4 || dh < 4) return;
-    const o = Math.min(32, Math.max(0.25, 2 ** (Math.round(Math.log2(G.dpr / ((Math.hypot(t.a, t.b) || 1) * (kx + ky) / 2)) * 4) / 4)));
-    const c = rimCanvas(img, sx, sy, sw, sh, col, o), p = c._pad, qx = dw / sw, qy = dh / sh;
-    ctx.drawImage(c, dx - p * qx, dy - p * qy, dw + p * 2 * qx, dh + p * 2 * qy);
+    drawRim(ctx, this.rimColor(), img, sx, sy, sw, sh, dx, dy, dw, dh, this.spawnT < 0.3 ? this.spawnT / 0.3 : 1);
   }
   /** World-px size of the sprite. */
   spriteDims(img) {
