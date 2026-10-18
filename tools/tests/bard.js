@@ -109,7 +109,8 @@ const fail = (m) => { console.log('FAIL ' + m); bad++; };
     for (const sk of CLASS_SKILLS.bard) G.char.skills[sk.id] = 1;
     G.char.level = 40; p.recompute(); p.mana = p.maxMana = 99999;
     const byName = (n) => CLASS_SKILLS.bard.find((s) => s.name === n);
-    const cast = (n) => { p.castLock = 0; p.cooldowns = {}; p.channel = null; p.mana = 99999; return p.tryUseSkill(byName(n), p.x + 3, p.y + 1); };
+    const settle = () => { if (p.score && p.score.play && !p.score.play.done) p.score.play.flush(); }; // let a performed bar land
+    const cast = (n) => { settle(); p.castLock = 0; p.cooldowns = {}; p.channel = null; p.mana = 99999; return p.tryUseSkill(byName(n), p.x + 3, p.y + 1); };
     const sc = () => ({ beats: p.score.beats, harmony: p.score.harmony, key: p.score.key, cad: p.score.cadences, dis: p.score.discords, notes: p.score.notes.length });
     const out = {};
     for (let i = 0; i < 4; i++) cast('Plucked Note');
@@ -127,7 +128,15 @@ const fail = (m) => { console.log('FAIL ' + m); bad++; };
     clear(); const cad1 = p.score.cadences, dis1 = p.score.discords;
     cast('Tempo Rubato'); cast('Plucked Note'); cast('Plucked Note'); cast('Plucked Note'); cast('Anthem of Heroes');
     out.rubato = { ...sc(), played: p.score.cadences - cad1, broke: p.score.discords - dis1 };
-    out.rests = (() => { p.score.notes.length = 0; p.score.beats = 0; p.mana = 10; p.cooldowns = {}; p.castLock = 0; p.tryUseSkill(byName('Requiem'), p.x, p.y); return Math.round(p.mana); })();
+    out.rests = (() => { settle(); p.score.notes.length = 0; p.score.beats = 0; p.mana = 10; p.cooldowns = {}; p.castLock = 0; p.tryUseSkill(byName('Requiem'), p.x, p.y); return Math.round(p.mana); })();
+    // one song at a time: while a bar is performed, casts write nothing; once it has landed they do
+    settle(); p.score.notes.length = 0; p.score.beats = 0;
+    for (let i = 0; i < 4; i++) { p.castLock = 0; p.cooldowns = {}; p.tryUseSkill(byName('Plucked Note'), p.x + 3, p.y); }
+    p.castLock = 0; p.cooldowns = {}; p.tryUseSkill(byName('Plucked Note'), p.x + 3, p.y);
+    const during = p.score.notes.length;
+    for (let i = 0; i < 240 && p.score.play && !p.score.play.done; i++) G.game.update(1 / 60);
+    p.castLock = 0; p.cooldowns = {}; p.tryUseSkill(byName('Plucked Note'), p.x + 3, p.y);
+    out.oneSong = { during, after: p.score.notes.length };
     out.harmonyDmg = (() => { const sk = SKILLS['bard.0.0'], h = p.score.harmony; p.score.harmony = 0; const a = p.skillDamage(sk, 1)[1]; p.score.harmony = 5; const b = p.skillDamage(sk, 1)[1]; p.score.harmony = h; return +(b / a).toFixed(2); })();
     void hp0;
     return out;
@@ -144,6 +153,7 @@ const fail = (m) => { console.log('FAIL ' + m); bad++; };
   if (c.rubato.broke !== 0 || c.rubato.played !== 2) fail('Rubato should turn an overfull bar into a Cadence (then the whole note plays its own)');
   if (!(c.rests > 10)) fail('a whole rest should restore mana at its Cadence');
   if (!(c.harmonyDmg > 1.25)) fail('Harmony 5 should add ~30% damage');
+  if (c.oneSong.during !== 0 || c.oneSong.after !== 1) fail(`nothing should be written while a bar is performed (${c.oneSong.during}), the next bar after it lands (${c.oneSong.after})`);
 
   // ------------------------------------------------------------ 2b. the sampler and the performed bar
   const mus = await page.evaluate(async () => {
@@ -220,6 +230,7 @@ const fail = (m) => { console.log('FAIL ' + m); bad++; };
         for (const h of w.hazards) h.dead = true;
         w.hazards.length = 0;
         const { effects, particles } = await import('/src/gfx/vfx.js'); effects.length = 0; particles.length = 0;
+        if (p.score.play) p.score.play.done = true;
         p.score.notes.length = 0; p.score.beats = 0;
         // a fresh crowd ahead of the Bard so the notes have something to hit
         let spot = null;
@@ -254,6 +265,7 @@ const fail = (m) => { console.log('FAIL ' + m); bad++; };
   await page.evaluate(async () => {
     const { G } = window.VELSCOUR, p = G.player;
     const { CLASS_SKILLS } = await import('/src/data/skills.js');
+    if (p.score.play) p.score.play.done = true;
     p.score.notes.length = 0; p.score.beats = 0; p.score.harmony = 3; p.score.harmonyT = 99; p.score.key = 'treble';
     for (const n of ['Sharp Note', 'Fan of Notes', 'Power Chord', 'Echo']) { const sk = CLASS_SKILLS.bard.find((s) => s.name === n); G.char.skills[sk.id] = 12; p.castLock = 0; p.cooldowns = {}; p.tryUseSkill(sk, p.x + 4, p.y); }
   });
@@ -264,7 +276,6 @@ const fail = (m) => { console.log('FAIL ' + m); bad++; };
     const { CLASS_SKILLS } = await import('/src/data/skills.js');
     const sk = CLASS_SKILLS.bard.find((s) => s.name === 'Plucked Note'); p.castLock = 0; p.cooldowns = {}; p.tryUseSkill(sk, p.x + 4, p.y);
     p.castLock = 0; p.cooldowns = {}; p.tryUseSkill(sk, p.x + 4, p.y); // 2 + 1 + 1 beats: the bar is performed
-    for (const n of ['Sound Wave', 'Sleight of Hand']) { const k = CLASS_SKILLS.bard.find((s) => s.name === n); p.castLock = 0; p.cooldowns = {}; p.tryUseSkill(k, p.x + 4, p.y); } // the next bar
   });
   await step(40);
   await page.screenshot({ path: `${OUT_DIR}/bard_cadence.png`, clip });
