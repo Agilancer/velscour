@@ -67,6 +67,12 @@ python tools/tests/chatgpt_art.py                 # round trip: examples (withou
 The geometry (cells, insets, frame names) lives in `tools/chatgpt_art.py` and the kit builder imports it, so the
 templates and the importer always agree.
 
+## Grim Nocturne redesign kit
+`ChatGPT_Style_Redesign_Kit.zip` (built by `tools/chatgpt_style_kit.py` from `docs/art_style/`) is the character
+redesign: the art bible, the master prompt, pose-master / armor / overlay templates for all 16 classes on a
+108-art-pixel grid, and pixel-locked imports (`chatgpt_art.py posemaster | armor ("style": "nocturne") | overlays`).
+Start at [art_style/00_START_HERE.md](art_style/00_START_HERE.md).
+
 ## Notes
 - The winged pet atlases still carry caption text from their source sheets (`companions_winged`: "FLAP 1",
   "VELSCOUR" above the Hawk; the drakes have frame numbers under them), and the knight sheets `townsfolk_021`/`022`

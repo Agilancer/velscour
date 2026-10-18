@@ -6,6 +6,10 @@ Import ChatGPT art sheets made from the kits in docs/art_kits/ (see docs/CHATGPT
     python tools/chatgpt_art.py pets    <sheet> <names.json>            4 animated pets (land: 9 frames, winged: 6)
     python tools/chatgpt_art.py npcs    <sheet> <names.json>            4 animated townsfolk (11 frames, knights 13)
     python tools/chatgpt_art.py armor   <sheet> <names.json>            5 body armors for one class
+    Grim Nocturne (docs/art_style/; pixel-locked: art pixels read back from 2x/3x/4x blocks, never rescaled):
+    python tools/chatgpt_art.py posemaster <sheet> <names.json>         a class's base hero -> assets/source/pose_masters/
+    python tools/chatgpt_art.py armor      <sheet> <names.json>         with "style": "nocturne" -> assets/source/gear_nocturne/
+    python tools/chatgpt_art.py overlays   <sheet> <names.json>         5 helmets, gloves, boots -> assets/source/gear_nocturne/
     options: --dry   cut and write only <work>/preview.png, touch nothing in the game
              --work DIR   where previews go (default tools/tests/out/chatgpt_art)
 
@@ -61,6 +65,32 @@ ARCHES = ['skeleton', 'archer', 'zombie', 'ghoul', 'imp', 'demon', 'spider', 'ba
           'abomination']
 ELEMENTS = ['fire', 'cold', 'light', 'poison', 'holy', 'shadow', 'arcane', 'blood']
 RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic']
+# Grim Nocturne (docs/art_style/): every hero frame is 128 x 192 art pixels (AP), the hero 108 AP crown to sole.
+# Templates deliver an AP as a k x k block; imports read the blocks back (pixel-locked: no rescaling, no realigning).
+CANON = {'crown': 75, 'eyes': 82, 'chin': 89, 'shoulders': 96, 'elbows': 114, 'belt': 120, 'crotch': 129, 'fists': 132,
+         'knees': 154, 'ankles': 178, 'soles': 183}
+JOINTS = {'head': (65, 82), 'fist_l': (37, 132), 'fist_r': (87, 132), 'knee_l': (50, 154), 'knee_r': (78, 154),
+          'foot_l': (46, 181), 'foot_r': (84, 181)}
+POSE_S, POSE_CELL = 4, (448, 120, 960, 888)        # pose master: one frame at 4x
+ZONES = {'helmets': [(45, 63, 40, 40)], 'gloves': [(25, 120, 24, 24), (75, 120, 24, 24)], 'boots': [(28, 150, 76, 40)]}
+OVL_S, OVL_COL0, OVL_STEP = 3, 290, 248            # overlays at 3x: 5 columns
+OVL_ROWS = {'helmets': 140, 'gloves': 340, 'boots': 490}
+BUDGET = {'posemaster': 40, 'armor': 40, 'overlay': 20}
+GUIDE = [(0, 255, 255), (255, 255, 0)]              # the style kit's guide colours (never in the palette): dropped
+
+
+def overlay_cells(slot, i):
+    """Sheet rectangles of overlay set i of a slot, each with the AP zone (x, y, w, h) it maps to."""
+    out, gap = [], 12
+    zs = ZONES[slot]
+    width = sum(z[2] for z in zs) * OVL_S + gap * (len(zs) - 1)
+    x = OVL_COL0 + i * OVL_STEP + (228 - width) // 2
+    for zx, zy, zw, zh in zs:
+        out.append(((x, OVL_ROWS[slot], x + zw * OVL_S, OVL_ROWS[slot] + zh * OVL_S), (zx, zy, zw, zh)))
+        x += zw * OVL_S + gap
+    return out
+
+
 CLASSES = ['arcane_sorcerer', 'barbarian', 'bard', 'boomerang_knight', 'carrion_witch', 'death_knight', 'dragon_knight',
            'dragoon', 'gunner', 'lancer', 'necromancer', 'paladin', 'ranger', 'slime_lord', 'totem_master', 'wizard']
 
@@ -370,9 +400,135 @@ def import_armor(sheet, names, args):
     print('\nNew armors drop alongside the old ones of the same rarity. Check: node tools/tests/gear.js %s' % cls)
 
 
+# ---------------------------------------------------------------- Grim Nocturne: pixel-locked imports
+def unblock(a, box, k, solid):
+    """The k x k blocks of box (x0, y0, x1, y1) read back to one art pixel each: the block pixel nearest the block's
+    median colour (a real colour of the art, never an average), opaque when most of the block is."""
+    x0, y0, x1, y1 = box
+    w, h = (x1 - x0) // k, (y1 - y0) // k
+    rgb = a[y0:y0 + h * k, x0:x0 + w * k, :3].astype(np.int32).reshape(h, k, w, k, 3).transpose(0, 2, 1, 3, 4).reshape(h, w, k * k, 3)
+    m = solid[y0:y0 + h * k, x0:x0 + w * k].reshape(h, k, w, k).transpose(0, 2, 1, 3).reshape(h, w, k * k)
+    med = np.median(rgb, axis=2, keepdims=True)
+    pick = np.argmin(np.abs(rgb - med).sum(axis=3) + np.where(m, 0, 999), axis=2)
+    out = np.zeros((h, w, 4), np.uint8)
+    out[..., :3] = np.take_along_axis(rgb, pick[..., None, None], axis=2)[:, :, 0]
+    out[..., 3] = np.where(m.mean(axis=2) >= 0.5, 255, 0)
+    out[out[..., 3] == 0] = 0
+    return out
+
+
+def limit_colours(rgba, n):
+    """At most n colours, without dithering, so pixel clusters stay flat."""
+    op = rgba[..., 3] > 0
+    if not op.any() or len(np.unique(rgba[op][:, :3], axis=0)) <= n:
+        return rgba
+    q = Image.fromarray(np.ascontiguousarray(rgba[..., :3])).quantize(n, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
+    out = rgba.copy()
+    out[..., :3] = np.asarray(q.convert('RGB'))
+    out[~op] = 0
+    return out
+
+
+def locked_mask(a):
+    """Opaque art on a pixel-locked sheet: background keyed, leftover guide colours dropped."""
+    solid = key_background(a)
+    rgb = a[:, :, :3].astype(int)
+    for g in GUIDE:
+        solid &= np.abs(rgb - g).max(axis=2) > 40
+    return solid
+
+
+def need_class(names):
+    cls = names.get('class')
+    if cls not in CLASSES:
+        sys.exit('names.json "class" must be one of ' + ', '.join(CLASSES))
+    return cls
+
+
+def colours(f):
+    return len(np.unique(f[f[..., 3] > 0][:, :3], axis=0))
+
+
+def import_posemaster(sheet, names, args):
+    cls = need_class(names)
+    f = limit_colours(unblock(sheet, POSE_CELL, POSE_S, locked_mask(sheet)), BUDGET['posemaster'])
+    ys = np.nonzero(f[..., 3].any(axis=1))[0]
+    if not len(ys):
+        sys.exit('posemaster: the frame is empty')
+    print('  crown y %d (target %d), soles y %d (target %d), %d colours' % (ys.min(), CANON['crown'], ys.max(), CANON['soles'], colours(f)))
+    img = Image.fromarray(f)
+    preview([img.resize((384, 576), Image.NEAREST)], os.path.join(args.work, 'preview.png'), 1, names=[cls])
+    if args.dry:
+        return
+    out = os.path.join(ROOT, 'assets', 'source', 'pose_masters')
+    os.makedirs(out, exist_ok=True)
+    img.save(os.path.join(out, cls + '.png'))
+    print('  wrote assets/source/pose_masters/%s.png; now rebuild the templates: python tools/chatgpt_style_kit.py' % cls)
+
+
+def save_numbered(folder, prefix, rows, frames):
+    """<prefix>_NNN_<rarity>.png numbered after the folder's last one, plus catalog.json (names, rarities)."""
+    os.makedirs(folder, exist_ok=True)
+    have = [int(m.group(1)) for f in os.listdir(folder) if (m := re.match(re.escape(prefix) + r'_(\d+)_', f))]
+    num = max(have + [0]) + 1
+    cat_path = os.path.join(folder, 'catalog.json')
+    cat = json.load(open(cat_path)) if os.path.exists(cat_path) else {}
+    for f, r in zip(frames, rows):
+        fn = '%s_%03d_%s.png' % (prefix, num, r['rarity'])
+        f.save(os.path.join(folder, fn))
+        cat[str(num)] = {'name': r['name'], 'rarity': r['rarity'], 'file': fn}
+        print('  wrote', os.path.relpath(os.path.join(folder, fn), ROOT))
+        num += 1
+    with open(cat_path, 'w') as fh:
+        json.dump(cat, fh, indent=1)
+
+
+def need_rarities(rows):
+    for r in rows:
+        if r.get('rarity') not in RARITIES:
+            sys.exit('%s: rarity must be one of %s' % (r.get('name'), ', '.join(RARITIES)))
+
+
+def import_armor_locked(sheet, names, args):
+    """Grim Nocturne armors: each 2x frame read back block by block onto the 128 x 192 frame, where it already is."""
+    cls = need_class(names)
+    rows = need(names, 'armors', 5, 'armor')
+    need_rarities(rows)
+    solid = locked_mask(sheet)
+    frames = [Image.fromarray(limit_colours(unblock(sheet, box, ARMOR_S, solid), BUDGET['armor'])) for box in ARMOR_FRAMES]
+    preview([f.resize((256, 384), Image.NEAREST) for f in frames], os.path.join(args.work, 'preview.png'), 5,
+            names=['%s (%s)' % (r['name'], r['rarity']) for r in rows])
+    if not args.dry:
+        save_numbered(os.path.join(ROOT, 'assets', 'source', 'gear_nocturne', cls, 'armor'), cls + '_armor', rows, frames)
+
+
+def import_overlays(sheet, names, args):
+    """Helmets, gloves and boots: each zone read back and put at its spot on a transparent 128 x 192 layer."""
+    cls = need_class(names)
+    solid = locked_mask(sheet)
+    shots = []
+    for slot in ZONES:
+        rows = need(names, slot, 5, 'overlays')
+        need_rarities(rows)
+        layers = []
+        for i in range(5):
+            f = np.zeros((192, 128, 4), np.uint8)
+            for box, (zx, zy, zw, zh) in overlay_cells(slot, i):
+                f[zy:zy + zh, zx:zx + zw] = unblock(sheet, box, OVL_S, solid)
+            layers.append(Image.fromarray(limit_colours(f, BUDGET['overlay'])))
+        shots += layers
+        if not args.dry:
+            save_numbered(os.path.join(ROOT, 'assets', 'source', 'gear_nocturne', cls, slot), '%s_%s' % (cls, slot[:-1]), rows, layers)
+    master = os.path.join(ROOT, 'assets', 'source', 'pose_masters', cls + '.png')
+    if os.path.exists(master):  # preview every piece worn by the pose master
+        base = Image.open(master).convert('RGBA')
+        shots = [Image.alpha_composite(base, s) for s in shots]
+    preview([s.resize((256, 384), Image.NEAREST) for s in shots], os.path.join(args.work, 'preview.png'), 5)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('kind', choices=['enemies', 'bosses', 'pets', 'npcs', 'armor'])
+    ap.add_argument('kind', choices=['enemies', 'bosses', 'pets', 'npcs', 'armor', 'posemaster', 'overlays'])
     ap.add_argument('sheet'); ap.add_argument('names')
     ap.add_argument('--dry', action='store_true')
     ap.add_argument('--work', default=os.path.join(ROOT, 'tools', 'tests', 'out', 'chatgpt_art'))
@@ -386,6 +542,12 @@ def main():
         import_pets(sheet, names, args)
     elif args.kind == 'npcs':
         import_npcs(sheet, names, args)
+    elif args.kind == 'posemaster':
+        import_posemaster(sheet, names, args)
+    elif args.kind == 'overlays':
+        import_overlays(sheet, names, args)
+    elif names.get('style') == 'nocturne':
+        import_armor_locked(sheet, names, args)
     else:
         import_armor(sheet, names, args)
 
