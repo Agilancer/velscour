@@ -14,6 +14,38 @@ Contents
 
 ---
 
+## October 18, 2026 — the Castle overworld overhauled into a concentric castle, 3x the area (branch `feat/castle-overhaul`)
+
+- **Why:** the user called the old Castle "a garbled mess" and asked for a significant overhaul: triple the size, a
+  bridge that fits, ground transitions, flowing water, proper scenarios, references from real castles and isometric
+  games. Image hosts were blocked by the network policy, so the layout follows text sources on concentric castles
+  (Beaumaris, Harlech: nested curtains, the outer lower, gates offset) and Diablo II's siege areas.
+- **Board** (`src/world/castleworld.js`, rewritten): 336 x 304 tiles (3x the old 192 x 176), built directly at tile
+  scale on a 2-tile wall cell grid (no more 2x expansion; `scaledCastlePropK` and `castleWallFamilyAt` are gone). River
+  feeding an 8-tile moat; outer curtain (15 towers, the `landmark_08` gatehouse anchored by its portcullis, a postern);
+  outer ward (practice yard, smithy, armoury, stables + paddock, kitchen garden, orchard, mason's yard, barracks, a
+  wall-walk lane with stairs); inner curtain (roofed drum towers, offset gates); inner ward (the `landmark_09` keep at
+  1.6x, cut into depth-sorted columns; throne hall, cathedral, great hall; walled garden). Outside: a village of town-pack
+  houses, fields, orchard, graveyard, siege lines with procedural tents, a ruined watchtower, a forest of Dark Forest
+  trees (the castle now also loads `loadDarkForestTrees`). Full write-up in CASTLE_OVERWORLD.md.
+- **Bridges:** the painted arch bridge with its near footings cut away (`castleCutout`), pinned to the bank line and
+  sized so its deck lands on the far bank/pier. Three crossings; decks walkable; the test checks they span water.
+- **Ground** (`src/gfx/castleground.js`, new): per-tile materials (`map.castleMat`), dithered edge + corner blend masks
+  baked into floor chunks, baked ground particles (tufts, pebbles, leaves, reeds, flowers) at seams, bank faces on far
+  water edges, water depth shading, and live flowing water (flow field streaks, bank foam, glints; ~3 ms at 4x throttle).
+- **Scenarios:** sites are clustered by story (`plan`): siege engines in the siege lines, the dead in the village and
+  graveyard, the bridge to hold, rampart fights on the south/east lane, keep fights in the halls. `scenarios.js` now
+  rolls a Castle seed per scenario id. Props can emit smoke (`pr.smoke`, world.js): camp fires, the hearth, chimneys.
+- **Art fixes:** floor tiles chosen by measured colour (many atlas names are wrong: several "grass"/"brick" tiles are
+  water); scatter frames aliased by what they show (`SCATTER_ART`); every prop sized in world px (`PROP_H`); furniture
+  pre-scaled once (`castleScaled`, halves the throne hall's frame cost); procedural carpet runner and tents.
+- **Verified:** `castle_overworld.mjs` (100 seeds, all 35 scenarios), `scenarios.js` (all pass, no wait > 20 s),
+  `castle_visual.js` (25 views, desktop + mobile, looked at), `mobs.js` (0 stuck), `wanderers.js` (passes; a bounty can
+  randomly stay on offer, also on main), `flow.js`, `mobile.js`, `hud.js`, `autoplay.js wizard 8`, an auto-play Castle
+  soak (finishes its scenario every run). Debug: `G.debugWalk` tints blocked tiles, `G.debugMarks` marks tiles.
+- **Open:** frame cost at the forested start on the throttled phone profile is still the heaviest spot (tall-tree
+  overdraw, same as the Dark Forest); the curtain wall is not walkable on top (the lane runs at its foot).
+
 ## October 18, 2026 — class signatures: a unique build-and-payoff mechanic for 14 classes (branch `feat/grand-sweep`, not committed)
 
 - **What:** in the spirit of the Bard's notation, every class except the Bard and the Astronomer (they keep theirs) gets a

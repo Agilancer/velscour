@@ -219,7 +219,7 @@ export const BIOMES = [
   },
   {
     id: 'castle', name: 'Castle', pack: 'castle', overworld: true,
-    palette: null, dark: 0.56, light: 11,
+    palette: null, dark: 0.44, light: 12,
     ambient: { type:'mote', color:'#d6c49b' }, mon: { hue:0, sat:0.86, light:0.03 },
     el:'phys', blood:'#7c1610', adj:['Stonebound','Besieged','Iron-Crowned'],
     roster:['zombie','ghoul','bat','gargoyle','skeleton','cultist','abomination','imp','wraith','archer','knight','golem'],
