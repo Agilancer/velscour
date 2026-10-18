@@ -51,6 +51,9 @@ export function initAudio() {
 }
 
 export const audioReady = () => !!ac && ac.state === 'running';
+/** The shared context and the sfx bus, for the instrument sampler (src/core/sampler.js). */
+export const audioCtx = () => ac;
+export const audioOut = () => sfxBus;
 /** For tests: what's loaded and playing. */
 export const audioStats = () => ({ samples: Object.keys(buffers).length, music: music && music.kind, song: music && music.song, amb: amb && amb.bed });
 

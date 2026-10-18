@@ -3,7 +3,7 @@ import { SKILLDATA } from './skilldata.js';
 import { CLASSES } from './classes.js';
 import { SUMMONS } from './summons.js';
 import { ELEM } from '../gfx/vfx.js';
-import { NOTES, NOTE_MODS } from './notation.js';
+import { NOTES, NOTE_MODS, REGISTERS, registerOf } from './notation.js';
 
 export const ROW_LEVELS = [1, 6, 12, 20, 30];
 export const MAX_SKILL_LEVEL = 20;
@@ -241,7 +241,7 @@ export function describe(sk, L, dmg) {
   for (const k in NOTE_MODS) if (m[k]) flags.push(NOTE_MODS[k]);
   const N = NOTES[m.note];
   if (N && m.free) flags.push('Fills the bar: with less than a beat left it plays a shorter note');
-  const score = N ? `<br><span style="color:#ffd88a">&#9835; ${N.name} · ${N.clef ? `no beats: changes the key to ${N.clef}` : `${N.beats} beat${N.beats === 1 ? '' : 's'} of the measure${N.rest ? ' (rests restore mana and life at the Cadence)' : ''}`}</span>` : '';
+  const score = N ? `<br><span style="color:#ffd88a">&#9835; ${N.name} · ${N.clef ? `no beats: changes the key to ${N.clef}` : `${N.beats} beat${N.beats === 1 ? '' : 's'} of the measure${N.rest ? ' (rests restore mana and life at the Cadence)' : ` · ${REGISTERS[registerOf(sk)].name}`}`}</span>` : '';
   return s + (flags.length ? ` <i>${flags.join(' · ')}.</i>` : '') + score;
 }
 
