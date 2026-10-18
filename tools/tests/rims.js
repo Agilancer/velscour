@@ -1,7 +1,7 @@
 // Monster rims and the enlargeable target window. A Slime Lord in a dungeon with a few pets
 // and the depth's monsters: checks every monster/summon gets a rim colour (by rank; green for summons, pale gold for the
 // hero), shoots a pet and a monster held behind a wall (rims_wall_pet/_foe vs _nopet/_nofoe: the wall fades), and that a click on the target window toggles it 2x+ and
-// back while staying on screen, on desktop and on a phone in landscape and portrait. Shots: rims_*.png.
+// back while staying on screen; in town, cyan rims round vendors and violet round townsfolk (rims_town); on desktop and on a phone in landscape and portrait. Shots: rims_*.png.
 //   node tools/tests/rims.js
 const { openGame, report } = require('./harness');
 
@@ -69,6 +69,16 @@ const SIZES = [['desktop', { width: 1400, height: 800 }], ['land', { width: 844,
     const c = await box();
     const fits = b.x >= 0 && b.y >= 0 && b.r <= b.vw && b.b <= b.vh;
     out.push(`[${tag}] ${b.w >= a.w * 2 && fits && /big/.test(b.cls) && !/big/.test(c.cls) && c.w === a.w ? '  ok ' : 'FAIL '} target window ${a.w}px -> ${b.w}px (box ${Math.round(b.r - b.x)}x${Math.round(b.b - b.y)} at ${Math.round(b.x)},${Math.round(b.y)} in ${b.vw}x${b.vh}) -> ${c.w}px`);
+    if (tag === 'desktop') { // town: cyan rims round vendors, violet round townsfolk (rims_town.png)
+      await page.evaluate(async () => {
+        const { G, game } = window.VELSCOUR, w0 = G.world; game.enterTown();
+        for (let i = 0; i < 100 && (G.world === w0 || !document.getElementById('loading').classList.contains('hidden')); i++) await new Promise((r) => setTimeout(r, 100));
+        const v = G.world.npcs.find((n) => n.vendor);
+        G.player.x = v.x + 1.5; G.player.y = v.y + 1.5;
+        G.world.npcs.filter((n) => !n.vendor && !n.stash).slice(0, 3).forEach((n, i) => { n.x = v.x + 2.5 + i * 0.8; n.y = v.y + 0.5 - i * 0.5; });
+      });
+      await page.waitForTimeout(200); await shot('rims_town');
+    }
     errs = errs.concat(errors);
     await browser.close();
   }

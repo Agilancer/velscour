@@ -29,9 +29,10 @@ function tinted(img, f) {
 }
 
 // A 1px screen-space rim round every monster, coloured like the target window's name (normal red, champion blue,
-// unique gold, boss orange), green round the hero's summons and pale gold round the hero. Each sprite frame's rim
+// unique gold, boss orange), green round the hero's summons and pale gold round the hero; in town and on the roads
+// townsfolk get violet and vendors (shops, crafters) cyan (drawNpc in render.js). Each sprite frame's rim
 // (its silhouette stamped 8 ways, in source px) is baked once per colour and thickness: one extra draw per creature.
-const RIM = { normal: '#e0302a', champion: '#5a9aff', unique: '#ffc040', boss: '#ff7a1a', ally: '#48e868', hero: '#ffe9a8' };
+export const RIM = { normal: '#e0302a', champion: '#5a9aff', unique: '#ffc040', boss: '#ff7a1a', ally: '#48e868', hero: '#ffe9a8', folk: '#c08cff', vendor: '#3ee0e0' };
 const RIM_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [0.71, 0.71], [-0.71, 0.71], [0.71, -0.71], [-0.71, -0.71]];
 const rims = new WeakMap(); // img -> Map(frame/colour/thickness key -> padded rim canvas)
 function rimCanvas(img, sx, sy, sw, sh, col, o) {
@@ -50,6 +51,16 @@ function rimCanvas(img, sx, sy, sw, sh, col, o) {
     m.set(key, c);
   }
   return c;
+}
+
+/** A col rim under a sprite: drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh) args in the sprite's current transform. */
+export function drawRim(ctx, col, img, sx, sy, sw, sh, dx, dy, dw, dh) {
+  if (!col || !img || !img.width || dw < 4 || dh < 4) return;
+  // 1 CSS px in the sprite's source px, snapped to 2^(n/4) steps so zoom, squash and spawn growth reuse a few bakes
+  const t = ctx.getTransform(), kx = dw / sw, ky = dh / sh;
+  const o = Math.min(32, Math.max(0.25, 2 ** (Math.round(Math.log2(G.dpr / ((Math.hypot(t.a, t.b) || 1) * (kx + ky) / 2)) * 4) / 4)));
+  const c = rimCanvas(img, sx, sy, sw, sh, col, o), p = c._pad;
+  ctx.drawImage(c, dx - p * kx, dy - p * ky, dw + p * 2 * kx, dh + p * 2 * ky);
 }
 
 export class Creature {
@@ -204,16 +215,7 @@ export class Creature {
     return this.team === 'enemy' ? RIM[this.rank] || RIM.normal : this.summon ? RIM.ally : null;
   }
   /** The rim under the sprite: drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh) args in the sprite's current transform. */
-  drawRim(ctx, img, sx, sy, sw, sh, dx, dy, dw, dh) {
-    const col = this.rimColor();
-    if (!col || !img || !img.width) return;
-    // 1 CSS px in the sprite's source px, snapped to 2^(n/4) steps so zoom, squash and spawn growth reuse a few bakes
-    const t = ctx.getTransform(), kx = dw / sw, ky = dh / sh;
-    if (dw < 4 || dh < 4) return;
-    const o = Math.min(32, Math.max(0.25, 2 ** (Math.round(Math.log2(G.dpr / ((Math.hypot(t.a, t.b) || 1) * (kx + ky) / 2)) * 4) / 4)));
-    const c = rimCanvas(img, sx, sy, sw, sh, col, o), p = c._pad;
-    ctx.drawImage(c, dx - p * kx, dy - p * ky, dw + p * 2 * kx, dh + p * 2 * ky);
-  }
+  drawRim(ctx, img, sx, sy, sw, sh, dx, dy, dw, dh) { drawRim(ctx, this.rimColor(), img, sx, sy, sw, sh, dx, dy, dw, dh); }
   /** World-px size of the sprite. */
   spriteDims(img) {
     if (img._art) { const h = this.artH * this.scale * (this.artRef ? img.height / this.artRef : 1); return [h * img.width / img.height, h]; }

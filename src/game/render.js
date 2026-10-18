@@ -16,6 +16,7 @@ import { drawTownProp, TOWN_PROP_KINDS } from '../gfx/townprops.js';
 import { drawTownSpeech } from './townspeech.js';
 import { enemyImage } from '../core/enemyart.js';
 import { drawLootLabels } from './loot.js';
+import { drawRim, RIM } from './creature.js';
 
 let lightCanvas = null, glowCanvas = null, vignette = null, vigKey = '';
 const transitionSprites = new Map();
@@ -435,13 +436,19 @@ function drawNpc(ctx, n) {
   if (n.flip) ctx.scale(-1, 1);
   ctx.rotate(m.rot + (n.walking ? m.lean : 0));
   ctx.scale(m.sx, m.sy);
+  // the rim like the monsters': cyan round vendors and crafters, violet round everyone else (creature.js RIM)
   let top;
+  const rim = n.vendor ? RIM.vendor : RIM.folk;
   if (vendorArt && !(n.adv && lying)) {
+    drawRim(ctx, rim, vendorArt, 0, 0, vendorArt.width, vendorArt.height, -vw / 2, -vh, vw, vh);
     ctx.drawImage(vendorArt, -vw / 2, -vh, vw, vh); top = vh * m.sy;
   } else if (vendorArt) {
     // a fallen adventurer: the portrait laid on its side
-    ctx.rotate(-Math.PI / 2); ctx.drawImage(vendorArt, -vw / 2, -vh * 0.5 - 4, vw, vh); top = vw * 0.6;
+    ctx.rotate(-Math.PI / 2);
+    drawRim(ctx, rim, vendorArt, 0, 0, vendorArt.width, vendorArt.height, -vw / 2, -vh * 0.5 - 4, vw, vh);
+    ctx.drawImage(vendorArt, -vw / 2, -vh * 0.5 - 4, vw, vh); top = vw * 0.6;
   } else if (ready) {
+    drawRim(ctx, rim, sheet, frame * TOWN_FRAME_W, 0, TOWN_FRAME_W, TOWN_FRAME_H, -W / 2, -H + foot, W, H);
     ctx.drawImage(sheet, frame * TOWN_FRAME_W, 0, TOWN_FRAME_W, TOWN_FRAME_H, -W / 2, -H + foot, W, H); top = (lying ? 20 : n.child ? 44 : 56) * m.sy;
   } else top = 50;
   ctx.restore();
