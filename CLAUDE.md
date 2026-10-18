@@ -42,7 +42,7 @@ node tools/tests/biome_perf.js [ids] [depth]       # per-biome frame cost with a
 node tools/tests/mobs.js [levels]                  # monster pathing: awake monsters + guardians must reach the hero (stuck <= 2%)
 node tools/tests/bot.js paladin 2                  # bot plays depths 1..2, prints balance stats
 node tools/tests/skills.js wizard,gunner           # cast every skill of a class (all 16 if no arg; slow)
-node tools/tests/bard.js [minutes] [mobile]        # Bard notation: glyph sheet, measure/Cadence rules, showcase shots, auto-play soak
+node tools/tests/bard.js [minutes] [mobile]        # Bard notation + music: glyphs, 300 jingles, engraving sheet, sampler, Cadence rules, shots, auto-play
 node tools/tests/astronomer.js [minutes] [mobile]  # Astronomer: icons, star chart/zodiac/Conjunction/Mirror rules, showcase shots, auto-play soak
 node tools/tests/classart.js paladin               # class art pack: catalog weapons, ability effects
 node tools/tests/lance.js [mobile]                 # Dragoon leaps: energy lance + per-skill trails, stepped frame by frame
@@ -108,6 +108,9 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   The user's sound zips live in `assets/source/audio/` and are transcoded to MP3 in `assets/audio/` by
   `python3 tools/process_assets.py audio` (needs ffmpeg; `tools/audiopack.py`). `src/core/audio.js` maps game sounds
   to samples (`SAMPLES`), songs to areas (`MUSIC`) and ambient beds to biomes (`AMB`).
+  The Bard's instrument packs (piano C3-B4, harpsichord C4-C5) live in `assets/source/audio/instruments/` and become
+  `assets/audio/inst/` via `python tools/process_assets.py instruments` (numpy + lameenc, no ffmpeg); `src/core/sampler.js`
+  plays them, `src/data/jingles.js` holds the 300 jingles, and `tools/songbook.html` is a keyboard + sequencer to hear them.
   The HUD art (`assets/source/hud_bar.webp`: orbs + 15 skill / 4 potion slots; `hud_frames.webp`: minimap ring + six
   buttons) is cut by `python3 tools/process_assets.py ui` into `assets/ui/` (`hud.webp`, `hud.json`, `minimap_ring.webp`,
   `btn_<name>.webp`). The skill bar's slot order, keys and save migration live in `src/data/bar.js`.
@@ -123,7 +126,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Overworld scenarios
   (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. Monster/hero scaling, affixes, drops or death
   rules (`monsterBase`, `src/data/depth.js`, `src/data/items.js`, `src/game/defiance.js`): run `balance_model.mjs` and
-  `balance.js` at a few depths. Dungeon/town events (`src/game/happenings.js`): run `happenings.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. The Bard's notes, measure and Cadences (`src/game/bard.js`, `src/gfx/notation.js`, `src/data/notation.js`): run `bard.js`. The Astronomer (class id `arcane_sorcerer`; `src/game/astronomer.js`, `src/gfx/cosmos.js`): run `astronomer.js`. Raid bosses
+  `balance.js` at a few depths. Dungeon/town events (`src/game/happenings.js`): run `happenings.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. The Bard's notes, measure, jingles, sampler and Cadences (`src/game/bard.js`, `src/game/bardmusic.js`, `src/gfx/notation.js`, `src/data/notation.js`, `src/data/jingles.js`, `src/core/sampler.js`): run `bard.js`. The Astronomer (class id `arcane_sorcerer`; `src/game/astronomer.js`, `src/gfx/cosmos.js`): run `astronomer.js`. Raid bosses
   (`src/game/raid.js`, every 5th depth): run `raid.js` (and `raid_sigs.js` for `src/game/raidsigs.js`). Rings, augments or skill mastery (`src/data/rings.js`,
   `src/game/augments.js`): run `rings.js`. The town generator (`src/world/town.js`): run `town.js` with a few seeds.
 - Velscour waits at `FINAL_DEPTH` (500, `src/data/depth.js`); monster levels come from `depthLevel(depth)`, never the

@@ -93,6 +93,45 @@ The user's ask: get past depths 150-160 without dying and resetting 30+ times; a
 - **Open:** melee Barbarians die most (dual wielding leaves ~half the armor of a shield build). Depths 250-500 are
   modelled, not played. Event odds are first guesses; ask the user what they like seeing.
 
+## October 17, 2026 — Bard music: a piano/harpsichord sampler, 300 jingles, real sheet music over his head (branch `feat/bard-music`)
+
+- **Samples** (user's packs, `assets/source/audio/instruments/`): piano C3-B4 (24 keys), harpsichord C4-C5 (13 keys).
+  `python tools/process_assets.py instruments` (`tools/instrumentpack.py`, numpy + `pip install lameenc`, no ffmpeg)
+  trims each WAV, mixes to mono, cuts it to 3.6 s (piano) / 2.6 s (harpsichord) with a fade, and writes 96 kbps MP3s to
+  `assets/audio/inst/<inst>/<midi>.mp3` + `instruments.json` (1.5 MB in all).
+- **Sampler + sequencer** (`src/core/sampler.js`): `loadInstruments()` (the Bard asks once the audio context exists),
+  `playNote(inst, midi, {at, dur, vel})` (missing keys are repitched from the nearest sample), `playSequence(events,
+  {bpm})` on the Web Audio clock, a 36-voice cap. Routed through the sfx bus, so the SFX volume applies.
+- **300 jingles** (`src/data/jingles.js`, generated at load from a fixed seed, so they never change between loads): 14 keys
+  (7 major, 7 harmonic minor, up to 3 sharps/flats), 120-168 BPM, one chord per beat ending on the dominant
+  (I-vi-ii-V, i-iv-V-V, ...) and a tonic landing on the next downbeat, so every bar is an authentic cadence. Melody rules:
+  a note on every beat, chord tones on beats, non-chord tones in and out by step, steps over leaps, leaps turn back,
+  no tritone/seventh leaps, no augmented second, at most two repeats, last note leads by step into the landing.
+  Every melody fits one octave C..B so any register can play it. `jingleFaults()` checks the rules (the test runs it).
+- **Registers** (`REGISTERS`/`registerOf` in `data/notation.js`): Songs = piano C4-B4, Sonic Arts = piano C3-B3,
+  Trickery = harpsichord, Grand Finale by note length (long low, quick on the harpsichord); `inst=` mod overrides.
+  The tooltip names it.
+- **Composing** (`game/bard.js`, pure helpers in `game/bardmusic.js`): each bar gets a random jingle (never the same twice
+  running; its key signature shows on the empty staff). A written glyph's noteheads take the tune's note at their beat
+  position (`pitchHeads`; extra notes inside one tune note walk by step toward the next, or turn on a neighbour) and
+  sound at once on the skill's register. A Cadence **performs** the bar (`Performance`, `bardArrangement`): every head at
+  its beat in the jingle's tempo, the chord's root + fifth in the bass where it changes, then the tonic chord lands on
+  beat 4 (or after a part-filled Da Capo bar). Gameplay rides it: treble-key notes launch as the playhead reaches them,
+  the bass-key chord AoE lands with the tonic. A new Cadence flushes the previous performance (its remaining notes fire
+  at once, its audio fades). A Discord is a piano cluster.
+- **Engraving** (`drawMeasure` in `gfx/notation.js`): clef, key signature, 4/4, notes at their true pitch for the clef
+  (`sc.key`; treble bottom line E4, bass G2), ledger lines, accidentals against the key signature and earlier ones in the
+  bar, stems (up below the middle line), flags, straight beams, triplet 3s, rests on their lines, proportional spacing.
+  The performed bar takes the staff's place (and floats above once the next bar has notes) with a playhead and the
+  jingle's name; notes glow as they sound.
+- **Songbook** (`tools/songbook.html`): keyboard synth (C3-C5, tracker keys) and a sequencer that writes any jingle in a
+  chosen register and rhythm and plays it with the playhead. Serve the repo root and open `/tools/songbook.html`.
+- Tests: `tools/tests/bard.js` now also checks the 300 jingles (distinct, rule-clean), engraves 12 of them in every glyph
+  (`bard_engraving.png`), loads the 37 samples and checks a performed bar's tempo and staggered note launches.
+- Not tested: real audio output (headless Chromium decodes and schedules but nobody listened), Safari/iOS decoding.
+  Later: more instruments (add a pack to `assets/source/audio/instruments/`, a `KEEP` entry in `instrumentpack.py`, an
+  `INSTRUMENTS` entry in `sampler.js` and a register in `REGISTERS`).
+
 ## October 17, 2026 — Bard overhaul: musical-notation projectiles, particle staves, the composing gimmick
 
 - **Notation** (`src/data/notation.js`): 20 glyphs (whole/half/quarter/eighth/sixteenth notes, tied eighths, 2-4 beamed

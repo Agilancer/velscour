@@ -6,6 +6,7 @@ import { makeCanvas, rand, TAU, chance } from '../core/util.js';
 import { isoX, isoY, HW } from '../core/view.js';
 import { glowSprite, spawn, addEffect, Ring } from './vfx.js';
 import { NOTES, MEASURE } from '../data/notation.js';
+import { JINGLES, sigAcc } from '../data/jingles.js';
 
 // staff / glyph / glow / spark colours per tier (4 = rainbow staff and a gold glyph)
 export const TIERS = [
@@ -210,13 +211,162 @@ export class NoteFlight {
 }
 export const flyNote = (o) => addEffect(new NoteFlight(o));
 
+// ---------------------------------------------------------------- engraving: the measure as real sheet music
+// Steps count staff positions from the bottom line (0) up (middle line = step 4, top line = step 8); u = line spacing.
+const CLEF_BOTTOM = { treble: 30, bass: 18 };   // diatonic index (octave*7 + letter) of the bottom line: E4 / G2
+export const staffStep = (clef, L) => L - (CLEF_BOTTOM[clef] ?? 30);
+const SIG_STEPS = { 1: [8, 5, 9, 6, 3, 7, 4], [-1]: [4, 7, 3, 6, 2, 5, 1] };   // treble; the bass clef sits two steps lower
+const BEAMS = { e: 1, s: 2, e2: 1, s2: 2, s3: 2, s4: 2, t8: 1, t16: 2, t32: 3 };
+const TRIP = { t8: 1, t16: 1, t32: 1 };
+const mod7 = (n) => ((n % 7) + 7) % 7;
+
+function accidental(ctx, a, x, y, u) {
+  const thin = Math.max(0.7, u * 0.11), thick = Math.max(1, u * 0.3);
+  ctx.beginPath();
+  if (a > 0) { // sharp: two uprights, two rising bars
+    ctx.lineWidth = thin;
+    ctx.moveTo(x - 0.22 * u, y - 1.1 * u); ctx.lineTo(x - 0.22 * u, y + 1.3 * u);
+    ctx.moveTo(x + 0.22 * u, y - 1.3 * u); ctx.lineTo(x + 0.22 * u, y + 1.1 * u); ctx.stroke();
+    ctx.lineWidth = thick; ctx.beginPath();
+    ctx.moveTo(x - 0.5 * u, y - 0.25 * u); ctx.lineTo(x + 0.5 * u, y - 0.55 * u);
+    ctx.moveTo(x - 0.5 * u, y + 0.55 * u); ctx.lineTo(x + 0.5 * u, y + 0.25 * u); ctx.stroke();
+  } else if (a < 0) { // flat: a tall stem and a bowl on the line
+    ctx.lineWidth = Math.max(0.8, u * 0.16);
+    ctx.moveTo(x - 0.3 * u, y - 1.75 * u); ctx.lineTo(x - 0.3 * u, y + 0.5 * u);
+    ctx.bezierCurveTo(x + 0.35 * u, y + 0.05 * u, x + 0.85 * u, y - 0.5 * u, x + 0.25 * u, y - 0.55 * u);
+    ctx.quadraticCurveTo(x - 0.05 * u, y - 0.5 * u, x - 0.3 * u, y - 0.2 * u); ctx.stroke();
+  } else { // natural
+    ctx.lineWidth = thin;
+    ctx.moveTo(x - 0.28 * u, y - 1.3 * u); ctx.lineTo(x - 0.28 * u, y + 0.55 * u);
+    ctx.moveTo(x + 0.28 * u, y - 0.55 * u); ctx.lineTo(x + 0.28 * u, y + 1.3 * u); ctx.stroke();
+    ctx.lineWidth = thick * 0.85; ctx.beginPath();
+    ctx.moveTo(x - 0.28 * u, y - 0.2 * u); ctx.lineTo(x + 0.28 * u, y - 0.45 * u);
+    ctx.moveTo(x - 0.28 * u, y + 0.45 * u); ctx.lineTo(x + 0.28 * u, y + 0.2 * u); ctx.stroke();
+  }
+}
+function notehead(ctx, x, y, u, hollow, whole) {
+  ctx.beginPath(); ctx.ellipse(x, y, (whole ? 0.78 : 0.62) * u, 0.45 * u, whole ? 0 : -0.35, 0, TAU);
+  if (!hollow) { ctx.fill(); return; }
+  ctx.lineWidth = Math.max(0.8, u * (whole ? 0.26 : 0.19)); ctx.stroke();
+}
+/** Glyph paths reused from the projectile art (rests, clefs), placed on the staff: k = units -> px. */
+function path(ctx, id, x, y, k) { ctx.save(); ctx.translate(x, y); ctx.scale(k, k); DRAW[id](ctx, 0); ctx.restore(); }
+function rest(ctx, g, x, Y, u) {
+  if (g === 'rw') ctx.fillRect(x - 0.6 * u, Y(6), 1.2 * u, 0.5 * u);                  // hangs from the fourth line
+  else if (g === 'rh') ctx.fillRect(x - 0.6 * u, Y(4) - 0.5 * u, 1.2 * u, 0.5 * u);   // sits on the middle line
+  else path(ctx, g, x, Y(4) + (g === 'rq' ? 0 : 0.25 * u), u * (g === 'rq' ? 0.18 : 0.15));
+}
+/** Highest and lowest staff step a measure's ink reaches (stems and flags included). */
+export function measureSpan(clef, notes) {
+  let hi = 8, lo = 0;
+  for (const n of notes) for (const h of n.heads || []) {
+    const s = staffStep(clef, h.L), up = s < 4;
+    hi = Math.max(hi, s + (up ? 7 : 1)); lo = Math.min(lo, s - (up ? 1 : 7));
+  }
+  return [hi, lo];
+}
+/** Width of the clef + key signature + time signature, in line spacings. */
+const headerU = (key) => 2.9 + Math.abs(key ? key.sig : 0) * 0.85 + 1.9;
+/** x of beat position `b` (0..4) in a measure drawn at x with width w. */
+export const measureX = (x, w, u, key, b) => { const x0 = x + headerU(key) * u + 1.2 * u; return x0 + (b / MEASURE) * (x + w - 1.4 * u - x0); };
+
+/**
+ * Engrave one 4/4 measure: staff, clef, key signature, 4/4, then each written note at its true pitch and its beat
+ * position (proportional spacing): accidentals against the key signature and earlier ones in the bar, ledger lines,
+ * stems (up below the middle line), flags, beamed groups, triplet numbers, rests. top = y of the top line.
+ * o.play = playhead beat (notes it has passed light up), o.colOf(note, lit) picks note colours.
+ */
+export function drawMeasure(ctx, o) {
+  const { x, top, w, u, clef = 'treble', key, notes = [], col, play = -1, final = false } = o;
+  const Y = (s) => top + (8 - s) * u / 2, X = (b) => measureX(x, w, u, key, b);
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = Math.max(0.9, u * 0.1);
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) { ctx.moveTo(x, Y(i * 2)); ctx.lineTo(x + w, Y(i * 2)); }
+  ctx.moveTo(x + w, Y(8)); ctx.lineTo(x + w, Y(0)); ctx.stroke();
+  if (final) { ctx.lineWidth = Math.max(1.4, u * 0.42); ctx.beginPath(); ctx.moveTo(x + w - 0.5 * u, Y(8)); ctx.lineTo(x + w - 0.5 * u, Y(0)); ctx.stroke(); }
+  // clef: the treble curl wraps the G line, the bass dots straddle the F line
+  if (clef === 'bass') path(ctx, 'bass', x + 1.4 * u, Y(6) + 3.1 * 0.17 * u, 0.17 * u);
+  else path(ctx, 'treble', x + 1.3 * u, Y(2) - 2.6 * 0.215 * u, 0.215 * u);
+  let hx = x + 2.9 * u;
+  if (key && key.sig) {
+    const a = Math.sign(key.sig), st = SIG_STEPS[a];
+    for (let i = 0; i < Math.abs(key.sig); i++) accidental(ctx, a, hx + (i + 0.4) * 0.85 * u, Y(st[i] - (clef === 'bass' ? 2 : 0)), u);
+    hx += Math.abs(key.sig) * 0.85 * u;
+  }
+  ctx.font = `bold ${Math.round(u * 2.3)}px Georgia, serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('4', hx + 0.9 * u, Y(6) + 0.1 * u); ctx.fillText('4', hx + 0.9 * u, Y(2) + 0.1 * u);
+  const cur = {};   // accidentals in force this bar, per staff position
+  const stemW = Math.max(0.8, u * 0.12), beamT = Math.max(1.2, u * 0.45);
+  for (const n of notes) {
+    const N = NOTES[n.g];
+    if (!N || N.clef) continue;
+    const lit = play >= 0 && play >= n.at - 1e-6, c = o.colOf ? o.colOf(n, lit) : col;
+    ctx.fillStyle = ctx.strokeStyle = c;
+    if (N.rest) { rest(ctx, n.g, n.g === 'rw' ? X(2) : X(n.at) + 0.2 * u, Y, u); continue; }   // a whole-bar rest sits mid-bar
+    const hs = n.heads.map((h) => ({ s: staffStep(clef, h.L), L: h.L, acc: h.acc, x: X(h.at) }));
+    for (const h of hs) { // accidentals, then ledger lines
+      const want = h.L in cur ? cur[h.L] : (key ? sigAcc(key, mod7(h.L)) : 0);
+      if (h.acc !== want) { accidental(ctx, h.acc, h.x - 1.25 * u, Y(h.s), u); cur[h.L] = h.acc; }
+      ctx.lineWidth = Math.max(0.7, u * 0.1); ctx.beginPath();
+      for (let s = -2; s >= h.s; s -= 2) { ctx.moveTo(h.x - 0.95 * u, Y(s)); ctx.lineTo(h.x + 0.95 * u, Y(s)); }
+      for (let s = 10; s <= h.s; s += 2) { ctx.moveTo(h.x - 0.95 * u, Y(s)); ctx.lineTo(h.x + 0.95 * u, Y(s)); }
+      ctx.stroke();
+    }
+    for (const h of hs) notehead(ctx, h.x, Y(h.s), u, n.g === 'h' || n.g === 'w', n.g === 'w');
+    if (n.g === 'w') continue;
+    const k = BEAMS[n.g] || 0;
+    ctx.lineWidth = stemW;
+    if (hs.length === 1) {
+      const h = hs[0], up = h.s < 4, sx = h.x + (up ? 0.56 : -0.56) * u, ey = Y(h.s) + (up ? -3.4 : 3.4) * u;
+      ctx.beginPath(); ctx.moveTo(sx, Y(h.s)); ctx.lineTo(sx, ey); ctx.stroke();
+      ctx.lineWidth = Math.max(0.9, u * 0.26);
+      for (let i = 0; i < k; i++) { // flags always fly to the right
+        const dd = up ? 1 : -1, y0 = ey + dd * i * 0.8 * u;
+        ctx.beginPath(); ctx.moveTo(sx, y0); ctx.bezierCurveTo(sx + 0.15 * u, y0 + dd * 0.9 * u, sx + 1.15 * u, y0 + dd * 1.1 * u, sx + 0.9 * u, y0 + dd * 2.1 * u); ctx.stroke();
+      }
+      continue;
+    }
+    // a beamed group: one stem direction, a straight beam that keeps every stem at least 2.8 spaces long
+    const up = hs.reduce((a, h) => a + h.s, 0) / hs.length < 4, d = up ? -1 : 1;
+    const xs = hs.map((h) => h.x + (up ? 0.56 : -0.56) * u), x0 = xs[0], x1 = xs[xs.length - 1];
+    const natural = hs.map((h) => Y(h.s) + d * 3.3 * u);
+    const slope = Math.max(-0.22, Math.min(0.22, (natural[natural.length - 1] - natural[0]) / Math.max(1, x1 - x0)));
+    let b0 = natural[0];
+    hs.forEach((h, i) => { const need = Y(h.s) + d * 2.8 * u - slope * (xs[i] - x0); b0 = up ? Math.min(b0, need) : Math.max(b0, need); });
+    const by = (xx) => b0 + slope * (xx - x0);
+    ctx.beginPath(); hs.forEach((h, i) => { ctx.moveTo(xs[i], Y(h.s)); ctx.lineTo(xs[i], by(xs[i])); }); ctx.stroke();
+    for (let j = 0; j < k; j++) { // beams stack toward the heads
+      const t0 = by(x0) - d * j * 0.75 * u - (up ? 0 : beamT), t1 = by(x1) - d * j * 0.75 * u - (up ? 0 : beamT);
+      ctx.beginPath(); ctx.moveTo(x0 - stemW / 2, t0); ctx.lineTo(x1 + stemW / 2, t1); ctx.lineTo(x1 + stemW / 2, t1 + beamT); ctx.lineTo(x0 - stemW / 2, t0 + beamT); ctx.closePath(); ctx.fill();
+    }
+    if (TRIP[n.g]) { // the triplet's 3 on the beam side
+      const mx = (x0 + x1) / 2;
+      ctx.font = `italic bold ${Math.max(6, Math.round(u * 1.7))}px Georgia, serif`;
+      ctx.fillText('3', mx, by(mx) + d * 1.1 * u + (up ? 0 : beamT));
+    }
+  }
+  if (play >= 0 && play <= MEASURE + 0.01) { // the playhead
+    const px = X(Math.min(MEASURE, play));
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha *= 0.8;
+    ctx.fillStyle = col; ctx.fillRect(px - 0.2 * u, Y(10), 0.4 * u, Y(-2) - Y(10));
+    ctx.globalAlpha *= 0.35; ctx.fillRect(px - u, Y(9), 2 * u, Y(-1) - Y(9));
+  }
+  ctx.restore();
+}
+
 // ---------------------------------------------------------------- the measure over the Bard's head
 const HARM = ['#f2e6c4', '#7cd4ff', '#62ffa4', '#ffd84a', '#ff72d2', '#ffffff'];
+const jingleOf = (sc) => JINGLES[sc && sc.jingle >= 0 ? sc.jingle : 0];
+/** Layout of the Bard's composing staff (world px): left x, top line y, width, line spacing. */
+export function scoreLayout(p) {
+  const u = G.touch ? 4 : 5, w = G.touch ? 140 : 172;
+  return { u, w, x: isoX(p.x, p.y) - w / 2, top: isoY(p.x, p.y) - (p.spriteH || 60) - 34 - 4 * u };
+}
 /** Screen position (world px) of beat position `at` on the Bard's staff. */
 export function scoreSlot(p, at) {
-  const W = G.touch ? 60 : 76;
-  const x0 = isoX(p.x, p.y) - W / 2, y = isoY(p.x, p.y) - (p.spriteH || 60) - 30;
-  return [x0 + 15 + (at / MEASURE) * (W - 20), y];
+  const L = scoreLayout(p);
+  return [measureX(L.x, L.w, L.u, jingleOf(p.score).key, at), L.top + 2 * L.u];
 }
 /** Tile-space offset (dx, dy, z) of a staff slot, so cadence notes can launch from the very spot they were written. */
 export function scoreWorld(p, at) {
@@ -225,45 +375,62 @@ export function scoreWorld(p, at) {
   return [p.x + d, p.y - d, by - sy];
 }
 export class ScoreFx {
-  constructor(p) { this.p = p; this.layer = 'top'; this.t = 0; }
-  update(dt) { this.t += dt; return !this.p.dead && this.p.score && this.p.world && G.player === this.p; }
+  constructor(p) { this.p = p; this.layer = 'top'; this.t = 0; this.lift = 0; }
+  update(dt) {
+    this.t += dt;
+    const sc = this.p.score; // the performed bar takes the staff's place until the next bar has notes, then floats above
+    if (sc) this.lift += ((sc.notes.length ? 1 : 0) - this.lift) * Math.min(1, dt * 12);
+    return !this.p.dead && this.p.score && this.p.world && G.player === this.p;
+  }
   draw(ctx) {
     const p = this.p, sc = p.score;
     if (!sc || (p.world && p.world.kind === 'town') || G.settings.bardScore === false) return;
-    const W = G.touch ? 60 : 76, gap = G.touch ? 2.6 : 3.2;
-    const cx = isoX(p.x, p.y), top = isoY(p.x, p.y) - (p.spriteH || 60) - 30 - gap * 2;
-    const x0 = cx - W / 2, busy = sc.notes.length || sc.flash > 0 || sc.discord > 0;
-    const a = busy ? 1 : 0.4;
+    const { u, w, x, top } = scoreLayout(p), J = jingleOf(sc), pl = sc.play, playing = pl && !pl.done && pl.w === p.world;
+    const base = playing ? Math.min(1, this.lift * 2) : 1;   // hidden under the performed bar while that sits in its place
+    const busy = sc.notes.length || sc.flash > 0 || sc.discord > 0, a = busy ? 1 : 0.5;
     const shake = sc.discord > 0 ? Math.sin(this.t * 70) * 2.5 * sc.discord : 0;
     const col = sc.discord > 0 ? '#ff5050' : HARM[Math.min(5, sc.harmony)];
+    const [hi, lo] = measureSpan(sc.key, sc.notes);
     ctx.save();
     ctx.translate(shake, 0);
-    // a dark wash so it reads over any floor
-    ctx.globalAlpha = 0.38 * a; ctx.fillStyle = '#0a0610';
-    ctx.fillRect(x0 - 3, top - 8, W + 6, gap * 4 + 16);
-    ctx.globalCompositeOperation = 'lighter';
-    // fill progress under the lines
+    // a dark card so the notation reads over any floor, sized to the ink (ledger lines, stems)
+    const cy0 = top - Math.max(0, hi - 8) * u / 2 - 1.4 * u, cy1 = top + 4 * u + Math.max(0, -lo) * u / 2 + 2.6 * u;
+    ctx.globalAlpha = 0.72 * a * base; ctx.fillStyle = '#0a0610';
+    ctx.fillRect(x - 4, cy0, w + 8, cy1 - cy0);
     const fill = Math.min(1, sc.beats / MEASURE);
-    if (fill > 0) { ctx.globalAlpha = 0.18 * a; ctx.fillStyle = col; ctx.fillRect(x0 + 12, top - 1, (W - 16) * fill, gap * 4 + 2); }
-    ctx.globalAlpha = (0.55 + (sc.flash > 0 ? 0.45 * sc.flash : 0)) * a; ctx.strokeStyle = sc.flash > 0 ? '#ffffff' : col; ctx.lineWidth = 1;
-    for (let i = 0; i < 5; i++) {
-      const y = top + i * gap + Math.sin(this.t * 3 + i * 0.7) * (sc.harmony >= 3 ? 0.6 : 0);
-      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + W, y); ctx.stroke();
+    if (fill > 0) {
+      const f0 = measureX(x, w, u, J.key, 0) - 0.9 * u, f1 = measureX(x, w, u, J.key, MEASURE) - 0.9 * u;
+      ctx.globalAlpha = 0.14 * a * base; ctx.fillStyle = col; ctx.fillRect(f0, top - u, (f1 - f0) * fill, 6 * u);
     }
-    ctx.beginPath(); ctx.moveTo(x0 + W, top); ctx.lineTo(x0 + W, top + gap * 4); ctx.stroke();
-    ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0 + W - 2.5, top); ctx.lineTo(x0 + W - 2.5, top + gap * 4); ctx.stroke();
-    ctx.globalCompositeOperation = 'source-over';
-    const gs = G.touch ? 0.42 : 0.5;
-    drawGlyph(ctx, sc.key === 'bass' ? 'bass' : 'treble', x0 + 6, top + gap * 2 + (sc.key === 'bass' ? -1 : 0), sc.key === 'bass' ? gs * 0.8 : gs * 1.05, col, 0, a);
-    for (const nt of sc.notes) {
-      const [nx] = scoreSlot(p, nt.at + Math.min(0.5, NOTES[nt.g].beats / 2) * 0.6);
-      const bob = Math.sin(this.t * 6 + nt.at * 2) * 0.8, rest = NOTES[nt.g].rest;
-      drawGlyph(ctx, nt.g, nx, top + gap * 2 + (rest ? 0 : -1) + bob, gs, TIERS[nt.tier].note, 0, a);
-    }
+    ctx.globalAlpha = (0.85 + 0.15 * sc.flash) * a * base;
+    drawMeasure(ctx, { x, top, w, u, clef: sc.key, key: J.key, notes: sc.notes, col: sc.flash > 0.5 ? '#ffffff' : col, colOf: (n) => TIERS[n.tier].note });
     // harmony pips
     for (let i = 0; i < 5; i++) {
-      ctx.globalAlpha = (i < sc.harmony ? 1 : 0.25) * a; ctx.fillStyle = i < sc.harmony ? HARM[Math.min(5, i + 1)] : '#806a80';
-      ctx.beginPath(); ctx.arc(cx - 10 + i * 5, top + gap * 4 + 5, 1.5, 0, TAU); ctx.fill();
+      ctx.globalAlpha = (i < sc.harmony ? 1 : 0.25) * a * base; ctx.fillStyle = i < sc.harmony ? HARM[Math.min(5, i + 1)] : '#806a80';
+      ctx.beginPath(); ctx.arc(x + w / 2 - 10 + i * 5, cy1 - 2.5, 1.5, 0, TAU); ctx.fill();
+    }
+    // the measure being performed floats above, read by a playhead
+    if (playing) {
+      const [phi, plo] = measureSpan(pl.clef, pl.notes), k = Math.min(1, pl.t / 0.12), out = Math.max(0, Math.min(1, (pl.end + 0.45 - pl.t) / 0.45));
+      const ptop = top + this.lift * (cy0 - 5 - (4 * u + Math.max(0, -plo) * u / 2 + 1.6 * u) - top) - this.lift * Math.min(pl.t, pl.end) * 3, beat = pl.t / pl.spb;
+      const py0 = ptop - Math.max(0, phi - 8) * u / 2 - (G.touch ? 1.4 * u : 3.6 * u), py1 = ptop + 4 * u + Math.max(0, -plo) * u / 2 + 1.4 * u;
+      ctx.globalAlpha = 0.75 * k * out; ctx.fillStyle = '#0a0610'; ctx.fillRect(x - 4, py0, w + 8, py1 - py0);
+      ctx.globalAlpha = k * out;
+      if (!G.touch) {
+        ctx.font = 'italic 8px Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#ffd88a';
+        ctx.fillText(`♪ ${pl.j.name}`, x + w / 2, py0 + 8);
+      }
+      const gold = TIERS[4].note;
+      drawMeasure(ctx, { x, top: ptop, w, u, clef: pl.clef, key: pl.j.key, notes: pl.notes, col: '#fff2c8', play: beat, final: true,
+        colOf: (n, lit) => (lit ? (beat - n.at < 0.5 ? '#ffffff' : gold) : 'rgba(255,248,226,0.55)') });
+      // a glow on each note as the playhead strikes it
+      ctx.globalCompositeOperation = 'lighter';
+      for (const n of pl.notes) for (const h of n.heads || []) {
+        const since = beat - h.at;
+        if (since < 0 || since > 0.6) continue;
+        const gx = measureX(x, w, u, pl.j.key, h.at), gy = ptop + (8 - staffStep(pl.clef, h.L)) * u / 2, r = u * (3 - since * 3);
+        ctx.globalAlpha = (1 - since / 0.6) * 0.8 * out; ctx.drawImage(glowSprite(TIERS[n.tier].glow), gx - r, gy - r, r * 2, r * 2);
+      }
     }
     ctx.restore();
     ctx.globalAlpha = 1;

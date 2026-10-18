@@ -56,6 +56,45 @@ const fail = (m) => { console.log('FAIL ' + m); bad++; };
   console.log(`glyph sheet: ${sheet} glyphs`);
   if (sheet !== 20) fail(`expected 20 glyphs, got ${sheet}`);
 
+  // ------------------------------------------------------------ 1b. engraving: jingles written in many rhythms, read as sheet music
+  const eng = await page.evaluate(async () => {
+    const { JINGLES, jingleFaults, keyName } = await import('/src/data/jingles.js');
+    const { pitchHeads } = await import('/src/game/bard.js');
+    const { drawMeasure } = await import('/src/gfx/notation.js');
+    const { NOTES } = await import('/src/data/notation.js');
+    const faults = JINGLES.filter((j) => jingleFaults(j).length).length;
+    const names = new Set(JINGLES.map((j) => j.name)).size;
+    // bars that fill 4/4 exactly, covering every glyph
+    const BARS = [['q', 'q', 'q', 'q'], ['e2', 'e2', 'h'], ['s4', 't8', 'e', 's', 's', 'q'], ['h', 'rq', 'q'], ['w'], ['t16', 's2', 'q', 'rh'],
+      ['s3', 's', 'e', 're', 't8', 'q'], ['e', 'e', 'e', 'e', 's2', 's2', 'rq'], ['t32', 'rs', 'rt', 'rt', 's4', 'e2', 'rs', 's3', 's'], ['rw'], ['q', 's4', 'rq', 'e2'], ['h', 'h']];
+    const REG = ['piano4', 'harpsichord', 'piano3'];
+    const c = document.createElement('canvas'); c.id = 'engrave'; c.width = 1400; c.height = 1000;
+    Object.assign(c.style, { position: 'fixed', left: 0, top: 0, zIndex: 9999 });
+    const x = c.getContext('2d');
+    x.fillStyle = '#f4ecd8'; x.fillRect(0, 0, c.width, c.height);
+    const bad = [];
+    for (let i = 0; i < 12; i++) {
+      const j = JINGLES[i * 23 % 300], sc = { jingle: j.id, notes: [], jst: { e: -1 } }, reg = REG[i % 3], clef = reg === 'piano3' ? 'bass' : 'treble';
+      let at = 0;
+      for (const g of BARS[i]) { const n = { g, at, tier: 0, reg, heads: pitchHeads(sc, g, at, reg) }; sc.notes.push(n); at += NOTES[g].beats; }
+      if (Math.abs(at - 4) > 1e-6) bad.push(`bar ${i} = ${at} beats`);
+      const cx = 30 + (i % 2) * 690, cy = 70 + Math.floor(i / 2) * 155;
+      drawMeasure(x, { x: cx, top: cy, w: 640, u: 11, clef, key: j.key, notes: sc.notes, col: '#1a1020', final: true });
+      x.fillStyle = '#5a3a20'; x.font = 'italic 14px Georgia'; x.textAlign = 'left'; x.textBaseline = 'alphabetic';
+      x.fillText(`${j.name} · ${keyName(j.key)} · ♩=${j.tempo} · ${j.chords.map((ch) => ch.roman).join('–')} · ${reg}`, cx, cy - 28);
+    }
+    document.body.appendChild(c);
+    return { faults, names, count: JINGLES.length, bad };
+  });
+  await page.setViewportSize({ width: 1400, height: 1000 });
+  await page.locator('#engrave').screenshot({ path: `${OUT_DIR}/bard_engraving.png` });
+  await page.evaluate(() => document.querySelector('#engrave').remove());
+  await page.setViewportSize(MOBILE ? { width: 844, height: 390 } : { width: 1280, height: 720 });
+  console.log(`jingles: ${eng.count}, ${eng.names} names, ${eng.faults} with rule faults`);
+  if (eng.count !== 300 || eng.names !== 300) fail('expected 300 distinct jingles');
+  if (eng.faults) fail(`${eng.faults} jingles break a voice-leading rule`);
+  for (const b of eng.bad) fail(b);
+
   // ------------------------------------------------------------ 2. composition rules
   const comp = await page.evaluate(async () => {
     const { G, game } = window.VELSCOUR;
@@ -105,6 +144,42 @@ const fail = (m) => { console.log('FAIL ' + m); bad++; };
   if (c.rubato.broke !== 0 || c.rubato.played !== 2) fail('Rubato should turn an overfull bar into a Cadence (then the whole note plays its own)');
   if (!(c.rests > 10)) fail('a whole rest should restore mana at its Cadence');
   if (!(c.harmonyDmg > 1.25)) fail('Harmony 5 should add ~30% damage');
+
+  // ------------------------------------------------------------ 2b. the sampler and the performed bar
+  const mus = await page.evaluate(async () => {
+    const { G } = window.VELSCOUR, p = G.player;
+    const { initAudio } = await import('/src/core/audio.js');
+    const { loadInstruments, keysLoaded } = await import('/src/core/sampler.js');
+    const { JINGLES } = await import('/src/data/jingles.js');
+    const { CLASS_SKILLS } = await import('/src/data/skills.js');
+    const { registerOf } = await import('/src/data/notation.js');
+    initAudio();
+    const keys = await loadInstruments();
+    const regs = {}; for (const sk of CLASS_SKILLS.bard) regs[registerOf(sk)] = (regs[registerOf(sk)] || 0) + 1;
+    // four quarter notes: pitched from the bar's jingle, then performed in its tempo
+    if (p.score.play) p.score.play.done = true; // let no earlier performance flush into the count
+    for (const h of G.world.hazards) h.dead = true; G.world.hazards.length = 0;
+    p.score.notes.length = 0; p.score.beats = 0; p.score.key = 'treble';
+    const J = JINGLES[p.score.jingle], sk = CLASS_SKILLS.bard.find((s) => s.name === 'Plucked Note');
+    const written = [];
+    for (let i = 0; i < 3; i++) { p.castLock = 0; p.cooldowns = {}; p.tryUseSkill(sk, p.x + 3, p.y); written.push(p.score.notes[i].heads[0].midi); }
+    const expect = J.mel.filter((e) => e.t % 24 === 0).slice(0, 3).map((e) => e.d);
+    p.castLock = 0; p.cooldowns = {}; p.tryUseSkill(sk, p.x + 3, p.y);
+    const pl = p.score.play, seen = new Set(), launched = [];
+    for (let i = 0; i < 60; i++) { // one second of the performance: notes leave the staff one by one
+      G.game.update(1 / 60);
+      for (const h of G.world.hazards) if (h.cadence) seen.add(h);
+      launched.push(seen.size);
+    }
+    const cad0 = launched[0], cad1 = launched[59];
+    return { keys, loaded: keysLoaded(), regs, written, expectN: expect.length, spb: pl && pl.spb, tempo: J.tempo, land: pl && pl.land, cad0, cad1, t: pl && +pl.t.toFixed(2) };
+  });
+  console.log('music', JSON.stringify(mus));
+  if (mus.loaded !== 37) fail(`sampler should load 37 keys (24 piano + 13 harpsichord), got ${mus.loaded}`);
+  if (Object.keys(mus.regs).length !== 3) fail('Bard skills should use all three registers');
+  if (!mus.written.every((m) => m >= 60 && m <= 71)) fail('Songs notes should play on the middle piano octave');
+  if (!mus.spb || Math.abs(mus.spb - 60 / mus.tempo) > 1e-6 || mus.land !== 4) fail('a full bar should be performed in its jingle tempo, landing on beat 4');
+  if (!(mus.cad0 <= 1 && mus.cad1 >= 2)) fail(`treble cadence notes should launch as the playhead reaches them, not all at once (${mus.cad0} then ${mus.cad1})`);
 
   // ------------------------------------------------------------ 3. showcase shots, stepped frame by frame
   await page.evaluate(async () => {
@@ -179,7 +254,7 @@ const fail = (m) => { console.log('FAIL ' + m); bad++; };
   await page.evaluate(async () => {
     const { G } = window.VELSCOUR, p = G.player;
     const { CLASS_SKILLS } = await import('/src/data/skills.js');
-    p.score.notes.length = 0; p.score.beats = 0; p.score.harmony = 3; p.score.harmonyT = 99;
+    p.score.notes.length = 0; p.score.beats = 0; p.score.harmony = 3; p.score.harmonyT = 99; p.score.key = 'treble';
     for (const n of ['Sharp Note', 'Fan of Notes', 'Power Chord', 'Echo']) { const sk = CLASS_SKILLS.bard.find((s) => s.name === n); G.char.skills[sk.id] = 12; p.castLock = 0; p.cooldowns = {}; p.tryUseSkill(sk, p.x + 4, p.y); }
   });
   await step(20);
@@ -188,9 +263,10 @@ const fail = (m) => { console.log('FAIL ' + m); bad++; };
     const { G } = window.VELSCOUR, p = G.player;
     const { CLASS_SKILLS } = await import('/src/data/skills.js');
     const sk = CLASS_SKILLS.bard.find((s) => s.name === 'Plucked Note'); p.castLock = 0; p.cooldowns = {}; p.tryUseSkill(sk, p.x + 4, p.y);
-    const sk2 = CLASS_SKILLS.bard.find((s) => s.name === 'Sharp Note'); p.castLock = 0; p.cooldowns = {}; p.tryUseSkill(sk2, p.x + 4, p.y);
+    p.castLock = 0; p.cooldowns = {}; p.tryUseSkill(sk, p.x + 4, p.y); // 2 + 1 + 1 beats: the bar is performed
+    for (const n of ['Sound Wave', 'Sleight of Hand']) { const k = CLASS_SKILLS.bard.find((s) => s.name === n); p.castLock = 0; p.cooldowns = {}; p.tryUseSkill(k, p.x + 4, p.y); } // the next bar
   });
-  await step(14);
+  await step(40);
   await page.screenshot({ path: `${OUT_DIR}/bard_cadence.png`, clip });
   console.log(`${shots} showcase shots`);
 

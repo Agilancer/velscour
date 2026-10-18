@@ -30,6 +30,25 @@ export const SINGLE = { e2: 'e', s2: 's', s3: 's', s4: 's', t8: 'e', t16: 's', t
 /** The glyph a skill writes, or null. */
 export const noteOf = (sk) => (sk && sk.m && NOTES[sk.m.note] ? sk.m.note : null);
 export const beatsOf = (sk) => { const n = noteOf(sk); return n ? NOTES[n].beats : 0; };
+// Every Bard skill plays its notes on one register of the sampler (src/core/sampler.js): a piano octave or the
+// harpsichord. Songs sing on the upper piano, Sonic Arts rumble on the lower, Trickery plucks the harpsichord, and
+// the Grand Finale tree picks by note length (long notes low, quick figures on the harpsichord). `inst=` overrides.
+export const REGISTERS = {
+  piano3: { inst: 'piano', oct: 3, name: 'Piano, low octave (C3-B3)' },
+  piano4: { inst: 'piano', oct: 4, name: 'Piano, middle octave (C4-B4)' },
+  harpsichord: { inst: 'harpsichord', oct: 4, name: 'Harpsichord (C4-C5)' },
+};
+const TREE_REG = ['piano4', 'piano3', 'harpsichord'];
+const LONG = new Set(['w', 'h', 'rw', 'rh', 'bass']), QUICK = new Set(['s', 's2', 's3', 's4', 't16', 't32', 'rs', 'rt']);
+/** The register (REGISTERS key) a Bard skill plays on. */
+export function registerOf(sk) {
+  if (!sk) return 'piano4';
+  if (sk.m && REGISTERS[sk.m.inst]) return sk.m.inst;
+  const tree = +String(sk.id).split('.')[1];
+  if (TREE_REG[tree]) return TREE_REG[tree];
+  const g = noteOf(sk);
+  return LONG.has(g) ? 'piano3' : QUICK.has(g) ? 'harpsichord' : 'piano4';
+}
 /** Bard skill-level tiers: the staff changes colour and gains particles at ranks 5, 10, 15 and 20. */
 export const noteTier = (L) => (L >= 20 ? 4 : L >= 15 ? 3 : L >= 10 ? 2 : L >= 5 ? 1 : 0);
 // tooltip words for the Bard's projectile mods
