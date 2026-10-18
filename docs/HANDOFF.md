@@ -93,6 +93,29 @@ The user's ask: get past depths 150-160 without dying and resetting 30+ times; a
 - **Open:** melee Barbarians die most (dual wielding leaves ~half the armor of a shield build). Depths 250-500 are
   modelled, not played. Event odds are first guesses; ask the user what they like seeing.
 
+## October 18, 2026 — Bard melody pass: one bar at a time, quarter/eighth notation, Cadences rebalanced (branch `feat/bard-melody-pass`)
+
+- **One bar at a time, enforced in the synth**: the notes sounding as they are written are one voice (a new note cuts
+  the last), the note that completes a bar is not sung (its performance plays it), Da Capo and Rubato perform the bar
+  without writing their own note into the next one, the bass of the performance holds only until the next chord
+  (root + fifth, or root + third over a diminished fifth), and the landing chord rings `LAND_BEATS` (1.5) and is cut
+  when the performance ends; nothing is written until then.
+- **Notation by how often a skill is cast**: every spammable Bard skill now writes a quarter, an eighth, a pair of
+  eighths, a half, or an eighth/quarter rest (Screech, Drum Roll, Firework Finale lost their 32nd triplets; Sharp Note,
+  Tremolo, Power Chord, Sleight of Hand their 16ths). Sixteenth figures remain only on three 20-30 s buffs (Song of
+  Swiftness, Rousing Chorus, Backup Singers); eighth triplets on Chorus, Orchestra, Feedback Loop, Deadly Sonata,
+  Bladestorm Waltz, Grand Fireworks, Rock Legend.
+- **Listening harness** `tools/tests/bard_listen.js [minutes] [render s]`: logs every note the sampler is asked for
+  during auto-play (`setNoteTap` in sampler.js; notes carry `tag: { kind, bar }`), checks no two bars ever sound
+  together, the share of harsh intervals (m2/M7/tritone) inside a bar, the share of 16th/32nd figures, and renders the
+  real samples to `tools/tests/out/bard_listen.wav`. Before: 125 bar overlaps and 13.5% harsh time in 3 minutes;
+  after: 0 overlaps, ~2-4% harsh (passing tones), ~4% fast figures.
+- **Balance**: one bar at a time cut Cadences from ~39 to ~12 a minute and Bard damage on dummies from ~14,000 to
+  ~10,000 DPS. Cadences now hit `CADENCE_POWER` = 5.8x harder (bard.js), back to ~14,500 DPS
+  (`tools/tests/bard_dps.js [secs] [runs]`, 8 x 60 s runs; runs vary by about 1,000).
+- Still by design: melodies jump an octave when a bar mixes the low piano octave (Sonic Arts) with the other
+  registers (~15-20% of intervals are leaps over 9 semitones in a mixed bar).
+
 ## October 17, 2026 — Bard music: a piano/harpsichord sampler, 300 jingles, real sheet music over his head (branch `feat/bard-music`)
 
 - **Samples** (user's packs, `assets/source/audio/instruments/`): piano C3-B4 (24 keys), harpsichord C4-C5 (13 keys).

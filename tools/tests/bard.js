@@ -1,7 +1,8 @@
 // The Bard's notation (src/data/notation.js, src/gfx/notation.js, src/game/bard.js):
 //  1. glyph sheet: all 20 glyphs and the particle staff at the five skill-rank tiers -> bard_glyphs.png, bard_icons.png
 //  2. composition: four quarter notes play a Cadence (+Harmony), an overfull bar is a Discord, clefs change the key,
-//     the bass key lands a chord, Da Capo plays a part-filled bar, Rubato forgives an overfull bar
+//     the bass key lands a chord, Da Capo plays a part-filled bar, Rubato forgives an overfull bar (neither writes its own
+//     note into the next bar: one bar at a time)
 //  3. showcase shots of the note skills at ranks 1/5/10/15/20, the game stepped frame by frame -> bard_<skill>_L<n>.png
 //  4. auto-play: a Bard plays N game minutes and must play Cadences far more often than Discords
 //   node tools/tests/bard.js [autoplay minutes, default 4] [mobile]
@@ -124,7 +125,7 @@ const fail = (m) => { console.log('FAIL ' + m); bad++; };
     const clear = () => { p.score.notes.length = 0; p.score.beats = 0; };
     clear(); const cad0 = p.score.cadences;
     cast('Plucked Note'); cast('Sharp Note'); cast('Da Capo'); out.daCapo = { ...sc(), played: p.score.cadences - cad0 };
-    clear(); cast('Plucked Note'); cast('Plucked Note'); cast('Plucked Note'); cast('Sharp Note'); const cad2 = p.score.cadences; cast('Plucked Note'); cast('Plucked Note'); out.fits = { ...sc(), played: p.score.cadences - cad2, glyphs: p.score.notes.map((n) => n.g).join() }; // 3.25 + eighth + sixteenth
+    clear(); cast('Plucked Note'); cast('Plucked Note'); cast('Plucked Note'); cast('Sharp Note'); const cad2 = p.score.cadences; cast('Plucked Note'); out.fits = { ...sc(), played: p.score.cadences - cad2, glyphs: p.score.play.notes.map((n) => n.g).join() }; // 3.5 + the basic note as an eighth
     clear(); const cad1 = p.score.cadences, dis1 = p.score.discords;
     cast('Tempo Rubato'); cast('Plucked Note'); cast('Plucked Note'); cast('Plucked Note'); cast('Anthem of Heroes');
     out.rubato = { ...sc(), played: p.score.cadences - cad1, broke: p.score.discords - dis1 };
@@ -148,9 +149,9 @@ const fail = (m) => { console.log('FAIL ' + m); bad++; };
   if (c.bassKey.key !== 'bass' || c.bassKey.beats !== 2) fail('Sonic Boom (bass clef) should change the key without taking beats');
   if (c.bassCadence.cad !== 2) fail('the bass measure should play a Cadence');
   if (c.trebleKey.key !== 'treble') fail('Symphony of Storms (treble clef) should change the key back');
-  if (c.daCapo.played !== 1 || c.daCapo.notes !== 1) fail('Da Capo should play the part-filled measure and start a new one');
-  if (c.fits.beats !== 0 || c.fits.dis !== 1 || c.fits.played !== 1) fail('the basic note should shrink to an eighth then a sixteenth to fill the last 3/4 beat');
-  if (c.rubato.broke !== 0 || c.rubato.played !== 2) fail('Rubato should turn an overfull bar into a Cadence (then the whole note plays its own)');
+  if (c.daCapo.played !== 1 || c.daCapo.notes !== 0) fail('Da Capo should play the part-filled measure without writing ahead');
+  if (c.fits.beats !== 0 || c.fits.dis !== 1 || c.fits.played !== 1 || c.fits.glyphs !== 'q,q,q,e,e') fail(`the basic note should shrink to an eighth to fill the last half beat (${c.fits.glyphs})`);
+  if (c.rubato.broke !== 0 || c.rubato.played !== 1 || c.rubato.notes !== 0) fail('Rubato should turn an overfull bar into a Cadence, writing nothing ahead');
   if (!(c.rests > 10)) fail('a whole rest should restore mana at its Cadence');
   if (!(c.harmonyDmg > 1.25)) fail('Harmony 5 should add ~30% damage');
   if (c.oneSong.during !== 0 || c.oneSong.after !== 1) fail(`nothing should be written while a bar is performed (${c.oneSong.during}), the next bar after it lands (${c.oneSong.after})`);
