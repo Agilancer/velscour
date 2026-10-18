@@ -224,8 +224,15 @@ export class World {
       if (chance(dt * 18)) spawn({ type: 'glow', x: t.x + rand(-0.04, 0.04), y: t.y + rand(-0.04, 0.04), z: t.flameZ ?? 40, vz: rand(15, 35), life: rand(0.3, 0.6), size: rand(2, 3.5), size1: 0.5, color: chance(0.5) ? (b.torch || '#ff9a40') : '#fff0a0', add: true });
     }
     for (const pr of this.props) {
-      if (!pr.light) continue;
-      addLight(pr.x, pr.y, pr.light + Math.sin(this.time * 7 + pr.x) * 0.15, 0.8, 20 + (pr.z || 0), '#ffb050');
+      if (!pr.light && !pr.smoke) continue;
+      if (pr.light) addLight(pr.x, pr.y, pr.light + Math.sin(this.time * 7 + pr.x) * 0.15, 0.8, 20 + (pr.z || 0), '#ffb050');
+      if (pr.smoke) {
+        // camp fires and chimneys (the Castle): a slow plume drifting downwind, embers off a fire
+        const px = isoX(pr.x, pr.y), py = isoY(pr.x, pr.y);
+        if (px < vr.x0 || px > vr.x1 || py < vr.y0 || py > vr.y1 + 160) continue;
+        if (chance(dt * pr.smoke)) spawn({ type: 'smoke', x: pr.x + rand(-0.15, 0.15), y: pr.y + rand(-0.15, 0.15), z: pr.smokeZ ?? 16, vx: rand(0.05, 0.3), vy: rand(-0.25, 0), vz: rand(12, 22), life: rand(2.4, 3.8), size: rand(4, 7), size1: rand(15, 24), color: '#3b3733', alpha: 0.26 });
+        if (pr.light && chance(dt * 5)) spawn({ type: 'glow', x: pr.x + rand(-0.2, 0.2), y: pr.y + rand(-0.2, 0.2), z: 14, vz: rand(30, 60), life: rand(0.6, 1.2), size: rand(1.5, 2.5), size1: 0.4, color: chance(0.5) ? '#ffb050' : '#ffe0a0', add: true });
+      }
     }
     // portals
     for (const po of this.portals) {

@@ -356,7 +356,7 @@ export const game = {
   // the art a level of this biome needs before it can be generated (the portal and Velscour's level select share it)
   loadLevelArt(biome, mix = null) {
     if (biome.id === 'sea_of_sand') return loadSeaOfSandPack();
-    if (biome.id === 'castle') return loadCastlePack();
+    if (biome.id === 'castle') return Promise.all([loadCastlePack(), loadDarkForestTrees()]);
     if (biome.id === 'dark_forest') return Promise.all([loadBiomeArt(biome), loadDarkForestTrees()]);
     if (!biome.overworld) return Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]);
     return Promise.resolve();

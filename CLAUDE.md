@@ -56,8 +56,8 @@ node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners
 node tools/tests/pack.js catacombs,blood          # biome pack levels: arches, doors, reachability; door/arch shots
 node tools/tests/overworld.js                      # 60 outdoor seeds, 20 scenarios, forced scheduling, landscape previews
 node tools/tests/scenarios.js                      # a bot plays every Wilds/Castle scenario and Sea of Sand route to the end
-node tools/tests/castle_overworld.mjs              # 100 Castle seeds: closed curtain wall, gates, wall-walk, halls, art caps (no browser)
-node tools/tests/castle_visual.js [views]          # Castle screenshots: overview, gatehouse, corners, postern, halls
+node tools/tests/castle_overworld.mjs              # 100 Castle seeds: both curtains sealed, gates, bridges over water, lane, halls, art caps (no browser)
+node tools/tests/castle_visual.js [views] [--grid] # Castle screenshots: 25 views (gatehouse, bridges, wards, keep, halls, village, siege)
 node tools/tests/sea_of_sand_generation.mjs         # 100 desert maze seeds, route reachability, one-to-five area rolls
 node tools/tests/sea_of_sand.js                     # atlas frames, desert HUD, monster frames, screenshots (browser)
 node tools/tests/dark_forest.js [noshots] [noauto]  # 40 forest seeds reachable, bot plays all 13 trials, frame cost, shots, auto-play wins the Heart
@@ -140,7 +140,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   and `hud.js` for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
   `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`.
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Overworld scenarios
-  (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. The Dark Forest (`src/world/darkforest.js`, `src/game/darkforest.js`, tree drawing in `render.js`): run `dark_forest.js`. The Castle layout (`src/world/castleworld.js`, `src/gfx/castle.js`; docs/CASTLE_OVERWORLD.md): run `castle_overworld.mjs`, `castle_visual.js` (look at the shots) and `scenarios.js`. Monster/hero scaling, affixes, drops or death
+  (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. The Dark Forest (`src/world/darkforest.js`, `src/game/darkforest.js`, tree drawing in `render.js`): run `dark_forest.js`. The Castle layout (`src/world/castleworld.js`, `src/gfx/castle.js`, `src/gfx/castleground.js`; docs/CASTLE_OVERWORLD.md): run `castle_overworld.mjs`, `castle_visual.js` (look at the shots) and `scenarios.js`. Monster/hero scaling, affixes, drops or death
   rules (`monsterBase`, `src/data/depth.js`, `src/data/items.js`, `src/game/defiance.js`): run `balance_model.mjs` and
   `balance.js` at a few depths. Dungeon/town events (`src/game/happenings.js`): run `happenings.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. Class signatures (`src/game/signature.js`, `src/game/sigs/`): run `signatures.js`. The Bard's notes, measure, jingles, sampler and Cadences (`src/game/bard.js`, `src/game/bardmusic.js`, `src/gfx/notation.js`, `src/data/notation.js`, `src/data/jingles.js`, `src/core/sampler.js`): run `bard.js` and `bard_listen.js` (`bard_dps.js` for Cadence balance). The Astronomer (class id `arcane_sorcerer`; `src/game/astronomer.js`, `src/gfx/cosmos.js`): run `astronomer.js`. Raid bosses
   (`src/game/raid.js`, every 5th depth): run `raid.js` (and `raid_sigs.js` for `src/game/raidsigs.js`). Rings, augments or skill mastery (`src/data/rings.js`,
