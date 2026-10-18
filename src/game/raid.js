@@ -825,7 +825,7 @@ class Raid {
       const [x, y] = w.map.nudge(A.cx + Math.cos(a) * rand(9, 11), A.cy + Math.sin(a) * rand(7, 9), 0.4);
       if (!w.map.walkable(x, y)) continue;
       const champ = chance(0.12 + this.depth * 0.003);
-      const c = makeMonster(w, pick(archs), w.biome, this.depth + (champ ? 1 : 0), champ ? 'champion' : 'normal', x, y);
+      const c = makeMonster(w, pick(archs), w.biome, m.level - 3 + (champ ? 1 : 0), champ ? 'champion' : 'normal', x, y);
       c.awake = true; c.aggro = p; c.raidAdd = true;
       if (this.has('volatile')) c.onDeath = () => w.addHazard(new Delayed({ world: w, src: m, x: c.x, y: c.y, r: 1.5, delay: 0.8, fx: 'explosion', el: this.tpl.el === 'phys' ? 'fire' : this.tpl.el, dmg: [c.dmg * 1.2, c.dmg * 1.6] }));
       w.add(c);

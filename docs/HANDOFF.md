@@ -14,6 +14,22 @@ Contents
 
 ---
 
+## October 18, 2026 — the Castle overworld rebuilt as a moated quadrangular castle (branch `feat/grand-sweep`)
+
+- **Why:** the old wall traced a jagged diagonal path; Bresenham's diagonal steps left cells touching only at corners,
+  so the curtain had holes, towers floated off the wall line, and the walls could be walked through.
+- **Layout** (`src/world/castleworld.js`, modelled on Bodiam and Beaumaris): a 4-cell moat ring, one solid curtain
+  wall (`CASTLE_WALL`, base cells 28..68 x 20..68) open only at the south gate (x 47..49) and the north postern
+  (x 61..62), round corner towers, square flanking towers, the `landmark_08` gatehouse, `landmark_17` stone bridges
+  over both causeways, a paved wall-walk lane (`map.rampartDeck`), and the throne hall, chapel and great hall round
+  an open courtyard. Scenarios read `map.castleRooms` and `map.rampartPosts` instead of fixed coordinates.
+- **Drawing:** the curtain is one 66px slice of `landmark_04` per wall cell (`castleStrip`), anchored at the low end
+  of the cell's face; towers and the gatehouse are cut into the same columns (`sliced()`), each drawn just in front of
+  its wall cell, so nothing leaves a sliver or draws across a tower. Keep walls are tinted to the limestone lazily.
+  Several floor atlas names don't match their art; floors are picked by look.
+- Tests: `castle_overworld.mjs` (100 seeds; the ward must be sealed with its gates closed; every wall cell drawn),
+  `castle_visual.js` (screenshots), `scenarios.js` (all 35 Castle scenarios finish). See CASTLE_OVERWORLD.md.
+
 ## October 18, 2026 — Herrington Hollow comes alive: re-cut townsfolk, emotions, town life director (branch `feat/grand-sweep`)
 
 - **Arrival:** the hero enters town 3.2 tiles down the portal's road toward the square (`enterTown` in game.js), every
@@ -56,7 +72,7 @@ Contents
 - Tests: `tools/tests/townlife.js` (new), `townsfolk.mjs`, `town_visuals.mjs`, `villagers.js`, `town_sprite_display.js`
   (updated to the new contract).
 
-## October 17, 2026 — the Arcane Sorcerer is now the Astronomer (branch `feat/grand-sweep`)
+## October 17, 2026 — the Arcane Sorcerer is now the Astronomer (branch `feat/astronomer`)
 
 - **Rename, id kept.** The class id stays `arcane_sorcerer` (saves, sprites, gear packs, `CLASS_IDS`); only the name,
   trees, description and colour changed (`src/data/classes.js`). Trees: Starfire, Celestial Bodies, Gravity, and
@@ -87,7 +103,78 @@ Contents
   orbiting planets. Auto-play favours `astro=` skills and star missiles (`focusMul`).
 - New summon `ursa` (Ursa Major). Test: `tools/tests/astronomer.js [minutes] [mobile]`. See [ASTRONOMER.md](ASTRONOMER.md).
 
-## October 17, 2026 — Bard music: a piano/harpsichord sampler, 300 jingles, real sheet music over his head
+## October 17, 2026 — balance sweep (depths 60-500) and happenings (branch `feat/balance-sweep`)
+
+The user's ask: get past depths 150-160 without dying and resetting 30+ times; a death now and then, never more than
+6-10 per threshold; a challenge for auto-play without 8-hour walls; and lots of random things to keep it fun to watch.
+
+- **Why 150-160 was a wall.** Offense kept up (geared heroes kill depth-150 raid bosses in 16-20 s), defense did
+  not: monster damage grew 1.058 a level while hero life grew linearly, so a normal hit took ~40% of a geared hero's
+  life at depth 150 and a raid boss one-shot them. Three bugs made it worse past depth 60, where monster level stops
+  matching depth: BOSS ROOM adds spawned at level = raw depth (`raid.js`, `raidsigs.js`; ~16x their damage at
+  depth 150), and auto-play compared hero level to the raw depth (`huntGoal` farm mode cleared whole maps before the
+  guardian, `boldness` stayed at minimum, gear scoring and gamble prices used the wrong level). And a death sent the
+  hero back to the start of the *previous* five-depth block (up to 9 depths).
+- **Curves** (`src/data/depth.js`, `monsterBase`): monster damage keeps 1.058/level to level 60, then 1.04 to 140,
+  then 1.016. Hero life x `fortitude(level)` (+2.2% per level past 60, shown on the character sheet). Armor's divisor
+  `armorDiv(lvl)` also grows 1.045/level past monster level 100 (item armor does, so deep heroes had become immune to
+  physical). `st.reduce` (damage reduction, cap 60%) is now real: buffs, Defiance and a new `reduce` affix feed it.
+  `tools/tests/balance_model.mjs` prints the curve: a normal hit is ~9% of life from depth 60 to 160 (was 37-45% at
+  150-160), 17% at 200, 27% at 250, 65% at 500.
+- **Gear:** life affix scales 0.1/ilvl (was 0.06), resistances 0.006 (0.004), all-res 0.005 (0.003); new affixes
+  `+% Maximum Life` (of Vigor) and `% Damage Reduction` (Warded). Rarity now raises base weapon damage and armor
+  (`RARITY_BASE`: +4% Uncommon ... +32% Mythic) so a rarer drop is an upgrade. Wands 0.8 (0.7), staves 0.95 (0.9).
+- **Death and Defiance** (`src/game/defiance.js`): a death returns the hero to the start of the *current* block
+  (`blockStart`; BOSS ROOMs are checkpoints) and adds a Defiance stack (+10% life, +8% damage, 5% less damage taken,
+  up to 8). Clearing the block's BOSS ROOM spends it. Shown in the buff row and logged. Saves gain `c.defiance`,
+  `c.blessing`, `c.nemesis`, `c.bestStreak` (all optional, no migrate needed).
+- **Happenings** (`src/game/happenings.js`). Dungeons roll an omen (22-45%: Blood Moon, Golden Hour, The Horde,
+  Gathering of Champions, Starfall, Arcane Surge, Treasure Vault, Feeding Frenzy), 0-2 shrines (Frenzy, Fortune,
+  Bulwark, Wisdom, Wrath, Storm, Renewal), a fallen adventurer's remains with an epitaph, a cursed chest (three
+  ambush waves, then a hoard), a Treasure Imp (flees, sheds gold, bursts into loot, escapes after 32 s), Velscour's
+  Challenge (slay N in 40 s), and the Nemesis (the monster that last killed you returns as a named unique; killing it
+  is a REVENGE with loot). Kill streaks (10/20/35/50/75/100/150) call out and pay XP. Every new tenth depth gets
+  fireworks and a gift. Town visits can bring a festival (potions, fireworks), a 3-depth blessing (Priestess,
+  Fortune Teller, Scholar, Watch Captain), the blacksmith's apprentice (+1 upgrade), a peddler's Epic+ gift, the
+  lottery or the gem fair. Shrines/remains/cursed chests live in `world.chests` with their own `draw()`, so
+  auto-play walks to them (`far` reach), grabs a shrine within 5 tiles even mid-fight, and chases the imp.
+- **Tests:** `tools/tests/balance.js [classes] [depths] [minutes] [god]` sets up a realistic hero for a depth (level,
+  auto-play's own stat/skill spending, the best of `BAL_GEAR`x25 drops, gems, upgrades, mastery) and lets auto-play
+  run; `god` measures DPS and fight lengths instead. `tools/tests/happenings.js` forces every event and checks it.
+  Results, 30 game minutes from depth 146 with `BAL_GEAR=3`: Paladin 0 deaths (to 155), Wizard 1 (153), Gunner 0
+  (155), Barbarian 6 (150 cleared; it started with a weak kit, and Defiance carried it through the BOSS ROOM).
+  Before the sweep, a better-geared Paladin died twice in its first 8 minutes at 150 and was sent back to 141.
+- **Pre-existing crash fixed:** a splitting guardian (slime) left children with `ai: 'boss'` and no patterns, so
+  `bossUpdate` threw every frame (`spawnChild` in `monster.js` now gives them the archetype's AI).
+- Regression: `flow`, `hud`, `mobile`, `raid`, `rings`, `skills paladin,barbarian`, `mobs`, `autoplay wizard 6`,
+  `data_check`, `happenings` pass.
+- **Open:** melee Barbarians die most (dual wielding leaves ~half the armor of a shield build). Depths 250-500 are
+  modelled, not played. Event odds are first guesses; ask the user what they like seeing.
+
+## October 18, 2026 — Bard melody pass: one bar at a time, quarter/eighth notation, Cadences rebalanced (branch `feat/bard-melody-pass`)
+
+- **One bar at a time, enforced in the synth**: the notes sounding as they are written are one voice (a new note cuts
+  the last), the note that completes a bar is not sung (its performance plays it), Da Capo and Rubato perform the bar
+  without writing their own note into the next one, the bass of the performance holds only until the next chord
+  (root + fifth, or root + third over a diminished fifth), and the landing chord rings `LAND_BEATS` (1.5) and is cut
+  when the performance ends; nothing is written until then.
+- **Notation by how often a skill is cast**: every spammable Bard skill now writes a quarter, an eighth, a pair of
+  eighths, a half, or an eighth/quarter rest (Screech, Drum Roll, Firework Finale lost their 32nd triplets; Sharp Note,
+  Tremolo, Power Chord, Sleight of Hand their 16ths). Sixteenth figures remain only on three 20-30 s buffs (Song of
+  Swiftness, Rousing Chorus, Backup Singers); eighth triplets on Chorus, Orchestra, Feedback Loop, Deadly Sonata,
+  Bladestorm Waltz, Grand Fireworks, Rock Legend.
+- **Listening harness** `tools/tests/bard_listen.js [minutes] [render s]`: logs every note the sampler is asked for
+  during auto-play (`setNoteTap` in sampler.js; notes carry `tag: { kind, bar }`), checks no two bars ever sound
+  together, the share of harsh intervals (m2/M7/tritone) inside a bar, the share of 16th/32nd figures, and renders the
+  real samples to `tools/tests/out/bard_listen.wav`. Before: 125 bar overlaps and 13.5% harsh time in 3 minutes;
+  after: 0 overlaps, ~2-4% harsh (passing tones), ~4% fast figures.
+- **Balance**: one bar at a time cut Cadences from ~39 to ~12 a minute and Bard damage on dummies from ~14,000 to
+  ~10,000 DPS. Cadences now hit `CADENCE_POWER` = 5.8x harder (bard.js), back to ~14,500 DPS
+  (`tools/tests/bard_dps.js [secs] [runs]`, 8 x 60 s runs; runs vary by about 1,000).
+- Still by design: melodies jump an octave when a bar mixes the low piano octave (Sonic Arts) with the other
+  registers (~15-20% of intervals are leaps over 9 semitones in a mixed bar).
+
+## October 17, 2026 — Bard music: a piano/harpsichord sampler, 300 jingles, real sheet music over his head (branch `feat/bard-music`)
 
 - **Samples** (user's packs, `assets/source/audio/instruments/`): piano C3-B4 (24 keys), harpsichord C4-C5 (13 keys).
   `python tools/process_assets.py instruments` (`tools/instrumentpack.py`, numpy + `pip install lameenc`, no ffmpeg)
@@ -111,13 +198,14 @@ Contents
   sound at once on the skill's register. A Cadence **performs** the bar (`Performance`, `bardArrangement`): every head at
   its beat in the jingle's tempo, the chord's root + fifth in the bass where it changes, then the tonic chord lands on
   beat 4 (or after a part-filled Da Capo bar). Gameplay rides it: treble-key notes launch as the playhead reaches them,
-  the bass-key chord AoE lands with the tonic. A new Cadence flushes the previous performance (its remaining notes fire
-  at once, its audio fades). A Discord is a piano cluster.
+  the bass-key chord AoE lands with the tonic. **One song at a time**: while a bar is performed (until 0.35 s after the
+  landing, `bardPerforming`) casts still work but write nothing (a clef still sets the next bar's key), and the first note
+  of the next bar fades the landing chord. Auto-play gets ~8-10 Cadences a minute (was ~20). A Discord is a piano cluster.
 - **Engraving** (`drawMeasure` in `gfx/notation.js`): clef, key signature, 4/4, notes at their true pitch for the clef
   (`sc.key`; treble bottom line E4, bass G2), ledger lines, accidentals against the key signature and earlier ones in the
   bar, stems (up below the middle line), flags, straight beams, triplet 3s, rests on their lines, proportional spacing.
-  The performed bar takes the staff's place (and floats above once the next bar has notes) with a playhead and the
-  jingle's name; notes glow as they sound.
+  The performed bar takes the staff's place (only one staff is ever shown) with a playhead and the jingle's name;
+  notes glow as they sound.
 - **Songbook** (`tools/songbook.html`): keyboard synth (C3-C5, tracker keys) and a sequencer that writes any jingle in a
   chosen register and rhythm and plays it with the playhead. Serve the repo root and open `/tools/songbook.html`.
 - Tests: `tools/tests/bard.js` now also checks the 300 jingles (distinct, rule-clean), engraves 12 of them in every glyph
@@ -151,6 +239,7 @@ Contents
   Discords per game minute.
 - Test: `tools/tests/bard.js [minutes] [mobile]`: glyph sheet + icons, the composition rules, 30 showcase shots
   (stepped, in the Wilds), and an auto-play soak.
+
 
 ## October 17, 2026 — grand sweep: FPS, room shapes, 20 raid bosses, 4th skill trees, overworld wanderers (branch `feat/grand-sweep`)
 
@@ -707,7 +796,7 @@ are in section 7.
    biome tile atlases (LRU keeps 3 non-town sets; a mixed level holds 2), monster art (an LRU of 160 canvases,
    about 70 KB each, in `src/core/enemyart.js`), memoized pixel/flash sprites, and corpse images. Measure this
    before adding more caches.
-3. **Balance is a first pass.** Monster scaling is `monsterBase(L)` in `src/game/monster.js`
+3. **Balance:** see the Oct 17 balance sweep entry (curves past depth 60, Defiance). Monster scaling is `monsterBase(L)` in `src/game/monster.js`
    (hp 20·1.066^(L−1), dmg (3+min(L,10)·0.15)·1.052^(L−1)). Player XP is `xpToNext(L) = 60L²+40L` in
    `src/game/player.js`. Depths 50–100 have never been played.
 4. **Caching on GitHub Pages:** pages are served with about a 10-minute cache and the module imports carry no

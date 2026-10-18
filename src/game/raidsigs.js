@@ -1079,7 +1079,7 @@ sig('sarcophagi', 'Sarcophagus Trap', (R) => {
     later(w, 2.2, () => {
       if (!live(R)) return;
       if (i === live1) {
-        const c = makeMonster(w, pick(R.tpl.adds), w.biome, R.depth + 2, 'champion', x, y);
+        const c = makeMonster(w, pick(R.tpl.adds), w.biome, R.m.level - 1, 'champion', x, y);
         c.awake = true; c.aggro = hero(R); c.raidAdd = true; c.name = 'Risen Royal Guard'; w.add(c); R.minions.push(c);
         smoke(x, y, 0, '#2a2010', 10, 14);
       } else { explosionFx(x, y, 2, 'holy', 'eruption'); for (const h of w.hostiles(R.m.team, x, y, 2)) hit(R.m, h, R.m.dmg * 1.6, 'poison', { poison: true }); }

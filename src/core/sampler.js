@@ -15,6 +15,9 @@ const bufs = {};          // name -> { midi: AudioBuffer }
 let loading = null, bus = null;
 const live = [];          // { src, g, end }
 const MAX_VOICES = 36;
+let tap = null, vid = 0;
+/** Tests: see every note asked for ({ name, midi, at, dur, vel, tag }, plus the audio clock now), even without samples. */
+export const setNoteTap = (f) => { tap = f; };
 
 const decode = (ac, data) => new Promise((res, rej) => { const p = ac.decodeAudioData(data, res, rej); if (p && p.catch) p.catch(rej); });
 
@@ -47,8 +50,10 @@ function nearest(set, midi) {
  * One note. at = audio-clock time (0 = now), dur = seconds held before the release, vel 0..1.
  * Returns the voice (for stopVoices) or null when the instrument is not loaded.
  */
-export function playNote(name, midi, { at = 0, dur = 0.5, vel = 0.8 } = {}) {
+export function playNote(name, midi, { at = 0, dur = 0.5, vel = 0.8, tag = null } = {}) {
   const ac = audioCtx(), set = bufs[name];
+  const id = ++vid;
+  if (tap) tap({ id, name, midi, at: Math.max(at, audioNow()), dur, vel, tag, now: audioNow() });
   if (!ac || !set) return null;
   const k = nearest(set, midi);
   if (k === null) return null;
@@ -61,7 +66,7 @@ export function playNote(name, midi, { at = 0, dur = 0.5, vel = 0.8 } = {}) {
   g.gain.exponentialRampToValueAtTime(0.0001, off + rel);
   src.connect(g); g.connect(out(ac));
   src.start(t); src.stop(off + rel + 0.02);
-  const v = { src, g, end: off + rel };
+  const v = { id, src, g, end: off + rel };
   src.onended = () => { const i = live.indexOf(v); if (i >= 0) live.splice(i, 1); };
   live.push(v);
   while (live.length > MAX_VOICES) fade(live.shift(), 0.04);
@@ -71,6 +76,7 @@ function fade(v, sec) {
   const ac = audioCtx();
   if (!ac || !v) return;
   const t = ac.currentTime;
+  if (tap) tap({ stop: v.id, at: t, fade: sec, now: t });
   try {
     v.g.gain.cancelScheduledValues(t); v.g.gain.setValueAtTime(Math.max(0.0002, v.g.gain.value), t);
     v.g.gain.exponentialRampToValueAtTime(0.0001, t + sec); v.src.stop(t + sec + 0.02);
@@ -83,8 +89,9 @@ export function stopVoices(voices, sec = 0.08) { for (const v of voices) if (v) 
  * The sequencer: schedule events on the audio clock. beat/beats are in quarter notes at `bpm`.
  * Returns { voices, start, spb, stop(sec) }.
  */
-export function playSequence(events, { at = 0, bpm = 120 } = {}) {
+export function playSequence(events, { at = 0, bpm = 120, tag = null } = {}) {
+  if (tag) events = events.map((e) => ({ ...e, tag }));
   const t0 = Math.max(at, audioNow() + 0.02), spb = 60 / bpm, voices = [];
-  for (const e of events) voices.push(playNote(e.inst, e.midi, { at: t0 + e.beat * spb, dur: (e.beats || 1) * spb * (e.legato ?? 0.95), vel: e.vel ?? 0.8 }));
+  for (const e of events) voices.push(playNote(e.inst, e.midi, { at: t0 + e.beat * spb, dur: (e.beats || 1) * spb * (e.legato ?? 0.95), vel: e.vel ?? 0.8, tag: e.tag }));
   return { voices, start: t0, spb, stop: (sec) => stopVoices(voices, sec) };
 }

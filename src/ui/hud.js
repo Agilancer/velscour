@@ -16,6 +16,7 @@ const TAUNT_KEY = 'velscour_taunts_v1'; // Velscour's level-up deck: the last mo
 import { Meter } from '../game/dpsmeter.js';
 import { heroDamage } from '../game/autoplay.js';
 import { madnessReady, madnessOn, unleashMadness } from '../game/mayhem.js';
+import { defianceText } from '../game/defiance.js';
 
 const POTIONS = ['hp', 'mp', 'rejuv', 'fury'];
 // hud slot index -> bar index (skills) or potion kind: LMB, ` 1-9 0 - =, the potions, RMB
@@ -295,10 +296,21 @@ export const HUD = {
     if (this.buffT <= 0) {
       this.buffT = 0.25;
       const row = $('#buff-row');
-      const key = p.buffs.map((b) => b.id + ':' + Math.ceil(b.t)).join('|');
+      // Defiance stacks and the town's blessing ride on the save (game/defiance.js), shown as the first two
+      const extra = [];
+      if (c.defiance) extra.push({ name: `Defiance ${c.defiance.n}: ${defianceText(c.defiance.n)} until you clear Depth ${c.defiance.block + 4}`, color: '#ff5a2a', n: c.defiance.n });
+      if (c.blessing) extra.push({ name: `${c.blessing.name}: ${c.blessing.left} more depth${c.blessing.left > 1 ? 's' : ''}`, color: '#ffe080', n: c.blessing.left });
+      const key = extra.map((x) => x.name).join('|') + '|' + p.buffs.map((b) => b.id + ':' + Math.ceil(b.t)).join('|');
       if (key !== this.last.buffs) {
         this.last.buffs = key;
         row.innerHTML = '';
+        for (const x of extra) {
+          const d = el('div', 'buff');
+          d.style.background = `radial-gradient(circle, ${x.color}, #200800)`;
+          d.title = x.name;
+          d.appendChild(el('span', '', x.n));
+          row.appendChild(d);
+        }
         for (const b of p.buffs) {
           if (b.hidden) continue;
           const d = el('div', 'buff');

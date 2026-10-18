@@ -34,7 +34,7 @@ node tools/tests/stash.js                          # town storage chest: 300 slo
 node tools/tests/ui.js                             # skill tree, inventory, socketing, vendors
 node tools/tests/mobile.js                         # 844x390 touch layout + joystick
 node tools/tests/hud.js                            # HUD art: 15-slot bar keys, save migration, minimap ring, buttons, Quest Log, touch pages
-node tools/tests/rims.js                           # monster rims (rank colours, green summons), enlargeable target window
+node tools/tests/rims.js                           # monster rims (rank colours, green summons, gold hero), pet see-through walls, enlargeable target window
 node tools/tests/levelup.js                        # level-up banner: Velscour's 2,000 taunts, mood colours, no mood twice in a row, lines fit
 node tools/tests/boss.js                           # Depth 100 Velscour arena + a depth 37 guardian
 node tools/tests/raid.js [5,30,55]                 # BOSS ROOMs: seal, every ability of all raid bosses, phases, wards, death
@@ -46,6 +46,8 @@ node tools/tests/mobs.js [levels]                  # monster pathing: awake mons
 node tools/tests/bot.js paladin 2                  # bot plays depths 1..2, prints balance stats
 node tools/tests/skills.js wizard,gunner           # cast every skill of a class (all 16 if no arg; slow)
 node tools/tests/bard.js [minutes] [mobile]        # Bard notation + music: glyphs, 300 jingles, engraving sheet, sampler, Cadence rules, shots, auto-play
+node tools/tests/bard_listen.js [min] [secs]       # Bard music as played: no two bars at once, harsh intervals, fast figures, renders out/bard_listen.wav
+node tools/tests/bard_dps.js [secs] [runs]         # Bard damage on dummies + Cadences/min, for balancing the measure
 node tools/tests/astronomer.js [minutes] [mobile]  # Astronomer: icons, star chart/zodiac/Conjunction/Mirror rules, showcase shots, auto-play soak
 node tools/tests/classart.js paladin               # class art pack: catalog weapons, ability effects
 node tools/tests/lance.js [mobile]                 # Dragoon leaps: energy lance + per-skill trails, stepped frame by frame
@@ -71,6 +73,9 @@ node tools/tests/familiars.js                      # pet art: every pet summon's
 node tools/tests/pets.js [seeds]                   # minion pathing: round walls, keep up, fight round corners, leash, idle
 node tools/tests/select.js [mobile]                # hero select: one hero per class, play/new/delete, old duplicate saves
 node tools/tests/autoplay.js wizard 15 [mobile]    # auto-play soak: a new hero plays N game minutes at ~30x speed
+node tools/tests/balance.js paladin,wizard 146 30  # a geared hero for depth D, auto-play: deaths, depths cleared (BAL_GEAR=3 weaker gear; 'god' 4th arg: DPS)
+node tools/tests/balance_model.mjs paladin         # no browser: hero life vs monster hits by depth (the curve in src/data/depth.js)
+node tools/tests/happenings.js                     # omens, shrines, treasure imp, cursed chest, challenge, nemesis, town events, Defiance
 node tools/tests/perf.js 6 wizard 1                # frame cost on a phone-sized screen: fps, update/render ms (last arg: CPU throttle)
 ```
 Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, because layout bugs don't throw.
@@ -130,7 +135,9 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   and `hud.js` for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
   `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`.
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Overworld scenarios
-  (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. The Castle layout (`src/world/castleworld.js`, `src/gfx/castle.js`; docs/CASTLE_OVERWORLD.md): run `castle_overworld.mjs`, `castle_visual.js` (look at the shots) and `scenarios.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. The Bard's notes, measure, jingles, sampler and Cadences (`src/game/bard.js`, `src/game/bardmusic.js`, `src/gfx/notation.js`, `src/data/notation.js`, `src/data/jingles.js`, `src/core/sampler.js`): run `bard.js`. The Astronomer (class id `arcane_sorcerer`; `src/game/astronomer.js`, `src/gfx/cosmos.js`): run `astronomer.js`. Raid bosses
+  (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. The Castle layout (`src/world/castleworld.js`, `src/gfx/castle.js`; docs/CASTLE_OVERWORLD.md): run `castle_overworld.mjs`, `castle_visual.js` (look at the shots) and `scenarios.js`. Monster/hero scaling, affixes, drops or death
+  rules (`monsterBase`, `src/data/depth.js`, `src/data/items.js`, `src/game/defiance.js`): run `balance_model.mjs` and
+  `balance.js` at a few depths. Dungeon/town events (`src/game/happenings.js`): run `happenings.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. The Bard's notes, measure, jingles, sampler and Cadences (`src/game/bard.js`, `src/game/bardmusic.js`, `src/gfx/notation.js`, `src/data/notation.js`, `src/data/jingles.js`, `src/core/sampler.js`): run `bard.js` and `bard_listen.js` (`bard_dps.js` for Cadence balance). The Astronomer (class id `arcane_sorcerer`; `src/game/astronomer.js`, `src/gfx/cosmos.js`): run `astronomer.js`. Raid bosses
   (`src/game/raid.js`, every 5th depth): run `raid.js` (and `raid_sigs.js` for `src/game/raidsigs.js`). Rings, augments or skill mastery (`src/data/rings.js`,
   `src/game/augments.js`): run `rings.js`. The town generator (`src/world/town.js`): run `town.js` with a few seeds. Town life (`src/game/townlife.js`, `src/data/townscripts.js`, `src/game/townsfolkvisuals.js`, `src/gfx/emotes.js`): run `townlife.js`, `townsfolk.mjs` and `town_visuals.mjs`; rebuild the townsfolk sheets with `python tools/build_townsfolk_pack.py`.
 - Velscour waits at `FINAL_DEPTH` (500, `src/data/depth.js`); monster levels come from `depthLevel(depth)`, never the
