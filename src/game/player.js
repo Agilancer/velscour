@@ -22,6 +22,7 @@ import { fxColor } from '../data/gear.js';
 import { freeSlot } from '../data/bar.js';
 import { bardCompose, bardUpdate, harmonyMul } from './bard.js';
 import { ASTRONOMER, astroAfterCast, astroUpdate } from './astronomer.js';
+import { sigCast, sigHit, sigUpdate } from './signature.js';
 
 export const xpToNext = (L) => Math.round(60 * L * L + 40 * L);
 export const MAX_LEVEL = 300;
@@ -413,6 +414,7 @@ export class Player extends Creature {
     castArtFx(this, sk, tx, ty);
     if (this.classId === 'bard') bardCompose(this, sk, L); // write the note into the measure (may play a Cadence)
     if (this.classId === ASTRONOMER) astroAfterCast(this, sk, L, tx, ty); // chart the star the spell lands on
+    sigCast(this, sk, L, tx, ty); // the class signature (game/signature.js) charges
     // casting trains the skill a little (kills with it train it more: combat.kill); skills that deal no damage train on casts alone
     const dl = depthLevel(this.world.depth || 1);
     this.gainMastery(sk.id, 4 * Math.pow(dl, 1.5) * (augmentable(sk) ? 0.15 : 1.2));
@@ -431,6 +433,7 @@ export class Player extends Creature {
   }
 
   onHit(tgt, dmg, el, o = {}) {
+    sigHit(this, tgt, dmg, el, o);
     if (this.classId === 'barbarian' && !o.dot && o.sk?.startsWith('barbarian.')) {
       if (o.sk === 'barbarian.0.0') {
         // One large payout per landed Bash, not one payout for each lightning-fan bolt.
@@ -501,6 +504,7 @@ export class Player extends Creature {
     if (this.noRageT > 0) this.noRageT -= dt;
     if (this.classId === 'bard' && this.world) bardUpdate(this, dt);
     if (this.classId === ASTRONOMER && this.world) astroUpdate(this, dt);
+    if (this.world) sigUpdate(this, dt);
     const canAct = this.tickStatus(dt, (k, amount, src) => {
       hit(src, this, amount, k === 'burn' ? 'fire' : k === 'poison' ? 'poison' : 'blood', { dot: true });
     });
@@ -534,7 +538,7 @@ export class Player extends Creature {
       if (b.t <= 0) { this.buffs.splice(i, 1); changed = true; }
     }
     if (changed) this.recompute();
-    this.scale = this.buffs.some((b) => b.transform) ? 1.22 : 1;
+    this.scale = (this.buffs.some((b) => b.transform) ? 1.22 : 1) * (this.sigScale || 1); // sigScale: the Slime Lord's mass
     for (const k in this.cooldowns) if (this.cooldowns[k] > 0) this.cooldowns[k] -= dt;
     if (this.castLock > 0) {
       this.castLock -= dt;
