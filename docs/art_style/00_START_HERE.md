@@ -1,9 +1,9 @@
 # VELSCOUR character redesign kit: start here
 
 The game is moving every character to one new house style, **Grim Nocturne**: hand-placed 2D pixel art at twice
-Symphony of the Night's PlayStation density, with Diablo II's darkness and weight, SotN's sprite elegance and moonlit
-rim light, and Final Fantasy VI's battle-sprite presence. Heroes stay single frames, with one picture per armor set,
-like now, and the stance never changes between armors.
+Symphony of the Night's PlayStation density, led by Final Fantasy VI's costume theatre, small palettes and
+battle-sprite presence, dragged through Diablo II's grime and lit by SotN's moonlit rim. Heroes stay single frames,
+with one picture per armor set, like now, and the stance never changes between armors.
 
 ## What's in the kit
 
@@ -13,6 +13,7 @@ like now, and the stance never changes between armors.
 | `02_MASTER_PROMPT.txt` | The long prompt to paste first in **every** ChatGPT chat |
 | `03_SHEET_PROMPTS.md` | The prompt for each sheet: style lock, pose masters, armors, overlays, world |
 | `04_STYLE_LOCK_REQUEST.txt` | Makes ChatGPT write its own style-lock documents (style guide, prompt templates, class cards) |
+| `05_PROMPT_PACK.md` | **Ready-to-paste prompts:** style lock, then per class: pose master, first 5 armors, more armors, overlays; fix prompts; world prompts |
 | `names/` | Names files for the importer (pose master, armor, overlays) |
 | `reference/current_heroes_lineup.png` | The 16 current heroes (identity reference: who they are, not how they're drawn) |
 | `reference/classes/<class>_current.png` | Each class's current hero and 6 current armors (one per rarity) |

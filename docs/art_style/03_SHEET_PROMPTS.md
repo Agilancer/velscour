@@ -1,5 +1,8 @@
 # Sheet prompts
 
+**Ready-made, filled-in prompts for every class are in `05_PROMPT_PACK.md`; start there.** This file explains
+the general shape of each prompt.
+
 Every chat starts with `02_MASTER_PROMPT.txt`. Once you have them, also attach **`STYLE_LOCK.md` and
 `style_lock_sheet.png`** (made in step 1). Then attach the template (and any references the prompt names) and paste
 one of the prompts below. **One sheet per message.** Keep one chat per class for heroes, so ChatGPT keeps the class in
@@ -41,7 +44,7 @@ gambeson in muted [class colour], linen shirt, trousers, simple leather shoes, a
 loosely clenched. The stance exactly as the template: crown on the top yellow line, soles on the bottom yellow line,
 chin, shoulders, elbows, belt, crotch, knees and ankles on their lines, fists and feet inside their cyan circles,
 body inside the cyan dashed stance contour (it may be slimmer, not wider). 108 art pixels from crown to sole.
-The face must be striking and memorable, keep the class identity, but designed fresh. Max 40 colours.
+The face must be striking and memorable, keep the class identity, but designed fresh. 16 colours including transparency.
 Keep the left column untouched; draw only in the big frame. Remove all guides and labels.
 ```
 Fix anything off (pose, face, palette) with follow-ups: "Keep everything identical except: ...". When it's right:
@@ -62,7 +65,7 @@ and armor change. Five structurally different designs, each with its own silhoue
 family ([motifs]):
 1 = [rarity]: [idea]   2 = [rarity]: [idea]   3 = [rarity]: [idea]   4 = [rarity]: [idea]   5 = [rarity]: [idea]
 Bulk may grow up to 8 art pixels per side and pauldrons up to 6 above the shoulder line; joints never move. No
-helmet, hood, hat or crown. Gloves and boots belong to the outfit. Max 40 colours per armor. Keep the left column
+helmet, hood, hat or crown. Gloves and boots belong to the outfit. Colours: 16 common/uncommon, 20 rare/epic, 24 legendary/mythic. Keep the left column
 as attached. Remove all guides. Flat magenta background.
 ```
 Names file: `{"class": "<class>", "style": "nocturne", "armors": [{"name": "...", "rarity": "..."} x 5]}`.
@@ -90,7 +93,7 @@ fitted to it, as it will be layered over the hero in game:
   gloves over the same clenched fists, same angle, covering hand and wrist.
 - BOOTS row (76x40 art pixels each): both boots and greaves over the pose master's shins and feet, soles exactly on
   the bottom yellow line.
-Pieces: [helmet 1-5 ideas] / [gloves 1-5 ideas] / [boots 1-5 ideas], rarities [..]. Max 20 colours per piece.
+Pieces: [helmet 1-5 ideas] / [gloves 1-5 ideas] / [boots 1-5 ideas], rarities [..]. 8-12 colours per piece.
 Everything that is not the piece stays flat magenta (no head, no hands, no legs). Remove all guides.
 ```
 Names file: `{"class": "<class>", "helmets": [{"name", "rarity"} x5], "gloves": [...], "boots": [...]}`.

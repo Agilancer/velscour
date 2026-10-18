@@ -67,15 +67,16 @@ ELEMENTS = ['fire', 'cold', 'light', 'poison', 'holy', 'shadow', 'arcane', 'bloo
 RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic']
 # Grim Nocturne (docs/art_style/): every hero frame is 128 x 192 art pixels (AP), the hero 108 AP crown to sole.
 # Templates deliver an AP as a k x k block; imports read the blocks back (pixel-locked: no rescaling, no realigning).
-CANON = {'crown': 75, 'eyes': 82, 'chin': 89, 'shoulders': 96, 'elbows': 114, 'belt': 120, 'crotch': 129, 'fists': 132,
+CANON = {'crown': 75, 'eyes': 83, 'chin': 91, 'shoulders': 96, 'elbows': 114, 'belt': 120, 'crotch': 129, 'fists': 132,
          'knees': 154, 'ankles': 178, 'soles': 183}
-JOINTS = {'head': (65, 82), 'fist_l': (37, 132), 'fist_r': (87, 132), 'knee_l': (50, 154), 'knee_r': (78, 154),
+JOINTS = {'head': (65, 83), 'fist_l': (37, 132), 'fist_r': (87, 132), 'knee_l': (50, 154), 'knee_r': (78, 154),
           'foot_l': (46, 181), 'foot_r': (84, 181)}
 POSE_S, POSE_CELL = 4, (448, 120, 960, 888)        # pose master: one frame at 4x
 ZONES = {'helmets': [(45, 63, 40, 40)], 'gloves': [(25, 120, 24, 24), (75, 120, 24, 24)], 'boots': [(28, 150, 76, 40)]}
 OVL_S, OVL_COL0, OVL_STEP = 3, 290, 248            # overlays at 3x: 5 columns
 OVL_ROWS = {'helmets': 140, 'gloves': 340, 'boots': 490}
-BUDGET = {'posemaster': 40, 'armor': 40, 'overlay': 20}
+# colours per sprite, the FF6 rule (one SNES-style 16-colour palette; richer for the top rarities), see art bible 0A
+BUDGET = {'posemaster': 16, 'overlay': 12, 'common': 16, 'uncommon': 16, 'rare': 20, 'epic': 20, 'legendary': 24, 'mythic': 24}
 GUIDE = [(0, 255, 255), (255, 255, 0)]              # the style kit's guide colours (never in the palette): dropped
 
 
@@ -495,7 +496,7 @@ def import_armor_locked(sheet, names, args):
     rows = need(names, 'armors', 5, 'armor')
     need_rarities(rows)
     solid = locked_mask(sheet)
-    frames = [Image.fromarray(limit_colours(unblock(sheet, box, ARMOR_S, solid), BUDGET['armor'])) for box in ARMOR_FRAMES]
+    frames = [Image.fromarray(limit_colours(unblock(sheet, box, ARMOR_S, solid), BUDGET[r['rarity']])) for box, r in zip(ARMOR_FRAMES, rows)]
     preview([f.resize((256, 384), Image.NEAREST) for f in frames], os.path.join(args.work, 'preview.png'), 5,
             names=['%s (%s)' % (r['name'], r['rarity']) for r in rows])
     if not args.dry:
