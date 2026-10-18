@@ -791,7 +791,8 @@ export const Auto = {
         this.watchStuck(dt); return;
       }
       let objective = null;
-      if (ow.type === 'zones' && ow.route && ow.route[ow.stage]) {
+      if (ow.objective !== undefined) objective = ow.objective; // the trial says where to go (game/darkforest.js)
+      else if (ow.type === 'zones' && ow.route && ow.route[ow.stage]) {
         const spot = ow.route[ow.stage];
         objective = { x: spot[0], y: spot[1], reach: 2.5 };
       } else if (ow.type === 'escort' && ow.escort && ow.routeIndex < ow.route.length) {

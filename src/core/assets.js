@@ -82,7 +82,7 @@ const biomePacks = (b) => [...new Set([b.pack || DEFAULT_PACK, b.wallPack, ...(b
 
 /** Fetch a biome's pack and the monster art. Safe to call repeatedly. */
 export function loadBiomeArt(biome) {
-  const dungeon = biome && !biome.overworld && biome.id !== 'town';
+  const dungeon = biome && (!biome.overworld || biome.packArt) && biome.id !== 'town'; // packArt: an overworld drawn from a biome pack
   return Promise.all([
     loadEnemyArt().catch((e) => console.warn(e)), // monsters fall back to their pixel sprites
     ...(dungeon ? biomePacks(biome).map(loadPack) : []),

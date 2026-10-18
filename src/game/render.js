@@ -234,6 +234,34 @@ function drawProp(ctx, pr, alpha) {
   if (alpha < 1 || pr.light) ctx.globalAlpha = 1;
 }
 
+/** A Dark Forest tree (gfx/darkforest.js): trunk and canopy drawn apart at the pack's split row, so the canopy
+ * (and, right over the hero, the trunk) can fade where the tree stands in front of the hero. */
+function treeFade(o, hx, hy) {
+  const s = o.spr, k = o.k, w = s.w * k, x = isoX(o.x, o.y), y = isoY(o.x, o.y);
+  const top = y + s.oy * k, cut = top + s.split * k, py = hy - 30;
+  // a see-through window round the hero: every canopy in front of him within ~a tree and a half fades, nearest most
+  const dx = Math.abs(hx - x), reach = w * 0.5 + 70;
+  if (py > y + 10 || py < top - 30 || dx > reach) return null;
+  const t = clamp((dx - w * 0.1) / (reach - w * 0.1), 0, 1);
+  const canopy = 0.22 + 0.78 * t * t;
+  const trunk = py > cut - 20 && dx < w * 0.3 ? 0.45 + 0.55 * t : 1;
+  return canopy < 0.98 || trunk < 1 ? [canopy, trunk] : null;
+}
+function drawTree(ctx, pr, fade) {
+  const s = pr.spr, k = pr.k, x = isoX(pr.x, pr.y), y = isoY(pr.x, pr.y), sp = s.split;
+  ctx.save();
+  if (pr.flip) { ctx.translate(x, 0); ctx.scale(-1, 1); }
+  const bx = pr.flip ? 0 : x;
+  if (!fade) ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, bx + s.ox * k, y + s.oy * k, s.w * k, s.h * k);
+  else {
+    ctx.globalAlpha = fade[0];
+    ctx.drawImage(s.img, s.sx, s.sy, s.w, sp, bx + s.ox * k, y + s.oy * k, s.w * k, sp * k);
+    ctx.globalAlpha = fade[1];
+    ctx.drawImage(s.img, s.sx, s.sy + sp, s.w, s.h - sp, bx + s.ox * k, y + (s.oy + sp) * k, s.w * k, (s.h - sp) * k);
+  }
+  ctx.restore();
+}
+
 /** A town building's rect [x, y, w, h] in world px (town-pack art drawn from the building's centre). */
 function buildingRect(b) {
   const s = b.spr, k = b.k, X = isoX(b.cx, b.cy);
@@ -607,6 +635,17 @@ export function renderWorld(ctx, world) {
     } else if (px < vr.x0 - 100 || px > vr.x1 + 100 || py < vr.y0 - 40 || py > vr.y1 + 220) continue;
     enqueue(pr.x + pr.y, 4, pr);
   }
+  // the Dark Forest's trees: only the buckets around the view (a tree's base may sit well below it)
+  const tc = map.treeCells;
+  if (tc) {
+    const bx0 = Math.max(0, Math.floor((tx0 - 2) / tc.B)), bx1 = Math.min(tc.bw - 1, Math.floor((tx1 + 12) / tc.B));
+    const by0 = Math.max(0, Math.floor((ty0 - 2) / tc.B)), by1 = Math.min(tc.bh - 1, Math.floor((ty1 + 12) / tc.B));
+    for (let by = by0; by <= by1; by++) for (let bx = bx0; bx <= bx1; bx++) for (const pr of tc.cells[by * tc.bw + bx]) {
+      const s = pr.spr, k = pr.k, px = isoX(pr.x, pr.y), x0 = px + (pr.flip ? -s.ox - s.w : s.ox) * k, y0 = isoY(pr.x, pr.y) + s.oy * k;
+      if (x0 > vr.x1 + 8 || x0 + s.w * k < vr.x0 - 8 || y0 > vr.y1 + 8 || y0 + s.h * k < vr.y0 - 8) continue;
+      enqueue(pr.x + pr.y, 4, pr);
+    }
+  }
   for (const b of world.buildings) {
     const [x,y,w,h] = buildingRect(b);
     if (x > vr.x1+24 || x+w < vr.x0-24 || y > vr.y1+24 || y+h < vr.y0-24) continue;
@@ -638,6 +677,7 @@ export function renderWorld(ctx, world) {
       case 1: o.draw(ctx); break;
       case 2: drawWall(ctx, o, wk, cutaway(wallRect(o, wk), o.depth)); break;
       case 4: {
+        if (o.tree) { drawTree(ctx, o, p && it.d > pd + 0.3 ? treeFade(o, ppx, ppy) : null); break; }
         let a = 1;
         if (p && it.d > pd + 0.5 && (o.spr || (o.sprite === 'tree' || o.sprite === 'pine'))) {
           const px = isoX(o.x, o.y), py = isoY(o.x, o.y);

@@ -30,6 +30,34 @@ Contents
 - Tests: `castle_overworld.mjs` (100 seeds; the ward must be sealed with its gates closed; every wall cell drawn),
   `castle_visual.js` (screenshots), `scenarios.js` (all 35 Castle scenarios finish). See CASTLE_OVERWORLD.md.
 
+## October 18, 2026 — THE DARK FOREST, the largest overworld (branch `feat/grand-sweep`)
+
+- **New overworld biome `dark_forest`** from the user's THE DARK FOREST Biome Pack (60 floors, 5 wall families with
+  arches/doors on the Catacombs rig, 40 props, 15 towering trees with trunk/canopy layers). 192 x 192 tiles, larger
+  than the Castle. Full write-up: [DARK_FOREST.md](DARK_FOREST.md).
+- **Assets:** `python tools/darkforestpack.py <zip>` -> `assets/tiles/dark_forest/` (floors/walls/scatter via
+  `biomepack.import_pack`, plus `trees.webp/json`, halved). The 101.7 MB zip is over GitHub's limit and stays outside
+  the repo (`F:\!  VELSCOUR\AI ASSETS\Biome Packs\`). Biome flag `packArt: true` makes `loadBiomeArt` load the pack
+  for an overworld; `game.loadLevelArt` also loads the trees.
+- **Map** (`src/world/darkforest.js`): a DFS trail maze over 24 x 24 macro cells (main paths to every objective, side
+  trails, dead ends with chests, deep-wood blobs), three walled labyrinths (3-tile corridors; mossy ruins around the
+  Heart, thorn hedge, roots/blackwood) entered through arch gates, five glades, six landmarks, a timber stockade on the
+  bandit glade, ~18,500 Poisson-spaced trees. Walls are centre-line nodes on wall tiles, pushed into `map.walls`.
+  Trees live in `map.treeCells` (8 x 8 buckets), not `world.props`.
+- **Rendering:** `drawTree`/`treeFade` in render.js: trunk and canopy drawn apart; the canopy (and trunk) fade over
+  the hero.
+- **Trials** (`src/game/darkforest.js`, texts in `src/data/darkforest.js`): twelve glade trials (Witch-Lights,
+  Brood Mother, Hanging Effigies, Lantern Vigil, Druid Circle, Wolf Moon, Lost in the Woods, Bandit Stockade, Fairy
+  Ring, Hollow King's Barrow, Woodcutters' Last Stand, Creeping Thorns), five per map, optional, each a Legendary drop;
+  the Heart's Elder Heartwood (roots, the Heartwood Warden, last waves) opens the exit. Progress and seed saved in
+  `c.darkForestRuns` (migrated). Auto-play reads the new `ow.objective` hook.
+- **Design calls made without the user's answers** (they declined the questions and said "continue"): 192 x 192;
+  optional glades + Heart; existing bestiary for monsters; tree woods plus walled labyrinths. Worth confirming.
+- Tests: `tools/tests/dark_forest.js` (new). `biome_perf.js` now loads each biome through `game.loadLevelArt`.
+- Open: frame cost on the throttled phone profile is below the Wilds (~11 vs ~17 fps headless, software raster
+  overdraw from the tall trees); not yet tried on a real phone. No native forest monsters yet; a ChatGPT enemy kit
+  brief for forest creatures would be the natural follow-up.
+
 ## October 18, 2026 — Herrington Hollow comes alive: re-cut townsfolk, emotions, town life director (branch `feat/grand-sweep`)
 
 - **Arrival:** the hero enters town 3.2 tiles down the portal's road toward the square (`enterTown` in game.js), every
