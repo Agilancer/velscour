@@ -85,22 +85,25 @@ export default {
     stat('lancer', 'fire');
   },
   back(ctx, p, s, t) {
-    const f = s.valor / MAX, px = isoX(p.x, p.y) + 10, py = isoY(p.x, p.y) - (p.z || 0) - 26 * (p.scale || 1), top = py - 62;
+    // centred on his back: the pole rises from between his shoulders, the cloth hangs centred on it and hides it;
+    // the crossbar sits 114 px above his feet, so even the fully unfurled cloth (49 px) clears his head
+    const f = s.valor / MAX, px = isoX(p.x, p.y), py = isoY(p.x, p.y) - (p.z || 0) - 26 * (p.scale || 1), top = py - 90;
+    const L = 8 + 36 * f, W = 22, h = W / 2, sp = f >= 1 ? 9 : 4;
     ctx.strokeStyle = '#5a4a30'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, top); ctx.stroke(); // the pole
-    ctx.strokeStyle = '#8a7a50'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(px - 1, top + 2); ctx.lineTo(px + 23, top + 2); ctx.stroke(); // crossbar
+    ctx.strokeStyle = '#8a7a50'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(px - h - 2, top + 2); ctx.lineTo(px + h + 2, top + 2); ctx.stroke(); // crossbar
     ctx.fillStyle = '#e0c060'; ctx.beginPath(); ctx.moveTo(px, top - 5); ctx.lineTo(px - 2, top); ctx.lineTo(px + 2, top); ctx.fill(); // finial
-    const L = 8 + 36 * f, W = 22, sp = f >= 1 ? 9 : 4;
-    if (f >= 1) glow(ctx, '#8ab8ff', px + 8, top + L / 2, 26, 0.4 + 0.2 * Math.sin(t * 8));
-    ctx.beginPath(); // the cloth, rippling
+    for (const sx of [-1, 1]) ctx.fillRect(px + sx * (h + 2) - 1, top + 1, 2, 2); // crossbar knobs
+    if (f >= 1) glow(ctx, '#8ab8ff', px, top + L / 2, 26, 0.4 + 0.2 * Math.sin(t * 8));
+    ctx.beginPath(); // the cloth, rippling, hung from the crossbar
     const wave = (y) => Math.sin(t * sp - y * 0.25) * (1.5 + y * 0.06);
-    ctx.moveTo(px, top + 2);
-    for (let y = 0; y <= L; y += 3) ctx.lineTo(px + wave(y), top + 2 + y);
-    ctx.lineTo(px + W / 2 + wave(L + 4), top + 2 + L + 5); // swallowtail point
-    for (let y = L; y >= 0; y -= 3) ctx.lineTo(px + W + wave(y), top + 2 + y);
+    ctx.moveTo(px - h, top + 2);
+    for (let y = 0; y <= L; y += 3) ctx.lineTo(px - h + wave(y), top + 2 + y);
+    ctx.lineTo(px + wave(L + 4), top + 2 + L + 5); // the point
+    for (let y = L; y >= 0; y -= 3) ctx.lineTo(px + h + wave(y), top + 2 + y);
     ctx.closePath();
     ctx.fillStyle = BLUE; ctx.fill(); ctx.strokeStyle = SILVER; ctx.lineWidth = 1; ctx.stroke();
     if (L > 14) { // the Order's emblem: a lance over a tower shield
-      const ex = px + W / 2 + wave(L * 0.45), ey = top + 2 + L * 0.45;
+      const ex = px + wave(L * 0.45), ey = top + 2 + L * 0.45;
       ctx.fillStyle = SILVER; ctx.beginPath(); ctx.moveTo(ex - 5, ey - 5); ctx.lineTo(ex + 5, ey - 5); ctx.lineTo(ex + 5, ey + 1); ctx.lineTo(ex, ey + 6); ctx.lineTo(ex - 5, ey + 1); ctx.closePath(); ctx.fill();
       ctx.strokeStyle = '#ffd860'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(ex - 6, ey + 6); ctx.lineTo(ex + 6, ey - 7); ctx.stroke();
     }
