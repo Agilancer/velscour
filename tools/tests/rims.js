@@ -1,6 +1,6 @@
 // Monster rims and the enlargeable target window. A Slime Lord in a dungeon with a few pets
 // and the depth's monsters: checks every monster/summon gets a rim colour (by rank; green for summons, pale gold for the
-// hero), shoots a pet held behind a wall (rims_wall_pet vs rims_wall_nopet: the wall fades), and that a click on the target window toggles it 2x+ and
+// hero), shoots a pet and a monster held behind a wall (rims_wall_pet/_foe vs _nopet/_nofoe: the wall fades), and that a click on the target window toggles it 2x+ and
 // back while staying on screen, on desktop and on a phone in landscape and portrait. Shots: rims_*.png.
 //   node tools/tests/rims.js
 const { openGame, report } = require('./harness');
@@ -52,6 +52,11 @@ const SIZES = [['desktop', { width: 1400, height: 800 }], ['land', { width: 844,
       await page.waitForTimeout(300); await shot('rims_wall_pet');
       await page.evaluate(() => { const m = window.VELSCOUR.G.world.creatures.find((c) => c.summon); m.x += 60; });
       await page.waitForTimeout(300); await shot('rims_wall_nopet');
+      // a monster behind the same wall cuts its own hole too
+      await page.evaluate(([x, y]) => { const { G } = window.VELSCOUR, m = G.world.creatures.find((c) => c.team === 'enemy' && !c.dead); G.rimFoe = m; m.x = x - 0.6; m.y = y - 0.6; m.speed = 0; m.update = () => {}; }, res.spot);
+      await page.waitForTimeout(300); await shot('rims_wall_foe');
+      await page.evaluate(() => { window.VELSCOUR.G.rimFoe.x += 60; });
+      await page.waitForTimeout(300); await shot('rims_wall_nofoe');
     }
     const box = async () => page.evaluate(() => { const b = document.getElementById('target-box'), r = b.getBoundingClientRect(), pic = document.getElementById('tb-pic').getBoundingClientRect(); return { cls: b.className, w: pic.width, x: r.left, y: r.top, r: r.right, b: r.bottom, vw: innerWidth, vh: innerHeight }; });
     const a = await box();

@@ -247,6 +247,23 @@ function treeFade(o, hx, hy) {
   const trunk = py > cut - 20 && dx < w * 0.3 ? 0.45 + 0.55 * t : 1;
   return canopy < 0.98 || trunk < 1 ? [canopy, trunk] : null;
 }
+/** The tree's fade for everyone behind it: the hero's wide window, and a tight one right round anyone else. */
+function treeHides(o, d, views) {
+  let f = null;
+  for (const v of views) {
+    if (d <= v.d + 0.3) continue;
+    let g;
+    if (v.hero) g = treeFade(o, v.x, v.y1 + 4);
+    else {
+      const s = o.spr, k = o.k, w = s.w * k, x = isoX(o.x, o.y), y = isoY(o.x, o.y), top = y + s.oy * k;
+      const cy = (v.y0 + v.y1) / 2;
+      if (Math.abs(v.x - x) > w * 0.3 || cy < top || cy > y + 10) continue;
+      g = [0.5, cy > top + s.split * k - 20 ? 0.6 : 1];
+    }
+    if (g) f = f ? [Math.min(f[0], g[0]), Math.min(f[1], g[1])] : g;
+  }
+  return f;
+}
 function drawTree(ctx, pr, fade) {
   const s = pr.spr, k = pr.k, x = isoX(pr.x, pr.y), y = isoY(pr.x, pr.y), sp = s.split;
   ctx.save();
@@ -436,6 +453,7 @@ function drawNpc(ctx, n) {
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
   n.sbox = [x - 16, spriteY, x + 16, y];
+  n.viewH = top; // next frame's see-through hole in walls/buildings in front of them
   // an emotion bubble over the head (not while a speech bubble is up)
   if (n.icon && n.iconT > 0 && !(n.talkT > 0)) n.iconRect = drawEmote(ctx, n.icon, x + 10, spriteY + 2, n.iconAge || 0, n.iconT, G.time + (n.idleSeed || 0));
   else n.iconRect = null;
@@ -575,20 +593,33 @@ export function renderWorld(ctx, world) {
   const p = world.player;
   const pd = p ? p.x + p.y : 0;
   const ppx = p ? isoX(p.x, p.y) : 0, ppy = p ? isoY(p.x, p.y) : 0;
-  const prect = [ppx - 16, ppy - 62, ppx + 16, ppy - 4];
-  const occludes = (r) => p && r[0] < prect[2] && r[0] + r[2] > prect[0] && r[1] < prect[3] && r[1] + r[3] > prect[1];
   // walls in front of the hero fade with screen distance and depth, so the narrow slices form a soft see-through hole
   // (a wide hole: the walls stand ~1.4 heroes tall, and fights next to the hero should stay in view)
-  // in dungeons the hero's summons cut their own smaller holes, so a pet behind a wall stays in sight
+  // every other creature (summons, monsters) and townsperson cuts its own smaller hole, sized by last frame's sprite
+  // height, so nothing walking behind a wall, building or tree drops out of sight
   const views = frame.views || (frame.views = []);
-  views.length = 0;
-  if (p) views.push({ x: ppx, y0: prect[1], y1: prect[3], d: pd, r: 24, fall: 120 });
-  if (p && world.kind !== 'town') for (const c of world.creatures) {
-    if (!c.summon || c.owner !== p || c.dead || c.static) continue;
-    const x = isoX(c.x, c.y), y = isoY(c.x, c.y), s = c.scale || 1;
-    if (x < vr.x0 - 60 || x > vr.x1 + 60 || y < vr.y0 - 20 || y > vr.y1 + 140) continue;
-    views.push({ x, y0: y - 46 * s, y1: y - 4, d: c.x + c.y, r: 10 * s, fall: 56 * s });
+  let nv = 0;
+  const look = (x, y, d, h, hero) => {
+    if (x < vr.x0 - 60 || x > vr.x1 + 60 || y < vr.y0 - 20 || y > vr.y1 + 140) return;
+    const v = views[nv] || (views[nv] = {}), k = Math.min(h, 110) / 46;
+    nv++; v.x = x; v.y0 = y - h; v.y1 = y - 4; v.d = d; v.hero = hero;
+    v.r = hero ? 24 : 10 * k; v.fall = hero ? 120 : 56 * k; v.hw = hero ? 16 : 8 * k;
+  };
+  if (p) look(ppx, ppy, pd, 62, true);
+  for (const c of world.creatures) {
+    if (c === p || c.dead || c.static || c.ghostDraw || c.hidden) continue;
+    look(isoX(c.x, c.y), isoY(c.x, c.y), c.x + c.y, c.viewH || 46 * (c.scale || 1), false);
   }
+  for (const n of world.npcs) {
+    if (n.stash || n.hidden || (n.alpha ?? 1) < 0.1) continue;
+    look(isoX(n.x, n.y), isoY(n.x, n.y), n.x + n.y, n.viewH || 56, false);
+  }
+  views.length = nv;
+  // does rect r [x, y, w, h] at depth d hide someone?
+  const hides = (r, d) => {
+    for (const v of views) if (d > v.d && r[0] < v.x + v.hw && r[0] + r[2] > v.x - v.hw && r[1] < v.y1 && r[1] + r[3] > v.y0) return true;
+    return false;
+  };
   const cutaway = (r, d) => {
     if (!r) return 1;
     let a = 1;
@@ -677,21 +708,21 @@ export function renderWorld(ctx, world) {
       case 1: o.draw(ctx); break;
       case 2: drawWall(ctx, o, wk, cutaway(wallRect(o, wk), o.depth)); break;
       case 4: {
-        if (o.tree) { drawTree(ctx, o, p && it.d > pd + 0.3 ? treeFade(o, ppx, ppy) : null); break; }
+        if (o.tree) { drawTree(ctx, o, treeHides(o, it.d, views)); break; }
         let a = 1;
-        if (p && it.d > pd + 0.5 && (o.spr || (o.sprite === 'tree' || o.sprite === 'pine'))) {
+        if (o.spr || (o.sprite === 'tree' || o.sprite === 'pine')) {
           const px = isoX(o.x, o.y), py = isoY(o.x, o.y);
-          if (Math.abs(px - ppx) < 40 && py > ppy - 8 && py - 90 < ppy) a = 0.35;
+          for (const v of views) {
+            const fy = v.y1 + 4;
+            if (it.d > v.d + 0.5 && Math.abs(px - v.x) < (v.hero ? 40 : 24) && py > fy - 8 && py - 90 < fy) { a = 0.35; break; }
+          }
         }
         drawProp(ctx, o, a);
         break;
       }
       case 5: {
-        let a = 1;
-        if (p && o.depth > pd) {
-          const [x, y, w, h] = buildingRect(o);
-          if (occludes([x + w * 0.15, y, w * 0.7, h * 0.85])) a = 0.4;
-        }
+        const [x, y, w, h] = buildingRect(o);
+        const a = hides([x + w * 0.15, y, w * 0.7, h * 0.85], o.depth) ? 0.4 : 1;
         drawBuilding(ctx, o, a);
         break;
       }
@@ -707,6 +738,7 @@ export function renderWorld(ctx, world) {
         const [sx, sy] = camera.tileToScreen(o.x, o.y, oldZ + deckZ + (o.fly ? 16 : 0));
         const z = camera.zoom;
         o.sbox = [sx - (w / 2) * z, sy - h * z, sx + (w / 2) * z, sy];
+        o.viewH = h + (o.fly ? 16 : 0); // next frame's see-through hole
         break;
       }
       case 7: drawNpc(ctx, o); break;
