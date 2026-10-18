@@ -35,6 +35,7 @@ from scipy import ndimage
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "assets", "FinalClasses")
 OUT = os.path.join(ROOT, "assets", "sprites", "gear")
+ADD = os.path.join(ROOT, "assets", "source", "gear_additions")
 
 FW, FH = 128, 192           # frame size
 COLS = 10                   # atlas columns
@@ -183,6 +184,24 @@ def read_zip(path, cid):
     return frames, rar
 
 
+def read_additions(cid, frames, rar):
+    """Armors added later from ChatGPT sheets (tools/chatgpt_art.py armor): assets/source/gear_additions/<class>/
+    <class>_armor_NNN_<rarity>.png, numbered on from the zip's 80. Returns their ids."""
+    d = os.path.join(ADD, cid)
+    ids = []
+    for name in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+        m = re.match(r"^[a-z_]+_armor_(\d+)_([a-z]+)\.png$", name)
+        if m:
+            i = int(m.group(1))
+            img = Image.open(os.path.join(d, name)).convert("RGBA")
+            if img.size != (FW, FH):
+                raise ValueError("%s: %s is %dx%d, expected %dx%d" % (cid, name, img.width, img.height, FW, FH))
+            frames["armor"][i] = harden(np.asarray(img).astype(np.int32))
+            rar["armor"][i] = m.group(2)
+            ids.append(i)
+    return ids
+
+
 def atlas(frames, cw, ch, mode="RGBA"):
     n = len(frames)
     rows = (n + COLS - 1) // COLS
@@ -205,6 +224,11 @@ def bands(rmap):
 def process_class(cid, zpath):
     ov = OVERRIDES.get(cid, {})
     frames, rar = read_zip(zpath, cid)
+    added = read_additions(cid, frames, rar)
+    # the zip's rarity bands stay contiguous ranges; added armors are listed per rarity on their own
+    extra = {}
+    for i in added:
+        extra.setdefault(rar["armor"].pop(i), []).append(i)
     na, nh = len(frames["armor"]), len(frames["helms"])
     ids_a, ids_h = sorted(frames["armor"]), sorted(frames["helms"])
     if ids_a != list(range(1, na + 1)) or ids_h != list(range(1, nh + 1)):
@@ -249,12 +273,14 @@ def process_class(cid, zpath):
         "class": cid, "frame": [FW, FH], "cols": COLS, "anchor": [64, 40],
         "feet": int(np.median([b[3] for b in abox])), "headTop": int(np.median([b[1] for b in abox])),
         "helmCell": [HX, HY, HW, HH],
-        "armor": {"n": na, "bands": bands(rar["armor"]), "box": abox},
+        "armor": {"n": na, "bands": bands(rar["armor"]), "extra": extra, "box": abox},
         "helms": {"n": nh, "bands": bands(rar["helms"]), "box": hbox},
     }
     with open(os.path.join(outdir, "gear.json"), "w") as f:
         json.dump(meta, f, separators=(",", ":"))
     size = sum(os.path.getsize(os.path.join(outdir, x)) for x in os.listdir(outdir)) / 1024
+    if added:
+        print("  %-17s + %d added armors %s" % (cid, len(added), extra))
     print("  %-17s armor %d  helms %d (%d open)  skin-like body %.3f -> body skin %s  protected %.0f%%  %d KB" % (
         cid, na, nh, nopen, frac, "on" if body_skin else "off", 100 * float(np.mean(prot_frac)), size))
 

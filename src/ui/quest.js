@@ -21,6 +21,7 @@ export function renderQuest(body) {
     if (c.depth === FINAL_DEPTH) h += step(false, '<b style="color:#ff4020">Demon Lord Velscour</b> waits on his throne.');
     else if (isRaidDepth(c.depth) && !b?.overworld) h += step(false, '<b style="color:#ff6030">A BOSS ROOM</b> lies at the end of this depth.');
     if (b?.id === 'sea_of_sand') h += step(false, 'A linked Sea of Sand route with one to five timed scenario areas lies beyond.');
+    else if (b?.id === 'dark_forest') h += step(false, 'The Dark Forest lies beyond: trails, labyrinths, five trial glades and the Heart of the Forest.');
     else if (b?.overworld) h += step(false, 'A Forsaken Wilds scenario shrine guards the way forward.');
   } else {
     const boss = w.boss, slain = !!(boss && boss.dead);
@@ -29,7 +30,14 @@ export function renderQuest(body) {
     const who = boss && (boss.awake || slain) ? `<b>${escapeHtml(boss.name)}</b>` : raid || isRaidDepth(w.depth) ? 'the lord of the <b>Boss Room</b>' : w.depth === FINAL_DEPTH ? '<b>Demon Lord Velscour</b>' : 'the guardian of this depth';
     if (w.overworldScenario) {
       const sc = w.overworldScenario;
-      if (w.biome?.id === 'sea_of_sand') {
+      if (w.biome?.id === 'dark_forest') {
+        const cur = sc.current;
+        h += step(sc.cleared > 0, `Win the trial glades along the trails (optional, each pays Legendary gear): <b>${sc.cleared}/${sc.trials.length}</b>.`);
+        for (const t of sc.trials) h += step(t.completed, `${escapeHtml(t.title)} <span class="dim">— ${escapeHtml(t.description)}</span>`);
+        if (cur) h += step(false, `In progress: <b>${escapeHtml(cur.title)}</b> — ${escapeHtml(cur.progress() || cur.description)}`);
+        h += step(sc.heart.completed, 'Reach the Heart of the Forest, deep in the mossy labyrinth to the north-east, and still the <b>Elder Heartwood</b>.');
+        h += step(sc.completed, sc.completed ? 'The exit is open — descend or return to town.' : 'The trial at the Heart opens the way on.');
+      } else if (w.biome?.id === 'sea_of_sand') {
         const beat=sc.current, total=sc.total||1, done=sc.beat||0;
         h += step(done>0, `Secure the marked Sea of Sand areas: <b>${Math.min(done+1,total)}/${total}</b> current · ${done}/${total} complete.`);
         if (beat) {

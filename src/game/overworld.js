@@ -164,9 +164,7 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
     S.timer=biome.id==='sea_of_sand'?rng.int(90,181):0;
     report(description);UI.centerMsg(title.toUpperCase(),description,3.2);
     if(type.startsWith('rampart_')){
-      const posts=[[35.5,29.5],[48.5,27.5],[62.5,34.5],[64.5,48.5],
-        [58.5,58.5],[48.5,63.5],[32.5,55.5],[31.5,38.5]]
-        .map(([x,y])=>[x*2,y*2])
+      const posts=(world.map.rampartPosts||[])
         .filter(([x,y])=>world.map.rampartDeck?.[Math.floor(y)*world.map.w+Math.floor(x)]);
       const roster=biome.roster;
       const put=(post,arch,rank='normal')=>{
@@ -193,12 +191,15 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
       return;
     }
     if(type.startsWith('keep_')){
+      // Room centres come from the generated keep (throne hall, cathedral, great hall).
+      const hall=(rid)=>{const r=world.map.castleRooms?.find(r=>r.id===rid)?.rect||[0,0,0,0];return [(r[0]+r[2])/2+.5,(r[1]+r[3])/2+.5];};
+      const T=hall('throne_hall'),C=hall('cathedral'),Gh=hall('great_hall');
       const rooms={
-        keep_banners:[[[95,82]],'knight'],keep_chapel:[[[70,102]],'cultist'],
-        keep_feast:[[[100,110]],'abomination'],keep_vault:[[[96,82],[70,102]],'wraith'],
-        keep_trial:[[[95,82],[100,110]],'knight'],keep_procession:[[[70,102],[100,110]],'demon'],
-        keep_armory:[[[100,110]],'knight'],keep_guard:[[[95,82],[100,110]],'knight'],
-        keep_belltower:[[[70,102]],'wraith'],keep_coronation:[[[95,82],[70,102],[100,110]],'demon'],
+        keep_banners:[[T],'knight'],keep_chapel:[[C],'cultist'],
+        keep_feast:[[Gh],'abomination'],keep_vault:[[T,C],'wraith'],
+        keep_trial:[[T,Gh],'knight'],keep_procession:[[C,Gh],'demon'],
+        keep_armory:[[Gh],'knight'],keep_guard:[[T,Gh],'knight'],
+        keep_belltower:[[C],'wraith'],keep_coronation:[[T,C,Gh],'demon'],
       };
       const [roomsToUse,arch]=rooms[type],at=roomsToUse[rng.int(0,roomsToUse.length-1)];
       const squad=(count,lead='normal',boss=null)=>()=>{
@@ -210,7 +211,7 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
       };
       if(type==='keep_procession'){
         S.wardHp=240;
-        const family=[['Queen Elowen',95,82,'wizard'],['Prince Rowan',96.5,83,'ranger'],['Princess Mira',93.5,83,'bard']];
+        const family=[['Queen Elowen',T[0],T[1],'wizard'],['Prince Rowan',T[0]+1.5,T[1]+1,'ranger'],['Princess Mira',T[0]-1.5,T[1]+1,'bard']];
         for(const [name,x,y,sprite] of family){const [px,py]=world.map.walkable(x,y)?[x,y]:world.map.randomNear(x,y,2,rng.fn());person(name,px,py,sprite);}
       }
       const plan={

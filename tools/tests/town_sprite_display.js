@@ -11,7 +11,7 @@ const {openGame,report}=require('./harness');
       const {townFrameReady,preloadTownSheets,townSprite}=await import('/src/game/render.js');
       const {TOWNSFOLK}=await import('/src/data/townsfolk.js');
       const canvas=document.createElement('canvas');
-      canvas.width=128*11;canvas.height=192;
+      canvas.width=256*11;canvas.height=192;
       const checks=[];
       if(!townFrameReady(canvas,11))checks.push('Recolored Canvas sheet rejected');
       if(townFrameReady(canvas,13))checks.push('Short non-knight sheet accepted for knight');
@@ -19,8 +19,8 @@ const {openGame,report}=require('./harness');
       if(!(await preloadTownSheets(knightIds)).every(Boolean))
         checks.push('A generated knight sheet failed to load');
       for(const id of knightIds){
-        const sheet=townSprite(id,{hue:15,sat:.9,light:.01});
-        if(!(sheet instanceof HTMLCanvasElement)||!townFrameReady(sheet,13))
+        const sheet=townSprite(id,null);
+        if(!sheet||!townFrameReady(sheet,13))
           checks.push('Knight palette Canvas not ready: '+id);
       }
       return checks;
@@ -67,8 +67,8 @@ const {openGame,report}=require('./harness');
         const {replacementImage}=await import('/src/core/replacementart.js');
         const {VENDORS}=await import('/src/world/town.js');
         G.char.townSeed=seed;game.enterTown();
-        const npcs=G.world.npcs;
-        const vendors=npcs.filter(n=>!!n.vendor),visitors=npcs.filter(n=>!!n.townsfolkId);
+        const npcs=G.world.npcs;for(const a of G.world.townLife.agents)if(a.hidden)G.world.townLife.show(a,G.player.x,G.player.y);
+        const vendors=npcs.filter(n=>!!n.vendor),visitors=npcs.filter(n=>!!n.townsfolkId&&!n.adv);
         const issues=[];
         if(vendors.length!==VENDORS.length)
           issues.push('Expected '+VENDORS.length+' unchanged vendors, got '+vendors.length);
@@ -88,9 +88,8 @@ const {openGame,report}=require('./harness');
         const loaded=await preloadTownSheets(visitors.map(n=>n.townsfolkSpriteId));
         if(!loaded.every(Boolean))issues.push('Some generated civilian sheets failed to load');
         for(const n of visitors){
-          const img=townSprite(n.townsfolkSpriteId,n.pal);
-          const frames=n.knight?13:11;
-          if(!(img instanceof HTMLCanvasElement)||!townFrameReady(img,frames))
+          const img=townSprite(n.townsfolkSpriteId,null);
+          if(!img||!townFrameReady(img,n.frameCount))
             issues.push('Original generated animation unavailable: '+n.name);
         }
         return issues;

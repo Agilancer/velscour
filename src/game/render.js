@@ -10,7 +10,9 @@ import { replacementImage } from '../core/replacementart.js';
 import { classSprite } from '../core/assets.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { gritAt } from '../gfx/grit.js';
-import { townFrame, townMotion } from './townsfolkvisuals.js';
+import { townFrame, townMotion, TOWN_FRAME_W, TOWN_FRAME_H } from './townsfolkvisuals.js';
+import { drawEmote } from '../gfx/emotes.js';
+import { drawTownProp, TOWN_PROP_KINDS } from '../gfx/townprops.js';
 import { drawTownSpeech } from './townspeech.js';
 import { enemyImage } from '../core/enemyart.js';
 import { drawLootLabels } from './loot.js';
@@ -21,7 +23,6 @@ const transitionSprites = new Map();
 // Vendors keep their existing painted replacement sprites.
 // Cache original PNG sheets and recolored variants separately. Recolored
 // sheets are Canvas elements, not HTMLImageElements (no .complete/.naturalWidth).
-const TOWN_FRAME_W=128, TOWN_FRAME_H=192;
 const townSheets=new Map();
 const townPaletteSheets=new Map();
 function townSheet(id) {
@@ -64,43 +65,12 @@ export function townFrameReady(sheet,count=11) {
   const width=sheet?.naturalWidth||sheet?.width||0,height=sheet?.naturalHeight||sheet?.height||0;
   return width>=TOWN_FRAME_W*count && height>=TOWN_FRAME_H;
 }
+const advPortraits=new Map();
+function advPortrait(id){let img=advPortraits.get(id);if(!img){img=new Image();img.src=`assets/sprites/select/${id}.webp`;advPortraits.set(id,img);}return img.complete&&img.naturalWidth?img:null;}
 export function townSprite(id,palette=null) {
   const img=townSheet(id);
   return img?.complete&&img.naturalWidth ? townPaletteSheet(id,img,palette) : null;
 }
-function drawTownMood(ctx,n,x,y){
-  if(!n.townMood||n.townMoodT<=0)return;
-  const bob=Math.sin(G.time*8)*2,px=Math.round(x+18),py=Math.round(y-70+bob);ctx.save();
-  if(n.townMood==='affection'||n.townMood==='celebration'){
-    ctx.fillStyle=n.townMood==='affection'?'#f24e72':'#ffd45c';
-    for(const [dx,dy,w,h] of [[3,0,5,3],[1,3,9,3],[2,6,7,3],[4,9,3,2]])ctx.fillRect(px+dx-7,py+dy-5,w,h);
-    if(n.townMood==='celebration'){ctx.fillStyle='#fff0a0';for(let i=0;i<3;i++){const a=G.time*3+i*2.1;ctx.fillRect(px+Math.cos(a)*12,py+Math.sin(a)*10,3,3);}}
-  }else if(n.townMood==='argument'){
-    ctx.fillStyle='#ffc14d';ctx.fillRect(px-7,py-7,14,14);ctx.fillStyle='#42251d';
-    ctx.fillRect(px-4,py-3,2,2);ctx.fillRect(px+2,py-3,2,2);ctx.fillRect(px-3,py+3,6,2);
-    ctx.fillStyle='#e95039';ctx.fillRect(px-5,py-6,4,2);ctx.fillRect(px+1,py-6,4,2);
-  }else if(n.townMood==='fight'){
-    ctx.lineCap='square';ctx.lineWidth=3;ctx.strokeStyle='#d9e5ec';ctx.beginPath();ctx.moveTo(px-6,py+6);ctx.lineTo(px+6,py-6);ctx.moveTo(px-6,py-6);ctx.lineTo(px+6,py+6);ctx.stroke();
-    ctx.fillStyle='#8b5831';for(const [dx,dy] of [[-8,8],[5,-8],[5,8],[-8,-8]])ctx.fillRect(px+dx,py+dy,4,3);
-    ctx.fillStyle='#fff3a0';for(let i=0;i<4;i++){const a=G.time*7+i*Math.PI/2;ctx.fillRect(Math.round(px+Math.cos(a)*11),Math.round(py+Math.sin(a)*10),3,3);}
-  }else if(n.townMood==='royal'){
-    ctx.fillStyle='#f2c75a';ctx.fillRect(px-8,py-3,16,7);ctx.fillRect(px-7,py-7,3,5);ctx.fillRect(px-1,py-10,3,8);ctx.fillRect(px+5,py-7,3,5);
-    ctx.fillStyle='#fff0a0';for(let i=0;i<4;i++){const a=G.time*2+i*Math.PI/2;ctx.fillRect(Math.round(px+Math.cos(a)*14),Math.round(py+Math.sin(a)*9),2,2);}
-  }else if(n.townMood==='alarm'){
-    const pulse=1+Math.sin(G.time*9)*.15;ctx.translate(px,py);ctx.scale(pulse,pulse);ctx.fillStyle='#d84c35';ctx.fillRect(-2,-11,4,13);ctx.fillRect(-2,5,4,4);ctx.restore();ctx.save();
-    ctx.strokeStyle='rgba(229,94,62,.8)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(px,py,13+Math.sin(G.time*5)*2,0,Math.PI*2);ctx.stroke();
-  }else if(n.townMood==='grief'){
-    ctx.fillStyle='#8fc3d0';ctx.beginPath();ctx.moveTo(px,py-8);ctx.quadraticCurveTo(px+7,py,px,py+7);ctx.quadraticCurveTo(px-7,py,px,py-8);ctx.fill();
-    ctx.fillStyle='#f3dd9a';ctx.fillRect(px-11,py+9,4,3);ctx.fillRect(px+7,py+8,4,3);
-  }else if(n.townMood==='birth'){
-    ctx.fillStyle='#ffd4e3';for(let i=0;i<3;i++){const a=G.time*2+i*2.1;ctx.fillRect(Math.round(px+Math.cos(a)*12),Math.round(py+Math.sin(a)*9),3,3);}
-    ctx.fillStyle='#fff2cb';ctx.fillRect(px-1,py-8,3,16);ctx.fillRect(px-7,py-2,15,3);
-  }else if(n.townMood==='relief'){
-    ctx.fillStyle='#9bd28f';ctx.fillRect(px-7,py-4,14,7);ctx.fillRect(px-4,py-7,8,13);ctx.fillStyle='#e9f5ca';ctx.fillRect(px-2,py-3,4,5);
-  }
-  ctx.restore();
-}
-
 const MATERIALS = [
   [/water|moat|pond|river|stream|lake/, '#75b9be'],
   [/dune|desert|sand(?!stone)/, '#e0bd78'],
@@ -224,6 +194,7 @@ function drawWall(ctx, o, k, alpha) {
 function drawProp(ctx, pr, alpha) {
   const x = isoX(pr.x, pr.y), y = isoY(pr.x, pr.y) - (pr.z || 0);
   if (alpha < 1) ctx.globalAlpha = alpha;
+  if (TOWN_PROP_KINDS.has(pr.kind)) { drawTownProp(ctx, pr, G.time); if (alpha < 1) ctx.globalAlpha = 1; return; }
   if (pr.kind === 'flame') {
     // a lit wall torch on a town building: a flickering flame over the pack's unlit torch head
     const fx = x + pr.fx, fy = y + pr.fy, f = Math.sin(G.time * 11 + pr.x * 3) * 0.5 + Math.sin(G.time * 17 + pr.y) * 0.3;
@@ -261,6 +232,34 @@ function drawProp(ctx, pr, alpha) {
     }
   }
   if (alpha < 1 || pr.light) ctx.globalAlpha = 1;
+}
+
+/** A Dark Forest tree (gfx/darkforest.js): trunk and canopy drawn apart at the pack's split row, so the canopy
+ * (and, right over the hero, the trunk) can fade where the tree stands in front of the hero. */
+function treeFade(o, hx, hy) {
+  const s = o.spr, k = o.k, w = s.w * k, x = isoX(o.x, o.y), y = isoY(o.x, o.y);
+  const top = y + s.oy * k, cut = top + s.split * k, py = hy - 30;
+  // a see-through window round the hero: every canopy in front of him within ~a tree and a half fades, nearest most
+  const dx = Math.abs(hx - x), reach = w * 0.5 + 70;
+  if (py > y + 10 || py < top - 30 || dx > reach) return null;
+  const t = clamp((dx - w * 0.1) / (reach - w * 0.1), 0, 1);
+  const canopy = 0.22 + 0.78 * t * t;
+  const trunk = py > cut - 20 && dx < w * 0.3 ? 0.45 + 0.55 * t : 1;
+  return canopy < 0.98 || trunk < 1 ? [canopy, trunk] : null;
+}
+function drawTree(ctx, pr, fade) {
+  const s = pr.spr, k = pr.k, x = isoX(pr.x, pr.y), y = isoY(pr.x, pr.y), sp = s.split;
+  ctx.save();
+  if (pr.flip) { ctx.translate(x, 0); ctx.scale(-1, 1); }
+  const bx = pr.flip ? 0 : x;
+  if (!fade) ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, bx + s.ox * k, y + s.oy * k, s.w * k, s.h * k);
+  else {
+    ctx.globalAlpha = fade[0];
+    ctx.drawImage(s.img, s.sx, s.sy, s.w, sp, bx + s.ox * k, y + s.oy * k, s.w * k, sp * k);
+    ctx.globalAlpha = fade[1];
+    ctx.drawImage(s.img, s.sx, s.sy + sp, s.w, s.h - sp, bx + s.ox * k, y + (s.oy + sp) * k, s.w * k, (s.h - sp) * k);
+  }
+  ctx.restore();
 }
 
 /** A town building's rect [x, y, w, h] in world px (town-pack art drawn from the building's centre). */
@@ -391,45 +390,55 @@ function drawNpc(ctx, n) {
     n.sbox = [x - 24, y - 40, x + 24, y + 6];
     return;
   }
+  if (n.hidden) { n.sbox = null; return; }
   // Vendors retain their existing hand-painted artwork, names and shops.
-  // Only visitors/civilians use the animated townsfolk collection.
-  const spriteId=n.vendor?null:(n.townsfolkSpriteId||n.spriteId||n.townsfolkId);
-  const sheet=spriteId?townSprite(spriteId,n.pal):null;
+  // Only visitors/civilians use the animated townsfolk collection; visiting adventurers use their class portrait.
+  const spriteId=n.vendor||n.adv?null:(n.townsfolkSpriteId||n.spriteId||n.townsfolkId);
+  const sheet=spriteId?townSprite(spriteId,null):null;
   // Painted art for vendors and scenario civilians (n.art); never hue-shifted class sprites (they came out green).
   const vendorArt=n.vendor
     ? replacementImage('npc_'+n.vendor.id) || classSprite(n.vendor.sprite,180)
+    : n.adv ? advPortrait(n.adv)
     : !spriteId && (n.art && replacementImage(n.art) || classSprite(n.sprite||'paladin',180));
-  const h=n.child?42:58,w=(h*128)/192;
+  // a townsfolk cell is 256 x 192 with the feet on row 186; adult art is ~172 px tall, children smaller in the art
+  const H=64, W=H*TOWN_FRAME_W/TOWN_FRAME_H, foot=H*(TOWN_FRAME_H-186)/TOWN_FRAME_H;
+  const vh=n.adv?54:58, vw=vendorArt?vh*vendorArt.width/vendorArt.height:0;
   const x = isoX(n.x, n.y), y = isoY(n.x, n.y);
-  ctx.fillStyle = 'rgba(0,0,0,0.38)';
-  ctx.beginPath(); ctx.ellipse(x, y, 13, 6, 0, 0, TAU); ctx.fill();
-  const {bob,squash}=townMotion(n.animT||0,!!n.walking);
-  const frame=townFrame(n);
-  const drawH=h*squash, spriteY=y-drawH-bob;
-  // HTMLCanvasElement does not expose Image.complete or Image.naturalWidth.
-  // The old guard failed for every recolored sheet and drew placeholders forever.
-  const ready=townFrameReady(sheet,n.frameCount||11);
-  if(vendorArt){
-    // Keep the old vendor image (including fallback if the replacement atlas
-    // cannot load). Match the same ground point and flip as the townsfolk.
-    ctx.save();
-    if(n.flip){ctx.translate(x,0);ctx.scale(-1,1);ctx.drawImage(vendorArt,-w/2,spriteY,w,drawH);}
-    else ctx.drawImage(vendorArt,x-w/2,spriteY,w,drawH);
-    ctx.restore();
-  } else if(!n.vendor && ready){
-    ctx.save();
-    // One centered facing transform for idle, walk, reactions and attacks.
-    if(n.flip){ctx.translate(x,0);ctx.scale(-1,1);ctx.drawImage(sheet,frame*TOWN_FRAME_W,0,TOWN_FRAME_W,TOWN_FRAME_H,-w/2,spriteY,w,drawH);}
-    else ctx.drawImage(sheet,frame*TOWN_FRAME_W,0,TOWN_FRAME_W,TOWN_FRAME_H,x-w/2,spriteY,w,drawH);
-    ctx.restore();
-  }
+  const m=townMotion(n.animT||0,!!n.walking,n.emotionT>0?n.emotion:null,!!n.running);
+  const frame=townFrame(n), lying=(n.emotionT>0&&(n.emotion==='sleep'||n.emotion==='dead'||n.emotion==='dying'||n.emotion==='hurt'))||n.lying;
+  const ready=!!sheet&&townFrameReady(sheet,n.frameCount||11);
+  const alpha=n.alpha??1;
+  // shadow: wider when lying down
+  ctx.fillStyle = `rgba(0,0,0,${0.36*alpha})`;
+  ctx.beginPath(); ctx.ellipse(x + m.dx, y, lying ? 22 : 13 - m.bob * 0.6, lying ? 7 : 6 - m.bob * 0.25, 0, 0, TAU); ctx.fill();
+  if (alpha < 1) ctx.globalAlpha = alpha;
+  ctx.save();
+  ctx.translate(Math.round(x + m.dx), Math.round(y - m.bob));
+  // squash and stretch about the feet, a lean into the walk, and the emotion's tilt; the facing mirrors it all
+  if (n.flip) ctx.scale(-1, 1);
+  ctx.rotate(m.rot + (n.walking ? m.lean : 0));
+  ctx.scale(m.sx, m.sy);
+  let top;
+  if (vendorArt && !(n.adv && lying)) {
+    ctx.drawImage(vendorArt, -vw / 2, -vh, vw, vh); top = vh * m.sy;
+  } else if (vendorArt) {
+    // a fallen adventurer: the portrait laid on its side
+    ctx.rotate(-Math.PI / 2); ctx.drawImage(vendorArt, -vw / 2, -vh * 0.5 - 4, vw, vh); top = vw * 0.6;
+  } else if (ready) {
+    ctx.drawImage(sheet, frame * TOWN_FRAME_W, 0, TOWN_FRAME_W, TOWN_FRAME_H, -W / 2, -H + foot, W, H); top = (lying ? 20 : n.child ? 44 : 56) * m.sy;
+  } else top = 50;
+  ctx.restore();
+  if (alpha < 1) ctx.globalAlpha = 1;
+  const spriteY = y - m.bob - top;
   if (n.vendor) {
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + Math.sin(G.time * 3) * 0.1;
-    ctx.drawImage(glowSprite('#ffd060'), x - 6, y - h - 18, 12, 12);
+    ctx.drawImage(glowSprite('#ffd060'), x - 6, y - vh - 18, 12, 12);
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
-  n.sbox = [x - w / 2, spriteY, x + w / 2, y];
-  drawTownMood(ctx,n,x,y);
+  n.sbox = [x - 16, spriteY, x + 16, y];
+  // an emotion bubble over the head (not while a speech bubble is up)
+  if (n.icon && n.iconT > 0 && !(n.talkT > 0)) n.iconRect = drawEmote(ctx, n.icon, x + 10, spriteY + 2, n.iconAge || 0, n.iconT, G.time + (n.idleSeed || 0));
+  else n.iconRect = null;
   if(n.bounty&&n.bounty.state!=='paid'){
     // a wanderer's bounty (game/wanderers.js): a bobbing gold "!" to take it, a silver "?" while it runs
     const offer=n.bounty.state==='offer',by=spriteY-16+Math.sin(G.time*4)*3;
@@ -626,6 +635,17 @@ export function renderWorld(ctx, world) {
     } else if (px < vr.x0 - 100 || px > vr.x1 + 100 || py < vr.y0 - 40 || py > vr.y1 + 220) continue;
     enqueue(pr.x + pr.y, 4, pr);
   }
+  // the Dark Forest's trees: only the buckets around the view (a tree's base may sit well below it)
+  const tc = map.treeCells;
+  if (tc) {
+    const bx0 = Math.max(0, Math.floor((tx0 - 2) / tc.B)), bx1 = Math.min(tc.bw - 1, Math.floor((tx1 + 12) / tc.B));
+    const by0 = Math.max(0, Math.floor((ty0 - 2) / tc.B)), by1 = Math.min(tc.bh - 1, Math.floor((ty1 + 12) / tc.B));
+    for (let by = by0; by <= by1; by++) for (let bx = bx0; bx <= bx1; bx++) for (const pr of tc.cells[by * tc.bw + bx]) {
+      const s = pr.spr, k = pr.k, px = isoX(pr.x, pr.y), x0 = px + (pr.flip ? -s.ox - s.w : s.ox) * k, y0 = isoY(pr.x, pr.y) + s.oy * k;
+      if (x0 > vr.x1 + 8 || x0 + s.w * k < vr.x0 - 8 || y0 > vr.y1 + 8 || y0 + s.h * k < vr.y0 - 8) continue;
+      enqueue(pr.x + pr.y, 4, pr);
+    }
+  }
   for (const b of world.buildings) {
     const [x,y,w,h] = buildingRect(b);
     if (x > vr.x1+24 || x+w < vr.x0-24 || y > vr.y1+24 || y+h < vr.y0-24) continue;
@@ -657,6 +677,7 @@ export function renderWorld(ctx, world) {
       case 1: o.draw(ctx); break;
       case 2: drawWall(ctx, o, wk, cutaway(wallRect(o, wk), o.depth)); break;
       case 4: {
+        if (o.tree) { drawTree(ctx, o, p && it.d > pd + 0.3 ? treeFade(o, ppx, ppy) : null); break; }
         let a = 1;
         if (p && it.d > pd + 0.5 && (o.spr || (o.sprite === 'tree' || o.sprite === 'pine'))) {
           const px = isoX(o.x, o.y), py = isoY(o.x, o.y);
@@ -829,8 +850,13 @@ function drawOverheadNames(ctx, world) {
       ctx.fillText(c.name, x * d, y * d);
     }
   }
+  // townsfolk names: only the one nearest the hero (a crowd of labels hides the crowd)
+  const hero = world.player;
+  let nearest = null, nd = 2.6;
+  if (hero) for (const n of world.npcs) if (!n.vendor && !n.stash && !n.hidden && n.sbox) { const q = Math.hypot(hero.x - n.x, hero.y - n.y); if (q < nd) { nd = q; nearest = n; } }
   for (const n of world.npcs) {
-    if (!n.sbox) continue;
+    if (!n.sbox || n.hidden) continue;
+    if (!n.vendor && !n.stash && (n !== nearest || n.talkT > 0)) continue;
     const x = (n.sbox[0] + n.sbox[2]) / 2;
     const [sx, sy] = camera.toScreen(x, n.sbox[1] - 10);
     const label = n.vendor ? n.vendor.name : n.name;

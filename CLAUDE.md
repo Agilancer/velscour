@@ -23,8 +23,11 @@ Headless Chromium tests live in `tools/tests/`; see the header comment of each f
 ```bash
 export NODE_PATH=/opt/node22/lib/node_modules     # where playwright is installed in Claude cloud containers
 node tools/tests/data_check.mjs                    # skill data sanity check, no browser (fast)
+python tools/tests/chatgpt_art.py                  # ChatGPT art kits (and Grim Nocturne pixel-locked imports) round-trip, no browser
 node tools/tests/lancer_shields.js                 # four 8-angle Lancer turntables, sprite alpha/frames, in-front/behind QA
 node tools/tests/town.js [seeds]                   # random towns: vendors/portal reachable + screenshots per seed
+node tools/tests/townlife.js [events|none]         # town life: arrival by the portal, quiet start, bubble budget, ~25% events, every event, emotion sheet
+node tools/tests/townsfolk.mjs                      # townsfolk sheets (256x192 cells), roster, scripts fit their bubbles, no browser
 node tools/tests/rings.js                          # ring augments in a live dungeon, skill mastery, ring/forge UI shots
 node tools/tests/flow.js                           # town -> portal -> boss -> exit -> depth 2 -> death -> reload
 node tools/tests/stash.js                          # town storage chest: 300 slots, store/take, auto-play stashing
@@ -53,8 +56,11 @@ node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners
 node tools/tests/pack.js catacombs,blood          # biome pack levels: arches, doors, reachability; door/arch shots
 node tools/tests/overworld.js                      # 60 outdoor seeds, 20 scenarios, forced scheduling, landscape previews
 node tools/tests/scenarios.js                      # a bot plays every Wilds/Castle scenario and Sea of Sand route to the end
+node tools/tests/castle_overworld.mjs              # 100 Castle seeds: closed curtain wall, gates, wall-walk, halls, art caps (no browser)
+node tools/tests/castle_visual.js [views]          # Castle screenshots: overview, gatehouse, corners, postern, halls
 node tools/tests/sea_of_sand_generation.mjs         # 100 desert maze seeds, route reachability, one-to-five area rolls
 node tools/tests/sea_of_sand.js                     # atlas frames, desert HUD, monster frames, screenshots (browser)
+node tools/tests/dark_forest.js [noshots] [noauto]  # 40 forest seeds reachable, bot plays all 13 trials, frame cost, shots, auto-play wins the Heart
 node tools/tests/heavenly.js                       # 60 distinct Heavenly monsters, painted floors/props, monster atlas export
 node tools/tests/worldwide_biomes.js               # 32 combat biomes, home/visitor/legacy spawns, town/wilds art and exact iso fences
 node tools/tests/worldwide_biomes.js --all         # every indoor biome's themed tile set (slow)
@@ -85,7 +91,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   (`python tools/replacementart.py`; see `docs/SPRITE_REPLACEMENTS.md`). Preserve these and the user's art.
   ASCII fallbacks for missing/loading art remain in
   `src/gfx/pixelart.js`, and the town (ground, transitions, buildings, trees, props) comes from the Overworld and Town pack
-  (`assets/source/biomes/town/`, `python3 tools/process_assets.py town`, `tools/townpack.py`; see docs/ART.md). The outdoor Forsaken Wilds biome reuses the town pack without overwriting Herrington Hollow, and adds procedural Canvas trees, scatter and scenario shrines; see `docs/OVERWORLD.md`. Sea of Sand uses the committed native floor, scatter, tree, monster, boss and modular cliff atlases under `assets/tiles/sea_of_sand/`, with five-beat scenario routing and a live HUD; see `docs/SEA_OF_SAND.md`. Rebuild the atlases with `python tools/seaofsandpack.py <Sea_of_Sand_Biome_Pack directory>`. Monsters use the user's sheets in
+  (`assets/source/biomes/town/`, `python3 tools/process_assets.py town`, `tools/townpack.py`; see docs/ART.md). The outdoor Forsaken Wilds biome reuses the town pack without overwriting Herrington Hollow, and adds procedural Canvas trees, scatter and scenario shrines; see `docs/OVERWORLD.md`. Sea of Sand uses the committed native floor, scatter, tree, monster, boss and modular cliff atlases under `assets/tiles/sea_of_sand/`, with five-beat scenario routing and a live HUD; see `docs/SEA_OF_SAND.md`. Rebuild the atlases with `python tools/seaofsandpack.py <Sea_of_Sand_Biome_Pack directory>`. The Dark Forest (192x192, the largest overworld: thick woods of the pack's 15 towering trees with canopy fade, a trail maze, three walled labyrinths with arch gates, five optional trial glades and the Heart of the Forest) uses `assets/tiles/dark_forest/` from `python tools/darkforestpack.py <THE_DARK_FOREST_Biome_Pack.zip>` (the 101 MB zip stays outside the repo); see `docs/DARK_FOREST.md`. Monsters use the user's sheets in
   `assets/source/enemies/<set>/`, imported by `python3 tools/process_assets.py enemies` and catalogued in
   `src/data/bestiary.js`; see [`docs/ENEMY_ART.md`](docs/ENEMY_ART.md). New uploads ("Enemy Assets Set N") go there too;
   set 2 (`Enemy_300.zip`, 300 single sprites) lives in `set2/<family>/` folders, each packed as one sheet and loaded per level. Pet sheets (JPEGs on a flat background) live in `familiars/` (`process_assets.py enemies familiars`). The user's sheets are in
@@ -99,7 +105,11 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   (`src/gfx/approvedbiomeart.js`). Torches and wall hangings are placed by `wallMounts()` in `src/world/dungeon.js`.
   See [`docs/BIOME_ART.md`](docs/BIOME_ART.md). New biome packs can come from 9 ChatGPT sheets (outlined templates
   and prompts in [`docs/CHATGPT_BIOME_SPRITES.md`](docs/CHATGPT_BIOME_SPRITES.md)), imported by
-  `python tools/chatgpt_biome.py <folder> <names.json> --install`. Each biome has 50 native monster variants (`src/gfx/biomenativeart.js`,
+  `python tools/chatgpt_biome.py <folder> <names.json> --install`. Enemies, bosses, pets, NPCs and class armor have
+  ChatGPT kits too (`docs/art_kits/*.zip`, built by `python tools/chatgpt_art_kits.py`), imported by
+  `python tools/chatgpt_art.py <kind> <sheet> <names.json>`; see [`docs/CHATGPT_ART_KITS.md`](docs/CHATGPT_ART_KITS.md). The character redesign
+  ("Grim Nocturne": 108-art-pixel heroes, a locked stance, armor/helmet/glove/boot overlays) is specified in
+  [`docs/art_style/`](docs/art_style/00_START_HERE.md) and packed by `python tools/chatgpt_style_kit.py`. Each biome has 50 native monster variants (`src/gfx/biomenativeart.js`,
   `src/data/biomenatives.js`) and exact X/Y barricades (`src/gfx/isobarriers.js`); see `docs/WORLD_BIOME_OVERHAUL.md`.
   HEAVENLY's 60 enemy sprites come from `src/gfx/heavenlymonsters.js`; see `docs/HEAVENLY.md`.
   The hero's look comes from the gear libraries `assets/FinalClasses/<class>.zip` (80 armors + 80 helms per class),
@@ -126,11 +136,11 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   and `hud.js` for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
   `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`.
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Overworld scenarios
-  (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. Monster/hero scaling, affixes, drops or death
+  (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. The Dark Forest (`src/world/darkforest.js`, `src/game/darkforest.js`, tree drawing in `render.js`): run `dark_forest.js`. The Castle layout (`src/world/castleworld.js`, `src/gfx/castle.js`; docs/CASTLE_OVERWORLD.md): run `castle_overworld.mjs`, `castle_visual.js` (look at the shots) and `scenarios.js`. Monster/hero scaling, affixes, drops or death
   rules (`monsterBase`, `src/data/depth.js`, `src/data/items.js`, `src/game/defiance.js`): run `balance_model.mjs` and
   `balance.js` at a few depths. Dungeon/town events (`src/game/happenings.js`): run `happenings.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. The Bard's notes, measure, jingles, sampler and Cadences (`src/game/bard.js`, `src/game/bardmusic.js`, `src/gfx/notation.js`, `src/data/notation.js`, `src/data/jingles.js`, `src/core/sampler.js`): run `bard.js` and `bard_listen.js` (`bard_dps.js` for Cadence balance). The Astronomer (class id `arcane_sorcerer`; `src/game/astronomer.js`, `src/gfx/cosmos.js`): run `astronomer.js`. Raid bosses
   (`src/game/raid.js`, every 5th depth): run `raid.js` (and `raid_sigs.js` for `src/game/raidsigs.js`). Rings, augments or skill mastery (`src/data/rings.js`,
-  `src/game/augments.js`): run `rings.js`. The town generator (`src/world/town.js`): run `town.js` with a few seeds.
+  `src/game/augments.js`): run `rings.js`. The town generator (`src/world/town.js`): run `town.js` with a few seeds. Town life (`src/game/townlife.js`, `src/data/townscripts.js`, `src/game/townsfolkvisuals.js`, `src/gfx/emotes.js`): run `townlife.js`, `townsfolk.mjs` and `town_visuals.mjs`; rebuild the townsfolk sheets with `python tools/build_townsfolk_pack.py`.
 - Velscour waits at `FINAL_DEPTH` (500, `src/data/depth.js`); monster levels come from `depthLevel(depth)`, never the
   raw depth.
 

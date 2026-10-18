@@ -23,6 +23,9 @@ import { createOverworldScenario } from './overworld.js';
 import { addWanderers } from './wanderers.js';
 import { createSeaOfSandScenario } from './seaofsand.js';
 import { loadSeaOfSandPack } from '../gfx/seaofsand.js';
+import { createDarkForestRun } from './darkforest.js';
+import { generateDarkForest } from '../world/darkforest.js';
+import { loadDarkForestTrees } from '../gfx/darkforest.js';
 import { loadCastlePack } from '../gfx/castle.js';
 import { World } from './world.js';
 import { Player } from './player.js';
@@ -31,7 +34,6 @@ import { applyTrait, rollTrait, ambushTick, madnessTick, unleashMadness } from '
 import { makeRaidBoss } from './raid.js';
 import { dropChest } from './loot.js';
 import { renderWorld, drawMinimap, preloadTownSheets } from './render.js';
-import { townFacingFlip } from './townsfolkvisuals.js';
 import { controls } from './controls.js';
 import { Auto } from './autoplay.js';
 import { writeSave, newCharData, migrate } from './save.js';
@@ -42,13 +44,13 @@ import { HUD } from '../ui/hud.js';
 import { TouchUI } from '../ui/touch.js';
 import { Vendor } from '../ui/vendor.js';
 import { Stash } from '../ui/stash.js';
-import { TOWNSFOLK, townLine, townEvent, townConversation } from '../data/townsfolk.js';
+import { startTownLife } from './townlife.js';
 import { toggleInventory } from '../ui/inventory.js';
 import { toggleTree, toggleBook } from '../ui/skills.js';
 import { toggleQuest } from '../ui/quest.js';
 import { titleScreen, hide as hideScreen, deathScreen, victoryScreen, pauseMenu, helpDialog } from '../ui/screens.js';
 
-const STEP_SURFACE = { sunken: 'water', plague: 'water', sewers: 'water', serpent: 'water', library: 'wood', gilded: 'wood', sea_of_sand:'sand' };   // footstep sounds; default stone
+const STEP_SURFACE = { sunken: 'water', plague: 'water', sewers: 'water', serpent: 'water', library: 'wood', gilded: 'wood', sea_of_sand:'sand', dark_forest:'wood' };   // footstep sounds; default stone
 
 const VELSCOUR_TAUNT_STARTS = [
   'WHY ARE YOU TRYING TO CONTACT VELSCOUR', 'WHAT MADE YOU THINK VELSCOUR WANTS TO HEAR FROM YOU',
@@ -192,124 +194,26 @@ export const game = {
     const world = new World('town', { map: t.map, tileset, biome: TOWN_BIOME, depth: 0, townTiles, buildings: t.buildings, props: t.props, wallHangings: t.wallHangings });
     world.raining = rollTownWeather();
     world.npcs = t.npcs.map((n) => ({ vendor: n.vendor, x: n.x, y: n.y, reach: 1.8, flip: n.flip, use: () => Vendor.open(n.vendor.id) }));
-    // the storage chest, beside the well where the hero arrives
+    // the storage chest, beside the well
     {
       let [x, y] = [t.start[0] + 1.5, t.start[1] - 0.5];
       if (!t.map.walkable(x, y)) [x, y] = t.map.randomNear(t.start[0], t.start[1], 2.5);
       world.npcs.push({ stash: true, name: 'Storage Chest', x, y, reach: 1.6, flip: false, use: () => Stash.open() });
     }
     c.townVisitCount = (c.townVisitCount || 0) + 1;
-    const visit = c.townVisitCount, rand01 = (()=>{let s=((c.townSeed||1)+visit*0x9e3779b9)>>>0;return ()=>{s=(s+0x6d2b79f5)>>>0;let z=s;z=Math.imul(z^(z>>>15),z|1);z^=z+Math.imul(z^(z>>>7),z|61);return ((z^(z>>>14))>>>0)/4294967296;};})();
-    const ordinary=TOWNSFOLK.filter(v=>!v.royal&&!v.regular&&!v.child&&!v.courtier);
-    const shuffled=ordinary.slice().sort(()=>rand01()-.5);
-    const regulars=TOWNSFOLK.filter(v=>v.regular);
-    const familyId=`family_${1+Math.floor(rand01()*5)}`;
-    const family=TOWNSFOLK.filter(v=>v.familyId===familyId),familyParent=family.find(v=>!v.child),familyChildren=family.filter(v=>v.child);
-    const visitors=[regulars[(visit-1)%regulars.length],regulars[visit%regulars.length],...shuffled.slice(0,4+Math.floor(rand01()*3)),familyParent,...familyChildren];
-    if(visit%3===0){const court=TOWNSFOLK.filter(v=>v.royal||v.courtier);visitors.push(...court);}
-    const uniqueVisitors=new Map(visitors.map(v=>[v.id,v]));
-    visitors.splice(0,visitors.length,...uniqueVisitors.values());
-    const eventSlot=Math.floor(rand01()*2000);
-    world.townEvent=townEvent(visit,eventSlot);world.townEventIndex=eventSlot;
-    const addCast=people=>{for(const person of people)if(person&&!visitors.some(v=>v.id===person.id))visitors.push(person);};
-    const kind=world.townEvent.kind;
-    if(kind==='royal_visit')addCast(TOWNSFOLK.filter(v=>v.royal||v.courtier));
-    if(kind==='returning_knights')addCast(TOWNSFOLK.filter(v=>v.knight).slice(0,3));
-    if(kind==='birth')addCast([TOWNSFOLK.find(v=>v.role==='midwife'),...TOWNSFOLK.filter(v=>v.child&&v.familyId===familyId).slice(0,1)]);
-    if(kind==='wedding'||kind==='engagement')addCast(shuffled.filter(v=>!v.child).slice(0,2));
-    if(kind==='funeral')addCast(regulars.slice(0,2));
-    if(kind==='harvest_fair'||kind==='market_show'||kind==='caravan')addCast(TOWNSFOLK.filter(v=>['musician','merchant','storyteller','town crier'].includes(v.role)).slice(0,2));
-    if(world.townEvent.attack||kind==='enemy_scouts'||kind==='siege_warning'||kind==='monster_sighting')addCast([...TOWNSFOLK.filter(v=>v.knight).slice(0,2),...TOWNSFOLK.filter(v=>v.role==='guard').slice(0,1)]);
-    const visitorById=new Map(visitors.map(v=>[v.id,v]));visitors.splice(0,visitors.length,...visitorById.values());
-    // Begin fetching only the civilian/knight sprite sheets actually used by
-    // this visit. Vendors intentionally retain the original painted NPC art.
-    // This is nonblocking: the renderer displays the sprites as soon as the
-    // image finishes loading and never substitutes playable-class artwork.
-    void preloadTownSheets(visitors.map(v=>v.spriteId));
-    const eventActor=v=>kind==='royal_visit'?v.royal||v.courtier:kind==='returning_knights'?v.knight:kind==='birth'?v.role==='midwife'||v.familyId===familyId:kind==='wedding'||kind==='engagement'?!v.child&&!v.royal:kind==='funeral'?v.regular:kind==='street_fight'?v.knight:kind==='enemy_scouts'||kind==='siege_warning'||kind==='monster_sighting'?v.knight||v.role==='guard':kind==='harvest_fair'||kind==='market_show'||kind==='caravan'?['merchant','musician','storyteller','town crier'].includes(v.role):false;
-    const eventActors=visitors.filter(eventActor).slice(0,4),eventActorIds=new Set(eventActors.map(v=>v.id));
-    const activeSpeakers=()=>world.npcs.filter(q=>q.townsfolkId&&q.talkT>0).length;
-    const fightSpots=world.townEvent.attack?[t.map.randomNear(t.center.x,t.center.y+2,1.8),t.map.randomNear(t.center.x+1.1,t.center.y+2,1.8)]:null;
-    const destinations=[...t.npcs.map(n=>[n.x+(rand01()-.5)*1.4,n.y+(rand01()-.5)*1.4]),[t.center.x,t.center.y+2],[t.center.x+2,t.center.y+1]];
-    const chooseDestination=()=>{const target=destinations[Math.floor(rand01()*destinations.length)];const [x,y]=t.map.randomNear(target[0],target[1],1.7);return [x,y];};
-    for (let vi=0;vi<visitors.length;vi++) {
-      const v=visitors[vi], [x,y] = t.map.randomNear(t.center.x, t.center.y + 3, 5), knightRank=visitors.filter(q=>q.knight).findIndex(q=>q.id===v.id), staged=eventActorIds.has(v.id), [tx,ty]=fightSpots&&v.knight&&knightRank<2?fightSpots[knightRank]:staged?t.map.randomNear(t.center.x,t.center.y+2,2.6):chooseDestination();
-      const npc = {
-        id:v.id,name: v.name,role:v.role,sprite: v.sprite,spriteId:v.spriteId,townsfolkSpriteId:v.spriteId,pal:v.palette,townsfolkId:v.id,frameCount:v.frame.count,child:v.child,royal:v.royal,courtier:v.courtier,knight:v.knight,familyId:v.familyId,
-        x, y, reach: 1.6, flip: false, tx, ty, waitT: rand(1, 4),
-        animT:vi*.73,walkT:0,idleSeed:vi%3,walking:false,barkT:rand(28,52),
-        // Ambient town chatter is sparse; only one event actor introduces an event.
-        talkText:v.id===eventActors[0]?.id?world.townEvent.text:'',talkT:v.id===eventActors[0]?.id?4:0,chatT:rand(28,55),
-        townMood:eventActorIds.has(v.id)?world.townEvent.emote:null,
-        townMoodT:eventActorIds.has(v.id)?18:0,
-        townPoseFrame:eventActorIds.has(v.id)?({celebration:10,affection:9,birth:9,alarm:vi%2?8:7,fight:8,royal:10,relief:9})[world.townEvent.emote]??1:1,
-        townPoseT:eventActorIds.has(v.id)?7:0,
-        townAttackT:world.townEvent.attack&&v.knight&&knightRank<2?5.5:0,townAttackSeed:vi*2.3,
-        use() { this.talkText=townLine(v.id,visit);this.talkT=4.5; },
-        update(dt) {
-          this.animT+=dt;
-          this.walking=false;
-          this.talkT=Math.max(0,this.talkT-dt);
-          this.townMoodT=Math.max(0,this.townMoodT-dt);
-          this.townPoseT=Math.max(0,this.townPoseT-dt);
-          this.townAttackT=Math.max(0,this.townAttackT-dt);
-          this.chatT=Math.max(0,this.chatT-dt);
-          this.waitT-=dt;
-          if(this.waitT<=0){
-            const d=dist(this.x,this.y,this.tx,this.ty);
-            if(d<0.65){
-              this.waitT=rand(3,7);
-              // Let one natural two-person conversation happen at a time.
-              if(this.chatT<=0&&this.talkT<=0&&activeSpeakers()===0){
-                const other=world.npcs.find(q=>q!==this&&q.townsfolkId
-                  &&dist(q.x,q.y,this.x,this.y)<2.2&&(!q.chatT||q.chatT<=0)
-                  &&(!q.talkT||q.talkT<=0));
-                if(other){
-                  const [one,two]=townConversation(v,other,visit,world.townEventIndex);
-                  this.talkText=one;this.talkT=3;
-                  other.talkText=two;other.talkT=3;
-                  this.chatT=other.chatT=rand(55,95);
-                }
-              }
-              [this.tx,this.ty]=chooseDestination();
-            }else{
-              const step=Math.min(d,1.1*dt);
-              const nx=this.x+((this.tx-this.x)/d)*step;
-              const ny=this.y+((this.ty-this.y)/d)*step;
-              if(t.map.walkable(nx,ny)){
-                this.walking=true;
-                this.walkT+=dt;
-                // Project world movement to screen X; keep orientation
-                // consistent through idle, walk and event animations.
-                this.flip=townFacingFlip(nx-this.x,ny-this.y,this.flip);
-                this.x=nx;this.y=ny;
-              }else{
-                this.waitT=.5;
-                [this.tx,this.ty]=chooseDestination();
-              }
-            }
-          }
-          if(!this.walking)this.walkT=0;
-          const p=G.player;
-          this.barkT-=dt;
-          if(p&&this.barkT<=0){
-            this.barkT=rand(48,85);
-            if(this.talkT<=0&&dist(p.x,p.y,this.x,this.y)<3
-              &&activeSpeakers()<2){
-              this.talkText=townLine(v.id,visit,Math.floor(rand01()*8));
-              this.talkT=2.7;
-            }
-          }
-        },
-      };
-      world.npcs.push(npc);
-    }
+    // the townsfolk, visiting adventurers, little set pieces and (about one visit in four) a special event
+    const life = startTownLife(world, t, c, c.townVisitCount);
+    void preloadTownSheets(life.agents.map((a) => a.townsfolkSpriteId));
     world.portals = [{
       x: t.portal.x, y: t.portal.y, active: true, color: '#ff5020', reach: 1.7,
       get label() { return `Portal — Depth ${G.char.depth}`; },
       use: () => this.confirmDungeon(),
     }];
-    this.setWorld(world, t.start, old);
+    // the hero steps out of the portal, a little way down its road toward the square
+    const P = t.portal, C = t.center, l = Math.hypot(C.x - P.x, C.y - P.y) || 1;
+    let arrive = [P.x + ((C.x - P.x) / l) * 3.2, P.y + ((C.y - P.y) / l) * 3.2];
+    if (!t.map.walkable(...arrive)) arrive = t.map.randomNear(arrive[0], arrive[1], 1.5) || t.start;
+    this.setWorld(world, arrive, old);
     HUD.setArea('Herrington Hollow', 'Town — a safe haven');
     playMusic('town'); setAmbience('town');
     Vendor.restock();
@@ -324,7 +228,7 @@ export const game = {
     const biome = BIOME_BY_ID[c.depth === FINAL_DEPTH ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
     UI.dialog({
       title: `Depth ${c.depth}`,
-      html: `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(biome.name)}</b>.</p><p class="dim">${biome.id === 'sea_of_sand' ? 'Follow the cliff maze and clear every marked scenario area to open the exit.' : biome.overworld ? 'Activate the scenario shrine and complete its trial to open the exit.' : 'Find the exit. It is sealed until its guardian is slain.'}${c.depth === FINAL_DEPTH ? '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>' : !biome.overworld && isRaidDepth(c.depth) ? '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>' : ''}</p>`,
+      html: `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(biome.name)}</b>.</p><p class="dim">${biome.id === 'sea_of_sand' ? 'Follow the cliff maze and clear every marked scenario area to open the exit.' : biome.id === 'dark_forest' ? 'Find your way through the woods and labyrinths to the Heart of the Forest. Its trial opens the way on; the glades along the trails hold trials of their own, and their rewards.' : biome.overworld ? 'Activate the scenario shrine and complete its trial to open the exit.' : 'Find the exit. It is sealed until its guardian is slain.'}${c.depth === FINAL_DEPTH ? '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>' : !biome.overworld && isRaidDepth(c.depth) ? '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>' : ''}</p>`,
       buttons: [{ label: 'Not yet' }, { label: 'Enter', cls: 'red', fn: () => this.enterDungeon() }],
     });
   },
@@ -339,7 +243,7 @@ export const game = {
         { label: 'Close' },
         { label: 'Send', cls: 'red', keepOpen: true, fn: (close) => {
           const message = document.getElementById('velscour-message')?.value || '';
-          if (message === 'HAIL VELSCOUR!') {
+          if (['HAIL VELSCOUR!', '13', '65', '69', '666', '6669'].includes(message)) {
             close();
             this.openVelscourTeleport();
           }
@@ -379,14 +283,13 @@ export const game = {
       c.seaOfSandRuns ||= {};
       delete c.seaOfSandRuns[depth];
     }
+    if (biome.id === 'dark_forest' && c.darkForestRuns) delete c.darkForestRuns[depth];
     const loading = document.getElementById('loading');
     document.getElementById('loading-text').textContent = `Answering Velscour — Depth ${depth} · ${biome.name}…`;
     loading.classList.remove('hidden');
     try {
-      if (biome.id === 'sea_of_sand') await loadSeaOfSandPack();
-      else if (!biome.overworld) await loadBiomeArt(biome);
       const mix = mixPartner(biome);
-      if (mix && !biome.overworld) await loadBiomeArt(mix);
+      await this.loadLevelArt(biome, mix);
       this.buildDungeon(depth, biome, mix);
       const w = G.world;
       await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])]).catch((e) => console.warn(e));
@@ -397,6 +300,15 @@ export const game = {
       loading.classList.add('hidden');
       this.autosave();
     }
+  },
+
+  // the art a level of this biome needs before it can be generated (the portal and Velscour's level select share it)
+  loadLevelArt(biome, mix = null) {
+    if (biome.id === 'sea_of_sand') return loadSeaOfSandPack();
+    if (biome.id === 'castle') return loadCastlePack();
+    if (biome.id === 'dark_forest') return Promise.all([loadBiomeArt(biome), loadDarkForestTrees()]);
+    if (!biome.overworld) return Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]);
+    return Promise.resolve();
   },
 
   enterDungeon() {
@@ -411,11 +323,7 @@ export const game = {
     sfx('portal');
     // fetch this biome's art first (about 1 MB); if that fails the default set stands in
     setTimeout(async () => {
-      try {
-        if (biome.id === 'sea_of_sand') await loadSeaOfSandPack();
-        else if (biome.id === 'castle') await loadCastlePack();
-        else if (!biome.overworld) await Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]);
-      } catch (e) { console.warn(e); }
+      try { await this.loadLevelArt(biome, mix); } catch (e) { console.warn(e); }
       try {
         this.buildDungeon(depth, biome, mix);
         // the level's monster art (set 2 sheets load per level); a failed sheet falls back to pixel sprites
@@ -428,11 +336,13 @@ export const game = {
   buildDungeon(depth, biome, mix = null) {
     const c = G.char;
     const old = G.world;
-    const tileset = biome.overworld ? biomeTileSet(TOWN_BIOME) : mix ? mixedTileSet(biome, mix, Math.random() < 0.5) : biomeTileSet(biome);
-    c.seaOfSandRuns ||= {};
-    const seed = biome.id === 'sea_of_sand' && c.seaOfSandRuns[depth]
-      ? c.seaOfSandRuns[depth].seed : (Math.random() * 1e9) | 0;
-    const gen = biome.overworld ? generateOverworld(depth, biome, seed) : generateDungeon(depth, biome, tileset, seed);
+    const forest = biome.id === 'dark_forest';
+    const tileset = forest ? biomeTileSet(biome) : biome.overworld ? biomeTileSet(TOWN_BIOME) : mix ? mixedTileSet(biome, mix, Math.random() < 0.5) : biomeTileSet(biome);
+    c.seaOfSandRuns ||= {}; c.darkForestRuns ||= {};
+    // the two overworlds that save their progress per depth rebuild the same map after a town trip
+    const kept = biome.id === 'sea_of_sand' ? c.seaOfSandRuns[depth] : forest ? c.darkForestRuns[depth] : null;
+    const seed = kept ? kept.seed : (Math.random() * 1e9) | 0;
+    const gen = forest ? generateDarkForest(depth, biome, tileset, seed) : biome.overworld ? generateOverworld(depth, biome, seed) : generateDungeon(depth, biome, tileset, seed);
     const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches, wallHangings: gen.wallHangings, looks: gen.looks, townTiles: gen.townTiles || null, buildings: gen.buildings || [] });
     if (gen.layoutId) { world.layoutId = gen.layoutId; world.layoutName = gen.layoutName; }
     world.rooms = gen.rooms || [];
@@ -518,6 +428,15 @@ export const game = {
       addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#40a0ff', 5));
       sfx('gate'); UI.refresh(); this.autosave();
     });
+    else if (forest) world.overworldScenario = createDarkForestRun(world, gen, biome, () => {
+      exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
+      const first = !c.cleared[depth];
+      c.cleared[depth] = true;
+      c.deepest = Math.max(c.deepest || 0, depth);
+      if (first) { c.skillPoints++; UI.log('Bonus skill point for stilling the Heart of the Forest!', '#ffd860'); }
+      addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#40a0ff', 5));
+      sfx('gate'); UI.refresh(); this.autosave();
+    });
     else if (biome.overworld) world.overworldScenario = createOverworldScenario(world, gen, biome, () => {
       exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
       const first = !c.cleared[depth];
@@ -537,7 +456,7 @@ export const game = {
         const x = 3 + Math.random() * (map.w - 6), y = 3 + Math.random() * (map.h - 6);
         if (map.walkable(x, y) && map.findPath(gen.start[0], gen.start[1], x, y, 9000)) spots.push([x, y]);
       }
-      if (spots.length >= 2) addWanderers(world, spots, biome.id === 'castle' ? 6 : 5);
+      if (spots.length >= 2) addWanderers(world, spots, biome.id === 'castle' ? 6 : forest ? 4 : 5);
       world.raining = biome.id !== 'sea_of_sand' && Math.random() < 0.3; // a wet day in the Wilds or on the walls
       if (Math.random() < 0.25) { world.darkK = biome.id === 'sea_of_sand' ? 0.45 : 0.6; world.night = true; } // nightfall: torches, spells and portals glow
     }
@@ -549,6 +468,7 @@ export const game = {
     UI.centerMsg(biome.name.toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);
     if (world.night) UI.log(world.raining ? 'Night has fallen, and the rain with it.' : 'Night has fallen over the land.', '#a0b0d0');
     if (biome.id === 'sea_of_sand') UI.log(`Secure ${gen.scenarioCount} marked scenario area${gen.scenarioCount===1?'':'s'} to open the exit. Rewards improve with each clear.`, '#ffe2a0');
+    else if (forest) UI.log(`The Dark Forest closes in. The Heart lies deep in the north-east labyrinth; ${gen.glades.length} glades hold trials and treasure along the way.`, '#c8f0a0');
     else if (biome.overworld) UI.log('Activate the glowing shrine and complete its objective to open the exit.', '#ffe2a0');
     else if (!c.tips.dungeon) { c.tips.dungeon = true; setTimeout(() => UI.log('Find the exit portal. It stays sealed until the depth\'s guardian is slain. The blue portal returns you to town.', '#ffe2a0'), 1500); }
     this.autosave();

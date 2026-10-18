@@ -12,7 +12,7 @@ export const CASTLE_FURNITURE_HEIGHT = Object.freeze({
 
 export function scaledCastlePropK(prop, factor = 2, nativeTileWorldWidth = 64) {
   const {spr, k} = prop;
-  if (!spr || !Number.isFinite(k)) return k;
+  if (!spr || !Number.isFinite(k) || prop.fixedK) return k;   // fixedK: already in world scale
   const category = spr.category;
   const height = Math.max(1, spr.h);
   const raw = k * factor;

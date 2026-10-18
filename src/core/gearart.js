@@ -122,7 +122,10 @@ export function itemLook(item, src = S) {
     const lib = src.meta.armor;
     if (!item.look || item.look[0] > lib.n) {
       const band = lib.bands[rarityName(item.rarity)] || lib.bands.common;
-      item.look = [designFor(band, item.ilvl), finishFor(item.rarity), fxFor(item.rarity)];
+      // armors added from ChatGPT sheets (gear.json extra) share the rarity's odds with its original band
+      const extra = lib.extra?.[rarityName(item.rarity)] || [];
+      const design = extra.length && chance(extra.length / (band[1] - band[0] + 1 + extra.length)) ? pick(extra) : designFor(band, item.ilvl);
+      item.look = [design, finishFor(item.rarity), fxFor(item.rarity)];
     }
   }
   return item.look;

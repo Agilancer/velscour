@@ -64,6 +64,12 @@ LAYOUT = {
     'skeletal_champions': ([350,507,666,807,963,1121,1279,1431,1601,1840], [(115,340),(365,550),(560,760),(780,1010)]),
     'misc_humanoids': ([300,440,628,817,1003,1196,1374,1542,1755,1994], [(75,260),(280,500),(520,725),(700,953)]),
 }
+# Sheets imported from ChatGPT (tools/chatgpt_art.py pets): an even grid, registered in chatgpt_sheets.json.
+_extra = SOURCE / 'chatgpt_sheets.json'
+if _extra.exists():
+    for _name, _e in json.loads(_extra.read_text(encoding='utf-8')).items():
+        SHEETS[_name] = (_e['file'], _e['frames'], _e['keys'])
+        LAYOUT[_name] = (_e['xs'], [tuple(r) for r in _e['ys']])
 ALPHA = 24   # below this is export residue, not art
 CORE = 96    # solid art; fainter glow halos bridge neighbouring frames, so pieces are linked through solid art only
 

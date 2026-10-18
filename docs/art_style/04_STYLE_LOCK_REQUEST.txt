@@ -1,0 +1,43 @@
+=== STYLE LOCK REQUEST (paste after the style-lock sheet is approved) ===
+
+Now write the VELSCOUR STYLE LOCK documents, so that any future chat (or another artist) can reproduce exactly this
+art style, these poses and these sizes. Base them on the master prompt, the attached art bible and the style-lock
+sheet you just painted. Be exhaustive and concrete: numbers, hex colours, pixel counts and do/don't pairs, never
+vague adjectives. Produce them as downloadable files:
+
+1. STYLE_LOCK.md, with these sections:
+   a. Style name and a 5-sentence definition of GRIM NOCTURNE, and what it takes from Diablo II, Symphony of the
+      Night and Final Fantasy VI (craft only, never content).
+   b. Grid and sizes: the art pixel, the 128x192 hero frame, the 108-AP hero, every landmark coordinate of the pose
+      lock, the delivery scales (2x armor, 3x overlays, 4x pose masters), and the art-pixel heights of every asset
+      type (townsfolk, children, small/medium/large monsters, bosses, pets, biome tiles).
+   c. The pose lock in words AND as a coordinate table, plus the allowed bulk changes and the forbidden changes.
+   d. The palette: every ramp with hex values, colour budgets per asset type, the 60/30/10 rule, which ramps each of
+      the 16 classes uses for skin, hair, base cloth and accent.
+   e. Pixel craft rules, each with one sentence of "do" and one of "don't": clusters, ramps and hue shifting,
+      sel-out outlines, the segmented moonlit rim, light direction, dithering, anti-aliasing, curves, detail budget.
+   f. Material recipes: for each material on the style-lock sheet, the exact ramp steps used for outline, shadow,
+      mid, light and highlight, how seams, rivets, stitches, folds and glints are placed (pixel counts).
+   g. Rarity ladder with concrete design vocabulary for each rarity.
+   h. Class bible: for all 16 classes, the hero's face, hair, skin, build, underlayer colours and the motif family
+      for armors, helmets, gloves and boots (5 concrete motif examples each).
+   i. Overlay rules: helmet, glove and boot zones (coordinates), how open helms show the face, how pieces must fit
+      the pose master.
+   j. World rules: townsfolk, monsters, bosses, pets and biomes in this style (density, palette, light, contrast
+      against floors).
+   k. The anti-slop list (everything that gets an image rejected) and a QA checklist.
+   l. A "reproduction recipe": the exact order of prompts and attachments that recreates this style from scratch.
+
+2. ARMOR_PROMPT_TEMPLATE.txt: one long fill-in-the-blanks prompt for 5 body armors of any class (with blanks for
+   class, motif family, rarities and design ideas), repeating every rule needed so it works even if pasted alone.
+
+3. OVERLAY_PROMPT_TEMPLATE.txt: the same for helmets, gloves and boots sheets.
+
+4. WORLD_PROMPT_TEMPLATES.txt: the same for townsfolk, enemies, bosses, pets and biome sheets.
+
+5. CLASS_CARDS.md: one card per class: identity line, palette ramps with hex, motif family, 10 armor ideas across
+   the rarities, 5 helmet, 5 glove and 5 boot ideas.
+
+Rules for the documents: plain markdown/text, no images inside them, every number consistent with the master
+prompt. Where you add something new, mark it "(added)" so I can review it.
+=== END ===
