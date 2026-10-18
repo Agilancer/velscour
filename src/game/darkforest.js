@@ -35,13 +35,17 @@ export function createDarkForestRun(world, gen, biome, onSuccess) {
     get cleared() { return trials.filter((S) => S.completed).length; },
     get title() { return run.current?.title || (heart.completed ? 'The Heart Is Still' : 'Seek the Heart of the Forest'); },
     // the shrine auto-play should head for: a nearby unfinished glade, else the Heart
+    // A glade once chosen stays the target until it is won: picked by straight-line distance, the target flipped
+    // between a glade and the Heart whenever the winding path to one led out of (or into) the other's 30 tiles, and
+    // auto-play walked back and forth on that line for good. Heading for the Heart, a glade passed near still wins.
     get target() {
       const p = world.player, cur = run.current;
       if (cur) return cur;
       if (heart.completed) return null;
+      if (run.aim && run.aim !== heart && !run.aim.completed) return run.aim;
       const near = p && trials.filter((S) => !S.completed && dist(at(p), S.glade.center) < 30)
         .sort((a, b) => dist(at(p), a.glade.center) - dist(at(p), b.glade.center))[0];
-      return near || heart;
+      return (run.aim = near || heart);
     },
     get shrine() { return run.target?.shrine || heart.shrine; },
     get type() { return run.current?.type || 'forest'; },
@@ -428,7 +432,7 @@ const TRIALS = {
       for (const n of x.kids) {
         if (n.state !== 'follow') continue;
         const d = Math.hypot(n.x - p.x, n.y - p.y);
-        if (d > 2 && d < 16) x.walkTo(n, [p.x, p.y], 3.6, dt);
+        if (d > 2 && d < 16) x.walkTo(n, [p.x, p.y], d > 5 ? 5.2 : 3.6, dt); // a child left behind runs to catch up
         const hurt = S.foes.filter((m) => !m.dead && Math.hypot(m.x - n.x, m.y - n.y) < 2).length;
         if (hurt) { n.hp -= hurt * 5 * dt; n.emotion = 'scared'; n.emotionT = 0.5; }
         if (n.hp <= 0) { x.fail(n.name + ' was lost to the forest.'); return; }
@@ -436,9 +440,17 @@ const TRIALS = {
       }
       if (S.stage >= 3) { x.finish(); return; }
       // auto-play: fetch a straggler, bring followers home, else find the next child
-      const follow = x.kids.filter((k) => k.state === 'follow'), lag = follow.find((k) => Math.hypot(k.x - p.x, k.y - p.y) > 6);
-      const lost = x.kids.filter((k) => k.state === 'lost').sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
-      S.objective = lag ? { x: lag.x, y: lag.y, reach: 2 } : follow.length ? { x: x.C[0], y: x.C[1], reach: 2.5 } : lost ? { x: lost.x, y: lost.y, reach: 1.5, use: () => lost.mk.use() } : undefined;
+      // a follower more than 6 tiles back: wait for it; one about to be lost (they follow up to 16): go back for it.
+      // (Walking back for every straggler ping-ponged with the walk home on long forest paths.)
+      const follow = x.kids.filter((k) => k.state === 'follow'), far = (k) => Math.hypot(k.x - p.x, k.y - p.y);
+      const lag = follow.find((k) => far(k) > 12), wait = !lag && follow.some((k) => far(k) > 6);
+      // the next child to find stays chosen until found: re-picking the nearest by straight line every frame flipped
+      // between children as the path wound through the labyrinth, and the hero wandered between them
+      if (!x.seek || x.seek.state !== 'lost') x.seek = x.kids.filter((k) => k.state === 'lost').sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
+      const lost = x.seek;
+      // home means the glade's centre itself: a follower stops 2 tiles from the hero and counts as home within 3.5 of
+      // the centre, so a hero waiting 2.5 out (the old reach) could leave a child at 4.5 forever
+      S.objective = lag ? { x: lag.x, y: lag.y, reach: 2 } : wait ? { x: p.x, y: p.y, reach: 1 } : follow.length ? { x: x.C[0], y: x.C[1], reach: 1 } : lost ? { x: lost.x, y: lost.y, reach: 1.5, use: () => lost.mk.use() } : undefined;
     },
   },
 
