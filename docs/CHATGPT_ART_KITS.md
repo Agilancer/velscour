@@ -73,6 +73,14 @@ redesign: the art bible, the master prompt, pose-master / armor / overlay templa
 108-art-pixel grid, and pixel-locked imports (`chatgpt_art.py posemaster | armor ("style": "nocturne") | overlays`).
 Start at [art_style/00_START_HERE.md](art_style/00_START_HERE.md).
 
+## Lancer war banner kit
+`ChatGPT_Lancer_Banner_Kit.zip` (built by `python tools/chatgpt_banner_kit.py`; text in `tools/chatgpt_banner_kit/`)
+is for the Lancer's class signature banner (`src/game/sigs/lancer.js`, drawn with shapes today). Two 1536 x 1024
+sheets at 3x (1 AP = 3 x 3 px): the cloth (CALM 1-6 and RALLIED 1-6 wave loops) and the parts (pole, RALLY 1-4, ROLL
+1-3), every cell 64 x 128 AP with the hero's centre line at x 32 and the crossbar at y 16. `SPEC.md` in the zip has the
+anchors, timing and how the game layers and unrolls it; `PROMPT.txt` has the ChatGPT messages. No importer yet: write
+one when the sheets come back.
+
 ## Notes
 - The winged pet atlases still carry caption text from their source sheets (`companions_winged`: "FLAP 1",
   "VELSCOUR" above the Hawk; the drakes have frame numbers under them), and the knight sheets `townsfolk_021`/`022`

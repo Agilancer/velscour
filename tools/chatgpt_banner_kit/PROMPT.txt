@@ -1,0 +1,63 @@
+========== FIRST MESSAGE (attach the zip) ==========
+
+You're the pixel artist for VELSCOUR, an isometric dark-fantasy action RPG in the style of Diablo II, drawn as
+hand-placed 2D pixel art. The attached zip is a sprite kit for one asset: the Lancer's war banner, a banner on a pole
+strapped to his back that unrolls as he fights and blazes when his knights charge.
+
+Before drawing anything, open the zip and read every file:
+- SPEC.md: exactly what to draw, the frame sizes, the anchor points and how the game animates it. It wins over
+  everything else.
+- STYLE.md: the pixel-art rules and the exact palette.
+- templates/: the two sheets you'll fill in. Cyan dashed boxes are the frames, yellow lines are the centre line and
+  the crossbar line, green lines are the cloth's full size.
+- examples/: the same sheets filled with a flat mock-up. Copy the placement and the motion from them, not the look.
+- reference/: the Lancer at the banner's scale, the palette swatches, and the banner as the game draws it today.
+
+Then reply with:
+1. The design card from STYLE.md (four lines), filled in for this banner.
+2. A one-paragraph description of the cloth: its folds, the emblem, the wear, the swallowtail.
+3. Anything in the spec that's unclear to you.
+
+Don't make any images in this reply. I'll ask for one sheet per message.
+
+========== SHEET 1 (attach templates/banner_sheet1_cloth_template.png and examples/banner_sheet1_layout_example.png) ==========
+
+Draw sheet 1, the banner cloth, as one 1536 x 1024 image. Use the attached template as the exact layout: same canvas
+size, same twelve frame positions, same flat magenta #FF00FF background.
+
+- Draw only the cloth: no pole, no crossbar, no finial.
+- Hard-edged pixel art on a grid where one art pixel is a 3 x 3 block of identical pixels. No blur, no gradients, no
+  anti-aliasing against the magenta.
+- The cloth hangs from the yellow crossbar line, centred on the yellow centre line, 40 art pixels wide and 88 long
+  (the green box), with a hem sleeve and rings along the top and a swallowtail at the bottom.
+- Night indigo field, a reliquary-gold border, and a centred emblem: a grave-steel tower shield with a portcullis grid
+  and a gold lance across it. Use the hex colours from STYLE.md. A 1 art-pixel cold moonlit rim on the right edges.
+  No text anywhere.
+- Row 1, CALM 1-6: a gentle ripple travelling down the cloth, as one seamless loop (frame 6 flows into frame 1).
+- Row 2, RALLIED 1-6: the same cloth in a strong gale: deeper folds, the tails snapping, a corner flicking up on
+  frames 3-4. Also a seamless loop.
+- The top edge never moves. Every frame shows the same cloth; only the folds and the sway change.
+- Remove every label, box and guide line from your image. Only the art on flat magenta.
+
+========== SHEET 2 (attach templates/banner_sheet2_parts_template.png, examples/banner_sheet2_layout_example.png and your sheet 1) ==========
+
+Draw sheet 2, the banner parts, as one 1536 x 1024 image. Use the attached template as the exact layout, with the same
+pixel grid (one art pixel = 3 x 3), palette and cloth design as the attached sheet 1.
+
+- POLE: a straight ash-wood pole up the centre line from the bottom yellow line to just above the crossbar, 3 art
+  pixels thick, with iron bands; a crossbar centred on it on the top yellow line, about 46 art pixels wide, with gilt
+  knobs on both ends; a gilt finial shaped like a tower merlon or a portcullis spike. Strapping at the bottom end.
+- RALLY 1-4: the fully unfurled cloth from sheet 1 at the moment the knights charge: it snaps taut, then the emblem and
+  the border ignite with holy light (the Holy ramp), brightest on frame 3, still glowing on frame 4. The glow stays
+  inside the cloth, 1-2 art pixels deep, never a soft halo outside it.
+- ROLL 1-3: the cloth rolled up into a tight cylinder, about 42 art pixels wide and 7-8 tall, its top on the yellow
+  line, gilt end caps, with a slight sway across the three frames.
+- Everything centred on its frame's centre line. Remove every label, box and guide line. Only the art on flat magenta.
+
+========== IF A SHEET COMES BACK WRONG (examples; use what applies) ==========
+
+- "The pixels aren't even. Redraw it with every art pixel as a crisp 3 x 3 block of one colour, no smoothing."
+- "The cloth leans off the centre line. Keep the top edge and the emblem centred on the yellow line in every frame."
+- "The frames don't match each other. Keep the exact same cloth, emblem and colours; change only the folds and sway."
+- "There are labels or guides left in the image. Give me the same art on plain flat magenta only."
+- "The colours drifted. Use only the hex values in STYLE.md."
