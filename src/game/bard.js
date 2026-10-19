@@ -5,21 +5,21 @@
 // scatters the notes and breaks Harmony. Clefs (0 beats) change the key. Also the note projectiles' special
 // behaviours (vibrato, staccato, fermata, crescendo, glissando, scatter, triplets, rests) and the cosmetic note
 // flights of skills that are not projectiles.
-// The music: each bar is written from one of 300 jingles (data/jingles.js). Every note sounds as it is written, on
-// its skill's register (a piano octave or the harpsichord, data/notation.js REGISTERS), pitched from the tune at its
-// beat (bardmusic.js); a Cadence performs the bar in the jingle's tempo while a playhead reads the staff, and the
-// gameplay rides the music (treble: each note launches as it plays; bass: the chord lands with the tonic). One song
-// at a time: nothing is written while a bar is performed.
+// The music (data/melodies.js, bardmusic.js): each bar picks a key and its candidate melodies (2,000 two-bar
+// harpsichord pieces); every cast re-fits the written rhythm to the candidate it matches best, so earlier notes can
+// change pitch or breathe a rest. A Cadence performs the bar with both hands, then a finishing bar from a compatible
+// melody that has never followed this one, so no song is heard twice. Casts write nothing while the written bar is
+// performed; during the finishing bar they write the next bar silently, and a bar completed then waits for its downbeat.
 import { G } from '../state.js';
 import { rand, chance, TAU, angleTo, dist } from '../core/util.js';
 import { sfx, audioCtx } from '../core/audio.js';
 import { loadInstruments, instReady, playNote, playSequence, audioNow, stopVoices } from '../core/sampler.js';
 import { isoX, isoY, HW, HH, camera } from '../core/view.js';
 import { addEffect, Ring, floatText, effects } from '../gfx/vfx.js';
-import { NOTES, MEASURE, SINGLE, noteOf, noteTier, REGISTERS, registerOf } from '../data/notation.js';
-import { JINGLES, chordPcs } from '../data/jingles.js';
-import { pitchHeads, bardArrangement, LAND_BEATS } from './bardmusic.js';
-export { pitchHeads, bardArrangement };
+import { NOTES, MEASURE, SINGLE, noteOf, noteTier, REGISTERS, registerOf, artFor } from '../data/notation.js';
+import { melodies, inKey, KEYS, TPB, chordAt, chordPcs } from '../data/melodies.js';
+import { realize, bestMelody, fitScore, arrangement, pickFinish, performBeats, drawn } from './bardmusic.js';
+export { realize, arrangement };
 import { SKILLS } from '../data/skills.js';
 import { ScoreFx, scoreWorld, cadenceFx, flyNote, noteParticles, noteBurst, drawStaff, drawNoteShape, TIERS } from '../gfx/notation.js';
 import { hit, aoe } from './combat.js';
@@ -35,15 +35,65 @@ const later = (w, t, fn) => w.addHazard(new Wait(t, fn));
 const roll = (d) => rand(d[0], d[1]);
 const EPS = 1e-6;
 
+// ---------------------------------------------------------------- songs heard (never the same song twice)
+const HEARD_KEY = 'velscour_bard_heard', HEARD_MAX = 6000, RECENT = 48;
+let heard = null;
+function heardSet() {
+  if (heard) return heard;
+  heard = new Set();
+  try { const a = JSON.parse(localStorage.getItem(HEARD_KEY) || '[]'); if (Array.isArray(a)) for (const k of a) heard.add(k); } catch (e) { /* private mode */ }
+  return heard;
+}
+function remember(song) {
+  const h = heardSet();
+  h.add(song);
+  if (h.size > HEARD_MAX) h.delete(h.values().next().value);
+  try { localStorage.setItem(HEARD_KEY, JSON.stringify([...h])); } catch (e) { /* full or blocked */ }
+}
+
 export function bardScore(p) {
-  if (!p.score) { p.score = { notes: [], beats: 0, key: 'treble', harmony: 0, harmonyT: 0, idle: 0, flash: 0, discord: 0, cadences: 0, discords: 0, jingle: -1, jst: { e: -1 }, play: null }; nextJingle(p.score); }
+  if (!p.score) { p.score = { notes: [], beats: 0, key: 'treble', harmony: 0, harmonyT: 0, idle: 0, flash: 0, discord: 0, cadences: 0, discords: 0, mel: -1, keyId: null, cands: [], recentA: [], recentB: [], play: null, pending: null }; nextBar(p.score); }
   return p.score;
 }
-/** The next bar is written from a new jingle (never the same twice running); its key signature shows at once. */
-function nextJingle(sc) {
-  let j;
-  do j = Math.floor(Math.random() * JINGLES.length); while (j === sc.jingle && JINGLES.length > 1);
-  sc.jingle = j; sc.jst = { e: -1 }; sc.bar = (sc.bar || 0) + 1;
+const pcOfKey = (k) => k.pc + (k.minor ? 3 : 0);   // a minor key's relative major
+/**
+ * A new bar: a key (often the same or a neighbour of the last, so the songs flow), its candidate melodies (none
+ * played lately), and one of them to start from; its key signature shows on the empty staff at once.
+ */
+function nextBar(sc) {
+  const last = KEYS.find((k) => k.id === sc.keyId), x = Math.random();
+  let key;
+  if (last && x < 0.35) key = last;
+  else if (last && x < 0.7) { // a neighbour: the relative key, the dominant or the subdominant side
+    const pc = pcOfKey(last), near = KEYS.filter((k) => k !== last && [0, 5, 7].includes(((pcOfKey(k) - pc) % 12 + 12) % 12));
+    key = near[Math.floor(Math.random() * near.length)] || last;
+  } else key = KEYS[Math.floor(Math.random() * KEYS.length)];
+  sc.keyId = key.id;
+  const all = inKey(key.id);
+  sc.cands = all.filter((id) => !sc.recentA.includes(id));
+  if (!sc.cands.length) sc.cands = all;
+  sc.mel = sc.cands[Math.floor(Math.random() * sc.cands.length)];
+  sc.bar = (sc.bar || 0) + 1;
+}
+/** The melody the bar is written from. */
+export const bardMelody = (sc) => melodies()[sc && sc.mel >= 0 ? sc.mel : 0];
+/** Re-fit the written bar to its best candidate and pitch every note again. */
+function refit(sc) {
+  sc.mel = bestMelody(sc.cands, sc.notes, sc.mel);
+  realize(bardMelody(sc), sc.notes, sc.key);
+}
+/**
+ * Auto-play: how much better (+) or worse (-) the bar's best melody fits if glyph g is written next, about -1..1.
+ * Rhythms that are some tune's own get pitched as that tune; this lets auto-play lean into them.
+ */
+export function bardFitGain(p, g) {
+  const sc = p.score;
+  if (!sc || !NOTES[g] || NOTES[g].clef || bardPerforming(p)) return 0;
+  const M = melodies(), extra = { g, at: sc.beats }, ids = sc.cands.length > 60 ? sc.cands.filter((_, i) => i % 2 === sc.bar % 2) : sc.cands;
+  let now = -Infinity, then = -Infinity;
+  for (const id of ids) { now = Math.max(now, fitScore(M[id], sc.notes)); then = Math.max(then, fitScore(M[id], sc.notes, extra)); }
+  const heads = NOTES[g].rest ? 1 : NOTES[g].heads || 1;
+  return Math.max(-1, Math.min(1, (then - now) / (2 * heads) - 0.15));
 }
 const avgOf = (d) => (d[0] + d[1]) / 2;
 /** What one written note is worth in a cadence: the skill's hit, never less than the basic attack's. */
@@ -65,23 +115,36 @@ export function bardNoteFor(p, sk) {
   return ['e', 's', 'rt'].find((k) => NOTES[k].beats <= rem + EPS) || g;
 }
 
-const spbOf = (sc) => 60 / JINGLES[sc.jingle >= 0 ? sc.jingle : 0].tempo;
+const playing = (sc) => !!sc.play && !sc.play.done && sc.play.w.hazards.includes(sc.play);
 /**
- * A note sounds as it is written (a beamed group or triplet plays its figure at the jingle's tempo). The writing is
- * one voice: a new note cuts the one before it, so quick casts never pile up into a second tune.
+ * A note sounds as it is written (a beamed group or triplet plays its figure at the tune's tempo), with the chord's
+ * root under it in the left hand when the harmony changes. The writing is one voice: a new note cuts the one before
+ * it. Nothing sings while a song is being performed (its finishing bar is playing).
  */
 function sing(sc, note) {
-  const inst = REGISTERS[note.reg].inst;
-  if (!note.heads.length) return;
+  if (!note.heads.length || playing(sc)) return;
   stopVoices(sc.wv || [], 0.05);
-  const spb = spbOf(sc), t = audioNow(), N = NOTES[note.g], each = (N.beats / (N.heads || 1)) * spb, tag = { kind: 'write', bar: sc.bar };
-  sc.wv = note.heads.map((h) => playNote(inst, h.midi, { at: t + (h.at - note.at) * spb, dur: Math.max(0.12, each), vel: 0.6, tag }));
+  const M = bardMelody(sc), spb = 60 / M.tempo, t = audioNow(), N = NOTES[note.g], each = (N.beats / (N.heads || 1)) * spb, tag = { kind: 'write', bar: sc.bar };
+  const art = artFor(note.reg, (note.sound || N.beats * TPB) / TPB), dbl = REGISTERS[note.reg] && REGISTERS[note.reg].double;
+  sc.wv = note.heads.flatMap((h) => {
+    const at = t + (h.at - note.at) * spb, v = [playNote('harpsichord', h.midi, { at, dur: Math.max(0.12, each), vel: 0.62, art, tag })];
+    if (dbl && h.midi >= 67) v.push(playNote('harpsichord', h.midi - 12, { at, dur: Math.max(0.12, each), vel: 0.32, art, tag }));
+    return v;
+  });
+  const ch = chordAt(M.A, Math.round(note.at * TPB));
+  if (ch !== sc.wch) { // the bass of a new chord
+    sc.wch = ch;
+    const lo = sc.key === 'bass' ? 36 : 40, pc = chordPcs(M.key, ch)[0], bass = lo + ((pc - lo) % 12 + 12) % 12;
+    sc.wv.push(playNote('harpsichord', bass, { at: t, dur: Math.min(1.2, 2 * spb), vel: 0.4, art: 'normal_held', tag }));
+  }
 }
 
-/** Is a bar being performed? One song at a time: nothing is written until it has landed. */
+/** Is the written bar being performed, or is a finished bar waiting for its downbeat? Nothing is written then. */
 export function bardPerforming(p) {
-  const pl = p.score && p.score.play;
-  return !!pl && !pl.done && pl.w === p.world && pl.w.hazards.includes(pl);
+  const sc = p.score;
+  if (!sc) return false;
+  if (sc.pending) return true;
+  return playing(sc) && sc.play.w === p.world && sc.play.t < sc.play.lock;
 }
 
 /**
@@ -94,26 +157,26 @@ export function bardCompose(p, sk, L) {
   const sc = bardScore(p), N = NOTES[g], tier = noteTier(L);
   sc.idle = 0;
   if (N.clef) {
-    if (sc.key !== N.clef) { sc.key = N.clef; floatText(p.x, p.y, 92, N.clef === 'bass' ? 'Bass Clef' : 'Treble Clef', TIERS[tier].staff, 11); }
+    if (sc.key !== N.clef) { sc.key = N.clef; floatText(p.x, p.y, 92, N.clef === 'bass' ? 'Bass Clef' : 'Treble Clef', TIERS[tier].staff, 11); if (sc.notes.length) realize(bardMelody(sc), sc.notes, sc.key); }
     sc.flash = Math.max(sc.flash, 0.5);
-    if (instReady('piano') && !bardPerforming(p)) { // a rolled tonic chord in the clef's octave
-      const J = JINGLES[sc.jingle], base = N.clef === 'bass' ? 48 : 60, t = audioNow();
+    if (instReady() && !playing(sc) && !sc.pending) { // a rolled tonic chord in the clef's octave
+      const M = bardMelody(sc), base = N.clef === 'bass' ? 48 : 60, t = audioNow();
       stopVoices(sc.wv || [], 0.05);
-      sc.wv = chordPcs(J.key, { root: 0 }).map((pc, i) => playNote('piano', base + pc, { at: t + i * 0.045, dur: 0.5, vel: 0.45, tag: { kind: 'clef', bar: sc.bar } }));
+      sc.wv = chordPcs(M.key, M.B.chords[3]).map((pc, i) => playNote('harpsichord', base + pc, { at: t + i * 0.045, dur: 0.6, vel: 0.5, art: 'normal_held', tag: { kind: 'clef', bar: sc.bar } }));
     }
     return;
   }
   if (bardPerforming(p)) return;
-  if (!sc.notes.length && sc.play) stopVoices(sc.play.voices, 0.05); // whatever is left of the last song gives way
   // Da Capo and Rubato perform the bar at once; the cast that did it is the performance, so its note is not written
   if (sk.m.dacapo && sc.notes.length) { cadence(p, sc, 1.5, false, 'Da Capo!'); return; }
   if (sc.beats + N.beats > MEASURE + EPS) {
     if (rubato(p)) { cadence(p, sc, 1, true, 'Rubato!'); return; }
     discord(p, sc);
   }
-  const reg = registerOf(sk), note = { g, at: sc.beats, tier, dmg: noteDmg(p, sk, L), el: sk.el, sk: sk.id, reg, heads: pitchHeads(sc, g, sc.beats, reg) };
+  const note = { g, at: sc.beats, tier, dmg: noteDmg(p, sk, L), el: sk.el, sk: sk.id, reg: registerOf(sk), heads: [] };
   sc.notes.push(note);
   sc.beats += N.beats;
+  refit(sc);
   if (Math.abs(sc.beats - MEASURE) < EPS) cadence(p, sc, 1, true);   // the performance plays this note in its place
   else sing(sc, note);
 }
@@ -121,40 +184,46 @@ export function bardCompose(p, sk, L) {
 function discord(p, sc) {
   for (const n of sc.notes) { const [x, y, z] = scoreWorld(p, n.at); noteBurst(x, y, z, 0, 1, [n.g]); }
   sc.notes.length = 0; sc.beats = 0; sc.harmony = 0; sc.discord = 1; sc.discords++;
-  nextJingle(sc);
+  nextBar(sc);
   if (G.bardStats) G.bardStats.dis++;
   floatText(p.x, p.y, 92, 'Discord', '#ff6060', 12);
   stopVoices(sc.wv || [], 0.05);
-  if (instReady('piano')) { const t = audioNow(), tag = { kind: 'discord', bar: sc.bar }; [48, 49, 54, 55, 61].forEach((m, i) => playNote('piano', m, { at: t + i * 0.012, dur: 0.45, vel: 0.55, tag })); }
-  else sfx('error', 0.5);
+  if (instReady() && !playing(sc)) { const t = audioNow(), tag = { kind: 'discord', bar: sc.bar }; [48, 49, 54, 55, 61].forEach((m, i) => playNote('harpsichord', m, { at: t + i * 0.012, dur: 0.45, vel: 0.6, art: 'marcato_short', tag })); }
+  else if (!instReady()) sfx('error', 0.5);
 }
 
 /**
- * The bar is performed: a playhead reads the measure in the jingle's tempo. Every note sounds at its beat with the
- * chord under it in the bass, then the tonic lands on the next downbeat (the authentic cadence). Gameplay rides the
- * music: in the treble key each written note leaves the staff as a homing note the moment it plays; in the bass key
- * the whole measure lands as one chord with the tonic.
+ * The bar is performed: a playhead reads the measure in the melody's tempo while both hands play it, then the
+ * finishing bar lands on the tonic. Gameplay rides the written bar: in the treble key each written note leaves the
+ * staff as a homing note the moment it plays; in the bass key the whole measure lands as one chord on the finishing
+ * bar's downbeat.
  */
 // One bar at a time means about a third as many Cadences as when bars could overlap, so each one hits that much
 // harder (tools/tests/bard_dps.js: Bard damage on dummies back to where it was).
-const CADENCE_POWER = 5.8;
+const CADENCE_POWER = 6;
 class Performance {
-  constructor(p, sc, notes, mul, perfect) {
-    const J = JINGLES[sc.jingle >= 0 ? sc.jingle : 0], end = notes.reduce((m, n) => Math.max(m, n.at + NOTES[n.g].beats), 0);
-    Object.assign(this, { p, w: p.world, j: J, notes, clef: sc.key, spb: 60 / J.tempo, t: 0, i: 0, ev: [], voices: [], bar: sc.bar });
+  constructor(p, sc, notes, mul, perfect, at = 0) {
+    const M = bardMelody(sc), end = notes.reduce((m, n) => Math.max(m, n.at + NOTES[n.g].beats), 0);
+    const F = melodies()[pickFinish(M.id, heardSet(), sc.recentB)];
+    Object.assign(this, { p, w: p.world, M, F, notes, drawn: drawn(notes), clef: sc.key, spb: 60 / M.tempo, t: 0, i: 0, ev: [], voices: [], bar: sc.bar });
     this.land = perfect ? MEASURE : Math.max(1, Math.ceil(end - EPS));
-    this.end = this.land * this.spb;
-    this.tail = LAND_BEATS * this.spb + 0.15;   // the landing chord rings out before the next bar can begin
+    this.lock = this.land * this.spb;                        // the written bar: nothing new is written meanwhile
+    this.end = performBeats(this.land) * this.spb;           // then the finishing bar
     this.mul = mul * CADENCE_POWER; this.H = 1 + 0.1 * sc.harmony;
     this.tier = Math.max(...notes.map((n) => n.tier));
-    this.score();
+    this.song = `${M.id}:${F.id}`;
+    remember(this.song);
+    for (const [k, id] of [['recentA', M.id], ['recentB', F.id]]) { sc[k].push(id); if (sc[k].length > RECENT) sc[k].shift(); }
+    if (G.bardStats) (G.bardStats.songs || (G.bardStats.songs = [])).push(this.song);
+    this.score(at);
   }
   at(beat, fn) { this.ev.push({ t: beat * this.spb, fn }); }
   /** Schedule the audio on the Web Audio clock (exact timing) and the gameplay on game time. */
-  score() {
+  score(at) {
     const { p, w, notes } = this;
-    this.voices = playSequence(bardArrangement(this.j, notes, this.clef, this.land), { at: audioNow() + 0.05, bpm: this.j.tempo, tag: { kind: 'perf', bar: this.bar } }).voices;
-    if (!instReady('piano')) sfx('note', 1);
+    const seq = playSequence(arrangement(this.M, notes, this.F, { clef: this.clef, land: this.land }), { at: Math.max(at, audioNow() + 0.05), bpm: this.M.tempo, tag: { kind: 'perf', bar: this.bar } });
+    this.voices = seq.voices; this.start = seq.start;
+    if (!instReady()) sfx('note', 1);
     // gameplay
     if (this.clef === 'bass') {
       this.at(this.land, () => {
@@ -181,25 +250,26 @@ class Performance {
       }));
       this.at(this.land, () => { if (!p.dead && p.world === w) cadenceFx(p, this.tier, notes.map((n) => n.g)); });
     }
+    this.at(this.land + this.F.B.arrive / TPB, () => { if (!p.dead && p.world === w) noteBurst(p.x, p.y, 70, this.tier, 4, ['q', 'e2', 'h']); });
     this.ev.sort((a, b) => a.t - b.t);
   }
   update(dt) {
     if (this.done) return false;
     this.t += dt;
     while (this.i < this.ev.length && this.ev[this.i].t <= this.t) this.ev[this.i++].fn();
-    if (this.t > this.end + this.tail) { this.done = true; stopVoices(this.voices, 0.06); return false; }   // one tune at a time
+    if (this.t >= this.end) { this.done = true; return false; }   // the last chord's own damper ends it; the next song may begin
     return true;
   }
-  /** A new cadence cuts this one short: what was still to come happens now, the music fades. */
+  /** Cut short (tests, leaving the level): what was still to come happens now, the music fades. */
   flush() {
     while (this.i < this.ev.length) this.ev[this.i++].fn();
-    this.done = true; stopVoices(this.voices, 0.12);
+    this.done = true; this.cut = true; stopVoices(this.voices, 0.12);
   }
   draw() {}
 }
 
 function cadence(p, sc, mul, perfect, label) {
-  const notes = sc.notes.splice(0), w = p.world;
+  const notes = sc.notes.splice(0);
   sc.beats = 0;
   if (!notes.length) return;
   if (perfect) { sc.harmony = Math.min(5, sc.harmony + 1); sc.harmonyT = 12; }
@@ -209,22 +279,38 @@ function cadence(p, sc, mul, perfect, label) {
   if (rests) { p.mana = Math.min(p.maxMana, p.mana + p.maxMana * 0.04 * rests); p.heal(p.maxHp * 0.015 * rests, true); }
   floatText(p.x, p.y, 96, label || (sc.harmony > 1 ? `Cadence! Harmony ${sc.harmony}` : 'Cadence!'), TIERS[Math.min(4, sc.harmony)].staff, 13);
   stopVoices(sc.wv || [], 0.05); // the note that completed the bar gives way to its performance
-  if (sc.play && !sc.play.done) sc.play.flush();
-  const perf = new Performance(p, sc, notes, mul, perfect);
-  sc.play = perf;
-  w.addHazard(perf);
-  nextJingle(sc);
+  const q = { notes, mul, perfect, mel: sc.mel, clef: sc.key, bar: sc.bar };
+  sc.rhythm = notes.map((n) => n.g).join();   // auto-play writes a different one next
+  if (playing(sc)) sc.pending = q;   // it begins on the downbeat after the last song's finishing bar
+  else perform(p, sc, q, 0);
+  nextBar(sc);
+}
+/** Start the performance of a finished bar q (its melody, clef and bar number), at audio time `at` (0 = now). */
+function perform(p, sc, q, at) {
+  const keep = { mel: sc.mel, key: sc.key, bar: sc.bar };
+  Object.assign(sc, { mel: q.mel, key: q.clef, bar: q.bar });
+  const perf = new Performance(p, sc, q.notes, q.mul, q.perfect, at);
+  Object.assign(sc, keep);
+  sc.play = perf; sc.wch = null;
+  p.world.addHazard(perf);
 }
 
 let instAsked = false;
-/** Per-frame upkeep (called by Player.update): Harmony decay, a forgotten tune, the staff over the head. */
+/** Per-frame upkeep (called by Player.update): Harmony decay, a forgotten tune, a waiting song, the staff over the head. */
 export function bardUpdate(p, dt) {
   const sc = bardScore(p);
   if (!instAsked && audioCtx()) { instAsked = true; loadInstruments(); }
   if (!p._scoreFx || !effects.includes(p._scoreFx)) addEffect(p._scoreFx = new ScoreFx(p));
   sc.flash = Math.max(0, sc.flash - dt * 2); sc.discord = Math.max(0, sc.discord - dt * 2.5);
   if (sc.harmony && (sc.harmonyT -= dt) <= 0) sc.harmony = 0;
-  if (sc.notes.length && (sc.idle += dt) > 6) { sc.notes.length = 0; sc.beats = 0; nextJingle(sc); }
+  if (sc.pending && !playing(sc) && p.world) { // the finished bar begins on the last song's final downbeat
+    // on the beat when the audio clock agrees with the game's (a hitch or a background tab can part them: then now)
+    const prev = sc.play, beat = prev && prev.w === p.world && prev.done && !prev.cut ? prev.start + prev.end : 0, now = audioNow();
+    const at = beat > now && beat < now + 0.12 ? beat : 0, q = sc.pending;
+    sc.pending = null;
+    perform(p, sc, q, at);
+  }
+  if (sc.notes.length && !sc.pending && (sc.idle += dt) > 6) { sc.notes.length = 0; sc.beats = 0; nextBar(sc); }
 }
 /** Bard skill damage multiplier from Harmony. */
 export const harmonyMul = (p) => (p.score && p.score.harmony ? 1 + 0.06 * p.score.harmony : 1);

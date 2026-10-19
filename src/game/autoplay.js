@@ -7,7 +7,7 @@ import { G } from '../state.js';
 import { input } from '../core/input.js';
 import { dist, clamp, TAU, fmtInt, escapeHtml, angleDiff, angleTo } from '../core/util.js';
 import { MEASURE, NOTES, beatsOf } from '../data/notation.js';
-import { bardNoteFor } from './bard.js';
+import { bardNoteFor, bardFitGain, bardPerforming } from './bard.js';
 import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, spearBarrageAreas, buffAmount, curseAmount, skillDuration, effLevel } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
 import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS } from '../data/items.js';
@@ -1340,15 +1340,22 @@ export const Auto = {
   /**
    * The Bard plays to the measure: a note that completes the 4/4 bar (a Cadence) is worth triple, one that would
    * overfill it (a Discord, which breaks Harmony) is dropped while anything else fits, and Da Capo waits for a
-   * well-filled bar. Emergency heals are never held back.
+   * well-filled bar. Emergency heals are never held back. He also leans (a little: at most +-25%) toward notes
+   * whose rhythm is one of the bar's melodies' own, and away from writing the same rhythm as his last bar, so the
+   * songs come out tuneful and different.
    */
   bardMeasure(choices) {
     const p = G.player, sc = p.score, rem = MEASURE - sc.beats, rub = p.buffs.some((b) => b.t > 0 && SKILLS[b.id] && SKILLS[b.id].m.rubato);
     const beats = (sk) => (NOTES[bardNoteFor(p, sk)] || { beats: 0 }).beats; // the basic note shrinks to fit
+    const writing = !bardPerforming(p), sofar = sc.notes.map((n) => n.g).join();
     for (const ch of choices) {
-      const b = beats(ch.sk);
+      const b = beats(ch.sk), g = bardNoteFor(p, ch.sk);
       if (ch.sk.m.dacapo) ch.score *= sc.beats >= 2 ? 4 : 0.2;
       else if (b && Math.abs(b - rem) < 1e-6) ch.score *= 3;
+      if (writing && g && b) {
+        ch.score *= 1 + 0.25 * bardFitGain(p, g);
+        if (sc.rhythm && sc.rhythm.startsWith(sofar ? `${sofar},${g}` : g)) ch.score *= 0.85;
+      }
     }
     if (rub) return;
     const fits = choices.filter((ch) => ch.sk.kind === 'heal' || beats(ch.sk) <= rem + 1e-6);
