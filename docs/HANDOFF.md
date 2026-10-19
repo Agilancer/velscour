@@ -14,6 +14,17 @@ Contents
 
 ---
 
+## October 19, 2026 — biome identity: art mixes, layouts, themed rooms, 20 scenarios per biome (branch `feat/biome-identity`)
+
+- Every dungeon biome has its own art mix (the Dark Forest pack now builds the cave biomes underground; borrowed floors,
+  props and town furniture), a layout style (crypt, hall, cave, maze, channel, ruin), 10-14 themed rooms out of 36
+  furnishing recipes, and 20 optional scenarios on 20 shared mechanics with biome-specific titles and wording.
+  Castle Keep floors re-cut (top faces only, seamless paving). Full write-up: [BIOME_ROOMS.md](BIOME_ROOMS.md).
+- Files: `src/data/biomerooms.js` (themes, tags, rooms, scenario words), `src/game/scenarios.js`, `STYLES`/`furnishRoom`
+  in `src/world/dungeon.js`, `ART` in `src/data/biomes.js`, `moreFloors`/`townProps` in `biomeTileSet`.
+- Tests: `biome_scenarios.js`, `biome_looks.js` (new); `data_check` counts borrowed floors and props.
+- Open: the scenarios aren't balance-tested at deep depths; auto-play completes them only when it happens upon them.
+
 ## October 18, 2026 — Bard: a five-octave harpsichord, 2,000 two-bar melodies, two-handed performances (branch `feat/bard-harpsichord`)
 
 - **Instrument**: the piano and the old one-octave harpsichord are gone. The user's "Harpsichord 5 Octaves / 7

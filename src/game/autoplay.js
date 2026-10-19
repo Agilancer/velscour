@@ -809,6 +809,13 @@ export const Auto = {
         this.watchStuck(dt); return;
       }
     }
+    // a dungeon scenario that needs the hero somewhere (a stone to hold, a soul to lead: game/scenarios.js)
+    const ds = w.scenario;
+    if (ds && ds.objective && !ds.done && !ds.failed && !foes.some((m) => !m.dead && Math.hypot(m.x - p.x, m.y - p.y) < 5)) {
+      this.setStatus('Completing ' + ds.title);
+      this.goTo(ds.objective.x, ds.objective.y, ds.objective.reach, dt);
+      this.watchStuck(dt); return;
+    }
     // loot, chests, then the job at hand
     if (this.lootStep(w, dt)) { this.watchStuck(dt); return; }
     const exit = w.portals.find((q) => q.type === 'exit');
