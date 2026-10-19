@@ -12,7 +12,7 @@ const helmetPromises = { helmet: null };
 const LOOK_GEN = 2; // item.look[3]: looks rolled before the Grim Nocturne library are rerolled
 // Bumped with every rebuild of the gear art: a browser that kept an older gear.json beside a newer atlas read armors
 // past the atlas's end, and the hero went invisible once he put one on.
-const V = '?v=nocturne-1';
+const V = '?v=nocturne-2';
 
 function loadImage(src) {
   return new Promise((res, rej) => {
