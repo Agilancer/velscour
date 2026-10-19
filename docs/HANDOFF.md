@@ -27,6 +27,9 @@ Contents
   (`assets/ui/velscour_contact_skull.png`) recoloured to his frost palette at load, red eye dots removed (`src/gfx/dkskull.js`).
 - **Balance call, not measured**: the sword skills add damage (roughly 0.5x `power` per 2.6 s plus the AoE skills).
   Worth a `balance.js death_knight` pass if the Death Knight now feels too strong.
+- **Follow-up**: the familiar is bigger (52 px, `RUNEBLADE_LEN` in `runeblade3d.js`), 3 far patterns (rove, dance,
+  scout) take it 2-3 tiles out about a third of the time, and the Rune Weapon summons are drawn as the same 3D blade at
+  the same size (`src/gfx/runeweapon.js`, hooked at the top of `Creature.draw`).
 - Tests: new `tools/tests/runeblade_familiar.js`.
 
 ## October 18, 2026 — Bard: a five-octave harpsichord, 2,000 two-bar melodies, two-handed performances (branch `feat/bard-harpsichord`)

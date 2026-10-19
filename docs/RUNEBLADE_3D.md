@@ -3,7 +3,7 @@
 The Death Knight's class signature sword (`src/game/sigs/deathknight.js`) is a real 3D model, drawn by
 `src/gfx/runeblade3d.js`. It covers both:
 
-- **The familiar sword** (about 42 world px from guard to point), which flies round him like a pet. It twirls once
+- **The familiar sword** (`RUNEBLADE_LEN`, 52 world px from guard to point), which flies round him like a pet. It twirls once
   each time it takes a rune. See *The familiar* below.
 - **RUNIC OBLITERATION** (about 125 px), the same model scaled up. It is raised leaning away and turned, comes round
   flat to the camera as it falls through the target, then rolls and fades.
@@ -18,7 +18,9 @@ fast. It has a shadow on the floor and draws behind him when it is further from 
 - **Idle patterns** (`PATTERNS`, a new one every 5-9 s, never the same twice running): shoulder (the old hover),
   orbit, figure8, helix (a drill spinning round him), wheel (a spinning wheel over his head), sentinel (planted
   point-down beside him), pendulum, star (darts between the points of a star), loop (loop-the-loops at his side),
-  guard (in front of him), comet (a wide fast orbit) and drift (lazy, with a flip now and then).
+  guard (in front of him), comet (a wide fast orbit) and drift (lazy, with a flip now and then). About one pick in
+  three is a far one that dances 2-3 tiles out from him: rove (winds out and back in), dance (a wide pirouetting
+  sweep) and scout (darts out to a far point, loops there and comes back).
 - **A swing for each kind of skill** (`SWINGS`, picked by `swingFor(sk)`; visual only, the skill does the damage):
   slash (melee slashes, alternating sides), scythe (wide melee arcs), chop (smashes), thrust (projectiles, chains),
   spin (novas), plunge (zones, AoEs, rains, fissures), lance (beams), salute (buffs, heals, auras), sigil (summons),
@@ -32,6 +34,14 @@ fast. It has a shadow on the floor and draws behind him when it is further from 
   - Blade Waltz (8 s): circles the toughest foe, 4 cuts of 0.3x.
   - Wheel of Rime (6.5 s, a crowd of 2+): spins end over end out through a crowd and back, 0.45x each way, slows.
 - RUNIC OBLITERATION hides the familiar; it comes back from the end of the cleave.
+
+## Rune Weapon summons
+
+Dancing Rune Weapon and Dark Runeweapon (summon key `runeweapon`) are drawn by `src/gfx/runeweapon.js` as the same 3D
+model, in his current skin and palette and at the familiar's size (`RUNEBLADE_LEN`). `Creature.draw` hands them over
+first; until the model loads, the old sprite stands in. It hovers point-down and turning, leans into the way it
+flies, and on each attack swings one of three ways: a slash (alternating sides), a thrust or an overhead chop. Its glow
+follows its element (blood red, shadow green). Only the look changed: its AI and damage are as before.
 
 ## Frost skulls
 

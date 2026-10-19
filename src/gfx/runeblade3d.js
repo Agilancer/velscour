@@ -12,6 +12,8 @@
 // rim on the blade), then copied into the 2D frame at the device resolution. Without WebGL, or until the model has
 // loaded, drawRuneblade3D returns null and the caller draws the old flat blade.
 const SRC = 'assets/fx/runeblade/runeblade3d_';
+/** World px from guard to point of the Death Knight's familiar Runeblade and his Rune Weapon summons (sigs/deathknight.js, gfx/runeweapon.js). */
+export const RUNEBLADE_LEN = 52;
 export const RUNEBLADE_SKINS = [
   { id: 'reliquary_sliver', name: 'Reliquary Sliver' },
   { id: 'funeral_sash', name: 'Funeral Sash' },

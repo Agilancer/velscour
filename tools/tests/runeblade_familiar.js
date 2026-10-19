@@ -1,12 +1,12 @@
 // The Death Knight's Runeblade as a familiar (src/game/sigs/deathknight.js) and his frost skulls (src/gfx/dkskull.js):
 //  1. the frost skulls: the Velscour contact skull recoloured, eye dots removed; Death Coil flies it ('dkskull')
-//  2. all 12 idle patterns: the sword moves, stays near him, never NaN; behind/in front of him by depth
+//  2. all 15 idle patterns: the sword moves, stays near him (the 3 far ones dance 2-3 tiles out), never NaN; depth order
 //  3. a swing for every kind of skill, every Death Knight skill maps to one, each finishes
 //  4. its five skills hurt a pack (and never charge the runes)
 //  5. a soak: auto-play-style casting at a live pack, the sword uses every skill and many swings, no errors
 //   node tools/tests/runeblade_familiar.js [soak seconds, default 60] [mobile]
 // Shots: dk_skulls.png, dk_patterns.png (12 patterns x 4 moments), dk_swings.png (each swing, 4 moments),
-//        dk_pet.png (each sword skill, 4 moments), dk_deathcoil.png
+//        dk_pet.png (each sword skill, 4 moments), dk_runeweapon.png (both summons), dk_deathcoil.png
 const fs = require('fs'), path = require('path');
 if (!process.env.CHROMIUM_ARGS) process.env.CHROMIUM_ARGS = '--enable-unsafe-swiftshader';   // WebGL in headless
 const { openGame, report, OUT_DIR } = require('./harness');
@@ -127,9 +127,11 @@ const SOAK = process.argv[2] !== undefined && !isNaN(+process.argv[2]) ? +proces
     });
     const ids = Object.keys(P);
     console.log('       ' + ids.map((k) => `${k} ${P[k].len}/${P[k].far}${P[k].back ? ' (behind ' + P[k].back + ')' : ''}`).join(', '));
-    ok(ids.length === 12, `${ids.length} idle patterns`);
+    ok(ids.length === 15, `${ids.length} idle patterns`);
     ok(ids.every((k) => !P[k].nan && P[k].pat === k), 'patterns hold and never go NaN');
-    ok(ids.every((k) => P[k].far < 2.6), 'it stays near him (max ' + Math.max(...ids.map((k) => P[k].far)) + ' tiles)');
+    const FAR = ['rove', 'dance', 'scout'], near = ids.filter((k) => !FAR.includes(k));
+    ok(near.every((k) => P[k].far < 2.6), 'near patterns stay near him (max ' + Math.max(...near.map((k) => P[k].far)) + ' tiles)');
+    ok(FAR.every((k) => P[k] && P[k].far > 2.2 && P[k].far < 3.6), 'far patterns dance out 2.2-3.6 tiles: ' + FAR.map((k) => P[k] && P[k].far).join(', '));
     ok(ids.filter((k) => P[k].len > 0.6).length >= 9, 'patterns move or turn' + (ids.some((k) => P[k].len <= 0.6) ? ' (calm: ' + ids.filter((k) => P[k].len <= 0.6).join(', ') + ')' : ''));
     ok(ids.some((k) => P[k].back > 10), 'some patterns pass behind him');
     const rows = [];
@@ -198,6 +200,37 @@ const SOAK = process.argv[2] !== undefined && !isNaN(+process.argv[2]) ? +proces
     }
     save('dk_pet', await strip(prow, CW, CH, pnames));
 
+    // 4b. the Rune Weapon summons: the same 3D Runeblade, the same size as the familiar, swinging as it attacks
+    const rwRows = [], rwNames = [];
+    for (const name of ['Dancing Rune Weapon', 'Dark Runeweapon']) {
+      await clear(); await pack();
+      const got = await page.evaluate(async (name) => {
+        const { G } = window.VELSCOUR, p = G.player, w = G.world;
+        const { CLASS_SKILLS } = await import('/src/data/skills.js');
+        const sk = CLASS_SKILLS.death_knight.find((s) => s.name === name);
+        if (!sk) return 'no skill';
+        for (const c of w.creatures) if (c.summonKey === 'runeweapon') c.dead = true;
+        p.castLock = 0; p.cooldowns = {}; p.mana = 99999; w.rebuildGrid();
+        const f = w.nearestHostile('player', p.x, p.y, 12, false);
+        p.tryUseSkill(sk, f ? f.x : p.x + 1, f ? f.y : p.y, f);
+        for (let i = 0; i < 12; i++) w.update(1 / 30);
+        return w.creatures.filter((c) => c.summonKey === 'runeweapon' && c.owner === p && !c.dead).length;
+      }, name);
+      const r = []; for (let i = 0; i < 4; i++) r.push(await stepShot(i ? 5 : 2)); rwRows.push(r); rwNames.push(name.split(' ').slice(-2).join(' '));
+      const res = await page.evaluate(async () => {
+        const { G, game } = window.VELSCOUR, p = G.player, w = G.world;
+        const { RUNEBLADE_LEN } = await import('/src/gfx/runeblade3d.js');
+        const m = w.creatures.find((c) => c.summonKey === 'runeweapon' && c.owner === p && !c.dead);
+        if (!m) return null;
+        const kinds = new Set(); let swings = 0, last = 0;
+        for (let i = 0; i < 240; i++) { w.update(1 / 30); game.render(); if (m.lunge > last + 0.3) swings++; last = m.lunge; if (m._rw) kinds.add(m._rw.kind); }
+        return { drawn: !!m._rw, swings, kinds: [...kinds], len: RUNEBLADE_LEN * (m.scale || 1), fam: RUNEBLADE_LEN, top: Number.isFinite(m.screenTop) };
+      });
+      ok(got >= 1 && res && res.drawn && res.top, `${name}: summoned (${got}), drawn as the 3D Runeblade`);
+      if (res) ok(res.swings > 0 && res.len === res.fam, `${name}: ${res.swings} attacks, swings ${res.kinds.join('/')}, ${res.len} px long like the familiar (${res.fam})`);
+    }
+    save('dk_runeweapon', await strip(rwRows, CW, CH, rwNames));
+
     // 5. soak: casting at a live pack
     await clear();
     const soak = await page.evaluate(async (secs) => {
@@ -231,7 +264,7 @@ const SOAK = process.argv[2] !== undefined && !isNaN(+process.argv[2]) ? +proces
       ok(swings.length >= 6, `${swings.length} kinds of swing in play`);
       ok((st.fire || 0) >= 1, 'RUNIC OBLITERATION still fires: ' + (st.fire || 0));
     }
-    console.log('  shots: dk_skulls, dk_deathcoil, dk_patterns, dk_swings, dk_pet');
+    console.log('  shots: dk_skulls, dk_deathcoil, dk_patterns, dk_swings, dk_pet, dk_runeweapon');
   } finally {
     report(errors);
     await browser.close();
