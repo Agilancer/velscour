@@ -1,5 +1,6 @@
 // Runtime access to the complete, pivot-preserving CASTLE biome atlas pack.
 import { recolor, pageAtlas } from '../core/util.js';
+import { isoFix, isoFixImage } from './isofix.js';
 const DIR='assets/tiles/castle/';
 let loading=null,meta=null,images=null;
 const recolored=new Map();
@@ -21,6 +22,11 @@ function imageFor(category,palette){
  if(!recolored.has(key))recolored.set(key,recolor(src,palette));
  return recolored.get(key);
 }
+function fixFor(palette){
+ const key='isofix|'+JSON.stringify(palette);
+ if(!recolored.has(key))recolored.set(key,recolor(isoFixImage('castle'),palette));
+ return recolored.get(key);
+}
 export function castleObject(id,category='scatter',palette=null){
  const f=castleFrames(category).find(v=>v.id===id||v.name===id);
  if(!f)return null;
@@ -29,6 +35,9 @@ export function castleObject(id,category='scatter',palette=null){
  const spr={...pageAtlas(imageFor(category))(f.x,f.y),w:f.w,h:f.h,ox:-px,oy:-py,
   fp:tree ? 0.72 : (f.w > 260 ? 0.7 : 0.42),block:tree,name:f.id,isometric:true,castle:true,
   category,connectionMask:f.connection_mask??f.mask??null,orientation:f.orientation||null};
+ // scatter re-projected onto the 2:1 grid by tools/isofix.py
+ const fix=category==='scatter'&&isoFix('castle',f.id);
+ if(fix){Object.assign(spr,fix);if(palette)Object.defineProperty(spr,'img',{get:()=>fixFor(palette),enumerable:true});return spr;}
  // A recoloured copy is built on first draw (small atlases only, so page offsets don't change);
  // map generation stays canvas-free and can run under Node.
  if(palette)Object.defineProperty(spr,'img',{get:()=>imageFor(category,palette),enumerable:true});
