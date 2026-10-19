@@ -37,6 +37,14 @@ export function coneTargets(world, team, x, y, ang, range, half) {
 }
 
 // ===================================================================== Projectile
+/** The Death Knight's own art: his frost skull for Death Coil, his 3D Runeblade for every sword he throws, rains or orbits. */
+const dkFx = (src, fx) => (src && src.classId === 'death_knight' ? (fx === 'skull' ? 'dkskull' : fx === 'blade' ? 'dkblade' : fx) : fx);
+/** n of his 3D Runeblades circling (x, y) at radius r tiles, z px up, edge first (whirls and cyclones). */
+function dkBlades(ctx, x, y, r, t, n, z, E, k) {
+  ctx.globalAlpha = k;
+  for (let i = 0; i < n; i++) { const a = t * 11 + (i * TAU) / n; drawShape(ctx, 'dkblade', isoX(x + Math.cos(a) * r, y + Math.sin(a) * r), isoY(x + Math.cos(a) * r, y + Math.sin(a) * r) - z - i * 10, screenAngle(a + Math.PI / 2), 1, E, t); }
+  ctx.globalAlpha = 1;
+}
 export class Projectile {
   constructor(o) {
     Object.assign(this, {
@@ -50,7 +58,7 @@ export class Projectile {
     this.life = this.dur || this.range / this.speed;
     this.sx = this.x; this.sy = this.y;
     this.team = this.src ? this.src.team : this.team;
-    if (this.fx === 'skull' && this.src && this.src.classId === 'death_knight') this.fx = 'dkskull'; // Death Coil wears his frost skull
+    this.fx = dkFx(this.src, this.fx);
     if (this.lob) {
       const d = Math.max(0.5, Math.min(this.range, dist(this.x, this.y, this.tx, this.ty)));
       const a = angleTo(this.x, this.y, this.tx, this.ty);
@@ -252,7 +260,7 @@ export class Area {
     this.team = this.src ? this.src.team : this.team;
     this.hitSet = new Map();
     this.ground = this.mode !== 'cyclone';
-    if (this.mode === 'cyclone') { this.wander = rand(TAU); }
+    if (this.mode === 'cyclone') { this.wander = rand(TAU); this.fx = dkFx(this.src, this.fx); }
   }
   get depth() { return this.x + this.y; }
   update(dt) {
@@ -335,6 +343,7 @@ export class Area {
         ctx.beginPath(); ctx.ellipse(px + Math.sin(this.t * 6 + i) * 3, py - h, rr, rr * 0.4, 0, this.t * 10 + i, this.t * 10 + i + 4.5); ctx.stroke();
       }
       ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+      if (this.fx === 'dkblade') dkBlades(ctx, this.x, this.y, this.r * 0.6, this.t, 2, 24, this.E, k); // Runeblade Storm: his swords whirl in it
       return;
     }
     if (this.mode === 'wallseg') return; // particles only
@@ -406,6 +415,7 @@ function drawWallSeg(ctx) {
 export class Orbit {
   constructor(o) {
     Object.assign(this, { n: 3, radius: 1.6, dur: 5, t: 0, spiral: false, fx: 'blade', speed: 4, size: 1, o: {} }, o);
+    this.fx = dkFx(this.src, this.fx);
     this.E = elem(this.el);
     this.team = this.src.team;
     this.cd = new Map();
@@ -456,6 +466,7 @@ export class Whirl {
   constructor(o) {
     Object.assign(this, { dur: 2, t: 0, r: 1.3, speed: 4.2, tick: 0.22, tickT: 0, o: {} }, o);
     this.E = elem(this.el);
+    this.fx = dkFx(this.src, this.fx);
     this.team = this.src.team;
     this.src.channel = this;
     this.slashT = 0;
@@ -557,7 +568,10 @@ export class Whirl {
     }
     return true;
   }
-  draw(ctx) { if (this.rage) drawWhirlCyclone(ctx, this.src, this.t, this.r); }
+  draw(ctx) {
+    if (this.rage) drawWhirlCyclone(ctx, this.src, this.t, this.r);
+    if (this.fx === 'dkblade') dkBlades(ctx, this.src.x, this.src.y, 0.95, this.t, 2, 30, this.E, 1); // his swords spin round him
+  }
 }
 
 // ===================================================================== Leap
@@ -848,6 +862,7 @@ export class Trap {
 export class Rain {
   constructor(o) {
     Object.assign(this, { t: 0, dur: 1.2, n: 12, r: 2, fx: 'arrow', o: {}, impactR: 0.8 }, o);
+    this.fx = dkFx(this.src, this.fx);
     this.E = elem(this.el);
     this.team = this.src.team;
     this.spawned = 0;
