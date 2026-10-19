@@ -686,8 +686,11 @@ export function drawParticles(ctx, vr) {
         ctx.beginPath(); ctx.moveTo(0, -size * 1.6); ctx.lineTo(size * 0.6, 0); ctx.lineTo(0, size * 1.6); ctx.lineTo(-size * 0.6, 0); ctx.fill();
         ctx.setTransform(ba, bb, bc, bd, be, bf);
         break;
-      case 'skull': { // a little pixel skull (the Death Knight's casts and hits)
-        ctx.globalAlpha = Math.min(1, (1 - k) * 1.6); const u = Math.max(1, size / 3), x0 = px - u * 2.5, y0 = py - u * 3;
+      case 'skull': { // the HUD's Velscour skull (the Death Knight's casts and hits); pixel blocks while it loads
+        ctx.globalAlpha = Math.min(1, (1 - k) * 1.6);
+        const im = skullImage(p.skull);
+        if (im) { const h = size * 2.3, w = h * im.width / im.height; ctx.drawImage(im, px - w / 2, py - h / 2, w, h); break; }
+        const u = Math.max(1, size / 3), x0 = px - u * 2.5, y0 = py - u * 3;
         ctx.fillStyle = p.color; ctx.fillRect(x0, y0, u * 5, u * 4); ctx.fillRect(x0 + u, y0 + u * 4, u * 3, u * 2);
         ctx.fillStyle = p.eye || '#102040'; ctx.fillRect(x0 + u * 0.6, y0 + u * 1.6, u * 1.4, u * 1.4); ctx.fillRect(x0 + u * 3, y0 + u * 1.6, u * 1.4, u * 1.4);
         ctx.fillRect(x0 + u * 2.2, y0 + u * 3.2, u * 0.6, u * 0.8); ctx.fillRect(x0 + u * 1.5, y0 + u * 5, u * 0.5, u); ctx.fillRect(x0 + u * 3, y0 + u * 5, u * 0.5, u);
@@ -705,6 +708,14 @@ export function drawParticles(ctx, vr) {
   }
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
+}
+
+// Skull art cut from the HUD's Velscour skull by tools/build_skulls.py: '' bone with ember eyes, 'frost' the Death Knight's.
+const SKULLS = {};
+export function skullImage(v = '') {
+  let im = SKULLS[v];
+  if (!im) { im = SKULLS[v] = new Image(); im.src = `assets/fx/skulls/skull${v ? '_' + v : ''}.webp`; }
+  return im.complete && im.naturalWidth ? im : null;
 }
 
 /** Floating combat text in screen space (call with identity transform). */

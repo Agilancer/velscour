@@ -30,6 +30,8 @@ The builder never slices art along a line except where the source poses physical
 
 Summon keys now select the matching row from the compact atlases in `assets/sprites/pets/`. Land companions switch between idle, spawn, run, and lunge/attack frames; winged companions loop through wing-flap frames at rest and forward-flight frames while moving. The original labeled sheets in `assets/source/pet_animations/` remain the reviewable source art. Run `python tools/build_pet_animations.py` after changing those sheets to regenerate the runtime atlases.
 
+`CAPTIONS` in the builder wipes caption bands whose lone digits the label filter can't tell from art (the land creatures sheet, where "SPAWN 1" left its "1" in the ghoul and bear frames). `DERIVED` makes recoloured rows of their own: `dk_ghoul.webp` is the ghoul in the Death Knight's frost palette (`frost()`: corpse-blue skin, gunmetal rags, rune-cyan eyes and mist), used by his `dkghoul` summon (Raise Ghoul, Army of the Dead), which is drawn 28 px tall (`look.h`, `Monster.petH`) and pounces on foes 2-6 tiles off (`leap` in `SUMMONS`, `Monster.tryLeap`).
+
 Static structures, Slime Lord summons, and revived monsters keep their existing sprite rendering. The runtime mapping only covers rows created for animal companions and humanoid allies in this art pass.
 
 ## Sheet gallery

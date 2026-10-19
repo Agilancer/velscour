@@ -65,7 +65,7 @@ export function petAnimation(c) {
   } else if (c.moving) {
     frame = 4 + (Math.floor(c.animT * 8) % 3);
   } else frame = 0;
-  return { img, sx: frame * cw, sy: meta.row * ch, cw, ch, frames: meta.frames, h: (c.artH || c.spriteH || 48) / (restH[c.summonKey] || 1) };
+  return { img, sx: frame * cw, sy: meta.row * ch, cw, ch, frames: meta.frames, h: (c.petH || c.artH || c.spriteH || 48) / (restH[c.summonKey] || 1) };
 }
 
 /** Keep hit tint generation bounded to the shared source atlas. */

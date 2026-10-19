@@ -37,6 +37,9 @@ export function coneTargets(world, team, x, y, ang, range, half) {
 }
 
 // ===================================================================== Projectile
+// The Death Knight's skulls (and his minions') wear his frost palette.
+const dkSkull = (c) => ((c && (c.owner || c)) || {}).classId === 'death_knight' ? 'frost' : '';
+
 export class Projectile {
   constructor(o) {
     Object.assign(this, {
@@ -196,7 +199,7 @@ export class Projectile {
     }
     if (this.note) return bardProjDraw(ctx, this, px, py);
     const a = screenAngle(Math.atan2(this.vy, this.vx));
-    drawShape(ctx, this.fx, px, py, a, this.size, this.E, this.t);
+    drawShape(ctx, this.fx, px, py, a, this.size, this.E, this.t, this.fx === 'skull' ? { skull: this.skullV ??= dkSkull(this.src) } : undefined);
     if (this.fx === 'chain' && this.src) {
       const sx = isoX(this.src.x, this.src.y), sy = isoY(this.src.x, this.src.y) - 26;
       ctx.strokeStyle = '#8a8a9a'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]);

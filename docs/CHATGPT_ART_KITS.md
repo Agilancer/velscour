@@ -82,6 +82,15 @@ pole 64 x 180; the crossbar rides 114 world px above his feet, so the full cloth
 anchors, timing and how the game layers and unrolls it; `PROMPT.txt` has the ChatGPT messages. No importer yet: write
 one when the sheets come back.
 
+## Death Knight Runeblade kit
+`ChatGPT_Runeblade_Kit.zip` (built by `python tools/chatgpt_runeblade_kit.py`; text in `tools/chatgpt_runeblade_kit/`)
+is for the Death Knight's class signature (`src/game/sigs/deathknight.js`, drawn with shapes today): nine sprites, all
+blades pointing down and rotated by the game round the crossguard's centre. Sheet 1 at 3x (the hero's 1.8 AP per world
+px): HOVER and HOVER CHARGED (48 x 112 AP, guard y 22, tip y 98) and RUNE S FROST / UNHOLY / BLOOD (16 x 16). Sheet 2 at
+2x (1 AP per world px): GREATBLADE (96 x 280 AP, guard y 36, tip y 264) and RUNE L x 3 (24 x 24). Six rune slots at
+14-74% of the blade length. `STYLE.md` is the Grim Nocturne style lock with the Death Knight's motifs and ramps;
+`SPEC.md` has the landmarks and how the game layers them. No importer yet: write one when the sheets come back.
+
 ## Notes
 - The winged pet atlases still carry caption text from their source sheets (`companions_winged`: "FLAP 1",
   "VELSCOUR" above the Hawk; the drakes have frame numbers under them), and the knight sheets `townsfolk_021`/`022`
