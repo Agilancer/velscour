@@ -343,6 +343,20 @@ export function heroPortrait(cls, body, head, w, h) {
   return fitCanvas(c, b, w, h);
 }
 
+/** A copy of canvas `c` cropped to its opaque pixels (null stays null), so a card can fill its frame with the hero. */
+export function trimCanvas(c) {
+  if (!c) return c;
+  const { width: w, height: h } = c, d = c.getContext('2d').getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (d[(y * w + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  if (x1 < 0) return c;
+  const t = makeCanvas(x1 - x0 + 1, y1 - y0 + 1);
+  t.getContext('2d').drawImage(c, -x0, -y0);
+  return t;
+}
+
 // Independent, sequential save previews: never replace the active game's gear state
 // while class cards are loading. Decode one class at a time and discard full atlases
 // immediately after composing its body/helm. Existing saved item looks are reused.
@@ -354,7 +368,7 @@ export function savedGearPreview(cls, body, head) {
   if (savedPreviews.has(signature)) return savedPreviews.get(signature);
   const work = previewQueue.then(async () => {
     const src = await loadClassGear(cls);
-    return heroLook(cls, body, head, src, new Map());
+    return trimCanvas(heroLook(cls, body, head, src, new Map()));
   });
   previewQueue = work.catch(() => {});
   const result = work.catch(e => {
