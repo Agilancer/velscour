@@ -50,6 +50,7 @@ export class Projectile {
     this.life = this.dur || this.range / this.speed;
     this.sx = this.x; this.sy = this.y;
     this.team = this.src ? this.src.team : this.team;
+    if (this.fx === 'skull' && this.src && this.src.classId === 'death_knight') this.fx = 'dkskull'; // Death Coil wears his frost skull
     if (this.lob) {
       const d = Math.max(0.5, Math.min(this.range, dist(this.x, this.y, this.tx, this.ty)));
       const a = angleTo(this.x, this.y, this.tx, this.ty);

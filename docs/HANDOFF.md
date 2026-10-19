@@ -14,6 +14,21 @@ Contents
 
 ---
 
+## October 19, 2026 — class touch-ups: Paladin halo, Slime Lord gauge, the Runeblade as a familiar (branch `feat/class-touchups`)
+
+- **Paladin**: the Halo of Judgement sits higher over his head (`headAt(p, 12)`, was 6).
+- **Slime Lord**: the royal-jelly bead and its % sit higher (`headAt(p, 24)`, was 10), so the number clears his head.
+- **Death Knight, the sword**: the Runeblade now flies round him like a pet (`src/game/sigs/deathknight.js`): 12 idle
+  flight patterns (`PATTERNS`, a new one every 5-9 s), a swing for each kind of skill he casts (`SWINGS`, 12 motions,
+  visual only), five sword skills of its own (`PET`: Runic Lunge, Reaping Arc, Grave Plunge, Blade Waltz, Wheel of
+  Rime; signature hits, so they never charge the runes), a fast-move trail, a floor shadow, drawn behind him when it is
+  further from the camera. Details and numbers: [RUNEBLADE_3D.md](RUNEBLADE_3D.md#the-familiar).
+- **Death Knight, the skulls**: the skulls from his casts/hits and Death Coil now use the Velscour contact skull art
+  (`assets/ui/velscour_contact_skull.png`) recoloured to his frost palette at load (`src/gfx/dkskull.js`).
+- **Balance call, not measured**: the sword skills add damage (roughly 0.5x `power` per 2.6 s plus the AoE skills).
+  Worth a `balance.js death_knight` pass if the Death Knight now feels too strong.
+- Tests: new `tools/tests/runeblade_familiar.js`.
+
 ## October 18, 2026 — Bard: a five-octave harpsichord, 2,000 two-bar melodies, two-handed performances (branch `feat/bard-harpsichord`)
 
 - **Instrument**: the piano and the old one-octave harpsichord are gone. The user's "Harpsichord 5 Octaves / 7
