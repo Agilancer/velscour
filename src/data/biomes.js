@@ -429,7 +429,23 @@ export function mixPartner(biome, rnd = Math.random) {
   return kin.length ? kin[Math.floor(rnd() * kin.length)] : null;
 }
 
-export const BIOME_BY_ID = Object.fromEntries(BIOMES.map((b) => [b.id, b]));
+// Beta biomes: never in a biome bag or the overworld guarantee. Velscour's skull button reaches them (the "mountain"
+// message, or first on the HAIL VELSCOUR! list; game.js openVelscourContact).
+export const BETA_BIOMES = [
+  {
+    // a height-mapped climb up a mountainside to its summit (world/mountain.js, docs/MOUNTAINSIDE.md)
+    id: 'mountainside', name: 'Mountainside', pack: 'town', overworld: true, beta: true, painted: false, wallPack: null,
+    palette: null, dark: 0.3, light: 13,
+    ambient: { type: 'leaf', color: '#d8e6c0' }, mon: { hue: 8, sat: 0.9, light: 0.04 },
+    el: 'cold', blood: '#7c1610', adj: ['Windswept', 'Craggy', 'High', 'Rimed'],
+    roster: ['hound', 'golem', 'gargoyle', 'bat', 'archer', 'skeleton', 'knight', 'elemental', 'spider', 'cultist', 'wraith', 'imp'],
+    prefer: ['set2/birdfolk', 'set2/goblins', 'set2/kobolds', 'set2/warriors'],
+    swaps: [null, null, 'rime', 'pale', 'ash'],
+    torch: '#ffc078', fog: '#0c1622',
+  },
+];
+
+export const BIOME_BY_ID = Object.fromEntries([...BIOMES, ...BETA_BIOMES].map((b) => [b.id, b]));
 
 /** Overworlds share the regular biome bag, with a hard visit guarantee after three combat dungeons. */
 export const OVERWORLD_BIOME_IDS = BIOMES.filter((b) => b.overworld).map((b) => b.id);

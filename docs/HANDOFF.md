@@ -14,6 +14,22 @@ Contents
 
 ---
 
+## October 18, 2026 — MOUNTAINSIDE (beta): the first height-mapped overworld (branch `feat/mountainside`)
+
+- **What:** a 50 x 50 climb up a mountainside, foot at the bottom-left of the screen, summit at the top-right. Not in
+  any rotation (`BETA_BIOMES` in `src/data/biomes.js`, excluded from the draw and the overworld guarantee): Velscour's
+  skull + the message `mountain`, or first on the HAIL VELSCOUR! list. Full write-up: [MOUNTAINSIDE.md](MOUNTAINSIDE.md).
+- **Height map:** `map.hgt` levels (4 px each); hop up 4 levels, drop 10, taller is a wall. Movement, A*, the flow
+  field, `losWide`, `los` and auto-play's nav field follow it (`stepOk`/`stepsOk`/`circleFree(..., from)` in map.js).
+  `view.js` `setElevation` lifts `isoY` so everything stands on the terrain; picking inverts it. `src/gfx/terrain.js`
+  draws lifted columns with earth banks and granite cliff faces into the floor chunks, re-draws columns that rise in
+  front of someone, hop arcs, a sky, minimap shading.
+- **Map:** five cliff bands with alternating ramps (a switchback trail), hop-high terraces, crags, hop-up chest
+  shelves, a west ridge, an east precipice, a camp, a summit shrine; the Summit Warden opens the exit.
+- **Design calls made without asking** (the user said to start going): 4 px levels, climb 16 px / drop 40 px, a
+  Summit Warden as the goal, regular bestiary with cold palettes, procedural rock faces. Worth confirming.
+- Tests: `tools/tests/mountain.js` (new; 30 seeds, rules in play, picking, shots, auto-play takes the summit).
+
 ## October 18, 2026 — Grim Nocturne hero gear: new armors, enclosed helmets, multi-colour finishes (branch `feat/mountainside`)
 
 - **Request:** replace every class's armor sprites and helmet overlays with the user's style-locked zips (Grim

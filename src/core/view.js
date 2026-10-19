@@ -7,8 +7,14 @@ export const TH = 32; // tile height in world px
 export const HW = TW / 2;
 export const HH = TH / 2;
 
+// A height-mapped level (world/mountain.js) lifts the ground plane: ELEV(x, y) is the world px the ground stands above
+// the flat plane, so everything drawn at a tile position (creatures, spells, lights, labels) stands on the terrain.
+// PICK(wx, wy) turns a world px point back into the tile position whose lifted ground shows there.
+let ELEV = null, PICK = null;
+export function setElevation(elev, pick) { ELEV = elev; PICK = pick; }
+export const elevationAt = (x, y) => (ELEV ? ELEV(x, y) : 0);
 export const isoX = (x, y) => (x - y) * HW;
-export const isoY = (x, y) => (x + y) * HH;
+export const isoY = (x, y) => (x + y) * HH - (ELEV ? ELEV(x, y) : 0);
 
 /** Convert a screen-space direction (world px) into a tile-space direction. */
 export function screenDirToTile(dx, dy) {
@@ -62,6 +68,7 @@ export const camera = {
   screenToTile(sx, sy) {
     const wx = (sx - G.W / 2) / this.zoom + this.x;
     const wy = (sy - G.H / 2) / this.zoom + this.y;
+    if (PICK) return PICK(wx, wy);
     return [(wx / HW + wy / HH) / 2, (wy / HH - wx / HW) / 2];
   },
   // visible world-px rect

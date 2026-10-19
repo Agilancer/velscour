@@ -18,6 +18,7 @@ import { enemyImage } from '../core/enemyart.js';
 import { drawLootLabels } from './loot.js';
 import { castleTileDressing, drawCastleParticles, drawCastleWater } from '../gfx/castleground.js';
 import { drawRim, RIM } from './creature.js';
+import { drawTerrain, drawColumn, occludersFor, standKey, hopZ, drawSky, terrainShade } from '../gfx/terrain.js';
 
 let lightCanvas = null, glowCanvas = null, vignette = null, vigKey = '';
 const transitionSprites = new Map();
@@ -126,7 +127,7 @@ function transitionSprite(color, size) {
 function buildTransitionParticles(world) {
   if (world.transitionParticles) return world.transitionParticles;
   const { map } = world, particles = [];
-  if (map.castleMat) return (world.transitionParticles = particles);   // the Castle dresses its own seams (gfx/castleground.js)
+  if (map.castleMat || map.hgt) return (world.transitionParticles = particles); // the Castle dresses its own seams; terrain has cliffs   // the Castle dresses its own seams (gfx/castleground.js)
   const addEdge = (x, y, variant, nx, ny, nextVariant, x1, y1, x2, y2, salt) => {
     if (map.t[ny * map.w + nx] !== 1) return;
     const a = floorMaterial(world, variant), b = floorMaterial(world, nextVariant);
@@ -485,6 +486,7 @@ const CW = 384;
 let chunkBudgetFrame = -1, chunkBudget = 0;
 function drawFloorTiles(ctx, world, x0, y0, x1, y1, force) {
   const map = world.map;
+  if (map.hgt) return drawTerrain(ctx, world, x0, y0, x1, y1, floorEntry); // height map: lifted columns and cliffs
   const tl = [(x0 / HW + y0 / HH) / 2, (y0 / HH - x0 / HW) / 2], br = [(x1 / HW + y1 / HH) / 2, (y1 / HH - x1 / HW) / 2];
   const tr = [(x1 / HW + y0 / HH) / 2, (y0 / HH - x1 / HW) / 2], bl = [(x0 / HW + y1 / HH) / 2, (y1 / HH - x0 / HW) / 2];
   const tx0 = clamp(Math.floor(tl[0]) - 1, 0, map.w - 1), tx1 = clamp(Math.ceil(br[0]) + 1, 0, map.w - 1);
@@ -577,6 +579,7 @@ export function renderWorld(ctx, world) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  if (world.map.hgt) drawSky(ctx, W, H, camera.x * camera.zoom * G.dpr, camera.y * camera.zoom * G.dpr, world.night);
   camera.apply(ctx);
   ctx.imageSmoothingEnabled = true;
   // 'medium' (mipmapped) downscaling of the big floor/wall atlases costs several times 'low' per draw, and those are
@@ -638,19 +641,22 @@ export function renderWorld(ctx, world) {
   // height, so nothing walking behind a wall, building or tree drops out of sight
   const views = frame.views || (frame.views = []);
   let nv = 0;
+  let at = null;
   const look = (x, y, d, h, hero) => {
     if (x < vr.x0 - 60 || x > vr.x1 + 60 || y < vr.y0 - 20 || y > vr.y1 + 140) return;
     const v = views[nv] || (views[nv] = {}), k = Math.min(h, 110) / 46;
-    nv++; v.x = x; v.y0 = y - h; v.y1 = y - 4; v.d = d; v.hero = hero;
+    nv++; v.x = x; v.y0 = y - h; v.y1 = y - 4; v.d = d; v.hero = hero; v.at = at;
     v.r = hero ? 24 : 10 * k; v.fall = hero ? 120 : 56 * k; v.hw = hero ? 16 : 8 * k;
   };
-  if (p) look(ppx, ppy, pd, 62, true);
+  if (p) { at = [p.x, p.y]; look(ppx, ppy, pd, 62, true); }
   for (const c of world.creatures) {
     if (c === p || c.dead || c.static || c.ghostDraw || c.hidden) continue;
+    at = [c.x, c.y];
     look(isoX(c.x, c.y), isoY(c.x, c.y), c.x + c.y, c.viewH || 46 * (c.scale || 1), false);
   }
   for (const n of world.npcs) {
     if (n.stash || n.hidden || (n.alpha ?? 1) < 0.1) continue;
+    at = [n.x, n.y];
     look(isoX(n.x, n.y), isoY(n.x, n.y), n.x + n.y, n.viewH || 56, false);
   }
   views.length = nv;
@@ -738,6 +744,20 @@ export function renderWorld(ctx, world) {
   for (const l of world.loot) if (closeEnough(l.x,l.y,50,75)) enqueue(l.x + l.y - 0.2, 8, l);
   for (const c of world.chests) if (closeEnough(c.x,c.y,70,80)) enqueue(c.x + c.y, 9, c);
   for (const po of world.portals) if (closeEnough(po.x,po.y,95,150)) enqueue(po.x + po.y, 10, po);
+  if (map.hgt) {
+    // a height map sorts by the tile stood on (gfx/terrain.js standKey), so a column rising in front of someone can
+    // be drawn again over them; offsets in the keys (fliers, loot) are kept
+    for (const it of sorted) {
+      const o = it.o;
+      if (it.f === 2 || it.f === 11 || !o || typeof o.x !== 'number' || typeof o.y !== 'number') continue;
+      it.d = standKey(o.x, o.y) + (it.d - o.x - o.y);
+    }
+    for (const v of views) v.d = standKey(...v.at);
+    const occ = frame.occ || (frame.occ = []);
+    occ.length = 0;
+    occludersFor(map, vr, views, occ);
+    for (let i = 0; i < occ.length; i += 2) enqueue(occ[i], 14, occ[i + 1]);
+  }
   sorted.sort((a, b) => a.d - b.d);
   let q = hq;
   for (const it of sorted) {
@@ -769,12 +789,13 @@ export function renderWorld(ctx, world) {
         const deckI=world.map.rampartDeck?Math.floor(o.y)*world.map.w+Math.floor(o.x):-1;
         const deckZ=deckI>=0?(world.map.rampartElev?.[deckI]??(world.map.rampartDeck[deckI]?world.map.rampartHeight||0:0)):0;
         const oldZ=o.z||0;
-        if(deckZ)o.z=oldZ+deckZ;
+        const hz=map.hgt?hopZ(o,map):0; // hopping up or dropping down a step of the terrain
+        if(deckZ||hz)o.z=oldZ+deckZ+hz;
         o.draw(ctx);
-        if(deckZ)o.z=oldZ;
+        if(deckZ||hz)o.z=oldZ;
         const img = o.spriteImage();
         const [w, h] = o.spriteDims(img);
-        const [sx, sy] = camera.tileToScreen(o.x, o.y, oldZ + deckZ + (o.fly ? 16 : 0));
+        const [sx, sy] = camera.tileToScreen(o.x, o.y, oldZ + deckZ + hz + (o.fly ? 16 : 0));
         const z = camera.zoom;
         o.sbox = [sx - (w / 2) * z, sy - h * z, sx + (w / 2) * z, sy];
         o.viewH = h + (o.fly ? 16 : 0); // next frame's see-through hole
@@ -789,6 +810,7 @@ export function renderWorld(ctx, world) {
         cutaway(wallTorchRect(o),it.d)); break;
       case 13: drawWallHanging(ctx,o,world.biome,
         cutaway(wallHangingRect(o,world.biome),it.d)); break;
+      case 14: drawColumn(ctx, world, o.ti, floorEntry); break;
     }
   }
   if (q !== hq) ctx.imageSmoothingQuality = hq;
@@ -1018,6 +1040,7 @@ export function drawMinimap(world, dt, canvas, big = false) {
       if (map.t[i] !== 1 || !map.seen[i]) continue;
       const [sx, sy] = toS(x, y);
       if (!big && (sx < -4 || sy < -4 || sx > W + 4 || sy > H + 4)) continue;
+      if (map.hgt) c.fillStyle = terrainShade(map, i); // paler up the mountain
       c.fillRect(sx - s * 0.5, sy, s, s * 0.6);
     }
   }
