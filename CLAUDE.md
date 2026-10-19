@@ -24,7 +24,7 @@ Headless Chromium tests live in `tools/tests/`; see the header comment of each f
 export NODE_PATH=/opt/node22/lib/node_modules     # where playwright is installed in Claude cloud containers
 node tools/tests/data_check.mjs                    # skill data sanity check, no browser (fast)
 python tools/tests/chatgpt_art.py                  # ChatGPT art kits (and Grim Nocturne pixel-locked imports) round-trip, no browser
-node tools/tests/lancer_shields.js                 # four 8-angle Lancer turntables, sprite alpha/frames, in-front/behind QA
+node tools/tests/lancer_shields.js                 # Lancer 3D shield models (built from the turntables), turntable + all-rings shots, in-front/behind QA
 node tools/tests/town.js [seeds]                   # random towns: vendors/portal reachable + screenshots per seed
 node tools/tests/townlife.js [events|none]         # town life: arrival by the portal, quiet start, bubble budget, ~25% events, every event, emotion sheet
 node tools/tests/townsfolk.mjs                      # townsfolk sheets (256x192 cells), roster, scripts fit their bubbles, no browser

@@ -688,6 +688,19 @@ See `docs/APPROVED_BIOME_ART.md`; run
 regressions with a local HTTP server. Real desktop and iOS Safari visual QA,
 including alpha edges and foot anchors, remains outstanding.
 
+## October 18, 2026: Lancer spinning shields are 3D models
+
+The eight-frame shield sprites are replaced by 3D slab models built at load time from the
+turntables:
+
+- front cap and silhouette from frame 0;
+- mirrored rear cap from frame 4;
+- thickness and rim colours from edge-on frames 2/6.
+
+The models are drawn with exact affine Canvas 2D maps, lit, and memoised per 1/96 turn. The
+frame-order notes below are historical: `shieldFrameForAngle` is gone. Gameplay, radii, spin
+and depth sorting are unchanged. See [LANCER_SPINNING_SHIELDS.md](LANCER_SPINNING_SHIELDS.md).
+
 ## October 15, 2026 — Lancer shield animation/direction follow-up
 
 **Branch:** `fix/lancer-reverse-orbit-and-frames-20261015` from `main`.
