@@ -1,4 +1,5 @@
 // Particles, blood & gore, decals, spell effects and floating combat text.
+import { drawDkSkull } from './dkskull.js';
 import { G } from '../state.js';
 import { A } from '../core/assets.js';
 import { camera, isoX, isoY, HW, HH } from '../core/view.js';
@@ -686,8 +687,10 @@ export function drawParticles(ctx, vr) {
         ctx.beginPath(); ctx.moveTo(0, -size * 1.6); ctx.lineTo(size * 0.6, 0); ctx.lineTo(0, size * 1.6); ctx.lineTo(-size * 0.6, 0); ctx.fill();
         ctx.setTransform(ba, bb, bc, bd, be, bf);
         break;
-      case 'skull': { // a little pixel skull (the Death Knight's casts and hits)
-        ctx.globalAlpha = Math.min(1, (1 - k) * 1.6); const u = Math.max(1, size / 3), x0 = px - u * 2.5, y0 = py - u * 3;
+      case 'skull': { // the Death Knight's casts and hits: the contact skull in frost, or a little pixel skull while it loads
+        ctx.globalAlpha = Math.min(1, (1 - k) * 1.6);
+        if (drawDkSkull(ctx, px, py, size * 2.4, p.color)) break;
+        const u = Math.max(1, size / 3), x0 = px - u * 2.5, y0 = py - u * 3;
         ctx.fillStyle = p.color; ctx.fillRect(x0, y0, u * 5, u * 4); ctx.fillRect(x0 + u, y0 + u * 4, u * 3, u * 2);
         ctx.fillStyle = p.eye || '#102040'; ctx.fillRect(x0 + u * 0.6, y0 + u * 1.6, u * 1.4, u * 1.4); ctx.fillRect(x0 + u * 3, y0 + u * 1.6, u * 1.4, u * 1.4);
         ctx.fillRect(x0 + u * 2.2, y0 + u * 3.2, u * 0.6, u * 0.8); ctx.fillRect(x0 + u * 1.5, y0 + u * 5, u * 0.5, u); ctx.fillRect(x0 + u * 3, y0 + u * 5, u * 0.5, u);

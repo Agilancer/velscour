@@ -3,10 +3,44 @@
 The Death Knight's class signature sword (`src/game/sigs/deathknight.js`) is a real 3D model, drawn by
 `src/gfx/runeblade3d.js`. It covers both:
 
-- **The hovering sword** at his shoulder (about 42 world px from guard to point). It sways round its length, tilts a
-  little toward the camera, and twirls once each time it takes a rune.
+- **The familiar sword** (about 42 world px from guard to point), which flies round him like a pet. It twirls once
+  each time it takes a rune. See *The familiar* below.
 - **RUNIC OBLITERATION** (about 125 px), the same model scaled up. It is raised leaning away and turned, comes round
   flat to the camera as it falls through the target, then rolls and fades.
+
+## The familiar
+
+`src/game/sigs/deathknight.js` moves the sword. A pose is an anchor point (tiles + height in px), how far along the
+blade the anchor sits (hilt or middle), the screen angle from hilt to point, spin, tilt and size. The sword eases
+toward the pose it wants, so it trails a little behind him like a pet. A ribbon trail follows the point when it moves
+fast. It has a shadow on the floor and draws behind him when it is further from the camera than he is.
+
+- **Idle patterns** (`PATTERNS`, a new one every 5-9 s, never the same twice running): shoulder (the old hover),
+  orbit, figure8, helix (a drill spinning round him), wheel (a spinning wheel over his head), sentinel (planted
+  point-down beside him), pendulum, star (darts between the points of a star), loop (loop-the-loops at his side),
+  guard (in front of him), comet (a wide fast orbit) and drift (lazy, with a flip now and then).
+- **A swing for each kind of skill** (`SWINGS`, picked by `swingFor(sk)`; visual only, the skill does the damage):
+  slash (melee slashes, alternating sides), scythe (wide melee arcs), chop (smashes), thrust (projectiles, chains),
+  spin (novas), plunge (zones, AoEs, rains, fissures), lance (beams), salute (buffs, heals, auras), sigil (summons),
+  jab (curses), whirl (whirls, cyclones, orbits) and charge (dashes, leaps, blinks).
+- **Its own skills** (`PET`): whenever it is free and a foe is within 6 tiles, it picks a ready one that has a target.
+  They are signature hits, so they never charge the runes. Damage is a share of `power(p)`, the element of the
+  latest rune (cold with none):
+  - Runic Lunge (2.6 s): darts through the nearest foe and back, 0.5x to everything on the line.
+  - Reaping Arc (5 s, 2+ foes close): one swelling sweep round him, 0.45x in 2.4 tiles, knockback.
+  - Grave Plunge (7 s): climbs over the toughest foe and drops on it, 1.1x in 1.4 tiles, stun.
+  - Blade Waltz (8 s): circles the toughest foe, 4 cuts of 0.3x.
+  - Wheel of Rime (6.5 s, a crowd of 2+): spins end over end out through a crowd and back, 0.45x each way, slows.
+- RUNIC OBLITERATION hides the familiar; it comes back from the end of the cleave.
+
+## Frost skulls
+
+The skulls his casts and hits throw off (`classfx.js`, `vfx.js` particle `skull`) and Death Coil (`shapes.js`
+`dkskull`, set in `Projectile` when the caster is a Death Knight) use the Velscour contact skull from the button by
+the minimap (`assets/ui/velscour_contact_skull.png`), recoloured at load by `src/gfx/dkskull.js`: bone becomes ice
+(two bone tints, the ones the old drawn skulls used), the red eye dots are taken out so the sockets are dark and empty,
+baked at 64 and 32 px.
+The old drawn skull stands in while the image loads.
 
 ## Skins
 
@@ -103,7 +137,8 @@ and in-game reference shots. It replaces the 2D sprite kit `ChatGPT_Runeblade_Ki
 ## Test
 
 ```bash
-node tools/tests/runeblade3d.js     # mesh, all 16 turns, face-on > edge-on, rune slots; turntable/hover/swing shots
+node tools/tests/runeblade3d.js         # mesh, all 16 turns, face-on > edge-on, rune slots; turntable/hover/swing shots
+node tools/tests/runeblade_familiar.js  # frost skulls, 12 patterns, every swing, the 5 sword skills, a casting soak
 ```
 
 Headless Chromium needs `--enable-unsafe-swiftshader` for WebGL. The test sets it when `CHROMIUM_ARGS` is unset.
