@@ -3,7 +3,7 @@ import { hexToRgb } from '../core/util.js';
 import { G } from '../state.js';
 import { TAU, rand, shade } from '../core/util.js';
 import { isoX, isoY, HW, HH, camera } from '../core/view.js';
-import { glowSprite, spawn, burst, addDecal, addEffect, Ring, Column, smoke, sparkle, addLight, elem } from './vfx.js';
+import { skullImage, glowSprite, spawn, burst, addDecal, addEffect, Ring, Column, smoke, sparkle, addLight, elem } from './vfx.js';
 import { replacementImage } from '../core/replacementart.js';
 import { pixelSprite, shiftPalette } from './pixelart.js';
 import { sfx } from '../core/audio.js';
@@ -93,6 +93,8 @@ export function drawShape(ctx, fx, x, y, a, s, E, t, extra = {}) {
     }
     case 'skull': case 'spirit': {
       glow(ctx, 0, 0, 18 * s, E.glow, 0.9);
+      const im = fx === 'skull' && skullImage(extra && extra.skull);
+      if (im) { const h = 15 * s, w = h * im.width / im.height; ctx.drawImage(im, -w / 2, -h / 2, w, h); break; }
       ctx.fillStyle = fx === 'skull' ? '#f0e8d8' : E.core;
       ctx.globalAlpha = fx === 'spirit' ? 0.8 : 1;
       ctx.beginPath(); ctx.arc(0, -1 * s, 5 * s, 0, TAU); ctx.fill();

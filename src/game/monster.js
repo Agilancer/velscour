@@ -392,6 +392,7 @@ export class Monster extends Creature {
 
   // ------------------------------------------------------------------ AIs
   aiMelee(dt, t, d) {
+    if (this.leap && (this.leapCd -= dt) <= 0 && d > 2 && d < this.leap.range && this.tryLeap(t, d)) return;
     if (d <= this.atkRange(t)) {
       this.face(angleTo(this.x, this.y, t.x, t.y));
       this.moving = false;
@@ -401,6 +402,16 @@ export class Monster extends Creature {
         if (brute) addEffect(new Telegraph({ kind: 'circle', x: this.x + Math.cos(this.facing) * 0.8, y: this.y + Math.sin(this.facing) * 0.8, r: 1.6 * this.scale, dur: 0.6, color: this.team === 'enemy' ? '#ff2a10' : '#40ff60' }), 'ground');
       }
     } else this.approach(dt, t, d);
+  }
+
+  /** A minion's pounce (def.leap): a short crouch, then an arc through the air onto the foe (mv_lunge). */
+  tryLeap(t, d) {
+    const ang = angleTo(this.x, this.y, t.x, t.y), L = Math.max(0, d - this.atkRange(t) + 0.2);
+    const tx = this.x + Math.cos(ang) * L, ty = this.y + Math.sin(ang) * L;
+    if (!this.world.map.losWide(this.x, this.y, tx, ty, bodyR(this) + 0.03)) { this.leapCd = 0.5; return false; }
+    this.leapCd = this.leap.cd; this.face(ang);
+    this.startAction('mv_lunge', 0.18, { tx, ty, ang, leap: true, target: t });
+    return true;
   }
 
   /**
@@ -997,11 +1008,18 @@ export class Monster extends Creature {
     const done = () => { this.state = 'idle'; this.cd = this.atkCd; this.z = 0; };
     switch (a.kind) {
       case 'mv_lunge': {
-        const k = Math.min(1, a.t / 0.35);
-        const want = dist(this.x, this.y, a.tx, a.ty), step = Math.min(want, dist(a.sx, a.sy, a.tx, a.ty) / 0.35 * dt);
+        const T = a.leap ? 0.3 + dist(a.sx, a.sy, a.tx, a.ty) * 0.04 : 0.35, k = Math.min(1, a.t / T);
+        const want = dist(this.x, this.y, a.tx, a.ty), step = Math.min(want, dist(a.sx, a.sy, a.tx, a.ty) / T * dt);
         if (want > 0.01) w.map.move(this, (a.tx - this.x) / want * step, (a.ty - this.y) / want * step, this.ghost);
-        this.z = 50 * 4 * k * (1 - k); this.moving = true;
-        if (k >= 1) {
+        this.z = (a.leap ? 36 : 50) * 4 * k * (1 - k); this.moving = true;
+        if (a.leap) this.attackAnimT = 0.1; // claws out in the air
+        if (a.leap && k >= 1) {
+          const t = a.target && !a.target.dead && dist(this.x, this.y, a.target.x, a.target.y) <= this.atkRange(a.target) + 0.8 ? a.target : null;
+          if (t) this.deal(t, dmg * 1.5, this.summonEl || 'phys', { melee: true, ang: this.facing, knock: 0.4 });
+          sparkle(this.x, this.y, 6, '#7ad0ff', 8, 0.35);
+          sfx('thud', 0.4);
+          done(); this.cd = Math.min(this.cd, 0.25);
+        } else if (k >= 1) {
           explode(w, this, this.x, this.y, 1.1 * big, dmg * 1.3, el, { knock: 0.6, melee: true }, 'eruption');
           sfx('thud', 0.6);
           done();
@@ -1409,6 +1427,8 @@ export function buildSummon(owner, def, key, x, y, dmg, hp, life) {
     defAura: def.aura, summonKey: key, awake: true, ...caster,
     spell: def.spell || null, spellCd: def.spell ? rand(0.5, def.spell.cd || 3) : 0, atkReach: def.reach ? 0.55 + def.reach : undefined,
   });
+  if (look.h && !look.art) m.petH = look.h; // drawn height on its animation atlas
+  if (def.leap) { m.leap = def.leap; m.leapCd = rand(0.3, 1); }
   if (look.cls) { m.classId = look.cls === true ? owner.classId : look.cls; m.classPal = look.pal || null; m.spriteH = 50; }
   else { m.sprite = look.sprite; m.pal = look.pal; m.px = look.px || 2.3; }
   const art = Array.isArray(look.art) ? pick(look.art) : look.art; // pets: a random one of the list

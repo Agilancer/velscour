@@ -70,6 +70,8 @@ if _extra.exists():
     for _name, _e in json.loads(_extra.read_text(encoding='utf-8')).items():
         SHEETS[_name] = (_e['file'], _e['frames'], _e['keys'])
         LAYOUT[_name] = (_e['xs'], [tuple(r) for r in _e['ys']])
+# Caption lines ('SPAWN 1') whose lone digits the label filter cannot tell from art: y-bands wiped before cutting.
+CAPTIONS = {'creatures_land': [(242, 253), (446, 457), (617, 628), (796, 807)]}
 ALPHA = 24   # below this is export residue, not art
 CORE = 96    # solid art; fainter glow halos bridge neighbouring frames, so pieces are linked through solid art only
 
@@ -122,6 +124,9 @@ def cut_sheet(name):
     src = np.array(Image.open(SOURCE / filename).convert('RGBA'))
     src[src[..., 3] <= ALPHA, 3] = 0
     strip_plaques(src)
+    for y0, y1 in CAPTIONS.get(name, []):
+        band = src[y0 - 3:y1 + 4]; rgb = band[..., :3].astype(np.int16); hi = rgb.max(axis=2)
+        band[(hi - rgb.min(axis=2) < 30) & ((hi > 150) | (hi < 70)), 3] = 0
     solid = src[..., 3] >= CORE
     src[:, :max(0, xs[0] - 8), 3] = 0              # row-name column
     src[:max(0, ys[0][0] - 60), :, 3] = 0          # sheet title and frame header
@@ -185,6 +190,32 @@ def cut_sheet(name):
     return poses
 
 
+def ramp(lum, stops):
+    """Map luminance 0..1 onto a list of (pos, (r, g, b)) colour stops."""
+    pos = np.array([p for p, _ in stops]); col = np.array([c for _, c in stops], float)
+    return np.stack([np.interp(lum, pos, col[:, i]) for i in range(3)], axis=-1)
+
+
+def frost(rgba):
+    """Recolour a ghoul to the Death Knight's palette: corpse-blue skin, gunmetal rags, rune-cyan eyes and mist."""
+    rgb = rgba[..., :3].astype(float) / 255; hi = rgb.max(-1); lo = rgb.min(-1); sat = (hi - lo) / np.maximum(hi, 1e-3)
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    lum = np.clip(0.3 * r + 0.59 * g + 0.11 * b, 0, 1)
+    out = ramp(np.clip(lum * 1.08, 0, 1), [(0, (8, 12, 22)), (0.25, (34, 48, 68)), (0.5, (92, 116, 140)), (0.75, (160, 186, 206)), (1, (228, 240, 250))])
+    eyes = (r > 0.5) & (r > g * 1.8) & (r > b * 1.8) & (hi > 0.55)
+    rags = (r > g * 1.12) & (r > b * 1.2) & (sat > 0.3) & ~eyes   # the loincloth and blood stripes
+    mist = (g > r * 1.18) & (g > b * 1.05) & (sat > 0.18)         # the green spawn mist and claw swipe
+    out[rags] = ramp(lum[rags], [(0, (6, 8, 16)), (0.3, (26, 34, 56)), (0.6, (58, 74, 104)), (1, (120, 140, 170))])
+    out[mist] = ramp(lum[mist], [(0, (16, 40, 80)), (0.35, (58, 140, 210)), (0.6, (122, 208, 255)), (1, (232, 250, 255))])
+    out[eyes] = ramp(lum[eyes], [(0, (64, 192, 255)), (0.5, (150, 230, 255)), (1, (240, 255, 255))])
+    res = rgba.copy(); res[..., :3] = np.clip(out, 0, 255).astype(np.uint8)
+    return res
+
+
+# Rows re-coloured into sheets of their own: new key -> (source key, recolour).
+DERIVED = {'dkghoul': ('ghoul', frost)}
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     catalog = {}
@@ -209,6 +240,12 @@ def main():
         # Lossless: lossy WebP leaves colored blocks around transparent magic glows.
         atlas.save(OUT / f'{name}.webp', 'WEBP', lossless=True, quality=100, method=6)
         print(f'{name}: {len(keys)} rows, {frames} frames, {atlas.width}x{atlas.height}')
+    for key, (src_key, fn) in DERIVED.items():
+        meta = catalog[src_key]; sheet = 'dk_' + src_key if key == 'dkghoul' else key
+        row = Image.open(OUT / f"{meta['sheet']}.webp").convert('RGBA').crop((0, meta['row'] * meta['cellH'], meta['cellW'] * meta['frames'], (meta['row'] + 1) * meta['cellH']))
+        Image.fromarray(fn(np.array(row)), 'RGBA').save(OUT / f'{sheet}.webp', 'WEBP', lossless=True, quality=100, method=6)
+        catalog[key] = {**meta, 'sheet': sheet, 'row': 0}
+        print(f'{sheet}: {key} from {src_key}')
     (OUT / 'catalog.json').write_text(json.dumps(catalog, separators=(',', ':')) + '\n', encoding='utf-8')
 
 

@@ -1,0 +1,68 @@
+========== FIRST MESSAGE (attach the zip) ==========
+
+You're the pixel artist for VELSCOUR, an isometric dark-fantasy action RPG in the style of Diablo II, drawn as
+hand-placed 2D pixel art. The attached zip is a sprite kit for one asset: the Death Knight's Runeblade, a spectral
+greatsword that hovers at his shoulder, takes a glowing rune in each of six slots as he fights, and then swells to
+giant size for one colossal cleave.
+
+Before drawing anything, open the zip and read every file:
+- SPEC.md: exactly what to draw, the cell sizes, the anchor point, the rune slot positions and how the game uses each
+  sprite. It wins over everything else.
+- STYLE.md: the style lock (the pixel-art rules every VELSCOUR hero is drawn by) and the exact palette.
+- templates/: the two sheets you'll fill in. Cyan dashed boxes are the cells; yellow lines are the centre line, the
+  crossguard line (the anchor), the tip line and the pommel top; green marks are the blade width, the guard ends and
+  the six rune slots.
+- examples/: the same sheets filled with a flat mock-up. Copy the placement from them, not the look.
+- reference/: the Death Knight at the sword's scale, the palette swatches, and the Runeblade as the game draws it today.
+
+Then reply with:
+1. The design card from STYLE.md (four lines), filled in for this sword.
+2. A one-paragraph description of the sword: the blade, the guard, the grip, the pommel, the verdigris, and the three
+   rune glyphs.
+3. Anything in the spec that's unclear to you.
+
+Don't make any images in this reply. I'll ask for one sheet per message.
+
+========== SHEET 1 (attach templates/runeblade_sheet1_hover_template.png and examples/runeblade_sheet1_layout_example.png) ==========
+
+Draw sheet 1, the hovering Runeblade and the small runes, as one 1536 x 1024 image. Use the attached template as the
+exact layout: same canvas size, same five cell positions, same flat magenta #FF00FF background.
+
+- Hard-edged pixel art on a grid where one art pixel is a 3 x 3 block of identical pixels. No blur, no gradients, no
+  anti-aliasing against the magenta.
+- HOVER: the sword pointing straight down on the yellow centre line, the centre of the crossguard on the yellow
+  crossguard line, the point on the tip line, the pommel's top on the dotted line. A broad straight frost-glass blade
+  12 art pixels wide with a long point and a fuller, a flat tomb-lid crossguard 34 art pixels wide with hourglass ends
+  in verdigris bronze, a dark wrapped grip, an hourglass pommel with a small gem, verdigris tears under the guard.
+  Six EMPTY rune slots engraved in the fuller exactly on the green squares. Use the hex colours from STYLE.md, with a
+  1 art-pixel moonlit rim on the right edges.
+- HOVER CHARGED: exactly the same sword, pixel for pixel, with the blade's edges and fuller kindled with the frost rune
+  ramp and the pommel gem white-hot. The slots stay empty.
+- RUNE S FROST, UNHOLY, BLOOD: one glowing glyph per cell, centred on the crosshair, about 5 x 7 art pixels, each in its
+  own emissive ramp with a 1 art-pixel dark rim. Abstract marks, not letters: a rime star, a plague fork, a cut drop.
+- No text anywhere. No halo painted outside any shape. Remove every label, box and guide line. Only the art on flat
+  magenta.
+
+========== SHEET 2 (attach templates/runeblade_sheet2_greatblade_template.png, examples/runeblade_sheet2_layout_example.png and your sheet 1) ==========
+
+Draw sheet 2, the greatblade and the large runes, as one 1536 x 1024 image. Use the attached template as the exact
+layout. This sheet is at 2x: one art pixel is a 2 x 2 block of identical pixels.
+
+- GREATBLADE: the same sword as sheet 1's HOVER (same silhouette, materials and colours), redrawn as a giant at its own
+  density, never a resized copy. Pointing straight down on the centre line, the guard's centre on the crossguard line,
+  the point on the tip line. Blade 16 art pixels wide at the guard, crossguard 46 wide, a heavier guard, deeper fuller,
+  more verdigris, thin cracks of frost light in the glass. Six EMPTY rune slots exactly on the green squares.
+- RUNE L FROST, UNHOLY, BLOOD: the same three glyphs as sheet 1's runes, redrawn about 9 x 11 art pixels, centred on
+  the crosshairs.
+- Everything inside its cyan box. Remove every label, box and guide line. Only the art on flat magenta.
+
+========== IF A SHEET COMES BACK WRONG (examples; use what applies) ==========
+
+- "The pixels aren't even. Redraw it with every art pixel as a crisp 3 x 3 block (2 x 2 on sheet 2) of one colour."
+- "The sword leans or sits off the centre line. Keep the blade straight down the yellow line, the guard's centre on
+  the crossguard line."
+- "The rune slots moved. Put the six empty slots exactly on the green squares, on the centre line."
+- "HOVER CHARGED doesn't match HOVER. Copy HOVER exactly and add only the frost glow and the white pommel gem."
+- "There's a glow or halo outside the sword. Keep every glow inside the shape; the game adds its own."
+- "There are labels or guides left in the image. Give me the same art on plain flat magenta only."
+- "The colours drifted. Use only the hex values in STYLE.md."

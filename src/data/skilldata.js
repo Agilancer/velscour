@@ -192,9 +192,9 @@ export const SKILLDATA = {
       "Winter's End|nova|cold|frost|n=3 r=2.2 freeze cd=8", 'Frozen Throne|zone|cold|frost|r=2.4 dur=6 freeze cd=12', 'Glacial Cataclysm|rain|cold|ice|n=30 r=2 cd=6', 'Runeblade Storm|cyclone|cold|blade|n=3 dur=5 cd=6',
     ],
     [
-      'Death Coil|proj|shadow|skull|leech', 'Plague Strike|melee|poison|slash|poison', 'Raise Ghoul|summon|shadow|ghoul|sum=ghoul max=1', 'Death Grip|proj|shadow|chain|pull stun',
+      'Death Coil|proj|shadow|skull|leech', 'Plague Strike|melee|poison|slash|poison', 'Raise Ghoul|summon|shadow|ghoul|sum=dkghoul max=1', 'Death Grip|proj|shadow|chain|pull stun',
       'Death and Decay|zone|shadow|void|r=1.4 dur=6', 'Festering Strike|melee|poison|smash|poison exp', 'Scourge Strike|melee|shadow|slash|dmg=1.5', 'Unholy Blight|zone|poison|poison|follow dur=8 cd=10',
-      'Army of the Dead|summon|shadow|ghoul|sum=ghoul n=6 dur=12 cd=40', 'Epidemic|nova|poison|poison|r=1.6', 'Dark Transformation|buff|shadow|aura|buff=dmg amt=30 party dur=15 cd=30', 'Necrotic Strike|melee|shadow|slash|curse=amp',
+      'Army of the Dead|summon|shadow|ghoul|sum=dkghoul n=6 dur=12 cd=40', 'Epidemic|nova|poison|poison|r=1.6', 'Dark Transformation|buff|shadow|aura|buff=dmg amt=30 party dur=15 cd=30', 'Necrotic Strike|melee|shadow|slash|curse=amp',
       'Defile|zone|shadow|void|r=1.8 dur=8 cd=8', 'Apocalypse|nova|shadow|void|r=1.8 dmg=1.8', 'Abomination|summon|poison|abomination|sum=abomination max=1 cd=30', 'Soul Reaper|melee|shadow|slash|dmg=2.6 cd=2',
       'Unholy Frenzy|buff|shadow|aura|buff=as,speed amt=40 dur=12 cd=30', 'Dark Rider|dash|shadow|charge|range=1.8 dmg=2.2 cd=3', 'Death Pact|heal|shadow|light|amt=40 cd=30', 'Plaguebringer|rain|poison|acid|n=30 r=2 cd=6',
     ],
