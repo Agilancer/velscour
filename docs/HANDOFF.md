@@ -34,6 +34,43 @@ Contents
 - Tests: new `tools/tests/phoenix.js` (turntable, tips, flight bank/glide/embers, stoop; `mobile` arg).
   `signatures.js ranger`, `flow.js`, `autoplay.js ranger 8`, `data_check.mjs` pass. Software GL: ~2 ms per draw.
 
+## October 19, 2026 — Boomerang Knight: every boomerang comes back (branch `feat/boomerang-return`)
+
+The user's ask: "BOOMERANGS RETURN TO THE PERSON THROWING THEM", in his skills and his damage balance, and the little
+blades circling him become larger blue boomerangs.
+- **All his thrown boomerangs and chakrams return** (`ret`): Ricochet, Chakram, Celestial Chakram, Gale Rang, Twin
+  Chakrams, Ricochet Storm, Thunder Return, Halo of Rangs and Thousand Rangs gained it. Rang Rain and Orbit Barrage
+  were rains from the sky; they are now thrown volleys (`proj ... rand ret pierce`) that fly home. Skill text reads
+  "Returns to your hand".
+- **Return flight** (`Projectile` in `src/game/hazards.js`, all classes): a returning projectile homes on the
+  thrower wherever he has moved and flies over walls (it used to stick against a wall until it timed out); it is
+  `caught()` within 0.55 tiles (a small sparkle). A bouncing boomerang ricochets foe to foe and flies home when its
+  bounces are spent (`turnAt`, `bounced`); a split boomerang's three children return too.
+- **Balance**: a returning boomerang hits on the way out and again on the way back, so the skills that newly return
+  got `dmg=` cuts (0.45-0.75; Celestial Chakram 1.6 -> 1.5) to keep their damage per cast where it was, measured on a
+  pack of dummies by `tools/tests/boomerang.js` (runs vary 10-20%). The two ring skills, the weakest in their trees,
+  end up a little stronger (Halo of Rangs ~340 -> ~600). Skills that already returned are unchanged.
+  `skillRange` now halves a returning projectile's range (it turns at half way), so the range shown, touch auto-aim and
+  auto-play agree; auto-play's power model counts the return trip (`hitsPerCast` x1.4 for `ret`).
+- **3D boomerangs** (`src/gfx/boomerang3d.js`, user ask: one 3D model, solid colours per ability with stripes near
+  the wing tips, sizes per ability, thrown properly at the game's isometric angle). Procedural, no art files: a thin
+  slab (two swept arms round an elbow; a spiked ring for chakrams). Under the parallel 2:1 projection a flat face is an
+  affine map, so each face is one transformed `Path2D` fill and the edge is the outline stacked 2-4 times along the
+  normal; a dark outline (four nudged copies), flat light shading, a glint strip that flashes once a turn, one spin
+  ghost and a ground shadow. Orientation = heading on the ground x bank about the flight line x spin in its own plane.
+  Thrown (`drawFlyingRang`, used by `Projectile.draw` for fx `rang`/`chakram`): leaves the hand near upright (bank
+  1.15), lays over flat by the turn (0.25), climbs ~9 px and drops back to the hand, leaning toward the camera so it
+  never goes edge-on. Orbits skim round him near flat. `RANG_SKINS` maps each skill name to colour, stripe colour and
+  size (`k`, on top of the skill's own `r`); skills pass `skin: sk.name` (skillrun.js). Wind Rang now flies as a
+  boomerang (fx `rang`, `wc=0.45` keeps its damage). Cost ~0.12 ms per boomerang in headless Chromium (old flat sprite
+  ~0.03); past 16 in one frame they drop outline, glint and blur.
+- **The Trick Shot's eight charge blades** are 3D blue boomerangs riding a ring above his helm (`ringDraw` in
+  `src/game/sigs/boomerang.js`; charged ones blue and spinning, the rest slate and still): the half behind his head draws
+  in the depth pass before him (`back`), the front half on top. The Trick Shot is a 3D gold boomerang.
+- Tests: new `tools/tests/boomerang.js` (damage per cast per skill, every blade caught standing, running and thrown at
+  walls, ring close-ups, in-play shots mid-throw, `boomerang_models.png` with every look at four angles,
+  `boomerang_film.png` with one throw frame by frame).
+
 ## October 19, 2026 — class touch-ups: Paladin halo, Slime Lord gauge, the Runeblade as a familiar (branch `feat/class-touchups`)
 
 - **Paladin**: the Halo of Judgement sits higher over his head (`headAt(p, 12)`, was 6).
@@ -1996,7 +2033,7 @@ On the player side, acid uses poison resistance, and phys/arcane/holy/shadow/blo
 - `ring`: projectiles cover 360°, or a wall becomes a ring.
 - `arc`: melee arc in degrees. Default 115; cleave 170; thrust fx 36; spin fx 360.
 - `cleave`: sets the melee arc to 170.
-- Projectile behaviour: `pierce` (pierce 99), `bounce=N`, `chain=N` (proj and melee), `home`, `split` (splits into 3 on first hit), `ret` (boomerang), `lob`, `exp` (explodes), `spray` (frozen-orb shards), `dur` (projectile lifetime).
+- Projectile behaviour: `pierce` (pierce 99), `bounce=N`, `chain=N` (proj and melee), `home`, `split` (splits into 3 on first hit), `ret` (boomerang: turns at half range, or when its bounces are spent, and flies back to the thrower over walls), `lob`, `exp` (explodes), `spray` (frozen-orb shards), `dur` (projectile lifetime).
 - `pull`: proj pulls within 2.6; nova and aoe pull in; an aoe with dur implodes at x2 damage when it ends; also traps.
 - `delay`: aoe uses a Delayed hazard (meteor and nuke default to 0.85).
 - `cone`: beam becomes a cone.
@@ -2769,9 +2806,6 @@ See the `open_issues` field.
 - src/game/loot.js:109-116 — the itemIcon cache key ignores `size`. Gear icons are always pixelSprite scale 4 whatever the requested size.
 - src/data/skills.js:109,113 vs src/game/skillrun.js:54,139 — skillRange (used for melee approach and UI) omits the thrust x1.15 factor and uses cone 0.5 where castSkill uses 0.55.
 - src/game/combat.js:119 — a no-op `if` statement with a comment about the thorns curse (dead code).
-- src/data/skills.js `skillRange` — returning projectiles (`ret`, the Boomerang Knight's whole first tree) turn back at
-  half their range, so touch auto-aim and the skill range shown are twice what really lands. Auto-play uses its own
-  `reachOf()` with the 0.48 factor.
 
 ## Auto-play
 

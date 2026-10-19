@@ -304,11 +304,11 @@ export const SKILLDATA = {
   ],
   boomerang_knight: [
     [
-      'Boomerang|proj|phys|rang|free wc=1 ret pierce', 'Twin Rang|proj|phys|rang|n=2 spread=30 ret pierce', 'Ricochet|proj|phys|rang|bounce=5', 'Heavy Rang|proj|phys|rang|ret pierce r=1.5 dmg=1.4 knock',
+      'Boomerang|proj|phys|rang|free wc=1 ret pierce', 'Twin Rang|proj|phys|rang|n=2 spread=30 ret pierce', 'Ricochet|proj|phys|rang|bounce=5 ret dmg=0.72', 'Heavy Rang|proj|phys|rang|ret pierce r=1.5 dmg=1.4 knock',
       'Tri-Rang|proj|phys|rang|n=3 spread=45 ret pierce', 'Seeking Rang|proj|phys|rang|home ret pierce', 'Flame Rang|proj|fire|rang|ret pierce burn', 'Frost Rang|proj|cold|rang|ret pierce slow',
-      'Rang Storm|proj|phys|rang|n=6 ring ret pierce', 'Storm Rang|proj|light|rang|ret pierce chain=2', 'Splitting Rang|proj|phys|rang|split ret', 'Chakram|proj|phys|chakram|bounce=8 spd=1.3',
+      'Rang Storm|proj|phys|rang|n=6 ring ret pierce', 'Storm Rang|proj|light|rang|ret pierce chain=2', 'Splitting Rang|proj|phys|rang|split ret dmg=0.45', 'Chakram|proj|phys|chakram|bounce=8 spd=1.3 ret dmg=0.8',
       'Infinity Rang|proj|arcane|rang|ret pierce r=2 dmg=1.6 dur=2', 'Blade Comet|aoe|phys|meteor|r=1.5 dmg=2.2', 'Rang Barrage|proj|phys|rang|n=10 spread=90 ret pierce', 'Orbiting Rangs|orbit|phys|rang|n=4 dur=8 cd=8',
-      'Rangnarok|proj|phys|rang|n=20 ring ret pierce cd=5', 'Celestial Chakram|proj|holy|chakram|bounce=12 dmg=1.6 cd=3', 'Black Hole Rang|proj|shadow|rang|pull ret pierce r=2 cd=5', 'Rang Rain|rain|phys|rang|n=30 r=2 cd=6',
+      'Rangnarok|proj|phys|rang|n=20 ring ret pierce cd=5', 'Celestial Chakram|proj|holy|chakram|bounce=12 ret dmg=1.5 cd=3', 'Black Hole Rang|proj|shadow|rang|pull ret pierce r=2 cd=5', 'Rang Rain|proj|phys|rang|n=24 rand spread=120 ret pierce dmg=0.5 cd=6',
     ],
     [
       'Cross Slash|melee|phys|slash|n=2', 'Swirling Blades|orbit|phys|blade|n=2 dur=6 cd=6', 'Riposte|buff|phys|shield|buff=block,thorns amt=25 dur=20 cd=25', 'Lunge|dash|phys|charge|range=0.8',
@@ -318,7 +318,7 @@ export const SKILLDATA = {
       'Omnislash|dash|phys|charge|n=6 range=1 dmg=1.5 cd=6', 'Blade Halo|orbit|holy|blade|n=10 dur=10 cd=15', 'Sword Saint|buff|phys|transform|transform buff=as,crit,dmg amt=45 dur=15 cd=50', 'Excalibur|beam|holy|laser|dur=1 dmg=3 cd=5',
     ],
     [
-      'Wind Rang|proj|phys|wave|ret pierce spd=1.3', 'Gust|nova|phys|wind|knock r=1', 'Air Dash|dash|phys|wind|range=1.1', 'Tailwind|buff|phys|wind|buff=speed amt=25 dur=20 cd=25',
+      'Wind Rang|proj|phys|rang|ret pierce spd=1.3 wc=0.45', 'Gust|nova|phys|wind|knock r=1', 'Air Dash|dash|phys|wind|range=1.1', 'Tailwind|buff|phys|wind|buff=speed amt=25 dur=20 cd=25',
       'Cyclone|cyclone|phys|wind|n=1 dur=4', 'Gale Wall|wall|phys|wind|dur=5', 'Vacuum Slash|melee|phys|slash|pull r=1.3', 'Squall|proj|cold|wave|n=5 spread=40',
       'Twin Cyclones|cyclone|phys|wind|n=2 dur=5', 'Hurricane Rang|proj|phys|rang|ret pierce r=1.8 slow', 'Wind Shear|fissure|phys|wind|range=1.4', 'Eye of the Storm|zone|light|storm|follow r=1.6 dur=8 cd=12',
       'Tempest Rang|proj|light|rang|n=3 spread=40 ret pierce chain=2', 'Typhoon|cyclone|cold|wind|n=4 dur=6 cd=8', 'Skyward Blades|rain|phys|blade|n=20 r=1.6', 'Zephyr|buff|phys|transform|buff=speed,as amt=40 dur=15 cd=30',
