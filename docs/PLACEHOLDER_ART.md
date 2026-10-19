@@ -496,8 +496,8 @@ transparency, facing right, full body, about 2000 x 800 px, one pose, sheets nam
 ## Not graphics, for reference
 
 Sounds with no sample yet still play from a code synthesizer (`SOUNDS` in `src/core/audio.js`). Some examples are
-summons, curses, traps, some spells, UI clicks and level-up. Only two songs remain: the title and the town; dungeons
-have ambience only (by request).
+summons, curses, traps, some spells, UI clicks and level-up. Songs: the title, the town, and two shuffled
+Stone Room Reverberation tracks for dungeons and overworld biomes.
 
 ---
 

@@ -28,7 +28,9 @@
  },
  "music": {
   "empty_school": 149.16,
-  "hymn_of_the_abyss": 204.08
+  "hymn_of_the_abyss": 204.08,
+  "stone_room_reverberation": 228.0,
+  "stone_room_reverberation_2": 214.6
  },
  "sfx": [
   "bow_attack_1",
