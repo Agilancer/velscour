@@ -912,9 +912,11 @@ Requirements, as stated (✅ = implemented in the draft):
   only format every browser decodes. Sample-backed sounds (`SAMPLES` in `src/core/audio.js`) cover melee swings, hits and
   blocks, bows, fire, cold, arcane, explosions, buffs, chests, doors, the exit gate and footsteps. Everything else, and
   anything still loading, uses the old procedural `SOUNDS`. **Music** (`MUSIC`): Hymn of the Abyss on the title screen,
-  Empty School in town (repeats after 30-70 s breaks), and nothing else: the user asked for all other music to be
-  removed, so dungeons, guardians and Velscour have ambience only (the other 8 songs are skipped by `MUSIC_KEEP` in
-  `tools/audiopack.py`; their source zips stay in `assets/source/audio/`). **Ambience** (`AMB`): every area
+  Empty School in town (repeats after 30-70 s breaks), and in every dungeon and overworld biome the `wilds` rotation:
+  Stone Room Reverberation 1 and 2 (the user's loose `.m4a` files in `assets/source/audio/`, always imported), shuffled,
+  never the same one twice running, 45-120 s ambience-only breaks between them, carrying on across levels. The other 8
+  songs in the zips are skipped by `MUSIC_KEEP` in `tools/audiopack.py`. The title screen has the song only, no ambience
+  (by request). **Ambience** (`AMB`): every area
   has 1-2 BG-loop beds. One plays at all times, drifting between soft and fuller every 10-25 s and sometimes
   crossfading to the other bed. It ducks to 45% under a song and swells in the breaks. The town uses Forest Night
   (Herrington Hollow is at dusk). There's a Settings slider for Ambience (`settings.amb`).
@@ -1589,8 +1591,8 @@ Do these in order, unless the user asks for something else. Their feedback after
     - Elements: `swing hit crit squish gore bones fire cold light arcane holy shadow poison acid blood phys`
     - Other: `explode shoot bow pickup gold orb potion levelup portal ui error boss die summon heal buff thud roar hurt block sonic note chest door gate step critping`
     - `SAMPLES[name]` = `{s: sample slugs, v: gain, layer: procedural sound on top, max: concurrent voices (3)}` takes priority once loaded. `step_stone|dirt|water|wood` are sample-only names.
-  - `playMusic(kind, {delay})`: `'title' | 'town'` (see `MUSIC`). No-op if that kind is already current. Entering a dungeon calls `stopMusic()`.
-  - `stopMusic(sec)`, `setAmbience(key)` (a biome id, `'town'` or `'title'`; see `AMB`), `stopAmbience(sec)`.
+  - `playMusic(kind, {delay})`: `'title' | 'town' | 'wilds'` (see `MUSIC`). No-op if that kind is already current. Entering a dungeon or overworld biome calls `playMusic('wilds', {delay: 4-24 s})`.
+  - `stopMusic(sec)`, `setAmbience(key)` (a biome id or `'town'`; see `AMB`), `stopAmbience(sec)`.
 - **assets.js**
   - `CLASS_IDS` (:4): 16 ids in sheet order.
   - `A`: `{classes, classScaled, hud, hudGeo, logo, potions, packs, chestImg, chestMeta, biomeSets}`. `packs[id]` holds a Promise while loading.

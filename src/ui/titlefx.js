@@ -6,7 +6,7 @@
 // Flames are simulated in coarse units (one unit = PX css px) but drawn at device resolution with tiny particles,
 // on a canvas laid over the title screen. A low-res copy of the fire, upscaled with smoothing, gives it a soft glow.
 import { A } from '../core/assets.js';
-import { initAudio, audioReady, playMusic, primeMusic, setAmbience, musicClock, seekMusic } from '../core/audio.js';
+import { initAudio, audioReady, playMusic, primeMusic, musicClock, seekMusic } from '../core/audio.js';
 import { rand, randi, clamp } from '../core/util.js';
 
 const FLAME = ['#fff7c8', '#ffe070', '#ffb428', '#ff7a12', '#e0400a', '#9a1c06', '#4a0c04'];
@@ -77,7 +77,6 @@ export function attachTitleFx(screen, logoEl, els = {}) {
     if (phase !== 'gate') return;
     phase = 'audio-pending'; priming = true;
     screen.classList.remove('title-gated');
-    setAmbience('title');
     primeMusic('title').then(() => {
       if (!cv.isConnected) return;
       priming = false;
