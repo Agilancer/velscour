@@ -71,6 +71,28 @@ Contents
   is a 60 s render of auto-play. Safari/iOS decoding at 22,050 Hz via OfflineAudioContext untested (falls back to the
   live context).
 
+## October 18, 2026 — Grim Nocturne hero gear: new armors, enclosed helmets, multi-colour finishes (branch `feat/mountainside`)
+
+- **Request:** replace every class's armor sprites and helmet overlays with the user's style-locked zips (Grim
+  Nocturne 96 armors, 96 additional armors, 80 enclosed helmets, style-lock documents), palette swaps for both that
+  change 3-4 colours (some bright, none blinding), and check helmet size/placement is cohesive across classes.
+- **Done:** `tools/nocturnegear.py` (`import` from the unpacked zips, `build` = `process_assets.py gear`). 12 armors
+  per class (two per rarity, odd ids Grim Nocturne, even ids the additional set), all re-cut from the high-res art with
+  the Game Exports' own downsampling (their pasted head patch had stray pale-blue/black blocks), soles at y183, each
+  head matched to the class's Common armor head. Helmets: one shared 16 x 5 atlas of 40 x 40 cells pinned at (45,63),
+  shifted per armor by its measured head offset (`gear.json` `armor.head`); no per-helmet nudges were needed, so
+  `placements.json` is empty and the helmet fitter (`Fit Helmets.cmd`, retargeted to the new atlas) is there for any
+  manual tweak. New skin/hair/slime masks. 44 new finishes in `src/data/gear.js` (base / cloth / trim / metal chosen to
+  contrast) and a classifier tweak in `recolorPx` so pale parchment stops turning pink. `item.look[3] = 2` marks the
+  new library; older looks reroll once. Removed: `tools/gearart.py`, `common_helmets/`, `rare_helmets/`, the old 80-frame
+  atlases. See [CLASS_ART.md](CLASS_ART.md).
+- **Verified:** `closed_helms.js all` (5 helmets x 12 armors x 16 classes: face covered, on the head, body untouched,
+  swap-safe; sheets looked at), `gear.js` sheets for several classes, `flow.js`, `ui.js`, `select.js`, `hud.js`, `mobile.js`.
+- **Open:** long-haired classes (Wizard, Carrion Witch, Ranger, Dragon Knight, Arcane Sorcerer) show some hair behind
+  the helmet's back edge, which the helmet addendum allows. Mythic helmets reuse the Legendary design until Mythic
+  helmets exist. `chatgpt_art.py armor/overlays` still writes to `assets/source/gear_nocturne/<class>/armor|overlays/`,
+  which `build` does not read yet.
+
 ## October 18, 2026 — performance sweep: hitches, canvas memory, per-biome frame cost (branch `perf/full-sweep`)
 
 - **Measure on a real GPU.** Headless Chromium on Windows renders through SwiftShader (a software GPU), whose
