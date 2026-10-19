@@ -39,7 +39,10 @@ each design's `rarity`; `placements.json`, kept across builds) and `classes.json
 
 ### Helmet fitting
 Every helmet draws its 40 x 40 cell at (45,63) of the hero frame, shifted by the armor's `armor.head` offset, so size
-and placement are the same for every class. To nudge one: double-click `Fit Helmets.cmd` (or
+and placement are the same for every class. The exported helmets were wider than the heads, so `build` narrows each
+class's helmets with an area resample (`HELM_SCALE` in `tools/nocturnegear.py`: 84% wide and 92% tall, 80% wide for
+the small-skulled Paladin, Necromancer, Barbarian and Death Knight), about the class's head centre and the helmet's
+bottom edge; the source PNGs stay untouched. To nudge one: double-click `Fit Helmets.cmd` (or
 `python tools/helmet_fit_server.py`), pick a class and design, drag/scroll it, and **Save to game**. That writes
 `{x, y, scaleX, scaleY, rotation}` (cell top-left in frame pixels) for that class and design into `placements.json`;
 an empty file means the default pin. The game and the fitter share `src/core/helmetfit.js`. More helmet designs per

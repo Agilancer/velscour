@@ -14,6 +14,17 @@ Contents
 
 ---
 
+## October 19, 2026 — helmets resized to the heads (branch `feat/helmet-sizing`)
+
+- **Request:** helmet placement looked decent but every class's helmets were a bit wide; give all classes a once-over.
+- **Done:** the exported helmets were ~26 px wide on 14-21 px skulls. `tools/nocturnegear.py build` now narrows them
+  (`HELM_SCALE`, `fit_helmet`: premultiplied box resample, 84% wide / 92% tall, 80% wide for Paladin, Necromancer,
+  Barbarian, Death Knight), anchored on the class's head centre and the helmet's bottom edge, so the visor stays over
+  the face and the bulky back shrinks most. Only `helmets/atlas.png` changed; gear `V` bumped to `nocturne-2`.
+- **Verified:** `closed_helms.js all` (all 16 classes clean; anchoring on the helmet's own centre had pushed the Slime
+  Lord's helms off its left-leaning head, hence the head anchor), sheets looked at, `herolook.js paladin,slime_lord`,
+  `flow.js`, `ui.js`, `select.js`.
+
 ## October 19, 2026 — Ranger: the signature bird is a 3D golden phoenix (branch `feat/ranger-phoenix`)
 
 - **Request:** replace the Ranger's new bird (the spirit hawk of her signature, The Hunt) with a 3D model of a golden
