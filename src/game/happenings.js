@@ -19,6 +19,9 @@ import { rollItem, rollGem, potionItem, itemName, itemColor } from '../data/item
 import { depthLevel, isRaidDepth, FINAL_DEPTH } from '../data/depth.js';
 import { addToBag } from './player.js';
 import { UI } from '../ui/ui.js';
+import { addEncounters } from './encounters.js';
+import { drawFolkPose } from './render.js';
+import { TOWNSFOLK } from '../data/townsfolk.js';
 
 // ------------------------------------------------------------------------------------------------ omens
 // A level-wide twist, announced on arrival. mon: applied to every enemy as it appears (ambushes too).
@@ -106,6 +109,8 @@ export function setupHappenings(world, start, gen) {
   if (spots.length && chance(0.22 + Math.min(0.15, depth * 0.002))) addCursed(world, spots.pop());
   // the vault's extra caches
   if (H.omen === 'vault') for (let i = 0; i < 3 && spots.length; i++) addCache(world, spots.pop());
+  // people of the Hollow down here: captives, a knight's last stand, a merchant's camp, the wizard, the witch, a Greener
+  addEncounters(world, roomSpots(world, start, 4));
   // a treasure imp shows up a while in; Velscour's challenge fires after the first kills
   if (chance(0.3)) H.impT = rand(25, 70);
   if (chance(0.3)) H.challengeAt = randi(12, 30);
@@ -178,12 +183,18 @@ export function addShrine(world, [x, y], key) {
   });
 }
 
+// the fallen are painted adventurers of the Hollow's sort (knights, wardens, scouts, the odd wizard), lying where they fell
+const FALLEN_LOOKS = () => TOWNSFOLK.filter((v) => v.knight || v.guard || v.caster).map((v) => v.spriteId);
 export function addRemains(world, [x, y]) {
-  const who = pick(FALLEN_NAMES), why = pick(EPITAPHS), depth = world.depth;
+  const who = pick(FALLEN_NAMES), why = pick(EPITAPHS), depth = world.depth, look = pick(FALLEN_LOOKS()), flip = chance(0.5);
   world.chests.push({
     x, y, opened: false, reach: 1.4, far: 22, label: `Remains of ${who}`, dot: '#e8dcc0',
     draw(ctx, sx, sy) {
-      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(sx, sy, 14, 6, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(sx, sy, 20, 7, 0, 0, TAU); ctx.fill();
+      if (drawFolkPose(ctx, look, 'dead', sx, sy + 2, flip, this.opened ? 0.85 : 1)) {
+        if (!this.opened) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3 + Math.sin(G.time * 2.5) * 0.12; ctx.drawImage(glowSprite('#e8dcc0'), sx - 22, sy - 24, 44, 32); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+        return;
+      }
       ctx.fillStyle = '#d8ccb0';
       ctx.fillRect(sx - 9, sy - 3, 14, 3); ctx.fillRect(sx - 5, sy - 6, 2, 9); ctx.fillRect(sx + 1, sy - 5, 2, 8);
       ctx.beginPath(); ctx.arc(sx + 8, sy - 4, 3.5, 0, TAU); ctx.fill();
