@@ -80,6 +80,11 @@ export function skillBaseDamage(sk, L) {
   if (sk.kind === 'proj' && (sk.m.n || 1) > 1) d /= Math.pow(sk.m.n, 0.35);
   if (sk.kind === 'rain' || sk.kind === 'strike') d /= Math.pow((sk.m.n || 1) / 6, 0.25) || 1;
   if (sk.m.free) d *= 0.85;
+  // A boomerang cuts going out AND coming back (bouncing ones ricochet first, then home to the hand). It curves home
+  // on a loop beside its throw line, so the way back sweeps fresh foes in a pack but rarely re-hits a lone target:
+  // each pass deals full damage (skills that only gained the return were trimmed with dmg= in their data).
+  // Rain rangs that fly home: the fall does 70%, the flight home 20% more (hazards.js Rain).
+  if (sk.m.ret && sk.kind === 'rain') d *= 0.7;
   return d;
 }
 
@@ -189,7 +194,7 @@ export function describe(sk, L, dmg) {
   if (m.chain) flags.push(`Chains to ${m.chain} more`);
   if (m.exp) flags.push('Explodes');
   if (m.split) flags.push('Splits on hit');
-  if (m.ret) flags.push('Returns');
+  if (m.ret) flags.push(sk.kind === 'rain' ? 'Each one flies back to your hand, cutting on the way' : m.bounce ? 'Then flies back to your hand, cutting on the way' : 'Returns to your hand, cutting again on the way back');
   if (m.burn) flags.push('Ignites');
   if (m.poison) flags.push('Poisons');
   if (m.bleed) flags.push('Causes bleeding');

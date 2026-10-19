@@ -240,7 +240,7 @@ Contents
   Knight Runeblade (6 frost/unholy/blood runes on a floating sword; Runic Obliteration cleave, majority rune decides the
   rider). Carrion Witch Hex Poppet (pins + hex threads to struck foes, dead foes leave rot pins; 6 = Squeeze). Slime Lord
   Gelatinous Mass (goo from kills slithers in, he grows up to 40%; Royal Belly Flop + 3 slimelings). Boomerang Knight
-  Trick Shot (8 mini boomerangs; a gold ricochet web that snaps). Lancer Rally the Order (war banner unfurls with Valor
+  Trick Shot (8 blue boomerangs ringing his helm; a gold ricochet web that snaps as the shot curves home). Lancer Rally the Order (war banner unfurls with Valor
   from hits, kills and wounds; 5 phantom knights charge + Rallied). Dragon Knight Dragonheart (flame wings grow with heat;
   a dragon head breathes fire + Wyrmblood). Gunner Bombing Run (marks foes on a radar; 10 marks = biplane drops 8 bombs).
 - **Rates** (auto-play, early depths, payoffs a minute): Ranger ~9, Totem ~7, Wizard/Barbarian/Dragoon ~6, Boomerang/Witch
@@ -1968,7 +1968,7 @@ On the player side, acid uses poison resistance, and phys/arcane/holy/shadow/blo
 - `ring`: projectiles cover 360°, or a wall becomes a ring.
 - `arc`: melee arc in degrees. Default 115; cleave 170; thrust fx 36; spin fx 360.
 - `cleave`: sets the melee arc to 170.
-- Projectile behaviour: `pierce` (pierce 99), `bounce=N`, `chain=N` (proj and melee), `home`, `split` (splits into 3 on first hit), `ret` (boomerang), `lob`, `exp` (explodes), `spray` (frozen-orb shards), `dur` (projectile lifetime).
+- Projectile behaviour: `pierce` (pierce 99), `bounce=N`, `chain=N` (proj and melee), `home`, `split` (splits into 3 on first hit), `ret` (boomerang: curls out, swings home in a loop to the thrower's hand, over walls; with `bounce` it ricochets first, then comes home; on `rain` each faller flies home too; each pass deals full damage but the curved way home rarely re-hits a lone target; a rain fall 70% plus 20% flying home, in `skillBaseDamage`), `lob`, `exp` (explodes), `spray` (frozen-orb shards), `dur` (projectile lifetime).
 - `pull`: proj pulls within 2.6; nova and aoe pull in; an aoe with dur implodes at x2 damage when it ends; also traps.
 - `delay`: aoe uses a Delayed hazard (meteor and nuke default to 0.85).
 - `cone`: beam becomes a cone.
@@ -2741,7 +2741,7 @@ See the `open_issues` field.
 - src/game/loot.js:109-116 — the itemIcon cache key ignores `size`. Gear icons are always pixelSprite scale 4 whatever the requested size.
 - src/data/skills.js:109,113 vs src/game/skillrun.js:54,139 — skillRange (used for melee approach and UI) omits the thrust x1.15 factor and uses cone 0.5 where castSkill uses 0.55.
 - src/game/combat.js:119 — a no-op `if` statement with a comment about the thorns curse (dead code).
-- src/data/skills.js `skillRange` — returning projectiles (`ret`, the Boomerang Knight's whole first tree) turn back at
+- src/data/skills.js `skillRange` — returning projectiles (`ret`, every thrown boomerang/chakram of the Boomerang Knight) turn back at
   half their range, so touch auto-aim and the skill range shown are twice what really lands. Auto-play uses its own
   `reachOf()` with the 0.48 factor.
 

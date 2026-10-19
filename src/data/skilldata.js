@@ -304,11 +304,11 @@ export const SKILLDATA = {
   ],
   boomerang_knight: [
     [
-      'Boomerang|proj|phys|rang|free wc=1 ret pierce', 'Twin Rang|proj|phys|rang|n=2 spread=30 ret pierce', 'Ricochet|proj|phys|rang|bounce=5', 'Heavy Rang|proj|phys|rang|ret pierce r=1.5 dmg=1.4 knock',
+      'Boomerang|proj|phys|rang|free wc=1 ret pierce', 'Twin Rang|proj|phys|rang|n=2 spread=30 ret pierce', 'Ricochet|proj|phys|rang|bounce=5 ret', 'Heavy Rang|proj|phys|rang|ret pierce r=1.5 dmg=1.4 knock',
       'Tri-Rang|proj|phys|rang|n=3 spread=45 ret pierce', 'Seeking Rang|proj|phys|rang|home ret pierce', 'Flame Rang|proj|fire|rang|ret pierce burn', 'Frost Rang|proj|cold|rang|ret pierce slow',
-      'Rang Storm|proj|phys|rang|n=6 ring ret pierce', 'Storm Rang|proj|light|rang|ret pierce chain=2', 'Splitting Rang|proj|phys|rang|split ret', 'Chakram|proj|phys|chakram|bounce=8 spd=1.3',
+      'Rang Storm|proj|phys|rang|n=6 ring ret pierce', 'Storm Rang|proj|light|rang|ret pierce chain=2', 'Splitting Rang|proj|phys|rang|split ret', 'Chakram|proj|phys|chakram|bounce=8 spd=1.3 ret',
       'Infinity Rang|proj|arcane|rang|ret pierce r=2 dmg=1.6 dur=2', 'Blade Comet|aoe|phys|meteor|r=1.5 dmg=2.2', 'Rang Barrage|proj|phys|rang|n=10 spread=90 ret pierce', 'Orbiting Rangs|orbit|phys|rang|n=4 dur=8 cd=8',
-      'Rangnarok|proj|phys|rang|n=20 ring ret pierce cd=5', 'Celestial Chakram|proj|holy|chakram|bounce=12 dmg=1.6 cd=3', 'Black Hole Rang|proj|shadow|rang|pull ret pierce r=2 cd=5', 'Rang Rain|rain|phys|rang|n=30 r=2 cd=6',
+      'Rangnarok|proj|phys|rang|n=20 ring ret pierce cd=5', 'Celestial Chakram|proj|holy|chakram|bounce=12 dmg=1.6 cd=3 ret', 'Black Hole Rang|proj|shadow|rang|pull ret pierce r=2 cd=5', 'Rang Rain|rain|phys|rang|n=30 r=2 cd=6 ret',
     ],
     [
       'Cross Slash|melee|phys|slash|n=2', 'Swirling Blades|orbit|phys|blade|n=2 dur=6 cd=6', 'Riposte|buff|phys|shield|buff=block,thorns amt=25 dur=20 cd=25', 'Lunge|dash|phys|charge|range=0.8',

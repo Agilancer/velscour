@@ -1,7 +1,7 @@
-// Boomerang Knight: the Trick Shot. Every blade that bites spins up one of the eight little gold boomerangs that
-// circle his helm. Eight and he lets fly the TRICK SHOT: a golden boomerang that ricochets from foe to foe (ten at
-// most, back and forth between a few) and draws a glowing web of gold across the field behind it. It snaps back to
-// his hand, and the web SNAPS too: every thread cuts whatever stands across it.
+// Boomerang Knight: the Trick Shot. Every blade that bites spins up one of the eight blue boomerangs that
+// circle his helm. Eight and he lets fly the TRICK SHOT: a blue boomerang that ricochets from foe to foe (ten at
+// most, back and forth between a few) and draws a glowing web of gold across the field behind it. It swings back in an
+// arc to his hand, and the web SNAPS too: every thread cuts whatever stands across it.
 import { G, later, stat, power, sigO, foesNear, headAt, glow, rand, TAU } from './common.js';
 import { isoX, isoY, camera } from '../../core/view.js';
 import { sfx } from '../../core/audio.js';
@@ -9,14 +9,20 @@ import { addEffect, Beam, Ring, floatText, sparkle, spawn } from '../../gfx/vfx.
 import { hit } from '../combat.js';
 import { lineTargets } from '../hazards.js';
 
-const MAX = 8, GOLD = '#ffd040', HOP = 0.11;
+const MAX = 8, GOLD = '#ffd040', BLUE = '#3a9cff', HOP = 0.11, BACK = 0.38; // BACK: the curving flight home
 
-/** A little boomerang (a bent blade) spun to angle a. */
-function rang(ctx, x, y, a, s, col) {
+/** A blue boomerang (two swept arms meeting at an elbow) spun to angle a; lit = charged, otherwise dull steel. */
+function rang(ctx, x, y, a, s, lit = true) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.scale(s, s);
-  ctx.fillStyle = col; ctx.beginPath();
-  ctx.moveTo(-6, -1); ctx.quadraticCurveTo(0, -5, 6, -1); ctx.lineTo(4, 1); ctx.quadraticCurveTo(0, -2, -4, 1); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(-0.7, -3.3, 1.4, 1.4);
+  ctx.beginPath(); // elbow at the top, arms sweeping down and out to rounded tips
+  ctx.moveTo(-9, 5); ctx.quadraticCurveTo(-7, -2, 0, -5); ctx.quadraticCurveTo(7, -2, 9, 5);
+  ctx.quadraticCurveTo(9.5, 7, 7.5, 6.5); ctx.quadraticCurveTo(5, 0.5, 0, -1); ctx.quadraticCurveTo(-5, 0.5, -7.5, 6.5);
+  ctx.quadraticCurveTo(-9.5, 7, -9, 5); ctx.closePath();
+  ctx.fillStyle = lit ? BLUE : '#5a6a7a'; ctx.fill();
+  ctx.lineWidth = 1.1; ctx.strokeStyle = lit ? '#0a2a6a' : '#22303c'; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-7.4, 3.5); ctx.quadraticCurveTo(-5.5, -2, 0, -3.8); ctx.quadraticCurveTo(5.5, -2, 7.4, 3.5); // bright leading edge
+  ctx.lineWidth = 1.2; ctx.strokeStyle = lit ? '#bfe6ff' : '#8a9aa8'; ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(-0.9, -4.2, 1.8, 1.8);
   ctx.restore();
 }
 
@@ -35,7 +41,7 @@ class TrickShot {
         this.i++;
       }
       if (this.i >= this.path.length) { this.back = true; this.t0 = this.t; }
-    } else if (this.t - this.t0 > 0.2 && !this.web) { this.web = this.t; }
+    } else if (this.t - this.t0 > BACK && !this.web) { this.web = this.t; }
     if (this.web && !this.snapped && this.t - this.web > 0.55) { // the web snaps
       this.snapped = true;
       const hitSet = new Set();
@@ -54,8 +60,11 @@ class TrickShot {
       const a = i ? this.path[i - 1] : { x: p.x, y: p.y }, b = this.path[i];
       return [a.x + (b.x - a.x) * Math.min(1, k), a.y + (b.y - a.y) * Math.min(1, k)];
     }
-    const last = this.path[this.path.length - 1], k = Math.min(1, (this.t - this.t0) / 0.2);
-    return [last.x + (p.x - last.x) * k, last.y + (p.y - last.y) * k];
+    // home along a wide curve, bowing out to one side of the straight line (a quadratic arc)
+    const last = this.path[this.path.length - 1], k = Math.min(1, (this.t - this.t0) / BACK), u = 1 - k;
+    const dx = p.x - last.x, dy = p.y - last.y, L = Math.hypot(dx, dy) || 1, bow = Math.min(3, 0.6 + L * 0.45);
+    const cx = (last.x + p.x) / 2 - (dy / L) * bow, cy = (last.y + p.y) / 2 + (dx / L) * bow;
+    return [u * u * last.x + 2 * u * k * cx + k * k * p.x, u * u * last.y + 2 * u * k * cy + k * k * p.y];
   }
   draw(ctx) {
     const live = this.snapped ? Math.max(0, 1 - (this.t - this.web - 0.55) / 0.35) : 1;
@@ -67,16 +76,16 @@ class TrickShot {
       ctx.globalAlpha = 0.95 * live * hum; ctx.strokeStyle = '#fff6c0'; ctx.lineWidth = 1.4; ctx.stroke();
     }
     ctx.restore();
-    if (this.back && this.t - this.t0 > 0.2) return;
+    if (this.back && this.t - this.t0 > BACK) return;
     const [x, y] = this.pos(), px = isoX(x, y), py = isoY(x, y) - 28;
-    glow(ctx, GOLD, px, py, 16, 0.8);
-    rang(ctx, px, py, this.spin, 1.6, GOLD);
+    glow(ctx, BLUE, px, py, 18, 0.8);
+    rang(ctx, px, py, this.spin, 1.6);
   }
 }
 
 export default {
   id: 'boomerang_knight', name: 'Trick Shot', color: GOLD,
-  desc: 'Every blade that bites spins up one of eight gold boomerangs circling his helm. Eight and the TRICK SHOT flies: it ricochets foe to foe, weaving a web of gold that snaps when it returns to his hand.',
+  desc: 'Every blade that bites spins up one of eight blue boomerangs circling his helm. Eight and the TRICK SHOT flies: it ricochets foe to foe, weaving a web of gold that snaps when it returns to his hand.',
   init: () => ({ n: 0, gap: 0, flash: 0, busy: 0 }),
   hit(p, s) { if (s.gap > 0 || s.busy > 0) return; s.gap = 0.25; if (s.n < MAX) { s.n++; s.flash = 0.4; } },
   update(p, s, dt) {
@@ -109,13 +118,14 @@ export default {
   },
   draw(ctx, p, s, t) {
     if (s.busy > 0 && !s.n) return;
-    const [cx, cy] = headAt(p, 2), R = G.touch ? 12 : 15;
-    for (let i = 0; i < MAX; i++) {
-      const a = t * 2.2 + (i / MAX) * TAU, x = cx + Math.cos(a) * R, y = cy - 4 + Math.sin(a) * R * 0.3, lit = i < s.n, front = Math.sin(a) > 0;
-      ctx.globalAlpha = lit ? (front ? 1 : 0.7) : 0.25;
-      if (lit) glow(ctx, GOLD, x, y, 6, front ? 0.6 : 0.3);
-      ctx.globalAlpha = lit ? (front ? 1 : 0.7) : 0.25;
-      rang(ctx, x, y, lit ? t * 14 + i : a, G.touch ? 0.6 : 0.75, lit ? GOLD : '#7a8a80');
+    const [cx, cy] = headAt(p, 2), R = G.touch ? 28 : 36, order = [];
+    for (let i = 0; i < MAX; i++) order.push(i);
+    order.sort((i, j) => Math.sin(t * 1.6 + (i / MAX) * TAU) - Math.sin(t * 1.6 + (j / MAX) * TAU)); // back ones first
+    for (const i of order) { // a wide ring round the helm, each boomerang spinning on its own
+      const a = t * 1.6 + (i / MAX) * TAU, x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R * 0.36, lit = i < s.n, front = Math.sin(a) > 0;
+      if (lit) { ctx.globalAlpha = 1; glow(ctx, BLUE, x, y, 9, front ? 0.55 : 0.25); }
+      ctx.globalAlpha = lit ? (front ? 1 : 0.75) : 0.35;
+      rang(ctx, x, y, lit ? t * 9 + i * 0.8 : a + Math.PI / 2, G.touch ? 0.85 : 1.05, lit);
     }
     ctx.globalAlpha = 1;
     if (s.n >= MAX) glow(ctx, '#ffffff', cx, cy - 4, R * 1.4, 0.25 + 0.15 * Math.sin(t * 10));

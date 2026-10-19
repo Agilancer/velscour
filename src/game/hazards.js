@@ -49,6 +49,15 @@ export class Projectile {
     this.vy = Math.sin(this.ang) * this.speed;
     this.life = this.dur || this.range / this.speed;
     this.sx = this.x; this.sy = this.y;
+    this.rico = this.ret && this.bounce > 0; // a ricochet boomerang: bounces, then comes home
+    if (this.ret) { // a boomerang curls: thrown a touch to one side, it bends back across the aim line on the way out
+      this.curl = this.curl || 1;
+      if (!this.returning) { // aimed off-line just enough that the curl brings it back across the target's spot
+        const D = this.tx !== undefined ? clamp(dist(this.x, this.y, this.tx, this.ty), 1.5, this.range * 0.5) : this.range * 0.5;
+        const a = this.ang - this.curl * clamp((0.8 * D) / (2 * this.speed), 0.06, 0.3); this.vx = Math.cos(a) * this.speed; this.vy = Math.sin(a) * this.speed;
+      }
+      else this.swing = true;
+    }
     this.team = this.src ? this.src.team : this.team;
     if (this.fx === 'skull' && this.src && this.src.classId === 'death_knight') this.fx = 'dkskull'; // Death Coil wears his frost skull
     if (this.lob) {
@@ -91,22 +100,31 @@ export class Projectile {
       const turn = Math.cos(this.t * this.weave + this.seed) * 7 * dt * Math.max(0.25, 1 - this.t * 1.2), c = Math.cos(turn), s = Math.sin(turn), vx = this.vx;
       this.vx = vx * c - this.vy * s; this.vy = vx * s + this.vy * c;
     }
-    // boomerang return
-    if (this.ret && !this.returning && this.t > this.life * 0.5) { this.returning = true; this.hitSet.clear(); }
+    // boomerang flight: a gentle curl going out, then it swings round in a wide loop (always the same way) and homes
+    // on the hand that threw it, sailing over walls on the way back. Never a straight snap back.
+    if (this.ret && !this.returning) {
+      if (!this.bounced) { const r = this.curl * 0.8 * dt, c = Math.cos(r), s = Math.sin(r), vx = this.vx; this.vx = vx * c - this.vy * s; this.vy = vx * s + this.vy * c; }
+      if (this.t > (this.retAt ?? this.life * 0.5)) this.goHome();
+    }
     if (this.returning) {
-      const s = this.src && !this.src.dead ? this.src : { x: this.sx, y: this.sy };
-      const a = angleTo(this.x, this.y, s.x, s.y), sp = this.speed * 1.1;
-      this.vx = Math.cos(a) * sp; this.vy = Math.sin(a) * sp;
-      if (dist(this.x, this.y, s.x, s.y) < 0.5 || this.t > this.life * 3) return false;
+      const s = this.src && !this.src.dead ? this.src : { x: this.sx, y: this.sy }, d = dist(this.x, this.y, s.x, s.y);
+      if (d < 0.55) { this.caught(s); return false; }
+      if (this.t > this.life * 4 + 4) return false;
+      const cur = Math.atan2(this.vy, this.vx), off = angleDiff(cur, angleTo(this.x, this.y, s.x, s.y));
+      if (this.swing && (Math.abs(off) < 0.35 || (this.swingT = (this.swingT || 0) + dt) > 1.5)) this.swing = false;
+      this.spd = clamp((this.spd ?? 1) + dt * (this.swing ? -1.2 : 1.6), 0.65, 1.2); // eases through the turn, then speeds home
+      const sp = this.speed * this.spd, rate = Math.max(7, (2.2 * sp) / d); // tight enough to never circle the hand
+      const turn = d < 0.7 ? off : this.swing ? this.curl * 6.2 * dt : clamp(off, -rate * dt, rate * dt);
+      this.vx = Math.cos(cur + turn) * sp; this.vy = Math.sin(cur + turn) * sp;
     }
     const nx = this.x + this.vx * dt, ny = this.y + this.vy * dt;
-    if (!w.map.isFloor(nx, ny)) {
-      if (this.bounce > 0 || this.returning) {
+    if (!this.returning && !w.map.isFloor(nx, ny)) {
+      if (this.bounce > 0) {
         if (!w.map.isFloor(nx, this.y)) this.vx = -this.vx;
         if (!w.map.isFloor(this.x, ny)) this.vy = -this.vy;
-        if (!this.returning) { this.bounce--; this.hitSet.clear(); }
+        this.bounce--; this.hitSet.clear();
       } else if (this.ret) {
-        this.returning = true;
+        this.goHome();
       } else {
         this.impact();
         return false;
@@ -153,12 +171,26 @@ export class Projectile {
       this.split = false;
       const base = Math.atan2(this.vy, this.vx);
       for (const off of [-0.45, 0, 0.45]) {
-        w.addHazard(new Projectile({ world: w, src: this.src, team: this.team, x: c.x, y: c.y, ang: base + off, speed: this.speed, range: this.range * 0.6, fx: this.fx, el: this.el, dmg: this.dmg.map((v) => v * 0.55), o: this.o, size: this.size * 0.8, child: true, pierce: 0 }));
+        const kid = w.addHazard(new Projectile({ world: w, src: this.src, team: this.team, x: c.x, y: c.y, ang: base + off, speed: this.speed, range: this.range * 0.6, fx: this.fx, el: this.el, dmg: this.dmg.map((v) => v * 0.55), o: this.o, size: this.size * 0.8, child: true, pierce: 0, ret: this.ret }));
+        if (kid && kid.hitSet) kid.hitSet.add(c.id);
       }
       this.hitSet.add(c.id);
     }
+    if (this.ret) { // boomerangs: ricochet foe to foe first, then home to the hand; plain ones cut through and keep going
+      if (!this.returning && this.bounce > 0) {
+        const n = w.hostiles(this.team, c.x, c.y, 6).filter((x) => !this.hitSet.has(x.id))[0];
+        if (n) {
+          this.bounce--;
+          const a = angleTo(this.x, this.y, n.x, n.y), sp = Math.hypot(this.vx, this.vy);
+          this.vx = Math.cos(a) * sp; this.vy = Math.sin(a) * sp;
+          this.bounced = true; this.retAt = this.t + 0.7; // misses the next one: comes home anyway
+          return;
+        }
+      }
+      if (!this.returning && this.rico) this.retAt = Math.min(this.retAt ?? 1e9, this.t + 0.2); // flies on a beat, then swings home
+      return;
+    }
     if (this.pierce > 0) { this.pierce--; return; }
-    if (this.ret) return; // boomerangs keep going
     if (this.bounce > 0) {
       this.bounce--;
       const n = w.hostiles(this.team, c.x, c.y, 6).filter((x) => !this.hitSet.has(x.id))[0];
@@ -171,6 +203,16 @@ export class Projectile {
     }
     if (!this.exp) hitSpark(this.x, this.y, this.z, this.el);
     this.dead = true;
+  }
+  /** A boomerang turns for home; whatever it just cut (c) is spared until the way back has cleared it. */
+  goHome(c) {
+    this.returning = true; this.swing = true; this.hitSet.clear();
+    if (c) this.hitSet.add(c.id);
+  }
+  /** Back in the hand: a small flash where it is caught. */
+  caught(s) {
+    if (!this.src || this.src !== s || this.child) return;
+    sparkle(s.x, s.y, 30, this.E.glow, 3, 0.18);
   }
   impact() {
     if (this.exp) explode(this.world, this.src, this.x, this.y, this.exp, this.dmg.map((v) => v * 0.7), this.el, { ...this.o, exclude: new Set(this.hitSet) });
@@ -874,6 +916,10 @@ export class Rain {
           aoe(this.world, this.src, f.x, f.y, this.impactR, roll(this.dmg), this.el, this.o);
           burst(f.x, f.y, 2, this.el, 5, 1.5, { size: 0.8 });
           if (chance(0.3)) sfx(this.E.sfx, 0.4);
+        }
+        if (this.ret && this.src && !this.src.dead) { // rain boomerangs bounce off the ground and fly home, cutting on the way
+          const p = this.src, curl = chance(0.5) ? 1 : -1, a = angleTo(f.x, f.y, p.x, p.y) - curl * rand(1, 1.8), back = new Projectile({ world: this.world, src: p, x: f.x, y: f.y, ang: a, speed: 11, range: 11, fx: this.fx, el: this.el, dmg: this.dmg.map((v) => v * 0.2), o: this.o, pierce: 99, ret: true, returning: true, curl, z: 18, size: 0.85, child: true });
+          this.world.addHazard(back);
         }
       }
     }

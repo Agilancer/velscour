@@ -128,6 +128,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
             tx: tx + (m.lob && n > 1 ? rand(-1, 1) : 0), ty: ty + (m.lob && n > 1 ? rand(-1, 1) : 0),
             exp: m.exp ? 1.1 * (m.r ?? 1) * area : 0, chain: m.chain ? m.chain + Math.floor(st.chainPlus || 0) : 0,
             spray: m.spray, pull: m.pull, size: (m.r ?? 1) * vis, r: 0.3 * (m.r ?? 1) * Math.sqrt(vis), dur: m.dur, light: el !== 'phys',
+            curl: m.ring ? (i % 2 ? -1 : 1) : n > 1 && i < (n - 1) / 2 ? -1 : 1, // boomerangs fan out in mirrored loops
             ...(bard >= 0 ? { bm: m, tier: bard } : null),
           }));
         });
@@ -331,7 +332,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
     }
     case 'rain': {
       const [x, y] = clampTarget(w, p, tx, ty, 10);
-      w.addHazard(new Rain({ world: w, src: p, x, y, r: 2 * (m.r ?? 1) * area, n: (m.n || 12) + Math.floor((st.extraProj || 0) * 3), dur: m.dur || 1.2, fx, el, dmg, o }));
+      w.addHazard(new Rain({ world: w, src: p, x, y, r: 2 * (m.r ?? 1) * area, n: (m.n || 12) + Math.floor((st.extraProj || 0) * 3), dur: m.dur || 1.2, fx, el, dmg, o, ret: m.ret }));
       addEffect(new Ring(x, y, 0.2, 2 * (m.r ?? 1) * area, 0.5, E.glow, 2));
       break;
     }
