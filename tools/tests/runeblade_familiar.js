@@ -1,5 +1,5 @@
 // The Death Knight's Runeblade as a familiar (src/game/sigs/deathknight.js) and his frost skulls (src/gfx/dkskull.js):
-//  1. the frost skulls: the Velscour contact skull recoloured in all four palettes; Death Coil flies it ('dkskull')
+//  1. the frost skulls: the Velscour contact skull recoloured, eye dots removed; Death Coil flies it ('dkskull')
 //  2. all 12 idle patterns: the sword moves, stays near him, never NaN; behind/in front of him by depth
 //  3. a swing for every kind of skill, every Death Knight skill maps to one, each finishes
 //  4. its five skills hurt a pack (and never charge the runes)
@@ -61,15 +61,19 @@ const SOAK = process.argv[2] !== undefined && !isNaN(+process.argv[2]) ? +proces
       for (let i = 0; i < 40 && !drawn; i++) { await new Promise((r) => setTimeout(r, 50)); drawn = K.drawDkSkull(g, -50, -50, 10); }
       const src = await new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.src = 'assets/ui/velscour_contact_skull.png'; });
       g.drawImage(src, 10, 10, 128, 128);
-      const pals = [['#e8f4ff', '#40c0ff'], ['#e8f4ff', '#1a3a80'], ['#bfeaff', '#40c0ff'], ['#bfeaff', '#1a3a80']];
-      pals.forEach(([b, e], i) => { K.drawDkSkull(g, 210 + i * 95, 52, 72, b, e); K.drawDkSkull(g, 190 + i * 95, 125, 14, b, e); K.drawDkSkull(g, 225 + i * 95, 122, 22, b, e); });
-      // its colours: no warm bone left, blue eyes
+      const pals = ['#e8f4ff', '#bfeaff'];
+      pals.forEach((b, i) => { K.drawDkSkull(g, 210 + i * 95, 52, 72, b); K.drawDkSkull(g, 190 + i * 95, 125, 14, b); K.drawDkSkull(g, 225 + i * 95, 122, 22, b); });
+      // its colours: no warm bone left
       const d = g.getImageData(160, 10, 400, 90).data; let warm = 0, n = 0;
       for (let i = 0; i < d.length; i += 4) { if (d[i] === 0x26 && d[i + 1] === 0x24) continue; n++; if (d[i] > d[i + 2] + 40) warm++; }
-      return { drawn, warm: warm / Math.max(1, n), sheet: c.toDataURL(), sig: !!p.sig };
+      // and no eye dots: the sockets stay dark (eyes at (46, 66) and (81, 66) of 128, drawn 72 px tall at (174, 16))
+      let eyes = 0;
+      for (const [ex, ey] of [[46, 66], [81, 66]]) { const e = g.getImageData(174 + Math.round(ex * 72 / 128) - 1, 16 + Math.round(ey * 72 / 128) - 1, 3, 3).data; for (let i = 0; i < e.length; i += 4) eyes = Math.max(eyes, e[i], e[i + 1], e[i + 2]); }
+      return { drawn, warm: warm / Math.max(1, n), eyes, sheet: c.toDataURL(), sig: !!p.sig };
     });
     ok(setup.sig, 'Death Knight has his signature');
     ok(setup.drawn && setup.warm < 0.02, `frost skulls draw from the contact skull (warm px ${(setup.warm * 100).toFixed(1)}%)`);
+    ok(setup.eyes < 110, `no eye dots: the sockets stay dark (brightest ${setup.eyes})`);
     save('dk_skulls', setup.sheet);
 
     // the particles his casts and hits throw use it, and Death Coil flies it

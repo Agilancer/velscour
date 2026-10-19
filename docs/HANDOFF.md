@@ -24,7 +24,7 @@ Contents
   Rime; signature hits, so they never charge the runes), a fast-move trail, a floor shadow, drawn behind him when it is
   further from the camera. Details and numbers: [RUNEBLADE_3D.md](RUNEBLADE_3D.md#the-familiar).
 - **Death Knight, the skulls**: the skulls from his casts/hits and Death Coil now use the Velscour contact skull art
-  (`assets/ui/velscour_contact_skull.png`) recoloured to his frost palette at load (`src/gfx/dkskull.js`).
+  (`assets/ui/velscour_contact_skull.png`) recoloured to his frost palette at load, red eye dots removed (`src/gfx/dkskull.js`).
 - **Balance call, not measured**: the sword skills add damage (roughly 0.5x `power` per 2.6 s plus the AoE skills).
   Worth a `balance.js death_knight` pass if the Death Knight now feels too strong.
 - Tests: new `tools/tests/runeblade_familiar.js`.

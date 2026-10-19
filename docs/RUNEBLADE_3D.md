@@ -37,8 +37,9 @@ fast. It has a shadow on the floor and draws behind him when it is further from 
 
 The skulls his casts and hits throw off (`classfx.js`, `vfx.js` particle `skull`) and Death Coil (`shapes.js`
 `dkskull`, set in `Projectile` when the caster is a Death Knight) use the Velscour contact skull from the button by
-the minimap (`assets/ui/velscour_contact_skull.png`), recoloured at load by `src/gfx/dkskull.js`: bone becomes ice,
-the red eyes become his eye colour (four palettes, the same pairs the old drawn skulls used), baked at 64 and 32 px.
+the minimap (`assets/ui/velscour_contact_skull.png`), recoloured at load by `src/gfx/dkskull.js`: bone becomes ice
+(two bone tints, the ones the old drawn skulls used), the red eye dots are taken out so the sockets are dark and empty,
+baked at 64 and 32 px.
 The old drawn skull stands in while the image loads.
 
 ## Skins

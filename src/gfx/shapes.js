@@ -95,7 +95,7 @@ export function drawShape(ctx, fx, x, y, a, s, E, t, extra = {}) {
     case 'dkskull': { // Death Coil: the contact skull in frost, rocking as it flies, a cold glow behind
       glow(ctx, 0, 0, 20 * s, '#40c0ff', 0.85);
       glow(ctx, 0, 0, 12 * s, E.glow, 0.6);
-      if (drawDkSkull(ctx, 0, 0, 17 * s, '#e8f4ff', '#40c0ff', Math.sin(t * 9) * 0.18)) break;
+      if (drawDkSkull(ctx, 0, 0, 17 * s, '#e8f4ff', Math.sin(t * 9) * 0.18)) break;
       fx = 'skull';
     }
     // falls through to the drawn skull while the art loads

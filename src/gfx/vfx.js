@@ -689,7 +689,7 @@ export function drawParticles(ctx, vr) {
         break;
       case 'skull': { // the Death Knight's casts and hits: the contact skull in frost, or a little pixel skull while it loads
         ctx.globalAlpha = Math.min(1, (1 - k) * 1.6);
-        if (drawDkSkull(ctx, px, py, size * 2.4, p.color, p.eye)) break;
+        if (drawDkSkull(ctx, px, py, size * 2.4, p.color)) break;
         const u = Math.max(1, size / 3), x0 = px - u * 2.5, y0 = py - u * 3;
         ctx.fillStyle = p.color; ctx.fillRect(x0, y0, u * 5, u * 4); ctx.fillRect(x0 + u, y0 + u * 4, u * 3, u * 2);
         ctx.fillStyle = p.eye || '#102040'; ctx.fillRect(x0 + u * 0.6, y0 + u * 1.6, u * 1.4, u * 1.4); ctx.fillRect(x0 + u * 3, y0 + u * 1.6, u * 1.4, u * 1.4);
