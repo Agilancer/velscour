@@ -1,0 +1,74 @@
+========== FIRST MESSAGE (attach the zip) ==========
+
+You're the pixel artist for VELSCOUR, an isometric dark-fantasy action RPG in the style of Diablo II, drawn as
+hand-placed pixel art. The attached zip is a texture kit for one asset: the Death Knight's Runeblade.
+
+The Runeblade is a spectral greatsword that hovers at the Death Knight's side. It takes a glowing rune in each of six
+slots as he fights, then grows to giant size for one colossal cleave. In the game it is a real 3D model. The game
+builds that model from ONE picture you paint, which shows three views of the same sword pointing down:
+- FRONT (face-on). This gives the outline and the front colours.
+- SIDE (edge-on). This gives how thick the sword is at every height.
+- BACK (from behind, mirrored). This gives the back colours.
+
+Before drawing anything, open the zip and read every file:
+- README.md: what the kit is.
+- SPEC.md: the exact canvas, columns, guide lines and rune slot positions, and how the game turns the picture into 3D.
+  It wins over everything else.
+- STYLE.md: the style lock and the exact palette.
+- templates/runeblade3d_texture_template.png: the sheet you'll fill in. The cyan dashed boxes are the three columns.
+  The yellow lines are the centre lines, the pommel top, the crossguard centre and the point. The green squares are
+  the six rune slots, and the green ticks mark the suggested blade and guard widths.
+- examples/: the placeholder sword the game uses today, painted into the template. Copy the placement, not the look.
+- reference/: how the sheet becomes 3D, the palette, and the placeholder model rendered in the game.
+
+Then reply with:
+1. The design card from STYLE.md (four lines), filled in for this sword.
+2. One paragraph describing the sword: the blade, the guard, the grip, the pommel and the verdigris. Also say how
+   thick each part is in the SIDE view.
+3. Anything in the spec that's unclear to you.
+
+Don't make any images in this reply. I'll ask for the sheet next.
+
+========== THE SHEET (attach templates/runeblade3d_texture_template.png and examples/runeblade3d_layout_example.png) ==========
+
+Draw the Runeblade texture sheet as one 1024 x 1536 portrait image. Use the attached template as the exact layout: the
+same canvas size, the same three columns, the same guide lines, and a flat magenta #FF00FF background.
+
+- Hard-edged pixel art on a grid where one art pixel is a 4 x 4 block of identical pixels. No blur, no gradients, and
+  no anti-aliasing against the magenta.
+- Draw the same sword three times, always pointing straight down on the column's yellow centre line. In every view
+  the top of the pommel touches the top line, the middle of the crossguard is on the crossguard line, and the point
+  touches the bottom line. Every part must be at the same height in all three views.
+- FRONT: the sword face-on.
+  - A broad, straight frost-glass blade about 144 px wide at the guard, with a long point and a darker fuller groove.
+  - A flat tomb-lid crossguard about 360 px wide with hourglass ends in verdigris bronze. It is the widest part.
+  - A dark wrapped grip, and an hourglass pommel with a small frost gem.
+  - Verdigris tears running down from the guard.
+  - Six EMPTY dark rune sockets in the fuller, exactly on the green squares.
+- SIDE: the same sword turned 90 degrees, edge-on, at most 120 px wide:
+  - the blade a thin wedge (about 32 px thick at the guard, thinning to the point);
+  - the crossguard end-on (about 56 px deep);
+  - the grip and pommel round, in profile.
+  No rune sockets.
+- BACK: the same sword seen from behind. Its outline is exactly FRONT's outline mirrored left to right. Use the same
+  materials and the same six empty sockets on the green squares.
+- Gentle, even light from the upper left. Shade with flat bands along the palette ramps in STYLE.md only. The game
+  lights the model itself, so paint no hot highlights, deep shadows or cast shadows.
+- No text anywhere, no lit runes, and no glow or halo outside the sword. Remove every label, box and guide line, so
+  only the three views are left on flat magenta.
+
+========== IF THE SHEET COMES BACK WRONG (use what applies) ==========
+
+- "The pixels aren't even. Redraw it with every art pixel as a crisp 4 x 4 block of one colour."
+- "The three views don't line up. Put the pommel top, crossguard centre and point of ALL THREE views on the same
+  three yellow lines, so every part is at the same height in each."
+- "BACK doesn't match FRONT. Make BACK's outline exactly FRONT's outline mirrored left to right."
+- "SIDE is too wide. It's the sword edge-on: thin blade, crossguard seen end-on, at most 120 px wide."
+- "The sword leans or sits off the centre line. Keep every view straight down its yellow centre line."
+- "The rune sockets moved or are lit. Put six EMPTY dark sockets exactly on the green squares, in FRONT and BACK."
+- "The lighting is too strong. Remove the bright streaks and dark shadow side; keep only flat material bands. The
+  game lights the model in 3D."
+- "There's a glow or halo outside the sword. Keep everything inside the outline on flat magenta."
+- "There are labels or guides left in the image. Give me the same art on plain flat magenta only."
+- "The colours drifted. Use only the hex values in STYLE.md."
+- "It's the wrong size. The canvas must be 1024 x 1536, portrait."
