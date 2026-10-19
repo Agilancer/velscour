@@ -1,18 +1,21 @@
-// Death Knight: the Runeblade. A spectral greatsword hovers at his side with six rune slots down its blade. His
-// blows carve runes into it by their nature: frost (cold, the Frost tree), unholy (shadow, poison, Unholy), blood
-// (blood, the Blood tree). Six runes and the blade swells to giant size for RUNIC OBLITERATION, one colossal cleave.
-// The runes decide what follows: mostly frost freezes everything it struck, mostly unholy bursts into plague, mostly
-// blood drinks their life back into him. All six of one kind is PERFECT: half again as strong.
-// The sword is a 3D model (src/gfx/runeblade3d.js, docs/RUNEBLADE_3D.md): it sways round its length as it hovers,
-// twirls when it takes a rune, and the same model, scaled up, makes the Obliteration swing. Its skin changes every 10
-// levels and its palette every 50 (runebladeLook), announced as the blade is reforged.
+// Death Knight: the Runeblade. A spectral greatsword flies round him like a familiar, with six rune slots down its
+// blade. His blows carve runes into it by their nature: frost (cold, the Frost tree), unholy (shadow, poison, Unholy),
+// blood (blood, the Blood tree). Six runes and the blade swells to giant size for RUNIC OBLITERATION, one colossal
+// cleave. The runes decide what follows: mostly frost freezes everything it struck, mostly unholy bursts into plague,
+// mostly blood drinks their life back into him. All six of one kind is PERFECT: half again as strong.
+// The sword is a 3D model (src/gfx/runeblade3d.js, docs/RUNEBLADE_3D.md). As a familiar it flies one of twelve idle
+// patterns round him (PATTERNS, a new one every few seconds), swings its own way for each kind of skill he casts
+// (SWINGS) and fights on its own with five sword skills (PET: Runic Lunge, Reaping Arc, Grave Plunge, Blade Waltz,
+// Wheel of Rime). It twirls when it takes a rune, and the same model, scaled up, makes the Obliteration swing. Its
+// skin changes every 10 levels and its palette every 50 (runebladeLook), announced as the blade is reforged.
 const look = (p) => runebladeLook((p === G.player && G.char ? G.char.level : p.level) || 1);
-import { G, stat, power, sigO, crowd, glow, rand, TAU } from './common.js';
+import { G, stat, power, sigO, crowd, toughest, foesNear, glow, rand, TAU } from './common.js';
 import { isoX, isoY, camera, HW, HH } from '../../core/view.js';
 import { sfx } from '../../core/audio.js';
 import { addEffect, Ring, Slash, floatText, spawn, burst, bloodSpray, addDecal } from '../../gfx/vfx.js';
 import { hit, aoe } from '../combat.js';
-import { coneTargets } from '../hazards.js';
+import { coneTargets, lineTargets } from '../hazards.js';
+import { angleDiff } from '../../core/util.js';
 import { drawRuneblade3D, runeblade3DReady, runebladeLook, preloadRuneblade } from '../../gfx/runeblade3d.js';
 
 const RUNES = 6;
@@ -105,10 +108,278 @@ class Obliteration {
   }
 }
 
+// ---- the familiar: where the Runeblade flies, how it swings, what it does by itself ----
+// A pose: (x, y) in tiles and z in px above the floor is its anchor, `piv` how far along the blade the anchor sits (0 the
+// hilt, 0.5 the middle), `a` the screen angle from hilt to point, `spin` the turn round its length, `tilt` the point
+// tipped toward the viewer, `len` its size (1 = 42 px).
+const BLADE = 42;
+const SA = (wa) => Math.atan2((Math.cos(wa) + Math.sin(wa)) * HH, (Math.cos(wa) - Math.sin(wa)) * HW);   // floor angle -> screen
+const scr = (sx, sy) => ({ dx: (sx / HW + sy / HH) / 2, dy: (sy / HH - sx / HW) / 2 });                 // screen px -> tiles
+const ease = (k) => (k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k));
+const clamp01 = (k) => Math.max(0, Math.min(1, k));
+const lerp = (a, b, k) => a + (b - a) * k;
+const lerpA = (a, b, k) => a + angleDiff(a, b) * k;
+/** Screen angle from a point at height z0 to one at z1. */
+const aimA = (x0, y0, z0, x1, y1, z1) => Math.atan2(isoY(x1, y1) - z1 - (isoY(x0, y0) - z0), isoX(x1, y1) - isoX(x0, y0));
+/** Turn from a0 to a1 the `dir` way round (+1 clockwise on screen), k of the way. */
+const sweep = (a0, a1, dir, k) => { let d = (a1 - a0) % TAU; if (dir > 0 && d < 0) d += TAU; if (dir < 0 && d > 0) d -= TAU; return a0 + d * k; };
+const tint = (s) => RC[s.runes[s.runes.length - 1]] || RC.frost;
+const elOf = (s) => EL[s.runes[s.runes.length - 1]] || 'cold';
+
+/** Idle flight round him: offsets (dx, dy tiles, z px) from his feet; a: 'vel' points it along its path. */
+export const PATTERNS = {
+  shoulder: (t) => ({ ...scr(22, 0), z: 62 + Math.sin(t * 2) * 2, a: Math.PI / 2 + 0.12 + Math.sin(t * 1.3) * 0.06, spin: Math.sin(t * 0.7) * 0.75, tilt: 0.18 }),
+  orbit: (t) => { const w = t * 1.7; return { dx: Math.cos(w) * 1.15, dy: Math.sin(w) * 1.15, z: 36 + Math.sin(w * 2) * 5, a: 'vel', spin: w * 0.5, tilt: 0.25, piv: 0.5 }; },
+  figure8: (t) => { const w = t * 1.3; return { ...scr(46 * Math.sin(w), 16 * Math.sin(2 * w)), z: 46 + Math.cos(w) * 10, a: 'vel', spin: w, tilt: 0.3, piv: 0.5 }; },
+  helix: (t) => { const w = t * 2.2; return { dx: Math.cos(w) * 0.95, dy: Math.sin(w) * 0.95, z: 64 + Math.sin(t * 1.1) * 16, a: Math.PI / 2, spin: t * 6, tilt: 0.1 }; },
+  wheel: (t) => ({ dx: 0, dy: 0, z: 112 + Math.sin(t * 2) * 3, a: t * 7, spin: 0, tilt: 0.5, piv: 0.5, len: 0.8 }),
+  sentinel: (t) => ({ ...scr(-32, 8), z: 45 + Math.sin(t * 1.6) * 1.5, a: Math.PI / 2, spin: t * 1.2, tilt: 0 }),
+  pendulum: (t) => ({ ...scr(0, -8), z: 126, a: Math.PI / 2 + Math.sin(t * 2.4) * 0.95, spin: Math.sin(t * 1.2) * 0.4, tilt: 0.1 }),
+  star: (t) => { // darts between the five points of a star round him, in star order
+    const seg = t / 0.42, i = Math.floor(seg), k = ease(seg - i);
+    const pt = (n) => { const a = (((n * 2) % 5) / 5) * TAU - Math.PI / 4; return [Math.cos(a) * 1.35, Math.sin(a) * 1.35]; };
+    const [x0, y0] = pt(i), [x1, y1] = pt(i + 1);
+    return { dx: lerp(x0, x1, k), dy: lerp(y0, y1, k), z: 42 + Math.sin(seg * Math.PI) * 6, a: 'vel', spin: seg * 1.2, tilt: 0.3, piv: 0.5 };
+  },
+  loop: (t) => { const w = t * 3; return { ...scr(36 + Math.cos(w) * 22, 0), z: 54 + Math.sin(w) * 22, a: 'vel', spin: 0.3, tilt: 0.2, piv: 0.5 }; },
+  guard: (t, p) => { const f = p.facing || 0; return { dx: Math.cos(f) * 0.85, dy: Math.sin(f) * 0.85, z: 56 + Math.sin(t * 2) * 2, a: Math.PI / 2 + Math.sin(t * 1.5) * 0.12, spin: Math.sin(t * 0.9) * 0.5, tilt: 0.15 }; },
+  comet: (t) => { const w = t * 2.6; return { dx: Math.cos(w) * 1.9, dy: Math.sin(w) * 1.9, z: 42 + Math.sin(w * 1.5) * 14, a: 'vel', spin: w * 2, tilt: 0.35, piv: 0.5 }; },
+  drift: (t) => { // lazy and curious, with a flip every few seconds
+    const f = (t % 4.5) / 4.5, flip = f > 0.8 ? ease((f - 0.8) / 0.2) : 0;
+    return { ...scr(26 * Math.sin(t * 0.7) + 10 * Math.sin(t * 1.9), 8 * Math.sin(t * 1.1)), z: 62 + 10 * Math.sin(t * 0.9), a: Math.PI / 2 + 0.4 * Math.sin(t * 0.6) - flip * TAU, spin: t * 0.6, tilt: 0.2, piv: 0.3 };
+  },
+};
+const PAT_IDS = Object.keys(PATTERNS);
+
+function idlePose(p, F) {
+  const f = PATTERNS[F.pat], q = f(F.patT, p), z0 = p.z || 0;
+  if (q.a === 'vel') {
+    const n = f(F.patT + 0.04, p), ddx = n.dx - q.dx, ddy = n.dy - q.dy;
+    const sx = (ddx - ddy) * HW, sy = (ddx + ddy) * HH - (n.z - q.z);
+    q.a = Math.hypot(sx, sy) > 0.3 ? Math.atan2(sy, sx) : F.a;
+  }
+  return { ...q, x: p.x + q.dx, y: p.y + q.dy, z: q.z + z0 };
+}
+
+/** The swing for each kind of skill he casts (visual: the skill itself does the damage). */
+const MOVE = { proj: 'thrust', chain: 'thrust', nova: 'spin', aoe: 'plunge', zone: 'plunge', rain: 'plunge', fissure: 'plunge', wall: 'plunge', trap: 'plunge',
+  beam: 'lance', buff: 'salute', heal: 'salute', aura: 'salute', shield: 'salute', transform: 'salute', summon: 'sigil', totem: 'sigil', curse: 'jab',
+  whirl: 'whirl', cyclone: 'whirl', orbit: 'whirl', dash: 'charge', leap: 'charge', blink: 'charge' };
+export function swingFor(sk) { return sk.kind === 'melee' ? (sk.m.arc ? 'scythe' : sk.fx === 'smash' ? 'chop' : 'slash') : MOVE[sk.kind] || 'slash'; }
+const at = (p, th, r) => [p.x + Math.cos(th) * r, p.y + Math.sin(th) * r];
+
+export const SWINGS = {
+  slash(p, s, th) { // a cleave past him, alternating sides
+    const side = (s.fam.side = -(s.fam.side || 1));
+    return { dur: 0.3, pose(k) { const w = th + side * (-1.25 + 2.5 * ease(k)), [x, y] = at(p, w, 0.3); return { x, y, z: 34 + (p.z || 0), a: SA(w), spin: 0.2 * side, tilt: 0.35 }; } };
+  },
+  scythe(p, s, th) { // a wide reaping sweep, grown a size
+    const side = (s.fam.side = -(s.fam.side || 1));
+    return { dur: 0.42, pose(k) { const w = th + side * (-2 + 4 * ease(k)), [x, y] = at(p, w, 0.3); return { x, y, z: 30 + (p.z || 0), a: SA(w), spin: 0.3 * side, tilt: 0.45, len: 1.25 }; } };
+  },
+  chop(p, s, th) { // raised overhead, then brought down on the spot in front of him
+    return { dur: 0.44, pose(k) {
+      const [x, y] = at(p, th, 0.45), [tx, ty] = at(p, th, 1.7), up = ease(k / 0.45), dn = clamp01((k - 0.45) / 0.2) ** 2;
+      const z = 34 + 40 * up * (1 - dn) + (p.z || 0), a1 = aimA(x, y, 36, tx, ty, 0), side = Math.cos(a1) >= 0 ? 1 : -1, a0 = -Math.PI / 2 - side * 0.6;
+      return { x, y, z, a: sweep(a0, a1, side, dn), spin: 0, tilt: 0.2, len: 1.1 };
+    } };
+  },
+  thrust(p, s, th, d) { // straight out at the target, point first, turning like a drill, and back
+    return { dur: 0.48, pose(k) { const u = k < 0.4 ? ease(k / 0.4) : 1 - ease((k - 0.4) / 0.6), [x, y] = at(p, th, 0.4 + u * d); return { x, y, z: 30 + (p.z || 0), a: SA(th), spin: k * TAU * 1.5, tilt: 0.1, piv: 0.5 }; } };
+  },
+  spin(p, s, th) { // a full turn round him, hilt in, a size bigger
+    return { dur: 0.45, pose(k) { const w = th + ease(k) * TAU * 1.25, [x, y] = at(p, w, 0.25); return { x, y, z: 30 + (p.z || 0), a: SA(w), spin: 0, tilt: 0.4, len: 1.15 }; } };
+  },
+  plunge(p, s, th, d) { // up over the spot, then down into the floor, point first
+    const [x0, y0] = [p.x, p.y], [tx, ty] = at(p, th, d);
+    return { dur: 0.62, pose(k) {
+      if (k < 0.5) { const e = ease(k / 0.5); return { x: lerp(x0, tx, e), y: lerp(y0, ty, e), z: 40 + 70 * e, a: lerpA(SA(th), Math.PI / 2, e), spin: e * TAU, tilt: 0.1 }; }
+      const dn = clamp01((k - 0.5) / 0.12) ** 2, out = clamp01((k - 0.85) / 0.15);
+      return { x: tx, y: ty, z: 110 - 70 * dn + 30 * out, a: Math.PI / 2, spin: 0, tilt: 0 };
+    }, hits: [{ at: 0.62, fn: () => addEffect(new Ring(tx, ty, 0.1, 1.1, 0.35, tint(s), 3)) }] };
+  },
+  lance(p, s, th) { // held point-first in front of him, quivering with the beam
+    return { dur: 0.7, pose(k, T) { const [x, y] = at(p, th, 0.75 + Math.sin(T * 50) * 0.03); return { x, y, z: 34 + (p.z || 0), a: SA(th), spin: Math.sin(T * 40) * 0.3, tilt: 0.1, piv: 0.3 }; } };
+  },
+  salute(p, s) { // raised point-up over his head, spinning
+    return { dur: 0.75, pose(k) { return { x: p.x, y: p.y, z: 72 + 30 * ease(k / 0.4) + (p.z || 0), a: -Math.PI / 2, spin: ease(k) * TAU * 2, tilt: 0, piv: 0.5 }; },
+      hits: [{ at: 0.5, fn: () => { s.flash = Math.max(s.flash, 0.3); } }] };
+  },
+  sigil(p, s, th) { // the point draws a circle on the floor in front of him
+    return { dur: 0.8, pose(k) {
+      const [cx, cy] = at(p, th, 1.2), w = th + ease(k) * TAU, tx = cx + Math.cos(w) * 0.7, ty = cy + Math.sin(w) * 0.7;
+      return { x: cx, y: cy, z: 50 + (p.z || 0), a: aimA(cx, cy, 50, tx, ty, 0), spin: 0, tilt: 0.1 };
+    }, hits: [{ at: 0.95, fn: () => { const [cx, cy] = at(p, th, 1.2); addEffect(new Ring(cx, cy, 0.6, 0.75, 0.4, tint(s), 2)); } }] };
+  },
+  jab(p, s, th) { // two quick jabs at the target
+    return { dur: 0.36, pose(k) { const [x, y] = at(p, th, 0.4 + 0.9 * Math.abs(Math.sin(k * TAU))); return { x, y, z: 36 + (p.z || 0), a: SA(th), spin: k * 2, tilt: 0.15, piv: 0.5 }; } };
+  },
+  whirl(p, s, th) { // two fast laps round him, edge first
+    return { dur: 0.8, pose(k) { const w = th + k * TAU * 2, [x, y] = at(p, w, 0.95); return { x, y, z: 30 + (p.z || 0), a: SA(w + Math.PI / 2), spin: w, tilt: 0.4, piv: 0.5 }; } };
+  },
+  charge(p, s, th) { // flies ahead of him, point first, rolling
+    return { dur: 0.45, pose(k) { const [x, y] = at(p, th, 1); return { x, y, z: 30 + (p.z || 0), a: SA(th), spin: ease(k) * TAU, tilt: 0.1, piv: 0.5 }; } };
+  },
+};
+
+/** The sword's own skills: it picks one that has a target whenever it is free (signature hits: they never charge it). */
+export const PET = [
+  { id: 'lunge', name: 'Runic Lunge', cd: 2.6, pick: (p) => foesNear(p, p.x, p.y, 5)[0], make: lunge },
+  { id: 'reap', name: 'Reaping Arc', cd: 5, pick: (p) => (foesNear(p, p.x, p.y, 2.4).length >= 2 ? p : null), make: reap },
+  { id: 'plunge', name: 'Grave Plunge', cd: 7, pick: (p) => toughest(p, 6), make: gravePlunge, say: true },
+  { id: 'waltz', name: 'Blade Waltz', cd: 8, pick: (p) => toughest(p, 5), make: waltz, say: true },
+  { id: 'wheel', name: 'Wheel of Rime', cd: 6.5, pick: (p) => { const c = crowd(p, 5, 1.6); return c && c[2] >= 2 ? c : null; }, make: wheel, say: true },
+];
+function lunge(p, s, c) { // darts through the nearest foe and back, cutting everything on the line
+  const x0 = p.x, y0 = p.y, th = Math.atan2(c.y - y0, c.x - x0), D = Math.min(5.5, Math.hypot(c.x - x0, c.y - y0) + 0.9), P = power(p), el = elOf(s);
+  return { dur: 0.7, pose(k) {
+    const u = k < 0.35 ? ease(k / 0.35) : k < 0.5 ? 1 : 1 - ease((k - 0.5) / 0.5), [ex, ey] = [x0 + Math.cos(th) * D, y0 + Math.sin(th) * D];
+    return { x: lerp(p.x, ex, u), y: lerp(p.y, ey, u), z: 30 + (p.z || 0), a: k < 0.5 ? SA(th) : SA(th + Math.PI), spin: k * TAU * 2, tilt: 0.2, piv: 0.5 };
+  }, hits: [{ at: 0.3, fn: () => {
+    for (const t of lineTargets(p.world, p.team, x0, y0, x0 + Math.cos(th) * D, y0 + Math.sin(th) * D, 0.55)) hit(p, t, P * 0.5, el, sigO({ slow: el === 'cold' }));
+    sfx('swing', 0.5);
+  } }] };
+}
+function reap(p, s) { // one great sweep round him, the blade swelling as it goes
+  const th = p.facing || 0, P = power(p), el = elOf(s);
+  return { dur: 0.6, pose(k) { const w = th + ease(k) * TAU, [x, y] = at(p, w, 0.3); return { x, y, z: 28 + (p.z || 0), a: SA(w), spin: 0.2, tilt: 0.45, len: 1.25 + 0.3 * Math.sin(k * Math.PI) }; },
+    hits: [{ at: 0.5, fn: () => {
+      aoe(p.world, p, p.x, p.y, 2.4, P * 0.45, el, sigO({ knock: 0.6 }));
+      addEffect(new Ring(p.x, p.y, 0.4, 2.4, 0.3, tint(s), 4));
+      sfx('swing', 0.7);
+    } }] };
+}
+function gravePlunge(p, s, c) { // climbs over the toughest foe, hangs, and drops on it point first
+  const P = power(p), el = elOf(s), T = { x: c.x, y: c.y };
+  return { dur: 0.95, pose(k) {
+    if (k < 0.55 && !c.dead) { T.x = c.x; T.y = c.y; }
+    if (k < 0.45) { const e = ease(k / 0.45); return { x: lerp(p.x, T.x, e), y: lerp(p.y, T.y, e), z: 40 + 100 * e, a: lerpA(SA(Math.atan2(T.y - p.y, T.x - p.x)), Math.PI / 2, e), spin: e * TAU * 2, tilt: 0.1 }; }
+    if (k < 0.55) return { x: T.x, y: T.y, z: 140 + Math.sin(k * 90) * 1.5, a: Math.PI / 2, spin: 0, tilt: 0 };
+    const dn = clamp01((k - 0.55) / 0.1) ** 2, out = clamp01((k - 0.85) / 0.15);
+    return { x: T.x, y: T.y, z: 140 - 100 * dn + 40 * out, a: Math.PI / 2, spin: 0, tilt: 0 };
+  }, hits: [{ at: 0.65, fn: () => {
+    aoe(p.world, p, T.x, T.y, 1.4, P * 1.1, el, sigO({ stun: true, knock: 0.8 }));
+    for (let i = 0; i < 2; i++) addEffect(new Ring(T.x, T.y, 0.1, 1.4 + i * 0.4, 0.35 + i * 0.1, i ? '#ffffff' : tint(s), 5 - i * 2, { fill: !i }));
+    burst(T.x, T.y, 8, el, G.touch ? 10 : 18, 3, { up: 1.5 });
+    camera.shake(5); sfx('thud', 0.7); sfx(el === 'cold' ? 'cold' : el, 0.5);
+  } }] };
+}
+function waltz(p, s, c) { // flies to a foe and dances round it, cutting four times
+  const P = power(p), el = elOf(s), T = { x: c.x, y: c.y }, th0 = Math.atan2(p.y - c.y, p.x - c.x);
+  const cut = () => { if (!c.dead) { hit(p, c, P * 0.3, el, sigO()); addEffect(new Slash(T.x, T.y, rand(TAU), 1.6, 0.8, 0.18, tint(s), { width: 6, z: 30 })); } };
+  return { dur: 1.4, pose(k) {
+    if (!c.dead) { T.x = c.x; T.y = c.y; }
+    const w = th0 + clamp01((k - 0.18) / 0.74) * TAU * 2, [ox, oy] = [T.x + Math.cos(w) * 0.75, T.y + Math.sin(w) * 0.75];
+    const e = k < 0.18 ? ease(k / 0.18) : k > 0.92 ? 1 - ease((k - 0.92) / 0.08) : 1;
+    return { x: lerp(p.x, ox, e), y: lerp(p.y, oy, e), z: 32 + (p.z || 0) * (1 - e), a: k < 0.18 ? aimA(p.x, p.y, 32, T.x, T.y, 32) : SA(w + Math.PI / 2), spin: w, tilt: 0.4, piv: 0.5 };
+  }, hits: [0.3, 0.48, 0.66, 0.84].map((a) => ({ at: a, fn: cut })) };
+}
+function wheel(p, s, cr) { // spins end over end out through a crowd and back, cutting it both ways
+  const th = Math.atan2(cr[1] - p.y, cr[0] - p.x), D = Math.min(5, Math.hypot(cr[0] - p.x, cr[1] - p.y) + 1.5), P = power(p), el = elOf(s), x0 = p.x, y0 = p.y;
+  const cut = () => {
+    for (const t of lineTargets(p.world, p.team, p.x, p.y, x0 + Math.cos(th) * D, y0 + Math.sin(th) * D, 0.7)) hit(p, t, P * 0.45, el, sigO({ slow: true }));
+    sfx('swing', 0.5);
+  };
+  return { dur: 1.1, pose(k, T) {
+    const u = k < 0.5 ? ease(k / 0.5) : 1 - ease((k - 0.5) / 0.5), ex = x0 + Math.cos(th) * D, ey = y0 + Math.sin(th) * D;
+    return { x: lerp(p.x, ex, u), y: lerp(p.y, ey, u), z: 30 + (p.z || 0) * (1 - u), a: T * 24, spin: 0, tilt: 0.3, piv: 0.5, len: 1.1 };
+  }, hits: [{ at: 0.45, fn: cut }, { at: 0.95, fn: cut }] };
+}
+
+function famInit(p) {
+  const pat = 'shoulder', F = { pat, patT: 0, patDur: 6, x: p.x, y: p.y, z: 62, a: Math.PI / 2, spin: 0, tilt: 0.18, piv: 0, len: 1, act: null, cd: {}, gcd: 1, say: 0, side: 1, trail: [], clock: 0 };
+  Object.assign(F, idlePose(p, F));
+  return F;
+}
+/** Start a cast swing (skips while the sword is busy with its own skill or the Obliteration). */
+function startSwing(p, s, name, th, d = 2) {
+  const F = s.fam;
+  if (!F || s.swing > 0 || (F.act && F.act.pet)) return;
+  F.act = { ...SWINGS[name](p, s, th, Math.min(4, Math.max(1.2, d))), name, t: 0, pet: false };
+  stat('death_knight', 'swing_' + name);
+}
+function startPet(p, s, q, tgt) {
+  const F = s.fam;
+  F.act = { ...q.make(p, s, tgt), name: q.id, t: 0, pet: true };
+  F.cd[q.id] = q.cd; F.gcd = F.act.dur + 0.8;
+  if (q.say && F.say <= 0) { floatText(p.x, p.y, 96, q.name, tint(s), 11, { life: 1, vz: 22 }); F.say = 5; }
+  stat('death_knight', 'pet_' + q.id);
+}
+/** Where the hilt is drawn (world px) and how long the blade is. */
+function hiltOf(F) {
+  const L = BLADE * (G.touch ? 0.85 : 1) * F.len;
+  return [isoX(F.x, F.y) - Math.cos(F.a) * L * F.piv, isoY(F.x, F.y) - F.z - Math.sin(F.a) * L * F.piv, L];
+}
+function famUpdate(p, s, dt) {
+  let F = s.fam;
+  if (!F || Math.hypot(F.x - p.x, F.y - p.y) > 9) F = s.fam = famInit(p);
+  F.clock += dt; F.gcd -= dt; F.say -= dt;
+  for (const k in F.cd) F.cd[k] -= dt;
+  if (s.swing > 0) { F.act = null; F.trail.length = 0; return; }
+  // its own skills, when it is free and there is something to cut
+  if (!(F.act && F.act.pet) && F.gcd <= 0) {
+    const ready = PET.filter((q) => (F.cd[q.id] || 0) <= 0).sort(() => Math.random() - 0.5);
+    let go = null;
+    if (ready.length && foesNear(p, p.x, p.y, 6).length) for (const q of ready) { const tg = q.pick(p); if (tg) { go = [q, tg]; break; } }
+    if (go) startPet(p, s, ...go); else F.gcd = 0.25;
+  }
+  let q;
+  if (F.act) {
+    const A = F.act;
+    A.t += dt;
+    const k = Math.min(1, A.t / A.dur);
+    for (const h of A.hits || []) if (!h.done && k >= h.at) { h.done = true; h.fn(); }
+    q = A.pose(k, A.t);
+    if (A.t >= A.dur) F.act = null;
+  } else {
+    if ((F.patT += dt) > F.patDur) { // a new pattern every few seconds, never the same twice running
+      const pick = PAT_IDS.filter((id) => id !== F.pat);
+      F.pat = pick[Math.floor(Math.random() * pick.length)]; F.patT = 0; F.patDur = rand(5, 9);
+    }
+    q = idlePose(p, F);
+  }
+  const kp = 1 - Math.exp(-dt * (F.act ? 28 : 9)), ka = 1 - Math.exp(-dt * (F.act ? 30 : 12));
+  F.x = lerp(F.x, q.x, kp); F.y = lerp(F.y, q.y, kp); F.z = lerp(F.z, q.z, kp);
+  F.a = lerpA(F.a, q.a, ka); F.spin = lerpA(F.spin, q.spin || 0, ka); F.tilt = lerp(F.tilt, q.tilt || 0, ka);
+  F.piv = lerp(F.piv, q.piv || 0, kp); F.len = lerp(F.len, q.len || 1, kp);
+  // the trail: where the point and the middle of the blade have been
+  const [hx, hy, L] = hiltOf(F), dx = Math.cos(F.a), dy = Math.sin(F.a);
+  F.trail.push({ t: F.clock, tx: hx + dx * L, ty: hy + dy * L, mx: hx + dx * L * 0.4, my: hy + dy * L * 0.4 });
+  while (F.trail.length && (F.clock - F.trail[0].t > 0.16 || F.trail.length > 14)) F.trail.shift();
+}
+function drawTrail(ctx, F, col) {
+  const T = F.trail;
+  if (T.length < 2) return;
+  ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = col;
+  for (let i = 1; i < T.length; i++) {
+    const a = T[i - 1], b = T[i], sp = Math.hypot(b.tx - a.tx, b.ty - a.ty), k = 1 - (F.clock - b.t) / 0.16;
+    if (sp < 1.5 || k <= 0) continue;
+    ctx.globalAlpha = Math.min(1, sp / 6) * 0.4 * k;
+    ctx.beginPath(); ctx.moveTo(a.tx, a.ty); ctx.lineTo(b.tx, b.ty); ctx.lineTo(b.mx, b.my); ctx.lineTo(a.mx, a.my); ctx.closePath(); ctx.fill();
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+}
+function drawFam(ctx, p, s, t) {
+  const F = s.fam;
+  if (!F || s.swing > 0) return;
+  const col = s.runes.length ? tint(s) : look(p).glow, [hx, hy, L] = hiltOf(F);
+  drawTrail(ctx, F, col);
+  if (s.flash > 0 && s.runes.length) glow(ctx, tint(s), hx + Math.cos(F.a) * L * 0.45, hy + Math.sin(F.a) * L * 0.45, 18, s.flash);
+  const u = s.flash > 0 ? 1 - s.flash / 0.5 : 1;  // a full twirl as it takes a rune
+  sword(ctx, p, hx, hy, F.a, L, s.runes, t, (G.touch ? 0.85 : 1) * F.len, F.spin + TAU * (1 - (1 - u) ** 3), F.tilt);
+}
+/** Behind him when it is further from the camera than he is (drawn before him), else on top. */
+const behind = (p, s) => s.fam && s.fam.x + s.fam.y < p.x + p.y - 0.05;
+
 export default {
   id: 'death_knight', name: 'Runeblade', color: '#7ad0ff',
-  desc: 'A spectral greatsword at his side takes a rune for every blow: frost, unholy or blood by its nature. Six runes and RUNIC OBLITERATION, one colossal cleave; the runes decide whether it freezes, spreads plague or drinks life.',
-  init: () => ({ runes: [], gap: 0, flash: 0, swing: 0 }),
+  desc: 'A spectral greatsword flies round him like a familiar, swinging with his skills and fighting on its own. It takes a rune for every blow: frost, unholy or blood by its nature. Six runes and RUNIC OBLITERATION, one colossal cleave; the runes decide whether it freezes, spreads plague or drinks life.',
+  init: () => ({ runes: [], gap: 0, flash: 0, swing: 0, fam: null }),
+  enter(p, s) { s.fam = null; },
+  cast(p, s, sk, L, tx, ty) {
+    const th = tx != null && (tx !== p.x || ty !== p.y) ? Math.atan2(ty - p.y, tx - p.x) : p.facing || 0;
+    startSwing(p, s, swingFor(sk), th, tx != null ? Math.hypot(tx - p.x, ty - p.y) : 2);
+  },
   hit(p, s, tgt, dmg, el, o) {
     if (s.gap > 0 || s.runes.length >= RUNES || s.swing > 0) return;
     s.gap = 0.5; s.flash = 0.5;
@@ -123,6 +394,7 @@ export default {
       s.band = L.band; preloadRuneblade(L.skin);
     }
     if (s.runes.length >= RUNES && s.swing <= 0 && (s.wait = (s.wait || 0) - dt) <= 0) { s.wait = 0.2; if (crowd(p, 4.5)) this.fire(p, s); }
+    famUpdate(p, s, dt);
   },
   fill: (s) => s.runes.length / RUNES,
   fire(p, s) {
@@ -130,16 +402,31 @@ export default {
     const c = crowd(p, 5), ang = c ? Math.atan2(c[1] - p.y, c[0] - p.x) : p.facing || 0;
     p.world.addHazard(new Obliteration(p, s, ang, s.runes.splice(0)));
     s.swing = 0.8;
+    if (s.fam) { // it comes back from the end of the cleave
+      const F = s.fam; F.act = null; F.trail.length = 0;
+      F.x = p.x + Math.cos(ang) * 1.6; F.y = p.y + Math.sin(ang) * 1.6; F.z = 24; F.a = SA(ang); F.piv = 0.5;
+    }
     floatText(p.x, p.y, 110, 'RUNIC OBLITERATION', '#c8ecff', 17, { life: 1.6, vz: 16 });
     sfx('cold', 0.5);
     stat('death_knight', 'fire');
   },
-  draw(ctx, p, s, t) {
-    if (s.swing > 0) return;
-    const px = isoX(p.x, p.y), py = isoY(p.x, p.y) - (p.z || 0), sc = G.touch ? 0.85 : 1;
-    const x = px + 20 * sc, y = py - 62 * (p.scale || 1) + Math.sin(t * 2) * 2, a = Math.PI / 2 + 0.12 + Math.sin(t * 1.3) * 0.06;
-    if (s.flash > 0 && s.runes.length) glow(ctx, RC[s.runes[s.runes.length - 1]], x, y + 18, 18, s.flash);
-    const u = s.flash > 0 ? 1 - s.flash / 0.5 : 1;  // a full twirl as it takes a rune
-    sword(ctx, p, x, y, a, 42 * sc, s.runes, t, sc, Math.sin(t * 0.7) * 0.75 + TAU * (1 - (1 - u) ** 3), 0.18);
+  draw(ctx, p, s, t) { if (!behind(p, s)) drawFam(ctx, p, s, t); },
+  back(ctx, p, s, t) { if (behind(p, s)) drawFam(ctx, p, s, t); },
+  ground(ctx, p, s) { // its shadow on the floor, fainter the higher it flies
+    const F = s.fam;
+    if (!F || s.swing > 0) return;
+    const [hx, , L] = hiltOf(F), cx = hx + Math.cos(F.a) * L * 0.5, k = clamp01(1 - (F.z - (p.z || 0)) / 160);
+    ctx.globalAlpha = 0.28 * k; ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.ellipse(cx, isoY(F.x, F.y), 4 + Math.abs(Math.cos(F.a)) * L * 0.4, 3, 0, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
   },
+  // tests: fly a pattern now, or make the sword use one of its skills
+  pattern(p, s, id) { if (!s.fam) s.fam = famInit(p); s.fam.act = null; s.fam.pat = id; s.fam.patT = 0; s.fam.patDur = 99; },
+  pet(p, s, id) {
+    if (!s.fam) s.fam = famInit(p);
+    const q = PET.find((k) => k.id === id), tg = q && q.pick(p);
+    if (tg) startPet(p, s, q, tg);
+    return !!tg;
+  },
+  swingNow(p, s, name, th = p.facing || 0, d = 2) { if (!s.fam) s.fam = famInit(p); s.fam.act = null; startSwing(p, s, name, th, d); },
 };

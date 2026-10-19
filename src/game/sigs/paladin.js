@@ -142,7 +142,7 @@ export default {
     later(p.world, 0.05, () => addEffect(new Ring(p.x, p.y, 0.1, 1.6, 0.4, WHITE, 3)));
   },
   draw(ctx, p, s, t) {
-    const [cx, cy0] = headAt(p, 6), cy = cy0 + Math.sin(t * 2) * 1.5, RX = G.touch ? 13 : 16, RY = RX * 0.32, f = s.runes / RUNES;
+    const [cx, cy0] = headAt(p, 12), cy = cy0 + Math.sin(t * 2) * 1.5, RX = G.touch ? 13 : 16, RY = RX * 0.32, f = s.runes / RUNES;
     glow(ctx, GOLD, cx, cy, RX * 1.6, 0.15 + 0.35 * f + s.flash * 0.4);
     ctx.globalCompositeOperation = 'lighter';
     ctx.strokeStyle = GOLD; ctx.lineWidth = 2; ctx.globalAlpha = 0.45 + 0.4 * f;
