@@ -118,6 +118,48 @@ const casts = +(process.argv[2] || 6), json = process.argv[3] === 'json', only =
       await page.screenshot({ path: require('path').join(process.env.OUT_DIR || require('path').join(__dirname, 'out'), `boomerang_ring_${n}_close${k}.png`), clip: { x: 560, y: 260, width: 160, height: 140 } });
     }
   }
+  // in play, mid-throw: a pack ahead, a few skills thrown at once
+  await page.evaluate(async () => {
+    const { G } = window.VELSCOUR;
+    const { makeMonster } = await import('/src/game/monster.js');
+    const p = G.player, w = G.world; G.settings.zoom = 1.4;
+    for (let k = 0; k < 6; k++) { const m = makeMonster(w, 'skeleton', w.biome, 6, 'normal', p.x + 3 + (k % 3) * 0.8, p.y + 1 + Math.floor(k / 3)); m.maxHp = m.hp = 1e9; m.speed = 0; m.dmg = [0, 0]; w.add(m); }
+  });
+  for (const [i, names] of [['Tri-Rang', 'Rang Storm'], ['Chakram', 'Heavy Rang', 'Orbiting Rangs'], ['Rang Rain']].entries()) {
+    await page.evaluate(async (names) => {
+      const { G } = window.VELSCOUR;
+      const { CLASS_SKILLS } = await import('/src/data/skills.js');
+      const p = G.player; p.mana = p.maxMana = 99999;
+      for (const n of names) { p.castLock = 0; p.cooldowns = {}; p.tryUseSkill(CLASS_SKILLS.boomerang_knight.find((s) => s.name === n), p.x + 4, p.y + 1.5, null); }
+    }, names);
+    for (const d of [180, 420]) { await page.waitForTimeout(d); await shot(`boomerang_play_${i}_${d}`); }
+  }
+  // the 3D models: every look at four spins (upright, half laid over, flat, flat from another heading), and one
+  // throw as a filmstrip (laying over as it flies out, flat on the way home), on a plain canvas scaled x3
+  const sheets = await page.evaluate(async () => {
+    const { RANG_SKINS, drawRang3D } = await import('/src/gfx/boomerang3d.js');
+    const names = Object.keys(RANG_SKINS), cw = 64, chh = 56, S = 3;
+    const sheet = (cols, rows, fn) => {
+      const c = document.createElement('canvas'); c.width = cols * cw * S; c.height = rows * chh * S;
+      const x = c.getContext('2d'); x.fillStyle = '#2a3020'; x.fillRect(0, 0, c.width, c.height); x.scale(S, S);
+      fn(x); return c.toDataURL('image/png');
+    };
+    const poses = [[1.2, 0.3, 0], [0.7, 1.4, 0.6], [0.2, 2.2, 1.2], [0.2, 3.6, 2.5]];
+    const models = sheet(8, Math.ceil(names.length / 2), (x) => names.forEach((n, i) => poses.forEach(([bank, spin, head], j) => {
+      const col = (i % 2) * 4 + j, row = Math.floor(i / 2);
+      drawRang3D(x, col * cw + cw / 2, row * chh + chh / 2 - 6, { skin: RANG_SKINS[n], bank, spin, head, lift: 14, blur: 0 });
+      if (j === 0) { x.fillStyle = '#e8e0c8'; x.font = '6px sans-serif'; x.fillText(n, col * cw + 2, row * chh + chh - 3); }
+    })));
+    const film = sheet(10, 2, (x) => {
+      for (let k = 0; k < 20; k++) {
+        const out = Math.min(1, k / 10), e = out * out * (3 - 2 * out), bank = k < 10 ? 1.15 - 0.9 * e : 0.22;
+        drawRang3D(x, (k % 10) * cw + cw / 2, Math.floor(k / 10) * chh + chh / 2 - 6, { skin: RANG_SKINS['Gale Rang'], bank: k < 10 ? -bank : bank, spin: k * 0.9, head: k < 10 ? 0.5 : 0.5 + Math.PI, lift: 16 });
+      }
+    });
+    return { models, film };
+  });
+  const fs = require('fs'), path = require('path'), OUT = process.env.OUT_DIR || path.join(__dirname, 'out');
+  for (const [k, v] of Object.entries(sheets)) fs.writeFileSync(path.join(OUT, `boomerang_${k}.png`), Buffer.from(v.split(',')[1], 'base64'));
   report(errors);
   await browser.close();
 })();

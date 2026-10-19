@@ -318,7 +318,7 @@ export const SKILLDATA = {
       'Omnislash|dash|phys|charge|n=6 range=1 dmg=1.5 cd=6', 'Blade Halo|orbit|holy|blade|n=10 dur=10 cd=15', 'Sword Saint|buff|phys|transform|transform buff=as,crit,dmg amt=45 dur=15 cd=50', 'Excalibur|beam|holy|laser|dur=1 dmg=3 cd=5',
     ],
     [
-      'Wind Rang|proj|phys|wave|ret pierce spd=1.3', 'Gust|nova|phys|wind|knock r=1', 'Air Dash|dash|phys|wind|range=1.1', 'Tailwind|buff|phys|wind|buff=speed amt=25 dur=20 cd=25',
+      'Wind Rang|proj|phys|rang|ret pierce spd=1.3 wc=0.45', 'Gust|nova|phys|wind|knock r=1', 'Air Dash|dash|phys|wind|range=1.1', 'Tailwind|buff|phys|wind|buff=speed amt=25 dur=20 cd=25',
       'Cyclone|cyclone|phys|wind|n=1 dur=4', 'Gale Wall|wall|phys|wind|dur=5', 'Vacuum Slash|melee|phys|slash|pull r=1.3', 'Squall|proj|cold|wave|n=5 spread=40',
       'Twin Cyclones|cyclone|phys|wind|n=2 dur=5', 'Hurricane Rang|proj|phys|rang|ret pierce r=1.8 slow', 'Wind Shear|fissure|phys|wind|range=1.4', 'Eye of the Storm|zone|light|storm|follow r=1.6 dur=8 cd=12',
       'Tempest Rang|proj|light|rang|n=3 spread=40 ret pierce chain=2', 'Typhoon|cyclone|cold|wind|n=4 dur=6 cd=8', 'Skyward Blades|rain|phys|blade|n=20 r=1.6', 'Zephyr|buff|phys|transform|buff=speed,as amt=40 dur=15 cd=30',

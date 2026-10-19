@@ -32,11 +32,24 @@ blades circling him become larger blue boomerangs.
   end up a little stronger (Halo of Rangs ~340 -> ~600). Skills that already returned are unchanged.
   `skillRange` now halves a returning projectile's range (it turns at half way), so the range shown, touch auto-aim and
   auto-play agree; auto-play's power model counts the return trip (`hitsPerCast` x1.4 for `ret`).
-- **The Trick Shot's eight charge blades** are now big blue boomerangs (`blueRang`/`ringDraw` in
-  `src/game/sigs/boomerang.js`), a halo above his helm: the half behind his head draws in the depth pass before him
-  (`back`), the front half on top. The Trick Shot itself stays gold.
+- **3D boomerangs** (`src/gfx/boomerang3d.js`, user ask: one 3D model, solid colours per ability with stripes near
+  the wing tips, sizes per ability, thrown properly at the game's isometric angle). Procedural, no art files: a thin
+  slab (two swept arms round an elbow; a spiked ring for chakrams). Under the parallel 2:1 projection a flat face is an
+  affine map, so each face is one transformed `Path2D` fill and the edge is the outline stacked 2-4 times along the
+  normal; a dark outline (four nudged copies), flat light shading, a glint strip that flashes once a turn, one spin
+  ghost and a ground shadow. Orientation = heading on the ground x bank about the flight line x spin in its own plane.
+  Thrown (`drawFlyingRang`, used by `Projectile.draw` for fx `rang`/`chakram`): leaves the hand near upright (bank
+  1.15), lays over flat by the turn (0.25), climbs ~9 px and drops back to the hand, leaning toward the camera so it
+  never goes edge-on. Orbits skim round him near flat. `RANG_SKINS` maps each skill name to colour, stripe colour and
+  size (`k`, on top of the skill's own `r`); skills pass `skin: sk.name` (skillrun.js). Wind Rang now flies as a
+  boomerang (fx `rang`, `wc=0.45` keeps its damage). Cost ~0.12 ms per boomerang in headless Chromium (old flat sprite
+  ~0.03); past 16 in one frame they drop outline, glint and blur.
+- **The Trick Shot's eight charge blades** are 3D blue boomerangs riding a ring above his helm (`ringDraw` in
+  `src/game/sigs/boomerang.js`; charged ones blue and spinning, the rest slate and still): the half behind his head draws
+  in the depth pass before him (`back`), the front half on top. The Trick Shot is a 3D gold boomerang.
 - Tests: new `tools/tests/boomerang.js` (damage per cast per skill, every blade caught standing, running and thrown at
-  walls, ring close-ups).
+  walls, ring close-ups, in-play shots mid-throw, `boomerang_models.png` with every look at four angles,
+  `boomerang_film.png` with one throw frame by frame).
 
 ## October 19, 2026 — class touch-ups: Paladin halo, Slime Lord gauge, the Runeblade as a familiar (branch `feat/class-touchups`)
 

@@ -9,6 +9,7 @@ import { drawShape, trail, explosionFx, hitSpark } from '../gfx/shapes.js';
 import { bardProjInit, bardProjUpdate, bardProjHit, bardProjDraw, bardOrbitDraw, bardRainDraw, bardBeamDraw } from './bard.js';
 import { drawLancerOrbitShield } from '../gfx/lancershields.js';
 import { drawCosmicBeam } from '../gfx/cosmos.js';
+import { drawFlyingRang, drawRang3D, rangSkin, groundHeading } from '../gfx/boomerang3d.js';
 import { screenAngle } from '../gfx/vfx.js';
 import { hit, aoe, chainHit } from './combat.js';
 
@@ -157,7 +158,7 @@ export class Projectile {
       this.split = false;
       const base = Math.atan2(this.vy, this.vx);
       for (const off of [-0.45, 0, 0.45]) {
-        w.addHazard(new Projectile({ world: w, src: this.src, team: this.team, x: c.x, y: c.y, ang: base + off, speed: this.speed, range: this.range * 0.6, fx: this.fx, el: this.el, dmg: this.dmg.map((v) => v * 0.55), o: this.o, size: this.size * 0.8, child: true, pierce: 0, ret: this.ret }));
+        w.addHazard(new Projectile({ world: w, src: this.src, team: this.team, x: c.x, y: c.y, ang: base + off, speed: this.speed, range: this.range * 0.6, fx: this.fx, el: this.el, dmg: this.dmg.map((v) => v * 0.55), o: this.o, size: this.size * 0.8, child: true, pierce: 0, ret: this.ret, skin: this.skin }));
       }
       this.hitSet.add(c.id);
     }
@@ -201,6 +202,7 @@ export class Projectile {
       ctx.beginPath(); ctx.ellipse(px, isoY(this.x, this.y), 5, 2.5, 0, 0, TAU); ctx.fill();
     }
     if (this.note) return bardProjDraw(ctx, this, px, py);
+    if ((this.fx === 'rang' || this.fx === 'chakram') && drawFlyingRang(ctx, this)) return; // the 3D boomerang
     const a = screenAngle(Math.atan2(this.vy, this.vx));
     drawShape(ctx, this.fx, px, py, a, this.size, this.E, this.t);
     if (this.fx === 'chain' && this.src) {
@@ -451,6 +453,11 @@ export class Orbit {
       return;
     }
     if (this.fx?.startsWith('n_')) bardOrbitDraw(ctx, this);
+    if (this.fx === 'rang' || this.fx === 'chakram') { // 3D boomerangs skimming round him, near flat
+      const sk = this.skinObj || (this.skinObj = rangSkin(this.skin, this.fx, this.el));
+      for (const [x, y, a] of this.pos) drawRang3D(ctx, isoX(x, y), isoY(x, y) - 26, { skin: sk, size: this.size, spin: this.t * 15, head: groundHeading(-Math.sin(a), Math.cos(a)), bank: 0.3, lift: 26 });
+      return;
+    }
     const each = this.fx === 'planet' || this.fx === 'zodiac' || this.fx === 'accretion'; // the Astronomer's orbiters differ one by one
     this.pos.forEach(([x, y, a], i) => drawShape(ctx, this.fx, isoX(x, y), isoY(x, y) - 24, screenAngle(a + Math.PI / 2), this.size, this.E, this.t, each ? { i } : this.o));
   }

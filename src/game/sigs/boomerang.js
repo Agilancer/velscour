@@ -8,43 +8,21 @@ import { sfx } from '../../core/audio.js';
 import { addEffect, Beam, Ring, floatText, sparkle, spawn } from '../../gfx/vfx.js';
 import { hit } from '../combat.js';
 import { lineTargets } from '../hazards.js';
+import { drawRang3D, RANG_SKINS } from '../../gfx/boomerang3d.js';
 
 const MAX = 8, GOLD = '#ffd040', BLUE = '#3a9cff', HOP = 0.11;
 
-/** A little boomerang (a bent blade) spun to angle a. */
-function rang(ctx, x, y, a, s, col) {
-  ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.scale(s, s);
-  ctx.fillStyle = col; ctx.beginPath();
-  ctx.moveTo(-6, -1); ctx.quadraticCurveTo(0, -5, 6, -1); ctx.lineTo(4, 1); ctx.quadraticCurveTo(0, -2, -4, 1); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(-0.7, -3.3, 1.4, 1.4);
-  ctx.restore();
-}
-
-/** One of the big blue boomerangs that circle his helm: two swept arms round an elbow, spun to angle a. */
-function blueRang(ctx, x, y, a, s, lit) {
-  ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.scale(s, s);
-  ctx.beginPath();
-  ctx.moveTo(-8, 4); ctx.quadraticCurveTo(-6, -5, 0, -5); ctx.quadraticCurveTo(6, -5, 8, 4);
-  ctx.quadraticCurveTo(7.6, 5.6, 6, 5); ctx.quadraticCurveTo(3, -1.2, 0, -1.2); ctx.quadraticCurveTo(-3, -1.2, -6, 5);
-  ctx.quadraticCurveTo(-7.6, 5.6, -8, 4); ctx.closePath();
-  ctx.fillStyle = lit ? BLUE : '#3a4868'; ctx.fill();
-  ctx.lineWidth = 1.2 / s; ctx.strokeStyle = lit ? '#0a2050' : '#1a2032'; ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-6.6, 2.6); ctx.quadraticCurveTo(-5, -3.6, 0, -3.8); ctx.quadraticCurveTo(5, -3.6, 6.6, 2.6); // the lit leading edge
-  ctx.lineWidth = 1.1 / s; ctx.strokeStyle = lit ? '#c8ecff' : '#6a7898'; ctx.stroke();
-  ctx.fillStyle = lit ? '#ffffff' : '#8a96b0'; ctx.fillRect(-1, -4.4, 2, 2); // the elbow gem
-  ctx.restore();
-}
-/** The eight boomerangs, the half behind his head (in the depth pass, before him) or the half in front (on top). */
+/** The eight 3D boomerangs riding a ring above his helm, the half behind his head (drawn in the depth pass, before
+ *  him) or the half in front (on top). Charged ones glow blue and spin; the rest lie still, slate grey. */
 function ringDraw(ctx, p, s, front) {
   if (s.busy > 0 && !s.n) return;
-  const t = G.time, [cx, cy] = headAt(p, 8), R = G.touch ? 20 : 26, sc = G.touch ? 0.95 : 1.15;
+  const t = G.time, [cx, cy] = headAt(p, 8), R = G.touch ? 20 : 26, sz = G.touch ? 0.85 : 1;
   for (let i = 0; i < MAX; i++) {
     const a = t * 1.8 + (i / MAX) * TAU, near = Math.sin(a) > 0;
     if (near !== front) continue;
-    const x = cx + Math.cos(a) * R, y = cy - 4 + Math.sin(a) * R * 0.34, lit = i < s.n;
-    if (lit) glow(ctx, BLUE, x, y, 11, near ? 0.7 : 0.4);
-    ctx.globalAlpha = lit ? (near ? 1 : 0.8) : 0.45;
-    blueRang(ctx, x, y, lit ? t * 12 + i : a + Math.PI / 2, sc, lit);
+    const x = cx + Math.cos(a) * R, y = cy - 4 + Math.sin(a) * R * 0.42, lit = i < s.n;
+    if (lit) glow(ctx, BLUE, x, y, 11, near ? 0.6 : 0.35);
+    drawRang3D(ctx, x, y, { skin: lit ? RANG_SKINS.sig_lit : RANG_SKINS.sig_dim, size: sz, spin: lit ? t * 14 + i : 0.4, head: a + Math.PI / 2, bank: 0.25, alpha: lit ? (near ? 1 : 0.85) : 0.6, blur: lit ? 0.7 : 0 });
   }
   ctx.globalAlpha = 1;
   if (front && s.n >= MAX) glow(ctx, '#bfe4ff', cx, cy - 4, R * 1.4, 0.25 + 0.15 * Math.sin(t * 10));
@@ -98,9 +76,11 @@ class TrickShot {
     }
     ctx.restore();
     if (this.back && this.t - this.t0 > 0.2) return;
-    const [x, y] = this.pos(), px = isoX(x, y), py = isoY(x, y) - 28;
+    const [x, y] = this.pos(), px = isoX(x, y), py = isoY(x, y) - 28, [lx, ly] = this.last || [x - 0.01, y];
+    if (Math.hypot(x - lx, y - ly) > 1e-4) this.head = Math.atan2(x - lx + y - ly, x - lx - (y - ly));
+    this.last = [x, y];
     glow(ctx, GOLD, px, py, 16, 0.8);
-    rang(ctx, px, py, this.spin, 1.6, GOLD);
+    drawRang3D(ctx, px, py, { skin: RANG_SKINS.trick_shot, spin: this.spin, head: this.head || 0, bank: 0.3, lift: 28 });
   }
 }
 
