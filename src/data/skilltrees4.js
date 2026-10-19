@@ -66,9 +66,9 @@ export const TREE4 = {
   bard: [
     'Opening Act|proj|light|n_q|free wc=1 canon dmg=0.6', 'Bright Note|proj|light|n_e|home cresc', 'Rousing Chorus|buff|holy|aura|buff=as amt=20 dur=15 cd=20 party note=s4', 'Drum Roll|nova|phys|drum|n=3 r=1 stun note=e2',
     'Spotlight|zone|light|flash|r=1.2 dur=5 note=rq', 'Pyro Finale|proj|fire|n_h|exp r=1.2', 'Backup Singers|summon|light|clone|sum=chorus n=2 dur=20 cd=20 note=s2', 'Stage Dive|leap|phys|eruption|r=1.4 dmg=1.3 note=bass',
-    'Crescendo Wave|fissure|light|sonic|range=1.5 knock note=q', 'Confetti Bombs|rain|fire|n_e|n=14 r=1.6', 'Curtain Call|curse|light|flash|curse=slow,stun r=1.4 note=rq', 'Mic Drop|aoe|light|eruption|r=1.6 dmg=1.8 cd=4 note=w',
-    'Grand Fireworks|rain|fire|n_t8|n=22 r=2 cd=5', 'Tempo Rubato|buff|holy|aura|buff=as,speed amt=35 dur=12 cd=30 party rubato note=treble', 'Amp Overload|chain|light|sonic|n=6 note=e2', 'Spinning Records|orbit|phys|n_w|n=5 dur=6 cd=8',
-    'Grand Finale|aoe|fire|nuke|r=2.6 dmg=3 cd=8 note=w', 'Rock Legend|buff|light|transform|buff=dmg,as amt=40 dur=12 cd=40 note=t8', 'Sonic Bulwark|wall|light|sonic|dur=6 cd=6 note=rq', 'Da Capo|nova|arcane|wave|n=2 r=1.6 dacapo cd=6 note=re',
+    'Crescendo Wave|fissure|light|sonic|range=1.5 knock note=q', 'Confetti Bombs|rain|fire|n_e|n=14 r=1.6', 'Curtain Call|curse|light|flash|curse=slow,stun r=1.4 note=rq', 'Mic Drop|aoe|light|eruption|r=1.6 dmg=1.8 cd=4 note=h',
+    'Grand Fireworks|rain|fire|n_qd|n=22 r=2 cd=5', 'Tempo Rubato|buff|holy|aura|buff=as,speed amt=35 dur=12 cd=30 party rubato note=treble', 'Amp Overload|chain|light|sonic|n=6 note=e2', 'Spinning Records|orbit|phys|n_h|n=5 dur=6 cd=8',
+    'Grand Finale|aoe|fire|nuke|r=2.6 dmg=3 cd=8 note=hd', 'Rock Legend|buff|light|transform|buff=dmg,as amt=40 dur=12 cd=40 note=h', 'Sonic Bulwark|wall|light|sonic|dur=6 cd=6 note=rq', 'Da Capo|nova|arcane|wave|n=2 r=1.6 dacapo cd=6 note=re',
   ],
   slime_lord: [
     'Ooze Slap|melee|acid|smash|free wc=1', 'Primal Glob|proj|acid|blob|exp r=1', 'Gel Coat|buff|acid|shield|buff=armor amt=45 dur=20 cd=25', 'Puddle|zone|acid|slime|r=1.2 dur=6 slow',

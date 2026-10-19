@@ -6,7 +6,8 @@ import { makeCanvas, rand, TAU, chance } from '../core/util.js';
 import { isoX, isoY, HW } from '../core/view.js';
 import { glowSprite, spawn, addEffect, Ring } from './vfx.js';
 import { NOTES, MEASURE } from '../data/notation.js';
-import { JINGLES, sigAcc } from '../data/jingles.js';
+import { melodies, sigAcc } from '../data/melodies.js';
+import { drawn } from '../game/bardmusic.js';
 
 // staff / glyph / glow / spark colours per tier (4 = rainbow staff and a gold glyph)
 export const TIERS = [
@@ -53,6 +54,7 @@ function beamed(ctx, o, n, k, trip) {
     if (o) { ctx.lineWidth = o + 0.6; ctx.strokeText('3', cx, ty); } else ctx.fillText('3', cx, ty);
   }
 }
+function dot(ctx, o) { ctx.beginPath(); ctx.arc(4.6, 4.2, 1.3 + o / 2, 0, TAU); ctx.fill(); }
 function restFlags(ctx, o, k) { // eighth / sixteenth / thirty-second rests: k dotted hooks on a slanted stem
   const top = -6 - (k - 1) * 2.1, x0 = 2.6 + (k - 1) * 0.8;
   line(ctx, o, 1.5, [x0 + 0.4, top - 1.4, -1.2 - (k - 1) * 0.6, 8]);
@@ -68,6 +70,7 @@ const DRAW = {
   t8: (c, o) => beamed(c, o, 3, 1, true), t16: (c, o) => beamed(c, o, 3, 2, true), t32: (c, o) => beamed(c, o, 3, 3, true),
   w: (c, o) => head(0, 1, c, o, false, true),
   h: (c, o) => { head(-1.6, 5, c, o, false); line(c, o, 1.4, [1.6, 4.4, 1.6, -9.5]); },
+  qd: (c, o) => { single(c, o, 0); dot(c, o); }, hd: (c, o) => { DRAW.h(c, o); dot(c, o); },
   rw: (c, o) => { line(c, o, 1, [-7, -2, 7, -2]); c.fillRect(-3.8 - o / 2, -2 - o / 2, 7.6 + o, 3.4 + o); },
   rh: (c, o) => { line(c, o, 1, [-7, 2, 7, 2]); c.fillRect(-3.8 - o / 2, -1.4 - o / 2, 7.6 + o, 3.4 + o); },
   rq: (c, o) => {
@@ -313,7 +316,10 @@ export function drawMeasure(ctx, o) {
       for (let s = 10; s <= h.s; s += 2) { ctx.moveTo(h.x - 0.95 * u, Y(s)); ctx.lineTo(h.x + 0.95 * u, Y(s)); }
       ctx.stroke();
     }
-    for (const h of hs) notehead(ctx, h.x, Y(h.s), u, n.g === 'h' || n.g === 'w', n.g === 'w');
+    for (const h of hs) notehead(ctx, h.x, Y(h.s), u, n.g === 'h' || n.g === 'hd' || n.g === 'w', n.g === 'w');
+    if (n.g === 'qd' || n.g === 'hd') for (const h of hs) { // the augmentation dot sits in a space
+      ctx.beginPath(); ctx.arc(h.x + 1.15 * u, Y(h.s % 2 ? h.s : h.s + 1), 0.22 * u, 0, TAU); ctx.fill();
+    }
     if (n.g === 'w') continue;
     const k = BEAMS[n.g] || 0;
     ctx.lineWidth = stemW;
@@ -357,7 +363,7 @@ export function drawMeasure(ctx, o) {
 
 // ---------------------------------------------------------------- the measure over the Bard's head
 const HARM = ['#f2e6c4', '#7cd4ff', '#62ffa4', '#ffd84a', '#ff72d2', '#ffffff'];
-const jingleOf = (sc) => JINGLES[sc && sc.jingle >= 0 ? sc.jingle : 0];
+const melodyOf = (sc) => melodies()[sc && sc.mel >= 0 ? sc.mel : 0];
 /** Layout of the Bard's composing staff (world px): left x, top line y, width, line spacing. */
 export function scoreLayout(p) {
   const u = G.touch ? 4 : 5, w = G.touch ? 140 : 172;
@@ -366,7 +372,7 @@ export function scoreLayout(p) {
 /** Screen position (world px) of beat position `at` on the Bard's staff. */
 export function scoreSlot(p, at) {
   const L = scoreLayout(p);
-  return [measureX(L.x, L.w, L.u, jingleOf(p.score).key, at), L.top + 2 * L.u];
+  return [measureX(L.x, L.w, L.u, melodyOf(p.score).key, at), L.top + 2 * L.u];
 }
 /** Tile-space offset (dx, dy, z) of a staff slot, so cadence notes can launch from the very spot they were written. */
 export function scoreWorld(p, at) {
@@ -380,13 +386,14 @@ export class ScoreFx {
   draw(ctx) {
     const p = this.p, sc = p.score;
     if (!sc || (p.world && p.world.kind === 'town') || G.settings.bardScore === false) return;
-    const { u, w, x, top } = scoreLayout(p), J = jingleOf(sc), pl = sc.play, playing = pl && !pl.done && pl.w === p.world && pl.w.hazards.includes(pl);
-    // one song at a time: while a bar is performed it takes the staff's place and nothing new is written
-    const base = playing ? 0 : 1;
+    const { u, w, x, top } = scoreLayout(p), J = melodyOf(sc), pl = sc.play, live = pl && !pl.done && pl.w === p.world && pl.w.hazards.includes(pl);
+    // one song at a time: while the written bar is performed it takes the staff's place and nothing new is written;
+    // during its finishing bar the next bar is written (silently) on the staff again
+    const playing = live && pl.t < pl.lock + 0.25, base = playing ? 0 : 1, notes = drawn(sc.notes);
     const busy = sc.notes.length || sc.flash > 0 || sc.discord > 0, a = busy ? 1 : 0.5;
     const shake = sc.discord > 0 ? Math.sin(this.t * 70) * 2.5 * sc.discord : 0;
     const col = sc.discord > 0 ? '#ff5050' : HARM[Math.min(5, sc.harmony)];
-    const [hi, lo] = measureSpan(sc.key, sc.notes);
+    const [hi, lo] = measureSpan(sc.key, notes);
     ctx.save();
     ctx.translate(shake, 0);
     // a dark card so the notation reads over any floor, sized to the ink (ledger lines, stems)
@@ -399,7 +406,11 @@ export class ScoreFx {
       ctx.globalAlpha = 0.14 * a * base; ctx.fillStyle = col; ctx.fillRect(f0, top - u, (f1 - f0) * fill, 6 * u);
     }
     ctx.globalAlpha = (0.85 + 0.15 * sc.flash) * a * base;
-    drawMeasure(ctx, { x, top, w, u, clef: sc.key, key: J.key, notes: sc.notes, col: sc.flash > 0.5 ? '#ffffff' : col, colOf: (n) => TIERS[n.tier].note });
+    drawMeasure(ctx, { x, top, w, u, clef: sc.key, key: J.key, notes, col: sc.flash > 0.5 ? '#ffffff' : col, colOf: (n) => TIERS[n.tier].note });
+    if (live && !playing && !G.touch) { // the finishing bar plays on: its name over the staff
+      ctx.globalAlpha = Math.min(1, (pl.end - pl.t) / 0.4) * 0.9 * base; ctx.font = 'italic 8px Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#ffd88a';
+      ctx.fillText(`♪ ${pl.M.name}`, x + w / 2, cy0 - 2);
+    }
     // harmony pips
     for (let i = 0; i < 5; i++) {
       ctx.globalAlpha = (i < sc.harmony ? 1 : 0.25) * a * base; ctx.fillStyle = i < sc.harmony ? HARM[Math.min(5, i + 1)] : '#806a80';
@@ -407,24 +418,24 @@ export class ScoreFx {
     }
     // the measure being performed floats above, read by a playhead
     if (playing) {
-      const [phi, plo] = measureSpan(pl.clef, pl.notes), k = 1, out = Math.max(0, Math.min(1, (pl.end + 0.35 - pl.t) / 0.25));
+      const [phi, plo] = measureSpan(pl.clef, pl.drawn), k = 1, out = Math.max(0, Math.min(1, (pl.lock + 0.25 - pl.t) / 0.25));
       const ptop = top, beat = pl.t / pl.spb;
       const py0 = ptop - Math.max(0, phi - 8) * u / 2 - (G.touch ? 1.4 * u : 3.6 * u), py1 = ptop + 4 * u + Math.max(0, -plo) * u / 2 + 1.4 * u;
       ctx.globalAlpha = 0.75 * k * out; ctx.fillStyle = '#0a0610'; ctx.fillRect(x - 4, py0, w + 8, py1 - py0);
       ctx.globalAlpha = k * out;
       if (!G.touch) {
         ctx.font = 'italic 8px Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#ffd88a';
-        ctx.fillText(`♪ ${pl.j.name}`, x + w / 2, py0 + 8);
+        ctx.fillText(`♪ ${pl.M.name}`, x + w / 2, py0 + 8);
       }
       const gold = TIERS[4].note;
-      drawMeasure(ctx, { x, top: ptop, w, u, clef: pl.clef, key: pl.j.key, notes: pl.notes, col: '#fff2c8', play: beat, final: true,
+      drawMeasure(ctx, { x, top: ptop, w, u, clef: pl.clef, key: pl.M.key, notes: pl.drawn, col: '#fff2c8', play: beat, final: true,
         colOf: (n, lit) => (lit ? (beat - n.at < 0.5 ? '#ffffff' : gold) : 'rgba(255,248,226,0.55)') });
       // a glow on each note as the playhead strikes it
       ctx.globalCompositeOperation = 'lighter';
-      for (const n of pl.notes) for (const h of n.heads || []) {
+      for (const n of pl.drawn) for (const h of n.heads || []) {
         const since = beat - h.at;
         if (since < 0 || since > 0.6) continue;
-        const gx = measureX(x, w, u, pl.j.key, h.at), gy = ptop + (8 - staffStep(pl.clef, h.L)) * u / 2, r = u * (3 - since * 3);
+        const gx = measureX(x, w, u, pl.M.key, h.at), gy = ptop + (8 - staffStep(pl.clef, h.L)) * u / 2, r = u * (3 - since * 3);
         ctx.globalAlpha = (1 - since / 0.6) * 0.8 * out; ctx.drawImage(glowSprite(TIERS[n.tier].glow), gx - r, gy - r, r * 2, r * 2);
       }
     }

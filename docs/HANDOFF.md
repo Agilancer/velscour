@@ -14,6 +14,63 @@ Contents
 
 ---
 
+## October 18, 2026 — Bard: a five-octave harpsichord, 2,000 two-bar melodies, two-handed performances (branch `feat/bard-harpsichord`)
+
+- **Instrument**: the piano and the old one-octave harpsichord are gone. The user's "Harpsichord 5 Octaves / 7
+  Articulations" pack (427 WAVs, C2-C7; `F:\!  VELSCOUR\Harpsichord_5Octaves_7Articulations_427_Samples.zip`, 220 MB,
+  kept outside the repo like the Dark Forest zip) is imported by `python tools/process_assets.py instruments <zip or
+  folder>` (`tools/instrumentpack.py`). The three held articulations are one recording at three gains (correlation
+  1.000) and soft_short is normal_short softer, so 4 banks are kept (held cut to 3 s, normal/staccato/marcato short
+  whole) and the other 3 are measured gains: 244 MP3s, 1.7 MB, 22,050 Hz (the pack has nothing above 11 kHz; decoded
+  through an OfflineAudioContext at that rate to halve phone memory). `sampler.js`: `playNote('harpsichord', midi,
+  { art })`, banks load held-first, a compressor on the bus, 40 voices. **The samples are GPL-2** (rendered from the
+  TimGM6mb SoundFont); `assets/audio/inst/harpsichord/LICENSE.txt` + `GPL-2.0.txt` carry the notice.
+- **2,000 melodies** (`src/data/melodies.js`, replaces `jingles.js`; built on first use from a fixed seed, ~0.4 s):
+  nine styles (Ballad, Invention, Tavern Tune, Court Dance, Fantasy Theme, Dungeon Crawl, Lament, Chorale, Toccata),
+  14 keys, tempo 96-160 (never slower than 96, so a performed spell bar never locks longer than before). Each is two
+  bars: **A** = the spell bar the Bard writes (antecedent, ends off the tonic), **B** = the finishing bar (runs,
+  second voice a third/sixth below, trills, the tonic arriving on beat 3 or 4). Harmony per beat from per-style
+  progression families (functional, modal: bVII, Andalusian i-VII-VI-V, Neapolitan bII, borrowed iv), alterations
+  spelled (natural/raised 7th and 6th in minor). `barFaults` checks every bar (chord tones on beats, non-chord tones
+  by step, no tritone/7th leaps, no augmented seconds, no triple repeats, arrival on the tonic). **Uniqueness**: every
+  A bar, every B bar and every name is distinct, compared as degrees + rhythm (key-free), so no tune repeats even
+  transposed. **Combinations**: any B whose opening chord follows A's last chord in the same key, first note within a
+  fifth, can finish it (`finishes`): ~242,000 songs.
+- **Writing** (`bard.js`, `bardmusic.js`): each bar picks a key (35% the same, 35% a neighbour, else random, so the
+  songs flow) and its candidate melodies (~100-190, none used in the last 48 bars). Every cast re-fits the written
+  rhythm to the best-matching candidate (`fitScore`: heads on the tune's own onsets, rests where it breathes; a little
+  chance and stickiness) and re-pitches the whole bar (`realize`), so earlier notes can change; where the tune rests
+  inside a written note it is drawn and played as a shorter note + a rest (q -> e re, h -> q rq, e2 -> e re, ...).
+  Written notes sing on the harpsichord with their tree's touch (Songs held, Sonic Arts marcato + octave below,
+  Trickery staccato; `REGISTERS`/`artFor` in `data/notation.js`), with the chord's root in the left hand when the
+  harmony changes. The staff shows only the written (right-hand) bar.
+- **Performance** (`arrangement`): the written bar in the right hand over the style's left hand (Alberti, walking
+  bass, contrary line, broken chords, rolled arpeggios, oom-pah, march, drone + octave pulse, ostinato with a b2
+  neighbour, lament bass, block chords, toccata pedal; always under the right hand), then the finishing bar from a
+  compatible melody never heard after this one (`pickFinish`; heard songs persist in localStorage
+  `velscour_bard_heard`, 6,000 kept), ending on a low octave + rolled tonic. **Lockout**: casts write nothing only
+  while the written bar plays (4 beats, as before minus the old landing ring); during the finishing bar they write the
+  next bar silently, and a bar completed then waits (`sc.pending`) and starts on the exact downbeat (if the audio clock
+  agrees with game time within 120 ms). Gameplay unchanged: treble notes launch as played, the bass chord lands on
+  the finishing bar's downbeat.
+- **Notation**: no skill writes a whole note or whole rest any more (Anthem, Magnum Opus, Finale, Bass Drop, Encore,
+  Showstopper, Mic Drop, Spinning Records, Grand Finale; Requiem, Wall of Sound, Vanishing Act -> h / hd / rh). New
+  glyphs **dotted quarter `qd`** and **dotted half `hd`** (Orchestra, Feedback Loop, Deadly Sonata, Bladestorm Waltz,
+  Grand Fireworks; Magnum Opus, Finale, Encore, Grand Finale). **Only Chorus (cd 25 s) writes a triplet.**
+- **Auto-play** leans toward glyphs that fit the bar's melodies (`bardFitGain`, at most +-25%) and away from repeating
+  its last bar's rhythm (x0.85); completing the bar (x3) still dominates, so DPS holds.
+- **Balance**: `CADENCE_POWER` 5.8 -> 6. bard_dps 60 s x 6 runs before the bump: 14,158 DPS, 11 Cadences/min, 0
+  Discords (was ~14,500 and ~12/min).
+- Tests: `tools/tests/melodies.mjs` (new, no browser): counts, uniqueness of A/B/melodies/names, rule faults, style and
+  key stock, tempo floor, combinations, 300 random arrangements (range, NaN, left hand under right, tonic ending), skill
+  rules (no whole notes, one long-cooldown triplet). `bard.js`: 22 glyphs, engraving of melodies, 244 samples, the
+  one-song/queue rules. `bard_listen.js`: songs never repeat; now 0 overlaps, ~4.6% harsh (mostly V7 tritones), 72%
+  steps. `tools/songbook.html`: C2-C7 keyboard with F1-F7 articulations, any melody + any compatible finish in its own
+  or a Bard rhythm.
+- Not verified by ear: headless Chromium decodes and schedules but nobody listened; `tools/tests/out/bard_listen.wav`
+  is a 60 s render of auto-play. Safari/iOS decoding at 22,050 Hz via OfflineAudioContext untested (falls back to the
+  live context).
+
 ## October 18, 2026 — performance sweep: hitches, canvas memory, per-biome frame cost (branch `perf/full-sweep`)
 
 - **Measure on a real GPU.** Headless Chromium on Windows renders through SwiftShader (a software GPU), whose
