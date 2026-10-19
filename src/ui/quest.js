@@ -21,6 +21,7 @@ export function renderQuest(body) {
     if (c.depth === FINAL_DEPTH) h += step(false, '<b style="color:#ff4020">Demon Lord Velscour</b> waits on his throne.');
     else if (isRaidDepth(c.depth) && !b?.overworld) h += step(false, '<b style="color:#ff6030">A BOSS ROOM</b> lies at the end of this depth.');
     if (b?.id === 'sea_of_sand') h += step(false, 'A linked Sea of Sand route with one to five timed scenario areas lies beyond.');
+    else if (b?.id === 'mountainside') h += step(false, 'The Mountainside (beta) lies beyond: a switchback climb up the cliffs to the summit.');
     else if (b?.id === 'dark_forest') h += step(false, 'The Dark Forest lies beyond: trails, labyrinths, five trial glades and the Heart of the Forest.');
     else if (b?.overworld) h += step(false, 'A Forsaken Wilds scenario shrine guards the way forward.');
   } else {
@@ -30,7 +31,12 @@ export function renderQuest(body) {
     const who = boss && (boss.awake || slain) ? `<b>${escapeHtml(boss.name)}</b>` : raid || isRaidDepth(w.depth) ? 'the lord of the <b>Boss Room</b>' : w.depth === FINAL_DEPTH ? '<b>Demon Lord Velscour</b>' : 'the guardian of this depth';
     if (w.overworldScenario) {
       const sc = w.overworldScenario;
-      if (w.biome?.id === 'dark_forest') {
+      if (w.biome?.id === 'mountainside') {
+        h += step(sc.reached, `Climb the switchback trail to the summit <span class="dim">— altitude ${sc.altitude}%</span>.`);
+        h += step(false, '<span class="dim">A ledge up to a hop high can be climbed; taller cliffs only jumped down, and the tallest not at all.</span>');
+        h += step(sc.completed, 'Defeat the <b>Summit Warden</b> on the peak.');
+        h += step(sc.completed, sc.completed ? 'The exit on the peak is open — descend or return to town.' : "The Warden's fall opens the way on.");
+      } else if (w.biome?.id === 'dark_forest') {
         const cur = sc.current;
         h += step(sc.cleared > 0, `Win the trial glades along the trails (optional, each pays Legendary gear): <b>${sc.cleared}/${sc.trials.length}</b>.`);
         for (const t of sc.trials) h += step(t.completed, `${escapeHtml(t.title)} <span class="dim">— ${escapeHtml(t.description)}</span>`);

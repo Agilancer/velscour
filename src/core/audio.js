@@ -410,7 +410,7 @@ const AMB = {
   ashen: ['cave_storm', 'inside_day_storm'], void: ['cave', 'inside_night_storm'], gilded: ['inside_day', 'inside_night', 'inside_day_rain'],
   plague: ['river_stream_loop', 'cave_rain'], sewers: ['river_stream_loop', 'cave_rain', 'cave'], crystal: ['cave_rain', 'cave'], desert: ['inside_day_storm', 'beach_storm'],
   shadow: ['inside_night', 'cave'], forge: ['torch_loop', 'cave'], abyss: ['sea_storm', 'cave_storm', 'sea_rain'],
-  thorn: ['forest_night', 'forest_day_rain'], dark_forest: ['forest_night', 'forest_night_rain', 'forest_night_storm'], storm: ['forest_night_storm', 'cave_storm', 'forest_day_storm'], obsidian: ['cave', 'inside_night'],
+  thorn: ['forest_night', 'forest_day_rain'], dark_forest: ['forest_night', 'forest_night_rain', 'forest_night_storm'], mountainside: ['forest_day_storm', 'forest_day', 'forest_day_rain'], storm: ['forest_night_storm', 'cave_storm', 'forest_day_storm'], obsidian: ['cave', 'inside_night'],
   flesh: ['inside_night_rain', 'cave_rain'], serpent: ['river_loop', 'cave_rain'], shattered: ['inside_day_storm', 'cave_storm'],
   library: ['inside_night_rain', 'inside_night'], necropolis: ['forest_night', 'forest_night_storm'],
   amber: ['inside_day_storm', 'beach'], desert_temple: ['inside_day_storm', 'torch_loop', 'cave'],
