@@ -1,4 +1,4 @@
-// Boomerang Knight: the Trick Shot. Every blade that bites spins up one of the eight little gold boomerangs that
+// Boomerang Knight: the Trick Shot. Every blade that bites spins up one of the eight big blue boomerangs that
 // circle his helm. Eight and he lets fly the TRICK SHOT: a golden boomerang that ricochets from foe to foe (ten at
 // most, back and forth between a few) and draws a glowing web of gold across the field behind it. It snaps back to
 // his hand, and the web SNAPS too: every thread cuts whatever stands across it.
@@ -9,7 +9,7 @@ import { addEffect, Beam, Ring, floatText, sparkle, spawn } from '../../gfx/vfx.
 import { hit } from '../combat.js';
 import { lineTargets } from '../hazards.js';
 
-const MAX = 8, GOLD = '#ffd040', HOP = 0.11;
+const MAX = 8, GOLD = '#ffd040', BLUE = '#3a9cff', HOP = 0.11;
 
 /** A little boomerang (a bent blade) spun to angle a. */
 function rang(ctx, x, y, a, s, col) {
@@ -18,6 +18,36 @@ function rang(ctx, x, y, a, s, col) {
   ctx.moveTo(-6, -1); ctx.quadraticCurveTo(0, -5, 6, -1); ctx.lineTo(4, 1); ctx.quadraticCurveTo(0, -2, -4, 1); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#ffffff'; ctx.fillRect(-0.7, -3.3, 1.4, 1.4);
   ctx.restore();
+}
+
+/** One of the big blue boomerangs that circle his helm: two swept arms round an elbow, spun to angle a. */
+function blueRang(ctx, x, y, a, s, lit) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.scale(s, s);
+  ctx.beginPath();
+  ctx.moveTo(-8, 4); ctx.quadraticCurveTo(-6, -5, 0, -5); ctx.quadraticCurveTo(6, -5, 8, 4);
+  ctx.quadraticCurveTo(7.6, 5.6, 6, 5); ctx.quadraticCurveTo(3, -1.2, 0, -1.2); ctx.quadraticCurveTo(-3, -1.2, -6, 5);
+  ctx.quadraticCurveTo(-7.6, 5.6, -8, 4); ctx.closePath();
+  ctx.fillStyle = lit ? BLUE : '#3a4868'; ctx.fill();
+  ctx.lineWidth = 1.2 / s; ctx.strokeStyle = lit ? '#0a2050' : '#1a2032'; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-6.6, 2.6); ctx.quadraticCurveTo(-5, -3.6, 0, -3.8); ctx.quadraticCurveTo(5, -3.6, 6.6, 2.6); // the lit leading edge
+  ctx.lineWidth = 1.1 / s; ctx.strokeStyle = lit ? '#c8ecff' : '#6a7898'; ctx.stroke();
+  ctx.fillStyle = lit ? '#ffffff' : '#8a96b0'; ctx.fillRect(-1, -4.4, 2, 2); // the elbow gem
+  ctx.restore();
+}
+/** The eight boomerangs, the half behind his head (in the depth pass, before him) or the half in front (on top). */
+function ringDraw(ctx, p, s, front) {
+  if (s.busy > 0 && !s.n) return;
+  const t = G.time, [cx, cy] = headAt(p, 8), R = G.touch ? 20 : 26, sc = G.touch ? 0.95 : 1.15;
+  for (let i = 0; i < MAX; i++) {
+    const a = t * 1.8 + (i / MAX) * TAU, near = Math.sin(a) > 0;
+    if (near !== front) continue;
+    const x = cx + Math.cos(a) * R, y = cy - 4 + Math.sin(a) * R * 0.34, lit = i < s.n;
+    if (lit) glow(ctx, BLUE, x, y, 11, near ? 0.7 : 0.4);
+    ctx.globalAlpha = lit ? (near ? 1 : 0.8) : 0.45;
+    blueRang(ctx, x, y, lit ? t * 12 + i : a + Math.PI / 2, sc, lit);
+  }
+  ctx.globalAlpha = 1;
+  if (front && s.n >= MAX) glow(ctx, '#bfe4ff', cx, cy - 4, R * 1.4, 0.25 + 0.15 * Math.sin(t * 10));
 }
 
 class TrickShot {
@@ -76,7 +106,7 @@ class TrickShot {
 
 export default {
   id: 'boomerang_knight', name: 'Trick Shot', color: GOLD,
-  desc: 'Every blade that bites spins up one of eight gold boomerangs circling his helm. Eight and the TRICK SHOT flies: it ricochets foe to foe, weaving a web of gold that snaps when it returns to his hand.',
+  desc: 'Every blade that bites spins up one of eight blue boomerangs circling his helm. Eight and the TRICK SHOT flies: it ricochets foe to foe, weaving a web of gold that snaps when it returns to his hand.',
   init: () => ({ n: 0, gap: 0, flash: 0, busy: 0 }),
   hit(p, s) { if (s.gap > 0 || s.busy > 0) return; s.gap = 0.25; if (s.n < MAX) { s.n++; s.flash = 0.4; } },
   update(p, s, dt) {
@@ -107,17 +137,6 @@ export default {
     sfx('swing', 0.9);
     stat('boomerang_knight', 'fire');
   },
-  draw(ctx, p, s, t) {
-    if (s.busy > 0 && !s.n) return;
-    const [cx, cy] = headAt(p, 2), R = G.touch ? 12 : 15;
-    for (let i = 0; i < MAX; i++) {
-      const a = t * 2.2 + (i / MAX) * TAU, x = cx + Math.cos(a) * R, y = cy - 4 + Math.sin(a) * R * 0.3, lit = i < s.n, front = Math.sin(a) > 0;
-      ctx.globalAlpha = lit ? (front ? 1 : 0.7) : 0.25;
-      if (lit) glow(ctx, GOLD, x, y, 6, front ? 0.6 : 0.3);
-      ctx.globalAlpha = lit ? (front ? 1 : 0.7) : 0.25;
-      rang(ctx, x, y, lit ? t * 14 + i : a, G.touch ? 0.6 : 0.75, lit ? GOLD : '#7a8a80');
-    }
-    ctx.globalAlpha = 1;
-    if (s.n >= MAX) glow(ctx, '#ffffff', cx, cy - 4, R * 1.4, 0.25 + 0.15 * Math.sin(t * 10));
-  },
+  back(ctx, p, s) { ringDraw(ctx, p, s, false); },
+  draw(ctx, p, s) { ringDraw(ctx, p, s, true); },
 };

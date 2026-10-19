@@ -48,6 +48,7 @@ export class Projectile {
     this.vx = Math.cos(this.ang) * this.speed;
     this.vy = Math.sin(this.ang) * this.speed;
     this.life = this.dur || this.range / this.speed;
+    this.turnAt = this.life * 0.5; // a boomerang turns for home halfway out
     this.sx = this.x; this.sy = this.y;
     this.team = this.src ? this.src.team : this.team;
     if (this.fx === 'skull' && this.src && this.src.classId === 'death_knight') this.fx = 'dkskull'; // Death Coil wears his frost skull
@@ -91,22 +92,23 @@ export class Projectile {
       const turn = Math.cos(this.t * this.weave + this.seed) * 7 * dt * Math.max(0.25, 1 - this.t * 1.2), c = Math.cos(turn), s = Math.sin(turn), vx = this.vx;
       this.vx = vx * c - this.vy * s; this.vy = vx * s + this.vy * c;
     }
-    // boomerang return
-    if (this.ret && !this.returning && this.t > this.life * 0.5) { this.returning = true; this.hitSet.clear(); }
+    // boomerang return: home to the thrower's hand wherever he has moved, over walls, hitting all again on the way
+    if (this.ret && !this.returning && (this.t > this.turnAt || this.t > 12)) this.turnBack();
     if (this.returning) {
-      const s = this.src && !this.src.dead ? this.src : { x: this.sx, y: this.sy };
-      const a = angleTo(this.x, this.y, s.x, s.y), sp = this.speed * 1.1;
+      const s = this.src && !this.src.dead ? this.src : { x: this.sx, y: this.sy }, d = dist(this.x, this.y, s.x, s.y);
+      if (d < 0.55 || this.t - this.retT > 8) { this.caught(s); return false; }
+      const a = angleTo(this.x, this.y, s.x, s.y), sp = Math.min(this.speed * 1.1, d / dt);
       this.vx = Math.cos(a) * sp; this.vy = Math.sin(a) * sp;
-      if (dist(this.x, this.y, s.x, s.y) < 0.5 || this.t > this.life * 3) return false;
     }
     const nx = this.x + this.vx * dt, ny = this.y + this.vy * dt;
-    if (!w.map.isFloor(nx, ny)) {
-      if (this.bounce > 0 || this.returning) {
+    if (this.returning) { this.x = nx; this.y = ny; }
+    else if (!w.map.isFloor(nx, ny)) {
+      if (this.bounce > 0) {
         if (!w.map.isFloor(nx, this.y)) this.vx = -this.vx;
         if (!w.map.isFloor(this.x, ny)) this.vy = -this.vy;
-        if (!this.returning) { this.bounce--; this.hitSet.clear(); }
+        this.bounce--; this.hitSet.clear();
       } else if (this.ret) {
-        this.returning = true;
+        this.turnBack();
       } else {
         this.impact();
         return false;
@@ -140,6 +142,8 @@ export class Projectile {
     if (this.t > this.life && !this.ret) { if (this.exp) this.impact(); return false; }
     return !this.dead;
   }
+  turnBack() { this.returning = true; this.retT = this.t; this.hitSet.clear(); }
+  caught(s) { if (this.src && this.src.classId && !this.child) sparkle(s.x, s.y, 30, this.E.glow, 2, 0.2); }
   onHit(c) {
     const w = this.world;
     this.hitSet.add(c.id);
@@ -153,22 +157,23 @@ export class Projectile {
       this.split = false;
       const base = Math.atan2(this.vy, this.vx);
       for (const off of [-0.45, 0, 0.45]) {
-        w.addHazard(new Projectile({ world: w, src: this.src, team: this.team, x: c.x, y: c.y, ang: base + off, speed: this.speed, range: this.range * 0.6, fx: this.fx, el: this.el, dmg: this.dmg.map((v) => v * 0.55), o: this.o, size: this.size * 0.8, child: true, pierce: 0 }));
+        w.addHazard(new Projectile({ world: w, src: this.src, team: this.team, x: c.x, y: c.y, ang: base + off, speed: this.speed, range: this.range * 0.6, fx: this.fx, el: this.el, dmg: this.dmg.map((v) => v * 0.55), o: this.o, size: this.size * 0.8, child: true, pierce: 0, ret: this.ret }));
       }
       this.hitSet.add(c.id);
     }
     if (this.pierce > 0) { this.pierce--; return; }
-    if (this.ret) return; // boomerangs keep going
+    if (this.returning) return; // on its way home it cuts through everything
     if (this.bounce > 0) {
       this.bounce--;
       const n = w.hostiles(this.team, c.x, c.y, 6).filter((x) => !this.hitSet.has(x.id))[0];
       if (n) {
         const a = angleTo(this.x, this.y, n.x, n.y), sp = Math.hypot(this.vx, this.vy);
         this.vx = Math.cos(a) * sp; this.vy = Math.sin(a) * sp;
-        this.life = this.t + 1.2;
+        this.life = this.t + 1.2; this.turnAt = this.t + 0.8; this.bounced = true;
         return;
       }
     }
+    if (this.ret) { if (this.bounced) this.turnBack(); return; } // boomerangs keep going; a spent ricochet flies home
     if (!this.exp) hitSpark(this.x, this.y, this.z, this.el);
     this.dead = true;
   }
