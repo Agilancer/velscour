@@ -3,10 +3,10 @@
 // blood (blood, the Blood tree). Six runes and the blade swells to giant size for RUNIC OBLITERATION, one colossal
 // cleave. The runes decide what follows: mostly frost freezes everything it struck, mostly unholy bursts into plague,
 // mostly blood drinks their life back into him. All six of one kind is PERFECT: half again as strong.
-// The sword is a 3D model (src/gfx/runeblade3d.js, docs/RUNEBLADE_3D.md). As a familiar it flies one of twelve idle
-// patterns round him (PATTERNS, a new one every few seconds), swings its own way for each kind of skill he casts
-// (SWINGS) and fights on its own with five sword skills (PET: Runic Lunge, Reaping Arc, Grave Plunge, Blade Waltz,
-// Wheel of Rime). It twirls when it takes a rune, and the same model, scaled up, makes the Obliteration swing. Its
+// The sword is a 3D model (src/gfx/runeblade3d.js, docs/RUNEBLADE_3D.md). As a familiar it flies one of fifteen idle
+// patterns round him (PATTERNS, a new one every few seconds, now and then one that dances 2-3 tiles out), swings its
+// own way for each kind of skill he casts (SWINGS) and fights on its own with five sword skills (PET: Runic Lunge,
+// Reaping Arc, Grave Plunge, Blade Waltz, Wheel of Rime). It twirls when it takes a rune, and the same model, scaled up, makes the Obliteration swing. Its
 // skin changes every 10 levels and its palette every 50 (runebladeLook), announced as the blade is reforged.
 const look = (p) => runebladeLook((p === G.player && G.char ? G.char.level : p.level) || 1);
 import { G, stat, power, sigO, crowd, toughest, foesNear, glow, rand, TAU } from './common.js';
@@ -16,7 +16,7 @@ import { addEffect, Ring, Slash, floatText, spawn, burst, bloodSpray, addDecal }
 import { hit, aoe } from '../combat.js';
 import { coneTargets, lineTargets } from '../hazards.js';
 import { angleDiff } from '../../core/util.js';
-import { drawRuneblade3D, runeblade3DReady, runebladeLook, preloadRuneblade } from '../../gfx/runeblade3d.js';
+import { drawRuneblade3D, runeblade3DReady, runebladeLook, preloadRuneblade, RUNEBLADE_LEN } from '../../gfx/runeblade3d.js';
 
 const RUNES = 6;
 const RC = { frost: '#7ad0ff', unholy: '#70e050', blood: '#ff2a30' };
@@ -111,8 +111,8 @@ class Obliteration {
 // ---- the familiar: where the Runeblade flies, how it swings, what it does by itself ----
 // A pose: (x, y) in tiles and z in px above the floor is its anchor, `piv` how far along the blade the anchor sits (0 the
 // hilt, 0.5 the middle), `a` the screen angle from hilt to point, `spin` the turn round its length, `tilt` the point
-// tipped toward the viewer, `len` its size (1 = 42 px).
-const BLADE = 42;
+// tipped toward the viewer, `len` its size (1 = RUNEBLADE_LEN, 52 px).
+const BLADE = RUNEBLADE_LEN;
 const SA = (wa) => Math.atan2((Math.cos(wa) + Math.sin(wa)) * HH, (Math.cos(wa) - Math.sin(wa)) * HW);   // floor angle -> screen
 const scr = (sx, sy) => ({ dx: (sx / HW + sy / HH) / 2, dy: (sy / HH - sx / HW) / 2 });                 // screen px -> tiles
 const ease = (k) => (k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k));
@@ -128,13 +128,13 @@ const elOf = (s) => EL[s.runes[s.runes.length - 1]] || 'cold';
 
 /** Idle flight round him: offsets (dx, dy tiles, z px) from his feet; a: 'vel' points it along its path. */
 export const PATTERNS = {
-  shoulder: (t) => ({ ...scr(22, 0), z: 62 + Math.sin(t * 2) * 2, a: Math.PI / 2 + 0.12 + Math.sin(t * 1.3) * 0.06, spin: Math.sin(t * 0.7) * 0.75, tilt: 0.18 }),
+  shoulder: (t) => ({ ...scr(24, 0), z: 70 + Math.sin(t * 2) * 2, a: Math.PI / 2 + 0.12 + Math.sin(t * 1.3) * 0.06, spin: Math.sin(t * 0.7) * 0.75, tilt: 0.18 }),
   orbit: (t) => { const w = t * 1.7; return { dx: Math.cos(w) * 1.15, dy: Math.sin(w) * 1.15, z: 36 + Math.sin(w * 2) * 5, a: 'vel', spin: w * 0.5, tilt: 0.25, piv: 0.5 }; },
   figure8: (t) => { const w = t * 1.3; return { ...scr(46 * Math.sin(w), 16 * Math.sin(2 * w)), z: 46 + Math.cos(w) * 10, a: 'vel', spin: w, tilt: 0.3, piv: 0.5 }; },
-  helix: (t) => { const w = t * 2.2; return { dx: Math.cos(w) * 0.95, dy: Math.sin(w) * 0.95, z: 64 + Math.sin(t * 1.1) * 16, a: Math.PI / 2, spin: t * 6, tilt: 0.1 }; },
+  helix: (t) => { const w = t * 2.2; return { dx: Math.cos(w) * 0.95, dy: Math.sin(w) * 0.95, z: 72 + Math.sin(t * 1.1) * 14, a: Math.PI / 2, spin: t * 6, tilt: 0.1 }; },
   wheel: (t) => ({ dx: 0, dy: 0, z: 112 + Math.sin(t * 2) * 3, a: t * 7, spin: 0, tilt: 0.5, piv: 0.5, len: 0.8 }),
-  sentinel: (t) => ({ ...scr(-32, 8), z: 45 + Math.sin(t * 1.6) * 1.5, a: Math.PI / 2, spin: t * 1.2, tilt: 0 }),
-  pendulum: (t) => ({ ...scr(0, -8), z: 126, a: Math.PI / 2 + Math.sin(t * 2.4) * 0.95, spin: Math.sin(t * 1.2) * 0.4, tilt: 0.1 }),
+  sentinel: (t) => ({ ...scr(-34, 8), z: BLADE + 3 + Math.sin(t * 1.6) * 1.5, a: Math.PI / 2, spin: t * 1.2, tilt: 0 }),
+  pendulum: (t) => ({ ...scr(0, -8), z: 136, a: Math.PI / 2 + Math.sin(t * 2.4) * 0.95, spin: Math.sin(t * 1.2) * 0.4, tilt: 0.1 }),
   star: (t) => { // darts between the five points of a star round him, in star order
     const seg = t / 0.42, i = Math.floor(seg), k = ease(seg - i);
     const pt = (n) => { const a = (((n * 2) % 5) / 5) * TAU - Math.PI / 4; return [Math.cos(a) * 1.35, Math.sin(a) * 1.35]; };
@@ -142,14 +142,26 @@ export const PATTERNS = {
     return { dx: lerp(x0, x1, k), dy: lerp(y0, y1, k), z: 42 + Math.sin(seg * Math.PI) * 6, a: 'vel', spin: seg * 1.2, tilt: 0.3, piv: 0.5 };
   },
   loop: (t) => { const w = t * 3; return { ...scr(36 + Math.cos(w) * 22, 0), z: 54 + Math.sin(w) * 22, a: 'vel', spin: 0.3, tilt: 0.2, piv: 0.5 }; },
-  guard: (t, p) => { const f = p.facing || 0; return { dx: Math.cos(f) * 0.85, dy: Math.sin(f) * 0.85, z: 56 + Math.sin(t * 2) * 2, a: Math.PI / 2 + Math.sin(t * 1.5) * 0.12, spin: Math.sin(t * 0.9) * 0.5, tilt: 0.15 }; },
+  guard: (t, p) => { const f = p.facing || 0; return { dx: Math.cos(f) * 0.85, dy: Math.sin(f) * 0.85, z: 64 + Math.sin(t * 2) * 2, a: Math.PI / 2 + Math.sin(t * 1.5) * 0.12, spin: Math.sin(t * 0.9) * 0.5, tilt: 0.15 }; },
   comet: (t) => { const w = t * 2.6; return { dx: Math.cos(w) * 1.9, dy: Math.sin(w) * 1.9, z: 42 + Math.sin(w * 1.5) * 14, a: 'vel', spin: w * 2, tilt: 0.35, piv: 0.5 }; },
   drift: (t) => { // lazy and curious, with a flip every few seconds
     const f = (t % 4.5) / 4.5, flip = f > 0.8 ? ease((f - 0.8) / 0.2) : 0;
     return { ...scr(26 * Math.sin(t * 0.7) + 10 * Math.sin(t * 1.9), 8 * Math.sin(t * 1.1)), z: 62 + 10 * Math.sin(t * 0.9), a: Math.PI / 2 + 0.4 * Math.sin(t * 0.6) - flip * TAU, spin: t * 0.6, tilt: 0.2, piv: 0.3 };
   },
+  // the far ones: it dances out 2-3 tiles from him and back
+  rove: (t) => { // wanders out and in on a winding path
+    const r = 1.1 + 1.7 * (0.5 - 0.5 * Math.cos(t * 0.9)), w = t * 0.7 + Math.sin(t * 0.4) * 2;
+    return { dx: Math.cos(w) * r, dy: Math.sin(w) * r, z: 50 + 14 * Math.sin(t * 2.3), a: 'vel', spin: t * 2, tilt: 0.3, piv: 0.5 };
+  },
+  dance: (t) => ({ dx: 2.6 * Math.sin(t * 0.8), dy: 2.1 * Math.sin(t * 1.3 + 1), z: 48 + 12 * Math.sin(t * 3), a: 'vel', spin: t * 3, tilt: 0.35, piv: 0.5 }),
+  scout: (t) => { // darts out to a far point, loops there, comes back
+    const seg = t / 1.7, i = Math.floor(seg), k = seg - i, h = Math.sin(i * 12.9898 + 4.1) * 43758.5453, th = (h - Math.floor(h)) * TAU;
+    const out = k < 0.35 ? ease(k / 0.35) : k < 0.65 ? 1 : 1 - ease((k - 0.65) / 0.35), lw = clamp01((k - 0.35) / 0.3) * TAU, lr = k > 0.35 && k < 0.65 ? 0.45 : 0;
+    const r = 0.8 + 2.2 * out;
+    return { dx: Math.cos(th) * r + Math.cos(lw) * lr, dy: Math.sin(th) * r + Math.sin(lw) * lr, z: 46 + 18 * Math.sin(k * Math.PI), a: 'vel', spin: seg * 4, tilt: 0.3, piv: 0.5 };
+  },
 };
-const PAT_IDS = Object.keys(PATTERNS);
+const PAT_IDS = Object.keys(PATTERNS), FAR = ['rove', 'dance', 'scout'], NEAR = PAT_IDS.filter((id) => !FAR.includes(id));
 
 function idlePose(p, F) {
   const f = PATTERNS[F.pat], q = f(F.patT, p), z0 = p.z || 0;
@@ -193,9 +205,9 @@ export const SWINGS = {
   plunge(p, s, th, d) { // up over the spot, then down into the floor, point first
     const [x0, y0] = [p.x, p.y], [tx, ty] = at(p, th, d);
     return { dur: 0.62, pose(k) {
-      if (k < 0.5) { const e = ease(k / 0.5); return { x: lerp(x0, tx, e), y: lerp(y0, ty, e), z: 40 + 70 * e, a: lerpA(SA(th), Math.PI / 2, e), spin: e * TAU, tilt: 0.1 }; }
+      if (k < 0.5) { const e = ease(k / 0.5); return { x: lerp(x0, tx, e), y: lerp(y0, ty, e), z: 40 + 76 * e, a: lerpA(SA(th), Math.PI / 2, e), spin: e * TAU, tilt: 0.1 }; }
       const dn = clamp01((k - 0.5) / 0.12) ** 2, out = clamp01((k - 0.85) / 0.15);
-      return { x: tx, y: ty, z: 110 - 70 * dn + 30 * out, a: Math.PI / 2, spin: 0, tilt: 0 };
+      return { x: tx, y: ty, z: 116 - (114 - BLADE) * dn + 30 * out, a: Math.PI / 2, spin: 0, tilt: 0 };
     }, hits: [{ at: 0.62, fn: () => addEffect(new Ring(tx, ty, 0.1, 1.1, 0.35, tint(s), 3)) }] };
   },
   lance(p, s, th) { // held point-first in front of him, quivering with the beam
@@ -256,7 +268,7 @@ function gravePlunge(p, s, c) { // climbs over the toughest foe, hangs, and drop
     if (k < 0.45) { const e = ease(k / 0.45); return { x: lerp(p.x, T.x, e), y: lerp(p.y, T.y, e), z: 40 + 100 * e, a: lerpA(SA(Math.atan2(T.y - p.y, T.x - p.x)), Math.PI / 2, e), spin: e * TAU * 2, tilt: 0.1 }; }
     if (k < 0.55) return { x: T.x, y: T.y, z: 140 + Math.sin(k * 90) * 1.5, a: Math.PI / 2, spin: 0, tilt: 0 };
     const dn = clamp01((k - 0.55) / 0.1) ** 2, out = clamp01((k - 0.85) / 0.15);
-    return { x: T.x, y: T.y, z: 140 - 100 * dn + 40 * out, a: Math.PI / 2, spin: 0, tilt: 0 };
+    return { x: T.x, y: T.y, z: 140 - (138 - BLADE) * dn + 40 * out, a: Math.PI / 2, spin: 0, tilt: 0 };
   }, hits: [{ at: 0.65, fn: () => {
     aoe(p.world, p, T.x, T.y, 1.4, P * 1.1, el, sigO({ stun: true, knock: 0.8 }));
     for (let i = 0; i < 2; i++) addEffect(new Ring(T.x, T.y, 0.1, 1.4 + i * 0.4, 0.35 + i * 0.1, i ? '#ffffff' : tint(s), 5 - i * 2, { fill: !i }));
@@ -333,7 +345,7 @@ function famUpdate(p, s, dt) {
     if (A.t >= A.dur) F.act = null;
   } else {
     if ((F.patT += dt) > F.patDur) { // a new pattern every few seconds, never the same twice running
-      const pick = PAT_IDS.filter((id) => id !== F.pat);
+      const pick = (Math.random() < 0.3 ? FAR : NEAR).filter((id) => id !== F.pat);   // now and then it dances out further
       F.pat = pick[Math.floor(Math.random() * pick.length)]; F.patT = 0; F.patDur = rand(5, 9);
     }
     q = idlePose(p, F);
