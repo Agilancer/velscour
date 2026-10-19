@@ -10,6 +10,9 @@ const HELMET_DIR = { helmet: BASE + 'helmets/' };
 const S = { list: null, cls: null, meta: null, armor: null, amask: null, helmetHelms: null };
 const helmetPromises = { helmet: null };
 const LOOK_GEN = 2; // item.look[3]: looks rolled before the Grim Nocturne library are rerolled
+// Bumped with every rebuild of the gear art: a browser that kept an older gear.json beside a newer atlas read armors
+// past the atlas's end, and the hero went invisible once he put one on.
+const V = '?v=nocturne-1';
 
 function loadImage(src) {
   return new Promise((res, rej) => {
@@ -45,9 +48,9 @@ function atlasBoxes(atlas, meta) {
 
 async function loadHelmetSet(set) {
   if (!helmetPromises[set]) helmetPromises[set] = Promise.all([
-    fetch(HELMET_DIR[set] + 'index.json').then((r) => { if (!r.ok) throw new Error(set + ' helmet index'); return r.json(); }),
-    loadImage(HELMET_DIR[set] + 'atlas.png'),
-    fetch(HELMET_DIR[set] + 'placements.json', { cache: 'no-store' }).then((r) => {
+    fetch(HELMET_DIR[set] + 'index.json' + V).then((r) => { if (!r.ok) throw new Error(set + ' helmet index'); return r.json(); }),
+    loadImage(HELMET_DIR[set] + 'atlas.png' + V),
+    fetch(HELMET_DIR[set] + 'placements.json' + V, { cache: 'no-store' }).then((r) => {
       if (!r.ok) throw new Error(set + ' helmet placements');
       return r.json();
     }),
@@ -61,21 +64,30 @@ async function loadHelmetSet(set) {
   return helmetPromises[set];
 }
 
+/** A class's armor library and the helmets, checked to belong together. */
+async function loadClassGear(cls) {
+  const dir = BASE + cls + '/';
+  const [meta, a, am, helmetHelms] = await Promise.all([
+    fetch(dir + 'gear.json' + V).then((r) => { if (!r.ok) throw new Error('gear ' + cls); return r.json(); }),
+    loadImage(dir + 'armor.webp' + V), loadImage(dir + 'armor_mask.png' + V), loadHelmetSet('helmet'),
+  ]);
+  const [fw, fh] = meta.frame, rows = Math.ceil(meta.armor.n / meta.cols);
+  if (a.width < meta.cols * fw || a.height < rows * fh || am.width !== a.width || am.height !== a.height) {
+    throw new Error(cls + ' armor atlas does not match its gear.json');
+  }
+  if (!helmetHelms.meta.classes.includes(cls)) throw new Error('No helmet art for ' + cls);
+  return { cls, meta, armor: pixels(a), amask: channel(am), helmetHelms };
+}
+
 /** Load a class's gear art. Resolves to its meta, or null if the class has none (it then keeps its old sprite). */
 export async function loadGearArt(cls) {
   if (S.cls === cls) return S.meta;
   try {
-    if (!S.list) S.list = await fetch(BASE + 'classes.json').then((r) => (r.ok ? r.json() : []));
+    if (!S.list) S.list = await fetch(BASE + 'classes.json' + V).then((r) => (r.ok ? r.json() : []));
     if (!S.list.includes(cls)) { Object.assign(S, { cls, meta: null }); return null; }
-    const dir = BASE + cls + '/';
-    const [meta, a, am, helmetHelms] = await Promise.all([
-      fetch(dir + 'gear.json').then((r) => { if (!r.ok) throw new Error('gear ' + cls); return r.json(); }),
-      loadImage(dir + 'armor.webp'), loadImage(dir + 'armor_mask.png'), loadHelmetSet('helmet'),
-    ]);
-    if (!helmetHelms.meta.classes.includes(cls)) throw new Error('No helmet art for ' + cls);
-    Object.assign(S, { cls, meta, armor: pixels(a), amask: channel(am), helmetHelms });
+    Object.assign(S, await loadClassGear(cls));
     looks.clear(); icons.clear(); recolouredHelms.clear();
-    return meta;
+    return S.meta;
   } catch (e) {
     console.warn('gear art unavailable for', cls, e);
     Object.assign(S, { cls, meta: null });
@@ -180,6 +192,7 @@ function recolorPx(d, i, pi, L, k) {
 /** One armor frame (1-based id) as RGBA bytes, recoloured by palette `pi`. */
 function armorPixels(id, pi, src = S) {
   const { meta, armor, amask } = src, [fw, fh] = meta.frame;
+  id = clamp(id | 0, 1, meta.armor.n); // never past the atlas: that is an invisible hero
   const sx = ((id - 1) % meta.cols) * fw, sy = Math.floor((id - 1) / meta.cols) * fh, aw = armor.width;
   const out = new Uint8ClampedArray(fw * fh * 4);
   const pal = PALETTES[pi] || PALETTES[0], L = pal.k ? luts(pi) : null;
@@ -340,12 +353,7 @@ export function savedGearPreview(cls, body, head) {
     head && [head.look, head.ilvl, head.rarity]]);
   if (savedPreviews.has(signature)) return savedPreviews.get(signature);
   const work = previewQueue.then(async () => {
-    const dir = BASE + cls + '/';
-    const [meta, armor, amask, helmetHelms] = await Promise.all([
-      fetch(dir + 'gear.json').then(r => { if (!r.ok) throw new Error('gear ' + cls); return r.json(); }),
-      loadImage(dir + 'armor.webp'), loadImage(dir + 'armor_mask.png'), loadHelmetSet('helmet'),
-    ]);
-    const src = { cls, meta, armor: pixels(armor), amask: channel(amask), helmetHelms };
+    const src = await loadClassGear(cls);
     return heroLook(cls, body, head, src, new Map());
   });
   previewQueue = work.catch(() => {});

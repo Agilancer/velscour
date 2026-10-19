@@ -53,6 +53,7 @@ node tools/tests/classart.js paladin               # class art pack: catalog wea
 node tools/tests/lance.js [mobile]                 # Dragoon leaps: energy lance + per-skill trails, stepped frame by frame
 node tools/tests/gear.js paladin,wizard            # hero looks: armor+helm per rarity, finishes, auras (all = 16)
 node tools/tests/closed_helms.js all               # enclosed helmets on all 12 armors: face covered, centred, body untouched
+node tools/tests/herolook.js all death_knight 8      # every armor/helmet/finish loads (945 per class) + hero visible every second of a soak
 node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners in those biomes (docs/ART.md)
 node tools/tests/pack.js catacombs,blood          # biome pack levels: arches, doors, reachability; door/arch shots
 node tools/tests/overworld.js                      # 60 outdoor seeds, 20 scenarios, forced scheduling, landscape previews
@@ -71,6 +72,7 @@ node tools/tests/titlefx.js                        # title intro: click gate, lo
 node tools/tests/enemies.js                        # monster art line-ups, corpses, mixed-biome levels + guardians
 node tools/tests/mayhem.js                         # monster traits, ambush arrivals (drop/teleport/burrow/wall), bullet patterns, MADNESS
 node tools/tests/legion.js                         # Necromancer skeleton summons: art line-up, every minion attacks + casts
+node tools/tests/dk_ghoul.js                       # Death Knight ghoul: frost dk_ghoul atlas, small, leaps from range; frost skulls on Death Coil
 node tools/tests/familiars.js                      # pet art: every pet summon's look, random blue slimes rising + hopping
 node tools/tests/pets.js [seeds]                   # minion pathing: round walls, keep up, fight round corners, leash, idle
 node tools/tests/select.js [mobile]                # hero select: one hero per class, play/new/delete, old duplicate saves

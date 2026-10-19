@@ -35,6 +35,11 @@ Contents
   the helmet's back edge, which the helmet addendum allows. Mythic helmets reuse the Legendary design until Mythic
   helmets exist. `chatgpt_art.py armor/overlays` still writes to `assets/source/gear_nocturne/<class>/armor|overlays/`,
   which `build` does not read yet.
+- **Invisible hero fix:** a browser that kept the old 80-armor `gear.json` beside the new 12-armor atlas read armors
+  past the atlas's end (ids 13-80), so the hero vanished once he equipped one (reproduced: armor 37 = 0 opaque px).
+  Gear URLs now carry a version (`V` in `src/core/gearart.js`; bump it on every gear rebuild), `loadClassGear` rejects an
+  atlas that doesn't match its `gear.json` (the old class sprite stands in), and `armorPixels` clamps the armor id.
+  New `tools/tests/herolook.js`: all 945 looks per class load, and a soak checks the hero is drawn every second.
 
 ## October 18, 2026 — performance sweep: hitches, canvas memory, per-biome frame cost (branch `perf/full-sweep`)
 

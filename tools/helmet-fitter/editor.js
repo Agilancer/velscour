@@ -128,7 +128,7 @@ async function selectClass() {
   const token = ++serial, cls = $('class').value;
   loaded = null; $('controls').disabled = true; status(`Loading ${title(cls)}…`);
   try {
-    if (!cache.has(cls)) cache.set(cls, Promise.all([json(base + cls + '/gear.json'), image(base + cls + '/armor.webp')]).then(([meta, im]) => ({ meta, image: im })).catch(e => { cache.delete(cls); throw e; }));
+    if (!cache.has(cls)) cache.set(cls, Promise.all([json(base + cls + '/gear.json'), image(base + cls + '/armor.webp?t=' + Date.now())]).then(([meta, im]) => ({ meta, image: im })).catch(e => { cache.delete(cls); throw e; }));
     const result = await cache.get(cls);
     if (token !== serial) return;
     current = cls; loaded = result; $('controls').disabled = false; $('armor').max = loaded.meta.armor.n;
