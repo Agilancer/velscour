@@ -65,10 +65,11 @@ export function createDarkForestRun(world, gen, biome, onSuccess) {
   };
   for (const S of all) S.busy = () => all.some((o) => o !== S && o.active);
   function reward(S, best) {
-    const n = record.rewarded || 0, lvl = Math.max(1, world.depth * 2);
+    const n = record.rewarded || 0, lvl = depthLevel(world.depth) + 2;
     const [x, y] = S.glade.center;
-    world.addLoot(new GroundItem(x + 0.6, y + 0.4, 'item', { item: rollItem(lvl, { rarity: 4 }) }));
-    const mythic = best ? 0.6 : Math.min(0.6, 0.12 * (n + 1));
+    // an Epic, sometimes Legendary; a Mythic is a rare gift (the Heart's odds are best)
+    world.addLoot(new GroundItem(x + 0.6, y + 0.4, 'item', { item: rollItem(lvl, { rarity: Math.random() < (best ? 0.5 : 0.2) ? 4 : 3 }) }));
+    const mythic = best ? 0.08 : Math.min(0.05, 0.01 * (n + 1));
     if (Math.random() < mythic) {
       world.addLoot(new GroundItem(x - 0.6, y + 0.4, 'item', { item: rollItem(lvl, { rarity: 5 }) }));
       UI.log('The forest gives up a Mythic treasure.', '#ff536e');

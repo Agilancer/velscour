@@ -19,10 +19,11 @@ for(const [category,count] of Object.entries(expected))if(seaOfSandFrames(catego
 for(const [category,names] of [['scatter',SAND_SCATTER],['tree',SAND_TREES]])
   for(const name of names)if(!seaOfSandFrames(category).some(f=>f.name.endsWith('_'+name)))throw Error(`missing ${category} frame ${name}`);
 if(SAND_CREATURES.length!==60||SAND_BOSSES.length!==10)throw Error('bestiary roster size mismatch');
-const first=rollSandScenarioRewards(0,40,()=>.99),second=rollSandScenarioRewards(1,40,()=>.99),last=rollSandScenarioRewards(4,40,()=>.949);
-if(first.items.length!==1||first.items[0].rarity!==4||first.items[0].slot!=='weapon')throw Error('first beat weapon reward mismatch');
-if(second.items.length!==1||second.items[0].rarity!==4||second.items[0].slot!=='offhand'||second.items[0].base!=='shield')throw Error('second beat shield reward mismatch');
-if(last.items.length!==2||last.items[0].rarity!==4||last.items[1].rarity!==5||last.mythicChance!==.95)throw Error('five-beat reward roll mismatch');
+const first=rollSandScenarioRewards(0,40,()=>.99),second=rollSandScenarioRewards(1,40,()=>.99),last=rollSandScenarioRewards(4,40,()=>.05),plain=rollSandScenarioRewards(4,40,()=>.5);
+if(first.items.length!==1||first.items[0].rarity!==3||first.items[0].slot!=='weapon')throw Error('first beat weapon reward mismatch');
+if(second.items.length!==1||second.items[0].rarity!==3||second.items[0].slot!=='offhand'||second.items[0].base!=='shield')throw Error('second beat shield reward mismatch');
+if(last.items.length!==2||last.items[0].rarity!==4||last.items[1].rarity!==5||Math.abs(last.mythicChance-.1)>1e-9)throw Error('five-beat reward roll mismatch');
+if(plain.items.length!==1||plain.items[0].rarity!==3)throw Error('five-beat plain reward mismatch');
 const biome=BIOME_BY_ID.sea_of_sand,counts=new Set(),routeShapes=new Set();let minCliffs=Infinity,minFree=Infinity;
 for(let n=1;n<=100;n++){
   const gen=generateOverworld(13,biome,n*32+1),m=gen.map,I=(x,y)=>y*m.w+x;

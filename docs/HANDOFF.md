@@ -14,6 +14,46 @@ Contents
 
 ---
 
+## October 19, 2026 — Gear rarity overhaul: item level first, rarity worth a few levels, far rarer top tiers
+
+- **Request:** Mythic much harder to get, every other tier rarer too; a level 25 Rare must beat a level 10 Mythic;
+  gear should be replaced often as the hero levels (each level an upgrade); Epic, Legendary and Mythic each last a
+  little longer than the tier below.
+- **Power level** (`src/data/items.js`): every number on an item (base damage, armor, affix values, ring augment
+  power, legendary power stats) is rolled at `powerLevel(ilvl, rarity) = ilvl + RARITY[r].lv`, lv = 0/2/3/7/8/10.
+  `RARITY_BASE` and the per-rarity affix `mult` are gone. Tooltips show `Power N`.
+- **Lines:** every rarity rolls the same `CORE_LINES` (2) stat lines at `LINE_MULT` 1.5; rarer items add *perks* on
+  top: perk lines (`perk: 1` affixes: magic/gold find, XP, move speed, thorns, mana steal, projectile speed, boss
+  damage; `PERK_MULT` 0.7, gold text) Rare/Epic/Legendary 1, Mythic 2; sockets 1/2/3/3/4/4; a legendary power on
+  Legendary/Mythic whose stats scale with power level (`legendaryScale`: 15% -> full at power level 90; text from
+  `legendaryDesc`). Why equal lines: with this game's linear stat curves, one extra affix is worth roughly
+  "current level" item levels, so rarity can only be a fixed number of levels if every rarity carries about the
+  same line mass. +skill lines unlock by power level (`minPl`: trees 10, all skills 30) instead of rarity.
+- **Steeper level growth:** stats that scale (sc >= 0.01) grow 2x faster with power level, anchored at 80
+  (`affixScale`); capped stats (res, speeds, crit, block...) keep their gentle growth.
+- **Rings** (`src/data/rings.js`): `augPower(pl) = 0.6 + 0.008 pl`; Mythic rings split it over two augments (0.55
+  each); every other ring has one.
+- **Requirement:** `req = ilvl` (was 0.8 ilvl), so each level up opens new gear. Boss drops ilvl lvl+2 (+-1, was +3);
+  vendors stock the hero's level -2..0 and rarely above Rare; gambling rolls at the hero's level.
+- **Drop odds** (`rollRarity`, weights 70/21/6/1/0.14/0.012, boss/chest `bonus` per rarity, magic find `mfMul`):
+  plain kill Common 71% / Uncommon 21% / Rare 6.1% / Epic 1.0% / Legendary 0.14% / Mythic 0.012% (was 8.9 / 3.2 /
+  0.79 / 0.114); boss 17.6 / 3.6 / 0.6 / 0.06% (was 22.7 / 11 / 3.5 / 0.63%). Guaranteed sources cut too: Dark
+  Forest trials an Epic (Legendary 20%, the Heart 50%) + Mythic 1-5% (Heart 8%, was up to 60%); Sea of Sand beats an
+  Epic (Legendary 25%) + Mythic 2-10% (was a Legendary + up to 95%); cursed chest Mythic 3%; peddler Mythic 2%,
+  Legendary 15%; tenth-depth gift Legendary 12%. **Bug fixed:** Dark Forest and Sea of Sand rewards rolled at item
+  level `depth * 2`; now `depthLevel(depth) + 2`.
+- **Measured** (`tools/tests/rarity.js`, new): worth in Common item levels, 8 classes x hero levels 16-124:
+  Uncommon 2.0, Rare 5.0, Epic 7.7, Legendary 11.6, Mythic 15.8; a level 25 Rare beats a level 10 Mythic averaged over
+  slots and for the weapon and body alone (all 8 classes); Common and Rare items improve every single level.
+  Balance (best-of-200-drops hero, 5 classes vs the old code): depth 60-300 within noise (+-0.3 score; deep DPS
+  +5-30%), depth 5-20 0.3-1.0 lower (far fewer Rares/Epics early). 25-minute auto-play soaks: same depth pace, no
+  deaths, 9-32% more gear swaps, Legendary/Mythic drops way down.
+- **Existing saves:** old items keep their rolled numbers and requirement; their legendary power stats now scale
+  with power level (a low-level old Mythic's power got weaker).
+- Tests run: rarity, flow, ui, rings, hud, mobile, stash, happenings, scenarios, gear, dark_forest (only its frame
+  time check failed, on SwiftShader with another browser test running), sea_of_sand_generation, balance_model,
+  data_check.
+
 ## October 18, 2026 — Bard: a five-octave harpsichord, 2,000 two-bar melodies, two-handed performances (branch `feat/bard-harpsichord`)
 
 - **Instrument**: the piano and the old one-octave harpsichord are gone. The user's "Harpsichord 5 Octaves / 7
@@ -623,7 +663,8 @@ changes; each fix cites the commit that made the change.
 - The biome generates connected desert maps with 1–5 scenario areas and
   labyrinth-like cliff barriers. Scenario HUD shows the area, beat progress,
   and timer. Each cleared beat grants a guaranteed Legendary (weapon on beat
-  one, shield on beat two); Mythic chance rises to 95% on a five-beat run.
+  one, shield on beat two); Mythic chance rises to 95% on a five-beat run. (Oct 19: now an Epic, Legendary 25%,
+  Mythic up to 10%; see the rarity overhaul.)
 - Added `docs/SEA_OF_SAND.md` and the runtime and generation checks. Passed
   `tools/tests/data_check.mjs`, `tools/tests/sea_of_sand_generation.mjs`
   (100 deterministic map seeds), JavaScript parse checks, and `git diff
@@ -2072,16 +2113,17 @@ Summon attacks (`monster.js:416 summonAttack`) by `atk.type`:
 
 **Items.**
 - `rollItem` (`items.js:213`):
-  - Slot is random with weapon weighted x2. Rarity comes from `rollRarity`: common weight/(1+bonus), others `w*(1+mf/100)*(1+bonus*id)`.
+  - Slot is random with weapon weighted x2. Rarity comes from `rollRarity`: common weight/(1+bonus), others `w*(1+bonus*R.bonus)*mfMul(mf,id)`.
+  - Everything below uses the power level `pl = ilvl + RARITY[r].lv` (rarity overhaul, Oct 19).
   - `tier = clamp(floor((ilvl-1)/10),0,9)` gives the MATERIAL prefix. Base name index = `min(4, floor(tier/2))`.
-  - Weapon avg damage = `3.4*1.052^(ilvl-1)*W.dmg*(1+.012*ilvl)`; range [x.75, x1.25].
-  - Armor = `6*A.armor*1.045^(ilvl-1)*U(.85,1.15)`.
+  - Weapon avg damage = `3.4*1.052^(pl-1)*W.dmg*(1+.012*pl)`; range [x.75, x1.25].
+  - Armor = `6*A.armor*1.045^(pl-1)*U(.85,1.15)`.
   - Implicits: dagger crit 4; staff/wand/lute cast 8/10/5; shield block 8-16; orb dmgPct 6-14 + ilvl/10.
-  - Affix count is `randi(R.affixes)`, unique by stat, filtered by slot letter (W, O, H, B, G=hands, L, F) and `minRarity`, weighted by `w` (default 1).
-  - maxSockets = R.sockets (1/2/3/4/6). Initial sockets: 45% chance of `randi(0, ceil(max/2))`.
-  - Legendary picks a random `LEGENDARY` key. Epic and above get a random title. Uncommon and Rare get a prefix/suffix from the first non-implicit affix. `req = floor(ilvl*.8)`.
-- `affixValue` = `(min+(max-min)*roll)*(1+ilvl*sc)*R.mult`. When min>=1, max<=2 and sc==0 (skill affixes) it is `round(base)`.
-- `itemStats` = affixes (non-implicit x(1+.04*upg)) + `gemStats` + legendary `stats`. Weapon damage and armor scale with `upgMult = 1+.1*upg` (upg max 10, `vendor.js:207`).
+  - `CORE_LINES` (2) core affixes, then `R.perks` perk affixes (`perk: 1`); unique by stat, filtered by slot letter (W, O, H, B, G=hands, L, F, R) and `minPl`, weighted by `w` (default 1).
+  - maxSockets = R.sockets (1/2/3/3/4/4). Initial sockets: 45% chance of `randi(0, ceil(max/2))`.
+  - Legendary picks a random `LEGENDARY` key. Epic and above get a random title. Uncommon and Rare get a prefix/suffix from the first non-implicit affix. `req = ilvl`.
+- `affixValue` = `(min+(max-min)*roll)*affixScale(sc,pl)*(perk?PERK_MULT:LINE_MULT)`; `affixScale` = `1+pl*sc` for sc<0.01, else 2x steeper anchored at pl 80. When min>=1, max<=2 and sc==0 (skill affixes) it is `round(base)`.
+- `itemStats` = affixes (non-implicit x(1+.04*upg)) + `gemStats` + `legendaryStats(item)` (scaled by `legendaryScale(pl)`). Weapon damage and armor scale with `upgMult = 1+.1*upg` (upg max 10, `vendor.js:207`).
 - Gems: normal gem value = `v*GEM_MULT[tier]` with GEM_MULT = [1,1.8,3,4.5,6.5,9]. Integer stats (extraProj, chainPlus, pierce, homing, skillsAll) use `floor((tier+1)*v)`.
 - `rollGem`: tier = `floor(ilvl/16)`, minus 0-1 at 60% chance. Special chance = `.08+.0012*ilvl`. Gems stack (`player.js:467`) and socket into `item.gems:[{gem,tier}]` (`ui/inventory.js:63`).
 - Legendary behaviour lives in game code as `st.legendary.<key>` checks:
@@ -2124,12 +2166,13 @@ Summon attacks (`monster.js:416 summonAttack`) by `atk.type`:
   - lancer: str, spear+shield, 78/25 (8/1.5), Phalanx, Javelin, Valor
   - dragon_knight: str, sword, 72/30 (8/2), Flame, Scale, Draconic
   - gunner: dex, pistol, 55/35 (6/2.5), Firearms, Explosives, Engineering
-- `RARITY` (`items.js:4`), as weight / affix count / max sockets / affix multiplier:
-  - Common: 62 / 0-1 / 1 / 1
-  - Uncommon: 25 / 1-2 / 2 / 1
-  - Rare: 9 / 2-3 / 3 / 1.1
-  - Epic: 3.2 / 3-4 / 4 / 1.25
-  - Legendary: 0.8 / 4-5 / 6 / 1.4
+- `RARITY` (`items.js`), as weight / lv (power-level bonus) / perk lines / max sockets / boss bonus factor:
+  - Common: 70 / 0 / 0 / 1 / 0
+  - Uncommon: 21 / 2 / 0 / 2 / 1
+  - Rare: 6 / 3 / 1 / 3 / 1.6
+  - Epic: 1 / 7 / 1 / 3 / 2.2
+  - Legendary: 0.14 / 8 / 1 / 4 / 2.8
+  - Mythic: 0.012 / 10 / 2 / 4 / 3.4
 - `itemValue` (`items.js:297`) = `12*1.06^ilvl*[1,2.5,6,15,40][rarity]*(1+.15*affixCount)*(1+.2*sockets)*(1+.3*upg)`. Gems: `(special?400:60)*2.6^tier`. Buy price = value; sell = floor(value/4) (`vendor.js:129`).
 - Service costs (`items.js:303-306`):
   - upgrade: `60*1.06^ilvl*1.7^upg*(1+.5r)`
@@ -2173,7 +2216,7 @@ Summon attacks (`monster.js:416 summonAttack`) by `atk.type`:
   1. Append to `BIOMES` with every field. `roster` uses 12 ARCH ids; `el` must be an ELEM key; `ambient.type` must be one handled in `world.js:169`. It automatically joins `randomBiome`.
   2. The id is persisted in saves as `char.nextBiome`/`lastBiome`. An unknown id falls back to catacombs (`game.js:177`).
 - **New affix:**
-  1. Add `{s, t:'...{v}...', pre|suf, min, max, sc, slots:'WOHBGLF', w?, minRarity?}` to `AFFIXES`.
+  1. Add `{s, t:'...{v}...', pre|suf, min, max, sc, slots:'WOHBGLFR', w?, minPl?, perk?}` to `AFFIXES`.
   2. Make the stat do something: read `add.<s>` in `player.recompute` (`player.js:72-114`). `<el>Pct` for an ELEM key is picked up automatically (`player.js:17,115`).
   3. Non-affix stats need a label in `statLabel` (`items.js:324`).
 - **New gem:**

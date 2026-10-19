@@ -38,7 +38,7 @@ export function renderQuest(body) {
         h += step(sc.completed, sc.completed ? 'The exit on the peak is open — descend or return to town.' : "The Warden's fall opens the way on.");
       } else if (w.biome?.id === 'dark_forest') {
         const cur = sc.current;
-        h += step(sc.cleared > 0, `Win the trial glades along the trails (optional, each pays Legendary gear): <b>${sc.cleared}/${sc.trials.length}</b>.`);
+        h += step(sc.cleared > 0, `Win the trial glades along the trails (optional, each pays Epic or better gear): <b>${sc.cleared}/${sc.trials.length}</b>.`);
         for (const t of sc.trials) h += step(t.completed, `${escapeHtml(t.title)} <span class="dim">— ${escapeHtml(t.description)}</span>`);
         if (cur) h += step(false, `In progress: <b>${escapeHtml(cur.title)}</b> — ${escapeHtml(cur.progress() || cur.description)}`);
         h += step(sc.heart.completed, 'Reach the Heart of the Forest, deep in the mossy labyrinth to the north-east, and still the <b>Elder Heartwood</b>.');
@@ -51,7 +51,7 @@ export function renderQuest(body) {
           const progress=beat.failed?'Failed — return to the shrine to retry.':beat.goal>0?`${beat.kills||0}/${beat.goal} objective progress.`:beat.description||'Scenario in progress.';
           h += step(beat.completed, `${escapeHtml(beat.title)} — ${escapeHtml(progress)}${timer}`);
         }
-        h += step(sc.completed, sc.completed ? 'The exit is open — descend or return to town.' : 'Clear each scenario shrine to unseal the exit. Every area grants Legendary gear.');
+        h += step(sc.completed, sc.completed ? 'The exit is open — descend or return to town.' : 'Clear each scenario shrine to unseal the exit. Every area grants Epic or better gear.');
       } else {
       h += step(sc.active || sc.completed, `Activate the glowing scenario shrine: <b>${escapeHtml(sc.title)}</b>.`);
       let progress = sc.description;

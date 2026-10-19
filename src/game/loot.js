@@ -153,7 +153,7 @@ export function dropLoot(world, m) {
   const items = rank === 'boss' ? randi(4, 6) + (world.depth % 10 === 0 ? 2 : 0) : rank === 'unique' ? randi(2, 3) : rank === 'champion' ? (chance(0.6) ? randi(1, 2) : 0) : (chance(0.085 * (world.lootMul || 1)) ? 1 : 0); // lootMul: omens (game/happenings.js)
   const bonus = rank === 'boss' ? 1.2 : rank === 'unique' ? 0.6 : rank === 'champion' ? 0.3 : 0;
   for (let i = 0; i < items; i++) {
-    const ilvl = lvl + (rank === 'boss' ? 3 : rank === 'normal' ? 0 : 1) + randi(-1, 1);
+    const ilvl = lvl + (rank === 'boss' ? 2 : rank === 'normal' ? 0 : 1) + randi(-1, 1);
     add('item', { item: rollItem(ilvl, { mf: st.magicFind, bonus }) });
   }
   // rings: a guardian usually drops one
