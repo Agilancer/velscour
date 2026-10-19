@@ -14,6 +14,26 @@ Contents
 
 ---
 
+## October 19, 2026 — Ranger: the signature bird is a 3D golden phoenix (branch `feat/ranger-phoenix`)
+
+- **Request:** replace the Ranger's new bird (the spirit hawk of her signature, The Hunt) with a 3D model of a golden
+  phoenix, with particles trailing behind it as it flies.
+- **Model** (`src/gfx/phoenix3d.js`): built in code, no art file. Smooth body/neck/head with glowing eyes, ivory beak,
+  a three-plume crest, jointed wings (gold coverts, six flame-tipped secondaries, seven fanned primaries), five long
+  tail plumes ending in flame-shaped vanes. Posed every frame (beat with the hand lagging the arm, glides, wings swept
+  back for the stoop, crest and tail sway) and drawn with WebGL on its own small canvas like the Runeblade (lit from
+  the top-left, gold specular, a flame rim, emissive tips that burn brighter as feathers fill). The bird leans its back
+  0.35 rad toward the camera so a banked wing never goes edge-on in the iso view. `phoenixPoints` gives the wing,
+  tail and crest tips in the world. Without WebGL the old flat bird is drawn, recoloured gold.
+- **Flight** (`src/game/sigs/ranger.js`, `fly`): heading from its motion, pitch from climb/dive, banks into turns
+  (max 0.45 rad), beats for 1.6-3.2 s then glides for 1.2-2.4 s, bobs gently. Embers (`glow`, sparks and gold
+  feather flakes) fall away from the tail plumes, wing tips and crest, ~56/s on desktop, 26/s on phones, twice that
+  in the stoop, which also streaks flame and bursts fire on impact. The feather fan over her head is gold now.
+  Gameplay (quarry, feathers, stoop damage, Hunter's Focus) is unchanged.
+- **Not changed:** the Hawk Companion and Hawk Talons/Starhawk summons still use their pet sprites.
+- Tests: new `tools/tests/phoenix.js` (turntable, tips, flight bank/glide/embers, stoop; `mobile` arg).
+  `signatures.js ranger`, `flow.js`, `autoplay.js ranger 8`, `data_check.mjs` pass. Software GL: ~2 ms per draw.
+
 ## October 19, 2026 — class touch-ups: Paladin halo, Slime Lord gauge, the Runeblade as a familiar (branch `feat/class-touchups`)
 
 - **Paladin**: the Halo of Judgement sits higher over his head (`headAt(p, 12)`, was 6).
