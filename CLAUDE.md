@@ -85,7 +85,7 @@ node tools/tests/select.js [mobile]                # hero select: one hero per c
 node tools/tests/autoplay.js wizard 15 [mobile]    # auto-play soak: a new hero plays N game minutes at ~30x speed
 node tools/tests/balance.js paladin,wizard 146 30  # a geared hero for depth D, auto-play: deaths, depths cleared (BAL_GEAR=3 weaker gear; 'god' 4th arg: DPS)
 node tools/tests/balance_model.mjs paladin         # no browser: hero life vs monster hits by depth (the curve in src/data/depth.js)
-node tools/tests/endgame.js paladin,wizard [8] [rush] # hero level by depth from dungeon XP, kill times + % of life per hit to Velscour (no simulation)
+node tools/tests/endgame.js paladin,wizard [8] [rush] # hero level by depth from dungeon XP (cap 600, Endless Torment to 1200), kill times + % of life per hit (no simulation)
 node tools/tests/happenings.js                     # omens, shrines, treasure imp, cursed chest, challenge, nemesis, town events, Defiance
 node tools/tests/perf.js 6 wizard 1                # frame cost on a phone-sized screen: fps, update/render ms (last arg: CPU throttle)
 node tools/tests/signatures.js [classes|all] [secs]   # class signatures (src/game/sigs/): charge in play, showcase shots, auto-play

@@ -27,7 +27,7 @@ const rounds = +(process.env.BAL_GEAR || 8); // drop rounds of 25 items the gear
       await game.newChar(cls, 'Balance');
       document.querySelectorAll('.screen').forEach((s) => s.remove()); G.ui.modalCount = 0; G.ui.closeAll();
       const c = G.char, p = G.player, L = depthLevel(D);
-      const lvl = Math.min(300, L + 1);
+      const lvl = Math.min(600, L + 1);
       c.level = lvl; c.xp = Math.round(xpToNext(lvl) * 0.3);
       c.statPoints += (lvl - 1) * 5; c.skillPoints += (lvl - 1) + Math.max(0, D - 1);
       for (let d = 1; d < D; d++) c.cleared[d] = true;

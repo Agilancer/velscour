@@ -8,6 +8,7 @@
 //  3. Against that depth's monsters (src/game/monster.js monsterBase, the raid.js and Velscour multipliers):
 //     seconds to kill a normal / guardian / BOSS ROOM boss / Velscour, and how much of the hero's life one hit
 //     of each takes (physical through armor, elemental through resistance).
+//  Depths 700-1200 are the Endless Torment past Velscour (the VELS columns there are hypothetical).
 //   node tools/tests/endgame.js [classes] [rounds] [rush]   # rounds of 25 drops the gear is picked from (default 8);
 //                                                            # rush: the hero who kills 40% of each depth
 // Each depth averages 3 geared heroes (one hero's resistances swing from 0 to 75%).
@@ -25,27 +26,28 @@ const rushing = process.argv[4] === 'rush';
     await game.newChar('paladin', 'XP');
     document.querySelectorAll('.screen').forEach((s) => s.remove()); G.ui.modalCount = 0; G.ui.closeAll();
     const out = [];
-    for (let d = 1; d <= 500; d += d === 1 ? 19 : 20) {
+    for (let d = 1; d <= 1300; d += d === 1 ? 19 : d < 500 ? 20 : 100) { // past 500: the Endless Torment
       G.char.depth = d;
       game.buildDungeon(d, d === 500 ? BIOME_BY_ID.throne : BIOME_BY_ID.catacombs);
       const ms = G.world.creatures.filter((m) => m.team === 'enemy');
       out.push([d, ms.reduce((a, m) => a + (m.xp || 0), 0), ms.length]);
     }
-    const { xpToNext } = await import('/src/game/player.js');
-    return { out, cost: Array.from({ length: 301 }, (_, L) => xpToNext(Math.max(1, L))) };
+    const { xpToNext, MAX_LEVEL } = await import('/src/game/player.js');
+    return { out, cap: MAX_LEVEL, cost: Array.from({ length: MAX_LEVEL + 1 }, (_, L) => xpToNext(Math.max(1, L))) };
   });
-  const cost = xp.cost; xp = xp.out;
+  const cost = xp.cost, cap = xp.cap; xp = xp.out;
   const xpToNext = (L) => cost[L];
-  const xpAt = (d) => { for (let i = 1; i < xp.length; i++) if (xp[i][0] >= d) { const [d0, a] = xp[i - 1], [d1, b] = xp[i]; return a * Math.pow(b / a, (d - d0) / (d1 - d0)); } return xp[xp.length - 1][1]; };
+  const dungeonXp = xp.filter(([d]) => d !== 500); // the throne is a short gauntlet: count depth 500 as a dungeon
+  const xpAt = (d) => { for (let i = 1; i < dungeonXp.length; i++) if (dungeonXp[i][0] >= d) { const [d0, a] = dungeonXp[i - 1], [d1, b] = dungeonXp[i]; return a * Math.pow(b / a, (d - d0) / (d1 - d0)); } return dungeonXp[dungeonXp.length - 1][1]; };
   const levelAfter = (share) => { // hero level on reaching each depth when `share` of every depth's XP is earned
     const H = [1]; let L = 1, cur = 0;
-    for (let d = 1; d <= 500; d++) { cur += xpAt(d) * share; while (L < 300 && cur >= xpToNext(L)) { cur -= xpToNext(L); L++; } H[d + 1] = L; }
+    for (let d = 1; d <= 1300; d++) { cur += xpAt(d) * share; while (L < cap && cur >= xpToNext(L)) { cur -= xpToNext(L); L++; } H[d + 1] = L; }
     return H;
   };
   const full = levelAfter(1), rush = levelAfter(0.4);
   console.log('XP per depth (dungeon, all monsters): ' + xp.map(([d, x, n]) => `D${d} ${Math.round(x).toLocaleString()} (${n})`).join(', '));
   // 2-3. Power at sample depths
-  const depths = [10, 40, 80, 120, 160, 200, 250, 300, 350, 400, 450, 495, 500];
+  const depths = [10, 40, 80, 120, 160, 200, 250, 300, 350, 400, 450, 495, 500, 700, 1000, 1200];
   for (const cls of classes) {
   console.log(`\n${cls}: hero level by full clears / 40% clears, then the ${rushing ? '40%' : 'full'}-clear hero (best of ${rounds * 25} drops, 3 heroes)`);
   console.log(' depth mlvl | lvl F/R |      dps    life arm% res% blk red | ttk: norm  guard  ROOM  VELS | % life per hit: norm champ guard ROOM VELS (phys/elem)');

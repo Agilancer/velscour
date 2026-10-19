@@ -557,11 +557,12 @@ function rollMods(depth) {
 const EXECUTE_T = 180; // seconds from waking until the boss executes the hero
 
 /**
- * A BOSS ROOM boss's life in normal monsters of its level (before the 26 x 1.3 and modifiers). It keeps growing past
- * depth 150 (+1 a depth): hero damage outgrows monster life deep down, and a flat 105 had depth-450 bosses dying
- * in 2-12 s while depth-40 ones took 20-60 s (tools/tests/endgame.js).
+ * A BOSS ROOM boss's life in normal monsters of its level (before the 26 x 1.3 and modifiers). It keeps growing from
+ * depth 150 to 500 (+1 a depth): hero damage outgrows monster life deep down, and a flat 105 had depth-450 bosses
+ * dying in 2-12 s while depth-40 ones took 20-60 s. In the Endless Torment it holds (hero damage falls behind there
+ * on its own; tools/tests/endgame.js).
  */
-export const raidHpMul = (depth) => (depth < 40 ? 12 + depth * 0.9 : 30 + Math.min(depth, 150) * 0.5 + Math.max(0, depth - 150));
+export const raidHpMul = (depth) => (depth < 40 ? 12 + depth * 0.9 : 30 + Math.min(depth, 150) * 0.5 + clamp(depth - 150, 0, 350));
 export function makeRaidBoss(world, arena, depth, level) {
   const c = G.char;
   const tpl = pick(RAID_BOSSES.filter((b) => b.id !== (c && c.lastRaid)));

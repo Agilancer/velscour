@@ -14,6 +14,19 @@ Contents
 
 ---
 
+## October 19, 2026 — Level cap 600 (levels 301-600 are the Endless Torment's progression)
+
+- `MAX_LEVEL` 300 -> 600 (`src/game/player.js`). `xpToNext` is unchanged to level 240; past it a level costs
+  `L/240` times the level-240 price (was still growing ~L^3.5). A full-clearing hero is ~273 at Velscour (depth 500,
+  was ~269), then keeps pace with the Endless Torment's monsters: ~355 at depth 700 (monster level 348), ~495 at 1000
+  (483), and 600 around depth 1200 (573). Existing heroes keep their level.
+- `raidHpMul` stops growing at depth 500 (it had +1 a depth past 150 with no end); in the Endless Torment hero damage
+  falls behind monster life on its own (`endgame.js` barbarian: BOSS ROOM 47 s at depth 700, ~170 s at 1000, ~550 s
+  at 1200; normal hits stay 13-23% of life, BOSS ROOM hits 50-85%). That is the intended "truly mad" wall.
+- `tools/tests/endgame.js` now samples XP to depth 1300 and adds depths 700/1000/1200; `balance.js` and
+  `balance_model.mjs` cap at 600. The Death Knight's Runeblade keeps its last look (level 300's) above 300.
+- Tests: endgame (paladin, wizard, ranger, bard, barbarian), flow, hud, levelup, raid 55,450,700, data_check.
+
 ## October 19, 2026 — Endgame balance pass: XP pacing, late monster damage, BOSS ROOMs, Velscour
 
 - **Request:** check enemy damage and the rest of the balance with calculations (no long simulations): still fun,
@@ -34,7 +47,8 @@ Contents
   (`src/game/raid.js`); `VELSCOUR_HP` 45000 normals (~3x the last BOSS ROOM boss) and his damage x2.8 (was 2.4);
   bounty XP `120 * level^1.5` (~30 kills).
 - **Result (6 classes, full clears):** hero level 12 / 53 / 98 / 151 / 207 / 240 / 265 at depth 10 / 40 / 80 / 160 /
-  300 / 400 / 500 (monster level 10 / 40 / 69 / 105 / 168 / 213 / 258); 300 is for grinders. Normal hits 2-10% of
+  300 / 400 / 500 (monster level 10 / 40 / 69 / 105 / 168 / 213 / 258); 300 is for grinders. (Later the same day the
+  cap became 600: see above.) Normal hits 2-10% of
   life to depth 160, 12-19% from 250 to 500; champions ~1.4x that, guardians ~2x, BOSS ROOM bosses 45-70% (two
   hits), Velscour 40-55%. BOSS ROOM fights 10-35 s at every depth past 40; Velscour 33-99 s. Defiance (8 stacks:
   +80% life, 40% less damage) cuts a Velscour hit to ~15%. A rusher falls behind from depth ~350 (level 216 vs 258
