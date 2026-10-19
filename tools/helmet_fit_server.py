@@ -9,10 +9,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import webbrowser
 
 ROOT = Path(__file__).resolve().parents[1]
-SETS = {
-    name: ROOT / f'assets/sprites/gear/{name}_helmets'
-    for name in ('common', 'rare')
-}
+SETS = {'helmet': ROOT / 'assets/sprites/gear/helmets'}
 
 
 def validate(data, index):
@@ -48,7 +45,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
-        set_name = parse_qs(parsed.query).get('set', ['common'])[0]
+        set_name = parse_qs(parsed.query).get('set', ['helmet'])[0]
         if parsed.path != '/api/helmet-placements' or set_name not in SETS:
             self.send_error(404)
             return

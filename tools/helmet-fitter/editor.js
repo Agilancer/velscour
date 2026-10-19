@@ -2,10 +2,10 @@ import { resolveHelmetFit } from '../../src/core/helmetfit.js';
 
 const $ = (id) => document.getElementById(id);
 const base = '../../assets/sprites/gear/';
-const draftKey = () => `velscour-helmet-fitter-v3-${activeSet}`;
-const camera = { x: 24, y: 0, w: 80, h: 96 };
+const draftKey = () => `velscour-helmet-fitter-v4-${activeSet}`;
+const camera = { x: 24, y: 48, w: 80, h: 96 };
 const canvas = $('editor'), ctx = canvas.getContext('2d');
-let index, atlas, data, persisted, current, loaded, activeSet = 'common', sets = {}, zoom = 6, history = [], dragging = null, space = false;
+let index, atlas, data, persisted, current, loaded, activeSet = 'helmet', sets = {}, zoom = 6, history = [], dragging = null, space = false;
 let serial = 0, dirty = false, angleChanging = false;
 const cache = new Map(), bounds = new Map();
 const round = (n) => Math.round(n * 10000) / 10000;
@@ -75,7 +75,7 @@ function updateControls() {
   $('numbers').textContent = `x=${f.x.toFixed(3)}  y=${f.y.toFixed(3)}  width=${(f.scaleX * 100).toFixed(2)}%  height=${(f.scaleY * 100).toFixed(2)}%  rotation=${(f.rotation || 0).toFixed(1)}°  | armor ${$('armor').value}`;
   const count = Object.values(data.classes).reduce((n, obj) => n + Object.keys(obj).length, 0);
   $('progress').textContent = `${count} / ${index.classes.length * index.designs.length} placements set · ${Object.keys(data.classes[current] || {}).length} / ${index.designs.length} for this class`;
-  $('thumbTitle').textContent = `This class · all ${index.designs.length} ${activeSet} helmets`;
+  $('thumbTitle').textContent = `This class · all ${index.designs.length} helmets`;
   document.querySelectorAll('#thumbnails button').forEach((button, i) => {
     button.classList.toggle('active', i + 1 === design());
     button.lastChild.textContent = `${index.designs[i].catalog}${data.classes[current]?.[i + 1] ? ' •' : ''}`;
@@ -297,15 +297,15 @@ window.addEventListener('beforeunload', event => { if (dirty) { event.preventDef
 
 async function init() {
   $('controls').disabled = true;
-  for (const set of ['common', 'rare']) {
-    const dir = `${set}_helmets/`;
+  for (const set of ['helmet']) {
+    const dir = 'helmets/';
     const [setIndex, setAtlas, setData] = await Promise.all([json(base + dir + 'index.json'), image(base + dir + 'atlas.png'), json(base + dir + 'placements.json')]);
     index = setIndex; validate(setData);
     sets[set] = { index: setIndex, atlas: setAtlas, data: setData, persisted: JSON.stringify(setData) };
   }
-  index = sets.common.index;
+  index = sets.helmet.index;
   for (const cls of index.classes) $('class').add(new Option(title(cls), cls));
-  await selectSet('common');
+  await selectSet('helmet');
   await selectClass();
 }
 init().catch(e => status('Could not start fitter: ' + e.message));

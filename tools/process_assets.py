@@ -12,7 +12,7 @@ JSON atlases under assets/. Re-run this whenever a source sheet changes:
     python3 tools/process_assets.py town     # the town pack: ground, transitions, buildings, trees (tools/townpack.py)
     python3 tools/process_assets.py props    # loot-chest art
     python3 tools/process_assets.py classes [paladin]   # class art packs (tools/classart.py, docs/CLASS_ART.md)
-    python3 tools/process_assets.py gear [paladin]      # armor + helm libraries (tools/gearart.py, docs/CLASS_ART.md)
+    python3 tools/process_assets.py gear     # Grim Nocturne armor + helmet atlases (tools/nocturnegear.py, docs/CLASS_ART.md)
     python3 tools/process_assets.py enemies  # monster sheets in assets/source/enemies/<set>/ (docs/ENEMY_ART.md)
     python3 tools/process_assets.py select   # class-select portraits from assets/FinalClasses/All 16 Classes.png
     python3 tools/process_assets.py gibs     # gore chunks from assets/source/gibs/ -> assets/sprites/gibs.webp + .json (tools/gibpack.py)
@@ -292,8 +292,8 @@ def main():
         from audiopack import process_audio
         process_audio()
     if "gear" in args:
-        from gearart import process_gear_art
-        process_gear_art(args[args.index("gear") + 1:])
+        from nocturnegear import build
+        build()
         return
     for flag in ("classes", "classart"):
         if flag in args:
