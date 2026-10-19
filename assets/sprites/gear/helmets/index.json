@@ -1,0 +1,64 @@
+{
+  "frame": [
+    40,
+    40
+  ],
+  "cols": 16,
+  "classes": [
+    "arcane_sorcerer",
+    "barbarian",
+    "bard",
+    "boomerang_knight",
+    "carrion_witch",
+    "death_knight",
+    "dragon_knight",
+    "dragoon",
+    "gunner",
+    "lancer",
+    "necromancer",
+    "paladin",
+    "ranger",
+    "slime_lord",
+    "totem_master",
+    "wizard"
+  ],
+  "designs": [
+    {
+      "id": 1,
+      "rarity": 0,
+      "name": "Common Helm",
+      "catalog": "Common"
+    },
+    {
+      "id": 2,
+      "rarity": 1,
+      "name": "Uncommon Helm",
+      "catalog": "Uncommon"
+    },
+    {
+      "id": 3,
+      "rarity": 2,
+      "name": "Rare Helm",
+      "catalog": "Rare"
+    },
+    {
+      "id": 4,
+      "rarity": 3,
+      "name": "Epic Helm",
+      "catalog": "Epic"
+    },
+    {
+      "id": 5,
+      "rarity": 4,
+      "name": "Legendary Helm",
+      "catalog": "Legendary"
+    }
+  ],
+  "fit": {
+    "scaleX": 1,
+    "scaleY": 1,
+    "xAnchor": 65.0,
+    "baselineOffset": -12,
+    "sourceBaseline": 0
+  }
+}

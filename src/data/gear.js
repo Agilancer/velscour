@@ -2,92 +2,76 @@
 // shows on the hero. How they're applied: src/core/gearart.js (palettes) and src/gfx/gearfx.js (effects).
 import { RARITY } from './items.js';
 
-// Gradient ramps, dark -> light. A palette recolours four materials, told apart per pixel by colour: neutral
-// metal, saturated cloth, bright warm trim (gold, brass) and dark warm leather. The hero's face, hair and
-// skin are masked out by the importer and never recoloured.
+// Gradient ramps, dark -> light. A palette recolours four materials, told apart per pixel by colour (gearart.js
+// recolorPx): neutral metal, dyed cloth (cool hues and reds), bright warm trim (gold, brass, parchment) and the dark
+// warm base (bronze plate and leather: most of a Grim Nocturne outfit). The hero's face, hair and skin are masked out
+// by the importer (tools/nocturnegear.py) and never recoloured.
 const R = {
   steel: ['#06070a', '#3a3e46', '#9aa2ae', '#f4f8ff'], iron: ['#060606', '#2c2c2e', '#6e6c6a', '#cfcac2'],
-  black: ['#030304', '#16161a', '#4a4a52', '#b8b8c4'], rust: ['#0a0503', '#3e2214', '#8a5432', '#e0b080'],
-  bronze: ['#100602', '#5a3416', '#b07a40', '#ffe0b0'], gold: ['#140a00', '#7a5410', '#e0b040', '#fff4c0'],
-  silver: ['#0a0c10', '#5a6270', '#c8d0dc', '#ffffff'], copper: ['#0e0402', '#5a2412', '#c06a3a', '#ffd0a8'],
+  black: ['#030304', '#16161a', '#4a4a52', '#b8b8c4'], silver: ['#0a0c10', '#5a6270', '#c8d0dc', '#ffffff'],
   bone: ['#0e0c08', '#4e4636', '#b0a688', '#fff8e4'], ash: ['#0a0a0a', '#3a3836', '#8a8680', '#e8e4dc'],
-  bloodsteel: ['#0a0404', '#4a2626', '#a07070', '#ffe0d8'], frost: ['#04080e', '#36506a', '#a0c8e8', '#f4fcff'],
-  verdigris: ['#020806', '#1e4a40', '#5aa08a', '#d8fff0'], obsidian: ['#06040a', '#2a2436', '#7a7090', '#e8e0ff'],
-  ember: ['#0e0402', '#6a1e06', '#e06a1a', '#fff0a0'], sunsteel: ['#141008', '#7a6a40', '#f0e0a0', '#ffffff'],
-  jade: ['#020a06', '#1e5a3a', '#5ac08a', '#e0ffe8'], amethyst: ['#0a0410', '#4a2470', '#a070e0', '#f4e8ff'],
-  // cloth dyes
+  frost: ['#04080e', '#36506a', '#a0c8e8', '#f4fcff'], obsidian: ['#06040a', '#2a2436', '#7a7090', '#e8e0ff'],
+  sunsteel: ['#141008', '#7a6a40', '#f0e0a0', '#ffffff'], jade: ['#020a06', '#1e5a3a', '#5ac08a', '#e0ffe8'],
+  amethyst: ['#0a0410', '#4a2470', '#a070e0', '#f4e8ff'], storm: ['#02040a', '#1a2a5a', '#5a8aff', '#e8f4ff'],
+  bloodsteel: ['#0a0404', '#4a2626', '#a07070', '#ffe0d8'], gunmetal: ['#040508', '#22262e', '#5a6270', '#c0c8d4'],
+  rosegold: ['#100604', '#6a3a30', '#e0a088', '#fff0e8'], copper: ['#0e0402', '#5a2412', '#c06a3a', '#ffd0a8'],
   crimson: ['#100000', '#6a0c0c', '#d02828', '#ffb0a0'], wine: ['#0a0004', '#4a0a20', '#9a2a50', '#f0a0c0'],
   royal: ['#000510', '#0a2050', '#3060c0', '#c0d8ff'], navy: ['#020408', '#101c38', '#2a4478', '#a0b8e8'],
   forest: ['#020802', '#143a18', '#3a7a34', '#c0f0a8'], moss: ['#060802', '#2a3414', '#6a7a34', '#e0eab0'],
-  purple: ['#0a0010', '#401070', '#a040ff', '#f0c0ff'], violet: ['#06020c', '#2e1650', '#6a40a0', '#dcc8ff'],
-  teal: ['#000a0a', '#0c4446', '#2a9a96', '#c0fff8'], sable: ['#030303', '#141214', '#3a363c', '#a8a0aa'],
-  ivory: ['#0e0c08', '#5a5444', '#c8c0a8', '#fffcf0'], ochre: ['#0c0600', '#5a3a08', '#c08a20', '#fff0b0'],
-  flame: ['#100200', '#7a1800', '#ff6010', '#fff0a0'], ice: ['#000818', '#103870', '#4090e0', '#c0f0ff'],
-  emerald: ['#001008', '#0a5030', '#20c070', '#c0ffe0'], rose: ['#0e0206', '#5a1430', '#d05080', '#ffd0e0'],
-  toxic: ['#040a00', '#2a5a00', '#80e010', '#f0ffb0'], blood: ['#080000', '#4a0000', '#a00808', '#ff8070'],
-  void: ['#020004', '#1a0830', '#5a20a0', '#e0a0ff'], storm: ['#02040a', '#1a2a5a', '#5a8aff', '#e8f4ff'],
-  // leathers
-  leather: ['#0a0604', '#3a2416', '#7a5434', '#d8b890'], darkleather: ['#050404', '#1e1a18', '#4a403a', '#a89c90'],
-  redleather: ['#080202', '#3a1410', '#7a3428', '#e0a090'], greyleather: ['#060606', '#2a2828', '#5e5a58', '#c0bab4'],
+  purple: ['#0a0010', '#401070', '#a040ff', '#f0c0ff'], plum: ['#08020a', '#3a1440', '#7a3a80', '#e8c0f0'],
+  teal: ['#000a0a', '#0c4446', '#2a9a96', '#c0fff8'], flame: ['#100200', '#7a1800', '#ff6010', '#fff0a0'],
+  ice: ['#000818', '#103870', '#4090e0', '#c0f0ff'], emerald: ['#001008', '#0a5030', '#20c070', '#c0ffe0'],
+  rose: ['#0e0206', '#5a1430', '#d05080', '#ffd0e0'], toxic: ['#040a00', '#2a5a00', '#80e010', '#f0ffb0'],
+  blood: ['#080000', '#4a0000', '#a00808', '#ff8070'], void: ['#020004', '#1a0830', '#5a20a0', '#e0a0ff'],
+  terracotta: ['#0c0402', '#5a2010', '#c0603a', '#ffd8c0'], cyan: ['#000a0e', '#004a5a', '#20c0e0', '#d0fcff'],
+  saffron: ['#0e0600', '#6a3a00', '#e09a10', '#fff0b0'], gold: ['#140a00', '#7a5410', '#e0b040', '#fff4c0'],
+  brass: ['#100800', '#5a4416', '#b09040', '#f4e8b0'], pewter: ['#080808', '#3e3e40', '#8e8e90', '#e4e4e6'],
+  bronze: ['#100602', '#5a3416', '#b07a40', '#ffe0b0'], glowcyan: ['#001014', '#007088', '#40e0f0', '#e8ffff'],
+  ember: ['#0e0402', '#6a1e06', '#e06a1a', '#fff0a0'], charcoal: ['#050505', '#1c1c1e', '#48484c', '#a8a8ae'],
+  oxblood: ['#0a0203', '#3e0e12', '#7a2228', '#e0a0a0'], olive: ['#060602', '#2e3014', '#646a34', '#d8dca8'],
+  peat: ['#060402', '#2a2014', '#5a4a30', '#c8b898'], slate: ['#04060a', '#1e2834', '#4a5a6e', '#b8c8d8'],
+  aubergine: ['#06020a', '#2a1236', '#5a2e6a', '#d0b0e0'], driftwood: ['#080706', '#34302a', '#7a7064', '#e0d8cc'],
+  midnight: ['#020308', '#0c1430', '#24346a', '#a8b8e8'], deepforest: ['#020604', '#0e2a18', '#285a38', '#b0e0c0'],
+  deepteal: ['#000606', '#0a2e30', '#1e6466', '#a8e8e4'], sand: ['#0c0906', '#4a3e2c', '#a8946c', '#f8ecd0'],
+  deepviolet: ['#04020a', '#1c0e36', '#44287a', '#c8b8f0'], blackteal: ['#000404', '#061c1e', '#14444a', '#90d0d0'],
+  iceblue: ['#02060c', '#1a3654', '#5a90c0', '#e0f4ff'], emberbase: ['#0a0200', '#4a1004', '#a03410', '#ffc890'],
+  ivorybase: ['#0c0a06', '#5a5240', '#c4b896', '#fffaec'], crimsonbase: ['#0a0000', '#4a0608', '#962028', '#ffb0a8'],
+  blackplum: ['#040104', '#1e0a1e', '#4a2048', '#d0a8d0'], royalpurple: ['#06020c', '#2a0e50', '#5e2aa0', '#dcc4ff'],
+  blackgreen: ['#010401', '#0a1e0e', '#1e4a28', '#a0d8a8'], blackred: ['#040000', '#200406', '#501018', '#d08888'],
+  emeraldbase: ['#000804', '#063a20', '#14804a', '#b8f8d8'],
 };
 
-// [name, minimum rarity, metal, cloth, trim, leather, glow colour (effects), strength]
+// [name, minimum rarity, metal, cloth, trim, base]: each finish changes three or four colours that contrast
 const P = [
   ['Original', 0], // the artist's own colours, at every rarity
-  ['Rusted', 0, 'rust', 'moss', 'rust', 'leather', '#c08040', 0.7], ['Ashen', 0, 'ash', 'sable', 'iron', 'greyleather', '#c0c0c0', 0.7],
-  ['Ironbound', 0, 'iron', 'navy', 'bronze', 'darkleather', '#a0b0c0', 0.75], ['Faded Crimson', 0, 'iron', 'wine', 'bronze', 'leather', '#c04040', 0.75],
-  ['Woodland', 0, 'iron', 'forest', 'bronze', 'leather', '#60c060', 0.75], ['Peasant Ochre', 0, 'rust', 'ochre', 'copper', 'leather', '#e0a040', 0.75],
-  ['Grave Dust', 0, 'bone', 'sable', 'iron', 'greyleather', '#d0c8b0', 0.7], ['Mud & Steel', 0, 'steel', 'moss', 'rust', 'darkleather', '#a0a080', 0.7],
-  ['Steel & Navy', 1, 'steel', 'navy', 'silver', 'darkleather', '#80a0ff'], ['Bloodforged', 1, 'bloodsteel', 'crimson', 'gold', 'redleather', '#ff3030'],
-  ['Verdant', 1, 'steel', 'forest', 'bronze', 'leather', '#50d050'], ['Blackened', 1, 'black', 'blood', 'bronze', 'darkleather', '#ff4020'],
-  ['Copperleaf', 1, 'copper', 'teal', 'copper', 'leather', '#40e0c0'], ['Ivory Guard', 1, 'silver', 'ivory', 'gold', 'leather', '#fff0c0'],
-  ['Wine Cellar', 1, 'iron', 'wine', 'gold', 'redleather', '#e04080'], ['Teal Tide', 1, 'steel', 'teal', 'silver', 'greyleather', '#40f0e0'],
-  ['Violet Order', 1, 'steel', 'violet', 'silver', 'darkleather', '#a080ff'], ['Bronze Legion', 1, 'bronze', 'crimson', 'bronze', 'leather', '#ffa040'],
-  ['Gilded', 2, 'gold', 'royal', 'gold', 'leather', '#ffd040'], ['Frostbound', 2, 'frost', 'ice', 'silver', 'darkleather', '#80d0ff'],
-  ['Voidtouched', 2, 'obsidian', 'purple', 'amethyst', 'darkleather', '#b040ff'], ['Verdigris', 2, 'verdigris', 'teal', 'copper', 'leather', '#40ffc0'],
-  ['Sable Knight', 2, 'black', 'sable', 'silver', 'darkleather', '#c0c0ff'], ['Rose Thorn', 2, 'silver', 'rose', 'gold', 'redleather', '#ff60a0'],
-  ['Emerald Court', 2, 'silver', 'emerald', 'gold', 'leather', '#40ff90'], ['Royal Silver', 2, 'silver', 'royal', 'silver', 'greyleather', '#6090ff'],
-  ['Ochre Sun', 2, 'bronze', 'ochre', 'gold', 'leather', '#ffc040'], ['Bone Warden', 2, 'bone', 'wine', 'bone', 'greyleather', '#e0d0a0'],
-  ['Emberforged', 3, 'ember', 'flame', 'gold', 'redleather', '#ff7020'], ['Stormcaller', 3, 'storm', 'royal', 'silver', 'darkleather', '#80b0ff'],
-  ['Jade Empress', 3, 'jade', 'emerald', 'gold', 'leather', '#60ffa0'], ['Amethyst', 3, 'amethyst', 'violet', 'silver', 'darkleather', '#c080ff'],
-  ['Obsidian Flame', 3, 'obsidian', 'flame', 'gold', 'darkleather', '#ff5010'], ['Glacier', 3, 'frost', 'ivory', 'silver', 'greyleather', '#c0f0ff'],
-  ['Toxic Bloom', 3, 'verdigris', 'toxic', 'bronze', 'darkleather', '#a0ff20'], ['Crimson Crown', 3, 'gold', 'crimson', 'gold', 'redleather', '#ff4040'],
-  ['Sunforged', 4, 'sunsteel', 'ivory', 'gold', 'leather', '#fff0a0'], ['Abyssal', 4, 'obsidian', 'void', 'amethyst', 'darkleather', '#a020ff'],
-  ['Hellfire', 4, 'ember', 'blood', 'gold', 'redleather', '#ff3000'], ['Winter King', 4, 'frost', 'ice', 'silver', 'greyleather', '#60c0ff'],
-  ['Thunderlord', 4, 'storm', 'storm', 'gold', 'darkleather', '#a0c8ff'], ['Venom Lord', 4, 'jade', 'toxic', 'gold', 'darkleather', '#80ff20'],
-  ['Bloodmoon', 4, 'bloodsteel', 'blood', 'silver', 'redleather', '#ff1030'], ['Golden Idol', 4, 'gold', 'ochre', 'gold', 'leather', '#ffe060'],
-  ['Starfall', 5, 'silver', 'void', 'gold', 'darkleather', '#e0c0ff'], ['Godforged', 5, 'sunsteel', 'royal', 'gold', 'leather', '#ffffff'],
-  ['Demonheart', 5, 'black', 'flame', 'ember', 'redleather', '#ff2010'], ['Eternal Frost', 5, 'frost', 'storm', 'silver', 'greyleather', '#a0f0ff'],
-  ['Nightmare', 5, 'obsidian', 'blood', 'amethyst', 'darkleather', '#ff20a0'], ['Worldtree', 5, 'jade', 'forest', 'gold', 'leather', '#a0ff60'],
+  ['Ashen Watch', 0, 'iron', 'wine', 'pewter', 'charcoal'], ['Moss and Iron', 0, 'iron', 'moss', 'bronze', 'olive'],
+  ['Oxblood', 0, 'steel', 'navy', 'brass', 'oxblood'], ['Dusk Patrol', 0, 'ash', 'plum', 'copper', 'slate'],
+  ['Peat and Copper', 0, 'iron', 'forest', 'copper', 'peat'], ['Saltworn', 0, 'bone', 'teal', 'pewter', 'driftwood'],
+  ['Sandstone', 0, 'bone', 'terracotta', 'brass', 'sand'], ['Gravewatch', 0, 'black', 'moss', 'pewter', 'slate'],
+  ['Royal Guard', 1, 'steel', 'crimson', 'gold', 'midnight'], ['Verdant Oath', 1, 'silver', 'forest', 'gold', 'deepforest'],
+  ['Copper Tide', 1, 'copper', 'teal', 'copper', 'deepteal'], ['Plum and Brass', 1, 'steel', 'plum', 'brass', 'aubergine'],
+  ['Iron Rose', 1, 'iron', 'rose', 'silver', 'charcoal'], ['Desert Saffron', 1, 'bone', 'saffron', 'gold', 'terracotta'],
+  ['Winter Wool', 1, 'silver', 'navy', 'silver', 'slate'], ['Marsh Lantern', 1, 'gunmetal', 'saffron', 'brass', 'deepforest'],
+  ['Sapphire Court', 2, 'silver', 'royal', 'gold', 'midnight'], ['Emerald Gild', 2, 'sunsteel', 'emerald', 'gold', 'deepforest'],
+  ['Crimson Lacquer', 2, 'black', 'crimson', 'gold', 'oxblood'], ['Frosted Steel', 2, 'frost', 'ice', 'silver', 'slate'],
+  ['Teal and Rosegold', 2, 'rosegold', 'teal', 'rosegold', 'deepteal'], ['Violet Steel', 2, 'steel', 'purple', 'silver', 'deepviolet'],
+  ['Sunset Pilgrim', 2, 'copper', 'flame', 'gold', 'aubergine'], ['Ivory and Wine', 2, 'silver', 'wine', 'gold', 'ivorybase'],
+  ['Abyssal Teal', 3, 'obsidian', 'teal', 'glowcyan', 'blackteal'], ['Molten Obsidian', 3, 'obsidian', 'flame', 'ember', 'charcoal'],
+  ['Amethyst Gilt', 3, 'amethyst', 'purple', 'gold', 'deepviolet'], ['Jade Dynasty', 3, 'jade', 'crimson', 'gold', 'deepforest'],
+  ['Storm Knight', 3, 'storm', 'royal', 'silver', 'slate'], ['Toxic Iron', 3, 'black', 'toxic', 'bronze', 'blackgreen'],
+  ['Ivory and Azure', 3, 'silver', 'ice', 'gold', 'ivorybase'], ['Rose Lacquer', 3, 'rosegold', 'rose', 'gold', 'blackplum'],
+  ['Sunforged', 4, 'silver', 'crimson', 'gold', 'saffron'], ['Bloodmoon', 4, 'bloodsteel', 'blood', 'silver', 'blackred'],
+  ['Glacier King', 4, 'frost', 'royal', 'silver', 'iceblue'], ['Emerald Flame', 4, 'jade', 'flame', 'gold', 'blackgreen'],
+  ['Royal Amethyst', 4, 'silver', 'purple', 'gold', 'royalpurple'], ['Ember Crown', 4, 'obsidian', 'crimson', 'gold', 'emberbase'],
+  ['Celestial', 5, 'silver', 'void', 'gold', 'midnight'], ['Godforged', 5, 'sunsteel', 'royal', 'gold', 'ivorybase'],
+  ['Infernal Regalia', 5, 'black', 'flame', 'gold', 'crimsonbase'], ['Spectral', 5, 'frost', 'cyan', 'glowcyan', 'deepviolet'],
+  ['Verdant God', 5, 'jade', 'saffron', 'gold', 'emeraldbase'], ['Rose Eclipse', 5, 'obsidian', 'rose', 'rosegold', 'blackplum'],
 ];
-// More finishes, mixed per rarity from that rarity's materials (seeded, so a palette index means the same look
-// in every session; appended after the hand-made ones so saved looks keep their colours)
-const MIX = [
-  [['rust', 'ash', 'iron', 'bone'], ['moss', 'sable', 'navy', 'wine', 'forest', 'ochre'], ['rust', 'iron', 'bronze', 'copper']],
-  [['steel', 'iron', 'bronze', 'copper', 'bloodsteel'], ['navy', 'crimson', 'forest', 'teal', 'violet', 'wine', 'ivory'], ['silver', 'gold', 'bronze', 'copper']],
-  [['gold', 'frost', 'obsidian', 'verdigris', 'black', 'silver'], ['royal', 'ice', 'purple', 'teal', 'sable', 'rose', 'emerald', 'ochre'], ['gold', 'silver', 'amethyst', 'copper']],
-  [['ember', 'storm', 'jade', 'amethyst', 'obsidian', 'frost'], ['flame', 'royal', 'emerald', 'violet', 'toxic', 'crimson', 'ice'], ['gold', 'silver', 'bronze', 'amethyst']],
-  [['sunsteel', 'obsidian', 'ember', 'frost', 'storm', 'jade', 'bloodsteel'], ['ivory', 'void', 'blood', 'ice', 'storm', 'toxic', 'flame'], ['gold', 'silver', 'amethyst']],
-  [['sunsteel', 'obsidian', 'silver', 'frost', 'black', 'ember'], ['void', 'royal', 'flame', 'storm', 'blood', 'forest', 'purple'], ['gold', 'amethyst', 'ember', 'silver']],
-];
-const LEATHERS = ['leather', 'darkleather', 'redleather', 'greyleather'];
-const cap = (w) => w[0].toUpperCase() + w.slice(1);
-let seed = 7;
-const rnd = (a) => a[(seed = (seed * 16807) % 2147483647) % a.length];
-MIX.forEach(([metals, cloths, trims], tier) => {
-  const seen = new Set();
-  for (let n = 0; n < 12; n++) {
-    const m = rnd(metals), cl = rnd(cloths), t = rnd(trims), l = rnd(LEATHERS);
-    if (seen.has(m + cl)) continue;
-    seen.add(m + cl);
-    P.push([`${cap(m)} & ${cap(cl)}`, tier, m, cl, t, l, R[cl][2], tier ? undefined : 0.75]);
-  }
-});
 
-export const PALETTES = P.map(([name, tier, metal, cloth, trim, leather, glow, k]) => ({
-  name, tier, k: metal ? k ?? 0.85 : 0,
-  ramps: metal ? { metal: R[metal], cloth: R[cloth], trim: R[trim], leather: R[leather] } : null,
-  glow: glow || null,
+export const PALETTES = P.map(([name, tier, metal, cloth, trim, base]) => ({
+  name, tier, k: metal ? (tier ? 0.88 : 0.8) : 0,
+  ramps: metal ? { metal: R[metal], cloth: R[cloth], trim: R[trim], leather: R[base] } : null,
+  glow: metal ? R[cloth][2] : null,
 }));
 
 // Effects worn by high rarity body armor. Parts (all optional): glow = outline glow strength; orbs = orbiting

@@ -1,17 +1,16 @@
-// Fitted helmet QA: every Common and Rare helmet of the shared atlases (assets/sprites/gear/{common,rare}_helmets/)
-// must draw on the hero's head through its placements.json fit, leave the body below the head untouched, and look
-// the same through a palette swap. Writes a head preview sheet per class.
+// Grim Nocturne helmet QA (assets/sprites/gear/helmets/, tools/nocturnegear.py): every enclosed helmet on every one
+// of the class's 12 body armors must cover the face, sit centred on the head, leave the body below the neck alone
+// and keep its silhouette under a palette swap. Sheet closed_helms_<class>.png: a row per helmet, a column per armor.
 //   node tools/tests/closed_helms.js paladin
 //   node tools/tests/closed_helms.js all
-// (The legacy per-class helms.webp / helms_mask.png closed-faceplate check retired when the fitted atlases replaced
-// them, 2af0460 "Replace helmet overlays with fitted class atlas and visual editor".)
+// (Fits are tuned in tools/helmet-fitter, served by tools/helmet_fit_server.py.)
 const path = require('path');
 const { openGame, report, ALL_CLASSES, OUT_DIR } = require('./harness');
 const arg = process.argv[2] || 'paladin';
 const CLASSES = arg === 'all' ? ALL_CLASSES : arg.split(',');
 
 (async () => {
-  const { browser, page, errors } = await openGame({ width: 1600, height: 1400 });
+  const { browser, page, errors } = await openGame({ width: 1800, height: 1000 });
   let failed = false;
   try {
     for (const cls of CLASSES) {
@@ -19,46 +18,57 @@ const CLASSES = arg === 'all' ? ALL_CLASSES : arg.split(',');
         const ga = await import('/src/core/gearart.js');
         const meta = await ga.loadGearArt(cid);
         if (!meta) return { issues: ['Missing gear metadata for ' + cid] };
-        const [fw, fh] = meta.frame, [ax] = meta.anchor, headTop = meta.headTop;
-        const sets = {};
-        for (const set of ['common', 'rare']) sets[set] = (await fetch('/assets/sprites/gear/' + set + '_helmets/index.json').then((r) => r.json())).designs.length;
+        const [fw, fh] = meta.frame, headTop = meta.headTop;
+        const designs = (await fetch('/assets/sprites/gear/helmets/index.json').then((r) => r.json())).designs;
         const issues = [], stats = [];
         const cv = document.createElement('canvas'); cv.width = fw; cv.height = fh;
         const xx = cv.getContext('2d', { willReadFrequently: true });
         const read = (c) => { xx.clearRect(0, 0, fw, fh); xx.drawImage(c, 0, 0); return xx.getImageData(0, 0, fw, fh).data; };
-        const body = { type: 'gear', slot: 'body', rarity: 0, look: [1, 0, -1] };
-        const bare = read(ga.heroLook(cid, body, null));
-        const total = sets.common + sets.rare, cell = 64;
+        const same = (a, b, k) => a[k] === b[k] && a[k + 1] === b[k + 1] && a[k + 2] === b[k + 2] && a[k + 3] === b[k + 3];
+        const cell = 48, s = 3, n = meta.armor.n;
         const preview = document.createElement('canvas');
-        preview.id = 'helmqa'; preview.width = 10 * cell * 2; preview.height = Math.ceil(total / 10) * cell * 2;
+        preview.id = 'helmqa'; preview.width = n * cell * s; preview.height = designs.length * cell * s;
         Object.assign(preview.style, { position: 'fixed', zIndex: 100000, left: '0', top: '0', background: '#26242a' });
         const pv = preview.getContext('2d'); pv.imageSmoothingEnabled = false;
-        let n = 0;
-        for (const [set, count] of Object.entries(sets)) for (let design = 1; design <= count; design++, n++) {
-          const helm = (finish) => ({ type: 'gear', slot: 'head', rarity: set === 'rare' ? 2 : 0, look: [design, finish, -1] });
-          const name = set + ' ' + design;
-          const worn = ga.heroLook(cid, body, helm(1)), d = read(worn);
-          let changed = 0, x0 = fw, y0 = fh, x1 = -1, y1 = -1;
-          for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) {
-            const k = (y * fw + x) * 4;
-            if (d[k] === bare[k] && d[k + 1] === bare[k + 1] && d[k + 2] === bare[k + 2] && d[k + 3] === bare[k + 3]) continue;
-            changed++; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+        // the head: armor 1's top rows, then each armor's measured head offset (gear.json armor.head)
+        let hx = 0, hn = 0;
+        const first = read(ga.heroLook(cid, { type: 'gear', slot: 'body', rarity: 0, look: [1, 0, -1, 2] }, null));
+        for (let y = headTop; y < headTop + 10; y++) for (let x = 0; x < fw; x++) if (first[(y * fw + x) * 4 + 3]) { hx += x; hn++; }
+        for (let a = 1; a <= n; a++) {
+          const body = { type: 'gear', slot: 'body', rarity: Math.floor((a - 1) / 2), look: [a, 0, -1, 2] };
+          const bare = read(ga.heroLook(cid, body, null));
+          const [odx, ody] = meta.armor.head?.[a - 1] || [0, 0], cx = Math.round(hx / hn) + odx, top = headTop + ody;
+          for (const d of designs) {
+            const helm = (finish) => ({ type: 'gear', slot: 'head', rarity: d.rarity, look: [d.id, finish, -1, 2] });
+            const name = 'armor ' + a + ' + ' + d.catalog.toLowerCase() + ' helm';
+            const worn = ga.heroLook(cid, body, helm(0)), w = read(worn);
+            let changed = 0, x0 = fw, y0 = fh, x1 = -1, y1 = -1, face = 0, covered = 0, vx0 = fw, vx1 = -1;
+            for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) {
+              const k = (y * fw + x) * 4;
+              const inFace = y >= top + 4 && y < top + 16 && Math.abs(x - cx) <= 5 && bare[k + 3];
+              if (inFace) face++;
+              if (same(w, bare, k)) continue;
+              changed++; if (inFace) covered++;
+              if (y >= top + 6 && y < top + 14) { vx0 = Math.min(vx0, x); vx1 = Math.max(vx1, x); } // the visor rows
+              x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+            }
+            stats.push([name, changed, x0, y0, x1, y1, cx, covered / face]);
+            if (changed < 200) { issues.push(name + ': helmet barely visible (' + changed + ' px)'); continue; }
+            if (covered < face * 0.85) issues.push(name + ': face not covered (' + Math.round(100 * covered / face) + '%)');
+            if (y1 > top + 30) issues.push(name + ': helmet reaches the body (down to y ' + y1 + ')');
+            // the visor rows span the head on both sides (crests may sweep far back, so not a centre test)
+            if (vx0 > cx - 7 || vx1 < cx + 6) issues.push(name + ': off the head (visor x ' + vx0 + '-' + vx1 + ', head ' + cx + ')');
+            if (a === 1) { // a finish recolours the same silhouette
+              const t = read(ga.heroLook(cid, body, helm(20)));
+              let tc = 0;
+              for (let k = 0; k < t.length; k += 4) if (!same(t, bare, k)) tc++;
+              if (Math.abs(tc - changed) > changed * 0.15) issues.push(name + ': palette swap changes the silhouette (' + changed + ' vs ' + tc + ' px)');
+            }
+            pv.drawImage(worn, cx - cell / 2, top - 10, cell, cell, (a - 1) * cell * s, (d.id - 1) * cell * s, cell * s, cell * s);
           }
-          stats.push([name, changed, x0, y0, x1, y1]);
-          if (changed < 150) { issues.push(name + ' helmet barely visible (' + changed + ' px)'); continue; }
-          // masks (Gunner, Death Knight Rare) leave the hair showing, so the art only has to reach the face
-          if (y0 > headTop + 16) issues.push(name + ' helmet does not reach the face (starts at y ' + y0 + ')');
-          if (y1 > headTop + 64) issues.push(name + ' helmet alters the body below the head (down to y ' + y1 + ')');
-          if (Math.abs((x0 + x1) / 2 - ax) > 20) issues.push(name + ' helmet is off the head anchor (centre x ' + (x0 + x1) / 2 + ')');
-          // a different finish recolours the same silhouette
-          const t = read(ga.heroLook(cid, body, helm(2)));
-          let tChanged = 0;
-          for (let k = 3; k < t.length; k += 4) if (t[k - 3] !== bare[k - 3] || t[k - 2] !== bare[k - 2] || t[k - 1] !== bare[k - 1] || t[k] !== bare[k]) tChanged++;
-          if (Math.abs(tChanged - changed) > changed * 0.25) issues.push(name + ' palette swap changes the silhouette (' + changed + ' vs ' + tChanged + ' px)');
-          pv.drawImage(worn, ax - cell / 2, Math.max(0, headTop - 16), cell, cell, (n % 10) * cell * 2, Math.floor(n / 10) * cell * 2, cell * 2, cell * 2);
         }
         document.body.appendChild(preview);
-        return { helmets: sets, issues, stats };
+        return { helmets: designs.length, issues, stats };
       }, cls);
       console.log(cls + ': ' + JSON.stringify({ helmets: result.helmets, issues: result.issues }));
       if (process.env.HELM_DEBUG) console.log(JSON.stringify(result.stats));

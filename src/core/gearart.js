@@ -1,14 +1,15 @@
-// Gear art: per-class body armors plus class-indexed Common and Rare helmet atlases. The catalog sheets supply
-// labels only, never sprite pixels.
+// Gear art (Grim Nocturne): per class 12 body armors, two per rarity, and one shared atlas of enclosed helmets, a
+// column per class and a row per design (each design has a rarity). Built by tools/nocturnegear.py.
 import { makeCanvas, hexToRgb, clamp, randi, pick, chance } from './util.js';
 import { RARITY } from '../data/items.js';
 import { PALETTES, GEAR_FX, FX_CHANCE } from '../data/gear.js';
 import { resolveHelmetFit } from './helmetfit.js';
 
 const BASE = 'assets/sprites/gear/';
-const HELMET_DIR = { common: BASE + 'common_helmets/', rare: BASE + 'rare_helmets/' };
-const S = { list: null, cls: null, meta: null, armor: null, amask: null, commonHelms: null, rareHelms: null };
-const helmetPromises = { common: null, rare: null };
+const HELMET_DIR = { helmet: BASE + 'helmets/' };
+const S = { list: null, cls: null, meta: null, armor: null, amask: null, helmetHelms: null };
+const helmetPromises = { helmet: null };
+const LOOK_GEN = 2; // item.look[3]: looks rolled before the Grim Nocturne library are rerolled
 
 function loadImage(src) {
   return new Promise((res, rej) => {
@@ -67,12 +68,12 @@ export async function loadGearArt(cls) {
     if (!S.list) S.list = await fetch(BASE + 'classes.json').then((r) => (r.ok ? r.json() : []));
     if (!S.list.includes(cls)) { Object.assign(S, { cls, meta: null }); return null; }
     const dir = BASE + cls + '/';
-    const [meta, a, am, commonHelms, rareHelms] = await Promise.all([
+    const [meta, a, am, helmetHelms] = await Promise.all([
       fetch(dir + 'gear.json').then((r) => { if (!r.ok) throw new Error('gear ' + cls); return r.json(); }),
-      loadImage(dir + 'armor.webp'), loadImage(dir + 'armor_mask.png'), loadHelmetSet('common'), loadHelmetSet('rare'),
+      loadImage(dir + 'armor.webp'), loadImage(dir + 'armor_mask.png'), loadHelmetSet('helmet'),
     ]);
-    if (!commonHelms.meta.classes.includes(cls) || !rareHelms.meta.classes.includes(cls)) throw new Error('No helmet art for ' + cls);
-    Object.assign(S, { cls, meta, armor: pixels(a), amask: channel(am), commonHelms, rareHelms });
+    if (!helmetHelms.meta.classes.includes(cls)) throw new Error('No helmet art for ' + cls);
+    Object.assign(S, { cls, meta, armor: pixels(a), amask: channel(am), helmetHelms });
     looks.clear(); icons.clear(); recolouredHelms.clear();
     return meta;
   } catch (e) {
@@ -85,12 +86,6 @@ export const gearMeta = (cls) => (S.cls === cls ? S.meta : null);
 
 // ------------------------------------------------------------------ looks of items
 const rarityName = (r) => RARITY[r].name.toLowerCase();
-/** A design id for a rarity band that follows the item's level: low levels get the band's first designs. */
-function designFor(band, ilvl) {
-  const [a, b] = band;
-  const t = Math.sqrt(clamp((ilvl - 1) / 99, 0, 1));
-  return clamp(Math.round(a + t * (b - a)) + randi(-1, 1), a, b);
-}
 function finishFor(rarity, forcePalette = false) {
   if (!forcePalette && chance(0.1)) return 0; // armor may keep its original colours
   const ok = PALETTES.map((p, i) => i).filter((i) => i && PALETTES[i].tier <= rarity && PALETTES[i].tier >= rarity - 2);
@@ -110,27 +105,24 @@ function fxFor(rarity) {
 export function itemLook(item, src = S) {
   if (!item || item.type !== 'gear' || (item.slot !== 'body' && item.slot !== 'head') || !src.meta) return null;
   if (item.slot === 'head') {
-    const designs = src[helmetSet(item) + 'Helms']?.meta.designs;
+    const designs = src.helmetHelms?.meta.designs;
     if (!designs?.length) return null;
-    if (!item.look || item.look[0] > designs.length) {
-      item.look = [designFor([1, designs.length], item.ilvl), finishFor(item.rarity, true), -1];
-    } else {
-      if (!item.look[1]) item.look[1] = finishFor(item.rarity, true);
-      item.look[2] = -1;
+    if (!item.look || item.look[3] !== LOOK_GEN || item.look[0] > designs.length) {
+      // a design of the helm's rarity (Mythic wears the rarest there is); more designs per rarity may come later
+      const top = Math.max(...designs.map((d) => d.rarity));
+      const ok = designs.filter((d) => d.rarity === Math.min(item.rarity, top));
+      item.look = [pick(ok.length ? ok : designs).id, finishFor(item.rarity, true), -1, LOOK_GEN];
     }
   } else {
     const lib = src.meta.armor;
-    if (!item.look || item.look[0] > lib.n) {
+    if (!item.look || item.look[3] !== LOOK_GEN || item.look[0] > lib.n) {
       const band = lib.bands[rarityName(item.rarity)] || lib.bands.common;
-      // armors added from ChatGPT sheets (gear.json extra) share the rarity's odds with its original band
-      const extra = lib.extra?.[rarityName(item.rarity)] || [];
-      const design = extra.length && chance(extra.length / (band[1] - band[0] + 1 + extra.length)) ? pick(extra) : designFor(band, item.ilvl);
-      item.look = [design, finishFor(item.rarity), fxFor(item.rarity)];
+      item.look = [randi(band[0], band[1]), finishFor(item.rarity), item.look?.[2] ?? fxFor(item.rarity), LOOK_GEN];
     }
   }
   return item.look;
 }
-const helmetSet = (item) => item?.rarity === 2 ? 'rare' : 'common';
+const helmetSet = () => 'helmet';
 export const finishOf = (item) => { const l = itemLook(item); return l && l[1] ? PALETTES[l[1]] : null; };
 export const gearFxOf = (item) => { const l = itemLook(item); return l && l[2] >= 0 ? GEAR_FX[l[2]] || null : null; };
 
@@ -166,10 +158,13 @@ function recolorPx(d, i, pi, L, k) {
   if (dd > 1e-6) h = mx === r ? (((g - b) / dd) % 6 + 6) % 6 * 60 : mx === g ? ((b - r) / dd + 2) * 60 : ((r - g) / dd + 4) * 60;
   const lum = r * 0.299 + g * 0.587 + b * 0.114;
   const warm = h >= 12 && h <= 62 ? 1 : 0;
-  const wT = ss(0.35, 0.55, s) * ss(0.42, 0.62, mx) * warm;
-  const wL = ss(0.25, 0.45, s) * (1 - ss(0.42, 0.62, mx)) * warm;
+  let wT = ss(0.35, 0.55, s) * ss(0.42, 0.62, mx) * warm;
+  let wL = ss(0.25, 0.45, s) * (1 - ss(0.42, 0.62, mx)) * warm;
   const wN = (1 - ss(0.2, 0.42, s)) * (1 - wT) * (1 - wL);
-  const wC = Math.max(0, 1 - wT - wN - wL);
+  // what's left is cloth only for cool hues and reds; warm leftovers (parchment, pale bronze) go to trim or base
+  const rest = Math.max(0, 1 - wT - wN - wL), bright = ss(0.42, 0.62, mx);
+  const wC = rest * (1 - warm);
+  wT += rest * warm * bright; wL += rest * warm * (1 - bright);
   const li = Math.round(clamp((lum - 0.02) * 1.2, 0, 1) * 255) * 3;
   let nr = 0, ng = 0, nb = 0;
   for (const [t, w] of [[L.metal, wN], [L.cloth, wC], [L.trim, wT], [L.leather, wL]]) {
@@ -271,7 +266,8 @@ export function heroLook(cls, body, head, src = S, outCache = looks) {
     const { px: hp, box } = helmetPixels(cls, hl[0], hl[1], set, src);
     const place = helmetPlacement(meta, box, hl[0], set, src), [x0,y0,x1,y1] = box;
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, x = c.getContext('2d');
-    x.save(); x.translate(place.center[0], place.center[1]); x.rotate(place.rotation * Math.PI / 180);
+    const [hdx, hdy] = meta.armor.head?.[bl[0] - 1] || [0, 0]; // the helmet follows this armor's head
+    x.save(); x.translate(place.center[0] + hdx, place.center[1] + hdy); x.rotate(place.rotation * Math.PI / 180);
     x.scale(place.dw / src[set + 'Helms'].meta.frame[0], place.dh / src[set + 'Helms'].meta.frame[1]);
     x.drawImage(toCanvas(hp, ...src[set + 'Helms'].meta.frame), -cx, -cy); x.restore();
   }
@@ -345,12 +341,11 @@ export function savedGearPreview(cls, body, head) {
   if (savedPreviews.has(signature)) return savedPreviews.get(signature);
   const work = previewQueue.then(async () => {
     const dir = BASE + cls + '/';
-    const [meta, armor, amask, commonHelms, rareHelms] = await Promise.all([
+    const [meta, armor, amask, helmetHelms] = await Promise.all([
       fetch(dir + 'gear.json').then(r => { if (!r.ok) throw new Error('gear ' + cls); return r.json(); }),
-      loadImage(dir + 'armor.webp'), loadImage(dir + 'armor_mask.png'),
-      loadHelmetSet('common'), loadHelmetSet('rare'),
+      loadImage(dir + 'armor.webp'), loadImage(dir + 'armor_mask.png'), loadHelmetSet('helmet'),
     ]);
-    const src = { cls, meta, armor: pixels(armor), amask: channel(amask), commonHelms, rareHelms };
+    const src = { cls, meta, armor: pixels(armor), amask: channel(amask), helmetHelms };
     return heroLook(cls, body, head, src, new Map());
   });
   previewQueue = work.catch(() => {});

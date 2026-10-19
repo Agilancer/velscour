@@ -1,100 +1,69 @@
-# Class art: gear libraries (hero look) and class art packs (weapons, effects)
+# Class art: Grim Nocturne gear (hero look) and class art packs (weapons, effects)
 
 Two kinds of art drive a class's look:
-- **Gear libraries** (`assets/FinalClasses/<class>.zip`, all 16 classes): 80 body armors + legacy helms as single
-  frames. Only the body armor frames are used at runtime; the shared Common and Rare helmet atlases supply those
-  rarity bands' hero helms.
+- **Grim Nocturne gear** (all 16 classes, October 18, 2026): 12 body armors per class (two per rarity) and one
+  enclosed helmet per class and rarity (Common to Legendary; Mythic helms wear the Legendary design). Built from the
+  user's style-locked zips by `tools/nocturnegear.py`. It replaced the `assets/FinalClasses/<class>.zip` libraries
+  (80 armors) and the Common/Rare helmet atlases; those zips stay in the repo as source but are no longer read.
 - **Class art packs** (`assets/source/classes/<class>/`, Paladin only so far): weapon/shield catalog items and the
   60 ability effects.
 
-## Gear libraries
-### Zip format (as delivered)
-`<class>/armor/<class>_armor_NNN_<rarity>.png` and `<class>/helms/<class>_helms_NNN_<rarity>.png`, 80 each,
-128 x 192 RGBA, facing right, the same unhelmed hero in every armor (head top at y 24, feet at y 183), every helm
-fitted to the shared head anchor (64, 40), so a helm draws at the same origin as the armor. Rarity bands (same
-for both, read from the file names): Common 1-20, Uncommon 21-36, Rare 37-52, Epic 53-64, Legendary 65-74, Mythic
-75-80. The zips also hold a Preview.html, labeled sheets, CSV catalogs and the generation prompts (not used).
+## Grim Nocturne gear
+### Source zips (kept outside the repo; F:\!  VELSCOUR\...)
+- `Grim_Nocturne_All_16_Classes_Artwork.zip`: 96 high-res armors (6 rarities x 16), bare-headed, empty-handed.
+- `Grim_Nocturne_All_16_Classes_Game_Exports.zip`: their 128 x 192 natives. Only used to place each class's head:
+  their pasted "shared head patch" has stray pale-blue/black blocks, so the armors are re-cut from the artwork.
+- `VELSCOUR_96_Additional_Armor_Source_Artwork.zip`: a second set of 96, high-res only (no game exports).
+- `VELSCOUR_80_Helmets_Game_Exports.zip`: 80 helmets as 40 x 40 cutouts pinned at (45,63) on the 128 x 192 frame,
+  plus full-colour layers (`layers_fullcolor`, every class but the Arcane Sorcerer, whose palette-limited layer is used).
+- `VELSCOUR_STYLE_LOCK_DOCUMENTS.zip` (STYLE_LOCK.md, CLASS_CARDS.md, HELMET_OVERLAY_ADDENDUM.md, prompt templates):
+  the art direction for any new armor or helmet. Helmets are fully enclosed and draw only exterior surfaces.
 
-### Importer (`tools/gearart.py`)
+### Importer (`tools/nocturnegear.py`, needs pillow numpy scipy)
 ```bash
-pip install pillow numpy scipy
-python3 tools/process_assets.py gear            # every zip in assets/FinalClasses (~8 s per class)
-python3 tools/process_assets.py gear paladin
+python tools/nocturnegear.py import <dir>   # <dir> holds the zips unpacked as gn_art/ gn_exports/ armor96/ helm_exports/
+python tools/nocturnegear.py build          # or: python tools/process_assets.py gear
 ```
-Reads the zips directly (nothing is extracted into the repo). Per class it prints counts, how many helms have a
-face opening, whether bare body skin is protected, and the output size (~600 KB).
-- **Alpha** is hardened at 150 (the frames carry a ~98% body alpha and a soft haze).
-- **Protect mask** (`armor_mask.png`, 255 = never recoloured): face, hair and skin. The head's colours (k-means
-  over the face core of every armor) seed it inside the head, then it grows through matching neighbours: hair within
-  a zone around the head (braids, manes), bare skin (cheek colours) anywhere, but only when skin is told apart
-  from the outfit (fewer than 12% of body pixels look like skin; dark skin on brown leather fails that, so the
-  Paladin's hands are recoloured with the armor). `OVERRIDES` in the script: `body_skin`, `skin_tol` (Barbarian
-  17, for the bare torso), `open` / `closed` helm id lists to force the opening detection.
-- **Helm mask** (`helms_mask.png`): 255 = face opening, 128 = crown zone. The helms were generated with dark empty
-  interiors. The opening is the dark (<52 luminance), solid, face-sized regions on the open side (centre right of
-  x 58 and below y 27; at least 4 px wide and 5 tall; slits wider than 2.6x their height and grille gaps are
-  rejected), plus specks inside it. The crown zone is above the shell and beside its upper half.
+`import` writes the natives to `assets/source/gear_nocturne/<class>/` (`armor_NN_<rarity>[_additional].png`, odd ids
+the Grim Nocturne set, even ids the additional set; `helmet_<rarity>.png`). Each armor is downsampled like the Game
+Exports (premultiplied box filter, binary alpha, sole at y 183, 108 art px crown to sole). The Common armor is
+centred where its export was; every other armor keeps its sole at y 183 and gets the scale (0.9-1.2x) and x offset
+that best match its head to the Common armor's head, because wings, spikes and pauldrons can rise above the crown.
 
-Output (generated, never hand-edit), `assets/sprites/gear/<class>/`: `armor.webp` (10 x 8 atlas of frames, lossy
-q90 with lossless alpha), `armor_mask.png`, `gear.json` (frame, feet / head top, and bounding boxes, plus the helm metadata); plus
-`assets/sprites/gear/classes.json`. The legacy per-class `helms.webp` / `helms_mask.png` atlases are no longer written
-or shipped (removed October 18, 2026): helmets come from the fitted common/rare atlases.
+`build` writes, per class, `assets/sprites/gear/<class>/`: `armor.webp` (6 x 2 cells of 128 x 192, lossless),
+`armor_mask.png` (255 = never recoloured: face, hair and neck found by colour around the head; the Barbarian's bare
+skin; the Slime Lord's blue slime) and `gear.json` (frame, `headTop` 75, `feet` 183, `helmPin`, rarity `bands`,
+boxes, and `armor.head`: each armor's measured head offset from armor 1's, which the helmet follows). Shared:
+`assets/sprites/gear/helmets/` (`atlas.png`: a column per class, a row per design, 40 x 40 cells; `index.json` with
+each design's `rarity`; `placements.json`, kept across builds) and `classes.json`. Never hand-edit these.
 
-### Shared Common and Rare helmet atlases
-`assets/sprites/gear/common_helmets/atlas.png` is a 16-column by 10-row transparent atlas of 192 x 224 cells.
-`assets/sprites/gear/rare_helmets/atlas.png` is a 16-column by 5-row transparent atlas of the same cell size.
-Each `index.json` maps columns to playable classes and rows to that set's labels. The labeled catalogs are metadata
-only and contribute no sprite pixels. Rare head items use the Rare designs; other head items use the Common designs.
-Both sets receive a rarity-appropriate palette swap. Placements come from each set's `placements.json`, keyed by class
-and design ID. The Common first five rows preserve the saved manual fits; Common 06–10 use the visible size and anchor
-measured from those fits. Rare fits use each class's manually curated Common 01–05 placements as the visible size and
-head-anchor reference, adjusted to each Rare sprite's opaque bounds. The game and fitter share `src/core/helmetfit.js`
-so saved coordinates drive equipped characters and portraits directly. The same sprite and palette drive item icons
-and ground pickups.
-
-### Visual helmet fitting
-Double-click `Fit Helmets.cmd` in the repository root, or run `python tools/helmet_fit_server.py`. The local server
-opens `tools/helmet-fitter/` in a browser. Choose a helmet set and class, drag the helmet into position, and scroll or use
-the size slider to resize it. Width and height can be adjusted separately by unchecking the proportions option.
-Arrow keys nudge by 0.25 body-frame pixels; Shift increases the step to 1 pixel. Space temporarily hides the helmet.
-The enlarged view rasterizes the composite at the game's 128×192 resolution before zooming, and the whole-character
-and all-design previews update alongside it. Width and height can be resized independently by unlocking proportions;
-the rotation slider or numeric field turns the helm around its visible center. Change body armor to inspect the same
-placement on other frames.
-
-**Save to game** writes placements for the selected set; reload the game afterward. The server keeps the previous file
-as `placements.json.bak`. Each entry stores `{x, y, scaleX, scaleY, rotation}`: the top-left of the
-entire source cell in body-frame pixels, its scale factors, and an optional angle in degrees around the visible center.
-Old entries without a rotation use 0 degrees. Export/Import JSON supports moving fits between
-machines. **Export PNG** downloads a labeled head close-up and whole-character preview with exact fit values;
-a screenshot showing the class, design, and numeric readout also provides enough information to transcribe a fit.
-Browser drafts preserve unsaved edits and can be restored on the next visit. Keep the launcher window open
-while editing; Ctrl+C stops the local server.
+### Helmet fitting
+Every helmet draws its 40 x 40 cell at (45,63) of the hero frame, shifted by the armor's `armor.head` offset, so size
+and placement are the same for every class. To nudge one: double-click `Fit Helmets.cmd` (or
+`python tools/helmet_fit_server.py`), pick a class and design, drag/scroll it, and **Save to game**. That writes
+`{x, y, scaleX, scaleY, rotation}` (cell top-left in frame pixels) for that class and design into `placements.json`;
+an empty file means the default pin. The game and the fitter share `src/core/helmetfit.js`. More helmet designs per
+rarity can be added as more atlas rows (`index.json` designs with a `rarity`); a helm picks among its rarity's designs.
+Check: `node tools/tests/closed_helms.js all` (face covered, centred on the head, body untouched, swap-safe;
+`closed_helms_<class>.png`: a row per helmet, a column per armor).
 
 ### Game
-- `src/core/gearart.js` loads the played class's body armor library (`game.loadClassPack`) and the shared Common/Rare helmet atlases.
-- **Item looks**: body armor and helmets get `item.look = [design, finish, aura]` on first use (saved with the
-  item). Armor design comes from the rarity's band, positioned by item level (sqrt curve over 1..100, so early
-  levels get the plain designs) +-1 at random. Rare helmet design follows item level across the five Rare atlas rows;
-  other helmet rarities use the ten Common atlas rows.
-  Helmets always use a non-original rarity-appropriate palette; armor uses one of 51 palettes (`PALETTES` in
-  `src/data/gear.js`) whose tier fits the rarity (tier r-2..r), or the original colours 10% of the time. Aura (body armor only): `GEAR_FX`, 45% of Rares,
-  every Epic, Legendary and Mythic (now and then one tier down).
-- **Palette swap** (`recolorPx`): each pixel is split into four materials by colour (neutral metal, saturated cloth,
-  bright warm trim, dark warm leather), each mapped through the finish's 4-stop ramp by luminance, then rescaled
-  to the original luminance so the shading survives, blended at the finish's strength (0.7-0.85). Protected
-  pixels are skipped.
-- **Helmet composite** (`heroLook`, cached): armor in its finish, then the shared class-specific sprite is palette
-  swapped and drawn over the full head. The icon uses the same atlas cell and palette; player portraits include its
-  scaled bounds. Saved design IDs from the prior common set remain valid.
-- **Drawing**: `Player.artFrame()` gives the composite to `Creature.drawArt` (single frame, same bob/squash/flip as
-  the class sprites, 60 px from head top to feet). Without gear art the old class sprite stands in.
-- **Auras** (`src/gfx/gearfx.js`): outline glow (stacked offset silhouettes, no ctx.filter) and a light, orbiting
-  wisps (ring / eight / double / wobble, optional trails; the ones behind the hero draw before it), a rune circle at
-  the feet, and particle emitters (motes, embers, sparks, frost, smoke, flames, runes) from `Player.update`.
-  Colour: the aura's own, else the finish's glow colour, else the rarity colour.
-- **UI**: body armor and helm icons are the item's design in its finish (`gearIcon`), the inventory portrait is the
-  composite, tooltips name the finish and aura.
+- `src/core/gearart.js` loads the played class's armor library and the shared helmet atlas.
+- **Item looks**: body armor and helmets get `item.look = [design, finish, aura, 2]` on first use (saved with the
+  item; the trailing 2 marks the Grim Nocturne library, so looks rolled before it are rerolled once). Armor picks one
+  of its rarity's two designs; a helm picks a design of its rarity. Finishes: 44 hand-made palettes plus Original
+  (`PALETTES` in `src/data/gear.js`), tier r-2..r for the item's rarity; armor keeps its original colours 10% of the
+  time, helms always take a finish. Aura (body armor only): `GEAR_FX`, 45% of Rares, every Epic, Legendary and Mythic.
+- **Palette swap** (`recolorPx`): each pixel is split into four materials by colour: neutral metal, dyed cloth (cool
+  hues and reds), bright warm trim (gold, brass, parchment) and the dark warm base (bronze plate and leather, most of
+  a Grim Nocturne outfit). Each maps through the finish's 4-stop ramp by luminance and is rescaled to the original
+  luminance so the shading survives, blended at 0.8 (Common finishes) or 0.88. Every finish sets the four materials
+  to contrasting colours, so a swap changes three or four colours rather than tinting the whole outfit.
+- **Helmet composite** (`heroLook`, cached): armor in its finish, then the helmet cell in its own finish. Icons use the
+  same cell and palette; the inventory portrait includes its bounds.
+- **Drawing**: `Player.artFrame()` gives the composite to `Creature.drawArt`; `heroFrame` scales head top (75) to
+  feet (183) to the hero's height.
+- **Auras** (`src/gfx/gearfx.js`): unchanged; colour is the aura's own, else the finish's cloth colour, else the rarity colour.
 - Check: `node tools/tests/gear.js [classes|all] [nofx]` -> `gear_<class>_sheet.png` (6 rarities x 12 looks, odd
   columns helmed), `gear_inventory.png`, `gear_fx_NN_<aura>.png`.
 
