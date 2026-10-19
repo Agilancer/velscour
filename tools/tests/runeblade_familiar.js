@@ -6,7 +6,8 @@
 //  5. a soak: auto-play-style casting at a live pack, the sword uses every skill and many swings, no errors
 //   node tools/tests/runeblade_familiar.js [soak seconds, default 60] [mobile]
 // Shots: dk_skulls.png, dk_patterns.png (12 patterns x 4 moments), dk_swings.png (each swing, 4 moments),
-//        dk_pet.png (each sword skill, 4 moments), dk_runeweapon.png (both summons), dk_deathcoil.png
+//        dk_pet.png (each sword skill, 4 moments), dk_runeweapon.png (both summons), dk_blades.png (thrown, rained and
+//        orbiting swords), dk_deathcoil.png
 const fs = require('fs'), path = require('path');
 if (!process.env.CHROMIUM_ARGS) process.env.CHROMIUM_ARGS = '--enable-unsafe-swiftshader';   // WebGL in headless
 const { openGame, report, OUT_DIR } = require('./harness');
@@ -231,6 +232,34 @@ const SOAK = process.argv[2] !== undefined && !isNaN(+process.argv[2]) ? +proces
     }
     save('dk_runeweapon', await strip(rwRows, CW, CH, rwNames));
 
+    // 4c. every sword he throws, rains, orbits or whirls is the 3D Runeblade ('dkblade'), never the flat blade
+    const bladeRows = [], bladeNames = [];
+    const BLADES = await page.evaluate(async () => (await import('/src/data/skills.js')).CLASS_SKILLS.death_knight.filter((s) => s.fx === 'blade' && ['proj', 'orbit', 'rain', 'whirl', 'cyclone'].includes(s.kind)).map((s) => s.name));
+    for (const name of BLADES) {
+      await clear(); await pack();
+      const r = await page.evaluate(async (name) => {
+        const { G } = window.VELSCOUR, p = G.player, w = G.world;
+        const sk = (await import('/src/data/skills.js')).CLASS_SKILLS.death_knight.find((s) => s.name === name);
+        p.castLock = 0; p.cooldowns = {}; p.mana = 99999; p.channel = null; w.rebuildGrid();
+        const f = w.nearestHostile('player', p.x, p.y, 12, false);
+        p.tryUseSkill(sk, f ? f.x : p.x + 2, f ? f.y : p.y, f);
+        for (let i = 0; i < 8; i++) w.update(1 / 30);
+        const mine = w.hazards.filter((h) => h.src === p && h.fx);
+        return { dk: mine.filter((h) => h.fx === 'dkblade').length, flat: mine.filter((h) => h.fx === 'blade').length };
+      }, name);
+      ok(r.dk > 0 && !r.flat, `${name}: ${r.dk} drawn as the 3D Runeblade, ${r.flat} flat blades`);
+      const row = []; for (let i = 0; i < 3; i++) row.push(await stepShot(i ? 4 : 1)); bladeRows.push(row); bladeNames.push(name.slice(0, 14));
+    }
+    // the 3D blade's draw cost (SwiftShader in headless: an upper bound)
+    const cost = await page.evaluate(async () => {
+      const { drawShape } = await import('/src/gfx/shapes.js'), { elem } = await import('/src/gfx/vfx.js');
+      const c = document.createElement('canvas'); c.width = c.height = 300; const g = c.getContext('2d'), E = elem('cold');
+      const t0 = performance.now(); for (let i = 0; i < 60; i++) drawShape(g, 'dkblade', 150, 150, i * 0.1, 1, E, i * 0.05);
+      return (performance.now() - t0) / 60;
+    });
+    console.log(`       3D blade draw: ${cost.toFixed(2)} ms each (headless software GL)`);
+    if (bladeRows.length) save('dk_blades', await strip(bladeRows, CW, CH, bladeNames));
+
     // 5. soak: casting at a live pack
     await clear();
     const soak = await page.evaluate(async (secs) => {
@@ -239,7 +268,7 @@ const SOAK = process.argv[2] !== undefined && !isNaN(+process.argv[2]) ? +proces
       const { makeMonster } = await import('/src/game/monster.js');
       const skills = CLASS_SKILLS.death_knight;
       p.sig.s.runes = []; p.sig.s.wait = 0; p.sig.s.gap = 0; p.sig.s.fam.gcd = 0; G.sigStats = {};
-      let t = 0, castT = 0, nan = 0;
+      let t = 0, castT = 0, nan = 0, flat = 0; const kinds = {};
       while (t < secs) {
         if (w.creatures.filter((c) => c.team === 'enemy' && !c.dead).length < 4) {
           const roster = w.biome.roster || ['skeleton'];
@@ -253,18 +282,20 @@ const SOAK = process.argv[2] !== undefined && !isNaN(+process.argv[2]) ? +proces
         }
         w.update(1 / 30); t += 1 / 30;
         const F = p.sig.s.fam; if (F && !Number.isFinite(F.x + F.y + F.z + F.a)) nan++;
+        for (const h of w.hazards) if (h.src === p && (h.fx === 'blade' || h.fx === 'skull')) { flat++; kinds[h.constructor.name + (h.mode ? '.' + h.mode : '') + ':' + h.fx] = 1; }
       }
-      return { stats: G.sigStats.death_knight || {}, nan };
+      return { stats: G.sigStats.death_knight || {}, nan, flat, kinds: Object.keys(kinds) };
     }, SOAK);
     const st = soak.stats, petUsed = pet.filter((id) => st['pet_' + id]), swings = Object.keys(st).filter((k) => k.startsWith('swing_'));
     console.log('       ' + JSON.stringify(st));
     ok(!soak.nan, 'no NaN in the soak');
+    ok(!soak.flat, 'no flat blade or drawn skull from him in the soak (' + soak.flat + ' ' + soak.kinds.join(', ') + ')');
     if (SOAK >= 30) {
       ok(petUsed.length >= 4, `the sword used ${petUsed.length}/5 of its skills: ${petUsed.join(', ')}`);
       ok(swings.length >= 6, `${swings.length} kinds of swing in play`);
       ok((st.fire || 0) >= 1, 'RUNIC OBLITERATION still fires: ' + (st.fire || 0));
     }
-    console.log('  shots: dk_skulls, dk_deathcoil, dk_patterns, dk_swings, dk_pet, dk_runeweapon');
+    console.log('  shots: dk_skulls, dk_deathcoil, dk_patterns, dk_swings, dk_pet, dk_runeweapon, dk_blades');
   } finally {
     report(errors);
     await browser.close();

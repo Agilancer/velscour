@@ -30,6 +30,9 @@ Contents
 - **Follow-up**: the familiar is bigger (52 px, `RUNEBLADE_LEN` in `runeblade3d.js`), 3 far patterns (rove, dance,
   scout) take it 2-3 tiles out about a third of the time, and the Rune Weapon summons are drawn as the same 3D blade at
   the same size (`src/gfx/runeweapon.js`, hooked at the top of `Creature.draw`).
+- **Every sword he makes is the 3D blade**: thrown, orbiting, raining, cyclone and whirl `blade` effects from a Death
+  Knight become `dkblade` (`dkFx` in `hazards.js`, drawn in `shapes.js`). Note: PR #145 was merged before the Rune
+  Weapon commit landed, so that and this went out in a follow-up PR.
 - Tests: new `tools/tests/runeblade_familiar.js`.
 
 ## October 18, 2026 — Bard: a five-octave harpsichord, 2,000 two-bar melodies, two-handed performances (branch `feat/bard-harpsichord`)

@@ -43,6 +43,15 @@ first; until the model loads, the old sprite stands in. It hovers point-down and
 flies, and on each attack swings one of three ways: a slash (alternating sides), a thrust or an overhead chop. Its glow
 follows its element (blood red, shadow green). Only the look changed: its AI and damage are as before.
 
+## Every sword is the 3D Runeblade
+
+Any `blade` effect a Death Knight makes is drawn as his 3D Runeblade at the familiar's size: `dkFx` in
+`src/game/hazards.js` turns `blade` into `dkblade` (and `skull` into `dkskull`) when the caster is a Death Knight,
+for projectiles (Rune Blade Throw), orbits (Frozen Runeblade, Endless Runes, the legendary orbit), rains (Rune Storm),
+cyclones (Runeblade Storm: two blades whirl in each) and whirls (Runic Whirl, Bonestorm: two blades spin round him).
+`drawShape(..., 'dkblade')` in `src/gfx/shapes.js` draws it point first, rolling; the flat blade stands in while the
+model loads. Headless software GL measures about 1.8 ms per blade, an upper bound; a real GPU is much faster.
+
 ## Frost skulls
 
 The skulls his casts and hits throw off (`classfx.js`, `vfx.js` particle `skull`) and Death Coil (`shapes.js`
