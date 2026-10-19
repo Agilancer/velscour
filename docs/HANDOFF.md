@@ -14,6 +14,39 @@ Contents
 
 ---
 
+## October 19, 2026 — Endgame balance pass: XP pacing, late monster damage, BOSS ROOMs, Velscour
+
+- **Request:** check enemy damage and the rest of the balance with calculations (no long simulations): still fun,
+  and Velscour (depth 500) beatable after enough grinding.
+- **Model:** new `tools/tests/endgame.js` (~1 min a class, no game simulation). It sums the XP of a built dungeon
+  every 20 depths and integrates the hero's level (full clears, and a "rusher" who kills 40% of each depth). Then at
+  13 depths it gears 3 heroes like `balance.js` (gear capped at the hero's level, since items need their level) and
+  compares auto-play's sheet numbers with that depth's monsters: seconds to kill a normal / guardian / BOSS ROOM /
+  Velscour, and % of life one hit of each takes (physical through armor / elemental through resistance).
+- **Found:** (1) a full-clearing hero hit the level cap (300) by depth ~160 (a rusher by ~250), so for the last 300+
+  depths nothing levelled and hero life stopped growing; (2) monster damage past level 140 grew 1.6% a level vs
+  ~0.6% for hero life, so by depth 450-500 a normal hit took 35-60% of life and BOSS ROOM bosses one-shot;
+  (3) Velscour had 40x a normal's life (less than a depth-500 guardian, 44x) and died in ~0.1 s; (4) BOSS ROOM life
+  stopped growing at depth 150, so deep ones died in 2-12 s while depth 10-40 ones took 20-90 s; (5) bounties paid
+  `60 * 1.11^level` XP: hundreds of levels per bounty past monster level ~150.
+- **Changes:** `xpToNext` x `(1 + (L/30)^1.5)` (`src/game/player.js`; early levels barely change); monster damage
+  past level 140 `1.016 -> 1.006` a level (`monsterBase`); `raidHpMul(depth)` keeps growing +1 a depth past 150
+  (`src/game/raid.js`); `VELSCOUR_HP` 45000 normals (~3x the last BOSS ROOM boss) and his damage x2.8 (was 2.4);
+  bounty XP `120 * level^1.5` (~30 kills).
+- **Result (6 classes, full clears):** hero level 12 / 53 / 98 / 151 / 207 / 240 / 265 at depth 10 / 40 / 80 / 160 /
+  300 / 400 / 500 (monster level 10 / 40 / 69 / 105 / 168 / 213 / 258); 300 is for grinders. Normal hits 2-10% of
+  life to depth 160, 12-19% from 250 to 500; champions ~1.4x that, guardians ~2x, BOSS ROOM bosses 45-70% (two
+  hits), Velscour 40-55%. BOSS ROOM fights 10-35 s at every depth past 40; Velscour 33-99 s. Defiance (8 stacks:
+  +80% life, 40% less damage) cuts a Velscour hit to ~15%. A rusher falls behind from depth ~350 (level 216 vs 258
+  at depth 500; normals 30-40% of life, BOSS ROOMs one-shot, Velscour ~15 min): they must grind, and auto-play's farm
+  mode (`huntGoal`: below monster level + 1) does. Normal monsters and guardians still die almost instantly past
+  depth 40 (hero damage outgrows monster life ~10x at depth 10, ~500x deep); left alone, the fights are the BOSS
+  ROOMs and Velscour.
+- **Tests:** endgame (6 classes, full + rush), raid 5,55,150,300,450 (depth 30 in the default set always lands on
+  the Sea of Sand, whose art isn't loaded in that test: an existing setup issue), boss, wanderers, flow,
+  balance_model, auto-play soaks (wizard/paladin 25 game min: same pace, no deaths). Seen once in a wizard soak:
+  `drawImage` on an unloaded biome scatter atlas (`render.js` `drawProp`), an existing art-loading race.
+
 ## October 19, 2026 — Gear rarity overhaul: item level first, rarity worth a few levels, far rarer top tiers
 
 - **Request:** Mythic much harder to get, every other tier rarer too; a level 25 Rare must beat a level 10 Mythic;

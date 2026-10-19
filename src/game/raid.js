@@ -556,6 +556,12 @@ function rollMods(depth) {
 /** Build the raid boss for this arena: a random one of RAID_BOSSES (not the same as the hero's last). */
 const EXECUTE_T = 180; // seconds from waking until the boss executes the hero
 
+/**
+ * A BOSS ROOM boss's life in normal monsters of its level (before the 26 x 1.3 and modifiers). It keeps growing past
+ * depth 150 (+1 a depth): hero damage outgrows monster life deep down, and a flat 105 had depth-450 bosses dying
+ * in 2-12 s while depth-40 ones took 20-60 s (tools/tests/endgame.js).
+ */
+export const raidHpMul = (depth) => (depth < 40 ? 12 + depth * 0.9 : 30 + Math.min(depth, 150) * 0.5 + Math.max(0, depth - 150));
 export function makeRaidBoss(world, arena, depth, level) {
   const c = G.char;
   const tpl = pick(RAID_BOSSES.filter((b) => b.id !== (c && c.lastRaid)));
@@ -570,7 +576,7 @@ export function makeRaidBoss(world, arena, depth, level) {
   Object.assign(m, {
     ai: 'raid', el: tpl.el, res: { [tpl.el]: 0.4, ...(m.undead ? { poison: 0.5, shadow: 0.3 } : null) },
     scale: has('colossal') ? 2.75 : 2.4, r: 1.05, atkReach: 0.35, speed: 2.4 * (tpl.spd || 1) * (has('colossal') ? 0.88 : 1), atkCd: 1.3,
-    maxHp: B.hp * 26 * (depth < 40 ? 12 + depth * 0.9 : 30 + Math.min(depth, 150) * 0.5) * (has('colossal') ? 1.35 : 1) * (tpl.hp || 1) * 1.3, dmg: B.dmg * 3.6 * (has('empowered') ? 1.25 : 1), xp: B.xp * 60,
+    maxHp: B.hp * 26 * raidHpMul(depth) * (has('colossal') ? 1.35 : 1) * (tpl.hp || 1) * 1.3, dmg: B.dmg * 3.6 * (has('empowered') ? 1.25 : 1), xp: B.xp * 60,
     name: tpl.name.toUpperCase(), title: tpl.title, aura: elem(tpl.el).glow, affixes: has('vampiric') ? ['vampiric'] : [],
     moves: null, patterns: [], isRaid: true, ward: 1, aggroRange: 0,
   });

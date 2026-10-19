@@ -24,7 +24,10 @@ import { bardCompose, bardUpdate, harmonyMul } from './bard.js';
 import { ASTRONOMER, astroAfterCast, astroUpdate } from './astronomer.js';
 import { sigCast, sigHit, sigUpdate } from './signature.js';
 
-export const xpToNext = (L) => Math.round(60 * L * L + 40 * L);
+// XP for the next level. The (L/30)^1.5 term paces a hero who clears every depth to stay ~10-50 levels above its
+// monsters and reach ~270 by Velscour (depth 500, monster level 258); the cap of 300 is for those who grind
+// (tools/tests/endgame.js). Without it a full-clearing hero hit the cap by depth 160.
+export const xpToNext = (L) => Math.round((60 * L * L + 40 * L) * (1 + Math.pow(L / 30, 1.5)));
 export const MAX_LEVEL = 300;
 
 const ELEM_KEYS = ['fire', 'cold', 'light', 'poison', 'arcane', 'holy', 'shadow', 'blood', 'acid'];
