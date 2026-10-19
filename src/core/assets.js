@@ -3,6 +3,7 @@ import { makeCanvas, recolor, scaleImage, pageAtlas } from './util.js';
 import { G } from '../state.js';
 import { preloadWallTorchHolders } from '../gfx/walltorches.js';
 import { preloadWallHangings } from '../gfx/wallhangings.js';
+import { preloadIsoFix, isoFix, isoFixImage } from '../gfx/isofix.js';
 import { approvedBiomeArt, preloadApprovedBiomeArt, preloadBiomeVariantArt, preloadOverworldScatterArt } from '../gfx/approvedbiomeart.js';
 import { preloadApprovedHeavenlyArtwork } from '../gfx/heavenlymonsters.js';
 import { TW } from './view.js';
@@ -51,6 +52,7 @@ export async function loadAssets(progress) {
   jobs.push(track(preloadBiomeVariantArt()));
   jobs.push(track(preloadOverworldScatterArt()));
   jobs.push(track(preloadWallHangings()));
+  jobs.push(track(preloadIsoFix()));
   jobs.push(track(preloadSong('hymn_of_the_abyss', (k) => { song = k; report(); }).then(() => { song = 1; })));
   for (const id of CLASS_IDS) jobs.push(track(loadImage(`assets/sprites/classes/${id}.webp`).then((img) => { A.classes[id] = img; })));
   jobs.push(track(loadImage('assets/ui/hud.webp').then((i) => { A.hud = i; })));
@@ -73,7 +75,7 @@ const DEFAULT_PACK = 'catacombs';
 
 async function loadPack(id) {
   return A.packs[id] || (A.packs[id] = Promise.all(['floors', 'walls', 'scatter'].map((n) => loadImage(`assets/tiles/${id}/${n}.webp`)).concat(loadJSON(`assets/tiles/${id}/pack.json`)))
-    .then(([floors, walls, scatter, meta]) => (A.packs[id] = { floors, walls, scatter, meta })).catch((e) => { delete A.packs[id]; throw e; }));
+    .then(([floors, walls, scatter, meta]) => (A.packs[id] = { floors, walls, scatter, meta: { ...meta, pack_id: id } })).catch((e) => { delete A.packs[id]; throw e; }));
 }
 const ready = (v) => v && !(v instanceof Promise);
 /** Every pack a biome's tile set draws on: floors and props from `pack`, walls/arches/doors from `wallPack`,
@@ -171,7 +173,14 @@ export function biomeTileSet(biome) {
       for (const [k, sl] of Object.entries(st)) set.doors[des][d][k] = sl.map((r) => ({ ...rect(wallImg, r), part: r[0][0], du: r[0][1], dv: r[0][2] }));
     }
   }
-  const scat = (p, img) => p.meta.scatter.map((s) => ({ img, sx: s.x, sy: s.y, w: s.w, h: s.h, ox: s.ox, oy: s.oy, fp: s.fp, block: s.block, name: s.name }));
+  // props tools/isofix.py re-projected onto the 2:1 grid come from its atlas (recoloured the same way)
+  const scat = (p, img) => {
+    const src = 'pack:' + p.meta.pack_id, fimg = isoFixImage(src), fix = fimg && (pal ? recolor(fimg, pal) : fimg);
+    return p.meta.scatter.map((s) => {
+      const f = fix && isoFix(src, s.name);
+      return { img, sx: s.x, sy: s.y, w: s.w, h: s.h, ox: s.ox, oy: s.oy, ...(f && { ...f, img: fix }), fp: s.fp, block: s.block, name: s.name };
+    });
+  };
   const inR = (rs, i) => !rs || rs.some(([a, b]) => i + 1 >= a && i + 1 <= b);
   const part = full && biome.part;
   set.scatter = scat(pk, scatImg).filter((s, i) => !part || inR(part.scatter, i));

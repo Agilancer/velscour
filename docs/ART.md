@@ -277,3 +277,21 @@ barrier joins at game zoom before merging.
 mask, generated source pack, wall-hanging views, and 23 rotating room layouts.
 Run `python tools/castlekeeppack.py` then `python tools/biomepack.py castle_keep`
 to rebuild its source art and runtime atlases.
+
+## Iso alignment fixes (`tools/isofix.py`, October 18, 2026)
+
+Many painted props were drawn at the wrong angle (boxes in perspective, plan-rotated, or flat pieces facing the camera)
+and stood out against the exact 2:1 floors and walls. `tools/isofix.py` re-projects them without touching the source
+atlases: box-like props layer by layer onto true 2:1 outlines (a piecewise-affine mesh; the top face stays a clean
+parallelogram), flat props sheared onto an iso axis, plan-rotated ones by one affine. `tools/isofix_spec.json` lists
+the props per source (dungeon packs, town, castle overworld, Sea of Sand; 95 sprites). Output `assets/tiles/isofix/`
+is loaded at boot by `src/gfx/isofix.js`, and `biomeTileSet`, `townObject`, `castleObject` and `seaOfSandObject` use a
+fixed sprite wherever one exists. `python tools/isofix.py review [source]` writes before/after sheets to
+`art-review/isofix/`. A warp that balloons is refused, so a bad corner fit can't ship.
+
+Also: Castle Keep's 40 props are now cut by alpha blob (the old even-grid crop sliced neighbours into cells and the
+names were shifted by two), sized per prop and pivoted on their base (`tools/castlekeeppack.py`). The 50 wall hangings
+are cut at the sheets' empty scanlines and each gets one view per wall axis that actually lies on it (authored if it
+leans the right way, else its head-on view sheared onto the wall), drawn centred on the mount
+(`tools/build_wall_hangings.py`, `wallHangingRect`). Check in game with `node tools/tests/isofix.js <biome>
+hangings|torches|props`.

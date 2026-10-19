@@ -1,0 +1,297 @@
+{
+  "_doc": "Props re-projected onto the 2:1 grid by tools/isofix.py, per source. 'box': box-like, corners from the silhouette (override any of Lb Fb Rb Lt Bt Rt, Ft; H = the base is the top outline dropped by H px; T = the top is the base outline raised by T px); 'plane': a flat camera-facing prop sheared onto an iso axis (-0.5 or 0.5, or true to pick); 'shear': [L, R] ground-edge angles as drawn; 'layers': explicit outlines, bottom first.",
+  "pack:catacombs": {
+    "effigy_sarcophagus": "box",
+    "open_sarcophagus": "box",
+    "shrouded_altar": "box",
+    "stone_bench": {
+      "box": true,
+      "H": 52
+    },
+    "funerary_bell": {
+      "plane": true
+    },
+    "closed_wood_coffin": "box",
+    "cross_grave_marker": {
+      "plane": true
+    }
+  },
+  "pack:cathedral_graveyard": {
+    "celtic_cross": {
+      "plane": true
+    },
+    "rounded_headstone": {
+      "plane": true
+    },
+    "gothic_marker": {
+      "plane": true
+    },
+    "broken_headstone": {
+      "plane": true
+    },
+    "squat_cross": {
+      "plane": true
+    },
+    "knight_chest_tomb": {
+      "box": true,
+      "T": 40
+    },
+    "sealed_sarcophagus": "box",
+    "open_stone_coffin": "box",
+    "bordered_fresh_grave": "box",
+    "wooden_coffin": {
+      "box": true,
+      "Lb": [
+        2,
+        60
+      ],
+      "Fb": [
+        22,
+        86
+      ],
+      "Rb": [
+        130,
+        47
+      ],
+      "T": 26
+    },
+    "fallen_railing": {
+      "plane": true
+    },
+    "cathedral_altar": {
+      "box": true,
+      "Lb": [
+        2,
+        95
+      ],
+      "Fb": [
+        118,
+        126
+      ],
+      "Rb": [
+        150,
+        110
+      ],
+      "T": 54
+    },
+    "oak_pew": {
+      "shear": [
+        21.5,
+        -20
+      ]
+    },
+    "confessional": "box",
+    "pipe_organ": {
+      "box": true,
+      "Lb": [
+        2,
+        131
+      ],
+      "Fb": [
+        70,
+        150
+      ],
+      "Rb": [
+        110,
+        137
+      ],
+      "T": 45
+    },
+    "reliquary_chest": "box",
+    "church_bell": {
+      "plane": true
+    },
+    "stone_bench": {
+      "box": true,
+      "H": 40
+    }
+  },
+  "pack:sewers": {
+    "grime_bound_stone_coffer": "box",
+    "open_sluice_reliquary": "box",
+    "rusted_sewer_strongbox": "box",
+    "bone_offering_altar": "box",
+    "sealed_rotwood_crate": "box",
+    "splintered_supply_crate": "box",
+    "circular_drain_marker": {
+      "plane": true
+    },
+    "corroded_warning_bell": {
+      "plane": true
+    },
+    "wet_stone_bench": {
+      "box": true,
+      "H": 40
+    }
+  },
+  "pack:castle_keep": {
+    "royal_sarcophagus": "box",
+    "shield_rack": {
+      "plane": true
+    },
+    "weapon_chest": "box",
+    "treasury_chest": "box",
+    "stone_bench": {
+      "box": true,
+      "H": 60
+    },
+    "war_map_table": {
+      "box": true,
+      "H": 50
+    },
+    "royal_lectern": "box",
+    "stone_keep_crest": {
+      "plane": true
+    },
+    "chapel_window_ruin": {
+      "plane": true
+    },
+    "knight_memorial": {
+      "box": true,
+      "T": 35
+    }
+  },
+  "pack:dark_forest": {
+    "wooden_crate": "box",
+    "wooden_chest": {
+      "box": true,
+      "T": 30
+    },
+    "trail_sign": {
+      "plane": true
+    },
+    "vine_altar": {
+      "box": true,
+      "T": 25
+    }
+  },
+  "town": {
+    "cloth_crate": "box",
+    "tool_rack": {
+      "plane": true
+    },
+    "firewood_stack": "box",
+    "scroll_rack": {
+      "plane": true
+    },
+    "grain_handmill": {
+      "box": true,
+      "T": 20
+    },
+    "arrow_milestone": {
+      "plane": true
+    },
+    "smith_bellows": {
+      "plane": true
+    },
+    "split_rail_fence": {
+      "plane": true
+    },
+    "stone_boundary": {
+      "plane": true
+    }
+  },
+  "castle": {
+    "scatter_08_crate_stack": {
+      "shear": true
+    },
+    "scatter_17_flower_box": "box",
+    "scatter_19_clipped_hedge": "box",
+    "scatter_25_mortar_trough": {
+      "shear": true
+    },
+    "scatter_47_roof_slate_stack": "box",
+    "scatter_62_stone_trough": "box",
+    "scatter_09_trestle_table": {
+      "box": true,
+      "H": 30
+    },
+    "scatter_10_guard_bench": {
+      "box": true,
+      "H": 30
+    },
+    "scatter_75_stone_bench": {
+      "box": true,
+      "H": 30
+    },
+    "scatter_99_guard_stool": {
+      "box": true,
+      "H": 30
+    },
+    "scatter_16_herb_drying_rack": {
+      "plane": true
+    },
+    "scatter_31_shield_rack": {
+      "plane": true
+    },
+    "scatter_33_archery_target": {
+      "plane": true
+    },
+    "scatter_46_spare_merlons": {
+      "plane": true
+    },
+    "scatter_52_scaffold_frame": {
+      "plane": true
+    },
+    "scatter_57_portcullis_teeth": {
+      "plane": true
+    },
+    "scatter_69_rose_trellis": {
+      "plane": true
+    },
+    "scatter_73_milestone": {
+      "plane": true
+    },
+    "scatter_82_wicker_barricade": {
+      "plane": true
+    },
+    "scatter_83_timber_barricade": {
+      "plane": true
+    },
+    "scatter_88_bucket_line": {
+      "plane": true
+    },
+    "scatter_93_crossbow_rack": {
+      "plane": true
+    },
+    "scatter_94_bow_rack": {
+      "plane": true
+    },
+    "scatter_100_blank_map_stand": {
+      "plane": true
+    },
+    "scatter_98_leaned_shields": {
+      "plane": true
+    },
+    "_note": "the castle atlas labels drift from the art after ~78: keys are atlas ids, comments say what is drawn",
+    "scatter_79_nest_box": "box",
+    "scatter_108_folded_blankets": {
+      "plane": true
+    },
+    "scatter_109_stretcher": "box",
+    "scatter_111_dressing_bowl": "box",
+    "scatter_115_fountain_statue": "box",
+    "scatter_117_paving_drain": {
+      "shear": true
+    }
+  },
+  "sea_of_sand": {
+    "scatter_20_reed_crate": "box",
+    "scatter_28_salt_trough": "box",
+    "scatter_18_waterskin_rack": {
+      "plane": true
+    },
+    "scatter_16_carved_standing_stone": {
+      "plane": true
+    },
+    "scatter_38_quest_shrine": {
+      "plane": true
+    },
+    "scatter_40_sand_swept_milestone": {
+      "plane": true
+    },
+    "scatter_22_market_awning": {
+      "plane": true
+    }
+  }
+}
