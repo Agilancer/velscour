@@ -24,7 +24,7 @@ Headless Chromium tests live in `tools/tests/`; see the header comment of each f
 export NODE_PATH=/opt/node22/lib/node_modules     # where playwright is installed in Claude cloud containers
 node tools/tests/data_check.mjs                    # skill data sanity check, no browser (fast)
 python tools/tests/chatgpt_art.py                  # ChatGPT art kits (and Grim Nocturne pixel-locked imports) round-trip, no browser
-node tools/tests/lancer_shields.js                 # four 8-angle Lancer turntables, sprite alpha/frames, in-front/behind QA
+node tools/tests/lancer_shields.js                 # Lancer 3D shield models (built from the turntables), turntable + all-rings shots, in-front/behind QA
 node tools/tests/town.js [seeds]                   # random towns: vendors/portal reachable + screenshots per seed
 node tools/tests/townlife.js [events|none]         # town life: arrival by the portal, quiet start, bubble budget, ~25% events, every event, emotion sheet
 node tools/tests/townsfolk.mjs                      # townsfolk sheets (256x192 cells), roster, scripts fit their bubbles, no browser
@@ -54,6 +54,7 @@ node tools/tests/classart.js paladin               # class art pack: catalog wea
 node tools/tests/lance.js [mobile]                 # Dragoon leaps: energy lance + per-skill trails, stepped frame by frame
 node tools/tests/gear.js paladin,wizard            # hero looks: armor+helm per rarity, finishes, auras (all = 16)
 node tools/tests/closed_helms.js all               # enclosed helmets on all 12 armors: face covered, centred, body untouched
+node tools/tests/herolook.js all death_knight 8      # every armor/helmet/finish loads (945 per class) + hero visible every second of a soak
 node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners in those biomes (docs/ART.md)
 node tools/tests/pack.js catacombs,blood          # biome pack levels: arches, doors, reachability; door/arch shots
 node tools/tests/overworld.js                      # 60 outdoor seeds, 20 scenarios, forced scheduling, landscape previews
@@ -63,6 +64,7 @@ node tools/tests/castle_visual.js [views] [--grid] # Castle screenshots: 25 view
 node tools/tests/sea_of_sand_generation.mjs         # 100 desert maze seeds, route reachability, one-to-five area rolls
 node tools/tests/sea_of_sand.js                     # atlas frames, desert HUD, monster frames, screenshots (browser)
 node tools/tests/dark_forest.js [noshots] [noauto]  # 40 forest seeds reachable, bot plays all 13 trials, frame cost, shots, auto-play wins the Heart
+node tools/tests/mountain.js [noshots] [noauto]    # Mountainside beta (height map): skull access, 30 seeds, hop/drop rules, picking, shots, auto-play summit
 node tools/tests/heavenly.js                       # 60 distinct Heavenly monsters, painted floors/props, monster atlas export
 node tools/tests/worldwide_biomes.js               # 32 combat biomes, home/visitor/legacy spawns, town/wilds art and exact iso fences
 node tools/tests/worldwide_biomes.js --all         # every indoor biome's themed tile set (slow)
@@ -72,6 +74,7 @@ node tools/tests/titlefx.js                        # title intro: click gate, lo
 node tools/tests/enemies.js                        # monster art line-ups, corpses, mixed-biome levels + guardians
 node tools/tests/mayhem.js                         # monster traits, ambush arrivals (drop/teleport/burrow/wall), bullet patterns, MADNESS
 node tools/tests/legion.js                         # Necromancer skeleton summons: art line-up, every minion attacks + casts
+node tools/tests/dk_ghoul.js                       # Death Knight ghoul: frost dk_ghoul atlas, small, leaps from range; frost skulls on Death Coil
 node tools/tests/familiars.js                      # pet art: every pet summon's look, random blue slimes rising + hopping
 node tools/tests/pets.js [seeds]                   # minion pathing: round walls, keep up, fight round corners, leash, idle
 node tools/tests/select.js [mobile]                # hero select: one hero per class, play/new/delete, old duplicate saves
@@ -145,7 +148,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   and `hud.js` for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
   `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`.
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Overworld scenarios
-  (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. The Dark Forest (`src/world/darkforest.js`, `src/game/darkforest.js`, tree drawing in `render.js`): run `dark_forest.js`. The Castle layout (`src/world/castleworld.js`, `src/gfx/castle.js`, `src/gfx/castleground.js`; docs/CASTLE_OVERWORLD.md): run `castle_overworld.mjs`, `castle_visual.js` (look at the shots) and `scenarios.js`. Monster/hero scaling, affixes, drops or death
+  (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. The Dark Forest (`src/world/darkforest.js`, `src/game/darkforest.js`, tree drawing in `render.js`): run `dark_forest.js`. Height maps (`map.hgt` in `src/world/map.js`, `src/gfx/terrain.js`, `src/world/mountain.js`; docs/MOUNTAINSIDE.md): run `mountain.js`. The Castle layout (`src/world/castleworld.js`, `src/gfx/castle.js`, `src/gfx/castleground.js`; docs/CASTLE_OVERWORLD.md): run `castle_overworld.mjs`, `castle_visual.js` (look at the shots) and `scenarios.js`. Monster/hero scaling, affixes, drops or death
   rules (`monsterBase`, `src/data/depth.js`, `src/data/items.js`, `src/game/defiance.js`): run `balance_model.mjs` and
   `balance.js` at a few depths. Dungeon/town events (`src/game/happenings.js`): run `happenings.js`. Monster traits, ambushes and MADNESS (`src/game/mayhem.js`): run `mayhem.js`. Class signatures (`src/game/signature.js`, `src/game/sigs/`): run `signatures.js`. The Bard's notes, measure, melodies, sampler and Cadences (`src/game/bard.js`, `src/game/bardmusic.js`, `src/gfx/notation.js`, `src/data/notation.js`, `src/data/melodies.js`, `src/core/sampler.js`): run `melodies.mjs`, `bard.js` and `bard_listen.js` (`bard_dps.js` for Cadence balance). The Astronomer (class id `arcane_sorcerer`; `src/game/astronomer.js`, `src/gfx/cosmos.js`): run `astronomer.js`. Raid bosses
   (`src/game/raid.js`, every 5th depth): run `raid.js` (and `raid_sigs.js` for `src/game/raidsigs.js`). Rings, augments or skill mastery (`src/data/rings.js`,

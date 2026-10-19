@@ -631,6 +631,7 @@ export const Auto = {
         const nx = x + ox, ny = y + oy;
         if (!m.walkableTile(nx, ny)) continue;
         if (ox && oy && (!m.walkableTile(x + ox, y) || !m.walkableTile(x, y + oy))) continue;
+        if (m.hgt && !m.stepsOk(x, y, ox, oy)) continue; // a height map: only hops and drops
         const ni = ny * W + nx;
         if (d[ni] !== -1) continue;
         d[ni] = nd; q[t++] = ni;
@@ -672,6 +673,7 @@ export const Auto = {
         const nx = x + ox, ny = y + oy;
         if ((!ox && !oy) || !m.inb(nx, ny)) continue;
         if (ox && oy && (!m.walkableTile(x + ox, y) || !m.walkableTile(x, y + oy))) continue;
+        if (m.hgt && !m.stepsOk(nx, ny, -ox, -oy)) continue; // walked from there to here
         if (d[ny * W + nx] === d[cur] - 1) { next = ny * W + nx; break; }
       }
       if (next < 0) break;

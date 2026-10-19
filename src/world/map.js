@@ -20,7 +20,15 @@ export class TileMap {
     this.flow = new Int16Array(w * h);
     this.flowFrom = [-999, -999];
     this.flowTime = 0;
+    // height mapped maps (world/mountain.js): a level per tile; a body hops up at most `climb` levels and drops at most
+    // `drop`, so a taller step is a wall one way (or both). null on flat maps, where none of this costs anything.
+    this.hgt = null;
+    this.climb = 2; this.drop = 5;
   }
+  /** Can a walker step from tile index a onto tile index b (height map only)? */
+  stepOk(a, b) { const d = this.hgt[b] - this.hgt[a]; return d <= this.climb && -d <= this.drop; }
+  /** The tile index under (x,y), clamped onto the map. */
+  tileIdx(x, y) { return Math.min(this.h - 1, Math.max(0, Math.floor(y))) * this.w + Math.min(this.w - 1, Math.max(0, Math.floor(x))); }
   idx(x, y) { return y * this.w + x; }
   inb(x, y) { return x >= 0 && y >= 0 && x < this.w && y < this.h; }
   tile(x, y) { return this.inb(x, y) ? this.t[y * this.w + x] : 0; }
@@ -33,9 +41,15 @@ export class TileMap {
   }
   walkable(x, y) { return this.walkableTile(Math.floor(x), Math.floor(y)); }
 
-  /** Is a circle at (x,y) radius r free of walls? */
-  circleFree(x, y, r) {
-    return this.walkable(x - r, y - r) && this.walkable(x + r, y - r) && this.walkable(x - r, y + r) && this.walkable(x + r, y + r);
+  /** Is a circle at (x,y) radius r free of walls? On a height map its centre must be a hop or a drop from tile `from`
+   * (default: the tile under it), and no corner may hang out over a drop too deep to take; brushing higher ground is
+   * fine (the foot of a cliff, or the edge just dropped from). */
+  circleFree(x, y, r, from) {
+    if (!(this.walkable(x - r, y - r) && this.walkable(x + r, y - r) && this.walkable(x - r, y + r) && this.walkable(x + r, y + r))) return false;
+    if (!this.hgt) return true;
+    const H = this.hgt, a = from ?? this.tileIdx(x, y), lo = H[a] - this.drop;
+    if (from !== undefined && !this.stepOk(a, this.tileIdx(x, y))) return false;
+    return H[this.tileIdx(x - r, y - r)] >= lo && H[this.tileIdx(x + r, y - r)] >= lo && H[this.tileIdx(x - r, y + r)] >= lo && H[this.tileIdx(x + r, y + r)] >= lo;
   }
 
   /** Move a circle with wall sliding. Returns true if moved at all. */
@@ -47,19 +61,20 @@ export class TileMap {
     }
     const r = bodyR(e);
     let moved = false;
-    if (!this.circleFree(e.x, e.y, r)) {
+    const from = this.hgt ? this.tileIdx(e.x, e.y) : undefined;
+    if (!this.circleFree(e.x, e.y, r, from)) {
       // already overlapping a wall or prop (knocked, spawned or pushed there): any step onto open floor lets it out
       const nx = e.x + dx, ny = e.y + dy;
-      if (this.walkable(nx, ny)) { e.x = nx; e.y = ny; return true; }
+      if (this.walkable(nx, ny) && (!this.hgt || this.stepOk(from, this.tileIdx(nx, ny)))) { e.x = nx; e.y = ny; return true; }
       return false;
     }
     if (dx !== 0) {
       const nx = e.x + dx;
-      if (this.circleFree(nx, e.y, r)) { e.x = nx; moved = true; }
+      if (this.circleFree(nx, e.y, r, from)) { e.x = nx; moved = true; }
     }
     if (dy !== 0) {
       const ny = e.y + dy;
-      if (this.circleFree(e.x, ny, r)) { e.y = ny; moved = true; }
+      if (this.circleFree(e.x, ny, r, this.hgt ? this.tileIdx(e.x, e.y) : undefined)) { e.y = ny; moved = true; }
     }
     return moved;
   }
@@ -69,10 +84,13 @@ export class TileMap {
     const dx = x1 - x0, dy = y1 - y0;
     const d = Math.hypot(dx, dy);
     const steps = Math.ceil(d * 3);
+    // on a height map, ground rising more than a hop above both ends hides one from the other
+    const H = this.hgt, top = H ? Math.max(H[this.tileIdx(x0, y0)], H[this.tileIdx(x1, y1)]) + this.climb : 0;
     for (let i = 1; i < steps; i++) {
       const t = i / steps;
       const tx = Math.floor(x0 + dx * t), ty = Math.floor(y0 + dy * t);
       if (!this.tile(tx,ty) || (this.losBlocks && this.block[ty*this.w+tx])) return false;
+      if (H && H[ty * this.w + tx] > top) return false;
     }
     return true;
   }
@@ -108,6 +126,7 @@ export class TileMap {
         if (!this.walkableTile(nx, ny)) continue;
         const ni = ny * W + nx;
         if (f[ni] !== -1) continue;
+        if (this.hgt && !this.stepOk(ni, i)) continue; // the field is walked from ni to i
         f[ni] = d + 1;
         q[qt++] = ni;
       }
@@ -145,6 +164,7 @@ export class TileMap {
         const nx = tx + ox, ny = ty + oy;
         if (!this.walkableTile(nx, ny)) continue;
         if (ox && oy && (!this.walkableTile(tx + ox, ty) || !this.walkableTile(tx, ty + oy))) continue;
+        if (this.hgt && !this.stepsOk(tx, ty, ox, oy)) continue;
         const v = this.flow[ny * this.w + nx];
         if (v >= 0 && v < best) { best = v; bx = ox; by = oy; }
       }
@@ -232,6 +252,7 @@ export class TileMap {
           const nx = cx + ox, ny = cy + oy;
           if (!this.walkableTile(nx, ny)) continue;
           if (ox && oy && (!this.walkableTile(cx + ox, cy) || !this.walkableTile(cx, cy + oy))) continue;
+          if (this.hgt && !this.stepsOk(cx, cy, ox, oy)) continue;
           const ni = ny * W + nx;
           if (closed[ni] === gen) continue;
           const ng = cg + (ox && oy ? 1.414 : 1);
@@ -242,6 +263,14 @@ export class TileMap {
       }
     }
     return null;
+  }
+  /** Height map: may a walker go from tile (x,y) to (x+ox,y+oy)? A body cutting a diagonal brushes all four tiles
+   * round the corner in any order, so a diagonal needs them all within a hop of each other (drops go straight). */
+  stepsOk(x, y, ox, oy) {
+    const W = this.w, H = this.hgt, a = y * W + x, b = (y + oy) * W + x + ox;
+    if (!(ox && oy)) return this.stepOk(a, b);
+    const s1 = y * W + x + ox, s2 = (y + oy) * W + x;
+    return Math.max(H[a], H[b], H[s1], H[s2]) - Math.min(H[a], H[b], H[s1], H[s2]) <= this.climb;
   }
   smooth(sx, sy, path, r = 0.28) {
     // drop intermediate nodes with clear line of sight
@@ -260,9 +289,12 @@ export class TileMap {
   losWide(x0, y0, x1, y1, r = 0.28) {
     const dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy);
     const steps = Math.ceil(d * 4);
+    // a height map walks the line tile to tile: every step from the last sample's tile must be a hop or a drop
+    let from = this.hgt ? this.tileIdx(x0, y0) : undefined;
     for (let i = 1; i <= steps; i++) {
-      const t = i / steps;
-      if (!this.circleFree(x0 + dx * t, y0 + dy * t, r)) return false;
+      const t = i / steps, x = x0 + dx * t, y = y0 + dy * t;
+      if (!this.circleFree(x, y, r, from)) return false;
+      if (from !== undefined) from = this.tileIdx(x, y);
     }
     return true;
   }

@@ -48,7 +48,9 @@ Check: `node tools/tests/closed_helms.js all` (face covered, centred on the head
 `closed_helms_<class>.png`: a row per helmet, a column per armor).
 
 ### Game
-- `src/core/gearart.js` loads the played class's armor library and the shared helmet atlas.
+- `src/core/gearart.js` loads the played class's armor library and the shared helmet atlas. Their URLs carry a
+  version (`V`): **bump it whenever the gear art is rebuilt**, or a browser can pair a cached `gear.json` with a new
+  atlas. An atlas that doesn't match its `gear.json` is refused (the old class sprite stands in).
 - **Item looks**: body armor and helmets get `item.look = [design, finish, aura, 2]` on first use (saved with the
   item; the trailing 2 marks the Grim Nocturne library, so looks rolled before it are rerolled once). Armor picks one
   of its rarity's two designs; a helm picks a design of its rarity. Finishes: 44 hand-made palettes plus Original

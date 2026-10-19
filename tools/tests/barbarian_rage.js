@@ -20,15 +20,15 @@ const {openGame,report}=require('./harness');
       for(const key of ['round','diamond','kite','tower']){
         const record=preloadLancerShield(key);
         try{await record.image.decode();}catch(e){problems.push('Shield failed to load '+key);continue;}
-        await new Promise(resolve=>setTimeout(resolve,0));
-        // The authored transparent gaps and antialiased alpha are kept as-is (0cdd86e, "Fix Lancer spinning
-        // shield sprites"), so only check that every turntable frame has art (edge-on frames are thin).
-        if(!record.atlas)problems.push('Shield atlas missing '+key);
+        for(let k=0;k<40&&!record.ready&&!record.error;k++)await new Promise(resolve=>setTimeout(resolve,25));
+        // The turntable is the texture source of the 3D shield model (src/gfx/lancershields.js), so
+        // check the model was built and every turntable frame has art (edge-on frames are thin).
+        if(!record.model)problems.push('Shield model missing '+key);
         else{
           const can=document.createElement('canvas');
-          can.width=record.atlas.width;can.height=record.atlas.height;
+          can.width=record.image.naturalWidth;can.height=record.image.naturalHeight;
           const g=can.getContext('2d',{willReadFrequently:true});
-          g.drawImage(record.atlas,0,0);
+          g.drawImage(record.image,0,0);
           const {data:d}=g.getImageData(0,0,can.width,can.height);
           for(let frame=0;frame<SHIELD_FRAME.count;frame++){
             const ox=(frame%4)*SHIELD_FRAME.w,oy=Math.floor(frame/4)*SHIELD_FRAME.h;

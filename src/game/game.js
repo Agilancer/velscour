@@ -11,7 +11,7 @@ import { loadGearArt } from '../core/gearart.js';
 import { preloadBarFx } from '../gfx/artfx.js';
 import { SKILLS } from '../data/skills.js';
 import { setClassItems, setRingContext } from '../data/items.js';
-import { BIOMES, BIOME_BY_ID, TOWN_BIOME, drawBiome, mixPartner, recordBiomeVisit } from '../data/biomes.js';
+import { BIOMES, BETA_BIOMES, BIOME_BY_ID, TOWN_BIOME, drawBiome, mixPartner, recordBiomeVisit } from '../data/biomes.js';
 import { CLASSES } from '../data/classes.js';
 import { generateDungeon, isRaidDepth } from '../world/dungeon.js';
 import { FINAL_DEPTH, depthLevel, blockStart } from '../data/depth.js';
@@ -26,6 +26,9 @@ import { loadSeaOfSandPack, releaseSeaOfSandPack } from '../gfx/seaofsand.js';
 import { createDarkForestRun } from './darkforest.js';
 import { generateDarkForest } from '../world/darkforest.js';
 import { loadDarkForestTrees } from '../gfx/darkforest.js';
+import { generateMountain } from '../world/mountain.js';
+import { createMountainRun } from './mountain.js';
+import { useTerrain } from '../gfx/terrain.js';
 import { loadCastlePack, releaseCastlePack } from '../gfx/castle.js';
 import { World } from './world.js';
 import { Player } from './player.js';
@@ -209,6 +212,7 @@ export const game = {
       world.add(s);
     }
     G.world = world;
+    useTerrain(world.map); // a height map lifts the ground plane (gfx/terrain.js); flat maps clear it
     camera.computeZoom();
     camera.follow(p.x, p.y, 0, true);
     world.map.reveal(p.x, p.y, 12);
@@ -274,7 +278,7 @@ export const game = {
     const biome = BIOME_BY_ID[c.depth === FINAL_DEPTH ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
     UI.dialog({
       title: `Depth ${c.depth}`,
-      html: `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(biome.name)}</b>.</p><p class="dim">${biome.id === 'sea_of_sand' ? 'Follow the cliff maze and clear every marked scenario area to open the exit.' : biome.id === 'dark_forest' ? 'Find your way through the woods and labyrinths to the Heart of the Forest. Its trial opens the way on; the glades along the trails hold trials of their own, and their rewards.' : biome.overworld ? 'Activate the scenario shrine and complete its trial to open the exit.' : 'Find the exit. It is sealed until its guardian is slain.'}${c.depth === FINAL_DEPTH ? '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>' : !biome.overworld && isRaidDepth(c.depth) ? '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>' : ''}</p>`,
+      html: `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(biome.name)}</b>.</p><p class="dim">${biome.id === 'sea_of_sand' ? 'Follow the cliff maze and clear every marked scenario area to open the exit.' : biome.id === 'mountainside' ? 'Climb the switchback trail to the summit and defeat its Warden. Ledges a hop high can be climbed; taller cliffs cannot.' : biome.id === 'dark_forest' ? 'Find your way through the woods and labyrinths to the Heart of the Forest. Its trial opens the way on; the glades along the trails hold trials of their own, and their rewards.' : biome.overworld ? 'Activate the scenario shrine and complete its trial to open the exit.' : 'Find the exit. It is sealed until its guardian is slain.'}${c.depth === FINAL_DEPTH ? '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>' : !biome.overworld && isRaidDepth(c.depth) ? '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>' : ''}</p>`,
       buttons: [{ label: 'Not yet' }, { label: 'Enter', cls: 'red', fn: () => this.enterDungeon() }],
     });
   },
@@ -292,6 +296,9 @@ export const game = {
           if (['HAIL VELSCOUR!', '13', '65', '69', '666', '6669'].includes(message)) {
             close();
             this.openVelscourTeleport();
+          } else if (message.trim().toLowerCase() === 'mountain') {
+            close();
+            this.teleportToBiome(BIOME_BY_ID.mountainside); // the Mountainside beta
           }
         } },
       ],
@@ -302,7 +309,7 @@ export const game = {
   },
 
   openVelscourTeleport() {
-    const options = BIOMES.map((biome) => `<option value="${escapeHtml(biome.id)}">${escapeHtml(biome.name)}${biome.overworld ? ' · Overworld' : ''}</option>`).join('');
+    const options = [...BETA_BIOMES, ...BIOMES].map((biome) => `<option value="${escapeHtml(biome.id)}">${escapeHtml(biome.name)}${biome.overworld ? ' · Overworld' : ''}${biome.beta ? ' (Beta)' : ''}</option>`).join('');
     const dialog = UI.dialog({
       title: 'CHOOSE YOUR DOOM',
       cls: 'velscour-teleport-dialog',
@@ -358,6 +365,7 @@ export const game = {
     if (biome.id === 'sea_of_sand') return loadSeaOfSandPack();
     if (biome.id === 'castle') return Promise.all([loadCastlePack(), loadDarkForestTrees()]);
     if (biome.id === 'dark_forest') return Promise.all([loadBiomeArt(biome), loadDarkForestTrees()]);
+    if (biome.id === 'mountainside') return Promise.all([loadBiomeArt(BIOME_BY_ID.dark_forest), loadDarkForestTrees()]); // its floors, props and pines
     if (!biome.overworld) return Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]);
     return Promise.resolve();
   },
@@ -396,7 +404,8 @@ export const game = {
     // the two overworlds that save their progress per depth rebuild the same map after a town trip
     const kept = biome.id === 'sea_of_sand' ? c.seaOfSandRuns[depth] : forest ? c.darkForestRuns[depth] : null;
     const seed = kept ? kept.seed : (Math.random() * 1e9) | 0;
-    const gen = forest ? generateDarkForest(depth, biome, tileset, seed) : biome.overworld ? generateOverworld(depth, biome, seed) : generateDungeon(depth, biome, tileset, seed);
+    const gen = forest ? generateDarkForest(depth, biome, tileset, seed) : biome.id === 'mountainside' ? generateMountain(depth, biome, seed)
+      : biome.overworld ? generateOverworld(depth, biome, seed) : generateDungeon(depth, biome, tileset, seed);
     const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches, wallHangings: gen.wallHangings, looks: gen.looks, townTiles: gen.townTiles || null, buildings: gen.buildings || [] });
     if (gen.layoutId) { world.layoutId = gen.layoutId; world.layoutName = gen.layoutName; }
     world.rooms = gen.rooms || [];
@@ -491,6 +500,16 @@ export const game = {
       addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#40a0ff', 5));
       sfx('gate'); UI.refresh(); this.autosave();
     });
+    else if (biome.id === 'mountainside') world.overworldScenario = createMountainRun(world, gen, biome, () => {
+      exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
+      const first = !c.cleared[depth];
+      c.cleared[depth] = true;
+      c.deepest = Math.max(c.deepest || 0, depth);
+      this.brokeThrough(depth);
+      if (first) { c.skillPoints++; UI.log('Bonus skill point for taking the summit!', '#ffd860'); }
+      addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#40a0ff', 5));
+      sfx('gate'); UI.refresh(); this.autosave();
+    });
     else if (biome.overworld) world.overworldScenario = createOverworldScenario(world, gen, biome, () => {
       exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
       const first = !c.cleared[depth];
@@ -510,11 +529,11 @@ export const game = {
         const x = 3 + Math.random() * (map.w - 6), y = 3 + Math.random() * (map.h - 6);
         if (map.walkable(x, y) && map.findPath(gen.start[0], gen.start[1], x, y, 9000)) spots.push([x, y]);
       }
-      if (spots.length >= 2) addWanderers(world, spots, biome.id === 'castle' ? 6 : forest ? 4 : 5);
+      if (spots.length >= 2 && !biome.beta) addWanderers(world, spots, biome.id === 'castle' ? 6 : forest ? 4 : 5);
       world.raining = biome.id !== 'sea_of_sand' && Math.random() < 0.3; // a wet day in the Wilds or on the walls
       if (Math.random() < 0.25) { world.darkK = biome.id === 'sea_of_sand' ? 0.45 : 0.6; world.night = true; } // nightfall: torches, spells and portals glow
     }
-    recordBiomeVisit(c, biome, depth);
+    if (!biome.beta) recordBiomeVisit(c, biome, depth); // a beta biome leaves the overworld guarantee alone
     c.lastBiome = biome.id;
     HUD.setArea(`Depth ${depth}${depth > FINAL_DEPTH ? ' — Endless Torment' : ''}`, biome.overworld ? `${biome.name} · ${world.overworldScenario.title}` : gen.raid ? `${biome.name} · Boss Room` : biome.name);
     stopMusic(); setAmbience(biome.id);
@@ -522,6 +541,7 @@ export const game = {
     UI.centerMsg(biome.name.toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);
     if (world.night) UI.log(world.raining ? 'Night has fallen, and the rain with it.' : 'Night has fallen over the land.', '#a0b0d0');
     if (biome.id === 'sea_of_sand') UI.log(`Secure ${gen.scenarioCount} marked scenario area${gen.scenarioCount===1?'':'s'} to open the exit. Rewards improve with each clear.`, '#ffe2a0');
+    else if (biome.id === 'mountainside') UI.log('The trail switchbacks up the cliffs to the summit. A ledge a hop high can be climbed; taller cliffs only jumped down.', '#ffe2a0');
     else if (forest) UI.log(`The Dark Forest closes in. The Heart lies deep in the north-east labyrinth; ${gen.glades.length} glades hold trials and treasure along the way.`, '#c8f0a0');
     else if (biome.overworld) UI.log('Activate the glowing shrine and complete its objective to open the exit.', '#ffe2a0');
     else if (!c.tips.dungeon) { c.tips.dungeon = true; setTimeout(() => UI.log('Find the exit portal. It stays sealed until the depth\'s guardian is slain. The blue portal returns you to town.', '#ffe2a0'), 1500); }
