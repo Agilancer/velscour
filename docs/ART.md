@@ -281,4 +281,6 @@ cut into a horizontally tileable strip (a minimum-error seam along the mortar, p
 `WALL_MATERIALS` in `castlekeeppack.py`, stored as `materials/<family>.png` and `wall_materials` in the manifest),
 and `biomepack.texture_walls` paints it onto the raised wall faces in world space, so courses follow the 2:1 slope,
 run on from piece to piece and wrap corners. Runs meeting at a plain corner share a family (`map.buildWalls`).
-Arches and doors still use the older flat material paste.
+Arches and doors are painted pieces from the Catacombs and Cathedral packs (`ARCH_SOURCES`, `DOOR_SOURCES`) with
+their stone (low-saturation pixels) shifted onto a keep material by `recolor_stone`; wood, rust and bronze keep their
+colours. Floors keep only each painted slab's top face, inside its bevelled rim (`FLOOR_INSET`), resampled smoothly.
