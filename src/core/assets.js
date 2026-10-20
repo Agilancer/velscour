@@ -220,7 +220,6 @@ export function biomeTileSet(biome) {
     for (const f of extra.floors) { for (let j = 0; j < Math.max(1, n / extra.floors.length); j++) set.features.push(set.floors.length); set.floors.push(f); }
     set.scatter.push(...extra.scatter);
   }
-  set.pillar = set.walls[set.families[0]]['0'][0][0];
   if (A.chestImg && A.chestMeta) {
     const img = pal ? recolor(A.chestImg, pal) : A.chestImg;
     const c = A.chestMeta;

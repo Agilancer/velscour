@@ -83,7 +83,7 @@ Native pixels map to world pixels by `k = TW / 160` (0.4); `ox/oy` are native px
   The throne arena's four columns are funerary obelisks.
 - **Rendering** (`src/game/render.js`): floors are drawn 0.6 px oversized to hide seams. Wall items (`drawWall`)
   are depth sorted with everything else. Walls in front of the hero fade in a wide soft hole around them
-  (`cutaway`). Portals use the pack's pillar for their posts.
+  (`cutaway`). Portals stand alone (no side pillars), drawn at 1.3x.
 - **Mixed levels**: about 65% of levels pair the biome with another of its colour family (`mixPartner`); the far
   chunks are paved in that biome's palette, and the walls, arches and doors come from one of the two.
 

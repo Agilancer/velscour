@@ -1883,8 +1883,8 @@ are in section 7.
      none in the portal yard; the arrow milestone (the "stone") is gone. All 18 trees are used now (the old code only
      found the fir and the willow). A BFS from the start checks every vendor and the portal; a failed roll retries with
      the next seed. `tools/tests/town.js [seeds]` checks reachability and screenshots each town.
-     Note: the "flag" the user meant was read as the lamp post (torch stand) beside the portal; if they meant the
-     portal's stone side pillars (`drawPortal`, `tileset.pillar`), remove those too.
+     Note: the "flag" the user meant was read as the lamp post (torch stand) beside the portal. The portal's stone
+     side pillars are gone too (the user asked later): every portal is the ring and vortex alone, drawn at 1.3x.
    - **Depth 500** (`src/data/depth.js`): `FINAL_DEPTH`, `isRaidDepth`, and `depthLevel(d)` (1:1 to 60, then 0.45 per
      depth: depth 500 = monster level 258). Monsters, loot, chests, vendors and the XP penalty use the level; raid/boss
      life multipliers and level density/elite counts are capped so depth 500 doesn't explode. `MAX_LEVEL` is 300.
@@ -2799,7 +2799,6 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 - `buildWalls` requires non-empty `tileset.walls` or `tileset.segFwd` (and `pillars` for corners). A segment with undefined `spr` is classified as a pillar by `s.spr && s.dir ? 2 : 3` (render.js:223) and crashes in drawPillar.
 - The town generator is called once per session and its map/props objects are reused. Don't mutate `townCache` objects per visit except `seen`.
 - The generator RNG is seeded, but game.js passes a fresh `Math.random()` seed, and spawn variants/`randomNear` use `Math.random`. Don't rely on reproducibility.
-- `drawPortal` reads pillars from `G.world.tileset` rather than its `world` argument (render.js:118).
 - Image smoothing is ON ('medium', render.js:179), because the wall/floor atlases are downscaled. Pixel-art sprites are pre-scaled canvases.
 - Performance hot spots:
   - Per-frame allocation of the `sorted` array and objects (render.js:208-240).
@@ -2825,7 +2824,6 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 - src/world/map.js:151-176 - A* open list is a plain array with linear min scan and open.includes (O(n^2)) and no closed set; may hitch on large maps for long click-moves.
 - src/game/render.js:422-430 - automap (big=true) iterates the full map and redraws every frame while open; could be cached and only redrawn when `seen` changes.
 - src/game/render.js:269-271 - creature sbox uses o.z + (fly?16:0) while Creature.draw adds bob, fly sine and spawn scale (creature.js:146-149); click boxes are slightly off for flyers and spawning monsters.
-- src/game/render.js:118 - drawPortal reads pillars from G.world.tileset instead of the world being rendered.
 - src/world/town.js:70 - building depth uses the footprint centre; entities near the ends of long buildings can sort incorrectly.
 - src/game/world.js:28,30 and src/world/map.js:14 - dead fields: World.exitOpen, World.lastPlayerTile, TileMap.flowTime are never read.
 - src/game/render.js:431-441 - automap dot radii and minimap scale are not multiplied by devicePixelRatio (automap canvas is device-px sized at game.js:365), so markers look small on high-DPI screens.
