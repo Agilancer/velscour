@@ -1,6 +1,7 @@
-"""Grim Nocturne hero gear: 12 body armors (two per rarity) and 5 enclosed helmets per class.
+"""Grim Nocturne hero gear: 18 body armors and 15 enclosed helmets (three sets) per class.
 
   python tools/nocturnegear.py import <extracted-zips-dir>   # user zips -> assets/source/gear_nocturne/ (native PNGs)
+  python tools/nocturnegear.py import2 <extracted-zips-dir>  # collection 02 armors + helmet sets 02/03 (below)
   python tools/nocturnegear.py build                          # assets/source/gear_nocturne/ -> assets/sprites/gear/
 
 `import` expects the user's zips unpacked side by side in <dir>:
@@ -8,8 +9,11 @@
   gn_exports/  Grim_Nocturne_All_16_Classes_Game_Exports.zip   (their natives: only where each head sits)
   armor96/     VELSCOUR_96_Additional_Armor_Source_Artwork.zip (96 more armors, high-res source only)
   helm_exports/ VELSCOUR_80_Helmets_Game_Exports.zip           (80 helmets, 40x40 pinned at (45,63))
-Both armor sets are area-downsampled exactly like the Game Exports (crown y75, sole y183, 108 art px) and
-centred on the class's head so the helmets fit both sets. `build` writes per class armor.webp (6x2 cells of 128x192),
+`import2` finds these anywhere under <dir> (each zip unpacked as is):
+  collection_02/  VELSCOUR_Collection_02_96_Armor_Source_Artwork.zip (rare a/b, epic, legendary, mythic a/b: armors 13-18)
+  Helmet_Set_02/, Helmet_Set_03/  VELSCOUR_Helmet_Set_0N_Game_Exports.zip (common..epic + mythic, pinned at (45,63))
+All armor sets are area-downsampled exactly like the Game Exports (crown y75, sole y183, 108 art px) and
+centred on the class's head so the helmets fit every set. `build` writes per class armor.webp (6 columns of 128x192),
 armor_mask.png (face, hair and bare skin: never recoloured) and gear.json, plus the shared helmets/ atlas.
 Placements made in tools/helmet-fitter are kept (assets/sprites/gear/helmets/placements.json).
 """
@@ -28,6 +32,10 @@ CLASSES = ['arcane_sorcerer', 'barbarian', 'bard', 'boomerang_knight', 'carrion_
            'dragoon', 'gunner', 'lancer', 'necromancer', 'paladin', 'ranger', 'slime_lord', 'totem_master', 'wizard']
 RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic']
 HELM_RARITIES = RARITIES[:5]
+SET_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'mythic']  # helmet sets 02 and 03: Mythic takes Legendary's slot
+HELM_SETS = [('', HELM_RARITIES), ('set02_', SET_RARITIES), ('set03_', SET_RARITIES)]
+C02 = [('rare_a', 'rare_c02a'), ('rare_b', 'rare_c02b'), ('epic', 'epic_c02'), ('legendary', 'legendary_c02'),
+       ('mythic_a', 'mythic_c02a'), ('mythic_b', 'mythic_c02b')]  # armors 13..18
 FW, FH, CROWN, SOLE, PIN, CELL = 128, 192, 75, 183, (45, 63), 40
 BARE_SKIN = {'barbarian'}  # classes whose outfits show arms/chest: skin is masked over the whole body
 # the exported helmets are wider than the heads: (width, height) scale per class, height kept at the neck
@@ -130,9 +138,38 @@ def do_import(src):
             p = hd / f'layers_fullcolor/{c}_helmet_{r}.png'
             if not p.exists():
                 p = hd / f'layers_128x192/{c}_helmet_{r}.png'
-            h = rgba(p)[PIN[1]:PIN[1] + CELL, PIN[0]:PIN[0] + CELL]
-            h[..., 3] = np.where(h[..., 3] > 127, 255, 0)
-            Image.fromarray(h).save(d / f'helmet_{r}.png')
+            Image.fromarray(helmet_cell(p)).save(d / f'helmet_{r}.png')
+        print('imported', c)
+
+
+def find_dir(root, name):
+    hits = sorted(p for p in Path(root).rglob(name) if p.is_dir())
+    if not hits:
+        sys.exit(f'{name}/ not found under {root}')
+    return hits[0]
+
+
+def helmet_cell(path):
+    h = rgba(path)[PIN[1]:PIN[1] + CELL, PIN[0]:PIN[0] + CELL]
+    h[..., 3] = np.where(h[..., 3] > 127, 255, 0)
+    return h
+
+
+def do_import2(src):
+    c02 = find_dir(src, 'collection_02') / 'artwork'
+    sets = {k: find_dir(src, f'Helmet_Set_{k[3:5]}') / 'classes' for k, _ in HELM_SETS[1:]}
+    for c in CLASSES:
+        d = SRC / c
+        ref = rgba(d / 'armor_01_common.png')  # the new armors' heads are matched to the common armor's
+        for k, (slot, name) in enumerate(C02):
+            Image.fromarray(native(c02 / c / f'{c}_{slot}.png', ref=ref)).save(d / f'armor_{13 + k:02d}_{name}.png')
+        for key, rars in HELM_SETS[1:]:
+            for r in rars:
+                hd = sets[key] / c
+                p = hd / f'layers_fullcolor/{c}_helmet_{key}{r}.png'
+                if not p.exists():
+                    p = hd / f'layers_128x192/{c}_helmet_{key}{r}.png'
+                Image.fromarray(helmet_cell(p)).save(d / f'helmet_{key}{r}.png')
         print('imported', c)
 
 
@@ -225,16 +262,19 @@ def head_offset(f, ref):
 
 def build():
     OUT.mkdir(parents=True, exist_ok=True)
-    helm_atlas = np.zeros((CELL * len(HELM_RARITIES), CELL * len(CLASSES), 4), np.uint8)
+    helms = [(key, r) for key, rars in HELM_SETS for r in rars]
+    helm_atlas = np.zeros((CELL * len(helms), CELL * len(CLASSES), 4), np.uint8)
     for ci, c in enumerate(CLASSES):
         d = SRC / c
-        files = [sorted(d.glob(f'armor_{i:02d}_*.png'))[0] for i in range(1, 13)]
+        files = sorted(d.glob('armor_[0-9][0-9]_*.png'))
+        assert [int(f.name[6:8]) for f in files] == list(range(1, len(files) + 1)), c + ': armor numbers have gaps'
         frames = [rgba(f) for f in files]
         heads, cx = [head_offset(f, frames[0]) for f in frames], int(round(head_cx(frames[0])))
         masks = [skin_mask(f, c in BARE_SKIN, c != 'slime_lord', cx + dx, CROWN + dy) for f, (dx, dy) in zip(frames, heads)]
         cols = 6
-        atlas = np.zeros((FH * 2, FW * cols, 4), np.uint8)
-        mask = np.zeros((FH * 2, FW * cols), np.uint8)
+        rows = -(-len(frames) // cols)
+        atlas = np.zeros((FH * rows, FW * cols, 4), np.uint8)
+        mask = np.zeros((FH * rows, FW * cols), np.uint8)
         boxes = []
         for i, (f, m) in enumerate(zip(frames, masks)):
             x, y = (i % cols) * FW, (i // cols) * FH
@@ -251,21 +291,23 @@ def build():
         meta = {
             'class': c, 'style': 'grim_nocturne', 'frame': [FW, FH], 'cols': cols, 'anchor': [64, CROWN], 'feet': SOLE,
             'headTop': CROWN, 'helmPin': list(PIN),
-            'armor': {'n': 12, 'bands': {r: [2 * k + 1, 2 * k + 2] for k, r in enumerate(RARITIES)},
+            # bands: the armor ids (1-based) each rarity rolls from
+            'armor': {'n': len(files), 'bands': {r: [i + 1 for i, f in enumerate(files) if f.stem.split('_')[2] == r]
+                                                 for r in RARITIES},
                       'names': [f.stem for f in files], 'box': boxes,
                       'head': heads},  # [dx, dy] of each armor's head from armor 1's: the helmet follows it
         }
         (od / 'gear.json').write_text(json.dumps(meta, separators=(',', ':')))
-        for k, r in enumerate(HELM_RARITIES):
-            helm_atlas[k * CELL:(k + 1) * CELL, ci * CELL:(ci + 1) * CELL] = fit_helmet(rgba(d / f'helmet_{r}.png'), *HELM_SCALE[c], cx - PIN[0])
+        for k, (key, r) in enumerate(helms):
+            helm_atlas[k * CELL:(k + 1) * CELL, ci * CELL:(ci + 1) * CELL] = fit_helmet(rgba(d / f'helmet_{key}{r}.png'), *HELM_SCALE[c], cx - PIN[0])
         print('built', c, int(mask.astype(bool).sum()), 'masked px')
     hd = OUT / 'helmets'
     hd.mkdir(exist_ok=True)
     Image.fromarray(helm_atlas).save(hd / 'atlas.png', optimize=True)
     index = {
         'frame': [CELL, CELL], 'cols': len(CLASSES), 'classes': CLASSES,
-        'designs': [{'id': k + 1, 'rarity': k, 'name': r.title() + ' Helm', 'catalog': r.title()}
-                    for k, r in enumerate(HELM_RARITIES)],
+        'designs': [{'id': k + 1, 'rarity': RARITIES.index(r), 'set': int(key[3:5] or 1), 'name': r.title() + ' Helm',
+                     'catalog': r.title() + (' ' + key[3:5] if key else '')} for k, (key, r) in enumerate(helms)],
         # the 40x40 cell's top left lands on the hero frame at (45,63) (crown y75); per-helmet nudges: placements.json
         'fit': {'scaleX': 1, 'scaleY': 1, 'xAnchor': PIN[0] + CELL / 2, 'baselineOffset': PIN[1] - CROWN, 'sourceBaseline': 0},
     }
@@ -279,6 +321,8 @@ def build():
 if __name__ == '__main__':
     if len(sys.argv) > 2 and sys.argv[1] == 'import':
         do_import(sys.argv[2])
+    elif len(sys.argv) > 2 and sys.argv[1] == 'import2':
+        do_import2(sys.argv[2])
     elif len(sys.argv) > 1 and sys.argv[1] == 'build':
         build()
     else:
