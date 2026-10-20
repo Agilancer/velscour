@@ -14,6 +14,27 @@ Contents
 
 ---
 
+## October 20, 2026 — Totem Master: the GREAT TOTEM is a 3D model (branch `feat/totem-3d`)
+
+- **Request:** replace the giant totem pole he summons (his signature, Spirit Pole) with a 3D model of a giant totem,
+  with particles showing it coming out of the ground, then an explosion once it is fully deployed.
+- **Model** (`src/gfx/totem3d.js`): built in code, no art file, ~2,400 triangles. A stepped stone plinth with teal
+  runes and roots, one carved log segment per spirit face in the order they were earned (bear: round ears, muzzle,
+  teeth; wolf: pointed ears, long snout, fangs; thunderbird: teal brow, side feathers, hooked beak; serpent: flared
+  hood, slit eyes, fangs, forked tongue), glowing teal seams, and a thunderbird crown with a crest and two hinged plank
+  wings. Built once per face order and kept on the GPU; lift (anything under z = 0 is cut away, the cut glows), wing
+  fold, per-face eye glow, runes and the blast flash are shader uniforms. WebGL on its own small canvas like the
+  phoenix; without WebGL the old flat pole is drawn.
+- **Sequence** (`GreatTotem` in `src/game/sigs/totem.js`): 1.1 s bursting out of cracked, glowing ground (`TotemScar`,
+  a ground-layer hazard: dark pit, rubble, nine cracks) with dirt, pebbles, dust, spirit motes and a rumbling camera;
+  then the blast (`deploy`: wings snap open and shiver still, white flash and pop, shock rings in each spirit's colour,
+  a light column, a ray burst (`TotemBlast`), sparks from every face, rocks and a dust ring, `explode` + roar);
+  7.6 s standing (unchanged: the faces act every 1.2 s, eyes flare when they do); then 0.7 s sinking back in.
+  The blast is visual only; damage, timing of the faces' attacks (they start once it stands) and charge are as before.
+- Tests: new `tools/tests/totem3d.js` (model states and face orders, buried shows nothing, in-play stepped sheet
+  `totem_rise.png`, sinks away; `mobile` arg). `signatures.js totem_master`, `flow.js`, `autoplay.js totem_master 8`,
+  `data_check.mjs` pass. Software GL: ~2-4 ms per draw.
+
 ## October 19, 2026 — People and Animals: 47 painted people and 10 animals replace every townsperson (branch `feat/people-and-animals`)
 
 - **What:** the user's `VELSCOUR_People_and_Animals.zip` (kept outside the repo) is cut by `tools/build_people_pack.py`
