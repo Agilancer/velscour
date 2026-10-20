@@ -83,9 +83,11 @@ export const EMOTIONS = {
 const LYING = new Set(['sleep', 'dead', 'dying', 'hurt']);
 export const isLying = (n) => !!n.lying || (n.emotionT > 0 && LYING.has(n.emotion));
 
+/** Facing for a step or a look (dx, dy) in world tiles: the sheets face right, so mirror when it heads screen-left.
+ * Judged by the angle, not the length: a walker's step per frame is tiny. Only near-vertical moves keep the old facing. */
 export function townFacingFlip(dx, dy, previous = false) {
   const screenDx = dx - dy;
-  return Math.abs(screenDx) <= 0.02 ? previous : screenDx < 0;
+  return !(Math.abs(screenDx) > 0.12 * (Math.abs(dx) + Math.abs(dy))) ? previous : screenDx < 0;
 }
 
 const poseList = (sid, e) => {
