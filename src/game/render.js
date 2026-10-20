@@ -374,19 +374,13 @@ function drawPortal(ctx, p) {
   const active = p.active;
   const col = active ? p.color || '#ff5020' : '#5a5a60';
   const t = G.time;
-  // floor rune ring
-  ctx.strokeStyle = rgba(col, 0.6); ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.ellipse(x, y, 34, 17, 0, 0, TAU); ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(x, y, 26, 13, 0, t, t + 5); ctx.stroke();
-  // side pillars
-  const ts = G.world && G.world.tileset, ps = ts && ts.pillar;
-  if (ps) {
-    const k = ts.k;
-    for (const sx of [-30, 26]) ctx.drawImage(ps.img, ps.sx, ps.sy, ps.w, ps.h, x + sx + ps.ox * k, y + (sx < 0 ? -4 : 4) + ps.oy * k, ps.w * k, ps.h * k);
-  }
-  // swirling vortex
+  // floor rune ring and swirling vortex, a free-standing portal drawn 1.3x around its foot
   ctx.save();
-  ctx.translate(x, y - 34);
+  ctx.translate(x, y); ctx.scale(1.3, 1.3);
+  ctx.strokeStyle = rgba(col, 0.6); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(0, 0, 34, 17, 0, 0, TAU); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0, 0, 26, 13, 0, t, t + 5); ctx.stroke();
+  ctx.translate(0, -34);
   ctx.globalCompositeOperation = 'lighter';
   for (let i = 0; i < 6; i++) {
     ctx.globalAlpha = active ? 0.45 - i * 0.05 : 0.15;
@@ -1047,7 +1041,7 @@ function drawOverheadNames(ctx, world) {
   // portal labels
   for (const po of world.portals) {
     if (!po.label) continue;
-    const [sx, sy] = camera.tileToScreen(po.x, po.y, 82);
+    const [sx, sy] = camera.tileToScreen(po.x, po.y, 100);
     if (sx < -200 || sy < -40 || sx > G.W + 200 || sy > G.H + 40) continue;
     drawLabel(ctx, po.label, sx * d, sy * d, nameFont, po.active ? '#ffd0a0' : '#909090', 3 * d);
   }

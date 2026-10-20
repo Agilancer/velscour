@@ -94,8 +94,8 @@ Contents
   within 5 tiles wherever it walks (`Projectile.nextFoe` / `ricochetFrom`), then bursts in a holy blast
   (`RICOCHET_BLAST` 1.5 tiles x area, `BLAST_DMG` 75% of a strike) around the last foe, at a wall, or at the end of
   its flight. Drawn as the Lancer's round model (`drawThrownShield` in `lancershields.js`, via the new general
-  `drawShieldOriented`; `drawShieldModel` is now its upright case, pixel-identical in `lancer_shields.js`), near flat,
-  tipped toward the camera, spinning, at 1.35x, sorted in front of the foe it strikes, with a glow, lit rim and a
+  `drawShieldOriented`; `drawShieldModel` is now its upright case, pixel-identical in `lancer_shields.js`), flat on the
+  isometric ground like a discus (face up, a slight wobble, half the Lancer slab's thickness), spinning, at 1.35x, sorted in front of the foe it strikes, with a glow, lit rim and a
   streak of light. It is in auto-play's Paladin focus (`isHammer`) at the non-orbit weight; `hitsPerCast` models it.
 - **Balance** (`pow=` mod: the skill's whole damage, weapon part too, x this; `Player.skillDamage`): the new
   `tools/tests/paladin.js dps` casts every damaging skill (same rank, seeded gear, mana counted) at one pinned dummy
@@ -197,6 +197,19 @@ Contents
   Pikeman"). The Sea of Sand keeps its own creatures (its archetypes are its own).
 - Tests: `data_check`, `flow`, `enemies`, `heavenly`, `raid 5,30` (its biome list now skips overworlds, which
   crashed at depth 5 on the Sea of Sand), `worldwide_biomes`, `autoplay wizard`.
+
+## October 20, 2026 — critters pay XP only, come far more often, arrows and sparks; SMITE meter sized like MADNESS (branch `feat/critter-xp`)
+
+- **Request:** make the SMITE bar the same size as the MADNESS bar; significantly more gilded critters, with sparks
+  streaming up and a small red arrow pointing at each so players know to tap them; the only pay is a significant sum
+  of XP per critter, based on the hero's level.
+- `#smite-track` / `#smite-text` now match `#mad-track` / `#mad-text` (100% wide, 9 px tall, 8 px text).
+- `src/game/critters.js`: `CRITTER_GAP` 40-85 s -> 12-25 s, first one 4-10 s into a level (was 18-40); still one at a
+  time. `pay.xp` is a share of `xpToNext(hero level)` (+-10%): Gilded Wisp 5%, Starmoth 6%, Golden Scarab 8%,
+  Prismatic Wisp 15%; no gold, gems or potions any more. `gainXp(n, flat)`: critters skip the out-levelled-depth
+  penalty (the hero's XP % bonus still applies). Each critter sheds ~34 rising sparks a second and has a bobbing red
+  arrow over it (gone once it flees).
+- **Open:** the XP shares and the gap are guesses; ask the user how they feel in play.
 
 ## October 20, 2026 — things to do while the hero plays: critters, SMITE, sealed treasures, stance, portal choice, Greed (branch `feat/spectator-play`)
 
@@ -1920,8 +1933,8 @@ are in section 7.
      none in the portal yard; the arrow milestone (the "stone") is gone. All 18 trees are used now (the old code only
      found the fir and the willow). A BFS from the start checks every vendor and the portal; a failed roll retries with
      the next seed. `tools/tests/town.js [seeds]` checks reachability and screenshots each town.
-     Note: the "flag" the user meant was read as the lamp post (torch stand) beside the portal; if they meant the
-     portal's stone side pillars (`drawPortal`, `tileset.pillar`), remove those too.
+     Note: the "flag" the user meant was read as the lamp post (torch stand) beside the portal. The portal's stone
+     side pillars are gone too (the user asked later): every portal is the ring and vortex alone, drawn at 1.3x.
    - **Depth 500** (`src/data/depth.js`): `FINAL_DEPTH`, `isRaidDepth`, and `depthLevel(d)` (1:1 to 60, then 0.45 per
      depth: depth 500 = monster level 258). Monsters, loot, chests, vendors and the XP penalty use the level; raid/boss
      life multipliers and level density/elite counts are capped so depth 500 doesn't explode. `MAX_LEVEL` is 300.
@@ -2836,7 +2849,6 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 - `buildWalls` requires non-empty `tileset.walls` or `tileset.segFwd` (and `pillars` for corners). A segment with undefined `spr` is classified as a pillar by `s.spr && s.dir ? 2 : 3` (render.js:223) and crashes in drawPillar.
 - The town generator is called once per session and its map/props objects are reused. Don't mutate `townCache` objects per visit except `seen`.
 - The generator RNG is seeded, but game.js passes a fresh `Math.random()` seed, and spawn variants/`randomNear` use `Math.random`. Don't rely on reproducibility.
-- `drawPortal` reads pillars from `G.world.tileset` rather than its `world` argument (render.js:118).
 - Image smoothing is ON ('medium', render.js:179), because the wall/floor atlases are downscaled. Pixel-art sprites are pre-scaled canvases.
 - Performance hot spots:
   - Per-frame allocation of the `sorted` array and objects (render.js:208-240).
@@ -2862,7 +2874,6 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 - src/world/map.js:151-176 - A* open list is a plain array with linear min scan and open.includes (O(n^2)) and no closed set; may hitch on large maps for long click-moves.
 - src/game/render.js:422-430 - automap (big=true) iterates the full map and redraws every frame while open; could be cached and only redrawn when `seen` changes.
 - src/game/render.js:269-271 - creature sbox uses o.z + (fly?16:0) while Creature.draw adds bob, fly sine and spawn scale (creature.js:146-149); click boxes are slightly off for flyers and spawning monsters.
-- src/game/render.js:118 - drawPortal reads pillars from G.world.tileset instead of the world being rendered.
 - src/world/town.js:70 - building depth uses the footprint centre; entities near the ends of long buildings can sort incorrectly.
 - src/game/world.js:28,30 and src/world/map.js:14 - dead fields: World.exitOpen, World.lastPlayerTile, TileMap.flowTime are never read.
 - src/game/render.js:431-441 - automap dot radii and minimap scale are not multiplied by devicePixelRatio (automap canvas is device-px sized at game.js:365), so markers look small on high-DPI screens.

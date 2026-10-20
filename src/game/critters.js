@@ -1,6 +1,8 @@
 // Gilded critters: little treasures that cross the screen now and then (a gilded wisp drifting through the air, a
 // starmoth, a golden scarab scuttling over the floor, now and then a prismatic wisp). Auto-play never chases them:
 // they are the player's to tap (or click) before they get away. They aren't creatures, so nothing fights them.
+// Each pays one thing: a big sum of experience, a share of the hero's next level (pay.xp). A red arrow bobs over
+// each one and sparks stream up from it so players know to tap.
 // Wiring: game.update -> crittersTick, each critter is a 'top' effect (vfx.js) that moves and draws itself, and
 // spectate.js hit-tests taps against world.critters (catchCritterAt).
 import { G } from '../state.js';
@@ -8,21 +10,19 @@ import { rand, chance, pick, TAU, fmtInt } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { camera, isoX, isoY } from '../core/view.js';
 import { addEffect, Ring, glowSprite, sparkle, spawn, floatText, addLight } from '../gfx/vfx.js';
-import { depthLevel } from '../data/depth.js';
-import { rollGem, potionItem } from '../data/items.js';
-import { addToBag, xpToNext } from './player.js';
-import { GroundItem } from './loot.js';
+import { xpToNext } from './player.js';
 import { UI } from '../ui/ui.js';
 
 // fly: drifts in the air (z), else scuttles on the floor. w: odds. life: seconds before it gets away.
+// pay.xp: experience, as a share of xpToNext(hero level).
 export const CRITTERS = {
-  wisp: { name: 'Gilded Wisp', color: '#ffd040', fly: true, w: 45, life: 12, speed: 1.3, pay: { gold: 30 } },
-  moth: { name: 'Starmoth', color: '#a8c8ff', fly: true, w: 25, life: 11, speed: 1.6, pay: { xp: 0.035 } },
-  scarab: { name: 'Golden Scarab', color: '#ffb030', fly: false, w: 22, life: 10, speed: 2.1, pay: { gold: 18, gem: 0.6 } },
-  prism: { name: 'Prismatic Wisp', color: '#ff80e0', fly: true, w: 8, life: 9, speed: 2, pay: { gold: 40, xp: 0.03, gem: 1, potion: 1 } },
+  wisp: { name: 'Gilded Wisp', color: '#ffd040', fly: true, w: 45, life: 12, speed: 1.3, pay: { xp: 0.05 } },
+  moth: { name: 'Starmoth', color: '#a8c8ff', fly: true, w: 25, life: 11, speed: 1.6, pay: { xp: 0.06 } },
+  scarab: { name: 'Golden Scarab', color: '#ffb030', fly: false, w: 22, life: 10, speed: 2.1, pay: { xp: 0.08 } },
+  prism: { name: 'Prismatic Wisp', color: '#ff80e0', fly: true, w: 8, life: 9, speed: 2, pay: { xp: 0.15 } },
 };
 const KEYS = Object.keys(CRITTERS);
-export const CRITTER_GAP = [40, 85]; // seconds between critters
+export const CRITTER_GAP = [12, 25]; // seconds between critters (was 40-85)
 
 class Critter {
   constructor(world, key, x, y) {
@@ -51,7 +51,11 @@ class Critter {
     if (K.fly || m.walkable(nx, ny)) { this.x = nx; this.y = ny; } else { this.a += Math.PI * rand(0.6, 1.4); this.turn = 0.3; }
     if (K.fly) this.z += Math.sin(this.t * 3 + this.ph) * dt * 14;
     addLight(this.x, this.y, 1.6, 0.7, this.z, K.color);
-    if (chance(dt * (K.fly ? 14 : 6))) spawn({ type: 'glow', x: this.x + rand(-0.1, 0.1), y: this.y + rand(-0.1, 0.1), z: this.z + rand(-3, 3), vz: K.fly ? -8 : 12, life: rand(0.4, 0.8), size: rand(1.5, 3), size1: 0, color: this.key === 'prism' ? pick(['#ff80e0', '#80e0ff', '#ffe060', '#90ff90']) : K.color, add: true });
+    // a stream of sparks rising from it, so it reads as something to tap even in a busy fight
+    for (let n = Math.floor(dt * 34 + Math.random()); n > 0; n--) {
+      const a = rand(TAU), r = rand(0.05, 0.3);
+      spawn({ type: 'glow', x: this.x + Math.cos(a) * r, y: this.y + Math.sin(a) * r, z: this.z + rand(-4, 6), vz: rand(45, 85), drag: 0.6, life: rand(0.7, 1.3), size: rand(1.2, 2.6), size1: 0, color: chance(0.25) ? '#ffffff' : this.key === 'prism' ? pick(['#ff80e0', '#80e0ff', '#ffe060', '#90ff90']) : K.color, add: true });
+    }
     return true;
   }
   draw(ctx) {
@@ -105,6 +109,15 @@ class Critter {
       ctx.drawImage(glowSprite(K.color), px - 18, py - 21, 36, 36);
       ctx.globalCompositeOperation = 'source-over';
     }
+    if (!this.gone) { // a small red arrow bobbing over it, pointing down at it
+      const tip = py - this.z - (K.fly ? 20 : 18) - Math.abs(Math.sin(t * 5)) * 6;
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = '#ff2a2a'; ctx.strokeStyle = '#3a0000'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(px, tip); ctx.lineTo(px - 7, tip - 8); ctx.lineTo(px - 3, tip - 8); ctx.lineTo(px - 3, tip - 15);
+      ctx.lineTo(px + 3, tip - 15); ctx.lineTo(px + 3, tip - 8); ctx.lineTo(px + 7, tip - 8); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    }
     ctx.globalAlpha = 1;
   }
   /** Screen position (css px) of its body, for taps. */
@@ -131,7 +144,7 @@ export function spawnCritter(world, key = null) {
     sparkle(x, y, c.z, c.K.color, 10, 0.4);
     sfx('pickup', 0.5);
     const ch = G.char;
-    if (ch && !ch.tips.critter) { ch.tips.critter = true; UI.log(`A <b style="color:${c.K.color}">${c.K.name}</b>! ${G.touch ? 'Tap' : 'Click'} it before it gets away: gilded critters are yours to catch, auto-play leaves them alone.`, '#ffe2a0'); }
+    if (ch && !ch.tips.critter) { ch.tips.critter = true; UI.log(`A <b style="color:${c.K.color}">${c.K.name}</b>! ${G.touch ? 'Tap' : 'Click'} it before it gets away: each gilded critter is worth a big sum of experience, and auto-play leaves them to you.`, '#ffe2a0'); }
     return c;
   }
   return null;
@@ -146,7 +159,7 @@ function weighted() {
 export function crittersTick(world, dt) {
   if (!allowed(world)) return;
   if (world.critters) world.critters = world.critters.filter((c) => c.alive || (c.gone && G.world === world && c.t - c.t0 < 0.6));
-  if (world.critterT === undefined) world.critterT = rand(18, 40);
+  if (world.critterT === undefined) world.critterT = rand(4, 10);
   if (world.critters && world.critters.some((c) => c.alive)) return;
   if ((world.critterT -= dt) <= 0) { world.critterT = rand(...CRITTER_GAP); spawnCritter(world); }
 }
@@ -167,38 +180,19 @@ export function catchCritterAt(sx, sy) {
   return true;
 }
 
-/** The catch: its treasure goes straight to the hero (gold, experience, a gem, a potion). */
+/** The catch: a share of the hero's next level in experience, straight to the hero. */
 export function catchCritter(cr) {
-  const p = G.player, c = G.char, w = cr.world, K = cr.K, pay = K.pay;
+  const p = G.player, c = G.char, K = cr.K;
   if (!p || !c || !cr.alive) return;
   cr.caught = true;
-  const lvl = depthLevel(w.depth || 1), lines = [];
-  if (pay.gold) {
-    const g = Math.max(10, Math.round((3 + lvl * 2.2) * pay.gold * rand(0.8, 1.25) * (1 + p.st.goldFind / 100)));
-    c.gold += g; lines.push(`${fmtInt(g)} gold`);
-    floatText(cr.x, cr.y, cr.z + 20, `+${fmtInt(g)} gold`, '#ffd34a', 15, { life: 1.6 });
-    sfx('gold', 0.8);
-  }
-  if (pay.xp) {
-    const x = Math.max(5, Math.round(xpToNext(c.level) * pay.xp));
-    p.gainXp(x); lines.push(`${fmtInt(x)} experience`);
-    floatText(cr.x, cr.y, cr.z + 36, `+${fmtInt(x)} XP`, '#a8c8ff', 14, { life: 1.6 });
-  }
-  if (pay.gem && chance(pay.gem)) {
-    const gem = rollGem(lvl + 4);
-    if (!addToBag(c, gem)) w.addLoot(new GroundItem(p.x, p.y, 'item', { item: gem }));
-    lines.push('a gem');
-  }
-  if (pay.potion) {
-    const k = pick(['hp', 'rejuv', 'fury']);
-    c.potions[k] = (c.potions[k] || 0) + 1; lines.push(potionItem(k).name.toLowerCase());
-  }
+  const x = Math.max(5, Math.round(xpToNext(c.level) * K.pay.xp * rand(0.9, 1.1)));
+  p.gainXp(x, true);
+  floatText(cr.x, cr.y, cr.z + 24, `+${fmtInt(x)} XP`, '#a8c8ff', 16, { life: 1.8 });
   addEffect(new Ring(cr.x, cr.y, 0.1, 1.6, 0.45, K.color, 4, { z: cr.z }));
   sparkle(cr.x, cr.y, cr.z, K.color, 24, 0.5);
   sparkle(cr.x, cr.y, cr.z, '#ffffff', 8, 0.3);
   sfx('levelup', 0.35);
   c.critters = (c.critters || 0) + 1;
-  UI.log(`Caught a <b style="color:${K.color}">${K.name}</b>: ${lines.join(', ')}.`, '#ffe2a0');
+  UI.log(`Caught a <b style="color:${K.color}">${K.name}</b>: ${fmtInt(x)} experience.`, '#ffe2a0');
   UI.refresh();
 }
-
