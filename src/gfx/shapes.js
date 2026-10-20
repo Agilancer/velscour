@@ -9,6 +9,8 @@ import { pixelSprite, shiftPalette } from './pixelart.js';
 import { sfx } from '../core/audio.js';
 import { drawNoteShape } from './notation.js';
 import { drawCosmic, cosmicTrail } from './cosmos.js';
+import { drawDkSkull } from './dkskull.js';
+import { drawRuneblade3D, runeblade3DReady, runebladeLook, RUNEBLADE_LEN } from './runeblade3d.js';
 
 function glow(ctx, x, y, r, color, a = 1) {
   ctx.globalCompositeOperation = 'lighter';
@@ -72,6 +74,15 @@ export function drawShape(ctx, fx, x, y, a, s, E, t, extra = {}) {
       ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(-sw, -sh / 2, sw * 0.35, sh * 0.75);
       break;
     }
+    case 'dkblade': { // the Death Knight's thrown, falling and orbiting swords: his 3D Runeblade, the familiar's size, point first
+      const L = runebladeLook((G.char && G.char.level) || 1), len = RUNEBLADE_LEN * (G.touch ? 0.85 : 1) * s;
+      if (runeblade3DReady(L.skin)) {
+        glow(ctx, 0, 0, len * 0.55, E.glow, 0.55);
+        if (drawRuneblade3D(ctx, -Math.cos(a) * len / 2, -Math.sin(a) * len / 2, a, len, { skin: L.skin, palette: L.palette, spin: t * 9, tilt: 0.25, glow: E.glow, glowAmt: 0.3 })) break;
+      }
+      fx = 'blade';
+    }
+    // falls through to the drawn blade while the model loads
     case 'blade': case 'axe': case 'chakram': case 'rang': case 'disc': {
       glow(ctx, 0, 0, 14 * s, E.glow, E.name === 'Physical' ? 0.35 : 0.75);
       ctx.rotate(spin);
@@ -91,6 +102,13 @@ export function drawShape(ctx, fx, x, y, a, s, E, t, extra = {}) {
       }
       break;
     }
+    case 'dkskull': { // Death Coil: the contact skull in frost, rocking as it flies, a cold glow behind
+      glow(ctx, 0, 0, 20 * s, '#40c0ff', 0.85);
+      glow(ctx, 0, 0, 12 * s, E.glow, 0.6);
+      if (drawDkSkull(ctx, 0, 0, 17 * s, '#e8f4ff', Math.sin(t * 9) * 0.18)) break;
+      fx = 'skull';
+    }
+    // falls through to the drawn skull while the art loads
     case 'skull': case 'spirit': {
       glow(ctx, 0, 0, 18 * s, E.glow, 0.9);
       ctx.fillStyle = fx === 'skull' ? '#f0e8d8' : E.core;
@@ -249,7 +267,7 @@ export function trail(fx, x, y, z, E, dt, s = 1) {
       if (p < dt * 60) spawn({ type: 'glow', x: x + rand(-0.05, 0.05), y: y + rand(-0.05, 0.05), z: z + rand(-3, 3), vz: rand(5, 25), life: rand(0.2, 0.45), size: rand(2, 4) * s, size1: 0, color: Math.random() < 0.5 ? E.glow : E.core, add: true });
       if (fx !== 'fireball' && p < dt * 20) smoke(x, y, z, '#2a2420', 1, 4);
       break;
-    case 'orb': case 'bolt': case 'missile': case 'spirit': case 'skull': case 'spark': case 'star': case 'note':
+    case 'orb': case 'bolt': case 'missile': case 'spirit': case 'skull': case 'dkskull': case 'dkblade': case 'spark': case 'star': case 'note':
       if (p < dt * 40) spawn({ type: 'glow', x, y, z, vz: rand(-5, 5), life: rand(0.2, 0.4), size: rand(1.5, 3) * s, size1: 0, color: E.glow, add: true });
       break;
     case 'blob': case 'acid':

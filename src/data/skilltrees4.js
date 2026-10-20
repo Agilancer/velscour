@@ -78,11 +78,11 @@ export const TREE4 = {
     'Mother of Ooze|summon|acid|slime|sum=motherooze n=1 dur=25 cd=40', 'Primal Form|buff|acid|transform|buff=dmg,armor,res amt=35 dur=15 cd=40', 'Deluge of Slime|rain|acid|meteor|n=14 r=2.2 dur=3 cd=10', 'Big Bang Blob|aoe|acid|nuke|r=2.6 dmg=2.8 cd=8',
   ],
   boomerang_knight: [
-    'Gale Rang|proj|phys|rang|free wc=1 bounce=1', 'Twin Chakrams|proj|light|chakram|n=2 spread=30 bounce=2', 'Wind Guard|buff|phys|shield|buff=block amt=25 dur=20 cd=25', 'Tempest Dash|dash|light|wind|range=1.1',
-    'Storm Orbit|orbit|light|chakram|n=3 dur=6 cd=6', 'Ricochet Storm|proj|phys|rang|bounce=5', 'Cyclone Catch|cyclone|phys|wind|n=1 dur=4', 'Thunder Return|proj|light|rang|pierce exp',
-    'Halo of Rangs|proj|phys|rang|n=8 ring', 'Eye of the Gale|zone|light|storm|r=1.4 dur=5 slow', 'Stormcaller Leap|leap|light|storm|r=1.5 dmg=1.4', 'Spinning Edge|whirl|phys|blade|dur=2.5',
-    'Blade Hurricane|cyclone|light|wind|n=4 dur=5 cd=8', 'Lightning Wheel|chain|light|lightning|n=6', 'Gale Knight Stance|buff|light|aura|buff=as,speed amt=35 dur=12 cd=30', 'Orbit Barrage|rain|phys|rang|n=16 r=1.6',
-    'Thousand Rangs|proj|phys|rang|n=16 ring dmg=0.9 cd=4', 'Tempest Ascendant|buff|light|transform|buff=dmg,as amt=40 dur=12 cd=40', 'Heart of the Gale|orbit|light|chakram|n=8 dur=8 cd=12', 'Skybreaker|aoe|light|eruption|r=2.4 dmg=2.6 cd=6',
+    'Gale Rang|proj|phys|rang|free wc=1 bounce=1 ret', 'Twin Chakrams|proj|light|chakram|n=2 spread=30 bounce=2 ret dmg=0.62', 'Wind Guard|buff|phys|shield|buff=block amt=25 dur=20 cd=25', 'Tempest Dash|dash|light|wind|range=1.1',
+    'Storm Orbit|orbit|light|chakram|n=3 dur=6 cd=6', 'Ricochet Storm|proj|phys|rang|bounce=5 ret dmg=0.75', 'Cyclone Catch|cyclone|phys|wind|n=1 dur=4', 'Thunder Return|proj|light|rang|ret pierce exp dmg=0.6',
+    'Halo of Rangs|proj|phys|rang|n=8 ring ret dmg=0.3', 'Eye of the Gale|zone|light|storm|r=1.4 dur=5 slow', 'Stormcaller Leap|leap|light|storm|r=1.5 dmg=1.4', 'Spinning Edge|whirl|phys|blade|dur=2.5',
+    'Blade Hurricane|cyclone|light|wind|n=4 dur=5 cd=8', 'Lightning Wheel|chain|light|lightning|n=6', 'Gale Knight Stance|buff|light|aura|buff=as,speed amt=35 dur=12 cd=30', 'Orbit Barrage|proj|phys|rang|n=14 rand spread=100 ret pierce dmg=0.62',
+    'Thousand Rangs|proj|phys|rang|n=16 ring ret dmg=0.35 cd=4', 'Tempest Ascendant|buff|light|transform|buff=dmg,as amt=40 dur=12 cd=40', 'Heart of the Gale|orbit|light|chakram|n=8 dur=8 cd=12', 'Skybreaker|aoe|light|eruption|r=2.4 dmg=2.6 cd=6',
   ],
   lancer: [
     'Radiant Thrust|melee|holy|thrust|free wc=1', 'Lance Beam|beam|holy|laser|dur=1.5 range=0.7', 'Prism Guard|buff|holy|tshield|buff=block,armor amt=25 dur=20 cd=25', 'Shield Disc|proj|holy|disc|bounce=3',

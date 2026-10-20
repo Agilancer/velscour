@@ -9,6 +9,7 @@ import { drawShape, trail, explosionFx, hitSpark } from '../gfx/shapes.js';
 import { bardProjInit, bardProjUpdate, bardProjHit, bardProjDraw, bardOrbitDraw, bardRainDraw, bardBeamDraw } from './bard.js';
 import { drawLancerOrbitShield } from '../gfx/lancershields.js';
 import { drawCosmicBeam } from '../gfx/cosmos.js';
+import { drawFlyingRang, drawRang3D, rangSkin, groundHeading } from '../gfx/boomerang3d.js';
 import { screenAngle } from '../gfx/vfx.js';
 import { hit, aoe, chainHit } from './combat.js';
 
@@ -37,6 +38,14 @@ export function coneTargets(world, team, x, y, ang, range, half) {
 }
 
 // ===================================================================== Projectile
+/** The Death Knight's own art: his frost skull for Death Coil, his 3D Runeblade for every sword he throws, rains or orbits. */
+const dkFx = (src, fx) => (src && src.classId === 'death_knight' ? (fx === 'skull' ? 'dkskull' : fx === 'blade' ? 'dkblade' : fx) : fx);
+/** n of his 3D Runeblades circling (x, y) at radius r tiles, z px up, edge first (whirls and cyclones). */
+function dkBlades(ctx, x, y, r, t, n, z, E, k) {
+  ctx.globalAlpha = k;
+  for (let i = 0; i < n; i++) { const a = t * 11 + (i * TAU) / n; drawShape(ctx, 'dkblade', isoX(x + Math.cos(a) * r, y + Math.sin(a) * r), isoY(x + Math.cos(a) * r, y + Math.sin(a) * r) - z - i * 10, screenAngle(a + Math.PI / 2), 1, E, t); }
+  ctx.globalAlpha = 1;
+}
 export class Projectile {
   constructor(o) {
     Object.assign(this, {
@@ -48,8 +57,10 @@ export class Projectile {
     this.vx = Math.cos(this.ang) * this.speed;
     this.vy = Math.sin(this.ang) * this.speed;
     this.life = this.dur || this.range / this.speed;
+    this.turnAt = this.life * 0.5; // a boomerang turns for home halfway out
     this.sx = this.x; this.sy = this.y;
     this.team = this.src ? this.src.team : this.team;
+    this.fx = dkFx(this.src, this.fx);
     if (this.lob) {
       const d = Math.max(0.5, Math.min(this.range, dist(this.x, this.y, this.tx, this.ty)));
       const a = angleTo(this.x, this.y, this.tx, this.ty);
@@ -90,22 +101,23 @@ export class Projectile {
       const turn = Math.cos(this.t * this.weave + this.seed) * 7 * dt * Math.max(0.25, 1 - this.t * 1.2), c = Math.cos(turn), s = Math.sin(turn), vx = this.vx;
       this.vx = vx * c - this.vy * s; this.vy = vx * s + this.vy * c;
     }
-    // boomerang return
-    if (this.ret && !this.returning && this.t > this.life * 0.5) { this.returning = true; this.hitSet.clear(); }
+    // boomerang return: home to the thrower's hand wherever he has moved, over walls, hitting all again on the way
+    if (this.ret && !this.returning && (this.t > this.turnAt || this.t > 12)) this.turnBack();
     if (this.returning) {
-      const s = this.src && !this.src.dead ? this.src : { x: this.sx, y: this.sy };
-      const a = angleTo(this.x, this.y, s.x, s.y), sp = this.speed * 1.1;
+      const s = this.src && !this.src.dead ? this.src : { x: this.sx, y: this.sy }, d = dist(this.x, this.y, s.x, s.y);
+      if (d < 0.55 || this.t - this.retT > 8) { this.caught(s); return false; }
+      const a = angleTo(this.x, this.y, s.x, s.y), sp = Math.min(this.speed * 1.1, d / dt);
       this.vx = Math.cos(a) * sp; this.vy = Math.sin(a) * sp;
-      if (dist(this.x, this.y, s.x, s.y) < 0.5 || this.t > this.life * 3) return false;
     }
     const nx = this.x + this.vx * dt, ny = this.y + this.vy * dt;
-    if (!w.map.isFloor(nx, ny)) {
-      if (this.bounce > 0 || this.returning) {
+    if (this.returning) { this.x = nx; this.y = ny; }
+    else if (!w.map.isFloor(nx, ny)) {
+      if (this.bounce > 0) {
         if (!w.map.isFloor(nx, this.y)) this.vx = -this.vx;
         if (!w.map.isFloor(this.x, ny)) this.vy = -this.vy;
-        if (!this.returning) { this.bounce--; this.hitSet.clear(); }
+        this.bounce--; this.hitSet.clear();
       } else if (this.ret) {
-        this.returning = true;
+        this.turnBack();
       } else {
         this.impact();
         return false;
@@ -139,6 +151,8 @@ export class Projectile {
     if (this.t > this.life && !this.ret) { if (this.exp) this.impact(); return false; }
     return !this.dead;
   }
+  turnBack() { this.returning = true; this.retT = this.t; this.hitSet.clear(); }
+  caught(s) { if (this.src && this.src.classId && !this.child) sparkle(s.x, s.y, 30, this.E.glow, 2, 0.2); }
   onHit(c) {
     const w = this.world;
     this.hitSet.add(c.id);
@@ -152,22 +166,23 @@ export class Projectile {
       this.split = false;
       const base = Math.atan2(this.vy, this.vx);
       for (const off of [-0.45, 0, 0.45]) {
-        w.addHazard(new Projectile({ world: w, src: this.src, team: this.team, x: c.x, y: c.y, ang: base + off, speed: this.speed, range: this.range * 0.6, fx: this.fx, el: this.el, dmg: this.dmg.map((v) => v * 0.55), o: this.o, size: this.size * 0.8, child: true, pierce: 0 }));
+        w.addHazard(new Projectile({ world: w, src: this.src, team: this.team, x: c.x, y: c.y, ang: base + off, speed: this.speed, range: this.range * 0.6, fx: this.fx, el: this.el, dmg: this.dmg.map((v) => v * 0.55), o: this.o, size: this.size * 0.8, child: true, pierce: 0, ret: this.ret, skin: this.skin }));
       }
       this.hitSet.add(c.id);
     }
     if (this.pierce > 0) { this.pierce--; return; }
-    if (this.ret) return; // boomerangs keep going
+    if (this.returning) return; // on its way home it cuts through everything
     if (this.bounce > 0) {
       this.bounce--;
       const n = w.hostiles(this.team, c.x, c.y, 6).filter((x) => !this.hitSet.has(x.id))[0];
       if (n) {
         const a = angleTo(this.x, this.y, n.x, n.y), sp = Math.hypot(this.vx, this.vy);
         this.vx = Math.cos(a) * sp; this.vy = Math.sin(a) * sp;
-        this.life = this.t + 1.2;
+        this.life = this.t + 1.2; this.turnAt = this.t + 0.8; this.bounced = true;
         return;
       }
     }
+    if (this.ret) { if (this.bounced) this.turnBack(); return; } // boomerangs keep going; a spent ricochet flies home
     if (!this.exp) hitSpark(this.x, this.y, this.z, this.el);
     this.dead = true;
   }
@@ -195,6 +210,7 @@ export class Projectile {
       ctx.beginPath(); ctx.ellipse(px, isoY(this.x, this.y), 5, 2.5, 0, 0, TAU); ctx.fill();
     }
     if (this.note) return bardProjDraw(ctx, this, px, py);
+    if ((this.fx === 'rang' || this.fx === 'chakram') && drawFlyingRang(ctx, this)) return; // the 3D boomerang
     const a = screenAngle(Math.atan2(this.vy, this.vx));
     drawShape(ctx, this.fx, px, py, a, this.size, this.E, this.t);
     if (this.fx === 'chain' && this.src) {
@@ -251,7 +267,7 @@ export class Area {
     this.team = this.src ? this.src.team : this.team;
     this.hitSet = new Map();
     this.ground = this.mode !== 'cyclone';
-    if (this.mode === 'cyclone') { this.wander = rand(TAU); }
+    if (this.mode === 'cyclone') { this.wander = rand(TAU); this.fx = dkFx(this.src, this.fx); }
   }
   get depth() { return this.x + this.y; }
   update(dt) {
@@ -334,6 +350,7 @@ export class Area {
         ctx.beginPath(); ctx.ellipse(px + Math.sin(this.t * 6 + i) * 3, py - h, rr, rr * 0.4, 0, this.t * 10 + i, this.t * 10 + i + 4.5); ctx.stroke();
       }
       ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+      if (this.fx === 'dkblade') dkBlades(ctx, this.x, this.y, this.r * 0.6, this.t, 2, 24, this.E, k); // Runeblade Storm: his swords whirl in it
       return;
     }
     if (this.mode === 'wallseg') return; // particles only
@@ -405,6 +422,7 @@ function drawWallSeg(ctx) {
 export class Orbit {
   constructor(o) {
     Object.assign(this, { n: 3, radius: 1.6, dur: 5, t: 0, spiral: false, fx: 'blade', speed: 4, size: 1, o: {} }, o);
+    this.fx = dkFx(this.src, this.fx);
     this.E = elem(this.el);
     this.team = this.src.team;
     this.cd = new Map();
@@ -445,6 +463,11 @@ export class Orbit {
       return;
     }
     if (this.fx?.startsWith('n_')) bardOrbitDraw(ctx, this);
+    if (this.fx === 'rang' || this.fx === 'chakram') { // 3D boomerangs skimming round him, near flat
+      const sk = this.skinObj || (this.skinObj = rangSkin(this.skin, this.fx, this.el));
+      for (const [x, y, a] of this.pos) drawRang3D(ctx, isoX(x, y), isoY(x, y) - 26, { skin: sk, size: this.size, spin: this.t * 15, head: groundHeading(-Math.sin(a), Math.cos(a)), bank: 0.3, lift: 26 });
+      return;
+    }
     const each = this.fx === 'planet' || this.fx === 'zodiac' || this.fx === 'accretion'; // the Astronomer's orbiters differ one by one
     this.pos.forEach(([x, y, a], i) => drawShape(ctx, this.fx, isoX(x, y), isoY(x, y) - 24, screenAngle(a + Math.PI / 2), this.size, this.E, this.t, each ? { i } : this.o));
   }
@@ -455,6 +478,7 @@ export class Whirl {
   constructor(o) {
     Object.assign(this, { dur: 2, t: 0, r: 1.3, speed: 4.2, tick: 0.22, tickT: 0, o: {} }, o);
     this.E = elem(this.el);
+    this.fx = dkFx(this.src, this.fx);
     this.team = this.src.team;
     this.src.channel = this;
     this.slashT = 0;
@@ -556,7 +580,10 @@ export class Whirl {
     }
     return true;
   }
-  draw(ctx) { if (this.rage) drawWhirlCyclone(ctx, this.src, this.t, this.r); }
+  draw(ctx) {
+    if (this.rage) drawWhirlCyclone(ctx, this.src, this.t, this.r);
+    if (this.fx === 'dkblade') dkBlades(ctx, this.src.x, this.src.y, 0.95, this.t, 2, 30, this.E, 1); // his swords spin round him
+  }
 }
 
 // ===================================================================== Leap
@@ -847,6 +874,7 @@ export class Trap {
 export class Rain {
   constructor(o) {
     Object.assign(this, { t: 0, dur: 1.2, n: 12, r: 2, fx: 'arrow', o: {}, impactR: 0.8 }, o);
+    this.fx = dkFx(this.src, this.fx);
     this.E = elem(this.el);
     this.team = this.src.team;
     this.spawned = 0;
