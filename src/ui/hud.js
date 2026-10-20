@@ -28,6 +28,7 @@ const SLOT_MAP = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 'hp', 'mp', 'rej
 
 /** [x, y, w, h] of a sprite's non-transparent pixels (monster sheets carry lots of padding), memoised per image. */
 const boxes = new WeakMap();
+const pct = (v, total) => (v / total) * 100 + '%';
 function opaqueBox(img) {
   let b = boxes.get(img);
   if (b) return b;
@@ -76,7 +77,6 @@ export const HUD = {
     // tap / click the target window to blow it up (about 2.25x, capped to the screen); again to shrink it back
     $('#target-box').addEventListener('click', (e) => { e.stopPropagation(); this.tbBig = !this.tbBig; this.last.tbCls = null; this.updateTarget(); });
     const wrap = $('#hud-slots');
-    const pct = (v, total) => (v / total) * 100 + '%';
     geo.slots.forEach((s, i) => {
       const d = el('div', 'slot');
       d.style.left = pct(s.x, geo.w); d.style.top = pct(s.y, geo.h);
@@ -114,12 +114,6 @@ export const HUD = {
       UI.tip(d, () => slotTip(map));
       wrap.appendChild(d);
     });
-    const [lo, mo] = geo.orbs;
-    const place = (elx, o) => { elx.style.left = pct(o.cx - o.r, geo.w); elx.style.top = pct(o.cy - o.r, geo.h); elx.style.width = pct(o.r * 2, geo.w); elx.style.height = pct(o.r * 2, geo.h); };
-    place($('#life-cover'), lo); place($('#mana-cover'), mo);
-    const lt = $('#life-text'), mt = $('#mana-text');
-    lt.style.left = pct(lo.cx - 110, geo.w); lt.style.width = pct(220, geo.w); lt.style.top = pct(lo.cy - 12, geo.h);
-    mt.style.left = pct(mo.cx - 110, geo.w); mt.style.width = pct(220, geo.w); mt.style.top = pct(mo.cy - 12, geo.h);
     const xp = geo.xp;
     if (geo.barTop) $('#hud-rail').style.top = pct(geo.barTop, geo.h);
     const xt = $('#xp-track');
@@ -150,6 +144,15 @@ export const HUD = {
     ring.style.left = -((h.cx - h.rx) / (2 * h.rx)) * 100 + '%';
     ring.style.top = -((h.cy - h.ry) / (2 * h.ry)) * 100 + '%';
     cvs.width = 200; cvs.height = Math.round((200 * h.ry) / h.rx);
+  },
+
+  /** Orb shading and numbers over the bar art's orbs, in % of the bar (portrait places its own in px, so redo this after a rotation). */
+  placeOrbs(geo) {
+    const [lo, mo] = geo.orbs;
+    const place = (elx, o) => Object.assign(elx.style, { left: pct(o.cx - o.r, geo.w), top: pct(o.cy - o.r, geo.h), width: pct(o.r * 2, geo.w), height: pct(o.r * 2, geo.h) });
+    const text = (elx, o) => Object.assign(elx.style, { left: pct(o.cx - 110, geo.w), width: pct(220, geo.w), top: pct(o.cy - 12, geo.h), fontSize: '' });
+    place($('#life-cover'), lo); place($('#mana-cover'), mo);
+    text($('#life-text'), lo); text($('#mana-text'), mo);
   },
 
   layoutMobile() {
@@ -203,8 +206,9 @@ export const HUD = {
       };
       placePortraitOrb($('#life-cover'), $('#life-text'), orbPos[0]);
       placePortraitOrb($('#mana-cover'), $('#mana-text'), orbPos[1]);
-    } else if (this.portraitOrbFrames) {
-      this.portraitOrbFrames.forEach((frame) => { frame.style.display = 'none'; });
+    } else {
+      if (this.portraitOrbFrames) this.portraitOrbFrames.forEach((frame) => { frame.style.display = 'none'; });
+      this.placeOrbs(A.hudGeo);
     }
     const gap = 8, x0 = (bar.width - (size * 4 + gap * 3)) / 2, y = bar.height - size - (innerHeight > innerWidth ? 10 : 8);
     this.slots.forEach((s) => {
