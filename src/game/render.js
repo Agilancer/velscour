@@ -669,6 +669,13 @@ export function renderWorld(ctx, world) {
     at = [n.x, n.y];
     look(isoX(n.x, n.y), isoY(n.x, n.y), n.x + n.y, n.viewH || 56, false);
   }
+  for (const c of world.critters || []) { // gilded critters (game/critters.js): a hole up to the arrow over them
+    if (!c.alive) continue;
+    at = [c.x, c.y];
+    look(isoX(c.x, c.y), isoY(c.x, c.y), c.x + c.y, c.z + 46, false);
+    const v = views[nv - 1];
+    if (v && v.at === at) { v.r = 14; v.fall = 64; v.hw = 12; }
+  }
   views.length = nv;
   // does rect r [x, y, w, h] at depth d hide someone?
   const hides = (r, d) => {

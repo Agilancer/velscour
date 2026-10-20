@@ -2,7 +2,8 @@
 // starmoth, a golden scarab scuttling over the floor, now and then a prismatic wisp). Auto-play never chases them:
 // they are the player's to tap (or click) before they get away. They aren't creatures, so nothing fights them.
 // Each pays one thing: a big sum of experience, a share of the hero's next level (pay.xp). A red arrow bobs over
-// each one and sparks stream up from it so players know to tap.
+// each one and sparks stream up from it so players know to tap; a bright outline rings it, and like any creature it
+// cuts a see-through hole in walls in front of it (render.js reads world.critters).
 // Wiring: game.update -> crittersTick, each critter is a 'top' effect (vfx.js) that moves and draws itself, and
 // spectate.js hit-tests taps against world.critters (catchCritterAt).
 import { G } from '../state.js';
@@ -23,6 +24,7 @@ export const CRITTERS = {
 };
 const KEYS = Object.keys(CRITTERS);
 export const CRITTER_GAP = [12, 25]; // seconds between critters (was 40-85)
+const OUTLINE = '#fffbe8'; // the bright edge round each critter and its arrow
 
 class Critter {
   constructor(world, key, x, y) {
@@ -88,6 +90,14 @@ class Critter {
       ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(px, y, 3.4, 0, TAU); ctx.fill();
       ctx.fillStyle = col; ctx.beginPath(); ctx.arc(px, y, 6, 0, TAU); ctx.globalAlpha = fade * 0.6; ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
+      // a bright outline, so it stands out on any floor
+      ctx.globalAlpha = fade; ctx.strokeStyle = OUTLINE; ctx.lineWidth = 2; ctx.shadowColor = col; ctx.shadowBlur = 8;
+      if (this.key === 'moth') {
+        const f = Math.abs(Math.sin(t * 16)) * 10 + 3;
+        for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.ellipse(px + sgn * 6, y - 1, f, 6, sgn * 0.5, 0, TAU); ctx.stroke(); }
+      }
+      ctx.beginPath(); ctx.arc(px, y, 7.5, 0, TAU); ctx.stroke();
+      ctx.shadowBlur = 0;
     } else { // a gold scarab, legs ticking, half sunk once it digs away
       const sink = this.sink || 0, h = Math.cos(this.a), v = Math.sin(this.a);
       const fx = (h - v) * 0.5, fy = (h + v) * 0.25; // facing, in screen space
@@ -101,6 +111,10 @@ class Critter {
       ctx.save(); ctx.translate(px, py - 3 + sink * 4); ctx.rotate(Math.atan2(fy, fx));
       ctx.scale(1.4, 1.4 * (1 - sink * 0.7));
       const g = ctx.createLinearGradient(-7, -5, 7, 5); g.addColorStop(0, '#fff2a0'); g.addColorStop(0.5, K.color); g.addColorStop(1, '#8a5008');
+      ctx.strokeStyle = OUTLINE; ctx.lineWidth = 1.5; ctx.shadowColor = K.color; ctx.shadowBlur = 8; // bright outline
+      ctx.beginPath(); ctx.ellipse(7, 0, 2.6, 2.4, 0, 0, TAU); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, 0, 7, 5, 0, 0, TAU); ctx.stroke();
+      ctx.shadowBlur = 0;
       ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, 7, 5, 0, 0, TAU); ctx.fill();
       ctx.fillStyle = '#5a3008'; ctx.beginPath(); ctx.ellipse(7, 0, 2.6, 2.4, 0, 0, TAU); ctx.fill();
       ctx.strokeStyle = '#6a3c08'; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(6, 0); ctx.stroke();
@@ -112,7 +126,7 @@ class Critter {
     if (!this.gone) { // a small red arrow bobbing over it, pointing down at it
       const tip = py - this.z - (K.fly ? 20 : 18) - Math.abs(Math.sin(t * 5)) * 6;
       ctx.globalAlpha = fade;
-      ctx.fillStyle = '#ff2a2a'; ctx.strokeStyle = '#3a0000'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+      ctx.fillStyle = '#ff2a2a'; ctx.strokeStyle = OUTLINE; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
       ctx.beginPath();
       ctx.moveTo(px, tip); ctx.lineTo(px - 7, tip - 8); ctx.lineTo(px - 3, tip - 8); ctx.lineTo(px - 3, tip - 15);
       ctx.lineTo(px + 3, tip - 15); ctx.lineTo(px + 3, tip - 8); ctx.lineTo(px + 7, tip - 8); ctx.closePath();

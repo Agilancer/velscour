@@ -159,6 +159,10 @@ Contents
   Prismatic Wisp 15%; no gold, gems or potions any more. `gainXp(n, flat)`: critters skip the out-levelled-depth
   penalty (the hero's XP % bonus still applies). Each critter sheds ~34 rising sparks a second and has a bobbing red
   arrow over it (gone once it flees).
+- Follow-up: each critter has a bright outline (`OUTLINE`, with a glow in its colour: the wisp's core, the moth's
+  wings, the scarab's shell) and so does the arrow. `render.js` adds every live critter in `world.critters` to the
+  see-through `views`, a hole as tall as the critter plus its arrow (r 14, fall 64), so walls and canopies in front
+  of it fade the way they do for creatures.
 - **Open:** the XP shares and the gap are guesses; ask the user how they feel in play.
 
 ## October 20, 2026 — things to do while the hero plays: critters, SMITE, sealed treasures, stance, portal choice, Greed (branch `feat/spectator-play`)
