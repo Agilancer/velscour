@@ -139,8 +139,10 @@ const check = (ok, msg) => { console.log(`${ok ? 'ok  ' : 'FAIL'} ${msg}`); if (
     const { addToBag } = await import('/src/game/player.js');
     const out = {};
     const epic = rollItem(80, { rarity: 3 }), rare = rollItem(80, { rarity: 2 }), myth = rollItem(80, { rarity: 5 });
-    for (const it of [epic, rare, myth]) new GroundItem(0, 0, 'item', { item: it });
+    for (const it of [epic, rare, myth]) { G.char.sealT = 1e9; new GroundItem(0, 0, 'item', { item: it }); }
     out.epic = epic.sealed === true; out.rare = !rare.sealed; out.myth = myth.sealed === true; out.name = itemName(myth);
+    // the seal clock: an Epic+ that drops before SEAL_GAP of dungeon time has passed since the last seal arrives open
+    const soon = rollItem(80, { rarity: 4 }); new GroundItem(0, 0, 'item', { item: soon }); out.gap = soon.sealed === false;
     // an opened item dropped again stays open
     const leg = rollItem(80, { rarity: 4 }); leg.sealed = false; new GroundItem(0, 0, 'item', { item: leg }); out.reopen = leg.sealed === false;
     G.char.bag.fill(null);
@@ -156,6 +158,7 @@ const check = (ok, msg) => { console.log(`${ok ? 'ok  ' : 'FAIL'} ${msg}`); if (
     return out;
   });
   check(seal.epic && seal.myth && seal.rare, 'Epic+ drops arrive sealed, Rare does not');
+  check(seal.gap, 'a second Epic+ within the seal gap arrives open');
   check(seal.name === 'Sealed Treasure', 'a sealed item hides its name');
   check(seal.reopen, 'an opened item dropped again stays open');
   check(seal.chip === '2 SEALED', `the HUD shows the sealed count (${seal.chip})`);
@@ -222,25 +225,25 @@ const check = (ok, msg) => { console.log(`${ok ? 'ok  ' : 'FAIL'} ${msg}`); if (
     const { GroundItem } = await import('/src/game/loot.js');
     Auto.toggle(false);
     G.char.bag.fill(null);
-    for (let i = 0; i < 50; i++) { const it = rollItem(60, { rarity: 3 + (i % 3) }); new GroundItem(0, 0, 'item', { item: it }); G.char.bag[i] = it; }
+    for (let i = 0; i < G.char.bag.length; i++) { const it = rollItem(60, { rarity: 3 + (i % 3) }); G.char.sealT = 1e9; new GroundItem(0, 0, 'item', { item: it }); G.char.bag[i] = it; }
     G.char.gold = 100;
     game.enterTown();
     Auto.toggle(true);
     for (let i = 0; i < 30 * 90; i++) { game.update(1 / 30); if (i % 300 === 0) await new Promise((r) => setTimeout(r, 0)); }
     return { kind: G.world.kind, status: Auto.status, urgent: document.querySelector('#sealed-btn').classList.contains('urgent'), sealed: G.char.bag.filter((b) => b && b.sealed).length };
   });
-  check(wait.kind === 'town' && /break the seals/.test(wait.status) && wait.sealed === 50, `auto-play waits in town with a bag of seals ("${wait.status}")`);
+  check(wait.kind === 'town' && /break the seals/.test(wait.status) && wait.sealed === 60, `auto-play waits in town with a bag full of seals ("${wait.status}")`);
   check(wait.urgent, 'the SEALED button pleads');
   await shot('spectate_town_wait' + tag);
   const go = await page.evaluate(async () => {
     const { G, game } = window.VELSCOUR;
-    const { unsealAll } = await import('/src/ui/sealed.js');
-    unsealAll();
+    const { openNextSeal, close } = await import('/src/ui/sealed.js');
+    openNextSeal(); close(); // one seal broken: auto-play sells, stashes or wears it, and a slot is free
     for (let i = 0; i < 30 * 120 && G.world.kind === 'town'; i++) { game.update(1 / 30); if (i % 300 === 0) await new Promise((r) => setTimeout(r, 0)); }
     await new Promise((r) => setTimeout(r, 1500));
     return { kind: G.world.kind, free: G.char.bag.filter((b) => !b).length };
   });
-  check(go.kind === 'dungeon', `with the seals broken auto-play trades and goes on (free slots ${go.free})`);
+  check(go.kind === 'dungeon', `with one seal broken auto-play trades and goes on (free slots ${go.free})`);
 
   // ---------------------------------------------------------------- 11. Greed
   const gr = await page.evaluate(async () => {

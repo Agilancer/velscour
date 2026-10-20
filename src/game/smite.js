@@ -16,7 +16,7 @@ export const SMITE_KILLS = 45; // plain kills to fill the meter
 export const SMITE_R = 3.4; // blast radius (tiles)
 const WORTH = { normal: 1, champion: 3, unique: 6, boss: 12, raid: 12 };
 // at least this share of a foe's life goes per smite, by rank (normal packs vanish, a guardian loses a chunk)
-const SHARE = { normal: 0.9, champion: 0.4, unique: 0.28, boss: 0.08, raid: 0.04 };
+const SHARE = { normal: 1, champion: 0.4, unique: 0.28, boss: 0.08, raid: 0.04 }; // normals fall outright
 let striking = false; // a smite's own kills don't feed the next one
 
 export const smiteReady = () => !!G.char && (G.char.smite || 0) >= 1 && !!G.world && G.world.kind === 'dungeon' && !!G.player && !G.player.dead;
@@ -67,7 +67,8 @@ export function smiteAt(x, y) {
       for (const m of w.hostiles('player', x, y, SMITE_R)) {
         if (m.team !== 'enemy' || m.dead) continue;
         const rank = m.raid ? 'raid' : m.rank || 'normal';
-        if (hit(p, m, Math.max(base, m.maxHp * (SHARE[rank] ?? 0.5)), 'holy', { noArc: true, knock: 1.2 }) > 0) n++;
+        const res = Math.min(0.9, (m.res && m.res.holy) || 0); // the share is of life left after its holy resistance
+        if (hit(p, m, Math.max(base, m.maxHp * (SHARE[rank] ?? 0.5) / (1 - res)), 'holy', { noArc: true, knock: 1.2 }) > 0) n++;
       }
     } finally { striking = false; }
     floatText(x, y, 90, n ? `SMITE ×${n}` : 'SMITE', '#ffe070', 22, { life: 1.6 });

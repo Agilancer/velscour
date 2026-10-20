@@ -12,7 +12,7 @@ import { camera, isoX, isoY } from '../core/view.js';
 import { addEffect, Ring, Column, Bolt, burst, sparkle, spawn, floatText, elem, addLight, smoke, glowSprite } from '../gfx/vfx.js';
 import { explosionFx } from '../gfx/shapes.js';
 import { hit, aoe } from './combat.js';
-import { makeMonster, makeElite } from './monster.js';
+import { makeMonster, makeElite, monsterBase } from './monster.js';
 import { ambush } from './mayhem.js';
 import { GroundItem, dropChest } from './loot.js';
 import { rollItem, rollGem, potionItem, itemName, itemColor, rarityAt } from '../data/items.js';
@@ -369,7 +369,7 @@ function impTick(world, dt) {
 
 // ------------------------------------------------------------------------------------------------ challenge
 export function startChallenge(world) {
-  const depth = world.depth, need = Math.min(45, 18 + Math.floor(depth / 8)), time = 40;
+  const depth = world.depth, need = Math.min(24, 10 + Math.floor(depth / 15)), time = 45; // monsters take a few seconds each
   world.happen.ch = { need, got: 0, left: time, shown: 0 };
   UI.centerMsg("VELSCOUR'S CHALLENGE", `Slay ${need} foes in ${time} seconds`, 2.6);
   UI.log(`<b style="color:#ff6030">Velscour's Challenge</b>: slay ${need} foes in ${time} seconds for a reward.`, '#ff8060');
@@ -410,7 +410,7 @@ export function onKill(m) {
   if (H.challengeAt && H.kills >= H.challengeAt) { H.challengeAt = 0; startChallenge(w); }
   if (H.omen === 'frenzy' && chance(0.3)) w.addLoot(new GroundItem(m.x, m.y, chance(0.6) ? 'orb_hp' : 'orb_mp', {}));
   H.streak = H.streakT > 0 ? H.streak + 1 : 1;
-  H.streakT = 2.2;
+  H.streakT = 4; // a few seconds a kill: the next one in time keeps the streak
   const s = STREAKS.find(([n]) => n === H.streak);
   if (s) {
     const p = G.player;
@@ -442,8 +442,7 @@ export function happeningsTick(world, dt) {
   if (p.buffs.some((b) => b.storm) && (H.zapT = (H.zapT || 0) - dt) <= 0) {
     H.zapT = 0.6;
     const foes = world.hostiles('player', p.x, p.y, 6).filter((m) => m.team === 'enemy' && !m.dead).slice(0, 2);
-    const d = heroHit(p) * 1.4;
-    for (const m of foes) { addEffect(new Bolt(p.x, p.y, 40, m.x, m.y, 20, '#c0b0ff', 0.25, 3)); hit(p, m, d, 'light', { noArc: true }); }
+    for (const m of foes) { addEffect(new Bolt(p.x, p.y, 40, m.x, m.y, 20, '#c0b0ff', 0.25, 3)); hit(p, m, Math.max(heroHit(p) * 1.4, normalLife(m) * 0.08), 'light', { noArc: true }); }
     if (foes.length) sfx('light', 0.3);
   }
   for (const ch of world.chests) if (ch.tick && ch.opened) ch.tick(dt);
@@ -453,6 +452,8 @@ export function happeningsTick(world, dt) {
   scenarioTick(world, dt);
 }
 
+/** A plain normal monster's life at m's level: monsters are sized to hero damage (data/depth.js toughness), weapons aren't. */
+const normalLife = (m) => monsterBase(m.level || 1).hp;
 /** About one of the hero's main-skill hits (for falling stars and shrine lightning). */
 function heroHit(p) {
   const w = p.st.weapon;
@@ -470,7 +471,7 @@ function starfall(world) {
     if (G.world !== world) return;
     explosionFx(x, y, 1.4, 'arcane', 'explosion', { sound: false });
     addEffect(new Ring(x, y, 0.2, 1.8, 0.4, '#e0f0ff', 4));
-    for (const m of world.hostiles('player', x, y, 1.8)) if (m.team === 'enemy') hit(p, m, heroHit(p) * 4, 'arcane', { noArc: true, knock: 0.5 });
+    for (const m of world.hostiles('player', x, y, 1.8)) if (m.team === 'enemy') hit(p, m, Math.max(heroHit(p) * 4, normalLife(m) * 0.5), 'arcane', { noArc: true, knock: 0.5 });
     sparkle(x, y, 20, '#ffffff', 10, 0.8); sfx('explode', 0.35); camera.shake(2);
   }, 380);
 }

@@ -390,8 +390,13 @@ function ringName(item) {
   return `${AUGMENTS[a.id].word} ${item.baseName} of ${augTarget(a)}`;
 }
 
-/** Epic and better drop sealed (ui/sealed.js): no name, no colour, no stats until the player breaks the seal. */
+/**
+ * Epic and better can drop sealed (ui/sealed.js): no name, no colour, no stats until the player breaks the seal. At
+ * most one every SEAL_GAP seconds of dungeon time (c.sealT, game.update): a 60-slot bag takes ~15 hours of auto-play
+ * to fill with them. An Epic+ that drops sooner arrives open, like any other item.
+ */
 export const SEAL_RARITY = 3;
+export const SEAL_GAP = 15 * 60;
 export const SEALED_COLOR = '#ffdf8a';
 
 export function itemName(item) {

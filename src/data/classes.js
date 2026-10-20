@@ -102,6 +102,21 @@ export const CLASSES = {
 };
 for (const [c, name] of Object.entries(TREE4_NAMES)) if (CLASSES[c].trees.length === 3) CLASSES[c].trees.push(name);
 
+/**
+ * Every class's damage multiplier at hero levels DMG_TUNE_AT (log-interpolated, held past the ends; Player.skillDamage
+ * applies it, so minions, signatures and procs follow). Measured in play by tools/tests/tuning.js: the classes killed
+ * up to ~8x faster or slower than each other (the Astronomer, Ranger and Wizard fastest, the Barbarian and Dragoon
+ * slowest); this evens most of it out (the measured ratio ^0.85, noise kept from swinging it all the way), and the
+ * melee classes keep ~15% more for standing in the crowd.
+ */
+export const DMG_TUNE_AT = [5, 45, 160];
+export const DMG_TUNE = {
+  paladin: [1.31, 1.27, 0.95], ranger: [0.74, 0.42, 0.53], wizard: [0.99, 0.6, 0.54], necromancer: [1.15, 1.23, 2.3],
+  barbarian: [1.63, 3.5, 2.38], dragoon: [0.98, 3.23, 3.2], totem_master: [0.95, 0.85, 1.48], death_knight: [0.96, 1.28, 1.66],
+  arcane_sorcerer: [0.77, 0.34, 0.25], carrion_witch: [1.13, 0.91, 1.36], bard: [0.69, 1.11, 1.28], slime_lord: [1.23, 0.69, 0.53],
+  boomerang_knight: [1.07, 0.74, 0.42], lancer: [1.32, 2.02, 1.48], dragon_knight: [1.35, 1.47, 1.83], gunner: [1.03, 0.68, 0.79],
+};
+
 export const ATTRS = {
   str: { name: 'Strength', short: 'STR', desc: '+1% physical damage, +1 armor' },
   dex: { name: 'Dexterity', short: 'DEX', desc: '+0.3% attack speed, +0.05% crit chance' },
