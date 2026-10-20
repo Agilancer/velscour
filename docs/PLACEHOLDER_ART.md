@@ -434,7 +434,7 @@ in white or grey with a coloured core, or deliver one per element.
   pillar of light, holy burst, void implosion, firework, sonic boom, blizzard, frost burst, blood burst, hit spark.
 - **Ground and area effects:** fire wall segment, trap (spike / fire / frost), rain impacts, fissure crack,
   aura ring, consecration circle, curse sigil, level-up sigil, boss telegraph (circle, cone, line).
-- **Town / dungeon portal:** a swirling vortex between two pillars (the pillars are pack art already). Wanted: an
+- **Town / dungeon portal:** a swirling vortex over a rune ring, no side pillars. Wanted: an
   animated portal, 6-8 frames.
 - **Blood decals:** splats and pools on the floor (now random masks).
 
