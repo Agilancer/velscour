@@ -10,6 +10,7 @@ import { UI } from '../ui/ui.js';
 import { RNG } from '../core/util.js';
 import { G } from '../state.js';
 import { TOWNSFOLK } from '../data/townsfolk.js';
+import { makeFolk } from './folk.js';
 import { townFacingFlip } from './townsfolkvisuals.js';
 import { DF_TRIALS } from '../data/darkforest.js';
 import { GroundItem } from './loot.js';
@@ -134,10 +135,7 @@ function makeTrial(world, gen, biome, glade, type, onWin) {
   const unmark = (mk) => { let i = world.portals.indexOf(mk); if (i >= 0) world.portals.splice(i, 1); i = S.markers.indexOf(mk); if (i >= 0) S.markers.splice(i, 1); };
   const clearMarkers = () => { for (const mk of S.markers.slice()) unmark(mk); };
   const person = (folk, p) => {
-    const n = { name: folk.name.split(' ')[0] + (folk.child ? '' : ' the ' + folk.role), sprite: 'ranger', x: p[0], y: p[1], flip: rng.chance(0.5), hp: 100, reach: 1.6,
-      townsfolkSpriteId: folk.spriteId, pal: folk.palette, frameCount: folk.frame?.count, child: folk.child, animT: rng.next() * 3, walkT: 0, idleSeed: rng.int(0, 2),
-      update(dt) { this.animT += dt; if (!this.walking) this.walkT = 0; this.walking = false; if (this.emotionT > 0) this.emotionT -= dt; },
-      use: () => { if (n.onUse) n.onUse(); } };
+    const n = makeFolk(world, folk, p[0], p[1]);
     world.npcs.push(n); S.civilians.push(n);
     return n;
   };

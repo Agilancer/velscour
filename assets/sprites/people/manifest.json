@@ -1,0 +1,1033 @@
+{
+ "name": "Velscour People and Animals",
+ "frameSize": [
+  256,
+  200
+ ],
+ "baseline": 194,
+ "standardFrames": [
+  "idle",
+  "angry",
+  "scared",
+  "point",
+  "dead",
+  "excited",
+  "love",
+  "cheer",
+  "attack",
+  "happy"
+ ],
+ "extraFrames": [
+  "confused",
+  "embarrassed",
+  "proud",
+  "curious",
+  "worried",
+  "suspicious",
+  "sleepy",
+  "surprised",
+  "thinking",
+  "relieved"
+ ],
+ "sheets": [
+  {
+   "id": "cat_01_black",
+   "kind": "animal",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 62
+  },
+  {
+   "id": "cat_02_tabby",
+   "kind": "animal",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 64
+  },
+  {
+   "id": "cat_03_tortoiseshell",
+   "kind": "animal",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 62
+  },
+  {
+   "id": "deer_buck_01",
+   "kind": "animal",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 168
+  },
+  {
+   "id": "deer_doe_01",
+   "kind": "animal",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 142
+  },
+  {
+   "id": "dog_01_small_terrier",
+   "kind": "animal",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 68
+  },
+  {
+   "id": "dog_02_hound",
+   "kind": "animal",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 86
+  },
+  {
+   "id": "dog_03_shepherd",
+   "kind": "animal",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 94
+  },
+  {
+   "id": "rabbit_01",
+   "kind": "animal",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 54
+  },
+  {
+   "id": "rat_01",
+   "kind": "animal",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 38
+  },
+  {
+   "id": "00_greener_20_frames",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy",
+    "confused",
+    "embarrassed",
+    "proud",
+    "curious",
+    "worried",
+    "suspicious",
+    "sleepy",
+    "surprised",
+    "thinking",
+    "relieved"
+   ],
+   "idleH": 150
+  },
+  {
+   "id": "00_greener_spooky_goofy_a",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy",
+    "confused",
+    "embarrassed",
+    "proud",
+    "curious",
+    "worried",
+    "suspicious",
+    "sleepy",
+    "surprised",
+    "thinking",
+    "relieved"
+   ],
+   "idleH": 150
+  },
+  {
+   "id": "00_greener_spooky_goofy_b",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy",
+    "confused",
+    "embarrassed",
+    "proud",
+    "curious",
+    "worried",
+    "suspicious",
+    "sleepy",
+    "surprised",
+    "thinking",
+    "relieved"
+   ],
+   "idleH": 150
+  },
+  {
+   "id": "01_militia_veteran",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "02_border_scout",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "03_city_watch",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "04_river_patrol",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "05_road_guard",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "06_knight_ashen_bastion",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "07_knight_ivory_mantle",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "08_knight_rusted_bulwark",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "09_knight_silver_censer",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "10_knight_thornwall",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "11_knight_cinder_crown",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "12_knight_mourning_veil",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "13_knight_frostbound",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "14_knight_dusk_lancer",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "15_knight_hollow_star",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "18_king",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "19_queen",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "20_crown_prince",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "21_crown_princess",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "22_dowager_queen",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "23_duke",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "24_duchess",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "25_royal_heir",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 150
+  },
+  {
+   "id": "26_traveling_merchant_spice",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "27_traveling_merchant_fur",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "28_traveling_merchant_glass",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "29_traveling_merchant_books",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "30_traveling_merchant_potter",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "31_traveling_merchant_fabric",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "32_traveling_merchant_fisher",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "33_witch",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "34_wizard_purple",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "35_townsfolk_baker",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "36_townsfolk_mason",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "37_townsfolk_midwife",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "38_townsfolk_stablehand",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "39_townsfolk_candle_maker",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "40_townsfolk_porter",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "41_friar",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "42_priest",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "43_townsfolk_shepherd",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "44_townsfolk_tailor",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "45_townsfolk_cooper",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  },
+  {
+   "id": "46_townsfolk_ferryman",
+   "kind": "person",
+   "frames": [
+    "idle",
+    "angry",
+    "scared",
+    "point",
+    "dead",
+    "excited",
+    "love",
+    "cheer",
+    "attack",
+    "happy"
+   ],
+   "idleH": 172
+  }
+ ]
+}

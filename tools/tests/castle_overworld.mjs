@@ -14,7 +14,7 @@ const {loadDarkForestTrees}=await imp('src/gfx/darkforest.js');
 const {A}=await imp('src/core/assets.js');
 const {BIOME_BY_ID,OVERWORLD_BIOME_IDS,drawBiome,recordBiomeVisit}=await imp('src/data/biomes.js');
 const {generateOverworld}=await imp('src/world/overworld.js');
-const {SCENARIOS}=await imp('src/game/overworld.js');
+const {SCENARIOS,CASTLE_SCENARIOS}=await imp('src/game/overworld.js');
 const {CASTLE_OUTER,CASTLE_INNER,CASTLE_GATES,CASTLE_SIZE,MAT}=await imp('src/world/castleworld.js');
 await loadCastlePack();await loadDarkForestTrees();
 A.town={meta:json('assets/tiles/town/town.json'),objects:{},ground:{}};
@@ -105,7 +105,7 @@ for(let seed=1;seed<=SEEDS;seed++){
 if(stats.minScatter<700)throw Error(`expected 700 scatter placements; got ${stats.minScatter}`);
 if(stats.minFree<40000)throw Error(`too little free combat space (${stats.minFree})`);
 if(SEEDS>=100&&scenarios.size!==35)throw Error(`expected all 35 Castle scenarios; saw ${scenarios.size}`);
-if(SCENARIOS.length!==35)throw Error(`expected 35 scenario definitions; saw ${SCENARIOS.length}`);
+if(CASTLE_SCENARIOS!==35||SCENARIOS.length<CASTLE_SCENARIOS)throw Error(`expected 35 Castle scenario definitions; saw ${CASTLE_SCENARIOS}`);
 const selected=new Set();for(let i=0;i<120;i++)selected.add(drawBiome({overworldMisses:3,lastBiome:null,biomeBag:[]},22));
 for(const id of OVERWORLD_BIOME_IDS)if(!selected.has(id))throw Error(`guarantee pool never selected ${id}`);
 for(let run=0;run<30;run++){

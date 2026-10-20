@@ -10,7 +10,7 @@ import { replacementImage } from '../core/replacementart.js';
 import { classSprite } from '../core/assets.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { gritAt } from '../gfx/grit.js';
-import { townFrame, townMotion, TOWN_FRAME_W, TOWN_FRAME_H } from './townsfolkvisuals.js';
+import { townFrame, townFrameOf, townMotion, isLying, TOWN_FRAME_W, TOWN_FRAME_H, TOWN_BASELINE } from './townsfolkvisuals.js';
 import { drawEmote } from '../gfx/emotes.js';
 import { drawTownProp, TOWN_PROP_KINDS } from '../gfx/townprops.js';
 import { drawTownSpeech } from './townspeech.js';
@@ -22,7 +22,7 @@ import { drawTerrain, drawColumn, occludersFor, standKey, hopZ, drawSky, terrain
 
 let lightCanvas = null, glowCanvas = null, vignette = null, vigKey = '';
 const transitionSprites = new Map();
-// Non-vendor town residents use the original 25-identity townsfolk animation pack.
+// Non-vendor people and animals use the People and Animals pack (assets/sprites/people/, one sheet each).
 // Vendors keep their existing painted replacement sprites.
 // Cache original PNG sheets and recolored variants separately. Recolored
 // sheets are Canvas elements, not HTMLImageElements (no .complete/.naturalWidth).
@@ -34,7 +34,7 @@ function townSheet(id) {
   if(!img){
     img=new Image();
     townSheets.set(id,img);
-    img.src=`assets/sprites/townsfolk/${id}.webp`;
+    img.src=`assets/sprites/people/${id}.webp`;
   }
   return img;
 }
@@ -66,7 +66,7 @@ function townPaletteSheet(id,img,palette) {
   return c;
 }
 /** A decoded PNG or a palette-adjusted Canvas both satisfy the frame contract. */
-export function townFrameReady(sheet,count=11) {
+export function townFrameReady(sheet,count=10) {
   const width=sheet?.naturalWidth||sheet?.width||0,height=sheet?.naturalHeight||sheet?.height||0;
   return width>=TOWN_FRAME_W*count && height>=TOWN_FRAME_H;
 }
@@ -75,6 +75,15 @@ function advPortrait(id){let img=advPortraits.get(id);if(!img){img=new Image();i
 export function townSprite(id,palette=null) {
   const img=townSheet(id);
   return img?.complete&&img.naturalWidth ? townPaletteSheet(id,img,palette) : null;
+}
+/** One painted pose of a person or animal at screen (sx, sy), feet there (a fallen body in the dungeon's remains). */
+export function drawFolkPose(ctx,spriteId,pose,sx,sy,flip=false,alpha=1) {
+  const sheet=townSprite(spriteId),f=townFrameOf(spriteId,pose);
+  if(!sheet||f<0)return false;
+  const H=66.7,W=H*TOWN_FRAME_W/TOWN_FRAME_H,foot=H*(TOWN_FRAME_H-TOWN_BASELINE)/TOWN_FRAME_H;
+  ctx.save();ctx.translate(Math.round(sx),Math.round(sy));if(flip)ctx.scale(-1,1);if(alpha<1)ctx.globalAlpha=alpha;
+  ctx.drawImage(sheet,f*TOWN_FRAME_W,0,TOWN_FRAME_W,TOWN_FRAME_H,-W/2,-H+foot,W,H);ctx.restore();
+  return true;
 }
 const MATERIALS = [
   [/water|moat|pond|river|stream|lake/, '#75b9be'],
@@ -423,17 +432,18 @@ function drawNpc(ctx, n) {
     ? replacementImage('npc_'+n.vendor.id) || classSprite(n.vendor.sprite,180)
     : n.adv ? advPortrait(n.adv)
     : !spriteId && (n.art && replacementImage(n.art) || classSprite(n.sprite||'paladin',180));
-  // a townsfolk cell is 256 x 192 with the feet on row 186; adult art is ~172 px tall, children smaller in the art
-  const H=64, W=H*TOWN_FRAME_W/TOWN_FRAME_H, foot=H*(TOWN_FRAME_H-186)/TOWN_FRAME_H;
+  // a people cell is 256 x 200 with the feet on row 194; adults are 172 px tall in it, animals their own size
+  const H=66.7, W=H*TOWN_FRAME_W/TOWN_FRAME_H, foot=H*(TOWN_FRAME_H-TOWN_BASELINE)/TOWN_FRAME_H;
   const vh=n.adv?54:58, vw=vendorArt?vh*vendorArt.width/vendorArt.height:0;
   const x = isoX(n.x, n.y), y = isoY(n.x, n.y);
-  const m=townMotion(n.animT||0,!!n.walking,n.emotionT>0?n.emotion:null,!!n.running);
-  const frame=townFrame(n), lying=(n.emotionT>0&&(n.emotion==='sleep'||n.emotion==='dead'||n.emotion==='dying'||n.emotion==='hurt'))||n.lying;
-  const ready=!!sheet&&townFrameReady(sheet,n.frameCount||11);
+  const m=townMotion(n.animT||0,!!n.walking,n.emotionT>0?n.emotion:null,!!n.running,n.animal?n.species:null);
+  const frame=townFrame(n), lying=isLying(n);
+  const ready=!!sheet&&townFrameReady(sheet,n.frameCount||10);
+  const tall=(n.idleH||(n.child?150:172))*H/TOWN_FRAME_H, sw=n.animal?Math.max(5,tall*0.42):13;
   const alpha=n.alpha??1;
   // shadow: wider when lying down
   ctx.fillStyle = `rgba(0,0,0,${0.36*alpha})`;
-  ctx.beginPath(); ctx.ellipse(x + m.dx, y, lying ? 22 : 13 - m.bob * 0.6, lying ? 7 : 6 - m.bob * 0.25, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x + m.dx, y, lying ? (n.animal ? sw * 1.4 : 22) : sw - m.bob * 0.6, (lying ? 7 : 6) * (n.animal ? Math.min(1, sw / 10) : 1) - m.bob * 0.25, 0, 0, TAU); ctx.fill();
   if (alpha < 1) ctx.globalAlpha = alpha;
   ctx.save();
   ctx.translate(Math.round(x + m.dx), Math.round(y - m.bob));
@@ -454,7 +464,7 @@ function drawNpc(ctx, n) {
     ctx.drawImage(vendorArt, -vw / 2, -vh * 0.5 - 4, vw, vh); top = vw * 0.6;
   } else if (ready) {
     drawRim(ctx, rim, sheet, frame * TOWN_FRAME_W, 0, TOWN_FRAME_W, TOWN_FRAME_H, -W / 2, -H + foot, W, H);
-    ctx.drawImage(sheet, frame * TOWN_FRAME_W, 0, TOWN_FRAME_W, TOWN_FRAME_H, -W / 2, -H + foot, W, H); top = (lying ? 20 : n.child ? 44 : 56) * m.sy;
+    ctx.drawImage(sheet, frame * TOWN_FRAME_W, 0, TOWN_FRAME_W, TOWN_FRAME_H, -W / 2, -H + foot, W, H); top = (lying ? Math.min(20, tall) : tall - 2) * m.sy;
   } else top = 50;
   ctx.restore();
   if (alpha < 1) ctx.globalAlpha = 1;
@@ -464,7 +474,7 @@ function drawNpc(ctx, n) {
     ctx.drawImage(glowSprite('#ffd060'), x - 6, y - vh - 18, 12, 12);
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
-  n.sbox = [x - 16, spriteY, x + 16, y];
+  n.sbox = n.animal ? [x - Math.max(8, sw * 1.2), spriteY, x + Math.max(8, sw * 1.2), y] : [x - 16, spriteY, x + 16, y];
   n.viewH = top; // next frame's see-through hole in walls/buildings in front of them
   // an emotion bubble over the head (not while a speech bubble is up)
   if (n.icon && n.iconT > 0 && !(n.talkT > 0)) n.iconRect = drawEmote(ctx, n.icon, x + 10, spriteY + 2, n.iconAge || 0, n.iconT, G.time + (n.idleSeed || 0));

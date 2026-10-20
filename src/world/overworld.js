@@ -2,6 +2,7 @@
 // Trees are collision walls, but the ground remains continuous; paths and quest landmarks are
 // protected before placing any trees. All randomness is based on a single seed for reproducibility.
 import { TileMap } from './map.js';
+import { wildScenario } from '../game/overworld.js';
 import { RNG } from '../core/util.js';
 import { A } from '../core/assets.js';
 import { TW } from '../core/view.js';
@@ -190,7 +191,7 @@ export function generateOverworld(depth,biome,seed) {
     throw new Error('Overworld generator produced unreachable objective; seed '+seed);
   return {map,props,buildings,wallHangings,townTiles,looks,spawns,chests,torches:[],
     start:ENTRY,exit:EXIT,shrine:SHRINE,sites:OVERWORLD_SITES,
-    scenarioId:(((seed >>> 0) ^ depth) >>> 0) % 20,seed};
+    scenarioId:wildScenario(((seed >>> 0) ^ depth) >>> 0),seed};
 }
 
 
@@ -324,5 +325,5 @@ function generateSeaOfSand(depth,biome,seed) {
   return {map,props,buildings:[],wallHangings:[],townTiles:floors,looks,spawns,chests,torches:[],
     start:ENTRY,exit:EXIT,shrine:scenarioSites[0],sites:Array.from({length:9},(_,i)=>{
       const [cx,cy]=scenarioSites[0];const a=i*Math.PI*2/8;return [cx+Math.cos(a)*7,cy+Math.sin(a)*6];
-    }),scenarioSites,scenarioCount,scenarioId:(((seed>>>0)^depth)>>>0)%20,seed};
+    }),scenarioSites,scenarioCount,scenarioId:wildScenario(((seed>>>0)^depth)>>>0),seed};
 }

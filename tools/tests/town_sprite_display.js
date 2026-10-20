@@ -1,5 +1,5 @@
-// Browser regression for original vendor art and generated 25-identity
-// townsfolk sprite sheets, including Canvas palette variants and knight poses.
+// Browser regression for original vendor art and the People and Animals sheets (every person loads, vendors keep
+// their painted art).
 // From repo root: python3 -m http.server 8123
 // Then: node tools/tests/town_sprite_display.js
 const {openGame,report}=require('./harness');
@@ -11,17 +11,17 @@ const {openGame,report}=require('./harness');
       const {townFrameReady,preloadTownSheets,townSprite}=await import('/src/game/render.js');
       const {TOWNSFOLK}=await import('/src/data/townsfolk.js');
       const canvas=document.createElement('canvas');
-      canvas.width=256*11;canvas.height=192;
+      canvas.width=256*10;canvas.height=200;
       const checks=[];
-      if(!townFrameReady(canvas,11))checks.push('Recolored Canvas sheet rejected');
-      if(townFrameReady(canvas,13))checks.push('Short non-knight sheet accepted for knight');
-      const knightIds=TOWNSFOLK.filter(n=>n.knight).map(n=>n.spriteId);
-      if(!(await preloadTownSheets(knightIds)).every(Boolean))
-        checks.push('A generated knight sheet failed to load');
-      for(const id of knightIds){
-        const sheet=townSprite(id,null);
-        if(!sheet||!townFrameReady(sheet,13))
-          checks.push('Knight palette Canvas not ready: '+id);
+      if(!townFrameReady(canvas,10))checks.push('A ten-emotion sheet was rejected');
+      if(townFrameReady(canvas,20))checks.push('A ten-emotion sheet passed for a twenty-emotion Greener sheet');
+      const ids=TOWNSFOLK.map(n=>n.spriteId);
+      if(!(await preloadTownSheets(ids)).every(Boolean))
+        checks.push('A people sheet failed to load');
+      for(const v of TOWNSFOLK){
+        const sheet=townSprite(v.spriteId,null);
+        if(!sheet||!townFrameReady(sheet,v.frame.count))
+          checks.push('People sheet not ready: '+v.spriteId);
       }
       return checks;
     });
