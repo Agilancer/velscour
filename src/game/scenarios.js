@@ -12,7 +12,7 @@ import { addEffect, Ring, Column, burst, sparkle, spawn, floatText, addLight, gl
 import { makeMonster } from './monster.js';
 import { ambush } from './mayhem.js';
 import { GroundItem, dropChest } from './loot.js';
-import { rollItem } from '../data/items.js';
+import { rollItem, rarityAt } from '../data/items.js';
 import { depthLevel } from '../data/depth.js';
 import { biomeScenario, TAGS } from '../data/biomerooms.js';
 import { TOWNSFOLK } from '../data/townsfolk.js';
@@ -120,7 +120,8 @@ function makeScenario(world, start, info, need) {
     for (const ch of world.chests) if (ch.scen === S) ch.opened = true;
     dropChest(world, { x, y, rare: true }, depth); dropChest(world, { x, y, rare: true }, depth);
     const p = G.player;
-    world.addLoot(new GroundItem(x, y + 0.3, 'item', { item: rollItem(lvl + 3, { rarity: legendary || chance(0.3) ? 5 : 4, mf: p ? p.st.magicFind : 0 }) }));
+    // an Epic, Legendary 30% of the time (always for a legendary scenario), Mythic 3%; gated by item level (rarityAt)
+    world.addLoot(new GroundItem(x, y + 0.3, 'item', { item: rollItem(lvl + 2, { rarity: rarityAt(lvl + 2, chance(0.03) ? 5 : legendary || chance(0.3) ? 4 : 3), mf: p ? p.st.magicFind : 0 }) }));
     addEffect(new Column(x, y, COLOR, 0.9, 30, 360)); sparkle(x, y, 24, '#ffd060', 24, 0.6);
     sfx('gate'); UI.centerMsg(S.title.toUpperCase(), 'Scenario complete: a hoard is yours', 2.8);
     UI.log(`<b style="color:${COLOR}">${S.title}</b> complete.`, COLOR);

@@ -14,6 +14,113 @@ Contents
 
 ---
 
+## October 20, 2026 — Rarity unlocks by item level (Epic 30, Legendary 45, Mythic 60)
+
+- **Request:** the user rolled a Boomerang Knight and had a Legendary at level 3 (on `main`, which still had the old
+  drop tables: PR #146 wasn't merged yet). Rarity odds should feel like other dungeon crawlers; drop counts are fine.
+  Then: Epic from level 30, Legendary 45, Mythic 60.
+- **Gates** (`RARITY[r].minIlvl` / `fullIlvl`, like Diablo II's quality levels): a rarity can't roll below its
+  minimum item level and its odds ramp to full by `fullIlvl`: Rare 3 -> 8, Epic 30 -> 40, Legendary 45 -> 60, Mythic
+  60 -> 80 (`rarityUnlock`, applied in `rollRarity(mf, bonus, ilvl)`, which `rollItem` passes). Every guaranteed
+  rarity steps down to the best one its item level allows (`rarityAt`): Dark Forest and Sea of Sand rewards, dungeon
+  scenario hoards (`src/game/scenarios.js`, merged from main: was Legendary + 30% Mythic, now Epic / Legendary 30% /
+  Mythic 3%), the cursed chest hoard, the tenth-depth gift, the peddler, vendor stock. The Dark Forest and Sea of Sand Mythic rolls
+  need item level 60. Sea of Sand's log names the rarity it gave; the Quest Log says "fine gear (Epic or better once
+  deep enough)".
+- **Odds once unlocked** (unchanged, plain kill): Common 71% / Uncommon 21% / Rare 6.1% / Epic 1.0% / Legendary 0.14%
+  / Mythic 0.011%. That is about D2's normal / magic / rare / set / unique split; Mythic is rarer than anything there.
+- **Tests:** `rarity.js` prints odds by item level and fails if any rarity rolls below its gate (even a boss at 300%
+  magic find) or if `rarityAt` lets one through; `sea_of_sand_generation.mjs` rolls at item level 70 and checks an
+  item level 10 route pays a Rare. A 25-minute Boomerang Knight soak (before the 30/45/60 change, with gates at
+  8/18/35) reached depth 11 / level 19 with no Legendary or Mythic. flow, happenings, scenarios, rings, ui pass.
+
+## October 19, 2026 — Level cap 600 (levels 301-600 are the Endless Torment's progression)
+
+- `MAX_LEVEL` 300 -> 600 (`src/game/player.js`). `xpToNext` is unchanged to level 240; past it a level costs
+  `L/240` times the level-240 price (was still growing ~L^3.5). A full-clearing hero is ~273 at Velscour (depth 500,
+  was ~269), then keeps pace with the Endless Torment's monsters: ~355 at depth 700 (monster level 348), ~495 at 1000
+  (483), and 600 around depth 1200 (573). Existing heroes keep their level.
+- `raidHpMul` stops growing at depth 500 (it had +1 a depth past 150 with no end); in the Endless Torment hero damage
+  falls behind monster life on its own (`endgame.js` barbarian: BOSS ROOM 47 s at depth 700, ~170 s at 1000, ~550 s
+  at 1200; normal hits stay 13-23% of life, BOSS ROOM hits 50-85%). That is the intended "truly mad" wall.
+- `tools/tests/endgame.js` now samples XP to depth 1300 and adds depths 700/1000/1200; `balance.js` and
+  `balance_model.mjs` cap at 600. The Death Knight's Runeblade keeps its last look (level 300's) above 300.
+- Tests: endgame (paladin, wizard, ranger, bard, barbarian), flow, hud, levelup, raid 55,450,700, data_check.
+
+## October 19, 2026 — Endgame balance pass: XP pacing, late monster damage, BOSS ROOMs, Velscour
+
+- **Request:** check enemy damage and the rest of the balance with calculations (no long simulations): still fun,
+  and Velscour (depth 500) beatable after enough grinding.
+- **Model:** new `tools/tests/endgame.js` (~1 min a class, no game simulation). It sums the XP of a built dungeon
+  every 20 depths and integrates the hero's level (full clears, and a "rusher" who kills 40% of each depth). Then at
+  13 depths it gears 3 heroes like `balance.js` (gear capped at the hero's level, since items need their level) and
+  compares auto-play's sheet numbers with that depth's monsters: seconds to kill a normal / guardian / BOSS ROOM /
+  Velscour, and % of life one hit of each takes (physical through armor / elemental through resistance).
+- **Found:** (1) a full-clearing hero hit the level cap (300) by depth ~160 (a rusher by ~250), so for the last 300+
+  depths nothing levelled and hero life stopped growing; (2) monster damage past level 140 grew 1.6% a level vs
+  ~0.6% for hero life, so by depth 450-500 a normal hit took 35-60% of life and BOSS ROOM bosses one-shot;
+  (3) Velscour had 40x a normal's life (less than a depth-500 guardian, 44x) and died in ~0.1 s; (4) BOSS ROOM life
+  stopped growing at depth 150, so deep ones died in 2-12 s while depth 10-40 ones took 20-90 s; (5) bounties paid
+  `60 * 1.11^level` XP: hundreds of levels per bounty past monster level ~150.
+- **Changes:** `xpToNext` x `(1 + (L/30)^1.5)` (`src/game/player.js`; early levels barely change); monster damage
+  past level 140 `1.016 -> 1.006` a level (`monsterBase`); `raidHpMul(depth)` keeps growing +1 a depth past 150
+  (`src/game/raid.js`); `VELSCOUR_HP` 45000 normals (~3x the last BOSS ROOM boss) and his damage x2.8 (was 2.4);
+  bounty XP `120 * level^1.5` (~30 kills).
+- **Result (6 classes, full clears):** hero level 12 / 53 / 98 / 151 / 207 / 240 / 265 at depth 10 / 40 / 80 / 160 /
+  300 / 400 / 500 (monster level 10 / 40 / 69 / 105 / 168 / 213 / 258); 300 is for grinders. (Later the same day the
+  cap became 600: see above.) Normal hits 2-10% of
+  life to depth 160, 12-19% from 250 to 500; champions ~1.4x that, guardians ~2x, BOSS ROOM bosses 45-70% (two
+  hits), Velscour 40-55%. BOSS ROOM fights 10-35 s at every depth past 40; Velscour 33-99 s. Defiance (8 stacks:
+  +80% life, 40% less damage) cuts a Velscour hit to ~15%. A rusher falls behind from depth ~350 (level 216 vs 258
+  at depth 500; normals 30-40% of life, BOSS ROOMs one-shot, Velscour ~15 min): they must grind, and auto-play's farm
+  mode (`huntGoal`: below monster level + 1) does. Normal monsters and guardians still die almost instantly past
+  depth 40 (hero damage outgrows monster life ~10x at depth 10, ~500x deep); left alone, the fights are the BOSS
+  ROOMs and Velscour.
+- **Tests:** endgame (6 classes, full + rush), raid 5,55,150,300,450 (depth 30 in the default set always lands on
+  the Sea of Sand, whose art isn't loaded in that test: an existing setup issue), boss, wanderers, flow,
+  balance_model, auto-play soaks (wizard/paladin 25 game min: same pace, no deaths). Seen once in a wizard soak:
+  `drawImage` on an unloaded biome scatter atlas (`render.js` `drawProp`), an existing art-loading race.
+
+## October 19, 2026 — Gear rarity overhaul: item level first, rarity worth a few levels, far rarer top tiers
+
+- **Request:** Mythic much harder to get, every other tier rarer too; a level 25 Rare must beat a level 10 Mythic;
+  gear should be replaced often as the hero levels (each level an upgrade); Epic, Legendary and Mythic each last a
+  little longer than the tier below.
+- **Power level** (`src/data/items.js`): every number on an item (base damage, armor, affix values, ring augment
+  power, legendary power stats) is rolled at `powerLevel(ilvl, rarity) = ilvl + RARITY[r].lv`, lv = 0/2/3/7/8/10.
+  `RARITY_BASE` and the per-rarity affix `mult` are gone. Tooltips show `Power N`.
+- **Lines:** every rarity rolls the same `CORE_LINES` (2) stat lines at `LINE_MULT` 1.5; rarer items add *perks* on
+  top: perk lines (`perk: 1` affixes: magic/gold find, XP, move speed, thorns, mana steal, projectile speed, boss
+  damage; `PERK_MULT` 0.7, gold text) Rare/Epic/Legendary 1, Mythic 2; sockets 1/2/3/3/4/4; a legendary power on
+  Legendary/Mythic whose stats scale with power level (`legendaryScale`: 15% -> full at power level 90; text from
+  `legendaryDesc`). Why equal lines: with this game's linear stat curves, one extra affix is worth roughly
+  "current level" item levels, so rarity can only be a fixed number of levels if every rarity carries about the
+  same line mass. +skill lines unlock by power level (`minPl`: trees 10, all skills 30) instead of rarity.
+- **Steeper level growth:** stats that scale (sc >= 0.01) grow 2x faster with power level, anchored at 80
+  (`affixScale`); capped stats (res, speeds, crit, block...) keep their gentle growth.
+- **Rings** (`src/data/rings.js`): `augPower(pl) = 0.6 + 0.008 pl`; Mythic rings split it over two augments (0.55
+  each); every other ring has one.
+- **Requirement:** `req = ilvl` (was 0.8 ilvl), so each level up opens new gear. Boss drops ilvl lvl+2 (+-1, was +3);
+  vendors stock the hero's level -2..0 and rarely above Rare; gambling rolls at the hero's level.
+- **Drop odds** (`rollRarity`, weights 70/21/6/1/0.14/0.012, boss/chest `bonus` per rarity, magic find `mfMul`):
+  plain kill Common 71% / Uncommon 21% / Rare 6.1% / Epic 1.0% / Legendary 0.14% / Mythic 0.012% (was 8.9 / 3.2 /
+  0.79 / 0.114); boss 17.6 / 3.6 / 0.6 / 0.06% (was 22.7 / 11 / 3.5 / 0.63%). Guaranteed sources cut too: Dark
+  Forest trials an Epic (Legendary 20%, the Heart 50%) + Mythic 1-5% (Heart 8%, was up to 60%); Sea of Sand beats an
+  Epic (Legendary 25%) + Mythic 2-10% (was a Legendary + up to 95%); cursed chest Mythic 3%; peddler Mythic 2%,
+  Legendary 15%; tenth-depth gift Legendary 12%. **Bug fixed:** Dark Forest and Sea of Sand rewards rolled at item
+  level `depth * 2`; now `depthLevel(depth) + 2`.
+- **Measured** (`tools/tests/rarity.js`, new): worth in Common item levels, 8 classes x hero levels 16-124:
+  Uncommon 2.0, Rare 5.0, Epic 7.7, Legendary 11.6, Mythic 15.8; a level 25 Rare beats a level 10 Mythic averaged over
+  slots and for the weapon and body alone (all 8 classes); Common and Rare items improve every single level.
+  Balance (best-of-200-drops hero, 5 classes vs the old code): depth 60-300 within noise (+-0.3 score; deep DPS
+  +5-30%), depth 5-20 0.3-1.0 lower (far fewer Rares/Epics early). 25-minute auto-play soaks: same depth pace, no
+  deaths, 9-32% more gear swaps, Legendary/Mythic drops way down.
+- **Existing saves:** old items keep their rolled numbers and requirement; their legendary power stats now scale
+  with power level (a low-level old Mythic's power got weaker).
+- Tests run: rarity, flow, ui, rings, hud, mobile, stash, happenings, scenarios, gear, dark_forest (only its frame
+  time check failed, on SwiftShader with another browser test running), sea_of_sand_generation, balance_model,
+  data_check.
+
 ## October 20, 2026 — Totem Master: the GREAT TOTEM is a 3D model (branch `feat/totem-3d`)
 
 - **Request:** replace the giant totem pole he summons (his signature, Spirit Pole) with a 3D model of a giant totem,
@@ -772,7 +879,8 @@ changes; each fix cites the commit that made the change.
 - The biome generates connected desert maps with 1–5 scenario areas and
   labyrinth-like cliff barriers. Scenario HUD shows the area, beat progress,
   and timer. Each cleared beat grants a guaranteed Legendary (weapon on beat
-  one, shield on beat two); Mythic chance rises to 95% on a five-beat run.
+  one, shield on beat two); Mythic chance rises to 95% on a five-beat run. (Oct 19: now an Epic, Legendary 25%,
+  Mythic up to 10%; see the rarity overhaul.)
 - Added `docs/SEA_OF_SAND.md` and the runtime and generation checks. Passed
   `tools/tests/data_check.mjs`, `tools/tests/sea_of_sand_generation.mjs`
   (100 deterministic map seeds), JavaScript parse checks, and `git diff
@@ -2223,16 +2331,17 @@ Summon attacks (`monster.js:416 summonAttack`) by `atk.type`:
 
 **Items.**
 - `rollItem` (`items.js:213`):
-  - Slot is random with weapon weighted x2. Rarity comes from `rollRarity`: common weight/(1+bonus), others `w*(1+mf/100)*(1+bonus*id)`.
+  - Slot is random with weapon weighted x2. Rarity comes from `rollRarity`: common weight/(1+bonus), others `w*(1+bonus*R.bonus)*mfMul(mf,id)`.
+  - Everything below uses the power level `pl = ilvl + RARITY[r].lv` (rarity overhaul, Oct 19).
   - `tier = clamp(floor((ilvl-1)/10),0,9)` gives the MATERIAL prefix. Base name index = `min(4, floor(tier/2))`.
-  - Weapon avg damage = `3.4*1.052^(ilvl-1)*W.dmg*(1+.012*ilvl)`; range [x.75, x1.25].
-  - Armor = `6*A.armor*1.045^(ilvl-1)*U(.85,1.15)`.
+  - Weapon avg damage = `3.4*1.052^(pl-1)*W.dmg*(1+.012*pl)`; range [x.75, x1.25].
+  - Armor = `6*A.armor*1.045^(pl-1)*U(.85,1.15)`.
   - Implicits: dagger crit 4; staff/wand/lute cast 8/10/5; shield block 8-16; orb dmgPct 6-14 + ilvl/10.
-  - Affix count is `randi(R.affixes)`, unique by stat, filtered by slot letter (W, O, H, B, G=hands, L, F) and `minRarity`, weighted by `w` (default 1).
-  - maxSockets = R.sockets (1/2/3/4/6). Initial sockets: 45% chance of `randi(0, ceil(max/2))`.
-  - Legendary picks a random `LEGENDARY` key. Epic and above get a random title. Uncommon and Rare get a prefix/suffix from the first non-implicit affix. `req = floor(ilvl*.8)`.
-- `affixValue` = `(min+(max-min)*roll)*(1+ilvl*sc)*R.mult`. When min>=1, max<=2 and sc==0 (skill affixes) it is `round(base)`.
-- `itemStats` = affixes (non-implicit x(1+.04*upg)) + `gemStats` + legendary `stats`. Weapon damage and armor scale with `upgMult = 1+.1*upg` (upg max 10, `vendor.js:207`).
+  - `CORE_LINES` (2) core affixes, then `R.perks` perk affixes (`perk: 1`); unique by stat, filtered by slot letter (W, O, H, B, G=hands, L, F, R) and `minPl`, weighted by `w` (default 1).
+  - maxSockets = R.sockets (1/2/3/3/4/4). Initial sockets: 45% chance of `randi(0, ceil(max/2))`.
+  - Legendary picks a random `LEGENDARY` key. Epic and above get a random title. Uncommon and Rare get a prefix/suffix from the first non-implicit affix. `req = ilvl`.
+- `affixValue` = `(min+(max-min)*roll)*affixScale(sc,pl)*(perk?PERK_MULT:LINE_MULT)`; `affixScale` = `1+pl*sc` for sc<0.01, else 2x steeper anchored at pl 80. When min>=1, max<=2 and sc==0 (skill affixes) it is `round(base)`.
+- `itemStats` = affixes (non-implicit x(1+.04*upg)) + `gemStats` + `legendaryStats(item)` (scaled by `legendaryScale(pl)`). Weapon damage and armor scale with `upgMult = 1+.1*upg` (upg max 10, `vendor.js:207`).
 - Gems: normal gem value = `v*GEM_MULT[tier]` with GEM_MULT = [1,1.8,3,4.5,6.5,9]. Integer stats (extraProj, chainPlus, pierce, homing, skillsAll) use `floor((tier+1)*v)`.
 - `rollGem`: tier = `floor(ilvl/16)`, minus 0-1 at 60% chance. Special chance = `.08+.0012*ilvl`. Gems stack (`player.js:467`) and socket into `item.gems:[{gem,tier}]` (`ui/inventory.js:63`).
 - Legendary behaviour lives in game code as `st.legendary.<key>` checks:
@@ -2275,12 +2384,14 @@ Summon attacks (`monster.js:416 summonAttack`) by `atk.type`:
   - lancer: str, spear+shield, 78/25 (8/1.5), Phalanx, Javelin, Valor
   - dragon_knight: str, sword, 72/30 (8/2), Flame, Scale, Draconic
   - gunner: dex, pistol, 55/35 (6/2.5), Firearms, Explosives, Engineering
-- `RARITY` (`items.js:4`), as weight / affix count / max sockets / affix multiplier:
-  - Common: 62 / 0-1 / 1 / 1
-  - Uncommon: 25 / 1-2 / 2 / 1
-  - Rare: 9 / 2-3 / 3 / 1.1
-  - Epic: 3.2 / 3-4 / 4 / 1.25
-  - Legendary: 0.8 / 4-5 / 6 / 1.4
+- `RARITY` (`items.js`), as weight / lv (power-level bonus) / perk lines / max sockets / boss bonus factor (plus
+  `minIlvl`/`fullIlvl` gates: Rare 3-8, Epic 30-40, Legendary 45-60, Mythic 60-80):
+  - Common: 70 / 0 / 0 / 1 / 0
+  - Uncommon: 21 / 2 / 0 / 2 / 1
+  - Rare: 6 / 3 / 1 / 3 / 1.6
+  - Epic: 1 / 7 / 1 / 3 / 2.2
+  - Legendary: 0.14 / 8 / 1 / 4 / 2.8
+  - Mythic: 0.012 / 10 / 2 / 4 / 3.4
 - `itemValue` (`items.js:297`) = `12*1.06^ilvl*[1,2.5,6,15,40][rarity]*(1+.15*affixCount)*(1+.2*sockets)*(1+.3*upg)`. Gems: `(special?400:60)*2.6^tier`. Buy price = value; sell = floor(value/4) (`vendor.js:129`).
 - Service costs (`items.js:303-306`):
   - upgrade: `60*1.06^ilvl*1.7^upg*(1+.5r)`
@@ -2324,7 +2435,7 @@ Summon attacks (`monster.js:416 summonAttack`) by `atk.type`:
   1. Append to `BIOMES` with every field. `roster` uses 12 ARCH ids; `el` must be an ELEM key; `ambient.type` must be one handled in `world.js:169`. It automatically joins `randomBiome`.
   2. The id is persisted in saves as `char.nextBiome`/`lastBiome`. An unknown id falls back to catacombs (`game.js:177`).
 - **New affix:**
-  1. Add `{s, t:'...{v}...', pre|suf, min, max, sc, slots:'WOHBGLF', w?, minRarity?}` to `AFFIXES`.
+  1. Add `{s, t:'...{v}...', pre|suf, min, max, sc, slots:'WOHBGLFR', w?, minPl?, perk?}` to `AFFIXES`.
   2. Make the stat do something: read `add.<s>` in `player.recompute` (`player.js:72-114`). `<el>Pct` for an ELEM key is picked up automatically (`player.js:17,115`).
   3. Non-affix stats need a label in `statLabel` (`items.js:324`).
 - **New gem:**

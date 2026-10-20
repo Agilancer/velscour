@@ -30,7 +30,8 @@ export const multN = (p) => Math.max(1, Math.round(p * 1.2));
 
 /** What an augment may target: one skill, a kind of skill, or every skill. */
 export const SCOPE_MUL = { skill: 1.6, kind: 1.0, all: 0.6 };
-const RARITY_POW = [0.6, 0.8, 1, 1.25, 1.6, 2];
+/** An augment's power by the ring's power level (item level + rarity worth, data/items.js powerLevel). */
+export const augPower = (pl) => 0.6 + pl * 0.008;
 export const RING_NAMES = ['Copper Band', 'Iron Ring', 'Silver Ring', 'Gold Ring', 'Jeweled Ring', 'Signet', 'Runed Seal', 'Star Loop', 'Abyssal Coil', 'Crown Ring'];
 export const KIND_NAMES = {
   melee: 'Melee', proj: 'Projectile', nova: 'Nova', aoe: 'Blast', beam: 'Beam', chain: 'Chain', wall: 'Wall', zone: 'Field', orbit: 'Orbit',
@@ -47,9 +48,12 @@ export function augmentable(sk) {
   return true;
 }
 
-/** Roll the augments of a new ring. learned: the hero's skills {id: points} (rings favour skills in use). */
-export function rollAugments(rarity, ilvl, classId, learned = {}) {
-  const n = rarity >= 5 ? 3 : rarity >= 4 ? 2 : 1;
+/**
+ * Roll the augments of a new ring of power level pl. learned: the hero's skills {id: points} (rings favour skills in
+ * use). Mythic rings split their power between two augments.
+ */
+export function rollAugments(rarity, pl, classId, learned = {}) {
+  const n = rarity >= 5 ? 2 : 1;
   const pool = (CLASS_SKILLS[classId] || []).filter(augmentable);
   const used = new Set(), out = [];
   for (let i = 0; i < n; i++) {
@@ -66,7 +70,7 @@ export function rollAugments(rarity, ilvl, classId, learned = {}) {
       a = { id, kind: pick(pool).kind };
     } else a = { id, all: true };
     const scope = a.sk ? 'skill' : a.kind ? 'kind' : 'all';
-    a.pow = Math.round(RARITY_POW[rarity] * (1 + ilvl * 0.006) * SCOPE_MUL[scope] * rand(0.85, 1.15) * 100) / 100;
+    a.pow = Math.round(augPower(pl) * (n > 1 ? 0.55 : 1) * SCOPE_MUL[scope] * rand(0.9, 1.1) * 100) / 100;
     out.push(a);
   }
   return out;

@@ -53,13 +53,16 @@ function rollMoves(arch, rank, variant, depth) {
   return n ? shuffle(all).slice(0, n) : null;
 }
 
+/** Demon Lord Velscour's life in normal monsters of his level: about three times the last BOSS ROOM boss. */
+export const VELSCOUR_HP = 45000;
 export function monsterBase(level) {
   return {
     // tuned hard: heroes should have to grind gear and levels to get past the BOSS ROOMs
     hp: 30 * Math.pow(1.068, level - 1),
-    // damage keeps its 1.058 a level to level 60, then grows slower (1.04, then 1.016 past 140): hero life and
-    // armor only grow with levels and gear, and at 1.058 a normal hit took ~45% of a geared hero's life by depth 160
-    dmg: 1.2 * (4.4 + Math.min(level, 10) * 0.24) * Math.pow(1.058, Math.min(level, 60) - 1) * Math.pow(1.04, clamp(level - 60, 0, 80)) * Math.pow(1.016, Math.max(0, level - 140)),
+    // damage keeps its 1.058 a level to level 60, then grows slower (1.04, then 1.006 past 140): hero life and
+    // armor only grow with levels and gear, and at 1.058 a normal hit took ~45% of a geared hero's life by depth 160;
+    // past 140 hero life grows ~0.6% a level (tools/tests/endgame.js), and 1.016 had normal hits at 35-60% by depth 500
+    dmg: 1.2 * (4.4 + Math.min(level, 10) * 0.24) * Math.pow(1.058, Math.min(level, 60) - 1) * Math.pow(1.04, clamp(level - 60, 0, 80)) * Math.pow(1.006, Math.max(0, level - 140)),
     xp: 4 * Math.pow(level, 1.5),
   };
 }
@@ -1372,7 +1375,8 @@ export function makeElite(m, rank, depth, world) {
   } else if (rank === 'boss') {
     const vel = m.arch === 'velscour';
     if (vel) { m.art = 'va_velscour'; m.artH = 94; m.swap = null; }
-    m.maxHp *= vel ? 40 : 14 + Math.min(depth, 120) / 4; m.dmg *= vel ? 2.4 : 1.9; m.xp *= vel ? 200 : 25;
+    // Velscour: the final fight (was 40x, less than a plain depth-500 guardian)
+    m.maxHp *= vel ? VELSCOUR_HP : 14 + Math.min(depth, 120) / 4; m.dmg *= vel ? 2.8 : 1.9; m.xp *= vel ? 200 : 25;
     m.aura = vel ? '#ff2000' : '#ff4020';
     m.scale = vel ? 1.6 : 1.9; m.r *= vel ? 1 : 1.6;
     m.ai = 'boss';

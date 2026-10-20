@@ -101,7 +101,7 @@ function payBounty(world, n) {
   add('item', { item: rollItem(lvl + 2, { mf: p ? p.st.magicFind : 0, bonus: 1 }) });
   if (chance(0.5)) add('item', { item: rollGem(lvl + 4) });
   add('gold', { amount: Math.round((40 + lvl * 9) * rand(0.8, 1.3)) });
-  if (p && G.char) { p.gainXp && p.gainXp(Math.round(60 * Math.pow(1.11, lvl))); }
+  if (p && G.char) { p.gainXp && p.gainXp(Math.round(120 * Math.pow(lvl, 1.5))); } // ~30 kills' worth (monsterBase xp); 60 * 1.11^lvl was hundreds of levels deep down
   n.say(pick(LINES.cheer), 4);
   addEffect(new Ring(at.x, at.y, 0.3, 2.5, 0.6, '#ffe080', 4));
   floatText(at.x, at.y, 80, 'BOUNTY COMPLETE', '#ffe080', 15, { life: 2 });

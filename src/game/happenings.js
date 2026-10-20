@@ -15,7 +15,7 @@ import { hit, aoe } from './combat.js';
 import { makeMonster, makeElite } from './monster.js';
 import { ambush } from './mayhem.js';
 import { GroundItem, dropChest } from './loot.js';
-import { rollItem, rollGem, potionItem, itemName, itemColor } from '../data/items.js';
+import { rollItem, rollGem, potionItem, itemName, itemColor, rarityAt } from '../data/items.js';
 import { depthLevel, isRaidDepth, FINAL_DEPTH } from '../data/depth.js';
 import { addToBag } from './player.js';
 import { UI } from '../ui/ui.js';
@@ -263,7 +263,7 @@ export function addCursed(world, [x, y]) {
           this.done = true;
           dropChest(world, { x, y, rare: true }, depth);
           dropChest(world, { x, y, rare: true }, depth);
-          if (chance(0.5)) world.addLoot(new GroundItem(x, y + 0.3, 'item', { item: rollItem(depthLevel(depth) + 3, { rarity: chance(0.25) ? 5 : 4, mf: p.st.magicFind }) }));
+          if (chance(0.5)) world.addLoot(new GroundItem(x, y + 0.3, 'item', { item: rollItem(depthLevel(depth) + 2, { rarity: rarityAt(depthLevel(depth) + 2, chance(0.03) ? 5 : chance(0.3) ? 4 : 3), mf: p.st.magicFind }) }));
           explosionFx(x, y, 2, 'holy', 'eruption');
           sfx('gate'); UI.centerMsg('CURSE BROKEN', 'The hoard is yours', 2.2);
           world.happen.cursed = null;
@@ -470,7 +470,7 @@ export function recordDepth(world, depth) {
   const p = G.player;
   UI.centerMsg(`DEPTH ${depth} CONQUERED`, 'A new record descent', 3);
   for (let i = 0; i < 6; i++) setTimeout(() => { if (G.world === world && p) firework(p.x + rand(-4, 4), p.y + rand(-4, 4)); }, i * 260);
-  world.addLoot(new GroundItem(p.x, p.y, 'item', { item: rollItem(depthLevel(depth) + 3, { rarity: chance(0.3) ? 4 : 3, mf: p.st.magicFind }) }));
+  world.addLoot(new GroundItem(p.x, p.y, 'item', { item: rollItem(depthLevel(depth) + 2, { rarity: rarityAt(depthLevel(depth) + 2, chance(0.12) ? 4 : 3), mf: p.st.magicFind }) }));
 }
 
 function firework(x, y) {
@@ -495,8 +495,8 @@ export const TOWN_EVENTS = {
     if (!list.length) return 'Nothing left to improve.';
     const it = pick(list); it.upg = (it.upg || 0) + 1; return `${itemName(it)} is now +${it.upg}.`;
   } },
-  peddler: { name: 'A Wandering Peddler', color: '#ff9a2a', text: 'Gifts you a treasure from the deep roads.', fn: (c) => {
-    const it = rollItem(Math.max(c.level, depthLevel(c.depth || 1)) + 1, { rarity: chance(0.15) ? 5 : chance(0.5) ? 4 : 3 });
+  peddler: { name: 'A Wandering Peddler', color: '#ff9a2a', text: 'Gifts you a treasure from the deep roads, made for your level.', fn: (c) => {
+    const it = rollItem(c.level, { rarity: rarityAt(c.level, chance(0.02) ? 5 : chance(0.15) ? 4 : chance(0.6) ? 3 : 2) });
     return addToBag(c, it) ? `Received <span style="color:${itemColor(it)}">${itemName(it)}</span>.` : 'Your bag was full, so the peddler shrugged and left.';
   } },
   lottery: { name: 'The Town Lottery', color: '#ffd040', text: 'Your ticket wins!', fn: (c) => { const g = Math.round(randi(30, 90) * (5 + depthLevel(c.depth || 1)) * (1 + Math.max(0, c.level - 60) * 0.04)); c.gold += g; return `Won ${g} gold.`; } },

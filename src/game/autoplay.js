@@ -10,7 +10,7 @@ import { MEASURE, NOTES, beatsOf } from '../data/notation.js';
 import { bardNoteFor, bardFitGain, bardPerforming } from './bard.js';
 import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, spearBarrageAreas, buffAmount, curseAmount, skillDuration, effLevel } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
-import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS } from '../data/items.js';
+import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS, powerLevel } from '../data/items.js';
 import { depthLevel, armorDiv } from '../data/depth.js';
 import { drawBiome } from '../data/biomes.js';
 import { augHits } from '../data/rings.js';
@@ -1663,7 +1663,7 @@ export const Auto = {
       let slot = 'weapon', low = Infinity;
       for (const s of SLOTS) {
         const it = c.equip[s];
-        const v = it ? it.ilvl * (1 + it.rarity * 0.4) : -1;
+        const v = it ? powerLevel(it.ilvl, it.rarity) : -1;
         if (v < low) { low = v; slot = s; }
       }
       const btn = [...document.querySelectorAll('.panel[data-panel="vendor"] .btn')].find((b) => b.textContent.startsWith({ weapon: 'Weapon', offhand: 'Off-hand', head: 'Head', body: 'Body', hands: 'Hands', legs: 'Legs', feet: 'Feet' }[slot] || 'Ring'));
