@@ -42,6 +42,106 @@ Contents
   were rewritten. `scenarios.js` and `overworld.js` cover the new ids. `castle_overworld.mjs` checks
   `CASTLE_SCENARIOS`.
 
+## October 19, 2026 — biome identity: art mixes, layouts, themed rooms, 20 scenarios per biome (branch `feat/biome-identity`)
+
+- Every dungeon biome has its own art mix (the Dark Forest pack now builds the cave biomes underground; borrowed floors,
+  props and town furniture), a layout style (crypt, hall, cave, maze, channel, ruin), 10-14 themed rooms out of 36
+  furnishing recipes, and 20 optional scenarios on 20 shared mechanics with biome-specific titles and wording.
+  Castle Keep floors re-cut (top faces only, seamless paving). Full write-up: [BIOME_ROOMS.md](BIOME_ROOMS.md).
+- Files: `src/data/biomerooms.js` (themes, tags, rooms, scenario words), `src/game/scenarios.js`, `STYLES`/`furnishRoom`
+  in `src/world/dungeon.js`, `ART` in `src/data/biomes.js`, `moreFloors`/`townProps` in `biomeTileSet`.
+- Tests: `biome_scenarios.js`, `biome_looks.js` (new); `data_check` counts borrowed floors and props.
+- Open: the scenarios aren't balance-tested at deep depths; auto-play completes them only when it happens upon them.
+
+## October 19, 2026 — helmets resized to the heads (branch `feat/helmet-sizing`)
+
+- **Request:** helmet placement looked decent but every class's helmets were a bit wide; give all classes a once-over.
+- **Done:** the exported helmets were ~26 px wide on 14-21 px skulls. `tools/nocturnegear.py build` now narrows them
+  (`HELM_SCALE`, `fit_helmet`: premultiplied box resample, 84% wide / 92% tall, 80% wide for Paladin, Necromancer,
+  Barbarian, Death Knight), anchored on the class's head centre and the helmet's bottom edge, so the visor stays over
+  the face and the bulky back shrinks most. Only `helmets/atlas.png` changed; gear `V` bumped to `nocturne-2`.
+- **Verified:** `closed_helms.js all` (all 16 classes clean; anchoring on the helmet's own centre had pushed the Slime
+  Lord's helms off its left-leaning head, hence the head anchor), sheets looked at, `herolook.js paladin,slime_lord`,
+  `flow.js`, `ui.js`, `select.js`.
+
+## October 19, 2026 — Ranger: the signature bird is a 3D golden phoenix (branch `feat/ranger-phoenix`)
+
+- **Request:** replace the Ranger's new bird (the spirit hawk of her signature, The Hunt) with a 3D model of a golden
+  phoenix, with particles trailing behind it as it flies.
+- **Model** (`src/gfx/phoenix3d.js`): built in code, no art file. Smooth body/neck/head with glowing eyes, ivory beak,
+  a three-plume crest, jointed wings (gold coverts, six flame-tipped secondaries, seven fanned primaries), five long
+  tail plumes ending in flame-shaped vanes. Posed every frame (beat with the hand lagging the arm, glides, wings swept
+  back for the stoop, crest and tail sway) and drawn with WebGL on its own small canvas like the Runeblade (lit from
+  the top-left, gold specular, a flame rim, emissive tips that burn brighter as feathers fill). The bird leans its back
+  0.35 rad toward the camera so a banked wing never goes edge-on in the iso view. `phoenixPoints` gives the wing,
+  tail and crest tips in the world. Without WebGL the old flat bird is drawn, recoloured gold.
+- **Flight** (`src/game/sigs/ranger.js`, `fly`): heading from its motion, pitch from climb/dive, banks into turns
+  (max 0.45 rad), beats for 1.6-3.2 s then glides for 1.2-2.4 s, bobs gently. Embers (`glow`, sparks and gold
+  feather flakes) fall away from the tail plumes, wing tips and crest, ~56/s on desktop, 26/s on phones, twice that
+  in the stoop, which also streaks flame and bursts fire on impact. The feather fan over her head is gold now.
+  Gameplay (quarry, feathers, stoop damage, Hunter's Focus) is unchanged.
+- **Not changed:** the Hawk Companion and Hawk Talons/Starhawk summons still use their pet sprites.
+- Tests: new `tools/tests/phoenix.js` (turntable, tips, flight bank/glide/embers, stoop; `mobile` arg).
+  `signatures.js ranger`, `flow.js`, `autoplay.js ranger 8`, `data_check.mjs` pass. Software GL: ~2 ms per draw.
+
+## October 19, 2026 — Boomerang Knight: every boomerang comes back (branch `feat/boomerang-return`)
+
+The user's ask: "BOOMERANGS RETURN TO THE PERSON THROWING THEM", in his skills and his damage balance, and the little
+blades circling him become larger blue boomerangs.
+- **All his thrown boomerangs and chakrams return** (`ret`): Ricochet, Chakram, Celestial Chakram, Gale Rang, Twin
+  Chakrams, Ricochet Storm, Thunder Return, Halo of Rangs and Thousand Rangs gained it. Rang Rain and Orbit Barrage
+  were rains from the sky; they are now thrown volleys (`proj ... rand ret pierce`) that fly home. Skill text reads
+  "Returns to your hand".
+- **Return flight** (`Projectile` in `src/game/hazards.js`, all classes): a returning projectile homes on the
+  thrower wherever he has moved and flies over walls (it used to stick against a wall until it timed out); it is
+  `caught()` within 0.55 tiles (a small sparkle). A bouncing boomerang ricochets foe to foe and flies home when its
+  bounces are spent (`turnAt`, `bounced`); a split boomerang's three children return too.
+- **Balance**: a returning boomerang hits on the way out and again on the way back, so the skills that newly return
+  got `dmg=` cuts (0.45-0.75; Celestial Chakram 1.6 -> 1.5) to keep their damage per cast where it was, measured on a
+  pack of dummies by `tools/tests/boomerang.js` (runs vary 10-20%). The two ring skills, the weakest in their trees,
+  end up a little stronger (Halo of Rangs ~340 -> ~600). Skills that already returned are unchanged.
+  `skillRange` now halves a returning projectile's range (it turns at half way), so the range shown, touch auto-aim and
+  auto-play agree; auto-play's power model counts the return trip (`hitsPerCast` x1.4 for `ret`).
+- **3D boomerangs** (`src/gfx/boomerang3d.js`, user ask: one 3D model, solid colours per ability with stripes near
+  the wing tips, sizes per ability, thrown properly at the game's isometric angle). Procedural, no art files: a thin
+  slab (two swept arms round an elbow; a spiked ring for chakrams). Under the parallel 2:1 projection a flat face is an
+  affine map, so each face is one transformed `Path2D` fill and the edge is the outline stacked 2-4 times along the
+  normal; a dark outline (four nudged copies), flat light shading, a glint strip that flashes once a turn, one spin
+  ghost and a ground shadow. Orientation = heading on the ground x bank about the flight line x spin in its own plane.
+  Thrown (`drawFlyingRang`, used by `Projectile.draw` for fx `rang`/`chakram`): leaves the hand near upright (bank
+  1.15), lays over flat by the turn (0.25), climbs ~9 px and drops back to the hand, leaning toward the camera so it
+  never goes edge-on. Orbits skim round him near flat. `RANG_SKINS` maps each skill name to colour, stripe colour and
+  size (`k`, on top of the skill's own `r`); skills pass `skin: sk.name` (skillrun.js). Wind Rang now flies as a
+  boomerang (fx `rang`, `wc=0.45` keeps its damage). Cost ~0.12 ms per boomerang in headless Chromium (old flat sprite
+  ~0.03); past 16 in one frame they drop outline, glint and blur.
+- **The Trick Shot's eight charge blades** are 3D blue boomerangs riding a ring above his helm (`ringDraw` in
+  `src/game/sigs/boomerang.js`; charged ones blue and spinning, the rest slate and still): the half behind his head draws
+  in the depth pass before him (`back`), the front half on top. The Trick Shot is a 3D gold boomerang.
+- Tests: new `tools/tests/boomerang.js` (damage per cast per skill, every blade caught standing, running and thrown at
+  walls, ring close-ups, in-play shots mid-throw, `boomerang_models.png` with every look at four angles,
+  `boomerang_film.png` with one throw frame by frame).
+
+## October 19, 2026 — class touch-ups: Paladin halo, Slime Lord gauge, the Runeblade as a familiar (branch `feat/class-touchups`)
+
+- **Paladin**: the Halo of Judgement sits higher over his head (`headAt(p, 12)`, was 6).
+- **Slime Lord**: the royal-jelly bead and its % sit higher (`headAt(p, 24)`, was 10), so the number clears his head.
+- **Death Knight, the sword**: the Runeblade now flies round him like a pet (`src/game/sigs/deathknight.js`): 12 idle
+  flight patterns (`PATTERNS`, a new one every 5-9 s), a swing for each kind of skill he casts (`SWINGS`, 12 motions,
+  visual only), five sword skills of its own (`PET`: Runic Lunge, Reaping Arc, Grave Plunge, Blade Waltz, Wheel of
+  Rime; signature hits, so they never charge the runes), a fast-move trail, a floor shadow, drawn behind him when it is
+  further from the camera. Details and numbers: [RUNEBLADE_3D.md](RUNEBLADE_3D.md#the-familiar).
+- **Death Knight, the skulls**: the skulls from his casts/hits and Death Coil now use the Velscour contact skull art
+  (`assets/ui/velscour_contact_skull.png`) recoloured to his frost palette at load, red eye dots removed (`src/gfx/dkskull.js`).
+- **Balance call, not measured**: the sword skills add damage (roughly 0.5x `power` per 2.6 s plus the AoE skills).
+  Worth a `balance.js death_knight` pass if the Death Knight now feels too strong.
+- **Follow-up**: the familiar is bigger (52 px, `RUNEBLADE_LEN` in `runeblade3d.js`), 3 far patterns (rove, dance,
+  scout) take it 2-3 tiles out about a third of the time, and the Rune Weapon summons are drawn as the same 3D blade at
+  the same size (`src/gfx/runeweapon.js`, hooked at the top of `Creature.draw`).
+- **Every sword he makes is the 3D blade**: thrown, orbiting, raining, cyclone and whirl `blade` effects from a Death
+  Knight become `dkblade` (`dkFx` in `hazards.js`, drawn in `shapes.js`). Note: PR #145 was merged before the Rune
+  Weapon commit landed, so that and this went out in a follow-up PR.
+- Tests: new `tools/tests/runeblade_familiar.js`.
+
 ## October 18, 2026 — Bard: a five-octave harpsichord, 2,000 two-bar melodies, two-handed performances (branch `feat/bard-harpsichord`)
 
 - **Instrument**: the piano and the old one-octave harpsichord are gone. The user's "Harpsichord 5 Octaves / 7
@@ -919,9 +1019,11 @@ Requirements, as stated (✅ = implemented in the draft):
   only format every browser decodes. Sample-backed sounds (`SAMPLES` in `src/core/audio.js`) cover melee swings, hits and
   blocks, bows, fire, cold, arcane, explosions, buffs, chests, doors, the exit gate and footsteps. Everything else, and
   anything still loading, uses the old procedural `SOUNDS`. **Music** (`MUSIC`): Hymn of the Abyss on the title screen,
-  Empty School in town (repeats after 30-70 s breaks), and nothing else: the user asked for all other music to be
-  removed, so dungeons, guardians and Velscour have ambience only (the other 8 songs are skipped by `MUSIC_KEEP` in
-  `tools/audiopack.py`; their source zips stay in `assets/source/audio/`). **Ambience** (`AMB`): every area
+  Empty School in town (repeats after 30-70 s breaks), and in every dungeon and overworld biome the `wilds` rotation:
+  Stone Room Reverberation 1 and 2 (the user's loose `.m4a` files in `assets/source/audio/`, always imported), shuffled,
+  never the same one twice running, 45-120 s ambience-only breaks between them, carrying on across levels. The other 8
+  songs in the zips are skipped by `MUSIC_KEEP` in `tools/audiopack.py`. The title screen has the song only, no ambience
+  (by request). **Ambience** (`AMB`): every area
   has 1-2 BG-loop beds. One plays at all times, drifting between soft and fuller every 10-25 s and sometimes
   crossfading to the other bed. It ducks to 45% under a song and swells in the breaks. The town uses Forest Night
   (Herrington Hollow is at dusk). There's a Settings slider for Ambience (`settings.amb`).
@@ -1596,8 +1698,8 @@ Do these in order, unless the user asks for something else. Their feedback after
     - Elements: `swing hit crit squish gore bones fire cold light arcane holy shadow poison acid blood phys`
     - Other: `explode shoot bow pickup gold orb potion levelup portal ui error boss die summon heal buff thud roar hurt block sonic note chest door gate step critping`
     - `SAMPLES[name]` = `{s: sample slugs, v: gain, layer: procedural sound on top, max: concurrent voices (3)}` takes priority once loaded. `step_stone|dirt|water|wood` are sample-only names.
-  - `playMusic(kind, {delay})`: `'title' | 'town'` (see `MUSIC`). No-op if that kind is already current. Entering a dungeon calls `stopMusic()`.
-  - `stopMusic(sec)`, `setAmbience(key)` (a biome id, `'town'` or `'title'`; see `AMB`), `stopAmbience(sec)`.
+  - `playMusic(kind, {delay})`: `'title' | 'town' | 'wilds'` (see `MUSIC`). No-op if that kind is already current. Entering a dungeon or overworld biome calls `playMusic('wilds', {delay: 4-24 s})`.
+  - `stopMusic(sec)`, `setAmbience(key)` (a biome id or `'town'`; see `AMB`), `stopAmbience(sec)`.
 - **assets.js**
   - `CLASS_IDS` (:4): 16 ids in sheet order.
   - `A`: `{classes, classScaled, hud, hudGeo, logo, potions, packs, chestImg, chestMeta, biomeSets}`. `packs[id]` holds a Promise while loading.
@@ -1981,7 +2083,7 @@ On the player side, acid uses poison resistance, and phys/arcane/holy/shadow/blo
 - `ring`: projectiles cover 360°, or a wall becomes a ring.
 - `arc`: melee arc in degrees. Default 115; cleave 170; thrust fx 36; spin fx 360.
 - `cleave`: sets the melee arc to 170.
-- Projectile behaviour: `pierce` (pierce 99), `bounce=N`, `chain=N` (proj and melee), `home`, `split` (splits into 3 on first hit), `ret` (boomerang), `lob`, `exp` (explodes), `spray` (frozen-orb shards), `dur` (projectile lifetime).
+- Projectile behaviour: `pierce` (pierce 99), `bounce=N`, `chain=N` (proj and melee), `home`, `split` (splits into 3 on first hit), `ret` (boomerang: turns at half range, or when its bounces are spent, and flies back to the thrower over walls), `lob`, `exp` (explodes), `spray` (frozen-orb shards), `dur` (projectile lifetime).
 - `pull`: proj pulls within 2.6; nova and aoe pull in; an aoe with dur implodes at x2 damage when it ends; also traps.
 - `delay`: aoe uses a Delayed hazard (meteor and nuke default to 0.85).
 - `cone`: beam becomes a cone.
@@ -2754,9 +2856,6 @@ See the `open_issues` field.
 - src/game/loot.js:109-116 — the itemIcon cache key ignores `size`. Gear icons are always pixelSprite scale 4 whatever the requested size.
 - src/data/skills.js:109,113 vs src/game/skillrun.js:54,139 — skillRange (used for melee approach and UI) omits the thrust x1.15 factor and uses cone 0.5 where castSkill uses 0.55.
 - src/game/combat.js:119 — a no-op `if` statement with a comment about the thorns curse (dead code).
-- src/data/skills.js `skillRange` — returning projectiles (`ret`, the Boomerang Knight's whole first tree) turn back at
-  half their range, so touch auto-aim and the skill range shown are twice what really lands. Auto-play uses its own
-  `reachOf()` with the 0.48 factor.
 
 ## Auto-play
 

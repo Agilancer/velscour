@@ -30,6 +30,8 @@ RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic']
 HELM_RARITIES = RARITIES[:5]
 FW, FH, CROWN, SOLE, PIN, CELL = 128, 192, 75, 183, (45, 63), 40
 BARE_SKIN = {'barbarian'}  # classes whose outfits show arms/chest: skin is masked over the whole body
+# the exported helmets are wider than the heads: (width, height) scale per class, height kept at the neck
+HELM_SCALE = {c: (.84, .92) for c in CLASSES} | {c: (.8, .92) for c in ('paladin', 'necromancer', 'barbarian', 'death_knight')}
 
 
 def rgba(path):
@@ -186,6 +188,23 @@ def warm_skin(rgb, v=.45, s0=.25, s1=.65):
     return (h[..., 0] >= 8) & (h[..., 0] <= 34) & (h[..., 1] > s0) & (h[..., 1] < s1) & (h[..., 2] > v)
 
 
+def fit_helmet(h, kx, ky, ax):
+    """Area-resample a 40x40 helmet cell by (kx, ky) about the head's centre column ax and the helmet's bottom edge."""
+    by = np.nonzero(h[..., 3].any(1))[0].max() + 1
+    p = h.astype(np.float32) / 255
+    p[..., :3] *= p[..., 3:4]
+    nw, nh = round(CELL * kx), round(CELL * ky)
+    s = np.stack([np.array(Image.fromarray(p[..., i]).resize((nw, nh), Image.BOX)) for i in range(4)], -1)
+    rgb, A = s[..., :3] / np.maximum(s[..., 3:4], 1e-4), s[..., 3]
+    out = np.zeros_like(h)
+    yy, xx = np.nonzero(A > .5)
+    ty, tx = yy + int(round(by - by * ky)), xx + int(round(ax - ax * kx))
+    ok = (ty >= 0) & (ty < CELL) & (tx >= 0) & (tx < CELL)
+    out[ty[ok], tx[ok], :3] = np.clip(rgb[yy[ok], xx[ok]] * 255 + .5, 0, 255)
+    out[ty[ok], tx[ok], 3] = 255
+    return out
+
+
 def head_offset(f, ref):
     """Where frame f's head is relative to ref's (the class's common armor), by matching the head's pixels."""
     rcx = int(round(head_cx(ref)))
@@ -238,7 +257,7 @@ def build():
         }
         (od / 'gear.json').write_text(json.dumps(meta, separators=(',', ':')))
         for k, r in enumerate(HELM_RARITIES):
-            helm_atlas[k * CELL:(k + 1) * CELL, ci * CELL:(ci + 1) * CELL] = rgba(d / f'helmet_{r}.png')
+            helm_atlas[k * CELL:(k + 1) * CELL, ci * CELL:(ci + 1) * CELL] = fit_helmet(rgba(d / f'helmet_{r}.png'), *HELM_SCALE[c], cx - PIN[0])
         print('built', c, int(mask.astype(bool).sum()), 'masked px')
     hd = OUT / 'helmets'
     hd.mkdir(exist_ok=True)

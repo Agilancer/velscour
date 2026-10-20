@@ -22,6 +22,7 @@ import { UI } from '../ui/ui.js';
 import { addEncounters } from './encounters.js';
 import { drawFolkPose } from './render.js';
 import { TOWNSFOLK } from '../data/townsfolk.js';
+import { setupScenario, scenarioTick } from './scenarios.js';
 
 // ------------------------------------------------------------------------------------------------ omens
 // A level-wide twist, announced on arrival. mon: applied to every enemy as it appears (ambushes too).
@@ -88,8 +89,10 @@ export function setupHappenings(world, start, gen) {
   dropOmen();
   world.onKill = onKill;
   world.happen = { t: 0, starT: rand(3, 6), streak: 0, streakT: 0, best: 0 };
+  world.scenario = null;
   if (world.kind !== 'dungeon' || world.raid || gen.raid || depth >= FINAL_DEPTH || world.biome.overworld) return;
   const H = world.happen;
+  setupScenario(world, start); // one of the biome's twenty optional set pieces (game/scenarios.js)
   // the omen
   if (chance(Math.min(0.45, 0.22 + depth * 0.004))) {
     H.omen = pick(OMEN_KEYS);
@@ -435,6 +438,7 @@ export function happeningsTick(world, dt) {
   if (H.impT !== undefined && H.impT > 0 && (H.impT -= dt) <= 0 && !(world.boss && world.boss.awake && !world.boss.dead)) spawnImp(world);
   impTick(world, dt);
   challengeTick(world, dt);
+  scenarioTick(world, dt);
 }
 
 /** About one of the hero's main-skill hits (for falling stars and shrine lightning). */

@@ -43,6 +43,7 @@ function hitsPerCast(sk, crowd) {
       if (m.bounce) h *= 1 + Math.min(m.bounce, extra + 1) * 0.5;
       if (m.chain) h *= 1 + Math.min(m.chain, extra + 1) * 0.5;
       if (m.split) h *= 1.25;
+      if (m.ret) h *= 1.4; // a boomerang cuts the pack again on its way home
       return h;
     }
     case 'nova': return (m.n || 1) * crowd * 0.9;
@@ -72,8 +73,8 @@ function castTime(p, sk) {
   if ((sk.kind === 'beam' && sk.m.dur) || sk.kind === 'whirl') t = Math.max(t, sk.m.dur || 2);
   return t;
 }
-/** How far a skill really reaches (returning projectiles turn back halfway). */
-const reachOf = (sk) => skillRange(sk) * (sk.kind === 'proj' && sk.m.ret ? 0.48 : 1);
+/** How far a skill really reaches (skillRange already halves a returning projectile's). */
+const reachOf = (sk) => skillRange(sk) * (sk.kind === 'proj' && sk.m.ret ? 0.96 : 1);
 /** How close the hero should stand to use a skill on target t. bold (0..1, Auto.boldness): ranged builds close in. */
 function engageRange(sk, t, bold = 0) {
   if (!sk) return 1.5;
@@ -808,6 +809,13 @@ export const Auto = {
         if (this.goTo(objective.x, objective.y, objective.reach||1.4, dt) && objective.use) objective.use();
         this.watchStuck(dt); return;
       }
+    }
+    // a dungeon scenario that needs the hero somewhere (a stone to hold, a soul to lead: game/scenarios.js)
+    const ds = w.scenario;
+    if (ds && ds.objective && !ds.done && !ds.failed && !foes.some((m) => !m.dead && Math.hypot(m.x - p.x, m.y - p.y) < 5)) {
+      this.setStatus('Completing ' + ds.title);
+      this.goTo(ds.objective.x, ds.objective.y, ds.objective.reach, dt);
+      this.watchStuck(dt); return;
     }
     // loot, chests, then the job at hand
     if (this.lootStep(w, dt)) { this.watchStuck(dt); return; }
