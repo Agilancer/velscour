@@ -45,13 +45,21 @@
         </button>
         <div id="minimap-wrap"><canvas id="minimap" width="200" height="188"></canvas><img id="minimap-ring" src="assets/ui/minimap_ring.webp" alt="" draggable="false"></div>
       </div>
-      <div id="hud-buttons">
-        <button class="hbtn" data-act="inventory" title="Inventory and hero (I)"><img src="assets/ui/btn_bag.webp" alt="Bag" draggable="false"><b id="stat-badge" class="badge hidden"></b></button>
-        <button class="hbtn" data-act="skills" title="Skill Tree (K)"><img src="assets/ui/btn_skills.webp" alt="Skills" draggable="false"><b id="sp-badge" class="badge hidden"></b></button>
-        <button class="hbtn" data-act="book" title="Skill Book (B)"><img src="assets/ui/btn_book.webp" alt="Book" draggable="false"></button>
-        <button class="hbtn" data-act="quest" title="Quest Log (Q)"><img src="assets/ui/btn_quest.webp" alt="Quest" draggable="false"></button>
-        <button class="hbtn" data-act="auto" id="auto-btn" title="Auto-play (P): the hero plays on autopilot"><img src="assets/ui/btn_auto.webp" alt="Auto" draggable="false"></button>
-        <button class="hbtn" data-act="menu" title="Menu (Esc)"><img src="assets/ui/btn_menu.webp" alt="Menu" draggable="false"></button>
+      <div id="hud-btncol">
+        <div id="hud-buttons">
+          <button class="hbtn" data-act="inventory" title="Inventory and hero (I)"><img src="assets/ui/btn_bag.webp" alt="Bag" draggable="false"><b id="stat-badge" class="badge hidden"></b></button>
+          <button class="hbtn" data-act="skills" title="Skill Tree (K)"><img src="assets/ui/btn_skills.webp" alt="Skills" draggable="false"><b id="sp-badge" class="badge hidden"></b></button>
+          <button class="hbtn" data-act="book" title="Skill Book (B)"><img src="assets/ui/btn_book.webp" alt="Book" draggable="false"></button>
+          <button class="hbtn" data-act="quest" title="Quest Log (Q)"><img src="assets/ui/btn_quest.webp" alt="Quest" draggable="false"></button>
+          <button class="hbtn" data-act="auto" id="auto-btn" title="Auto-play (P): the hero plays on autopilot"><img src="assets/ui/btn_auto.webp" alt="Auto" draggable="false"></button>
+          <button class="hbtn" data-act="menu" title="Menu (Esc)"><img src="assets/ui/btn_menu.webp" alt="Menu" draggable="false"></button>
+        </div>
+        <!-- the spectator's dials: auto-play's stance, the Greed lever, sealed treasures waiting in the bag -->
+        <div id="hud-dials">
+          <div id="stance" class="hidden" title="Auto-play's stance: how hard the hero presses in, when it drinks and when it runs"><button type="button" data-st="cautious">Cautious</button><button type="button" data-st="balanced">Balanced</button><button type="button" data-st="reckless">Reckless</button></div>
+          <div id="greed"><button type="button" class="gr-btn" data-d="-1" aria-label="Lower the Greed lever">&minus;</button><span class="gr-lever"><span class="gr-label">Greed</span><span id="greed-pips"></span></span><button type="button" class="gr-btn" data-d="1" aria-label="Raise the Greed lever">+</button><span id="hoard"></span></div>
+          <button id="sealed-btn" class="hidden" type="button" title="Break the seal on a sealed treasure"><i></i><span id="sealed-text"></span></button>
+        </div>
       </div>
     </div>
     <div id="boss-bar" class="hidden"><div id="boss-name"></div><div id="boss-track"><div id="boss-fill"></div></div><div id="boss-sub"></div></div>
@@ -76,7 +84,7 @@
       <div class="orb-text" id="mana-text"></div>
       <div id="xp-text"></div>
       <div id="hud-slots"></div>
-      <div id="madness"><button id="madness-btn" class="hidden" title="Unleash MADNESS (G): double damage and double speed for 30 seconds">MADNESS</button><div id="mad-track"><div id="mad-fill"></div><span id="mad-text">Madness</span></div></div>
+      <div id="madness"><button id="madness-btn" class="hidden" title="Unleash MADNESS (G): double damage and double speed for 30 seconds">MADNESS</button><button id="smite-btn" class="hidden" title="SMITE (F): arm it, then click or tap where the heavens should strike">SMITE</button><div id="mad-track"><div id="mad-fill"></div><span id="mad-text">Madness</span></div><div id="smite-track"><div id="smite-fill"></div><span id="smite-text">Smite</span></div></div>
       <div id="barbarian-rage" class="hidden" aria-label="Barbarian Rage"><div id="barbarian-rage-fill"></div><span id="barbarian-rage-text">Rage 0%</span></div>
     </div>
   </div>

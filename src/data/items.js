@@ -390,7 +390,12 @@ function ringName(item) {
   return `${AUGMENTS[a.id].word} ${item.baseName} of ${augTarget(a)}`;
 }
 
+/** Epic and better drop sealed (ui/sealed.js): no name, no colour, no stats until the player breaks the seal. */
+export const SEAL_RARITY = 3;
+export const SEALED_COLOR = '#ffdf8a';
+
 export function itemName(item) {
+  if (item.sealed) return 'Sealed Treasure';
   if (item.type === 'gem') return gemName(item.gem, item.tier);
   if (item.type === 'potion') return item.name;
   if (item.rname) return item.rname + (item.upg ? ` +${item.upg}` : '');
@@ -406,6 +411,7 @@ export function itemBaseLine(item) {
   return `${MATERIALS[item.tier].name} ${item.baseName}`;
 }
 export function itemColor(item) {
+  if (item.sealed) return SEALED_COLOR;
   if (item.type === 'gem') return GEMS[item.gem].special ? '#ff9a2a' : '#c8f0ff';
   if (item.type === 'potion') return '#ffffff';
   return RARITY[item.rarity].color;

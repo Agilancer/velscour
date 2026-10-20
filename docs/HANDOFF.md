@@ -14,6 +14,59 @@ Contents
 
 ---
 
+## October 20, 2026 — things to do while the hero plays: critters, SMITE, sealed treasures, stance, portal choice, Greed (branch `feat/spectator-play`)
+
+- **Request:** ideas to make auto-play more engaging "like the Madness bar", then: build gilded critters to tap, a
+  Divine Smite meter, sealed treasures for **Epic and better** (auto-play stops in town when they fill the bag), an
+  auto-play stance dial, a choice of three portals at each exit (auto-play picks after ~8 s) and a Greed lever.
+- **The tap layer** (`src/game/spectate.js`): `input.js` hands every canvas press to `G.tapHook` first; a claimed press
+  is swallowed, so it never moves the hero or sets auto-play's `overrideT` ("Manual control"). Claims: an armed SMITE,
+  then a critter under the finger. `spectateTick` (game.update) runs the critter clock and keeps the SMITE reticle up.
+- **Gilded critters** (`src/game/critters.js`): Gilded Wisp (gold), Starmoth (3.5% of a level in XP), Golden Scarab
+  (gold, 60% a gem), Prismatic Wisp (gold, XP, gem, potion). One at a time, every 40-85 s in dungeons/overworlds (not
+  town or a sealed BOSS ROOM), 3.5-7 tiles from the hero and on screen; 9-12 s to catch, then they fly/dig away. They
+  are 'top' vfx effects listed in `world.critters`, not creatures, so nothing fights them and auto-play ignores them.
+  Saves count `c.critters`.
+- **SMITE** (`src/game/smite.js`): `c.smite` 0..1 fills from kills (`happenings.onKill` -> `smiteKill`: normal 1,
+  champion 3, unique 6, guardian 12 of `SMITE_KILLS` 45; its own kills don't count). Full: the SMITE button (under
+  MADNESS; in portrait it sits above the MADNESS button) or **F** arms it; the next click/tap strikes a 3.4-tile blast:
+  `max(14 hero hits, a share of each foe's life)` (normal 90%, champion 40%, unique 28%, guardian 8%, raid boss 4%).
+  Right-click / Esc disarms. Never fired by auto-play.
+- **Sealed treasures** (`src/ui/sealed.js`): a `GroundItem` seals any gear of rarity >= `SEAL_RARITY` (3, Epic) whose
+  `sealed` is still undefined (`dropFromBag` marks opened items `false`, so they stay open). `itemName` -> "Sealed
+  Treasure", `itemColor` -> `SEALED_COLOR`, icon = a casket, tooltip hides everything but "Epic or better" and the item
+  level; it can't be equipped or sold. The SEALED chip under the HUD buttons (or Break the Seal / double-click in the
+  inventory) spins a reel (non-modal card, the game keeps running) that lands on the real rarity; Equip / Keep /
+  Next seal. Auto-play picks them up (always worth a slot) but never equips, sells, stashes or drops one; in town,
+  with fewer than `BAG_LOW` (14) free slots and sealed items in the bag, it stops before the portal ("Waiting in town:
+  break the seals…", `Auto.sealWaiting`, the chip pulses red). Tests that soak unattended set `G.autoOpenSeals = true`
+  (autoplay.js, balance.js) so auto-play opens them itself.
+- **Stance** (`STANCES` / `stanceOf` in autoplay.js, saved as `c.stance`, shown while auto-play is on): Cautious /
+  Balanced (the old numbers) / Reckless move `boldness()`, the life share where it turns timid, drinks a healing
+  potion, retreats to town, and how far it farms (`farm`, `lim` in `huntGoal`).
+- **Portal choice** (`game.portalChoice`, `biomeChoices` / `takeBiome` in biomes.js, `rollOmen` / `omenable` in
+  happenings.js): a cleared exit offers up to three biomes (all overworlds while the overworld guarantee is due; one
+  card at Velscour's throne), each with its pre-rolled omen (none for BOSS ROOMs, overworlds, Endless Torment). The
+  chosen omen rides on `c.nextOmen` ('none' for a quiet depth) and `setupHappenings` keeps its word. Both the manual
+  exit and auto-play's `leaveLevel` use it; with auto-play on, `game.tickPick` (runs while the dialog pauses the
+  world) counts `PICK_WAIT` (8 s) and then takes a portal with an omen if any; a tapped portal cuts the wait to 3 s and
+  auto-play takes that one. "Descend to Depth N" kept its label (flow.js).
+- **Greed** (`src/game/greed.js`, `c.greed` 0-5, `c.hoard` 0-50): read when a depth is built (from the next depth).
+  Per notch: +7% champion pack leaders, +12% pack size, +8% forced monster traits (`rollTrait(..., force)`), monsters
+  +10% life / +6% damage / +10% XP (marked as they appear, ambushes too, by `greedTick` in happeningsTick); pays
+  x(1 + 0.25 g) drops, x(1 + 0.3 g) gold, +20 g % magic find (`world.mfAdd`, read by dropLoot/dropChest). Clearing a
+  depth with the lever up adds g stacks to the Hoard (+2% drops and gold a stack, only while greedy). A death drops
+  the lever to 0 and loses the Hoard.
+- **HUD:** SMITE meter/button under MADNESS; stance switch, Greed lever (pips, -/+, Hoard) and the SEALED chip in
+  `#hud-dials` under the HUD buttons (a row under them on touch; hung below the button column in portrait). Help
+  screen lists the new controls.
+- **Tests:** new `tools/tests/spectate.js [mobile]` (37 checks through real clicks/taps; shots `spectate_*.png`).
+  Regression: flow, hud, mobile, select, ui, stash, rarity, happenings, mayhem, scenarios, data_check,
+  `autoplay wizard 8`, `autoplay paladin 8` pass.
+- **Open:** odds/numbers are first guesses (critter gap, SMITE kills and shares, Greed per notch, Hoard cap); ask the
+  user how they feel in play. Balance soaks with Greed raised haven't been run. Sealed items in the storage chest stay
+  sealed (only the bag's are counted).
+
 ## October 19, 2026 — more hero gear: collection 02 armors, helmet sets 02 and 03, 24 more finishes (branch `feat/gear-collection-02`)
 
 - **Request:** add `VELSCOUR_Collection_02_96_Armor_Source_Artwork.zip`, `VELSCOUR_Helmet_Set_02_Game_Exports.zip` and

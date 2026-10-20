@@ -129,6 +129,7 @@ export const Vendor = {
     const it = getItem(ref);
     if (!it) return false;
     if (ref.where === 'equip') { UI.log('Unequip it first.', '#ff8080'); return false; }
+    if (it.sealed) { UI.log('Break the seal first: nobody buys a sealed treasure.', '#ffdf8a'); sfx('error'); return false; }
     const n = it.type === 'gem' ? 1 : 1;
     const price = Math.max(1, Math.floor(itemValue(it) / 4)) * n;
     const sellIt = () => {

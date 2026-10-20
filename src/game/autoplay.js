@@ -5,6 +5,7 @@
 // simulation: apply the change, recompute the hero, score the result with charScore(), undo.
 import { G } from '../state.js';
 import { input } from '../core/input.js';
+import { sfx } from '../core/audio.js';
 import { dist, clamp, TAU, fmtInt, escapeHtml, angleDiff, angleTo } from '../core/util.js';
 import { MEASURE, NOTES, beatsOf } from '../data/notation.js';
 import { bardNoteFor, bardFitGain, bardPerforming } from './bard.js';
@@ -28,6 +29,18 @@ const OFFENSIVE = new Set(['melee', 'proj', 'nova', 'aoe', 'beam', 'chain', 'wal
 const CROWD = 2.2; // enemies a typical cast is expected to reach, for planning
 const CC = new Set(['fear', 'freeze', 'confuse', 'charm', 'stun']);
 const POT_TARGET = { hp: 16, mp: 8, rejuv: 4, fury: 2 };
+// The player's stance dial (HUD, saved as c.stance): how hard auto-play presses in. bold: added to boldness();
+// low: life share below which it turns timid; pot/potBoss: life share for a healing potion; retreat: life share for
+// running to town with nothing left to heal; farm: levels over the monsters before it stops clearing whole maps;
+// lim: how far (tiles) it detours for monsters on the way to the guardian.
+export const STANCES = {
+  cautious: { name: 'Cautious', bold: -0.3, low: 0.6, pot: 0.65, potBoss: 0.75, retreat: 0.35, farm: 3, lim: 18 },
+  balanced: { name: 'Balanced', bold: 0, low: 0.45, pot: 0.5, potBoss: 0.6, retreat: 0.22, farm: 1, lim: 12 },
+  reckless: { name: 'Reckless', bold: 0.35, low: 0.3, pot: 0.35, potBoss: 0.45, retreat: 0.12, farm: -2, lim: 6 },
+};
+export const stanceOf = (c = G.char) => STANCES[c && c.stance] || STANCES.balanced;
+/** Fewer free bag slots than this sends auto-play back to town (and sealed treasures can keep it there). */
+const BAG_LOW = 14;
 
 // ================================================================== power model
 const isWide = (sk) => (sk.m.arc ?? (sk.m.cleave ? 170 : sk.fx === 'spin' ? 360 : 115)) >= 170;
@@ -281,6 +294,8 @@ function simulate(p, mutate) {
 
 // ================================================================== small helpers
 function bagFree(c) { return c.bag.reduce((a, b) => a + (b ? 0 : 1), 0); }
+/** In town with the bag this full of sealed treasures: wait for the player to break the seals (ui/sealed.js). */
+function sealedWait(c) { return !G.autoOpenSeals && bagFree(c) < BAG_LOW && c.bag.some((b) => b && b.sealed); }
 function sellPrice(it) { return Math.max(1, Math.floor(itemValue(it) / 4)) * (it.type === 'gem' ? (it.count || 1) : 1); }
 function vendorNpc(w, id) { return w.npcs.find((n) => n.vendor && n.vendor.id === id); }
 function potionPrice(k, c) { return Math.round(POTION_PRICE[k] * (1 + c.level * 0.08)); }
@@ -313,7 +328,7 @@ export const Auto = {
 
   reset() {
     this.world = null; this.nav = null; this.path = null; this.goal = null; this.thinkT = 0; this.navT = 0;
-    this.town = null; this.transitT = 0; this.stuck = { t: 0, x: 0, y: 0, n: 0 }; this.jiggle = null;
+    this.town = null; this.sealWaiting = false; this.transitT = 0; this.stuck = { t: 0, x: 0, y: 0, n: 0 }; this.jiggle = null;
     this.target = null; this.dodge = null; this.retreat = false; this.ignore = new WeakSet(); this.lastSig = '';
     this.screenT = 0; this.lastCast = {}; this.stall = null; this.banT = 0; this.shun = new WeakMap(); this.giveUp = new WeakSet();
     this.lootFor = null; this.lootT = 0; this.wantCache = new WeakMap(); this.hurt = 0; this.lastHp = -1;
@@ -515,7 +530,7 @@ export const Auto = {
       const cur = simulate(p, () => () => {});
       let best = -1, bs = cur * 1.004 + 0.002, bslot = null;
       c.bag.forEach((it, i) => {
-        if (!it || it.type !== 'gear' || it.unid || (it.req || 1) > c.level) return;
+        if (!it || it.type !== 'gear' || it.unid || it.sealed || (it.req || 1) > c.level) return;
         const f = fitScore(p, it);
         if (f.s > bs) { bs = f.s; best = i; bslot = f.slot; }
       });
@@ -523,7 +538,7 @@ export const Auto = {
       if (best < 0) {
         this.worn = this.worn || new Set();
         c.bag.forEach((it, i) => {
-          if (best >= 0 || !it || it.type !== 'gear' || it.unid || (it.req || 1) > c.level || (it.slot !== 'body' && it.slot !== 'head') || this.worn.has(it.uid)) return;
+          if (best >= 0 || !it || it.type !== 'gear' || it.unid || it.sealed || (it.req || 1) > c.level || (it.slot !== 'body' && it.slot !== 'head') || this.worn.has(it.uid)) return;
           const old = c.equip[it.slot];
           if (old && (it.rarity < old.rarity || it.ilvl < old.ilvl - 4)) return;
           if (fitScore(p, it).s > cur * 0.975) { best = i; bslot = it.slot; }
@@ -582,7 +597,7 @@ export const Auto = {
     if (g.kind !== 'item') return false;
     const it = g.item, free = bagFree(c);
     if (it.type === 'gem') return free > 0 || c.bag.some((b) => b && b.type === 'gem' && b.gem === it.gem && b.tier === it.tier) || this.worstBag(itemValue(it)) >= 0;
-    if (it.type !== 'gear') return free > 0;
+    if (it.type !== 'gear' || it.sealed) return free > 0; // a sealed treasure is Epic or better: always worth a slot
     const upgrade = (it.req || 1) <= c.level && this.isUpgrade(it);
     if (upgrade) return true;
     if ((it.slot === 'body' || it.slot === 'head') && (it.req || 1) <= c.level && (!c.equip[it.slot] || it.rarity >= c.equip[it.slot].rarity) && free > 0) return true; // new looks
@@ -599,7 +614,7 @@ export const Auto = {
   worstBag(than) {
     const c = G.char;
     let wi = -1, wv = than * 0.8;
-    c.bag.forEach((b, i) => { if (b && b.type === 'gear' && sellPrice(b) * 4 < wv) { wv = sellPrice(b) * 4; wi = i; } });
+    c.bag.forEach((b, i) => { if (b && b.type === 'gear' && !b.sealed && sellPrice(b) * 4 < wv) { wv = sellPrice(b) * 4; wi = i; } });
     return wi;
   },
   makeRoom(it) {
@@ -751,7 +766,7 @@ export const Auto = {
     // retreat to the town portal when nearly dead with nothing left to heal with
     const healLeft = c.potions.hp + c.potions.rejuv > 0 || this.readySkill((s) => s.kind === 'heal');
     const sealed = w.raid && w.raid.sealed; // no way out of a sealed boss room
-    if (!this.retreat && p.hp < p.maxHp * 0.22 && !healLeft && foes.length && !sealed) this.retreat = true;
+    if (!this.retreat && p.hp < p.maxHp * stanceOf(c).retreat && !healLeft && foes.length && !sealed) this.retreat = true;
     if (this.retreat && (p.hp > p.maxHp * 0.75 || !foes.length && p.hp > p.maxHp * 0.5)) this.retreat = false;
     if (this.retreat) {
       const tp = w.portals.find((q) => q.type === 'town');
@@ -861,13 +876,14 @@ export const Auto = {
   /** The next monster to walk to: the boss, unless the hero is under-levelled or something is close by. */
   huntGoal(w) {
     const p = G.player, c = G.char;
-    const farm = c.level < depthLevel(w.depth) + 1; // the monster level, not the raw depth (they part after depth 60)
+    const S = stanceOf(c);
+    const farm = c.level < depthLevel(w.depth) + S.farm; // the monster level, not the raw depth (they part after depth 60)
     let best = null, bd = Infinity;
     for (const m of w.creatures) {
       if (m.dead || m.team !== 'enemy' || m.targetable === false || this.giveUp.has(m)) continue;
       const d = this.navDist(m.x, m.y);
       if (d === Infinity) continue;
-      const lim = m.goblin ? 60 : farm ? 999 : 12;
+      const lim = m.goblin ? 60 : farm ? 999 : S.lim;
       if (m !== w.boss && d > lim) continue;
       const v = m === w.boss ? d + (farm ? 40 : 0) : m.goblin ? d - 30 : d;
       if (v < bd) { bd = v; best = m; }
@@ -914,16 +930,18 @@ export const Auto = {
     const c = G.char;
     const next = w.depth + 1;
     const town = this.needTown();
+    this.transitT = 3;
+    // the three portals down (game.portalChoice): the player has a few seconds to pick before auto-play does
+    if (G.game.portalChoice) { G.game.portalChoice(w, { auto: true, town }); return; }
     c.depth = next;
     c.nextBiome = drawBiome(c, next);
-    this.transitT = 3;
     if (town) { G.ui.log('Auto-play heads back to town to trade.', '#8fe0ff'); G.game.enterTown(); }
     else G.game.enterDungeon();
   },
   needTown() {
     const c = G.char;
     this.sinceTown = (this.sinceTown || 0) + 1;
-    if (bagFree(c) < 14) return true;
+    if (bagFree(c) < BAG_LOW) return true;
     if (c.potions.hp < 5 && c.gold > potionPrice('hp', c) * 6) return true;
     if (this.sinceTown >= 4 && c.gold > 400 * Math.pow(1.06, c.level)) return true;
     return false;
@@ -1058,7 +1076,8 @@ export const Auto = {
     const hpK = p.hp / p.maxHp;
     const regen = p.potionRegen.some((r) => r.hp > 0);
     if (hpK < 0.28 && c.potions.rejuv > 0) return p.usePotion('rejuv');
-    if (hpK < (boss ? 0.6 : 0.5) && !regen && c.potions.hp > 0) return p.usePotion('hp');
+    const S = stanceOf(c);
+    if (hpK < (boss ? S.potBoss : S.pot) && !regen && c.potions.hp > 0) return p.usePotion('hp');
     if (hpK < 0.35 && !regen && c.potions.rejuv > 0) return p.usePotion('rejuv');
     const main = SKILLS[c.bar[0]];
     const needMana = main && manaCost(main, effLevel(p, main)) > 0;
@@ -1108,9 +1127,10 @@ export const Auto = {
   boldness() {
     const p = G.player, w = G.world, c = G.char;
     const hpK = p.hp / p.maxHp;
-    let k = 0.55 + clamp((c.level - depthLevel(w.depth || 1)) / 8, -0.5, 0.4) + (hpK - 0.7) * 0.9 - this.hurt * 4;
+    const S = stanceOf(c);
+    let k = 0.55 + S.bold + clamp((c.level - depthLevel(w.depth || 1)) / 8, -0.5, 0.4) + (hpK - 0.7) * 0.9 - this.hurt * 4;
     if (w.boss && !w.boss.dead && w.boss.awake && dist(p.x, p.y, w.boss.x, w.boss.y) < 12) k -= 0.25;
-    if (hpK < 0.45) k = Math.min(k, 0.15);
+    if (hpK < S.low) k = Math.min(k, 0.15);
     return clamp(k, 0, 1);
   },
 
@@ -1405,6 +1425,15 @@ export const Auto = {
     while (T.phase === 'walk' && T.t === 0 && T.steps[T.i] && T.steps[T.i].want && !this.wants(T.steps[T.i].want)) T.i++;
     const step = T.steps[T.i];
     if (!step) {
+      // sealed treasures fill the bag: wait here until the player breaks enough seals (ui/sealed.js)
+      this.sealWaiting = sealedWait(c);
+      if (this.sealWaiting) {
+        const n = c.bag.filter((b) => b && b.sealed).length;
+        this.setStatus(`Waiting in town: break the seals on ${n} treasure${n > 1 ? 's' : ''}`);
+        if (!T.sealNote) { T.sealNote = true; G.ui.centerMsg('YOUR BAG IS FULL', `Break the seals on your treasures: auto-play waits in town`, 4); G.ui.log(`Auto-play waits in town: <b style="color:#ffdf8a">${n} sealed treasure${n > 1 ? 's' : ''}</b> fill the bag. Tap SEALED (or open them in the inventory) to break the seals.`, '#ffdf8a'); sfx('error'); }
+        return;
+      }
+      if (G.autoOpenSeals && bagFree(c) < BAG_LOW && c.bag.some((b) => b && b.sealed)) { for (const b of c.bag) if (b && b.sealed) b.sealed = false; T.i = 0; T.steps = this.townPlan(); return; } // tests: open them and shop again
       // done: through the portal
       const po = w.portals[0];
       this.setStatus(`To the portal — Depth ${c.depth}`);
@@ -1451,7 +1480,7 @@ export const Auto = {
     const steps = [];
     if (c.stash && c.stash.some((b) => b && (b.type === 'gem' || (b.req || 1) <= c.level))) steps.push({ stash: true, label: 'Checking the storage chest', fn: () => this.unstash() });
     const gear = (k) => () => this.gearGain(Vendor.stock[k]);
-    steps.push({ vendor: 'weapons', label: 'Selling loot', want: () => c.bag.some((b) => b && b.type !== 'gem') || this.gearGain(Vendor.stock.weapons), fn: () => { this.sellJunk(); this.buyGear(Vendor.stock.weapons); } });
+    steps.push({ vendor: 'weapons', label: 'Selling loot', want: () => c.bag.some((b) => b && b.type !== 'gem' && !b.sealed) || this.gearGain(Vendor.stock.weapons), fn: () => { this.sellJunk(); this.buyGear(Vendor.stock.weapons); } });
     steps.push({ vendor: 'alchemist', label: 'Buying potions', want: () => this.potionsWanted(), fn: () => this.buyPotions() });
     steps.push({ vendor: 'armor', label: 'Browsing armor', want: gear('armor'), fn: () => this.buyGear(Vendor.stock.armor) });
     if (c.bag.some((b) => b && b.type === 'gem') || c.gold > 2000) steps.push({ vendor: 'gems', label: 'Visiting the gem merchant', fn: () => this.gemShop() });
@@ -1459,7 +1488,7 @@ export const Auto = {
     steps.push({ vendor: 'upgrade', label: 'Upgrading gear', want: () => this.equipped().some((it) => (it.upg || 0) < 10 && upgradeCost(it) <= this.budget(0.45)), fn: () => this.blacksmith() });
     steps.push({ vendor: 'enchant', label: 'Enchanting gear', want: () => this.equipped().some((it) => it.rarity >= 1 && enchantCost(it, true) <= this.budget(0.2)), fn: () => this.enchanter() });
     steps.push({ vendor: 'gamble', label: 'Gambling', want: () => c.gold >= Math.round(180 * Math.pow(1.065, Math.max(c.level, depthLevel(c.depth || 1)))) * 8 && bagFree(c) >= 3, fn: () => { this.gamble(); this.sellJunk(); } });
-    steps.push({ stash: true, label: 'Stashing gems and gear for later', want: () => c.bag.some((b) => b && (b.type === 'gem' || (b.type === 'gear' && (b.req || 1) > c.level && b.rarity >= 2))), fn: () => this.stashExtras() });
+    steps.push({ stash: true, label: 'Stashing gems and gear for later', want: () => c.bag.some((b) => b && !b.sealed && (b.type === 'gem' || (b.type === 'gear' && (b.req || 1) > c.level && b.rarity >= 2))), fn: () => this.stashExtras() });
     return steps;
   },
   wants(f) { try { return !!f(); } catch (e) { return true; } },
@@ -1490,7 +1519,7 @@ export const Auto = {
     const c = G.char;
     let n = 0;
     c.bag.forEach((it, i) => {
-      if (!it || !(it.type === 'gem' || (it.type === 'gear' && (it.req || 1) > c.level && it.rarity >= 2))) return;
+      if (!it || it.sealed || !(it.type === 'gem' || (it.type === 'gear' && (it.req || 1) > c.level && it.rarity >= 2))) return;
       if (addToStash(c, it)) { c.bag[i] = null; n++; }
     });
     // a full chest: make room by dropping the weakest stored gear (lowest rarity, then item level)
@@ -1514,7 +1543,7 @@ export const Auto = {
     let gold = 0, n = 0;
     const future = {};
     c.bag.forEach((it, i) => {
-      if (!it) return;
+      if (!it || it.sealed) return; // only the player breaks a seal
       if (it.type === 'gem') {
         const top = Math.max(0, ...SLOTS.flatMap((s) => (c.equip[s] ? c.equip[s].gems.map((g) => g.tier) : [])), ...c.bag.filter((b) => b && b.type === 'gem').map((b) => b.tier));
         if (bagFree(c) > 15 || GEMS[it.gem].special || it.tier >= top - 1) return;

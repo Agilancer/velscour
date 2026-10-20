@@ -11,6 +11,7 @@ import { addToBag } from '../game/player.js';
 import { GroundItem } from '../game/loot.js';
 import { classSprite } from '../core/assets.js';
 import { heroPortrait } from '../core/gearart.js';
+import { openSeal } from './sealed.js';
 
 const DOLL = { head: [2, 1], weapon: [1, 2], body: [2, 2], offhand: [3, 2], hands: [1, 3], legs: [2, 3], feet: [2, 4], ring1: [4, 1], ring2: [4, 2], ring3: [4, 3], ring4: [4, 4] };
 
@@ -32,6 +33,7 @@ export function equipFromBag(idx, slot) {
   const c = G.char, it = c.bag[idx];
   if (!it || it.type !== 'gear') return false;
   if (it.unid) { UI.log('Identify it first (buy it from the Gambler).', '#ff8080'); return false; }
+  if (it.sealed) { UI.log('Break the seal first.', '#ffdf8a'); return false; }
   if ((it.req || 1) > c.level) { UI.log(`Requires level ${it.req}.`, '#ff8080'); sfx('error'); return false; }
   const to = slot && fitsSlot(it, slot, c.classId) ? slot : slotFor(c.equip, it, c.classId);
   const old = c.equip[to];
@@ -72,6 +74,7 @@ export function socketGem(gemIdx, target) {
 export function dropFromBag(idx) {
   const c = G.char, it = c.bag[idx], p = G.player;
   if (!it || !G.world) return false;
+  if (it.type === 'gear' && it.sealed === undefined) it.sealed = false; // already opened: it doesn't seal again on the floor
   c.bag[idx] = null;
   const g = new GroundItem(p.x, p.y, it.type === 'potion' ? 'potion' : 'item', { item: it });
   g.t = -1.5; // don't instantly re-pick
@@ -125,13 +128,14 @@ function bagSlot(idx) {
     onDropWorld: (data) => (data.where === 'bag' ? dropFromBag(data.idx) : false),
   });
   droppable(d, (data) => handleDropOnBag(idx, data), (data) => data.type === 'item' || data.type === 'shop' || data.type === 'stash');
-  if (it) UI.tip(d, () => itemTooltip(c.bag[idx], { compare: c.bag[idx] && c.bag[idx].slot ? c.equip[slotFor(c.equip, c.bag[idx])] : null, price: G.ui.vendor && G.ui.vendor.active ? Math.max(1, Math.floor(itemValue(c.bag[idx]) / 4)) : 0, priceLabel: 'Sells for', hint: G.ui.vendor && G.ui.vendor.active ? 'Right-click to sell' : G.ui.stash && G.ui.stash.active ? 'Right-click to store' : it.type === 'gear' ? 'Right-click / double-click to equip' : it.type === 'gem' ? 'Drag onto gear to socket' : '' }));
+  if (it) UI.tip(d, () => itemTooltip(c.bag[idx], { compare: c.bag[idx] && c.bag[idx].slot ? c.equip[slotFor(c.equip, c.bag[idx])] : null, price: G.ui.vendor && G.ui.vendor.active ? Math.max(1, Math.floor(itemValue(c.bag[idx]) / 4)) : 0, priceLabel: 'Sells for', hint: G.ui.vendor && G.ui.vendor.active ? 'Right-click to sell' : G.ui.stash && G.ui.stash.active ? 'Right-click to store' : it.sealed ? 'Right-click / double-click to break the seal' : it.type === 'gear' ? 'Right-click / double-click to equip' : it.type === 'gem' ? 'Drag onto gear to socket' : '' }));
   return d;
 }
 
 function quickUse(idx) {
   const c = G.char, it = c.bag[idx];
   if (!it) return;
+  if (it.sealed && !(G.ui.stash && G.ui.stash.active)) { openSeal(idx); return; }
   if (G.ui.vendor && G.ui.vendor.active) { G.ui.vendor.sell({ where: 'bag', idx }); return; }
   if (G.ui.stash && G.ui.stash.active) { G.ui.stash.store(idx); return; }
   if (it.type === 'gear') equipFromBag(idx);
@@ -169,12 +173,13 @@ function detailBox() {
   row.style.marginTop = '8px';
   const btn = (label, fn, cls = 'small') => { const b = el('button', 'btn ' + cls, label); b.onclick = () => { sfx('ui'); fn(); }; row.appendChild(b); };
   if (sel.where === 'bag') {
-    if (it.type === 'gear') btn('Equip', () => equipFromBag(sel.idx));
+    if (it.sealed) btn('Break the Seal', () => openSeal(sel.idx), 'small red');
+    else if (it.type === 'gear') btn('Equip', () => equipFromBag(sel.idx));
     if (it.type === 'gem') {
       const targets = [...SLOTS.map((s) => ({ where: 'equip', slot: s })), ...G.char.bag.map((b, i) => ({ where: 'bag', idx: i }))].filter((r) => { const x = getItem(r); return x && x.type === 'gear' && x.gems.length < x.sockets; });
       if (targets.length) btn(`Socket (${targets.length} items)`, () => pickSocketTarget(sel.idx, targets));
     }
-    if (G.ui.vendor && G.ui.vendor.active) btn(`Sell (${fmtInt(Math.max(1, Math.floor(itemValue(it) / 4)))}g)`, () => G.ui.vendor.sell(sel));
+    if (G.ui.vendor && G.ui.vendor.active && !it.sealed) btn(`Sell (${fmtInt(Math.max(1, Math.floor(itemValue(it) / 4)))}g)`, () => G.ui.vendor.sell(sel));
     btn('Drop', () => dropFromBag(sel.idx), 'small red');
   } else {
     btn('Unequip', () => unequip(sel.slot));

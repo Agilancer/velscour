@@ -24,6 +24,7 @@ export function itemCell(item) {
     d.appendChild(s);
   }
   if (item.unid) d.appendChild(el('span', 'upg', '?'));
+  if (item.sealed) d.classList.add('sealed');
   return d;
 }
 
@@ -31,7 +32,7 @@ export function rarityClass(item) {
   if (!item) return '';
   if (item.type === 'gem') return GEMS[item.gem].special ? 'r4' : 'r2';
   if (item.type !== 'gear') return 'r0';
-  return 'r' + item.rarity;
+  return item.sealed ? 'rs' : 'r' + item.rarity;
 }
 
 export function itemTooltip(item, opts = {}) {
@@ -47,6 +48,8 @@ export function itemTooltip(item, opts = {}) {
     h += `<div class="tt-sep"></div><div class="dim">Drag onto gear with a free socket to insert.${item.tier < MAX_GEM_TIER ? ' Fuse 3 (or refine 1) at the Gem Forge (Gem Merchant) for the next grade.' : ''}</div>`;
   } else if (item.type === 'potion') {
     h += `<div class="dim">${POTION_INFO[item.kind]}</div>`;
+  } else if (item.sealed) {
+    h += `<div class="tt-base">Epic or better · Item Level ${item.ilvl}</div><div style="color:${col}">What lies inside is anyone's guess until the seal is broken.</div><div class="tt-sep"></div><div class="dim">${G.touch ? 'Tap' : 'Click'} <b>Break the Seal</b>, or the SEALED button on the HUD. It can't be sold or worn sealed.</div>`;
   } else {
     if (item.unid) {
       h += `<div class="tt-base">${SLOT_NAMES[item.slot]} · Item Level ${item.ilvl}</div><div class="dim">Its true nature is revealed once purchased.</div>`;

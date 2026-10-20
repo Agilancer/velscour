@@ -56,6 +56,8 @@ export const TouchUI = {
     this.madnessBtn = $('#madness-btn');
     this.madnessHome = $('#madness');
     this.madnessBtn.classList.add('touch-madness');
+    this.smiteBtn = $('#smite-btn'); // SMITE (game/smite.js) moves with it in portrait
+    this.smiteBtn.classList.add('touch-smite');
     window.addEventListener('resize', () => this.layout());
     this.setPage(0);
   },
@@ -85,6 +87,7 @@ export const TouchUI = {
     };
     if (portrait) {
       if (this.madnessBtn.parentElement !== root) root.appendChild(this.madnessBtn);
+      if (this.smiteBtn.parentElement !== root) root.appendChild(this.smiteBtn);
       const tile = Math.min(44, Math.max(32, (W - 40 - 24) / 7)), gap = 4;
       const trayH = tile * 2 + gap;
       const safeBottom = parseFloat(getComputedStyle(document.body).getPropertyValue('--portrait-safe-bottom')) || 0;
@@ -109,9 +112,11 @@ export const TouchUI = {
       });
       const madnessW = Math.min(W * .36, 132);
       Object.assign(this.madnessBtn.style, { boxSizing: 'border-box', width: madnessW + 'px', height: '36px', left: ((W - madnessW) / 2) + 'px', top: (trayTop - 46) + 'px', transform: 'none' });
+      Object.assign(this.smiteBtn.style, { boxSizing: 'border-box', width: madnessW + 'px', height: '36px', left: ((W - madnessW) / 2) + 'px', top: (trayTop - 90) + 'px', transform: 'none' });
     } else {
       Object.assign($('#log').style, { left: '', right: '', top: '', bottom: '', height: '', maxHeight: '' });
       if (this.madnessBtn.parentElement !== this.madnessHome) this.madnessHome.insertBefore(this.madnessBtn, this.madnessHome.firstChild);
+      if (this.smiteBtn.parentElement !== this.madnessHome) this.madnessBtn.after(this.smiteBtn);
       this.btns.forEach((t, i) => {
         if (i === 0) { t.bar = 0; t.k.textContent = 'ATK'; t.b.classList.remove('hidden'); put(t.b, 0, 0, main); return; }
         const bar = i <= POS.length ? PAGES[this.page][i - 1] : undefined;
@@ -129,6 +134,7 @@ export const TouchUI = {
         put(this.flipBtn, FLIP[0], FLIP[1], 32 * s);
       }
       Object.assign(this.madnessBtn.style, { width: '', height: '', left: '', top: '', transform: '' });
+      Object.assign(this.smiteBtn.style, { width: '', height: '', left: '', top: '', transform: '' });
     }
     this.flipBtn?.classList.toggle('hidden', portrait);
     this.refresh();
