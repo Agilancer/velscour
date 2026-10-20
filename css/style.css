@@ -101,9 +101,9 @@ body.touch #barbarian-rage-text { font-size: 8px; line-height: 9px; }
 body.touch #madness-btn { padding: 8px 26px; font-size: 20px; }
 
 /* SMITE: a second meter under MADNESS, filled by kills; the button arms it, the next tap/click aims it (game/smite.js) */
-#smite-track { position: relative; width: 82%; height: 7px; background: rgba(20,14,0,.8); border: 1px solid #6a5418; border-radius: 4px; overflow: hidden; box-shadow: 0 0 4px #000; }
+#smite-track { position: relative; width: 100%; height: 9px; background: rgba(20,14,0,.8); border: 1px solid #6a5418; border-radius: 5px; overflow: hidden; box-shadow: 0 0 4px #000; }
 #smite-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #6a4a08, #d0a020 60%, #ffe070); transition: width .3s; }
-#smite-text { position: absolute; inset: 0; text-align: center; font: 700 7px/7px var(--font-head); letter-spacing: 2px; color: #fff8e0; text-transform: uppercase; text-shadow: 0 0 2px #000, 0 0 2px #000, 0 0 3px #000; }
+#smite-text { position: absolute; inset: 0; text-align: center; font: 700 8px/9px var(--font-head); letter-spacing: 2px; color: #fff8e0; text-transform: uppercase; text-shadow: 0 0 2px #000, 0 0 2px #000, 0 0 3px #000; }
 #smite-track.full #smite-fill, #smite-track.armed #smite-fill { background: linear-gradient(90deg, #ffd040, #fff6c0, #ffb020); animation: madglow .8s ease-in-out infinite; }
 #smite-btn { pointer-events: auto; cursor: pointer; padding: 5px 20px; border: 2px solid #ffd040; border-radius: 6px; background: radial-gradient(#7a5808, #2a1a00); color: #fff; font: 700 16px var(--font-head); letter-spacing: 3px; text-shadow: 0 0 6px #ffb020, 0 0 2px #000; box-shadow: 0 0 14px #ffc030, inset 0 0 10px #ffc030; animation: smitepulse 1.2s ease-in-out infinite; }
 #smite-btn.armed { background: radial-gradient(#fff0a0, #a07010); color: #2a1800; text-shadow: none; animation: smitepulse .5s ease-in-out infinite; }

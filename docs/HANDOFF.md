@@ -148,6 +148,19 @@ Contents
 - Tests: `data_check`, `flow`, `enemies`, `heavenly`, `raid 5,30` (its biome list now skips overworlds, which
   crashed at depth 5 on the Sea of Sand), `worldwide_biomes`, `autoplay wizard`.
 
+## October 20, 2026 — critters pay XP only, come far more often, arrows and sparks; SMITE meter sized like MADNESS (branch `feat/critter-xp`)
+
+- **Request:** make the SMITE bar the same size as the MADNESS bar; significantly more gilded critters, with sparks
+  streaming up and a small red arrow pointing at each so players know to tap them; the only pay is a significant sum
+  of XP per critter, based on the hero's level.
+- `#smite-track` / `#smite-text` now match `#mad-track` / `#mad-text` (100% wide, 9 px tall, 8 px text).
+- `src/game/critters.js`: `CRITTER_GAP` 40-85 s -> 12-25 s, first one 4-10 s into a level (was 18-40); still one at a
+  time. `pay.xp` is a share of `xpToNext(hero level)` (+-10%): Gilded Wisp 5%, Starmoth 6%, Golden Scarab 8%,
+  Prismatic Wisp 15%; no gold, gems or potions any more. `gainXp(n, flat)`: critters skip the out-levelled-depth
+  penalty (the hero's XP % bonus still applies). Each critter sheds ~34 rising sparks a second and has a bobbing red
+  arrow over it (gone once it flees).
+- **Open:** the XP shares and the gap are guesses; ask the user how they feel in play.
+
 ## October 20, 2026 — things to do while the hero plays: critters, SMITE, sealed treasures, stance, portal choice, Greed (branch `feat/spectator-play`)
 
 - **Request:** ideas to make auto-play more engaging "like the Madness bar", then: build gilded critters to tap, a

@@ -246,12 +246,12 @@ export class Player extends Creature {
   }
 
   // ------------------------------------------------------------------ progression
-  gainXp(n) {
+  gainXp(n, flat = false) { // flat: no penalty for out-levelling the depth (gilded critters pay by hero level)
     const c = this.char;
     if (c.level >= MAX_LEVEL) return;
     const depth = depthLevel((this.world && this.world.depth) || 1);
     const diff = c.level - depth;
-    const pen = diff > 5 ? Math.max(0.1, 1 - (diff - 5) * 0.1) : 1;
+    const pen = !flat && diff > 5 ? Math.max(0.1, 1 - (diff - 5) * 0.1) : 1;
     c.xp += Math.round(n * pen * (1 + this.st.xpPct / 100));
     while (c.level < MAX_LEVEL && c.xp >= xpToNext(c.level)) {
       c.xp -= xpToNext(c.level);

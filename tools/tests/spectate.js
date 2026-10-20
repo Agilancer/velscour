@@ -54,8 +54,7 @@ const check = (ok, msg) => { console.log(`${ok ? 'ok  ' : 'FAIL'} ${msg}`); if (
       return { caught: (G.char.critters || 0) - b.n, gold: G.char.gold - b.gold, xp: G.char.level > b.lvl || G.char.xp > b.xp, override: Auto.overrideT, status: Auto.status };
     });
     check(r.caught === 1, `${key}: caught by a ${mobile ? 'tap' : 'click'}`);
-    if (key !== 'moth') check(r.gold > 0, `${key}: paid ${r.gold} gold`);
-    if (key === 'moth' || key === 'prism') check(r.xp, `${key}: paid experience`);
+    check(r.xp && r.gold === 0, `${key}: paid experience only (gold ${r.gold})`);
     check(!(r.override > 0) && !/Manual/.test(r.status), `${key}: auto-play kept control (overrideT ${r.override}, "${r.status}")`);
   }
   // one that gets away
