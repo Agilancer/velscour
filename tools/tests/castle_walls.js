@@ -64,7 +64,7 @@ const mobile=process.argv.includes('--mobile'),noshots=process.argv.includes('--
         ['inner_gate',193.5,180.5,1.1,0],['inner_gate_in',193.5,169.5,1.1,0],['inner_north_gate',145.5,99.5,1.1,0],
         ['bridge_main',169.5,208.5,1.3,0],['bridge_post',209.5,61.5,1.3,0],['bridge_river',285.5,152,1.0,0],
         ['hall_door_s',141.5,135.5,1.5,0],['door_zoom',141,135.5,3,0],['chapel_zoom',183.5,117.5,3,0],['hall_door_e',157.5,117.5,1.5,0],['chapel_door',183.5,117.5,1.5,0],['great_hall_door',141.5,138.5,1.5,0],
-        ['moat_west',90.5,140.5,1.0,0],['moat_north',150.5,62.5,1.0,0],['overview',169,140,.16,0],['outer_ward',112,150,.5,0],
+        ['keep_view',170.5,132.5,0.8,0],['foot_zoom',140.5,75.5,2.6,0],['foot_zoom2',124.5,190.5,2.6,0],['foot_zoom3',237.5,206.5,2.4,0],['moat_west',90.5,140.5,1.0,0],['moat_north',150.5,62.5,1.0,0],['overview',169,140,.16,0],['outer_ward',112,150,.5,0],
       ].filter(v=>!only.length||only.includes(v[0]));
       await page.waitForTimeout(2000);
       for(const [name,x,y,zoom,foes] of views){

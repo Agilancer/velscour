@@ -668,6 +668,7 @@ export const Auto = {
       let found = false;
       for (let r = 1; r < 3 && !found; r++) for (let oy = -r; oy <= r && !found; oy++) for (let ox = -r; ox <= r && !found; ox++) if (m.walkableTile(sx + ox, sy + oy)) { sx += ox; sy += oy; found = true; }
     }
+    if (m.road) return this.buildRoadNav(sx, sy);
     let h = 0, t = 0;
     q[t++] = sy * W + sx; d[sy * W + sx] = 0;
     while (h < t) {
@@ -681,6 +682,42 @@ export const Auto = {
         const ni = ny * W + nx;
         if (d[ni] !== -1) continue;
         d[ni] = nd; q[t++] = ni;
+      }
+    }
+    this.navT = 0.35;
+  },
+  /**
+   * On a map with roads (map.road: the Castle's roads, lanes, trails and paving) the field is the cheapest way rather
+   * than the shortest: a step onto road costs 2, onto open ground 5 (diagonals 3 / 7), so the hero keeps to the roads
+   * and trails unless leaving them saves real distance. Dial's buckets; d still counts the steps, p the way back.
+   */
+  buildRoadNav(sx, sy) {
+    const m = G.world.map, W = m.w, N = W * m.h, R = m.road, d = this.nav.d;
+    const c = this.nav.c && this.nav.c.length === N ? this.nav.c : (this.nav.c = new Int32Array(N));
+    const pv = this.nav.p && this.nav.p.length === N ? this.nav.p : (this.nav.p = new Int32Array(N));
+    c.fill(0x3fffffff); pv.fill(-1);
+    const B = 8, bk = this.nav.bk || (this.nav.bk = Array.from({ length: B }, () => []));
+    for (const b of bk) b.length = 0;
+    const s0 = sy * W + sx;
+    c[s0] = 0; d[s0] = 0; bk[0].push(s0);
+    let left = 1;
+    for (let cur = 0; left > 0; cur++) {
+      const b = bk[cur % B];
+      while (b.length) {
+        const i = b.pop(); left--;
+        if (c[i] !== cur) continue;
+        const x = i % W, y = (i / W) | 0;
+        for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
+          if (!ox && !oy) continue;
+          const nx = x + ox, ny = y + oy;
+          if (!m.walkableTile(nx, ny)) continue;
+          if (ox && oy && (!m.walkableTile(x + ox, y) || !m.walkableTile(x, y + oy))) continue;
+          if (!m.stepsOk(x, y, ox, oy)) continue;
+          const ni = ny * W + nx, nc = cur + (ox && oy ? (R[ni] ? 3 : 7) : (R[ni] ? 2 : 5));
+          if (nc >= c[ni]) continue;
+          c[ni] = nc; d[ni] = d[i] + 1; pv[ni] = i;
+          bk[nc % B].push(ni); left++;
+        }
       }
     }
     this.navT = 0.35;
@@ -702,7 +739,9 @@ export const Auto = {
   },
   pathTo(gx, gy) {
     const w = G.world, m = w.map, W = m.w, d = this.nav.d, p = G.player;
-    if (m.losWide(p.x, p.y, gx, gy)) return [[gx, gy]];
+    // straight there when in sight (on a map with roads only when near: further, the roads lead)
+    if ((!m.road || dist(p.x, p.y, gx, gy) < 8) && m.losWide(p.x, p.y, gx, gy)) return [[gx, gy]];
+    if (m.road && this.nav.p) return this.roadPath(gx, gy);
     let tx = Math.floor(gx), ty = Math.floor(gy), cur = -1, cd = Infinity;
     for (let r = 0; r < 4 && cur < 0; r++) for (let oy = -r; oy <= r; oy++) for (let ox = -r; ox <= r; ox++) {
       if (!m.inb(tx + ox, ty + oy)) continue;
@@ -728,6 +767,33 @@ export const Auto = {
     path.reverse();
     if (path.length) path[path.length - 1] = [gx, gy];
     return m.smooth(p.x, p.y, path);
+  },
+  /** The cheapest way to (gx,gy) down the road field, its corners cut only where the cut keeps to the same ground. */
+  roadPath(gx, gy) {
+    const m = G.world.map, W = m.w, d = this.nav.d, pv = this.nav.p, p = G.player, R = m.road;
+    let tx = Math.floor(gx), ty = Math.floor(gy), cur = -1;
+    for (let r = 0; r < 4 && cur < 0; r++) for (let oy = -r; oy <= r && cur < 0; oy++) for (let ox = -r; ox <= r; ox++) {
+      if (m.inb(tx + ox, ty + oy) && d[(ty + oy) * W + tx + ox] >= 0) { cur = (ty + oy) * W + tx + ox; break; }
+    }
+    if (cur < 0) return null;
+    const path = [];
+    for (let guard = 0; pv[cur] >= 0 && guard < 20000; guard++) { path.push([(cur % W) + 0.5, ((cur / W) | 0) + 0.5]); cur = pv[cur]; }
+    path.reverse();
+    if (path.length) path[path.length - 1] = [gx, gy];
+    // smooth: skip a waypoint only if the straight line stays all on road, or all off it
+    const same = (ax, ay, bx, by) => {
+      const n = Math.ceil(Math.hypot(bx - ax, by - ay) * 2), r0 = R[m.tileIdx(ax, ay)];
+      for (let k = 1; k <= n; k++) if (R[m.tileIdx(ax + (bx - ax) * k / n, ay + (by - ay) * k / n)] !== r0) return false;
+      return true;
+    };
+    const out = [];
+    let ax = p.x, ay = p.y, i = 0;
+    while (i < path.length) {
+      let j = Math.min(path.length - 1, i + 12);
+      while (j > i && !(same(ax, ay, path[j][0], path[j][1]) && m.losWide(ax, ay, path[j][0], path[j][1]))) j--;
+      out.push(path[j]); ax = path[j][0]; ay = path[j][1]; i = j + 1;
+    }
+    return out;
   },
   /** Steer toward (gx,gy) along a path. Returns true when there. */
   goTo(gx, gy, near = 0.35, dt = 0) {

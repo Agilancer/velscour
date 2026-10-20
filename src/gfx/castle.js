@@ -19,7 +19,7 @@ export function loadCastlePack(){
 export function releaseCastlePack(){if(!images)return;images=null;ramparts=null;loading=null;recolored.clear();}
 /** The wall masonry atlas: {img, rects: {face, warm, corbel, plinth, slit, arch, top_0..7: [x, y, w, h]}}, or null. */
 export function castleRamparts(){return ramparts;}
-/** The flagstone wall-walk tops as floor tiles: 8 quarters of two painted slabs (quarter q of slab s is entry s * 4 + q). */
+/** The flagstone wall-walk tops as floor tiles: two painted slabs, each in four turns (tools/castleramparts.py). */
 export function castleRampartTops(palette=null){
  if(!ramparts)return [];
  const key='ramparts|'+JSON.stringify(palette),src=ramparts.img;
@@ -169,6 +169,20 @@ export function castleTent(variant=0){
   poly([[A[0],A[1]-10],[A[0]+12,A[1]-7],[A[0],A[1]-4]],v===1?'#d8c070':'#a02a20');
   tentCache.set(v,c);return c;}});
  return spr;
+}
+// A sprite mirrored left to right about its pivot (the keep, so its gate faces the inner ward's courtyard); the canvas
+// is made on first draw.
+const flipCache=new Map();
+export function castleFlipped(spr){
+ const src={img:null,sx:spr.sx,sy:spr.sy,w:spr.w,h:spr.h},key=spr.name,out={...spr,sx:0,sy:0,ox:-spr.w-spr.ox,flipped:true};
+ Object.defineProperty(src,'img',{get:()=>spr.img});
+ Object.defineProperty(out,'img',{enumerable:true,get(){
+  if(typeof document==='undefined')return null;
+  let c=flipCache.get(key);
+  if(!c){c=document.createElement('canvas');c.width=src.w;c.height=src.h;const g=c.getContext('2d');g.translate(src.w,0);g.scale(-1,1);
+   g.drawImage(src.img,src.sx,src.sy,src.w,src.h,0,0,src.w,src.h);flipCache.set(key,c);}
+  return c;}});
+ return out;
 }
 // A copy of a big painted sprite pre-scaled to `over` x the size it is drawn at (the furniture is painted at up to
 // 1,256 px and drawn at ~40): drawing the full-size source every frame costs the throne hall half its frame time.

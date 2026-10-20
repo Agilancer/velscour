@@ -84,7 +84,8 @@ the masonry painter `src/gfx/castlewalls.js`.
 - **Curtains**: the outer ring is 6 tiles thick (a 5-tile walk behind its battlement), the inner 5 (4-tile walk); the
   battlement runs along the outside edge, merlon and crenel alternating. Wall-walk tiles are `map.rampartDeck`, every
   wall tile `map.rampartWall`.
-- **Towers** (`map.castleTowers`, 31): square, projecting over the berm; their floor is `TOWER_UP` 8 levels over the
+- **Towers** (`map.castleTowers`, 31): square, a tile out onto the berm (so they stand on the same ground as the
+  curtain and every wall foot meets the moat's revetment on one line); their floor is `TOWER_UP` 8 levels over the
   walk (the gatehouse's two `GATE_UP` 12), stepped up one STEP a tile wherever the walk comes in, battlements round
   the rest of the edge, a corbel band under them and arrow slits on their faces (`map.faceBand`).
 - **Gates**: each passage goes straight through the wall (and on between its two towers) at ground level, paved.
@@ -101,15 +102,28 @@ the masonry painter `src/gfx/castlewalls.js`.
   each doorway is a clean opening through a solid wall with an arched lintel and two oak leaves swung back flat against
   the face the camera sees (`castleLeaf`; the leaves are cut from the face-on oak door, the pack's other doors are
   drawn at an angle).
+- **Banners** (`castlePanel`): the pack's hangings are all painted face on (their SE/SW/NW/NE frames are the same
+  picture), so they are sheared flat onto the wall face they hang on: every 8 tiles along the curtains (inside the
+  wards, and outside toward the moat), one under the corbels of each visible tower face, every 6 tiles round the halls
+  and at their old spots inside; never over a door, window, sign or torch.
+- **Keep**: `landmark_09` is mirrored (`castleFlipped`) so its gate and steps face south over the courtyard to the
+  inner gate.
+- **Roads** (`map.road`): after the sites are known, a trail runs from every house's door, every scenario site (the
+  shrine first), chest and stair foot and the exit to the nearest road, lane, paving or hall floor, round props and
+  trees; then every stretch the props and walls cut off is joined to the network the hero arrives on. On a map with
+  `map.road` auto-play's distance field (`Auto.buildRoadNav`) is the cheapest way, not the shortest (a road step 2,
+  open ground 5), and its corners are cut only where the cut keeps to the same ground, so the hero keeps to the roads.
 - **Packs on the walls**: 12 monster packs hold the wall-walks and tower tops (`spawns[].rampart`); they come down the
   stairs at the hero. The rampart scenarios muster on the south and east walks (`map.rampartPosts`).
 
 **Drawing.** Columns are baked into the floor chunks back to front. Faces with a `map.faceArt` style are painted by
-`drawCastleFace`: the unsheared masonry sheared back onto each face and anchored in world space (courses run on from
-tile to tile; SE faces darker), a string course at walk level, corbels and slits on towers, a battered plinth at the
+`drawCastleFace`: the unsheared masonry sheared back onto each face and anchored to the ground plane (each course at a
+fixed height, so courses run on from tile to tile, round corners and from a merlon down the wall under it; SE faces
+darker), a string course at walk level, corbels and slits on towers, a battered plinth at the
 foot, rain streaks and moss, a wet green waterline on the moat's stone revetment; the river's banks are earth
-(`FACE.earth`, terrain.js's own banks). Tops are the artwork's flagstone slabs, 2 x 2 tiles to a slab
-(`castleRampartTops`, tinted for the halls). Because the walls stand far taller than a tile (`map.tallOcclusion`):
+(`FACE.earth`, terrain.js's own banks). Tops are the artwork's flagstone slabs, one slab to a tile in eight turns,
+so tile joints fall on the slabs' own edges and the grout runs on along the iso axes (`castleRampartTops`, tinted for
+the halls). Because the walls stand far taller than a tile (`map.tallOcclusion`):
 - every column whose top could hide something behind it is an occluder (terrain.js `terrainOf`), redrawn in the sorted
   pass over creatures, props, trees, buildings, chests, loot and portals behind it, clipped to them (`occludersFor`,
   `occludersOfRect`);

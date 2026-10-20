@@ -112,30 +112,32 @@ def main():
                 a[y, x, 3] = 255
     parts['arch'] = level(a, 92)
 
-    # flagstone tops: the two plain slabs' top diamonds (inset off their bevelled rims), cut into quarters
+    # flagstone tops: the two plain slabs' top diamonds (inset just inside their bevelled rims), one slab to a tile, so
+    # the joints between tiles fall on the slabs' own edges and every grout line runs on along the iso axes; each slab
+    # also mirrored and turned half round (still a 2:1 diamond) for eight variants
     tops = []
-    # (top vertex x, y, half width, half height) of each slab's top diamond, measured off the sheet
     for (tx0, ty0, hw, hh) in [(102.5, 24, 78.5, 41), (284.5, 24, 78.5, 41)]:
-        k = 0.86   # inset off the rim
-        cx, cy, rw, rh = tx0, ty0 + hh, hw * k, hh * k
-        for q in range(4):
-            qu, qv = q % 2, q // 2
-            o = np.zeros((40, 80, 4), np.float32)
-            for Y in range(40):
-                for X in range(80):
-                    u = ((X + 0.5 - 40) / 40 + (Y + 0.5) / 20) / 2   # tile coords 0..1 (x), (y)
-                    v = ((Y + 0.5) / 20 - (X + 0.5 - 40) / 40) / 2
-                    if u < -0.02 or v < -0.02 or u > 1.02 or v > 1.02:
-                        continue
-                    U, V = (qu + u) / 2, (qv + v) / 2              # within the slab's top, 0..1
-                    sx = cx + (U - V) * rw
-                    sy = cy - rh + (U + V) * rh
-                    xi, yi = int(sx), int(sy)
-                    tx, ty = sx - xi, sy - yi
-                    px = (ramp[yi, xi] * (1 - tx) + ramp[yi, xi + 1] * tx) * (1 - ty) + (ramp[yi + 1, xi] * (1 - tx) + ramp[yi + 1, xi + 1] * tx) * ty
-                    o[Y, X] = px
-                    o[Y, X, 3] = 255
-            tops.append(o)
+        k = 0.84
+        cx, cy, rw, rh = tx0, ty0 + hh + 1, hw * k, hh * k
+        o = np.zeros((40, 80, 4), np.float32)
+        for Y in range(40):
+            for X in range(80):
+                u = ((X + 0.5 - 40) / 40 + (Y + 0.5) / 20) / 2
+                v = ((Y + 0.5) / 20 - (X + 0.5 - 40) / 40) / 2
+                if u < -0.02 or v < -0.02 or u > 1.02 or v > 1.02:
+                    continue
+                U, V = min(1, max(0, u)), min(1, max(0, v))
+                sx = cx + (U - V) * rw
+                sy = cy - rh + (U + V) * rh
+                xi, yi = int(sx), int(sy)
+                fx, fy = sx - xi, sy - yi
+                o[Y, X] = (ramp[yi, xi] * (1 - fx) + ramp[yi, xi + 1] * fx) * (1 - fy) + (ramp[yi + 1, xi] * (1 - fx) + ramp[yi + 1, xi + 1] * fx) * fy
+                o[Y, X, 3] = 255
+        tops += [o, o[:, ::-1], o[::-1, ::-1], o[::-1]]
+    # the half-turned copies are a diamond only when flipped about its centre: rebuild the masks from the first
+    mask = tops[0][..., 3] > 0
+    for t in tops:
+        t[..., 3] = np.where(mask, 255, 0)
     m = np.mean([t[..., :3][t[..., 3] > 0].mean() for t in tops])
     for k, t in enumerate(tops):
         parts[f'top_{k}'] = level(t, m * 1.05)

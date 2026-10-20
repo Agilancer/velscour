@@ -75,7 +75,9 @@ export function drawCastleFace(ctx, map, i, x0, y0, dx, dy, depth, dark, top, HS
     ctx.restore();
   } else {
     const c = style === FACE.warm ? (dark ? T.warmD : T.warmL) : (dark ? T.wallD : T.wallL), p = patOf(ctx, c);
-    p.setTransform(new DOMMatrix([1, s, 0, 1, 0, (style === FACE.warm ? 7 : 0)]));
+    // courses at fixed heights above the ground plane (v = -z), so they run level round corners and from a merlon to
+    // the wall under it; joints at fixed world x
+    p.setTransform(new DOMMatrix([1, s, 0, 1, 0, y0 - s * x0 + top * HS]));
     quad(ctx, x0, y0, dx, dy, 0, D);
     ctx.fillStyle = p; ctx.fill();
   }
@@ -220,29 +222,31 @@ export function castleSpan({ L, T = 1, zs, zc, zt, axis = 'x', warm = false, por
   return spr;
 }
 
-// ------------------------------------------------------------------ door leaves
-// An open door leaf standing flat against a doorway's jamb: the wooden leaf cut out of a castle pack door sprite
-// (`door`, its frame trimmed by `trim` px a side), sheared onto the plane of the jamb. axis 'y': the leaf runs along y
-// (a jamb of a doorway through a wall that runs along x), shaded; 'x': along x, lit. `len` tiles long, `hpx` tall;
-// pivot: its ground point at the run's start (axis 'y': the +y end; 'x': the -x end).
-const leafCache = new Map();
-export function castleLeaf(door, { len = 1, hpx = 52, axis = 'y', trim = [14, 14, 14, 6] }) {
-  const run = len * 32, rise = len * 16, w = run + 2, h = hpx + rise + 2, key = door.name + '|' + len + '|' + hpx + '|' + axis;
+// ------------------------------------------------------------------ panels on a wall face
+// A flat picture sheared onto the plane of a wall face: an open door leaf cut out of a castle pack door (`trim` px off
+// each side: its frame), or a banner (the pack's hangings are all painted face on). axis 'y': the panel runs along y,
+// on a face looking down +x (an SE face, shaded); 'x': along x, on a face looking down +y (lit). `len` tiles long,
+// `hpx` tall; pivot: the panel's foot at the run's start (axis 'y': its +y end; 'x': its -x end).
+const panelCache = new Map();
+export function castlePanel(art, { len = 1, hpx = 52, axis = 'y', trim = [0, 0, 0, 0], shade = null }) {
+  const run = len * 32, rise = len * 16, w = run + 2, h = hpx + rise + 2, key = art.name + '|' + len + '|' + hpx + '|' + axis + '|' + trim.join(',');
   // axis 'y' climbs to the right, so its start (the pivot) is the canvas's low left corner; 'x' falls to the right
-  const spr = { sx: 0, sy: 0, w, h, ox: -1, oy: -(hpx + 1 + (axis === 'y' ? rise : 0)), name: 'castle_leaf_' + key, castle: true, lazy: true };
+  const spr = { sx: 0, sy: 0, w, h, ox: -1, oy: -(hpx + 1 + (axis === 'y' ? rise : 0)), name: 'castle_panel_' + key, castle: true, lazy: true };
   Object.defineProperty(spr, 'img', { enumerable: true, get() {
-    if (typeof document === 'undefined' || !door.img) return null;
-    let c = leafCache.get(key);
+    if (typeof document === 'undefined' || !art.img) return null;
+    let c = panelCache.get(key);
     if (c) return c;
     c = makeCanvas(w, h);
     const g = c.getContext('2d'), [l, t, r, b] = trim;
     if (axis === 'y') g.setTransform(1, -0.5, 0, 1, 1, hpx + 1 + rise); else g.setTransform(1, 0.5, 0, 1, 1, hpx + 1);
-    g.drawImage(door.img, door.sx + l, door.sy + t, door.w - l - r, door.h - t - b, 0, -hpx, run, hpx);
+    g.drawImage(art.img, art.sx + l, art.sy + t, art.w - l - r, art.h - t - b, 0, -hpx, run, hpx);
     g.globalCompositeOperation = 'source-atop';
-    g.fillStyle = axis === 'y' ? 'rgba(10,8,14,0.3)' : 'rgba(10,8,14,0.08)'; g.fillRect(0, -hpx, run, hpx);
+    g.fillStyle = shade ?? (axis === 'y' ? 'rgba(10,8,14,0.3)' : 'rgba(10,8,14,0.08)'); g.fillRect(0, -hpx, run, hpx);
     g.setTransform(1, 0, 0, 1, 0, 0);
-    leafCache.set(key, c);
+    panelCache.set(key, c);
     return c;
   } });
   return spr;
 }
+/** An open door leaf: a panel cut from a door sprite inside its frame. */
+export const castleLeaf = (door, o) => castlePanel(door, { trim: [14, 14, 14, 6], ...o });

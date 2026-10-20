@@ -83,12 +83,21 @@ for(let seed=1;seed<=SEEDS;seed++){
   for(const y of [b.far-1,b.near])if(m.castleMat[I(m,(b.x0+b.x1)/2,y)]===MAT.water)throw Error(`bridge ${b.kind} ends in the water seed ${seed}`);
  }
  for(let i=0;i<m.w*m.h;i++)if(m.castleMat[i]===MAT.water&&m.hgt[i]>=0)throw Error(`water not sunk seed ${seed}`);
+ // a road, trail or paving reaches every door, site, chest, stair foot and the exit (map.road; auto-play keeps to it)
+ const nearRoad=([x,y],r=3)=>{for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const X=Math.floor(x)+dx,Y=Math.floor(y)+dy;if(X>=0&&Y>=0&&X<m.w&&Y<m.h&&m.road[I(m,X,Y)])return true;}return false;};
+ const DX=new Set(['alchemist','gems','socket','gamble','bakery']);
+ for(const b of gen.buildings){const dx=DX.has(b.name)!==b.flip,d=dx?[b.x0+b.fp+.5,b.y0+b.fp/2]:[b.x0+b.fp/2,b.y0+b.fp+.5];if(!nearRoad(d))throw Error(`no trail to the ${b.name} door seed ${seed} at ${d}`);}
+ for(const p of [...gen.sites,gen.exit,...gen.chests.map(c=>[c.x,c.y]),...m.castleStairs.map(st=>[st.x-st.dx+.5,st.y-st.dy+.5])])if(!nearRoad(p))throw Error(`no trail to ${p} seed ${seed}`);
+ // the network is one piece from the arrival
+ const roadSeen=flood(m,gen.start,(x,y,k,from)=>m.road[k]&&m.stepOk(from,k));let roads=0,cut=0;
+ for(let k=0;k<m.w*m.h;k++)if(m.road[k]&&!m.hgt[k]){roads++;if(!roadSeen[k])cut++;}
+ if(cut>roads*.03)throw Error(`road network in pieces seed ${seed}: ${cut} of ${roads} tiles cut off`);
  // Keep: three enterable halls with their own floors, doors and room to fight.
  if(m.castleRooms?.length!==3)throw Error(`three enterable keep interiors missing seed ${seed}`);
  if(m.castleDoors?.length<6)throw Error(`keep has too few doors seed ${seed}`);
  // the halls' walls are masonry too, their doorways clean openings with a lintel and two leaves against the wall
  for(let i=0;i<m.w*m.h;i++)if(m.castleRoomWalls[i]&&(m.hgt[i]!==18||!m.block[i]))throw Error(`hall wall not solid seed ${seed}`);
- if(gen.props.filter(p=>p.roomDoor&&/castle_leaf/.test(p.spr?.name||'')).length!==2*m.castleDoors.length)throw Error(`door leaves missing seed ${seed}`);
+ if(gen.props.filter(p=>p.roomDoor&&/castle_panel_door/.test(p.spr?.name||'')).length!==2*m.castleDoors.length)throw Error(`door leaves missing seed ${seed}`);
  for(const d of m.castleDoors)if(!seen[I(m,d.x,d.y)]||!m.walkable(d.x,d.y))throw Error(`unreachable or blocked keep door seed ${seed} at ${d.x},${d.y}`);
  for(const r of m.castleRooms){const cx=(r.rect[0]+r.rect[2])/2|0,cy=(r.rect[1]+r.rect[3])/2|0;let free=0;
   for(let y=cy-10;y<cy+10;y++)for(let x=cx-10;x<cx+10;x++)if(m.walkableTile(x,y))free++;
@@ -101,7 +110,8 @@ for(let seed=1;seed<=SEEDS;seed++){
  }
  const caps={scatter:132,trees:300,torches:50,wall_hangings:80,doors:126,gateways:130,windows:70,signs:62};
  for(const p of gen.props.filter(p=>p.spr)){const max=caps[p.spr.category];if(max&&p.spr.h*p.k>max+.001)throw Error(`oversized Castle ${p.spr.name}: ${p.spr.h*p.k} > ${max}`);}
- for(const category of ['windows','signs','torches','wall_hangings','furniture'])
+ if(gen.props.filter(p=>p.banner).length<80)throw Error(`too few banners on the walls seed ${seed}`);
+ for(const category of ['windows','signs','torches','furniture'])
   if(!gen.props.some(p=>p.spr?.category===category))throw Error(`missing Castle ${category} placements seed ${seed}`);
  if(gen.buildings.length<13)throw Error(`outbuildings and village missing seed ${seed}: ${gen.buildings.length}`);
  for(const b of gen.buildings)for(let y=b.y0;y<b.y0+b.fp;y++)for(let x=b.x0;x<b.x0+b.fp;x++)if(!m.block[I(m,x,y)])throw Error(`building ${b.name} footprint open seed ${seed}`);

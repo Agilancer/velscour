@@ -46,6 +46,15 @@ Contents
   new `castle_walls.js` (walk 4,224 tiles all reachable, no drops off the walls, wall monsters come down the stairs
   6/6 and bailey monsters climb 4/4; 30 shots looked at), `scenarios.js` (all 35 Castle scenarios done, longest wait
   < 20 s), `castle_visual.js`, `BAL_BIOME=castle balance.js paladin,wizard 19 8` (new env var).
+- **Follow-up (user):** brick courses are anchored to the ground plane (they ran level per screen, so corners and
+  merlons mismatched); flagstone tops are one slab per tile so the grout lines run on along the iso axes; outer towers
+  stand a tile out on the berm with the curtain (the towers' feet were 44 px lower, in the water); the keep is
+  mirrored so its gate faces the courtyard; banners (the pack's face-on hangings sheared onto the faces) on the
+  curtains, every tower and the halls (146 on a map); trails from every house door, site, chest, stair and the exit,
+  the cut-off pieces joined into one network (`map.road`), and auto-play's Castle pathing keeps to it (road-weighted
+  Dijkstra, ~10 ms per rebuild vs 7 for the BFS; 100% of its walking to the shrine on road). Checks added to
+  `castle_overworld.mjs` (trails to every door/site/chest/stair, one network, banners); all 35 scenarios done; both
+  `BAL_BIOME=castle` soaks clear with 0 deaths.
 - **Frame cost** (`biome_perf.js castle 19 4 20`, SwiftShader, 4x throttle, two runs each): render 8.8/10.8 ms vs
   `main` 19.7/9.8, update 7.0/9.8 vs 10.0/5.8: within the run-to-run noise. Terrain columns are bucketed per floor
   chunk (`columnsIn`); before that, scanning all 100k columns per chunk doubled the render cost.
