@@ -7,6 +7,7 @@
 //   node tools/tests/balance.js paladin 150 10 god     # no damage taken: hero DPS, guardian and raid fight lengths
 //   BAL_STANCE=cautious,reckless node tools/tests/balance.js wizard 20 10   # auto-play stances (default balanced)
 //   BAL_RAID=1 node tools/tests/balance.js wizard 30 5   # start at a BOSS ROOM depth's gate, the level's monsters gone
+//   BAL_BIOME=castle node tools/tests/balance.js paladin 19 6   # start in that biome (an overworld: its scenario)
 // Also prints potions drunk, life lost (in whole life bars), share of time kiting and seconds per kill.
 // Targets (see docs/HANDOFF.md, balance sweep): a death now and then, never more than 6-10 deaths per 5-depth block.
 const { openGame, report } = require('./harness');
@@ -21,7 +22,7 @@ const stances = (process.env.BAL_STANCE || 'balanced').split(',');
   const { browser, page, errors, shot } = await openGame();
   const rows = [];
   for (const cls of classes) for (const D of depths) for (const stance of stances) {
-    await page.evaluate(async ({ cls, D, god, rounds, stance, raidGate }) => {
+    await page.evaluate(async ({ cls, D, god, rounds, stance, raidGate, biomeId }) => {
       const { G, game } = window.VELSCOUR;
       const { Auto } = await import('/src/game/autoplay.js');
       const { depthLevel } = await import('/src/data/depth.js');
@@ -35,7 +36,7 @@ const stances = (process.env.BAL_STANCE || 'balanced').split(',');
       c.level = lvl; c.xp = Math.round(xpToNext(lvl) * 0.3);
       c.statPoints += (lvl - 1) * 5; c.skillPoints += (lvl - 1) + Math.max(0, D - 1);
       for (let d = 1; d < D; d++) c.cleared[d] = true;
-      c.deepest = D - 1; c.depth = D; c.nextBiome = null;
+      c.deepest = D - 1; c.depth = D; c.nextBiome = biomeId || null;
       c.gold = Math.round(800 * Math.pow(1.05, L));
       c.potions = { hp: 10, mp: 6, rejuv: 3, fury: 2 };
       Auto.spendStats(); Auto.spendSkills(); Auto.arrangeBar();
@@ -70,7 +71,7 @@ const stances = (process.env.BAL_STANCE || 'balanced').split(',');
         const w = G.world, R = w.raid;
         if (R) { for (const m of w.creatures) if (m.team === 'enemy' && m !== w.boss) m.dead = true; G.player.x = R.arena.gate.x - 3; G.player.y = R.arena.gate.y0 + 1.5; }
       }
-    }, { cls, D, god, rounds, stance, raidGate: !!process.env.BAL_RAID });
+    }, { cls, D, god, rounds, stance, raidGate: !!process.env.BAL_RAID, biomeId: process.env.BAL_BIOME });
     await page.waitForTimeout(1500);
     let last = null;
     for (let min = 1; min <= minutes; min++) {

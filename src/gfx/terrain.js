@@ -6,6 +6,7 @@
 import { G } from '../state.js';
 import { HW, HH, TW, TH, setElevation } from '../core/view.js';
 import { makeCanvas, clamp } from '../core/util.js';
+import { drawCastleFace } from './castlewalls.js';
 
 export const HS = 4; // world px per height level
 
@@ -76,21 +77,66 @@ export function terrainOf(map) {
     const i = y * w + x;
     if (t[i] !== 1) continue;
     const v = hgt[i], s = at(x, y + 1), e = at(x + 1, y);
-    sw[i] = s === null ? v - base : Math.max(0, v - s);
-    se[i] = e === null ? v - base : Math.max(0, v - e);
+    sw[i] = Math.max(0, s === null ? v - base : v - s);
+    se[i] = Math.max(0, e === null ? v - base : v - e);
     const px = (x - y) * HW, py = (x + y) * HH - v * HS;
     box[i * 4] = px - HW; box[i * 4 + 1] = py; box[i * 4 + 2] = px + HW; box[i * 4 + 3] = py + TH + Math.max(sw[i], se[i]) * HS;
     order.push(i);
-    // rises toward the camera over a tile behind it: may hide someone standing there
-    const b1 = at(x - 1, y), b2 = at(x, y - 1), b3 = at(x - 1, y - 1);
-    if ((b1 !== null && b1 < v) || (b2 !== null && b2 < v) || (b3 !== null && b3 < v)) occ.push(i);
+    // rises toward the camera over a tile behind it: may hide someone standing there. Walls (the Castle) rise far over
+    // the ground behind them, so the window looks back as many rows as the column's height covers.
+    let hides = false;
+    if (!map.tallOcclusion) {
+      const b1 = at(x - 1, y), b2 = at(x, y - 1), b3 = at(x - 1, y - 1);
+      hides = (b1 !== null && b1 < v) || (b2 !== null && b2 < v) || (b3 !== null && b3 < v);
+    } else if (v > 0) {
+      const R = Math.min(14, Math.ceil((v * HS + 40) / HH));
+      for (let b = 0; b <= R && !hides; b++) for (let a = 0; a + b <= R && !hides; a++) {
+        const u = (a || b) ? at(x - a, y - b) : null;
+        if (u !== null && u < v - 2 && (v - u) * HS > (a + b - 1) * HH) hides = true;
+      }
+    }
+    if (hides) occ.push(i);
   }
   order.sort((a, b) => ((a % w) + ((a / w) | 0)) - ((b % w) + ((b / w) | 0)) || a - b);
-  return (map._terr = { sw, se, box, order, occ, objs: new Map() });
+  // occluders bucketed by 256 world px screen cells, for the props' lookups (occludersOfRect)
+  const cells = new Map(), C = 256;
+  for (const i of occ) {
+    const k = i * 4;
+    for (let cy = Math.floor(box[k + 1] / C); cy <= Math.floor(box[k + 3] / C); cy++) for (let cx = Math.floor(box[k] / C); cx <= Math.floor(box[k + 2] / C); cx++) {
+      const key = cx * 65536 + cy;
+      let l = cells.get(key);
+      if (!l) cells.set(key, (l = []));
+      l.push(i);
+    }
+  }
+  return (map._terr = { sw, se, box, order, occ, objs: new Map(), cells, C, chunks: null, w });
+}
+
+/**
+ * Is ground at (x,y) (tile units) hidden behind a column in front of it? For things drawn flat before the sorted
+ * pass (corpses, decals, ground particles, the water's ripples), so the Castle's walls hide what lies behind them.
+ */
+export function hiddenBehind(map, x, y) {
+  if (!map || !map.hgt || !map.tallOcclusion) return false;
+  const { w, h, hgt, t } = map, tx = Math.floor(x), ty = Math.floor(y);
+  if (tx < 0 || ty < 0 || tx >= w || ty >= h) return false;
+  const T = terrainOf(map), lv = hgt[ty * w + tx];
+  // column (a,b) tiles in front: the point sits Y px below the centre of its lifted top; its silhouette is the top
+  // diamond (+-HH) and the faces hanging F px under it
+  for (let s = 1; s <= 16; s++) for (let a = s >> 1; a <= (s + 1) >> 1; a++) {
+    const b = s - a, X = tx + a, Y0 = ty + b;
+    if (X >= w || Y0 >= h) continue;
+    const j = Y0 * w + X;
+    if (t[j] !== 1) continue;
+    const Y = (hgt[j] - lv) * HS - s * HH, F = Math.max(T.sw[j], T.se[j]) * HS;
+    if (a === b ? Y >= -HH && Y <= HH + F : Y > 0 && Y < F) return true;
+  }
+  return false;
 }
 
 /** The elevation and picking functions for view.js; null clears them (flat maps). */
 export function useTerrain(map) {
+  CUR = map && map.hgt ? map : null;
   if (!map || !map.hgt) { setElevation(null, null); return; }
   const { w, h, hgt, t } = map;
   let lo = Infinity, hi = -Infinity;
@@ -111,6 +157,10 @@ export function useTerrain(map) {
   };
   setElevation(elev, pick);
 }
+
+let CUR = null;
+/** hiddenBehind on the map in play (vfx.js decals). */
+export const groundHidden = (x, y) => hiddenBehind(CUR, x, y);
 
 // ------------------------------------------------------------------ drawing
 const SOIL = { grass: '#3f5222', moss: '#3c4a22', dirt: '#5a4330', snow: '#d8dde0' };
@@ -163,15 +213,38 @@ function face(ctx, R, f, i, x0, y0, dx, dy, depth, dark, deep) {
   ctx.beginPath(); ctx.moveTo(x0, y0 + 0.5); ctx.lineTo(x0 + dx, y0 + dy + 0.5); ctx.stroke();
 }
 
-/** One terrain column: its cliff faces, its top and the shadow cast on it by higher ground behind. */
-export function drawColumn(ctx, world, i, floorEntry) {
+const soiled = new WeakMap();
+function soilOf(f) {
+  let s = soiled.get(f);
+  if (!s) soiled.set(f, (s = { ...f, soil: 'dirt' }));
+  return s;
+}
+
+/** One terrain column: its cliff faces, its top and the shadow cast on it by higher ground behind. `dress` adds a
+ * map's own ground detail to the top (the Castle's blended seams). */
+export function drawColumn(ctx, world, i, floorEntry, dress = null) {
   const map = world.map, T = terrainOf(map), w = map.w, x = i % w, y = (i / w) | 0, v = map.hgt[i];
   const px = (x - y) * HW, py = (x + y) * HH - v * HS;
   const R = rockPatterns(ctx);
   const f = floorEntry(world, map.v[i]);
-  if (T.sw[i]) face(ctx, R, f, i, px - HW, py + HH, HW, HH, T.sw[i], false, y + 1 >= map.h || map.t[i + w] !== 1);
-  if (T.se[i]) face(ctx, R, f, i, px, py + TH, HW, -HH, T.se[i], true, x + 1 >= w || map.t[i + 1] !== 1);
+  const art = map.faceArt && map.faceArt[i];
+  const fb = art === 5 ? soilOf(f) : f; // the Castle's river banks: earth over rock
+  if (T.sw[i] && !(art && drawCastleFace(ctx, map, i, px - HW, py + HH, HW, HH, T.sw[i], false, v, HS))) face(ctx, R, fb, i, px - HW, py + HH, HW, HH, T.sw[i], false, y + 1 >= map.h || map.t[i + w] !== 1);
+  if (T.se[i] && !(art && drawCastleFace(ctx, map, i, px, py + TH, HW, -HH, T.se[i], true, v, HS))) face(ctx, R, fb, i, px, py + TH, HW, -HH, T.se[i], true, x + 1 >= w || map.t[i + 1] !== 1);
+  if (art && art !== 5 && (T.sw[i] || T.se[i])) {
+    // masonry: a lit quoin on the corner between the two faces, dark silhouette edges where a face ends
+    ctx.lineWidth = 1;
+    const m = Math.min(T.sw[i], T.se[i]) * HS;
+    if (m) { ctx.strokeStyle = 'rgba(220,228,240,0.35)'; ctx.beginPath(); ctx.moveTo(px + 0.5, py + TH); ctx.lineTo(px + 0.5, py + TH + m); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(4,5,9,0.6)';
+    // a face's end stands clear of the neighbour beside it down to that neighbour's top
+    const bare = (j, d) => (j < 0 || map.t[j] !== 1 ? d : Math.min(d, v - map.hgt[j])) * HS;
+    let e;
+    if (T.sw[i] && x > 0 && (e = bare(i - 1, T.sw[i])) > 0) { ctx.beginPath(); ctx.moveTo(px - HW + 0.5, py + HH); ctx.lineTo(px - HW + 0.5, py + HH + e); ctx.stroke(); }
+    if (T.se[i] && y > 0 && (e = bare(i - w, T.se[i])) > 0) { ctx.beginPath(); ctx.moveTo(px + HW - 0.5, py + HH); ctx.lineTo(px + HW - 0.5, py + HH + e); ctx.stroke(); }
+  }
   ctx.drawImage(f.img, f.sx, f.sy, f.w, f.h, px - HW - 0.6, py - 0.6, TW + 1.2, TH + 1.2);
+  if (dress) dress(ctx, world, x, y, px, py, f);
   // a higher neighbour behind (NE: y-1, NW: x-1) shades the strip of this top along their shared edge
   const nb = (j) => (j >= 0 && map.t[j] === 1 ? map.hgt[j] - v : 0);
   const ne = y > 0 ? nb(i - w) : 0, nw = x > 0 ? nb(i - 1) : 0;
@@ -185,16 +258,52 @@ export function drawColumn(ctx, world, i, floorEntry) {
       ctx.closePath(); ctx.fill();
     }
   }
+  if (art && art !== 5 && map.tallOcclusion) {
+    // a wall top's back edge, where it drops away out of sight to lower ground: a dark rim so it reads as a ledge
+    const drop = (j) => j >= 0 && map.t[j] === 1 && v - map.hgt[j] > map.climb;
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(6,8,12,0.55)';
+    if (y > 0 && drop(i - w)) { ctx.beginPath(); ctx.moveTo(px, py + 1); ctx.lineTo(px + HW, py + HH + 1); ctx.stroke(); }
+    if (x > 0 && drop(i - 1)) { ctx.beginPath(); ctx.moveTo(px, py + 1); ctx.lineTo(px - HW, py + HH + 1); ctx.stroke(); }
+  }
+  if (art && art !== 5) {
+    // the lit lip of a top over its faces
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(230,236,248,0.5)';
+    if (T.sw[i]) { ctx.beginPath(); ctx.moveTo(px - HW, py + HH + 0.5); ctx.lineTo(px, py + TH + 0.5); ctx.stroke(); }
+    if (T.se[i]) { ctx.beginPath(); ctx.moveTo(px, py + TH + 0.5); ctx.lineTo(px + HW, py + HH + 0.5); ctx.stroke(); }
+  }
 }
 
 /** Every column overlapping the world px rect, back to front (the floor chunk bake and its fallback). */
-export function drawTerrain(ctx, world, x0, y0, x1, y1, floorEntry) {
+export function drawTerrain(ctx, world, x0, y0, x1, y1, floorEntry, dress = null) {
   const T = terrainOf(world.map), b = T.box;
-  for (const i of T.order) {
+  for (const i of columnsIn(T, x0, y0, x1, y1)) {
     const k = i * 4;
     if (b[k] > x1 || b[k + 2] < x0 || b[k + 1] > y1 || b[k + 3] < y0) continue;
-    drawColumn(ctx, world, i, floorEntry);
+    drawColumn(ctx, world, i, floorEntry, dress);
   }
+}
+// Columns bucketed (in draw order) by the 384 px floor chunks their boxes touch: a chunk's bake reads one bucket
+// instead of scanning the whole map.
+const CHUNK = 384;
+function columnsIn(T, x0, y0, x1, y1) {
+  if (!T.chunks) {
+    const m = (T.chunks = new Map()), b = T.box;
+    for (const i of T.order) {
+      const k = i * 4;
+      for (let cy = Math.floor(b[k + 1] / CHUNK); cy <= Math.floor(b[k + 3] / CHUNK); cy++) for (let cx = Math.floor(b[k] / CHUNK); cx <= Math.floor(b[k + 2] / CHUNK); cx++) {
+        const key = cx * 65536 + cy;
+        let l = m.get(key);
+        if (!l) m.set(key, (l = []));
+        l.push(i);
+      }
+    }
+  }
+  const cx0 = Math.floor(x0 / CHUNK), cx1 = Math.floor((x1 - 0.001) / CHUNK), cy0 = Math.floor(y0 / CHUNK), cy1 = Math.floor((y1 - 0.001) / CHUNK);
+  if (cx0 === cx1 && cy0 === cy1) return T.chunks.get(cx0 * 65536 + cy0) || [];
+  const set = new Set();
+  for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) for (const i of T.chunks.get(cx * 65536 + cy) || []) set.add(i);
+  const w = T.w;
+  return [...set].sort((a, b) => ((a % w) + ((a / w) | 0)) - ((b % w) + ((b / w) | 0)) || a - b);
 }
 
 /**
@@ -206,22 +315,62 @@ export function standKey(x, y) {
   return s + (x + y - s) * 0.2;
 }
 
-/** Occluding columns in front of someone in `views` (render.js): [[key, obj], ...] to add to the sorted pass. */
+/** Occluding columns in front of someone in `views` (render.js): [[key, obj], ...] to add to the sorted pass; a view
+ * hidden by one is stamped `hid` (render.js draws the hero's silhouette over the Castle's walls). */
 export function occludersFor(map, vr, views, out) {
-  const T = terrainOf(map), b = T.box, w = map.w;
+  const T = terrainOf(map), b = T.box, w = map.w, H = map.hgt, tall = map.tallOcclusion;
+  for (const v of views) v.lv = H[map.tileIdx(v.at[0], v.at[1])];
   for (const i of T.occ) {
     const k = i * 4;
     if (b[k] > vr.x1 || b[k + 2] < vr.x0 || b[k + 1] > vr.y1 || b[k + 3] < vr.y0) continue;
     const key = (i % w) + ((i / w) | 0) + 0.5;
     for (const v of views) {
       if (v.d >= key || v.x + v.hw < b[k] || v.x - v.hw > b[k + 2] || v.y1 < b[k + 1] || v.y0 > b[k + 3]) continue;
+      if (tall && H[i] <= v.lv + map.climb) continue; // no higher than the ground under them
       let o = T.objs.get(i);
       if (!o) T.objs.set(i, (o = { ti: i }));
+      v.hid = G.frame;
+      const cx = Math.max(24, v.hw * 2.8);
+      if (o._f === G.frame) { if (tall) clipAdd(o, v.x - cx, v.y0 - 6, v.x + cx, v.y1 + 10); if (!tall) break; continue; }
+      o._f = G.frame; o.clip = null;
+      if (tall) clipAdd(o, v.x - cx, v.y0 - 6, v.x + cx, v.y1 + 10);
       out.push(key, o);
-      break;
+      if (!tall) break;
     }
   }
   return out;
+}
+
+/** Occluding columns over a static thing drawn at screen rect r ([x0, y0, x1, y1] world px) standing at sort key
+ * `key` on ground level `lv` (props, buildings, chests behind the Castle's walls): indices, computed once per thing. */
+export function occludersOfRect(map, r, key, lv) {
+  const T = terrainOf(map), b = T.box, w = map.w, H = map.hgt, C = T.C, out = [];
+  const seen = new Set();
+  for (let cy = Math.floor(r[1] / C); cy <= Math.floor(r[3] / C); cy++) for (let cx = Math.floor(r[0] / C); cx <= Math.floor(r[2] / C); cx++) {
+    for (const i of T.cells.get(cx * 65536 + cy) || []) {
+      if (seen.has(i)) continue;
+      seen.add(i);
+      const k = i * 4;
+      if (b[k] > r[2] || b[k + 2] < r[0] || b[k + 1] > r[3] || b[k + 3] < r[1]) continue;
+      if ((i % w) + ((i / w) | 0) + 0.5 <= key || H[i] <= lv + map.climb) continue;
+      out.push(i);
+    }
+  }
+  return out;
+}
+/** Grow the screen rect a redrawn column is clipped to (the things it is drawn over this frame): drawn whole, a column's
+ * faces would spill over its neighbours in front that aren't redrawn. */
+export function clipAdd(o, x0, y0, x1, y1) {
+  const c = o.clip;
+  if (!c) { o.clip = [x0, y0, x1, y1]; return; }
+  if (x0 < c[0]) c[0] = x0; if (y0 < c[1]) c[1] = y0; if (x1 > c[2]) c[2] = x1; if (y1 > c[3]) c[3] = y1;
+}
+/** The column object occludersFor would hand out for tile i (one per tile, stamped per frame). */
+export function occluderObj(map, i) {
+  const T = terrainOf(map);
+  let o = T.objs.get(i);
+  if (!o) T.objs.set(i, (o = { ti: i }));
+  return o;
 }
 
 /** World px a creature's sprite rides above its tile's ground while it hops up or drops down a step (0 at rest). */
@@ -235,7 +384,8 @@ export function hopZ(o, map) {
   if (lv !== o._lv) {
     const cur = o._hop ? now(o._hop) : 0, dl = o._lv - lv; // dl > 0: dropped down
     // a level or so is just walked; a real step up is hopped, a drop fallen
-    o._hop = { t0: G.time, from: dl * HS + cur, up: dl < 0, dur: dl < 0 ? 0.1 + -dl * 0.035 : 0.06 + dl * 0.02, arc: dl < -1 ? 2 + -dl * 1.8 : dl > 2 ? 2 : 0 };
+    const walk = map.walkStep ?? 1; // steps up to this many levels are walked (the Castle's stairs), not hopped
+    o._hop = { t0: G.time, from: dl * HS + cur, up: dl < 0, dur: dl < 0 ? (-dl <= walk ? 0.08 + -dl * 0.025 : 0.1 + -dl * 0.035) : 0.06 + dl * 0.02, arc: -dl > walk ? 2 + -dl * 1.8 : dl > 2 ? 2 : 0 };
     o._lv = lv;
   }
   if (!o._hop) return 0;

@@ -4,6 +4,7 @@ import { G } from '../state.js';
 import { A } from '../core/assets.js';
 import { camera, isoX, isoY, HW, HH } from '../core/view.js';
 import { makeCanvas, rand, TAU, hexToRgb, shade, randi, pick, fmt } from '../core/util.js';
+import { groundHidden } from './terrain.js';
 
 export const ELEM = {
   phys: { name: 'Physical', core: '#ffffff', glow: '#e0d8c8', dark: '#7a7060', sfx: 'phys' },
@@ -591,7 +592,7 @@ export function stampDecals(g, after, x0, y0, x1, y1) {
   const B = g.getTransform(), ba = B.a, bb = B.b, bc = B.c, bd = B.d, be = B.e, bf = B.f;
   for (; i < n; i++) {
     const d = bakedDecals[i], px = isoX(d.x, d.y), py = isoY(d.x, d.y);
-    if (px + d.r < x0 || px - d.r > x1 || py + d.r < y0 || py - d.r > y1) continue;
+    if (px + d.r < x0 || px - d.r > x1 || py + d.r < y0 || py - d.r > y1 || groundHidden(d.x, d.y)) continue;
     g.globalAlpha = d.alpha;
     drawSplat(g, d, d.size * HW * 1.6, ba, bb, bc, bd, be, bf);
   }
@@ -605,13 +606,13 @@ export function drawDecals(ctx, vr, stamped = null) {
   for (const d of bakedDecals) {
     const px = isoX(d.x, d.y), py = isoY(d.x, d.y);
     if (px < vr.x0 - 80 || px > vr.x1 + 80 || py < vr.y0 - 60 || py > vr.y1 + 60) continue;
-    if (stamped && stamped(d, px, py)) continue;
+    if ((stamped && stamped(d, px, py)) || groundHidden(d.x, d.y)) continue;
     ctx.globalAlpha = d.alpha;
     drawSplat(ctx, d, d.size * HW * 1.6, ba, bb, bc, bd, be, bf);
   }
   for (const d of decals) {
     const px = isoX(d.x, d.y), py = isoY(d.x, d.y);
-    if (px < vr.x0 - 80 || px > vr.x1 + 80 || py < vr.y0 - 60 || py > vr.y1 + 60) continue;
+    if (px < vr.x0 - 80 || px > vr.x1 + 80 || py < vr.y0 - 60 || py > vr.y1 + 60 || groundHidden(d.x, d.y)) continue;
     const s = d.size * HW * 1.6 * (d.kind === 'pool' ? 0.3 + 0.7 * d.grow : 1);
     let a = d.alpha;
     if (d.life < 3) a *= d.life / 3;
