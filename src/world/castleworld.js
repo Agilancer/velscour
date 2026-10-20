@@ -15,7 +15,7 @@ import { castleFloorTiles, castleKeepFloorTiles, castleKeepWallFrames, castleFra
 import { townObject } from './town.js';
 import { MAT } from '../gfx/castleground.js';
 import { darkForestTree, darkTreeK, darkForestTreesReady } from '../gfx/darkforest.js';
-import { SCENARIOS } from '../game/overworld.js';
+import { SCENARIOS, CASTLE_SCENARIOS } from '../game/overworld.js';
 
 export const CASTLE_SIZE=Object.freeze([336,304]);
 const W=336,H=304,C=2;                    // tiles; one wall cell is C x C tiles
@@ -86,7 +86,7 @@ export function generateCastle(depth,biome,seed){
   map.t.fill(1);map.losBlocks=true;map.castleMat=mat;
   for(const k of ['rampartDeck','rampartWall','castleRoomWalls'])map[k]=new Uint8Array(N);
   map.rampartHeight=0;map.castleBridges=[];
-  const scenarioId=(((seed>>>0)^depth)>>>0)%SCENARIOS.length,type=SCENARIOS[scenarioId][1];
+  const scenarioId=(((seed>>>0)^depth)>>>0)%CASTLE_SCENARIOS,type=SCENARIOS[scenarioId][1];
   const set=(x,y,m)=>{if(inb(x,y))mat[I(x,y)]=m;};
   const block=(x,y)=>{if(inb(x,y))map.block[I(x,y)]=1;};
   const free=(x,y)=>{if(inb(x,y))map.block[I(x,y)]=0;};

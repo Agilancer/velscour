@@ -1,5 +1,8 @@
 # Dungeon biome art (October 17, 2026 clean-up)
 
+> **October 19, 2026:** biomes now also borrow the Dark Forest and Sewers packs and town furniture (`moreFloors`,
+> `morePacks`, `townProps`), and have their own layouts, themed rooms and scenarios: see [BIOME_ROOMS.md](BIOME_ROOMS.md).
+
 Every indoor biome is built from the three **painted biome packs** only:
 
 | Pack | Floors | Walls | Props |

@@ -79,8 +79,8 @@ async function loadPack(id) {
 }
 const ready = (v) => v && !(v instanceof Promise);
 /** Every pack a biome's tile set draws on: floors and props from `pack`, walls/arches/doors from `wallPack`,
- * more props from `morePacks` ([[pack, 1-based ranges], ...]). */
-const biomePacks = (b) => [...new Set([b.pack || DEFAULT_PACK, b.wallPack, ...(b.morePacks || []).map((m) => m[0])].filter(Boolean))];
+ * more props from `morePacks` and more floors from `moreFloors` ([[pack, 1-based ranges], ...]). */
+const biomePacks = (b) => [...new Set([b.pack || DEFAULT_PACK, b.wallPack, ...[...(b.morePacks || []), ...(b.moreFloors || [])].map((m) => m[0])].filter(Boolean))];
 
 /** Fetch a biome's pack and the monster art. Safe to call repeatedly. */
 export function loadBiomeArt(biome) {
@@ -193,6 +193,24 @@ export function biomeTileSet(biome) {
   if (full) for (const [p, ranges] of biome.morePacks || []) {
     const src = A.packs[p];
     set.scatter.push(...scat(src, pal ? recolor(src.scatter, pal) : src.scatter).filter((s, i) => inR(ranges, i)));
+  }
+  // floors borrowed from other packs in the biome's palette: their seamless ones join the pavings, the rest the
+  // feature tiles (data/biomes.js moreFloors)
+  if (full) for (const [p, ranges] of biome.moreFloors || []) {
+    const src = A.packs[p], cells = src.meta.floors, img = clipFloors(pal ? recolor(src.floors, pal) : src.floors, cells);
+    cells.forEach((f, i) => {
+      if (!inR(ranges, i)) return;
+      (f.seamless ? set.bases : set.features).push(set.floors.length);
+      set.floors.push({ img, sx: f.x, sy: f.y, w: f.w, h: f.h, lum: f.lum, seamless: f.seamless, name: f.name });
+    });
+  }
+  // town-pack furniture (anvils, scroll racks, market tables...), each cut out and recoloured on its own
+  if (full && A.town) for (const name of biome.townProps || []) {
+    const r = A.town.meta.objects[name];
+    if (!r) continue;
+    const f = isoFix('town', name) || { img: A.town.objects, sx: r[0], sy: r[1], w: r[2], h: r[3], ox: r[4], oy: r[5] };
+    const fp = A.town.meta.footprints[name] || [0.5, 0.5];
+    set.scatter.push({ img: recolor(f.img, pal, f.sx, f.sy, f.w, f.h), sx: 0, sy: 0, w: f.w, h: f.h, ox: f.ox, oy: f.oy, fp: fp[0], block: true, name });
   }
   // the temple biomes' approved painted floors and props, unrecoloured, on top of the pack's own; their floors
   // are listed several times so they show about as often as all of the pack's feature tiles together

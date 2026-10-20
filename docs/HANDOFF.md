@@ -35,6 +35,45 @@ Contents
   `totem_rise.png`, sinks away; `mobile` arg). `signatures.js totem_master`, `flow.js`, `autoplay.js totem_master 8`,
   `data_check.mjs` pass. Software GL: ~2-4 ms per draw.
 
+## October 19, 2026 — People and Animals: 47 painted people and 10 animals replace every townsperson (branch `feat/people-and-animals`)
+
+- **What:** the user's `VELSCOUR_People_and_Animals.zip` (kept outside the repo) is cut by `tools/build_people_pack.py`
+  into `assets/sprites/people/` and replaces all townsfolk, royals, NPC knights, guards and scenario civilians. Vendors
+  keep their painted art. Full write-up: [PEOPLE_AND_ANIMALS.md](PEOPLE_AND_ANIMALS.md).
+- **Animation:** there are no walk frames. People bounce along on their pose (hero-style), and frightened, angry or
+  cheering people keep that pose while moving. Animals trot and bound. There are 56 emotions over the 10 painted
+  poses (20 on the Greener sheets).
+- **Town:** cats and dogs in the lanes; rabbits, rats and deer on the outskirts that bolt from the hero. Merchants
+  cry their wares, the witch gathers herbs, the wizard practises, and a Greener juggles. There are 19 events, 7 of
+  them new (witch trial, knighting, wizard's show, dog chase, tax day, ghost prank, deer in the square), on 35% of
+  visits.
+- **World:** `src/game/folk.js` is shared by scenarios, Dark Forest trials and dungeon encounters. There are 6 new
+  Wilds/Sea of Sand scenarios (`WILD_SCENARIOS`; the Castle keeps its 35), and the old scenarios now use the new
+  people. Dungeon encounters (`src/game/encounters.js`, about half of depths): captive, knight's last stand,
+  merchant's camp, wizard's ward, witch's cauldron, Greener's cache. Rats scurry on some depths. The remains are
+  painted fallen knights.
+- **Design calls made without asking:**
+  - Vendors keep their own art.
+  - The witch is named Nan Bramble, because the alchemist vendor is already Old Mother Wren.
+  - The three Greener sheets are triplets.
+  - The royal heir is the lost child.
+  - Events happen on 35% of visits (was 25%).
+  - The animals are larger than life so they read on screen.
+- **Tests:** `townsfolk.mjs`, `town_visuals.mjs`, `townlife.js`, `encounters.js` (new) and `town_sprite_display.js`
+  were rewritten. `scenarios.js` and `overworld.js` cover the new ids. `castle_overworld.mjs` checks
+  `CASTLE_SCENARIOS`.
+
+## October 19, 2026 — biome identity: art mixes, layouts, themed rooms, 20 scenarios per biome (branch `feat/biome-identity`)
+
+- Every dungeon biome has its own art mix (the Dark Forest pack now builds the cave biomes underground; borrowed floors,
+  props and town furniture), a layout style (crypt, hall, cave, maze, channel, ruin), 10-14 themed rooms out of 36
+  furnishing recipes, and 20 optional scenarios on 20 shared mechanics with biome-specific titles and wording.
+  Castle Keep floors re-cut (top faces only, seamless paving). Full write-up: [BIOME_ROOMS.md](BIOME_ROOMS.md).
+- Files: `src/data/biomerooms.js` (themes, tags, rooms, scenario words), `src/game/scenarios.js`, `STYLES`/`furnishRoom`
+  in `src/world/dungeon.js`, `ART` in `src/data/biomes.js`, `moreFloors`/`townProps` in `biomeTileSet`.
+- Tests: `biome_scenarios.js`, `biome_looks.js` (new); `data_check` counts borrowed floors and props.
+- Open: the scenarios aren't balance-tested at deep depths; auto-play completes them only when it happens upon them.
+
 ## October 19, 2026 — helmets resized to the heads (branch `feat/helmet-sizing`)
 
 - **Request:** helmet placement looked decent but every class's helmets were a bit wide; give all classes a once-over.
