@@ -31,15 +31,56 @@ def source_rgba(name): return Image.open(SOURCE/name).convert('RGBA')
 def bounds_nonblack(im):
     rgb=im.convert('RGB')
     return rgb.point(lambda p:255 if p>20 else 0).getbbox()
+def seamless(face, margin=0.07, band=0.16, N=256, wrap=True):
+    """A paving tile that repeats without seams. Each painted slab has its own bevelled rim, so tiled as drawn every
+    tile shows a dark diamond outline. The top face is unsheared to a square (u, v), the rim cropped off, the square
+    made periodic by blending its edges with a half-offset copy of itself (the copy's edges are the original's
+    middle, so they continue across the wrap), and the square sheared back onto the 160x80 diamond."""
+    import numpy as np
+    from scipy import ndimage
+    f=np.asarray(face.convert('RGB')).astype(float); fh,fw=f.shape[:2]
+    def sample(img,xs,ys): return np.stack([ndimage.map_coordinates(img[...,c],[ys,xs],order=1,mode='nearest') for c in range(3)],-1)
+    t=(np.arange(N)+.5)/N; u,v=np.meshgrid(margin+t*(1-2*margin),margin+t*(1-2*margin),indexing='xy')
+    sq=sample(f,fw/2+(u-v)*fw/2-.5,(u+v)*fh/2-.5)
+    if wrap:
+      rolled=np.roll(sq,(N//2,N//2),(0,1))
+      d=np.minimum(np.arange(N),N-1-np.arange(N))/(band*N); ramp=np.clip(d,0,1); ramp=ramp*ramp*(3-2*ramp)
+      wgt=(ramp[:,None]*ramp[None,:])[...,None]
+      sq=sq*wgt+rolled*(1-wgt)
+    # back onto the diamond, at 4x then filtered down; (u, v) wraps, so every diamond pixel has a source
+    W,H=640,320; ys,xs=np.mgrid[0:H,0:W]+.5
+    uu=((xs-W/2)/(W/2)+ys/(H/2))/2; vv=(ys/(H/2)-(xs-W/2)/(W/2))/2
+    big=np.stack([ndimage.map_coordinates(np.pad(sq[...,c],2,mode='wrap'),[(vv%1)*N-.5+2,(uu%1)*N-.5+2],order=1) for c in range(3)],-1)
+    return Image.fromarray(np.clip(big,0,255).astype(np.uint8),'RGB').resize((160,80),Image.Resampling.LANCZOS)
+
 def floor_tiles(mask):
+    """The painted floors are 3D slabs (a diamond top face over a dark side). Only the top face is the floor: it spans
+    the slab's full width, apex at the slab's top and side corners on its widest row. Each slab is found as an alpha blob and
+    assigned to its grid cell by centre (the art isn't on an even grid)."""
+    from scipy import ndimage
+    import numpy as np
     sources=[(source_rgba('castle_keep_floors_40.png').convert('RGB'),8,5),(source_rgba('castle_keep_floors_20.png').convert('RGB'),5,4)]
     out=[]
     for src,cols,rows in sources:
+        a=np.asarray(src).max(2)>16
+        lab,n=ndimage.label(ndimage.binary_closing(a,iterations=2))
+        cells={}
+        for i,sl in enumerate(ndimage.find_objects(lab),1):
+            ys,xs=np.nonzero(lab[sl]==i)
+            if len(ys)<3000: continue
+            cy,cx=ys.mean()+sl[0].start,xs.mean()+sl[1].start
+            k=(min(rows-1,int(cy*rows/src.height)),min(cols-1,int(cx*cols/src.width)))
+            if k not in cells or len(ys)>cells[k][1]: cells[k]=(sl,len(ys))
         for iy in range(rows):
             for ix in range(cols):
-                crop=src.crop((round(ix*src.width/cols),round(iy*src.height/rows),round((ix+1)*src.width/cols),round((iy+1)*src.height/rows)))
-                box=bounds_nonblack(crop) or (0,0,crop.width,crop.height)
-                out.append(crop.crop(box).resize((160,80),NEAREST).convert('RGBA'))
+                sl,_=cells[(iy,ix)]
+                x0,x1,y0=sl[1].start,sl[1].stop,sl[0].start
+                # the side corners sit on the first row at full width; the face is twice that tall (the mosaic
+                # features are drawn steeper than 2:1, so their face is squashed onto the tile's 2:1 diamond)
+                m=a[sl]; widths=m.sum(1); r=int(np.argmax(widths>=widths.max()-3))
+                face=src.crop((x0,y0,x1,y0+2*r))
+                # feature tiles are single slabs: only their dark bevelled rim is trimmed
+                out.append((seamless(face) if len(out)<10 else seamless(face,margin=0.045,wrap=False)).convert('RGBA'))
     for tile in out: tile.putalpha(mask)
     return out
 
