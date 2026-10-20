@@ -89,7 +89,7 @@ export function torchAtWallSegment(s) {
 }
 
 /** Every fifth depth (but the throne at FINAL_DEPTH) ends in a BOSS ROOM with a raid boss (game/raid.js). */
-import { isRaidDepth, FINAL_DEPTH } from '../data/depth.js';
+import { isRaidDepth, FINAL_DEPTH, density } from '../data/depth.js';
 export { isRaidDepth };
 
 // the boss room: an arena east of the maze, reached by a corridor from its far end
@@ -320,7 +320,7 @@ export function generateDungeon(depth, biome, tileset, seed) {
   const roster = biome.roster;
   const rnd = () => rng.next();
   const looks = rollLooks(biome, rnd); // this level's bestiary: which art and palette swap each archetype gets
-  const density = 1.1 + Math.min(depth, 120) * 0.013;
+  const dens = density(depth);
   const pickArch = () => {
     // earlier roster entries are a bit more common
     const i = Math.floor(Math.pow(rng.next(), 1.35) * roster.length);
@@ -336,7 +336,7 @@ export function generateDungeon(depth, biome, tileset, seed) {
   const packRooms = rooms.filter((r) => r !== startRoom && dist[r.idx] >= 0);
   for (const r of packRooms) {
     const area = r.type === 'cave' ? 28 : r.w * r.h;
-    let packs = Math.max(r === exitRoom && !raid ? 0 : 1, Math.round((area / 26) * density * rng.range(0.7, 1.3)));
+    let packs = Math.max(r === exitRoom && !raid ? 0 : 1, Math.round((area / 26) * dens * rng.range(0.7, 1.3)));
     if (r.type === 'small') packs = rng.chance(0.5) ? 1 : 0;
     for (let p = 0; p < packs; p++) {
       const arch = pickArch();
@@ -347,7 +347,7 @@ export function generateDungeon(depth, biome, tileset, seed) {
     }
   }
   // elites
-  const champs = 2 + Math.floor(Math.min(depth, 150) / 15), uniques = 1 + Math.floor(Math.min(depth, 150) / 30);
+  const champs = 2 + Math.floor(Math.min(depth, 150) / 25), uniques = 1 + Math.floor(Math.min(depth, 150) / 45);
   for (let i = 0; i < champs; i++) {
     const r = rng.pick(packRooms.filter((x) => x !== exitRoom)) || exitRoom;
     const [px, py] = roomFloorSpot(r);

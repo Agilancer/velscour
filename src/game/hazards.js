@@ -11,7 +11,7 @@ import { drawLancerOrbitShield } from '../gfx/lancershields.js';
 import { drawCosmicBeam } from '../gfx/cosmos.js';
 import { drawFlyingRang, drawRang3D, rangSkin, groundHeading } from '../gfx/boomerang3d.js';
 import { screenAngle } from '../gfx/vfx.js';
-import { hit, aoe, chainHit } from './combat.js';
+import { hit, aoe, chainHit, leechHeal } from './combat.js';
 
 const roll = (d) => rand(d[0], d[1]);
 
@@ -159,7 +159,7 @@ export class Projectile {
     const d = roll(this.dmg);
     hit(this.src, c, d, this.el, { ...this.o, ang: Math.atan2(this.vy, this.vx) });
     if (this.note) bardProjHit(this, c, d);
-    if (this.heal && this.src && this.src.owner) this.src.owner.heal(d * 0.2, true);
+    if (this.heal && this.src && this.src.owner) leechHeal(this.src.owner, c, d, 0.2);
     if (this.chain > 0) chainHit(w, this.src, c.x, c.y, w.hostiles(this.team, c.x, c.y, 5).find((x) => x !== c), this.chain - 1, d * 0.7, this.el, this.E.glow);
     if (this.exp) explode(w, this.src, c.x, c.y, this.exp, this.dmg.map((v) => v * 0.6), this.el, { ...this.o, sound: true, exclude: new Set([c.id]) }, this.fx === 'rocket' || this.fx === 'bomb' ? 'explosion' : 'explosion');
     if (this.split && !this.child) {
@@ -739,7 +739,7 @@ export class BeamCh {
         const ex = s.x + Math.cos(a) * L, ey = s.y + Math.sin(a) * L;
         for (const c of lineTargets(w, this.team, s.x, s.y, ex, ey, this.width)) {
           hit(s, c, roll(this.dmg), this.el, { ...this.o, dot: !this.instant && !first, ang: a });
-          if (this.o.leech && s.heal) s.heal(roll(this.dmg) * 0.05, true);
+          if (this.o.leech) leechHeal(s, c, roll(this.dmg), 0.05);
         }
         this.ends.push([ex, ey, a]);
         if (this.instant) {

@@ -61,7 +61,7 @@ const rushing = process.argv[4] === 'rush';
       const { depthLevel, armorDiv } = await import('/src/data/depth.js');
       const { rollItem, rollGem } = await import('/src/data/items.js');
       const { monsterBase, VELSCOUR_HP } = await import('/src/game/monster.js');
-      const { raidHpMul } = await import('/src/game/raid.js');
+      const { raidHpMul, raidHitMul } = await import('/src/game/raid.js');
       await game.newChar(cls, 'Endgame');
       document.querySelectorAll('.screen').forEach((s) => s.remove()); G.ui.modalCount = 0; G.ui.closeAll();
       const c = G.char, p = G.player, L = depthLevel(D);
@@ -89,8 +89,8 @@ const rushing = process.argv[4] === 'rush';
       const kinds = {
         norm: { hp: B(L).hp, dmg: B(L).dmg, l: L },
         champ: { hp: B(L + 1).hp * 3, dmg: B(L + 1).dmg * 1.4, l: L + 1 },
-        guard: { hp: B(L + 2).hp * (14 + Math.min(D, 120) / 4), dmg: B(L + 2).dmg * 1.9, l: L + 2 },
-        room: { hp: raidHp(D, L + 3), dmg: B(L + 3).dmg * 3.6, l: L + 3 },
+        guard: { hp: B(L + 2).hp * (10 + Math.min(D, 120) / 10), dmg: B(L + 2).dmg * 1.9, l: L + 2 },
+        room: { hp: raidHp(D, L + 3), dmg: B(L + 3).dmg * raidHitMul(D), l: L + 3 },
         vels: { hp: B(L + 2).hp * VELSCOUR_HP, dmg: B(L + 2).dmg * 2.8, l: L + 2 },
       };
       const elemRes = Math.min(75, (st.res.fire + st.res.cold + st.res.light + st.res.poison) / 4);

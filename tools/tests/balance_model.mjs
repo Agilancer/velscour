@@ -7,10 +7,10 @@ const { rollItem, itemStats, itemDmg, itemArmor, SLOTS } = await import(new URL(
 const { CLASSES } = await import(new URL('data/classes.js', U));
 const { skillBaseDamage } = await import(new URL('data/skills.js', U));
 const { masteryMul } = await import(new URL('game/augments.js', U));
-const { depthLevel, armorDiv, fortitude } = await import(new URL('data/depth.js', U));
+const { depthLevel, armorDiv, fortitude, toughness, danger, densityXp } = await import(new URL('data/depth.js', U));
 const src = (await import('node:fs')).readFileSync(new URL('game/monster.js', U), 'utf8');
 const mb = src.match(/export function monsterBase\(level\) \{[\s\S]*?\n\}/)[0].replace('export ', '');
-const monsterBase = new Function('clamp', mb + '; return monsterBase;')((v, a, b) => Math.max(a, Math.min(b, v)));
+const monsterBase = new Function('clamp', 'toughness', 'danger', 'densityXp', mb + '; return monsterBase;')((v, a, b) => Math.max(a, Math.min(b, v)), toughness, danger, densityXp);
 const cls = process.argv[2] || 'paladin', C = CLASSES[cls];
 const avg = (f, n = 400) => { let s = 0; for (let i = 0; i < n; i++) s += f(); return s / n; };
 
@@ -50,5 +50,5 @@ for (const depth of [5, 20, 40, 60, 80, 100, 120, 140, 150, 160, 180, 200, 250, 
   const dps = hitD * 1.6;
   const mhit = B.dmg * mit, ehit = B.dmg * (1 - h.res / 100);
   const f = (x) => x.toFixed(1).padStart(6);
-  console.log(`${String(depth).padStart(4)} -> ${String(L).padStart(3)} | ${String(Math.round(h.hp)).padStart(6)} ${f(100 * (1 - mit))} ${f(mhit)} ${f(100 * mhit / h.hp)}% | ${String(Math.round(dps)).padStart(7)} ${f(B.hp / dps)} ${f(B.hp * 3 / dps)} ${f(B.hp * (14 + Math.min(depth, 120) / 4) * 2 / dps)} | ${f(h.hp / mhit)} ${f(h.hp / (mhit * 1.4))} ${f(h.hp / (mhit * 1.9 * 2))}`);
+  console.log(`${String(depth).padStart(4)} -> ${String(L).padStart(3)} | ${String(Math.round(h.hp)).padStart(6)} ${f(100 * (1 - mit))} ${f(mhit)} ${f(100 * mhit / h.hp)}% | ${String(Math.round(dps)).padStart(7)} ${f(B.hp / dps)} ${f(B.hp * 3 / dps)} ${f(B.hp * (10 + Math.min(depth, 120) / 10) * 2 / dps)} | ${f(h.hp / mhit)} ${f(h.hp / (mhit * 1.4))} ${f(h.hp / (mhit * 1.9 * 2))}`);
 }

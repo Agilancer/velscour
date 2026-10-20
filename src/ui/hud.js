@@ -66,9 +66,9 @@ export const HUD = {
     const pips = $('#greed-pips');
     for (let i = 0; i < GREED_MAX; i++) pips.appendChild(el('i'));
     UI.tip($('#stance'), () => `<b style="color:#8fe0ff">Auto-play stance</b>
-      <div><b>Cautious</b>: keeps its distance, drinks early, runs sooner, clears more of each depth before its guardian.</div>
-      <div><b>Balanced</b>: the default.</div>
-      <div><b>Reckless</b>: presses in, drinks late, dives for the guardian.</div>`);
+      <div><b>Cautious</b>: kites anything that closes in, fights from the edge of its reach, drinks early, runs for town sooner, out-levels each depth before its guardian.</div>
+      <div><b>Balanced</b>: the default: kites crowds and when hurt.</div>
+      <div><b>Reckless</b>: stands in the thick of it, barely kites, drinks late, dives for the guardian under-levelled.</div>`);
     UI.tip($('#greed'), () => { const g = greedOf(), M = greedMods(g, hoardOf()); return `<b style="color:#ffc040">The Greed lever: ${g} / ${GREED_MAX}</b>
       <div>Each notch: +7% champion packs, +12% pack size, +8% monster traits, monsters +10% life and +6% damage. Pays +25% drops, +30% gold, +20% magic find.</div>
       <div>Every depth cleared with the lever up adds its level to the <b>Hoard</b> (+2% drops and gold a stack while greedy, up to 50). A death loses the Hoard and drops the lever.</div>

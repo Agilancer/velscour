@@ -5,6 +5,9 @@
 //   node tools/tests/balance.js paladin 150 20        # class, start depth, game minutes
 //   node tools/tests/balance.js wizard,ranger 150,60 15
 //   node tools/tests/balance.js paladin 150 10 god     # no damage taken: hero DPS, guardian and raid fight lengths
+//   BAL_STANCE=cautious,reckless node tools/tests/balance.js wizard 20 10   # auto-play stances (default balanced)
+//   BAL_RAID=1 node tools/tests/balance.js wizard 30 5   # start at a BOSS ROOM depth's gate, the level's monsters gone
+// Also prints potions drunk, life lost (in whole life bars), share of time kiting and seconds per kill.
 // Targets (see docs/HANDOFF.md, balance sweep): a death now and then, never more than 6-10 deaths per 5-depth block.
 const { openGame, report } = require('./harness');
 const classes = (process.argv[2] || 'paladin').split(',');
@@ -12,12 +15,13 @@ const depths = (process.argv[3] || '150').split(',').map(Number);
 const minutes = +(process.argv[4] || 15);
 const god = process.argv[5] === 'god'; // no damage taken: measures DPS and fight lengths instead of deaths
 const rounds = +(process.env.BAL_GEAR || 8); // drop rounds of 25 items the gear is picked from (lower = a weaker-geared hero)
+const stances = (process.env.BAL_STANCE || 'balanced').split(',');
 
 (async () => {
   const { browser, page, errors, shot } = await openGame();
   const rows = [];
-  for (const cls of classes) for (const D of depths) {
-    await page.evaluate(async ({ cls, D, god, rounds }) => {
+  for (const cls of classes) for (const D of depths) for (const stance of stances) {
+    await page.evaluate(async ({ cls, D, god, rounds, stance, raidGate }) => {
       const { G, game } = window.VELSCOUR;
       const { Auto } = await import('/src/game/autoplay.js');
       const { depthLevel } = await import('/src/data/depth.js');
@@ -55,13 +59,18 @@ const rounds = +(process.env.BAL_GEAR || 8); // drop rounds of 25 items the gear
       const M = Math.min(1000, Math.round(20 + D * 1.6));
       c.bar.filter(Boolean).forEach((id, i) => { c.mastery[id] = [Math.max(1, Math.round(M * (i < 2 ? 1 : 0.55))), 0]; });
       Auto.spendSkills(); Auto.arrangeBar(); p.recompute(); p.hp = p.maxHp; p.mana = p.maxMana;
-      c.deaths = 0; c.kills = 0;
+      c.deaths = 0; c.kills = 0; c.stance = stance;
       G.godMode = god; G.raidLog = [];
       G.autoOpenSeals = true; // nobody is watching: auto-play breaks sealed treasures itself instead of waiting in town
-      window.__bal = { blocks: {}, startDepth: D, maxDepth: D, deathsAt: [] };
+      window.__bal = { blocks: {}, startDepth: D, maxDepth: D, deathsAt: [], pots: 0, lost: 0, kiteT: 0, t: 0 };
       Auto.toggle(true);
       game.enterDungeon();
-    }, { cls, D, god, rounds });
+      if (raidGate) {
+        await new Promise((r) => setTimeout(r, 800));
+        const w = G.world, R = w.raid;
+        if (R) { for (const m of w.creatures) if (m.team === 'enemy' && m !== w.boss) m.dead = true; G.player.x = R.arena.gate.x - 3; G.player.y = R.arena.gate.y0 + 1.5; }
+      }
+    }, { cls, D, god, rounds, stance, raidGate: !!process.env.BAL_RAID });
     await page.waitForTimeout(1500);
     let last = null;
     for (let min = 1; min <= minutes; min++) {
@@ -71,12 +80,17 @@ const rounds = +(process.env.BAL_GEAR || 8); // drop rounds of 25 items the gear
         const { Meter } = await import('/src/game/dpsmeter.js');
         const B = window.__bal, t0 = performance.now();
         let sim = 0, deaths = G.char.deaths;
+        const potSum = () => Object.values(G.char.potions).reduce((a, n) => a + n, 0);
         while (sim < 60) {
           for (let i = 0; i < 15; i++) {
             if (G.mode !== 'game' || !G.world) break;
             G.dt = 1 / 30; G.time += G.dt; G.frame++;
+            const pp = G.player, hp0 = pp.hp, pots0 = potSum();
             game.update(1 / 30);
-            sim += 1 / 30;
+            sim += 1 / 30; B.t += 1 / 30;
+            if (G.player === pp && pp.hp < hp0) B.lost += (hp0 - pp.hp) / pp.maxHp;
+            if (potSum() < pots0) B.pots += pots0 - potSum();
+            if (Auto.status === 'Kiting') B.kiteT += 1 / 30;
             if (G.char.deaths > deaths) { deaths = G.char.deaths; B.deathsAt.push(G.world.depth); const k = Math.floor((G.world.depth - 1) / 5); B.blocks[k] = (B.blocks[k] || 0) + 1; }
             if (G.world && G.world.kind === 'dungeon') B.maxDepth = Math.max(B.maxDepth, G.world.depth);
           }
@@ -86,17 +100,17 @@ const rounds = +(process.env.BAL_GEAR || 8); // drop rounds of 25 items the gear
         const c = G.char, p = G.player, w = G.world;
         const raids = (G.raidLog || []).splice(0).map((r) => `${r.boss}@D${r.depth} ${r.secs}s`).join('; ');
         return { dps: Math.round(Meter.avg()), raids, where: w ? (w.kind === 'town' ? 'town' : `D${w.depth}`) : '-', depth: c.depth, deepest: c.deepest, lvl: c.level, kills: c.kills, deaths: c.deaths,
-          hp: `${Math.round(p.hp)}/${p.maxHp}`, armor: p.st.armor, pots: Object.values(c.potions).join('/'), status: Auto.status, maxDepth: B.maxDepth, deathsAt: B.deathsAt.join(','),
+          hp: `${Math.round(p.hp)}/${p.maxHp}`, armor: p.st.armor, pots: Object.values(c.potions).join('/'), status: Auto.status, maxDepth: B.maxDepth, deathsAt: B.deathsAt.join(','), drunk: B.pots, lost: B.lost, kite: B.kiteT / Math.max(1, B.t), spk: B.t / Math.max(1, c.kills),
           boss: w && w.boss ? `${w.boss.name} ${Math.round(w.boss.hp)}/${Math.round(w.boss.maxHp)}` : '' };
       });
-      console.log(`[${cls} D${D} ${min}m] ${last.where} lvl=${last.lvl} kills=${last.kills} deaths=${last.deaths} deepest=${last.deepest} hp=${last.hp} arm=${last.armor} pots=${last.pots} dps=${last.dps} ${last.boss} | ${last.status}`);
+      console.log(`[${cls} D${D} ${stance} ${min}m] ${last.where} lvl=${last.lvl} kills=${last.kills} deaths=${last.deaths} deepest=${last.deepest} hp=${last.hp} arm=${last.armor} pots=${last.pots} dps=${last.dps} ${last.boss} | ${last.status}`);
       if (last.raids) console.log(`   RAID KILLED: ${last.raids}`);
     }
-    await shot(`balance_${cls}_${D}`);
-    rows.push({ cls, D, minutes, deaths: last.deaths, cleared: Math.max(0, last.deepest - (D - 1)), maxDepth: last.maxDepth, lvl: last.lvl, deathsAt: last.deathsAt });
+    await shot(`balance_${cls}_${D}_${stance}`);
+    rows.push({ cls, D, stance, minutes, deaths: last.deaths, cleared: Math.max(0, last.deepest - (D - 1)), maxDepth: last.maxDepth, lvl: last.lvl, deathsAt: last.deathsAt, kills: last.kills, drunk: last.drunk, lost: last.lost, kite: last.kite, spk: last.spk });
   }
-  console.log('\nSUMMARY  class  start  min  deaths  cleared  furthest  lvl  deaths at');
-  for (const r of rows) console.log(`  ${r.cls.padEnd(14)} ${String(r.D).padStart(4)} ${String(r.minutes).padStart(4)} ${String(r.deaths).padStart(7)} ${String(r.cleared).padStart(8)} ${String(r.maxDepth).padStart(9)} ${String(r.lvl).padStart(4)}  ${r.deathsAt}`);
+  console.log('\nSUMMARY  class          start stance    min  deaths cleared furthest  lvl  kills s/kill potions lives-lost kiting  deaths at');
+  for (const r of rows) console.log(`  ${r.cls.padEnd(14)} ${String(r.D).padStart(4)} ${r.stance.padEnd(9)} ${String(r.minutes).padStart(4)} ${String(r.deaths).padStart(7)} ${String(r.cleared).padStart(7)} ${String(r.maxDepth).padStart(8)} ${String(r.lvl).padStart(4)} ${String(r.kills).padStart(6)} ${r.spk.toFixed(1).padStart(6)} ${String(r.drunk).padStart(7)} ${r.lost.toFixed(1).padStart(10)} ${(r.kite * 100).toFixed(0).padStart(5)}%  ${r.deathsAt}`);
   report(errors, 20);
   await browser.close();
 })();

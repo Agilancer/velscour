@@ -5,14 +5,16 @@ import { sfx } from '../core/audio.js';
 import { addEffect, Telegraph, Slash, Ring, Bolt, Column, burst, spawn, sparkle, elem, floatText, smoke, addLight } from '../gfx/vfx.js';
 import { shiftPalette } from '../gfx/pixelart.js';
 import { Creature } from './creature.js';
-import { hit, aoe, chainHit } from './combat.js';
+import { hit, aoe, chainHit, leechHeal } from './combat.js';
 import { Projectile, Delayed, NovaWave, Area, Fissure, explode, lineTargets, coneTargets } from './hazards.js';
 import { ARCH, ARCH_MOVES, ELITE_AFFIXES, bossName, uniqueName } from '../data/enemies.js';
 import { SUMMONS } from '../data/summons.js';
 import { bodyR } from '../world/map.js';
+import { toughness, danger, densityXp } from '../data/depth.js';
 import { ART_BY_ID, BLUE_PUDDLES, BLUE_SLIMES, REVIVED, greaterSwap, rollLooks, uniqueSwap } from '../data/bestiary.js';
 
 const LEASH = 10; // minions fight what's within this many tiles of the hero
+const CHASE = 1.3, CHASE_MAX = 4.6; // monsters' pursuit pace: x1.3, up to 4.6 tiles/s (the hero runs 4.2) unless faster already
 const PROJ_FX = { fire: 'fireball', cold: 'shard', light: 'spark', poison: 'blob', shadow: 'skull', arcane: 'orb', holy: 'bolt', blood: 'blob', acid: 'blob', phys: 'rock' };
 const POOL_FX = { fire: 'fire', cold: 'frost', poison: 'poison', acid: 'slime', shadow: 'void', arcane: 'void', blood: 'blood', light: 'storm', holy: 'holy', phys: 'poison' };
 
@@ -53,17 +55,18 @@ function rollMoves(arch, rank, variant, depth) {
   return n ? shuffle(all).slice(0, n) : null;
 }
 
-/** Demon Lord Velscour's life in normal monsters of his level: about three times the last BOSS ROOM boss. */
-export const VELSCOUR_HP = 45000;
+/** Demon Lord Velscour's life in normal monsters of his level: ~3x the last BOSS ROOM boss (~3 minutes of hero damage). */
+export const VELSCOUR_HP = 60;
 export function monsterBase(level) {
   return {
-    // tuned hard: heroes should have to grind gear and levels to get past the BOSS ROOMs
-    hp: 30 * Math.pow(1.068, level - 1),
+    // toughness (data/depth.js) sizes life to the heroes' damage at that level: a few seconds a normal monster
+    hp: 30 * Math.pow(1.068, level - 1) * toughness(level),
     // damage keeps its 1.058 a level to level 60, then grows slower (1.04, then 1.006 past 140): hero life and
     // armor only grow with levels and gear, and at 1.058 a normal hit took ~45% of a geared hero's life by depth 160;
-    // past 140 hero life grows ~0.6% a level (tools/tests/endgame.js), and 1.016 had normal hits at 35-60% by depth 500
-    dmg: 1.2 * (4.4 + Math.min(level, 10) * 0.24) * Math.pow(1.058, Math.min(level, 60) - 1) * Math.pow(1.04, clamp(level - 60, 0, 80)) * Math.pow(1.006, Math.max(0, level - 140)),
-    xp: 4 * Math.pow(level, 1.5),
+    // past 140 hero life grows ~0.6% a level (tools/tests/endgame.js), and 1.016 had normal hits at 35-60% by depth 500;
+    // danger (data/depth.js) softens it where hero life lags, now that fights last long enough for every monster to hit
+    dmg: 1.2 * (4.4 + Math.min(level, 10) * 0.24) * Math.pow(1.058, Math.min(level, 60) - 1) * Math.pow(1.04, clamp(level - 60, 0, 80)) * Math.pow(1.006, Math.max(0, level - 140)) * danger(level),
+    xp: 4 * Math.pow(level, 1.5) * densityXp(level), // fewer monsters a level than before (data/depth.js density)
   };
 }
 
@@ -92,7 +95,7 @@ export class Monster extends Creature {
       if (this.affixes && this.affixes.includes('vampiric')) this.heal(d * 0.3);
       const th = this.curses.thorns;
       if (th && th.t > 0) hit(th.src, this, d * th.amt / 100, 'phys', { dot: true, crit: false });
-      if (this.leech && this.owner) this.owner.heal(d * this.leech * 0.15, true);
+      if (this.leech && this.owner) leechHeal(this.owner, target, d, this.leech * 0.15);
     }
     return d;
   }
@@ -375,11 +378,15 @@ export class Monster extends Creature {
     sparkle(x, y, 10, '#80c0ff', 8, 0.4);
   }
 
-  /** Go after a target round walls and props: minions by A*, monsters down the flow field when it is the hero. */
+  /**
+   * Go after a target round walls and props: minions by A*, monsters down the flow field when it is the hero.
+   * Monsters run harder in pursuit (CHASE, up to about the hero's own pace), so a kiting hero can't outrun them forever.
+   */
   chase(dt, t, speed = this.speed) {
     if (this.static) return;
     const w = this.world, p = w.player;
     if (this.summon) { this.navTo(t.x, t.y, dt, speed); return; }
+    if (this.team === 'enemy') speed = Math.max(speed, Math.min(speed * CHASE, CHASE_MAX));
     // the flow field leads to the hero: follow it to them, and to anything at their side
     const flow = p && !p.dead && (t === p || dist(t.x, t.y, p.x, p.y) < 3) && w.map.flowAt(p.x, p.y) === 0;
     this.navTo(t.x, t.y, dt, speed, flow);
@@ -1376,7 +1383,8 @@ export function makeElite(m, rank, depth, world) {
     const vel = m.arch === 'velscour';
     if (vel) { m.art = 'va_velscour'; m.artH = 94; m.swap = null; }
     // Velscour: the final fight (was 40x, less than a plain depth-500 guardian)
-    m.maxHp *= vel ? VELSCOUR_HP : 14 + Math.min(depth, 120) / 4; m.dmg *= vel ? 2.8 : 1.9; m.xp *= vel ? 200 : 25;
+    // a guardian is 10-22 plain normals whatever its build (a brute archetype's own bulk counts only partly)
+    m.maxHp *= vel ? VELSCOUR_HP : (10 + Math.min(depth, 120) / 10) / Math.pow(Math.max(1, ARCH[m.arch]?.hp || 1), 0.7); m.dmg *= vel ? 2.8 : 1.9; m.xp *= vel ? 200 : 25;
     m.aura = vel ? '#ff2000' : '#ff4020';
     m.scale = vel ? 1.6 : 1.9; m.r *= vel ? 1 : 1.6;
     m.ai = 'boss';
@@ -1441,7 +1449,7 @@ export function createSummon(p, sk, L, x, y, dmgRange, corpse) {
     m.sprite = corpse.sprite; m.pal = shiftPalette(corpse.pal || {}, { hue: 120, sat: 0.5, light: 0.05 }); m.px = corpse.px; m.fly = corpse.fly;
     if (corpse.art) { m.art = corpse.art; m.swap = REVIVED; m.artH = corpse.artH; }
     m.name = 'Revived ' + (corpse.art ? ART_BY_ID[corpse.art].name : ARCH[corpse.arch] ? ARCH[corpse.arch].names[0] : 'Monster');
-    m.maxHp = m.hp = Math.max(hp, corpse.maxHp * 0.6);
+    m.maxHp = m.hp = Math.max(hp, corpse.maxHp * 0.6 / toughness(corpse.level || 1)); // monster life is sized to hero damage, not monster hits
     m.aura = '#40ff80';
   }
   // enforce per-skill maximum and a global cap

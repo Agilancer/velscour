@@ -14,6 +14,66 @@ Contents
 
 ---
 
+## October 20, 2026 — risky combat: tougher monsters, class damage evened out, kiting stances, rarer seals (branch `feat/risky-combat-retune`)
+
+- **Request:** hero damage far too high, especially early: ranged heroes one-shot everything in range. Enemies (even easy
+  ones) should take time to kill, close the gap, make the hero take damage and drink every potion; auto-play should
+  run/kite when needed and its stance dial should give clearly different results. Re-tune all classes. Sealed treasures
+  drop far too often: at least 12 hours of auto-play to fill the bag; a bag full of what auto-play can't sell stops
+  auto-play in town until a slot is free.
+- **Measured first** (new `tools/tests/tuning.js`: every class auto-plays, god mode, against pinned training dummies,
+  one alone then a pack of five, at depths 1-500; heroes 2 levels over their monsters, geared like endgame.js). A
+  normal monster died in 0.3 s at depth 1, 0.05 s at depth 10, under 0.005 s past depth 160; classes differed ~8x
+  (Astronomer, Ranger, Wizard fastest; Barbarian, Dragoon slowest).
+- **Monster life** (`toughness(level)` in `src/data/depth.js`, a log-interpolated table read by `monsterBase`):
+  x4.6 at level 1 to x1690 at 258 (held past it, so the Endless Torment still outgrows the hero). A plain normal
+  now takes ~1.5 s of a level-1 hero's damage at depth 1 and ~3 s from depth 10 on (a pack of five ~1.5x that);
+  re-measured after: 2.1-3.3 s at every sampled depth. Champions x3, uniques x5 as before.
+- **Monster damage** (`danger(level)`, same file): x0.7 at level 1 (a fresh hero still died twice in its first two
+  minutes at x1), x1 from 6 to 20, then down to x0.14-0.15 past level 146, where hero
+  life lagged (a normal hit was ~6% of life at depth 40, ~12% at 80-160, ~30% past 250). Normal hits are now ~3-5%,
+  but every monster lives long enough to land them.
+- **Class damage** (`DMG_TUNE` / `DMG_TUNE_AT` in `src/data/classes.js`, applied in `Player.skillDamage` via
+  `classTune`, so minions, signatures and procs follow): a multiplier per class at hero levels 5 / 45 / 160 (the
+  measured ratio^0.85; melee classes +15%). After: classes mostly within +-40% of the mean.
+- **Bosses:** guardians 10-22 plain normals (`(10 + depth/10) / archetype life^0.7`, was 14-44 x archetype life);
+  BOSS ROOM life `raidHpMul` 0.35-0.55 (~12-19 normals; their wards and mechanics stretch it ~3.5x), damage
+  `raidHitMul` x2.7 to depth 10 easing to x1.9 by 100 (was 3.6); add waves are fodder (35% life, at most 7, was up to
+  10 full monsters that piled up); enrage at 3 min and execute at 5 (were 2 and 3: every fight hit the execute);
+  `VELSCOUR_HP` 60 normals (was 45000 when he died in 0.1 s). Measured (`BAL_RAID=1` balance.js, 16 class/depth
+  pairs, damage on): every depth-5 room cleared first try in 43-72 s, most depth-30 rooms in 48-198 s (3 of 12 heroes
+  died once), depth-100 rooms 74-156 s with about half the heroes dying once first.
+- **Pursuit:** monsters chasing run x1.3 (`CHASE`, up to 4.6 tiles/s; the hero runs 4.2) in `Monster.chase`.
+- **Leech** (`leechHeal` in combat.js): life/mana leech heals by the share of the target's life the hit took
+  (`LEECH_K` 2 x leech% of the hero's own life for a whole monster), not raw damage, which runs far ahead of hero life
+  and healed whole life bars a hit. Ring blood augment, beams, projectiles' heal and minion leech use it too.
+  Revived corpses' life is divided by the corpse's toughness.
+- **Density:** packs per room grow half as fast (`density(depth)` 1.0 + 0.006/depth to 120, was 1.1 + 0.013; champions
+  2 + depth/25, uniques 1 + depth/45); `monsterBase` XP x `densityXp` so XP per depth stays where it was.
+- **Events:** Velscour's Challenge needs 10 + depth/15 kills (max 24) in 45 s (was 18+, 40 s); kill streaks allow 4 s
+  between kills (was 2.2).
+- **Stances** (`STANCES` in autoplay.js): new `kiteNear` (a melee foe this close sends a ranged build back), `kiteCrowd`,
+  `kiteHp`, `backoff` (melee builds, Whirlwind too, step out of the crowd while a potion works) and `stand` (share of a
+  ranged skill's reach it fights from: Cautious 1.1, Reckless 0.55); wider potion/retreat thresholds. Measured (8-min
+  soaks, balance.js): ranged Cautious kites 26-51% of the time, Balanced 8-28%, Reckless 0-3%; Cautious drinks the most
+  (a depth-12 Wizard: 31 potions vs 18 vs 2).
+- **Sealed treasures** (`SEAL_GAP` 15 min in items.js; `c.sealT` counts dungeon time in game.update, loot.js seals an
+  Epic+ only when it has run out): at most 4 an hour, a 60-slot bag takes ~15 h. Other Epic+ drops arrive open.
+  **Full bag:** auto-play waits in town only when the bag has no free slot after trading (`bagWait`; was "fewer than
+  14 free with a seal in it"), re-runs its errands when a seal is broken, and goes on once a slot is free. Fixed on the
+  way: buying a vendor upgrade left the replaced piece in the bag unsold (`buyGear` returns the count, the step sells
+  again); a full storage chest made room but didn't store that visit's items.
+- **Tests:** new `tuning.js [classes|all] [depths] [secs]`; `balance.js` gains `BAL_STANCE=a,b,c`, `BAL_RAID=1` (start at
+  a BOSS ROOM gate, the level's monsters gone) and prints potions drunk, life lost (in life bars), kiting share and
+  seconds per kill; `spectate.js` checks the seal gap and the full-bag wait. endgame.js / balance_model.mjs follow the
+  new guardian/raid formulas.
+- **Fresh hero** (autoplay.js wizard/paladin, 15-25 game min): depth 1 takes 5-9 minutes, the starting potions are
+  gone in the first few, an occasional early death; depth 3-4 by minute 15-20 (it was ~10+).
+- **Open:** pet classes (Necromancer, Totem Master seen) are weaker in BOSS ROOMs than on open ground: dozens of pets
+  crowd a big boss and the mechanics (heads, wards) soak them; one run took 40% in 2 minutes, others far less. Deep depths (past
+  ~150) are modelled and soaked only at 100. Auto-play progress is several times slower per hour than before (by
+  design: a depth takes minutes); ask the user how it feels and whether gold/drops per hour need a lift.
+
 ## October 20, 2026 — enemy set 3, no more generated monsters, a random bestiary (branch `feat/enemy-set3`)
 - **Removed** the 1,850 generated biome natives (`bn_`: existing sprites with Canvas shapes drawn on top;
   `src/data/biomenatives.js`, `src/gfx/biomenativeart.js`) and the Heavenly monsters' Canvas fallback (they now come
@@ -44,7 +104,7 @@ Contents
 - **SMITE** (`src/game/smite.js`): `c.smite` 0..1 fills from kills (`happenings.onKill` -> `smiteKill`: normal 1,
   champion 3, unique 6, guardian 12 of `SMITE_KILLS` 45; its own kills don't count). Full: the SMITE button (under
   MADNESS; in portrait it sits above the MADNESS button) or **F** arms it; the next click/tap strikes a 3.4-tile blast:
-  `max(14 hero hits, a share of each foe's life)` (normal 90%, champion 40%, unique 28%, guardian 8%, raid boss 4%).
+  `max(14 hero hits, a share of each foe's life)` (normal 100% since the risky-combat retune, was 90%; champion 40%, unique 28%, guardian 8%, raid boss 4%).
   Right-click / Esc disarms. Never fired by auto-play.
 - **Sealed treasures** (`src/ui/sealed.js`): a `GroundItem` seals any gear of rarity >= `SEAL_RARITY` (3, Epic) whose
   `sealed` is still undefined (`dropFromBag` marks opened items `false`, so they stay open). `itemName` -> "Sealed
@@ -1782,6 +1842,9 @@ are in section 7.
 - Review the sprite replacement PR and its gallery; merge to publish through the existing
   Pages workflow when the art is approved. Keep future art expansion separate from this pass.
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
+- (Oct 20) Ask how the risky-combat retune feels in play (`feat/risky-combat-retune` entry at the top): kill times,
+  deaths, BOSS ROOMs, the stance dial, progress per hour, and whether gold/drops per hour need a lift now that kills
+  are slower. Pet classes in BOSS ROOMs are the known weak spot.
 0. Get the user's feedback on item 21: town variety, ring power (augment numbers are first guesses in rings.js and
    augments.js), mastery speed (`masteryNeed`, cast XP in `Player.tryUseSkill`), and whether deaths now happen often
    enough. Then the boss rooms (item 16).

@@ -15,6 +15,11 @@ import { sigKill } from './signature.js';
 import { armorDiv } from '../data/depth.js';
 
 const PLAYER_RES = { fire: 'fire', cold: 'cold', light: 'light', poison: 'poison', acid: 'poison' };
+const LEECH_K = 2; // life/mana leech: a whole monster's life taken returns LEECH_K x leech% of the hero's own
+/** Heal `who` for leeching `frac` of a hit of dmg on tgt: by the share of tgt's life it took, in `who`'s own life. */
+export function leechHeal(who, tgt, dmg, frac) {
+  if (who && who.heal && tgt && frac > 0) who.heal(Math.min(1, dmg / Math.max(1, tgt.maxHp)) * LEECH_K * who.maxHp * frac, true);
+}
 
 function bloodOf(c) {
   if (c.bloodColor) return c.bloodColor;
@@ -124,16 +129,17 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
   // ---- status effects
   if (!o.dot && !tgt.dead) applyStatus(src, tgt, dmg, el, o);
 
-  // ---- leech
+  // ---- leech: by the share of the target's life the hit took (LEECH_K of the hero's own life a whole life's worth),
+  // not raw damage, which runs far ahead of hero life (it healed whole life bars a hit)
   if (fromPlayer && src.isPlayer && !tgt.isPlayer) {
-    const st = src.st;
+    const st = src.st, share = Math.min(1, dmg / Math.max(1, tgt.maxHp)) * LEECH_K;
     const ls = (st.lifeSteal + (o.leech ? 4 : 0) + (el === 'shadow' ? 2 : 0) + (el === 'blood' ? 3 : 0)) / 100;
-    if (ls > 0) src.heal(dmg * ls * (o.dot ? 0.3 : 1), true);
-    if (st.manaSteal > 0) src.mana = Math.min(src.maxMana, src.mana + dmg * st.manaSteal / 100);
-    if (tgt.curses.leech && tgt.curses.leech.t > 0) src.heal(dmg * tgt.curses.leech.amt / 100 * 0.3, true);
+    if (ls > 0) src.heal(share * src.maxHp * ls * (o.dot ? 0.3 : 1), true);
+    if (st.manaSteal > 0) src.mana = Math.min(src.maxMana, src.mana + share * src.maxMana * st.manaSteal / 100);
+    if (tgt.curses.leech && tgt.curses.leech.t > 0) src.heal(share * src.maxHp * tgt.curses.leech.amt / 100 * 0.3, true);
     src.onHit && src.onHit(tgt, dmg, el, o);
-  } else if (src && src.summon && src.leech) {
-    src.owner.heal(dmg * src.leech * 0.2, true);
+  } else if (src && src.summon && src.leech && src.owner) {
+    leechHeal(src.owner, tgt, dmg, src.leech * 0.2);
   }
   // ring augments ride on skill hits (o.aug) and on the hits of a skill's minions; the skill earns mastery for kills
   if (byHero && !o.proc) {

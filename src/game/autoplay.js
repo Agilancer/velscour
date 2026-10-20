@@ -32,14 +32,17 @@ const POT_TARGET = { hp: 16, mp: 8, rejuv: 4, fury: 2 };
 // The player's stance dial (HUD, saved as c.stance): how hard auto-play presses in. bold: added to boldness();
 // low: life share below which it turns timid; pot/potBoss: life share for a healing potion; retreat: life share for
 // running to town with nothing left to heal; farm: levels over the monsters before it stops clearing whole maps;
-// lim: how far (tiles) it detours for monsters on the way to the guardian.
+// lim: how far (tiles) it detours for monsters on the way to the guardian. Kiting (ranged builds step back between
+// casts): kiteNear: a melee foe this close (tiles past its reach) sends it back; kiteCrowd: this many foes within
+// 2.2 tiles; kiteHp: below this life share any foe beside it. backoff: melee builds below this life share step out
+// of the crowd while a potion works (or with none left). stand: the share of a ranged skill's reach it fights from.
 export const STANCES = {
-  cautious: { name: 'Cautious', bold: -0.3, low: 0.6, pot: 0.65, potBoss: 0.75, retreat: 0.35, farm: 3, lim: 18 },
-  balanced: { name: 'Balanced', bold: 0, low: 0.45, pot: 0.5, potBoss: 0.6, retreat: 0.22, farm: 1, lim: 12 },
-  reckless: { name: 'Reckless', bold: 0.35, low: 0.3, pot: 0.35, potBoss: 0.45, retreat: 0.12, farm: -2, lim: 6 },
+  cautious: { name: 'Cautious', bold: -0.35, low: 0.65, pot: 0.7, potBoss: 0.8, retreat: 0.4, farm: 3, lim: 18, kiteNear: 2.6, kiteCrowd: 2, kiteHp: 0.75, backoff: 0.55, stand: 1.1 },
+  balanced: { name: 'Balanced', bold: 0, low: 0.45, pot: 0.5, potBoss: 0.6, retreat: 0.22, farm: 1, lim: 12, kiteNear: 0.8, kiteCrowd: 3, kiteHp: 0.5, backoff: 0.35, stand: 1 },
+  reckless: { name: 'Reckless', bold: 0.45, low: 0.25, pot: 0.3, potBoss: 0.4, retreat: 0.1, farm: -2, lim: 6, kiteNear: -1, kiteCrowd: 7, kiteHp: 0.22, backoff: 0, stand: 0.55 },
 };
 export const stanceOf = (c = G.char) => STANCES[c && c.stance] || STANCES.balanced;
-/** Fewer free bag slots than this sends auto-play back to town (and sealed treasures can keep it there). */
+/** Fewer free bag slots than this sends auto-play back to town (where a bag with none free after trading keeps it: bagWait). */
 const BAG_LOW = 14;
 
 // ================================================================== power model
@@ -294,8 +297,8 @@ function simulate(p, mutate) {
 
 // ================================================================== small helpers
 function bagFree(c) { return c.bag.reduce((a, b) => a + (b ? 0 : 1), 0); }
-/** In town with the bag this full of sealed treasures: wait for the player to break the seals (ui/sealed.js). */
-function sealedWait(c) { return !G.autoOpenSeals && bagFree(c) < BAG_LOW && c.bag.some((b) => b && b.sealed); }
+/** In town with no free bag slot left after trading (sealed treasures, or nothing auto-play may sell or stash): wait for the player. */
+function bagWait(c) { return bagFree(c) === 0; }
 function sellPrice(it) { return Math.max(1, Math.floor(itemValue(it) / 4)) * (it.type === 'gem' ? (it.count || 1) : 1); }
 function vendorNpc(w, id) { return w.npcs.find((n) => n.vendor && n.vendor.id === id); }
 function potionPrice(k, c) { return Math.round(POTION_PRICE[k] * (1 + c.level * 0.08)); }
@@ -1152,6 +1155,9 @@ export const Auto = {
     // A Barbarian can run at distant visible foes WHILE channeling Whirlwind.
     // This feeds the same goTo/steer path waypoints as ordinary movement.
     if (p.channel instanceof Whirl && p.classId === 'barbarian') {
+      // low on life with a potion working (or none left): spin back out of the crowd (how soon is the stance's call)
+      const S = stanceOf(G.char), near = foes.filter((m) => dist(p.x, p.y, m.x, m.y) < 2.2).length;
+      if (!fleeing && near >= 2 && p.hp < p.maxHp * S.backoff && t.rank !== 'boss' && (p.potionCd > 0 || p.potionRegen.some((r) => r.hp > 0) || G.char.potions.hp + G.char.potions.rejuv === 0) && this.kite(foes)) return;
       if (!fleeing && dist(p.x, p.y, t.x, t.y) > Math.max(0.7, p.channel.r * 0.65))
         this.goTo(t.x, t.y, Math.max(0.6, p.channel.r * 0.6), 1 / 30);
       return;
@@ -1197,8 +1203,14 @@ export const Auto = {
     if (this.stall && this.stall.t > 6) reach = Math.min(reach, 1.6); // nothing is landing: walk right up to it
     // shooters and casters: don't trade shots from the edge of range (they win that), close in to a sure hit
     else if ((t.ai === 'ranged' || t.ai === 'caster') && p.hp > p.maxHp * 0.55) reach = Math.min(reach, Math.max(2.4, reach * (0.65 - 0.25 * bold)));
-    // ranged builds back off from a crowd: later the bolder they are, and never while healthy and over-powered
-    if (!melee && (near >= 3 + Math.round(bold * 3) || (near >= 1 && p.hp < p.maxHp * (0.55 - 0.2 * bold))) && this.kite(foes)) return;
+    // ranged builds back off between casts from a crowd, from a melee foe closing in, or from anything when hurt (how
+    // soon is the stance's call); melee builds step out of the crowd while a potion works when life runs low
+    const S = stanceOf(G.char), hpK = p.hp / p.maxHp;
+    if (!melee) {
+      reach *= S.stand;
+      const closing = S.kiteNear >= 0 && foes.some((m) => (m.ai === 'melee' || m.ai === 'brute' || m.ai === 'charger' || m.ai === 'swarm' || m.ai === 'exploder') && dist(p.x, p.y, m.x, m.y) < m.r + p.r + (m.atkReach || 0.55) + S.kiteNear);
+      if ((near >= S.kiteCrowd + Math.round(bold * 2) || (near >= 1 && hpK < S.kiteHp - 0.15 * bold) || (closing && t.rank !== 'boss')) && this.kite(foes)) return;
+    } else if (near >= 1 && hpK < S.backoff && (p.potionCd > 0 || p.potionRegen.some((r) => r.hp > 0) || G.char.potions.hp + G.char.potions.rejuv === 0) && t.rank !== 'boss' && this.kite(foes)) return;
     if (d > reach || !w.map.los(p.x, p.y, t.x, t.y)) this.goTo(t.x, t.y, Math.max(0.6, reach * 0.85));
   },
   /** Step away from the crowd (ranged builds). */
@@ -1425,15 +1437,24 @@ export const Auto = {
     while (T.phase === 'walk' && T.t === 0 && T.steps[T.i] && T.steps[T.i].want && !this.wants(T.steps[T.i].want)) T.i++;
     const step = T.steps[T.i];
     if (!step) {
-      // sealed treasures fill the bag: wait here until the player breaks enough seals (ui/sealed.js)
-      this.sealWaiting = sealedWait(c);
+      // the bag is full of what auto-play can't sell or stash (sealed treasures...): wait here until the player makes
+      // room (breaks a seal, sells, drops). A seal broken meanwhile is trade goods: run the errands again for it.
+      if (G.autoOpenSeals && bagFree(c) < BAG_LOW && c.bag.some((b) => b && b.sealed)) { for (const b of c.bag) if (b && b.sealed) b.sealed = false; T.i = 0; T.steps = this.townPlan(); return; } // tests: open them and shop again
+      const sealedN = c.bag.filter((b) => b && b.sealed).length;
+      this.sealWaiting = bagWait(c);
       if (this.sealWaiting) {
-        const n = c.bag.filter((b) => b && b.sealed).length;
-        this.setStatus(`Waiting in town: break the seals on ${n} treasure${n > 1 ? 's' : ''}`);
-        if (!T.sealNote) { T.sealNote = true; G.ui.centerMsg('YOUR BAG IS FULL', `Break the seals on your treasures: auto-play waits in town`, 4); G.ui.log(`Auto-play waits in town: <b style="color:#ffdf8a">${n} sealed treasure${n > 1 ? 's' : ''}</b> fill the bag. Tap SEALED (or open them in the inventory) to break the seals.`, '#ffdf8a'); sfx('error'); }
+        if (T.sealedN !== undefined && sealedN < T.sealedN) { T.sealedN = sealedN; T.i = 0; T.steps = this.townPlan(); return; }
+        T.sealedN = sealedN;
+        this.setStatus(sealedN ? `Waiting in town: bag full — break the seals on ${sealedN} treasure${sealedN > 1 ? 's' : ''}` : 'Waiting in town: bag full — free a slot to go on');
+        if (!T.sealNote) {
+          T.sealNote = true;
+          G.ui.centerMsg('YOUR BAG IS FULL', sealedN ? 'Break the seals on your treasures: auto-play waits in town' : 'Free a bag slot: auto-play waits in town', 4);
+          G.ui.log(`Auto-play waits in town: the bag is full${sealedN ? ` (<b style="color:#ffdf8a">${sealedN} sealed treasure${sealedN > 1 ? 's' : ''}</b>). Tap SEALED (or open them in the inventory) to break the seals` : '. Sell, stash or drop something'} and it goes on once a slot is free.`, '#ffdf8a');
+          sfx('error');
+        }
         return;
       }
-      if (G.autoOpenSeals && bagFree(c) < BAG_LOW && c.bag.some((b) => b && b.sealed)) { for (const b of c.bag) if (b && b.sealed) b.sealed = false; T.i = 0; T.steps = this.townPlan(); return; } // tests: open them and shop again
+      T.sealNote = false;
       // done: through the portal
       const po = w.portals[0];
       this.setStatus(`To the portal — Depth ${c.depth}`);
@@ -1480,9 +1501,9 @@ export const Auto = {
     const steps = [];
     if (c.stash && c.stash.some((b) => b && (b.type === 'gem' || (b.req || 1) <= c.level))) steps.push({ stash: true, label: 'Checking the storage chest', fn: () => this.unstash() });
     const gear = (k) => () => this.gearGain(Vendor.stock[k]);
-    steps.push({ vendor: 'weapons', label: 'Selling loot', want: () => c.bag.some((b) => b && b.type !== 'gem' && !b.sealed) || this.gearGain(Vendor.stock.weapons), fn: () => { this.sellJunk(); this.buyGear(Vendor.stock.weapons); } });
+    steps.push({ vendor: 'weapons', label: 'Selling loot', want: () => c.bag.some((b) => b && b.type !== 'gem' && !b.sealed) || this.gearGain(Vendor.stock.weapons), fn: () => { this.sellJunk(); if (this.buyGear(Vendor.stock.weapons)) this.sellJunk(); } }); // sell what the new piece replaced too: a nearly full bag has no slot for it
     steps.push({ vendor: 'alchemist', label: 'Buying potions', want: () => this.potionsWanted(), fn: () => this.buyPotions() });
-    steps.push({ vendor: 'armor', label: 'Browsing armor', want: gear('armor'), fn: () => this.buyGear(Vendor.stock.armor) });
+    steps.push({ vendor: 'armor', label: 'Browsing armor', want: gear('armor'), fn: () => { if (this.buyGear(Vendor.stock.armor)) this.sellJunk(); } });
     if (c.bag.some((b) => b && b.type === 'gem') || c.gold > 2000) steps.push({ vendor: 'gems', label: 'Visiting the gem merchant', fn: () => this.gemShop() });
     steps.push({ vendor: 'socket', label: 'Visiting the jeweler', want: () => c.bag.some((b) => b && b.type === 'gem') || this.equipped().some((it) => it.sockets < it.maxSockets && socketCost(it) <= this.budget(0.3)) || this.gearGain(Vendor.stock.rings), fn: () => this.jeweler() });
     steps.push({ vendor: 'upgrade', label: 'Upgrading gear', want: () => this.equipped().some((it) => (it.upg || 0) < 10 && upgradeCost(it) <= this.budget(0.45)), fn: () => this.blacksmith() });
@@ -1518,14 +1539,16 @@ export const Auto = {
   stashExtras() {
     const c = G.char;
     let n = 0;
-    c.bag.forEach((it, i) => {
+    const store = () => c.bag.forEach((it, i) => {
       if (!it || it.sealed || !(it.type === 'gem' || (it.type === 'gear' && (it.req || 1) > c.level && it.rarity >= 2))) return;
       if (addToStash(c, it)) { c.bag[i] = null; n++; }
     });
-    // a full chest: make room by dropping the weakest stored gear (lowest rarity, then item level)
+    store();
+    // a full chest: make room by dropping the weakest stored gear (lowest rarity, then item level), then store the rest
     if (c.stash.every(Boolean)) {
       const worst = c.stash.map((b, i) => ({ b, i })).filter(({ b }) => b.type === 'gear').sort((a, b) => a.b.rarity - b.b.rarity || a.b.ilvl - b.b.ilvl).slice(0, 30);
       for (const { b, i } of worst) { c.gold += sellPrice(b); c.stash[i] = null; }
+      store();
     }
     if (n) G.ui.log(`Auto-play stored ${n} item${n > 1 ? 's' : ''} in the storage chest.`, '#c8f0ff');
     changed();
@@ -1583,8 +1606,10 @@ export const Auto = {
     changed();
   },
 
+  /** Buy the best affordable upgrades from a shop list; returns how many it bought (what they replaced is in the bag). */
   buyGear(list) {
     const p = G.player, c = G.char;
+    let n = 0;
     for (let guard = 0; guard < 4; guard++) {
       const cur = simulate(p, () => () => {});
       let best = -1, bv = 0;
@@ -1600,7 +1625,9 @@ export const Auto = {
       if (best < 0 || !bagFree(c)) break;
       Vendor.buy({ type: 'shop', list, i: best });
       this.optimizeGear();
+      n++;
     }
+    return n;
   },
 
   gemShop() {

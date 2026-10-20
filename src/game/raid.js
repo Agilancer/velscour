@@ -3,7 +3,7 @@ import { hexToRgb } from '../core/util.js';
 // holding one of RAID_BOSSES, picked at random. A raid boss is huge and fights in 3 phases (4 from depth 25). Each
 // phase plays a randomly rolled rotation of its ability pool, now and then chaining a quick follow-up. At each
 // phase change it retreats to the middle of the arena behind warding crystals (it takes 90% less damage until they
-// break) while adds pour in. One to three random modifiers change each fight, it enrages after 2 minutes (frenzying every 45 s), and after 3 it executes the hero outright.
+// break) while adds pour in. One to three random modifiers change each fight, it enrages after 3 minutes (frenzying every 45 s), and after 5 it executes the hero outright.
 // The arena seals behind the hero until the boss dies.
 import { G } from '../state.js';
 import { rand, chance, TAU, clamp, angleTo, angleDiff, dist, pick, randi, shuffle } from '../core/util.js';
@@ -554,7 +554,7 @@ function rollMods(depth) {
 }
 
 /** Build the raid boss for this arena: a random one of RAID_BOSSES (not the same as the hero's last). */
-const EXECUTE_T = 180; // seconds from waking until the boss executes the hero
+const ENRAGE_T = 180, EXECUTE_T = 300; // seconds from waking until the boss enrages / executes the hero (fights run ~2 min)
 
 /**
  * A BOSS ROOM boss's life in normal monsters of its level (before the 26 x 1.3 and modifiers). It keeps growing from
@@ -562,7 +562,14 @@ const EXECUTE_T = 180; // seconds from waking until the boss executes the hero
  * dying in 2-12 s while depth-40 ones took 20-60 s. In the Endless Torment it holds (hero damage falls behind there
  * on its own; tools/tests/endgame.js).
  */
-export const raidHpMul = (depth) => (depth < 40 ? 12 + depth * 0.9 : 30 + Math.min(depth, 150) * 0.5 + clamp(depth - 150, 0, 350));
+// a BOSS ROOM boss is 26 x 1.3 x this many normals of its level (monsterBase's toughness keeps a normal at ~3 s of hero
+// damage at every depth): ~12 normals at depth 5, ~19 by depth 500. Its wards, adds and mechanics stretch that ~3.5x,
+// so auto-play takes about two minutes (tools/tests/balance.js with BAL_RAID=1 ... god)
+export const raidHpMul = (depth) => 0.35 + Math.min(depth, 500) * 0.0004;
+// a BOSS ROOM boss hits for this many normals of its level: 2.7 to depth 10, easing to 1.9 by depth 100 (deeper rooms
+// bring a fourth phase and more modifiers, and every hero died in its first depth-100 room at 2.7; was 3.6 when the
+// fights lasted 20 s, not two minutes)
+export const raidHitMul = (depth) => 2.7 * (1 - 0.3 * clamp((depth - 10) / 90, 0, 1));
 export function makeRaidBoss(world, arena, depth, level) {
   const c = G.char;
   const tpl = pick(RAID_BOSSES.filter((b) => b.id !== (c && c.lastRaid)));
@@ -577,7 +584,7 @@ export function makeRaidBoss(world, arena, depth, level) {
   Object.assign(m, {
     ai: 'raid', el: tpl.el, res: { [tpl.el]: 0.4, ...(m.undead ? { poison: 0.5, shadow: 0.3 } : null) },
     scale: has('colossal') ? 2.75 : 2.4, r: 1.05, atkReach: 0.35, speed: 2.4 * (tpl.spd || 1) * (has('colossal') ? 0.88 : 1), atkCd: 1.3,
-    maxHp: B.hp * 26 * raidHpMul(depth) * (has('colossal') ? 1.35 : 1) * (tpl.hp || 1) * 1.3, dmg: B.dmg * 3.6 * (has('empowered') ? 1.25 : 1), xp: B.xp * 60,
+    maxHp: B.hp * 26 * raidHpMul(depth) * (has('colossal') ? 1.35 : 1) * (tpl.hp || 1) * 1.3, dmg: raidHitMul(depth) * B.dmg * (has('empowered') ? 1.25 : 1), xp: B.xp * 60,
     name: tpl.name.toUpperCase(), title: tpl.title, aura: elem(tpl.el).glow, affixes: has('vampiric') ? ['vampiric'] : [],
     moves: null, patterns: [], isRaid: true, ward: 1, aggroRange: 0,
   });
@@ -646,9 +653,9 @@ class Raid {
       if (!G.godMode) { p.phoenixCd = Math.max(p.phoenixCd || 0, 1); p.hp = 0; p.die(m); return; }
       this.execT = this.t + 5;
     }
-    // the DPS check: enraged after 2 minutes, and harder still every 45 s after that (MADNESS doubles the hero's damage)
-    if (!this.enraged && this.t > 120) this.enrage('Too slow, mortal');
-    if (this.enraged && this.t > (this.frenzyT || 165)) { this.frenzyT = this.t + 45; m.dmg *= 1.15; m.atkCd *= 0.95; floatText(m.x, m.y, 120, 'FRENZY', '#ff3010', 16, { life: 1.4 }); if (madnessReady()) UI.log('Unleash your MADNESS (G) before it is too late!', '#ff2050'); }
+    // the DPS check: enraged after 3 minutes, and harder still every 45 s after that (MADNESS doubles the hero's damage)
+    if (!this.enraged && this.t > ENRAGE_T) this.enrage('Too slow, mortal');
+    if (this.enraged && this.t > (this.frenzyT || ENRAGE_T + 45)) { this.frenzyT = this.t + 45; m.dmg *= 1.15; m.atkCd *= 0.95; floatText(m.x, m.y, 120, 'FRENZY', '#ff3010', 16, { life: 1.4 }); if (madnessReady()) UI.log('Unleash your MADNESS (G) before it is too late!', '#ff2050'); }
     if (this.tpl.passive && PASSIVES[this.tpl.passive]) PASSIVES[this.tpl.passive](this, dt);
     // heads take the hits: a Grimscale with heads up shrugs off most damage
     if (this.tpl.headsTake && !this.inter) m.ward = (this.heads || []).some((h) => !h.dead) ? 0.4 : 1;
@@ -826,14 +833,15 @@ class Raid {
   spawnAdds(wave = 1) {
     const m = this.m, w = m.world, A = this.arena, p = w.player;
     const archs = this.tpl.adds.filter((a) => ARCH[a]);
-    const n = Math.min(10, 2 + wave + Math.floor(this.depth / 15) + (this.has('swarming') ? 2 : 0));
+    // fodder: monsters take seconds each now, so a wave is a few light ones (35% life), not ten that pile up
+    const n = Math.min(7, 1 + wave + Math.floor(this.depth / 40) + (this.has('swarming') ? 2 : 0));
     for (let i = 0; i < n; i++) {
       const a = rand(TAU);
       const [x, y] = w.map.nudge(A.cx + Math.cos(a) * rand(9, 11), A.cy + Math.sin(a) * rand(7, 9), 0.4);
       if (!w.map.walkable(x, y)) continue;
       const champ = chance(0.12 + this.depth * 0.003);
       const c = makeMonster(w, pick(archs), w.biome, m.level - 3 + (champ ? 1 : 0), champ ? 'champion' : 'normal', x, y);
-      c.awake = true; c.aggro = p; c.raidAdd = true;
+      c.awake = true; c.aggro = p; c.raidAdd = true; c.maxHp *= 0.35; c.hp = c.maxHp;
       if (this.has('volatile')) c.onDeath = () => w.addHazard(new Delayed({ world: w, src: m, x: c.x, y: c.y, r: 1.5, delay: 0.8, fx: 'explosion', el: this.tpl.el === 'phys' ? 'fire' : this.tpl.el, dmg: [c.dmg * 1.2, c.dmg * 1.6] }));
       w.add(c);
       addEffect(new Ring(x, y, 0.1, 1.2, 0.5, this.E.glow, 3));

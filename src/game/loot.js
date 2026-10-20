@@ -6,7 +6,7 @@ import { sfx } from '../core/audio.js';
 import { spawn, glowSprite, sparkle, floatText, addLight, elem } from '../gfx/vfx.js';
 import { replacementIcon } from '../core/replacementart.js';
 import { pixelSprite, gemIcon, goldIcon, ringIcon } from '../gfx/pixelart.js';
-import { rollItem, rollGem, itemName, itemColor, MATERIALS, GEMS, potionItem, RARITY_COLORS, SEAL_RARITY, SEALED_COLOR } from '../data/items.js';
+import { rollItem, rollGem, itemName, itemColor, MATERIALS, GEMS, potionItem, RARITY_COLORS, SEAL_RARITY, SEALED_COLOR, SEAL_GAP } from '../data/items.js';
 import { potionIcon } from '../core/assets.js';
 import { artIcon } from '../core/classart.js';
 import { gearIcon } from '../core/gearart.js';
@@ -18,8 +18,13 @@ export class GroundItem {
     this.x = x; this.y = y; this.z = 0;
     this.kind = kind; // gold | orb_hp | orb_mp | item | potion
     Object.assign(this, data);
-    // an Epic or better hits the floor sealed, once (dropFromBag marks items that were already opened)
-    if (kind === 'item' && this.item.type === 'gear' && this.item.rarity >= SEAL_RARITY && this.item.sealed === undefined) this.item.sealed = true;
+    // an Epic or better hits the floor sealed, once (dropFromBag marks items that were already opened), when the seal
+    // clock allows one (SEAL_GAP); otherwise it arrives open
+    if (kind === 'item' && this.item.type === 'gear' && this.item.rarity >= SEAL_RARITY && this.item.sealed === undefined) {
+      const c = G.char, ready = !c || (c.sealT ?? SEAL_GAP) >= SEAL_GAP;
+      this.item.sealed = ready;
+      if (ready && c) c.sealT = 0;
+    }
     const a = rand(TAU), s = rand(0.5, 1.6);
     this.vx = Math.cos(a) * s; this.vy = Math.sin(a) * s; this.vz = rand(90, 150);
     this.t = 0;

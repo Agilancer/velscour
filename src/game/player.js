@@ -5,11 +5,11 @@ import { sfx, levelUpFanfare } from '../core/audio.js';
 import { camera } from '../core/view.js';
 import { floatText, addEffect, Column, Ring, Sigil, sparkle, burst, spawn, elem, bloodSpray, smoke } from '../gfx/vfx.js';
 import { Creature } from './creature.js';
-import { CLASSES } from '../data/classes.js';
+import { CLASSES, DMG_TUNE, DMG_TUNE_AT } from '../data/classes.js';
 import { SKILLS, CLASS_SKILLS, effLevel, skillBaseDamage, manaCost, rageCost, cooldown, useTime, weaponCoef, grantedSkillsAt, skillRange } from '../data/skills.js';
 import { SLOTS, RING_SLOTS, itemStats, itemDmg, itemArmor, GEMS } from '../data/items.js';
 import { augHits, augmentable } from '../data/rings.js';
-import { depthLevel, fortitude } from '../data/depth.js';
+import { depthLevel, fortitude, logCurve } from '../data/depth.js';
 import { heroBonus } from './defiance.js';
 import { MAX_MASTERY, masteryNeed, masteryMul, masteryTier, TIER_NAMES } from './augments.js';
 import { castSkill, Timer } from './skillrun.js';
@@ -31,6 +31,11 @@ import { sigCast, sigHit, sigUpdate } from './signature.js';
 const xpCurve = (L) => (60 * L * L + 40 * L) * (1 + Math.pow(L / 30, 1.5));
 export const xpToNext = (L) => Math.round(L <= 240 ? xpCurve(L) : xpCurve(240) * L / 240);
 export const MAX_LEVEL = 600;
+/** The class's damage tuning at a hero level (data/classes.js DMG_TUNE). */
+export function classTune(cls, level) {
+  const T = DMG_TUNE[cls];
+  return T ? logCurve(DMG_TUNE_AT.map((L, i) => [L, T[i]]), level) : 1;
+}
 
 const ELEM_KEYS = ['fire', 'cold', 'light', 'poison', 'arcane', 'holy', 'shadow', 'blood', 'acid'];
 
@@ -218,7 +223,7 @@ export class Player extends Creature {
     const base = skillBaseDamage(sk, L);
     const wc = weaponCoef(sk);
     const elBonus = sk.el === 'phys' ? st.physPct : st.elemPct[sk.el] || 0;
-    let mult = (1 + (st.dmgPct + st.primary + elBonus) / 100) * this.synergy(sk) * masteryMul(this.mastery(sk));
+    let mult = (1 + (st.dmgPct + st.primary + elBonus) / 100) * this.synergy(sk) * masteryMul(this.mastery(sk)) * classTune(this.classId, this.char.level);
     if (st.legendary.berserk) mult *= 1 + 0.04 * Math.floor((1 - this.hp / this.maxHp) * 10);
     if (this.score) mult *= harmonyMul(this); // the Bard's Harmony
     const lo = (base * 0.85 + st.weapon[0] * wc) * mult, hi = (base * 1.15 + st.weapon[1] * wc) * mult;

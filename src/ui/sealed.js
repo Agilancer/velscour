@@ -1,7 +1,7 @@
-// Sealed treasures: every Epic, Legendary and Mythic that drops arrives sealed (loot.js seals it as it hits the
-// floor). Nobody knows what's inside until the player breaks the seal: a slot-machine reel spins through the
+// Sealed treasures: an Epic, Legendary or Mythic that drops arrives sealed (loot.js seals it as it hits the floor,
+// at most one every SEAL_GAP of dungeon time). Nobody knows what's inside until the player breaks the seal: a slot-machine reel spins through the
 // rarities and lands on the real item. Auto-play picks them up but never opens, sells, stashes or equips one, and
-// when they leave no room in the bag it waits in town for the player (autoplay.js sealedWait).
+// when they leave no room in the bag it waits in town for the player (autoplay.js bagWait).
 // The reveal is a card over the game, not a modal dialog: the hero keeps fighting behind it.
 import { G } from '../state.js';
 import { el, escapeHtml } from '../core/util.js';
