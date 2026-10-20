@@ -39,6 +39,14 @@ const R = {
   blackplum: ['#040104', '#1e0a1e', '#4a2048', '#d0a8d0'], royalpurple: ['#06020c', '#2a0e50', '#5e2aa0', '#dcc4ff'],
   blackgreen: ['#010401', '#0a1e0e', '#1e4a28', '#a0d8a8'], blackred: ['#040000', '#200406', '#501018', '#d08888'],
   emeraldbase: ['#000804', '#063a20', '#14804a', '#b8f8d8'],
+  rust: ['#0a0402', '#4a1e0c', '#9a4a22', '#f0c09a'], linen: ['#0c0a08', '#4a4238', '#a89a86', '#fbf4e8'],
+  seaglass: ['#020a08', '#1a4a42', '#5ab0a0', '#e0fff6'], garnet: ['#0a0004', '#4a0618', '#a01838', '#ffb8c8'],
+  indigo: ['#02020c', '#141a4a', '#3a44a0', '#c8ccff'], mustard: ['#0a0802', '#4a3c0a', '#b0901a', '#fff0a8'],
+  lilac: ['#08060c', '#3e3456', '#9a88c4', '#f4eeff'], verdigris: ['#020806', '#1e4a3c', '#4a9a80', '#d8fff0'],
+  pearl: ['#0c0c0e', '#5a5a64', '#c8c8d4', '#ffffff'], aurora: ['#00080a', '#0a4a4a', '#30e0a0', '#f0fff0'],
+  dawn: ['#100604', '#7a3a24', '#ffa070', '#fff4e0'], nightshade: ['#04020a', '#200a3a', '#6a2a9a', '#f0b0ff'],
+  rustbase: ['#080302', '#30140a', '#6a3018', '#d8a888'], indigobase: ['#020208', '#0e1236', '#262e70', '#b0b8f0'],
+  garnetbase: ['#060002', '#2a040e', '#5a0c22', '#e0a0b0'], tealbase: ['#000606', '#08282a', '#16585a', '#a0e0dc'],
 };
 
 // [name, minimum rarity, metal, cloth, trim, base]: each finish changes three or four colours that contrast
@@ -66,6 +74,19 @@ const P = [
   ['Celestial', 5, 'silver', 'void', 'gold', 'midnight'], ['Godforged', 5, 'sunsteel', 'royal', 'gold', 'ivorybase'],
   ['Infernal Regalia', 5, 'black', 'flame', 'gold', 'crimsonbase'], ['Spectral', 5, 'frost', 'cyan', 'glowcyan', 'deepviolet'],
   ['Verdant God', 5, 'jade', 'saffron', 'gold', 'emeraldbase'], ['Rose Eclipse', 5, 'obsidian', 'rose', 'rosegold', 'blackplum'],
+  // added with the collection 02 armors and helmet sets 02/03 (appended: saves keep their finish by index)
+  ['Rust and Linen', 0, 'rust', 'linen', 'bronze', 'rustbase'], ['Bog Iron', 0, 'iron', 'olive', 'copper', 'peat'],
+  ['Harbor Watch', 0, 'pewter', 'navy', 'brass', 'driftwood'], ['Mustard Levy', 0, 'iron', 'mustard', 'pewter', 'charcoal'],
+  ['Thornwood', 1, 'gunmetal', 'garnet', 'bronze', 'deepforest'], ['Sea Glass', 1, 'silver', 'seaglass', 'pewter', 'slate'],
+  ['Indigo Ward', 1, 'steel', 'indigo', 'brass', 'charcoal'], ['Verdigris Watch', 1, 'verdigris', 'wine', 'copper', 'olive'],
+  ['Garnet Court', 2, 'silver', 'garnet', 'gold', 'garnetbase'], ['Lilac Mourning', 2, 'pearl', 'lilac', 'silver', 'deepviolet'],
+  ['Copper Indigo', 2, 'copper', 'indigo', 'gold', 'indigobase'], ['Verdigris Crown', 2, 'verdigris', 'saffron', 'brass', 'tealbase'],
+  ['Nightshade', 3, 'obsidian', 'nightshade', 'silver', 'blackplum'], ['Pearl and Garnet', 3, 'pearl', 'garnet', 'gold', 'ivorybase'],
+  ['Wyrmscale', 3, 'jade', 'ember', 'bronze', 'blackgreen'], ['Tidecaller', 3, 'seaglass', 'royal', 'silver', 'tealbase'],
+  ['Dawnbreaker', 4, 'pearl', 'dawn', 'gold', 'ivorybase'], ['Hellforged', 4, 'black', 'ember', 'copper', 'blackred'],
+  ['Starlit Court', 4, 'silver', 'indigo', 'gold', 'indigobase'], ['Aurora Warden', 4, 'frost', 'aurora', 'silver', 'blackteal'],
+  ['Eclipse Gold', 5, 'obsidian', 'saffron', 'gold', 'midnight'], ['Abyss Crown', 5, 'storm', 'nightshade', 'glowcyan', 'blackplum'],
+  ['Prismatic Saint', 5, 'pearl', 'aurora', 'gold', 'ivorybase'], ['Phoenix Regalia', 5, 'sunsteel', 'dawn', 'gold', 'emberbase'],
 ];
 
 export const PALETTES = P.map(([name, tier, metal, cloth, trim, base]) => ({

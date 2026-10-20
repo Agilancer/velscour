@@ -14,6 +14,21 @@ Contents
 
 ---
 
+## October 19, 2026 — more hero gear: collection 02 armors, helmet sets 02 and 03, 24 more finishes (branch `feat/gear-collection-02`)
+
+- **Request:** add `VELSCOUR_Collection_02_96_Armor_Source_Artwork.zip`, `VELSCOUR_Helmet_Set_02_Game_Exports.zip` and
+  `VELSCOUR_Helmet_Set_03_Game_Exports.zip` to the game, used in play, with palette swaps for more gear variety.
+- **Done:** `tools/nocturnegear.py import2 <dir>` (head-matched like the first sets). Per class 18 armors (new 13-18:
+  Rare A/B, Epic, Legendary, Mythic A/B) and 15 helmets (new designs 6-15; sets 02/03 bring the first real Mythic
+  helmets). `gear.json` bands are now id lists (`rare: [5,6,13,14]`...) and `itemLook` picks from them; helmets roll a
+  design of their rarity, so Mythic helms now get the set 02/03 Mythics; Legendary helms roll set 01's Legendary or
+  those two Mythics (three designs). 24 new
+  finishes (four per rarity tier), appended so saved looks keep their index. Gear cache key `V` = `nocturne-3`. Saved
+  items keep their looks (ids only grew); new drops roll the new art. The helmet narrowing (`HELM_SCALE`) applies to the
+  new sets too.
+- **Verified:** `herolook.js all` (2,457 looks per class, 3-minute soak), `closed_helms.js all` (15 helmets x 18 armors x
+  16 classes, sheets looked at), `gear.js paladin,necromancer` (new armors, helmets and finishes seen in the sheets).
+
 ## October 20, 2026 — Rarity unlocks by item level (Epic 30, Legendary 45, Mythic 60)
 
 - **Request:** the user rolled a Boomerang Knight and had a Legendary at level 3 (on `main`, which still had the old

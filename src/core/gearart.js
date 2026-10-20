@@ -1,6 +1,6 @@
-// Gear art (Grim Nocturne): per class 12 body armors, two per rarity, and one shared atlas of enclosed helmets, a
-// column per class and a row per design (each design has a rarity). Built by tools/nocturnegear.py.
-import { makeCanvas, hexToRgb, clamp, randi, pick, chance } from './util.js';
+// Gear art (Grim Nocturne): per class 18 body armors (two to four per rarity) and one shared atlas of enclosed helmets
+// (three sets), a column per class and a row per design (each design has a rarity). Built by tools/nocturnegear.py.
+import { makeCanvas, hexToRgb, clamp, pick, chance } from './util.js';
 import { RARITY } from '../data/items.js';
 import { PALETTES, GEAR_FX, FX_CHANCE } from '../data/gear.js';
 import { resolveHelmetFit } from './helmetfit.js';
@@ -12,7 +12,7 @@ const helmetPromises = { helmet: null };
 const LOOK_GEN = 2; // item.look[3]: looks rolled before the Grim Nocturne library are rerolled
 // Bumped with every rebuild of the gear art: a browser that kept an older gear.json beside a newer atlas read armors
 // past the atlas's end, and the hero went invisible once he put one on.
-const V = '?v=nocturne-2';
+const V = '?v=nocturne-3';
 
 function loadImage(src) {
   return new Promise((res, rej) => {
@@ -120,16 +120,17 @@ export function itemLook(item, src = S) {
     const designs = src.helmetHelms?.meta.designs;
     if (!designs?.length) return null;
     if (!item.look || item.look[3] !== LOOK_GEN || item.look[0] > designs.length) {
-      // a design of the helm's rarity (Mythic wears the rarest there is); more designs per rarity may come later
-      const top = Math.max(...designs.map((d) => d.rarity));
-      const ok = designs.filter((d) => d.rarity === Math.min(item.rarity, top));
+      // a design of the helm's rarity (three sets each). Sets 02/03 have Mythic in Legendary's place, so a Legendary helm
+      // also rolls those Mythics: three designs, while Mythic keeps its own two.
+      const top = Math.max(...designs.map((d) => d.rarity)), r = Math.min(item.rarity, top);
+      const ok = designs.filter((d) => d.rarity === r || (r === 4 && d.rarity === 5));
       item.look = [pick(ok.length ? ok : designs).id, finishFor(item.rarity, true), -1, LOOK_GEN];
     }
   } else {
     const lib = src.meta.armor;
     if (!item.look || item.look[3] !== LOOK_GEN || item.look[0] > lib.n) {
       const band = lib.bands[rarityName(item.rarity)] || lib.bands.common;
-      item.look = [randi(band[0], band[1]), finishFor(item.rarity), item.look?.[2] ?? fxFor(item.rarity), LOOK_GEN];
+      item.look = [pick(band), finishFor(item.rarity), item.look?.[2] ?? fxFor(item.rarity), LOOK_GEN];
     }
   }
   return item.look;

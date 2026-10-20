@@ -1,5 +1,5 @@
 // Hero look check: every gear combination loads and shows a full hero, and the hero stays visible in play.
-//  1. Every class: all 12 armors x every finish, all helmets x every finish, the armor's own silhouette kept
+//  1. Every class: all 18 armors x every finish, all helmets x every finish, the armor's own silhouette kept
 //     (a swap never loses pixels), icons and the portrait; items of every rarity and level, and old saved looks.
 //  2. Soak: a new hero on auto-play (~30x speed); every game second the hero's image must exist and be opaque,
 //     and the hero must be drawn at full alpha and size.
