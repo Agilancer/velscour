@@ -20,7 +20,7 @@ const mobile=process.argv.includes('--mobile'),grid=process.argv.includes('--gri
     });
     // [name, map x, map y, zoom] (tiles)
     const views=[
-      ['overview',169,140,.16],['approach',169,232,.6],['gatehouse',169,214,1.0],['bridge',169,208,1.5],['gate_inside',169,190,.9],
+      ['overview',169,140,.16],['door_th',156,118,1.4],['door_th2',144,134,1.4],['door_ch',182,118,1.4],['door_gh',156,154,1.4],['door_gh2',144,140,1.4],['approach',169,232,.6],['gatehouse',169,214,1.0],['bridge',169,208,1.5],['gate_inside',169,190,.9],
       ['bailey',148,186,.7],['inner_gate',193,178,.9],['courtyard',174,156,.7],['keep',170,126,.6],['throne_hall',141,117,.8],
       ['cathedral',196,117,.8],['great_hall',141,155,.8],['corner_nw',96,68,.7],['corner_se',241,201,.7],['inner_corner',124,96,.8],
       ['postern',209,64,.9],['river_bridge',285,153,.8],['village',169,252,.7],['siege',262,236,.6],['graveyard',56,176,.7],

@@ -2,19 +2,32 @@
 import { recolor, pageAtlas } from '../core/util.js';
 import { isoFix, isoFixImage } from './isofix.js';
 const DIR='assets/tiles/castle/';
-let loading=null,meta=null,images=null;
+let loading=null,meta=null,images=null,ramparts=null;
 const recolored=new Map();
 function loadImage(name){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error(`Failed to load ${DIR}${name}.webp`));img.src=`${DIR}${name}.webp`;});}
 export function loadCastlePack(){
  if(images)return Promise.resolve();
  if(loading)return loading;
- loading=fetch(`${DIR}pack.json`).then(r=>{if(!r.ok)throw new Error('CASTLE metadata missing');return r.json();})
-  .then(async m=>{const categories=Object.keys(m.atlases);const atlases=await Promise.all(categories.map(loadImage));meta=m;images=Object.fromEntries(categories.map((k,i)=>[k,atlases[i]]));})
+ // the pack's atlases, and the masonry the walls are built from (tools/castleramparts.py: ramparts.webp + .json)
+ loading=Promise.all([fetch(`${DIR}pack.json`),fetch(`${DIR}ramparts.json`)]).then(([r,q])=>{if(!r.ok||!q.ok)throw new Error('CASTLE metadata missing');return Promise.all([r.json(),q.json()]);})
+  .then(async ([m,rp])=>{const categories=Object.keys(m.atlases);const atlases=await Promise.all([...categories,'ramparts'].map(loadImage));meta=m;
+   images=Object.fromEntries(categories.map((k,i)=>[k,atlases[i]]));ramparts={...rp,img:atlases[categories.length]};})
   .catch(e=>{loading=null;throw e;});
  return loading;
 }
 /** Let the pack's atlases go (~120 MB decoded) once the Castle is left; loadCastlePack fetches them again. */
-export function releaseCastlePack(){if(!images)return;images=null;loading=null;recolored.clear();}
+export function releaseCastlePack(){if(!images)return;images=null;ramparts=null;loading=null;recolored.clear();}
+/** The wall masonry atlas: {img, rects: {face, warm, corbel, plinth, slit, arch, top_0..7: [x, y, w, h]}}, or null. */
+export function castleRamparts(){return ramparts;}
+/** The flagstone wall-walk tops as floor tiles: 8 quarters of two painted slabs (quarter q of slab s is entry s * 4 + q). */
+export function castleRampartTops(palette=null){
+ if(!ramparts)return [];
+ const key='ramparts|'+JSON.stringify(palette),src=ramparts.img;
+ return Array.from({length:8},(_,k)=>{const [x,y,w,h]=ramparts.rects['top_'+k],f={sx:x,sy:y,w,h,lum:0.02,seamless:true,name:'castle_rampart_top_'+k+(palette?'_tint':''),castle:true};
+  // a recoloured copy (the halls' limestone) is made on first draw
+  Object.defineProperty(f,'img',{enumerable:true,get:()=>{if(!palette)return src;if(!recolored.has(key))recolored.set(key,recolor(src,palette));return recolored.get(key);}});
+  return f;});
+}
 export function castleFrames(category){return meta?.atlases[category]||[];}
 function imageFor(category,palette){
  const src=images?.[category];if(!src||!palette)return src;
@@ -101,6 +114,27 @@ function carpetArt(){
   g.fillStyle=col;g.fillRect(t*160+X,Y,2,2);
  }
  return carpetCanvas=c;
+}
+// Procedural drawbridge planks (160 x 80 diamond): oak boards laid along x, tarred seams, two iron straps along y.
+let plankCanvas=null;
+function plankArt(){
+ if(plankCanvas)return plankCanvas;
+ const c=document.createElement('canvas');c.width=160;c.height=80;const g=c.getContext('2d');
+ const h=(x,y)=>{let n=Math.imul(x,374761393)+Math.imul(y,668265263)|0;n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296;};
+ const wood=[[92,64,38],[84,58,34],[100,70,42],[78,54,32],[96,66,40]];
+ for(let Y=0;Y<80;Y+=2)for(let X=0;X<160;X+=2){
+  const u=((X+1-80)/80+(Y+1)/40)/2,v=((Y+1)/40-(X+1-80)/80)/2;if(u<-.02||v<-.02||u>1.02||v>1.02)continue;
+  const b=Math.floor(v*5),t=v*5-b,[r,gg,bb]=wood[(b+5)%5],grain=(h(Math.floor(u*40),b)-.5)*16+(h(X,Y)-.5)*10;
+  let col=[r+grain,gg+grain*.8,bb+grain*.5];
+  if(t<.12||t>.92)col=[34,24,16];                                   // the seams between boards
+  if(Math.abs(u-.22)<.045||Math.abs(u-.78)<.045){col=[48,46,46];if(Math.abs(t-.5)<.14)col=[92,90,86];}   // straps and their rivets
+  g.fillStyle=`rgb(${col.map(k=>Math.max(0,Math.min(255,k|0))).join(',')})`;g.fillRect(X,Y,2,2);
+ }
+ return plankCanvas=c;
+}
+export function castlePlankTile(){
+ const f={sx:0,sy:0,w:160,h:80,lum:0.02,seamless:true,name:'castle_drawbridge',castle:true};
+ Object.defineProperty(f,'img',{enumerable:true,get:()=>typeof document==='undefined'?null:plankArt()});return f;
 }
 export function castleCarpetTiles(){
  return [0,1,2].map(t=>{const f={sx:t*160,sy:0,w:160,h:80,lum:0.02,seamless:true,name:'castle_carpet_'+t,castle:true};

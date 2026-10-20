@@ -14,6 +14,47 @@ Contents
 
 ---
 
+## October 20, 2026 — the Castle's walls rebuilt as height-mapped masonry you can fight on (branch `feat/castle-walls-heightmap`)
+
+- **Request:** use the user's `VELSCOUR_Castle_Artwork_Complete.zip` (walls and towers, walkable rampart tiles, stairs
+  and landings, crenellations; not to any template) to rebuild the Castle overworld's walls and bridge: lower the
+  water with height mapping and build the bridge from the set's pieces, make the walls wide enough to fight on with
+  monsters spawning on top and stairs up, fix the keep doors that didn't connect to their walls; palette swaps of
+  other packs allowed; screenshots until it looks like real castle walls and a bridge.
+- **Art** (`tools/castleramparts.py`, source zip in `assets/source/biomes/`): the pieces are small isometric sprites
+  at their own scale (a 1-tile-thick wall), so they are used as textures: each painted face is unsheared (columns slid
+  half a px per px so the courses run level), cropped and made to tile: masonry (+ a limestone recolour for the halls),
+  the towers' corbel band, the plinth, an arrow slit, the arch piece's face (opening filled with shadow), and the two
+  plain rampart slabs' tops cut into quarters. Output `assets/tiles/castle/ramparts.webp/json`, loaded with the pack.
+- **Geometry** (`src/world/castleworld.js`): the Castle is now a height map (`map.hgt`, the Mountainside's system).
+  Outer curtain 6 tiles thick, walk 24 levels (96 px) up; inner curtain 5 thick, walk at 32; merlons/crenels along
+  the outer edge; 31 square towers stepped up 8 over the walk (gatehouse towers 12) with corbels and slits; gate
+  passages straight through at ground level under arched lintels (raised portcullis on the main and inner gates);
+  11 stair flights (one level-4 step a tile) from the wards; moat and river sunk to -11 with masonry (moat) or earth
+  (river) banks; three stone bridges at ground level with parapets and arches on the visible side, the main one ending
+  in drawbridge planks. The hall walls are limestone masonry at 18 with one doorway each side: arched lintel and two
+  oak leaves swung back against the visible face (the old frame sprites stood free of the wall). 12 monster packs
+  spawn on the walls; the rampart scenarios fight up there. Full write-up in CASTLE_OVERWORLD.md.
+- **Engine** (`src/gfx/terrain.js`, `src/game/render.js`, `src/gfx/castlewalls.js`): `map.faceArt` styles route
+  faces to the masonry painter; `map.tallOcclusion` makes every column that can hide something behind it an occluder,
+  redrawn over creatures (and, computed once per thing, props, trees, buildings, chests, portals, loot) and clipped to
+  them; the hero behind a wall gets a faint silhouette drawn over it; corpses/decals/ground particles/ripples behind a
+  wall are skipped (`hiddenBehind`); `map.walkStep` (stairs walked, not hopped); `map.flowRange` 96 on the Castle
+  (monsters find the stairs). The sky is skipped on the Castle; the old `rampartHeight`/`rampartElev` z-hack is gone.
+- **Verified:** `castle_overworld.mjs` (100 seeds, rewritten for the height map: curtains solid and sealed with no hop
+  over them, walks/towers/stairs reached, bridges over sunken water, hall walls/doors, all 35 scenarios),
+  new `castle_walls.js` (walk 4,224 tiles all reachable, no drops off the walls, wall monsters come down the stairs
+  6/6 and bailey monsters climb 4/4; 30 shots looked at), `scenarios.js` (all 35 Castle scenarios done, longest wait
+  < 20 s), `castle_visual.js`, `BAL_BIOME=castle balance.js paladin,wizard 19 8` (new env var).
+- **Frame cost** (`biome_perf.js castle 19 4 20`, SwiftShader, 4x throttle, two runs each): render 8.8/10.8 ms vs
+  `main` 19.7/9.8, update 7.0/9.8 vs 10.0/5.8: within the run-to-run noise. Terrain columns are bucketed per floor
+  chunk (`columnsIn`); before that, scanning all 100k columns per chunk doubled the render cost.
+- **Open:** a hero just behind (north of) a wall shows above its back edge, as the projection has it; the dark rim on
+  the wall top's back edge is the only cue. Towers are square only (the artwork has no round ones). Monsters awake on
+  a wall more than ~96 steps of walking from the hero (the flow field's reach) mill at the edge rather than walk to
+  the far stairs. Not caused here but seen: `mountain.js` auto-play doesn't reach the summit in 600 s on `main` either
+  (50-63%), and its `rules` check now and then finds no clean tall step on a seed (passes on rerun).
+
 ## October 20, 2026 — Paladin: 3D hammers, Shield Throw ricochets, every skill balanced (branch `feat/paladin-hammers-shield-throw`)
 
 - **Follow-up: auto-play prioritises hammers AND Shield Throw** (user request). Before, Shield Throw went unlearned

@@ -5,9 +5,10 @@
 // edge overlays and particles cost nothing once a chunk is built.
 import { makeCanvas } from '../core/util.js';
 import { HW, HH, TW, TH } from '../core/view.js';
+import { hiddenBehind, HS } from './terrain.js';
 // Material classes of map.castleMat, written by the generator (src/world/castleworld.js).
 export const MAT=Object.freeze({meadow:1,lush:2,forest:3,dirt:4,road:5,mud:6,field:7,sand:8,cobble:9,pave:10,dark:11,
-  moss:12,plank:13,water:14,hall:15,grave:16,bright:17,wall:18,mid:19});
+  moss:12,plank:13,water:14,hall:15,grave:16,bright:17,wall:18,mid:19,rampart:20});
 
 // Which material spills over which at a seam: grass creeps over paths, paths over paving, nothing over water or halls.
 const RANK = { [MAT.water]: 0, [MAT.wall]: 0, [MAT.hall]: 0, [MAT.dark]: 1, [MAT.plank]: 1, [MAT.pave]: 2, [MAT.cobble]: 2,
@@ -94,6 +95,7 @@ export function castleTileDressing(ctx, world, tx, ty, px, py, floorEntry) {
     const shore = land(1, 0) || land(-1, 0) || land(0, 1) || land(0, -1), near2 = shore || land(2, 0) || land(-2, 0) || land(0, 2) || land(0, -2);
     ctx.fillStyle = shore ? 'rgba(120,170,150,0.14)' : near2 ? 'rgba(0,18,26,0.12)' : 'rgba(0,14,24,0.26)';
     ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + HW, py + HH); ctx.lineTo(px, py + TH); ctx.lineTo(px - HW, py + HH); ctx.fill();
+    if (map.hgt) return;   // a height map drops the banks to the water as real faces (terrain.js)
     // far banks: land on the -x (upper left) or -y (upper right) edge
     const art = banks();
     if (tx > 0 && mat[i - 1] !== MAT.water) ctx.drawImage(art[(mat[i - 1] === MAT.wall || mat[i - 1] === MAT.dark || mat[i - 1] === MAT.pave ? 'stone' : 'earth') + '0'], px - HW, py);
@@ -108,6 +110,7 @@ export function castleTileDressing(ctx, world, tx, ty, px, py, floorEntry) {
     if (nx < 0 || ny < 0 || nx >= W || ny >= map.h) continue;
     const j = ny * W + nx, nm = mat[j], nr = RANK[nm] ?? 0, nv = map.v[j];
     if (nv === v || nr < r || (nr === r && nv < v) || !nr) continue;
+    if (map.hgt && map.hgt[j] !== map.hgt[i]) continue;   // no blending up or down a wall
     const f = floorEntry(world, nv);
     ctx.drawImage(maskedTile(f, nv, d, hash(tx, ty, d) % VARIANTS), px - HW, py, TW, TH);
   }
@@ -172,13 +175,14 @@ export const PARTICLE_CHUNK = 384;
 function buildParticles(world) {
   const map = world.map, mat = map.castleMat, W = map.w, H = map.h, buckets = new Map();
   const put = (kind, x, y, h) => {
-    const wx = (x - y) * HW, wy = (x + y) * HH, key = Math.floor(wx / PARTICLE_CHUNK) + ',' + Math.floor(wy / PARTICLE_CHUNK);
+    if (map.hgt && hiddenBehind(map, x, y)) return;   // behind a wall
+    const wx = (x - y) * HW, wy = (x + y) * HH - (map.hgt ? map.hgt[map.tileIdx(x, y)] * HS : 0), key = Math.floor(wx / PARTICLE_CHUNK) + ',' + Math.floor(wy / PARTICLE_CHUNK);
     let b = buckets.get(key); if (!b) buckets.set(key, b = []);
     b.push({ kind, v: ((h % 8) + 8) % 8, x: wx, y: wy });
   };
   for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
     const i = y * W + x, m = mat[i];
-    if (m === MAT.hall || m === MAT.wall || map.castleRoomWalls?.[i]) continue;
+    if (m === MAT.hall || m === MAT.wall || m === MAT.rampart || map.castleRoomWalls?.[i]) continue;
     const h = hash(x, y, 0x5c);
     const nb = [mat[i - 1], mat[i + 1], mat[i - W], mat[i + W]];
     const nearGrass = nb.some((n) => GRASSY.has(n)), nearWater = nb.some((n) => n === MAT.water), nearEarth = nb.some((n) => EARTHY.has(n));
@@ -253,6 +257,8 @@ function buildFlow(map) {
       const l = Math.hypot(sx, sy) || 1; fx[i] = sx / l; fy[i] = sy / l;
     }
   }
+  // water hidden under a bridge or the near bank (a sunken moat) gets no ripples
+  if (map.hgt) for (let i = 0; i < N; i++) if (D[i] >= 0 && hiddenBehind(map, i % W + 0.5, ((i / W) | 0) + 0.5)) D[i] = -1;
   return { fx, fy, shore, D };
 }
 const FOAM = [[1, HW / 2, -HH / 2, HW, HH, -0.45, 0.9], [2, HW / 2, HH / 2, -HW, HH, -0.45, -0.9], [4, -HW / 2, HH / 2, -HW, -HH, 0.45, -0.9], [8, -HW / 2, -HH / 2, HW, -HH, 0.45, 0.9]];
@@ -267,7 +273,7 @@ export function drawCastleWater(ctx, world, vr, time, touch) {
   for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
     const i = ty * W + tx;
     if (flow.D[i] < 0) continue;
-    const cx = (tx - ty) * HW, cy = (tx + ty) * HH + HH;
+    const cx = (tx - ty) * HW, cy = (tx + ty) * HH + HH - (map.hgt ? map.hgt[i] * HS : 0);
     if (cx < vr.x0 - TW || cx > vr.x1 + TW || cy < vr.y0 - TH || cy > vr.y1 + TH) continue;
     any = true;
     const h = hash(tx, ty, 0x77), fx = flow.fx[i], fy = flow.fy[i];
