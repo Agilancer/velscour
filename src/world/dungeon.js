@@ -6,8 +6,34 @@ import { rollLooks } from '../data/bestiary.js';
 import { isoBarrier } from '../gfx/isobarriers.js';
 import { wallHangingAtWallSegment, wallHangingCount } from '../gfx/wallhangings.js';
 import { CASTLE_KEEP_LAYOUTS } from '../data/castlekeeplayouts.js';
+import { THEMES, TAGS, BIOME_ROOMS } from '../data/biomerooms.js';
 
 const S = 11; // chunk size in tiles
+
+// Level layouts (data/biomes.js `style`): the share of built rooms and caves (the rest are small rooms), the shapes a
+// built room takes, how often a corridor is 3 wide, how many extra loops the maze gets, whether rooms fill their chunk
+// (big) and whether corridors are ragged (rough).
+const STYLES = {
+  crypt: { room: 0.62, cave: 0.18, shapes: ['rect', 'rect', 'octagon', 'round', 'cross', 'pillars', 'cloister', 'octagon', 'pillars'], wide: 0.25, loops: 0.1 },
+  hall: { room: 0.86, cave: 0, big: true, shapes: ['rect', 'pillars', 'pillars', 'cross', 'cloister', 'octagon', 'rect'], wide: 0.65, loops: 0.18 },
+  cave: { room: 0.22, cave: 0.66, shapes: ['round', 'octagon', 'round', 'rect'], wide: 0.55, loops: 0.14, rough: true },
+  maze: { room: 0.46, cave: 0.04, shapes: ['rect', 'cross', 'octagon', 'pillars', 'rect'], wide: 0.04, loops: 0.03 },
+  channel: { room: 0.62, cave: 0.06, shapes: ['rect', 'pillars', 'cloister', 'rect', 'cross'], wide: 0.9, loops: 0.22 },
+  ruin: { room: 0.52, cave: 0.3, shapes: ['octagon', 'cross', 'round', 'rect', 'pillars', 'cloister'], wide: 0.35, loops: 0.12, rough: true },
+};
+
+/** A level's deck of room themes for its biome (data/biomerooms.js): draws cycle through the shuffled list, built
+ * rooms and cave chambers separately, so a level repeats no theme until it has shown them all. */
+function themeDeck(biome, rng) {
+  const all = BIOME_ROOMS[biome.id] || [];
+  const decks = { built: [], cave: [] };
+  return (cave) => {
+    const k = cave ? 'cave' : 'built';
+    if (!decks[k].length) decks[k] = shuffleWith(all.filter(([t]) => !!THEMES[t].cave === cave), rng);
+    const e = decks[k].pop();
+    return e ? { theme: e[0], title: e[1] } : null;
+  };
+}
 
 function nextHangingDesign(rng, bag, count = 50) {
   if (!bag.length) {
@@ -86,6 +112,9 @@ function generateCastleKeepLayout(depth, biome, tileset, seed, layout) {
     return !best || distance < best.distance ? { room: r, distance } : best;
   }, null).room;
   const startRoom = nearestRoom(layout.start), guardianRoom = nearestRoom(layout.guardian);
+  // the keep's own room themes (throne room, armory, barracks...: data/biomerooms.js)
+  const nextTheme = themeDeck(biome, rng);
+  for (const r of rooms) if (r !== startRoom && Math.min(r.w, r.h) >= 5) Object.assign(r, nextTheme(false));
   const exitRoom = guardianRoom;
   if (!map.walkable(layout.start[0], layout.start[1]) ||
       !map.walkable(layout.guardian[0], layout.guardian[1]) ||
@@ -145,6 +174,7 @@ export function generateDungeon(depth, biome, tileset, seed) {
   const rng = new RNG(seed);
   const raid = isRaidDepth(depth);
   // a raid level's maze is a little smaller: the boss fight takes the time
+  const style = STYLES[biome.style] || STYLES.crypt, nextTheme = themeDeck(biome, rng);
   const CW = clamp(4 + Math.floor(depth / 14) + rng.int(0, 1) - (raid ? 1 : 0), 4, 8);
   const CH = clamp(4 + Math.floor(depth / 18) + rng.int(0, 1), 4, 7);
   const W = CW * S + 2 + (raid ? ARENA_GAP + ARENA_W + 2 : 0), H = Math.max(CH * S + 2, raid ? ARENA_H + 6 : 0);
@@ -172,8 +202,8 @@ export function generateDungeon(depth, biome, tileset, seed) {
   }
   for (let y = 0; y < CH; y++) {
     for (let x = 0; x < CW; x++) {
-      if (x + 1 < CW && rng.chance(0.1)) conn.add(ek(ci(x, y), ci(x + 1, y)));
-      if (y + 1 < CH && rng.chance(0.1)) conn.add(ek(ci(x, y), ci(x, y + 1)));
+      if (x + 1 < CW && rng.chance(style.loops)) conn.add(ek(ci(x, y), ci(x + 1, y)));
+      if (y + 1 < CH && rng.chance(style.loops)) conn.add(ek(ci(x, y), ci(x, y + 1)));
     }
   }
   const adj = Array.from({ length: CW * CH }, () => []);
@@ -187,12 +217,15 @@ export function generateDungeon(depth, biome, tileset, seed) {
       const ox = cx * S + 1, oy = cy * S + 1;
       const isStart = cx === start.x && cy === start.y;
       const roll = rng.next();
-      let type = roll < 0.62 ? 'room' : roll < 0.8 ? 'cave' : 'small';
+      let type = roll < style.room ? 'room' : roll < style.room + style.cave ? 'cave' : 'small';
       if (isStart) type = 'room';
       let rw, rh, rx, ry, shape = 'rect';
       const holes = [];
       if (type === 'small') { rw = rng.int(3, 4); rh = rng.int(3, 4); }
+      else if (style.big && type === 'room') { rw = rng.int(7, S - 2); rh = rng.int(7, S - 2); }
       else { rw = rng.int(5, S - 2); rh = rng.int(5, S - 2); }
+      // the room's theme (an ossuary, an armory...): built rooms of 5 x 5 and up and cave chambers, never the start
+      const th = isStart || type === 'small' || (type === 'room' && Math.min(rw, rh) < 5) ? null : nextTheme(type === 'cave');
       rx = ox + rng.int(1, S - rw - 1); ry = oy + rng.int(1, S - rh - 1);
       if (type === 'cave') {
         const ccx = ox + S / 2, ccy = oy + S / 2;
@@ -207,7 +240,8 @@ export function generateDungeon(depth, biome, tileset, seed) {
         for (let y = ry; y < ry + rh; y++) for (let x = rx; x < rx + rw; x++) carve(x, y);
       } else if (type === 'room' && !isStart && rw >= 7 && rh >= 7) {
         // shaped rooms: chamfered, round, cross, pillared halls and cloisters (holes are stamped after the corridors)
-        shape = rng.pick(['rect', 'rect', 'octagon', 'round', 'cross', 'pillars', 'cloister', 'octagon', 'pillars']);
+        const want = th && THEMES[th.theme].shapes;
+        shape = rng.pick(want && rng.chance(0.8) ? want : style.shapes);
         const cc = Math.min(rw, rh) >= 9 ? 3 : 2, mx = rx + rw / 2, my = ry + rh / 2;
         for (let y = ry; y < ry + rh; y++) for (let x = rx; x < rx + rw; x++) {
           const ex = Math.min(x - rx, rx + rw - 1 - x), ey = Math.min(y - ry, ry + rh - 1 - y);
@@ -223,7 +257,7 @@ export function generateDungeon(depth, biome, tileset, seed) {
       } else {
         for (let y = ry; y < ry + rh; y++) for (let x = rx; x < rx + rw; x++) carve(x, y);
       }
-      rooms.push({ cx, cy, x: rx, y: ry, w: rw, h: rh, type: shape === 'round' ? 'round' : type, shape, mx: rx + rw / 2, my: ry + rh / 2, idx: ci(cx, cy) });
+      rooms.push({ cx, cy, x: rx, y: ry, w: rw, h: rh, type: shape === 'round' ? 'round' : type, shape, mx: rx + rw / 2, my: ry + rh / 2, idx: ci(cx, cy), ...th });
     }
   }
 
@@ -231,11 +265,14 @@ export function generateDungeon(depth, biome, tileset, seed) {
   for (const k of conn) {
     const [a, b] = k.split(',').map(Number);
     const A = rooms[a], B = rooms[b];
-    const wid = rng.chance(0.25) ? 3 : 2;
+    const wid = rng.chance(style.wide) ? 3 : 2;
     const ax = Math.floor(A.mx), ay = Math.floor(A.my), bx = Math.floor(B.mx), by = Math.floor(B.my);
     const horizFirst = rng.chance(0.5);
-    const hline = (x0, x1, y) => { for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) for (let w = 0; w < wid; w++) carve(x, y + w - (wid > 2 ? 1 : 0)); };
-    const vline = (y0, y1, x) => { for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) for (let w = 0; w < wid; w++) carve(x + w - (wid > 2 ? 1 : 0), y); };
+    // rough styles (caves, ruins) bulge their passages here and there
+    const lo = wid > 2 ? -2 : -1, hi = wid > 2 ? 2 : 2;
+    const bulge = (x, y, dx, dy) => { if (style.rough && rng.chance(0.3)) carve(x + dx, y + dy); };
+    const hline = (x0, x1, y) => { for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) { for (let w = 0; w < wid; w++) carve(x, y + w - (wid > 2 ? 1 : 0)); bulge(x, y, 0, rng.chance(0.5) ? hi : lo); } };
+    const vline = (y0, y1, x) => { for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) { for (let w = 0; w < wid; w++) carve(x + w - (wid > 2 ? 1 : 0), y); bulge(x, y, rng.chance(0.5) ? hi : lo, 0); } };
     if (horizFirst) { hline(ax, bx, ay); vline(ay, by, bx); } else { vline(ay, by, ax); hline(ax, bx, by); }
   }
 
@@ -274,7 +311,9 @@ export function generateDungeon(depth, biome, tileset, seed) {
     region = (i) => alt[ci(clamp(Math.floor((i % W - 1) / S), 0, CW - 1), clamp(Math.floor((Math.floor(i / W) - 1) / S), 0, CH - 1))];
   }
   finishMap(map, tileset, rng, region, arena ? [...rooms, arena] : rooms, arena ? [arena.arch] : []);
-  const obstacles = placeObstacles(map, rooms.filter((r) => r !== startRoom && (raid || r !== exitRoom)), tileset, rng, startRoom);
+  // the guardian's room keeps its floor and the exit clear: only its theme's walls and head
+  if (!raid) { exitRoom.guardian = true; exitRoom.keep = exitPos(map, exitRoom, startRoom); }
+  const obstacles = placeObstacles(map, rooms.filter((r) => r !== startRoom && (raid || r !== exitRoom || r.theme)), tileset, rng, startRoom);
 
   // ---- spawns
   const spawns = [];
@@ -352,7 +391,7 @@ export function generateDungeon(depth, biome, tileset, seed) {
   return {
       map, rooms, spawns, props, chests, torches, wallHangings, looks,
     start: [startRoom.mx, startRoom.my],
-    exit: arena ? [arena.x + arena.w - 2.5, arena.cy] : exitPos(map, exitRoom, startRoom),
+    exit: arena ? [arena.x + arena.w - 2.5, arena.cy] : exitRoom.keep || exitPos(map, exitRoom, startRoom),
     bossRoom: arena || exitRoom,
     raid: arena,
   };
@@ -429,7 +468,9 @@ function placeObstacles(map, rooms, tileset, rng, startRoom) {
   const voidAround = (x, y) => [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => !map.tile(x + dx, y + dy)).length;
   // a level shows a dozen or so of the pack's props, so rooms look furnished rather than random
   const pool = shuffleWith(scat.slice(), rng).slice(0, rng.int(10, 16));
-  for (const r of rooms) {
+  for (const r0 of rooms) {
+    // a cave chamber spreads over its whole chunk, not just the core it was grown from
+    const r = r0.type === 'cave' && r0.cx !== undefined ? { ...r0, x: r0.cx * S + 2, y: r0.cy * S + 2, w: S - 2, h: S - 2 } : r0;
     const inRoom = (x, y) => x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h;
     // keep corridor mouths clear: no blocker within two tiles of a floor tile outside the room
     const nearDoor = (x, y) => {
@@ -437,7 +478,7 @@ function placeObstacles(map, rooms, tileset, rng, startRoom) {
       return false;
     };
     // ...and the room centre, where loot chests go
-    const ok = (x, y) => inRoom(x, y) && map.walkableTile(x, y) && !nearDoor(x, y) && !used.has(y * W + x)
+    const ok = (x, y) => inRoom(x, y) && !(r.keep && Math.hypot(x + 0.5 - r.keep[0], y + 0.5 - r.keep[1]) < 2) && map.walkableTile(x, y) && !nearDoor(x, y) && !used.has(y * W + x)
       && (Math.abs(x - Math.floor(r.mx)) > 1 || Math.abs(y - Math.floor(r.my)) > 1);
     const cells = [];
     for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (ok(x, y)) cells.push([x, y]);
@@ -453,9 +494,12 @@ function placeObstacles(map, rooms, tileset, rng, startRoom) {
       props.push({ kind: 'scatter', x: x + 0.5 + (jit ? rng.range(-jit, jit) : 0), y: y + 0.5 + (jit ? rng.range(-jit, jit) : 0), spr: e, k: tileset.k, flip: rng.chance(0.5), light: LIT[e.name] });
       return true;
     };
-    const cx = Math.floor(r.mx), cy = Math.floor(r.my), plan = r.w >= 6 && r.h >= 6 && rng.chance(0.55) ? rng.pick(['nave', 'shrine', 'rows', 'rubble', 'ring']) : null;
-    r.plan = plan;
-    if (plan === 'nave' && blockers.length) {
+    const cx = Math.floor(r.mx), cy = Math.floor(r.my);
+    const plan = r.theme && THEMES[r.theme] ? 'themed' : r.w >= 6 && r.h >= 6 && rng.chance(0.55) ? rng.pick(['nave', 'shrine', 'rows', 'rubble', 'ring']) : null;
+    r0.plan = plan;
+    if (plan === 'themed') furnishRoom(r, THEMES[r.theme], { scat, rng, put, ok, cells, edge, cx, cy, map, outer: !!r0.guardian });
+    if (r0.guardian) continue;
+    else if (plan === 'nave' && blockers.length) {
       // two colonnades of one prop down the long axis, a clear aisle between
       const e = rng.pick(blockers), alongX = r.w >= r.h;
       for (let a = 1; a < (alongX ? r.w : r.h) - 1; a += 2) for (const side of [1, -2]) {
@@ -512,6 +556,54 @@ function placeObstacles(map, rooms, tileset, rng, startRoom) {
   return props;
 }
 
+/** The props of a tag (data/biomerooms.js TAGS) in this tile set; 'light' is everything that burns. */
+function tagged(scat, tag) {
+  return tag === 'light' ? scat.filter((e) => LIT[e.name]) : scat.filter((e) => TAGS[tag] && TAGS[tag].test(e.name));
+}
+
+/**
+ * Furnish a themed room by its recipe (data/biomerooms.js THEMES): a throne or altar at the head of the room (the far
+ * end of its long axis, as seen from the camera), braziers flanking it, rows of pews or graves with an aisle down the
+ * middle, colonnades, props along the walls, in the corners or in a ring, and loose clutter. A step whose tag has no
+ * prop in this biome is skipped. Each step keeps to one prop of its tag so a room reads as a set.
+ */
+function furnishRoom(r, theme, { scat, rng, put, ok, cells, edge, cx, cy, outer }) {
+  const alongX = r.w >= r.h, len = alongX ? r.w : r.h, wid = alongX ? r.h : r.w;
+  // (a, b) -> tile: a along the long axis from the head, b across it from the centre line
+  const at = (a, b) => alongX ? [r.x + a, cy + b] : [cx + b, r.y + a];
+  // 'a|b': the first tag with props in this biome
+  const pick = (tags) => { for (const tag of tags.split('|')) { const l = tagged(scat, tag); if (l.length) return rng.pick(l); } return null; };
+  const place = (a, b, e, jit = 0) => { const [x, y] = at(a, b); return put(x, y, e, jit); };
+  for (const [kind, tag, n] of theme.steps) {
+    if (outer && !['head', 'pairs', 'walls', 'corners'].includes(kind)) continue;
+    const e = pick(tag);
+    if (!e) continue;
+    if (kind === 'head') { for (const b of [0, -1, 1]) if (place(1, b, e)) break; }
+    else if (kind === 'pairs') { const h = Math.max(2, Math.floor(wid / 2) - 1); place(1, -h, e); place(1, h, e); }
+    else if (kind === 'rows') {
+      const h = Math.floor(wid / 2) - 1;
+      for (let a = 3; a < len - 1; a += 2) for (let b = -h; b <= h; b++) if (Math.abs(b) >= 1) place(a, b, e);
+    } else if (kind === 'aisle') {
+      const h = Math.max(1, Math.floor(wid / 2) - 1);
+      for (let a = 2; a < len - 1; a += 2) { place(a, -h, e); place(a, h, e); }
+    } else if (kind === 'walls') {
+      const spots = shuffleWith(edge.slice(), rng);
+      let k = 0;
+      for (const [x, y] of spots) { if (k >= n) break; if (put(x, y, k % 2 && rng.chance(0.4) ? pick(tag) || e : e)) k++; }
+    } else if (kind === 'corners') {
+      for (const [x, y] of [[r.x, r.y], [r.x + r.w - 1, r.y], [r.x, r.y + r.h - 1], [r.x + r.w - 1, r.y + r.h - 1]]) {
+        const c = cells.reduce((best, q) => !best || Math.hypot(q[0] - x, q[1] - y) < Math.hypot(best[0] - x, best[1] - y) ? q : best, null);
+        if (c) put(c[0], c[1], e);
+      }
+    } else if (kind === 'ring') {
+      const rad = Math.min(r.w, r.h) / 2 - 1.5;
+      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; put(Math.floor(r.mx + Math.cos(a) * rad), Math.floor(r.my + Math.sin(a) * rad), e); }
+    } else if (kind === 'clutter') {
+      for (let k = 0, tries = 0; k < n && tries < n * 5; tries++) { const [x, y] = rng.pick(cells); if (put(x, y, pick(tag), 0.3)) k++; }
+    }
+  }
+}
+
 // light radius (tiles) of the props that burn
 const LIT = { grave_lantern: 2.2,
   yellow_cage_lantern: 2.4, dripping_candle_cluster: 2, tall_iron_candelabrum: 2.6, green_fire_brazier: 3.4, green_flame_torch: 3.2, torch_stand: 3.2, incense_brazier: 3, iron_candelabrum: 2.6, vigil_candles: 2, votive_candles: 2,
@@ -526,7 +618,8 @@ const LIT = { grave_lantern: 2.2,
   sun_disk_dais: 3.8, halo_ring: 3.6, dawn_relic_chest: 2.9,
   starfall_brazier: 3.5, voidflame_brazier: 3.7, aether_lantern: 2.5,
   stellar_conduit: 3.8, nebula_shrine: 4.1, astral_fountain: 3.2,
-  convergence_dais: 3.6, singularity_heart: 4.5, portal_anchor: 3.7 };
+  convergence_dais: 3.6, singularity_heart: 4.5, portal_anchor: 3.7,
+  campfire: 3.4, lantern_stake: 2.4, glowing_crystal: 2.6 };
 
 function shuffleWith(a, rng) {
   for (let i = a.length - 1; i > 0; i--) { const j = rng.int(0, i); [a[i], a[j]] = [a[j], a[i]]; }
@@ -598,14 +691,20 @@ function finishMap(map, tileset, rng, region = null, rooms = [], extra = []) {
   const W = map.w;
   const bases = shuffleWith(tileset.bases.slice(), rng);
   const main = bases[0], hall = bases[1 % bases.length];
-  const roomBase = new Int16Array(map.t.length).fill(-1);
-  for (const r of rooms) {
+  const roomBase = new Int16Array(map.t.length).fill(-1), roomOf = new Int16Array(map.t.length).fill(-1);
+  rooms.forEach((r, ri) => {
     const b = rng.chance(0.7) ? main : rng.pick(bases);
     if (r.type === 'cave') {
       const ox = r.cx * S + 1, oy = r.cy * S + 1;
-      for (let y = oy; y < oy + S; y++) for (let x = ox; x < ox + S; x++) roomBase[y * W + x] = b;
-    } else for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) roomBase[y * W + x] = b;
-  }
+      for (let y = oy; y < oy + S; y++) for (let x = ox; x < ox + S; x++) { roomBase[y * W + x] = b; roomOf[y * W + x] = ri; }
+    } else for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) { roomBase[y * W + x] = b; roomOf[y * W + x] = ri; }
+  });
+  // a themed room's floor motifs (data/biomerooms.js): feature tiles named for the theme, and a runner down the aisle
+  const motifs = new Map(), names = (re) => re ? tileset.features.filter((i) => re.test(tileset.floors[i].name)) : [];
+  const motif = (r) => {
+    if (!motifs.has(r)) { const T = r.theme && THEMES[r.theme]; motifs.set(r, T ? { T, floor: names(T.floor), runner: names(T.runner) } : null); }
+    return motifs.get(r);
+  };
   const near = new Map();
   const featuresFor = (b) => {
     if (!near.has(b)) {
@@ -621,7 +720,11 @@ function finishMap(map, tileset, rng, region = null, rooms = [], extra = []) {
     const inRoom = roomBase[i] >= 0;
     const b = inRoom ? roomBase[i] : rooms.length ? hall : main;
     let v = b;
-    if (rng.chance(inRoom ? 0.07 : 0.035)) v = rng.pick(featuresFor(b));
+    const r = inRoom && roomOf[i] >= 0 ? rooms[roomOf[i]] : null, M = r && motif(r);
+    const x = i % W, y = (i / W) | 0;
+    if (M && M.runner.length && r.type !== 'cave' && (r.w >= r.h ? y === Math.floor(r.my) && x > r.x : x === Math.floor(r.mx) && y > r.y)) v = M.runner[(r.w >= r.h ? x : y) % 2 ? 0 : M.runner.length - 1];
+    else if (M && M.floor.length && rng.chance(M.T.rate || 0.08)) v = rng.pick(M.floor);
+    else if (rng.chance(inRoom ? 0.07 : 0.035)) v = rng.pick(featuresFor(b));
     map.v[i] = v + (region && region(i) ? sp : 0);
   }
   const fams = shuffleWith(tileset.families.slice(), rng);

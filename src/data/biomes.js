@@ -316,12 +316,15 @@ export const BIOMES = [
 // (1-based floor/prop ranges, wall families, arch and door designs). Everything is recoloured by `palette`
 // (walls by `wallPalette` when set). The five temple biomes add their approved painted floors and props
 // (gfx/approvedbiomeart.js).
-const CAT = 'catacombs', CG = 'cathedral_graveyard', CK = 'castle_keep';
-// Sewers is the first ChatGPT-sheet pack (docs/CHATGPT_BIOME_SPRITES.md), drawn in its own colours.
+const CAT = 'catacombs', CG = 'cathedral_graveyard', CK = 'castle_keep', DF = 'dark_forest', SEW = 'sewers';
+// Sewers is the first ChatGPT-sheet pack (docs/CHATGPT_BIOME_SPRITES.md), drawn in its own colours. The Dark Forest
+// pack (roots, thorn hedges, mossy ruins, forest floors) also builds the cave and wood biomes underground.
 const CAT_ARCH = { arches: ['roman_ossuary', 'pointed_funerary', 'ironbound_segmental'], doors: ['ironbound_oak', 'iron_grille', 'bone_reliquary'] };
 const NAVE_ARCH = { arches: ['chapel_lancet', 'nave_triumphal', 'grand_westwork'], doors: ['cathedral_oak', 'sacristy_bronze'] };
 const GRAVE_ARCH = { arches: ['churchyard_cross', 'ruined_cloister', 'processional_cemetery'], doors: ['cemetery_gate'] };
 const KEEP_GATES = { arches: ['portcullis_arch', 'great_hall_arch'], doors: ['blackiron_gate', 'armory_door'] };
+const DF_ARCH = { arches: ['ancient_root_arch', 'thorn_ruin_arch', 'timber_gateway'], doors: ['ironbound_blackwood', 'woven_thorn', 'carved_ward'] };
+const SEW_ARCH = { arches: ['brick_culvert_arch', 'monumental_sluice_gateway', 'iron_reinforced_arch'], doors: ['rotted_oak_sewer_door', 'barred_maintenance_gate', 'rat_emblem_sewer_door'] };
 const NAVE = { ...NAVE_ARCH, floors: [[1, 5], [11, 30]], scatter: [[21, 35]], families: ['nave_ashlar', 'stained_glass_chapel', 'buttressed_masonry'] };
 const GRAVEYARD = { ...GRAVE_ARCH, floors: [[6, 10], [31, 60]], scatter: [[1, 20], [36, 40]], families: ['cemetery_limestone', 'cemetery_iron'] };
 // Castle Keep pale stone halls: limestone, marble and slate floors, carved ashlar walls (palaces, temples, spires).
@@ -337,49 +340,101 @@ const crypt = (...families) => ({ ...CAT_ARCH, floors: [[1, 60]], scatter: [[1, 
 // Graveyard soil, moss and gravel floors and its outdoor props, under another pack's walls.
 const SOIL = { floors: [[6, 10], [31, 60]], scatter: [[1, 20], [36, 40]] };
 const CAVE_WALLS = crypt('drowned_crypt', 'crypt_ashlar', 'sealed_cells');
+// Rough rock: the Catacombs' drowned and sealed walls round natural caverns.
+const ROCK = { ...CAT_ARCH, families: ['drowned_crypt', 'sealed_cells', 'crypt_ashlar'] };
+// Prop groups borrowed across packs (1-based indices, see each pack.json)
+const CAT_BONES = [[4, 6], [21, 22], [28, 30]], CAT_RITES = [[11, 16], [24, 25], [31, 35]], CAT_STONE = [[17, 19], [32, 32]];
+const CG_RUIN = [[29, 32]], CG_GRAVES = [[1, 5], [9, 14]];
+const CK_SIEGE = [[15, 16], [19, 22], [31, 31], [35, 35], [37, 37]], CK_CHAINS = [[33, 35]];
+// Each biome is one pack's floors and props (`pack`, limited by `part`), walls from `wallPack`, floors and props
+// borrowed from others (`moreFloors`, `morePacks`) and town furniture (`townProps`), all in the biome's `palette`.
+// `style` picks the level layout (world/dungeon.js STYLES); its rooms and scenarios are in data/biomerooms.js.
 const ART = {
-  castle_keep: { pack: CK },
-  sewers: { pack: 'sewers' },
-  frozen: { pack: CAT, part: crypt('ossuary_niches', 'crypt_ashlar', 'sealed_cells') },
-  ice_temple: { pack: CK, wallPack: CG, part: { ...KEEP_HALLS, ...NAVE_ARCH, families: ['stained_glass_chapel', 'nave_ashlar', 'buttressed_masonry'] },
+  catacombs: { pack: CAT, style: 'crypt' },
+  castle_keep: { pack: CK, style: 'hall' },
+  sewers: { pack: SEW, style: 'channel', morePacks: [[CAT, CAT_BONES]] },
+  frozen: { pack: CAT, style: 'crypt', part: crypt('ossuary_niches', 'crypt_ashlar', 'sealed_cells'), moreFloors: [[CG, [[3, 3], [19, 20]]]] },
+  ice_temple: { pack: CK, wallPack: CG, style: 'hall', part: { ...KEEP_HALLS, ...NAVE_ARCH, families: ['stained_glass_chapel', 'nave_ashlar', 'buttressed_masonry'] },
     palette: { colorize: [202, 0.42], light: 0.1, contrast: 1.12 } },
-  molten: { pack: CAT, wallPack: CK, part: { ...KEEP_GATES, floors: [[1, 60]], scatter: [[1, 40]], families: ['armory_ironstone', 'underkeep_brick'] },
-    palette: { colorize: [22, 0.92], light: 0.05, contrast: 1.3 } },
-  fungal: { pack: CG, wallPack: CAT, part: { ...CAVE_WALLS, ...SOIL }, palette: { colorize: [98, 0.5], light: 0.07, contrast: 1.1 } },
-  sunken: { pack: CAT, part: CAVE_WALLS, palette: { colorize: [176, 0.38], light: 0.03, contrast: 1.08 } },
-  blood: { pack: CAT, part: crypt('ossuary_niches', 'funerary_chapel', 'sealed_cells'), palette: { colorize: [356, 0.62], light: -0.02, contrast: 1.15 } },
-  ashen: { pack: CG, wallPack: CAT, part: { ...crypt('crypt_ashlar', 'funerary_chapel', 'sealed_cells'), ...SOIL }, palette: { sat: 0.1, light: 0.04, contrast: 1.05 } },
-  void: { pack: CAT, part: crypt('funerary_chapel', 'sealed_cells', 'crypt_ashlar'), palette: { colorize: [275, 0.48], light: -0.04, contrast: 1.12 } },
-  gilded: { pack: CK, wallPack: CAT, part: { ...KEEP_HALLS, ...CAT_ARCH, families: ['funerary_chapel', 'ossuary_niches'] },
+  // volcanic caverns: scorched shale and ash floors in rough rock walls, bones and braziers
+  molten: { pack: DF, wallPack: CAT, style: 'cave',
+    part: { ...ROCK, floors: [[5, 5], [8, 9], [19, 20], [30, 30], [35, 35], [50, 50], [54, 56]], scatter: [[1, 1], [11, 11], [19, 21], [29, 29], [39, 39]] },
+    moreFloors: [[CAT, [[11, 11], [31, 31], [33, 33], [51, 51]]]],
+    morePacks: [[CAT, [...CAT_BONES, ...CAT_STONE, [24, 27], [30, 33]]]], palette: { colorize: [16, 0.9], light: 0.05, contrast: 1.3 } },
+  // a living cave: loam, moss and fungus floors between tangled roots, mushrooms, spores and egg sacs
+  fungal: { pack: DF, wallPack: DF, style: 'cave',
+    part: { ...DF_ARCH, floors: [[1, 1], [4, 4], [6, 8], [10, 10], [16, 18], [25, 26], [43, 44], [46, 47], [57, 58]],
+      scatter: [[1, 9], [19, 19], [22, 22], [25, 25], [29, 31], [34, 36], [39, 39]], families: ['tangled_roots', 'mossy_ruins', 'blackwood_trunks'] },
+    palette: { hue: 32, sat: 1.15, light: 0.03, contrast: 1.08 } },
+  sunken: { pack: CAT, style: 'crypt', part: CAVE_WALLS, moreFloors: [[SEW, [[5, 5], [8, 8], [10, 10], [14, 14], [18, 18], [38, 38], [49, 49], [52, 53], [58, 59]]]],
+    morePacks: [[SEW, [[3, 3], [17, 17], [24, 24], [33, 33]]]], palette: { colorize: [176, 0.38], light: 0.03, contrast: 1.08 } },
+  blood: { pack: CAT, style: 'crypt', part: crypt('ossuary_niches', 'funerary_chapel', 'sealed_cells'),
+    moreFloors: [[CK, [[4, 4], [18, 18], [29, 29], [58, 58]]], [CG, [[17, 18]]]], morePacks: [[CK, CK_CHAINS]],
+    palette: { colorize: [356, 0.62], light: -0.02, contrast: 1.15 } },
+  // a burnt battlefield: ash, charred roots and gravel round broken keep brickwork and siege wreckage
+  ashen: { pack: DF, wallPack: CK, style: 'ruin',
+    part: { ...KEEP_GATES, floors: [[1, 1], [5, 6], [9, 9], [20, 20], [29, 30], [33, 33], [54, 54], [56, 56]],
+      scatter: [[1, 3], [10, 11], [16, 16], [19, 20], [36, 38]], families: ['underkeep_brick', 'royal_ashlar'] },
+    moreFloors: [[CK, [[15, 15], [39, 39], [45, 45], [60, 60]]]], morePacks: [[CK, CK_SIEGE]], palette: { sat: 0.1, light: 0.04, contrast: 1.05 } },
+  // a profane sanctum: marble and inlay floors in sealed chapel walls, idols, candles and basins
+  void: { pack: CK, wallPack: CAT, style: 'maze',
+    part: { ...CAT_ARCH, floors: [[5, 5], [9, 10], [16, 16], [19, 19], [22, 22], [32, 32], [36, 36], [38, 38], [47, 47], [49, 49]],
+      scatter: [[6, 6], [9, 11], [18, 19], [25, 27], [38, 40]], families: ['funerary_chapel', 'sealed_cells'] },
+    moreFloors: [[CAT, [[13, 13], [17, 17], [26, 26], [51, 51]]]], morePacks: [[CAT, CAT_RITES]], palette: { colorize: [275, 0.48], light: -0.04, contrast: 1.12 } },
+  gilded: { pack: CK, wallPack: CAT, style: 'hall', part: { ...KEEP_HALLS, ...CAT_ARCH, families: ['funerary_chapel', 'ossuary_niches'] },
     morePacks: [[CAT, [[1, 3], [7, 7], [9, 10], [13, 15], [24, 25], [32, 34]]]], palette: { colorize: [44, 0.62], light: 0.03, contrast: 1.12 } },
-  plague: { pack: CAT, part: CAVE_WALLS, palette: { colorize: [85, 0.45], light: -0.03, contrast: 1.08 } },
-  crystal: { pack: CG, part: NAVE, palette: { colorize: [188, 0.62], light: 0.09, contrast: 1.22 } },
-  desert: { pack: CAT, part: crypt('crypt_ashlar', 'funerary_chapel', 'ossuary_niches'), palette: { colorize: [36, 0.45], light: 0.1 } },
-  shadow: { pack: CAT, part: crypt('sealed_cells', 'crypt_ashlar', 'funerary_chapel'), palette: { sat: 0.3, light: -0.05, contrast: 1.12 } },
-  forge: { pack: CK, part: { ...KEEP_IRON, ...KEEP_GATES }, palette: { colorize: [18, 0.7], contrast: 1.2, light: 0.03 } },
-  abyss: { pack: CAT, part: crypt('drowned_crypt', 'sealed_cells'), palette: { colorize: [226, 0.55], light: 0.03, contrast: 1.15 } },
-  thorn: { pack: CG, part: GRAVEYARD, palette: { colorize: [100, 0.36], light: -0.04 } },
-  storm: { pack: CK, part: { ...KEEP_HALLS, families: ['royal_ashlar', 'armory_ironstone'], arches: ['keep_lancet', 'portcullis_arch'] },
+  plague: { pack: SEW, style: 'channel', morePacks: [[CAT, [...CAT_BONES, [23, 23]]], [DF, [[8, 9], [30, 31]]]],
+    palette: { colorize: [72, 0.55], light: -0.02, contrast: 1.1 } },
+  // caverns of shale, gravel and mineral veins round rough rock, crystals and standing stones
+  crystal: { pack: DF, wallPack: CAT, style: 'cave',
+    part: { ...ROCK, floors: [[5, 5], [9, 9], [35, 36], [50, 50], [53, 53], [55, 55]], scatter: [[1, 1], [11, 11], [21, 21], [29, 29], [39, 39]] },
+    moreFloors: [[CK, [[2, 2], [6, 6]]], [CAT, [[11, 11], [18, 18], [31, 31], [50, 50], [56, 56]]]], morePacks: [[CAT, [...CAT_STONE, [24, 24]]], [CG, [[24, 24], [29, 31]]]],
+    palette: { colorize: [188, 0.62], light: 0.09, contrast: 1.22 } },
+  desert: { pack: CAT, style: 'crypt', part: crypt('crypt_ashlar', 'funerary_chapel', 'ossuary_niches'),
+    moreFloors: [[DF, [[35, 36], [51, 51]]], [CG, [[41, 41]]]], palette: { colorize: [36, 0.45], light: 0.1 } },
+  shadow: { pack: CAT, style: 'maze', part: crypt('sealed_cells', 'crypt_ashlar', 'funerary_chapel'), palette: { sat: 0.3, light: -0.05, contrast: 1.12 } },
+  forge: { pack: CK, style: 'hall', part: { ...KEEP_IRON, ...KEEP_GATES }, townProps: ['anvil_stump', 'cold_forge', 'smith_bellows', 'tool_rack', 'firewood_stack', 'tiles_and_bricks'],
+    palette: { colorize: [18, 0.7], contrast: 1.2, light: 0.03 } },
+  // the deep: black loam, shale and still pools in drowned rock, runes and standing stones
+  abyss: { pack: DF, wallPack: CAT, style: 'cave',
+    part: { ...ROCK, floors: [[1, 1], [8, 9], [19, 19], [24, 24], [49, 49], [52, 52], [55, 55], [58, 58]], scatter: [[1, 1], [11, 11], [21, 21], [29, 30], [39, 39]], families: ['drowned_crypt', 'sealed_cells'] },
+    moreFloors: [[CAT, [[12, 12], [22, 22], [40, 40], [52, 52]]]], morePacks: [[CAT, [...CAT_STONE, [31, 33]]]], palette: { colorize: [226, 0.55], light: 0.03, contrast: 1.15 } },
+  // a barrow under the wood: forest floors in thorn hedges and roots, with graves and mourners
+  thorn: { pack: DF, style: 'ruin',
+    part: { ...DF_ARCH, floors: [[1, 60]], scatter: [[1, 11], [18, 25], [29, 36], [39, 39]], families: ['thorn_hedge', 'tangled_roots', 'mossy_ruins'] },
+    morePacks: [[CG, [...CG_GRAVES, [36, 37]]]], palette: { colorize: [95, 0.34], light: -0.04, contrast: 1.05 } },
+  storm: { pack: CK, style: 'hall', part: { ...KEEP_HALLS, families: ['royal_ashlar', 'armory_ironstone'], arches: ['keep_lancet', 'portcullis_arch'] },
     palette: { colorize: [216, 0.36], light: 0, contrast: 1.18 } },
-  obsidian: { pack: CK, part: KEEP_IRON, palette: { sat: 0.22, light: -0.01, contrast: 1.35 } },
-  flesh: { pack: CAT, part: crypt('ossuary_niches', 'drowned_crypt', 'sealed_cells'), palette: { colorize: [342, 0.5], light: 0.02 } },
-  serpent: { pack: CAT, part: crypt('funerary_chapel', 'drowned_crypt', 'crypt_ashlar'), palette: { colorize: [150, 0.42], light: -0.01, contrast: 1.06 } },
-  shattered: { pack: CK, part: KEEP_HALLS, palette: { sat: 0.4, light: 0.04, tint: [180, 200, 255, 0.12] } },
-  library: { pack: CK, part: KEEP_STUDY, palette: { colorize: [30, 0.38], light: -0.03 } },
-  cathedral: { pack: CG, part: NAVE },
-  necropolis: { pack: CG, part: GRAVEYARD },
-  amber: { pack: CG, wallPack: CAT, part: { ...crypt('crypt_ashlar', 'funerary_chapel'), ...SOIL }, palette: { colorize: [32, 0.7], light: 0.04, contrast: 1.05 } },
-  desert_temple: { pack: CK, part: KEEP_HALLS, palette: { colorize: [36, 0.5], light: 0.06, contrast: 1.05 } },
-  hell: { pack: CAT, wallPack: CK, part: { floors: [[1, 60]], scatter: [[1, 40]], families: ['underkeep_brick', 'armory_ironstone'],
+  obsidian: { pack: CK, style: 'maze', part: KEEP_IRON, palette: { sat: 0.22, light: -0.01, contrast: 1.35 } },
+  // living tissue: soil, roots and rot recoloured to meat, walled in sinew (tangled roots), bones and egg sacs
+  flesh: { pack: DF, wallPack: DF, style: 'cave',
+    part: { ...DF_ARCH, floors: [[1, 1], [6, 6], [8, 8], [10, 10], [16, 16], [19, 19], [26, 26], [38, 38], [43, 43], [46, 46], [57, 57]],
+      scatter: [[5, 5], [8, 10], [19, 20], [30, 32]], families: ['tangled_roots', 'mossy_ruins'] },
+    moreFloors: [[CAT, [[15, 15], [25, 25], [57, 57]]]], morePacks: [[CAT, [...CAT_BONES, [24, 24]]]], palette: { colorize: [345, 0.55], light: 0.02, contrast: 1.08 } },
+  serpent: { pack: CAT, wallPack: SEW, style: 'crypt', part: { ...SEW_ARCH, floors: [[1, 60]], scatter: [[1, 40]], families: ['civic_grotesque_relief', 'plain_damp_ashlar'] },
+    moreFloors: [[SEW, [[5, 5], [8, 8], [36, 36], [42, 42]]]], morePacks: [[SEW, [[15, 16], [32, 34]]]], palette: { colorize: [150, 0.42], light: -0.01, contrast: 1.06 } },
+  shattered: { pack: CK, style: 'ruin', part: KEEP_HALLS, morePacks: [[CG, CG_RUIN], [CK, CK_SIEGE]], palette: { sat: 0.4, light: 0.04, tint: [180, 200, 255, 0.12] } },
+  library: { pack: CK, style: 'maze', part: KEEP_STUDY, townProps: ['scroll_rack', 'potion_jars', 'market_table', 'workbench', 'crate_stack'],
+    morePacks: [[CAT, [[14, 14], [39, 39]]]], palette: { colorize: [30, 0.38], light: -0.03 } },
+  cathedral: { pack: CG, style: 'hall', part: NAVE },
+  necropolis: { pack: CG, style: 'ruin', part: GRAVEYARD },
+  amber: { pack: CG, wallPack: CAT, style: 'ruin', part: { ...crypt('crypt_ashlar', 'funerary_chapel'), ...SOIL },
+    moreFloors: [[DF, [[35, 36], [51, 51]]]], palette: { colorize: [32, 0.7], light: 0.04, contrast: 1.05 } },
+  desert_temple: { pack: CK, style: 'hall', part: KEEP_HALLS, palette: { colorize: [36, 0.5], light: 0.06, contrast: 1.05 } },
+  hell: { pack: CAT, wallPack: CK, style: 'crypt', part: { floors: [[1, 60]], scatter: [[1, 40]], families: ['underkeep_brick', 'armory_ironstone'],
     arches: ['portcullis_arch', 'great_hall_arch', 'keep_lancet'], doors: ['blackiron_gate', 'crimson_oak'] },
-    palette: { colorize: [9, 0.88], light: 0.09, contrast: 1.2 } },
-  astral_plane: { pack: CG, part: NAVE, palette: { colorize: [256, 0.58], light: 0.05, contrast: 1.18 } },
-  heavenly: { pack: CG, part: NAVE, palette: { sat: 0.22, light: 0.24, contrast: 0.9, tint: [255, 238, 196, 0.22] } },
-  throne: { pack: CK, part: KEEP_IRON, palette: { colorize: [2, 0.7], light: -0.06, contrast: 1.2 } },
+    morePacks: [[CK, CK_CHAINS]], palette: { colorize: [9, 0.88], light: 0.09, contrast: 1.2 } },
+  astral_plane: { pack: CG, style: 'hall', part: NAVE, palette: { colorize: [256, 0.58], light: 0.05, contrast: 1.18 } },
+  heavenly: { pack: CG, style: 'hall', part: NAVE, palette: { sat: 0.22, light: 0.24, contrast: 0.9, tint: [255, 238, 196, 0.22] } },
+  throne: { pack: CK, style: 'hall', part: KEEP_IRON, palette: { colorize: [2, 0.7], light: -0.06, contrast: 1.2 } },
 };
 for (const b of BIOMES) {
   const a = ART[b.id];
-  if (a) { b.pack = a.pack; b.part = a.part || null; b.wallPack = a.wallPack || null; b.morePacks = a.morePacks || null; if (a.palette) b.palette = a.palette; }
+  if (a) {
+    b.pack = a.pack; b.part = a.part || null; b.wallPack = a.wallPack || null; b.morePacks = a.morePacks || null;
+    b.moreFloors = a.moreFloors || null; b.townProps = a.townProps || null; b.style = a.style || 'crypt';
+    if (a.palette) b.palette = a.palette;
+  }
   b.painted = ['desert_temple', 'ice_temple', 'hell', 'astral_plane', 'heavenly'].includes(b.id);
   if (!b.pack) b.pack = CAT;
   b.wallPack = b.wallPack || null;

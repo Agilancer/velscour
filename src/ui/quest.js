@@ -64,6 +64,8 @@ export function renderQuest(body) {
       h += step(sc.completed, sc.completed ? 'The exit is open — descend or return to town.' : 'Complete the scenario to unseal the exit.');
       }
     } else {
+      const sc = w.scenario;
+      if (sc) h += step(sc.done, `<b style="color:#ffb347">${escapeHtml(sc.title)}</b> <span class="dim">(optional)</span> — ${sc.failed ? 'failed.' : escapeHtml(sc.desc)}${sc.progress && !sc.done && !sc.failed ? ` <span class="dim">${escapeHtml(sc.progress())}</span>` : ''}`);
       h += step(slain, `Slay ${who}${raid && !slain ? ` <span class="dim">(phase ${raid.pi + 1} of ${raid.phases.length})</span>` : ''}.`);
       h += step(false, slain ? 'The exit is open: pass through it to go deeper or return to town.' : 'Reach the exit. It stays sealed until the guardian falls.');
     }

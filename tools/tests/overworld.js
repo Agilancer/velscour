@@ -31,7 +31,7 @@ const { openGame, report } = require('./harness');
       const {G}=window.VELSCOUR;
       const {BIOME_BY_ID,drawBiome,recordBiomeVisit}=await import('/src/data/biomes.js');
       const {generateOverworld}=await import('/src/world/overworld.js');
-      const {createOverworldScenario,SCENARIOS}=await import('/src/game/overworld.js');
+      const {createOverworldScenario,SCENARIOS,WILD_SCENARIOS}=await import('/src/game/overworld.js');
       const {World}=await import('/src/game/world.js');
       const errors=[],b=BIOME_BY_ID.overworld;
       const locations=[ [63.5,9.5],[36.5,35.5],[20.5,20.5],[51.5,23.5],
@@ -52,7 +52,7 @@ const { openGame, report } = require('./harness');
           !m.walkable(x+.5,y+.5)||(i>0&&Math.abs(x-a[i-1][0])+Math.abs(y-a[i-1][1])!==1))))errors.push('invalid settlement approach at '+seed);
         if(m.v.some(v=>v>=126))errors.push('out-of-place floor accents at '+seed);
         if(gen.props.some(p=>oddMonuments.has(p.spr.name)))errors.push('random monument scatter at '+seed);
-        if(gen.scenarioId<0||gen.scenarioId>=20)errors.push('invalid scenario id at '+seed);
+        if(!WILD_SCENARIOS.includes(gen.scenarioId))errors.push('invalid scenario id at '+seed);
       }
       if(minTrees<150)errors.push('too few forest wall trees');
       if(minClear<1800)errors.push('too little free combat space');
@@ -78,7 +78,7 @@ const { openGame, report } = require('./harness');
       // Exercise 20 different scenario completions without requiring a full combat
       // soak. Foes use real Monster instances; deaths signal actual objective hooks.
       let complete=0;
-      for(let id=0;id<20;id++){
+      for(const id of WILD_SCENARIOS){
         const gen=generateOverworld(13,b,471234+id*7313);
         gen.scenarioId=id;
         const world=new World('dungeon',{map:gen.map,depth:13,biome:b,props:gen.props,buildings:gen.buildings,looks:gen.looks});
@@ -97,11 +97,11 @@ const { openGame, report } = require('./harness');
         }
         if(!sc.completed||sc.failed)errors.push('scenario '+id+' '+SCENARIOS[id][0]+' did not complete');
       }
-      return {seeds:60,scenarios:SCENARIOS.length,successfulScenarios:complete,
+      return {seeds:60,scenarios:SCENARIOS.length,wilds:WILD_SCENARIOS.length,successfulScenarios:complete,
         minTrees,minClear,maxProps,errors};
     });
     console.log('overworld QA',JSON.stringify(stats));
-    if(stats.errors.length||stats.successfulScenarios!==20) errors.push('[overworld] '+JSON.stringify(stats));
+    if(stats.errors.length||stats.successfulScenarios!==stats.wilds) errors.push('[overworld] '+JSON.stringify(stats));
     await page.evaluate(()=>{const {G}=window.VELSCOUR;G.world.overworldScenario.start();G.world.creatures.length=0;G.world.rebuildGrid();});
     await page.waitForTimeout(400);
     await shot('overworld_active_scenario');

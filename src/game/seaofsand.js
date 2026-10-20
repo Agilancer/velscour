@@ -1,6 +1,6 @@
 // A Sea of Sand run chains one to five ordinary overworld scenarios through a
 // single cliff maze. The established scenario engines still own each beat.
-import { createOverworldScenario } from './overworld.js';
+import { createOverworldScenario, WILD_SCENARIOS, wildScenario } from './overworld.js';
 import { SAND_BOSSES } from '../data/seaofsand.js';
 import { GroundItem } from './loot.js';
 import { rollSandScenarioRewards } from './sandrewards.js';
@@ -52,7 +52,7 @@ export function createSeaOfSandScenario(world, gen, biome, onSuccess) {
   const beginBeat=(index,chained=false)=>{
     if(index>=total){finishRun();return;}
     beat=index;run.active=true;run.completed=false;
-    const p=sites[index],subgen={...gen,scenarioId:(gen.scenarioId+index*7)%20,shrine:p,
+    const p=sites[index],subgen={...gen,scenarioId:wildScenario(Math.max(0,WILD_SCENARIOS.indexOf(gen.scenarioId))+index*7),shrine:p,
       sites:Array.from({length:9},(_,i)=>{const a=i*Math.PI*2/8;return [p[0]+Math.cos(a)*7,p[1]+Math.sin(a)*6];})};
     const originalSite=subgen.sites;
     // Scenario beats use the generated ring around their own landmark rather

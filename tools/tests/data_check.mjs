@@ -126,8 +126,8 @@ for (const b of BIOMES) {
     continue; // the outdoor pack has no indoor floor/wall/door atlas
   }
   // dungeons use only the painted packs and the ChatGPT-sheet packs (data/biomes.js ART), floors/props from `pack`, walls from `wallPack`
-  for (const p of [b.pack, b.wallPack, ...(b.morePacks || []).map((m) => m[0])].filter(Boolean)) {
-    if (!['catacombs', 'cathedral_graveyard', 'castle_keep', 'sewers'].includes(p)) bad.push(`biome ${b.id}: ${p} is not a painted pack`);
+  for (const p of [b.pack, b.wallPack, ...[...(b.morePacks || []), ...(b.moreFloors || [])].map((m) => m[0])].filter(Boolean)) {
+    if (!['catacombs', 'cathedral_graveyard', 'castle_keep', 'sewers', 'dark_forest'].includes(p)) bad.push(`biome ${b.id}: ${p} is not a painted pack`);
     for (const f of ['pack.json', 'floors.webp', 'walls.webp', 'scatter.webp']) if (!existsSync(asset(`tiles/${p}/${f}`))) bad.push(`biome ${b.id}: missing tiles/${p}/${f}`);
     packs[p] = 1;
   }
@@ -138,8 +138,12 @@ for (const b of BIOMES.filter((b) => !b.overworld && b.part)) {
   const inR = (rs, i) => !rs || rs.some(([x, y]) => i + 1 >= x && i + 1 <= y);
   const seamless = fm.floors.filter((f, i) => f.seamless && inR(part.floors, i)).length;
   if (seamless < 2) bad.push(`biome ${b.id}: part has ${seamless} seamless floors`);
-  if (fm.floors.filter((f, i) => !f.seamless && inR(part.floors, i)).length < 10) bad.push(`biome ${b.id}: part has few feature floors`);
-  if (fm.scatter.filter((s, i) => inR(part.scatter, i)).length < 8) bad.push(`biome ${b.id}: part has few props`);
+  // borrowed floors and props (moreFloors, morePacks, townProps) count too
+  const more = (list, key, keep) => (list || []).reduce((n, [p, rs]) => n + packMeta(p)[key].filter((f, i) => inR(rs, i) && keep(f)).length, 0);
+  const feats = fm.floors.filter((f, i) => !f.seamless && inR(part.floors, i)).length + more(b.moreFloors, 'floors', (f) => !f.seamless);
+  const props = fm.scatter.filter((s, i) => inR(part.scatter, i)).length + more(b.morePacks, 'scatter', () => true) + (b.townProps || []).length;
+  if (feats < 10) bad.push(`biome ${b.id}: part has few feature floors (${feats})`);
+  if (props < 8) bad.push(`biome ${b.id}: part has few props (${props})`);
   for (const f of part.families || []) if (!wm.walls[f]) bad.push(`biome ${b.id}: no wall family ${f}`);
   for (const k of ['arches', 'doors']) for (const d of part[k] || []) if (!wm[k][d]) bad.push(`biome ${b.id}: no ${k} design ${d}`);
   if (part.arches && !part.arches.length) bad.push(`biome ${b.id}: no arches`);
