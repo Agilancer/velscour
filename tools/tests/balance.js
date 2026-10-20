@@ -57,6 +57,7 @@ const rounds = +(process.env.BAL_GEAR || 8); // drop rounds of 25 items the gear
       Auto.spendSkills(); Auto.arrangeBar(); p.recompute(); p.hp = p.maxHp; p.mana = p.maxMana;
       c.deaths = 0; c.kills = 0;
       G.godMode = god; G.raidLog = [];
+      G.autoOpenSeals = true; // nobody is watching: auto-play breaks sealed treasures itself instead of waiting in town
       window.__bal = { blocks: {}, startDepth: D, maxDepth: D, deathsAt: [] };
       Auto.toggle(true);
       game.enterDungeon();

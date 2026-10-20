@@ -23,6 +23,8 @@ import { addEncounters } from './encounters.js';
 import { drawFolkPose } from './render.js';
 import { TOWNSFOLK } from '../data/townsfolk.js';
 import { setupScenario, scenarioTick } from './scenarios.js';
+import { smiteKill } from './smite.js';
+import { greedTick } from './greed.js';
 
 // ------------------------------------------------------------------------------------------------ omens
 // A level-wide twist, announced on arrival. mon: applied to every enemy as it appears (ambushes too).
@@ -37,6 +39,10 @@ export const OMENS = {
   frenzy: { name: 'Feeding Frenzy', color: '#40e070', text: 'Kills spill health and mana orbs.', orbs: true },
 };
 const OMEN_KEYS = Object.keys(OMENS);
+/** Can a depth of this biome have an omen at all? (Not BOSS ROOMs, overworlds or Velscour's throne.) */
+export const omenable = (depth, biome) => !!biome && !biome.overworld && !isRaidDepth(depth) && depth < FINAL_DEPTH;
+/** A depth's omen roll: an OMENS key, or null for a quiet one. */
+export const rollOmen = (depth) => (chance(Math.min(0.45, 0.22 + depth * 0.004)) ? pick(OMEN_KEYS) : null);
 
 // ------------------------------------------------------------------------------------------------ shrines
 export const SHRINES = {
@@ -90,12 +96,16 @@ export function setupHappenings(world, start, gen) {
   world.onKill = onKill;
   world.happen = { t: 0, starT: rand(3, 6), streak: 0, streakT: 0, best: 0 };
   world.scenario = null;
+  // the portal the hero took showed this depth's omen (game.portalChoice): keep its word
+  const c0 = G.char, told = c0 && c0.nextOmen !== undefined ? c0.nextOmen : undefined;
+  if (c0) delete c0.nextOmen;
   if (world.kind !== 'dungeon' || world.raid || gen.raid || depth >= FINAL_DEPTH || world.biome.overworld) return;
   const H = world.happen;
   setupScenario(world, start); // one of the biome's twenty optional set pieces (game/scenarios.js)
   // the omen
-  if (chance(Math.min(0.45, 0.22 + depth * 0.004))) {
-    H.omen = pick(OMEN_KEYS);
+  const omen = told !== undefined ? (OMENS[told] ? told : null) : rollOmen(depth);
+  if (omen) {
+    H.omen = omen;
     const O = OMENS[H.omen];
     world.lootMul = O.loot || 1;
     world.goldMul = O.gold || 1;
@@ -394,6 +404,7 @@ const STREAKS = [[10, 'KILLING SPREE'], [20, 'MASSACRE'], [35, 'BLOODBATH'], [50
 export function onKill(m) {
   const w = m.world || G.world, H = w && w.happen;
   if (!H || m.team !== 'enemy') return;
+  smiteKill(m); // the Divine Smite meter (game/smite.js)
   H.kills = (H.kills || 0) + 1;
   if (H.ch) H.ch.got++;
   if (H.challengeAt && H.kills >= H.challengeAt) { H.challengeAt = 0; startChallenge(w); }
@@ -418,6 +429,7 @@ export function happeningsTick(world, dt) {
   const H = world.happen, p = world.player;
   if (!H || !p || p.dead) return;
   H.t += dt;
+  greedTick(world, dt); // the Greed lever's tougher monsters (game/greed.js)
   if (H.streakT > 0) H.streakT -= dt;
   // the omen marks every enemy as it appears
   if (H.omen && OMENS[H.omen].mon && (H.monT = (H.monT || 0) - dt) <= 0) {

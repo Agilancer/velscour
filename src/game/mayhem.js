@@ -36,8 +36,8 @@ export function applyTrait(m, key) {
 }
 
 /** A pack's trait (or null): more often deeper. Hunters are capped per level. */
-export function rollTrait(world, depth) {
-  if (!chance(Math.min(0.55, 0.22 + depth * 0.004))) return null;
+export function rollTrait(world, depth, force = false) {
+  if (!force && !chance(Math.min(0.55, 0.22 + depth * 0.004))) return null;
   const k = pick(['hunter', 'tank', 'tank', 'gunner', 'gunner', 'phaser', 'burrower']);
   if (k === 'hunter') { if ((world.hunters = (world.hunters || 0) + 1) > 2) return 'tank'; }
   return k;

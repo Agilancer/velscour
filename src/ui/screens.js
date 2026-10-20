@@ -212,6 +212,11 @@ export function helpDialog() {
     <div><kbd>I</kbd> inventory · <kbd>K</kbd> skill tree · <kbd>B</kbd> skill book · <kbd>Q</kbd> quest log</div>
     <div><kbd>Tab</kbd>/<kbd>M</kbd> map · <kbd>Esc</kbd> menu · wheel zoom</div>
     <div><kbd>P</kbd> or the <b>Auto</b> button: auto-play (the hero fights, loots, shops and delves on autopilot)</div>
+    <div><kbd>G</kbd> MADNESS · <kbd>F</kbd> SMITE, then click where it should strike (both fill as you fight)</div>
+    <div><b style="color:#ffe2a0">While the hero plays</b></div>
+    <div>Click or tap <b style="color:#ffd040">gilded critters</b> before they get away: gold, experience, gems. Auto-play leaves them to you.</div>
+    <div>Epic and better drop <b style="color:#ffdf8a">sealed</b>: break the seals from the SEALED button or the inventory. Auto-play waits in town when they fill the bag.</div>
+    <div>Pick one of three portals down at each cleared exit (auto-play picks after 8 seconds). Set auto-play's stance, and pull the <b style="color:#ffc040">Greed</b> lever for tougher depths and richer drops; a death loses the Hoard.</div>
     <div><b style="color:#ffe2a0">Mobile</b></div>
     <div>Left thumb: virtual joystick</div>
     <div>Tap the world: move / attack / talk</div>

@@ -527,6 +527,35 @@ export function drawBiome(c, depth) {
   return id;
 }
 
+/**
+ * Up to n different biomes for the next depth (the three portals at a cleared exit, game.portalChoice), drawn like
+ * drawBiome but without spending any: takeBiome spends the one chosen. While the overworld guarantee is due they
+ * are all overworlds.
+ */
+export function biomeChoices(c, depth, n = 3) {
+  if (depth === FINAL_DEPTH) return ['throne'];
+  const all = BIOMES.filter((b) => b.id !== 'throne').map((b) => b.id);
+  const mix = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  if ((c.overworldMisses || 0) >= 3) {
+    const options = OVERWORLD_BIOME_IDS.filter((id) => id !== c.lastBiome);
+    return mix(options.length ? options : OVERWORLD_BIOME_IDS).slice(0, n);
+  }
+  const bag = (c.biomeBag || []).filter((id) => all.includes(id) && id !== c.lastBiome);
+  const out = mix(bag).slice(0, n);
+  // a bag running dry tops up from the rest (as drawBiome refills it)
+  for (const id of mix(all)) if (out.length < n && id !== c.lastBiome && !out.includes(id)) out.push(id);
+  return out;
+}
+/** The portal taken: spend its biome from the bag (and keep the overworld guarantee's bag clean, as drawBiome does). */
+export function takeBiome(c, id) {
+  if (id === 'throne') return;
+  const all = BIOMES.filter((b) => b.id !== 'throne').map((b) => b.id);
+  if ((c.overworldMisses || 0) >= 3) { c.biomeBag = (c.biomeBag || []).filter((x) => !OVERWORLD_BIOME_IDS.includes(x) && all.includes(x)); return; }
+  let bag = (c.biomeBag || []).filter((x) => all.includes(x));
+  if (!bag.includes(id)) bag = all.slice();
+  c.biomeBag = bag.filter((x) => x !== id);
+}
+
 /** Count actual dungeon *visits* once per depth; town re-entry cannot farm the counter.
  * Saved per hero and reset immediately on visiting any town-tileset overworld biome.
  */

@@ -12,6 +12,7 @@ const mobile = process.argv[4] === 'mobile';
   await page.evaluate(async (cls) => {
     await window.VELSCOUR.game.newChar(cls, 'Autobot');
     const { Auto } = await import('/src/game/autoplay.js');
+    window.VELSCOUR.G.autoOpenSeals = true; // nobody is watching: auto-play breaks sealed treasures itself instead of waiting in town
     Auto.toggle(true);
   }, cls);
   await page.waitForTimeout(500);
