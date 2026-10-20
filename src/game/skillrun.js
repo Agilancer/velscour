@@ -127,7 +127,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
             home: m.home || st.homing ? 1 : 0, split: m.split || chance((st.splitChance || 0) / 100), ret: m.ret, lob: m.lob,
             tx: tx + (m.lob && n > 1 ? rand(-1, 1) : 0), ty: ty + (m.lob && n > 1 ? rand(-1, 1) : 0),
             exp: m.exp ? 1.1 * (m.r ?? 1) * area : 0, chain: m.chain ? m.chain + Math.floor(st.chainPlus || 0) : 0,
-            spray: m.spray, pull: m.pull, size: (m.r ?? 1) * vis, r: 0.3 * (m.r ?? 1) * Math.sqrt(vis), dur: m.dur, light: el !== 'phys',
+            spray: m.spray, pull: m.pull, size: (m.r ?? 1) * vis, r: 0.3 * (m.r ?? 1) * Math.sqrt(vis), dur: m.dur, light: el !== 'phys', skin: sk.name,
             ...(bard >= 0 ? { bm: m, tier: bard } : null),
           }));
         });
@@ -230,7 +230,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       // eight-angle designs, without altering orbit count or damage behavior.
       const shieldVariant = m.shields ? shieldVariantForSkill(sk.name) : null;
       if(shieldVariant) preloadLancerShield(shieldVariant);
-      w.addHazard(new Orbit({ world: w, src: p, n, radius: m.shields ? shieldOrbitRadius(sk.name) * area : 1.6 * (m.r ?? 1) * area, dur: m.dur || 4, spiral: m.spiral, fx, el, dmg, o, speed: m.shields ? 2.4 : m.spiral ? 5 : 4.2, size: vis * (m.shields ? 1.4 : 1), shieldVariant }));
+      w.addHazard(new Orbit({ world: w, src: p, n, radius: m.shields ? shieldOrbitRadius(sk.name) * area : 1.6 * (m.r ?? 1) * area, dur: m.dur || 4, spiral: m.spiral, fx, el, dmg, o, skin: sk.name, speed: m.shields ? 2.4 : m.spiral ? 5 : 4.2, size: vis * (m.shields ? 1.4 : 1), shieldVariant }));
       sfx('swing');
       break;
     }

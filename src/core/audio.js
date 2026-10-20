@@ -1,8 +1,8 @@
 // Sound: the user's samples (assets/audio/, imported by `process_assets.py audio`), with procedural Web Audio
 // fallbacks for sounds that have no sample (or until the samples finish loading), plus the music + ambience directors.
 //   sfx(name)           one-shot: a random sample from SAMPLES[name] if loaded, else the procedural SOUNDS[name]
-//   playMusic(kind)     'title' | 'town': songs with quiet breaks between them (dungeons have ambience only)
-//   setAmbience(key)    a biome id or 'town' / 'title': a looped ambient bed that drifts louder and softer
+//   playMusic(kind)     'title' | 'town' | 'wilds' (dungeons + overworld biomes): songs with quiet breaks between them
+//   setAmbience(key)    a biome id or 'town': a looped ambient bed that drifts louder and softer (the title has none)
 // Songs and beds stream through <audio> elements routed into the Web Audio graph, so they're never fully decoded.
 import { G } from '../state.js';
 
@@ -326,6 +326,8 @@ export const TITLE_SONG = 'hymn_of_the_abyss';
 const MUSIC = {
   title: { songs: [TITLE_SONG], gap: [10, 16], vol: 0.9 },
   town: { songs: ['empty_school'], gap: [30, 70], vol: 0.75 },
+  // dungeons and overworld biomes: shuffled, with long ambience-only breaks; it carries on across levels
+  wilds: { songs: ['stone_room_reverberation', 'stone_room_reverberation_2'], shuffle: true, gap: [45, 120], vol: 0.6 },
 };
 let music = null;   // { kind, def, deck, queue, next (ac time of next song or 0), gen }
 const songUrls = {};   // song -> blob URL of a fully downloaded copy (preloadSong)
@@ -377,8 +379,11 @@ export function stopMusic(sec = 1.5) {
 
 function startSong(at = 0) {
   const m = music, def = m.def;
-  if (!m.queue.length) m.queue = def.shuffle ? [...def.songs].sort(() => Math.random() - 0.5) : [...def.songs];
-  m.song = m.queue.shift();
+  if (!m.queue.length) {
+    m.queue = def.shuffle ? [...def.songs].sort(() => Math.random() - 0.5) : [...def.songs];
+    if (m.queue.length > 1 && m.queue[0] === m.last) m.queue.push(m.queue.shift());   // never the same song twice running
+  }
+  m.song = m.last = m.queue.shift();
   if (manifest && !(m.song in manifest.music)) { m.song = null; m.next = 0; return; }
   const deck = m.deck;
   deck.load(m.song, songUrls[m.song] || `${AUDIO}music/${m.song}.mp3`, false, at || def.at || 0);
@@ -403,7 +408,7 @@ export function seekMusic(t) {
 // Each area gets one or more 60 s beds; one plays at a time, drifting between soft and fuller every 10-25 s and now and
 // then crossfading to another of its beds. Beds sit lower while a song plays and come up in the breaks between songs.
 const AMB = {
-  title: ['cave_storm', 'inside_night_storm'], town: ['forest_night', 'forest_night_rain', 'forest_day'],
+  town: ['forest_night', 'forest_night_rain', 'forest_day'],
   catacombs: ['inside_night', 'cave'], frozen: ['cave_storm', 'forest_night_storm'],
   ice_temple: ['cave_storm', 'inside_night_storm', 'cave'], molten: ['cave', 'torch_loop'],
   fungal: ['cave_rain', 'cave'], sunken: ['sea', 'cave_rain', 'beach_rain'], blood: ['inside_night_rain', 'inside_night'],

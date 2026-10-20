@@ -122,7 +122,7 @@ export function skillRange(sk) {
     case 'nova': return 3.5 * (sk.m.r ?? 1);
     case 'buff': case 'heal': case 'summon': return 99;
     case 'curse': return sk.m.at === 'self' ? 4 : 8;
-    default: return 10 * (sk.m.range ?? 1);
+    default: return 10 * (sk.m.range ?? 1) * (sk.kind === 'proj' && sk.m.ret ? 0.5 : 1); // a boomerang turns for home halfway
   }
 }
 /** Shared point-blank hit/visual footprint of the Dragoon's one- and three-circle spear barrages. */
@@ -189,7 +189,7 @@ export function describe(sk, L, dmg) {
   if (m.chain) flags.push(`Chains to ${m.chain} more`);
   if (m.exp) flags.push('Explodes');
   if (m.split) flags.push('Splits on hit');
-  if (m.ret) flags.push('Returns');
+  if (m.ret) flags.push('Returns to your hand');
   if (m.burn) flags.push('Ignites');
   if (m.poison) flags.push('Poisons');
   if (m.bleed) flags.push('Causes bleeding');

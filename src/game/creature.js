@@ -7,6 +7,7 @@ import { pixelSprite } from '../gfx/pixelart.js';
 import { classSprite } from '../core/assets.js';
 import { enemyImage } from '../core/enemyart.js';
 import { petAnimation, petTintImage } from '../core/petart.js';
+import { drawRuneWeapon } from '../gfx/runeweapon.js';
 
 let UID = 0;
 
@@ -236,6 +237,7 @@ export class Creature {
   }
 
   draw(ctx) {
+    if (this.summonKey === 'runeweapon' && drawRuneWeapon(ctx, this)) return; // the Death Knight's 3D Runeblade
     const art = this.artFrame && this.artFrame();
     if (art) return this.drawArt(ctx, art);
     const pet = petAnimation(this);
