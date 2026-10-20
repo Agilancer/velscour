@@ -225,9 +225,9 @@ export function drawShieldModel(ctx, model, px, py, angle, s) {
 }
 /** Draw a shield model in any orientation: eU, eV, eN are where its across, up and outward axes point in the world
  *  (x, toward the camera, up). An upright orbiting shield is drawShieldModel; a thrown one lies flat.
- *  lift: brightness steps added to every face (a shield carrying holy light). */
-export function drawShieldOriented(ctx, model, px, py, eU, eV, eN, s, lift = 0) {
-  const T2 = model.T / 2, dv = (v) => v[1] * VIEW[1] + v[2] * VIEW[2];
+ *  lift: brightness steps added to every face (a shield carrying holy light); thick: x the slab's thickness. */
+export function drawShieldOriented(ctx, model, px, py, eU, eV, eN, s, lift = 0, thick = 1) {
+  const T2 = model.T * thick / 2, dv = (v) => v[1] * VIEW[1] + v[2] * VIEW[2];
   // Model (U across, V up, N out) -> screen offset.
   const sx = (U, V, N) => px + s * (U * eU[0] + V * eV[0] + N * eN[0]);
   const sy = (U, V, N) => py + s * (K * (U * eU[1] + V * eV[1] + N * eN[1]) - (U * eU[2] + V * eV[2] + N * eN[2]));
@@ -348,7 +348,7 @@ export function drawThrownShield(ctx, pr) {
   ctx.globalAlpha = prev;
   const smooth = ctx.imageSmoothingEnabled;
   ctx.imageSmoothingEnabled = false;
-  drawShieldOriented(ctx, record.model, px, gy - pr.z, eU, eV, eN, s, 3);
+  drawShieldOriented(ctx, record.model, px, gy - pr.z, eU, eV, eN, s, 3, 0.5); // half the Lancer slab: a thin disc
   ctx.imageSmoothingEnabled = smooth;
   return true;
 }

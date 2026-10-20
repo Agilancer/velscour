@@ -45,7 +45,7 @@ Contents
   (`RICOCHET_BLAST` 1.5 tiles x area, `BLAST_DMG` 75% of a strike) around the last foe, at a wall, or at the end of
   its flight. Drawn as the Lancer's round model (`drawThrownShield` in `lancershields.js`, via the new general
   `drawShieldOriented`; `drawShieldModel` is now its upright case, pixel-identical in `lancer_shields.js`), flat on the
-  isometric ground like a discus (face up, a slight wobble), spinning, at 1.35x, sorted in front of the foe it strikes, with a glow, lit rim and a
+  isometric ground like a discus (face up, a slight wobble, half the Lancer slab's thickness), spinning, at 1.35x, sorted in front of the foe it strikes, with a glow, lit rim and a
   streak of light. It is in auto-play's Paladin focus (`isHammer`) at the non-orbit weight; `hitsPerCast` models it.
 - **Balance** (`pow=` mod: the skill's whole damage, weapon part too, x this; `Player.skillDamage`): the new
   `tools/tests/paladin.js dps` casts every damaging skill (same rank, seeded gear, mana counted) at one pinned dummy
