@@ -8,7 +8,7 @@ import { getItem, changed, renderInventory } from './inventory.js';
 import { addToBag } from '../game/player.js';
 import {
   rollItem, rollGem, makeGem, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost,
-  rerollAffixes, addAffix, RARITY, POTION_PRICE, POTION_INFO, GEMS, gemName, SLOT_NAMES, WEAPONS, MAX_GEM_TIER, gemFuseCost, gemRefineCost, slotFor,
+  rerollAffixes, addAffix, RARITY, rarityAt, POTION_PRICE, POTION_INFO, GEMS, gemName, SLOT_NAMES, WEAPONS, MAX_GEM_TIER, gemFuseCost, gemRefineCost, slotFor,
 } from '../data/items.js';
 import { CLASSES } from '../data/classes.js';
 import { potionIcon } from '../core/assets.js';
@@ -32,14 +32,14 @@ export const Vendor = {
     for (let i = 0; i < 16; i++) {
       const slot = i < 12 ? 'weapon' : 'offhand';
       const base = slot === 'weapon' && i < 4 ? cls.weapon : slot === 'offhand' && i === 12 && cls.offhand ? cls.offhand : undefined;
-      weapons.push(rollItem(Math.max(1, lvl + randi(-2, 0)), { slot, rarity: shopRarity(), base: base && (slot === 'weapon' ? WEAPONS[base] && base : base) }));
+      weapons.push(rollItem(Math.max(1, lvl + randi(-2, 0)), { slot, rarity: rarityAt(lvl, shopRarity()), base: base && (slot === 'weapon' ? WEAPONS[base] && base : base) }));
     }
     const armor = [];
-    for (let i = 0; i < 18; i++) armor.push(rollItem(Math.max(1, lvl + randi(-2, 0)), { slot: ['head', 'body', 'hands', 'legs', 'feet', 'offhand'][i % 6], rarity: shopRarity(), base: i % 6 === 5 ? 'shield' : undefined }));
+    for (let i = 0; i < 18; i++) armor.push(rollItem(Math.max(1, lvl + randi(-2, 0)), { slot: ['head', 'body', 'hands', 'legs', 'feet', 'offhand'][i % 6], rarity: rarityAt(lvl, shopRarity()), base: i % 6 === 5 ? 'shield' : undefined }));
     const gems = [];
     for (let i = 0; i < 14; i++) gems.push(rollGem(Math.max(1, Math.max(c.level, depthLevel(c.depth || 1)) - 5)));
     const rings = [];
-    for (let i = 0; i < 10; i++) rings.push(rollItem(Math.max(1, lvl + randi(-2, 0)), { slot: 'ring', rarity: Math.max(1, shopRarity()) }));
+    for (let i = 0; i < 10; i++) rings.push(rollItem(Math.max(1, lvl + randi(-2, 0)), { slot: 'ring', rarity: rarityAt(lvl, Math.max(1, shopRarity())) }));
     this.stock = { weapons, armor, gems, rings };
   },
 

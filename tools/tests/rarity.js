@@ -6,7 +6,8 @@
 //   - every item level beats the one before it (Common and Rare items rise level by level),
 //   - each rarity is worth more levels than the one below it, and Epic -> Legendary -> Mythic steps grow,
 //   - a level 25 Rare beats a level 10 Mythic (averaged over slots, and the weapon and body armor alone),
-//   - drop rates: each rarity rarer than the last, Mythic at most 0.02% of plain drops.
+//   - drop rates: each rarity rarer than the last, Mythic at most 0.02% of plain drops; no rarity below its item
+//     level gate (Rare 3, Epic 30, Legendary 45, Mythic 60), even from a boss at 300% magic find.
 //   node tools/tests/rarity.js [classes] [samples]       # default paladin,wizard,ranger 30
 const { openGame, report } = require('./harness');
 const classes = (process.argv[2] || 'paladin,wizard,ranger').split(',');
@@ -30,6 +31,23 @@ const samples = +(process.argv[3] || 30);
   });
   console.log('drop rates (% of items)      ' + rates.names.map((n) => n.padStart(10)).join(''));
   for (const [k, v] of Object.entries(rates.out)) console.log(k.padEnd(28) + v.map((x) => x.toFixed(x < 1 ? 3 : 1).padStart(10)).join(''));
+  // item-level gates (like D2's quality levels): odds by item level, and nothing below a rarity's minIlvl
+  const gate = await page.evaluate(async () => {
+    const { rollRarity, rarityAt, RARITY } = await import('/src/data/items.js');
+    const rows = [], bad = [];
+    for (const il of [1, 3, 8, 20, 30, 35, 45, 52, 60, 70, 80, 100]) {
+      const n = RARITY.map(() => 0), N = 200000;
+      for (let i = 0; i < N; i++) n[rollRarity(0, 0, il)]++;
+      rows.push([il, n.map((x) => (x / N) * 100)]);
+      // the best odds in the game (a boss, 300% magic find) still can't beat the gate
+      for (let i = 0; i < 20000; i++) { const r = rollRarity(300, 1.5, il); if (il < RARITY[r].minIlvl) { bad.push(`ilvl ${il} rolled ${RARITY[r].name}`); break; } }
+      for (let r = 0; r < RARITY.length; r++) if (il < RARITY[rarityAt(il, r)].minIlvl) bad.push(`rarityAt(${il}, ${r}) is above the gate`);
+    }
+    return { rows, bad, gates: RARITY.map((r) => `${r.name} ${r.minIlvl}-${r.fullIlvl}`) };
+  });
+  console.log('\nby item level, plain kill (unlock ' + gate.gates.slice(2).join(', ') + ')');
+  for (const [il, v] of gate.rows) console.log(('  ilvl ' + il).padEnd(28) + v.map((x) => x.toFixed(x < 1 ? 3 : 1).padStart(10)).join(''));
+  for (const b of gate.bad) bad(b);
   const nr = rates.out.normal;
   for (let r = 1; r < nr.length; r++) if (!(nr[r] < nr[r - 1])) bad(`${rates.names[r]} is not rarer than ${rates.names[r - 1]}`);
   if (!(nr[5] <= 0.02)) bad(`Mythic drops ${nr[5].toFixed(3)}% of the time at no magic find (want <= 0.02%)`);

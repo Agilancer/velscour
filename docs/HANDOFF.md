@@ -14,6 +14,25 @@ Contents
 
 ---
 
+## October 20, 2026 — Rarity unlocks by item level (Epic 30, Legendary 45, Mythic 60)
+
+- **Request:** the user rolled a Boomerang Knight and had a Legendary at level 3 (on `main`, which still had the old
+  drop tables: PR #146 wasn't merged yet). Rarity odds should feel like other dungeon crawlers; drop counts are fine.
+  Then: Epic from level 30, Legendary 45, Mythic 60.
+- **Gates** (`RARITY[r].minIlvl` / `fullIlvl`, like Diablo II's quality levels): a rarity can't roll below its
+  minimum item level and its odds ramp to full by `fullIlvl`: Rare 3 -> 8, Epic 30 -> 40, Legendary 45 -> 60, Mythic
+  60 -> 80 (`rarityUnlock`, applied in `rollRarity(mf, bonus, ilvl)`, which `rollItem` passes). Every guaranteed
+  rarity steps down to the best one its item level allows (`rarityAt`): Dark Forest and Sea of Sand rewards, the
+  cursed chest hoard, the tenth-depth gift, the peddler, vendor stock. The Dark Forest and Sea of Sand Mythic rolls
+  need item level 60. Sea of Sand's log names the rarity it gave; the Quest Log says "fine gear (Epic or better once
+  deep enough)".
+- **Odds once unlocked** (unchanged, plain kill): Common 71% / Uncommon 21% / Rare 6.1% / Epic 1.0% / Legendary 0.14%
+  / Mythic 0.011%. That is about D2's normal / magic / rare / set / unique split; Mythic is rarer than anything there.
+- **Tests:** `rarity.js` prints odds by item level and fails if any rarity rolls below its gate (even a boss at 300%
+  magic find) or if `rarityAt` lets one through; `sea_of_sand_generation.mjs` rolls at item level 70 and checks an
+  item level 10 route pays a Rare. A 25-minute Boomerang Knight soak (before the 30/45/60 change, with gates at
+  8/18/35) reached depth 11 / level 19 with no Legendary or Mythic. flow, happenings, scenarios, rings, ui pass.
+
 ## October 19, 2026 — Level cap 600 (levels 301-600 are the Endless Torment's progression)
 
 - `MAX_LEVEL` 300 -> 600 (`src/game/player.js`). `xpToNext` is unchanged to level 240; past it a level costs
@@ -2304,7 +2323,8 @@ Summon attacks (`monster.js:416 summonAttack`) by `atk.type`:
   - lancer: str, spear+shield, 78/25 (8/1.5), Phalanx, Javelin, Valor
   - dragon_knight: str, sword, 72/30 (8/2), Flame, Scale, Draconic
   - gunner: dex, pistol, 55/35 (6/2.5), Firearms, Explosives, Engineering
-- `RARITY` (`items.js`), as weight / lv (power-level bonus) / perk lines / max sockets / boss bonus factor:
+- `RARITY` (`items.js`), as weight / lv (power-level bonus) / perk lines / max sockets / boss bonus factor (plus
+  `minIlvl`/`fullIlvl` gates: Rare 3-8, Epic 30-40, Legendary 45-60, Mythic 60-80):
   - Common: 70 / 0 / 0 / 1 / 0
   - Uncommon: 21 / 2 / 0 / 2 / 1
   - Rare: 6 / 3 / 1 / 3 / 1.6

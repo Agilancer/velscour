@@ -9,15 +9,26 @@ import { SKILLS } from './skills.js';
 // legendary power. Measured in auto-play's hero score (tools/tests/rarity.js) a rarity is worth about Uncommon 2,
 // Rare 5, Epic 8, Legendary 11.5 and Mythic 15 item levels, so a level 25 Rare beats a level 10 Mythic and gear
 // keeps being replaced as the hero levels; the rarer tiers last a little longer each.
-// weight: drop odds (rollRarity). bonus: how much a boss/chest bonus multiplies the weight (1 + bonus * b).
+// weight: drop odds (rollRarity), close to Diablo II's white / magic / rare / set / unique split; Mythic is rarer than
+// anything there. bonus: how much a boss/chest bonus multiplies the weight (1 + bonus * b). minIlvl/fullIlvl: like
+// D2's quality levels, a rarity can't drop below item level minIlvl and its odds ramp up to full by fullIlvl, so no
+// Epic before item level 30, Legendary before 45 or Mythic before 60 (rarityAt caps the guaranteed rewards the same
+// way).
 export const RARITY = [
-  { id: 0, name: 'Common', color: '#e8e8e8', weight: 70, lv: 0, perks: 0, sockets: 1, bonus: 0 },
-  { id: 1, name: 'Uncommon', color: '#4fd65a', weight: 21, lv: 2, perks: 0, sockets: 2, bonus: 1 },
-  { id: 2, name: 'Rare', color: '#4f8dff', weight: 6, lv: 3, perks: 1, sockets: 3, bonus: 1.6 },
-  { id: 3, name: 'Epic', color: '#b45cff', weight: 1, lv: 7, perks: 1, sockets: 3, bonus: 2.2 },
-  { id: 4, name: 'Legendary', color: '#ff9a2a', weight: 0.14, lv: 8, perks: 1, sockets: 4, bonus: 2.8 },
-  { id: 5, name: 'Mythic', color: '#ff4058', weight: 0.012, lv: 10, perks: 2, sockets: 4, bonus: 3.4 },
+  { id: 0, name: 'Common', color: '#e8e8e8', weight: 70, lv: 0, perks: 0, sockets: 1, bonus: 0, minIlvl: 1, fullIlvl: 1 },
+  { id: 1, name: 'Uncommon', color: '#4fd65a', weight: 21, lv: 2, perks: 0, sockets: 2, bonus: 1, minIlvl: 1, fullIlvl: 1 },
+  { id: 2, name: 'Rare', color: '#4f8dff', weight: 6, lv: 3, perks: 1, sockets: 3, bonus: 1.6, minIlvl: 3, fullIlvl: 8 },
+  { id: 3, name: 'Epic', color: '#b45cff', weight: 1, lv: 7, perks: 1, sockets: 3, bonus: 2.2, minIlvl: 30, fullIlvl: 40 },
+  { id: 4, name: 'Legendary', color: '#ff9a2a', weight: 0.14, lv: 8, perks: 1, sockets: 4, bonus: 2.8, minIlvl: 45, fullIlvl: 60 },
+  { id: 5, name: 'Mythic', color: '#ff4058', weight: 0.012, lv: 10, perks: 2, sockets: 4, bonus: 3.4, minIlvl: 60, fullIlvl: 80 },
 ];
+/** How much of a rarity's drop odds item level ilvl has unlocked: 0 below its minIlvl, ramping to 1 at fullIlvl. */
+export const rarityUnlock = (r, ilvl) => clamp((ilvl - RARITY[r].minIlvl + 1) / (RARITY[r].fullIlvl - RARITY[r].minIlvl + 1), 0, 1);
+/** The best rarity up to r that item level ilvl allows (guaranteed rewards: a level 3 "Legendary" gift is a Rare). */
+export function rarityAt(ilvl, r) {
+  while (r > 0 && ilvl < RARITY[r].minIlvl) r--;
+  return r;
+}
 /** Stat lines every item rolls (rarity adds perk lines on top), and each line's multiplier on its affix's range. */
 export const CORE_LINES = 2, LINE_MULT = 1.5, PERK_MULT = 0.7;
 for (const R of RARITY) R.affixes = [CORE_LINES + R.perks, CORE_LINES + R.perks]; // lines an item has (the enchanter adds one more)
@@ -294,11 +305,11 @@ function rollAffixes(item, count, perk = false) {
 }
 
 /**
- * A drop's rarity. mf: magic find (%).
- * bonus: a guardian's, chest's or event's better odds (0 = a plain kill).
+ * A drop's rarity. mf: magic find (%). bonus: a guardian's, chest's or event's better odds (0 = a plain kill).
+ * ilvl: the item's level (rarities unlock with it; rarityUnlock).
  */
-export function rollRarity(mf = 0, bonus = 0) {
-  return weighted(RARITY.map((r) => [r.id, r.id === 0 ? r.weight / (1 + bonus) : r.weight * (1 + bonus * r.bonus) * mfMul(mf, r.id)]));
+export function rollRarity(mf = 0, bonus = 0, ilvl = 999) {
+  return weighted(RARITY.map((r) => [r.id, r.id === 0 ? r.weight / (1 + bonus) : r.weight * (1 + bonus * r.bonus) * mfMul(mf, r.id) * rarityUnlock(r.id, ilvl)]));
 }
 /** Magic find's multiplier on a rarity's weight (at 100% it raises the share of Epic and above ~1.6x). */
 export const mfMul = (mf, id) => 1 + Math.max(0, mf) / 100 * [0, 0.6, 0.8, 0.9, 0.9, 0.9][id];
@@ -309,7 +320,7 @@ const EPIC_B = ['bringer', 'reaver', 'fang', 'song', 'ward', 'call', 'bane', 'sh
 export function rollItem(ilvl, opts = {}) {
   ilvl = Math.max(1, Math.round(ilvl));
   const slot = opts.slot || pick(['weapon', 'weapon', 'offhand', 'head', 'head', 'body', 'body', 'body', 'hands', 'legs', 'feet', 'ring', 'ring']);
-  const rarity = opts.rarity ?? rollRarity(opts.mf || 0, opts.bonus || 0);
+  const rarity = opts.rarity ?? rollRarity(opts.mf || 0, opts.bonus || 0, ilvl);
   const tier = tierOf(ilvl), pl = powerLevel(ilvl, rarity);
   const item = { uid: newUid(), type: 'gear', slot, rarity, ilvl, tier, upg: 0, affixes: [], gems: [], sockets: 0 };
   const art = opts.generic || slot === 'ring' ? null : classItem(slot, rarity, opts.base);

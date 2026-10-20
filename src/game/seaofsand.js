@@ -4,6 +4,7 @@ import { createOverworldScenario } from './overworld.js';
 import { SAND_BOSSES } from '../data/seaofsand.js';
 import { GroundItem } from './loot.js';
 import { rollSandScenarioRewards } from './sandrewards.js';
+import { RARITY } from '../data/items.js';
 import { depthLevel } from '../data/depth.js';
 import { G } from '../state.js';
 import { UI } from '../ui/ui.js';
@@ -46,7 +47,7 @@ export function createSeaOfSandScenario(world, gen, biome, onSuccess) {
       UI.log(`The route yielded a Mythic weapon (${Math.round(mythicChance*100)}% scenario chance).`,'#ff536e');
     }
     record.rewarded=index+1;
-    UI.log(`Sea of Sand reward ${index+1}/${total}: guaranteed Epic or better gear.`,'#ffb044');
+    UI.log(`Sea of Sand reward ${index+1}/${total}: guaranteed ${RARITY[items[0].rarity].name} gear.`,'#ffb044');
   };
   const beginBeat=(index,chained=false)=>{
     if(index>=total){finishRun();return;}
