@@ -8,6 +8,7 @@ import { sfx } from '../../core/audio.js';
 import { addEffect, Ring, Beam, Column, floatText, burst, sparkle, spawn, addLight, addDecal } from '../../gfx/vfx.js';
 import { hit, aoe } from '../combat.js';
 import { lineTargets } from '../hazards.js';
+import { drawGreatHammer, hammerPalette } from '../../gfx/hammer3d.js';
 
 const RUNES = 7, GOLD = '#ffd860', WHITE = '#fffff0';
 
@@ -33,21 +34,9 @@ class Hammer {
       for (let i = -2; i <= 2; i++) { ctx.globalAlpha = 0.25 * a; ctx.fillStyle = i ? GOLD : '#ffffff'; ctx.fillRect(px + i * 9 - 1.5, py - 420, 3, 300); }
       ctx.globalCompositeOperation = 'source-over';
     }
-    ctx.globalAlpha = 0.92 * a;
-    const hg = ctx.createLinearGradient(px - 6, 0, px + 6, 0); // the haft, with leather wraps
-    hg.addColorStop(0, '#c89020'); hg.addColorStop(0.5, '#fff8d0'); hg.addColorStop(1, '#c89020');
-    ctx.fillStyle = hg; ctx.fillRect(px - 5, py - 128, 10, 104);
-    ctx.fillStyle = 'rgba(120,70,10,0.55)'; for (let i = 0; i < 5; i++) ctx.fillRect(px - 5, py - 120 + i * 9, 10, 3);
-    ctx.fillStyle = '#ffe890'; ctx.beginPath(); ctx.arc(px, py - 134, 7, 0, TAU); ctx.fill(); // pommel
-    const W = 34, H = 20, cy = py - 22; // the head: a great block with bevelled faces
-    const g = ctx.createLinearGradient(0, cy - H, 0, cy + H);
-    g.addColorStop(0, '#fffef0'); g.addColorStop(0.45, '#ffd860'); g.addColorStop(1, '#a86a10');
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.moveTo(px - W, cy - H + 6); ctx.lineTo(px - W + 6, cy - H); ctx.lineTo(px + W - 6, cy - H); ctx.lineTo(px + W, cy - H + 6);
-    ctx.lineTo(px + W, cy + H - 6); ctx.lineTo(px + W - 6, cy + H); ctx.lineTo(px - W + 6, cy + H); ctx.lineTo(px - W, cy + H - 6); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(px - W - 4, cy - H + 4, 6, H * 2 - 8); ctx.fillRect(px + W - 2, cy - H + 4, 6, H * 2 - 8); // striking faces
-    ctx.fillStyle = '#fffbe0'; ctx.fillRect(px - 3, cy - H + 5, 6, H * 2 - 10); ctx.fillRect(px - 12, cy - 6, 24, 6); // a cross on its side
+    ctx.globalAlpha = 0.95 * a; // the hammer itself: the 3D model (gfx/hammer3d.js) cast in light, turning as it falls
+    drawGreatHammer(ctx, px, py, 4.6, hammerPalette(null, true), -0.7 + this.t * 1.6);
+    const cy = py - 17;
     ctx.globalCompositeOperation = 'lighter'; glow(ctx, '#ffffff', px, cy - 3, 26, 0.6 * a);
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }

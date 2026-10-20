@@ -7,7 +7,7 @@ import { spawn, burst, addEffect, Ring, Bolt, Beam, Slash, Telegraph, elem, glow
 import { emitWhirlCyclone, captureWhirlGibs, drawWhirlCyclone } from '../gfx/barbarianwhirl.js';
 import { drawShape, trail, explosionFx, hitSpark } from '../gfx/shapes.js';
 import { bardProjInit, bardProjUpdate, bardProjHit, bardProjDraw, bardOrbitDraw, bardRainDraw, bardBeamDraw } from './bard.js';
-import { drawLancerOrbitShield } from '../gfx/lancershields.js';
+import { drawLancerOrbitShield, drawThrownShield } from '../gfx/lancershields.js';
 import { drawCosmicBeam } from '../gfx/cosmos.js';
 import { drawFlyingRang, drawRang3D, rangSkin, groundHeading } from '../gfx/boomerang3d.js';
 import { screenAngle } from '../gfx/vfx.js';
@@ -38,6 +38,8 @@ export function coneTargets(world, team, x, y, ang, range, half) {
 }
 
 // ===================================================================== Projectile
+/** Shield Throw: its finale blast deals this share of a strike's damage to everything in it (data/skills.js describe). */
+export const BLAST_DMG = 0.75;
 /** The Death Knight's own art: his frost skull for Death Coil, his 3D Runeblade for every sword he throws, rains or orbits. */
 const dkFx = (src, fx) => (src && src.classId === 'death_knight' ? (fx === 'skull' ? 'dkskull' : fx === 'blade' ? 'dkblade' : fx) : fx);
 /** n of his 3D Runeblades circling (x, y) at radius r tiles, z px up, edge first (whirls and cyclones). */
@@ -50,7 +52,7 @@ export class Projectile {
   constructor(o) {
     Object.assign(this, {
       speed: 9, range: 10, r: 0.3, fx: 'bolt', el: 'phys', z: 26, pierce: 0, bounce: 0, home: 0, split: false, ret: false,
-      lob: false, exp: 0, chain: 0, spray: false, pull: false, size: 1, child: false, o: {}, t: 0, dead: false,
+      lob: false, exp: 0, chain: 0, spray: false, pull: false, size: 1, child: false, o: {}, t: 0, dead: false, ricochet: 0, blast: 0,
     }, o);
     this.E = elem(this.el);
     this.hitSet = new Set();
@@ -73,7 +75,7 @@ export class Projectile {
     if (typeof this.fx === 'string' && this.fx.startsWith('n_')) bardProjInit(this); // a Bard note: staff trail + note behaviours
     if (this.fx === 'starmissile' || this.fx === 'stardust') { this.weave = rand(5, 9); this.seed = rand(TAU); } // the Astronomer's stars dart and weave
   }
-  get depth() { return this.x + this.y + 0.3; }
+  get depth() { return this.x + this.y + (this.ricochet ? 1.2 : 0.3); } // Shield Throw shows in front of the foe it strikes
   update(dt) {
     const w = this.world;
     this.t += dt;
@@ -95,6 +97,13 @@ export class Projectile {
         const turn = clamp(angleDiff(cur, want), -dt * 6 * this.home, dt * 6 * this.home);
         const sp = Math.hypot(this.vx, this.vy);
         this.vx = Math.cos(cur + turn) * sp; this.vy = Math.sin(cur + turn) * sp;
+      }
+    }
+    if (this.ricochet && this.seek) { // Shield Throw: fly straight at the foe it ricochets to, wherever it walks
+      if (this.seek.dead) this.seek = this.nextFoe(this.x, this.y);
+      if (this.seek) {
+        const a = angleTo(this.x, this.y, this.seek.x, this.seek.y), sp = Math.hypot(this.vx, this.vy);
+        this.vx = Math.cos(a) * sp; this.vy = Math.sin(a) * sp;
       }
     }
     if (this.weave && !this.returning) {
@@ -148,7 +157,7 @@ export class Projectile {
     }
     if (!this.note) trail(this.fx, this.x, this.y, this.z, this.E, dt, this.size);
     if (this.light) addLight(this.x, this.y, 2.5, 0.8, 20, this.E.glow);
-    if (this.t > this.life && !this.ret) { if (this.exp) this.impact(); return false; }
+    if (this.t > this.life && !this.ret) { if (this.exp || this.blast) this.impact(); return false; }
     return !this.dead;
   }
   turnBack() { this.returning = true; this.retT = this.t; this.hitSet.clear(); }
@@ -160,6 +169,7 @@ export class Projectile {
     hit(this.src, c, d, this.el, { ...this.o, ang: Math.atan2(this.vy, this.vx) });
     if (this.note) bardProjHit(this, c, d);
     if (this.heal && this.src && this.src.owner) leechHeal(this.src.owner, c, d, 0.2);
+    if (this.ricochet) return this.ricochetFrom(c);
     if (this.chain > 0) chainHit(w, this.src, c.x, c.y, w.hostiles(this.team, c.x, c.y, 5).find((x) => x !== c), this.chain - 1, d * 0.7, this.el, this.E.glow);
     if (this.exp) explode(w, this.src, c.x, c.y, this.exp, this.dmg.map((v) => v * 0.6), this.el, { ...this.o, sound: true, exclude: new Set([c.id]) }, this.fx === 'rocket' || this.fx === 'bomb' ? 'explosion' : 'explosion');
     if (this.split && !this.child) {
@@ -186,7 +196,35 @@ export class Projectile {
     if (!this.exp) hitSpark(this.x, this.y, this.z, this.el);
     this.dead = true;
   }
+  /** The nearest foe within 5 tiles of (x, y) it has not struck yet, in sight. */
+  nextFoe(x, y) {
+    const w = this.world;
+    let best = null, bd = 1e9;
+    for (const c of w.hostiles(this.team, x, y, 5)) {
+      if (this.hitSet.has(c.id) || c.targetable === false) continue;
+      const d = dist(x, y, c.x, c.y);
+      if (d < bd && w.map.los(x, y, c.x, c.y)) { bd = d; best = c; }
+    }
+    return best;
+  }
+  /** Shield Throw struck c: on to the next foe, or after the last one (or with none in reach) the blast. */
+  ricochetFrom(c) {
+    this.struck = (this.struck || 0) + 1;
+    sfx('block', 0.55); sparkle(c.x, c.y, 30, this.E.glow, 6, 0.25);
+    addEffect(new Ring(c.x, c.y, 0.1, 0.7, 0.22, this.E.glow, 3));
+    this.seek = this.struck < this.ricochet ? this.nextFoe(c.x, c.y) : null;
+    if (this.seek) { this.life = this.t + 2; this.x = c.x; this.y = c.y; return; }
+    this.x = c.x; this.y = c.y;
+    this.impact();
+  }
   impact() {
+    if (this.blast) { // Shield Throw's finale: the shield bursts into holy light
+      explode(this.world, this.src, this.x, this.y, this.blast, this.dmg.map((v) => v * BLAST_DMG), this.el, { ...this.o, sound: true }, 'holy');
+      addEffect(new Ring(this.x, this.y, 0.2, this.blast * 1.15, 0.4, this.E.glow, 6, { fill: true }));
+      sparkle(this.x, this.y, 26, '#ffffff', 18, 0.5);
+      this.dead = true;
+      return;
+    }
     if (this.exp) explode(this.world, this.src, this.x, this.y, this.exp, this.dmg.map((v) => v * 0.7), this.el, { ...this.o, exclude: new Set(this.hitSet) });
     else burst(this.x, this.y, this.z, this.el, 6, 1.5, { size: 0.8 });
     this.dead = true;
@@ -211,8 +249,9 @@ export class Projectile {
     }
     if (this.note) return bardProjDraw(ctx, this, px, py);
     if ((this.fx === 'rang' || this.fx === 'chakram') && drawFlyingRang(ctx, this)) return; // the 3D boomerang
+    if (this.fx === 'pshield' && drawThrownShield(ctx, this)) return; // the Paladin's thrown 3D shield
     const a = screenAngle(Math.atan2(this.vy, this.vx));
-    drawShape(ctx, this.fx, px, py, a, this.size, this.E, this.t);
+    drawShape(ctx, this.fx === 'pshield' ? 'disc' : this.fx, px, py, a, this.size, this.E, this.t); // a disc while the shield model loads
     if (this.fx === 'chain' && this.src) {
       const sx = isoX(this.src.x, this.src.y), sy = isoY(this.src.x, this.src.y) - 26;
       ctx.strokeStyle = '#8a8a9a'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]);

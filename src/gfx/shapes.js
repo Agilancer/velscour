@@ -11,6 +11,7 @@ import { drawNoteShape } from './notation.js';
 import { drawCosmic, cosmicTrail } from './cosmos.js';
 import { drawDkSkull } from './dkskull.js';
 import { drawRuneblade3D, runeblade3DReady, runebladeLook, RUNEBLADE_LEN } from './runeblade3d.js';
+import { drawHammer3D, headingOfScreen } from './hammer3d.js';
 
 function glow(ctx, x, y, r, color, a = 1) {
   ctx.globalCompositeOperation = 'lighter';
@@ -52,7 +53,8 @@ export function drawShape(ctx, fx, x, y, a, s, E, t, extra = {}) {
       ctx.fillStyle = '#fff6c0'; ctx.fillRect(-6 * s, -1.3 * s, 10 * s, 2.6 * s);
       break;
     }
-    case 'hammer': {
+    case 'hammer': { // the 3D hammer (gfx/hammer3d.js), tumbling end over end along its line of flight
+      if (drawHammer3D(ctx, 0, 0, { head: headingOfScreen(a), spin: -t * 13 - ((extra && extra.i) || 0), size: s, E, glow: 0.6, shadow: (extra && extra.lift) ?? 24 })) break;
       glow(ctx, 0, 0, 18 * s, E.glow, 0.8);
       ctx.rotate(spin * 0.6);
       ctx.fillStyle = '#7a5a30'; ctx.fillRect(-1.5 * s, -2 * s, 3 * s, 14 * s);
@@ -272,6 +274,9 @@ export function trail(fx, x, y, z, E, dt, s = 1) {
       break;
     case 'blob': case 'acid':
       if (p < dt * 20) spawn({ type: 'dot', x, y, z, vz: -20, g: 200, life: 0.6, size: 2, color: E.glow });
+      break;
+    case 'pshield': // Shield Throw: a streak of holy light behind the shield
+      if (p < dt * 40) spawn({ type: 'glow', x: x + rand(-0.05, 0.05), y: y + rand(-0.05, 0.05), z: z + rand(-3, 3), vz: rand(-6, 6), life: rand(0.2, 0.4), size: rand(1.5, 3) * s, size1: 0, color: Math.random() < 0.7 ? E.glow : '#ffffff', add: true });
       break;
     case 'shard':
       if (p < dt * 25) spawn({ type: 'dot', x, y, z, vz: rand(-10, 10), life: 0.4, size: 1.5, color: E.core, add: true });

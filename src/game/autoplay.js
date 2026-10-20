@@ -9,7 +9,7 @@ import { sfx } from '../core/audio.js';
 import { dist, clamp, TAU, fmtInt, escapeHtml, angleDiff, angleTo } from '../core/util.js';
 import { MEASURE, NOTES, beatsOf } from '../data/notation.js';
 import { bardNoteFor, bardFitGain, bardPerforming } from './bard.js';
-import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, spearBarrageAreas, buffAmount, curseAmount, skillDuration, effLevel } from '../data/skills.js';
+import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, spearBarrageAreas, buffAmount, curseAmount, skillDuration, effLevel, ricochetCount } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
 import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS, powerLevel } from '../data/items.js';
 import { depthLevel, armorDiv } from '../data/depth.js';
@@ -48,8 +48,9 @@ const BAG_LOW = 14;
 // ================================================================== power model
 const isWide = (sk) => (sk.m.arc ?? (sk.m.cleave ? 170 : sk.fx === 'spin' ? 360 : 115)) >= 170;
 /** Expected hits per cast against `crowd` enemies near the target (very rough, per skill kind). */
-function hitsPerCast(sk, crowd) {
+function hitsPerCast(sk, crowd, L = 1) {
   const m = sk.m, n = m.n || 1, extra = Math.max(0, crowd - 1);
+  if (m.ricochet) return Math.min(ricochetCount(sk, L), crowd) + 0.75 * Math.min(crowd, 2.2); // Shield Throw: its strikes, then the blast
   switch (sk.kind) {
     case 'melee': return n * (isWide(sk) ? Math.min(crowd, 2.4) : 1.1) * (m.exp ? 1 + extra * 0.4 : 1) * (m.chain ? 1 + Math.min(m.chain, extra + 1) * 0.4 : 1);
     case 'proj': {
@@ -114,11 +115,12 @@ const summonMax = (sk) => sk.m.max || sk.m.n || 1;
 // How the user wants some classes played on auto-play. Pet classes raise as many minions as they can (every summon
 // skill that fits under the minion cap, kept up at all times); the Paladin builds around his hammers: Blessed Hammer
 // and Hammerstorm (hammers spiralling out around him) as the main attack, Wheel of Hammers (six hammers circling him)
-// fired whenever it is ready, and Hammer of the Gods. Only skill spending and the bar use it (focus = true); the
-// HUD's DPS and gear choices (charScore) stay unbiased.
+// fired whenever it is ready, and Hammer of the Gods, with Shield Throw (his 3D shield ricocheting through the pack)
+// beside them. Only skill spending and the bar use it (focus = true); the HUD's DPS and gear choices (charScore) stay
+// unbiased.
 export const PET_CLASSES = new Set(['necromancer', 'totem_master', 'carrion_witch', 'slime_lord', 'ranger', 'gunner']);
 const PET_CAP = 40; // createSummon keeps at most 40 minions per hero; more would only kill the oldest
-const isHammer = (sk) => sk.fx === 'hammer' || /hammer/i.test(sk.name);
+const isHammer = (sk) => sk.fx === 'hammer' || /hammer/i.test(sk.name) || !!sk.m.ricochet; // and Shield Throw
 const petsOf = (sk) => (sk.m.sum === 'revive' ? 0 : summonMax(sk));
 /** Skills a class pours its points into first, when it can (the Paladin's hammers), or null. */
 const focusSkills = (classId) => {
@@ -131,9 +133,25 @@ const focusSkills = (classId) => {
 };
 const mobility = (sk) => ['leap', 'dash', 'blink'].includes(sk.kind) ||
   (sk.kind === 'buff' && (sk.m.buff || []).includes('speed'));
+/** The Paladin's Shield Throw stands beside his hammers: its prerequisites are learned as its level gate nears (so it
+ *  opens with Hammerstorm at 12), then it stays within two ranks of his best swirling hammer. The point it wants, or null. */
+function shieldStep(c, focus) {
+  const st = focus.find((sk) => sk.m.ricochet);
+  if (!st) return null;
+  let step = null;
+  if (!(c.skills[st.id] > 0)) {
+    if (st.reqLevel - c.level > 2) return null;
+    step = st;
+    while (step.prereq && !(c.skills[step.prereq] > 0)) step = SKILLS[step.prereq];
+  } else {
+    const top = Math.max(0, ...focus.filter((sk) => sk.kind === 'orbit' && cooldown(sk) < 1.2).map((sk) => c.skills[sk.id] || 0));
+    if (c.skills[st.id] + 2 < top) step = st;
+  }
+  return step && !canLearn(step) ? step : null;
+}
 /** Value multiplier for a skill under the class's build focus. */
 function focusMul(classId, sk) {
-  if (classId === 'paladin') return isHammer(sk) ? (sk.kind === 'orbit' ? 4 : 2.5) : 1;
+  if (classId === 'paladin') return isHammer(sk) ? (sk.kind === 'orbit' || sk.m.ricochet ? 4 : 2.5) : 1; // hammers and Shield Throw
   if (classId === 'barbarian') return sk.kind === 'whirl' ? 6 : mobility(sk) ? 1.8 : 1;
   if (classId === 'lancer') return sk.m.shields ? 5 : mobility(sk) ? 1.8 : 1;
   if (classId === 'dragoon') return sk.m.barrage ? 5 : sk.kind === 'leap' ? 5 : sk.m.weave ? 2.5 : mobility(sk) ? 1.8 : 1;
@@ -145,7 +163,7 @@ function focusMul(classId, sk) {
 
 /** Damage per second one skill adds when used as often as its cast time, cooldown and mana allow. */
 function skillDps(p, sk, L, crowd = CROWD) {
-  const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, crowd) * critMul(p);
+  const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, crowd, L) * critMul(p);
   const period = Math.max(castTime(p, sk), cdOf(p, sk), 0.05);
   const cost = manaCost(sk, L), rage = rageCost(sk);
   const supply = p.st.manaRegen + p.maxMana / 40;
@@ -426,6 +444,10 @@ export const Auto = {
     p.recompute();
   },
 
+  /** The Paladin alternates hammers and Shield Throw: hammers cast since his last shield. */
+  hammersSince: 1,
+  countFocus(sk) { if (sk.m.ricochet) this.hammersSince = 0; else if (isHammer(sk)) this.hammersSince++; },
+
   /** Put each skill point where it raises buildPower most (counting the prerequisites a new skill needs). */
   spendSkills() {
     const p = G.player, c = G.char;
@@ -456,11 +478,14 @@ export const Auto = {
           continue;
         }
       }
-      // a focused build (the Paladin's hammers) takes the point whenever one of its skills can use it
-      for (const sk of focusSkills(c.classId) || []) {
+      // a focused build (the Paladin's hammers) takes the point whenever one of its skills can use it; the Paladin's
+      // even when the plan reads a rank as a loss (a mana-starved early rank whose cost rounds up faster than its damage)
+      let fv = c.classId === 'paladin' ? -Infinity : bv;
+      best = c.classId === 'paladin' ? shieldStep(c, focus) : null;
+      for (const sk of best ? [] : focus) {
         if (canLearn(sk)) continue;
         const v = (buildPowerWith(p, [sk]) - base) * (sk.kind === 'orbit' ? 1.5 : 1) + 1e-6; // the swirling hammers first
-        if (v > bv) { bv = v; best = sk; }
+        if (v > fv) { fv = v; best = sk; }
       }
       if (best) bv = Infinity;
       // none can take it yet, but one opens within a few levels (Blessed Hammer at 6): save the points for it
@@ -509,6 +534,8 @@ export const Auto = {
     const rmb = free && free.id !== bar[LMB] && (lmbSk && (manaCost(lmbSk, 1) || rageCost(lmbSk) || lmbSk.kind === 'whirl' || lmbSk.kind === 'orbit' || lmbSk.kind === 'leap')) ? free :
       alt && alt.sk;
     if (rmb && rmb.id !== bar[LMB]) bar[RMB] = rmb.id;
+    const shield = c.classId === 'paladin' && focused.find((sk) => sk.m.ricochet); // the Paladin: hammers on LMB, Shield Throw on RMB
+    if (shield && shield.id !== bar[LMB]) bar[RMB] = shield.id;
     // All learned bar skills participate, including low-ranked gap closers.
     // Put signature and mobility skills before pure damage picks if slots fill.
     const priority = [...focused, ...learned.filter(mobility), ...parts.map((x) => x.sk),
@@ -1002,7 +1029,7 @@ export const Auto = {
     this.setStatus('Raid mechanic!');
     // keep shooting on the way when the hero can
     const foes = enemyNear(w, p, 13);
-    if (foes.length && p.castLock <= 0 && !r.holdFire) { const t = this.pickTarget(foes); if (t) { const pick = this.chooseSkill(foes, t, dist(p.x, p.y, t.x, t.y), true); if (pick && !['leap', 'dash'].includes(pick.sk.kind)) p.tryUseSkill(pick.sk, pick.x, pick.y, pick.sk.kind === 'melee' ? t : null); } }
+    if (foes.length && p.castLock <= 0 && !r.holdFire) { const t = this.pickTarget(foes); if (t) { const pick = this.chooseSkill(foes, t, dist(p.x, p.y, t.x, t.y), true); if (pick && !['leap', 'dash'].includes(pick.sk.kind) && p.tryUseSkill(pick.sk, pick.x, pick.y, pick.sk.kind === 'melee' ? t : null)) this.countFocus(pick.sk); } }
     this.goTo(g.x, g.y, Math.max(0.3, g.r * 0.6), dt);
     return true;
   },
@@ -1175,6 +1202,7 @@ export const Auto = {
     if (p.castLock <= 0) {
       const pick = this.chooseSkill(foes, t, d, fleeing);
       if (pick && p.tryUseSkill(pick.sk, pick.x, pick.y, pick.sk.kind === 'melee' ? t : null)) {
+        this.countFocus(pick.sk);
         this.lastCast[pick.sk.id] = w.time;
         if (p.classId === 'dragoon') {
           if (pick.sk.m.barrage) {
@@ -1297,7 +1325,7 @@ export const Auto = {
           continue;
         }
       }
-      if (!OFFENSIVE.has(sk.kind) || fleeing && !['nova', 'orbit'].includes(sk.kind)) continue;
+      if (!OFFENSIVE.has(sk.kind) || fleeing && !['nova', 'orbit'].includes(sk.kind) && !m.ricochet) continue; // Shield Throw flies while he backs off
       // can it reach?
       let n = 1, ok = true, ax = t.x, ay = t.y;
       switch (sk.kind) {
@@ -1327,10 +1355,11 @@ export const Auto = {
       }
       if (!ok) continue;
       if (lowMana) continue;
-      const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, Math.max(1, n));
+      const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, Math.max(1, n), L);
       let score = per / Math.max(0.2, castTime(p, sk));
       if (cooldown(sk) >= 1.2) score *= 1.6; // fire cooldowns whenever they are up
       score *= focusMul(c.classId, sk); // the build focus: the Paladin swings hammers before anything else
+      if (sk.m.ricochet && c.classId === 'paladin') score *= this.hammersSince > 0 ? 6 : 0.3; // and throws his shield between them
       if (sk.kind === 'leap' || sk.kind === 'dash') score *= d > 3 ? 2.5 : d > 1.8 ? 1.2 : 0.5;
       if (cost) score *= 1 - 0.35 * clamp(1 - p.mana / p.maxMana, 0, 1);
       consider(sk, score, ax, ay);

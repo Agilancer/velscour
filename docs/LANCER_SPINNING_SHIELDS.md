@@ -64,6 +64,14 @@ then costs one `drawImage`, ~0.006 ms, the same as the old sprites. Fifty shield
 Until a sheet has loaded, the old procedural `tshield` shape stands in, so hits and visuals keep
 working.
 
+**Any orientation (`drawShieldOriented`).** `drawShieldModel` is the upright case of
+`drawShieldOriented(ctx, model, px, py, eU, eV, eN, s, lift)`, which takes where the model's
+across, up and outward axes point in the world (x, toward the camera, up); keep `eU x eV = -eN`
+or the art comes out mirrored. The Paladin's **Shield Throw** uses it (`drawThrownShield`): the
+round model thrown near flat, its face tipped toward the camera, spinning in its own plane, at
+1.35x the art (the round shield is only ~18 px across), `lift` 3 brightness steps and a lit rim.
+It is drawn live each frame (one or two at a time), not memoised.
+
 ## Depth sorting (unchanged)
 
 `render.js` enqueues **each shield** with `orbitShieldDepth(x, y, a)` as a `f:11` item and

@@ -14,6 +14,66 @@ Contents
 
 ---
 
+## October 20, 2026 — Paladin: 3D hammers, Shield Throw ricochets, every skill balanced (branch `feat/paladin-hammers-shield-throw`)
+
+- **Follow-up: auto-play prioritises hammers AND Shield Throw** (user request). Before, Shield Throw went unlearned
+  until ~level 45 (its prerequisites Holy Shield -> Vengeance Aura are in the shield tree and the Paladin's focus loop
+  never walks chains). Now (`src/game/autoplay.js`): `shieldStep` learns the chain from level 10 so Shield Throw opens
+  with Hammerstorm at 12, then keeps it within two ranks of his best swirling hammer; it casts at the orbit hammers'
+  weight (`focusMul` 4) and **alternates** with them (`hammersSince`/`countFocus`: x6 once a hammer has gone out since
+  the last shield, x0.3 otherwise); it may be thrown while kiting (only orbits/novas could); the bar is hammer on LMB,
+  Shield Throw on RMB. `paladin.js auto` (geared heroes at levels 14/25/45/90, 2 min in a real level): hammers +
+  Shield Throw 72-100% of his mana attacks, Shield Throw 23-60% of those (fails outside 20-70%). Smite still fills in
+  when the mana orb is empty. `tuning.js paladin` stays within noise of `main` except D10 (~40% slower: a rank-1 shield
+  hits 2 foes and takes half his mana); soak unchanged (depth 5 by minute 14-20, 0 deaths).
+
+- **Request:** turn the Paladin's hammers into a 3D model; add a shield throw that eventually bounces between up to 5
+  enemies, then explodes into an AoE, using the Lancer's round 3D shield; balance all the Paladin's skills alongside it
+  for the risky-combat balance.
+- **3D hammers** (`src/gfx/hammer3d.js`): convex prisms (octagonal head, flared steel striking faces, gold band with a
+  glowing cross on each side, haft with rings, leather grip, pommel), faces culled and painted far to near, lit like the
+  Lancer shields, a one-pixel dark outline; each hammer tumbles end over end along its flight (heading from drawShape's
+  screen angle, `headingOfScreen`). Renders memoised per 1/32 turn of heading x spin, per size and palette (elements
+  tint the fittings). The `hammer` case of `drawShape` uses it, so every orbiting hammer (Blessed Hammer, Hammerstorm,
+  Wheel of Hammers, the Hammerfall legendary, the Totem Master's Ancestral Hammer) is 3D. Hammer of the Gods and Solar
+  Hammer drop a `FallingHammer` (0.2 s, damage lands with it); JUDGEMENT's hammer of light is `drawGreatHammer` in the
+  light palette.
+- **Shield Throw** (the Paladin already had a plain one, `paladin.1.9`, kept so saves keep their points):
+  `proj|holy|pshield|ricochet=5`. It strikes 2 foes at rank 1, one more every 4 ranks, 5 from rank 13
+  (`ricochetCount`; +chain items, never past 5), never the same foe twice, flying straight at the next foe in sight
+  within 5 tiles wherever it walks (`Projectile.nextFoe` / `ricochetFrom`), then bursts in a holy blast
+  (`RICOCHET_BLAST` 1.5 tiles x area, `BLAST_DMG` 75% of a strike) around the last foe, at a wall, or at the end of
+  its flight. Drawn as the Lancer's round model (`drawThrownShield` in `lancershields.js`, via the new general
+  `drawShieldOriented`; `drawShieldModel` is now its upright case, pixel-identical in `lancer_shields.js`), near flat,
+  tipped toward the camera, spinning, at 1.35x, sorted in front of the foe it strikes, with a glow, lit rim and a
+  streak of light. It is in auto-play's Paladin focus (`isHammer`) at the non-orbit weight; `hitsPerCast` models it.
+- **Balance** (`pow=` mod: the skill's whole damage, weapon part too, x this; `Player.skillDamage`): the new
+  `tools/tests/paladin.js dps` casts every damaging skill (same rank, seeded gear, mana counted) at one pinned dummy
+  and at a pack of five. Value = sqrt(one x pack) x mana sustain. **Anchored** on auto-play's main attacks, the curve
+  `DMG_TUNE` was fitted on: Smite (level 3) and Hammerstorm (12/40/120) keep their power, and `DMG_TUNE.paladin` is
+  unchanged. Every skill of rows 1-4 is set to its row's target (0.85 + 0.1 x row of the anchor; cooldown skills
+  half, leaps/dashes 0.8) at the levels its row is used (row 1: 12/40, row 2: 12/40/120, rows 3-4: 40/120);
+  cooldown skills and leaps are capped at 1.3x / 1.5x at their mid-game peak. Most skills came **down**: they ran
+  2-8x past the hammers (Bastion 0.13, Crusader's Flurry 0.18, Blade Barrage 0.22, Hallowed Ground 0.25,
+  Consecration 0.28, Zeal 0.3, Sword of Justice 0.37, ... Shield Throw 0.49); a few came up (Wings of Judgment, Halo
+  of Spears 1.3, Purifying Nova, Martyrdom, Hammer of the Gods, Seraph's Gaze, Archon's Radiance, Throne of Light,
+  Bulwark Slam 1.2). Spread after: spammables 0.82-1.28 of target (Divine Strike 1.6), from 0.23-9x.
+- **Kept as they were, on purpose:** row 0 (Smite, Holy Bolt, Radiant Spark, Shield Bash, Sweep, Dawnblade, ...) and
+  Blessed Hammer. The fresh-hero early game is tuned on them. Raising Holy Bolt/Radiant Spark/Sweep (weak mid-game)
+  made depth 1 two to four times faster: the level-1 point bought a skill far above the free attacks, whose weapon
+  part is tiny at level 1. They read 0.3-0.6 of target from level 12 on (starter skills fall behind, like D2's).
+- **Verified:** `tuning.js paladin` vs `main` (seconds per normal, single; 2-3 runs each): D1 0.87 (main 1.03), D3
+  1.86 (1.83), D6 3.1 (2.4), D10 2.3 (2.3), D20 2.5 (5.1), D40 2.4 (2.8), D80 3.9 (3.4), D160 3.1 (2.5): within the
+  run-to-run noise (up to 2x). Fresh-hero soak (`autoplay.js paladin 20`): depth 1 ~4.5 min (main ~6), depth 4 at
+  minute 14 (14), potions drunk, 0 deaths. `paladin.js shield` (ranks 1-20, moving foes, one foe, none, wall),
+  `paladin.js shots` (sheets and shots looked at), flow, skills paladin + totem_master, signatures paladin, classart
+  paladin, rings, hud, ui, lancer_shields, data_check.
+- **Open:** cooldown skills (every class) fall to ~0.1-0.3 of a spammable's value by hero level 120: spammables gain
+  cast speed and weapon damage, cooldowns don't. A game-wide question (cooldowns scaling with cast speed?), not fixed.
+  The per-skill numbers swing ~+-50% run to run (gear picks follow skill power), so finer tuning needs averaged runs.
+  Ask the user how Shield Throw's speed (7.2 tiles/s) and blast feel, and whether Blessed Hammer should stay the
+  weaker early hammer.
+
 ## October 20, 2026 — risky combat: tougher monsters, class damage evened out, kiting stances, rarer seals (branch `feat/risky-combat-retune`)
 
 - **Request:** hero damage far too high, especially early: ranged heroes one-shot everything in range. Enemies (even easy

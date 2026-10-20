@@ -10,6 +10,7 @@
 // side at a=pi/4, rear on the far side) and are lit by a top-left-front light.
 import { isoX, isoY } from '../core/view.js';
 import { drawShape } from './shapes.js';
+import { glowSprite } from './vfx.js';
 
 export const SHIELD_SHEET = Object.freeze({
   round:   'assets/fx/lancer/spinning_round.png',
@@ -219,27 +220,35 @@ export function shieldFacing(angle) { return shieldBasis(angle).nd >= 0 ? 'front
 const faceOrder = [];
 /** Draw a shield model centred at screen (px,py), facing radially out along world angle a. */
 export function drawShieldModel(ctx, model, px, py, angle, s) {
-  const {nx, nd, ux, ud} = shieldBasis(angle), T2 = model.T / 2;
+  const {nx, nd, ux, ud} = shieldBasis(angle);
+  drawShieldOriented(ctx, model, px, py, [ux, ud, 0], [0, 0, 1], [nx, nd, 0], s);
+}
+/** Draw a shield model in any orientation: eU, eV, eN are where its across, up and outward axes point in the world
+ *  (x, toward the camera, up). An upright orbiting shield is drawShieldModel; a thrown one lies near flat.
+ *  lift: brightness steps added to every face (a shield carrying holy light). */
+export function drawShieldOriented(ctx, model, px, py, eU, eV, eN, s, lift = 0) {
+  const T2 = model.T / 2, dv = (v) => v[1] * VIEW[1] + v[2] * VIEW[2];
   // Model (U across, V up, N out) -> screen offset.
-  const sx = (U, N) => px + s * (U * ux + N * nx);
-  const sy = (U, V, N) => py + s * (-V + K * (U * ud + N * nd));
-  const showFront = nd >= 0, capN = showFront ? T2 : -T2, farN = -capN;
+  const sx = (U, V, N) => px + s * (U * eU[0] + V * eV[0] + N * eN[0]);
+  const sy = (U, V, N) => py + s * (K * (U * eU[1] + V * eV[1] + N * eN[1]) - (U * eU[2] + V * eV[2] + N * eN[2]));
+  const showFront = dv(eN) >= 0, capN = showFront ? T2 : -T2, farN = -capN;
   // Far outline first: covers hairline seams between rim faces.
   const pts = model.pts;
   ctx.fillStyle = model.dark;
   ctx.beginPath();
   for (let i = 0; i < pts.length; i++) {
-    const p = pts[i], x = sx(p.U, farN), y = sy(p.U, p.V, farN);
+    const p = pts[i], x = sx(p.U, p.V, farN), y = sy(p.U, p.V, farN);
     if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
   }
   ctx.fill();
   // Rim faces turned toward the camera, painted far to near.
   faceOrder.length = 0;
   for (const f of model.faces) {
-    const fx = f.nU * ux, fd = f.nU * ud, fu = f.nV;
+    const fx = f.nU * eU[0] + f.nV * eV[0], fd = f.nU * eU[1] + f.nV * eV[1], fu = f.nU * eU[2] + f.nV * eV[2];
     if (fd * VIEW[1] + fu * VIEW[2] <= 0.001) continue;
-    f.depth = ((f.a.U + f.b.U) / 2) * ud + K * (f.a.V + f.b.V) / 2;
-    f.lv = level(shade(fx, fd, fu));
+    const mU = (f.a.U + f.b.U) / 2, mV = (f.a.V + f.b.V) / 2;
+    f.depth = (mU * eU[1] + mV * eV[1]) * VIEW[1] + (mU * eU[2] + mV * eV[2]) * VIEW[2];
+    f.lv = Math.min(LEVELS - 1, level(shade(fx, fd, fu)) + lift);
     faceOrder.push(f);
   }
   faceOrder.sort((p, q) => p.depth - q.depth);
@@ -247,20 +256,26 @@ export function drawShieldModel(ctx, model, px, py, angle, s) {
     const {a, b} = f;
     ctx.fillStyle = f.styles[f.lv] || rimStyle(f, f.lv);
     ctx.beginPath();
-    ctx.moveTo(sx(a.U, T2), sy(a.U, a.V, T2)); ctx.lineTo(sx(b.U, T2), sy(b.U, b.V, T2));
-    ctx.lineTo(sx(b.U, -T2), sy(b.U, b.V, -T2)); ctx.lineTo(sx(a.U, -T2), sy(a.U, a.V, -T2));
+    ctx.moveTo(sx(a.U, a.V, T2), sy(a.U, a.V, T2)); ctx.lineTo(sx(b.U, b.V, T2), sy(b.U, b.V, T2));
+    ctx.lineTo(sx(b.U, b.V, -T2), sy(b.U, b.V, -T2)); ctx.lineTo(sx(a.U, a.V, -T2), sy(a.U, a.V, -T2));
     ctx.closePath(); ctx.fill();
   }
   // The visible cap: texel (tx,ty) -> U = m*(tx-cx)*fx, V = (cy-ty)*fy, N = capN.
   const cap = showFront ? model.front : model.back, m = showFront ? 1 : -1;
-  const lv = level(shade(m * nx, m * nd, 0));
+  const lv = Math.min(LEVELS - 1, level(shade(m * eN[0], m * eN[1], m * eN[2])) + lift);
   const fx = m * cap.sx, fy = cap.sy;
-  const a = s * fx * ux, b = s * K * fx * ud, d = s * fy;
-  const e = sx(-fx * cap.cx, capN), f = sy(-fx * cap.cx, fy * cap.cy, capN);
+  const ta = s * fx * eU[0], tb = s * fx * (K * eU[1] - eU[2]), tc = -s * fy * eV[0], td = -s * fy * (K * eV[1] - eV[2]);
+  const e = sx(-fx * cap.cx, fy * cap.cy, capN), f = sy(-fx * cap.cx, fy * cap.cy, capN);
   ctx.save();
-  ctx.transform(a, b, 0, d, e, f);
+  ctx.transform(ta, tb, tc, td, e, f);
   ctx.drawImage(cap.levels[lv], 0, 0);
   ctx.restore();
+  if (lift) { // its rim catches the light
+    ctx.strokeStyle = '#fff4c0'; ctx.lineWidth = 1.2; ctx.globalAlpha *= 0.8;
+    ctx.beginPath();
+    for (let i = 0; i < pts.length; i++) { const p = pts[i], x = sx(p.U, p.V, capN), y = sy(p.U, p.V, capN); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
+    ctx.closePath(); ctx.stroke(); ctx.globalAlpha /= 0.8;
+  }
 }
 function rimStyle(f, lv) {
   return (f.styles[lv] = rgb(f.col, levelValue(lv)));
@@ -308,4 +323,32 @@ export function shieldView(model, angle, s) {
   drawShieldModel(g, model, size / 2, size / 2, step * Math.PI * 2 / SHIELD_STEPS, sk / 20);
   cache.set(key, c);
   return c;
+}
+
+/** The Paladin's Shield Throw: the round model thrown near flat, its face tipped toward the camera, spinning in its
+ *  own plane (the emblem turns) with a slight wobble, its shadow on the ground beneath. pr is the Projectile. */
+export function drawThrownShield(ctx, pr) {
+  const record = preloadLancerShield('round');
+  if (!record?.ready) return false;
+  const head = Math.atan2(pr.vx + pr.vy, pr.vx - pr.vy), ch = Math.cos(head), sh = Math.sin(head);
+  const b0 = 0.55 + 0.08 * Math.sin(pr.t * 7), b = ch > 0 ? -b0 : b0, cb = Math.cos(b), sb = Math.sin(b);
+  const sp = -pr.t * 16, cs = Math.cos(sp), ss = Math.sin(sp);
+  // flat (U right, V away from the camera so the art reads unmirrored: U x V = -N, as upright), spun about N,
+  // banked about the flight line, turned to the heading
+  const R = (x, y, z) => { const Y = y * cb - z * sb, Z = y * sb + z * cb; return [x * ch - Y * sh, x * sh + Y * ch, Z]; };
+  const eU = R(cs, ss, 0), eV = R(ss, -cs, 0), eN = R(0, 0, 1);
+  const px = isoX(pr.x, pr.y), gy = isoY(pr.x, pr.y), s = 1.35 * (pr.size || 1), prev = ctx.globalAlpha; // the art is ~18 px across
+  ctx.globalAlpha = prev * 0.28; ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.ellipse(px, gy, 15 * s, 7 * s, 0, 0, Math.PI * 2); ctx.fill();
+  if (pr.E) { // the holy light it carries
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = prev * 0.3;
+    const r = 20 * s; ctx.drawImage(glowSprite(pr.E.glow), px - r, gy - pr.z - r, r * 2, r * 2);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  ctx.globalAlpha = prev;
+  const smooth = ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled = false;
+  drawShieldOriented(ctx, record.model, px, gy - pr.z, eU, eV, eN, s, 3);
+  ctx.imageSmoothingEnabled = smooth;
+  return true;
 }

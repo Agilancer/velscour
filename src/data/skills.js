@@ -25,7 +25,7 @@ const KIND_MANA = {
 };
 const KIND_CD = { summon: 0.6, leap: 0.7, dash: 0.6, blink: 0.4, heal: 4, trap: 0.3 };
 const KIND_USE = { melee: 0.36, proj: 0.32, buff: 0.3, summon: 0.4, curse: 0.35, blink: 0.2, dash: 0.25, leap: 0.25 };
-const ATTACK_FX = new Set(['arrow', 'bullet', 'rang', 'javelin', 'blade', 'axe', 'chakram', 'rock', 'disc', 'bomb', 'rocket']);
+const ATTACK_FX = new Set(['arrow', 'bullet', 'rang', 'javelin', 'blade', 'axe', 'chakram', 'rock', 'disc', 'pshield', 'bomb', 'rocket']);
 
 function parseMods(str) {
   const m = {};
@@ -139,11 +139,15 @@ export function spearBarrageAreas(sk, x, y, angle, area = 1, floor = () => true)
   return { radius, centers };
 }
 
+/** Shield Throw (`ricochet=N`): foes one throw strikes at rank L: 2 at rank 1, one more every 4 ranks, N (5) from rank 13. */
+export function ricochetCount(sk, L) { return Math.min(sk.m.ricochet || 0, 2 + Math.floor((Math.max(1, L) - 1) / 4)); }
+export const RICOCHET_BLAST = 1.5; // tiles, before area bonuses
+
 export function needsTarget(sk) { return !['buff', 'heal', 'summon'].includes(sk.kind) && !(sk.kind === 'curse' && sk.m.at === 'self') && sk.kind !== 'nova'; }
 
 const FXNAME = {
   arrow: 'arrow', bullet: 'bullet', rang: 'boomerang', javelin: 'javelin', blade: 'blade', axe: 'axe', chakram: 'chakram', rock: 'boulder',
-  disc: 'shield', bomb: 'bomb', rocket: 'rocket', bolt: 'bolt', orb: 'orb', fireball: 'fireball', hammer: 'hammer', skull: 'spirit skull',
+  disc: 'shield', pshield: 'shield', bomb: 'bomb', rocket: 'rocket', bolt: 'bolt', orb: 'orb', fireball: 'fireball', hammer: 'hammer', skull: 'spirit skull',
   spear: 'spear', shard: 'shard', crow: 'crow', note: 'note', blob: 'glob', star: 'star', wave: 'wave', missile: 'missile', locust: 'locust',
   wolf: 'ghost wolf', dragon: 'drake', rune: 'rune', tooth: 'tooth', bone: 'bone shard', card: 'card', spark: 'spark', spirit: 'spirit', chain: 'chain',
   feather: 'feather', totem: 'totem', meteor: 'meteor', ice: 'ice shard', acid: 'acid drop', firework: 'firework', blood: 'blood drop',
@@ -207,7 +211,12 @@ export function describe(sk, L, dmg) {
     case 'melee': s = sk.id === 'barbarian.0.0'
       ? `Bash in front of you for ${D}, then fan five short lightning bolts forward. Builds 3 Rage on cast and 15 more on the first hit.`
       : `Strike ${n > 1 ? n + ' times ' : ''}${m.arc >= 300 || sk.fx === 'spin' ? 'all around you' : 'in front of you'} for ${D}.`; break;
-    case 'proj': s = `${m.lob ? 'Lob' : 'Launch'} ${n > 1 ? n + ' ' + plural(n, fx) : 'a ' + fx}${m.ring ? ' in every direction' : ''}, each dealing ${D}.`; break;
+    case 'proj': if (m.ricochet) { // Shield Throw
+        const k = ricochetCount(sk, L), more = k < m.ricochet ? ` (${k + 1} at rank ${(k - 1) * 4 + 1})` : '';
+        s = `Hurl your shield at the target for ${D}. It ricochets from foe to foe, never striking one twice, up to ${k} enemies${more}, then bursts into holy light, dealing 75% of that to everything around the last.`;
+        break;
+      }
+      s = `${m.lob ? 'Lob' : 'Launch'} ${n > 1 ? n + ' ' + plural(n, fx) : 'a ' + fx}${m.ring ? ' in every direction' : ''}, each dealing ${D}.`; break;
     case 'nova': s = `Release ${n > 1 ? n + ' waves' : 'a nova'} of ${el} energy around you for ${D}.`; break;
     case 'aoe': s = `${n > 1 ? `Erupt the ground ${n} times` : `Call down ${sk.fx === 'meteor' ? 'a meteor' : 'a blast'}`} at the target for ${D}${m.dur ? ` over ${m.dur}s` : ''}.`; break;
     case 'beam': s = `${m.dur ? `Channel a ${m.cone ? 'cone of ' + el + ' breath' : el + ' beam'} for ${m.dur}s` : `Fire a ${el} beam`}, dealing ${D}${m.dur ? ' per tick' : ''}.`; break;
