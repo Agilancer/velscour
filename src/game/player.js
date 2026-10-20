@@ -223,7 +223,7 @@ export class Player extends Creature {
     const base = skillBaseDamage(sk, L);
     const wc = weaponCoef(sk);
     const elBonus = sk.el === 'phys' ? st.physPct : st.elemPct[sk.el] || 0;
-    let mult = (1 + (st.dmgPct + st.primary + elBonus) / 100) * this.synergy(sk) * masteryMul(this.mastery(sk)) * classTune(this.classId, this.char.level);
+    let mult = (1 + (st.dmgPct + st.primary + elBonus) / 100) * this.synergy(sk) * masteryMul(this.mastery(sk)) * classTune(this.classId, this.char.level) * (sk.m.pow ?? 1);
     if (st.legendary.berserk) mult *= 1 + 0.04 * Math.floor((1 - this.hp / this.maxHp) * 10);
     if (this.score) mult *= harmonyMul(this); // the Bard's Harmony
     const lo = (base * 0.85 + st.weapon[0] * wc) * mult, hi = (base * 1.15 + st.weapon[1] * wc) * mult;

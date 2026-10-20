@@ -9,10 +9,10 @@ export const TREE4_NAMES = {
 export const TREE4 = {
   paladin: [
     'Dawnblade|melee|holy|slash|free wc=1 cleave', 'Halo Toss|proj|holy|disc|bounce=3', 'Lightwell|zone|holy|holy|heal r=1.2 dur=6 cd=10', 'Censure|curse|holy|sigil|curse=amp r=1.2',
-    'Seraph Wings|dash|holy|charge|range=1.3 exp', 'Prism Lance|proj|holy|laser|pierce n=3 spread=20', 'Hallowed Ground|zone|holy|holy|r=1.5 dur=6', 'Choir of Blades|orbit|holy|blade|n=5 dur=6 cd=8',
-    'Radiant Cascade|chain|holy|lightning|n=6', 'Solar Hammer|aoe|holy|pillar|r=1.6 dmg=1.8 cd=3', 'Beacon of Valor|buff|holy|aura|buff=dmg,armor amt=30 dur=15 cd=30 party', 'Ascendant Leap|leap|holy|holy|r=1.6 dmg=1.5',
-    'Wings of Judgment|rain|holy|star|n=18 r=1.6', 'Sunfire Nova|nova|holy|holy|n=2 r=1.6', 'Seraphic Host|summon|holy|guardian|sum=guardian n=2 dur=20 cd=30', 'Halo of Spears|proj|holy|spear|n=12 ring',
-    'Day of Reckoning|strike|holy|holy|n=12 cd=8', 'Avatar of Dawn|buff|holy|aura|pulse buff=dmg,speed amt=40 dur=12 cd=40', 'Throne of Light|aoe|holy|pillar|r=2.4 dmg=3 cd=8', 'Eternal Sunrise|beam|holy|laser|dur=3 dmg=1.6 cd=8',
+    'Seraph Wings|dash|holy|charge|range=1.3 exp pow=0.5', 'Prism Lance|proj|holy|laser|pierce n=3 spread=20 pow=0.44', 'Hallowed Ground|zone|holy|holy|r=1.5 dur=6 pow=0.25', 'Choir of Blades|orbit|holy|blade|n=5 dur=6 cd=8',
+    'Radiant Cascade|chain|holy|lightning|n=6', 'Solar Hammer|aoe|holy|pillar|r=1.6 dmg=1.8 cd=3', 'Beacon of Valor|buff|holy|aura|buff=dmg,armor amt=30 dur=15 cd=30 party', 'Ascendant Leap|leap|holy|holy|r=1.6 dmg=1.5 pow=0.63',
+    'Wings of Judgment|rain|holy|star|n=18 r=1.6 pow=1.3', 'Sunfire Nova|nova|holy|holy|n=2 r=1.6 pow=0.56', 'Seraphic Host|summon|holy|guardian|sum=guardian n=2 dur=20 cd=30', 'Halo of Spears|proj|holy|spear|n=12 ring pow=1.3',
+    'Day of Reckoning|strike|holy|holy|n=12 cd=8 pow=0.47', 'Avatar of Dawn|buff|holy|aura|pulse buff=dmg,speed amt=40 dur=12 cd=40', 'Throne of Light|aoe|holy|pillar|r=2.4 dmg=3 cd=8 pow=1.2', 'Eternal Sunrise|beam|holy|laser|dur=3 dmg=1.6 cd=8 pow=0.41',
   ],
   ranger: [
     'Star Shot|proj|light|arrow|free wc=1', 'Comet Arrow|proj|fire|arrow|exp r=1.1', 'Moonfall Mark|curse|arcane|sigil|curse=mark amt=30 r=0.8', 'Skyward Roll|dash|phys|wind|range=0.9',

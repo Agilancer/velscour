@@ -9,7 +9,7 @@ import { sfx } from '../core/audio.js';
 import { dist, clamp, TAU, fmtInt, escapeHtml, angleDiff, angleTo } from '../core/util.js';
 import { MEASURE, NOTES, beatsOf } from '../data/notation.js';
 import { bardNoteFor, bardFitGain, bardPerforming } from './bard.js';
-import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, spearBarrageAreas, buffAmount, curseAmount, skillDuration, effLevel } from '../data/skills.js';
+import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, spearBarrageAreas, buffAmount, curseAmount, skillDuration, effLevel, ricochetCount } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
 import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS, powerLevel } from '../data/items.js';
 import { depthLevel, armorDiv } from '../data/depth.js';
@@ -48,8 +48,9 @@ const BAG_LOW = 14;
 // ================================================================== power model
 const isWide = (sk) => (sk.m.arc ?? (sk.m.cleave ? 170 : sk.fx === 'spin' ? 360 : 115)) >= 170;
 /** Expected hits per cast against `crowd` enemies near the target (very rough, per skill kind). */
-function hitsPerCast(sk, crowd) {
+function hitsPerCast(sk, crowd, L = 1) {
   const m = sk.m, n = m.n || 1, extra = Math.max(0, crowd - 1);
+  if (m.ricochet) return Math.min(ricochetCount(sk, L), crowd) + 0.75 * Math.min(crowd, 2.2); // Shield Throw: its strikes, then the blast
   switch (sk.kind) {
     case 'melee': return n * (isWide(sk) ? Math.min(crowd, 2.4) : 1.1) * (m.exp ? 1 + extra * 0.4 : 1) * (m.chain ? 1 + Math.min(m.chain, extra + 1) * 0.4 : 1);
     case 'proj': {
@@ -114,11 +115,12 @@ const summonMax = (sk) => sk.m.max || sk.m.n || 1;
 // How the user wants some classes played on auto-play. Pet classes raise as many minions as they can (every summon
 // skill that fits under the minion cap, kept up at all times); the Paladin builds around his hammers: Blessed Hammer
 // and Hammerstorm (hammers spiralling out around him) as the main attack, Wheel of Hammers (six hammers circling him)
-// fired whenever it is ready, and Hammer of the Gods. Only skill spending and the bar use it (focus = true); the
-// HUD's DPS and gear choices (charScore) stay unbiased.
+// fired whenever it is ready, and Hammer of the Gods, with Shield Throw (his 3D shield ricocheting through the pack)
+// beside them. Only skill spending and the bar use it (focus = true); the HUD's DPS and gear choices (charScore) stay
+// unbiased.
 export const PET_CLASSES = new Set(['necromancer', 'totem_master', 'carrion_witch', 'slime_lord', 'ranger', 'gunner']);
 const PET_CAP = 40; // createSummon keeps at most 40 minions per hero; more would only kill the oldest
-const isHammer = (sk) => sk.fx === 'hammer' || /hammer/i.test(sk.name);
+const isHammer = (sk) => sk.fx === 'hammer' || /hammer/i.test(sk.name) || !!sk.m.ricochet; // and Shield Throw
 const petsOf = (sk) => (sk.m.sum === 'revive' ? 0 : summonMax(sk));
 /** Skills a class pours its points into first, when it can (the Paladin's hammers), or null. */
 const focusSkills = (classId) => {
@@ -145,7 +147,7 @@ function focusMul(classId, sk) {
 
 /** Damage per second one skill adds when used as often as its cast time, cooldown and mana allow. */
 function skillDps(p, sk, L, crowd = CROWD) {
-  const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, crowd) * critMul(p);
+  const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, crowd, L) * critMul(p);
   const period = Math.max(castTime(p, sk), cdOf(p, sk), 0.05);
   const cost = manaCost(sk, L), rage = rageCost(sk);
   const supply = p.st.manaRegen + p.maxMana / 40;
@@ -456,11 +458,13 @@ export const Auto = {
           continue;
         }
       }
-      // a focused build (the Paladin's hammers) takes the point whenever one of its skills can use it
+      // a focused build (the Paladin's hammers) takes the point whenever one of its skills can use it; the Paladin's
+      // even when the plan reads a rank as a loss (a mana-starved early rank whose cost rounds up faster than its damage)
+      let fv = c.classId === 'paladin' ? -Infinity : bv;
       for (const sk of focusSkills(c.classId) || []) {
         if (canLearn(sk)) continue;
         const v = (buildPowerWith(p, [sk]) - base) * (sk.kind === 'orbit' ? 1.5 : 1) + 1e-6; // the swirling hammers first
-        if (v > bv) { bv = v; best = sk; }
+        if (v > fv) { fv = v; best = sk; }
       }
       if (best) bv = Infinity;
       // none can take it yet, but one opens within a few levels (Blessed Hammer at 6): save the points for it
@@ -1327,7 +1331,7 @@ export const Auto = {
       }
       if (!ok) continue;
       if (lowMana) continue;
-      const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, Math.max(1, n));
+      const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, Math.max(1, n), L);
       let score = per / Math.max(0.2, castTime(p, sk));
       if (cooldown(sk) >= 1.2) score *= 1.6; // fire cooldowns whenever they are up
       score *= focusMul(c.classId, sk); // the build focus: the Paladin swings hammers before anything else

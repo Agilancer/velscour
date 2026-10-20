@@ -3,30 +3,31 @@ import { TREE4 } from './skilltrees4.js';
 // Each line: "Name|kind|element|fx|mods"
 // Tree layout is 5 rows x 4 columns; each column is a prerequisite chain.
 // Row level requirements: 1, 6, 12, 20, 30.
+// pow=: the skill's whole damage (weapon part too) x this; the per-skill balance (tools/tests/paladin.js measures it).
 // kinds: melee proj nova aoe beam chain wall zone orbit cyclone whirl leap dash blink
 //        summon buff curse heal trap rain strike fissure corpse
 export const SKILLDATA = {
   paladin: [
     [
       'Smite|melee|holy|smash|free wc=1', 'Holy Bolt|proj|holy|bolt|', 'Blessed Light|heal|holy|light|amt=15 cd=6', 'Radiant Spark|chain|holy|spirit|n=3',
-      'Blessed Hammer|orbit|holy|hammer|spiral n=1 dur=2.5', 'Sacred Lance|proj|holy|spear|pierce spd=1.4', 'Consecration|zone|holy|holy|r=1.2 dur=5', 'Divine Strike|strike|holy|holy|n=1',
-      'Hammerstorm|orbit|holy|hammer|spiral n=3 dur=2.5', 'Fist of the Heavens|strike|holy|lightning|n=3', 'Sanctuary|zone|holy|holy|follow heal dur=8 cd=12', 'Judgment Beam|beam|holy|holy|range=1.2',
-      'Wheel of Hammers|orbit|holy|hammer|n=6 dur=6 cd=8', "Heaven's Wrath|rain|holy|star|n=14 r=1.4", 'Purifying Nova|nova|holy|holy|r=1.4', "Seraph's Gaze|beam|holy|laser|dur=2 cd=6",
-      'Hammer of the Gods|aoe|holy|pillar|r=2 dmg=2.2 cd=4', 'Apocalypse of Light|strike|holy|holy|n=8 cd=8', 'Divine Intervention|buff|holy|shield|buff=armor,res amt=60 dur=8 cd=30', "Archon's Radiance|nova|holy|holy|n=4 r=1.6 cd=6",
+      'Blessed Hammer|orbit|holy|hammer|spiral n=1 dur=2.5', 'Sacred Lance|proj|holy|spear|pierce spd=1.4', 'Consecration|zone|holy|holy|r=1.2 dur=5 pow=0.28', 'Divine Strike|strike|holy|holy|n=1',
+      'Hammerstorm|orbit|holy|hammer|spiral n=3 dur=2.5', 'Fist of the Heavens|strike|holy|lightning|n=3 pow=0.44', 'Sanctuary|zone|holy|holy|follow heal dur=8 cd=12', 'Judgment Beam|beam|holy|holy|range=1.2 pow=0.84',
+      'Wheel of Hammers|orbit|holy|hammer|n=6 dur=6 cd=8', "Heaven's Wrath|rain|holy|star|n=14 r=1.4", 'Purifying Nova|nova|holy|holy|r=1.4 pow=1.2', "Seraph's Gaze|beam|holy|laser|dur=2 cd=6 pow=1.2",
+      'Hammer of the Gods|aoe|holy|pillar|r=2 dmg=2.2 cd=4 pow=1.2', 'Apocalypse of Light|strike|holy|holy|n=8 cd=8 pow=0.86', 'Divine Intervention|buff|holy|shield|buff=armor,res amt=60 dur=8 cd=30', "Archon's Radiance|nova|holy|holy|n=4 r=1.6 cd=6 pow=1.2",
     ],
     [
       'Shield Bash|melee|phys|smash|knock stun arc=70', 'Holy Shield|buff|holy|shield|buff=armor amt=40 dur=20 cd=25', 'Rally Banner|summon|holy|banner|sum=banner dur=20 cd=20', 'Defiance|buff|phys|shield|buff=res amt=25 dur=20 cd=25',
-      'Charge|dash|holy|charge|range=1.2 knock', 'Vengeance Aura|buff|fire|aura|buff=thorns amt=40 dur=30 cd=30 pulse', 'Bulwark Slam|nova|phys|shock|r=0.8 stun', 'Guardian Angel|summon|holy|spirit|sum=guardian n=1 dur=20 cd=25',
-      'Righteous Fire Aura|buff|fire|aura|pulse buff=dmg amt=10 dur=30 cd=30', 'Shield Throw|proj|holy|disc|bounce=4', 'Holy Freeze Aura|buff|cold|aura|pulse slow buff=armor amt=10 dur=30 cd=30', 'Avenging Charge|dash|holy|charge|range=1.5 exp',
-      'Aegis|buff|holy|shield|buff=block amt=30 dur=15 cd=30', 'Conviction|curse|holy|sigil|curse=amp r=1.6 at=self', 'Martyrdom|nova|blood|holy|r=1.5 dmg=1.8', "Crusader's Leap|leap|holy|holy|range=1.2 r=1.3",
-      'Divine Shield Nova|nova|holy|shield|n=3 stun', 'Fanaticism|buff|holy|aura|buff=as,dmg amt=30 dur=20 cd=40 party', 'Bastion|wall|holy|holy|block len=1.5 dur=8', "Champion's Call|summon|holy|guardian|sum=guardian n=3 dur=25 cd=40",
+      'Charge|dash|holy|charge|range=1.2 knock pow=0.86', 'Vengeance Aura|buff|fire|aura|buff=thorns amt=40 dur=30 cd=30 pulse', 'Bulwark Slam|nova|phys|shock|r=0.8 stun pow=1.2', 'Guardian Angel|summon|holy|spirit|sum=guardian n=1 dur=20 cd=25',
+      'Righteous Fire Aura|buff|fire|aura|pulse buff=dmg amt=10 dur=30 cd=30', 'Shield Throw|proj|holy|pshield|ricochet=5 spd=0.8 pow=0.49', 'Holy Freeze Aura|buff|cold|aura|pulse slow buff=armor amt=10 dur=30 cd=30', 'Avenging Charge|dash|holy|charge|range=1.5 exp pow=0.42',
+      'Aegis|buff|holy|shield|buff=block amt=30 dur=15 cd=30', 'Conviction|curse|holy|sigil|curse=amp r=1.6 at=self', 'Martyrdom|nova|blood|holy|r=1.5 dmg=1.8 pow=1.2', "Crusader's Leap|leap|holy|holy|range=1.2 r=1.3",
+      'Divine Shield Nova|nova|holy|shield|n=3 stun pow=0.45', 'Fanaticism|buff|holy|aura|buff=as,dmg amt=30 dur=20 cd=40 party', 'Bastion|wall|holy|holy|block len=1.5 dur=8 pow=0.13', "Champion's Call|summon|holy|guardian|sum=guardian n=3 dur=25 cd=40",
     ],
     [
       'Zealous Strike|melee|phys|slash|n=2', 'Sacrifice|melee|blood|slash|dmg=1.6 leech', 'Holy Fire|melee|fire|smash|burn exp', 'Sweep|melee|phys|spin|arc=360 r=1.1',
-      'Zeal|melee|phys|slash|n=5 dmg=0.6', 'Vengeance|melee|light|smash|exp', 'Thunder Strike|melee|light|smash|chain=3', 'Cleansing Blade|melee|holy|slash|cleave',
-      "Crusader's Flurry|melee|holy|slash|n=7 dmg=0.55", 'Elemental Wrath|melee|cold|smash|exp freeze', 'Sword of Justice|proj|holy|blade|n=3 spread=30 pierce', "Templar's Whirl|whirl|holy|blade|dur=2",
-      'Blade Barrage|proj|holy|blade|n=7 spread=70', 'Valkyrie Strike|leap|holy|holy|r=1.5 dmg=1.6', 'Inquisition|curse|fire|sigil|curse=decay r=1.2', 'Swords of Light|orbit|holy|blade|n=4 dur=8 cd=10',
-      'Final Judgment|melee|holy|smash|dmg=3 exp r=1.5 cd=3', 'Storm of Swords|rain|holy|blade|n=20 r=1.6', 'Crusade|buff|holy|aura|buff=dmg,speed amt=35 dur=12 cd=30', "Heaven's Edge|fissure|holy|holy|range=1.4",
+      'Zeal|melee|phys|slash|n=5 dmg=0.6 pow=0.3', 'Vengeance|melee|light|smash|exp pow=0.54', 'Thunder Strike|melee|light|smash|chain=3 pow=0.76', 'Cleansing Blade|melee|holy|slash|cleave pow=0.78',
+      "Crusader's Flurry|melee|holy|slash|n=7 dmg=0.55 pow=0.18", 'Elemental Wrath|melee|cold|smash|exp freeze pow=0.49', 'Sword of Justice|proj|holy|blade|n=3 spread=30 pierce pow=0.37', "Templar's Whirl|whirl|holy|blade|dur=2 pow=0.51",
+      'Blade Barrage|proj|holy|blade|n=7 spread=70 pow=0.22', 'Valkyrie Strike|leap|holy|holy|r=1.5 dmg=1.6 pow=0.56', 'Inquisition|curse|fire|sigil|curse=decay r=1.2', 'Swords of Light|orbit|holy|blade|n=4 dur=8 cd=10',
+      'Final Judgment|melee|holy|smash|dmg=3 exp r=1.5 cd=3 pow=0.43', 'Storm of Swords|rain|holy|blade|n=20 r=1.6 pow=0.76', 'Crusade|buff|holy|aura|buff=dmg,speed amt=35 dur=12 cd=30', "Heaven's Edge|fissure|holy|holy|range=1.4",
     ],
   ],
   ranger: [

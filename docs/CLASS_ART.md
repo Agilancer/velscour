@@ -154,3 +154,11 @@ Effects were matched by theme; rarity tier does not follow skill row. Ambiguous 
 | Apocalypse of Light | F52 Last Sun | Fanaticism | F24 Crimson Vow | Storm of Swords | F32 Martyr Spikes |
 | Divine Intervention | F53 Deathless Grace | Bastion | F33 Bone Benediction | Crusade | F54 Thorn Apotheosis |
 | Archon's Radiance | F39 Bleeding Dawn | Champion's Call | F57 Eternal Funeral * | Heaven's Edge | F56 First Flame |
+
+The hammers themselves (Blessed Hammer, Hammerstorm, Wheel of Hammers, the Hammerfall proc, the Totem Master's
+Ancestral Hammer) are a procedural 3D model, `src/gfx/hammer3d.js`: octagonal steel head with flared striking faces, a
+gold band carrying a glowing cross, a turned haft with a leather grip. It tumbles end over end along its line of
+flight, and renders are memoised per 1/32 turn of heading and spin with a one-pixel dark outline. Hammer of the Gods and
+Solar Hammer drop a big one (`FallingHammer`) before they strike, and JUDGEMENT's hammer of light is the same model in
+a light palette (`drawGreatHammer`). Shield Throw flies the Lancer's round 3D shield (docs/LANCER_SPINNING_SHIELDS.md).
+Sheets and in-play shots: `tools/tests/paladin.js shots`.
