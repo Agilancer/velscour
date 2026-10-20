@@ -310,7 +310,7 @@ export const RAID_BOSSES = [
   // ---- the third host (game/raidsigs.js): each fight is built on its own mechanic and signature attacks, shared
   // with no other boss. `sigs: true` bosses have no cataclysm; `mech` keys appear once per rotation; `passive` runs every frame.
   {
-    id: 'valdric', name: 'Ser Valdric', title: 'the Bound Seraph', art: ['hv_seraph_5', 'bn_heavenly_45'], el: 'holy', fx: 'holy', sigs: true,
+    id: 'valdric', name: 'Ser Valdric', title: 'the Bound Seraph', art: ['hv_seraph_5', 'thousand_blade_seraph'], el: 'holy', fx: 'holy', sigs: true,
     adds: ['knight', 'cultist'], mech: ['tether'], hp: 1, spd: 1,
     phases: [
       { name: 'Oath of Chains', pool: { judgement_cross: 3, halo: 2, tether: 2 } },
@@ -320,7 +320,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'ophaniel', name: 'Ophaniel', title: 'Wheel of a Thousand Eyes', art: ['hv_ophanim_5', 'bn_catacombs_49'], el: 'holy', fx: 'holy', sigs: true,
+    id: 'ophaniel', name: 'Ophaniel', title: 'Wheel of a Thousand Eyes', art: ['hv_ophanim_5', 'orb_of_blades'], el: 'holy', fx: 'holy', sigs: true,
     adds: ['eye', 'wraith'], mech: ['gaze'], hp: 0.95, spd: 0.8,
     phases: [
       { name: 'The Opening Eye', pool: { wheels: 3, eye_lattice: 2, gaze: 2 } },
@@ -330,7 +330,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'bastion', name: 'Bastion Prime', title: 'the Last Warden', art: ['hv_warden_5', 'bn_castle_keep_48'], el: 'light', fx: 'spark', sigs: true,
+    id: 'bastion', name: 'Bastion Prime', title: 'the Last Warden', art: ['hv_warden_5', 'keep_golem'], el: 'light', fx: 'spark', sigs: true,
     adds: ['golem', 'knight'], mech: ['conduits'], hp: 1.25, spd: 0.75,
     phases: [
       { name: 'Raise the Walls', pool: { rampart: 3, aegis_bash: 3, conduits: 2 } },
@@ -340,7 +340,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'thessaly', name: 'Thessaly', title: 'Herald of the Ending Hymn', art: ['hv_herald_5', 'bn_desert_temple_48'], el: 'holy', fx: 'holy', sigs: true,
+    id: 'thessaly', name: 'Thessaly', title: 'Herald of the Ending Hymn', art: ['hv_herald_5', 'iron_choir_absolute'], el: 'holy', fx: 'holy', sigs: true,
     adds: ['cultist', 'zombie'], mech: ['beacons'], hp: 0.9, spd: 1,
     phases: [
       { name: 'Overture', pool: { trumpet: 3, choir: 3, beacons: 2 } },
@@ -350,7 +350,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'vexis', name: 'Vexis', title: 'the Scales of Judgement', art: ['hv_judgement_5', 'bn_obsidian_49'], el: 'arcane', fx: 'orb', sigs: true, passive: 'vexis',
+    id: 'vexis', name: 'Vexis', title: 'the Scales of Judgement', art: ['hv_judgement_5', 'black_throne_engine'], el: 'arcane', fx: 'orb', sigs: true, passive: 'vexis',
     adds: ['wraith', 'eye'], mech: ['verdict'], hp: 1.1, spd: 0.85,
     phases: [
       { name: 'Weighing', pool: { scales: 3, verdict: 2 } },
@@ -360,7 +360,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'aurion', name: 'Aurion', title: 'the Throne-Seraph', art: ['hv_throne_5', 'bn_heavenly_48'], el: 'holy', fx: 'holy', sigs: true,
+    id: 'aurion', name: 'Aurion', title: 'the Throne-Seraph', art: ['hv_throne_5', 'fallen_archangel'], el: 'holy', fx: 'holy', sigs: true,
     adds: ['knight', 'gargoyle'], mech: ['eclipse'], hp: 1.15, spd: 0.9,
     phases: [
       { name: 'Dawn', pool: { dawn_rays: 3, corona: 2, eclipse: 2 } },
@@ -380,7 +380,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'ambrecoil', name: 'Ambrecoil', title: 'the Amber Frill', art: ['amber_frill_hydra', 'bn_amber_47'], el: 'fire', fx: 'fireball', sigs: true,
+    id: 'ambrecoil', name: 'Ambrecoil', title: 'the Amber Frill', art: ['amber_frill_hydra', 'three_throat_hydra'], el: 'fire', fx: 'fireball', sigs: true,
     adds: ['beetle', 'imp'], mech: ['entomb'], hp: 1, spd: 0.9,
     phases: [
       { name: 'Resin', pool: { entomb: 2, geysers: 3, frill_flash: 2 } },
@@ -390,7 +390,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'copperjaw', name: 'Copperjaw', title: 'the Hammer-Hydra', art: ['copper_hammer_hydra', 'bn_castle_49'], el: 'phys', fx: 'bone', sigs: true,
+    id: 'copperjaw', name: 'Copperjaw', title: 'the Hammer-Hydra', art: ['copper_hammer_hydra', 'siege_maw'], el: 'phys', fx: 'bone', sigs: true,
     adds: ['golem', 'beetle'], mech: ['mines'], hp: 1.2, spd: 0.85,
     phases: [
       { name: 'Forgefall', pool: { anvil: 3, magnet: 2, mines: 2 } },
@@ -400,7 +400,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'leonis', name: 'Ser Leonis', title: 'the Silver Lion', art: ['silver_lion_knight', 'bn_gilded_46'], el: 'light', fx: 'spark', sigs: true, passive: 'leonis',
+    id: 'leonis', name: 'Ser Leonis', title: 'the Silver Lion', art: ['silver_lion_knight', 'fallen_templar'], el: 'light', fx: 'spark', sigs: true, passive: 'leonis',
     adds: ['knight', 'hound'], mech: ['riposte'], hp: 0.95, spd: 1.3,
     phases: [
       { name: 'The Challenge', pool: { mane_lightning: 3, riposte: 2 } },
@@ -410,7 +410,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'nyx', name: 'Nyx', title: 'the Crescent Lancer', art: ['silver_crescent_lancer', 'bn_obsidian_46'], el: 'arcane', fx: 'shard', sigs: true, passive: 'nyx',
+    id: 'nyx', name: 'Nyx', title: 'the Crescent Lancer', art: ['silver_crescent_lancer', 'crimson_reaper'], el: 'arcane', fx: 'shard', sigs: true, passive: 'nyx',
     adds: ['wraith', 'bat'], mech: ['lance_pin'], hp: 0.9, spd: 1.25,
     phases: [
       { name: 'New Moon', pool: { crescent: 3, lance_pin: 2 } },
@@ -420,7 +420,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'ashenward', name: 'Ashenward', title: 'the Cinder Colossus', art: ['bn_ashen_46', 'bn_shattered_49'], el: 'fire', fx: 'fireball', sigs: true,
+    id: 'ashenward', name: 'Ashenward', title: 'the Cinder Colossus', art: ['furnace_colossus', 'the_sable_abattoir'], el: 'fire', fx: 'fireball', sigs: true,
     adds: ['imp', 'elemental'], mech: ['lava_quadrants'], hp: 1.3, spd: 0.75,
     phases: [
       { name: 'Smelting', pool: { magma_trail: 3, cinder_turret: 2, lava_quadrants: 2 } },
@@ -430,7 +430,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'ysol', name: 'Voidmother Ysol', title: 'the Unmaking Womb', art: ['bn_void_49', 'bn_void_48'], el: 'shadow', fx: 'skull', sigs: true,
+    id: 'ysol', name: 'Voidmother Ysol', title: 'the Unmaking Womb', art: ['void_thing', 'hairmother'], el: 'shadow', fx: 'skull', sigs: true,
     adds: ['wraith', 'slime'], mech: ['null_orbs'], hp: 1.05, spd: 0.8,
     phases: [
       { name: 'Hunger', pool: { defile: 2, tendrils: 3, null_orbs: 2 } },
@@ -440,7 +440,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'lith', name: 'Prismatic Lith', title: 'the Refracted', art: ['bn_crystal_46', 'bn_castle_keep_49'], el: 'light', fx: 'spark', sigs: true,
+    id: 'lith', name: 'Prismatic Lith', title: 'the Refracted', art: ['spire_crawler', 'chapel_god'], el: 'light', fx: 'spark', sigs: true,
     adds: ['elemental', 'golem'], mech: ['prisms'], hp: 1.1, spd: 0.8,
     phases: [
       { name: 'Facets', pool: { checkerboard: 3, crystal_growth: 2, prisms: 2 } },
@@ -450,7 +450,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'kaela', name: 'Kaela', title: 'the Stormwraith', art: ['bn_storm_49', 'bn_abyss_49'], el: 'light', fx: 'spark', sigs: true, passive: 'kaela',
+    id: 'kaela', name: 'Kaela', title: 'the Stormwraith', art: ['crow_matriarch', 'stormshell_tortoise'], el: 'light', fx: 'spark', sigs: true, passive: 'kaela',
     adds: ['bat', 'elemental'], mech: ['storm_cells'], hp: 0.9, spd: 1.2,
     phases: [
       { name: 'Static', pool: { arc_chain: 3, storm_cells: 2 } },
@@ -460,7 +460,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'hollowmere', name: 'Hollowmere', title: 'the Necrolyte of Rime', art: ['bn_necropolis_49', 'bn_sunken_49'], el: 'cold', fx: 'shard', sigs: true, passive: 'hollowmere',
+    id: 'hollowmere', name: 'Hollowmere', title: 'the Necrolyte of Rime', art: ['frost_leviathan', 'frozen_bastion'], el: 'cold', fx: 'shard', sigs: true, passive: 'hollowmere',
     adds: ['skeleton', 'zombie'], mech: ['corpse_bombs'], hp: 1.05, spd: 0.85,
     phases: [
       { name: 'First Frost', pool: { glacial_spears: 3, corpse_bombs: 2 } },
@@ -470,7 +470,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'organ', name: 'The Pipe Organ', title: 'Cathedral of Screams', art: ['bn_cathedral_49', 'bn_library_49'], el: 'holy', fx: 'holy', sigs: true,
+    id: 'organ', name: 'The Pipe Organ', title: 'Cathedral of Screams', art: ['the_throne_that_screams', 'hungering_cathedral'], el: 'holy', fx: 'holy', sigs: true,
     adds: ['cultist', 'zombie'], mech: ['dance', 'organ_pipes'], hp: 1.15, spd: 0.6,
     phases: [
       { name: 'Prelude', pool: { dance: 2, dissonance: 2, organ_pipes: 2 } },
@@ -480,7 +480,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'saranthe', name: 'Bloodqueen Saranthe', title: 'of the Crimson Court', art: ['bn_blood_49', 'bn_blood_47'], el: 'fire', fx: 'fireball', sigs: true,
+    id: 'saranthe', name: 'Bloodqueen Saranthe', title: 'of the Crimson Court', art: ['blood_siren', 'the_wound_without_end'], el: 'fire', fx: 'fireball', sigs: true,
     adds: ['bat', 'ghoul'], mech: ['thralls', 'hemorrhage'], hp: 1, spd: 1.15,
     phases: [
       { name: 'First Taste', pool: { crimson_crescent: 3, thralls: 2, hemorrhage: 2 } },
@@ -490,7 +490,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'kragmaul', name: 'Kragmaul', title: 'the Hellforged', art: ['bn_hell_48', 'bn_void_49'], el: 'fire', fx: 'fireball', sigs: true,
+    id: 'kragmaul', name: 'Kragmaul', title: 'the Hellforged', art: ['horned_warlord', 'cathedral_devourer'], el: 'fire', fx: 'fireball', sigs: true,
     adds: ['demon', 'imp'], mech: ['wrecking_charge'], hp: 1.25, spd: 1,
     phases: [
       { name: 'Chains of Hell', pool: { hooks: 3, hellfire_grid: 2, wrecking_charge: 2 } },
@@ -500,7 +500,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'sekhmun', name: 'Pharaoh Sekhmun', title: 'the Exchanged King', art: ['hv_templar_5', 'bn_desert_49'], el: 'holy', fx: 'holy', sigs: true,
+    id: 'sekhmun', name: 'Pharaoh Sekhmun', title: 'the Exchanged King', art: ['hv_templar_5', 'the_candle_king'], el: 'holy', fx: 'holy', sigs: true,
     adds: ['zombie', 'scorpion', 'knight'], mech: ['exchange', 'sarcophagi'], hp: 1.05, spd: 1,
     phases: [
       { name: 'The Court of Sand', pool: { scarab_carpet: 3, exchange: 2, sarcophagi: 2 } },

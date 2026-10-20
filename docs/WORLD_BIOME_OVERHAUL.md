@@ -1,5 +1,8 @@
 # World-wide Biome Expansion & Isometric Barrier Audit
 
+> **October 20, 2026:** the generated biome-native monsters (`bn_`) described here were removed and levels no
+> longer theme their monsters by biome; the Heavenly monsters use only their painted sheets. See docs/ENEMY_ART.md.
+
 > **October 17, 2026:** the Canvas-generated temple packs, the per-biome floor/prop/wall expansion and the AI
 > floor/prop/wall atlases described below were removed. Dungeon biomes now use the painted packs only; see
 > [BIOME_ART.md](BIOME_ART.md).
