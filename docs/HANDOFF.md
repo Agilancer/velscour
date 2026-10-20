@@ -16,6 +16,17 @@ Contents
 
 ## October 20, 2026 — Paladin: 3D hammers, Shield Throw ricochets, every skill balanced (branch `feat/paladin-hammers-shield-throw`)
 
+- **Follow-up: auto-play prioritises hammers AND Shield Throw** (user request). Before, Shield Throw went unlearned
+  until ~level 45 (its prerequisites Holy Shield -> Vengeance Aura are in the shield tree and the Paladin's focus loop
+  never walks chains). Now (`src/game/autoplay.js`): `shieldStep` learns the chain from level 10 so Shield Throw opens
+  with Hammerstorm at 12, then keeps it within two ranks of his best swirling hammer; it casts at the orbit hammers'
+  weight (`focusMul` 4) and **alternates** with them (`hammersSince`/`countFocus`: x6 once a hammer has gone out since
+  the last shield, x0.3 otherwise); it may be thrown while kiting (only orbits/novas could); the bar is hammer on LMB,
+  Shield Throw on RMB. `paladin.js auto` (geared heroes at levels 14/25/45/90, 2 min in a real level): hammers +
+  Shield Throw 72-100% of his mana attacks, Shield Throw 23-60% of those (fails outside 20-70%). Smite still fills in
+  when the mana orb is empty. `tuning.js paladin` stays within noise of `main` except D10 (~40% slower: a rank-1 shield
+  hits 2 foes and takes half his mana); soak unchanged (depth 5 by minute 14-20, 0 deaths).
+
 - **Request:** turn the Paladin's hammers into a 3D model; add a shield throw that eventually bounces between up to 5
   enemies, then explodes into an AoE, using the Lancer's round 3D shield; balance all the Paladin's skills alongside it
   for the risky-combat balance.

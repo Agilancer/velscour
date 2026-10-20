@@ -98,7 +98,7 @@ node tools/tests/happenings.js                     # omens, shrines, treasure im
 node tools/tests/perf.js 6 wizard 1                # frame cost on a phone-sized screen: fps, update/render ms (last arg: CPU throttle)
 node tools/tests/signatures.js [classes|all] [secs]   # class signatures (src/game/sigs/): charge in play, showcase shots, auto-play
 node tools/tests/boomerang.js [casts] [json] [skills] # Boomerang Knight: damage per cast per skill, every boomerang returns to his hand, 3D boomerang model sheets + shots
-node tools/tests/paladin.js [dps|shield|shots|all] [levels] # Paladin: every skill's damage vs the hammers (per-skill pow=), Shield Throw ricochets + blast, 3D hammer/shield sheets + shots
+node tools/tests/paladin.js [dps|auto|shield|shots|all] [levels] # Paladin: every skill's damage vs the hammers (per-skill pow=), auto-play's hammer + Shield Throw build and cast mix, Shield Throw ricochets + blast, 3D sheets + shots
 ```
 Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, because layout bugs don't throw.
 - In cloud containers, Chromium is at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` and

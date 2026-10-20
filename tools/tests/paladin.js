@@ -1,9 +1,11 @@
 // Paladin: damage of every skill, Shield Throw's ricochets and blast, the 3D hammers and the thrown 3D shield.
-//   node tools/tests/paladin.js [dps|shield|shots|all] [hero levels, default 3,12,40,120] [seconds per skill, default 10]
+//   node tools/tests/paladin.js [dps|auto|shield|shots|all] [hero levels, default 3,12,40,120] [seconds per skill, default 10]
 // dps: a geared hero (gear rolled like tuning.js) with every skill at the same rank casts each damaging skill as fast
 //   as its cast time and cooldown allow (mana is refilled and counted) at one pinned immortal dummy, then at a pack of
 //   five, signatures off. Prints damage per second (one / pack), mana per second and each skill's value against the
 //   median of its row (sqrt(one x pack), mana-limited). Writes out/paladin_dps.json for diffing.
+// auto: auto-play builds, gears and plays a hero at levels 14/25/45/90 for 2 min: its points, LMB/RMB and casts. Of his
+//   attacks that cost mana, hammers + Shield Throw must be 70%+, and Shield Throw 20-70% of those.
 // shield: Shield Throw strikes 2 foes at rank 1 and one more every 4 ranks (5 from rank 13), never the same foe twice,
 //   and ends in a holy blast; it seeks foes that walk, blasts at a wall and at the end of its flight.
 // shots: hammer model turntable sheet, the thrown shield sheet, Wheel of Hammers / Hammerstorm / Shield Throw / Judgement in play.
@@ -114,6 +116,54 @@ const OUT = process.env.OUT_DIR || path.join(__dirname, 'out');
       }
     }
     fs.writeFileSync(path.join(OUT, 'paladin_dps.json'), JSON.stringify(all, null, 1));
+  }
+
+  if (mode === 'auto' || mode === 'all') {
+    // auto-play's build: where its points go, what it puts on the bar, and what it casts in a real level (god mode)
+    for (const H of process.argv[3] ? levels : [14, 25, 45, 90]) {
+      const r = await page.evaluate(async ({ H, secs }) => {
+        const { G, game } = window.VELSCOUR;
+        const { Auto } = await import('/src/game/autoplay.js');
+        const { SKILLS } = await import('/src/data/skills.js');
+        const { depthLevel } = await import('/src/data/depth.js');
+        await game.newChar('paladin', 'Auto' + Math.random());
+        document.querySelectorAll('.screen').forEach((s) => s.remove()); G.ui.modalCount = 0; G.ui.closeAll();
+        const c = G.char, p = G.player;
+        let D = 1; while (depthLevel(D + 1) + 2 <= H) D++;
+        c.level = H; c.statPoints += (H - 1) * 5; c.skillPoints += (H - 1) + (D - 1); c.depth = D; c.deepest = D - 1;
+        Auto.spendStats(); Auto.spendSkills();
+        const { rollItem } = await import('/src/data/items.js'), L = depthLevel(D); // gear like tuning.js: the best of 25 drops of its level
+        c.bag = c.bag.map(() => null);
+        for (let i = 0; i < 25 && i < c.bag.length; i++) { const it = rollItem(Math.max(1, Math.min(L, H) - Math.floor(Math.random() * 4)), { mf: 0, bonus: 0.1 }); it.unid = false; c.bag[i] = it; }
+        p.recompute(); Auto.optimizeGear(); c.bag = c.bag.map(() => null);
+        Auto.arrangeBar(); p.recompute();
+        const pts = Object.entries(c.skills).filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1]).map(([id, n]) => `${SKILLS[id].name} ${n}`);
+        const bar = [c.bar[0], c.bar[14]].map((id) => (id ? SKILLS[id].name : '-'));
+        G.godMode = true; G.autoOpenSeals = true;
+        const { BIOME_BY_ID } = await import('/src/data/biomes.js');
+        game.buildDungeon(D, BIOME_BY_ID.catacombs);
+        const casts = {}, P = G.player, orig = P.tryUseSkill.bind(P);
+        P.tryUseSkill = (sk, ...a) => { const ok = orig(sk, ...a); if (ok) casts[sk.name] = (casts[sk.name] || 0) + 1; return ok; };
+        Auto.toggle(true);
+        for (let sim = 0; sim < secs;) {
+          for (let i = 0; i < 15 && sim < secs; i++) { G.dt = 1 / 30; G.time += G.dt; G.frame++; game.update(1 / 30); sim += 1 / 30; }
+          await new Promise((res) => setTimeout(res, 0));
+        }
+        Auto.toggle(false); G.godMode = false; delete P.tryUseSkill;
+        const tot = Object.values(casts).reduce((a, b) => a + b, 0) || 1;
+        const { OFFENSIVE_KINDS } = { OFFENSIVE_KINDS: ['melee', 'proj', 'nova', 'aoe', 'beam', 'chain', 'wall', 'zone', 'orbit', 'cyclone', 'whirl', 'leap', 'dash', 'trap', 'rain', 'strike', 'fissure'] };
+        const atk = Object.keys(casts).filter((n) => { const sk = Object.values(SKILLS).find((x) => x.classId === 'paladin' && x.name === n); return sk && OFFENSIVE_KINDS.includes(sk.kind) && !sk.m.free; });
+        return { D, pts, bar, raw: Object.entries(casts), atk, casts: Object.entries(casts).sort((a, b) => b[1] - a[1]).map(([n, k]) => `${n} ${Math.round(k / tot * 100)}%`), kills: c.kills || 0 };
+      }, { H, secs: Math.max(120, secs) });
+      console.log(`level ${H} (depth ${r.D}): points ${r.pts.join(', ')}\n  LMB/RMB ${r.bar.join(' / ')} | casts ${r.casts.join(', ')} | kills ${r.kills}`);
+      if (H >= 14) { // among his attacks that cost mana (Smite is the free filler for an empty mana orb): hammers and shields
+        const n = (re) => r.raw.filter(([k]) => re.test(k)).reduce((a, [, v]) => a + v, 0);
+        const st = n(/^Shield Throw$/), ham = n(/Hammer/), all = r.raw.filter(([k]) => r.atk.includes(k)).reduce((a, [, v]) => a + v, 0) || 1;
+        console.log(`  hammers + Shield Throw ${Math.round((st + ham) / all * 100)}% of his mana attacks, Shield Throw ${Math.round(st / Math.max(1, st + ham) * 100)}% of those`);
+        if ((st + ham) / all < 0.7) fails.push(`FAIL auto-play level ${H}: hammers + Shield Throw only ${Math.round((st + ham) / all * 100)}% of mana attacks`);
+        if (st / Math.max(1, st + ham) < 0.2 || st / Math.max(1, st + ham) > 0.7) fails.push(`FAIL auto-play level ${H}: Shield Throw ${Math.round(st / Math.max(1, st + ham) * 100)}% of hammer + shield casts`);
+      }
+    }
   }
 
   if (mode === 'shield' || mode === 'all') {
