@@ -224,7 +224,7 @@ export function drawShieldModel(ctx, model, px, py, angle, s) {
   drawShieldOriented(ctx, model, px, py, [ux, ud, 0], [0, 0, 1], [nx, nd, 0], s);
 }
 /** Draw a shield model in any orientation: eU, eV, eN are where its across, up and outward axes point in the world
- *  (x, toward the camera, up). An upright orbiting shield is drawShieldModel; a thrown one lies near flat.
+ *  (x, toward the camera, up). An upright orbiting shield is drawShieldModel; a thrown one lies flat.
  *  lift: brightness steps added to every face (a shield carrying holy light). */
 export function drawShieldOriented(ctx, model, px, py, eU, eV, eN, s, lift = 0) {
   const T2 = model.T / 2, dv = (v) => v[1] * VIEW[1] + v[2] * VIEW[2];
@@ -325,13 +325,13 @@ export function shieldView(model, angle, s) {
   return c;
 }
 
-/** The Paladin's Shield Throw: the round model thrown near flat, its face tipped toward the camera, spinning in its
- *  own plane (the emblem turns) with a slight wobble, its shadow on the ground beneath. pr is the Projectile. */
+/** The Paladin's Shield Throw: the round model thrown flat like a discus, level with the isometric ground (face up),
+ *  spinning in its own plane (the emblem turns) with a slight wobble, its shadow on the ground beneath. pr is the Projectile. */
 export function drawThrownShield(ctx, pr) {
   const record = preloadLancerShield('round');
   if (!record?.ready) return false;
   const head = Math.atan2(pr.vx + pr.vy, pr.vx - pr.vy), ch = Math.cos(head), sh = Math.sin(head);
-  const b0 = 0.55 + 0.08 * Math.sin(pr.t * 7), b = ch > 0 ? -b0 : b0, cb = Math.cos(b), sb = Math.sin(b);
+  const b = 0.07 * Math.sin(pr.t * 7), cb = Math.cos(b), sb = Math.sin(b); // flat on the ground plane, a slight wobble
   const sp = -pr.t * 16, cs = Math.cos(sp), ss = Math.sin(sp);
   // flat (U right, V away from the camera so the art reads unmirrored: U x V = -N, as upright), spun about N,
   // banked about the flight line, turned to the heading
