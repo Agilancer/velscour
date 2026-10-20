@@ -83,5 +83,7 @@ export function migrate(c) {
   while (c.stash.length < 300) c.stash.push(null);
   // body armor and helmets of the first Paladin art pack: their look now comes from the gear art
   for (const it of [...Object.values(c.equip), ...c.bag]) if (it && it.art && (it.slot === 'body' || it.slot === 'head')) { delete it.art; delete it.artCls; }
+  // the generated biome natives (bn_) are gone: a nemesis wearing one takes a look from its next level
+  if (c.nemesis && typeof c.nemesis.art === 'string' && c.nemesis.art.startsWith('bn_')) { c.nemesis.art = null; c.nemesis.swap = null; }
   return c;
 }

@@ -17,6 +17,7 @@ const {openGame,report,OUT_DIR}=require('./harness');
       const {rollLooks,ART_BY_ID}=await import('/src/data/bestiary.js');
       const {loadBiomeArt,A,biomeTileSet}=await import('/src/core/assets.js');
       const {enemyImage}=await import('/src/core/enemyart.js');
+      await (await import('/src/gfx/heavenlymonsters.js')).preloadApprovedHeavenlyArtwork(); // painted sheets only now
       const b=BIOME_BY_ID.heavenly,issues=[];
       if(!b||b.pack!=='cathedral_graveyard'||b.overworld)throw Error('HEAVENLY is not a Cathedral-pack indoor dungeon');
       if(HEAVENLY_MONSTERS.length!==60||HEAVENLY_FAMILIES.length!==12)issues.push('60 monsters / 12 families missing');
@@ -49,25 +50,21 @@ const {openGame,report,OUT_DIR}=require('./harness');
           issues.push('Monster finish missing '+a.id);
         tested++;
       }
-      // The worldwide expansion keeps all sixty original Heavenly sprites,
-      // adds fifty new Empyrean-native designs, and lets ordinary legacy art
-      // plus rare foreign natives appear. Do not require hv_ exclusively.
-      const seen={heavenly:0,native:0,global:0,visitors:0};
+      // No biome themes: the Heavenly dungeon rolls from the whole catalogue like every other biome, and the sixty
+      // Heavenly monsters can turn up anywhere (data/bestiary.js rollLooks).
+      const seen={heavenly:0,other:0};
       for(let run=0;run<160;run++){
         const looks=rollLooks(b);
         for(const arch of b.roster){
           const choice=looks.pick(arch),a=choice&&ART_BY_ID[choice.art];
           if(!a)issues.push('Unresolved Heavenly roster look '+arch);
           else if(a.id.startsWith('hv_'))seen.heavenly++;
-          else if(a.homeBiome==='heavenly')seen.native++;
-          else if(a.homeBiome)seen.visitors++;
-          else seen.global++;
+          else seen.other++;
         }
         if(!looks.boss(b.roster)?.look?.art)
           issues.push('Heavenly guardian lacks artwork');
       }
-      if(!seen.heavenly||!seen.native||!seen.global||!seen.visitors)
-        issues.push('Heavenly/global/visitor spawn mix missing: '+JSON.stringify(seen));
+      if(!seen.other)issues.push('Heavenly still themed: '+JSON.stringify(seen));
       await loadBiomeArt(b);
       // floors, walls and props: the Cathedral nave palette swapped, plus the eight approved painted floors/props
       const tiles=biomeTileSet(b);

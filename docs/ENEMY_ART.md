@@ -36,14 +36,12 @@ fallback while the art loads, for Demon Lord Velscour, and for player summons.
 - `fly`, `gore`, `undead`, `demon` override the archetype. For example, liches walk where wraiths float, and bone
   monsters leave bone gore.
 
-**Per level** (`rollLooks(biome, rnd)`, called in `generateDungeon`): each archetype in the roster gets up to 2
-looks, chosen with element-matching art weighted x4 and art from the biome's `prefer` sheets (`src/data/biomes.js`,
-e.g. `set2/goblins` in the Thornwood) x3. Each look also gets a palette swap. Every pack uses one of
-its archetype's looks, so a level reads as a themed bestiary, and the next visit rolls a new one.
+**Per level** (`rollLooks(biome, rnd)`, called in `generateDungeon`): see "No biome themes" below. Every pack uses
+one of its archetype's looks, and the next visit rolls a new set.
 `world.looks` serves later spawns as well (cultist and boss summons, the throne gauntlet).
 
 **Palette swaps** (`SWAPS`, recolor params for `recolor()` in `src/core/util.js`):
-- Each biome lists 3-4 swaps in `MON_SWAPS` (`src/data/biomes.js`). `null` keeps the art's own colours.
+- A level's look rolls a random swap two times in three (any of `SWAPS`) and is named after it.
 - The "greater" breed darkens and enriches its swap (`greaterSwap`).
 - Unique monsters roll any swap (`uniqueSwap`).
 - Raised corpses turn ghostly green (`REVIVED`).
@@ -95,54 +93,26 @@ and each minion gets one at random; see HANDOFF status item 20 and `node tools/t
   a swapped look.
 - `node tools/tests/data_check.mjs`: bestiary and sheet consistency, plus the biome bag and mixing rules.
 
-## HEAVENLY: sixty self-contained procedural monsters
+## Set 3: VELSCOUR_Monsters_Enemies_Bosses (260 monsters)
+The zip (35 plates, 5 or 10 sprites each; 90 MB, kept outside the repo) is cut by
+`python tools/set3plates.py <zip or unpacked folder> [--sheet out.png]`: printed names, plaques, title banners and
+frame lines are cleared, every sprite is cut on its plate's grid (touching sprites are split only when a plate comes
+up short) and written to `assets/source/enemies/set3/<family>[_n]/NNN_<name>.png`, then
+`python tools/process_assets.py enemies set3` packs each folder. Families: `enemies` (100 regulars, 4 sheets),
+`monsters` (60, 2 sheets; the biggest are guardians), `lords` (40 normal bosses, guardians), `bosses` (20 major
+bosses) and `arena` (40, 2 sheets): the last two are `lone` giants for guardians and raid bosses. The catalogue is
+`src/data/bestiary3.js` (names printed on the plates are the artist's; the rest are named by look), and
+`tools/set3names.json` (the file names) is written from it.
 
-The HEAVENLY dungeon is a specialized exception to the uploaded enemy
-sheet workflow. `src/data/heavenly.js` defines **60 unique named monsters**
-across twelve species/families (five ranks each), with dedicated 160×186
-transparent Canvas sprite drawings in `src/gfx/heavenlymonsters.js`.
+## No biome themes: the random bestiary
+`rollLooks(biome)` ignores the biome: each archetype in the level's roster gets up to 4 looks picked at random from
+every painted sheet (sets 1-3, the 60 Heavenly paintings), so any monster can turn up anywhere. The roster still sets
+which AI archetypes a biome fights with; the Sea of Sand's own archetypes keep their own creatures. To keep downloads
+and memory bounded a level draws from at most `LEVEL_SHEETS` (6) lazily loaded sheets besides set 1. Two looks in
+three get a random palette swap from `SWAPS` and are named after it ("Ember Ashen Maw"), so the ~760 drawings make
+thousands of named monsters. Guardians are random `boss` art (giants included) that can play a roster archetype.
 
-These entries use the reserved `sheet: 'heavenly/generated'` identifier.
-`src/data/bestiary.js` includes them in `BESTIARY` / `ART_BY_ID`
-but filters the level-roll pool: HEAVENLY chooses only generated monsters,
-and ordinary biomes do not see them. `src/core/enemyart.js` recognizes
-the `hv_` prefix and bypasses the static metadata/fetch pipeline while
-preserving swap/flash/corpse behavior and the `_art.fx` foot anchor.
-The source shapes are not hand-painted PNG sprite sheets; a browser
-export in `tools/tests/heavenly.js` produces an optional
-`monsters.webp` atlas and `monsters.json` cell metadata, plus
-the full `heavenly_60_monsters.png` contact sheet.
-
-The fifth rank in each family is a potential named guardian; the
-others occur as regular packs with elite/champion/unique variants.
-Existing enemy archetypes supply combat AI while custom per-variant
-health, damage, speed, magical range, resistance and wings determine
-the feel of fighting them. See [HEAVENLY.md](HEAVENLY.md).
-
-## Native bestiary for every combat biome — 50 each
-
-`src/data/biomenatives.js` now defines **1,600 new monsters**, 50 for
-each of the 32 combat biomes including the Forsaken Wilds and Depth 500
-throne. There are **none in Herrington Hollow town**, which is a no-combat zone.
-They are registered in `BESTIARY` under the `bn_` prefix. Each new
-monster has a unique ID and name, a matching original VELSCOUR monster
-art source/AI archetype and new procedural silhouette/bodygear additions
-from `src/gfx/biomenativeart.js`, preserving the artwork's pixel density
-and foot pivot. Source sheets load normally using `loadArtFor`.
-
-`rollLooks` selects a *monster look* from a home-native pool (74%), the
-existing global painted bestiary (24%), or a native from some *other*
-biome (2%). Probabilities shift if a requested AI archetype has no
-eligible art in a channel. Up to four looks per archetype are rolled for
-each level, so a single run won't show all fifty, but multiple floors
-feature different characters. The final five of each roster are
-guardian-only; ordinary combatants preserve existing health scaling,
-elite/champion affixes, loot and spell/projectile behavior.
-
-The original 60 HEAVENLY sprites continue to exist in the global look
-pool *within HEAVENLY*, beside the fifty added new locals and existing
-random bestiary entries.
-
-`tools/tests/worldwide_biomes.js` checks biome-native IDs and source
-sprites in live Chromium; `tools/tests/data_check.mjs` validates static
-catalog completeness. Details: [WORLD_BIOME_OVERHAUL.md](WORLD_BIOME_OVERHAUL.md).
+The 1,850 generated "biome native" monsters (`bn_`: existing sprites with Canvas shapes drawn over them) were removed,
+and so was the Heavenly monsters' Canvas fallback: `hv_` monsters are cut only from their painted sheets
+(`src/gfx/heavenlymonsters.js`, loaded by `loadArtFor` when a level rolls one). A saved nemesis that wore `bn_` art
+takes a fresh look (`migrate()`).

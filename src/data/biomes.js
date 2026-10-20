@@ -7,7 +7,6 @@ export const BIOMES = [
     id: 'catacombs', name: 'Skull-Lined Catacombs', palette: null, dark: 0.82, light: 7.5,
     ambient: { type: 'dust', color: '#c8b89a' }, mon: { hue: 0, sat: 1, light: 0 }, el: 'phys', blood: '#8a0b08',
     adj: ['Grave', 'Crypt', 'Ossuary'], roster: ['skeleton', 'archer', 'zombie', 'ghoul', 'wraith', 'cultist', 'spider', 'bat', 'knight', 'abomination', 'beetle', 'eye'],
-    prefer: ['set1/skeletons', 'set1/bone_horrors', 'set2/undead'], // monster art families favoured here (bestiary.js rollLooks)
     torch: '#ff9a40', fog: '#1a0e08',
   },
   {
@@ -18,14 +17,12 @@ export const BIOMES = [
     adj: ['Royal', 'Black-Iron', 'Oathsworn', 'Siege-Worn'],
     roster: ['knight', 'archer', 'cultist', 'gargoyle', 'golem', 'skeleton',
       'wraith', 'zombie', 'hound', 'imp', 'abomination', 'elemental'],
-    prefer: ['set2/warriors', 'set2/goblins', 'set2/undead'],
     torch: '#ffb45d', fog: '#15100b',
   },
   {
     id: 'frozen', name: 'Frozen Ossuary', palette: { colorize: [205, 0.35], light: 0.06, contrast: 1.05 }, dark: 0.76, light: 8,
     ambient: { type: 'snow', color: '#e8f4ff' }, mon: { hue: 180, sat: 0.6, light: 0.1 }, el: 'cold', blood: '#3a7ac8',
     adj: ['Frostbitten', 'Rime', 'Glacial'], roster: ['skeleton', 'archer', 'wraith', 'golem', 'hound', 'elemental', 'knight', 'bat', 'ghoul', 'eye', 'gargoyle', 'zombie'],
-    prefer: ['set2/undead', 'set2/birdfolk'],
     torch: '#8ad8ff', fog: '#0a1420',
   },
   {
@@ -37,175 +34,150 @@ export const BIOMES = [
     adj: ['Everfrozen', 'Rimebound', 'Sapphire', 'Wintersworn'],
     roster: ['skeleton', 'archer', 'wraith', 'golem', 'hound', 'elemental',
       'knight', 'bat', 'ghoul', 'eye', 'gargoyle', 'zombie'],
-    prefer: ['set2/undead', 'set2/birdfolk', 'set1/liches'],
     torch: '#89d9fc', fog: '#091629',
   },
   {
     id: 'molten', name: 'Molten Depths', palette: { tint: [255, 90, 20, 0.45], sat: 1.3, contrast: 1.1, light: -0.02 }, dark: 0.72, light: 8,
     ambient: { type: 'ember', color: '#ff8a30' }, mon: { hue: -20, sat: 1.3, light: 0 }, el: 'fire', blood: '#ff5a10',
     adj: ['Molten', 'Cinder', 'Magma'], roster: ['imp', 'demon', 'elemental', 'golem', 'hound', 'cultist', 'beetle', 'gargoyle', 'skeleton', 'worm', 'scorpion', 'wraith'],
-    prefer: ['set1/demons', 'set2/fiends', 'set2/dragons'],
     torch: '#ff6a10', fog: '#200802',
   },
   {
     id: 'fungal', name: 'Fungal Grotto', palette: { hue: 80, sat: 1.1, tint: [120, 255, 160, 0.18] }, dark: 0.8, light: 7.5,
     ambient: { type: 'spore', color: '#b0ff80' }, mon: { hue: 90, sat: 1.1, light: 0 }, el: 'poison', blood: '#5ac828',
     adj: ['Sporeborn', 'Mycelial', 'Moldering'], roster: ['shroom', 'spider', 'slime', 'worm', 'zombie', 'beetle', 'scorpion', 'eye', 'hound', 'abomination', 'bat', 'cultist'],
-    prefer: ['set1/tentacles', 'set2/slimes', 'set2/goblins'],
     torch: '#a0ff70', fog: '#081408',
   },
   {
     id: 'sunken', name: 'Sunken Crypt', palette: { colorize: [175, 0.33], light: -0.04 }, dark: 0.82, light: 7,
     ambient: { type: 'drip', color: '#7ae0e0' }, mon: { hue: 150, sat: 0.9, light: 0 }, el: 'cold', blood: '#2a8a8a',
     adj: ['Drowned', 'Sodden', 'Tidal'], roster: ['zombie', 'skeleton', 'worm', 'slime', 'wraith', 'eye', 'scorpion', 'ghoul', 'knight', 'archer', 'spider', 'elemental'],
-    prefer: ['set2/undead', 'set1/tentacles'],
     torch: '#60f0e0', fog: '#04141a',
   },
   {
     id: 'blood', name: 'Halls of Blood', palette: { colorize: [356, 0.55], light: -0.05, contrast: 1.1 }, dark: 0.8, light: 7.5,
     ambient: { type: 'drip', color: '#c01010' }, mon: { hue: -30, sat: 1.4, light: -0.05 }, el: 'blood', blood: '#a00000',
     adj: ['Gorebound', 'Sanguine', 'Crimson'], roster: ['ghoul', 'demon', 'abomination', 'hound', 'cultist', 'bat', 'zombie', 'imp', 'knight', 'slime', 'spider', 'wraith'],
-    prefer: ['set1/flesh_brutes', 'set2/fiends'],
     torch: '#ff3020', fog: '#1a0202',
   },
   {
     id: 'ashen', name: 'Ashen Wastes', palette: { sat: 0.12, light: 0.04, contrast: 0.95 }, dark: 0.74, light: 8,
     ambient: { type: 'ash', color: '#a0a0a0' }, mon: { hue: 0, sat: 0.25, light: 0.05 }, el: 'fire', blood: '#4a4040',
     adj: ['Ashen', 'Charred', 'Smoldering'], roster: ['skeleton', 'golem', 'imp', 'wraith', 'hound', 'archer', 'beetle', 'gargoyle', 'knight', 'zombie', 'cultist', 'elemental'],
-    prefer: ['set2/undead', 'set2/fiends'],
     torch: '#ffb070', fog: '#141414',
   },
   {
     id: 'void', name: 'Void Sanctum', palette: { colorize: [275, 0.45], light: -0.08, contrast: 1.1 }, dark: 0.86, light: 7,
     ambient: { type: 'mote', color: '#c070ff' }, mon: { hue: 220, sat: 1.2, light: -0.02 }, el: 'shadow', blood: '#5a10a0',
     adj: ['Voidtouched', 'Nether', 'Hollow'], roster: ['wraith', 'eye', 'elemental', 'cultist', 'demon', 'imp', 'gargoyle', 'knight', 'spider', 'bat', 'slime', 'abomination'],
-    prefer: ['set1/eyes', 'set2/mages', 'set2/fiends'],
     torch: '#b050ff', fog: '#0c0418',
   },
   {
     id: 'gilded', name: 'Gilded Tomb', palette: { colorize: [44, 0.62], light: 0.03, contrast: 1.12 }, dark: 0.74, light: 8.5,
     ambient: { type: 'glitter', color: '#ffe080' }, mon: { hue: 30, sat: 1.3, light: 0.05 }, el: 'holy', blood: '#8a0b08',
     adj: ['Gilded', 'Pharaonic', 'Golden'], roster: ['skeleton', 'knight', 'scorpion', 'golem', 'wraith', 'archer', 'beetle', 'cultist', 'gargoyle', 'zombie', 'elemental', 'eye'],
-    prefer: ['set2/undead', 'set2/kobolds'],
     torch: '#ffd060', fog: '#1a1404',
   },
   {
     id: 'plague', name: 'Plague Sewers', palette: { colorize: [85, 0.42], light: -0.06 }, dark: 0.82, light: 7,
     ambient: { type: 'bubble', color: '#90d040' }, mon: { hue: 70, sat: 0.9, light: -0.04 }, el: 'poison', blood: '#6a9a10',
     adj: ['Plagued', 'Festering', 'Rotten'], roster: ['zombie', 'slime', 'worm', 'abomination', 'spider', 'beetle', 'bat', 'ghoul', 'shroom', 'hound', 'cultist', 'scorpion'],
-    prefer: ['set2/slimes', 'set1/flesh_brutes', 'set2/goblins'],
     torch: '#c0ff40', fog: '#0a1004',
   },
   {
     id: 'crystal', name: 'Crystal Caverns', palette: { colorize: [192, 0.6], contrast: 1.2, light: 0.02 }, dark: 0.72, light: 9,
     ambient: { type: 'glitter', color: '#a0ffff' }, mon: { hue: 170, sat: 1.4, light: 0.06 }, el: 'light', blood: '#40c0ff',
     adj: ['Crystalline', 'Prismatic', 'Shardborn'], roster: ['elemental', 'golem', 'spider', 'eye', 'gargoyle', 'beetle', 'bat', 'scorpion', 'slime', 'wraith', 'knight', 'hound'],
-    prefer: ['set2/slimes', 'set2/kobolds'],
     torch: '#80ffff', fog: '#041418',
   },
   {
     id: 'desert', name: 'Bone Desert Tombs', palette: { colorize: [36, 0.42], light: 0.1 }, dark: 0.7, light: 9,
     ambient: { type: 'sand', color: '#e0c080' }, mon: { hue: 20, sat: 0.9, light: 0.08 }, el: 'phys', blood: '#8a3008',
     adj: ['Sunscorched', 'Dune', 'Sandworn'], roster: ['scorpion', 'skeleton', 'worm', 'beetle', 'archer', 'hound', 'zombie', 'golem', 'gargoyle', 'cultist', 'spider', 'knight'],
-    prefer: ['set2/kobolds', 'set2/undead'],
     torch: '#ffc070', fog: '#1a1006',
   },
   {
     id: 'shadow', name: 'Shadow Labyrinth', palette: { sat: 0.3, light: -0.16, contrast: 1.1 }, dark: 0.9, light: 6,
     ambient: { type: 'wisp', color: '#504060' }, mon: { hue: 250, sat: 0.4, light: -0.1 }, el: 'shadow', blood: '#20101a',
     adj: ['Shadowed', 'Umbral', 'Lightless'], roster: ['wraith', 'ghoul', 'spider', 'bat', 'hound', 'eye', 'knight', 'cultist', 'imp', 'gargoyle', 'abomination', 'skeleton'],
-    prefer: ['set2/fiends', 'set1/eyes'],
     torch: '#9a80ff', fog: '#000000',
   },
   {
     id: 'forge', name: 'Infernal Forge', palette: { colorize: [12, 0.65], contrast: 1.15, light: -0.03 }, dark: 0.74, light: 8,
     ambient: { type: 'ember', color: '#ff5a10' }, mon: { hue: -15, sat: 1.4, light: -0.03 }, el: 'fire', blood: '#ff3000',
     adj: ['Infernal', 'Hellforged', 'Brimstone'], roster: ['demon', 'imp', 'golem', 'knight', 'hound', 'gargoyle', 'elemental', 'cultist', 'abomination', 'beetle', 'skeleton', 'scorpion'],
-    prefer: ['set1/demons', 'set2/fiends', 'set2/dragons'],
     torch: '#ff4000', fog: '#1e0400',
   },
   {
     id: 'abyss', name: 'Abyssal Rift', palette: { colorize: [232, 0.5], light: -0.1, contrast: 1.15 }, dark: 0.86, light: 7,
     ambient: { type: 'mote', color: '#6080ff' }, mon: { hue: 200, sat: 1.2, light: -0.05 }, el: 'light', blood: '#2040c0',
     adj: ['Abyssal', 'Deepborn', 'Starless'], roster: ['eye', 'wraith', 'elemental', 'worm', 'spider', 'demon', 'slime', 'knight', 'gargoyle', 'cultist', 'bat', 'abomination'],
-    prefer: ['set1/tentacles', 'set1/eyes', 'set2/colossi'],
     torch: '#6080ff', fog: '#02041a',
   },
   {
     id: 'thorn', name: 'Thornwood Barrow', palette: { colorize: [100, 0.32], light: -0.04 }, dark: 0.8, light: 7.5,
     ambient: { type: 'leaf', color: '#80a040' }, mon: { hue: 60, sat: 0.8, light: -0.02 }, el: 'poison', blood: '#6a2a08',
     adj: ['Thornbound', 'Barrow', 'Bramble'], roster: ['hound', 'spider', 'shroom', 'zombie', 'skeleton', 'archer', 'worm', 'scorpion', 'beetle', 'ghoul', 'cultist', 'golem'],
-    prefer: ['set2/goblins', 'set2/birdfolk'],
     torch: '#d0ff80', fog: '#081006',
   },
   {
     id: 'storm', name: 'Storm Spire', palette: { colorize: [214, 0.4], contrast: 1.15, light: 0.02 }, dark: 0.76, light: 8.5,
     ambient: { type: 'spark', color: '#c0e0ff' }, mon: { hue: 190, sat: 1.1, light: 0.04 }, el: 'light', blood: '#3060c0',
     adj: ['Stormwrought', 'Thunder', 'Galvanic'], roster: ['elemental', 'gargoyle', 'golem', 'knight', 'eye', 'hound', 'imp', 'cultist', 'bat', 'skeleton', 'archer', 'wraith'],
-    prefer: ['set2/birdfolk', 'set2/dragons', 'set2/mages'],
     torch: '#a0d0ff', fog: '#060c1a',
   },
   {
     id: 'obsidian', name: 'Obsidian Vault', palette: { sat: 0.25, light: -0.12, contrast: 1.35 }, dark: 0.84, light: 7,
     ambient: { type: 'dust', color: '#8080a0' }, mon: { hue: 260, sat: 0.3, light: -0.08 }, el: 'arcane', blood: '#300830',
     adj: ['Obsidian', 'Glassbound', 'Onyx'], roster: ['golem', 'knight', 'gargoyle', 'elemental', 'wraith', 'eye', 'beetle', 'spider', 'cultist', 'demon', 'skeleton', 'abomination'],
-    prefer: ['set2/warriors', 'set2/dragons'],
     torch: '#e080ff', fog: '#08060c',
   },
   {
     id: 'flesh', name: 'Flesh Pits', palette: { colorize: [342, 0.45], light: 0.02 }, dark: 0.78, light: 7.5,
     ambient: { type: 'spore', color: '#ff6080' }, mon: { hue: -40, sat: 1.2, light: 0.02 }, el: 'blood', blood: '#b00010',
     adj: ['Fleshwoven', 'Visceral', 'Writhing'], roster: ['abomination', 'worm', 'ghoul', 'slime', 'zombie', 'spider', 'eye', 'hound', 'demon', 'beetle', 'bat', 'shroom'],
-    prefer: ['set1/flesh_brutes', 'set2/slimes'],
     torch: '#ff5070', fog: '#1a0408',
   },
   {
     id: 'serpent', name: 'Serpent Sepulcher', palette: { colorize: [150, 0.4], light: -0.02 }, dark: 0.8, light: 7.5,
     ambient: { type: 'dust', color: '#c8c090' }, mon: { hue: 40, sat: 0.9, light: 0 }, el: 'poison', blood: '#5a7a10',
     adj: ['Serpentine', 'Coiled', 'Venomous'], roster: ['scorpion', 'worm', 'skeleton', 'cultist', 'archer', 'spider', 'knight', 'golem', 'beetle', 'wraith', 'zombie', 'hound'],
-    prefer: ['set2/kobolds', 'set2/dragons'],
     torch: '#a8e070', fog: '#0e0c04',
   },
   {
     id: 'shattered', name: 'Shattered Citadel', palette: { sat: 0.4, light: 0.06, tint: [180, 200, 255, 0.12] }, dark: 0.78, light: 8,
     ambient: { type: 'dust', color: '#a8b0c8' }, mon: { hue: 0, sat: 0.6, light: 0 }, el: 'phys', blood: '#8a0b08',
     adj: ['Shattered', 'Fallen', 'Broken'], roster: ['knight', 'archer', 'gargoyle', 'golem', 'skeleton', 'wraith', 'cultist', 'hound', 'imp', 'elemental', 'bat', 'demon'],
-    prefer: ['set2/warriors', 'set2/mages'],
     torch: '#ffb070', fog: '#0a0c12',
   },
   {
     id: 'library', name: 'Haunted Library', palette: { colorize: [28, 0.35], light: -0.06 }, dark: 0.84, light: 7,
     ambient: { type: 'mote', color: '#f0d090' }, mon: { hue: 230, sat: 0.7, light: -0.02 }, el: 'arcane', blood: '#6a1010',
     adj: ['Haunted', 'Forbidden', 'Whispering'], roster: ['wraith', 'cultist', 'eye', 'imp', 'bat', 'skeleton', 'spider', 'elemental', 'gargoyle', 'zombie', 'knight', 'ghoul'],
-    prefer: ['set2/mages', 'set1/liches'],
     torch: '#ffc070', fog: '#100a06',
   },
   {
     id: 'sewers', name: 'The Fetid Sewers', palette: null, dark: 0.8, light: 7.5,
     ambient: { type: 'drip', color: '#9ad070' }, mon: { hue: 75, sat: 0.85, light: -0.02 }, el: 'poison', blood: '#4a6a18',
     adj: ['Fetid', 'Sodden', 'Rat-Gnawed', 'Brackish'], roster: ['zombie', 'slime', 'worm', 'spider', 'beetle', 'ghoul', 'bat', 'abomination', 'cultist', 'shroom', 'scorpion', 'archer'],
-    prefer: ['set2/slimes', 'set1/tentacles', 'set2/goblins', 'set2/kobolds'],
     torch: '#a8ff60', fog: '#070c05',
   },
   {
     id: 'necropolis', name: 'Moonlit Necropolis', palette: { colorize: [225, 0.25], light: 0.04, contrast: 1.1 }, dark: 0.8, light: 7.5,
     ambient: { type: 'mote', color: '#c8d8ff' }, mon: { hue: 200, sat: 0.5, light: 0.04 }, el: 'cold', blood: '#4a5a8a',
     adj: ['Moonlit', 'Gravebound', 'Silvered'], roster: ['skeleton', 'zombie', 'ghoul', 'wraith', 'archer', 'knight', 'bat', 'hound', 'gargoyle', 'cultist', 'eye', 'abomination'],
-    prefer: ['set2/undead', 'set1/skeletons'],
     torch: '#a0c0ff', fog: '#060a16',
   },
   {
     id: 'cathedral', name: 'Desecrated Cathedral', palette: null, dark: 0.8, light: 8,
     ambient: { type: 'mote', color: '#e8d8b0' }, mon: { hue: 0, sat: 0.9, light: 0.02 }, el: 'holy', blood: '#7a0a10',
     adj: ['Desecrated', 'Profane', 'Fallen'], roster: ['knight', 'wraith', 'gargoyle', 'cultist', 'skeleton', 'archer', 'zombie', 'ghoul', 'bat', 'eye', 'imp', 'abomination'],
-    prefer: ['set2/undead', 'set2/warriors', 'set1/liches'],
     torch: '#ffc070', fog: '#120c08',
   },
   {
     id: 'amber', name: 'Amber Wastes', palette: { colorize: [32, 0.7], light: 0.02, contrast: 1.05 }, dark: 0.7, light: 9,
     ambient: { type: 'sand', color: '#ffb050' }, mon: { hue: 25, sat: 1.1, light: 0.04 }, el: 'fire', blood: '#8a3008',
     adj: ['Amber', 'Sunbaked', 'Resinous'], roster: ['scorpion', 'beetle', 'worm', 'golem', 'elemental', 'hound', 'archer', 'skeleton', 'gargoyle', 'imp', 'spider', 'cultist'],
-    prefer: ['set2/kobolds', 'set2/goblins'],
     torch: '#ffa040', fog: '#1a0c02',
   },
   {
@@ -214,7 +186,6 @@ export const BIOMES = [
     ambient: { type: 'leaf', color: '#9fb777' }, mon: { hue: 16, sat: 0.85, light: 0.04 },
     el: 'phys', blood: '#7c1610', adj: ['Wilderness', 'Outcast', 'Wayward'],
     roster: ['zombie', 'ghoul', 'hound', 'skeleton', 'archer', 'knight', 'cultist', 'golem', 'spider', 'shroom', 'abomination', 'wraith'],
-    prefer: ['set2/undead', 'set2/warriors', 'set2/goblins'],
     torch: '#ffc078', fog: '#0a160d',
   },
   {
@@ -223,7 +194,7 @@ export const BIOMES = [
     ambient: { type:'mote', color:'#d6c49b' }, mon: { hue:0, sat:0.86, light:0.03 },
     el:'phys', blood:'#7c1610', adj:['Stonebound','Besieged','Iron-Crowned'],
     roster:['zombie','ghoul','bat','gargoyle','skeleton','cultist','abomination','imp','wraith','archer','knight','golem'],
-    prefer:['set2/undead','set2/warriors','set2/goblins'], torch:'#ffc078', fog:'#0a0e13',
+    torch:'#ffc078', fog:'#0a0e13',
   },
   {
     id: 'sea_of_sand', name: 'Sea of Sand', pack: 'sea_of_sand', overworld: true,
@@ -249,7 +220,6 @@ export const BIOMES = [
     ambient: { type: 'firefly', color: '#b8f07a' }, mon: { hue: 70, sat: 0.8, light: -0.02 },
     el: 'poison', blood: '#5e1410', adj: ['Gloomwood', 'Briar-Bound', 'Moonless', 'Root-Choked'],
     roster: ['spider', 'hound', 'shroom', 'wraith', 'golem', 'archer', 'cultist', 'ghoul', 'zombie', 'bat', 'skeleton', 'slime'],
-    prefer: ['set2/goblins', 'set2/undead', 'set2/slimes', 'set2/birdfolk', 'set2/fiends'],
     torch: '#ffc070', fog: '#060c07',
   },
   {
@@ -259,7 +229,6 @@ export const BIOMES = [
     mon: { hue: 28, sat: 0.95, light: 0.04 }, el: 'holy', blood: '#8a2a14',
     adj: ['Sunless', 'Goldbound', 'Dynastic', 'Entombed'],
     roster: ['skeleton', 'archer', 'knight', 'golem', 'cultist', 'scorpion', 'worm', 'wraith', 'zombie', 'beetle', 'gargoyle', 'elemental'],
-    prefer: ['set2/undead', 'set2/kobolds', 'set2/warriors', 'set1/skeletons'],
     torch: '#ffb860', fog: '#140e0b',
   },
   {
@@ -271,7 +240,6 @@ export const BIOMES = [
     adj: ['Hellbound', 'Hellsworn', 'Damned', 'Abyssal'],
     roster: ['demon','imp','knight','gargoyle','abomination','hound',
       'wraith','cultist','elemental','golem','eye','skeleton'],
-    prefer: ['set1/demons','set2/fiends','set2/titans'],
     torch: '#ff5420', fog: '#17030b',
   },
   {
@@ -283,7 +251,6 @@ export const BIOMES = [
     adj: ['Starborn', 'Astral', 'Celestial', 'Aetherbound'],
     roster: ['wraith','eye','elemental','golem','gargoyle','knight',
       'cultist','bat','slime','spider','demon','archer'],
-    prefer: ['set2/fiends','set2/titans','set1/liches'],
     torch: '#a08bff', fog: '#0b0921',
   },
   {
@@ -301,7 +268,6 @@ export const BIOMES = [
     id: 'throne', name: "Velscour's Throne", palette: { colorize: [4, 0.72], light: -0.1, contrast: 1.2 }, dark: 0.8, light: 8,
     ambient: { type: 'ember', color: '#ff3a10' }, mon: { hue: -10, sat: 1.5, light: -0.06 }, el: 'fire', blood: '#c00000',
     adj: ['Hellsworn', 'Doom', 'Archfiend'], roster: ['demon', 'imp', 'knight', 'gargoyle', 'abomination', 'hound', 'wraith', 'cultist', 'elemental', 'golem', 'eye', 'skeleton'],
-    prefer: ['set1/demons', 'set2/fiends', 'set2/titans'],
     torch: '#ff2000', fog: '#200000',
   },
 ];
@@ -454,26 +420,6 @@ const FAMILY = {
 };
 for (const [f, ids] of Object.entries(FAMILY)) for (const id of ids) BIOMES.find((b) => b.id === id).family = f;
 
-// Monster palette swaps per biome (names from SWAPS in bestiary.js; null = the art's own colours). Each look in
-// a level rolls one of these, so the same monster art shows up in many colourings across biomes.
-const MON_SWAPS = {
-  catacombs: [null, null, 'pale', 'ash', 'bone'], frozen: ['rime', 'frost', 'pale', 'spectral'],
-  ice_temple: ['rime', 'frost', 'crystal', 'pale', 'spectral'], molten: ['ember', 'infernal', null, 'rust'],
-  fungal: ['venom', 'rot', 'thorn', 'bile', 'verdigris'], sunken: ['tide', 'abyss', 'pale', 'spectral'], blood: ['blood', 'flesh', null, 'coral'],
-  ashen: ['ash', 'pale', 'shadow', 'bone'], void: ['void', 'abyss', 'shadow', 'amethyst'], gilded: ['gilded', 'sand', null, 'bronze'],
-  plague: ['rot', 'venom', 'tide', 'bile'], sewers: [null, null, 'rot', 'bile', 'rust'], crystal: ['crystal', 'frost', 'storm', 'amethyst'], desert: ['sand', null, 'gilded', 'bone', 'bronze'],
-  shadow: ['shadow', 'obsidian', 'void', 'midnight'], forge: ['infernal', 'ember', 'obsidian', 'rust', 'bronze'], abyss: ['abyss', 'void', 'storm', 'midnight'],
-  thorn: ['thorn', 'venom', null, 'verdigris'], storm: ['storm', 'crystal', 'pale', 'midnight'], obsidian: ['obsidian', 'void', 'shadow', 'midnight'],
-  flesh: ['flesh', 'blood', null, 'coral'], serpent: ['venom', 'sand', null, 'verdigris'], shattered: ['pale', 'storm', null, 'bronze'],
-  library: ['shadow', 'pale', 'void', 'amethyst'], cathedral: [null, 'pale', 'shadow', 'bone'], necropolis: ['pale', 'frost', 'shadow', 'spectral', 'bone'], amber: ['sand', 'ember', 'gilded', 'bronze'],
-  desert_temple: ['sand', 'gilded', 'bronze', 'bone', null],
-  hell: ['infernal', 'ember', 'blood', 'rust', 'obsidian'],
-  astral_plane: ['spectral', 'amethyst', 'crystal', 'void', 'midnight'],
-  heavenly: [null, null, 'gilded', 'pale', 'bronze'],
-  castle_keep: ['gilded', 'bronze', 'rust', 'pale', 'ash'],
-  overworld: [null, 'thorn', 'rot', 'ash', 'bone'], dark_forest: [null, 'thorn', 'rot', 'shadow', 'verdigris', 'midnight'], throne: ['infernal', 'blood', 'ember', 'rust'],
-};
-for (const b of BIOMES) b.swaps = MON_SWAPS[b.id];
 
 export const MIX_CHANCE = 0.65;
 /** Maybe pick a like-coloured biome on the same packs to mix floors (and maybe walls) with, or null. The temple biomes'
@@ -494,8 +440,6 @@ export const BETA_BIOMES = [
     ambient: { type: 'leaf', color: '#d8e6c0' }, mon: { hue: 8, sat: 0.9, light: 0.04 },
     el: 'cold', blood: '#7c1610', adj: ['Windswept', 'Craggy', 'High', 'Rimed'],
     roster: ['hound', 'golem', 'gargoyle', 'bat', 'archer', 'skeleton', 'knight', 'elemental', 'spider', 'cultist', 'wraith', 'imp'],
-    prefer: ['set2/birdfolk', 'set2/goblins', 'set2/kobolds', 'set2/warriors'],
-    swaps: [null, null, 'rime', 'pale', 'ash'],
     torch: '#ffc078', fog: '#0c1622',
   },
 ];

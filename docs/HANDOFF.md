@@ -14,6 +14,20 @@ Contents
 
 ---
 
+## October 20, 2026 — enemy set 3, no more generated monsters, a random bestiary (branch `feat/enemy-set3`)
+- **Removed** the 1,850 generated biome natives (`bn_`: existing sprites with Canvas shapes drawn on top;
+  `src/data/biomenatives.js`, `src/gfx/biomenativeart.js`) and the Heavenly monsters' Canvas fallback (they now come
+  only from their painted sheets). Raid bosses that used `bn_` art use set 3 giants. A saved nemesis with `bn_` art
+  gets a fresh look.
+- **Added** enemy set 3: 260 painted monsters from `VELSCOUR_Monsters_Enemies_Bosses.zip` (100 enemies, 60 monsters,
+  40 lords, 20 major bosses, 40 arena bosses), cut by `tools/set3plates.py`, packed into 10 atlases (each at most 1,554 px
+  tall), catalogued in `src/data/bestiary3.js`. See docs/ENEMY_ART.md.
+- **No biome themes:** `rollLooks` picks looks at random from every sheet (at most 6 lazy sheets a level); biome
+  `prefer` and `swaps` lists are gone. Two looks in three get a random palette swap and its name ("Frost Gaunt
+  Pikeman"). The Sea of Sand keeps its own creatures (its archetypes are its own).
+- Tests: `data_check`, `flow`, `enemies`, `heavenly`, `raid 5,30` (its biome list now skips overworlds, which
+  crashed at depth 5 on the Sea of Sand), `worldwide_biomes`, `autoplay wizard`.
+
 ## October 20, 2026 — things to do while the hero plays: critters, SMITE, sealed treasures, stance, portal choice, Greed (branch `feat/spectator-play`)
 
 - **Request:** ideas to make auto-play more engaging "like the Madness bar", then: build gilded critters to tap, a

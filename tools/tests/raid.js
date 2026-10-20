@@ -24,7 +24,7 @@ const DEPTHS = (process.argv[2] || '5,30,55').split(',').map(Number);
       const { G, game } = window.VELSCOUR;
       const { BIOMES } = await import('/src/data/biomes.js');
       const { dist } = await import('/src/core/util.js');
-      const list = BIOMES.filter((b) => b.id !== 'throne' && b.id !== 'town');
+      const list = BIOMES.filter((b) => b.id !== 'throne' && b.id !== 'town' && !b.overworld); // raids are dungeon rooms
       G.char.level = Math.min(90, depth + 4); G.player.recompute();
       game.buildDungeon(depth, list[depth % list.length]);
       const p = G.player, w = G.world, map = w.map, b = w.boss, R = w.raid;

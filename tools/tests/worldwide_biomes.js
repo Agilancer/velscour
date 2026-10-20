@@ -1,4 +1,4 @@
-// World-wide biome, native-monster, and town fence regression suite.
+// World-wide biome, random-bestiary, and town fence regression suite.
 // Requires local repo web server: python3 -m http.server 8123
 // Usage: node tools/tests/worldwide_biomes.js [--all]
 // Runs 7 representative full browser packs by default; --all renders every
@@ -15,24 +15,17 @@ const FULL=process.argv.includes('--all');
       document.querySelectorAll('.screen').forEach(s=>s.remove());
       G.ui.modalCount=0;G.godMode=true;
       const {BIOMES,BIOME_BY_ID,drawBiome,recordBiomeVisit}=await import('/src/data/biomes.js');
-      const {BIOME_NATIVES,ART_BY_ID,rollLooks}=await import('/src/data/bestiary.js');
+      const {BESTIARY,ART_BY_ID,rollLooks}=await import('/src/data/bestiary.js');
       const {A,loadBiomeArt,biomeTileSet}=await import('/src/core/assets.js');
       const {makeTownTiles}=await import('/src/world/town.js');
       const {generateOverworld}=await import('/src/world/overworld.js');
       const {enemyImage,loadArtFor}=await import('/src/core/enemyart.js');
       const {isoBarrier,BARRIER_STYLES}=await import('/src/gfx/isobarriers.js');
       const {TOWN_FLOOR_EXPANSION,OVERWORLD_FLOOR_EXPANSION}=await import('/src/gfx/biomeexpansion.js');
-      const issues=[],stats={biomes:BIOMES.length,natives:BIOME_NATIVES.length,
+      const issues=[],stats={biomes:BIOMES.length,monsters:BESTIARY.length,
         rendered:[],townFences:0,townFloors:0,townProps:0,wildFloors:0,wildProps:0,monsterImages:0};
-      if(BIOMES.length*50!==BIOME_NATIVES.length)issues.push('50 native monsters per biome missing');
-      if(new Set(BIOME_NATIVES.map(a=>a.id)).size!==BIOME_NATIVES.length)issues.push('Duplicate native monster ID');
+      if(BESTIARY.some(a=>a.id.startsWith('bn_')||a.sourceArt))issues.push('Generated overlay monsters are back');
       for(const b of BIOMES){
-        const own=BIOME_NATIVES.filter(a=>a.homeBiome===b.id);
-        if(own.length!==50)issues.push('Missing native monsters '+b.id);
-        for(const a of own){
-          if(!ART_BY_ID[a.sourceArt] || !b.roster.includes(a.arch))
-            issues.push('Invalid native monster source/AI '+a.id);
-        }
         const looks=rollLooks(b);
         for(const arch of b.roster)if(!looks.pick(arch))issues.push('No art for '+b.id+'/'+arch);
       }
@@ -118,33 +111,31 @@ const FULL=process.argv.includes('--all');
         if(!G.world.map.walkable(G.player.x,G.player.y))
           issues.push('Player is inside blocked cell '+b.id);
         stats.rendered.push(b.id);
-        checkArt.push(...BIOME_NATIVES.filter(a=>a.homeBiome===b.id&&!a.lone).slice(0,4).map(a=>a.id));
+        checkArt.push(...G.world.looks.ids().slice(0,6));
       }
       await loadArtFor(checkArt);
       for(const id of checkArt){
         const sprite=enemyImage(id);
         if(!sprite||!sprite._art||!Number.isFinite(sprite._art.fx))
-          issues.push('Native artwork missing '+id);
+          issues.push('Monster artwork missing '+id);
         else stats.monsterImages++;
       }
-      // Verify existing random bestiary remains possible and native
-      // characters can travel to a foreign biome at reduced frequency.
-      let owned=0,global=0,visitors=0,tries=0;
-      for(let i=0;i<600;i++){
-        const looks=rollLooks(BIOME_BY_ID.catacombs);
-        for(const arch of BIOME_BY_ID.catacombs.roster){
-          const picked=looks.pick(arch);
-          const a=picked&&ART_BY_ID[picked.art];
-          if(!a)continue;
-          if(a.homeBiome==='catacombs')owned++;
-          else if(a.homeBiome)visitors++;
-          else global++;
-          tries++;
+      // No biome themes: every biome rolls from the whole catalogue (set 3, Heavenly and all), a few sheets a level.
+      const sheetsBy={},perLevel=[];
+      for(const id of ['catacombs','heavenly','molten']){
+        const seen=new Set();
+        for(let i=0;i<200;i++){
+          const looks=rollLooks(BIOME_BY_ID[id]),lv=new Set();
+          for(const arch of BIOME_BY_ID[id].roster){const p=looks.pick(arch),a=p&&ART_BY_ID[p.art];if(a){seen.add(a.sheet);if(!a.sheet.startsWith('set1/'))lv.add(a.sheet);}}
+          perLevel.push(lv.size);
         }
+        sheetsBy[id]=seen.size;
+        if(![...seen].some(k=>k.startsWith('set3/')))issues.push('No enemy set 3 art rolled in '+id);
+        if(seen.size<15)issues.push('Bestiary still themed in '+id+': only '+seen.size+' sheets');
       }
-      stats.spawnSamples={owned,global,visitors,tries};
-      if(!owned||!global||!visitors||!(owned>global&&global>visitors))
-        issues.push('Home/global/foreign native spawn weighting incorrect');
+      stats.spawnSheets={...sheetsBy,maxPerLevel:Math.max(...perLevel)};
+      // LEVEL_SHEETS is 6; an archetype with no art on those sheets may add one or two more
+      if(Math.max(...perLevel)>8)issues.push('A level loads too many lazy sheets: '+Math.max(...perLevel));
       for(let trial=0;trial<24;trial++){
         const hero={biomeBag:[],lastBiome:null,overworldMisses:0};
         for(let d=1;d<55;d++){

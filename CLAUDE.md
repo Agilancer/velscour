@@ -76,7 +76,7 @@ node tools/tests/biome_scenarios.js [ids] [noshots] # themed rooms per biome rea
 node tools/tests/biome_looks.js [ids] [depth]      # each biome's biggest themed rooms with the lights up, for art review
 node tools/tests/approved_biome_art.js             # the five temple biomes' approved painted floors and props
 node tools/tests/titlefx.js                        # title intro: click gate, logo fade on the song clock, flame burst on the hit, eyes
-node tools/tests/enemies.js                        # monster art line-ups, corpses, mixed-biome levels + guardians
+node tools/tests/enemies.js                        # monster art line-ups (sets 1-3), corpses, random-bestiary levels + guardians
 node tools/tests/mayhem.js                         # monster traits, ambush arrivals (drop/teleport/burrow/wall), bullet patterns, MADNESS
 node tools/tests/spectate.js [mobile]              # while the hero plays: critter taps, SMITE, sealed treasures + reel, auto-play waits in town, stance, portal choice, Greed
 node tools/tests/legion.js                         # Necromancer skeleton summons: art line-up, every minion attacks + casts
@@ -130,9 +130,12 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   ChatGPT kits too (`docs/art_kits/*.zip`, built by `python tools/chatgpt_art_kits.py`), imported by
   `python tools/chatgpt_art.py <kind> <sheet> <names.json>`; see [`docs/CHATGPT_ART_KITS.md`](docs/CHATGPT_ART_KITS.md). The character redesign
   ("Grim Nocturne": 108-art-pixel heroes, a locked stance, armor/helmet/glove/boot overlays) is specified in
-  [`docs/art_style/`](docs/art_style/00_START_HERE.md) and packed by `python tools/chatgpt_style_kit.py`. Each biome has 50 native monster variants (`src/gfx/biomenativeart.js`,
-  `src/data/biomenatives.js`) and exact X/Y barricades (`src/gfx/isobarriers.js`); see `docs/WORLD_BIOME_OVERHAUL.md`.
-  HEAVENLY's 60 enemy sprites come from `src/gfx/heavenlymonsters.js`; see `docs/HEAVENLY.md`.
+  [`docs/art_style/`](docs/art_style/00_START_HERE.md) and packed by `python tools/chatgpt_style_kit.py`. Biomes have exact X/Y barricades (`src/gfx/isobarriers.js`; see
+  `docs/WORLD_BIOME_OVERHAUL.md`) but no monster themes: `rollLooks` picks every level's looks at random from all
+  painted art (the generated `bn_` biome natives are gone; never draw monsters in code). Enemy set 3 (260 monsters
+  and bosses) is cut from `VELSCOUR_Monsters_Enemies_Bosses.zip` by `python tools/set3plates.py <zip>` and catalogued
+  in `src/data/bestiary3.js`. HEAVENLY's 60 enemy sprites are cut from painted sheets by `src/gfx/heavenlymonsters.js`;
+  see `docs/HEAVENLY.md`.
   The hero's look is the Grim Nocturne gear: 18 armors per class (2-4 per rarity) and 15 enclosed helmets per class (three sets),
   69 palette finishes, built by `python tools/nocturnegear.py build` (or `process_assets.py gear`) from the natives in
   `assets/source/gear_nocturne/`; helmet nudges go in `assets/sprites/gear/helmets/placements.json` via

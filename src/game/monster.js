@@ -1311,7 +1311,7 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
     art: art ? art.id : null, swap: art ? (variant ? greaterSwap(look.swap) : look.swap) : null, artH: art ? art.h : 0,
     level, maxHp: B.hp * A.hp, hp: B.hp * A.hp, dmg: B.dmg * A.dmg, xp: B.xp * (A.xp || 1),
     speed: A.spd * rand(0.92, 1.08), el, res, goreType: gore, bloodColor: gore === 'flesh' ? biome.blood : null,
-    name: art && tier ? tierName : `${adj} ${tierName}`.trim(), atkCd: 1.2, range: A.range, proj: A.proj ? { ...A.proj, fx: archId === 'archer' ? 'arrow' : A.proj.fx === 'blob' ? 'blob' : PROJ_FX[el] || A.proj.fx } : null,
+    name: art ? [tier, look.tint || (!tier && adj), art.name].filter(Boolean).join(' ') : `${adj} ${tierName}`.trim(), atkCd: 1.2, range: A.range, proj: A.proj ? { ...A.proj, fx: archId === 'archer' ? 'arrow' : A.proj.fx === 'blob' ? 'blob' : PROJ_FX[el] || A.proj.fx } : null,
     undead, demon: art && art.demon !== undefined ? art.demon : A.demon, fly: art && art.fly !== undefined ? art.fly : A.fly, ghost: A.ghost, poison: A.poison, split: A.split,
     summoner: A.summoner && chance(A.summoner), aoeCaster: A.aoe, rank: 'normal', x, y,
   });
@@ -1319,7 +1319,7 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
   m.moves = rollMoves(archId, rank, variant, depth);
   m.moveCd = rand(1.5, 4);
   if (variant) { m.maxHp *= 1.4; m.hp = m.maxHp; m.dmg *= 1.2; m.xp *= 1.5; m.scale = 1.08; m.speed *= 1.05; }
-  if (art && art.heavenlyFamily && biome.id === 'heavenly') {
+  if (art && art.heavenlyFamily) {
     // The sixty Heaven opponents share the project's proven AI controllers
     // but vary their combat stats, elemental defenses and threat profile by
     // individual design. This is gameplay distinction, not just new names.
@@ -1339,7 +1339,7 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
     }
     if (family === 'ophanim' || family === 'luminary') m.fly = true;
   }
-  if(art?.homeBiome) {
+  if(art?.seaOfSand) { // the Sea of Sand's own creatures: tougher by rank, and a little more so away from the dunes
     const rarity=art.nativeVariant%5,foreign=art.homeBiome!==biome.id;
     m.maxHp*=1+rarity*.065+(art.nativeVariant>=45?.22:0);
     m.hp=m.maxHp;

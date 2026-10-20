@@ -1,7 +1,6 @@
 import { HEAVENLY_MONSTERS } from './heavenly.js';
-import { BIOMES } from './biomes.js';
-import { buildBiomeNatives } from './biomenatives.js';
 import { SAND_CREATURES, SAND_BOSSES } from './seaofsand.js';
+import { SET3 } from './bestiary3.js';
 // Monster art catalogue: every monster cut from the sheets in assets/source/enemies/<set>/ (see docs/ENEMY_ART.md).
 // Each entry is one cell of a sheet (i = reading order, left to right then top to bottom) and says which AI
 // archetype it plays (ARCH in enemies.js). `also` lists other archetypes it can stand in for, `h` is its height
@@ -10,8 +9,9 @@ import { SAND_CREATURES, SAND_BOSSES } from './seaofsand.js';
 // `lone` (the giants of set 2) only ever plays bosses: guardians and raid bosses, never a pack.
 // Optional overrides: fly, gore, undead, demon.
 //
-// Palette swaps: a level recolours each look with one of its biome's SWAPS (biomes.js `swaps`), the "greater"
-// breed darkens it (greaterSwap), and unique monsters roll their own swap, so 370 drawings make thousands of looks.
+// Palette swaps: a level recolours most looks with a random one of SWAPS (named after it: "Frost Bone Hound"), the
+// "greater" breed darkens it (greaterSwap), and unique monsters roll their own swap, so ~690 drawings make thousands
+// of monsters. Levels are not themed: any biome rolls any art (rollLooks).
 
 export const SWAPS = {
   pale: { sat: 0.35, light: 0.1 },
@@ -470,6 +470,7 @@ BESTIARY.push(
     ['ivory_swan_revenant', 'wraith', 60, { also: ['cultist'], el: 'holy', boss: true }],
     ['obsidian_roc_matron', 'gargoyle', 64, { el: 'shadow', boss: true }],
   ]),
+  ...SET3,
 );
 
 // Player minions: the Necromancer's skeletons (assets/source/enemies/minions/). Never rolled as monsters; summon
@@ -527,108 +528,73 @@ export const FAMILIAR_ART = [
 ];
 
 import { REPLACEMENT_ART } from './replacementart.js';
-// +50 original identities per combat biome (including wilderness and throne).
-// All normal static drawings stay eligible as global/random spawns, too.
-export const BIOME_NATIVES=buildBiomeNatives(BIOMES,BESTIARY);
-BESTIARY.push(...BIOME_NATIVES);
 export const ART_BY_ID = Object.fromEntries([...BESTIARY, ...SUMMON_ART, ...FAMILIAR_ART, ...REPLACEMENT_ART].map((a) => [a.id, a]));
 
-/** Approved art for an AI archetype. Generated biome art is included in the
- * catalog but weighted in rollLooks rather than being counted as common global
- * sheets. This preserves all original default/random monsters in every biome.
- */
-export function artPool(arch, heavenly=false) {
- if(BESTIARY.some(a=>a.seaOfSand&&a.arch===arch))return BESTIARY.filter(a=>a.seaOfSand&&a.arch===arch);
- return BESTIARY.filter(a=>!a.lone && !a.homeBiome &&
-   (a.sheet !== 'heavenly/generated' || heavenly) &&
-   (a.arch===arch || (a.also&&a.also.includes(arch))));
+const compat = (a, arch) => a.arch === arch || (a.also && a.also.includes(arch));
+/** Painted art that can play an AI archetype in a pack: every sheet, any biome (the Sea of Sand's own archetypes
+ * keep their own creatures). Giants (`lone`) only play guardians and raid bosses. */
+export function artPool(arch) {
+  if (BESTIARY.some((a) => a.seaOfSand && a.arch === arch)) return BESTIARY.filter((a) => a.seaOfSand && a.arch === arch);
+  return BESTIARY.filter((a) => !a.lone && !a.seaOfSand && compat(a, arch));
 }
-const compat=(a,arch)=>a.arch===arch||(a.also&&a.also.includes(arch));
-const NATIVE_BY_BIOME=new Map();
-const NATIVE_BY_ARCH=new Map();
-for(const a of BIOME_NATIVES){
- if(!NATIVE_BY_BIOME.has(a.homeBiome))NATIVE_BY_BIOME.set(a.homeBiome,[]);
- NATIVE_BY_BIOME.get(a.homeBiome).push(a);
- if(!NATIVE_BY_ARCH.has(a.arch))NATIVE_BY_ARCH.set(a.arch,[]);
- NATIVE_BY_ARCH.get(a.arch).push(a);
-}
-const weighted=(array,weight,rand)=>{
- if(!array.length)return null;
- let total=0;
- for(const a of array)total+=weight(a);
- if(total<=0)return array[Math.floor(rand()*array.length)];
- let n=rand()*total;
- for(const a of array)if((n-=weight(a))<=0)return a;
- return array[array.length-1];
-};
+/** Guardian art for an archetype (giants included). */
+const bossPool = (arch) => BESTIARY.filter((a) => a.boss && !a.seaOfSand && (!arch || compat(a, arch)));
+
+// A level draws its looks from at most this many lazily loaded sheets (set 1 is always in), so a random bestiary
+// still only downloads and decodes a few atlases per level.
+const LEVEL_SHEETS = 6;
+const EAGER_SHEET = /^set1\//;
+const SWAP_KEYS = Object.keys(SWAPS);
+const titleCase = (k) => k[0].toUpperCase() + k.slice(1);
+
 /**
- * Three selection channels per creature look:
- *   74% HOME biome (50 new native monster identities)
- *   24% complete EXISTING/global painted bestiary (preserves all random spawns)
- *    2% FOREIGN-biome natives (rare cross-biome travelers)
- * These are selection weights, not claims that every monster appears on each
- * generated floor. Up to 4 looks per archetype refresh between dungeon runs.
+ * A level's bestiary: up to 4 random looks per archetype from the whole catalogue (no biome themes), each with a
+ * random palette swap two times in three. A swapped look is named after its swap ("Ember Ashen Maw").
  */
-export function rollLooks(biome,rnd=Math.random){
- const id=biome.id||'',bel=biome.el&&biome.el!=='phys'?biome.el:null;
- const swaps=biome.swaps||[null],isHeaven=id==='heavenly';
- const original=artPool; // normal bestiary always eligible, including inside HEAVENLY
- const globalsByArch=new Map(),homeByArch=new Map(),visitorsByArch=new Map();
- const nHome=NATIVE_BY_BIOME.get(id)||[];
- const affinity=a=>(a.el&&a.el===bel?4:1)*
-   (biome.prefer&&biome.prefer.includes(a.sheet)?3:1);
- const swapFor=a=>{
-   if(a.el&&a.el===bel)return null;
-   const key=swaps[Math.floor(rnd()*swaps.length)];
-   return key?SWAPS[key]:null;
- };
- const select=(arch,r,excluded=[],boss=false)=>{
-   if(!globalsByArch.has(arch))globalsByArch.set(arch,original(arch,isHeaven).filter(a=>boss?!!a.boss:!a.lone));
-   if(!homeByArch.has(arch))homeByArch.set(arch,nHome.filter(a=>compat(a,arch)&&(!boss||a.boss)));
-   if(!visitorsByArch.has(arch))visitorsByArch.set(arch,(NATIVE_BY_ARCH.get(arch)||[]).filter(a=>a.homeBiome!==id&&(!boss||a.boss)));
-   // home monster definition reserves 5 boss-only entries.
-   const domestic=homeByArch.get(arch).filter(a=>boss?!!a.boss:!a.lone).filter(a=>!excluded.includes(a.id));
-   const global=globalsByArch.get(arch).filter(a=>!excluded.includes(a.id));
-   const visitors=visitorsByArch.get(arch).filter(a=>(boss?a.boss:!a.lone)&&!excluded.includes(a.id));
-   const value=r(),order=value<.74?[domestic,global,visitors]:
-     value<.98?[global,domestic,visitors]:[visitors,domestic,global];
-   const pool=order.find(a=>a.length)||[];
-   return weighted(pool,affinity,r);
- };
- const chosen=new Map(),bosses=[];
- const looksFor=arch=>{
-   if(chosen.has(arch))return chosen.get(arch);
-   const ids=[],looks=[];
-   // A biome has ~4 native identities for each of its 12 standard archetypes.
-   // Four rolled looks makes those designs visible across random dungeons.
-   for(let i=0;i<4;i++){
-     const a=select(arch,rnd,ids);
-     if(!a)break;
-     ids.push(a.id);looks.push({art:a.id,swap:swapFor(a)});
-   }
-   chosen.set(arch,looks);return looks;
- };
- return{
-   pick(arch,r=rnd){
-     const looks=looksFor(arch);
-     return looks.length?looks[Math.floor(r()*looks.length)]:null;
-   },
-   boss(roster,r=rnd){
-     const possible=(roster||biome.roster||[]).filter(a=>a);
-     const arch=possible.length?possible[Math.floor(r()*possible.length)]:null;
-     let a=arch&&select(arch,r,[],true);
-     if(!a){
-       const local=nHome.filter(x=>x.boss);
-       const ordinary=BESTIARY.filter(x=>x.boss&&!x.homeBiome&&
-         (x.sheet==='heavenly/generated')===isHeaven);
-       const pool=local.length&&r()<.8?local:ordinary;
-       a=weighted(pool,affinity,r);
-     }
-     if(a)bosses.push(a.id);
-     return a?{arch:a.arch,look:{art:a.id,swap:swapFor(a)}}:null;
-   },
-   ids(){return[...bosses,...Array.from(chosen.values()).flat().map(l=>l.art)];},
- };
+export function rollLooks(biome, rnd = Math.random) {
+  const sheets = new Set();
+  const lazy = (a) => !EAGER_SHEET.test(a.sheet);
+  const pickArt = (pool, excluded = []) => {
+    let p = pool.filter((a) => !excluded.includes(a.id));
+    if (sheets.size >= LEVEL_SHEETS) {
+      const near = p.filter((a) => !lazy(a) || sheets.has(a.sheet));
+      if (near.length) p = near;
+    }
+    if (!p.length) return null;
+    const a = p[Math.floor(rnd() * p.length)];
+    if (lazy(a)) sheets.add(a.sheet);
+    return a;
+  };
+  const lookOf = (a) => {
+    if (a.seaOfSand || rnd() < 1 / 3) return { art: a.id, swap: null };
+    const k = SWAP_KEYS[Math.floor(rnd() * SWAP_KEYS.length)];
+    return { art: a.id, swap: SWAPS[k], tint: titleCase(k) };
+  };
+  const chosen = new Map(), bosses = [];
+  const looksFor = (arch) => {
+    if (chosen.has(arch)) return chosen.get(arch);
+    const pool = artPool(arch), ids = [], looks = [];
+    for (let i = 0; i < 4; i++) {
+      const a = pickArt(pool, ids);
+      if (!a) break;
+      ids.push(a.id); looks.push(lookOf(a));
+    }
+    chosen.set(arch, looks); return looks;
+  };
+  return {
+    pick(arch, r = rnd) {
+      const looks = looksFor(arch);
+      return looks.length ? looks[Math.floor(r() * looks.length)] : null;
+    },
+    boss(roster, r = rnd) {
+      const possible = (roster || biome.roster || []).filter((a) => a);
+      const arch = possible.length ? possible[Math.floor(r() * possible.length)] : null;
+      const a = pickArt(arch && bossPool(arch).length ? bossPool(arch) : bossPool());
+      if (a) bosses.push(a.id);
+      return a ? { arch: a.arch, look: lookOf(a) } : null;
+    },
+    ids() { return [...bosses, ...Array.from(chosen.values()).flat().map((l) => l.art)]; },
+  };
 }
 
 /** A unique monster's own palette swap. */
