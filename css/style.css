@@ -604,8 +604,6 @@ body.touch .stash-panel { max-width: 46vw; }
 
 /* Portrait uses the same game canvas with a compact orb and potion HUD. The mobile skill cluster
    moves into the lower-right safe area, leaving the left side clear for the thumb joystick. */
-body.touch.compact-mobile-hud { --hud-w: min(100vw, 1180px); }
-body.touch.compact-mobile-hud #hud-bar { width: min(100vw, 1180px); }
 body.touch #hud.compact-mobile #hud-rail,
 body.touch #hud.compact-mobile #xp-track,
 body.touch #hud.compact-mobile #xp-text { display: none; }

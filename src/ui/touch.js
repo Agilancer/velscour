@@ -91,7 +91,9 @@ export const TouchUI = {
       const tile = Math.min(44, Math.max(32, (W - 40 - 24) / 7)), gap = 4;
       const trayH = tile * 2 + gap;
       const safeBottom = parseFloat(getComputedStyle(document.body).getPropertyValue('--portrait-safe-bottom')) || 0;
-      const trayTop = Math.max(H * .34, H - trayH - safeBottom - 12);
+      // sit above the corner orb frames (hud.js layoutMobile sizes them the same way)
+      const orbTop = $('#hud-bar').getBoundingClientRect().bottom - Math.max(74, Math.min(98, W * .24)) * 296 / 270;
+      const trayTop = Math.max(H * .34, Math.min(H - trayH - safeBottom - 12, orbTop - trayH - 6));
       const mainSize = Math.min(92, Math.max(72, W * .22));
       const logHeight = Math.min(H * .13, 100);
       const logTop = Math.max(H * .34, trayTop - mainSize - logHeight - 32);

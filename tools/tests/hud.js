@@ -1,7 +1,8 @@
 // The HUD art and the 15-slot skill bar: an old 10-slot save migrates, all 13 keys (` 1-9 0 - =) and both mouse
 // buttons cast their slot, the bar's slots line up with the art, the minimap ring and the six art buttons work
 // (Quest opens the Quest Log), and on touch the skill cluster flips to its second page.
-// Screenshots: hud1_bar (desktop, full bar), hud2_quest, hud3_touch_p1, hud4_touch_p2.
+// The orbs' shading and numbers stay on the art through portrait/landscape rotations.
+// Screenshots: hud1_bar (desktop, full bar), hud2_quest, hud3_touch_p1, hud4_touch_p2, hud5_portrait.
 const { openGame, report } = require('./harness');
 
 const fail = (msg) => { console.log('FAIL', msg); process.exitCode = 1; };
@@ -116,6 +117,25 @@ const fail = (msg) => { console.log('FAIL', msg); process.exitCode = 1; };
     return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
   });
   if (ov) fail('flip button overlaps the mana orb');
+  // the orb shading + numbers follow the art through portrait -> landscape -> portrait, and the portrait tray clears the orbs
+  const orbs = () => page.evaluate(() => {
+    const r = (s) => document.querySelector(s).getBoundingClientRect();
+    const out = [];
+    for (const k of ['life', 'mana']) {
+      const c = r('#' + k + '-cover'), t = r('#' + k + '-text');
+      const frame = document.querySelector(`.portrait-orb-frame[data-orb="${k}"]`);
+      const art = frame && frame.style.display === 'block' ? r(`.portrait-orb-frame[data-orb="${k}"]`) : r('#hud-img');
+      if (c.left < art.left - 1 || c.right > art.right + 1 || c.top < art.top - 1 || c.bottom > art.bottom + 1) out.push(k + ' shading off the orb art');
+      if (Math.abs((t.left + t.right) / 2 - (c.left + c.right) / 2) > 2 || Math.abs((t.top + t.bottom) / 2 - (c.top + c.bottom) / 2) > c.height * .2) out.push(k + ' numbers off the orb');
+      for (const b of document.querySelectorAll('.tbtn.portrait-tile')) { const q = b.getBoundingClientRect(); if (q.width && !(q.right < c.left || q.left > c.right || q.bottom < c.top || q.top > c.bottom)) { out.push('touch tile over the ' + k + ' orb'); break; } }
+    }
+    return out;
+  });
+  for (const [w, h, tag] of [[390, 844, 'portrait'], [844, 390, 'landscape after portrait'], [390, 844, 'portrait again']]) {
+    await page.setViewportSize({ width: w, height: h }); await page.waitForTimeout(500);
+    for (const m of await orbs()) fail(`${tag}: ${m}`);
+  }
+  await shot('hud5_portrait');
   report(errors);
   await browser.close();
 })();
