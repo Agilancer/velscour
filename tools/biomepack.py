@@ -67,6 +67,28 @@ def span_box(d, a0, a1, p0, p1, h, tag):
     return box(min(us), max(us), min(vs), max(vs), h, tag)
 
 
+def wall_boxes(a):
+    """A wall asset's geometry -> (connection mask, thin boxes tagged by arm: NE/SE/SW/NW, or c for the post)."""
+    h = a["height_px"]
+    if a["topology"] == "directed_panel":
+        # panels: split along the axis like a straight node
+        d = a["orientation"]
+        mask = 10 if d in ("SE", "NW") else 5
+        tags_of = lambda u, v: ("SE" if u > 0 else "NW") if mask == 10 else ("SW" if v > 0 else "NE")
+        bx = []
+        for k in range(10):
+            a0 = -0.5 + k * 0.1
+            b = span_box(d, a0, a0 + 0.1, -0.1, 0.1, h, None)
+            bx.append(b[:5] + (tags_of((b[0] + b[1]) / 2, (b[2] + b[3]) / 2),))
+        return mask, bx
+    bx = []
+    for i, j in a["footprint_cells_0_1_tile"]:
+        cu, cv = (i + 0.5) / 10, (j + 0.5) / 10
+        t = "c" if abs(cu) < 0.1 and abs(cv) < 0.1 else "NE" if cv < -0.1 else "SW" if cv > 0.1 else "SE" if cu > 0.1 else "NW"
+        bx.append(box(i / 10, (i + 1) / 10, j / 10, (j + 1) / 10, h, t))
+    return a["connection_mask"], bx
+
+
 def raycast(src, pivot, boxes, s, tol=1):
     """Raise `src` (RGBA array) by s. Returns (out RGBA, out pivot, tag per pixel or None)."""
     sh, sw = src.shape[:2]
@@ -107,6 +129,57 @@ def raycast(src, pivot, boxes, s, tol=1):
     seen[r[v], xs[v]] = True
     lost = int((alpha & ~seen).sum())
     return out, (px, opy), tag, lost
+
+
+def wall_material(tile, height):
+    """A horizontally tileable material (h x p RGB) -> one tile's face: 80 columns along the wall (one per screen
+    column of a 2:1 face) by `height` rows, resampled with wrap-around so its ends still meet."""
+    w3 = np.concatenate([tile, tile, tile], 1).astype(np.uint8)
+    big = np.asarray(Image.fromarray(w3).resize((240, height), Image.LANCZOS)).astype(np.float32)
+    return big[:, 80:160]
+
+
+def texture_walls(arr, pivot, boxes, s, tex):
+    """Paint a raised wall sprite (from raycast) with a material in world space: every visible face pixel looks up
+    `tex` (wall_material) at its position along the wall (tile-periodic, so neighbouring pieces and both sides of a
+    corner continue the same courses) and its height. The +v face is lit, the +u face a step darker, the top darker
+    still; a light lip on the top edge, dark corner lines and a little occlusion at the foot."""
+    oh, sw = arr.shape[:2]
+    px, py = pivot
+    X = (np.arange(sw) + 0.5 - px)[None, :].repeat(oh, 0)
+    Y = (np.arange(oh) + 0.5 - py)[:, None].repeat(sw, 1)
+    d = X / 80.0
+    best = np.full((oh, sw), -np.inf)
+    face = np.full((oh, sw), -1, np.int8)
+    top = np.zeros((oh, sw))
+    for (u0, u1, v0, v1, h, _) in boxes:
+        lo = np.maximum.reduce([2 * u0 - d, 2 * v0 + d, Y / 40.0])
+        c = np.stack([2 * u1 - d, 2 * v1 + d, (Y + s * h) / 40.0])
+        hi = c.min(0)
+        hit = (lo <= hi) & (hi > best)
+        best[hit] = hi[hit]
+        face[hit] = c.argmin(0)[hit]
+        top[hit] = s * h
+    op = (arr[..., 3] > 0) & (face >= 0)
+    t = np.where(op, best, 0)
+    u, v, z = (t + d) / 2, (t - d) / 2, 40 * t - Y
+    th, tw = tex.shape[:2]
+    along = np.where(face == 0, v, u)
+    col = np.floor(np.mod(along, 1.0) * tw).astype(int) % tw
+    row = np.clip(np.floor((top - z) / np.maximum(top, 1) * th), 0, th - 1).astype(int)
+    tcol = np.floor(np.mod(u, 1.0) * tw).astype(int) % tw   # the cap: a darker read of the same stone
+    trow = np.floor(np.mod(v, 1.0) * tw).astype(int) % th
+    rgb = np.where((face == 2)[..., None], tex[trow, tcol], tex[row, col])
+    shade = np.choose(np.clip(face, 0, 2), [0.8, 1.0, 0.62]).astype(np.float32)
+    shade *= np.where(face == 2, 1.0, 0.72 + 0.28 * np.clip(z / (0.18 * np.maximum(top, 1)), 0, 1))
+    up = np.r_[np.full((1, sw), -1, np.int8), face[:-1]]
+    shade[(face < 2) & ((up == 2) | (up < 0))] *= 1.25            # lip where a face meets the cap
+    lf = np.c_[np.full((oh, 1), -1, np.int8), face[:, :-1]]
+    rt = np.c_[face[:, 1:], np.full((oh, 1), -1, np.int8)]
+    shade[(face < 2) & (((lf != face) & (lf >= 0) & (lf < 2)) | ((rt != face) & (rt >= 0) & (rt < 2)))] *= 0.7
+    out = arr.copy()
+    out[..., :3] = np.where(op[..., None], np.clip(rgb * shade[..., None], 0, 255), arr[..., :3]).astype(np.uint8)
+    return out
 
 
 def crop(arr):
@@ -199,37 +272,21 @@ def import_pack(zpaths, pack_id):
         lst.append(rec)
 
     # ---- walls: every node / panel split into arms
+    # a pack may give its wall families tileable materials (manifest wall_materials: family -> file); those faces
+    # are painted in world space at the raised size instead of keeping the source sprite's pixels
+    mats = {f: wall_material(load({"file": p})[..., :3], int(round(128 * ZSCALE)))
+            for f, p in man.get("wall_materials", {}).items()}
     seen_px = {}
     for a in [a for a in assets if a["category"] == "walls"]:
-        fam, topo = a["wall_set"], a["topology"]
-        if topo == "directed_panel":
-            if a.get("pixel_identical_to"):
-                continue
-            d = a["orientation"]
-            mask = 10 if d in ("SE", "NW") else 5
-            cells = None
-        else:
-            mask = a["connection_mask"]
-            cells = a["footprint_cells_0_1_tile"]
+        if a["topology"] == "directed_panel" and a.get("pixel_identical_to"):
+            continue
+        fam = a["wall_set"]
+        mask, bx = wall_boxes(a)
         src = load(a)
-        h = a["height_px"]
-        if cells is None:
-            # panels: split along the axis like a straight node
-            tags_of = lambda u, v: ("SE" if u > 0 else "NW") if mask == 10 else ("SW" if v > 0 else "NE")
-            bx = []
-            for k in range(10):
-                a0 = -0.5 + k * 0.1
-                b = span_box(d, a0, a0 + 0.1, -0.1, 0.1, h, None)
-                cu, cv = (b[0] + b[1]) / 2, (b[2] + b[3]) / 2
-                bx.append(b[:5] + (tags_of(cu, cv),))
-        else:
-            bx = []
-            for i, j in cells:
-                cu, cv = (i + 0.5) / 10, (j + 0.5) / 10
-                t = "c" if abs(cu) < 0.1 and abs(cv) < 0.1 else "NE" if cv < -0.1 else "SW" if cv > 0.1 else "SE" if cu > 0.1 else "NW"
-                bx.append(box(i / 10, (i + 1) / 10, j / 10, (j + 1) / 10, h, t))
         arr, piv, tags, lost = raycast(src, a["pivot_px"], bx, ZSCALE)
         lost_report.append((a["id"], lost))
+        if fam in mats:
+            arr = texture_walls(arr, piv, bx, ZSCALE, mats[fam])
         key = arr.tobytes()
         if key in seen_px:
             continue

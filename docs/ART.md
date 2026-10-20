@@ -276,7 +276,14 @@ barrier joins at game zoom before merging.
 **Castle Keep:** [CASTLE_KEEP.md](CASTLE_KEEP.md) documents its 160×80 floor
 mask, generated source pack, wall-hanging views, and 23 rotating room layouts.
 Run `python tools/castlekeeppack.py` then `python tools/biomepack.py castle_keep`
-to rebuild its source art and runtime atlases.
+to rebuild its source art and runtime atlases. Its walls are not pasted flat: each family's material swatch is
+cut into a horizontally tileable strip (a minimum-error seam along the mortar, painted pixels only;
+`WALL_MATERIALS` in `castlekeeppack.py`, stored as `materials/<family>.png` and `wall_materials` in the manifest),
+and `biomepack.texture_walls` paints it onto the raised wall faces in world space, so courses follow the 2:1 slope,
+run on from piece to piece and wrap corners. Runs meeting at a plain corner share a family (`map.buildWalls`).
+Arches and doors are painted pieces from the Catacombs and Cathedral packs (`ARCH_SOURCES`, `DOOR_SOURCES`) with
+their stone (low-saturation pixels) shifted onto a keep material by `recolor_stone`; wood, rust and bronze keep their
+colours.
 
 ## Iso alignment fixes (`tools/isofix.py`, October 18, 2026)
 
