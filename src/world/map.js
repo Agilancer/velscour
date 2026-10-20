@@ -387,12 +387,14 @@ export class TileMap {
     const total = fams.reduce((t, f) => t + f[1], 0);
     const pickFam = () => { let r = rng() * total; for (const [f, w] of fams) if ((r -= w) < 0) return f; return fams[0][0]; };
     const STEP = { SE: [1, 0, 'NW'], SW: [0, 1, 'NE'] };
+    const runs = [];
     for (const v of verts.values()) {
       for (const d of ['SE', 'SW']) {
         if (!v.arms[d] || v.arms[d].run) continue;
         const back = d === 'SE' ? 'NW' : 'NE';
         if (v.arms[back] && !v.arms[back].run) continue; // start runs at their first vertex
         const run = { fam: pickFam(), vari: Math.floor(rng() * 3) };
+        runs.push(run);
         let c = v;
         while (c && c.arms[d]) {
           c.arms[d].run = run;
@@ -402,6 +404,15 @@ export class TileMap {
         }
       }
     }
+    // runs meeting at a plain corner (two arms) are one wall turning: they share a family, so a room's outline
+    // doesn't change material at every corner (tees and crossings may still)
+    const up = new Map(runs.map((r) => [r, r]));
+    const root = (r) => { while (up.get(r) !== r) r = up.get(r); return r; };
+    for (const v of verts.values()) {
+      const as = Object.values(v.arms);
+      if (as.length === 2 && as[0].run && as[1].run) up.set(root(as[1].run), root(as[0].run));
+    }
+    for (const r of runs) r.fam = root(r).fam;
     const OFF = { NE: [0, -0.25], SE: [0.25, 0], SW: [0, 0.25], NW: [-0.25, 0] };
     for (const v of verts.values()) {
       let mask = 0;

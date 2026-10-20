@@ -142,6 +142,78 @@ def make_props():
     assert len(out)==40
     return out,pivots
 
+# Wall family -> (material swatch index, repeat widths to try). Each swatch is cut into a horizontally tileable
+# strip (one tile of wall) and painted onto the faces in world space by biomepack.texture_walls, so courses follow
+# the 2:1 slope and continue from piece to piece and round corners.
+WALL_MATERIALS={'royal_ashlar':(0,range(150,200,2)),'great_hall_paneling':(8,range(124,140)),
+  'armory_ironstone':(5,range(206,228)),'chapel_carving':(4,range(122,142)),'underkeep_brick':(3,range(150,200,2))}
+
+def swatch(k,pad=5):
+    """Swatch k (row-major) of the 5x2 wall material sheet, float RGB, its painted border trimmed."""
+    import numpy as np
+    m=np.asarray(source_rgba('castle_keep_wall_materials_10.png').convert('RGB')).astype(np.float32)
+    H,W=m.shape[:2]; r,c=divmod(k,5)
+    return m[round(r*H/2)+pad:round((r+1)*H/2)-pad,round(c*W/5)+pad:round((c+1)*W/5)-pad]
+
+# Arches and doors are painted pieces from the Catacombs and Cathedral packs (true 2:1, carved, with real depth),
+# their stone recoloured to a Castle Keep material: name -> (pack, source design, material swatch).
+CAT_GC=[ROOT/'assets/source/biomes/Cathedral_Graveyard_Biome_Pack-1.zip',ROOT/'assets/source/biomes/Cathedral_Graveyard_Biome_Pack-2.zip']
+ARCH_SOURCES={'keep_lancet':('cat','pointed_funerary',0),'great_hall_arch':('cg','chapel_lancet',0),
+  'portcullis_arch':('cat','ironbound_segmental',5)}
+DOOR_SOURCES={'crimson_oak':('cg','cathedral_oak',0),'blackiron_gate':('cat','iron_grille',5),
+  'armory_door':('cg','sacristy_bronze',5)}
+
+def recolor_stone(img,k):
+    """Shift a painted piece's stone (its low-saturation pixels) onto material swatch k: the stone's mean brightness
+    moves to the material's and each pixel takes the material's colour at that brightness, so the painted shading
+    and carving stay exactly as drawn. Wood, rust and bronze (saturated) keep their colours."""
+    import numpy as np
+    LUM=np.array([0.299,0.587,0.114],np.float32)
+    mat=swatch(k).reshape(-1,3); ml=mat@LUM; o=np.array_split(np.argsort(ml),64)
+    rl=np.array([ml[i].mean() for i in o]); rc=np.array([mat[i].mean(0) for i in o])
+    a=np.asarray(img.convert('RGBA')).astype(np.float32); rgb,al=a[...,:3],a[...,3]>0
+    l=rgb@LUM; mx=rgb.max(2); sat=(mx-rgb.min(2))/np.maximum(mx,1)
+    w=np.clip(1-(sat-0.14)/0.16,0,1)*al
+    tl=np.clip(l+(rl.mean()*0.9-l[al&(w>0.5)].mean()),4,250)
+    idx=np.clip(np.searchsorted(rl,tl),0,len(rl)-1)
+    col=rc[idx]*(tl/np.maximum(rc[idx]@LUM,1))[...,None]
+    a[...,:3]=np.clip(rgb*(1-w[...,None])+col*w[...,None],0,255)
+    return Image.fromarray(a.astype(np.uint8),'RGBA')
+
+def tileable_material(k,widths,overlap=28,pad=5):
+    """Swatch k of the 5x2 material sheet -> a strip whose right edge runs on into its left. The repeat width and
+    start are searched for the cheapest seam; the seam is a minimum-error path down the overlap (it follows the
+    mortar), with the previous repeat's pixels left of it. Only the painted pixels are used, none are blended."""
+    import numpy as np
+    s=swatch(k,pad)
+    def seam(err):
+        cost=err.copy()
+        for y in range(1,len(cost)):
+            p=cost[y-1]; cost[y]+=np.minimum(p,np.minimum(np.r_[np.inf,p[:-1]],np.r_[p[1:],np.inf]))
+        path=[int(np.argmin(cost[-1]))]
+        for y in range(len(cost)-2,-1,-1):
+            j=path[-1]; lo=max(0,j-1); path.append(lo+int(np.argmin(cost[y,lo:j+2])))
+        return path[::-1],cost[-1].min()
+    best=None
+    for p in widths:
+        for x0 in range(overlap,s.shape[1]-p-overlap+1,3):
+            path,cst=seam(((s[:,x0+p:x0+p+overlap]-s[:,x0:x0+overlap])**2).sum(2))
+            if best is None or cst<best[0]: best=(cst,p,x0,path)
+    _,p,x0,path=best
+    t=s[:,x0:x0+p].copy()
+    for y,j in enumerate(path): t[y,:j]=s[y,x0+p:x0+p+j]
+    return Image.fromarray(t.astype(np.uint8),'RGB')
+
+def texture_wall(path_bytes, asset, material):
+    """A Catacombs wall silhouette painted with a tileable material, as biomepack does at the raised size."""
+    import numpy as np, sys
+    sys.path.insert(0,str(ROOT/'tools'))
+    from biomepack import wall_boxes, wall_material, texture_walls
+    src=np.asarray(Image.open(io.BytesIO(path_bytes)).convert('RGBA'))
+    _,bx=wall_boxes(asset)
+    tex=wall_material(np.asarray(material),asset['height_px'])
+    return Image.fromarray(texture_walls(src,asset['pivot_px'],bx,1.0,tex),'RGBA')
+
 def apply_material(path_bytes, material):
     src=Image.open(io.BytesIO(path_bytes)).convert('RGBA')
     alpha=src.getchannel('A')
@@ -171,6 +243,7 @@ def wall_hangings():
 
 def build():
     mask=make_mask(); floors=floor_tiles(mask); mats=make_materials(); props,prop_pivots=make_props()
+    wallmats={f:tileable_material(k,w) for f,(k,w) in WALL_MATERIALS.items()}
     source=ZipFile(CAT,'r'); names=source.namelist(); root=next(n.rsplit('manifest.json',1)[0] for n in names if n.endswith('manifest.json'))
     man=json.loads(source.read(root+'manifest.json'))
     orig=man['assets']; floor_i=wall_i=arch_i=door_i=prop_i=0
@@ -194,16 +267,10 @@ def build():
                 fi=oldfamilies.index(old)
                 a['wall_set']=WALLS[fi];a['name']=WALLS[fi]+'_'+oldtop
                 a['id']=f'wall_{fi+1:02d}_{a.get("connection_mask",0):02d}_{idx:03d}_{oldtop}'
-                oldbytes=source.read(root+rel); img=apply_material(oldbytes,mats[fi*2+(idx%2)])
+                img=texture_wall(source.read(root+rel),a,wallmats[WALLS[fi]])
                 a['file']=f'sprites/walls/{a["id"]}.png'
-            elif category=='arches':
-                oldname=a['arch_design']; fi=list(dict.fromkeys(x['arch_design'] for x in orig if x['category']=='arches')).index(oldname)
-                name=ARCHES[fi]; a['arch_design']=name;a['name']=name+'_'+a['orientation'];a['id']=f'arch_{fi+1:02d}_{a["orientation"]}'
-                a['file']=f'sprites/arches/{a["id"]}.png';img=apply_material(source.read(root+rel),mats[(fi+1)*2])
-            elif category=='doors':
-                oldname=a['door_design']; fi=list(dict.fromkeys(x['door_design'] for x in orig if x['category']=='doors')).index(oldname)
-                name=DOORS[fi];a['door_design']=name;a['name']=name+'_'+a['orientation']+'_'+a['state'];a['id']=f'door_{fi+1:02d}_{a["orientation"]}_{a["state"]}'
-                a['file']=f'sprites/doors/{a["id"]}.png';img=apply_material(source.read(root+rel),mats[(fi*2+3)%len(mats)])
+            elif category in ('arches','doors'):
+                continue  # replaced below by ARCH_SOURCES / DOOR_SOURCES
             elif category=='scatter':
                 i=prop_i;prop_i+=1;name=PROP_NAMES[i]
                 img=props[i]
@@ -219,11 +286,33 @@ def build():
             a['filter']='nearest';a['alpha']='preserved';a['animation']=False
             outassets.append(a);pixels[a['file']]=data
         assert (floor_i,wall_i,arch_i,door_i,prop_i)==(60,100,0,0,40),(floor_i,wall_i,arch_i,door_i,prop_i)
+        packs={'cat':[CAT],'cg':CAT_GC}
+        for cat,key,sources,names in [('arches','arch_design',ARCH_SOURCES,ARCHES),('doors','door_design',DOOR_SOURCES,DOORS)]:
+            for fi,name in enumerate(names):
+                pk,design,k=sources[name]
+                zs=[ZipFile(p) for p in packs[pk]]; files={n:z for z in zs for n in z.namelist()}
+                proot=next(n for n in files if n.endswith('manifest.json')).rsplit('manifest.json',1)[0]
+                pman=json.loads(files[proot+'manifest.json'].read(proot+'manifest.json'))
+                for a0 in [x for x in pman['assets'] if x['category']==cat and x[key]==design]:
+                    a=dict(a0); a[key]=name
+                    tail=a['orientation']+('_'+a['state'] if cat=='doors' else '')
+                    a['name']=name+'_'+tail; a['id']=f'{cat[:-1] if cat=="arches" else "door"}_{fi+1:02d}_{tail}'
+                    a['id']=a['id'].replace('arche_','arch_')
+                    a['source_pack']=pk; a['source_design']=design
+                    img=recolor_stone(Image.open(io.BytesIO(files[proot+a0['file']].read(proot+a0['file']))),k)
+                    a['file']=f'sprites/{cat}/{a["id"]}.png'; data=write_png(a['file'],img)
+                    bbox=img.getchannel('A').getbbox(); a['alpha_bounds_px']=list(bbox) if bbox else [0,0,0,0]
+                    a['pixel_sha256']=hashlib.sha256(data).hexdigest(); a.pop('atlas',None)
+                    outassets.append(a); pixels[a['file']]=data
+                for z in zs: z.close()
         # Correct count from category coverage, independent of loop ordering.
         categories={c:[a for a in outassets if a['category']==c] for c in ('floors','walls','arches','doors','scatter')}
         for c,n in [('arches',12),('doors',24)]: assert len(categories[c])==n
         # Pack-format metadata and top-level categories.
         man['pack']='Castle Keep';man['version']='1.0';man['assets']=outassets
+        man['wall_materials']={}
+        for f,im in wallmats.items():
+            man['wall_materials'][f]=f'materials/{f}.png'; write_png(f'materials/{f}.png',im)
         man['coverage'].update({'floors':60,'certified_self_seamless_floors':10,'wall_sets':5,'wall_sprites_per_set':20,'wall_sprites':100,'arch_designs':3,'arch_frames':12,'door_designs':3,'door_frames':24,'scatter_designs':40,'total_sprite_frames':236})
         man['coverage']['wall_sets_names']=WALLS;man['coverage']['arch_design_names']=ARCHES;man['coverage']['door_design_names']=DOORS
         man['coordinate_system']['floor_raster_sample']='Copied from the Catacombs reference floor atlas; verified 6,400 opaque pixels and row widths 4,8,...,160,...,4,0.'
@@ -244,8 +333,9 @@ def build():
         contact([Image.open(io.BytesIO(pixels[a['file']])).convert('RGBA') for a in categories['scatter']],8,(192,192),'scatter.png')
         wall_items=[Image.open(io.BytesIO(pixels[a['file']])).convert('RGBA') for a in categories['walls']]
         for i,fam in enumerate(WALLS): contact([Image.open(io.BytesIO(pixels[a['file']])).convert('RGBA') for a in categories['walls'] if a['wall_set']==fam],4,(256,256),f'walls_{fam}.png')
-        contact([Image.open(io.BytesIO(pixels[a['file']])).convert('RGBA') for a in categories['arches']],4,(384,336),'arches.png')
-        contact([Image.open(io.BytesIO(pixels[a['file']])).convert('RGBA') for a in categories['doors']],4,(320,288),'doors.png')
+        cells={c:tuple(max(a['size_px'][i] for a in categories[c]) for i in (0,1)) for c in ('arches','doors')}
+        contact([Image.open(io.BytesIO(pixels[a['file']])).convert('RGBA') for a in categories['arches']],4,cells['arches'],'arches.png')
+        contact([Image.open(io.BytesIO(pixels[a['file']])).convert('RGBA') for a in categories['doors']],4,cells['doors'],'doors.png')
         # Repoint the template's contact-sheet records at Castle Keep's own sheets.
         family_indices={name:0 for name in WALLS}
         for a in categories['floors']:
@@ -258,7 +348,7 @@ def build():
             i=family_indices[a['wall_set']];family_indices[a['wall_set']]+=1
             a['atlas']={'file':f"sheets/walls_{a['wall_set']}.png",
                         'rect_px':[2+(i%4)*258,2+(i//4)*258,*a['size_px']]}
-        for category, filename, cell, cols in [('arches','arches.png',(384,336),4),('doors','doors.png',(320,288),4)]:
+        for category, filename, cell, cols in [('arches','arches.png',cells['arches'],4),('doors','doors.png',cells['doors'],4)]:
             for i,a in enumerate(categories[category]):
                 a['atlas']={'file':'sheets/'+filename,
                             'rect_px':[2+(i%cols)*(cell[0]+2),2+(i//cols)*(cell[1]+2),*a['size_px']]}
