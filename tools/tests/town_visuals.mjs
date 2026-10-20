@@ -11,6 +11,9 @@ assert.equal(townFacingFlip(-1,0),true,'west in world moves left on screen');
 assert.equal(townFacingFlip(0,1),true,'south in world moves left on screen');
 assert.equal(townFacingFlip(1,1,true),true,'pure vertical motion must not flip');
 assert.equal(townFacingFlip(-1,-1,false),false,'pure vertical motion must not flip');
+assert.equal(townFacingFlip(0.0175,0,true),false,'a slow walker heading screen-right turns right');
+assert.equal(townFacingFlip(-0.0175,0,false),true,'a slow walker heading screen-left turns left (per-frame steps are tiny)');
+assert.equal(townFacingFlip(-0.012,-0.0105,false),false,'nearly vertical steps keep the facing');
 // named frames: ten painted emotions everywhere, ten more on the Greener sheets
 assert.equal(townFrameCount('18_king'),10);
 assert.equal(townFrameCount('dog_02_hound'),10);
