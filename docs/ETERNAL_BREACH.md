@@ -37,6 +37,11 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
 - **Walkways**: a spanning tree over the islands (shortest gaps first) plus 4-6 loops, so there is more than one way
   round. Each is a 2-tile path with a slight bend, climbing at most ~2.2 levels a tile; one that would cross another
   island or walkway is dropped (a tree one retries the seed).
+- **Rounded walkway edges** (`map.rounded`, `drawRounded` in gfx/terrain.js): on walkway tiles every corner sticking
+  out into the void is cut by a curve and every notch between two tiles filled by one (drawn by the later tile beside
+  it, at its height and in its paving), with the rock faces following the curves, so diagonal walkways run smooth
+  instead of in diamond steps. Drawing only; collision is the tiles'. Walkway tiles are never redrawn over creatures
+  (their steps are a level or two), which kept the frame cost where it was.
 - **Height map** (`map.hgt`, the Mountainside's system, `CLIMB` 4 / `DROP` 10): each island has its own altitude
   (walked out along the tree from the start, 0-52 levels), gentle noise, a hop-high plateau on the medium and large
   ones (a second tier on the large), and 2-4 tall rock crags on the large ones (taken back if they cut the island).

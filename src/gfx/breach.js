@@ -105,7 +105,7 @@ export function drawNebula(ctx, W, H, camX, camY) {
  * darkening into violet haze toward its foot, a few glowing rift seams, and stalactites, roots and crystal hanging
  * below the foot (their depth comes from the tile, so neighbouring faces don't line up into a ruler edge).
  */
-export function breachUnderside(ctx, i, x0, y0, dx, dy, D, dark, quad, pat) {
+export function breachUnderside(ctx, i, x0, y0, dx, dy, D, dark, quad, pat, few = false) {
   const skew = new DOMMatrix([1, dy / dx, 0, 1, 0, 0]);
   quad(ctx, x0, y0, dx, dy, 0, D);
   pat.setTransform(skew); ctx.fillStyle = pat; ctx.fill();
@@ -113,7 +113,7 @@ export function breachUnderside(ctx, i, x0, y0, dx, dy, D, dark, quad, pat) {
   gr.addColorStop(0, 'rgba(14,6,24,0)'); gr.addColorStop(0.4, 'rgba(18,6,32,0.25)'); gr.addColorStop(1, 'rgba(12,4,24,0.62)');
   ctx.fillStyle = gr; ctx.fill();
   // stalactites and roots below the foot
-  const n = 2 + Math.floor(hash(i, 1, dark ? 3 : 4) * 3);
+  const n = few ? (hash(i, 1, 9) < 0.45 ? 1 : 0) : 2 + Math.floor(hash(i, 1, dark ? 3 : 4) * 3); // a short piece of a curve: one at most
   for (let k = 0; k < n; k++) {
     const u = (k + 0.2 + hash(i, k, 5) * 0.6) / n, w = 4 + hash(i, k, 6) * 9, len = 6 + hash(i, k, 7) ** 1.5 * 34;
     const bx = x0 + dx * u, by = y0 + dy * u + D;

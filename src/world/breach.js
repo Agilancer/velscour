@@ -309,6 +309,9 @@ function build(floor, biome, ts, ts2, seed) {
   }
   for (const b of bridges) for (const i of b.tiles) under[i] = hgt[i] - 4 - Math.round(h01(i % W, (i / W) | 0, 5) * 3);
   map.hgt = hgt; map.under = under; map.climb = CLIMB; map.drop = DROP;
+  // the walkways' edges are drawn rounded (gfx/terrain.js drawRounded)
+  map.rounded = new Uint8Array(N);
+  for (const b of bridges) for (const i of b.tiles) map.rounded[i] = 1;
 
   // ---------------------------------------------------------------- ruins: walls, doorways, arches
   const arches = [], doors = [];

@@ -93,6 +93,9 @@ export function terrainOf(map) {
     se[i] = Math.max(0, e === null ? v - foot : v - e);
     const px = (x - y) * HW, py = (x + y) * HH - v * HS;
     box[i * 4] = px - HW; box[i * 4 + 1] = py; box[i * 4 + 2] = px + HW; box[i * 4 + 3] = py + TH + Math.max(sw[i], se[i]) * HS + (map.voidFace && (s === null || e === null) ? UNDERSIDE_HANG : 0);
+    if (map.rounded && map.rounded[i]) { // its fills reach half a tile into the void beside it, with their faces
+      box[i * 4] -= HW; box[i * 4 + 2] += HW; box[i * 4 + 1] -= HH; box[i * 4 + 3] = Math.max(box[i * 4 + 3], py + TH + HH + (v - (under ? under[i] : base)) * HS + UNDERSIDE_HANG);
+    }
     order.push(i);
     if (c3) {   // the Castle's baked masonry (docs/CASTLE_3D.md): the box is its pieces' own
       const gx = (x - y) * HW, gy = (x + y) * HH;
@@ -117,7 +120,7 @@ export function terrainOf(map) {
         if (u !== null && u < v - 2 && (v - u) * HS > (a + b - 1) * HH) hides = true;
       }
     }
-    if (hides) occ.push(i);
+    if (hides && !(map.rounded && map.rounded[i])) occ.push(i); // a walkway's steps (a level or two) hide no one worth a redraw
   }
   order.sort((a, b) => ((a % w) + ((a / w) | 0)) - ((b % w) + ((b / w) | 0)) || a - b);
   // occluders bucketed by 256 world px screen cells, for the props' lookups (occludersOfRect)
@@ -266,6 +269,7 @@ export function drawColumn(ctx, world, i, floorEntry, dress = null, over = false
   const f = floorEntry(world, map.v[i]);
   const art = map.faceArt && map.faceArt[i];
   const fb = art === 5 ? soilOf(f) : f; // the Castle's river banks: earth over rock
+  if (map.rounded && map.rounded[i]) return drawRounded(ctx, map, T, R, f, i, x, y, v, px, py);
   const voidSW = y + 1 >= map.h || map.t[i + w] !== 1, voidSE = x + 1 >= w || map.t[i + 1] !== 1;
   if (T.sw[i] && !(art && drawCastleFace(ctx, map, i, px - HW, py + HH, HW, HH, T.sw[i], false, v, HS))) {
     if (voidSW && map.voidFace) breachUnderside(ctx, i, px - HW, py + HH, HW, HH, T.sw[i] * HS, false, quad, R.pl);
@@ -320,6 +324,79 @@ export function drawColumn(ctx, world, i, floorEntry, dress = null, over = false
     if (T.sw[i]) { ctx.beginPath(); ctx.moveTo(px - HW, py + HH + 0.5); ctx.lineTo(px, py + TH + 0.5); ctx.stroke(); }
     if (T.se[i]) { ctx.beginPath(); ctx.moveTo(px, py + TH + 0.5); ctx.lineTo(px + HW, py + HH + 0.5); ctx.stroke(); }
   }
+}
+
+// ------------------------------------------------------------------ rounded columns (the Breach's walkways)
+// A walkway running across the grid's diagonal is a staircase of diamonds. On `map.rounded` tiles every corner that
+// sticks out into the void is cut by a curve, and every notch between two of them is filled by one (drawn by the later
+// of the two tiles beside it, at its height, in its paving), so the walkway's edge runs smooth. Collision is unchanged.
+const RK = 0.5, RC = 0.45, RS = 7;   // cut along each edge (fraction), the curve's pull toward the corner, samples
+// the 2x2 block round each top-diamond vertex (T, R, B, L): the edge neighbour before it, the one after it, the diagonal
+const AROUND = [[[-1, 0], [0, -1], [-1, -1]], [[0, -1], [1, 0], [1, -1]], [[1, 0], [0, 1], [1, 1]], [[0, 1], [-1, 0], [-1, 1]]];
+const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+function curve(a, b, v) {
+  const c = lerp(lerp(a, b, 0.5), v, RC), out = [];
+  for (let k = 1; k < RS; k++) { const t = k / RS, u = 1 - t; out.push([u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]]); }
+  return out;
+}
+/** The face hanging under segment p-q of a shape whose inside is toward `inside`, if the camera sees it. */
+function hang(ctx, R, i, k, p, q, inside, D, voidBelow, f) {
+  let [a, b] = p[0] <= q[0] ? [p, q] : [q, p];
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  if (dx < 0.01 || dx * (inside[1] - a[1]) - dy * (inside[0] - a[0]) >= 0) return; // the inside is below: a back face
+  const dark = dy < 0;
+  if (voidBelow) breachUnderside(ctx, i * 16 + k, a[0], a[1], dx, dy, D, dark, quad, dark ? R.pd : R.pl, dx < HW * 0.6);
+  else face(ctx, R, f, i, a[0], a[1], dx, dy, D / HS, dark, false);
+}
+function drawRounded(ctx, map, T, R, f, i, x, y, v, px, py) {
+  const w = map.w, h = map.h, ix = (xx, yy) => yy * w + xx;
+  const floor = (xx, yy) => xx >= 0 && yy >= 0 && xx < w && yy < h && map.t[ix(xx, yy)] === 1;
+  const V = [[px, py], [px + HW, py + HH], [px, py + TH], [px - HW, py + HH]], C = [px, py + HH];
+  const deep = (map.under ? v - map.under[i] : Math.max(T.sw[i], T.se[i])) * HS;
+  // the top's outline: the diamond, its void corners cut by curves; tag = the edge a segment runs along (-1: a curve)
+  const pts = [], tag = [];
+  for (let k = 0; k < 4; k++) {
+    const [n1, n2, d] = AROUND[k];
+    if (!floor(x + n1[0], y + n1[1]) && !floor(x + n2[0], y + n2[1]) && !floor(x + d[0], y + d[1])) {
+      const a = lerp(V[k], V[(k + 3) % 4], RK), b = lerp(V[k], V[(k + 1) % 4], RK);
+      pts.push(a); tag.push(-1);
+      for (const c of curve(a, b, V[k])) { pts.push(c); tag.push(-1); }
+      pts.push(b); tag.push(k);
+    } else { pts.push(V[k]); tag.push(k); }
+  }
+  // the notches beside this tile it fills: [void tile offset, the fill's outline]
+  const fills = [];
+  for (let k = 0; k < 4; k++) {
+    const [n1, n2, d] = AROUND[k], dx = x + d[0], dy = y + d[1];
+    if (!floor(dx, dy)) continue;
+    const f1 = floor(x + n1[0], y + n1[1]), f2 = floor(x + n2[0], y + n2[1]);
+    if (f1 === f2 || dx + dy > x + y || (dx + dy === x + y && ix(dx, dy) > i)) continue;
+    const before = V[(k + 3) % 4], after = V[(k + 1) % 4], P = V[k];
+    // the void one's two edges at this vertex: the one it shares with this tile, the one it shares with the diagonal
+    const [q, e1, e2] = !f1 ? [n1, before, after] : [n2, after, before];
+    const a = lerp(P, e1, RK), b = [P[0] - (e2[0] - P[0]) * RK, P[1] - (e2[1] - P[1]) * RK];
+    fills.push([q, [P, a, ...curve(a, b, P), b]]);
+  }
+  // faces: the tile's (straight edges at their own depth, curves into the void), then the fills' curves
+  const n = pts.length;
+  for (let j = 0; j < n; j++) {
+    const p = pts[j], q = pts[(j + 1) % n], t = tag[j];
+    if (t === 1 || t === 2) {
+      const nx = t === 1 ? x + 1 : x, ny = t === 1 ? y : y + 1, D = (t === 1 ? T.se[i] : T.sw[i]) * HS;
+      if (D > 0) hang(ctx, R, i, j, p, q, C, D, !floor(nx, ny) && map.voidFace, f);
+    } else if (t === -1 && deep > 0) hang(ctx, R, i, j, p, q, C, deep, map.voidFace, f);
+  }
+  for (const [, poly] of fills) for (let j = 1; j < poly.length - 1; j++) if (deep > 0) hang(ctx, R, i, 20 + j, poly[j], poly[j + 1], poly[0], deep, map.voidFace, f);
+  // the tops: this tile's paving clipped to its outline, and moved into each notch it fills
+  const top = (poly, ox, oy) => {
+    ctx.save(); ctx.beginPath(); ctx.moveTo(poly[0][0], poly[0][1]);
+    for (let j = 1; j < poly.length; j++) ctx.lineTo(poly[j][0], poly[j][1]);
+    ctx.closePath(); ctx.clip();
+    ctx.drawImage(f.img, f.sx, f.sy, f.w, f.h, px - HW - 0.6 + ox, py - 0.6 + oy, TW + 1.2, TH + 1.2);
+    ctx.restore();
+  };
+  top(pts, 0, 0);
+  for (const [q, poly] of fills) top(poly, (q[0] - q[1]) * HW, (q[0] + q[1]) * HH);
 }
 
 /** Every column overlapping the world px rect, back to front (the floor chunk bake and its fallback). */
