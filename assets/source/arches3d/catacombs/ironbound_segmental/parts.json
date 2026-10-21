@@ -1,0 +1,15 @@
+{
+ "note": "Ironbound segmental: square piers with iron bands and a hanging ring and chain, a segmental voussoir arch strapped in iron with a riveted keystone plate. (tools/arch3d.py; elevation px from the top left, half-depths in native px, parts in order, mirrored about the centre)",
+ "mirror": true,
+ "parts": [
+  {"op": "fill", "half": 12, "amp": 3, "what": "wall body"},
+  {"op": "portal", "width": 32, "half": 17, "amp": 3, "what": "voussoir ring"},
+  {"op": "fill", "rect": [104, 46, 136, 88], "add": 3, "what": "keystone strap"},
+  {"op": "fill", "rect": [30, 58, 48, 98], "add": 2, "what": "iron straps on the ring"},
+  {"op": "fill", "rect": [4, 95, 58, 192], "half": 21, "amp": 3, "what": "pier"},
+  {"op": "fill", "rect": [0, 90, 60, 102], "half": 24, "amp": 2, "what": "iron impost band"},
+  {"op": "fill", "rect": [2, 150, 60, 162], "add": 2, "what": "iron band"},
+  {"op": "fill", "rect": [16, 118, 42, 182], "add": 3, "amp": 5, "what": "ring and chain"},
+  {"op": "fill", "rect": [2, 175, 60, 192], "half": 24, "amp": 2, "what": "plinth"}
+ ]
+}

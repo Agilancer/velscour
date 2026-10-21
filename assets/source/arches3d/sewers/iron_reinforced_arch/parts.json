@@ -1,0 +1,15 @@
+{
+ "note": "Iron-reinforced: square piers with riveted iron bands and a hanging ring, a segmental ring strapped in iron with a riveted plate and ring at the crown. (tools/arch3d.py; elevation px from the top left, half-depths in native px, parts in order, mirrored about the centre)",
+ "mirror": true,
+ "parts": [
+  {"op": "fill", "half": 12, "amp": 3, "what": "wall body"},
+  {"op": "portal", "width": 32, "half": 17, "amp": 3, "what": "stone ring"},
+  {"op": "fill", "rect": [104, 48, 137, 90], "add": 4, "amp": 5, "what": "crown plate and ring"},
+  {"op": "fill", "rect": [38, 58, 52, 98], "add": 2, "what": "iron straps on the ring"},
+  {"op": "fill", "rect": [2, 98, 64, 192], "half": 21, "amp": 3, "what": "pier"},
+  {"op": "fill", "rect": [0, 96, 66, 110], "half": 24, "amp": 2, "what": "iron impost band"},
+  {"op": "fill", "rect": [2, 150, 64, 164], "add": 2, "what": "iron band"},
+  {"op": "fill", "rect": [16, 124, 40, 180], "add": 3, "amp": 5, "what": "ring and chain"},
+  {"op": "fill", "rect": [0, 176, 66, 192], "half": 24, "amp": 2, "what": "plinth"}
+ ]
+}

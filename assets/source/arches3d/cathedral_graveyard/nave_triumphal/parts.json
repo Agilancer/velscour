@@ -1,0 +1,20 @@
+{
+ "note": "Nave triumphal: clustered buttress towers with statues in niches and crocketed pinnacles, deep stepped archivolts under a crocketed gable with tracery, thin crosses on the apex and pinnacles. (tools/arch3d.py; elevation px from the top left, half-depths in native px, parts in order, mirrored about the centre)",
+ "mirror": true,
+ "parts": [
+  {"op": "fill", "half": 12, "amp": 4, "what": "wall body, tracery spandrels"},
+  {"op": "knobs", "rect": [70, 70, 330, 160], "max": 3.5, "what": "crockets and small crosses on the gable"},
+  {"op": "fill", "poly": [[200, 78], [80, 152], [320, 152]], "half": 13, "rim": 7, "rimHalf": 17, "amp": 3, "what": "gable, raised coping"},
+  {"op": "fill", "poly": [[200, 96], [146, 142], [254, 142]], "half": 10, "amp": 7, "what": "tympanum tracery, recessed"},
+  {"op": "portal", "minY": 120, "width": 46, "in": 14, "out": 26, "steps": 6, "amp": 3, "what": "archivolts and jambs, stepping in"},
+  {"op": "add", "shafts": [[86, 95], [96, 104], [105, 113]], "rect": [84, 250, 115, 355], "bulge": 4, "what": "jamb shafts"},
+  {"op": "fill", "rect": [4, 150, 84, 400], "half": 26, "amp": 3, "what": "buttress towers"},
+  {"op": "add", "shafts": [[8, 24], [56, 64], [64, 80]], "rect": [4, 160, 84, 350], "bulge": 5, "what": "tower shafts"},
+  {"op": "fill", "rect": [28, 178, 54, 345], "half": 17, "amp": 10, "what": "statue niches, deep"},
+  {"op": "fill", "rect": [2, 350, 86, 400], "half": 30, "amp": 2, "what": "plinth"},
+  {"op": "square", "rect": [4, 70, 84, 156], "open": 3, "max": 16, "knobMax": 4, "what": "pinnacles"},
+  {"op": "thin", "rect": [30, 72, 50, 94], "half": 1.8, "what": "pinnacle finial"},
+  {"op": "thin", "rect": [60, 80, 80, 98], "half": 1.8, "what": "pinnacle finial"},
+  {"op": "thin", "rect": [186, 42, 214, 80], "half": 2, "what": "apex cross"}
+ ]
+}

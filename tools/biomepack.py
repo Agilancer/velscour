@@ -307,9 +307,18 @@ def import_pack(zpaths, pack_id):
         for k in range(10 * n):
             a0 = -n / 2 + k * 0.1
             bx.append(span_box(d, a0, a0 + 0.1, -0.1, 0.1, h, k // 5))
-        arr, piv, tags, lost = raycast(load(a), a["pivot_px"], bx, ZSCALE)
-        lost_report.append((a["id"], lost))
-        groups = {g: [i for i, b in enumerate(bx) if b[5] == g] for g in range(2 * n)}
+        baked = os.path.join(ROOT, "assets", "source", "arches3d", pack_id, a["arch_design"])
+        if os.path.exists(os.path.join(baked, d + ".png")):
+            # a 3D model baked by tools/arch3d_bake.js: already raised, tagged by slice (1 + index, 0 = empty)
+            arr = np.array(Image.open(os.path.join(baked, d + ".png")).convert("RGBA"))
+            tags = np.array(Image.open(os.path.join(baked, d + "_tags.png")).convert("RGBA"))[..., 0].astype(np.int32) - 1
+            tags[arr[..., 3] == 0] = -1
+            piv = json.load(open(os.path.join(baked, "bake.json")))[d]["pivot"]
+            groups = {g: [g] for g in range(2 * n)}
+        else:
+            arr, piv, tags, lost = raycast(load(a), a["pivot_px"], bx, ZSCALE)
+            lost_report.append((a["id"], lost))
+            groups = {g: [i for i, b in enumerate(bx) if b[5] == g] for g in range(2 * n)}
         sl = []
         for g, img, ox, oy in pieces(arr, piv, tags, groups):
             put(sl, round(-n / 2 + 0.25 + g * 0.5, 2), img, ox, oy)

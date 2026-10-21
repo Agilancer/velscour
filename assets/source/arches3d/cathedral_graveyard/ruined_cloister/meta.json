@@ -1,0 +1,10 @@
+{
+ "pack": "cathedral_graveyard",
+ "design": "ruined_cloister",
+ "span": 5,
+ "w": 400,
+ "h": 368,
+ "half": 8.0,
+ "depthStep": 0.25,
+ "pixels": 62893
+}

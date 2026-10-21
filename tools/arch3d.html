@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arch 3D</title>
+<!-- Arch models (tools/arch3d.py extract) in three.js: an orbit viewer, and bake() for tools/arch3d_bake.js.
+     Open http://localhost:8123/tools/arch3d.html?pack=cathedral_graveyard&design=chapel_lancet (add &iso=SE for the
+     game camera). Only this tool uses three.js; the game draws the baked sprites. -->
+<style>
+  html, body { margin: 0; height: 100%; background: #1c1b22; color: #ccc; font: 13px sans-serif; overflow: hidden; }
+  #hud { position: fixed; left: 8px; top: 8px; }
+  canvas { display: block; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="hud"></div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const ZSCALE = 1.6;                       // tools/biomepack.py: architecture is raised 1.6x
+const H_PX = Math.SQRT2;                  // native px along/across -> world (a tile is 80 px and 113.14 world)
+const V_PX = ZSCALE / Math.cos(Math.PI / 6); // native px up -> world, so the 30 degree camera shows it ZSCALE px tall
+const DIRS = { NE: [0, -1], SE: [1, 0], SW: [0, 1], NW: [-1, 0] };
+const P = new URLSearchParams(location.search);
+// Light fixed to the camera (every view is lit the same way): from the upper left, a little in front.
+const LOOK = { amb: 0.62, sun: 1.05, sky: 0.25, sunDir: [-0.55, 0.85, 0.45], shadow: true };
+
+const img = (src) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+function pixels(i) {
+  const c = document.createElement('canvas'); c.width = i.width; c.height = i.height;
+  const x = c.getContext('2d'); x.drawImage(i, 0, 0); return x.getImageData(0, 0, i.width, i.height).data;
+}
+// upward faces take the art softened (premultiplied blur, so the clear surround doesn't darken it): weathered stone
+function soft(i, r) {
+  const c = document.createElement('canvas'); c.width = i.width; c.height = i.height;
+  const x = c.getContext('2d'); x.filter = `blur(${r}px)`; x.drawImage(i, 0, 0); return c;
+}
+function tex(i) {
+  const t = new THREE.Texture(i); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter;
+  t.generateMipmaps = false; t.flipY = false; t.needsUpdate = true; return t;
+}
+
+/** Build the model from its elevations + depth map (tools/arch3d.py): every pixel is a solid column from its front
+ *  depth to its back depth. Neighbours within SMOOTH px share corners (slopes: round shafts shade round); bigger jumps
+ *  become vertical step walls, and the silhouette is walled from front to back. Walls take the art wrapped round from
+ *  the face they belong to (a texel further in for every px deeper), as a carved block shows its carving on each face.
+ *  Local mesh units are native px: x along (centre 0), y up from the ground, z across (+ = the front art's side). */
+const SMOOTH = 2.0, SEG = 1.5, RUN_WIN = 5, WRAP = 12;
+async function loadArch(pack, design) {
+  const base = `../assets/source/arches3d/${pack}/${design}/`;
+  const meta = await (await fetch(base + 'meta.json')).json();
+  const [fi, bi, di] = await Promise.all(['front.png', 'back.png', 'depth.png'].map((f) => img(base + f)));
+  const W = meta.w, H = meta.h, dep = pixels(di), al = pixels(fi), step = meta.depthStep || 0.125;
+  const IN = new Uint8Array(W * H);
+  for (let k = 0; k < W * H; k++) IN[k] = al[k * 4 + 3] > 0 ? 1 : 0;
+  const inside = (i, j) => i >= 0 && j >= 0 && i < W && j < H && IN[j * W + i] === 1;
+  const D = [0, 1].map((s) => { const d = new Float32Array(W * H); for (let k = 0; k < W * H; k++) d[k] = dep[k * 4 + s] * step; return d; });
+  // runs of inside pixels in each direction (to keep wrapped texels on the same piece)
+  const run = (dx, dy) => {
+    const r = new Int16Array(W * H);
+    const xs = dx > 0 ? [...Array(W).keys()].reverse() : [...Array(W).keys()], ys = dy > 0 ? [...Array(H).keys()].reverse() : [...Array(H).keys()];
+    for (const j of ys) for (const i of xs) if (inside(i, j)) r[j * W + i] = 1 + (inside(i + dx, j + dy) ? r[(j + dy) * W + i + dx] : 0);
+    return r;
+  };
+  // ...steadied across the face (the least run within RUN_WIN px along the edge), so a side face wraps the same shafts
+  // on every row instead of jumping wherever a capital or base makes one row's run longer
+  const steady = (r, ax, ay) => {
+    const o = new Int16Array(W * H);
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (r[j * W + i]) {
+      let m = r[j * W + i];
+      for (let t = -RUN_WIN; t <= RUN_WIN; t++) { const x = i + ax * t, y = j + ay * t; if (inside(x, y) && r[y * W + x]) m = Math.min(m, r[y * W + x]); }
+      o[j * W + i] = m;
+    }
+    return o;
+  };
+  const RUN = { '-1,0': steady(run(-1, 0), 0, 1), '1,0': steady(run(1, 0), 0, 1), '0,-1': steady(run(0, -1), 1, 0), '0,1': steady(run(0, 1), 1, 0) };
+  // corner depths per pixel and side: TL, TR, BL, BR
+  const CO = [[0, 0], [1, 0], [0, 1], [1, 1]];
+  const C = D.map((d) => {
+    const c = new Float32Array(W * H * 4);
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (inside(i, j)) {
+      const own = d[j * W + i];
+      CO.forEach(([ox, oy], k) => {
+        let s = 0, n = 0;
+        for (const [a, b] of [[i + ox - 1, j + oy - 1], [i + ox, j + oy - 1], [i + ox - 1, j + oy], [i + ox, j + oy]])
+          if (inside(a, b) && Math.abs(d[b * W + a] - own) <= SMOOTH) { s += d[b * W + a]; n++; }
+        c[(j * W + i) * 4 + k] = s / n;
+      });
+    }
+    return c;
+  });
+  // each side's height field blurred: walls are shaded with its contour normal, not their pixel step's, so a stepped
+  // diagonal (a gable rake, an archivolt order) lights as one slope instead of a ladder of lit treads and dark risers
+  const SM = D.map((d) => {
+    const k = [0.0545, 0.2442, 0.4026, 0.2442, 0.0545], a = new Float32Array(W * H), b = new Float32Array(W * H);
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+      let v = 0; for (let t = -2; t <= 2; t++) { const x = i + t; if (inside(x, j)) v += k[t + 2] * d[j * W + x]; } a[j * W + i] = v;
+    }
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+      let v = 0; for (let t = -2; t <= 2; t++) { const y = j + t; if (y >= 0 && y < H) v += k[t + 2] * a[y * W + i]; } b[j * W + i] = v;
+    }
+    return b;
+  });
+  const grad = (s, i, j) => {
+    const h = (x, y) => SM[s][Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))];
+    return [h(i + 1, j) - h(i - 1, j), h(i, j + 1) - h(i, j - 1)];
+  };
+  const geo = [0, 1, 2, 3].map(() => ({ pos: [], uv: [], nrm: [] }));   // front, back, front tops, back tops
+  const tri = (g, p0, p1, p2, out, u0, u1, u2, nrm) => {
+    const e1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]], e2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
+    let n = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+    if (n[0] * out[0] + n[1] * out[1] + n[2] * out[2] < 0) { [p1, p2, u1, u2] = [p2, p1, u2, u1]; n = n.map((c) => -c); }   // wind along `out`
+    const l = Math.hypot(...n) || 1; n = nrm || n.map((c) => c / l);
+    g.pos.push(...p0, ...p1, ...p2); g.uv.push(...u0, ...u1, ...u2); g.nrm.push(...n, ...n, ...n);
+  };
+  const V = (ci, cj, z) => [ci - W / 2, H - cj, z];
+  // a wall on side s along the edge (e0 -> e1, grid corners), from depths lo to hi (hi = the higher piece's),
+  // facing out of the piece whose pixel is (i, j); wrapped texels walk in along (dx, dy)
+  const wall = (s, e0, e1, lo, hi, i, j, dx, dy) => {
+    const sg = s ? -1 : 1, depthSpan = Math.max(hi[0] - lo[0], hi[1] - lo[1]);
+    if (depthSpan < 0.01) return;
+    const n = Math.max(1, Math.ceil(depthSpan / SEG)), out = [-dx, dy, 0], lim = RUN[`${dx},${dy}`][j * W + i] - 1;
+    // shading normal: down the blurred height field at the edge (pixel y is down, model y up), else the step's own
+    const [ga, gb] = [grad(s, i, j), grad(s, i - dx, j - dy)], gx = -(ga[0] + gb[0]), gy = ga[1] + gb[1], gl = Math.hypot(gx, gy);
+    const nrm = gl > 0.05 && gx * out[0] + gy * out[1] > 0 ? [gx / gl, gy / gl, 0] : out, g = geo[s + (nrm[1] > 0.35 ? 2 : 0)];
+    for (let k = 0; k < n; k++) {
+      const t0 = k / n, t1 = (k + 1) / n, z = (t, e) => sg * (lo[e] + (hi[e] - lo[e]) * t);
+      // tops (walls facing up) take only the first rows of the face, stretched: a ledge, not the carving below it
+      // sides wrap the outermost WRAP px of the face over and over (a side face shows more of the same shafts and
+      // stones, not a squeezed copy of the carving from deep inside the piece)
+      const deep = Math.floor((1 - (k + 0.5) / n) * depthSpan * (dy > 0 ? 0.12 : 1));
+      const into = Math.min(lim, Math.min(lim + 1, WRAP) > 2 ? deep % Math.min(lim + 1, WRAP) : deep);
+      const u = [(i + dx * into + 0.5) / W, (j + dy * into + 0.5) / H];
+      const a0 = V(...e0, z(t0, 0)), b0 = V(...e1, z(t0, 1)), a1 = V(...e0, z(t1, 0)), b1 = V(...e1, z(t1, 1));
+      tri(g, a0, b0, b1, out, u, u, u, nrm); tri(g, a0, b1, a1, out, u, u, u, nrm);
+    }
+  };
+  for (let s = 0; s < 2; s++) {
+    const sg = s ? -1 : 1, c = C[s], g = geo[s];
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (inside(i, j)) {
+      const q = (j * W + i) * 4, P = (k) => V(i + CO[k][0], j + CO[k][1], sg * c[q + k]), U = (k) => [(i + CO[k][0]) / W, (j + CO[k][1]) / H];
+      tri(g, P(0), P(2), P(1), [0, 0, sg], U(0), U(2), U(1)); tri(g, P(1), P(2), P(3), [0, 0, sg], U(1), U(2), U(3));
+      // edges: [neighbour, my corner indices, its corner indices, edge corners, inward step (into me)]
+      for (const [ni, nj, mine, its, e0, e1, dx, dy] of [
+        [i - 1, j, [0, 2], [1, 3], [i, j], [i, j + 1], 1, 0], [i + 1, j, [1, 3], [0, 2], [i + 1, j], [i + 1, j + 1], -1, 0],
+        [i, j - 1, [0, 1], [2, 3], [i, j], [i + 1, j], 0, 1], [i, j + 1, [2, 3], [0, 1], [i, j + 1], [i + 1, j + 1], 0, -1]]) {
+        const hi = mine.map((k) => c[q + k]);
+        if (!inside(ni, nj)) { wall(s, e0, e1, [0, 0], hi, i, j, dx, dy); continue; }
+        const lo = its.map((k) => c[(nj * W + ni) * 4 + k]);
+        if (hi[0] + hi[1] > lo[0] + lo[1] + 0.02) wall(s, e0, e1, lo, hi, i, j, dx, dy);   // only the higher side builds it
+      }
+    }
+  }
+  const mat = (t) => new THREE.MeshLambertMaterial({ map: t });
+  const mats = [mat(tex(fi)), mat(tex(bi)), mat(tex(soft(fi, 2.5))), mat(tex(soft(bi, 2.5)))];
+  const model = new THREE.Group();
+  geo.forEach((g, s) => {
+    const b = new THREE.BufferGeometry();
+    b.setAttribute('position', new THREE.Float32BufferAttribute(g.pos, 3));
+    b.setAttribute('uv', new THREE.Float32BufferAttribute(g.uv, 2));
+    b.setAttribute('normal', new THREE.Float32BufferAttribute(g.nrm, 3));
+    const m = new THREE.Mesh(b, mats[s]); m.castShadow = m.receiveShadow = true; model.add(m);
+  });
+  model.scale.set(H_PX, V_PX, H_PX);
+  const root = new THREE.Group(); root.add(model);
+  meta.tris = (geo[0].pos.length + geo[1].pos.length) / 9;
+  return { meta, root, model, mats };
+}
+
+/** Turn the model to run along `dir` (pack directions: SE = +u ...). World x = u, z = v, y up. */
+function orient(arch, dir) {
+  const [du, dv] = DIRS[dir];
+  // local along (x) -> (du, dv), local across (z) -> (-dv, du)
+  arch.root.matrixAutoUpdate = false;
+  arch.root.matrix.set(du, 0, -dv, 0, 0, 1, 0, 0, dv, 0, du, 0, 0, 0, 0, 1);
+  arch.root.matrixWorldNeedsUpdate = true;
+}
+
+let renderer, scene, sun;
+function setup(w, h) {
+  if (!renderer) {
+    renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(1);
+    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+    scene = new THREE.Scene();
+    scene.add(new THREE.AmbientLight(0xffffff, LOOK.amb * Math.PI));
+    scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x302820, LOOK.sky * Math.PI));
+    sun = new THREE.DirectionalLight(0xfff4e6, LOOK.sun * Math.PI);
+    sun.castShadow = LOOK.shadow; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.6;
+    Object.assign(sun.shadow.camera, { left: -500, right: 500, top: 800, bottom: -300, near: 1, far: 4000 });
+    scene.add(sun, sun.target);
+  }
+  renderer.setSize(w, h, false);
+}
+// the game camera: orthographic, 30 degrees down, looking toward -u -v, 1 world unit = 1 px after projection
+function isoCamera(left, right, top, bottom) {
+  const c = new THREE.OrthographicCamera(left, right, top, bottom, -5000, 5000);
+  const e = Math.PI / 6;
+  c.position.set(Math.cos(e) * Math.SQRT1_2, Math.sin(e), Math.cos(e) * Math.SQRT1_2).multiplyScalar(1000);
+  c.up.set(0, 1, 0); c.lookAt(0, 0, 0); c.updateMatrixWorld(); c.updateProjectionMatrix();
+  return c;
+}
+function placeSun(cam) {
+  // sunDir is in camera space (x right, y up, z toward the viewer)
+  const d = new THREE.Vector3(...LOOK.sunDir).normalize().transformDirection(cam.matrixWorld);
+  sun.position.copy(d).multiplyScalar(1500); sun.target.position.set(0, 0, 0); sun.target.updateMatrixWorld();
+}
+
+const SLICE_MAT = new THREE.ShaderMaterial({
+  uniforms: { span: { value: 3 } },
+  vertexShader: 'varying float a; void main(){ a = position.x; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: 'uniform float span; varying float a; void main(){ float k = clamp(floor((a / 80.0 + span * 0.5) * 2.0), 0.0, span * 2.0 - 1.0); gl_FragColor = vec4((k + 1.0) / 255.0, 0.0, 0.0, 1.0); }',
+});
+
+/** Render the arch as the game sees it (running along dir) -> {png, tags, w, h, pivot} at 1 px = 1 native px,
+ *  supersampled ss x ss. tags[i] = 1 + half-tile slice index along the span (0 = empty). */
+function bake(arch, dir, ss = 4) {
+  const { span, h } = arch.meta;
+  const W = 80 * span + 96, Hh = Math.ceil(h * ZSCALE + 40 * span + 96);
+  const px = W / 2, py = Hh - 48 - 20 * span;
+  setup(W * ss, Hh * ss);
+  orient(arch, dir);
+  const cam = isoCamera(-px, W - px, py, py - Hh);
+  placeSun(cam);
+  scene.add(arch.root);
+  const read = () => { const b = new Uint8Array(W * ss * Hh * ss * 4); const gl = renderer.getContext();
+    gl.readPixels(0, 0, W * ss, Hh * ss, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
+  renderer.setClearColor(0x000000, 0); renderer.render(scene, cam);
+  const col = read();
+  const keep = arch.model.children.map((m) => m.material);
+  arch.model.children.forEach((m) => { m.material = SLICE_MAT; }); SLICE_MAT.uniforms.span.value = span;
+  renderer.render(scene, cam);
+  const tag = read();
+  arch.model.children.forEach((m, i) => { m.material = keep[i]; });
+  scene.remove(arch.root);
+  // box filter (premultiplied), binary alpha at 50%, tag = most common among covered subsamples
+  const out = new Uint8ClampedArray(W * Hh * 4), tags = new Uint8Array(W * Hh), SW = W * ss;
+  for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++) {
+    let r = 0, g = 0, b = 0, a = 0; const cnt = {};
+    for (let sy = 0; sy < ss; sy++) for (let sx = 0; sx < ss; sx++) {
+      const k = (((Hh - 1 - y) * ss + (ss - 1 - sy)) * SW + x * ss + sx) * 4, al = col[k + 3];
+      r += col[k] * al; g += col[k + 1] * al; b += col[k + 2] * al; a += al;
+      if (tag[k + 3]) cnt[tag[k]] = (cnt[tag[k]] || 0) + 1;
+    }
+    const o = (y * W + x) * 4;
+    if (a >= 127.5 * ss * ss) {
+      out[o] = r / a; out[o + 1] = g / a; out[o + 2] = b / a; out[o + 3] = 255;
+      let best = 0, bn = 0; for (const t in cnt) if (cnt[t] > bn) { bn = cnt[t]; best = +t; }
+      tags[o / 4] = best;
+    }
+  }
+  const c = document.createElement('canvas'); c.width = W; c.height = Hh;
+  c.getContext('2d').putImageData(new ImageData(out, W, Hh), 0, 0);
+  return { png: c.toDataURL('image/png'), tags: Array.from(tags), w: W, h: Hh, pivot: [px, py] };
+}
+
+// viewer
+async function view() {
+  const pack = P.get('pack') || 'cathedral_graveyard', design = P.get('design') || 'chapel_lancet', iso = P.get('iso');
+  const arch = await loadArch(pack, design);
+  document.getElementById('hud').textContent = `${pack} / ${design} (span ${arch.meta.span})` + (iso ? ` — iso ${iso}` : ' — drag to orbit');
+  if (iso) {
+    const r = bake(arch, iso, +(P.get('ss') || 4));
+    renderer.domElement.remove(); const i = new Image(); i.src = r.png; i.style.cssText = 'image-rendering:pixelated;zoom:2;margin:30px';
+    document.body.appendChild(i); return;
+  }
+  setup(innerWidth, innerHeight);
+  const cam = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 1, 10000);
+  cam.position.set(420, 380, 520);
+  const ctl = new OrbitControls(cam, renderer.domElement); ctl.target.set(0, 200, 0); ctl.update();
+  orient(arch, 'SE'); scene.add(arch.root);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshLambertMaterial({ color: 0x3a3646 }));
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+  addEventListener('resize', () => { setup(innerWidth, innerHeight); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); });
+  renderer.setAnimationLoop(() => { ctl.update(); placeSun(cam); renderer.render(scene, cam); });
+}
+window.ARCH3D = { loadArch, bake, LOOK };
+if (!P.has('bake')) view();
+</script>
+</body>
+</html>

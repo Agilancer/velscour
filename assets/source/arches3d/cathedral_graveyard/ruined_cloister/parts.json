@@ -1,0 +1,20 @@
+{
+ "note": "Ruined cloister: two square towers with lancet windows, roundel reliefs and stepped buttresses, thin spires on top, an arcaded gallery band, a pointed arch under a small gable with an apex cross. (tools/arch3d.py; elevation px from the top left, half-depths in native px, parts in order, mirrored about the centre)",
+ "mirror": true,
+ "parts": [
+  {"op": "fill", "half": 12, "amp": 4, "what": "wall body, broken parapet"},
+  {"op": "knobs", "rect": [95, 95, 305, 128], "max": 5, "what": "broken parapet blocks"},
+  {"op": "fill", "rect": [95, 124, 305, 162], "half": 14, "amp": 6, "what": "arcaded gallery band"},
+  {"op": "fill", "poly": [[200, 52], [146, 132], [254, 132]], "half": 13, "rim": 5, "rimHalf": 16, "amp": 4, "what": "gable"},
+  {"op": "portal", "minY": 130, "width": 30, "in": 14, "out": 22, "steps": 4, "amp": 3, "what": "arch mouldings"},
+  {"op": "fill", "rect": [12, 186, 32, 368], "half": 20, "amp": 3, "what": "stepped buttress"},
+  {"op": "fill", "rect": [30, 120, 98, 368], "half": 27, "amp": 3, "what": "tower"},
+  {"op": "fill", "rect": [38, 138, 92, 190], "half": 19, "amp": 8, "what": "lancet windows, recessed"},
+  {"op": "fill", "rect": [38, 200, 90, 254], "add": 2, "amp": 8, "what": "roundel relief"},
+  {"op": "fill", "rect": [44, 262, 62, 312], "half": 19, "amp": 8, "what": "lower lancet, recessed"},
+  {"op": "fill", "rect": [28, 118, 100, 136], "half": 29, "amp": 2, "what": "tower cornice"},
+  {"op": "fill", "rect": [8, 330, 102, 368], "half": 30, "amp": 2, "what": "plinth"},
+  {"op": "square", "rect": [52, 70, 98, 122], "open": 2, "max": 8, "knobMax": 3, "what": "thin spires"},
+  {"op": "thin", "rect": [188, 40, 212, 70], "half": 2, "what": "apex cross"}
+ ]
+}

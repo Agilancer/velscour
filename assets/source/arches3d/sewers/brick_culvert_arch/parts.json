@@ -1,0 +1,14 @@
+{
+ "note": "Brick culvert: square stone piers with sunk round drain grates under a capping slab, a recessed ring of bricks inside a stone voussoir ring, a keystone. (tools/arch3d.py; elevation px from the top left, half-depths in native px, parts in order, mirrored about the centre)",
+ "mirror": true,
+ "parts": [
+  {"op": "fill", "half": 12, "amp": 3, "what": "wall body"},
+  {"op": "portal", "width": 16, "half": 13, "amp": 4, "what": "brick ring, set back"},
+  {"op": "portal", "from": 16, "width": 36, "half": 19, "amp": 3, "what": "stone voussoirs"},
+  {"op": "fill", "rect": [100, 46, 140, 82], "add": 3, "what": "keystone"},
+  {"op": "fill", "rect": [2, 112, 68, 208], "half": 22, "amp": 3, "what": "pier"},
+  {"op": "fill", "rect": [14, 136, 46, 170], "half": 11, "amp": 6, "what": "drain grate, sunk"},
+  {"op": "fill", "rect": [0, 110, 70, 126], "half": 25, "amp": 2, "what": "capping slab"},
+  {"op": "fill", "rect": [0, 180, 70, 208], "half": 25, "amp": 2, "what": "plinth"}
+ ]
+}

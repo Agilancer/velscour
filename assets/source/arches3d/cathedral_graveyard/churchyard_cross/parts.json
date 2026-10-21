@@ -1,0 +1,17 @@
+{
+ "note": "Churchyard cross: square towers with pyramid caps, a pointed arch under a gable with a skull boss, a thin stone cross on a pedestal at the apex. (tools/arch3d.py; elevation px from the top left, half-depths in native px, parts in order, mirrored about the centre)",
+ "mirror": true,
+ "parts": [
+  {"op": "fill", "half": 12, "amp": 3, "what": "wall body"},
+  {"op": "fill", "poly": [[120, 98], [50, 140], [190, 140]], "half": 13, "rim": 5, "rimHalf": 16, "amp": 3, "what": "gable, raised coping"},
+  {"op": "portal", "minY": 110, "width": 24, "in": 12, "out": 18, "steps": 3, "amp": 3, "what": "arch mouldings"},
+  {"op": "fill", "rect": [108, 118, 132, 142], "add": 4, "amp": 6, "what": "skull boss"},
+  {"op": "add", "shafts": [[58, 66], [66, 74]], "rect": [56, 200, 76, 268], "bulge": 4, "what": "jamb shafts"},
+  {"op": "fill", "rect": [6, 148, 58, 280], "half": 24, "amp": 3, "what": "lower tower"},
+  {"op": "fill", "rect": [2, 252, 60, 280], "half": 27, "amp": 2, "what": "plinth"},
+  {"op": "fill", "rect": [12, 140, 54, 156], "half": 26, "amp": 2, "what": "tower string course"},
+  {"op": "square", "rect": [12, 88, 54, 142], "open": 2, "max": 15, "knobMax": 3, "what": "upper tower and its pyramid cap"},
+  {"op": "square", "rect": [100, 86, 140, 102], "open": 2, "max": 10, "knobMax": 3, "what": "cross pedestal"},
+  {"op": "thin", "rect": [96, 46, 144, 88], "half": 2.6, "what": "stone cross"}
+ ]
+}
