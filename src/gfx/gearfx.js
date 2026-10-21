@@ -11,7 +11,7 @@ function outlineGlow(img, col) {
   const key = col;
   let e = glowCache.get(img);
   if (e && e.key === key) return e.c;
-  const pad = 8, w = img.width + pad * 2, h = img.height + pad * 2;
+  const u = img._res || 1, pad = 8 * u, w = img.width + pad * 2, h = img.height + pad * 2; // u: image px per art px
   const sil = makeCanvas(img.width, img.height), sx = sil.getContext('2d');
   sx.drawImage(img, 0, 0);
   sx.globalCompositeOperation = 'source-in';
@@ -19,7 +19,7 @@ function outlineGlow(img, col) {
   const c = makeCanvas(w, h), x = c.getContext('2d');
   for (const [r, a] of [[6, 0.12], [4, 0.2], [2, 0.35]]) {
     x.globalAlpha = a;
-    for (let i = 0; i < 12; i++) { const t = (i / 12) * TAU; x.drawImage(sil, pad + Math.cos(t) * r, pad + Math.sin(t) * r); }
+    for (let i = 0; i < 12; i++) { const t = (i / 12) * TAU; x.drawImage(sil, pad + Math.cos(t) * r * u, pad + Math.sin(t) * r * u); }
   }
   glowCache.set(img, { key, c });
   if (glowCache.size > 6) glowCache.delete(glowCache.keys().next().value);
@@ -107,7 +107,7 @@ export function drawGearFx(ctx, p, fx, col, layer, art) {
       ctx.restore();
     }
     if (fx.glow && art) {
-      const g = outlineGlow(art.img, col), pad = 8 * art.k;
+      const g = outlineGlow(art.img, col), pad = 8 * (art.img._res || 1) * art.k;
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = alpha * fx.glow * (0.75 + Math.sin(t * 3) * 0.25);

@@ -12,7 +12,10 @@ const helmetPromises = { helmet: null };
 const LOOK_GEN = 2; // item.look[3]: looks rolled before the Grim Nocturne library are rerolled
 // Bumped with every rebuild of the gear art: a browser that kept an older gear.json beside a newer atlas read armors
 // past the atlas's end, and the hero went invisible once he put one on.
-const V = '?v=nocturne-3';
+const V = '?v=nocturne-4';
+// The hero is composed at HD x its 128x192 frame: armor pixels enlarged as they are, helmets from their HD atlas
+// (tools/nocturnegear.py), so the engine's downscale keeps more helmet detail the closer the camera zooms in.
+export const HD = 4;
 
 function loadImage(src) {
   return new Promise((res, rej) => {
@@ -49,7 +52,7 @@ function atlasBoxes(atlas, meta) {
 async function loadHelmetSet(set) {
   if (!helmetPromises[set]) helmetPromises[set] = Promise.all([
     fetch(HELMET_DIR[set] + 'index.json' + V).then((r) => { if (!r.ok) throw new Error(set + ' helmet index'); return r.json(); }),
-    loadImage(HELMET_DIR[set] + 'atlas.png' + V),
+    loadImage(HELMET_DIR[set] + 'atlas.webp' + V),
     fetch(HELMET_DIR[set] + 'placements.json' + V, { cache: 'no-store' }).then((r) => {
       if (!r.ok) throw new Error(set + ' helmet placements');
       return r.json();
@@ -274,12 +277,17 @@ export function heroLook(cls, body, head, src = S, outCache = looks) {
   let c = outCache.get(key);
   if (c) return c;
   const { meta } = src, [fw, fh] = meta.frame;
-  const px = armorPixels(bl[0], bl[1], src);
-  c = toCanvas(px, fw, fh);
+  c = makeCanvas(fw * HD, fh * HD);
+  const x = c.getContext('2d');
+  x.imageSmoothingEnabled = false;
+  x.drawImage(toCanvas(armorPixels(bl[0], bl[1], src), fw, fh), 0, 0, fw * HD, fh * HD);
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  x.scale(HD, HD);
+  c._res = HD;
   if (hl) {
     const { px: hp, box } = helmetPixels(cls, hl[0], hl[1], set, src);
     const place = helmetPlacement(meta, box, hl[0], set, src), [x0,y0,x1,y1] = box;
-    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, x = c.getContext('2d');
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     const [hdx, hdy] = meta.armor.head?.[bl[0] - 1] || [0, 0]; // the helmet follows this armor's head
     x.save(); x.translate(place.center[0] + hdx, place.center[1] + hdy); x.rotate(place.rotation * Math.PI / 180);
     x.scale(place.dw / src[set + 'Helms'].meta.frame[0], place.dh / src[set + 'Helms'].meta.frame[1]);
@@ -293,7 +301,7 @@ export function heroLook(cls, body, head, src = S, outCache = looks) {
 /** Draw parameters of the hero canvas: feet anchor and world px per art px for a hero `spriteH` tall. */
 export function heroFrame(cls, spriteH) {
   const m = gearMeta(cls);
-  return m && { ax: m.frame[0] / 2, ay: m.feet, k: spriteH / (m.feet - m.headTop) };
+  return m && { ax: m.frame[0] / 2 * HD, ay: m.feet * HD, k: spriteH / (m.feet - m.headTop) / HD };
 }
 
 // ------------------------------------------------------------------ icons
@@ -301,8 +309,9 @@ const icons = new Map();
 function fitCanvas(src, box, w, h) {
   const [x0, y0, x1, y1] = box, bw = x1 - x0, bh = y1 - y0;
   const k = Math.min(w / bw, h / bh) * 0.94;
-  const c = makeCanvas(w, h);
-  c.getContext('2d').drawImage(src, x0, y0, bw, bh, (w - bw * k) / 2, (h - bh * k) / 2, bw * k, bh * k);
+  const c = makeCanvas(w, h), x = c.getContext('2d');
+  x.imageSmoothingQuality = 'high';
+  x.drawImage(src, x0, y0, bw, bh, (w - bw * k) / 2, (h - bh * k) / 2, bw * k, bh * k);
   return c;
 }
 /** Icon canvas (w x h) of a body armor or helm in its finish, or null without gear art. */
@@ -341,7 +350,7 @@ export function heroPortrait(cls, body, head, w, h) {
     b[0] = Math.min(b[0], hb[0]); b[1] = Math.min(b[1], hb[1]);
     b[2] = Math.max(b[2], hb[2]); b[3] = Math.max(b[3], hb[3]);
   }
-  return fitCanvas(c, b, w, h);
+  return fitCanvas(c, b.map((v) => v * HD), w, h);
 }
 
 /** A copy of canvas `c` cropped to its opaque pixels (null stays null), so a card can fill its frame with the hero. */

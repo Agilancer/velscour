@@ -1,7 +1,7 @@
 {
   "frame": [
-    40,
-    40
+    160,
+    160
   ],
   "cols": 16,
   "classes": [
@@ -130,8 +130,8 @@
     }
   ],
   "fit": {
-    "scaleX": 1,
-    "scaleY": 1,
+    "scaleX": 0.25,
+    "scaleY": 0.25,
     "xAnchor": 65.0,
     "baselineOffset": -12,
     "sourceBaseline": 0
