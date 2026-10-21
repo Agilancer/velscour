@@ -23,6 +23,14 @@ import { addEffect, Ring, Column, Telegraph, sparkle, smoke, burst, spawn, float
 import { drawWard, drawCarrier } from '../gfx/breach.js';
 import { enemyImage } from '../core/enemyart.js';
 
+/** A monster of the Breach: no regenerating elites (the floors are thick with pools to dodge, and a champion healing
+ * to full while the hero side-steps them made fights endless). */
+export function breachMonster(m) {
+  m.breach = true;
+  if (m.affixes && m.affixes.includes('regen')) m.affixes = m.affixes.filter((a) => a !== 'regen');
+  return m;
+}
+
 export const ARRIVALS = ['rise', 'climb', 'sky', 'ride', 'rift', 'meteor', 'march', 'shard', 'chain', 'coalesce', 'coffin', 'doorway'];
 export const ARRIVAL_NAMES = {
   rise: 'They claw up out of the ground!', climb: 'They climb over the edge!', sky: 'They fly in from the void!',
@@ -82,7 +90,7 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
   // ---------------------------------------------------------------- scenarios on the shrine islands
   const shrineIsl = isl.filter((o) => o.shrine);
   const others = shrineIsl.filter((o) => !o.heart);
-  const deck = shuffleR(Object.keys(SCENARIOS).filter((k) => !SCENARIOS[k].boss), rng), bossDeck = shuffleR(Object.keys(SCENARIOS).filter((k) => SCENARIOS[k].boss), rng);
+  const deck = shuffleR(Object.keys(SCENARIOS).filter((k) => !SCENARIOS[k].boss && k !== 'heart'), rng), bossDeck = shuffleR(Object.keys(SCENARIOS).filter((k) => SCENARIOS[k].boss), rng);
   const usedBoss = new Set([finalBossIndex(floor)]);
   const bossIndex = () => { let i; do i = rng.int(0, BREACH_BOSSES.length - 1); while (usedBoss.has(i) && usedBoss.size < BREACH_BOSSES.length); usedBoss.add(i); return i; };
   const record = c.breach || (c.breach = { best: 0, cleared: {} });
@@ -111,8 +119,11 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
       if (run.completed) return null;
       const p = world.player, here = p ? islandAt(p.x, p.y) : gen.startIsland;
       const can = reachable(here >= 0 ? here : nearestIsland(p));
-      const open = all.filter((S) => !S.completed && S !== heart && can.has(S.o.idx));
-      if (!open.length) return heart;
+      for (const k of reachable(gen.startIsland)) can.add(k); // and everything the open wards allow from the start
+      const left = all.filter((S) => !S.completed && S !== heart);
+      if (!left.length) return heart;
+      let open = left.filter((S) => can.has(S.o.idx));
+      if (!open.length) open = left; // (never expected: the nearest unwon shrine rather than standing at the Heart)
       if (run.aim && open.includes(run.aim)) return run.aim;
       return (run.aim = open.sort((a, b) => Math.hypot(a.C[0] - p.x, a.C[1] - p.y) - Math.hypot(b.C[0] - p.x, b.C[1] - p.y))[0]);
     },
@@ -148,18 +159,29 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
     return best;
   }
 
-  // ---------------------------------------------------------------- scenario locks: the walkways off a fighting island
-  let lastSafe = null, lockMsgT = 0;
+  // ---------------------------------------------------------------- the wards hold the hero
+  // Walking, the closed wards' blocked tiles stop him; this catches blinks, leaps and dashes: wherever the hero ends
+  // up must be somewhere the open wards allow (while a fight is on, its island alone), else he is put back.
+  let lastSafe = null, lockMsgT = 0, legalKey = '', legalIsl = null;
+  const nearSide = new Map(bridges.map((b) => [b.idx, new Set(b.nearTiles || [])]));
+  function legal(i, S) {
+    if (S) return own[i] === S.o.idx;
+    const key = wards.map((w) => (w.closed ? 1 : 0)).join('');
+    if (key !== legalKey) { legalKey = key; legalIsl = reachable(gen.startIsland); }
+    if (own[i] >= 0) return legalIsl.has(own[i]);
+    const b = bridges[bridgeOf[i]];
+    if (!b) return false;
+    if (wards.some((w) => w.closed && w.b === b)) return legalIsl.has(b.near) && nearSide.get(b.idx).has(i);
+    return legalIsl.has(b.a) || legalIsl.has(b.b);
+  }
   function holdLocks() {
     const S = run.current, p = world.player;
-    if (!S || !p || p.dead) { lastSafe = null; return; }
+    if (!p || p.dead) { lastSafe = null; return; }
     const i = tileOf(p.x, p.y);
-    if (own[i] === S.o.idx) { lastSafe = [p.x, p.y]; return; }
-    const b = bridgeOf[i];
-    if (b >= 0 && S.locks.some((l) => l.b.idx === b && l.closed) && lastSafe) {
-      p.x = lastSafe[0]; p.y = lastSafe[1]; p.path = null; p.moveTarget = null;
-      if (world.time > lockMsgT) { lockMsgT = world.time + 1.5; floatText(p.x, p.y, 70, 'The ward holds until the fight is won!', VIOLET, 13, { life: 1.4 }); sfx('error', 0.5); }
-    }
+    if (legal(i, S)) { lastSafe = [p.x, p.y]; return; }
+    if (!lastSafe) return;
+    p.x = lastSafe[0]; p.y = lastSafe[1]; p.path = null; p.moveTarget = null;
+    if (world.time > lockMsgT) { lockMsgT = world.time + 1.5; floatText(p.x, p.y, 70, S ? 'The ward holds until the fight is won!' : 'A ward bars the way: win its shrine first!', VIOLET, 13, { life: 1.4 }); sfx('error', 0.5); }
   }
 
   // ---------------------------------------------------------------- monsters arriving while no shrine is active
@@ -215,7 +237,7 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
     const lv = (rank) => lvl + (rank === 'boss' ? 2 : rank === 'champion' ? 1 : 0);
     const monster = (arch, p, rank = 'normal', look) => {
       const m = makeMonster(world, arch, biome, lv(rank), rank, p[0], p[1], 0, look ?? world.looks.pick(arch));
-      m.awake = true; m.hunter = true; m.breach = true;
+      m.awake = true; m.hunter = true; breachMonster(m);
       return m;
     };
     /** Bring n of the floor's monsters to this island by `kind` (ARRIVALS); they join the fight. */
@@ -391,7 +413,7 @@ export function arrive(world, o, kind, n, opts = {}) {
     const arch = opts.arch || breachArch(rng.fn());
     const rank = (opts.champ && k === 0) || (!opts.champ && rng.next() < 0.08 + world.breach.floor * 0.008) ? 'champion' : 'normal';
     const m = makeMonster(world, arch, world.biome, lvl + (rank === 'normal' ? 0 : 1), rank, at.x, at.y, 0, world.looks.pick(arch, rng.fn()));
-    m.awake = true; m.hunter = true; m.breach = true;
+    m.awake = true; m.hunter = true; breachMonster(m);
     world.add(m);
     if (opts.onMake) opts.onMake(m);
     made.push([m, at]);
@@ -544,7 +566,8 @@ export function bringOne(world, o, m, kind, p, opts = {}) {
     const art = designs.length ? world.tileset.doors[pick(designs)][dir] : null;
     const fx = world.addHazard(new Fx({ x: tx, y: ty, art, dur: 2.6, lift: -0.2, paint: paintDoor }));
     m.alpha = 0;
-    const bx = dir === 'SW' ? 0 : 0.7, by = dir === 'SW' ? 0.7 : 0;
+    let bx = dir === 'SW' ? 0 : 0.7, by = dir === 'SW' ? 0.7 : 0;
+    if (!world.map.walkable(tx + bx, ty + by)) bx = by = 0; // a doorway at the island's edge: it steps out where it stands
     m.entering = (dt) => {
       t += dt;
       if (t < 0.9) return;
@@ -912,9 +935,9 @@ export const SCENARIOS = {
     update(x, dt) {
       const { S, world } = x, p = world.player;
       if ((x.climbT -= dt) <= 0) {
-        x.climbT = Math.max(5, 9 - S.stage);
+        x.climbT = Math.max(7, 11 - S.stage);
         const g = x.grap.filter((q) => !q.done);
-        if (g.length && S.foes.filter((m) => !m.dead).length < 7) x.wave('climb', g.length >= 3 ? 3 : 2, { near: { x: pick(g).p[0], y: pick(g).p[1] } });
+        if (g.length && S.foes.filter((m) => !m.dead).length < 6) x.wave('climb', 2, { near: { x: pick(g).p[0], y: pick(g).p[1] } });
       }
       const near = x.grap.filter((g) => !g.done).sort((a, b) => Math.hypot(a.p[0] - p.x, a.p[1] - p.y) - Math.hypot(b.p[0] - p.x, b.p[1] - p.y))[0];
       S.objective = near ? { x: near.p[0], y: near.p[1], reach: 1.6, use: () => near.mk.use() } : undefined;

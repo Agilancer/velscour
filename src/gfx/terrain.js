@@ -166,7 +166,14 @@ export function useTerrain(map) {
   const { w, h, hgt, t } = map;
   let lo = Infinity, hi = -Infinity;
   for (let i = 0; i < w * h; i++) if (t[i] === 1) { lo = Math.min(lo, hgt[i]); hi = Math.max(hi, hgt[i]); }
-  const elev = (x, y) => hgt[Math.min(h - 1, Math.max(0, Math.floor(y))) * w + Math.min(w - 1, Math.max(0, Math.floor(x)))] * HS;
+  const ramp = map.ramp, rt = map.rampTile, W1 = w + 1;
+  const elev = (x, y) => {
+    const tx = Math.min(w - 1, Math.max(0, Math.floor(x))), ty = Math.min(h - 1, Math.max(0, Math.floor(y))), i = ty * w + tx;
+    if (!rt || !rt[i]) return hgt[i] * HS;
+    // a ramp (the Breach's walkways): the ground between its four corner heights
+    const fx = clamp(x - tx, 0, 1), fy = clamp(y - ty, 0, 1), c = ty * W1 + tx;
+    return ((ramp[c] * (1 - fx) + ramp[c + 1] * fx) * (1 - fy) + (ramp[c + W1] * (1 - fx) + ramp[c + W1 + 1] * fx) * fy) * HS;
+  };
   // the first lifted column met going into the screen: from the highest level (nearest the camera) down
   const pick = (wx, wy) => {
     for (let k = hi; k >= lo; k--) {
@@ -348,10 +355,23 @@ function hang(ctx, R, i, k, p, q, inside, D, voidBelow, f) {
   if (voidBelow) breachUnderside(ctx, i * 16 + k, a[0], a[1], dx, dy, D, dark, quad, dark ? R.pd : R.pl, dx < HW * 0.6);
   else face(ctx, R, f, i, a[0], a[1], dx, dy, D / HS, dark, false);
 }
+/** The plane through three lifted points as a y shear of the flat ground: dz = a x + b y + c (flat world px). */
+function plane(F, L) {
+  const [[x1, y1], [x2, y2], [x3, y3]] = F, [z1, z2, z3] = L;
+  const det = x1 * (y2 - y3) - y1 * (x2 - x3) + (x2 * y3 - x3 * y2);
+  if (Math.abs(det) < 1e-6) return [0, 0, z1];
+  const A = (z1 * (y2 - y3) - y1 * (z2 - z3) + (z2 * y3 - z3 * y2)) / det;
+  const B = (x1 * (z2 - z3) - z1 * (x2 - x3) + (x2 * z3 - x3 * z2)) / det;
+  return [A, B, z1 - A * x1 - B * y1];
+}
 function drawRounded(ctx, map, T, R, f, i, x, y, v, px, py) {
   const w = map.w, h = map.h, ix = (xx, yy) => yy * w + xx;
   const floor = (xx, yy) => xx >= 0 && yy >= 0 && xx < w && yy < h && map.t[ix(xx, yy)] === 1;
-  const V = [[px, py], [px + HW, py + HH], [px, py + TH], [px - HW, py + HH]], C = [px, py + HH];
+  // a ramp tile (the walkways) has its own height at each corner; any other its level all over
+  const W1 = w + 1, ramp = map.rampTile && map.rampTile[i] ? map.ramp : null;
+  const ch = ramp ? [ramp[y * W1 + x], ramp[y * W1 + x + 1], ramp[(y + 1) * W1 + x + 1], ramp[(y + 1) * W1 + x]] : [v, v, v, v];
+  const fy = py + v * HS, F = [[px, fy], [px + HW, fy + HH], [px, fy + TH], [px - HW, fy + HH]];
+  const V = F.map((p, k) => [p[0], p[1] - ch[k] * HS]), C = [px, fy + HH - (ch[0] + ch[2]) * HS / 2];
   const deep = (map.under ? v - map.under[i] : Math.max(T.sw[i], T.se[i])) * HS;
   // the top's outline: the diamond, its void corners cut by curves; tag = the edge a segment runs along (-1: a curve)
   const pts = [], tag = [];
@@ -364,7 +384,7 @@ function drawRounded(ctx, map, T, R, f, i, x, y, v, px, py) {
       pts.push(b); tag.push(k);
     } else { pts.push(V[k]); tag.push(k); }
   }
-  // the notches beside this tile it fills: [void tile offset, the fill's outline]
+  // the notches beside this tile it fills: [void tile offset, the fill's outline, the corner it fills at]
   const fills = [];
   for (let k = 0; k < 4; k++) {
     const [n1, n2, d] = AROUND[k], dx = x + d[0], dy = y + d[1];
@@ -375,28 +395,45 @@ function drawRounded(ctx, map, T, R, f, i, x, y, v, px, py) {
     // the void one's two edges at this vertex: the one it shares with this tile, the one it shares with the diagonal
     const [q, e1, e2] = !f1 ? [n1, before, after] : [n2, after, before];
     const a = lerp(P, e1, RK), b = [P[0] - (e2[0] - P[0]) * RK, P[1] - (e2[1] - P[1]) * RK];
-    fills.push([q, [P, a, ...curve(a, b, P), b]]);
+    fills.push([q, [P, a, ...curve(a, b, P), b], k]);
   }
-  // faces: the tile's (straight edges at their own depth, curves into the void), then the fills' curves
+  // faces: the tile's (straight edges at their own depth, curves into the void), then the fills' curves. A ramp is a
+  // slab of even thickness: it hangs faces into the void only, its neighbours meet it at its corners.
   const n = pts.length;
   for (let j = 0; j < n; j++) {
     const p = pts[j], q = pts[(j + 1) % n], t = tag[j];
     if (t === 1 || t === 2) {
-      const nx = t === 1 ? x + 1 : x, ny = t === 1 ? y : y + 1, D = (t === 1 ? T.se[i] : T.sw[i]) * HS;
-      if (D > 0) hang(ctx, R, i, j, p, q, C, D, !floor(nx, ny) && map.voidFace, f);
+      const nx = t === 1 ? x + 1 : x, ny = t === 1 ? y : y + 1, open = !floor(nx, ny);
+      const D = ramp ? (open ? deep : 0) : (t === 1 ? T.se[i] : T.sw[i]) * HS;
+      if (D > 0) hang(ctx, R, i, j, p, q, C, D, open && map.voidFace, f);
     } else if (t === -1 && deep > 0) hang(ctx, R, i, j, p, q, C, deep, map.voidFace, f);
   }
   for (const [, poly] of fills) for (let j = 1; j < poly.length - 1; j++) if (deep > 0) hang(ctx, R, i, 20 + j, poly[j], poly[j + 1], poly[0], deep, map.voidFace, f);
-  // the tops: this tile's paving clipped to its outline, and moved into each notch it fills
-  const top = (poly, ox, oy) => {
-    ctx.save(); ctx.beginPath(); ctx.moveTo(poly[0][0], poly[0][1]);
-    for (let j = 1; j < poly.length; j++) ctx.lineTo(poly[j][0], poly[j][1]);
-    ctx.closePath(); ctx.clip();
-    ctx.drawImage(f.img, f.sx, f.sy, f.w, f.h, px - HW - 0.6 + ox, py - 0.6 + oy, TW + 1.2, TH + 1.2);
+  // the tops: this tile's paving clipped to its outline (a ramp's tilted, a triangle at a time, on the planes through
+  // its corners), and moved into each notch it fills
+  const path = (poly) => { ctx.beginPath(); ctx.moveTo(poly[0][0], poly[0][1]); for (let j = 1; j < poly.length; j++) ctx.lineTo(poly[j][0], poly[j][1]); ctx.closePath(); };
+  const paint = (poly, tri, ox, oy, pl) => {
+    ctx.save();
+    path(poly); ctx.clip();
+    if (tri) { path(tri); ctx.clip(); }
+    if (pl) ctx.transform(1, pl[0], 0, 1 + pl[1], 0, pl[2]);
+    ctx.drawImage(f.img, f.sx, f.sy, f.w, f.h, px - HW - 0.6 + ox, fy - (pl ? 0 : v * HS) - 0.6 + oy, TW + 1.2, TH + 1.2);
     ctx.restore();
   };
-  top(pts, 0, 0);
-  for (const [q, poly] of fills) top(poly, (q[0] - q[1]) * HW, (q[0] + q[1]) * HH);
+  const planeOf = (a, b, c) => plane([F[a], F[b], F[c]], [-ch[a] * HS, -ch[b] * HS, -ch[c] * HS]);
+  const flat = ch.every((c) => c === ch[0]);
+  if (flat) paint(pts, null, 0, 0, null);
+  else {
+    // the two triangles either side of the T-B diagonal, each a little over the line so no seam shows
+    const m = 0.6, tT = [V[0][0], V[0][1] - m], tB = [V[2][0], V[2][1] + m];
+    paint(pts, [tT, [V[1][0] + 2, V[1][1]], tB], 0, 0, planeOf(0, 1, 2));
+    paint(pts, [tT, tB, [V[3][0] - 2, V[3][1]]], 0, 0, planeOf(0, 2, 3));
+  }
+  for (const [q, poly, k] of fills) {
+    const ox = (q[0] - q[1]) * HW, oy = (q[0] + q[1]) * HH;
+    if (flat) paint(poly, null, ox, oy, null);
+    else paint(poly, null, ox, oy, planeOf((k + 3) % 4, k, (k + 1) % 4));
+  }
 }
 
 /** Every column overlapping the world px rect, back to front (the floor chunk bake and its fallback). */
@@ -513,8 +550,11 @@ export function occluderObj(map, i) {
 
 /** World px a creature's sprite rides above its tile's ground while it hops up or drops down a step (0 at rest). */
 export function hopZ(o, map) {
-  const lv = map.hgt[map.tileIdx(o.x, o.y)];
+  const ti = map.tileIdx(o.x, o.y), lv = map.hgt[ti];
   if (o._hopMap !== map) { o._hopMap = map; o._lv = lv; o._hop = null; return 0; }
+  // on and off a ramp the ground itself carries them (the elevation is smooth there): no hop
+  if (map.rampTile && (map.rampTile[ti] || map.rampTile[o._ti ?? ti])) { o._ti = ti; o._lv = lv; o._hop = null; return 0; }
+  o._ti = ti;
   const now = (hp) => {
     const t = clamp((G.time - hp.t0) / hp.dur, 0, 1);
     return hp.from * (1 - (hp.up ? 1 - (1 - t) * (1 - t) : t * t)) + hp.arc * Math.sin(Math.PI * t);

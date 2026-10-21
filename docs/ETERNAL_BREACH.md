@@ -37,11 +37,16 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
 - **Walkways**: a spanning tree over the islands (shortest gaps first) plus 4-6 loops, so there is more than one way
   round. Each is a 2-tile path with a slight bend, climbing at most ~2.2 levels a tile; one that would cross another
   island or walkway is dropped (a tree one retries the seed).
-- **Rounded walkway edges** (`map.rounded`, `drawRounded` in gfx/terrain.js): on walkway tiles every corner sticking
-  out into the void is cut by a curve and every notch between two tiles filled by one (drawn by the later tile beside
-  it, at its height and in its paving), with the rock faces following the curves, so diagonal walkways run smooth
-  instead of in diamond steps. Drawing only; collision is the tiles'. Walkway tiles are never redrawn over creatures
-  (their steps are a level or two), which kept the frame cost where it was.
+- **Rounded edges** (`map.rounded`, `drawRounded` in gfx/terrain.js): on walkway tiles and on the islands' rim tiles
+  every corner sticking out into the void is cut by a curve and every notch between two tiles filled by one (drawn by
+  the later tile beside it, at its height and in its paving), with the rock faces following the curves, so walkways and
+  coastlines run smooth instead of in diamond steps. Drawing only; collision is the tiles'. Rounded tiles are never
+  redrawn over creatures (a level or two of step), which kept the frame cost where it was.
+- **Walkway ramps** (`map.ramp`, `map.rampTile`): a height at every tile corner of a walkway (the island's level where
+  it lands, else the mean of the walkway tiles round it). The paving is drawn tilted on those corners (two triangles,
+  each an affine shear of the flat tile), the walkway hangs as a slab of even thickness, and the ground under heroes and
+  monsters (`useTerrain`'s elevation) is smooth across it, with no hop animation on and off a ramp (`hopZ`). The
+  tiles' integer levels still decide who can step where.
 - **Height map** (`map.hgt`, the Mountainside's system, `CLIMB` 4 / `DROP` 10): each island has its own altitude
   (walked out along the tree from the start, 0-52 levels), gentle noise, a hop-high plateau on the medium and large
   ones (a second tier on the large), and 2-4 tall rock crags on the large ones (taken back if they cut the island).
@@ -77,6 +82,10 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
   repeats on a floor). The Heart answers only when every other shrine is won.
 - While a shrine's fight is on, every walkway off its island is **locked** against the hero (a soft ward: stepping onto
   one of them puts him back; monsters still come over them).
+- The wards hold against blinks, leaps and dashes too: wherever the hero ends up must be somewhere the open wards
+  allow from the start (during a fight, its island alone), else he is put back where he last stood (`holdLocks`).
+- No regenerating elites in the Breach (`breachMonster` drops the `regen` affix): the floors are thick with pools to
+  dodge, and a champion healing to full while the hero side-stepped them made fights endless.
 - Stragglers: when nothing in a fight has fallen for 30 s, the last few (four or fewer) far from the hero or out of
   his reach sink back into the void.
 - Between fights, every 40-70 s a few monsters arrive near the hero by a random arrival.

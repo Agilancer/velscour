@@ -32,7 +32,7 @@ import { generateDarkForest } from '../world/darkforest.js';
 import { loadDarkForestTrees } from '../gfx/darkforest.js';
 import { generateMountain } from '../world/mountain.js';
 import { generateBreach } from '../world/breach.js';
-import { createBreachRun, chestAt } from './breach.js';
+import { createBreachRun, chestAt, breachMonster } from './breach.js';
 import { breachDepth, breachLevel, BREACH_ART, BREACH_ARCHS } from '../data/breach.js';
 import { createMountainRun } from './mountain.js';
 import { castle3dTick } from './castle3d.js';
@@ -731,7 +731,7 @@ export const game = {
     }, 40);
   },
 
-  buildBreach(floor, seed = (Math.random() * 1e9) | 0) {
+  buildBreach(floor, seed = G.breachSeed ?? (Math.random() * 1e9) | 0) { // G.breachSeed: tests
     const c = G.char, old = G.world, B = BREACH_BIOME, depth = breachDepth(floor), lvl = breachLevel(floor);
     c.breach ||= { best: 0, cleared: {} };
     const a = biomeTileSet(B), b = biomeTileSet(BREACH_WALLS);
@@ -752,7 +752,7 @@ export const game = {
         const [x, y] = i === 0 ? [s.x, s.y] : gen.map.randomNear(s.x, s.y, 1.6);
         const rank = i === 0 ? s.rank : 'normal';
         const m = makeMonster(world, s.arch, B, lvl + (rank === 'normal' ? 0 : 1), rank, x, y, Math.random() < 0.25 ? 1 : 0, gen.looks.pick(s.arch));
-        m.breach = true;
+        breachMonster(m);
         world.add(m);
       }
     }

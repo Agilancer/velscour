@@ -187,6 +187,7 @@ const FLOOR = +(process.argv[3] || 2);
 
     // ------------------------------------------------ auto-play plays a whole floor
     if (PARTS.includes('auto')) {
+      if (process.env.BREACH_SEED) await page.evaluate((s) => { window.BREACH_SEED = +s; }, process.env.BREACH_SEED); // replay a floor
       const r = await page.evaluate(async (FLOOR) => {
         const { G, game } = window.VELSCOUR;
         const { Auto } = await import('/src/game/autoplay.js');
@@ -211,21 +212,23 @@ const FLOOR = +(process.argv[3] || 2);
         Auto.spendSkills(); Auto.arrangeBar(); p.recompute(); p.hp = p.maxHp;
         c.breach.best = FLOOR - 1;
         G.godMode = true; G.autoDest = 'breach'; G.autoOpenSeals = true;
+        if (window.BREACH_SEED) G.breachSeed = window.BREACH_SEED;
         Auto.toggle(true);
         const log = [];
         let t = 0, lastSt = '', lastLogT = 0;
         const t0 = performance.now();
-        while (t < 1500 && performance.now() - t0 < 400000) {
+        while (t < 2100 && performance.now() - t0 < 560000) {
           for (let i = 0; i < 30; i++) { if (G.mode !== 'game' || !G.world) break; G.dt = 1 / 30; G.time += G.dt; G.frame++; game.update(1 / 30); t += 1 / 30; }
           await new Promise((r) => setTimeout(r, 0));
           const W = G.world, run = W?.overworldScenario;
           if (W?.breach && run) {
             const st = `${run.won}/${run.scenarios.length - 1}${run.current ? ' in ' + run.current.type : ''}${run.completed ? ' WON' : ''}`;
+            if (!lastSt) log.push('seed ' + W.breach.seed);
             if (st !== lastSt || t - (lastLogT || 0) > 45) { lastSt = st; lastLogT = t; const P = G.player, own = W.map.breach.own[W.map.tileIdx(P.x, P.y)]; log.push(`${t.toFixed(0)}s ${st} — ${Auto.status} @${P.x.toFixed(0)},${P.y.toFixed(0)} isl ${own} lvl ${G.char.level} tgt ${Auto.target ? Auto.target.name + " " + Math.round(Auto.target.hp / Auto.target.maxHp * 100) + "% d" + Math.hypot(Auto.target.x - P.x, Auto.target.y - P.y).toFixed(1) + " h" + (W.map.hgt[W.map.tileIdx(Auto.target.x, Auto.target.y)] - W.map.hgt[W.map.tileIdx(P.x, P.y)]) + " los" + W.map.los(P.x, P.y, Auto.target.x, Auto.target.y) : "-"} dz ${JSON.stringify(Auto.dangers(W).slice(0, 3).map((d) => [d.x.toFixed(1), d.y.toFixed(1), (d.r || 0).toFixed(1), d.line ? "L" : d.cone ? "C" : d.ring ? "R" : ""]))} hz ${W.hazards.filter((h) => h.team === "enemy").map((h) => h.constructor.name).join(",")} hp ${Math.round(P.hp)}/${P.maxHp} mana ${Math.round(P.mana)} ${run.current ? run.current.progress() : ""}`); }
           }
-          if (W?.breach && run && !run.current && run.target === run.heart && !run.dumped && run.won < 7) {
+          if (W?.breach && run && !run.current && !run.dumped && run.won < 7 && Auto.status.includes('Breach Heart')) {
             run.dumped = true; const P = G.player, own = W.map.breach.own, I = run.islands;
-            log.push('DUMP here ' + own[W.map.tileIdx(P.x, P.y)] + ' islands ' + JSON.stringify(I.map((o) => [o.idx, o.kind[0], o.hops, o.start ? 'S' : o.heart ? 'H' : ''])) + ' bridges ' + JSON.stringify(W.breachBridges.map((b) => [b.a, b.b, b.ward, run.wards.find((w) => w.b === b)?.closed ? 'X' : ''])) + ' scen ' + JSON.stringify(run.scenarios.map((S) => [S.o.idx, S.type, S.completed])));
+            log.push('DUMP here ' + own[W.map.tileIdx(P.x, P.y)] + ' islands ' + JSON.stringify(I.map((o) => [o.idx, o.kind[0], o.hops, o.start ? 'S' : o.heart ? 'H' : ''])) + ' bridges ' + JSON.stringify(W.breachBridges.map((b) => [b.a, b.b, b.ward, run.wards.find((w) => w.b === b)?.closed ? 'X' : ''])) + ' scen ' + JSON.stringify(run.scenarios.map((S) => [S.o.idx, S.type, S.completed, S.active])) + ' target ' + (run.target && run.target.type) + ' heartShrine ' + JSON.stringify([run.heart.shrine.x, run.heart.shrine.y]) + ' P ' + [P.x, P.y].map((v) => v.toFixed(1)) + ' flowAtHeart ' + W.map.flowAt(run.heart.shrine.x, run.heart.shrine.y));
           }
           if (W && W.kind === 'town' && c.breach.best >= FLOOR) break;
           if (W?.breach && W.breach.floor > FLOOR) break;

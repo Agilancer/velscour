@@ -309,9 +309,29 @@ function build(floor, biome, ts, ts2, seed) {
   }
   for (const b of bridges) for (const i of b.tiles) under[i] = hgt[i] - 4 - Math.round(h01(i % W, (i / W) | 0, 5) * 3);
   map.hgt = hgt; map.under = under; map.climb = CLIMB; map.drop = DROP;
-  // the walkways' edges are drawn rounded (gfx/terrain.js drawRounded)
+  // the walkways and the islands' rims are drawn with rounded edges (gfx/terrain.js drawRounded)
   map.rounded = new Uint8Array(N);
   for (const b of bridges) for (const i of b.tiles) map.rounded[i] = 1;
+  for (let i = 0; i < N; i++) {
+    if (own[i] < 0) continue;
+    const x = i % W, y = (i / W) | 0;
+    for (let dy = -1; dy <= 1 && !map.rounded[i]; dy++) for (let dx = -1; dx <= 1; dx++) if (!inb(x + dx, y + dy) || (own[id(x + dx, y + dy)] < 0 && bridgeOf[id(x + dx, y + dy)] < 0)) { map.rounded[i] = 1; break; }
+  }
+  // the walkways are ramps: a height at every tile corner (the island's level where they land, else the mean of the
+  // walkway tiles round it), the ground and the drawing smooth between them (gfx/terrain.js useTerrain, drawRounded)
+  const W1 = W + 1, ramp = new Float32Array(W1 * (H + 1));
+  for (let gy = 0; gy <= H; gy++) for (let gx = 0; gx <= W; gx++) {
+    let si = 0, ni = 0, sb = 0, nb = 0;
+    for (const [tx, ty] of [[gx - 1, gy - 1], [gx, gy - 1], [gx - 1, gy], [gx, gy]]) {
+      if (!inb(tx, ty)) continue;
+      const j = id(tx, ty);
+      if (own[j] >= 0 && !rock[j]) { si += hgt[j]; ni++; } else if (bridgeOf[j] >= 0) { sb += hgt[j]; nb++; }
+    }
+    ramp[gy * W1 + gx] = ni ? si / ni : nb ? sb / nb : 0;
+  }
+  map.ramp = ramp;
+  map.rampTile = new Uint8Array(N);
+  for (const b of bridges) for (const i of b.tiles) map.rampTile[i] = 1;
 
   // ---------------------------------------------------------------- ruins: walls, doorways, arches
   const arches = [], doors = [];
@@ -539,6 +559,7 @@ function build(floor, biome, ts, ts2, seed) {
       ok = b.gate.length > 0 && !leak;
     }
     if (!ok) return null;
+    b.nearTiles = b.tiles.filter((i, k) => tOf(k) <= adj); // the walkway this side of its ward
     const gx = b.gate.reduce((s, i) => s + (i % W) + 0.5, 0) / Math.max(1, b.gate.length), gy = b.gate.reduce((s, i) => s + ((i / W) | 0) + 0.5, 0) / Math.max(1, b.gate.length);
     b.gateAt = [gx, gy];
   }

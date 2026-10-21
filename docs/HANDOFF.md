@@ -47,6 +47,11 @@ Contents
   frame cost in the real loop render 1.3 ms vs the Mountainside's 4.3), plus flow, town, townlife, hud, mobile,
   mountain, castle_walls, scenarios, enemies, mayhem, data_check, autoplay paladin 8 min. `scenarios.js` reports the
   same three Castle rampart scenarios with 21-25 s waits on `main` too (not from this change).
+- **Follow-ups (user):** walkways and island coastlines have rounded edges (void corners cut, notches filled) and the
+  walkways are smooth ramps (corner heights, tilted paving, smooth elevation, no hops); wards now also hold against
+  blinks/leaps (the hero is put back); fixed the scenario deck dealing the Heart's fight to a medium island (it then
+  refused to start, stalling auto-play); no `regen` elites in the Breach. `breach.js` auto-play won floor 2 in
+  1011-1235 s over several seeds (budget 2100 s); breach_gen 120/120 (now also checks no tile path walks round a ward).
 - **Open / to ask:** every other shrine is required before the Heart (a floor is ~20 game minutes); reward odds
   (`BREACH_ODDS`); death costs nothing but the floor. Not measured on a phone.
 

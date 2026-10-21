@@ -67,10 +67,13 @@ for (let s = 1; s <= N; s++) {
       const farIn = I[b.far].tiles.some((i) => s2[i]), nearIn = I[b.near].tiles.some((i) => s2[i]);
       void farIn; void nearIn;
     }
-    const reachedShrines = I.filter((o) => o.shrine && !o.heart && s2[m.tileIdx(o.cx, o.cy)]);
-    const hopsMin = Math.min(...I.filter((o) => o.shrine && !o.heart).map((o) => o.hops));
-    if (!reachedShrines.length) errs.push('tiles: no shrine reachable at the start');
-    if (reachedShrines.some((o) => o.hops > hopsMin + 20)) errs.push('tiles: leak');
+    // islands reached on the tiles with every ward closed must be exactly those the walkway graph allows
+    const graph = new Set([g.startIsland]);
+    for (let more = true; more;) { more = false; for (const b of g.bridges) if (b.ward < 0 && graph.has(b.a) !== graph.has(b.b)) { graph.add(b.a); graph.add(b.b); more = true; } }
+    const tiles = I.filter((o) => o.tiles.some((i) => s2[i])).map((o) => o.idx);
+    const leak = tiles.filter((k) => !graph.has(k));
+    if (leak.length) errs.push('tiles: past a ward to islands ' + leak.join(',') + ' (graph allows ' + [...graph].join(',') + ')');
+    if (![...graph].some((k) => I[k].shrine && !I[k].heart)) errs.push('no shrine reachable at the start');
   }
   const warded = g.bridges.filter((b) => b.ward >= 0).length;
   sizes.push([g.map.w, g.map.h, g.bridges.length, warded, g.ruins.length, g.spawns.length, g.chests.length, g.props.length]);
