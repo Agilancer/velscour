@@ -299,7 +299,7 @@ async function init() {
   $('controls').disabled = true;
   for (const set of ['helmet']) {
     const dir = 'helmets/';
-    const [setIndex, setAtlas, setData] = await Promise.all([json(base + dir + 'index.json'), image(base + dir + 'atlas.png'), json(base + dir + 'placements.json')]);
+    const [setIndex, setAtlas, setData] = await Promise.all([json(base + dir + 'index.json'), image(base + dir + 'atlas.webp'), json(base + dir + 'placements.json')]);
     index = setIndex; validate(setData);
     sets[set] = { index: setIndex, atlas: setAtlas, data: setData, persisted: JSON.stringify(setData) };
   }

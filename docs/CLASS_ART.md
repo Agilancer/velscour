@@ -40,12 +40,16 @@ that best match its head to the Common armor's head, because wings, spikes and p
 `armor_mask.png` (255 = never recoloured: face, hair and neck found by colour around the head; the Barbarian's bare
 skin; the Slime Lord's blue slime) and `gear.json` (frame, `headTop` 75, `feet` 183, `helmPin`, rarity `bands` (the armor ids each rarity rolls from),
 boxes, and `armor.head`: each armor's measured head offset from armor 1's, which the helmet follows). Shared:
-`assets/sprites/gear/helmets/` (`atlas.png`: a column per class, a row per design, 40 x 40 cells; `index.json` with
+`assets/sprites/gear/helmets/` (`atlas.webp`: a column per class, a row per design, 160 x 160 cells: 4x the 40 x 40 hero-pixel cell, pixel art cut
+from the helmets' high-res artwork (2 art px per hero px, 32 colours, hard edges, enlarged nearest-neighbour; `PIX`,
+`COLORS`) by `python tools/nocturnegear.py hires <the three *_Artwork zips>` into `<class>/hd/`; the game composes the
+hero at 4x (`HD` in `src/core/gearart.js`, armor pixels enlarged as they are) and scales it down, so helmets get
+crisper the further the camera zooms in; `index.json` with
 each design's `rarity` and `set`; designs 1-5 set 01, 6-10 set 02, 11-15 set 03; `placements.json`, kept across builds) and `classes.json`. Never hand-edit these.
 
 ### Helmet fitting
 Every helmet draws its 40 x 40 cell at (45,63) of the hero frame, shifted by the armor's `armor.head` offset, so size
-and placement are the same for every class. The exported helmets were wider than the heads, so `build` narrows each
+and placement are the same for every class. The exported helmets were wider than the heads, so `hires` narrows each
 class's helmets with an area resample (`HELM_SCALE` in `tools/nocturnegear.py`: 84% wide and 92% tall, 80% wide for
 the small-skulled Paladin, Necromancer, Barbarian and Death Knight), about the class's head centre and the helmet's
 bottom edge; the source PNGs stay untouched. To nudge one: double-click `Fit Helmets.cmd` (or

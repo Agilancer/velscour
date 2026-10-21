@@ -25,7 +25,7 @@ const SOAK = process.argv[3] || 'death_knight', MINUTES = +(process.argv[4] || 8
       const cv = document.createElement('canvas'); cv.width = meta.frame[0]; cv.height = meta.frame[1];
       const x = cv.getContext('2d', { willReadFrequently: true });
       const opaque = (img) => {
-        x.clearRect(0, 0, cv.width, cv.height); x.drawImage(img, 0, 0);
+        x.clearRect(0, 0, cv.width, cv.height); x.imageSmoothingEnabled = false; x.drawImage(img, 0, 0, cv.width, cv.height);
         const d = x.getImageData(0, 0, cv.width, cv.height).data; let n = 0;
         for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++;
         return n;

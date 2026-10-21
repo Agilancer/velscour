@@ -2,6 +2,7 @@
 
   python tools/nocturnegear.py import <extracted-zips-dir>   # user zips -> assets/source/gear_nocturne/ (native PNGs)
   python tools/nocturnegear.py import2 <extracted-zips-dir>  # collection 02 armors + helmet sets 02/03 (below)
+  python tools/nocturnegear.py hires <zip> <zip> <zip>         # helmets' high-res artwork (the three *_Artwork zips) -> hd/
   python tools/nocturnegear.py build                          # assets/source/gear_nocturne/ -> assets/sprites/gear/
 
 `import` expects the user's zips unpacked side by side in <dir>:
@@ -14,7 +15,8 @@
   Helmet_Set_02/, Helmet_Set_03/  VELSCOUR_Helmet_Set_0N_Game_Exports.zip (common..epic + mythic, pinned at (45,63))
 All armor sets are area-downsampled exactly like the Game Exports (crown y75, sole y183, 108 art px) and
 centred on the class's head so the helmets fit every set. `build` writes per class armor.webp (6 columns of 128x192),
-armor_mask.png (face, hair and bare skin: never recoloured) and gear.json, plus the shared helmets/ atlas.
+armor_mask.png (face, hair and bare skin: never recoloured) and gear.json, plus the shared helmets/ atlas, built from
+the HD cells in <class>/hd/ (`hires`): VELSCOUR_All_16_Classes_80_Enclosed_Helmets.zip, VELSCOUR_Helmet_Set_0N_All_80_Artwork.zip.
 Placements made in tools/helmet-fitter are kept (assets/sprites/gear/helmets/placements.json).
 """
 import json
@@ -37,6 +39,8 @@ HELM_SETS = [('', HELM_RARITIES), ('set02_', SET_RARITIES), ('set03_', SET_RARIT
 C02 = [('rare_a', 'rare_c02a'), ('rare_b', 'rare_c02b'), ('epic', 'epic_c02'), ('legendary', 'legendary_c02'),
        ('mythic_a', 'mythic_c02a'), ('mythic_b', 'mythic_c02b')]  # armors 13..18
 FW, FH, CROWN, SOLE, PIN, CELL = 128, 192, 75, 183, (45, 63), 40
+HD = 4  # helmet atlas cells are HD x the 40x40 native cell; the game scales them down (crisper when zoomed in)
+PIX, COLORS = 2, 32  # the helmets' pixel art: 2 art px per hero px, 32 colours each
 BARE_SKIN = {'barbarian'}  # classes whose outfits show arms/chest: skin is masked over the whole body
 # the exported helmets are wider than the heads: (width, height) scale per class, height kept at the neck
 HELM_SCALE = {c: (.84, .92) for c in CLASSES} | {c: (.8, .92) for c in ('paladin', 'necromancer', 'barbarian', 'death_knight')}
@@ -173,6 +177,48 @@ def do_import2(src):
         print('imported', c)
 
 
+def do_hires(zips):
+    """The helmets' high-res artwork -> gear_nocturne/<class>/hd/helmet_<key>.png: HD x the 40x40 cell. Each native is
+    the artwork squeezed into its box; that box is narrowed by HELM_SCALE (about the head's centre column and the
+    helmet's bottom edge), the artwork resampled into it at PIX x (premultiplied Lanczos), made pixel art (binary
+    alpha, COLORS colours, no dither) and enlarged to HD x nearest-neighbour."""
+    import io, re, zipfile
+    found = {}
+    for z in zips:
+        zf = zipfile.ZipFile(z)
+        for n in zf.namelist():
+            m = re.search(r'classes/([a-z_]+)/sources/\1_helmet_((?:set0\d_)?[a-z]+)\.png$', n)
+            if m:
+                found[m.groups()] = (zf, n)
+    for c in CLASSES:
+        d = SRC / c
+        (d / 'hd').mkdir(exist_ok=True)
+        kx, ky = HELM_SCALE[c]
+        ax = int(round(head_cx(rgba(d / 'armor_01_common.png')))) - PIN[0]  # as build's cx
+        for key, rars in HELM_SETS:
+            for r in rars:
+                zf, n = found[(c, key + r)]
+                a = np.array(Image.open(io.BytesIO(zf.read(n))).convert('RGBA')).astype(np.float32) / 255
+                ys, xs = np.nonzero(a[..., 3] > 0.5)
+                a = a[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+                ys, xs = np.nonzero(rgba(d / f'helmet_{key}{r}.png')[..., 3])
+                by = ys.max() + 1
+                x0, x1 = (ax + (xs.min() - ax) * kx) * PIX, (ax + (xs.max() + 1 - ax) * kx) * PIX
+                y0 = (by + (ys.min() - by) * ky) * PIX
+                x0, y0, w, h = round(x0), round(y0), round(x1 - x0), by * PIX - round(y0)
+                a[..., :3] *= a[..., 3:4]
+                s = np.clip(np.stack([np.array(Image.fromarray(a[..., i]).resize((w, h), Image.LANCZOS)) for i in range(4)], -1), 0, 1)
+                on = s[..., 3] > 0.5
+                rgb = np.clip(s[..., :3] / np.maximum(s[..., 3:4], 1e-4) * 255 + .5, 0, 255).astype(np.uint8)
+                q = np.array(Image.fromarray(rgb).quantize(COLORS, Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).convert('RGB'))
+                out = np.zeros((CELL * PIX, CELL * PIX, 4), np.uint8)
+                out[y0:y0 + h, x0:x0 + w, :3] = np.where(on[..., None], q, 0)
+                out[y0:y0 + h, x0:x0 + w, 3] = on * 255
+                big = Image.fromarray(out).resize((CELL * HD, CELL * HD), Image.NEAREST)
+                big.save(d / 'hd' / f'helmet_{key}{r}.png', optimize=True)
+        print('hires', c)
+
+
 def skin_mask(frame, bare, skinned, cx, top):
     """Face, hair and neck, never recoloured: around the head, skin-coloured pixels and the colours of the crown's
     top rows (hair), joined to the crown. Bare-skin classes also keep the body's skin."""
@@ -225,23 +271,6 @@ def warm_skin(rgb, v=.45, s0=.25, s1=.65):
     return (h[..., 0] >= 8) & (h[..., 0] <= 34) & (h[..., 1] > s0) & (h[..., 1] < s1) & (h[..., 2] > v)
 
 
-def fit_helmet(h, kx, ky, ax):
-    """Area-resample a 40x40 helmet cell by (kx, ky) about the head's centre column ax and the helmet's bottom edge."""
-    by = np.nonzero(h[..., 3].any(1))[0].max() + 1
-    p = h.astype(np.float32) / 255
-    p[..., :3] *= p[..., 3:4]
-    nw, nh = round(CELL * kx), round(CELL * ky)
-    s = np.stack([np.array(Image.fromarray(p[..., i]).resize((nw, nh), Image.BOX)) for i in range(4)], -1)
-    rgb, A = s[..., :3] / np.maximum(s[..., 3:4], 1e-4), s[..., 3]
-    out = np.zeros_like(h)
-    yy, xx = np.nonzero(A > .5)
-    ty, tx = yy + int(round(by - by * ky)), xx + int(round(ax - ax * kx))
-    ok = (ty >= 0) & (ty < CELL) & (tx >= 0) & (tx < CELL)
-    out[ty[ok], tx[ok], :3] = np.clip(rgb[yy[ok], xx[ok]] * 255 + .5, 0, 255)
-    out[ty[ok], tx[ok], 3] = 255
-    return out
-
-
 def head_offset(f, ref):
     """Where frame f's head is relative to ref's (the class's common armor), by matching the head's pixels."""
     rcx = int(round(head_cx(ref)))
@@ -263,7 +292,8 @@ def head_offset(f, ref):
 def build():
     OUT.mkdir(parents=True, exist_ok=True)
     helms = [(key, r) for key, rars in HELM_SETS for r in rars]
-    helm_atlas = np.zeros((CELL * len(helms), CELL * len(CLASSES), 4), np.uint8)
+    C = CELL * HD
+    helm_atlas = np.zeros((C * len(helms), C * len(CLASSES), 4), np.uint8)
     for ci, c in enumerate(CLASSES):
         d = SRC / c
         files = sorted(d.glob('armor_[0-9][0-9]_*.png'))
@@ -299,17 +329,18 @@ def build():
         }
         (od / 'gear.json').write_text(json.dumps(meta, separators=(',', ':')))
         for k, (key, r) in enumerate(helms):
-            helm_atlas[k * CELL:(k + 1) * CELL, ci * CELL:(ci + 1) * CELL] = fit_helmet(rgba(d / f'helmet_{key}{r}.png'), *HELM_SCALE[c], cx - PIN[0])
+            helm_atlas[k * C:(k + 1) * C, ci * C:(ci + 1) * C] = rgba(d / 'hd' / f'helmet_{key}{r}.png')
         print('built', c, int(mask.astype(bool).sum()), 'masked px')
     hd = OUT / 'helmets'
     hd.mkdir(exist_ok=True)
-    Image.fromarray(helm_atlas).save(hd / 'atlas.png', optimize=True)
+    (hd / 'atlas.png').unlink(missing_ok=True)
+    Image.fromarray(helm_atlas).save(hd / 'atlas.webp', lossless=True, quality=100, method=6)
     index = {
-        'frame': [CELL, CELL], 'cols': len(CLASSES), 'classes': CLASSES,
+        'frame': [C, C], 'cols': len(CLASSES), 'classes': CLASSES,
         'designs': [{'id': k + 1, 'rarity': RARITIES.index(r), 'set': int(key[3:5] or 1), 'name': r.title() + ' Helm',
                      'catalog': r.title() + (' ' + key[3:5] if key else '')} for k, (key, r) in enumerate(helms)],
-        # the 40x40 cell's top left lands on the hero frame at (45,63) (crown y75); per-helmet nudges: placements.json
-        'fit': {'scaleX': 1, 'scaleY': 1, 'xAnchor': PIN[0] + CELL / 2, 'baselineOffset': PIN[1] - CROWN, 'sourceBaseline': 0},
+        # the cell (40x40 hero px at 1/HD) has its top left on the hero frame at (45,63) (crown y75); nudges: placements.json
+        'fit': {'scaleX': 1 / HD, 'scaleY': 1 / HD, 'xAnchor': PIN[0] + CELL / 2, 'baselineOffset': PIN[1] - CROWN, 'sourceBaseline': 0},
     }
     (hd / 'index.json').write_text(json.dumps(index, indent=2))
     pl = hd / 'placements.json'
@@ -323,6 +354,8 @@ if __name__ == '__main__':
         do_import(sys.argv[2])
     elif len(sys.argv) > 2 and sys.argv[1] == 'import2':
         do_import2(sys.argv[2])
+    elif len(sys.argv) > 2 and sys.argv[1] == 'hires':
+        do_hires(sys.argv[2:])
     elif len(sys.argv) > 1 and sys.argv[1] == 'build':
         build()
     else:
