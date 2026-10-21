@@ -1,0 +1,559 @@
+{
+  "version": 1,
+  "tests": {
+    "floor_repeats": [
+      {
+        "floor": 1,
+        "uv_opposing_edge_max_error": [
+          0,
+          0
+        ],
+        "repeat_grid": [
+          4,
+          4
+        ],
+        "uncovered_pixels": 0,
+        "out_of_bounds_pixels": 0,
+        "pass": true
+      },
+      {
+        "floor": 2,
+        "uv_opposing_edge_max_error": [
+          0,
+          0
+        ],
+        "repeat_grid": [
+          4,
+          4
+        ],
+        "uncovered_pixels": 0,
+        "out_of_bounds_pixels": 0,
+        "pass": true
+      },
+      {
+        "floor": 3,
+        "uv_opposing_edge_max_error": [
+          0,
+          0
+        ],
+        "repeat_grid": [
+          4,
+          4
+        ],
+        "uncovered_pixels": 0,
+        "out_of_bounds_pixels": 0,
+        "pass": true
+      },
+      {
+        "floor": 4,
+        "uv_opposing_edge_max_error": [
+          0,
+          0
+        ],
+        "repeat_grid": [
+          4,
+          4
+        ],
+        "uncovered_pixels": 0,
+        "out_of_bounds_pixels": 0,
+        "pass": true
+      },
+      {
+        "floor": 5,
+        "uv_opposing_edge_max_error": [
+          0,
+          0
+        ],
+        "repeat_grid": [
+          4,
+          4
+        ],
+        "uncovered_pixels": 0,
+        "out_of_bounds_pixels": 0,
+        "pass": true
+      },
+      {
+        "floor": 6,
+        "uv_opposing_edge_max_error": [
+          0,
+          0
+        ],
+        "repeat_grid": [
+          4,
+          4
+        ],
+        "uncovered_pixels": 0,
+        "out_of_bounds_pixels": 0,
+        "pass": true
+      },
+      {
+        "floor": 7,
+        "uv_opposing_edge_max_error": [
+          0,
+          0
+        ],
+        "repeat_grid": [
+          4,
+          4
+        ],
+        "uncovered_pixels": 0,
+        "out_of_bounds_pixels": 0,
+        "pass": true
+      },
+      {
+        "floor": 8,
+        "uv_opposing_edge_max_error": [
+          0,
+          0
+        ],
+        "repeat_grid": [
+          4,
+          4
+        ],
+        "uncovered_pixels": 0,
+        "out_of_bounds_pixels": 0,
+        "pass": true
+      },
+      {
+        "floor": 9,
+        "uv_opposing_edge_max_error": [
+          0,
+          0
+        ],
+        "repeat_grid": [
+          4,
+          4
+        ],
+        "uncovered_pixels": 0,
+        "out_of_bounds_pixels": 0,
+        "pass": true
+      },
+      {
+        "floor": 10,
+        "uv_opposing_edge_max_error": [
+          0,
+          0
+        ],
+        "repeat_grid": [
+          4,
+          4
+        ],
+        "uncovered_pixels": 0,
+        "out_of_bounds_pixels": 0,
+        "pass": true
+      }
+    ],
+    "arch_wall_sockets": [
+      {
+        "arch": "arch_01_split_chapel_arch_SE",
+        "span_tiles": 3,
+        "socket_max_error_tiles": 0.0,
+        "pass": true
+      },
+      {
+        "arch": "arch_01_split_chapel_arch_SW",
+        "span_tiles": 3,
+        "socket_max_error_tiles": 0.0,
+        "pass": true
+      },
+      {
+        "arch": "arch_01_split_chapel_arch_NW",
+        "span_tiles": 3,
+        "socket_max_error_tiles": 0.0,
+        "pass": true
+      },
+      {
+        "arch": "arch_01_split_chapel_arch_NE",
+        "span_tiles": 3,
+        "socket_max_error_tiles": 0.0,
+        "pass": true
+      },
+      {
+        "arch": "arch_02_rootwound_ossuary_arch_SE",
+        "span_tiles": 3,
+        "socket_max_error_tiles": 0.0,
+        "pass": true
+      },
+      {
+        "arch": "arch_02_rootwound_ossuary_arch_SW",
+        "span_tiles": 3,
+        "socket_max_error_tiles": 0.0,
+        "pass": true
+      },
+      {
+        "arch": "arch_02_rootwound_ossuary_arch_NW",
+        "span_tiles": 3,
+        "socket_max_error_tiles": 0.0,
+        "pass": true
+      },
+      {
+        "arch": "arch_02_rootwound_ossuary_arch_NE",
+        "span_tiles": 3,
+        "socket_max_error_tiles": 0.0,
+        "pass": true
+      },
+      {
+        "arch": "arch_03_voidbound_stone_arch_SE",
+        "span_tiles": 3,
+        "socket_max_error_tiles": 0.0,
+        "pass": true
+      },
+      {
+        "arch": "arch_03_voidbound_stone_arch_SW",
+        "span_tiles": 3,
+        "socket_max_error_tiles": 0.0,
+        "pass": true
+      },
+      {
+        "arch": "arch_03_voidbound_stone_arch_NW",
+        "span_tiles": 3,
+        "socket_max_error_tiles": 0.0,
+        "pass": true
+      },
+      {
+        "arch": "arch_03_voidbound_stone_arch_NE",
+        "span_tiles": 3,
+        "socket_max_error_tiles": 0.0,
+        "pass": true
+      }
+    ],
+    "door_state_alignment": [
+      {
+        "design": "thornbound_oak",
+        "orientation": "SE",
+        "states": [
+          "closed",
+          "open"
+        ],
+        "same_size_pivot_hinge": true,
+        "pass": true
+      },
+      {
+        "design": "thornbound_oak",
+        "orientation": "SW",
+        "states": [
+          "closed",
+          "open"
+        ],
+        "same_size_pivot_hinge": true,
+        "pass": true
+      },
+      {
+        "design": "thornbound_oak",
+        "orientation": "NW",
+        "states": [
+          "closed",
+          "open"
+        ],
+        "same_size_pivot_hinge": true,
+        "pass": true
+      },
+      {
+        "design": "thornbound_oak",
+        "orientation": "NE",
+        "states": [
+          "closed",
+          "open"
+        ],
+        "same_size_pivot_hinge": true,
+        "pass": true
+      },
+      {
+        "design": "rift_iron_grille",
+        "orientation": "SE",
+        "states": [
+          "closed",
+          "open"
+        ],
+        "same_size_pivot_hinge": true,
+        "pass": true
+      },
+      {
+        "design": "rift_iron_grille",
+        "orientation": "SW",
+        "states": [
+          "closed",
+          "open"
+        ],
+        "same_size_pivot_hinge": true,
+        "pass": true
+      },
+      {
+        "design": "rift_iron_grille",
+        "orientation": "NW",
+        "states": [
+          "closed",
+          "open"
+        ],
+        "same_size_pivot_hinge": true,
+        "pass": true
+      },
+      {
+        "design": "rift_iron_grille",
+        "orientation": "NE",
+        "states": [
+          "closed",
+          "open"
+        ],
+        "same_size_pivot_hinge": true,
+        "pass": true
+      },
+      {
+        "design": "sealed_bone_vault",
+        "orientation": "SE",
+        "states": [
+          "closed",
+          "open"
+        ],
+        "same_size_pivot_hinge": true,
+        "pass": true
+      },
+      {
+        "design": "sealed_bone_vault",
+        "orientation": "SW",
+        "states": [
+          "closed",
+          "open"
+        ],
+        "same_size_pivot_hinge": true,
+        "pass": true
+      },
+      {
+        "design": "sealed_bone_vault",
+        "orientation": "NW",
+        "states": [
+          "closed",
+          "open"
+        ],
+        "same_size_pivot_hinge": true,
+        "pass": true
+      },
+      {
+        "design": "sealed_bone_vault",
+        "orientation": "NE",
+        "states": [
+          "closed",
+          "open"
+        ],
+        "same_size_pivot_hinge": true,
+        "pass": true
+      }
+    ],
+    "wall_coverage": [
+      {
+        "wall_set": "rootsplit_limestone",
+        "all_16_topologies": true,
+        "four_directed_panels": true,
+        "pass": true
+      },
+      {
+        "wall_set": "ossuary_galleries",
+        "all_16_topologies": true,
+        "four_directed_panels": true,
+        "pass": true
+      },
+      {
+        "wall_set": "split_chapel_masonry",
+        "all_16_topologies": true,
+        "four_directed_panels": true,
+        "pass": true
+      },
+      {
+        "wall_set": "thornsealed_cells",
+        "all_16_topologies": true,
+        "four_directed_panels": true,
+        "pass": true
+      },
+      {
+        "wall_set": "rift_drowned_vault",
+        "all_16_topologies": true,
+        "four_directed_panels": true,
+        "pass": true
+      }
+    ],
+    "wall_join_raster": [
+      {
+        "wall_set": "rootsplit_limestone",
+        "orientation": "SE",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "rootsplit_limestone",
+        "orientation": "SW",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "rootsplit_limestone",
+        "orientation": "NW",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "rootsplit_limestone",
+        "orientation": "NE",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "ossuary_galleries",
+        "orientation": "SE",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "ossuary_galleries",
+        "orientation": "SW",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "ossuary_galleries",
+        "orientation": "NW",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "ossuary_galleries",
+        "orientation": "NE",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "split_chapel_masonry",
+        "orientation": "SE",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "split_chapel_masonry",
+        "orientation": "SW",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "split_chapel_masonry",
+        "orientation": "NW",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "split_chapel_masonry",
+        "orientation": "NE",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "thornsealed_cells",
+        "orientation": "SE",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "thornsealed_cells",
+        "orientation": "SW",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "thornsealed_cells",
+        "orientation": "NW",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "thornsealed_cells",
+        "orientation": "NE",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "rift_drowned_vault",
+        "orientation": "SE",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "rift_drowned_vault",
+        "orientation": "SW",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "rift_drowned_vault",
+        "orientation": "NW",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      },
+      {
+        "wall_set": "rift_drowned_vault",
+        "orientation": "NE",
+        "test": "two saved sprites versus one continuous geometric wall",
+        "silhouette_mismatch_pixels": 0,
+        "pass": true
+      }
+    ],
+    "inventory": {
+      "frames": 236,
+      "expected": 236,
+      "all_nonempty": true,
+      "all_binary_alpha": true,
+      "unique_pixel_payloads": 231,
+      "pass": true
+    },
+    "unique_designs": [
+      {
+        "category": "floors",
+        "required": 60,
+        "unique": 60,
+        "pass": true
+      },
+      {
+        "category": "scatter",
+        "required": 40,
+        "unique": 40,
+        "pass": true
+      }
+    ],
+    "atlas_roundtrip": {
+      "checked": 236,
+      "mismatches": 0,
+      "pass": true
+    },
+    "sprite_canvas_margins": {
+      "clipped_candidates": [],
+      "pass": true
+    },
+    "reference_floor_mask": {
+      "source": "stored measured raster specification",
+      "mismatched_pixels": 0,
+      "pass": true
+    }
+  },
+  "limitations": [
+    "The 160x80 reference grid is measured. Scatter projection is generated and visually matched, not reverse-engineered 3D geometry.",
+    "Architecture is a deterministic 2.5D extrusion of original generated elevations; this is not a native Diablo DT1 pack.",
+    "Seamless certification applies to each of floor_01 through floor_10 repeated with itself; arbitrary material transitions are not certified."
+  ],
+  "overall_pass": true
+}

@@ -1,0 +1,299 @@
+{
+  "origin_px": [
+    430,
+    168
+  ],
+  "tile_size_px": [
+    160,
+    80
+  ],
+  "floors": [
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 0,
+      "v": 0
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 0,
+      "v": 1
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 0,
+      "v": 2
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 0,
+      "v": 3
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 0,
+      "v": 4
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 1,
+      "v": 0
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 1,
+      "v": 1
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 1,
+      "v": 2
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 1,
+      "v": 3
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 1,
+      "v": 4
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 2,
+      "v": 0
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 2,
+      "v": 1
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 2,
+      "v": 2
+    },
+    {
+      "id": "floor_44_woven_root_paving",
+      "u": 2,
+      "v": 3
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 2,
+      "v": 4
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 3,
+      "v": 0
+    },
+    {
+      "id": "floor_31_fallen_monolith_chips",
+      "u": 3,
+      "v": 1
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 3,
+      "v": 2
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 3,
+      "v": 3
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 3,
+      "v": 4
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 4,
+      "v": 0
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 4,
+      "v": 1
+    },
+    {
+      "id": "floor_11_cracked_heather",
+      "u": 4,
+      "v": 2
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 4,
+      "v": 3
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 4,
+      "v": 4
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 5,
+      "v": 0
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 5,
+      "v": 1
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 5,
+      "v": 2
+    },
+    {
+      "id": "floor_24_violet_glass_gravel",
+      "u": 5,
+      "v": 3
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 5,
+      "v": 4
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 6,
+      "v": 0
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 6,
+      "v": 1
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 6,
+      "v": 2
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 6,
+      "v": 3
+    },
+    {
+      "id": "floor_01_rift_heath_loam",
+      "u": 6,
+      "v": 4
+    }
+  ],
+  "objects": [
+    {
+      "id": "scatter_01_split_standing_stones",
+      "u": 0.65,
+      "v": 0.7
+    },
+    {
+      "id": "wall_01_rift_heath_ashlar_panel_NE",
+      "u": -0.5,
+      "v": 3
+    },
+    {
+      "id": "scatter_20_split_basalt_monolith",
+      "u": 0.7,
+      "v": 2.4
+    },
+    {
+      "id": "scatter_13_bonegrass_tuft",
+      "u": 3,
+      "v": 0.1
+    },
+    {
+      "id": "wall_04_violet_seam_basalt_panel_SE",
+      "u": 4,
+      "v": -0.5
+    },
+    {
+      "id": "wall_01_rift_heath_ashlar_panel_NE",
+      "u": -0.5,
+      "v": 4
+    },
+    {
+      "id": "scatter_11_ash_dusted_urn",
+      "u": 4,
+      "v": 0.25
+    },
+    {
+      "id": "scatter_27_shattered_rootbound_obelisk",
+      "u": 0.3,
+      "v": 4
+    },
+    {
+      "id": "wall_04_violet_seam_basalt_panel_SE",
+      "u": 5,
+      "v": -0.5
+    },
+    {
+      "id": "arch_02_rootbound_stone_arch_SE",
+      "u": 3.0,
+      "v": 1.8
+    },
+    {
+      "id": "wall_05_iron_banded_slate_panel_SE",
+      "u": 6,
+      "v": -0.5
+    },
+    {
+      "id": "scatter_21_broken_stone_trail_arch",
+      "u": 1.8,
+      "v": 4.0
+    },
+    {
+      "id": "scatter_16_root_laced_well_ring",
+      "u": 5.8,
+      "v": 0.3
+    },
+    {
+      "id": "scatter_19_antlered_root_stump",
+      "u": 3.0,
+      "v": 3.3
+    },
+    {
+      "id": "wall_05_iron_banded_slate_panel_NE",
+      "u": 6.5,
+      "v": 0
+    },
+    {
+      "id": "wall_05_iron_banded_slate_panel_NE",
+      "u": 6.5,
+      "v": 1
+    },
+    {
+      "id": "scatter_32_dead_tree_root_cluster",
+      "u": 6.1,
+      "v": 1.4
+    },
+    {
+      "id": "scatter_10_weathered_shrine_plinth",
+      "u": 4.2,
+      "v": 3.6
+    },
+    {
+      "id": "wall_05_iron_banded_slate_panel_NE",
+      "u": 6.5,
+      "v": 2
+    },
+    {
+      "id": "door_02_graveyard_iron_grille_SE_open",
+      "u": 6.2,
+      "v": 3.0
+    },
+    {
+      "id": "scatter_37_iron_chain_wrapped_slate",
+      "u": 5.4,
+      "v": 4
+    },
+    {
+      "id": "scatter_24_violet_trim_roadside_shrine",
+      "u": 6.2,
+      "v": 4.0
+    }
+  ]
+}

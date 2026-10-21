@@ -1,0 +1,299 @@
+{
+  "origin_px": [
+    430,
+    168
+  ],
+  "tile_size_px": [
+    160,
+    80
+  ],
+  "floors": [
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 0,
+      "v": 0
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 0,
+      "v": 1
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 0,
+      "v": 2
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 0,
+      "v": 3
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 0,
+      "v": 4
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 1,
+      "v": 0
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 1,
+      "v": 1
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 1,
+      "v": 2
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 1,
+      "v": 3
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 1,
+      "v": 4
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 2,
+      "v": 0
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 2,
+      "v": 1
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 2,
+      "v": 2
+    },
+    {
+      "id": "floor_44_exposed_roots",
+      "u": 2,
+      "v": 3
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 2,
+      "v": 4
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 3,
+      "v": 0
+    },
+    {
+      "id": "floor_31_diagonal_rift_seam",
+      "u": 3,
+      "v": 1
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 3,
+      "v": 2
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 3,
+      "v": 3
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 3,
+      "v": 4
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 4,
+      "v": 0
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 4,
+      "v": 1
+    },
+    {
+      "id": "floor_11_branching_rift_fracture",
+      "u": 4,
+      "v": 2
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 4,
+      "v": 3
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 4,
+      "v": 4
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 5,
+      "v": 0
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 5,
+      "v": 1
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 5,
+      "v": 2
+    },
+    {
+      "id": "floor_24_inset_coffin_lid",
+      "u": 5,
+      "v": 3
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 5,
+      "v": 4
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 6,
+      "v": 0
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 6,
+      "v": 1
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 6,
+      "v": 2
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 6,
+      "v": 3
+    },
+    {
+      "id": "floor_01_ashen_grave_cobbles",
+      "u": 6,
+      "v": 4
+    }
+  ],
+  "objects": [
+    {
+      "id": "scatter_01_broken_chapel_threshold",
+      "u": 0.65,
+      "v": 0.7
+    },
+    {
+      "id": "wall_01_rootsplit_limestone_panel_NE",
+      "u": -0.5,
+      "v": 3
+    },
+    {
+      "id": "scatter_20_rootbound_grave_marker",
+      "u": 0.7,
+      "v": 2.4
+    },
+    {
+      "id": "scatter_13_rootpierced_altar",
+      "u": 3,
+      "v": 0.1
+    },
+    {
+      "id": "wall_04_thornsealed_cells_panel_SE",
+      "u": 4,
+      "v": -0.5
+    },
+    {
+      "id": "wall_01_rootsplit_limestone_panel_NE",
+      "u": -0.5,
+      "v": 4
+    },
+    {
+      "id": "scatter_11_last_vigil_candles",
+      "u": 4,
+      "v": 0.25
+    },
+    {
+      "id": "scatter_27_burial_urn_cluster",
+      "u": 0.3,
+      "v": 4
+    },
+    {
+      "id": "wall_04_thornsealed_cells_panel_SE",
+      "u": 5,
+      "v": -0.5
+    },
+    {
+      "id": "arch_02_rootwound_ossuary_arch_SE",
+      "u": 3.0,
+      "v": 1.8
+    },
+    {
+      "id": "wall_05_rift_drowned_vault_panel_SE",
+      "u": 6,
+      "v": -0.5
+    },
+    {
+      "id": "scatter_21_sealed_wood_coffin",
+      "u": 1.8,
+      "v": 4.0
+    },
+    {
+      "id": "scatter_16_rootshrouded_angel",
+      "u": 5.8,
+      "v": 0.3
+    },
+    {
+      "id": "scatter_19_breach_rubble",
+      "u": 3.0,
+      "v": 3.3
+    },
+    {
+      "id": "wall_05_rift_drowned_vault_panel_NE",
+      "u": 6.5,
+      "v": 0
+    },
+    {
+      "id": "wall_05_rift_drowned_vault_panel_NE",
+      "u": 6.5,
+      "v": 1
+    },
+    {
+      "id": "scatter_32_split_funerary_obelisk",
+      "u": 6.1,
+      "v": 1.4
+    },
+    {
+      "id": "scatter_10_breach_grave_lantern",
+      "u": 4.2,
+      "v": 3.6
+    },
+    {
+      "id": "wall_05_rift_drowned_vault_panel_NE",
+      "u": 6.5,
+      "v": 2
+    },
+    {
+      "id": "door_02_rift_iron_grille_SE_open",
+      "u": 6.2,
+      "v": 3.0
+    },
+    {
+      "id": "scatter_37_fallen_iron_fence",
+      "u": 5.4,
+      "v": 4
+    },
+    {
+      "id": "scatter_24_riftwarding_basin",
+      "u": 6.2,
+      "v": 4.0
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "eternal_breach": {
+    "manifest_frames": 236,
+    "category_counts": {
+      "arches": 12,
+      "doors": 24,
+      "floors": 60,
+      "scatter": 40,
+      "walls": 100
+    },
+    "all_validation_checks_pass": true,
+    "validation_counts": {
+      "floor_repeats": 10,
+      "arch_wall_sockets": 12,
+      "door_state_alignment": 12,
+      "wall_coverage": 5,
+      "wall_join_raster": 20,
+      "unique_designs": 2
+    }
+  },
+  "veilscar_march": {
+    "manifest_frames": 236,
+    "category_counts": {
+      "arches": 12,
+      "doors": 24,
+      "floors": 60,
+      "scatter": 40,
+      "walls": 100
+    },
+    "all_validation_checks_pass": true,
+    "validation_counts": {
+      "floor_repeats": 10,
+      "arch_wall_sockets": 12,
+      "door_state_alignment": 12,
+      "wall_coverage": 5,
+      "wall_join_raster": 20,
+      "unique_designs": 2
+    }
+  },
+  "creatures": {
+    "regular_count": 200,
+    "boss_count": 30,
+    "regular_palette_max": 24,
+    "boss_palette_max": 31,
+    "all_binary_alpha": true,
+    "distinct_pixel_hashes": 230,
+    "files_exist": true
+  },
+  "corrected_scatter_source_matches_rebuild": true
+}
