@@ -1,5 +1,9 @@
 # CASTLE overworld biome
 
+> **October 21, 2026:** the curtains, towers, gates, stairs, keep and halls are now one baked 3D model on a height
+> map: walk the walls, explore the keep and its throne room, watch the drawbridge come down. See
+> [CASTLE_3D.md](CASTLE_3D.md); the sprite walls, towers and keep art described below are gone.
+
 CASTLE is the third playable overworld beside the Forsaken Wilds and Sea of Sand. Its runtime atlases preserve the 160×80 floor grid, pivots, frame IDs, wall masks, orientation, and topology. The keep has its own six-frame floor atlas and three complete 20-piece interior wall families.
 
 ## Game integration

@@ -1,0 +1,20 @@
+{
+ "note": "Processional cemetery: aedicule piers with mourners in niches and skull panels, kneeling angel statues and small spires on top, a segmental pediment with roundels and a mask over a deep arch, a thin cross on a pedestal at the crown. (tools/arch3d.py; elevation px from the top left, half-depths in native px, parts in order, mirrored about the centre)",
+ "mirror": true,
+ "parts": [
+  {"op": "fill", "half": 12, "amp": 4, "what": "wall body"},
+  {"op": "fill", "poly": [[130, 196], [200, 140], [275, 112], [350, 140], [430, 196]], "half": 14, "rim": 6, "rimHalf": 17, "amp": 6, "what": "pediment with roundels and mask, raised coping"},
+  {"op": "portal", "minY": 150, "width": 40, "in": 14, "out": 24, "steps": 4, "amp": 3, "what": "arch mouldings"},
+  {"op": "add", "shafts": [[132, 146], [148, 162]], "rect": [130, 300, 166, 440], "bulge": 5, "what": "inner columns"},
+  {"op": "fill", "rect": [14, 280, 52, 448], "half": 20, "amp": 3, "what": "outer buttress"},
+  {"op": "fill", "rect": [50, 190, 132, 448], "half": 28, "amp": 3, "what": "aedicule pier"},
+  {"op": "fill", "rect": [64, 250, 106, 345], "half": 18, "amp": 10, "what": "mourner niche, deep"},
+  {"op": "fill", "rect": [64, 350, 108, 394], "half": 24, "amp": 8, "what": "skull panel"},
+  {"op": "fill", "rect": [46, 186, 136, 206], "half": 30, "amp": 2, "what": "pier cornice"},
+  {"op": "fill", "rect": [10, 400, 170, 448], "half": 31, "amp": 2, "what": "plinth"},
+  {"op": "square", "rect": [96, 112, 140, 190], "open": 3, "max": 16, "knobMax": 4, "what": "angel statue: a round mass", "scale": 0.85},
+  {"op": "square", "rect": [70, 112, 96, 190], "open": 2, "max": 8, "knobMax": 3, "what": "small spire"},
+  {"op": "square", "rect": [252, 98, 298, 118], "open": 2, "max": 12, "knobMax": 3, "what": "cross pedestal"},
+  {"op": "thin", "rect": [250, 46, 300, 100], "half": 2.6, "what": "stone cross"}
+ ]
+}

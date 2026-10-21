@@ -1,0 +1,10 @@
+{
+ "pack": "cathedral_graveyard",
+ "design": "nave_triumphal",
+ "span": 5,
+ "w": 400,
+ "h": 400,
+ "half": 8.0,
+ "depthStep": 0.25,
+ "pixels": 75447
+}

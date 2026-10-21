@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Castle 3D</title>
+<!-- The Castle's masonry (src/world/castle3d.js) in three.js: an orbit viewer, and the bake used by tools/castle3d_bake.js
+     (per-tile pieces cut from the game camera's view, building roofs, door and drawbridge frames). Only this tool runs
+     three.js; the game draws the baked pieces. http://localhost:8123/tools/castle3d.html (add ?bake for no viewer). -->
+<style>
+  html, body { margin: 0; height: 100%; background: #1d1c22; color: #ccc; font: 13px sans-serif; overflow: hidden; }
+  #hud { position: fixed; left: 8px; top: 8px; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="hud"></div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { castle3d, C3 } from '../src/world/castle3d.js';
+
+// World units: one screen px at 1x. A tile is 32*sqrt2 across (its edges project to 32 x 16 px), a level is 4 px up
+// (the camera looks 30 degrees down, so world height is scaled by 1/cos 30).
+const TU = 32 * Math.SQRT2, LU = 4 / Math.cos(Math.PI / 6);
+const U_TILES = 1, V_PX = 98;    // the masonry repeats every tile along a wall (so straight runs repeat exactly)
+const P = new URLSearchParams(location.search);
+const LOOK = { amb: 0.3, sky: 0.3, sun: 1.15, sunDir: [-0.6, 0.85, 0.5], bump: 3, tone: 0xbab4ac };
+
+const load = (src) => new Promise((ok, no) => new THREE.TextureLoader().load(src, ok, undefined, no));
+async function materials() {
+  const M = {};
+  const tex = async (name, rep = true) => {
+    const t = await load(`../assets/source/castle3d/tex/${name}.png`);
+    t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = rep ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
+    t.anisotropy = 8; return t;
+  };
+  const mk = async (name, o = {}) => {
+    const map = await tex(name), bump = await tex(name);
+    bump.colorSpace = THREE.NoColorSpace;
+    return new THREE.MeshStandardMaterial({ map, bumpMap: bump, bumpScale: LOOK.bump, roughness: 0.92, metalness: 0, color: o.color ?? LOOK.tone, side: THREE.FrontSide });
+  };
+  M.ashlar = await mk('ashlar');
+  M.walk = await mk('ashlar', { color: 0x9a948c });
+  M.setts = await mk('ashlar', { color: 0x8c8780 });
+  M.lead = await mk('slate', { color: 0x7c8088 });
+  M.glass = new THREE.MeshStandardMaterial({ color: 0x15171d, roughness: 0.35, metalness: 0.2 });
+  M.slit = new THREE.MeshStandardMaterial({ color: 0x0c0b0a, roughness: 1 });
+  M.marble = await mk('chapel', { color: 0xfff6e8 });
+  M.chapel = await mk('chapel');
+  M.slate = await mk('slate', { color: 0xe6e9f0 });
+  M.wood = await mk('wood', { color: 0xc8c0b8 });
+  M.iron = await mk('iron');
+  return M;
+}
+
+// ------------------------------------------------------------------ geometry from the parts
+// Everything is built in world units, then UVs are mapped from world position by face direction, so textures run on
+// across neighbouring parts. Buckets: material | layer (0 masonry, 1 over a walkway) | roof (building id or 0).
+const V3 = (x, y, z) => new THREE.Vector3(x * TU, z * LU, y * TU);
+function worldUV(g, cyl = null) {
+  g = g.index ? g.toNonIndexed() : g;
+  g.computeVertexNormals();
+  const p = g.attributes.position, n = g.attributes.normal, uv = new Float32Array(p.count * 2);
+  for (let i = 0; i < p.count; i++) {
+    const X = p.getX(i) / TU, Y = p.getY(i) / LU * 4, Z = p.getZ(i) / TU;
+    const nx = n.getX(i), ny = n.getY(i), nz = n.getZ(i);
+    if (cyl && Math.abs(ny) < 0.7) { uv[i * 2] = Math.atan2(Z - cyl.y, X - cyl.x) * cyl.r / U_TILES; uv[i * 2 + 1] = Y / V_PX; }
+    else if (Math.abs(ny) >= 0.7) { uv[i * 2] = X / U_TILES; uv[i * 2 + 1] = Z / (U_TILES * 2); }
+    else if (Math.abs(nx) > Math.abs(nz)) { uv[i * 2] = Z / U_TILES; uv[i * 2 + 1] = Y / V_PX; }
+    else { uv[i * 2] = X / U_TILES; uv[i * 2 + 1] = Y / V_PX; }
+  }
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  return g;
+}
+function boxGeo(x0, y0, x1, y1, z0, z1) {
+  const g = new THREE.BoxGeometry((x1 - x0) * TU, (z1 - z0) * LU, (y1 - y0) * TU);
+  g.translate((x0 + x1) / 2 * TU, (z0 + z1) / 2 * LU, (y0 + y1) / 2 * TU);
+  return g;
+}
+// an AABB minus another: the parts of A outside B
+function subtract(A, B) {
+  if (A.x1 <= B.x0 || A.x0 >= B.x1 || A.y1 <= B.y0 || A.y0 >= B.y1 || A.z1 <= B.z0 || A.z0 >= B.z1) return [A];
+  const out = [];
+  if (A.x0 < B.x0) out.push({ ...A, x1: B.x0 });
+  if (A.x1 > B.x1) out.push({ ...A, x0: B.x1 });
+  const xa = Math.max(A.x0, B.x0), xb = Math.min(A.x1, B.x1);
+  if (A.y0 < B.y0) out.push({ ...A, x0: xa, x1: xb, y1: B.y0 });
+  if (A.y1 > B.y1) out.push({ ...A, x0: xa, x1: xb, y0: B.y1 });
+  const ya = Math.max(A.y0, B.y0), yb = Math.min(A.y1, B.y1);
+  if (A.z0 < B.z0) out.push({ ...A, x0: xa, x1: xb, y0: ya, y1: yb, z1: B.z0 });
+  if (A.z1 > B.z1) out.push({ ...A, x0: xa, x1: xb, y0: ya, y1: yb, z0: B.z1 });
+  return out;
+}
+// the masonry above an arched opening, extruded through the wall: the opening spans s0..s1 across, d0..d1 deep
+function archGeo(a) {
+  const { s0, s1, d0, d1, z0, z1, spring, apex, axis } = a, half = (s1 - s0) / 2, mid = (s0 + s1) / 2;
+  const R = half * 1.15, cx = s0 + R, phiMax = Math.acos((R - half) / R), pts = [];
+  const zOf = (phi) => spring + (apex - spring) * Math.sin(phi) / Math.sin(phiMax);
+  for (let k = 0; k <= 10; k++) { const phi = phiMax * k / 10; pts.push([cx - R * Math.cos(phi), zOf(phi)]); }
+  for (let k = 9; k >= 0; k--) { const [s, z] = pts[k]; pts.push([2 * mid - s, z]); }
+  // hole: the opening itself (the region under the curve) is cut by building the shape round it
+  const outline = new THREE.Shape();
+  outline.moveTo(s0 * TU, spring * LU);
+  for (const [s, z] of pts) outline.lineTo(s * TU, z * LU);
+  outline.lineTo(s1 * TU, spring * LU); outline.lineTo(s1 * TU, z1 * LU); outline.lineTo(s0 * TU, z1 * LU); outline.closePath();
+  const g = new THREE.ExtrudeGeometry(outline, { depth: (d1 - d0) * TU, bevelEnabled: false, curveSegments: 1 });
+  // shape space (s, z) -> world: axis 'y' means the passage runs along y (s is x); 'x' means it runs along x (s is y)
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const s = p.getX(i), z = p.getY(i), d = p.getZ(i) + d0 * TU;
+    if (axis === 'y') p.setXYZ(i, s, z, d); else p.setXYZ(i, d, z, s);
+  }
+  g.computeVertexNormals();
+  return axis === 'x' ? flip(g) : g;
+}
+function flip(g) {   // mirrored by the axis swap: turn the faces back outward
+  g = g.index ? g.toNonIndexed() : g;
+  const p = g.attributes.position.array;
+  for (let i = 0; i < p.length; i += 9) for (let k = 0; k < 3; k++) { const t = p[i + 3 + k]; p[i + 3 + k] = p[i + 6 + k]; p[i + 6 + k] = t; }
+  g.attributes.position.needsUpdate = true; g.computeVertexNormals();
+  return g;
+}
+// a lathe's start and length (radians) leaving out the gap [g0, g1] (degrees, tile x toward y; lathe 0 is +y, phi = 90 - theta)
+function arc(gap) {
+  if (!gap) return [0, Math.PI * 2];
+  const [g0, g1] = gap, rad = Math.PI / 180;
+  return [(90 - (g0 + 360)) * rad, ((g0 + 360) - g1) * rad];
+}
+function inArc(a, [g0, g1]) { const t = ((a - g0) % 360 + 360) % 360; return t <= ((g1 - g0) % 360 + 360) % 360; }
+function merlonRow(add, axis, a0, a1, c0, c1, z, outward, m) {
+  // breastwork the whole row; merlons on its outer 0.6, one per 2 tiles (aligned to even tiles, so runs repeat)
+  add(axis === 'x' ? boxGeo(a0, c0, a1, c1, z, z + 5) : boxGeo(c0, a0, c1, a1, z, z + 5), m);
+  const [o0, o1] = outward ? [c1 - 0.6, c1] : [c0, c0 + 0.6];
+  for (let s = Math.ceil(a0 / 2) * 2; s < a1; s += 2) {
+    const e0 = Math.max(a0, s + 0.2), e1 = Math.min(a1, s + 1.4);
+    if (e1 - e0 > 0.3) add(axis === 'x' ? boxGeo(e0, o0, e1, o1, z + 5, z + 12) : boxGeo(o0, e0, o1, e1, z + 5, z + 12), m);
+  }
+}
+function build(M, layout, only = null) {
+  const buckets = new Map();
+  const add = (g, m, layer = 0, roof = 0, cyl = null) => {
+    const key = m + '|' + layer + '|' + roof;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(worldUV(g, cyl));
+  };
+  const openings = layout.parts.filter((p) => p.t === 'arch').map((a) => a.axis === 'y'
+    ? { x0: a.x0, x1: a.x1, y0: a.y0, y1: a.y1, z0: a.z0 ?? 0, z1: a.z1 } : { x0: a.y0, x1: a.y1, y0: a.x0, y1: a.x1, z0: a.z0 ?? 0, z1: a.z1 });
+  for (const p of layout.parts) {
+    if (only && !only(p)) continue;
+    const layer = p.cover ? 1 : 0, roof = p.roof || 0;
+    if (p.t === 'box') {
+      let bits = [{ x0: p.x0, y0: p.y0, x1: p.x1, y1: p.y1, z0: p.z0, z1: p.z1 }];
+      for (const o of openings) bits = bits.flatMap((b) => subtract(b, o));
+      for (const b of bits) {
+        if (p.top && !roof) {   // the walking surface on top, a hair proud, in its own material
+          add(boxGeo(b.x0, b.y0, b.x1, b.y1, b.z0, b.z1 - 0.05), p.m, layer, roof);
+          add(boxGeo(b.x0, b.y0, b.x1, b.y1, b.z1 - 0.05, b.z1), p.top, layer, roof);
+        } else add(boxGeo(b.x0, b.y0, b.x1, b.y1, b.z0, b.z1), p.m, layer, roof);
+      }
+    } else if (p.t === 'cyl') {
+      const seg = Math.max(16, Math.round(p.r * 10));
+      if (p.shell) {
+        const prof = [new THREE.Vector2((p.r - p.shell) * TU, 0), new THREE.Vector2(p.r * TU, 0), new THREE.Vector2(p.r * TU, (p.z1 - p.z0) * LU), new THREE.Vector2((p.r - p.shell) * TU, (p.z1 - p.z0) * LU), new THREE.Vector2((p.r - p.shell) * TU, 0)];
+        const [ps, pl] = arc(p.gap);
+        const g = new THREE.LatheGeometry(prof, seg, ps, pl); g.translate(p.x * TU, p.z0 * LU, p.y * TU);
+        add(g, p.m, layer, roof, { x: p.x, y: p.y, r: p.r });
+      } else {
+        const g = new THREE.CylinderGeometry(p.r * TU, p.r * TU, (p.z1 - p.z0) * LU, seg, 1, false);
+        g.translate(p.x * TU, (p.z0 + p.z1) / 2 * LU, p.y * TU);
+        add(g, p.m, layer, roof, { x: p.x, y: p.y, r: p.r });
+        if (p.top) { const t = new THREE.CircleGeometry(p.r * TU * 0.98, seg); t.rotateX(-Math.PI / 2); t.translate(p.x * TU, p.z1 * LU + 0.2, p.y * TU); add(t, p.top, layer, roof); }
+      }
+    } else if (p.t === 'cone') {
+      const g = new THREE.ConeGeometry(p.r * TU, p.h * LU, p.seg || 24, 1, true);
+      g.translate(p.x * TU, (p.z + p.h / 2) * LU, p.y * TU);
+      add(g, p.m, layer, roof, { x: p.x, y: p.y, r: p.r });
+    } else if (p.t === 'arch') {
+      const a = p.axis === 'y' ? { s0: p.x0, s1: p.x1, d0: p.y0, d1: p.y1 } : { s0: p.x0, s1: p.x1, d0: p.y0, d1: p.y1 };
+      add(archGeo({ ...a, z0: p.z0 ?? 0, z1: p.z1, spring: p.spring, apex: p.apex, axis: p.axis }), p.m, layer, roof);
+    } else if (p.t === 'parapet') {
+      merlonRow((g, m) => add(g, m, layer, roof), p.axis, p.a0, p.a1, p.c0, p.c1, p.z, p.side === 'S' || p.side === 'E', p.m);
+    } else if (p.t === 'towerParapet') {
+      const t = 0.6;
+      for (const [side, ax, a0, a1, c0, c1, out] of [['N', 'x', p.x0, p.x1, p.y0, p.y0 + t, false], ['S', 'x', p.x0, p.x1, p.y1 - t, p.y1, true],
+        ['W', 'y', p.y0 + t, p.y1 - t, p.x0, p.x0 + t, false], ['E', 'y', p.y0 + t, p.y1 - t, p.x1 - t, p.x1, true]]) {
+        if (side === p.open) continue;
+        merlonRow((g, m) => add(g, m, layer, roof), ax, a0, a1, c0, c1, p.z, out, p.m);
+      }
+    } else if (p.t === 'ringParapet') {
+      const prof = [new THREE.Vector2((p.r - 0.6) * TU, 0), new THREE.Vector2(p.r * TU, 0), new THREE.Vector2(p.r * TU, 4 * LU), new THREE.Vector2((p.r - 0.6) * TU, 4 * LU), new THREE.Vector2((p.r - 0.6) * TU, 0)];
+      const [ps, pl] = arc(p.gap);
+      const g = new THREE.LatheGeometry(prof, 32, ps, pl); g.translate(p.x * TU, p.z * LU, p.y * TU);
+      add(g, p.m, layer, roof, { x: p.x, y: p.y, r: p.r });
+      const n = Math.max(8, Math.round(Math.PI * 2 * p.r / 1.6));
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2, m = new THREE.BoxGeometry(0.95 * TU, 5 * LU, 0.6 * TU);
+        if (p.gap && inArc(90 - a * 180 / Math.PI, p.gap)) continue;
+        m.translate(0, (p.z + 6.5) * LU, (p.r - 0.3) * TU); m.rotateY(a); m.translate(p.x * TU, 0, p.y * TU);
+        add(m, p.m, layer, roof);
+      }
+    } else if (p.t === 'roof') {
+      add(roofGeo(p), p.m || 'slate', layer, p.roof || 0);
+      const ends = gableEnds(p); if (ends) add(ends, 'ashlar', layer, p.roof || 0);
+    } else if (p.t === 'face') {
+      dressFace(p, (g, m) => add(g, m, layer, roof));
+    }
+  }
+  const group = new THREE.Group();
+  for (const [key, list] of buckets) {
+    const [m, layer, roof] = key.split('|');
+    const mesh = new THREE.Mesh(mergeGeometries(list.map((g) => { for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k); return g; })), M[m]);
+    mesh.userData = { layer: +layer, roof: +roof, m };
+    mesh.castShadow = mesh.receiveShadow = true;
+    group.add(mesh);
+  }
+  return group;
+}
+// a wall face's dressing (parts of type 'face', src/world/castle3d.js); boxes are given as (along, out, z) ranges
+function dressFace(p, add) {
+  const B = (a0, a1, o0, o1, z0, z1, m) => {
+    const c0 = p.c + p.dir * o0, c1 = p.c + p.dir * o1, lo = Math.min(c0, c1), hi = Math.max(c0, c1);
+    add(p.axis === 'x' ? boxGeo(a0, lo, a1, hi, z0, z1) : boxGeo(lo, a0, hi, a1, z0, z1), m);
+  };
+  const free = (a, w) => a - w > p.a0 + 0.6 && a + w < p.a1 - 0.6 && !(p.skip || []).some(([s0, s1]) => a + w > s0 && a - w < s1);
+  if (p.course) B(p.a0, p.a1, -0.02, 0.14, p.course, p.course + 1, 'ashlar');
+  if (p.course2) B(p.a0, p.a1, -0.02, 0.18, p.course2, p.course2 + 1.2, 'ashlar');
+  if (p.pilasters) for (let a = Math.ceil(p.a0 / p.pilasters) * p.pilasters; a <= p.a1; a += p.pilasters) if (free(a, 0.45))
+    B(a - 0.45, a + 0.45, -0.02, 0.42, 0, p.z1 - 4, 'ashlar');
+  if (p.windows) { const w = p.windows;
+    for (let a = Math.ceil(p.a0 / w.every) * w.every + w.every / 2; a < p.a1; a += w.every) if (free(a, w.w)) {
+      B(a - w.w / 2, a + w.w / 2, -0.02, 0.03, w.z0, w.z1, 'glass');
+      B(a - w.w / 2 - 0.22, a - w.w / 2, -0.02, 0.16, w.z0 - 1, w.z1 + 1, 'ashlar');
+      B(a + w.w / 2, a + w.w / 2 + 0.22, -0.02, 0.16, w.z0 - 1, w.z1 + 1, 'ashlar');
+      B(a - w.w / 2 - 0.3, a + w.w / 2 + 0.3, -0.02, 0.2, w.z0 - 1.2, w.z0, 'ashlar');
+      B(a - w.w / 2 - 0.22, a + w.w / 2 + 0.22, -0.02, 0.16, w.z1, w.z1 + 1.6, 'ashlar');
+      B(a - 0.18, a + 0.18, -0.02, 0.05, w.z0, w.z1, 'ashlar');   // the mullion
+    } }
+  if (p.slits) for (let a = Math.ceil(p.a0 / p.slits) * p.slits + 1; a < p.a1; a += p.slits) if (free(a, 0.2))
+    B(a - 0.08, a + 0.08, -0.02, 0.02, Math.max(4, p.z1 * 0.35), Math.max(9, p.z1 * 0.35 + 6), 'slit');
+}
+function tri(arr, a, b, c) { arr.push(...a, ...b, ...c); }
+function roofGeo(p) {
+  const { x0, y0, x1, y1, z, h } = p, pos = [];
+  const v = (x, y, zz) => [x * TU, zz * LU, y * TU];
+  if (p.kind === 'lean') {   // a lean-to rising from its outer eave (`side`) to the clerestory
+    const lo = p.side === 'W' ? x0 : x1, hi = p.side === 'W' ? x1 : x0;
+    tri(pos, v(lo, y0, z), v(lo, y1, z), v(hi, y1, z + h)); tri(pos, v(lo, y0, z), v(hi, y1, z + h), v(hi, y0, z + h));
+  } else if (p.kind === 'gable') {
+    if (p.axis === 'y') { const xm = (x0 + x1) / 2;
+      tri(pos, v(x0, y0, z), v(x0, y1, z), v(xm, y1, z + h)); tri(pos, v(x0, y0, z), v(xm, y1, z + h), v(xm, y0, z + h));
+      tri(pos, v(x1, y1, z), v(x1, y0, z), v(xm, y0, z + h)); tri(pos, v(x1, y1, z), v(xm, y0, z + h), v(xm, y1, z + h));
+    } else { const ym = (y0 + y1) / 2;
+      tri(pos, v(x1, y0, z), v(x0, y0, z), v(x0, ym, z + h)); tri(pos, v(x1, y0, z), v(x0, ym, z + h), v(x1, ym, z + h));
+      tri(pos, v(x0, y1, z), v(x1, y1, z), v(x1, ym, z + h)); tri(pos, v(x0, y1, z), v(x1, ym, z + h), v(x0, ym, z + h)); }
+  } else {   // hip: a short ridge along the longer side
+    const lx = x1 - x0, ly = y1 - y0, r = Math.min(lx, ly) / 2;
+    const [a, b] = lx >= ly ? [[x0 + r, (y0 + y1) / 2], [x1 - r, (y0 + y1) / 2]] : [[(x0 + x1) / 2, y0 + r], [(x0 + x1) / 2, y1 - r]];
+    const A = v(a[0], a[1], z + h), B = v(b[0], b[1], z + h), c00 = v(x0, y0, z), c10 = v(x1, y0, z), c11 = v(x1, y1, z), c01 = v(x0, y1, z);
+    if (lx >= ly) { tri(pos, c10, c00, A); tri(pos, c10, A, B); tri(pos, c01, c11, B); tri(pos, c01, B, A); tri(pos, c00, c01, A); tri(pos, c11, c10, B); }
+    else { tri(pos, c00, c01, A); tri(pos, c01, B, A); tri(pos, c11, c10, B); tri(pos, c10, A, B); tri(pos, c10, c00, A); tri(pos, c01, c11, B); }
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  return outward(g, p);
+}
+function gableEnds(p) {
+  const pos = [], v = (x, y, zz) => [x * TU, zz * LU, y * TU];
+  if (p.kind === 'gable') {
+    if (p.axis === 'y') { const xm = (p.x0 + p.x1) / 2; for (const y of [p.y0 + 0.3, p.y1 - 0.3]) tri(pos, v(p.x0 + 0.3, y, p.z), v(p.x1 - 0.3, y, p.z), v(xm, y, p.z + p.h - 0.6)); }
+    else { const ym = (p.y0 + p.y1) / 2; for (const x of [p.x0 + 0.3, p.x1 - 0.3]) tri(pos, v(x, p.y0 + 0.3, p.z), v(x, p.y1 - 0.3, p.z), v(x, ym, p.z + p.h - 0.6)); }
+  }
+  if (!pos.length) return null;
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  return outward(g, p, true);
+}
+// wind every triangle to face away from the roof's centre line (and gable ends both ways)
+function outward(g, p, both = false) {
+  const a = g.attributes.position.array, cx = (p.x0 + p.x1) / 2 * TU, cz = (p.y0 + p.y1) / 2 * TU, cy = p.z * LU - 1000;
+  const out = [];
+  for (let i = 0; i < a.length; i += 9) {
+    const A = new THREE.Vector3(a[i], a[i + 1], a[i + 2]), B = new THREE.Vector3(a[i + 3], a[i + 4], a[i + 5]), Cc = new THREE.Vector3(a[i + 6], a[i + 7], a[i + 8]);
+    const n = B.clone().sub(A).cross(Cc.clone().sub(A)), m = A.clone().add(B).add(Cc).multiplyScalar(1 / 3);
+    const ok = n.dot(m.clone().sub(new THREE.Vector3(cx, cy, cz))) >= 0;
+    out.push(...(ok ? [A, B, Cc] : [A, Cc, B]).flatMap((q) => [q.x, q.y, q.z]));
+    if (both) out.push(...(ok ? [A, Cc, B] : [A, B, Cc]).flatMap((q) => [q.x, q.y, q.z]));
+  }
+  const r = new THREE.BufferGeometry(); r.setAttribute('position', new THREE.Float32BufferAttribute(out, 3));
+  return r;
+}
+
+// ------------------------------------------------------------------ rendering
+let renderer, scene, sun, SHADOW_FIXED = false;
+function setup() {
+  renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(1); renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.body.appendChild(renderer.domElement);
+  scene = new THREE.Scene();
+  scene.add(new THREE.AmbientLight(0xffffff, LOOK.amb * Math.PI));
+  scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x3a3020, LOOK.sky * Math.PI));
+  sun = new THREE.DirectionalLight(0xfff2e0, LOOK.sun * Math.PI);
+  sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -0.0012; sun.shadow.normalBias = 2.5;
+  scene.add(sun, sun.target);
+}
+function isoCamera(left, right, top, bottom) {
+  const c = new THREE.OrthographicCamera(left, right, top, bottom, -40000, 40000), e = Math.PI / 6;
+  c.position.set(Math.cos(e) * Math.SQRT1_2, Math.sin(e), Math.cos(e) * Math.SQRT1_2).multiplyScalar(10000);
+  c.up.set(0, 1, 0); c.lookAt(0, 0, 0); c.updateMatrixWorld(); c.updateProjectionMatrix();
+  return c;
+}
+// the sun is fixed to the camera (every view lit alike); its shadow box follows the viewport being rendered
+function aimSun(cam, sx, sy, w, h) {
+  const d = new THREE.Vector3(...LOOK.sunDir).normalize().transformDirection(cam.matrixWorld);
+  // the ground point under the viewport's centre: screen (sx, sy) = ((x - y) * 32, (x + y) * 16)
+  const cx = sx + w / 2, cy = sy + h / 2, ground = new THREE.Vector3((cx / 32 + cy / 16) / 2 * TU, 0, (cy / 16 - cx / 32) / 2 * TU);
+  sun.position.copy(ground).addScaledVector(d, 6000); sun.target.position.copy(ground); sun.target.updateMatrixWorld();
+  // one fixed shadow frustum for the whole castle when baking pieces, so identical tiles get identical shadows
+  const r = SHADOW_FIXED ? 5200 : Math.max(w, h) * 0.9;
+  if (SHADOW_FIXED) { const c = new THREE.Vector3(170 * TU, 0, 136 * TU); sun.position.copy(c).addScaledVector(d, 6000); sun.target.position.copy(c); sun.target.updateMatrixWorld(); }
+  Object.assign(sun.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 10, far: 14000 });
+  sun.shadow.camera.updateProjectionMatrix();
+}
+const TAG = new THREE.ShaderMaterial({
+  uniforms: { layer: { value: 0 } },
+  vertexShader: `varying vec3 wp; varying vec3 wn; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); wp = w.xyz; wn = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `uniform float layer; varying vec3 wp; varying vec3 wn;
+    void main(){ float tx = floor(wp.x / ${TU.toFixed(6)} - wn.x * 0.03), ty = floor(wp.z / ${TU.toFixed(6)} - wn.z * 0.03);
+      gl_FragColor = vec4(mod(tx, 256.0) / 255.0, mod(ty, 256.0) / 255.0, (floor(tx / 256.0) + 2.0 * floor(ty / 256.0) + 4.0 * layer + 8.0) / 255.0, 1.0); }`,
+});
+function renderPass(group, cam, w, h, tag) {
+  renderer.setSize(w, h, false);
+  const keep = [];
+  group.traverse((o) => { if (o.isMesh) { keep.push([o, o.material]); if (tag) o.material = TAG.clone(), o.material.uniforms.layer.value = o.userData.layer; } });
+  renderer.setClearColor(0x000000, 0);
+  renderer.shadowMap.enabled = !tag && !window.NOSHADOW;
+  renderer.render(scene, cam);
+  const gl = renderer.getContext(), buf = new Uint8Array(w * h * 4);
+  gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+  for (const [o, m] of keep) { if (o.material !== m) o.material.dispose(); o.material = m; }
+  return buf;   // bottom-up rows
+}
+
+/** Bake the masonry into per-tile pieces. S: render px per world px. Returns pieces (deduplicated) and tile refs. */
+async function bake(S = 2, VP = 2048) {
+  const layout = castle3d(), M = await materials();
+  setup(); SHADOW_FIXED = true; sun.shadow.mapSize.set(8192, 8192);
+  const group = build(M, layout, (p) => !p.roof);
+  scene.add(group);
+  // screen extent of the castle (world px)
+  const bb = new THREE.Box3().setFromObject(group), corners = [];
+  for (const x of [bb.min.x, bb.max.x]) for (const y of [bb.min.y, bb.max.y]) for (const z of [bb.min.z, bb.max.z]) corners.push([x / TU, z / TU, y / LU]);
+  const sxs = corners.map(([x, y]) => (x - y) * 32), sys = corners.map(([x, y, z]) => (x + y) * 16 - z * 4);
+  const SX0 = Math.floor(Math.min(...sxs)) - 8, SX1 = Math.ceil(Math.max(...sxs)) + 8, SY0 = Math.floor(Math.min(...sys)) - 8, SY1 = Math.ceil(Math.max(...sys)) + 8;
+  const vw = VP / S, pieces = new Map();   // key (tile*2+layer) -> { x0, y0, x1, y1, crops: [] } in render px (screen * S)
+  let renders = 0;
+  for (let sy = SY0; sy < SY1; sy += vw) for (let sx = SX0; sx < SX1; sx += vw) {
+    const cam = isoCamera(sx, sx + vw, -sy, -(sy + vw));
+    aimSun(cam, sx, sy, vw, vw);
+    const tag = renderPass(group, cam, VP, VP, true);
+    let any = false;
+    for (let i = 3; i < tag.length; i += 4) if (tag[i]) { any = true; break; }
+    if (!any) continue;
+    const col = renderPass(group, cam, VP, VP, false);
+    renders++;
+    // group this viewport's pixels by key
+    const local = new Map();
+    for (let row = 0; row < VP; row++) for (let x = 0; x < VP; x++) {
+      const k = ((VP - 1 - row) * VP + x) * 4;
+      if (!tag[k + 3] || !col[k + 3]) continue;
+      const b = tag[k + 2], tx = tag[k] + ((b & 1) << 8), ty = tag[k + 1] + ((b & 2) << 7), layer = (b >> 2) & 1;
+      if (tx < 0 || ty < 0 || tx >= C3.W || ty >= C3.H) continue;
+      const key = (ty * C3.W + tx) * 2 + layer;
+      let L = local.get(key);
+      if (!L) local.set(key, (L = { x0: x, y0: row, x1: x, y1: row, px: [] }));
+      L.x0 = Math.min(L.x0, x); L.x1 = Math.max(L.x1, x); L.y0 = Math.min(L.y0, row); L.y1 = Math.max(L.y1, row);
+      L.px.push(x, row, k);
+    }
+    const ox = Math.round(sx * S), oy = Math.round(sy * S);
+    for (const [key, L] of local) {
+      const w = L.x1 - L.x0 + 1, h = L.y1 - L.y0 + 1, data = new Uint8ClampedArray(w * h * 4);
+      for (let i = 0; i < L.px.length; i += 3) {
+        const x = L.px[i] - L.x0, y = L.px[i + 1] - L.y0, k = L.px[i + 2], o = (y * w + x) * 4;
+        data[o] = col[k]; data[o + 1] = col[k + 1]; data[o + 2] = col[k + 2]; data[o + 3] = 255;
+      }
+      let P = pieces.get(key);
+      const gx0 = ox + L.x0, gy0 = oy + L.y0;
+      if (!P) pieces.set(key, (P = { x0: gx0, y0: gy0, x1: gx0 + w, y1: gy0 + h, crops: [] }));
+      P.x0 = Math.min(P.x0, gx0); P.y0 = Math.min(P.y0, gy0); P.x1 = Math.max(P.x1, gx0 + w); P.y1 = Math.max(P.y1, gy0 + h);
+      P.crops.push([gx0, gy0, w, h, data]);
+    }
+  }
+  scene.remove(group);
+  return { S, pieces, renders, layout, M };
+}
+
+// assemble, deduplicate and pack the pieces into atlas pages; offsets are world px from the tile's ground origin
+function packPieces(pieces, S, extra = [], PAGE = 4096) {
+  const uniq = [], byHash = new Map(), tiles = [];
+  for (const [key, P] of pieces) {
+    const w = P.x1 - P.x0, h = P.y1 - P.y0, data = new Uint8ClampedArray(w * h * 4);
+    for (const [x0, y0, cw, ch, d] of P.crops) for (let y = 0; y < ch; y++) {
+      const src = y * cw * 4, dst = ((y0 - P.y0 + y) * w + (x0 - P.x0)) * 4;
+      for (let k = 0; k < cw * 4; k += 4) if (d[src + k + 3]) { data[dst + k] = d[src + k]; data[dst + k + 1] = d[src + k + 1]; data[dst + k + 2] = d[src + k + 2]; data[dst + k + 3] = 255; }
+    }
+    const tile = key >> 1, layer = key & 1, tx = tile % C3.W, ty = (tile / C3.W) | 0;
+    const ox = P.x0 / S - (tx - ty) * 32, oy = P.y0 / S - (tx + ty) * 16;
+    // dedupe: same size, same sub-pixel offset, colours within 6 per channel
+    let h32 = w * 73856093 ^ h * 19349663 ^ Math.round(ox * S) * 83492791 ^ Math.round(oy * S) * 2654435761;
+    for (let i = 3; i < data.length; i += 4 * 3) h32 = Math.imul(h32 ^ data[i], 16777619);   // the shape only: colours are compared below
+    let id = -1;
+    for (const c of byHash.get(h32) || []) {
+      const u = uniq[c];
+      if (u.w !== w || u.h !== h || u.ox !== ox || u.oy !== oy) continue;
+      let ok = true;
+      for (let i = 0; i < data.length && ok; i += 4) if (data[i + 3] !== u.data[i + 3] || Math.abs(data[i] - u.data[i]) > 6 || Math.abs(data[i + 1] - u.data[i + 1]) > 6 || Math.abs(data[i + 2] - u.data[i + 2]) > 6) ok = false;
+      if (ok) { id = c; break; }
+    }
+    if (id < 0) { id = uniq.length; uniq.push({ w, h, ox, oy, data }); byHash.set(h32, [...(byHash.get(h32) || []), id]); }
+    tiles.push(tile, layer, id);
+  }
+  for (const e of extra) { e.id = uniq.length; uniq.push(e); }   // roof strips: not deduplicated
+  // shelf-pack by height
+  const order = uniq.map((u, i) => i).sort((a, b) => uniq[b].h - uniq[a].h), pages = [];
+  let page = null, x = 0, y = 0, shelf = 0;
+  const newPage = () => { page = { c: document.createElement('canvas'), used: 0 }; page.c.width = PAGE; page.c.height = PAGE; pages.push(page); x = y = shelf = 0; };
+  newPage();
+  for (const i of order) {
+    const u = uniq[i];
+    if (x + u.w + 1 > PAGE) { x = 0; y += shelf + 1; shelf = 0; }
+    if (y + u.h + 1 > PAGE) newPage();
+    page.c.getContext('2d').putImageData(new ImageData(u.data, u.w, u.h), x, y);
+    u.at = [pages.length - 1, x, y]; page.used = Math.max(page.used, y + u.h + 1);
+    x += u.w + 1; shelf = Math.max(shelf, u.h);
+  }
+  return { uniq, tiles, pages };
+}
+
+/** Each building's roof alone (it lifts off while the hero is inside): a sprite with its world px offset. */
+function bakeRoofs(M, layout, S) {
+  const out = [];
+  for (const id of [...new Set(layout.parts.filter((p) => p.roof).map((p) => p.roof))]) {
+    const group = build(M, layout, (p) => p.roof === id);
+    scene.add(group);
+    const bb = new THREE.Box3().setFromObject(group), cs = [];
+    for (const x of [bb.min.x, bb.max.x]) for (const y of [bb.min.y, bb.max.y]) for (const z of [bb.min.z, bb.max.z]) cs.push([x / TU, z / TU, y / LU]);
+    const sx0 = Math.floor(Math.min(...cs.map(([x, y]) => (x - y) * 32))) - 4, sx1 = Math.ceil(Math.max(...cs.map(([x, y]) => (x - y) * 32))) + 4;
+    const sy0 = Math.floor(Math.min(...cs.map(([x, y, z]) => (x + y) * 16 - z * 4))) - 4, sy1 = Math.ceil(Math.max(...cs.map(([x, y, z]) => (x + y) * 16 - z * 4))) + 4;
+    const w = Math.ceil((sx1 - sx0) * S), h = Math.ceil((sy1 - sy0) * S);
+    const cam = isoCamera(sx0, sx0 + w / S, -sy0, -(sy0 + h / S));
+    aimSun(cam, sx0, sy0, w / S, h / S);
+    const col = renderPass(group, cam, w, h, false);
+    scene.remove(group);
+    const data = new Uint8ClampedArray(w * h * 4);
+    for (let r = 0; r < h; r++) for (let x = 0; x < w; x++) { const s = ((h - 1 - r) * w + x) * 4, d = (r * w + x) * 4; if (col[s + 3] > 127) { data[d] = col[s]; data[d + 1] = col[s + 1]; data[d + 2] = col[s + 2]; data[d + 3] = 255; } }
+    // 32 world px columns on the world's own 32 px grid (the game sorts each from the footprint's front edge under it)
+    const strips = [], c0 = Math.floor(sx0 / 32), c1 = Math.ceil((sx0 + w / S) / 32);
+    for (let col = c0; col < c1; col++) {
+      const xa = Math.max(0, Math.round((col * 32 - sx0) * S)), xb = Math.min(w, Math.round(((col + 1) * 32 - sx0) * S));
+      let ya = h, yb = -1;
+      for (let r = 0; r < h; r++) for (let x = xa; x < xb; x++) if (data[(r * w + x) * 4 + 3]) { ya = Math.min(ya, r); yb = Math.max(yb, r); }
+      if (yb < 0 || xb <= xa) continue;
+      const sw = xb - xa, sh = yb - ya + 1, d = new Uint8ClampedArray(sw * sh * 4);
+      for (let r = 0; r < sh; r++) d.set(data.subarray(((ya + r) * w + xa) * 4, ((ya + r) * w + xb) * 4), r * sw * 4);
+      strips.push({ w: sw, h: sh, ox: sx0 + xa / S, oy: sy0 + ya / S, data: d, col });
+    }
+    out.push({ bld: id, strips });
+  }
+  return out;
+}
+
+// ------------------------------------------------------------------ moving parts
+// Rendered among the castle's masonry drawn depth-only (invisible, but it hides what is behind it and casts shadows), so
+// a door leaf behind a jamb or the portcullis inside the tunnel is cut exactly where the stone stands in front of it.
+function rod(a, b, r, m) {   // a cylinder between two world points
+  const d = b.clone().sub(a), g = new THREE.CylinderGeometry(r, r, d.length(), 6);
+  g.translate(0, d.length() / 2, 0);
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize());
+  g.applyQuaternion(q); g.translate(a.x, a.y, a.z);
+  const mesh = new THREE.Mesh(g, m); mesh.castShadow = true; return mesh;
+}
+function slab(M, x0, y0, x1, y1, z0, z1, m) { const mesh = new THREE.Mesh(worldUV(boxGeo(x0, y0, x1, y1, z0, z1)), M[m]); mesh.castShadow = mesh.receiveShadow = true; return mesh; }
+function drawbridgeFrame(M, D, angle) {
+  const g = new THREE.Group(), deck = new THREE.Group(), len = D.y1 - D.hinge;
+  // the deck built lying along +y from the hinge, then turned up about the hinge line
+  deck.add(slab(M, D.x0 - 0.25, 0, D.x1 + 0.25, len, 0, 1.6, 'wood'));
+  for (const t of [0.6, len / 2, len - 0.6]) deck.add(slab(M, D.x0 - 0.3, t - 0.12, D.x1 + 0.3, t + 0.12, 1.6, 2.1, 'iron'));
+  for (const x of [D.x0 - 0.3, D.x1 + 0.05]) deck.add(slab(M, x, 0, x + 0.25, len, 1.6, 3.2, 'iron'));
+  deck.position.set(0, 0, D.hinge * TU);
+  deck.rotation.x = -angle;
+  g.add(deck);
+  deck.updateMatrixWorld(true);
+  // chains from the deck's far corners up into the gatehouse face
+  for (const x of [D.x0 - 0.15, D.x1 + 0.15]) {
+    const end = new THREE.Vector3(x * TU, 2.6 * LU, len * TU).applyMatrix4(deck.matrixWorld);
+    g.add(rod(end, new THREE.Vector3(x * TU, 30 * LU, (D.hinge - 0.4) * TU), 1.3, M.iron));
+  }
+  return g;
+}
+function portcullisFrame(M, D, lift) {
+  const g = new THREE.Group(), y = 202.15, z0 = lift, z1 = lift + 19;
+  for (let k = 0; k <= 6; k++) { const x = D.x0 + (D.x1 - D.x0) * k / 6; g.add(slab(M, x - 0.06, y, x + 0.06, y + 0.12, z0 - 1.2, z1, 'iron')); }
+  for (let k = 0; k <= 5; k++) { const z = z0 + 1 + k * 3.4; g.add(slab(M, D.x0, y - 0.02, D.x1, y + 0.14, z, z + 0.6, 'iron')); }
+  return g;
+}
+function doorFrame(M, d, phi) {
+  // two leaves hinged at the jambs, swinging `open` (+/-1 across the mouth) by phi
+  const g = new THREE.Group(), half = d.w / 2, h = d.kind === 'gate' ? 15 : 12, mat = d.kind === 'gate' ? 'wood' : 'wood';
+  for (const side of [-1, 1]) {
+    const leaf = new THREE.Group();
+    leaf.add(slab(M, 0, -0.07, half, 0.07, 0, h, mat));
+    for (const z of [2, h / 2, h - 2]) leaf.add(slab(M, 0, -0.1, half * 0.85, 0.1, z, z + 0.7, 'iron'));
+    const pivot = new THREE.Group();
+    pivot.add(leaf);
+    if (side < 0) leaf.scale.x = 1; else { leaf.scale.x = -1; }
+    pivot.rotation.y = side * d.open * phi * (d.axis === 'x' ? 1 : -1);   // the free edge swings into the doorway (`open`)
+    const along = (d.axis === 'x' ? d.x : d.y) + side * half;
+    const holder = new THREE.Group(); holder.add(pivot);
+    if (d.axis === 'x') holder.position.set(along * TU, d.lv * LU, d.y * TU);
+    else { holder.position.set(d.x * TU, d.lv * LU, along * TU); holder.rotation.y = -Math.PI / 2; }
+    pivot.scale.x = side < 0 ? 1 : 1;
+    if (side > 0) leaf.position.x = 0;
+    g.add(holder);
+  }
+  return g;
+}
+/** Every frame of every moving part as a sprite: offsets in world px from the anchor's ground point. */
+function bakeFrames(M, layout, S) {
+  const masonry = build(M, layout, (p) => !p.roof);
+  const hide = new THREE.MeshBasicMaterial({ colorWrite: false });
+  masonry.traverse((o) => { if (o.isMesh) { o.material = hide; o.renderOrder = -1; } });   // first: it only hides what comes after it
+  scene.add(masonry);
+  const shoot = (objs, anchor, box) => {
+    // box: tile extent [x0, y0, x1, y1, z1] of everything the frames can cover
+    const cs = [];
+    for (const x of [box[0], box[2]]) for (const y of [box[1], box[3]]) for (const z of [0, box[4]]) cs.push([(x - y) * 32, (x + y) * 16 - z * 4]);
+    const sx0 = Math.floor(Math.min(...cs.map((c) => c[0]))) - 4, sx1 = Math.ceil(Math.max(...cs.map((c) => c[0]))) + 4;
+    const sy0 = Math.floor(Math.min(...cs.map((c) => c[1]))) - 4, sy1 = Math.ceil(Math.max(...cs.map((c) => c[1]))) + 4;
+    const w = Math.ceil((sx1 - sx0) * S), h = Math.ceil((sy1 - sy0) * S), out = [];
+    const cam = isoCamera(sx0, sx0 + w / S, -sy0, -(sy0 + h / S));
+    aimSun(cam, sx0, sy0, w / S, h / S);
+    for (const obj of objs) {
+      scene.add(obj);
+      renderer.setSize(w, h, false); renderer.setClearColor(0x000000, 0); renderer.shadowMap.enabled = true;
+      renderer.render(scene, cam);
+      const gl = renderer.getContext(), buf = new Uint8Array(w * h * 4);
+      gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+      scene.remove(obj);
+      let x0 = w, y0 = h, x1 = -1, y1 = -1;
+      for (let r = 0; r < h; r++) for (let x = 0; x < w; x++) if (buf[((h - 1 - r) * w + x) * 4 + 3] > 127) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, r); y1 = Math.max(y1, r); }
+      if (x1 < 0) { x0 = y0 = 0; x1 = y1 = 0; }
+      const cw = x1 - x0 + 1, ch = y1 - y0 + 1, data = new Uint8ClampedArray(cw * ch * 4);
+      for (let r = 0; r < ch; r++) for (let x = 0; x < cw; x++) {
+        const s = ((h - 1 - (y0 + r)) * w + x0 + x) * 4, d = (r * cw + x) * 4;
+        if (buf[s + 3] > 127) { data[d] = buf[s]; data[d + 1] = buf[s + 1]; data[d + 2] = buf[s + 2]; data[d + 3] = 255; }
+      }
+      out.push({ w: cw, h: ch, ox: sx0 + x0 / S - (anchor[0] - anchor[1]) * 32, oy: sy0 + y0 / S - (anchor[0] + anchor[1]) * 16, data });
+    }
+    return out;
+  };
+  const D = layout.drawbridge, N = 9;
+  const res = { drawbridge: null, portcullis: null, doors: [] };
+  const ease = (k) => k / (N - 1);
+  res.drawbridge = { anchor: [(D.x0 + D.x1) / 2, D.hinge + 0.02], frames: shoot([...Array(N)].map((_, k) => drawbridgeFrame(M, D, Math.PI / 2 * (1 - ease(k)))), [(D.x0 + D.x1) / 2, D.hinge + 0.02], [D.x0 - 1, D.hinge - 2, D.x1 + 1, D.y1, 42]) };
+  res.portcullis = { anchor: [(D.x0 + D.x1) / 2, 202.2], frames: shoot([...Array(N)].map((_, k) => portcullisFrame(M, D, 16 * ease(k))), [(D.x0 + D.x1) / 2, 202.2], [D.x0, 201, D.x1, 203, 40]) };
+  layout.doors.forEach((d, i) => {
+    const phis = [0, 0.3, 0.6, 0.9, 1.2, Math.PI / 2];
+    const across = d.axis === 'x' ? d.y : d.x, along = d.axis === 'x' ? d.x : d.y;
+    const box = d.axis === 'x' ? [along - d.w / 2 - 0.5, across - d.w / 2 - 0.5, along + d.w / 2 + 0.5, across + d.w / 2 + 0.5, d.lv + 18]
+      : [across - d.w / 2 - 0.5, along - d.w / 2 - 0.5, across + d.w / 2 + 0.5, along + d.w / 2 + 0.5, d.lv + 18];
+    res.doors.push({ i, anchor: [d.x, d.y], frames: shoot(phis.map((p) => doorFrame(M, d, p)), [d.x, d.y], box) });
+  });
+  scene.remove(masonry);
+  return res;
+}
+
+async function bakeAll(S = 2) {
+  const t0 = performance.now();
+  const { pieces, renders, layout, M } = await bake(S);
+  const roofs = bakeRoofs(M, layout, S), moving = bakeFrames(M, layout, S);
+  const extra = [...roofs.flatMap((r) => r.strips), ...moving.drawbridge.frames, ...moving.portcullis.frames, ...moving.doors.flatMap((d) => d.frames)];
+  const { uniq, tiles, pages } = packPieces(pieces, S, extra);
+  return {
+    S, renders, ms: Math.round(performance.now() - t0), tiles, roofs: roofs.map((r) => ({ bld: r.bld, strips: r.strips.map((s) => [s.id, s.col]) })),
+    moving: { drawbridge: { anchor: moving.drawbridge.anchor, frames: moving.drawbridge.frames.map((f) => f.id) },
+      portcullis: { anchor: moving.portcullis.anchor, frames: moving.portcullis.frames.map((f) => f.id) },
+      doors: moving.doors.map((d) => ({ i: d.i, anchor: d.anchor, frames: d.frames.map((f) => f.id) })) },
+    pieces: uniq.map((u) => [u.at[0], u.at[1], u.at[2], u.w, u.h, +u.ox.toFixed(3), +u.oy.toFixed(3)]),
+    pages: pages.map((p) => { const c = document.createElement('canvas'); c.width = p.c.width; c.height = p.used; c.getContext('2d').drawImage(p.c, 0, 0); return c.toDataURL('image/png'); }),
+  };
+}
+
+// ------------------------------------------------------------------ viewer
+async function view() {
+  const layout = castle3d(), M = await materials();
+  setup();
+  const group = build(M, layout);
+  scene.add(group);
+  const cam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 10, 100000);
+  cam.position.set(260 * TU, 260 * LU * 6, 300 * TU);
+  const ctl = new OrbitControls(cam, renderer.domElement); ctl.target.set(169 * TU, 0, 140 * TU); ctl.update();
+  renderer.setSize(innerWidth, innerHeight);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(400 * TU, 400 * TU), new THREE.MeshStandardMaterial({ color: 0x3c4a2a, roughness: 1 }));
+  ground.rotation.x = -Math.PI / 2; ground.position.set(168 * TU, -0.5, 152 * TU); ground.receiveShadow = true; scene.add(ground);
+  document.getElementById('hud').textContent = 'Castle 3D: drag to orbit';
+  renderer.setAnimationLoop(() => { ctl.update(); const d = new THREE.Vector3(...LOOK.sunDir).normalize().transformDirection(cam.matrixWorld);
+    sun.position.copy(ctl.target).addScaledVector(d, 8000); sun.target.position.copy(ctl.target); sun.target.updateMatrixWorld();
+    Object.assign(sun.shadow.camera, { left: -6000, right: 6000, top: 6000, bottom: -6000, near: 10, far: 20000 }); sun.shadow.camera.updateProjectionMatrix();
+    renderer.render(scene, cam); });
+}
+/** One framed view (roofs on), centred on tile (tx, ty): w x h world px at S render px each, on a grass ground. */
+async function preview(tx, ty, w = 1400, h = 900, S = 1) {
+  const layout = castle3d(), M = await materials();
+  if (!renderer) setup();
+  const group = build(M, layout);
+  scene.add(group);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(400 * TU, 400 * TU), new THREE.MeshStandardMaterial({ color: 0x3a4628, roughness: 1 }));
+  ground.rotation.x = -Math.PI / 2; ground.position.set(168 * TU, -0.2, 152 * TU); ground.receiveShadow = true; scene.add(ground);
+  const sx = (tx - ty) * 32 - w / 2, sy = (tx + ty) * 16 - h / 2 - 60;
+  const cam = isoCamera(sx, sx + w, -sy, -(sy + h));
+  aimSun(cam, sx, sy, w, h);
+  renderer.setSize(w * S, h * S, false); renderer.shadowMap.enabled = true; renderer.setClearColor(0x1d1c22, 1);
+  renderer.render(scene, cam);
+  scene.remove(group, ground);
+  return renderer.domElement.toDataURL('image/png');
+}
+/** Debug: the gate with the portcullis at `lift` and the drawbridge at `angle`, masonry visible. */
+async function gateDebug(lift = 16, angle = 0.6) {
+  const layout = castle3d(), M = await materials();
+  if (!renderer) setup();
+  const group = build(M, layout, (p) => !p.roof), D = layout.drawbridge;
+  const pc = portcullisFrame(M, D, lift), db = drawbridgeFrame(M, D, angle);
+  scene.add(group, pc, db);
+  const w = 500, h = 500, sx = (169 - 202) * 32 - w / 2, sy = (169 + 202) * 16 - h / 2 - 150;
+  const cam = isoCamera(sx, sx + w, -sy, -(sy + h)); aimSun(cam, sx, sy, w, h);
+  renderer.setSize(w * 2, h * 2, false); renderer.setClearColor(0x1d1c22, 1); renderer.shadowMap.enabled = true; renderer.render(scene, cam);
+  scene.remove(group, pc, db);
+  return renderer.domElement.toDataURL('image/png');
+}
+async function bboxDebug() {
+  const layout = castle3d(), M = await materials(), D = layout.drawbridge, out = {};
+  for (const [k, a] of [['flat', 0], ['up', Math.PI / 2]]) { const g = drawbridgeFrame(M, D, a); g.updateMatrixWorld(true);
+    const b = new THREE.Box3().setFromObject(g); out[k] = [b.min.x / TU, b.min.z / TU, b.min.y / LU, b.max.x / TU, b.max.z / TU, b.max.y / LU].map((v) => +v.toFixed(2)); }
+  const pc = portcullisFrame(M, D, 0); const b = new THREE.Box3().setFromObject(pc); out.pc = [b.min.x / TU, b.min.z / TU, b.min.y / LU, b.max.x / TU, b.max.z / TU, b.max.y / LU].map((v) => +v.toFixed(2));
+  return out;
+}
+async function doorDebug(i = 0, phi = 0.6) {
+  const layout = castle3d(), M = await materials(), d = layout.doors[i];
+  if (!renderer) setup();
+  const group = build(M, layout, (p) => !p.roof), df = doorFrame(M, d, phi);
+  scene.add(group, df);
+  const w = 360, h = 360, sx = (d.x - d.y) * 32 - w / 2, sy = (d.x + d.y) * 16 - h / 2 - 40;
+  const cam = isoCamera(sx, sx + w, -sy, -(sy + h)); aimSun(cam, sx, sy, w, h);
+  renderer.setSize(w * 2, h * 2, false); renderer.setClearColor(0x1d1c22, 1); renderer.shadowMap.enabled = true; renderer.render(scene, cam);
+  scene.remove(group, df);
+  return renderer.domElement.toDataURL('image/png');
+}
+window.CASTLE3D = { bakeAll, preview, castle3d, gateDebug, bboxDebug, doorDebug };
+if (!P.has('bake')) view();
+</script>
+</body>
+</html>

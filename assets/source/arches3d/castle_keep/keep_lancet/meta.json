@@ -1,0 +1,10 @@
+{
+ "pack": "castle_keep",
+ "design": "keep_lancet",
+ "span": 3,
+ "w": 240,
+ "h": 232,
+ "half": 8.0,
+ "depthStep": 0.25,
+ "pixels": 21747
+}

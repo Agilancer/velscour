@@ -23,10 +23,11 @@ const mobile=process.argv.includes('--mobile'),noshots=process.argv.includes('--
       for(let a=0;a<q.length;a++){const i=q[a],x=i%W,y=(i/W)|0;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const j=i+dx+dy*W;
         if(x+dx<0||y+dy<0||x+dx>=W||y+dy>=m.h||seen[j]||!m.walkableTile(x+dx,y+dy)||!m.stepOk(i,j))continue;seen[j]=1;q.push(j);}}
       let deck=0,lost=0;for(let i=0;i<W*m.h;i++)if(m.rampartDeck[i]&&!m.block[i]){deck++;if(!seen[i])lost++;}
-      if(deck<2500)bad.push('wall-walk too small: '+deck);
+      if(deck<1500)bad.push('wall-walk too small: '+deck);
       if(lost>deck*0.02)bad.push(lost+' of '+deck+' wall-walk tiles cannot be reached');
-      for(const s of m.castleStairs){const top=[s.x+s.dx*s.n,s.y+s.dy*s.n];if(!seen[I(s.x,s.y)]||!seen[I(...top)])bad.push('stairs unreachable at '+s.x+','+s.y);
-        if(m.hgt[I(...top)]!==s.lv)bad.push('stair landing not at walk level at '+top);}
+      // (the 3D stairs, src/world/castle3d.js: the top step is a hop below the walk beside it)
+      for(const s of m.castleStairs){const top=[s.x+s.dx*(s.n-1),s.y+s.dy*(s.n-1)];if(!seen[I(s.x,s.y)]||!seen[I(...top)])bad.push('stairs unreachable at '+s.x+','+s.y);
+        if(m.hgt[I(...top)]<s.lv-m.climb)bad.push('stair top more than a hop below the walk at '+top);}
       // the walls can't be stepped onto or dropped from except by the stairs
       for(let i=0;i<W*m.h;i++){if(!m.rampartDeck[i]||m.block[i])continue;const x=i%W,y=(i/W)|0;
         for(const j of [i+1,i-1,i+W,i-W]){if(m.block[j]||m.rampartWall[j])continue;const d=m.hgt[j]-m.hgt[i];if(d<-m.climb&&m.stepOk(i,j))bad.push('walk drops to '+(j%W)+','+((j/W)|0));}}

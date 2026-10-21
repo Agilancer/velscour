@@ -674,6 +674,7 @@ export function renderWorld(ctx, world) {
   // depth sorted pass
   const p = world.player;
   const pd = p ? p.x + p.y : 0;
+  const heroBld = map.c3bld && p ? map.c3bld[map.tileIdx(p.x, p.y)] : 0;
   const ppx = p ? isoX(p.x, p.y) : 0, ppy = p ? isoY(p.x, p.y) : 0;
   // walls in front of the hero fade with screen distance and depth, so the narrow slices form a soft see-through hole
   // (a wide hole: the walls stand ~1.4 heroes tall, and fights next to the hero should stay in view)
@@ -812,6 +813,12 @@ export function renderWorld(ctx, world) {
       case 4: {
         if (o.tree) { drawTree(ctx, o, treeHides(o, it.d, views)); break; }
         let a = 1;
+        if (o.roofOf) {   // a Castle building's roof (gfx/castle3dart.js): off while the hero is inside, faded over anyone behind
+          if (heroBld === o.roofOf) break;
+          const s = o.spr, rx = isoX(o.x, o.y) + s.ox * o.k, ry = isoY(o.x, o.y) + (o.z ? -o.z : 0) + s.oy * o.k;
+          drawProp(ctx, o, hides([rx, ry, s.w * o.k, s.h * o.k], it.d) ? 0.32 : 1);
+          break;
+        }
         if (o.spr || (o.sprite === 'tree' || o.sprite === 'pine')) {
           const px = isoX(o.x, o.y), py = isoY(o.x, o.y);
           for (const v of views) {
@@ -856,7 +863,7 @@ export function renderWorld(ctx, world) {
         // spill over neighbours in front that aren't redrawn)
         const c = o.clip;
         if (c) { ctx.save(); ctx.beginPath(); ctx.rect(c[0], c[1], c[2] - c[0], c[3] - c[1]); ctx.clip(); }
-        drawColumn(ctx, world, o.ti, floorEntry, map.castleMat ? castleDress : null);
+        drawColumn(ctx, world, o.ti, floorEntry, map.castleMat ? castleDress : null, !!o.over);
         if (c) ctx.restore();
         break;
       }
@@ -943,8 +950,12 @@ function drawLighting(ctx, world) {
     return true;
   };
   if (p) add(p.x,p.y,b.light*(1+(p.st.lightPct||0)),1,20);
+  // the Castle: lights inside a building stay under its roof unless the hero is in there too
+  const bld = world.map.c3bld, W_ = world.map.w, hb = bld && p ? bld[world.map.tileIdx(p.x, p.y)] : 0;
+  const roofed = (l) => { if (!bld) return false; const k = bld[Math.floor(l.y) * W_ + Math.floor(l.x)]; return k > 0 && k !== hb; };
   let visibleLights=0;
   for (const l of lights) {
+    if (roofed(l)) continue;
     if (add(l.x, l.y, l.radius, l.intensity * 0.85, l.z ?? 20)) visibleLights++;
     if (G.touch && visibleLights >= 48) break;
   }
@@ -972,7 +983,7 @@ function drawLighting(ctx, world) {
     gc.globalCompositeOperation = 'lighter';
     let n = 0;
     for (const l of lights) {
-      if (!l.color) continue;
+      if (!l.color || roofed(l)) continue;
       const [sx, sy] = camera.tileToScreen(l.x, l.y, l.z ?? 20);
       const cx = (sx * G.dpr) / divisor, cy = (sy * G.dpr) / divisor, rr = l.radius * scale * 0.9;
       if (cx + rr < 0 || cy + rr < 0 || cx - rr > lw || cy - rr > lh) continue;

@@ -22,6 +22,7 @@ const counts={floors:60,transitions:120,walls:200,roofs:96,gables:24,gateways:12
 for(const [k,n] of Object.entries(counts))if(castleFrames(k).length!==n)throw Error(`${k}: expected ${n} frames`);
 if(BIOME_BY_ID.castle?.pack!=='castle'||!BIOME_BY_ID.castle.overworld)throw Error('Castle overworld not registered');
 if(!BIOME_BY_ID.sea_of_sand?.overworld||OVERWORLD_BIOME_IDS.length<3)throw Error('Sea of Sand or multi-overworld pool missing');
+const {K:K3,C3}=await imp('src/world/castle3d.js');
 const I=(m,x,y)=>Math.floor(y)*m.w+Math.floor(x);
 const flood=(m,start,ok)=>{const seen=new Uint8Array(m.w*m.h),q=[I(m,start[0],start[1])];seen[q[0]]=1;
  for(let j=0;j<q.length;j++){const i=q[j],x=i%m.w,y=(i/m.w)|0;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy,k=I(m,nx,ny);
@@ -36,18 +37,22 @@ for(let seed=1;seed<=SEEDS;seed++){
  // A height map: the walls stand up out of the ground, the water lies sunk below it; walkers hop up and drop down
  // only as far as the map allows (map.stepOk), so floods follow that rule.
  if(!m.hgt||!m.tallOcclusion)throw Error(`Castle has no height map seed ${seed}`);
+ for(let i=0;i<m.w*m.h;i++)if(m.castleMat[i]===MAT.water&&m.hgt[i]>=0)throw Error(`water not sunk seed ${seed}`);
+ // the drawbridge comes down as the hero nears it (game/castle3d.js): its tiles rise to the ground and open
+ if(m.drawbridge?.tiles?.length!==8)throw Error(`drawbridge missing seed ${seed}`);
+ for(const i of m.drawbridge.tiles){if(m.castleMat[i]!==MAT.water)throw Error(`drawbridge not over the moat seed ${seed}`);m.block[i]=0;m.hgt[i]=0;}
  const step=(ok)=>(x,y,k,from)=>ok(x,y,k)&&m.stepOk(from,k);
  const seen=flood(m,gen.start,step((x,y)=>m.walkableTile(x,y)));
  for(const [x,y] of [gen.exit,...gen.sites])if(!seen[I(m,x,y)])throw Error(`unreachable seed ${seed} at ${x},${y}`);
- // Both curtains are solid bands of masonry (outer 6 tiles thick, inner 5): merlons and crenels along the outside
- // edge, the walk level behind them; open only where a gate passage goes through at ground level.
- const rings=[[CASTLE_OUTER.x0*2,CASTLE_OUTER.y0*2,CASTLE_OUTER.x1*2+1,CASTLE_OUTER.y1*2+1,6,24],[CASTLE_INNER.x0*2-3,CASTLE_INNER.y0*2-3,CASTLE_INNER.x1*2+4,CASTLE_INNER.y1*2+4,5,32]];
+ // Both curtains are the 3D layout's (src/world/castle3d.js): three tiles of masonry, the crenellated parapet along the
+ // outside edge and the walk behind it; open only where a gate tunnel goes through at ground level.
+ const rings=[[CASTLE_OUTER.x0*2,CASTLE_OUTER.y0*2,CASTLE_OUTER.x1*2+1,CASTLE_OUTER.y1*2+1,3,C3.OW],[CASTLE_INNER.x0*2,CASTLE_INNER.y0*2,CASTLE_INNER.x1*2+1,CASTLE_INNER.y1*2+1,3,C3.IW]];
  const gatePass=new Uint8Array(m.w*m.h);
  for(const [x0,y0,x1,y1,th,lv] of rings)for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
   const d=Math.min(x-x0,x1-x,y-y0,y1-y);if(d>=th)continue;const i=I(m,x,y);
   if(!m.rampartWall[i]){if(m.hgt[i]!==0||m.block[i])throw Error(`curtain hole seed ${seed} at ${x},${y}`);gatePass[i]=1;continue;}
   if(m.hgt[i]<lv)throw Error(`curtain below its walk seed ${seed} at ${x},${y}: ${m.hgt[i]}`);
-  if(d===0&&!m.block[i]&&!m.castleTowers.some(t=>x>=t.x0&&x<=t.x1&&y>=t.y0&&y<=t.y1))throw Error(`open parapet seed ${seed} at ${x},${y}`);
+  if(d===0&&!m.block[i]&&m.c3kind[i]!==K3.tower)throw Error(`open parapet seed ${seed} at ${x},${y}`);
  }
  const shut=(x,y,k)=>m.walkableTile(x,y)&&!gatePass[k];
  const open_=([x,y])=>{for(let r=0;r<6;r++)for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++)if(m.walkable(x+dx,y+dy)&&!m.hgt[I(m,x+dx,y+dy)])return [x+dx,y+dy];return [x,y];};
@@ -59,30 +64,25 @@ for(let seed=1;seed<=SEEDS;seed++){
  // Wall-walks: wide, all of them reached by the stairs; towers a few steps up; stairs from the ground to the walk.
  const walk=(k)=>m.rampartDeck[k]===1&&!m.block[k];let deck=0,lost=0;
  for(let k=0;k<m.w*m.h;k++)if(walk(k)){deck++;if(!seen[k])lost++;}
- if(deck<3500||lost>deck*.01)throw Error(`wall-walk ${deck} tiles, ${lost} unreachable seed ${seed}`);
- if(m.castleTowers?.length!==31)throw Error(`towers missing seed ${seed}: ${m.castleTowers?.length}`);
- for(const t of m.castleTowers){let up=false;for(let y=t.y0;y<=t.y1;y++)for(let x=t.x0;x<=t.x1;x++){const k=I(m,x,y);if(m.hgt[k]===t.top&&seen[k])up=true;}
-  if(!up)throw Error(`tower top unreachable seed ${seed} at ${t.x0},${t.y0}`);}
- if(m.castleStairs?.length!==11)throw Error(`stairs missing seed ${seed}`);
- for(const s of m.castleStairs){const foot=I(m,s.x,s.y),top=I(m,s.x+s.dx*s.n,s.y+s.dy*s.n);
-  if(!seen[foot]||!seen[top]||m.hgt[top]!==s.lv)throw Error(`stairs broken seed ${seed} at ${s.x},${s.y}`);}
+ if(deck<1500||lost>deck*.01)throw Error(`wall-walk ${deck} tiles, ${lost} unreachable seed ${seed}`);
+ const kinds=(k)=>{let n=0;for(let i=0;i<m.w*m.h;i++)if(m.c3kind[i]===k)n++;return n;};
+ if(!m.c3struct||kinds(K3.tower)<500||kinds(K3.gate)<150||kinds(K3.keep)<300)throw Error(`castle masonry missing seed ${seed}`);
+ if(m.castleStairs?.length!==8)throw Error(`stairs missing seed ${seed}`);
+ for(const s of m.castleStairs){const foot=I(m,s.x,s.y),top=I(m,s.x+s.dx*(s.n-1),s.y+s.dy*(s.n-1));
+  if(!seen[foot]||!seen[top]||m.hgt[top]<s.lv-m.climb)throw Error(`stairs broken seed ${seed} at ${s.x},${s.y}`);}
  for(const [x,y] of m.rampartPosts)if(!m.rampartDeck[I(m,x,y)]||!m.walkable(x,y)||!seen[I(m,x,y)])throw Error(`rampart post off the walk seed ${seed} at ${x},${y}`);
  if(m.rampartPosts.length<8)throw Error(`too few rampart posts seed ${seed}`);
  if(gen.spawns.filter(s=>s.rampart).length<8)throw Error(`too few packs on the walls seed ${seed}`);
- // gate passages carry their arched lintels (sliced), the main gate its portcullis
- if(gen.props.filter(p=>p.gateArch).length<30)throw Error(`gate arches missing seed ${seed}`);
- const named=(re)=>gen.props.filter(p=>re.test(p.spr?.name||''));
- if(gen.props.filter(p=>p.keep).length<12)throw Error(`keep missing seed ${seed}`);
+ if(gen.props.some(p=>!p.c3&&!p.banner&&m.c3struct[I(m,p.x,p.y)]&&m.block[I(m,p.x,p.y)]&&m.c3kind[I(m,p.x,p.y)]!==K3.floor))throw Error(`a prop stands in the masonry seed ${seed}`);
  // Bridges: a walkable deck at ground level over the sunken water, low parapets, arches on the side the camera sees.
  if(m.castleBridges.length!==3)throw Error(`bridges missing seed ${seed}`);
- for(const b of m.castleBridges){let over=0,arches=0;
+ for(const b of m.castleBridges.filter(b=>b.kind!=='main')){let over=0,arches=0;
   for(let y=b.far;y<b.near;y++){for(let x=b.x0;x<=b.x1;x++){const k=I(m,x,y);if(!m.walkableTile(x,y)||!seen[k]||m.hgt[k]!==0)throw Error(`bridge ${b.kind} deck blocked seed ${seed} at ${x},${y}`);if(m.bridgeWater[k])over++;}
    if(!m.block[I(m,b.x1+1,y)]||!m.block[I(m,b.x0-1,y)])throw Error(`bridge ${b.kind} parapet open seed ${seed}`);if(m.faceArch[I(m,b.x1+1,y)])arches++;}
   if(over<(b.near-b.far)*(b.x1-b.x0+1)*.6)throw Error(`bridge ${b.kind} not over water seed ${seed}`);
   if(arches!==b.near-b.far)throw Error(`bridge ${b.kind} arches missing seed ${seed}`);
   for(const y of [b.far-1,b.near])if(m.castleMat[I(m,(b.x0+b.x1)/2,y)]===MAT.water)throw Error(`bridge ${b.kind} ends in the water seed ${seed}`);
  }
- for(let i=0;i<m.w*m.h;i++)if(m.castleMat[i]===MAT.water&&m.hgt[i]>=0)throw Error(`water not sunk seed ${seed}`);
  // a road, trail or paving reaches every door, site, chest, stair foot and the exit (map.road; auto-play keeps to it)
  const nearRoad=([x,y],r=3)=>{for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const X=Math.floor(x)+dx,Y=Math.floor(y)+dy;if(X>=0&&Y>=0&&X<m.w&&Y<m.h&&m.road[I(m,X,Y)])return true;}return false;};
  const DX=new Set(['alchemist','gems','socket','gamble','bakery']);
@@ -95,9 +95,8 @@ for(let seed=1;seed<=SEEDS;seed++){
  // Keep: three enterable halls with their own floors, doors and room to fight.
  if(m.castleRooms?.length!==3)throw Error(`three enterable keep interiors missing seed ${seed}`);
  if(m.castleDoors?.length<6)throw Error(`keep has too few doors seed ${seed}`);
- // the halls' walls are masonry too, their doorways clean openings with a lintel and two leaves against the wall
- for(let i=0;i<m.w*m.h;i++)if(m.castleRoomWalls[i]&&(m.hgt[i]!==18||!m.block[i]))throw Error(`hall wall not solid seed ${seed}`);
- if(gen.props.filter(p=>p.roomDoor&&/castle_panel_door/.test(p.spr?.name||'')).length!==2*m.castleDoors.length)throw Error(`door leaves missing seed ${seed}`);
+ // the keep's and halls' walls are solid masonry; every doorway an open arch (its leaves are the 3D doors)
+ for(let i=0;i<m.w*m.h;i++)if(m.castleRoomWalls[i]&&(m.hgt[i]<20||!m.block[i]))throw Error(`hall wall not solid seed ${seed}`);
  for(const d of m.castleDoors)if(!seen[I(m,d.x,d.y)]||!m.walkable(d.x,d.y))throw Error(`unreachable or blocked keep door seed ${seed} at ${d.x},${d.y}`);
  for(const r of m.castleRooms){const cx=(r.rect[0]+r.rect[2])/2|0,cy=(r.rect[1]+r.rect[3])/2|0;let free=0;
   for(let y=cy-10;y<cy+10;y++)for(let x=cx-10;x<cx+10;x++)if(m.walkableTile(x,y))free++;

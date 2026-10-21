@@ -1,0 +1,15 @@
+{
+ "note": "Roman ossuary: square piers with recessed skull-and-bones panels under an impost cornice, a round voussoir ring over a recessed band of skulls, a keystone. (tools/arch3d.py; elevation px from the top left, half-depths in native px, parts in order, mirrored about the centre)",
+ "mirror": true,
+ "parts": [
+  {"op": "fill", "half": 12, "amp": 3, "what": "wall body, spandrels"},
+  {"op": "portal", "width": 5, "half": 15, "amp": 3, "what": "inner moulding"},
+  {"op": "portal", "from": 5, "width": 19, "half": 12, "amp": 9, "what": "band of skulls, recessed; the skulls stand out of it"},
+  {"op": "portal", "from": 19, "width": 40, "half": 18, "amp": 3, "what": "voussoir ring"},
+  {"op": "fill", "rect": [104, 48, 136, 84], "add": 3, "what": "keystone"},
+  {"op": "fill", "rect": [4, 118, 70, 208], "half": 22, "amp": 3, "what": "pier"},
+  {"op": "fill", "rect": [18, 134, 52, 184], "half": 16, "amp": 9, "what": "skull-and-bones panel, recessed"},
+  {"op": "fill", "rect": [0, 114, 72, 130], "half": 25, "amp": 2, "what": "impost cornice"},
+  {"op": "fill", "rect": [0, 182, 72, 208], "half": 25, "amp": 2, "what": "plinth"}
+ ]
+}

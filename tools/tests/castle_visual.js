@@ -11,7 +11,7 @@ const mobile=process.argv.includes('--mobile'),grid=process.argv.includes('--gri
     await page.evaluate(async()=>{
       const {G,game}=window.VELSCOUR;
       try{await game.newChar('paladin','Castle Visual QA');}catch(e){console.warn('town setup: '+e.message);}  // only the castle matters here
-      await (await import('/src/gfx/castle.js')).loadCastlePack();
+      await (await import('/src/gfx/castle.js')).loadCastlePack(); await (await import('/src/gfx/castle3dart.js')).loadCastle3D();
       G.char.depth=19;G.godMode=true;
       const {BIOME_BY_ID}=await import('/src/data/biomes.js');
       game.buildDungeon(19,BIOME_BY_ID.castle);

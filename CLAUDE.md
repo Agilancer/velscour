@@ -42,6 +42,7 @@ node tools/tests/levelup.js                        # level-up banner: Velscour's
 node tools/tests/boss.js                           # Depth 100 Velscour arena + a depth 37 guardian
 node tools/tests/raid.js [5,30,55]                 # BOSS ROOMs: seal, every ability of all raid bosses, phases, wards, death
 node tools/tests/raid_sigs.js [ids] [secs]         # the 20 signature raid bosses (raidsigs.js): cast all, shots, auto-play fights each
+node tools/tests/arch3d.js [biome] [design]        # 3D-baked arches (docs/ARCH_3D.md) in a live dungeon: hero in front / under / behind
 node tools/tests/rooms.js [biomes] [levels]        # shaped rooms + scatter set pieces: reachability, chests, screenshots
 node tools/tests/wanderers.js [minutes]            # overworld townsfolk walk/flee, bounties taken and paid by auto-play
 node tools/tests/biome_perf.js [ids] [depth]       # per-biome frame cost with auto-play on + CPU profile hot spots
@@ -64,6 +65,7 @@ node tools/tests/overworld.js                      # 60 outdoor seeds, 20 scenar
 node tools/tests/scenarios.js                      # a bot plays every Wilds/Castle scenario and Sea of Sand route to the end
 node tools/tests/castle_overworld.mjs              # 100 Castle seeds: both curtains sealed, gates, bridges over water, lane, halls, art caps (no browser)
 node tools/tests/castle_visual.js [views] [--grid] # Castle screenshots: 25 views (gatehouse, bridges, wards, keep, halls, village, siege)
+node tools/tests/castle3d.js [views]              # the 3D Castle (docs/CASTLE_3D.md): wall-walk, stairs, tunnel, throne room, doors, drawbridge, overview
 node tools/tests/castle_walls.js [views] [--noshots] # Castle height-mapped walls: walk/towers/stairs reachable, monsters use the stairs, 30 shots
 node tools/tests/sea_of_sand_generation.mjs         # 100 desert maze seeds, route reachability, one-to-five area rolls
 node tools/tests/sea_of_sand.js                     # atlas frames, desert HUD, monster frames, screenshots (browser)

@@ -1,0 +1,15 @@
+{
+ "note": "Pointed funerary: buttress piers with hooded mourners standing in deep niches under gablets and pinnacles, a pointed arch with tracery spandrels, a thin stone cross on the apex. (tools/arch3d.py; elevation px from the top left, half-depths in native px, parts in order, mirrored about the centre)",
+ "mirror": true,
+ "parts": [
+  {"op": "fill", "half": 12, "amp": 4, "what": "wall body, tracery spandrels"},
+  {"op": "knobs", "rect": [40, 50, 200, 110], "max": 4, "what": "crockets on the arch"},
+  {"op": "portal", "minY": 60, "width": 26, "in": 13, "out": 19, "steps": 3, "amp": 3, "what": "arch mouldings, stepping in"},
+  {"op": "fill", "rect": [8, 100, 60, 232], "half": 22, "amp": 3, "what": "pier"},
+  {"op": "fill", "rect": [18, 110, 50, 202], "half": 13, "amp": 11, "what": "niche, deep; the mourner stands out of it"},
+  {"op": "add", "shafts": [[50, 58], [58, 64]], "rect": [48, 140, 66, 206], "bulge": 4, "what": "jamb shafts"},
+  {"op": "fill", "rect": [4, 202, 64, 232], "half": 25, "amp": 2, "what": "plinth"},
+  {"op": "square", "rect": [10, 62, 58, 104], "open": 3, "max": 16, "knobMax": 4, "what": "gablet and pinnacle over the niche"},
+  {"op": "thin", "rect": [104, 48, 136, 100], "half": 2.2, "what": "stone cross on the apex"}
+ ]
+}

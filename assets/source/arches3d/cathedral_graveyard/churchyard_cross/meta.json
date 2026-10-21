@@ -1,0 +1,10 @@
+{
+ "pack": "cathedral_graveyard",
+ "design": "churchyard_cross",
+ "span": 3,
+ "w": 240,
+ "h": 280,
+ "half": 8.0,
+ "depthStep": 0.25,
+ "pixels": 25856
+}

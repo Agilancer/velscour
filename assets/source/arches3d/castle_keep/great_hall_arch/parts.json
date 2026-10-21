@@ -1,0 +1,22 @@
+{
+ "note": "Chapel lancet as architecture (tools/arch3d.py). Elevation px: x 0-240 from the left, y 0-304 from the top, ground at 304. Half-depths in native px either side of the wall line (the plain wall is 8). Parts apply in order; mirror copies each about x = 120.",
+ "mirror": true,
+ "parts": [
+  {"op": "fill", "half": 12, "amp": 3, "what": "wall body behind everything"},
+  {"op": "knobs", "rect": [36, 64, 204, 150], "max": 4.5, "what": "gable crockets"},
+  {"op": "fill", "poly": [[120, 72], [42, 149], [198, 149]], "half": 12, "rim": 6, "rimHalf": 15, "amp": 3, "what": "gable, raised coping on the rakes"},
+  {"op": "fill", "poly": [[120, 90], [74, 136], [166, 136]], "half": 9, "amp": 9, "what": "tympanum, recessed; the fleur-de-lis stands out of it"},
+  {"op": "portal", "minY": 112, "width": 30, "in": 13, "out": 24, "steps": 5, "amp": 3, "what": "archivolts and jambs, stepping in toward the opening"},
+  {"op": "add", "shafts": [[47, 58], [59, 66], [67, 74]], "rect": [46, 214, 76, 282], "bulge": 5, "what": "jamb shafts"},
+  {"op": "fill", "rect": [44, 196, 77, 215], "add": 3, "what": "jamb capitals"},
+  {"op": "fill", "rect": [44, 282, 77, 304], "add": 4, "what": "jamb bases"},
+  {"op": "fill", "rect": [4, 180, 46, 304], "half": 26, "amp": 2, "what": "outer pier, a buttress"},
+  {"op": "add", "shafts": [[10, 19], [20, 32], [32, 45]], "rect": [4, 200, 46, 272], "bulge": 6, "what": "pier shafts"},
+  {"op": "fill", "rect": [12, 180, 47, 200], "half": 30, "amp": 3, "what": "pier capitals"},
+  {"op": "fill", "rect": [2, 272, 48, 304], "half": 31, "amp": 2, "what": "pier plinth"},
+  {"op": "fill", "rect": [14, 146, 44, 180], "half": 16, "amp": 6, "what": "pinnacle tabernacle, its niche sinks in"},
+  {"op": "square", "rect": [8, 104, 50, 148], "open": 3, "scale": 1.0, "max": 16, "knobMax": 4, "what": "pinnacle gablet and spire: square in plan, so it tapers to a pyramid; crockets as knobs"},
+  {"op": "thin", "rect": [17, 80, 45, 108], "half": 1.6, "what": "pinnacle finial cross"},
+  {"op": "thin", "rect": [104, 40, 136, 71], "half": 1.8, "what": "gable finial cross"}
+ ]
+}

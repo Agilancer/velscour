@@ -1,0 +1,21 @@
+{
+ "note": "Grand westwork: tall clustered towers with statues and crocketed pinnacle spires, a gable over deep archivolts framing an openwork tracery screen, an apex cross. (tools/arch3d.py; elevation px from the top left, half-depths in native px, parts in order, mirrored about the centre)",
+ "mirror": true,
+ "parts": [
+  {"op": "fill", "half": 12, "amp": 4, "what": "wall body"},
+  {"op": "knobs", "rect": [140, 90, 410, 180], "max": 4, "what": "crockets"},
+  {"op": "fill", "poly": [[275, 96], [148, 172], [402, 172]], "half": 14, "rim": 7, "rimHalf": 18, "amp": 3, "what": "gable, raised coping"},
+  {"op": "portal", "maxY": 300, "width": 52, "half": 9, "amp": 8, "what": "tracery screen in the arch head, set far back"},
+  {"op": "portal", "from": 52, "maxY": 300, "width": 90, "in": 20, "out": 28, "steps": 4, "amp": 3, "what": "archivolts"},
+  {"op": "portal", "minY": 300, "width": 50, "in": 16, "out": 26, "steps": 5, "amp": 3, "what": "jambs, stepping in"},
+  {"op": "add", "shafts": [[150, 160], [160, 170], [170, 180], [180, 192]], "rect": [148, 310, 194, 450], "bulge": 4, "what": "jamb shafts"},
+  {"op": "fill", "rect": [14, 190, 150, 496], "half": 26, "amp": 3, "what": "outer towers"},
+  {"op": "fill", "rect": [78, 150, 145, 496], "half": 32, "amp": 3, "what": "main tower"},
+  {"op": "add", "shafts": [[20, 34], [40, 52], [60, 76], [84, 96], [126, 140]], "rect": [14, 300, 150, 440], "bulge": 5, "what": "tower shafts"},
+  {"op": "fill", "rect": [92, 190, 128, 300], "half": 22, "amp": 10, "what": "statue niche, deep"},
+  {"op": "fill", "rect": [30, 330, 60, 400], "half": 20, "amp": 8, "what": "lower niche"},
+  {"op": "fill", "rect": [10, 440, 152, 496], "half": 34, "amp": 2, "what": "plinth"},
+  {"op": "square", "rect": [12, 50, 160, 195], "open": 3, "max": 20, "knobMax": 4, "what": "pinnacle spires"},
+  {"op": "thin", "rect": [260, 48, 290, 96], "half": 2.2, "what": "apex cross"}
+ ]
+}

@@ -1,0 +1,17 @@
+{
+ "note": "Sluice gateway: buttress towers with serpent reliefs in sunk panels and small pinnacles, a pointed arch under a gable with a grated oculus and an apex finial. (tools/arch3d.py; elevation px from the top left, half-depths in native px, parts in order, mirrored about the centre)",
+ "mirror": true,
+ "parts": [
+  {"op": "fill", "half": 12, "amp": 4, "what": "wall body"},
+  {"op": "knobs", "rect": [40, 45, 200, 110], "max": 4, "what": "crockets"},
+  {"op": "fill", "poly": [[120, 52], [48, 104], [192, 104]], "half": 13, "rim": 5, "rimHalf": 16, "amp": 3, "what": "gable, raised coping"},
+  {"op": "fill", "rect": [98, 70, 142, 102], "half": 8, "amp": 6, "what": "grated oculus, sunk"},
+  {"op": "portal", "minY": 80, "width": 26, "in": 13, "out": 19, "steps": 3, "amp": 3, "what": "arch mouldings"},
+  {"op": "fill", "rect": [8, 100, 62, 232], "half": 22, "amp": 3, "what": "tower"},
+  {"op": "fill", "rect": [22, 120, 52, 200], "half": 15, "amp": 10, "what": "serpent panel, sunk; the serpent stands out"},
+  {"op": "add", "shafts": [[58, 64], [64, 70]], "rect": [56, 140, 72, 206], "bulge": 4, "what": "jamb shafts"},
+  {"op": "fill", "rect": [4, 200, 72, 232], "half": 26, "amp": 2, "what": "plinth"},
+  {"op": "square", "rect": [14, 66, 58, 112], "open": 3, "max": 16, "knobMax": 4, "what": "tower gablet and pinnacle"},
+  {"op": "square", "rect": [108, 44, 132, 66], "open": 2, "max": 8, "knobMax": 3, "what": "apex finial"}
+ ]
+}
