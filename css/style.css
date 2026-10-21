@@ -709,3 +709,6 @@ body.touch .item-detail, body.touch .skill-detail { width: 230px; font-size: 12p
 .class-card:not(.has-hero) canvas { opacity: .55; }
 .class-screen.del-mode .class-card.has-hero { border-color: #c03a2a; box-shadow: 0 0 12px rgba(220,50,30,.55); }
 .class-screen.del-mode .class-card:not(.has-hero) { opacity: .4; cursor: default; }
+/* THE ETERNAL BREACH: the purple portal's floor dialog (game.confirmBreach) */
+.breach-dialog .velscour-biome-select { width: 100%; border-color: #7a40b0; color: #e0c0ff; }
+.breach-warn { min-height: 1.3em; margin: 10px 0 0; }

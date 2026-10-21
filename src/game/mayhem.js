@@ -138,7 +138,7 @@ export function enter(m, kind, from) {
  */
 export function ambushTick(w, dt) {
   const p = w.player;
-  if (w.kind !== 'dungeon' || w.raid || !p || p.dead || !w.roster || !w.roster.length) return;
+  if (w.kind !== 'dungeon' || w.raid || w.breach || !p || p.dead || !w.roster || !w.roster.length) return;
   if (w.boss && w.boss.awake && !w.boss.dead) return;
   if (w.ambushT === undefined) w.ambushT = rand(25, 40);
   if ((w.ambushT -= dt) > 0) return;

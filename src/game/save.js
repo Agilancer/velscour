@@ -46,7 +46,7 @@ export function newCharData(classId, name) {
     bag: Array(60).fill(null),
     stash: Array(300).fill(null),
     gold: 150, potions: { hp: 6, mp: 4, rejuv: 1, fury: 1 },
-    depth: 1, deepest: 0, nextBiome: null, biomeBag: [], cleared: {}, overworldMisses: 0, overworldLastVisit: null, seaOfSandRuns: {}, darkForestRuns: {},
+    depth: 1, deepest: 0, nextBiome: null, biomeBag: [], cleared: {}, overworldMisses: 0, overworldLastVisit: null, seaOfSandRuns: {}, darkForestRuns: {}, breach: { best: 0, cleared: {} },
     kills: 0, deaths: 0, created: Date.now(), lastPlayed: Date.now(), tips: {},
   };
   c.equip.weapon = rollItem(1, { slot: 'weapon', base: C.weapon, rarity: 0 });
@@ -65,6 +65,7 @@ export function migrate(c) {
   c.cleared = c.cleared || {};
   c.seaOfSandRuns = c.seaOfSandRuns || {};
   c.darkForestRuns = c.darkForestRuns || {};
+  c.breach = Object.assign({ best: 0, cleared: {} }, c.breach); // THE ETERNAL BREACH: best floor beaten, clears per floor
   c.granted = c.granted || {};
   c.tips = c.tips || {};
   if (c.classId === 'barbarian') c.rage = Math.max(0, Math.min(100, Number(c.rage) || 0));

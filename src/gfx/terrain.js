@@ -8,6 +8,7 @@ import { HW, HH, TW, TH, setElevation } from '../core/view.js';
 import { makeCanvas, clamp } from '../core/util.js';
 import { castle3dState, drawPiece, pieceRect } from './castle3dart.js';
 import { drawCastleFace } from './castlewalls.js';
+import { breachUnderside, UNDERSIDE_HANG } from './breach.js';
 
 export const HS = 4; // world px per height level
 
@@ -18,10 +19,11 @@ const hash = (x, y, s) => {
 };
 
 // ------------------------------------------------------------------ rock
-let rock = null;
+const rocks = {};
 /** Two 64x64 tiling rock faces (lit SW faces, shaded SE faces): broken granite in angular facets, taller than wide,
  * each lit along its top and shadowed at its foot, with thin broken cracks between and a little lichen. */
-function rockPatterns(ctx) {
+function rockPatterns(ctx, style = '') {
+  let rock = rocks[style];
   if (!rock) {
     const S = 64, pts = [];
     for (let k = 0; k < 26; k++) pts.push([hash(k, 1, 91) * S, hash(k, 2, 91) * S]);
@@ -42,6 +44,12 @@ function rockPatterns(ctx) {
         if (edge < 0.9 && crack) v -= 0.2; else if (edge < 1.8) v -= vy > 0 ? 0.09 : -0.05;
         let r = v * 1.02 + 0.015, gg = v * 0.96 + 0.01, b = v * 0.86;
         if (hash(near, 4, 13) > 0.8 && edge > 2 && hash(x >> 1, y >> 1, 17) > 0.5) { r = r * 0.82 + 0.05; gg = gg * 0.85 + 0.11; b *= 0.72; }
+        if (style === 'breach') {
+          // the Breach: dark violet-grey basalt, its cracks lit by the rift
+          const l = r * 0.3 + gg * 0.59 + b * 0.11;
+          r = l * 0.78 + 0.03; gg = l * 0.66; b = l * 0.95 + 0.05;
+          if (edge < 0.9 && crack && hash(near, 6, 19) > 0.8) { r = 0.55; gg = 0.25; b = 0.85; }
+        }
         if (dark) { r *= 0.7; gg *= 0.72; b *= 0.82; }
         const i = (y * S + x) * 4;
         p[i] = 255 * clamp(r, 0, 1); p[i + 1] = 255 * clamp(gg, 0, 1); p[i + 2] = 255 * clamp(b, 0, 1); p[i + 3] = 255;
@@ -49,7 +57,7 @@ function rockPatterns(ctx) {
       g.putImageData(d, 0, 0);
       return c;
     };
-    rock = { lit: make(false), dark: make(true) };
+    rock = rocks[style] = { lit: make(false), dark: make(true) };
   }
   if (!rock.pl || rock.ctx !== ctx) { rock.ctx = ctx; rock.pl = ctx.createPattern(rock.lit, 'repeat'); rock.pd = ctx.createPattern(rock.dark, 'repeat'); }
   return rock;
@@ -71,7 +79,7 @@ function bankOf(f, dark) {
 /** Draw order, face depths, screen boxes and occluders of a height map (built once). */
 export function terrainOf(map) {
   if (map._terr) return map._terr;
-  const { w, h, hgt, t } = map, N = w * h, base = map.baseLevel ?? 0;
+  const { w, h, hgt, t } = map, N = w * h, base = map.baseLevel ?? 0, under = map.under;
   const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h || t[y * w + x] !== 1 ? null : hgt[y * w + x]);
   const sw = new Int16Array(N), se = new Int16Array(N), box = new Float32Array(N * 4), order = [], occ = [], covers = [];
   const c3 = map.c3struct && castle3dState();
@@ -79,10 +87,12 @@ export function terrainOf(map) {
     const i = y * w + x;
     if (t[i] !== 1) continue;
     const v = hgt[i], s = at(x, y + 1), e = at(x + 1, y);
-    sw[i] = Math.max(0, s === null ? v - base : v - s);
-    se[i] = Math.max(0, e === null ? v - base : v - e);
+    // over the void a face runs down to the column's own underside (the Breach's islands) or the map's base
+    const foot = under ? under[i] : base;
+    sw[i] = Math.max(0, s === null ? v - foot : v - s);
+    se[i] = Math.max(0, e === null ? v - foot : v - e);
     const px = (x - y) * HW, py = (x + y) * HH - v * HS;
-    box[i * 4] = px - HW; box[i * 4 + 1] = py; box[i * 4 + 2] = px + HW; box[i * 4 + 3] = py + TH + Math.max(sw[i], se[i]) * HS;
+    box[i * 4] = px - HW; box[i * 4 + 1] = py; box[i * 4 + 2] = px + HW; box[i * 4 + 3] = py + TH + Math.max(sw[i], se[i]) * HS + (map.voidFace && (s === null || e === null) ? UNDERSIDE_HANG : 0);
     order.push(i);
     if (c3) {   // the Castle's baked masonry (docs/CASTLE_3D.md): the box is its pieces' own
       const gx = (x - y) * HW, gy = (x + y) * HH;
@@ -252,12 +262,19 @@ export function drawColumn(ctx, world, i, floorEntry, dress = null, over = false
       return;
     }
   }
-  const R = rockPatterns(ctx);
+  const R = rockPatterns(ctx, map.voidFace || '');
   const f = floorEntry(world, map.v[i]);
   const art = map.faceArt && map.faceArt[i];
   const fb = art === 5 ? soilOf(f) : f; // the Castle's river banks: earth over rock
-  if (T.sw[i] && !(art && drawCastleFace(ctx, map, i, px - HW, py + HH, HW, HH, T.sw[i], false, v, HS))) face(ctx, R, fb, i, px - HW, py + HH, HW, HH, T.sw[i], false, y + 1 >= map.h || map.t[i + w] !== 1);
-  if (T.se[i] && !(art && drawCastleFace(ctx, map, i, px, py + TH, HW, -HH, T.se[i], true, v, HS))) face(ctx, R, fb, i, px, py + TH, HW, -HH, T.se[i], true, x + 1 >= w || map.t[i + 1] !== 1);
+  const voidSW = y + 1 >= map.h || map.t[i + w] !== 1, voidSE = x + 1 >= w || map.t[i + 1] !== 1;
+  if (T.sw[i] && !(art && drawCastleFace(ctx, map, i, px - HW, py + HH, HW, HH, T.sw[i], false, v, HS))) {
+    if (voidSW && map.voidFace) breachUnderside(ctx, i, px - HW, py + HH, HW, HH, T.sw[i] * HS, false, quad, R.pl);
+    else face(ctx, R, fb, i, px - HW, py + HH, HW, HH, T.sw[i], false, voidSW);
+  }
+  if (T.se[i] && !(art && drawCastleFace(ctx, map, i, px, py + TH, HW, -HH, T.se[i], true, v, HS))) {
+    if (voidSE && map.voidFace) breachUnderside(ctx, i, px, py + TH, HW, -HH, T.se[i] * HS, true, quad, R.pd);
+    else face(ctx, R, fb, i, px, py + TH, HW, -HH, T.se[i], true, voidSE);
+  }
   if (art && art !== 5 && (T.sw[i] || T.se[i])) {
     // masonry: a lit quoin on the corner between the two faces, dark silhouette edges where a face ends
     ctx.lineWidth = 1;

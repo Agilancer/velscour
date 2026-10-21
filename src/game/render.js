@@ -18,6 +18,7 @@ import { enemyImage } from '../core/enemyart.js';
 import { drawLootLabels } from './loot.js';
 import { castleTileDressing, drawCastleParticles, drawCastleWater } from '../gfx/castleground.js';
 import { drawRim, RIM } from './creature.js';
+import { drawNebula } from '../gfx/breach.js';
 import { drawTerrain, drawColumn, occludersFor, occludersOfRect, occluderObj, clipAdd, hiddenBehind, standKey, hopZ, drawSky, terrainShade, HS } from '../gfx/terrain.js';
 
 let lightCanvas = null, glowCanvas = null, vignette = null, vigKey = '';
@@ -630,7 +631,8 @@ export function renderWorld(ctx, world) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-  if (world.map.hgt && !world.map.castleMat) drawSky(ctx, W, H, camera.x * camera.zoom * G.dpr, camera.y * camera.zoom * G.dpr, world.night);
+  if (world.map.voidFace) drawNebula(ctx, W, H, camera.x * camera.zoom * G.dpr, camera.y * camera.zoom * G.dpr); // the Breach's void
+  else if (world.map.hgt && !world.map.castleMat) drawSky(ctx, W, H, camera.x * camera.zoom * G.dpr, camera.y * camera.zoom * G.dpr, world.night);
   camera.apply(ctx);
   ctx.imageSmoothingEnabled = true;
   // 'medium' (mipmapped) downscaling of the big floor/wall atlases costs several times 'low' per draw, and those are

@@ -14,6 +14,42 @@ Contents
 
 ---
 
+## October 21, 2026 — THE ETERNAL BREACH: a challenge biome behind a purple portal (branch `feat/eternal-breach`)
+
+- **Request:** add "THE ETERNAL BREACH" from the two uploads in `assets/` (`The_Eternal_Breach_Biome_Pack/`,
+  `The_Eternal_Breach_Expanded_Pack/`): a purple portal in Herrington Hollow; auto-play turned on in town asks
+  Standard Adventure Portal or the Breach; a broken world floating in the void with a purple nebula, height mapping,
+  floating islands joined by pathways (8 small, 5 medium, 3 large, non-linear but all reachable), buildings/dungeons on
+  some, shrines on the medium and large islands starting scenarios and boss fights that block the way on until won;
+  only the Breach's own 200 monsters and 30 bosses; arrivals out of the ground, over the edges, from the sky, dropped
+  by a large flier that flies off, plus 8 more of my own; floor n as hard as depth 10n, deadly when under-levelled;
+  the final boss's drops: floors 1-3 Rare; 4-10 Epic the first time, then Rare with a very low Legendary chance; 11+
+  Epic the first time (small Legendary, smaller Mythic chance), then Rare with a low chance of better.
+- **Done** (full write-up: [ETERNAL_BREACH.md](ETERNAL_BREACH.md)): `tools/eternalbreach.py` (both biome packs via
+  `biomepack.py`, which now reads unzipped folders; the 230 creatures as six enemy atlases and the generated
+  `src/data/breachroster.js` with an AI archetype per creature), `src/data/breach.js` (bestiary entries flagged
+  `breach`, kept out of every regular draw; `breachLooks`, `breachArch`, the reward table), `src/world/breach.js` (the
+  floor: 16 islands, walkway graph with loops, altitudes, plateaus, crags, ruined chapels from both packs' walls, arches
+  and doors, wards across walkways, cone undersides `map.under`), `src/gfx/breach.js` (nebula void, undersides with
+  stalactites/roots/crystal, wards, carriers), `src/game/breach.js` (12 arrivals, 12 scenarios + 2 boss fights + the
+  Heart with shield phases, wards and scenario locks, stragglers, ambient arrivals, rewards), game.js
+  (`confirmBreach`, `enterBreach`, `buildBreach`, `breachExit`, `breachDeath`: no Defiance, the descent untouched),
+  town.js (the purple portal's yard and road, rolled from a second generator), autoplay.js (`askDest` menu with an 8 s
+  countdown, `dest`, `breachFloor`/`breachReady`, Breach exits, loot between shrines, `objPush`), the HUD objective
+  panel and Quest Log, save `c.breach`, ambience beds.
+- **Engine touches:** terrain.js: `map.under` (a column's own foot over the void), `map.voidFace` (Breach undersides),
+  the rock pattern takes a style; render.js draws `drawNebula` for `map.voidFace`; props may carry `lightColor`;
+  `deathScreen` takes `where`/`note`; mayhem's ambush director skips the Breach.
+- **Verified:** `breach_gen.mjs 120` (120/120 seeds: 8/5/3 islands, every ward solvable on the tiles), `breach.js`
+  (purple portal in 12 towns, floor dialog, auto-play menu walks into the Breach; a bot wins all 14 scenarios and the
+  Heart; all 12 arrivals land, shots looked at; auto-play (god mode, a hero geared 2 levels over the floor) wins floor 2
+  in ~1230 game s and goes home; the reward table over 20k rolls; a death leaves the descent and Defiance alone;
+  frame cost in the real loop render 1.3 ms vs the Mountainside's 4.3), plus flow, town, townlife, hud, mobile,
+  mountain, castle_walls, scenarios, enemies, mayhem, data_check, autoplay paladin 8 min. `scenarios.js` reports the
+  same three Castle rampart scenarios with 21-25 s waits on `main` too (not from this change).
+- **Open / to ask:** every other shrine is required before the Heart (a floor is ~20 game minutes); reward odds
+  (`BREACH_ODDS`); death costs nothing but the floor. Not measured on a phone.
+
 ## October 20, 2026 — the Castle's walls rebuilt as height-mapped masonry you can fight on (branch `feat/castle-walls-heightmap`)
 
 - **Request:** use the user's `VELSCOUR_Castle_Artwork_Complete.zip` (walls and towers, walkable rampart tiles, stairs

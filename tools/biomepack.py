@@ -47,7 +47,11 @@ WALK_OVER = {"supine_skeleton", "vigil_candles", "rolled_shroud", "chain_and_sha
              # Sewers
              "muck_rubble_scatter", "sludge_soaked_remains", "dripping_candle_cluster", "mildewed_bedroll",
              "rotten_timber_heap", "rusty_chains_shackles", "stagnant_offering_bowl", "sewer_tools_and_ledger",
-             "filthy_boots_and_kit"}
+             "filthy_boots_and_kit",
+             # The Eternal Breach / The Veilscar March
+             "shattered_coffin_lid", "last_vigil_candles", "breach_rubble", "torn_shroud_roll", "rift_chain_and_shackle",
+             "forgotten_grave_kit", "bonegrass_tuft", "moonlit_puddle_marker", "cracked_moss_slab",
+             "weathered_offering_bowl", "moonlit_puddle_basin"}
 
 
 def box(u0, u1, v0, v1, h, tag):
@@ -232,14 +236,27 @@ def pieces(arr, pivot, tags, groups):
     return out
 
 
+class _Dir:
+    """An unpacked pack folder read like a zip (tools/eternalbreach.py imports the Breach packs as uploaded)."""
+    def __init__(self, path):
+        self.path = path
+
+    def namelist(self):
+        return [os.path.relpath(os.path.join(d, f), self.path).replace(os.sep, "/") for d, _, fs in os.walk(self.path) for f in fs]
+
+    def read(self, n):
+        with open(os.path.join(self.path, n), "rb") as f:
+            return f.read()
+
+
 def import_pack(zpaths, pack_id):
-    # a pack may be split into parts (<Name>_Biome_Pack-1.zip, -2, ...) to fit GitHub's upload limit
+    # a pack may be split into parts (<Name>_Biome_Pack-1.zip, -2, ...) to fit GitHub's upload limit; a folder works too
     files = {}
     for zp in zpaths:
-        z = zipfile.ZipFile(zp)
+        z = _Dir(zp) if os.path.isdir(zp) else zipfile.ZipFile(zp)
         for n in z.namelist():
             files.setdefault(n, z)
-    root = next(n for n in files if n.endswith("manifest.json")).rsplit("manifest.json", 1)[0]
+    root = min((n for n in files if n.endswith("manifest.json")), key=len).rsplit("manifest.json", 1)[0]
     read = lambda f: files[root + f].read(root + f)
     man = json.loads(read("manifest.json"))
     load = lambda a: np.array(Image.open(io.BytesIO(read(a["file"]))).convert("RGBA"))
