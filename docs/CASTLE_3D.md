@@ -63,8 +63,9 @@ Pure data, so it also runs under Node. Both the game and the bake read it.
   bank of a cliff (tunnels get their floor first), keeps the Castle's blended ground on the other tiles, and redraws
   pieces over anyone behind them. It also redraws what stands over a walkway after whoever walks under it. Both fade
   where they would hide the hero (`cutaway`, `src/game/render.js`).
-- **Roofs** lift off while the hero is inside their building and fade over anyone behind them. Lights inside a roofed
-  building are left out of the light map.
+- **Roofs**: a building's whole roof fades away (about half a second, `roofFade` in `src/game/render.js`) while the hero
+  is inside it, and fades back in once they leave; it also turns see-through over anyone behind it. Lights inside a
+  roofed building come up in the light map as its roof fades.
 - `src/game/castle3d.js` (every frame): the drawbridge comes down when the hero is within 11 tiles of it and only then
   opens the crossing. Doors swing open while anyone is within about 3 tiles and close behind them.
 

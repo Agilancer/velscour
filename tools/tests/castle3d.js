@@ -51,6 +51,21 @@ const only = (process.argv[2] || '').split(',').filter(Boolean);
         if (!st.down || !st.open) errors.push('[castle3d] the drawbridge did not come down and open the crossing');
       }
     }
+    // the keep's whole roof fades off as the hero steps inside and back on once the hero leaves (render.js roofFade)
+    if (!only.length || only.includes('roof_fade')) {
+      const step = (x, y, ms) => page.evaluate(async ([x, y, ms]) => {
+        const { G } = window.VELSCOUR, { camera } = await import('/src/core/view.js');
+        G.player.x = x; G.player.y = y; G.settings.zoom = 1; camera.computeZoom(); camera.follow(x, y, 0, true);
+        if (ms) await new Promise((r) => setTimeout(r, ms));
+        else await new Promise((r) => requestAnimationFrame(r));   // one frame into the fade (a frame steps it at most 55%)
+        return G.world._roofs?.a[1];
+      }, [x, y, ms]);
+      const out0 = await step(167.5, 142.5, 900), mid = await step(160.5, 128.5, 0);
+      await shot('castle3d_roof_fading');
+      const inside = await step(160.5, 128.5, 900), back = await step(167.5, 142.5, 900);
+      console.log('roof fade', JSON.stringify({ out0, mid, inside, back }));
+      if (!(out0 === 1 && mid > 0 && mid < 1 && inside === 0 && back === 1)) errors.push('[castle3d] the keep roof does not fade off inside and back on outside');
+    }
   } catch (e) { errors.push('[castle3d] ' + e.message); }
   report(errors);
   await browser.close();

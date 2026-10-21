@@ -611,6 +611,20 @@ function occludeStatic(o, r, x = o.x, y = o.y, live = false) {
 }
 
 /** Main world render. */
+// the Castle's roofs: each building's whole roof eases out while the hero is inside it and back in once they leave
+// (real time, so it reads the same at auto-play speed); a[bld] is that roof's opacity
+const ROOF_FADE_S = 0.45;
+function roofFade(world, heroBld) {
+  const now = performance.now(), f = world._roofs || (world._roofs = { a: [], t: now });
+  const step = Math.min(0.25, (now - f.t) / 1000) / ROOF_FADE_S;
+  f.t = now;
+  for (let k = 1; k < 8; k++) {
+    const to = k === heroBld ? 0 : 1;
+    f.a[k] = f.a[k] === undefined ? to : to > f.a[k] ? Math.min(to, f.a[k] + step) : Math.max(to, f.a[k] - step);
+  }
+  return f.a;
+}
+
 export function renderWorld(ctx, world) {
   const W = G.W * G.dpr, H = G.H * G.dpr;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -675,6 +689,7 @@ export function renderWorld(ctx, world) {
   const p = world.player;
   const pd = p ? p.x + p.y : 0;
   const heroBld = map.c3bld && p ? map.c3bld[map.tileIdx(p.x, p.y)] : 0;
+  const roofA = map.c3bld ? roofFade(world, heroBld) : null;
   const ppx = p ? isoX(p.x, p.y) : 0, ppy = p ? isoY(p.x, p.y) : 0;
   // walls in front of the hero fade with screen distance and depth, so the narrow slices form a soft see-through hole
   // (a wide hole: the walls stand ~1.4 heroes tall, and fights next to the hero should stay in view)
@@ -813,10 +828,11 @@ export function renderWorld(ctx, world) {
       case 4: {
         if (o.tree) { drawTree(ctx, o, treeHides(o, it.d, views)); break; }
         let a = 1;
-        if (o.roofOf) {   // a Castle building's roof (gfx/castle3dart.js): off while the hero is inside, faded over anyone behind
-          if (heroBld === o.roofOf) break;
+        if (o.roofOf) {   // a Castle building's roof (gfx/castle3dart.js): fades off while the hero is inside, faded over anyone behind
+          const ra = roofA[o.roofOf] ?? 1;
+          if (ra <= 0.01) break;
           const s = o.spr, rx = isoX(o.x, o.y) + s.ox * o.k, ry = isoY(o.x, o.y) + (o.z ? -o.z : 0) + s.oy * o.k;
-          drawProp(ctx, o, hides([rx, ry, s.w * o.k, s.h * o.k], it.d) ? 0.32 : 1);
+          drawProp(ctx, o, Math.min(ra, hides([rx, ry, s.w * o.k, s.h * o.k], it.d) ? 0.32 : 1));
           break;
         }
         if (o.spr || (o.sprite === 'tree' || o.sprite === 'pine')) {
@@ -950,13 +966,14 @@ function drawLighting(ctx, world) {
     return true;
   };
   if (p) add(p.x,p.y,b.light*(1+(p.st.lightPct||0)),1,20);
-  // the Castle: lights inside a building stay under its roof unless the hero is in there too
-  const bld = world.map.c3bld, W_ = world.map.w, hb = bld && p ? bld[world.map.tileIdx(p.x, p.y)] : 0;
-  const roofed = (l) => { if (!bld) return false; const k = bld[Math.floor(l.y) * W_ + Math.floor(l.x)]; return k > 0 && k !== hb; };
+  // the Castle: lights inside a building stay under its roof, showing as the roof fades off round the hero
+  const bld = world.map.c3bld, W_ = world.map.w, ra = world._roofs?.a;
+  const roofed = (l) => { if (!bld) return 0; const k = bld[Math.floor(l.y) * W_ + Math.floor(l.x)]; return k > 0 ? (ra?.[k] ?? 1) : 0; };
   let visibleLights=0;
   for (const l of lights) {
-    if (roofed(l)) continue;
-    if (add(l.x, l.y, l.radius, l.intensity * 0.85, l.z ?? 20)) visibleLights++;
+    const r = roofed(l);
+    if (r >= 0.99) continue;
+    if (add(l.x, l.y, l.radius, l.intensity * 0.85 * (1 - r), l.z ?? 20)) visibleLights++;
     if (G.touch && visibleLights >= 48) break;
   }
   // the vignette is baked into the same quarter-res layer, so the screen takes one full-size blit, not two
