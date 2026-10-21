@@ -5,11 +5,11 @@ import { sfx, levelUpFanfare } from '../core/audio.js';
 import { camera } from '../core/view.js';
 import { floatText, addEffect, Column, Ring, Sigil, sparkle, burst, spawn, elem, bloodSpray, smoke } from '../gfx/vfx.js';
 import { Creature } from './creature.js';
-import { CLASSES } from '../data/classes.js';
+import { CLASSES, DMG_TUNE, DMG_TUNE_AT } from '../data/classes.js';
 import { SKILLS, CLASS_SKILLS, effLevel, skillBaseDamage, manaCost, rageCost, cooldown, useTime, weaponCoef, grantedSkillsAt, skillRange } from '../data/skills.js';
 import { SLOTS, RING_SLOTS, itemStats, itemDmg, itemArmor, GEMS } from '../data/items.js';
 import { augHits, augmentable } from '../data/rings.js';
-import { depthLevel, fortitude } from '../data/depth.js';
+import { depthLevel, fortitude, logCurve } from '../data/depth.js';
 import { heroBonus } from './defiance.js';
 import { MAX_MASTERY, masteryNeed, masteryMul, masteryTier, TIER_NAMES } from './augments.js';
 import { castSkill, Timer } from './skillrun.js';
@@ -24,8 +24,18 @@ import { bardCompose, bardUpdate, harmonyMul } from './bard.js';
 import { ASTRONOMER, astroAfterCast, astroUpdate } from './astronomer.js';
 import { sigCast, sigHit, sigUpdate } from './signature.js';
 
-export const xpToNext = (L) => Math.round(60 * L * L + 40 * L);
-export const MAX_LEVEL = 300;
+// XP for the next level. The (L/30)^1.5 term paces a hero who clears every depth to stay ~10-50 levels above its
+// monsters and reach ~270 by Velscour (depth 500, monster level 258); without it a full-clearing hero hit level 300
+// by depth 160. Past level 240 a level costs L/240 times the level-240 price, so in the Endless Torment (depths past
+// 500) a full-clearing hero keeps pace with its monsters and reaches the cap around depth 1200 (tools/tests/endgame.js).
+const xpCurve = (L) => (60 * L * L + 40 * L) * (1 + Math.pow(L / 30, 1.5));
+export const xpToNext = (L) => Math.round(L <= 240 ? xpCurve(L) : xpCurve(240) * L / 240);
+export const MAX_LEVEL = 600;
+/** The class's damage tuning at a hero level (data/classes.js DMG_TUNE). */
+export function classTune(cls, level) {
+  const T = DMG_TUNE[cls];
+  return T ? logCurve(DMG_TUNE_AT.map((L, i) => [L, T[i]]), level) : 1;
+}
 
 const ELEM_KEYS = ['fire', 'cold', 'light', 'poison', 'arcane', 'holy', 'shadow', 'blood', 'acid'];
 
@@ -213,7 +223,7 @@ export class Player extends Creature {
     const base = skillBaseDamage(sk, L);
     const wc = weaponCoef(sk);
     const elBonus = sk.el === 'phys' ? st.physPct : st.elemPct[sk.el] || 0;
-    let mult = (1 + (st.dmgPct + st.primary + elBonus) / 100) * this.synergy(sk) * masteryMul(this.mastery(sk));
+    let mult = (1 + (st.dmgPct + st.primary + elBonus) / 100) * this.synergy(sk) * masteryMul(this.mastery(sk)) * classTune(this.classId, this.char.level) * (sk.m.pow ?? 1);
     if (st.legendary.berserk) mult *= 1 + 0.04 * Math.floor((1 - this.hp / this.maxHp) * 10);
     if (this.score) mult *= harmonyMul(this); // the Bard's Harmony
     const lo = (base * 0.85 + st.weapon[0] * wc) * mult, hi = (base * 1.15 + st.weapon[1] * wc) * mult;
@@ -236,12 +246,12 @@ export class Player extends Creature {
   }
 
   // ------------------------------------------------------------------ progression
-  gainXp(n) {
+  gainXp(n, flat = false) { // flat: no penalty for out-levelling the depth (gilded critters pay by hero level)
     const c = this.char;
     if (c.level >= MAX_LEVEL) return;
     const depth = depthLevel((this.world && this.world.depth) || 1);
     const diff = c.level - depth;
-    const pen = diff > 5 ? Math.max(0.1, 1 - (diff - 5) * 0.1) : 1;
+    const pen = !flat && diff > 5 ? Math.max(0.1, 1 - (diff - 5) * 0.1) : 1;
     c.xp += Math.round(n * pen * (1 + this.st.xpPct / 100));
     while (c.level < MAX_LEVEL && c.xp >= xpToNext(c.level)) {
       c.xp -= xpToNext(c.level);

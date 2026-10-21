@@ -1,5 +1,5 @@
 // Hero look check: every gear combination loads and shows a full hero, and the hero stays visible in play.
-//  1. Every class: all 12 armors x every finish, all helmets x every finish, the armor's own silhouette kept
+//  1. Every class: all 18 armors x every finish, all helmets x every finish, the armor's own silhouette kept
 //     (a swap never loses pixels), icons and the portrait; items of every rarity and level, and old saved looks.
 //  2. Soak: a new hero on auto-play (~30x speed); every game second the hero's image must exist and be opaque,
 //     and the hero must be drawn at full alpha and size.
@@ -25,7 +25,7 @@ const SOAK = process.argv[3] || 'death_knight', MINUTES = +(process.argv[4] || 8
       const cv = document.createElement('canvas'); cv.width = meta.frame[0]; cv.height = meta.frame[1];
       const x = cv.getContext('2d', { willReadFrequently: true });
       const opaque = (img) => {
-        x.clearRect(0, 0, cv.width, cv.height); x.drawImage(img, 0, 0);
+        x.clearRect(0, 0, cv.width, cv.height); x.imageSmoothingEnabled = false; x.drawImage(img, 0, 0, cv.width, cv.height);
         const d = x.getImageData(0, 0, cv.width, cv.height).data; let n = 0;
         for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++;
         return n;

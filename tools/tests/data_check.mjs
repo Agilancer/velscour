@@ -30,26 +30,20 @@ const s = SKILLS['wizard.0.0'];
 console.log('example', s.name, 'dmg L1', skillBaseDamage(s, 1), 'dmg L20', skillBaseDamage(s, 20), 'mana wizard.0.8 L1', manaCost(SKILLS['wizard.0.8'], 1));
 
 // ---- monster art (src/data/bestiary.js vs assets/sprites/enemies/enemies.json)
-const { BESTIARY, BIOME_NATIVES, SUMMON_ART, FAMILIAR_ART, ART_BY_ID, SWAPS, artPool, rollLooks } = await import(new URL('../../src/data/bestiary.js', import.meta.url));
+const { BESTIARY, SUMMON_ART, FAMILIAR_ART, ART_BY_ID, artPool, rollLooks } = await import(new URL('../../src/data/bestiary.js', import.meta.url));
 const { ARCH } = await import(new URL('../../src/data/enemies.js', import.meta.url));
 const { HEAVENLY_MONSTERS } = await import(new URL('../../src/data/heavenly.js', import.meta.url));
 if (HEAVENLY_MONSTERS.length !== 60 || new Set(HEAVENLY_MONSTERS.map(m=>m.id)).size !== 60) bad.push('Expected 60 distinct Heavenly monsters');
 const { BIOMES, drawBiome, mixPartner } = await import(new URL('../../src/data/biomes.js', import.meta.url));
-if (BIOME_NATIVES.length !== BIOMES.length*50) bad.push('Each combat biome needs 50 newly generated native monsters');
-for (const b of BIOMES) if(BIOME_NATIVES.filter(a=>a.homeBiome===b.id).length!==50) bad.push('Bad native monster count '+b.id);
+const { SET3 } = await import(new URL('../../src/data/bestiary3.js', import.meta.url));
+if (SET3.length !== 260) bad.push('Expected the 260 monsters of enemy set 3');
+if (BESTIARY.some((a) => a.sourceArt || a.id.startsWith('bn_'))) bad.push('Generated overlay monsters (bn_) must not return');
 const fs = await import('node:fs');
 const meta = JSON.parse(fs.readFileSync(new URL('../../assets/sprites/enemies/enemies.json', import.meta.url)));
 const ids = new Set(), cells = new Set();
 for (const a of BESTIARY) {
   if (ids.has(a.id)) bad.push(`duplicate monster art id ${a.id}`);
   ids.add(a.id);
-  if(a.sheet==='biome/generated'){
-    if(!a.id.startsWith('bn_')||!BIOMES.some(b=>b.id===a.homeBiome)||
-       !ART_BY_ID[a.sourceArt]||!ARCH[a.arch]||!ELEMENTS.includes(a.el)||
-       !(a.h>20&&a.h<120))
-      bad.push('Invalid generated biome monster '+a.id);
-    continue; // procedural overlay sources are covered by source-art validation
-  }
   if(a.sheet==='sea_of_sand'){
     if(!a.seaOfSand||!a.id.startsWith('ss_')||!ARCH[a.arch]||!(a.h>20&&a.h<120))
       bad.push('Invalid Sea of Sand monster art '+a.id);
@@ -61,7 +55,7 @@ for (const a of BESTIARY) {
     if (!a.id.startsWith('hv_') || !a.name || !ARCH[a.arch] ||
         !ELEMENTS.includes(a.el) || !(a.h > 20 && a.h < 120))
       bad.push('invalid Heavenly monster '+a.id);
-    continue; // generated Canvas art, no static enemies.json cell
+    continue; // cut from the painted Heavenly sheets (gfx/heavenlymonsters.js), no enemies.json cell
   }
   if (!meta[a.sheet] || !meta[a.sheet].cells[a.i]) bad.push(`monster art ${a.id}: no cell ${a.sheet}#${a.i}`);
   if (cells.has(a.sheet + a.i)) bad.push(`monster art ${a.id}: cell ${a.sheet}#${a.i} used twice`);
@@ -87,14 +81,10 @@ for (const [k, d] of Object.entries(SUMMONS)) {
 for (const [k, s] of Object.entries(meta)) s.cells.forEach((c, i) => { if (c && !cells.has(k + i)) console.log(`note: ${k}#${i} has no bestiary entry yet`); });
 for (const k of Object.keys(ARCH)) if (k !== 'velscour' && !artPool(k).length) bad.push(`archetype ${k} has no monster art`);
 for (const b of BIOMES) {
-  for (const sw of b.swaps || []) if (sw && !SWAPS[sw]) bad.push(`biome ${b.id}: unknown swap ${sw}`);
-  for (const k of b.prefer || []) if (!meta[k]) bad.push(`biome ${b.id}: prefers unknown art sheet ${k}`);
   const looks = rollLooks(b);
   for (const k of b.roster) if (!looks.pick(k)) bad.push(`biome ${b.id}: no look for ${k}`);
   if (!looks.boss(b.roster)) bad.push(`biome ${b.id}: no guardian art`);
   if (b.id !== 'throne' && !b.overworld && !b.family) bad.push(`biome ${b.id}: no colour family`);
-  const testNative=BIOME_NATIVES.find(a=>a.homeBiome===b.id);
-  if(!testNative)bad.push(`biome ${b.id}: no custom monster pool`);
 }
 // every biome's pack exists and is complete: all 16 wall connection masks per family, with an arm for each
 // connection, arches and doors in 4 directions (doors open and closed), self-seamless floors, chest art
@@ -126,8 +116,8 @@ for (const b of BIOMES) {
     continue; // the outdoor pack has no indoor floor/wall/door atlas
   }
   // dungeons use only the painted packs and the ChatGPT-sheet packs (data/biomes.js ART), floors/props from `pack`, walls from `wallPack`
-  for (const p of [b.pack, b.wallPack, ...(b.morePacks || []).map((m) => m[0])].filter(Boolean)) {
-    if (!['catacombs', 'cathedral_graveyard', 'castle_keep', 'sewers'].includes(p)) bad.push(`biome ${b.id}: ${p} is not a painted pack`);
+  for (const p of [b.pack, b.wallPack, ...[...(b.morePacks || []), ...(b.moreFloors || [])].map((m) => m[0])].filter(Boolean)) {
+    if (!['catacombs', 'cathedral_graveyard', 'castle_keep', 'sewers', 'dark_forest'].includes(p)) bad.push(`biome ${b.id}: ${p} is not a painted pack`);
     for (const f of ['pack.json', 'floors.webp', 'walls.webp', 'scatter.webp']) if (!existsSync(asset(`tiles/${p}/${f}`))) bad.push(`biome ${b.id}: missing tiles/${p}/${f}`);
     packs[p] = 1;
   }
@@ -138,8 +128,12 @@ for (const b of BIOMES.filter((b) => !b.overworld && b.part)) {
   const inR = (rs, i) => !rs || rs.some(([x, y]) => i + 1 >= x && i + 1 <= y);
   const seamless = fm.floors.filter((f, i) => f.seamless && inR(part.floors, i)).length;
   if (seamless < 2) bad.push(`biome ${b.id}: part has ${seamless} seamless floors`);
-  if (fm.floors.filter((f, i) => !f.seamless && inR(part.floors, i)).length < 10) bad.push(`biome ${b.id}: part has few feature floors`);
-  if (fm.scatter.filter((s, i) => inR(part.scatter, i)).length < 8) bad.push(`biome ${b.id}: part has few props`);
+  // borrowed floors and props (moreFloors, morePacks, townProps) count too
+  const more = (list, key, keep) => (list || []).reduce((n, [p, rs]) => n + packMeta(p)[key].filter((f, i) => inR(rs, i) && keep(f)).length, 0);
+  const feats = fm.floors.filter((f, i) => !f.seamless && inR(part.floors, i)).length + more(b.moreFloors, 'floors', (f) => !f.seamless);
+  const props = fm.scatter.filter((s, i) => inR(part.scatter, i)).length + more(b.morePacks, 'scatter', () => true) + (b.townProps || []).length;
+  if (feats < 10) bad.push(`biome ${b.id}: part has few feature floors (${feats})`);
+  if (props < 8) bad.push(`biome ${b.id}: part has few props (${props})`);
   for (const f of part.families || []) if (!wm.walls[f]) bad.push(`biome ${b.id}: no wall family ${f}`);
   for (const k of ['arches', 'doors']) for (const d of part[k] || []) if (!wm[k][d]) bad.push(`biome ${b.id}: no ${k} design ${d}`);
   if (part.arches && !part.arches.length) bad.push(`biome ${b.id}: no arches`);

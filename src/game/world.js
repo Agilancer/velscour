@@ -142,7 +142,7 @@ export class World {
     // flow field toward the player for monster path finding
     this.flowTimer -= dt;
     if (p && !p.dead && this.flowTimer <= 0) {
-      this.map.buildFlow(p.x, p.y, 64);
+      this.map.buildFlow(p.x, p.y, this.map.flowRange || 64); // (the Castle's: far enough to lead round by its stairs)
       this.flowTimer = 0.25;
     }
     this.rebuildGrid();

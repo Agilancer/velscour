@@ -10,10 +10,11 @@ import { UI } from '../ui/ui.js';
 import { RNG } from '../core/util.js';
 import { G } from '../state.js';
 import { TOWNSFOLK } from '../data/townsfolk.js';
+import { makeFolk } from './folk.js';
 import { townFacingFlip } from './townsfolkvisuals.js';
 import { DF_TRIALS } from '../data/darkforest.js';
 import { GroundItem } from './loot.js';
-import { rollItem } from '../data/items.js';
+import { rollItem, rarityAt, RARITY } from '../data/items.js';
 import { addEffect, Ring, sparkle, addLight } from '../gfx/vfx.js';
 import { Area } from './hazards.js';
 
@@ -65,11 +66,12 @@ export function createDarkForestRun(world, gen, biome, onSuccess) {
   };
   for (const S of all) S.busy = () => all.some((o) => o !== S && o.active);
   function reward(S, best) {
-    const n = record.rewarded || 0, lvl = Math.max(1, world.depth * 2);
+    const n = record.rewarded || 0, lvl = depthLevel(world.depth) + 2;
     const [x, y] = S.glade.center;
-    world.addLoot(new GroundItem(x + 0.6, y + 0.4, 'item', { item: rollItem(lvl, { rarity: 4 }) }));
-    const mythic = best ? 0.6 : Math.min(0.6, 0.12 * (n + 1));
-    if (Math.random() < mythic) {
+    // an Epic, sometimes Legendary; a Mythic is a rare gift (the Heart's odds are best)
+    world.addLoot(new GroundItem(x + 0.6, y + 0.4, 'item', { item: rollItem(lvl, { rarity: rarityAt(lvl, Math.random() < (best ? 0.5 : 0.2) ? 4 : 3) }) }));
+    const mythic = best ? 0.08 : Math.min(0.05, 0.01 * (n + 1));
+    if (lvl >= RARITY[5].minIlvl && Math.random() < mythic) {
       world.addLoot(new GroundItem(x - 0.6, y + 0.4, 'item', { item: rollItem(lvl, { rarity: 5 }) }));
       UI.log('The forest gives up a Mythic treasure.', '#ff536e');
     }
@@ -134,10 +136,7 @@ function makeTrial(world, gen, biome, glade, type, onWin) {
   const unmark = (mk) => { let i = world.portals.indexOf(mk); if (i >= 0) world.portals.splice(i, 1); i = S.markers.indexOf(mk); if (i >= 0) S.markers.splice(i, 1); };
   const clearMarkers = () => { for (const mk of S.markers.slice()) unmark(mk); };
   const person = (folk, p) => {
-    const n = { name: folk.name.split(' ')[0] + (folk.child ? '' : ' the ' + folk.role), sprite: 'ranger', x: p[0], y: p[1], flip: rng.chance(0.5), hp: 100, reach: 1.6,
-      townsfolkSpriteId: folk.spriteId, pal: folk.palette, frameCount: folk.frame?.count, child: folk.child, animT: rng.next() * 3, walkT: 0, idleSeed: rng.int(0, 2),
-      update(dt) { this.animT += dt; if (!this.walking) this.walkT = 0; this.walking = false; if (this.emotionT > 0) this.emotionT -= dt; },
-      use: () => { if (n.onUse) n.onUse(); } };
+    const n = makeFolk(world, folk, p[0], p[1]);
     world.npcs.push(n); S.civilians.push(n);
     return n;
   };

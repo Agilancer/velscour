@@ -1,4 +1,6 @@
-// Thirty-five playable, shrine-activated overworld challenge scenarios.
+// Forty-one playable, shrine-activated overworld challenge scenarios (the Wilds and the Sea of Sand draw from
+// WILD_SCENARIOS, the Castle from the first CASTLE_SCENARIOS). The people in them come from the People and Animals
+// pack (game/folk.js): merchants, knights, royals, the witch, the wizard, the Greeners.
 // The original monster, loot, XP, rarity, combat and portal systems remain authoritative.
 import { makeMonster } from './monster.js';
 import { depthLevel } from '../data/depth.js';
@@ -8,6 +10,9 @@ import { overworldObject } from '../gfx/overworldart.js';
 import { TW } from '../core/view.js';
 import { TOWNSFOLK } from '../data/townsfolk.js';
 import { townFacingFlip } from './townsfolkvisuals.js';
+import { makeFolk, folkWalk } from './folk.js';
+import { hit } from './combat.js';
+import { sparkle, addEffect, Ring } from '../gfx/vfx.js';
 
 export const SCENARIOS = [
   ['Siege of the Forgotten','waves','Survive four escalating enemy waves.'],
@@ -45,7 +50,18 @@ export const SCENARIOS = [
   ['The Oathsworn Guard','keep_guard','Defeat the corrupted guard captain and sworn knights.'],
   ['The Bell Tower Breach','keep_belltower','Clear the attackers from the cathedral stair and bell landing.'],
   ['Coronation at Dawn','keep_coronation','Defend the throne hall through a final assault.'],
+  // ---- people of the Hollow out on the roads (the People and Animals pack)
+  ['The Merchant Road','merchants','Drive the beasts off three stranded traveling merchants.'],
+  ['A Knight\'s Last Stand','laststand','Fight beside a wounded knight through four waves.'],
+  ['The Witch\'s Brew','brew','Gather four ingredients for Nan Bramble\'s cauldron.'],
+  ['The Purple Ritual','ritual','Guard Zebulon the Purple while his ritual seals the woods.'],
+  ['The Royal Hunt','hunt','Save Prince Rowan from the alpha beasts he went hunting.'],
+  ['The Lost Greeners','greeners','Find the three Greener goblins hiding in the wilds.'],
 ];
+export const CASTLE_SCENARIOS=35;
+/** Scenario ids the Wilds and the Sea of Sand roll from (the castle ones need its walls and keep). */
+export const WILD_SCENARIOS=[...Array.from({length:20},(_,i)=>i),...SCENARIOS.map((_,i)=>i).filter(i=>i>=CASTLE_SCENARIOS)];
+export const wildScenario=(k)=>WILD_SCENARIOS[((k%WILD_SCENARIOS.length)+WILD_SCENARIOS.length)%WILD_SCENARIOS.length];
 const CENTER=[36.5,35.5];
 const norm=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
 const pos=(p)=>[p[0],p[1]];
@@ -103,22 +119,20 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
     if(S.stage===target)spawn(type,world.map.randomNear(at[0]+3,at[1]-6,2,rng.fn()),'champion',1);
     report('Wave '+S.stage+'/'+target+' is attacking!');
   };
-  const person=(name,x,y,cls='ranger')=>{
-    // Painted townsfolk/guard art; recoloured class sprites read as green ghosts.
-    const art=cls==='paladin'?'captain':cls==='wizard'?'npc_tobin':['npc_mira','npc_gorm','npc_cael','npc_tobin'][S.civilians.length%4];
-    // ...and townsfolk from Herrington Hollow (animated sheets: they walk, flinch and cheer) for everyone else
-    const folk=cls==='paladin'?null:rng.pick(TOWNSFOLK.filter(v=>!v.royal&&!v.courtier&&(cls==='ranger'?!v.child:true)));
-    const n={name:folk?folk.name.split(' ')[0]+' the '+folk.role:name,sprite:cls,art,x,y,flip:rng.chance(.5),hp:100,reach:1.6,
-      townsfolkSpriteId:folk?.spriteId,pal:folk?.palette,frameCount:folk?.frame.count,child:folk?.child,knight:folk?.knight,animT:rng.next()*3,walkT:0,idleSeed:rng.int(0,2),
-      update(dt){this.animT+=dt;if(!this.walking)this.walkT=0;this.walking=false;},
-      use:()=>{
+  // A person from the Hollow's roster (`who`: a role, a sheet id, a test, or a roster entry; default anyone grown).
+  const person=(name,x,y,who=null)=>{
+    const pool=TOWNSFOLK.filter(typeof who==='function'?who:who?(v)=>v.role===who||v.spriteId===who:(v)=>!v.royal&&!v.courtier&&!v.child);
+    const folk=pool.length?pool[rng.int(0,pool.length-1)]:TOWNSFOLK[0];
+    const n=makeFolk(world,folk,x,y,{use:()=>{
         // NPCs are normally click targets; give each one a safe and useful interaction.
         if(type==='rescue'){
           const marker=S.markers.find(m=>norm([m.x,m.y],[n.x,n.y])<2.5);
           if(marker)return marker.use();
         }
-        UI.log('['+name+'] Stay close, and help keep the Wilds safe.','#e2d6aa');
-      }};
+        if(n.onUse)return n.onUse();
+        n.say(rng.pick(['Stay close, hero!','Keep the Wilds safe.','Light keep you.','Watch the treeline!']),2.5);
+      }});
+    if(name&&!who)n.name=name;
     world.npcs.push(n);S.civilians.push(n);return n;
   };
   const fail=(reason)=>{
@@ -211,8 +225,8 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
       };
       if(type==='keep_procession'){
         S.wardHp=240;
-        const family=[['Queen Elowen',T[0],T[1],'wizard'],['Prince Rowan',T[0]+1.5,T[1]+1,'ranger'],['Princess Mira',T[0]-1.5,T[1]+1,'bard']];
-        for(const [name,x,y,sprite] of family){const [px,py]=world.map.walkable(x,y)?[x,y]:world.map.randomNear(x,y,2,rng.fn());person(name,px,py,sprite);}
+        const family=[['queen',T[0],T[1]],['prince',T[0]+1.5,T[1]+1],['princess',T[0]-1.5,T[1]+1],['royal heir',T[0],T[1]+1.6]];
+        for(const [role,x,y] of family){const [px,py]=world.map.walkable(x,y)?[x,y]:world.map.randomNear(x,y,2,rng.fn());person(null,px,py,role);}
       }
       const plan={
         keep_trial:[squad(4),squad(5,'champion'),squad(2,'champion','knight')],                 // three-stage trial
@@ -240,9 +254,11 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
       S.goal=n;S.remaining=n;
       for(let i=0;i<n;i++){
         const at=site(i+1),idx=i+1;
-        const captive=type==='rescue'?person('Prisoner '+idx,at[0]+1.2,at[1]+.8,'wizard'):null;
+        const captive=type==='rescue'?person(null,at[0]+1.2,at[1]+.8,(v)=>v.merchant||v.knight||v.guard||v.worker||v.caster):null;
+        if(captive){captive.feel('worried',1e6);captive.still=true;captive.chatter=['Get me out of here!','Please, hurry!'];}
         mark(label+' '+idx,at,(m)=>{
-          if(captive){const j=world.npcs.indexOf(captive);if(j>=0)world.npcs.splice(j,1);}
+          if(captive){captive.feel('relieved',2.5);captive.say(rng.pick(['Free! Thank you, hero!','I owe you my life!','Bless you!']),2.5);
+            captive.after(1.2,()=>{if(S.active)captive.feel('cheer',4);});}
           unmark(m);S.remaining--;S.stage++;report(label+': '+S.stage+'/'+S.goal);
           if(['rifts','totems','siege'].includes(type))group(idx+2,3,type==='rifts'?'wraith':type==='totems'?'shroom':'knight');
           if(S.remaining===0&&(!['rifts','totems','siege'].includes(type)||!live()))finish();
@@ -252,17 +268,17 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
     };
     switch(type){
       case 'waves':case 'battle':case 'bridge':
-        if(type==='bridge'){S.escort=person('Crossing Watchman',center[0]+2,center[1]+3,'paladin');S.escort.hp=170;}
+        if(type==='bridge'){S.escort=person(null,center[0]+2,center[1]+3,'04_river_patrol');S.escort.hp=170;S.escort.feel('proud',4);}
         wave(type==='battle'?5:4);break;
       case 'bosses': bosses(3,['demon','knight','abomination']);break;
       case 'defend':case 'infestation': {
         // The settlement sits beside this map's shrine (fixed Wilds coordinates broke on larger maps).
         const v=world.map.randomNear(center[0]-9,center[1]+7,2,rng.fn());S.village=v;
-        for(let i=0;i<4;i++){const q=world.map.randomNear(v[0]+(i%2)*2.5-1.2,v[1]+Math.floor(i/2)*2.5-1.2,1.5,rng.fn());person('Villager '+(i+1),q[0],q[1]);}
+        for(let i=0;i<4;i++){const q=world.map.randomNear(v[0]+(i%2)*2.5-1.2,v[1]+Math.floor(i/2)*2.5-1.2,1.5,rng.fn());person(null,q[0],q[1],(v)=>v.worker||v.merchant||v.old&&!v.royal);}
         S.wardHp=4;wave(type==='infestation'?4:3,v,'zombie');break;
       }
       case 'escort': {
-        S.escort=person('Caravan Guard',center[0],center[1]+3,'paladin');
+        S.escort=person(null,center[0],center[1]+3,(v)=>v.merchant);S.escort.chatter=['Keep up! The wagon won\'t wait.','Mind my glassware!'];
         S.escort.hp=140;S.goal=4;S.routeIndex=0;
         const wagon=overworldObject('ow_caravan');
         S.wagon={kind:'scatter',x:S.escort.x,y:S.escort.y,spr:wagon,
@@ -292,6 +308,60 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
       case 'trial':
         S.goal=20;S.timer=110;S.remaining=110;
         for(let i=1;i<=5;i++)group(i+1,6,i%2?'ghoul':'skeleton');break;
+      case 'merchants': {
+        // three traders, each pinned down by a pack; speak with each once their pack is dead
+        S.goal=3;S.remaining=3;S.traders=[];
+        for(let i=0;i<3;i++){
+          const at=site(i*2+1),n=person(null,at[0]+.8,at[1]+.6,(v)=>v.merchant&&!S.traders.some(q=>q.folk===v));
+          n.feel('scared',2);S.traders.push(n);group(i*2+1,4);
+          const mk=mark('Speak with '+n.name,[n.x,n.y],(m)=>{
+            if(S.foes.some(f=>!f.dead&&norm([f.x,f.y],[n.x,n.y])<7)){n.say('They\'re still out there!',2,'scared');return;}
+            unmark(m);S.remaining--;S.stage++;n.feel('cheer',4);n.say(rng.pick(['My wares, saved! Take this.','The road owes you, hero.','Free goods for a free road!']),3);
+            report('Merchants safe: '+S.stage+'/3');if(S.remaining===0)finish();
+          },'#ffd890');
+        }
+        break;
+      }
+      case 'laststand': {
+        // a knight at the shrine fights four waves; they swing at what comes close; they must not fall
+        const k=S.escort=person(null,center[0]+1,center[1]+1,(v)=>v.knight);k.hp=260;k.calm=true;k.still=true;k.feel('proud',4);
+        k.say('To me, hero! We hold here!',3);
+        wave(4);break;
+      }
+      case 'brew': {
+        const w=S.escort=person(null,center[0]+1.5,center[1]+.8,'hedge witch');w.calm=true;w.feel('thinking',1e6);
+        w.say('Toadstool, bloodroot, moonmoss and a wolf\'s tooth. Hurry!',4);
+        const parts=['Toadstool','Bloodroot','Moonmoss','Wolf\'s Tooth'];S.goal=4;S.remaining=4;
+        parts.forEach((part,i)=>{group(i+2,3,null);mark('Gather '+part,site(i+2),(m)=>{unmark(m);S.remaining--;S.stage++;report(part+' gathered: '+S.stage+'/4');
+          if(S.remaining===0){w.feel('excited',1e6);mark('Bring the brew to Nan Bramble',[w.x,w.y],(m2)=>{unmark(m2);
+            w.feel('cheer',5);w.say('Bubble, bubble... PERFECT!',3);sparkle(w.x,w.y,40,'#80ff90',40,0.8);addEffect(new Ring(w.x,w.y,0.3,4,0.8,'#80ff90',5));
+            group(1,3);S.brewDone=true;report('The brew is done, but the smell draws beasts! Clear them!');},'#80ff90');}},'#80ff90');});
+        break;
+      }
+      case 'ritual': {
+        const z=S.escort=person(null,center[0]+.6,center[1]+.6,'wandering wizard');z.calm=true;z.still=true;z.hp=200;z.feel('fight',1e6,false);
+        z.say('Keep them off me! Three waves and the seal holds!',4);
+        wave(3);break;
+      }
+      case 'hunt': {
+        const at=site(4),pr=S.escort=person(null,at[0]+.6,at[1]+.6,'prince');pr.hp=200;pr.feel('scared',3);
+        const scout=person(null,center[0]+1.4,center[1]+1,'border scout');scout.calm=true;scout.say('The prince rode off after the alpha! That way!',4);scout.feel('point',4);
+        S.goal=3;for(let i=0;i<3;i++)spawn(['hound','abomination','golem'][i],world.map.randomNear(at[0]+(i-1)*2,at[1]+2,2,rng.fn()),'champion',1);
+        spawn('hound',world.map.randomNear(at[0],at[1]-2,2,rng.fn()),'normal',3);
+        break;
+      }
+      case 'greeners': {
+        S.goal=3;S.remaining=3;S.kids=[];
+        ['00_greener_20_frames','00_greener_spooky_goofy_a','00_greener_spooky_goofy_b'].forEach((id,i)=>{
+          const at=site(i*2+2),g=person(null,at[0],at[1],id);g.calm=true;g.feel('suspicious',1e6);g.state='hiding';S.kids.push(g);
+          mark('Find '+g.name,[g.x,g.y],(m)=>{unmark(m);S.remaining--;S.stage++;g.state='home';g.calm=false;
+            g.feel('spooky',1.6);g.say(rng.pick(['BOO!','RAAAH! Got you!','Wooo, a ghost!']),2);
+            g.after(1.6,()=>{if(S.active){g.feel('laugh',3);g.say('Hee hee! Race you back!',2.5);}});
+            spawn(rng.pick(biome.roster),world.map.randomNear(g.x,g.y,4,rng.fn()),'normal',3);
+            report('Greeners found: '+S.stage+'/3');},'#a0ff80');
+        });
+        break;
+      }
     }
   };
   const update=(dt)=>{
@@ -391,6 +461,28 @@ export function createOverworldScenario(world,gen,biome,onSuccess) {
           if(S.wagon){S.wagon.x=n.x;S.wagon.y=n.y;}
         }
       }
+    }else if(type==='merchants'){
+      for(const n of S.traders||[]){const a=S.foes.filter(m=>!m.dead&&norm([n.x,n.y],[m.x,m.y])<2.5).length;if(a&&n.hp>0)n.hp-=dt*a*1.5;if(n.hp<=0){fail(n.name+' was killed.');return;}}
+    }else if(type==='laststand'||type==='ritual'){
+      const n=S.escort,attackers=S.foes.filter(m=>!m.dead&&norm([n.x,n.y],[m.x,m.y])<3);
+      n.hp-=dt*attackers.length*(norm([p.x,p.y],[n.x,n.y])<8?1.4:4);
+      if(n.hp<=0){fail(n.name+' has fallen.');return;}
+      if(type==='laststand'&&attackers.length&&(S.swingT=(S.swingT||0)-dt)<=0){
+        // the knight swings at the nearest attacker
+        S.swingT=1.1;const m=attackers[0];n.face(m.x,m.y);n.townAttackT=0.45;hit(p,m,m.maxHp*0.12,'phys',{noArc:true});
+      }
+      if(type==='ritual'&&(S.glowT=(S.glowT||0)-dt)<=0){S.glowT=0.5;sparkle(n.x,n.y,4,'#c890ff',30,0.4);}
+      if(!live()){if(S.stage>=(type==='ritual'?3:4)){n.feel('cheer',5);n.say(type==='ritual'?'The seal holds! Splendid!':'We held! By the Light, we held!',3);finish();}else wave(type==='ritual'?3:4,center);}
+    }else if(type==='brew'){
+      if(S.brewDone&&!live())finish();
+    }else if(type==='hunt'){
+      const n=S.escort,a=S.foes.filter(m=>!m.dead&&norm([n.x,n.y],[m.x,m.y])<2.5).length;
+      n.hp-=dt*a*(norm([p.x,p.y],[n.x,n.y])<8?1.2:3);
+      if(n.hp<=0){fail('Prince Rowan was lost.');return;}
+      if(S.foes.filter(m=>m.rank==='champion').every(m=>m.dead)){n.feel('cheer',5);n.say('I had them on the run. Truly.',3);finish();}
+    }else if(type==='greeners'){
+      for(const g of S.kids||[])if(g.state==='home'&&norm([g.x,g.y],center)>2.5)folkWalk(world,g,center,3.2,dt);
+      if(S.remaining===0&&!live())finish();
     }else if(['rifts','siege','totems'].includes(type)){
       if(S.remaining===0&&!live())finish();
     }else if(type==='rescue'||type==='relics'){

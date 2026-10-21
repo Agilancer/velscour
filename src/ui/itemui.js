@@ -1,7 +1,7 @@
 // Item cells and tooltip HTML.
 import { G } from '../state.js';
 import { el, escapeHtml, fmtInt } from '../core/util.js';
-import { itemName, itemBaseLine, itemColor, itemStats, itemDmg, itemArmor, statLabel, RARITY, GEMS, gemStats, gemName, LEGENDARY, SLOT_NAMES, POTION_INFO, MAX_GEM_TIER, augTarget } from '../data/items.js';
+import { itemName, itemBaseLine, itemColor, itemStats, itemDmg, itemArmor, statLabel, RARITY, GEMS, gemStats, gemName, LEGENDARY, legendaryDesc, powerLevel, SLOT_NAMES, POTION_INFO, MAX_GEM_TIER, augTarget } from '../data/items.js';
 import { AUGMENTS } from '../data/rings.js';
 import { elem } from '../gfx/vfx.js';
 import { CLASSES } from '../data/classes.js';
@@ -24,6 +24,7 @@ export function itemCell(item) {
     d.appendChild(s);
   }
   if (item.unid) d.appendChild(el('span', 'upg', '?'));
+  if (item.sealed) d.classList.add('sealed');
   return d;
 }
 
@@ -31,7 +32,7 @@ export function rarityClass(item) {
   if (!item) return '';
   if (item.type === 'gem') return GEMS[item.gem].special ? 'r4' : 'r2';
   if (item.type !== 'gear') return 'r0';
-  return 'r' + item.rarity;
+  return item.sealed ? 'rs' : 'r' + item.rarity;
 }
 
 export function itemTooltip(item, opts = {}) {
@@ -47,11 +48,13 @@ export function itemTooltip(item, opts = {}) {
     h += `<div class="tt-sep"></div><div class="dim">Drag onto gear with a free socket to insert.${item.tier < MAX_GEM_TIER ? ' Fuse 3 (or refine 1) at the Gem Forge (Gem Merchant) for the next grade.' : ''}</div>`;
   } else if (item.type === 'potion') {
     h += `<div class="dim">${POTION_INFO[item.kind]}</div>`;
+  } else if (item.sealed) {
+    h += `<div class="tt-base">Epic or better · Item Level ${item.ilvl}</div><div style="color:${col}">What lies inside is anyone's guess until the seal is broken.</div><div class="tt-sep"></div><div class="dim">${G.touch ? 'Tap' : 'Click'} <b>Break the Seal</b>, or the SEALED button on the HUD. It can't be sold or worn sealed.</div>`;
   } else {
     if (item.unid) {
       h += `<div class="tt-base">${SLOT_NAMES[item.slot]} · Item Level ${item.ilvl}</div><div class="dim">Its true nature is revealed once purchased.</div>`;
     } else {
-      h += `<div class="tt-base">${escapeHtml(itemBaseLine(item))} · ${RARITY[item.rarity].name} ${SLOT_NAMES[item.slot]} · iLvl ${item.ilvl}</div>`;
+      h += `<div class="tt-base">${escapeHtml(itemBaseLine(item))} · ${RARITY[item.rarity].name} ${SLOT_NAMES[item.slot]} · iLvl ${item.ilvl} · <span title="Item level + the rarity's worth in levels: what the item's numbers are rolled at">Power ${powerLevel(item.ilvl, item.rarity)}</span></div>`;
       const fin = finishOf(item), gfx = gearFxOf(item);
       if (fin || gfx) h += `<div class="dim" style="font-style:italic">${fin ? escapeHtml(fin.name) + ' finish' : ''}${fin && gfx ? ' · ' : ''}${gfx ? 'Aura: ' + escapeHtml(gfx.name) : ''}</div>`;
       if (item.dmg) { const [a, b] = itemDmg(item); h += `<div>Damage: <b>${a}–${b}</b>${cmp(opts.compare, item, 'dmg')}</div>`; }
@@ -60,14 +63,14 @@ export function itemTooltip(item, opts = {}) {
       const req = item.req || 1;
       h += `<div style="color:${p && p.char.level < req ? '#ff5050' : '#a8977c'}">Requires Level ${req}</div>`;
       h += '<div class="tt-sep"></div>';
-      for (const a of item.affixes) h += `<div class="tt-line" style="color:${a.implicit ? '#d8d0c0' : '#8fb4ff'}">${escapeHtml(statLabel(a.s, a.v, trees))}</div>`;
+      for (const a of item.affixes) h += `<div class="tt-line" style="color:${a.implicit ? '#d8d0c0' : a.perk ? '#d8c078' : '#8fb4ff'}">${escapeHtml(statLabel(a.s, a.v, trees))}</div>`;
       if (item.aug) for (const a of item.aug) {
         const A = AUGMENTS[a.id], col = elem(A.el).glow, has = !a.sk || (p && p.char.skills[a.sk]);
         h += `<div class="tt-aug" style="border-left:3px solid ${col};padding-left:6px;margin:4px 0"><b style="color:${col}">${A.name}</b> <span class="dim">· ${escapeHtml(augTarget(a))}${has ? '' : ' (not learned)'}</span><div style="color:#e8d8b8;font-size:12px">${escapeHtml(A.desc(a.pow))}</div></div>`;
       }
       if (item.legendary) {
         const L = LEGENDARY[item.legendary];
-        h += `<div class="tt-leg"><b>${L.name}:</b> ${escapeHtml(L.desc)}</div>`;
+        h += `<div class="tt-leg"><b>${L.name}:</b> ${escapeHtml(legendaryDesc(item))}</div>`;
       }
       if (item.maxSockets) {
         h += `<div class="tt-sep"></div><div class="dim">Sockets: ${item.sockets}/${item.maxSockets}</div>`;

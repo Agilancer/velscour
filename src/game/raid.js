@@ -3,7 +3,7 @@ import { hexToRgb } from '../core/util.js';
 // holding one of RAID_BOSSES, picked at random. A raid boss is huge and fights in 3 phases (4 from depth 25). Each
 // phase plays a randomly rolled rotation of its ability pool, now and then chaining a quick follow-up. At each
 // phase change it retreats to the middle of the arena behind warding crystals (it takes 90% less damage until they
-// break) while adds pour in. One to three random modifiers change each fight, it enrages after 2 minutes (frenzying every 45 s), and after 3 it executes the hero outright.
+// break) while adds pour in. One to three random modifiers change each fight, it enrages after 3 minutes (frenzying every 45 s), and after 5 it executes the hero outright.
 // The arena seals behind the hero until the boss dies.
 import { G } from '../state.js';
 import { rand, chance, TAU, clamp, angleTo, angleDiff, dist, pick, randi, shuffle } from '../core/util.js';
@@ -310,7 +310,7 @@ export const RAID_BOSSES = [
   // ---- the third host (game/raidsigs.js): each fight is built on its own mechanic and signature attacks, shared
   // with no other boss. `sigs: true` bosses have no cataclysm; `mech` keys appear once per rotation; `passive` runs every frame.
   {
-    id: 'valdric', name: 'Ser Valdric', title: 'the Bound Seraph', art: ['hv_seraph_5', 'bn_heavenly_45'], el: 'holy', fx: 'holy', sigs: true,
+    id: 'valdric', name: 'Ser Valdric', title: 'the Bound Seraph', art: ['hv_seraph_5', 'thousand_blade_seraph'], el: 'holy', fx: 'holy', sigs: true,
     adds: ['knight', 'cultist'], mech: ['tether'], hp: 1, spd: 1,
     phases: [
       { name: 'Oath of Chains', pool: { judgement_cross: 3, halo: 2, tether: 2 } },
@@ -320,7 +320,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'ophaniel', name: 'Ophaniel', title: 'Wheel of a Thousand Eyes', art: ['hv_ophanim_5', 'bn_catacombs_49'], el: 'holy', fx: 'holy', sigs: true,
+    id: 'ophaniel', name: 'Ophaniel', title: 'Wheel of a Thousand Eyes', art: ['hv_ophanim_5', 'orb_of_blades'], el: 'holy', fx: 'holy', sigs: true,
     adds: ['eye', 'wraith'], mech: ['gaze'], hp: 0.95, spd: 0.8,
     phases: [
       { name: 'The Opening Eye', pool: { wheels: 3, eye_lattice: 2, gaze: 2 } },
@@ -330,7 +330,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'bastion', name: 'Bastion Prime', title: 'the Last Warden', art: ['hv_warden_5', 'bn_castle_keep_48'], el: 'light', fx: 'spark', sigs: true,
+    id: 'bastion', name: 'Bastion Prime', title: 'the Last Warden', art: ['hv_warden_5', 'keep_golem'], el: 'light', fx: 'spark', sigs: true,
     adds: ['golem', 'knight'], mech: ['conduits'], hp: 1.25, spd: 0.75,
     phases: [
       { name: 'Raise the Walls', pool: { rampart: 3, aegis_bash: 3, conduits: 2 } },
@@ -340,7 +340,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'thessaly', name: 'Thessaly', title: 'Herald of the Ending Hymn', art: ['hv_herald_5', 'bn_desert_temple_48'], el: 'holy', fx: 'holy', sigs: true,
+    id: 'thessaly', name: 'Thessaly', title: 'Herald of the Ending Hymn', art: ['hv_herald_5', 'iron_choir_absolute'], el: 'holy', fx: 'holy', sigs: true,
     adds: ['cultist', 'zombie'], mech: ['beacons'], hp: 0.9, spd: 1,
     phases: [
       { name: 'Overture', pool: { trumpet: 3, choir: 3, beacons: 2 } },
@@ -350,7 +350,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'vexis', name: 'Vexis', title: 'the Scales of Judgement', art: ['hv_judgement_5', 'bn_obsidian_49'], el: 'arcane', fx: 'orb', sigs: true, passive: 'vexis',
+    id: 'vexis', name: 'Vexis', title: 'the Scales of Judgement', art: ['hv_judgement_5', 'black_throne_engine'], el: 'arcane', fx: 'orb', sigs: true, passive: 'vexis',
     adds: ['wraith', 'eye'], mech: ['verdict'], hp: 1.1, spd: 0.85,
     phases: [
       { name: 'Weighing', pool: { scales: 3, verdict: 2 } },
@@ -360,7 +360,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'aurion', name: 'Aurion', title: 'the Throne-Seraph', art: ['hv_throne_5', 'bn_heavenly_48'], el: 'holy', fx: 'holy', sigs: true,
+    id: 'aurion', name: 'Aurion', title: 'the Throne-Seraph', art: ['hv_throne_5', 'fallen_archangel'], el: 'holy', fx: 'holy', sigs: true,
     adds: ['knight', 'gargoyle'], mech: ['eclipse'], hp: 1.15, spd: 0.9,
     phases: [
       { name: 'Dawn', pool: { dawn_rays: 3, corona: 2, eclipse: 2 } },
@@ -380,7 +380,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'ambrecoil', name: 'Ambrecoil', title: 'the Amber Frill', art: ['amber_frill_hydra', 'bn_amber_47'], el: 'fire', fx: 'fireball', sigs: true,
+    id: 'ambrecoil', name: 'Ambrecoil', title: 'the Amber Frill', art: ['amber_frill_hydra', 'three_throat_hydra'], el: 'fire', fx: 'fireball', sigs: true,
     adds: ['beetle', 'imp'], mech: ['entomb'], hp: 1, spd: 0.9,
     phases: [
       { name: 'Resin', pool: { entomb: 2, geysers: 3, frill_flash: 2 } },
@@ -390,7 +390,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'copperjaw', name: 'Copperjaw', title: 'the Hammer-Hydra', art: ['copper_hammer_hydra', 'bn_castle_49'], el: 'phys', fx: 'bone', sigs: true,
+    id: 'copperjaw', name: 'Copperjaw', title: 'the Hammer-Hydra', art: ['copper_hammer_hydra', 'siege_maw'], el: 'phys', fx: 'bone', sigs: true,
     adds: ['golem', 'beetle'], mech: ['mines'], hp: 1.2, spd: 0.85,
     phases: [
       { name: 'Forgefall', pool: { anvil: 3, magnet: 2, mines: 2 } },
@@ -400,7 +400,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'leonis', name: 'Ser Leonis', title: 'the Silver Lion', art: ['silver_lion_knight', 'bn_gilded_46'], el: 'light', fx: 'spark', sigs: true, passive: 'leonis',
+    id: 'leonis', name: 'Ser Leonis', title: 'the Silver Lion', art: ['silver_lion_knight', 'fallen_templar'], el: 'light', fx: 'spark', sigs: true, passive: 'leonis',
     adds: ['knight', 'hound'], mech: ['riposte'], hp: 0.95, spd: 1.3,
     phases: [
       { name: 'The Challenge', pool: { mane_lightning: 3, riposte: 2 } },
@@ -410,7 +410,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'nyx', name: 'Nyx', title: 'the Crescent Lancer', art: ['silver_crescent_lancer', 'bn_obsidian_46'], el: 'arcane', fx: 'shard', sigs: true, passive: 'nyx',
+    id: 'nyx', name: 'Nyx', title: 'the Crescent Lancer', art: ['silver_crescent_lancer', 'crimson_reaper'], el: 'arcane', fx: 'shard', sigs: true, passive: 'nyx',
     adds: ['wraith', 'bat'], mech: ['lance_pin'], hp: 0.9, spd: 1.25,
     phases: [
       { name: 'New Moon', pool: { crescent: 3, lance_pin: 2 } },
@@ -420,7 +420,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'ashenward', name: 'Ashenward', title: 'the Cinder Colossus', art: ['bn_ashen_46', 'bn_shattered_49'], el: 'fire', fx: 'fireball', sigs: true,
+    id: 'ashenward', name: 'Ashenward', title: 'the Cinder Colossus', art: ['furnace_colossus', 'the_sable_abattoir'], el: 'fire', fx: 'fireball', sigs: true,
     adds: ['imp', 'elemental'], mech: ['lava_quadrants'], hp: 1.3, spd: 0.75,
     phases: [
       { name: 'Smelting', pool: { magma_trail: 3, cinder_turret: 2, lava_quadrants: 2 } },
@@ -430,7 +430,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'ysol', name: 'Voidmother Ysol', title: 'the Unmaking Womb', art: ['bn_void_49', 'bn_void_48'], el: 'shadow', fx: 'skull', sigs: true,
+    id: 'ysol', name: 'Voidmother Ysol', title: 'the Unmaking Womb', art: ['void_thing', 'hairmother'], el: 'shadow', fx: 'skull', sigs: true,
     adds: ['wraith', 'slime'], mech: ['null_orbs'], hp: 1.05, spd: 0.8,
     phases: [
       { name: 'Hunger', pool: { defile: 2, tendrils: 3, null_orbs: 2 } },
@@ -440,7 +440,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'lith', name: 'Prismatic Lith', title: 'the Refracted', art: ['bn_crystal_46', 'bn_castle_keep_49'], el: 'light', fx: 'spark', sigs: true,
+    id: 'lith', name: 'Prismatic Lith', title: 'the Refracted', art: ['spire_crawler', 'chapel_god'], el: 'light', fx: 'spark', sigs: true,
     adds: ['elemental', 'golem'], mech: ['prisms'], hp: 1.1, spd: 0.8,
     phases: [
       { name: 'Facets', pool: { checkerboard: 3, crystal_growth: 2, prisms: 2 } },
@@ -450,7 +450,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'kaela', name: 'Kaela', title: 'the Stormwraith', art: ['bn_storm_49', 'bn_abyss_49'], el: 'light', fx: 'spark', sigs: true, passive: 'kaela',
+    id: 'kaela', name: 'Kaela', title: 'the Stormwraith', art: ['crow_matriarch', 'stormshell_tortoise'], el: 'light', fx: 'spark', sigs: true, passive: 'kaela',
     adds: ['bat', 'elemental'], mech: ['storm_cells'], hp: 0.9, spd: 1.2,
     phases: [
       { name: 'Static', pool: { arc_chain: 3, storm_cells: 2 } },
@@ -460,7 +460,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'hollowmere', name: 'Hollowmere', title: 'the Necrolyte of Rime', art: ['bn_necropolis_49', 'bn_sunken_49'], el: 'cold', fx: 'shard', sigs: true, passive: 'hollowmere',
+    id: 'hollowmere', name: 'Hollowmere', title: 'the Necrolyte of Rime', art: ['frost_leviathan', 'frozen_bastion'], el: 'cold', fx: 'shard', sigs: true, passive: 'hollowmere',
     adds: ['skeleton', 'zombie'], mech: ['corpse_bombs'], hp: 1.05, spd: 0.85,
     phases: [
       { name: 'First Frost', pool: { glacial_spears: 3, corpse_bombs: 2 } },
@@ -470,7 +470,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'organ', name: 'The Pipe Organ', title: 'Cathedral of Screams', art: ['bn_cathedral_49', 'bn_library_49'], el: 'holy', fx: 'holy', sigs: true,
+    id: 'organ', name: 'The Pipe Organ', title: 'Cathedral of Screams', art: ['the_throne_that_screams', 'hungering_cathedral'], el: 'holy', fx: 'holy', sigs: true,
     adds: ['cultist', 'zombie'], mech: ['dance', 'organ_pipes'], hp: 1.15, spd: 0.6,
     phases: [
       { name: 'Prelude', pool: { dance: 2, dissonance: 2, organ_pipes: 2 } },
@@ -480,7 +480,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'saranthe', name: 'Bloodqueen Saranthe', title: 'of the Crimson Court', art: ['bn_blood_49', 'bn_blood_47'], el: 'fire', fx: 'fireball', sigs: true,
+    id: 'saranthe', name: 'Bloodqueen Saranthe', title: 'of the Crimson Court', art: ['blood_siren', 'the_wound_without_end'], el: 'fire', fx: 'fireball', sigs: true,
     adds: ['bat', 'ghoul'], mech: ['thralls', 'hemorrhage'], hp: 1, spd: 1.15,
     phases: [
       { name: 'First Taste', pool: { crimson_crescent: 3, thralls: 2, hemorrhage: 2 } },
@@ -490,7 +490,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'kragmaul', name: 'Kragmaul', title: 'the Hellforged', art: ['bn_hell_48', 'bn_void_49'], el: 'fire', fx: 'fireball', sigs: true,
+    id: 'kragmaul', name: 'Kragmaul', title: 'the Hellforged', art: ['horned_warlord', 'cathedral_devourer'], el: 'fire', fx: 'fireball', sigs: true,
     adds: ['demon', 'imp'], mech: ['wrecking_charge'], hp: 1.25, spd: 1,
     phases: [
       { name: 'Chains of Hell', pool: { hooks: 3, hellfire_grid: 2, wrecking_charge: 2 } },
@@ -500,7 +500,7 @@ export const RAID_BOSSES = [
     ],
   },
   {
-    id: 'sekhmun', name: 'Pharaoh Sekhmun', title: 'the Exchanged King', art: ['hv_templar_5', 'bn_desert_49'], el: 'holy', fx: 'holy', sigs: true,
+    id: 'sekhmun', name: 'Pharaoh Sekhmun', title: 'the Exchanged King', art: ['hv_templar_5', 'the_candle_king'], el: 'holy', fx: 'holy', sigs: true,
     adds: ['zombie', 'scorpion', 'knight'], mech: ['exchange', 'sarcophagi'], hp: 1.05, spd: 1,
     phases: [
       { name: 'The Court of Sand', pool: { scarab_carpet: 3, exchange: 2, sarcophagi: 2 } },
@@ -554,8 +554,22 @@ function rollMods(depth) {
 }
 
 /** Build the raid boss for this arena: a random one of RAID_BOSSES (not the same as the hero's last). */
-const EXECUTE_T = 180; // seconds from waking until the boss executes the hero
+const ENRAGE_T = 180, EXECUTE_T = 300; // seconds from waking until the boss enrages / executes the hero (fights run ~2 min)
 
+/**
+ * A BOSS ROOM boss's life in normal monsters of its level (before the 26 x 1.3 and modifiers). It keeps growing from
+ * depth 150 to 500 (+1 a depth): hero damage outgrows monster life deep down, and a flat 105 had depth-450 bosses
+ * dying in 2-12 s while depth-40 ones took 20-60 s. In the Endless Torment it holds (hero damage falls behind there
+ * on its own; tools/tests/endgame.js).
+ */
+// a BOSS ROOM boss is 26 x 1.3 x this many normals of its level (monsterBase's toughness keeps a normal at ~3 s of hero
+// damage at every depth): ~12 normals at depth 5, ~19 by depth 500. Its wards, adds and mechanics stretch that ~3.5x,
+// so auto-play takes about two minutes (tools/tests/balance.js with BAL_RAID=1 ... god)
+export const raidHpMul = (depth) => 0.35 + Math.min(depth, 500) * 0.0004;
+// a BOSS ROOM boss hits for this many normals of its level: 2.7 to depth 10, easing to 1.9 by depth 100 (deeper rooms
+// bring a fourth phase and more modifiers, and every hero died in its first depth-100 room at 2.7; was 3.6 when the
+// fights lasted 20 s, not two minutes)
+export const raidHitMul = (depth) => 2.7 * (1 - 0.3 * clamp((depth - 10) / 90, 0, 1));
 export function makeRaidBoss(world, arena, depth, level) {
   const c = G.char;
   const tpl = pick(RAID_BOSSES.filter((b) => b.id !== (c && c.lastRaid)));
@@ -570,7 +584,7 @@ export function makeRaidBoss(world, arena, depth, level) {
   Object.assign(m, {
     ai: 'raid', el: tpl.el, res: { [tpl.el]: 0.4, ...(m.undead ? { poison: 0.5, shadow: 0.3 } : null) },
     scale: has('colossal') ? 2.75 : 2.4, r: 1.05, atkReach: 0.35, speed: 2.4 * (tpl.spd || 1) * (has('colossal') ? 0.88 : 1), atkCd: 1.3,
-    maxHp: B.hp * 26 * (depth < 40 ? 12 + depth * 0.9 : 30 + Math.min(depth, 150) * 0.5) * (has('colossal') ? 1.35 : 1) * (tpl.hp || 1) * 1.3, dmg: B.dmg * 3.6 * (has('empowered') ? 1.25 : 1), xp: B.xp * 60,
+    maxHp: B.hp * 26 * raidHpMul(depth) * (has('colossal') ? 1.35 : 1) * (tpl.hp || 1) * 1.3, dmg: raidHitMul(depth) * B.dmg * (has('empowered') ? 1.25 : 1), xp: B.xp * 60,
     name: tpl.name.toUpperCase(), title: tpl.title, aura: elem(tpl.el).glow, affixes: has('vampiric') ? ['vampiric'] : [],
     moves: null, patterns: [], isRaid: true, ward: 1, aggroRange: 0,
   });
@@ -639,9 +653,9 @@ class Raid {
       if (!G.godMode) { p.phoenixCd = Math.max(p.phoenixCd || 0, 1); p.hp = 0; p.die(m); return; }
       this.execT = this.t + 5;
     }
-    // the DPS check: enraged after 2 minutes, and harder still every 45 s after that (MADNESS doubles the hero's damage)
-    if (!this.enraged && this.t > 120) this.enrage('Too slow, mortal');
-    if (this.enraged && this.t > (this.frenzyT || 165)) { this.frenzyT = this.t + 45; m.dmg *= 1.15; m.atkCd *= 0.95; floatText(m.x, m.y, 120, 'FRENZY', '#ff3010', 16, { life: 1.4 }); if (madnessReady()) UI.log('Unleash your MADNESS (G) before it is too late!', '#ff2050'); }
+    // the DPS check: enraged after 3 minutes, and harder still every 45 s after that (MADNESS doubles the hero's damage)
+    if (!this.enraged && this.t > ENRAGE_T) this.enrage('Too slow, mortal');
+    if (this.enraged && this.t > (this.frenzyT || ENRAGE_T + 45)) { this.frenzyT = this.t + 45; m.dmg *= 1.15; m.atkCd *= 0.95; floatText(m.x, m.y, 120, 'FRENZY', '#ff3010', 16, { life: 1.4 }); if (madnessReady()) UI.log('Unleash your MADNESS (G) before it is too late!', '#ff2050'); }
     if (this.tpl.passive && PASSIVES[this.tpl.passive]) PASSIVES[this.tpl.passive](this, dt);
     // heads take the hits: a Grimscale with heads up shrugs off most damage
     if (this.tpl.headsTake && !this.inter) m.ward = (this.heads || []).some((h) => !h.dead) ? 0.4 : 1;
@@ -819,14 +833,15 @@ class Raid {
   spawnAdds(wave = 1) {
     const m = this.m, w = m.world, A = this.arena, p = w.player;
     const archs = this.tpl.adds.filter((a) => ARCH[a]);
-    const n = Math.min(10, 2 + wave + Math.floor(this.depth / 15) + (this.has('swarming') ? 2 : 0));
+    // fodder: monsters take seconds each now, so a wave is a few light ones (35% life), not ten that pile up
+    const n = Math.min(7, 1 + wave + Math.floor(this.depth / 40) + (this.has('swarming') ? 2 : 0));
     for (let i = 0; i < n; i++) {
       const a = rand(TAU);
       const [x, y] = w.map.nudge(A.cx + Math.cos(a) * rand(9, 11), A.cy + Math.sin(a) * rand(7, 9), 0.4);
       if (!w.map.walkable(x, y)) continue;
       const champ = chance(0.12 + this.depth * 0.003);
       const c = makeMonster(w, pick(archs), w.biome, m.level - 3 + (champ ? 1 : 0), champ ? 'champion' : 'normal', x, y);
-      c.awake = true; c.aggro = p; c.raidAdd = true;
+      c.awake = true; c.aggro = p; c.raidAdd = true; c.maxHp *= 0.35; c.hp = c.maxHp;
       if (this.has('volatile')) c.onDeath = () => w.addHazard(new Delayed({ world: w, src: m, x: c.x, y: c.y, r: 1.5, delay: 0.8, fx: 'explosion', el: this.tpl.el === 'phys' ? 'fire' : this.tpl.el, dmg: [c.dmg * 1.2, c.dmg * 1.6] }));
       w.add(c);
       addEffect(new Ring(x, y, 0.1, 1.2, 0.5, this.E.glow, 3));

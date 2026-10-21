@@ -3,6 +3,7 @@ import { makeCanvas, recolor, scaleImage, pageAtlas } from './util.js';
 import { G } from '../state.js';
 import { preloadWallTorchHolders } from '../gfx/walltorches.js';
 import { preloadWallHangings } from '../gfx/wallhangings.js';
+import { preloadIsoFix, isoFix, isoFixImage } from '../gfx/isofix.js';
 import { approvedBiomeArt, preloadApprovedBiomeArt, preloadBiomeVariantArt, preloadOverworldScatterArt } from '../gfx/approvedbiomeart.js';
 import { preloadApprovedHeavenlyArtwork } from '../gfx/heavenlymonsters.js';
 import { TW } from './view.js';
@@ -51,6 +52,7 @@ export async function loadAssets(progress) {
   jobs.push(track(preloadBiomeVariantArt()));
   jobs.push(track(preloadOverworldScatterArt()));
   jobs.push(track(preloadWallHangings()));
+  jobs.push(track(preloadIsoFix()));
   jobs.push(track(preloadSong('hymn_of_the_abyss', (k) => { song = k; report(); }).then(() => { song = 1; })));
   for (const id of CLASS_IDS) jobs.push(track(loadImage(`assets/sprites/classes/${id}.webp`).then((img) => { A.classes[id] = img; })));
   jobs.push(track(loadImage('assets/ui/hud.webp').then((i) => { A.hud = i; })));
@@ -73,12 +75,12 @@ const DEFAULT_PACK = 'catacombs';
 
 async function loadPack(id) {
   return A.packs[id] || (A.packs[id] = Promise.all(['floors', 'walls', 'scatter'].map((n) => loadImage(`assets/tiles/${id}/${n}.webp`)).concat(loadJSON(`assets/tiles/${id}/pack.json`)))
-    .then(([floors, walls, scatter, meta]) => (A.packs[id] = { floors, walls, scatter, meta })).catch((e) => { delete A.packs[id]; throw e; }));
+    .then(([floors, walls, scatter, meta]) => (A.packs[id] = { floors, walls, scatter, meta: { ...meta, pack_id: id } })).catch((e) => { delete A.packs[id]; throw e; }));
 }
 const ready = (v) => v && !(v instanceof Promise);
 /** Every pack a biome's tile set draws on: floors and props from `pack`, walls/arches/doors from `wallPack`,
- * more props from `morePacks` ([[pack, 1-based ranges], ...]). */
-const biomePacks = (b) => [...new Set([b.pack || DEFAULT_PACK, b.wallPack, ...(b.morePacks || []).map((m) => m[0])].filter(Boolean))];
+ * more props from `morePacks` and more floors from `moreFloors` ([[pack, 1-based ranges], ...]). */
+const biomePacks = (b) => [...new Set([b.pack || DEFAULT_PACK, b.wallPack, ...[...(b.morePacks || []), ...(b.moreFloors || [])].map((m) => m[0])].filter(Boolean))];
 
 /** Fetch a biome's pack and the monster art. Safe to call repeatedly. */
 export function loadBiomeArt(biome) {
@@ -171,7 +173,14 @@ export function biomeTileSet(biome) {
       for (const [k, sl] of Object.entries(st)) set.doors[des][d][k] = sl.map((r) => ({ ...rect(wallImg, r), part: r[0][0], du: r[0][1], dv: r[0][2] }));
     }
   }
-  const scat = (p, img) => p.meta.scatter.map((s) => ({ img, sx: s.x, sy: s.y, w: s.w, h: s.h, ox: s.ox, oy: s.oy, fp: s.fp, block: s.block, name: s.name }));
+  // props tools/isofix.py re-projected onto the 2:1 grid come from its atlas (recoloured the same way)
+  const scat = (p, img) => {
+    const src = 'pack:' + p.meta.pack_id, fimg = isoFixImage(src), fix = fimg && (pal ? recolor(fimg, pal) : fimg);
+    return p.meta.scatter.map((s) => {
+      const f = fix && isoFix(src, s.name);
+      return { img, sx: s.x, sy: s.y, w: s.w, h: s.h, ox: s.ox, oy: s.oy, ...(f && { ...f, img: fix }), fp: s.fp, block: s.block, name: s.name };
+    });
+  };
   const inR = (rs, i) => !rs || rs.some(([a, b]) => i + 1 >= a && i + 1 <= b);
   const part = full && biome.part;
   set.scatter = scat(pk, scatImg).filter((s, i) => !part || inR(part.scatter, i));
@@ -185,6 +194,24 @@ export function biomeTileSet(biome) {
     const src = A.packs[p];
     set.scatter.push(...scat(src, pal ? recolor(src.scatter, pal) : src.scatter).filter((s, i) => inR(ranges, i)));
   }
+  // floors borrowed from other packs in the biome's palette: their seamless ones join the pavings, the rest the
+  // feature tiles (data/biomes.js moreFloors)
+  if (full) for (const [p, ranges] of biome.moreFloors || []) {
+    const src = A.packs[p], cells = src.meta.floors, img = clipFloors(pal ? recolor(src.floors, pal) : src.floors, cells);
+    cells.forEach((f, i) => {
+      if (!inR(ranges, i)) return;
+      (f.seamless ? set.bases : set.features).push(set.floors.length);
+      set.floors.push({ img, sx: f.x, sy: f.y, w: f.w, h: f.h, lum: f.lum, seamless: f.seamless, name: f.name });
+    });
+  }
+  // town-pack furniture (anvils, scroll racks, market tables...), each cut out and recoloured on its own
+  if (full && A.town) for (const name of biome.townProps || []) {
+    const r = A.town.meta.objects[name];
+    if (!r) continue;
+    const f = isoFix('town', name) || { img: A.town.objects, sx: r[0], sy: r[1], w: r[2], h: r[3], ox: r[4], oy: r[5] };
+    const fp = A.town.meta.footprints[name] || [0.5, 0.5];
+    set.scatter.push({ img: recolor(f.img, pal, f.sx, f.sy, f.w, f.h), sx: 0, sy: 0, w: f.w, h: f.h, ox: f.ox, oy: f.oy, fp: fp[0], block: true, name });
+  }
   // the temple biomes' approved painted floors and props, unrecoloured, on top of the pack's own; their floors
   // are listed several times so they show about as often as all of the pack's feature tiles together
   const extra = full && set.bases.length && approvedBiomeArt(biome.id, set.floors[set.bases[0]]);
@@ -193,7 +220,6 @@ export function biomeTileSet(biome) {
     for (const f of extra.floors) { for (let j = 0; j < Math.max(1, n / extra.floors.length); j++) set.features.push(set.floors.length); set.floors.push(f); }
     set.scatter.push(...extra.scatter);
   }
-  set.pillar = set.walls[set.families[0]]['0'][0][0];
   if (A.chestImg && A.chestMeta) {
     const img = pal ? recolor(A.chestImg, pal) : A.chestImg;
     const c = A.chestMeta;

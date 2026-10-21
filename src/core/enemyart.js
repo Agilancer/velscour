@@ -3,8 +3,7 @@
 import { recolor, silhouette, swapKey, decoded, lruMark, lruTrim } from './util.js';
 import { loadReplacementArt, replacementImage } from './replacementart.js';
 import { ART_BY_ID } from '../data/bestiary.js';
-import { heavenlyEnemyImage, CACHE as heavenlyCache } from '../gfx/heavenlymonsters.js';
-import { biomeNativeImage, CACHE as nativeCache } from '../gfx/biomenativeart.js';
+import { heavenlyEnemyImage, preloadApprovedHeavenlyArtwork, CACHE as heavenlyCache } from '../gfx/heavenlymonsters.js';
 import { loadSeaOfSandPack, seaOfSandArtCell, seaOfSandEnemyImage, cache as sandCache } from '../gfx/seaofsand.js';
 
 const DIR = 'assets/sprites/enemies/';
@@ -55,8 +54,7 @@ export function loadArtFor(ids, release = false) {
   const keys = [...new Set(ids.map(id=>{
     const a=ART_BY_ID[id];
     if (a?.sheet === 'sea_of_sand') return null;
-    return a?.sourceArt ? ART_BY_ID[a.sourceArt]?.sheet :
-      a?.sheet !== 'heavenly/generated' ? a?.sheet : null;
+    return a?.sheet !== 'heavenly/generated' ? a?.sheet : null;
   }).filter(Boolean))];
   if (release) for (const k of Object.keys(E.sheets)) {
     if (EAGER.test(k) || PETS.test(k) || keys.includes(k)) continue;
@@ -65,13 +63,14 @@ export function loadArtFor(ids, release = false) {
   return Promise.all([
     ids.some((id) => id && id.startsWith('va_')) ? loadReplacementArt() : null,
     ids.some((id) => id && id.startsWith('ss_')) ? loadSeaOfSandPack() : null,
+    ids.some((id) => id && id.startsWith('hv_')) ? preloadApprovedHeavenlyArtwork().catch((e) => console.warn(e)) : null,
     loadEnemySheets(keys),
   ]);
 }
 
 // The monster sprite caches: marked before a level's warm-up, trimmed after it (util.lruMark/lruTrim), so sprites
 // only earlier levels used (and their flash/corpse silhouettes and GPU textures) don't pile up over a long run.
-const levelCaches = () => [cache, nativeCache, heavenlyCache, sandCache];
+const levelCaches = () => [cache, heavenlyCache, sandCache];
 export function markArtCaches() { levelCaches().forEach(lruMark); }
 export function trimArtCaches() { levelCaches().forEach(lruTrim); }
 
@@ -85,15 +84,15 @@ function cell(a) {
 /** The stored cell ({x, y, w, h, fx, oh}) of an art id, or null while its sheet is loading. */
 export function artCell(id) {
   const a = ART_BY_ID[id];
-  return a ? cell(a.sourceArt ? ART_BY_ID[a.sourceArt] : a) : null;
+  return a ? cell(a) : null;
 }
 
 /** True once a look's art has loaded. */
 export function enemyArtReady(id) {
   if (id && id.startsWith('va_')) return !!replacementImage(id);
   if (id && id.startsWith('hv_')) return !!heavenlyEnemyImage(id);
-  const a=ART_BY_ID[id];
-  return !!(a && cell(a.sourceArt ? ART_BY_ID[a.sourceArt] : a));
+  const a = ART_BY_ID[id];
+  return !!(a && cell(a));
 }
 
 /**
@@ -103,7 +102,6 @@ export function enemyArtReady(id) {
 export function enemyImage(id, swap = null, mode = '') {
   if (id && id.startsWith('ss_')) return seaOfSandEnemyImage(id, swap, mode);
   if (id && id.startsWith('hv_')) return heavenlyEnemyImage(id, swap, mode);
-  if (id && id.startsWith('bn_')) return biomeNativeImage(id,swap,mode,baseId=>enemyImage(baseId));
   if (id && id.startsWith('va_')) return replacementImage(id, swap, mode);
   const a = ART_BY_ID[id];
   const c = a && cell(a);

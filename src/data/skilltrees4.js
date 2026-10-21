@@ -9,10 +9,10 @@ export const TREE4_NAMES = {
 export const TREE4 = {
   paladin: [
     'Dawnblade|melee|holy|slash|free wc=1 cleave', 'Halo Toss|proj|holy|disc|bounce=3', 'Lightwell|zone|holy|holy|heal r=1.2 dur=6 cd=10', 'Censure|curse|holy|sigil|curse=amp r=1.2',
-    'Seraph Wings|dash|holy|charge|range=1.3 exp', 'Prism Lance|proj|holy|laser|pierce n=3 spread=20', 'Hallowed Ground|zone|holy|holy|r=1.5 dur=6', 'Choir of Blades|orbit|holy|blade|n=5 dur=6 cd=8',
-    'Radiant Cascade|chain|holy|lightning|n=6', 'Solar Hammer|aoe|holy|pillar|r=1.6 dmg=1.8 cd=3', 'Beacon of Valor|buff|holy|aura|buff=dmg,armor amt=30 dur=15 cd=30 party', 'Ascendant Leap|leap|holy|holy|r=1.6 dmg=1.5',
-    'Wings of Judgment|rain|holy|star|n=18 r=1.6', 'Sunfire Nova|nova|holy|holy|n=2 r=1.6', 'Seraphic Host|summon|holy|guardian|sum=guardian n=2 dur=20 cd=30', 'Halo of Spears|proj|holy|spear|n=12 ring',
-    'Day of Reckoning|strike|holy|holy|n=12 cd=8', 'Avatar of Dawn|buff|holy|aura|pulse buff=dmg,speed amt=40 dur=12 cd=40', 'Throne of Light|aoe|holy|pillar|r=2.4 dmg=3 cd=8', 'Eternal Sunrise|beam|holy|laser|dur=3 dmg=1.6 cd=8',
+    'Seraph Wings|dash|holy|charge|range=1.3 exp pow=0.5', 'Prism Lance|proj|holy|laser|pierce n=3 spread=20 pow=0.44', 'Hallowed Ground|zone|holy|holy|r=1.5 dur=6 pow=0.25', 'Choir of Blades|orbit|holy|blade|n=5 dur=6 cd=8',
+    'Radiant Cascade|chain|holy|lightning|n=6', 'Solar Hammer|aoe|holy|pillar|r=1.6 dmg=1.8 cd=3', 'Beacon of Valor|buff|holy|aura|buff=dmg,armor amt=30 dur=15 cd=30 party', 'Ascendant Leap|leap|holy|holy|r=1.6 dmg=1.5 pow=0.63',
+    'Wings of Judgment|rain|holy|star|n=18 r=1.6 pow=1.3', 'Sunfire Nova|nova|holy|holy|n=2 r=1.6 pow=0.56', 'Seraphic Host|summon|holy|guardian|sum=guardian n=2 dur=20 cd=30', 'Halo of Spears|proj|holy|spear|n=12 ring pow=1.3',
+    'Day of Reckoning|strike|holy|holy|n=12 cd=8 pow=0.47', 'Avatar of Dawn|buff|holy|aura|pulse buff=dmg,speed amt=40 dur=12 cd=40', 'Throne of Light|aoe|holy|pillar|r=2.4 dmg=3 cd=8 pow=1.2', 'Eternal Sunrise|beam|holy|laser|dur=3 dmg=1.6 cd=8 pow=0.41',
   ],
   ranger: [
     'Star Shot|proj|light|arrow|free wc=1', 'Comet Arrow|proj|fire|arrow|exp r=1.1', 'Moonfall Mark|curse|arcane|sigil|curse=mark amt=30 r=0.8', 'Skyward Roll|dash|phys|wind|range=0.9',
@@ -66,9 +66,9 @@ export const TREE4 = {
   bard: [
     'Opening Act|proj|light|n_q|free wc=1 canon dmg=0.6', 'Bright Note|proj|light|n_e|home cresc', 'Rousing Chorus|buff|holy|aura|buff=as amt=20 dur=15 cd=20 party note=s4', 'Drum Roll|nova|phys|drum|n=3 r=1 stun note=e2',
     'Spotlight|zone|light|flash|r=1.2 dur=5 note=rq', 'Pyro Finale|proj|fire|n_h|exp r=1.2', 'Backup Singers|summon|light|clone|sum=chorus n=2 dur=20 cd=20 note=s2', 'Stage Dive|leap|phys|eruption|r=1.4 dmg=1.3 note=bass',
-    'Crescendo Wave|fissure|light|sonic|range=1.5 knock note=q', 'Confetti Bombs|rain|fire|n_e|n=14 r=1.6', 'Curtain Call|curse|light|flash|curse=slow,stun r=1.4 note=rq', 'Mic Drop|aoe|light|eruption|r=1.6 dmg=1.8 cd=4 note=w',
-    'Grand Fireworks|rain|fire|n_t8|n=22 r=2 cd=5', 'Tempo Rubato|buff|holy|aura|buff=as,speed amt=35 dur=12 cd=30 party rubato note=treble', 'Amp Overload|chain|light|sonic|n=6 note=e2', 'Spinning Records|orbit|phys|n_w|n=5 dur=6 cd=8',
-    'Grand Finale|aoe|fire|nuke|r=2.6 dmg=3 cd=8 note=w', 'Rock Legend|buff|light|transform|buff=dmg,as amt=40 dur=12 cd=40 note=t8', 'Sonic Bulwark|wall|light|sonic|dur=6 cd=6 note=rq', 'Da Capo|nova|arcane|wave|n=2 r=1.6 dacapo cd=6 note=re',
+    'Crescendo Wave|fissure|light|sonic|range=1.5 knock note=q', 'Confetti Bombs|rain|fire|n_e|n=14 r=1.6', 'Curtain Call|curse|light|flash|curse=slow,stun r=1.4 note=rq', 'Mic Drop|aoe|light|eruption|r=1.6 dmg=1.8 cd=4 note=h',
+    'Grand Fireworks|rain|fire|n_qd|n=22 r=2 cd=5', 'Tempo Rubato|buff|holy|aura|buff=as,speed amt=35 dur=12 cd=30 party rubato note=treble', 'Amp Overload|chain|light|sonic|n=6 note=e2', 'Spinning Records|orbit|phys|n_h|n=5 dur=6 cd=8',
+    'Grand Finale|aoe|fire|nuke|r=2.6 dmg=3 cd=8 note=hd', 'Rock Legend|buff|light|transform|buff=dmg,as amt=40 dur=12 cd=40 note=h', 'Sonic Bulwark|wall|light|sonic|dur=6 cd=6 note=rq', 'Da Capo|nova|arcane|wave|n=2 r=1.6 dacapo cd=6 note=re',
   ],
   slime_lord: [
     'Ooze Slap|melee|acid|smash|free wc=1', 'Primal Glob|proj|acid|blob|exp r=1', 'Gel Coat|buff|acid|shield|buff=armor amt=45 dur=20 cd=25', 'Puddle|zone|acid|slime|r=1.2 dur=6 slow',
@@ -78,11 +78,11 @@ export const TREE4 = {
     'Mother of Ooze|summon|acid|slime|sum=motherooze n=1 dur=25 cd=40', 'Primal Form|buff|acid|transform|buff=dmg,armor,res amt=35 dur=15 cd=40', 'Deluge of Slime|rain|acid|meteor|n=14 r=2.2 dur=3 cd=10', 'Big Bang Blob|aoe|acid|nuke|r=2.6 dmg=2.8 cd=8',
   ],
   boomerang_knight: [
-    'Gale Rang|proj|phys|rang|free wc=1 bounce=1', 'Twin Chakrams|proj|light|chakram|n=2 spread=30 bounce=2', 'Wind Guard|buff|phys|shield|buff=block amt=25 dur=20 cd=25', 'Tempest Dash|dash|light|wind|range=1.1',
-    'Storm Orbit|orbit|light|chakram|n=3 dur=6 cd=6', 'Ricochet Storm|proj|phys|rang|bounce=5', 'Cyclone Catch|cyclone|phys|wind|n=1 dur=4', 'Thunder Return|proj|light|rang|pierce exp',
-    'Halo of Rangs|proj|phys|rang|n=8 ring', 'Eye of the Gale|zone|light|storm|r=1.4 dur=5 slow', 'Stormcaller Leap|leap|light|storm|r=1.5 dmg=1.4', 'Spinning Edge|whirl|phys|blade|dur=2.5',
-    'Blade Hurricane|cyclone|light|wind|n=4 dur=5 cd=8', 'Lightning Wheel|chain|light|lightning|n=6', 'Gale Knight Stance|buff|light|aura|buff=as,speed amt=35 dur=12 cd=30', 'Orbit Barrage|rain|phys|rang|n=16 r=1.6',
-    'Thousand Rangs|proj|phys|rang|n=16 ring dmg=0.9 cd=4', 'Tempest Ascendant|buff|light|transform|buff=dmg,as amt=40 dur=12 cd=40', 'Heart of the Gale|orbit|light|chakram|n=8 dur=8 cd=12', 'Skybreaker|aoe|light|eruption|r=2.4 dmg=2.6 cd=6',
+    'Gale Rang|proj|phys|rang|free wc=1 bounce=1 ret', 'Twin Chakrams|proj|light|chakram|n=2 spread=30 bounce=2 ret dmg=0.62', 'Wind Guard|buff|phys|shield|buff=block amt=25 dur=20 cd=25', 'Tempest Dash|dash|light|wind|range=1.1',
+    'Storm Orbit|orbit|light|chakram|n=3 dur=6 cd=6', 'Ricochet Storm|proj|phys|rang|bounce=5 ret dmg=0.75', 'Cyclone Catch|cyclone|phys|wind|n=1 dur=4', 'Thunder Return|proj|light|rang|ret pierce exp dmg=0.6',
+    'Halo of Rangs|proj|phys|rang|n=8 ring ret dmg=0.3', 'Eye of the Gale|zone|light|storm|r=1.4 dur=5 slow', 'Stormcaller Leap|leap|light|storm|r=1.5 dmg=1.4', 'Spinning Edge|whirl|phys|blade|dur=2.5',
+    'Blade Hurricane|cyclone|light|wind|n=4 dur=5 cd=8', 'Lightning Wheel|chain|light|lightning|n=6', 'Gale Knight Stance|buff|light|aura|buff=as,speed amt=35 dur=12 cd=30', 'Orbit Barrage|proj|phys|rang|n=14 rand spread=100 ret pierce dmg=0.62',
+    'Thousand Rangs|proj|phys|rang|n=16 ring ret dmg=0.35 cd=4', 'Tempest Ascendant|buff|light|transform|buff=dmg,as amt=40 dur=12 cd=40', 'Heart of the Gale|orbit|light|chakram|n=8 dur=8 cd=12', 'Skybreaker|aoe|light|eruption|r=2.4 dmg=2.6 cd=6',
   ],
   lancer: [
     'Radiant Thrust|melee|holy|thrust|free wc=1', 'Lance Beam|beam|holy|laser|dur=1.5 range=0.7', 'Prism Guard|buff|holy|tshield|buff=block,armor amt=25 dur=20 cd=25', 'Shield Disc|proj|holy|disc|bounce=3',

@@ -13,6 +13,7 @@ import { Vendor } from './ui/vendor.js';
 import { Stash } from './ui/stash.js';
 import { game } from './game/game.js';
 import { controls } from './game/controls.js';
+import { initSpectate } from './game/spectate.js';
 import { glowSprite } from './gfx/vfx.js';
 import { applyVolumes, preloadSong, TITLE_SONG } from './core/audio.js';
 
@@ -118,6 +119,7 @@ async function boot() {
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', () => setTimeout(resize, 200));
   initInput(G.canvas);
+  initSpectate(); // taps that catch critters / aim SMITE without moving the hero (game/spectate.js)
   UI.init();
   UI.vendor = Vendor;
   UI.stash = Stash;

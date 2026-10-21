@@ -14,6 +14,7 @@ CASTLE is the third playable overworld beside the Forsaken Wilds and Sea of Sand
 - Floors are dressed by `src/gfx/castleground.js`: every material (`MAT`, stored per tile in `map.castleMat`) blends into its neighbours with dithered edge and corner masks baked into the floor chunks, grass tufts, pebbles, leaves, reeds and wildflowers are baked in at the seams, the far banks of the river and moat drop to the water as earth or masonry faces, and the water flows (light streaks drifting along a flow field from the river's source round the moat to its outflow, foam at the banks, glints, deeper water darker).
 - Every Castle scenario is winnable and verified by `tools/tests/scenarios.js`. Scenario foes hunt the hero across the board; rampart sieges and last stands arrive as waves along the wall walk; keep fights run as two or three back-to-back phases (the Crown Vault ends at a claimable relic, the Royal Procession must keep the royal party alive); the Sconce Ward gives the hero 8 s to reach the wall before torches start to gutter.
 - Castle pathing expands with the board: spawn points, doors, scenario sites, stairs, exits, and rampart objectives are rescaled onto walkable tiles. Ramparts connect through bends, corners, gates, and broad stair landings.
+- **Height map (October 20, 2026).** The Castle is a height-mapped overworld like the Mountainside (`map.hgt`, `src/gfx/terrain.js`; docs/MOUNTAINSIDE.md): the curtain walls, towers, gatehouses, stairs and hall walls are solid masonry columns, the moat and river lie sunk 11 levels (44 px) below the ground, and the bridges cross them at ground level. A walker hops up `map.climb` = 4 levels (one stair step) and drops at most 10, so the walls are reached only by their stairs and can't be jumped from. See *Walls, towers, stairs and bridges* below.
 - The shared shrine-activated system supplies 35 challenges. It retains the twenty general scenarios, adds five rampart encounters, and adds ten room-focused keep scenarios. Other overworlds continue to select from their applicable general scenario set.
 - Sea of Sand caravan paths remain connected to the authored oasis and ruin anchors while their intermediate curves, phases, and widths vary by seed. Dune and stone seams use scattered 3–6px transition flecks in the matching terrain colors.
 - `src/game/game.js` loads Castle atlases before map generation. The art remains lazy-loaded, so ordinary dungeons do not fetch the castle sheets.
@@ -35,19 +36,17 @@ charge straight through both. The board (south at the bottom of the screen's lef
   smoking camp fires, cages, stores).
 - **Moat and river**: a river comes down the west side, feeds the 8-tile moat, and leaves by the east. The moat's far
   banks show as faces dropping to the water.
-- **Bridges**: three crossings use the painted arch bridge (`landmark_17`, its near-end footings cut away by
-  `castleCutout`): the main bridge from the outer bank to a stone pier where the gatehouse's drawbridge comes down, the
-  postern bridge over the north moat, and the east road's bridge over the outflow. Each deck is pinned to the bank
-  line at ground level (the arch and piers fall away into the sunken water), sized so its far edge lands on the pier or
-  far bank (`k = span tiles × 32 / 154`), and sorted from its far end so walkers draw on it.
-- **Outer curtain** (`CASTLE_OUTER`, cells 48..120 × 34..100): round drum towers on the corners, square interval
-  towers, the `landmark_08` twin-towered gatehouse mid-south, a postern (arched gate between two small square towers)
-  north-east. A paved wall-walk lane runs round its foot (`map.rampartDeck`), with stair runs against the wall.
+- **Bridges**: three stone bridges at ground level over the sunken water (main, postern, the east road's over the
+  outflow), arched on the side the camera sees; the main one ends in the drawbridge's planks (see below).
+- **Outer curtain** (`CASTLE_OUTER`, cells 48..120 × 34..100, 6 tiles thick): square towers on the corners and
+  between, the twin-towered gatehouse mid-south, a postern between two small towers north-east; a wall-walk on top
+  reached by stairs from the outer ward (see below).
 - **Outer ward**: the south bailey (practice yard with targets and dummies, banners, the smithy and armoury), the west
   ward (stables, a mud paddock behind timber rails), the north ward (tilled kitchen garden, orchard, dovecote, the
   postern road), the east ward (barracks, and a mason's yard repairing the curtain: scaffolds, a hoist, dressed stone).
-- **Inner curtain** (`CASTLE_INNER`, 14 cells inside): taller roofed drum towers (`landmark_05`) on its corners; the
-  inner gate is offset east of the gatehouse, a second inner gate opens north-west towards the postern.
+- **Inner curtain** (`CASTLE_INNER`, 14 cells inside, 5 tiles thick, its walk 8 levels higher than the outer's):
+  square towers on its corners and sides; the inner gate is offset east of the gatehouse, a second inner gate opens
+  north-west towards the postern.
 - **Inner ward**: the great keep (`landmark_09` at 1.6×, cut into 32 px columns sorted from its footprint's front edge,
   so walkers beside it sort right); the **throne hall** (carpeted nave, colonnades, the dais, chandeliers, banners,
   armour), the **cathedral** (carpeted nave between pews, side aisles behind pillars, pulpit, lancet windows) and the
@@ -71,12 +70,81 @@ The carpet runner and the tents are procedural (`castleCarpetTiles`, `castleTent
 use so generation stays canvas-free under Node.
 
 ```sh
-node tools/tests/castle_overworld.mjs [seeds]   # 100 seeds: both curtains sealed with their gates shut, every wall cell
-                                                # drawn, towers/gatehouse/arches/keep, bridges over water with open decks,
-                                                # lane, halls, buildings, forest, all 35 scenarios, size caps
+node tools/tests/castle_overworld.mjs [seeds]   # 100 seeds: both curtains solid and sealed with their gates shut (no
+                                                # hop over them), walks/towers/stairs reached, bridges over sunken water
+                                                # with parapets and arches, hall walls and doors, all 35 scenarios, caps
+node tools/tests/castle_walls.js [views]        # the height-mapped walls in play, with shots (castlewall_*.png)
 node tools/tests/castle_visual.js [views] [--grid]   # screenshots of every area; --grid tints blocked tiles red
 ```
 Look at the screenshots (`tools/tests/out/castle_*.png`): layering mistakes don't throw.
+
+## Walls, towers, stairs and bridges (height map)
+
+Built in `src/world/castleworld.js` (the `curtain walls` and `bridges` sections), drawn by `src/gfx/terrain.js` with
+the masonry painter `src/gfx/castlewalls.js`.
+
+- **Levels** (`LV`, HS = 4 world px each): ground 0, water -11, outer wall-walk 24 (96 px, ~1.6 heroes), inner
+  wall-walk 32, hall walls 18. Merlons stand `MERLON` 9 over a walk, crenels (the gaps) `SILL` 3; both are blocked.
+- **Curtains**: the outer ring is 6 tiles thick (a 5-tile walk behind its battlement), the inner 5 (4-tile walk); the
+  battlement runs along the outside edge, merlon and crenel alternating. Wall-walk tiles are `map.rampartDeck`, every
+  wall tile `map.rampartWall`.
+- **Towers** (`map.castleTowers`, 31): square, a tile out onto the berm (so they stand on the same ground as the
+  curtain and every wall foot meets the moat's revetment on one line); their floor is `TOWER_UP` 8 levels over the
+  walk (the gatehouse's two `GATE_UP` 12), stepped up one STEP a tile wherever the walk comes in, battlements round
+  the rest of the edge, a corbel band under them and arrow slits on their faces (`map.faceBand`).
+- **Gates**: each passage goes straight through the wall (and on between its two towers) at ground level, paved.
+  Over both mouths an arched lintel (`castleSpan`, sliced into 32 px columns so walkers in the passage sort under it);
+  the main gate and the inner gate's outer mouth show a raised portcullis, the main gate a battlement.
+- **Stairs** (`map.castleStairs`, 11): flights two tiles wide against a wall's inside face, one STEP (4 levels) a tile,
+  ending on a landing level with the walk: two per side of the outer curtain, three for the inner one (one per half
+  between its gates). `map.walkStep` = 4: walkers climb them without the terrain's hop.
+- **Bridges** (`map.castleBridges`): the main bridge over the south moat (its last three rows before the gate are the
+  drawbridge's planks, `castlePlankTile`), the postern bridge over the north moat, the east road's over the outflow:
+  a deck at ground level between low blocked parapets, the side the camera sees opening in arches down to the water
+  (`map.faceArch`: the artwork's arch piece, one arch per ~4 tiles). `map.bridgeWater` keeps the water flowing under.
+- **Halls**: the throne hall, cathedral and great hall have masonry walls in the keep's limestone (`FACE.warm`), so
+  each doorway is a clean opening through a solid wall with an arched lintel and two oak leaves swung back flat against
+  the face the camera sees (`castleLeaf`; the leaves are cut from the face-on oak door, the pack's other doors are
+  drawn at an angle).
+- **Banners** (`castlePanel`): the pack's hangings are all painted face on (their SE/SW/NW/NE frames are the same
+  picture), so they are sheared flat onto the wall face they hang on: every 8 tiles along the curtains (inside the
+  wards, and outside toward the moat), one under the corbels of each visible tower face, every 6 tiles round the halls
+  and at their old spots inside; never over a door, window, sign or torch.
+- **Keep**: `landmark_09` is mirrored (`castleFlipped`) so its gate and steps face south over the courtyard to the
+  inner gate.
+- **Roads** (`map.road`): after the sites are known, a trail runs from every house's door, every scenario site (the
+  shrine first), chest and stair foot and the exit to the nearest road, lane, paving or hall floor, round props and
+  trees; then every stretch the props and walls cut off is joined to the network the hero arrives on. On a map with
+  `map.road` auto-play's distance field (`Auto.buildRoadNav`) is the cheapest way, not the shortest (a road step 2,
+  open ground 5), and its corners are cut only where the cut keeps to the same ground, so the hero keeps to the roads.
+- **Packs on the walls**: 12 monster packs hold the wall-walks and tower tops (`spawns[].rampart`); they come down the
+  stairs at the hero. The rampart scenarios muster on the south and east walks (`map.rampartPosts`).
+
+**Drawing.** Columns are baked into the floor chunks back to front. Faces with a `map.faceArt` style are painted by
+`drawCastleFace`: the unsheared masonry sheared back onto each face and anchored to the ground plane (each course at a
+fixed height, so courses run on from tile to tile, round corners and from a merlon down the wall under it; SE faces
+darker), a string course at walk level, corbels and slits on towers, a battered plinth at the
+foot, rain streaks and moss, a wet green waterline on the moat's stone revetment; the river's banks are earth
+(`FACE.earth`, terrain.js's own banks). Tops are the artwork's flagstone slabs, one slab to a tile in eight turns,
+so tile joints fall on the slabs' own edges and the grout runs on along the iso axes (`castleRampartTops`, tinted for
+the halls). Because the walls stand far taller than a tile (`map.tallOcclusion`):
+- every column whose top could hide something behind it is an occluder (terrain.js `terrainOf`), redrawn in the sorted
+  pass over creatures, props, trees, buildings, chests, loot and portals behind it, clipped to them (`occludersFor`,
+  `occludersOfRect`);
+- the hero hidden behind a wall is drawn again over it as a faint silhouette; walls stay solid;
+- corpses, decals, ground particles and the water's ripples behind a wall or under a bridge are skipped
+  (`hiddenBehind`), and a wall top's back edge, where it drops out of sight, gets a dark rim.
+
+**Art.** `tools/castleramparts.py` cuts the user's `assets/source/biomes/VELSCOUR_Castle_Artwork_Complete.zip` into
+`assets/tiles/castle/ramparts.webp` + `ramparts.json` (face, warm, corbel, plinth, slit, arch, top_0..7): each painted
+face is unsheared (its columns slid half a pixel per pixel so the courses run level), cropped and made to tile.
+The pieces are small and drawn at their own scale, so they are used as textures, not placed whole.
+
+```sh
+python tools/castleramparts.py                      # rebuild ramparts.webp/json from the zip
+node tools/tests/castle_walls.js [views] [--noshots] # walk/towers/stairs reachable, no drops off the walls,
+                                                     # monsters path down; 30 shots with the hero (castlewall_*.png)
+```
 
 ## Rebuild runtime atlases
 

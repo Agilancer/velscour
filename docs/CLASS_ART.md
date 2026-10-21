@@ -1,8 +1,9 @@
 # Class art: Grim Nocturne gear (hero look) and class art packs (weapons, effects)
 
 Two kinds of art drive a class's look:
-- **Grim Nocturne gear** (all 16 classes, October 18, 2026): 12 body armors per class (two per rarity) and one
-  enclosed helmet per class and rarity (Common to Legendary; Mythic helms wear the Legendary design). Built from the
+- **Grim Nocturne gear** (all 16 classes, October 18-19, 2026): 18 body armors per class (Common and Uncommon two,
+  Rare four, Epic and Legendary three, Mythic four) and 15 enclosed helmets per class in three sets (set 01 Common to
+  Legendary; sets 02 and 03 Common to Epic plus Mythic), all recoloured by 69 finishes (`src/data/gear.js`). Built from the
   user's style-locked zips by `tools/nocturnegear.py`. It replaced the `assets/FinalClasses/<class>.zip` libraries
   (80 armors) and the Common/Rare helmet atlases; those zips stay in the repo as source but are no longer read.
 - **Class art packs** (`assets/source/classes/<class>/`, Paladin only so far): weapon/shield catalog items and the
@@ -16,12 +17,17 @@ Two kinds of art drive a class's look:
 - `VELSCOUR_96_Additional_Armor_Source_Artwork.zip`: a second set of 96, high-res only (no game exports).
 - `VELSCOUR_80_Helmets_Game_Exports.zip`: 80 helmets as 40 x 40 cutouts pinned at (45,63) on the 128 x 192 frame,
   plus full-colour layers (`layers_fullcolor`, every class but the Arcane Sorcerer, whose palette-limited layer is used).
+- `VELSCOUR_Collection_02_96_Armor_Source_Artwork.zip` (October 19): 96 more high-res armors, six per class (Rare A/B,
+  Epic, Legendary, Mythic A/B, `collection_02/artwork/<class>/`): armors 13-18 (`armor_NN_<rarity>_c02[a|b].png`).
+- `VELSCOUR_Helmet_Set_02_Game_Exports.zip`, `VELSCOUR_Helmet_Set_03_Game_Exports.zip` (October 19): 80 helmets each,
+  same pin and layout as set 01, rarities Common, Uncommon, Rare, Epic and Mythic (`helmet_set0N_<rarity>.png`).
 - `VELSCOUR_STYLE_LOCK_DOCUMENTS.zip` (STYLE_LOCK.md, CLASS_CARDS.md, HELMET_OVERLAY_ADDENDUM.md, prompt templates):
   the art direction for any new armor or helmet. Helmets are fully enclosed and draw only exterior surfaces.
 
 ### Importer (`tools/nocturnegear.py`, needs pillow numpy scipy)
 ```bash
 python tools/nocturnegear.py import <dir>   # <dir> holds the zips unpacked as gn_art/ gn_exports/ armor96/ helm_exports/
+python tools/nocturnegear.py import2 <dir>  # finds collection_02/ Helmet_Set_02/ Helmet_Set_03/ anywhere under <dir>
 python tools/nocturnegear.py build          # or: python tools/process_assets.py gear
 ```
 `import` writes the natives to `assets/source/gear_nocturne/<class>/` (`armor_NN_<rarity>[_additional].png`, odd ids
@@ -30,16 +36,23 @@ Exports (premultiplied box filter, binary alpha, sole at y 183, 108 art px crown
 centred where its export was; every other armor keeps its sole at y 183 and gets the scale (0.9-1.2x) and x offset
 that best match its head to the Common armor's head, because wings, spikes and pauldrons can rise above the crown.
 
-`build` writes, per class, `assets/sprites/gear/<class>/`: `armor.webp` (6 x 2 cells of 128 x 192, lossless),
+`build` writes, per class, `assets/sprites/gear/<class>/`: `armor.webp` (6 columns x 3 rows of 128 x 192, lossless),
 `armor_mask.png` (255 = never recoloured: face, hair and neck found by colour around the head; the Barbarian's bare
-skin; the Slime Lord's blue slime) and `gear.json` (frame, `headTop` 75, `feet` 183, `helmPin`, rarity `bands`,
+skin; the Slime Lord's blue slime) and `gear.json` (frame, `headTop` 75, `feet` 183, `helmPin`, rarity `bands` (the armor ids each rarity rolls from),
 boxes, and `armor.head`: each armor's measured head offset from armor 1's, which the helmet follows). Shared:
-`assets/sprites/gear/helmets/` (`atlas.png`: a column per class, a row per design, 40 x 40 cells; `index.json` with
-each design's `rarity`; `placements.json`, kept across builds) and `classes.json`. Never hand-edit these.
+`assets/sprites/gear/helmets/` (`atlas.webp`: a column per class, a row per design, 160 x 160 cells: 4x the 40 x 40 hero-pixel cell, pixel art cut
+from the helmets' high-res artwork (2 art px per hero px, 32 colours, hard edges, enlarged nearest-neighbour; `PIX`,
+`COLORS`) by `python tools/nocturnegear.py hires <the three *_Artwork zips>` into `<class>/hd/`; the game composes the
+hero at 4x (`HD` in `src/core/gearart.js`, armor pixels enlarged as they are) and scales it down, so helmets get
+crisper the further the camera zooms in; `index.json` with
+each design's `rarity` and `set`; designs 1-5 set 01, 6-10 set 02, 11-15 set 03; `placements.json`, kept across builds) and `classes.json`. Never hand-edit these.
 
 ### Helmet fitting
 Every helmet draws its 40 x 40 cell at (45,63) of the hero frame, shifted by the armor's `armor.head` offset, so size
-and placement are the same for every class. To nudge one: double-click `Fit Helmets.cmd` (or
+and placement are the same for every class. The exported helmets were wider than the heads, so `hires` narrows each
+class's helmets with an area resample (`HELM_SCALE` in `tools/nocturnegear.py`: 84% wide and 92% tall, 80% wide for
+the small-skulled Paladin, Necromancer, Barbarian and Death Knight), about the class's head centre and the helmet's
+bottom edge; the source PNGs stay untouched. To nudge one: double-click `Fit Helmets.cmd` (or
 `python tools/helmet_fit_server.py`), pick a class and design, drag/scroll it, and **Save to game**. That writes
 `{x, y, scaleX, scaleY, rotation}` (cell top-left in frame pixels) for that class and design into `placements.json`;
 an empty file means the default pin. The game and the fitter share `src/core/helmetfit.js`. More helmet designs per
@@ -145,3 +158,11 @@ Effects were matched by theme; rarity tier does not follow skill row. Ambiguous 
 | Apocalypse of Light | F52 Last Sun | Fanaticism | F24 Crimson Vow | Storm of Swords | F32 Martyr Spikes |
 | Divine Intervention | F53 Deathless Grace | Bastion | F33 Bone Benediction | Crusade | F54 Thorn Apotheosis |
 | Archon's Radiance | F39 Bleeding Dawn | Champion's Call | F57 Eternal Funeral * | Heaven's Edge | F56 First Flame |
+
+The hammers themselves (Blessed Hammer, Hammerstorm, Wheel of Hammers, the Hammerfall proc, the Totem Master's
+Ancestral Hammer) are a procedural 3D model, `src/gfx/hammer3d.js`: octagonal steel head with flared striking faces, a
+gold band carrying a glowing cross, a turned haft with a leather grip. It tumbles end over end along its line of
+flight, and renders are memoised per 1/32 turn of heading and spin with a one-pixel dark outline. Hammer of the Gods and
+Solar Hammer drop a big one (`FallingHammer`) before they strike, and JUDGEMENT's hammer of light is the same model in
+a light palette (`drawGreatHammer`). Shield Throw flies the Lancer's round 3D shield (docs/LANCER_SPINNING_SHIELDS.md).
+Sheets and in-play shots: `tools/tests/paladin.js shots`.

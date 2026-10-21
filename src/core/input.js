@@ -59,6 +59,8 @@ export function initInput(canvas) {
 
   canvas.addEventListener('pointerdown', (e) => {
     input.lastPointerType = e.pointerType;
+    // a spectator's tap (aiming SMITE, catching a critter: game/spectate.js) never moves the hero or stops auto-play
+    if (G.tapHook && G.tapHook(e.clientX, e.clientY, e)) { e.preventDefault(); return; }
     if (e.pointerType === 'mouse') {
       input.mouse.x = e.clientX; input.mouse.y = e.clientY;
       if (e.button === 0) { input.mouse.left = true; input.mouse.leftPressed = true; }

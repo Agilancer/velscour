@@ -7,6 +7,7 @@ Audio import: unpacks the user's sound zips in assets/source/audio/ and transcod
   SFX.zip                -> assets/audio/sfx/<slug>.mp3     mono one-shots (attacks, spells, doors, footsteps, torch)
   BG Loops N.zip         -> assets/audio/amb/<slug>.mp3     60 s stereo ambient beds (+ the river/waterfall loops)
   Game Music / Music Pack 2 -> assets/audio/music/<slug>.mp3   only the MUSIC_KEEP songs (title + town); the rest are skipped
+  <Song>.m4a|mp3|ogg|wav  -> assets/audio/music/<slug>.mp3   loose songs are always kept (the dungeon/overworld rotation)
   assets/audio/audio.json   {sfx: [...], amb: {slug: seconds}, music: {slug: seconds}}  (read by src/core/audio.js)
 Needs ffmpeg + ffprobe on PATH. Slugs: lower case, spaces -> '_' ("Sword Attack 1.ogg" -> sword_attack_1).
 """
@@ -23,7 +24,8 @@ SRC = os.path.join(ROOT, "assets", "source", "audio")
 OUT = os.path.join(ROOT, "assets", "audio")
 
 SFX_SKIP = re.compile(r"(Chain |Jump|Land|Chopping and Mining|Put Away|Take Out|Sheath|Unsheath)", re.I)
-MUSIC_KEEP = {"hymn_of_the_abyss", "empty_school"}   # title screen + town; dungeons have ambience only
+MUSIC_KEEP = {"hymn_of_the_abyss", "empty_school"}   # title screen + town (dungeons: the loose songs)
+SONG_EXT = (".m4a", ".mp3", ".ogg", ".wav", ".flac")
 LOOPS = re.compile(r"(Loop\.ogg$)", re.I)   # river / waterfall / torch loops are ambient beds, not one-shots
 
 
@@ -53,6 +55,12 @@ def process_audio():
     manifest = {"sfx": [], "amb": {}, "music": {}}
     tmp = tempfile.mkdtemp(prefix="velscour_audio_")
     try:
+        for f in sorted(os.listdir(SRC)):   # loose songs (e.g. "Stone Room Reverberation.m4a")
+            if f.lower().endswith(SONG_EXT):
+                p, s = os.path.join(SRC, f), slug(f)
+                encode(p, os.path.join(OUT, "music", s + ".mp3"), False, 4)
+                manifest["music"][s] = duration(p)
+                print("audio:", s)
         for zname in sorted(os.listdir(SRC)):
             if not zname.lower().endswith(".zip"):
                 continue

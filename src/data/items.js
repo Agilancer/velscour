@@ -3,16 +3,37 @@ import { rand, randi, pick, weighted, clamp, chance } from '../core/util.js';
 import { rollAugments, RING_NAMES, AUGMENTS, KIND_NAMES } from './rings.js';
 import { SKILLS } from './skills.js';
 
+// lv: the rarity's power bonus in item levels. Every number on an item (base damage, armor, affix values, ring
+// powers, legendary powers) comes from its power level = item level + lv. Every rarity rolls the same CORE_LINES
+// stat lines; rarer items add perks on top: perk lines (magic/gold find, experience, speed, thorns...), sockets, a
+// legendary power. Measured in auto-play's hero score (tools/tests/rarity.js) a rarity is worth about Uncommon 2,
+// Rare 5, Epic 8, Legendary 11.5 and Mythic 15 item levels, so a level 25 Rare beats a level 10 Mythic and gear
+// keeps being replaced as the hero levels; the rarer tiers last a little longer each.
+// weight: drop odds (rollRarity), close to Diablo II's white / magic / rare / set / unique split; Mythic is rarer than
+// anything there. bonus: how much a boss/chest bonus multiplies the weight (1 + bonus * b). minIlvl/fullIlvl: like
+// D2's quality levels, a rarity can't drop below item level minIlvl and its odds ramp up to full by fullIlvl, so no
+// Epic before item level 30, Legendary before 45 or Mythic before 60 (rarityAt caps the guaranteed rewards the same
+// way).
 export const RARITY = [
-  { id: 0, name: 'Common', color: '#e8e8e8', weight: 62, affixes: [0, 1], sockets: 1, mult: 1 },
-  { id: 1, name: 'Uncommon', color: '#4fd65a', weight: 25, affixes: [1, 2], sockets: 2, mult: 1 },
-  { id: 2, name: 'Rare', color: '#4f8dff', weight: 9, affixes: [2, 3], sockets: 3, mult: 1.1 },
-  { id: 3, name: 'Epic', color: '#b45cff', weight: 3.2, affixes: [3, 4], sockets: 4, mult: 1.25 },
-  { id: 4, name: 'Legendary', color: '#ff9a2a', weight: 0.8, affixes: [4, 5], sockets: 6, mult: 1.4 },
-  { id: 5, name: 'Mythic', color: '#ff4058', weight: 0.12, affixes: [5, 6], sockets: 6, mult: 1.65 },
+  { id: 0, name: 'Common', color: '#e8e8e8', weight: 70, lv: 0, perks: 0, sockets: 1, bonus: 0, minIlvl: 1, fullIlvl: 1 },
+  { id: 1, name: 'Uncommon', color: '#4fd65a', weight: 21, lv: 2, perks: 0, sockets: 2, bonus: 1, minIlvl: 1, fullIlvl: 1 },
+  { id: 2, name: 'Rare', color: '#4f8dff', weight: 6, lv: 3, perks: 1, sockets: 3, bonus: 1.6, minIlvl: 3, fullIlvl: 8 },
+  { id: 3, name: 'Epic', color: '#b45cff', weight: 1, lv: 7, perks: 1, sockets: 3, bonus: 2.2, minIlvl: 30, fullIlvl: 40 },
+  { id: 4, name: 'Legendary', color: '#ff9a2a', weight: 0.14, lv: 8, perks: 1, sockets: 4, bonus: 2.8, minIlvl: 45, fullIlvl: 60 },
+  { id: 5, name: 'Mythic', color: '#ff4058', weight: 0.012, lv: 10, perks: 2, sockets: 4, bonus: 3.4, minIlvl: 60, fullIlvl: 80 },
 ];
-/** Base weapon damage and armor by rarity: a rarer drop of the same item level is a real upgrade, not just more affixes. */
-export const RARITY_BASE = [1, 1.04, 1.08, 1.14, 1.22, 1.32];
+/** How much of a rarity's drop odds item level ilvl has unlocked: 0 below its minIlvl, ramping to 1 at fullIlvl. */
+export const rarityUnlock = (r, ilvl) => clamp((ilvl - RARITY[r].minIlvl + 1) / (RARITY[r].fullIlvl - RARITY[r].minIlvl + 1), 0, 1);
+/** The best rarity up to r that item level ilvl allows (guaranteed rewards: a level 3 "Legendary" gift is a Rare). */
+export function rarityAt(ilvl, r) {
+  while (r > 0 && ilvl < RARITY[r].minIlvl) r--;
+  return r;
+}
+/** Stat lines every item rolls (rarity adds perk lines on top), and each line's multiplier on its affix's range. */
+export const CORE_LINES = 2, LINE_MULT = 1.5, PERK_MULT = 0.7;
+for (const R of RARITY) R.affixes = [CORE_LINES + R.perks, CORE_LINES + R.perks]; // lines an item has (the enchanter adds one more)
+/** An item's power level: its item level plus its rarity's worth in levels. */
+export const powerLevel = (ilvl, rarity) => ilvl + RARITY[rarity].lv;
 /** Display colour per rarity id (also used for icon and staff tints). */
 export const RARITY_COLORS = RARITY.map((r) => r.color);
 
@@ -87,12 +108,12 @@ export const AFFIXES = [
   { s: 'resPoison', t: '+{v}% Poison Resistance', suf: 'of the Antidote', min: 5, max: 14, sc: 0.006, slots: 'OHBGLFR' },
   { s: 'resAll', t: '+{v}% All Resistances', suf: 'of the Prism', min: 3, max: 8, sc: 0.005, slots: 'OHBR', w: 0.5 },
   { s: 'lifeSteal', t: '{v}% Life Steal', pre: 'Vampiric', min: 1, max: 3, sc: 0.002, slots: 'WGR' },
-  { s: 'manaSteal', t: '{v}% Mana Steal', pre: 'Draining', min: 1, max: 3, sc: 0.002, slots: 'WGR' },
-  { s: 'moveSpeed', t: '+{v}% Movement Speed', pre: 'Fleet', min: 4, max: 10, sc: 0.002, slots: 'FL' },
-  { s: 'goldFind', t: '+{v}% Gold Find', suf: 'of Greed', min: 10, max: 30, sc: 0.01, slots: 'HGFR' },
-  { s: 'magicFind', t: '+{v}% Magic Find', suf: 'of Fortune', min: 5, max: 15, sc: 0.006, slots: 'HGFR' },
+  { s: 'manaSteal', t: '{v}% Mana Steal', pre: 'Draining', min: 1, max: 3, sc: 0.002, slots: 'WGR', perk: 1 },
+  { s: 'moveSpeed', t: '+{v}% Movement Speed', pre: 'Fleet', min: 4, max: 10, sc: 0.002, slots: 'FL', perk: 1 },
+  { s: 'goldFind', t: '+{v}% Gold Find', suf: 'of Greed', min: 10, max: 30, sc: 0.01, slots: 'HGFR', perk: 1 },
+  { s: 'magicFind', t: '+{v}% Magic Find', suf: 'of Fortune', min: 5, max: 15, sc: 0.006, slots: 'HGFR', perk: 1 },
   { s: 'block', t: '+{v}% Block Chance', pre: 'Stalwart', min: 3, max: 8, sc: 0.002, slots: 'O' },
-  { s: 'thorns', t: '{v} Thorns Damage', pre: 'Spiked', min: 2, max: 6, sc: 0.08, slots: 'OBL' },
+  { s: 'thorns', t: '{v} Thorns Damage', pre: 'Spiked', min: 2, max: 6, sc: 0.08, slots: 'OBL', perk: 1 },
   { s: 'physPct', t: '+{v}% Physical Damage', pre: 'Sharpened', min: 8, max: 18, sc: 0.02, slots: 'WG' },
   { s: 'firePct', t: '+{v}% Fire Damage', pre: 'Burning', min: 8, max: 18, sc: 0.02, slots: 'WOHR' },
   { s: 'coldPct', t: '+{v}% Cold Damage', pre: 'Frozen', min: 8, max: 18, sc: 0.02, slots: 'WOHR' },
@@ -105,42 +126,61 @@ export const AFFIXES = [
   { s: 'acidPct', t: '+{v}% Acid Damage', pre: 'Caustic', min: 8, max: 18, sc: 0.02, slots: 'WOHR' },
   { s: 'cdr', t: '+{v}% Cooldown Reduction', pre: 'Hastened', min: 3, max: 7, sc: 0.002, slots: 'HOGR', w: 0.6 },
   { s: 'areaPct', t: '+{v}% Area of Effect', pre: 'Vast', min: 5, max: 12, sc: 0.003, slots: 'WOB', w: 0.6 },
-  { s: 'projSpeed', t: '+{v}% Projectile Speed', pre: 'Hurtling', min: 6, max: 15, sc: 0.003, slots: 'WG', w: 0.6 },
-  { s: 'xpPct', t: '+{v}% Experience Gained', suf: 'of Learning', min: 3, max: 8, sc: 0.002, slots: 'HBR', w: 0.5 },
-  { s: 'bossDmg', t: '+{v}% Damage to Bosses', pre: 'Slayer\'s', min: 8, max: 18, sc: 0.01, slots: 'WGO', w: 0.5 },
-  { s: 'skillsAll', t: '+{v} to All Skills', pre: 'Exalted', min: 1, max: 1, sc: 0, slots: 'WOHBR', w: 0.25, minRarity: 3 },
-  { s: 'skillTree0', t: '+{v} to {tree0} Skills', pre: 'Adept\'s', min: 1, max: 2, sc: 0, slots: 'WOH', w: 0.25, minRarity: 2 },
-  { s: 'skillTree1', t: '+{v} to {tree1} Skills', pre: 'Adept\'s', min: 1, max: 2, sc: 0, slots: 'WOH', w: 0.25, minRarity: 2 },
-  { s: 'skillTree2', t: '+{v} to {tree2} Skills', pre: 'Adept\'s', min: 1, max: 2, sc: 0, slots: 'WOH', w: 0.25, minRarity: 2 },
-  { s: 'skillTree3', t: '+{v} to {tree3} Skills', pre: 'Adept\'s', min: 1, max: 2, sc: 0, slots: 'WOH', w: 0.25, minRarity: 2 },
+  { s: 'projSpeed', t: '+{v}% Projectile Speed', pre: 'Hurtling', min: 6, max: 15, sc: 0.003, slots: 'WG', w: 0.6, perk: 1 },
+  { s: 'xpPct', t: '+{v}% Experience Gained', suf: 'of Learning', min: 3, max: 8, sc: 0.002, slots: 'HBR', w: 0.5, perk: 1 },
+  { s: 'bossDmg', t: '+{v}% Damage to Bosses', pre: 'Slayer\'s', min: 8, max: 18, sc: 0.01, slots: 'WGO', w: 0.5, perk: 1 },
+  { s: 'skillsAll', t: '+{v} to All Skills', pre: 'Exalted', min: 1, max: 1, sc: 0, slots: 'WOHBR', w: 0.25, minPl: 30 },
+  { s: 'skillTree0', t: '+{v} to {tree0} Skills', pre: 'Adept\'s', min: 1, max: 2, sc: 0, slots: 'WOH', w: 0.25, minPl: 10 },
+  { s: 'skillTree1', t: '+{v} to {tree1} Skills', pre: 'Adept\'s', min: 1, max: 2, sc: 0, slots: 'WOH', w: 0.25, minPl: 10 },
+  { s: 'skillTree2', t: '+{v} to {tree2} Skills', pre: 'Adept\'s', min: 1, max: 2, sc: 0, slots: 'WOH', w: 0.25, minPl: 10 },
+  { s: 'skillTree3', t: '+{v} to {tree3} Skills', pre: 'Adept\'s', min: 1, max: 2, sc: 0, slots: 'WOH', w: 0.25, minPl: 10 },
 ];
 export const AFFIX_BY_STAT = Object.fromEntries(AFFIXES.map((a) => [a.s, a]));
 const SLOT_LETTER = { weapon: 'W', offhand: 'O', head: 'H', body: 'B', hands: 'G', legs: 'L', feet: 'F', ring: 'R' };
 
 export const LEGENDARY = {
   thunder: { name: 'Thunderstruck', desc: 'Hits have a 12% chance to call down a lightning bolt.' },
-  echo: { name: 'Echoing', desc: 'Skills have a 20% chance to cast twice.', stats: [['echoChance', 20]] },
-  split: { name: 'Splintering', desc: 'Projectiles split into three on their first hit.', stats: [['splitChance', 100]] },
-  vamp: { name: 'Sanguinarch', desc: '+6% Life Steal. Kills heal 2% of life.', stats: [['lifeSteal', 6]] },
+  echo: { name: 'Echoing', desc: 'Skills have a {0}% chance to cast twice.', stats: [['echoChance', 20]] },
+  split: { name: 'Splintering', desc: 'Projectiles have a {0}% chance to split into three on their first hit.', stats: [['splitChance', 100]] },
+  vamp: { name: 'Sanguinarch', desc: '+{0}% Life Steal. Kills heal 2% of life.', stats: [['lifeSteal', 6]] },
   inferno: { name: 'Infernal Path', desc: 'You leave a trail of burning ground.' },
   bloodbath: { name: 'Bloodbath', desc: 'Enemies you kill explode for 35% of their life.' },
   frostbite: { name: 'Frostbite', desc: 'Hits chill; 10% chance to freeze solid.' },
   surge: { name: 'Arcane Surge', desc: '15% chance on cast to refund the mana cost.' },
-  wraith: { name: 'Wraithwalk', desc: '+25% movement speed and you pass through monsters.', stats: [['moveSpeed', 25]] },
+  wraith: { name: 'Wraithwalk', desc: '+{0}% movement speed and you pass through monsters.', stats: [['moveSpeed', 25]] },
   hammer: { name: 'Hammerfall', desc: 'Every 6th hit drops a spinning holy hammer.' },
   orbit: { name: 'Orbiting Shards', desc: 'Three spectral blades orbit you permanently.' },
   phoenix: { name: 'Phoenix Heart', desc: 'Once every 90 seconds, survive a killing blow.' },
-  glass: { name: 'Glass Cannon', desc: '+60% damage, -30% life.', stats: [['dmgPct', 60], ['lifePct', -30]] },
+  glass: { name: 'Glass Cannon', desc: '+{0}% damage, {1}% life.', stats: [['dmgPct', 60], ['lifePct', -30]] },
   prism: { name: 'Prismatic', desc: '+1 projectile to all projectile skills.', stats: [['extraProj', 1]] },
-  giant: { name: 'Giant\'s Reach', desc: '+30% area of effect.', stats: [['areaPct', 30]] },
+  giant: { name: 'Giant\'s Reach', desc: '+{0}% area of effect.', stats: [['areaPct', 30]] },
   chain: { name: 'Chain Reaction', desc: 'Chains, bounces and pierces happen 2 extra times.', stats: [['chainPlus', 2], ['pierce', 2]] },
-  nova: { name: 'Nova Heart', desc: '25% chance on cast to release a nova of the skill\'s element.', stats: [['novaOnCast', 25]] },
-  greed: { name: 'Midas Touch', desc: '+80% gold find. Kills sometimes burst into coins.', stats: [['goldFind', 80]] },
+  nova: { name: 'Nova Heart', desc: '{0}% chance on cast to release a nova of the skill\'s element.', stats: [['novaOnCast', 25]] },
+  greed: { name: 'Midas Touch', desc: '+{0}% gold find. Kills sometimes burst into coins.', stats: [['goldFind', 80]] },
   berserk: { name: 'Berserker', desc: '+4% damage for every 10% of life missing.' },
   thorns: { name: 'Iron Maiden', desc: 'Attackers take 150% of the damage they deal.' },
-  legion: { name: 'Legion', desc: 'Your summons deal +60% damage and have +60% life.', stats: [['summonPct', 60]] },
-  crit: { name: 'Executioner', desc: '+10% critical chance and +60% critical damage.', stats: [['critChance', 10], ['critDmg', 60]] },
+  legion: { name: 'Legion', desc: 'Your summons deal +{0}% damage and have +{0}% life.', stats: [['summonPct', 60]] },
+  crit: { name: 'Executioner', desc: '+{0}% critical chance and +{1}% critical damage.', stats: [['critChance', 10], ['critDmg', 60]] },
 };
+
+/**
+ * A legendary power's strength by the item's power level: its stats (and the numbers in its text) grow from 15% to
+ * full strength at power level 90, so an early Mythic's power is a taste, not a crutch, and a level 25 Rare still
+ * beats a level 10 Mythic. Whole-number powers (+1 projectile, +2 chains) don't scale.
+ */
+export const legendaryScale = (pl) => clamp((pl - 10) / 80, 0.15, 1);
+const WHOLE = new Set(['extraProj', 'chainPlus', 'pierce']);
+export function legendaryStats(item) {
+  const L = item.legendary && LEGENDARY[item.legendary];
+  if (!L || !L.stats) return [];
+  const k = legendaryScale(powerLevel(item.ilvl, item.rarity));
+  return L.stats.map(([st, v]) => [st, WHOLE.has(st) ? v : Math.round(v * k)]);
+}
+/** The power's text with its scaled numbers. */
+export function legendaryDesc(item) {
+  const L = LEGENDARY[item.legendary], st = legendaryStats(item);
+  return L.desc.replace(/\{(\d)\}/g, (_, i) => st[+i] ? String(st[+i][1]) : '?');
+}
 
 // ---------------------------------------------------------------- class catalog items
 // A class art pack (assets/sprites/classes/<cls>/<cls>.json) names that class's weapons and shields. While a
@@ -237,26 +277,42 @@ export function rollGem(ilvl) {
 }
 
 // --------------------------------------------------------------- items
+// Affix values of the stats that scale (sc >= 0.01: damage, life, mana, attributes, armor...) grow AFFIX_K times
+// faster with power level than (1 + pl * sc), re-anchored to equal it at AFFIX_ANCHOR: deep gear keeps its numbers
+// while every level below is a visible step down, so each level up is an upgrade. Capped stats (resistances, speeds,
+// crit, block...) keep their gentle growth.
+const AFFIX_K = 2, AFFIX_ANCHOR = 80;
+export function affixScale(sc, pl) {
+  if (sc < 0.01) return 1 + pl * sc;
+  return (1 + AFFIX_ANCHOR * sc) * (1 + pl * sc * AFFIX_K) / (1 + AFFIX_ANCHOR * sc * AFFIX_K);
+}
 export function affixValue(a, ilvl, rarity, roll = Math.random()) {
   const base = a.min + (a.max - a.min) * roll;
-  const v = base * (1 + ilvl * a.sc) * RARITY[rarity].mult;
+  const v = base * affixScale(a.sc, powerLevel(ilvl, rarity)) * (a.perk ? PERK_MULT : LINE_MULT);
   return a.min >= 1 && a.max <= 2 && a.sc === 0 ? Math.round(base) : Math.max(1, Math.round(v));
 }
 
-function rollAffixes(item, count) {
+/** Roll `count` stat lines onto an item: core lines, or perk lines (perk). */
+function rollAffixes(item, count, perk = false) {
   const letter = SLOT_LETTER[item.slot];
-  const pool = AFFIXES.filter((a) => a.slots.includes(letter) && (a.minRarity || 0) <= item.rarity && !item.affixes.some((x) => x.s === a.s));
+  const pl = powerLevel(item.ilvl, item.rarity);
+  const pool = AFFIXES.filter((a) => a.slots.includes(letter) && !a.perk === !perk && (a.minPl || 0) <= pl && !item.affixes.some((x) => x.s === a.s));
   for (let i = 0; i < count && pool.length; i++) {
     const a = weighted(pool.map((p) => [p, p.w ?? 1]));
     pool.splice(pool.indexOf(a), 1);
-    item.affixes.push({ s: a.s, v: affixValue(a, item.ilvl, item.rarity) });
+    item.affixes.push({ s: a.s, v: affixValue(a, item.ilvl, item.rarity), ...(perk ? { perk: true } : {}) });
   }
 }
 
-export function rollRarity(mf = 0, bonus = 0) {
-  const m = 1 + mf / 100;
-  return weighted(RARITY.map((r) => [r.id, r.id === 0 ? r.weight / (1 + bonus) : r.weight * m * (1 + bonus * r.id)]));
+/**
+ * A drop's rarity. mf: magic find (%). bonus: a guardian's, chest's or event's better odds (0 = a plain kill).
+ * ilvl: the item's level (rarities unlock with it; rarityUnlock).
+ */
+export function rollRarity(mf = 0, bonus = 0, ilvl = 999) {
+  return weighted(RARITY.map((r) => [r.id, r.id === 0 ? r.weight / (1 + bonus) : r.weight * (1 + bonus * r.bonus) * mfMul(mf, r.id) * rarityUnlock(r.id, ilvl)]));
 }
+/** Magic find's multiplier on a rarity's weight (at 100% it raises the share of Epic and above ~1.6x). */
+export const mfMul = (mf, id) => 1 + Math.max(0, mf) / 100 * [0, 0.6, 0.8, 0.9, 0.9, 0.9][id];
 
 const EPIC_A = ['Doom', 'Soul', 'Blood', 'Grim', 'Storm', 'Night', 'Wrath', 'Bone', 'Dread', 'Ember', 'Frost', 'Shadow', 'Hell', 'Star', 'Void', 'Rune', 'Gore', 'Plague', 'Dawn', 'Ash'];
 const EPIC_B = ['bringer', 'reaver', 'fang', 'song', 'ward', 'call', 'bane', 'shard', 'heart', 'grasp', 'veil', 'brand', 'mourn', 'fall', 'spire', 'maw', 'crest', 'thorn', 'whisper', 'edge'];
@@ -264,15 +320,15 @@ const EPIC_B = ['bringer', 'reaver', 'fang', 'song', 'ward', 'call', 'bane', 'sh
 export function rollItem(ilvl, opts = {}) {
   ilvl = Math.max(1, Math.round(ilvl));
   const slot = opts.slot || pick(['weapon', 'weapon', 'offhand', 'head', 'head', 'body', 'body', 'body', 'hands', 'legs', 'feet', 'ring', 'ring']);
-  const rarity = opts.rarity ?? rollRarity(opts.mf || 0, opts.bonus || 0);
-  const tier = tierOf(ilvl);
+  const rarity = opts.rarity ?? rollRarity(opts.mf || 0, opts.bonus || 0, ilvl);
+  const tier = tierOf(ilvl), pl = powerLevel(ilvl, rarity);
   const item = { uid: newUid(), type: 'gear', slot, rarity, ilvl, tier, upg: 0, affixes: [], gems: [], sockets: 0 };
   const art = opts.generic || slot === 'ring' ? null : classItem(slot, rarity, opts.base);
   if (art) opts = { ...opts, base: art.base };
   if (slot === 'weapon') {
     item.base = opts.base || pick(Object.keys(WEAPONS));
     const W = WEAPONS[item.base];
-    const avg = 3.4 * Math.pow(1.052, ilvl - 1) * W.dmg * (1 + ilvl * 0.012) * RARITY_BASE[rarity];
+    const avg = 3.4 * Math.pow(1.052, pl - 1) * W.dmg * (1 + pl * 0.012);
     item.dmg = [Math.max(1, Math.round(avg * 0.75)), Math.max(2, Math.round(avg * 1.25))];
     item.icon = W.icon;
     item.baseName = W.names[Math.min(4, Math.floor(tier / 2))];
@@ -281,7 +337,7 @@ export function rollItem(ilvl, opts = {}) {
   } else if (slot === 'offhand') {
     item.base = opts.base || pick(Object.keys(OFFHANDS));
     const O = OFFHANDS[item.base];
-    item.armor = Math.round(6 * O.armor * Math.pow(1.045, ilvl - 1) * (0.85 + Math.random() * 0.3) * RARITY_BASE[rarity]);
+    item.armor = Math.round(6 * O.armor * Math.pow(1.045, pl - 1) * (0.85 + Math.random() * 0.3));
     item.icon = O.icon;
     item.baseName = O.names[Math.min(4, Math.floor(tier / 2))];
     if (O.block) item.affixes.push({ s: 'block', v: randi(O.block[0], O.block[1]), implicit: true });
@@ -289,16 +345,17 @@ export function rollItem(ilvl, opts = {}) {
   } else if (slot === 'ring') {
     item.base = 'ring'; item.icon = 'ring';
     item.baseName = RING_NAMES[tier];
-    item.aug = rollAugments(rarity, ilvl, ringCtx.classId, ringCtx.learned || {});
+    item.aug = rollAugments(rarity, pl, ringCtx.classId, ringCtx.learned || {});
   } else {
     item.base = slot;
     const A = ARMORS[slot];
-    item.armor = Math.round(6 * A.armor * Math.pow(1.045, ilvl - 1) * (0.85 + Math.random() * 0.3) * RARITY_BASE[rarity]);
+    item.armor = Math.round(6 * A.armor * Math.pow(1.045, pl - 1) * (0.85 + Math.random() * 0.3));
     item.icon = A.icon;
     item.baseName = A.names[Math.min(4, Math.floor(tier / 2))];
   }
   const R = RARITY[rarity];
-  rollAffixes(item, randi(R.affixes[0], R.affixes[1]));
+  rollAffixes(item, CORE_LINES);
+  rollAffixes(item, R.perks, true);
   item.maxSockets = slot === 'ring' ? [0, 0, 1, 1, 2, 2][rarity] : R.sockets;
   item.sockets = Math.min(item.maxSockets, chance(0.45) ? randi(0, Math.ceil(item.maxSockets / 2)) : 0);
   if (rarity >= 4) item.legendary = pick(Object.keys(LEGENDARY));
@@ -311,7 +368,7 @@ export function rollItem(ilvl, opts = {}) {
     item.pre = pre ? AFFIX_BY_STAT[pre.s].pre : null;
     item.suf = rarity >= 2 && suf ? AFFIX_BY_STAT[suf.s].suf : (suf && !pre ? AFFIX_BY_STAT[suf.s].suf : null);
   }
-  item.req = Math.max(1, Math.floor(ilvl * 0.8));
+  item.req = ilvl; // a level N item needs a level N hero: each level up opens the next step of gear
   if (opts.unid) item.unid = true;
   return item;
 }
@@ -333,7 +390,17 @@ function ringName(item) {
   return `${AUGMENTS[a.id].word} ${item.baseName} of ${augTarget(a)}`;
 }
 
+/**
+ * Epic and better can drop sealed (ui/sealed.js): no name, no colour, no stats until the player breaks the seal. At
+ * most one every SEAL_GAP seconds of dungeon time (c.sealT, game.update): a 60-slot bag takes ~15 hours of auto-play
+ * to fill with them. An Epic+ that drops sooner arrives open, like any other item.
+ */
+export const SEAL_RARITY = 3;
+export const SEAL_GAP = 15 * 60;
+export const SEALED_COLOR = '#ffdf8a';
+
 export function itemName(item) {
+  if (item.sealed) return 'Sealed Treasure';
   if (item.type === 'gem') return gemName(item.gem, item.tier);
   if (item.type === 'potion') return item.name;
   if (item.rname) return item.rname + (item.upg ? ` +${item.upg}` : '');
@@ -349,6 +416,7 @@ export function itemBaseLine(item) {
   return `${MATERIALS[item.tier].name} ${item.baseName}`;
 }
 export function itemColor(item) {
+  if (item.sealed) return SEALED_COLOR;
   if (item.type === 'gem') return GEMS[item.gem].special ? '#ff9a2a' : '#c8f0ff';
   if (item.type === 'potion') return '#ffffff';
   return RARITY[item.rarity].color;
@@ -363,7 +431,7 @@ export function itemStats(item) {
   const am = 1 + (item.upg || 0) * 0.04;
   for (const a of item.affixes) out.push([a.s, Math.round(a.v * (a.implicit ? 1 : am) * 10) / 10]);
   for (const g of item.gems) for (const s of gemStats(g.gem, g.tier)) out.push(s);
-  if (item.legendary && LEGENDARY[item.legendary].stats) for (const s of LEGENDARY[item.legendary].stats) out.push(s);
+  for (const s of legendaryStats(item)) out.push(s);
   return out;
 }
 
@@ -386,9 +454,11 @@ export function unsocketCost(item) { return Math.round(50 * Math.pow(1.04, item.
 
 export function rerollAffixes(item) {
   const keep = item.affixes.filter((a) => a.implicit);
-  const n = item.affixes.length - keep.length;
+  const perks = item.affixes.filter((a) => a.perk).length;
+  const n = item.affixes.length - keep.length - perks;
   item.affixes = keep;
   rollAffixes(item, Math.max(1, n));
+  rollAffixes(item, perks, true);
 }
 export function addAffix(item) {
   const R = RARITY[item.rarity];

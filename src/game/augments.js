@@ -7,7 +7,7 @@ import { sfx } from '../core/audio.js';
 import { addEffect, Bolt, Column, Ring, burst, spawn, sparkle, smoke, elem, addLight } from '../gfx/vfx.js';
 import { explosionFx } from '../gfx/shapes.js';
 import { isoX, isoY } from '../core/view.js';
-import { hit } from './combat.js';
+import { hit, leechHeal } from './combat.js';
 import { Projectile, lineTargets } from './hazards.js';
 
 // ------------------------------------------------------------------ mastery
@@ -97,7 +97,7 @@ export function augHit(src, owner, tgt, dmg, el, o) {
         break;
       case 'blood':
         s.bleed = { t: 3, dps: Math.max(s.bleed && s.bleed.t > 0 ? s.bleed.dps : 0, dmg * 0.25 * p), src: owner };
-        if (owner.heal) owner.heal(dmg * 0.02 * p * k, true);
+        leechHeal(owner, tgt, dmg, 0.02 * p * k);
         break;
       case 'shatter':
         if (chance(Math.min(0.6, 0.2 * p) * k)) shardsFrom(w, src, owner, tgt, 4 + Math.round(p), dmg * 0.35 * p, proc);

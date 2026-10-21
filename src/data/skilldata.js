@@ -3,30 +3,31 @@ import { TREE4 } from './skilltrees4.js';
 // Each line: "Name|kind|element|fx|mods"
 // Tree layout is 5 rows x 4 columns; each column is a prerequisite chain.
 // Row level requirements: 1, 6, 12, 20, 30.
+// pow=: the skill's whole damage (weapon part too) x this; the per-skill balance (tools/tests/paladin.js measures it).
 // kinds: melee proj nova aoe beam chain wall zone orbit cyclone whirl leap dash blink
 //        summon buff curse heal trap rain strike fissure corpse
 export const SKILLDATA = {
   paladin: [
     [
       'Smite|melee|holy|smash|free wc=1', 'Holy Bolt|proj|holy|bolt|', 'Blessed Light|heal|holy|light|amt=15 cd=6', 'Radiant Spark|chain|holy|spirit|n=3',
-      'Blessed Hammer|orbit|holy|hammer|spiral n=1 dur=2.5', 'Sacred Lance|proj|holy|spear|pierce spd=1.4', 'Consecration|zone|holy|holy|r=1.2 dur=5', 'Divine Strike|strike|holy|holy|n=1',
-      'Hammerstorm|orbit|holy|hammer|spiral n=3 dur=2.5', 'Fist of the Heavens|strike|holy|lightning|n=3', 'Sanctuary|zone|holy|holy|follow heal dur=8 cd=12', 'Judgment Beam|beam|holy|holy|range=1.2',
-      'Wheel of Hammers|orbit|holy|hammer|n=6 dur=6 cd=8', "Heaven's Wrath|rain|holy|star|n=14 r=1.4", 'Purifying Nova|nova|holy|holy|r=1.4', "Seraph's Gaze|beam|holy|laser|dur=2 cd=6",
-      'Hammer of the Gods|aoe|holy|pillar|r=2 dmg=2.2 cd=4', 'Apocalypse of Light|strike|holy|holy|n=8 cd=8', 'Divine Intervention|buff|holy|shield|buff=armor,res amt=60 dur=8 cd=30', "Archon's Radiance|nova|holy|holy|n=4 r=1.6 cd=6",
+      'Blessed Hammer|orbit|holy|hammer|spiral n=1 dur=2.5', 'Sacred Lance|proj|holy|spear|pierce spd=1.4', 'Consecration|zone|holy|holy|r=1.2 dur=5 pow=0.28', 'Divine Strike|strike|holy|holy|n=1',
+      'Hammerstorm|orbit|holy|hammer|spiral n=3 dur=2.5', 'Fist of the Heavens|strike|holy|lightning|n=3 pow=0.44', 'Sanctuary|zone|holy|holy|follow heal dur=8 cd=12', 'Judgment Beam|beam|holy|holy|range=1.2 pow=0.84',
+      'Wheel of Hammers|orbit|holy|hammer|n=6 dur=6 cd=8', "Heaven's Wrath|rain|holy|star|n=14 r=1.4", 'Purifying Nova|nova|holy|holy|r=1.4 pow=1.2', "Seraph's Gaze|beam|holy|laser|dur=2 cd=6 pow=1.2",
+      'Hammer of the Gods|aoe|holy|pillar|r=2 dmg=2.2 cd=4 pow=1.2', 'Apocalypse of Light|strike|holy|holy|n=8 cd=8 pow=0.86', 'Divine Intervention|buff|holy|shield|buff=armor,res amt=60 dur=8 cd=30', "Archon's Radiance|nova|holy|holy|n=4 r=1.6 cd=6 pow=1.2",
     ],
     [
       'Shield Bash|melee|phys|smash|knock stun arc=70', 'Holy Shield|buff|holy|shield|buff=armor amt=40 dur=20 cd=25', 'Rally Banner|summon|holy|banner|sum=banner dur=20 cd=20', 'Defiance|buff|phys|shield|buff=res amt=25 dur=20 cd=25',
-      'Charge|dash|holy|charge|range=1.2 knock', 'Vengeance Aura|buff|fire|aura|buff=thorns amt=40 dur=30 cd=30 pulse', 'Bulwark Slam|nova|phys|shock|r=0.8 stun', 'Guardian Angel|summon|holy|spirit|sum=guardian n=1 dur=20 cd=25',
-      'Righteous Fire Aura|buff|fire|aura|pulse buff=dmg amt=10 dur=30 cd=30', 'Shield Throw|proj|holy|disc|bounce=4', 'Holy Freeze Aura|buff|cold|aura|pulse slow buff=armor amt=10 dur=30 cd=30', 'Avenging Charge|dash|holy|charge|range=1.5 exp',
-      'Aegis|buff|holy|shield|buff=block amt=30 dur=15 cd=30', 'Conviction|curse|holy|sigil|curse=amp r=1.6 at=self', 'Martyrdom|nova|blood|holy|r=1.5 dmg=1.8', "Crusader's Leap|leap|holy|holy|range=1.2 r=1.3",
-      'Divine Shield Nova|nova|holy|shield|n=3 stun', 'Fanaticism|buff|holy|aura|buff=as,dmg amt=30 dur=20 cd=40 party', 'Bastion|wall|holy|holy|block len=1.5 dur=8', "Champion's Call|summon|holy|guardian|sum=guardian n=3 dur=25 cd=40",
+      'Charge|dash|holy|charge|range=1.2 knock pow=0.86', 'Vengeance Aura|buff|fire|aura|buff=thorns amt=40 dur=30 cd=30 pulse', 'Bulwark Slam|nova|phys|shock|r=0.8 stun pow=1.2', 'Guardian Angel|summon|holy|spirit|sum=guardian n=1 dur=20 cd=25',
+      'Righteous Fire Aura|buff|fire|aura|pulse buff=dmg amt=10 dur=30 cd=30', 'Shield Throw|proj|holy|pshield|ricochet=5 spd=0.8 pow=0.49', 'Holy Freeze Aura|buff|cold|aura|pulse slow buff=armor amt=10 dur=30 cd=30', 'Avenging Charge|dash|holy|charge|range=1.5 exp pow=0.42',
+      'Aegis|buff|holy|shield|buff=block amt=30 dur=15 cd=30', 'Conviction|curse|holy|sigil|curse=amp r=1.6 at=self', 'Martyrdom|nova|blood|holy|r=1.5 dmg=1.8 pow=1.2', "Crusader's Leap|leap|holy|holy|range=1.2 r=1.3",
+      'Divine Shield Nova|nova|holy|shield|n=3 stun pow=0.45', 'Fanaticism|buff|holy|aura|buff=as,dmg amt=30 dur=20 cd=40 party', 'Bastion|wall|holy|holy|block len=1.5 dur=8 pow=0.13', "Champion's Call|summon|holy|guardian|sum=guardian n=3 dur=25 cd=40",
     ],
     [
       'Zealous Strike|melee|phys|slash|n=2', 'Sacrifice|melee|blood|slash|dmg=1.6 leech', 'Holy Fire|melee|fire|smash|burn exp', 'Sweep|melee|phys|spin|arc=360 r=1.1',
-      'Zeal|melee|phys|slash|n=5 dmg=0.6', 'Vengeance|melee|light|smash|exp', 'Thunder Strike|melee|light|smash|chain=3', 'Cleansing Blade|melee|holy|slash|cleave',
-      "Crusader's Flurry|melee|holy|slash|n=7 dmg=0.55", 'Elemental Wrath|melee|cold|smash|exp freeze', 'Sword of Justice|proj|holy|blade|n=3 spread=30 pierce', "Templar's Whirl|whirl|holy|blade|dur=2",
-      'Blade Barrage|proj|holy|blade|n=7 spread=70', 'Valkyrie Strike|leap|holy|holy|r=1.5 dmg=1.6', 'Inquisition|curse|fire|sigil|curse=decay r=1.2', 'Swords of Light|orbit|holy|blade|n=4 dur=8 cd=10',
-      'Final Judgment|melee|holy|smash|dmg=3 exp r=1.5 cd=3', 'Storm of Swords|rain|holy|blade|n=20 r=1.6', 'Crusade|buff|holy|aura|buff=dmg,speed amt=35 dur=12 cd=30', "Heaven's Edge|fissure|holy|holy|range=1.4",
+      'Zeal|melee|phys|slash|n=5 dmg=0.6 pow=0.3', 'Vengeance|melee|light|smash|exp pow=0.54', 'Thunder Strike|melee|light|smash|chain=3 pow=0.76', 'Cleansing Blade|melee|holy|slash|cleave pow=0.78',
+      "Crusader's Flurry|melee|holy|slash|n=7 dmg=0.55 pow=0.18", 'Elemental Wrath|melee|cold|smash|exp freeze pow=0.49', 'Sword of Justice|proj|holy|blade|n=3 spread=30 pierce pow=0.37', "Templar's Whirl|whirl|holy|blade|dur=2 pow=0.51",
+      'Blade Barrage|proj|holy|blade|n=7 spread=70 pow=0.22', 'Valkyrie Strike|leap|holy|holy|r=1.5 dmg=1.6 pow=0.56', 'Inquisition|curse|fire|sigil|curse=decay r=1.2', 'Swords of Light|orbit|holy|blade|n=4 dur=8 cd=10',
+      'Final Judgment|melee|holy|smash|dmg=3 exp r=1.5 cd=3 pow=0.43', 'Storm of Swords|rain|holy|blade|n=20 r=1.6 pow=0.76', 'Crusade|buff|holy|aura|buff=dmg,speed amt=35 dur=12 cd=30', "Heaven's Edge|fissure|holy|holy|range=1.4",
     ],
   ],
   ranger: [
@@ -259,24 +260,24 @@ export const SKILLDATA = {
   bard: [
     [
       'Plucked Note|proj|arcane|n_q|free wc=0.9', 'Ballad of Valor|buff|holy|note|buff=dmg amt=20 dur=30 cd=30 party note=h', 'Hymn of Mending|buff|holy|note|buff=regen amt=20 dur=30 cd=30 party note=rh', 'Dirge|curse|shadow|note|curse=slow r=1.4 at=self note=rq',
-      'Battle Hymn|buff|phys|note|buff=as amt=25 dur=30 cd=30 party note=e2', 'Lullaby|proj|arcane|n_re|n=3 spread=30 spd=0.55 wavy hush stun cd=3', 'Song of Swiftness|buff|phys|note|buff=speed amt=30 dur=30 cd=30 party note=s2', 'Requiem|curse|shadow|note|curse=amp,weaken r=1.6 at=self cd=10 note=rw',
-      'Anthem of Heroes|buff|holy|note|buff=dmg,armor amt=30 dur=30 cd=35 party note=w', 'Chorus|summon|holy|clone|sum=chorus n=2 dur=15 cd=25 note=t8', 'Siren Song|curse|arcane|note|curse=charm r=1 cd=20 note=h', 'Rhapsody|nova|holy|note|r=1.6 heal note=e2',
+      'Battle Hymn|buff|phys|note|buff=as amt=25 dur=30 cd=30 party note=e2', 'Lullaby|proj|arcane|n_re|n=3 spread=30 spd=0.55 wavy hush stun cd=3', 'Song of Swiftness|buff|phys|note|buff=speed amt=30 dur=30 cd=30 party note=s2', 'Requiem|curse|shadow|note|curse=amp,weaken r=1.6 at=self cd=10 note=rh',
+      'Anthem of Heroes|buff|holy|note|buff=dmg,armor amt=30 dur=30 cd=35 party note=h', 'Chorus|summon|holy|clone|sum=chorus n=2 dur=15 cd=25 note=t8', 'Siren Song|curse|arcane|note|curse=charm r=1 cd=20 note=h', 'Rhapsody|nova|holy|note|r=1.6 heal note=e2',
       'Symphony of Storms|buff|light|note|pulse buff=dmg amt=20 dur=20 cd=30 note=treble', 'Crescendo|proj|phys|n_h|cresc pierce dmg=1.5 spd=0.8 cd=1.5', 'Elegy|zone|shadow|note|r=1.8 dur=8 cd=12 note=re', 'Ode to Joy|heal|holy|note|amt=50 party cd=25 note=re',
-      'Magnum Opus|buff|holy|note|buff=dmg,as,speed amt=40 dur=20 cd=50 party note=w', 'Finale|proj|arcane|n_w|ferm hold=2 r=1.6 dmg=2.4 spd=0.8 cd=8', 'Orchestra|summon|holy|clone|sum=chorus n=5 dur=20 cd=50 note=t8', 'Song of the Ages|curse|arcane|note|curse=stun,amp r=2.5 at=self cd=20 note=rq',
+      'Magnum Opus|buff|holy|note|buff=dmg,as,speed amt=40 dur=20 cd=50 party note=hd', 'Finale|proj|arcane|n_hd|ferm hold=2 r=1.6 dmg=2.4 spd=0.8 cd=8', 'Orchestra|summon|holy|clone|sum=chorus n=5 dur=20 cd=50 note=qd', 'Song of the Ages|curse|arcane|note|curse=stun,amp r=2.5 at=self cd=20 note=rq',
     ],
     [
       'Sound Wave|proj|phys|n_e2|pierce wavy', 'Power Chord|proj|phys|n_q|n=3 spread=22', 'Echo|proj|phys|n_e|bounce=3 canon dmg=0.7', 'Dissonance|curse|phys|note|curse=confuse r=1 note=re',
-      'Shockwave Riff|fissure|phys|sonic|range=1.3 note=e2', 'Resonance|proj|phys|n_h|ferm hold=2.5 spd=0.8 cd=4', 'Tremolo|proj|phys|n_e|n=6 spread=40 rand wavy', 'Feedback Loop|orbit|phys|n_t8|n=3 dur=6 cd=8',
-      'Sonic Boom|nova|phys|sonic|r=1.8 knock note=bass', 'Bass Drop|proj|phys|n_w|lob exp r=1.8 dmg=2 stun cd=5', 'Harmonic Beam|beam|arcane|n_treble|dur=2', 'Screech|proj|phys|n_e|n=9 spread=90 slow',
-      'Thunder Drum|summon|light|drum|sum=drum max=1 cd=15 note=rq', 'Shatter Note|proj|phys|n_e2|scatter exp', 'Wall of Sound|wall|phys|sonic|block dur=6 cd=6 note=rw', 'Amplifier|summon|arcane|drum|sum=amp max=1 cd=15 note=e2',
-      'Brown Note|proj|poison|n_h|n=3 spread=30 spd=0.6 pull exp cd=6', 'Encore|buff|arcane|note|buff=cdr amt=50 dur=10 cd=60 note=w', 'Death Metal|proj|shadow|n_bass|spd=0.7 pierce cresc r=1.5 dmg=2.2 cd=6', 'Supersonic|proj|light|n_treble|spray pierce spd=0.6 r=1.3 cd=4',
+      'Shockwave Riff|fissure|phys|sonic|range=1.3 note=e2', 'Resonance|proj|phys|n_h|ferm hold=2.5 spd=0.8 cd=4', 'Tremolo|proj|phys|n_e|n=6 spread=40 rand wavy', 'Feedback Loop|orbit|phys|n_qd|n=3 dur=6 cd=8',
+      'Sonic Boom|nova|phys|sonic|r=1.8 knock note=bass', 'Bass Drop|proj|phys|n_h|lob exp r=1.8 dmg=2 stun cd=5', 'Harmonic Beam|beam|arcane|n_treble|dur=2', 'Screech|proj|phys|n_e|n=9 spread=90 slow',
+      'Thunder Drum|summon|light|drum|sum=drum max=1 cd=15 note=rq', 'Shatter Note|proj|phys|n_e2|scatter exp', 'Wall of Sound|wall|phys|sonic|block dur=6 cd=6 note=rh', 'Amplifier|summon|arcane|drum|sum=amp max=1 cd=15 note=e2',
+      'Brown Note|proj|poison|n_h|n=3 spread=30 spd=0.6 pull exp cd=6', 'Encore|buff|arcane|note|buff=cdr amt=50 dur=10 cd=60 note=hd', 'Death Metal|proj|shadow|n_bass|spd=0.7 pierce cresc r=1.5 dmg=2.2 cd=6', 'Supersonic|proj|light|n_treble|spray pierce spd=0.6 r=1.3 cd=4',
     ],
     [
       'Sharp Note|proj|phys|n_e|spd=1.5', 'Fan of Notes|proj|phys|n_e|n=8 ring', 'Smoke Screen|curse|shadow|smoke|curse=slow r=1.2 note=re', 'Pickpocket|proj|phys|n_e|home ret gold',
       'Dancing Notes|orbit|phys|n_e2|n=3 dur=8 cd=8', 'Pyrotechnics|aoe|fire|firework|n=5 r=0.8 dur=1 note=q', 'Misdirection|blink|arcane|smoke|range=1.2 nova note=re', "Juggler's Toss|proj|fire|n_e2|n=3 lob exp spread=40",
       'Mirror Images|summon|arcane|clone|sum=clone n=2 dur=15 cd=20 note=e2', 'Sleight of Hand|proj|arcane|n_e|n=5 spread=40 home stac', 'Flashbang|curse|holy|flash|curse=stun r=1.4 dur=1.5 note=rq', 'Staccato Flurry|proj|phys|n_e2|n=2 spread=16 stac pierce dmg=0.8',
-      'Grand Illusion|summon|arcane|clone|sum=clone n=4 dur=15 cd=30 note=q', 'Firework Finale|rain|fire|n_q|n=20 r=1.8', 'Swashbuckle|dash|phys|wind|range=1.3 n=3 note=e', 'Deadly Sonata|proj|arcane|n_t8|n=12 ring home trip dmg=0.55',
-      'Showstopper|aoe|arcane|firework|r=2.6 dmg=3 cd=6 note=w', 'Thousand Notes|rain|phys|n_e2|n=40 r=2 cd=6', 'Vanishing Act|buff|shadow|transform|buff=crit,dmg,speed amt=40 dur=10 cd=40 note=rw', 'Bladestorm Waltz|whirl|phys|blade|dur=4 r=1.4 cd=5 note=t8',
+      'Grand Illusion|summon|arcane|clone|sum=clone n=4 dur=15 cd=30 note=q', 'Firework Finale|rain|fire|n_q|n=20 r=1.8', 'Swashbuckle|dash|phys|wind|range=1.3 n=3 note=e', 'Deadly Sonata|proj|arcane|n_qd|n=12 ring home trip dmg=0.55',
+      'Showstopper|aoe|arcane|firework|r=2.6 dmg=3 cd=6 note=h', 'Thousand Notes|rain|phys|n_e2|n=40 r=2 cd=6', 'Vanishing Act|buff|shadow|transform|buff=crit,dmg,speed amt=40 dur=10 cd=40 note=rh', 'Bladestorm Waltz|whirl|phys|blade|dur=4 r=1.4 cd=5 note=qd',
     ],
   ],
   slime_lord: [
@@ -304,11 +305,11 @@ export const SKILLDATA = {
   ],
   boomerang_knight: [
     [
-      'Boomerang|proj|phys|rang|free wc=1 ret pierce', 'Twin Rang|proj|phys|rang|n=2 spread=30 ret pierce', 'Ricochet|proj|phys|rang|bounce=5', 'Heavy Rang|proj|phys|rang|ret pierce r=1.5 dmg=1.4 knock',
+      'Boomerang|proj|phys|rang|free wc=1 ret pierce', 'Twin Rang|proj|phys|rang|n=2 spread=30 ret pierce', 'Ricochet|proj|phys|rang|bounce=5 ret dmg=0.72', 'Heavy Rang|proj|phys|rang|ret pierce r=1.5 dmg=1.4 knock',
       'Tri-Rang|proj|phys|rang|n=3 spread=45 ret pierce', 'Seeking Rang|proj|phys|rang|home ret pierce', 'Flame Rang|proj|fire|rang|ret pierce burn', 'Frost Rang|proj|cold|rang|ret pierce slow',
-      'Rang Storm|proj|phys|rang|n=6 ring ret pierce', 'Storm Rang|proj|light|rang|ret pierce chain=2', 'Splitting Rang|proj|phys|rang|split ret', 'Chakram|proj|phys|chakram|bounce=8 spd=1.3',
+      'Rang Storm|proj|phys|rang|n=6 ring ret pierce', 'Storm Rang|proj|light|rang|ret pierce chain=2', 'Splitting Rang|proj|phys|rang|split ret dmg=0.45', 'Chakram|proj|phys|chakram|bounce=8 spd=1.3 ret dmg=0.8',
       'Infinity Rang|proj|arcane|rang|ret pierce r=2 dmg=1.6 dur=2', 'Blade Comet|aoe|phys|meteor|r=1.5 dmg=2.2', 'Rang Barrage|proj|phys|rang|n=10 spread=90 ret pierce', 'Orbiting Rangs|orbit|phys|rang|n=4 dur=8 cd=8',
-      'Rangnarok|proj|phys|rang|n=20 ring ret pierce cd=5', 'Celestial Chakram|proj|holy|chakram|bounce=12 dmg=1.6 cd=3', 'Black Hole Rang|proj|shadow|rang|pull ret pierce r=2 cd=5', 'Rang Rain|rain|phys|rang|n=30 r=2 cd=6',
+      'Rangnarok|proj|phys|rang|n=20 ring ret pierce cd=5', 'Celestial Chakram|proj|holy|chakram|bounce=12 ret dmg=1.5 cd=3', 'Black Hole Rang|proj|shadow|rang|pull ret pierce r=2 cd=5', 'Rang Rain|proj|phys|rang|n=24 rand spread=120 ret pierce dmg=0.5 cd=6',
     ],
     [
       'Cross Slash|melee|phys|slash|n=2', 'Swirling Blades|orbit|phys|blade|n=2 dur=6 cd=6', 'Riposte|buff|phys|shield|buff=block,thorns amt=25 dur=20 cd=25', 'Lunge|dash|phys|charge|range=0.8',
@@ -318,7 +319,7 @@ export const SKILLDATA = {
       'Omnislash|dash|phys|charge|n=6 range=1 dmg=1.5 cd=6', 'Blade Halo|orbit|holy|blade|n=10 dur=10 cd=15', 'Sword Saint|buff|phys|transform|transform buff=as,crit,dmg amt=45 dur=15 cd=50', 'Excalibur|beam|holy|laser|dur=1 dmg=3 cd=5',
     ],
     [
-      'Wind Rang|proj|phys|wave|ret pierce spd=1.3', 'Gust|nova|phys|wind|knock r=1', 'Air Dash|dash|phys|wind|range=1.1', 'Tailwind|buff|phys|wind|buff=speed amt=25 dur=20 cd=25',
+      'Wind Rang|proj|phys|rang|ret pierce spd=1.3 wc=0.45', 'Gust|nova|phys|wind|knock r=1', 'Air Dash|dash|phys|wind|range=1.1', 'Tailwind|buff|phys|wind|buff=speed amt=25 dur=20 cd=25',
       'Cyclone|cyclone|phys|wind|n=1 dur=4', 'Gale Wall|wall|phys|wind|dur=5', 'Vacuum Slash|melee|phys|slash|pull r=1.3', 'Squall|proj|cold|wave|n=5 spread=40',
       'Twin Cyclones|cyclone|phys|wind|n=2 dur=5', 'Hurricane Rang|proj|phys|rang|ret pierce r=1.8 slow', 'Wind Shear|fissure|phys|wind|range=1.4', 'Eye of the Storm|zone|light|storm|follow r=1.6 dur=8 cd=12',
       'Tempest Rang|proj|light|rang|n=3 spread=40 ret pierce chain=2', 'Typhoon|cyclone|cold|wind|n=4 dur=6 cd=8', 'Skyward Blades|rain|phys|blade|n=20 r=1.6', 'Zephyr|buff|phys|transform|buff=speed,as amt=40 dur=15 cd=30',

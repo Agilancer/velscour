@@ -8,10 +8,11 @@ import { GroundItem } from './loot.js';
 import { explosionFx } from '../gfx/shapes.js';
 import { hit, aoe, chainHit } from './combat.js';
 import { Projectile, Delayed, Area, makeWall, Orbit, Whirl, Leap, Dash, NovaWave, BeamCh, Trap, Rain, Fissure, AuraFx, explode, coneTargets } from './hazards.js';
-import { buffAmount, curseAmount, skillDuration, spearBarrageAreas } from '../data/skills.js';
+import { buffAmount, curseAmount, skillDuration, spearBarrageAreas, ricochetCount, RICOCHET_BLAST } from '../data/skills.js';
 import { createSummon } from './monster.js';
 import { lanceLeap, lanceSpearBarrage } from '../gfx/lancefx.js';
 import { shieldVariantForSkill, shieldOrbitRadius, preloadLancerShield } from '../gfx/lancershields.js';
+import { FallingHammer } from '../gfx/hammer3d.js';
 import { classCastFx, energyLance } from '../gfx/classfx.js';
 import { masteryVis, masteryCastFx } from './augments.js';
 import { multN } from '../data/rings.js';
@@ -116,6 +117,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       const spread = (m.spread ?? (n > 1 ? Math.min(80, 10 + n * 5) : 0)) * DEG;
       const speed = 9 * (m.spd ?? 1) * (1 + (st.projSpeed || 0) / 100) * (fx === 'bullet' ? 1.4 : fx === 'arrow' ? 1.25 : 1);
       const range = 10 * (m.range ?? 1);
+      if (fx === 'pshield') preloadLancerShield('round'); // Shield Throw flies the Lancer's round 3D shield
       for (let i = 0; i < n; i++) {
         const a = m.ring ? ang + (i / n) * TAU : m.rand ? ang + rand(-spread / 2 - 0.1, spread / 2 + 0.1) : ang + (n > 1 ? (i / (n - 1) - 0.5) * spread : 0);
         const delay = m.rand ? i * 0.035 : 0;
@@ -127,7 +129,8 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
             home: m.home || st.homing ? 1 : 0, split: m.split || chance((st.splitChance || 0) / 100), ret: m.ret, lob: m.lob,
             tx: tx + (m.lob && n > 1 ? rand(-1, 1) : 0), ty: ty + (m.lob && n > 1 ? rand(-1, 1) : 0),
             exp: m.exp ? 1.1 * (m.r ?? 1) * area : 0, chain: m.chain ? m.chain + Math.floor(st.chainPlus || 0) : 0,
-            spray: m.spray, pull: m.pull, size: (m.r ?? 1) * vis, r: 0.3 * (m.r ?? 1) * Math.sqrt(vis), dur: m.dur, light: el !== 'phys',
+            spray: m.spray, pull: m.pull, size: (m.r ?? 1) * vis, r: 0.3 * (m.r ?? 1) * Math.sqrt(vis), dur: m.dur, light: el !== 'phys', skin: sk.name,
+            ...(m.ricochet ? { ricochet: Math.min(m.ricochet, ricochetCount(sk, L) + Math.floor(st.chainPlus || 0)), blast: RICOCHET_BLAST * area, split: false } : null),
             ...(bard >= 0 ? { bm: m, tier: bard } : null),
           }));
         });
@@ -190,6 +193,10 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       } else if (fx === 'meteor' || fx === 'nuke' || m.delay) {
         w.addHazard(new Delayed({ world: w, src: p, x, y, r, delay: m.delay ?? 0.85, fx: fx === 'meteor' ? 'meteor' : fx, el, dmg, o }));
         if (fx === 'nuke') sfx('boss');
+      } else if (fx === 'pillar' && /Hammer/.test(sk.name)) { // Hammer of the Gods, Solar Hammer: a 3D hammer falls on the spot first
+        const fall = 0.2;
+        addEffect(new FallingHammer(x, y, { fall, size: 2.2 + r * 0.4, E }));
+        later(w, fall, () => explode(w, p, x, y, r, dmg, el, o, fx));
       } else {
         explode(w, p, x, y, r, dmg, el, o, fx);
       }
@@ -230,7 +237,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       // eight-angle designs, without altering orbit count or damage behavior.
       const shieldVariant = m.shields ? shieldVariantForSkill(sk.name) : null;
       if(shieldVariant) preloadLancerShield(shieldVariant);
-      w.addHazard(new Orbit({ world: w, src: p, n, radius: m.shields ? shieldOrbitRadius(sk.name) * area : 1.6 * (m.r ?? 1) * area, dur: m.dur || 4, spiral: m.spiral, fx, el, dmg, o, speed: m.shields ? 2.4 : m.spiral ? 5 : 4.2, size: vis * (m.shields ? 1.4 : 1), shieldVariant }));
+      w.addHazard(new Orbit({ world: w, src: p, n, radius: m.shields ? shieldOrbitRadius(sk.name) * area : 1.6 * (m.r ?? 1) * area, dur: m.dur || 4, spiral: m.spiral, fx, el, dmg, o, skin: sk.name, speed: m.shields ? 2.4 : m.spiral ? 5 : 4.2, size: vis * (m.shields ? 1.4 : 1), shieldVariant }));
       sfx('swing');
       break;
     }

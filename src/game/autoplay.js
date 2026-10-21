@@ -5,12 +5,13 @@
 // simulation: apply the change, recompute the hero, score the result with charScore(), undo.
 import { G } from '../state.js';
 import { input } from '../core/input.js';
+import { sfx } from '../core/audio.js';
 import { dist, clamp, TAU, fmtInt, escapeHtml, angleDiff, angleTo } from '../core/util.js';
 import { MEASURE, NOTES, beatsOf } from '../data/notation.js';
-import { bardNoteFor } from './bard.js';
-import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, spearBarrageAreas, buffAmount, curseAmount, skillDuration, effLevel } from '../data/skills.js';
+import { bardNoteFor, bardFitGain, bardPerforming } from './bard.js';
+import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, spearBarrageAreas, buffAmount, curseAmount, skillDuration, effLevel, ricochetCount } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
-import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS } from '../data/items.js';
+import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS, powerLevel } from '../data/items.js';
 import { depthLevel, armorDiv } from '../data/depth.js';
 import { drawBiome } from '../data/biomes.js';
 import { augHits } from '../data/rings.js';
@@ -28,12 +29,28 @@ const OFFENSIVE = new Set(['melee', 'proj', 'nova', 'aoe', 'beam', 'chain', 'wal
 const CROWD = 2.2; // enemies a typical cast is expected to reach, for planning
 const CC = new Set(['fear', 'freeze', 'confuse', 'charm', 'stun']);
 const POT_TARGET = { hp: 16, mp: 8, rejuv: 4, fury: 2 };
+// The player's stance dial (HUD, saved as c.stance): how hard auto-play presses in. bold: added to boldness();
+// low: life share below which it turns timid; pot/potBoss: life share for a healing potion; retreat: life share for
+// running to town with nothing left to heal; farm: levels over the monsters before it stops clearing whole maps;
+// lim: how far (tiles) it detours for monsters on the way to the guardian. Kiting (ranged builds step back between
+// casts): kiteNear: a melee foe this close (tiles past its reach) sends it back; kiteCrowd: this many foes within
+// 2.2 tiles; kiteHp: below this life share any foe beside it. backoff: melee builds below this life share step out
+// of the crowd while a potion works (or with none left). stand: the share of a ranged skill's reach it fights from.
+export const STANCES = {
+  cautious: { name: 'Cautious', bold: -0.35, low: 0.65, pot: 0.7, potBoss: 0.8, retreat: 0.4, farm: 3, lim: 18, kiteNear: 2.6, kiteCrowd: 2, kiteHp: 0.75, backoff: 0.55, stand: 1.1 },
+  balanced: { name: 'Balanced', bold: 0, low: 0.45, pot: 0.5, potBoss: 0.6, retreat: 0.22, farm: 1, lim: 12, kiteNear: 0.8, kiteCrowd: 3, kiteHp: 0.5, backoff: 0.35, stand: 1 },
+  reckless: { name: 'Reckless', bold: 0.45, low: 0.25, pot: 0.3, potBoss: 0.4, retreat: 0.1, farm: -2, lim: 6, kiteNear: -1, kiteCrowd: 7, kiteHp: 0.22, backoff: 0, stand: 0.55 },
+};
+export const stanceOf = (c = G.char) => STANCES[c && c.stance] || STANCES.balanced;
+/** Fewer free bag slots than this sends auto-play back to town (where a bag with none free after trading keeps it: bagWait). */
+const BAG_LOW = 14;
 
 // ================================================================== power model
 const isWide = (sk) => (sk.m.arc ?? (sk.m.cleave ? 170 : sk.fx === 'spin' ? 360 : 115)) >= 170;
 /** Expected hits per cast against `crowd` enemies near the target (very rough, per skill kind). */
-function hitsPerCast(sk, crowd) {
+function hitsPerCast(sk, crowd, L = 1) {
   const m = sk.m, n = m.n || 1, extra = Math.max(0, crowd - 1);
+  if (m.ricochet) return Math.min(ricochetCount(sk, L), crowd) + 0.75 * Math.min(crowd, 2.2); // Shield Throw: its strikes, then the blast
   switch (sk.kind) {
     case 'melee': return n * (isWide(sk) ? Math.min(crowd, 2.4) : 1.1) * (m.exp ? 1 + extra * 0.4 : 1) * (m.chain ? 1 + Math.min(m.chain, extra + 1) * 0.4 : 1);
     case 'proj': {
@@ -43,6 +60,7 @@ function hitsPerCast(sk, crowd) {
       if (m.bounce) h *= 1 + Math.min(m.bounce, extra + 1) * 0.5;
       if (m.chain) h *= 1 + Math.min(m.chain, extra + 1) * 0.5;
       if (m.split) h *= 1.25;
+      if (m.ret) h *= 1.4; // a boomerang cuts the pack again on its way home
       return h;
     }
     case 'nova': return (m.n || 1) * crowd * 0.9;
@@ -72,8 +90,8 @@ function castTime(p, sk) {
   if ((sk.kind === 'beam' && sk.m.dur) || sk.kind === 'whirl') t = Math.max(t, sk.m.dur || 2);
   return t;
 }
-/** How far a skill really reaches (returning projectiles turn back halfway). */
-const reachOf = (sk) => skillRange(sk) * (sk.kind === 'proj' && sk.m.ret ? 0.48 : 1);
+/** How far a skill really reaches (skillRange already halves a returning projectile's). */
+const reachOf = (sk) => skillRange(sk) * (sk.kind === 'proj' && sk.m.ret ? 0.96 : 1);
 /** How close the hero should stand to use a skill on target t. bold (0..1, Auto.boldness): ranged builds close in. */
 function engageRange(sk, t, bold = 0) {
   if (!sk) return 1.5;
@@ -97,11 +115,12 @@ const summonMax = (sk) => sk.m.max || sk.m.n || 1;
 // How the user wants some classes played on auto-play. Pet classes raise as many minions as they can (every summon
 // skill that fits under the minion cap, kept up at all times); the Paladin builds around his hammers: Blessed Hammer
 // and Hammerstorm (hammers spiralling out around him) as the main attack, Wheel of Hammers (six hammers circling him)
-// fired whenever it is ready, and Hammer of the Gods. Only skill spending and the bar use it (focus = true); the
-// HUD's DPS and gear choices (charScore) stay unbiased.
+// fired whenever it is ready, and Hammer of the Gods, with Shield Throw (his 3D shield ricocheting through the pack)
+// beside them. Only skill spending and the bar use it (focus = true); the HUD's DPS and gear choices (charScore) stay
+// unbiased.
 export const PET_CLASSES = new Set(['necromancer', 'totem_master', 'carrion_witch', 'slime_lord', 'ranger', 'gunner']);
 const PET_CAP = 40; // createSummon keeps at most 40 minions per hero; more would only kill the oldest
-const isHammer = (sk) => sk.fx === 'hammer' || /hammer/i.test(sk.name);
+const isHammer = (sk) => sk.fx === 'hammer' || /hammer/i.test(sk.name) || !!sk.m.ricochet; // and Shield Throw
 const petsOf = (sk) => (sk.m.sum === 'revive' ? 0 : summonMax(sk));
 /** Skills a class pours its points into first, when it can (the Paladin's hammers), or null. */
 const focusSkills = (classId) => {
@@ -114,9 +133,25 @@ const focusSkills = (classId) => {
 };
 const mobility = (sk) => ['leap', 'dash', 'blink'].includes(sk.kind) ||
   (sk.kind === 'buff' && (sk.m.buff || []).includes('speed'));
+/** The Paladin's Shield Throw stands beside his hammers: its prerequisites are learned as its level gate nears (so it
+ *  opens with Hammerstorm at 12), then it stays within two ranks of his best swirling hammer. The point it wants, or null. */
+function shieldStep(c, focus) {
+  const st = focus.find((sk) => sk.m.ricochet);
+  if (!st) return null;
+  let step = null;
+  if (!(c.skills[st.id] > 0)) {
+    if (st.reqLevel - c.level > 2) return null;
+    step = st;
+    while (step.prereq && !(c.skills[step.prereq] > 0)) step = SKILLS[step.prereq];
+  } else {
+    const top = Math.max(0, ...focus.filter((sk) => sk.kind === 'orbit' && cooldown(sk) < 1.2).map((sk) => c.skills[sk.id] || 0));
+    if (c.skills[st.id] + 2 < top) step = st;
+  }
+  return step && !canLearn(step) ? step : null;
+}
 /** Value multiplier for a skill under the class's build focus. */
 function focusMul(classId, sk) {
-  if (classId === 'paladin') return isHammer(sk) ? (sk.kind === 'orbit' ? 4 : 2.5) : 1;
+  if (classId === 'paladin') return isHammer(sk) ? (sk.kind === 'orbit' || sk.m.ricochet ? 4 : 2.5) : 1; // hammers and Shield Throw
   if (classId === 'barbarian') return sk.kind === 'whirl' ? 6 : mobility(sk) ? 1.8 : 1;
   if (classId === 'lancer') return sk.m.shields ? 5 : mobility(sk) ? 1.8 : 1;
   if (classId === 'dragoon') return sk.m.barrage ? 5 : sk.kind === 'leap' ? 5 : sk.m.weave ? 2.5 : mobility(sk) ? 1.8 : 1;
@@ -128,7 +163,7 @@ function focusMul(classId, sk) {
 
 /** Damage per second one skill adds when used as often as its cast time, cooldown and mana allow. */
 function skillDps(p, sk, L, crowd = CROWD) {
-  const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, crowd) * critMul(p);
+  const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, crowd, L) * critMul(p);
   const period = Math.max(castTime(p, sk), cdOf(p, sk), 0.05);
   const cost = manaCost(sk, L), rage = rageCost(sk);
   const supply = p.st.manaRegen + p.maxMana / 40;
@@ -280,6 +315,8 @@ function simulate(p, mutate) {
 
 // ================================================================== small helpers
 function bagFree(c) { return c.bag.reduce((a, b) => a + (b ? 0 : 1), 0); }
+/** In town with no free bag slot left after trading (sealed treasures, or nothing auto-play may sell or stash): wait for the player. */
+function bagWait(c) { return bagFree(c) === 0; }
 function sellPrice(it) { return Math.max(1, Math.floor(itemValue(it) / 4)) * (it.type === 'gem' ? (it.count || 1) : 1); }
 function vendorNpc(w, id) { return w.npcs.find((n) => n.vendor && n.vendor.id === id); }
 function potionPrice(k, c) { return Math.round(POTION_PRICE[k] * (1 + c.level * 0.08)); }
@@ -312,7 +349,7 @@ export const Auto = {
 
   reset() {
     this.world = null; this.nav = null; this.path = null; this.goal = null; this.thinkT = 0; this.navT = 0;
-    this.town = null; this.transitT = 0; this.stuck = { t: 0, x: 0, y: 0, n: 0 }; this.jiggle = null;
+    this.town = null; this.sealWaiting = false; this.transitT = 0; this.stuck = { t: 0, x: 0, y: 0, n: 0 }; this.jiggle = null;
     this.target = null; this.dodge = null; this.retreat = false; this.ignore = new WeakSet(); this.lastSig = '';
     this.screenT = 0; this.lastCast = {}; this.stall = null; this.banT = 0; this.shun = new WeakMap(); this.giveUp = new WeakSet();
     this.lootFor = null; this.lootT = 0; this.wantCache = new WeakMap(); this.hurt = 0; this.lastHp = -1;
@@ -407,6 +444,10 @@ export const Auto = {
     p.recompute();
   },
 
+  /** The Paladin alternates hammers and Shield Throw: hammers cast since his last shield. */
+  hammersSince: 1,
+  countFocus(sk) { if (sk.m.ricochet) this.hammersSince = 0; else if (isHammer(sk)) this.hammersSince++; },
+
   /** Put each skill point where it raises buildPower most (counting the prerequisites a new skill needs). */
   spendSkills() {
     const p = G.player, c = G.char;
@@ -437,11 +478,14 @@ export const Auto = {
           continue;
         }
       }
-      // a focused build (the Paladin's hammers) takes the point whenever one of its skills can use it
-      for (const sk of focusSkills(c.classId) || []) {
+      // a focused build (the Paladin's hammers) takes the point whenever one of its skills can use it; the Paladin's
+      // even when the plan reads a rank as a loss (a mana-starved early rank whose cost rounds up faster than its damage)
+      let fv = c.classId === 'paladin' ? -Infinity : bv;
+      best = c.classId === 'paladin' ? shieldStep(c, focus) : null;
+      for (const sk of best ? [] : focus) {
         if (canLearn(sk)) continue;
         const v = (buildPowerWith(p, [sk]) - base) * (sk.kind === 'orbit' ? 1.5 : 1) + 1e-6; // the swirling hammers first
-        if (v > bv) { bv = v; best = sk; }
+        if (v > fv) { fv = v; best = sk; }
       }
       if (best) bv = Infinity;
       // none can take it yet, but one opens within a few levels (Blessed Hammer at 6): save the points for it
@@ -490,6 +534,8 @@ export const Auto = {
     const rmb = free && free.id !== bar[LMB] && (lmbSk && (manaCost(lmbSk, 1) || rageCost(lmbSk) || lmbSk.kind === 'whirl' || lmbSk.kind === 'orbit' || lmbSk.kind === 'leap')) ? free :
       alt && alt.sk;
     if (rmb && rmb.id !== bar[LMB]) bar[RMB] = rmb.id;
+    const shield = c.classId === 'paladin' && focused.find((sk) => sk.m.ricochet); // the Paladin: hammers on LMB, Shield Throw on RMB
+    if (shield && shield.id !== bar[LMB]) bar[RMB] = shield.id;
     // All learned bar skills participate, including low-ranked gap closers.
     // Put signature and mobility skills before pure damage picks if slots fill.
     const priority = [...focused, ...learned.filter(mobility), ...parts.map((x) => x.sk),
@@ -514,7 +560,7 @@ export const Auto = {
       const cur = simulate(p, () => () => {});
       let best = -1, bs = cur * 1.004 + 0.002, bslot = null;
       c.bag.forEach((it, i) => {
-        if (!it || it.type !== 'gear' || it.unid || (it.req || 1) > c.level) return;
+        if (!it || it.type !== 'gear' || it.unid || it.sealed || (it.req || 1) > c.level) return;
         const f = fitScore(p, it);
         if (f.s > bs) { bs = f.s; best = i; bslot = f.slot; }
       });
@@ -522,7 +568,7 @@ export const Auto = {
       if (best < 0) {
         this.worn = this.worn || new Set();
         c.bag.forEach((it, i) => {
-          if (best >= 0 || !it || it.type !== 'gear' || it.unid || (it.req || 1) > c.level || (it.slot !== 'body' && it.slot !== 'head') || this.worn.has(it.uid)) return;
+          if (best >= 0 || !it || it.type !== 'gear' || it.unid || it.sealed || (it.req || 1) > c.level || (it.slot !== 'body' && it.slot !== 'head') || this.worn.has(it.uid)) return;
           const old = c.equip[it.slot];
           if (old && (it.rarity < old.rarity || it.ilvl < old.ilvl - 4)) return;
           if (fitScore(p, it).s > cur * 0.975) { best = i; bslot = it.slot; }
@@ -581,7 +627,7 @@ export const Auto = {
     if (g.kind !== 'item') return false;
     const it = g.item, free = bagFree(c);
     if (it.type === 'gem') return free > 0 || c.bag.some((b) => b && b.type === 'gem' && b.gem === it.gem && b.tier === it.tier) || this.worstBag(itemValue(it)) >= 0;
-    if (it.type !== 'gear') return free > 0;
+    if (it.type !== 'gear' || it.sealed) return free > 0; // a sealed treasure is Epic or better: always worth a slot
     const upgrade = (it.req || 1) <= c.level && this.isUpgrade(it);
     if (upgrade) return true;
     if ((it.slot === 'body' || it.slot === 'head') && (it.req || 1) <= c.level && (!c.equip[it.slot] || it.rarity >= c.equip[it.slot].rarity) && free > 0) return true; // new looks
@@ -598,7 +644,7 @@ export const Auto = {
   worstBag(than) {
     const c = G.char;
     let wi = -1, wv = than * 0.8;
-    c.bag.forEach((b, i) => { if (b && b.type === 'gear' && sellPrice(b) * 4 < wv) { wv = sellPrice(b) * 4; wi = i; } });
+    c.bag.forEach((b, i) => { if (b && b.type === 'gear' && !b.sealed && sellPrice(b) * 4 < wv) { wv = sellPrice(b) * 4; wi = i; } });
     return wi;
   },
   makeRoom(it) {
@@ -622,6 +668,7 @@ export const Auto = {
       let found = false;
       for (let r = 1; r < 3 && !found; r++) for (let oy = -r; oy <= r && !found; oy++) for (let ox = -r; ox <= r && !found; ox++) if (m.walkableTile(sx + ox, sy + oy)) { sx += ox; sy += oy; found = true; }
     }
+    if (m.road) return this.buildRoadNav(sx, sy);
     let h = 0, t = 0;
     q[t++] = sy * W + sx; d[sy * W + sx] = 0;
     while (h < t) {
@@ -635,6 +682,42 @@ export const Auto = {
         const ni = ny * W + nx;
         if (d[ni] !== -1) continue;
         d[ni] = nd; q[t++] = ni;
+      }
+    }
+    this.navT = 0.35;
+  },
+  /**
+   * On a map with roads (map.road: the Castle's roads, lanes, trails and paving) the field is the cheapest way rather
+   * than the shortest: a step onto road costs 2, onto open ground 5 (diagonals 3 / 7), so the hero keeps to the roads
+   * and trails unless leaving them saves real distance. Dial's buckets; d still counts the steps, p the way back.
+   */
+  buildRoadNav(sx, sy) {
+    const m = G.world.map, W = m.w, N = W * m.h, R = m.road, d = this.nav.d;
+    const c = this.nav.c && this.nav.c.length === N ? this.nav.c : (this.nav.c = new Int32Array(N));
+    const pv = this.nav.p && this.nav.p.length === N ? this.nav.p : (this.nav.p = new Int32Array(N));
+    c.fill(0x3fffffff); pv.fill(-1);
+    const B = 8, bk = this.nav.bk || (this.nav.bk = Array.from({ length: B }, () => []));
+    for (const b of bk) b.length = 0;
+    const s0 = sy * W + sx;
+    c[s0] = 0; d[s0] = 0; bk[0].push(s0);
+    let left = 1;
+    for (let cur = 0; left > 0; cur++) {
+      const b = bk[cur % B];
+      while (b.length) {
+        const i = b.pop(); left--;
+        if (c[i] !== cur) continue;
+        const x = i % W, y = (i / W) | 0;
+        for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
+          if (!ox && !oy) continue;
+          const nx = x + ox, ny = y + oy;
+          if (!m.walkableTile(nx, ny)) continue;
+          if (ox && oy && (!m.walkableTile(x + ox, y) || !m.walkableTile(x, y + oy))) continue;
+          if (!m.stepsOk(x, y, ox, oy)) continue;
+          const ni = ny * W + nx, nc = cur + (ox && oy ? (R[ni] ? 3 : 7) : (R[ni] ? 2 : 5));
+          if (nc >= c[ni]) continue;
+          c[ni] = nc; d[ni] = d[i] + 1; pv[ni] = i;
+          bk[nc % B].push(ni); left++;
+        }
       }
     }
     this.navT = 0.35;
@@ -656,7 +739,9 @@ export const Auto = {
   },
   pathTo(gx, gy) {
     const w = G.world, m = w.map, W = m.w, d = this.nav.d, p = G.player;
-    if (m.losWide(p.x, p.y, gx, gy)) return [[gx, gy]];
+    // straight there when in sight (on a map with roads only when near: further, the roads lead)
+    if ((!m.road || dist(p.x, p.y, gx, gy) < 8) && m.losWide(p.x, p.y, gx, gy)) return [[gx, gy]];
+    if (m.road && this.nav.p) return this.roadPath(gx, gy);
     let tx = Math.floor(gx), ty = Math.floor(gy), cur = -1, cd = Infinity;
     for (let r = 0; r < 4 && cur < 0; r++) for (let oy = -r; oy <= r; oy++) for (let ox = -r; ox <= r; ox++) {
       if (!m.inb(tx + ox, ty + oy)) continue;
@@ -682,6 +767,33 @@ export const Auto = {
     path.reverse();
     if (path.length) path[path.length - 1] = [gx, gy];
     return m.smooth(p.x, p.y, path);
+  },
+  /** The cheapest way to (gx,gy) down the road field, its corners cut only where the cut keeps to the same ground. */
+  roadPath(gx, gy) {
+    const m = G.world.map, W = m.w, d = this.nav.d, pv = this.nav.p, p = G.player, R = m.road;
+    let tx = Math.floor(gx), ty = Math.floor(gy), cur = -1;
+    for (let r = 0; r < 4 && cur < 0; r++) for (let oy = -r; oy <= r && cur < 0; oy++) for (let ox = -r; ox <= r; ox++) {
+      if (m.inb(tx + ox, ty + oy) && d[(ty + oy) * W + tx + ox] >= 0) { cur = (ty + oy) * W + tx + ox; break; }
+    }
+    if (cur < 0) return null;
+    const path = [];
+    for (let guard = 0; pv[cur] >= 0 && guard < 20000; guard++) { path.push([(cur % W) + 0.5, ((cur / W) | 0) + 0.5]); cur = pv[cur]; }
+    path.reverse();
+    if (path.length) path[path.length - 1] = [gx, gy];
+    // smooth: skip a waypoint only if the straight line stays all on road, or all off it
+    const same = (ax, ay, bx, by) => {
+      const n = Math.ceil(Math.hypot(bx - ax, by - ay) * 2), r0 = R[m.tileIdx(ax, ay)];
+      for (let k = 1; k <= n; k++) if (R[m.tileIdx(ax + (bx - ax) * k / n, ay + (by - ay) * k / n)] !== r0) return false;
+      return true;
+    };
+    const out = [];
+    let ax = p.x, ay = p.y, i = 0;
+    while (i < path.length) {
+      let j = Math.min(path.length - 1, i + 12);
+      while (j > i && !(same(ax, ay, path[j][0], path[j][1]) && m.losWide(ax, ay, path[j][0], path[j][1]))) j--;
+      out.push(path[j]); ax = path[j][0]; ay = path[j][1]; i = j + 1;
+    }
+    return out;
   },
   /** Steer toward (gx,gy) along a path. Returns true when there. */
   goTo(gx, gy, near = 0.35, dt = 0) {
@@ -750,7 +862,7 @@ export const Auto = {
     // retreat to the town portal when nearly dead with nothing left to heal with
     const healLeft = c.potions.hp + c.potions.rejuv > 0 || this.readySkill((s) => s.kind === 'heal');
     const sealed = w.raid && w.raid.sealed; // no way out of a sealed boss room
-    if (!this.retreat && p.hp < p.maxHp * 0.22 && !healLeft && foes.length && !sealed) this.retreat = true;
+    if (!this.retreat && p.hp < p.maxHp * stanceOf(c).retreat && !healLeft && foes.length && !sealed) this.retreat = true;
     if (this.retreat && (p.hp > p.maxHp * 0.75 || !foes.length && p.hp > p.maxHp * 0.5)) this.retreat = false;
     if (this.retreat) {
       const tp = w.portals.find((q) => q.type === 'town');
@@ -809,6 +921,13 @@ export const Auto = {
         this.watchStuck(dt); return;
       }
     }
+    // a dungeon scenario that needs the hero somewhere (a stone to hold, a soul to lead: game/scenarios.js)
+    const ds = w.scenario;
+    if (ds && ds.objective && !ds.done && !ds.failed && !foes.some((m) => !m.dead && Math.hypot(m.x - p.x, m.y - p.y) < 5)) {
+      this.setStatus('Completing ' + ds.title);
+      this.goTo(ds.objective.x, ds.objective.y, ds.objective.reach, dt);
+      this.watchStuck(dt); return;
+    }
     // loot, chests, then the job at hand
     if (this.lootStep(w, dt)) { this.watchStuck(dt); return; }
     const exit = w.portals.find((q) => q.type === 'exit');
@@ -853,13 +972,14 @@ export const Auto = {
   /** The next monster to walk to: the boss, unless the hero is under-levelled or something is close by. */
   huntGoal(w) {
     const p = G.player, c = G.char;
-    const farm = c.level < depthLevel(w.depth) + 1; // the monster level, not the raw depth (they part after depth 60)
+    const S = stanceOf(c);
+    const farm = c.level < depthLevel(w.depth) + S.farm; // the monster level, not the raw depth (they part after depth 60)
     let best = null, bd = Infinity;
     for (const m of w.creatures) {
       if (m.dead || m.team !== 'enemy' || m.targetable === false || this.giveUp.has(m)) continue;
       const d = this.navDist(m.x, m.y);
       if (d === Infinity) continue;
-      const lim = m.goblin ? 60 : farm ? 999 : 12;
+      const lim = m.goblin ? 60 : farm ? 999 : S.lim;
       if (m !== w.boss && d > lim) continue;
       const v = m === w.boss ? d + (farm ? 40 : 0) : m.goblin ? d - 30 : d;
       if (v < bd) { bd = v; best = m; }
@@ -906,16 +1026,18 @@ export const Auto = {
     const c = G.char;
     const next = w.depth + 1;
     const town = this.needTown();
+    this.transitT = 3;
+    // the three portals down (game.portalChoice): the player has a few seconds to pick before auto-play does
+    if (G.game.portalChoice) { G.game.portalChoice(w, { auto: true, town }); return; }
     c.depth = next;
     c.nextBiome = drawBiome(c, next);
-    this.transitT = 3;
     if (town) { G.ui.log('Auto-play heads back to town to trade.', '#8fe0ff'); G.game.enterTown(); }
     else G.game.enterDungeon();
   },
   needTown() {
     const c = G.char;
     this.sinceTown = (this.sinceTown || 0) + 1;
-    if (bagFree(c) < 14) return true;
+    if (bagFree(c) < BAG_LOW) return true;
     if (c.potions.hp < 5 && c.gold > potionPrice('hp', c) * 6) return true;
     if (this.sinceTown >= 4 && c.gold > 400 * Math.pow(1.06, c.level)) return true;
     return false;
@@ -973,7 +1095,7 @@ export const Auto = {
     this.setStatus('Raid mechanic!');
     // keep shooting on the way when the hero can
     const foes = enemyNear(w, p, 13);
-    if (foes.length && p.castLock <= 0 && !r.holdFire) { const t = this.pickTarget(foes); if (t) { const pick = this.chooseSkill(foes, t, dist(p.x, p.y, t.x, t.y), true); if (pick && !['leap', 'dash'].includes(pick.sk.kind)) p.tryUseSkill(pick.sk, pick.x, pick.y, pick.sk.kind === 'melee' ? t : null); } }
+    if (foes.length && p.castLock <= 0 && !r.holdFire) { const t = this.pickTarget(foes); if (t) { const pick = this.chooseSkill(foes, t, dist(p.x, p.y, t.x, t.y), true); if (pick && !['leap', 'dash'].includes(pick.sk.kind) && p.tryUseSkill(pick.sk, pick.x, pick.y, pick.sk.kind === 'melee' ? t : null)) this.countFocus(pick.sk); } }
     this.goTo(g.x, g.y, Math.max(0.3, g.r * 0.6), dt);
     return true;
   },
@@ -1050,7 +1172,8 @@ export const Auto = {
     const hpK = p.hp / p.maxHp;
     const regen = p.potionRegen.some((r) => r.hp > 0);
     if (hpK < 0.28 && c.potions.rejuv > 0) return p.usePotion('rejuv');
-    if (hpK < (boss ? 0.6 : 0.5) && !regen && c.potions.hp > 0) return p.usePotion('hp');
+    const S = stanceOf(c);
+    if (hpK < (boss ? S.potBoss : S.pot) && !regen && c.potions.hp > 0) return p.usePotion('hp');
     if (hpK < 0.35 && !regen && c.potions.rejuv > 0) return p.usePotion('rejuv');
     const main = SKILLS[c.bar[0]];
     const needMana = main && manaCost(main, effLevel(p, main)) > 0;
@@ -1100,9 +1223,10 @@ export const Auto = {
   boldness() {
     const p = G.player, w = G.world, c = G.char;
     const hpK = p.hp / p.maxHp;
-    let k = 0.55 + clamp((c.level - depthLevel(w.depth || 1)) / 8, -0.5, 0.4) + (hpK - 0.7) * 0.9 - this.hurt * 4;
+    const S = stanceOf(c);
+    let k = 0.55 + S.bold + clamp((c.level - depthLevel(w.depth || 1)) / 8, -0.5, 0.4) + (hpK - 0.7) * 0.9 - this.hurt * 4;
     if (w.boss && !w.boss.dead && w.boss.awake && dist(p.x, p.y, w.boss.x, w.boss.y) < 12) k -= 0.25;
-    if (hpK < 0.45) k = Math.min(k, 0.15);
+    if (hpK < S.low) k = Math.min(k, 0.15);
     return clamp(k, 0, 1);
   },
 
@@ -1124,6 +1248,9 @@ export const Auto = {
     // A Barbarian can run at distant visible foes WHILE channeling Whirlwind.
     // This feeds the same goTo/steer path waypoints as ordinary movement.
     if (p.channel instanceof Whirl && p.classId === 'barbarian') {
+      // low on life with a potion working (or none left): spin back out of the crowd (how soon is the stance's call)
+      const S = stanceOf(G.char), near = foes.filter((m) => dist(p.x, p.y, m.x, m.y) < 2.2).length;
+      if (!fleeing && near >= 2 && p.hp < p.maxHp * S.backoff && t.rank !== 'boss' && (p.potionCd > 0 || p.potionRegen.some((r) => r.hp > 0) || G.char.potions.hp + G.char.potions.rejuv === 0) && this.kite(foes)) return;
       if (!fleeing && dist(p.x, p.y, t.x, t.y) > Math.max(0.7, p.channel.r * 0.65))
         this.goTo(t.x, t.y, Math.max(0.6, p.channel.r * 0.6), 1 / 30);
       return;
@@ -1141,6 +1268,7 @@ export const Auto = {
     if (p.castLock <= 0) {
       const pick = this.chooseSkill(foes, t, d, fleeing);
       if (pick && p.tryUseSkill(pick.sk, pick.x, pick.y, pick.sk.kind === 'melee' ? t : null)) {
+        this.countFocus(pick.sk);
         this.lastCast[pick.sk.id] = w.time;
         if (p.classId === 'dragoon') {
           if (pick.sk.m.barrage) {
@@ -1169,8 +1297,14 @@ export const Auto = {
     if (this.stall && this.stall.t > 6) reach = Math.min(reach, 1.6); // nothing is landing: walk right up to it
     // shooters and casters: don't trade shots from the edge of range (they win that), close in to a sure hit
     else if ((t.ai === 'ranged' || t.ai === 'caster') && p.hp > p.maxHp * 0.55) reach = Math.min(reach, Math.max(2.4, reach * (0.65 - 0.25 * bold)));
-    // ranged builds back off from a crowd: later the bolder they are, and never while healthy and over-powered
-    if (!melee && (near >= 3 + Math.round(bold * 3) || (near >= 1 && p.hp < p.maxHp * (0.55 - 0.2 * bold))) && this.kite(foes)) return;
+    // ranged builds back off between casts from a crowd, from a melee foe closing in, or from anything when hurt (how
+    // soon is the stance's call); melee builds step out of the crowd while a potion works when life runs low
+    const S = stanceOf(G.char), hpK = p.hp / p.maxHp;
+    if (!melee) {
+      reach *= S.stand;
+      const closing = S.kiteNear >= 0 && foes.some((m) => (m.ai === 'melee' || m.ai === 'brute' || m.ai === 'charger' || m.ai === 'swarm' || m.ai === 'exploder') && dist(p.x, p.y, m.x, m.y) < m.r + p.r + (m.atkReach || 0.55) + S.kiteNear);
+      if ((near >= S.kiteCrowd + Math.round(bold * 2) || (near >= 1 && hpK < S.kiteHp - 0.15 * bold) || (closing && t.rank !== 'boss')) && this.kite(foes)) return;
+    } else if (near >= 1 && hpK < S.backoff && (p.potionCd > 0 || p.potionRegen.some((r) => r.hp > 0) || G.char.potions.hp + G.char.potions.rejuv === 0) && t.rank !== 'boss' && this.kite(foes)) return;
     if (d > reach || !w.map.los(p.x, p.y, t.x, t.y)) this.goTo(t.x, t.y, Math.max(0.6, reach * 0.85));
   },
   /** Step away from the crowd (ranged builds). */
@@ -1257,7 +1391,7 @@ export const Auto = {
           continue;
         }
       }
-      if (!OFFENSIVE.has(sk.kind) || fleeing && !['nova', 'orbit'].includes(sk.kind)) continue;
+      if (!OFFENSIVE.has(sk.kind) || fleeing && !['nova', 'orbit'].includes(sk.kind) && !m.ricochet) continue; // Shield Throw flies while he backs off
       // can it reach?
       let n = 1, ok = true, ax = t.x, ay = t.y;
       switch (sk.kind) {
@@ -1287,10 +1421,11 @@ export const Auto = {
       }
       if (!ok) continue;
       if (lowMana) continue;
-      const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, Math.max(1, n));
+      const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, Math.max(1, n), L);
       let score = per / Math.max(0.2, castTime(p, sk));
       if (cooldown(sk) >= 1.2) score *= 1.6; // fire cooldowns whenever they are up
       score *= focusMul(c.classId, sk); // the build focus: the Paladin swings hammers before anything else
+      if (sk.m.ricochet && c.classId === 'paladin') score *= this.hammersSince > 0 ? 6 : 0.3; // and throws his shield between them
       if (sk.kind === 'leap' || sk.kind === 'dash') score *= d > 3 ? 2.5 : d > 1.8 ? 1.2 : 0.5;
       if (cost) score *= 1 - 0.35 * clamp(1 - p.mana / p.maxMana, 0, 1);
       consider(sk, score, ax, ay);
@@ -1340,15 +1475,22 @@ export const Auto = {
   /**
    * The Bard plays to the measure: a note that completes the 4/4 bar (a Cadence) is worth triple, one that would
    * overfill it (a Discord, which breaks Harmony) is dropped while anything else fits, and Da Capo waits for a
-   * well-filled bar. Emergency heals are never held back.
+   * well-filled bar. Emergency heals are never held back. He also leans (a little: at most +-25%) toward notes
+   * whose rhythm is one of the bar's melodies' own, and away from writing the same rhythm as his last bar, so the
+   * songs come out tuneful and different.
    */
   bardMeasure(choices) {
     const p = G.player, sc = p.score, rem = MEASURE - sc.beats, rub = p.buffs.some((b) => b.t > 0 && SKILLS[b.id] && SKILLS[b.id].m.rubato);
     const beats = (sk) => (NOTES[bardNoteFor(p, sk)] || { beats: 0 }).beats; // the basic note shrinks to fit
+    const writing = !bardPerforming(p), sofar = sc.notes.map((n) => n.g).join();
     for (const ch of choices) {
-      const b = beats(ch.sk);
+      const b = beats(ch.sk), g = bardNoteFor(p, ch.sk);
       if (ch.sk.m.dacapo) ch.score *= sc.beats >= 2 ? 4 : 0.2;
       else if (b && Math.abs(b - rem) < 1e-6) ch.score *= 3;
+      if (writing && g && b) {
+        ch.score *= 1 + 0.25 * bardFitGain(p, g);
+        if (sc.rhythm && sc.rhythm.startsWith(sofar ? `${sofar},${g}` : g)) ch.score *= 0.85;
+      }
     }
     if (rub) return;
     const fits = choices.filter((ch) => ch.sk.kind === 'heal' || beats(ch.sk) <= rem + 1e-6);
@@ -1390,6 +1532,24 @@ export const Auto = {
     while (T.phase === 'walk' && T.t === 0 && T.steps[T.i] && T.steps[T.i].want && !this.wants(T.steps[T.i].want)) T.i++;
     const step = T.steps[T.i];
     if (!step) {
+      // the bag is full of what auto-play can't sell or stash (sealed treasures...): wait here until the player makes
+      // room (breaks a seal, sells, drops). A seal broken meanwhile is trade goods: run the errands again for it.
+      if (G.autoOpenSeals && bagFree(c) < BAG_LOW && c.bag.some((b) => b && b.sealed)) { for (const b of c.bag) if (b && b.sealed) b.sealed = false; T.i = 0; T.steps = this.townPlan(); return; } // tests: open them and shop again
+      const sealedN = c.bag.filter((b) => b && b.sealed).length;
+      this.sealWaiting = bagWait(c);
+      if (this.sealWaiting) {
+        if (T.sealedN !== undefined && sealedN < T.sealedN) { T.sealedN = sealedN; T.i = 0; T.steps = this.townPlan(); return; }
+        T.sealedN = sealedN;
+        this.setStatus(sealedN ? `Waiting in town: bag full — break the seals on ${sealedN} treasure${sealedN > 1 ? 's' : ''}` : 'Waiting in town: bag full — free a slot to go on');
+        if (!T.sealNote) {
+          T.sealNote = true;
+          G.ui.centerMsg('YOUR BAG IS FULL', sealedN ? 'Break the seals on your treasures: auto-play waits in town' : 'Free a bag slot: auto-play waits in town', 4);
+          G.ui.log(`Auto-play waits in town: the bag is full${sealedN ? ` (<b style="color:#ffdf8a">${sealedN} sealed treasure${sealedN > 1 ? 's' : ''}</b>). Tap SEALED (or open them in the inventory) to break the seals` : '. Sell, stash or drop something'} and it goes on once a slot is free.`, '#ffdf8a');
+          sfx('error');
+        }
+        return;
+      }
+      T.sealNote = false;
       // done: through the portal
       const po = w.portals[0];
       this.setStatus(`To the portal — Depth ${c.depth}`);
@@ -1436,15 +1596,15 @@ export const Auto = {
     const steps = [];
     if (c.stash && c.stash.some((b) => b && (b.type === 'gem' || (b.req || 1) <= c.level))) steps.push({ stash: true, label: 'Checking the storage chest', fn: () => this.unstash() });
     const gear = (k) => () => this.gearGain(Vendor.stock[k]);
-    steps.push({ vendor: 'weapons', label: 'Selling loot', want: () => c.bag.some((b) => b && b.type !== 'gem') || this.gearGain(Vendor.stock.weapons), fn: () => { this.sellJunk(); this.buyGear(Vendor.stock.weapons); } });
+    steps.push({ vendor: 'weapons', label: 'Selling loot', want: () => c.bag.some((b) => b && b.type !== 'gem' && !b.sealed) || this.gearGain(Vendor.stock.weapons), fn: () => { this.sellJunk(); if (this.buyGear(Vendor.stock.weapons)) this.sellJunk(); } }); // sell what the new piece replaced too: a nearly full bag has no slot for it
     steps.push({ vendor: 'alchemist', label: 'Buying potions', want: () => this.potionsWanted(), fn: () => this.buyPotions() });
-    steps.push({ vendor: 'armor', label: 'Browsing armor', want: gear('armor'), fn: () => this.buyGear(Vendor.stock.armor) });
+    steps.push({ vendor: 'armor', label: 'Browsing armor', want: gear('armor'), fn: () => { if (this.buyGear(Vendor.stock.armor)) this.sellJunk(); } });
     if (c.bag.some((b) => b && b.type === 'gem') || c.gold > 2000) steps.push({ vendor: 'gems', label: 'Visiting the gem merchant', fn: () => this.gemShop() });
     steps.push({ vendor: 'socket', label: 'Visiting the jeweler', want: () => c.bag.some((b) => b && b.type === 'gem') || this.equipped().some((it) => it.sockets < it.maxSockets && socketCost(it) <= this.budget(0.3)) || this.gearGain(Vendor.stock.rings), fn: () => this.jeweler() });
     steps.push({ vendor: 'upgrade', label: 'Upgrading gear', want: () => this.equipped().some((it) => (it.upg || 0) < 10 && upgradeCost(it) <= this.budget(0.45)), fn: () => this.blacksmith() });
     steps.push({ vendor: 'enchant', label: 'Enchanting gear', want: () => this.equipped().some((it) => it.rarity >= 1 && enchantCost(it, true) <= this.budget(0.2)), fn: () => this.enchanter() });
     steps.push({ vendor: 'gamble', label: 'Gambling', want: () => c.gold >= Math.round(180 * Math.pow(1.065, Math.max(c.level, depthLevel(c.depth || 1)))) * 8 && bagFree(c) >= 3, fn: () => { this.gamble(); this.sellJunk(); } });
-    steps.push({ stash: true, label: 'Stashing gems and gear for later', want: () => c.bag.some((b) => b && (b.type === 'gem' || (b.type === 'gear' && (b.req || 1) > c.level && b.rarity >= 2))), fn: () => this.stashExtras() });
+    steps.push({ stash: true, label: 'Stashing gems and gear for later', want: () => c.bag.some((b) => b && !b.sealed && (b.type === 'gem' || (b.type === 'gear' && (b.req || 1) > c.level && b.rarity >= 2))), fn: () => this.stashExtras() });
     return steps;
   },
   wants(f) { try { return !!f(); } catch (e) { return true; } },
@@ -1474,14 +1634,16 @@ export const Auto = {
   stashExtras() {
     const c = G.char;
     let n = 0;
-    c.bag.forEach((it, i) => {
-      if (!it || !(it.type === 'gem' || (it.type === 'gear' && (it.req || 1) > c.level && it.rarity >= 2))) return;
+    const store = () => c.bag.forEach((it, i) => {
+      if (!it || it.sealed || !(it.type === 'gem' || (it.type === 'gear' && (it.req || 1) > c.level && it.rarity >= 2))) return;
       if (addToStash(c, it)) { c.bag[i] = null; n++; }
     });
-    // a full chest: make room by dropping the weakest stored gear (lowest rarity, then item level)
+    store();
+    // a full chest: make room by dropping the weakest stored gear (lowest rarity, then item level), then store the rest
     if (c.stash.every(Boolean)) {
       const worst = c.stash.map((b, i) => ({ b, i })).filter(({ b }) => b.type === 'gear').sort((a, b) => a.b.rarity - b.b.rarity || a.b.ilvl - b.b.ilvl).slice(0, 30);
       for (const { b, i } of worst) { c.gold += sellPrice(b); c.stash[i] = null; }
+      store();
     }
     if (n) G.ui.log(`Auto-play stored ${n} item${n > 1 ? 's' : ''} in the storage chest.`, '#c8f0ff');
     changed();
@@ -1499,7 +1661,7 @@ export const Auto = {
     let gold = 0, n = 0;
     const future = {};
     c.bag.forEach((it, i) => {
-      if (!it) return;
+      if (!it || it.sealed) return; // only the player breaks a seal
       if (it.type === 'gem') {
         const top = Math.max(0, ...SLOTS.flatMap((s) => (c.equip[s] ? c.equip[s].gems.map((g) => g.tier) : [])), ...c.bag.filter((b) => b && b.type === 'gem').map((b) => b.tier));
         if (bagFree(c) > 15 || GEMS[it.gem].special || it.tier >= top - 1) return;
@@ -1539,8 +1701,10 @@ export const Auto = {
     changed();
   },
 
+  /** Buy the best affordable upgrades from a shop list; returns how many it bought (what they replaced is in the bag). */
   buyGear(list) {
     const p = G.player, c = G.char;
+    let n = 0;
     for (let guard = 0; guard < 4; guard++) {
       const cur = simulate(p, () => () => {});
       let best = -1, bv = 0;
@@ -1556,7 +1720,9 @@ export const Auto = {
       if (best < 0 || !bagFree(c)) break;
       Vendor.buy({ type: 'shop', list, i: best });
       this.optimizeGear();
+      n++;
     }
+    return n;
   },
 
   gemShop() {
@@ -1648,7 +1814,7 @@ export const Auto = {
       let slot = 'weapon', low = Infinity;
       for (const s of SLOTS) {
         const it = c.equip[s];
-        const v = it ? it.ilvl * (1 + it.rarity * 0.4) : -1;
+        const v = it ? powerLevel(it.ilvl, it.rarity) : -1;
         if (v < low) { low = v; slot = s; }
       }
       const btn = [...document.querySelectorAll('.panel[data-panel="vendor"] .btn')].find((b) => b.textContent.startsWith({ weapon: 'Weapon', offhand: 'Off-hand', head: 'Head', body: 'Body', hands: 'Hands', legs: 'Legs', feet: 'Feet' }[slot] || 'Ring'));

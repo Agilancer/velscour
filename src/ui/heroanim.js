@@ -1,4 +1,5 @@
-// Living class portraits for the menus (assets/sprites/select/, sliced from the 16-class sheet by tools/selectart.py).
+// Living class portraits for the menus: the Grim Nocturne hero sprites (assets/sprites/select/nocturne/, rendered by
+// tools/selectportraits.js), or a saved hero's own look (setArt). Both are pixel art, drawn crisp.
 // Every hero breathes and sways to a rhythm of its own (seeded from its class id); while hovered (or just after a tap)
 // it gets excited: it hops with squash and stretch, cheers side to side, and glows with sparks in its class colour.
 // The portrait is redrawn in thin horizontal strips so the feet stay planted while the body bends above them.
@@ -11,7 +12,7 @@ const calm = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-mo
 const AURA = { death_knight: '#7ab8ff' }; // where the art's colour differs from the class colour
 
 function portrait(id) {
-  if (!imgs[id]) { imgs[id] = new Image(); imgs[id].src = `assets/sprites/select/${id}.webp`; }
+  if (!imgs[id]) { imgs[id] = new Image(); imgs[id].src = `assets/sprites/select/nocturne/${id}.webp`; }
   return imgs[id];
 }
 /** Start fetching all portraits (the class grid needs them at once). */
@@ -63,6 +64,7 @@ export function heroCanvas(id, cls = 'hero-cv') {
       if (!cw || !ch) return;
       if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
       ctx.clearRect(0, 0, cw, ch);
+      ctx.imageSmoothingEnabled = false;
       if (!nw || !nh) return;
       this.t += dt;
       this.burstT = Math.max(0, this.burstT - dt);

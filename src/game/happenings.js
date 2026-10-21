@@ -12,13 +12,19 @@ import { camera, isoX, isoY } from '../core/view.js';
 import { addEffect, Ring, Column, Bolt, burst, sparkle, spawn, floatText, elem, addLight, smoke, glowSprite } from '../gfx/vfx.js';
 import { explosionFx } from '../gfx/shapes.js';
 import { hit, aoe } from './combat.js';
-import { makeMonster, makeElite } from './monster.js';
+import { makeMonster, makeElite, monsterBase } from './monster.js';
 import { ambush } from './mayhem.js';
 import { GroundItem, dropChest } from './loot.js';
-import { rollItem, rollGem, potionItem, itemName, itemColor } from '../data/items.js';
+import { rollItem, rollGem, potionItem, itemName, itemColor, rarityAt } from '../data/items.js';
 import { depthLevel, isRaidDepth, FINAL_DEPTH } from '../data/depth.js';
 import { addToBag } from './player.js';
 import { UI } from '../ui/ui.js';
+import { addEncounters } from './encounters.js';
+import { drawFolkPose } from './render.js';
+import { TOWNSFOLK } from '../data/townsfolk.js';
+import { setupScenario, scenarioTick } from './scenarios.js';
+import { smiteKill } from './smite.js';
+import { greedTick } from './greed.js';
 
 // ------------------------------------------------------------------------------------------------ omens
 // A level-wide twist, announced on arrival. mon: applied to every enemy as it appears (ambushes too).
@@ -33,6 +39,10 @@ export const OMENS = {
   frenzy: { name: 'Feeding Frenzy', color: '#40e070', text: 'Kills spill health and mana orbs.', orbs: true },
 };
 const OMEN_KEYS = Object.keys(OMENS);
+/** Can a depth of this biome have an omen at all? (Not BOSS ROOMs, overworlds or Velscour's throne.) */
+export const omenable = (depth, biome) => !!biome && !biome.overworld && !isRaidDepth(depth) && depth < FINAL_DEPTH;
+/** A depth's omen roll: an OMENS key, or null for a quiet one. */
+export const rollOmen = (depth) => (chance(Math.min(0.45, 0.22 + depth * 0.004)) ? pick(OMEN_KEYS) : null);
 
 // ------------------------------------------------------------------------------------------------ shrines
 export const SHRINES = {
@@ -85,11 +95,17 @@ export function setupHappenings(world, start, gen) {
   dropOmen();
   world.onKill = onKill;
   world.happen = { t: 0, starT: rand(3, 6), streak: 0, streakT: 0, best: 0 };
+  world.scenario = null;
+  // the portal the hero took showed this depth's omen (game.portalChoice): keep its word
+  const c0 = G.char, told = c0 && c0.nextOmen !== undefined ? c0.nextOmen : undefined;
+  if (c0) delete c0.nextOmen;
   if (world.kind !== 'dungeon' || world.raid || gen.raid || depth >= FINAL_DEPTH || world.biome.overworld) return;
   const H = world.happen;
+  setupScenario(world, start); // one of the biome's twenty optional set pieces (game/scenarios.js)
   // the omen
-  if (chance(Math.min(0.45, 0.22 + depth * 0.004))) {
-    H.omen = pick(OMEN_KEYS);
+  const omen = told !== undefined ? (OMENS[told] ? told : null) : rollOmen(depth);
+  if (omen) {
+    H.omen = omen;
     const O = OMENS[H.omen];
     world.lootMul = O.loot || 1;
     world.goldMul = O.gold || 1;
@@ -106,6 +122,8 @@ export function setupHappenings(world, start, gen) {
   if (spots.length && chance(0.22 + Math.min(0.15, depth * 0.002))) addCursed(world, spots.pop());
   // the vault's extra caches
   if (H.omen === 'vault') for (let i = 0; i < 3 && spots.length; i++) addCache(world, spots.pop());
+  // people of the Hollow down here: captives, a knight's last stand, a merchant's camp, the wizard, the witch, a Greener
+  addEncounters(world, roomSpots(world, start, 4));
   // a treasure imp shows up a while in; Velscour's challenge fires after the first kills
   if (chance(0.3)) H.impT = rand(25, 70);
   if (chance(0.3)) H.challengeAt = randi(12, 30);
@@ -178,12 +196,18 @@ export function addShrine(world, [x, y], key) {
   });
 }
 
+// the fallen are painted adventurers of the Hollow's sort (knights, wardens, scouts, the odd wizard), lying where they fell
+const FALLEN_LOOKS = () => TOWNSFOLK.filter((v) => v.knight || v.guard || v.caster).map((v) => v.spriteId);
 export function addRemains(world, [x, y]) {
-  const who = pick(FALLEN_NAMES), why = pick(EPITAPHS), depth = world.depth;
+  const who = pick(FALLEN_NAMES), why = pick(EPITAPHS), depth = world.depth, look = pick(FALLEN_LOOKS()), flip = chance(0.5);
   world.chests.push({
     x, y, opened: false, reach: 1.4, far: 22, label: `Remains of ${who}`, dot: '#e8dcc0',
     draw(ctx, sx, sy) {
-      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(sx, sy, 14, 6, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(sx, sy, 20, 7, 0, 0, TAU); ctx.fill();
+      if (drawFolkPose(ctx, look, 'dead', sx, sy + 2, flip, this.opened ? 0.85 : 1)) {
+        if (!this.opened) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3 + Math.sin(G.time * 2.5) * 0.12; ctx.drawImage(glowSprite('#e8dcc0'), sx - 22, sy - 24, 44, 32); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+        return;
+      }
       ctx.fillStyle = '#d8ccb0';
       ctx.fillRect(sx - 9, sy - 3, 14, 3); ctx.fillRect(sx - 5, sy - 6, 2, 9); ctx.fillRect(sx + 1, sy - 5, 2, 8);
       ctx.beginPath(); ctx.arc(sx + 8, sy - 4, 3.5, 0, TAU); ctx.fill();
@@ -249,7 +273,7 @@ export function addCursed(world, [x, y]) {
           this.done = true;
           dropChest(world, { x, y, rare: true }, depth);
           dropChest(world, { x, y, rare: true }, depth);
-          if (chance(0.5)) world.addLoot(new GroundItem(x, y + 0.3, 'item', { item: rollItem(depthLevel(depth) + 3, { rarity: chance(0.25) ? 5 : 4, mf: p.st.magicFind }) }));
+          if (chance(0.5)) world.addLoot(new GroundItem(x, y + 0.3, 'item', { item: rollItem(depthLevel(depth) + 2, { rarity: rarityAt(depthLevel(depth) + 2, chance(0.03) ? 5 : chance(0.3) ? 4 : 3), mf: p.st.magicFind }) }));
           explosionFx(x, y, 2, 'holy', 'eruption');
           sfx('gate'); UI.centerMsg('CURSE BROKEN', 'The hoard is yours', 2.2);
           world.happen.cursed = null;
@@ -345,7 +369,7 @@ function impTick(world, dt) {
 
 // ------------------------------------------------------------------------------------------------ challenge
 export function startChallenge(world) {
-  const depth = world.depth, need = Math.min(45, 18 + Math.floor(depth / 8)), time = 40;
+  const depth = world.depth, need = Math.min(24, 10 + Math.floor(depth / 15)), time = 45; // monsters take a few seconds each
   world.happen.ch = { need, got: 0, left: time, shown: 0 };
   UI.centerMsg("VELSCOUR'S CHALLENGE", `Slay ${need} foes in ${time} seconds`, 2.6);
   UI.log(`<b style="color:#ff6030">Velscour's Challenge</b>: slay ${need} foes in ${time} seconds for a reward.`, '#ff8060');
@@ -380,12 +404,13 @@ const STREAKS = [[10, 'KILLING SPREE'], [20, 'MASSACRE'], [35, 'BLOODBATH'], [50
 export function onKill(m) {
   const w = m.world || G.world, H = w && w.happen;
   if (!H || m.team !== 'enemy') return;
+  smiteKill(m); // the Divine Smite meter (game/smite.js)
   H.kills = (H.kills || 0) + 1;
   if (H.ch) H.ch.got++;
   if (H.challengeAt && H.kills >= H.challengeAt) { H.challengeAt = 0; startChallenge(w); }
   if (H.omen === 'frenzy' && chance(0.3)) w.addLoot(new GroundItem(m.x, m.y, chance(0.6) ? 'orb_hp' : 'orb_mp', {}));
   H.streak = H.streakT > 0 ? H.streak + 1 : 1;
-  H.streakT = 2.2;
+  H.streakT = 4; // a few seconds a kill: the next one in time keeps the streak
   const s = STREAKS.find(([n]) => n === H.streak);
   if (s) {
     const p = G.player;
@@ -404,6 +429,7 @@ export function happeningsTick(world, dt) {
   const H = world.happen, p = world.player;
   if (!H || !p || p.dead) return;
   H.t += dt;
+  greedTick(world, dt); // the Greed lever's tougher monsters (game/greed.js)
   if (H.streakT > 0) H.streakT -= dt;
   // the omen marks every enemy as it appears
   if (H.omen && OMENS[H.omen].mon && (H.monT = (H.monT || 0) - dt) <= 0) {
@@ -416,16 +442,18 @@ export function happeningsTick(world, dt) {
   if (p.buffs.some((b) => b.storm) && (H.zapT = (H.zapT || 0) - dt) <= 0) {
     H.zapT = 0.6;
     const foes = world.hostiles('player', p.x, p.y, 6).filter((m) => m.team === 'enemy' && !m.dead).slice(0, 2);
-    const d = heroHit(p) * 1.4;
-    for (const m of foes) { addEffect(new Bolt(p.x, p.y, 40, m.x, m.y, 20, '#c0b0ff', 0.25, 3)); hit(p, m, d, 'light', { noArc: true }); }
+    for (const m of foes) { addEffect(new Bolt(p.x, p.y, 40, m.x, m.y, 20, '#c0b0ff', 0.25, 3)); hit(p, m, Math.max(heroHit(p) * 1.4, normalLife(m) * 0.08), 'light', { noArc: true }); }
     if (foes.length) sfx('light', 0.3);
   }
   for (const ch of world.chests) if (ch.tick && ch.opened) ch.tick(dt);
   if (H.impT !== undefined && H.impT > 0 && (H.impT -= dt) <= 0 && !(world.boss && world.boss.awake && !world.boss.dead)) spawnImp(world);
   impTick(world, dt);
   challengeTick(world, dt);
+  scenarioTick(world, dt);
 }
 
+/** A plain normal monster's life at m's level: monsters are sized to hero damage (data/depth.js toughness), weapons aren't. */
+const normalLife = (m) => monsterBase(m.level || 1).hp;
 /** About one of the hero's main-skill hits (for falling stars and shrine lightning). */
 function heroHit(p) {
   const w = p.st.weapon;
@@ -443,7 +471,7 @@ function starfall(world) {
     if (G.world !== world) return;
     explosionFx(x, y, 1.4, 'arcane', 'explosion', { sound: false });
     addEffect(new Ring(x, y, 0.2, 1.8, 0.4, '#e0f0ff', 4));
-    for (const m of world.hostiles('player', x, y, 1.8)) if (m.team === 'enemy') hit(p, m, heroHit(p) * 4, 'arcane', { noArc: true, knock: 0.5 });
+    for (const m of world.hostiles('player', x, y, 1.8)) if (m.team === 'enemy') hit(p, m, Math.max(heroHit(p) * 4, normalLife(m) * 0.5), 'arcane', { noArc: true, knock: 0.5 });
     sparkle(x, y, 20, '#ffffff', 10, 0.8); sfx('explode', 0.35); camera.shake(2);
   }, 380);
 }
@@ -455,7 +483,7 @@ export function recordDepth(world, depth) {
   const p = G.player;
   UI.centerMsg(`DEPTH ${depth} CONQUERED`, 'A new record descent', 3);
   for (let i = 0; i < 6; i++) setTimeout(() => { if (G.world === world && p) firework(p.x + rand(-4, 4), p.y + rand(-4, 4)); }, i * 260);
-  world.addLoot(new GroundItem(p.x, p.y, 'item', { item: rollItem(depthLevel(depth) + 3, { rarity: chance(0.3) ? 4 : 3, mf: p.st.magicFind }) }));
+  world.addLoot(new GroundItem(p.x, p.y, 'item', { item: rollItem(depthLevel(depth) + 2, { rarity: rarityAt(depthLevel(depth) + 2, chance(0.12) ? 4 : 3), mf: p.st.magicFind }) }));
 }
 
 function firework(x, y) {
@@ -480,8 +508,8 @@ export const TOWN_EVENTS = {
     if (!list.length) return 'Nothing left to improve.';
     const it = pick(list); it.upg = (it.upg || 0) + 1; return `${itemName(it)} is now +${it.upg}.`;
   } },
-  peddler: { name: 'A Wandering Peddler', color: '#ff9a2a', text: 'Gifts you a treasure from the deep roads.', fn: (c) => {
-    const it = rollItem(Math.max(c.level, depthLevel(c.depth || 1)) + 1, { rarity: chance(0.15) ? 5 : chance(0.5) ? 4 : 3 });
+  peddler: { name: 'A Wandering Peddler', color: '#ff9a2a', text: 'Gifts you a treasure from the deep roads, made for your level.', fn: (c) => {
+    const it = rollItem(c.level, { rarity: rarityAt(c.level, chance(0.02) ? 5 : chance(0.15) ? 4 : chance(0.6) ? 3 : 2) });
     return addToBag(c, it) ? `Received <span style="color:${itemColor(it)}">${itemName(it)}</span>.` : 'Your bag was full, so the peddler shrugged and left.';
   } },
   lottery: { name: 'The Town Lottery', color: '#ffd040', text: 'Your ticket wins!', fn: (c) => { const g = Math.round(randi(30, 90) * (5 + depthLevel(c.depth || 1)) * (1 + Math.max(0, c.level - 60) * 0.04)); c.gold += g; return `Won ${g} gold.`; } },

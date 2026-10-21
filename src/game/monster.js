@@ -5,14 +5,16 @@ import { sfx } from '../core/audio.js';
 import { addEffect, Telegraph, Slash, Ring, Bolt, Column, burst, spawn, sparkle, elem, floatText, smoke, addLight } from '../gfx/vfx.js';
 import { shiftPalette } from '../gfx/pixelart.js';
 import { Creature } from './creature.js';
-import { hit, aoe, chainHit } from './combat.js';
+import { hit, aoe, chainHit, leechHeal } from './combat.js';
 import { Projectile, Delayed, NovaWave, Area, Fissure, explode, lineTargets, coneTargets } from './hazards.js';
 import { ARCH, ARCH_MOVES, ELITE_AFFIXES, bossName, uniqueName } from '../data/enemies.js';
 import { SUMMONS } from '../data/summons.js';
 import { bodyR } from '../world/map.js';
+import { toughness, danger, densityXp } from '../data/depth.js';
 import { ART_BY_ID, BLUE_PUDDLES, BLUE_SLIMES, REVIVED, greaterSwap, rollLooks, uniqueSwap } from '../data/bestiary.js';
 
 const LEASH = 10; // minions fight what's within this many tiles of the hero
+const CHASE = 1.3, CHASE_MAX = 4.6; // monsters' pursuit pace: x1.3, up to 4.6 tiles/s (the hero runs 4.2) unless faster already
 const PROJ_FX = { fire: 'fireball', cold: 'shard', light: 'spark', poison: 'blob', shadow: 'skull', arcane: 'orb', holy: 'bolt', blood: 'blob', acid: 'blob', phys: 'rock' };
 const POOL_FX = { fire: 'fire', cold: 'frost', poison: 'poison', acid: 'slime', shadow: 'void', arcane: 'void', blood: 'blood', light: 'storm', holy: 'holy', phys: 'poison' };
 
@@ -53,14 +55,18 @@ function rollMoves(arch, rank, variant, depth) {
   return n ? shuffle(all).slice(0, n) : null;
 }
 
+/** Demon Lord Velscour's life in normal monsters of his level: ~3x the last BOSS ROOM boss (~3 minutes of hero damage). */
+export const VELSCOUR_HP = 60;
 export function monsterBase(level) {
   return {
-    // tuned hard: heroes should have to grind gear and levels to get past the BOSS ROOMs
-    hp: 30 * Math.pow(1.068, level - 1),
-    // damage keeps its 1.058 a level to level 60, then grows slower (1.04, then 1.016 past 140): hero life and
-    // armor only grow with levels and gear, and at 1.058 a normal hit took ~45% of a geared hero's life by depth 160
-    dmg: 1.2 * (4.4 + Math.min(level, 10) * 0.24) * Math.pow(1.058, Math.min(level, 60) - 1) * Math.pow(1.04, clamp(level - 60, 0, 80)) * Math.pow(1.016, Math.max(0, level - 140)),
-    xp: 4 * Math.pow(level, 1.5),
+    // toughness (data/depth.js) sizes life to the heroes' damage at that level: a few seconds a normal monster
+    hp: 30 * Math.pow(1.068, level - 1) * toughness(level),
+    // damage keeps its 1.058 a level to level 60, then grows slower (1.04, then 1.006 past 140): hero life and
+    // armor only grow with levels and gear, and at 1.058 a normal hit took ~45% of a geared hero's life by depth 160;
+    // past 140 hero life grows ~0.6% a level (tools/tests/endgame.js), and 1.016 had normal hits at 35-60% by depth 500;
+    // danger (data/depth.js) softens it where hero life lags, now that fights last long enough for every monster to hit
+    dmg: 1.2 * (4.4 + Math.min(level, 10) * 0.24) * Math.pow(1.058, Math.min(level, 60) - 1) * Math.pow(1.04, clamp(level - 60, 0, 80)) * Math.pow(1.006, Math.max(0, level - 140)) * danger(level),
+    xp: 4 * Math.pow(level, 1.5) * densityXp(level), // fewer monsters a level than before (data/depth.js density)
   };
 }
 
@@ -89,7 +95,7 @@ export class Monster extends Creature {
       if (this.affixes && this.affixes.includes('vampiric')) this.heal(d * 0.3);
       const th = this.curses.thorns;
       if (th && th.t > 0) hit(th.src, this, d * th.amt / 100, 'phys', { dot: true, crit: false });
-      if (this.leech && this.owner) this.owner.heal(d * this.leech * 0.15, true);
+      if (this.leech && this.owner) leechHeal(this.owner, target, d, this.leech * 0.15);
     }
     return d;
   }
@@ -372,11 +378,15 @@ export class Monster extends Creature {
     sparkle(x, y, 10, '#80c0ff', 8, 0.4);
   }
 
-  /** Go after a target round walls and props: minions by A*, monsters down the flow field when it is the hero. */
+  /**
+   * Go after a target round walls and props: minions by A*, monsters down the flow field when it is the hero.
+   * Monsters run harder in pursuit (CHASE, up to about the hero's own pace), so a kiting hero can't outrun them forever.
+   */
   chase(dt, t, speed = this.speed) {
     if (this.static) return;
     const w = this.world, p = w.player;
     if (this.summon) { this.navTo(t.x, t.y, dt, speed); return; }
+    if (this.team === 'enemy') speed = Math.max(speed, Math.min(speed * CHASE, CHASE_MAX));
     // the flow field leads to the hero: follow it to them, and to anything at their side
     const flow = p && !p.dead && (t === p || dist(t.x, t.y, p.x, p.y) < 3) && w.map.flowAt(p.x, p.y) === 0;
     this.navTo(t.x, t.y, dt, speed, flow);
@@ -1308,7 +1318,7 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
     art: art ? art.id : null, swap: art ? (variant ? greaterSwap(look.swap) : look.swap) : null, artH: art ? art.h : 0,
     level, maxHp: B.hp * A.hp, hp: B.hp * A.hp, dmg: B.dmg * A.dmg, xp: B.xp * (A.xp || 1),
     speed: A.spd * rand(0.92, 1.08), el, res, goreType: gore, bloodColor: gore === 'flesh' ? biome.blood : null,
-    name: art && tier ? tierName : `${adj} ${tierName}`.trim(), atkCd: 1.2, range: A.range, proj: A.proj ? { ...A.proj, fx: archId === 'archer' ? 'arrow' : A.proj.fx === 'blob' ? 'blob' : PROJ_FX[el] || A.proj.fx } : null,
+    name: art ? [tier, look.tint || (!tier && adj), art.name].filter(Boolean).join(' ') : `${adj} ${tierName}`.trim(), atkCd: 1.2, range: A.range, proj: A.proj ? { ...A.proj, fx: archId === 'archer' ? 'arrow' : A.proj.fx === 'blob' ? 'blob' : PROJ_FX[el] || A.proj.fx } : null,
     undead, demon: art && art.demon !== undefined ? art.demon : A.demon, fly: art && art.fly !== undefined ? art.fly : A.fly, ghost: A.ghost, poison: A.poison, split: A.split,
     summoner: A.summoner && chance(A.summoner), aoeCaster: A.aoe, rank: 'normal', x, y,
   });
@@ -1316,7 +1326,7 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
   m.moves = rollMoves(archId, rank, variant, depth);
   m.moveCd = rand(1.5, 4);
   if (variant) { m.maxHp *= 1.4; m.hp = m.maxHp; m.dmg *= 1.2; m.xp *= 1.5; m.scale = 1.08; m.speed *= 1.05; }
-  if (art && art.heavenlyFamily && biome.id === 'heavenly') {
+  if (art && art.heavenlyFamily) {
     // The sixty Heaven opponents share the project's proven AI controllers
     // but vary their combat stats, elemental defenses and threat profile by
     // individual design. This is gameplay distinction, not just new names.
@@ -1336,7 +1346,7 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
     }
     if (family === 'ophanim' || family === 'luminary') m.fly = true;
   }
-  if(art?.homeBiome) {
+  if(art?.seaOfSand) { // the Sea of Sand's own creatures: tougher by rank, and a little more so away from the dunes
     const rarity=art.nativeVariant%5,foreign=art.homeBiome!==biome.id;
     m.maxHp*=1+rarity*.065+(art.nativeVariant>=45?.22:0);
     m.hp=m.maxHp;
@@ -1372,7 +1382,9 @@ export function makeElite(m, rank, depth, world) {
   } else if (rank === 'boss') {
     const vel = m.arch === 'velscour';
     if (vel) { m.art = 'va_velscour'; m.artH = 94; m.swap = null; }
-    m.maxHp *= vel ? 40 : 14 + Math.min(depth, 120) / 4; m.dmg *= vel ? 2.4 : 1.9; m.xp *= vel ? 200 : 25;
+    // Velscour: the final fight (was 40x, less than a plain depth-500 guardian)
+    // a guardian is 10-22 plain normals whatever its build (a brute archetype's own bulk counts only partly)
+    m.maxHp *= vel ? VELSCOUR_HP : (10 + Math.min(depth, 120) / 10) / Math.pow(Math.max(1, ARCH[m.arch]?.hp || 1), 0.7); m.dmg *= vel ? 2.8 : 1.9; m.xp *= vel ? 200 : 25;
     m.aura = vel ? '#ff2000' : '#ff4020';
     m.scale = vel ? 1.6 : 1.9; m.r *= vel ? 1 : 1.6;
     m.ai = 'boss';
@@ -1437,7 +1449,7 @@ export function createSummon(p, sk, L, x, y, dmgRange, corpse) {
     m.sprite = corpse.sprite; m.pal = shiftPalette(corpse.pal || {}, { hue: 120, sat: 0.5, light: 0.05 }); m.px = corpse.px; m.fly = corpse.fly;
     if (corpse.art) { m.art = corpse.art; m.swap = REVIVED; m.artH = corpse.artH; }
     m.name = 'Revived ' + (corpse.art ? ART_BY_ID[corpse.art].name : ARCH[corpse.arch] ? ARCH[corpse.arch].names[0] : 'Monster');
-    m.maxHp = m.hp = Math.max(hp, corpse.maxHp * 0.6);
+    m.maxHp = m.hp = Math.max(hp, corpse.maxHp * 0.6 / toughness(corpse.level || 1)); // monster life is sized to hero damage, not monster hits
     m.aura = '#40ff80';
   }
   // enforce per-skill maximum and a global cap

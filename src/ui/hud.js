@@ -16,6 +16,10 @@ const TAUNT_KEY = 'velscour_taunts_v1'; // Velscour's level-up deck: the last mo
 import { Meter } from '../game/dpsmeter.js';
 import { heroDamage } from '../game/autoplay.js';
 import { madnessReady, madnessOn, unleashMadness } from '../game/mayhem.js';
+import { smiteReady, smiteArmed, toggleSmite } from '../game/smite.js';
+import { greedOf, hoardOf, greedMods, setGreed, GREED_MAX } from '../game/greed.js';
+import { STANCES, Auto } from '../game/autoplay.js';
+import { sealedCount, openNextSeal } from './sealed.js';
 import { defianceText } from '../game/defiance.js';
 
 const POTIONS = ['hp', 'mp', 'rejuv', 'fury'];
@@ -24,6 +28,7 @@ const SLOT_MAP = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 'hp', 'mp', 'rej
 
 /** [x, y, w, h] of a sprite's non-transparent pixels (monster sheets carry lots of padding), memoised per image. */
 const boxes = new WeakMap();
+const pct = (v, total) => (v / total) * 100 + '%';
 function opaqueBox(img) {
   let b = boxes.get(img);
   if (b) return b;
@@ -54,10 +59,24 @@ export const HUD = {
     document.documentElement.style.setProperty('--hud-k', String(geo.h / geo.w));
     this.initFrames(geo);
     $('#madness-btn').addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); unleashMadness(); });
+    $('#smite-btn').addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); toggleSmite(); });
+    $('#sealed-btn').addEventListener('click', (e) => { e.stopPropagation(); sfx('ui'); openNextSeal(); });
+    // the spectator's dials: auto-play's stance and the Greed lever (game/autoplay.js STANCES, game/greed.js)
+    for (const b of document.querySelectorAll('#stance button')) b.addEventListener('click', (e) => { e.stopPropagation(); if (!G.char) return; G.char.stance = b.dataset.st; sfx('ui'); UI.log(`Auto-play stance: <b>${STANCES[b.dataset.st].name}</b>.`, '#8fe0ff'); });
+    for (const b of document.querySelectorAll('#greed .gr-btn')) b.addEventListener('click', (e) => { e.stopPropagation(); sfx('ui'); setGreed(greedOf() + +b.dataset.d); });
+    const pips = $('#greed-pips');
+    for (let i = 0; i < GREED_MAX; i++) pips.appendChild(el('i'));
+    UI.tip($('#stance'), () => `<b style="color:#8fe0ff">Auto-play stance</b>
+      <div><b>Cautious</b>: kites anything that closes in, fights from the edge of its reach, drinks early, runs for town sooner, out-levels each depth before its guardian.</div>
+      <div><b>Balanced</b>: the default: kites crowds and when hurt.</div>
+      <div><b>Reckless</b>: stands in the thick of it, barely kites, drinks late, dives for the guardian under-levelled.</div>`);
+    UI.tip($('#greed'), () => { const g = greedOf(), M = greedMods(g, hoardOf()); return `<b style="color:#ffc040">The Greed lever: ${g} / ${GREED_MAX}</b>
+      <div>Each notch: +7% champion packs, +12% pack size, +8% monster traits, monsters +10% life and +6% damage. Pays +25% drops, +30% gold, +20% magic find.</div>
+      <div>Every depth cleared with the lever up adds its level to the <b>Hoard</b> (+2% drops and gold a stack while greedy, up to 50). A death loses the Hoard and drops the lever.</div>
+      <div class="dim">Takes hold from the next depth. Now: ×${M.loot.toFixed(2)} drops, ×${M.gold.toFixed(2)} gold, +${M.mf}% magic find.</div>`; });
     // tap / click the target window to blow it up (about 2.25x, capped to the screen); again to shrink it back
     $('#target-box').addEventListener('click', (e) => { e.stopPropagation(); this.tbBig = !this.tbBig; this.last.tbCls = null; this.updateTarget(); });
     const wrap = $('#hud-slots');
-    const pct = (v, total) => (v / total) * 100 + '%';
     geo.slots.forEach((s, i) => {
       const d = el('div', 'slot');
       d.style.left = pct(s.x, geo.w); d.style.top = pct(s.y, geo.h);
@@ -95,12 +114,6 @@ export const HUD = {
       UI.tip(d, () => slotTip(map));
       wrap.appendChild(d);
     });
-    const [lo, mo] = geo.orbs;
-    const place = (elx, o) => { elx.style.left = pct(o.cx - o.r, geo.w); elx.style.top = pct(o.cy - o.r, geo.h); elx.style.width = pct(o.r * 2, geo.w); elx.style.height = pct(o.r * 2, geo.h); };
-    place($('#life-cover'), lo); place($('#mana-cover'), mo);
-    const lt = $('#life-text'), mt = $('#mana-text');
-    lt.style.left = pct(lo.cx - 110, geo.w); lt.style.width = pct(220, geo.w); lt.style.top = pct(lo.cy - 12, geo.h);
-    mt.style.left = pct(mo.cx - 110, geo.w); mt.style.width = pct(220, geo.w); mt.style.top = pct(mo.cy - 12, geo.h);
     const xp = geo.xp;
     if (geo.barTop) $('#hud-rail').style.top = pct(geo.barTop, geo.h);
     const xt = $('#xp-track');
@@ -131,6 +144,15 @@ export const HUD = {
     ring.style.left = -((h.cx - h.rx) / (2 * h.rx)) * 100 + '%';
     ring.style.top = -((h.cy - h.ry) / (2 * h.ry)) * 100 + '%';
     cvs.width = 200; cvs.height = Math.round((200 * h.ry) / h.rx);
+  },
+
+  /** Orb shading and numbers over the bar art's orbs, in % of the bar (portrait places its own in px, so redo this after a rotation). */
+  placeOrbs(geo) {
+    const [lo, mo] = geo.orbs;
+    const place = (elx, o) => Object.assign(elx.style, { left: pct(o.cx - o.r, geo.w), top: pct(o.cy - o.r, geo.h), width: pct(o.r * 2, geo.w), height: pct(o.r * 2, geo.h) });
+    const text = (elx, o) => Object.assign(elx.style, { left: pct(o.cx - 110, geo.w), width: pct(220, geo.w), top: pct(o.cy - 12, geo.h), fontSize: '' });
+    place($('#life-cover'), lo); place($('#mana-cover'), mo);
+    text($('#life-text'), lo); text($('#mana-text'), mo);
   },
 
   layoutMobile() {
@@ -184,8 +206,9 @@ export const HUD = {
       };
       placePortraitOrb($('#life-cover'), $('#life-text'), orbPos[0]);
       placePortraitOrb($('#mana-cover'), $('#mana-text'), orbPos[1]);
-    } else if (this.portraitOrbFrames) {
-      this.portraitOrbFrames.forEach((frame) => { frame.style.display = 'none'; });
+    } else {
+      if (this.portraitOrbFrames) this.portraitOrbFrames.forEach((frame) => { frame.style.display = 'none'; });
+      this.placeOrbs(A.hudGeo);
     }
     const gap = 8, x0 = (bar.width - (size * 4 + gap * 3)) / 2, y = bar.height - size - (innerHeight > innerWidth ? 10 : 8);
     this.slots.forEach((s) => {
@@ -241,6 +264,32 @@ export const HUD = {
       $('#madness').className = v;
       $('#madness-btn').classList.toggle('hidden', v !== 'full');
       if (v === 'full') { sfx('levelup', 0.4); UI.log('MADNESS is full: press the MADNESS button (G) to unleash it.', '#ff6090'); }
+    });
+    // SMITE (game/smite.js)
+    const sReady = smiteReady(), sArmed = smiteArmed();
+    set('smite', Math.round(clamp(c.smite || 0, 0, 1) * 1000) / 10, (v) => { $('#smite-fill').style.width = v + '%'; });
+    set('smitest', sArmed ? 'armed' : sReady ? 'full' : '', (v) => {
+      $('#smite-track').className = v;
+      $('#smite-btn').classList.toggle('hidden', !v);
+      $('#smite-btn').classList.toggle('armed', v === 'armed');
+      $('#smite-btn').textContent = v === 'armed' ? 'AIMING…' : 'SMITE';
+    });
+    set('smitet', sArmed ? (G.touch ? 'Smite — tap the ground' : 'Smite — click the ground') : sReady ? 'Smite — ready' : `Smite ${Math.floor((c.smite || 0) * 100)}%`, (v) => { $('#smite-text').textContent = v; });
+    if (G.canvas) G.canvas.classList.toggle('aiming', sArmed);
+    // sealed treasures waiting in the bag (ui/sealed.js)
+    const nSeal = sealedCount(c);
+    set('sealed', nSeal, (v) => { $('#sealed-btn').classList.toggle('hidden', !v); $('#sealed-text').textContent = `${v} SEALED`; });
+    set('sealwait', !!(nSeal && Auto.on && Auto.sealWaiting && w && w.kind === 'town'), (v) => { $('#sealed-btn').classList.toggle('urgent', v); });
+    // stance (shown while auto-play is on) and the Greed lever
+    set('stance', G.autoplayOn ? (c.stance || 'balanced') : '', (v) => {
+      $('#stance').classList.toggle('hidden', !v);
+      for (const b of document.querySelectorAll('#stance button')) b.classList.toggle('on', b.dataset.st === v);
+    });
+    const g = greedOf(c), hd = hoardOf(c);
+    set('greed', `${g}|${hd}|${w ? w.greed || 0 : 0}`, () => {
+      document.querySelectorAll('#greed-pips i').forEach((p, i) => p.classList.toggle('on', i < g));
+      $('#greed').classList.toggle('on', g > 0);
+      $('#hoard').textContent = hd ? `Hoard ${hd}` : '';
     });
     set('madt', on ? `MADNESS ${Math.ceil(c.madT)}s` : ready ? 'Madness — ready' : `Madness ${Math.floor((c.madness || 0) * 100)}%`, (v) => { $('#mad-text').textContent = v; });
     const need = xpToNext(c.level);

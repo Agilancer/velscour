@@ -10,13 +10,16 @@ import { loadClassArt } from '../core/classart.js';
 import { loadGearArt } from '../core/gearart.js';
 import { preloadBarFx } from '../gfx/artfx.js';
 import { SKILLS } from '../data/skills.js';
-import { setClassItems, setRingContext } from '../data/items.js';
-import { BIOMES, BETA_BIOMES, BIOME_BY_ID, TOWN_BIOME, drawBiome, mixPartner, recordBiomeVisit } from '../data/biomes.js';
+import { setClassItems, setRingContext, SEAL_GAP } from '../data/items.js';
+import { BIOMES, BETA_BIOMES, BIOME_BY_ID, TOWN_BIOME, drawBiome, biomeChoices, takeBiome, mixPartner, recordBiomeVisit } from '../data/biomes.js';
 import { CLASSES } from '../data/classes.js';
 import { generateDungeon, isRaidDepth } from '../world/dungeon.js';
 import { FINAL_DEPTH, depthLevel, blockStart } from '../data/depth.js';
 import { addDefiance, clearDefiance, defianceText, tickBlessing } from './defiance.js';
-import { setupHappenings, announceHappenings, happeningsTick, townHappening, townTick, recordDepth, markNemesis } from './happenings.js';
+import { setupHappenings, announceHappenings, happeningsTick, townHappening, townTick, recordDepth, markNemesis, OMENS, rollOmen, omenable } from './happenings.js';
+import { greedOf, greedPacks, greedWorld, greedCleared, greedDeath } from './greed.js';
+import { spectateTick } from './spectate.js';
+import { toggleSmite } from './smite.js';
 import { generateTown, makeTownTiles, rollTownWeather } from '../world/town.js';
 import { generateOverworld } from '../world/overworld.js';
 import { createOverworldScenario } from './overworld.js';
@@ -34,7 +37,7 @@ import { loadCastlePack, releaseCastlePack } from '../gfx/castle.js';
 import { loadCastle3D, releaseCastle3D } from '../gfx/castle3dart.js';
 import { World } from './world.js';
 import { Player } from './player.js';
-import { makeMonster, Monster } from './monster.js';
+import { makeMonster, makeElite, Monster } from './monster.js';
 import { clearRims } from './creature.js';
 import { applyTrait, rollTrait, ambushTick, madnessTick, unleashMadness } from './mayhem.js';
 import { makeRaidBoss } from './raid.js';
@@ -55,6 +58,8 @@ import { toggleInventory } from '../ui/inventory.js';
 import { toggleTree, toggleBook } from '../ui/skills.js';
 import { toggleQuest } from '../ui/quest.js';
 import { titleScreen, hide as hideScreen, deathScreen, victoryScreen, pauseMenu, helpDialog } from '../ui/screens.js';
+
+const PICK_WAIT = 8; // seconds auto-play gives the player to choose a portal down (portalChoice)
 
 const STEP_SURFACE = { sunken: 'water', plague: 'water', sewers: 'water', serpent: 'water', library: 'wood', gilded: 'wood', sea_of_sand:'sand', dark_forest:'wood' };   // footstep sounds; default stone
 
@@ -334,6 +339,7 @@ export const game = {
     const depth = Math.max(1, G.world?.kind === 'dungeon' ? G.world.depth : c.depth || 1);
     c.depth = depth;
     c.nextBiome = biome.id;
+    delete c.nextOmen;
     if (biome.id === 'sea_of_sand') {
       c.seaOfSandRuns ||= {};
       delete c.seaOfSandRuns[depth];
@@ -434,7 +440,7 @@ export const game = {
     ];
     // monsters
     const lvl = depthLevel(depth);
-    for (const s of gen.spawns) {
+    for (const s of greedPacks(gen.spawns, greedOf(c))) { // the Greed lever: bigger packs, champion leaders (game/greed.js)
       if (s.rank === 'raid') {
         const m = makeRaidBoss(world, gen.raid, depth, lvl + 3);
         world.add(m);
@@ -450,7 +456,7 @@ export const game = {
       }
       const n = s.n;
       const variant = Math.random() < Math.min(0.5, 0.2 + depth * 0.005) ? 1 : 0;
-      const trait = rollTrait(world, depth);
+      const trait = rollTrait(world, depth) || (s.trait ? rollTrait(world, depth, true) : null);
       for (let i = 0; i < n; i++) {
         const [x, y] = i === 0 ? [s.x, s.y] : gen.map.randomNear(s.x, s.y, 1.6);
         const rank = s.rank === 'unique' ? (i === 0 ? 'unique' : 'normal') : s.rank;
@@ -458,11 +464,13 @@ export const game = {
         if (s.rank === 'unique' && i > 0) { m.affixes = []; m.name = m.name + ' Minion'; }
         // tanks and bullet-hell casters lead their pack; hunters, phasers and burrowers come as a pack
         if (trait && (i === 0 || ['hunter', 'phaser', 'burrower'].includes(trait))) applyTrait(m, trait);
+        if (s.champ && i === 0) makeElite(m, 'champion', depth, world);
         world.add(m);
       }
     }
     world.roster = [...new Set(gen.spawns.filter((s) => s.arch && !['raid', 'boss'].includes(s.rank)).map((s) => s.arch))];
     setupHappenings(world, gen.start, gen); // omens, shrines, treasure imps, cursed chests (game/happenings.js)
+    greedWorld(world, c); // the Greed lever and its Hoard multiply the omen's loot dials
     tickBlessing(c);
     world.onBossAwake = (m) => {
       UI.centerMsg(m.name, m.isVelscour ? 'The Demon Lord rises' : m.raid ? `${m.title}${m.raid.mods.length ? ' · ' + m.raid.modText() : ''}` : 'Guardian of the Exit', 3);
@@ -498,6 +506,7 @@ export const game = {
       const first = !c.cleared[depth];
       c.cleared[depth] = true;
       c.deepest = Math.max(c.deepest || 0, depth);
+      greedCleared(world, c);
       if (first) { c.skillPoints++; UI.log('Bonus skill point for stilling the Heart of the Forest!', '#ffd860'); }
       addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#40a0ff', 5));
       sfx('gate'); UI.refresh(); this.autosave();
@@ -538,7 +547,7 @@ export const game = {
     if (!biome.beta) recordBiomeVisit(c, biome, depth); // a beta biome leaves the overworld guarantee alone
     c.lastBiome = biome.id;
     HUD.setArea(`Depth ${depth}${depth > FINAL_DEPTH ? ' — Endless Torment' : ''}`, biome.overworld ? `${biome.name} · ${world.overworldScenario.title}` : gen.raid ? `${biome.name} · Boss Room` : biome.name);
-    stopMusic(); setAmbience(biome.id);
+    playMusic('wilds', { delay: 4 + Math.random() * 20 }); setAmbience(biome.id);
     const kin = tileset.mixed && BIOME_BY_ID[tileset.mixed];
     UI.centerMsg(biome.name.toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);
     if (world.night) UI.log(world.raining ? 'Night has fallen, and the rain with it.' : 'Night has fallen over the land.', '#a0b0d0');
@@ -561,24 +570,75 @@ export const game = {
   useExit(world, exit) {
     const c = G.char;
     if (!exit.active) { floatText(exit.x, exit.y, 70, world.overworldScenario ? 'Sealed — complete the shrine trial!' : 'Sealed — slay the guardian!', '#ff6040', 13, { life: 1.6 }); sfx('error'); return; }
-    const depth = world.depth;
-    const next = depth + 1;
-    const nb = drawBiome(c, next);
-    const nbName = BIOME_BY_ID[nb].name;
-    UI.dialog({
-      title: `Depth ${depth} Cleared`,
-      html: `<p>The way down opens onto <b style="color:#ffb070">${escapeHtml(nbName)}</b> (Depth ${next}).</p><p class="dim">Continue the descent, or return to town to trade — the town portal will lead to Depth ${next}.</p>`,
-      closable: false,
-      buttons: [
-        { label: 'Return to Town', fn: () => { c.depth = next; c.nextBiome = nb; sfx('portal'); this.enterTown(); } },
-        { label: `Descend to Depth ${next}`, cls: 'red', fn: () => { c.depth = next; c.nextBiome = nb; this.enterDungeon(); } },
-      ],
+    this.portalChoice(world);
+  },
+
+  /**
+   * A cleared exit: up to three portals down, each a biome and (where one can stir) the omen waiting there. Pick one,
+   * then descend or go to town first (the town portal leads to it). With auto-play on the player has PICK_WAIT seconds
+   * to choose (or to tap a portal for it) before auto-play takes its own pick; opts.auto/opts.town come from
+   * auto-play's leaveLevel (town: it means to shop first).
+   */
+  portalChoice(world, opts = {}) {
+    if (this.pick) return;
+    const c = G.char, next = world.depth + 1;
+    const cards = biomeChoices(c, next, 3).map((id) => {
+      const biome = BIOME_BY_ID[id] || BIOME_BY_ID.catacombs;
+      return { id: biome.id, biome, omen: omenable(next, biome) ? rollOmen(next) : undefined };
     });
+    let sel = 0, chosen = false;
+    const tag = (cd) => (cd.biome.id === 'throne' ? '<b style="color:#ff4020">Demon Lord Velscour awaits</b>' : cd.biome.overworld ? 'Overworld trial' : isRaidDepth(next) ? '<b style="color:#ff6030">BOSS ROOM</b>' : 'Dungeon');
+    const omenLine = (cd) => (cd.omen === undefined ? '' : cd.omen ? `<span class="pc-omen" style="color:${OMENS[cd.omen].color}"><b>${OMENS[cd.omen].name}</b>${OMENS[cd.omen].text}</span>` : '<span class="pc-omen dim"><b>No omen</b>A quiet depth.</span>');
+    const html = `<p class="dim">${cards.length > 1 ? `Depth ${next} lies beyond ${['', 'one', 'two', 'three'][cards.length]} portals. Choose your way down.` : `The way down opens onto Depth ${next}.`}</p>
+      <div class="pc-row">${cards.map((cd, i) => `<button type="button" class="pc-card${i === sel ? ' sel' : ''}" data-i="${i}" style="--pc:${cd.biome.torch || '#ff8040'}"><i class="pc-swirl"></i><b class="pc-name">${escapeHtml(cd.biome.name)}</b><span class="pc-tag">${tag(cd)}</span>${omenLine(cd)}</button>`).join('')}</div>
+      <p class="pc-auto"></p>`;
+    const go = (town) => {
+      this.pick = null;
+      const cd = cards[sel];
+      c.depth = next; c.nextBiome = cd.id; takeBiome(c, cd.id);
+      if (cd.omen !== undefined) c.nextOmen = cd.omen || 'none'; else delete c.nextOmen;
+      if (Auto.on) Auto.transitT = 3;
+      if (town) { if (opts.auto) UI.log('Auto-play heads back to town to trade.', '#8fe0ff'); sfx('portal'); this.enterTown(); }
+      else this.enterDungeon();
+    };
+    const d = UI.dialog({
+      title: `Depth ${world.depth} Cleared`, html, closable: false, cls: 'portal-choice',
+      buttons: [{ label: 'Return to Town', fn: () => go(true) }, { label: `Descend to Depth ${next}`, cls: 'red', fn: () => go(false) }],
+    });
+    const btns = [...d.box.querySelectorAll('.pc-card')];
+    btns.forEach((b) => b.addEventListener('click', () => {
+      sel = +b.dataset.i; chosen = true; sfx('ui');
+      btns.forEach((x) => x.classList.toggle('sel', x === b));
+      if (this.pick) this.pick.t = Math.min(this.pick.t, 3); // auto-play goes where it was told, after a moment
+    }));
+    // auto-play's own pick: a portal with an omen (more to see, and most of them pay), else any
+    const autoPick = () => { const o = cards.map((cd, i) => (cd.omen ? i : -1)).filter((i) => i >= 0); return o.length ? o[Math.floor(Math.random() * o.length)] : Math.floor(Math.random() * cards.length); };
+    this.pick = {
+      t: PICK_WAIT, el: d.box.querySelector('.pc-auto'), last: '',
+      choose: () => { d.close(); if (!chosen) sel = autoPick(); go(opts.auto ? opts.town : Auto.needTown()); },
+      name: () => (chosen ? cards[sel].biome.name : null),
+    };
+  },
+
+  /** The portal choice's auto-play countdown (runs while the dialog pauses the world). */
+  tickPick(dt) {
+    const pk = this.pick;
+    if (!pk) return;
+    if (!pk.el.isConnected) { this.pick = null; return; }
+    let txt = '';
+    if (Auto.on && G.char) {
+      pk.t -= dt;
+      if (pk.t <= 0) { pk.choose(); return; }
+      const nm = pk.name();
+      txt = nm ? `Auto-play takes the portal to ${escapeHtml(nm)} in ${Math.ceil(pk.t)}…` : `Auto-play picks a portal in ${Math.ceil(pk.t)}… tap one to choose for it.`;
+    }
+    if (txt !== pk.last) { pk.last = txt; pk.el.innerHTML = txt; }
   },
 
   /** A cleared depth: if it ends the Defiance block, the stacks are spent (and say so). */
   brokeThrough(depth) {
     const c = G.char, had = c.defiance && c.defiance.n;
+    greedCleared(G.world, c); // the Greed lever pays into the Hoard (game/greed.js)
     if (!clearDefiance(c, depth)) return;
     if (G.player) G.player.recompute();
     UI.log(`The wall is broken. <b style="color:#ff6a3a">Defiance ${had}</b> fades — Velscour takes note.`, '#ffb080');
@@ -591,6 +651,9 @@ export const game = {
     const depth = w && w.kind === 'dungeon' ? w.depth : c.depth;
     const n = addDefiance(c, depth);
     markNemesis(c, src, depth); // the killer comes back as a unique (game/happenings.js)
+    greedDeath(c); // the Hoard is lost and the Greed lever drops (game/greed.js)
+    G.smiteArmed = false;
+    delete c.nextOmen;
     const killer = src ? (src.owner ? src.owner.name : src.name) : null;
     stopMusic();
     this.autosave();
@@ -635,9 +698,11 @@ export const game = {
       if (input.consume('KeyH')) helpDialog();
       if (input.consume('KeyP')) Auto.toggle();
       if (input.consume('KeyG')) unleashMadness();
+      if (input.consume('KeyF')) toggleSmite();
       if (input.consume('Tab') || input.consume('KeyM')) G.showAutomap = !G.showAutomap;
       if (input.consume('Escape')) {
-        if (ui.anyOpen()) ui.closeAll();
+        if (G.smiteArmed) G.smiteArmed = false;
+        else if (ui.anyOpen()) ui.closeAll();
         else if (G.showAutomap) G.showAutomap = false;
         else pauseMenu();
       }
@@ -645,6 +710,7 @@ export const game = {
       const top = UI.screensEl.lastElementChild;
       if (top && top.querySelector('.dialog-box')) top.dispatchEvent(new PointerEvent('pointerdown'));
     }
+    this.tickPick(dt);
     const pauseMenus = G.settings.pauseMenus !== false && w.kind === 'dungeon' && ui.anyOpen();
     G.paused = ui.modal || pauseMenus;
     if (G.hitStop > 0) { G.hitStop -= dt; controls.update(0); }
@@ -658,8 +724,10 @@ export const game = {
       ambushTick(w, dt);
       if (w.kind === 'town') townTick(w, dt); else happeningsTick(w, dt);
       madnessTick(dt);
+      spectateTick(w, dt); // gilded critters, the SMITE reticle (game/spectate.js)
       footsteps(p, w.kind === 'town' ? 'dirt' : STEP_SURFACE[w.biome && w.biome.id] || 'stone');
       Meter.tick(dt);
+      if (w.kind === 'dungeon' && G.char) G.char.sealT = (G.char.sealT ?? SEAL_GAP) + dt; // the sealed treasure clock (loot.js)
     } else {
       input.endFrame();
     }

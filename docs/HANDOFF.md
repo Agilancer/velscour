@@ -14,6 +14,584 @@ Contents
 
 ---
 
+## October 20, 2026 — the Castle's walls rebuilt as height-mapped masonry you can fight on (branch `feat/castle-walls-heightmap`)
+
+- **Request:** use the user's `VELSCOUR_Castle_Artwork_Complete.zip` (walls and towers, walkable rampart tiles, stairs
+  and landings, crenellations; not to any template) to rebuild the Castle overworld's walls and bridge: lower the
+  water with height mapping and build the bridge from the set's pieces, make the walls wide enough to fight on with
+  monsters spawning on top and stairs up, fix the keep doors that didn't connect to their walls; palette swaps of
+  other packs allowed; screenshots until it looks like real castle walls and a bridge.
+- **Art** (`tools/castleramparts.py`, source zip in `assets/source/biomes/`): the pieces are small isometric sprites
+  at their own scale (a 1-tile-thick wall), so they are used as textures: each painted face is unsheared (columns slid
+  half a px per px so the courses run level), cropped and made to tile: masonry (+ a limestone recolour for the halls),
+  the towers' corbel band, the plinth, an arrow slit, the arch piece's face (opening filled with shadow), and the two
+  plain rampart slabs' tops cut into quarters. Output `assets/tiles/castle/ramparts.webp/json`, loaded with the pack.
+- **Geometry** (`src/world/castleworld.js`): the Castle is now a height map (`map.hgt`, the Mountainside's system).
+  Outer curtain 6 tiles thick, walk 24 levels (96 px) up; inner curtain 5 thick, walk at 32; merlons/crenels along
+  the outer edge; 31 square towers stepped up 8 over the walk (gatehouse towers 12) with corbels and slits; gate
+  passages straight through at ground level under arched lintels (raised portcullis on the main and inner gates);
+  11 stair flights (one level-4 step a tile) from the wards; moat and river sunk to -11 with masonry (moat) or earth
+  (river) banks; three stone bridges at ground level with parapets and arches on the visible side, the main one ending
+  in drawbridge planks. The hall walls are limestone masonry at 18 with one doorway each side: arched lintel and two
+  oak leaves swung back against the visible face (the old frame sprites stood free of the wall). 12 monster packs
+  spawn on the walls; the rampart scenarios fight up there. Full write-up in CASTLE_OVERWORLD.md.
+- **Engine** (`src/gfx/terrain.js`, `src/game/render.js`, `src/gfx/castlewalls.js`): `map.faceArt` styles route
+  faces to the masonry painter; `map.tallOcclusion` makes every column that can hide something behind it an occluder,
+  redrawn over creatures (and, computed once per thing, props, trees, buildings, chests, portals, loot) and clipped to
+  them; the hero behind a wall gets a faint silhouette drawn over it; corpses/decals/ground particles/ripples behind a
+  wall are skipped (`hiddenBehind`); `map.walkStep` (stairs walked, not hopped); `map.flowRange` 96 on the Castle
+  (monsters find the stairs). The sky is skipped on the Castle; the old `rampartHeight`/`rampartElev` z-hack is gone.
+- **Verified:** `castle_overworld.mjs` (100 seeds, rewritten for the height map: curtains solid and sealed with no hop
+  over them, walks/towers/stairs reached, bridges over sunken water, hall walls/doors, all 35 scenarios),
+  new `castle_walls.js` (walk 4,224 tiles all reachable, no drops off the walls, wall monsters come down the stairs
+  6/6 and bailey monsters climb 4/4; 30 shots looked at), `scenarios.js` (all 35 Castle scenarios done, longest wait
+  < 20 s), `castle_visual.js`, `BAL_BIOME=castle balance.js paladin,wizard 19 8` (new env var).
+- **Follow-up (user):** brick courses are anchored to the ground plane (they ran level per screen, so corners and
+  merlons mismatched); flagstone tops are one slab per tile so the grout lines run on along the iso axes; outer towers
+  stand a tile out on the berm with the curtain (the towers' feet were 44 px lower, in the water); the keep is
+  mirrored so its gate faces the courtyard; banners (the pack's face-on hangings sheared onto the faces) on the
+  curtains, every tower and the halls (146 on a map); trails from every house door, site, chest, stair and the exit,
+  the cut-off pieces joined into one network (`map.road`), and auto-play's Castle pathing keeps to it (road-weighted
+  Dijkstra, ~10 ms per rebuild vs 7 for the BFS; 100% of its walking to the shrine on road). Checks added to
+  `castle_overworld.mjs` (trails to every door/site/chest/stair, one network, banners); all 35 scenarios done; both
+  `BAL_BIOME=castle` soaks clear with 0 deaths.
+- **Frame cost** (`biome_perf.js castle 19 4 20`, SwiftShader, 4x throttle, two runs each): render 8.8/10.8 ms vs
+  `main` 19.7/9.8, update 7.0/9.8 vs 10.0/5.8: within the run-to-run noise. Terrain columns are bucketed per floor
+  chunk (`columnsIn`); before that, scanning all 100k columns per chunk doubled the render cost.
+- **Open:** a hero just behind (north of) a wall shows above its back edge, as the projection has it; the dark rim on
+  the wall top's back edge is the only cue. Towers are square only (the artwork has no round ones). Monsters awake on
+  a wall more than ~96 steps of walking from the hero (the flow field's reach) mill at the edge rather than walk to
+  the far stairs. Not caused here but seen: `mountain.js` auto-play doesn't reach the summit in 600 s on `main` either
+  (50-63%), and its `rules` check now and then finds no clean tall step on a seed (passes on rerun).
+
+## October 20, 2026 — Paladin: 3D hammers, Shield Throw ricochets, every skill balanced (branch `feat/paladin-hammers-shield-throw`)
+
+- **Follow-up: auto-play prioritises hammers AND Shield Throw** (user request). Before, Shield Throw went unlearned
+  until ~level 45 (its prerequisites Holy Shield -> Vengeance Aura are in the shield tree and the Paladin's focus loop
+  never walks chains). Now (`src/game/autoplay.js`): `shieldStep` learns the chain from level 10 so Shield Throw opens
+  with Hammerstorm at 12, then keeps it within two ranks of his best swirling hammer; it casts at the orbit hammers'
+  weight (`focusMul` 4) and **alternates** with them (`hammersSince`/`countFocus`: x6 once a hammer has gone out since
+  the last shield, x0.3 otherwise); it may be thrown while kiting (only orbits/novas could); the bar is hammer on LMB,
+  Shield Throw on RMB. `paladin.js auto` (geared heroes at levels 14/25/45/90, 2 min in a real level): hammers +
+  Shield Throw 72-100% of his mana attacks, Shield Throw 23-60% of those (fails outside 20-70%). Smite still fills in
+  when the mana orb is empty. `tuning.js paladin` stays within noise of `main` except D10 (~40% slower: a rank-1 shield
+  hits 2 foes and takes half his mana); soak unchanged (depth 5 by minute 14-20, 0 deaths).
+
+- **Request:** turn the Paladin's hammers into a 3D model; add a shield throw that eventually bounces between up to 5
+  enemies, then explodes into an AoE, using the Lancer's round 3D shield; balance all the Paladin's skills alongside it
+  for the risky-combat balance.
+- **3D hammers** (`src/gfx/hammer3d.js`): convex prisms (octagonal head, flared steel striking faces, gold band with a
+  glowing cross on each side, haft with rings, leather grip, pommel), faces culled and painted far to near, lit like the
+  Lancer shields, a one-pixel dark outline; each hammer tumbles end over end along its flight (heading from drawShape's
+  screen angle, `headingOfScreen`). Renders memoised per 1/32 turn of heading x spin, per size and palette (elements
+  tint the fittings). The `hammer` case of `drawShape` uses it, so every orbiting hammer (Blessed Hammer, Hammerstorm,
+  Wheel of Hammers, the Hammerfall legendary, the Totem Master's Ancestral Hammer) is 3D. Hammer of the Gods and Solar
+  Hammer drop a `FallingHammer` (0.2 s, damage lands with it); JUDGEMENT's hammer of light is `drawGreatHammer` in the
+  light palette.
+- **Shield Throw** (the Paladin already had a plain one, `paladin.1.9`, kept so saves keep their points):
+  `proj|holy|pshield|ricochet=5`. It strikes 2 foes at rank 1, one more every 4 ranks, 5 from rank 13
+  (`ricochetCount`; +chain items, never past 5), never the same foe twice, flying straight at the next foe in sight
+  within 5 tiles wherever it walks (`Projectile.nextFoe` / `ricochetFrom`), then bursts in a holy blast
+  (`RICOCHET_BLAST` 1.5 tiles x area, `BLAST_DMG` 75% of a strike) around the last foe, at a wall, or at the end of
+  its flight. Drawn as the Lancer's round model (`drawThrownShield` in `lancershields.js`, via the new general
+  `drawShieldOriented`; `drawShieldModel` is now its upright case, pixel-identical in `lancer_shields.js`), flat on the
+  isometric ground like a discus (face up, a slight wobble, half the Lancer slab's thickness), spinning, at 1.35x, sorted in front of the foe it strikes, with a glow, lit rim and a
+  streak of light. It is in auto-play's Paladin focus (`isHammer`) at the non-orbit weight; `hitsPerCast` models it.
+- **Balance** (`pow=` mod: the skill's whole damage, weapon part too, x this; `Player.skillDamage`): the new
+  `tools/tests/paladin.js dps` casts every damaging skill (same rank, seeded gear, mana counted) at one pinned dummy
+  and at a pack of five. Value = sqrt(one x pack) x mana sustain. **Anchored** on auto-play's main attacks, the curve
+  `DMG_TUNE` was fitted on: Smite (level 3) and Hammerstorm (12/40/120) keep their power, and `DMG_TUNE.paladin` is
+  unchanged. Every skill of rows 1-4 is set to its row's target (0.85 + 0.1 x row of the anchor; cooldown skills
+  half, leaps/dashes 0.8) at the levels its row is used (row 1: 12/40, row 2: 12/40/120, rows 3-4: 40/120);
+  cooldown skills and leaps are capped at 1.3x / 1.5x at their mid-game peak. Most skills came **down**: they ran
+  2-8x past the hammers (Bastion 0.13, Crusader's Flurry 0.18, Blade Barrage 0.22, Hallowed Ground 0.25,
+  Consecration 0.28, Zeal 0.3, Sword of Justice 0.37, ... Shield Throw 0.49); a few came up (Wings of Judgment, Halo
+  of Spears 1.3, Purifying Nova, Martyrdom, Hammer of the Gods, Seraph's Gaze, Archon's Radiance, Throne of Light,
+  Bulwark Slam 1.2). Spread after: spammables 0.82-1.28 of target (Divine Strike 1.6), from 0.23-9x.
+- **Kept as they were, on purpose:** row 0 (Smite, Holy Bolt, Radiant Spark, Shield Bash, Sweep, Dawnblade, ...) and
+  Blessed Hammer. The fresh-hero early game is tuned on them. Raising Holy Bolt/Radiant Spark/Sweep (weak mid-game)
+  made depth 1 two to four times faster: the level-1 point bought a skill far above the free attacks, whose weapon
+  part is tiny at level 1. They read 0.3-0.6 of target from level 12 on (starter skills fall behind, like D2's).
+- **Verified:** `tuning.js paladin` vs `main` (seconds per normal, single; 2-3 runs each): D1 0.87 (main 1.03), D3
+  1.86 (1.83), D6 3.1 (2.4), D10 2.3 (2.3), D20 2.5 (5.1), D40 2.4 (2.8), D80 3.9 (3.4), D160 3.1 (2.5): within the
+  run-to-run noise (up to 2x). Fresh-hero soak (`autoplay.js paladin 20`): depth 1 ~4.5 min (main ~6), depth 4 at
+  minute 14 (14), potions drunk, 0 deaths. `paladin.js shield` (ranks 1-20, moving foes, one foe, none, wall),
+  `paladin.js shots` (sheets and shots looked at), flow, skills paladin + totem_master, signatures paladin, classart
+  paladin, rings, hud, ui, lancer_shields, data_check.
+- **Open:** cooldown skills (every class) fall to ~0.1-0.3 of a spammable's value by hero level 120: spammables gain
+  cast speed and weapon damage, cooldowns don't. A game-wide question (cooldowns scaling with cast speed?), not fixed.
+  The per-skill numbers swing ~+-50% run to run (gear picks follow skill power), so finer tuning needs averaged runs.
+  Ask the user how Shield Throw's speed (7.2 tiles/s) and blast feel, and whether Blessed Hammer should stay the
+  weaker early hammer.
+
+## October 20, 2026 — risky combat: tougher monsters, class damage evened out, kiting stances, rarer seals (branch `feat/risky-combat-retune`)
+
+- **Request:** hero damage far too high, especially early: ranged heroes one-shot everything in range. Enemies (even easy
+  ones) should take time to kill, close the gap, make the hero take damage and drink every potion; auto-play should
+  run/kite when needed and its stance dial should give clearly different results. Re-tune all classes. Sealed treasures
+  drop far too often: at least 12 hours of auto-play to fill the bag; a bag full of what auto-play can't sell stops
+  auto-play in town until a slot is free.
+- **Measured first** (new `tools/tests/tuning.js`: every class auto-plays, god mode, against pinned training dummies,
+  one alone then a pack of five, at depths 1-500; heroes 2 levels over their monsters, geared like endgame.js). A
+  normal monster died in 0.3 s at depth 1, 0.05 s at depth 10, under 0.005 s past depth 160; classes differed ~8x
+  (Astronomer, Ranger, Wizard fastest; Barbarian, Dragoon slowest).
+- **Monster life** (`toughness(level)` in `src/data/depth.js`, a log-interpolated table read by `monsterBase`):
+  x4.6 at level 1 to x1690 at 258 (held past it, so the Endless Torment still outgrows the hero). A plain normal
+  now takes ~1.5 s of a level-1 hero's damage at depth 1 and ~3 s from depth 10 on (a pack of five ~1.5x that);
+  re-measured after: 2.1-3.3 s at every sampled depth. Champions x3, uniques x5 as before.
+- **Monster damage** (`danger(level)`, same file): x0.7 at level 1 (a fresh hero still died twice in its first two
+  minutes at x1), x1 from 6 to 20, then down to x0.14-0.15 past level 146, where hero
+  life lagged (a normal hit was ~6% of life at depth 40, ~12% at 80-160, ~30% past 250). Normal hits are now ~3-5%,
+  but every monster lives long enough to land them.
+- **Class damage** (`DMG_TUNE` / `DMG_TUNE_AT` in `src/data/classes.js`, applied in `Player.skillDamage` via
+  `classTune`, so minions, signatures and procs follow): a multiplier per class at hero levels 5 / 45 / 160 (the
+  measured ratio^0.85; melee classes +15%). After: classes mostly within +-40% of the mean.
+- **Bosses:** guardians 10-22 plain normals (`(10 + depth/10) / archetype life^0.7`, was 14-44 x archetype life);
+  BOSS ROOM life `raidHpMul` 0.35-0.55 (~12-19 normals; their wards and mechanics stretch it ~3.5x), damage
+  `raidHitMul` x2.7 to depth 10 easing to x1.9 by 100 (was 3.6); add waves are fodder (35% life, at most 7, was up to
+  10 full monsters that piled up); enrage at 3 min and execute at 5 (were 2 and 3: every fight hit the execute);
+  `VELSCOUR_HP` 60 normals (was 45000 when he died in 0.1 s). Measured (`BAL_RAID=1` balance.js, 16 class/depth
+  pairs, damage on): every depth-5 room cleared first try in 43-72 s, most depth-30 rooms in 48-198 s (3 of 12 heroes
+  died once), depth-100 rooms 74-156 s with about half the heroes dying once first.
+- **Pursuit:** monsters chasing run x1.3 (`CHASE`, up to 4.6 tiles/s; the hero runs 4.2) in `Monster.chase`.
+- **Leech** (`leechHeal` in combat.js): life/mana leech heals by the share of the target's life the hit took
+  (`LEECH_K` 2 x leech% of the hero's own life for a whole monster), not raw damage, which runs far ahead of hero life
+  and healed whole life bars a hit. Ring blood augment, beams, projectiles' heal and minion leech use it too.
+  Revived corpses' life is divided by the corpse's toughness.
+- **Density:** packs per room grow half as fast (`density(depth)` 1.0 + 0.006/depth to 120, was 1.1 + 0.013; champions
+  2 + depth/25, uniques 1 + depth/45); `monsterBase` XP x `densityXp` so XP per depth stays where it was.
+- **Events:** Velscour's Challenge needs 10 + depth/15 kills (max 24) in 45 s (was 18+, 40 s); kill streaks allow 4 s
+  between kills (was 2.2).
+- **Stances** (`STANCES` in autoplay.js): new `kiteNear` (a melee foe this close sends a ranged build back), `kiteCrowd`,
+  `kiteHp`, `backoff` (melee builds, Whirlwind too, step out of the crowd while a potion works) and `stand` (share of a
+  ranged skill's reach it fights from: Cautious 1.1, Reckless 0.55); wider potion/retreat thresholds. Measured (8-min
+  soaks, balance.js): ranged Cautious kites 26-51% of the time, Balanced 8-28%, Reckless 0-3%; Cautious drinks the most
+  (a depth-12 Wizard: 31 potions vs 18 vs 2).
+- **Sealed treasures** (`SEAL_GAP` 15 min in items.js; `c.sealT` counts dungeon time in game.update, loot.js seals an
+  Epic+ only when it has run out): at most 4 an hour, a 60-slot bag takes ~15 h. Other Epic+ drops arrive open.
+  **Full bag:** auto-play waits in town only when the bag has no free slot after trading (`bagWait`; was "fewer than
+  14 free with a seal in it"), re-runs its errands when a seal is broken, and goes on once a slot is free. Fixed on the
+  way: buying a vendor upgrade left the replaced piece in the bag unsold (`buyGear` returns the count, the step sells
+  again); a full storage chest made room but didn't store that visit's items.
+- **Tests:** new `tuning.js [classes|all] [depths] [secs]`; `balance.js` gains `BAL_STANCE=a,b,c`, `BAL_RAID=1` (start at
+  a BOSS ROOM gate, the level's monsters gone) and prints potions drunk, life lost (in life bars), kiting share and
+  seconds per kill; `spectate.js` checks the seal gap and the full-bag wait. endgame.js / balance_model.mjs follow the
+  new guardian/raid formulas.
+- **Fresh hero** (autoplay.js wizard/paladin, 15-25 game min): depth 1 takes 5-9 minutes, the starting potions are
+  gone in the first few, an occasional early death; depth 3-4 by minute 15-20 (it was ~10+).
+- **Open:** pet classes (Necromancer, Totem Master seen) are weaker in BOSS ROOMs than on open ground: dozens of pets
+  crowd a big boss and the mechanics (heads, wards) soak them; one run took 40% in 2 minutes, others far less. Deep depths (past
+  ~150) are modelled and soaked only at 100. Auto-play progress is several times slower per hour than before (by
+  design: a depth takes minutes); ask the user how it feels and whether gold/drops per hour need a lift.
+
+## October 20, 2026 — enemy set 3, no more generated monsters, a random bestiary (branch `feat/enemy-set3`)
+- **Removed** the 1,850 generated biome natives (`bn_`: existing sprites with Canvas shapes drawn on top;
+  `src/data/biomenatives.js`, `src/gfx/biomenativeart.js`) and the Heavenly monsters' Canvas fallback (they now come
+  only from their painted sheets). Raid bosses that used `bn_` art use set 3 giants. A saved nemesis with `bn_` art
+  gets a fresh look.
+- **Added** enemy set 3: 260 painted monsters from `VELSCOUR_Monsters_Enemies_Bosses.zip` (100 enemies, 60 monsters,
+  40 lords, 20 major bosses, 40 arena bosses), cut by `tools/set3plates.py`, packed into 10 atlases (each at most 1,554 px
+  tall), catalogued in `src/data/bestiary3.js`. See docs/ENEMY_ART.md.
+- **No biome themes:** `rollLooks` picks looks at random from every sheet (at most 6 lazy sheets a level); biome
+  `prefer` and `swaps` lists are gone. Two looks in three get a random palette swap and its name ("Frost Gaunt
+  Pikeman"). The Sea of Sand keeps its own creatures (its archetypes are its own).
+- Tests: `data_check`, `flow`, `enemies`, `heavenly`, `raid 5,30` (its biome list now skips overworlds, which
+  crashed at depth 5 on the Sea of Sand), `worldwide_biomes`, `autoplay wizard`.
+
+## October 20, 2026 — critters pay XP only, come far more often, arrows and sparks; SMITE meter sized like MADNESS (branch `feat/critter-xp`)
+
+- **Request:** make the SMITE bar the same size as the MADNESS bar; significantly more gilded critters, with sparks
+  streaming up and a small red arrow pointing at each so players know to tap them; the only pay is a significant sum
+  of XP per critter, based on the hero's level.
+- `#smite-track` / `#smite-text` now match `#mad-track` / `#mad-text` (100% wide, 9 px tall, 8 px text).
+- `src/game/critters.js`: `CRITTER_GAP` 40-85 s -> 12-25 s, first one 4-10 s into a level (was 18-40); still one at a
+  time. `pay.xp` is a share of `xpToNext(hero level)` (+-10%): Gilded Wisp 5%, Starmoth 6%, Golden Scarab 8%,
+  Prismatic Wisp 15%; no gold, gems or potions any more. `gainXp(n, flat)`: critters skip the out-levelled-depth
+  penalty (the hero's XP % bonus still applies). Each critter sheds ~34 rising sparks a second and has a bobbing red
+  arrow over it (gone once it flees).
+- **Open:** the XP shares and the gap are guesses; ask the user how they feel in play.
+
+## October 20, 2026 — things to do while the hero plays: critters, SMITE, sealed treasures, stance, portal choice, Greed (branch `feat/spectator-play`)
+
+- **Request:** ideas to make auto-play more engaging "like the Madness bar", then: build gilded critters to tap, a
+  Divine Smite meter, sealed treasures for **Epic and better** (auto-play stops in town when they fill the bag), an
+  auto-play stance dial, a choice of three portals at each exit (auto-play picks after ~8 s) and a Greed lever.
+- **The tap layer** (`src/game/spectate.js`): `input.js` hands every canvas press to `G.tapHook` first; a claimed press
+  is swallowed, so it never moves the hero or sets auto-play's `overrideT` ("Manual control"). Claims: an armed SMITE,
+  then a critter under the finger. `spectateTick` (game.update) runs the critter clock and keeps the SMITE reticle up.
+- **Gilded critters** (`src/game/critters.js`): Gilded Wisp (gold), Starmoth (3.5% of a level in XP), Golden Scarab
+  (gold, 60% a gem), Prismatic Wisp (gold, XP, gem, potion). One at a time, every 40-85 s in dungeons/overworlds (not
+  town or a sealed BOSS ROOM), 3.5-7 tiles from the hero and on screen; 9-12 s to catch, then they fly/dig away. They
+  are 'top' vfx effects listed in `world.critters`, not creatures, so nothing fights them and auto-play ignores them.
+  Saves count `c.critters`.
+- **SMITE** (`src/game/smite.js`): `c.smite` 0..1 fills from kills (`happenings.onKill` -> `smiteKill`: normal 1,
+  champion 3, unique 6, guardian 12 of `SMITE_KILLS` 45; its own kills don't count). Full: the SMITE button (under
+  MADNESS; in portrait it sits above the MADNESS button) or **F** arms it; the next click/tap strikes a 3.4-tile blast:
+  `max(14 hero hits, a share of each foe's life)` (normal 100% since the risky-combat retune, was 90%; champion 40%, unique 28%, guardian 8%, raid boss 4%).
+  Right-click / Esc disarms. Never fired by auto-play.
+- **Sealed treasures** (`src/ui/sealed.js`): a `GroundItem` seals any gear of rarity >= `SEAL_RARITY` (3, Epic) whose
+  `sealed` is still undefined (`dropFromBag` marks opened items `false`, so they stay open). `itemName` -> "Sealed
+  Treasure", `itemColor` -> `SEALED_COLOR`, icon = a casket, tooltip hides everything but "Epic or better" and the item
+  level; it can't be equipped or sold. The SEALED chip under the HUD buttons (or Break the Seal / double-click in the
+  inventory) spins a reel (non-modal card, the game keeps running) that lands on the real rarity; Equip / Keep /
+  Next seal. Auto-play picks them up (always worth a slot) but never equips, sells, stashes or drops one; in town,
+  with fewer than `BAG_LOW` (14) free slots and sealed items in the bag, it stops before the portal ("Waiting in town:
+  break the seals…", `Auto.sealWaiting`, the chip pulses red). Tests that soak unattended set `G.autoOpenSeals = true`
+  (autoplay.js, balance.js) so auto-play opens them itself.
+- **Stance** (`STANCES` / `stanceOf` in autoplay.js, saved as `c.stance`, shown while auto-play is on): Cautious /
+  Balanced (the old numbers) / Reckless move `boldness()`, the life share where it turns timid, drinks a healing
+  potion, retreats to town, and how far it farms (`farm`, `lim` in `huntGoal`).
+- **Portal choice** (`game.portalChoice`, `biomeChoices` / `takeBiome` in biomes.js, `rollOmen` / `omenable` in
+  happenings.js): a cleared exit offers up to three biomes (all overworlds while the overworld guarantee is due; one
+  card at Velscour's throne), each with its pre-rolled omen (none for BOSS ROOMs, overworlds, Endless Torment). The
+  chosen omen rides on `c.nextOmen` ('none' for a quiet depth) and `setupHappenings` keeps its word. Both the manual
+  exit and auto-play's `leaveLevel` use it; with auto-play on, `game.tickPick` (runs while the dialog pauses the
+  world) counts `PICK_WAIT` (8 s) and then takes a portal with an omen if any; a tapped portal cuts the wait to 3 s and
+  auto-play takes that one. "Descend to Depth N" kept its label (flow.js).
+- **Greed** (`src/game/greed.js`, `c.greed` 0-5, `c.hoard` 0-50): read when a depth is built (from the next depth).
+  Per notch: +7% champion pack leaders, +12% pack size, +8% forced monster traits (`rollTrait(..., force)`), monsters
+  +10% life / +6% damage / +10% XP (marked as they appear, ambushes too, by `greedTick` in happeningsTick); pays
+  x(1 + 0.25 g) drops, x(1 + 0.3 g) gold, +20 g % magic find (`world.mfAdd`, read by dropLoot/dropChest). Clearing a
+  depth with the lever up adds g stacks to the Hoard (+2% drops and gold a stack, only while greedy). A death drops
+  the lever to 0 and loses the Hoard.
+- **HUD:** SMITE meter/button under MADNESS; stance switch, Greed lever (pips, -/+, Hoard) and the SEALED chip in
+  `#hud-dials` under the HUD buttons (a row under them on touch; hung below the button column in portrait). Help
+  screen lists the new controls.
+- **Tests:** new `tools/tests/spectate.js [mobile]` (37 checks through real clicks/taps; shots `spectate_*.png`).
+  Regression: flow, hud, mobile, select, ui, stash, rarity, happenings, mayhem, scenarios, data_check,
+  `autoplay wizard 8`, `autoplay paladin 8` pass.
+- **Open:** odds/numbers are first guesses (critter gap, SMITE kills and shares, Greed per notch, Hoard cap); ask the
+  user how they feel in play. Balance soaks with Greed raised haven't been run. Sealed items in the storage chest stay
+  sealed (only the bag's are counted).
+
+## October 19, 2026 — more hero gear: collection 02 armors, helmet sets 02 and 03, 24 more finishes (branch `feat/gear-collection-02`)
+
+- **Request:** add `VELSCOUR_Collection_02_96_Armor_Source_Artwork.zip`, `VELSCOUR_Helmet_Set_02_Game_Exports.zip` and
+  `VELSCOUR_Helmet_Set_03_Game_Exports.zip` to the game, used in play, with palette swaps for more gear variety.
+- **Done:** `tools/nocturnegear.py import2 <dir>` (head-matched like the first sets). Per class 18 armors (new 13-18:
+  Rare A/B, Epic, Legendary, Mythic A/B) and 15 helmets (new designs 6-15; sets 02/03 bring the first real Mythic
+  helmets). `gear.json` bands are now id lists (`rare: [5,6,13,14]`...) and `itemLook` picks from them; helmets roll a
+  design of their rarity, so Mythic helms now get the set 02/03 Mythics; Legendary helms roll set 01's Legendary or
+  those two Mythics (three designs). 24 new
+  finishes (four per rarity tier), appended so saved looks keep their index. Gear cache key `V` = `nocturne-3`. Saved
+  items keep their looks (ids only grew); new drops roll the new art. The helmet narrowing (`HELM_SCALE`) applies to the
+  new sets too.
+- **Verified:** `herolook.js all` (2,457 looks per class, 3-minute soak), `closed_helms.js all` (15 helmets x 18 armors x
+  16 classes, sheets looked at), `gear.js paladin,necromancer` (new armors, helmets and finishes seen in the sheets).
+
+## October 20, 2026 — Rarity unlocks by item level (Epic 30, Legendary 45, Mythic 60)
+
+- **Request:** the user rolled a Boomerang Knight and had a Legendary at level 3 (on `main`, which still had the old
+  drop tables: PR #146 wasn't merged yet). Rarity odds should feel like other dungeon crawlers; drop counts are fine.
+  Then: Epic from level 30, Legendary 45, Mythic 60.
+- **Gates** (`RARITY[r].minIlvl` / `fullIlvl`, like Diablo II's quality levels): a rarity can't roll below its
+  minimum item level and its odds ramp to full by `fullIlvl`: Rare 3 -> 8, Epic 30 -> 40, Legendary 45 -> 60, Mythic
+  60 -> 80 (`rarityUnlock`, applied in `rollRarity(mf, bonus, ilvl)`, which `rollItem` passes). Every guaranteed
+  rarity steps down to the best one its item level allows (`rarityAt`): Dark Forest and Sea of Sand rewards, dungeon
+  scenario hoards (`src/game/scenarios.js`, merged from main: was Legendary + 30% Mythic, now Epic / Legendary 30% /
+  Mythic 3%), the cursed chest hoard, the tenth-depth gift, the peddler, vendor stock. The Dark Forest and Sea of Sand Mythic rolls
+  need item level 60. Sea of Sand's log names the rarity it gave; the Quest Log says "fine gear (Epic or better once
+  deep enough)".
+- **Odds once unlocked** (unchanged, plain kill): Common 71% / Uncommon 21% / Rare 6.1% / Epic 1.0% / Legendary 0.14%
+  / Mythic 0.011%. That is about D2's normal / magic / rare / set / unique split; Mythic is rarer than anything there.
+- **Tests:** `rarity.js` prints odds by item level and fails if any rarity rolls below its gate (even a boss at 300%
+  magic find) or if `rarityAt` lets one through; `sea_of_sand_generation.mjs` rolls at item level 70 and checks an
+  item level 10 route pays a Rare. A 25-minute Boomerang Knight soak (before the 30/45/60 change, with gates at
+  8/18/35) reached depth 11 / level 19 with no Legendary or Mythic. flow, happenings, scenarios, rings, ui pass.
+
+## October 19, 2026 — Level cap 600 (levels 301-600 are the Endless Torment's progression)
+
+- `MAX_LEVEL` 300 -> 600 (`src/game/player.js`). `xpToNext` is unchanged to level 240; past it a level costs
+  `L/240` times the level-240 price (was still growing ~L^3.5). A full-clearing hero is ~273 at Velscour (depth 500,
+  was ~269), then keeps pace with the Endless Torment's monsters: ~355 at depth 700 (monster level 348), ~495 at 1000
+  (483), and 600 around depth 1200 (573). Existing heroes keep their level.
+- `raidHpMul` stops growing at depth 500 (it had +1 a depth past 150 with no end); in the Endless Torment hero damage
+  falls behind monster life on its own (`endgame.js` barbarian: BOSS ROOM 47 s at depth 700, ~170 s at 1000, ~550 s
+  at 1200; normal hits stay 13-23% of life, BOSS ROOM hits 50-85%). That is the intended "truly mad" wall.
+- `tools/tests/endgame.js` now samples XP to depth 1300 and adds depths 700/1000/1200; `balance.js` and
+  `balance_model.mjs` cap at 600. The Death Knight's Runeblade keeps its last look (level 300's) above 300.
+- Tests: endgame (paladin, wizard, ranger, bard, barbarian), flow, hud, levelup, raid 55,450,700, data_check.
+
+## October 19, 2026 — Endgame balance pass: XP pacing, late monster damage, BOSS ROOMs, Velscour
+
+- **Request:** check enemy damage and the rest of the balance with calculations (no long simulations): still fun,
+  and Velscour (depth 500) beatable after enough grinding.
+- **Model:** new `tools/tests/endgame.js` (~1 min a class, no game simulation). It sums the XP of a built dungeon
+  every 20 depths and integrates the hero's level (full clears, and a "rusher" who kills 40% of each depth). Then at
+  13 depths it gears 3 heroes like `balance.js` (gear capped at the hero's level, since items need their level) and
+  compares auto-play's sheet numbers with that depth's monsters: seconds to kill a normal / guardian / BOSS ROOM /
+  Velscour, and % of life one hit of each takes (physical through armor / elemental through resistance).
+- **Found:** (1) a full-clearing hero hit the level cap (300) by depth ~160 (a rusher by ~250), so for the last 300+
+  depths nothing levelled and hero life stopped growing; (2) monster damage past level 140 grew 1.6% a level vs
+  ~0.6% for hero life, so by depth 450-500 a normal hit took 35-60% of life and BOSS ROOM bosses one-shot;
+  (3) Velscour had 40x a normal's life (less than a depth-500 guardian, 44x) and died in ~0.1 s; (4) BOSS ROOM life
+  stopped growing at depth 150, so deep ones died in 2-12 s while depth 10-40 ones took 20-90 s; (5) bounties paid
+  `60 * 1.11^level` XP: hundreds of levels per bounty past monster level ~150.
+- **Changes:** `xpToNext` x `(1 + (L/30)^1.5)` (`src/game/player.js`; early levels barely change); monster damage
+  past level 140 `1.016 -> 1.006` a level (`monsterBase`); `raidHpMul(depth)` keeps growing +1 a depth past 150
+  (`src/game/raid.js`); `VELSCOUR_HP` 45000 normals (~3x the last BOSS ROOM boss) and his damage x2.8 (was 2.4);
+  bounty XP `120 * level^1.5` (~30 kills).
+- **Result (6 classes, full clears):** hero level 12 / 53 / 98 / 151 / 207 / 240 / 265 at depth 10 / 40 / 80 / 160 /
+  300 / 400 / 500 (monster level 10 / 40 / 69 / 105 / 168 / 213 / 258); 300 is for grinders. (Later the same day the
+  cap became 600: see above.) Normal hits 2-10% of
+  life to depth 160, 12-19% from 250 to 500; champions ~1.4x that, guardians ~2x, BOSS ROOM bosses 45-70% (two
+  hits), Velscour 40-55%. BOSS ROOM fights 10-35 s at every depth past 40; Velscour 33-99 s. Defiance (8 stacks:
+  +80% life, 40% less damage) cuts a Velscour hit to ~15%. A rusher falls behind from depth ~350 (level 216 vs 258
+  at depth 500; normals 30-40% of life, BOSS ROOMs one-shot, Velscour ~15 min): they must grind, and auto-play's farm
+  mode (`huntGoal`: below monster level + 1) does. Normal monsters and guardians still die almost instantly past
+  depth 40 (hero damage outgrows monster life ~10x at depth 10, ~500x deep); left alone, the fights are the BOSS
+  ROOMs and Velscour.
+- **Tests:** endgame (6 classes, full + rush), raid 5,55,150,300,450 (depth 30 in the default set always lands on
+  the Sea of Sand, whose art isn't loaded in that test: an existing setup issue), boss, wanderers, flow,
+  balance_model, auto-play soaks (wizard/paladin 25 game min: same pace, no deaths). Seen once in a wizard soak:
+  `drawImage` on an unloaded biome scatter atlas (`render.js` `drawProp`), an existing art-loading race.
+
+## October 19, 2026 — Gear rarity overhaul: item level first, rarity worth a few levels, far rarer top tiers
+
+- **Request:** Mythic much harder to get, every other tier rarer too; a level 25 Rare must beat a level 10 Mythic;
+  gear should be replaced often as the hero levels (each level an upgrade); Epic, Legendary and Mythic each last a
+  little longer than the tier below.
+- **Power level** (`src/data/items.js`): every number on an item (base damage, armor, affix values, ring augment
+  power, legendary power stats) is rolled at `powerLevel(ilvl, rarity) = ilvl + RARITY[r].lv`, lv = 0/2/3/7/8/10.
+  `RARITY_BASE` and the per-rarity affix `mult` are gone. Tooltips show `Power N`.
+- **Lines:** every rarity rolls the same `CORE_LINES` (2) stat lines at `LINE_MULT` 1.5; rarer items add *perks* on
+  top: perk lines (`perk: 1` affixes: magic/gold find, XP, move speed, thorns, mana steal, projectile speed, boss
+  damage; `PERK_MULT` 0.7, gold text) Rare/Epic/Legendary 1, Mythic 2; sockets 1/2/3/3/4/4; a legendary power on
+  Legendary/Mythic whose stats scale with power level (`legendaryScale`: 15% -> full at power level 90; text from
+  `legendaryDesc`). Why equal lines: with this game's linear stat curves, one extra affix is worth roughly
+  "current level" item levels, so rarity can only be a fixed number of levels if every rarity carries about the
+  same line mass. +skill lines unlock by power level (`minPl`: trees 10, all skills 30) instead of rarity.
+- **Steeper level growth:** stats that scale (sc >= 0.01) grow 2x faster with power level, anchored at 80
+  (`affixScale`); capped stats (res, speeds, crit, block...) keep their gentle growth.
+- **Rings** (`src/data/rings.js`): `augPower(pl) = 0.6 + 0.008 pl`; Mythic rings split it over two augments (0.55
+  each); every other ring has one.
+- **Requirement:** `req = ilvl` (was 0.8 ilvl), so each level up opens new gear. Boss drops ilvl lvl+2 (+-1, was +3);
+  vendors stock the hero's level -2..0 and rarely above Rare; gambling rolls at the hero's level.
+- **Drop odds** (`rollRarity`, weights 70/21/6/1/0.14/0.012, boss/chest `bonus` per rarity, magic find `mfMul`):
+  plain kill Common 71% / Uncommon 21% / Rare 6.1% / Epic 1.0% / Legendary 0.14% / Mythic 0.012% (was 8.9 / 3.2 /
+  0.79 / 0.114); boss 17.6 / 3.6 / 0.6 / 0.06% (was 22.7 / 11 / 3.5 / 0.63%). Guaranteed sources cut too: Dark
+  Forest trials an Epic (Legendary 20%, the Heart 50%) + Mythic 1-5% (Heart 8%, was up to 60%); Sea of Sand beats an
+  Epic (Legendary 25%) + Mythic 2-10% (was a Legendary + up to 95%); cursed chest Mythic 3%; peddler Mythic 2%,
+  Legendary 15%; tenth-depth gift Legendary 12%. **Bug fixed:** Dark Forest and Sea of Sand rewards rolled at item
+  level `depth * 2`; now `depthLevel(depth) + 2`.
+- **Measured** (`tools/tests/rarity.js`, new): worth in Common item levels, 8 classes x hero levels 16-124:
+  Uncommon 2.0, Rare 5.0, Epic 7.7, Legendary 11.6, Mythic 15.8; a level 25 Rare beats a level 10 Mythic averaged over
+  slots and for the weapon and body alone (all 8 classes); Common and Rare items improve every single level.
+  Balance (best-of-200-drops hero, 5 classes vs the old code): depth 60-300 within noise (+-0.3 score; deep DPS
+  +5-30%), depth 5-20 0.3-1.0 lower (far fewer Rares/Epics early). 25-minute auto-play soaks: same depth pace, no
+  deaths, 9-32% more gear swaps, Legendary/Mythic drops way down.
+- **Existing saves:** old items keep their rolled numbers and requirement; their legendary power stats now scale
+  with power level (a low-level old Mythic's power got weaker).
+- Tests run: rarity, flow, ui, rings, hud, mobile, stash, happenings, scenarios, gear, dark_forest (only its frame
+  time check failed, on SwiftShader with another browser test running), sea_of_sand_generation, balance_model,
+  data_check.
+
+## October 20, 2026 — Totem Master: the GREAT TOTEM is a 3D model (branch `feat/totem-3d`)
+
+- **Request:** replace the giant totem pole he summons (his signature, Spirit Pole) with a 3D model of a giant totem,
+  with particles showing it coming out of the ground, then an explosion once it is fully deployed.
+- **Model** (`src/gfx/totem3d.js`): built in code, no art file, ~2,400 triangles. A stepped stone plinth with teal
+  runes and roots, one carved log segment per spirit face in the order they were earned (bear: round ears, muzzle,
+  teeth; wolf: pointed ears, long snout, fangs; thunderbird: teal brow, side feathers, hooked beak; serpent: flared
+  hood, slit eyes, fangs, forked tongue), glowing teal seams, and a thunderbird crown with a crest and two hinged plank
+  wings. Built once per face order and kept on the GPU; lift (anything under z = 0 is cut away, the cut glows), wing
+  fold, per-face eye glow, runes and the blast flash are shader uniforms. WebGL on its own small canvas like the
+  phoenix; without WebGL the old flat pole is drawn.
+- **Sequence** (`GreatTotem` in `src/game/sigs/totem.js`): 1.1 s bursting out of cracked, glowing ground (`TotemScar`,
+  a ground-layer hazard: dark pit, rubble, nine cracks) with dirt, pebbles, dust, spirit motes and a rumbling camera;
+  then the blast (`deploy`: wings snap open and shiver still, white flash and pop, shock rings in each spirit's colour,
+  a light column, a ray burst (`TotemBlast`), sparks from every face, rocks and a dust ring, `explode` + roar);
+  7.6 s standing (unchanged: the faces act every 1.2 s, eyes flare when they do); then 0.7 s sinking back in.
+  The blast is visual only; damage, timing of the faces' attacks (they start once it stands) and charge are as before.
+- Tests: new `tools/tests/totem3d.js` (model states and face orders, buried shows nothing, in-play stepped sheet
+  `totem_rise.png`, sinks away; `mobile` arg). `signatures.js totem_master`, `flow.js`, `autoplay.js totem_master 8`,
+  `data_check.mjs` pass. Software GL: ~2-4 ms per draw.
+
+## October 19, 2026 — People and Animals: 47 painted people and 10 animals replace every townsperson (branch `feat/people-and-animals`)
+
+- **What:** the user's `VELSCOUR_People_and_Animals.zip` (kept outside the repo) is cut by `tools/build_people_pack.py`
+  into `assets/sprites/people/` and replaces all townsfolk, royals, NPC knights, guards and scenario civilians. Vendors
+  keep their painted art. Full write-up: [PEOPLE_AND_ANIMALS.md](PEOPLE_AND_ANIMALS.md).
+- **Animation:** there are no walk frames. People bounce along on their pose (hero-style), and frightened, angry or
+  cheering people keep that pose while moving. Animals trot and bound. There are 56 emotions over the 10 painted
+  poses (20 on the Greener sheets).
+- **Town:** cats and dogs in the lanes; rabbits, rats and deer on the outskirts that bolt from the hero. Merchants
+  cry their wares, the witch gathers herbs, the wizard practises, and a Greener juggles. There are 19 events, 7 of
+  them new (witch trial, knighting, wizard's show, dog chase, tax day, ghost prank, deer in the square), on 35% of
+  visits.
+- **World:** `src/game/folk.js` is shared by scenarios, Dark Forest trials and dungeon encounters. There are 6 new
+  Wilds/Sea of Sand scenarios (`WILD_SCENARIOS`; the Castle keeps its 35), and the old scenarios now use the new
+  people. Dungeon encounters (`src/game/encounters.js`, about half of depths): captive, knight's last stand,
+  merchant's camp, wizard's ward, witch's cauldron, Greener's cache. Rats scurry on some depths. The remains are
+  painted fallen knights.
+- **Design calls made without asking:**
+  - Vendors keep their own art.
+  - The witch is named Nan Bramble, because the alchemist vendor is already Old Mother Wren.
+  - The three Greener sheets are triplets.
+  - The royal heir is the lost child.
+  - Events happen on 35% of visits (was 25%).
+  - The animals are larger than life so they read on screen.
+- **Tests:** `townsfolk.mjs`, `town_visuals.mjs`, `townlife.js`, `encounters.js` (new) and `town_sprite_display.js`
+  were rewritten. `scenarios.js` and `overworld.js` cover the new ids. `castle_overworld.mjs` checks
+  `CASTLE_SCENARIOS`.
+
+## October 19, 2026 — biome identity: art mixes, layouts, themed rooms, 20 scenarios per biome (branch `feat/biome-identity`)
+
+- Every dungeon biome has its own art mix (the Dark Forest pack now builds the cave biomes underground; borrowed floors,
+  props and town furniture), a layout style (crypt, hall, cave, maze, channel, ruin), 10-14 themed rooms out of 36
+  furnishing recipes, and 20 optional scenarios on 20 shared mechanics with biome-specific titles and wording.
+  Castle Keep floors re-cut (top faces only, seamless paving). Full write-up: [BIOME_ROOMS.md](BIOME_ROOMS.md).
+- Files: `src/data/biomerooms.js` (themes, tags, rooms, scenario words), `src/game/scenarios.js`, `STYLES`/`furnishRoom`
+  in `src/world/dungeon.js`, `ART` in `src/data/biomes.js`, `moreFloors`/`townProps` in `biomeTileSet`.
+- Tests: `biome_scenarios.js`, `biome_looks.js` (new); `data_check` counts borrowed floors and props.
+- Open: the scenarios aren't balance-tested at deep depths; auto-play completes them only when it happens upon them.
+
+## October 19, 2026 — helmets resized to the heads (branch `feat/helmet-sizing`)
+
+- **Request:** helmet placement looked decent but every class's helmets were a bit wide; give all classes a once-over.
+- **Done:** the exported helmets were ~26 px wide on 14-21 px skulls. `tools/nocturnegear.py build` now narrows them
+  (`HELM_SCALE`, `fit_helmet`: premultiplied box resample, 84% wide / 92% tall, 80% wide for Paladin, Necromancer,
+  Barbarian, Death Knight), anchored on the class's head centre and the helmet's bottom edge, so the visor stays over
+  the face and the bulky back shrinks most. Only `helmets/atlas.png` changed; gear `V` bumped to `nocturne-2`.
+- **Verified:** `closed_helms.js all` (all 16 classes clean; anchoring on the helmet's own centre had pushed the Slime
+  Lord's helms off its left-leaning head, hence the head anchor), sheets looked at, `herolook.js paladin,slime_lord`,
+  `flow.js`, `ui.js`, `select.js`.
+
+## October 19, 2026 — Ranger: the signature bird is a 3D golden phoenix (branch `feat/ranger-phoenix`)
+
+- **Request:** replace the Ranger's new bird (the spirit hawk of her signature, The Hunt) with a 3D model of a golden
+  phoenix, with particles trailing behind it as it flies.
+- **Model** (`src/gfx/phoenix3d.js`): built in code, no art file. Smooth body/neck/head with glowing eyes, ivory beak,
+  a three-plume crest, jointed wings (gold coverts, six flame-tipped secondaries, seven fanned primaries), five long
+  tail plumes ending in flame-shaped vanes. Posed every frame (beat with the hand lagging the arm, glides, wings swept
+  back for the stoop, crest and tail sway) and drawn with WebGL on its own small canvas like the Runeblade (lit from
+  the top-left, gold specular, a flame rim, emissive tips that burn brighter as feathers fill). The bird leans its back
+  0.35 rad toward the camera so a banked wing never goes edge-on in the iso view. `phoenixPoints` gives the wing,
+  tail and crest tips in the world. Without WebGL the old flat bird is drawn, recoloured gold.
+- **Flight** (`src/game/sigs/ranger.js`, `fly`): heading from its motion, pitch from climb/dive, banks into turns
+  (max 0.45 rad), beats for 1.6-3.2 s then glides for 1.2-2.4 s, bobs gently. Embers (`glow`, sparks and gold
+  feather flakes) fall away from the tail plumes, wing tips and crest, ~56/s on desktop, 26/s on phones, twice that
+  in the stoop, which also streaks flame and bursts fire on impact. The feather fan over her head is gold now.
+  Gameplay (quarry, feathers, stoop damage, Hunter's Focus) is unchanged.
+- **Not changed:** the Hawk Companion and Hawk Talons/Starhawk summons still use their pet sprites.
+- Tests: new `tools/tests/phoenix.js` (turntable, tips, flight bank/glide/embers, stoop; `mobile` arg).
+  `signatures.js ranger`, `flow.js`, `autoplay.js ranger 8`, `data_check.mjs` pass. Software GL: ~2 ms per draw.
+
+## October 19, 2026 — Boomerang Knight: every boomerang comes back (branch `feat/boomerang-return`)
+
+The user's ask: "BOOMERANGS RETURN TO THE PERSON THROWING THEM", in his skills and his damage balance, and the little
+blades circling him become larger blue boomerangs.
+- **All his thrown boomerangs and chakrams return** (`ret`): Ricochet, Chakram, Celestial Chakram, Gale Rang, Twin
+  Chakrams, Ricochet Storm, Thunder Return, Halo of Rangs and Thousand Rangs gained it. Rang Rain and Orbit Barrage
+  were rains from the sky; they are now thrown volleys (`proj ... rand ret pierce`) that fly home. Skill text reads
+  "Returns to your hand".
+- **Return flight** (`Projectile` in `src/game/hazards.js`, all classes): a returning projectile homes on the
+  thrower wherever he has moved and flies over walls (it used to stick against a wall until it timed out); it is
+  `caught()` within 0.55 tiles (a small sparkle). A bouncing boomerang ricochets foe to foe and flies home when its
+  bounces are spent (`turnAt`, `bounced`); a split boomerang's three children return too.
+- **Balance**: a returning boomerang hits on the way out and again on the way back, so the skills that newly return
+  got `dmg=` cuts (0.45-0.75; Celestial Chakram 1.6 -> 1.5) to keep their damage per cast where it was, measured on a
+  pack of dummies by `tools/tests/boomerang.js` (runs vary 10-20%). The two ring skills, the weakest in their trees,
+  end up a little stronger (Halo of Rangs ~340 -> ~600). Skills that already returned are unchanged.
+  `skillRange` now halves a returning projectile's range (it turns at half way), so the range shown, touch auto-aim and
+  auto-play agree; auto-play's power model counts the return trip (`hitsPerCast` x1.4 for `ret`).
+- **3D boomerangs** (`src/gfx/boomerang3d.js`, user ask: one 3D model, solid colours per ability with stripes near
+  the wing tips, sizes per ability, thrown properly at the game's isometric angle). Procedural, no art files: a thin
+  slab (two swept arms round an elbow; a spiked ring for chakrams). Under the parallel 2:1 projection a flat face is an
+  affine map, so each face is one transformed `Path2D` fill and the edge is the outline stacked 2-4 times along the
+  normal; a dark outline (four nudged copies), flat light shading, a glint strip that flashes once a turn, one spin
+  ghost and a ground shadow. Orientation = heading on the ground x bank about the flight line x spin in its own plane.
+  Thrown (`drawFlyingRang`, used by `Projectile.draw` for fx `rang`/`chakram`): leaves the hand near upright (bank
+  1.15), lays over flat by the turn (0.25), climbs ~9 px and drops back to the hand, leaning toward the camera so it
+  never goes edge-on. Orbits skim round him near flat. `RANG_SKINS` maps each skill name to colour, stripe colour and
+  size (`k`, on top of the skill's own `r`); skills pass `skin: sk.name` (skillrun.js). Wind Rang now flies as a
+  boomerang (fx `rang`, `wc=0.45` keeps its damage). Cost ~0.12 ms per boomerang in headless Chromium (old flat sprite
+  ~0.03); past 16 in one frame they drop outline, glint and blur.
+- **The Trick Shot's eight charge blades** are 3D blue boomerangs riding a ring above his helm (`ringDraw` in
+  `src/game/sigs/boomerang.js`; charged ones blue and spinning, the rest slate and still): the half behind his head draws
+  in the depth pass before him (`back`), the front half on top. The Trick Shot is a 3D gold boomerang.
+- Tests: new `tools/tests/boomerang.js` (damage per cast per skill, every blade caught standing, running and thrown at
+  walls, ring close-ups, in-play shots mid-throw, `boomerang_models.png` with every look at four angles,
+  `boomerang_film.png` with one throw frame by frame).
+
+## October 19, 2026 — class touch-ups: Paladin halo, Slime Lord gauge, the Runeblade as a familiar (branch `feat/class-touchups`)
+
+- **Paladin**: the Halo of Judgement sits higher over his head (`headAt(p, 12)`, was 6).
+- **Slime Lord**: the royal-jelly bead and its % sit higher (`headAt(p, 24)`, was 10), so the number clears his head.
+- **Death Knight, the sword**: the Runeblade now flies round him like a pet (`src/game/sigs/deathknight.js`): 12 idle
+  flight patterns (`PATTERNS`, a new one every 5-9 s), a swing for each kind of skill he casts (`SWINGS`, 12 motions,
+  visual only), five sword skills of its own (`PET`: Runic Lunge, Reaping Arc, Grave Plunge, Blade Waltz, Wheel of
+  Rime; signature hits, so they never charge the runes), a fast-move trail, a floor shadow, drawn behind him when it is
+  further from the camera. Details and numbers: [RUNEBLADE_3D.md](RUNEBLADE_3D.md#the-familiar).
+- **Death Knight, the skulls**: the skulls from his casts/hits and Death Coil now use the Velscour contact skull art
+  (`assets/ui/velscour_contact_skull.png`) recoloured to his frost palette at load, red eye dots removed (`src/gfx/dkskull.js`).
+- **Balance call, not measured**: the sword skills add damage (roughly 0.5x `power` per 2.6 s plus the AoE skills).
+  Worth a `balance.js death_knight` pass if the Death Knight now feels too strong.
+- **Follow-up**: the familiar is bigger (52 px, `RUNEBLADE_LEN` in `runeblade3d.js`), 3 far patterns (rove, dance,
+  scout) take it 2-3 tiles out about a third of the time, and the Rune Weapon summons are drawn as the same 3D blade at
+  the same size (`src/gfx/runeweapon.js`, hooked at the top of `Creature.draw`).
+- **Every sword he makes is the 3D blade**: thrown, orbiting, raining, cyclone and whirl `blade` effects from a Death
+  Knight become `dkblade` (`dkFx` in `hazards.js`, drawn in `shapes.js`). Note: PR #145 was merged before the Rune
+  Weapon commit landed, so that and this went out in a follow-up PR.
+- Tests: new `tools/tests/runeblade_familiar.js`.
+
+## October 18, 2026 — Bard: a five-octave harpsichord, 2,000 two-bar melodies, two-handed performances (branch `feat/bard-harpsichord`)
+
+- **Instrument**: the piano and the old one-octave harpsichord are gone. The user's "Harpsichord 5 Octaves / 7
+  Articulations" pack (427 WAVs, C2-C7; `F:\!  VELSCOUR\Harpsichord_5Octaves_7Articulations_427_Samples.zip`, 220 MB,
+  kept outside the repo like the Dark Forest zip) is imported by `python tools/process_assets.py instruments <zip or
+  folder>` (`tools/instrumentpack.py`). The three held articulations are one recording at three gains (correlation
+  1.000) and soft_short is normal_short softer, so 4 banks are kept (held cut to 3 s, normal/staccato/marcato short
+  whole) and the other 3 are measured gains: 244 MP3s, 1.7 MB, 22,050 Hz (the pack has nothing above 11 kHz; decoded
+  through an OfflineAudioContext at that rate to halve phone memory). `sampler.js`: `playNote('harpsichord', midi,
+  { art })`, banks load held-first, a compressor on the bus, 40 voices. **The samples are GPL-2** (rendered from the
+  TimGM6mb SoundFont); `assets/audio/inst/harpsichord/LICENSE.txt` + `GPL-2.0.txt` carry the notice.
+- **2,000 melodies** (`src/data/melodies.js`, replaces `jingles.js`; built on first use from a fixed seed, ~0.4 s):
+  nine styles (Ballad, Invention, Tavern Tune, Court Dance, Fantasy Theme, Dungeon Crawl, Lament, Chorale, Toccata),
+  14 keys, tempo 96-160 (never slower than 96, so a performed spell bar never locks longer than before). Each is two
+  bars: **A** = the spell bar the Bard writes (antecedent, ends off the tonic), **B** = the finishing bar (runs,
+  second voice a third/sixth below, trills, the tonic arriving on beat 3 or 4). Harmony per beat from per-style
+  progression families (functional, modal: bVII, Andalusian i-VII-VI-V, Neapolitan bII, borrowed iv), alterations
+  spelled (natural/raised 7th and 6th in minor). `barFaults` checks every bar (chord tones on beats, non-chord tones
+  by step, no tritone/7th leaps, no augmented seconds, no triple repeats, arrival on the tonic). **Uniqueness**: every
+  A bar, every B bar and every name is distinct, compared as degrees + rhythm (key-free), so no tune repeats even
+  transposed. **Combinations**: any B whose opening chord follows A's last chord in the same key, first note within a
+  fifth, can finish it (`finishes`): ~242,000 songs.
+- **Writing** (`bard.js`, `bardmusic.js`): each bar picks a key (35% the same, 35% a neighbour, else random, so the
+  songs flow) and its candidate melodies (~100-190, none used in the last 48 bars). Every cast re-fits the written
+  rhythm to the best-matching candidate (`fitScore`: heads on the tune's own onsets, rests where it breathes; a little
+  chance and stickiness) and re-pitches the whole bar (`realize`), so earlier notes can change; where the tune rests
+  inside a written note it is drawn and played as a shorter note + a rest (q -> e re, h -> q rq, e2 -> e re, ...).
+  Written notes sing on the harpsichord with their tree's touch (Songs held, Sonic Arts marcato + octave below,
+  Trickery staccato; `REGISTERS`/`artFor` in `data/notation.js`), with the chord's root in the left hand when the
+  harmony changes. The staff shows only the written (right-hand) bar.
+- **Performance** (`arrangement`): the written bar in the right hand over the style's left hand (Alberti, walking
+  bass, contrary line, broken chords, rolled arpeggios, oom-pah, march, drone + octave pulse, ostinato with a b2
+  neighbour, lament bass, block chords, toccata pedal; always under the right hand), then the finishing bar from a
+  compatible melody never heard after this one (`pickFinish`; heard songs persist in localStorage
+  `velscour_bard_heard`, 6,000 kept), ending on a low octave + rolled tonic. **Lockout**: casts write nothing only
+  while the written bar plays (4 beats, as before minus the old landing ring); during the finishing bar they write the
+  next bar silently, and a bar completed then waits (`sc.pending`) and starts on the exact downbeat (if the audio clock
+  agrees with game time within 120 ms). Gameplay unchanged: treble notes launch as played, the bass chord lands on
+  the finishing bar's downbeat.
+- **Notation**: no skill writes a whole note or whole rest any more (Anthem, Magnum Opus, Finale, Bass Drop, Encore,
+  Showstopper, Mic Drop, Spinning Records, Grand Finale; Requiem, Wall of Sound, Vanishing Act -> h / hd / rh). New
+  glyphs **dotted quarter `qd`** and **dotted half `hd`** (Orchestra, Feedback Loop, Deadly Sonata, Bladestorm Waltz,
+  Grand Fireworks; Magnum Opus, Finale, Encore, Grand Finale). **Only Chorus (cd 25 s) writes a triplet.**
+- **Auto-play** leans toward glyphs that fit the bar's melodies (`bardFitGain`, at most +-25%) and away from repeating
+  its last bar's rhythm (x0.85); completing the bar (x3) still dominates, so DPS holds.
+- **Balance**: `CADENCE_POWER` 5.8 -> 6. bard_dps 60 s x 6 runs before the bump: 14,158 DPS, 11 Cadences/min, 0
+  Discords (was ~14,500 and ~12/min).
+- Tests: `tools/tests/melodies.mjs` (new, no browser): counts, uniqueness of A/B/melodies/names, rule faults, style and
+  key stock, tempo floor, combinations, 300 random arrangements (range, NaN, left hand under right, tonic ending), skill
+  rules (no whole notes, one long-cooldown triplet). `bard.js`: 22 glyphs, engraving of melodies, 244 samples, the
+  one-song/queue rules. `bard_listen.js`: songs never repeat; now 0 overlaps, ~4.6% harsh (mostly V7 tritones), 72%
+  steps. `tools/songbook.html`: C2-C7 keyboard with F1-F7 articulations, any melody + any compatible finish in its own
+  or a Bard rhythm.
+- Not verified by ear: headless Chromium decodes and schedules but nobody listened; `tools/tests/out/bard_listen.wav`
+  is a 60 s render of auto-play. Safari/iOS decoding at 22,050 Hz via OfflineAudioContext untested (falls back to the
+  live context).
+
 ## October 18, 2026 — MOUNTAINSIDE (beta): the first height-mapped overworld (branch `feat/mountainside`)
 
 - **What:** a 50 x 50 climb up a mountainside, foot at the bottom-left of the screen, summit at the top-right. Not in
@@ -566,7 +1144,8 @@ changes; each fix cites the commit that made the change.
 - The biome generates connected desert maps with 1–5 scenario areas and
   labyrinth-like cliff barriers. Scenario HUD shows the area, beat progress,
   and timer. Each cleared beat grants a guaranteed Legendary (weapon on beat
-  one, shield on beat two); Mythic chance rises to 95% on a five-beat run.
+  one, shield on beat two); Mythic chance rises to 95% on a five-beat run. (Oct 19: now an Epic, Legendary 25%,
+  Mythic up to 10%; see the rarity overhaul.)
 - Added `docs/SEA_OF_SAND.md` and the runtime and generation checks. Passed
   `tools/tests/data_check.mjs`, `tools/tests/sea_of_sand_generation.mjs`
   (100 deterministic map seeds), JavaScript parse checks, and `git diff
@@ -709,6 +1288,19 @@ See `docs/APPROVED_BIOME_ART.md`; run
 regressions with a local HTTP server. Real desktop and iOS Safari visual QA,
 including alpha edges and foot anchors, remains outstanding.
 
+## October 18, 2026: Lancer spinning shields are 3D models
+
+The eight-frame shield sprites are replaced by 3D slab models built at load time from the
+turntables:
+
+- front cap and silhouette from frame 0;
+- mirrored rear cap from frame 4;
+- thickness and rim colours from edge-on frames 2/6.
+
+The models are drawn with exact affine Canvas 2D maps, lit, and memoised per 1/96 turn. The
+frame-order notes below are historical: `shieldFrameForAngle` is gone. Gameplay, radii, spin
+and depth sorting are unchanged. See [LANCER_SPINNING_SHIELDS.md](LANCER_SPINNING_SHIELDS.md).
+
 ## October 15, 2026 — Lancer shield animation/direction follow-up
 
 **Branch:** `fix/lancer-reverse-orbit-and-frames-20261015` from `main`.
@@ -821,9 +1413,11 @@ Requirements, as stated (✅ = implemented in the draft):
   only format every browser decodes. Sample-backed sounds (`SAMPLES` in `src/core/audio.js`) cover melee swings, hits and
   blocks, bows, fire, cold, arcane, explosions, buffs, chests, doors, the exit gate and footsteps. Everything else, and
   anything still loading, uses the old procedural `SOUNDS`. **Music** (`MUSIC`): Hymn of the Abyss on the title screen,
-  Empty School in town (repeats after 30-70 s breaks), and nothing else: the user asked for all other music to be
-  removed, so dungeons, guardians and Velscour have ambience only (the other 8 songs are skipped by `MUSIC_KEEP` in
-  `tools/audiopack.py`; their source zips stay in `assets/source/audio/`). **Ambience** (`AMB`): every area
+  Empty School in town (repeats after 30-70 s breaks), and in every dungeon and overworld biome the `wilds` rotation:
+  Stone Room Reverberation 1 and 2 (the user's loose `.m4a` files in `assets/source/audio/`, always imported), shuffled,
+  never the same one twice running, 45-120 s ambience-only breaks between them, carrying on across levels. The other 8
+  songs in the zips are skipped by `MUSIC_KEEP` in `tools/audiopack.py`. The title screen has the song only, no ambience
+  (by request). **Ambience** (`AMB`): every area
   has 1-2 BG-loop beds. One plays at all times, drifting between soft and fuller every 10-25 s and sometimes
   crossfading to the other bed. It ducks to 45% under a song and swells in the breaks. The town uses Forest Night
   (Herrington Hollow is at dusk). There's a Settings slider for Ambience (`settings.amb`).
@@ -1339,8 +1933,8 @@ are in section 7.
      none in the portal yard; the arrow milestone (the "stone") is gone. All 18 trees are used now (the old code only
      found the fir and the willow). A BFS from the start checks every vendor and the portal; a failed roll retries with
      the next seed. `tools/tests/town.js [seeds]` checks reachability and screenshots each town.
-     Note: the "flag" the user meant was read as the lamp post (torch stand) beside the portal; if they meant the
-     portal's stone side pillars (`drawPortal`, `tileset.pillar`), remove those too.
+     Note: the "flag" the user meant was read as the lamp post (torch stand) beside the portal. The portal's stone
+     side pillars are gone too (the user asked later): every portal is the ring and vortex alone, drawn at 1.3x.
    - **Depth 500** (`src/data/depth.js`): `FINAL_DEPTH`, `isRaidDepth`, and `depthLevel(d)` (1:1 to 60, then 0.45 per
      depth: depth 500 = monster level 258). Monsters, loot, chests, vendors and the XP penalty use the level; raid/boss
      life multipliers and level density/elite counts are capped so depth 500 doesn't explode. `MAX_LEVEL` is 300.
@@ -1371,6 +1965,9 @@ are in section 7.
 - Review the sprite replacement PR and its gallery; merge to publish through the existing
   Pages workflow when the art is approved. Keep future art expansion separate from this pass.
 Do these in order, unless the user asks for something else. Their feedback after testing comes first.
+- (Oct 20) Ask how the risky-combat retune feels in play (`feat/risky-combat-retune` entry at the top): kill times,
+  deaths, BOSS ROOMs, the stance dial, progress per hour, and whether gold/drops per hour need a lift now that kills
+  are slower. Pet classes in BOSS ROOMs are the known weak spot.
 0. Get the user's feedback on item 21: town variety, ring power (augment numbers are first guesses in rings.js and
    augments.js), mastery speed (`masteryNeed`, cast XP in `Player.tryUseSkill`), and whether deaths now happen often
    enough. Then the boss rooms (item 16).
@@ -1498,8 +2095,8 @@ Do these in order, unless the user asks for something else. Their feedback after
     - Elements: `swing hit crit squish gore bones fire cold light arcane holy shadow poison acid blood phys`
     - Other: `explode shoot bow pickup gold orb potion levelup portal ui error boss die summon heal buff thud roar hurt block sonic note chest door gate step critping`
     - `SAMPLES[name]` = `{s: sample slugs, v: gain, layer: procedural sound on top, max: concurrent voices (3)}` takes priority once loaded. `step_stone|dirt|water|wood` are sample-only names.
-  - `playMusic(kind, {delay})`: `'title' | 'town'` (see `MUSIC`). No-op if that kind is already current. Entering a dungeon calls `stopMusic()`.
-  - `stopMusic(sec)`, `setAmbience(key)` (a biome id, `'town'` or `'title'`; see `AMB`), `stopAmbience(sec)`.
+  - `playMusic(kind, {delay})`: `'title' | 'town' | 'wilds'` (see `MUSIC`). No-op if that kind is already current. Entering a dungeon or overworld biome calls `playMusic('wilds', {delay: 4-24 s})`.
+  - `stopMusic(sec)`, `setAmbience(key)` (a biome id or `'town'`; see `AMB`), `stopAmbience(sec)`.
 - **assets.js**
   - `CLASS_IDS` (:4): 16 ids in sheet order.
   - `A`: `{classes, classScaled, hud, hudGeo, logo, potions, packs, chestImg, chestMeta, biomeSets}`. `packs[id]` holds a Promise while loading.
@@ -1883,7 +2480,7 @@ On the player side, acid uses poison resistance, and phys/arcane/holy/shadow/blo
 - `ring`: projectiles cover 360°, or a wall becomes a ring.
 - `arc`: melee arc in degrees. Default 115; cleave 170; thrust fx 36; spin fx 360.
 - `cleave`: sets the melee arc to 170.
-- Projectile behaviour: `pierce` (pierce 99), `bounce=N`, `chain=N` (proj and melee), `home`, `split` (splits into 3 on first hit), `ret` (boomerang), `lob`, `exp` (explodes), `spray` (frozen-orb shards), `dur` (projectile lifetime).
+- Projectile behaviour: `pierce` (pierce 99), `bounce=N`, `chain=N` (proj and melee), `home`, `split` (splits into 3 on first hit), `ret` (boomerang: turns at half range, or when its bounces are spent, and flies back to the thrower over walls), `lob`, `exp` (explodes), `spray` (frozen-orb shards), `dur` (projectile lifetime).
 - `pull`: proj pulls within 2.6; nova and aoe pull in; an aoe with dur implodes at x2 damage when it ends; also traps.
 - `delay`: aoe uses a Delayed hazard (meteor and nuke default to 0.85).
 - `cone`: beam becomes a cone.
@@ -2002,16 +2599,17 @@ Summon attacks (`monster.js:416 summonAttack`) by `atk.type`:
 
 **Items.**
 - `rollItem` (`items.js:213`):
-  - Slot is random with weapon weighted x2. Rarity comes from `rollRarity`: common weight/(1+bonus), others `w*(1+mf/100)*(1+bonus*id)`.
+  - Slot is random with weapon weighted x2. Rarity comes from `rollRarity`: common weight/(1+bonus), others `w*(1+bonus*R.bonus)*mfMul(mf,id)`.
+  - Everything below uses the power level `pl = ilvl + RARITY[r].lv` (rarity overhaul, Oct 19).
   - `tier = clamp(floor((ilvl-1)/10),0,9)` gives the MATERIAL prefix. Base name index = `min(4, floor(tier/2))`.
-  - Weapon avg damage = `3.4*1.052^(ilvl-1)*W.dmg*(1+.012*ilvl)`; range [x.75, x1.25].
-  - Armor = `6*A.armor*1.045^(ilvl-1)*U(.85,1.15)`.
+  - Weapon avg damage = `3.4*1.052^(pl-1)*W.dmg*(1+.012*pl)`; range [x.75, x1.25].
+  - Armor = `6*A.armor*1.045^(pl-1)*U(.85,1.15)`.
   - Implicits: dagger crit 4; staff/wand/lute cast 8/10/5; shield block 8-16; orb dmgPct 6-14 + ilvl/10.
-  - Affix count is `randi(R.affixes)`, unique by stat, filtered by slot letter (W, O, H, B, G=hands, L, F) and `minRarity`, weighted by `w` (default 1).
-  - maxSockets = R.sockets (1/2/3/4/6). Initial sockets: 45% chance of `randi(0, ceil(max/2))`.
-  - Legendary picks a random `LEGENDARY` key. Epic and above get a random title. Uncommon and Rare get a prefix/suffix from the first non-implicit affix. `req = floor(ilvl*.8)`.
-- `affixValue` = `(min+(max-min)*roll)*(1+ilvl*sc)*R.mult`. When min>=1, max<=2 and sc==0 (skill affixes) it is `round(base)`.
-- `itemStats` = affixes (non-implicit x(1+.04*upg)) + `gemStats` + legendary `stats`. Weapon damage and armor scale with `upgMult = 1+.1*upg` (upg max 10, `vendor.js:207`).
+  - `CORE_LINES` (2) core affixes, then `R.perks` perk affixes (`perk: 1`); unique by stat, filtered by slot letter (W, O, H, B, G=hands, L, F, R) and `minPl`, weighted by `w` (default 1).
+  - maxSockets = R.sockets (1/2/3/3/4/4). Initial sockets: 45% chance of `randi(0, ceil(max/2))`.
+  - Legendary picks a random `LEGENDARY` key. Epic and above get a random title. Uncommon and Rare get a prefix/suffix from the first non-implicit affix. `req = ilvl`.
+- `affixValue` = `(min+(max-min)*roll)*affixScale(sc,pl)*(perk?PERK_MULT:LINE_MULT)`; `affixScale` = `1+pl*sc` for sc<0.01, else 2x steeper anchored at pl 80. When min>=1, max<=2 and sc==0 (skill affixes) it is `round(base)`.
+- `itemStats` = affixes (non-implicit x(1+.04*upg)) + `gemStats` + `legendaryStats(item)` (scaled by `legendaryScale(pl)`). Weapon damage and armor scale with `upgMult = 1+.1*upg` (upg max 10, `vendor.js:207`).
 - Gems: normal gem value = `v*GEM_MULT[tier]` with GEM_MULT = [1,1.8,3,4.5,6.5,9]. Integer stats (extraProj, chainPlus, pierce, homing, skillsAll) use `floor((tier+1)*v)`.
 - `rollGem`: tier = `floor(ilvl/16)`, minus 0-1 at 60% chance. Special chance = `.08+.0012*ilvl`. Gems stack (`player.js:467`) and socket into `item.gems:[{gem,tier}]` (`ui/inventory.js:63`).
 - Legendary behaviour lives in game code as `st.legendary.<key>` checks:
@@ -2054,12 +2652,14 @@ Summon attacks (`monster.js:416 summonAttack`) by `atk.type`:
   - lancer: str, spear+shield, 78/25 (8/1.5), Phalanx, Javelin, Valor
   - dragon_knight: str, sword, 72/30 (8/2), Flame, Scale, Draconic
   - gunner: dex, pistol, 55/35 (6/2.5), Firearms, Explosives, Engineering
-- `RARITY` (`items.js:4`), as weight / affix count / max sockets / affix multiplier:
-  - Common: 62 / 0-1 / 1 / 1
-  - Uncommon: 25 / 1-2 / 2 / 1
-  - Rare: 9 / 2-3 / 3 / 1.1
-  - Epic: 3.2 / 3-4 / 4 / 1.25
-  - Legendary: 0.8 / 4-5 / 6 / 1.4
+- `RARITY` (`items.js`), as weight / lv (power-level bonus) / perk lines / max sockets / boss bonus factor (plus
+  `minIlvl`/`fullIlvl` gates: Rare 3-8, Epic 30-40, Legendary 45-60, Mythic 60-80):
+  - Common: 70 / 0 / 0 / 1 / 0
+  - Uncommon: 21 / 2 / 0 / 2 / 1
+  - Rare: 6 / 3 / 1 / 3 / 1.6
+  - Epic: 1 / 7 / 1 / 3 / 2.2
+  - Legendary: 0.14 / 8 / 1 / 4 / 2.8
+  - Mythic: 0.012 / 10 / 2 / 4 / 3.4
 - `itemValue` (`items.js:297`) = `12*1.06^ilvl*[1,2.5,6,15,40][rarity]*(1+.15*affixCount)*(1+.2*sockets)*(1+.3*upg)`. Gems: `(special?400:60)*2.6^tier`. Buy price = value; sell = floor(value/4) (`vendor.js:129`).
 - Service costs (`items.js:303-306`):
   - upgrade: `60*1.06^ilvl*1.7^upg*(1+.5r)`
@@ -2103,7 +2703,7 @@ Summon attacks (`monster.js:416 summonAttack`) by `atk.type`:
   1. Append to `BIOMES` with every field. `roster` uses 12 ARCH ids; `el` must be an ELEM key; `ambient.type` must be one handled in `world.js:169`. It automatically joins `randomBiome`.
   2. The id is persisted in saves as `char.nextBiome`/`lastBiome`. An unknown id falls back to catacombs (`game.js:177`).
 - **New affix:**
-  1. Add `{s, t:'...{v}...', pre|suf, min, max, sc, slots:'WOHBGLF', w?, minRarity?}` to `AFFIXES`.
+  1. Add `{s, t:'...{v}...', pre|suf, min, max, sc, slots:'WOHBGLFR', w?, minPl?, perk?}` to `AFFIXES`.
   2. Make the stat do something: read `add.<s>` in `player.recompute` (`player.js:72-114`). `<el>Pct` for an ELEM key is picked up automatically (`player.js:17,115`).
   3. Non-affix stats need a label in `statLabel` (`items.js:324`).
 - **New gem:**
@@ -2249,7 +2849,6 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 - `buildWalls` requires non-empty `tileset.walls` or `tileset.segFwd` (and `pillars` for corners). A segment with undefined `spr` is classified as a pillar by `s.spr && s.dir ? 2 : 3` (render.js:223) and crashes in drawPillar.
 - The town generator is called once per session and its map/props objects are reused. Don't mutate `townCache` objects per visit except `seen`.
 - The generator RNG is seeded, but game.js passes a fresh `Math.random()` seed, and spawn variants/`randomNear` use `Math.random`. Don't rely on reproducibility.
-- `drawPortal` reads pillars from `G.world.tileset` rather than its `world` argument (render.js:118).
 - Image smoothing is ON ('medium', render.js:179), because the wall/floor atlases are downscaled. Pixel-art sprites are pre-scaled canvases.
 - Performance hot spots:
   - Per-frame allocation of the `sorted` array and objects (render.js:208-240).
@@ -2275,7 +2874,6 @@ Caches: `lightCanvas` + `vignette` (module level, keyed by size), `townCache`/`t
 - src/world/map.js:151-176 - A* open list is a plain array with linear min scan and open.includes (O(n^2)) and no closed set; may hitch on large maps for long click-moves.
 - src/game/render.js:422-430 - automap (big=true) iterates the full map and redraws every frame while open; could be cached and only redrawn when `seen` changes.
 - src/game/render.js:269-271 - creature sbox uses o.z + (fly?16:0) while Creature.draw adds bob, fly sine and spawn scale (creature.js:146-149); click boxes are slightly off for flyers and spawning monsters.
-- src/game/render.js:118 - drawPortal reads pillars from G.world.tileset instead of the world being rendered.
 - src/world/town.js:70 - building depth uses the footprint centre; entities near the ends of long buildings can sort incorrectly.
 - src/game/world.js:28,30 and src/world/map.js:14 - dead fields: World.exitOpen, World.lastPlayerTile, TileMap.flowTime are never read.
 - src/game/render.js:431-441 - automap dot radii and minimap scale are not multiplied by devicePixelRatio (automap canvas is device-px sized at game.js:365), so markers look small on high-DPI screens.
@@ -2656,9 +3254,6 @@ See the `open_issues` field.
 - src/game/loot.js:109-116 — the itemIcon cache key ignores `size`. Gear icons are always pixelSprite scale 4 whatever the requested size.
 - src/data/skills.js:109,113 vs src/game/skillrun.js:54,139 — skillRange (used for melee approach and UI) omits the thrust x1.15 factor and uses cone 0.5 where castSkill uses 0.55.
 - src/game/combat.js:119 — a no-op `if` statement with a comment about the thorns curse (dead code).
-- src/data/skills.js `skillRange` — returning projectiles (`ret`, the Boomerang Knight's whole first tree) turn back at
-  half their range, so touch auto-aim and the skill range shown are twice what really lands. Auto-play uses its own
-  `reachOf()` with the 0.48 factor.
 
 ## Auto-play
 

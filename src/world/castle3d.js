@@ -202,7 +202,7 @@ export function castle3d() {
   stair(184, 71, '-x', OW, 'outer');     // north
   stair(99, 120, '+y', OW, 'outer');     // west
   stair(237, 154, '-y', OW, 'outer');    // east
-  stair(150, 169, '+x', IW, 'inner');
+  stair(164, 169, '+x', IW, 'inner');     // (east of the great hall)
   stair(191, 99, '-x', IW, 'inner');
   stair(127, 108, '+y', IW, 'inner');
   stair(209, 140, '+y', IW, 'inner');

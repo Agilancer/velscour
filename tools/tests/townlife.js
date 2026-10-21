@@ -1,6 +1,7 @@
 // Town life (src/game/townlife.js): the hero arrives by the portal; nobody speaks for the first seconds; at most two
-// ambient bubbles (three in an event) near the hero; special events on about a quarter of visits; every event plays
-// to its end without errors; shots of an ordinary day and of each event, plus a sheet of every emotion.
+// ambient bubbles (three in an event) near the hero; special events on about a third of visits; every event plays
+// to its end without errors; cats and dogs in the lanes, wild things on the outskirts that bolt from the hero;
+// shots of an ordinary day, the animals and each event, plus a sheet of every emotion.
 // node tools/tests/townlife.js [events]   (default: all; 'none' for ordinary days only)
 const { openGame, report } = require('./harness');
 (async () => {
@@ -29,7 +30,7 @@ const { openGame, report } = require('./harness');
     return { share: n / 160, kinds };
   });
   console.log('events per visit', JSON.stringify(freq));
-  if (freq.share < 0.15 || freq.share > 0.36) fail('special events on ' + Math.round(freq.share * 100) + '% of visits (want about 25%)');
+  if (freq.share < 0.24 || freq.share > 0.47) fail('special events on ' + Math.round(freq.share * 100) + '% of visits (want about 35%)');
   // an ordinary day: a two-minute soak with the hero standing on the square; bubble budget near the hero
   const day = await page.evaluate(() => {
     const { G, game } = window.VELSCOUR;
@@ -50,7 +51,34 @@ const { openGame, report } = require('./harness');
   if (day.lines < 8) fail('the town is too quiet: ' + day.lines + ' lines in two minutes');
   await shot('townlife_day');
   // each special event, stepped to its end, with shots at its height
-  const all = ['wedding', 'royal', 'funeral', 'fair', 'brawl', 'tourney', 'alarm', 'birth', 'party', 'caravan', 'wounded', 'lost_child'];
+  // the animals: one of each kind, a minute of town time; tame ones wander, wild ones keep away from the hero
+  const zoo = await page.evaluate(() => {
+    const { G, game } = window.VELSCOUR;
+    G.townEventForce = null; G.townAnimalsForce = { cat: 2, dog: 2, rabbit: 2, rat: 2, deer: 2 }; game.enterTown(); G.townAnimalsForce = undefined;
+    const d = G.world.townLife, C = d.t.center, beasts = d.agents.filter((a) => a.animal), start = beasts.map((a) => [a.x, a.y]);
+    let closest = 99, poses = new Set();
+    const wild = beasts.filter((a) => a.wild);
+    for (let i = 0; i < 30 * 60; i++) {
+      // the hero strolls toward a wild animal now and then
+      if (i % 300 === 0 && wild.length) { const w = wild[(i / 300) % wild.length]; G.player.x = w.x + 1.5; G.player.y = w.y + 1.5; }
+      game.update(1 / 30);
+      if (i % 300 > 60) for (const a of wild) closest = Math.min(closest, Math.hypot(a.x - G.player.x, a.y - G.player.y));
+      for (const a of beasts) if (a.emotionT > 0) poses.add(a.species + ':' + a.emotion);
+    }
+    const moved = beasts.filter((a, i) => Math.hypot(a.x - start[i][0], a.y - start[i][1]) > 1.5).length;
+    // a shot: everyone at the well, the hero a little way off
+    beasts.forEach((a, i) => { if (a.busy) d.release(a.busy); a.busy = true; a.goal = a.path = null; a.wild = false; a.x = C.x - 3 + (i % 5) * 1.5; a.y = C.y + 2 + Math.floor(i / 5) * 1.8; a.flip = false; });
+    G.player.x = C.x + 1; G.player.y = C.y + 6;
+    for (let i = 0; i < 10; i++) game.update(1 / 30);
+    return { n: beasts.length, wild: wild.length, moved, closest: +closest.toFixed(1), poses: [...poses] };
+  });
+  console.log('animals', JSON.stringify(zoo));
+  if (zoo.n !== 10) fail('expected 10 animals, got ' + zoo.n);
+  if (zoo.moved < 6) fail('the animals hardly moved: ' + zoo.moved + '/10');
+  await page.waitForTimeout(400);
+  await shot('townlife_animals');
+  const { TOWN_EVENTS } = await page.evaluate(async () => ({ TOWN_EVENTS: (await import('/src/game/townlife.js')).TOWN_EVENTS }));
+  const all = TOWN_EVENTS;
   const which = process.argv[2] === 'none' ? [] : process.argv[2] ? process.argv[2].split(',') : all;
   for (const kind of which) {
     const r = await page.evaluate((kind) => {
@@ -96,7 +124,7 @@ const { openGame, report } = require('./harness');
     for (const pr of G.world.props) if (Math.hypot(pr.x - C.x - 2, pr.y - C.y - 2) < 9 && pr.spr && !/well/.test(pr.spr.name || '')) pr._hiddenForShot = true;
     G.world.props = G.world.props.filter((p) => !p._hiddenForShot);
     const names = Object.keys(EMOTIONS), TF = (await import('/src/data/townsfolk.js')).TOWNSFOLK;
-    const people = [TF[11], TF[0], TF[80], TF[85], TF[84]];
+    const people = [TF[34], TF[0], TF[18], TF[8], TF[47 - 22]];
     names.forEach((e, i) => {
       const v = people[i % people.length], a = d.makeAgent(v, C.x - 4 + (i % 8) * 1.4, C.y - 2 + Math.floor(i / 8) * 1.6);
       a.busy = true; a.flip = false; d.feel(a, e, 9999); a.iconT = 9999; a.iconAge = 1; a.name = e;

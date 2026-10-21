@@ -83,7 +83,7 @@ Native pixels map to world pixels by `k = TW / 160` (0.4); `ox/oy` are native px
   The throne arena's four columns are funerary obelisks.
 - **Rendering** (`src/game/render.js`): floors are drawn 0.6 px oversized to hide seams. Wall items (`drawWall`)
   are depth sorted with everything else. Walls in front of the hero fade in a wide soft hole around them
-  (`cutaway`). Portals use the pack's pillar for their posts.
+  (`cutaway`). Portals stand alone (no side pillars), drawn at 1.3x.
 - **Mixed levels**: about 65% of levels pair the biome with another of its colour family (`mixPartner`); the far
   chunks are paved in that biome's palette, and the walls, arches and doors come from one of the two.
 
@@ -283,4 +283,22 @@ and `biomepack.texture_walls` paints it onto the raised wall faces in world spac
 run on from piece to piece and wrap corners. Runs meeting at a plain corner share a family (`map.buildWalls`).
 Arches and doors are painted pieces from the Catacombs and Cathedral packs (`ARCH_SOURCES`, `DOOR_SOURCES`) with
 their stone (low-saturation pixels) shifted onto a keep material by `recolor_stone`; wood, rust and bronze keep their
-colours. Floors keep only each painted slab's top face, inside its bevelled rim (`FLOOR_INSET`), resampled smoothly.
+colours.
+
+## Iso alignment fixes (`tools/isofix.py`, October 18, 2026)
+
+Many painted props were drawn at the wrong angle (boxes in perspective, plan-rotated, or flat pieces facing the camera)
+and stood out against the exact 2:1 floors and walls. `tools/isofix.py` re-projects them without touching the source
+atlases: box-like props layer by layer onto true 2:1 outlines (a piecewise-affine mesh; the top face stays a clean
+parallelogram), flat props sheared onto an iso axis, plan-rotated ones by one affine. `tools/isofix_spec.json` lists
+the props per source (dungeon packs, town, castle overworld, Sea of Sand; 95 sprites). Output `assets/tiles/isofix/`
+is loaded at boot by `src/gfx/isofix.js`, and `biomeTileSet`, `townObject`, `castleObject` and `seaOfSandObject` use a
+fixed sprite wherever one exists. `python tools/isofix.py review [source]` writes before/after sheets to
+`art-review/isofix/`. A warp that balloons is refused, so a bad corner fit can't ship.
+
+Also: Castle Keep's 40 props are now cut by alpha blob (the old even-grid crop sliced neighbours into cells and the
+names were shifted by two), sized per prop and pivoted on their base (`tools/castlekeeppack.py`). The 50 wall hangings
+are cut at the sheets' empty scanlines and each gets one view per wall axis that actually lies on it (authored if it
+leans the right way, else its head-on view sheared onto the wall), drawn centred on the mount
+(`tools/build_wall_hangings.py`, `wallHangingRect`). Check in game with `node tools/tests/isofix.js <biome>
+hangings|torches|props`.

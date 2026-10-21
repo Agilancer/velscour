@@ -4,7 +4,7 @@
 // them (auto-play does) and they ask for a number of kills, a guardian slain or a relic fetched, and pay out on the spot.
 import { G } from '../state.js';
 import { rand, chance, pick, dist, angleTo } from '../core/util.js';
-import { TOWNSFOLK } from '../data/townsfolk.js';
+import { TOWNSFOLK, folkLabel } from '../data/townsfolk.js';
 import { townFacingFlip } from './townsfolkvisuals.js';
 import { preloadTownSheets } from './render.js';
 import { GroundItem } from './loot.js';
@@ -37,7 +37,7 @@ export function addWanderers(world, spots, n = 5) {
   picked.forEach((v, i) => {
     const [sx, sy] = map.randomNear(...pick(spots), 2.5);
     const w = {
-      name: `${v.name.split(' ')[0]} the ${v.role}`, wanderer: true, x: sx, y: sy, reach: 2.2, flip: chance(0.5),
+      name: folkLabel(v), wanderer: true, x: sx, y: sy, reach: 2.2, flip: chance(0.5),
       townsfolkSpriteId: v.spriteId, pal: v.palette, frameCount: v.frame.count, knight: v.knight,
       animT: rand(3), walkT: 0, idleSeed: i % 3, walking: false, talkT: 0, talkText: '', waitT: rand(0, 3), chatT: rand(8, 20),
       path: null, goal: null, mood: 'calm', fleeT: 0,
@@ -101,7 +101,7 @@ function payBounty(world, n) {
   add('item', { item: rollItem(lvl + 2, { mf: p ? p.st.magicFind : 0, bonus: 1 }) });
   if (chance(0.5)) add('item', { item: rollGem(lvl + 4) });
   add('gold', { amount: Math.round((40 + lvl * 9) * rand(0.8, 1.3)) });
-  if (p && G.char) { p.gainXp && p.gainXp(Math.round(60 * Math.pow(1.11, lvl))); }
+  if (p && G.char) { p.gainXp && p.gainXp(Math.round(120 * Math.pow(lvl, 1.5))); } // ~30 kills' worth (monsterBase xp); 60 * 1.11^lvl was hundreds of levels deep down
   n.say(pick(LINES.cheer), 4);
   addEffect(new Ring(at.x, at.y, 0.3, 2.5, 0.6, '#ffe080', 4));
   floatText(at.x, at.y, 80, 'BOUNTY COMPLETE', '#ffe080', 15, { life: 2 });
@@ -116,19 +116,21 @@ function wanderTick(world, n, spots, dt) {
   if (!n.walking) n.walkT = 0;
   n.walking = false;
   n.townPoseT = Math.max(0, (n.townPoseT || 0) - dt);
+  n.emotionT = Math.max(0, (n.emotionT || 0) - dt); n.emoteClock = (n.emoteClock || 0) + dt;
   const b = n.bounty;
   if (b && b.state === 'active' && progress(world, b) >= b.need) payBounty(world, n);
   if (b && b.state === 'offer' && (n.askT = (n.askT || 0) - dt) <= 0) { n.askT = rand(9, 15); if (world.player && dist(world.player.x, world.player.y, n.x, n.y) < 12) n.say(pick(LINES.ask), 2.5); }
   // won the area: everybody cheers once
   const sc = world.overworldScenario;
-  if (sc && sc.completed && !n.cheered) { n.cheered = true; n.townPoseFrame = 10; n.townPoseT = 3; n.say(pick(LINES.cheer), 3); }
+  if (sc && sc.completed && !n.cheered) { n.cheered = true; n.townPose = 'cheer'; n.townPoseT = 3; n.say(pick(LINES.cheer), 3); }
   // danger: an awake monster close by
   let threat = null;
   if ((n.scanT = (n.scanT || 0) - dt) <= 0) {
     n.scanT = 0.4;
     threat = world.creatures.find((m) => !m.dead && m.team === 'enemy' && m.awake && dist(m.x, m.y, n.x, n.y) < 5);
     if (threat) {
-      if (n.mood !== 'scared') { n.say(pick(LINES.scared), 2); n.townPoseFrame = chance(0.5) ? 7 : 8; n.townPoseT = 0.8; }
+      if (n.mood !== 'scared') { n.say(pick(LINES.scared), 2); n.townPose = chance(0.5) ? 'scared' : 'point'; n.townPoseT = 0.8; }
+      n.emotion = 'scared'; n.emotionT = 2.5;
       n.mood = 'scared'; n.fleeT = 2.5;
       const a = angleTo(threat.x, threat.y, n.x, n.y) + rand(-0.6, 0.6);
       n.goal = map.randomNear(n.x + Math.cos(a) * 7, n.y + Math.sin(a) * 7, 2); n.path = null;
@@ -146,11 +148,12 @@ function wanderTick(world, n, spots, dt) {
     if (!n.path.length) { n.goal = null; n.waitT = rand(1, 3); return; }
   }
   const [tx, ty] = n.path[0], d = dist(n.x, n.y, tx, ty);
-  if (d < 0.2) { n.path.shift(); if (!n.path.length) { n.goal = null; n.path = null; n.waitT = rand(3, 9); if (chance(0.3)) n.say(pick(LINES.idle)); } return; }
+  if (d < 0.2) { n.path.shift(); if (!n.path.length) { n.goal = null; n.path = null; n.waitT = rand(3, 9); if (chance(0.3)) n.say(pick(LINES.idle)); else if (chance(0.4)) { n.emotion = pick(['curious', 'happy', 'think', 'worried', 'proud']); n.emotionT = rand(2.5, 4); } } return; }
   const sp = (n.mood === 'scared' ? 2.6 : 1.1) * dt, k = Math.min(1, sp / d), nx = n.x + (tx - n.x) * k, ny = n.y + (ty - n.y) * k;
   if (!map.walkable(nx, ny)) { n.path = null; n.goal = null; n.waitT = 0.5; return; }
   n.flip = townFacingFlip(nx - n.x, ny - n.y, n.flip);
   n.x = nx; n.y = ny; n.walking = true; n.walkT += dt * (n.mood === 'scared' ? 2 : 1);
+  n.running = n.mood === 'scared';
 }
 
 /** For auto-play: a bounty giver worth walking to, or an heirloom to pick up. */

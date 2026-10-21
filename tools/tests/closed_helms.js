@@ -23,7 +23,7 @@ const CLASSES = arg === 'all' ? ALL_CLASSES : arg.split(',');
         const issues = [], stats = [];
         const cv = document.createElement('canvas'); cv.width = fw; cv.height = fh;
         const xx = cv.getContext('2d', { willReadFrequently: true });
-        const read = (c) => { xx.clearRect(0, 0, fw, fh); xx.drawImage(c, 0, 0); return xx.getImageData(0, 0, fw, fh).data; };
+        const read = (c) => { xx.clearRect(0, 0, fw, fh); xx.imageSmoothingEnabled = false; xx.drawImage(c, 0, 0, fw, fh); return xx.getImageData(0, 0, fw, fh).data; };
         const same = (a, b, k) => a[k] === b[k] && a[k + 1] === b[k + 1] && a[k + 2] === b[k + 2] && a[k + 3] === b[k + 3];
         const cell = 48, s = 3, n = meta.armor.n;
         const preview = document.createElement('canvas');
@@ -64,7 +64,8 @@ const CLASSES = arg === 'all' ? ALL_CLASSES : arg.split(',');
               for (let k = 0; k < t.length; k += 4) if (!same(t, bare, k)) tc++;
               if (Math.abs(tc - changed) > changed * 0.15) issues.push(name + ': palette swap changes the silhouette (' + changed + ' vs ' + tc + ' px)');
             }
-            pv.drawImage(worn, cx - cell / 2, top - 10, cell, cell, (a - 1) * cell * s, (d.id - 1) * cell * s, cell * s, cell * s);
+            const u = worn._res || 1; pv.imageSmoothingEnabled = true; pv.imageSmoothingQuality = 'high';
+            pv.drawImage(worn, (cx - cell / 2) * u, (top - 10) * u, cell * u, cell * u, (a - 1) * cell * s, (d.id - 1) * cell * s, cell * s, cell * s);
           }
         }
         document.body.appendChild(preview);

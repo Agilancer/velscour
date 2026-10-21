@@ -56,7 +56,8 @@ const { openGame, report } = require('./harness');
     game.buildDungeon(34, BIOME_BY_ID.catacombs);
     const w = G.world, p = G.player, map = w.map;
     w.chests = w.chests.filter((c) => !c.label && !c.shrine);
-    G.char.level = 40; p.recompute();
+    G.char.level = 40; G.char.statPoints += 39 * 5; G.char.skillPoints += 39 + 33; // its points spent: monsters take a while now
+    Auto.spendStats(); Auto.spendSkills(); Auto.arrangeBar(); p.recompute(); p.hp = p.maxHp; p.mana = p.maxMana;
     for (const m of w.creatures) if (m.team === 'enemy' && m !== w.boss && Math.hypot(m.x - p.x, m.y - p.y) < 30) m.dead = true; // a quiet start: walking to them is the test
     const near = (r) => { for (let i = 0; i < 80; i++) { const a = Math.random() * 6.28, x = p.x + Math.cos(a) * r, y = p.y + Math.sin(a) * r; if (map.walkable(x, y) && map.findPath(p.x, p.y, x, y, 8000)) return [x, y]; } return map.randomNear(p.x, p.y, 3); };
     for (const k of Object.keys(H.SHRINES)) H.addShrine(w, near(4 + Math.random() * 6), k);
@@ -70,7 +71,8 @@ const { openGame, report } = require('./harness');
   });
   ok(placed === 9, `placed 7 shrines + remains + cursed chest (${placed})`);
   await run(1); await shot('happen_interactables');
-  for (let i = 0; i < 10; i++) { await run(10); if (process.env.TRACE) console.log('   trace', await page.evaluate(async () => { const { Auto } = await import('/src/game/autoplay.js'); const G = window.VELSCOUR.G; return G.world.kind + ' D' + G.world.depth + ' ' + Auto.status + ' hp ' + Math.round(G.player.hp) + ' boss ' + (G.world.boss && G.world.boss.dead); })); }
+  // monsters take a few seconds each: 200 s to get round the level
+  for (let i = 0; i < 20; i++) { await run(10); if (process.env.TRACE) console.log('   trace', await page.evaluate(async () => { const { Auto } = await import('/src/game/autoplay.js'); const G = window.VELSCOUR.G; return G.world.kind + ' D' + G.world.depth + ' ' + Auto.status + ' hp ' + Math.round(G.player.hp) + ' boss ' + (G.world.boss && G.world.boss.dead); })); }
   const used = await page.evaluate(() => {
     const w = window.VELSCOUR.G.world;
     return { open: w.chests.filter((c) => c.label && c.opened).map((c) => c.label), shut: w.chests.filter((c) => c.label && !c.opened).map((c) => c.label), buffs: window.VELSCOUR.G.player.buffs.map((b) => b.id), cursed: window.__cursed && { opened: window.__cursed.opened, done: window.__cursed.done } };
@@ -107,7 +109,7 @@ const { openGame, report } = require('./harness');
     return G.world.happen.ch && G.world.happen.ch.need;
   });
   ok(ch > 0, `challenge started: slay ${ch}`);
-  await run(42);
+  await run(47); // 45 s on the clock
   const chEnd = await page.evaluate(() => ({ ch: window.VELSCOUR.G.world.happen.ch, best: window.VELSCOUR.G.world.happen.best || 0, kills: window.VELSCOUR.G.world.happen.kills || 0 }));
   ok(!chEnd.ch, `challenge resolved (kills this level ${chEnd.kills}, best streak ${chEnd.best})`);
 

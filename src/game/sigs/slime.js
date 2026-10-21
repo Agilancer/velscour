@@ -94,7 +94,7 @@ export default {
     }
     if (s.mass <= 0) return;
     // a wobbling bead of royal jelly over his head, filling with mass
-    const [cx, cy0] = headAt(p, 10), cy = cy0 + Math.sin(t * 3) * 1.5, f = s.mass / MAX, R = (G.touch ? 6 : 7.5) * (1 + 0.1 * Math.sin(t * 7));
+    const [cx, cy0] = headAt(p, 24), cy = cy0 + Math.sin(t * 3) * 1.5, f = s.mass / MAX, R = (G.touch ? 6 : 7.5) * (1 + 0.1 * Math.sin(t * 7));
     glow(ctx, BLUE, cx, cy, R * 2.4, 0.25 + 0.45 * f);
     ctx.fillStyle = 'rgba(10,30,80,0.7)'; ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.92, 0, 0, TAU); ctx.fill();
     ctx.save(); ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.92, 0, 0, TAU); ctx.clip();

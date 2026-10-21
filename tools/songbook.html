@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bard's Songbook</title>
-<!-- The Bard's sampler and sequencer outside the game: play the piano / harpsichord samples on a keyboard, and hear any
-     of the 300 jingles written in a chosen rhythm and register, read off the staff by a playhead. Serve the repo root
+<!-- The Bard's harpsichord outside the game: play its five octaves on a keyboard, and hear any of the 2,000 melodies
+     the way the Bard performs them (his written bar in the right hand over the style's left hand, then a finishing
+     bar), in the tune's own rhythm or a Bard rhythm, read off the staff by a playhead. Serve the repo root
      (python3 -m http.server 8123) and open /tools/songbook.html. -->
 <style>
   :root { --bg: #120c16; --card: #1d1424; --ink: #f2e6c4; --dim: #a8988a; --gold: #ffd88a; --line: #3a2c40; }
@@ -17,13 +18,14 @@
   p.sub { color: var(--dim); margin: 0 0 14px; }
   section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-bottom: 14px; }
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
-  select, input, button { font: inherit; background: #2a1e32; color: var(--ink); border: 1px solid #4a3a52; border-radius: 5px; padding: 5px 8px; }
+  select, input, button { font: inherit; background: #2a1e32; color: var(--ink); border: 1px solid #4a3a52; border-radius: 5px; padding: 5px 8px; max-width: 100%; }
   button { cursor: pointer; } button:hover { border-color: var(--gold); }
   button.go { background: #5a3a14; border-color: #a87a2a; }
   #status { color: var(--dim); }
   canvas#staff { width: 100%; height: auto; background: #f4ecd8; border-radius: 6px; display: block; }
   #info { color: var(--dim); margin-top: 8px; min-height: 1.4em; }
-  .kb { position: relative; height: 150px; user-select: none; touch-action: none; overflow-x: auto; }
+  .kbwrap { overflow-x: auto; }
+  .kb { position: relative; height: 150px; user-select: none; touch-action: none; }
   .kb .w, .kb .b { position: absolute; top: 0; border: 1px solid #222; border-radius: 0 0 5px 5px; }
   .kb .w { background: #f6f0e2; height: 150px; z-index: 1; }
   .kb .b { background: #1a1418; height: 92px; z-index: 2; }
@@ -34,19 +36,22 @@
 <body>
 <main>
   <h1>Bard's Songbook</h1>
-  <p class="sub">The Bard's sampler and sequencer: 24 piano keys (C3–B4), 13 harpsichord keys (C4–C5), and 300 one-bar jingles.</p>
+  <p class="sub">The Bard's harpsichord (C2–C7, seven articulations) and his 2,000 two-bar melodies in nine styles.</p>
   <section>
     <div class="row"><button class="go" id="start">Start audio</button><span id="status">Audio is off until you press Start.</span></div>
   </section>
   <section>
-    <h2>Sequencer</h2>
+    <h2>Melodies</h2>
     <div class="row">
-      <select id="jingle" aria-label="Jingle"></select>
-      <button id="rand">Random</button>
+      <label>Style <select id="style"><option value="">All styles</option></select></label>
+      <select id="mel" aria-label="Melody"></select>
+      <button id="rand">Random song</button>
     </div>
     <div class="row">
-      <label>Register <select id="reg"></select></label>
+      <label>Finish <select id="fin"></select></label>
       <label>Rhythm <select id="rhythm"></select></label>
+      <label>Touch <select id="reg"></select></label>
+      <label>Clef <select id="clef"><option>treble</option><option>bass</option></select></label>
       <button class="go" id="play">Play ▶</button>
       <button id="stop">Stop</button>
     </div>
@@ -55,55 +60,72 @@
   </section>
   <section>
     <h2>Keyboard</h2>
-    <div class="row"><label>Instrument <select id="inst"><option value="piano">Piano</option><option value="harpsichord">Harpsichord</option></select></label>
-      <span id="keyhint" style="color:var(--dim)">Tracker layout: Z S X D C V G B H N J M play C3–B3, Q 2 W 3 E R 5 T 6 Y 7 U play C4–B4, I plays C5.</span></div>
-    <div class="kb" id="kb"></div>
+    <div class="row"><label>Articulation <select id="art"></select></label>
+      <label>Octave <select id="oct"></select></label>
+      <span style="color:var(--dim)">Z S X D C V G B H N J M and Q 2 W 3 E R 5 T 6 Y 7 U play two octaves from the chosen C.</span></div>
+    <div class="kbwrap"><div class="kb" id="kb"></div></div>
   </section>
 </main>
 <script type="module">
 import { initAudio } from '../src/core/audio.js';
-import { loadInstruments, keysLoaded, playNote, playSequence, audioNow } from '../src/core/sampler.js';
-import { JINGLES, keyName } from '../src/data/jingles.js';
-import { NOTES, REGISTERS } from '../src/data/notation.js';
-import { pitchHeads, bardArrangement } from '../src/game/bardmusic.js';
+import { loadInstruments, playNote, playSequence, audioNow, ARTICULATIONS } from '../src/core/sampler.js';
+import { melodies, finishes, keyName, STYLES } from '../src/data/melodies.js';
+import { NOTES, REGISTERS, NOTE_OF_TICKS, REST_OF_TICKS } from '../src/data/notation.js';
+import { realize, arrangement, drawn } from '../src/game/bardmusic.js';
 import { drawMeasure } from '../src/gfx/notation.js';
 
-const $ = (id) => document.getElementById(id);
+const $ = (id) => document.getElementById(id), M = melodies();
 const RHYTHMS = {
-  'Quarter notes': ['q', 'q', 'q', 'q'], 'Eighth pairs': ['e2', 'e2', 'e2', 'e2'], 'Sixteenths': ['s4', 's4', 's4', 's4'],
-  'Eighth triplets': ['t8', 't8', 't8', 't8'], 'Half notes': ['h', 'h'], 'Whole note': ['w'],
-  'Waltz-ish (q e e h)': ['q', 'e', 'e', 'h'], 'Gallop (e s s ×4)': ['e', 's2', 'e', 's2', 'e', 's2', 'e', 's2'],
-  'Mixed (s4 t8 e s s q)': ['s4', 't8', 'e', 's', 's', 'q'], 'With rests (q rq e2 q)': ['q', 'rq', 'e2', 'q'],
-  'Battle (random)': null,
+  "The tune's own": null, 'Quarter notes': ['q', 'q', 'q', 'q'], 'Eighth pairs': ['e2', 'e2', 'e2', 'e2'], 'Dotted (q. e q q)': ['qd', 'e', 'q', 'q'],
+  'Half notes': ['h', 'h'], 'Ballad (h q q)': ['h', 'q', 'q'], 'Waltz-ish (q e e h)': ['q', 'e', 'e', 'h'], 'Breath (q re e h)': ['q', 're', 'e', 'h'],
+  'Swift (s2 s2 q e2 q)': ['s2', 's2', 'q', 'e2', 'q'], 'Chorus triplet (t8 q h)': ['t8', 'q', 'h'], 'Battle (random)': 'rand',
 };
-const POOL = ['q', 'q', 'e', 'e2', 's', 's2', 's3', 's4', 't8', 't16', 'h', 'rq', 're'];
-for (const j of JINGLES) $('jingle').add(new Option(`${String(j.id + 1).padStart(3, '0')} · ${j.name} · ${keyName(j.key)} · ♩=${j.tempo}`, j.id));
+const POOL = ['q', 'q', 'q', 'e', 'e2', 'h', 'qd', 're', 'rq', 's2', 'rh', 'hd'];
+for (const k of Object.keys(STYLES)) $('style').add(new Option(STYLES[k].name, k));
 for (const [k, r] of Object.entries(REGISTERS)) $('reg').add(new Option(r.name, k));
 for (const k of Object.keys(RHYTHMS)) $('rhythm').add(new Option(k, k));
+for (const a of ARTICULATIONS) $('art').add(new Option(a.replace('_', ' '), a));
+for (let o = 2; o <= 5; o++) $('oct').add(new Option('C' + o, o));
+$('oct').value = 4;
+function fillMelodies() {
+  const s = $('style').value; $('mel').innerHTML = '';
+  for (const m of M) if (!s || m.style === s) $('mel').add(new Option(`${String(m.id + 1).padStart(4, '0')} · ${m.name} · ${keyName(m.key)} · ♩=${m.tempo}`, m.id));
+  fillFinishes();
+}
+function fillFinishes() {
+  const a = +$('mel').value; $('fin').innerHTML = '';
+  $('fin').add(new Option('its own', a));
+  for (const b of finishes(a)) if (b !== a) $('fin').add(new Option(`${M[b].name} (${STYLES[M[b].style].name})`, b));
+}
 
 let ready = false, seq = null, bar = null;
 $('start').onclick = async () => {
   initAudio();
-  $('status').textContent = 'Loading samples…';
+  $('status').textContent = 'Loading the harpsichord…';
   const n = await loadInstruments();
   ready = n > 0;
-  $('status').textContent = ready ? `${n} samples loaded. Play the keyboard or a jingle.` : 'Could not load the samples.';
+  $('status').textContent = ready ? `${n} samples loaded (61 keys × 4 banks). Play the keyboard or a song.` : 'Could not load the samples.';
 };
 
-function glyphs(name) {
-  const r = RHYTHMS[name];
-  if (r) return r;
-  const out = []; let left = 4;
-  while (left > 1e-6) { const fit = POOL.filter((g) => NOTES[g].beats <= left + 1e-6); const g = fit[Math.floor(Math.random() * fit.length)] || 's'; out.push(g); left -= NOTES[g].beats; }
-  return out;
+/** The bar's glyphs: a Bard rhythm, or the tune's own rhythm written back as glyphs. */
+function glyphs(m) {
+  const r = RHYTHMS[$('rhythm').value];
+  if (Array.isArray(r)) return r;
+  if (r === 'rand') {
+    const out = []; let left = 4;
+    while (left > 1e-6) { const fit = POOL.filter((g) => NOTES[g].beats <= left + 1e-6); const g = fit[Math.floor(Math.random() * fit.length)] || 'e'; out.push(g); left -= NOTES[g].beats; }
+    return out;
+  }
+  return m.A.rh.map((e) => (e.r ? REST_OF_TICKS[e.dur] : NOTE_OF_TICKS[e.dur]) || 'e');
 }
-/** Write the bar exactly as the Bard would: each glyph pitched from the jingle at its beat. */
+/** Write the bar exactly as the Bard would, pitched from the melody. */
 function write() {
-  const j = JINGLES[+$('jingle').value], reg = $('reg').value, sc = { jingle: j.id, notes: [], jst: { e: -1 } };
+  const m = M[+$('mel').value], F = M[+$('fin').value], reg = $('reg').value, clef = $('clef').value, notes = [];
   let at = 0;
-  for (const g of glyphs($('rhythm').value)) { sc.notes.push({ g, at, tier: 0, reg, heads: pitchHeads(sc, g, at, reg) }); at += NOTES[g].beats; }
-  bar = { j, reg, notes: sc.notes, clef: reg === 'piano3' ? 'bass' : 'treble' };
-  $('info').textContent = `${keyName(j.key)} · ${j.chords.map((c) => c.roman).join(' – ')} → ${j.key.minor ? 'i' : 'I'} · ♩ = ${j.tempo} · ${REGISTERS[reg].name}`;
+  for (const g of glyphs(m)) { notes.push({ g, at, tier: 0, reg }); at += NOTES[g].beats; }
+  realize(m, notes, clef);
+  bar = { m, F, notes, clef };
+  $('info').textContent = `${STYLES[m.style].name} · ${keyName(m.key)} · ${m.A.chords.map((c) => c.roman).join(' – ')} | ${F.B.chords.map((c) => c.roman).join(' – ')} · left hand: ${m.A.lh} / ${F.B.lh} · ♩ = ${m.tempo} · finishes: ${finishes(m.id).length}`;
   draw(-1);
 }
 function draw(play) {
@@ -111,48 +133,55 @@ function draw(play) {
   x.fillStyle = '#f4ecd8'; x.fillRect(0, 0, c.width, c.height);
   if (!bar) return;
   x.fillStyle = '#5a3a20'; x.font = 'italic 34px Georgia'; x.textAlign = 'left'; x.textBaseline = 'alphabetic';
-  x.fillText(bar.j.name, 40, 52);
-  drawMeasure(x, { x: 40, top: 120, w: 1920, u: 26, clef: bar.clef, key: bar.j.key, notes: bar.notes, col: '#1a1020', play, final: true,
+  x.fillText(bar.m.name + (bar.F !== bar.m ? `  →  ${bar.F.name}` : ''), 40, 52);
+  drawMeasure(x, { x: 40, top: 120, w: 1920, u: 26, clef: bar.clef, key: bar.m.key, notes: drawn(bar.notes), col: '#1a1020', play, final: true,
     colOf: (n, lit) => (lit ? '#b0400a' : '#1a1020') });
 }
 function play() {
   if (!ready) { $('status').textContent = 'Press Start audio first.'; return; }
   if (seq) seq.stop(0.05);
   write();
-  seq = playSequence(bardArrangement(bar.j, bar.notes, bar.clef), { bpm: bar.j.tempo });
-  const s = seq, total = (4 + 2.5) * s.spb;
-  const tick = () => { if (seq !== s) return; const b = (audioNow() - s.start) / s.spb; draw(b >= 0 && b <= 4.6 ? Math.min(4, b) : -1); if (audioNow() - s.start < total) requestAnimationFrame(tick); };
+  seq = playSequence(arrangement(bar.m, bar.notes, bar.F, { clef: bar.clef }), { bpm: bar.m.tempo });
+  const s = seq, total = 8.5 * s.spb;
+  const tick = () => { if (seq !== s) return; const b = (audioNow() - s.start) / s.spb; draw(b >= 0 && b <= 4.2 ? Math.min(4, b) : -1); if (audioNow() - s.start < total) requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
 }
 $('play').onclick = play;
 $('stop').onclick = () => { if (seq) seq.stop(0.08); seq = null; draw(-1); };
-$('rand').onclick = () => { $('jingle').value = Math.floor(Math.random() * JINGLES.length); play(); };
-for (const id of ['jingle', 'reg', 'rhythm']) $(id).onchange = write;
-write();
+$('rand').onclick = () => {
+  const opts = [...$('mel').options]; $('mel').value = opts[Math.floor(Math.random() * opts.length)].value; fillFinishes();
+  const f = [...$('fin').options]; $('fin').value = f[Math.floor(Math.random() * f.length)].value; play();
+};
+$('style').onchange = () => { fillMelodies(); write(); };
+$('mel').onchange = () => { fillFinishes(); write(); };
+for (const id of ['fin', 'reg', 'rhythm', 'clef']) $(id).onchange = write;
+fillMelodies(); write();
 
-// ---------------------------------------------------------------- keyboard synth, C3..C5
+// ---------------------------------------------------------------- keyboard, C2..C7
 const kb = $('kb'), NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'], BLACK = [1, 3, 6, 8, 10];
-const KEYMAP = 'zsxdcvgbhnjmq2w3er5t6y7ui'; // a tracker-style layout: C3 .. C5
+const KEYMAP = 'zsxdcvgbhnjmq2w3er5t6y7ui';
 const keyEls = {};
 let wx = 0;
-for (let m = 48; m <= 72; m++) {
+for (let m = 36; m <= 96; m++) {
   const pc = m % 12, black = BLACK.includes(pc), el = document.createElement('div');
   el.className = black ? 'b' : 'w';
-  if (black) { el.style.left = (wx * 40 - 13) + 'px'; el.style.width = '26px'; }
-  else { el.style.left = (wx * 40) + 'px'; el.style.width = '40px'; wx++; el.innerHTML = `<span>${NAMES[pc]}${Math.floor(m / 12) - 1}</span>`; }
+  if (black) { el.style.left = (wx * 28 - 9) + 'px'; el.style.width = '18px'; }
+  else { el.style.left = (wx * 28) + 'px'; el.style.width = '28px'; wx++; if (pc === 0) el.innerHTML = `<span>C${Math.floor(m / 12) - 1}</span>`; }
   el.onpointerdown = (e) => { e.preventDefault(); hit(m); };
   kb.appendChild(el); keyEls[m] = el;
 }
-kb.style.width = (wx * 40 + 2) + 'px';
+kb.style.width = (wx * 28 + 2) + 'px';
 function hit(m) {
   if (!ready) { $('status').textContent = 'Press Start audio first.'; return; }
-  playNote($('inst').value, m, { dur: 1.2, vel: 0.8 });
-  const el = keyEls[m]; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 160);
+  playNote('harpsichord', m, { dur: 1.6, vel: 0.85, art: $('art').value });
+  const el = keyEls[m]; if (el) { el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 160); }
 }
 window.addEventListener('keydown', (e) => {
   if (e.repeat || e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
   const i = KEYMAP.indexOf(e.key.toLowerCase());
-  if (i >= 0) hit(48 + i);
+  if (i >= 0) { const m = 12 * (+$('oct').value + 1) + i; if (m >= 36 && m <= 96) hit(m); }
+  const f = /^F([1-7])$/.exec(e.key);
+  if (f) { e.preventDefault(); $('art').value = ARTICULATIONS[+f[1] - 1]; }
 });
 </script>
 </body>

@@ -6,6 +6,7 @@ import { TW } from '../core/view.js';
 import { isoBarrier, isoBarrierProp } from '../gfx/isobarriers.js';
 import { extendedTownFloors } from '../gfx/biomeexpansion.js';
 import { wallHangingAtBuilding } from '../gfx/wallhangings.js';
+import { isoFix } from '../gfx/isofix.js';
 
 export const VENDORS = [
   { id: 'weapons', name: 'Garrick Ironhand', title: 'Weaponsmith', sprite: 'barbarian', pal: { hue: 25, sat: 0.6, light: -0.02 }, sign: 'sword', greet: 'Steel for the slaughter. Pick your poison - edges, hafts or bows.' },
@@ -41,8 +42,8 @@ export function makeTownTiles() {
 
 /** A town-pack object (building, tree, scatter) as a draw rect: {img,sx,sy,w,h,ox,oy} (ox/oy native px from its pivot). */
 export function townObject(name) {
-  const r = A.town.meta.objects[name];
-  return r && { img: A.town.objects, sx: r[0], sy: r[1], w: r[2], h: r[3], ox: r[4], oy: r[5], name };
+  const r = A.town.meta.objects[name], f = r && isoFix('town', name); // re-projected onto the 2:1 grid (gfx/isofix.js)
+  return r && (f ? { ...f, name } : { img: A.town.objects, sx: r[0], sy: r[1], w: r[2], h: r[3], ox: r[4], oy: r[5], name });
 }
 
 // Buildings: each is the pack's 2 x 2 house drawn BS x (a 3 x 3 footprint). The art puts the door on the +y face, or

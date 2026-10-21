@@ -97,11 +97,9 @@ export function wallHangingRect(item, biome = null) {
   const castleKeep = (typeof biome === 'string' ? biome : biome?.id) === 'castle_keep';
   // Castle Keep supplies the two front-facing wall planes only. Use those
   // views for either depth side so its authored art is always player-facing.
-  const frame = castleKeep ? (item.dir === 'f' ? 3 : 2) : wallHangingAngle(item.dir, item.front);
+  // every view is drawn flat on its wall plane (tools/build_wall_hangings.py), centred on the mount
   const x = isoX(item.mountX, item.mountY), y = isoY(item.mountX, item.mountY);
-  const plateLeft = frame === 0 || frame === 2;
-  return [x - (plateLeft ? 0.22 : 0.78) * DISPLAY,
-    y - HANG, DISPLAY, DISPLAY];
+  return [x - DISPLAY / 2, y - HANG, DISPLAY, DISPLAY];
 }
 
 // The biome tint is baked once per atlas and hue: a ctx.filter on every draw is a slow path (a filter layer per

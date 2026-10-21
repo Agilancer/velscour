@@ -11,13 +11,15 @@ import { TW } from '../core/view.js';
 import { A } from '../core/assets.js';
 import { rollLooks } from '../data/bestiary.js';
 import { CASTLE_FURNITURE_HEIGHT } from '../gfx/castlescale.js';
-import { castleFloorTiles, castleKeepFloorTiles, castleKeepWallFrames, castleFrames, castleObject, castleStrip, castleCutout, castleCarpetTiles, castleTent, castleScaled } from '../gfx/castle.js';
+import { castleFloorTiles, castleKeepFloorTiles, castleFrames, castleObject, castleCarpetTiles, castleRampartTops, castlePlankTile, castleFlipped, castleTent, castleScaled } from '../gfx/castle.js';
 import { townObject } from './town.js';
 import { MAT } from '../gfx/castleground.js';
-import { darkForestTree, darkTreeK, darkForestTreesReady } from '../gfx/darkforest.js';
-import { SCENARIOS } from '../game/overworld.js';
-import { castle3d, C3, K as K3, BLD } from './castle3d.js';
+import { FACE, castleSpan, castleLeaf, castlePanel } from '../gfx/castlewalls.js';
+import { castle3d, C3, K as K3 } from './castle3d.js';
 import { castle3dState, roofStrip } from '../gfx/castle3dart.js';
+import { HS } from '../gfx/terrain.js';
+import { darkForestTree, darkTreeK, darkForestTreesReady } from '../gfx/darkforest.js';
+import { SCENARIOS, CASTLE_SCENARIOS } from '../game/overworld.js';
 
 export const CASTLE_SIZE=Object.freeze([336,304]);
 const W=336,H=304,C=2;                    // tiles; one wall cell is C x C tiles
@@ -30,6 +32,10 @@ const MOAT=Object.freeze({x0:86,y0:58,x1:251,y1:211,w:8});   // tiles: an 8-tile
 // (Beaumaris: attackers can't charge straight through both), the inner north gate west of the keep.
 export const CASTLE_GATES=Object.freeze({outer:[[84,100]],postern:[[104,34]],inner:[[96,86]],innerNorth:[[72,48]]});
 const ENTRY=[169,294],EXIT=[224,8];
+// Height-map levels (gfx/terrain.js HS = 4 world px each): the moat and river lie sunk below the ground, the outer
+// wall-walk 24 levels up (96 px, ~1.6 heroes), the inner one higher; merlons and crenels stand MERLON / SILL over a walk.
+const LV=Object.freeze({water:-11,outer:24,inner:32}),STEP=4,SILL=3,MERLON=9,TOWER_UP=8,GATE_UP=12,HALL_LV=18;
+const D4=[[1,0],[-1,0],[0,1],[0,-1]];
 // Floor ids (1-based, as in the atlas) chosen by how each tile looks: several atlas names don't describe their art.
 const F={meadow:[1,7,13,21],bright:[41,47],lush:[2,8,14,22,28,42],mid:[19,27,53,59],dirt:[4,24,44,36],
   mud:[50,10,16],sand:[30],gravel:[3,9,29],cobble:[15],pave:[35,35,35,23,43],dark:[37],moss:[33,39,34],herring:[40],
@@ -64,8 +70,6 @@ const SCATTER_ART={siege_engine:'scatter_34_broken_wheel',broken_wheel:'scatter_
 const TREE_H={apple:70,birch:84,pine:80,oak:74,juniper:64,thorn:66,ash:150,pear:128,fir:160,twin:150,willow:140,dead:150,
   ancient:230,elm:250,cedar:240,scots:260,storm:220};
 const SOLID=/well|cart|engine|chest|firewood|barrel|crate|table|bench|grindstone|anvil|brazier|rack|box|bush|hedge|bollard|fountain|birdbath|sundial|blocks|trough|ladder|winch|bundle|target|statue|cage|pole|rubble_pile|large_rubble|drums|capital|merlons|stack|scaffold|pulley|spikes|teeth|hook|stand|basin|topiary|potted|urn|trellis|arch|spout|nozzle|milestone|post|roost|barricade|stakes|cask|line|pump|dummy|stool|cookpot|cage|barrow|bucket_line/;
-const WALL_ART='castle_landmark_04_curtain_wall_battlement',WALL_SLICE=[144,66,33,246];
-const WALL_K=TW/WALL_SLICE[1];               // one slice spans one wall cell along the run (64 world px)
 const KEEP_STONE={colorize:[36,.3],light:.16,contrast:.9};   // tints the keep's dark brick to the curtain's limestone
 const PILLAR_STONE={colorize:[34,.28],light:.06,contrast:1.05};
 const FOREST_TREES=['ancient_black_oak','spire_pine','twisted_yew','cathedral_redwood','hollow_ash','hanging_moss_fir',
@@ -87,8 +91,8 @@ export function generateCastle(depth,biome,seed){
   const mat=new Uint8Array(N),clear=new Uint8Array(N),forest=new Uint8Array(N);   // clear: roads and yards stay free
   map.t.fill(1);map.losBlocks=true;map.castleMat=mat;
   for(const k of ['rampartDeck','rampartWall','castleRoomWalls'])map[k]=new Uint8Array(N);
-  map.rampartHeight=0;map.castleBridges=[];
-  const scenarioId=(((seed>>>0)^depth)>>>0)%SCENARIOS.length,type=SCENARIOS[scenarioId][1];
+  map.castleBridges=[];
+  const scenarioId=(((seed>>>0)^depth)>>>0)%CASTLE_SCENARIOS,type=SCENARIOS[scenarioId][1];
   const set=(x,y,m)=>{if(inb(x,y))mat[I(x,y)]=m;};
   const block=(x,y)=>{if(inb(x,y))map.block[I(x,y)]=1;};
   const free=(x,y)=>{if(inb(x,y))map.block[I(x,y)]=0;};
@@ -120,6 +124,22 @@ export function generateCastle(depth,biome,seed){
     const p={kind:'scatter',x,y,spr,k,flip:false,z:0,fixedK:true,...extra};props.push(p);return p;
   };
   const scr=(x,y)=>[32*(x-y),16*(x+y)];     // tile -> world px
+  // a copy of a sprite keeping a lazily drawn image's getter (castleSpan, castleTent), with fields overridden
+  const sub=(spr,o)=>Object.assign(Object.defineProperties({},Object.getOwnPropertyDescriptors(spr)),o);
+  // A big sprite cut into 32 px screen columns, each sorted from the front edge of its footprint [fx0,fy0,fx1,fy1]
+  // (tiles) under that column, so walkers beside it sort as they would round a solid block. Drawn at ground level
+  // even where a column's sort tile is raised.
+  const slicedRect=(spr,Pt,k,[fx0,fy0,fx1,fy1],extra=null)=>{
+    const [px,py]=scr(Pt[0],Pt[1]),left=px+spr.ox*k,right=left+spr.w*k;
+    for(let m=Math.floor(left/32);m*32<right;m++){
+      const X=m*32+16;let qx=X/32+fy1,qy=fy1;if(qx>fx1){qx=fx1;qy=fx1-X/32;}if(qx<fx0){qx=fx0;qy=fx0-X/32;}
+      qy=Math.max(fy0,Math.min(fy1,qy))+.02;
+      const a=Math.max(0,Math.floor((m*32-left)/k)),b=Math.min(spr.w,Math.ceil((m*32+32-left)/k));if(b<=a)continue;
+      const [ax,ay]=scr(qx,qy);
+      props.push({kind:'scatter',x:qx,y:qy,spr:sub(spr,{sx:spr.sx+a,w:b-a,ox:spr.ox+a+(px-ax)/k,oy:spr.oy+(py-ay)/k,strip:true}),k,flip:false,
+        z:-(map.hgt?map.hgt[map.tileIdx(qx,qy)]*HS:0),fixedK:true,...extra});
+    }
+  };
 
   // ---------------------------------------------------------------- ground
   // Meadow with lush hollows and dry patches; the forest closes in round the edge.
@@ -142,39 +162,62 @@ export function generateCastle(depth,biome,seed){
     let near=false;for(let d=1;d<=2&&!near;d++)for(const [dx,dy] of [[d,0],[-d,0],[0,d],[0,-d]])if(mat[I(Math.min(W-1,Math.max(0,x+dx)),Math.min(H-1,Math.max(0,y+dy)))]===MAT.water&&!inMoat(x+dx,y+dy))near=true;
     if(near&&n(x,y,3)>.35)mat[i]=MAT.sand;}
 
-  // ---------------------------------------------------------------- curtain walls, towers, gates (3D, src/world/castle3d.js)
-  // Both curtains are walked along the top (stairs from the wards), towers are walked through, the gates are tunnels;
-  // the masonry is drawn from the baked 3D pieces (gfx/castle3dart.js) as the columns of a height map.
+  // ---------------------------------------------------------------- curtain walls, towers, gates, stairs (3D)
+  // The curtains, towers, gatehouses, stairs, the keep and the halls are one baked 3D model (src/world/castle3d.js,
+  // docs/CASTLE_3D.md) on the height map: walk along the tops of the walls, up the stairs from the wards, through the
+  // gate tunnels. Its tiles draw the baked pieces (gfx/castle3dart.js); the moat and river stay sunk below the ground.
+  const hgt=new Int16Array(N),faceArt=new Uint8Array(N),faceBand=new Int16Array(N),faceArch=new Uint8Array(N),bridgeWater=new Uint8Array(N);
+  Object.assign(map,{hgt,faceArt,faceBand,faceArch,bridgeWater,climb:STEP,drop:10,walkStep:STEP,tallOcclusion:true,baseLevel:0,flowRange:96,
+    minLevel:LV.water,maxLevel:C3.KT});   // (minimap shading: water darkest, walls palest)
+  for(let i=0;i<N;i++)if(mat[i]===MAT.water)hgt[i]=LV.water;
   const L=castle3d();
-  map.hgt=Int16Array.from(L.hgt);map.climb=4;map.drop=10;map.baseLevel=0;
   map.c3struct=L.struct;map.c3bld=L.bld;map.c3kind=L.kind;map.c3cover=L.cover;
+  // kind, as the rest of this file reads it: 1 walk, 2 parapet, 3 tower floor, 4 tower parapet, 5 stair, 6 gate passage
+  const kind=new Uint8Array(N);
+  const K6={[K3.walk]:1,[K3.parapet]:2,[K3.stair]:5};
   for(let i=0;i<N;i++){
-    if(!L.struct[i]&&!L.bld[i]&&L.kind[i]!==K3.bridge)continue;
+    if(!L.struct[i]&&!L.bld[i])continue;
     forest[i]=0;clear[i]=1;
-    if(L.kind[i]===K3.bridge&&L.solid[i]){map.block[i]=0;continue;}   // the drawbridge: open while generating (castle3d's drawbridge object raises it)
-    if(L.solid[i]){map.block[i]=1;mat[i]=MAT.wall;}else{map.block[i]=0;if(L.struct[i])mat[i]=MAT.dark;}
-    if(L.walk[i]||L.kind[i]===K3.parapet||L.kind[i]===K3.tower)map.rampartWall[i]=1;
+    if(L.kind[i]===K3.bridge&&L.solid[i])continue;   // the drawbridge's tiles: moat until it comes down (game/castle3d.js)
+    if(L.struct[i]||L.kind[i]!==K3.floor)hgt[i]=L.hgt[i];
+    if(L.bld[i]&&L.kind[i]===K3.floor&&!L.struct[i]){hgt[i]=L.hgt[i];continue;}
+    map.block[i]=L.solid[i];
+    const k=L.kind[i];
+    kind[i]=K6[k]||(k===K3.tower?(L.solid[i]?4:3):(k===K3.gate&&L.cover[i])?6:k===K3.gate?4:0);
+    if(kind[i]&&kind[i]!==6){mat[i]=MAT.rampart;map.rampartWall[i]=1;faceBand[i]=L.hgt[i];}
+    else if(L.struct[i])mat[i]=MAT.dark;
+    if(L.walk[i]&&!L.solid[i])map.rampartDeck[i]=1;
   }
-  // an apron of clear ground at every doorway and gate mouth (no scatter in the way)
+  // an apron of clear ground at every doorway and gate mouth
   for(const d of L.doors)rect(Math.floor(d.x)-2,Math.floor(d.y)-2,Math.floor(d.x)+2,Math.floor(d.y)+2,(x,y,i)=>{if(!L.solid[i]){clear[i]=1;forest[i]=0;}});
   const O=CASTLE_OUTER,IN=CASTLE_INNER;
-  const blockCell=(cx,cy)=>{for(let dy=0;dy<C;dy++)for(let dx=0;dx<C;dx++){const x=cx*C+dx,y=cy*C+dy;block(x,y);if(inb(x,y)){forest[I(x,y)]=0;clear[I(x,y)]=1;}}};
+  // the two curtain rings in tiles (wall cells plus a tile of wall-walk on the ward side)
+  const RINGS=[{x0:O.x0*C,y0:O.y0*C,x1:O.x1*C+1,y1:O.y1*C+1,th:3,lv:C3.OW},{x0:IN.x0*C,y0:IN.y0*C,x1:IN.x1*C+1,y1:IN.y1*C+1,th:3,lv:C3.IW}];
+  const [gx,gy]=CASTLE_GATES.outer[0],[px_,py_]=CASTLE_GATES.postern[0],[ix_,iy_]=CASTLE_GATES.inner[0],[nx_,ny_]=CASTLE_GATES.innerNorth[0];
+  const GATE={x0:gx*C,x1:gx*C+1},POST={x0:px_*C,x1:px_*C+1},IGATE={x0:ix_*C,x1:ix_*C+1},NGATE={x0:nx_*C,x1:nx_*C+1};
+  const towers=[];
+  const stairs=L.stairs.map(st=>{const [dx,dy]={'+x':[1,0],'-x':[-1,0],'+y':[0,1],'-y':[0,-1]}[st.dir];return {x:st.x0,y:st.y0,dx,dy,lv:st.lv,n:st.steps.length};});
+  map.castleTowers=towers;map.castleStairs=stairs;
+  const R0=RINGS[0],R1=RINGS[1];
 
   // ---------------------------------------------------------------- wards
-  const ox0=O.x0*C+C,oy0=O.y0*C+C,ox1=O.x1*C-1,oy1=O.y1*C-1;          // outer ward interior (tiles)
-  const ix0=IN.x0*C+C,iy0=IN.y0*C+C,ix1=IN.x1*C-1,iy1=IN.y1*C-1;      // inner ward interior
-  const inInner=(x,y)=>x>=IN.x0*C&&x<=IN.x1*C+1&&y>=IN.y0*C&&y<=IN.y1*C+1;
-  const inOuter=(x,y)=>x>=O.x0*C&&x<=O.x1*C+1&&y>=O.y0*C&&y<=O.y1*C+1;
-  rect(ox0,oy0,ox1,oy1,(x,y,i)=>{forest[i]=0;if(map.rampartWall[i]||mat[i]===MAT.dark||L.struct[i])return;
+  const ox0=R0.x0+R0.th,oy0=R0.y0+R0.th,ox1=R0.x1-R0.th,oy1=R0.y1-R0.th;     // outer ward interior (tiles)
+  const ix0=IN.x0*C+C,iy0=IN.y0*C+C,ix1=IN.x1*C-1,iy1=IN.y1*C-1;          // inner ward interior
+  const inInner=(x,y)=>x>=R1.x0&&x<=R1.x1&&y>=R1.y0&&y<=R1.y1;
+  const inOuter=(x,y)=>x>=R0.x0&&x<=R0.x1&&y>=R0.y0&&y<=R0.y1;
+  rect(ox0,oy0,ox1,oy1,(x,y,i)=>{forest[i]=0;if(map.rampartWall[i]||mat[i]===MAT.dark)return;
     if(inInner(x,y))mat[i]=n(x,y,7)>.62?MAT.mid:MAT.meadow;else mat[i]=n(x,y,6)>.68?MAT.dirt:n(x,y,11)>.58?MAT.mid:MAT.meadow;});
-  // The wall-walk: along the top of both curtains (map.rampartDeck), reached by the stairs in the wards.
-  for(let i=0;i<N;i++)if(L.walk[i]&&!L.solid[i])map.rampartDeck[i]=1;
-  // berm round the outside of the curtain
-  rect(O.x0*C-2,O.y0*C-2,O.x1*C+3,O.y1*C+3,(x,y,i)=>{if(!inOuter(x,y)&&!inMoat(x,y)){forest[i]=0;clear[i]=1;}});
+  // a paved strip along the foot of the walls, and the berm round the outside of the curtain
+  rect(ox0,oy0,ox1,oy1,(x,y,i)=>{if(map.rampartWall[i]||inInner(x,y)&&!kind[i])return;
+    if(!kind[i]&&(x<ox0+2||x>ox1-2||y<oy0+2||y>oy1-2||D4.some(([dx,dy])=>kind[I(x+dx,y+dy)]===5))){mat[i]=MAT.dark;clear[i]=1;}});
+  rect(R0.x0-2,R0.y0-2,R0.x1+2,R0.y1+2,(x,y,i)=>{if(!inOuter(x,y)&&!inMoat(x,y)){forest[i]=0;clear[i]=1;}});
+  // the moat is a stone-lined cut: its banks drop to the water as masonry; the river's banks are earth
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const i=I(x,y);if(hgt[i]!==0||faceArt[i])continue;
+    if(inMoat(x+1,y)||inMoat(x,y+1))faceArt[i]=FACE.moat;else if(mat[i+1]===MAT.water||mat[i+W]===MAT.water)faceArt[i]=FACE.earth;}
 
   // Roads: the approach from the south through the village to the bridge, the bailey lanes to the inner gate,
   // the postern road north to the exit, and the old tracks to the siege lines, the graveyard and the fields.
-  const road=(pts,w,m=MAT.road)=>trail(pts,w,(x,y,i)=>{if(mat[i]===MAT.water||map.rampartWall[i])return;mat[i]=m;clear[i]=1;forest[i]=0;},.5);
+  const road=(pts,w,m=MAT.road)=>trail(pts,w,(x,y,i)=>{if(mat[i]===MAT.water||map.rampartWall[i]||kind[i])return;mat[i]=m;clear[i]=1;forest[i]=0;},.5);
   const [ogx]=CASTLE_GATES.outer[0],gateX=ogx*C+1,[igx]=CASTLE_GATES.inner[0],igX=igx*C+1,[pgx]=CASTLE_GATES.postern[0],pgX=pgx*C+1,[ngx]=CASTLE_GATES.innerNorth[0],ngX=ngx*C+1;
   road([[ENTRY[0],H+2],[ENTRY[0]-3,268],[gateX+4,246],[gateX,226],[gateX,214]],5.2);
   road([[gateX,196],[gateX,186],[igX-4,182],[igX,176]],4.4,MAT.cobble);
@@ -186,56 +229,65 @@ export function generateCastle(depth,biome,seed){
   road([[100,254],[78,226],[60,196],[50,168]],2.8);
 
   // ---------------------------------------------------------------- bridges
-  // Each painted bridge spans real water at ground level, as the sunken moat's banks read: the deck's near edge sits on
-  // the near bank, its far edge on the far bank or pier, its arch and piers fall away into the water below. The deck
-  // is the walkable crossing; the bridge sorts from its far end, so walkers on it draw on its deck.
-  const BRIDGE_DECK=154;   // src px from the deck's near edge to its far edge along the span
-  const bridge=(x,nearY,farY,kind)=>{
-    const spr=castleCutout('castle_landmark_17_bridge_approach','castle_landmarks','deck');if(!spr)return;
-    const k=(nearY-farY)*32/BRIDGE_DECK,[px,py]=scr(x,nearY),[ax,ay]=scr(x-1,farY);
-    rect(x-1,farY,x,nearY-1,(xx,yy,i)=>{map.block[i]=0;forest[i]=0;clear[i]=1;});
-    props.push({kind:'scatter',x:x-1,y:farY,spr:{...spr,ox:spr.ox+(px-ax)/k,oy:spr.oy+(py-ay)/k},k,flip:false,z:0,fixedK:true,bridge:kind});
-    map.castleBridges.push({x:x-.5,y:(nearY+farY)/2,kind,near:nearY,far:farY});
-    for(const [lx,ly] of [[x,nearY+2],[x,farY-2]])blob(lx,ly,7,7,(xx,yy,i)=>{clear[i]=1;forest[i]=0;},.2);   // open landings
+  // Stone bridges at ground level over the sunken water: a deck between two low parapets, the side the camera sees
+  // opening in arches (the artwork's arch piece) down to the water. The main bridge's last tiles before the gate are
+  // the drawbridge's planks.
+  const bridge=(x0,x1,y0,y1,name,planks=0,ends=[0,1])=>{
+    for(let y=y0-ends[0];y<=y1+ends[1];y++)for(let x=x0-1;x<=x1+1;x++){const i=I(x,y),edge=x<x0||x>x1;
+      if(mat[i]===MAT.water)bridgeWater[i]=1;
+      hgt[i]=edge?SILL:0;map.block[i]=edge?1:0;mat[i]=!edge&&y<y0+planks?MAT.plank:MAT.rampart;faceArt[i]=FACE.bridge;forest[i]=0;clear[i]=1;}
+    const len=y1-y0+1,n=Math.max(1,Math.round(len/4));
+    for(let a=0;a<n;a++){const ya=y0+Math.round(a*len/n),yb=y0+Math.round((a+1)*len/n)-1,span=yb-ya+1;
+      for(let y=ya;y<=yb;y++)faceArch[I(x1+1,y)]=1+(yb-y)+(span<<4);}
+    map.castleBridges.push({x:(x0+x1+1)/2,y:(y0+y1+1)/2,kind:name,near:y1+1,far:y0,x0,x1});
+    for(const [lx,ly] of [[(x0+x1+1)/2,y1+3],[(x0+x1+1)/2,y0-3]])blob(lx,ly,7,7,(xx,yy,i)=>{clear[i]=1;forest[i]=0;},.2);   // open landings
   };
-  // The main crossing (3D): the gatehouse's drawbridge over the moat to a stone pier, a stone causeway to the bank.
-  {const D=L.drawbridge;
-    rect(D.x0-2,D.y1,D.x1+1,D.y1+3,(x,y,i)=>{if(L.struct[i]){map.block[i]=0;mat[i]=MAT.dark;forest[i]=0;clear[i]=1;}});
-    rect(D.x0,D.hinge,D.x1-1,D.y1-1,(x,y,i)=>{mat[i]=MAT.water;});
-    map.castleBridges.push({x:(D.x0+D.x1)/2,y:(D.hinge+D.y1+4)/2,kind:'main',near:D.y1+4,far:D.hinge});
+  {const D=L.drawbridge;   // the main crossing (3D): the drawbridge over the moat to a stone pier, a causeway to the bank
+    rect(D.x0-2,D.y1,D.x1+1,D.y1+3,(x,y,i)=>{if(L.struct[i]){map.block[i]=0;mat[i]=MAT.dark;forest[i]=0;clear[i]=1;hgt[i]=0;}});
+    rect(D.x0,D.hinge,D.x1-1,D.y1-1,(x,y,i)=>{mat[i]=MAT.water;hgt[i]=LV.water;});
+    map.castleBridges.push({x:(D.x0+D.x1)/2,y:(D.hinge+D.y1+4)/2,kind:'main',near:D.y1+4,far:D.hinge,x0:D.x0,x1:D.x1-1});
     map.drawbridge={...D};
-    for(const [lx,ly] of [[gateX,D.y1+6]])blob(lx,ly,7,7,(xx,yy,i)=>{clear[i]=1;forest[i]=0;},.2);}
-  bridge(pgX,MOAT.y0+MOAT.w,MOAT.y0,'postern');
-  // The east road crosses the outflow.
-  {const bx=285;let y0=999,y1=-1;for(let y=120;y<190;y++)if(mat[I(bx,y)]===MAT.water||mat[I(bx-1,y)]===MAT.water){y0=Math.min(y0,y);y1=Math.max(y1,y);}
-    if(y1>0)bridge(bx,y1+1,y0,'river');}
-
-  // ---------------------------------------------------------------- the keep and the halls (3D, src/world/castle3d.js)
+    blob(gateX,D.y1+6,7,7,(xx,yy,i)=>{clear[i]=1;forest[i]=0;},.2);}
+  bridge(POST.x0,POST.x1,MOAT.y0,MOAT.y0+MOAT.w-1,'postern',0,[1,0]);
+  // the east road crosses the river's outflow
+  {const bx=284;let y0=999,y1=-1;for(let y=120;y<190;y++)for(let x=bx-1;x<=bx+3;x++)if(mat[I(x,y)]===MAT.water){y0=Math.min(y0,y);y1=Math.max(y1,y);}
+    if(y1>0)bridge(bx,bx+2,y0,y1,'river',0,[1,1]);}
+  // ---------------------------------------------------------------- the keep and the halls (3D)
   // The keep is explored inside: an entrance hall, the throne room in its west wing, the council chamber and the armoury
   // in its great tower. The cathedral and the great hall are buildings too; their roofs lift off while you are inside.
   const KEEP=[(L.keep[0]+L.keep[2])/2|0,(L.keep[1]+L.keep[3])/2|0];
   rect(L.keep[0]-6,L.keep[1]-4,L.keep[2]+6,L.keep[3]+6,(x,y,i)=>{if(!L.bld[i]&&!L.struct[i]&&!map.block[i])mat[i]=MAT.pave;});
   const hallF=floors.length,TH_F=F.pave[0]-1,AISLE=F.dark[0]-1,CH_F=F.gravel[2]-1,GH_F=F.plank[0]-1;
   // rooms: `tiles` is the outer bound (walls included, two tiles thick where the old halls had them)
-  const room3=(id)=>L.rooms.find(r=>r.id===id);
+  const room3=(id)=>L.rooms.find(r=>r.id===id),th3=room3('throne_hall').tiles;
   const rooms=[
-    {id:'throne_hall',name:'Throne Room',tiles:[room3('throne_hall').tiles[0]-2,room3('throne_hall').tiles[1]-2,room3('throne_hall').tiles[2]+2,room3('throne_hall').tiles[3]+2],floor:TH_F},
+    {id:'throne_hall',name:'Throne Room',tiles:[th3[0]-2,th3[1]-2,th3[2]+2,th3[3]+2],floor:TH_F},
     {id:'cathedral',name:'Cathedral',tiles:[182,102,209,133],floor:CH_F},
     {id:'great_hall',name:'Great Hall',tiles:[128,140,155,169],floor:GH_F},
   ];
   for(let i=0;i<N;i++){if(!L.bld[i])continue;
     if(L.kind[i]===K3.floor&&!L.struct[i]){mat[i]=MAT.hall;map.block[i]=0;clear[i]=1;}
     else if(L.kind[i]===K3.keep)map.castleRoomWalls[i]=1;}
-  const floorRoom=(r,f)=>{const [x0,y0,x1,y1]=r.tiles;rect(x0,y0,x1,y1,(x,y,i)=>{if(L.bld[i]&&!L.struct[i])map.v[i]=f;});};
-  floorRoom(room3('keep_hall'),F.slab[0]-1);floorRoom(room3('council'),F.herring[0]-1);floorRoom(room3('armoury'),F.dark[0]-1);
-  for(const r of rooms)floorRoom({tiles:r.tiles},r.floor);
-  const tilesOf=(r)=>r.tiles;
+  const floorRoom=(t,f)=>rect(t[0],t[1],t[2],t[3],(x,y,i)=>{if(L.bld[i]&&!L.struct[i])map.v[i]=f;});
+  floorRoom(room3('keep_hall').tiles,F.slab[0]-1);floorRoom(room3('council').tiles,F.herring[0]-1);floorRoom(room3('armoury').tiles,F.dark[0]-1);
+  for(const r of rooms)floorRoom(r.tiles,r.floor);
+  // A banner hung flat on a wall face (the pack's hangings are painted face on: castlePanel shears them onto the face):
+  // axis 'x' on the face looking down +y at row Y (the tile in front, X..X+1), 'y' on the face looking down +x at column
+  // X (Y..Y+1); its top `topPx` world px above the ground plane.
+  const hung=new Set();
+  const hang=(X,Y,axis,topPx,hpx,id)=>{
+    const art=castleObject(id,'wall_hangings');if(!art)return;
+    const [x,y]=axis==='x'?[X+.03,Y+.04]:[X+.04,Y+.97];
+    props.push({kind:'scatter',x,y,spr:castlePanel(art,{len:1,hpx,axis,trim:[2,0,2,4]}),k:1,flip:false,z:topPx-hpx-hgt[I(X,Y)]*HS,fixedK:true,banner:true});
+    for(let d=-2;d<=2;d++)hung.add(axis==='x'?(X+d)+','+Y+',x':X+','+(Y+d)+',y');
+  };
   const furnish=(fid,x,y,light=0,flip=false,z=0,hk=1)=>{
     const art=castleObject(fid,'furniture');if(!art)throw new Error('Missing keep furnishing '+fid);
     const [spr,k]=castleScaled(art,CASTLE_FURNITURE_HEIGHT[fid]*hk/art.h);
     props.push({kind:'scatter',x,y,spr,k,flip,light,z,fixedK:true});return spr;
   };
   const wallArt=(asset,category,x,y,h)=>add(asset,category,x,y,h,{solid:false});
+  const tilesOf=(r)=>r.tiles;
   const CARPET=floors.length+keepFloors.length;
   const carpet=(xa,xb,ya,yb)=>rect(xa,ya,xb,yb,(x,y,i)=>{map.v[i]=CARPET+(x===xa?1:x===xb?2:0);});
   const pillar=(x,y)=>{const spr=castleObject('keep_wall_01_pale_quarry_stone_pillar','keep_walls',PILLAR_STONE);if(!spr)return;
@@ -251,9 +303,9 @@ export function generateCastle(depth,biome,seed){
     for(const [nm,x,y] of [['banner_pole',cx-6.5,y0+3.4],['banner_pole',cx+5.5,y0+3.4],['shield_rack',x0+4.5,y0+3.4],['spear_bundle',x1-3.5,y0+3.4],
       ['armor_stand',x0+3.4,y0+12],['armor_stand',x0+3.4,y0+17],['armor_stand',x0+3.4,y0+22],['armor_stand',x1-2.6,y0+12],['armor_stand',x1-2.6,y0+22],
       ['blank_map_stand',x1-3.5,y1-3.6],['trestle_table',x1-5.5,y1-5],['guard_stool',x1-5.4,y1-3.4],['guard_stool',x1-7.4,y1-5.2],['wax_tablet',x1-5.6,y1-5.2]])P(nm,x,y);
-    for(const x of [cx-9.5,cx+8.5])wallArt('castle_hanging_01_05_crown_roots_SE','wall_hangings',x,y0+2.1,76);
+    for(const x of [cx-9.5,cx+8.5])hang(Math.floor(x),y0+2,'x',HALL_LV*HS-6,56,'castle_hanging_01_05_crown_roots_SE');
     for(const x of [cx-3.5,cx+2.5])wallArt('window_03_lancet_keep_SE','windows',x,y0+2.1,64);
-    for(const y of [y0+9.5,y0+19.5])wallArt('castle_hanging_01_04_gate_sun_SW','wall_hangings',x0+2.1,y,72);
+    for(const y of [y0+9.5,y0+19.5])hang(x0+2,Math.floor(y),'y',HALL_LV*HS-6,56,'castle_hanging_01_04_gate_sun_SE');
     for(const y of [y0+14.5,y0+24.5])sconce(x0+2.1,y,'SW');
     for(const y of [y0+11,y0+21])furnish('furniture_04_hanging_chandelier',cx,y,3.0,false,34);}
   // Chapel: the pulpit and altar candles in the apse, pews either side of a carpeted nave, side aisles behind colonnades.
@@ -266,7 +318,7 @@ export function generateCastle(depth,biome,seed){
     for(const [x,y] of [[cx-4.5,y0+4.5],[cx+3.5,y0+4.5],[cx-3.4,y1-3.5],[cx+2.6,y1-3.5]]){furnish('furniture_05_floor_candelabrum',x,y,4.5);block(Math.floor(x),Math.floor(y));}
     for(const y of [y0+12.5,y0+19.5,y0+26.5])furnish('furniture_04_hanging_chandelier',cx,y,3.0,false,34);
     for(const x of [cx-8.5,cx+7.5])wallArt('window_05_twin_lancet_SE','windows',x,y0+2.1,66);
-    wallArt('castle_hanging_02_05_pilgrim_stars_SE','wall_hangings',cx,y0+2.1,80);
+    hang(Math.floor(cx),y0+2,'x',HALL_LV*HS-4,60,'castle_hanging_02_05_pilgrim_stars_SE');
     for(const y of [y0+11.5,y0+21.5])wallArt('window_08_deep_recess_arch_SW','windows',x0+2.1,y,64);
     for(const y of [y0+16.5,y0+26.5])sconce(x0+2.1,y,'SW');
     for(const [nm,x,y] of [['flower_urn',cx-2.6,y0+7.4],['flower_urn',cx+1.6,y0+7.4],['lantern_bell',x0+3.5,y0+3.5],['statue_fragment',x1-3,y0+3.6],['potted_cypress',x0+3.5,y1-3.5],['potted_cypress',x1-3,y1-3.5]])P(nm,x,y);}
@@ -282,7 +334,7 @@ export function generateCastle(depth,biome,seed){
     for(const [nm,x,y] of [['cookpot',x0+3.5,y0+3.5],['bread_basket',x0+6,y0+3.2],['stoneware_jugs',x0+8.4,y0+3.2],['water_cask',x1-3,y0+3.5],
       ['crate_stack',x1-3,y1-3],['grain_sack',x1-5.6,y1-2.8],['apple_sack',x0+3.6,y1-3.4],['cabbage_basket',x0+6,y1-3.2],['leaned_shields',x0+3.4,y0+14],['armor_stand',x1-2.6,y0+9]])P(nm,x,y);
     for(const x of [cx-8.5,cx+7.5])wallArt('window_04_shuttered_square_SE','windows',x,y0+2.1,60);
-    wallArt('castle_hanging_01_09_crossed_hammers_SE','wall_hangings',cx,y0+2.1,78);
+    hang(Math.floor(cx),y0+2,'x',HALL_LV*HS-4,60,'castle_hanging_01_09_crossed_hammers_SE');
     for(const y of [y0+9.5,y0+19.5])sconce(x0+2.1,y,'SW');
     for(const y of [y0+8,y0+18])furnish('furniture_04_hanging_chandelier',cx,y,3.0,false,32);}
   for(const [asset,cat,x,y,h] of [['sign_11_kitchen_plaque_SW','signs',156.6,151,60]])wallArt(asset,cat,x,y,h);
@@ -357,10 +409,35 @@ export function generateCastle(depth,biome,seed){
     ['carved_capital',223,141.6],['mason_square',226,138.4],['stone_trowels',218.4,137],['large_rubble',230,140],['rubble_pile',232,137.4],['tool_chest',224,136]])P(nm,x,y);
   hall('cottage',222,150,true,'barracks');hall('inn',222,162,true,'barracks');
   for(const [nm,x,y] of [['guard_stool',219,156],['folded_blankets',219.4,158],['stretcher',218.6,166],['medicine_box',219,169],['dressing_bowl',220.6,170.4]])P(nm,x,y);
-  // Lanterns along the foot of the outer curtain.
-  for(const [x,y] of [[112,72.6],[146,72.6],[200,72.6],[226,72.6],[99,96],[99,130],[99,160],[99,188],[238.6,96],[238.6,130],[238.6,160]])
-    add('torch_05_stone_lantern_SE','torches',x,y,40,{light:4.2,solid:true});
-  for(const [x,y] of [[gateX-3,193.6],[gateX+2.6,193.6]])add('torch_06_unlit_brazier_SE','torches',x+.5,y,46,{light:5,solid:true});
+  // Lanterns along the wall-walk, against the parapet; braziers either side of the gatehouse's inner mouth.
+  for(const [x,y] of [[112,69.5],[146,69.5],[200,69.5],[226,69.5],[97.5,96],[97.5,124],[97.5,152],[97.5,186],[240.5,96],[240.5,124],[240.5,152],[240.5,186],
+    [112,200.5],[146,200.5],[194,200.5],[226,200.5]])add('torch_05_stone_lantern_SE','torches',x,y,40,{light:4.2,solid:true});
+  for(const [x,y] of [[gateX-3,192.6],[gateX+2.6,192.6]])add('torch_06_unlit_brazier_SE','torches',x+.5,y,46,{light:5,solid:true});
+
+  // Banners all round the castle, on the faces the camera sees: every few tiles along the curtains (inside the wards,
+  // and outside over the moat), one in the middle of each visible tower face under its corbels, and round the halls.
+  {const busy=props.filter(p=>p.roomDoor||p.gateArch||p.banner||/^(windows|signs|torches)$/.test(p.spr?.category||'')).map(p=>[p.x,p.y]);
+    const free=(x,y)=>busy.every(([bx,by])=>Math.abs(bx-x)+Math.abs(by-y)>2.2);
+    const OUT=['castle_hanging_01_01_eclipse_sun_SE','castle_hanging_01_07_wingless_raven_SE'],IN=['castle_hanging_01_02_crescent_stars_SE','castle_hanging_01_06_crossed_keys_SE'],
+      HALLS=['castle_hanging_01_05_crown_roots_SE','castle_hanging_01_04_gate_sun_SE'],TOWER=['castle_hanging_01_03_thorn_tree_SE','castle_hanging_01_08_four_rayed_star_SE'];
+    const pickId=(list,k)=>castleObject(list[k%list.length],'wall_hangings')?list[k%list.length]:'castle_hanging_01_01_eclipse_sun_SE';
+    // a face of wall tile w looking at front tile f, part of a straight run (its neighbours along the run have it too)
+    const face=(x,y,axis)=>{const i=I(x,y),f=axis==='x'?I(x,y+1):I(x+1,y);
+      return !!(kind[i]||map.castleRoomWalls[i])&&!kind[f]&&!map.castleRoomWalls[f]&&hgt[i]-hgt[f]>=16;};
+    const run=(x,y,axis)=>face(x,y,axis)&&(axis==='x'?face(x-1,y,axis)&&face(x+1,y,axis):face(x,y-1,axis)&&face(x,y+1,axis));
+    let k=0;
+    const put=(x,y,axis,topPx,hpx,list)=>{const fx=axis==='x'?x:x+1,fy=axis==='x'?y+1:y;
+      if(hung.has(fx+','+fy+','+axis)||!free(fx+.5,fy+.5)||topPx-hpx<hgt[I(fx,fy)]*HS+8)return;hang(fx,fy,axis,topPx,hpx,pickId(list,k++));};
+    for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++){const i=I(x,y);
+      if(map.castleRoomWalls[i]){for(const a of ['x','y'])if((a==='x'?x:y)%6===3&&run(x,y,a))put(x,y,a,HALL_LV*HS-6,52,HALLS);continue;}
+      if(kind[i]!==1&&kind[i]!==2)continue;
+      const top=(kind[i]===2?faceBand[i]:hgt[i])*HS-6,outside=kind[i]===2;
+      for(const a of ['x','y'])if((a==='x'?x:y)%8===(outside?6:2)&&run(x,y,a))put(x,y,a,top,62,outside?OUT:IN);
+    }
+    for(const t of map.castleTowers){const mx=(t.x0+t.x1)>>1,my=(t.y0+t.y1)>>1,top=t.top*HS-20;
+      if(run(mx,t.y1,'x'))put(mx,t.y1,'x',top,58,TOWER);
+      if(run(t.x1,my,'y'))put(t.x1,my,'y',top,58,TOWER);}
+  }
 
   // ---------------------------------------------------------------- outside the walls
   // The village on the approach road: cottages, the inn and the bakery round a green with a well and a market stall,
@@ -413,7 +490,7 @@ export function generateCastle(depth,biome,seed){
     ['handcart',SG[0]-2,SG[1]+3],['firewood_stack',SG[0]+10,SG[1]+9.6],['water_barrel',SG[0]-12,SG[1]+12],['sandbags',SG[0]+14,SG[1]+14]])P(nm,x,y);
   // A ruined watchtower in the north-east woods.
   const RW=[290,64];blob(RW[0],RW[1],9,7,(x,y,i)=>{mat[i]=n(x,y,3)>.5?MAT.moss:MAT.meadow;forest[i]=0;clear[i]=1;},.3);
-  art('castle_landmark_03_round_tower_upper',RW[0]-1,RW[1]+1,WALL_K*.95,{ruin:true});rect(RW[0]-3,RW[1]-3,RW[0]+1,RW[1]+1,(x,y,i)=>{map.block[i]=1;});
+  art('castle_landmark_03_round_tower_upper',RW[0]-1,RW[1]+1,.92,{ruin:true});rect(RW[0]-3,RW[1]-3,RW[0]+1,RW[1]+1,(x,y,i)=>{map.block[i]=1;});
   for(const [nm,x,y] of [['large_rubble',RW[0]+3,RW[1]+2],['rubble_pile',RW[0]-4,RW[1]+3],['stone_blocks',RW[0]+4,RW[1]-2],['spare_merlons',RW[0]-1,RW[1]+4.5]])P(nm,x,y);
 
   // ---------------------------------------------------------------- loose scatter and trees
@@ -428,7 +505,7 @@ export function generateCastle(depth,biome,seed){
   }
   // Ground cover: small walk-over clutter.
   for(let t=0;t<9000;t++){const x=rng.int(3,W-4)+.5,y=rng.int(3,H-4)+.5,i=I(x|0,y|0);
-    if(map.block[i]||mat[i]===MAT.water||mat[i]===MAT.hall||mat[i]===MAT.pave||mat[i]===MAT.dark||map.rampartDeck[i])continue;
+    if(map.block[i]||mat[i]===MAT.water||mat[i]===MAT.hall||mat[i]===MAT.pave||mat[i]===MAT.dark||kind[i]||faceArt[i]===FACE.bridge)continue;
     if(rng.chance(.06))S(rng.pick(['41_cracked_paving','42_small_rubble','26_mason_tools','105_apple_sack']),x+rng.range(-.3,.3),y+rng.range(-.3,.3),{solid:false});}
   // The forest: the Dark Forest's towering trees in the deep wood, the castle pack's trees on its fringe and in groves.
   const dfOK=darkForestTreesReady(),grid=new Int32Array(N);
@@ -462,13 +539,19 @@ export function generateCastle(depth,biome,seed){
   // ---------------------------------------------------------------- floors
   // Each material picks its tiles from low-frequency noise, so patches of one texture run together instead of a checker.
   const pick=(list,x,y,s=7,salt=0)=>list[Math.min(list.length-1,Math.floor(n(x+salt,y-salt,s)*list.length*1.15)%list.length)]-1;
-  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=I(x,y),m=mat[i];if(m===MAT.hall)continue;
+  // the walls' flagstone tops: a painted slab to a tile, eight turns of two slabs (castleRampartTops); the halls' wall
+  // tops the same stone in the keep's limestone
+  const RAMP=floors.length+keepFloors.length+3,WARM=RAMP+8,slab=(x,y)=>((Math.imul(x,73856093)^Math.imul(y,19349663))>>>4)&7;
+  for(let i=0;i<N;i++)if(kind[i]&&kind[i]!==6&&mat[i]!==MAT.plank)mat[i]=MAT.rampart;   // later ground work may have painted over them
+  const floorAt=(x,y)=>{const i=I(x,y),m=mat[i];if(m===MAT.hall)return;
+    if(m===MAT.rampart||m===MAT.wall&&map.castleRoomWalls[i]){map.v[i]=(m===MAT.rampart?RAMP:WARM)+slab(x,y);return;}
+    if(m===MAT.plank&&faceArt[i]===FACE.bridge){map.v[i]=WARM+8;return;}   // the drawbridge
     map.v[i]=m===MAT.meadow?pick(F.meadow,x,y,9):m===MAT.mid?pick(F.mid,x,y,8,20):m===MAT.bright?pick(F.bright,x,y,6,40):m===MAT.lush||m===MAT.grave?pick(F.lush,x,y,8,80):
       m===MAT.forest?pick(F.lush,x,y,5,120):m===MAT.dirt?pick(F.dirt,x,y,6,160):m===MAT.road?pick(F.dirt,x,y,10,200):
       m===MAT.mud?pick(F.mud,x,y,4,240):m===MAT.field?(y%2?F.mud[0]-1:pick(F.dirt,x,y,12,280)):m===MAT.sand?F.sand[0]-1:
       m===MAT.cobble?F.cobble[0]-1:m===MAT.pave?pick(F.pave,x,y,5,320):m===MAT.dark||m===MAT.wall?F.dark[0]-1:m===MAT.moss?F.herring[0]-1:
-      m===MAT.plank?F.plank[0]-1:m===MAT.water?(n(x,y,8)>.62&&inMoat(x,y)?F.deep[0]-1:pick(F.water,x,y,6,360)):pick(F.meadow,x,y,9);
-  }
+      m===MAT.plank?F.plank[0]-1:m===MAT.water?(n(x,y,8)>.62&&inMoat(x,y)?F.deep[0]-1:pick(F.water,x,y,6,360)):pick(F.meadow,x,y,9);};
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)floorAt(x,y);
 
   // ---------------------------------------------------------------- spawns, chests, sites
   const reach=new Uint8Array(N),q=[I(ENTRY[0],ENTRY[1])];reach[q[0]]=1;
@@ -510,41 +593,104 @@ export function generateCastle(depth,biome,seed){
     if(!ok([x,y])||dist(x,y,ENTRY)<24||sites.some(s=>dist(x,y,s)<9)||mat[I(x|0,y|0)]===MAT.hall)continue;
     const arch=rng.pick(biome.roster);spawns.push({x,y,arch,n:rng.int(2,4),rank:k%10===0?'champion':'normal',look:looks.pick(arch)});
   }
+  // packs on the wall-walks and tower tops: they hold the walls, or come down the stairs at the hero
+  const walkTiles=[];for(let i=0;i<N;i++)if(map.rampartDeck[i]&&reach[i]&&!map.block[i])walkTiles.push(i);
+  for(let k=0,t=0;k<12&&t<600&&walkTiles.length;t++){const i=rng.pick(walkTiles),x=i%W+.5,y=((i/W)|0)+.5;
+    if(!ok([x,y])||sites.some(s=>dist(x,y,s)<8)||spawns.some(s=>Math.hypot(s.x-x,s.y-y)<14))continue;
+    const arch=rng.pick(biome.roster);spawns.push({x,y,arch,n:rng.int(2,3),rank:k%4===0?'champion':'normal',look:looks.pick(arch),rampart:true});k++;}
   for(const id of ['throne_hall','cathedral','great_hall']){const [x,y]=near(hallC(id),3),arch=rng.pick(biome.roster);spawns.push({x,y,arch,n:2,rank:'normal',look:looks.pick(arch),castleRoom:id});}
   const chests=[[rooms[0].tiles[0]+5.5,rooms[0].tiles[1]+12.5],[rooms[1].tiles[2]-4.5,rooms[1].tiles[1]+5.5],[rooms[2].tiles[0]+4.5,rooms[2].tiles[3]-3.5],
     [GY[0]+8,GY[1]+6],[RW[0]+5,RW[1]+3],[SG[0]+16,SG[1]+12]].map(([x,y],j)=>{const [px,py]=near([x,y],3);return {x:px,y:py,rare:j===0||rng.chance(.2)};});
   const exit=near(EXIT,4);
+  // ---------------------------------------------------------------- trails
+  // Every place worth walking to has a way there: a trail from each house's door, every scenario site (the shrine
+  // first), the chests, the stairs and the exit to the nearest road, lane or paving, the cheapest way over open ground
+  // (round props and trees, over no wall or water). map.road marks the whole network: auto-play keeps to it.
+  const ROADS=new Set([MAT.road,MAT.cobble,MAT.dark,MAT.pave,MAT.moss,MAT.plank,MAT.hall]);   // (the halls' floors are the way indoors)
+  const onRoad=(i)=>ROADS.has(mat[i])||faceArt[i]===FACE.bridge&&!map.block[i];
+  const groundOK=(i)=>!map.block[i]&&hgt[i]===0&&mat[i]!==MAT.water&&mat[i]!==MAT.hall&&!kind[i];
+  const touched=[];
+  const trailFrom=(px,py)=>{
+    let s0=I(Math.floor(px),Math.floor(py));
+    if(!groundOK(s0)&&!onRoad(s0)){let best=-1;for(let r=1;r<4&&best<0;r++)for(let dy=-r;dy<=r&&best<0;dy++)for(let dx=-r;dx<=r;dx++){const j=I(Math.floor(px)+dx,Math.floor(py)+dy);if(groundOK(j)){best=j;break;}}if(best<0)return;s0=best;}
+    const cost=new Map([[s0,0]]),prev=new Map(),Q=[[s0]];let end=-1;
+    for(let c=0;c<Q.length&&c<900&&end<0;c++)for(const i of Q[c]||[]){
+      if(cost.get(i)!==c)continue;if(onRoad(i)){end=i;break;}
+      const x=i%W,y=(i/W)|0;
+      for(const [dx,dy] of D4){const X=x+dx,Y=y+dy;if(!inb(X,Y))continue;const j=I(X,Y);
+        if(!groundOK(j)&&!onRoad(j))continue;
+        const nc=c+(onRoad(j)?1:forest[j]?7:4);if(nc>=(cost.get(j)??1e9))continue;
+        cost.set(j,nc);prev.set(j,i);(Q[nc]||(Q[nc]=[])).push(j);}
+    }
+    if(end<0)return;
+    for(let i=prev.get(end);i!==undefined;i=prev.get(i)){
+      // two tiles wide: the path's tile and the one beside it across the way it runs
+      const x=i%W,y=(i/W)|0,q=prev.get(i),ax=q!==undefined&&Math.abs(q-i)===1?0:1,ay=1-ax;
+      for(const j of [i,I(x+ax,y+ay)])if(groundOK(j)&&!onRoad(j)){mat[j]=MAT.road;clear[j]=1;touched.push(j);}
+    }
+  };
+  const DOOR_X=new Set(['alchemist','gems','socket','gamble','bakery']);   // world/town.js: the art's door on its +x face
+  for(const b of buildings){const dx=DOOR_X.has(b.name)!==b.flip;trailFrom(dx?b.x0+b.fp+.5:b.x0+b.fp/2,dx?b.y0+b.fp/2:b.y0+b.fp+.5);}
+  for(const p of [...sites,exit,ENTRY,...chests.map(c=>[c.x,c.y])])trailFrom(p[0],p[1]);
+  for(const st of stairs)trailFrom(st.x-st.dx+.5,st.y-st.dy+.5);
+  // then join every stretch of road, lane, paving or hall floor that the props and walls cut off to the network the
+  // hero arrives on, by the cheapest trail between them
+  const roadOK=(i)=>onRoad(i)&&!map.block[i];
+  for(let pass=0;pass<4;pass++){
+    const comp=new Int32Array(N).fill(-1),size=[];
+    for(let i=0;i<N;i++){if(!roadOK(i)||comp[i]>=0)continue;const q=[i];comp[i]=size.length;
+      for(let a=0;a<q.length;a++){const k=q[a];for(const j of [k+1,k-1,k+W,k-W])if(j>=0&&j<N&&comp[j]<0&&roadOK(j)&&map.stepOk(k,j)){comp[j]=size.length;q.push(j);}}
+      size.push(q.length);}
+    const main=comp[I(ENTRY[0],ENTRY[1]-2)]>=0?comp[I(ENTRY[0],ENTRY[1]-2)]:size.indexOf(Math.max(...size));
+    let joined=0;
+    for(let c=0;c<size.length;c++){if(c===main||size[c]<6)continue;
+      const cost=new Map(),prev=new Map(),Q=[[]];
+      for(let i=0;i<N;i++)if(comp[i]===c){cost.set(i,0);Q[0].push(i);}
+      let end=-1;
+      for(let k=0;k<Q.length&&k<500&&end<0;k++)for(const i of Q[k]||[]){
+        if(cost.get(i)!==k)continue;if(comp[i]===main){end=i;break;}
+        const x=i%W,y=(i/W)|0;
+        for(const [dx,dy] of D4){const X=x+dx,Y=y+dy;if(!inb(X,Y))continue;const j=I(X,Y);
+          if(!(groundOK(j)||roadOK(j))||!map.stepOk(i,j))continue;
+          const nc=k+(roadOK(j)?1:forest[j]?7:4);if(nc>=(cost.get(j)??1e9))continue;cost.set(j,nc);prev.set(j,i);(Q[nc]||(Q[nc]=[])).push(j);}
+      }
+      if(end<0)continue;joined++;
+      for(let i=prev.get(end);i!==undefined&&comp[i]!==c;i=prev.get(i)){const x=i%W,y=(i/W)|0,q=prev.get(i),ax=q!==undefined&&Math.abs(q-i)===1?0:1;
+        for(const j of [i,I(x+ax,y+1-ax)])if(groundOK(j)&&!onRoad(j)){mat[j]=MAT.road;clear[j]=1;touched.push(j);}}
+    }
+    if(!joined)break;
+  }
+  for(const i of touched)floorAt(i%W,(i/W)|0);
+  map.road=new Uint8Array(N);for(let i=0;i<N;i++)if(roadOK(i))map.road[i]=1;
   if(!globalThis.CASTLE_DEBUG)for(const p of [exit,...sites])if(!reach[I(Math.floor(p[0]),Math.floor(p[1]))])throw new Error('Castle moat, gate or wall blocked a route; seed '+seed+' at '+p.map(v=>v.toFixed(1)));
   map.castleRooms=rooms.map(r=>({id:r.id,name:r.name,rect:r.tiles,floor:r.floor}));
   map.castleDoors=L.doors.map(d=>({...d,x:d.x+(d.axis==='y'?(d.open<0?.5:-.5):0),y:d.y+(d.axis==='x'?(d.open<0?.5:-.5):0)}));
-  // Rampart posts: muster points along the south and east wall-walk (on top of the curtain), facing the siege lines.
+  // Rampart posts: muster points along the south and east wall-walk, the front facing the siege lines.
   map.rampartPosts=L.posts.filter(p=>map.rampartDeck[I(p[0]|0,p[1]|0)]===1&&!map.block[I(p[0]|0,p[1]|0)]);
   // nothing old stands in the masonry; each building's roof is cut into 32 px columns, sorted from its front edge
   for(let k=props.length-1;k>=0;k--){const pr=props[k],i=I(Math.floor(pr.x),Math.floor(pr.y));
-    if(inb(Math.floor(pr.x),Math.floor(pr.y))&&(L.solid[i]||(L.struct[i]&&L.kind[i]!==K3.floor))&&!pr.c3)props.splice(k,1);}
+    if(inb(Math.floor(pr.x),Math.floor(pr.y))&&(L.solid[i]||(L.struct[i]&&L.kind[i]!==K3.floor))&&!pr.c3&&!pr.banner)props.splice(k,1);}
   const st=castle3dState();
   if(st)for(const r of st.roofs){
     let fx0=W,fy0=H,fx1=0,fy1=0;for(let i=0;i<N;i++)if(L.bld[i]===r.bld){const x=i%W,y=(i/W)|0;fx0=Math.min(fx0,x);fy0=Math.min(fy0,y);fx1=Math.max(fx1,x+1);fy1=Math.max(fy1,y+1);}
     for(const [id,col] of r.strips){
       const X=col*32+16;let qx=X/32+fy1,qy=fy1;if(qx>fx1){qx=fx1;qy=fx1-X/32;}if(qx<fx0){qx=fx0;qy=fx0-X/32;}
       qy=Math.max(fy0,Math.min(fy1,qy))+.02;
-      const s=roofStrip(id),ax=(qx-qy)*32,ay=(qx+qy)*16,lv=map.hgt[I(Math.min(W-1,Math.floor(qx)),Math.min(H-1,Math.floor(qy)))];
-      props.push({kind:'scatter',x:qx,y:qy,spr:{...s,ox:s.ox-ax*st.S,oy:s.oy-ay*st.S},k:1/st.S,flip:false,z:-lv*4,fixedK:true,roofOf:r.bld,c3:true});
+      const s=roofStrip(id),ax=(qx-qy)*32,ay=(qx+qy)*16,lv=hgt[I(Math.min(W-1,Math.floor(qx)),Math.min(H-1,Math.floor(qy)))];
+      props.push({kind:'scatter',x:qx,y:qy,spr:{...s,ox:s.ox-ax*st.S,oy:s.oy-ay*st.S},k:1/st.S,flip:false,z:-lv*HS,fixedK:true,roofOf:r.bld,c3:true});
     }
   }
-  // the moving parts (src/game/castle3d.js): the drawbridge and portcullis, every door; the drawbridge starts raised
+  // the moving parts (game/castle3d.js): the drawbridge and portcullis, every door; the drawbridge starts raised
   if(st?.moving){
-    const frames=(ids)=>ids.map(id=>{const s=roofStrip(id);return {...s,roof:false};});
-    const mover=(kind,anchor,ids,extra={})=>{const [ax,ay]=anchor,lv=map.hgt[I(Math.floor(ax),Math.floor(ay))],fr=frames(ids);
+    const mover=(kind_,anchor,ids,extra={})=>{const [ax,ay]=anchor,lv=hgt[I(Math.floor(ax),Math.floor(ay))],fr=ids.map(id=>({...roofStrip(id),roof:false}));
       // frame offsets are from the anchor's ground point (no elevation): z cancels the tile's
-      const p={kind:'scatter',x:ax,y:ay,spr:fr[0],k:1/st.S,flip:false,z:-lv*4,fixedK:true,c3:true,c3move:{kind,frames:fr,f:0,...extra}};
-      props.push(p);return p;};
+      props.push({kind:'scatter',x:ax,y:ay,spr:fr[0],k:1/st.S,flip:false,z:-lv*HS,fixedK:true,c3:true,c3move:{kind:kind_,frames:fr,f:0,...extra}});};
     mover('drawbridge',st.moving.drawbridge.anchor,st.moving.drawbridge.frames);
     mover('portcullis',st.moving.portcullis.anchor,st.moving.portcullis.frames);
     for(const d of st.moving.doors)mover('door',d.anchor,d.frames,{door:L.doors[d.i]});
   }
   {const D=map.drawbridge;D.tiles=[];rect(D.x0,D.hinge,D.x1-1,D.y1-1,(x,y,i)=>{D.tiles.push(i);map.block[i]=1;});D.down=false;D.lowering=false;}
   map.castleKeep={x:KEEP[0],y:KEEP[1]};map.castleGarden=GDN;map.castleSiege=SG;map.castleVillage=[vx,vy];
-  return {map,props,buildings,trees,wallHangings:[],townTiles:[...floors,...keepFloors,...castleCarpetTiles()],looks,spawns,chests,torches:[],
+  return {map,props,buildings,trees,wallHangings:[],townTiles:[...floors,...keepFloors,...castleCarpetTiles(),...castleRampartTops(),...castleRampartTops(KEEP_STONE),castlePlankTile()],looks,spawns,chests,torches:[],
     start:ENTRY,exit,shrine:sites[0],sites,scenarioId,seed,engines,tents};
 }

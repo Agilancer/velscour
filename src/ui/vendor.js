@@ -8,7 +8,7 @@ import { getItem, changed, renderInventory } from './inventory.js';
 import { addToBag } from '../game/player.js';
 import {
   rollItem, rollGem, makeGem, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost,
-  rerollAffixes, addAffix, RARITY, POTION_PRICE, POTION_INFO, GEMS, gemName, SLOT_NAMES, WEAPONS, MAX_GEM_TIER, gemFuseCost, gemRefineCost, slotFor,
+  rerollAffixes, addAffix, RARITY, rarityAt, POTION_PRICE, POTION_INFO, GEMS, gemName, SLOT_NAMES, WEAPONS, MAX_GEM_TIER, gemFuseCost, gemRefineCost, slotFor,
 } from '../data/items.js';
 import { CLASSES } from '../data/classes.js';
 import { potionIcon } from '../core/assets.js';
@@ -24,21 +24,22 @@ export const Vendor = {
 
   restock() {
     const c = G.char;
-    const lvl = Math.max(1, Math.max(c.level, depthLevel(c.depth || 1)));
+    // stock for the hero's own level (items need their level to wear); rarely better than Rare
+    const lvl = Math.max(1, c.level);
     const cls = CLASSES[c.classId];
-    const shopRarity = () => (chance(0.03) ? 3 : chance(0.15) ? 2 : chance(0.45) ? 1 : 0);
+    const shopRarity = () => (chance(0.012) ? 3 : chance(0.08) ? 2 : chance(0.4) ? 1 : 0);
     const weapons = [];
     for (let i = 0; i < 16; i++) {
       const slot = i < 12 ? 'weapon' : 'offhand';
       const base = slot === 'weapon' && i < 4 ? cls.weapon : slot === 'offhand' && i === 12 && cls.offhand ? cls.offhand : undefined;
-      weapons.push(rollItem(lvl + randi(-2, 1), { slot, rarity: shopRarity(), base: base && (slot === 'weapon' ? WEAPONS[base] && base : base) }));
+      weapons.push(rollItem(Math.max(1, lvl + randi(-2, 0)), { slot, rarity: rarityAt(lvl, shopRarity()), base: base && (slot === 'weapon' ? WEAPONS[base] && base : base) }));
     }
     const armor = [];
-    for (let i = 0; i < 18; i++) armor.push(rollItem(lvl + randi(-2, 1), { slot: ['head', 'body', 'hands', 'legs', 'feet', 'offhand'][i % 6], rarity: shopRarity(), base: i % 6 === 5 ? 'shield' : undefined }));
+    for (let i = 0; i < 18; i++) armor.push(rollItem(Math.max(1, lvl + randi(-2, 0)), { slot: ['head', 'body', 'hands', 'legs', 'feet', 'offhand'][i % 6], rarity: rarityAt(lvl, shopRarity()), base: i % 6 === 5 ? 'shield' : undefined }));
     const gems = [];
-    for (let i = 0; i < 14; i++) gems.push(rollGem(Math.max(1, lvl - 5)));
+    for (let i = 0; i < 14; i++) gems.push(rollGem(Math.max(1, Math.max(c.level, depthLevel(c.depth || 1)) - 5)));
     const rings = [];
-    for (let i = 0; i < 10; i++) rings.push(rollItem(lvl + randi(-2, 1), { slot: 'ring', rarity: Math.max(1, shopRarity()) }));
+    for (let i = 0; i < 10; i++) rings.push(rollItem(Math.max(1, lvl + randi(-2, 0)), { slot: 'ring', rarity: rarityAt(lvl, Math.max(1, shopRarity())) }));
     this.stock = { weapons, armor, gems, rings };
   },
 
@@ -128,6 +129,7 @@ export const Vendor = {
     const it = getItem(ref);
     if (!it) return false;
     if (ref.where === 'equip') { UI.log('Unequip it first.', '#ff8080'); return false; }
+    if (it.sealed) { UI.log('Break the seal first: nobody buys a sealed treasure.', '#ffdf8a'); sfx('error'); return false; }
     const n = it.type === 'gem' ? 1 : 1;
     const price = Math.max(1, Math.floor(itemValue(it) / 4)) * n;
     const sellIt = () => {
@@ -234,7 +236,7 @@ export const Vendor = {
           it.gems = [];
           sfx('gold');
         });
-        box.appendChild(el('div', 'dim', 'Common gear holds up to 1 socket, Uncommon 2, Rare 3, Epic 4 and Legendary 6.'));
+        box.appendChild(el('div', 'dim', `Sockets by rarity: ${RARITY.map((r) => `${r.name} ${r.sockets}`).join(', ')}.`));
       }
     }
     body.appendChild(box);
@@ -244,7 +246,7 @@ export const Vendor = {
     const c = G.char;
     const lvl = Math.max(c.level, depthLevel(c.depth || 1));
     const price = Math.round(180 * Math.pow(1.065, lvl));
-    body.appendChild(el('div', 'dim', 'Buy an unidentified item. Gambled items are far more likely to be Rare, Epic or Legendary.'));
+    body.appendChild(el('div', 'dim', 'Buy an unidentified item of your level. Gambled items are far more likely to be Rare or better.'));
     const grid = el('div', 'row');
     grid.style.marginTop = '8px';
     for (const slot of ['weapon', 'offhand', 'head', 'body', 'hands', 'legs', 'feet', 'ring', 'gem']) {
@@ -252,7 +254,7 @@ export const Vendor = {
       const cost = slot === 'gem' ? Math.round(price * 0.6) : price;
       b.disabled = c.gold < cost;
       b.onclick = () => {
-        const it = slot === 'gem' ? rollGem(lvl + 8) : rollItem(lvl + 2, { slot, mf: G.player.st.magicFind + 120, bonus: 0.5 });
+        const it = slot === 'gem' ? rollGem(lvl + 8) : rollItem(c.level, { slot, mf: G.player.st.magicFind + 120, bonus: 0.5 });
         if (!addToBag(c, it)) { UI.log('Inventory full.', '#ff8080'); sfx('error'); return; }
         c.gold -= cost;
         sfx(it.rarity >= 3 ? 'levelup' : 'gold');

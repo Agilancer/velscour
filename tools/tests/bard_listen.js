@@ -1,9 +1,10 @@
 // Listen to the Bard: a level-40 Bard with the everyday Bard skills on his bar auto-plays a dungeon while every note
-// the sampler is asked for is logged (src/core/sampler.js setNoteTap), timed as it would sound in real time.
-//  1. one tune at a time: no two bars may sound together (a fading landing chord is allowed its fade)
+// the harpsichord is asked for is logged (src/core/sampler.js setNoteTap), timed as it would sound in real time.
+//  1. one tune at a time: no two songs may sound together (the last chord is allowed its damper); a song is its
+//     written bar then its finishing bar, and bars written during a finishing bar wait silently for their downbeat
 //  2. clashes: share of sounding time with a minor second / major seventh / tritone between notes of the same bar
 //     (the Discord cluster is meant to clash and is left out)
-//  3. melody: notes per bar, the share of 16th/32nd figures written, leaps in the performed melodies
+//  3. melody: notes per bar, the share of 16th/32nd figures written, leaps in the right hand; songs never repeat
 //  4. renders the first N seconds to tools/tests/out/bard_listen.wav (the real samples, an OfflineAudioContext)
 //   node tools/tests/bard_listen.js [game minutes, default 3] [seconds to render, default 60]
 const fs = require('fs');
@@ -29,7 +30,7 @@ const BAR = ['bard.0.0', 'bard.1.0', 'bard.2.0', 'bard.2.1', 'bard.1.11', 'bard.
     G.char.bar = BAR.slice(); G.char.sp = 0;
     game.buildDungeon(8, BIOME_BY_ID.catacombs);
     await new Promise((r) => setTimeout(r, 400));
-    G.player.recompute();
+    G.player.recompute(); G.bardStats = { cad: 0, dis: 0, songs: [] };
     const { Auto } = await import('/src/game/autoplay.js');
     Auto.toggle(true);
     const rec = [], casts = {};
@@ -48,15 +49,15 @@ const BAR = ['bard.0.0', 'bard.1.0', 'bard.2.0', 'bard.2.1', 'bard.1.11', 'bard.
     }
     setNoteTap(null);
     const t0 = rec.length ? rec[0].t : 0;
-    return { rec: rec.map((e) => ({ ...e, t: e.t - t0 })), casts, cad: G.player.score.cadences, dis: G.player.score.discords, beats: Object.fromEntries(Object.entries(NOTES).map(([k, n]) => [k, n.beats])) };
+    return { songs: (G.bardStats && G.bardStats.songs) || [], rec: rec.map((e) => ({ ...e, t: e.t - t0 })), casts, cad: G.player.score.cadences, dis: G.player.score.discords, beats: Object.fromEntries(Object.entries(NOTES).map(([k, n]) => [k, n.beats])) };
   }, { minutes, BAR });
 
   // ---------------------------------------------------------------- analysis
-  const REL = { piano: 0.32, harpsichord: 0.12 };
+  const SHORT = { normal_short: 0.7, soft_short: 0.7, staccato_short: 0.35, marcato_short: 0.49 };
   const notes = log.rec.filter((e) => !e.stop), stops = new Map();
   for (const e of log.rec) if (e.stop && !stops.has(e.stop)) stops.set(e.stop, e);   // the first stop is the one that counts
   for (const n of notes) {
-    n.end = n.t + n.dur + (REL[n.name] || 0.25);
+    n.end = n.t + (SHORT[n.art] || n.dur + 0.09);
     const s = stops.get(n.id);
     n.loud = n.t + Math.max(0.15, n.dur);
     if (s) { n.end = s.t < n.t ? n.t : Math.min(n.end, s.t + s.fade); n.loud = Math.min(n.loud, Math.max(n.t, s.t)); }   // a fading note is not loud
@@ -87,7 +88,7 @@ const BAR = ['bard.0.0', 'bard.1.0', 'bard.2.0', 'bard.2.1', 'bard.1.11', 'bard.
   }
   // 3. melody of the performed bars
   const bars = {};
-  for (const n of notes) if (n.tag && n.tag.kind === 'perf' && n.vel >= 0.8 && n.vel < 0.9) (bars[n.tag.bar] = bars[n.tag.bar] || []).push(n);
+  for (const n of notes) if (n.tag && n.tag.kind === 'perf' && n.tag.hand === 'rh' && n.vel >= 0.7) (bars[n.tag.bar + n.tag.part] = bars[n.tag.bar + n.tag.part] || []).push(n);
   let leaps = 0, steps = 0, big = 0, count = 0;
   for (const b of Object.values(bars)) {
     b.sort((x, y) => x.t - y.t); count += b.length;
@@ -100,38 +101,36 @@ const BAR = ['bard.0.0', 'bard.1.0', 'bard.2.0', 'bard.2.1', 'bard.1.11', 'bard.
     minutes, cadences: log.cad, discords: log.dis, notesPlayed: notes.length, bars: nb, notesPerBar: +(count / Math.max(1, nb)).toFixed(1),
     overlaps, overlapSec: +overlapSec.toFixed(2), clashPct: +(100 * clash / Math.max(1, sounding)).toFixed(1),
     stepPct: +(100 * steps / ints).toFixed(0), bigLeapPct: +(100 * big / ints).toFixed(0), fastFigurePct: +(100 * fast / total).toFixed(1),
-    overlapKinds: okinds, clashKinds: ckinds,
+    songs: log.songs.length, repeatedSongs: log.songs.length - new Set(log.songs).size, overlapKinds: okinds, clashKinds: ckinds,
     casts: Object.fromEntries(Object.entries(log.casts).sort((a, b) => b[1] - a[1])),
   };
   console.log('listen', JSON.stringify(res));
+  if (process.env.SPANS) { const sp = {}; for (const n of notes) if (n.tag && n.tag.kind === 'perf') { const k = n.tag.bar, o = sp[k] || (sp[k] = { a: 1e9, b: 0, e: 0 }); o.a = Math.min(o.a, n.t); o.b = Math.max(o.b, n.t + n.dur); o.e = Math.max(o.e, n.end); }
+    console.log(Object.entries(sp).slice(0, 12).map(([k, o]) => `${k}: ${o.a.toFixed(2)}-${o.b.toFixed(2)} (ring ${o.e.toFixed(2)})`).join(' | ')); }
   if (overlaps) fail(`${overlaps} times two bars sounded together (${res.overlapSec}s)`);
   if (res.clashPct > 6) fail(`harsh intervals ${res.clashPct}% of the time`);
   if (res.fastFigurePct > 10) fail(`${res.fastFigurePct}% of written notes are 16th/32nd figures`);
   if (!(log.cad >= 3)) fail('too few bars performed to judge');
+  if (res.repeatedSongs) fail(`${res.repeatedSongs} songs were played twice`);
 
   // ---------------------------------------------------------------- 4. render to WAV
   const wav = await page.evaluate(async ({ rec, renderSec }) => {
     const sr = 44100, ctx = new OfflineAudioContext(1, sr * renderSec, sr), bufs = {};
-    const need = new Set(rec.filter((e) => !e.stop && e.t < renderSec).map((e) => e.name + '/' + e.midi));
-    const man = await (await fetch('/assets/audio/inst/instruments.json')).json();
-    const keyFor = (name, midi) => man[name].keys.reduce((b, k) => (Math.abs(k - midi) < Math.abs(b - midi) ? k : b), man[name].keys[0]);
-    for (const nm of need) {
-      const [name, midi] = nm.split('/'), k = keyFor(name, +midi), id = name + '/' + k;
-      if (!bufs[id]) bufs[id] = await ctx.decodeAudioData(await (await fetch(`/assets/audio/inst/${id}.mp3`)).arrayBuffer());
-    }
+    const man = (await (await fetch('/assets/audio/inst/instruments.json')).json()).harpsichord, A = (e) => man.articulations[e.art] || man.articulations.normal_held;
+    const need = new Set(rec.filter((e) => !e.stop && e.t < renderSec).map((e) => A(e).bank + '/' + e.midi));
+    for (const id of need) if (!bufs[id]) bufs[id] = await ctx.decodeAudioData(await (await fetch(`/assets/audio/inst/harpsichord/${id}.mp3`)).arrayBuffer());
     const stops = new Map(); for (const e of rec) if (e.stop && !stops.has(e.stop)) stops.set(e.stop, e);
     const out = ctx.createGain(); out.gain.value = 0.6;
     const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 6; out.connect(comp); comp.connect(ctx.destination);
     for (const e of rec) {
       if (e.stop || e.t >= renderSec) continue;
-      const k = keyFor(e.name, e.midi), src = ctx.createBufferSource(), g = ctx.createGain();
-      src.buffer = bufs[e.name + '/' + k];
-      if (k !== e.midi) src.playbackRate.value = Math.pow(2, (e.midi - k) / 12);
-      const rel = e.name === 'harpsichord' ? 0.12 : 0.32, peak = e.vel * e.vel * 0.9, s = stops.get(e.id);
-      let off = e.t + Math.max(0.04, e.dur), endT = off + rel;
+      const a = A(e), src = ctx.createBufferSource(), g = ctx.createGain(), held = a.bank === 'held';
+      src.buffer = bufs[a.bank + '/' + e.midi];
+      const peak = e.vel * a.gain * 0.9, s = stops.get(e.id);
+      let off = held ? e.t + Math.min(src.buffer.duration, Math.max(0.05, e.dur)) : e.t + src.buffer.duration, endT = held ? off + 0.09 : off;
       g.gain.setValueAtTime(peak, e.t);
       if (s && s.t < endT) { const st = Math.max(e.t, s.t); g.gain.setValueAtTime(peak, st); g.gain.exponentialRampToValueAtTime(0.0001, st + s.fade); endT = st + s.fade; }
-      else { g.gain.setValueAtTime(peak, off); g.gain.exponentialRampToValueAtTime(0.0001, endT); }
+      else if (held) { g.gain.setValueAtTime(peak, off); g.gain.exponentialRampToValueAtTime(0.0001, endT); }
       src.connect(g); g.connect(out); src.start(e.t); src.stop(endT + 0.02);
     }
     const buf = await ctx.startRendering(), d = buf.getChannelData(0), n = d.length;

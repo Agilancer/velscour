@@ -1,9 +1,11 @@
 // A Sea of Sand run chains one to five ordinary overworld scenarios through a
 // single cliff maze. The established scenario engines still own each beat.
-import { createOverworldScenario } from './overworld.js';
+import { createOverworldScenario, WILD_SCENARIOS, wildScenario } from './overworld.js';
 import { SAND_BOSSES } from '../data/seaofsand.js';
 import { GroundItem } from './loot.js';
 import { rollSandScenarioRewards } from './sandrewards.js';
+import { RARITY } from '../data/items.js';
+import { depthLevel } from '../data/depth.js';
 import { G } from '../state.js';
 import { UI } from '../ui/ui.js';
 
@@ -38,19 +40,19 @@ export function createSeaOfSandScenario(world, gen, biome, onSuccess) {
   };
   const reward=(index)=>{
     if(index<record.rewarded)return;
-    const {items,mythicChance}=rollSandScenarioRewards(index,Math.max(1,world.depth*2));
+    const {items,mythicChance}=rollSandScenarioRewards(index,depthLevel(world.depth)+2);
     world.addLoot(new GroundItem(sites[index][0],sites[index][1], 'item',{item:items[0]}));
     if(items[1]){
       world.addLoot(new GroundItem(sites[index][0]+.45,sites[index][1], 'item',{item:items[1]}));
       UI.log(`The route yielded a Mythic weapon (${Math.round(mythicChance*100)}% scenario chance).`,'#ff536e');
     }
     record.rewarded=index+1;
-    UI.log(`Sea of Sand reward ${index+1}/${total}: guaranteed Legendary gear.`,'#ffb044');
+    UI.log(`Sea of Sand reward ${index+1}/${total}: guaranteed ${RARITY[items[0].rarity].name} gear.`,'#ffb044');
   };
   const beginBeat=(index,chained=false)=>{
     if(index>=total){finishRun();return;}
     beat=index;run.active=true;run.completed=false;
-    const p=sites[index],subgen={...gen,scenarioId:(gen.scenarioId+index*7)%20,shrine:p,
+    const p=sites[index],subgen={...gen,scenarioId:wildScenario(Math.max(0,WILD_SCENARIOS.indexOf(gen.scenarioId))+index*7),shrine:p,
       sites:Array.from({length:9},(_,i)=>{const a=i*Math.PI*2/8;return [p[0]+Math.cos(a)*7,p[1]+Math.sin(a)*6];})};
     const originalSite=subgen.sites;
     // Scenario beats use the generated ring around their own landmark rather

@@ -1,5 +1,5 @@
 // Overworld scenarios played for real: a bot walks map paths to each objective (enemy, marker, capture zone, caravan),
-// anything within reach dies, and every scenario must finish. Covers all 20 Forsaken Wilds scenarios, all 35 Castle
+// anything within reach dies, and every scenario must finish. Covers all 26 Forsaken Wilds scenarios, all 35 Castle
 // scenarios (rampart and keep fights included) and a chained Sea of Sand route, where each next area must start on
 // its own. Flags scenarios that stall, fail, or leave the hero with nothing to fight for too long.
 //   node tools/tests/scenarios.js            (start the server first: python3 -m http.server 8123)
@@ -7,13 +7,14 @@ const { openGame, report } = require('./harness');
 
 (async () => {
   const { browser, page, errors } = await openGame({ width: 1000, height: 640 });
+  if (process.argv[2]) await page.evaluate((t) => { window.SCENARIO_ONLY = t.split(','); }, process.argv[2]); // node scenarios.js merchants,brew
   const res = await page.evaluate(async () => {
     const { G, game } = window.VELSCOUR;
     await game.newChar('paladin', 'Scenario Bot');
     G.char.depth = 19; G.godMode = true;
     const { BIOME_BY_ID } = await import('/src/data/biomes.js');
     const { generateOverworld } = await import('/src/world/overworld.js');
-    const { createOverworldScenario, SCENARIOS } = await import('/src/game/overworld.js');
+    const { createOverworldScenario, SCENARIOS, WILD_SCENARIOS } = await import('/src/game/overworld.js');
     const { hit } = await import('/src/game/combat.js');
     const { castle3dTick } = await import('/src/game/castle3d.js');   // the drawbridge comes down as the bot nears it
     await (await import('/src/gfx/castle.js')).loadCastlePack();
@@ -40,9 +41,11 @@ const { openGame, report } = require('./harness');
         if (st.path.length) { const [tx, ty] = st.path[0], d = Math.hypot(tx - P.x, ty - P.y), k = Math.min(1, dt * 4.5 / d); P.x += (tx - P.x) * k; P.y += (ty - P.y) * k; }
       }
     };
-    for (const [biomeId, count, seed] of [['overworld', 20, 777], ['castle', 35, 4242]]) {
+    const only = window.SCENARIO_ONLY;
+    for (const [biomeId, ids, seed] of [['overworld', WILD_SCENARIOS, 777], ['castle', Array.from({ length: 35 }, (_, i) => i), 4242]]) {
       const biome = BIOME_BY_ID[biomeId];
-      for (let id = 0; id < count; id++) {
+      for (const id of ids) {
+        if (only && !only.includes(SCENARIOS[id][1])) continue;
         game.buildDungeon(19, biome);
         // the Castle places its shrine and sites by scenario (world/castleworld.js): use a seed that rolls this one
         const W = G.world, P = G.player, gen = generateOverworld(19, biome, biomeId === 'castle' ? ((35 * seed + id) ^ 19) >>> 0 : seed);
@@ -72,7 +75,7 @@ const { openGame, report } = require('./harness');
         if (run.beat !== beat) { beat = run.beat; if (!S.active) bad.push(`sea of sand area ${beat + 1} did not start on its own`); }
         step(W, P, S, st);
       }
-      const line = `sea_of_sand route ${trial}: ${run.total} areas, ${run.completed ? 'done' : 'NOT done'} in ${t.toFixed(0)}s`;
+      const line = `sea_of_sand route ${trial}: ${run.total} areas, ${run.completed ? 'done' : 'NOT done'} in ${t.toFixed(0)}s` + (run.completed ? '' : ` (area ${run.beat + 1}: ${run.current?.title} ${run.current?.type}, ${run.current?.failed ? 'failed' : 'running'}, foes ${run.current?.foes.filter((m) => !m.dead).length}, markers ${run.current?.markers.length})`);
       out.push(line); if (!run.completed) bad.push(line);
     }
     return { out, bad };
