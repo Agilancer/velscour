@@ -28,8 +28,10 @@ import { generateDarkForest } from '../world/darkforest.js';
 import { loadDarkForestTrees } from '../gfx/darkforest.js';
 import { generateMountain } from '../world/mountain.js';
 import { createMountainRun } from './mountain.js';
+import { castle3dTick } from './castle3d.js';
 import { useTerrain } from '../gfx/terrain.js';
 import { loadCastlePack, releaseCastlePack } from '../gfx/castle.js';
+import { loadCastle3D, releaseCastle3D } from '../gfx/castle3dart.js';
 import { World } from './world.js';
 import { Player } from './player.js';
 import { makeMonster, Monster } from './monster.js';
@@ -116,7 +118,7 @@ async function warmLevelArt(w) {
 // (The painted biome packs stay: there are only a few, and fetching one again decoded a second copy while the
 // browser still held the first, which cost more renderer memory than it saved.)
 function releaseLevelArt(biome) {
-  if (biome?.id !== 'castle') releaseCastlePack();
+  if (biome?.id !== 'castle') { releaseCastlePack(); releaseCastle3D(); }
   if (biome?.id !== 'sea_of_sand') releaseSeaOfSandPack(); // loadArtFor fetches it again for ss_ monsters elsewhere
   if (!biome?.overworld && biome?.id !== 'town') releaseTownSheets();
 }
@@ -363,7 +365,7 @@ export const game = {
   // the art a level of this biome needs before it can be generated (the portal and Velscour's level select share it)
   loadLevelArt(biome, mix = null) {
     if (biome.id === 'sea_of_sand') return loadSeaOfSandPack();
-    if (biome.id === 'castle') return Promise.all([loadCastlePack(), loadDarkForestTrees()]);
+    if (biome.id === 'castle') return Promise.all([loadCastlePack(), loadCastle3D(), loadDarkForestTrees()]);
     if (biome.id === 'dark_forest') return Promise.all([loadBiomeArt(biome), loadDarkForestTrees()]);
     if (biome.id === 'mountainside') return Promise.all([loadBiomeArt(BIOME_BY_ID.dark_forest), loadDarkForestTrees()]); // its floors, props and pines
     if (!biome.overworld) return Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]);
@@ -652,6 +654,7 @@ export const game = {
       Auto.update(dt);
       w.update(dt);
       if (w.overworldScenario) w.overworldScenario.update(dt);
+      if (w.map.c3struct) castle3dTick(w, dt);
       ambushTick(w, dt);
       if (w.kind === 'town') townTick(w, dt); else happeningsTick(w, dt);
       madnessTick(dt);

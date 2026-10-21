@@ -61,6 +61,7 @@ node tools/tests/overworld.js                      # 60 outdoor seeds, 20 scenar
 node tools/tests/scenarios.js                      # a bot plays every Wilds/Castle scenario and Sea of Sand route to the end
 node tools/tests/castle_overworld.mjs              # 100 Castle seeds: both curtains sealed, gates, bridges over water, lane, halls, art caps (no browser)
 node tools/tests/castle_visual.js [views] [--grid] # Castle screenshots: 25 views (gatehouse, bridges, wards, keep, halls, village, siege)
+node tools/tests/castle3d.js [views]              # the 3D Castle (docs/CASTLE_3D.md): wall-walk, stairs, tunnel, throne room, doors, drawbridge, overview
 node tools/tests/sea_of_sand_generation.mjs         # 100 desert maze seeds, route reachability, one-to-five area rolls
 node tools/tests/sea_of_sand.js                     # atlas frames, desert HUD, monster frames, screenshots (browser)
 node tools/tests/dark_forest.js [noshots] [noauto]  # 40 forest seeds reachable, bot plays all 13 trials, frame cost, shots, auto-play wins the Heart

@@ -3,9 +3,14 @@
 // height and, wherever the ground in front is lower, rock cliff faces down to it (the two faces the camera sees: SW
 // toward +y and SE toward +x). Terrain rises away from the camera, so faces mostly face it; a column that rises toward
 // the camera (`occluders`) is drawn again in the depth-sorted pass over anyone standing behind it.
+// The Castle (docs/CASTLE_3D.md) is a height map too: its masonry tiles (`map.c3struct`) draw baked 3D pieces
+// (gfx/castle3dart.js) instead of banks and rock, its ground keeps the Castle's own blended seams, and what stands over a
+// walkway (tunnel vaults, lintels) is drawn again over whoever walks under it.
 import { G } from '../state.js';
 import { HW, HH, TW, TH, setElevation } from '../core/view.js';
 import { makeCanvas, clamp } from '../core/util.js';
+import { castle3dState, drawPiece, pieceRect } from './castle3dart.js';
+import { castleTileDressing } from './castleground.js';
 
 export const HS = 4; // world px per height level
 
@@ -71,7 +76,8 @@ export function terrainOf(map) {
   if (map._terr) return map._terr;
   const { w, h, hgt, t } = map, N = w * h, base = map.baseLevel ?? 0;
   const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h || t[y * w + x] !== 1 ? null : hgt[y * w + x]);
-  const sw = new Int16Array(N), se = new Int16Array(N), box = new Float32Array(N * 4), order = [], occ = [];
+  const sw = new Int16Array(N), se = new Int16Array(N), box = new Float32Array(N * 4), order = [], occ = [], covers = [];
+  const c3 = map.c3struct && castle3dState();
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = y * w + x;
     if (t[i] !== 1) continue;
@@ -81,12 +87,23 @@ export function terrainOf(map) {
     const px = (x - y) * HW, py = (x + y) * HH - v * HS;
     box[i * 4] = px - HW; box[i * 4 + 1] = py; box[i * 4 + 2] = px + HW; box[i * 4 + 3] = py + TH + Math.max(sw[i], se[i]) * HS;
     order.push(i);
+    if (c3) {   // baked masonry: the box is the pieces' own, and every piece can hide someone behind it
+      const gx = (x - y) * HW, gy = (x + y) * HH;
+      for (const id of [c3.base.get(i), c3.over.get(i)]) {
+        if (id === undefined) continue;
+        const [rx, ry, rw, rh] = pieceRect(id, gx, gy);
+        box[i * 4] = Math.min(box[i * 4], rx); box[i * 4 + 1] = Math.min(box[i * 4 + 1], ry);
+        box[i * 4 + 2] = Math.max(box[i * 4 + 2], rx + rw); box[i * 4 + 3] = Math.max(box[i * 4 + 3], ry + rh);
+      }
+      if (c3.over.has(i)) covers.push(i);
+      if (c3.base.has(i) && map.c3struct[i]) { occ.push(i); continue; }
+    }
     // rises toward the camera over a tile behind it: may hide someone standing there
     const b1 = at(x - 1, y), b2 = at(x, y - 1), b3 = at(x - 1, y - 1);
     if ((b1 !== null && b1 < v) || (b2 !== null && b2 < v) || (b3 !== null && b3 < v)) occ.push(i);
   }
   order.sort((a, b) => ((a % w) + ((a / w) | 0)) - ((b % w) + ((b / w) | 0)) || a - b);
-  return (map._terr = { sw, se, box, order, occ, objs: new Map() });
+  return (map._terr = { sw, se, box, order, occ, covers, objs: new Map(), cobjs: new Map() });
 }
 
 /** The elevation and picking functions for view.js; null clears them (flat maps). */
@@ -163,15 +180,40 @@ function face(ctx, R, f, i, x0, y0, dx, dy, depth, dark, deep) {
   ctx.beginPath(); ctx.moveTo(x0, y0 + 0.5); ctx.lineTo(x0 + dx, y0 + dy + 0.5); ctx.stroke();
 }
 
-/** One terrain column: its cliff faces, its top and the shadow cast on it by higher ground behind. */
-export function drawColumn(ctx, world, i, floorEntry) {
+/** One terrain column: its cliff faces, its top and the shadow cast on it by higher ground behind (the Castle's
+ * masonry: its baked pieces; `over` alone draws what stands over a walkway, for the pass after the walkers). */
+export function drawColumn(ctx, world, i, floorEntry, alpha = 1, over = false) {
   const map = world.map, T = terrainOf(map), w = map.w, x = i % w, y = (i / w) | 0, v = map.hgt[i];
   const px = (x - y) * HW, py = (x + y) * HH - v * HS;
+  const c3 = map.c3struct && castle3dState();
+  if (c3) {
+    const gx = (x - y) * HW, gy = (x + y) * HH, b = c3.base.get(i), o = c3.over.get(i);
+    if (alpha < 1) ctx.globalAlpha = alpha;
+    if (over) { if (o !== undefined) drawPiece(ctx, o, gx, gy); ctx.globalAlpha = 1; return; }
+    if (map.c3struct[i]) {
+      if (map.c3cover?.[i] && alpha === 1) {   // a tunnel or doorway: its floor first
+        const f = floorEntry(world, map.v[i]);
+        ctx.drawImage(f.img, f.sx, f.sy, f.w, f.h, px - HW - 0.6, py - 0.6, TW + 1.2, TH + 1.2);
+      }
+      if (b !== undefined) drawPiece(ctx, b, gx, gy);
+      if (o !== undefined) drawPiece(ctx, o, gx, gy);
+      ctx.globalAlpha = 1;
+      return;
+    }
+    if (alpha < 1) { if (b !== undefined) drawPiece(ctx, b, gx, gy); ctx.globalAlpha = 1; return; }
+  }
   const R = rockPatterns(ctx);
   const f = floorEntry(world, map.v[i]);
   if (T.sw[i]) face(ctx, R, f, i, px - HW, py + HH, HW, HH, T.sw[i], false, y + 1 >= map.h || map.t[i + w] !== 1);
   if (T.se[i]) face(ctx, R, f, i, px, py + TH, HW, -HH, T.se[i], true, x + 1 >= w || map.t[i + 1] !== 1);
   ctx.drawImage(f.img, f.sx, f.sy, f.w, f.h, px - HW - 0.6, py - 0.6, TW + 1.2, TH + 1.2);
+  if (map.castleMat) castleTileDressing(ctx, world, x, y, px, py, floorEntry);
+  if (c3) {   // masonry reaching over a ground tile (a plinth's batter, a doorway's step)
+    const b = c3.base.get(i), o = c3.over.get(i), gx = (x - y) * HW, gy = (x + y) * HH;
+    if (b !== undefined) drawPiece(ctx, b, gx, gy);
+    if (o !== undefined) drawPiece(ctx, o, gx, gy);
+    return;
+  }
   // a higher neighbour behind (NE: y-1, NW: x-1) shades the strip of this top along their shared edge
   const nb = (j) => (j >= 0 && map.t[j] === 1 ? map.hgt[j] - v : 0);
   const ne = y > 0 ? nb(i - w) : 0, nw = x > 0 ? nb(i - 1) : 0;
@@ -221,7 +263,25 @@ export function occludersFor(map, vr, views, out) {
       break;
     }
   }
+  // what stands over a walkway is drawn after whoever stands under it (key past the tile's own walkers)
+  for (const i of T.covers) {
+    const k = i * 4;
+    if (b[k] > vr.x1 || b[k + 2] < vr.x0 || b[k + 1] > vr.y1 || b[k + 3] < vr.y0) continue;
+    const key = (i % w) + ((i / w) | 0) + 1.25;
+    for (const v of views) {
+      if (v.d >= key || v.x + v.hw < b[k] || v.x - v.hw > b[k + 2] || v.y1 < b[k + 1] || v.y0 > b[k + 3]) continue;
+      let o = T.cobjs.get(i);
+      if (!o) T.cobjs.set(i, (o = { ti: i, over: true }));
+      out.push(key, o);
+      break;
+    }
+  }
   return out;
+}
+/** The world rect of a terrain column (its box), for fading what hides the hero. */
+export function columnRect(map, i) {
+  const b = terrainOf(map).box, k = i * 4;
+  return [b[k], b[k + 1], b[k + 2] - b[k], b[k + 3] - b[k + 1]];
 }
 
 /** World px a creature's sprite rides above its tile's ground while it hops up or drops down a step (0 at rest). */

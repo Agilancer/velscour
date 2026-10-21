@@ -15,6 +15,7 @@ const { openGame, report } = require('./harness');
     const { generateOverworld } = await import('/src/world/overworld.js');
     const { createOverworldScenario, SCENARIOS } = await import('/src/game/overworld.js');
     const { hit } = await import('/src/game/combat.js');
+    const { castle3dTick } = await import('/src/game/castle3d.js');   // the drawbridge comes down as the bot nears it
     await (await import('/src/gfx/castle.js')).loadCastlePack();
     await (await import('/src/gfx/darkforest.js')).loadDarkForestTrees();
     await (await import('/src/gfx/seaofsand.js')).loadSeaOfSandPack();
@@ -50,7 +51,7 @@ const { openGame, report } = require('./harness');
         P.x = gen.shrine[0] + 1; P.y = gen.shrine[1] + 1;
         const S = createOverworldScenario(W, { ...gen, scenarioId: id }, biome, () => {}); S.start();
         const st = { idle: 0, maxIdle: 0, repath: 0, path: null, sticky: null }; let t = 0;
-        while (t < 360 && !S.completed && !S.failed) { t += dt; W.update(dt); S.update(dt); step(W, P, S, st); }
+        while (t < 360 && !S.completed && !S.failed) { t += dt; W.update(dt); S.update(dt); if (W.map.c3struct) castle3dTick(W, dt); step(W, P, S, st); }
         st.maxIdle = Math.max(st.maxIdle, st.idle);
         const line = `${biomeId} ${id} ${SCENARIOS[id][0]} (${S.type}): ${S.completed ? 'done' : S.failed ? 'FAILED' : 'STUCK'} in ${t.toFixed(0)}s, longest wait ${st.maxIdle.toFixed(1)}s`;
         out.push(line);
