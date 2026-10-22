@@ -4,8 +4,8 @@ A broken world floating in a violet void, behind a **purple portal** in Herringt
 bosses (none from the standard biomes), its own floors and its own rewards; it never enters a biome bag, the overworld
 guarantee or Velscour's teleport list, and dying there costs no Defiance and leaves the descent (`c.depth`) alone.
 
-Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
-`node tools/tests/breach.js [town,play,arrive,shots,auto,rules] [floor]`.
+Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser),
+`node tools/tests/breach.js [town,play,arrive,shots,auto,rules] [floor]` and `node tools/tests/breach_dragon.js` (the wyrm).
 
 ## Getting in
 - **The purple portal** (`world/town.js`): a second portal yard across the plaza from the dungeon portal, on its own
@@ -139,6 +139,34 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
   `objective` points at the fight's task, else its nearest foe, else the shrine. Between fights auto-play loots first.
   With an objective waiting and foes in its face for 10 s it pushes through to the objective for 4 s (`objPush`).
   Scenarios with standing goals (anchor, hold) post `autoGoal` hazards, which auto-play's raid-mechanic code follows.
+
+## The Ethereal Wyrm (`game/breachdragon.js`, `gfx/breachdragon.js`)
+Every floor has one: a long wingless parade dragon of glowing scales, in one of seven colours (`WYRM_VARIANTS` in
+data/breach.js: violet, the Breach's own and four times as common, then red, black, jade, gold, silver and white; floor 1
+is always violet), with a name (`WYRM_NAMES`). It grows with the floor (`wyrmStats`): 30 + 2 per floor segments (up
+to 60), bigger, faster, sharper turns, 2-5 passes a visit, shorter waits, life 3 + 0.15 x floor bosses, hits
+1 + 0.04 x floor; breath from floor 2, its brood from 3, void orbs from 4, coils from 6.
+- **Away**: it swims deep under the islands (drawn in the `void` pass, before the floors, faint) for 20-70 s.
+- **Passes**: it rises out of view, lines up and sweeps through the hero at body height (a line warning on the
+  ground first), bends round and comes back, 2-5 times, breathing on the later floors, then climbs off and sinks back
+  into the void. Every segment that touches him hits (knockback; 0.9 s apart). It is ethereal: no one can hit it yet.
+  A hero out on a walkway calls it early (`bridgeCall`); it never comes while a shrine's fight is on.
+- **The fight**: once two thirds of the shrines are won (`due`), the next time it comes and finds the hero on a
+  medium or large island it stays: the walkways off that island are locked (the shrines' soft wards), it coils round
+  the island at body height and every few seconds dives across it, comes in to bite (its head hangs low beside the
+  hero first), breathes a cone (pools of its element), rains void orbs or coils tight round him; at 2/3 and 1/3 life it
+  calls its brood (`coalesce`) and grows faster. A hidden boss monster (the hitbox) rides the point of its body
+  nearest the hero over the island's walkable ground, so melee, spells and auto-play strike whatever part comes near.
+  Its fall drops an Epic or better (`breachReward` first-clear odds at item level +2) and gold, unlocks the
+  walkways, and it comes apart into light. **The Breach Heart answers only once it is slain.** It is the run's
+  scenario `S` (`S.wyrm`) while it fights, so the HUD, the ward hold and auto-play follow it; `run.won` leaves it out.
+- **Art**: its body segment and tail are three.js models (`tools/breachdragon3d.html`: a scaled tube with a cream
+  belly, swept spines with glowing tips, flame side fins, the tail a flame fan) baked by `node tools/breachdragon3d_bake.js`
+  at 24 headings in three layers (scales, accent, glow), which `gfx/breachdragon.js` tints per colour and blurs into an
+  aura. The heads (ten) and claws (eight) are cut from the set 2 dragon sprites (`HEADS`, `CLAWS` boxes in the tool)
+  into `assets/sprites/breach_dragon/parts.webp`. Each frame: shadows on the islands, additive auras, the segments,
+  head and claws back to front, whiskers and mouth glow; motes shed from the body (`spawn`) and a light at the head.
+- Test: `node tools/tests/breach_dragon.js [looks,pass,bridge,void,fight,floors] [floor]`.
 
 ## Art (`tools/eternalbreach.py`)
 - Both uploads stay where they were put (`assets/The_Eternal_Breach_Biome_Pack/`,

@@ -22,6 +22,7 @@ import { breachLevel, breachDepth, breachReward, finalBossIndex, breachArch, BRE
 import { addEffect, Ring, Column, Telegraph, sparkle, smoke, burst, spawn, floatText, addLight, glowSprite } from '../gfx/vfx.js';
 import { drawWard, drawCarrier } from '../gfx/breach.js';
 import { enemyImage } from '../core/enemyart.js';
+import { createWyrm } from './breachdragon.js';
 
 /** A monster of the Breach: no regenerating elites (the floors are thick with pools to dodge, and a champion healing
  * to full while the hero side-steps them made fights endless). */
@@ -101,12 +102,19 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
   for (const o of others) all.push(makeScenario(o, G.breachTypes?.length ? G.breachTypes.shift() : o.kind === 'large' ? bossDeck.shift() || 'duel' : deck.shift() || 'surge'));
   const heart = makeScenario(isl[gen.heart], 'heart');
   all.push(heart);
+  // the floor's Ethereal Wyrm (game/breachdragon.js): passes over the hero, then a fight two thirds of the way through
+  const islandLocks = new Map();
+  const wyrm = world.wyrmOff ? null : createWyrm({ world, gen, floor, lvl, rng: new RNG((gen.seed ^ 0x77a1d) >>> 0), islands: isl, own, islandAt,
+    lock: (o, on) => { if (on) islandLocks.set(o.idx, o.bridges.map((bi) => makeWard(bridges[bi], gateNear(bridges[bi], o).at, 'lock'))); else for (const l of islandLocks.get(o.idx) || []) l.closed = false; return islandLocks.get(o.idx) || []; },
+    arrive: (o, kind, n, opts) => arrive(world, o, kind, n, { ...opts, lvl }),
+    run: () => ({ won: run.won, others: others.length, active: run.active }) });
+  if (wyrm) { all.push(wyrm.S); world.wyrm = wyrm.w; }
 
   const run = {
-    id: 'eternal_breach', floor, completed: false, failed: false, scenarios: all, heart, wards, islands: isl,
+    id: 'eternal_breach', floor, completed: false, failed: false, scenarios: all, heart, wards, islands: isl, wyrm,
     get current() { return all.find((S) => S.active) || null; },
     get active() { return !!run.current; },
-    get won() { return all.filter((S) => S.completed && S !== heart).length; },
+    get won() { return all.filter((S) => S.completed && S !== heart && !S.wyrm).length; },
     get title() { return run.current?.title || (run.completed ? 'The Breach Heart Is Sealed' : run.won === others.length ? 'Face the Breach Heart' : 'Win the Shrines of the Breach'); },
     get type() { return 'breach'; },
     get markers() { return run.current?.markers || []; },
@@ -122,7 +130,7 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
       const p = world.player, here = p ? islandAt(p.x, p.y) : gen.startIsland;
       const can = reachable(here >= 0 ? here : nearestIsland(p));
       for (const k of reachable(gen.startIsland)) can.add(k); // and everything the open wards allow from the start
-      const left = all.filter((S) => !S.completed && S !== heart);
+      const left = all.filter((S) => !S.completed && S !== heart && !S.wyrm);
       if (!left.length) return heart;
       let open = left.filter((S) => can.has(S.o.idx));
       if (!open.length) open = left; // (never expected: the nearest unwon shrine rather than standing at the Heart)
@@ -141,12 +149,13 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
     get hud() {
       const S = run.current, won = run.won;
       if (!S) return { title: run.completed ? 'The Breach Heart is sealed' : won === others.length ? 'Face the Breach Heart' : 'Win the shrines', beat: won, total: others.length,
-        timer: '', progress: run.completed ? 'The exit portal is open' : won === others.length ? 'Every ward is down: the Heart awaits' : `Shrines won ${won}/${others.length} · then the Heart` };
+        timer: '', progress: run.completed ? 'The exit portal is open' : wyrm && !wyrm.slain && won >= Math.ceil(others.length * 2 / 3) ? `Shrines won ${won}/${others.length} · ${wyrm.w.name.split(',')[0]} hunts you` : won === others.length ? 'Every ward is down: the Heart awaits' : `Shrines won ${won}/${others.length} · then the Heart` };
       const left = S.timer > 0 ? Math.max(0, Math.ceil(S.timer - S.seconds)) : 0;
       return { title: S.title, beat: won, total: others.length, timer: left ? left + 's' : '', progress: S.progress() };
     },
     update(dt) {
       for (const S of all) if (S.active) S.update(dt);
+      if (wyrm) wyrm.update(dt);
       holdLocks();
       ambient(dt);
       stranded(dt);
@@ -375,6 +384,11 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
         const left = others.length - run.won;
         floatText(C[0], C[1], 80, `${left} shrine${left > 1 ? 's' : ''} still bar${left > 1 ? '' : 's'} the Heart`, '#ff80c0', 14, { life: 2 });
         report(`The Heart answers only when every other shrine of this floor is won (${run.won}/${others.length}).`, '#ffb0d0');
+        sfx('error'); return;
+      }
+      if (type === 'heart' && wyrm && !wyrm.slain) {
+        floatText(C[0], C[1], 80, 'The wyrm still circles this floor', wyrm.w.variant.glow, 14, { life: 2 });
+        report(`The Heart answers only once ${wyrm.w.name} is slain. It comes down to fight when you stand on an island.`, '#ffb0d0');
         sfx('error'); return;
       }
       Object.assign(S, { active: true, failed: false, stage: 0, goal: 0, seconds: 0, timer: 0, phaseList: null, objective: undefined, onFoeDeath: null, cleanup: null });

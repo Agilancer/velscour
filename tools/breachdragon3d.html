@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Breach Wyrm 3D</title>
+<!-- The Ethereal Wyrm of the Eternal Breach (docs/ETERNAL_BREACH.md): a long wingless parade dragon. This tool builds its
+     body segment and tail tip in three.js (scaled tube, cream belly plates, swept dorsal spines with glowing tips, side
+     fins; the tail a flame fan) and bakes them from the game's iso camera at 24 headings, in three layers the game tints
+     per colour variant: SCALES (x body colour), ACCENT (belly, spines, fins: x accent colour) and GLOW (added in the glow
+     colour). It also cuts the heads and front claws from the set 2 dragon sprites (HEADS, CLAWS below) into a parts sheet.
+     Baked by tools/breachdragon3d_bake.js into assets/sprites/breach_dragon/; drawn by src/gfx/breachdragon.js.
+     http://localhost:8123/tools/breachdragon3d.html   ?bake for no viewer.  Keys: space pauses, I iso camera, T tail. -->
+<style>
+  html, body { margin: 0; height: 100%; background: #140a20; overflow: hidden; font: 12px monospace; color: #dfe; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+  #hud { position: fixed; left: 10px; top: 8px; white-space: pre; pointer-events: none; text-shadow: 1px 1px 0 #000; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="hud"></div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const P = new URLSearchParams(location.search);
+const R = 16;                                   // segment radius in game px at 1x
+const DIRS = 24;
+const SUN_DIR = [-0.55, 0.8, 0.55];
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+const amb = new THREE.HemisphereLight(0xffffff, 0x404050, 0.55 * Math.PI);
+const sun = new THREE.DirectionalLight(0xffffff, 1.35 * Math.PI);
+const rim = new THREE.DirectionalLight(0xffffff, 0.7 * Math.PI);   // from behind and above: a lit edge on the far side
+scene.add(amb, sun, sun.target, rim, rim.target);
+
+// ------------------------------------------------------------------ textures (canvas, greyscale: the game tints)
+function canvasTex(w, h, paint, srgb = true) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  paint(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  t.magFilter = THREE.LinearFilter; t.anisotropy = 4;
+  return t;
+}
+// fish scales in overlapping rows: u runs round the body, v along it (scales point back, toward +v)
+const SC = { cols: 8, rows: 4 };
+function scales(glow) {
+  return canvasTex(256, 192, (g, w, h) => {
+    g.fillStyle = glow ? '#000' : '#5c5c66'; g.fillRect(0, 0, w, h);
+    const cw = w / SC.cols, rh = h / SC.rows;
+    for (let r = -1; r <= SC.rows; r++) for (let k = -1; k <= SC.cols; k++) {
+      const x = (k + (r & 1 ? 0.5 : 0)) * cw, y = r * rh;
+      const grad = g.createRadialGradient(x, y + rh * 0.2, 1, x, y + rh * 0.55, rh * 1.05);
+      if (glow) { g.strokeStyle = r % 2 ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.22)'; g.lineWidth = 2.2; }
+      else { grad.addColorStop(0, '#f4f4f8'); grad.addColorStop(0.55, '#c4c4cc'); grad.addColorStop(1, '#6a6a74'); g.fillStyle = grad; }
+      g.beginPath(); g.ellipse(x, y + rh * 0.35, cw * 0.56, rh * 0.95, 0, 0, Math.PI); g.closePath();
+      if (glow) g.stroke(); else { g.fill(); g.strokeStyle = '#34343c'; g.lineWidth = 1.6; g.stroke(); }
+    }
+  }, !glow);
+}
+// belly plates: broad bands across the body with grooves between
+const belly = canvasTex(128, 192, (g, w, h) => {
+  const n = 6, bh = h / n;
+  for (let i = 0; i < n; i++) {
+    const grad = g.createLinearGradient(0, i * bh, 0, (i + 1) * bh);
+    grad.addColorStop(0, '#fffaf0'); grad.addColorStop(0.75, '#d8d0c4'); grad.addColorStop(1, '#8a8278');
+    g.fillStyle = grad; g.fillRect(0, i * bh, w, bh);
+    g.fillStyle = '#4a443e'; g.fillRect(0, (i + 1) * bh - 2, w, 2);
+  }
+});
+
+const BLACK = new THREE.MeshBasicMaterial({ color: 0x000000 });
+const MAT = {
+  scales: new THREE.MeshStandardMaterial({ map: scales(false), roughness: 0.45, metalness: 0.15 }),
+  scalesGlow: new THREE.MeshBasicMaterial({ map: scales(true) }),
+  belly: new THREE.MeshStandardMaterial({ map: belly, roughness: 0.6 }),
+  horn: new THREE.MeshStandardMaterial({ color: 0xe8e0d0, roughness: 0.35, metalness: 0.1 }),
+  fin: new THREE.MeshStandardMaterial({ color: 0xd8d0c8, roughness: 0.5, side: THREE.DoubleSide }),
+  glow: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+  finGlow: new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }),
+};
+// every mesh carries its material per layer: { scales, accent, glow } (a missing one draws black, still hiding what's behind)
+function mesh(geo, layers) { const m = new THREE.Mesh(geo, BLACK); m.userData.layers = layers; return m; }
+function setLayer(root, layer) {
+  root.traverse((o) => { if (!o.isMesh) return; const L = o.userData.layers, v = L[layer]; o.material = Array.isArray(v) ? v : v || (L.groups ? L.groups.map(() => BLACK) : BLACK); });
+}
+
+// ------------------------------------------------------------------ the body tube (axis +x, top +y)
+/** A tube from x0 to x1 with radius rad(t), t 0..1 along it; the underside (|angle - pi| < 0.8) a second group. */
+function tube(len, rad, segs = 24, ring = 40, flat = 0.9) {
+  const pos = [], uv = [], idx = [], under = [];
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs, x = -len / 2 + t * len, r = rad(t);
+    for (let j = 0; j <= ring; j++) {
+      const a = (j / ring) * Math.PI * 2;
+      pos.push(x, Math.cos(a) * r * flat, Math.sin(a) * r);
+      uv.push((j / ring) * 2, 1 - t * (len / (R * 2.6)));
+    }
+  }
+  for (let i = 0; i < segs; i++) for (let j = 0; j < ring; j++) {
+    const a = i * (ring + 1) + j, b = a + ring + 1, ang = ((j + 0.5) / ring) * Math.PI * 2;
+    const tri = [a, a + 1, b, b, a + 1, b + 1];
+    (Math.abs(ang - Math.PI) < 0.8 ? under : idx).push(...tri);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex([...idx, ...under]);
+  g.addGroup(0, idx.length, 0); g.addGroup(idx.length, under.length, 1);
+  g.computeVertexNormals();
+  return g;
+}
+/** A spine: a cone swept back (toward -x) from the top of the body, its tip a glowing cone. */
+function spine(x, h, w, lean = 0.6, y = R * 0.82) {
+  const g = new THREE.Group();
+  const base = mesh(new THREE.ConeGeometry(w, h * 0.72, 10), { accent: MAT.horn });
+  base.position.y = h * 0.36;
+  const tip = mesh(new THREE.ConeGeometry(w * 0.45, h * 0.42, 10), { accent: MAT.horn, glow: MAT.glow });
+  tip.position.y = h * 0.72 + h * 0.14;
+  g.add(base, tip);
+  g.position.set(x, y, 0); g.rotation.z = lean;
+  return g;
+}
+/** A flame-shaped fin in the xy plane, root at the origin, sweeping back; its edge glows. */
+function finShape(len, h) {
+  const s = new THREE.Shape();
+  s.moveTo(0, 0); s.quadraticCurveTo(-len * 0.3, h * 1.1, -len, h * 0.55); s.quadraticCurveTo(-len * 0.7, h * 0.35, -len * 0.95, h * 0.05);
+  s.quadraticCurveTo(-len * 0.5, -h * 0.1, 0, 0);
+  return s;
+}
+function fin(len, h, glowEdge = true) {
+  const g = new THREE.Group();
+  const shape = finShape(len, h);
+  g.add(mesh(new THREE.ShapeGeometry(shape, 12), { accent: MAT.fin }));
+  if (glowEdge) {
+    const pts = shape.getPoints(24).map((p) => new THREE.Vector3(p.x, p.y, 0));
+    const curve = new THREE.CatmullRomCurve3(pts.slice(1, 14));
+    g.add(mesh(new THREE.TubeGeometry(curve, 24, 0.7, 5), { accent: MAT.fin, glow: MAT.glow }));
+  }
+  return g;
+}
+
+function buildSegment() {
+  const root = new THREE.Group();
+  const len = R * 2.5;
+  const body = mesh(tube(len, (t) => R * Math.pow(Math.sin(Math.PI * t), 0.42)), { scales: [MAT.scales, BLACK], accent: [BLACK, MAT.belly], glow: [MAT.scalesGlow, BLACK], groups: [0, 1] });
+  root.add(body);
+  root.add(spine(R * 0.55, R * 1.05, R * 0.2, 0.75), spine(-R * 0.45, R * 0.8, R * 0.17, 0.85));
+  // side fins: a pair of small flames off the flanks
+  for (const s of [1, -1]) {
+    const f = fin(R * 1.3, R * 0.55);
+    f.position.set(R * 0.1, -R * 0.1, s * R * 0.86); f.rotation.x = s * 0.5; f.rotation.y = s * 0.25;
+    root.add(f);
+  }
+  return root;
+}
+function buildTail() {
+  const root = new THREE.Group();
+  const len = R * 2.6;
+  root.add(mesh(tube(len, (t) => R * Math.pow(Math.sin(Math.PI * t), 0.4) * (0.22 + 0.5 * t)), { scales: [MAT.scales, BLACK], accent: [BLACK, MAT.belly], glow: [MAT.scalesGlow, BLACK], groups: [0, 1] }));
+  root.add(spine(R * 0.5, R * 0.7, R * 0.15, 0.85, R * 0.48));
+  // the tail fan: five flame fins splayed behind the tip
+  for (let k = 0; k < 5; k++) {
+    const a = (k - 2) * 0.42, f = fin(R * (2.3 - Math.abs(k - 2) * 0.35), R * 0.9);
+    f.position.set(-len / 2 + R * 0.2, 0, 0);
+    f.rotation.x = a + Math.PI / 2 * (k === 2 ? 0 : 0); f.rotation.z = -0.1;
+    const h = new THREE.Group(); h.add(f); h.rotation.x = (k - 2) * 0.55;
+    root.add(h);
+  }
+  return root;
+}
+
+// ------------------------------------------------------------------ camera and bake helpers (as tools/gunner3d.html)
+function isoCamera(left, right, top, bottom) {
+  const c = new THREE.OrthographicCamera(left, right, top, bottom, -4000, 4000), e = Math.PI / 6;
+  c.position.set(Math.cos(e) * Math.SQRT1_2, Math.sin(e), Math.cos(e) * Math.SQRT1_2).multiplyScalar(1000);
+  c.up.set(0, 1, 0); c.lookAt(0, 0, 0); c.updateMatrixWorld(); c.updateProjectionMatrix();
+  return c;
+}
+function aimLights(cam) {
+  const d = new THREE.Vector3(...SUN_DIR).normalize().transformDirection(cam.matrixWorld);
+  sun.position.copy(d).multiplyScalar(500); sun.target.position.set(0, 0, 0); sun.target.updateMatrixWorld();
+  const r = new THREE.Vector3(0.3, 0.6, -1).normalize().transformDirection(cam.matrixWorld);
+  rim.position.copy(r).multiplyScalar(500); rim.target.position.set(0, 0, 0); rim.target.updateMatrixWorld();
+}
+// game heading f (tile space: 0 = +x, screen down-right) -> yaw about +Y (the models face +X)
+const yawOf = (f) => -f;
+function shoot(F, S) {
+  renderer.setSize(F.w * S, F.h * S, false);
+  const cam = isoCamera(-F.ax, F.w - F.ax, F.ay, F.ay - F.h);
+  aimLights(cam);
+  renderer.setClearColor(0x000000, 0);
+  renderer.render(scene, cam);
+  const c = document.createElement('canvas'); c.width = F.w * S; c.height = F.h * S;
+  c.getContext('2d', { willReadFrequently: true }).drawImage(renderer.domElement, 0, 0);
+  return c;
+}
+function bounds(shots) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+  for (const c of shots) {
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  return { x0, y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+}
+
+const models = { seg: buildSegment(), tail: buildTail() };
+const hold = new THREE.Group(); scene.add(hold);
+const show = (k) => { hold.clear(); hold.add(models[k]); };
+const F = { w: 120, h: 110, ax: 60, ay: 58 };     // the segment's centre at ax, ay
+const LAYERS = ['scales', 'accent', 'glow'];
+/** One model at DIRS headings x the three layers: rows scales, accent, glow; cells trimmed to the union. */
+function bakeModel(k, S) {
+  show(k);
+  const rows = LAYERS.map((L) => { setLayer(models[k], L); const row = []; for (let i = 0; i < DIRS; i++) { hold.rotation.y = yawOf((i / DIRS) * Math.PI * 2); row.push(shoot(F, S)); } return row; });
+  hold.rotation.y = 0; setLayer(models[k], 'scales');
+  // the silhouette is the same in every layer (black where another layer's parts are), so one union trims all
+  const b = bounds(rows.flat()), pad = S, x0 = Math.max(0, b.x0 - pad), y0 = Math.max(0, b.y0 - pad);
+  const w = Math.min(F.w * S - x0, b.w + 2 * pad), h = Math.min(F.h * S - y0, b.h + 2 * pad);
+  return { rows, x0, y0, w, h, ax: F.ax - x0 / S, ay: F.ay - y0 / S };
+}
+
+// ------------------------------------------------------------------ heads and claws from the set 2 dragons
+// Cuts from the 512 px source sprites (all face right). box: generous, so every horn and crest is inside it; cut: a
+// line [A, B] across the throat (or the shoulder, for a leg) and only the side holding `keep` (the eye, the foot) stays,
+// and of that only the piece connected to `keep`, so the neck, body and wings fall away and nothing else is trimmed.
+// cut2: a second line where one isn't enough. mouth: the snout's tip. A head's neck (where it sits on the body's axis)
+// is on its eye-to-snout line, behind the eye; a leg hangs from the middle of its cut line.
+const SRC = '../assets/source/enemies/set2/dragons/';
+const HEADS = {
+  amethyst: { file: 'ene_127_amethyst_crown_dragon', box: [248, 138, 364, 274], cut: [[256, 200], [318, 270]], keep: [318, 232], mouth: [350, 250] },
+  scarlet: { file: 'ene_132_scarlet_thorn_wyrm', box: [278, 150, 368, 294], cut: [[288, 214], [324, 294]], keep: [318, 252], mouth: [358, 280] },
+  crimson: { file: 'ene_121_crimson_crag_drake', box: [280, 193, 394, 347], cut: [[282, 306], [346, 347]], keep: [352, 293], mouth: [386, 322] },
+  obsidian: { file: 'ene_125_obsidian_horn_dragon', box: [322, 98, 450, 302], cut: [[328, 228], [396, 302]], keep: [395, 232], mouth: [446, 262] },
+  jade: { file: 'ene_133_jade_cloud_dragon', box: [283, 193, 358, 338], cut: [[296, 262], [322, 338]], keep: [330, 278], mouth: [350, 296] },
+  emerald: { file: 'ene_123_emerald_marsh_dragon', box: [328, 283, 416, 384], cut: [[334, 318], [354, 384]], keep: [368, 348], mouth: [408, 362] },
+  golden: { file: 'ene_128_golden_sunscale', box: [288, 160, 390, 300], cut: [[288, 226], [362, 286]], keep: [350, 235], mouth: [378, 258] },
+  silver: { file: 'ene_129_silver_moon_wyvern', box: [250, 203, 324, 294], cut: [[262, 252], [300, 294]], keep: [297, 262], mouth: [316, 278] },
+  ivory: { file: 'ene_124_ivory_frost_wyrm', box: [248, 246, 326, 344], cut: [[256, 285], [290, 344]], keep: [292, 307], mouth: [320, 328] },
+  bone: { file: 'ene_138_bonewhite_crypt_dragon', box: [316, 116, 426, 336], cut: [[334, 240], [372, 336]], keep: [370, 270], mouth: [418, 305] },
+};
+const CLAWS = {
+  amethyst: { file: 'ene_127_amethyst_crown_dragon', box: [278, 356, 335, 438], cut: [[278, 364], [335, 380]], keep: [310, 425] },
+  crimson: { file: 'ene_121_crimson_crag_drake', box: [263, 346, 320, 452], cut: [[263, 357], [320, 352]], cut2: [[298, 346], [318, 396]], keep: [300, 440] },
+  obsidian: { file: 'ene_125_obsidian_horn_dragon', box: [334, 332, 424, 426], cut: [[334, 343], [402, 336]], keep: [380, 410] },
+  jade: { file: 'ene_133_jade_cloud_dragon', box: [316, 360, 354, 414], cut: [[316, 371], [347, 364]], cut2: [[320, 360], [356, 376]], keep: [335, 402] },
+  golden: { file: 'ene_128_golden_sunscale', box: [290, 390, 340, 444], cut: [[290, 399], [327, 394]], keep: [315, 432] },
+  bone: { file: 'ene_138_bonewhite_crypt_dragon', box: [308, 343, 392, 414], cut: [[308, 353], [362, 345]], keep: [370, 400] },
+};
+const loadImg = (f) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('no ' + f)); i.src = SRC + f + '.png'; });
+/** A cut part: the box with the far side of the cut line feathered away (2 px), then only the piece connected to `keep`
+ * (and its antialiased rim), trimmed to its opaque pixels. */
+async function cut(def) {
+  const img = await loadImg(def.file), [x0, y0, x1, y1] = def.box, w = x1 - x0, h = y1 - y0;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.drawImage(img, x0, y0, w, h, 0, 0, w, h);
+  const d = g.getImageData(0, 0, w, h), px = d.data;
+  const [[ax, ay], [bx, by]] = def.cut;
+  for (const [[cx0, cy0], [cx1, cy1]] of [def.cut, def.cut2].filter(Boolean)) {
+    const L = Math.hypot(cx1 - cx0, cy1 - cy0), side = (x, y) => ((cx1 - cx0) * (y - cy0) - (cy1 - cy0) * (x - cx0)) / L;   // signed px from the line
+    const want = Math.sign(side(def.keep[0], def.keep[1]));
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const s = side(x + x0 + 0.5, y + y0 + 0.5) * want; px[(y * w + x) * 4 + 3] *= Math.max(0, Math.min(1, (s + 0.5) / 2)); }
+  }
+  const seen = new Uint8Array(w * h), q = [], kx = def.keep[0] - x0, ky = def.keep[1] - y0;
+  let s0 = -1, bd = 1e9;
+  for (let y = Math.max(0, ky - 6); y < Math.min(h, ky + 7); y++) for (let x = Math.max(0, kx - 6); x < Math.min(w, kx + 7); x++) { const dd = Math.hypot(x - kx, y - ky); if (px[(y * w + x) * 4 + 3] > 24 && dd < bd) { bd = dd; s0 = y * w + x; } }
+  if (s0 >= 0) { seen[s0] = 1; q.push(s0); }
+  for (let k = 0; k < q.length; k++) {
+    const i = q[k], x = i % w, y = (i / w) | 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy, j = ny * w + nx; if (nx >= 0 && ny >= 0 && nx < w && ny < h && !seen[j] && px[j * 4 + 3] > 24) { seen[j] = 1; q.push(j); } }
+  }
+  for (let i = 0; i < w * h; i++) {
+    if (seen[i]) continue;
+    const x = i % w, y = (i / w) | 0;
+    let near = false;
+    for (let dy = -1; dy <= 1 && !near; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < w && ny < h && seen[ny * w + nx]) { near = true; break; } }
+    if (!near || px[i * 4 + 3] > 24) px[i * 4 + 3] = 0;
+  }
+  g.putImageData(d, 0, 0);
+  const b = bounds([c]);
+  const o = document.createElement('canvas'); o.width = b.w; o.height = b.h;
+  o.getContext('2d').drawImage(c, -b.x0, -b.y0);
+  const rel = (p) => p && [p[0] - x0 - b.x0, p[1] - y0 - b.y0], [ex, ey] = def.keep, head = !!def.mouth;
+  const neck = head && [ex + (ex - def.mouth[0]) * 0.6, ey + (ey - def.mouth[1]) * 0.6];
+  return { c: o, neck: rel(neck), mouth: rel(def.mouth), top: head ? null : rel([(ax + bx) / 2, (ay + by) / 2]), foot: head ? null : rel(def.keep) };
+}
+async function bakeParts() {
+  const parts = [];
+  for (const [id, d] of Object.entries(HEADS)) parts.push({ kind: 'head', id, ...(await cut(d)) });
+  for (const [id, d] of Object.entries(CLAWS)) parts.push({ kind: 'claw', id, ...(await cut(d)) });
+  // shelf-pack in one row per kind
+  let x = 0, y = 0, rowH = 0; const W = 1024, meta = { heads: {}, claws: {} };
+  for (const p of parts) { if (x + p.c.width > W) { x = 0; y += rowH + 2; rowH = 0; } p.x = x; p.y = y; x += p.c.width + 2; rowH = Math.max(rowH, p.c.height); }
+  const sheet = document.createElement('canvas'); sheet.width = W; sheet.height = y + rowH;
+  const g = sheet.getContext('2d');
+  for (const p of parts) {
+    g.drawImage(p.c, p.x, p.y);
+    const e = { x: p.x, y: p.y, w: p.c.width, h: p.c.height };
+    if (p.kind === 'head') meta.heads[p.id] = { ...e, neck: p.neck, mouth: p.mouth };
+    else meta.claws[p.id] = { ...e, top: p.top, foot: p.foot };
+  }
+  return { sheet, meta };
+}
+
+async function bake(S = 3) {
+  const t0 = performance.now(), cells = { seg: bakeModel('seg', S), tail: bakeModel('tail', S) };
+  const cw = Math.max(cells.seg.w, cells.tail.w), sheet = document.createElement('canvas');
+  sheet.width = cw * DIRS; sheet.height = 3 * (cells.seg.h + cells.tail.h);
+  const g = sheet.getContext('2d'), meta = { S, dirs: DIRS, R, layers: LAYERS };
+  let y = 0;
+  for (const k of ['seg', 'tail']) {
+    const m = cells[k];
+    m.rows.forEach((row, r) => row.forEach((c, i) => g.drawImage(c, m.x0, m.y0, m.w, m.h, i * cw, y + r * m.h, m.w, m.h)));
+    meta[k] = { y: y / S, cw: cw / S, w: m.w / S, h: m.h / S, ax: +m.ax.toFixed(2), ay: +m.ay.toFixed(2) };
+    y += 3 * m.h;
+  }
+  const parts = await bakeParts();
+  return { body: sheet.toDataURL('image/webp', 0.94), parts: parts.sheet.toDataURL('image/webp', 0.95), meta: { ...meta, ...parts.meta }, ms: Math.round(performance.now() - t0) };
+}
+/** Review: each model at 8 headings in the three layers, plus a tinted composite (violet body, pale accent, glow). */
+function preview(S = 4) {
+  const rows = [];
+  for (const k of ['seg', 'tail']) {
+    show(k);
+    for (const L of LAYERS) { setLayer(models[k], L); const row = []; for (let i = 0; i < 8; i++) { hold.rotation.y = yawOf((i / 8) * Math.PI * 2); row.push(shoot(F, S)); } rows.push(row); }
+    setLayer(models[k], 'scales');
+  }
+  hold.rotation.y = 0;
+  const w = rows[0][0].width, h = rows[0][0].height, c = document.createElement('canvas');
+  c.width = w * 8; c.height = h * rows.length;
+  const g = c.getContext('2d'); g.fillStyle = '#1a1028'; g.fillRect(0, 0, c.width, c.height);
+  rows.forEach((row, r) => row.forEach((s, i) => g.drawImage(s, i * w, r * h)));
+  return c.toDataURL('image/png');
+}
+/** Review: every head and leg cut, magnified on a dark ground, its neck / mouth / top / foot marked. */
+async function partsPreview(S = 3) {
+  const { sheet, meta } = await bakeParts(), all = [...Object.entries(meta.heads), ...Object.entries(meta.claws)];
+  const c = document.createElement('canvas'); c.width = 1800; c.height = 1700;
+  const g = c.getContext('2d'); g.fillStyle = '#1a1028'; g.fillRect(0, 0, c.width, c.height); g.imageSmoothingEnabled = false;
+  let x = 10, y = 10, rowH = 0;
+  for (const [id, p] of all) {
+    if (x + p.w * S > c.width) { x = 10; y += rowH + 30; rowH = 0; }
+    g.drawImage(sheet, p.x, p.y, p.w, p.h, x, y, p.w * S, p.h * S);
+    g.fillStyle = '#fff'; g.font = '14px monospace'; g.fillText(id, x, y + p.h * S + 16);
+    for (const [k, col] of [['neck', '#0f0'], ['mouth', '#f40'], ['top', '#0ff'], ['foot', '#ff0']]) if (p[k]) { g.fillStyle = col; g.fillRect(x + p[k][0] * S - 3, y + p[k][1] * S - 3, 6, 6); }
+    x += p.w * S + 20; rowH = Math.max(rowH, p.h * S);
+  }
+  return c.toDataURL('image/png');
+}
+window.DRAGON3D = { bake, preview, partsPreview };
+
+// ------------------------------------------------------------------ viewer
+if (!P.has('bake')) {
+  document.body.appendChild(renderer.domElement);
+  const persp = new THREE.PerspectiveCamera(32, 1, 1, 8000);
+  persp.position.set(120, 90, 140);
+  const controls = new OrbitControls(persp, renderer.domElement);
+  controls.target.set(0, 0, 0); controls.update();
+  let iso = false, paused = false, k = 'seg', last = performance.now(), t = 0;
+  show(k);
+  addEventListener('keydown', (e) => { if (e.key === ' ') paused = !paused; else if (e.key === 'i' || e.key === 'I') iso = !iso; else if (e.key === 't' || e.key === 'T') { k = k === 'seg' ? 'tail' : 'seg'; show(k); } });
+  const hud = document.getElementById('hud');
+  const loop = (now) => {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (!paused) t += dt;
+    setLayer(models[k], 'scales');
+    hold.rotation.y = t * 0.6;
+    renderer.setSize(innerWidth, innerHeight, false);
+    renderer.setClearColor(0x140a20, 1);
+    let cam;
+    if (iso) { const s = 3; cam = isoCamera(-innerWidth / 2 / s, innerWidth / 2 / s, innerHeight / 2 / s, -innerHeight / 2 / s); }
+    else { persp.aspect = innerWidth / innerHeight; persp.updateProjectionMatrix(); cam = persp; }
+    aimLights(cam.isOrthographicCamera ? cam : isoCamera(-1, 1, 1, -1));
+    renderer.render(scene, cam);
+    hud.textContent = `Breach Wyrm 3D  [${k}]  ${iso ? 'iso' : 'orbit'}  space pause · I iso · T tail`;
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
