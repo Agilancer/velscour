@@ -135,7 +135,9 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
   `assets/tiles/eternal_breach/` and `assets/tiles/veilscar_march/`. The biome (`BREACH_BIOME` in data/biomes.js) takes
   its floors and scatter from both, walls/arches/doors from the Eternal Breach; `BREACH_WALLS` adds the Veilscar
   March's walls, arches and doors (game.buildBreach merges the two tile sets).
-- The 200 monsters and 30 bosses (`Creatures/`, one PNG each) are copied into `assets/source/enemies/breach/m1..m5`
+- The 200 monsters and 30 bosses (`Creatures/`, one PNG each) were re-cut from the pack's `source_atlases/` along each
+  creature's own outline (the first cut used a fixed grid, which clipped creatures crossing a cell line and picked up
+  their neighbours' feet and limbs; `Creatures/qa/recut_*.png` compare the two). They are copied into `assets/source/enemies/breach/m1..m5`
   (40 each) and `bosses/`, packed by `process_assets.py enemies` like set 2 (`assets/sprites/enemies/breach_*.webp`),
   and listed in the generated `src/data/breachroster.js`: name, family, AI archetype (from keywords in the name and
   description; the breach-warped families' oddities become casters and beamers), drawn height (small 40, medium 54,
