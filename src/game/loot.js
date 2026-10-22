@@ -228,10 +228,19 @@ export function drawLootLabels(ctx, world, mouse) {
   const p = world.player;
   const font = `${Math.round(12 * G.dpr)}px "Alegreya Sans", sans-serif`;
   const placed = [];
+  let shown = false;
   for (const l of world.loot) {
     if (l.kind !== 'item' && l.kind !== 'potion' && !(l.kind === 'gold' && l.amount > 0)) continue;
     if (p && Math.hypot(p.x - l.x, p.y - l.y) > 14) continue;
     if (l.kind === 'gold' && !G.settings.showGoldLabels) continue;
+    if (G.settings.hideItemNames) {
+      // no labels: an unseen hit box on the item itself still picks it up, and the name shows only under the mouse
+      const [gx, gy] = camera.tileToScreen(l.x, l.y, 6), z = camera.zoom || 1;
+      const box = { x: gx, y: gy, w: 30 * z, h: 24 * z, loot: l };
+      boxes.push(box);
+      if (shown || !mouse || Math.abs(mouse.x - gx) >= box.w / 2 || Math.abs(mouse.y - gy) >= box.h / 2) continue;
+      shown = true;
+    }
     const [sx, sy0] = camera.tileToScreen(l.x, l.y, 26);
     let sy = sy0;
     const text = l.label, spr = labelSprite(text, l.color, font);
@@ -243,7 +252,7 @@ export function drawLootLabels(ctx, world, mouse) {
     }
     const box = { x: sx, y: sy, w, h, loot: l };
     placed.push(box);
-    const hover = mouse && Math.abs(mouse.x - sx) < w / 2 && Math.abs(mouse.y - sy) < h / 2;
+    const hover = G.settings.hideItemNames || (mouse && Math.abs(mouse.x - sx) < w / 2 && Math.abs(mouse.y - sy) < h / 2);
     ctx.fillStyle = hover ? 'rgba(40,30,80,0.9)' : 'rgba(0,0,0,0.72)';
     ctx.fillRect((sx - w / 2) * G.dpr, (sy - h / 2) * G.dpr, w * G.dpr, h * G.dpr);
     ctx.drawImage(spr.c, Math.round(sx * G.dpr - spr.c.width / 2), Math.round((sy + 1) * G.dpr - spr.c.height / 2));

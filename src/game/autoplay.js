@@ -24,7 +24,7 @@ import { addToBag } from './player.js';
 import { Delayed, Area, Whirl } from './hazards.js';
 import { bountyGoal } from './wanderers.js';
 import { effects, Telegraph } from '../gfx/vfx.js';
-import { BAR_SIZE, LMB, RMB, FILL_ORDER, SLOT_KEYS } from '../data/bar.js';
+import { BAR_SIZE, LMB, RMB, FILL_ORDER, SLOT_KEYS, freeSlot } from '../data/bar.js';
 
 const OFFENSIVE = new Set(['melee', 'proj', 'nova', 'aoe', 'beam', 'chain', 'wall', 'zone', 'orbit', 'cyclone', 'whirl', 'leap', 'dash', 'trap', 'rain', 'strike', 'fissure', 'corpse']);
 const CROWD = 2.2; // enemies a typical cast is expected to reach, for planning
@@ -470,7 +470,7 @@ export const Auto = {
     const p = G.player, c = G.char;
     let dirty = false;
     if (c.statPoints > 0) { this.spendStats(); dirty = true; }
-    if (c.skillPoints > 0) { if (this.spendSkills()) dirty = true; }
+    if (c.skillPoints > 0 && G.settings.autoSkillPoints !== false) { if (this.spendSkills()) dirty = true; }
     const sig = Object.entries(c.skills).map((e) => e.join(':')).join(',') + '|' + c.level;
     if (sig !== this.lastSig) { this.lastSig = sig; this.arrangeBar(); dirty = true; }
     if (this.optimizeGear()) dirty = true;
@@ -567,7 +567,7 @@ export const Auto = {
     const { parts } = buildPower(p, CROWD, null, true);
     const learned = CLASS_SKILLS[c.classId].filter((sk) => effLevel(p, sk) > 0);
     const focused = (focusSkills(c.classId) || []).filter((sk) => effLevel(p, sk) > 0);
-    const bar = Array(BAR_SIZE).fill(null);
+    let bar = Array(BAR_SIZE).fill(null);
     const main = parts.find((x) => x.role === 'main');
     const alt = parts.find((x) => x.role === 'alt' || x.role === 'filler');
     const free = (c.classId === 'barbarian' && learned.find((sk) => sk.id === 'barbarian.0.0')) || learned.find((sk) => !manaCost(sk, 1) && !rageCost(sk) &&
@@ -595,6 +595,16 @@ export const Auto = {
       if (i >= keys.length) break;
       if (bar.includes(sk.id)) continue;
       bar[keys[i++]] = sk.id;
+    }
+    if (G.settings.lockSkillBar) { // locked: keep the player's slots, only fill the empty ones
+      const out = c.bar.slice();
+      for (const id of [bar[LMB], bar[RMB], ...FILL_ORDER.map((k) => bar[k])]) {
+        if (!id || out.includes(id)) continue;
+        const k = !out[LMB] ? LMB : freeSlot(out);
+        if (k < 0) break;
+        out[k] = id;
+      }
+      bar = out;
     }
     if (bar.join() !== c.bar.join()) { c.bar = bar; G.ui.refresh(); }
   },

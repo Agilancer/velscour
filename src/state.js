@@ -25,6 +25,9 @@ export const G = {
     shake: true,
     zoom: 1,
     mobileSkillBar: true,
+    lockSkillBar: false, // auto-play only fills empty bar slots
+    hideItemNames: false, // no item name labels on the ground (hover still shows one)
+    autoSkillPoints: true, // auto-play spends skill points
   },
 };
 

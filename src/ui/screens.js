@@ -187,6 +187,9 @@ export function settingsDialog() {
     <label>Standard skill bar on mobile (landscape)</label><input type="checkbox" data-k="mobileSkillBar" ${st.mobileSkillBar !== false ? 'checked' : ''}>
     <label>Pause while menus open</label><input type="checkbox" data-k="pauseMenus" ${st.pauseMenus !== false ? 'checked' : ''}>
     <label>Show gold labels</label><input type="checkbox" data-k="showGoldLabels" ${st.showGoldLabels ? 'checked' : ''}>
+    <label>Hide dropped item names</label><input type="checkbox" data-k="hideItemNames" ${st.hideItemNames ? 'checked' : ''}>
+    <label>Lock skill bar (auto-play only fills empty slots)</label><input type="checkbox" data-k="lockSkillBar" ${st.lockSkillBar ? 'checked' : ''}>
+    <label>Auto skill point assignment (auto-play)</label><input type="checkbox" data-k="autoSkillPoints" ${st.autoSkillPoints !== false ? 'checked' : ''}>
   </div>`;
   const d = UI.dialog({ title: 'Settings', html, buttons: [{ label: 'Done', fn: () => { camera.computeZoom(); saveSettings(); } }] });
   d.box.querySelector('select').value = String(st.gore);

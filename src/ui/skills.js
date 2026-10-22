@@ -58,6 +58,36 @@ export function learn(sk) {
   G.game.autosave();
 }
 
+export const respecCost = (lv) => 50 * lv * lv;
+
+/** Refund every skill point (granted skills keep their free rank) for 50 gold x level squared. Mastery stays. */
+export function respec() {
+  const c = G.char, cost = respecCost(c.level);
+  let refund = 0;
+  for (const [id, lv] of Object.entries(c.skills)) {
+    const keep = c.granted && c.granted[id] ? Math.min(1, lv) : 0;
+    refund += lv - keep;
+    if (keep) c.skills[id] = keep; else delete c.skills[id];
+  }
+  c.skillPoints += refund;
+  c.gold -= cost;
+  c.bar = c.bar.map((id) => (id && c.skills[id] > 0 ? id : null));
+  if (!c.bar[0]) c.bar[0] = `${c.classId}.0.0`;
+  sfx('buff');
+  UI.log(`Skills reset: <b>${refund}</b> skill points refunded for ${cost.toLocaleString()} gold.`, '#ffd860');
+  G.player.recompute();
+  UI.refresh();
+  G.game.autosave();
+}
+
+function respecDialog() {
+  const c = G.char, cost = respecCost(c.level);
+  const spent = Object.entries(c.skills).reduce((a, [id, lv]) => a + lv - (c.granted && c.granted[id] ? Math.min(1, lv) : 0), 0);
+  if (!spent) { UI.log('No skill points to refund.', '#ff8080'); sfx('error'); return; }
+  if (c.gold < cost) { UI.log(`Respec costs ${cost.toLocaleString()} gold.`, '#ff8080'); sfx('error'); return; }
+  UI.confirm('Respec Skills', `Refund all <b>${spent}</b> spent skill points for <b class="gold-text">${cost.toLocaleString()} gold</b> (50 x level&sup2;)? Skill mastery is kept.`, respec, 'Respec');
+}
+
 export function assign(slotIdx, skillId) {
   const c = G.char;
   const prev = c.bar.indexOf(skillId);
@@ -131,6 +161,11 @@ export function renderTree(body) {
   const head = el('div', 'row');
   head.style.justifyContent = 'space-between';
   head.innerHTML = `<span>Skill Points: <b class="gold-text" style="font-size:18px">${c.skillPoints}</b></span><span class="dim" style="font-size:12px">Click to inspect · double/right-click to learn · drag to the skill bar</span>`;
+  const rb = el('button', 'btn small respec-btn', `Respec (${respecCost(c.level).toLocaleString()} gold)`);
+  rb.title = 'Refund all spent skill points: 50 gold x level squared';
+  if (c.gold < respecCost(c.level)) rb.style.opacity = '.45';
+  rb.onclick = () => { sfx('ui'); respecDialog(); };
+  head.appendChild(rb);
   body.appendChild(head);
   const tabs = el('div', 'tabs');
   C.trees.forEach((t, i) => {

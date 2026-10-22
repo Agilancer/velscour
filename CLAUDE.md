@@ -35,6 +35,7 @@ node tools/tests/flow.js                           # town -> portal -> boss -> e
 node tools/tests/stash.js                          # town storage chest: 300 slots, store/take, auto-play stashing
 node tools/tests/rarity.js [classes] [samples]     # gear rarity worth in item levels, level 25 Rare > level 10 Mythic, drop odds
 node tools/tests/ui.js                             # skill tree, inventory, socketing, vendors
+node tools/tests/options.js                        # settings: lock skill bar, hide item names, auto skill points off; skill tree Respec (50 gold x level^2)
 node tools/tests/mobile.js                         # 844x390 touch layout + joystick
 node tools/tests/hud.js                            # HUD art: 15-slot bar keys, save migration, minimap ring, buttons, Quest Log, touch pages
 node tools/tests/rims.js                           # monster rims (rank colours, green summons, gold hero), pet see-through walls, enlargeable target window
