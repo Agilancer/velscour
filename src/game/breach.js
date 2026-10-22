@@ -39,6 +39,8 @@ export const ARRIVAL_NAMES = {
   coalesce: 'Motes of the void take shape!', coffin: 'The coffins burst open!', doorway: 'Doorways open in the empty air!',
 };
 const VIOLET = '#b060ff';
+/** Is tile (x, y) within `m` world px of the screen? (A floor's wards and lamps are spread over the whole map.) */
+const inView = (x, y, m) => { const r = camera.viewRect(m), px = isoX(x, y), py = isoY(x, y); return px > r.x0 && px < r.x1 && py > r.y0 && py < r.y1; };
 
 // ======================================================================= things drawn in the world (hazards)
 /** A short-lived drawn thing in the depth-sorted pass: `paint(ctx, fx)` draws, `step(dt, fx)` returns false when done. */
@@ -67,7 +69,7 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
   };
   const makeWard = (b, at, kind) => {
     const w = new Fx({ x: at[0], y: at[1], axis: axisOf(b), open: 0, closed: true, kind, b, lift: 0.3,
-      step(dt, f) { f.open = clamp(f.open + (f.closed ? -dt : dt) * 1.4, 0, 1); if (!f.closed && f.open >= 1 && f.kind === 'lock') return false; if (f.closed) addLight(f.x, f.y, 3, 0.7, 30, VIOLET); return true; },
+      step(dt, f) { f.open = clamp(f.open + (f.closed ? -dt : dt) * 1.4, 0, 1); if (!f.closed && f.open >= 1 && f.kind === 'lock') return false; if (f.closed && inView(f.x, f.y, 200)) addLight(f.x, f.y, 3, 0.7, 30, VIOLET); return true; },
       paint(ctx, f) { drawWard(ctx, f); } });
     world.addHazard(w);
     return w;
@@ -150,7 +152,12 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
       stranded(dt);
     },
     /** Tests: start a shrine's fight now (the hero is moved there). */
-    force(S) { const p = world.player; p.x = S.C[0]; p.y = S.C[1] + 1.6; S.start(true); },
+    force(S) {   // (the nearest walkable tile of its island to the spot below the shrine: one on a basin saw nothing land)
+      const p = world.player, [x0, y0] = [S.C[0], S.C[1] + 1.6];
+      let at = [x0, y0], bd = Infinity;
+      for (const i of S.o.tiles) { const x = (i % W) + 0.5, y = ((i / W) | 0) + 0.5, d = Math.hypot(x - x0, y - y0); if (d < bd && map.circleFree(x, y, 0.35)) { bd = d; at = [x, y]; } }
+      p.x = at[0]; p.y = at[1]; S.start(true);
+    },
   };
   for (const S of all) S.busy = () => all.some((o) => o !== S && o.active);
 
@@ -194,12 +201,16 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
     if (!p || p.dead || (strandT -= dt) > 0) return;
     strandT = 1;
     map.buildFlow(p.x, p.y, map.flowRange || 64);
-    const here = islandAt(p.x, p.y);
+    const here = islandAt(p.x, p.y), S = run.current;
     for (const m of world.hostiles('player', p.x, p.y, 16)) {
       if (!m.breach || m.dead || m.entering || m.static || m.targetable === false || !m.awake) continue;
-      if (own[tileOf(m.x, m.y)] !== here && !run.current?.foes.includes(m)) continue; // (not a pack across a ward)
-      if (reachOk(map, m.x, m.y)) { m.strandT = 0; continue; }
-      if ((m.strandT = (m.strandT || 0) + 1) < 4 || here < 0) continue;
+      const foe = S && S.foes.includes(m);
+      if (own[tileOf(m.x, m.y)] !== here && !foe) continue; // (not a pack across a ward)
+      // the hero is held on the fight's island: one of its foes out on a walkway (a caster that marched in and stopped
+      // at range) can't be reached either
+      const out = foe && (own[tileOf(m.x, m.y)] !== S.o.idx || !S.onIsland(m.x, m.y));
+      if (reachOk(map, m.x, m.y) && !out) { m.strandT = 0; continue; }
+      if ((m.strandT = (m.strandT || 0) + 1) < (out ? 7 : 4) || here < 0) continue;   // (marchers walk in from up to 14 tiles out)
       const at = landing(world, isl[here], 'rift', p, new RNG((Math.random() * 1e9) >>> 0));
       if (!at) continue;
       m.strandT = 0;
@@ -238,12 +249,49 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
       S.foes.push(m);
       return m;
     };
+    // In a fight the walkways are locked to the hero, so what he can reach is what he can walk to without leaving this
+    // island: a few rim tiles and ledges (about 1 shrine island in 80) are reached only by a walkway's far end, and a
+    // grapple or resonator put there made the fight unwinnable.
+    let isle = null, isleAt = -2, isleKey = -1;
+    const onIsland = (qx, qy) => {
+      const P = world.player, s0 = P ? tileOf(P.x, P.y) : -1;
+      if (s0 < 0 || own[s0] !== o.idx) return true;   // (not on it: the general reach rule decides)
+      if (s0 !== isleAt || isleKey !== map.blockKey) {
+        isleAt = s0; isleKey = map.blockKey; isle = new Set([s0]);
+        const q = [s0];
+        for (let k = 0; k < q.length; k++) {
+          const i = q[k], tx = i % W, ty = (i / W) | 0;
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const j = (ty + dy) * W + tx + dx;
+            if (isle.has(j) || own[j] !== o.idx || !map.walkableTile(tx + dx, ty + dy) || (map.hgt && !map.stepOk(i, j))) continue;
+            isle.add(j); q.push(j);
+          }
+        }
+      }
+      return isle.has(tileOf(qx, qy));
+    };
+    const fightReach = (qx, qy) => reachOk(map, qx, qy) && onIsland(qx, qy);
+    S.onIsland = onIsland;
     const spot = (r0 = 2, r1 = 7, from = C) => {
       for (let k = 0; k < 40; k++) {
         const i = o.tiles[Math.floor(rng.next() * o.tiles.length)], x = (i % W) + 0.5, y = ((i / W) | 0) + 0.5, d = Math.hypot(x - from[0], y - from[1]);
-        if (d >= r0 && d <= r1 && map.circleFree(x, y, 0.35) && reachOk(map, x, y)) return [x, y];
+        if (d >= r0 && d <= r1 && map.circleFree(x, y, 0.35) && fightReach(x, y)) return [x, y];
       }
       return map.randomNear(C[0], C[1], 3, rng.fn());
+    };
+    /** A spot on this island the hero can reach, as near `p` as can be (a hatchling beside its nest, a shard on the
+     *  Heart's ring): one dropped where p happens to be (a crag top, past the edge) could never be reached. */
+    const landAt = (p, r = 1.6) => {
+      const ok = (q) => own[tileOf(q[0], q[1])] === o.idx && map.circleFree(q[0], q[1], 0.35) && fightReach(q[0], q[1]);
+      if (ok(p)) return p;
+      for (let k = 0; k < 24; k++) { const a = rng.next() * TAU, d = 0.5 + rng.next() * r, q = [p[0] + Math.cos(a) * d, p[1] + Math.sin(a) * d]; if (ok(q)) return q; }
+      return spot(0, 5, p);
+    };
+    /** The island's rim tiles the hero can walk to (a resonator or grapple on a ledge he can't climb made the fight
+     *  unwinnable, and the Heart needs every shrine). */
+    const rims = () => {
+      const walk = o.rimTiles.filter((i) => map.walkableTile(i % W, (i / W) | 0)), ok = walk.filter((i) => fightReach((i % W) + 0.5, ((i / W) | 0) + 0.5));
+      return ok.length >= 4 ? ok : walk;
     };
     const mark = (label, p, cb, color = '#d090ff', reach = 1.7) => {
       const mk = { x: p[0], y: p[1], type: 'objective', active: true, reach, color, label, use: () => { if (S.active) cb(mk); } };
@@ -319,7 +367,7 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
     };
     Object.assign(S, { finish });
     S.progress = () => (S.goal ? `Progress ${Math.min(S.stage, S.goal)}/${S.goal}` : '');
-    const x = { S, world, map, o, C, rng, floor, lvl, spot, mark, unmark, prop, dropProp, flash, monster, wave, boss, phases, trackPhases, live, calm, report, finish, track, bossIndex };
+    const x = { S, world, map, o, C, rng, floor, lvl, spot, landAt, rims, mark, unmark, prop, dropProp, flash, monster, wave, boss, phases, trackPhases, live, calm, report, finish, track, bossIndex };
     const start = (forced) => {
       if (S.active || S.completed) return;
       if (S.busy()) { report('Another shrine already burns. Finish its fight first.', '#ffb070'); return; }
@@ -608,7 +656,12 @@ export function bringOne(world, o, m, kind, p, opts = {}) {
         burst(tx, ty, 10, 'phys', 14, 3); smoke(tx, ty, 6, '#3a2a2a', 6, 10); sfx('thud', 0.6);
       }
       m.alpha = clamp((t - dur) / 0.5, 0, 1); m.z = -24 * (1 - m.alpha); m.moving = true; m.animT += dt;
-      if (t >= dur + 0.5) { done(m, tx, ty + 0.6); setTimeout(() => { const i = world.props.indexOf(pr); if (i >= 0) world.props.splice(i, 1); }, 20000); }
+      if (t >= dur + 0.5) {
+        const fy = world.map.walkable(tx, ty + 0.6) && reachOk(world.map, tx, ty + 0.6) ? ty + 0.6 : ty;   // it steps out of the coffin, if there's ground
+        done(m, tx, fy);
+        let left = 20;   // the burst coffin lies there 20 s of game time
+        world.addHazard({ update: (dt2) => { if ((left -= dt2) > 0) return true; const i = world.props.indexOf(pr); if (i >= 0) world.props.splice(i, 1); return false; }, draw() {} });
+      }
     };
   } else if (kind === 'doorway') {
     // a door of the Breach's ruins stands up out of nothing, swings open, and it walks through
@@ -846,7 +899,7 @@ export const SCENARIOS = {
           cf.done = true; x.unmark(cf.mk); S.stage++;
           const open = x.world.tileset.scatter.find((s) => s.name === 'breached_open_coffin'); if (open && cf.pr) cf.pr.spr = open;
           burst(cf.p[0], cf.p[1], 10, 'phys', 14, 3);
-          for (let k = 0; k < 2 + Math.floor(x.floor / 8); k++) { const m = x.track(x.monster(breachArch(x.rng.fn()), cf.p)); x.world.add(m); bringOne(x.world, x.o, m, 'rise', [cf.p[0] + rand(-0.8, 0.8), cf.p[1] + rand(0.3, 1)], { rng: x.rng }); }
+          for (let k = 0; k < 2 + Math.floor(x.floor / 8); k++) { const m = x.track(x.monster(breachArch(x.rng.fn()), cf.p)); x.world.add(m); bringOne(x.world, x.o, m, 'rise', x.landAt([cf.p[0] + rand(-0.8, 0.8), cf.p[1] + rand(0.3, 1)], 1.2), { rng: x.rng }); }
           x.report('A coffin bursts!', '#ffb080');
         }
       }
@@ -878,7 +931,7 @@ export const SCENARIOS = {
       const { S } = x;
       for (const d of x.doors) {
         if (d.shut) continue;
-        if ((d.t -= dt) <= 0 || x.calm()) { d.t = 11; if (x.S.foes.filter((m) => !m.dead).length < 7) { const m = x.track(x.monster(breachArch(x.rng.fn()), d.p)); x.world.add(m); bringOne(x.world, x.o, m, 'march', [d.p[0] + 0.5, d.p[1] + 0.5], { rng: x.rng }); } }
+        if ((d.t -= dt) <= 0 || x.calm()) { d.t = 11; if (x.S.foes.filter((m) => !m.dead).length < 7) { const m = x.track(x.monster(breachArch(x.rng.fn()), d.p)); x.world.add(m); bringOne(x.world, x.o, m, 'march', x.landAt([d.p[0] + 0.5, d.p[1] + 0.5], 1.2), { rng: x.rng }); } }
       }
       const open = x.doors.filter((d) => !d.shut), p = x.world.player;
       const near = open.sort((a, b) => Math.hypot(a.p[0] - p.x, a.p[1] - p.y) - Math.hypot(b.p[0] - p.x, b.p[1] - p.y))[0];
@@ -913,7 +966,7 @@ export const SCENARIOS = {
     start(x) {
       const { S } = x;
       S.goal = 3; S.stage = 0;
-      const rims = x.o.rimTiles.filter((i) => x.map.walkableTile(i % x.map.w, (i / x.map.w) | 0));
+      const rims = x.rims();
       x.res = [0, 1, 2].map((k) => {
         const i = rims[Math.floor((k + x.rng.next() * 0.5) / 3 * rims.length) % rims.length], W = x.map.w;
         const p = [(i % W) + 0.5, ((i / W) | 0) + 0.5], pr = x.prop('violet_shard_cluster', p, { light: 3, lightColor: '#d070ff' }) || x.prop('violet_quartz_boulder', p);
@@ -973,7 +1026,7 @@ export const SCENARIOS = {
     start(x) {
       const { S } = x;
       S.goal = 4; S.stage = 0; x.climbT = 1;
-      const rims = x.o.rimTiles.filter((i) => x.map.walkableTile(i % x.map.w, (i / x.map.w) | 0)), W = x.map.w;
+      const rims = x.rims(), W = x.map.w;
       x.grap = [0, 1, 2, 3].map((k) => {
         const i = rims[Math.floor(((k + 0.5) / 4) * rims.length) % rims.length], p = [(i % W) + 0.5, ((i / W) | 0) + 0.5];
         const g = { p, pr: x.prop('petrified_root_coil', p) || x.prop('dead_tree_root_cluster', p) };
@@ -1039,7 +1092,7 @@ export const SCENARIOS = {
         if (n.dead || !n.targetable) continue;
         if (((n.hatchT -= dt) <= 0 || x.calm()) && S.foes.filter((m) => !m.dead).length < 7) {
           n.hatchT = 9;
-          for (let k = 0; k < 1 + (x.floor >= 6 ? 1 : 0); k++) { const m = x.track(x.monster(any(x, ['spider', 'scorpion', 'worm', 'ghoul']), [n.x, n.y])); x.world.add(m); bringOne(x.world, x.o, m, 'rise', [n.x + rand(-1, 1), n.y + rand(0.5, 1.2)], { rng: x.rng }); }
+          for (let k = 0; k < 1 + (x.floor >= 6 ? 1 : 0); k++) { const m = x.track(x.monster(any(x, ['spider', 'scorpion', 'worm', 'ghoul']), [n.x, n.y])); x.world.add(m); bringOne(x.world, x.o, m, 'rise', x.landAt([n.x + rand(-1, 1), n.y + rand(0.5, 1.2)], 1.2), { rng: x.rng }); }
         }
       }
       if (S.stage >= 4 && !x.live()) x.finish();
@@ -1094,7 +1147,7 @@ export const SCENARIOS = {
         const eyes = BREACH_MONSTERS.filter((a) => a.arch === 'eye' || a.family === 'Breachborn Geometry');
         x.shards = [0, 1, 2].map((k) => {
           const a = (k / 3) * TAU, p = [x.C[0] + Math.cos(a) * 4.5, x.C[1] + Math.sin(a) * 4.5];
-          const at = x.world.map.walkable(p[0], p[1]) ? p : x.spot(3, 6);
+          const at = x.landAt(p, 1.5);   // a shard on a crag top held the Heart shut until it sank as a straggler (30 s)
           const m = x.track(x.monster('eye', at, 'champion', { art: eyes[Math.floor(x.rng.next() * eyes.length)].id, swap: null }));
           m.static = true; m.name = 'Heart Shard'; m.maxHp *= 1.4; m.hp = m.maxHp;
           x.world.add(m); bringOne(x.world, x.o, m, 'rift', at, { rng: x.rng });

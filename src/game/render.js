@@ -662,7 +662,7 @@ export function renderWorld(ctx, world) {
   const W = G.W * G.dpr, H = G.H * G.dpr;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  if (!world.map.voidFace || world.sky) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }   // (the Breach's void is opaque)
   if (world.sky) skyBack(ctx, W, H, world); // the Sky Battle's sky and clouds (gfx/skyship.js)
   else if (world.map.voidFace) drawNebula(ctx, W, H, camera.x * camera.zoom * G.dpr, camera.y * camera.zoom * G.dpr); // the Breach's void
   else if (world.map.hgt && !world.map.castleMat && !world.map.noSky) drawSky(ctx, W, H, camera.x * camera.zoom * G.dpr, camera.y * camera.zoom * G.dpr, world.night);

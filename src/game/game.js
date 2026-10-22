@@ -815,7 +815,7 @@ export const game = {
     });
     this.setWorld(world, gen.start, old);
     world.night = true;
-    HUD.setArea(`The Eternal Breach — Floor ${floor}`, `As deadly as Depth ${depth}`);
+    HUD.setArea('The Eternal Breach', `Floor ${floor} · as deadly as Depth ${depth}`);   // (the floor in the name ran under a phone's boss bar)
     playMusic('wilds', { delay: 3 + Math.random() * 10 }); setAmbience('eternal_breach');
     UI.centerMsg('THE ETERNAL BREACH', `Floor ${floor} · as deadly as Depth ${depth}`, 3);
     UI.log(`Floor ${floor} of the Eternal Breach: win the shrines on the medium and large islands to lift the wards on the walkways, then face the keeper of the <b style="color:#ff70d0">Breach Heart</b>.`, '#d8b0ff');
