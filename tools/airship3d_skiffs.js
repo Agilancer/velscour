@@ -7,7 +7,7 @@
 // Same units and frame as the big ships: 1 unit = 1 tile, bow to -Z, deck at y = 0, centred on z = 0.
 // buildSkiff(M, kind, rampSide) -> { root, anim, info, setRamp(f) }; rampSide +1 drops the ramp to starboard (+X).
 import * as THREE from 'three';
-import { Parts, box, rod, surf, flag, sm, hull, ramp } from './airship3d.js';
+import { Parts, box, rod, surf, flag, sm, hull, ramp, smoke } from './airship3d.js';
 
 const scaleUV = (g, su, sv) => { const a = g.attributes.uv.array; for (let i = 0; i < a.length; i += 2) { a[i] *= su; a[i + 1] *= sv; } return g; };
 const round = (k) => Math.pow(Math.max(0, 1 - Math.pow(k, 2.5)), 0.55);
@@ -22,23 +22,6 @@ const KINDS = {
     bands: [['flaked', 0, 0.14, 2], ['hullLow', 0.14, 0.85, 6], ['iron', 0.85, 1, 2]] },
 };
 export const SKIFF_KINDS = Object.keys(KINDS);
-
-/** Smoke puffs rising from p and trailing aft (+Z): soft grey sprites on a loop. */
-function smoke(p, n = 7) {
-  const c = document.createElement('canvas'); c.width = c.height = 32; const x = c.getContext('2d');
-  const g = x.createRadialGradient(16, 16, 0, 16, 16, 16); g.addColorStop(0, '#5a5560'); g.addColorStop(0.6, '#4a4550aa'); g.addColorStop(1, '#4a455000');
-  x.fillStyle = g; x.fillRect(0, 0, 32, 32);
-  const tex = new THREE.CanvasTexture(c), grp = new THREE.Group(), puffs = [];
-  for (let i = 0; i < n; i++) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
-    grp.add(s); puffs.push(s);
-  }
-  return { grp, update: (t) => puffs.forEach((s, i) => {
-    const f = (t * 0.45 + i / n) % 1;
-    s.position.set(p[0] + Math.sin(i * 7 + t) * 0.2 * f, p[1] + f * 2.6, p[2] + f * f * 5);
-    s.scale.setScalar(0.6 + f * 2.2); s.material.opacity = 0.75 * (1 - f) * Math.min(1, f * 6);
-  }) };
-}
 
 export function buildSkiff(M, kind, rampSide = 1) {
   const o = KINDS[kind], { L } = o, Z0 = L / 2;

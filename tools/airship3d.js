@@ -597,3 +597,21 @@ export function plume(r, len, color = 0xa24dff) {
   m.userData.update = (t) => { mat.uniforms.t.value = t; m.scale.z = 0.9 + 0.12 * Math.sin(t * 23) + 0.06 * Math.sin(t * 57); };
   return m;
 }
+
+/** Smoke or steam puffs rising from p and trailing aft (+Z): soft sprites on a loop. tint: [core, edge] css colours. */
+export function smoke(p, n = 7, tint = ['#5a5560', '#4a4550'], rise = 2.6, size = 1) {
+  const c = document.createElement('canvas'); c.width = c.height = 32; const x = c.getContext('2d');
+  const g = x.createRadialGradient(16, 16, 0, 16, 16, 16); g.addColorStop(0, tint[0]); g.addColorStop(0.6, tint[1] + 'aa'); g.addColorStop(1, tint[1] + '00');
+  x.fillStyle = g; x.fillRect(0, 0, 32, 32);
+  const tex = new THREE.CanvasTexture(c), grp = new THREE.Group(), puffs = [];
+  for (let i = 0; i < n; i++) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+    grp.add(s); puffs.push(s);
+  }
+  const ph = Math.random() * 10;
+  return { grp, update: (t) => puffs.forEach((s, i) => {
+    const f = (t * 0.45 + ph + i / n) % 1;
+    s.position.set(p[0] + Math.sin(i * 7 + t) * 0.2 * f, p[1] + f * rise, p[2] + f * f * 5);
+    s.scale.setScalar((0.6 + f * 2.2) * size); s.material.opacity = 0.75 * (1 - f) * Math.min(1, f * 6);
+  }) };
+}

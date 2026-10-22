@@ -140,7 +140,7 @@ async function buildScene(name) {
   const S = { root: new THREE.Group(), ships: [], skiffs: [], grid: null, info: '' };
   if (name === 'galleon' || name === 'ironclad') {
     const ship = name === 'galleon' ? buildAirship(M) : buildIronclad(M), h = holder(ship);
-    S.root.add(h); S.ships.push({ ship, h });
+    S.root.add(h); S.ships.push({ ship, h }); if (ship.arrive) S.hero = ship;
     S.grid = deckGrid(ship.info.walk); ship.root.add(S.grid);
     const spots = [[-3, 3], [1.5, 4.5], [3.5, 0.5], [-1, -2], [-4, -5.5], [2, -7], [0, 6.5], [-2.5, -8.5]];
     await Promise.all(spots.map(([x, z], i) => pirate(ship.root, E[i], x, 0, z)));
@@ -149,7 +149,7 @@ async function buildScene(name) {
     S.info = `${i.length.toFixed(0)} x ${i.beam.toFixed(0)} tiles, main deck ${(i.mainDeck.z1 - i.mainDeck.z0).toFixed(0)} x ${i.mainDeck.width.toFixed(0)} clear + raised decks, ${S.grid.userData.tiles} walkable tiles`;
   }
   if (name === 'fleet') {
-    const hero = buildIronclad(M), h = holder(hero);
+    const hero = buildIronclad(M), h = holder(hero); S.hero = hero;
     S.root.add(h); S.ships.push({ ship: hero, h });
     S.grid = deckGrid(hero.info.walk); hero.root.add(S.grid);
     for (const [i, x, z] of [[0, -3, 2], [2, -4.5, -3], [5, -2, -1.5], [10, 1.2, 14.5], [12, 2.5, 15.5]]) await pirate(hero.root, E[i], x, hero.info.walk.deckAt(hero.info.walk.sAt(z)), z);
@@ -189,12 +189,51 @@ async function setScene(name) {
   if (!SCENES[name]) name = 'fleet';
   opt.scene = name;
   built[name] ||= await buildScene(name);
-  world.clear(); cur = built[name]; world.add(cur.root);
+  for (const w of walkers.splice(0)) w.removeFromParent();
+  world.clear(); cur = built[name]; world.add(cur.root); nextArrival = 1.5;
   FH = SCENES[name].fh; TARGET.set(...SCENES[name].target); resize(); look();
   applyToggles(); info();
 }
 function applyToggles() {
   cur.root.traverse((o) => { if (o.userData.figure) o.visible = opt.figures; if (o.userData.grid) o.visible = opt.grid; });
+}
+
+// arrivals: a hero steps out of the portal in the bridge's great door, crosses the landing and walks down to the deck
+const CLASSES = ['paladin', 'death_knight', 'wizard', 'barbarian', 'ranger', 'necromancer', 'dragoon', 'bard', 'gunner', 'lancer', 'carrion_witch', 'dragon_knight'];
+const walkers = [];
+let nextArrival = 1.5;
+async function arrival() {
+  const hero = cur?.hero; if (!hero) return;
+  const url = `../assets/sprites/select/${CLASSES[Math.floor(Math.random() * CLASSES.length)]}.webp`;
+  const tex = await (texCache[url] ||= new THREE.TextureLoader().loadAsync(url).then((t) => { t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; }));
+  if (cur?.hero !== hero) return;
+  hero.arrive();
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, alphaTest: 0.1 }));
+  const h = HERO * Math.cos(Math.PI / 6) / 0.9;     // the portraits leave ~10% headroom
+  s.userData = { w: h * tex.image.width / tex.image.height, h, t: 0, path: hero.info.portal.path.map((q) => new THREE.Vector3(...q)) };
+  s.center.set(0.5, 0.02); s.userData.figure = true; s.visible = opt.figures;
+  hero.root.add(s); walkers.push(s);
+  const ps = s.userData.path; ps[ps.length - 1].x += (Math.random() - 0.5) * 7; ps[ps.length - 1].z += Math.random() * 3; s.position.copy(ps[0]);
+}
+const toCam = new THREE.Vector3();
+function walk(dt) {
+  cam.getWorldDirection(toCam).negate();
+  for (const s of [...walkers]) {
+    const u = s.userData; u.t += dt;
+    const grow = Math.min(1, u.t / 0.6);                        // emerge from the gate
+    s.scale.set(u.w * (0.3 + 0.7 * grow), u.h * (0.3 + 0.7 * grow), 1);
+    let d = Math.max(0, u.t - 0.5) * 1.6;                        // then walk the path
+    let i = 0;
+    for (; i < u.path.length - 1; i++) { const seg = u.path[i].distanceTo(u.path[i + 1]); if (d <= seg) break; d -= seg; }
+    if (i < u.path.length - 1) s.position.lerpVectors(u.path[i], u.path[i + 1], d / u.path[i].distanceTo(u.path[i + 1]));
+    else s.position.copy(u.path[u.path.length - 1]);
+    s.position.addScaledVector(toCam, 1.4);   // toward the camera: the same spot on screen, but the sprite's top no
+                                              // longer leans back into the gate or the stairs behind it
+    s.material.color.setScalar(1 + Math.max(0, 1 - u.t * 1.5) * 2);   // glowing hot as it steps out
+    const end = u.t - 9;
+    s.material.opacity = Math.min(1, u.t * 3) * (end > 0 ? Math.max(0, 1 - end) : 1);
+    if (end > 1) { s.removeFromParent(); walkers.splice(walkers.indexOf(s), 1); }
+  }
 }
 
 // docking: approach from astern, ramp down, hold, ramp up, leave
@@ -313,7 +352,7 @@ const hud = document.getElementById('hud');
 function info() {
   const list = Object.entries(SCENES).map(([k, s]) => `${s.key} ${k}`).join('  ');
   hud.textContent = `${SCENES[opt.scene].name.toUpperCase()}\n${cur.info}\n`
-    + `${list} · drag orbit · wheel zoom · right-drag pan · I iso · P pixel ${opt.px}x · F figures · G grid · W wind · D ${opt.dock ? 'cycle boats' : 'hold docked'} · space ${opt.paused ? 'resume' : 'pause'}`;
+    + `${list} · drag orbit · wheel zoom · right-drag pan · I iso · P pixel ${opt.px}x · F figures · G grid · W wind · E arrival · D ${opt.dock ? 'cycle boats' : 'hold docked'} · space ${opt.paused ? 'resume' : 'pause'}`;
 }
 addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase(), sc = Object.entries(SCENES).find(([, s]) => s.key === k);
@@ -325,23 +364,30 @@ addEventListener('keydown', (e) => {
   else if (k === 'w') opt.wind = !opt.wind;
   else if (k === 'd') opt.dock = !opt.dock;
   else if (k === ' ') opt.paused = !opt.paused;
+  else if (k === 'e') arrival();
   info();
 });
 await setScene(opt.scene);
 let last = performance.now(), t = 0;
-function frame(now) {
-  const dt = opt.still ? 0 : Math.min(0.05, (now - last) / 1000); last = now;
-  if (!opt.paused) t += dt;
-  const d = opt.paused ? 0 : dt;
+function update(d) {
+  t += d;
   for (const { ship, h } of cur.ships) { h.userData.bob(t); ship.anim(t, d); }
   for (const b of cur.skiffs) { b.sh.userData.bob(t); b.sk.anim(t, d); dockCycle(b, t); }
+  if (cur.hero && d && (nextArrival -= d) < 0) { nextArrival = 7; arrival(); }
+  walk(d);
   glows.forEach((g, i) => { g.material.opacity = (g.userData.big ? 0.75 : 0.45) + 0.12 * Math.sin(t * 9 + i * 1.7); });
   windDir(); drawSky(d); drawWind(d, t);
+}
+function frame(now) {
+  const dt = opt.still ? 0 : Math.min(0.05, (now - last) / 1000); last = now;
+  update(opt.paused ? 0 : dt);
   renderer.render(scene, cam);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.AIRSHIP = { scene, cam, renderer, opt, look, setScene, get cur() { return cur; }, set t(v) { t = v; } };
+/** Test hook: step(sec) advances the animation in 1/30 s steps and renders (for screenshots of a throttled page). */
+const step = (sec) => { for (let i = 0; i < Math.round(sec * 30); i++) update(1 / 30); renderer.render(scene, cam); };
+window.AIRSHIP = { scene, cam, renderer, opt, look, setScene, arrival, step, get cur() { return cur; }, set t(v) { t = v; } };
 </script>
 </body>
 </html>
