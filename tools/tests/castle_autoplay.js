@@ -35,6 +35,7 @@ const classes = (process.argv[2] || 'wizard,dragoon,paladin,ranger,necromancer,l
       });
       const run = (mobs, secs, purge) => {
         let across = 0, all = 0, jump = 0, at = -1, last = lv(p), top = 0; let big = null;
+        p.mana = p.maxMana; // (godmode keeps his life, not his mana)
         const hp = new Map(mobs.map((mo) => [mo, mo.hp])), leaps = [];
         if (!p._wrapped) { const f = p.tryUseSkill.bind(p); p._wrapped = true; p.tryUseSkill = (sk, x, y, tg) => { const ok = f(sk, x, y, tg); if (ok && ["leap", "dash", "blink"].includes(sk.kind)) (window.__leaps ||= []).push([sk.kind, +p.x.toFixed(1), +p.y.toFixed(1), lv(p), +x.toFixed(1), +y.toFixed(1), lv({ x, y }), Auto.target && lv(Auto.target), Auto.status]); return ok; }; }
         window.__leaps = [];
@@ -47,7 +48,7 @@ const classes = (process.argv[2] || 'wizard,dragoon,paladin,ranger,necromancer,l
             const dmg = hp.get(mo) - Math.max(0, mo.hp); hp.set(mo, Math.max(0, mo.hp));
             if (dmg > 0) { all += dmg; if (Math.abs(lv(mo) - L) > m.drop) across += dmg; }
           }
-          if (at < 0 && mobs.some((mo) => Math.abs(lv(mo) - L) <= m.drop && Math.hypot(mo.x - p.x, mo.y - p.y) < 8)) at = +(t / 30).toFixed(1);
+          if (at < 0 && mobs.some((mo) => Math.abs(lv(mo) - L) <= m.drop && Math.hypot(mo.x - p.x, mo.y - p.y) < 10)) at = +(t / 30).toFixed(1);
           if (mobs.every((mo) => mo.dead)) break;
         }
         Auto.toggle(false);
@@ -58,7 +59,16 @@ const classes = (process.argv[2] || 'wizard,dragoon,paladin,ranger,necromancer,l
       const up = run(spawn([[136.5, 199.5], [130.5, 200.5]]), 120);
       // now down again: a shooter in the ward
       w.creatures = w.creatures.filter((x) => x === p || !x.dead); w.rebuildGrid();
-      const down = run(spawn([[124.5, 186.5]]), 120, true);
+      p.x = 133.5; p.y = 199.5; Auto.path = null; // up on the south wall-walk (level 26)
+      // (in sight: a ground tile 7-10 tiles off)
+      // (inside the wards: one outside the curtain can't be walked to with the drawbridge up, and is shot from the walls)
+      let spot = [124.5, 186.5];
+      Auto.buildNav();
+      for (let r = 7, done = false; r <= 10 && !done; r++) for (let a = 0; a < 24 && !done; a++) {
+        const x = Math.floor(p.x + Math.cos(a * 0.26) * r) + 0.5, y = Math.floor(p.y + Math.sin(a * 0.26) * r) + 0.5;
+        if (m.walkable(x, y) && lv({ x, y }) === 0 && !m.rampartDeck[m.tileIdx(x, y)] && m.los(p.x, p.y, x, y) && Auto.navDist(x, y) < 120) { spot = [x, y]; done = true; }
+      }
+      const down = run(spawn([spot]), 120, true);
       return { up, down, end: lv(p) };
     }, cls);
     console.log(cls, JSON.stringify(res));

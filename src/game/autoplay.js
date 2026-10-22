@@ -403,7 +403,7 @@ export const Auto = {
     this.town = null; this.sealWaiting = false; this.transitT = 0; this.stuck = { t: 0, x: 0, y: 0, n: 0 }; this.jiggle = null;
     this.target = null; this.dodge = null; this.retreat = false; this.ignore = new WeakSet(); this.lastSig = '';
     this.screenT = 0; this.lastCast = {}; this.stall = null; this.banT = 0; this.shun = new WeakMap(); this.giveUp = new WeakSet();
-    this.lootFor = null; this.lootT = 0; this.wantCache = new WeakMap(); this.hurt = 0; this.lastHp = -1;
+    this.lootFor = null; this.lootT = 0; this.wantCache = new WeakMap(); this.hurt = 0; this.lastHp = -1; this.climbTo = null;
     this.dragoonJumps = 0; this.dragoonJumpGoal = 3 + Math.floor(Math.random() * 6);
     this.dragoonCastUntil = 0; this.dragoonLastBarrage = 0; this.dragoonLastWeaveAt = -1;
     G.heroListen = null;
@@ -948,6 +948,10 @@ export const Auto = {
       this.setStatus('Spearstorm!'); p.moveVec = [0, 0]; return;
     }
     const foes = enemyNear(w, p, 13).filter((m) => w.map.los(p.x, p.y, m.x, m.y));
+    // a foe he is taking the stairs to stays in mind while the walls and stairs hide it (12 s from the last sighting)
+    const ct = this.climbTo;
+    if (ct && (ct.dead || w.time - this.climbSeen > 12)) this.climbTo = null;
+    else if (ct && !foes.includes(ct)) foes.push(ct);
     // retreat to the town portal when nearly dead with nothing left to heal with
     const healLeft = c.potions.hp + c.potions.rejuv > 0 || this.readySkill((s) => s.kind === 'heal');
     const sealed = w.raid && w.raid.sealed; // no way out of a sealed boss room
@@ -1373,6 +1377,8 @@ export const Auto = {
     }
     if (p.channel) return;
     if (climb) {
+      if (this.climbTo !== t || w.map.los(p.x, p.y, t.x, t.y)) this.climbSeen = w.time;
+      this.climbTo = t;
       const up = G.world.map.hgt[G.world.map.tileIdx(t.x, t.y)] > G.world.map.hgt[G.world.map.tileIdx(p.x, p.y)];
       this.setStatus(`Taking the stairs ${up ? 'up' : 'down'} to ${t.name || 'a monster'}`);
       // heals, buffs and minions on the way; no attacks across the height
