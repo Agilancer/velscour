@@ -14,6 +14,16 @@ Contents
 
 ---
 
+## October 21, 2026 — more hero gear: Nocturne collection 04 armors (branch `feat/mountainside`)
+
+- **Request:** add `VELSCOUR_Nocturne_Collection_04_128_Armor_Source_Artwork.zip` (eight armors per class) to the game.
+- **Done:** `tools/nocturnegear.py import4 <dir>` (head-matched to each class's common armor like collection 02; every
+  new head lands at offset 0,0). Per class 26 armors (new 19-26: Rare A/B/C, Epic A/B/C, Legendary, Mythic), so the
+  bands are now common 2, uncommon 2, rare 7, epic 6, legendary 4, mythic 5. Gear cache key `V` = `nocturne-5`. Saved
+  items keep their looks (ids only grew); new drops roll the new art.
+- **Verified:** `herolook.js all` (3,009 looks per class, 2-minute soak), `closed_helms.js all` (15 helmets x 26 armors
+  x 16 classes, sheets looked at), `gear.js bard`.
+
 ## October 21, 2026 — THE ETERNAL BREACH: a challenge biome behind a purple portal (branch `feat/eternal-breach`)
 
 - **Request:** add "THE ETERNAL BREACH" from the two uploads in `assets/` (`The_Eternal_Breach_Biome_Pack/`,

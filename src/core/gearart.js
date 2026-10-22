@@ -1,4 +1,4 @@
-// Gear art (Grim Nocturne): per class 18 body armors (two to four per rarity) and one shared atlas of enclosed helmets
+// Gear art (Grim Nocturne): per class 26 body armors (two to seven per rarity) and one shared atlas of enclosed helmets
 // (three sets), a column per class and a row per design (each design has a rarity). Built by tools/nocturnegear.py.
 import { makeCanvas, hexToRgb, clamp, pick, chance } from './util.js';
 import { RARITY } from '../data/items.js';
@@ -12,7 +12,7 @@ const helmetPromises = { helmet: null };
 const LOOK_GEN = 2; // item.look[3]: looks rolled before the Grim Nocturne library are rerolled
 // Bumped with every rebuild of the gear art: a browser that kept an older gear.json beside a newer atlas read armors
 // past the atlas's end, and the hero went invisible once he put one on.
-const V = '?v=nocturne-4';
+const V = '?v=nocturne-5';
 // The hero is composed at HD x its 128x192 frame: armor pixels enlarged as they are, helmets from their HD atlas
 // (tools/nocturnegear.py), so the engine's downscale keeps more helmet detail the closer the camera zooms in.
 export const HD = 4;

@@ -1,8 +1,8 @@
 # Class art: Grim Nocturne gear (hero look) and class art packs (weapons, effects)
 
 Two kinds of art drive a class's look:
-- **Grim Nocturne gear** (all 16 classes, October 18-19, 2026): 18 body armors per class (Common and Uncommon two,
-  Rare four, Epic and Legendary three, Mythic four) and 15 enclosed helmets per class in three sets (set 01 Common to
+- **Grim Nocturne gear** (all 16 classes, October 18-19, 2026): 26 body armors per class (Common and Uncommon two,
+  Rare seven, Epic six, Legendary four, Mythic five) and 15 enclosed helmets per class in three sets (set 01 Common to
   Legendary; sets 02 and 03 Common to Epic plus Mythic), all recoloured by 69 finishes (`src/data/gear.js`). Built from the
   user's style-locked zips by `tools/nocturnegear.py`. It replaced the `assets/FinalClasses/<class>.zip` libraries
   (80 armors) and the Common/Rare helmet atlases; those zips stay in the repo as source but are no longer read.
@@ -19,6 +19,8 @@ Two kinds of art drive a class's look:
   plus full-colour layers (`layers_fullcolor`, every class but the Arcane Sorcerer, whose palette-limited layer is used).
 - `VELSCOUR_Collection_02_96_Armor_Source_Artwork.zip` (October 19): 96 more high-res armors, six per class (Rare A/B,
   Epic, Legendary, Mythic A/B, `collection_02/artwork/<class>/`): armors 13-18 (`armor_NN_<rarity>_c02[a|b].png`).
+- `VELSCOUR_Nocturne_Collection_04_128_Armor_Source_Artwork.zip` (October 21): 128 more, eight per class (Rare A/B/C,
+  Epic A/B/C, Legendary, Mythic, `collection_04_nocturne/artwork/<class>/`): armors 19-26 (`armor_NN_<rarity>_c04[a|b|c].png`).
 - `VELSCOUR_Helmet_Set_02_Game_Exports.zip`, `VELSCOUR_Helmet_Set_03_Game_Exports.zip` (October 19): 80 helmets each,
   same pin and layout as set 01, rarities Common, Uncommon, Rare, Epic and Mythic (`helmet_set0N_<rarity>.png`).
 - `VELSCOUR_STYLE_LOCK_DOCUMENTS.zip` (STYLE_LOCK.md, CLASS_CARDS.md, HELMET_OVERLAY_ADDENDUM.md, prompt templates):
@@ -28,6 +30,7 @@ Two kinds of art drive a class's look:
 ```bash
 python tools/nocturnegear.py import <dir>   # <dir> holds the zips unpacked as gn_art/ gn_exports/ armor96/ helm_exports/
 python tools/nocturnegear.py import2 <dir>  # finds collection_02/ Helmet_Set_02/ Helmet_Set_03/ anywhere under <dir>
+python tools/nocturnegear.py import4 <dir>  # finds collection_04_nocturne/ under <dir> (the zip unpacked as is)
 python tools/nocturnegear.py build          # or: python tools/process_assets.py gear
 ```
 `import` writes the natives to `assets/source/gear_nocturne/<class>/` (`armor_NN_<rarity>[_additional].png`, odd ids

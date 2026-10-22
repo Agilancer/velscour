@@ -1,7 +1,8 @@
-"""Grim Nocturne hero gear: 18 body armors and 15 enclosed helmets (three sets) per class.
+"""Grim Nocturne hero gear: 26 body armors and 15 enclosed helmets (three sets) per class.
 
   python tools/nocturnegear.py import <extracted-zips-dir>   # user zips -> assets/source/gear_nocturne/ (native PNGs)
   python tools/nocturnegear.py import2 <extracted-zips-dir>  # collection 02 armors + helmet sets 02/03 (below)
+  python tools/nocturnegear.py import4 <extracted-zip-dir>   # collection 04 armors (below)
   python tools/nocturnegear.py hires <zip> <zip> <zip>         # helmets' high-res artwork (the three *_Artwork zips) -> hd/
   python tools/nocturnegear.py build                          # assets/source/gear_nocturne/ -> assets/sprites/gear/
 
@@ -13,6 +14,7 @@
 `import2` finds these anywhere under <dir> (each zip unpacked as is):
   collection_02/  VELSCOUR_Collection_02_96_Armor_Source_Artwork.zip (rare a/b, epic, legendary, mythic a/b: armors 13-18)
   Helmet_Set_02/, Helmet_Set_03/  VELSCOUR_Helmet_Set_0N_Game_Exports.zip (common..epic + mythic, pinned at (45,63))
+`import4`: collection_04_nocturne/  VELSCOUR_Nocturne_Collection_04_128_Armor_Source_Artwork.zip (armors 19-26)
 All armor sets are area-downsampled exactly like the Game Exports (crown y75, sole y183, 108 art px) and
 centred on the class's head so the helmets fit every set. `build` writes per class armor.webp (6 columns of 128x192),
 armor_mask.png (face, hair and bare skin: never recoloured) and gear.json, plus the shared helmets/ atlas, built from
@@ -38,6 +40,8 @@ SET_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'mythic']  # helmet sets 0
 HELM_SETS = [('', HELM_RARITIES), ('set02_', SET_RARITIES), ('set03_', SET_RARITIES)]
 C02 = [('rare_a', 'rare_c02a'), ('rare_b', 'rare_c02b'), ('epic', 'epic_c02'), ('legendary', 'legendary_c02'),
        ('mythic_a', 'mythic_c02a'), ('mythic_b', 'mythic_c02b')]  # armors 13..18
+C04 = [('rare_a', 'rare_c04a'), ('rare_b', 'rare_c04b'), ('rare_c', 'rare_c04c'), ('epic_a', 'epic_c04a'),
+       ('epic_b', 'epic_c04b'), ('epic_c', 'epic_c04c'), ('legendary', 'legendary_c04'), ('mythic', 'mythic_c04')]  # 19..26
 FW, FH, CROWN, SOLE, PIN, CELL = 128, 192, 75, 183, (45, 63), 40
 HD = 4  # helmet atlas cells are HD x the 40x40 native cell; the game scales them down (crisper when zoomed in)
 PIX, COLORS = 2, 32  # the helmets' pixel art: 2 art px per hero px, 32 colours each
@@ -174,6 +178,16 @@ def do_import2(src):
                 if not p.exists():
                     p = hd / f'layers_128x192/{c}_helmet_{key}{r}.png'
                 Image.fromarray(helmet_cell(p)).save(d / f'helmet_{key}{r}.png')
+        print('imported', c)
+
+
+def do_import4(src):
+    c04 = find_dir(src, 'collection_04_nocturne') / 'artwork'
+    for c in CLASSES:
+        d = SRC / c
+        ref = rgba(d / 'armor_01_common.png')
+        for k, (slot, name) in enumerate(C04):
+            Image.fromarray(native(c04 / c / f'{c}_{slot}.png', ref=ref)).save(d / f'armor_{19 + k:02d}_{name}.png')
         print('imported', c)
 
 
@@ -354,6 +368,8 @@ if __name__ == '__main__':
         do_import(sys.argv[2])
     elif len(sys.argv) > 2 and sys.argv[1] == 'import2':
         do_import2(sys.argv[2])
+    elif len(sys.argv) > 2 and sys.argv[1] == 'import4':
+        do_import4(sys.argv[2])
     elif len(sys.argv) > 2 and sys.argv[1] == 'hires':
         do_hires(sys.argv[2:])
     elif len(sys.argv) > 1 and sys.argv[1] == 'build':
