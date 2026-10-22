@@ -1,7 +1,8 @@
 // THE ETERNAL BREACH (docs/ETERNAL_BREACH.md), in the browser:
 //   town   the purple portal in Herrington Hollow (reachable over 12 town seeds), its floor dialog, auto-play's
 //          Standard/Breach menu
-//   play   a bot plays every shrine scenario (and the Heart) on a live floor: each must be won, no long idle waits
+//   play   a bot plays every shrine scenario (and the Heart) on a live floor: each must be won, no long idle waits, and
+//          never more than 3 s with nothing of the fight alive and nothing else to do (the next wave comes at once)
 //   arrive every arrival kind brought in on a live floor, mid-flight screenshots
 //   shots  a floor's overview, an island, a ruin, a ward, a fight
 //   auto   auto-play (god mode, geared at the floor's level) plays a whole floor from the town to the exit
@@ -102,12 +103,19 @@ const FLOOR = +(process.argv[3] || 2);
             if (S === run.heart) { for (const o of run.scenarios) if (o !== S && !o.completed) o.finish(); }
             run.force(S);
             const st = { idle: 0, maxIdle: 0, repath: 0, path: null }; let t = 0;
-            while (t < 400 && !S.completed) { t += dt; G.time += dt; G.frame++; W.update(dt); run.update(dt); step(S, st); if (G.player.dead) break; }
+            // the longest stretch with nothing of the fight alive and no task to do: the hero waiting for monsters
+            let empty = 0, emptyMax = 0;
+            while (t < 400 && !S.completed) {
+              t += dt; G.time += dt; G.frame++; W.update(dt); run.update(dt); step(S, st); if (G.player.dead) break;
+              const none = !S.foes.some((m) => !m.dead && !m.static && !m.breachBoss), task = S.objective && (S.objective.use || S.type === 'anchor' || S.type === 'hold');
+              if (none && !task && !S.completed) empty += dt; else { emptyMax = Math.max(emptyMax, empty); empty = 0; }
+            }
+            st.emptyMax = Math.max(emptyMax, empty);
             st.maxIdle = Math.max(st.maxIdle, st.idle);
             const left = S.foes.filter((m) => !m.dead).length;
-            const line = `${S.type} — ${S.title} (${S.o.kind}): ${S.completed ? 'won' : 'STUCK (' + (S.progress() || '') + `, ${left} foes)`} in ${t.toFixed(0)}s, foes ${S.foes.length}, longest wait ${st.maxIdle.toFixed(1)}s`;
+            const line = `${S.type} — ${S.title} (${S.o.kind}): ${S.completed ? 'won' : 'STUCK (' + (S.progress() || '') + `, ${left} foes)`} in ${t.toFixed(0)}s, foes ${S.foes.length}, longest wait ${st.maxIdle.toFixed(1)}s, longest with no monster ${st.emptyMax.toFixed(1)}s`;
             out.push(line);
-            if (!S.completed || st.maxIdle > 25) bad.push(line);
+            if (!S.completed || st.maxIdle > 25 || st.emptyMax > 3) bad.push(line);
             // a won shrine drops its wards and leaves a reliquary
             if (S.completed && S !== run.heart && !W.chests.some((c) => Math.hypot(c.x - S.C[0], c.y - S.C[1]) < 3)) bad.push(S.type + ': no reliquary');
             if (S.completed && run.wards.some((w) => w.closed && w.b.ward === S.o.idx)) bad.push(S.type + ': its wards still stand');
@@ -139,7 +147,7 @@ const FLOOR = +(process.argv[3] || 2);
           P.x = o.cx + 1; P.y = o.cy + 2.5;
           const ms = arrive(W, o, kind, 4, { near: P });
           let t = 0, mid = false;
-          const midT = { ride: 2.2, shard: 2.4, chain: 1.2, sky: 0.9, climb: 0.9, coffin: 1.3, doorway: 1.2, meteor: 0.9 }[kind] || 0.6;
+          const midT = { ride: 1.1, shard: 1.4, chain: 0.7, sky: 0.6, climb: 0.6, coffin: 0.7, doorway: 0.7, meteor: 0.6 }[kind] || 0.4;
           while (t < midT) { t += 1 / 30; G.time += 1 / 30; G.frame++; game.update(1 / 30); }
           game.render();
           mid = ms.some((m) => !m.targetable);
@@ -217,7 +225,7 @@ const FLOOR = +(process.argv[3] || 2);
         const log = [];
         let t = 0, lastSt = '', lastLogT = 0;
         const t0 = performance.now();
-        while (t < 2100 && performance.now() - t0 < 560000) {
+        while (t < 2700 && performance.now() - t0 < 720000) {
           for (let i = 0; i < 30; i++) { if (G.mode !== 'game' || !G.world) break; G.dt = 1 / 30; G.time += G.dt; G.frame++; game.update(1 / 30); t += 1 / 30; }
           await new Promise((r) => setTimeout(r, 0));
           const W = G.world, run = W?.overworldScenario;

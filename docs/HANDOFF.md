@@ -52,6 +52,10 @@ Contents
   blinks/leaps (the hero is put back); fixed the scenario deck dealing the Heart's fight to a medium island (it then
   refused to start, stalling auto-play); no `regen` elites in the Breach. `breach.js` auto-play won floor 2 in
   1011-1235 s over several seeds (budget 2100 s); breach_gen 120/120 (now also checks no tile path walks round a ward).
+- **Follow-up (user): no waiting for monsters.** Every timed spawner in a shrine fight fires at once when the fight's
+  monsters (bar its boss and nests) are all dead; arrivals sped up (0.4-1.3 s). `breach.js play` checks no fight leaves
+  the hero >3 s with nothing alive and nothing to do (max now 0.1 s outside boss fights). Floors run 19-28 game minutes
+  with auto-play (the idle time became fighting); the auto test's budget is 2700 s.
 - **Open / to ask:** every other shrine is required before the Heart (a floor is ~20 game minutes); reward odds
   (`BREACH_ODDS`); death costs nothing but the floor. Not measured on a phone.
 

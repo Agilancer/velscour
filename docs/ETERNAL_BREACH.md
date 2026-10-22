@@ -86,6 +86,12 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
   allow from the start (during a fight, its island alone), else he is put back where he last stood (`holdLocks`).
 - No regenerating elites in the Breach (`breachMonster` drops the `regen` affix): the floors are thick with pools to
   dodge, and a champion healing to full while the hero side-stepped them made fights endless.
+- **No waiting for monsters**: every timed spawner in a fight (carrier drops, climbers, hatchlings, doors, marches,
+  meteors, the Hold's arrivals, the Courier's re-drops) fires at once when nothing of the fight but its boss and nests
+  is left alive (`calm` in the scenario context), and wave fights (Surge, Hanging Host) bring the next wave the moment
+  the last one falls. The arrivals themselves are quick (0.4-1.3 s; a carrier ~1 s out of the void). `breach.js play`
+  fails a fight that leaves the hero more than 3 s with nothing alive and nothing to do. (The Coffin Choir keeps its
+  timers: there the hero is sealing coffins, and each seal calls the choir.)
 - Stragglers: when nothing in a fight has fallen for 30 s, the last few (four or fewer) far from the hero or out of
   his reach sink back into the void.
 - Between fights, every 40-70 s a few monsters arrive near the hero by a random arrival.
@@ -136,6 +142,6 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
 ## Open
 - Not measured on a phone; the void is three screen-sized blits a frame plus one more for the far rocks.
 - The five monster atlases are all loaded per floor (simple, ~1.6 MB); `breachLooks` uses three of them.
-- A floor takes a geared hero about 20 game minutes with auto-play (seven shrines and the Heart).
+- A floor takes a geared hero about 19-28 game minutes with auto-play (seven shrines and the Heart).
 - Ask the user: whether every shrine should be needed for the Heart (now yes), the floor length, the reward odds
   (`BREACH_ODDS`), and whether death should cost anything in the Breach.
