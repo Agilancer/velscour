@@ -62,6 +62,14 @@ Contents
   couldn't climb kept him dodging for 20+ minutes. Arrivals now need two-way reach (`heroReach`), stranded monsters
   are rifted down beside the hero after 4 s, and auto-play in the Breach pushes on (3 s, dangers ignored) after 6 s of
   dodging while healthy and barely hurt. `BREACH_CLASS=lancer breach.js auto` picks the class.
+  The Lancer replay of the stalled seed (849252875) now wins floor 2 in 1337 s.
+- **Follow-up (user): black screen in Herrington Hollow after a Breach run while away.** The trip home itself draws
+  fine (reproduced: floor 2 won, auto-play goes home). The likely cause is a GPU reset while the computer slept or the
+  tab was hidden, which wipes accelerated canvases. The baked floor chunks then drew black under the hero for good. Now
+  `dropBakes()` (render.js) forgets the baked floors, light falloff, vignette and labels when the page is shown again
+  or the screen canvas is restored, and a floor chunk that reports `contextlost` is dropped. Everything rebakes as it is drawn.
+  Checked by wiping the town's chunks by hand (black ground, hero and HUD fine) and recovering. If it happens with the
+  computer awake, it's something else: ask what was on screen.
 - **Open / to ask:** every other shrine is required before the Heart (a floor is ~20 game minutes); reward odds
   (`BREACH_ODDS`); death costs nothing but the floor. Not measured on a phone.
 

@@ -12,6 +12,7 @@ import { titleScreen } from './ui/screens.js';
 import { Vendor } from './ui/vendor.js';
 import { Stash } from './ui/stash.js';
 import { game } from './game/game.js';
+import { dropBakes } from './game/render.js';
 import { controls } from './game/controls.js';
 import { initSpectate } from './game/spectate.js';
 import { glowSprite } from './gfx/vfx.js';
@@ -126,7 +127,8 @@ async function boot() {
   window.addEventListener('error', (e) => reportError(e.error || e.message));
   window.addEventListener('unhandledrejection', (e) => reportError(e.reason));
   window.addEventListener('beforeunload', () => { if (G.char) game.autosave(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden && G.char) game.autosave(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && G.char) game.autosave(); else if (!document.hidden) dropBakes(); });
+  G.canvas.addEventListener('contextrestored', dropBakes); // a GPU reset wiped the baked floors (game/render.js)
   requestAnimationFrame(loop);
   try {
     // the title song downloads in full alongside the art, so on mobile its intro never waits on the network
