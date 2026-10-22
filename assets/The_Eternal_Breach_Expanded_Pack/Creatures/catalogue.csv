@@ -2,100 +2,100 @@
 ETB-M001,monster,Gravejaw Mastiff,Marrow Menagerie,medium,100,monsters/ETB-M001_gravejaw_mastiff.png,17,an emaciated bone hound with a hinged shovel-jaw
 ETB-M002,monster,Lantern-Rib Hound,Marrow Menagerie,medium,100,monsters/ETB-M002_lantern_rib_hound.png,20,a crouching canine whose rib cage encloses a violet lantern organ
 ETB-M003,monster,Ossuary Scavenger,Marrow Menagerie,medium,100,monsters/ETB-M003_ossuary_scavenger.png,20,a six-legged skull collector with bone plates on its back
-ETB-M004,monster,Bonecart Grazer,Marrow Menagerie,medium,100,monsters/ETB-M004_bonecart_grazer.png,21,a squat quadruped with a cart-shaped fused ribcage
+ETB-M004,monster,Bonecart Grazer,Marrow Menagerie,medium,100,monsters/ETB-M004_bonecart_grazer.png,19,a squat quadruped with a cart-shaped fused ribcage
 ETB-M005,monster,Fourfold Skulker,Marrow Menagerie,small,64,monsters/ETB-M005_fourfold_skulker.png,16,a low crawling beast with four tiny skull faces along one spine
 ETB-M006,monster,Gallowsback Stalker,Marrow Menagerie,medium,100,monsters/ETB-M006_gallowsback_stalker.png,16,a long-necked carrion beast with hanging vertebrae
-ETB-M007,monster,Tombwing Rook,Marrow Menagerie,medium,100,monsters/ETB-M007_tombwing_rook.png,20,an actual raven-like monster with a bony wing fan and split beak
-ETB-M008,monster,Coffin Crab,Marrow Menagerie,medium,100,monsters/ETB-M008_coffin_crab.png,17,a broad carapaced crawler with a coffin-lid shell and six hooked legs
-ETB-M009,monster,Marrow Snail,Marrow Menagerie,medium,100,monsters/ETB-M009_marrow_snail.png,20,a slug monster carrying a spiral vertebra shell
-ETB-M010,monster,Spine-Burrower,Marrow Menagerie,medium,100,monsters/ETB-M010_spine_burrower.png,19,a segmented pale worm armored in interlocking ribs
-ETB-M011,monster,Gilt Skull Mite,Marrow Menagerie,small,64,monsters/ETB-M011_gilt_skull_mite.png,17,a tiny many-legged creature with a broken brass skull carapace
+ETB-M007,monster,Tombwing Rook,Marrow Menagerie,medium,100,monsters/ETB-M007_tombwing_rook.png,19,an actual raven-like monster with a bony wing fan and split beak
+ETB-M008,monster,Coffin Crab,Marrow Menagerie,medium,100,monsters/ETB-M008_coffin_crab.png,18,a broad carapaced crawler with a coffin-lid shell and six hooked legs
+ETB-M009,monster,Marrow Snail,Marrow Menagerie,medium,100,monsters/ETB-M009_marrow_snail.png,23,a slug monster carrying a spiral vertebra shell
+ETB-M010,monster,Spine-Burrower,Marrow Menagerie,medium,100,monsters/ETB-M010_spine_burrower.png,21,a segmented pale worm armored in interlocking ribs
+ETB-M011,monster,Gilt Skull Mite,Marrow Menagerie,small,64,monsters/ETB-M011_gilt_skull_mite.png,20,a tiny many-legged creature with a broken brass skull carapace
 ETB-M012,monster,Ribcage Behemoth,Marrow Menagerie,brute,132,monsters/ETB-M012_ribcage_behemoth.png,23,a massive hunched quadruped whose ribs form a cage around a violet heart
 ETB-M013,monster,Hollowjaw Drake,Marrow Menagerie,small,64,monsters/ETB-M013_hollowjaw_drake.png,18,a small wingless reptile with an impossibly deep jaw cavity
 ETB-M014,monster,Reliquary Mimic,Marrow Menagerie,medium,100,monsters/ETB-M014_reliquary_mimic.png,22,a predatory boxlike creature with bone teeth and grasping lid limbs
-ETB-M015,monster,Pale Maw Eel,Marrow Menagerie,medium,100,monsters/ETB-M015_pale_maw_eel.png,20,a floating eel-shaped monster with concentric bone teeth
-ETB-M016,monster,Cairn Tunneler,Marrow Menagerie,medium,100,monsters/ETB-M016_cairn_tunneler.png,20,a broad digging beast with stacked grave-stones growing from its shell
+ETB-M015,monster,Pale Maw Eel,Marrow Menagerie,medium,100,monsters/ETB-M015_pale_maw_eel.png,23,a floating eel-shaped monster with concentric bone teeth
+ETB-M016,monster,Cairn Tunneler,Marrow Menagerie,medium,100,monsters/ETB-M016_cairn_tunneler.png,17,a broad digging beast with stacked grave-stones growing from its shell
 ETB-M017,monster,Gravebell Stag,Marrow Menagerie,medium,100,monsters/ETB-M017_gravebell_stag.png,19,an antlered skeletal animal with a bell-shaped ribcage
-ETB-M018,monster,Sicklebone Harrier,Marrow Menagerie,medium,100,monsters/ETB-M018_sicklebone_harrier.png,19,a lean birdlike predator with hooked bone forelimbs
-ETB-M019,monster,Shroud Wolf,Marrow Menagerie,medium,100,monsters/ETB-M019_shroud_wolf.png,22,a four-legged ash-gray beast dragging strips of burial cloth from its back
+ETB-M018,monster,Sicklebone Harrier,Marrow Menagerie,medium,100,monsters/ETB-M018_sicklebone_harrier.png,20,a lean birdlike predator with hooked bone forelimbs
+ETB-M019,monster,Shroud Wolf,Marrow Menagerie,medium,100,monsters/ETB-M019_shroud_wolf.png,23,a four-legged ash-gray beast dragging strips of burial cloth from its back
 ETB-M020,monster,Catacomb Basilisk,Marrow Menagerie,medium,100,monsters/ETB-M020_catacomb_basilisk.png,23,a squat stone-scaled reptile with clustered pale eyes and a blunt tail
 ETB-M021,monster,Thornroot Mauler,Rootwound Brood,medium,100,monsters/ETB-M021_thornroot_mauler.png,16,a low quadruped made of twisted roots and a split maw
-ETB-M022,monster,Violet Sap Leech,Rootwound Brood,medium,100,monsters/ETB-M022_violet_sap_leech.png,23,a swollen limbless crawler with a translucent purple belly
-ETB-M023,monster,Gravebloom Stalker,Rootwound Brood,medium,100,monsters/ETB-M023_gravebloom_stalker.png,21,a thin many-jointed predator with corpse flowers opening along its back
+ETB-M022,monster,Violet Sap Leech,Rootwound Brood,medium,100,monsters/ETB-M022_violet_sap_leech.png,22,a swollen limbless crawler with a translucent purple belly
+ETB-M023,monster,Gravebloom Stalker,Rootwound Brood,medium,100,monsters/ETB-M023_gravebloom_stalker.png,19,a thin many-jointed predator with corpse flowers opening along its back
 ETB-M024,monster,Crownroot Snatcher,Rootwound Brood,medium,100,monsters/ETB-M024_crownroot_snatcher.png,15,a root-bodied creature with a ring of hooked tendrils instead of a head
 ETB-M025,monster,Burial Briarback,Rootwound Brood,medium,100,monsters/ETB-M025_burial_briarback.png,17,a shaggy boarlike beast with thorned roots growing through its hide
 ETB-M026,monster,Rootglass Widow,Rootwound Brood,medium,100,monsters/ETB-M026_rootglass_widow.png,22,a spider monster with violet glass abdomen and stone-cutting legs
-ETB-M027,monster,Chapel Vine Loper,Rootwound Brood,medium,100,monsters/ETB-M027_chapel_vine_loper.png,17,a tall stilt-legged plant beast with a hanging bell-shaped throat
-ETB-M028,monster,Moss-Drinker,Rootwound Brood,brute,132,monsters/ETB-M028_moss_drinker.png,22,a squat toadlike monster with a huge mouth and grave-moss plates
-ETB-M029,monster,Spore Coffin Grub,Rootwound Brood,small,64,monsters/ETB-M029_spore_coffin_grub.png,19,a pale segmented larva wearing a cracked husk shell
-ETB-M030,monster,Bramble Jaw Prowler,Rootwound Brood,medium,100,monsters/ETB-M030_bramble_jaw_prowler.png,22,a long-bodied stalking beast with bramble mandibles
+ETB-M027,monster,Chapel Vine Loper,Rootwound Brood,medium,100,monsters/ETB-M027_chapel_vine_loper.png,19,a tall stilt-legged plant beast with a hanging bell-shaped throat
+ETB-M028,monster,Moss-Drinker,Rootwound Brood,brute,132,monsters/ETB-M028_moss_drinker.png,20,a squat toadlike monster with a huge mouth and grave-moss plates
+ETB-M029,monster,Spore Coffin Grub,Rootwound Brood,small,64,monsters/ETB-M029_spore_coffin_grub.png,21,a pale segmented larva wearing a cracked husk shell
+ETB-M030,monster,Bramble Jaw Prowler,Rootwound Brood,medium,100,monsters/ETB-M030_bramble_jaw_prowler.png,21,a long-bodied stalking beast with bramble mandibles
 ETB-M031,monster,Votive Rootling,Rootwound Brood,small,64,monsters/ETB-M031_votive_rootling.png,16,a small four-armed crawler with a candle-like crown fungus
-ETB-M032,monster,Thorned Ossuary Ram,Rootwound Brood,medium,100,monsters/ETB-M032_thorned_ossuary_ram.png,17,a horned animal monster with ribbed stone armor
-ETB-M033,monster,Violet Mycelium Brute,Rootwound Brood,brute,132,monsters/ETB-M033_violet_mycelium_brute.png,22,a hulking fungal beast with clustered caps and one contained luminous core
-ETB-M034,monster,Gravevine Lurker,Rootwound Brood,medium,100,monsters/ETB-M034_gravevine_lurker.png,15,a flattened ambush creature with root tendrils spread like legs
+ETB-M032,monster,Thorned Ossuary Ram,Rootwound Brood,medium,100,monsters/ETB-M032_thorned_ossuary_ram.png,14,a horned animal monster with ribbed stone armor
+ETB-M033,monster,Violet Mycelium Brute,Rootwound Brood,brute,132,monsters/ETB-M033_violet_mycelium_brute.png,23,a hulking fungal beast with clustered caps and one contained luminous core
+ETB-M034,monster,Gravevine Lurker,Rootwound Brood,medium,100,monsters/ETB-M034_gravevine_lurker.png,21,a flattened ambush creature with root tendrils spread like legs
 ETB-M035,monster,Blackbriar Carrion Kite,Rootwound Brood,medium,100,monsters/ETB-M035_blackbriar_carrion_kite.png,15,a skeletal flying predator with ragged leaf wings
 ETB-M036,monster,Rootbound Husk Beast,Rootwound Brood,medium,100,monsters/ETB-M036_rootbound_husk_beast.png,17,a nonhumanoid quadruped fused with a split tombstone
 ETB-M037,monster,Choked Well Horror,Rootwound Brood,medium,100,monsters/ETB-M037_choked_well_horror.png,19,a many-tentacled creature with a stone-ring throat
-ETB-M038,monster,Needlecap Burrower,Rootwound Brood,medium,100,monsters/ETB-M038_needlecap_burrower.png,20,a compact insectlike monster with a crown of rigid fungal spines
+ETB-M038,monster,Needlecap Burrower,Rootwound Brood,medium,100,monsters/ETB-M038_needlecap_burrower.png,17,a compact insectlike monster with a crown of rigid fungal spines
 ETB-M039,monster,Thorn-Marrow Stag,Rootwound Brood,medium,100,monsters/ETB-M039_thorn_marrow_stag.png,20,a four-legged beast with root antlers and a glowing violet sternum
 ETB-M040,monster,Crypt Orchard Devourer,Rootwound Brood,brute,132,monsters/ETB-M040_crypt_orchard_devourer.png,20,a huge low plant-animal with grasping root mouth and fruitlike eyes
-ETB-M041,monster,Angle-Eater,Breachborn Geometry,medium,100,monsters/ETB-M041_angle_eater.png,19,a hovering asymmetrical mouth with folded stone planes
-ETB-M042,monster,Backwards Hound,Breachborn Geometry,medium,100,monsters/ETB-M042_backwards_hound.png,22,a four-legged predator whose joints bend in alternating impossible directions
-ETB-M043,monster,Inside-Out Stalker,Breachborn Geometry,medium,100,monsters/ETB-M043_inside_out_stalker.png,20,a tall skinless creature with its ribs enclosing a dark void
+ETB-M041,monster,Angle-Eater,Breachborn Geometry,medium,100,monsters/ETB-M041_angle_eater.png,17,a hovering asymmetrical mouth with folded stone planes
+ETB-M042,monster,Backwards Hound,Breachborn Geometry,medium,100,monsters/ETB-M042_backwards_hound.png,20,a four-legged predator whose joints bend in alternating impossible directions
+ETB-M043,monster,Inside-Out Stalker,Breachborn Geometry,medium,100,monsters/ETB-M043_inside_out_stalker.png,19,a tall skinless creature with its ribs enclosing a dark void
 ETB-M044,monster,Fracture Moth,Breachborn Geometry,small,64,monsters/ETB-M044_fracture_moth.png,17,a small winged monster whose paired wings show incompatible patterns
-ETB-M045,monster,Loopjaw Crawler,Breachborn Geometry,small,64,monsters/ETB-M045_loopjaw_crawler.png,22,a crawling ring of teeth with no visible head or tail
-ETB-M046,monster,Split-Shadow Loper,Breachborn Geometry,medium,100,monsters/ETB-M046_split_shadow_loper.png,16,a lean quadruped with a detached-looking second shadow attached at the feet
-ETB-M047,monster,Parallax Devourer,Breachborn Geometry,medium,100,monsters/ETB-M047_parallax_devourer.png,20,a floating many-eyed mass with two misaligned silhouettes
-ETB-M048,monster,Knotted Space Larva,Breachborn Geometry,small,64,monsters/ETB-M048_knotted_space_larva.png,15,a worm folded through its own body in a clean readable loop
-ETB-M049,monster,Wrong-Way Heron,Breachborn Geometry,medium,100,monsters/ETB-M049_wrong_way_heron.png,18,a long-legged predator with a beak opening backward
-ETB-M050,monster,Staircase Carapace,Breachborn Geometry,small,64,monsters/ETB-M050_staircase_carapace.png,14,a low beetle whose shell forms impossible descending steps
-ETB-M051,monster,Violet Foldling,Breachborn Geometry,small,64,monsters/ETB-M051_violet_foldling.png,12,a small angular imp with a faceless folded mask and taloned limbs
-ETB-M052,monster,Unfinished Beast,Breachborn Geometry,medium,100,monsters/ETB-M052_unfinished_beast.png,18,a hunched creature with one side fading into broken tile-like fragments
+ETB-M045,monster,Loopjaw Crawler,Breachborn Geometry,small,64,monsters/ETB-M045_loopjaw_crawler.png,21,a crawling ring of teeth with no visible head or tail
+ETB-M046,monster,Split-Shadow Loper,Breachborn Geometry,medium,100,monsters/ETB-M046_split_shadow_loper.png,20,a lean quadruped with a detached-looking second shadow attached at the feet
+ETB-M047,monster,Parallax Devourer,Breachborn Geometry,medium,100,monsters/ETB-M047_parallax_devourer.png,22,a floating many-eyed mass with two misaligned silhouettes
+ETB-M048,monster,Knotted Space Larva,Breachborn Geometry,small,64,monsters/ETB-M048_knotted_space_larva.png,16,a worm folded through its own body in a clean readable loop
+ETB-M049,monster,Wrong-Way Heron,Breachborn Geometry,medium,100,monsters/ETB-M049_wrong_way_heron.png,19,a long-legged predator with a beak opening backward
+ETB-M050,monster,Staircase Carapace,Breachborn Geometry,small,64,monsters/ETB-M050_staircase_carapace.png,17,a low beetle whose shell forms impossible descending steps
+ETB-M051,monster,Violet Foldling,Breachborn Geometry,small,64,monsters/ETB-M051_violet_foldling.png,16,a small angular imp with a faceless folded mask and taloned limbs
+ETB-M052,monster,Unfinished Beast,Breachborn Geometry,medium,100,monsters/ETB-M052_unfinished_beast.png,17,a hunched creature with one side fading into broken tile-like fragments
 ETB-M053,monster,Mirrorless Gazer,Breachborn Geometry,medium,100,monsters/ETB-M053_mirrorless_gazer.png,22,a bulbous beast with several inward-facing eyes
-ETB-M054,monster,Recursion Spider,Breachborn Geometry,small,64,monsters/ETB-M054_recursion_spider.png,12,a many-legged monster with repeating smaller leg shapes in its abdomen
+ETB-M054,monster,Recursion Spider,Breachborn Geometry,small,64,monsters/ETB-M054_recursion_spider.png,13,a many-legged monster with repeating smaller leg shapes in its abdomen
 ETB-M055,monster,Paradox Elk,Breachborn Geometry,medium,100,monsters/ETB-M055_paradox_elk.png,19,a four-legged antlered monster whose antlers loop through its own silhouette
 ETB-M056,monster,Crooked Maw Eater,Breachborn Geometry,medium,100,monsters/ETB-M056_crooked_maw_eater.png,20,a stocky beast with a mouth displaced to one shoulder
 ETB-M057,monster,Distance Leech,Breachborn Geometry,medium,100,monsters/ETB-M057_distance_leech.png,19,a long floating ribbon-bodied monster with separated head and tail joined by violet seams
 ETB-M058,monster,False-Horizon Wyrm,Breachborn Geometry,medium,100,monsters/ETB-M058_false_horizon_wyrm.png,22,a broad low serpent whose body bends at impossible 90-degree turns
-ETB-M059,monster,Negative-Space Jackal,Breachborn Geometry,medium,100,monsters/ETB-M059_negative_space_jackal.png,20,a dark four-legged creature defined by a sharp hollow chest cavity
+ETB-M059,monster,Negative-Space Jackal,Breachborn Geometry,medium,100,monsters/ETB-M059_negative_space_jackal.png,17,a dark four-legged creature defined by a sharp hollow chest cavity
 ETB-M060,monster,Unmoored Crown Beast,Breachborn Geometry,small,64,monsters/ETB-M060_unmoored_crown_beast.png,14,a crawling creature with a small levitating crown-shaped bone above its back
-ETB-M061,monster,Mortuary Skitterer,Crypt Fauna,medium,100,monsters/ETB-M061_mortuary_skitterer.png,23,a six-legged stone insect with a narrow violet abdomen
-ETB-M062,monster,Graveglass Scorpion,Crypt Fauna,medium,100,monsters/ETB-M062_graveglass_scorpion.png,23,a heavy scorpion with translucent indigo tail and chipped pincers
+ETB-M061,monster,Mortuary Skitterer,Crypt Fauna,medium,100,monsters/ETB-M061_mortuary_skitterer.png,24,a six-legged stone insect with a narrow violet abdomen
+ETB-M062,monster,Graveglass Scorpion,Crypt Fauna,medium,100,monsters/ETB-M062_graveglass_scorpion.png,22,a heavy scorpion with translucent indigo tail and chipped pincers
 ETB-M063,monster,Bell-Tongue Toad,Crypt Fauna,medium,100,monsters/ETB-M063_bell_tongue_toad.png,24,a squat amphibian with a pendulous bronze throat sac
 ETB-M064,monster,Blind Crypt Mole,Crypt Fauna,brute,132,monsters/ETB-M064_blind_crypt_mole.png,20,a shovel-faced burrower with huge foreclaws and sealed eyes
-ETB-M065,monster,Charnel Bat,Crypt Fauna,small,64,monsters/ETB-M065_charnel_bat.png,15,a small cave predator with folded bone-finger wings
-ETB-M066,monster,Plague Choir Cicada,Crypt Fauna,small,64,monsters/ETB-M066_plague_choir_cicada.png,16,a broad insect with ribbed sound plates and a split violet glow
-ETB-M067,monster,Sepulcher Centipede,Crypt Fauna,medium,100,monsters/ETB-M067_sepulcher_centipede.png,21,a long armored crawler with alternating bone and iron plates
+ETB-M065,monster,Charnel Bat,Crypt Fauna,small,64,monsters/ETB-M065_charnel_bat.png,14,a small cave predator with folded bone-finger wings
+ETB-M066,monster,Plague Choir Cicada,Crypt Fauna,small,64,monsters/ETB-M066_plague_choir_cicada.png,18,a broad insect with ribbed sound plates and a split violet glow
+ETB-M067,monster,Sepulcher Centipede,Crypt Fauna,medium,100,monsters/ETB-M067_sepulcher_centipede.png,19,a long armored crawler with alternating bone and iron plates
 ETB-M068,monster,Coffin-Lid Turtle,Crypt Fauna,medium,100,monsters/ETB-M068_coffin_lid_turtle.png,17,a low turtle monster with a cracked wooden lid carapace
 ETB-M069,monster,Whispering Cave Ape,Crypt Fauna,medium,100,monsters/ETB-M069_whispering_cave_ape.png,18,a nonhuman crouched cave beast with elongated forearms and stone teeth
-ETB-M070,monster,Gravepool Lamprey,Crypt Fauna,medium,100,monsters/ETB-M070_gravepool_lamprey.png,22,a limbless suction-mouthed monster with wet slate hide
-ETB-M071,monster,Chapel Mantis,Crypt Fauna,medium,100,monsters/ETB-M071_chapel_mantis.png,20,a folded predatory insect with blade-like forelimbs shaped like stone arches
+ETB-M070,monster,Gravepool Lamprey,Crypt Fauna,medium,100,monsters/ETB-M070_gravepool_lamprey.png,23,a limbless suction-mouthed monster with wet slate hide
+ETB-M071,monster,Chapel Mantis,Crypt Fauna,medium,100,monsters/ETB-M071_chapel_mantis.png,21,a folded predatory insect with blade-like forelimbs shaped like stone arches
 ETB-M072,monster,Burial Hare,Crypt Fauna,medium,100,monsters/ETB-M072_burial_hare.png,17,a compact leaping beast with long ears and a split skull mask
-ETB-M073,monster,Ossuary Vulture,Crypt Fauna,medium,100,monsters/ETB-M073_ossuary_vulture.png,21,a heavy carrion bird monster with a hooked beak and bare bone crown
+ETB-M073,monster,Ossuary Vulture,Crypt Fauna,medium,100,monsters/ETB-M073_ossuary_vulture.png,22,a heavy carrion bird monster with a hooked beak and bare bone crown
 ETB-M074,monster,Riftjaw Salamander,Crypt Fauna,medium,100,monsters/ETB-M074_riftjaw_salamander.png,23,a squat amphibian with a luminous violet throat and stone frills
-ETB-M075,monster,Tunnelback Boar,Crypt Fauna,medium,100,monsters/ETB-M075_tunnelback_boar.png,19,a broad low beast with shovel snout and layered grave-dirt plates
+ETB-M075,monster,Tunnelback Boar,Crypt Fauna,medium,100,monsters/ETB-M075_tunnelback_boar.png,20,a broad low beast with shovel snout and layered grave-dirt plates
 ETB-M076,monster,Cryptwing Newt,Crypt Fauna,small,64,monsters/ETB-M076_cryptwing_newt.png,18,a small four-legged lizard with broad membrane fins
 ETB-M077,monster,Vault Rammer,Crypt Fauna,medium,100,monsters/ETB-M077_vault_rammer.png,20,a short muscular quadruped with a blocky stone skull
 ETB-M078,monster,Shroud-Maw Ferret,Crypt Fauna,medium,100,monsters/ETB-M078_shroud_maw_ferret.png,22,a long low mammal with a burial cloth ruff and needle teeth
-ETB-M079,monster,Bone-Shell Pangolin,Crypt Fauna,small,64,monsters/ETB-M079_bone_shell_pangolin.png,18,a rolling beast covered in overlapping grave-bone scales
-ETB-M080,monster,Cathedral Cave Lion,Crypt Fauna,medium,100,monsters/ETB-M080_cathedral_cave_lion.png,22,a stalking feline monster with a mane of broken arch stones
-ETB-M081,monster,Quietus Hound,Echo and Veil Beasts,medium,100,monsters/ETB-M081_quietus_hound.png,17,a lean ash-colored beast with a hollow violet throat
-ETB-M082,monster,Wailing Maw,Echo and Veil Beasts,small,64,monsters/ETB-M082_wailing_maw.png,14,a floating oval monster lined with inward-facing teeth
-ETB-M083,monster,Bellwether Shade,Echo and Veil Beasts,medium,100,monsters/ETB-M083_bellwether_shade.png,19,a four-legged translucent animal with a bronze skull bell inside its chest
-ETB-M084,monster,Shiverwing,Echo and Veil Beasts,small,64,monsters/ETB-M084_shiverwing.png,13,a small batlike creature with ragged indigo membranes
-ETB-M085,monster,Veil-Torn Elk,Echo and Veil Beasts,medium,100,monsters/ETB-M085_veil_torn_elk.png,15,a skeletal antlered beast split by a narrow violet seam
+ETB-M079,monster,Bone-Shell Pangolin,Crypt Fauna,small,64,monsters/ETB-M079_bone_shell_pangolin.png,17,a rolling beast covered in overlapping grave-bone scales
+ETB-M080,monster,Cathedral Cave Lion,Crypt Fauna,medium,100,monsters/ETB-M080_cathedral_cave_lion.png,20,a stalking feline monster with a mane of broken arch stones
+ETB-M081,monster,Quietus Hound,Echo and Veil Beasts,medium,100,monsters/ETB-M081_quietus_hound.png,14,a lean ash-colored beast with a hollow violet throat
+ETB-M082,monster,Wailing Maw,Echo and Veil Beasts,small,64,monsters/ETB-M082_wailing_maw.png,15,a floating oval monster lined with inward-facing teeth
+ETB-M083,monster,Bellwether Shade,Echo and Veil Beasts,medium,100,monsters/ETB-M083_bellwether_shade.png,18,a four-legged translucent animal with a bronze skull bell inside its chest
+ETB-M084,monster,Shiverwing,Echo and Veil Beasts,small,64,monsters/ETB-M084_shiverwing.png,14,a small batlike creature with ragged indigo membranes
+ETB-M085,monster,Veil-Torn Elk,Echo and Veil Beasts,medium,100,monsters/ETB-M085_veil_torn_elk.png,13,a skeletal antlered beast split by a narrow violet seam
 ETB-M086,monster,Chorus Leech,Echo and Veil Beasts,small,64,monsters/ETB-M086_chorus_leech.png,12,a hovering segmented creature with several small mouth slits
-ETB-M087,monster,Gravewind Kite,Echo and Veil Beasts,small,64,monsters/ETB-M087_gravewind_kite.png,11,a long-necked flying predator with trailing shroud fins
-ETB-M088,monster,Unheard Stalker,Echo and Veil Beasts,medium,100,monsters/ETB-M088_unheard_stalker.png,16,a low crouching creature with sealed earless head and long forelimbs
-ETB-M089,monster,Crypt Lantern Ray,Echo and Veil Beasts,small,64,monsters/ETB-M089_crypt_lantern_ray.png,13,a broad floating ray with a single contained purple core and trailing tendrils
-ETB-M090,monster,Echo-Split Fox,Echo and Veil Beasts,small,64,monsters/ETB-M090_echo_split_fox.png,13,a small four-legged predator with two offset tails
+ETB-M087,monster,Gravewind Kite,Echo and Veil Beasts,small,64,monsters/ETB-M087_gravewind_kite.png,12,a long-necked flying predator with trailing shroud fins
+ETB-M088,monster,Unheard Stalker,Echo and Veil Beasts,medium,100,monsters/ETB-M088_unheard_stalker.png,14,a low crouching creature with sealed earless head and long forelimbs
+ETB-M089,monster,Crypt Lantern Ray,Echo and Veil Beasts,small,64,monsters/ETB-M089_crypt_lantern_ray.png,12,a broad floating ray with a single contained purple core and trailing tendrils
+ETB-M090,monster,Echo-Split Fox,Echo and Veil Beasts,small,64,monsters/ETB-M090_echo_split_fox.png,14,a small four-legged predator with two offset tails
 ETB-M091,monster,Dirge Cicada,Echo and Veil Beasts,small,64,monsters/ETB-M091_dirge_cicada.png,14,a plated insect with a hollow vibrating abdomen
 ETB-M092,monster,Graveyard Moth,Echo and Veil Beasts,medium,100,monsters/ETB-M092_graveyard_moth.png,15,a heavy moth with skull-like wing patches and dark plum edges
-ETB-M093,monster,Moonless Newt,Echo and Veil Beasts,medium,100,monsters/ETB-M093_moonless_newt.png,19,a pale amphibian with a black throat void and violet spots
+ETB-M093,monster,Moonless Newt,Echo and Veil Beasts,medium,100,monsters/ETB-M093_moonless_newt.png,21,a pale amphibian with a black throat void and violet spots
 ETB-M094,monster,Vigil Crowler,Echo and Veil Beasts,medium,100,monsters/ETB-M094_vigil_crowler.png,17,a many-legged birdlike beast with folded wings and a narrow beak
-ETB-M095,monster,Shroudbound Staglet,Echo and Veil Beasts,small,64,monsters/ETB-M095_shroudbound_staglet.png,11,a compact young antlered creature wrapped in torn burial cloth
+ETB-M095,monster,Shroudbound Staglet,Echo and Veil Beasts,small,64,monsters/ETB-M095_shroudbound_staglet.png,12,a compact young antlered creature wrapped in torn burial cloth
 ETB-M096,monster,Rift-Whistle Snake,Echo and Veil Beasts,medium,100,monsters/ETB-M096_rift_whistle_snake.png,18,a coiled serpent with trumpet-shaped neck plates
-ETB-M097,monster,Mourning Tapir,Echo and Veil Beasts,medium,100,monsters/ETB-M097_mourning_tapir.png,15,a squat beast with a long trunk ending in a tooth-ring mouth
+ETB-M097,monster,Mourning Tapir,Echo and Veil Beasts,medium,100,monsters/ETB-M097_mourning_tapir.png,16,a squat beast with a long trunk ending in a tooth-ring mouth
 ETB-M098,monster,Silent Choir Toad,Echo and Veil Beasts,small,64,monsters/ETB-M098_silent_choir_toad.png,14,a broad toad with several tiny mouths along its underside
 ETB-M099,monster,Nightglass Gull,Echo and Veil Beasts,medium,100,monsters/ETB-M099_nightglass_gull.png,19,a winged scavenger with chipped mirror-like feathers
 ETB-M100,monster,Afterimage Loper,Echo and Veil Beasts,medium,100,monsters/ETB-M100_afterimage_loper.png,16,a four-legged creature whose pale back plates repeat in an offset sequence
@@ -103,124 +103,124 @@ ETB-M101,monster,Rotfen Bellied,Bile and Fungal Horrors,medium,100,monsters/ETB-
 ETB-M102,monster,Spore Crown Devourer,Bile and Fungal Horrors,medium,100,monsters/ETB-M102_spore_crown_devourer.png,23,a squat beast with clustered violet caps around its mouth
 ETB-M103,monster,Bilegut Crawler,Bile and Fungal Horrors,small,64,monsters/ETB-M103_bilegut_crawler.png,19,a thick segmented larva with sickly green pockets beneath slate plates
 ETB-M104,monster,Grave Mold Ram,Bile and Fungal Horrors,medium,100,monsters/ETB-M104_grave_mold_ram.png,20,a blunt horned beast carrying pale fungus across its back
-ETB-M105,monster,Crypt Puffball,Bile and Fungal Horrors,small,64,monsters/ETB-M105_crypt_puffball.png,19,a round rolling monster split by a toothed vertical seam
-ETB-M106,monster,Festerbloom Spider,Bile and Fungal Horrors,medium,100,monsters/ETB-M106_festerbloom_spider.png,21,a wide eight-legged predator with a sealed flower abdomen
-ETB-M107,monster,Rot-Tongue Lizard,Bile and Fungal Horrors,small,64,monsters/ETB-M107_rot_tongue_lizard.png,21,a small stone-scaled reptile with a long forked violet tongue
-ETB-M108,monster,Charnel Puffin,Bile and Fungal Horrors,medium,100,monsters/ETB-M108_charnel_puffin.png,22,a heavy flightless bird with a purple crop and bone beak
+ETB-M105,monster,Crypt Puffball,Bile and Fungal Horrors,small,64,monsters/ETB-M105_crypt_puffball.png,18,a round rolling monster split by a toothed vertical seam
+ETB-M106,monster,Festerbloom Spider,Bile and Fungal Horrors,medium,100,monsters/ETB-M106_festerbloom_spider.png,23,a wide eight-legged predator with a sealed flower abdomen
+ETB-M107,monster,Rot-Tongue Lizard,Bile and Fungal Horrors,small,64,monsters/ETB-M107_rot_tongue_lizard.png,22,a small stone-scaled reptile with a long forked violet tongue
+ETB-M108,monster,Charnel Puffin,Bile and Fungal Horrors,medium,100,monsters/ETB-M108_charnel_puffin.png,21,a heavy flightless bird with a purple crop and bone beak
 ETB-M109,monster,Spore Lantern Bug,Bile and Fungal Horrors,small,64,monsters/ETB-M109_spore_lantern_bug.png,21,a squat beetle with a contained fungal lamp on its back
 ETB-M110,monster,Fungus-Eaten Hound,Bile and Fungal Horrors,medium,100,monsters/ETB-M110_fungus_eaten_hound.png,19,a crouched canine with a cap fungus replacing its shoulder
-ETB-M111,monster,Blistercap Hulk,Bile and Fungal Horrors,brute,132,monsters/ETB-M111_blistercap_hulk.png,22,a large low brute with broken caps and an exposed purple inner mass
+ETB-M111,monster,Blistercap Hulk,Bile and Fungal Horrors,brute,132,monsters/ETB-M111_blistercap_hulk.png,23,a large low brute with broken caps and an exposed purple inner mass
 ETB-M112,monster,Molded Bone Golembeast,Bile and Fungal Horrors,medium,100,monsters/ETB-M112_molded_bone_golembeast.png,17,a quadruped assembled by fungus through a rib cage
-ETB-M113,monster,Bile-Spewing Slug,Bile and Fungal Horrors,medium,100,monsters/ETB-M113_bile_spewing_slug.png,20,a thick limbless slug with a dark green mouth funnel
+ETB-M113,monster,Bile-Spewing Slug,Bile and Fungal Horrors,medium,100,monsters/ETB-M113_bile_spewing_slug.png,19,a thick limbless slug with a dark green mouth funnel
 ETB-M114,monster,Sepulcher Morel Stalker,Bile and Fungal Horrors,medium,100,monsters/ETB-M114_sepulcher_morel_stalker.png,14,a long-limbed insect beast with a folded mushroom head
 ETB-M115,monster,Violet Shelfback,Bile and Fungal Horrors,medium,100,monsters/ETB-M115_violet_shelfback.png,22,a broad four-legged creature with tiered fungi growing along its shell
 ETB-M116,monster,Gravepool Skater,Bile and Fungal Horrors,medium,100,monsters/ETB-M116_gravepool_skater.png,19,a flat many-legged water monster with a ring mouth
-ETB-M117,monster,Corpse Blossom Grazer,Bile and Fungal Horrors,small,64,monsters/ETB-M117_corpse_blossom_grazer.png,17,a small horned beast nibbling from a flower-shaped maw
-ETB-M118,monster,Rotroot Croaker,Bile and Fungal Horrors,medium,100,monsters/ETB-M118_rotroot_croaker.png,22,a squat amphibian with root toes and a purple throat pouch
-ETB-M119,monster,Black Spore Hatcher,Bile and Fungal Horrors,small,64,monsters/ETB-M119_black_spore_hatcher.png,15,a crouched insect carrying a cracked pod full of tiny eyes
-ETB-M120,monster,Fungal Ossuary Tyrant,Bile and Fungal Horrors,brute,132,monsters/ETB-M120_fungal_ossuary_tyrant.png,23,a broad brute with rib arches and shelf fungi framing its face
-ETB-M121,monster,Gravestone Grazer,Living Cryptstone,medium,100,monsters/ETB-M121_gravestone_grazer.png,24,a heavy low beast with a slab shell and blunt stone horns
+ETB-M117,monster,Corpse Blossom Grazer,Bile and Fungal Horrors,small,64,monsters/ETB-M117_corpse_blossom_grazer.png,15,a small horned beast nibbling from a flower-shaped maw
+ETB-M118,monster,Rotroot Croaker,Bile and Fungal Horrors,medium,100,monsters/ETB-M118_rotroot_croaker.png,21,a squat amphibian with root toes and a purple throat pouch
+ETB-M119,monster,Black Spore Hatcher,Bile and Fungal Horrors,small,64,monsters/ETB-M119_black_spore_hatcher.png,17,a crouched insect carrying a cracked pod full of tiny eyes
+ETB-M120,monster,Fungal Ossuary Tyrant,Bile and Fungal Horrors,brute,132,monsters/ETB-M120_fungal_ossuary_tyrant.png,22,a broad brute with rib arches and shelf fungi framing its face
+ETB-M121,monster,Gravestone Grazer,Living Cryptstone,medium,100,monsters/ETB-M121_gravestone_grazer.png,22,a heavy low beast with a slab shell and blunt stone horns
 ETB-M122,monster,Archback Crawler,Living Cryptstone,medium,100,monsters/ETB-M122_archback_crawler.png,23,a six-legged creature with a broken stone arch on its back
 ETB-M123,monster,Mortar Maw,Living Cryptstone,medium,100,monsters/ETB-M123_mortar_maw.png,24,a squat blocky monster with a deep purple mouth in its chest
-ETB-M124,monster,Rift-Quartz Basilisk,Living Cryptstone,medium,100,monsters/ETB-M124_rift_quartz_basilisk.png,24,a lizard with slate scales and contained violet crystal growth
-ETB-M125,monster,Crypt Bell Golembeast,Living Cryptstone,medium,100,monsters/ETB-M125_crypt_bell_golembeast.png,22,a quadruped with a bronze bell fused into its shoulder
+ETB-M124,monster,Rift-Quartz Basilisk,Living Cryptstone,medium,100,monsters/ETB-M124_rift_quartz_basilisk.png,23,a lizard with slate scales and contained violet crystal growth
+ETB-M125,monster,Crypt Bell Golembeast,Living Cryptstone,medium,100,monsters/ETB-M125_crypt_bell_golembeast.png,21,a quadruped with a bronze bell fused into its shoulder
 ETB-M126,monster,Cathedral Pillar Wurm,Living Cryptstone,medium,100,monsters/ETB-M126_cathedral_pillar_wurm.png,22,a thick segmented burrower with column-like stone plates
-ETB-M127,monster,Graveyard Gargoyle Beast,Living Cryptstone,medium,100,monsters/ETB-M127_graveyard_gargoyle_beast.png,20,a crouching wingless gargoyle animal with folded stone frills
-ETB-M128,monster,Chain-Eater,Living Cryptstone,medium,100,monsters/ETB-M128_chain_eater.png,20,a long low iron-plated beast with chain links embedded as armor
-ETB-M129,monster,Sepulcher Tortoise,Living Cryptstone,medium,100,monsters/ETB-M129_sepulcher_tortoise.png,21,a heavy turtle with a carved coffin-stone carapace
-ETB-M130,monster,Marble Maw Spider,Living Cryptstone,medium,100,monsters/ETB-M130_marble_maw_spider.png,20,a wide pale stone spider with chipped legs and black-violet mouth
-ETB-M131,monster,Obsidian Root Stag,Living Cryptstone,medium,100,monsters/ETB-M131_obsidian_root_stag.png,16,a four-legged horned creature with black stone bark
-ETB-M132,monster,Anvilback Devourer,Living Cryptstone,small,64,monsters/ETB-M132_anvilback_devourer.png,17,a squat beetle brute with a riveted iron shell
+ETB-M127,monster,Graveyard Gargoyle Beast,Living Cryptstone,medium,100,monsters/ETB-M127_graveyard_gargoyle_beast.png,22,a crouching wingless gargoyle animal with folded stone frills
+ETB-M128,monster,Chain-Eater,Living Cryptstone,medium,100,monsters/ETB-M128_chain_eater.png,24,a long low iron-plated beast with chain links embedded as armor
+ETB-M129,monster,Sepulcher Tortoise,Living Cryptstone,medium,100,monsters/ETB-M129_sepulcher_tortoise.png,23,a heavy turtle with a carved coffin-stone carapace
+ETB-M130,monster,Marble Maw Spider,Living Cryptstone,medium,100,monsters/ETB-M130_marble_maw_spider.png,22,a wide pale stone spider with chipped legs and black-violet mouth
+ETB-M131,monster,Obsidian Root Stag,Living Cryptstone,medium,100,monsters/ETB-M131_obsidian_root_stag.png,18,a four-legged horned creature with black stone bark
+ETB-M132,monster,Anvilback Devourer,Living Cryptstone,small,64,monsters/ETB-M132_anvilback_devourer.png,19,a squat beetle brute with a riveted iron shell
 ETB-M133,monster,Broken Idol Hound,Living Cryptstone,medium,100,monsters/ETB-M133_broken_idol_hound.png,23,a low stone canine whose head is assembled from mismatched sculpted pieces
 ETB-M134,monster,Wall-Niche Lurker,Living Cryptstone,medium,100,monsters/ETB-M134_wall_niche_lurker.png,23,a flattened ambush beast with a rectangular ribbed shell
-ETB-M135,monster,Rubble-Crowned Ram,Living Cryptstone,medium,100,monsters/ETB-M135_rubble_crowned_ram.png,21,a broad horned beast with a crown of broken pavers
-ETB-M136,monster,Vaultbreaker Crab,Living Cryptstone,medium,100,monsters/ETB-M136_vaultbreaker_crab.png,23,a thick-shelled crawler with asymmetrical stone pincers
-ETB-M137,monster,Graveglass Skimmer,Living Cryptstone,medium,100,monsters/ETB-M137_graveglass_skimmer.png,24,a low six-legged crystal insect with violet windows in its carapace
-ETB-M138,monster,Ironroot Burrower,Living Cryptstone,small,64,monsters/ETB-M138_ironroot_burrower.png,19,a tunneling worm with iron bands and rootlike mouthfeelers
+ETB-M135,monster,Rubble-Crowned Ram,Living Cryptstone,medium,100,monsters/ETB-M135_rubble_crowned_ram.png,22,a broad horned beast with a crown of broken pavers
+ETB-M136,monster,Vaultbreaker Crab,Living Cryptstone,medium,100,monsters/ETB-M136_vaultbreaker_crab.png,22,a thick-shelled crawler with asymmetrical stone pincers
+ETB-M137,monster,Graveglass Skimmer,Living Cryptstone,medium,100,monsters/ETB-M137_graveglass_skimmer.png,23,a low six-legged crystal insect with violet windows in its carapace
+ETB-M138,monster,Ironroot Burrower,Living Cryptstone,small,64,monsters/ETB-M138_ironroot_burrower.png,18,a tunneling worm with iron bands and rootlike mouthfeelers
 ETB-M139,monster,Sepulcher Chimera,Living Cryptstone,medium,100,monsters/ETB-M139_sepulcher_chimera.png,22,a four-legged stone beast with mismatched animal skull profiles
 ETB-M140,monster,Crypt Door Mimic,Living Cryptstone,medium,100,monsters/ETB-M140_crypt_door_mimic.png,21,a hunched creature whose hinged stone plates form a toothed maw
-ETB-M141,monster,Abyssal Rosary Worm,Deep Crawlers and Brood,medium,100,monsters/ETB-M141_abyssal_rosary_worm.png,21,a long segmented worm with beadlike bone rings and purple mouth
+ETB-M141,monster,Abyssal Rosary Worm,Deep Crawlers and Brood,medium,100,monsters/ETB-M141_abyssal_rosary_worm.png,20,a long segmented worm with beadlike bone rings and purple mouth
 ETB-M142,monster,Five-Knuckle Spider,Deep Crawlers and Brood,medium,100,monsters/ETB-M142_five_knuckle_spider.png,22,a compact crawler with five asymmetrical hooked legs
 ETB-M143,monster,Rift Scuttler,Deep Crawlers and Brood,small,64,monsters/ETB-M143_rift_scuttler.png,19,a low insect with an offset second abdomen
-ETB-M144,monster,Grave Needle Centipede,Deep Crawlers and Brood,medium,100,monsters/ETB-M144_grave_needle_centipede.png,22,a thin plated centipede with violet needle legs
-ETB-M145,monster,Crypt-Eye Tick,Deep Crawlers and Brood,small,64,monsters/ETB-M145_crypt_eye_tick.png,22,a tiny broad mite with a clustered eye plate and four grasping limbs
-ETB-M146,monster,Catacomb Earwig,Deep Crawlers and Brood,medium,100,monsters/ETB-M146_catacomb_earwig.png,18,an armored crawler with oversized pincers and broken tail fork
-ETB-M147,monster,Lantern-Jawed Beetle,Deep Crawlers and Brood,small,64,monsters/ETB-M147_lantern_jawed_beetle.png,20,a stout beetle with a contained purple mouth light
-ETB-M148,monster,Votive Grub,Deep Crawlers and Brood,small,64,monsters/ETB-M148_votive_grub.png,17,a pale larva with candle-wax ridges and a snapping jaw
-ETB-M149,monster,Blind Bell Spider,Deep Crawlers and Brood,medium,100,monsters/ETB-M149_blind_bell_spider.png,17,a long-legged spider with a bell-shaped abdomen and dark eye pits
-ETB-M150,monster,Breachglass Scorpionling,Deep Crawlers and Brood,small,64,monsters/ETB-M150_breachglass_scorpionling.png,18,a small scorpion with an angular translucent tail
-ETB-M151,monster,Grave Silk Spinner,Deep Crawlers and Brood,medium,100,monsters/ETB-M151_grave_silk_spinner.png,21,a squat spider with folded cloth-like spinnerets
-ETB-M152,monster,Marrow Tick-Hound,Deep Crawlers and Brood,small,64,monsters/ETB-M152_marrow_tick_hound.png,19,a low six-legged predator with a tick-like skull
-ETB-M153,monster,Shroudwing Crawler,Deep Crawlers and Brood,small,64,monsters/ETB-M153_shroudwing_crawler.png,13,a crawling insect with folded shroud membranes along its sides
-ETB-M154,monster,Vault Ceiling Leech,Deep Crawlers and Brood,small,64,monsters/ETB-M154_vault_ceiling_leech.png,17,a limbless looped parasite with a stone sucker mouth
-ETB-M155,monster,Bone Crown Wasp,Deep Crawlers and Brood,medium,100,monsters/ETB-M155_bone_crown_wasp.png,22,a narrow-winged predator with a ribbed abdomen and hornlike face
+ETB-M144,monster,Grave Needle Centipede,Deep Crawlers and Brood,medium,100,monsters/ETB-M144_grave_needle_centipede.png,21,a thin plated centipede with violet needle legs
+ETB-M145,monster,Crypt-Eye Tick,Deep Crawlers and Brood,small,64,monsters/ETB-M145_crypt_eye_tick.png,21,a tiny broad mite with a clustered eye plate and four grasping limbs
+ETB-M146,monster,Catacomb Earwig,Deep Crawlers and Brood,medium,100,monsters/ETB-M146_catacomb_earwig.png,19,an armored crawler with oversized pincers and broken tail fork
+ETB-M147,monster,Lantern-Jawed Beetle,Deep Crawlers and Brood,small,64,monsters/ETB-M147_lantern_jawed_beetle.png,23,a stout beetle with a contained purple mouth light
+ETB-M148,monster,Votive Grub,Deep Crawlers and Brood,small,64,monsters/ETB-M148_votive_grub.png,21,a pale larva with candle-wax ridges and a snapping jaw
+ETB-M149,monster,Blind Bell Spider,Deep Crawlers and Brood,medium,100,monsters/ETB-M149_blind_bell_spider.png,18,a long-legged spider with a bell-shaped abdomen and dark eye pits
+ETB-M150,monster,Breachglass Scorpionling,Deep Crawlers and Brood,small,64,monsters/ETB-M150_breachglass_scorpionling.png,21,a small scorpion with an angular translucent tail
+ETB-M151,monster,Grave Silk Spinner,Deep Crawlers and Brood,medium,100,monsters/ETB-M151_grave_silk_spinner.png,22,a squat spider with folded cloth-like spinnerets
+ETB-M152,monster,Marrow Tick-Hound,Deep Crawlers and Brood,small,64,monsters/ETB-M152_marrow_tick_hound.png,23,a low six-legged predator with a tick-like skull
+ETB-M153,monster,Shroudwing Crawler,Deep Crawlers and Brood,small,64,monsters/ETB-M153_shroudwing_crawler.png,16,a crawling insect with folded shroud membranes along its sides
+ETB-M154,monster,Vault Ceiling Leech,Deep Crawlers and Brood,small,64,monsters/ETB-M154_vault_ceiling_leech.png,18,a limbless looped parasite with a stone sucker mouth
+ETB-M155,monster,Bone Crown Wasp,Deep Crawlers and Brood,medium,100,monsters/ETB-M155_bone_crown_wasp.png,23,a narrow-winged predator with a ribbed abdomen and hornlike face
 ETB-M156,monster,Fissure Crab,Deep Crawlers and Brood,medium,100,monsters/ETB-M156_fissure_crab.png,23,a compact crab with a luminous violet crack between shell halves
 ETB-M157,monster,Crypt Millipede,Deep Crawlers and Brood,medium,100,monsters/ETB-M157_crypt_millipede.png,20,a wide many-segmented roller with a dark underside full of feet
 ETB-M158,monster,Carrion Needlefly,Deep Crawlers and Brood,medium,100,monsters/ETB-M158_carrion_needlefly.png,22,a hovering long-bodied insect with needle beak and translucent wings
-ETB-M159,monster,Burial Husk Mantis,Deep Crawlers and Brood,medium,100,monsters/ETB-M159_burial_husk_mantis.png,19,a folded ambush insect with a papery shroud-like shell
+ETB-M159,monster,Burial Husk Mantis,Deep Crawlers and Brood,medium,100,monsters/ETB-M159_burial_husk_mantis.png,18,a folded ambush insect with a papery shroud-like shell
 ETB-M160,monster,Ossuary Broodmother,Deep Crawlers and Brood,brute,132,monsters/ETB-M160_ossuary_broodmother.png,22,a large low spider carrying a clustered nest of bone eggs
-ETB-M161,monster,Split Coffin Devourer,Coffinborn Amalgams,medium,100,monsters/ETB-M161_split_coffin_devourer.png,20,a low beast that opens its back like a jawed coffin
-ETB-M162,monster,Grave Stitcher,Coffinborn Amalgams,small,64,monsters/ETB-M162_grave_stitcher.png,20,a crawling mass of fused rib cages with six limbs
-ETB-M163,monster,Charnel Pile Walker,Coffinborn Amalgams,medium,100,monsters/ETB-M163_charnel_pile_walker.png,22,a squat creature carrying several skull faces on a mound body
+ETB-M161,monster,Split Coffin Devourer,Coffinborn Amalgams,medium,100,monsters/ETB-M161_split_coffin_devourer.png,21,a low beast that opens its back like a jawed coffin
+ETB-M162,monster,Grave Stitcher,Coffinborn Amalgams,small,64,monsters/ETB-M162_grave_stitcher.png,18,a crawling mass of fused rib cages with six limbs
+ETB-M163,monster,Charnel Pile Walker,Coffinborn Amalgams,medium,100,monsters/ETB-M163_charnel_pile_walker.png,21,a squat creature carrying several skull faces on a mound body
 ETB-M164,monster,Burial Bell Hulker,Coffinborn Amalgams,brute,132,monsters/ETB-M164_burial_bell_hulker.png,23,a broad four-legged beast with a bell fused to its spine
 ETB-M165,monster,Bone-Draped Maw,Coffinborn Amalgams,brute,132,monsters/ETB-M165_bone_draped_maw.png,23,a headless low brute with a vertical tooth-filled chest opening
-ETB-M166,monster,Sepulcher Handbeast,Coffinborn Amalgams,small,64,monsters/ETB-M166_sepulcher_handbeast.png,13,a crawling monster made of joined oversized hands and bone plates
+ETB-M166,monster,Sepulcher Handbeast,Coffinborn Amalgams,small,64,monsters/ETB-M166_sepulcher_handbeast.png,16,a crawling monster made of joined oversized hands and bone plates
 ETB-M167,monster,Waxen Corpse Grub,Coffinborn Amalgams,small,64,monsters/ETB-M167_waxen_corpse_grub.png,18,a pale swollen larva with candle-wax folds
-ETB-M168,monster,Ribbed Coffin Roamer,Coffinborn Amalgams,medium,100,monsters/ETB-M168_ribbed_coffin_roamer.png,18,a slow six-legged creature whose torso is a moving sarcophagus
-ETB-M169,monster,Marrow Ladder Horror,Coffinborn Amalgams,medium,100,monsters/ETB-M169_marrow_ladder_horror.png,18,a long bent crawler made from vertebra segments and hooked limbs
+ETB-M168,monster,Ribbed Coffin Roamer,Coffinborn Amalgams,medium,100,monsters/ETB-M168_ribbed_coffin_roamer.png,20,a slow six-legged creature whose torso is a moving sarcophagus
+ETB-M169,monster,Marrow Ladder Horror,Coffinborn Amalgams,medium,100,monsters/ETB-M169_marrow_ladder_horror.png,20,a long bent crawler made from vertebra segments and hooked limbs
 ETB-M170,monster,Gravegut Collector,Coffinborn Amalgams,medium,100,monsters/ETB-M170_gravegut_collector.png,22,a hunched nonhuman beast with a transparent violet belly cavity
 ETB-M171,monster,Chapel-Beast of Nails,Coffinborn Amalgams,medium,100,monsters/ETB-M171_chapel_beast_of_nails.png,20,a four-legged monster with iron spikes emerging from flesh folds
-ETB-M172,monster,Funeral Procession Eater,Coffinborn Amalgams,small,64,monsters/ETB-M172_funeral_procession_eater.png,17,a low centipede-like creature with dangling bone masks
-ETB-M173,monster,Two-Skull Mourner,Coffinborn Amalgams,medium,100,monsters/ETB-M173_two_skull_mourner.png,20,a quadruped with two fused skull heads facing opposite directions
-ETB-M174,monster,Root-Impaled Corpse Beast,Coffinborn Amalgams,medium,100,monsters/ETB-M174_root_impaled_corpse_beast.png,19,a heavy animal body pierced through by living roots
-ETB-M175,monster,Crypt-Feast Mimic,Coffinborn Amalgams,medium,100,monsters/ETB-M175_crypt_feast_mimic.png,20,a wide open maw supported by short clawed limbs
+ETB-M172,monster,Funeral Procession Eater,Coffinborn Amalgams,small,64,monsters/ETB-M172_funeral_procession_eater.png,19,a low centipede-like creature with dangling bone masks
+ETB-M173,monster,Two-Skull Mourner,Coffinborn Amalgams,medium,100,monsters/ETB-M173_two_skull_mourner.png,21,a quadruped with two fused skull heads facing opposite directions
+ETB-M174,monster,Root-Impaled Corpse Beast,Coffinborn Amalgams,medium,100,monsters/ETB-M174_root_impaled_corpse_beast.png,21,a heavy animal body pierced through by living roots
+ETB-M175,monster,Crypt-Feast Mimic,Coffinborn Amalgams,medium,100,monsters/ETB-M175_crypt_feast_mimic.png,23,a wide open maw supported by short clawed limbs
 ETB-M176,monster,Shroud-Filled Husk,Coffinborn Amalgams,small,64,monsters/ETB-M176_shroud_filled_husk.png,19,a crawling cloth-wrapped creature with many hidden limbs
 ETB-M177,monster,Grave Nailback,Coffinborn Amalgams,medium,100,monsters/ETB-M177_grave_nailback.png,20,a stocky beast with rows of burial nails growing through its hide
 ETB-M178,monster,Corpse Cart Scavenger,Coffinborn Amalgams,medium,100,monsters/ETB-M178_corpse_cart_scavenger.png,21,a long animal with a wooden bier fused along its back
-ETB-M179,monster,Ritual Vessel Horror,Coffinborn Amalgams,medium,100,monsters/ETB-M179_ritual_vessel_horror.png,23,a quadruped with a cracked urn shell and moving bone legs
+ETB-M179,monster,Ritual Vessel Horror,Coffinborn Amalgams,medium,100,monsters/ETB-M179_ritual_vessel_horror.png,22,a quadruped with a cracked urn shell and moving bone legs
 ETB-M180,monster,Last Breath Chimera,Coffinborn Amalgams,medium,100,monsters/ETB-M180_last_breath_chimera.png,20,a low four-legged monster with three mismatched animal jaws
-ETB-M181,monster,Hallway Fold Beast,Uncanny Breach Anatomy,small,64,monsters/ETB-M181_hallway_fold_beast.png,19,a long quadruped whose ribs recede into a tiny doorway
+ETB-M181,monster,Hallway Fold Beast,Uncanny Breach Anatomy,small,64,monsters/ETB-M181_hallway_fold_beast.png,18,a long quadruped whose ribs recede into a tiny doorway
 ETB-M182,monster,Many-Behind Gazer,Uncanny Breach Anatomy,medium,100,monsters/ETB-M182_many_behind_gazer.png,22,a floating knot of eyes on different depth planes
 ETB-M183,monster,Unwound Calf,Uncanny Breach Anatomy,small,64,monsters/ETB-M183_unwound_calf.png,19,a small four-legged creature with a body that spirals around an empty center
 ETB-M184,monster,Violet Knot Maw,Uncanny Breach Anatomy,medium,100,monsters/ETB-M184_violet_knot_maw.png,22,a hovering knotted mass of limbs converging on one tooth-ring
 ETB-M185,monster,Doorway That Crawls,Uncanny Breach Anatomy,medium,100,monsters/ETB-M185_doorway_that_crawls.png,20,an animal-shaped monster whose open rib cage frames a second mouth
-ETB-M186,monster,Far-Side Hound,Uncanny Breach Anatomy,medium,100,monsters/ETB-M186_far_side_hound.png,21,a lean beast with its forequarters visually distant from its hindquarters
-ETB-M187,monster,Missing-Limb Stalker,Uncanny Breach Anatomy,small,64,monsters/ETB-M187_missing_limb_stalker.png,14,a crawling predator with gaps where limbs should connect
-ETB-M188,monster,Impossible Nest,Uncanny Breach Anatomy,small,64,monsters/ETB-M188_impossible_nest.png,17,a round creature with several smaller mouths nested inside the shell opening
-ETB-M189,monster,Blind Corner Devourer,Uncanny Breach Anatomy,medium,100,monsters/ETB-M189_blind_corner_devourer.png,22,a folded triangular beast with a mouth visible only on its far side
+ETB-M186,monster,Far-Side Hound,Uncanny Breach Anatomy,medium,100,monsters/ETB-M186_far_side_hound.png,19,a lean beast with its forequarters visually distant from its hindquarters
+ETB-M187,monster,Missing-Limb Stalker,Uncanny Breach Anatomy,small,64,monsters/ETB-M187_missing_limb_stalker.png,15,a crawling predator with gaps where limbs should connect
+ETB-M188,monster,Impossible Nest,Uncanny Breach Anatomy,small,64,monsters/ETB-M188_impossible_nest.png,18,a round creature with several smaller mouths nested inside the shell opening
+ETB-M189,monster,Blind Corner Devourer,Uncanny Breach Anatomy,medium,100,monsters/ETB-M189_blind_corner_devourer.png,23,a folded triangular beast with a mouth visible only on its far side
 ETB-M190,monster,Rift-Reflected Spider,Uncanny Breach Anatomy,medium,100,monsters/ETB-M190_rift_reflected_spider.png,20,an asymmetrical spider with mismatched leg lengths and a violet mirrored abdomen
-ETB-M191,monster,Upside-Down Grazer,Uncanny Breach Anatomy,medium,100,monsters/ETB-M191_upside_down_grazer.png,22,a four-legged beast whose bone horns curl downward through its body
+ETB-M191,monster,Upside-Down Grazer,Uncanny Breach Anatomy,medium,100,monsters/ETB-M191_upside_down_grazer.png,20,a four-legged beast whose bone horns curl downward through its body
 ETB-M192,monster,Looped Neck Horror,Uncanny Breach Anatomy,medium,100,monsters/ETB-M192_looped_neck_horror.png,19,a tall animal with a neck that closes into a ring around its head
-ETB-M193,monster,Quiet Room Leech,Uncanny Breach Anatomy,medium,100,monsters/ETB-M193_quiet_room_leech.png,22,a floating translucent parasite with a hard-edged hollow center
+ETB-M193,monster,Quiet Room Leech,Uncanny Breach Anatomy,medium,100,monsters/ETB-M193_quiet_room_leech.png,19,a floating translucent parasite with a hard-edged hollow center
 ETB-M194,monster,Beyond-Scale Larva,Uncanny Breach Anatomy,small,64,monsters/ETB-M194_beyond_scale_larva.png,23,a small foreground grub with a vast shadow-shaped second abdomen inside itself
-ETB-M195,monster,Unending Stair Maw,Uncanny Breach Anatomy,medium,100,monsters/ETB-M195_unending_stair_maw.png,22,a squat creature with tooth rows descending like steps into a black throat
-ETB-M196,monster,Parallax Carrion Beast,Uncanny Breach Anatomy,medium,100,monsters/ETB-M196_parallax_carrion_beast.png,22,a low carcass-shaped monster with offset duplicate jaw plates
-ETB-M197,monster,Folded Horizon Stag,Uncanny Breach Anatomy,medium,100,monsters/ETB-M197_folded_horizon_stag.png,14,an antlered beast whose antler branches bend at impossible right angles
-ETB-M198,monster,Inside-Outside Crab,Uncanny Breach Anatomy,small,64,monsters/ETB-M198_inside_outside_crab.png,21,a crawling creature with its shell opened inward around a violet core
+ETB-M195,monster,Unending Stair Maw,Uncanny Breach Anatomy,medium,100,monsters/ETB-M195_unending_stair_maw.png,23,a squat creature with tooth rows descending like steps into a black throat
+ETB-M196,monster,Parallax Carrion Beast,Uncanny Breach Anatomy,medium,100,monsters/ETB-M196_parallax_carrion_beast.png,20,a low carcass-shaped monster with offset duplicate jaw plates
+ETB-M197,monster,Folded Horizon Stag,Uncanny Breach Anatomy,medium,100,monsters/ETB-M197_folded_horizon_stag.png,17,an antlered beast whose antler branches bend at impossible right angles
+ETB-M198,monster,Inside-Outside Crab,Uncanny Breach Anatomy,small,64,monsters/ETB-M198_inside_outside_crab.png,22,a crawling creature with its shell opened inward around a violet core
 ETB-M199,monster,Recursive Widowling,Uncanny Breach Anatomy,small,64,monsters/ETB-M199_recursive_widowling.png,19,a small spider with a second miniature spider shape inside its abdomen
 ETB-M200,monster,Non-Euclid Worm,Uncanny Breach Anatomy,medium,100,monsters/ETB-M200_non_euclid_worm.png,22,a thick coiled worm that passes through itself once without overlapping
 ETB-B001,boss,"Nhal, the Unburied Pulpit",Ossuary Sovereigns,boss,176,bosses/ETB-B001_nhal__the_unburied_pulpit.png,26,a towering many-limbed ossuary beast whose rib vault opens into a choir of mouths
-ETB-B002,boss,Grave-Tide Leviathan,Ossuary Sovereigns,boss,192,bosses/ETB-B002_grave_tide_leviathan.png,28,a massive eel-shaped monster with a tombstone carapace and a violet gill fissure
+ETB-B002,boss,Grave-Tide Leviathan,Ossuary Sovereigns,boss,192,bosses/ETB-B002_grave_tide_leviathan.png,27,a massive eel-shaped monster with a tombstone carapace and a violet gill fissure
 ETB-B003,boss,The Bell-Hung Devourer,Ossuary Sovereigns,boss,208,bosses/ETB-B003_the_bell_hung_devourer.png,24,an enormous crawling beast carrying a cathedral bell in its open rib cage
-ETB-B004,boss,"Marrow Regent, Crown of Teeth",Ossuary Sovereigns,boss,224,bosses/ETB-B004_marrow_regent__crown_of_teeth.png,28,a low colossal quadruped with a crown-shaped skull maw and layered bone armor
+ETB-B004,boss,"Marrow Regent, Crown of Teeth",Ossuary Sovereigns,boss,224,bosses/ETB-B004_marrow_regent__crown_of_teeth.png,29,a low colossal quadruped with a crown-shaped skull maw and layered bone armor
 ETB-B005,boss,The Worm Beneath the Chapel,Ossuary Sovereigns,boss,244,bosses/ETB-B005_the_worm_beneath_the_chapel.png,29,a huge segmented burrower with repeated arch-stone plates and an enormous violet oral ring
 ETB-B006,boss,"Last Procession, the Carrion Engine",Ossuary Sovereigns,boss,268,bosses/ETB-B006_last_procession__the_carrion_engine.png,27,"a multi-body insectoid monster fused from bones, coffin wood and iron rails"
 ETB-B007,boss,Mother Briar Vesper,Rooted Cathedral Abominations,boss,176,bosses/ETB-B007_mother_briar_vesper.png,23,a gigantic root beast with a flower-shaped throat and many grasping root legs
 ETB-B008,boss,The Thorned Reliquary,Rooted Cathedral Abominations,boss,192,bosses/ETB-B008_the_thorned_reliquary.png,29,a hunched stone-and-root monster carrying a violet glass heart in a cage of branches
-ETB-B009,boss,Grave Orchard Colossus,Rooted Cathedral Abominations,boss,208,bosses/ETB-B009_grave_orchard_colossus.png,24,"a broad quadruped whose back is a crown of dead trees, nests and skeletal fruit"
-ETB-B010,boss,The Hollow Tree That Hunts,Rooted Cathedral Abominations,boss,224,bosses/ETB-B010_the_hollow_tree_that_hunts.png,24,a walking root mass with a vertical trunk mouth and antlered tendrils
-ETB-B011,boss,Saint of the Fungal Crown,Rooted Cathedral Abominations,boss,244,bosses/ETB-B011_saint_of_the_fungal_crown.png,30,a huge many-jointed beast whose mushroom canopy hides a skull-like predator face
-ETB-B012,boss,Root-King Without a Face,Rooted Cathedral Abominations,boss,268,bosses/ETB-B012_root_king_without_a_face.png,26,a low sprawling root titan with a ring of mouths set into its bark
+ETB-B009,boss,Grave Orchard Colossus,Rooted Cathedral Abominations,boss,208,bosses/ETB-B009_grave_orchard_colossus.png,23,"a broad quadruped whose back is a crown of dead trees, nests and skeletal fruit"
+ETB-B010,boss,The Hollow Tree That Hunts,Rooted Cathedral Abominations,boss,224,bosses/ETB-B010_the_hollow_tree_that_hunts.png,22,a walking root mass with a vertical trunk mouth and antlered tendrils
+ETB-B011,boss,Saint of the Fungal Crown,Rooted Cathedral Abominations,boss,244,bosses/ETB-B011_saint_of_the_fungal_crown.png,32,a huge many-jointed beast whose mushroom canopy hides a skull-like predator face
+ETB-B012,boss,Root-King Without a Face,Rooted Cathedral Abominations,boss,268,bosses/ETB-B012_root_king_without_a_face.png,27,a low sprawling root titan with a ring of mouths set into its bark
 ETB-B013,boss,"Vorr, the Unmeasured",The Wrong-Angle Court,boss,176,bosses/ETB-B013_vorr__the_unmeasured.png,28,a colossal nonhumanoid whose four separated body masses align into a single open jaw only from one angle
 ETB-B014,boss,Mother of the Unseen Stair,The Wrong-Angle Court,boss,192,bosses/ETB-B014_mother_of_the_unseen_stair.png,27,an enormous crawling beast with stair-step ribs descending into a hollow violet eye
 ETB-B015,boss,The Backward Cathedral,The Wrong-Angle Court,boss,208,bosses/ETB-B015_the_backward_cathedral.png,23,a many-legged creature whose arch-shaped spine frames a mouth facing inward
 ETB-B016,boss,Thirteenfold Gazer,The Wrong-Angle Court,boss,224,bosses/ETB-B016_thirteenfold_gazer.png,29,"a hovering cluster of huge mismatched eyes and grasping bone limbs, no central body"
-ETB-B017,boss,The Room That Bites,The Wrong-Angle Court,boss,244,bosses/ETB-B017_the_room_that_bites.png,26,"a broad low beast whose open ribcage forms a doorway to a second, much larger jaw"
-ETB-B018,boss,Uncounted One,The Wrong-Angle Court,boss,268,bosses/ETB-B018_uncounted_one.png,25,a colossal many-necked creature whose necks vanish behind its own body and return as legs
+ETB-B017,boss,The Room That Bites,The Wrong-Angle Court,boss,244,bosses/ETB-B017_the_room_that_bites.png,27,"a broad low beast whose open ribcage forms a doorway to a second, much larger jaw"
+ETB-B018,boss,Uncounted One,The Wrong-Angle Court,boss,268,bosses/ETB-B018_uncounted_one.png,26,a colossal many-necked creature whose necks vanish behind its own body and return as legs
 ETB-B019,boss,"Vael-Tor, the Breach Maw",The Eternal Breach Titans,boss,176,bosses/ETB-B019_vael_tor__the_breach_maw.png,30,"a gigantic rift-born worm with a split jaw, layered stone plates and a violet throat"
-ETB-B020,boss,Gravetide Colossus,The Eternal Breach Titans,boss,192,bosses/ETB-B020_gravetide_colossus.png,29,"a hulking crawling mass of drowned bones, black chains and one exposed purple core"
+ETB-B020,boss,Gravetide Colossus,The Eternal Breach Titans,boss,192,bosses/ETB-B020_gravetide_colossus.png,28,"a hulking crawling mass of drowned bones, black chains and one exposed purple core"
 ETB-B021,boss,The Sepulcher That Walks,The Eternal Breach Titans,boss,208,bosses/ETB-B021_the_sepulcher_that_walks.png,30,a four-legged living tomb with a vertical mouth filling its opened roof
-ETB-B022,boss,The Pale Spiral,The Eternal Breach Titans,boss,224,bosses/ETB-B022_the_pale_spiral.png,29,a colossal coiled serpent whose body forms a ring around a floating tooth-filled void
+ETB-B022,boss,The Pale Spiral,The Eternal Breach Titans,boss,224,bosses/ETB-B022_the_pale_spiral.png,30,a colossal coiled serpent whose body forms a ring around a floating tooth-filled void
 ETB-B023,boss,Rift-Crowned Behemoth,The Eternal Breach Titans,boss,244,bosses/ETB-B023_rift_crowned_behemoth.png,30,a broad low beast with a fractured crown of grave stone and asymmetrical limbs
 ETB-B024,boss,The Last Threshold,The Eternal Breach Titans,boss,268,bosses/ETB-B024_the_last_threshold.png,30,a massive quadruped whose stone ribs form a pointed arch around a hungry inner darkness
 ETB-B025,boss,"Vesper, the Unending Hunger",Mythic Dread Brood,boss,176,bosses/ETB-B025_vesper__the_unending_hunger.png,30,a huge sideways-opening maw nested inside a second body-sized mouth

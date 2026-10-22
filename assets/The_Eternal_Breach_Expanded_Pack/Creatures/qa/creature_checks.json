@@ -2,7 +2,7 @@
   "regular_count": 200,
   "boss_count": 30,
   "regular_palette_max": 24,
-  "boss_palette_max": 31,
+  "boss_palette_max": 32,
   "all_binary_alpha": true,
   "distinct_pixel_hashes": 230,
   "files_exist": true
