@@ -58,8 +58,8 @@ node tools/tests/astronomer.js [minutes] [mobile]  # Astronomer: icons, star cha
 node tools/tests/classart.js paladin               # class art pack: catalog weapons, ability effects
 node tools/tests/lance.js [mobile]                 # Dragoon leaps: energy lance + per-skill trails, stepped frame by frame
 node tools/tests/gear.js paladin,wizard            # hero looks: armor+helm per rarity, finishes, auras (all = 16)
-node tools/tests/closed_helms.js all               # all 15 enclosed helmets on all 18 armors: face covered, centred, body untouched
-node tools/tests/herolook.js all death_knight 8      # every armor/helmet/finish loads (2,457 per class) + hero visible every second of a soak
+node tools/tests/closed_helms.js all               # all 15 enclosed helmets on all 26 armors: face covered, centred, body untouched
+node tools/tests/herolook.js all death_knight 8      # every armor/helmet/finish loads (3,009 per class) + hero visible every second of a soak
 node tools/tests/walls.js walls catacombs,frozen  # screenshot wall runs/corners in those biomes (docs/ART.md)
 node tools/tests/pack.js catacombs,blood          # biome pack levels: arches, doors, reachability; door/arch shots
 node tools/tests/overworld.js                      # 60 outdoor seeds, 20 scenarios, forced scheduling, landscape previews
@@ -145,7 +145,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   and bosses) is cut from `VELSCOUR_Monsters_Enemies_Bosses.zip` by `python tools/set3plates.py <zip>` and catalogued
   in `src/data/bestiary3.js`. HEAVENLY's 60 enemy sprites are cut from painted sheets by `src/gfx/heavenlymonsters.js`;
   see `docs/HEAVENLY.md`.
-  The hero's look is the Grim Nocturne gear: 18 armors per class (2-4 per rarity) and 15 enclosed helmets per class (three sets),
+  The hero's look is the Grim Nocturne gear: 26 armors per class (2-7 per rarity) and 15 enclosed helmets per class (three sets),
   69 palette finishes, built by `python tools/nocturnegear.py build` (or `process_assets.py gear`) from the natives in
   `assets/source/gear_nocturne/`; helmet nudges go in `assets/sprites/gear/helmets/placements.json` via
   `Fit Helmets.cmd`. The old `assets/FinalClasses/<class>.zip` libraries are no longer read. Class art packs (Paladin weapons, ability effects) go in
