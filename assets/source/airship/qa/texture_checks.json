@@ -1,0 +1,15 @@
+{
+  "total": 35,
+  "by_category": {
+    "ship_planks": 10,
+    "metal": 10,
+    "sailcloth": 5,
+    "wood": 5,
+    "gold": 5
+  },
+  "all_160_square": true,
+  "max_colors": 8,
+  "all_within_8_color_budget": true,
+  "all_edges_exactly_repeat": true,
+  "unique_hashes": 35
+}

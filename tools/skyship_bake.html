@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sky Ship Bake</title>
+<!-- The Sky Battle bake (docs/SKY_BATTLE.md): the heroes' ironclad (tools/airship3d_ironclad.js) rendered from the game's iso
+     camera and cut into per-tile pieces (like tools/castle3d.html), plus animated sprites of the pirates' galleon and
+     boarding boats and the ironclad's engine props, and the anchor points the game needs. Driven by
+     tools/skyship_bake.js; only this tool runs three.js. -->
+<style>html, body { margin: 0; background: #222; }</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { airshipMaterials, buildAirship, AIRSHIP } from './airship3d.js';
+import { buildIronclad } from './airship3d_ironclad.js';
+import { buildSkiff, SKIFF_KINDS } from './airship3d_skiffs.js';
+import { TU, LU, OX, OY, MAP_W, MAP_H } from '../src/world/skyship.js';
+
+const SUN_DIR = [-0.6, 0.85, 0.5];
+let renderer, scene, sun;
+function setup() {
+  renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(1); renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.body.appendChild(renderer.domElement);
+  scene = new THREE.Scene();
+  scene.add(new THREE.AmbientLight(0xffffff, 0.32 * Math.PI));
+  scene.add(new THREE.HemisphereLight(0xd4e6ff, 0x8aa6cc, 0.42 * Math.PI));
+  sun = new THREE.DirectionalLight(0xfff1dc, 1.2 * Math.PI);
+  sun.castShadow = true; sun.shadow.mapSize.set(8192, 8192); sun.shadow.bias = -0.0008; sun.shadow.normalBias = 1.5;
+  scene.add(sun, sun.target);
+}
+// the game camera: orthographic, 30 degrees down, 1 world unit = 1 screen px (screen x = (x - y) * 32, y = (x + y) * 16)
+function isoCamera(left, right, top, bottom) {
+  const c = new THREE.OrthographicCamera(left, right, top, bottom, -40000, 40000), e = Math.PI / 6;
+  c.position.set(Math.cos(e) * Math.SQRT1_2, Math.sin(e), Math.cos(e) * Math.SQRT1_2).multiplyScalar(10000);
+  c.up.set(0, 1, 0); c.lookAt(0, 0, 0); c.updateMatrixWorld(); c.updateProjectionMatrix();
+  return c;
+}
+/** Light fixed to the camera, its shadow box round `centre` (world) with half-size r. */
+function aimSun(cam, centre, r) {
+  const d = new THREE.Vector3(...SUN_DIR).normalize().transformDirection(cam.matrixWorld);
+  sun.position.copy(centre).addScaledVector(d, 8000); sun.target.position.copy(centre); sun.target.updateMatrixWorld();
+  Object.assign(sun.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 10, far: 20000 });
+  sun.shadow.camera.updateProjectionMatrix();
+}
+/** Screen rect (world px) of an object's bounds. */
+function screenRect(obj) {
+  const bb = new THREE.Box3().setFromObject(obj), xs = [], ys = [];
+  for (const x of [bb.min.x, bb.max.x]) for (const y of [bb.min.y, bb.max.y]) for (const z of [bb.min.z, bb.max.z]) {
+    const tx = x / TU, ty = z / TU, lv = y / LU;
+    xs.push((tx - ty) * 32); ys.push((tx + ty) * 16 - lv * 4);
+  }
+  return { x0: Math.floor(Math.min(...xs)) - 6, y0: Math.floor(Math.min(...ys)) - 6, x1: Math.ceil(Math.max(...xs)) + 6, y1: Math.ceil(Math.max(...ys)) + 6, centre: bb.getCenter(new THREE.Vector3()), size: bb.getSize(new THREE.Vector3()).length() };
+}
+const TAG = new THREE.ShaderMaterial({
+  vertexShader: 'varying vec3 wp; varying vec3 wn; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); wp = w.xyz; wn = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }',
+  fragmentShader: `varying vec3 wp; varying vec3 wn;
+    void main(){ float tx = floor(wp.x / ${TU.toFixed(6)} - wn.x * 0.03), ty = floor(wp.z / ${TU.toFixed(6)} - wn.z * 0.03);
+      gl_FragColor = vec4(clamp(tx, 0.0, 254.0) / 255.0, clamp(ty, 0.0, 254.0) / 255.0, 1.0, 1.0); }`,
+  side: THREE.DoubleSide,
+});
+function renderPass(group, cam, w, h, tag) {
+  renderer.setSize(w, h, false);
+  const keep = [];
+  group.traverse((o) => { if (o.isMesh || o.isLine || o.isLineSegments) { keep.push([o, o.material, o.visible]); if (tag) { if (o.isMesh) o.material = TAG; else o.visible = false; } } });
+  renderer.setClearColor(0x000000, 0);
+  renderer.shadowMap.enabled = !tag;
+  renderer.render(scene, cam);
+  const gl = renderer.getContext(), buf = new Uint8Array(w * h * 4);
+  gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+  for (const [o, m, v] of keep) { o.material = m; o.visible = v; }
+  return buf;   // bottom-up rows
+}
+
+// ------------------------------------------------------------------ the ship: per-tile pieces
+function bakePieces(group, S, VP = 2048) {
+  scene.add(group);
+  const R = screenRect(group), vw = VP / S, pieces = new Map();
+  for (let sy = R.y0; sy < R.y1; sy += vw) for (let sx = R.x0; sx < R.x1; sx += vw) {
+    const cam = isoCamera(sx, sx + vw, -sy, -(sy + vw));
+    aimSun(cam, R.centre, 2400);
+    const tag = renderPass(group, cam, VP, VP, true);
+    let any = false;
+    for (let i = 3; i < tag.length; i += 4) if (tag[i]) { any = true; break; }
+    if (!any) continue;
+    const col = renderPass(group, cam, VP, VP, false), local = new Map();
+    for (let row = 0; row < VP; row++) for (let x = 0; x < VP; x++) {
+      const k = ((VP - 1 - row) * VP + x) * 4;
+      if (!tag[k + 3] || !col[k + 3]) continue;
+      const key = tag[k + 1] * MAP_W + tag[k];
+      let Lc = local.get(key);
+      if (!Lc) local.set(key, (Lc = { x0: x, y0: row, x1: x, y1: row, px: [] }));
+      Lc.x0 = Math.min(Lc.x0, x); Lc.x1 = Math.max(Lc.x1, x); Lc.y0 = Math.min(Lc.y0, row); Lc.y1 = Math.max(Lc.y1, row);
+      Lc.px.push(x, row, k);
+    }
+    const ox = Math.round(sx * S), oy = Math.round(sy * S);
+    for (const [key, Lc] of local) {
+      const w = Lc.x1 - Lc.x0 + 1, h = Lc.y1 - Lc.y0 + 1, data = new Uint8ClampedArray(w * h * 4);
+      for (let i = 0; i < Lc.px.length; i += 3) {
+        const o = ((Lc.px[i + 1] - Lc.y0) * w + (Lc.px[i] - Lc.x0)) * 4, k = Lc.px[i + 2];
+        data[o] = col[k]; data[o + 1] = col[k + 1]; data[o + 2] = col[k + 2]; data[o + 3] = 255;
+      }
+      let P = pieces.get(key);
+      const gx0 = ox + Lc.x0, gy0 = oy + Lc.y0;
+      if (!P) pieces.set(key, (P = { x0: gx0, y0: gy0, x1: gx0 + w, y1: gy0 + h, crops: [] }));
+      P.x0 = Math.min(P.x0, gx0); P.y0 = Math.min(P.y0, gy0); P.x1 = Math.max(P.x1, gx0 + w); P.y1 = Math.max(P.y1, gy0 + h);
+      P.crops.push([gx0, gy0, w, h, data]);
+    }
+  }
+  scene.remove(group);
+  const out = [];
+  for (const [tile, P] of pieces) {
+    const w = P.x1 - P.x0, h = P.y1 - P.y0, data = new Uint8ClampedArray(w * h * 4);
+    for (const [x0, y0, cw, ch, d] of P.crops) for (let y = 0; y < ch; y++) {
+      const src = y * cw * 4, dst = ((y0 - P.y0 + y) * w + (x0 - P.x0)) * 4;
+      for (let k = 0; k < cw * 4; k += 4) if (d[src + k + 3]) { data[dst + k] = d[src + k]; data[dst + k + 1] = d[src + k + 1]; data[dst + k + 2] = d[src + k + 2]; data[dst + k + 3] = 255; }
+    }
+    const tx = tile % MAP_W, ty = (tile / MAP_W) | 0;
+    out.push({ tile, w, h, ox: P.x0 / S - (tx - ty) * 32, oy: P.y0 / S - (tx + ty) * 16, data });
+  }
+  return out;
+}
+
+// ------------------------------------------------------------------ sprites: an object alone, a few frames
+/** Render `obj` (already placed in world units) once per frame setup; crops with offsets from the world origin. */
+function bakeSprite(obj, S, frames) {
+  scene.add(obj);
+  const out = [];
+  for (const setFrame of frames) {
+    setFrame();
+    obj.updateMatrixWorld(true);
+    const R = screenRect(obj), w = Math.ceil((R.x1 - R.x0) * S), h = Math.ceil((R.y1 - R.y0) * S);
+    const cam = isoCamera(R.x0, R.x0 + w / S, -R.y0, -(R.y0 + h / S));
+    aimSun(cam, R.centre, Math.max(400, R.size * 0.6));
+    const col = renderPass(obj, cam, w, h, false);
+    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let row = 0; row < h; row++) for (let x = 0; x < w; x++) if (col[((h - 1 - row) * w + x) * 4 + 3] > 8) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, row); y1 = Math.max(y1, row); }
+    const cw = x1 - x0 + 1, ch = y1 - y0 + 1, data = new Uint8ClampedArray(cw * ch * 4);
+    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+      const k = ((h - 1 - (y0 + y)) * w + x0 + x) * 4, o = (y * cw + x) * 4, a = col[k + 3];
+      if (a <= 8) continue;
+      data[o] = col[k]; data[o + 1] = col[k + 1]; data[o + 2] = col[k + 2]; data[o + 3] = a > 200 ? 255 : a;
+    }
+    out.push({ w: cw, h: ch, ox: R.x0 + x0 / S, oy: R.y0 + y0 / S, data });
+  }
+  scene.remove(obj);
+  return out;
+}
+const scaled = (root, x = 0, z = 0) => { const g = new THREE.Group(); g.add(root); g.scale.setScalar(TU); g.position.set(x * TU, 0, z * TU); return g; };
+
+// ------------------------------------------------------------------ atlas pages
+function pack(items, PAGE = 4096) {
+  const order = items.map((u, i) => i).sort((a, b) => items[b].h - items[a].h), pages = [];
+  let page = null, x = 0, y = 0, shelf = 0;
+  const newPage = () => { page = document.createElement('canvas'); page.width = PAGE; page.height = 16; page._rows = []; pages.push(page); x = y = shelf = 0; };
+  newPage();
+  for (const i of order) {
+    const u = items[i];
+    if (x + u.w + 1 > PAGE) { x = 0; y += shelf + 1; shelf = 0; }
+    if (y + u.h + 1 > PAGE) newPage();
+    page._rows.push([u, x, y]); u.at = [pages.length - 1, x, y];
+    x += u.w + 1; shelf = Math.max(shelf, u.h);
+  }
+  for (const p of pages) {   // pages are cut to the height they use
+    p.height = Math.max(...p._rows.map(([u, , py]) => py + u.h)) + 1;
+    const g = p.getContext('2d');
+    for (const [u, px, py] of p._rows) g.putImageData(new ImageData(u.data, u.w, u.h), px, py);
+  }
+  return pages;
+}
+
+async function bakeAll(S = 1.5, SPR = 1) {
+  const t0 = performance.now();
+  setup();
+  const M = await airshipMaterials();
+  // the ironclad, pieces per tile; its props as 4 frames each, placed where they turn on the ship
+  const ship = buildIronclad(M, { bake: true });
+  const pieces = bakePieces(scaled(ship.root, OX, OY), S);
+  const sprites = {}, items = [];
+  const add = (name, frames, sc) => { sprites[name] = { S: sc, frames }; items.push(...frames); };
+  ship.anchors.props.forEach((p, i) => {
+    const holder = scaled(p.group, OX, OY), blades = 4;
+    add('ship_prop_' + i, bakeSprite(holder, S, [0, 1, 2, 3].map((k) => () => { p.group.rotation.z = p.side * k * (Math.PI * 2 / blades) / 4; })), S);
+  });
+  // the pirates' galleon and boats at their own origin (deck at y 0), 4 frames of rotors, props and flags
+  const galleon = buildAirship(M);
+  add('galleon', bakeSprite(scaled(galleon.root), SPR, [0, 1, 2, 3].map((k) => () => galleon.anim(k * 0.06, k ? 0.06 : 0))), SPR);
+  for (const kind of SKIFF_KINDS) {
+    const sk = buildSkiff(M, kind, 1);
+    for (const [st, f] of [['up', 0], ['down', 1]]) {
+      sk.setRamp(f);
+      add(`skiff_${kind}_${st}`, bakeSprite(scaled(sk.root), SPR, [0, 1, 2, 3].map((k) => () => sk.anim(k * 0.06, k ? 0.06 : 0))), SPR);
+    }
+  }
+  // small props from the same materials: a grappling hook, two chain links (face-on and edge-on), an iron cannonball
+  const prop = (build, mats) => { const g = new THREE.Group(); build(g, mats); return g; };
+  const hook = prop((g) => {
+    const iron = M.iron, add = (geo, m = iron) => { const me = new THREE.Mesh(geo, m); me.castShadow = true; g.add(me); };
+    add(new THREE.CylinderGeometry(0.07, 0.07, 0.9, 8).translate(0, 0.45, 0));
+    add(new THREE.TorusGeometry(0.13, 0.04, 6, 12).translate(0, 0.98, 0), M.goldHammer);
+    for (let i = 0; i < 3; i++) { const t = new THREE.TorusGeometry(0.28, 0.055, 6, 12, Math.PI * 0.9); t.rotateZ(Math.PI); t.translate(0.28, 0.1, 0); t.rotateY(i * Math.PI * 2 / 3); add(t); add(new THREE.ConeGeometry(0.06, 0.18, 6).translate(0.56, 0.18, 0).rotateY(i * Math.PI * 2 / 3)); }
+  });
+  hook.rotation.set(0.35, 0.4, 0);
+  add('sky_hook', bakeSprite(scaled(hook), 2, [() => {}]), 2);
+  const link = (edge) => prop((g) => { const t = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.045, 6, 14).scale(1, 1.6, 1), M.iron); t.rotation.set(0, edge ? Math.PI / 2.2 : 0.55, 0); g.add(t); });
+  add('sky_link', bakeSprite(scaled(link(false)), 2, [() => {}]).concat(bakeSprite(scaled(link(true)), 2, [() => {}])), 2);
+  add('sky_ball', bakeSprite(scaled(prop((g) => { g.add(new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 10), M.gunmetal)); })), 2, [() => {}]), 2);
+  // atlas: the ship's pieces and the sprites together
+  const all = [...pieces, ...items], pages = pack(all);
+  const P = (u) => [u.at[0], u.at[1], u.at[2], u.w, u.h, +u.ox.toFixed(2), +u.oy.toFixed(2)];
+  const r2 = (a) => a.map((v) => typeof v === 'number' ? +v.toFixed(3) : v);
+  const A = ship.anchors, G = AIRSHIP;
+  const anchors = {
+    ship: { gate: A.gate, braziers: A.braziers.map(r2), furnaces: A.furnaces.map(r2), stacks: A.stacks.map(r2), crystals: A.crystals.map(r2),
+      ports: A.ports.map(r2), lamps: A.lamps.map(r2), props: A.props.map((p) => r2([p.x, p.y, p.z, p.side])) },
+    // the galleon: starboard gun ports, and deck spots along its starboard rail (crews, hooks, bosses leaping off)
+    galleon: {
+      ports: [0.27, 0.47, 0.53, 0.74].map((s) => { const k = 0.22, y = G.sheer(s) - (G.sheer(s) - G.keel(s)) * k; return r2([G.beam(s) * G.prof(k) + 0.9, y, G.zAt(s)]); }),
+      rail: [0.3, 0.38, 0.46, 0.54, 0.62, 0.7].map((s) => r2([G.inner(s) - 0.7, G.deckAt(s), G.zAt(s)])),
+      railTop: [0.34, 0.5, 0.66].map((s) => r2([G.beam(s), G.sheer(s) + 0.1, G.zAt(s)])),
+    },
+    skiffs: Object.fromEntries(SKIFF_KINDS.map((kind) => {
+      const sk = buildSkiff(M, kind, 1), i = sk.info, w = i.walk;
+      const deck = [];
+      for (let z = -i.length / 2 + 2; z < i.length / 2 - 1.5; z += 1.6) { const s = w.sAt(z), hw = w.inner(s) - 0.5; if (hw > 0.2) deck.push(r2([0, 0, z]), r2([hw * 0.6, 0, z]), r2([-hw * 0.6, 0, z])); }
+      return [kind, { len: i.length, beam: i.beam, ramp: r2([i.rampX, i.rampY, i.rampZ]), rampLen: i.rampLen, deck }];
+    })),
+  };
+  return {
+    S, SPR, W: MAP_W, H: MAP_H, OX, OY,
+    pages: pages.map((c) => c.toDataURL('image/png')),
+    pieces: pieces.map(P), tiles: pieces.flatMap((u, i) => [u.tile, 0, i]),
+    sprites: Object.fromEntries(Object.entries(sprites).map(([k, v]) => [k, { S: v.S, f: v.frames.map(P) }])),
+    anchors, ms: Math.round(performance.now() - t0),
+  };
+}
+window.SKYBAKE = { bakeAll };
+</script>
+</body>
+</html>

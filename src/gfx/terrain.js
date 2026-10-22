@@ -120,6 +120,7 @@ export function terrainOf(map) {
         if (u !== null && u < v - 2 && (v - u) * HS > (a + b - 1) * HH) hides = true;
       }
     }
+    if (map.occStruct && map.c3struct?.[i]) hides = true;   // the Sky Battle's ship: every bulwark, fitting and the bridge
     if (hides && !(map.rounded && map.rounded[i])) occ.push(i); // a walkway's steps (a level or two) hide no one worth a redraw
   }
   order.sort((a, b) => ((a % w) + ((a / w) | 0)) - ((b % w) + ((b / w) | 0)) || a - b);
@@ -262,6 +263,7 @@ export function drawColumn(ctx, world, i, floorEntry, dress = null, over = false
   if (c3) {
     const gx = (x - y) * HW, gy = (x + y) * HH, b = c3.base.get(i), o = c3.over.get(i);
     if (over) { if (o !== undefined) drawPiece(ctx, o, gx, gy); return; }
+    if (map.c3only) { if (b !== undefined) drawPiece(ctx, b, gx, gy); return; }   // all baked (the Sky Battle's ship): no ground of its own
     if (map.c3struct[i]) {
       if (map.c3cover?.[i]) {   // a tunnel or doorway: its floor first
         const f = floorEntry(world, map.v[i]);

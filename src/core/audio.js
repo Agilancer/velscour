@@ -408,6 +408,8 @@ export function seekMusic(t) {
 // Each area gets one or more 60 s beds; one plays at a time, drifting between soft and fuller every 10-25 s and now and
 // then crossfading to another of its beds. Beds sit lower while a song plays and come up in the breaks between songs.
 const AMB = {
+  skyship_clear: ['sea', 'beach'], skyship_storm: ['sea_storm', 'forest_day_storm'], skyship_night: ['sea', 'forest_night'], skyship_fog: ['sea_rain', 'sea'],
+  skyship_sunset: ['beach', 'sea'], skyship_gale: ['sea_storm', 'beach_storm'], skyship_blizzard: ['cave_storm', 'sea_storm'], skyship_ash: ['torch_loop', 'cave_storm'],
   town: ['forest_night', 'forest_night_rain', 'forest_day'],
   catacombs: ['inside_night', 'cave'], frozen: ['cave_storm', 'forest_night_storm'],
   ice_temple: ['cave_storm', 'inside_night_storm', 'cave'], molten: ['cave', 'torch_loop'],

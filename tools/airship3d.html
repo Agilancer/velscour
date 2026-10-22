@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Airship 3D</title>
+<!-- The airships over a blue sky, seen from the game's iso camera with the bows to the upper right: the heroes' armored
+     ship (tools/airship3d_ironclad.js), the galleon (tools/airship3d.js) and the Air Pirates' boarding boats
+     (tools/airship3d_skiffs.js). Clouds and wind are 2D canvases behind and in front of the three.js view.
+     Only this tool runs three.js. http://localhost:8123/tools/airship3d.html
+     ?scene=fleet|ironclad|galleon|skiffs  ?px=1|2|3 pixel size  ?figures=0  ?grid=1  ?dock=1 holds the boats docked -->
+<style>
+  html, body { margin: 0; height: 100%; background: #4f86d0; overflow: hidden; font: 12px monospace; color: #fff; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+  #hud { position: fixed; left: 10px; top: 8px; text-shadow: 1px 1px 0 #0008; white-space: pre; pointer-events: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="sky"></canvas>
+<canvas id="gl"></canvas>
+<canvas id="wind"></canvas>
+<div id="hud"></div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { buildAirship, airshipMaterials } from './airship3d.js';
+import { buildIronclad } from './airship3d_ironclad.js';
+import { buildSkiff } from './airship3d_skiffs.js';
+
+const Q = new URLSearchParams(location.search);
+const opt = { px: +(Q.get('px') || 2), figures: Q.get('figures') !== '0', grid: Q.get('grid') === '1', wind: true, paused: false,
+  still: Q.get('still') === '1', dock: Q.get('dock') === '1', scene: Q.get('scene') || 'fleet' };
+const HERO = 60 / Math.cos(Math.PI / 6) / (32 * Math.SQRT2);   // a 60 px hero in tile units (1.53)
+
+// ------------------------------------------------------------------ three.js
+const glc = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({ canvas: glc, alpha: true, antialias: false, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setClearColor(0x000000, 0);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+const scene = new THREE.Scene();
+let FH = 22;                                                       // half the view height, in tiles
+const cam = new THREE.OrthographicCamera(-FH, FH, FH, -FH, -400, 400);
+const controls = new OrbitControls(cam, glc);
+controls.zoomSpeed = 1.2;
+const TARGET = new THREE.Vector3(0, 1.5, -2);
+/** Frame a point: look(x, y, z, zoom, azimuthDeg, elevationDeg); defaults are the scene's iso view. */
+function look(x = TARGET.x, y = TARGET.y, z = TARGET.z, zoom = 1, az = 45, el = 30) {
+  const a = az * Math.PI / 180, e = el * Math.PI / 180, p = new THREE.Vector3(x, y, z);
+  cam.position.set(Math.cos(e) * Math.sin(a), Math.sin(e), Math.cos(e) * Math.cos(a)).multiplyScalar(100).add(p);
+  cam.up.set(0, 1, 0); cam.zoom = zoom; cam.lookAt(p); cam.updateProjectionMatrix(); controls.target.copy(p); controls.update();
+}
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.32 * Math.PI));
+scene.add(new THREE.HemisphereLight(0xd4e6ff, 0x8aa6cc, 0.42 * Math.PI));   // blue above, cloud bounce below
+const sun = new THREE.DirectionalLight(0xfff1dc, 1.2 * Math.PI);
+sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.04;
+Object.assign(sun.shadow.camera, { left: -42, right: 42, top: 42, bottom: -42, near: 1, far: 240 });
+scene.add(sun, sun.target);
+{ // from the upper left, a little in front, as in the other 3D tools (camera space)
+  look(0, 0, 0); cam.updateMatrixWorld();
+  const d = new THREE.Vector3(-0.6, 0.85, 0.5).normalize().transformDirection(cam.matrixWorld);
+  sun.position.copy(d).multiplyScalar(110); sun.target.position.set(0, 0, 0);
+}
+
+const M = await airshipMaterials();
+const halo = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+  const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, '#fff'); g.addColorStop(0.25, '#fff8'); g.addColorStop(1, '#fff0');
+  x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+const glows = [];
+/** Soft additive halos on a ship's lamps, engines and crystals; a point light for the big ones. */
+function addGlows(ship) {
+  for (const gl of ship.info.glow) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, color: gl.c, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+    s.position.set(gl.x, gl.y, gl.z); s.scale.setScalar(gl.r); s.userData.big = gl.r > 2.8; ship.root.add(s); glows.push(s);
+    if (gl.light) { const p = new THREE.PointLight(gl.c, 22, gl.lr || 7, 1.6); p.position.set(gl.x, gl.y + 0.5, gl.z); ship.root.add(p); }
+  }
+}
+
+// figures at the game's 60 px hero size: Air Pirates (and a boss) from the expansion pack
+const texCache = {};
+async function pirate(parent, file, x, y, z) {
+  const boss = file.startsWith('B'), frameH = boss ? 320 : 192, foot = boss ? 16 : 9;
+  const url = `../assets/source/enemies/air/${boss ? 'captains' : 'crew'}/${String(+file.slice(1, 4) - 1).padStart(3, '0')}_${file.slice(5)}.png`;
+  const t = await (texCache[url] ||= new THREE.TextureLoader().loadAsync(url).then((t) => { t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; }));
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, alphaTest: 0.5 }));
+  const h = HERO * Math.cos(Math.PI / 6) * frameH / 108;            // screen height of the frame, in tiles
+  s.scale.set(h * t.image.width / t.image.height, h, 1); s.center.set(0.5, foot / frameH);
+  s.position.set(x, y + 0.02, z); s.userData.figure = true; parent.add(s);
+}
+const E = ['E001_tarcoat_deckhand', 'E002_saltwind_cutlass_raider', 'E004_boarding_pike_corsair', 'E006_gale_glass_harpooner',
+  'E011_quartermaster_breaker', 'E018_shipbreaker_mauler', 'E021_iron_rib_captain_s_guard', 'E014_cinderbomb_grenadier',
+  'E005_chainhook_climber', 'E012_red_sash_duelist', 'E016_hook_leg_veteran', 'E024_salt_rust_boarding_shield', 'E030_last_ratline_enforcer'];
+const BOSS = 'B001_admiral_veyl__the_black_sail_overlord';
+
+/** Whole tiles inside a ship's bulwarks, as lines a hair above its decks. */
+function deckGrid(walk) {
+  const pts = [], { inner, sAt, deckAt, zAt } = walk;
+  let n = 0;
+  for (let z = Math.floor(zAt(1)); z < Math.ceil(zAt(0)); z++) for (let x = -7; x < 7; x++) {
+    const s0 = sAt(z), s1 = sAt(z + 1);
+    if (deckAt(s0) !== deckAt(s1) || s1 < 0.005 || s0 > 0.995) continue;
+    const w = Math.min(inner(s0), inner(s1));
+    if (x < -w || x + 1 > w || walk.blocked?.(x + 0.5, z + 0.5)) continue;
+    n++;
+    const Y = deckAt(s0) + 0.03;
+    pts.push(x, Y, z, x + 1, Y, z, x + 1, Y, z, x + 1, Y, z + 1, x + 1, Y, z + 1, x, Y, z + 1, x, Y, z + 1, x, Y, z);
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  const lines = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x9cf7ff, transparent: true, opacity: 0.45 }));
+  lines.userData = { grid: true, tiles: n };
+  return lines;
+}
+
+// ------------------------------------------------------------------ scenes
+const world = new THREE.Group(); scene.add(world);
+const SCENES = {
+  fleet: { key: '1', name: 'Fleet: the heroes\' ship boarded by the three pirate boats', fh: 27, target: [0, 1, -1] },
+  ironclad: { key: '2', name: 'The heroes\' ship', fh: 22, target: [0, 1.5, -2] },
+  galleon: { key: '3', name: 'The galleon', fh: 22, target: [0, 1.5, -2] },
+  skiffs: { key: '4', name: 'Pirate boats: hauler, cutter, gasbag', fh: 15, target: [0, 1.5, 0] },
+};
+const built = {};
+let cur = null;
+/** A ship with its own gentle bob, glows and (optionally) figures. */
+function holder(ship, phase = 0) {
+  const g = new THREE.Group(); g.add(ship.root); addGlows(ship);
+  g.userData.bob = (t) => { ship.root.position.y = Math.sin(t * 0.7 + phase) * 0.28; ship.root.rotation.z = Math.sin(t * 0.5 + phase) * 0.012; ship.root.rotation.x = Math.sin(t * 0.6 + 1 + phase) * 0.008; };
+  return g;
+}
+async function buildScene(name) {
+  const S = { root: new THREE.Group(), ships: [], skiffs: [], grid: null, info: '' };
+  if (name === 'galleon' || name === 'ironclad') {
+    const ship = name === 'galleon' ? buildAirship(M) : buildIronclad(M), h = holder(ship);
+    S.root.add(h); S.ships.push({ ship, h }); if (ship.arrive) S.hero = ship;
+    S.grid = deckGrid(ship.info.walk); ship.root.add(S.grid);
+    const spots = [[-3, 3], [1.5, 4.5], [3.5, 0.5], [-1, -2], [-4, -5.5], [2, -7], [0, 6.5], [-2.5, -8.5]];
+    await Promise.all(spots.map(([x, z], i) => pirate(ship.root, E[i], x, 0, z)));
+    await pirate(ship.root, BOSS, 0, ship.info.walk.QD_H, ship.info.walk.zAt(0.11) - 1.2);
+    const i = ship.info;
+    S.info = `${i.length.toFixed(0)} x ${i.beam.toFixed(0)} tiles, main deck ${(i.mainDeck.z1 - i.mainDeck.z0).toFixed(0)} x ${i.mainDeck.width.toFixed(0)} clear + raised decks, ${S.grid.userData.tiles} walkable tiles`;
+  }
+  if (name === 'fleet') {
+    const hero = buildIronclad(M), h = holder(hero); S.hero = hero;
+    S.root.add(h); S.ships.push({ ship: hero, h });
+    S.grid = deckGrid(hero.info.walk); hero.root.add(S.grid);
+    for (const [i, x, z] of [[0, -3, 2], [2, -4.5, -3], [5, -2, -1.5], [10, 1.2, 14.5], [12, 2.5, 15.5]]) await pirate(hero.root, E[i], x, hero.info.walk.deckAt(hero.info.walk.sAt(z)), z);
+    // docking spots: the ramp's end lands on the heroes' rail; boats come up from astern and leave the same way
+    const W = hero.info.walk;
+    const dock = [
+      { kind: 'hauler', side: -1, z: -9, crew: [6, 7, 8, 9], away: [-26, 2, 18] },
+      { kind: 'cutter', side: 1, z: -8, crew: [3, 11], away: [24, 4, 26] },
+      { kind: 'gasbag', side: -1, z: 14.5, crew: [1, 4, 0], away: [-14, 12, 32] },
+    ];
+    for (const [k, d] of dock.entries()) {
+      const sk = buildSkiff(M, d.kind, -d.side), sh = holder(sk, k * 2.1);
+      const s = W.sAt(d.z + sk.info.rampZ), rail = W.beam(s) - 0.15, railY = W.sheer(s) + 0.12;
+      const reach = sk.info.rampLen * Math.cos(0.1);
+      const pos = new THREE.Vector3(d.side * (rail + reach + sk.info.rampX), railY + reach * Math.tan(0.1) + 0.05 - sk.info.rampY, d.z);
+      sh.position.copy(pos); S.root.add(sh);
+      const away = pos.clone().add(new THREE.Vector3(...d.away));       // each boat has its own lane in and out
+      S.skiffs.push({ sk, sh, pos, away, off: k * 8.7 });
+      const zs = [-2, 0.8, 2.6, -3.6];
+      await Promise.all(d.crew.map((e, j) => pirate(sk.root, E[e], (j % 2 ? 0.6 : -0.6) * (d.kind === 'cutter' ? 0.6 : 1), 0, zs[j])));
+    }
+    S.info = 'The heroes\' ship (40 x 12): hauler and gasbag dock to port (tall boats go behind the deck), the low cutter to starboard';
+  }
+  if (name === 'skiffs') {
+    for (const [k, [kind, x]] of [['hauler', -9], ['cutter', 0], ['gasbag', 9]].entries()) {
+      const sk = buildSkiff(M, kind, 1), sh = holder(sk, k * 1.7);
+      sh.position.set(x, 0, -x); S.root.add(sh); sk.setRamp(0.5);
+      S.ships.push({ ship: sk, h: sh });
+      const crew = { hauler: [6, 7, 8, 9, 10], cutter: [3, 11, 2], gasbag: [1, 4, 0, 5] }[kind];
+      await Promise.all(crew.map((e, j) => pirate(sk.root, E[e], (j % 2 ? 0.7 : -0.7) * (kind === 'cutter' ? 0.6 : 1), 0, -3 + j * 1.6)));
+    }
+    S.info = 'left to right: grapple hauler 15 x 3.8, harpoon cutter 13 x 2.3, gasbag sloop 14 x 2.7 (ramps half down)';
+  }
+  return S;
+}
+async function setScene(name) {
+  if (!SCENES[name]) name = 'fleet';
+  opt.scene = name;
+  built[name] ||= await buildScene(name);
+  for (const w of walkers.splice(0)) w.removeFromParent();
+  world.clear(); cur = built[name]; world.add(cur.root); nextArrival = 1.5;
+  FH = SCENES[name].fh; TARGET.set(...SCENES[name].target); resize(); look();
+  applyToggles(); info();
+}
+function applyToggles() {
+  cur.root.traverse((o) => { if (o.userData.figure) o.visible = opt.figures; if (o.userData.grid) o.visible = opt.grid; });
+}
+
+// arrivals: a hero steps out of the portal in the bridge's great door, crosses the landing and walks down to the deck
+const CLASSES = ['paladin', 'death_knight', 'wizard', 'barbarian', 'ranger', 'necromancer', 'dragoon', 'bard', 'gunner', 'lancer', 'carrion_witch', 'dragon_knight'];
+const walkers = [];
+let nextArrival = 1.5;
+async function arrival() {
+  const hero = cur?.hero; if (!hero) return;
+  const url = `../assets/sprites/select/${CLASSES[Math.floor(Math.random() * CLASSES.length)]}.webp`;
+  const tex = await (texCache[url] ||= new THREE.TextureLoader().loadAsync(url).then((t) => { t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; }));
+  if (cur?.hero !== hero) return;
+  hero.arrive();
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, alphaTest: 0.1 }));
+  const h = HERO * Math.cos(Math.PI / 6) / 0.9;     // the portraits leave ~10% headroom
+  s.userData = { w: h * tex.image.width / tex.image.height, h, t: 0, path: hero.info.portal.path.map((q) => new THREE.Vector3(...q)) };
+  s.center.set(0.5, 0.02); s.userData.figure = true; s.visible = opt.figures;
+  hero.root.add(s); walkers.push(s);
+  const ps = s.userData.path; ps[ps.length - 1].x += (Math.random() - 0.5) * 7; ps[ps.length - 1].z += Math.random() * 3; s.position.copy(ps[0]);
+}
+const toCam = new THREE.Vector3();
+function walk(dt) {
+  cam.getWorldDirection(toCam).negate();
+  for (const s of [...walkers]) {
+    const u = s.userData; u.t += dt;
+    const grow = Math.min(1, u.t / 0.6);                        // emerge from the gate
+    s.scale.set(u.w * (0.3 + 0.7 * grow), u.h * (0.3 + 0.7 * grow), 1);
+    let d = Math.max(0, u.t - 0.5) * 1.6;                        // then walk the path
+    let i = 0;
+    for (; i < u.path.length - 1; i++) { const seg = u.path[i].distanceTo(u.path[i + 1]); if (d <= seg) break; d -= seg; }
+    if (i < u.path.length - 1) s.position.lerpVectors(u.path[i], u.path[i + 1], d / u.path[i].distanceTo(u.path[i + 1]));
+    else s.position.copy(u.path[u.path.length - 1]);
+    s.position.addScaledVector(toCam, 1.4);   // toward the camera: the same spot on screen, but the sprite's top no
+                                              // longer leans back into the gate or the stairs behind it
+    s.material.color.setScalar(1 + Math.max(0, 1 - u.t * 1.5) * 2);   // glowing hot as it steps out
+    const end = u.t - 9;
+    s.material.opacity = Math.min(1, u.t * 3) * (end > 0 ? Math.max(0, 1 - end) : 1);
+    if (end > 1) { s.removeFromParent(); walkers.splice(walkers.indexOf(s), 1); }
+  }
+}
+
+// docking: approach from astern, ramp down, hold, ramp up, leave
+const ease = (x) => 1 - Math.pow(1 - x, 3);
+function dockCycle(b, t) {
+  if (opt.dock) { b.sh.position.copy(b.pos); b.sk.setRamp(1); return; }
+  const T = 26, p = (t + b.off) % T;
+  let f = 0, r = 0;
+  if (p < 6) f = 1 - ease(p / 6);
+  else if (p < 7.5) r = (p - 6) / 1.5;
+  else if (p < 19.5) r = 1;
+  else if (p < 21) r = 1 - (p - 19.5) / 1.5;
+  else f = Math.pow((p - 21) / 5, 2);
+  b.sh.position.lerpVectors(b.pos, b.away, f); b.sk.setRamp(r);
+}
+
+// ------------------------------------------------------------------ sky, clouds and wind (2D, pixel scale 3 / 2)
+const skyc = document.getElementById('sky'), sx = skyc.getContext('2d');
+const windc = document.getElementById('wind'), wx = windc.getContext('2d');
+let W = 0, H = 0;
+function resize() {
+  W = innerWidth; H = innerHeight;
+  renderer.setSize(Math.ceil(W / opt.px), Math.ceil(H / opt.px), false);
+  const a = W / H; cam.left = -FH * a; cam.right = FH * a; cam.top = FH; cam.bottom = -FH; cam.updateProjectionMatrix();
+  skyc.width = Math.ceil(W / 3); skyc.height = Math.ceil(H / 3);
+  windc.width = Math.ceil(W / 2); windc.height = Math.ceil(H / 2);
+}
+addEventListener('resize', resize);
+
+const rnd = (a, b) => a + Math.random() * (b - a);
+/** A pixel cloud: lit puffs from the upper left, three tones plus a highlight. */
+function cloudSprite(w, h, tones) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d');
+  const puffs = [], n = Math.round(w / 9) + 3;
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1), r = h * (0.22 + 0.2 * Math.sin(Math.PI * t)) * rnd(0.8, 1.15);
+    puffs.push([w * (0.12 + 0.76 * t) + rnd(-3, 3), h - r - rnd(1, h * 0.12), r]);
+  }
+  const pass = (col, dx, dy, k, op = 'source-over') => {
+    x.globalCompositeOperation = op; x.fillStyle = col;
+    for (const [px, py, r] of puffs) { x.beginPath(); x.arc(Math.round(px + dx * r), Math.round(py + dy * r), Math.max(1, r * k), 0, Math.PI * 2); x.fill(); }
+  };
+  pass(tones[0], 0, 0, 1);
+  pass(tones[1], -0.12, -0.16, 0.86, 'source-atop');
+  pass(tones[2], -0.25, -0.3, 0.6, 'source-atop');
+  pass(tones[3], -0.38, -0.42, 0.28, 'source-atop');
+  const d = x.getImageData(0, 0, w, h); for (let i = 3; i < d.data.length; i += 4) d.data[i] = d.data[i] > 100 ? 255 : 0; x.putImageData(d, 0, 0);
+  return c;
+}
+const FAR = ['#86a9d6', '#a5c3e8', '#bed6f1', '#d3e5f8'], MID = ['#a9c4e6', '#d6e6f7', '#eef5fd', '#ffffff'];
+const layers = [
+  { n: 34, speed: 9, alpha: 0.85, make: () => cloudSprite(Math.round(rnd(40, 90)), Math.round(rnd(16, 30)), FAR) },
+  { n: 16, speed: 22, alpha: 1, make: () => cloudSprite(Math.round(rnd(50, 120)), Math.round(rnd(20, 40)), MID) },
+];
+for (const L of layers) L.items = Array.from({ length: L.n }, () => ({ img: L.make(), u: Math.random(), v: Math.random() }));
+const wisps = Array.from({ length: 3 }, () => ({ img: cloudSprite(Math.round(rnd(90, 160)), Math.round(rnd(30, 50)), MID), u: Math.random(), v: Math.random() }));
+
+// the screen direction world +Z (bow to stern) moves in: the wind and the passing sky
+const dir = { x: -0.894, y: 0.447 };
+function windDir() {
+  const a = new THREE.Vector3(0, 0, 0).project(cam), b = new THREE.Vector3(0, 0, 10).project(cam);
+  const dx = (b.x - a.x) * W, dy = -(b.y - a.y) * H, l = Math.hypot(dx, dy);
+  if (l > 1e-3) { dir.x = dx / l; dir.y = dy / l; }
+}
+function drawSky(dt) {
+  const w = skyc.width, h = skyc.height;
+  const g = sx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#2f5fae'); g.addColorStop(0.55, '#5d93d8'); g.addColorStop(1, '#8fc2ef');
+  sx.fillStyle = g; sx.fillRect(0, 0, w, h);
+  for (const L of layers) {
+    sx.globalAlpha = L.alpha;
+    const pw = w + 240, ph = h + 120;
+    for (const c of L.items) {
+      c.u = (c.u + dir.x * L.speed * dt / pw + 1) % 1; c.v = (c.v + dir.y * L.speed * dt / ph + 1) % 1;
+      sx.drawImage(c.img, Math.round(c.u * pw - 120), Math.round(c.v * ph - 60));
+    }
+  }
+  sx.globalAlpha = 1;
+}
+const streaks = [];
+const spawn = (front) => ({ x: rnd(-0.1, 1.2), y: rnd(-0.2, 1.1), len: rnd(14, 46), speed: rnd(260, 520), life: 0, max: rnd(0.5, 1.3), a: rnd(0.25, 0.7), wob: rnd(0, 6), front });
+for (let i = 0; i < 70; i++) { const s = spawn(i % 4 !== 0); s.life = rnd(0, s.max); streaks.push(s); }
+function line(ctx, x0, y0, len, a) {   // a pixel line fading toward its tail
+  for (let i = 0; i < len; i++) {
+    ctx.globalAlpha = a * (1 - i / len) * Math.min(1, (len - i) / 4);
+    ctx.fillRect(Math.round(x0 - dir.x * i), Math.round(y0 - dir.y * i), 1, 1);
+  }
+}
+function drawWind(dt, t) {
+  const w = windc.width, h = windc.height;
+  wx.clearRect(0, 0, w, h);
+  if (!opt.wind) return;
+  const gust = 0.75 + 0.25 * Math.sin(t * 0.7) + 0.1 * Math.sin(t * 2.3);
+  wx.globalAlpha = 0.2;
+  for (const c of wisps) {
+    const pw = w + 400, ph = h + 200;
+    c.u = (c.u + dir.x * 140 * dt / pw + 1) % 1; c.v = (c.v + dir.y * 140 * dt / ph + 1) % 1;
+    wx.drawImage(c.img, Math.round(c.u * pw - 200), Math.round(c.v * ph - 100), c.img.width * 2, c.img.height * 2);
+  }
+  for (const s of streaks) {
+    s.life += dt;
+    if (s.life > s.max) Object.assign(s, spawn(s.front));
+    const fade = Math.sin(Math.PI * s.life / s.max);
+    s.x += dir.x * s.speed * gust * dt / w; s.y += dir.y * s.speed * gust * dt / h;
+    const px = s.x * w + Math.sin(t * 3 + s.wob) * 1.5 * -dir.y, py = s.y * h + Math.sin(t * 3 + s.wob) * 1.5 * dir.x;
+    const ctx = s.front ? wx : sx;
+    ctx.fillStyle = '#ffffff';
+    if (s.front) line(ctx, px, py, s.len * gust, s.a * fade);
+    else line(ctx, px * skyc.width / w, py * skyc.height / h, s.len * 0.6, s.a * fade * 0.8);
+  }
+  wx.globalAlpha = 1; sx.globalAlpha = 1;
+}
+
+// ------------------------------------------------------------------ loop + keys
+const hud = document.getElementById('hud');
+function info() {
+  const list = Object.entries(SCENES).map(([k, s]) => `${s.key} ${k}`).join('  ');
+  hud.textContent = `${SCENES[opt.scene].name.toUpperCase()}\n${cur.info}\n`
+    + `${list} · drag orbit · wheel zoom · right-drag pan · I iso · P pixel ${opt.px}x · F figures · G grid · W wind · E arrival · D ${opt.dock ? 'cycle boats' : 'hold docked'} · space ${opt.paused ? 'resume' : 'pause'}`;
+}
+addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase(), sc = Object.entries(SCENES).find(([, s]) => s.key === k);
+  if (sc) { setScene(sc[0]); return; }
+  if (k === 'i') look();
+  else if (k === 'p') { opt.px = opt.px % 3 + 1; resize(); }
+  else if (k === 'f') { opt.figures = !opt.figures; applyToggles(); }
+  else if (k === 'g') { opt.grid = !opt.grid; applyToggles(); }
+  else if (k === 'w') opt.wind = !opt.wind;
+  else if (k === 'd') opt.dock = !opt.dock;
+  else if (k === ' ') opt.paused = !opt.paused;
+  else if (k === 'e') arrival();
+  info();
+});
+await setScene(opt.scene);
+let last = performance.now(), t = 0;
+function update(d) {
+  t += d;
+  for (const { ship, h } of cur.ships) { h.userData.bob(t); ship.anim(t, d); }
+  for (const b of cur.skiffs) { b.sh.userData.bob(t); b.sk.anim(t, d); dockCycle(b, t); }
+  if (cur.hero && d && (nextArrival -= d) < 0) { nextArrival = 7; arrival(); }
+  walk(d);
+  glows.forEach((g, i) => { g.material.opacity = (g.userData.big ? 0.75 : 0.45) + 0.12 * Math.sin(t * 9 + i * 1.7); });
+  windDir(); drawSky(d); drawWind(d, t);
+}
+function frame(now) {
+  const dt = opt.still ? 0 : Math.min(0.05, (now - last) / 1000); last = now;
+  update(opt.paused ? 0 : dt);
+  renderer.render(scene, cam);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+/** Test hook: step(sec) advances the animation in 1/30 s steps and renders (for screenshots of a throttled page). */
+const step = (sec) => { for (let i = 0; i < Math.round(sec * 30); i++) update(1 / 30); renderer.render(scene, cam); };
+window.AIRSHIP = { scene, cam, renderer, opt, look, setScene, arrival, step, get cur() { return cur; }, set t(v) { t = v; } };
+</script>
+</body>
+</html>

@@ -224,6 +224,15 @@ export const BIOMES = [
     torch: '#ffc070', fog: '#060c07',
   },
   {
+    // the Sky Battle (docs/SKY_BATTLE.md): the heroes' ironclad against the Air Pirates, eight scenarios and their weather
+    id: 'skyship', name: 'The Sky Lanes', pack: 'town', overworld: true,
+    palette: null, dark: 0.04, light: 14,
+    ambient: { type: 'leaf', color: '#e8f0ff' }, mon: { hue: 0, sat: 1, light: 0 },
+    el: 'phys', blood: '#8a0b08', adj: ['Sky-Borne', 'Wind-Lashed', 'Black-Sail', 'Cloud-Running'],
+    roster: ['skeleton', 'ghoul', 'archer', 'knight', 'cultist', 'hound', 'demon', 'beetle'],
+    torch: '#ffb050', fog: '#0a1020',
+  },
+  {
     id: 'desert_temple', name: 'Temple of the Sunless Dynasty', pack: 'desert_temple',
     palette: null, dark: 0.77, light: 8.2,
     ambient: { type: 'sand', color: '#d9ac70' },

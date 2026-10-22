@@ -19,6 +19,8 @@ import { drawLootLabels } from './loot.js';
 import { castleTileDressing, drawCastleParticles, drawCastleWater } from '../gfx/castleground.js';
 import { drawRim, RIM } from './creature.js';
 import { drawNebula } from '../gfx/breach.js';
+import { skyBack, skyWorld, skyFx, skyFront, drawSkyGate } from '../gfx/skyship.js';
+import { drawCine } from './cinema.js';
 import { drawTerrain, drawColumn, occludersFor, occludersOfRect, occluderObj, clipAdd, hiddenBehind, standKey, hopZ, drawSky, terrainShade, HS } from '../gfx/terrain.js';
 
 let lightCanvas = null, glowCanvas = null, vignette = null, vigKey = '';
@@ -380,6 +382,7 @@ function drawScenarioGlyph(ctx, p) {
   ctx.restore();
 }
 function drawPortal(ctx, p) {
+  if (p.skygate) return drawSkyGate(ctx, p);
   if (p.type === 'shrine' || p.type === 'objective') return drawScenarioGlyph(ctx, p);
   const x = isoX(p.x, p.y), y = isoY(p.x, p.y);
   const active = p.active;
@@ -431,7 +434,7 @@ function drawNpc(ctx, n) {
   // Vendors retain their existing hand-painted artwork, names and shops.
   // Only visitors/civilians use the animated townsfolk collection; visiting adventurers use their class portrait.
   const spriteId=n.vendor||n.adv?null:(n.townsfolkSpriteId||n.spriteId||n.townsfolkId);
-  const sheet=spriteId?townSprite(spriteId,null):null;
+  const sheet=spriteId?townSprite(spriteId,n.palette||null):null;
   // Painted art for vendors and scenario civilians (n.art); never hue-shifted class sprites (they came out green).
   const vendorArt=n.vendor
     ? replacementImage('npc_'+n.vendor.id) || classSprite(n.vendor.sprite,180)
@@ -452,6 +455,9 @@ function drawNpc(ctx, n) {
   if (alpha < 1) ctx.globalAlpha = alpha;
   ctx.save();
   ctx.translate(Math.round(x + m.dx), Math.round(y - m.bob));
+  // a scripted motion (the Sky Battle's knights: hops, spins, faints, leaps between ships)
+  const q=n.pose?n.pose():null;
+  if(q){ctx.translate(q.dx||0,-(q.dy||0));if(q.flip)ctx.scale(-1,1);if(q.rot)ctx.rotate(q.rot);if(q.sx||q.sy)ctx.scale(q.sx||1,q.sy||1);}
   // squash and stretch about the feet, a lean into the walk, and the emotion's tilt; the facing mirrors it all
   if (n.flip) ctx.scale(-1, 1);
   ctx.rotate(m.rot + (n.walking ? m.lean : 0));
@@ -642,7 +648,8 @@ export function renderWorld(ctx, world) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-  if (world.map.voidFace) drawNebula(ctx, W, H, camera.x * camera.zoom * G.dpr, camera.y * camera.zoom * G.dpr); // the Breach's void
+  if (world.sky) skyBack(ctx, W, H, world); // the Sky Battle's sky and clouds (gfx/skyship.js)
+  else if (world.map.voidFace) drawNebula(ctx, W, H, camera.x * camera.zoom * G.dpr, camera.y * camera.zoom * G.dpr); // the Breach's void
   else if (world.map.hgt && !world.map.castleMat) drawSky(ctx, W, H, camera.x * camera.zoom * G.dpr, camera.y * camera.zoom * G.dpr, world.night);
   camera.apply(ctx);
   ctx.imageSmoothingEnabled = true;
@@ -660,6 +667,7 @@ export function renderWorld(ctx, world) {
   const ty0 = clamp(Math.floor(Math.min(...corners.map((c) => c[1]))) - 1, 0, map.h - 1);
   const ty1 = clamp(Math.ceil(Math.max(...corners.map((c) => c[1]))) + 1, 0, map.h - 1);
 
+  if (world.sky) skyWorld(ctx, world); // the pirates' galleon and boats, behind the ship
   drawFloors(ctx, world, vr, hq);
   if (map.castleMat) drawCastleWater(ctx, world, vr, G.time, G.touch);
   ctx.imageSmoothingQuality = hq;
@@ -914,6 +922,7 @@ export function renderWorld(ctx, world) {
     for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) if (map.block[ty * map.w + tx]) tile(tx, ty, 'rgba(255,0,0,0.22)');
     for (const [tx, ty] of G.debugMarks || []) tile(tx, ty, 'rgba(0,255,255,0.55)');
   }
+  if (world.sky) skyFx(ctx, world); // furnaces, braziers, chains, cannon shot, lightning
   drawParticles(ctx, vr);
   for (const h of top) h.draw(ctx);
   ctx.globalCompositeOperation = 'lighter';
@@ -923,6 +932,7 @@ export function renderWorld(ctx, world) {
   // ---------------------------------------------------------- screen space
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   drawLighting(ctx, world);
+  if (world.sky) skyFront(ctx, W, H, world, Math.min(0.05, G.dt || 0.016)); // rain, snow, ash, wind, fog, lightning
   if (G.hurtFlash > 0) {
     ctx.fillStyle = `rgba(160,0,0,${Math.min(0.45, G.hurtFlash)})`;
     ctx.fillRect(0, 0, W, H);
@@ -935,6 +945,7 @@ export function renderWorld(ctx, world) {
   drawOverheadNames(ctx, world);
   G.lootBoxes = drawLootLabels(ctx, world, G.input && G.input.lastPointerType === 'mouse' ? G.input.mouse : null);
   drawTexts(ctx);
+  drawCine(ctx, W, H);
   // Keep capacity without retaining creatures/loot that have left the world.
   for (const item of pool) item.o = null;
   top.length = 0;

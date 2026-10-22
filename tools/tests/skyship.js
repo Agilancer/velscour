@@ -1,0 +1,88 @@
+// The Sky Battle (docs/SKY_BATTLE.md): plays a whole battle per scenario at simulated speed with the hero unkillable,
+// clearing the boarders as they land, and checks every phase comes in order: the arrival, five boarding waves with the
+// mid-boss after the third, the parley (2,000 talks), the flagship's duel, the hooks, the two captains, the open exit and
+// the hoard chest. Screenshots of each phase go to tools/tests/out/sky_<variant>_*.png.
+//   node tools/tests/skyship.js                # the clear-sky scenario
+//   node tools/tests/skyship.js storm,night    # these scenarios
+//   node tools/tests/skyship.js all [auto]     # all eight; `auto` lets auto-play fight instead of clearing the deck
+const { openGame, report } = require('./harness');
+const arg = process.argv[2] || 'clear';
+const auto = process.argv.includes('auto');
+const ALL = ['clear', 'storm', 'night', 'fog', 'sunset', 'gale', 'blizzard', 'ash'];
+const ids = arg === 'all' ? ALL : arg.split(',');
+
+(async () => {
+  const { browser, page, errors, shot } = await openGame({ width: 1280, height: 720 });
+  const fails = [];
+  await page.evaluate(async (auto) => {
+    const { G, game } = window.VELSCOUR;
+    await game.newChar('paladin', 'Skyla');
+    G.godMode = true;
+    if (auto) { const { Auto } = await import('/src/game/autoplay.js'); Auto.toggle(true); }
+  }, auto);
+  /** Run the game `sec` simulated seconds (30 updates a second), clearing landed boarders unless auto-play fights;
+   * stops early when `until` (a phase name) is reached. Returns the run's state. */
+  const run = (sec, until = null, clear = !auto) => page.evaluate(async ([sec, until, clear]) => {
+    const { G, game } = window.VELSCOUR;
+    const { kill } = await import('/src/game/combat.js');
+    for (let i = 0; i < sec * 30; i++) {
+      G.time += 1 / 30; game.update(1 / 30);
+      const r = G.world.skyRun;
+      (window.__skySeen ||= new Set()).add(r.phase + (r.phase === 'waves' ? r.wave : ''));
+      if (clear && !G.cine && i % 10 === 0) for (const m of G.world.creatures) if (m.sky && !m.dead && !m.entering && m.team === 'enemy') kill(m, G.player);
+      if (G.player.hp < G.player.maxHp * 0.5) G.player.hp = G.player.maxHp;
+      if (until && (r.phase === until || (until === 'cine' && G.cine))) break;
+    }
+    game.render();
+    const r = G.world.skyRun, S = G.world.sky, exit = G.world.portals.find((q) => q.type === 'exit');
+    return { phase: r.phase, wave: r.wave, cine: !!G.cine, boats: S.boats.length, galleon: !!S.galleon, hooks: S.hooks.length, foes: G.world.creatures.filter((m) => m.sky && !m.dead).length,
+      exit: exit.active, chest: !!r.chest, completed: r.completed, line: G.cine && window.__cineLine, talk: r.talk };
+  }, [sec, until, clear]);
+  const look = (x, y, zoom = 1) => page.evaluate(async ([x, y, zoom]) => { const { camera, isoX, isoY } = await import('/src/core/view.js'); camera.x = isoX(x, y); camera.y = isoY(x, y) - 24; camera.zoom = zoom; window.VELSCOUR.game.render(); }, [x, y, zoom]);
+  const expect = (ok, what) => { if (!ok) { fails.push(what); console.log('  FAIL', what); } };
+
+  for (const id of ids) {
+    console.log(`--- ${id}`);
+    await page.evaluate(async ([id, auto]) => {
+      const { G, game } = window.VELSCOUR;
+      const { BIOME_BY_ID } = await import('/src/data/biomes.js');
+      G.char.skyVariant = id; G.char.depth = auto ? 1 : 12;   // auto-play fights it for real: a fresh hero at depth 1
+      await game.teleportToBiome(BIOME_BY_ID.skyship);
+      if (auto) { const { Auto } = await import('/src/game/autoplay.js'); Auto.toggle(true); }   // the teleport turned it off
+    }, [id, auto]);
+    let s = await run(0.1);
+    expect(s.phase === 'intro', `${id}: starts with the arrival`);
+    s = await run(2.5); await shot(`sky_${id}_intro`);
+    s = await run(9); await shot(`sky_${id}_gate`);
+    s = await run(30, 'waves');
+    expect(s.phase === 'waves', `${id}: the arrival ends in the waves (${s.phase})`);
+    // the first boat comes alongside: look at the port side amidships
+    s = await run(5.2, null, false);
+    await look(26, 36, 1); await shot(`sky_${id}_boarding`);
+    let shotMid = false;
+    for (let k = 0; k < (auto ? 400 : 60) && s.phase !== 'parley'; k++) { s = await run(2, 'parley'); if (s.phase === 'mid' && !shotMid) { shotMid = true; await shot(`sky_${id}_midboss`); } }
+    const seen = await page.evaluate(() => [...window.__skySeen]);
+    expect([0, 1, 2, 3, 4].every((w) => seen.includes('waves' + w)), `${id}: all five waves came (${seen.join(',')})`);
+    expect(seen.includes('mid'), `${id}: the mid-boss came`);
+    expect(s.phase === 'parley', `${id}: the parley begins (${s.phase})`);
+    for (let k = 0; k < 6; k++) { s = await run(5); await shot(`sky_${id}_parley_${k}`); }
+    s = await run(80, 'flagship');
+    expect(s.phase === 'flagship' && s.galleon, `${id}: the flagship comes (${s.phase})`);
+    s = await run(8); await look(24, 36, 0.8); await shot(`sky_${id}_duel`);
+    s = await run(auto ? 400 : 60, 'hooks');
+    expect(s.phase === 'hooks', `${id}: the hooks fly (${s.phase})`);
+    s = await run(6); await shot(`sky_${id}_hooks`);
+    s = await run(40, 'final');
+    expect(s.phase === 'final', `${id}: the captains board (${s.phase})`);
+    s = await run(1, null, false); await shot(`sky_${id}_final`);
+    s = await run(auto ? 400 : 40, 'victory');
+    s = await run(30, 'done');
+    expect(s.completed && s.exit && s.chest, `${id}: victory opens the exit and lays the hoard (${JSON.stringify(s)})`);
+    s = await run(2); await shot(`sky_${id}_victory`);
+    console.log(`  phases: ${(await page.evaluate(() => [...window.__skySeen])).join(' > ')}; talk #${s.talk}, ${errors.length} errors so far`);
+    await page.evaluate(() => { window.__skySeen = new Set(); });
+  }
+  if (fails.length) { console.log(`${fails.length} FAILED`); process.exitCode = 1; }
+  report(errors);
+  await browser.close();
+})();
