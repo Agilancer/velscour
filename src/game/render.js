@@ -33,7 +33,7 @@ const transitionSprites = new Map();
  * main.js calls this when the page is shown again or the screen canvas is restored; everything rebakes as it's drawn.
  */
 export function dropBakes() {
-  if (G.world) G.world.floorChunks = null;
+  if (G.world) G.world.floorChunks = G.world.floorChunksFlux = null;
   falloff = null; vignette = null; vigKey = ''; lightCanvas = null; glowCanvas = null;
   transitionSprites.clear(); labels.clear();
 }
@@ -554,8 +554,15 @@ function decalStamped(fc, d, px, py) {
   return true;
 }
 function drawFloors(ctx, world, vr, hq) {
-  const z = camera.zoom * G.dpr;
-  const fc = world.floorChunks && world.floorChunks.z === z ? world.floorChunks : (world.floorChunks = { z, map: new Map() });
+  // The chunks are baked at the camera's zoom. While a cut scene glides it (game/cinema.js sets G.zoomFlux) they're
+  // a second set, baked at the nearest of steps 12% apart (else every frame of a zoom bakes them all again) and at most
+  // 2.4 device px a world px (a close-up's chunks would be 20-40 MB each on a phone, and the baked art holds 1.5), drawn
+  // scaled; the game's own set waits for the scene to end.
+  const zr = camera.zoom * G.dpr, flux = !!G.zoomFlux, z = flux ? Math.min(2.4, 2 ** (Math.round(Math.log2(zr) * 6) / 6)) : zr;
+  const slot = flux ? 'floorChunksFlux' : 'floorChunks';
+  const fc = world[slot] && world[slot].z === z ? world[slot] : (world[slot] = { z, map: new Map() });
+  world.floorNow = fc;
+  if (!flux && world.floorChunksFlux) world.floorChunksFlux = null;   // the scene is over: let its chunks go
   const tf = ctx.getTransform(), ox = tf.e, oy = tf.f;
   if (chunkBudgetFrame !== G.frame) { chunkBudgetFrame = G.frame; chunkBudget = G.touch ? 1 : 2; }
   const parts = buildTransitionParticles(world);
@@ -570,7 +577,7 @@ function drawFloors(ctx, world, vr, hq) {
     let c = fc.map.get(key);
     const wx = cx * CW, wy = cy * CW;
     // device-px edges from the same rounding on both sides, so neighbouring chunks meet with no seam
-    const dx0 = Math.round(ox + wx * z), dy0 = Math.round(oy + wy * z), dx1 = Math.round(ox + (wx + CW) * z), dy1 = Math.round(oy + (wy + CW) * z);
+    const dx0 = Math.round(ox + wx * zr), dy0 = Math.round(oy + wy * zr), dx1 = Math.round(ox + (wx + CW) * zr), dy1 = Math.round(oy + (wy + CW) * zr);
     if (!c && chunkBudget > 0) {
       chunkBudget--;
       const n = Math.ceil(CW * z);
@@ -679,7 +686,7 @@ export function renderWorld(ctx, world) {
   drawFloors(ctx, world, vr, hq);
   if (map.castleMat) drawCastleWater(ctx, world, vr, G.time, G.touch);
   ctx.imageSmoothingQuality = hq;
-  const fc = world.floorChunks;
+  const fc = world.floorNow;
   drawDecals(ctx, vr, (d, px, py) => decalStamped(fc, d, px, py));
   const tall = map.hgt && map.tallOcclusion;
   for (const c of world.corpses) {
@@ -952,8 +959,10 @@ export function renderWorld(ctx, world) {
     ctx.fillStyle = `rgba(120,0,0,${0.15 + Math.sin(G.time * 6) * 0.08})`;
     ctx.fillRect(0, 0, W, H);
   }
-  drawOverheadNames(ctx, world);
-  G.lootBoxes = drawLootLabels(ctx, world, G.input && G.input.lastPointerType === 'mouse' ? G.input.mouse : null);
+  if (!G.cine) {   // a cut scene's frame shows the actors, not the loot's names (game/cinema.js)
+    drawOverheadNames(ctx, world);
+    G.lootBoxes = drawLootLabels(ctx, world, G.input && G.input.lastPointerType === 'mouse' ? G.input.mouse : null);
+  } else G.lootBoxes = [];
   drawTexts(ctx);
   drawCine(ctx, W, H);
   // Keep capacity without retaining creatures/loot that have left the world.

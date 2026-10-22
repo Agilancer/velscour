@@ -13,20 +13,23 @@ node tools/tests/skyship.js [clear|storm,...|all] [auto]     # whole battles at 
 ```
 
 ## How a battle goes (`src/game/skybattle.js`)
-1. **Arrival** (cut scene). The camera runs along the ship to the cathedral bridge. The portal in its great door
-   flares, and the hero steps out onto the landing.
+1. **Arrival** (cut scene). The camera comes down through a cloud astern onto the whole ironclad, runs along the deck
+   to the cathedral bridge and closes in on the portal in its great door. The portal flares and the hero steps out onto
+   the landing, framed with the gate behind them.
 2. **Boarding waves** (5, easy to hard). Boats come out of the sky astern and lie alongside to port: the gasbag sloop,
    the harpoon cutter and the grapple hauler, from `tools/airship3d_skiffs.js`. Their crews leap the rail. From the
    third wave on, a gasbag also crosses high overhead and drops boarders on ropes. Monster levels follow the depth.
 3. **Mid-boss** (after wave 3). A captain swings across the deck on a rope from his gasbag's balloon, with an escort.
-4. **Parley** (cut scene). The next captain and two **sky-knights** come aboard under a white flag. The talk is one of
+4. **Parley** (cut scene). The next captain and two **sky-knights** come aboard from a gasbag flying a white flag. The
+   hero walks over to meet them (round the fittings and down the stairs, wherever they stood). The talk is one of
    2,000 conversations (`src/data/skytalk.js`):
    - the captain's opener
    - the knights' stories of why they serve Velscour as Air Pirates
    - the hero's pitches
    - the double refusal
    - a truce, and a quiet moment
-   Then the twist: the flagship (the galleon from `tools/airship3d.js`) comes out of the clouds firing. The captain
+   Then the twist: the flagship (the galleon from `tools/airship3d.js`) pushes out of a cloud bank off the port
+   quarter, her first broadside bursting short in the air. The captain
    leaps away and leaves his knights under his own fleet's guns. They still won't join the hero, but from here on
    they fight at the hero's side.
 5. **The flagship's duel.** She closes from far to port over about 26 s, trading broadsides with the ironclad. Her
@@ -44,7 +47,34 @@ node tools/tests/skyship.js [clear|storm,...|all] [auto]     # whole battles at 
 Cut scenes (`src/game/cinema.js`) can't be skipped, with or without auto-play. They show letterbox bars, a scripted
 camera (pans, zooms, shakes), title cards, and a dialogue panel with a portrait, the speaker's name, typed text and a
 syllable-blip voice. While one plays, there's no input, no auto-play and no monster thinks; only the scene's actors
-move.
+move. Shots already in the air, lightning, frost and a captain's entrance don't hurt the hero while a scene holds them
+still, and the dropped items' names are hidden.
+
+## The cut scenes' camera
+The director (`game/skybattle.js`) frames every shot on where its subject **is while the shot plays**. Positions are
+read each frame, never when the scene is written, so a boat still out in the clouds when a scene starts is picked up
+there and followed in. Cinema camera steps:
+
+| Step | What it does |
+|---|---|
+| `on: () => [wx, wy]` | eases onto a point (an actor's face, a boat, the flagship) and keeps following it |
+| `fit: () => [points]` | frames several points: a group, a knight and the captain they leap at, both ships |
+| `pace` | sets a move's length from how far it goes |
+| `push`, `drift` | a slow push-in or slide once the camera is there |
+
+- **Dialogue.** Each line is a close-up on its speaker: the hero at 3x the game's zoom, a captain at 2.4x (they stand
+  taller), a knight at 3.2x. The frame leans a little toward whoever they answer, and pushes in slowly. The knights'
+  tale opens a little wider; the double refusal frames both knights.
+- **Wide shots.** A wide shot shows the whole of what matters: both ships for the hooks, the chains coming off, the
+  knights' leap onto the flagship.
+- **Hand-off.** Every scene ends on the hero, at the game's own zoom, and the zoom eases home after it.
+- **Weather.** In fog the clear patch moves to the shot's subject and opens with the zoom. At night the flagship
+  carries lanterns along her rail.
+- **Phones.** The dialogue font and the letterbox size themselves to the screen, so the panel fits a phone on its side.
+- **Floor art.** While a scene moves the zoom, the floor's baked chunks are a second set at zoom steps 12% apart,
+  capped at 2.4 device px per world px (render.js `drawFloors`). The game's own set is kept for when the scene ends.
+- **Tests.** `skyship.js` checks that every spoken line frames its speaker between the bars, and that the flagship is
+  in the shot under her title card.
 
 ## The captains' moves
 Each captain draws from their own moves (`AIR_CAPTAIN_ROWS` in `src/data/airpirates.js`) plus three ship moves:
@@ -99,6 +129,8 @@ same scenario twice in a row (`G.char.lastSkyVariant`).
   - the furnace glow, braziers, lift crystals and lanterns
   - the gate's swirl, drawn in the door's own plane in the game's portal colours
   - ropes, chains, cannon shot, lightning and the knights' blades
+  - the parley gasbag's white flag (16 baked frames), the cloud bank the flagship comes out of, and the cloud the
+    arrival's camera comes down through
 - **The Air Pirates** (the user's Air Pirate Expansion Pack): 30 boarders and 10 captains in `assets/source/enemies/air/`,
   packed by `python tools/process_assets.py enemies air`, catalogued in `src/data/airpirates.js`. Like the Breach's
   creatures, they never join the regular bestiary's draws.
@@ -106,8 +138,9 @@ same scenario twice in a row (`G.char.lastSkyVariant`).
   (`assets/source/skyship/out/`) are not committed.
 
 ## Limits
-- The camera is the game's 2D iso camera. Cut scenes pan, zoom and shake; they don't orbit, because the art is baked
-  from one angle.
+- The camera is the game's 2D iso camera. Cut scenes pan, track, zoom, push in and shake; they don't orbit, because
+  the art is baked from one angle.
 - The boats lie alongside to port only. Port is behind the deck in the iso view, so they never hide it.
 - The Credits (`src/ui/credits.js`) draws every bestiary monster with generated lines, the Air Pirates included.
-- Not verified: how it plays on a phone, and Safari or Firefox.
+- Not verified: how it plays on a real phone (the cut scenes were checked at 844 x 390 in headless Chromium), and
+  Safari or Firefox.

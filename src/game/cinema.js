@@ -2,12 +2,21 @@
 // cards and a dialogue panel (portrait, name, typed text, a syllable-blip voice). While one plays the game holds still
 // round it: no input, no auto-play, no monster thinks (game.js), and it can't be skipped, auto-play or not.
 // Cine.play(steps) runs steps in order; a step is
-//   { cam: { x, y, lv, zoom, dur, ease } }  move the camera to tile (x, y) at `lv` levels (wait: true holds the script)
+//   { cam: { on, fit, x, y, lv, zoom, dur, ease, wait, push, drift } }  a camera move (wait: true holds the script):
+//       on: () => [wx, wy]       a world px point read every frame (an actor's face, a boat): the camera eases onto it
+//                                and keeps on it after, so a moving subject stays framed
+//       fit: () => [[wx, wy]...]  frame all these points (the centre tracked, the zoom fitted once, at most `zoom`)
+//       x, y, lv                 a fixed tile; `lv` an absolute level (a boat's), else the ground there
+//       zoom                     times the game's own zoom; push: the zoom's growth a second once there (a slow push-in);
+//       drift: [wx, wy]          world px a second the frame slides once there; pace: world px a second, the move's
+//                                length from how far it goes (dur its longest)
 //   { wait: s } | { until: () => bool, max: s } | { do: fn } | { card: [title, sub], dur } | { shake: px }
-//   { say: { name, color, portrait(ctx, x, y, w, h), text, voice: { pitch, wave }, onStart, onEnd }, dur }
+//   { say: { name, color, portrait(ctx, x, y, w, h), text, voice: { pitch, wave }, focus, onStart, onEnd }, dur }
+//       focus: () => [wx, wy], the speaker (tests check every line frames its speaker)
+// When a scene ends the zoom eases back to the game's (the director's last shot is usually the hero already).
 // Cine.speed (tests) multiplies time; G.cine is true while a scene plays.
 import { G } from '../state.js';
-import { camera, isoX, isoY } from '../core/view.js';
+import { camera, isoX, isoY, HH } from '../core/view.js';
 import { clamp } from '../core/util.js';
 import { audioCtx, audioOut } from '../core/audio.js';
 
@@ -36,33 +45,35 @@ function voice(text, v = {}) {
   }
 }
 
+/** The game's own zoom (settings, screen size), without touching the camera. */
+function baseZoom() { const z = camera.zoom; camera.computeZoom(); const b = camera.zoom; camera.zoom = z; return b; }
+
 export const Cine = {
-  active: false, steps: [], i: 0, t: 0, speed: 1, bars: 0, card: null, line: null, cam: null, shook: false,
-  onEnd: null,
+  active: false, steps: [], i: 0, t: 0, speed: 1, bars: 0, card: null, line: null, cam: null, shook: false, back: null,
+  onEnd: null, zoom0: 1,
   /** Start a scene (or queue it after the one playing). */
   play(steps, onEnd = null) {
     if (this.active) { this.steps.push(...steps); if (onEnd) { const prev = this.onEnd; this.onEnd = () => { prev && prev(); onEnd(); }; } return; }
     this.active = true; G.cine = true; this.steps = steps.slice(); this.i = 0; this.t = 0; this.onEnd = onEnd; this.line = null; this.card = null;
-    this.zoom0 = camera.zoom;
+    this.zoom0 = baseZoom(); this.back = null; this.cam = null;
   },
   stop() {
     this.active = false; G.cine = false; this.steps = []; this.line = null; this.card = null; this.cam = null;
-    camera.computeZoom();
+    this.back = { t: 0, z0: camera.zoom };   // ease the zoom home (game.js's camera.follow brings the frame back to the hero)
     const f = this.onEnd; this.onEnd = null; if (f) f();
   },
   /** Drop a scene without its ending: the hero left the world it played in (else its camera and hidden HUD follow
    *  him to town, which then draws black). */
-  abort() { this.onEnd = null; if (this.active) this.stop(); this.bars = 0; },
+  abort() { this.onEnd = null; if (this.active) this.stop(); this.back = null; camera.computeZoom(); this.bars = 0; },
   update(dt) {
     dt *= this.speed;
     this.bars = clamp(this.bars + (this.active ? dt : -dt) * 2.5, 0, 1);
-    if (!this.active) return;
-    // the camera glides toward its mark
-    if (this.cam) {
-      const c = this.cam; c.t += dt;
-      const k = (ease[c.ease] || ease.io)(clamp(c.t / c.dur, 0, 1));
-      camera.x = c.x0 + (c.x1 - c.x0) * k; camera.y = c.y0 + (c.y1 - c.y0) * k; camera.zoom = c.z0 + (c.z1 - c.z0) * k;
+    G.zoomFlux = this.active || !!this.back;   // the camera's zoom is moving: render.js bakes the floor at zoom steps
+    if (!this.active) {
+      if (this.back) { const b = this.back; b.t += dt; const k = ease.io(clamp(b.t / 0.7, 0, 1)); camera.zoom = b.z0 + (baseZoom() - b.z0) * k; if (k >= 1) this.back = null; }
+      return;
     }
+    if (this.cam) this.aim(dt);
     if (this.card) { this.card.t += dt; if (this.card.t > this.card.dur) this.card = null; }
     for (let guard = 0; guard < 50 && this.active; guard++) {
       const s = this.steps[this.i];
@@ -74,10 +85,34 @@ export const Cine = {
       this.i++; this.line = s.say ? null : this.line;
     }
   },
+  /** The camera glides toward its mark, then holds it (a moving mark is followed), pushing in or drifting. */
+  aim(dt) {
+    const c = this.cam; c.t += dt;
+    const k = (ease[c.ease] || ease.io)(clamp(c.t / c.dur, 0, 1)), after = Math.max(0, c.t - c.dur);
+    let [tx, ty] = c.on ? c.on() : [c.x1, c.y1];
+    if (c.drift) { tx += c.drift[0] * after; ty += c.drift[1] * after; }
+    if (c.t <= c.dur) { camera.x = c.x0 + (tx - c.x0) * k; camera.y = c.y0 + (ty - c.y0) * k; }
+    else { const f = 1 - Math.pow(0.004, dt); camera.x += (tx - camera.x) * f; camera.y += (ty - camera.y) * f; }
+    camera.zoom = (c.z0 + (c.z1 - c.z0) * k) * (1 + Math.min(0.3, (c.push || 0) * after));
+  },
   begin(s) {
     if (s.cam) {
-      const c = s.cam, [x1, y1] = c.px || [isoX(c.x, c.y), isoY(c.x, c.y) - (c.lv || 0) * 4 - (c.up ?? 24)];
-      this.cam = { t: 0, dur: Math.max(0.01, c.dur ?? 1.5), ease: c.ease, x0: camera.x, y0: camera.y, z0: camera.zoom, x1, y1, z1: (c.zoom ?? 1) * this.zoom0 };
+      const c = s.cam, z0 = this.zoom0;
+      let on = c.on || null, zoom = c.zoom ?? 1, x1 = 0, y1 = 0;
+      if (c.fit) {
+        // frame every point: the box's centre (followed), the zoom that fits the box into the frame between the bars
+        const box = () => { const ps = c.fit(); let a = Infinity, b = Infinity, d = -Infinity, e = -Infinity; for (const [x, y] of ps) { a = Math.min(a, x); b = Math.min(b, y); d = Math.max(d, x); e = Math.max(e, y); } return [a, b, d, e]; };
+        const [a, b, d, e] = box(), m = c.margin ?? 0.62;
+        zoom = Math.min(zoom, (G.W * m) / Math.max(40, d - a) / z0, (G.H * 0.74 * m) / Math.max(30, e - b) / z0);
+        zoom = Math.max(c.min ?? 0.4, zoom);
+        on = () => { const [a2, b2, d2, e2] = box(); return [(a2 + d2) / 2, (b2 + e2) / 2]; };
+      } else if (!on) {
+        // a fixed tile: at an absolute level (a boat's, a perch) the flat plane lifted by it, else the ground there
+        x1 = isoX(c.x, c.y); y1 = (c.lv === undefined ? isoY(c.x, c.y) : (c.x + c.y) * HH - c.lv * 4) - (c.up ?? 24);
+      }
+      let dur = c.dur ?? 1.5;
+      if (c.pace) { const [tx, ty] = on ? on() : [x1, y1]; dur = clamp((Math.hypot(tx - camera.x, ty - camera.y) + Math.abs(Math.log(zoom * z0 / camera.zoom)) * 450) / c.pace, 0.35, dur); }
+      this.cam = { t: 0, dur: Math.max(0.01, dur), ease: c.ease, x0: camera.x, y0: camera.y, z0: camera.zoom, x1, y1, z1: zoom * z0, on, push: c.push, drift: c.drift };
     }
     if (s.do) s.do();
     if (s.shake) camera.shakeAmt = Math.max(camera.shakeAmt, s.shake);
@@ -94,7 +129,7 @@ export const Cine = {
     if (s.say) { this.line.t = this.t; return this.t >= s.dur; }
     if (s.wait !== undefined) return this.t >= s.wait;
     if (s.until) return s.until() || this.t >= (s.max ?? 30);
-    if (s.cam && s.cam.wait) return this.t >= (s.cam.dur ?? 1.5);
+    if (s.cam && s.cam.wait) return this.t >= (this.cam ? this.cam.dur : s.cam.dur ?? 1.5);
     if (s.card && s.block) return this.t >= (s.dur ?? 2.6);
     return true;
   },
@@ -110,35 +145,37 @@ function wrap(ctx, text, maxW) {
 export function drawCine(ctx, W, H) {
   const k = Cine.bars;
   if (k <= 0) return;
-  const dpr = G.dpr, bar = Math.round(H * 0.13 * (1 - (1 - k) ** 2));
+  // css px sizes (x dpr): on a short screen (a phone on its side) the font shrinks and the bars grow to hold the panel
+  const dpr = G.dpr, f = clamp(G.H / 42, 11, 17), lh = f * 1.3, pad = Math.max(6, f * 0.5);
+  const barCss = Math.max(G.H * 0.13, pad * 2 + f + 4 + lh * 2), bar = Math.round(barCss * dpr * (1 - (1 - k) ** 2));
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bar); ctx.fillRect(0, H - bar, W, bar);
   const C = Cine.card;
   if (C) {
-    const a = Math.min(1, C.t / 0.4, (C.dur - C.t) / 0.5);
+    const a = Math.min(1, C.t / 0.4, (C.dur - C.t) / 0.5), big = clamp(G.H / 15.6, 24, 46), sub = big * 0.44;
     ctx.globalAlpha = clamp(a, 0, 1); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `${Math.round(46 * dpr)}px "Cinzel", "Alegreya", serif`; ctx.fillStyle = '#000'; ctx.fillText(C.title, W / 2 + 3 * dpr, H * 0.36 + 3 * dpr);
+    ctx.font = `${Math.round(big * dpr)}px "Cinzel", "Alegreya", serif`; ctx.fillStyle = '#000'; ctx.fillText(C.title, W / 2 + 3 * dpr, H * 0.36 + 3 * dpr);
     ctx.fillStyle = '#ffd9a0'; ctx.fillText(C.title, W / 2, H * 0.36);
-    if (C.sub) { ctx.font = `italic ${Math.round(20 * dpr)}px "Alegreya", serif`; ctx.fillStyle = '#e8d8c0'; ctx.fillText(C.sub, W / 2, H * 0.36 + 44 * dpr); }
+    if (C.sub) { ctx.font = `italic ${Math.round(sub * dpr)}px "Alegreya", serif`; ctx.fillStyle = '#e8d8c0'; ctx.fillText(C.sub, W / 2, H * 0.36 + big * 0.95 * dpr); }
     ctx.globalAlpha = 1;
   }
   const L = Cine.line;
   if (L && k > 0.5) {
-    const pad = 14 * dpr, ph = Math.max(bar - pad, 60 * dpr), py = H - bar + (bar - ph) / 2, pw = ph;
-    const x0 = Math.max(pad, W / 2 - 520 * dpr);
+    const ph = (barCss - pad * 2) * dpr, py = H - bar + (bar - ph) / 2, pw = ph;
+    const x0 = Math.max(pad * dpr, W / 2 - 520 * dpr);
     ctx.globalAlpha = Math.min(1, L.t / 0.15);
     ctx.fillStyle = '#120c0a'; ctx.fillRect(x0, py, pw, ph);
     ctx.strokeStyle = L.color || '#c9a060'; ctx.lineWidth = 2 * dpr; ctx.strokeRect(x0 + 1, py + 1, pw - 2, ph - 2);
     if (L.portrait) { ctx.save(); ctx.beginPath(); ctx.rect(x0 + 3, py + 3, pw - 6, ph - 6); ctx.clip(); L.portrait(ctx, x0 + 3, py + 3, pw - 6, ph - 6, L.t); ctx.restore(); }
-    const tx = x0 + pw + 16 * dpr, maxW = Math.min(W - tx - pad, 820 * dpr);
+    const tx = x0 + pw + f * dpr, maxW = Math.min(W - tx - pad * dpr, 820 * dpr);
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    ctx.font = `bold ${Math.round(17 * dpr)}px "Cinzel", "Alegreya", serif`; ctx.fillStyle = L.color || '#ffd9a0';
+    ctx.font = `bold ${Math.round(f * dpr)}px "Cinzel", "Alegreya", serif`; ctx.fillStyle = L.color || '#ffd9a0';
     ctx.fillText(L.name, tx, py + 2 * dpr);
-    ctx.font = `${Math.round(17 * dpr)}px "Alegreya Sans", "Segoe UI", sans-serif`; ctx.fillStyle = '#f2e8d8';
+    ctx.font = `${Math.round(f * dpr)}px "Alegreya Sans", "Segoe UI", sans-serif`; ctx.fillStyle = '#f2e8d8';
     const n = Math.floor(L.t * 42), shown = L.text.slice(0, n);
     const lines = wrap(ctx, L.text, maxW);
     let used = 0;
-    lines.forEach((ln, j) => { const part = shown.slice(used, used + ln.length); used += ln.length + 1; ctx.fillText(part, tx, py + 28 * dpr + j * 22 * dpr); });
+    lines.forEach((ln, j) => { const part = shown.slice(used, used + ln.length); used += ln.length + 1; ctx.fillText(part, tx, py + (f + 4 + 2) * dpr + j * lh * dpr); });
     ctx.globalAlpha = 1;
   }
 }

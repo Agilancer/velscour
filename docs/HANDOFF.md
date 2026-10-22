@@ -14,6 +14,85 @@ Contents
 
 ---
 
+## October 22, 2026 — Sky Battle sweep: a cut-scene camera that frames its subjects (branch `feat/sky-battle-sweep`)
+- **Request (user):** a bug, scripting and performance sweep of the airship biome and its scenarios. Make the camera's
+  pans into the clouds make sense. It should move round theatrically and zoom in on the characters and enemies as they
+  speak. Get the camera placement right, especially when the hero enters the airship.
+- **What was wrong (seen in shots of every cut-scene beat):**
+  - **Shots of empty sky.** The mid-boss's and the parley's shots read the boat's position when the scene was written,
+    while the boat was still at its spawn point far out in the clouds. The camera flew to empty sky, and the mid-boss's
+    name card played over nothing.
+  - **The flagship reveal missed her.** "THE BLACK MOURNING" panned to a spot about 1,300 px from the galleon, so the
+    card played over empty clouds.
+  - **The arrival counted the deck's height twice.** `camTo` added the level on top of `isoY`, which already lifts by
+    the ground. The camera sat above the gate, and the hero stepped out at the bottom edge behind the letterbox.
+  - **Close-ups too wide.** Lines were framed at 1.15-1.45x zoom, so the speaker was a small figure in a crowd. The
+    twist line was spoken over the far sky.
+- **The camera (`src/game/cinema.js`):**
+  - **Live framing.** Cam steps take `on` (a point read every frame, followed once reached), `fit` (frame several
+    points), `pace` (a move's length from its distance), `push` (a slow push-in) and `drift`.
+  - **Smooth exits.** The zoom eases home when a scene ends instead of snapping.
+  - **Phones.** The dialogue font and the letterbox size themselves to the screen; on a phone the panel used to overflow
+    the bar.
+- **The director (`src/game/skybattle.js`):** every scene was re-shot.
+  - **Arrival.** Down through a cloud astern (`S.through`), the whole ship, along the deck to the bridge, in on the
+    gate. The hero steps out framed in the shot, says their line in close-up, then a wide over the deck, then back to
+    the hero.
+  - **Mid-boss.** The gasbag is followed in from the clouds, then a close-up of the captain on its deck for the card
+    and the cry. His swing is tracked.
+  - **Parley.** The boat comes in flying a white flag. A close-up on each line leans toward whoever is being answered,
+    with group shots between. In the "moment of calm" the frame drifts to port.
+  - **Flagship reveal.** A whip-pan to the flagship pushing out of a cloud bank (`S.bank`), her first broadside bursting
+    short in the air. The scene cuts back to the captain for his twist line, then to the knights under the guns.
+  - **Hooks and victory.** Both ships framed together. Each knight is followed to the rail and framed with the
+    flagship's rail as they throw. The captains are shown on her rail for their card, then tracked over. The farewells
+    are close-ups, the leap to the flagship is tracked, she is followed away, then the gate and the chest.
+  - Each line's step carries `focus` (the speaker).
+- **Bugs fixed:**
+  - **Parley walk.** The hero's walk to the parley went straight to the forecastle landing first, through the bridge,
+    stairs and helm. It now paths from wherever the hero stands (`run.goTo`), and knights walk to the rail the same way.
+  - **Knights mid-strike.** A knight still mid-strike when the hooks or victory scene began fought the scene: the
+    strike's leap and its return to the hero moved them against the scripted walk. `settleKnights()` now lands them.
+  - **`splice(indexOf())` with -1.** This removed the last chain, rope or blade. All such calls go through `drop()`.
+  - **Damage during scenes.** A cannon shot, lightning or frost already in flight, or a captain's landing or swing,
+    could hurt the hero while a scene held them still. These now spare the hero during scenes.
+  - **Blank portrait.** A fainting knight's portrait was empty: the frame's top half has nothing in it when they lie
+    down.
+  - **Fog.** The clear patch stayed on the hero during close-ups of others. It was also placed in css px on a device-px
+    canvas, so on a 2x phone it sat at half the hero's position and half the size.
+  - **Night.** The flagship had no lights at night; her rail lanterns now light.
+  - **Labels.** Dropped items' names and overhead names are hidden in cut scenes.
+- **Performance:**
+  - **Floor chunks.** The chunk cache was keyed by the exact zoom, so every frame of a cut-scene zoom re-baked the
+    floor (and lost the blood decals' stamps). While a scene moves the zoom there's now a second set at zoom steps 12%
+    apart, capped at 2.4 device px a world px. A close-up's chunks would otherwise be 20-40 MB each on a phone. The
+    game's own set is kept for when the scene ends.
+  - **Hitches moved to loading.** The knights are chosen at load and their recoloured sheets built behind the loading
+    screen; this was a ~200 ms (4x throttle) hitch when the parley began. Their Runeblades go to the GPU in the parley,
+    not at the first strike.
+  - **Fewer draw calls.** Painted crew draw without save/restore, chain links set one transform each, the flag is 16
+    baked frames, and cloud puffs off screen are skipped.
+  - **Measured** (phone profile, 4x throttle, SwiftShader): the parley scene's render p95 went from 152-264 ms to 40-44
+    ms, since scenes no longer re-bake the floor every frame. The waves and the duel are unchanged within noise. The
+    arrival's wide shots stay GPU-bound on the ship's 624 pieces. Under SwiftShader the profiler pins GPU waits on
+    whichever draw call is current, so per-call figures (the flag, `drawSplat`) wander from run to run.
+- **Tests:** `skyship.js` now checks that every spoken line frames its speaker between the letterbox bars, and that the
+  flagship is in the shot under her card. Results: `skyship.js all` (all eight skies, every phase, 25 of 25
+  lines framed in each, no errors), `skyship.js clear,storm auto` (auto-play wins both), `data_check`, `flow`, `mobile`
+  and `hud` all pass. The cut scenes were also checked shot by shot in clear, storm, fog and night, and at 844 x 390.
+- **Design calls made without asking:**
+  - The close-up zooms (hero 3x, captain 2.4x, knights 3.2x).
+  - The cloud the arrival comes down through, and the flagship's cloud bank and new spot off the port quarter (nearer:
+    she is now in sight sooner in the duel).
+  - The white flag.
+  - Hazards sparing the hero during scenes.
+  - The gameplay camera is unchanged (it still follows the hero during the duel).
+- **Open:**
+  - Not seen on a real phone or GPU.
+  - In the arrival's wide shots, SwiftShader is slow drawing the whole ship.
+  - The test steps frames between its own render loop's frames, so it could miss a very short line (it checked 25 of 25
+    in every scenario of the final run, and 24 once in an earlier one).
+
 ## October 22, 2026 — the Gunner's 3D turrets and Bombing Run biplane (branch `feat/gunner-3d`)
 - **Request (user):** three.js models of the Gunner's turrets and the plane he summons, textured from the skyships'
   texture pack. The turrets rotate on their stands and look really cool, and the Gunner can walk through them so he never
