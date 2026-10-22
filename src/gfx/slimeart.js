@@ -1,6 +1,7 @@
 // The Slime Lord's court: animated Glymmora slimes (assets/sprites/slimes, packed by tools/slimecourt.py).
 // Each set is one atlas: a row per animation (idle walk run jump attack open ability special from the detailed sheets'
-// isometric panels; idle walk squish jump attack hurt die from the cards), a column per frame, the feet at (ax, ay).
+// isometric panels; idle walk squish jump attack hurt die from the cards), a column per frame. Each row has its own cell
+// size, big enough that no effect is clipped: cells[row] = [y, w, h, feet x, feet y].
 // game/slimecourt.js moves them and says which animation plays; this draws them: hop height, squash and stretch,
 // a jelly shadow, blink fades, riding on a bigger slime, and little emotes over their heads.
 import { G } from '../state.js';
@@ -25,8 +26,6 @@ const FPS = { idle: 5, walk: 8, run: 11, jump: 7, attack: 11, open: 6, ability: 
 const ONCE = new Set(['attack', 'ability', 'special', 'hurt', 'die', 'open']);
 
 function rowOf(meta, anim) {
-  // a detailed sheet's special attack fills its whole cell with spell effects: play its special ability instead
-  if (anim === 'special' && meta.src === 'detail') anim = 'ability';
   let r = meta.rows.indexOf(anim);
   if (r < 0) for (const f of FALLBACK[anim] || []) if ((r = meta.rows.indexOf(f)) >= 0) break;
   return r < 0 ? 0 : r;
@@ -73,7 +72,8 @@ export function drawSlime(ctx, m) {
   let sx = 1 + S.sqx, sy = 1 + S.sqy;
   const born = Math.min(1, m.spawnT / 0.45); // rises out of its own puddle
   if (born < 1) { sy *= 0.15 + 0.85 * born + Math.sin(born * Math.PI) * 0.25; sx *= 1.4 - 0.4 * born; }
-  const dw = meta.cw * k * sx, dh = meta.ch * k * sy;
+  const [cy, cw, ch, cax, cay] = meta.cells[r];
+  const dw = cw * k * sx, dh = ch * k * sy;
   const z = m.z + S.z + (S.ride ? S.ride.slime ? S.ride.slime.h * S.ride.scale * 0.8 + S.ride.slime.z : 0 : 0);
   const alpha = (m.alpha ?? 1) * S.alpha;
   // jelly shadow: a dark pool tinted with the slime's colour, smaller while it is up in the air
@@ -90,11 +90,11 @@ export function drawSlime(ctx, m) {
   }
   if (alpha <= 0.02) { m.screenTop = py - S.h - z; return true; }
   const face = meta.face || 'R', flipX = face === 'S' ? false : face === 'R' ? m.flip : !m.flip;
-  const ax = meta.ax * k * sx, ay = meta.ay * k * sy;
+  const ax = cax * k * sx, ay = cay * k * sy;
   const lx = m.lunge > 0 ? (Math.cos(m.facing) - Math.sin(m.facing)) * m.lunge * 6 : 0;
   const ly = m.lunge > 0 ? (Math.cos(m.facing) + Math.sin(m.facing)) * m.lunge * 3 : 0;
   const ox = px + lx, oy = py - z + ly;
-  const cw = meta.cw, ch = meta.ch, srcX = f * cw, srcY = r * ch;
+  const srcX = f * cw, srcY = cy;
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(ox, oy);
@@ -127,7 +127,8 @@ export function slimeIconParts(def) {
     const ids = setsOf(k).sort((a, b) => (SLIME_SETS[a].src === 'detail' ? 0 : 1) - (SLIME_SETS[b].src === 'detail' ? 0 : 1) || a.localeCompare(b));
     const id = ids[0], meta = SLIME_SETS[id], img = id && slimeImage(id);
     if (!img) return null;
-    out.push({ img, sx: 0, sy: 0, sw: meta.cw, sh: meta.ch, ax: meta.ax, ay: meta.ay, bh: meta.bh, flip: meta.face === 'L' });
+    const [, cw, ch, ax, ay] = meta.cells[0];
+    out.push({ img, sx: 0, sy: 0, sw: cw, sh: ch, ax, ay, bh: meta.bh, flip: meta.face === 'L' });
   }
   return out;
 }

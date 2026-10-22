@@ -231,7 +231,7 @@ const ACTS = {
     const x = a.x0 + (a.x1 - a.x0) * k, y = a.y0 + (a.y1 - a.y0) * k;
     if (m.world.map.walkable(x, y)) { m.x = x; m.y = y; }
     S.z = a.h * 4 * k * (1 - k);
-    a.anim = 'jump';
+    a.anim = a.airAnim || 'jump';
     m.face(angleTo(a.x0, a.y0, a.x1, a.y1));
     if (a.trail && chance(0.6)) spawn({ type: 'glow', x: m.x, y: m.y, z: S.z + 8, life: 0.3, size: 4, size1: 0, color: S.K.color, add: true });
     if (k >= 1) { S.z = 0; S.sqv -= 3.4; dust(m, S, 6); if (a.land) a.land(m, S); return false; }
@@ -521,7 +521,7 @@ const FIGHT = {
     const los = m.world.map.los(m.x, m.y, t.x, t.y);
     if (!(S.cds.leap > 0) && d > 1.8 && d < 9.5 && los) {
       if (chance(0.4)) emote(S, 'bang', 0.5);
-      startLeap(m, S, t.x, t.y, 22 + d * 5, 0.26 + d * 0.045, { squat: 0.12, squatAnim: 'open', follow: t, trail: true, whoosh: true, air: true,
+      startLeap(m, S, t.x, t.y, 22 + d * 5, 0.26 + d * 0.045, { squat: 0.12, squatAnim: 'open', airAnim: 'special', follow: t, trail: true, whoosh: true, air: true,
         land: (mm, SS) => {
           aoe(mm.world, mm, mm.x, mm.y, 1.1, mm.dmg * 1.6, 'fire', { burn: true, knock: 0.5, melee: true });
           ring(mm.x, mm.y, 1.2, SS.K.color, 3, { fill: true });
@@ -543,7 +543,7 @@ const FIGHT = {
           aoe(mm.world, mm, mm.x, mm.y, 2.3, mm.dmg * 2.4, 'fire', { knock: 1.3, stun: true });
           for (let i = 0; i < 3; i++) addEffect(new Ring(mm.x, mm.y, 0.3, 2.4 + i * 0.4, 0.45 + i * 0.1, i ? '#ffd040' : SS.K.color, 6 - i * 2, { fill: !i }));
           addDecal(mm.x, mm.y, '#3a1008', 1.3, 'scorch', 0.6);
-          camera.shake(6); sfx('thud', 0.8); lockAnim(SS, 'special', 0.5);
+          camera.shake(6); sfx('thud', 0.8); lockAnim(SS, 'ability', 0.5);
         } });
       return;
     }
@@ -553,14 +553,14 @@ const FIGHT = {
     }
     if (!(S.cds.roll > 0) && d > 2.4 && d < 7 && m.world.map.los(m.x, m.y, t.x, t.y)) { // roll through the pack
       S.cds.roll = rand(4.5, 6.5) * cdk(S);
-      S.act = { type: 'dash', t: 0, ang: angleTo(m.x, m.y, t.x, t.y), len: d + 1.4, speed: 10.5, spin: true, dashAnim: 'run', seen: new Set(),
+      S.act = { type: 'dash', t: 0, ang: angleTo(m.x, m.y, t.x, t.y), len: d + 1.4, speed: 10.5, spin: true, dashAnim: 'special', seen: new Set(),
         hit: (mm, SS, c) => { mm.deal(c, mm.dmg * 1.3, 'fire', { knock: 0.9, ang: mm.facing, melee: true }); SS.rage = Math.min(5, SS.rage + 1); SS.rageT = 4; spawn({ type: 'glow', x: c.x, y: c.y, z: 16, life: 0.25, size: 8, size1: 16, color: '#ff8030', add: true }); } };
       sfx('roar', 0.25, 1.6);
       return;
     }
     if (d <= m.atkRange(t)) {
       m.moving = false; m.face(angleTo(m.x, m.y, t.x, t.y));
-      if (m.cd <= 0) bite(m, S, t, { aoe: 1.3, cdMul: 1 / (1 + 0.16 * S.rage), anim: S.rage >= 3 ? 'special' : 'attack' }, (mm, SS) => { SS.rage = Math.min(5, SS.rage + 1); SS.rageT = 4; if (SS.rage >= 3) SS.glowT = 0.3; });
+      if (m.cd <= 0) bite(m, S, t, { aoe: 1.3, cdMul: 1 / (1 + 0.16 * S.rage), anim: S.rage >= 3 ? 'ability' : 'attack' }, (mm, SS) => { SS.rage = Math.min(5, SS.rage + 1); SS.rageT = 4; if (SS.rage >= 3) SS.glowT = 0.3; });
     } else { S.fast = true; m.chase(dt, t, m.speed * 1.1); }
   },
   bulwark(m, S, t, d, dt) {
@@ -581,7 +581,7 @@ const FIGHT = {
       m.moving = false; m.face(angleTo(m.x, m.y, t.x, t.y));
       if (m.cd <= 0) {
         const bash = ++S.hits % 3 === 0;
-        bite(m, S, t, bash ? { anim: 'special', mul: 1.4, hit: { stun: true, knock: 1.4 } } : { hit: { knock: 0.3 } }, bash ? (mm, SS) => { ring(t.x, t.y, 1.1, SS.K.color, 3); sfx('block', 0.5); } : null);
+        bite(m, S, t, bash ? { anim: 'ability', mul: 1.4, hit: { stun: true, knock: 1.4 } } : { hit: { knock: 0.3 } }, bash ? (mm, SS) => { ring(t.x, t.y, 1.1, SS.K.color, 3); sfx('block', 0.5); } : null);
       }
       return;
     }
@@ -603,7 +603,7 @@ const FIGHT = {
           aoe(w, mm, o.x, o.y, 2.6, mm.dmg * 0.7, 'holy', { knock: 1.7, slow: true });
           for (const c of w.hostiles(mm.team, o.x, o.y, 2.6)) c.curses.slow = { t: 2.5, amt: 0.5 };
           addEffect(new Ring(o.x, o.y, 0.3, 2.8, 0.5, '#ffb020', 6, { fill: true })); petals(o.x, o.y, '#ffd060', 14);
-          lockAnim(SS, 'special', 0.5); sfx('sonic', 0.4);
+          lockAnim(SS, 'ability', 0.5); sfx('sonic', 0.4);
         } });
         return;
       }
@@ -642,7 +642,7 @@ const FIGHT = {
     const w = m.world;
     if (!(S.cds.snare > 0) && d < 7 && w.map.los(m.x, m.y, t.x, t.y)) {
       S.cds.snare = 6 * cdk(S);
-      cast(m, S, 'special', 0.55, 0.3, (mm, SS) => {
+      cast(m, S, 'ability', 0.55, 0.3, (mm, SS) => {
         aoe(w, mm, t.x, t.y, 1.4, mm.dmg * 1.2, 'poison', { poison: true });
         for (const c of w.hostiles(mm.team, t.x, t.y, 1.4)) c.curses.slow = { t: 2.5, amt: 0.75 };
         for (let i = 0; i < (G.touch ? 7 : 14); i++) { const a = rand(TAU), r = rand(1.3); spawn({ type: 'streak', x: t.x + Math.cos(a) * r, y: t.y + Math.sin(a) * r, z: 0, vz: rand(60, 120), g: 200, life: 0.45, size: 2, color: i % 3 ? '#3a8a20' : '#a0ff60' }); }
@@ -655,7 +655,7 @@ const FIGHT = {
   tide(m, S, t, d, dt) {
     if (!(S.cds.bubble > 0) && d < 7 && m.world.map.los(m.x, m.y, t.x, t.y)) {
       S.cds.bubble = 8 * cdk(S);
-      cast(m, S, 'special', 0.5, 0.25, (mm, SS) => shot(mm, SS, t, { fx: 'orb', el: 'acid', speed: 5, range: 7.5, size: 1.8, mul: 0.6, o: { stun: true } }), t);
+      cast(m, S, 'ability', 0.5, 0.25, (mm, SS) => shot(mm, SS, t, { fx: 'orb', el: 'acid', speed: 5, range: 7.5, size: 1.8, mul: 0.6, o: { stun: true } }), t);
       return;
     }
     if (engage(m, S, t, d, dt, 6.5) && m.cd <= 0) { m.cd = m.atkCd; cast(m, S, 'attack', 0.3, 0.12, (mm, SS) => shot(mm, SS, t, { fx: 'orb', el: 'acid', speed: 7.5, range: 7.5, n: 2, spread: 0.5, home: true, mul: 0.6 }), t); }
@@ -664,7 +664,7 @@ const FIGHT = {
     const w = m.world;
     if (!(S.cds.nova > 0) && w.hostiles(m.team, m.x, m.y, 2).length) {
       S.cds.nova = 7 * cdk(S);
-      cast(m, S, 'special', 0.45, 0.2, (mm, SS) => {
+      cast(m, S, 'ability', 0.45, 0.2, (mm, SS) => {
         aoe(w, mm, mm.x, mm.y, 2.2, mm.dmg * 1.2, 'cold', { freeze: true, slow: true });
         addEffect(new Ring(mm.x, mm.y, 0.2, 2.3, 0.45, '#c8f0ff', 5, { fill: true }));
         for (let i = 0; i < (G.touch ? 8 : 16); i++) { const a = (i / 16) * TAU; spawn({ type: 'glow', x: mm.x, y: mm.y, z: 10, vx: Math.cos(a) * 5, vy: Math.sin(a) * 5, drag: 2, life: 0.45, size: 3, size1: 0, color: '#e0f8ff', add: true }); }
@@ -695,7 +695,7 @@ const FIGHT = {
     }
     if (!(S.cds.void > 0) && d < 7 && w.map.los(m.x, m.y, t.x, t.y)) {
       S.cds.void = 9 * cdk(S);
-      cast(m, S, 'special', 0.5, 0.25, (mm, SS) => shot(mm, SS, t, { fx: 'void', el: 'shadow', speed: 3.2, range: d + 1, size: 1.5, pull: 1, mul: 0.5 }), t);
+      cast(m, S, 'ability', 0.5, 0.25, (mm, SS) => shot(mm, SS, t, { fx: 'void', el: 'shadow', speed: 3.2, range: d + 1, size: 1.5, pull: 1, mul: 0.5 }), t);
       return;
     }
     if (engage(m, S, t, d, dt, 7) && m.cd <= 0) { m.cd = m.atkCd; cast(m, S, 'attack', 0.3, 0.12, (mm, SS) => shot(mm, SS, t, { fx: 'skull', el: 'shadow', speed: 8, range: 7.5, home: true }), t); }
@@ -705,7 +705,7 @@ const FIGHT = {
     const puddle = (r, dur, mul) => (x, y) => w.addHazard(new Area({ world: w, src: m, x, y, r, dur, tick: 0.5, dmg: [m.dmg * mul * 0.8, m.dmg * mul * 1.2], el: 'poison', fx: 'poison', o: { poison: true } }));
     if (!(S.cds.cloud > 0) && d < 6.5) {
       S.cds.cloud = 9 * cdk(S);
-      cast(m, S, 'special', 0.6, 0.3, (mm, SS) => { puddle(SS.mini ? 1.4 : 2, 4, 0.3)(t.x, t.y); ring(t.x, t.y, 2, '#80ff40', 3, { fill: true }); sfx('poison', 0.5); }, t);
+      cast(m, S, 'ability', 0.6, 0.3, (mm, SS) => { puddle(SS.mini ? 1.4 : 2, 4, 0.3)(t.x, t.y); ring(t.x, t.y, 2, '#80ff40', 3, { fill: true }); sfx('poison', 0.5); }, t);
       return;
     }
     if (engage(m, S, t, d, dt, 6.5) && m.cd <= 0) { m.cd = m.atkCd; cast(m, S, 'attack', 0.3, 0.14, (mm, SS) => shot(mm, SS, t, { fx: 'blob', el: 'poison', lob: true, exp: 0.9, range: 7, o: { poison: true }, onLand: puddle(1, 2.5, 0.22) }), t); }
@@ -735,7 +735,7 @@ const FIGHT = {
       if (m.cd <= 0) bite(m, S, t, { hit: {} }, (mm, SS) => { if (chance(0.55)) { const sp = spotToward(mm, angleTo(t.x, t.y, mm.x, mm.y) + rand(-0.8, 0.8), 1.6, 0.8); if (sp) startLeap(mm, SS, sp[0], sp[1], 16, 0.28, { squat: 0.2 }); } });
     } else if (!(S.cds.dash > 0) && d < 5 && w.map.los(m.x, m.y, t.x, t.y)) {
       S.cds.dash = rand(2.5, 4) * cdk(S);
-      S.act = { type: 'dash', t: 0, ang: angleTo(m.x, m.y, t.x, t.y), len: d, speed: 11, target: t, seen: new Set(), arrive: (mm, SS) => { mm.cd = 0; } };
+      S.act = { type: 'dash', t: 0, ang: angleTo(m.x, m.y, t.x, t.y), len: d, speed: 11, target: t, dashAnim: 'special', seen: new Set(), arrive: (mm, SS) => { mm.cd = 0; } };
       petals(m.x, m.y, '#ff90d0', 6);
     } else { S.fast = true; m.chase(dt, t, m.speed * 1.15); }
   },
@@ -746,7 +746,7 @@ const FIGHT = {
   volatile(m, S, t, d, dt) {
     if (d < 9 && m.world.map.los(m.x, m.y, t.x, t.y)) {
       emote(S, 'bang', 0.6);
-      startLeap(m, S, t.x, t.y, 26 + d * 5, 0.26 + d * 0.045, { squat: 0.14, squatAnim: 'open', follow: t, trail: true, air: true, land: (mm, SS) => {
+      startLeap(m, S, t.x, t.y, 26 + d * 5, 0.26 + d * 0.045, { squat: 0.14, squatAnim: 'open', airAnim: 'special', follow: t, trail: true, air: true, land: (mm, SS) => {
         aoe(mm.world, mm, mm.x, mm.y, 1.7, mm.dmg * 1.7, 'fire', { burn: true, knock: 0.8 });
         for (let i = 0; i < 3; i++) addEffect(new Ring(mm.x, mm.y, 0.2, 1.9 + i * 0.3, 0.4 + i * 0.1, i ? '#ffd040' : SS.K.color, 5 - i, { fill: !i }));
         sfx('explode', 0.6); camera.shake(4); mm.hp = 0; mm.dead = true;
@@ -765,7 +765,7 @@ FIGHT.mender.always = (m, S, t, dt) => {
   const d = dist(m.x, m.y, o.x, o.y);
   if (!(S.cds.burst > 0) && o.hp < o.maxHp * 0.4 && d < 8) {
     S.cds.burst = 18 * cdk(S);
-    cast(m, S, 'special', 0.6, 0.3, (mm, SS) => { o.heal(o.maxHp * (SS.mini ? 0.08 : 0.15)); addEffect(new Column(o.x, o.y, '#80ff80', 0.6, 22, 200)); ring(o.x, o.y, 1.6, '#80ff60', 4, { fill: true }); petals(o.x, o.y, '#a0ff80', 16); sfx('heal', 0.6); });
+    cast(m, S, 'ability', 0.6, 0.3, (mm, SS) => { o.heal(o.maxHp * (SS.mini ? 0.08 : 0.15)); addEffect(new Column(o.x, o.y, '#80ff80', 0.6, 22, 200)); ring(o.x, o.y, 1.6, '#80ff60', 4, { fill: true }); petals(o.x, o.y, '#a0ff80', 16); sfx('heal', 0.6); });
     return;
   }
   let who = o.hp < o.maxHp * 0.97 && d < 7 ? o : null;

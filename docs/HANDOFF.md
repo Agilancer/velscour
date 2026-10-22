@@ -24,10 +24,16 @@ Contents
   (numbers clear of it) and a fancier slime puddle at his feet.
 - **Art:** `python tools/slimecourt.py "<sheets folder>" [--debug dir] [--only ids]` slices 60 sets (26 detailed sheets:
   isometric rows idle/walk/run/jump/attack/open/ability/special found from their labels; 34 cards: idle/walk/squish/jump/
-  attack/hurt/die), keys the dark card background with soft alpha (glows kept, only small holes filled, effects feathered
-  at the cell edge), anchors each row on one floor line and writes `assets/sprites/slimes/<id>.webp` + `slimes.json`
-  (kind, cell, feet anchor, body height, rows, frame counts, facing from a checked table `FACE`). `SETS` maps every set
-  to its kind and sheet. A detailed set's special attack fills its cell with effects, so `special` plays its ability row.
+  attack/hurt/die). `segment()` cuts each panel into per-frame masks: the frame lines, corner ornaments and portrait
+  slivers are stripped; every cell gets a seed (its most compact solid blob, never the tip of an effect rising from the
+  row below); art touching one seed goes whole to it, art joining two frames is split half way between their bodies,
+  sparks join the nearest body of their own row if close enough. Frame counts per row can differ (`cols`, `rowcols`:
+  Glacier Grin has 4 a row, seven sheets 4 special attacks, Sakura 2). The background is keyed with soft alpha (glows
+  kept, small holes filled), each row is anchored on one floor line and gets its own cell size (nothing clipped), and
+  `--debug dir` writes a review sheet per set with the audit's flags (panel edge, split seam, two bodies, missing).
+  Writes `assets/sprites/slimes/<id>.webp` + `slimes.json` (kind, body height, rows, frame counts, `cells` per row:
+  y, w, h, feet x, feet y; facing from the checked table `FACE`). Special-attack frames (the comet-like rush) play while
+  Pouncers and Volatile Slimes fly at a foe and while Berserkers roll and Charmers dash; in-place spells use `ability`.
 - **Kinds** (`src/game/slimecourt.js`, `KINDS`/`FIGHT`): red Pouncer (pounces 2-10 tiles, bounces on to the next foe,
   burning bites) and Berserker (rolls through packs, rage stacks into a quake slam); gold Bulwark (taunt, body-blocks
   between foe and Lord, shield bash, Gilded Aegis buff on a hurt Lord) and Warden (Amber Barrier buff, honey slows,
