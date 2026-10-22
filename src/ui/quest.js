@@ -22,6 +22,7 @@ export function renderQuest(body) {
     else if (isRaidDepth(c.depth) && !b?.overworld) h += step(false, '<b style="color:#ff6030">A BOSS ROOM</b> lies at the end of this depth.');
     if (b?.id === 'sea_of_sand') h += step(false, 'A linked Sea of Sand route with one to five timed scenario areas lies beyond.');
     else if (b?.id === 'mountainside') h += step(false, 'The Mountainside (beta) lies beyond: a switchback climb up the cliffs to the summit.');
+    else if (b?.id === 'skyship') h += step(false, "The Sky Lanes lie beyond: the Air Pirates board the heroes' airship in waves, then their flagship comes.");
     else if (b?.id === 'dark_forest') h += step(false, 'The Dark Forest lies beyond: trails, labyrinths, five trial glades and the Heart of the Forest.');
     else if (b?.overworld) h += step(false, 'A Forsaken Wilds scenario shrine guards the way forward.');
     h += step(false, `Or take the <b style="color:#c080ff">purple portal</b> into <b>THE ETERNAL BREACH</b>: Floor ${((c.breach && c.breach.best) || 0) + 1} awaits (each floor as deadly as ten depths).`);
@@ -48,6 +49,14 @@ export function renderQuest(body) {
         h += step(false, '<span class="dim">A ledge up to a hop high can be climbed; taller cliffs only jumped down, and the tallest not at all.</span>');
         h += step(sc.completed, 'Defeat the <b>Summit Warden</b> on the peak.');
         h += step(sc.completed, sc.completed ? 'The exit on the peak is open — descend or return to town.' : "The Warden's fall opens the way on.");
+      } else if (w.biome?.id === 'skyship') {
+        const ph = sc.phase, at = ['intro', 'waves', 'mid', 'parley', 'flagship', 'hooks', 'final', 'victory', 'done'].indexOf(ph), waves = sc.wave + 1;
+        h += step(at > 0, `<b>${escapeHtml(sc.variant.name)}</b> <span class="dim">— ${escapeHtml(sc.variant.weather)}</span>`);
+        h += step(at > 2 || (ph === 'waves' && waves > 3), 'Defeat the captain who swings aboard after the third wave.');
+        h += step(at > 2, `Hold the deck against five boarding waves${ph === 'waves' ? `: <b>${waves}/5</b>` : ''}.`);
+        h += step(at > 5, "Survive the flagship's broadsides.");
+        h += step(sc.completed, 'Defeat the two captains who board from her.');
+        h += step(sc.completed, sc.completed ? 'The gate is the exit now, and the hoard chest waits on the hatch.' : escapeHtml(sc.description));
       } else if (w.biome?.id === 'dark_forest') {
         const cur = sc.current;
         h += step(sc.cleared > 0, `Win the trial glades along the trails (optional, each pays fine gear: Epic or better once deep enough): <b>${sc.cleared}/${sc.trials.length}</b>.`);

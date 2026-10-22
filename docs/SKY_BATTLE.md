@@ -1,7 +1,9 @@
 # The Sky Battle (The Sky Lanes)
 
 An overworld biome fought on the deck of the heroes' airship, a gothic steam ironclad, against the Air Pirates. It
-is in the normal biome rotation as **The Sky Lanes** (`skyship` in `src/data/biomes.js`). Velscour's skull also
+is in the normal biome rotation as **The Sky Lanes** (`skyship` in `src/data/biomes.js`): `drawBiome`'s bag (about one
+depth in 20), the three portals at a cleared exit ("Sky battle"), and one of the five overworlds the guarantee picks
+after three dungeons. The portal prompt and the Quest Log describe its phases. Velscour's skull also
 reaches it: send `sky`, `airship` or `pirates`, optionally followed by a scenario (`sky storm`, `sky night`). The
 HAIL VELSCOUR! list also has one entry per scenario.
 
@@ -107,5 +109,5 @@ same scenario twice in a row (`G.char.lastSkyVariant`).
 - The camera is the game's 2D iso camera. Cut scenes pan, zoom and shake; they don't orbit, because the art is baked
   from one angle.
 - The boats lie alongside to port only. Port is behind the deck in the iso view, so they never hide it.
-- The Credits parade (if it lands on main) needs lines for the 40 Air Pirates.
+- The Credits (`src/ui/credits.js`) draws every bestiary monster with generated lines, the Air Pirates included.
 - Not verified: how it plays on a phone, and Safari or Firefox.
