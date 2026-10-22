@@ -13,6 +13,7 @@ import { depthLevel } from '../data/depth.js';
 import { floatText, sparkle, addEffect, Ring } from '../gfx/vfx.js';
 import { sfx } from '../core/audio.js';
 import { UI } from '../ui/ui.js';
+import { heroHears } from './townlife.js';
 
 const LINES = {
   idle: ['Keep to the road, friend.', 'These woods were safer once.', 'Mind the ruins after dark.', 'I heard wolves at dawn.', 'Bless you for walking this way.', 'My cart broke a mile back.'],
@@ -42,12 +43,12 @@ export function addWanderers(world, spots, n = 5) {
       animT: rand(3), walkT: 0, idleSeed: i % 3, walking: false, talkT: 0, talkText: '', waitT: rand(0, 3), chatT: rand(8, 20),
       path: null, goal: null, mood: 'calm', fleeT: 0,
       bounty: i < givers ? { ...pick(BOUNTIES), state: 'offer' } : null,
-      say(t, d = 3) { this.talkText = t; this.talkT = d; },
+      say(t, d = 3, toHero = false) { this.talkText = t; this.talkT = d; if (toHero) heroHears(this, d); },
       use() {
         const b = this.bounty;
-        if (!b || b.state === 'paid') { this.say(pick(LINES.idle)); return; }
+        if (!b || b.state === 'paid') { this.say(pick(LINES.idle), 3, true); return; }
         if (b.state === 'offer') startBounty(world, this);
-        else this.say(b.kind === 'relic' ? 'The heirloom lies where the beacon shines.' : `Still ${Math.max(0, b.need - progress(world, b))} to go!`);
+        else this.say(b.kind === 'relic' ? 'The heirloom lies where the beacon shines.' : `Still ${Math.max(0, b.need - progress(world, b))} to go!`, 3, true);
       },
       update(dt) { wanderTick(world, this, spots, dt); },
     };
@@ -64,7 +65,7 @@ function progress(world, b) {
 function startBounty(world, n) {
   const b = n.bounty, p = world.player;
   b.state = 'active'; b.k0 = world.kills; b.need = b.n();
-  n.say(b.text(b.need), 5);
+  n.say(b.text(b.need), 5, true);
   if (b.kind === 'elite') {
     // the nearest living champion or unique leader, else any monster with a few friends
     let best = null, bd = Infinity;
@@ -102,7 +103,7 @@ function payBounty(world, n) {
   if (chance(0.5)) add('item', { item: rollGem(lvl + 4) });
   add('gold', { amount: Math.round((40 + lvl * 9) * rand(0.8, 1.3)) });
   if (p && G.char) { p.gainXp && p.gainXp(Math.round(120 * Math.pow(lvl, 1.5))); } // ~30 kills' worth (monsterBase xp); 60 * 1.11^lvl was hundreds of levels deep down
-  n.say(pick(LINES.cheer), 4);
+  n.say(pick(LINES.cheer), 4, true);
   addEffect(new Ring(at.x, at.y, 0.3, 2.5, 0.6, '#ffe080', 4));
   floatText(at.x, at.y, 80, 'BOUNTY COMPLETE', '#ffe080', 15, { life: 2 });
   UI.log(`<b>Bounty complete!</b> ${n.name} pays up.`, '#ffe080');
@@ -119,7 +120,7 @@ function wanderTick(world, n, spots, dt) {
   n.emotionT = Math.max(0, (n.emotionT || 0) - dt); n.emoteClock = (n.emoteClock || 0) + dt;
   const b = n.bounty;
   if (b && b.state === 'active' && progress(world, b) >= b.need) payBounty(world, n);
-  if (b && b.state === 'offer' && (n.askT = (n.askT || 0) - dt) <= 0) { n.askT = rand(9, 15); if (world.player && dist(world.player.x, world.player.y, n.x, n.y) < 12) n.say(pick(LINES.ask), 2.5); }
+  if (b && b.state === 'offer' && (n.askT = (n.askT || 0) - dt) <= 0) { n.askT = rand(9, 15); if (world.player && dist(world.player.x, world.player.y, n.x, n.y) < 12) n.say(pick(LINES.ask), 2.5, true); }
   // won the area: everybody cheers once
   const sc = world.overworldScenario;
   if (sc && sc.completed && !n.cheered) { n.cheered = true; n.townPose = 'cheer'; n.townPoseT = 3; n.say(pick(LINES.cheer), 3); }

@@ -12,6 +12,8 @@
 //
 // Speech is rationed so bubbles never swamp the screen: nothing is said for the first seconds of a visit, at most two
 // ambient bubbles (three during an event) show near the hero at once, and ambient talk keeps a gap between lines.
+// A line meant for the hero (heroHears) makes auto-play stand and read it; after its errands auto-play pays its
+// respects to any royalty in town (and now and then a townsperson) through heroVisit.
 import { G } from '../state.js';
 import { dist, rand, randi, pick, chance, RNG, TAU } from '../core/util.js';
 import { TW } from '../core/view.js';
@@ -19,10 +21,11 @@ import { A } from '../core/assets.js';
 import { TOWNSFOLK } from '../data/townsfolk.js';
 import { addTownAnimals, animalRoutine, animalGreet, castAnimal, animalBolt } from './townanimals.js';
 import { CLASSES } from '../data/classes.js';
-import { CHATS, BARKS, SHOPPING, ADVENTURER_CHATS, ADVENTURER_BARKS, EVENT_LINES } from '../data/townscripts.js';
+import { CHATS, BARKS, SHOPPING, ADVENTURER_CHATS, ADVENTURER_BARKS, EVENT_LINES, AUDIENCES } from '../data/townscripts.js';
 import { townFacingFlip, EMOTIONS } from './townsfolkvisuals.js';
 import { townObject } from '../world/town.js';
 import { spawn } from '../gfx/vfx.js';
+import { setupHomunculus } from './homunculus.js';
 
 export const TOWN_EVENT_CHANCE = 0.35;
 export const TOWN_EVENTS = Object.keys(EVENT_LINES);
@@ -32,6 +35,16 @@ const ADV_NAMES = ['Brannoc', 'Ysra', 'Corvin', 'Talia', 'Mord', 'Elsabet', 'Rur
 const CONFETTI = ['#ff5a5a', '#ffd23c', '#5ab4ff', '#7ae07a', '#ff9ad8', '#ffffff'];
 
 const lineTime = (text) => Math.min(4.6, Math.max(2.3, 1.5 + text.length * 0.055));
+const HEAR = 6;               // tiles: a line this close that is meant for the hero makes auto-play stop and read it
+
+/** Someone is talking to the hero: auto-play stands still for the bubble (at least a second) so it can be read.
+ *  Back-to-back bubbles from the same speaker keep the hero listening. */
+export function heroHears(who, dur) {
+  const p = G.player;
+  if (!p || !who || dist(p.x, p.y, who.x, who.y) > HEAR) return;
+  const l = G.heroListen;
+  G.heroListen = { who, t: Math.max(1, dur + 0.6, l && l.who === who ? l.t : 0) };
+}
 
 export function startTownLife(world, t, c, visit) {
   const rng = new RNG(((c.townSeed || 1) * 31 + visit * 0x9e3779b9) >>> 0);
@@ -142,6 +155,8 @@ export function startTownLife(world, t, c, visit) {
     a.talkText = text; a.talkT = dur; a.talkAge = 0;
     if (emo) d.feel(a, emo, dur + 0.6, false);
     a.iconT = 0;
+    if (a.toHero) heroHears(a, dur);
+    if (a.onSay) a.onSay(text, emo, dur);
     return dur;
   };
   const nearHero = (a) => { const p = G.player; return p && dist(p.x, p.y, a.x, a.y) < NEAR; };
@@ -169,7 +184,7 @@ export function startTownLife(world, t, c, visit) {
     const p = G.player;
     if (p) d.face(a, p.x, p.y);
     const list = a.adv ? ADVENTURER_BARKS : chance(0.6) && BARKS[a.group] ? BARKS[a.group] : BARKS.any, [text, emo] = pick(list);
-    if (clicked || d.canSpeak(a)) { d.say(a, text, emo); if (!clicked) d.nextAmbient = d.time + 6; }
+    if (clicked || d.canSpeak(a)) { heroHears(a, d.say(a, text, emo)); if (!clicked) d.nextAmbient = d.time + 6; }
   };
 
   // ------------------------------------------------------------------ per-agent tick
@@ -225,6 +240,8 @@ export function startTownLife(world, t, c, visit) {
   // ------------------------------------------------------------------ the update
   d.update = (dt) => {
     d.time += dt;
+    // the hero's own bubbles (chats at the forge) and the axe's
+    for (const q of [G.player, d.axe]) if (q && q.talkT > 0) { q.talkT = Math.max(0, q.talkT - dt); q.talkAge = (q.talkAge || 0) + dt; }
     for (const s of d.scenes) if (!s.done) stepScene(s, dt);
     if (d.scenes.length > 40) d.scenes = d.scenes.filter((s) => !s.done);
     if (d.event && d.event.done && !d.eventOver) { d.eventOver = true; }
@@ -255,6 +272,8 @@ export function startTownLife(world, t, c, visit) {
     if (a.home && rng.chance(0.33)) { d.hide(a); a.nextT = rand(2, 30); a.indoors = true; }
   }
   d.cast = cast;
+  if (G.player) G.player.talkT = 0;
+  setupHomunculus(d);
 
   // ------------------------------------------------------------------ set pieces and the special event
   addTownAnimals(d, rng);
@@ -418,8 +437,29 @@ function* fan(d, a) {
   d.face(a, p.x, p.y);
   d.feel(a, 'celebrate', 2);
   const [text, emo] = pick(BARKS.kids);
+  a.toHero = true;
   yield* d.line(a, text, emo, 1);
+  a.toHero = false;
   yield 1.5;
+}
+
+/** Auto-play's hero walked up to `a` for a word: they turn, say a few bubbles to the hero, then go back to their day.
+ *  Returns the scene (done when they have finished talking). */
+export function heroVisit(d, a) {
+  if (a.busy && a.busy !== d.event && a.busy !== true) d.release(a.busy);
+  const list = AUDIENCES[a.role] || (a.royal ? AUDIENCES.royal : AUDIENCES[a.group] || AUDIENCES.any);
+  return d.run((function* () {
+    const p = G.player;
+    a.goal = a.path = null;
+    if (p) d.face(a, p.x, p.y);
+    if (a.royal) d.feel(a, 'proud', 2);
+    yield 0.5;
+    a.toHero = true;
+    for (const [text, emo] of pick(list)) { if (p) d.face(a, p.x, p.y); yield d.say(a, text, emo) + 0.35; }
+    a.toHero = false;
+    d.feel(a, a.royal ? 'gesture' : pick(['happy', 'wave', 'bow']), 2);
+    yield 1;
+  })(), [a], 'audience');
 }
 
 function* advRoutine(d, a) {

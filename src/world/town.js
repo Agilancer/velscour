@@ -11,7 +11,7 @@ import { isoFix } from '../gfx/isofix.js';
 export const VENDORS = [
   { id: 'weapons', name: 'Garrick Ironhand', title: 'Weaponsmith', sprite: 'barbarian', pal: { hue: 25, sat: 0.6, light: -0.02 }, sign: 'sword', greet: 'Steel for the slaughter. Pick your poison - edges, hafts or bows.' },
   { id: 'armor', name: 'Stevie the Stronger', title: 'Armorer', sprite: 'lancer', pal: { hue: -25, sat: 0.9 }, sign: 'shield', greet: 'The dead hit hard down there. Wear something thicker than hope.' },
-  { id: 'upgrade', name: 'Durgan Emberforge', title: 'Blacksmith', sprite: 'dragoon', pal: { hue: 20, sat: 0.7, light: 0.03 }, sign: 'hammer', greet: 'Bring me your gear and your gold. I\'ll hammer both into something better.' },
+  { id: 'upgrade', name: 'Homunculus the Proud', title: 'Blacksmith · Paladin', sprite: 'dragoon', pal: { hue: 20, sat: 0.7, light: 0.03 }, sign: 'hammer', greet: 'Homunculus the Proud, smith and Paladin of the Light! Hand it over. Hammer and faith will see to the rest.' },
   { id: 'enchant', name: 'Lily Belle the Veiled', title: 'Enchanter', sprite: 'arcane_sorcerer', pal: { hue: 120, sat: 1 }, sign: 'orb', greet: 'Magic is merely a negotiation. Let us renegotiate your equipment.' },
   { id: 'alchemist', name: 'Old Mother Wren', title: 'Alchemist', sprite: 'carrion_witch', pal: { hue: 150, sat: 0.8 }, sign: 'lantern', greet: 'Red for blood, blue for wits, purple for both. Orange... for when you mean it.' },
   { id: 'gems', name: 'Zafir the Lapidary', title: 'Gem Merchant', sprite: 'totem_master', pal: { hue: 200, sat: 0.9 }, sign: 'orb', greet: 'Every stone remembers the light. Three of a kind, and I can make them sing louder.' },
@@ -315,7 +315,13 @@ function rollTown(tileset, seed, last) {
       ? [[b.x0 + 3.5, b.y0 - 0.4], [b.x0 + 3.5, b.y0 + 3.4], [b.x0 + 3.45, b.y0 + 2.6], [b.x0 - 0.5, b.y0 + 1.5], [b.x0 + 1.5, b.y0 - 0.5]]
       : [[b.x0 - 0.4, b.y0 + 3.5], [b.x0 + 3.4, b.y0 + 3.5], [b.x0 + 2.6, b.y0 + 3.45], [b.x0 + 1.5, b.y0 - 0.5], [b.x0 - 0.5, b.y0 + 1.5]];
     let si = 0;
-    for (const n of shuffle(solid.slice(), rng)) while (si < spots.length && !prop(n, ...spots[si++]));
+    if (b.name === 'upgrade') {
+      // Homunculus the Proud always has his anvil by the door: the first free wall spot, else the nearest free ground
+      let ok = false;
+      while (!ok && si < spots.length) ok = prop('anvil_stump', ...spots[si++]);
+      for (let r = 2.6; !ok && r < 6; r += 0.5) for (let a = 0; !ok && a < TAU; a += 0.4) ok = prop('anvil_stump', b.cx + Math.cos(a) * r, b.cy + Math.sin(a) * r);
+    }
+    for (const n of shuffle(solid.filter((n) => b.name !== 'upgrade' || n !== 'anvil_stump'), rng)) while (si < spots.length && !prop(n, ...spots[si++]));
     for (const n of small.slice(0, 1)) if (si < spots.length) prop(n, ...spots[si++], { solid: false });
   }
   // yards: gardens, an orchard, a lumber camp by the trees, a paddock, old ruins

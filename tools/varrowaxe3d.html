@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Varrow's Axe 3D</title>
+<!-- Varrow's great axe on its rack (tools/varrowaxe3d.js; Homunculus the Proud's forge, src/game/homunculus.js): an
+     orbit viewer, and the bake used by tools/varrowaxe3d_bake.js (32 turns of the axe and its rune layer from the
+     game's iso camera, plus the rack). Only this tool runs three.js; the game draws the baked sheet.
+     http://localhost:8123/tools/varrowaxe3d.html   ?bake for no viewer   ?skin=0 flat colours
+     Keys: 0-9 / - = story chapter (rune glow), space pauses the turn, I toggles the iso camera. -->
+<style>
+  html, body { margin: 0; height: 100%; background: #1b1d22; overflow: hidden; font: 12px monospace; color: #dfe; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+  #hud { position: fixed; left: 10px; top: 8px; white-space: pre; pointer-events: none; text-shadow: 1px 1px 0 #000; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="hud"></div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { buildVarrowAxe, buildRack, axeSkin, AXE } from './varrowaxe3d.js';
+
+const P = new URLSearchParams(location.search);
+// the rune glow by story chapter (src/gfx/varrowaxe.js uses the same colours)
+const RUNE = (ch) => (ch >= 11 ? 0xffe080 : ch >= 5 ? 0xa8f0ff : ch >= 1 ? 0x7dffb0 : 0x15191b);
+const LOOK = { amb: 0.32, sky: 0.3, sun: 1.25, sunDir: [-0.6, 0.85, 0.5] };
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+scene.add(new THREE.AmbientLight(0xffffff, LOOK.amb * Math.PI), new THREE.HemisphereLight(0xdfe6ff, 0x3a3020, LOOK.sky * Math.PI));
+const sun = new THREE.DirectionalLight(0xfff2e0, LOOK.sun * Math.PI);
+scene.add(sun, sun.target);
+const skin = P.get('skin') === '0' ? null : await axeSkin();
+const axe = buildVarrowAxe(skin), rack = buildRack();
+scene.add(rack, axe);
+
+/** The game's camera: orthographic, 30 degrees down, from the +x +z diagonal; world units are screen px. */
+function isoCamera(left, right, top, bottom) {
+  const c = new THREE.OrthographicCamera(left, right, top, bottom, -4000, 4000), e = Math.PI / 6;
+  c.position.set(Math.cos(e) * Math.SQRT1_2, Math.sin(e), Math.cos(e) * Math.SQRT1_2).multiplyScalar(1000);
+  c.up.set(0, 1, 0); c.lookAt(0, 0, 0); c.updateMatrixWorld(); c.updateProjectionMatrix();
+  return c;
+}
+// the sun is fixed to the camera, so every turn of the axe is lit from the top left like the rest of the game
+function aimSun(cam) {
+  const d = new THREE.Vector3(...LOOK.sunDir).normalize().transformDirection(cam.matrixWorld);
+  sun.position.copy(d).multiplyScalar(500); sun.target.position.set(0, 0, 0); sun.target.updateMatrixWorld();
+}
+const setYaw = (yaw) => { axe.rotation.y = Math.PI / 4 + yaw; };  // yaw 0: the blades broadside to the camera
+function setChapter(ch) { const m = axe.runes.material; m.color.setHex(ch >= 1 ? 0x30383a : 0x15191b); m.emissive.setHex(RUNE(ch)); m.emissiveIntensity = ch >= 1 ? 0.9 : 0; }
+
+// ------------------------------------------------------------------ bake
+// px at 1x: the axe frame (ground under its axis at ax, ay) and the rack's
+const AF = { w: 56, h: 120, ax: 28, ay: 106 }, RF = { w: 72, h: 106, ax: 36, ay: 98 };
+const OCC = new THREE.MeshBasicMaterial({ colorWrite: false }), WHITE = new THREE.MeshBasicMaterial({ color: 0xffffff });
+function shoot(F, S) {
+  renderer.setSize(F.w * S, F.h * S, false);
+  const cam = isoCamera(-F.ax, F.w - F.ax, F.ay, F.ay - F.h);
+  aimSun(cam);
+  renderer.setClearColor(0x000000, 0);
+  renderer.render(scene, cam);
+  return renderer.domElement;
+}
+/** Every turn of the axe (lit, then runes only) and the rack, on one sheet. */
+async function bake(S = 3, N = 32) {
+  const t0 = performance.now();
+  const sheet = document.createElement('canvas'), fw = AF.w * S, fh = AF.h * S;
+  sheet.width = N * fw; sheet.height = 2 * fh + RF.h * S;
+  const g = sheet.getContext('2d');
+  setChapter(0);
+  // the rack alone, once
+  axe.visible = false;
+  g.drawImage(shoot(RF, S), 0, 2 * fh);
+  axe.visible = true; rack.visible = false;
+  const meshes = []; axe.traverse((o) => o.isMesh && meshes.push(o));
+  for (let i = 0; i < N; i++) {
+    setYaw((i / N) * Math.PI * 2);
+    g.drawImage(shoot(AF, S), i * fw, 0);
+    // the runes alone: everything else only hides what is behind it
+    const keep = meshes.map((m) => m.material);
+    for (const m of meshes) { m.material = m === axe.runes ? WHITE : OCC; m.renderOrder = m === axe.runes ? 1 : 0; }
+    g.drawImage(shoot(AF, S), i * fw, fh);
+    meshes.forEach((m, k) => { m.material = keep[k]; m.renderOrder = 0; });
+  }
+  rack.visible = true;
+  return { sheet: sheet.toDataURL('image/webp', 0.94), meta: { S, n: N, frame: [AF.w, AF.h], anchor: [AF.ax, AF.ay], rack: { y: 2 * AF.h, size: [RF.w, RF.h], anchor: [RF.ax, RF.ay] }, skin: !!skin }, ms: Math.round(performance.now() - t0) };
+}
+/** One iso view of the axe on its rack at a yaw and chapter, magnified (for previews and the turntable sheet). */
+function preview(yaw = 0, ch = 0, S = 4) {
+  setYaw(yaw); setChapter(ch);
+  return shoot({ w: 80, h: 122, ax: 40, ay: 108 }, S).toDataURL('image/png');
+}
+window.AXE3D = { bake, preview, AXE };
+
+// ------------------------------------------------------------------ viewer
+if (!P.has('bake')) {
+  document.body.appendChild(renderer.domElement);
+  const persp = new THREE.PerspectiveCamera(32, 1, 1, 4000);
+  persp.position.set(120, 110, 160);
+  const controls = new OrbitControls(persp, renderer.domElement);
+  controls.target.set(0, 55, 0); controls.update();
+  let iso = false, paused = false, ch = 6, yaw = 0, last = performance.now();
+  const hud = document.getElementById('hud');
+  addEventListener('keydown', (e) => {
+    if (e.key === ' ') paused = !paused;
+    else if (e.key === 'i' || e.key === 'I') iso = !iso;
+    else if (/^[0-9]$/.test(e.key)) ch = +e.key;
+    else if (e.key === '-') ch = 10; else if (e.key === '=') ch = 11;
+  });
+  const loop = (now) => {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (!paused) yaw += dt * 0.6;
+    setYaw(yaw); setChapter(ch);
+    const w = innerWidth, h = innerHeight;
+    renderer.setSize(w, h, false);
+    let cam = persp;
+    if (iso) { const k = 130 / h * 1.2; cam = isoCamera(-w / 2 * k, w / 2 * k, 112, 112 - h * k); }
+    else { persp.aspect = w / h; persp.updateProjectionMatrix(); controls.update(); }
+    aimSun(iso ? cam : persp);
+    renderer.setClearColor(0x1b1d22, 1);
+    renderer.render(scene, cam);
+    hud.textContent = `Varrow's axe  chapter ${ch} (0-9 - =)  ${paused ? 'paused' : 'turning'} (space)  ${iso ? 'iso' : 'orbit'} camera (I)  skin: ${skin ? 'Runeblade chunks' : 'flat'}`;
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
