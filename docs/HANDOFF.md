@@ -69,10 +69,29 @@ Contents
     fps, update 11.3 -> 3.1 ms.
   - Skill icons are CPU-backed canvases (`willReadFrequently`): their `toDataURL` stalled on the GPU 10-150 ms (a level-up
     hitch). A potion on the ground built a new canvas every frame; now one per drop.
+  - First frames: the baked 3D pages (Castle masonry, airships) are decoded on load and drawn once in `warmLevelArt` so
+    the GPU takes them in behind the loading screen; Sky Battle clouds are built there too (their hard-edge pass on a
+    CPU canvas), and a height map's terrain cache (`terrainOf`). Sky Battle first frame 485 -> 2 ms, Castle 62 -> 3 ms.
+    Every other biome's first frame measured under 50 ms.
 - **Tests run:** castle_autoplay, castle_walls, castle_overworld, castle_visual (looked at), mobs, flow, breach (auto 1,
   town, rules, shots), skyship all auto (all eight skies, every phase), overworld (60 seeds), scenarios (Wilds 26/26; the
   same three Castle rampart waits of 21-25 s as on `main`), sea_of_sand_generation, biome_perf.
-- **Open / to look at:** see the end-of-session list below this section's tests line in the next session's notes.
+- **Deep dive:** `balance.js necromancer,barbarian 100,250,450 6`: no errors; BOSS ROOMs won (the Briarheart at 250, the
+  Bailiff at 450); two Barbarian deaths at Depth 100, none deeper. The Sky Battle under auto-play opens the hoard chest,
+  collects, takes the exit and goes on to the next depth.
+- **Design calls made without asking (worth a look):** the sizes in `SIZE` (Breach) and `SAND_H` (Sea of Sand); the
+  Castle's scatter rules (most fallen masonry outside the walls, the bombardment field to the south-east); the wall rule's
+  threshold (more than a drop, 10 levels) and its 12 s memory; one template (the woodcutter's spot) kept, no others built.
+- **Open:**
+  - Combat ignores height, so the Paladin's orbiting hammers and Shield Throw, pets and splash still land on wall foes
+    from below while he climbs (castle_autoplay: up to ~9% of the damage). Only auto-play's own choices follow the rule.
+  - The map lets a walker step off a low stair's side (a drop of 10 or less); auto-play may while dodging or kiting.
+    The walls themselves can't be dropped from.
+  - Mountainside auto-play still misses the summit in 600 s (27-42% here, 37% with `main`'s files on the same run):
+    not from this change. `mountain.js rules` now and then finds no clean tall step (passes on rerun, as before).
+  - `scenarios.js`: the same three Castle rampart scenarios wait 21-25 s, as on `main`.
+  - During the Sky Battle's waves loot piles up on the deck (auto-play collects it after the victory).
+  - Not measured on a real phone; Safari/iOS untested (`img.decode` and `willReadFrequently` are standard there).
 
 ## October 22, 2026 — THE SKY BATTLE: airships, Air Pirates, cut scenes, eight skies (branch `feat/sky-battle`)
 - **Request:** the airships (tools/airship3d*.js, docs/AIRSHIP_3D.md) as a biome. The hero steps out of the portal
