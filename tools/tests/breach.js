@@ -191,11 +191,12 @@ const FLOOR = +(process.argv[3] || 2);
         await page.waitForTimeout(900);
         await shot('breach_' + name);
       };
-      await at('overview', 'for (const m of W.creatures) if (m.team === "enemy") m.dead = true; return [W.map.w / 2, W.map.h / 2];', 0.3);
+      // (the wards stand open for the photos: a closed one puts the hero back on the start island)
+      await at('overview', 'for (const m of W.creatures) if (m.team === "enemy") m.dead = true; for (const w of run.wards) { w.was = w.closed; w.closed = false; } return [W.map.w / 2, W.map.h / 2];', 0.3);
       await at('start', 'const o = run.islands.find((q) => q.start); return [o.cx, o.cy + 1.5];', 1);
       await at('heart', 'const o = run.islands[run.heart.o.idx]; return [o.cx, o.cy + 3];', 0.7);
       await at('ruin', 'const S = run.scenarios.find((s) => s.o.ruin) || run.scenarios[0]; return [S.C[0], S.C[1] + 1.5];', 0.85);
-      await at('ward', 'const w = run.wards[0]; return [w.x - 1.5, w.y + 1.5];', 1);
+      await at('ward', 'for (const w of run.wards) w.closed = w.was; const w = run.wards[0]; return [w.x - 1.5, w.y + 1.5];', 1);
       await at('fight', 'const S = run.scenarios.find((s) => s.type !== "heart"); run.force(S); for (let i = 0; i < 90; i++) { W.update(1/30); run.update(1/30); } return null;', 1);
       await page.evaluate(async () => { const { G } = window.VELSCOUR; const { camera } = await import('/src/core/view.js'); G.settings.zoom = 1; camera.computeZoom(); });
     }
@@ -254,6 +255,20 @@ const FLOOR = +(process.argv[3] || 2);
       console.log('auto:', r.log.join('\n  '));
       console.log(`auto: ${r.t}s game time, best floor ${r.best}, now in ${r.where}`);
       if (r.best < FLOOR) errors.push(`[auto] auto-play did not win floor ${FLOOR} in ${r.t}s`);
+      // home again: the town must draw (the black town after a Breach run). The game's own loop, 3 s, then the
+      // share of near-black pixels in the middle of the screen
+      if (r.where === 'town') {
+        await page.waitForTimeout(3000);
+        const dark = await page.evaluate(() => {
+          const c = window.VELSCOUR.G.canvas, g = c.getContext('2d'), w = c.width, h = c.height;
+          const d = g.getImageData(Math.round(w * 0.2), Math.round(h * 0.2), Math.round(w * 0.6), Math.round(h * 0.6)).data;
+          let n = 0; for (let i = 0; i < d.length; i += 16) if (d[i] + d[i + 1] + d[i + 2] < 30) n++;
+          return n / (d.length / 16);
+        });
+        await shot('breach_home');
+        console.log(`auto: back in town, ${(dark * 100).toFixed(1)}% of the view near black`);
+        if (dark > 0.25) errors.push(`[auto] the town draws ${(dark * 100).toFixed(0)}% black after the Breach`);
+      }
     }
 
     // ------------------------------------------------ rules
@@ -306,6 +321,21 @@ const FLOOR = +(process.argv[3] || 2);
       });
       console.log('ledge', ledge);
       if (!ledge.startsWith('pulled')) errors.push('[rules] stranded monster: ' + ledge);
+      // auto-play leaves the Breach inside game.update: the Breach's ward check must not run on after him and put him
+      // back at his last Breach spot (off the edge of town: the black town)
+      await enter(1);
+      const home = await page.evaluate(async () => {
+        const { G, game } = window.VELSCOUR, { Auto } = await import('/src/game/autoplay.js');
+        const step = () => { G.dt = 1 / 30; G.time += G.dt; G.frame++; game.update(1 / 30); };
+        for (let i = 0; i < 30; i++) step();
+        G.player.x = 90.5; G.player.y = 95.5; // far out over the void: what the ward check last saw
+        const orig = Auto.update; Auto.update = () => { Auto.update = orig; game.breachExit(G.world, { auto: true, town: true }); };
+        step(); for (let i = 0; i < 15; i++) step();
+        const P = G.player, m = G.world.map;
+        return { kind: G.world.kind, ok: m.walkable(P.x, P.y), at: [+P.x.toFixed(1), +P.y.toFixed(1)], size: [m.w, m.h] };
+      });
+      console.log('home', JSON.stringify(home));
+      if (home.kind !== 'town' || !home.ok) errors.push('[rules] auto-play came home off the town\'s ground: ' + JSON.stringify(home));
       await enter(1);
       await page.evaluate(() => { const { G } = window.VELSCOUR; G.godMode = false; G.player.hp = 0; G.player.die(null); });
       await page.waitForTimeout(2200);

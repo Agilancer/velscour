@@ -6,7 +6,7 @@
 // a graveyard, the enemy siege lines, and a forest of the Dark Forest's towering trees round the edge.
 // 336 x 304 tiles (three times the old 192 x 176 board). Walls, towers and halls sit on a 2-tile cell grid.
 import { TileMap } from './map.js';
-import { RNG } from '../core/util.js';
+import { RNG, TAU } from '../core/util.js';
 import { TW } from '../core/view.js';
 import { A } from '../core/assets.js';
 import { rollLooks } from '../data/bestiary.js';
@@ -494,19 +494,48 @@ export function generateCastle(depth,biome,seed){
   for(const [nm,x,y] of [['large_rubble',RW[0]+3,RW[1]+2],['rubble_pile',RW[0]-4,RW[1]+3],['stone_blocks',RW[0]+4,RW[1]-2],['spare_merlons',RW[0]-1,RW[1]+4.5]])P(nm,x,y);
 
   // ---------------------------------------------------------------- loose scatter and trees
+  // Loose scatter goes where it belongs: masonry knocked off the walls lies at their foot (mostly outside, where the
+  // siege engines aim), spent shot and wreckage on the ground between the siege lines and the curtain, milestones
+  // beside the roads, and out in the meadows and along the wood's edge only nature: stones, shrubs, flowers, logs.
+  // Nothing on a road. (It used to be rubble, sandbags, headstones and apple sacks dropped anywhere.)
   const reserved=(x,y)=>[ENTRY,EXIT].some(p=>dist(x,y,p)<6);
-  let scatter=0;
-  const looseOut=['40_rubble_pile','42_small_rubble','34_broken_wheel','24_stone_blocks','73_milestone','105_apple_sack','81_sandbags','43_large_rubble','04_broken_barrel'];
-  for(let t=0;t<20000&&scatter<520;t++){
-    const x=rng.int(4,W-5)+.5,y=rng.int(4,H-5)+.5,i=I(x|0,y|0);
-    if(map.block[i]||clear[i]||forest[i]||mat[i]===MAT.water||reserved(x,y)||!map.circleFree(x,y,.6))continue;
-    if(inOuter(x,y)&&rng.chance(.7))continue;
-    if(S(rng.pick(looseOut),x,y,{solid:rng.chance(.5)}))scatter++;
-  }
-  // Ground cover: small walk-over clutter.
+  const wallD=new Uint8Array(N).fill(9),wq=[];   // tiles from the nearest wall or tower, up to 5
+  for(let i=0;i<N;i++)if(map.rampartWall[i]){wallD[i]=0;wq.push(i);}
+  for(let a=0;a<wq.length;a++){const i=wq[a];if(wallD[i]>=5)continue;for(const j of [i+1,i-1,i+W,i-W])if(j>=0&&j<N&&wallD[j]>wallD[i]+1){wallD[j]=wallD[i]+1;wq.push(j);}}
+  const open=(x,y,r=.55)=>{const i=I(x|0,y|0);return inb(x|0,y|0)&&!map.block[i]&&!kind[i]&&hgt[i]===0&&mat[i]!==MAT.water&&mat[i]!==MAT.road&&mat[i]!==MAT.cobble&&
+    mat[i]!==MAT.hall&&mat[i]!==MAT.sand&&faceArt[i]!==FACE.bridge&&!reserved(x,y)&&map.circleFree(x,y,r);};
+  const nearAny=(x,y,r,test)=>{for(let yy=(y|0)-r;yy<=(y|0)+r;yy++)for(let xx=(x|0)-r;xx<=(x|0)+r;xx++)if(inb(xx,yy)&&test(I(xx,yy)))return true;return false;};
+  // fallen masonry: a block or a heap with smaller stones round it
+  for(let t=0,n=0;t<6000&&n<64;t++){const x=rng.int(4,W-5)+.5,y=rng.int(4,H-5)+.5,i=I(x|0,y|0);
+    if(wallD[i]<1||wallD[i]>3||!open(x,y,.6)||(inOuter(x,y)&&rng.chance(.75)))continue;
+    const big=!clear[i];   // on the paved strip along the wall's foot only stones you can walk over
+    if(!S(big?rng.pick(['40_rubble_pile','43_large_rubble','24_stone_blocks','spare_merlons']):'42_small_rubble',x,y,{solid:big}))continue;n++;
+    for(let k=rng.int(1,3);k>0;k--){const a=rng.range(0,TAU),r=rng.range(.7,1.4),sx=x+Math.cos(a)*r,sy=y+Math.sin(a)*r;if(open(sx,sy,.3))S('42_small_rubble',sx,sy,{solid:false});}}
+  // the bombardment: spent shot and wreckage on the ground between the siege lines and the south-east walls
+  for(let t=0,n=0;t<3000&&n<30;t++){const x=SG[0]+rng.range(-46,10),y=SG[1]+rng.range(-46,4),i=I(x|0,y|0);
+    if(clear[i]||forest[i]||inOuter(x,y)||!open(x,y,.6))continue;
+    if(S(rng.chance(.6)?'43_large_rubble':rng.pick(['34_broken_wheel','04_broken_barrel','81_sandbags']),x,y,{solid:true}))n++;}
+  // milestones beside the roads where they fork or leave the woods
+  for(const [mx,my] of [[gateX+6,240],[gateX-4,250],[100,254],[ENTRY[0]-4,270],[286,172],[244,44],[78,226],[pgX+4,40]]){
+    let best=null,bd=9;
+    for(let yy=my-4;yy<=my+4;yy++)for(let xx=mx-4;xx<=mx+4;xx++){const x=xx+.5,y=yy+.5,d=Math.hypot(x-mx,y-my);
+      if(d<2||d>=bd||!open(x,y,.45)||!nearAny(x,y,1,(j)=>mat[j]===MAT.road))continue;bd=d;best=[x,y];}
+    if(best)T('arrow_milestone',best[0],best[1],40);}
+  // nature: patches of flowers and stones in the meadows; logs, stumps, boulders, shrubs and mushrooms along the wood's edge
+  for(let t=0,n=0;t<14000&&n<300;t++){const x=rng.int(4,W-5)+.5,y=rng.int(4,H-5)+.5,i=I(x|0,y|0);
+    if(clear[i]||forest[i]||inOuter(x,y)||wallD[i]<5||!open(x,y,.6))continue;
+    if(nearAny(x,y,2,(j)=>forest[j])){
+      const nm=rng.pick(['fallen_log','hollow_stump','sawn_stump','moss_boulder','leafy_shrub','thorn_bush','mushrooms','mushrooms']),solid=!/mushrooms|leafy/.test(nm);
+      if(T(nm,x+rng.range(-.2,.2),y+rng.range(-.2,.2),{fallen_log:26,hollow_stump:24,sawn_stump:18,moss_boulder:36,leafy_shrub:30,thorn_bush:32,mushrooms:12}[nm]*rng.range(.85,1.15),solid))n++;
+    }else if(rng.chance(.5)){
+      const nm=rng.chance(.55)?'wildflowers':rng.chance(.6)?'fieldstone_cluster':rng.chance(.7)?'leafy_shrub':'moss_boulder';
+      for(let k=nm==='wildflowers'?rng.int(2,4):1;k>0;k--){const sx=x+rng.range(-.8,.8),sy=y+rng.range(-.8,.8);
+        if(open(sx,sy,.3)&&T(nm,sx,sy,{wildflowers:16,fieldstone_cluster:20,leafy_shrub:28,moss_boulder:34}[nm]*rng.range(.85,1.15),nm==='moss_boulder'))n++;}}}
+  // Ground cover you walk over: a cracked cobble here and there on the cobbled lanes, chips of stone near the walls.
   for(let t=0;t<9000;t++){const x=rng.int(3,W-4)+.5,y=rng.int(3,H-4)+.5,i=I(x|0,y|0);
-    if(map.block[i]||mat[i]===MAT.water||mat[i]===MAT.hall||mat[i]===MAT.pave||mat[i]===MAT.dark||kind[i]||faceArt[i]===FACE.bridge)continue;
-    if(rng.chance(.06))S(rng.pick(['41_cracked_paving','42_small_rubble','26_mason_tools','105_apple_sack']),x+rng.range(-.3,.3),y+rng.range(-.3,.3),{solid:false});}
+    if(map.block[i]||kind[i]||faceArt[i]===FACE.bridge||!rng.chance(.06))continue;
+    if(mat[i]===MAT.cobble)S('41_cracked_paving',x+rng.range(-.3,.3),y+rng.range(-.3,.3),{solid:false});
+    else if(wallD[i]<=4&&mat[i]!==MAT.water&&mat[i]!==MAT.hall&&mat[i]!==MAT.road)S('42_small_rubble',x+rng.range(-.3,.3),y+rng.range(-.3,.3),{solid:false});}
   // The forest: the Dark Forest's towering trees in the deep wood, the castle pack's trees on its fringe and in groves.
   const dfOK=darkForestTreesReady(),grid=new Int32Array(N);
   const fringeTrees=castleFrames('trees').filter(f=>/medium|large/.test(f.id)).map(f=>f.id);
@@ -691,6 +720,7 @@ export function generateCastle(depth,biome,seed){
   }
   {const D=map.drawbridge;D.tiles=[];rect(D.x0,D.hinge,D.x1-1,D.y1-1,(x,y,i)=>{D.tiles.push(i);map.block[i]=1;});D.down=false;D.lowering=false;}
   map.castleKeep={x:KEEP[0],y:KEEP[1]};map.castleGarden=GDN;map.castleSiege=SG;map.castleVillage=[vx,vy];
+  map.stepMask();   // (auto-play's road field reads it: built here, behind the loading screen)
   return {map,props,buildings,trees,wallHangings:[],townTiles:[...floors,...keepFloors,...castleCarpetTiles(),...castleRampartTops(),...castleRampartTops(KEEP_STONE),castlePlankTile()],looks,spawns,chests,torches:[],
     start:ENTRY,exit,shrine:sites[0],sites,scenarioId,seed,engines,tents};
 }

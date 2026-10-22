@@ -95,6 +95,9 @@ function loop(now) {
     }
   } catch (err) {
     reportError(err);
+    // a draw that threw left its save()s (clips, alpha, transforms) on the stack: unwind them, or every later frame
+    // draws through them (restore() past the bottom of the stack does nothing)
+    if (G.ctx) for (let i = 0; i < 64; i++) G.ctx.restore();
   }
   input.endFrame();
   requestAnimationFrame(loop);

@@ -272,6 +272,23 @@ export class TileMap {
     const s1 = y * W + x + ox, s2 = (y + oy) * W + x;
     return Math.max(H[a], H[b], H[s1], H[s2]) - Math.min(H[a], H[b], H[s1], H[s2]) <= this.climb;
   }
+  /** Bit k (k = (oy + 1) * 3 + ox + 1) set where a walker may step from tile i to its neighbour (ox, oy) on the map by
+   *  the height map's hop rule (stepsOk); walkability is checked live (doors, props). Built once; a change to hgt (the
+   *  Castle's drawbridge) clears it. */
+  stepMask() {
+    if (this._stepMask) return this._stepMask;
+    const W = this.w, H = this.h, out = new Uint16Array(W * H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let b = 0;
+      for (let k = 0; k < 9; k++) {
+        const ox = (k % 3) - 1, oy = ((k / 3) | 0) - 1;
+        if (k === 4 || x + ox < 0 || y + oy < 0 || x + ox >= W || y + oy >= H) continue;
+        if (!this.hgt || this.stepsOk(x, y, ox, oy)) b |= 1 << k;
+      }
+      out[y * W + x] = b;
+    }
+    return (this._stepMask = out);
+  }
   smooth(sx, sy, path, r = 0.28) {
     // drop intermediate nodes with clear line of sight
     const out = [];
@@ -294,7 +311,15 @@ export class TileMap {
     for (let i = 1; i <= steps; i++) {
       const t = i / steps, x = x0 + dx * t, y = y0 + dy * t;
       if (!this.circleFree(x, y, r, from)) return false;
-      if (from !== undefined) from = this.tileIdx(x, y);
+      if (from !== undefined) {
+        // a line through a tile corner is walked round one side or the other (move() slides x then y): the diagonal
+        // rule, all four tiles within a hop (else the hero slips onto a lower stair beside the wall-walk and sticks)
+        const to = this.tileIdx(x, y), W = this.w, ox = (to % W) - (from % W), oy = ((to / W) | 0) - ((from / W) | 0);
+        if (ox && oy && !this.stepsOk(from % W, (from / W) | 0, Math.sign(ox), Math.sign(oy))) return false;
+        const cx = Math.round(x), cy = Math.round(y); // passing right by a corner counts as cutting it
+        if (Math.abs(x - cx) < 0.15 && Math.abs(y - cy) < 0.15 && cx > 0 && cy > 0 && cx < W && cy < this.h && !this.stepsOk(cx - 1, cy - 1, 1, 1)) return false;
+        from = to;
+      }
     }
     return true;
   }

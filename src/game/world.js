@@ -147,6 +147,7 @@ export class World {
     }
     this.rebuildGrid();
     if (p && !p.dead) p.update(dt);
+    if (G.world && G.world !== this) return; // the hero just stepped through a portal: this world stops with him gone
     const ax = p ? p.x : 0, ay = p ? p.y : 0;
     for (const c of this.creatures) {
       if (c === p || c.dead) continue;

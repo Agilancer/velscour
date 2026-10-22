@@ -69,6 +69,8 @@ node tools/tests/scenarios.js                      # a bot plays every Wilds/Cas
 node tools/tests/castle_overworld.mjs              # 100 Castle seeds: both curtains sealed, gates, bridges over water, lane, halls, art caps (no browser)
 node tools/tests/castle_visual.js [views] [--grid] # Castle screenshots: 25 views (gatehouse, bridges, wards, keep, halls, village, siege)
 node tools/tests/castle3d.js [views]              # the 3D Castle (docs/CASTLE_3D.md): wall-walk, stairs, tunnel, throne room, doors, drawbridge, overview
+node tools/tests/castle_autoplay.js [classes]       # auto-play takes the Castle's stairs to wall foes (no hits from below) and back down, never leaps off
+node tools/tests/overworld_look.js [biome] [seed]    # screenshots of an overworld's spots for art review (scatter in context, sizes, hills)
 node tools/tests/skyship.js [clear|storm,...|all] [auto]  # the Sky Battle (docs/SKY_BATTLE.md): whole battles per scenario, every phase in order, shots
 node tools/tests/castle_walls.js [views] [--noshots] # Castle height-mapped walls: walk/towers/stairs reachable, monsters use the stairs, 30 shots
 node tools/tests/sea_of_sand_generation.mjs         # 100 desert maze seeds, route reachability, one-to-five area rolls

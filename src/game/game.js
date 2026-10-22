@@ -36,10 +36,11 @@ import { createBreachRun, chestAt, breachMonster } from './breach.js';
 import { breachDepth, breachLevel, BREACH_ART, BREACH_ARCHS } from '../data/breach.js';
 import { createMountainRun } from './mountain.js';
 import { castle3dTick } from './castle3d.js';
-import { useTerrain } from '../gfx/terrain.js';
+import { useTerrain, terrainOf } from '../gfx/terrain.js';
 import { loadCastlePack, releaseCastlePack } from '../gfx/castle.js';
-import { loadCastle3D, releaseCastle3D, loadBaked, castle3dState } from '../gfx/castle3dart.js';
+import { loadCastle3D, releaseCastle3D, loadBaked, castle3dState, warmBaked } from '../gfx/castle3dart.js';
 import { generateSkyship } from '../world/skyship.js';
+import { warmSky } from '../gfx/skyship.js';
 import { createSkyBattle } from './skybattle.js';
 import { SKY_VARIANTS } from '../data/skybattle.js';
 import { TOWNSFOLK } from '../data/townsfolk.js';
@@ -112,6 +113,9 @@ let automapCanvas = null;
 // Yields every ~40 ms so the loading screen keeps painting.
 async function warmLevelArt(w) {
   const seen = new Set();
+  if (w.map.hgt) terrainOf(w.map); // a height map's draw order and occluders (the Castle's 100k columns): behind the loading screen, not the first frame
+  warmSky(w); // the Sky Battle's clouds
+  if (w.map.c3struct || w.sky) warmBaked(G.ctx); // the baked 3D pages (the Castle's masonry, the airships)
   let t = performance.now();
   markArtCaches();
   for (const c of w.creatures) {
@@ -243,6 +247,7 @@ export const game = {
       world.add(s);
     }
     G.world = world;
+    Cine.abort(); // a cut scene belongs to the world it played in
     useTerrain(world.map); // a height map lifts the ground plane (gfx/terrain.js); flat maps clear it
     camera.computeZoom();
     camera.follow(p.x, p.y, 0, true);
@@ -902,7 +907,11 @@ export const game = {
       Auto.noteInput();
       controls.update(dt);
       Auto.update(dt);
+      // auto-play (or a click) may have taken the hero through a portal: the world he left stops here, or its rules run on
+      // him in the new one (the Breach's wards put him back at his last Breach spot, off the edge of town: a black town)
+      if (G.world !== w) return;
       w.update(dt);
+      if (G.world !== w) return;
       if (w.overworldScenario) w.overworldScenario.update(dt);
       if (w.map.c3struct && !w.map.sky) castle3dTick(w, dt);
       ambushTick(w, dt);
@@ -917,7 +926,7 @@ export const game = {
     }
     if (!G.cine) camera.follow(p.x, p.y, dt);
     camera.update(dt);
-    if (G.cine !== hudCine) { hudCine = !!G.cine; HUD.show(!hudCine); if (G.touch) TouchUI.show(!hudCine); }
+    if (!!G.cine !== hudCine) { hudCine = !!G.cine; HUD.show(!hudCine); if (G.touch) TouchUI.show(!hudCine); }
     if (G.hurtFlash > 0) G.hurtFlash = Math.max(0, G.hurtFlash - dt * 1.5);
     if (G.flash > 0) G.flash = Math.max(0, G.flash - dt * 2);
     HUD.update(dt);

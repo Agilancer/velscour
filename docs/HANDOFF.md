@@ -14,6 +14,85 @@ Contents
 
 ---
 
+## October 22, 2026 — overnight pass: black town fixed, wall-walking auto-play, scatter in context, hills, perf (branch `feat/overnight-pass`)
+- **Request (user, overnight, "proceed on defaults"):** a full pass: optimise without changing the look, bug hunt (Castle,
+  ETERNAL BREACH, deep dives, the airship areas), the "black town" after the Breach, auto-play up the Castle's stairs
+  (never hitting wall monsters from below, never jumping off), height maps on other overworlds where they fit, scatter
+  that is too small and placed with no context (headstones and apple sacks in roads), small area templates if they look
+  good.
+- **The black town (found and fixed).** `game.update` holds `w = G.world`, then runs auto-play; when auto-play left the
+  Breach inside that call, the same tick still ran the old world's update and the Breach run's ward check
+  (`holdLocks`), which saw the hero at town coordinates, judged him past a ward and put him back at his last Breach
+  spot: off the edge of Herrington Hollow (the view is the void beyond the map: black, with the town's edge cut along an
+  iso row) or on a blocked tile. Reproduced with `breach.js auto 1` (76% of the view black on arrival). Now
+  `game.update` and `World.update` stop once the hero is in another world, and `holdLocks` ignores a hero who left.
+  `breach.js auto` checks the town draws after the floor; `breach.js rules` replays the exit from inside `game.update`.
+  A Sky Battle cut scene is also dropped on a world change (`Cine.abort`), else its camera and hidden HUD followed the
+  hero home.
+- **Town render crash (on `main`):** `drawNpc` called `n.pose()` (Sky Battle knights) on Homunculus, whose `pose` is a
+  name: every town frame threw. Fixed; the main loop also unwinds the canvas save stack after a frame throws.
+- **Castle walls (auto-play):** a foe more than a drop above or below the hero (`Auto.offTier`) is reached by walking
+  (the road field leads to the stairs), with only heals/buffs/minions on the way and no attacks across the height; leaps,
+  dashes and blinks only along ground within a hop of both ends (`Auto.hopLine`), so never onto or off the walls.
+  `map.losWide` now applies the diagonal rule to a line through a tile corner (smoothed paths cut the top stair's corner,
+  slipped onto the stair below the walk and stuck). A foe he is taking the stairs to stays a target for 12 s after the
+  last sighting (`climbTo`): the wall itself hides it on the way to the stairs, and he used to wander off exploring.
+  The wall rule is the Castle's only (`map.rampartDeck`); on hills and the Breach's islands a ledge is fought from where
+  he stands, as before. New `tools/tests/castle_autoplay.js` (six classes: shooters pinned on
+  the wall-walk, then a foe in the ward): damage across the height 0-3% (pets and splash), biggest one-tick level change
+  9 (stepping off a low stair's side; walls can't be dropped from).
+- **Scatter in context and at believable sizes:**
+  - Castle: the 520 random rubble/sandbag/wheel/apple-sack/headstone props and the apple-sack/mason's-tools ground cover
+    are gone. Fallen masonry at the walls' foot (mostly outside), spent shot and wreckage between the siege lines and the
+    south-east walls, milestones (`arrow_milestone`) beside the road forks, nature only in the meadows and at the wood's
+    edge; nothing on a road.
+  - Forsaken Wilds: story props in themed groups round the scenario clearings (an old fight, an abandoned camp, a lost
+    cache), elsewhere flowers/stones in the meadows and logs/stumps/boulders/mushrooms at the wood's edge. One small area
+    template made the cut: a woodcutter's spot (chopping stump, woodpile, sawn rounds, a felled trunk, the handcart) where a
+    lane runs by the trees, one or two a map.
+  - Sea of Sand: every object was drawn ~30 px (the pack fits each to one cell); `SAND_H` gives each a height against the
+    60 px hero (tall palms 140, a well 78, pots 18-26). Palms line the dry wash and ring the oasis, the caravan's camp is
+    pitched round the rest, waymarkers and dropped gear beside the trails, ruins at the sites, ore at the rock's foot.
+  - Eternal Breach: `SIZE` in `src/world/breach.js` grows monoliths (x3), obelisks, standing stones, cairns, waystones,
+    boulders to a believable size (they were 20-36 px).
+- **Height maps:** the Forsaken Wilds (`liftWilds` in `src/world/overworld.js`): wooded ridges (the woods' rock banks rise
+  from the second row of trees in) and a few meadow terraces/a hillock a hop high, off the lanes and clearings; checked
+  walkable both ways or the map lies flat. A first try with gentle rolling hills drew as rows of thin 4 px steps across the
+  lanes and was dropped. `map.noSky` keeps the black void round it. The Dark Forest (a dense canopy over the trails, and the
+  heaviest map to draw) and the Sea of Sand (its rock is sprite cliffs) stay flat.
+- **Performance (no visual change):**
+  - `if (G.cine !== hudCine)` compared `undefined` with `false` until the first cut scene, so `HUD.show()` ->
+    `layoutMobile()` (a forced layout, style writes, an `img.src`) and on phones `TouchUI.layout()` ran every frame in
+    every biome. Catacombs update 4.2 -> 2.3 ms (53 -> 60 fps, phone profile, 4x throttle).
+  - Castle auto-play's road field (100k tiles): `map.stepMask()` precomputes each tile's height-legal steps (built at
+    generation; the drawbridge clears it), and the field is reused while the hero stays on his tile. Castle 38.8 -> 55.5
+    fps, update 11.3 -> 3.1 ms.
+  - Skill icons are CPU-backed canvases (`willReadFrequently`): their `toDataURL` stalled on the GPU 10-150 ms (a level-up
+    hitch). A potion on the ground built a new canvas every frame; now one per drop.
+  - First frames: the baked 3D pages (Castle masonry, airships) are decoded on load and drawn once in `warmLevelArt` so
+    the GPU takes them in behind the loading screen; Sky Battle clouds are built there too (their hard-edge pass on a
+    CPU canvas), and a height map's terrain cache (`terrainOf`). Sky Battle first frame 485 -> 2 ms, Castle 62 -> 3 ms.
+    Every other biome's first frame measured under 50 ms.
+- **Tests run:** castle_autoplay, castle_walls, castle_overworld, castle_visual (looked at), mobs, flow, breach (auto 1,
+  town, rules, shots), skyship all auto (all eight skies, every phase), overworld (60 seeds), scenarios (Wilds 26/26; the
+  same three Castle rampart waits of 21-25 s as on `main`), sea_of_sand_generation, biome_perf.
+- **Deep dive:** `balance.js necromancer,barbarian 100,250,450 6`: no errors; BOSS ROOMs won (the Briarheart at 250, the
+  Bailiff at 450); two Barbarian deaths at Depth 100, none deeper. The Sky Battle under auto-play opens the hoard chest,
+  collects, takes the exit and goes on to the next depth.
+- **Design calls made without asking (worth a look):** the sizes in `SIZE` (Breach) and `SAND_H` (Sea of Sand); the
+  Castle's scatter rules (most fallen masonry outside the walls, the bombardment field to the south-east); the wall rule's
+  threshold (more than a drop, 10 levels) and its 12 s memory; one template (the woodcutter's spot) kept, no others built.
+- **Open:**
+  - Combat ignores height, so the Paladin's orbiting hammers and Shield Throw, pets and splash still land on wall foes
+    from below while he climbs (castle_autoplay: up to ~9% of the damage). Only auto-play's own choices follow the rule.
+  - The map lets a walker step off a low stair's side (a drop of 10 or less); auto-play may while dodging or kiting.
+    The walls themselves can't be dropped from.
+  - Mountainside auto-play still misses the summit in 600 s (27-42% here, 37% with `main`'s files on the same run):
+    not from this change. `mountain.js rules` now and then finds no clean tall step (passes on rerun, as before).
+  - `scenarios.js`: the same three Castle rampart scenarios wait 21-25 s, as on `main`.
+  - During the Sky Battle's waves loot piles up on the deck (auto-play collects it after the victory).
+  - Not measured on a real phone; Safari/iOS untested (`img.decode` and `willReadFrequently` are standard there).
+
 ## October 22, 2026 — THE SKY BATTLE: airships, Air Pirates, cut scenes, eight skies (branch `feat/sky-battle`)
 - **Request:** the airships (tools/airship3d*.js, docs/AIRSHIP_3D.md) as a biome. The hero steps out of the portal
   built into the heroes' ship. Then come boarding waves of increasing difficulty, a mid-boss, more waves, and an
