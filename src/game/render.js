@@ -14,6 +14,7 @@ import { townFrame, townFrameOf, townMotion, isLying, TOWN_FRAME_W, TOWN_FRAME_H
 import { drawEmote } from '../gfx/emotes.js';
 import { drawTownProp, TOWN_PROP_KINDS } from '../gfx/townprops.js';
 import { drawTownSpeech } from './townspeech.js';
+import { homunculusPose } from '../gfx/homunculus.js';
 import { enemyImage } from '../core/enemyart.js';
 import { drawLootLabels } from './loot.js';
 import { castleTileDressing, drawCastleParticles, drawCastleWater } from '../gfx/castleground.js';
@@ -222,7 +223,7 @@ function drawWall(ctx, o, k, alpha) {
 function drawProp(ctx, pr, alpha) {
   const x = isoX(pr.x, pr.y), y = isoY(pr.x, pr.y) - (pr.z || 0);
   if (alpha < 1) ctx.globalAlpha = alpha;
-  if (TOWN_PROP_KINDS.has(pr.kind)) { drawTownProp(ctx, pr, G.time); if (alpha < 1) ctx.globalAlpha = 1; return; }
+  if (TOWN_PROP_KINDS.has(pr.kind)) { drawTownProp(ctx, pr, G.time); if (alpha < 1) ctx.globalAlpha = 1; if (pr.talkT > 0) drawTownSpeech(ctx, pr, x, y - (pr.kind === 'axe_rack' ? 96 : 60)); return; }
   if (pr.kind === 'flame') {
     // a lit wall torch on a town building: a flickering flame over the pack's unlit torch head
     const fx = x + pr.fx, fy = y + pr.fy, f = Math.sin(G.time * 11 + pr.x * 3) * 0.5 + Math.sin(G.time * 17 + pr.y) * 0.3;
@@ -436,13 +437,14 @@ function drawNpc(ctx, n) {
   const spriteId=n.vendor||n.adv?null:(n.townsfolkSpriteId||n.spriteId||n.townsfolkId);
   const sheet=spriteId?townSprite(spriteId,n.palette||null):null;
   // Painted art for vendors and scenario civilians (n.art); never hue-shifted class sprites (they came out green).
-  const vendorArt=n.vendor
+  const hom=n.vendor&&n.vendor.id==='upgrade'?homunculusPose(n.pose||'confident'):null; // Homunculus the Proud's 30 poses
+  const vendorArt=hom?hom.img:n.vendor
     ? replacementImage('npc_'+n.vendor.id) || classSprite(n.vendor.sprite,180)
     : n.adv ? advPortrait(n.adv)
     : !spriteId && (n.art && replacementImage(n.art) || classSprite(n.sprite||'paladin',180));
   // a people cell is 256 x 200 with the feet on row 194; adults are 172 px tall in it, animals their own size
   const H=66.7, W=H*TOWN_FRAME_W/TOWN_FRAME_H, foot=H*(TOWN_FRAME_H-TOWN_BASELINE)/TOWN_FRAME_H;
-  const vh=n.adv?54:58, vw=vendorArt?vh*vendorArt.width/vendorArt.height:0;
+  const vh=hom?hom.h:n.adv?54:58, vw=vendorArt?vh*vendorArt.width/vendorArt.height:0;
   const x = isoX(n.x, n.y), y = isoY(n.x, n.y);
   const m=townMotion(n.animT||0,!!n.walking,n.emotionT>0?n.emotion:null,!!n.running,n.animal?n.species:null);
   const frame=townFrame(n), lying=isLying(n);
@@ -452,6 +454,11 @@ function drawNpc(ctx, n) {
   // shadow: wider when lying down
   ctx.fillStyle = `rgba(0,0,0,${0.36*alpha})`;
   ctx.beginPath(); ctx.ellipse(x + m.dx, y, lying ? (n.animal ? sw * 1.4 : 22) : sw - m.bob * 0.6, (lying ? 7 : 6) * (n.animal ? Math.min(1, sw / 10) : 1) - m.bob * 0.25, 0, 0, TAU); ctx.fill();
+  if (n.aura > 0) {
+    // Homunculus's "holy" light (game/homunculus.js): really the axe's
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, n.aura) * (0.55 + Math.sin(G.time * 9) * 0.15);
+    ctx.drawImage(glowSprite(n.auraCol || '#9fffc8'), x - 30, y - vh - 6, 60, vh + 14); ctx.restore();
+  }
   if (alpha < 1) ctx.globalAlpha = alpha;
   ctx.save();
   ctx.translate(Math.round(x + m.dx), Math.round(y - m.bob));
@@ -884,6 +891,7 @@ export function renderWorld(ctx, world) {
         const z = camera.zoom;
         o.sbox = [sx - (w / 2) * z, sy - h * z, sx + (w / 2) * z, sy];
         o.viewH = h + (o.fly ? 16 : 0); // next frame's see-through hole
+        if (o === G.player && o.talkT > 0 && world.kind === 'town') drawTownSpeech(ctx, o, isoX(o.x, o.y), isoY(o.x, o.y) - Math.min(70, h)); // chatting at the forge
         break;
       }
       case 7: drawNpc(ctx, o); break;

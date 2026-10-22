@@ -23,6 +23,8 @@ import { Stash, addToStash } from '../ui/stash.js';
 import { addToBag } from './player.js';
 import { Delayed, Area, Whirl } from './hazards.js';
 import { bountyGoal } from './wanderers.js';
+import { heroVisit } from './townlife.js';
+import { homunculusChat, isHomunculus } from './homunculus.js';
 import { effects, Telegraph } from '../gfx/vfx.js';
 import { BAR_SIZE, LMB, RMB, FILL_ORDER, SLOT_KEYS, freeSlot } from '../data/bar.js';
 
@@ -47,6 +49,7 @@ export const stanceOf = (c = G.char) => STANCES[c && c.stance] || STANCES.balanc
 const DEST_WAIT = 8;
 /** Fewer free bag slots than this sends auto-play back to town (where a bag with none free after trading keeps it: bagWait). */
 const BAG_LOW = 14;
+const ROYAL_ORDER = ['king', 'queen', 'dowager queen', 'prince', 'princess', 'royal heir', 'duke', 'duchess']; // who auto-play greets first in town
 
 // ================================================================== power model
 const isWide = (sk) => (sk.m.arc ?? (sk.m.cleave ? 170 : sk.fx === 'spin' ? 360 : 115)) >= 170;
@@ -403,6 +406,7 @@ export const Auto = {
     this.lootFor = null; this.lootT = 0; this.wantCache = new WeakMap(); this.hurt = 0; this.lastHp = -1;
     this.dragoonJumps = 0; this.dragoonJumpGoal = 3 + Math.floor(Math.random() * 6);
     this.dragoonCastUntil = 0; this.dragoonLastBarrage = 0; this.dragoonLastWeaveAt = -1;
+    G.heroListen = null;
   },
 
   setStatus(s) {
@@ -446,11 +450,24 @@ export const Auto = {
     if (p.dead) { this.setStatus('Fallen…'); return; }
     if (this.transitT > 0) { this.transitT -= dt; this.setStatus('Travelling…'); return; }
     if (this.overrideT > 0) { p.whirlAuto = false; this.overrideT -= dt; this.setStatus('Manual control'); return; }
+    if (this.listen(dt)) return;
     this.thinkT -= dt;
     if (this.thinkT <= 0) { this.thinkT = 1; this.manageHero(); }
     p.moveVec = [0, 0];
     if (w.kind === 'town') this.townTick(dt);
     else this.dungeonTick(dt);
+  },
+
+  /** Someone is talking to the hero (townlife.js heroHears): stand still and face them until the bubble has been
+   *  read (a second at least), unless monsters are close. */
+  listen(dt) {
+    const L = G.heroListen, p = G.player, w = G.world;
+    if (!L) return false;
+    if ((L.t -= dt) <= 0 || L.who.hidden || w.creatures.some((m) => !m.dead && m.team === 'enemy' && m.awake && dist(m.x, m.y, p.x, p.y) < 7)) { G.heroListen = null; return false; }
+    p.moveVec = [0, 0];
+    p.facing = Math.atan2(L.who.y - p.y, L.who.x - p.x);
+    this.setStatus(`Listening to ${L.who.name}`);
+    return true;
   },
 
   /** Click through the death and victory screens. */
@@ -1598,7 +1615,7 @@ export const Auto = {
     const T = this.town;
     // skip errands with nothing to do there (a fresh hero heads straight for the portal); checked on arrival at
     // each step, so gold from the first sale still counts
-    while (T.phase === 'walk' && T.t === 0 && T.steps[T.i] && T.steps[T.i].want && !this.wants(T.steps[T.i].want)) T.i++;
+    while (T.phase === 'walk' && T.t === 0 && T.steps[T.i] && T.steps[T.i].want && !T.steps[T.i].chat && !this.wants(T.steps[T.i].want)) T.i++;
     const step = T.steps[T.i];
     if (!step) {
       // the bag is full of what auto-play can't sell or stash (sealed treasures...): wait here until the player makes
@@ -1619,6 +1636,7 @@ export const Auto = {
         return;
       }
       T.sealNote = false;
+      if (this.townSocial(dt)) return;
       // done: through the portal (the purple one when auto-play was told to take the Breach)
       const breach = this.dest === 'breach' && w.portals.find((q) => q.breach);
       const po = breach || w.portals[0];
@@ -1640,9 +1658,18 @@ export const Auto = {
       this.setStatus(step.label);
       // blocked short of the counter (summons, props): trade from anywhere in reach, or give up on this vendor
       const reach = npc.reach || 1.8, d = dist(p.x, p.y, npc.x, npc.y);
-      if (this.goTo(npc.x, npc.y, reach - 0.3, dt) || (T.t > 6 && d <= reach)) { T.phase = 'open'; T.t = 0; }
+      if (this.goTo(npc.x, npc.y, reach - 0.3, dt) || (T.t > 6 && d <= reach)) { T.phase = step.chat && isHomunculus(npc) && w.townLife ? 'chat' : 'open'; T.t = 0; }
       else if (T.t > 25) { G.ui.log(`Auto-play couldn't reach the ${npc.vendor ? npc.vendor.title : npc.name} and moved on.`, '#ff8080'); T.i++; T.t = 0; }
       this.watchStuck(dt);
+      return;
+    }
+    if (T.phase === 'chat') {
+      // Homunculus the Proud has something to say first (game/homunculus.js): stand, face him and read it
+      if (!T.scene) T.scene = homunculusChat(w.townLife, npc);
+      p.facing = Math.atan2(npc.y - p.y, npc.x - p.x);
+      this.setStatus('Chatting with Homunculus');
+      if (T.scene.done || T.t > 16) { T.scene = null; T.phase = step.want && !this.wants(step.want) ? 'skip' : 'open'; T.t = 0; }
+      if (T.phase === 'skip') { T.i++; T.phase = 'walk'; }
       return;
     }
     if (T.phase === 'open') {
@@ -1662,6 +1689,47 @@ export const Auto = {
     }
   },
 
+  /** Errands done: a word with any royalty in town (the King and Queen first), and now and then with a townsperson,
+   *  before heading back down. Royals taking part in an event are watched until they are free. */
+  townSocial(dt) {
+    const T = this.town, p = G.player, d = G.world.townLife;
+    if (!d || T.socialDone) return false;
+    if (!T.social) {
+      if (d.event && !d.event.done && d.time < 8) { this.setStatus('Looking around town'); return true; } // the royal train shows up a few seconds in
+      const folk = d.agents.filter((a) => !a.hidden && !a.animal && !a.wild && !a.fixed && dist(a.x, a.y, p.x, p.y) < 30);
+      const rank = (a) => { const i = ROYAL_ORDER.indexOf(a.role); return i < 0 ? ROYAL_ORDER.length : i; };
+      const royals = folk.filter((a) => a.royal).sort((a, b) => rank(a) - rank(b)).slice(0, 2);
+      const others = folk.filter((a) => !a.royal && !a.eventRole && dist(a.x, a.y, p.x, p.y) < 16).sort(() => Math.random() - 0.5);
+      T.social = royals.length ? royals.slice() : [];
+      if (others.length && Math.random() < (royals.length ? 0.2 : 0.4)) T.social.push(others[0]);
+      T.visit = null;
+    }
+    let V = T.visit;
+    if (!V) {
+      const a = T.social.shift();
+      if (!a) { T.socialDone = true; return false; }
+      V = T.visit = { a, phase: 'walk', t: 0 };
+    }
+    const a = V.a;
+    V.t += dt; V.all = (V.all || 0) + dt;
+    if (a.hidden || (V.phase === 'walk' && V.t > 20) || V.all > 75) { T.visit = null; return true; } // gone indoors, or out of reach
+    if (V.phase === 'walk') {
+      this.setStatus(a.royal ? `Paying respects to ${a.name}` : `Saying hello to ${a.name}`);
+      if (this.goTo(a.x, a.y, a.eventRole ? 2.8 : 1.5, dt)) { V.phase = a.eventRole ? 'watch' : 'talk'; V.t = 0; if (V.phase === 'talk') V.scene = heroVisit(d, a); }
+      this.watchStuck(dt);
+      return true;
+    }
+    p.facing = Math.atan2(a.y - p.y, a.x - p.x);
+    if (V.phase === 'watch') {
+      // the royal progress (or a knighting) is under way: watch from the crowd, then step up when they are free
+      this.setStatus(`Watching ${a.name}`);
+      if (!a.eventRole) { V.phase = 'walk'; V.t = 0; } else if (V.t > 40) T.visit = null;
+      return true;
+    }
+    if (V.scene.done) T.visit = null;
+    return true;
+  },
+
   townPlan() {
     const c = G.char;
     const steps = [];
@@ -1672,7 +1740,7 @@ export const Auto = {
     steps.push({ vendor: 'armor', label: 'Browsing armor', want: gear('armor'), fn: () => { if (this.buyGear(Vendor.stock.armor)) this.sellJunk(); } });
     if (c.bag.some((b) => b && b.type === 'gem') || c.gold > 2000) steps.push({ vendor: 'gems', label: 'Visiting the gem merchant', fn: () => this.gemShop() });
     steps.push({ vendor: 'socket', label: 'Visiting the jeweler', want: () => c.bag.some((b) => b && b.type === 'gem') || this.equipped().some((it) => it.sockets < it.maxSockets && socketCost(it) <= this.budget(0.3)) || this.gearGain(Vendor.stock.rings), fn: () => this.jeweler() });
-    steps.push({ vendor: 'upgrade', label: 'Upgrading gear', want: () => this.equipped().some((it) => (it.upg || 0) < 10 && upgradeCost(it) <= this.budget(0.45)), fn: () => this.blacksmith() });
+    steps.push({ vendor: 'upgrade', chat: true, label: 'Visiting Homunculus the Proud', want: () => this.equipped().some((it) => (it.upg || 0) < 10 && upgradeCost(it) <= this.budget(0.45)), fn: () => this.blacksmith() });
     steps.push({ vendor: 'enchant', label: 'Enchanting gear', want: () => this.equipped().some((it) => it.rarity >= 1 && enchantCost(it, true) <= this.budget(0.2)), fn: () => this.enchanter() });
     steps.push({ vendor: 'gamble', label: 'Gambling', want: () => c.gold >= Math.round(180 * Math.pow(1.065, Math.max(c.level, depthLevel(c.depth || 1)))) * 8 && bagFree(c) >= 3, fn: () => { this.gamble(); this.sellJunk(); } });
     steps.push({ stash: true, label: 'Stashing gems and gear for later', want: () => c.bag.some((b) => b && !b.sealed && (b.type === 'gem' || (b.type === 'gear' && (b.req || 1) > c.level && b.rarity >= 2))), fn: () => this.stashExtras() });

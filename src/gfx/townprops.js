@@ -1,10 +1,12 @@
 // Procedural set pieces the town's scenes put down for a visit (src/game/townlife.js): a campfire, candles, festival
-// bunting between two posts, a bedroll. Drawn by render.js drawProp for props with these kinds; `light` makes them glow.
+// bunting between two posts, a bedroll, and the cursed great axe on its rack by the forge (game/homunculus.js; its
+// glow follows the story chapter `ch`). Drawn by render.js drawProp for props with these kinds; `light` makes them glow.
 import { glowSprite } from './vfx.js';
 import { isoX, isoY } from '../core/view.js';
+import { drawVarrowAxe } from './varrowaxe.js';
 
 const TAU = Math.PI * 2;
-export const TOWN_PROP_KINDS = new Set(['campfire', 'candle', 'bunting', 'bedroll', 'post']);
+export const TOWN_PROP_KINDS = new Set(['campfire', 'candle', 'bunting', 'bedroll', 'post', 'axe_rack']);
 
 function flame(ctx, x, y, s, t, seed) {
   const f = Math.sin(t * 11 + seed) * 0.5 + Math.sin(t * 17 + seed * 2) * 0.3;
@@ -71,11 +73,80 @@ export function drawTownProp(ctx, pr, t) {
         ctx.beginPath(); ctx.moveTo(px - 3, py); ctx.lineTo(px + 3, py); ctx.lineTo(px + sw, py + 7); ctx.closePath(); ctx.fill();
       }
     }
+  } else if (pr.kind === 'axe_rack') {
+    // the 3D bake (gfx/varrowaxe.js): it sways on its chain, and turns slowly while Varrow speaks
+    const dt = Math.min(0.1, Math.max(0, t - (pr.lastT ?? t))); pr.lastT = t;
+    if (pr.talkT > 0) pr.spin = (pr.spin || 0) + dt * 1.3;
+    else if (pr.spin) pr.spin += (Math.round(pr.spin / TAU) * TAU - pr.spin) * Math.min(1, dt * 1.2);
+    const ch = pr.ch || 0, pulse = 0.5 + Math.sin(t * 2.2) * 0.5;
+    axeGlow(ctx, x, y, ch, t, pulse, true);
+    if (drawVarrowAxe(ctx, x, y, (pr.spin || 0) + Math.sin(t * 0.55 + pr.x) * 0.32, ch >= 1 ? runeColour(ch) : null, ch >= 1 ? 0.5 + ch * 0.07 + pulse * 0.35 : 0)) axeGlow(ctx, x, y, ch, t, pulse, false);
+    else drawAxeRack(ctx, x, y, ch, t);
   } else if (pr.kind === 'bedroll') {
     ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.5); ctx.rotate(pr.rot || 0.5);
     ctx.fillStyle = pr.color || '#6a3a2a'; ctx.fillRect(-14, -6, 28, 12);
     ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(-14, -6, 28, 3);
     ctx.fillStyle = '#c8b890'; ctx.fillRect(-14, -6, 7, 12);
     ctx.restore();
+  }
+}
+
+const runeColour = (ch) => (ch >= 11 ? '#ffe080' : ch >= 5 ? '#a8f0ff' : '#7dffb0');
+// the light round the 3D axe's head (behind it) and the frost drifting off it (in front)
+function axeGlow(ctx, x, y, ch, t, pulse, behind) {
+  const done = ch >= 11;
+  if (behind) {
+    if (ch < 1) return;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = Math.min(0.75, 0.12 + ch * 0.06) * (0.6 + pulse * 0.4);
+    ctx.drawImage(glowSprite(runeColour(ch)), x - 34, y - 92, 68, 60);
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    return;
+  }
+  if (ch < 5) return;
+  ctx.fillStyle = done ? '#fff0b0' : '#dff8ff';
+  for (let i = 0; i < 6; i++) { const ph = (t * 0.35 + i * 0.17) % 1; ctx.globalAlpha = (1 - ph) * 0.8; ctx.fillRect(x + Math.sin(ph * 7 + i) * 18, y - 58 - ph * 30, 1.6, 1.6); }
+  ctx.globalAlpha = 1;
+}
+
+// Varrow's prison drawn flat (until the 3D bake has loaded): a great axe hung head-up on a two-post rack
+function drawAxeRack(ctx, x, y, ch, t) {
+  const pulse = 0.5 + Math.sin(t * 2.2) * 0.5, done = ch >= 11;
+  const glow = done ? '#ffe080' : ch >= 5 ? '#a8f0ff' : '#7dffb0';
+  if (ch >= 1) {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = Math.min(0.75, 0.12 + ch * 0.06) * (0.6 + pulse * 0.4);
+    ctx.drawImage(glowSprite(glow), x - 26, y - 70, 52, 66);
+    if (ch >= 5 && !done) { ctx.globalAlpha = 0.25 + pulse * 0.15; ctx.drawImage(glowSprite('#7dffb0'), x - 18, y - 30, 36, 30); }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  }
+  ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(x, y, 14, 5, 0, 0, TAU); ctx.fill();
+  // the rack
+  for (const px of [x - 10, x + 10]) { ctx.fillStyle = '#4a2e18'; ctx.fillRect(px - 1.8, y - 44, 3.6, 44); ctx.fillStyle = '#6e4626'; ctx.fillRect(px - 1.8, y - 44, 1.2, 44); }
+  ctx.fillStyle = '#5a3820'; ctx.fillRect(x - 13, y - 40, 26, 3.4); ctx.fillRect(x - 12, y - 12, 24, 3);
+  // the haft and the double-bitted head
+  ctx.fillStyle = '#2a1c14'; ctx.fillRect(x - 1.6, y - 64, 3.2, 60);
+  ctx.fillStyle = '#463024'; ctx.fillRect(x - 1.6, y - 64, 1, 60);
+  ctx.fillStyle = '#1e2224';
+  for (const s of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(x + s * 1.5, y - 66); ctx.quadraticCurveTo(x + s * 13, y - 72, x + s * 15, y - 62);
+    ctx.quadraticCurveTo(x + s * 14, y - 52, x + s * 1.5, y - 53); ctx.closePath(); ctx.fill();
+  }
+  ctx.fillStyle = '#6c767a';
+  for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + s * 13.5, y - 69); ctx.quadraticCurveTo(x + s * 16, y - 62, x + s * 13, y - 54); ctx.lineTo(x + s * 11.5, y - 56); ctx.quadraticCurveTo(x + s * 13.5, y - 62, x + s * 12, y - 67); ctx.closePath(); ctx.fill(); }
+  ctx.fillStyle = '#3a3e40'; ctx.fillRect(x - 3, y - 70, 6, 18);
+  // runes on the blade: dark at first, then green, then frost (gold once Varrow is reformed)
+  ctx.fillStyle = ch >= 1 ? glow : '#4a5254';
+  ctx.globalAlpha = ch >= 1 ? 0.55 + pulse * 0.45 : 1;
+  for (const [rx, ry] of [[-8, -64], [-9, -60], [-7, -57], [8, -64], [9, -60], [7, -57], [0, -66], [0, -61], [0, -56]]) ctx.fillRect(x + rx - 0.7, y + ry, 1.4, 2);
+  ctx.globalAlpha = 1;
+  // chains: seven once, only broken links now
+  ctx.strokeStyle = '#7a7470'; ctx.lineWidth = 1;
+  for (const [cx, cy] of [[-10, -36], [-10, -32], [10, -36], [10, -31], [10, -27]]) { ctx.beginPath(); ctx.ellipse(x + cx, y + cy, 1.4, 2, 0, 0, TAU); ctx.stroke(); }
+  // frost drifting off it once the forge has gone cold
+  if (ch >= 5) {
+    ctx.fillStyle = done ? '#fff0b0' : '#dff8ff';
+    for (let i = 0; i < 5; i++) { const ph = (t * 0.35 + i * 0.21) % 1; ctx.globalAlpha = (1 - ph) * 0.8; ctx.fillRect(x + Math.sin(ph * 7 + i) * 12, y - 52 - ph * 26, 1.6, 1.6); }
+    ctx.globalAlpha = 1;
   }
 }

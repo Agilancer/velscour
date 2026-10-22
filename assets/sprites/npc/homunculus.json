@@ -1,0 +1,39 @@
+{
+ "cell": [
+  193,
+  240
+ ],
+ "stand": 230,
+ "poses": {
+  "relieved": 0,
+  "curious": 1,
+  "embarrassed": 2,
+  "suspicious": 3,
+  "exhausted": 4,
+  "frustrated": 5,
+  "determined": 6,
+  "surprised": 7,
+  "thoughtful": 8,
+  "sleepy": 9,
+  "nervous": 10,
+  "concentrating": 11,
+  "disappointed": 12,
+  "shy": 13,
+  "confident": 14,
+  "worried": 15,
+  "grateful": 16,
+  "winking": 17,
+  "impatient": 18,
+  "apologetic": 19,
+  "defiant": 20,
+  "mournful": 21,
+  "confused": 22,
+  "skeptical": 23,
+  "overjoyed": 24,
+  "annoyed": 25,
+  "nostalgic": 26,
+  "alarmed": 27,
+  "focused": 28,
+  "humble": 29
+ }
+}

@@ -114,6 +114,39 @@ const { openGame, report } = require('./harness');
     if (r.maxNear > 3) fail(kind + ': ' + r.maxNear + ' bubbles at once');
     if (!end.done) fail(kind + ' never finished');
   }
+  // auto-play during the royal progress: the hero pays its respects to the royals (watching the procession until they
+  // are free), stands still while anyone talks to it, then goes back down through the portal
+  await page.evaluate(async () => {
+    const { G, game } = window.VELSCOUR;
+    const { Auto } = await import('/src/game/autoplay.js');
+    G.townEventForce = 'royal'; game.enterTown(); G.townEventForce = null;
+    Auto.toggle(true);
+    window.__aud = { d: G.world.townLife, town: G.world, Auto, statuses: new Set(), heard: new Set(), visited: new Set(), moved: 0, listenFrames: 0, last: null, minHold: 99, holdT: 0, t: 0, shot: false };
+  });
+  // run the town until a royal is talking to the hero (pause there for a screenshot), then on to the portal
+  const runAudience = (pause) => page.evaluate((pause) => {
+    const { G, game } = window.VELSCOUR, A = window.__aud;
+    while (A.t < 240 && G.world === A.town && !A.statuses.has('Travelling…')) { // entering the dungeon is async: stop at the portal
+      game.update(1 / 30); A.t += 1 / 30;
+      if (A.Auto.status) A.statuses.add(A.Auto.status.replace(/ [A-Z].*/, ''));
+      for (const s of A.d.scenes) if (s.tag === 'audience') for (const a of s.agents) A.visited.add(a.role);
+      const L = G.heroListen, p = G.player;
+      if (L) { A.heard.add(L.who.name); A.listenFrames++; A.holdT += 1 / 30; if (A.last && Math.hypot(p.x - A.last[0], p.y - A.last[1]) > 0.02) A.moved++; A.last = [p.x, p.y]; }
+      else { if (A.holdT) A.minHold = Math.min(A.minHold, A.holdT); A.holdT = 0; A.last = null; }
+      if (pause && L && L.who.royal && L.who.talkT > 1.5) return { paused: L.who.name };
+    }
+    A.Auto.toggle(false);
+    return { statuses: [...A.statuses], heard: [...A.heard], visited: [...A.visited], moved: A.moved, listenFrames: A.listenFrames, minHold: A.minHold, left: G.world !== A.town || A.statuses.has('Travelling…'), t: Math.round(A.t) };
+  }, pause);
+  const paused = await runAudience(true);
+  if (paused.paused) { await page.waitForTimeout(300); await shot('townlife_audience'); console.log('audience shot:', paused.paused); }
+  const audience = paused.paused ? await runAudience(false) : paused;
+  console.log('auto-play audience', JSON.stringify(audience));
+  if (!audience.visited.some((r) => ['king', 'queen'].includes(r))) fail('auto-play never spoke with the King or Queen during the royal progress');
+  if (!audience.listenFrames) fail('auto-play never stopped to listen');
+  if (audience.moved > 3) fail('hero moved ' + audience.moved + ' times while being spoken to');
+  if (audience.minHold < 0.95) fail('hero held still only ' + audience.minHold.toFixed(2) + 's for a bubble');
+  if (!audience.left) fail('auto-play never left town after the audience');
   // a line-up of every emotion on one townsperson per row
   await page.evaluate(async () => {
     const { G, game } = window.VELSCOUR;

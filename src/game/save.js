@@ -69,6 +69,7 @@ export function migrate(c) {
   c.granted = c.granted || {};
   c.tips = c.tips || {};
   if (c.classId === 'barbarian') c.rage = Math.max(0, Math.min(100, Number(c.rage) || 0));
+  c.homunculus = c.homunculus || { talks: 0, chapter: 0, told: [], recap: [] }; // the blacksmith's axe story (game/homunculus.js)
   c.mastery = c.mastery || {}; // skill mastery: {skillId: [level 1-1000, xp]}
   for (const s of ['ring1', 'ring2', 'ring3', 'ring4']) if (!(s in c.equip)) c.equip[s] = null;
   if (c.townSeed === undefined) c.townSeed = (Math.random() * 1e9) | 0;

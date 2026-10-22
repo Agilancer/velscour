@@ -25,7 +25,7 @@ export const CHATS = [
   { tags: ['any'], lines: [[0, 'Lily Belle enchanted my spoon.', 'happy'], [1, 'What does it do?', 'question'], [0, 'It refuses to touch soup.', 'sad']] },
   { tags: ['any'], lines: [[0, 'The portal hummed a tune last night.', 'music'], [1, 'Was it a nice tune?', 'question'], [0, 'It was a funeral march.', 'sad']] },
   { tags: ['any'], lines: [[0, 'Rain tomorrow, my knee says.', 'think'], [1, 'Your knee said that yesterday.', 'mischief'], [0, 'And was it wrong?', 'proud']] },
-  { tags: ['any'], lines: [[0, 'Durgan\'s forge burned blue today.', 'surprised'], [1, 'He says that\'s good.', 'think'], [0, 'He also says that about burns.', 'scared']] },
+  { tags: ['any'], lines: [[0, 'Homunculus\'s forge burned blue today.', 'surprised'], [1, 'He says that\'s good.', 'think'], [0, 'He also says that about burns.', 'scared']] },
   { tags: ['any'], lines: [[0, 'I\'m thinking of going down there.', 'proud'], [1, 'Into the dungeon? You?', 'surprised'], [0, 'Just to the first step.', 'shy'], [1, 'Bring a lantern.', 'think']] },
   { tags: ['any'], lines: [[0, 'Have you seen my goat?', 'panic'], [1, 'Brown, one horn, eats hats?', 'question'], [0, 'That\'s her!', 'happy'], [1, 'She ate my hat.', 'angry']] },
   { tags: ['any'], lines: [[0, 'Zafir says gems remember the light.', 'think'], [1, 'My mother remembers every slight.', 'sad'], [0, 'Different sort of stone.', 'laugh']] },
@@ -91,6 +91,48 @@ export const BARKS = {
   knight: [['Steel and faith, adventurer.', 'proud'], ['The Order salutes you.', 'proud'], ['We hold the town. You hold the depths.', 'point'], ['Spar later?', 'mischief']],
 };
 
+// When the hero (auto-play) walks up to someone for a word: a few bubbles in a row, [text, emotion]. Royalty by role
+// (falls back to `royal`), everyone else by group (falls back to `any`).
+export const AUDIENCES = {
+  king: [
+    [['Ah, the hero of the Hollow!', 'proud'], ['Our coffers grow lighter, the depths grow darker.', 'think'], ['Go with the crown\'s blessing.', 'gesture']],
+    [['Rise, rise. We are among friends.', 'happy'], ['Bring us Velscour\'s head and name your reward.', 'point']],
+    [['You have the look of someone who fights things.', 'think'], ['Good. Keep doing that. Downstairs.', 'proud']],
+  ],
+  queen: [
+    [['Welcome, champion.', 'happy'], ['The people speak of you at every hearth.', 'proud'], ['Come home whole. That is my only command.', 'pray']],
+    [['You have mud on your cloak.', 'suspicious'], ['...and blood. Well. It suits you.', 'happy']],
+    [['My heir will not stop talking about you.', 'laugh'], ['Do try not to die. It would upset the child.', 'gesture']],
+  ],
+  'dowager queen': [
+    [['Come closer, I don\'t bite. Anymore.', 'mischief'], ['I buried two kings and a dragon, child.', 'proud'], ['Mind the third step down. It always lies.', 'point']],
+    [['Back in my day heroes knelt.', 'impatient'], ['...Oh, never mind. My knees wouldn\'t either.', 'laugh']],
+  ],
+  'royal heir': [
+    [['You\'re the HERO!', 'excited'], ['Is that blood? Can I touch it?', 'question'], ['MOTHER, THE HERO IS HERE!', 'cheer']],
+    [['When I\'m king you can have a castle.', 'proud'], ['A small one.', 'think']],
+  ],
+  royal: [
+    [['Ah. The adventurer.', 'proud'], ['The court hears of your deeds.', 'gesture'], ['Do continue. Quietly.', 'happy']],
+    [['You may approach.', 'proud'], ['That is near enough. Lovely.', 'suspicious']],
+    [['The crown takes notice of you, hero.', 'gesture'], ['Rarely a good thing. Today, perhaps.', 'mischief']],
+  ],
+  kids: [
+    [['You\'re back!', 'excited'], ['Did you fight a dragon? A big one?', 'question'], ['I KNEW it!', 'cheer']],
+    [['Watch this!', 'mischief'], ['...I can almost do a cartwheel.', 'shy']],
+  ],
+  guard: [[['Hero. The watch is glad to see you.', 'proud'], ['Anything we should know about, down there?', 'think']]],
+  knight: [[['Well met, champion.', 'proud'], ['The Order keeps the town. You keep the dark at bay.', 'point']]],
+  merchant: [[['My best customer!', 'haggle'], ['Bring me something rare from below, eh?', 'greedy']]],
+  old: [[['Come here, let me look at you.', 'think'], ['Too thin. Eat something before you go down.', 'tired']]],
+  any: [
+    [['Oh! It\'s you!', 'surprised'], ['Thank you for keeping the dark down there.', 'bow']],
+    [['A moment, hero?', 'wave'], ['My boy wants to be like you. Please don\'t die.', 'pray']],
+    [['You look tired.', 'think'], ['Back to the depths already? Light keep you.', 'pray']],
+    [['Heard you went deeper than anyone yet.', 'excited'], ['Is it true the walls whisper?', 'question']],
+  ],
+};
+
 // A shopper at a vendor: [customer, vendor, customer] lines with emotions (the vendor speaks as slot 1)
 export const SHOPPING = {
   weapons: [
@@ -104,8 +146,11 @@ export const SHOPPING = {
     [['My helmet\'s dented.', 'sad'], ['So was its last owner.', 'think'], ['Not encouraging, Stevie.', 'angry']],
   ],
   upgrade: [
-    [['Can you mend my plough?', 'question'], ['I mend swords, not ploughs.', 'impatient'], ['Pretend it\'s a sword.', 'mischief']],
-    [['Is it supposed to glow?', 'surprised'], ['Only for a week.', 'think'], ['And after?', 'scared']],
+    [['Can you mend my plough?', 'question'], ['For you? I\'ll bless it too!', 'cheer'], ['Just mend it, love.', 'laugh']],
+    [['Is it supposed to glow?', 'surprised'], ['Holy light! Green is humble.', 'proud'], ['If you say so, dear.', 'happy']],
+    [['Morning, Homunculus!', 'wave'], ['Morning! The Light loves you!', 'cheer'], ['You say that every day.', 'laugh']],
+    [['Fix my pot, paladin?', 'mischief'], ['A holy pot, coming up!', 'proud'], ['You\'re a dear.', 'love']],
+    [['Your forge is cold again.', 'surprised'], ['Divine draught! Refreshing!', 'happy'], ['My tea froze, you lump.', 'laugh']],
   ],
   enchant: [
     [['Can you make my cat love me?', 'love'], ['No magic is that strong.', 'think'], ['Worth asking.', 'sad']],

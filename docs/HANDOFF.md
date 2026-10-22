@@ -977,6 +977,36 @@ blades circling him become larger blue boomerangs.
 - **Bubble budget:** silence for the first 5.5 s of a visit; at most 2 ambient bubbles (3 in an event) within 12 tiles
   of the hero; a 1.5-4 s gap after each ambient line near him; a line that can't get a slot within a few seconds is
   acted out silently.
+- **Auto-play listens and pays respects:** a line meant for the hero (a bark as it passes, a kid running up, an
+  audience, a wanderer's bounty talk on the overworld) calls `heroHears(who, dur)`, which sets `G.heroListen`;
+  `Auto.listen` then stands the hero still, facing the speaker, for the bubble + 0.6 s (at least 1 s; back-to-back
+  bubbles from one speaker extend it), unless monsters are within 7 tiles. After its errands, `Auto.townSocial` walks
+  up to any royalty in town (King and Queen first, up to two; watching from the crowd while they are in an event) and,
+  now and then, a townsperson; `heroVisit(d, a)` plays a 2-3 bubble audience (`AUDIENCES` in townscripts.js).
+- **Homunculus the Proud, the blacksmith** (the `upgrade` vendor; `src/game/homunculus.js`, lines in
+  `src/data/homunculus.js`). A big, comical, much-loved smith who thinks he is a Paladin; his "holy" powers are
+  Varrow the Rimebound's, a death knight sealed in the great axe on the rack beside his forge (`axe_rack` in
+  `src/gfx/townprops.js`). The axe is a three.js model (`tools/varrowaxe3d.js`, viewer `tools/varrowaxe3d.html`:
+  double crescent blades, skull bosses, top spike, langets and collars, chains, carved runes) skinned with chunks cut
+  from the Runeblade skins (Verdigris Weeper's blade, Funeral Sash's grip, Reliquary Sliver's hilt), baked from the
+  iso camera by `node tools/varrowaxe3d_bake.js` into 32 turns + a white rune layer + the rack
+  (`assets/sprites/npc/varrow_axe.webp/json`); `src/gfx/varrowaxe.js` draws it, tinting the runes by chapter (green,
+  frost, gold). It sways on its chain and turns while Varrow speaks; the flat drawing stays as the loading fallback.
+  Art: 30 painted emotion poses (`assets/source/npc/homunculus/poses_{1,2,3}.webp` ->
+  `python tools/homunculus.py` -> `assets/sprites/npc/homunculus.webp/json`, drawn by `src/gfx/homunculus.js`); his
+  pose follows each line (`POSES` maps a pose to the town emotion it moves like), idle poses cycle between lines.
+  - With auto-play on, the forge is always a stop (`chat` step in `Auto.townPlan`): the hero stands and has a 3-10 s
+    back-and-forth (the hero gets three-line bubbles too) before the upgrade menu opens (skipped if nothing to buy).
+  - Everyday talk is a grammar (`POOLS`/`TOPICS`: boasts, paladin training, the hero's gear, townsfolk, advice, his
+    life, compliments, blessings): over 2,300 distinct Homunculus lines, some gated by story chapter so his boasts get
+    stranger (green light, frost, things that won't stay dead).
+  - The axe story (`STORY`, 11 chapters x 3 tellings, progress in `G.char.homunculus`, migrated in save.js): a beat on
+    every other chat, each chapter told twice in different words before the next; recaps of told chapters come round
+    later. Chapters: the Proud, the axe, green light, the hen, the voice, the cold forge, Saint Varrow, the warning, a
+    vessel, good morning, the Reformed. The finale drops a forged gift; afterwards he and Varrow banter (`AFTER`).
+  - In play: his glow flares gold-then-green-then-frost with the chapter, the rack's runes wake and frost drifts off
+    it, the axe speaks in dark bubbles in chats and mutters to itself (`AXE_MUTTERS`), and he hails passing
+    townsfolk by name, who answer fondly (`FOLK_HAILS`/`FOLK_BACK`). Tests: `homunculus.mjs`, `homunculus.js`.
 - Removed: the 2,000 generated event cards and conversations, `townLine/townEvent/townConversation`, `drawTownMood`.
 - Tests: `tools/tests/townlife.js` (new), `townsfolk.mjs`, `town_visuals.mjs`, `villagers.js`, `town_sprite_display.js`
   (updated to the new contract).
@@ -3471,6 +3501,7 @@ See the `open_issues` field.
   the hero and erupt). Moves live in `monster.js` MOVES/beginMove/movePerform/moveTick.
 - The ambush director (`ambushTick`, not in BOSS ROOMs or guardian fights) sends a hunting wave every ~30-55 s that
   drops from above the screen, teleports in, claws out of the ground or tears out of a wall (`enter`).
-- MADNESS fills over 600 s in the dungeon (`G.char.madness`); when full, the MADNESS button / G key (hero input only,
-  auto-play never presses it) gives 2x damage (`combat.hit`) and 2x move speed (`Creature.speedMul`) for 30 s (`G.char.madT`).
+- MADNESS fills over 420 s in the dungeon (`G.char.madness`); when full, the MADNESS button / G key (hero input only,
+  auto-play never presses it) gives 2x damage (`combat.hit`), 2x move speed (`Creature.speedMul`) and 2x attack/cast
+  speed (half the `castLock` in `Player.tryUseSkill`) for 30 s (`G.char.madT`).
 - `G.godMode` now really takes no damage (the 1-damage floor used to leak through). Test: `tools/tests/mayhem.js`.
