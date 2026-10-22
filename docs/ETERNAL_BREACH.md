@@ -86,8 +86,18 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
   allow from the start (during a fight, its island alone), else he is put back where he last stood (`holdLocks`).
 - No regenerating elites in the Breach (`breachMonster` drops the `regen` affix): the floors are thick with pools to
   dodge, and a champion healing to full while the hero side-stepped them made fights endless.
+- **No waiting for monsters**: every timed spawner in a fight (carrier drops, climbers, hatchlings, doors, marches,
+  meteors, the Hold's arrivals, the Courier's re-drops) fires at once when nothing of the fight but its boss and nests
+  is left alive (`calm` in the scenario context), and wave fights (Surge, Hanging Host) bring the next wave the moment
+  the last one falls. The arrivals themselves are quick (0.4-1.3 s; a carrier ~1 s out of the void). `breach.js play`
+  fails a fight that leaves the hero more than 3 s with nothing alive and nothing to do. (The Coffin Choir keeps its
+  timers: there the hero is sealing coffins, and each seal calls the choir.)
 - Stragglers: when nothing in a fight has fallen for 30 s, the last few (four or fewer) far from the hero or out of
   his reach sink back into the void.
+- **Reachable both ways**: arrivals land only where the monster can walk to the hero and the hero can walk to it
+  (`reachOk`: the flow field plus `heroReach`, a forward walk from the hero's tile), never on a ledge a monster could
+  drop from but the hero can't climb. A monster on the hero's island (or in his fight) that still ends up out of his
+  reach for 4 s is torn back down next to him by a rift (`stranded`); `breach.js rules` checks it.
 - Between fights, every 40-70 s a few monsters arrive near the hero by a random arrival.
 - **Arrivals** (`ARRIVALS`, `bringOne`): the user's four, *rise* (out of the ground), *climb* (hauled up over the
   island's edge from the void), *sky* (swooping in from the void), *ride* (a great flier of the Breach, drawn at 150 px,
@@ -110,7 +120,9 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
 - **The Breach Heart**: the floor's keeper (`finalBossIndex`: the six boss families in turn, each family's six from least
   to most fearsome as floors go on) rises from the sarcophagus at 1.5x a boss's life; at 66% and 33% it shields itself
   (untargetable) behind three Heart Shards while a wave arrives; break them to strike again. Its fall gives the reward
-  and opens the exit portal on the Heart island: on to the next floor, or home.
+  and opens the exit portal on the Heart island: on to the next floor, or home. The generator reserves its spot (a
+  clear tile with open neighbours a step from the Heart's shrine, before the braziers and lights go down:
+  `heart.exitAt`), and the portal answers within 2 tiles.
 - Auto-play: the run's `target` is the nearest unwon shrine the hero can walk to (through open wards), then the Heart;
   `objective` points at the fight's task, else its nearest foe, else the shrine. Between fights auto-play loots first.
   With an objective waiting and foes in its face for 10 s it pushes through to the objective for 4 s (`objPush`).
@@ -136,6 +148,6 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
 ## Open
 - Not measured on a phone; the void is three screen-sized blits a frame plus one more for the far rocks.
 - The five monster atlases are all loaded per floor (simple, ~1.6 MB); `breachLooks` uses three of them.
-- A floor takes a geared hero about 20 game minutes with auto-play (seven shrines and the Heart).
+- A floor takes a geared hero about 19-28 game minutes with auto-play (seven shrines and the Heart).
 - Ask the user: whether every shrine should be needed for the Heart (now yes), the floor length, the reward odds
   (`BREACH_ODDS`), and whether death should cost anything in the Breach.

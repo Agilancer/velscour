@@ -52,6 +52,24 @@ Contents
   blinks/leaps (the hero is put back); fixed the scenario deck dealing the Heart's fight to a medium island (it then
   refused to start, stalling auto-play); no `regen` elites in the Breach. `breach.js` auto-play won floor 2 in
   1011-1235 s over several seeds (budget 2100 s); breach_gen 120/120 (now also checks no tile path walks round a ward).
+- **Follow-up (user): no waiting for monsters.** Every timed spawner in a shrine fight fires at once when the fight's
+  monsters (bar its boss and nests) are all dead; arrivals sped up (0.4-1.3 s). `breach.js play` checks no fight leaves
+  the hero >3 s with nothing alive and nothing to do (max now 0.1 s outside boss fights). Floors run 19-28 game minutes
+  with auto-play (the idle time became fighting); the auto test's budget is 2700 s.
+- **Follow-up (user): Lancer auto-play couldn't take the exit.** The exit portal sat on the Heart shrine's braziers on
+  147 of 200 floors; the generator now reserves a clear spot for it (`heart.exitAt`; `breach_gen.mjs` checks 0
+  blocked), the portal's reach is 2, and auto-play walks into it. Also found a Lancer stall: a caster on a ledge the hero
+  couldn't climb kept him dodging for 20+ minutes. Arrivals now need two-way reach (`heroReach`), stranded monsters
+  are rifted down beside the hero after 4 s, and auto-play in the Breach pushes on (3 s, dangers ignored) after 6 s of
+  dodging while healthy and barely hurt. `BREACH_CLASS=lancer breach.js auto` picks the class.
+  The Lancer replay of the stalled seed (849252875) now wins floor 2 in 1337 s.
+- **Follow-up (user): black screen in Herrington Hollow after a Breach run while away.** The trip home itself draws
+  fine (reproduced: floor 2 won, auto-play goes home). The likely cause is a GPU reset while the computer slept or the
+  tab was hidden, which wipes accelerated canvases. The baked floor chunks then drew black under the hero for good. Now
+  `dropBakes()` (render.js) forgets the baked floors, light falloff, vignette and labels when the page is shown again
+  or the screen canvas is restored, and a floor chunk that reports `contextlost` is dropped. Everything rebakes as it is drawn.
+  Checked by wiping the town's chunks by hand (black ground, hero and HUD fine) and recovering. If it happens with the
+  computer awake, it's something else: ask what was on screen.
 - **Open / to ask:** every other shrine is required before the Heart (a floor is ~20 game minutes); reward odds
   (`BREACH_ODDS`); death costs nothing but the floor. Not measured on a phone.
 

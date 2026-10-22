@@ -57,7 +57,7 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
   const islandAt = (x, y) => own[tileOf(x, y)];
 
   // ---------------------------------------------------------------- wards
-  const blockGate = (b, on) => { for (const i of b.gate) map.block[i] = on ? 1 : 0; map.flowFrom = [-999, -999]; };
+  const blockGate = (b, on) => { for (const i of b.gate) map.block[i] = on ? 1 : 0; map.flowFrom = [-999, -999]; map.blockKey = (map.blockKey || 0) + 1; };
   const axisOf = (b) => (Math.abs(b.p1[0] - b.p0[0]) > Math.abs(b.p1[1] - b.p0[1]) ? 'y' : 'x');
   const gateNear = (b, o) => {
     const p = b.a === o.idx ? b.p0 : b.p1;
@@ -147,6 +147,7 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
       for (const S of all) if (S.active) S.update(dt);
       holdLocks();
       ambient(dt);
+      stranded(dt);
     },
     /** Tests: start a shrine's fight now (the hero is moved there). */
     force(S) { const p = world.player; p.x = S.C[0]; p.y = S.C[1] + 1.6; S.start(true); },
@@ -184,6 +185,29 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
     if (world.time > lockMsgT) { lockMsgT = world.time + 1.5; floatText(p.x, p.y, 70, S ? 'The ward holds until the fight is won!' : 'A ward bars the way: win its shrine first!', VIOLET, 13, { life: 1.4 }); sfx('error', 0.5); }
   }
 
+  // ---------------------------------------------------------------- monsters the hero can't reach
+  // A monster up on a ledge the hero can't climb (dropped there, or kiting up a crag) would hold a fight up for good:
+  // a few seconds stranded and the Breach tears it back down next to him.
+  let strandT = 0;
+  function stranded(dt) {
+    const p = world.player;
+    if (!p || p.dead || (strandT -= dt) > 0) return;
+    strandT = 1;
+    map.buildFlow(p.x, p.y, map.flowRange || 64);
+    const here = islandAt(p.x, p.y);
+    for (const m of world.hostiles('player', p.x, p.y, 16)) {
+      if (!m.breach || m.dead || m.entering || m.static || m.targetable === false || !m.awake) continue;
+      if (own[tileOf(m.x, m.y)] !== here && !run.current?.foes.includes(m)) continue; // (not a pack across a ward)
+      if (reachOk(map, m.x, m.y)) { m.strandT = 0; continue; }
+      if ((m.strandT = (m.strandT || 0) + 1) < 4 || here < 0) continue;
+      const at = landing(world, isl[here], 'rift', p, new RNG((Math.random() * 1e9) >>> 0));
+      if (!at) continue;
+      m.strandT = 0;
+      sparkle(m.x, m.y, 20, VIOLET, 14, 0.5);
+      bringOne(world, isl[here], m, 'rift', [at.x, at.y]);
+    }
+  }
+
   // ---------------------------------------------------------------- monsters arriving while no shrine is active
   let ambT = rand(35, 55);
   function ambient(dt) {
@@ -206,6 +230,8 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
       foes: [], markers: [], extras: [], locks: [], objective: undefined, boss: !!T.boss || type === 'heart' };
     const report = (s, col = '#d8b0ff') => UI.log('[' + S.title + '] ' + s, col);
     const live = () => S.foes.some((m) => !m.dead);
+    /** Nothing of the fight left to hit but its boss and nests: the next wave comes now, not on its timer. */
+    const calm = () => !S.foes.some((m) => !m.dead && !m.static && !m.breachBoss);
     const track = (m) => {
       const prev = m.onDeath;
       m.onDeath = (src) => { if (prev) prev.call(m, src); if (S.onFoeDeath) S.onFoeDeath(m); };
@@ -293,7 +319,7 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
     };
     Object.assign(S, { finish });
     S.progress = () => (S.goal ? `Progress ${Math.min(S.stage, S.goal)}/${S.goal}` : '');
-    const x = { S, world, map, o, C, rng, floor, lvl, spot, mark, unmark, prop, dropProp, flash, monster, wave, boss, phases, trackPhases, live, report, finish, track, bossIndex };
+    const x = { S, world, map, o, C, rng, floor, lvl, spot, mark, unmark, prop, dropProp, flash, monster, wave, boss, phases, trackPhases, live, calm, report, finish, track, bossIndex };
     const start = (forced) => {
       if (S.active || S.completed) return;
       if (S.busy()) { report('Another shrine already burns. Finish its fight first.', '#ffb070'); return; }
@@ -423,7 +449,7 @@ export function arrive(world, o, kind, n, opts = {}) {
   if (kind === 'ride' && made.length) carrier(world, o, made, rng);
   else if (kind === 'shard' && made.length) shard(world, o, made, rng);
   else made.forEach(([m, at], k) => {
-    const delay = k * (0.15 + rng.next() * 0.3);
+    const delay = k * (0.06 + rng.next() * 0.12);
     if (delay > 0) { hide(m); let d = delay; m.entering = (dt) => { if ((d -= dt) <= 0) bringOne(world, o, m, kind, [at.x, at.y], { rng, at }); }; }
     else bringOne(world, o, m, kind, [at.x, at.y], { rng, at });
   });
@@ -431,8 +457,32 @@ export function arrive(world, o, kind, n, opts = {}) {
   return out;
 }
 
-/** Can the hero walk there (the monsters' flow field, built round the hero, reaches it)? Off crags and ledges. */
-const reachOk = (map, x, y) => map.flowAt(x, y) >= 0;
+/**
+ * Can the hero and a monster there reach each other: the monsters' flow field (built round the hero) leads from it to
+ * the hero, and the hero can walk to it too (not a ledge a monster can drop from but the hero can't climb).
+ */
+const reachOk = (map, x, y) => map.flowAt(x, y) >= 0 && heroReach(map)[map.tileIdx(x, y)] === map._hrStamp;
+/** The tiles the hero can walk to from where he stands (stamped map._hrStamp), kept until he changes tile. */
+function heroReach(map) {
+  const P = G.world?.player, W = map.w;
+  if (!map._hr) { map._hr = new Int32Array(map.w * map.h); map._hrQ = new Int32Array(map.w * map.h); map._hrStamp = 0; map._hrAt = -1; }
+  const s = P ? map.tileIdx(P.x, P.y) : -1;
+  if (s === map._hrAt && map._hrKey === map.blockKey) return map._hr;
+  map._hrAt = s; map._hrKey = map.blockKey;
+  const f = map._hr, q = map._hrQ, st = ++map._hrStamp;
+  if (s < 0 || !map.walkableTile(s % W, (s / W) | 0)) return f;
+  let qh = 0, qt = 0;
+  q[qt++] = s; f[s] = st;
+  while (qh < qt) {
+    const i = q[qh++], x = i % W, y = (i / W) | 0;
+    for (let k = 0; k < 4; k++) {
+      const nx = x + (k === 0 ? 1 : k === 1 ? -1 : 0), ny = y + (k === 2 ? 1 : k === 3 ? -1 : 0), ni = ny * W + nx;
+      if (!map.walkableTile(nx, ny) || f[ni] === st || (map.hgt && !map.stepOk(i, ni))) continue;
+      f[ni] = st; q[qt++] = ni;
+    }
+  }
+  return f;
+}
 const hide = (m) => { m.targetable = false; m.alpha = 0; };
 function done(m, x, y) { m.entering = null; m.targetable = true; m.alpha = undefined; m.z = 0; m.x = x; m.y = y; m.cd = rand(0.2, 0.6); }
 
@@ -452,21 +502,21 @@ export function bringOne(world, o, m, kind, p, opts = {}) {
   };
   if (kind === 'rise') {
     // the ground heaves, then it claws up out of the rock
-    const dur = 1.2;
+    const dur = 0.8;
     m.alpha = 0; m.z = -60;
-    addEffect(new Telegraph({ kind: 'circle', x: tx, y: ty, r: 1.1 * big, dur: 0.6, color: '#a060e0' }), 'ground');
+    addEffect(new Telegraph({ kind: 'circle', x: tx, y: ty, r: 1.1 * big, dur: 0.4, color: '#a060e0' }), 'ground');
     m.entering = (dt) => {
       t += dt; m.animT += dt;
       const k = Math.min(1, t / dur);
       m.alpha = clamp(k * 2 - 0.2, 0, 1); m.z = -60 * (1 - k); m.moving = true;
       if (chance(dt * 35)) spawn({ type: 'dot', x: tx + rand(-0.6, 0.6), y: ty + rand(-0.6, 0.6), z: 2, vz: rand(30, 80), g: 220, life: 0.6, size: rand(2, 4), color: chance(0.5) ? '#3a2e44' : '#5a4660' });
-      if (t > 0.5 && t - dt <= 0.5) { smoke(tx, ty, 2, '#2a2034', 6, 12); sfx('thud', 0.5); }
+      if (t > 0.35 && t - dt <= 0.35) { smoke(tx, ty, 2, '#2a2034', 6, 12); sfx('thud', 0.5); }
       if (k >= 1) done(m, tx, ty);
     };
   } else if (kind === 'climb') {
     // hauls itself up the island's edge from the void below and over the lip
     const vx = at?.vx || 0, vy = at?.vy || 1, sx = (at?.x ?? tx) + vx * 0.55, sy0 = (at?.y ?? ty) + vy * 0.55, ex = at?.x ?? tx, ey = at?.y ?? ty;
-    const dur = 1.5 + (m.rank === 'boss' ? 1 : 0), drop = m.rank === 'boss' ? 160 : 90;
+    const dur = 1.0 + (m.rank === 'boss' ? 0.6 : 0), drop = m.rank === 'boss' ? 160 : 90;
     m.x = sx; m.y = sy0; m.z = -drop; m.alpha = 1;
     m.entering = (dt) => {
       t += dt; m.animT += dt * 1.6; m.moving = true;
@@ -479,7 +529,7 @@ export function bringOne(world, o, m, kind, p, opts = {}) {
     sfx('swing', 0.4);
   } else if (kind === 'sky') {
     // swoops in from the void, high up, and lands
-    const a = rng.next() * TAU, fx = tx + Math.cos(a) * 7, fy = ty + Math.sin(a) * 7, dur = 1.5, H = 360;
+    const a = rng.next() * TAU, fx = tx + Math.cos(a) * 7, fy = ty + Math.sin(a) * 7, dur = 1.0, H = 360;
     m.x = fx; m.y = fy; m.z = H; m.alpha = 1;
     addEffect(new Telegraph({ kind: 'circle', x: tx, y: ty, r: 1.2 * big, dur, color: '#c070ff' }), 'ground');
     m.entering = (dt) => {
@@ -492,34 +542,34 @@ export function bringOne(world, o, m, kind, p, opts = {}) {
     sfx('swing', 0.6);
   } else if (kind === 'rift') {
     // a violet tear opens upright in the air; it steps out of it
-    const dur = 1.1;
+    const dur = 0.7;
     m.alpha = 0;
     world.addHazard(new Fx({ x: tx, y: ty, dur: 2, lift: -0.1, paint: paintTear }));
     m.entering = (dt) => {
       t += dt; m.animT += dt;
-      m.alpha = clamp((t - 0.5) / 0.5, 0, 1);
+      m.alpha = clamp((t - 0.3) / 0.4, 0, 1);
       if (chance(dt * 30)) sparkle(tx + rand(-0.3, 0.3), ty + rand(-0.3, 0.3), rand(10, 70), '#e0a0ff', 1, 0.2);
       if (t >= dur) { done(m, tx, ty); addEffect(new Ring(tx, ty, 0.2, 1.6, 0.35, VIOLET, 4)); sfx('arcane', 0.5); }
     };
     sfx('portal', 0.35);
   } else if (kind === 'meteor') {
     // inside a breachstone that falls burning violet; it climbs out of the crater
-    const dur = 1.3;
+    const dur = 0.9;
     hide(m);
     world.addHazard(new Delayed({ world, src: m, x: tx, y: ty, r: 1.3, delay: dur, dmg: [m.dmg * 0.5, m.dmg * 0.8], el: 'arcane', fx: 'meteor' }));
     m.entering = (dt) => {
       t += dt;
       if (t < dur) return;
-      m.alpha = clamp((t - dur) / 0.4, 0, 1); m.z = -20 * (1 - m.alpha); m.moving = true; m.animT += dt;
-      if (t >= dur + 0.4) { done(m, tx, ty); smoke(tx, ty, 4, '#2a1a34', 10, 14); }
+      m.alpha = clamp((t - dur) / 0.3, 0, 1); m.z = -20 * (1 - m.alpha); m.moving = true; m.animT += dt;
+      if (t >= dur + 0.3) { done(m, tx, ty); smoke(tx, ty, 4, '#2a1a34', 10, 14); }
     };
   } else if (kind === 'march') {
     // comes running in over the walkway, out of the haze
     m.alpha = 0;
-    m.entering = (dt) => { t += dt; m.alpha = Math.min(1, t / 0.6); if (t >= 0.6) done(m, tx, ty); };
+    m.entering = (dt) => { t += dt; m.alpha = Math.min(1, t / 0.4); if (t >= 0.4) done(m, tx, ty); };
   } else if (kind === 'chain') {
     // lowered from far above on a violet chain, which then draws back up
-    const dur = 2.0, H = 300;
+    const dur = 1.2, H = 300;
     m.z = H; m.alpha = 1;
     const ch = world.addHazard(new Fx({ x: tx, y: ty, m, lift: 0.4, up: 0, paint: paintChain, step(dt2, f) { if (!m.entering) f.up += dt2; return f.up < 0.6 && !m.dead; } }));
     m.entering = (dt) => {
@@ -532,7 +582,7 @@ export function bringOne(world, o, m, kind, p, opts = {}) {
     sfx('swing', 0.3);
   } else if (kind === 'coalesce') {
     // motes of the void stream in from all round and take its shape
-    const dur = 1.3;
+    const dur = 0.8;
     m.alpha = 0;
     m.entering = (dt) => {
       t += dt; m.animT += dt;
@@ -540,7 +590,7 @@ export function bringOne(world, o, m, kind, p, opts = {}) {
         const a = rand(TAU), r = rand(1.6, 2.6);
         spawn({ type: 'glow', x: tx + Math.cos(a) * r, y: ty + Math.sin(a) * r, z: rand(10, 60), vx: -Math.cos(a) * r / 0.6, vy: -Math.sin(a) * r / 0.6, life: 0.6, size: rand(2, 3.5), size1: 0.5, color: chance(0.5) ? '#d090ff' : '#ff80e0', add: true });
       }
-      m.alpha = clamp((t - 0.7) / 0.6, 0, 1);
+      m.alpha = clamp((t - 0.4) / 0.4, 0, 1);
       if (t >= dur) { done(m, tx, ty); addEffect(new Ring(tx, ty, 1.8, 0.2, 0.3, '#e0b0ff', 3)); sfx('arcane', 0.45); }
     };
   } else if (kind === 'coffin') {
@@ -549,7 +599,7 @@ export function bringOne(world, o, m, kind, p, opts = {}) {
     const pr = { kind: 'scatter', x: tx, y: ty + 0.05, spr: sc('sealed_wood_coffin') || sc('breached_open_coffin'), k: ts.k, flip: rng.next() < 0.5, light: 0 };
     if (pr.spr) world.props.push(pr);
     hide(m);
-    const dur = 1.4;
+    const dur = 0.8;
     m.entering = (dt) => {
       t += dt;
       if (t < dur) { pr.x = tx + Math.sin(t * 40) * 0.03 * (t / dur); return; }
@@ -570,8 +620,8 @@ export function bringOne(world, o, m, kind, p, opts = {}) {
     if (!world.map.walkable(tx + bx, ty + by)) bx = by = 0; // a doorway at the island's edge: it steps out where it stands
     m.entering = (dt) => {
       t += dt;
-      if (t < 0.9) return;
-      const k = clamp((t - 0.9) / 0.7, 0, 1);
+      if (t < 0.5) return;
+      const k = clamp((t - 0.5) / 0.5, 0, 1);
       m.alpha = k; m.x = tx + bx * k; m.y = ty + by * k; m.moving = true; m.animT += dt;
       if (k >= 1) done(m, tx + bx, ty + by);
     };
@@ -593,21 +643,21 @@ export function bringOne(world, o, m, kind, p, opts = {}) {
 /** A great flier of the Breach sweeps in over the void with a squad clinging under it, drops them and flies on. */
 function carrier(world, o, made, rng) {
   const mx = made.reduce((s, [, a]) => s + a.x, 0) / made.length, my = made.reduce((s, [, a]) => s + a.y, 0) / made.length;
-  const a = rng.next() * TAU, dist = 16, dx = Math.cos(a), dy = Math.sin(a);
+  const a = rng.next() * TAU, dist = 10, dx = Math.cos(a), dy = Math.sin(a);
   const art = BREACH_CARRIERS[Math.floor(rng.next() * BREACH_CARRIERS.length)];
   const base = elevationAt(mx, my), Z = 150;
   for (const [m] of made) hide(m);
   const riders = made.map(([m, at], k) => ({ art: m.art, swap: m.swap, artH: m.artH, ox: (k - (made.length - 1) / 2) * 16, oy: (k % 2) * 6, m, at }));
   const c = new Fx({ x: mx - dx * dist, y: my - dy * dist, z: Z, art, h: 150, seed: rng.next() * 9, flip: dx < 0, riders, base, lift: 1.5, phase: 0,
     step(dt, f) {
-      const sp = 9 * dt;
+      const sp = 13 * dt;
       if (f.phase === 0) {
         const d = Math.hypot(mx - f.x, my - f.y);
-        if (d <= sp) { f.x = mx; f.y = my; f.phase = 1; f.hold = 0.7; }
+        if (d <= sp) { f.x = mx; f.y = my; f.phase = 1; f.hold = 0.4; }
         else { f.x += dx * sp; f.y += dy * sp; }
       } else if (f.phase === 1) {
         f.hold -= dt;
-        const k = Math.floor((0.7 - f.hold) / 0.7 * riders.length);
+        const k = Math.floor((0.4 - f.hold) / 0.4 * riders.length);
         riders.forEach((r, i) => {
           if (r.dropped || i > k) return;
           r.dropped = true;
@@ -635,12 +685,12 @@ function shard(world, o, made, rng) {
   const s = new Fx({ x: from[0], y: from[1], base, riders, seed: rng.next() * 9, phase: 0, lift: 0.8, w: 1.4 + made.length * 0.25,
     step(dt, f) {
       if (f.phase === 0) {
-        const k = Math.min(1, f.t / 2.2), e = 1 - Math.pow(1 - k, 3);
+        const k = Math.min(1, f.t / 1.3), e = 1 - Math.pow(1 - k, 3);
         f.x = from[0] + (dock[0] - from[0]) * e; f.y = from[1] + (dock[1] - from[1]) * e;
         if (k >= 1) { f.phase = 1; f.t0 = f.t; sfx('thud', 0.5); camera.shake(2); }
       } else if (f.phase === 1) {
         riders.forEach((r, i) => {
-          if (r.dropped || f.t - f.t0 < i * 0.2) return;
+          if (r.dropped || f.t - f.t0 < i * 0.12) return;
           r.dropped = true;
           // the island under the passengers is level with the shard: they leap across in an arc
           bringOne(world, o, r.m, 'drop', [r.at.x, r.at.y], { from: [f.x, f.y, 0], dur: 0.55, arc: 40 });
@@ -678,7 +728,7 @@ function paintDoor(ctx, f) {
   const a = f.t < 0.4 ? f.t / 0.4 : f.t > 2 ? Math.max(0, (2.6 - f.t) / 0.6) : 1, art = f.art;
   if (!art || a <= 0) return;
   const k = G.world?.tileset?.k || 0.4, x = isoX(f.x, f.y), y = isoY(f.x, f.y);
-  const sl = f.t < 0.9 ? art.closed : art.open;
+  const sl = f.t < 0.5 ? art.closed : art.open;
   ctx.save(); ctx.globalAlpha = a;
   ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(glowSprite(VIOLET), x - 50, y - 110, 100, 120);
   ctx.globalCompositeOperation = 'source-over';
@@ -745,7 +795,7 @@ export const SCENARIOS = {
       addEffect(new Ring(A.p[0], A.p[1], 1.2, 1.25, 0.05, '#e0a0ff', 2), 'ground');
       if (Math.hypot(p.x - A.p[0], p.y - A.p[1]) < 1.4) A.prog = Math.min(100, A.prog + dt * 100 / 9);
       if (A.prog >= 100) { x.flash(A.p, '#ffe0ff', 2.6); S.stage++; x.cur++; x.report(`Anchor ${S.stage} binds.`); if (x.cur >= 3) S.objective = undefined; }
-      if ((x.waveT -= dt) <= 0) { x.waveT = 9; if (S.foes.filter((m) => !m.dead).length < 8) x.wave('climb', 2 + Math.floor(x.floor / 10)); }
+      if ((x.waveT -= dt) <= 0 || x.calm()) { x.waveT = 9; if (S.foes.filter((m) => !m.dead).length < 8) x.wave('climb', 2 + Math.floor(x.floor / 10)); }
     },
   },
   // Carriers bring squad after squad; then their master lands.
@@ -754,7 +804,7 @@ export const SCENARIOS = {
     start(x) { x.S.goal = 5; x.S.stage = 0; x.dropT = 1; },
     update(x, dt) {
       const { S } = x;
-      if (S.stage < 4) { if ((x.dropT -= dt) <= 0) { x.dropT = 9; S.stage++; x.wave('ride', 3 + Math.floor(x.floor / 8)); } return; }
+      if (S.stage < 4) { if ((x.dropT -= dt) <= 0 || x.calm()) { x.dropT = 9; S.stage++; x.wave('ride', 3 + Math.floor(x.floor / 8)); } return; }
       if (!x.master && !x.live()) {
         S.stage = 5;
         const arch = x.world.looks.pick('bat') ? 'bat' : 'gargoyle';
@@ -828,7 +878,7 @@ export const SCENARIOS = {
       const { S } = x;
       for (const d of x.doors) {
         if (d.shut) continue;
-        if ((d.t -= dt) <= 0) { d.t = 11; if (x.S.foes.filter((m) => !m.dead).length < 7) { const m = x.track(x.monster(breachArch(x.rng.fn()), d.p)); x.world.add(m); bringOne(x.world, x.o, m, 'march', [d.p[0] + 0.5, d.p[1] + 0.5], { rng: x.rng }); } }
+        if ((d.t -= dt) <= 0 || x.calm()) { d.t = 11; if (x.S.foes.filter((m) => !m.dead).length < 7) { const m = x.track(x.monster(breachArch(x.rng.fn()), d.p)); x.world.add(m); bringOne(x.world, x.o, m, 'march', [d.p[0] + 0.5, d.p[1] + 0.5], { rng: x.rng }); } }
       }
       const open = x.doors.filter((d) => !d.shut), p = x.world.player;
       const near = open.sort((a, b) => Math.hypot(a.p[0] - p.x, a.p[1] - p.y) - Math.hypot(b.p[0] - p.x, b.p[1] - p.y))[0];
@@ -848,7 +898,7 @@ export const SCENARIOS = {
         const a = rand(TAU), r = rand(0.5, 3.5), tx = p.x + Math.cos(a) * r, ty = p.y + Math.sin(a) * r;
         if (world.map.isFloor(tx, ty)) world.addHazard(new Delayed({ world, team: 'enemy', src: null, x: tx, y: ty, r: 1.2, delay: 1.3, dmg: starDmg(x), el: 'arcane', fx: 'meteor' }));
       }
-      if ((x.hatchT -= dt) <= 0) { x.hatchT = 7; x.wave('meteor', 2 + Math.floor(x.floor / 9)); }
+      if ((x.hatchT -= dt) <= 0 || x.calm()) { x.hatchT = 7; x.wave('meteor', 2 + Math.floor(x.floor / 9)); }
     },
   },
   // Wave after wave lowered on chains.
@@ -883,7 +933,7 @@ export const SCENARIOS = {
         if (x.rng.next() < dt * 6) spawn({ type: 'glow', x: C[0] + rand(-3, 3), y: C[1] + rand(-3, 3), z: rand(5, 40), vx: 0, vy: 0, life: 0.6, size: 2, size1: 0, color: '#c080ff', add: true });
         const left = x.res.filter((r) => !r.done).sort((a, b) => Math.hypot(a.p[0] - p.x, a.p[1] - p.y) - Math.hypot(b.p[0] - p.x, b.p[1] - p.y))[0];
         S.objective = left ? { x: left.p[0], y: left.p[1], reach: 1.6, use: () => left.mk.use() } : undefined;
-        if ((x.addT = (x.addT ?? 6) - dt) <= 0) { x.addT = 10; if (S.foes.filter((m) => !m.dead).length < 8) x.wave('coalesce', 2); }
+        if ((x.addT = (x.addT ?? 6) - dt) <= 0 || x.calm()) { x.addT = 10; if (S.foes.filter((m) => !m.dead).length < 8) x.wave('coalesce', 2); }
       } else { S.objective = undefined; if (!x.live()) x.finish(); }
     },
   },
@@ -910,7 +960,7 @@ export const SCENARIOS = {
         const nx = s.p[0] + Math.cos(S.seconds * 0.4 + s.ph) * 0.8, ny = s.p[1] + Math.sin(S.seconds * 0.4 + s.ph) * 0.8;
         if (world.map.walkable(nx, ny) && reachOk(world.map, nx, ny)) { s.mk.x = nx; s.mk.y = ny; }
       }
-      if ((x.marchT -= dt) <= 0 && S.foes.filter((m) => !m.dead).length < 8) { x.marchT = 9; x.wave(x.rng.next() < 0.6 ? 'march' : 'climb', 2 + Math.floor(x.floor / 9)); }
+      if (S.stage < 3 && ((x.marchT -= dt) <= 0 || x.calm()) && S.foes.filter((m) => !m.dead).length < 8) { x.marchT = 9; x.wave(x.rng.next() < 0.6 ? 'march' : 'climb', 2 + Math.floor(x.floor / 9)); }
       if (S.stage >= 3) { S.objective = undefined; if (!x.live()) x.finish(); return; }
       const loose = x.stones.filter((s) => !s.got).sort((a, b) => Math.hypot(a.mk.x - p.x, a.mk.y - p.y) - Math.hypot(b.mk.x - p.x, b.mk.y - p.y))[0];
       const to = loose && !(x.carry && x.carry + S.stage >= 3) ? loose.mk : x.socket;
@@ -934,7 +984,7 @@ export const SCENARIOS = {
     },
     update(x, dt) {
       const { S, world } = x, p = world.player;
-      if ((x.climbT -= dt) <= 0) {
+      if ((x.climbT -= dt) <= 0 || x.calm()) {
         x.climbT = Math.max(7, 11 - S.stage);
         const g = x.grap.filter((q) => !q.done);
         if (g.length && S.foes.filter((m) => !m.dead).length < 6) x.wave('climb', 2, { near: { x: pick(g).p[0], y: pick(g).p[1] } });
@@ -962,7 +1012,7 @@ export const SCENARIOS = {
         if (inside) x.prog = Math.min(100, x.prog + dt * 100 / 35);
         addEffect(new Ring(C[0], C[1] + 0.8, 3.2, 3.25, 0.05, inside ? '#ffd0ff' : '#a060c0', 3), 'ground');
         S.objective = { x: C[0], y: C[1] + 0.8, reach: 1.2 };
-        if ((x.arrT -= dt) <= 0) { x.arrT = 7.5; if (S.foes.filter((m) => !m.dead).length < 9) x.wave(pick(ARRIVALS), 3 + Math.floor(x.floor / 9)); }
+        if ((x.arrT -= dt) <= 0 || x.calm()) { x.arrT = 7.5; if (S.foes.filter((m) => !m.dead).length < 9) x.wave(pick(ARRIVALS), 3 + Math.floor(x.floor / 9)); }
       } else { S.objective = undefined; if (!x.live()) x.finish(); }
     },
   },
@@ -987,7 +1037,7 @@ export const SCENARIOS = {
       const { S } = x;
       for (const n of x.nests) {
         if (n.dead || !n.targetable) continue;
-        if ((n.hatchT -= dt) <= 0 && S.foes.filter((m) => !m.dead).length < 7) {
+        if (((n.hatchT -= dt) <= 0 || x.calm()) && S.foes.filter((m) => !m.dead).length < 7) {
           n.hatchT = 9;
           for (let k = 0; k < 1 + (x.floor >= 6 ? 1 : 0); k++) { const m = x.track(x.monster(any(x, ['spider', 'scorpion', 'worm', 'ghoul']), [n.x, n.y])); x.world.add(m); bringOne(x.world, x.o, m, 'rise', [n.x + rand(-1, 1), n.y + rand(0.5, 1.2)], { rng: x.rng }); }
         }
@@ -1021,7 +1071,7 @@ export const SCENARIOS = {
       sfx('boss');
     },
     update(x, dt) {
-      if ((x.dropT -= dt) <= 0) { x.dropT = 16; if (!x.b.dead && x.S.foes.filter((m) => !m.dead).length < 10) x.wave('ride', 3 + Math.floor(x.floor / 9)); }
+      if ((x.dropT -= dt) <= 0 || x.calm()) { x.dropT = 16; if (!x.b.dead && x.S.foes.filter((m) => !m.dead).length < 10) x.wave('ride', 3 + Math.floor(x.floor / 9)); }
       if (x.b.dead && !x.live()) x.finish();
     },
   },

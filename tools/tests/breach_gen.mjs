@@ -35,6 +35,9 @@ for (let s = 1; s <= N; s++) {
   if (reach.size !== 16) errs.push('wards leave ' + (16 - reach.size) + ' islands unreachable');
   if (done.size !== 7) errs.push('only ' + done.size + ' of 7 shrines winnable');
   if (!I[g.heart].heart || I[g.heart].kind !== 'large') errs.push('heart');
+  // the exit portal stands on a clear tile of the Heart island with room to walk up to it
+  { const m = g.map, [ex, ey] = g.exit, open = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => m.walkable(ex + dx, ey + dy)).length;
+    if (!m.walkable(ex, ey) || m.breach.own[m.tileIdx(ex, ey)] !== g.heart || open < 3) errs.push(`exit blocked (${open} open sides)`); }
   // the same on the tiles: closed wards are blocked tiles; walk (hop rules), win every shrine reached, open its wards
   {
     const m = g.map, W = m.w, own = m.breach.own, blk = m.block.slice();

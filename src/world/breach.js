@@ -476,6 +476,20 @@ function build(floor, biome, ts, ts2, seed) {
       break;
     }
   }
+  // the exit portal's spot on the Heart island, in front of its shrine: a clear tile on the pad's level with clear
+  // tiles round it, kept free of the dressing below (a brazier on it left the portal out of reach)
+  const keep = new Set();
+  {
+    const hx = Math.floor(heart.cx), hy = Math.floor(heart.cy), lv = hgt[id(hx, hy)];
+    const ok = (x, y) => inb(x, y) && own[id(x, y)] === heart.idx && !kind[id(x, y)] && !rock[id(x, y)] && !map.block[id(x, y)] && Math.abs(hgt[id(x, y)] - lv) <= 1;
+    const spots = [[2, 2], [2, 1], [1, 2], [3, 2], [2, 3], [3, 1], [1, 3], [3, 3], [-2, 2], [2, -2], [0, 3], [3, 0], [-2, 3], [3, -2]];
+    const at = spots.find(([dx, dy]) => ok(hx + dx, hy + dy) && N4.filter(([ax, ay]) => ok(hx + dx + ax, hy + dy + ay)).length >= 3);
+    if (!at) return null;
+    heart.exitAt = [hx + at[0] + 0.5, hy + at[1] + 0.5];
+    keep.add(id(hx + at[0], hy + at[1]));
+    for (const [ax, ay] of N4) keep.add(id(hx + at[0] + ax, hy + at[1] + ay));
+    for (const i of keep) taken[i] = 1;
+  }
   // shrine dressing: a rift-warding basin behind each shrine stone, candles and braziers round the pad
   for (const o of isl) {
     if (!o.shrine) continue;
@@ -484,7 +498,7 @@ function build(floor, biome, ts, ts2, seed) {
     put(dress[0], o.shrinePos[0] - 1, o.shrinePos[1] - 1);
     for (const [dx, dy] of [[2.2, -1.6], [-2.4, 1.8], [2.0, 2.2], [-1.8, -2.6]]) {
       const x = Math.floor(o.cx + dx), y = Math.floor(o.cy + dy);
-      if (inb(x, y) && own[id(x, y)] === o.idx && !kind[id(x, y)] && !map.block[id(x, y)]) put(rng.pick(LIGHTS), x + 0.5, y + 0.5, { light: 4.5, lightColor: o.heart ? '#ff40c0' : '#a050ff' });
+      if (inb(x, y) && own[id(x, y)] === o.idx && !kind[id(x, y)] && !map.block[id(x, y)] && !keep.has(id(x, y))) put(rng.pick(LIGHTS), x + 0.5, y + 0.5, { light: 4.5, lightColor: o.heart ? '#ff40c0' : '#a050ff' });
     }
   }
   // landings: a waystone beside each walkway's end
@@ -574,7 +588,8 @@ function build(floor, biome, ts, ts2, seed) {
   map.breach = { own, bridgeOf, rock };
   map.voidFace = 'breach';
   const startAt = [Math.floor(start.cx) + 0.5, Math.floor(start.cy) + 1.5];
-  const exitAt = [heart.shrinePos[0] + 1.5, heart.shrinePos[1] + 1.5];
+  const exitAt = heart.exitAt;
+  if (!map.walkable(exitAt[0], exitAt[1]) || !seen[id(Math.floor(exitAt[0]), Math.floor(exitAt[1]))]) return null;
   return {
     map, props, buildings: [], wallHangings: [], torches: [], townTiles: null, looks, spawns, chests: chests.filter((c) => !c.drop),
     start: startAt, exit: exitAt, islands: isl, bridges, ruins, heart: heart.idx, startIsland: start.idx, seed,

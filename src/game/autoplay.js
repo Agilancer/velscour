@@ -909,7 +909,13 @@ export const Auto = {
     this.potions(w);
     // danger first: hide from a raid boss's cataclysm, step out of telegraphed attacks and enemy ground effects
     if (this.takeCover(dt)) { this.watchStuck(dt); return; }
-    if (this.dodgeDanger(dt)) { this.watchStuck(dt); return; }
+    // the Breach's casters can keep him side-stepping all fight long: healthy and barely hurt, he pushes on a while
+    if (this.braveT > 0) this.braveT -= dt;
+    if (!(w.breach && this.braveT > 0 && p.hp > p.maxHp * 0.6) && this.dodgeDanger(dt)) {
+      if (w.breach && (this.dodgeRun = (this.dodgeRun || 0) + dt) > 6 && p.hp > p.maxHp * 0.7 && this.hurt < 0.02) { this.braveT = 3; this.dodgeRun = 0; }
+      this.watchStuck(dt); return;
+    }
+    this.dodgeRun = Math.max(0, (this.dodgeRun || 0) - dt * 0.5);
     // raid mechanics (game/raidsigs.js): be where the fight says to be (beacons, conduits, the safe half...)
     if (this.mechGoal(dt)) { this.watchStuck(dt); return; }
     // Instant damage already landed, but hold the pose while the lances rain down.
@@ -996,7 +1002,7 @@ export const Auto = {
     const bossDead = !w.boss || w.boss.dead;
     if (bossDead && exit && exit.active) {
       this.setStatus('Heading for the exit');
-      if (this.goTo(exit.x, exit.y, 1.1, dt)) this.leaveLevel(w);
+      if (this.goTo(exit.x, exit.y, Math.max(1.1, (exit.reach || 1.6) - 0.5), dt)) this.leaveLevel(w);
       this.watchStuck(dt);
       return;
     }

@@ -23,6 +23,16 @@ import { drawTerrain, drawColumn, occludersFor, occludersOfRect, occluderObj, cl
 
 let lightCanvas = null, glowCanvas = null, vignette = null, vigKey = '';
 const transitionSprites = new Map();
+/**
+ * Forget the canvases render.js baked (floor chunks, light falloff, vignette, labels): a GPU reset (the computer
+ * slept, the tab sat in the background) can wipe accelerated canvases, and the floor would then draw black for good.
+ * main.js calls this when the page is shown again or the screen canvas is restored; everything rebakes as it's drawn.
+ */
+export function dropBakes() {
+  if (G.world) G.world.floorChunks = null;
+  falloff = null; vignette = null; vigKey = ''; lightCanvas = null; glowCanvas = null;
+  transitionSprites.clear(); labels.clear();
+}
 // Non-vendor people and animals use the People and Animals pack (assets/sprites/people/, one sheet each).
 // Vendors keep their existing painted replacement sprites.
 // Cache original PNG sheets and recolored variants separately. Recolored
@@ -562,6 +572,7 @@ function drawFloors(ctx, world, vr, hq) {
       }
       if (world.map.castleMat) drawCastleParticles(g, world, wx, wy);
       c.dseq = 0;
+      c.addEventListener('contextlost', () => { if (fc.map.get(key) === c) fc.map.delete(key); }); // (wiped by a GPU reset)
       fc.map.set(key, c);
       while (fc.map.size > cap) fc.map.delete(fc.map.keys().next().value);
     } else if (c) { fc.map.delete(key); fc.map.set(key, c); } // LRU touch

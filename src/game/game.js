@@ -745,7 +745,7 @@ export const game = {
     const [sx, sy] = gen.start;
     let tp = [sx + 1.4, sy - 1.2];
     if (!gen.map.walkable(tp[0], tp[1])) tp = gen.map.randomNear(sx, sy, 2);
-    const exit = { x: gen.exit[0], y: gen.exit[1], type: 'exit', active: false, color: '#4a3a5a', reach: 1.6, label: 'Sealed — the Breach Heart', use: () => this.useExit(world, exit) };
+    const exit = { x: gen.exit[0], y: gen.exit[1], type: 'exit', active: false, color: '#4a3a5a', reach: 2, label: 'Sealed — the Breach Heart', use: () => this.useExit(world, exit) };
     world.portals = [{ x: tp[0], y: tp[1], type: 'town', active: true, color: '#3a8aff', reach: 1.6, label: 'Town Portal', use: () => this.useTownPortal() }]; // the exit appears when the Heart is won
     for (const s of gen.spawns) {
       for (let i = 0; i < s.n; i++) {
