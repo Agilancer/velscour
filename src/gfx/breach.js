@@ -3,7 +3,7 @@
 // roots and glowing rift crystal), the wards across walkways, and the riders' carrier beasts.
 import { G } from '../state.js';
 import { makeCanvas } from '../core/util.js';
-import { isoX, isoY } from '../core/view.js';
+import { camera, isoX, isoY } from '../core/view.js';
 import { enemyImage } from '../core/enemyart.js';
 import { glowSprite } from './vfx.js';
 
@@ -39,8 +39,9 @@ function buildLayers() {
   const far = makeCanvas(T, T), fg = far.getContext('2d');
   fg.imageSmoothingEnabled = true; fg.imageSmoothingQuality = 'high';
   fg.drawImage(small, 0, 0, T, T);
-  // stars: pin pricks, a few bright crosses
-  const stars = makeCanvas(T, T), sg = stars.getContext('2d');
+  // stars: pin pricks, a few bright crosses, painted onto the far nebula (one full-screen layer less a frame; they
+  // drift with it)
+  const sg = fg;
   for (let k = 0; k < 900; k++) {
     const x = Math.floor(hash(k, 8, 3) * T), y = Math.floor(hash(k, 9, 3) * T), b = hash(k, 10, 3);
     sg.fillStyle = b > 0.97 ? '#ffffff' : b > 0.8 ? '#e8d8ff' : b > 0.5 ? '#a090c8' : '#5a4a80';
@@ -57,33 +58,55 @@ function buildLayers() {
   const near = makeCanvas(T, T), ng = near.getContext('2d');
   ng.imageSmoothingEnabled = true; ng.imageSmoothingQuality = 'high';
   ng.drawImage(ws, 0, 0, T, T);
-  // far drifting rocks: little dark islands with violet rims
-  const rocks = makeCanvas(T, T), rg = rocks.getContext('2d');
+  // far drifting rocks: little dark islands with violet rims, each its own small sprite (a T x T layer for nine of them
+  // was a full screen of empty pixels to blend every frame); [sprite, x, y] its place in the tile, kept to the same
+  // sub-pixel so it draws as it did
+  const rocks = [], box = [];
   for (let k = 0; k < 9; k++) {
     const cx = hash(k, 14, 1) * T, cy = hash(k, 15, 1) * T, w = 14 + hash(k, 16, 1) * 46, h = w * (0.7 + hash(k, 17, 1) * 0.6);
+    box.push([cx, cy, w, h, Math.floor(cx - w / 2) - 1, Math.floor(cy - 8), Math.ceil(w + 3), Math.ceil(h + 10)]);
+  }
+  // one atlas (a canvas that size stays on the GPU), the rocks side by side
+  const atlas = makeCanvas(box.reduce((a, b) => a + b[6], 0), Math.max(...box.map((b) => b[7]))), rg = atlas.getContext('2d');
+  let ax = 0;
+  for (let k = 0; k < 9; k++) {
+    const [cx, cy, w, h, x0, y0, bw, bh] = box[k];
+    rg.setTransform(1, 0, 0, 1, ax - x0, -y0);
     rg.fillStyle = '#120a1c';
     rg.beginPath(); rg.moveTo(cx - w / 2, cy);
     for (let j = 0; j <= 6; j++) rg.lineTo(cx - w / 2 + (w * j) / 6, cy - 2 - hash(k, j, 2) * 5);
     rg.lineTo(cx + w / 2, cy); rg.lineTo(cx + w * 0.12, cy + h); rg.lineTo(cx - w * 0.08, cy + h * 0.8); rg.closePath(); rg.fill();
     rg.fillStyle = 'rgba(170,90,255,0.55)'; rg.fillRect(cx - w / 2, cy - 1, w, 1);
+    rocks.push([atlas, ax, 0, bw, bh, x0, y0]);
+    ax += bw;
   }
-  layers = { far, stars, near, rocks };
+  layers = { far, near, rocks };
 }
 function tiled(ctx, img, W, H, ox, oy) {
   const x0 = -(((ox % T) + T) % T), y0 = -(((oy % T) + T) % T);
   for (let y = y0; y < H; y += T) for (let x = x0; x < W; x += T) ctx.drawImage(img, x, y);
 }
+/** Atlas sprites [img, sx, sy, w, h, x, y] placed at (x, y) in a T x T tile, tiled over the screen like tiled() (those
+ *  off the screen skipped). A sprite poking over the tile's edge is also drawn from the tile before. */
+function tiledSprites(ctx, list, W, H, ox, oy) {
+  const x0 = -(((ox % T) + T) % T) - T, y0 = -(((oy % T) + T) % T) - T;
+  for (let y = y0; y < H; y += T) for (let x = x0; x < W; x += T) {
+    for (const [img, sx, sy, w, h, tx, ty] of list) {
+      const px = x + tx, py = y + ty;
+      if (px < W && py < H && px + w > 0 && py + h > 0) ctx.drawImage(img, sx, sy, w, h, px, py, w, h);
+    }
+  }
+}
 /** The void behind the islands, in screen space: nebula, stars, far rocks and a rift flash now and then. */
 export function drawNebula(ctx, W, H, camX, camY) {
   if (!layers) buildLayers();
   const t = G.time || 0;
-  tiled(ctx, layers.far, W, H, camX * 0.04 + t * 1.5, camY * 0.04);
-  tiled(ctx, layers.stars, W, H, camX * 0.07, camY * 0.07);
+  tiled(ctx, layers.far, W, H, camX * 0.04 + t * 1.5, camY * 0.04);   // opaque: render.js skips its black clear under it
   ctx.globalCompositeOperation = 'lighter';
   ctx.globalAlpha = 0.6 + 0.15 * Math.sin(t * 0.3);
   tiled(ctx, layers.near, W, H, camX * 0.12 + t * 6, camY * 0.12 - t * 2);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-  tiled(ctx, layers.rocks, W, H, camX * 0.18 - t * 3, camY * 0.18 + Math.sin(t * 0.2) * 6);
+  tiledSprites(ctx, layers.rocks, W, H, camX * 0.18 - t * 3, camY * 0.18 + Math.sin(t * 0.2) * 6);
   // rift lightning: a jagged violet crack somewhere in the deep every few seconds
   const k = Math.floor(t / 3.7), ph = t / 3.7 - k;
   if (ph < 0.12 && hash(k, 0, 55) < 0.6) {
@@ -157,6 +180,8 @@ export function drawWard(ctx, w) {
   const t = G.time, a = w.open ?? 0, vis = 1 - a;
   if (vis <= 0.01) return;
   const x = isoX(w.x, w.y), y = isoY(w.x, w.y), half = 30, ax = w.axis === 'x' ? 1 : -1, hgt = 70;
+  const vr = camera.viewRect(60);   // every ward on the floor is a hazard drawn each frame: those off the screen stop here
+  if (x < vr.x0 || x > vr.x1 || y < vr.y0 || y - hgt > vr.y1) return;
   const lx = x - half, ly = y - half * 0.5 * ax, rx = x + half, ry = y + half * 0.5 * ax;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';

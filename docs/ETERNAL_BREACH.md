@@ -56,8 +56,11 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
   basalt (the rock pattern's `breach` style), darkening into haze, stalactites, hanging roots, rift crystal and seams
   below the foot (`UNDERSIDE_HANG` px are added to such columns' screen boxes).
 - **The void**: `drawNebula` (gfx/breach.js) replaces the Mountainside's sky: a tiling nebula at an eighth of the
-  resolution blown up, stars, a brighter drifting veil, far floating rocks and now and then a rift lightning crack, all
-  with parallax. The biome's fog is `#0e0518` (dark 0.3), ambient `mote` particles, violet lights.
+  resolution blown up with the stars painted on it, a brighter drifting veil, far floating rocks and now and then a
+  rift lightning crack, all with parallax. Two screen-sized blits a frame: the nebula (opaque, so render.js skips its
+  black clear under it) and the veil; the nine far rocks are small sprites from one atlas. It was five full-screen
+  passes and about half the frame on a throttled phone profile. The biome's fog is `#0e0518` (dark 0.3), ambient `mote`
+  particles, violet lights.
 - **The start** is a small island, the **Breach Heart** the large island farthest from it in walkway hops that is not
   the only way to any other island.
 - **Shrines** on every medium and large island (a pad of the Eternal Breach's mosaics, a rift-warding basin, braziers);
@@ -97,7 +100,16 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
 - **Reachable both ways**: arrivals land only where the monster can walk to the hero and the hero can walk to it
   (`reachOk`: the flow field plus `heroReach`, a forward walk from the hero's tile), never on a ledge a monster could
   drop from but the hero can't climb. A monster on the hero's island (or in his fight) that still ends up out of his
-  reach for 4 s is torn back down next to him by a rift (`stranded`); `breach.js rules` checks it.
+  reach for 4 s is torn back down next to him by a rift (`stranded`); `breach.js rules` checks it. A fight's foe out on a
+  walkway counts as out of reach too (after 7 s there: marchers walk in from up to 14 tiles out): the hero is held on
+  the fight's island, and a caster that marched in and stopped at range on the walkway held the fight up for good. Anything a fight places beside something (a coffin's brood, a
+  nest's hatchlings, a door's marchers, the Heart Shards) lands on the nearest spot of the island the hero can reach
+  (`landAt`); a Heart Shard dropped on a crag top used to hold the Heart shut for 30 s, until it sank as a straggler.
+  In a fight "reachable" means walkable without leaving the fight's island (`onIsland`): about one shrine island in 80
+  has a few rim tiles reached only by a walkway's far end, and a resonator or grapple put on one (rim tiles were only
+  checked for being walkable) made the fight unwinnable, and with it the floor. Fight placements, rim picks and the
+  strand rescue all use it. `breach.js play` checks every foe lands on the ground and every nest, shard and marker can
+  be walked up to from the fight's island.
 - Between fights, every 40-70 s a few monsters arrive near the hero by a random arrival.
 - **Arrivals** (`ARRIVALS`, `bringOne`): the user's four, *rise* (out of the ground), *climb* (hauled up over the
   island's edge from the void), *sky* (swooping in from the void), *ride* (a great flier of the Breach, drawn at 150 px,
@@ -148,7 +160,10 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
 - Rebuild: `python tools/eternalbreach.py [packs] [creatures]` (Pillow, NumPy, SciPy).
 
 ## Open
-- Not measured on a phone; the void is three screen-sized blits a frame plus one more for the far rocks.
+- Not measured on a real phone. In headless Chromium (SwiftShader, a 4x CPU throttle, 844 x 390) a fight went from
+  14-16 fps to 17-18 and an island's edge (mostly void) from 19-21 to 26-28. Walking the floor is the slowest view (about
+  8 fps there, before and after). It is GPU-bound under SwiftShader, and switching off its props, walls or wards one at
+  a time didn't pin it on any one of them; it wants measuring on a real GPU.
 - The five monster atlases are all loaded per floor (simple, ~1.6 MB); `breachLooks` uses three of them.
 - A floor takes a geared hero about 19-28 game minutes with auto-play (seven shrines and the Heart).
 - Ask the user: whether every shrine should be needed for the Heart (now yes), the floor length, the reward odds

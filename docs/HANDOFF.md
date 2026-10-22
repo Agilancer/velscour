@@ -14,6 +14,61 @@ Contents
 
 ---
 
+## October 22, 2026 — THE ETERNAL BREACH sweep: stalls, landing spots, the light quota, the void's cost (branch `feat/breach-sweep`)
+- **Request (user):** the same kind of scan as the Sky Battle's, on THE ETERNAL BREACH: performance, bugs, looks.
+- **Bugs found and fixed** (new checks in `breach.js play` caught each one on the old code):
+  - **Walkway stalemate.** A fight could hang for good: a ranged foe that marched in over a walkway stopped at
+    casting range out on it, the hero is held on the fight's island, and the strand rescue counted it as reachable.
+    A fight's foe off the fight's island now counts as stranded: after 7 s it is rifted in beside the hero (7, not
+    the usual 4, so a march arrival can still walk in from up to 14 tiles out). Before
+    the fix, 3 of 7 runs hung a fight and every shrine after it was blocked (the one examined: six casters out on a
+    walkway); after it, 5 of 5 ran clean.
+  - **Unreachable Heart Shards.** A Heart Shard landing on a crag top couldn't be walked up to. Shards never move, and
+    the rescue skips static monsters, so the Heart stayed shut ~30 s until the straggler rule sank the shard. That
+    happened in 3 of the 4 Heart fights the old code played.
+  - **Spawns off the ground.** Coffin bursts, nest hatchlings and door marchers were placed at random offsets, and the
+    coffin arrival stepped its monster 0.6 tiles forward unchecked; one landed off the ground and hung *Hold the
+    Shrine* for 400 s. All of them now go through `landAt`, the nearest spot on the island the hero can reach.
+  - **Unwinnable fights.** About one shrine island in 80 has a few rim tiles reachable only via a walkway's far end
+    (a generator scan of 640 shrine islands found 8). During a fight the walkways are locked, and The Gravity Well's
+    resonators and The Rising Tide's grapples were put on rim tiles checked only for being walkable. One landing there
+    made the fight unwinnable, and with it the floor (the Heart needs every shrine); seen once in ~16 test runs. In a
+    fight, "reachable" now means walkable without leaving the island (`onIsland`), for placements, rim picks and the
+    strand rescue.
+  - **The 48-light quota.** It was always full on a Breach floor (8-11 lights on screen). `World.ambient` lit every lit
+    prop and portal on the map (30+ lamps, 8+ shrines, the fights' markers) and sparkled the portals off screen, so the
+    lights that matter (spells, the fight at hand) were dropped. Lit props and portals now light only near the view
+    (all biomes), and closed wards only on screen: 9-20 lights a frame, more of them visible. `breach.js rules` checks
+    it stays under 40.
+  - **Phone HUD.** The boss bar's name ran over "THE ETERNAL BREACH — FLOOR 3", and the objective panel covered the
+    Greed lever. The floor moved into the subtitle ("Floor 3 · as deadly as Depth 30"). On touch the boss bar sits a
+    little right with a tighter name, and the objective panel sits left of the Greed lever.
+  - **Coffin clean-up timer.** A burst coffin's removal ran on a real-time `setTimeout`; it now runs on game time.
+- **Performance** (phone profile, 4x CPU throttle, SwiftShader; GPU-bound, so A/B by switching parts off):
+  - **The void.** It was about half the frame: five full-screen passes (a black clear, then the nebula, stars, veil
+    and rocks layers). Now it is two: the stars are painted onto the nebula (they drift with it, a hair less
+    parallax), the nine far rocks are sprites from one atlas, and the clear is skipped (the nebula is opaque).
+  - **Results.** Fights went from 14-16 to 17-18 fps, an island's edge from 19-21 to 26-28 fps. Wards are drawn only
+    on screen.
+  - **Not improved.** Walking the floor is still ~8 fps; no single part (props, walls, wards, undersides) accounts
+    for it.
+- **Looks:** shots at 1366 x 860 and 844 x 390 of the start, a ward, an edge, the void, a ruin, the Heart and fights.
+  Apart from the phone HUD overlaps, nothing looked wrong. The test's ward shot now stands the hero on the ward's near
+  side; before, a closed ward put him back where he'd stood and the shot showed a ruin.
+- **Tests:**
+  - `breach_gen.mjs 120`: 120/120 seeds.
+  - `breach.js` all parts: town, play, arrive, shots, rules (at most 19 of 48 lights a frame) and perf. Breach
+    render 1.1-1.2 ms a frame (13.0 before) beside the Mountainside's 6-7 ms.
+  - `breach.js play` five more times on the final code, every scenario and the Heart won each time. Its new checks:
+    foes land on the ground; nests, shards and markers can be reached from the fight's island; the Heart's shield
+    phases are played.
+  - `breach.js auto`: auto-play wins floor 2 in 1,135 game s and comes home to a town that draws.
+  - `flow`, `mobile`, `hud`, `data_check`, `skyship.js clear`.
+- **Open:**
+  - Walking a floor on a phone still wants measuring on a real GPU.
+  - Not changed without asking: every shrine is still required before the Heart (a floor is ~20 game minutes), and
+    the reward odds and death rules are unchanged.
+
 ## October 22, 2026 — Sky Battle sweep: a cut-scene camera that frames its subjects (branch `feat/sky-battle-sweep`)
 - **Request (user):** a bug, scripting and performance sweep of the airship biome and its scenarios. Make the camera's
   pans into the clouds make sense. It should move round theatrically and zoom in on the characters and enemies as they

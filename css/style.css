@@ -562,10 +562,10 @@ body.touch #hud-bar { left: calc(50% - 4vw); }
 body.touch #minimap-wrap { width: 84px; margin: 17px 18px 18px; }
 body.touch #hud-top-right { flex-direction: row-reverse; align-items: flex-start; }
 body.touch #hud-buttons { flex-wrap: wrap; justify-content: flex-end; max-width: 46vw; }
-body.touch #boss-bar { width: 30vw; left: 36%; top: 8px; }
-body.touch #sand-objective { top:48px; width:min(440px,74vw); padding:5px 8px; gap:7px; font-size:11px; }
+body.touch #boss-bar { width: 28vw; left: 38%; top: 8px; } /* clear of the area name on the left */
+body.touch #sand-objective { top:48px; left:41%; width:min(400px,48vw); padding:5px 8px; gap:7px; font-size:11px; } /* clear of the Greed lever on the right */
 @media (max-width: 720px) { body.touch #boss-bar { width: 26vw; left: 31%; } }
-body.touch #boss-name { font-size: 13px; }
+body.touch #boss-name { font-size: 13px; letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 body.touch #boss-sub { font-size: 10px; min-height: 11px; }
 body.touch .hbtn { width: 38px; height: 41px; }
 body.touch #area-name { font-size: 15px; }

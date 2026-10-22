@@ -227,9 +227,14 @@ export class World {
       addLight(t.x, t.y, 5.5 + Math.sin(this.time * 9 + t.x) * 0.3, 0.9, t.flameZ ?? 20, b.torch || '#ff9a40');
       if (chance(dt * 18)) spawn({ type: 'glow', x: t.x + rand(-0.04, 0.04), y: t.y + rand(-0.04, 0.04), z: t.flameZ ?? 40, vz: rand(15, 35), life: rand(0.3, 0.6), size: rand(2, 3.5), size1: 0.5, color: chance(0.5) ? (b.torch || '#ff9a40') : '#fff0a0', add: true });
     }
+    // lit props and portals near the view only: a light reaches about 40 px a unit of radius past its spot, and the
+    // 48 lights a frame (vfx.js) were filling with ones across the map (a Breach floor's 30+ lamps and shrines), so the
+    // ones on screen (spells, the fight at hand) were dropped
+    const lr = camera.viewRect(280);
+    const lit = (x, y) => { const px = isoX(x, y), py = isoY(x, y); return px > lr.x0 && px < lr.x1 && py > lr.y0 && py < lr.y1 + 80; };
     for (const pr of this.props) {
       if (!pr.light && !pr.smoke) continue;
-      if (pr.light) addLight(pr.x, pr.y, pr.light + Math.sin(this.time * 7 + pr.x) * 0.15, 0.8, 20 + (pr.z || 0), pr.lightColor || '#ffb050');
+      if (pr.light && lit(pr.x, pr.y)) addLight(pr.x, pr.y, pr.light + Math.sin(this.time * 7 + pr.x) * 0.15, 0.8, 20 + (pr.z || 0), pr.lightColor || '#ffb050');
       if (pr.smoke) {
         // camp fires and chimneys (the Castle): a slow plume drifting downwind, embers off a fire
         const px = isoX(pr.x, pr.y), py = isoY(pr.x, pr.y);
@@ -240,7 +245,7 @@ export class World {
     }
     // portals
     for (const po of this.portals) {
-      if (!po.active) continue;
+      if (!po.active || !lit(po.x, po.y)) continue;
       addLight(po.x, po.y, 6, 1, 20, po.color || '#ff6030');
       if (chance(dt * 30)) sparkle(po.x, po.y, rand(10, 60), po.color || '#ff6030', 1, 0.6);
     }

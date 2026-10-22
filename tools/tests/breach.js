@@ -1,12 +1,14 @@
 // THE ETERNAL BREACH (docs/ETERNAL_BREACH.md), in the browser:
 //   town   the purple portal in Herrington Hollow (reachable over 12 town seeds), its floor dialog, auto-play's
 //          Standard/Breach menu
-//   play   a bot plays every shrine scenario (and the Heart) on a live floor: each must be won, no long idle waits, and
-//          never more than 3 s with nothing of the fight alive and nothing else to do (the next wave comes at once)
+//   play   a bot plays every shrine scenario (and the Heart) on a live floor: each must be won, no long idle waits,
+//          never more than 3 s with nothing of the fight alive and nothing else to do (the next wave comes at once),
+//          every foe lands on the walkable ground, and every nest, Heart Shard and marker can be walked up to
 //   arrive every arrival kind brought in on a live floor, mid-flight screenshots
 //   shots  a floor's overview, an island, a ruin, a ward, a fight
 //   auto   auto-play (god mode, geared at the floor's level) plays a whole floor from the town to the exit
-//   rules  the final boss's reward table, a death in the Breach (no Defiance, the descent untouched), save migration
+//   rules  the final boss's reward table, a death in the Breach (no Defiance, the descent untouched), save migration,
+//          the lights a frame stay well under the cap
 //   perf   frame cost on a floor (update / render ms over 10 s of a fight), beside the Mountainside's
 //   node tools/tests/breach.js [town,play,arrive,shots,auto,rules] [floor]      (all by default; floor 2)
 const { openGame, report } = require('./harness');
@@ -86,7 +88,8 @@ const FLOOR = +(process.argv[3] || 2);
           for (const m of W.creatures) if (m.team === 'enemy') m.dead = true;
           const step = (S, st) => {
             const foes = S.foes.filter((m) => !m.dead && m.targetable !== false);
-            for (const m of W.creatures) if (!m.dead && m.team === 'enemy' && m.targetable !== false && Math.hypot(m.x - P.x, m.y - P.y) < 2.4) hit(P, m, 1e12, 'phys', { crit: false });
+            // the Heart's keeper takes a fifth of its life a hit, so both of its shield phases (the Heart Shards) come
+            for (const m of W.creatures) if (!m.dead && m.team === 'enemy' && m.targetable !== false && Math.hypot(m.x - P.x, m.y - P.y) < 2.4) hit(P, m, S.type === 'heart' && m.breachBoss ? m.maxHp * 0.2 : 1e12, 'phys', { crit: false });
             let goal = null, use = null;
             const near = foes.filter((m) => Math.hypot(m.x - P.x, m.y - P.y) < 6);
             const o = run.objective;
@@ -104,19 +107,53 @@ const FLOOR = +(process.argv[3] || 2);
             if (S === run.heart) { for (const o of run.scenarios) if (o !== S && !o.completed) o.finish(); }
             run.force(S);
             const st = { idle: 0, maxIdle: 0, repath: 0, path: null }; let t = 0;
+            // where they land: on the walkable ground, and a nest or Heart Shard (they never move) where the hero can walk up
+            const off = new Set(), stuck = new Set(), seen = new Set();
+            // where the hero can walk in this fight: the walkways are locked to him, so the island's own tiles only
+            const M = W.map, own = M.breach.own, N = M.w;
+            const isleReach = () => { const s0 = M.tileIdx(P.x, P.y), got = new Set([s0]), q = [s0];
+              for (let k = 0; k < q.length; k++) { const i = q[k], x = i % N, y = (i / N) | 0;
+                for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = (y + dy) * N + x + dx; if (!got.has(j) && own[j] === S.o.idx && M.walkableTile(x + dx, y + dy) && M.stepOk(i, j)) { got.add(j); q.push(j); } } }
+              return got; };
+            const canReach = (x, y, r) => { for (const i of isleReach()) if (Math.hypot((i % N) + 0.5 - x, ((i / N) | 0) + 0.5 - y) <= r) return true; return false; };
+            const landed = () => {
+              // the fight's markers (a resonator, a grapple, a coffin, a door, a keystone) can be walked up to
+              for (const mk of S.markers) {
+                if (seen.has(mk)) continue;
+                seen.add(mk);
+                if (!canReach(mk.x, mk.y, (mk.reach || 1.4) - 0.3)) stuck.add(mk.label);
+              }
+              for (const m of S.foes) {
+              if (m.dead || m.entering || m.targetable === false || seen.has(m)) continue;
+              seen.add(m);
+              if (!W.map.walkable(m.x, m.y)) off.add(m.name);
+              if (m.static && !canReach(m.x, m.y, 1.8)) stuck.add(m.name);
+            } };
             // the longest stretch with nothing of the fight alive and no task to do: the hero waiting for monsters
             let empty = 0, emptyMax = 0;
             while (t < 400 && !S.completed) {
-              t += dt; G.time += dt; G.frame++; W.update(dt); run.update(dt); step(S, st); if (G.player.dead) break;
-              const none = !S.foes.some((m) => !m.dead && !m.static && !m.breachBoss), task = S.objective && (S.objective.use || S.type === 'anchor' || S.type === 'hold');
+              t += dt; G.time += dt; G.frame++; W.update(dt); run.update(dt); landed(); step(S, st); if (G.player.dead) break;
+              // (a boss, and the Heart's shards, are always something to fight)
+              const none = !S.foes.some((m) => !m.dead && (S.type === 'heart' || m.breachBoss || !m.static)), task = S.objective && (S.objective.use || S.type === 'anchor' || S.type === 'hold');
               if (none && !task && !S.completed) empty += dt; else { emptyMax = Math.max(emptyMax, empty); empty = 0; }
             }
             st.emptyMax = Math.max(emptyMax, empty);
             st.maxIdle = Math.max(st.maxIdle, st.idle);
             const left = S.foes.filter((m) => !m.dead).length;
+            // a fight that never ends: what is left of it, and why the hero can't finish it
+            if (!S.completed && S.objective) {
+              const o = S.objective, path = W.map.findPath(P.x, P.y, o.x, o.y, 60000, 0.28), end = path && path[path.length - 1];
+              out.push(`   objective at ${o.x.toFixed(1)},${o.y.toFixed(1)} reach ${o.reach} lv ${W.map.hgt[W.map.tileIdx(o.x, o.y)]} walkable ${W.map.walkable(o.x, o.y)}; hero at ${P.x.toFixed(1)},${P.y.toFixed(1)} lv ${W.map.hgt[W.map.tileIdx(P.x, P.y)]} ${Math.hypot(o.x - P.x, o.y - P.y).toFixed(2)} away; path ends ${end ? Math.hypot(end[0] - o.x, end[1] - o.y).toFixed(2) : 'none'} from it`);
+            }
+            if (!S.completed) for (const m of S.foes.filter((q) => !q.dead).slice(0, 6)) {
+              const own = W.map.breach.own[W.map.tileIdx(m.x, m.y)];
+              out.push(`   left: ${m.name} at ${m.x.toFixed(1)},${m.y.toFixed(1)} island ${own} (fight's ${S.o.idx}) walkable ${W.map.walkable(m.x, m.y)} flow ${W.map.flowAt(m.x, m.y)} entering ${!!m.entering} targetable ${m.targetable} static ${!!m.static} alpha ${m.alpha} z ${(m.z || 0).toFixed(0)} hero ${Math.hypot(m.x - P.x, m.y - P.y).toFixed(1)} away`);
+            }
             const line = `${S.type} — ${S.title} (${S.o.kind}): ${S.completed ? 'won' : 'STUCK (' + (S.progress() || '') + `, ${left} foes)`} in ${t.toFixed(0)}s, foes ${S.foes.length}, longest wait ${st.maxIdle.toFixed(1)}s, longest with no monster ${st.emptyMax.toFixed(1)}s`;
             out.push(line);
             if (!S.completed || st.maxIdle > 25 || st.emptyMax > 3) bad.push(line);
+            if (off.size) bad.push(`${S.type}: ${off.size} landed off the ground (${[...off].slice(0, 3).join(', ')})`);
+            if (stuck.size) bad.push(`${S.type}: the hero can't walk up to ${[...stuck].join(', ')}`);
             // a won shrine drops its wards and leaves a reliquary
             if (S.completed && S !== run.heart && !W.chests.some((c) => Math.hypot(c.x - S.C[0], c.y - S.C[1]) < 3)) bad.push(S.type + ': no reliquary');
             if (S.completed && run.wards.some((w) => w.closed && w.b.ward === S.o.idx)) bad.push(S.type + ': its wards still stand');
@@ -196,8 +233,10 @@ const FLOOR = +(process.argv[3] || 2);
       await at('start', 'const o = run.islands.find((q) => q.start); return [o.cx, o.cy + 1.5];', 1);
       await at('heart', 'const o = run.islands[run.heart.o.idx]; return [o.cx, o.cy + 3];', 0.7);
       await at('ruin', 'const S = run.scenarios.find((s) => s.o.ruin) || run.scenarios[0]; return [S.C[0], S.C[1] + 1.5];', 0.85);
-      await at('ward', 'for (const w of run.wards) w.closed = w.was; const w = run.wards[0]; return [w.x - 1.5, w.y + 1.5];', 1);
-      await at('fight', 'const S = run.scenarios.find((s) => s.type !== "heart"); run.force(S); for (let i = 0; i < 90; i++) { W.update(1/30); run.update(1/30); } return null;', 1);
+      // the hero on the ward's near side, the other wards open (one still closed nearer the start, or the hero beyond
+      // this one, puts him back where he last stood)
+      await at('ward', 'for (const w of run.wards) w.closed = w === run.wards[0] && w.was; const w = run.wards[0], b = W.breachBridges[w.b.idx], N = W.map.w; const i = (b.nearTiles || []).filter((t) => W.map.walkableTile(t % N, (t / N) | 0)).sort((a, c) => Math.hypot(a % N - w.x, ((a / N) | 0) - w.y) - Math.hypot(c % N - w.x, ((c / N) | 0) - w.y))[2]; return i === undefined ? [w.x - 1.5, w.y + 1.5] : [(i % N) + 0.5, ((i / N) | 0) + 0.5];', 1);
+      await at('fight', 'for (const w of run.wards) w.closed = w.was; const S = run.scenarios.find((s) => s.type !== "heart"); run.force(S); for (let i = 0; i < 90; i++) { W.update(1/30); run.update(1/30); } return null;', 1);
       await page.evaluate(async () => { const { G } = window.VELSCOUR; const { camera } = await import('/src/core/view.js'); G.settings.zoom = 1; camera.computeZoom(); });
     }
 
@@ -273,6 +312,20 @@ const FLOOR = +(process.argv[3] || 2);
 
     // ------------------------------------------------ rules
     if (PARTS.includes('rules')) {
+      // the lights a frame (48 at most, vfx.js): a floor's lamps and shrines across the map must not fill them, or the
+      // ones on screen (spells, the fight at hand) are dropped
+      await enter(FLOOR);
+      const lit = await page.evaluate(async () => {
+        const { G, game } = window.VELSCOUR, { lights } = await import('/src/gfx/vfx.js'), run = G.world.overworldScenario;
+        let most = 0;
+        for (let i = 0; i < 40; i++) { G.time += 1 / 30; game.update(1 / 30); most = Math.max(most, lights.length); }
+        run.force(run.scenarios.find((q) => q !== run.heart));
+        for (let i = 0; i < 60; i++) { G.time += 1 / 30; game.update(1 / 30); most = Math.max(most, lights.length); }
+        run.current.finish();
+        return most;
+      });
+      console.log(`lights a frame: at most ${lit} of 48`);
+      if (lit >= 40) errors.push(`[rules] ${lit} lights a frame: the floor's far lamps crowd out the ones on screen`);
       const r = await page.evaluate(async () => {
         const { G, game } = window.VELSCOUR;
         const { breachReward, BREACH_ODDS, breachDepth } = await import('/src/data/breach.js');
