@@ -720,6 +720,7 @@ export function generateCastle(depth,biome,seed){
   }
   {const D=map.drawbridge;D.tiles=[];rect(D.x0,D.hinge,D.x1-1,D.y1-1,(x,y,i)=>{D.tiles.push(i);map.block[i]=1;});D.down=false;D.lowering=false;}
   map.castleKeep={x:KEEP[0],y:KEEP[1]};map.castleGarden=GDN;map.castleSiege=SG;map.castleVillage=[vx,vy];
+  map.stepMask();   // (auto-play's road field reads it: built here, behind the loading screen)
   return {map,props,buildings,trees,wallHangings:[],townTiles:[...floors,...keepFloors,...castleCarpetTiles(),...castleRampartTops(),...castleRampartTops(KEEP_STONE),castlePlankTile()],looks,spawns,chests,torches:[],
     start:ENTRY,exit,shrine:sites[0],sites,scenarioId,seed,engines,tents};
 }

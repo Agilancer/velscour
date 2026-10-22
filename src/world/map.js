@@ -272,6 +272,23 @@ export class TileMap {
     const s1 = y * W + x + ox, s2 = (y + oy) * W + x;
     return Math.max(H[a], H[b], H[s1], H[s2]) - Math.min(H[a], H[b], H[s1], H[s2]) <= this.climb;
   }
+  /** Bit k (k = (oy + 1) * 3 + ox + 1) set where a walker may step from tile i to its neighbour (ox, oy) on the map by
+   *  the height map's hop rule (stepsOk); walkability is checked live (doors, props). Built once; a change to hgt (the
+   *  Castle's drawbridge) clears it. */
+  stepMask() {
+    if (this._stepMask) return this._stepMask;
+    const W = this.w, H = this.h, out = new Uint16Array(W * H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let b = 0;
+      for (let k = 0; k < 9; k++) {
+        const ox = (k % 3) - 1, oy = ((k / 3) | 0) - 1;
+        if (k === 4 || x + ox < 0 || y + oy < 0 || x + ox >= W || y + oy >= H) continue;
+        if (!this.hgt || this.stepsOk(x, y, ox, oy)) b |= 1 << k;
+      }
+      out[y * W + x] = b;
+    }
+    return (this._stepMask = out);
+  }
   smooth(sx, sy, path, r = 0.28) {
     // drop intermediate nodes with clear line of sight
     const out = [];

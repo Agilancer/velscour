@@ -922,7 +922,7 @@ export const game = {
     }
     if (!G.cine) camera.follow(p.x, p.y, dt);
     camera.update(dt);
-    if (G.cine !== hudCine) { hudCine = !!G.cine; HUD.show(!hudCine); if (G.touch) TouchUI.show(!hudCine); }
+    if (!!G.cine !== hudCine) { hudCine = !!G.cine; HUD.show(!hudCine); if (G.touch) TouchUI.show(!hudCine); }
     if (G.hurtFlash > 0) G.hurtFlash = Math.max(0, G.hurtFlash - dt * 1.5);
     if (G.flash > 0) G.flash = Math.max(0, G.flash - dt * 2);
     HUD.update(dt);

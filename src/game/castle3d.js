@@ -22,7 +22,7 @@ export function castle3dTick(world, dt) {
         D.down = true;
         // the deck's tiles come up out of the sunken moat to the ground and open: the terrain's caches start again
         for (const i of D.tiles) { map.block[i] = 0; if (map.hgt) map.hgt[i] = 0; }
-        map._terr = null; world.floorChunks?.map?.clear(); world.flowTimer = 0;
+        map._terr = null; map._stepMask = null; world.floorChunks?.map?.clear(); world.flowTimer = 0;
       }
     }
   }

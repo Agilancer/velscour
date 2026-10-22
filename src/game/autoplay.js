@@ -737,13 +737,20 @@ export const Auto = {
     const w = G.world, p = G.player, m = w.map, W = m.w, H = m.h;
     if (!this.nav || this.nav.d.length !== W * H) this.nav = { d: new Int32Array(W * H), q: new Int32Array(W * H) };
     const { d, q } = this.nav;
-    d.fill(-1);
     let sx = Math.floor(p.x), sy = Math.floor(p.y);
     if (!m.walkableTile(sx, sy)) {
       let found = false;
       for (let r = 1; r < 3 && !found; r++) for (let oy = -r; oy <= r && !found; oy++) for (let ox = -r; ox <= r && !found; ox++) if (m.walkableTile(sx + ox, sy + oy)) { sx += ox; sy += oy; found = true; }
     }
-    if (m.road) return this.buildRoadNav(sx, sy);
+    if (!(m.road && this.nav.from === sy * W + sx && this.nav.c && w.time - this.nav.at < 2)) d.fill(-1);
+    if (m.road) {
+      // the Castle's field covers 100k tiles (~10 ms): built again only once the hero has left his tile, or every 2 s
+      const at = sy * W + sx, now = w.time;
+      if (this.nav.from === at && this.nav.c && now - this.nav.at < 2) { this.navT = 0.35; return; }
+      this.nav.from = at; this.nav.at = now;
+      return this.buildRoadNav(sx, sy);
+    }
+    this.nav.from = -1;
     let h = 0, t = 0;
     q[t++] = sy * W + sx; d[sy * W + sx] = 0;
     while (h < t) {
@@ -773,7 +780,9 @@ export const Auto = {
     c.fill(0x3fffffff); pv.fill(-1);
     const B = 8, bk = this.nav.bk || (this.nav.bk = Array.from({ length: B }, () => []));
     for (const b of bk) b.length = 0;
-    const s0 = sy * W + sx;
+    const s0 = sy * W + sx, T = m.t, Bl = m.block;
+    // each tile's height-legal steps (map.stepMask, worked out once a map)
+    const SM = m.stepMask();
     c[s0] = 0; d[s0] = 0; bk[0].push(s0);
     let left = 1;
     for (let cur = 0; left > 0; cur++) {
@@ -781,14 +790,13 @@ export const Auto = {
       while (b.length) {
         const i = b.pop(); left--;
         if (c[i] !== cur) continue;
-        const x = i % W, y = (i / W) | 0;
-        for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
-          if (!ox && !oy) continue;
-          const nx = x + ox, ny = y + oy;
-          if (!m.walkableTile(nx, ny)) continue;
-          if (ox && oy && (!m.walkableTile(x + ox, y) || !m.walkableTile(x, y + oy))) continue;
-          if (!m.stepsOk(x, y, ox, oy)) continue;
-          const ni = ny * W + nx, nc = cur + (ox && oy ? (R[ni] ? 3 : 7) : (R[ni] ? 2 : 5));
+        const sm = SM[i];
+        for (let k = 0; k < 9; k++) {
+          if (!((sm >> k) & 1)) continue;
+          const ox = (k % 3) - 1, oy = ((k / 3) | 0) - 1, ni = i + oy * W + ox;
+          if (T[ni] !== 1 || Bl[ni]) continue;
+          if (ox && oy && (T[i + ox] !== 1 || Bl[i + ox] || T[i + oy * W] !== 1 || Bl[i + oy * W])) continue;
+          const nc = cur + (ox && oy ? (R[ni] ? 3 : 7) : (R[ni] ? 2 : 5));
           if (nc >= c[ni]) continue;
           c[ni] = nc; d[ni] = d[i] + 1; pv[ni] = i;
           bk[nc % B].push(ni); left++;
@@ -1307,8 +1315,8 @@ export const Auto = {
    * ward under it)? Auto-play fights there by walking the stairs, never by shooting up or leaping off.
    */
   offTier(x, y, from = G.player) {
-    const m = G.world.map;
-    return !!m.hgt && Math.abs(m.hgt[m.tileIdx(x, y)] - m.hgt[m.tileIdx(from.x, from.y)]) > m.drop;
+    const m = G.world.map;   // (the Castle's walls: on hills and islands a ledge is fought from where he stands)
+    return !!m.rampartDeck && Math.abs(m.hgt[m.tileIdx(x, y)] - m.hgt[m.tileIdx(from.x, from.y)]) > m.drop;
   },
   /** May the hero leap, dash or blink from where he stands to (x,y)? On a height map only along ground that stays
    *  within a hop of both ends: never up onto the walls or off them, or across a stair's side. */

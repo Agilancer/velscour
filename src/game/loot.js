@@ -76,7 +76,7 @@ export class GroundItem {
   }
   icon() {
     if (this.kind === 'item') return itemIcon(this.item);
-    if (this.kind === 'potion') return potionIcon(this.item.color, 48);
+    if (this.kind === 'potion') return this._ic || (this._ic = potionIcon(this.item.color, 48)); // (kept per drop: it built a canvas a frame)
     if (this.kind === 'gold') return goldIcon(48, this.amount);
     return null;
   }

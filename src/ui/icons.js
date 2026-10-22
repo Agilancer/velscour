@@ -23,7 +23,7 @@ export function skillIcon(sk, size = 64) {
   if (c) return c;
   c = makeCanvas(size, size);
   let keep = true; // false while a summon's painted art is still loading: draw the fallback, don't cache it
-  const x = c.getContext('2d');
+  const x = c.getContext('2d', { willReadFrequently: true }); // CPU-backed: read back by toDataURL with no GPU stall (~10-150 ms)
   const E = elem(sk.classId === 'arcane_sorcerer' && sk.el === 'arcane' ? 'astral' : sk.el); // the Astronomer's blue starlight
   const s = size / 64;
   // background

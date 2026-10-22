@@ -191,6 +191,18 @@ export function generateOverworld(depth,biome,seed) {
     for(let n=0,t=0;n<set.length&&t<40;t++){const a=a0+n*.55+rng.range(-.15,.15),r=rng.range(5,6.4),x=s[0]+Math.cos(a)*r,y=s[1]+Math.sin(a)*r;
       if(openAt(x,y)&&add(set[n],x,y))n++;}});
   const woodEdge=(x,y)=>[[1,0],[-1,0],[0,1],[0,-1],[2,0],[0,2],[-2,0],[0,-2]].some(([dx,dy])=>flags[id(Math.min(W-1,Math.max(0,(x|0)+dx)),Math.min(H-1,Math.max(0,(y|0)+dy)))]===2);
+  // A woodcutter's spot or two where a lane runs by the trees: the chopping stump with its axe, a stacked woodpile, sawn
+  // rounds, a felled trunk and the handcart that hauls it to the hamlet. (A template: laid out round its anchor.)
+  const nearLane=(x,y)=>[[2,0],[-2,0],[0,2],[0,-2],[3,0],[0,3],[-3,0],[0,-3],[4,0],[0,4],[-4,0],[0,-4]].some(([dx,dy])=>flags[id(Math.min(W-1,Math.max(0,(x|0)+dx)),Math.min(H-1,Math.max(0,(y|0)+dy)))]===1);
+  const WOODCUT=[['axe_stump',0,0],['firewood_stack',.9,-.5],['sawn_stump',-.8,.4],['sawn_stump',-.3,-.9],['fallen_log',1.3,.7],['handcart',-1.4,-.4]];
+  for(let t=0,n=0;t<600&&n<2;t++){
+    const cx=rng.int(4,W-5)+.5,cy=rng.int(4,H-5)+.5;
+    if(!openAt(cx,cy)||reserved(cx,cy)||!woodEdge(cx,cy)||!nearLane(cx,cy)||dist(cx,cy,[32,43])<10)continue;
+    const fit=WOODCUT.filter(([,dx,dy])=>openAt(cx+dx,cy+dy));
+    if(fit.length<4||fit[0]!==WOODCUT[0])continue;   // the stump and most of the rest
+    for(const [nm,dx,dy] of fit)add(nm,cx+dx,cy+dy);
+    n++;
+  }
   for(let i=0,n=0;i<900&&n<200;i++){
     const x=rng.int(2,W-3),y=rng.int(2,H-3),cx=x+.5,cy=y+.5;
     if(!openAt(cx,cy)||reserved(cx,cy))continue;
