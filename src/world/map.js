@@ -294,7 +294,15 @@ export class TileMap {
     for (let i = 1; i <= steps; i++) {
       const t = i / steps, x = x0 + dx * t, y = y0 + dy * t;
       if (!this.circleFree(x, y, r, from)) return false;
-      if (from !== undefined) from = this.tileIdx(x, y);
+      if (from !== undefined) {
+        // a line through a tile corner is walked round one side or the other (move() slides x then y): the diagonal
+        // rule, all four tiles within a hop (else the hero slips onto a lower stair beside the wall-walk and sticks)
+        const to = this.tileIdx(x, y), W = this.w, ox = (to % W) - (from % W), oy = ((to / W) | 0) - ((from / W) | 0);
+        if (ox && oy && !this.stepsOk(from % W, (from / W) | 0, Math.sign(ox), Math.sign(oy))) return false;
+        const cx = Math.round(x), cy = Math.round(y); // passing right by a corner counts as cutting it
+        if (Math.abs(x - cx) < 0.15 && Math.abs(y - cy) < 0.15 && cx > 0 && cy > 0 && cx < W && cy < this.h && !this.stepsOk(cx - 1, cy - 1, 1, 1)) return false;
+        from = to;
+      }
     }
     return true;
   }

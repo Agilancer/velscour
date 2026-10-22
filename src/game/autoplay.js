@@ -1297,9 +1297,29 @@ export const Auto = {
       else if (m.rank === 'unique' || m.rank === 'champion') s -= 0.5;
       if (m.hp < m.maxHp * 0.3) s -= 0.7;
       if (m.ai === 'ranged' || m.ai === 'caster') s -= 0.4;
+      if (this.offTier(m.x, m.y)) s += 12; // up on the walls (or down in the ward): fight what's on his own level first
       if (s < bs) { bs = s; best = m; }
     }
     return best;
+  },
+  /**
+   * On a height map: is (x,y) on another level than the hero, more than a drop apart (a wall-walk over the ward, the
+   * ward under it)? Auto-play fights there by walking the stairs, never by shooting up or leaping off.
+   */
+  offTier(x, y, from = G.player) {
+    const m = G.world.map;
+    return !!m.hgt && Math.abs(m.hgt[m.tileIdx(x, y)] - m.hgt[m.tileIdx(from.x, from.y)]) > m.drop;
+  },
+  /** May the hero leap, dash or blink from where he stands to (x,y)? On a height map only along ground that stays
+   *  within a hop of both ends: never up onto the walls or off them, or across a stair's side. */
+  hopLine(x, y) {
+    const m = G.world.map, p = G.player;
+    if (!m.hgt) return true;
+    const H = m.hgt, a = H[m.tileIdx(p.x, p.y)], b = H[m.tileIdx(x, y)], k = m.rampartDeck ? m.climb : m.drop; // (hills: a ledge is fine)
+    if (Math.abs(a - b) > k) return false;
+    const lo = Math.min(a, b) - k, hi = Math.max(a, b) + k, n = Math.ceil(dist(p.x, p.y, x, y) * 3);
+    for (let i = 1; i < n; i++) { const h = H[m.tileIdx(p.x + (x - p.x) * i / n, p.y + (y - p.y) * i / n)]; if (h < lo || h > hi) return false; }
+    return true;
   },
 
   /**
@@ -1321,10 +1341,12 @@ export const Auto = {
     const p = G.player, w = G.world;
     const t = this.target = this.pickTarget(foes);
     if (!t) return;
+    // a foe on another level that the hero can walk to (the Castle's walls by their stairs): go there to fight it
+    const climb = !fleeing && this.offTier(t.x, t.y) && this.navDist(t.x, t.y) < 220;
     // watchdog: if the target's life hasn't moved in a while, stop casting utility skills, then try another target
     const sw = this.stall;
     if (!sw || sw.m !== t || t.hp < sw.hp - 1) this.stall = { m: t, hp: t.hp, t: 0 };
-    else if ((sw.t += 1 / 30) > 12) {
+    else if (!climb && (sw.t += 1 / 30) > 12) {
       this.banT = 10;
       if (sw.t > 25 && t.rank !== 'boss') { this.shun.set(t, w.time + 30); this.stall = null; }
     }
@@ -1342,6 +1364,15 @@ export const Auto = {
       return;
     }
     if (p.channel) return;
+    if (climb) {
+      const up = G.world.map.hgt[G.world.map.tileIdx(t.x, t.y)] > G.world.map.hgt[G.world.map.tileIdx(p.x, p.y)];
+      this.setStatus(`Taking the stairs ${up ? 'up' : 'down'} to ${t.name || 'a monster'}`);
+      // heals, buffs and minions on the way; no attacks across the height
+      const pick = p.castLock <= 0 && this.chooseSkill(foes, t, dist(p.x, p.y, t.x, t.y), false);
+      if (pick && ['heal', 'buff', 'summon'].includes(pick.sk.kind) && p.tryUseSkill(pick.sk, p.x + Math.cos(p.facing), p.y + Math.sin(p.facing))) this.lastCast[pick.sk.id] = w.time;
+      this.goTo(t.x, t.y, 0.9, 1 / 30);
+      return;
+    }
     const d = dist(p.x, p.y, t.x, t.y);
     const melee = this.meleeBuild();
     const R = this.rules;
@@ -1472,7 +1503,7 @@ export const Auto = {
           if (fleeing || (crowded && hpK < 0.45)) {
             const away = this.escapePoint(foes, 6);
             if (away) consider(sk, 6e8, away[0], away[1]);
-          } else if (this.meleeBuild() && d > 3 && d <= skillRange(sk) && los && !lowMana) consider(sk, 1e6, t.x, t.y);
+          } else if (this.meleeBuild() && d > 3 && d <= skillRange(sk) && los && !lowMana && this.hopLine(t.x, t.y)) consider(sk, 1e6, t.x, t.y);
           else if (m.nova && d < 3 && !lowMana) consider(sk, avg(p.skillDamage(sk, L)) * crowdAt(p.x, p.y, 2.2), p.x, p.y);
           continue;
         }
@@ -1487,8 +1518,8 @@ export const Auto = {
         case 'whirl': n = crowdAt(p.x, p.y, 2.6); ok = n > 0 && d < 3; break;
         case 'zone': if (m.follow) { n = crowdAt(p.x, p.y, 2); ok = n > 0; } else { ok = d < 8.5 && los; n = crowdAt(t.x, t.y, 1.8); } break;
         case 'wall': ok = m.ring ? d < 2.6 : d < 7 && los; n = crowdAt(t.x, t.y, 2); break;
-        case 'leap': ok = d <= 6.5 * (m.range ?? 1) && los; n = crowdAt(t.x, t.y, 1.6); break;
-        case 'dash': ok = d <= 5 * (m.range ?? 1) && los; n = crowdAt(t.x, t.y, 1.5); break;
+        case 'leap': ok = d <= 6.5 * (m.range ?? 1) && los && this.hopLine(t.x, t.y); n = crowdAt(t.x, t.y, 1.6); break; // never on or off the walls
+        case 'dash': ok = d <= 5 * (m.range ?? 1) && los && this.hopLine(t.x, t.y); n = crowdAt(t.x, t.y, 1.5); break;
         case 'corpse': ok = w.corpses.some((k) => !k.used && dist(k.x, k.y, t.x, t.y) < 4 * (m.r ?? 1)) && d < 9 && los; n = crowdAt(t.x, t.y, 2); break;
         case 'aoe':
           if (m.barrage) {
@@ -1587,7 +1618,7 @@ export const Auto = {
     let best = null, bs = -Infinity;
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * TAU, x = p.x + Math.cos(a) * r, y = p.y + Math.sin(a) * r;
-      if (!m.circleFree(x, y, 0.3) || !m.los(p.x, p.y, x, y)) continue;
+      if (!m.circleFree(x, y, 0.3) || !m.los(p.x, p.y, x, y) || !this.hopLine(x, y)) continue;
       const s = foes.reduce((acc, f) => acc + Math.min(8, dist(x, y, f.x, f.y)), 0);
       if (s > bs) { bs = s; best = [x, y]; }
     }
