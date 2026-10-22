@@ -9,6 +9,7 @@ import { enemyImage } from '../core/enemyart.js';
 import { petAnimation, petTintImage } from '../core/petart.js';
 import { drawRuneWeapon } from '../gfx/runeweapon.js';
 import { drawSlime } from '../gfx/slimeart.js';
+import { TURRET3D, drawTurret3D } from '../gfx/gunner3d.js';
 
 let UID = 0;
 
@@ -241,6 +242,7 @@ export class Creature {
 
   draw(ctx) {
     if (this.summonKey === 'runeweapon' && drawRuneWeapon(ctx, this)) return; // the Death Knight's 3D Runeblade
+    if (TURRET3D.has(this.summonKey) && drawTurret3D(ctx, this)) return; // the Gunner's 3D turrets
     const art = this.artFrame && this.artFrame();
     if (art) return this.drawArt(ctx, art);
     if (this.slime && drawSlime(ctx, this)) return;

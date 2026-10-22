@@ -14,6 +14,31 @@ Contents
 
 ---
 
+## October 22, 2026 — the Gunner's 3D turrets and Bombing Run biplane (branch `feat/gunner-3d`)
+- **Request (user):** three.js models of the Gunner's turrets and the plane he summons, textured from the skyships'
+  texture pack. The turrets rotate on their stands and look really cool, and the Gunner can walk through them so he never
+  gets stuck on them. Show them in action.
+- **Done:** see [GUNNER_3D.md](GUNNER_3D.md).
+  - `tools/gunner3d.js` holds four turrets (Gun: a rotary six-barrel behind a riveted shield; Flame: a bell nozzle with
+    fuel tanks; Rocket: two four-rocket pods and a radar dish; Cryo: an ice crystal and copper coils) and the biplane.
+    They use the airship pack's materials (`airshipMaterials`). `tools/gunner3d.html` is the viewer and the bake, and
+    `node tools/gunner3d_bake.js` writes `assets/sprites/gunner/` (5 sheets, about 1.6 MB).
+  - `src/gfx/gunner3d.js` draws them. Each turret's head turns through 48 steps on its stand: it tracks its target,
+    sweeps while it has none, drops in spinning when summoned, kicks back, spins its barrels or lights up as it fires,
+    with muzzle glows. Shots leave from the barrel tip (`turretMuzzle`, used by `summonAttack`).
+  - The Bombing Run biplane is 32 headings with its ground shadow. It swoops in, levels off over the targets and climbs
+    away.
+- **Walking through:** `World.separate` let a static summon push everyone with full weight, so the hero was shoved off
+  his own turrets and stuck walking a line through them (`gunner3d.js` with the old rule: 2.1 tiles short after 200
+  frames). Now a static summon never pushes its owner, for every class (turrets, totems, sentries, hydras). Monsters
+  still bump into them.
+- **Tooling:** jsDelivr is blocked in Claude cloud containers. The bake takes `THREE_DIR` (an unpacked
+  `npm pack three@0.170.0`) and serves three.js from it.
+- **Tests:** `gunner3d.js` (new), `gunner3d.js video` (the film), `data_check`, `flow`, `skills.js gunner`,
+  `signatures.js gunner`, `pets.js`, `autoplay.js gunner`.
+- **Open:** the Tesla Coil, Drones and Death Machine keep their 2D art; the four Turret skills and the signature's
+  plane are the 3D set. The turrets' shadow is a 2D ellipse.
+
 ## October 22, 2026 — overnight pass: black town fixed, wall-walking auto-play, scatter in context, hills, perf (branch `feat/overnight-pass`)
 - **Request (user, overnight, "proceed on defaults"):** a full pass: optimise without changing the look, bug hunt (Castle,
   ETERNAL BREACH, deep dives, the airship areas), the "black town" after the Breach, auto-play up the Castle's stairs

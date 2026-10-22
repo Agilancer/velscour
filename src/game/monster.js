@@ -9,6 +9,7 @@ import { hit, aoe, chainHit, leechHeal } from './combat.js';
 import { Projectile, Delayed, NovaWave, Area, Fissure, explode, lineTargets, coneTargets } from './hazards.js';
 import { ARCH, ARCH_MOVES, ELITE_AFFIXES, bossName, uniqueName } from '../data/enemies.js';
 import { SUMMONS } from '../data/summons.js';
+import { turretMuzzle } from '../gfx/gunner3d.js';
 import { bodyR } from '../world/map.js';
 import { toughness, danger, densityXp } from '../data/depth.js';
 import { attachSlime, slimeUpdate, courtDef } from './slimecourt.js';
@@ -676,8 +677,8 @@ export class Monster extends Creature {
         if (!t) return;
         const n = A.n || 1;
         for (let i = 0; i < n; i++) {
-          const ang = angleTo(this.x, this.y, t.x, t.y) + (n > 1 ? (i - (n - 1) / 2) * 0.2 : 0);
-          w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, z: this.fly ? 40 : 26, ang, speed: A.spd || 9, range: (A.range || 7) + 2, fx: A.fx || PROJ_FX[el], el, dmg, home: A.home ? 1 : 0, exp: A.exp || 0, pierce: A.pierce ? 99 : 0, heal: A.heal, o: { slow: A.slow, poison: A.poison } }));
+          const ang = angleTo(this.x, this.y, t.x, t.y) + (n > 1 ? (i - (n - 1) / 2) * 0.2 : 0), mz = turretMuzzle(this, ang); // 3D turrets fire from the barrel
+          w.addHazard(new Projectile({ world: w, src: this, x: mz ? mz.x : this.x, y: mz ? mz.y : this.y, z: mz ? mz.z : this.fly ? 40 : 26, ang, speed: A.spd || 9, range: (A.range || 7) + 2, fx: A.fx || PROJ_FX[el], el, dmg, home: A.home ? 1 : 0, exp: A.exp || 0, pierce: A.pierce ? 99 : 0, heal: A.heal, o: { slow: A.slow, poison: A.poison } }));
         }
         if (chance(0.4)) sfx(A.fx === 'bullet' ? 'shoot' : A.fx === 'arrow' ? 'bow' : E.sfx, 0.35);
         break;
@@ -699,15 +700,15 @@ export class Monster extends Creature {
         break;
       case 'beam': {
         if (!t) return;
-        const ang = angleTo(this.x, this.y, t.x, t.y);
+        const ang = angleTo(this.x, this.y, t.x, t.y), mz = turretMuzzle(this, ang); // 3D turrets fire from the barrel
         if (A.cone) {
           for (const c of coneTargets(w, this.team, this.x, this.y, ang, A.range || 4, 0.5)) hit(this, c, rand(dmg[0], dmg[1]), el, {});
-          for (let i = 0; i < 14; i++) { const aa = ang + rand(-0.45, 0.45), sp = rand(5, 8); spawn({ type: 'glow', x: this.x, y: this.y, z: this.fly ? 40 : 22, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, drag: 1.5, life: 0.5, size: 4, size1: 8, color: chance(0.5) ? E.glow : E.core, add: true }); }
+          for (let i = 0; i < 14; i++) { const aa = ang + rand(-0.45, 0.45), sp = rand(5, 8); spawn({ type: 'glow', x: mz ? mz.x : this.x, y: mz ? mz.y : this.y, z: mz ? mz.z : this.fly ? 40 : 22, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, drag: 1.5, life: 0.5, size: 4, size1: 8, color: chance(0.5) ? E.glow : E.core, add: true }); }
         } else {
           const L = w.map.rayLength(this.x, this.y, ang, A.range || 7);
           const ex = this.x + Math.cos(ang) * L, ey = this.y + Math.sin(ang) * L;
           for (const c of lineTargets(w, this.team, this.x, this.y, ex, ey, 0.5)) hit(this, c, rand(dmg[0], dmg[1]), el, { freeze: A.freeze });
-          addEffect(new Bolt(this.x, this.y, 30, ex, ey, 20, E.glow, 0.2, 3));
+          addEffect(new Bolt(mz ? mz.x : this.x, mz ? mz.y : this.y, mz ? mz.z : 30, ex, ey, 20, E.glow, 0.2, 3));
         }
         sfx(E.sfx, 0.35);
         break;
