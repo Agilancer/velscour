@@ -1,15 +1,18 @@
 // Gunner: the Bombing Run. Every new foe he shoots is painted: a red target lock hangs over it, it shows as a blip on
 // the little radar over his head, and the radar counts the mark (a painted foe that dies still counts). Ten marks and
 // he calls it in: a biplane roars across the field low over his targets, its shadow racing over the floor, and drops
-// eight whistling bombs on the painted foes still standing and on whatever is nearest him.
+// eight whistling bombs on the painted foes still standing and on whatever is nearest him. The biplane is a three.js
+// model baked to sprites (src/gfx/gunner3d.js); it swoops in, levels off over the targets and climbs away.
 import { G, later, stat, power, sigO, foesNear, headAt, glow, rand, TAU } from './common.js';
 import { isoX, isoY, camera } from '../../core/view.js';
 import { sfx } from '../../core/audio.js';
 import { addEffect, floatText, spawn, smoke, addDecal } from '../../gfx/vfx.js';
 import { explosionFx } from '../../gfx/shapes.js';
 import { aoe } from '../combat.js';
+import { drawBiplane3D, preloadGunner3D } from '../../gfx/gunner3d.js';
 
 const MAX = 10, BOMBS = 8, RED = '#ff3a2a', AMBER = '#d0a060', PLANE_Z = 150, SPEED = 16;
+const planeZ = (u) => PLANE_Z + 70 * (2 * u - 1) ** 2;   // swoops in, low over the targets, climbs away
 
 function reticle(ctx, x, y, t, k = 1) {
   const r = 7 * k, a = t * 2;
@@ -73,13 +76,20 @@ class Run {
     const p = this.p, w = this.world;
     this.t += dt;
     this.x = this.x0 + Math.cos(this.ang) * SPEED * this.t; this.y = this.y0 + Math.sin(this.ang) * SPEED * this.t;
+    if (!this.shade) w.addHazard(this.shade = { ground: true, update: () => this.t < this.dur, draw: (ctx) => this.drawShadow(ctx) }); // its shadow on the floor
     for (const d of this.drops) if (!d.done && this.t >= d.at) { d.done = true; if (!p.dead) w.addHazard(new Bomb(p, d.c, d.ox, d.oy)); }
-    if (Math.random() < 0.7) smoke(this.x, this.y, PLANE_Z - 4, '#9a9080', 1, 5);
+    if (Math.random() < 0.7) smoke(this.x, this.y, planeZ(this.t / this.dur) - 4, '#9a9080', 1, 5);
     if (Math.random() < dt * 6) sfx('shoot', 0.15);
     return this.t < this.dur;
   }
+  drawShadow(ctx) {
+    const u = this.t / this.dur, k = (G.touch ? 0.85 : 1) * (1 - 0.25 * Math.abs(2 * u - 1));   // smaller as it climbs
+    drawBiplane3D(ctx, isoX(this.x, this.y), isoY(this.x, this.y), 0, this.ang, this.t, k, 0, true);
+  }
   draw(ctx) {
-    const px = isoX(this.x, this.y), py = isoY(this.x, this.y), sdx = Math.cos(this.ang) - Math.sin(this.ang);
+    const px = isoX(this.x, this.y), py = isoY(this.x, this.y), sdx = Math.cos(this.ang) - Math.sin(this.ang), u = this.t / this.dur;
+    // the 3D biplane, rocking its wings; the old drawn one until its sheet is in
+    if (drawBiplane3D(ctx, px, py, planeZ(u), this.ang, this.t, G.touch ? 0.85 : 1, Math.sin(this.t * 5) * 0.05 + (u > 0.75 ? (u - 0.75) * (sdx >= 0 ? -0.6 : 0.6) : 0))) return;
     ctx.globalAlpha = 0.28; ctx.fillStyle = '#000'; // its shadow racing over the floor
     ctx.beginPath(); ctx.ellipse(px, py, 34, 9, 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
     const sy = (Math.cos(this.ang) + Math.sin(this.ang)) * 0.5, tilt = Math.atan2(sy, Math.abs(sdx)) * 0.5;
@@ -91,7 +101,7 @@ export default {
   id: 'gunner', name: 'Bombing Run', color: AMBER,
   desc: 'Every new foe he shoots is painted with a target lock and marked on the radar over his head. Ten marks and he calls in a BOMBING RUN: a biplane roars over and drops eight bombs on his painted targets.',
   init: () => ({ locks: [], marks: 0, busy: 0, sweep: 0, ping: 0 }),
-  enter(p, s) { s.locks.length = 0; },
+  enter(p, s) { s.locks.length = 0; preloadGunner3D(); },
   hit(p, s, tgt) {
     if (s.busy > 0 || s.marks >= MAX || s.locks.includes(tgt) || tgt.team !== 'enemy') return;
     s.locks.push(tgt); s.marks++; s.ping = 1;

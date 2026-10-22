@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gunner 3D</title>
+<!-- The Gunner's turrets and Bombing Run biplane (tools/gunner3d.js, textured from the airship pack): an orbit viewer,
+     and the bake used by tools/gunner3d_bake.js (each turret's stand once and its head at 48 turns x its frames; the
+     biplane at 32 headings x 2 propeller frames plus its ground shadow; all from the game's iso camera). Only this
+     tool runs three.js; the game draws the baked sheets (src/gfx/gunner3d.js).
+     http://localhost:8123/tools/gunner3d.html   ?bake for no viewer
+     Keys: 1-4 a turret, 5 the biplane, 6 everything, space pauses, I toggles the iso camera, F fires. -->
+<style>
+  html, body { margin: 0; height: 100%; background: #1b1d22; overflow: hidden; font: 12px monospace; color: #dfe; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+  #hud { position: fixed; left: 10px; top: 8px; white-space: pre; pointer-events: none; text-shadow: 1px 1px 0 #000; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="hud"></div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { airshipMaterials } from './airship3d.js';
+import { buildTurret, buildBiplane, TURRET_KINDS } from './gunner3d.js';
+
+const P = new URLSearchParams(location.search);
+const TU = 32 * Math.SQRT2, C30 = Math.cos(Math.PI / 6);   // px along a tile edge; px per unit of height = TU * C30
+const SUN_DIR = [-0.6, 0.85, 0.5];
+
+const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;   // wings shade the fuselage, heads their barrels
+const scene = new THREE.Scene();
+scene.add(new THREE.AmbientLight(0xffffff, 0.34 * Math.PI), new THREE.HemisphereLight(0xdfe6ff, 0x3a3020, 0.36 * Math.PI));
+const sun = new THREE.DirectionalLight(0xfff1dc, 1.25 * Math.PI);
+sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.6;
+Object.assign(sun.shadow.camera, { left: -160, right: 160, top: 160, bottom: -160, near: 10, far: 1200 });
+scene.add(sun, sun.target);
+const M = await airshipMaterials();
+// everything is built in tiles and shown in px (1 world unit = 1 screen px, as in the game)
+const world = new THREE.Group(); world.scale.setScalar(TU); scene.add(world);
+const turrets = Object.fromEntries(TURRET_KINDS.map((k) => [k, buildTurret(M, k)]));
+const plane = buildBiplane(M);
+const holders = {};
+for (const k of TURRET_KINDS) { const g = new THREE.Group(); g.add(turrets[k].stand, turrets[k].head); holders[k] = g; world.add(g); }
+const planeHold = new THREE.Group(); planeHold.add(plane.root); world.add(planeHold);
+const show = (keys) => { for (const k of TURRET_KINDS) holders[k].visible = keys.includes(k); planeHold.visible = keys.includes('plane'); };
+
+/** The game's camera: orthographic, 30 degrees down, from the +x +z diagonal; world units are screen px. */
+function isoCamera(left, right, top, bottom) {
+  const c = new THREE.OrthographicCamera(left, right, top, bottom, -4000, 4000), e = Math.PI / 6;
+  c.position.set(Math.cos(e) * Math.SQRT1_2, Math.sin(e), Math.cos(e) * Math.SQRT1_2).multiplyScalar(1000);
+  c.up.set(0, 1, 0); c.lookAt(0, 0, 0); c.updateMatrixWorld(); c.updateProjectionMatrix();
+  return c;
+}
+// the sun is fixed to the camera: every turn is lit from the top left like the rest of the game
+function aimSun(cam) {
+  const d = new THREE.Vector3(...SUN_DIR).normalize().transformDirection(cam.matrixWorld);
+  sun.position.copy(d).multiplyScalar(500); sun.target.position.set(0, 0, 0); sun.target.updateMatrixWorld();
+  sun.shadow.camera.updateProjectionMatrix();
+}
+// game heading f (radians in tile space: 0 = +x, screen down-right) -> yaw about +Y (the models face +X)
+const yawOf = (f) => -f;
+
+// ------------------------------------------------------------------ bake
+/** One shot of the scene in a cell F ({w, h, ax, ay} px at 1x; the ground point under the model at ax, ay). */
+function shoot(F, S) {
+  renderer.setSize(F.w * S, F.h * S, false);
+  const cam = isoCamera(-F.ax, F.w - F.ax, F.ay, F.ay - F.h);
+  aimSun(cam);
+  renderer.setClearColor(0x000000, 0);
+  renderer.render(scene, cam);
+  const c = document.createElement('canvas'); c.width = F.w * S; c.height = F.h * S;
+  c.getContext('2d', { willReadFrequently: true }).drawImage(renderer.domElement, 0, 0);
+  return c;
+}
+/** The union of the opaque pixels of shots (canvases of one size). */
+function bounds(shots) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+  for (const c of shots) {
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  return { x0, y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+}
+/** Trim shots to their union (+1 px) and lay them out in rows; returns the cell in 1x px with its anchor. */
+function layout(rows, F, S, g, y) {
+  const b = bounds(rows.flat()), pad = S, x0 = Math.max(0, b.x0 - pad), y0 = Math.max(0, b.y0 - pad);
+  const w = Math.min(F.w * S - x0, b.w + 2 * pad), h = Math.min(F.h * S - y0, b.h + 2 * pad);
+  rows.forEach((row, r) => row.forEach((c, i) => g.drawImage(c, x0, y0, w, h, i * w, y + r * h, w, h)));
+  return { w: w / S, h: h / S, ax: F.ax - x0 / S, ay: F.ay - y0 / S, rows: rows.length };
+}
+
+const HF = { w: 130, h: 120, ax: 65, ay: 88 }, SF = { w: 100, h: 70, ax: 50, ay: 50 };
+/** A turret: its stand, then its head at N turns (rows: frames). */
+function bakeTurret(kind, S = 2, N = 48) {
+  const t = turrets[kind];
+  show([kind]);
+  t.head.visible = false; t.frame(0);
+  const stand = [[shoot(SF, S)]];
+  t.head.visible = true; t.stand.visible = false;
+  const rows = [];
+  for (let f = 0; f < t.frames; f++) {
+    t.frame(f); const row = [];
+    for (let i = 0; i < N; i++) { holders[kind].rotation.y = yawOf((i / N) * Math.PI * 2); row.push(shoot(HF, S)); }
+    rows.push(row);
+  }
+  holders[kind].rotation.y = 0; t.stand.visible = true; t.frame(0);
+  // size the sheet: the head rows, then the stand
+  const hb = bounds(rows.flat()), sb = bounds(stand[0]);
+  const sheet = document.createElement('canvas');
+  sheet.width = Math.max(N * (hb.w + 2 * S), sb.w + 2 * S); sheet.height = t.frames * (hb.h + 2 * S) + sb.h + 2 * S;
+  const g = sheet.getContext('2d');
+  const head = layout(rows, HF, S, g, 0), st = layout(stand, SF, S, g, head.h * S * t.frames);
+  const k = TU * C30;
+  return { sheet: sheet.toDataURL('image/webp', 0.92), meta: { S, dirs: N, frames: t.frames, head: { w: head.w, h: head.h, ax: head.ax, ay: head.ay }, stand: { y: head.h * t.frames, w: st.w, h: st.h, ax: st.ax, ay: st.ay }, pivot: +(t.info.pivot * k).toFixed(2), muzzle: [+t.info.muzzle[0].toFixed(3), +((t.info.pivot + t.info.muzzle[1]) * k).toFixed(2)] } };
+}
+const PF = { w: 220, h: 170, ax: 110, ay: 85 };
+const BLACK = new THREE.MeshBasicMaterial({ color: 0x000000 });
+/** The biplane at N headings x its propeller frames, then its ground shadow (flattened, black) at the same headings. */
+function bakePlane(S = 2, N = 32) {
+  show(['plane']);
+  const rows = [];
+  for (let f = 0; f < plane.frames; f++) {
+    plane.frame(f); const row = [];
+    for (let i = 0; i < N; i++) { planeHold.rotation.y = yawOf((i / N) * Math.PI * 2); row.push(shoot(PF, S)); }
+    rows.push(row);
+  }
+  // the shadow: squashed onto the ground, every part black, the propeller blur left out
+  const disc = plane.root.getObjectByName('prop:propDisc');
+  if (disc) disc.visible = false;
+  planeHold.scale.y = 0.002; scene.overrideMaterial = BLACK;
+  const shadow = [];
+  for (let i = 0; i < N; i++) { planeHold.rotation.y = yawOf((i / N) * Math.PI * 2); shadow.push(shoot(PF, S)); }
+  scene.overrideMaterial = null; planeHold.scale.y = 1; planeHold.rotation.y = 0; if (disc) disc.visible = true; plane.frame(0);
+  const pb = bounds(rows.flat()), sb = bounds(shadow);
+  const sheet = document.createElement('canvas');
+  sheet.width = N * Math.max(pb.w, sb.w) + 4 * N * S; sheet.height = plane.frames * (pb.h + 2 * S) + sb.h + 2 * S;
+  const g = sheet.getContext('2d');
+  const body = layout(rows, PF, S, g, 0), sh = layout([shadow], PF, S, g, body.h * S * plane.frames);
+  return { sheet: sheet.toDataURL('image/webp', 0.92), meta: { S, dirs: N, frames: plane.frames, body: { w: body.w, h: body.h, ax: body.ax, ay: body.ay }, shadow: { y: body.h * plane.frames, w: sh.w, h: sh.h, ax: sh.ax, ay: sh.ay } } };
+}
+/** Magnified iso views for review: each turret at 8 turns (idle, then firing), the plane at 8 headings. */
+function preview(S = 4) {
+  const shots = [];
+  for (const k of TURRET_KINDS) for (const f of [0, 1]) {
+    show([k]); turrets[k].frame(f);
+    const row = [];
+    for (let i = 0; i < 8; i++) { holders[k].rotation.y = yawOf((i / 8) * Math.PI * 2); row.push(shoot({ w: 130, h: 120, ax: 65, ay: 92 }, S)); }
+    holders[k].rotation.y = 0; turrets[k].frame(0);
+    shots.push(row);
+  }
+  show(['plane']);
+  for (const f of [0]) { const row = []; for (let i = 0; i < 8; i++) { planeHold.rotation.y = yawOf((i / 8) * Math.PI * 2); row.push(shoot({ w: 130, h: 120, ax: 65, ay: 60 }, S)); } shots.push(row); }
+  planeHold.rotation.y = 0;
+  const w = shots[0][0].width, h = shots[0][0].height, c = document.createElement('canvas');
+  c.width = w * 8; c.height = h * shots.length;
+  const g = c.getContext('2d'); g.fillStyle = '#4a4438'; g.fillRect(0, 0, c.width, c.height);
+  shots.forEach((row, r) => row.forEach((s, i) => g.drawImage(s, i * w, r * h)));
+  show([...TURRET_KINDS, 'plane']);
+  return c.toDataURL('image/png');
+}
+function bake() {
+  const t0 = performance.now(), out = {};
+  for (const k of TURRET_KINDS) out[k] = bakeTurret(k);
+  out.biplane = bakePlane();
+  show([...TURRET_KINDS, 'plane']);
+  return { out, ms: Math.round(performance.now() - t0) };
+}
+window.GUNNER3D = { bake, bakeTurret, bakePlane, preview };
+
+// ------------------------------------------------------------------ viewer
+if (!P.has('bake')) {
+  document.body.appendChild(renderer.domElement);
+  const persp = new THREE.PerspectiveCamera(32, 1, 1, 8000);
+  persp.position.set(220, 180, 260);
+  const controls = new OrbitControls(persp, renderer.domElement);
+  controls.target.set(0, 25, 0); controls.update();
+  let iso = false, paused = false, mode = '6', t = 0, fire = 0, last = performance.now();
+  const MODES = { 1: ['turret'], 2: ['flameturret'], 3: ['rocketturret'], 4: ['cryoturret'], 5: ['plane'], 6: [...TURRET_KINDS, 'plane'] };
+  const hud = document.getElementById('hud');
+  addEventListener('keydown', (e) => {
+    if (e.key === ' ') paused = !paused;
+    else if (e.key === 'i' || e.key === 'I') iso = !iso;
+    else if (e.key === 'f' || e.key === 'F') fire = 1.2;
+    else if (MODES[e.key]) mode = e.key;
+  });
+  const loop = (now) => {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (!paused) t += dt;
+    fire = Math.max(0, fire - dt);
+    const keys = MODES[mode], all = keys.length > 1;
+    show(keys);
+    TURRET_KINDS.forEach((k, i) => {
+      const h = holders[k];
+      h.position.set(all ? (i % 2 ? 1.3 : -1.3) : 0, 0, all ? (i < 2 ? -1.3 : 1.3) : 0);
+      turrets[k].head.rotation.y = Math.sin(t * 0.7 + i) * 1.6 + t * 0.3;
+      turrets[k].frame(fire > 0 ? Math.floor(t * 30) % turrets[k].frames : 0);
+    });
+    planeHold.position.set(all ? Math.cos(t * 0.5) * 4 : 0, all ? 3.2 : 0.6, all ? Math.sin(t * 0.5) * 4 : 0);
+    planeHold.rotation.y = all ? -t * 0.5 - Math.PI / 2 : t * 0.4; plane.root.rotation.x = all ? -0.35 : 0;
+    plane.frame(Math.floor(t * 40) % 2);
+    const w = innerWidth, h = innerHeight;
+    renderer.setSize(w, h, false);
+    let cam = persp;
+    if (iso) { const k = 260 / h * 1.4; cam = isoCamera(-w / 2 * k, w / 2 * k, 160, 160 - h * k); }
+    else { persp.aspect = w / h; persp.updateProjectionMatrix(); controls.update(); }
+    aimSun(iso ? cam : persp);
+    renderer.setClearColor(0x1b1d22, 1);
+    renderer.render(scene, cam);
+    hud.textContent = `Gunner 3D  1 Gun  2 Flame  3 Rocket  4 Cryo  5 Biplane  6 all   F fire   ${paused ? 'paused' : 'running'} (space)   ${iso ? 'iso' : 'orbit'} camera (I)`;
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

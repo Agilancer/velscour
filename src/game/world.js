@@ -192,6 +192,7 @@ export class World {
         if (a.static) continue;
         for (let j = i + 1; j < cell.length; j++) {
           const b = cell[j];
+          if (b.static && b.owner === a) continue; // the hero walks through his own turrets and totems
           const dx = b.x - a.x, dy = b.y - a.y;
           const rr = (a.r + b.r) * 0.85;
           const d2 = dx * dx + dy * dy;
