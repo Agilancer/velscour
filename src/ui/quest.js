@@ -24,12 +24,24 @@ export function renderQuest(body) {
     else if (b?.id === 'mountainside') h += step(false, 'The Mountainside (beta) lies beyond: a switchback climb up the cliffs to the summit.');
     else if (b?.id === 'dark_forest') h += step(false, 'The Dark Forest lies beyond: trails, labyrinths, five trial glades and the Heart of the Forest.');
     else if (b?.overworld) h += step(false, 'A Forsaken Wilds scenario shrine guards the way forward.');
+    h += step(false, `Or take the <b style="color:#c080ff">purple portal</b> into <b>THE ETERNAL BREACH</b>: Floor ${((c.breach && c.breach.best) || 0) + 1} awaits (each floor as deadly as ten depths).`);
   } else {
     const boss = w.boss, slain = !!(boss && boss.dead);
     const raid = boss && boss.raid;
     h += `<div class="q-title">Depth ${w.depth} &middot; ${escapeHtml(w.biome ? w.biome.name : '')}</div>`;
     const who = boss && (boss.awake || slain) ? `<b>${escapeHtml(boss.name)}</b>` : raid || isRaidDepth(w.depth) ? 'the lord of the <b>Boss Room</b>' : w.depth === FINAL_DEPTH ? '<b>Demon Lord Velscour</b>' : 'the guardian of this depth';
-    if (w.overworldScenario) {
+    if (w.breach) {
+      // THE ETERNAL BREACH (game/breach.js)
+      const sc = w.overworldScenario, cur = sc.current, others = sc.scenarios.filter((S) => S !== sc.heart);
+      h = '<div class="q-sec"><h3>Current Quest</h3>' + `<div class="q-title">The Eternal Breach &middot; Floor ${w.breach.floor} <span class="dim">(as deadly as Depth ${w.depth})</span></div>`;
+      h += step(sc.won === others.length, `Win the shrines on the medium and large islands: <b>${sc.won}/${others.length}</b>. Each won lifts the wards on the walkways leading on.`);
+      for (const S of others) h += step(S.completed, `${escapeHtml(S.title)}${S.boss ? ' <span style="color:#ff80c0">(boss)</span>' : ''} <span class="dim">— ${escapeHtml(S.description)}</span>`);
+      if (cur && cur !== sc.heart) h += step(false, `In progress: <b>${escapeHtml(cur.title)}</b> — ${escapeHtml(cur.progress() || cur.description)}`);
+      h += step(sc.completed, `Then face the keeper of the <b style="color:#ff70d0">Breach Heart</b>${cur === sc.heart ? ` — ${escapeHtml(cur.progress())}` : ''}.`);
+      h += step(sc.completed, sc.completed ? 'The exit portal on the Heart island is open: on to the next floor, or home.' : 'The Heart opens the way on.');
+      const b = c.breach || {};
+      h += `<div class="dim q-note">Best floor beaten: ${b.best || 0}. Foes slain on this floor: ${fmtInt(w.kills || 0)}</div>`;
+    } else if (w.overworldScenario) {
       const sc = w.overworldScenario;
       if (w.biome?.id === 'mountainside') {
         h += step(sc.reached, `Climb the switchback trail to the summit <span class="dim">— altitude ${sc.altitude}%</span>.`);

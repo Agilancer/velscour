@@ -419,6 +419,7 @@ const AMB = {
   flesh: ['inside_night_rain', 'cave_rain'], serpent: ['river_loop', 'cave_rain'], shattered: ['inside_day_storm', 'cave_storm'],
   library: ['inside_night_rain', 'inside_night'], necropolis: ['forest_night', 'forest_night_storm'],
   amber: ['inside_day_storm', 'beach'], desert_temple: ['inside_day_storm', 'torch_loop', 'cave'],
+  eternal_breach: ['inside_night_storm', 'cave_storm', 'sea_storm'],
   hell: ['torch_loop', 'cave_storm', 'cave'], heavenly: ['inside_day', 'river_stream_loop', 'waterfall_loop'], astral_plane: ['cave', 'inside_night_storm', 'waterfall_loop'], throne: ['cave_storm', 'waterfall_loop'],
 };
 let amb = null;   // { key, beds, deck, bed, level, nextDrift, nextSwap }

@@ -150,9 +150,10 @@ export function classSelect(sel = 'paladin', back = titleScreen) {
   show(s);
 }
 
-export function deathScreen(depth, killer, onReturn) {
+/** o.where / o.note replace the "Depth N" line and the descent note (the Eternal Breach). */
+export function deathScreen(depth, killer, onReturn, o = {}) {
   const s = el('div', 'screen');
-  s.innerHTML = `<div class="death-title">YOU HAVE DIED</div><p style="font-size:18px">Slain on Depth ${depth}${killer ? ` by <b style="color:#ff8060">${escapeHtml(killer)}</b>` : ''}.</p><p class="dim" style="max-width:520px;text-align:center;padding:0 12px">Your gear, levels and skills endure — but you must fight back down from Depth ${Math.max(1, Math.floor((depth - 1) / 5) * 5 - 4)}.</p>`;
+  s.innerHTML = `<div class="death-title">YOU HAVE DIED</div><p style="font-size:18px">Slain ${o.where || `on Depth ${depth}`}${killer ? ` by <b style="color:#ff8060">${escapeHtml(killer)}</b>` : ''}.</p><p class="dim" style="max-width:520px;text-align:center;padding:0 12px">${o.note || `Your gear, levels and skills endure — but you must fight back down from Depth ${Math.max(1, Math.floor((depth - 1) / 5) * 5 - 4)}.`}</p>`;
   const b = el('button', 'btn big red', 'Return to Town');
   b.onclick = () => { sfx('ui'); hide(); onReturn(); };
   s.appendChild(b);

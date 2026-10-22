@@ -225,7 +225,7 @@ export class World {
     }
     for (const pr of this.props) {
       if (!pr.light && !pr.smoke) continue;
-      if (pr.light) addLight(pr.x, pr.y, pr.light + Math.sin(this.time * 7 + pr.x) * 0.15, 0.8, 20 + (pr.z || 0), '#ffb050');
+      if (pr.light) addLight(pr.x, pr.y, pr.light + Math.sin(this.time * 7 + pr.x) * 0.15, 0.8, 20 + (pr.z || 0), pr.lightColor || '#ffb050');
       if (pr.smoke) {
         // camp fires and chimneys (the Castle): a slow plume drifting downwind, embers off a fire
         const px = isoX(pr.x, pr.y), py = isoY(pr.x, pr.y);

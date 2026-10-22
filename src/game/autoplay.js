@@ -13,6 +13,7 @@ import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, us
 import { SUMMONS } from '../data/summons.js';
 import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS, powerLevel } from '../data/items.js';
 import { depthLevel, armorDiv } from '../data/depth.js';
+import { breachLevel } from '../data/breach.js';
 import { drawBiome } from '../data/biomes.js';
 import { augHits } from '../data/rings.js';
 import { canLearn } from '../ui/skills.js';
@@ -42,6 +43,8 @@ export const STANCES = {
   reckless: { name: 'Reckless', bold: 0.45, low: 0.25, pot: 0.3, potBoss: 0.4, retreat: 0.1, farm: -2, lim: 6, kiteNear: -1, kiteCrowd: 7, kiteHp: 0.22, backoff: 0, stand: 0.55 },
 };
 export const stanceOf = (c = G.char) => STANCES[c && c.stance] || STANCES.balanced;
+/** Seconds the Standard/Breach menu waits for a choice before auto-play keeps its last one. */
+const DEST_WAIT = 8;
 /** Fewer free bag slots than this sends auto-play back to town (where a bag with none free after trading keeps it: bagWait). */
 const BAG_LOW = 14;
 
@@ -345,7 +348,52 @@ export const Auto = {
     this.setStatus(v ? 'Thinking…' : '');
     const btn = document.getElementById('auto-btn');
     if (btn) btn.classList.toggle('on', v);
+    if (v && G.world && G.world.kind === 'town' && G.ui && G.char) this.askDest();
   },
+
+  // ---------------------------------------------------------------- THE ETERNAL BREACH (docs/ETERNAL_BREACH.md)
+  /** Turned on in town: which portal to play through, the Standard Adventure Portal or THE ETERNAL BREACH. */
+  dest: 'standard',
+  askDest() {
+    if (G.autoDest) { this.dest = G.autoDest; return; } // tests
+    const c = G.char, f = this.breachFloor();
+    const d = G.ui.dialog({
+      title: 'Where to, adventurer?', cls: 'auto-dest',
+      html: `<p>Auto-play is on. Which portal should it take?</p>
+        <div class="pc-row"><button type="button" class="pc-card${this.dest !== 'breach' ? ' sel' : ''}" data-d="standard" style="--pc:#ff8040"><i class="pc-swirl"></i><b class="pc-name">Standard Adventure Portal</b><span class="pc-tag">The descent: Depth ${c.depth}</span></button>
+        <button type="button" class="pc-card${this.dest === 'breach' ? ' sel' : ''}" data-d="breach" style="--pc:#b050ff"><i class="pc-swirl"></i><b class="pc-name">THE ETERNAL BREACH</b><span class="pc-tag">Challenge: Floor ${f} (monster level ${breachLevel(f)}, you are ${c.level})</span></button></div>
+        <p class="pc-auto"></p>`,
+      closable: false,
+      buttons: [{ label: 'Standard Adventure Portal', fn: () => this.setDest('standard') }, { label: 'THE ETERNAL BREACH', cls: 'red', fn: () => this.setDest('breach') }],
+    });
+    // the cards choose too; with no choice in DEST_WAIT seconds auto-play keeps the portal it took last
+    d.box.querySelectorAll('.pc-card').forEach((b) => b.addEventListener('click', () => { sfx('ui'); d.close(); this.setDest(b.dataset.d); }));
+    this.destPick = { t: DEST_WAIT, d, el: d.box.querySelector('.pc-auto'), last: '' };
+  },
+  /** The Standard/Breach menu's countdown (runs while the dialog pauses the world; game.update). */
+  tickDest(dt) {
+    const k = this.destPick;
+    if (!k) return;
+    if (!k.el.isConnected || !this.on) { this.destPick = null; if (k.el.isConnected) k.d.close(); return; }
+    if ((k.t -= dt) <= 0) { this.destPick = null; k.d.close(); this.setDest(this.dest); return; }
+    const txt = `Auto-play takes the ${this.dest === 'breach' ? 'Eternal Breach' : 'Standard Adventure Portal'} in ${Math.ceil(k.t)}… tap one to choose.`;
+    if (txt !== k.last) { k.last = txt; k.el.innerHTML = txt; }
+  },
+  setDest(d) {
+    this.dest = d; this.town = null; this.destPick = null;
+    G.ui.log(d === 'breach' ? `Auto-play heads for <b style="color:#c080ff">THE ETERNAL BREACH</b> (Floor ${this.breachFloor()}).` : 'Auto-play takes the Standard Adventure Portal.', '#8fe0ff');
+  },
+  /** Can the hero take Breach floor n? Its monsters at most two levels above the hero. */
+  breachReady(n) { return breachLevel(n) <= (G.char?.level || 1) + 2; },
+  /** The floor auto-play enters: the highest open one the hero is ready for (floor 1 at the least). */
+  breachFloor() {
+    const top = (G.char?.breach?.best || 0) + 1;
+    let f = top;
+    while (f > 1 && !this.breachReady(f)) f--;
+    return f;
+  },
+  /** Fell in the Breach: auto-play goes back to the descent until it is turned on again. */
+  breachDied() { if (this.dest === 'breach') { this.dest = 'standard'; G.ui?.log('Auto-play fell in the Breach: it takes the Standard Adventure Portal from now on (turn it off and on in town to choose again).', '#8fe0ff'); } },
 
   reset() {
     this.world = null; this.nav = null; this.path = null; this.goal = null; this.thinkT = 0; this.navT = 0;
@@ -900,7 +948,8 @@ export const Auto = {
     if (ow && !ow.completed && !ow.failed) {
       const nearEnemy = foes.some((m) => !m.dead && Math.hypot(m.x - p.x, m.y - p.y) < 6);
       if (!ow.active) {
-        this.setStatus('Finding the scenario shrine');
+        if (w.breach && this.lootStep(w, dt)) { this.watchStuck(dt); return; } // the shrines' reliquaries, loot between fights
+        this.setStatus(w.breach ? `To the shrine — ${ow.target?.title || 'the Breach Heart'}` : 'Finding the scenario shrine');
         if (this.goTo(ow.shrine.x, ow.shrine.y, 1.4, dt)) ow.shrine.use();
         this.watchStuck(dt); return;
       }
@@ -915,7 +964,10 @@ export const Auto = {
         objective = ow.markers.reduce((a,b) =>
           !a || Math.hypot(b.x-p.x,b.y-p.y) < Math.hypot(a.x-p.x,a.y-p.y) ? b : a, null);
       }
-      if (objective && !nearEnemy) {
+      // the Breach's fights keep arriving: after a while fighting with an objective waiting, push through to it
+      if (objective && nearEnemy && w.breach) { this.objWait = (this.objWait || 0) + dt; if (this.objWait > 10) this.objPush = 4; } else this.objWait = 0;
+      if (this.objPush > 0) this.objPush -= dt;
+      if (objective && (!nearEnemy || this.objPush > 0)) {
         this.setStatus('Completing '+ow.title);
         if (this.goTo(objective.x, objective.y, objective.reach||1.4, dt) && objective.use) objective.use();
         this.watchStuck(dt); return;
@@ -1027,6 +1079,7 @@ export const Auto = {
     const next = w.depth + 1;
     const town = this.needTown();
     this.transitT = 3;
+    if (w.breach) { G.game.breachExit(w, { auto: true, town }); return; }
     // the three portals down (game.portalChoice): the player has a few seconds to pick before auto-play does
     if (G.game.portalChoice) { G.game.portalChoice(w, { auto: true, town }); return; }
     c.depth = next;
@@ -1550,14 +1603,16 @@ export const Auto = {
         return;
       }
       T.sealNote = false;
-      // done: through the portal
-      const po = w.portals[0];
-      this.setStatus(`To the portal — Depth ${c.depth}`);
+      // done: through the portal (the purple one when auto-play was told to take the Breach)
+      const breach = this.dest === 'breach' && w.portals.find((q) => q.breach);
+      const po = breach || w.portals[0];
+      this.setStatus(breach ? `To THE ETERNAL BREACH — Floor ${this.breachFloor()}` : `To the portal — Depth ${c.depth}`);
       if (this.goTo(po.x, po.y, 1.3, dt)) {
         G.ui.closeAll();
         this.transitT = 4;
         this.sinceTown = 0;
-        G.game.enterDungeon();
+        if (breach) G.game.enterBreach(this.breachFloor());
+        else G.game.enterDungeon();
       }
       this.watchStuck(dt);
       return;

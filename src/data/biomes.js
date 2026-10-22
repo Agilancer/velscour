@@ -1,4 +1,5 @@
 // Thirty-four dungeon biomes, including an outdoor scenario biome. Each has its own palette over a biome pack's art (see below), monster tints and lighting.
+import { BREACH_ARCHS } from './breach.js';
 // palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
 import { FINAL_DEPTH } from './depth.js';
@@ -444,7 +445,21 @@ export const BETA_BIOMES = [
   },
 ];
 
-export const BIOME_BY_ID = Object.fromEntries([...BIOMES, ...BETA_BIOMES].map((b) => [b.id, b]));
+// THE ETERNAL BREACH (docs/ETERNAL_BREACH.md): the challenge biome behind the purple portal in Herrington Hollow. Never in
+// a biome bag, the overworld guarantee or Velscour's list; its floors are counted apart (c.breach). Island tops and
+// scatter from the Veilscar March pack, ruins (walls, arches, doors, paving) and crypt scatter from the Eternal Breach
+// pack; the Veilscar March's own walls, arches and doors join the ruins (BREACH_WALLS).
+export const BREACH_BIOME = {
+  id: 'eternal_breach', name: 'The Eternal Breach', pack: 'veilscar_march', wallPack: 'eternal_breach', overworld: true, packArt: true,
+  challenge: true, painted: false, palette: null, part: null,
+  moreFloors: [['eternal_breach', [[1, 60]]]], morePacks: [['eternal_breach', [[1, 40]]]],
+  dark: 0.3, light: 13, ambient: { type: 'mote', color: '#c890ff' }, mon: null,
+  el: 'arcane', blood: '#4a1460', adj: ['Riftborn', 'Unmoored', 'Void-Touched', 'Breachbound'],
+  roster: BREACH_ARCHS, torch: '#b060ff', fog: '#0e0518',
+};
+export const BREACH_WALLS = { id: 'eternal_breach_veilscar', name: 'The Veilscar March', pack: 'veilscar_march', overworld: true, packArt: true, palette: null, part: null };
+
+export const BIOME_BY_ID = Object.fromEntries([...BIOMES, ...BETA_BIOMES, BREACH_BIOME].map((b) => [b.id, b]));
 
 /** Overworlds share the regular biome bag, with a hard visit guarantee after three combat dungeons. */
 export const OVERWORLD_BIOME_IDS = BIOMES.filter((b) => b.overworld).map((b) => b.id);

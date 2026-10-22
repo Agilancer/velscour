@@ -8,6 +8,7 @@ import { HW, HH, TW, TH, setElevation } from '../core/view.js';
 import { makeCanvas, clamp } from '../core/util.js';
 import { castle3dState, drawPiece, pieceRect } from './castle3dart.js';
 import { drawCastleFace } from './castlewalls.js';
+import { breachUnderside, UNDERSIDE_HANG } from './breach.js';
 
 export const HS = 4; // world px per height level
 
@@ -18,10 +19,11 @@ const hash = (x, y, s) => {
 };
 
 // ------------------------------------------------------------------ rock
-let rock = null;
+const rocks = {};
 /** Two 64x64 tiling rock faces (lit SW faces, shaded SE faces): broken granite in angular facets, taller than wide,
  * each lit along its top and shadowed at its foot, with thin broken cracks between and a little lichen. */
-function rockPatterns(ctx) {
+function rockPatterns(ctx, style = '') {
+  let rock = rocks[style];
   if (!rock) {
     const S = 64, pts = [];
     for (let k = 0; k < 26; k++) pts.push([hash(k, 1, 91) * S, hash(k, 2, 91) * S]);
@@ -42,6 +44,12 @@ function rockPatterns(ctx) {
         if (edge < 0.9 && crack) v -= 0.2; else if (edge < 1.8) v -= vy > 0 ? 0.09 : -0.05;
         let r = v * 1.02 + 0.015, gg = v * 0.96 + 0.01, b = v * 0.86;
         if (hash(near, 4, 13) > 0.8 && edge > 2 && hash(x >> 1, y >> 1, 17) > 0.5) { r = r * 0.82 + 0.05; gg = gg * 0.85 + 0.11; b *= 0.72; }
+        if (style === 'breach') {
+          // the Breach: dark violet-grey basalt, its cracks lit by the rift
+          const l = r * 0.3 + gg * 0.59 + b * 0.11;
+          r = l * 0.78 + 0.03; gg = l * 0.66; b = l * 0.95 + 0.05;
+          if (edge < 0.9 && crack && hash(near, 6, 19) > 0.8) { r = 0.55; gg = 0.25; b = 0.85; }
+        }
         if (dark) { r *= 0.7; gg *= 0.72; b *= 0.82; }
         const i = (y * S + x) * 4;
         p[i] = 255 * clamp(r, 0, 1); p[i + 1] = 255 * clamp(gg, 0, 1); p[i + 2] = 255 * clamp(b, 0, 1); p[i + 3] = 255;
@@ -49,7 +57,7 @@ function rockPatterns(ctx) {
       g.putImageData(d, 0, 0);
       return c;
     };
-    rock = { lit: make(false), dark: make(true) };
+    rock = rocks[style] = { lit: make(false), dark: make(true) };
   }
   if (!rock.pl || rock.ctx !== ctx) { rock.ctx = ctx; rock.pl = ctx.createPattern(rock.lit, 'repeat'); rock.pd = ctx.createPattern(rock.dark, 'repeat'); }
   return rock;
@@ -71,7 +79,7 @@ function bankOf(f, dark) {
 /** Draw order, face depths, screen boxes and occluders of a height map (built once). */
 export function terrainOf(map) {
   if (map._terr) return map._terr;
-  const { w, h, hgt, t } = map, N = w * h, base = map.baseLevel ?? 0;
+  const { w, h, hgt, t } = map, N = w * h, base = map.baseLevel ?? 0, under = map.under;
   const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h || t[y * w + x] !== 1 ? null : hgt[y * w + x]);
   const sw = new Int16Array(N), se = new Int16Array(N), box = new Float32Array(N * 4), order = [], occ = [], covers = [];
   const c3 = map.c3struct && castle3dState();
@@ -79,10 +87,15 @@ export function terrainOf(map) {
     const i = y * w + x;
     if (t[i] !== 1) continue;
     const v = hgt[i], s = at(x, y + 1), e = at(x + 1, y);
-    sw[i] = Math.max(0, s === null ? v - base : v - s);
-    se[i] = Math.max(0, e === null ? v - base : v - e);
+    // over the void a face runs down to the column's own underside (the Breach's islands) or the map's base
+    const foot = under ? under[i] : base;
+    sw[i] = Math.max(0, s === null ? v - foot : v - s);
+    se[i] = Math.max(0, e === null ? v - foot : v - e);
     const px = (x - y) * HW, py = (x + y) * HH - v * HS;
-    box[i * 4] = px - HW; box[i * 4 + 1] = py; box[i * 4 + 2] = px + HW; box[i * 4 + 3] = py + TH + Math.max(sw[i], se[i]) * HS;
+    box[i * 4] = px - HW; box[i * 4 + 1] = py; box[i * 4 + 2] = px + HW; box[i * 4 + 3] = py + TH + Math.max(sw[i], se[i]) * HS + (map.voidFace && (s === null || e === null) ? UNDERSIDE_HANG : 0);
+    if (map.rounded && map.rounded[i]) { // its fills reach half a tile into the void beside it, with their faces
+      box[i * 4] -= HW; box[i * 4 + 2] += HW; box[i * 4 + 1] -= HH; box[i * 4 + 3] = Math.max(box[i * 4 + 3], py + TH + HH + (v - (under ? under[i] : base)) * HS + UNDERSIDE_HANG);
+    }
     order.push(i);
     if (c3) {   // the Castle's baked masonry (docs/CASTLE_3D.md): the box is its pieces' own
       const gx = (x - y) * HW, gy = (x + y) * HH;
@@ -107,7 +120,7 @@ export function terrainOf(map) {
         if (u !== null && u < v - 2 && (v - u) * HS > (a + b - 1) * HH) hides = true;
       }
     }
-    if (hides) occ.push(i);
+    if (hides && !(map.rounded && map.rounded[i])) occ.push(i); // a walkway's steps (a level or two) hide no one worth a redraw
   }
   order.sort((a, b) => ((a % w) + ((a / w) | 0)) - ((b % w) + ((b / w) | 0)) || a - b);
   // occluders bucketed by 256 world px screen cells, for the props' lookups (occludersOfRect)
@@ -153,7 +166,14 @@ export function useTerrain(map) {
   const { w, h, hgt, t } = map;
   let lo = Infinity, hi = -Infinity;
   for (let i = 0; i < w * h; i++) if (t[i] === 1) { lo = Math.min(lo, hgt[i]); hi = Math.max(hi, hgt[i]); }
-  const elev = (x, y) => hgt[Math.min(h - 1, Math.max(0, Math.floor(y))) * w + Math.min(w - 1, Math.max(0, Math.floor(x)))] * HS;
+  const ramp = map.ramp, rt = map.rampTile, W1 = w + 1;
+  const elev = (x, y) => {
+    const tx = Math.min(w - 1, Math.max(0, Math.floor(x))), ty = Math.min(h - 1, Math.max(0, Math.floor(y))), i = ty * w + tx;
+    if (!rt || !rt[i]) return hgt[i] * HS;
+    // a ramp (the Breach's walkways): the ground between its four corner heights
+    const fx = clamp(x - tx, 0, 1), fy = clamp(y - ty, 0, 1), c = ty * W1 + tx;
+    return ((ramp[c] * (1 - fx) + ramp[c + 1] * fx) * (1 - fy) + (ramp[c + W1] * (1 - fx) + ramp[c + W1 + 1] * fx) * fy) * HS;
+  };
   // the first lifted column met going into the screen: from the highest level (nearest the camera) down
   const pick = (wx, wy) => {
     for (let k = hi; k >= lo; k--) {
@@ -252,12 +272,20 @@ export function drawColumn(ctx, world, i, floorEntry, dress = null, over = false
       return;
     }
   }
-  const R = rockPatterns(ctx);
+  const R = rockPatterns(ctx, map.voidFace || '');
   const f = floorEntry(world, map.v[i]);
   const art = map.faceArt && map.faceArt[i];
   const fb = art === 5 ? soilOf(f) : f; // the Castle's river banks: earth over rock
-  if (T.sw[i] && !(art && drawCastleFace(ctx, map, i, px - HW, py + HH, HW, HH, T.sw[i], false, v, HS))) face(ctx, R, fb, i, px - HW, py + HH, HW, HH, T.sw[i], false, y + 1 >= map.h || map.t[i + w] !== 1);
-  if (T.se[i] && !(art && drawCastleFace(ctx, map, i, px, py + TH, HW, -HH, T.se[i], true, v, HS))) face(ctx, R, fb, i, px, py + TH, HW, -HH, T.se[i], true, x + 1 >= w || map.t[i + 1] !== 1);
+  if (map.rounded && map.rounded[i]) return drawRounded(ctx, map, T, R, f, i, x, y, v, px, py);
+  const voidSW = y + 1 >= map.h || map.t[i + w] !== 1, voidSE = x + 1 >= w || map.t[i + 1] !== 1;
+  if (T.sw[i] && !(art && drawCastleFace(ctx, map, i, px - HW, py + HH, HW, HH, T.sw[i], false, v, HS))) {
+    if (voidSW && map.voidFace) breachUnderside(ctx, i, px - HW, py + HH, HW, HH, T.sw[i] * HS, false, quad, R.pl);
+    else face(ctx, R, fb, i, px - HW, py + HH, HW, HH, T.sw[i], false, voidSW);
+  }
+  if (T.se[i] && !(art && drawCastleFace(ctx, map, i, px, py + TH, HW, -HH, T.se[i], true, v, HS))) {
+    if (voidSE && map.voidFace) breachUnderside(ctx, i, px, py + TH, HW, -HH, T.se[i] * HS, true, quad, R.pd);
+    else face(ctx, R, fb, i, px, py + TH, HW, -HH, T.se[i], true, voidSE);
+  }
   if (art && art !== 5 && (T.sw[i] || T.se[i])) {
     // masonry: a lit quoin on the corner between the two faces, dark silhouette edges where a face ends
     ctx.lineWidth = 1;
@@ -302,6 +330,109 @@ export function drawColumn(ctx, world, i, floorEntry, dress = null, over = false
     ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(230,236,248,0.5)';
     if (T.sw[i]) { ctx.beginPath(); ctx.moveTo(px - HW, py + HH + 0.5); ctx.lineTo(px, py + TH + 0.5); ctx.stroke(); }
     if (T.se[i]) { ctx.beginPath(); ctx.moveTo(px, py + TH + 0.5); ctx.lineTo(px + HW, py + HH + 0.5); ctx.stroke(); }
+  }
+}
+
+// ------------------------------------------------------------------ rounded columns (the Breach's walkways)
+// A walkway running across the grid's diagonal is a staircase of diamonds. On `map.rounded` tiles every corner that
+// sticks out into the void is cut by a curve, and every notch between two of them is filled by one (drawn by the later
+// of the two tiles beside it, at its height, in its paving), so the walkway's edge runs smooth. Collision is unchanged.
+const RK = 0.5, RC = 0.45, RS = 7;   // cut along each edge (fraction), the curve's pull toward the corner, samples
+// the 2x2 block round each top-diamond vertex (T, R, B, L): the edge neighbour before it, the one after it, the diagonal
+const AROUND = [[[-1, 0], [0, -1], [-1, -1]], [[0, -1], [1, 0], [1, -1]], [[1, 0], [0, 1], [1, 1]], [[0, 1], [-1, 0], [-1, 1]]];
+const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+function curve(a, b, v) {
+  const c = lerp(lerp(a, b, 0.5), v, RC), out = [];
+  for (let k = 1; k < RS; k++) { const t = k / RS, u = 1 - t; out.push([u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]]); }
+  return out;
+}
+/** The face hanging under segment p-q of a shape whose inside is toward `inside`, if the camera sees it. */
+function hang(ctx, R, i, k, p, q, inside, D, voidBelow, f) {
+  let [a, b] = p[0] <= q[0] ? [p, q] : [q, p];
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  if (dx < 0.01 || dx * (inside[1] - a[1]) - dy * (inside[0] - a[0]) >= 0) return; // the inside is below: a back face
+  const dark = dy < 0;
+  if (voidBelow) breachUnderside(ctx, i * 16 + k, a[0], a[1], dx, dy, D, dark, quad, dark ? R.pd : R.pl, dx < HW * 0.6);
+  else face(ctx, R, f, i, a[0], a[1], dx, dy, D / HS, dark, false);
+}
+/** The plane through three lifted points as a y shear of the flat ground: dz = a x + b y + c (flat world px). */
+function plane(F, L) {
+  const [[x1, y1], [x2, y2], [x3, y3]] = F, [z1, z2, z3] = L;
+  const det = x1 * (y2 - y3) - y1 * (x2 - x3) + (x2 * y3 - x3 * y2);
+  if (Math.abs(det) < 1e-6) return [0, 0, z1];
+  const A = (z1 * (y2 - y3) - y1 * (z2 - z3) + (z2 * y3 - z3 * y2)) / det;
+  const B = (x1 * (z2 - z3) - z1 * (x2 - x3) + (x2 * z3 - x3 * z2)) / det;
+  return [A, B, z1 - A * x1 - B * y1];
+}
+function drawRounded(ctx, map, T, R, f, i, x, y, v, px, py) {
+  const w = map.w, h = map.h, ix = (xx, yy) => yy * w + xx;
+  const floor = (xx, yy) => xx >= 0 && yy >= 0 && xx < w && yy < h && map.t[ix(xx, yy)] === 1;
+  // a ramp tile (the walkways) has its own height at each corner; any other its level all over
+  const W1 = w + 1, ramp = map.rampTile && map.rampTile[i] ? map.ramp : null;
+  const ch = ramp ? [ramp[y * W1 + x], ramp[y * W1 + x + 1], ramp[(y + 1) * W1 + x + 1], ramp[(y + 1) * W1 + x]] : [v, v, v, v];
+  const fy = py + v * HS, F = [[px, fy], [px + HW, fy + HH], [px, fy + TH], [px - HW, fy + HH]];
+  const V = F.map((p, k) => [p[0], p[1] - ch[k] * HS]), C = [px, fy + HH - (ch[0] + ch[2]) * HS / 2];
+  const deep = (map.under ? v - map.under[i] : Math.max(T.sw[i], T.se[i])) * HS;
+  // the top's outline: the diamond, its void corners cut by curves; tag = the edge a segment runs along (-1: a curve)
+  const pts = [], tag = [];
+  for (let k = 0; k < 4; k++) {
+    const [n1, n2, d] = AROUND[k];
+    if (!floor(x + n1[0], y + n1[1]) && !floor(x + n2[0], y + n2[1]) && !floor(x + d[0], y + d[1])) {
+      const a = lerp(V[k], V[(k + 3) % 4], RK), b = lerp(V[k], V[(k + 1) % 4], RK);
+      pts.push(a); tag.push(-1);
+      for (const c of curve(a, b, V[k])) { pts.push(c); tag.push(-1); }
+      pts.push(b); tag.push(k);
+    } else { pts.push(V[k]); tag.push(k); }
+  }
+  // the notches beside this tile it fills: [void tile offset, the fill's outline, the corner it fills at]
+  const fills = [];
+  for (let k = 0; k < 4; k++) {
+    const [n1, n2, d] = AROUND[k], dx = x + d[0], dy = y + d[1];
+    if (!floor(dx, dy)) continue;
+    const f1 = floor(x + n1[0], y + n1[1]), f2 = floor(x + n2[0], y + n2[1]);
+    if (f1 === f2 || dx + dy > x + y || (dx + dy === x + y && ix(dx, dy) > i)) continue;
+    const before = V[(k + 3) % 4], after = V[(k + 1) % 4], P = V[k];
+    // the void one's two edges at this vertex: the one it shares with this tile, the one it shares with the diagonal
+    const [q, e1, e2] = !f1 ? [n1, before, after] : [n2, after, before];
+    const a = lerp(P, e1, RK), b = [P[0] - (e2[0] - P[0]) * RK, P[1] - (e2[1] - P[1]) * RK];
+    fills.push([q, [P, a, ...curve(a, b, P), b], k]);
+  }
+  // faces: the tile's (straight edges at their own depth, curves into the void), then the fills' curves. A ramp is a
+  // slab of even thickness: it hangs faces into the void only, its neighbours meet it at its corners.
+  const n = pts.length;
+  for (let j = 0; j < n; j++) {
+    const p = pts[j], q = pts[(j + 1) % n], t = tag[j];
+    if (t === 1 || t === 2) {
+      const nx = t === 1 ? x + 1 : x, ny = t === 1 ? y : y + 1, open = !floor(nx, ny);
+      const D = ramp ? (open ? deep : 0) : (t === 1 ? T.se[i] : T.sw[i]) * HS;
+      if (D > 0) hang(ctx, R, i, j, p, q, C, D, open && map.voidFace, f);
+    } else if (t === -1 && deep > 0) hang(ctx, R, i, j, p, q, C, deep, map.voidFace, f);
+  }
+  for (const [, poly] of fills) for (let j = 1; j < poly.length - 1; j++) if (deep > 0) hang(ctx, R, i, 20 + j, poly[j], poly[j + 1], poly[0], deep, map.voidFace, f);
+  // the tops: this tile's paving clipped to its outline (a ramp's tilted, a triangle at a time, on the planes through
+  // its corners), and moved into each notch it fills
+  const path = (poly) => { ctx.beginPath(); ctx.moveTo(poly[0][0], poly[0][1]); for (let j = 1; j < poly.length; j++) ctx.lineTo(poly[j][0], poly[j][1]); ctx.closePath(); };
+  const paint = (poly, tri, ox, oy, pl) => {
+    ctx.save();
+    path(poly); ctx.clip();
+    if (tri) { path(tri); ctx.clip(); }
+    if (pl) ctx.transform(1, pl[0], 0, 1 + pl[1], 0, pl[2]);
+    ctx.drawImage(f.img, f.sx, f.sy, f.w, f.h, px - HW - 0.6 + ox, fy - (pl ? 0 : v * HS) - 0.6 + oy, TW + 1.2, TH + 1.2);
+    ctx.restore();
+  };
+  const planeOf = (a, b, c) => plane([F[a], F[b], F[c]], [-ch[a] * HS, -ch[b] * HS, -ch[c] * HS]);
+  const flat = ch.every((c) => c === ch[0]);
+  if (flat) paint(pts, null, 0, 0, null);
+  else {
+    // the two triangles either side of the T-B diagonal, each a little over the line so no seam shows
+    const m = 0.6, tT = [V[0][0], V[0][1] - m], tB = [V[2][0], V[2][1] + m];
+    paint(pts, [tT, [V[1][0] + 2, V[1][1]], tB], 0, 0, planeOf(0, 1, 2));
+    paint(pts, [tT, tB, [V[3][0] - 2, V[3][1]]], 0, 0, planeOf(0, 2, 3));
+  }
+  for (const [q, poly, k] of fills) {
+    const ox = (q[0] - q[1]) * HW, oy = (q[0] + q[1]) * HH;
+    if (flat) paint(poly, null, ox, oy, null);
+    else paint(poly, null, ox, oy, planeOf((k + 3) % 4, k, (k + 1) % 4));
   }
 }
 
@@ -419,8 +550,11 @@ export function occluderObj(map, i) {
 
 /** World px a creature's sprite rides above its tile's ground while it hops up or drops down a step (0 at rest). */
 export function hopZ(o, map) {
-  const lv = map.hgt[map.tileIdx(o.x, o.y)];
+  const ti = map.tileIdx(o.x, o.y), lv = map.hgt[ti];
   if (o._hopMap !== map) { o._hopMap = map; o._lv = lv; o._hop = null; return 0; }
+  // on and off a ramp the ground itself carries them (the elevation is smooth there): no hop
+  if (map.rampTile && (map.rampTile[ti] || map.rampTile[o._ti ?? ti])) { o._ti = ti; o._lv = lv; o._hop = null; return 0; }
+  o._ti = ti;
   const now = (hp) => {
     const t = clamp((G.time - hp.t0) / hp.dur, 0, 1);
     return hp.from * (1 - (hp.up ? 1 - (1 - t) * (1 - t) : t * t)) + hp.arc * Math.sin(Math.PI * t);

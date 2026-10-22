@@ -330,13 +330,14 @@ export const HUD = {
     set('bossSub', boss && boss.raid ? boss.raid.label() : '', (v) => { $('#boss-sub').textContent = v; });
     set('bossWard', !!(boss && boss.ward < 1), (v) => { $('#boss-bar').classList.toggle('warded', v); });
     const forest = w?.biome?.id === 'dark_forest';
-    const sand = (w?.biome?.id === 'sea_of_sand' || forest) && w.overworldScenario?.hud ? w.overworldScenario.hud : null;
+    const breach = !!w?.breach;
+    const sand = (w?.biome?.id === 'sea_of_sand' || forest || breach) && w.overworldScenario?.hud ? w.overworldScenario.hud : null;
     set('sandHud', sand ? `${sand.title}|${sand.beat}|${sand.total}|${sand.progress}|${sand.timer}` : '', (v) => {
       const panel=$('#sand-objective');
       panel.classList.toggle('hidden',!sand);
       if(sand){
         $('#sand-title').textContent=sand.title;
-        $('#sand-beat').textContent=forest?`Glades ${sand.beat}/${sand.total}`:`Area ${sand.beat}/${sand.total}`;
+        $('#sand-beat').textContent=forest?`Glades ${sand.beat}/${sand.total}`:breach?`Shrines ${sand.beat}/${sand.total}`:`Area ${sand.beat}/${sand.total}`;
         $('#sand-progress').textContent=sand.progress;
         $('#sand-timer').textContent=sand.timer?`Time ${sand.timer}`:'';
       }

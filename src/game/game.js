@@ -11,6 +11,7 @@ import { loadGearArt } from '../core/gearart.js';
 import { preloadBarFx } from '../gfx/artfx.js';
 import { SKILLS } from '../data/skills.js';
 import { setClassItems, setRingContext, SEAL_GAP } from '../data/items.js';
+import { BREACH_BIOME, BREACH_WALLS } from '../data/biomes.js';
 import { BIOMES, BETA_BIOMES, BIOME_BY_ID, TOWN_BIOME, drawBiome, biomeChoices, takeBiome, mixPartner, recordBiomeVisit } from '../data/biomes.js';
 import { CLASSES } from '../data/classes.js';
 import { generateDungeon, isRaidDepth } from '../world/dungeon.js';
@@ -30,6 +31,9 @@ import { createDarkForestRun } from './darkforest.js';
 import { generateDarkForest } from '../world/darkforest.js';
 import { loadDarkForestTrees } from '../gfx/darkforest.js';
 import { generateMountain } from '../world/mountain.js';
+import { generateBreach } from '../world/breach.js';
+import { createBreachRun, chestAt, breachMonster } from './breach.js';
+import { breachDepth, breachLevel, BREACH_ART, BREACH_ARCHS } from '../data/breach.js';
 import { createMountainRun } from './mountain.js';
 import { castle3dTick } from './castle3d.js';
 import { useTerrain } from '../gfx/terrain.js';
@@ -254,6 +258,8 @@ export const game = {
       get label() { return `Portal — Depth ${G.char.depth}`; },
       use: () => this.confirmDungeon(),
     }];
+    // THE ETERNAL BREACH's purple portal (game.confirmBreach, docs/ETERNAL_BREACH.md)
+    if (t.breach) world.portals.push({ x: t.breach.x, y: t.breach.y, active: true, breach: true, color: '#a040ff', reach: 1.7, label: 'THE ETERNAL BREACH', use: () => this.confirmBreach() });
     // the hero steps out of the portal, a little way down its road toward the square
     const P = t.portal, C = t.center, l = Math.hypot(C.x - P.x, C.y - P.y) || 1;
     let arrive = [P.x + ((C.x - P.x) / l) * 3.2, P.y + ((C.y - P.y) / l) * 3.2];
@@ -373,6 +379,7 @@ export const game = {
     if (biome.id === 'sea_of_sand') return loadSeaOfSandPack();
     if (biome.id === 'castle') return Promise.all([loadCastlePack(), loadCastle3D(), loadDarkForestTrees()]);
     if (biome.id === 'dark_forest') return Promise.all([loadBiomeArt(biome), loadDarkForestTrees()]);
+    if (biome.challenge) return loadBiomeArt(biome); // the Breach's two packs (pack, wallPack, moreFloors/morePacks)
     if (biome.id === 'mountainside') return Promise.all([loadBiomeArt(BIOME_BY_ID.dark_forest), loadDarkForestTrees()]); // its floors, props and pines
     if (!biome.overworld) return Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]);
     return Promise.resolve();
@@ -562,15 +569,16 @@ export const game = {
   useTownPortal() {
     UI.dialog({
       title: 'Return to Town?',
-      html: `<p>You will return to Herrington Hollow. Depth ${G.char.depth} will be re-forged when you come back.</p>`,
+      html: `<p>You will return to Herrington Hollow. ${G.world?.breach ? `Floor ${G.world.breach.floor} of the Eternal Breach` : `Depth ${G.char.depth}`} will be re-forged when you come back.</p>`,
       buttons: [{ label: 'Stay' }, { label: 'Return', fn: () => { sfx('portal'); this.enterTown(); } }],
     });
   },
 
   useExit(world, exit) {
     const c = G.char;
-    if (!exit.active) { floatText(exit.x, exit.y, 70, world.overworldScenario ? 'Sealed — complete the shrine trial!' : 'Sealed — slay the guardian!', '#ff6040', 13, { life: 1.6 }); sfx('error'); return; }
-    this.portalChoice(world);
+    if (!exit.active) { floatText(exit.x, exit.y, 70, world.breach ? 'Sealed — the Breach Heart still beats!' : world.overworldScenario ? 'Sealed — complete the shrine trial!' : 'Sealed — slay the guardian!', '#ff6040', 13, { life: 1.6 }); sfx('error'); return; }
+    if (world.breach) this.breachExit(world);
+    else this.portalChoice(world);
   },
 
   /**
@@ -647,6 +655,7 @@ export const game = {
   onPlayerDeath(src) {
     const c = G.char;
     const w = G.world;
+    if (w && w.breach) return this.breachDeath(src);
     c.deaths = (c.deaths || 0) + 1;
     const depth = w && w.kind === 'dungeon' ? w.depth : c.depth;
     const n = addDefiance(c, depth);
@@ -671,6 +680,133 @@ export const game = {
         UI.log(`You awaken in Herrington Hollow. The descent begins anew at Depth ${c.depth}.`, '#ff8060');
         UI.log(`<b style="color:#ff6a3a">Defiance ${n}</b>: ${defianceText(n)} until you break past Depth ${c.defiance.block + 4}.`, '#ffb080');
       });
+    }, 1700);
+  },
+
+  // ------------------------------------------------------------ THE ETERNAL BREACH (docs/ETERNAL_BREACH.md)
+  /** The highest Breach floor the hero may enter: one past the best floor beaten. */
+  breachOpen() { const b = G.char?.breach; return (b?.best || 0) + 1; },
+
+  /** The purple portal: pick a floor (any up to one past the best beaten) and step in. */
+  confirmBreach(floor) {
+    const c = G.char, top = this.breachOpen(), pick = Math.min(top, Math.max(1, floor || top));
+    const opt = (n) => {
+      const L = breachLevel(n), won = c.breach?.cleared?.[n] || 0;
+      return `<option value="${n}"${n === pick ? ' selected' : ''}>Floor ${n} — as deadly as Depth ${breachDepth(n)} (monster level ${L})${won ? ` · beaten ${won}x` : n === top ? ' · new' : ''}</option>`;
+    };
+    const floors = [];
+    for (let n = top; n >= 1; n--) floors.push(opt(n));
+    const d = UI.dialog({
+      title: 'THE ETERNAL BREACH', cls: 'breach-dialog',
+      html: `<p>The purple portal opens on <b style="color:#c080ff">a broken world floating in the void</b>: sixteen islands joined by walkways, held by the Breach's own monsters.</p>
+        <p class="dim">Win the shrines on the medium and large islands (scenarios and boss fights), lifting the wards on the walkways as you go; then face the floor's keeper at the Breach Heart. Floor N is as deadly as standard Depth 10&times;N. Falling here costs no Defiance and leaves your descent where it is.</p>
+        <label class="velscour-message-label" for="breach-floor">Floor</label><select id="breach-floor" class="velscour-biome-select">${floors.join('')}</select>
+        <p class="breach-warn" id="breach-warn"></p>`,
+      buttons: [{ label: 'Not yet' }, { label: 'Enter the Breach', cls: 'red', fn: () => this.enterBreach(+d.box.querySelector('#breach-floor').value) }],
+    });
+    const sel = d.box.querySelector('#breach-floor'), warn = d.box.querySelector('#breach-warn');
+    const upd = () => { const L = breachLevel(+sel.value); warn.innerHTML = L > c.level + 4 ? `<b style="color:#ff6050">Monsters there are level ${L}; you are level ${c.level}. Expect to die.</b>` : ''; };
+    sel.addEventListener('change', upd); upd();
+    return d;
+  },
+
+  enterBreach(floor) {
+    const c = G.char;
+    floor = Math.max(1, Math.min(this.breachOpen(), floor | 0 || 1));
+    c.breach ||= { best: 0, cleared: {} };
+    c.breach.floor = floor;
+    const loading = document.getElementById('loading');
+    document.getElementById('loading-text').textContent = `Into the Eternal Breach — Floor ${floor}…`;
+    loading.classList.remove('hidden');
+    sfx('portal');
+    setTimeout(async () => {
+      try { await this.loadLevelArt(BREACH_BIOME); } catch (e) { console.warn(e); }
+      try {
+        this.buildBreach(floor);
+        const w = G.world;
+        await loadArtFor(BREACH_ART.map((a) => a.id), true).catch((e) => console.warn(e)); // the Breach's six atlases (~1.6 MB)
+        await warmLevelArt(w);
+        releaseLevelArt(BREACH_BIOME);
+      } finally { loading.classList.add('hidden'); }
+    }, 40);
+  },
+
+  buildBreach(floor, seed = G.breachSeed ?? (Math.random() * 1e9) | 0) { // G.breachSeed: tests
+    const c = G.char, old = G.world, B = BREACH_BIOME, depth = breachDepth(floor), lvl = breachLevel(floor);
+    c.breach ||= { best: 0, cleared: {} };
+    const a = biomeTileSet(B), b = biomeTileSet(BREACH_WALLS);
+    // the Eternal Breach's floors and scatter, and both packs' walls, arches and doors for the ruins
+    const tileset = { ...a, walls: { ...a.walls, ...b.walls }, families: [...a.families, ...b.families], arches: { ...a.arches, ...b.arches }, doors: { ...a.doors, ...b.doors }, parts: [a, b] };
+    keepTileSets(tileset);
+    const gen = generateBreach(floor, B, tileset, null, seed);
+    const world = new World('dungeon', { map: gen.map, tileset, biome: B, depth, props: gen.props, torches: [], wallHangings: [], looks: gen.looks, townTiles: null, buildings: [] });
+    world.breach = { floor, seed }; world.breachBridges = gen.bridges; world.rooms = [];
+    world.chests = gen.chests.map((ch) => chestAt(world, ch.x, ch.y, ch.rare, depth));
+    const [sx, sy] = gen.start;
+    let tp = [sx + 1.4, sy - 1.2];
+    if (!gen.map.walkable(tp[0], tp[1])) tp = gen.map.randomNear(sx, sy, 2);
+    const exit = { x: gen.exit[0], y: gen.exit[1], type: 'exit', active: false, color: '#4a3a5a', reach: 1.6, label: 'Sealed — the Breach Heart', use: () => this.useExit(world, exit) };
+    world.portals = [{ x: tp[0], y: tp[1], type: 'town', active: true, color: '#3a8aff', reach: 1.6, label: 'Town Portal', use: () => this.useTownPortal() }]; // the exit appears when the Heart is won
+    for (const s of gen.spawns) {
+      for (let i = 0; i < s.n; i++) {
+        const [x, y] = i === 0 ? [s.x, s.y] : gen.map.randomNear(s.x, s.y, 1.6);
+        const rank = i === 0 ? s.rank : 'normal';
+        const m = makeMonster(world, s.arch, B, lvl + (rank === 'normal' ? 0 : 1), rank, x, y, Math.random() < 0.25 ? 1 : 0, gen.looks.pick(s.arch));
+        breachMonster(m);
+        world.add(m);
+      }
+    }
+    world.roster = BREACH_ARCHS;
+    world.onBossAwake = () => {};
+    world.onBossKilled = () => {};
+    world.overworldScenario = createBreachRun(world, gen, B, floor, () => {
+      exit.active = true; exit.color = '#c050ff'; exit.label = 'Exit — onward or home';
+      world.portals.push(exit);
+      addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#c050ff', 5));
+      sfx('gate'); UI.refresh(); this.autosave();
+    });
+    this.setWorld(world, gen.start, old);
+    world.night = true;
+    HUD.setArea(`The Eternal Breach — Floor ${floor}`, `As deadly as Depth ${depth}`);
+    playMusic('wilds', { delay: 3 + Math.random() * 10 }); setAmbience('eternal_breach');
+    UI.centerMsg('THE ETERNAL BREACH', `Floor ${floor} · as deadly as Depth ${depth}`, 3);
+    UI.log(`Floor ${floor} of the Eternal Breach: win the shrines on the medium and large islands to lift the wards on the walkways, then face the keeper of the <b style="color:#ff70d0">Breach Heart</b>.`, '#d8b0ff');
+    this.autosave();
+  },
+
+  /** The exit on a beaten floor: on to the next floor, or home. opts.auto: auto-play's call (opts.town: it wants to shop). */
+  breachExit(world, opts = {}) {
+    const next = world.breach.floor + 1;
+    if (Auto.on) Auto.transitT = 3;
+    if (opts.auto) {
+      if (opts.town || !Auto.breachReady(next)) { UI.log(opts.town ? 'Auto-play heads back to town to trade.' : `Auto-play judges Floor ${next} too deadly for now and heads home.`, '#8fe0ff'); sfx('portal'); this.enterTown(); }
+      else this.enterBreach(next);
+      return;
+    }
+    UI.dialog({
+      title: `Breach Floor ${world.breach.floor} Sealed`,
+      html: `<p>The Heart is still. Deeper in the Breach lies <b style="color:#c080ff">Floor ${next}</b>, as deadly as Depth ${breachDepth(next)} (monster level ${breachLevel(next)}).</p>`,
+      buttons: [{ label: 'Return to Town', fn: () => { sfx('portal'); this.enterTown(); } }, { label: `On to Floor ${next}`, cls: 'red', fn: () => this.enterBreach(next) }],
+    });
+  },
+
+  /** Death in the Breach: back to town with no Defiance, the descent untouched. */
+  breachDeath(src) {
+    const c = G.char, floor = G.world.breach.floor;
+    c.deaths = (c.deaths || 0) + 1;
+    c.breach.deaths = (c.breach.deaths || 0) + 1;
+    G.smiteArmed = false;
+    const killer = src ? (src.owner ? src.owner.name : src.name) : null;
+    stopMusic();
+    if (Auto.on) Auto.breachDied();
+    this.autosave();
+    setTimeout(() => {
+      deathScreen(breachDepth(floor), killer, () => {
+        const p = G.player;
+        p.dead = false; p.buffs = []; p.recompute(); p.hp = p.maxHp; p.mana = p.maxMana;
+        this.enterTown();
+        UI.log(`The Breach casts you out. Floor ${floor} waits beyond the purple portal; your descent still stands at Depth ${c.depth}.`, '#c890ff');
+      }, { where: `on Floor ${floor} of the Eternal Breach`, note: 'Your gear, levels and skills endure, and the Breach takes no toll on your descent. Grow stronger and try the floor again.' });
     }, 1700);
   },
 
@@ -711,6 +847,7 @@ export const game = {
       if (top && top.querySelector('.dialog-box')) top.dispatchEvent(new PointerEvent('pointerdown'));
     }
     this.tickPick(dt);
+    Auto.tickDest(dt); // auto-play's Standard/Breach menu in town
     const pauseMenus = G.settings.pauseMenus !== false && w.kind === 'dungeon' && ui.anyOpen();
     G.paused = ui.modal || pauseMenus;
     if (G.hitStop > 0) { G.hitStop -= dt; controls.update(0); }

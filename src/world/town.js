@@ -115,9 +115,9 @@ function rollTown(tileset, seed, last) {
       else if (shoulder && d <= r + 0.75 && mat[i] === 0 && use[i] !== 1) mat[i] = 1;
     }
   };
-  const lane = (x0, y0, x1, y1, r, m, shoulder, stopAtEdge) => {
+  const lane = (x0, y0, x1, y1, r, m, shoulder, stopAtEdge, RR = R) => {
     let x = x0, y = y0;
-    const pts = [], phase = R(0, TAU), wig = R(0.25, 0.6);
+    const pts = [], phase = RR(0, TAU), wig = RR(0.25, 0.6);
     for (let k = 0; k < 400; k++) {
       const d = Math.hypot(x1 - x, y1 - y);
       if (d < 0.6) break;
@@ -152,6 +152,18 @@ function rollTown(tileset, seed, last) {
     const d = Math.hypot(x + 0.5 - portal.x, y + 0.5 - portal.y), i = I(x, y);
     if (d < 5) keep[i] = 1;
     if (d < 3.1) { if (use[i] === 4) use[i] = 0; mat[i] = d < 1.2 ? 4 : 1; use[i] = 1; }
+  }
+  // THE ETERNAL BREACH's purple portal across the plaza from the dungeon portal, on its own road and yard. Rolled from
+  // a second generator, so the roads and plaza of every hero's town stay as they were (a building may move aside).
+  const brng = new RNG((seed ^ 0x6b7ea5) >>> 0), BR = (a, b) => brng.range(a, b);
+  const aB = aP + Math.PI + BR(-0.7, 0.7), dB = Math.min(maxD(aB), BR(13, 18));
+  const breach = { x: Math.floor(C.x + Math.cos(aB) * dB) + 0.5, y: Math.floor(C.y + Math.sin(aB) * dB) + 0.5 };
+  roads.push(lane(C.x + 0.5, C.y + 0.5, breach.x, breach.y, 1.3, 2, false, false, BR));
+  for (let y = Math.floor(breach.y - 4); y <= breach.y + 4; y++) for (let x = Math.floor(breach.x - 4); x <= breach.x + 4; x++) {
+    if (!inb(x, y)) continue;
+    const d = Math.hypot(x + 0.5 - breach.x, y + 0.5 - breach.y), i = I(x, y);
+    if (d < 4.2) keep[i] = 1;
+    if (d < 2.8) { mat[i] = d < 1.2 ? 4 : 1; use[i] = 1; }
   }
   // puddles on the dirt
   for (let i = rng.int(3, 7); i > 0; i--) {
@@ -383,7 +395,7 @@ function rollTown(tileset, seed, last) {
   for (const road of roads) for (let i = 6; i < road.length && lamps < 10; i += rng.int(10, 16)) {
     const [x, y] = road[i], a = rng.chance(0.5) ? 1 : -1, n = road[Math.min(road.length - 1, i + 1)], dir = Math.atan2(n[1] - y, n[0] - x) + a * Math.PI / 2;
     const lx = x + Math.cos(dir) * 1.6, ly = y + Math.sin(dir) * 1.6;
-    if (!stand || Math.hypot(lx - portal.x, ly - portal.y) < 7 || !free(lx, ly, true)) continue;
+    if (!stand || Math.hypot(lx - portal.x, ly - portal.y) < 7 || Math.hypot(lx - breach.x, ly - breach.y) < 6 || !free(lx, ly, true)) continue;
     props.push({ kind: 'scatter', x: lx, y: ly, spr: stand, k: tileset.k, light: 4.5 });
     blockAt(lx, ly); lamps++;
   }
@@ -392,7 +404,7 @@ function rollTown(tileset, seed, last) {
     const road = rng.pick(roads), at = road[Math.floor(R(0, 1) * road.length)];
     if (!at) continue;
     const x = at[0] + R(-1.6, 1.6), y = at[1] + R(-1.6, 1.6);
-    if (!verge(x, y) || Math.hypot(x - portal.x, y - portal.y) < 6 || Math.hypot(x - C.x, y - C.y) < 3) continue;
+    if (!verge(x, y) || Math.hypot(x - portal.x, y - portal.y) < 6 || Math.hypot(x - breach.x, y - breach.y) < 5 || Math.hypot(x - C.x, y - C.y) < 3) continue;
     if (prop(rng.pick(clutter), x, y)) n++;
   }
   // the forest: varied trees in the ragged band, and copses, single trees and brush on the open grass
@@ -408,7 +420,7 @@ function rollTown(tileset, seed, last) {
     for (let yy = Math.floor(y - r); yy <= Math.floor(y + r); yy++) for (let xx = Math.floor(x - r); xx <= Math.floor(x + r); xx++) if (!inb(xx, yy) || use[I(xx, yy)] !== 0 || keep[I(xx, yy)] || map.block[I(xx, yy)]) return false;
     return true;
   };
-  const nearKey = (x, y, d) => npcs.some((n) => Math.hypot(n.x - x, n.y - y) < d) || Math.hypot(x - portal.x, y - portal.y) < d + 2 || Math.hypot(x - C.x, y - C.y) < 6;
+  const nearKey = (x, y, d) => npcs.some((n) => Math.hypot(n.x - x, n.y - y) < d) || Math.hypot(x - portal.x, y - portal.y) < d + 2 || Math.hypot(x - breach.x, y - breach.y) < d + 2 || Math.hypot(x - C.x, y - C.y) < 6;
   for (let c = rng.int(1, 2); c > 0; c--) { // copses
     const cx = R(6, W - 6), cy = R(6, H - 6);
     for (let i = 0; i < 6; i++) { const x = Math.floor(cx + R(-2, 2)) + 0.5, y = Math.floor(cy + R(-2, 2)) + 0.5; if (open(x, y, 0.6) && !nearKey(x, y, 2.5)) prop(rng.pick(pine), x, y, { solid: true }); }
@@ -462,8 +474,8 @@ function rollTown(tileset, seed, last) {
     if (last) throw new Error('Could not connect every town entrance');
     return null;
   }
-  if (!last && (npcs.length < VENDORS.length || !reach(portal.x, portal.y) || npcs.some((n) => !reach(n.x, n.y)))) return null;
-  return { map, buildings, npcs, props, torches, wallHangings, portal, center: { x: C.x + 0.5, y: C.y + 0.5 }, start };
+  if (!last && (npcs.length < VENDORS.length || !reach(portal.x, portal.y) || !reach(breach.x, breach.y) || npcs.some((n) => !reach(n.x, n.y)))) return null;
+  return { map, buildings, npcs, props, torches, wallHangings, portal, breach, center: { x: C.x + 0.5, y: C.y + 0.5 }, start };
 }
 
 function shuffle(a, rng) {
