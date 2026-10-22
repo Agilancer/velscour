@@ -1,0 +1,26 @@
+{
+  "enemies": 30,
+  "bosses": 10,
+  "all_humanoid_air_pirates": true,
+  "enemy_canvas_px": [
+    128,
+    192
+  ],
+  "enemy_height_ap_range": [
+    100,
+    104
+  ],
+  "boss_canvas_px": [
+    256,
+    320
+  ],
+  "boss_height_ap_range": [
+    180,
+    212
+  ],
+  "enemy_max_opaque_colors": 23,
+  "boss_max_opaque_colors": 31,
+  "all_binary_alpha": true,
+  "unique_hashes": 40,
+  "all_files_present": true
+}

@@ -1,0 +1,36 @@
+﻿id,category,name,file,size_px,colors,palette_budget,seam_edges_exact,source_cell,sha256
+SHIP-01,ship_planks,Tarblack Ship Oak,textures/ship_planks/SHIP-01_Tarblack_Oak.png,160x160,8,8,True,"1,1",6af0e0f85d18522dbe9fe1d2d8f25da5fcbac6d07a651114533f7de1517cda58
+SHIP-02,ship_planks,Salt-Worn Deck Oak,textures/ship_planks/SHIP-02_Salt_Worn_Oak.png,160x160,8,8,True,"1,2",e2f90621ac242a942a86e91a6489baa809096b114cfbdbc6edb3628892aeaa82
+SHIP-03,ship_planks,Violet-Caulking Teak,textures/ship_planks/SHIP-03_Violet_Teak.png,160x160,8,8,True,"1,3",17606d5480ea140d175ce56175c1c939de535053d6eb779884360aa0c65f82b6
+SHIP-04,ship_planks,Splintered Cypress,textures/ship_planks/SHIP-04_Splintered_Cypress.png,160x160,8,8,True,"1,4",5aa6046bba8c95d3a89f6133ceb48d56be07b49dac3c044715291e72e344f984
+SHIP-05,ship_planks,Red Mahogany Deck,textures/ship_planks/SHIP-05_Red_Mahogany.png,160x160,8,8,True,"1,5",eaa7662a8db152154f004b639fbce4e6fe30530e671b6c9e3f9aace1b6d3bdd0
+SHIP-06,ship_planks,Salt-Bleached Greyboards,textures/ship_planks/SHIP-06_Salt_Bleached_Greyboards.png,160x160,8,8,True,"1,6",2099e5220844ed169cf7fb60aac3d26a7854cba0d8319bd4ef75b6d988044cf3
+SHIP-07,ship_planks,Ember-Scorched Planks,textures/ship_planks/SHIP-07_Ember_Scorched.png,160x160,8,8,True,"2,1",8bb87922882598ebd250a0fea01783742fddf99bf4f548c8fc698e742d053408
+SHIP-08,ship_planks,Bone-Nail Deck Oak,textures/ship_planks/SHIP-08_Bone_Nail_Oak.png,160x160,8,8,True,"2,2",530a1dd2000136161df1507ba09102836fc12f693283b666380060eeb68a7896
+SHIP-09,ship_planks,Mossed Shipboard,textures/ship_planks/SHIP-09_Mossed_Shipboard.png,160x160,8,8,True,"2,3",bfd69f385ec6cefccae73f01cce97a928e20222e432c7755766b4831bb34fb9c
+SHIP-10,ship_planks,Black Walnut Rift-Seam,textures/ship_planks/SHIP-10_Black_Walnut_Rift_Seam.png,160x160,8,8,True,"2,4",b0bb2d7d9ba9c01c95ee7ee81558721ef9034e5a1a6e4410b1bd14b733017379
+MET-01,metal,Hammered Gunmetal,textures/metal/MET-01_Hammered_Gunmetal.png,160x160,8,8,True,"2,5",8cd43a74b25cefabfcbcdb861f7a3ab036ebabad042865cb60fb6c4558400b31
+MET-02,metal,Riveted Black Iron,textures/metal/MET-02_Riveted_Black_Iron.png,160x160,8,8,True,"2,6",2a0b8a73244f524aebeedb9bd861f42ef4b86b968183e273e6eda66215b6bfb0
+MET-03,metal,Flaked Iron Plate,textures/metal/MET-03_Flaked_Iron.png,160x160,8,8,True,"3,1",2e2e10e5e142a91b8266eae9451caa0b5d765db668d6dea48ead410676a3ecbf
+MET-04,metal,Pitted Tarnished Bronze,textures/metal/MET-04_Tarnished_Bronze.png,160x160,8,8,True,"3,2",4e4da10d64ad643ce38f8343b0665d5859f9fcd6dc985b33fc37b341d8c1ccc3
+MET-05,metal,Oxidized Green Copper,textures/metal/MET-05_Oxidized_Copper.png,160x160,8,8,True,"3,3",4baca79c7ac24eea783d283be4f168a12e1adc30839c21eb4d4e24544b00a9cc
+MET-06,metal,Tarnished Pale Silver,textures/metal/MET-06_Tarnished_Silver.png,160x160,8,8,True,"3,4",9f2d4873a6fe3c131e27f3c17652492c9a2280d306e527e8ac201b1aa1a14039
+MET-07,metal,Black Chainmail,textures/metal/MET-07_Black_Chainmail.png,160x160,8,8,True,"3,5",e51e7e9d0c37c2c0125849e374703878633b3960c6b26049c314c25c21374fff
+MET-08,metal,Scratched Blue Steel,textures/metal/MET-08_Scratched_Blue_Steel.png,160x160,8,8,True,"3,6",903cdf1ddda505a0fd242cc4b4f988690ba409efaebb0139a86d2d45b092d980
+MET-09,metal,Oxide-Stained Brass Sheet,textures/metal/MET-09_Oxide_Stained_Brass.png,160x160,8,8,True,"4,1",ab159e88163d554014d224aff80bab97de5324ee490a2ea87596b6043fb3134d
+MET-10,metal,Amethyst-Corroded Plate,textures/metal/MET-10_Amethyst_Corrosion.png,160x160,8,8,True,"4,2",fefe33423ae58ad19e338e1c71706f1cb37320aa1d05f57daaa9bc0b48b25824
+CLOTH-01,sailcloth,Coarse Sail Canvas,textures/sailcloth/CLOTH-01_Coarse_Sail_Canvas.png,160x160,8,8,True,"4,3",522c3846fe8c4e3cf72f9cbb37606c3f6d0cec90039c5d9e23d6dee1bebfed3a
+CLOTH-02,sailcloth,Stitched Charcoal Sailcloth,textures/sailcloth/CLOTH-02_Stitched_Charcoal.png,160x160,8,8,True,"4,4",66af3c3cb8ef156a284e6ee8454c3c7d954b467887055692367155975f6f029e
+CLOTH-03,sailcloth,Patched Dark Canvas,textures/sailcloth/CLOTH-03_Patched_Dark_Canvas.png,160x160,8,8,True,"4,5",f1fd791a5b693541450f01a31256d093a37c9b4a7949f151cf45f3d2c17e02e8
+CLOTH-04,sailcloth,Aged Cream Linen,textures/sailcloth/CLOTH-04_Aged_Cream_Linen.png,160x160,8,8,True,"4,6",3377c571c32e9e5bdc31c25f7f3425ad91de318c390f270a02bfe716e9097878
+CLOTH-05,sailcloth,Deep Plum Woven Sail,textures/sailcloth/CLOTH-05_Deep_Plum_Woven_Sail.png,160x160,8,8,True,"5,1",db1656d47ed1a5b111b26d896e04143afd7a7cb5b04b9a9095a431e1366d95fc
+WOOD-01,wood,End-Grain Timber,textures/wood/WOOD-01_End_Grain_Timber.png,160x160,8,8,True,"5,2",266e5b52d3f03905aaeabbd338a4bfa1d26d9491049bc77004066e23bee08fc5
+WOOD-02,wood,Scroll-Cut Blackwood,textures/wood/WOOD-02_Scroll_Cut_Blackwood.png,160x160,8,8,True,"5,3",17e968e305c44ffdeb64a2e64e156221365d430a6f1c1de400ab4bea032e9c03
+WOOD-03,wood,Rootwood Grain,textures/wood/WOOD-03_Rootwood_Grain.png,160x160,8,8,True,"5,4",9dfa3a1b0fcca033bf7b3d7e32ecb52681f9261751bd7a620fdd406ba5666e52
+WOOD-04,wood,Weathered Cedar,textures/wood/WOOD-04_Weathered_Cedar.png,160x160,8,8,True,"5,5",02bc5d6289104f268d19c0963d57139f076ee93caf987307e0315ee18fbe9cf1
+WOOD-05,wood,Violet-Streak Blackwood,textures/wood/WOOD-05_Violet_Streak_Blackwood.png,160x160,8,8,True,"5,6",026ba41f9ae70939ecda85e26df1104f26c3245371562a94abf05d8f493bcfe6
+GOLD-01,gold,Beaten Antique Gold,textures/gold/GOLD-01_Beaten_Antique_Gold.png,160x160,8,8,True,"6,1",e54d27202d6028920e2f4f115b9f70baf2750c76721d86fed04171b521371a63
+GOLD-02,gold,Scratched Gold Leaf,textures/gold/GOLD-02_Scratched_Gold_Leaf.png,160x160,8,8,True,"6,2",b012484725dded9b6e9318c5d73f182f4a52c39fc4d396505bbdfc769d4c2aed
+GOLD-03,gold,Gold with Amethyst Seams,textures/gold/GOLD-03_Amethyst_Seamed_Gold.png,160x160,8,8,True,"6,3",c3f18459e95bd50a1e7e3dae91a625291c953aa8bc8eb8976f5fdb2b75bc3c4d
+GOLD-04,gold,Hammered Reliquary Gold,textures/gold/GOLD-04_Hammered_Reliquary_Gold.png,160x160,8,8,True,"6,4",b58b2b926bffc8d0674fa819f1dc84ed5e1ce9c76b6ba1a0c5a2e1ee3e44dadd
+GOLD-05,gold,Gilded Charcoal Alloy,textures/gold/GOLD-05_Gilded_Charcoal_Alloy.png,160x160,8,8,True,"6,5",255a0f323f9c6b9d40d764a6bd4d56cd128d0a92c4f6219a84197157af7dc992

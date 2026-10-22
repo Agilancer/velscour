@@ -1,0 +1,894 @@
+{
+  "faction": "Air Pirates",
+  "style_reference": "VELScour / Grim Nocturne",
+  "enemy_frame_native_px": [
+    128,
+    192
+  ],
+  "boss_frame_native_px": [
+    256,
+    320
+  ],
+  "assets": [
+    {
+      "id": "AIR-E001",
+      "name": "Tarcoat Deckhand",
+      "role": "deckhand",
+      "description": "A soot-dark deckhand with a cutlass, rope harness, and pitch-stained coat.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_01.png",
+      "atlas_cell_row_major": 0,
+      "file": "enemies/AIR-E001_tarcoat_deckhand.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 100,
+      "scaled_art_px": [
+        96,
+        100
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "a85df222fcf8113020c38fbbf041f7149fb75bbde1e6f7b9b127236658b12207"
+    },
+    {
+      "id": "AIR-E002",
+      "name": "Saltwind Cutlass Raider",
+      "role": "boarder",
+      "description": "A fast boarding raider with a salt-bleached scarf and nicked cutlass.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_01.png",
+      "atlas_cell_row_major": 1,
+      "file": "enemies/AIR-E002_saltwind_cutlass_raider.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 102,
+      "scaled_art_px": [
+        97,
+        102
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "e16a445cbbcac474b9b808b0ac5fb2b6d0b9634de17351398be3c69d7b18f3fa"
+    },
+    {
+      "id": "AIR-E003",
+      "name": "Blackpowder Pistolier",
+      "role": "gunner",
+      "description": "A lean flintlock gunner with a brass powder flask and split-tail coat.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_01.png",
+      "atlas_cell_row_major": 2,
+      "file": "enemies/AIR-E003_blackpowder_pistolier.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 104,
+      "scaled_art_px": [
+        98,
+        104
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "3070a9473eab6a1d9905162e03d833e8ddd14979c72ee14ad6570a060745d2ee"
+    },
+    {
+      "id": "AIR-E004",
+      "name": "Boarding Pike Corsair",
+      "role": "pike fighter",
+      "description": "An armored corsair bracing a long hooked boarding pike across the body.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_01.png",
+      "atlas_cell_row_major": 3,
+      "file": "enemies/AIR-E004_boarding_pike_corsair.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 100,
+      "scaled_art_px": [
+        102,
+        100
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "c907e522a269720f250a82e29d2fbb36522475ba98e6bd09e969bb808cca9f73"
+    },
+    {
+      "id": "AIR-E005",
+      "name": "Chainhook Climber",
+      "role": "rigger",
+      "description": "A rope rigger with a grappling chain, climbing gloves, and a wind-whipped hood.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_01.png",
+      "atlas_cell_row_major": 4,
+      "file": "enemies/AIR-E005_chainhook_climber.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 102,
+      "scaled_art_px": [
+        98,
+        102
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "032ad1dc1c5a7222c1ba7cdd2d3c39628454a003870f5c01aa77234c59a4aef9"
+    },
+    {
+      "id": "AIR-E006",
+      "name": "Gale-Glass Harpooner",
+      "role": "harpooner",
+      "description": "A broad-shouldered harpooner in flight goggles with a compact deck harpoon.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_01.png",
+      "atlas_cell_row_major": 5,
+      "file": "enemies/AIR-E006_gale_glass_harpooner.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 104,
+      "scaled_art_px": [
+        100,
+        104
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "2f41bb130bba3b0972b774f919061570f0dce2beb73a0305ade8fa1f5424342b"
+    },
+    {
+      "id": "AIR-E007",
+      "name": "Powder-Keg Runner",
+      "role": "saboteur",
+      "description": "A nimble fuse runner with a satchel of sealed powder charges and a short blade.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_01.png",
+      "atlas_cell_row_major": 6,
+      "file": "enemies/AIR-E007_powder_keg_runner.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 100,
+      "scaled_art_px": [
+        65,
+        100
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "00138fd2010dd4897279986fe0bd3f8934f948bca3e68ddab48ad4407d09a059"
+    },
+    {
+      "id": "AIR-E008",
+      "name": "Crow's Nest Sharpshooter",
+      "role": "marksman",
+      "description": "A patient long-gun marksman wearing a narrow brim, brass sight, and feathered mantle.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_01.png",
+      "atlas_cell_row_major": 7,
+      "file": "enemies/AIR-E008_crow_s_nest_sharpshooter.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 102,
+      "scaled_art_px": [
+        106,
+        102
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "c76a5c4856705649bc369ac32953ce276a026531f2dadeefbbc473cc83238775"
+    },
+    {
+      "id": "AIR-E009",
+      "name": "Rift-Compass Navigator",
+      "role": "navigator",
+      "description": "A grim route-finder holding a violet-lit compass under a layered chart cloak.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_01.png",
+      "atlas_cell_row_major": 8,
+      "file": "enemies/AIR-E009_rift_compass_navigator.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 104,
+      "scaled_art_px": [
+        77,
+        104
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "0be58cfe252e5ff4efa965821f6ab6bfac3fd00cb95521069c2f3ecdb09e9fef"
+    },
+    {
+      "id": "AIR-E010",
+      "name": "Sky-Chart Thief",
+      "role": "scout",
+      "description": "A narrow figure with stolen charts, a half-mask, and two slim boarding knives.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_01.png",
+      "atlas_cell_row_major": 9,
+      "file": "enemies/AIR-E010_sky_chart_thief.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 100,
+      "scaled_art_px": [
+        98,
+        100
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "aa36efa286d5d4a2163f2576e718b16a1a627b69a7e76f4ac72a016d54f50ecc"
+    },
+    {
+      "id": "AIR-E011",
+      "name": "Quartermaster Breaker",
+      "role": "bruiser",
+      "description": "A stocky quartermaster with a heavy boarding axe and iron-reinforced leather.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_01.png",
+      "atlas_cell_row_major": 10,
+      "file": "enemies/AIR-E011_quartermaster_breaker.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 102,
+      "scaled_art_px": [
+        95,
+        102
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "b7783e6a612677072168b866645e6748289ec7630757268ca781468185d98842"
+    },
+    {
+      "id": "AIR-E012",
+      "name": "Red-Sash Duelist",
+      "role": "duelist",
+      "description": "A precise duelist with a swept-back hat, red sash, and long narrow sabre.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_01.png",
+      "atlas_cell_row_major": 11,
+      "file": "enemies/AIR-E012_red_sash_duelist.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 104,
+      "scaled_art_px": [
+        97,
+        104
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "312fc91686181eb2d4f791d4b945cb3b0cf3dcf0450829320021d6d55fbb39bc"
+    },
+    {
+      "id": "AIR-E013",
+      "name": "Brass-Mask Ship Surgeon",
+      "role": "field medic",
+      "description": "A masked field surgeon with a hooked knife, leather apron, and brass breathing mask.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_01.png",
+      "atlas_cell_row_major": 12,
+      "file": "enemies/AIR-E013_brass_mask_ship_surgeon.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 100,
+      "scaled_art_px": [
+        85,
+        100
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "039c8288395dec2e1d058dbe2811ec3ddd81524e1df3f25a4653419ceb411756"
+    },
+    {
+      "id": "AIR-E014",
+      "name": "Cinderbomb Grenadier",
+      "role": "grenadier",
+      "description": "A black-gloved bomber with a short blunderbuss, fuse braid, and smoke-dark coat.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_01.png",
+      "atlas_cell_row_major": 13,
+      "file": "enemies/AIR-E014_cinderbomb_grenadier.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 102,
+      "scaled_art_px": [
+        89,
+        102
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "754fd7051f796f2a055db929316c54d30f6b307c5a5f9faf82c9e4efcb3cfb3f"
+    },
+    {
+      "id": "AIR-E015",
+      "name": "Black-Banner Standard Bearer",
+      "role": "standard bearer",
+      "description": "A stern banner carrier with a violet-edged pennant and a boarding sword.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_01.png",
+      "atlas_cell_row_major": 14,
+      "file": "enemies/AIR-E015_black_banner_standard_bearer.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 104,
+      "scaled_art_px": [
+        98,
+        104
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "c23e3b91179fa93015274b2222c13dc3e7a8573ecd870027388d94ff02c2dd9e"
+    },
+    {
+      "id": "AIR-E016",
+      "name": "Hook-Leg Veteran",
+      "role": "veteran boarder",
+      "description": "A scarred pirate with a metal prosthetic leg, cutlass, and patched longcoat.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_02.png",
+      "atlas_cell_row_major": 0,
+      "file": "enemies/AIR-E016_hook_leg_veteran.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 100,
+      "scaled_art_px": [
+        90,
+        100
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "dc8ca9f8dc0ceaf72da1062d79a303a97e146f0fb207cc0010ee5e376151ae30"
+    },
+    {
+      "id": "AIR-E017",
+      "name": "Twin-Pistol Ratliner",
+      "role": "gunner",
+      "description": "A nimble rigging fighter with paired flintlocks, belt hooks, and a close-cut coat.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_02.png",
+      "atlas_cell_row_major": 1,
+      "file": "enemies/AIR-E017_twin_pistol_ratliner.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 102,
+      "scaled_art_px": [
+        83,
+        102
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "9c66762c1f7465c8975699497472ae7c58bd6cd65b7ae894501fc12782feba83"
+    },
+    {
+      "id": "AIR-E018",
+      "name": "Shipbreaker Mauler",
+      "role": "axe fighter",
+      "description": "A towering human raider wielding a two-handed boarding axe and layered shoulder leather.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_02.png",
+      "atlas_cell_row_major": 2,
+      "file": "enemies/AIR-E018_shipbreaker_mauler.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 104,
+      "scaled_art_px": [
+        103,
+        104
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "d811e54d2e6e1ad7b6010b42ca0b9384fe62e8bb56de1b705e8586f575cd97b4"
+    },
+    {
+      "id": "AIR-E019",
+      "name": "Storm-Eye Lookout",
+      "role": "lookout",
+      "description": "A hooded lookout with storm goggles, a spyglass, and a short boarding spear.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_02.png",
+      "atlas_cell_row_major": 3,
+      "file": "enemies/AIR-E019_storm_eye_lookout.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 100,
+      "scaled_art_px": [
+        77,
+        100
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "94e5d3db39ccce667483b7dce7a91489e3e42d37f84350e9b5eb0b5afccde189"
+    },
+    {
+      "id": "AIR-E020",
+      "name": "Violet-Fuse Saboteur",
+      "role": "saboteur",
+      "description": "A crouched saboteur carrying a violet fuse spool, hand charges, and a hooked knife.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_02.png",
+      "atlas_cell_row_major": 4,
+      "file": "enemies/AIR-E020_violet_fuse_saboteur.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 102,
+      "scaled_art_px": [
+        83,
+        102
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "1e8771dbca55e96169b512adbacf3a07e25a7588f4c504d869ab2d6a0a66e373"
+    },
+    {
+      "id": "AIR-E021",
+      "name": "Iron-Rib Captain's Guard",
+      "role": "bodyguard",
+      "description": "A disciplined human guard in ribbed blackened plate with a boarding glaive.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_02.png",
+      "atlas_cell_row_major": 5,
+      "file": "enemies/AIR-E021_iron_rib_captain_s_guard.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 104,
+      "scaled_art_px": [
+        86,
+        104
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "78b2714f704b5f7e9639af1b1b8b87358490d1232bc9e742afbc12f2b0929919"
+    },
+    {
+      "id": "AIR-E022",
+      "name": "Gallows-Rope Snarer",
+      "role": "rope fighter",
+      "description": "A lean rope fighter with a weighted noose line, climbing harness, and face wrap.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_02.png",
+      "atlas_cell_row_major": 6,
+      "file": "enemies/AIR-E022_gallows_rope_snarer.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 100,
+      "scaled_art_px": [
+        108,
+        100
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "1b75cbcd7ea15899b283401699ff045b54f042340f90d8b95aa324a023468034"
+    },
+    {
+      "id": "AIR-E023",
+      "name": "Windlass Crossbowman",
+      "role": "crossbowman",
+      "description": "A compact deck crossbow specialist with a crank winch and stormproof cloak.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_02.png",
+      "atlas_cell_row_major": 7,
+      "file": "enemies/AIR-E023_windlass_crossbowman.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 102,
+      "scaled_art_px": [
+        94,
+        102
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "d6e0094337190eaf66000175dcd4404213ad25fa89c86666225a66e7d07514a1"
+    },
+    {
+      "id": "AIR-E024",
+      "name": "Salt-Rust Boarding Shield",
+      "role": "shield fighter",
+      "description": "A shield-bearing pirate with a battered round buckler and a short naval axe.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_02.png",
+      "atlas_cell_row_major": 8,
+      "file": "enemies/AIR-E024_salt_rust_boarding_shield.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 104,
+      "scaled_art_px": [
+        84,
+        104
+      ],
+      "opaque_colors": 22,
+      "alpha": "binary",
+      "sha256": "62da50ab6d791fdcfae964a7ba782d575029df41c1b258f9f8386c83accf66e3"
+    },
+    {
+      "id": "AIR-E025",
+      "name": "Veil-Cloaked Infiltrator",
+      "role": "infiltrator",
+      "description": "A silent human infiltrator with a dark split cloak, narrow mask, and paired daggers.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_02.png",
+      "atlas_cell_row_major": 9,
+      "file": "enemies/AIR-E025_veil_cloaked_infiltrator.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 100,
+      "scaled_art_px": [
+        102,
+        100
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "73c4b8cc5e2430b9dc6c8ccc3bb6c3ac63bb1c6e8f434b947f32f4dbec9dbb5a"
+    },
+    {
+      "id": "AIR-E026",
+      "name": "Lantern-Bomb Mechanic",
+      "role": "engineer",
+      "description": "A soot-smeared mechanic with a wrench, violet signal lantern, and patched tool belt.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_02.png",
+      "atlas_cell_row_major": 10,
+      "file": "enemies/AIR-E026_lantern_bomb_mechanic.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 102,
+      "scaled_art_px": [
+        92,
+        102
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "98434a9d93873920d3d422a5741824565a05dd4ad2f4d18fc0bfcba852093e03"
+    },
+    {
+      "id": "AIR-E027",
+      "name": "Mourning-Coat Corsair",
+      "role": "corsair",
+      "description": "A pale-faced corsair in a long mourning coat with a curved sabre and brass buttons.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_02.png",
+      "atlas_cell_row_major": 11,
+      "file": "enemies/AIR-E027_mourning_coat_corsair.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 104,
+      "scaled_art_px": [
+        100,
+        104
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "7b75e4d34be0c8510fc9439b06655a8c8c09c8e596612448f4387418e8b8d733"
+    },
+    {
+      "id": "AIR-E028",
+      "name": "Tarred Sail-Ripper",
+      "role": "boarding specialist",
+      "description": "A scarred sail-cutter with twin hooked knives and tarred canvas armor.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_02.png",
+      "atlas_cell_row_major": 12,
+      "file": "enemies/AIR-E028_tarred_sail_ripper.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 100,
+      "scaled_art_px": [
+        108,
+        100
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "2cf3d1ab65a6c0318124836bf34ebbdaf9cd55cd03f90631835083d862af6140"
+    },
+    {
+      "id": "AIR-E029",
+      "name": "Copper-Goggle Powderman",
+      "role": "powder gunner",
+      "description": "A masked powderman with copper goggles, a stubby hand cannon, and spare cartridges.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_02.png",
+      "atlas_cell_row_major": 13,
+      "file": "enemies/AIR-E029_copper_goggle_powderman.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 102,
+      "scaled_art_px": [
+        97,
+        102
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "a884454fdf9e3a2497936d3052cb55937722692c277b6efb05be965c793f2e30"
+    },
+    {
+      "id": "AIR-E030",
+      "name": "Last-Ratline Enforcer",
+      "role": "enforcer",
+      "description": "A relentless human enforcer with a cleaver-like cutlass and heavy climbing chains.",
+      "kind": "enemy",
+      "atlas_source": "enemy_atlas_02.png",
+      "atlas_cell_row_major": 14,
+      "file": "enemies/AIR-E030_last_ratline_enforcer.png",
+      "frame_px": [
+        128,
+        192
+      ],
+      "height_ap": 104,
+      "scaled_art_px": [
+        103,
+        104
+      ],
+      "opaque_colors": 23,
+      "alpha": "binary",
+      "sha256": "bdd871708deefd89eb364549fcb1ade81c8da5351b4346f00bc2892dd23ac791"
+    },
+    {
+      "id": "AIR-B001",
+      "name": "Admiral Veyl, the Black-Sail Overlord",
+      "role": "fleet admiral",
+      "description": "A towering admiral in layered black sailcloth and grave steel, carrying a long violet-edged boarding blade.",
+      "kind": "boss",
+      "atlas_source": "boss_atlas.png",
+      "atlas_cell_row_major": 0,
+      "file": "bosses/AIR-B001_admiral_veyl__the_black_sail_overlord.png",
+      "frame_px": [
+        256,
+        320
+      ],
+      "height_ap": 192,
+      "scaled_art_px": [
+        190,
+        192
+      ],
+      "opaque_colors": 31,
+      "alpha": "binary",
+      "sha256": "eff2322e0a837e3ba82b37d4b814e1305dcbb3669856210d97a4d05092ff9703"
+    },
+    {
+      "id": "AIR-B002",
+      "name": "Captain Sable Vane, Storm Widow",
+      "role": "captain",
+      "description": "A human captain with a wind-torn mantle, brass storm mask, and paired dueling pistols.",
+      "kind": "boss",
+      "atlas_source": "boss_atlas.png",
+      "atlas_cell_row_major": 1,
+      "file": "bosses/AIR-B002_captain_sable_vane__storm_widow.png",
+      "frame_px": [
+        256,
+        320
+      ],
+      "height_ap": 200,
+      "scaled_art_px": [
+        175,
+        200
+      ],
+      "opaque_colors": 31,
+      "alpha": "binary",
+      "sha256": "38f470e3d93efcb2cf1cc8e55f9d98a8767c774c91eefa381b45985bd1166c82"
+    },
+    {
+      "id": "AIR-B003",
+      "name": "The Hollow Commodore",
+      "role": "commodore",
+      "description": "A tall, fully humanoid corsair sealed inside an empty-looking black plate harness with a hooked polearm.",
+      "kind": "boss",
+      "atlas_source": "boss_atlas.png",
+      "atlas_cell_row_major": 2,
+      "file": "bosses/AIR-B003_the_hollow_commodore.png",
+      "frame_px": [
+        256,
+        320
+      ],
+      "height_ap": 184,
+      "scaled_art_px": [
+        191,
+        184
+      ],
+      "opaque_colors": 31,
+      "alpha": "binary",
+      "sha256": "72f1fa2860ac552a31f5ee74d9dbe3735af5caaedfc68f377de6d9a90c693074"
+    },
+    {
+      "id": "AIR-B004",
+      "name": "Madam Stormglass",
+      "role": "navigator captain",
+      "description": "A severe woman pirate with a violet compass cage, chart mantle, and ceremonial sabre.",
+      "kind": "boss",
+      "atlas_source": "boss_atlas.png",
+      "atlas_cell_row_major": 3,
+      "file": "bosses/AIR-B004_madam_stormglass.png",
+      "frame_px": [
+        256,
+        320
+      ],
+      "height_ap": 190,
+      "scaled_art_px": [
+        184,
+        190
+      ],
+      "opaque_colors": 31,
+      "alpha": "binary",
+      "sha256": "f0238d47205f039de94d04152cc0d076142b7eddba78bb2707c61947667c9f59"
+    },
+    {
+      "id": "AIR-B005",
+      "name": "The Gallows King",
+      "role": "boarding tyrant",
+      "description": "A massive human boarder in dangling chain harness and a broad executioner's boarding axe.",
+      "kind": "boss",
+      "atlas_source": "boss_atlas.png",
+      "atlas_cell_row_major": 4,
+      "file": "bosses/AIR-B005_the_gallows_king.png",
+      "frame_px": [
+        256,
+        320
+      ],
+      "height_ap": 210,
+      "scaled_art_px": [
+        219,
+        210
+      ],
+      "opaque_colors": 31,
+      "alpha": "binary",
+      "sha256": "d9e052b92ac278bc2fd7e8fe3c6bd859ac18301e9a79bfa330fbbbaeef7fb841"
+    },
+    {
+      "id": "AIR-B006",
+      "name": "Brass-Beak, the Rookery Duelist",
+      "role": "duelist",
+      "description": "A masked human champion in brass beak visor, feathered collar, and long twin blades.",
+      "kind": "boss",
+      "atlas_source": "boss_atlas.png",
+      "atlas_cell_row_major": 5,
+      "file": "bosses/AIR-B006_brass_beak__the_rookery_duelist.png",
+      "frame_px": [
+        256,
+        320
+      ],
+      "height_ap": 180,
+      "scaled_art_px": [
+        175,
+        180
+      ],
+      "opaque_colors": 31,
+      "alpha": "binary",
+      "sha256": "c446d2ad23baa222f42b9413a7662de9dcc0be01d8dd0ea9f3d1ba2b718aabc6"
+    },
+    {
+      "id": "AIR-B007",
+      "name": "Red Gale Corsair",
+      "role": "corsair captain",
+      "description": "A ruthless human captain in a crimson stormcoat, gold trim, and a broad-backed cutlass.",
+      "kind": "boss",
+      "atlas_source": "boss_atlas.png",
+      "atlas_cell_row_major": 6,
+      "file": "bosses/AIR-B007_red_gale_corsair.png",
+      "frame_px": [
+        256,
+        320
+      ],
+      "height_ap": 198,
+      "scaled_art_px": [
+        195,
+        198
+      ],
+      "opaque_colors": 31,
+      "alpha": "binary",
+      "sha256": "4e25127620c55a2e63b6eb550a4de86c29ad443d6e864b5d113c02e2e4b6405a"
+    },
+    {
+      "id": "AIR-B008",
+      "name": "Warden of the Rookery",
+      "role": "fleet jailer",
+      "description": "A broad humanoid jailer with a locked iron cuirass, key chains, and a barbed boarding hook.",
+      "kind": "boss",
+      "atlas_source": "boss_atlas.png",
+      "atlas_cell_row_major": 7,
+      "file": "bosses/AIR-B008_warden_of_the_rookery.png",
+      "frame_px": [
+        256,
+        320
+      ],
+      "height_ap": 200,
+      "scaled_art_px": [
+        198,
+        200
+      ],
+      "opaque_colors": 31,
+      "alpha": "binary",
+      "sha256": "8f1ff62815d19855650b4d68554af2cf1752f88a4f8f4f3b72795b6d62f0a0ee"
+    },
+    {
+      "id": "AIR-B009",
+      "name": "Lord Thundershroud",
+      "role": "storm captain",
+      "description": "A human captain under a monumental ragged cloak, steel storm helm, and twin hand cannons.",
+      "kind": "boss",
+      "atlas_source": "boss_atlas.png",
+      "atlas_cell_row_major": 8,
+      "file": "bosses/AIR-B009_lord_thundershroud.png",
+      "frame_px": [
+        256,
+        320
+      ],
+      "height_ap": 212,
+      "scaled_art_px": [
+        218,
+        212
+      ],
+      "opaque_colors": 31,
+      "alpha": "binary",
+      "sha256": "44ec440dd2f582039dc307cdbe84b8004188429371f27b09275f97b63d5569db"
+    },
+    {
+      "id": "AIR-B010",
+      "name": "The Last Boarding Saint",
+      "role": "flagship champion",
+      "description": "A towering human champion in tarnished gold and plum, carrying a banner-lance and cutlass.",
+      "kind": "boss",
+      "atlas_source": "boss_atlas.png",
+      "atlas_cell_row_major": 9,
+      "file": "bosses/AIR-B010_the_last_boarding_saint.png",
+      "frame_px": [
+        256,
+        320
+      ],
+      "height_ap": 190,
+      "scaled_art_px": [
+        182,
+        190
+      ],
+      "opaque_colors": 31,
+      "alpha": "binary",
+      "sha256": "f9e778392d86bf949c2fa5048c344186c84622c0edfaaa366df9ed40b1380044"
+    }
+  ]
+}
