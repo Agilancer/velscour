@@ -1,7 +1,9 @@
 // The Sky Battle (docs/SKY_BATTLE.md): plays a whole battle per scenario at simulated speed with the hero unkillable,
 // clearing the boarders as they land, and checks every phase comes in order: the arrival, five boarding waves with the
 // mid-boss after the third, the parley (2,000 talks), the flagship's duel, the hooks, the two captains, the open exit and
-// the hoard chest. Screenshots of each phase go to tools/tests/out/sky_<variant>_*.png.
+// the hoard chest. The cut scenes' camera is checked too: every spoken line frames its speaker between the letterbox
+// bars, and the flagship is in the shot when her title card shows. Screenshots of each phase go to
+// tools/tests/out/sky_<variant>_*.png.
 //   node tools/tests/skyship.js                # the clear-sky scenario
 //   node tools/tests/skyship.js storm,night    # these scenarios
 //   node tools/tests/skyship.js all [auto]     # all eight; `auto` lets auto-play fight instead of clearing the deck
@@ -25,9 +27,20 @@ const ids = arg === 'all' ? ALL : arg.split(',');
   const run = (sec, until = null, clear = !auto) => page.evaluate(async ([sec, until, clear]) => {
     const { G, game } = window.VELSCOUR;
     const { kill } = await import('/src/game/combat.js');
+    const { Cine } = await import('/src/game/cinema.js');
+    const { camera } = await import('/src/core/view.js');
+    const cam = (window.__skyCam ||= { lines: 0, miss: [], galleon: null });
+    /** Is world px (x, y) in the frame between the letterbox bars, clear of the edges? */
+    const inFrame = ([x, y]) => { const [sx, sy] = camera.toScreen(x, y), bar = G.H * 0.13; return sx > G.W * 0.1 && sx < G.W * 0.9 && sy > bar + 4 && sy < G.H - bar - 4; };
     for (let i = 0; i < sec * 30; i++) {
       G.time += 1 / 30; game.update(1 / 30);
       const r = G.world.skyRun;
+      if (G.cine) {   // the camera: each line frames its speaker once the shot has settled, the flagship is in her card's shot
+        const L = Cine.line, st = Cine.steps[Cine.i];
+        if (L && L.focus && st && st.say && !st._checked && L.t >= st.dur * 0.6) { st._checked = true; cam.lines++; if (!inFrame(L.focus())) cam.miss.push(`${r.phase}: ${L.name} "${L.text.slice(0, 30)}"`); }
+        const C = Cine.card, g = G.world.sky.galleon;
+        if (C && C.title === 'THE BLACK MOURNING' && C.t > 1 && cam.galleon === null && g) { const { HW, HH } = await import('/src/core/view.js'); cam.galleon = inFrame([(g.x - g.y) * HW, (g.x + g.y) * HH - g.lv * 4 - 120]); }
+      }
       (window.__skySeen ||= new Set()).add(r.phase + (r.phase === 'waves' ? r.wave : ''));
       if (clear && !G.cine && i % 10 === 0) for (const m of G.world.creatures) if (m.sky && !m.dead && !m.entering && m.team === 'enemy') kill(m, G.player);
       if (G.player.hp < G.player.maxHp * 0.5) G.player.hp = G.player.maxHp;
@@ -79,8 +92,11 @@ const ids = arg === 'all' ? ALL : arg.split(',');
     s = await run(30, 'done');
     expect(s.completed && s.exit && s.chest, `${id}: victory opens the exit and lays the hoard (${JSON.stringify(s)})`);
     s = await run(2); await shot(`sky_${id}_victory`);
-    console.log(`  phases: ${(await page.evaluate(() => [...window.__skySeen])).join(' > ')}; talk #${s.talk}, ${errors.length} errors so far`);
-    await page.evaluate(() => { window.__skySeen = new Set(); });
+    const cam = await page.evaluate(() => window.__skyCam);
+    expect(cam.miss.length === 0, `${id}: every line frames its speaker (${cam.miss.length} of ${cam.lines} missed: ${cam.miss.slice(0, 3).join('; ')})`);
+    expect(cam.galleon === true, `${id}: the flagship is in the shot under her title card (${cam.galleon})`);
+    console.log(`  phases: ${(await page.evaluate(() => [...window.__skySeen])).join(' > ')}; talk #${s.talk}; ${cam.lines} lines framed; ${errors.length} errors so far`);
+    await page.evaluate(() => { window.__skySeen = new Set(); window.__skyCam = null; });
   }
   if (fails.length) { console.log(`${fails.length} FAILED`); process.exitCode = 1; }
   report(errors);

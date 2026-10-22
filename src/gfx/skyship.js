@@ -15,6 +15,7 @@ import { glowSprite } from './vfx.js';
 import { castle3dState } from './castle3dart.js';
 import { enemyImage } from '../core/enemyart.js';
 import { drawRuneblade3D } from './runeblade3d.js';
+import { Cine } from '../game/cinema.js';
 import { isoX, isoY } from '../core/view.js';
 import { OX, OY, LV, FC_H } from '../world/skyship.js';
 
@@ -51,8 +52,9 @@ function cloudSprite(w, h, tones, seed) {
   c.getContext('2d').drawImage(cpu, 0, 0);
   return c;
 }
-/** Build a Sky Battle world's clouds now (game.js warmLevelArt: behind the loading screen, not on the first frame). */
-export function warmSky(world) { if (world.sky) skyArt(world.sky.v); }
+/** Build a Sky Battle world's clouds (and the director's own art: the knights' sheets) now (game.js warmLevelArt: behind
+ *  the loading screen, not on the first frame). */
+export function warmSky(world) { if (world.sky) { skyArt(world.sky.v); if (world.sky.warm) world.sky.warm(); } }
 /** The sky's clouds and gradient for a variant (built once per variant). */
 function skyArt(v) {
   if (v._art) return v._art;
@@ -62,6 +64,8 @@ function skyArt(v) {
     far: layer(v.far, 30, 40, 90, 16, 30, 9, v.fog ? 0.6 : 0.85, 0.05, 3),
     mid: layer(v.mid, 14, 50, 120, 20, 40, 22, v.fog ? 0.75 : 1, 0.12, 5),
     wisps: Array.from({ length: v.fog ? 7 : 3 }, (_, i) => ({ img: cloudSprite(90 + (i * 37) % 70, 30 + (i * 13) % 20, v.mid, 900 + i), u: hash(77, i), v: hash(78, i) })),
+    // the bank the flagship comes out of, and the cloud the arrival's camera comes down through
+    bank: Array.from({ length: 6 }, (_, i) => cloudSprite(110 + (i * 29) % 70, 34 + (i * 11) % 18, v.mid, 700 + i)),
   };
   return v._art;
 }
@@ -120,18 +124,23 @@ function prop(ctx, name, frame, x, y, rot = 0, k = 1) {
   const st = castle3dState(), sp = st && st.sprites && st.sprites[name];
   if (!sp) return false;
   const f = sp.f[frame % sp.f.length], w = f[3] / sp.S * k, h = f[4] / sp.S * k;
-  ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot);
+  if (!rot) { ctx.drawImage(st.imgs[f[0]], f[1], f[2], f[3], f[4], x - w / 2, y - h / 2, w, h); return true; }
+  // turned: the base transform times translate + rotate, set once (no save/restore: chains are hundreds of links)
+  const B = baseT || ctx.getTransform(), c = Math.cos(rot), sn = Math.sin(rot);
+  ctx.setTransform(B.a * c + B.c * sn, B.b * c + B.d * sn, B.c * c - B.a * sn, B.d * c - B.b * sn, B.a * x + B.c * y + B.e, B.b * x + B.d * y + B.f);
   ctx.drawImage(st.imgs[f[0]], f[1], f[2], f[3], f[4], -w / 2, -h / 2, w, h);
-  ctx.restore();
+  ctx.setTransform(B);
   return true;
 }
+let baseT = null;   // skyFx's world transform while it draws turned props
 const ctx_alpha = (a) => { CTX.globalAlpha = a; };
 /** A painted pirate standing at world px (x, y), feet there, h px tall, flipped to face the ironclad. */
 function crewman(art, x, y, h, flip, bob) {
   const img = enemyImage(art, null);
   if (!img) return;
   const w = h * img.width / img.height, fx = (img._art && img._art.fx != null ? img._art.fx : img.width / 2) / img.width;
-  CTX.save(); CTX.translate(x, y - bob); if (flip) CTX.scale(-1, 1);
+  if (!flip) { CTX.drawImage(img, x - w * fx, y - bob - h, w, h); return; }
+  CTX.save(); CTX.translate(x, y - bob); CTX.scale(-1, 1);
   CTX.drawImage(img, -w * fx, -h, w, h); CTX.restore();
 }
 export function skyWorld(ctx, world) {
@@ -139,6 +148,7 @@ export function skyWorld(ctx, world) {
   CTX = ctx;
   const fr = Math.floor(G.time * 12), t = G.time;
   const items = [];
+  if (S.bank) cloudBank(ctx, S.bank, S.v, false);
   if (S.galleon && S.galleon.alpha > 0) items.push(S.galleon);
   for (const b of S.boats) if (b.alpha > 0) items.push(b);
   items.sort((a, b) => a.x + a.y - (b.x + b.y));
@@ -151,14 +161,56 @@ export function skyWorld(ctx, world) {
       const [cx, cy] = tilePx(o.x + c.x, o.y + c.z, o.lv + (c.y || 0) * LV);
       crewman(c.art, cx, cy, c.h, c.flip, Math.abs(Math.sin(t * 6 + c.ph)) * 2);
     }
+    if (o.flag) whiteFlag(ctx, ...tilePx(o.x, o.y - 5, o.lv), t);
     if (o.burn) for (let i = 0; i < o.burn.length; i++) {   // fires on a hit hull
       const [bx, by] = tilePx(o.x + o.burn[i][0], o.y + o.burn[i][2], o.lv + o.burn[i][1] * LV), k = 0.7 + 0.3 * Math.sin(t * 13 + i * 3);
       ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(glowSprite('#ff7020'), bx - 30 * k, by - 40 * k, 60 * k, 60 * k); ctx.globalCompositeOperation = 'source-over';
     }
   }
+  if (S.bank) cloudBank(ctx, S.bank, S.v, true);
   // the ironclad's two engine props, turning behind and beside the hull
   const st = castle3dState();
   if (st && st.sprites) for (let i = 0; i < 2; i++) sprite('ship_prop_' + i, Math.floor(t * 20), 0, 0);
+}
+// the flagship's cloud bank: puffs round her middle [dx, dy, scale] (world px), behind her and in front; the front ones
+// part and blow astern as she pushes out, the ones behind thin slowly
+const BANK_BACK = [[-430, -70, 3.2], [380, -130, 3], [-10, -270, 3.4], [-220, 150, 2.8], [270, 170, 3]];
+const BANK_FRONT = [[-520, 70, 2.6], [-250, -20, 3.4], [110, 50, 3.6], [430, 0, 3], [-70, 230, 3.2], [210, -250, 2.8]];
+function cloudBank(ctx, B, v, front) {
+  const A = skyArt(v), t = B.t, [cx, cy] = tilePx(B.x, B.y, B.lv);
+  const a = front ? clamp(1 - Math.max(0, t - 0.5) / 2.2, 0, 1) : clamp(1 - Math.max(0, t - 2) / 5, 0, 1);
+  if (a <= 0) return;
+  const spread = front ? 1 + t * 0.45 : 1 + t * 0.06, drift = (front ? 46 : 14) * t;
+  ctx.imageSmoothingEnabled = false;
+  (front ? BANK_FRONT : BANK_BACK).forEach(([dx, dy, k], i) => {
+    const img = A.bank[(i + (front ? 3 : 0)) % A.bank.length], w = img.width * k, h = img.height * k;
+    ctx.globalAlpha = a * (front ? 0.95 : 0.85);
+    ctx.drawImage(img, cx - 16 + dx * spread + DIR[0] * drift - w / 2, cy - 105 + dy * spread + DIR[1] * drift - h / 2, w, h);
+  });
+  ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 1;
+}
+/** A white flag of truce on a pole at (x, y) (world px, the pole's foot), streaming astern: 2 px columns of cloth,
+ *  16 frames of its wave baked once. */
+let flagFrames = null;
+const FLAG = { H: 62, w: 30, h: 18, cw: 36, ch: 74 };
+function whiteFlag(ctx, x, y, t) {
+  const { H, w, h, cw, ch } = FLAG;
+  if (!flagFrames) {
+    flagFrames = makeCanvas(cw * 16, ch);
+    const g = flagFrames.getContext('2d');
+    for (let fr = 0; fr < 16; fr++) {
+      const ox = fr * cw + cw - 4, ph = fr / 16 * TAU;   // the pole near the right edge, the cloth streaming left
+      g.fillStyle = '#3e2c1c'; g.fillRect(ox - 1, ch - H, 3, H);
+      g.fillStyle = '#c8b070'; g.fillRect(ox - 2, ch - H - 3, 5, 4);
+      for (let px = 0; px < w; px += 2) {
+        const u = px / w, wave = Math.sin(ph - px * 0.2) * 3 * u, slope = Math.cos(ph - px * 0.2);
+        g.fillStyle = slope > 0.4 ? '#fbf8ef' : slope > -0.4 ? '#e4dfd2' : '#bdb6a6';
+        g.fillRect(ox - 2 - px, Math.round(ch - H + 2 + px * 0.28 + wave), 2, Math.round(h * (1 - u * 0.25)));
+      }
+    }
+  }
+  const fr = Math.floor(((t * 7) / TAU) * 16) % 16;
+  ctx.drawImage(flagFrames, fr * cw, 0, cw, ch, Math.round(x) - cw + 4, Math.round(y) - ch, cw, ch);
 }
 
 // ------------------------------------------------------------------ world space, after everyone
@@ -188,6 +240,7 @@ export function skyFx(ctx, world) {
     glow(ctx, rx, ry - 30, 60 + fl * 60, gc, 0.35 + fl * 0.5);
   }
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  baseT = ctx.getTransform();
   // grappling chains: baked iron links along a sagging curve from the thrower's rail, the baked hook at the head
   for (const h of S.hooks) {
     const k = clamp(h.t, 0, 1), [ax, ay] = tilePx(...h.from), [bx, by] = tilePx(...h.to);
@@ -209,6 +262,7 @@ export function skyFx(ctx, world) {
     ctx.globalCompositeOperation = 'lighter'; glow(ctx, x, y, 11, '#ff9a40', 0.5); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     prop(ctx, 'sky_ball', 0, x, y, 0, 0.75);
   }
+  baseT = null;
   // ropes: from their anchor high above to the hands of whoever swings or slides on them
   for (const r of S.ropes) {
     const [ax, ay] = tilePx(...r.a()), m = r.m, hx = isoX(m.x, m.y), hy = isoY(m.x, m.y) - (m.z || 0) - (m.artH || 50) * (m.scale || 1) * 0.85;
@@ -282,11 +336,14 @@ export function skyFront(ctx, W, H, world, dt) {
   if (v.fog && world.player) {
     const fw = Math.ceil(W / 6), fh = Math.ceil(H / 6);
     if (!fogCanvas || fogCanvas.width !== fw || fogCanvas.height !== fh) fogCanvas = makeCanvas(fw, fh);
-    const f = fogCanvas.getContext('2d'), [sx, sy] = camera.tileToScreen(world.player.x, world.player.y, 30);
+    // in a cut scene the clear patch moves to the shot's subject (the middle of the screen) and opens with the zoom
+    const f = fogCanvas.getContext('2d'), [hx, hy] = camera.tileToScreen(world.player.x, world.player.y, 30), k = Cine.bars;
+    const sx = (hx * (1 - k) + G.W / 2 * k) * dpr, sy = (hy * (1 - k) + G.H / 2 * k) * dpr;
     f.globalCompositeOperation = 'source-over'; f.clearRect(0, 0, fw, fh);
     f.fillStyle = 'rgba(176,186,194,0.8)'; f.fillRect(0, 0, fw, fh);
     f.globalCompositeOperation = 'destination-out';
-    const r = (G.H / 6) * 0.5 * (S.fogR ?? 1), cx = sx / 6, cy = sy / 6, g = f.createRadialGradient(cx, cy, r * 0.25, cx, cy, r);
+    const open = 1 + k * (0.5 + 0.5 * clamp(camera.zoom / (Cine.zoom0 || 1), 0.5, 3));
+    const r = (H / 6) * 0.5 * (S.fogR ?? 1) * open, cx = sx / 6, cy = sy / 6, g = f.createRadialGradient(cx, cy, r * 0.25, cx, cy, r);
     g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
     f.fillStyle = g; f.fillRect(0, 0, fw, fh);
     ctx.drawImage(fogCanvas, 0, 0, W, H);
@@ -301,6 +358,21 @@ export function skyFront(ctx, W, H, world, dt) {
     ctx.drawImage(c.img, Math.round(u * pw - 450 * dpr), Math.round(w * ph - 200 * dpr), c.img.width * 6 * dpr, c.img.height * 6 * dpr);
   }
   ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 1;
+  // the arrival: the camera comes down through a cloud, which parts from the middle of the screen
+  if (S.through > 0) {
+    const k = 1 - S.through, B = A.bank, R = Math.max(W, H);
+    ctx.globalAlpha = clamp(S.through * 2 - 1, 0, 1); ctx.fillStyle = v.mid[2]; ctx.fillRect(0, 0, W, H);
+    ctx.imageSmoothingEnabled = false;
+    for (let i = 0; i < 14; i++) {
+      const img = B[i % B.length], ang = i * 2.4 + 0.4, d = (0.05 + 0.85 * k * k) * R * (0.55 + 0.45 * hash(i, 3));
+      const sc = (6 + 14 * k) * dpr * (0.8 + 0.4 * hash(i, 4)), w = img.width * sc, h = img.height * sc;
+      const x = W / 2 + Math.cos(ang) * d - w / 2, y = H / 2 + Math.sin(ang) * d * 0.7 - h / 2;
+      if (x > W || y > H || x + w < 0 || y + h < 0) continue;   // parted off the screen
+      ctx.globalAlpha = clamp(S.through * 1.5, 0, 1);
+      ctx.drawImage(img, x, y, w, h);
+    }
+    ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 1;
+  }
   // a lightning flash lights the whole sky
   if (S.flash > 0) { ctx.fillStyle = `rgba(225,235,255,${Math.min(0.75, S.flash)})`; ctx.fillRect(0, 0, W, H); }
 }
