@@ -21,6 +21,7 @@ import { drawLootLabels } from './loot.js';
 import { castleTileDressing, drawCastleParticles, drawCastleWater } from '../gfx/castleground.js';
 import { drawRim, RIM } from './creature.js';
 import { drawNebula } from '../gfx/breach.js';
+import { drawWyrm } from '../gfx/breachdragon.js';
 import { skyBack, skyWorld, skyFx, skyFront, drawSkyGate } from '../gfx/skyship.js';
 import { drawCine } from './cinema.js';
 import { drawTerrain, drawColumn, occludersFor, occludersOfRect, occluderObj, clipAdd, hiddenBehind, standKey, hopZ, drawSky, terrainShade, HS } from '../gfx/terrain.js';
@@ -683,6 +684,7 @@ export function renderWorld(ctx, world) {
   const ty1 = clamp(Math.ceil(Math.max(...corners.map((c) => c[1]))) + 1, 0, map.h - 1);
 
   if (world.sky) skyWorld(ctx, world); // the pirates' galleon and boats, behind the ship
+  if (world.wyrm) drawWyrm(ctx, world.wyrm, 'void'); // the Breach's wyrm deep under the islands (gfx/breachdragon.js)
   drawFloors(ctx, world, vr, hq);
   if (map.castleMat) drawCastleWater(ctx, world, vr, G.time, G.touch);
   ctx.imageSmoothingQuality = hq;
@@ -940,6 +942,7 @@ export function renderWorld(ctx, world) {
     for (const [tx, ty] of G.debugMarks || []) tile(tx, ty, 'rgba(0,255,255,0.55)');
   }
   if (world.sky) skyFx(ctx, world); // furnaces, braziers, chains, cannon shot, lightning
+  if (world.wyrm) drawWyrm(ctx, world.wyrm, 'top'); // the Breach's wyrm flying over everything
   drawParticles(ctx, vr);
   for (const h of top) h.draw(ctx);
   ctx.globalCompositeOperation = 'lighter';

@@ -84,3 +84,35 @@ export function breachReward(floor, first, rnd = Math.random) {
   if (first) return r < O.firstMythic ? 5 : r < O.firstMythic + O.firstLegendary ? 4 : 3;
   return r < O.repeatMythic ? 5 : r < O.repeatMythic + O.repeatLegendary ? 4 : r < O.repeatMythic + O.repeatLegendary + O.repeatEpic ? 3 : 2;
 }
+
+// ------------------------------------------------------------------ the Ethereal Wyrm (game/breachdragon.js)
+/** Its colours: body (x the baked scales), accent (belly, spines, fins), glow; its breath element; the heads and
+ * claws cut from the set 2 dragons (tools/breachdragon3d.html). The violet one is the Breach's own and the commonest. */
+export const WYRM_VARIANTS = [
+  { id: 'violet', name: 'Ethereal', body: '#7040b8', accent: '#ead8ff', glow: '#b060ff', el: 'arcane', heads: ['amethyst'], claw: 'amethyst', w: 4 },
+  { id: 'red', name: 'Crimson', body: '#c03024', accent: '#ffd890', glow: '#ff5030', el: 'fire', heads: ['scarlet', 'crimson'], claw: 'crimson', w: 1 },
+  { id: 'black', name: 'Black', body: '#2c2634', accent: '#8a8096', glow: '#ff3a60', el: 'shadow', heads: ['obsidian'], claw: 'obsidian', w: 1 },
+  { id: 'green', name: 'Jade', body: '#2e9a52', accent: '#f4ecb8', glow: '#50ff90', el: 'poison', heads: ['jade', 'emerald'], claw: 'jade', w: 1 },
+  { id: 'gold', name: 'Golden', body: '#e0a42c', accent: '#fff2c8', glow: '#ffd860', el: 'holy', heads: ['golden'], claw: 'golden', w: 1 },
+  { id: 'silver', name: 'Silver', body: '#aab2c4', accent: '#eef4ff', glow: '#b8dcff', el: 'light', heads: ['silver'], claw: 'bone', w: 1 },
+  { id: 'white', name: 'White', body: '#f0eef8', accent: '#ffffff', glow: '#e4f6ff', el: 'cold', heads: ['ivory', 'bone'], claw: 'bone', w: 1 },
+];
+export const WYRM_NAMES = ["Ysh'vael", 'Nhalakor', 'Veyrith', 'Ossarune', "Khel'mora", 'Saevrith', 'Umbrathiel', 'Iolanthe', 'Corvaxis', "Thal'zuun", 'Mirrovane', 'Quessadrel'];
+/** A floor's wyrm: floor 1 is always the violet one; after that a weighted draw. */
+export function wyrmVariant(floor, rnd = Math.random) {
+  if (floor <= 1) return WYRM_VARIANTS[0];
+  let r = rnd() * WYRM_VARIANTS.reduce((s, v) => s + v.w, 0);
+  for (const v of WYRM_VARIANTS) if ((r -= v.w) < 0) return v;
+  return WYRM_VARIANTS[0];
+}
+/** It grows longer, faster and deadlier floor by floor, and learns new attacks. */
+export function wyrmStats(floor) {
+  const f = Math.max(1, floor);
+  return {
+    segs: Math.min(60, 30 + f * 2), scale: Math.min(1.9, 1.35 + f * 0.03),
+    speed: Math.min(10, 6.4 + f * 0.24), turn: Math.min(2.4, 1.55 + f * 0.04),
+    passes: Math.min(5, 2 + Math.floor(f / 4)), away: [Math.max(18, 40 - f), Math.max(30, 70 - f * 2)],
+    hpMul: 3 + f * 0.15, dmgMul: 1 + f * 0.04,
+    breath: f >= 2, orbs: f >= 4, brood: f >= 3, coil: f >= 6, attackCd: Math.max(2.6, 5 - f * 0.12),
+  };
+}
