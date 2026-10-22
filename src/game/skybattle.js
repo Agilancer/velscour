@@ -34,7 +34,7 @@ const ARRIVE = ['So this is the sky lane. Nice view. Terrible neighbours.', 'Thr
   'Air Pirates, huh? Let them come.', 'Never look down. Never look down. ...I looked down.', 'Steady deck, strong wind, black sails coming. Perfect.',
   'Every pirate in the sky is coming for this ship. Good. Saves me the walk.', 'Hold the deck. Hold it until there is nobody left to hold it from.'];
 const VICTORY = ['And STAY down.', 'That is how you hold a deck.', 'Tell Velscour his fleet needs practice.', 'The sky is ours. For today.', 'Next time, bring a bigger boat.'];
-/** The knights' animations for their lines: a townsfolk pose and how the body moves (drawNpc's n.pose). */
+/** The knights' animations for their lines: a townsfolk pose and how the body moves (drawNpc's n.motion). */
 export const KNIGHT_ACTS = {
   laugh: ['happy', (t) => ({ dy: Math.abs(Math.sin(t * 16)) * 3 })],
   cry: ['scared', (t) => ({ dx: Math.sin(t * 40) * 1.2, sy: 1 - Math.abs(Math.sin(t * 6)) * 0.04 })],
@@ -228,7 +228,7 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
       n.first = q.name.split(' ')[0];
       n.name = `Sky-Knight ${n.first}`;
       n.lift = 0;   // px over the ground under them (standing on a boat or the flagship)
-      n.pose = () => { const a = n.actPose ? n.actPose() : null; return a ? { ...a, dy: (a.dy || 0) + n.lift } : { dy: n.lift }; };
+      n.motion = () => { const a = n.actPose ? n.actPose() : null; return a ? { ...a, dy: (a.dy || 0) + n.lift } : { dy: n.lift }; };
       world.npcs.push(n);
       return n;
     };
