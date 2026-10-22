@@ -31,7 +31,7 @@ Anything tall on the starboard side or near the stern would hide the deck.
 ## Scale and orientation
 1 unit = 1 game tile (64 x 32 px), and heights use the same unit, so a 60 px hero is 1.53 units tall. Bows point along -Z,
 which the game's iso camera (30 degrees down) shows toward the **upper right**, so the decks lie on the tile grid.
-Air Pirate sprites (`assets/source/air_pirates/`, from the Air Pirate Expansion Pack) stand on the decks for scale.
+Air Pirate sprites (the Air Pirate Expansion Pack, `assets/source/enemies/air/`; its catalogue in `assets/source/air_pirates/`) stand on the decks for scale.
 
 Both big ships share one deck plan: the main deck at y = 0 is about 26 x 12 between the bulkheads, a raised quarterdeck
 (+2.2) covers the stern 20% and holds the boss spot, and a raised forecastle (+2.0) covers the bow. Two central stairs

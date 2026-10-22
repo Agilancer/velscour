@@ -14,6 +14,35 @@ Contents
 
 ---
 
+## October 22, 2026 — THE SKY BATTLE: airships, Air Pirates, cut scenes, eight skies (branch `feat/sky-battle`)
+- **Request:** the airships (tools/airship3d*.js, docs/AIRSHIP_3D.md) as a biome. The hero steps out of the portal
+  built into the heroes' ship. Then come boarding waves of increasing difficulty, a mid-boss, more waves, and an
+  unskippable cinematic parley with the next boss and two palette-swapped townsfolk knights (2,000 conversations; the
+  knights tell why they serve Velscour and never join). The flagship arrives with a cannon duel, the ships close, and
+  hooks are thrown from both ships. Two big bosses jump aboard for the final fight. Then the portal turns into the
+  exit and a better-odds chest appears. Eight scenario variants with weather (one at night), some of it affecting play.
+- **Mid-request changes:**
+  - The knights are the hero's buddies and fight alongside. They leap in with big blade strikes: the Death Knight's 3D
+    Runeblade, recoloured to each knight's armour, drawn only for the strikes.
+  - Bosses do ship things: climb and dive, swing on ropes, call boarders down ropes from the sky.
+  - Bosses stand about 1.5 heroes tall.
+  - No placeholder art: the hook, chain and cannonball are baked from the texture pack.
+- **Done:** `skyship` biome, "The Sky Lanes", in the overworld rotation. Velscour's skull also reaches it (`sky`,
+  `sky storm`, ...) and it has entries on the HAIL list. Full write-up: [SKY_BATTLE.md](SKY_BATTLE.md). The PR is
+  from a worktree based on `origin/main`, so the main checkout's uncommitted work is untouched.
+- **Design calls made without asking:**
+  - The tall parts and every boat sit to port (behind the deck in the iso view).
+  - The knights betray their own fleet when it fires on the truce (that reconciles "they never join" with "they fight
+    alongside").
+  - The chest gives a 35% chance of a guaranteed Epic (20% of those a Legendary).
+  - The cut scenes are 2D pans and zooms of the iso camera (the art is baked from one angle).
+- **Verified:** `skyship.js all` (every phase of all eight scenarios, no errors), `skyship.js clear,storm auto`,
+  `data_check`, `flow`, `worldwide_biomes`.
+- **Open:**
+  - The Credits parade (not on main yet) needs lines for the 40 Air Pirates.
+  - Phone layout and frame cost not measured.
+  - Boats dock only to port.
+
 ## October 21, 2026 — more hero gear: Nocturne collection 04 armors (branch `feat/mountainside`)
 
 - **Request:** add `VELSCOUR_Nocturne_Collection_04_128_Armor_Source_Artwork.zip` (eight armors per class) to the game.

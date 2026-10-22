@@ -6,20 +6,9 @@
 import * as THREE from 'three';
 import { Parts, box, rod, tris, flag, sm, hull, slab, plume, smoke } from './airship3d.js';
 
-const L = 40, ZS = 20, QD_S = 0.2, FC_S = 0.8, QD_H = 2.2, FC_H = 2.0, BW = 1.1, WALL = 0.35;
+import { L, ZS, QD_S, FC_S, QD_H, FC_H, WALL, TOWER, zAt, sAt, beam, sheer, keel, prof, inner, deckAt, hullX, yAtK, STAIR_W, QD_STAIRS, FC_STAIRS } from '../src/world/skyship.js';
 const lerp = (a, b, t) => a + (b - a) * t;
-const zAt = (s) => ZS - s * L, sAt = (z) => (ZS - z) / L;
-const beam = (s) => s < 0.1 ? 5.6 + 0.6 * sm(0, 0.1, s) : s < 0.6 ? 6.2 : 6.2 * (1 - Math.pow((s - 0.6) / 0.4, 2.2));
-const sheer = (s) => BW + QD_H * (1 - sm(0.17, 0.23, s)) + FC_H * sm(0.77, 0.83, s) + 1.0 * Math.pow(sm(0.88, 1, s), 2);
-const keel = (s) => -6.0 + 1.4 * (1 - sm(0, 0.3, s)) + 6.6 * Math.pow(sm(0.58, 1, s), 1.3);
-// armored section: a vertical belt (the gun decks), a chine, a V bottom to a keel blade
-const prof = (k) => k < 0.42 ? 1 - 0.03 * k / 0.42 : k < 0.72 ? lerp(0.97, 0.72, (k - 0.42) / 0.3) : lerp(0.72, 0.04, (k - 0.72) / 0.28);
-const inner = (s) => Math.max(0, beam(s) - WALL);
-const deckAt = (s) => s < QD_S ? QD_H : s > FC_S ? FC_H : 0;
-const TOWER = [0.835, 0.945];
-const hullX = (s, y) => beam(s) * prof((sheer(s) - y) / (sheer(s) - keel(s)));   // the hull's half-width at height y
-const yAtK = (s, k) => sheer(s) - (sheer(s) - keel(s)) * k;
-export const IRONCLAD = { L, QD_S, FC_S, QD_H, FC_H, BW, zAt, sAt, beam, inner, deckAt, sheer, keel,
+export const IRONCLAD = { L, QD_S, FC_S, QD_H, FC_H, zAt, sAt, beam, inner, deckAt, sheer, keel,
   blocked: (x, z) => { const s = sAt(z); return s > TOWER[0] - 0.01 && s < TOWER[1] + 0.02; } };
 
 /** A pointed (gothic) arch outline: width w, sides straight up to hs, apex at h. */
@@ -34,9 +23,13 @@ function archShape(w, hs, h) {
 const archFrame = (w, hs, h, t, depth) => new THREE.ExtrudeGeometry(Object.assign(archShape(w + t * 2, hs + t * 0.2, h + t * 1.5), { holes: [archShape(w, hs, h)] }),
   { depth, bevelEnabled: false, curveSegments: 6 });
 
-export function buildIronclad(M) {
+/** opts.bake: leave out what moves or glows at runtime (portal swirl, flames, plumes, steam, sparks, engine props) and
+ *  return where those go as `anchors`, with the props as their own groups (tools/skyship_bake.js). */
+export function buildIronclad(M, opts = {}) {
+  const bake = !!opts.bake, live = !bake;
   const root = new THREE.Group(); root.name = 'ironclad';
   const P = new Parts(M), spin = [], fx = [], glow = [], turrets = [], sway = [], flames = [];
+  const anchors = { braziers: [], furnaces: [], stacks: [], crystals: [], ports: [], props: [] };
   hull(P, { L, beam, sheer, keel, prof, ns: 140, transom: 'iron', inner, deckAt, wall: 'iron', cap: 'goldHammer',
     bands: [['goldHammer', 0, 0.04, 1], ['iron', 0.04, 0.4, 6], ['bronze', 0.4, 0.43, 1], ['gunmetal', 0.43, 0.72, 6], ['iron', 0.72, 1, 6]],
     decks: [['greyboards', QD_S - 0.01, FC_S + 0.01, 0], ['greyboards', 0.009, QD_S, QD_H], ['greyboards', FC_S, 0.995, FC_H]] });
@@ -48,7 +41,7 @@ export function buildIronclad(M) {
 
   // Stairs: iron treads with gold nosing, 4 tiles wide.
   const stairs = (z0, dir, h, n) => {
-    const rise = h / n, run = 0.42, w = 4;
+    const rise = h / n, run = 4 / n, w = STAIR_W;
     for (let i = 0; i < n; i++) {
       const y = rise * (n - i), z = z0 + dir * run * (i + 0.5);
       P.add('iron', box(w, y, run, 0, y / 2, z));
@@ -56,12 +49,12 @@ export function buildIronclad(M) {
     }
     for (const sx of [-1, 1]) {
       const g = new THREE.BoxGeometry(0.26, 0.4, run * n * Math.hypot(1, h / (run * n)) + 0.2);
-      g.rotateX(dir * Math.atan2(h, run * n)); g.translate(sx * (w / 2 + 0.13), h / 2 + 0.16, z0 + dir * run * n / 2);
+      g.rotateX(dir * Math.atan2(h, run * n)); g.translate(sx * (w / 2 - 0.13), h / 2 + 0.16, z0 + dir * run * n / 2);
       P.add('gunmetal', g);
     }
     return z0 + dir * run * n;
   };
-  const qFoot = stairs(zq, -1, QD_H, 9), fFoot = stairs(zf, 1, FC_H, 8);
+  const qFoot = stairs(zq, -1, QD_H, QD_STAIRS[2]), fFoot = stairs(zf, 1, FC_H, FC_STAIRS[2]);
 
   const lantern = (x, y, z, k = 1) => {
     P.add('iron', box(0.32 * k, 0.06, 0.32 * k, x, y, z));
@@ -78,8 +71,8 @@ export function buildIronclad(M) {
     P.add('iron', box(len, 0.08, 0.12, cx, y + 0.14, z));
     for (const x of [x0, x1]) { P.add('gunmetal', box(0.3, 1.0, 0.3, x, y + 0.5, z)); finial(x, y + 1.0, z, 0.13); }
   };
-  rail(-inner(QD_S) + 0.1, -2.2, QD_H, zq - 0.12); rail(2.2, inner(QD_S) - 0.1, QD_H, zq - 0.12);
-  lantern(-2.2, QD_H + 1.26, zq - 0.12, 0.8); lantern(2.2, QD_H + 1.26, zq - 0.12, 0.8);
+  rail(-inner(QD_S) + 0.1, -2.2, QD_H, zq + 0.12); rail(2.2, inner(QD_S) - 0.1, QD_H, zq + 0.12);   // on the quarterdeck's edge (its own tiles)
+  lantern(-2.2, QD_H + 1.26, zq + 0.12, 0.8); lantern(2.2, QD_H + 1.26, zq + 0.12, 0.8);
   rail(-inner(FC_S) + 0.1, -2.2, FC_H, zf + 0.12); rail(2.2, inner(FC_S) - 0.1, FC_H, zf + 0.12);
 
   // Gothic doors under the raised decks: oak in iron straps under a gilded pointed arch.
@@ -111,6 +104,7 @@ export function buildIronclad(M) {
       P.add('dark', box(0.16, 0.72, 0.56, x + side * 0.08, y - 0.04, z));
       for (const d of [-1, 1]) P.add('goldHammer', new THREE.BoxGeometry(0.14, 0.08, 0.5).rotateX(d * 0.6).translate(x + side * 0.1, y + 0.5, z + d * 0.19));
       P.add('gunmetal', rod([x, y - 0.06, z], [x + side * 0.85, y - 0.04, z], 0.15, 0.13, 8));
+      anchors.ports.push([x + side * 0.95, y - 0.04, z, side]);
       P.add('goldHammer', rod([x + side * 0.8, y - 0.04, z], [x + side * 0.92, y - 0.04, z], 0.16, 0.16, 8));
     }
     for (const z of [...ports.map((p) => p + 0.75), ports[ports.length - 1] - 0.75]) {
@@ -260,7 +254,8 @@ export function buildIronclad(M) {
         gl_FragColor = vec4(col, 1.0);
       }` });
   const gate = new THREE.Mesh(new THREE.ShapeGeometry(archShape(PW, PHS, PH), 12), portalMat);
-  gate.position.set(0, FC_H, gz); gate.name = 'portal'; root.add(gate);
+  gate.position.set(0, FC_H, gz); gate.name = 'portal'; if (live) root.add(gate);
+  anchors.gate = { x: 0, y: FC_H, z: gz, w: PW, hs: PHS, h: PH };
   {
     const fr = new THREE.ExtrudeGeometry(Object.assign(archShape(PW + 0.7, PHS + 0.05, PH + 0.45), { holes: [archShape(PW, PHS, PH)] }),
       { depth: 0.4, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 1, curveSegments: 12 });
@@ -278,18 +273,19 @@ export function buildIronclad(M) {
       const x = sx * (PW / 2 + 1.2), z = gz + 0.5;
       P.add('iron', rod([x, FC_H, z], [x, FC_H + 0.9, z], 0.08, 0.06, 6));
       P.add('bronze', new THREE.CylinderGeometry(0.32, 0.18, 0.28, 10).translate(x, FC_H + 1.02, z));
-      const f = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.55, 6), M.ember); f.position.set(x, FC_H + 1.42, z); root.add(f); flames.push(f);
+      const f = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.55, 6), M.ember); f.position.set(x, FC_H + 1.42, z); if (live) root.add(f); flames.push(f);
+      anchors.braziers.push([x, FC_H + 1.2, z]);
       glow.push({ x, y: FC_H + 1.4, z, r: 1.8, c: 0xff6a20 });
     }
     glow.push({ x: 0, y: FC_H + 1.4, z: gz + 0.3, r: 4.5, c: 0xff5020 });
   }
-  const ring = new THREE.Group(); ring.position.set(0, FC_H + 0.03, gz + 0.8); root.add(ring);
+  const ring = new THREE.Group(); ring.position.set(0, FC_H + 0.03, gz + 0.8); if (live) root.add(ring);
   for (let i = 0; i < 14; i++) { const a = i * Math.PI * 2 / 14, b = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.03, 0.08), M.ember); b.position.set(Math.cos(a) * 0.6, 0, Math.sin(a) * 0.6); b.rotation.y = -a + Math.PI / 2; ring.add(b); }
-  const portalLight = new THREE.PointLight(0xff5a24, 18, 7, 1.6); portalLight.position.set(0, FC_H + 1.4, gz + 1.0); root.add(portalLight);
+  const portalLight = new THREE.PointLight(0xff5a24, 18, 7, 1.6); portalLight.position.set(0, FC_H + 1.4, gz + 1.0); if (live) root.add(portalLight);
   const sparkTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 8; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(2, 2, 4, 4); x.fillStyle = '#ffd9a0'; x.fillRect(3, 0, 2, 8); x.fillRect(0, 3, 8, 2); return new THREE.CanvasTexture(c); })();
   const sparks = Array.from({ length: 36 }, () => {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, color: 0xff8a40, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }));
-    s.scale.setScalar(0.14); root.add(s); s.userData = { life: Math.random() * 2, max: 1 }; return s;
+    s.scale.setScalar(0.14); if (live) root.add(s); s.userData = { life: Math.random() * 2, max: 1 }; return s;
   });
   let flash = 0;
   const respawn = (s, burst) => {
@@ -309,7 +305,8 @@ export function buildIronclad(M) {
       const sx = x + side * 0.15, sz = zc + dz;
       P.add('gunmetal', rod([sx, y + r - 0.2, sz], [sx, y + r + 2.0, sz + 0.2], 0.24, 0.3, 10));
       P.add('bronze', new THREE.CylinderGeometry(0.38, 0.34, 0.25, 10).translate(sx, y + r + 2.0, sz + 0.2));
-      const st = smoke([sx, y + r + 2.2, sz + 0.2], 6, ['#e8eaef', '#c9ced8'], 2.2, 0.9); root.add(st.grp); fx.push(st);
+      const st = smoke([sx, y + r + 2.2, sz + 0.2], 6, ['#e8eaef', '#c9ced8'], 2.2, 0.9); if (live) root.add(st.grp); fx.push(st);
+      anchors.stacks.push([sx, y + r + 2.2, sz + 0.2]);
     }
     for (const [hy, hz] of [[-1.8, z0 + 0.8], [-1.8, z1 - 0.8], [-4.2, zc]]) {                    // truss
       P.add('iron', rod([side * (hullX(sAt(hz), hy) - 0.2), hy, hz], [x - side * (r - 0.1), y + (hy > -3 ? 0.6 : -0.6), hz], 0.15, 0.15, 6));
@@ -322,7 +319,8 @@ export function buildIronclad(M) {
       for (let v = 0; v < pos.count; v++) { const t = (pos.getY(v) + 1.15) / 2.3; pos.setX(v, pos.getX(v) * (1.15 - 0.6 * Math.abs(t - 0.5))); pos.setZ(v, pos.getZ(v) + pos.getX(v) * 0.5); pos.setY(v, pos.getY(v) + 1.3); }
       g.computeVertexNormals(); g.rotateZ(i * Math.PI / 2); R.add('bronze', g);
     }
-    prop.add(R.build('prop')); root.add(prop); spin.push({ o: prop, axis: 'z', w: side * 12 });
+    prop.add(R.build('prop')); if (live) root.add(prop); spin.push({ o: prop, axis: 'z', w: side * 12 });
+    anchors.props.push({ group: prop, x, y, z: z1 + 1.5, side });
   }
 
   // Furnaces at the stern: two engine sponsons along the quarters and three through the transom, each a bronze bell
@@ -331,8 +329,9 @@ export function buildIronclad(M) {
     P.add('bronze', new THREE.CylinderGeometry(r + 0.35, r, 0.9, 20, 1, true).rotateX(Math.PI / 2).translate(x, y, z + 0.45));
     P.add('goldHammer', new THREE.TorusGeometry(r + 0.36, 0.1, 5, 24).translate(x, y, z + 0.9));
     P.add('ember', new THREE.CircleGeometry(r * 0.95, 20).translate(x, y, z + 0.3));
-    const pl = plume(r * 0.85, len, 0xff6a1a); pl.position.set(x, y, z + 0.35); root.add(pl); fx.push(pl);
-    const st = smoke([x, y + 0.2, z + 1.2], 7, ['#dfe2e8', '#b8bdc8'], 1.4, 1.2); root.add(st.grp); fx.push(st);
+    const pl = plume(r * 0.85, len, 0xff6a1a); pl.position.set(x, y, z + 0.35); if (live) root.add(pl); fx.push(pl);
+    const st = smoke([x, y + 0.2, z + 1.2], 7, ['#dfe2e8', '#b8bdc8'], 1.4, 1.2); if (live) root.add(st.grp); fx.push(st);
+    anchors.furnaces.push([x, y, z + 0.35, r]);
     glow.push({ x, y, z: z + 1.0, r: r * 3.2, c: 0xff7a2a });
   };
   for (const side of [-1, 1]) {
@@ -404,6 +403,7 @@ export function buildIronclad(M) {
     for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; P.add('iron', rod([Math.cos(a), y + 1.3, z + Math.sin(a)], [Math.cos(a) * 0.75, y - 1.3, z + Math.sin(a) * 0.75], 0.07, 0.07, 4)); }
     const c = new THREE.Mesh(new THREE.OctahedronGeometry(0.85, 0).scale(1, 1.7, 1), M.crystal);
     c.position.set(0, y, z); c.name = 'crystal'; root.add(c); spin.push({ o: c, axis: 'y', w: 0.8 });
+    anchors.crystals.push([0, y, z]);
     glow.push({ x: 0, y, z, r: 5, c: 0xa040ff, light: true, lr: 5 });
   }
   // Lift hatch in the middle of the main deck: an iron grate in gold, flush.
@@ -445,5 +445,6 @@ export function buildIronclad(M) {
     portal: { gate: [0, FC_H, gz], path: [[0, FC_H, gz + 0.1], [0, FC_H, zf + 0.15], [0, 0, fFoot + 0.2], [0, 0, fFoot + 2.6]] } };
   /** The gate flares and throws sparks: call as a hero steps out. */
   const arrive = () => { flash = 1.3; for (const s of sparks) { respawn(s, true); s.userData.life = Math.random() * 0.2; } };
-  return { root, anim, info, arrive };
+  anchors.lamps = glow.filter((g) => g.c === 0xffa040).map((g) => [g.x, g.y, g.z]);
+  return { root, anim, info, arrive, anchors };
 }

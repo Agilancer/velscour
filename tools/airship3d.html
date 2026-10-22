@@ -89,7 +89,7 @@ function addGlows(ship) {
 const texCache = {};
 async function pirate(parent, file, x, y, z) {
   const boss = file.startsWith('B'), frameH = boss ? 320 : 192, foot = boss ? 16 : 9;
-  const url = `../assets/source/air_pirates/${boss ? 'bosses' : 'enemies'}/AIR-${file}.png`;
+  const url = `../assets/source/enemies/air/${boss ? 'captains' : 'crew'}/${String(+file.slice(1, 4) - 1).padStart(3, '0')}_${file.slice(5)}.png`;
   const t = await (texCache[url] ||= new THREE.TextureLoader().loadAsync(url).then((t) => { t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; }));
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, alphaTest: 0.5 }));
   const h = HERO * Math.cos(Math.PI / 6) * frameH / 108;            // screen height of the frame, in tiles

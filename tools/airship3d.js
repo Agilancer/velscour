@@ -62,7 +62,7 @@ const keel = (s) => -6.4 + 2.3 * (1 - sm(0, 0.34, s)) + 7.4 * Math.pow(sm(0.54, 
 const prof = (k) => Math.pow(Math.max(0, 1 - Math.pow(k, 2.5)), 0.55);     // half-width fraction k of the way down
 const inner = (s) => Math.max(0, beam(s) - WALL);
 const deckAt = (s) => s < QD_S ? QD_H : s > FC_S ? FC_H : 0;
-export const AIRSHIP = { L, QD_S, FC_S, QD_H, FC_H, BW, zAt, sAt, beam, inner, deckAt, sheer };
+export const AIRSHIP = { L, QD_S, FC_S, QD_H, FC_H, BW, zAt, sAt, beam, inner, deckAt, sheer, keel, prof };
 
 // ------------------------------------------------------------------ geometry helpers
 /** Box-projected UVs in the given frame, 1 texture repeat per 2 units (planks run along z on walls and floors). */

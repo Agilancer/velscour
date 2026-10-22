@@ -38,7 +38,14 @@ import { createMountainRun } from './mountain.js';
 import { castle3dTick } from './castle3d.js';
 import { useTerrain } from '../gfx/terrain.js';
 import { loadCastlePack, releaseCastlePack } from '../gfx/castle.js';
-import { loadCastle3D, releaseCastle3D } from '../gfx/castle3dart.js';
+import { loadCastle3D, releaseCastle3D, loadBaked, castle3dState } from '../gfx/castle3dart.js';
+import { generateSkyship } from '../world/skyship.js';
+import { createSkyBattle } from './skybattle.js';
+import { SKY_VARIANTS } from '../data/skybattle.js';
+import { TOWNSFOLK } from '../data/townsfolk.js';
+const TOWNSFOLK_KNIGHTS = TOWNSFOLK.filter((q) => q.knight).map((q) => q.spriteId);
+import { Cine } from './cinema.js';
+import { lights, updateVfx } from '../gfx/vfx.js';
 import { World } from './world.js';
 import { Player } from './player.js';
 import { makeMonster, makeElite, Monster } from './monster.js';
@@ -65,7 +72,7 @@ import { titleScreen, hide as hideScreen, deathScreen, victoryScreen, pauseMenu,
 
 const PICK_WAIT = 8; // seconds auto-play gives the player to choose a portal down (portalChoice)
 
-const STEP_SURFACE = { sunken: 'water', plague: 'water', sewers: 'water', serpent: 'water', library: 'wood', gilded: 'wood', sea_of_sand:'sand', dark_forest:'wood' };   // footstep sounds; default stone
+const STEP_SURFACE = { sunken: 'water', plague: 'water', sewers: 'water', serpent: 'water', library: 'wood', gilded: 'wood', sea_of_sand:'sand', dark_forest:'wood', skyship:'wood' };   // footstep sounds; default stone
 
 const VELSCOUR_TAUNT_STARTS = [
   'WHY ARE YOU TRYING TO CONTACT VELSCOUR', 'WHAT MADE YOU THINK VELSCOUR WANTS TO HEAR FROM YOU',
@@ -127,9 +134,22 @@ async function warmLevelArt(w) {
 // (The painted biome packs stay: there are only a few, and fetching one again decoded a second copy while the
 // browser still held the first, which cost more renderer memory than it saved.)
 function releaseLevelArt(biome) {
-  if (biome?.id !== 'castle') { releaseCastlePack(); releaseCastle3D(); }
+  if (biome?.id !== 'castle') releaseCastlePack();
+  if (biome?.id !== 'castle' && biome?.id !== 'skyship') releaseCastle3D();
   if (biome?.id !== 'sea_of_sand') releaseSeaOfSandPack(); // loadArtFor fetches it again for ss_ monsters elsewhere
   if (!biome?.overworld && biome?.id !== 'town') releaseTownSheets();
+}
+
+let hudCine = false;
+/** A world during a cut scene: the scene's actors (leaps, scripted walks), townsfolk, effects and the director move;
+ * nobody fights and nobody takes input. */
+function cineTick(w, dt) {
+  w.time += dt;
+  lights.length = 0;
+  for (const c of w.creatures) if (c.entering && !c.dead) c.update(dt);
+  for (const n of w.npcs) n.update && n.update(dt);
+  if (w.overworldScenario) w.overworldScenario.update(dt);
+  updateVfx(dt, w);
 }
 
 export const game = {
@@ -312,6 +332,12 @@ export const game = {
           } else if (message.trim().toLowerCase() === 'mountain') {
             close();
             this.teleportToBiome(BIOME_BY_ID.mountainside); // the Mountainside beta
+          } else if (/^(sky|airship|air|pirates?)(\s|$)/i.test(message.trim())) {
+            // the Sky Battle; 'sky storm', 'sky night'... picks its scenario
+            const want = message.trim().toLowerCase().split(/\s+/)[1];
+            G.char.skyVariant = SKY_VARIANTS.find((v) => v.id === want || v.weather.toLowerCase().includes(want || '#'))?.id;
+            close();
+            this.teleportToBiome(BIOME_BY_ID.skyship);
           }
         } },
       ],
@@ -322,7 +348,8 @@ export const game = {
   },
 
   openVelscourTeleport() {
-    const options = [...BETA_BIOMES, ...BIOMES].map((biome) => `<option value="${escapeHtml(biome.id)}">${escapeHtml(biome.name)}${biome.overworld ? ' · Overworld' : ''}${biome.beta ? ' (Beta)' : ''}</option>`).join('');
+    const options = [...BETA_BIOMES, ...BIOMES].map((biome) => `<option value="${escapeHtml(biome.id)}">${escapeHtml(biome.name)}${biome.overworld ? ' · Overworld' : ''}${biome.beta ? ' (Beta)' : ''}</option>`).join('')
+      + SKY_VARIANTS.map((v) => `<option value="skyship:${v.id}">${escapeHtml(BIOME_BY_ID.skyship.name)}: ${escapeHtml(v.name)} (${escapeHtml(v.weather)})</option>`).join('');
     const dialog = UI.dialog({
       title: 'CHOOSE YOUR DOOM',
       cls: 'velscour-teleport-dialog',
@@ -330,7 +357,8 @@ export const game = {
       buttons: [
         { label: 'Cancel' },
         { label: 'Teleport', cls: 'red', fn: () => {
-          const id = dialog.box.querySelector('#velscour-biome').value;
+          let id = dialog.box.querySelector('#velscour-biome').value;
+          if (id.startsWith('skyship:')) { G.char.skyVariant = id.slice(8); id = 'skyship'; }
           const biome = BIOME_BY_ID[id];
           if (biome) this.teleportToBiome(biome);
         } },
@@ -381,6 +409,7 @@ export const game = {
     if (biome.id === 'dark_forest') return Promise.all([loadBiomeArt(biome), loadDarkForestTrees()]);
     if (biome.challenge) return loadBiomeArt(biome); // the Breach's two packs (pack, wallPack, moreFloors/morePacks)
     if (biome.id === 'mountainside') return Promise.all([loadBiomeArt(BIOME_BY_ID.dark_forest), loadDarkForestTrees()]); // its floors, props and pines
+    if (biome.id === 'skyship') return Promise.all([loadBaked('assets/tiles/skyship/'), preloadTownSheets(TOWNSFOLK_KNIGHTS)]); // the baked ironclad, boats and galleon; the sky-knights
     if (!biome.overworld) return Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]);
     return Promise.resolve();
   },
@@ -419,7 +448,9 @@ export const game = {
     // the two overworlds that save their progress per depth rebuild the same map after a town trip
     const kept = biome.id === 'sea_of_sand' ? c.seaOfSandRuns[depth] : forest ? c.darkForestRuns[depth] : null;
     const seed = kept ? kept.seed : (Math.random() * 1e9) | 0;
+    const sky = biome.id === 'skyship';
     const gen = forest ? generateDarkForest(depth, biome, tileset, seed) : biome.id === 'mountainside' ? generateMountain(depth, biome, seed)
+      : sky ? generateSkyship(depth, biome, seed, castle3dState())
       : biome.overworld ? generateOverworld(depth, biome, seed) : generateDungeon(depth, biome, tileset, seed);
     const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches, wallHangings: gen.wallHangings, looks: gen.looks, townTiles: gen.townTiles || null, buildings: gen.buildings || [] });
     if (gen.layoutId) { world.layoutId = gen.layoutId; world.layoutName = gen.layoutName; }
@@ -435,10 +466,10 @@ export const game = {
       },
     }));
     const [sx, sy] = gen.start;
-    let tp = [sx + 1.6, sy - 0.6];
+    let tp = gen.townPortal || [sx + 1.6, sy - 0.6];
     if (!gen.map.walkable(tp[0], tp[1])) tp = gen.map.randomNear(sx, sy, 2);
     const exit = {
-      x: gen.exit[0], y: gen.exit[1], type: 'exit', active: false, color: '#5a5a60', reach: 1.6, label: 'Sealed Exit',
+      x: gen.exit[0], y: gen.exit[1], type: 'exit', active: false, color: '#5a5a60', reach: 1.6, label: 'Sealed Exit', skygate: sky,
       use: () => this.useExit(world, exit),
     };
     world.portals = [
@@ -476,7 +507,7 @@ export const game = {
       }
     }
     world.roster = [...new Set(gen.spawns.filter((s) => s.arch && !['raid', 'boss'].includes(s.rank)).map((s) => s.arch))];
-    setupHappenings(world, gen.start, gen); // omens, shrines, treasure imps, cursed chests (game/happenings.js)
+    if (!sky) setupHappenings(world, gen.start, gen); // omens, shrines, treasure imps, cursed chests (game/happenings.js)
     greedWorld(world, c); // the Greed lever and its Hoard multiply the omen's loot dials
     tickBlessing(c);
     world.onBossAwake = (m) => {
@@ -498,7 +529,18 @@ export const game = {
       this.autosave();
       if (m.isVelscour) setTimeout(() => victoryScreen(() => {}), 3200);
     };
-    if (biome.id === 'sea_of_sand') world.overworldScenario = createSeaOfSandScenario(world, gen, biome, () => {
+    if (sky) {   // the Sky Battle (game/skybattle.js): one of eight scenarios, never the last one twice
+      world.overworldScenario = createSkyBattle(world, gen, biome, depth, { variant: c.skyVariant, last: c.lastSkyVariant }, () => {
+        exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
+        const first = !c.cleared[depth];
+        c.cleared[depth] = true;
+        c.deepest = Math.max(c.deepest || 0, depth);
+        this.brokeThrough(depth);
+        if (first) { c.skillPoints++; UI.log('Bonus skill point for winning the Sky Battle!', '#ffd860'); }
+        sfx('gate'); UI.refresh(); this.autosave();
+      });
+      c.lastSkyVariant = world.sky.v.id; delete c.skyVariant;
+    } else if (biome.id === 'sea_of_sand') world.overworldScenario = createSeaOfSandScenario(world, gen, biome, () => {
       exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
       const first = !c.cleared[depth];
       c.cleared[depth] = true;
@@ -540,7 +582,7 @@ export const game = {
     });
     this.setWorld(world, gen.start, old);
     announceHappenings(world);
-    if (biome.overworld) {
+    if (biome.overworld && !sky) {
       // townsfolk on the road: reachable landmarks to walk between (game/wanderers.js)
       const spots = [], map = gen.map;
       for (let i = 0; i < 60 && spots.length < 9; i++) {
@@ -554,12 +596,13 @@ export const game = {
     if (!biome.beta) recordBiomeVisit(c, biome, depth); // a beta biome leaves the overworld guarantee alone
     c.lastBiome = biome.id;
     HUD.setArea(`Depth ${depth}${depth > FINAL_DEPTH ? ' — Endless Torment' : ''}`, biome.overworld ? `${biome.name} · ${world.overworldScenario.title}` : gen.raid ? `${biome.name} · Boss Room` : biome.name);
-    playMusic('wilds', { delay: 4 + Math.random() * 20 }); setAmbience(biome.id);
+    playMusic('wilds', { delay: 4 + Math.random() * 20 }); setAmbience(sky ? world.sky.v.amb : biome.id);
     const kin = tileset.mixed && BIOME_BY_ID[tileset.mixed];
-    UI.centerMsg(biome.name.toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);
+    if (!sky) UI.centerMsg(biome.name.toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);
     if (world.night) UI.log(world.raining ? 'Night has fallen, and the rain with it.' : 'Night has fallen over the land.', '#a0b0d0');
     if (biome.id === 'sea_of_sand') UI.log(`Secure ${gen.scenarioCount} marked scenario area${gen.scenarioCount===1?'':'s'} to open the exit. Rewards improve with each clear.`, '#ffe2a0');
     else if (biome.id === 'mountainside') UI.log('The trail switchbacks up the cliffs to the summit. A ledge a hop high can be climbed; taller cliffs only jumped down.', '#ffe2a0');
+    else if (sky) UI.log(`${world.sky.v.name}: hold the deck against the Air Pirates' boarding waves. ${world.sky.v.hazardText || ''}`, '#ffe2a0');
     else if (forest) UI.log(`The Dark Forest closes in. The Heart lies deep in the north-east labyrinth; ${gen.glades.length} glades hold trials and treasure along the way.`, '#c8f0a0');
     else if (biome.overworld) UI.log('Activate the glowing shrine and complete its objective to open the exit.', '#ffe2a0');
     else if (!c.tips.dungeon) { c.tips.dungeon = true; setTimeout(() => UI.log('Find the exit portal. It stays sealed until the depth\'s guardian is slain. The blue portal returns you to town.', '#ffe2a0'), 1500); }
@@ -850,16 +893,20 @@ export const game = {
     Auto.tickDest(dt); // auto-play's Standard/Breach menu in town
     const pauseMenus = G.settings.pauseMenus !== false && w.kind === 'dungeon' && ui.anyOpen();
     G.paused = ui.modal || pauseMenus;
-    if (G.hitStop > 0) { G.hitStop -= dt; controls.update(0); }
+    Cine.update(G.paused ? 0 : dt);
+    if (G.cine && !G.paused) {   // a cut scene (game/cinema.js): no input, no auto-play, no monster thinks; the scene's actors move
+      input.endFrame();
+      cineTick(w, dt);
+    } else if (G.hitStop > 0) { G.hitStop -= dt; controls.update(0); }
     else if (!G.paused) {
       Auto.noteInput();
       controls.update(dt);
       Auto.update(dt);
       w.update(dt);
       if (w.overworldScenario) w.overworldScenario.update(dt);
-      if (w.map.c3struct) castle3dTick(w, dt);
+      if (w.map.c3struct && !w.map.sky) castle3dTick(w, dt);
       ambushTick(w, dt);
-      if (w.kind === 'town') townTick(w, dt); else happeningsTick(w, dt);
+      if (w.kind === 'town') townTick(w, dt); else if (!w.sky) happeningsTick(w, dt);
       madnessTick(dt);
       spectateTick(w, dt); // gilded critters, the SMITE reticle (game/spectate.js)
       footsteps(p, w.kind === 'town' ? 'dirt' : STEP_SURFACE[w.biome && w.biome.id] || 'stone');
@@ -868,8 +915,9 @@ export const game = {
     } else {
       input.endFrame();
     }
-    camera.follow(p.x, p.y, dt);
+    if (!G.cine) camera.follow(p.x, p.y, dt);
     camera.update(dt);
+    if (G.cine !== hudCine) { hudCine = !!G.cine; HUD.show(!hudCine); if (G.touch) TouchUI.show(!hudCine); }
     if (G.hurtFlash > 0) G.hurtFlash = Math.max(0, G.hurtFlash - dt * 1.5);
     if (G.flash > 0) G.flash = Math.max(0, G.flash - dt * 2);
     HUD.update(dt);
