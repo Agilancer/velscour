@@ -15,9 +15,14 @@ export const TEX = {
   plum: 'sailcloth/CLOTH-05_Deep_Plum_Woven_Sail', cedar: 'wood/WOOD-04_Weathered_Cedar', scroll: 'wood/WOOD-02_Scroll_Cut_Blackwood',
   blackwood: 'wood/WOOD-05_Violet_Streak_Blackwood', gold: 'gold/GOLD-01_Beaten_Antique_Gold', goldLeaf: 'gold/GOLD-02_Scratched_Gold_Leaf',
   goldSeam: 'gold/GOLD-03_Amethyst_Seamed_Gold', goldHammer: 'gold/GOLD-04_Hammered_Reliquary_Gold',
+  greyboards: 'ship_planks/SHIP-06_Salt_Bleached_Greyboards', cypress: 'ship_planks/SHIP-04_Splintered_Cypress',
+  scorched: 'ship_planks/SHIP-07_Ember_Scorched', mossed: 'ship_planks/SHIP-09_Mossed_Shipboard', bonenail: 'ship_planks/SHIP-08_Bone_Nail_Oak',
+  flaked: 'metal/MET-03_Flaked_Iron', silver: 'metal/MET-06_Tarnished_Silver', steel: 'metal/MET-08_Scratched_Blue_Steel',
+  endgrain: 'wood/WOOD-01_End_Grain_Timber', rootwood: 'wood/WOOD-03_Rootwood_Grain', goldCharcoal: 'gold/GOLD-05_Gilded_Charcoal_Alloy',
+  cream: 'sailcloth/CLOTH-04_Aged_Cream_Linen',
 };
-const METAL = { iron: 0.35, gunmetal: 0.4, brass: 0.45, bronze: 0.4, copper: 0.3, amethyst: 0.3, gold: 0.55, goldLeaf: 0.55, goldSeam: 0.5, goldHammer: 0.55 };
-const CLOTH = new Set(['canvas', 'charcoal', 'patched', 'plum']);
+const METAL = { flaked: 0.3, silver: 0.45, steel: 0.45, goldCharcoal: 0.45, iron: 0.35, gunmetal: 0.4, brass: 0.45, bronze: 0.4, copper: 0.3, amethyst: 0.3, gold: 0.55, goldLeaf: 0.55, goldSeam: 0.5, goldHammer: 0.55 };
+const CLOTH = new Set(['canvas', 'charcoal', 'patched', 'plum', 'cream']);
 
 /** Materials from the pack: nearest-neighbour up close, mipmapped far away (the 160 px tiles are pixel art). */
 export async function airshipMaterials(base = '../assets/source/airship/textures/') {
@@ -35,6 +40,10 @@ export async function airshipMaterials(base = '../assets/source/airship/textures
   M.crystal = new THREE.MeshStandardMaterial({ color: 0xc58cff, emissive: 0x9a3dff, emissiveIntensity: 1.6, roughness: 0.25, metalness: 0.1, flatShading: true });
   M.dark = new THREE.MeshStandardMaterial({ color: 0x0d0a0c, roughness: 1 });
   M.rope = new THREE.LineBasicMaterial({ color: 0x2b1d16 });
+  M.neon = new THREE.MeshStandardMaterial({ color: 0xd9a6ff, emissive: 0xa24dff, emissiveIntensity: 2.0, roughness: 0.4 });
+  M.cyan = new THREE.MeshStandardMaterial({ color: 0xbff4ff, emissive: 0x5fd8ff, emissiveIntensity: 1.6, roughness: 0.3 });
+  M.ember = new THREE.MeshStandardMaterial({ color: 0xff7a4a, emissive: 0xff3a10, emissiveIntensity: 1.8, roughness: 0.6 });
+  M.redCrystal = new THREE.MeshStandardMaterial({ color: 0xff7fa8, emissive: 0xd0206a, emissiveIntensity: 1.4, roughness: 0.3, flatShading: true });
   return M;
 }
 
@@ -45,7 +54,7 @@ const QD_H = 2.2, FC_H = 2.0, BW = 1.0;      // raised deck heights, bulwark hei
 const WALL = 0.3;                            // bulwark thickness
 const zAt = (s) => ZS - s * L;
 const sAt = (z) => (ZS - z) / L;
-const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+export const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const beam = (s) => s < 0.25 ? 4.9 + 1.3 * Math.sin(s / 0.25 * Math.PI / 2) : s < 0.58 ? 6.2
   : 6.2 * Math.pow(Math.max(0, 1 - Math.pow((s - 0.58) / 0.42, 1.8)), 0.62);
 const sheer = (s) => BW + QD_H * (1 - sm(0.17, 0.23, s)) + FC_H * sm(0.81, 0.87, s) + 2.2 * Math.pow(sm(0.86, 1, s), 2) + 0.5 * (1 - sm(0, 0.1, s));
@@ -57,7 +66,7 @@ export const AIRSHIP = { L, QD_S, FC_S, QD_H, FC_H, BW, zAt, sAt, beam, inner, d
 
 // ------------------------------------------------------------------ geometry helpers
 /** Box-projected UVs in the given frame, 1 texture repeat per 2 units (planks run along z on walls and floors). */
-function boxUV(g, swap = false, rep = 2) {
+export function boxUV(g, swap = false, rep = 2) {
   g = g.index ? g.toNonIndexed() : g;
   if (!g.attributes.normal) g.computeVertexNormals();
   const p = g.attributes.position, n = g.attributes.normal, uv = new Float32Array(p.count * 2);
@@ -71,10 +80,10 @@ function boxUV(g, swap = false, rep = 2) {
   g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   return g;
 }
-const clean = (g) => { g = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k); return g; };
+export const clean = (g) => { g = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k); return g; };
 
 /** Collects geometry per material and merges it into one mesh each. */
-class Parts {
+export class Parts {
   constructor(M) { this.M = M; this.by = {}; }
   add(mat, g, { uv = 'box', swap = false, rep = 2 } = {}) {
     g = uv === 'box' ? boxUV(g, swap, rep) : clean(g);
@@ -91,23 +100,23 @@ class Parts {
     return grp;
   }
 }
-const box = (w, h, d, x, y, z, ry = 0) => { const g = new THREE.BoxGeometry(w, h, d); if (ry) g.rotateY(ry); return g.translate(x, y, z); };
+export const box = (w, h, d, x, y, z, ry = 0) => { const g = new THREE.BoxGeometry(w, h, d); if (ry) g.rotateY(ry); return g.translate(x, y, z); };
 /** A cylinder (or cone, r1 = 0) from a to b. */
-function rod(a, b, r0, r1 = r0, seg = 8, open = false) {
+export function rod(a, b, r0, r1 = r0, seg = 8, open = false) {
   const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = B.clone().sub(A);
   const g = new THREE.CylinderGeometry(r1, r0, d.length(), seg, 1, open);
   g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize()));
   return g.translate((A.x + B.x) / 2, (A.y + B.y) / 2, (A.z + B.z) / 2);
 }
 /** Triangles from a flat list of points [[x,y,z],...] and index triples; normals computed. */
-function tris(pts, idx) {
+export function tris(pts, idx) {
   const a = new Float32Array(idx.length * 3);
   idx.forEach((v, i) => a.set(pts[v], i * 3));
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(a, 3)); g.computeVertexNormals();
   return g;
 }
 /** A grid surface: f(i/nu, j/nv) -> [x,y,z], uvs given by uvf (or the grid). flip reverses the winding. */
-function surf(nu, nv, f, uvf = (u, v) => [u, v], flip = false) {
+export function surf(nu, nv, f, uvf = (u, v) => [u, v], flip = false) {
   const pos = [], uv = [];
   const P = (i, j) => f(i / nu, j / nv), U = (i, j) => uvf(i / nu, j / nv);
   for (let i = 0; i < nu; i++) for (let j = 0; j < nv; j++) {
@@ -475,14 +484,14 @@ export function buildAirship(M) {
   crystals.forEach((c) => { c.userData.y0 = c.position.y; });
   const info = {
     length: L + 9, beam: 2 * Math.max(...Array.from({ length: 50 }, (_, i) => beam(i / 49))),
-    mainDeck: { z0: fFoot, z1: qFoot, width: 2 * inner(0.5) },
+    mainDeck: { z0: fFoot, z1: qFoot, width: 2 * inner(0.5) }, walk: AIRSHIP,
     glow,
   };
   return { root, anim, info };
 }
 
 /** A cloth strip streaming toward +Z from a pole at p (top corner), waving. */
-function flag(mat, len, h, p, amp, name) {
+export function flag(mat, len, h, p, amp, name) {
   const nu = 14, nv = 3;
   const g = new THREE.PlaneGeometry(len, h, nu, nv);
   g.translate(len / 2, -h / 2, 0);
@@ -522,4 +531,69 @@ function sail(mat, [z, y0, y1, w0, w1]) {
   mat = mat.clone(); mat.map = mat.map.clone(); mat.map.repeat.set(w0 / 1.6, (y1 - y0) / 2); mat.map.needsUpdate = true;
   mat.bumpMap = mat.map; mesh.material = mat;
   return { mesh, update };
+}
+
+// ------------------------------------------------------------------ shared by the other ships
+/** A lofted hull from H = { L, beam(s), sheer(s), keel(s), prof(k), bands: [[mat, k0, k1, nk]], ns, transom } (s: 0 stern
+ *  .. 1 bow, bow toward -Z, centred on z = 0), plus the bulwarks' inner faces and cap when H.inner/H.deckAt/H.wall/H.cap
+ *  are given, and flat decks H.decks: [[mat, s0, s1, y]]. Adds to the Parts P. */
+export function hull(P, H) {
+  const zAt = (s) => H.L / 2 - s * H.L, ns = H.ns || Math.round(H.L * 3.5);
+  for (const [mat, k0, k1, nk] of H.bands) for (const side of [1, -1]) P.add(mat, surf(ns, nk, (u, v) => {
+    const k = k0 + (k1 - k0) * v, top = H.sheer(u), bot = H.keel(u);
+    return [side * H.beam(u) * H.prof(k), top - (top - bot) * k, zAt(u)];
+  }, (u, v) => { const k = k0 + (k1 - k0) * v; return [zAt(u) / 2, -(H.sheer(u) - H.keel(u)) * k / 2]; }, side > 0), { uv: 'keep' });
+  if (H.transom && H.beam(0) > 0.05) {
+    const N = 16, ring = [];
+    for (let j = 0; j <= N; j++) { const k = j / N; ring.push([H.beam(0) * H.prof(k), H.sheer(0) - (H.sheer(0) - H.keel(0)) * k]); }
+    const all = [...ring, ...ring.slice(0, -1).reverse().map(([x, y]) => [-x, y])], pts = [[0, (H.sheer(0) + H.keel(0)) / 2, H.L / 2]], idx = [];
+    all.forEach(([x, y]) => pts.push([x, y, H.L / 2]));
+    for (let i = 1; i < all.length; i++) idx.push(0, i + 1, i);
+    idx.push(0, 1, all.length);
+    P.add(H.transom, tris(pts, idx));
+  }
+  if (H.inner) for (const side of [1, -1]) {
+    P.add(H.wall, surf(ns, 1, (u, v) => [side * H.inner(u), v ? H.deckAt(u) - 0.05 : H.sheer(u), zAt(u)], (u, v) => [zAt(u) / 2, v * 0.6], side < 0), { uv: 'keep' });
+    P.add(H.cap, surf(ns, 1, (u, v) => [side * (v ? H.inner(u) - 0.05 : H.beam(u) + 0.06), H.sheer(u) + 0.12, zAt(u)], (u, v) => [zAt(u) / 2, v * 0.2], side < 0), { uv: 'keep' });
+  }
+  for (const [mat, s0, s1, y] of H.decks || []) P.add(mat, surf(Math.max(2, Math.ceil((s1 - s0) * ns)), 1, (u, v) => {
+    const s = s0 + (s1 - s0) * u; return [(v * 2 - 1) * H.inner(s), y, zAt(s)];
+  }, (u, v) => { const s = s0 + (s1 - s0) * u; return [zAt(s) / 2, (v * 2 - 1) * H.inner(s) / 2]; }, true), { uv: 'keep' });
+}
+
+/** A prism: polygon pts [[x, y, z], ...] (convex) as the top face, dropped by t. */
+export function slab(pts, t) {
+  const n = pts.length, all = [...pts, ...pts.map(([x, y, z]) => [x, y - t, z])], idx = [];
+  const area = pts.reduce((a, p, i) => { const q = pts[(i + 1) % n]; return a + (p[2] * q[0] - p[0] * q[2]); }, 0);
+  const ccw = area > 0;                                  // counter-clockwise seen from +Y
+  for (let i = 1; i < n - 1; i++) ccw ? idx.push(0, i, i + 1, n, n + i + 1, n + i) : idx.push(0, i + 1, i, n, n + i, n + i + 1);
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n; ccw ? idx.push(i, n + i, j, j, n + i, n + j) : idx.push(i, j, n + i, j, n + j, n + i); }
+  return tris(all, idx);
+}
+
+/** A boarding ramp hinged at the origin, reaching out along +x (side = -1 mirrors it). userData.set(f): 0 up, 1 down. */
+export function ramp(M, mat, len, w, side) {
+  const g = new THREE.Group(), P = new Parts(M);
+  P.add(mat, box(len, 0.16, w, side * len / 2, 0, 0));
+  for (let i = 0.4; i < len; i += 0.5) P.add('iron', box(0.08, 0.08, w + 0.04, side * i, 0.1, 0));
+  for (const dz of [-w / 2, w / 2]) P.add('iron', box(len, 0.1, 0.1, side * len / 2, 0.06, dz));
+  for (const dz of [-w / 2 + 0.2, w / 2 - 0.2]) P.add('iron', new THREE.ConeGeometry(0.12, 0.4, 5).translate(side * (len + 0.05), -0.2, dz));
+  g.add(P.build('ramp'));
+  g.userData.set = (f) => { g.rotation.z = side * (Math.PI / 2 * (1 - f) - 0.1 * f); };
+  g.userData.set(0);
+  return g;
+}
+
+/** An additive engine plume pointing along +Z from the origin: white-hot core to the given colour, flickering. */
+export function plume(r, len, color = 0xa24dff) {
+  const g = new THREE.CylinderGeometry(r, r * 0.3, len, 16, 6, true).rotateX(Math.PI / 2).translate(0, 0, len / 2);
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { t: { value: 0 }, c: { value: new THREE.Color(color) }, len: { value: len } },
+    vertexShader: 'varying float f; uniform float len; void main(){ f = position.z / len; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'varying float f; uniform float t; uniform vec3 c; void main(){ float a = pow(1.0 - f, 1.6) * (0.75 + 0.25 * sin(t * 40.0 + f * 18.0)); gl_FragColor = vec4(mix(vec3(1.0), c, smoothstep(0.0, 0.45, f)) * a, a); }',
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  });
+  const m = new THREE.Mesh(g, mat); m.name = 'plume';
+  m.userData.update = (t) => { mat.uniforms.t.value = t; m.scale.z = 0.9 + 0.12 * Math.sin(t * 23) + 0.06 * Math.sin(t * 57); };
+  return m;
 }
