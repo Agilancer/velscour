@@ -3,6 +3,7 @@ import { G } from '../state.js';
 import { rand, chance, clamp, angleTo, TAU, mixHex } from '../core/util.js';
 import { camera } from '../core/view.js';
 import { sfx } from '../core/audio.js';
+import { petCorpse } from '../core/petart.js';
 import { floatText, damageText, bloodSpray, gibs, addDecal, addEffect, Bolt, elem, spawn, burst } from '../gfx/vfx.js';
 import { Meter } from './dpsmeter.js';
 import { explosionFx, hitSpark } from '../gfx/shapes.js';
@@ -219,8 +220,11 @@ export function kill(tgt, src, info = {}) {
   if (tgt.onDeath) tgt.onDeath(src);
   if (tgt.summon) {
     burst(tgt.x, tgt.y, 20, tgt.el || 'arcane', 10, 2);
+    const fell = world && petCorpse(tgt); // its dead pose stays down a moment
+    if (fell) world.fallen.push(fell);
     return;
   }
+  if (src && src.summon && !src.dead) src.cheerT = 1; // a pet that lands the killing blow cheers
   // gore
   const gore = GORE[tgt.goreType] || GORE.flesh;
   const blood = bloodOf(tgt);
@@ -260,7 +264,10 @@ export function kill(tgt, src, info = {}) {
     if (tgt.team === 'enemy') dropLoot(world, tgt);
     if (world.onKill) world.onKill(tgt); // streaks, challenges (game/happenings.js)
   }
-  if (tgt.rank === 'boss' && world && world.onBossKilled) world.onBossKilled(tgt);
+  if (tgt.rank === 'boss' && world) {
+    for (const c of world.creatures) if (c.summon && !c.dead) c.cheerT = 2.5;
+    if (world.onBossKilled) world.onBossKilled(tgt);
+  }
 }
 
 /** Which gib-sprite sets a corpse bursts into (null: plain rects for rock, spark, ecto). */

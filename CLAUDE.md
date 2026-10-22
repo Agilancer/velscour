@@ -98,6 +98,7 @@ node tools/tests/runeblade3d.js                    # Death Knight Runeblade 3D m
 node tools/tests/runeblade_familiar.js [secs] [mobile] # Death Knight sword familiar: frost skulls, 15 flight patterns, swings, 5 sword skills, Rune Weapon summons, soak
 node tools/tests/familiars.js                      # pet art: every pet summon's look, rainbow slimelings rising + hopping
 node tools/tests/slimecourt.js [secs] [play]       # Slime Lord's court: 60 Glymmora sets, every kind's abilities, pounces, blinks, idle games, shots
+node tools/tests/petanims.js [keys]                # pet atlases (docs/PET_SUMMON_ANIMATIONS.md): every summon in every state, dead poses, shots
 node tools/tests/pets.js [seeds]                   # minion pathing: round walls, keep up, fight round corners, leash, idle
 node tools/tests/select.js [mobile]                # hero select: one hero per class, play/new/delete, old duplicate saves
 node tools/tests/autoplay.js wizard 15 [mobile]    # auto-play soak: a new hero plays N game minutes at ~30x speed
@@ -176,7 +177,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `src/game/save.js` so existing heroes keep loading.
 - After any gameplay change, run at least `flow.js` and the `skills.js` classes you touched. Run `mobile.js`
   and `hud.js` for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
-  `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`.
+  `autoplay.js` for a class or two as well. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`. Pet art (`assets/source/pet_animations/`, `tools/build_pet_animations.py`, `src/core/petart.js`; watch them in `tools/pet_viewer.html`): run `petanims.js`.
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Overworld scenarios
   (`src/game/overworld.js`, `src/game/seaofsand.js`): run `scenarios.js`. The Dark Forest (`src/world/darkforest.js`, `src/game/darkforest.js`, tree drawing in `render.js`): run `dark_forest.js`. Height maps (`map.hgt` in `src/world/map.js`, `src/gfx/terrain.js`, `src/world/mountain.js`; docs/MOUNTAINSIDE.md): run `mountain.js`. The Castle layout (`src/world/castleworld.js`, `src/gfx/castle.js`, `src/gfx/castleground.js`, `src/gfx/castlewalls.js`; docs/CASTLE_OVERWORLD.md): run `castle_overworld.mjs`, `castle_walls.js` and `castle_visual.js` (look at the shots) and `scenarios.js`. Its walls, towers, stairs, moat and bridges are a height map textured from `assets/tiles/castle/ramparts.webp` (`python tools/castleramparts.py`, from the user's `assets/source/biomes/VELSCOUR_Castle_Artwork_Complete.zip`); changes to `src/gfx/terrain.js` also need `mountain.js`. Item rarity, power levels, affixes or drop odds (`src/data/items.js` `RARITY`, `rollRarity`, `affixScale`): run `rarity.js`. Monster/hero scaling, XP curve, BOSS ROOM or Velscour life (`monsterBase`, `xpToNext`, `raidHpMul`, `VELSCOUR_HP`): run `endgame.js`. Monster/hero scaling, affixes, drops or death
   rules (`monsterBase`, `src/data/depth.js`, `src/data/items.js`, `src/game/defiance.js`): run `balance_model.mjs` and

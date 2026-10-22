@@ -163,6 +163,7 @@ export class Creature {
     if (this.hpShow > 0) this.hpShow -= dt;
     if (this.lunge > 0) this.lunge = Math.max(0, this.lunge - dt * 4);
     if (this.attackAnimT > 0) this.attackAnimT = Math.max(0, this.attackAnimT - dt);
+    if (this.cheerT > 0) this.cheerT -= dt;
     this.spawnT += dt;
     if (this.idleArt) { this.stillT = this.x === this._sx && this.y === this._sy ? (this.stillT || 0) + dt : 0; this._sx = this.x; this._sy = this.y; }
     return !this.disabled();
@@ -306,42 +307,41 @@ export class Creature {
   /** Draw an animal or humanoid summon from its dedicated animation atlas. */
   drawPet(ctx, a) {
     const px = isoX(this.x, this.y), py = isoY(this.x, this.y);
-    const h = a.h * this.scale, w = h * a.cw / a.ch;
-    const spawning = a.frames === 9 && this.spawnT < 0.54;
-    // Spawn frames are already drawn small and rising, so only ease them in lightly.
-    const appear = spawning ? 0.75 + Math.min(1, this.spawnT / 0.54) * 0.25 : this.spawnT < 0.3 ? this.spawnT / 0.3 : 1;
+    // the atlas has its own summon frames, so the pet only fades in; it stands on the cell's floor line
+    const k = a.k * this.scale, dw = a.cw * k, dh = a.ch * k, foot = a.floor * k;
     const z = this.z + (this.fly ? 16 + Math.sin(this.animT * 3) * 4 : 0) +
       (this.moving ? Math.abs(Math.sin(this.animT * 9)) * 2.2 : Math.sin(this.animT * 2) * 0.6);
-    const dw = w * appear, dh = h * appear;
+    const rest = a.restH * k; // the rest pose's height: the body's size for the shadow, aura and overhead bar
     ctx.fillStyle = 'rgba(0,0,0,0.38)';
-    ctx.beginPath(); ctx.ellipse(px, py, Math.max(8, Math.min(dw, dh) * 0.32), Math.max(4, Math.min(dw, dh) * 0.14), 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(px, py, Math.max(8, rest * 0.32), Math.max(4, rest * 0.14), 0, 0, TAU); ctx.fill();
     if (this.aura) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = 0.55 + Math.sin(this.animT * 4) * 0.2;
       const g = glowSprite(this.aura);
-      ctx.drawImage(g, px - dw * 0.8, py - dh * 0.75 - z, dw * 1.6, dh * 1.3);
+      ctx.drawImage(g, px - rest * 0.8, py - rest * 0.75 - z, rest * 1.6, rest * 1.3);
       ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     }
     const lx = this.lunge > 0 ? (Math.cos(this.facing) - Math.sin(this.facing)) * this.lunge * 8 : 0;
     const ly = this.lunge > 0 ? (Math.cos(this.facing) + Math.sin(this.facing)) * this.lunge * 4 : 0;
-    const dx = px - dw / 2 + lx, dy = py - dh - z + ly;
     ctx.save();
-    if (this.alpha !== undefined) ctx.globalAlpha = this.alpha;
+    ctx.globalAlpha = (this.alpha ?? 1) * (this.spawnT < 0.15 ? this.spawnT / 0.15 : 1);
+    // humanoids have no walk frames: they rock from foot to foot round the feet instead
+    ctx.translate(px + lx, py - z + ly);
+    if (a.walk) ctx.rotate(Math.sin(this.animT * 9) * 0.05);
+    if (this.flip) ctx.scale(-1, 1);
+    const dx = -dw / 2, dy = -foot;
     const img = petTintImage(a.img, this.tintFilter());
-    if (this.flip) {
-      ctx.translate(dx + dw, dy); ctx.scale(-1, 1);
-      this.drawRim(ctx, a.img, a.sx, a.sy, a.cw, a.ch, 0, 0, dw, dh);
-      ctx.drawImage(img, a.sx, a.sy, a.cw, a.ch, 0, 0, dw, dh);
-    } else { this.drawRim(ctx, a.img, a.sx, a.sy, a.cw, a.ch, dx, dy, dw, dh); ctx.drawImage(img, a.sx, a.sy, a.cw, a.ch, dx, dy, dw, dh); }
+    this.drawRim(ctx, a.img, a.sx, a.sy, a.cw, a.ch, dx, dy, dw, dh);
+    ctx.drawImage(img, a.sx, a.sy, a.cw, a.ch, dx, dy, dw, dh);
     if (this.flash > 0) {
       ctx.globalAlpha = Math.min(1, this.flash * 8) * 0.6;
       ctx.globalCompositeOperation = 'lighter';
-      if (this.flip) ctx.drawImage(a.img, a.sx, a.sy, a.cw, a.ch, 0, 0, dw, dh);
-      else ctx.drawImage(a.img, a.sx, a.sy, a.cw, a.ch, dx, dy, dw, dh);
+      ctx.drawImage(a.img, a.sx, a.sy, a.cw, a.ch, dx, dy, dw, dh);
     }
     ctx.restore();
-    this.screenTop = py - dh - z;
-    this.drawOverhead(ctx, px, py - dh - z - 4, dw);
+    const top = py - z - rest;
+    this.screenTop = top;
+    this.drawOverhead(ctx, px, top - 4, rest);
   }
 
   /**
