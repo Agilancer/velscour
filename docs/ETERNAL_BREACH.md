@@ -94,6 +94,10 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
   timers: there the hero is sealing coffins, and each seal calls the choir.)
 - Stragglers: when nothing in a fight has fallen for 30 s, the last few (four or fewer) far from the hero or out of
   his reach sink back into the void.
+- **Reachable both ways**: arrivals land only where the monster can walk to the hero and the hero can walk to it
+  (`reachOk`: the flow field plus `heroReach`, a forward walk from the hero's tile), never on a ledge a monster could
+  drop from but the hero can't climb. A monster on the hero's island (or in his fight) that still ends up out of his
+  reach for 4 s is torn back down next to him by a rift (`stranded`); `breach.js rules` checks it.
 - Between fights, every 40-70 s a few monsters arrive near the hero by a random arrival.
 - **Arrivals** (`ARRIVALS`, `bringOne`): the user's four, *rise* (out of the ground), *climb* (hauled up over the
   island's edge from the void), *sky* (swooping in from the void), *ride* (a great flier of the Breach, drawn at 150 px,
@@ -116,7 +120,9 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser) and
 - **The Breach Heart**: the floor's keeper (`finalBossIndex`: the six boss families in turn, each family's six from least
   to most fearsome as floors go on) rises from the sarcophagus at 1.5x a boss's life; at 66% and 33% it shields itself
   (untargetable) behind three Heart Shards while a wave arrives; break them to strike again. Its fall gives the reward
-  and opens the exit portal on the Heart island: on to the next floor, or home.
+  and opens the exit portal on the Heart island: on to the next floor, or home. The generator reserves its spot (a
+  clear tile with open neighbours a step from the Heart's shrine, before the braziers and lights go down:
+  `heart.exitAt`), and the portal answers within 2 tiles.
 - Auto-play: the run's `target` is the nearest unwon shrine the hero can walk to (through open wards), then the Heart;
   `objective` points at the fight's task, else its nearest foe, else the shrine. Between fights auto-play loots first.
   With an objective waiting and foes in its face for 10 s it pushes through to the objective for 4 s (`objPush`).

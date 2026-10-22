@@ -57,7 +57,7 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
   const islandAt = (x, y) => own[tileOf(x, y)];
 
   // ---------------------------------------------------------------- wards
-  const blockGate = (b, on) => { for (const i of b.gate) map.block[i] = on ? 1 : 0; map.flowFrom = [-999, -999]; };
+  const blockGate = (b, on) => { for (const i of b.gate) map.block[i] = on ? 1 : 0; map.flowFrom = [-999, -999]; map.blockKey = (map.blockKey || 0) + 1; };
   const axisOf = (b) => (Math.abs(b.p1[0] - b.p0[0]) > Math.abs(b.p1[1] - b.p0[1]) ? 'y' : 'x');
   const gateNear = (b, o) => {
     const p = b.a === o.idx ? b.p0 : b.p1;
@@ -147,6 +147,7 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
       for (const S of all) if (S.active) S.update(dt);
       holdLocks();
       ambient(dt);
+      stranded(dt);
     },
     /** Tests: start a shrine's fight now (the hero is moved there). */
     force(S) { const p = world.player; p.x = S.C[0]; p.y = S.C[1] + 1.6; S.start(true); },
@@ -182,6 +183,29 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
     if (!lastSafe) return;
     p.x = lastSafe[0]; p.y = lastSafe[1]; p.path = null; p.moveTarget = null;
     if (world.time > lockMsgT) { lockMsgT = world.time + 1.5; floatText(p.x, p.y, 70, S ? 'The ward holds until the fight is won!' : 'A ward bars the way: win its shrine first!', VIOLET, 13, { life: 1.4 }); sfx('error', 0.5); }
+  }
+
+  // ---------------------------------------------------------------- monsters the hero can't reach
+  // A monster up on a ledge the hero can't climb (dropped there, or kiting up a crag) would hold a fight up for good:
+  // a few seconds stranded and the Breach tears it back down next to him.
+  let strandT = 0;
+  function stranded(dt) {
+    const p = world.player;
+    if (!p || p.dead || (strandT -= dt) > 0) return;
+    strandT = 1;
+    map.buildFlow(p.x, p.y, map.flowRange || 64);
+    const here = islandAt(p.x, p.y);
+    for (const m of world.hostiles('player', p.x, p.y, 16)) {
+      if (!m.breach || m.dead || m.entering || m.static || m.targetable === false || !m.awake) continue;
+      if (own[tileOf(m.x, m.y)] !== here && !run.current?.foes.includes(m)) continue; // (not a pack across a ward)
+      if (reachOk(map, m.x, m.y)) { m.strandT = 0; continue; }
+      if ((m.strandT = (m.strandT || 0) + 1) < 4 || here < 0) continue;
+      const at = landing(world, isl[here], 'rift', p, new RNG((Math.random() * 1e9) >>> 0));
+      if (!at) continue;
+      m.strandT = 0;
+      sparkle(m.x, m.y, 20, VIOLET, 14, 0.5);
+      bringOne(world, isl[here], m, 'rift', [at.x, at.y]);
+    }
   }
 
   // ---------------------------------------------------------------- monsters arriving while no shrine is active
@@ -433,8 +457,32 @@ export function arrive(world, o, kind, n, opts = {}) {
   return out;
 }
 
-/** Can the hero walk there (the monsters' flow field, built round the hero, reaches it)? Off crags and ledges. */
-const reachOk = (map, x, y) => map.flowAt(x, y) >= 0;
+/**
+ * Can the hero and a monster there reach each other: the monsters' flow field (built round the hero) leads from it to
+ * the hero, and the hero can walk to it too (not a ledge a monster can drop from but the hero can't climb).
+ */
+const reachOk = (map, x, y) => map.flowAt(x, y) >= 0 && heroReach(map)[map.tileIdx(x, y)] === map._hrStamp;
+/** The tiles the hero can walk to from where he stands (stamped map._hrStamp), kept until he changes tile. */
+function heroReach(map) {
+  const P = G.world?.player, W = map.w;
+  if (!map._hr) { map._hr = new Int32Array(map.w * map.h); map._hrQ = new Int32Array(map.w * map.h); map._hrStamp = 0; map._hrAt = -1; }
+  const s = P ? map.tileIdx(P.x, P.y) : -1;
+  if (s === map._hrAt && map._hrKey === map.blockKey) return map._hr;
+  map._hrAt = s; map._hrKey = map.blockKey;
+  const f = map._hr, q = map._hrQ, st = ++map._hrStamp;
+  if (s < 0 || !map.walkableTile(s % W, (s / W) | 0)) return f;
+  let qh = 0, qt = 0;
+  q[qt++] = s; f[s] = st;
+  while (qh < qt) {
+    const i = q[qh++], x = i % W, y = (i / W) | 0;
+    for (let k = 0; k < 4; k++) {
+      const nx = x + (k === 0 ? 1 : k === 1 ? -1 : 0), ny = y + (k === 2 ? 1 : k === 3 ? -1 : 0), ni = ny * W + nx;
+      if (!map.walkableTile(nx, ny) || f[ni] === st || (map.hgt && !map.stepOk(i, ni))) continue;
+      f[ni] = st; q[qt++] = ni;
+    }
+  }
+  return f;
+}
 const hide = (m) => { m.targetable = false; m.alpha = 0; };
 function done(m, x, y) { m.entering = null; m.targetable = true; m.alpha = undefined; m.z = 0; m.x = x; m.y = y; m.cd = rand(0.2, 0.6); }
 

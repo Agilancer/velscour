@@ -20,7 +20,8 @@ const FLOOR = +(process.argv[3] || 2);
     await page.waitForFunction((f) => window.VELSCOUR.G.world?.breach?.floor === f && document.querySelector('#loading').classList.contains('hidden'), floor, { timeout: 60000 });
   };
   try {
-    await page.evaluate(async () => { await window.VELSCOUR.game.newChar('paladin', 'Breacher'); });
+    if (process.env.BREACH_CLASS) await page.evaluate((c) => { window.BREACH_CLASS = c; }, process.env.BREACH_CLASS); // e.g. lancer
+    await page.evaluate(async () => { await window.VELSCOUR.game.newChar(window.BREACH_CLASS || 'paladin', 'Breacher'); });
     await page.waitForTimeout(300);
 
     // ------------------------------------------------ town: the purple portal
@@ -124,6 +125,12 @@ const FLOOR = +(process.argv[3] || 2);
           if (!run.completed) bad.push('the floor was never won');
           if (!W.portals.some((q) => q.type === 'exit' && q.active)) bad.push('no exit after the Heart');
           if (!W.loot.some((l) => l.kind === 'item')) bad.push('the Heart dropped no item');
+          // the exit can be walked up to and used (a brazier once stood on it)
+          const ex = W.portals.find((q) => q.type === 'exit');
+          if (ex) {
+            const path = W.map.findPath(P.x, P.y, ex.x, ex.y, 60000, 0.28), end = path && path[path.length - 1];
+            if (!W.map.walkable(ex.x, ex.y) || !end || Math.hypot(end[0] - ex.x, end[1] - ex.y) > ex.reach - 0.3) bad.push('the exit portal cannot be walked up to');
+          }
           return { out, bad };
         });
         console.log(r.out.join('\n'));
@@ -273,6 +280,32 @@ const FLOOR = +(process.argv[3] || 2);
       });
       console.log('rewards', JSON.stringify(r));
       for (const b of r.bad) errors.push('[rules] ' + b);
+      // a monster up on a ledge the hero can't climb is torn back down next to him
+      await enter(1);
+      const ledge = await page.evaluate(async () => {
+        const { G } = window.VELSCOUR;
+        const { arrive } = await import('/src/game/breach.js');
+        const W = G.world, P = G.player, map = W.map, run = W.overworldScenario, own = map.breach.own, here = own[map.tileIdx(P.x, P.y)];
+        G.godMode = true;
+        for (const m of W.creatures) if (m.team === 'enemy') m.dead = true;
+        const [m] = arrive(W, run.islands[here], 'rise', 1, { near: P });
+        if (!m) return 'no monster arrived';
+        for (let k = 0; k < 40; k++) { G.time += 0.05; W.update(0.05); }
+        let t = -1;
+        for (let r = 3; r < 6 && t < 0; r++) for (let a = 0; a < 16 && t < 0; a++) {
+          const x = Math.floor(P.x + Math.cos(a * 0.39) * r), y = Math.floor(P.y + Math.sin(a * 0.39) * r), i = map.tileIdx(x, y);
+          if (own[i] === here && map.walkableTile(x, y)) t = i;
+        }
+        if (t < 0) return 'no ledge tile';
+        map.hgt[t] += 8; map.flowFrom = [-999, -999]; map._hrAt = -2; // 8 levels up: a monster drops off it, the hero can't climb it
+        m.x = (t % map.w) + 0.5; m.y = ((t / map.w) | 0) + 0.5; m.speed = 0;
+        let s = 0;
+        while (s < 8 && map.tileIdx(m.x, m.y) === t) { s += 0.05; G.time += 0.05; W.update(0.05); run.update(0.05); }
+        map.hgt[t] -= 8; map.flowFrom = [-999, -999]; map._hrAt = -2;
+        return map.tileIdx(m.x, m.y) === t ? 'still up there after 8 s' : 'pulled down in ' + s.toFixed(1) + ' s';
+      });
+      console.log('ledge', ledge);
+      if (!ledge.startsWith('pulled')) errors.push('[rules] stranded monster: ' + ledge);
       await enter(1);
       await page.evaluate(() => { const { G } = window.VELSCOUR; G.godMode = false; G.player.hp = 0; G.player.die(null); });
       await page.waitForTimeout(2200);

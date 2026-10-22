@@ -56,6 +56,12 @@ Contents
   monsters (bar its boss and nests) are all dead; arrivals sped up (0.4-1.3 s). `breach.js play` checks no fight leaves
   the hero >3 s with nothing alive and nothing to do (max now 0.1 s outside boss fights). Floors run 19-28 game minutes
   with auto-play (the idle time became fighting); the auto test's budget is 2700 s.
+- **Follow-up (user): Lancer auto-play couldn't take the exit.** The exit portal sat on the Heart shrine's braziers on
+  147 of 200 floors; the generator now reserves a clear spot for it (`heart.exitAt`; `breach_gen.mjs` checks 0
+  blocked), the portal's reach is 2, and auto-play walks into it. Also found a Lancer stall: a caster on a ledge the hero
+  couldn't climb kept him dodging for 20+ minutes. Arrivals now need two-way reach (`heroReach`), stranded monsters
+  are rifted down beside the hero after 4 s, and auto-play in the Breach pushes on (3 s, dangers ignored) after 6 s of
+  dodging while healthy and barely hurt. `BREACH_CLASS=lancer breach.js auto` picks the class.
 - **Open / to ask:** every other shrine is required before the Heart (a floor is ~20 game minutes); reward odds
   (`BREACH_ODDS`); death costs nothing but the floor. Not measured on a phone.
 
