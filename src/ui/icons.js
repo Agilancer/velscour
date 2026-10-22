@@ -12,6 +12,7 @@ import { enemyImage } from '../core/enemyart.js';
 import { NOTES } from '../data/notation.js';
 import { drawGlyph } from '../gfx/notation.js';
 import { drawSun, drawMoon, drawBlackHole, drawChartStar } from '../gfx/cosmos.js';
+import { slimeIconParts } from '../gfx/slimeart.js';
 
 const cache = new Map();
 const urlCache = new Map();
@@ -157,7 +158,19 @@ export function skillIcon(sk, size = 64) {
       for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; x.beginPath(); x.moveTo(Math.cos(a) * 6, Math.sin(a) * 6); x.lineTo(Math.cos(a) * (i % 2 ? 14 : 24), Math.sin(a) * (i % 2 ? 14 : 24)); stroke(3, core); }
       break;
     case 'summon': {
-      const look = SUMMONS[sk.m.sum] && SUMMONS[sk.m.sum].look;
+      const def = SUMMONS[sk.m.sum];
+      if (def && (def.slime || def.court)) { // the Slime Lord's court: its Glymmora slimes (gfx/slimeart.js)
+        const parts = slimeIconParts(def);
+        if (!parts) { keep = false; x.beginPath(); x.ellipse(0, 10, 18, 12, 0, 0, TAU); x.fillStyle = glow; x.fill(); }
+        else parts.forEach((q, i) => {
+          const n = parts.length, k = (n > 1 ? 26 : 40) / q.bh, ox = n > 1 ? (i - 1) * 15 : 0, oy = n > 1 ? (i === 1 ? -6 : 8) : 0;
+          x.save(); x.translate(ox, 22 + oy); if (q.flip) x.scale(-1, 1);
+          x.drawImage(q.img, q.sx, q.sy, q.sw, q.sh, -q.ax * k, -q.ay * k, q.sw * k, q.sh * k); x.restore();
+        });
+        if ((sk.m.n || 1) > 1) { x.fillStyle = '#fff'; x.font = 'bold 12px sans-serif'; x.fillText('x' + sk.m.n, 10, 26); }
+        break;
+      }
+      const look = def && def.look;
       const art = look && (look.icon || (Array.isArray(look.art) ? look.art[0] : look.art));
       let img = art ? enemyImage(art) : null;
       if (art && !img) keep = false;

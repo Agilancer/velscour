@@ -1,8 +1,8 @@
 // Pet art from the familiar sheets (assets/source/enemies/familiars/): a line-up of every summon that draws one
-// (familiars_lineup.png, 3 of each so the random picks show), a field of 40 Slime Lord slimelings rising out of
-// puddles and hopping after the hero (familiars_slimes.png), then a Slime Lord casting every slime summon into a
-// crowd (familiars_battle.png). Checks: every pet look drew painted art, the slimelings are many different blue
-// slimes, the wolves sit when idle, and no errors.
+// (familiars_lineup.png, 3 of each so the random picks show), a field of 40 Slime Lord slimelings (court slimes,
+// game/slimecourt.js) rising out of their puddles and hopping after the hero (familiars_slimes.png), then a Slime Lord casting every slime summon into a
+// crowd (familiars_battle.png). Checks: every pet look drew painted art, the slimelings are many different Glymmora
+// slime sets of every colour, the wolves sit when idle, and no errors.
 //   node tools/tests/familiars.js
 const { openGame, report } = require('./harness');
 
@@ -47,11 +47,11 @@ const { openGame, report } = require('./harness');
   await page.waitForTimeout(200);
   await shot('familiars_lineup');
 
-  // 40 slimelings: random blue slimes, rising from puddles, then hopping after the hero
+  // 40 slimelings: the rainbow brood, each a random sprite set of its kind, rising from puddles, then hopping after the hero
   const out2 = await page.evaluate(async () => {
     const { G, game } = window.VELSCOUR;
     const { SUMMONS } = await import('/src/data/summons.js');
-    const { buildSummon } = await import('/src/game/monster.js');
+    const { courtSummon } = await import('/src/game/slimecourt.js');
     const { lineup, out } = window.famTest;
     const p = G.player, w = G.world;
     for (const m of lineup) m.dead = true;
@@ -59,11 +59,11 @@ const { openGame, report } = require('./harness');
     const slimes = [];
     for (let i = 0; i < 40; i++) {
       const [x, y] = w.map.randomNear(p.x, p.y, 4);
-      const m = buildSummon(p, SUMMONS.slimeling, 'slimeling', x, y, 1, 100, 0);
+      const m = courtSummon(p, 'slimeling', x, y, 1, 100, 0);
       w.add(m); slimes.push(m);
     }
-    const ids = new Set(slimes.map((m) => m.art));
-    out.push((ids.size >= 30 ? '  ok ' : 'FAIL ') + `40 slimelings wear ${ids.size} different blue slimes; ${slimes.filter((m) => m.riseArt).length} rose from a puddle`);
+    const ids = new Set(slimes.map((m) => m.slime && m.slime.set)), hues = new Set(slimes.map((m) => m.slime && m.slime.K.hue));
+    out.push((ids.size >= 25 && hues.size === 6 ? '  ok ' : 'FAIL ') + `40 slimelings wear ${ids.size} different slime sets in ${hues.size} colours`);
     G.paused = false;
     for (let i = 0; i < 4; i++) w.update(1 / 30);
     G.paused = true; game.render();
@@ -115,7 +115,7 @@ const { openGame, report } = require('./harness');
     step(90);
     const mine = w.creatures.filter((c) => c.summon && !c.dead);
     out.push(`${fails ? 'FAIL' : '  ok '} cast ${sks.length} slime summons; alive: ` + Object.entries(mine.reduce((a, c) => ((a[c.summonKey] = (a[c.summonKey] || 0) + 1), a), {})).map((e) => e.join('x')).join(' '));
-    out.push(`  .. ${new Set(mine.map((c) => c.art)).size} different looks among ${mine.length} minions`);
+    out.push(`  .. ${new Set(mine.map((c) => (c.slime && c.slime.set) || c.art)).size} different looks among ${mine.length} minions`);
     // idle wolves sit
     const wolf = buildSummon(p, SUMMONS.spiritwolf, 'spiritwolf', p.x - 2, p.y - 2, 1, 100, 0);
     wolf.art = 'wf5'; wolf.idleArt = 'wf6'; wolf.static = true;

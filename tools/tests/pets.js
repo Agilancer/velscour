@@ -31,7 +31,7 @@ const SEEDS = +(process.argv[2] || 3);
       G.godMode = true; G.paused = true;
       const clear = () => { for (const c of w.creatures) if (!c.isPlayer && c.team === 'enemy') c.dead = true; w.update(1 / 30); };
       clear();
-      const KEYS = ['skeleton', 'skeleton', 'reaver', 'spearman', 'skelarcher', 'pyromancer', 'slimeling', 'slimeling', 'oozebuddy', 'frostslime', 'kingslime', 'slimetitan'];
+      const KEYS = ['skeleton', 'skeleton', 'reaver', 'spearman', 'skelarcher', 'pyromancer', 'sl_pouncer', 'sl_charmer', 'sl_mender', 'sl_frost', 'sl_bulwark', 'slimetitan'];
       let pets = [];
       const summon = (x, y) => {
         for (const c of pets) c.dead = true;
@@ -47,7 +47,7 @@ const SEEDS = +(process.argv[2] || 3);
           w.update(1 / 30);
           for (const c of pets) {
             const [lx, ly] = last.get(c);
-            if (dist(lx, ly, c.x, c.y) > 1) st.blinks++;
+            if (dist(lx, ly, c.x, c.y) > 1 && !(c.slime && c.slime.act && c.slime.act.type === 'blink')) st.blinks++; // a blue slime's blink is meant
             last.set(c, [c.x, c.y]);
           }
           if (each && each(i) === false) break;

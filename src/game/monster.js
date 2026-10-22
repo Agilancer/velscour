@@ -11,7 +11,8 @@ import { ARCH, ARCH_MOVES, ELITE_AFFIXES, bossName, uniqueName } from '../data/e
 import { SUMMONS } from '../data/summons.js';
 import { bodyR } from '../world/map.js';
 import { toughness, danger, densityXp } from '../data/depth.js';
-import { ART_BY_ID, BLUE_PUDDLES, BLUE_SLIMES, REVIVED, greaterSwap, rollLooks, uniqueSwap } from '../data/bestiary.js';
+import { attachSlime, slimeUpdate, courtDef } from './slimecourt.js';
+import { ART_BY_ID, REVIVED, greaterSwap, rollLooks, uniqueSwap } from '../data/bestiary.js';
 
 const LEASH = 10; // minions fight what's within this many tiles of the hero
 const CHASE = 1.3, CHASE_MAX = 4.6; // monsters' pursuit pace: x1.3, up to 4.6 tiles/s (the hero runs 4.2) unless faster already
@@ -166,6 +167,7 @@ export class Monster extends Creature {
       return;
     }
     if (this.state === 'windup' || this.state === 'act') { this.runAction(dt); return; }
+    if (this.slime) return slimeUpdate(this, dt); // the Slime Lord's court (game/slimecourt.js)
 
     if (this.ai === 'boss') return this.bossUpdate(dt);
     if (this.ai === 'raid') return this.raid.update(dt);
@@ -1427,16 +1429,16 @@ export function buildSummon(owner, def, key, x, y, dmg, hp, life) {
   if (art && ART_BY_ID[art]) {
     m.art = art; m.swap = look.swap || null; m.artH = look.h || ART_BY_ID[art].h; m.artRef = look.ref || 0;
     m.hop = !!look.hop; m.idleArt = look.idle && look.idle[art];
-    if (look.art === BLUE_SLIMES) m.riseArt = pick(BLUE_PUDDLES); // rises out of a puddle
   }
+  if (def.slime) attachSlime(m, def);
   return m;
 }
 
 export function createSummon(p, sk, L, x, y, dmgRange, corpse) {
   const w = p.world;
-  let key = sk.m.sum;
-  if (SUMMONS[key] && SUMMONS[key].pool) key = pick(SUMMONS[key].pool); // Grave Warband, Conclave of Bones
-  const def = SUMMONS[key];
+  let key = sk.m.sum, def;
+  if (SUMMONS[key] && SUMMONS[key].court) [key, def] = courtDef(key, p); // the Slime Lord's rainbow broods
+  else { if (SUMMONS[key] && SUMMONS[key].pool) key = pick(SUMMONS[key].pool); def = SUMMONS[key]; } // Grave Warband, Conclave of Bones
   if (!def) return null;
   const sp = 1 + (p.st.summonPct || 0) / 100;
   const avg = (dmgRange[0] + dmgRange[1]) / 2;
