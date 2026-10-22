@@ -67,6 +67,23 @@ const check = (ok, msg) => { console.log(`${ok ? 'ok  ' : 'FAIL'} ${msg}`); if (
     return { gone: cr.gone, caught: cr.caught, n: (G.char.critters || 0) - n, listed: G.world.critters.includes(cr) };
   });
   check(away.gone && !away.caught && away.n === 0 && !away.listed, 'an untouched critter escapes and is cleared');
+  // the hero walking over one never catches it: only a click or a tap does (and it shies away)
+  const walk = await page.evaluate(async () => {
+    const { G, game } = window.VELSCOUR;
+    const { spawnCritter } = await import('/src/game/critters.js');
+    const out = [];
+    for (const key of ['scarab', 'moth']) {
+      for (const c of G.world.critters || []) c.caught = true;
+      const cr = spawnCritter(G.world, key), n = G.char.critters || 0;
+      if (!cr) { out.push(null); continue; }
+      cr.x = G.player.x; cr.y = G.player.y;
+      for (let i = 0; i < 30 * 3; i++) { game.update(1 / 30); if (cr.alive && i < 45) { G.player.x = cr.x; G.player.y = cr.y; } }
+      out.push({ caught: cr.caught, n: (G.char.critters || 0) - n, d: Math.hypot(cr.x - G.player.x, cr.y - G.player.y) });
+    }
+    return out;
+  });
+  check(walk.every((w) => w && !w.caught && w.n === 0), `the hero standing on critters never catches them ${JSON.stringify(walk)}`);
+  check(walk.every((w) => w && w.d > 0.8), 'critters shy away from the hero');
   // the spawning clock
   const clock = await page.evaluate(async () => {
     const { G, game } = window.VELSCOUR;

@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gilded Critters 3D</title>
+<!-- The gilded critters (src/game/critters.js) as three.js models: the Gilded Wisp, the Starmoth, the Golden Scarab and
+     the Prismatic Wisp. Built in code, lit by a rig of eleven lights (key, fill, two rims, a hemisphere, an environment
+     map and each critter's own coloured lamps) and rendered from the game's iso camera into one atlas: 8 facings x the
+     walk / flap frames for the moth and scarab, a looping 12-frame idle for the wisps. Driven by tools/critters3d_bake.js,
+     which writes assets/sprites/critters/critters.webp + .json. Open it in a browser to see the baked atlas.
+     Only this tool runs three.js; the game draws the atlas. -->
+<style>html, body { margin: 0; background: #14101c; color: #ccc; font: 13px sans-serif; } canvas { image-rendering: pixelated; }</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// 1 unit = 1 game px. Cells are CELL px at S x the game's size; the model's origin lands on the cell centre (the body
+// for fliers, the ground under it for the scarab). Facings: k * 45 degrees, game angle a -> three (cos a, 0, sin a).
+const CELL = 128, S = 2, COLS = 16, TAU = Math.PI * 2;
+const SETS = { wisp: { dirs: 1, frames: 12 }, prism: { dirs: 1, frames: 12 }, moth: { dirs: 8, frames: 8 }, scarab: { dirs: 8, frames: 6 } };
+
+let renderer, scene, camera;
+function setup() {
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(1); renderer.setSize(CELL, CELL, false);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.85;
+  scene = new THREE.Scene();
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = 0.7;
+  const h = CELL / S / 2, e = Math.PI / 6;
+  camera = new THREE.OrthographicCamera(-h, h, h, -h, -2000, 2000);
+  camera.position.set(Math.cos(e) * Math.SQRT1_2, Math.sin(e), Math.cos(e) * Math.SQRT1_2).multiplyScalar(500);
+  camera.up.set(0, 1, 0); camera.lookAt(0, 0, 0); camera.updateMatrixWorld();
+  // the rig, fixed to the view (screen left = (-1, 0, 1), toward the viewer = (1, 0, 1)): warm key from the top left,
+  // cool fill from the right, a gold and a violet rim from behind, sky/ground hemisphere and a soft ambient
+  const dl = (c, i, x, y, z) => { const l = new THREE.DirectionalLight(c, i); l.position.set(x, y, z); scene.add(l); };
+  dl(0xfff0d0, 2, -0.3, 1.4, 1.1);
+  dl(0x9ab8ff, 0.9, 1.2, 0.4, 0.2);
+  dl(0xffc860, 2.2, -0.9, 0.7, -1);
+  dl(0xc080ff, 1.6, 1, 0.5, -1.1);
+  dl(0xffffff, 0.5, 0.4, -0.6, 1);
+  scene.add(new THREE.HemisphereLight(0xfff4e0, 0x302040, 0.9), new THREE.AmbientLight(0xffffff, 0.25));
+}
+const pl = (g, c, i, x, y, z, d = 40) => { const l = new THREE.PointLight(c, i, d, 2); l.position.set(x, y, z); g.add(l); return l; };
+
+// ------------------------------------------------------------------ materials
+const gold = (o = {}) => new THREE.MeshPhysicalMaterial({ color: 0xffc040, metalness: 1, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.08, ...o });
+const glow = (c, i = 2.5, o = {}) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: i, roughness: 0.4, ...o });
+const haze = (c, op) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: op, depthWrite: false });
+const mesh = (geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); return m; };
+/** A rod from a to b. */
+function rod(a, b, r0, r1, mat) {
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = B.clone().sub(A);
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, d.length(), 8), mat);
+  m.position.copy(A).addScaledVector(d, 0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+  return m;
+}
+const joint = (p, r, mat) => mesh(new THREE.SphereGeometry(r, 10, 8), mat, ...p);
+
+// ------------------------------------------------------------------ the wisps: a glowing heart in a turning crystal,
+// gold rings with beads, orbiting motes and a flame tail that sways
+function buildWisp(prism) {
+  const g = new THREE.Group(), parts = {};
+  const RAIN = [0xff60d0, 0x60d8ff, 0xffe050, 0x80ff90, 0xb070ff, 0xff9040];
+  const main = prism ? 0xff80e0 : 0xffc838;
+  parts.core = mesh(new THREE.IcosahedronGeometry(3.6, 3), glow(prism ? 0xfff0ff : 0xffd860, 2.2));
+  parts.halo = mesh(new THREE.SphereGeometry(6.5, 24, 16), haze(main, 0.14));
+  let shellGeo;
+  if (prism) { // a bipyramid of rainbow facets
+    shellGeo = new THREE.OctahedronGeometry(8, 0); shellGeo.scale(1, 1.55, 1);
+    const col = [], n = shellGeo.attributes.position.count;
+    for (let i = 0; i < n; i += 3) { const c = new THREE.Color(RAIN[(i / 3) % RAIN.length]); for (let k = 0; k < 3; k++) col.push(c.r, c.g, c.b); }
+    shellGeo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  } else shellGeo = new THREE.OctahedronGeometry(7.4, 1);
+  parts.shell = mesh(shellGeo, new THREE.MeshPhysicalMaterial({ color: prism ? 0xffffff : 0xffd870, vertexColors: prism, metalness: 0.2, roughness: 0.06,
+    transparent: true, opacity: prism ? 0.7 : 0.58, flatShading: true, clearcoat: 1, emissive: main, emissiveIntensity: prism ? 0.35 : 0.2, iridescence: prism ? 1 : 0.3, side: THREE.DoubleSide, depthWrite: false }));
+  parts.core.renderOrder = 0; parts.shell.renderOrder = 2; parts.halo.renderOrder = 3;
+  g.add(parts.core, parts.shell, parts.halo);
+  // rings with beads (beads every 120 degrees, so a third of a turn loops)
+  parts.rings = [];
+  const tilts = prism ? [[1.2, 0.3], [0.4, 1.1], [1.6, -0.9]] : [[1.25, 0.25], [0.35, -1.0]];
+  tilts.forEach(([tx, tz], i) => {
+    const holder = new THREE.Group(); holder.rotation.set(tx, 0, tz);
+    const spin = new THREE.Group(); holder.add(spin);
+    const R = 11 + i * 1.6, c = prism ? RAIN[i * 2] : 0xffd050;
+    spin.add(mesh(new THREE.TorusGeometry(R, 0.55, 8, 64), prism ? glow(c, 1.4, { metalness: 0.6, roughness: 0.2 }) : gold({ emissive: 0x803000, emissiveIntensity: 0.4 })));
+    for (let b = 0; b < 3; b++) { const a = b * TAU / 3; spin.add(mesh(new THREE.IcosahedronGeometry(1.3, 1), glow(prism ? RAIN[(i * 2 + b + 1) % 6] : 0xfff4c0, 3), Math.cos(a) * R, Math.sin(a) * R, 0)); }
+    g.add(holder); parts.rings.push(spin);
+  });
+  // motes on a slow orbit
+  parts.motes = [];
+  for (let i = 0; i < 6; i++) { const m = mesh(new THREE.IcosahedronGeometry(0.9, 1), glow(prism ? RAIN[i] : 0xffe890, 3.5)); g.add(m); parts.motes.push(m); }
+  // the tail
+  parts.tail = [];
+  for (let i = 0; i < 9; i++) {
+    const r = 3.6 * (1 - i / 10), m = mesh(new THREE.SphereGeometry(r, 14, 10), glow(prism ? RAIN[i % 6] : new THREE.Color(0xffa018).lerp(new THREE.Color(0xff4a00), i / 8).getHex(), 1.3 * (1 - i / 12), { transparent: true, opacity: 0.9 - i * 0.06 }));
+    g.add(m); parts.tail.push(m);
+  }
+  // its own lamps: the heart, and two in its colours to either side
+  pl(g, prism ? 0xffffff : 0xffe080, 300, 0, 0, 0, 60);
+  pl(g, main, 220, -14, 6, 10); pl(g, prism ? 0x60d8ff : 0xff9a20, 220, 14, -4, -6);
+  const pose = (f, N) => {
+    const k = f / N, ph = k * TAU;
+    parts.core.scale.setScalar(1 + 0.12 * Math.sin(ph * 2));
+    parts.halo.scale.setScalar(1 + 0.15 * Math.sin(ph * 2 + 0.6));
+    parts.shell.rotation.set(0.3, k * Math.PI / 2, 0.15);
+    parts.rings.forEach((r, i) => { r.rotation.z = (i % 2 ? -1 : 1) * k * TAU / 3; });
+    parts.motes.forEach((m, i) => { const a = ph + i * TAU / 6, r = 15 + 2 * Math.sin(ph * 2 + i); m.position.set(Math.cos(a) * r, Math.sin(a * 2 + i) * 4, Math.sin(a) * r); });
+    parts.tail.forEach((m, i) => { const sw = Math.sin(ph + i * 0.7) * i * 0.55; m.position.set(-i * 0.8 + sw, -5 - i * 2.4, sw * 0.6); });
+  };
+  return { g, pose };
+}
+
+// ------------------------------------------------------------------ the starmoth: a fuzzy body, feathered antennae and
+// four painted wings (indigo, silver edges, a gold eye spot and stars that glow)
+const SHAPES = {
+  fore: [[1.5, 0], [4, 7, 8, 16, 6, 23], [3, 26, -6, 25, -8, 21], [-9, 14, -6, 6, -4, 2], [-2, 0, 0, -0.5, 1.5, 0]],
+  hind: [[-1, 0], [-3, 6, -6, 13, -10, 15], [-15, 16, -18, 12, -16, 7], [-14, 3, -8, 0.5, -4, -0.2], [-3, -0.5, -2, -0.4, -1, 0]],
+};
+const WB = { x0: -19, x1: 9, y0: -1, y1: 27 };
+function wingShape(pts) {
+  const s = new THREE.Shape(); s.moveTo(...pts[0]);
+  for (const c of pts.slice(1)) s.bezierCurveTo(...c);
+  return s;
+}
+function wingTextures() {
+  const W = 256, mk = () => { const c = document.createElement('canvas'); c.width = c.height = W; return c; };
+  const col = mk(), emi = mk(), cx = col.getContext('2d'), ex = emi.getContext('2d');
+  const xf = (x) => x.setTransform(W / (WB.x1 - WB.x0), 0, 0, -W / (WB.y1 - WB.y0), -WB.x0 * W / (WB.x1 - WB.x0), WB.y1 * W / (WB.y1 - WB.y0));
+  ex.fillStyle = '#000'; ex.fillRect(0, 0, W, W);
+  for (const [k, pts] of Object.entries(SHAPES)) {
+    const path = new Path2D(); path.moveTo(...pts[0]);
+    for (const c of pts.slice(1)) path.bezierCurveTo(...c);
+    path.closePath();
+    const [tx, ty] = k === 'fore' ? [-1, 22] : [-14, 12];
+    for (const [x, glowing] of [[cx, false], [ex, true]]) {
+      xf(x); x.save(); x.clip(path);
+      if (!glowing) {
+        const gr = x.createRadialGradient(0, 0, 1, 0, 0, 26);
+        gr.addColorStop(0, '#0c0628'); gr.addColorStop(0.4, '#26207a'); gr.addColorStop(0.78, '#4c6ad8'); gr.addColorStop(1, '#a8c4ff');
+        x.fillStyle = gr; x.fillRect(WB.x0, WB.y0, WB.x1 - WB.x0, WB.y1 - WB.y0);
+        x.strokeStyle = 'rgba(10,6,40,0.55)'; x.lineWidth = 0.35; // veins
+        for (let i = 0; i < 7; i++) { const a = Math.atan2(ty, tx) + (i - 3) * 0.28; x.beginPath(); x.moveTo(0, 0); x.quadraticCurveTo(Math.cos(a) * 9 + 1, Math.sin(a) * 9, Math.cos(a) * 30, Math.sin(a) * 30); x.stroke(); }
+      }
+      // eye spot: gold ring, dark pupil, white glint
+      const ex0 = k === 'fore' ? 0 : -12, ey0 = k === 'fore' ? 14 : 9, R = k === 'fore' ? 4 : 3.4;
+      x.fillStyle = glowing ? '#a06a10' : '#ffc840'; x.beginPath(); x.arc(ex0, ey0, R, 0, TAU); x.fill();
+      x.fillStyle = glowing ? '#000' : '#120828'; x.beginPath(); x.arc(ex0, ey0, R * 0.62, 0, TAU); x.fill();
+      x.fillStyle = glowing ? '#ffffff' : '#ffffff'; x.beginPath(); x.arc(ex0 + R * 0.2, ey0 + R * 0.2, R * 0.2, 0, TAU); x.fill();
+      // stars
+      let seed = k === 'fore' ? 7 : 19; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      for (let i = 0; i < 46; i++) {
+        const sx = WB.x0 + rnd() * (WB.x1 - WB.x0), sy = WB.y0 + rnd() * (WB.y1 - WB.y0), r = 0.15 + rnd() * 0.45;
+        x.fillStyle = rnd() < 0.3 ? '#ffe9a0' : '#ffffff'; x.globalAlpha = glowing ? 0.9 : 1;
+        x.beginPath(); x.arc(sx, sy, r, 0, TAU); x.fill();
+      }
+      x.globalAlpha = 1; x.restore();
+      xf(x); x.strokeStyle = glowing ? '#7ab0ff' : '#f4f8ff'; x.lineWidth = glowing ? 1.4 : 0.8; x.stroke(path); // glowing rim
+    }
+  }
+  const t = (c) => { const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; return tx; };
+  return { map: t(col), emissiveMap: t(emi) };
+}
+function wingMesh(pts, tex) {
+  const geo = new THREE.ShapeGeometry(wingShape(pts), 24), p = geo.attributes.position, uv = geo.attributes.uv;
+  for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) - WB.x0) / (WB.x1 - WB.x0), (p.getY(i) - WB.y0) / (WB.y1 - WB.y0));
+  // a gentle camber so the wing catches the light
+  for (let i = 0; i < p.count; i++) p.setZ(i, -0.02 * p.getY(i) * p.getY(i) * 0.25);
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial({ ...tex, emissive: 0xffffff, emissiveIntensity: 1.1, side: THREE.DoubleSide,
+    roughness: 0.45, metalness: 0.1, sheen: 0.35, sheenColor: new THREE.Color(0x8098ff), iridescence: 0.4, transparent: true, alphaTest: 0.05 }));
+  m.rotation.x = Math.PI / 2; // shape y -> model z (the span)
+  return m;
+}
+function buildMoth() {
+  const g = new THREE.Group(), tex = wingTextures(), parts = { wings: [] };
+  const fur = new THREE.MeshPhysicalMaterial({ color: 0xc8d4ff, roughness: 0.9, sheen: 1, sheenRoughness: 0.4, sheenColor: new THREE.Color(0xffffff) });
+  const dark = new THREE.MeshPhysicalMaterial({ color: 0x2a2060, roughness: 0.5, sheen: 1, sheenColor: new THREE.Color(0x8090ff) });
+  const body = new THREE.Group(); g.add(body); parts.body = body;
+  body.add(mesh(new THREE.SphereGeometry(3.2, 20, 14), fur, 1, 0, 0)); // thorax
+  for (let i = 0; i < 6; i++) { const s = mesh(new THREE.SphereGeometry(2.6 - i * 0.3, 16, 12), i % 2 ? dark : fur, -2.2 - i * 1.7, -0.3 - i * 0.25, 0); s.scale.set(0.9, 0.95, 1); body.add(s); }
+  body.add(mesh(new THREE.SphereGeometry(2, 16, 12), dark, 4, 0.4, 0)); // head
+  for (const z of [-1, 1]) {
+    body.add(mesh(new THREE.SphereGeometry(1.05, 14, 10), glow(0x9ad0ff, 3.5), 5.2, 0.9, z * 1.2)); // big glowing eyes
+    const ant = new THREE.Group(); ant.position.set(5, 1.8, z * 0.8); body.add(ant);
+    const tipA = [6, 6, z * 4];
+    ant.add(rod([0, 0, 0], tipA, 0.25, 0.15, dark));
+    for (let i = 1; i <= 6; i++) { const u = i / 7; ant.add(rod([tipA[0] * u, tipA[1] * u, tipA[2] * u], [tipA[0] * u - 1.2, tipA[1] * u + 0.4, tipA[2] * u + z * 1.4 * (1 - u * 0.5)], 0.12, 0.05, fur)); }
+    ant.add(mesh(new THREE.IcosahedronGeometry(0.6, 1), glow(0xfff0b0, 4), ...tipA));
+    parts[z < 0 ? 'antR' : 'antL'] = ant;
+  }
+  for (const side of [-1, 1]) {
+    const mirror = new THREE.Group(); mirror.scale.z = side; g.add(mirror);
+    for (const k of ['fore', 'hind']) {
+      const piv = new THREE.Group(); piv.position.set(k === 'fore' ? 1.6 : -0.6, 0.8, 1.6); mirror.add(piv);
+      piv.add(wingMesh(SHAPES[k], tex));
+      parts.wings.push({ piv, k });
+    }
+  }
+  pl(g, 0x9ac8ff, 260, 0, 10, 4, 60); pl(g, 0xffe0a0, 160, -8, -6, 10); pl(g, 0xb080ff, 160, 8, 4, -12);
+  const pose = (f, N) => {
+    const ph = f / N * TAU, up = 0.25 + 0.95 * Math.sin(ph);
+    for (const w of parts.wings) { w.piv.rotation.x = -(w.k === 'fore' ? up : up * 0.85 - 0.1); w.piv.rotation.y = w.k === 'fore' ? -0.12 * Math.cos(ph) : 0.08; }
+    body.position.y = -Math.sin(ph) * 1.2; body.rotation.z = 0.12 + Math.cos(ph) * 0.05;
+    parts.antL.rotation.x = Math.sin(ph + 1) * 0.08; parts.antR.rotation.x = -Math.sin(ph + 1) * 0.08;
+  };
+  return { g, pose };
+}
+
+// ------------------------------------------------------------------ the golden scarab: a polished gold shell with a
+// turquoise seam and inlays, a horned head, a glowing gem and six legs in a tripod gait
+function buildScarab() {
+  const g = new THREE.Group(), parts = { legs: [] };
+  const shell = gold(), deep = gold({ color: 0xd88a18, roughness: 0.3 }), bronze = new THREE.MeshPhysicalMaterial({ color: 0x4a2a0c, metalness: 0.8, roughness: 0.35, clearcoat: 0.6 });
+  const tq = glow(0x30f0e0, 2.4, { metalness: 0.3, roughness: 0.15 });
+  const Y = 4.2;
+  const elytra = mesh(new THREE.SphereGeometry(1, 40, 20, 0, TAU, 0, Math.PI / 2), shell, -2, Y, 0); elytra.scale.set(8.5, 5.2, 6.6); g.add(elytra);
+  const belly = mesh(new THREE.SphereGeometry(1, 24, 10, 0, TAU, Math.PI / 2, Math.PI / 2), bronze, -2, Y, 0); belly.scale.set(8.2, 1.6, 6.2); g.add(belly);
+  g.add(mesh(new THREE.BoxGeometry(16, 0.5, 0.45), tq, -2.4, Y + 5.05, 0)); // the seam
+  // inlay arcs on each wing case
+  for (const z of [-1, 1]) {
+    const pts = [];
+    for (let i = 0; i <= 20; i++) { const a = -0.9 + i / 20 * 1.9, x = -2 + Math.cos(a) * 6, zz = z * (1.2 + Math.abs(Math.sin(a)) * 3.2); const yy = Y + 5.2 * Math.sqrt(Math.max(0, 1 - ((x + 2) / 8.5) ** 2 - (zz / 6.6) ** 2)) + 0.15; pts.push(new THREE.Vector3(x, yy, zz)); }
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 30, 0.32, 6), tq));
+  }
+  const pron = mesh(new THREE.SphereGeometry(1, 32, 16, 0, TAU, 0, Math.PI / 2), deep, 6.6, Y - 0.2, 0); pron.scale.set(3.8, 4, 5.2); g.add(pron);
+  g.add(mesh(new THREE.OctahedronGeometry(1.5, 0), glow(0x40ffe8, 3.2, { flatShading: true, metalness: 0.4, roughness: 0.1 }), 7, Y + 4, 0)); // the gem
+  const head = mesh(new THREE.SphereGeometry(1, 24, 14), deep, 10.4, Y - 0.6, 0); head.scale.set(2.4, 2, 3); g.add(head);
+  // the horn, curving up
+  const hp = []; for (let i = 0; i <= 10; i++) { const u = i / 10; hp.push(new THREE.Vector3(11.5 + u * 4, Y + 0.4 + u * u * 6, 0)); }
+  const horn = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(hp), 20, 1, 10);
+  const hpos = horn.attributes.position, hc = new THREE.CatmullRomCurve3(hp); // taper toward the tip
+  for (let i = 0; i < hpos.count; i++) { const seg = Math.floor(i / 11) / 20, c = hc.getPoint(seg), k = 1 - seg * 0.85; hpos.setXYZ(i, c.x + (hpos.getX(i) - c.x) * k, c.y + (hpos.getY(i) - c.y) * k, c.z + (hpos.getZ(i) - c.z) * k); }
+  horn.computeVertexNormals(); g.add(new THREE.Mesh(horn, shell));
+  for (const z of [-1, 1]) {
+    g.add(mesh(new THREE.SphereGeometry(0.75, 12, 8), glow(0xffa020, 3), 11.4, Y, z * 2.3)); // eyes
+    g.add(rod([12, Y - 0.6, z * 1.6], [15, Y + 0.6, z * 3.4], 0.18, 0.12, bronze)); // antennae with clubs
+    g.add(mesh(new THREE.SphereGeometry(0.6, 10, 8), deep, 15, Y + 0.6, z * 3.4));
+  }
+  // six legs: front, mid, hind on each side; tripod A = L front, R mid, L hind
+  [[5, 4.5], [0.5, 3.5], [-4.5, -4]].forEach(([hx, reach], i) => {
+    for (const side of [-1, 1]) {
+      const hip = new THREE.Group(); hip.position.set(hx, Y - 0.6, side * 4.6); g.add(hip);
+      const knee = [reach * 0.4, 2.4, side * 4.2], foot = [reach, -(Y - 0.6), side * 8.2];
+      hip.add(rod([0, 0, 0], knee, 0.75, 0.55, bronze), joint(knee, 0.6, deep), rod(knee, foot, 0.5, 0.22, bronze));
+      for (const t of [-1, 1]) hip.add(rod(foot, [foot[0] + t * 0.8, foot[1], foot[2] + side * 0.7], 0.18, 0.08, bronze)); // claws
+      parts.legs.push({ hip, side, ph: (i + (side > 0 ? 0 : 1)) % 2 ? Math.PI : 0 });
+    }
+  });
+  pl(g, 0xffd060, 400, -2, 18, 6, 60); pl(g, 0x40ffe8, 220, 8, 10, -10); pl(g, 0xff9020, 200, -12, 6, 12);
+  const pose = (f, N) => {
+    const ph = f / N * TAU;
+    for (const L of parts.legs) {
+      const p = ph + L.ph;
+      L.hip.rotation.y = 0.38 * Math.sin(p);
+      L.hip.rotation.x = -L.side * 0.28 * Math.max(0, Math.cos(p));
+    }
+    elytra.position.y = Y + 0.25 * Math.abs(Math.sin(ph)); // a little bob
+  };
+  return { g, pose };
+}
+
+// ------------------------------------------------------------------ bake
+const BUILD = { wisp: () => buildWisp(false), prism: () => buildWisp(true), moth: buildMoth, scarab: buildScarab };
+function bake() {
+  setup();
+  const total = Object.values(SETS).reduce((a, s) => a + s.dirs * s.frames, 0), rows = Math.ceil(total / COLS);
+  const atlas = document.createElement('canvas'); atlas.width = COLS * CELL; atlas.height = rows * CELL;
+  const ax = atlas.getContext('2d'), out = { cell: CELL, S, cols: COLS, sets: {} };
+  let idx = 0;
+  for (const [key, set] of Object.entries(SETS)) {
+    const { g, pose } = BUILD[key]();
+    scene.add(g);
+    out.sets[key] = { dirs: set.dirs, frames: set.frames, at: idx };
+    for (let d = 0; d < set.dirs; d++) for (let f = 0; f < set.frames; f++) {
+      g.rotation.y = -d * TAU / 8; pose(f, set.frames);
+      renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(scene, camera);
+      ax.drawImage(renderer.domElement, (idx % COLS) * CELL, Math.floor(idx / COLS) * CELL);
+      idx++;
+    }
+    scene.remove(g);
+  }
+  return { meta: out, atlas };
+}
+window.CRITTERBAKE = { bake: () => { const { meta, atlas } = bake(); return { meta, webp: atlas.toDataURL('image/webp', 0.92) }; } };
+if (!navigator.webdriver) { // opened by hand: show the atlas
+  const { atlas } = bake();
+  atlas.style.background = '#2a2236'; document.body.appendChild(atlas);
+}
+</script>
+</body>
+</html>
