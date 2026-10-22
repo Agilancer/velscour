@@ -5,7 +5,8 @@
 Each sheet is 2 rows x 5 poses on a transparent background with a caption under every pose. A pose is every opaque
 component in its grid cell that is taller than a caption; all poses keep one shared scale and are placed in equal
 cells with the feet on the bottom row, centred. Writes homunculus.webp (one row of cells) and homunculus.json
-({cell: [w, h], foot, stand, poses: {name: index}}); src/gfx/homunculus.js draws them.
+({cell: [w, h], foot, stand, poses: {name: index}}); src/gfx/homunculus.js draws them. His dark red neck scarf is
+recoloured pink (SCARF_HUE) on every pose before scaling.
 """
 import json, os, sys
 import numpy as np
@@ -21,6 +22,7 @@ NAMES = [
   ['defiant', 'mournful', 'confused', 'skeptical', 'overjoyed', 'annoyed', 'nostalgic', 'alarmed', 'focused', 'humble'],
 ]
 CELL_H = 240   # px of the tallest standing pose plus headroom
+SCARF_HUE = 340   # degrees: the neck scarf's new colour (pink)
 
 
 def cut(path):
@@ -73,10 +75,34 @@ def cut(path):
   return poses
 
 
+def pink_scarf(im):
+  """The scarf: the big saturated deep red patches in the top half of a pose (skin and leather sit at hue 10-25),
+  widened a little to take its shading and soft edges, then shifted to SCARF_HUE and lightened."""
+  a = np.asarray(im)
+  hsv = np.asarray(im.convert('RGB').convert('HSV')).astype(float) / 255
+  h, s, v = hsv[..., 0] * 360, hsv[..., 1], hsv[..., 2]
+  op = a[..., 3] > 40
+  core = ((h >= 340) | (h < 9)) & (s > 0.42) & op
+  core[a.shape[0] // 2:] = False
+  lab, n = ndimage.label(core, np.ones((3, 3)))
+  if not n: return im
+  size = ndimage.sum(core, lab, range(1, n + 1))
+  keep = np.isin(lab, 1 + np.nonzero(size >= max(40, size.max() * 0.08))[0])
+  zone = ndimage.binary_dilation(ndimage.binary_fill_holes(ndimage.binary_closing(keep, iterations=3)), iterations=2)
+  # full weight up to hue 9, fading out by 18 (towards skin); saturation fades it in from 0.2
+  red = np.where(h >= 300, h - 360, h)
+  wt = (zone & op & (red > -40) & (red < 18)) * np.clip((18 - red) / 9, 0, 1) * np.clip((s - 0.2) / 0.15, 0, 1)
+  pk = np.stack([np.full_like(h, SCARF_HUE / 360), s * 0.72, np.minimum(1, v * 1.5 + 0.1)], -1)
+  rgb = np.asarray(Image.fromarray((pk * 255).round().astype(np.uint8), 'HSV').convert('RGB')).astype(float)
+  out = a.astype(float)
+  out[..., :3] += (rgb - out[..., :3]) * wt[..., None]
+  return Image.fromarray(out.round().astype(np.uint8))
+
+
 def main():
   poses, names = [], []
   for i, row in enumerate(NAMES):
-    poses += cut(os.path.join(SRC, f'poses_{i + 1}.webp'))
+    poses += [(pink_scarf(p), foot) for p, foot in cut(os.path.join(SRC, f'poses_{i + 1}.webp'))]
     names += row
   stand = max(p.height for p, _ in poses)
   k = CELL_H * 0.96 / stand
