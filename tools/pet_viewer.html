@@ -1,0 +1,97 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pet Viewer</title>
+<style>
+  body { margin: 0; background: #16141c; color: #c8c0d8; font: 13px system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: #201c2a; padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  select, button, input { font: inherit; }
+  #grid { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; }
+  .pet { background: #24202e; border: 1px solid #34304a; border-radius: 4px; text-align: center; }
+  .pet canvas { display: block; image-rendering: auto; }
+  .pet div { padding: 2px 4px 4px; font-size: 11px; }
+</style></head>
+<body>
+<!-- Plays the pet atlases (tools/build_pet_animations.py) as the game does. Serve the repo root and open
+     /tools/pet_viewer.html. "Showreel" runs summon, idle, move, attack, cheer, scared and dead in turn. -->
+<header>
+  <label>Sheet <select id="sheet"><option value="">all</option></select></label>
+  <label>State <select id="state">
+    <option value="reel">showreel</option><option>idle</option><option>move</option><option>attack</option>
+    <option>summoned</option><option>cheer</option><option>scared</option><option>dead</option><option>frames</option>
+  </select></label>
+  <label>Zoom <input id="zoom" type="range" min="0.5" max="3" step="0.25" value="1"></label>
+  <label><input id="guides" type="checkbox"> floor and centre</label>
+  <label><input id="onion" type="checkbox"> onion skin (rest pose)</label>
+  <label>Speed <input id="speed" type="range" min="0.1" max="2" step="0.1" value="1"></label>
+</header>
+<div id="grid"></div>
+<script type="module">
+const cat = await (await fetch('../assets/sprites/pets/catalog.json')).json();
+const imgs = {};
+const img = (s) => imgs[s] || (imgs[s] = Object.assign(new Image(), { src: `../assets/sprites/pets/${s}.webp` }));
+const $ = (id) => document.getElementById(id);
+for (const s of [...new Set(Object.values(cat).map((m) => m.sheet))]) $('sheet').append(new Option(s, s));
+let pets = [];
+function build() {
+  const grid = $('grid'); grid.textContent = ''; pets = [];
+  const z = +$('zoom').value;
+  for (const [key, m] of Object.entries(cat)) {
+    if ($('sheet').value && m.sheet !== $('sheet').value) continue;
+    const box = document.createElement('div'); box.className = 'pet';
+    const cv = document.createElement('canvas'); cv.width = Math.round(m.cellW * z); cv.height = Math.round(m.cellH * z);
+    const label = document.createElement('div'); label.textContent = key;
+    box.append(cv, label); grid.append(box); pets.push({ key, m, cv, label });
+  }
+}
+const S = (m, a, b) => m.states[a] || (b && m.states[b]) || m.states.idle;
+const loop = (l, t, fps) => l[Math.floor(t * fps) % l.length];
+const at = (l, k) => l[Math.min(l.length - 1, Math.floor(k * l.length))];
+// what the game shows (src/core/petart.js) for each state at time t
+function frame(m, st, t) {
+  const hum = m.kind === 'humanoid', still = m.kind === 'stationary';
+  switch (st) {
+    case 'idle': return still ? (Math.sin(t * 2.4) > 0.35 ? S(m, 'active')[0] : m.states.idle[0]) : loop(m.states.idle, t, 6);
+    case 'move': return still ? S(m, 'active')[0] : loop(S(m, 'fly', 'walk'), t, 9);
+    case 'attack': { const k = (t % 0.6) / 0.32; if (k > 1) return m.states.idle[0];
+      if (m.states.swoop) return k < 0.3 ? m.states.swoop[0] : at(m.states.attack, (k - 0.3) / 0.7);
+      if (m.states.attack) return at(m.states.attack, k);
+      return k < 0.55 ? S(m, 'cheer', 'happy')[0] : m.states.idle[0]; }
+    case 'summoned': { const k = (t % 1.4) / 0.6; return k < 1 ? at(m.states.summoned, k) : m.states.idle[0]; }
+    case 'cheer': return S(m, 'cheer', 'happy')[0];
+    case 'scared': return S(m, 'scared', 'damaged')[0];
+    case 'dead': return S(m, 'dead')[0];
+    case 'frames': return Math.floor(t * 2) % m.frames;
+  }
+}
+const REEL = [['summoned', 0.6], ['idle', 2], ['move', 2], ['attack', 1.8], ['cheer', 1], ['scared', 1], ['dead', 1]];
+const reelLen = REEL.reduce((a, [, d]) => a + d, 0);
+let t0 = performance.now(), T = 0;
+function tick(now) {
+  T += (now - t0) / 1000 * +$('speed').value; t0 = now;
+  const z = +$('zoom').value;
+  for (const p of pets) {
+    const { m, cv } = p, x = cv.getContext('2d'), im = img(m.sheet);
+    x.clearRect(0, 0, cv.width, cv.height);
+    if (!im.complete) continue;
+    let st = $('state').value, t = T;
+    if (st === 'reel') { let r = T % reelLen; for (const [s, d] of REEL) { if (r < d) { st = s; t = r; break; } r -= d; } }
+    const f = frame(m, st, t);
+    let dx = 0;
+    if (st === 'move' && m.kind === 'humanoid') { x.save(); x.translate(cv.width / 2, m.floor * z); x.rotate(Math.sin(t * 9) * 0.05); x.translate(-cv.width / 2, -m.floor * z); }
+    const bob = st === 'move' ? -Math.abs(Math.sin(t * 9)) * 2.2 * z : 0;
+    if (+$('onion').checked) { x.globalAlpha = 0.25; x.drawImage(im, 0, m.row * m.cellH, m.cellW, m.cellH, 0, 0, cv.width, cv.height); x.globalAlpha = 1; }
+    x.drawImage(im, f * m.cellW, m.row * m.cellH, m.cellW, m.cellH, dx, bob, cv.width, cv.height);
+    if (st === 'move' && m.kind === 'humanoid') x.restore();
+    if ($('guides').checked) {
+      x.fillStyle = '#5a5'; x.fillRect(0, m.floor * z, cv.width, 1);
+      x.fillStyle = '#66c'; x.fillRect(cv.width / 2, 0, 1, cv.height);
+    }
+    p.label.textContent = `${p.key} · ${st} ${f}`;
+  }
+  requestAnimationFrame(tick);
+}
+for (const id of ['sheet', 'zoom']) $(id).onchange = build;
+$('zoom').oninput = build;
+build(); requestAnimationFrame(tick);
+</script>
+</body></html>

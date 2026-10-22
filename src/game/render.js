@@ -16,6 +16,7 @@ import { drawTownProp, TOWN_PROP_KINDS } from '../gfx/townprops.js';
 import { drawTownSpeech } from './townspeech.js';
 import { homunculusPose } from '../gfx/homunculus.js';
 import { enemyImage } from '../core/enemyart.js';
+import { drawPetCorpse } from '../core/petart.js';
 import { drawLootLabels } from './loot.js';
 import { castleTileDressing, drawCastleParticles, drawCastleWater } from '../gfx/castleground.js';
 import { drawRim, RIM } from './creature.js';
@@ -686,6 +687,7 @@ export function renderWorld(ctx, world) {
     const px = isoX(c.x, c.y), py = isoY(c.x, c.y);
     if (px > vr.x0 - 40 && px < vr.x1 + 40 && py > vr.y0 - 40 && py < vr.y1 + 40) drawCorpse(ctx, c);
   }
+  for (const f of world.fallen || []) drawPetCorpse(ctx, f, isoX(f.x, f.y), isoY(f.x, f.y));
   // ground layer hazards & effects
   // Reuse records by insertion index (sort rearranges the active array only).
   const frame = world.renderFrame || (world.renderFrame = { pool: [], sorted: [], top: [], walls: [] });

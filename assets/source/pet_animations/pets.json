@@ -1,0 +1,251 @@
+{
+ "skeletal_warriors": {
+  "kind": "humanoid",
+  "keys": [
+   "skeleton",
+   "reaver",
+   "spearman",
+   "berserker"
+  ]
+ },
+ "skeletal_ranged": {
+  "kind": "humanoid",
+  "keys": [
+   "skelarcher",
+   "crossbowman",
+   "skelmage",
+   "pyromancer"
+  ]
+ },
+ "skeletal_support": {
+  "kind": "humanoid",
+  "keys": [
+   "plaguecaller",
+   "stormcaller",
+   "bishop",
+   "archlich"
+  ]
+ },
+ "skeletal_guards": {
+  "kind": "humanoid",
+  "keys": [
+   "jailer",
+   "coffinguard",
+   "standard",
+   "gravedigger"
+  ]
+ },
+ "skeletal_champions": {
+  "kind": "humanoid",
+  "keys": [
+   "pyreknight",
+   "druid",
+   "bellringer",
+   "reaperking"
+  ]
+ },
+ "lancer_knights_i": {
+  "kind": "humanoid",
+  "keys": [
+   "kn_squire",
+   "kn_lance",
+   "kn_flame",
+   "kn_frost"
+  ]
+ },
+ "lancer_knights_ii": {
+  "kind": "humanoid",
+  "keys": [
+   "kn_storm",
+   "kn_captain",
+   "kn_chaplain",
+   "kn_marshal"
+  ]
+ },
+ "humanoid_warriors": {
+  "kind": "humanoid",
+  "keys": [
+   "deathknight",
+   "hoplite",
+   "squire",
+   "captain"
+  ]
+ },
+ "class_allies": {
+  "kind": "humanoid",
+  "keys": [
+   "ancient",
+   "ancientstorm",
+   "ancestor",
+   "guardian"
+  ]
+ },
+ "misc_humanoids": {
+  "kind": "humanoid",
+  "keys": [
+   "chorus",
+   "witch",
+   "bonecolossus",
+   "kn_round"
+  ]
+ },
+ "undead_humanoids": {
+  "kind": "humanoid",
+  "keys": [
+   "ghoul",
+   "abomination",
+   "plaguebearer",
+   "wraith"
+  ]
+ },
+ "companions_land": {
+  "kind": "ground",
+  "keys": [
+   "wolf",
+   "spiritwolf",
+   "direwolf",
+   "stormwolf"
+  ]
+ },
+ "bears_and_marten": {
+  "kind": "ground",
+  "keys": [
+   "bear",
+   "spiritbear",
+   "ursa",
+   "gale_marten"
+  ]
+ },
+ "companions_winged": {
+  "kind": "flying",
+  "keys": [
+   "hawk",
+   "stormhawk",
+   "raven",
+   "phoenix"
+  ]
+ },
+ "companions_dragons": {
+  "kind": "flying",
+  "keys": [
+   "whelp",
+   "wyvern",
+   "frostwyrm",
+   "elderwyrm"
+  ]
+ },
+ "elemental_golems": {
+  "kind": "ground",
+  "keys": [
+   "claygolem",
+   "bloodgolem",
+   "firegolem",
+   "icegolem"
+  ]
+ },
+ "sentries": {
+  "kind": "stationary",
+  "keys": [
+   "sentry",
+   "deathsentry",
+   "chainsentry",
+   "tesla"
+  ]
+ },
+ "totems_elements": {
+  "kind": "stationary",
+  "keys": [
+   "totem_fire",
+   "totem_heal",
+   "totem_stone",
+   "totem_storm"
+  ]
+ },
+ "totems_weather": {
+  "kind": "stationary",
+  "keys": [
+   "totem_frost",
+   "totem_wind",
+   "totem_magma",
+   "totem_poison"
+  ]
+ },
+ "totems_spirit": {
+  "kind": "stationary",
+  "keys": [
+   "totem_link",
+   "totem_thunder",
+   "totem_pillar",
+   "totem_earthbind"
+  ]
+ },
+ "totems_greater": {
+  "kind": "stationary",
+  "keys": [
+   "totem_grand",
+   "totem_volcano",
+   "totem_bone",
+   "dragonstatue"
+  ]
+ },
+ "banners": {
+  "kind": "stationary",
+  "keys": [
+   "banner",
+   "firebanner",
+   "kingbanner",
+   "grimward"
+  ]
+ },
+ "witch_structures": {
+  "kind": "stationary",
+  "keys": [
+   "scarecrow",
+   "effigy",
+   "cauldron",
+   "lantern"
+  ]
+ },
+ "bard_artillery": {
+  "kind": "stationary",
+  "keys": [
+   "drum",
+   "amp",
+   "turret",
+   "flameturret"
+  ]
+ },
+ "siege_and_beasts": {
+  "kind": "stationary",
+  "keys": [
+   "rocketturret",
+   "cryoturret",
+   "hive",
+   "hydra"
+  ]
+ },
+ "mobile_constructs": {
+  "kind": "ground",
+  "keys": [
+   "voidspawn",
+   "mech"
+  ]
+ },
+ "flying_constructs": {
+  "kind": "flying",
+  "keys": [
+   "drone",
+   "bombdrone",
+   "runeweapon",
+   "stormcloud"
+  ]
+ },
+ "mirror_images": {
+  "kind": "humanoid",
+  "keys": [
+   "clone_ranger",
+   "clone_arcane_sorcerer",
+   "clone_bard"
+  ]
+ }
+}
