@@ -463,7 +463,7 @@ function drawNpc(ctx, n) {
   ctx.save();
   ctx.translate(Math.round(x + m.dx), Math.round(y - m.bob));
   // a scripted motion (the Sky Battle's knights: hops, spins, faints, leaps between ships)
-  const q=n.pose?n.pose():null;
+  const q=n.motion?n.motion():null;
   if(q){ctx.translate(q.dx||0,-(q.dy||0));if(q.flip)ctx.scale(-1,1);if(q.rot)ctx.rotate(q.rot);if(q.sx||q.sy)ctx.scale(q.sx||1,q.sy||1);}
   // squash and stretch about the feet, a lean into the walk, and the emotion's tilt; the facing mirrors it all
   if (n.flip) ctx.scale(-1, 1);
