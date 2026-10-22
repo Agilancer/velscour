@@ -47,6 +47,12 @@ const SOFT = ['bonegrass_tuft', 'bonegrass_tuft', 'cracked_moss_slab', 'moonlit_
 const CRYPT = ['sealed_wood_coffin', 'breached_open_coffin', 'ossuary_urn', 'burial_urn_cluster', 'last_vigil_candles', 'bent_iron_candelabrum',
   'prayer_lectern', 'crypt_stone_bench', 'collapsed_effigy', 'skull_waymarker_pile', 'long_bone_heap', 'cracked_grave_amphora', 'split_funerary_obelisk'];
 const LIGHTS = ['sickly_breach_brazier', 'thorned_torch_stand', 'breach_grave_lantern'];
+// The packs paint their scatter at mixed scales (a monolith 30 px, an obelisk 36 px beside a 60 px hero): each is
+// grown to a believable size against the hero. Monoliths and obelisks stand over him, cairns and waystones to his hip.
+const SIZE = { split_basalt_monolith: 3, shattered_rootbound_obelisk: 2.3, split_funerary_obelisk: 2, split_standing_stones: 1.5,
+  rift_scarred_cairn: 2, cracked_waystone_pair: 1.75, broken_mile_marker: 1.5, violet_quartz_boulder: 1.5, violet_shard_cluster: 1.4,
+  three_piece_burial_marker: 1.3, fallen_headstone: 1.3, breach_grave_lantern: 1.5, collapsed_effigy: 1.6, skull_waymarker_pile: 1.4,
+  dead_tree_root_cluster: 1.6, petrified_root_coil: 1.3, thornbloom_cluster: 1.2, deadthorn_bush: 1.3, ossuary_urn: 1.2 };
 
 export function generateBreach(floor, biome, tileset, walls2, seed) {
   for (let k = 0; k < 24; k++) {
@@ -441,7 +447,7 @@ function build(floor, biome, ts, ts2, seed) {
   const put = (name, x, y, o = {}) => {
     const s = scat.get(name) || scat2.get(name);
     if (!s) return null;
-    const p = { kind: 'scatter', x, y, spr: s, k: ts.k * (o.scale || 1), flip: o.flip ?? rng.chance(0.5), light: o.light || 0, lightColor: o.lightColor };
+    const p = { kind: 'scatter', x, y, spr: s, k: ts.k * (o.scale || 1) * (SIZE[name] || 1), flip: o.flip ?? rng.chance(0.5), light: o.light || 0, lightColor: o.lightColor };
     props.push(p);
     if (s.block && !o.walk) map.block[id(Math.floor(x), Math.floor(y))] = 1;
     taken[id(Math.floor(x), Math.floor(y))] = 1;

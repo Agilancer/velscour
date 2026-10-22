@@ -191,11 +191,12 @@ const FLOOR = +(process.argv[3] || 2);
         await page.waitForTimeout(900);
         await shot('breach_' + name);
       };
-      await at('overview', 'for (const m of W.creatures) if (m.team === "enemy") m.dead = true; return [W.map.w / 2, W.map.h / 2];', 0.3);
+      // (the wards stand open for the photos: a closed one puts the hero back on the start island)
+      await at('overview', 'for (const m of W.creatures) if (m.team === "enemy") m.dead = true; for (const w of run.wards) { w.was = w.closed; w.closed = false; } return [W.map.w / 2, W.map.h / 2];', 0.3);
       await at('start', 'const o = run.islands.find((q) => q.start); return [o.cx, o.cy + 1.5];', 1);
       await at('heart', 'const o = run.islands[run.heart.o.idx]; return [o.cx, o.cy + 3];', 0.7);
       await at('ruin', 'const S = run.scenarios.find((s) => s.o.ruin) || run.scenarios[0]; return [S.C[0], S.C[1] + 1.5];', 0.85);
-      await at('ward', 'const w = run.wards[0]; return [w.x - 1.5, w.y + 1.5];', 1);
+      await at('ward', 'for (const w of run.wards) w.closed = w.was; const w = run.wards[0]; return [w.x - 1.5, w.y + 1.5];', 1);
       await at('fight', 'const S = run.scenarios.find((s) => s.type !== "heart"); run.force(S); for (let i = 0; i < 90; i++) { W.update(1/30); run.update(1/30); } return null;', 1);
       await page.evaluate(async () => { const { G } = window.VELSCOUR; const { camera } = await import('/src/core/view.js'); G.settings.zoom = 1; camera.computeZoom(); });
     }
