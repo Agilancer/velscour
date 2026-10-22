@@ -50,6 +50,9 @@ export const Cine = {
     camera.computeZoom();
     const f = this.onEnd; this.onEnd = null; if (f) f();
   },
+  /** Drop a scene without its ending: the hero left the world it played in (else its camera and hidden HUD follow
+   *  him to town, which then draws black). */
+  abort() { this.onEnd = null; if (this.active) this.stop(); this.bars = 0; },
   update(dt) {
     dt *= this.speed;
     this.bars = clamp(this.bars + (this.active ? dt : -dt) * 2.5, 0, 1);

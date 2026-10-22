@@ -177,7 +177,7 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
   }
   function holdLocks() {
     const S = run.current, p = world.player;
-    if (!p || p.dead) { lastSafe = null; return; }
+    if (!p || p.dead || G.world !== world) { lastSafe = null; return; } // (never once he has left the Breach)
     const i = tileOf(p.x, p.y);
     if (legal(i, S)) { lastSafe = [p.x, p.y]; return; }
     if (!lastSafe) return;

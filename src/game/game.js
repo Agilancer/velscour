@@ -243,6 +243,7 @@ export const game = {
       world.add(s);
     }
     G.world = world;
+    Cine.abort(); // a cut scene belongs to the world it played in
     useTerrain(world.map); // a height map lifts the ground plane (gfx/terrain.js); flat maps clear it
     camera.computeZoom();
     camera.follow(p.x, p.y, 0, true);
@@ -902,7 +903,11 @@ export const game = {
       Auto.noteInput();
       controls.update(dt);
       Auto.update(dt);
+      // auto-play (or a click) may have taken the hero through a portal: the world he left stops here, or its rules run on
+      // him in the new one (the Breach's wards put him back at his last Breach spot, off the edge of town: a black town)
+      if (G.world !== w) return;
       w.update(dt);
+      if (G.world !== w) return;
       if (w.overworldScenario) w.overworldScenario.update(dt);
       if (w.map.c3struct && !w.map.sky) castle3dTick(w, dt);
       ambushTick(w, dt);
