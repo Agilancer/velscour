@@ -8,6 +8,7 @@ import { classSprite } from '../core/assets.js';
 import { enemyImage } from '../core/enemyart.js';
 import { petAnimation, petTintImage } from '../core/petart.js';
 import { drawRuneWeapon } from '../gfx/runeweapon.js';
+import { drawSlime } from '../gfx/slimeart.js';
 
 let UID = 0;
 
@@ -113,6 +114,7 @@ export class Creature {
     if (s.slow && s.slow.t > 0) m *= 1 - s.slow.amt;
     if (this.curses.slow && this.curses.slow.t > 0) m *= 1 - this.curses.slow.amt;
     if (this.isPlayer && G.char && G.char.madT > 0) m *= 2; // MADNESS
+    if (this.hopGait) m *= this.hopGait; // court slimes move in hops (game/slimecourt.js)
     return Math.max(0.15, m);
   }
   disabled() {
@@ -240,6 +242,7 @@ export class Creature {
     if (this.summonKey === 'runeweapon' && drawRuneWeapon(ctx, this)) return; // the Death Knight's 3D Runeblade
     const art = this.artFrame && this.artFrame();
     if (art) return this.drawArt(ctx, art);
+    if (this.slime && drawSlime(ctx, this)) return;
     const pet = petAnimation(this);
     if (pet) return this.drawPet(ctx, pet);
     const px = isoX(this.x, this.y), py = isoY(this.x, this.y);

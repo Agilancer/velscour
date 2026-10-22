@@ -14,6 +14,47 @@ Contents
 
 ---
 
+## October 21, 2026 — the Slime Lord's court: a rainbow of Glymmora slimes (branch `feat/slime-court`)
+
+- **Request:** replace ALL the Slime Lord's slimes with the user's Glymmora sheets ("@ ! HI RES SLIME SPRITES", 49
+  sheets, kept outside the repo; only the ISOMETRIC panel of sheets that also have battle animations), every animation
+  labelled and used; group by colour, two distinct larger kinds per colour with very different abilities, a handful of
+  same-colour sprite sets each; reds leap from far and are aggressive, blues are casters that blink (sometimes several
+  blink together), lots of idle/running interactions, fluid group movement. Also: the mass bubble over his head higher
+  (numbers clear of it) and a fancier slime puddle at his feet.
+- **Art:** `python tools/slimecourt.py "<sheets folder>" [--debug dir] [--only ids]` slices 60 sets (26 detailed sheets:
+  isometric rows idle/walk/run/jump/attack/open/ability/special found from their labels; 34 cards: idle/walk/squish/jump/
+  attack/hurt/die), keys the dark card background with soft alpha (glows kept, only small holes filled, effects feathered
+  at the cell edge), anchors each row on one floor line and writes `assets/sprites/slimes/<id>.webp` + `slimes.json`
+  (kind, cell, feet anchor, body height, rows, frame counts, facing from a checked table `FACE`). `SETS` maps every set
+  to its kind and sheet. A detailed set's special attack fills its cell with effects, so `special` plays its ability row.
+- **Kinds** (`src/game/slimecourt.js`, `KINDS`/`FIGHT`): red Pouncer (pounces 2-10 tiles, bounces on to the next foe,
+  burning bites) and Berserker (rolls through packs, rage stacks into a quake slam); gold Bulwark (taunt, body-blocks
+  between foe and Lord, shield bash, Gilded Aegis buff on a hurt Lord) and Warden (Amber Barrier buff, honey slows,
+  repels foes off the Lord); green Mender (sap tether heal on the Lord or hurt slimes, Sap Burst) and Druid (healing
+  Bloom zones, thorn snares); blue Tide Mage (homing orbs, stunning bubbles) and Frost Sage (lightning chains, ice fans,
+  freezing nova), both blink; purple Hexer (amp+weaken curses, pulling void orbs) and Venom Spitter (poison lobs with
+  puddles, clouds); pink Idol (Slime Serenade buff) and Charmer (charms foes, dash-in hit-and-run). Plus Mother Ooze
+  (births rainbow minis) and Volatile Slime (pounces and bursts). Summon keys `sl_<kind>`, `slimeling` (rainbow minis,
+  `mini`), `prismslime` (casters), `kingslime` (Royal Court: full-size rainbow), `bombslime`, `slimetitan`, `motherooze`;
+  `courtDef` resolves pools (rainbow pools go round the colours each cast). Skills renamed: Ooze Buddy -> Sap Mender,
+  Frost Jelly -> Frost Sage, King Slime -> Gilded Bulwark; Slime Empire summons 6. The Royal Belly Flop spawns 3 rainbow
+  minis. Skill icons draw the slimes (`slimeIconParts`).
+- **Movement/play:** slimes hop (fast in the air, slow on the ground: `Creature.hopGait`), hop phases of a colour drift
+  together with a per-slime lag so hops ripple through the group, and followers weave across the line of travel. The
+  court director (`play`) starts a game every 1.4-3 s out of combat: leapfrog, races, cheers and blink parades on the
+  move; bumps, dances round the Lord, riding a big slime, sparring, naps, merging and popping apart, tag, hearts when
+  he stands. Emotes over heads. Dead slimes splat in their colour.
+- **Hooks:** `Monster.update` hands slimes to `slimeUpdate` (after windup/fear handling); `buildSummon` calls
+  `attachSlime`; `Creature.draw` calls `drawSlime` (falls back to the pixel slime while loading).
+- **Slime Lord:** bubble lifted (`headAt(p, 28)`, 24 on touch); the royal puddle is always there: wobbling rim with
+  creeping tendrils, a paler swirling lobe, ripples, meniscus rim, glints, bubbles that swell and pop, droplets crawling
+  round the edge, and a goo trail where he walks.
+- **Verified:** new `tools/tests/slimecourt.js` (all 60 sets draw; every kind uses its abilities in a fight; long
+  pounce at a lone foe 8 tiles off; blues blink in and out of fights; 8-9 different games in 40 s idle; shots of sets,
+  animations, court, battle, play, the Lord close up). Regression: data_check, flow, skills slime_lord, familiars, pets,
+  legion, signatures slime_lord, hud, mobile.
+
 ## October 21, 2026 — more hero gear: Nocturne collection 04 armors (branch `feat/mountainside`)
 
 - **Request:** add `VELSCOUR_Nocturne_Collection_04_128_Armor_Source_Artwork.zip` (eight armors per class) to the game.
