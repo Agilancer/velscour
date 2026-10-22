@@ -30,7 +30,8 @@ export const tilePx = (x, y, lv = 0) => [(x - y) * HW, (x + y) * HH - lv * HS];
 // ------------------------------------------------------------------ clouds
 /** A pixel cloud: lit puffs from the upper left, three tones plus a highlight, hard edges. */
 function cloudSprite(w, h, tones, seed) {
-  const c = makeCanvas(w, h), x = c.getContext('2d'), puffs = [], n = Math.round(w / 9) + 3;
+  // painted and hard-edged on a CPU canvas (its getImageData stalls on nothing), then copied to the canvas it is drawn from
+  const cpu = makeCanvas(w, h), x = cpu.getContext('2d', { willReadFrequently: true }), puffs = [], n = Math.round(w / 9) + 3;
   for (let i = 0; i < n; i++) {
     const t = i / (n - 1), r = h * (0.22 + 0.2 * Math.sin(Math.PI * t)) * (0.8 + 0.35 * hash(seed, i));
     puffs.push([w * (0.12 + 0.76 * t) + (hash(seed, i + 50) - 0.5) * 6, h - r - 1 - hash(seed, i + 90) * h * 0.12, r]);
@@ -46,8 +47,12 @@ function cloudSprite(w, h, tones, seed) {
   const d = x.getImageData(0, 0, w, h);
   for (let i = 3; i < d.data.length; i += 4) d.data[i] = d.data[i] > 100 ? 255 : 0;
   x.putImageData(d, 0, 0);
+  const c = makeCanvas(w, h);
+  c.getContext('2d').drawImage(cpu, 0, 0);
   return c;
 }
+/** Build a Sky Battle world's clouds now (game.js warmLevelArt: behind the loading screen, not on the first frame). */
+export function warmSky(world) { if (world.sky) skyArt(world.sky.v); }
 /** The sky's clouds and gradient for a variant (built once per variant). */
 function skyArt(v) {
   if (v._art) return v._art;

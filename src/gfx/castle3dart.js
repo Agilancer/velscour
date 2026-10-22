@@ -15,7 +15,8 @@ export function loadBaked(dir) {
   if (loading && loadingDir === dir) return loading;
   state = null; loadingDir = dir;
   loading = fetch(dir + 'index.json').then((r) => r.json()).then((idx) => Promise.all(idx.pages.map((p) => new Promise((ok, no) => {
-    const img = new Image(); img.onload = () => ok(img); img.onerror = () => no(new Error('baked page ' + dir + p)); img.src = dir + p;
+    // decoded here, while the level loads: the first draw of an undecoded 4096 px page stalled a frame (~230 ms)
+    const img = new Image(); img.onload = () => (img.decode ? img.decode().catch(() => {}) : Promise.resolve()).then(() => ok(img)); img.onerror = () => no(new Error('baked page ' + dir + p)); img.src = dir + p;
   }))).then((imgs) => {
     const base = new Map(), over = new Map();
     for (let k = 0; k < idx.tiles.length; k += 3) (idx.tiles[k + 1] ? over : base).set(idx.tiles[k], idx.tiles[k + 2]);
@@ -28,6 +29,14 @@ export function loadBaked(dir) {
 /** The Castle's masonry. */
 export const loadCastle3D = () => loadBaked(DIR);
 export const castle3dState = () => state;
+/** Draw a pixel of every page onto ctx (the screen, behind the loading screen): the GPU takes the pages in then, not
+ *  on the level's first frame (~120-200 ms on the Sky Battle). The next frame paints over it. */
+export function warmBaked(ctx) {
+  if (!state || !ctx) return;
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+  for (const img of state.imgs) ctx.drawImage(img, 0, 0, 1, 1, 0, 0, 1, 1);
+  ctx.restore();
+}
 /** Release the decoded pages when the level is left. */
 export function releaseCastle3D() { state = null; loading = null; loadingDir = null; }
 

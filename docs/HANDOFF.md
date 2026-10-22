@@ -35,7 +35,10 @@ Contents
   (the road field leads to the stairs), with only heals/buffs/minions on the way and no attacks across the height; leaps,
   dashes and blinks only along ground within a hop of both ends (`Auto.hopLine`), so never onto or off the walls.
   `map.losWide` now applies the diagonal rule to a line through a tile corner (smoothed paths cut the top stair's corner,
-  slipped onto the stair below the walk and stuck). New `tools/tests/castle_autoplay.js` (six classes: shooters pinned on
+  slipped onto the stair below the walk and stuck). A foe he is taking the stairs to stays a target for 12 s after the
+  last sighting (`climbTo`): the wall itself hides it on the way to the stairs, and he used to wander off exploring.
+  The wall rule is the Castle's only (`map.rampartDeck`); on hills and the Breach's islands a ledge is fought from where
+  he stands, as before. New `tools/tests/castle_autoplay.js` (six classes: shooters pinned on
   the wall-walk, then a foe in the ward): damage across the height 0-3% (pets and splash), biggest one-tick level change
   9 (stepping off a low stair's side; walls can't be dropped from).
 - **Scatter in context and at believable sizes:**
@@ -44,7 +47,9 @@ Contents
     south-east walls, milestones (`arrow_milestone`) beside the road forks, nature only in the meadows and at the wood's
     edge; nothing on a road.
   - Forsaken Wilds: story props in themed groups round the scenario clearings (an old fight, an abandoned camp, a lost
-    cache), elsewhere flowers/stones in the meadows and logs/stumps/boulders/mushrooms at the wood's edge.
+    cache), elsewhere flowers/stones in the meadows and logs/stumps/boulders/mushrooms at the wood's edge. One small area
+    template made the cut: a woodcutter's spot (chopping stump, woodpile, sawn rounds, a felled trunk, the handcart) where a
+    lane runs by the trees, one or two a map.
   - Sea of Sand: every object was drawn ~30 px (the pack fits each to one cell); `SAND_H` gives each a height against the
     60 px hero (tall palms 140, a well 78, pots 18-26). Palms line the dry wash and ring the oasis, the caravan's camp is
     pitched round the rest, waymarkers and dropped gear beside the trails, ruins at the sites, ore at the rock's foot.

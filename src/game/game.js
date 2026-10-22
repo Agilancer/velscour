@@ -36,10 +36,11 @@ import { createBreachRun, chestAt, breachMonster } from './breach.js';
 import { breachDepth, breachLevel, BREACH_ART, BREACH_ARCHS } from '../data/breach.js';
 import { createMountainRun } from './mountain.js';
 import { castle3dTick } from './castle3d.js';
-import { useTerrain } from '../gfx/terrain.js';
+import { useTerrain, terrainOf } from '../gfx/terrain.js';
 import { loadCastlePack, releaseCastlePack } from '../gfx/castle.js';
-import { loadCastle3D, releaseCastle3D, loadBaked, castle3dState } from '../gfx/castle3dart.js';
+import { loadCastle3D, releaseCastle3D, loadBaked, castle3dState, warmBaked } from '../gfx/castle3dart.js';
 import { generateSkyship } from '../world/skyship.js';
+import { warmSky } from '../gfx/skyship.js';
 import { createSkyBattle } from './skybattle.js';
 import { SKY_VARIANTS } from '../data/skybattle.js';
 import { TOWNSFOLK } from '../data/townsfolk.js';
@@ -112,6 +113,9 @@ let automapCanvas = null;
 // Yields every ~40 ms so the loading screen keeps painting.
 async function warmLevelArt(w) {
   const seen = new Set();
+  if (w.map.hgt) terrainOf(w.map); // a height map's draw order and occluders (the Castle's 100k columns): behind the loading screen, not the first frame
+  warmSky(w); // the Sky Battle's clouds
+  if (w.map.c3struct || w.sky) warmBaked(G.ctx); // the baked 3D pages (the Castle's masonry, the airships)
   let t = performance.now();
   markArtCaches();
   for (const c of w.creatures) {
