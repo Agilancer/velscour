@@ -14,6 +14,18 @@ Contents
 
 ---
 
+## October 23, 2026 — cloud saves with Google sign-in (branch `feat/cloud-saves`)
+- **Request (user):** cloud saves via Google (Apple later). The user made the Firebase project `velscour` (Google
+  sign-in on, `agilancer.github.io` authorized, Firestore with per-user rules) and gave the web config.
+- **Built:** `src/game/cloud.js` (lazy Firebase SDK from gstatic, one Firestore document per class, three-way merge
+  against what the device last synced, pushes at most once a minute while playing, offline retries). The UI is in
+  `src/ui/screens.js`: a Settings > Cloud save row (Sign in with Google / account dialog with Sync now and Sign out),
+  the "Two copies of a hero" dialog, and the title footer status. `save.js` gained `onSaveChange` and
+  `replaceClassHero`. See docs/CLOUD_SAVES.md.
+- **Tests:** new `cloud.js` (3 devices on a fake Firebase: 29 checks; the real SDK loads and Firestore denies a
+  signed-out read), `flow`, `mobile`, `hud`, `options`, `select`. The real Google popup can't run in cloud containers
+  (apis.google.com is blocked), so the first real sign-in has to be tried on a device.
+
 ## October 23, 2026 — THE SERPENTINE TOWER: the upper cut, auto-play up the middle (branch `fix/tower-upper-cut`)
 - **Request (user):** the next level of stairs must not be in view on the right of the screen, and auto-play should
   walk up the centre of the stair instead of hugging the handrail.

@@ -5,6 +5,10 @@ import { drawBiome } from '../data/biomes.js';
 import { migrateBar, BAR_SIZE } from '../data/bar.js';
 
 const KEY = 'velscour_saves_v1';
+const watchers = [];
+/** fn(classId) after a hero of that class is saved or deleted (core/cloud.js syncs it). */
+export function onSaveChange(fn) { watchers.push(fn); }
+const changed = (classId) => { for (const fn of watchers) fn(classId); };
 
 function readAll() {
   let list;
@@ -22,9 +26,15 @@ export function writeSave(char) {
   char.lastPlayed = Date.now();
   const list = readAll().filter((c) => c.id !== char.id);
   list.push(char);
-  return writeAll(list);
+  const ok = writeAll(list);
+  changed(char.classId);
+  return ok;
 }
-export function deleteSave(id) { writeAll(readAll().filter((c) => c.id !== id)); }
+export function deleteSave(id) {
+  const list = readAll(), gone = list.find((c) => c.id === id);
+  writeAll(list.filter((c) => c.id !== id));
+  if (gone) changed(gone.classId);
+}
 /** One hero per class: classId -> that class's most recently played hero. (Older saves may hold several heroes of a
  * class; the newest one is the class's hero, and deleting it deletes them all.) */
 export function heroesByClass() {
@@ -32,7 +42,13 @@ export function heroesByClass() {
   for (const c of listSaves()) if (!out[c.classId]) out[c.classId] = c;
   return out;
 }
-export function deleteClassSaves(classId) { writeAll(readAll().filter((c) => c.classId !== classId)); }
+export function deleteClassSaves(classId) { writeAll(readAll().filter((c) => c.classId !== classId)); changed(classId); }
+/** A class's hero from the cloud (or null): replaces every local save of that class, keeping its lastPlayed. */
+export function replaceClassHero(classId, char) {
+  const list = readAll().filter((c) => c.classId !== classId);
+  if (char) list.push(char);
+  return writeAll(list);
+}
 
 export function newCharData(classId, name) {
   const C = CLASSES[classId];
