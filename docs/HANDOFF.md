@@ -14,6 +14,31 @@ Contents
 
 ---
 
+## October 23, 2026 — THE SERPENTINE TOWER sweep: bugs, monsters, the look of every variant (branch `fix/tower-sweep`)
+- **Request (user):** a deep bug sweep of the tower (code, scripting/monsters, visuals) in several passes, and better
+  looks for each variant.
+- **Bugs fixed:**
+  - The stairhead cleared every hazard. That also removed the grappling-rope layer for good (the roof's hook climbers
+    climbed invisible ropes) and the hero's own orbiting shields, whirls and auras. Now the hero's riding effects come
+    up, the rest stay below, and the rope layer is made again on the roof.
+  - Loot further than 40 tiles down the stair was thrown away at the stairhead; all of it comes up now.
+  - A boat that left before its crew was off stranded them alive and invisible off the map; the rest jump for the roof
+    (or stay aboard once the tower is taken).
+  - Clouds followed the hero's height, so the climb never passed them.
+  - On leaving a tower its cut-cap material, moon, sky and cloud textures weren't released.
+  - Packs that charge up from behind start only where the cutaway hides them (the turned cut shows more stair behind).
+- **Looks:** stencil-capped cut faces (a flat dressed-stone section where the cutaway slices stone, not dark slabs);
+  the cut turned 25 degrees so it lies right of the hero and the stair behind him is in view; height fog into the well;
+  lit step nosings, a curb under the railing, a skirting and a sill course on the wall; stained glass in each variant's
+  colours; emblem banners, floor and roof mosaics, flags; a starry sky and a moon; finer merlons and a lighter roof deck;
+  smaller bells. Per variant: ivy (Serpentine), a violet rune line down the stringer (Obsidian), candles on the steps
+  (Bloodstone), icicles under the stair (Rimeglass), small bells under the stair (Sunken Bell). A front pass draws the
+  railings and chandeliers again over the sprites, so bodies behind them are covered; fallers and climbers in the well
+  are drawn in front.
+- **Tests:** `tower.js all all` (5 variants, 20 scenarios to the portal, auto-play takes a tower), the new
+  `tower_edge.js` (stairhead pets/loot/effects/ropes, every arrival lands on floor, deaths on roof and stair, town and
+  back), `data_check`, `flow`.
+
 ## October 22, 2026 — THE SERPENTINE TOWER: a live three.js spiral stair, sky pirates on the roof (branch `feat/serpentine-tower`)
 - **Request:** a new biome, a three.js tower with a spiral stair the heroes walk straight up (up-left on screen) while
   the camera moves with them so the tower seems to turn beneath them; enemies on the floors above, some dropping onto

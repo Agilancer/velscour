@@ -10,10 +10,17 @@ import { HW } from '../core/view.js';
 import { rollLooks } from '../data/bestiary.js';
 
 export const VZ = HW * Math.SQRT2 * Math.cos(Math.PI / 6); // 39.19 px: one tile of height in the 2:1 iso view
+// The cutaway: a vertical plane through the axis (1.6 tiles toward the camera) hides the near part of the tower while
+// climbing. It's turned 25 degrees off square to the view, so its cut through the stair lies off to the right of the
+// hero (with the stretch behind him, where packs charge up, in view) and its left edge off screen. CUT_N is its normal
+// in the camera frame (pointing away from the camera side): a point is cut away when dot(p, CUT_N) < -CUT_C.
+const CUT_A = Math.PI * 1.25 + 0.44;
+export const CUT_N = [Math.cos(CUT_A), Math.sin(CUT_A)], CUT_C = 1.6;
 
 // geometry (rIn: the open well's radius, w: stair width, pitch: rise per turn, steps per turn) and the look of each
 // variant: the stone texture and its palette swap (core/util.js recolor), trim, floor, railing, lanterns, chandeliers,
-// windows, banners and the sky outside
+// windows, banners and the sky outside. stained: the window panes' colours; emblem: the motif on its banners, flags and
+// floor mosaics; extra: what only this tower has (gfx/tower3d.js); fog: the dark the well falls away into.
 export const TOWER_VARIANTS = [
   {
     id: 'serpentine', name: 'The Serpentine Tower', epithet: 'coils of verdigris stone',
@@ -22,6 +29,7 @@ export const TOWER_VARIANTS = [
     trim: 'chapel', trimSwap: { colorize: [160, 0.3], light: 0.02 }, floor: 'slate', floorSwap: { colorize: [140, 0.25], light: -0.04 },
     metal: 'MET-05_Oxidized_Copper', rail: 'serpent', lantern: 0xffb45a, chandelier: 'ring', windows: 'lancet', glass: 0x7fe0c0,
     banner: 0x2f6a4a, ribs: true, ambient: 0x4a5a58, moon: 0xa8d0ff, sky: ['#060a12', '#18263a', '#3a4a5a'], cloud: '#3a4a58',
+    stained: ['#3fa878', '#c8b45a', '#2a6a7a'], emblem: 'serpent', extra: 'serpent', fog: '#04080a', gild: '#c8b45a',
   },
   {
     id: 'obsidian', name: 'The Obsidian Coil', epithet: 'black glass and violet fire',
@@ -30,6 +38,7 @@ export const TOWER_VARIANTS = [
     trim: 'panel', trimSwap: { colorize: [280, 0.35], light: -0.08 }, floor: 'slate', floorSwap: { colorize: [270, 0.3], light: -0.12, contrast: 1.15 },
     metal: 'MET-10_Amethyst_Corrosion', rail: 'iron', lantern: 0xb070ff, chandelier: 'crown', windows: 'slit', glass: 0xc080ff,
     banner: 0x4a1a6a, ribs: true, ambient: 0x3a3048, moon: 0xd0b0ff, sky: ['#05030a', '#1a0e2a', '#3a1e48'], cloud: '#2a2038',
+    stained: ['#9a50e0', '#4a2a8a', '#d080ff'], emblem: 'eye', extra: 'runes', fog: '#050309', gild: '#b080ff',
   },
   {
     id: 'bloodstone', name: 'The Bloodstone Spire', epithet: 'red stone, black iron, a thousand candles',
@@ -38,6 +47,7 @@ export const TOWER_VARIANTS = [
     trim: 'brick', trimSwap: { colorize: [8, 0.3], light: -0.12 }, floor: 'chapel', floorSwap: { colorize: [350, 0.32], light: -0.08 },
     metal: 'MET-02_Riveted_Black_Iron', rail: 'balusters', lantern: 0xff7a40, chandelier: 'candelabra', windows: 'rose', glass: 0xff5a4a,
     banner: 0x8a1018, ribs: false, ambient: 0x5a3a36, moon: 0xffc0a0, sky: ['#0a0304', '#2a0a0e', '#5a1a14'], cloud: '#3a1a1a',
+    stained: ['#c82a2a', '#e8a040', '#6a1020'], emblem: 'flame', extra: 'candles', fog: '#090304', gild: '#e8a040',
   },
   {
     id: 'rimeglass', name: 'The Rimeglass Tower', epithet: 'frost-white stone under a cold moon',
@@ -46,6 +56,7 @@ export const TOWER_VARIANTS = [
     trim: 'ashlar', trimSwap: { colorize: [210, 0.3], light: 0.12 }, floor: 'slate', floorSwap: { colorize: [200, 0.25], light: 0.06 },
     metal: 'MET-08_Scratched_Blue_Steel', rail: 'arcade', lantern: 0x8ad8ff, chandelier: 'crystal', windows: 'lancet', glass: 0x9ae8ff,
     banner: 0x2a4a7a, ribs: true, ambient: 0x4a5a6a, moon: 0xc8e8ff, sky: ['#04070e', '#122238', '#2a4a68'], cloud: '#4a6078',
+    stained: ['#8ad0ff', '#e8f4ff', '#4a7ac8'], emblem: 'flake', extra: 'icicles', fog: '#03060c', gild: '#c8e8ff',
   },
   {
     id: 'sunken_bell', name: 'The Sunken Bell Tower', epithet: 'sandstone and tarnished gold, bells for chandeliers',
@@ -54,6 +65,7 @@ export const TOWER_VARIANTS = [
     trim: 'ashlar', trimSwap: { colorize: [40, 0.45], light: 0.04 }, floor: 'chapel', floorSwap: { colorize: [30, 0.35], light: -0.02 },
     metal: 'MET-04_Tarnished_Bronze', rail: 'balusters', lantern: 0xffc060, chandelier: 'bell', windows: 'slit', glass: 0xffd080,
     banner: 0x7a4a10, ribs: false, ambient: 0x5a4a3a, moon: 0xffe0b0, sky: ['#08060a', '#2a1a14', '#6a3a1a'], cloud: '#4a3424',
+    stained: ['#e8b040', '#c86a20', '#f0e0a0'], emblem: 'bell', extra: 'bells', fog: '#080503', gild: '#f0c860',
   },
 ];
 
