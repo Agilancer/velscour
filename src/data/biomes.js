@@ -233,6 +233,16 @@ export const BIOMES = [
     torch: '#ffb050', fog: '#0a1020',
   },
   {
+    // a wide stone tower climbed by a spiral stair, drawn live in three.js; air pirates and bosses on the roof
+    // (world/tower.js, game/tower.js, gfx/tower3d.js, docs/SERPENTINE_TOWER.md)
+    id: 'serpentine_tower', name: 'The Serpentine Tower', pack: 'town', overworld: true, tower: true,
+    palette: null, dark: 0.3, light: 12,
+    ambient: { type: 'mote', color: '#e8d0a0' }, mon: { hue: 0, sat: 0.9, light: 0.02 },
+    el: 'phys', blood: '#7c1610', adj: ['Tower', 'Spiral', 'High', 'Lantern-Lit'],
+    roster: ['skeleton', 'archer', 'knight', 'gargoyle', 'bat', 'cultist', 'wraith', 'ghoul', 'imp', 'golem', 'spider', 'eye'],
+    torch: '#ffb050', fog: '#05060a',
+  },
+  {
     id: 'desert_temple', name: 'Temple of the Sunless Dynasty', pack: 'desert_temple',
     palette: null, dark: 0.77, light: 8.2,
     ambient: { type: 'sand', color: '#d9ac70' },

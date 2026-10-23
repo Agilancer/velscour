@@ -664,7 +664,8 @@ export function renderWorld(ctx, world) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   if (!world.map.voidFace || world.sky) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }   // (the Breach's void is opaque)
-  if (world.sky) skyBack(ctx, W, H, world); // the Sky Battle's sky and clouds (gfx/skyship.js)
+  if (world.tower) world.tower.draw(ctx); // the Serpentine Tower in three.js (gfx/tower3d.js), turning with the hero
+  else if (world.sky) skyBack(ctx, W, H, world); // the Sky Battle's sky and clouds (gfx/skyship.js)
   else if (world.map.voidFace) drawNebula(ctx, W, H, camera.x * camera.zoom * G.dpr, camera.y * camera.zoom * G.dpr); // the Breach's void
   else if (world.map.hgt && !world.map.castleMat && !world.map.noSky) drawSky(ctx, W, H, camera.x * camera.zoom * G.dpr, camera.y * camera.zoom * G.dpr, world.night);
   camera.apply(ctx);
@@ -685,11 +686,11 @@ export function renderWorld(ctx, world) {
 
   if (world.sky) skyWorld(ctx, world); // the pirates' galleon and boats, behind the ship
   if (world.wyrm) drawWyrm(ctx, world.wyrm, 'void'); // the Breach's wyrm deep under the islands (gfx/breachdragon.js)
-  drawFloors(ctx, world, vr, hq);
+  if (!world.tower) drawFloors(ctx, world, vr, hq);
   if (map.castleMat) drawCastleWater(ctx, world, vr, G.time, G.touch);
   ctx.imageSmoothingQuality = hq;
   const fc = world.floorNow;
-  drawDecals(ctx, vr, (d, px, py) => decalStamped(fc, d, px, py));
+  drawDecals(ctx, vr, world.tower ? () => false : (d, px, py) => decalStamped(fc, d, px, py)); // the tower turns: its blood can't bake
   const tall = map.hgt && map.tallOcclusion;
   for (const c of world.corpses) {
     if (tall && hiddenBehind(map, c.x, c.y)) continue; // behind the Castle's walls
@@ -1153,6 +1154,7 @@ export function drawMinimap(world, dt, canvas, big = false) {
   c.clearRect(0, 0, W, H);
   const p = world.player;
   if (!p) return;
+  if (world.tower) { world.tower.minimap(c, W, H, big); return; }
   const map = world.map;
   const s = big ? Math.max(2, Math.min(W / (map.w + map.h), H / ((map.w + map.h) / 2)) * 0.95) : 2.4;
   const cx = W / 2, cy = H / 2;

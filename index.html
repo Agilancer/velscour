@@ -101,6 +101,11 @@
   <div id="drag-ghost" class="hidden"></div>
   <div id="loading"><div class="spinner"></div><div id="loading-bar"><div id="loading-fill"></div></div><div id="loading-text">Summoning the depths&hellip;</div></div>
 </div>
+<!-- three.js, fetched only when a level draws in 3D (the Serpentine Tower, src/gfx/tower3d.js) -->
+<script type="importmap">{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }</script>
 <script type="module" src="src/main.js"></script>
 </body>
 </html>
