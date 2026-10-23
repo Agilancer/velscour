@@ -570,11 +570,12 @@ export const raidHpMul = (depth) => 0.35 + Math.min(depth, 500) * 0.0004;
 // bring a fourth phase and more modifiers, and every hero died in its first depth-100 room at 2.7; was 3.6 when the
 // fights lasted 20 s, not two minutes)
 export const raidHitMul = (depth) => 2.7 * (1 - 0.3 * clamp((depth - 10) / 90, 0, 1));
-export function makeRaidBoss(world, arena, depth, level) {
+/** opts.tpl / opts.art: a given template (copied, maybe renamed) and look instead of a random one (game/tower.js). */
+export function makeRaidBoss(world, arena, depth, level, opts = {}) {
   const c = G.char;
-  const tpl = pick(RAID_BOSSES.filter((b) => b.id !== (c && c.lastRaid)));
-  if (c) c.lastRaid = tpl.id;
-  const artId = pick(tpl.art.filter((id) => ART_BY_ID[id]));
+  const tpl = opts.tpl || pick(RAID_BOSSES.filter((b) => b.id !== (c && c.lastRaid)));
+  if (c && !opts.tpl) c.lastRaid = tpl.id;
+  const artId = opts.art || pick(tpl.art.filter((id) => ART_BY_ID[id]));
   const art = ART_BY_ID[artId];
   const mods = rollMods(depth);
   if (tpl.innate && !mods.includes(tpl.innate)) mods.unshift(tpl.innate);

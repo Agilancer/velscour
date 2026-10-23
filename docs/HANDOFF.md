@@ -14,6 +14,33 @@ Contents
 
 ---
 
+## October 22, 2026 — THE SERPENTINE TOWER: a live three.js spiral stair, sky pirates on the roof (branch `feat/serpentine-tower`)
+- **Request:** a new biome, a three.js tower with a spiral stair the heroes walk straight up (up-left on screen) while
+  the camera moves with them so the tower seems to turn beneath them; enemies on the floors above, some dropping onto
+  the stair, some charging up from behind out of sight, some throwing grappling hooks and climbing over the railing;
+  bodies slide smoothly up the steps; palette-swapped textures from any biome; stone walls, lanterns, chandeliers on
+  chains down a wide open middle; at the top three waves of bosses, then the last boss on an airship; 20 roof scenarios
+  with more airships and air pirate ambushes; 5 tower variants; a portal on the roof when the last boss dies.
+- **Done:** see [SERPENTINE_TOWER.md](SERPENTINE_TOWER.md). The game plays on the stair unrolled into a strip of tiles;
+  `view.js` gained `setWarp` (isoX/isoY lay any tile position onto the 3D helix) and `camera.leadX/leadY/zoomK`. The
+  first level that runs three.js live (import map in `index.html`, loaded only for the tower), drawn behind the sprites
+  each frame with a cutaway of the near half. 5 variants (`TOWER_VARIANTS`), 20 scenarios (`SCENARIOS`), the
+  galleon/ironclad/skiffs from `tools/airship3d*.js` docking with gangplanks and ramps, the captain as a raid boss
+  (`makeRaidBoss` takes `opts.tpl/art` now). The boarders, hook climbers and captains are the Sky Battle's
+  **Air Pirates** (`src/data/airpirates.js` `AIR_ART`), no new art. The tower is in the regular overworld draw.
+
+- **Design calls made without asking** (worth confirming): the cutaway (the near half of the tower is cut away while
+  climbing, so you see into it across the well); the stairhead door is a flash-cut to the roof rather than a walk;
+  the flagship docks up-left so its hull runs diagonally; the last boss is a raid boss at 60% life with no execute
+  timer; the tower joins the regular rotation (not beta).
+- **Verified:** `tower.js` (5 variants: reachability, picking, climb arrivals, stairhead, roof; all 20 scenarios run to
+  the portal; on this branch's auto-play a level-1 paladin at depth 3 takes a whole tower in about 17 game minutes),
+  `data_check.mjs`, `flow.js`, `credits.js` and `raid.js` (before the port onto `main`). Shots looked at for every
+  variant and several scenarios. The climb's chargers and hooks wait for progress as well as time (24 and 14 tiles):
+  on timers alone they buried a slow climber and `main`'s more careful auto-play never got up the stair. Frame cost on this PC's GPU: render ~6 ms median at 1600x900, ~4 ms at 844x390.
+- **Not verified:** real phones (three.js plus the 2D frame), Safari/iOS. Sprites always draw over the 3D view (a body at
+  the railing draws in front of it). three.js comes from jsdelivr: offline, the tower falls back to the Forsaken Wilds.
+
 ## October 22, 2026 — THE ETERNAL BREACH: black screen at the Heart of floors 6, 12, 18... (branch `fix/breach-heart-keeper`)
 - **Report (user):** a full black screen at the very end of a Breach floor (level 96 Astronomer), "like the portal didn't
   work right".

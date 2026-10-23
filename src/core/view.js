@@ -13,8 +13,16 @@ export const HH = TH / 2;
 let ELEV = null, PICK = null;
 export function setElevation(elev, pick) { ELEV = elev; PICK = pick; }
 export const elevationAt = (x, y) => (ELEV ? ELEV(x, y) : 0);
-export const isoX = (x, y) => (x - y) * HW;
-export const isoY = (x, y) => (x + y) * HH - (ELEV ? ELEV(x, y) : 0);
+// A warped level (world/tower.js) lays the tile grid onto a 3D surface: WARP(x, y, out) writes the world px of tile
+// position (x, y) into out, WPICK(wx, wy) turns world px back into a tile position. isoX and isoY ask for the same
+// point back to back, so the last answer is kept until warpMoved() (the warp turns with the camera every frame).
+let WARP = null, WPICK = null, wkx = NaN, wky = NaN;
+const wout = [0, 0];
+export function setWarp(warp, pick) { WARP = warp; WPICK = pick; wkx = NaN; }
+export function warpMoved() { wkx = NaN; }
+const warped = (x, y) => { if (x !== wkx || y !== wky) { wkx = x; wky = y; WARP(x, y, wout); } return wout; };
+export const isoX = (x, y) => (WARP ? warped(x, y)[0] : (x - y) * HW);
+export const isoY = (x, y) => (WARP ? warped(x, y)[1] : (x + y) * HH - (ELEV ? ELEV(x, y) : 0));
 
 /** Convert a screen-space direction (world px) into a tile-space direction. */
 export function screenDirToTile(dx, dy) {
@@ -30,8 +38,11 @@ export const camera = {
   shakeAmt: 0,
   shakeX: 0,
   shakeY: 0,
+  leadX: 0, // world px the view is held off the hero (the tower frames the stair ahead)
+  leadY: 0,
+  zoomK: 1, // a level's own zoom factor (the tower's roof pulls back to show the airships)
   follow(tx, ty, dt, snap = false) {
-    const wx = isoX(tx, ty), wy = isoY(tx, ty) - 24;
+    const wx = isoX(tx, ty) + this.leadX, wy = isoY(tx, ty) - 24 + this.leadY;
     if (snap) { this.x = wx; this.y = wy; return; }
     const k = 1 - Math.pow(0.0005, dt);
     this.x += (wx - this.x) * k;
@@ -48,7 +59,7 @@ export const camera = {
   computeZoom() {
     const base = Math.max(G.H / 700, G.W / 1400);
     const min = G.touch ? 0.95 : 0.9;
-    this.zoom = clamp(base, min, 3) * (G.settings.zoom || 1);
+    this.zoom = clamp(base, min, 3) * (G.settings.zoom || 1) * this.zoomK;
   },
   /** Apply camera transform to ctx (world px -> device px). */
   apply(ctx) {
@@ -68,6 +79,7 @@ export const camera = {
   screenToTile(sx, sy) {
     const wx = (sx - G.W / 2) / this.zoom + this.x;
     const wy = (sy - G.H / 2) / this.zoom + this.y;
+    if (WPICK) return WPICK(wx, wy);
     if (PICK) return PICK(wx, wy);
     return [(wx / HW + wy / HH) / 2, (wy / HH - wx / HW) / 2];
   },

@@ -24,6 +24,7 @@ export function renderQuest(body) {
     else if (b?.id === 'mountainside') h += step(false, 'The Mountainside (beta) lies beyond: a switchback climb up the cliffs to the summit.');
     else if (b?.id === 'skyship') h += step(false, "The Sky Lanes lie beyond: the Air Pirates board the heroes' airship in waves, then their flagship comes.");
     else if (b?.id === 'dark_forest') h += step(false, 'The Dark Forest lies beyond: trails, labyrinths, five trial glades and the Heart of the Forest.');
+    else if (b?.tower) h += step(false, 'The Serpentine Tower lies beyond: a spiral stair to a roof where bosses and sky pirates wait.');
     else if (b?.overworld) h += step(false, 'A Forsaken Wilds scenario shrine guards the way forward.');
     h += step(false, `Or take the <b style="color:#c080ff">purple portal</b> into <b>THE ETERNAL BREACH</b>: Floor ${((c.breach && c.breach.best) || 0) + 1} awaits (each floor as deadly as ten depths).`);
   } else {
@@ -57,6 +58,13 @@ export function renderQuest(body) {
         h += step(at > 5, "Survive the flagship's broadsides.");
         h += step(sc.completed, 'Defeat the two captains who board from her.');
         h += step(sc.completed, sc.completed ? 'The gate is the exit now, and the hoard chest waits on the hatch.' : escapeHtml(sc.description));
+      } else if (w.biome?.tower) {
+        const top = sc.phase !== 'climb';
+        h += step(top, `Climb ${escapeHtml(sc.variant.name)} to the stairhead door <span class="dim">— ${sc.altitude}% of the way up</span>.`);
+        h += step(false, '<span class="dim">Packs wait on the floors above; some drop down, some charge up from behind, and pirates come over the railing on hooks.</span>');
+        h += step(sc.completed || !!sc.top?.final, `Hold the roof: <b>${escapeHtml(sc.scenario.name)}</b> — three waves of bosses${top ? ` (wave ${Math.min(3, sc.wave)} of 3)` : ''}.`);
+        h += step(sc.completed, 'Defeat the captain who comes on the airship.');
+        h += step(sc.completed, sc.completed ? 'A portal burns on the roof — descend or return to town.' : 'The portal opens on the roof when the last boss falls.');
       } else if (w.biome?.id === 'dark_forest') {
         const cur = sc.current;
         h += step(sc.cleared > 0, `Win the trial glades along the trails (optional, each pays fine gear: Epic or better once deep enough): <b>${sc.cleared}/${sc.trials.length}</b>.`);
