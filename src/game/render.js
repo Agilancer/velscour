@@ -933,6 +933,7 @@ export function renderWorld(ctx, world) {
     p.z = oldZ + hz; p.alpha = 0.42; p.draw(ctx); p.z = oldZ; p.alpha = oldA;
     ctx.globalAlpha = 1;
   }
+  if (world.tower) world.tower.front(ctx); // the tower's railings and chandeliers over whoever stands behind them
   if (G.debugWalk) {
     // test shots only: blocked tiles red and the tiles a test points at (G.debugMarks) cyan, to check art against collision
     const tile = (tx, ty, c) => {

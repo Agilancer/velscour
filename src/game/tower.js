@@ -10,19 +10,18 @@ import { HUD } from '../ui/hud.js';
 import { camera, setWarp, warpMoved, isoX, isoY, HW, HH } from '../core/view.js';
 import { rand, chance, pick, clamp, TAU, shuffle } from '../core/util.js';
 import { sfx } from '../core/audio.js';
-import { VZ } from '../world/tower.js';
-import { drawTower3D, tickTower3D, buildTower3D, disposeTower3D, spawnShip, loadAirships, airshipsReady } from '../gfx/tower3d.js';
+import { VZ, CUT_N, CUT_C } from '../world/tower.js';
+import { drawTower3D, drawTowerFront, tickTower3D, buildTower3D, disposeTower3D, spawnShip, loadAirships, airshipsReady } from '../gfx/tower3d.js';
 import { makeMonster, monsterBase } from './monster.js';
 import { makeRaidBoss, RAID_BOSSES } from './raid.js';
 import { depthLevel } from '../data/depth.js';
 import { addEffect, Ring, Column, Telegraph, burst, smoke, floatText, addLight, clearVfx, sparkle } from '../gfx/vfx.js';
-import { explode, Area } from './hazards.js';
+import { explode, Area, Orbit, Whirl, AuraFx } from './hazards.js';
 import { enter } from './mayhem.js';
 import { AIR_ART } from '../data/airpirates.js';
 import { SWAPS } from '../data/bestiary.js';
 import { dropChest } from './loot.js';
 
-const CLIP = 1.6 * Math.SQRT2;   // camera-frame x + y beyond which the cutaway hides things (gfx/tower3d.js clip plane)
 const GRAV = 1400;               // px/s^2 for falls
 
 // ------------------------------------------------------------------ the 20 roof scenarios
@@ -110,7 +109,7 @@ export function createTowerRun(world, gen, biome, onSuccess) {
       else {
         const s = g.X1 - x, t = g.theta0 - s / g.rc - tw.alpha, r = g.rWall - (y - g.YR);
         cx = r * Math.cos(t); cy = r * Math.sin(t); z = g.z(s);
-        if (clip && cx + cy > CLIP) { out[0] = out[1] = 1e7; return out; }   // nearer the camera than the axis: cut away
+        if (clip && cx * CUT_N[0] + cy * CUT_N[1] < -CUT_C) { out[0] = out[1] = 1e7; return out; }   // in the cutaway
       }
       out[0] = (cx - cy) * HW; out[1] = (cx + cy) * HH - z * VZ;
       return out;
@@ -161,6 +160,8 @@ export function createTowerRun(world, gen, biome, onSuccess) {
       tw.focus[0] = cx; tw.focus[1] = z; tw.focus[2] = cy;
     },
     draw(ctx) { drawTower3D(ctx, tw); },
+    /** Over the sprites: the railings and chandeliers, then whoever hangs in the well in front of them (render.js). */
+    front(ctx) { drawTowerFront(ctx); for (const c of world.creatures) if (c.towerFront && !c.dead) c.draw(ctx); },
     minimap: (c, W, H, big) => minimap(world, tw, c, W, H, big),
   };
   void buildTower3D(g).catch((e) => console.warn(e));
@@ -253,15 +254,17 @@ export function createTowerRun(world, gen, biome, onSuccess) {
     const p = world.player;
     G.flash = 1; sfx('portal'); camera.shake(4);
     const pets = world.creatures.filter((c) => c !== p && c.team === 'player' && !c.dead);
-    const loot = world.loot.filter((l) => l.x >= g.XR && g.s(l.x) > g.sEnd - 40);
+    const loot = world.loot.filter((l) => l.x >= g.XR);   // all of it comes up: there's no way back down for it
     world.creatures = world.creatures.filter((c) => c === p || pets.includes(c));
-    world.hazards.length = 0; world.corpses.length = 0; tw.ropes.length = 0;
-    world.loot = world.loot.filter((l) => !(l.x >= g.XR) || loot.includes(l));
+    // the hero's own effects that ride with him (orbits, whirls, auras, zones that follow) come up; the rest stay below,
+    // and the rope layer is made again on the roof for its climbers
+    world.hazards = world.hazards.filter((h) => h.src && h.src.team === 'player' && !h.src.dead && (h.follow || h instanceof Orbit || h instanceof Whirl || h instanceof AuraFx));
+    world.towerRopeLayer = null; world.corpses.length = 0; tw.ropes.length = 0;
     clearVfx();
     tw.roof = true; run.phase = 'top';
     [p.x, p.y] = g.roofDoor; p.path = null; p.moveTarget = null; p.attackTarget = null; p.interact = null; p.lootTarget = null;
     for (const s of pets) { [s.x, s.y] = map.randomNear(p.x, p.y, 1.6); s.aggro = null; s.foe = null; s.nav = null; s.fol = null; }
-    for (const l of loot) [l.x, l.y] = map.randomNear(g.roofDoor[0] + 1, g.roofDoor[1] + 1.5, 2);
+    loot.forEach((l, i) => { [l.x, l.y] = map.randomNear(g.roofDoor[0] + 1, g.roofDoor[1] + 2, 1.5 + Math.min(3.5, i * 0.08)); });
     for (const ch of world.chests) if (ch.x >= g.XR && !ch.opened && g.s(ch.x) > g.sEnd - 6) [ch.x, ch.y] = map.randomNear(g.roofDoor[0] - 2.5, g.roofDoor[1] + 1, 1.5);
     map.flowFrom = [-9, -9];
     tw.frame(0);
@@ -431,7 +434,13 @@ export function createTowerRun(world, gen, biome, onSuccess) {
     const tick = {
       ground: true, draw() {},
       update(dt) {
-        if (sh.state === 'gone') return false;
+        if (sh.state !== 'in' && sh.state !== 'docked') {
+          for (const m of crew.slice(sent)) {
+            if (run.completed) { const i = world.creatures.indexOf(m); if (i >= 0) world.creatures.splice(i, 1); continue; }
+            const [x, y] = roofSpot(3, 8); m.x = x; m.y = y; m.z = 0; enter(m, 'drop');
+          }
+          return false;
+        }
         if (!sh.ready) return true;
         t += dt;
         if (sent < crew.length && t - lastT > 0.55) { walkOff(crew[sent], sh.board(sent % 3, 3), 2.6); sent++; lastT = t; }
@@ -603,6 +612,7 @@ function dropDown(world, tw, m, delay) {
   m.entering = (dt) => {
     t += dt; if (t < 0) return;
     m.animT += dt; m.moving = true;
+    m.towerFront = t > 0.25;   // over the rail and down the well: in front of the railings
     if (t < 0.4) { const k = t / 0.4; m.x = x0; m.y = y0 + (edge - y0) * k; m.z = Math.sin(k * Math.PI) * 30 + 10 * k; return; }
     if (!warned) { warned = true; addEffect(new Telegraph({ kind: 'circle', x: xl, y: ly, r: 1.2, dur: fall + 0.25 }), 'ground'); sfx('swing', 0.5); }
     const tf = t - 0.4;
@@ -610,7 +620,7 @@ function dropDown(world, tw, m, delay) {
     const k = Math.min(1, (tf - fall) / 0.25);
     m.y = edge + (ly - edge) * k; m.z = Math.sin(k * Math.PI) * 24;
     if (k >= 1) {
-      m.entering = null; m.targetable = true; m.z = 0; m.moving = false; m.cd = rand(0.3, 0.6);
+      m.entering = null; m.targetable = true; m.z = 0; m.moving = false; m.cd = rand(0.3, 0.6); m.towerFront = false;
       addEffect(new Ring(m.x, m.y, 0.2, 2, 0.4, '#d8c8a8', 5)); smoke(m.x, m.y, 4, '#5a4a3a', 8, 12); burst(m.x, m.y, 6, 'phys', 12, 4);
       camera.shake(4); sfx('thud', 0.8);
     }
@@ -619,8 +629,10 @@ function dropDown(world, tw, m, delay) {
 /** A pack out of sight behind the hero, already running. */
 function chargers(world, tw, biome, lvl, depth) {
   const g = tw.g, p = world.player, arch = pick(world.roster || biome.roster), n = 2 + Math.floor(rand(0, 3)) + Math.floor(depth / 40);
-  const x = Math.min(g.XB - 1.5, p.x + rand(14, 18));
-  if (x - p.x < 9) return;
+  // the nearest stretch of stair behind him that the cutaway hides (none near the foot: then no pack this time)
+  let x = null;
+  for (let k = 12; k <= 34 && x == null; k += 2) { const q = p.x + k; if (q < g.XB - 1.5 && tw.raw(q, g.YR + g.w / 2, [0, 0], true)[0] > 1e6 && tw.raw(q + 2.5, g.YR + 1, [0, 0], true)[0] > 1e6) x = q; }
+  if (x == null) return;
   for (let i = 0; i < n; i++) {
     const y = g.YR + rand(0.8, g.w - 0.8), rank = i === 0 && chance(0.25) ? 'champion' : 'normal';
     const m = makeMonster(world, arch, biome, lvl + (rank === 'normal' ? 0 : 1), rank, x + rand(0, 2.5), y, 0);
@@ -631,7 +643,7 @@ function chargers(world, tw, biome, lvl, depth) {
 }
 /** A grappling hook flies up out of the well onto the railing; an Air Pirate climbs the rope and vaults over. */
 function grapple(world, tw, x, lvl, depth, delay) {
-  const g = tw.g, rail = g.YR + g.w - 0.06, out = g.YR + g.w + 0.6, land = g.YR + g.w - rand(0.9, 1.9), top = 1.15 * VZ;
+  const g = tw.g, rail = g.YR + g.w - 0.06, out = g.YR + g.w + 0.6, land = g.YR + g.w - rand(0.9, 1.9), top = 1.3 * VZ;   // the handrail, on its curb
   const a = pick(AIR_ART.filter((q) => !q.boss && (CLIMBERS.has(q.id) || chance(0.4))));
   const rank = chance(0.15 + depth * 0.003) ? 'champion' : 'normal';
   const m = makeMonster(world, a.arch, world.biome, lvl + (rank === 'normal' ? 0 : 1), rank, x, land, 0, { art: a.id, swap: null });
@@ -643,10 +655,10 @@ function grapple(world, tw, x, lvl, depth, delay) {
   m.entering = (dt) => {
     t += dt; m.animT += dt;
     if (t < 0.75) return;
-    m.alpha = undefined; m.moving = true;
+    m.alpha = undefined; m.moving = true; m.towerFront = t < 2.4;
     if (t < 2.25) { const k = (t - 0.75) / 1.5; m.z = -320 + (top + 320) * k; rope.phase = 'climb'; }
     else if (t < 2.6) { const k = (t - 2.25) / 0.35; m.y = out + (land - out) * k; m.z = top * (1 - k) + Math.sin(k * Math.PI) * 22; rope.phase = 'hang'; }
-    else { m.entering = null; m.targetable = true; m.z = 0; m.moving = false; m.cd = rand(0.2, 0.5); sfx('thud', 0.4); }
+    else { m.entering = null; m.targetable = true; m.z = 0; m.moving = false; m.cd = rand(0.2, 0.5); m.towerFront = false; sfx('thud', 0.4); }
   };
   sfx('swing', 0.4);
 }

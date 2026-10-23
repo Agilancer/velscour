@@ -30,10 +30,16 @@ on the HAIL VELSCOUR! list.
   screen (as on a flat level), so moving and aiming feel normal. Near the hero the warp is the flat iso view. The
   stair ahead curves up and to the left, the floor above is in view at the top of the screen, and the floor below at
   the bottom. A blink or teleport turns the camera at once.
-- **The cutaway.** The camera is orthographic, so the near half of the tower would hide everything. While climbing,
-  geometry nearer the camera than the axis is clipped (a three.js clip plane). Back faces then show where the cut
-  slices a solid, drawn as the stone itself, unlit and dark. The 2D warp hides sprites, spells and lights there too,
-  which is where packs charge up from behind.
+- **The cutaway.** The camera is orthographic, so the near half of the tower would hide everything. While climbing, a
+  vertical clip plane through the axis (`CUT_N`/`CUT_C` in `world/tower.js`) cuts away what lies nearer the camera.
+  It's turned 25 degrees off square to the view, so the cut through the stair lies off to the right of the hero, the
+  stretch behind him stays in view, and the left edge of the cut is off screen. Where the cut slices stone, a
+  **stencil cap** fills it with a flat face of dressed stone: the closed `solid` set (wall, stair blocks, curb, ribs)
+  counts back faces up and front faces down in the stencil behind the plane, and a quad on the plane draws wherever
+  the count isn't zero. The 2D warp hides sprites, spells and lights in the cutaway too; packs that charge up from
+  behind start only where it hides them.
+- **The well's dark.** Every tower material carries a height fog (`FOG` in `gfx/tower3d.js`): stone fades into the
+  variant's fog from 6 tiles below the hero, so the stair falls away into the deep, and a little from 14 above.
 - **The roof** is a disk of its own at the `-x` end of the same grid, joined to the stair only by the stairhead door.
   Stepping through it is a flash and a move. There the warp is a plain translation and the camera angle is fixed.
 - **Drawing.** `render.js` asks `world.tower.draw` for the backdrop instead of floor chunks. The 3D view renders at
@@ -50,23 +56,27 @@ on the HAIL VELSCOUR! list.
 - Air Pirates **throw grappling hooks** onto the railing from the well below (every 16-28 s and every 14 tiles
   climbed), climb the rope hand over hand and vault over.
 - Lanterns every 8.5 tiles of stair, chandeliers on one chain down the middle (never over the stair), a chest on every
-  other turn's landing and two at the stairhead. The minimap draws the tower from above: the turn you're on and the
+  other turn's landing and two at the stairhead. The steps have lighter worn nosings and a curb under the railing; a
+  skirting follows the stair along the wall and a sill course runs under the windows, which are stained glass in the
+  variant's colours. Banners and the floor mosaic carry the variant's emblem. The minimap draws the tower from above: the turn you're on and the
   stair climbed so far.
 
 ## The five variants
 | Variant | Size | Look |
 |---|---|---|
-| The Serpentine Tower | well radius 11, stair 6 wide, 4 turns | verdigris ashlar, amber lanterns, cartwheel chandeliers, serpent-headed newels on a copper rail, lancet windows |
-| The Obsidian Coil | well 13, stair 6, 3.5 turns (the widest) | black-violet brick, violet lanterns, iron crown chandeliers, an iron railing, arrow slits |
-| The Bloodstone Spire | well 10, stair 7, 4.5 turns (the tallest) | red ashlar, black iron, tiered candelabra chandeliers, balusters, rose windows |
-| The Rimeglass Tower | well 12, stair 6, 4 turns | frost-white chapel stone, cold blue lanterns, crystal chandeliers, a carved arcade parapet |
-| The Sunken Bell Tower | well 11, stair 7, 4 turns | sandstone brick, gold, bronze bells hung as chandeliers |
+| The Serpentine Tower | well radius 11, stair 6 wide, 4 turns | verdigris ashlar, amber lanterns, cartwheel chandeliers, serpent-headed newels on a copper rail, green and gold lancets, ivy up the wall, a serpent emblem |
+| The Obsidian Coil | well 13, stair 6, 3.5 turns (the widest) | black-violet brick, violet lanterns, iron crown chandeliers, an iron railing, arrow slits, a violet rune line glowing down the stringer, an eye emblem |
+| The Bloodstone Spire | well 10, stair 7, 4.5 turns (the tallest) | red ashlar, black iron, tiered candelabra chandeliers, balusters, red rose windows, candles on the steps, a flame emblem |
+| The Rimeglass Tower | well 12, stair 6, 4 turns | frost-white chapel stone, cold blue lanterns, crystal chandeliers, a carved arcade parapet, icicles under the stair, a snowflake emblem |
+| The Sunken Bell Tower | well 11, stair 7, 4 turns | sandstone brick, gold, bronze bells hung as chandeliers, small bells under the stair, a bell emblem |
 
 Every texture is palette swapped from the Castle 3D masonry (`assets/source/castle3d/tex/`) and the airship pack's
-metals and cloth (`assets/source/airship/textures/`) by `core/util.js recolor`. Each variant has its own sky.
+metals and cloth (`assets/source/airship/textures/`) by `core/util.js recolor`. Each variant has its own night sky
+with stars and a moon held at the same spot on screen.
 
 ## The roof and its 20 scenarios
-The roof is a crenellated disk with the stairhead turret (where the hero comes out) and three braziers. One scenario
+The roof is a crenellated disk with the stairhead turret (where the hero comes out), three braziers, flags on the
+parapet and the variant's emblem in mosaic at the centre, where the portal opens. One scenario
 is rolled per tower. Each runs: an intro, **three boss waves** (1, 2, then 1 boss with adds and champions; the third
 may be a pirate captain), and then **the last boss's airship**. The ship flies in from astern and docks up-left of the
 roof, lowers a gangplank onto the parapet, and the captain walks down it. The captain fights as a raid boss (the raid
@@ -120,6 +130,7 @@ imported on demand when a tower is built.
 ## Test
 ```bash
 node tools/tests/tower.js [variants] [scenarios] [noauto]   # e.g. 0,2 0-19; 'none' skips a part
+node tools/tests/tower_edge.js                              # the stairhead, landings, deaths, town and back
 ```
 The skull and the draw; every variant: the stair walkable end to end, picking inverts the warp, shots of the foot, a
 turn up, three quarters up, a drop, the hooks, the stairhead and the roof; every scenario run to the portal with
@@ -130,7 +141,8 @@ and takes its roof in god mode. On Windows use the GPU (`CHROMIUM_ARGS="--use-an
 ## Not verified / open
 - Only headless Chromium has run it. Phones' frame cost with three.js on top of the 2D frame is unmeasured on real
   devices.
-- Sprites are drawn over the 3D view, so a body standing right at the railing draws in front of it, and the chandeliers
-  never hide anyone behind them.
+- The railings and chandeliers are drawn a second time over the sprites (a front pass against the 3D depth), so whoever
+  stands behind them is covered properly; anything else in 3D (the stairhead arch, the turret, a ship) still never
+  hides a sprite.
 - The design calls were made without asking: the cutaway look, the up-left dock for the flagship, a raid boss as the
   last boss, 60% of its life, no execute timer, and the tower being in the regular overworld rotation.
