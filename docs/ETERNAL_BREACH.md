@@ -129,8 +129,8 @@ Tests: `node tools/tests/breach_gen.mjs [seeds] [floor]` (no browser),
   (break four pulsing nests that hatch crawlers).
 - **Boss fights** (large islands): A Sovereign's Duel (a Breach boss climbs over the edge, rises or is lowered in, and
   calls its brood at 66% and 33%), The Dread Courier (a carrier drops a Breach boss, and comes back with more).
-- **The Breach Heart**: the floor's keeper (`finalBossIndex`: the six boss families in turn, each family's six from least
-  to most fearsome as floors go on) rises from the sarcophagus at 1.5x a boss's life; at 66% and 33% it shields itself
+- **The Breach Heart**: the floor's keeper (`finalBossIndex`: the five boss families in turn, each family's six from least
+  to most fearsome as floors go on: floors 1-5 the first of each, 6-10 the second, ..., the sixth from floor 26 on) rises from the sarcophagus at 1.5x a boss's life; at 66% and 33% it shields itself
   (untargetable) behind three Heart Shards while a wave arrives; break them to strike again. Its fall gives the reward
   and opens the exit portal on the Heart island: on to the next floor, or home. The generator reserves its spot (a
   clear tile with open neighbours a step from the Heart's shrine, before the braziers and lights go down:

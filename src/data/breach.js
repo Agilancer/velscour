@@ -66,7 +66,10 @@ export function breachLooks(rnd = Math.random, sheets = 3) {
 }
 
 /** The final boss of floor n: the six boss families in turn, each family's six from least to most fearsome. */
-export const finalBossIndex = (floor) => ((floor - 1) % 6) * 6 + Math.min(5, Math.floor((floor - 1) / 6)) % 6;
+// (the roster is five families of six; this once cycled six families, and floors 6, 12, 18... asked for a boss past the
+// end of the list: the Heart threw on every frame and the screen went black)
+const FAMILIES = BREACH_BOSSES.length / 6;
+export const finalBossIndex = (floor) => ((floor - 1) % FAMILIES) * 6 + Math.min(5, Math.floor((floor - 1) / FAMILIES));
 
 /**
  * What the final boss of floor `floor` drops (the user's table): a rarity id (data/items.js RARITY: 2 Rare, 3 Epic,

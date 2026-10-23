@@ -104,7 +104,12 @@ const FLOOR = +(process.argv[3] || 2);
             }
           };
           for (const S of run.scenarios) {
-            if (S === run.heart) { for (const o of run.scenarios) if (o !== S && !o.completed) o.finish(); }
+            if (S.wyrm) continue;   // (the wyrm's fight has its own test, breach_dragon.js; it is slain before the Heart)
+            if (S === run.heart) {
+              for (const o of run.scenarios) if (o !== S && !o.completed && !o.wyrm) o.finish();
+              if (run.wyrm && !run.wyrm.slain) { run.wyrm.force.fight(); run.wyrm.m.dead = true; run.update(dt); }
+              if (run.wyrm && !run.wyrm.slain) bad.push('the wyrm could not be slain before the Heart');
+            }
             run.force(S);
             const st = { idle: 0, maxIdle: 0, repath: 0, path: null }; let t = 0;
             // where they land: on the walkable ground, and a nest or Heart Shard (they never move) where the hero can walk up
