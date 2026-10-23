@@ -116,6 +116,7 @@ const SOUNDS = {
   orb: (t) => { tone(t, 0.18, { f0: 400, f1: 900, vol: 0.1 }); },
   potion: (t) => { for (let i = 0; i < 4; i++) tone(t + i * 0.06, 0.08, { f0: R(300, 600), f1: R(150, 300), vol: 0.12 }); },
   levelup: (t) => { [392, 523, 659, 784, 1046].forEach((f, i) => tone(t + i * 0.09, 0.5, { f0: f, vol: 0.12, wave: 'triangle' })); },
+  thunder: (t, p) => { SOUNDS.light(t, p); noise(t, 2.4, { f0: 1400 * p, f1: 60, vol: 0.35, a: 0.004 }); tone(t, 1.8, { f0: 55, f1: 28, vol: 0.25 }); }, // until the sample loads
   portal: (t) => { noise(t, 1.0, { type: 'bandpass', f0: 200, f1: 2400, q: 3, vol: 0.4, a: 0.2 }); tone(t, 1.0, { f0: 200, f1: 800, vol: 0.08, a: 0.2 }); },
   ui: (t) => tone(t, 0.05, { wave: 'triangle', f0: 900, f1: 700, vol: 0.1 }),
   error: (t) => tone(t, 0.18, { wave: 'square', f0: 130, f1: 110, vol: 0.08 }),
@@ -223,6 +224,7 @@ const SAMPLES = {
   chest: { s: [...n3('chest_open', 2), ...n3('chest_close', 2), 'lock_unlock'], v: 0.7, max: 1 },
   door: { s: [...n3('door_open', 2), ...n3('door_close', 2)], v: 0.45, max: 2 },
   gate: { s: ['gate_open', 'gate_close', 'portcullis_gate'], v: 0.7, max: 1 },
+  thunder: { s: ['thunder_crack'], v: 0.6, max: 1 }, // the level-up's lightning (oneshots/, tools/audiopack.py)
   step_stone: STEP('stone'), step_dirt: STEP('dirt'), step_water: STEP('water'), step_wood: STEP('wood'),
 };
 

@@ -3,7 +3,7 @@ import { G } from '../state.js';
 import { rand, chance, clamp, angleTo, dist, TAU } from '../core/util.js';
 import { sfx, levelUpFanfare } from '../core/audio.js';
 import { camera } from '../core/view.js';
-import { floatText, addEffect, Column, Ring, Sigil, sparkle, burst, spawn, elem, bloodSpray, smoke } from '../gfx/vfx.js';
+import { floatText, addEffect, Column, Ring, Sigil, SigilFlames, SkyBolts, sparkle, burst, spawn, elem, bloodSpray, smoke } from '../gfx/vfx.js';
 import { Creature } from './creature.js';
 import { CLASSES, DMG_TUNE, DMG_TUNE_AT } from '../data/classes.js';
 import { SKILLS, CLASS_SKILLS, effLevel, skillBaseDamage, manaCost, rageCost, cooldown, useTime, weaponCoef, grantedSkillsAt, skillRange } from '../data/skills.js';
@@ -273,14 +273,18 @@ export class Player extends Creature {
       G.ui.refresh();
     }
   }
-  /** Grimdark level-up: a dark sigil, a column of blood-red hellfire, smoke and a blood fountain, a shove. */
+  /** Grimdark level-up: a dark sigil bursting into flames, a column of blood-red hellfire, rainbow lightning forking
+   *  into the sky, smoke and a blood fountain, a shove. */
   levelUpFx() {
     const { x, y } = this;
     G.hitStop = Math.max(G.hitStop, 0.08);
     camera.shake(7);
-    addEffect(new Sigil(x, y, 2.6, 3.4, '#8a0a06', '#3a0000'), 'ground');
+    sfx('thunder');
+    const sig = addEffect(new Sigil(x, y, 2.6, 3.4, '#8a0a06', '#3a0000'), 'ground');
+    addEffect(new SigilFlames(sig), 'ground');
     addEffect(new Column(x, y, '#7a0804', 1.6, 60, 520));
     addEffect(new Column(x, y, '#2a0000', 1.8, 90, 380));
+    addEffect(new SkyBolts(x, y));
     addEffect(new Ring(x, y, 0.2, 6, 1.4, '#5a0404', 9, { fill: true }));
     smoke(x, y, 10, '#120606', 14, 14);
     sparkle(x, y, 30, '#a01008', 24, 0.9);

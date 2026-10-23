@@ -2,8 +2,8 @@
 import { drawDkSkull } from './dkskull.js';
 import { G } from '../state.js';
 import { A } from '../core/assets.js';
-import { camera, isoX, isoY, HW, HH } from '../core/view.js';
-import { makeCanvas, rand, TAU, hexToRgb, shade, randi, pick, fmt } from '../core/util.js';
+import { camera, isoX, isoY, HW, HH, screenDirToTile } from '../core/view.js';
+import { makeCanvas, rand, TAU, hexToRgb, shade, randi, pick, fmt, shuffle, clamp } from '../core/util.js';
 import { groundHidden } from './terrain.js';
 
 export const ELEM = {
@@ -314,48 +314,189 @@ export class Beam {
 }
 
 export class Column {
-  // vertical light/fire column from the sky
+  // vertical light/fire column from the sky: a round shaft whose foot is the front of the floor ellipse it stands on,
+  // with its light pooled on the floor round it
   constructor(x, y, color, dur = 0.5, width = 18, height = 260) { Object.assign(this, { x, y, color, dur, width, height, t: 0 }); }
   update(dt) { this.t += dt; return this.t < this.dur; }
   draw(ctx) {
     const k = this.t / this.dur;
-    const px = isoX(this.x, this.y), py = isoY(this.x, this.y);
-    const w = this.width * (1 - k);
-    const g = ctx.createLinearGradient(px, py - this.height, px, py);
+    const px = isoX(this.x, this.y), py = isoY(this.x, this.y), top = py - this.height;
+    const w = Math.max(0, this.width * (1 - k)), op = ctx.globalCompositeOperation, s = this.width * 1.2;
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.8 * (1 - k);
+    ctx.drawImage(glowSprite(this.color), px - s, py - s * HH / HW, s * 2, s * 2 * HH / HW);
+    ctx.globalCompositeOperation = op;
+    const g = ctx.createLinearGradient(px, top, px, py);
     g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.7, this.color); g.addColorStop(1, '#ffffff');
     ctx.globalAlpha = 1 - k * 0.5;
-    ctx.fillStyle = g; ctx.fillRect(px - w / 2, py - this.height, w, this.height);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(px - w / 6, py - this.height, w / 3, this.height);
+    ctx.fillStyle = g; shaft(ctx, px, py, top, w / 2); ctx.fill();
+    ctx.fillStyle = '#ffffff'; shaft(ctx, px, py, top, w / 6); ctx.fill();
     ctx.globalAlpha = 1;
   }
+}
+// a light shaft's outline: straight sides down to the floor, closed by the front half of the floor ellipse under it
+function shaft(ctx, px, py, top, r) {
+  ctx.beginPath(); ctx.moveTo(px - r, top); ctx.lineTo(px + r, top);
+  ctx.ellipse(px, py, r, r * HH / HW, 0, 0, Math.PI); ctx.closePath();
 }
 
 export class Sigil {
   // a burning summoning circle on the ground (level up): rings, a seven-point star and rune ticks, turning
   constructor(x, y, r, dur, color = '#ff3018', glow = '#ffd860') { Object.assign(this, { x, y, r, dur, color, glow, t: 0, add: true }); }
   update(dt) { this.t += dt; return this.t < this.dur; }
+  get R() { return this.r * HW * 1.41 * (0.6 + 0.4 * Math.min(1, this.t / 0.35)); } // outer ring, world px (before the iso squash)
+  get rot() { return this.t * 0.9; }
   draw(ctx) {
     const k = this.t / this.dur, a = Math.min(1, this.t / 0.25) * (k > 0.7 ? (1 - k) / 0.3 : 1);
     const px = isoX(this.x, this.y), py = isoY(this.x, this.y);
-    const R = this.r * HW * 1.41 * (0.6 + 0.4 * Math.min(1, this.t / 0.35)), rot = this.t * 0.9;
+    const R = this.R, rot = this.rot;
     ctx.save(); ctx.translate(px, py); ctx.scale(1, HH / HW);
     ctx.lineJoin = 'miter';
     for (let pass = 0; pass < 2; pass++) {
       ctx.globalAlpha = a * (pass ? 1 : 0.45);
       ctx.strokeStyle = pass ? this.glow : this.color; ctx.lineWidth = pass ? 1.6 : 6;
-      ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 0, R * 0.8, 0, TAU); ctx.stroke();
-      ctx.beginPath();
-      for (let i = 0; i <= 7; i++) { const q = rot + (i * 3 * TAU) / 7; ctx[i ? 'lineTo' : 'moveTo'](Math.cos(q) * R * 0.8, Math.sin(q) * R * 0.8); }
-      ctx.stroke();
-      for (let i = 0; i < 21; i++) { // rune ticks between the rings, turning the other way
-        const q = -rot * 0.6 + (i * TAU) / 21, r0 = R * 0.84, r1 = R * (i % 3 ? 0.92 : 0.97);
-        ctx.beginPath(); ctx.moveTo(Math.cos(q) * r0, Math.sin(q) * r0); ctx.lineTo(Math.cos(q + 0.06) * r1, Math.sin(q + 0.06) * r1); ctx.stroke();
-      }
+      this.trace(ctx, R, rot);
     }
     ctx.restore();
     ctx.globalAlpha = 1;
   }
+  // stroke the lines round the centre in the current style (one path, one stroke)
+  trace(ctx, R, rot) {
+    ctx.beginPath();
+    ctx.moveTo(R, 0); ctx.arc(0, 0, R, 0, TAU);
+    ctx.moveTo(R * 0.8, 0); ctx.arc(0, 0, R * 0.8, 0, TAU);
+    for (let i = 0; i <= 7; i++) { const q = rot + (i * 3 * TAU) / 7; ctx[i ? 'lineTo' : 'moveTo'](Math.cos(q) * R * 0.8, Math.sin(q) * R * 0.8); }
+    for (let i = 0; i < 21; i++) { // rune ticks between the rings, turning the other way
+      const q = -rot * 0.6 + (i * TAU) / 21, r0 = R * 0.84, r1 = R * (i % 3 ? 0.92 : 0.97);
+      ctx.moveTo(Math.cos(q) * r0, Math.sin(q) * r0); ctx.lineTo(Math.cos(q + 0.06) * r1, Math.sin(q + 0.06) * r1);
+    }
+    ctx.stroke();
+  }
+}
+
+// a Sigil's lines, in units of its outer radius R: the outer ring, the inner ring, the star's seven strokes, the runes
+const SIG_LEN = [TAU, TAU * 0.8, 7 * 1.6 * Math.sin((3 * Math.PI) / 7), 21 * 0.1];
+const SIG_SUM = SIG_LEN.reduce((a, b) => a + b);
+export class SigilFlames {
+  // flames rising off a Sigil's lines (level up): once it has grown to full size every ring, star stroke and rune
+  // catches, a burst first, then a burn that dies down. The fire is particles (type 'flame'); this draws the lines
+  // glowing hot under it.
+  constructor(sig, dur = 2.5) { Object.assign(this, { sig, dur, t: 0, n: 0, add: true }); }
+  // a random point on the lines, weighted by length so the fire is even along them: [tile angle, tile radius, turn
+  // rate]. The ground plane is the sigil's circle space turned 45 degrees, so its turns are the same in tiles.
+  spot() {
+    const s = this.sig, R = s.r * HW * 1.41, rot = s.rot, u = Math.random() * SIG_SUM;
+    let ox, oy, omega = 0.9;
+    if (u < SIG_LEN[0] + SIG_LEN[1]) {
+      const q = rand(TAU), r = u < SIG_LEN[0] ? R : R * 0.8;
+      ox = Math.cos(q) * r; oy = Math.sin(q) * r;
+    } else if (u < SIG_LEN[0] + SIG_LEN[1] + SIG_LEN[2]) {
+      const a = rot + (randi(0, 6) * 3 * TAU) / 7, b = a + (3 * TAU) / 7, f = Math.random();
+      ox = (Math.cos(a) + (Math.cos(b) - Math.cos(a)) * f) * R * 0.8; oy = (Math.sin(a) + (Math.sin(b) - Math.sin(a)) * f) * R * 0.8;
+    } else { // a rune tick, as Sigil.draw turns them (the other way)
+      const i = randi(0, 20), q = -rot * 0.6 + (i * TAU) / 21, f = Math.random(), r = R * (0.84 + f * ((i % 3 ? 0.92 : 0.97) - 0.84));
+      ox = Math.cos(q + 0.06 * f) * r; oy = Math.sin(q + 0.06 * f) * r; omega = -0.54;
+    }
+    const [dx, dy] = screenDirToTile(ox, oy * HH / HW);
+    return [Math.atan2(dy, dx), Math.hypot(dx, dy), omega];
+  }
+  flame(burst) {
+    const s = this.sig, [angle, radius, omega] = this.spot(), x = s.x + Math.cos(angle) * radius, y = s.y + Math.sin(angle) * radius;
+    if (Math.random() < 0.08) { // a spark that breaks loose, flies higher and lasts
+      spawn({ type: 'glow', x, y, z: 2, vx: rand(-0.3, 0.3), vy: rand(-0.3, 0.3), vz: rand(60, 160), g: -40, drag: 1, life: rand(0.7, 1.3), size: rand(1.2, 2), size1: 0, color: pick(['#ffc050', '#ff7a20']), add: true });
+      return;
+    }
+    // rides the turning sigil (the vortex follow in updateVfx) straight up off its line, so the fire keeps its shape
+    spawn({ type: 'flame', x, y, z: 0, life: rand(0.25, burst ? 0.5 : 0.42), size: rand(2.2, burst ? 3.8 : 3), size1: 0.3, add: true,
+      vortex: { owner: s, angle, radius, omega, radial: 0, rise: burst ? rand(35, 100) : rand(15, 48) } });
+  }
+  update(dt) {
+    const t = (this.t += dt), k = G.touch ? 0.45 : 1;
+    if (t < 0.32) return true; // the sigil is still growing
+    if (t < this.dur - 0.3) addLight(this.sig.x, this.sig.y, 5 + Math.sin(t * 19) * 0.5, 1, 24, '#ff6a20');
+    // a roaring burst, then a burn that dies down, stopping in time for the last flames to fade with the sigil
+    const rate = t < 0.7 ? 2000 : t < this.dur - 0.55 ? 1700 - 800 * ((t - 0.7) / (this.dur - 1.25)) : 0;
+    for (this.n += dt * rate * k; this.n >= 1; this.n--) this.flame(t < 0.7);
+    return t < this.dur;
+  }
+  draw(ctx) {
+    const s = this.sig, t = this.t, heat = Math.min(1, (t - 0.32) / 0.1) * (0.6 + 0.4 * Math.max(0, 1 - (t - 0.7) / 0.6)) * Math.min(1, (this.dur - t) / 0.5);
+    if (heat <= 0) return;
+    ctx.save(); ctx.translate(isoX(s.x, s.y), isoY(s.x, s.y)); ctx.scale(1, HH / HW);
+    ctx.lineJoin = 'miter';
+    ctx.globalAlpha = heat * 0.5; ctx.strokeStyle = '#ff5a10'; ctx.lineWidth = 5; s.trace(ctx, s.R, s.rot);
+    ctx.globalAlpha = heat; ctx.strokeStyle = '#ffd860'; ctx.lineWidth = 1.4; s.trace(ctx, s.R, s.rot);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+}
+
+const RAINBOW = ['#ff2020', '#ff8a10', '#ffe820', '#30ff40', '#20d0ff', '#4050ff', '#c030ff'];
+export class SkyBolts {
+  // rainbow lightning from the hero into the sky (level up): seven bolts fan out, red leaning left to violet right,
+  // and halfway from the hero to the top of the screen each forks into 2-5 bolts that run off the top edge
+  constructor(x, y, dur = 1) {
+    const order = shuffle([0, 1, 2, 3, 4, 5, 6]);
+    Object.assign(this, { x, y, dur, t: 0, add: true });
+    this.bolts = RAINBOW.map((color, i) => ({ color, ang: ((i - 3) / 3) * 0.95 + rand(-0.12, 0.12), z0: rand(26, 52), t0: 0.03 + order[i] * 0.05 + rand(0, 0.03), ends: null, segs: null, regen: 0 }));
+  }
+  // laid out in world px the moment a bolt fires, against the view as it is then: the trunk, then the forks
+  aim(b) {
+    const ox = isoX(this.x, this.y), oy = isoY(this.x, this.y) - b.z0, top = camera.viewRect().y0;
+    const sy = (oy + top) / 2, sx = ox + Math.tan(b.ang) * (oy - sy), n = randi(2, 5);
+    b.ends = [[ox, oy, sx, sy]];
+    for (let j = 0; j < n; j++) {
+      const a = clamp(b.ang + ((j + 0.5) / n - 0.5) * 1.2 + rand(-0.12, 0.12), -1.1, 1.1);
+      b.ends.push([sx, sy, sx + Math.tan(a) * (sy - top + 40), top - 40]);
+    }
+  }
+  update(dt) {
+    this.t += dt;
+    const gx = isoX(this.x, this.y), gy = isoY(this.x, this.y);
+    for (const b of this.bolts) {
+      const a = this.t - b.t0;
+      if (a < 0 || a > 0.6) continue;
+      if (!b.ends) { this.aim(b); G.flash = Math.max(G.flash || 0, 0.1); }
+      if ((b.regen -= dt) <= 0) { b.regen = 0.05; b.segs = b.ends.map(([ax, ay, bx, by]) => jag(ax, ay, bx, by)); }
+      // its colour lights the dark halfway up the trunk and at the fork
+      for (const f of [0.5, 1]) {
+        const [ax, ay, bx, by] = b.ends[0], wx = ax + (bx - ax) * f, wy = ay + (by - ay) * f, [dx, dy] = screenDirToTile(wx - gx, 0);
+        addLight(this.x + dx, this.y + dy, 3, 0.9 * (1 - a / 0.6), gy - wy, b.color);
+      }
+    }
+    return this.t < this.dur;
+  }
+  draw(ctx) {
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    for (const b of this.bolts) {
+      const a = this.t - b.t0;
+      if (a < 0 || a > 0.6 || !b.segs) continue;
+      const k = a / 0.6, alpha = (1 - k * k) * (0.7 + 0.3 * Math.sin(a * 80 + b.z0));
+      b.segs.forEach((p, j) => {
+        const grow = j ? (a - 0.06) / 0.08 : a / 0.06; // the trunk strikes, then the forks
+        if (grow > 0) strokeBolt(ctx, p, Math.min(1, grow), b.color, alpha, j ? 0.7 : 1);
+      });
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+// a jagged lightning path from a to b by midpoint displacement, as a flat [x, y, x, y, ...] list
+function jag(ax, ay, bx, by, out = [ax, ay]) {
+  const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy);
+  if (len < 18) { out.push(bx, by); return out; }
+  const off = rand(-0.2, 0.2) * len, mx = (ax + bx) / 2 - (dy / len) * off, my = (ay + by) / 2 + (dx / len) * off;
+  jag(ax, ay, mx, my, out);
+  return jag(mx, my, bx, by, out);
+}
+// a bolt drawn `frac` of the way along: a wide coloured halo, the coloured bolt, a white-hot core
+function strokeBolt(ctx, p, frac, color, alpha, w) {
+  const n = p.length / 2 - 1, end = n * frac, last = Math.floor(end), f = end - last;
+  ctx.beginPath(); ctx.moveTo(p[0], p[1]);
+  for (let i = 1; i <= last; i++) ctx.lineTo(p[i * 2], p[i * 2 + 1]);
+  if (last < n) ctx.lineTo(p[last * 2] + (p[last * 2 + 2] - p[last * 2]) * f, p[last * 2 + 1] + (p[last * 2 + 3] - p[last * 2 + 1]) * f);
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = alpha * 0.25; ctx.lineWidth = 11 * w; ctx.stroke();
+  ctx.globalAlpha = alpha; ctx.lineWidth = 3.6 * w; ctx.stroke();
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.4 * w; ctx.stroke();
 }
 
 export class Telegraph {
@@ -638,6 +779,7 @@ export function drawEffects(ctx, layer) {
   }
 }
 
+const FIRE = ['#fff4c0', '#ffd860', '#ff9a28', '#ff5a10', '#d02008', '#7a0a04']; // a 'flame' particle's colour over its life
 export function drawParticles(ctx, vr) {
   let mode = 'source-over';
   const B = ctx.getTransform(), ba = B.a, bb = B.b, bc = B.c, bd = B.d, be = B.e, bf = B.f; // rotated particles reset to it (cheaper than a full save/restore each)
@@ -654,6 +796,12 @@ export function drawParticles(ctx, vr) {
         ctx.globalAlpha = Math.min(1, p.life / p.max * 1.5);
         const s = size * 3;
         ctx.drawImage(glowSprite(p.color), px - s, py - s, s * 2, s * 2);
+        break;
+      }
+      case 'flame': { // fire: white-yellow, orange, red, ember as it burns out; a soft lick, tall and narrow
+        ctx.globalAlpha = 0.75 * Math.min(1, (1 - k) * 1.8);
+        const s = size * 3;
+        ctx.drawImage(glowSprite(FIRE[(k * FIRE.length) | 0]), px - s * 0.5, py - s * 1.5, s, s * 3);
         break;
       }
       case 'smoke':
