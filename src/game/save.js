@@ -6,15 +6,20 @@ import { migrateBar, BAR_SIZE } from '../data/bar.js';
 
 const KEY = 'velscour_saves_v1';
 const watchers = [];
-/** fn(classId) after a hero of that class is saved or deleted (core/cloud.js syncs it). */
+/** fn(classId, deletedIds) after a hero of that class is saved, or deleted by the player (game/cloud.js syncs it). */
 export function onSaveChange(fn) { watchers.push(fn); }
-const changed = (classId) => { for (const fn of watchers) fn(classId); };
+const changed = (classId, deleted) => { for (const fn of watchers) try { fn(classId, deleted); } catch (e) { console.warn(e); } };
 
+let unreadable = false;   // the saves are there but don't parse: cloud sync must not touch them
 function readAll() {
   let list;
-  try { list = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; }
-  return Array.isArray(list) ? list : [];
+  const raw = localStorage.getItem(KEY);
+  try { list = JSON.parse(raw || '[]'); } catch (e) { unreadable = true; return []; }
+  unreadable = !Array.isArray(list);
+  return unreadable ? [] : list;
 }
+/** False when this device's saves exist but can't be read (cloud.js then changes nothing). */
+export function savesReadable() { readAll(); return !unreadable; }
 function writeAll(list) {
   try { localStorage.setItem(KEY, JSON.stringify(list)); return true; } catch (e) { console.warn('Save failed', e); return false; }
 }
@@ -33,7 +38,7 @@ export function writeSave(char) {
 export function deleteSave(id) {
   const list = readAll(), gone = list.find((c) => c.id === id);
   writeAll(list.filter((c) => c.id !== id));
-  if (gone) changed(gone.classId);
+  if (gone) changed(gone.classId, [id]);
 }
 /** One hero per class: classId -> that class's most recently played hero. (Older saves may hold several heroes of a
  * class; the newest one is the class's hero, and deleting it deletes them all.) */
@@ -42,10 +47,19 @@ export function heroesByClass() {
   for (const c of listSaves()) if (!out[c.classId]) out[c.classId] = c;
   return out;
 }
-export function deleteClassSaves(classId) { writeAll(readAll().filter((c) => c.classId !== classId)); changed(classId); }
-/** A class's hero from the cloud (or null): replaces every local save of that class, keeping its lastPlayed. */
+export function deleteClassSaves(classId) {
+  const list = readAll();
+  writeAll(list.filter((c) => c.classId !== classId));
+  changed(classId, list.filter((c) => c.classId === classId).map((c) => c.id));
+}
+/** Every save of a class (old saves may hold several). */
+export function classSaves(classId) { return readAll().filter((c) => c.classId === classId); }
+/** A class's hero from the cloud (or null): replaces every local save of that class, keeping its lastPlayed.
+ * cloud.js backs the old ones up first (game/herobackup.js). Refuses when the saves can't be read. */
 export function replaceClassHero(classId, char) {
-  const list = readAll().filter((c) => c.classId !== classId);
+  const all = readAll();
+  if (unreadable) return false;
+  const list = all.filter((c) => c.classId !== classId);
   if (char) list.push(char);
   return writeAll(list);
 }

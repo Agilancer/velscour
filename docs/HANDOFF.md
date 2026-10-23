@@ -22,8 +22,16 @@ Contents
   `src/ui/screens.js`: a Settings > Cloud save row (Sign in with Google / account dialog with Sync now and Sign out),
   the "Two copies of a hero" dialog, and the title footer status. `save.js` gained `onSaveChange` and
   `replaceClassHero`. See docs/CLOUD_SAVES.md.
-- **Tests:** new `cloud.js` (3 devices on a fake Firebase: 29 checks; the real SDK loads and Firestore denies a
-  signed-out read), `flow`, `mobile`, `hud`, `options`, `select`. The real Google popup can't run in cloud containers
+- **Follow-up (user):** push every 5 minutes, and "NO WAY anyone could lose their saved games". Now: a hero replaced
+  or deleted here (or a cloud copy written over) is backed up to IndexedDB first, or nothing changes
+  (`src/game/herobackup.js`, Settings > Hero backups restores); a missing hero is only a deletion when the player
+  deleted it (tombstones in the cloud, `st.deleted` here), otherwise it's copied back; unreadable local saves and
+  damaged cloud copies change nothing; a failed local write isn't counted as synced. The rules are in
+  docs/CLOUD_SAVES.md.
+- **Tests:** new `cloud.js` (4 devices on a fake Firebase: 43 checks, including lost, corrupt, damaged, no-IndexedDB
+  and restore cases; the real SDK loads and Firestore denies a signed-out read), `flow`, `mobile`, `hud`, `options`,
+  `select`, `stash`. (`options.js` and `select.js` can time out when six browser tests run at once; `main` does the
+  same. They pass alone.) The real Google popup can't run in cloud containers
   (apis.google.com is blocked), so the first real sign-in has to be tried on a device.
 
 ## October 23, 2026 — THE SERPENTINE TOWER: the upper cut, auto-play up the middle (branch `fix/tower-upper-cut`)

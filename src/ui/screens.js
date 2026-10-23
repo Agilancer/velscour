@@ -6,7 +6,8 @@ import { sfx, applyVolumes, initAudio } from '../core/audio.js';
 import { CLASS_IDS, A } from '../core/assets.js';
 import { CLASSES, ATTRS } from '../data/classes.js';
 import { UI, $ } from './ui.js';
-import { listSaves, heroesByClass, deleteClassSaves } from '../game/save.js';
+import { listSaves, heroesByClass, deleteClassSaves, classSaves, writeSave } from '../game/save.js';
+import { backupHeroes, listBackups } from '../game/herobackup.js';
 import { heroCanvas, excitable, preloadPortraits } from './heroanim.js';
 import { savedGearPreview } from '../core/gearart.js';
 import { attachTitleFx } from './titlefx.js';
@@ -112,6 +113,38 @@ Cloud.on((what) => {
   const cls = G.char && G.char.classId;
   if (Cloud.conflicts.has(cls) && Cloud.warnOnce(cls)) UI.log(`This hero was also played on another device. Its cloud save is paused: you will choose which copy to keep on the title screen.`, '#ffb060');
 });
+
+const WHY = { cloud: 'replaced by the cloud copy', deleted: 'deleted on another device', cloudcopy: 'cloud copy, replaced by this device', restore: 'replaced by a restored backup' };
+/** Settings > Hero backups: every hero cloud sync replaced or deleted, newest first; Restore puts one back. */
+export function backupsDialog() {
+  const d = UI.dialog({ title: 'Hero Backups', html: '<p class="dim">Loading…</p>', buttons: [{ label: 'Done' }], cls: 'backups-dialog' });
+  const body = d.box.querySelector('.dlg-body');
+  listBackups().then((list) => {
+    if (!d.box.isConnected) return;
+    if (!list.length) { body.innerHTML = '<p>No backups yet. Whenever cloud sync replaces or deletes a hero on this device, the old one is kept here.</p>'; return; }
+    body.innerHTML = `<p class="dim" style="font-size:12px">${G.mode === 'game' ? 'Return to the title screen to restore a hero.' : 'Restoring makes that copy the class\'s hero; the one it replaces is backed up too.'}</p><div class="backup-list"></div>`;
+    const box = body.querySelector('.backup-list');
+    for (const b of list) {
+      const h = b.hero, C = CLASSES[b.cls];
+      const row = el('div', 'backup-row', `<span><b>${escapeHtml(h.name)}</b> · ${C ? C.name : escapeHtml(b.cls)} · Lv ${h.level} · Depth ${h.depth} · ${fmtInt(h.gold || 0)} gold<br><span class="dim">${WHY[b.why] || escapeHtml(b.why)} · ${new Date(b.at).toLocaleString()}</span></span>`);
+      const btn = el('button', 'btn small', 'Restore');
+      btn.disabled = G.mode === 'game';
+      btn.onclick = () => {
+        sfx('ui');
+        UI.confirm('Restore hero?', `Make this copy of ${escapeHtml(h.name)} (Level ${h.level}) your ${C ? C.name : 'hero'}? The current one is kept as a backup.`, async () => {
+          try { await backupHeroes(classSaves(b.cls), 'restore'); } catch (e) { UI.dialog({ title: 'Hero Backups', html: '<p>Could not back up the current hero first, so nothing was restored.</p>', buttons: [{ label: 'OK' }] }); return; }
+          writeSave(JSON.parse(JSON.stringify(h)));
+          d.close();
+          if (current && current.refresh) current.refresh();
+          UI.dialog({ title: 'Hero Backups', html: `<p>${escapeHtml(h.name)} is restored.</p>`, buttons: [{ label: 'OK' }] });
+        }, 'Restore');
+      };
+      row.appendChild(btn);
+      box.appendChild(row);
+    }
+  }).catch(() => { if (d.box.isConnected) body.innerHTML = '<p>Backups can\'t be opened in this browser.</p>'; });
+  return d;
+}
 
 let cloudRow = null;
 /** Settings > Cloud save: sign in with Google, or the account, last sync, Sync now and Sign out. */
@@ -274,6 +307,7 @@ export function settingsDialog() {
   const st = G.settings;
   const html = `<div class="settings-grid">
     <label>Cloud save (Google account)</label><button class="btn small" data-cloud></button>
+    <label>Hero backups (kept by cloud sync)</label><button class="btn small" data-backups>View</button>
     <label>Sound effects</label><input type="range" min="0" max="1" step="0.05" value="${st.sfx}" data-k="sfx">
     <label>Music</label><input type="range" min="0" max="1" step="0.05" value="${st.music}" data-k="music">
     <label>Ambience</label><input type="range" min="0" max="1" step="0.05" value="${st.amb ?? 0.5}" data-k="amb">
@@ -292,6 +326,7 @@ export function settingsDialog() {
   </div>`;
   const d = UI.dialog({ title: 'Settings', html, buttons: [{ label: 'Done', fn: () => { camera.computeZoom(); saveSettings(); } }] });
   d.box.querySelector('select').value = String(st.gore);
+  d.box.querySelector('[data-backups]').onclick = () => { sfx('ui'); backupsDialog(); };
   const cb = d.box.querySelector('[data-cloud]');
   cloudRow = () => {
     if (!cb.isConnected) { cloudRow = null; return; }

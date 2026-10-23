@@ -1,7 +1,9 @@
-// Cloud saves (game/cloud.js): Google sign-in + Firestore, against a fake Firebase shared by three "devices" (three
-// browsers with their own localStorage). Push on sign-in, pull on another device, play on one and sync on the other,
-// a conflict picked from the dialog, the in-game warning, deleting, a first sign-in that must not overwrite, offline
-// and back, reload resumes the session, sign out. Then a smoke test of the real SDK (12.19.0 from npm when the
+// Cloud saves (game/cloud.js): Google sign-in + Firestore, against a fake Firebase shared by four "devices" (four
+// browsers with their own storage). Push on sign-in, pull on another device, play on one and sync on the other,
+// a conflict picked from the dialog, the in-game warning, deleting (tombstones), a first sign-in that must not
+// overwrite, offline and back, reload resumes the session, sign out. No save is lost: every replaced hero is backed up
+// (and restorable from Settings), a hero lost on either side is copied back instead of deleted, unreadable local saves
+// and damaged cloud copies change nothing, a device without IndexedDB (no backups) changes nothing, the 5-minute push. Then a smoke test of the real SDK (12.19.0 from npm when the
 // gstatic CDN is blocked): it loads, the popup goes to velscour.firebaseapp.com, and Firestore refuses a signed-out read.
 // node tools/tests/cloud.js [nosdk]
 const fs = require('fs');
@@ -43,8 +45,9 @@ function backend(op, a) {
   if (op === 'get') return store.get(a) || null;
   if (op === 'put') { if (a[1]) store.set(a[0], a[1]); else store.delete(a[0]); return true; }
 }
-async function device(name, user) {
+async function device(name, user, noIdb) {
   const d = await openGame();
+  if (noIdb) { await d.page.addInitScript(() => { Object.defineProperty(window, 'indexedDB', { value: undefined }); }); await d.page.reload(); await d.page.waitForFunction(() => window.VELSCOUR && document.querySelector('#loading').classList.contains('hidden')); }
   await d.ctx.route(SDK + '*', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: FAKE[r.request().url().split('/').pop()] }));
   await d.page.exposeFunction('__store', backend);
   if (user) await d.page.addInitScript((u) => { window.__FAKE_USER = u; }, user);
@@ -56,6 +59,7 @@ const cloudHero = async (page, cls) => page.evaluate(async (cls) => {
   const { Cloud } = await import('/src/game/cloud.js');
   const r = await window.__store('get', 'users/u1/heroes/' + cls);
   if (!r) return null;
+  if (r.deleted) return { deleted: true, id: r.id };
   const c = await Cloud.unpack({ ...r, gz: r.gz && Uint8Array.from(atob(r.gz.b64), (x) => x.charCodeAt(0)) });
   return { id: c.id, name: c.name, gold: c.gold, lastPlayed: c.lastPlayed, meta: r.lastPlayed === c.lastPlayed && r.name === c.name };
 }, cls);
@@ -73,6 +77,7 @@ const IN = {
     for (const k in h) out[k] = { id: h[k].id, name: h[k].name, gold: h[k].gold, lastPlayed: h[k].lastPlayed };
     return out;
   },
+  async backups() { const { listBackups } = await import('/src/game/herobackup.js'); return (await listBackups()).map((b) => ({ cls: b.cls, why: b.why, gold: b.hero.gold, name: b.hero.name, id: b.hero.id })); },
   async status() { const { Cloud } = await import('/src/game/cloud.js'); return { status: Cloud.status, error: Cloud.error, conflicts: [...Cloud.conflicts.keys()], signedIn: Cloud.signedIn, user: Cloud.user }; },
 };
 const run = (page, fn, ...a) => page.evaluate(`(${IN[fn].toString().replace(/^async \w+/, 'async function')})(...${JSON.stringify(a)})`);
@@ -174,16 +179,21 @@ const check = (ok, msg, fails) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg);
     await idle(A.page);
     la = await run(A.page, 'local');
     check(la.paladin.gold === 2222, 'A: kept the cloud copy (gold 2222)', fails);
+    let bk = await run(A.page, 'backups');
+    check(bk.some((b) => b.cls === 'paladin' && b.why === 'cloud' && b.gold === 1111), 'A: its own copy (gold 1111) was backed up first', fails);
     s = await run(A.page, 'status');
     check(!s.conflicts.length && s.status === 'ok', `A: no conflicts left, status ${s.status}`, fails);
 
     // 5. B deletes the wizard on hero select: it leaves the cloud, then A
     await B.page.evaluate(async () => { const { deleteClassSaves } = await import('/src/game/save.js'); deleteClassSaves('wizard'); });
     await idle(B.page);
-    check(!await cloudHero(B.page, 'wizard'), 'B: deleting the wizard deleted it in the cloud', fails);
+    const tomb = await cloudHero(B.page, 'wizard');
+    check(tomb && tomb.deleted && tomb.id === idsA.wizard, 'B: deleting the wizard left a tombstone in the cloud', fails);
     await sync(A.page);
     la = await run(A.page, 'local');
     check(!la.wizard && la.ranger, 'A: the wizard is gone, the ranger came down', fails);
+    bk = await run(A.page, 'backups');
+    check(bk.some((b) => b.cls === 'wizard' && b.why === 'deleted' && b.id === idsA.wizard), 'A: the deleted wizard was backed up first', fails);
 
     // 6. A reloads: the session resumes on boot without a click
     await A.page.reload();
@@ -205,13 +215,83 @@ const check = (ok, msg, fails) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg);
       await idle(C.page);
       p = await cloudHero(C.page, 'paladin');
       check(p.id === idsC.paladin && p.gold === 7, 'C: kept its own paladin, now in the cloud', fails);
+      check((await run(C.page, 'backups')).some((b) => b.cls === 'paladin' && b.why === 'cloudcopy' && b.gold === 2222), 'C: the cloud copy it wrote over (gold 2222) was backed up on C', fails);
       check((await run(C.page, 'local')).ranger, 'C: got the ranger too', fails);
       await sync(A.page);
       check((await run(A.page, 'local')).paladin.id === idsC.paladin, 'A: synced C\'s paladin', fails);
       errs.push(...C.errors.map((e) => 'C ' + e));
     } finally { await C.browser.close(); }
 
-    // 8. sign out: heroes stay on the device, nothing syncs
+    // 8. a hero gone from this device without a delete (lost, cleared) comes back from the cloud; the cloud keeps it
+    await A.page.evaluate(() => { const k = 'velscour_saves_v1'; localStorage.setItem(k, JSON.stringify(JSON.parse(localStorage.getItem(k)).filter((c) => c.classId !== 'ranger'))); });
+    await sync(A.page);
+    check(!!(await run(A.page, 'local')).ranger && !!(await cloudHero(A.page, 'ranger')) && !(await cloudHero(A.page, 'ranger')).deleted, 'A: a ranger lost here (not deleted) came back; the cloud still has it', fails);
+    // 9. a hero gone from the cloud without a tombstone is sent again, never deleted here
+    store.delete('users/u1/heroes/ranger');
+    await sync(A.page);
+    check(!!(await run(A.page, 'local')).ranger && !!(await cloudHero(A.page, 'ranger')), 'A: a ranger missing from the cloud was sent again, still here', fails);
+    // 10. unreadable saves on this device: cloud sync changes nothing, here or in the cloud
+    const snap = JSON.stringify([...store]);
+    const raw = await B.page.evaluate(() => { const r = localStorage.getItem('velscour_saves_v1'); localStorage.setItem('velscour_saves_v1', '[{"broken'); return r; });
+    await sync(B.page);
+    s = await run(B.page, 'status');
+    check(s.status === 'error' && /could not be read/.test(s.error), `B unreadable saves: sync paused (${s.status})`, fails);
+    check(await B.page.evaluate(() => localStorage.getItem('velscour_saves_v1')) === '[{"broken' && JSON.stringify([...store]) === snap, 'B unreadable saves: the saves and the cloud are untouched', fails);
+    await B.page.evaluate((r) => localStorage.setItem('velscour_saves_v1', r), raw);
+    // 11. a damaged cloud copy, newer than this device's: not loaded, the hero here is untouched
+    const good = store.get('users/u1/heroes/ranger');
+    store.set('users/u1/heroes/ranger', { ...good, gz: null, json: '{"id":', lastPlayed: good.lastPlayed + 1 });
+    const before11 = (await run(A.page, 'local')).ranger;
+    await sync(A.page);
+    s = await run(A.page, 'status');
+    const after11 = (await run(A.page, 'local')).ranger;
+    check(s.status === 'error' && /damaged/.test(s.error) && after11 && after11.lastPlayed === before11.lastPlayed, `A damaged cloud copy: not loaded, the ranger here untouched (${s.status})`, fails);
+    store.set('users/u1/heroes/ranger', good);
+    await sync(A.page);
+    // 12. a device without IndexedDB can't back up, so it never replaces a hero (keeping its own still works)
+    const D = await device('D', null, true);
+    try {
+      await run(D.page, 'seed', [['ranger', 'Dov', 9]]);
+      await title(D.page);
+      await signInByClicks(D);
+      await D.page.waitForSelector('.cloud-conflict', { timeout: 8000 }).catch(() => {});
+      await D.page.click('.cloud-conflict button:has-text("Keep the cloud")');
+      await idle(D.page);
+      const ld = await run(D.page, 'local');
+      s = await run(D.page, 'status');
+      check(ld.ranger && ld.ranger.name === 'Dov' && s.status === 'error', `D without IndexedDB: "keep the cloud" changed nothing (${s.status}: ${s.error})`, fails);
+      check((await cloudHero(D.page, 'ranger')).name !== 'Dov', 'D without IndexedDB: the cloud ranger is untouched too', fails);
+      errs.push(...D.errors.filter((e) => !/IndexedDB/.test(e)).map((e) => 'D ' + e));
+    } finally { await D.browser.close(); }
+    // 13. the played hero goes up every 5 minutes (or when play stops), not on every autosave
+    const pd = await B.page.evaluate(async () => {
+      const { G, game } = window.VELSCOUR;
+      const { Cloud } = await import('/src/game/cloud.js');
+      const { heroesByClass } = await import('/src/game/save.js');
+      await Cloud.sync(true);
+      await game.loadChar(heroesByClass().ranger);
+      G.char.gold = 4242; game.autosave();
+      await new Promise((r) => setTimeout(r, 1500));
+      return Cloud.PUSH_DELAY;
+    });
+    check(pd === 300000 && (await cloudHero(B.page, 'ranger')).gold !== 4242, 'B in game: an autosave does not go up at once (PUSH_DELAY 5 min)', fails);
+    await B.page.evaluate(() => window.VELSCOUR.game.quitToTitle());
+    await idle(B.page);
+    check((await cloudHero(B.page, 'ranger')).gold === 4242, 'B: quitting to the title sent it', fails);
+    // 14. Settings > Hero backups restores a backed-up hero
+    await A.page.click('.title-menu button:has-text("Settings")');
+    await A.page.click('[data-backups]');
+    await A.page.waitForSelector('.backup-row');
+    await A.shot('cloud_backups');
+    await A.page.click('.backup-row:has-text("Aria") >> nth=0 >> button');
+    await A.page.click('.dialog-box:has(h2:text-is("Restore hero?")) button:has-text("Restore")');
+    await A.page.waitForSelector('.dialog-box:has-text("is restored")');
+    la = await run(A.page, 'local');
+    check(la.paladin && la.paladin.name === 'Aria', `A: restored Aria from the backups (gold ${la.paladin && la.paladin.gold})`, fails);
+    bk = await run(A.page, 'backups');
+    check(bk.some((b) => b.why === 'restore' && b.name === 'Cyra'), 'A: the paladin it replaced (Cyra) was backed up', fails);
+
+    // 15. sign out: heroes stay on the device, nothing syncs
     await A.page.evaluate(async () => { const { Cloud } = await import('/src/game/cloud.js'); await Cloud.signOut(); });
     s = await run(A.page, 'status');
     la = await run(A.page, 'local');

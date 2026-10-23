@@ -490,6 +490,8 @@ body.touch #sealed-btn i { width: 16px; height: 16px; }
 .cloud-pick > div { flex: 1; min-width: 0; border: 1px solid var(--gold-dim); border-radius: 6px; padding: 8px 10px; background: rgba(0,0,0,.25); line-height: 1.45; }
 .cloud-pick h3 { font: 700 14px var(--font-head); color: var(--gold-bright); margin: 0 0 4px; letter-spacing: 1px; }
 .cloud-conflict .row { flex-wrap: wrap; gap: 6px; }
+.backup-list { max-height: min(50vh, 360px); overflow-y: auto; text-align: left; }
+.backup-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 4px; border-bottom: 1px solid rgba(180,140,80,.25); font-size: 14px; }
 .dialog-box p { margin: 6px 0 14px; }
 .dialog-box .row { justify-content: center; }
 .velscour-contact-dialog { width: min(560px, 92vw); }
