@@ -22,6 +22,17 @@ export function addToStash(c, item) {
   return true;
 }
 
+const TYPE_ORDER = ['weapon', 'offhand', 'head', 'body', 'hands', 'legs', 'feet', 'ring'];
+/** Chest order: by type (weapons, off-hands, armor head to feet, rings, then gems by kind), or by rarity first. */
+export function sortStash(c, by = 'type') {
+  const kind = (it) => (it.type === 'gear' ? TYPE_ORDER.indexOf(it.slot) + 1 || 9 : it.type === 'gem' ? 10 : 11);
+  const items = c.stash.filter(Boolean).sort((a, b) => {
+    const k = kind(a) - kind(b), r = (b.rarity || 0) - (a.rarity || 0);
+    return (by === 'rarity' ? r || k : k || r) || (a.gem || '').localeCompare(b.gem || '') || (b.tier || 0) - (a.tier || 0) || (b.ilvl || 0) - (a.ilvl || 0);
+  });
+  c.stash = c.stash.map((_, i) => items[i] || null);
+}
+
 export const Stash = {
   active: false,
   open() {
@@ -36,6 +47,7 @@ export const Stash = {
     const c = G.char, it = c.bag[idx];
     if (!it) return false;
     if (!addToStash(c, it)) { UI.log('The storage chest is full.', '#ff8080'); sfx('error'); return false; }
+    delete it.autoStash; // the player stored it: auto-play leaves it be (game/autoplay.js unstash)
     c.bag[idx] = null;
     sfx('pickup'); UI.selected = null; changed();
     return true;
@@ -54,7 +66,13 @@ export const Stash = {
     if (!c.stash) c.stash = Array(STASH_SIZE).fill(null);
     body.innerHTML = '';
     const used = c.stash.filter(Boolean).length;
-    body.appendChild(el('div', 'row', `<span class="dim" style="font-size:12px">${fmtInt(used)} / ${STASH_SIZE} slots used · Right-click to move items between the chest and your bag</span>`));
+    const head = el('div', 'row', `<span class="dim" style="font-size:12px">${fmtInt(used)} / ${STASH_SIZE} slots used · Right-click to move items between the chest and your bag</span>`);
+    for (const [by, label] of [['type', 'Sort by type'], ['rarity', 'Sort by rarity']]) {
+      const b = el('button', 'btn small', label);
+      b.onclick = () => { sortStash(c, by); sfx('ui'); UI.selected = null; changed(); };
+      head.appendChild(b);
+    }
+    body.appendChild(head);
     const grid = el('div', 'bag stash-grid');
     c.stash.forEach((it, i) => {
       const d = el('div', 'bslot ' + rarityClass(it));

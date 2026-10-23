@@ -14,6 +14,28 @@ Contents
 
 ---
 
+## October 23, 2026 — auto-play stops buying gear to sell it, a loot filter, chest sorting (branch `feat/autoplay-loot-filter`)
+- **Report (a player on Reddit, via the user):** auto-play buys an item and sells it right after, so the hero never has
+  money; asks for a way to choose which item types and rarities auto-pickup takes (rings Uncommon+, gear Epic+, all
+  gems), and a sort by type in the storage chest.
+- **Cause:** `buyGear` bought any piece scoring `cur + 0.012` over the hero, but `optimizeGear` only wears what beats
+  `cur * 1.004 + 0.002` (~0.06 at typical scores). Everything in between was bought, never worn, and sold by the next
+  `sellJunk` at a quarter of its price: about 13% of purchases (`autoshop.js` on `main`: 47 of 373). Also, a cheap
+  small upgrade could be bought and then replaced by a bigger one for the same slot in the same visit.
+- **Fixes:** one `equipBar` for wearing, picking up, `gearGain` and buying; one purchase per slot per shop list.
+  Gambling needs 20 gambles' worth of gold (was 8) and does at most 2 per visit (a miss sells back for ~5%). `unstash`
+  no longer takes out everything the hero can wear (it sold what the player had stored): only upgrades, and gear
+  auto-play itself put away (`it.autoStash`); the full-chest cull only sells auto-play's own stored gear.
+- **Loot filter** (`src/game/lootfilter.js`, Settings > Loot filter, `G.settings.lootFilter`, off by default): lowest
+  rarity (or none) for weapons, off-hands, armor and rings; gems on/off; "also pick up upgrades it will wear" (on);
+  "keep what passes" (off: keepers are stored in the chest instead of sold). Applies to auto-play's pickups
+  (`wantLootNow`) and walk-over auto-pickup (`loot.js`); clicking/tapping an item and sealed treasures always pass.
+- **Chest:** Sort by type (weapons, off-hands, head..feet, rings, gems) and Sort by rarity buttons (`sortStash`).
+- **Tests:** new `autoshop.js` (0-2 of ~200 bought items per class not worn: rings weigh each other's augments; the
+  filter, keepers, player-stored gear left alone, sorting, dialog + chest shots), `stash.js`, `options.js`, `flow.js`,
+  `mobile.js`, `hud.js`, `autoplay.js` paladin/wizard/ranger vs `main` (same progress), `AP_FILTER=1 autoplay.js` (the
+  player's filter: a fresh hero sells far less early on, as expected).
+
 ## October 23, 2026 — THE SERPENTINE TOWER sweep: bugs, monsters, the look of every variant (branch `fix/tower-sweep`)
 - **Request (user):** a deep bug sweep of the tower (code, scripting/monsters, visuals) in several passes, and better
   looks for each variant.
