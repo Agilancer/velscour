@@ -10,7 +10,7 @@ import { HUD } from '../ui/hud.js';
 import { camera, setWarp, warpMoved, isoX, isoY, HW, HH } from '../core/view.js';
 import { rand, chance, pick, clamp, TAU, shuffle } from '../core/util.js';
 import { sfx } from '../core/audio.js';
-import { VZ, CUT_N, CUT_C } from '../world/tower.js';
+import { VZ, CUT_N, CUT_C, upCut } from '../world/tower.js';
 import { drawTower3D, drawTowerFront, tickTower3D, buildTower3D, disposeTower3D, spawnShip, loadAirships, airshipsReady } from '../gfx/tower3d.js';
 import { makeMonster, monsterBase } from './monster.js';
 import { makeRaidBoss, RAID_BOSSES } from './raid.js';
@@ -109,7 +109,7 @@ export function createTowerRun(world, gen, biome, onSuccess) {
       else {
         const s = g.X1 - x, t = g.theta0 - s / g.rc - tw.alpha, r = g.rWall - (y - g.YR);
         cx = r * Math.cos(t); cy = r * Math.sin(t); z = g.z(s);
-        if (clip && cx * CUT_N[0] + cy * CUT_N[1] < -CUT_C) { out[0] = out[1] = 1e7; return out; }   // in the cutaway
+        if (clip && (cx * CUT_N[0] + cy * CUT_N[1] < -CUT_C || upCut(cx, cy, z, tw.focus) < 0)) { out[0] = out[1] = 1e7; return out; }   // in the cutaway
       }
       out[0] = (cx - cy) * HW; out[1] = (cx + cy) * HH - z * VZ;
       return out;
@@ -152,12 +152,12 @@ export function createTowerRun(world, gen, biome, onSuccess) {
       }
       const zk = tw.roof ? 0.82 : 1;
       if (camera.zoomK !== zk) { camera.zoomK = zk; camera.computeZoom(); }
-      warpMoved();
-      // the hero in the camera frame (three.js axes): the lanterns nearest him get the lights
+      // the hero in the camera frame (three.js axes): the lanterns nearest him get the lights; the upper cut holds on him
       let cx, cy, z;
       if (p.x < g.XR) { cx = p.x - g.AX; cy = p.y - g.AY; z = g.roofZ; }
       else { const s = g.s(p.x), t = g.theta(s) - tw.alpha, r = g.r(p.y); cx = r * Math.cos(t); cy = r * Math.sin(t); z = g.z(s); }
       tw.focus[0] = cx; tw.focus[1] = z; tw.focus[2] = cy;
+      warpMoved();
     },
     draw(ctx) { drawTower3D(ctx, tw); },
     /** Over the sprites: the railings and chandeliers, then whoever hangs in the well in front of them (render.js). */
@@ -189,7 +189,8 @@ export function createTowerRun(world, gen, biome, onSuccess) {
     get altitude() { const p = world.player; return run.phase !== 'climb' ? 100 : p ? Math.round(clamp(g.s(p.x) / g.sEnd, 0, 1) * 100) : 0; },
     get objective() {
       if (run.completed) return undefined;
-      if (run.phase === 'climb') return { x: g.XT + 1, y: g.door[1], reach: 0.8 };
+      // a few tiles ahead up the middle of the stair (the door straight on would leave him in whatever lane a fight did)
+      if (run.phase === 'climb') { const p = world.player; return { x: Math.max(g.XT + 1, (p ? p.x : g.X1) - 5), y: g.door[1], reach: 0.8 }; }
       return run.top && (run.top.idle || run.top.step === 'ship') ? { x: g.AX, y: g.AY + 2, reach: 3 } : null;
     },
     update(dt) {

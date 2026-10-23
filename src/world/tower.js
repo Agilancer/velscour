@@ -16,6 +16,13 @@ export const VZ = HW * Math.SQRT2 * Math.cos(Math.PI / 6); // 39.19 px: one tile
 // in the camera frame (pointing away from the camera side): a point is cut away when dot(p, CUT_N) < -CUT_C.
 const CUT_A = Math.PI * 1.25 + 0.44;
 export const CUT_N = [Math.cos(CUT_A), Math.sin(CUT_A)], CUT_C = 1.6;
+// The upper cut: the turn above comes round toward the camera behind the hero (right of him on screen), its railing
+// down level with his feet at the cutaway. A second plane, tilted and held on the hero, cuts away whatever is higher
+// than UP_H tiles over his feet, less UP_K per tile right of him on screen and UP_D per tile nearer the camera, so the
+// floor above stays in view up-left and the turn above never fills the right of the screen. f = (cx, z, cy) is the
+// hero in the camera frame (tw.focus); a point is cut away when upCut(...) < 0.
+export const UP_H = 8, UP_K = 0.5, UP_D = 0.25;
+export const upCut = (cx, cy, z, f) => UP_H - (z - f[1]) - UP_K * ((cx - f[0]) - (cy - f[2])) / Math.SQRT2 - UP_D * ((cx - f[0]) + (cy - f[2]));
 
 // geometry (rIn: the open well's radius, w: stair width, pitch: rise per turn, steps per turn) and the look of each
 // variant: the stone texture and its palette swap (core/util.js recolor), trim, floor, railing, lanterns, chandeliers,

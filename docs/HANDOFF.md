@@ -14,6 +14,20 @@ Contents
 
 ---
 
+## October 23, 2026 — THE SERPENTINE TOWER: the upper cut, auto-play up the middle (branch `fix/tower-upper-cut`)
+- **Request (user):** the next level of stairs must not be in view on the right of the screen, and auto-play should
+  walk up the centre of the stair instead of hugging the handrail.
+- **Cause:** the vertical cutaway (turned 25 degrees in the sweep) keeps the turn above where it comes round toward the
+  camera behind the hero. On screen it filled the right side, and its railing, cut at the plane, ran down to the hero's
+  feet, so he looked pressed against a handrail even in the middle of the stair. Auto-play's climb objective was the
+  stairhead door 300 tiles straight on, so it kept whatever lane a fight left it in.
+- **Fix:** a second clip plane held on the hero (`upCut` in `src/world/tower.js`; 3D plane and its own stencil cap in
+  `src/gfx/tower3d.js`; the 2D warp hides sprites there too). Auto-play's climb objective is now 5 tiles ahead on the
+  centre line. See docs/SERPENTINE_TOWER.md (the upper cut).
+- **Verified:** shots of all 5 variants at 10/35/72% up; auto-play lanes (out of combat it now keeps to the middle half
+  tiles); `tower.js`, `tower_edge.js`. jsdelivr is blocked in cloud containers: the tests ran with three.js 0.170
+  from npm routed in place of the CDN.
+
 ## October 23, 2026 — THE SERPENTINE TOWER sweep: bugs, monsters, the look of every variant (branch `fix/tower-sweep`)
 - **Request (user):** a deep bug sweep of the tower (code, scripting/monsters, visuals) in several passes, and better
   looks for each variant.
