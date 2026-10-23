@@ -5,19 +5,21 @@
 // warped by game/tower.js lands on the same pixel the 3D stair shows. The tower turns (root.rotation.y = alpha), the
 // camera never does. While climbing, everything nearer the camera than the axis is clipped away (a cutaway: the far
 // half of the tower, its stair, its lanterns and the chandeliers on their chains down the middle); back faces show as
-// the dark cut stone. On the roof the clip is off and the dome hidden. Materials are the Castle 3D masonry and the
+// the dark cut stone. A second, tilted plane held on the hero cuts away the turn above where it comes round behind him
+// (world/tower.js upCut). On the roof the clips are off and the dome hidden. Materials are the Castle 3D masonry and the
 // airship pack's metals, palette swapped per variant (core/util.js recolor). three.js is loaded on demand from the
 // import map in index.html; the airships come from tools/airship3d*.js (docs/AIRSHIP_3D.md).
 import { G } from '../state.js';
 import { camera, HW } from '../core/view.js';
 import { recolor, makeCanvas } from '../core/util.js';
-import { VZ, TOWER_VARIANTS, CUT_N, CUT_C } from '../world/tower.js';
+import { VZ, TOWER_VARIANTS, CUT_N, CUT_C, UP_H, UP_K, UP_D } from '../world/tower.js';
 
 const SC = HW * Math.SQRT2;                 // world px per tile (one three.js unit) across the screen
 const TEXDIR = 'assets/source/castle3d/tex/', AIRDIR = 'assets/source/airship/textures/';
 let T = null, BGU = null;                   // three, BufferGeometryUtils
 let R = null;                               // the renderer and its camera, shared by every tower
 let S = null;                               // the scene of the tower being played
+let UPN, UPP, UPZ;                          // scratch vectors for the upper cut
 const IMG = new Map();                      // source images by path
 
 const loadImg = (src) => IMG.get(src) || IMG.set(src, new Promise((ok, no) => {
@@ -44,6 +46,7 @@ function renderer() {
   cam.position.set(Math.cos(e) * Math.sin(a), Math.sin(e), Math.cos(e) * Math.cos(a)).multiplyScalar(700);
   cam.up.set(0, 1, 0); cam.lookAt(0, 0, 0); cam.updateMatrixWorld();
   R = { gl, cam, w: 0, h: 0 };
+  UPN = new T.Vector3(); UPP = new T.Vector3(); UPZ = new T.Vector3(0, 0, 1);
   return R;
 }
 
@@ -72,12 +75,12 @@ function fogged(sh, extra = '', cap = 0) {
   sh.fragmentShader = 'uniform vec3 uCap; uniform float uFogY; uniform float uFogK; uniform vec3 uFogC; varying float vWY;\n' + sh.fragmentShader.replace('#include <dithering_fragment>',
     `#include <dithering_fragment>\n\t${extra}\n\tfloat fogD = clamp((uFogY - vWY - 6.0) / 24.0, 0.0, 1.0), fogU = clamp((vWY - uFogY - 14.0) / 34.0, 0.0, 1.0);\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uFogC, uFogK * (fogD * 0.92 + fogU * 0.4));`);
 }
-async function materials(v, clip) {
+async function materials(v, clips) {
   const M = {}, cap = 0x3a3634;
   FOG.c.value = new T.Color(v.fog);
   const std = async (key, src, swap, o = {}) => {
     const map = await texture(src, swap), bump = map.clone(); bump.colorSpace = T.NoColorSpace; bump.needsUpdate = true;
-    M[key] = capped(new T.MeshStandardMaterial({ map, bumpMap: bump, bumpScale: o.bump ?? 1.2, roughness: o.rough ?? 0.92, metalness: o.metal ?? 0, color: o.color ?? 0xd8d2ca, clippingPlanes: [clip] }), cap);
+    M[key] = capped(new T.MeshStandardMaterial({ map, bumpMap: bump, bumpScale: o.bump ?? 1.2, roughness: o.rough ?? 0.92, metalness: o.metal ?? 0, color: o.color ?? 0xd8d2ca, clippingPlanes: clips }), cap);
   };
   await Promise.all([
     std('stone', TEXDIR + v.stone + '.png', v.stoneSwap),
@@ -93,16 +96,16 @@ async function materials(v, clip) {
     std('nose', TEXDIR + v.trim + '.png', v.trimSwap, { color: 0xfff6ea, bump: 0.5 }),       // the steps' worn nosings catch the light
   ]);
   const lead = stainedGlass(v.stained);
-  M.glass = capped(new T.MeshStandardMaterial({ map: lead, emissiveMap: lead, color: 0x404850, emissive: 0xffffff, emissiveIntensity: 0.62, roughness: 0.35, clippingPlanes: [clip] }), cap);
-  M.lamp = new T.MeshStandardMaterial({ color: 0xfff0d0, emissive: v.lantern, emissiveIntensity: 2.4, clippingPlanes: [clip] });
-  M.flame = new T.MeshBasicMaterial({ color: 0xffe6a0, clippingPlanes: [clip] });
-  M.door = new T.MeshBasicMaterial({ map: portalTexture(), transparent: true, side: T.DoubleSide, clippingPlanes: [clip] });
-  M.crystal = capped(new T.MeshStandardMaterial({ color: 0xc8f0ff, emissive: v.glass, emissiveIntensity: 1.2, roughness: 0.2, flatShading: true, clippingPlanes: [clip] }), cap);
-  M.rune = new T.MeshBasicMaterial({ color: v.glass, clippingPlanes: [clip] });
-  M.ivy = capped(new T.MeshStandardMaterial({ color: 0x4a7a44, roughness: 0.9, clippingPlanes: [clip] }), cap);
+  M.glass = capped(new T.MeshStandardMaterial({ map: lead, emissiveMap: lead, color: 0x404850, emissive: 0xffffff, emissiveIntensity: 0.62, roughness: 0.35, clippingPlanes: clips }), cap);
+  M.lamp = new T.MeshStandardMaterial({ color: 0xfff0d0, emissive: v.lantern, emissiveIntensity: 2.4, clippingPlanes: clips });
+  M.flame = new T.MeshBasicMaterial({ color: 0xffe6a0, clippingPlanes: clips });
+  M.door = new T.MeshBasicMaterial({ map: portalTexture(), transparent: true, side: T.DoubleSide, clippingPlanes: clips });
+  M.crystal = capped(new T.MeshStandardMaterial({ color: 0xc8f0ff, emissive: v.glass, emissiveIntensity: 1.2, roughness: 0.2, flatShading: true, clippingPlanes: clips }), cap);
+  M.rune = new T.MeshBasicMaterial({ color: v.glass, clippingPlanes: clips });
+  M.ivy = capped(new T.MeshStandardMaterial({ color: 0x4a7a44, roughness: 0.9, clippingPlanes: clips }), cap);
   const emb = emblemTexture(v, 'banner');
-  M.banner = capped(new T.MeshStandardMaterial({ map: emb, roughness: 0.95, side: T.DoubleSide, clippingPlanes: [clip] }), cap);
-  M.mosaic = capped(new T.MeshStandardMaterial({ map: emblemTexture(v, 'mosaic'), color: 0xb8b2aa, roughness: 0.85, clippingPlanes: [clip] }), cap);
+  M.banner = capped(new T.MeshStandardMaterial({ map: emb, roughness: 0.95, side: T.DoubleSide, clippingPlanes: clips }), cap);
+  M.mosaic = capped(new T.MeshStandardMaterial({ map: emblemTexture(v, 'mosaic'), color: 0xb8b2aa, roughness: 0.85, clippingPlanes: clips }), cap);
   for (const k of ['lamp', 'flame', 'rune']) M[k].onBeforeCompile = (sh) => fogged(sh), M[k].customProgramCacheKey = () => 'towerfog';
   return M;
 }
@@ -183,8 +186,8 @@ function halo() {
   haloTex = new T.CanvasTexture(c); haloTex.colorSpace = T.SRGBColorSpace;
   return haloTex;
 }
-const glowSprite = (color, size, clip) => {
-  const s = new T.Sprite(new T.SpriteMaterial({ map: halo(), color, blending: T.AdditiveBlending, depthWrite: false, transparent: true, clippingPlanes: clip ? [clip] : [] }));
+const glowSprite = (color, size, clips) => {
+  const s = new T.Sprite(new T.SpriteMaterial({ map: halo(), color, blending: T.AdditiveBlending, depthWrite: false, transparent: true, clippingPlanes: clips || [] }));
   s.scale.setScalar(size); return s;
 };
 
@@ -252,8 +255,8 @@ export async function buildTower3D(g) {
   const v = g.v, rd = renderer();
   if (S && S.g === g) return S;
   disposeTower3D();
-  const clip = new T.Plane(new T.Vector3(CUT_N[0], 0, CUT_N[1]), CUT_C);
-  const M = await materials(v, clip);
+  const clip = new T.Plane(new T.Vector3(CUT_N[0], 0, CUT_N[1]), CUT_C), up = new T.Plane(new T.Vector3(0, -1, 0), 1e6), clips = [clip, up];
+  const M = await materials(v, clips);
   const scene = new T.Scene(), root = new T.Group(), lightSrc = [], spin = [], flick = [];
   scene.add(root);
   const B = new Build(), climb = new Build(), roof = new Build(), front = new Build();   // front: drawn again over the sprites (drawTowerFront)
@@ -398,7 +401,7 @@ export async function buildTower3D(g) {
     dg.setAttribute('uv', new T.BufferAttribute(ua, 2)); dg.rotateY(-t);
     const door = new T.Mesh(dg, M.door); door.position.set(...P(rm, t, z)); door.position.x += tangent(t)[0] * 0.05; door.position.z += tangent(t)[2] * 0.05;
     root.add(door);
-    const gl = glowSprite(0xff7a30, 6, clip); gl.position.set(...P(rm, t, z + 2.2)); root.add(gl); flick.push({ o: gl, base: 6 });
+    const gl = glowSprite(0xff7a30, 6, clips); gl.position.set(...P(rm, t, z + 2.2)); root.add(gl); flick.push({ o: gl, base: 6 });
     lightSrc.push({ p: P(rm, t + 0.06, z + 2), c: 0xff8040, r: 10, i: 1.6, door: true });
   }
 
@@ -472,26 +475,33 @@ export async function buildTower3D(g) {
   root.add(shell, inner, top);
   // ---- the cut caps: where the cutaway slices a solid, a flat face of dressed stone on the cut. The solid set's back
   // faces count up and its front faces down in the stencil (behind the clip plane only); a quad on the plane fills
-  // wherever the count isn't zero, i.e. where the cut runs inside stone (three.js's clipping-stencil technique).
+  // wherever the count isn't zero, i.e. where the cut runs inside stone (three.js's clipping-stencil technique). The
+  // upper cut gets a quad of its own; each quad is clipped by the other plane, so only the one the eye meets first draws.
   const sg = solid.build({}, 'solid').children[0].geometry;
   const writer = (side, op) => new T.MeshBasicMaterial({ side, colorWrite: false, depthWrite: false, depthTest: false, stencilWrite: true,
-    stencilFunc: T.AlwaysStencilFunc, stencilFail: op, stencilZFail: op, stencilZPass: op, clippingPlanes: [clip] });
+    stencilFunc: T.AlwaysStencilFunc, stencilFail: op, stencilZFail: op, stencilZPass: op, clippingPlanes: clips });
   const caps = new T.Group(), wb = new T.Mesh(sg, writer(T.BackSide, T.IncrementWrapStencilOp)), wf = new T.Mesh(sg, writer(T.FrontSide, T.DecrementWrapStencilOp));
   for (const m of [wb, wf]) { m.renderOrder = -3; m.frustumCulled = false; caps.add(m); }
   root.add(caps);
   const ct = cutTexture(), capW = 2 * (rOut + 5), capH = g.roofZ + 46;
   ct.repeat.set(capW / 2.4, capH / 2.4);
-  const capMat = new T.MeshStandardMaterial({ map: ct, color: 0xb0aaa2, roughness: 1, stencilWrite: true, stencilRef: 0, stencilFunc: T.NotEqualStencilFunc,
-    stencilFail: T.ReplaceStencilOp, stencilZFail: T.ReplaceStencilOp, stencilZPass: T.ReplaceStencilOp });
-  capMat.onBeforeCompile = (sh) => fogged(sh); capMat.customProgramCacheKey = () => 'towercut';
-  const cap = new T.Mesh(new T.PlaneGeometry(capW, capH), capMat);
+  const capMat = (map, other) => {
+    const m = new T.MeshStandardMaterial({ map, color: 0xb0aaa2, roughness: 1, stencilWrite: true, stencilRef: 0, stencilFunc: T.NotEqualStencilFunc,
+      stencilFail: T.ReplaceStencilOp, stencilZFail: T.ReplaceStencilOp, stencilZPass: T.ReplaceStencilOp, clippingPlanes: [other] });
+    m.onBeforeCompile = (sh) => fogged(sh); m.customProgramCacheKey = () => 'towercut';
+    return m;
+  };
+  const cap = new T.Mesh(new T.PlaneGeometry(capW, capH), capMat(ct, up));
   cap.position.set(-CUT_C * CUT_N[0], (g.roofZ - 6) / 2, -CUT_C * CUT_N[1]); cap.rotation.y = Math.atan2(-CUT_N[0], -CUT_N[1]);
-  cap.renderOrder = -2; cap.frustumCulled = false; cap.onAfterRender = (r) => r.clearStencil();
-  scene.add(cap);
+  cap.renderOrder = -2; cap.frustumCulled = false;
+  const ut = cutTexture(); ut.repeat.set(160 / 2.4, 160 / 2.4);
+  const upCap = new T.Mesh(new T.PlaneGeometry(160, 160), capMat(ut, clip));   // laid on the upper cut each frame (drawTower3D)
+  upCap.renderOrder = -1.5; upCap.frustumCulled = false; upCap.onAfterRender = (r) => r.clearStencil();
+  scene.add(cap, upCap);
   for (const o of root.children) if (o.userData.roof) o.visible = false;
   top.visible = false;
   // halos on the lanterns and chandeliers
-  for (const l of lightSrc) if (l.halo) { const s = glowSprite(l.c, l.halo, clip); s.position.set(...l.p); root.add(s); flick.push({ o: s, base: l.halo }); }
+  for (const l of lightSrc) if (l.halo) { const s = glowSprite(l.c, l.halo, clips); s.position.set(...l.p); root.add(s); flick.push({ o: s, base: l.halo }); }
 
   // ---- light: a dim fill, a cold moon from the upper left (fixed to the camera), lanterns near the hero
   const amb = new T.AmbientLight(v.ambient, 1.1), hemi = new T.HemisphereLight(v.moon, 0x1a1410, 0.55);
@@ -507,7 +517,7 @@ export async function buildTower3D(g) {
   const clouds = cloudLayer(v); scene.add(clouds.grp);
   const moonS = moonSprite(v); scene.add(moonS);
 
-  S = { g, v, M, scene, root, clip, climb: inner, roof: top, pool, hero, lightSrc, flick, spin, clouds, ships: [], t: 0, roofOn: false, amb, hemi, moon, caps, cap, moonS };
+  S = { g, v, M, scene, root, clip, up, climb: inner, roof: top, pool, hero, lightSrc, flick, spin, clouds, ships: [], t: 0, roofOn: false, amb, hemi, moon, caps, cap, upCap, moonS };
   return S;
 }
 const w16 = (w) => w / 1.6;
@@ -757,13 +767,18 @@ export function drawTower3D(ctx, tw) {
   cam.left = (cx - hw) / SC; cam.right = (cx + hw) / SC; cam.top = -(cy - hh) / SC; cam.bottom = -(cy + hh) / SC; cam.updateProjectionMatrix();
   S.root.rotation.y = tw.alpha;
   S.clip.constant = tw.roof ? 1e6 : CUT_C;
+  // the upper cut, held on the hero (world/tower.js upCut), and its cap quad laid on it facing the camera
+  const [fx, fy, fz] = tw.focus, k = UP_K / Math.SQRT2, un = UPN.set(-(k + UP_D), -1, k - UP_D).normalize();
+  S.up.setFromNormalAndCoplanarPoint(un, UPP.set(fx, fy + UP_H, fz));
+  if (tw.roof) S.up.constant = 1e6;
+  S.upCap.position.copy(UPP); S.upCap.quaternion.setFromUnitVectors(UPZ, un.negate());
   if (S.roofOn !== tw.roof) {
-    S.roofOn = tw.roof; S.roof.visible = tw.roof; S.climb.visible = !tw.roof; S.caps.visible = S.cap.visible = !tw.roof;
+    S.roofOn = tw.roof; S.roof.visible = tw.roof; S.climb.visible = !tw.roof; S.caps.visible = S.cap.visible = S.upCap.visible = !tw.roof;
     S.amb.intensity = tw.roof ? 1.9 : 1.1; S.hemi.intensity = tw.roof ? 1.3 : 0.55; S.moon.intensity = tw.roof ? 2.6 : 0.9;   // the open sky
     for (const o of S.root.children) if (o.userData.roof) o.visible = tw.roof;
   }
   // lanterns nearest the hero get the point lights; the rest glow on their own
-  const ca = Math.cos(tw.alpha), sa = Math.sin(tw.alpha), [fx, fy, fz] = tw.focus;
+  const ca = Math.cos(tw.alpha), sa = Math.sin(tw.alpha);
   const near = [];
   for (const l of S.lightSrc) {
     if (!!l.roof !== tw.roof) continue;
@@ -819,7 +834,7 @@ export function disposeTower3D() {
   S.scene.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
   for (const m of Object.values(S.M)) { m.map?.dispose(); m.bumpMap?.dispose(); m.emissiveMap?.dispose(); m.dispose(); }
   // this tower's own textures and materials outside M (the shared halo and the airships' materials stay)
-  for (const m of [S.cap.material, S.moonS.material, ...S.clouds.list.map((c) => c.s.material)]) { m.map?.dispose(); m.dispose(); }
+  for (const m of [S.cap.material, S.upCap.material, S.moonS.material, ...S.clouds.list.map((c) => c.s.material)]) { m.map?.dispose(); m.dispose(); }
   S.scene.background?.dispose();
   S = null;
 }
