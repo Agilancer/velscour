@@ -86,13 +86,14 @@ function loop(now) {
   G.time += dt;
   G.dt = dt;
   G.frame++;
+  // the update and the draw each get their own try: an update that throws every frame (a broken fight) used to skip
+  // every draw too, and the screen went black
+  if (G.mode === 'game' && G.world) {
+    try { game.update(dt); } catch (err) { reportError(err); }
+  }
   try {
-    if (G.mode === 'game' && G.world) {
-      game.update(dt);
-      game.render();
-    } else {
-      renderTitle(dt);
-    }
+    if (G.mode === 'game' && G.world) game.render();
+    else renderTitle(dt);
   } catch (err) {
     reportError(err);
     // a draw that threw left its save()s (clips, alpha, transforms) on the stack: unwind them, or every later frame

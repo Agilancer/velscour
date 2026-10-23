@@ -192,4 +192,10 @@ for (let i = 0; i < 3000; i++) {
 }
 if (seen.size < 1900) bad.push(`3000 picks showed only ${seen.size} different taunts`);
 console.log('level-up taunts', nT, Object.entries(TAUNTS).map(([m, l]) => `${m} ${l.length}`).join(', '), '; 3000 picks showed', seen.size);
+
+// THE ETERNAL BREACH: every floor's Heart has a keeper (floors 6, 12, 18... once had none, and the Heart threw)
+const { BREACH_BOSSES, finalBossIndex } = await import(new URL('../../src/data/breach.js', import.meta.url));
+const keepers = new Set();
+for (let f = 1; f <= 200; f++) { const b = BREACH_BOSSES[finalBossIndex(f)]; if (!b) bad.push(`Breach floor ${f} has no keeper (index ${finalBossIndex(f)})`); else keepers.add(b.id); }
+console.log('Breach keepers over 200 floors', keepers.size, 'of', BREACH_BOSSES.length);
 if (bad.length) { console.log(bad); process.exitCode = 1; } else console.log('OK');

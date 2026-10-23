@@ -14,6 +14,28 @@ Contents
 
 ---
 
+## October 22, 2026 — THE ETERNAL BREACH: black screen at the Heart of floors 6, 12, 18... (branch `fix/breach-heart-keeper`)
+- **Report (user):** a full black screen at the very end of a Breach floor (level 96 Astronomer), "like the portal didn't
+  work right".
+- **Cause:** `finalBossIndex` (data/breach.js) cycled six boss families, but the roster has five families of six (30
+  keepers). Floors 6, 12, 18, 24, 30 and 36 asked for keeper 31-36, which don't exist. Lighting the Heart threw in
+  `looks.boss`, left the fight active with no keeper, and its update then threw on every frame. The main loop ran
+  update and render in one `try`, so nothing was drawn again: the HUD stayed up over a black screen, with "Cannot read
+  properties of undefined (reading 'length')" in the log.
+- **Fix:** the rule cycles `BREACH_BOSSES.length / 6` families (floors 1-5 keep their keepers; from floor 6 on, every
+  five floors bring each family's next keeper, and all 30 now appear). `main.js` runs update and render in separate
+  `try`s, so an update that throws can no longer black out the screen. `data_check.mjs` checks every floor up to 200 has
+  a keeper.
+- **Test fix:** `breach.js play` broke when the wyrm joined `run.scenarios` (#184): it called `finish()` on the wyrm's
+  fight, which has none. The bot now skips the wyrm's fight (its own test is `breach_dragon.js`) and slays it before the
+  Heart.
+- **Tests:** `data_check`; the Heart lit on floors 6 and 12 (keeper rises, the screen draws, and still draws with
+  `game.update` forced to throw every frame); `breach.js play,rules 6` (all 14 scenarios and the Heart won, exit open,
+  home draws); `flow`. A level-96 Astronomer auto-played all of floor 14 (2,719 game s, over `breach.js auto`'s 2,100 s
+  budget for floor 2) and took its exit back to town; it drew.
+- **Open:** `breach.js rules`' stranded-monster check failed once in three runs with "no monster arrived" (`arrive`
+  'rise' found no landing spot on floor 1's start island); it is random and unrelated to this fix.
+
 ## October 22, 2026 — THE ETERNAL BREACH sweep: stalls, landing spots, the light quota, the void's cost (branch `feat/breach-sweep`)
 - **Request (user):** the same kind of scan as the Sky Battle's, on THE ETERNAL BREACH: performance, bugs, looks.
 - **Bugs found and fixed** (new checks in `breach.js play` caught each one on the old code):
