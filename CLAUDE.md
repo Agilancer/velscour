@@ -164,7 +164,9 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `assets/FinalClasses/All 16 Classes.png` (`python3 tools/process_assets.py select`, drawn by `src/ui/heroanim.js`).
   The user's sound zips live in `assets/source/audio/` and are transcoded to MP3 in `assets/audio/` by
   `python3 tools/process_assets.py audio` (needs ffmpeg; `tools/audiopack.py`). `src/core/audio.js` maps game sounds
-  to samples (`SAMPLES`), songs to areas (`MUSIC`) and ambient beds to biomes (`AMB`).
+  to samples (`SAMPLES`), songs to areas (`MUSIC`) and ambient beds to biomes (`AMB`). Loose one-shot WAVs (the
+  level-up thunder) go in `assets/source/audio/oneshots/` (a loose WAV one level up would become a song): their lead-in
+  is cut and they fade out per `ONESHOTS` in `tools/audiopack.py`, via `python tools/process_assets.py oneshots` (no ffmpeg).
   The Bard's harpsichord (the user's 5-octave, 7-articulation pack, a 220 MB zip kept outside the repo) becomes
   `assets/audio/inst/harpsichord/` via `python tools/process_assets.py instruments <zip>` (numpy + scipy + lameenc; GPL-2
   samples, notice alongside); `src/core/sampler.js` plays it, `src/data/melodies.js` holds the 2,000 two-bar melodies,

@@ -17,6 +17,7 @@ JSON atlases under assets/. Re-run this whenever a source sheet changes:
     python3 tools/process_assets.py select   # class-select portraits from assets/FinalClasses/All 16 Classes.png
     python3 tools/process_assets.py gibs     # gore chunks from assets/source/gibs/ -> assets/sprites/gibs.webp + .json (tools/gibpack.py)
     python3 tools/process_assets.py audio    # sound zips in assets/source/audio/ -> assets/audio/ (tools/audiopack.py, needs ffmpeg)
+    python3 tools/process_assets.py oneshots # assets/source/audio/oneshots/*.wav -> assets/audio/sfx/ (cut + faded; no ffmpeg)
     python3 tools/process_assets.py instruments <pack.zip>  # the Bard's harpsichord pack (kept outside the repo) -> assets/audio/inst/
 
 Outputs
@@ -42,6 +43,11 @@ if sys.argv[1:] == ["audio"]:   # the audio import needs only ffmpeg, not the im
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from audiopack import process_audio
     process_audio()
+    sys.exit(0)
+if sys.argv[1:] == ["oneshots"]:   # assets/source/audio/oneshots/*.wav -> assets/audio/sfx/ (numpy + lameenc, no ffmpeg)
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from audiopack import process_oneshots
+    process_oneshots()
     sys.exit(0)
 if sys.argv[1:2] == ["instruments"]:   # the harpsichord pack (zip or folder) -> assets/audio/inst/ (numpy + scipy + lameenc)
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
