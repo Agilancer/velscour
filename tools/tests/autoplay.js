@@ -2,6 +2,7 @@
 // game minute (depth, level, kills, deaths, gold, what the bot is doing) and screenshots now and then.
 //   node tools/tests/autoplay.js paladin 20        # class, game minutes (default 15)
 //   node tools/tests/autoplay.js wizard 30 mobile  # 844x390 touch layout
+//   AP_FILTER=1 node tools/tests/autoplay.js ...   # loot filter on: rings Uncommon+, gear Epic+, all gems, keepers to the chest
 const { openGame, report } = require('./harness');
 const cls = process.argv[2] || 'paladin';
 const minutes = +(process.argv[3] || 15);
@@ -9,12 +10,13 @@ const mobile = process.argv[4] === 'mobile';
 
 (async () => {
   const { browser, page, errors, shot } = await openGame(mobile ? { width: 844, height: 390, mobile: true } : {});
-  await page.evaluate(async (cls) => {
+  await page.evaluate(async ({ cls, filter }) => {
     await window.VELSCOUR.game.newChar(cls, 'Autobot');
+    if (filter) Object.assign((await import('/src/game/lootfilter.js')).lootFilter(), { on: true, weapon: 3, offhand: 3, armor: 3, ring: 1, gems: true, upgrades: true, keep: true });
     const { Auto } = await import('/src/game/autoplay.js');
     window.VELSCOUR.G.autoOpenSeals = true; // nobody is watching: auto-play breaks sealed treasures itself instead of waiting in town
     Auto.toggle(true);
-  }, cls);
+  }, { cls, filter: !!process.env.AP_FILTER });
   await page.waitForTimeout(500);
   await shot(`auto_${cls}_start`);
   let lastDepth = 0;

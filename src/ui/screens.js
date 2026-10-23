@@ -11,6 +11,8 @@ import { heroCanvas, excitable, preloadPortraits } from './heroanim.js';
 import { savedGearPreview } from '../core/gearart.js';
 import { attachTitleFx } from './titlefx.js';
 import { creditsScreen } from './credits.js';
+import { RARITY } from '../data/items.js';
+import { FILTER_ROWS, lootFilter } from '../game/lootfilter.js';
 
 let current = null;
 
@@ -184,6 +186,7 @@ export function settingsDialog() {
     <label>Damage numbers</label><input type="checkbox" data-k="dmgNumbers" ${st.dmgNumbers ? 'checked' : ''}>
     <label>Screen shake</label><input type="checkbox" data-k="shake" ${st.shake ? 'checked' : ''}>
     <label>Auto-pickup items</label><input type="checkbox" data-k="autoLoot" ${st.autoLoot ? 'checked' : ''}>
+    <label>Loot filter (what auto-pickup and auto-play pick up)</label><button class="btn small" data-loot-filter>${lootFilter().on ? 'On' : 'Off'} · Set up</button>
     <label>Standard skill bar on mobile (landscape)</label><input type="checkbox" data-k="mobileSkillBar" ${st.mobileSkillBar !== false ? 'checked' : ''}>
     <label>Pause while menus open</label><input type="checkbox" data-k="pauseMenus" ${st.pauseMenus !== false ? 'checked' : ''}>
     <label>Show gold labels</label><input type="checkbox" data-k="showGoldLabels" ${st.showGoldLabels ? 'checked' : ''}>
@@ -193,6 +196,8 @@ export function settingsDialog() {
   </div>`;
   const d = UI.dialog({ title: 'Settings', html, buttons: [{ label: 'Done', fn: () => { camera.computeZoom(); saveSettings(); } }] });
   d.box.querySelector('select').value = String(st.gore);
+  const lf = d.box.querySelector('[data-loot-filter]');
+  lf.onclick = () => { sfx('ui'); lootFilterDialog(() => { lf.textContent = `${lootFilter().on ? 'On' : 'Off'} · Set up`; }); };
   d.box.querySelectorAll('[data-k]').forEach((inp) => {
     inp.oninput = inp.onchange = () => {
       const k = inp.dataset.k;
@@ -202,6 +207,26 @@ export function settingsDialog() {
       saveSettings();
     };
   });
+}
+
+/** Settings > Loot filter: the lowest rarity of each item type auto-pickup grabs (game/lootfilter.js). */
+export function lootFilterDialog(onDone) {
+  const f = lootFilter();
+  const hue = ['white', 'green', 'blue', 'purple', 'orange', 'red'];
+  const opts = `<option value="-1">None</option>` + RARITY.map((r, i) => `<option value="${i}" style="color:${r.color}">${r.name}${i < RARITY.length - 1 ? ' or better' : ''} (${hue[i]})</option>`).join('');
+  const html = `<div class="settings-grid">
+    <label><b>Use the loot filter</b></label><input type="checkbox" data-f="on" ${f.on ? 'checked' : ''}>
+    ${FILTER_ROWS.map((r) => `<label>${r.name}</label><select data-f="${r.k}">${opts}</select>`).join('')}
+    <label>Gems (all of them)</label><input type="checkbox" data-f="gems" ${f.gems ? 'checked' : ''}>
+    <label>Auto-play also picks up upgrades it will wear</label><input type="checkbox" data-f="upgrades" ${f.upgrades ? 'checked' : ''}>
+    <label>Auto-play keeps what passes (stores it in the chest instead of selling it)</label><input type="checkbox" data-f="keep" ${f.keep ? 'checked' : ''}>
+  </div><p class="dim" style="font-size:12px;max-width:520px">With the filter on, auto-play and walk-over pickup take only what passes. Clicking or tapping an item still picks it up, and sealed treasures always pass.</p>`;
+  const d = UI.dialog({ title: 'Loot Filter', html, buttons: [{ label: 'Done', fn: () => { saveSettings(); onDone && onDone(); } }] });
+  d.box.querySelectorAll('[data-f]').forEach((inp) => {
+    if (inp.tagName === 'SELECT') inp.value = String(f[inp.dataset.f]);
+    inp.onchange = () => { f[inp.dataset.f] = inp.type === 'checkbox' ? inp.checked : Number(inp.value); saveSettings(); onDone && onDone(); };
+  });
+  return d;
 }
 
 export function helpDialog() {
@@ -220,6 +245,7 @@ export function helpDialog() {
     <div><b style="color:#ffe2a0">While the hero plays</b></div>
     <div>Click or tap <b style="color:#ffd040">gilded critters</b> before they get away (follow the red arrows): each is worth a big sum of experience. Auto-play leaves them to you.</div>
     <div>Now and then an Epic or better drops <b style="color:#ffdf8a">sealed</b>: break the seals from the SEALED button or the inventory. Auto-play waits in town when the bag is full of what it can't sell, until a slot is free.</div>
+    <div><b>Loot filter</b> (Settings): pick which weapons, off-hands, armor and rings (by rarity) and whether gems get picked up, by auto-play and by walking over them.</div>
     <div>Pick one of three portals down at each cleared exit (auto-play picks after 8 seconds). Set auto-play's stance, and pull the <b style="color:#ffc040">Greed</b> lever for tougher depths and richer drops; a death loses the Hoard.</div>
     <div><b style="color:#ffe2a0">Mobile</b></div>
     <div>Left thumb: virtual joystick</div>
