@@ -38,6 +38,14 @@ on the HAIL VELSCOUR! list.
   counts back faces up and front faces down in the stencil behind the plane, and a quad on the plane draws wherever
   the count isn't zero. The 2D warp hides sprites, spells and lights in the cutaway too; packs that charge up from
   behind start only where it hides them.
+- **The upper cut.** Past the vertical cut, the turn above comes round toward the camera behind the hero: right of him
+  on screen, its railing down level with his feet, so he seemed to walk along a handrail with the next level of stairs
+  filling the right of the screen. A second plane, tilted and held on the hero (`UP_H`/`UP_K`/`UP_D`, `upCut` in
+  `world/tower.js`), cuts away whatever is higher than 8 tiles over his feet, less half a tile per tile right of him
+  on screen and a quarter per tile nearer the camera. The floor above stays in view up-left (droppers still wait
+  there), the right of the screen shows his own stair, its wall and lanterns, and the night sky past the tower's cut
+  top. It has its own stencil cap quad; each cap is clipped by the other plane, so only the cut the eye meets first
+  draws. The 2D warp hides what stands there too.
 - **The well's dark.** Every tower material carries a height fog (`FOG` in `gfx/tower3d.js`): stone fades into the
   variant's fog from 6 tiles below the hero, so the stair falls away into the deep, and a little from 14 above.
 - **The roof** is a disk of its own at the `-x` end of the same grid, joined to the stair only by the stairhead door.
@@ -48,6 +56,8 @@ on the HAIL VELSCOUR! list.
   baked into floor chunks (the stair turns), so they are drawn live.
 
 ## The climb
+- Auto-play heads for a point five tiles ahead on the stair's centre line (`run.objective`), so after a fight it walks
+  back to the middle of the stair rather than keeping to the lane the fight left it in.
 - Packs wait all the way up, asleep until the hero comes (they are a whole turn away along the stair). About 40% of
   those above the first turn are **droppers**: when the hero passes beneath them they hop the railing, fall down the
   well past the floor between and vault over the railing onto his stretch of stair.
