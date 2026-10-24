@@ -665,6 +665,7 @@ export function renderWorld(ctx, world) {
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   if (!world.map.voidFace || world.sky) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }   // (the Breach's void is opaque)
   if (world.tower) world.tower.draw(ctx); // the Serpentine Tower in three.js (gfx/tower3d.js), turning with the hero
+  else if (world.cave) world.cave.draw(ctx); // the Depth's Edge Caverns in three.js (gfx/cave3d.js)
   else if (world.sky) skyBack(ctx, W, H, world); // the Sky Battle's sky and clouds (gfx/skyship.js)
   else if (world.map.voidFace) drawNebula(ctx, W, H, camera.x * camera.zoom * G.dpr, camera.y * camera.zoom * G.dpr); // the Breach's void
   else if (world.map.hgt && !world.map.castleMat && !world.map.noSky) drawSky(ctx, W, H, camera.x * camera.zoom * G.dpr, camera.y * camera.zoom * G.dpr, world.night);
@@ -686,11 +687,11 @@ export function renderWorld(ctx, world) {
 
   if (world.sky) skyWorld(ctx, world); // the pirates' galleon and boats, behind the ship
   if (world.wyrm) drawWyrm(ctx, world.wyrm, 'void'); // the Breach's wyrm deep under the islands (gfx/breachdragon.js)
-  if (!world.tower) drawFloors(ctx, world, vr, hq);
+  if (!world.tower && !world.cave) drawFloors(ctx, world, vr, hq);
   if (map.castleMat) drawCastleWater(ctx, world, vr, G.time, G.touch);
   ctx.imageSmoothingQuality = hq;
   const fc = world.floorNow;
-  drawDecals(ctx, vr, world.tower ? () => false : (d, px, py) => decalStamped(fc, d, px, py)); // the tower turns: its blood can't bake
+  drawDecals(ctx, vr, world.tower || world.cave ? () => false : (d, px, py) => decalStamped(fc, d, px, py)); // the tower turns: its blood can't bake
   const tall = map.hgt && map.tallOcclusion;
   for (const c of world.corpses) {
     if (tall && hiddenBehind(map, c.x, c.y)) continue; // behind the Castle's walls
@@ -804,6 +805,9 @@ export function renderWorld(ctx, world) {
       const y0 = py + s.oy * k;
       if (x0 > vr.x1 + 8 || x0 + s.w * k < vr.x0 - 8 ||
           y0 > vr.y1 + 8 || y0 + s.h * k < vr.y0 - 8) continue;
+    } else if (pr.caveProp) {   // the caves' baked rock (game/caverns.js): columns stand tall, stalactites hang high
+      const y1 = py - (pr.z || 0) + 12;
+      if (px < vr.x0 - 100 || px > vr.x1 + 100 || y1 < vr.y0 || y1 - 340 > vr.y1) continue;
     } else if (px < vr.x0 - 100 || px > vr.x1 + 100 || py < vr.y0 - 40 || py > vr.y1 + 220) continue;
     enqueue(pr.x + pr.y, 4, pr);
     if (tall) occludeStatic(pr, propRect(pr, px, py));
@@ -854,7 +858,7 @@ export function renderWorld(ctx, world) {
     for (const v of views) v.d = standKey(...v.at);
     const occ = frame.occ || (frame.occ = []);
     occ.length = 0;
-    occludersFor(map, vr, views, occ);
+    if (!world.cave) occludersFor(map, vr, views, occ); // the caves' 3D terrain hides its own (game/caverns.js horizon)
     for (let i = 0; i < occ.length; i += 2) enqueue(occ[i], 14, occ[i + 1]);
   }
   sorted.sort((a, b) => a.d - b.d);
@@ -866,6 +870,7 @@ export function renderWorld(ctx, world) {
       case 1: o.draw(ctx); break;
       case 2: drawWall(ctx, o, wk, cutaway(wallRect(o, wk), o.depth)); break;
       case 4: {
+        if (o.caveProp) { if (world.cave) world.cave.drawProp(ctx, o, it.d, views); break; }
         if (o.tree) { drawTree(ctx, o, treeHides(o, it.d, views)); break; }
         let a = 1;
         if (o.roofOf) {   // a Castle building's roof (gfx/castle3dart.js): fades off while the hero is inside, faded over anyone behind
@@ -893,9 +898,13 @@ export function renderWorld(ctx, world) {
       }
       case 6: {
         const oldZ=o.z||0;
-        const hz=map.hgt?hopZ(o,map):0; // hopping up or dropping down a step of the terrain
+        const hz=map.hgt&&!map.smoothField?hopZ(o,map):0; // hopping up or dropping down a step of the terrain (a smooth field has none)
         if(hz)o.z=oldZ+hz;
+        const hc=world.cave?world.cave.horizon(o):null; // behind higher ground in the caves: hidden below its edge
+        if(hc===-Infinity){if(hz)o.z=oldZ;o.sbox=null;break;}
+        if(hc!==null){ctx.save();ctx.beginPath();ctx.rect(vr.x0-200,vr.y0-900,vr.x1-vr.x0+400,hc-(vr.y0-900));ctx.clip();}
         o.draw(ctx);
+        if(hc!==null)ctx.restore();
         if(hz)o.z=oldZ;
         const img = o.spriteImage();
         const [w, h] = o.spriteDims(img);
@@ -1165,10 +1174,10 @@ export function drawMinimap(world, dt, canvas, big = false) {
   for (let y = 0; y < map.h; y++) {
     for (let x = 0; x < map.w; x++) {
       const i = y * map.w + x;
-      if (map.t[i] !== 1 || !map.seen[i]) continue;
+      if ((map.t[i] !== 1 && !(map.wet && map.wet[i])) || !map.seen[i]) continue;
       const [sx, sy] = toS(x, y);
       if (!big && (sx < -4 || sy < -4 || sx > W + 4 || sy > H + 4)) continue;
-      if (map.hgt) c.fillStyle = terrainShade(map, i); // paler up the mountain (and up the Castle's walls)
+      if (map.hgt) c.fillStyle = map.wet && map.wet[i] ? 'rgba(70,140,230,0.65)' : terrainShade(map, i); // paler up the mountain; the caves' water blue (and up the Castle's walls)
       c.fillRect(sx - s * 0.5, sy, s, s * 0.6);
     }
   }

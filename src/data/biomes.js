@@ -243,6 +243,17 @@ export const BIOMES = [
     torch: '#ffb050', fog: '#05060a',
   },
   {
+    // passages and caverns down to an underground lake under a tall waterfall, a spiralling shaft up to the top of the
+    // falls and its bosses; one smooth height field drawn live in three.js (world/caverns.js, game/caverns.js,
+    // gfx/cave3d.js, docs/DEPTHS_EDGE.md). Its creatures are its own (data/depthsedge.js).
+    id: 'depths_edge', name: "Depth's Edge Caverns", pack: 'town', overworld: true, cave: true,
+    palette: null, dark: 0.6, light: 10,
+    ambient: { type: 'drip', color: '#a8d0ff' }, mon: { hue: 0, sat: 1, light: 0 },
+    el: 'cold', blood: '#6a1424', adj: ['Deep', 'Chalk', 'Dripping', 'Echoing'],
+    roster: ['hound', 'ghoul', 'spider', 'worm', 'scorpion', 'abomination', 'zombie', 'golem', 'cultist', 'shroom', 'beetle', 'gargoyle'],
+    torch: '#ffb060', fog: '#050509',
+  },
+  {
     id: 'desert_temple', name: 'Temple of the Sunless Dynasty', pack: 'desert_temple',
     palette: null, dark: 0.77, light: 8.2,
     ambient: { type: 'sand', color: '#d9ac70' },
