@@ -85,7 +85,7 @@ export class TileMap {
     const d = Math.hypot(dx, dy);
     const steps = Math.ceil(d * 3);
     // on a height map, ground rising more than a hop above both ends hides one from the other
-    const H = this.hgt, top = H ? Math.max(H[this.tileIdx(x0, y0)], H[this.tileIdx(x1, y1)]) + this.climb : 0;
+    const H = this.hgt, top = H ? Math.max(H[this.tileIdx(x0, y0)], H[this.tileIdx(x1, y1)]) + (this.losRise ?? this.climb) : 0;   // losRise: a map whose low rises don't hide (the caves)
     for (let i = 1; i < steps; i++) {
       const t = i / steps;
       const tx = Math.floor(x0 + dx * t), ty = Math.floor(y0 + dy * t);

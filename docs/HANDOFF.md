@@ -14,6 +14,40 @@ Contents
 
 ---
 
+## October 23, 2026 — DEPTH'S EDGE CAVERNS: passages, caverns, a lake under a tall waterfall, a spiral climb (branch `feat/depths-edge-caverns`)
+- **Request:** a new biome: narrow dungeon-like passages that open into large caverns and back, monsters all the way,
+  torches on the walls, stalactites and stalagmites everywhere, three.js stalactites/stalagmites and height-mapped
+  terrain from the pack's seamless or high-res textures with smooth transitions; an underground lake with a really tall
+  waterfall (smoke-like spray and downpour, different blue particles); a passage at the waterfall's foot into a cave
+  that spirals up a long way to the top of the falls; a large final boss or three, then the exit portal; six variants
+  with palette swaps of the tiles and the monsters. Two zips: `Depths_Edge_Caves_Biome_Pack.zip` (materials) and
+  `Depths_Edge_Terror_II_50_Monsters_10_Bosses.zip` (60 creatures on magenta).
+- **Done:** see [DEPTHS_EDGE.md](DEPTHS_EDGE.md). One smooth height field (`src/world/caverns.js`) drawn live in three.js
+  behind the sprites (`src/gfx/cave3d.js`, the tower's camera); `src/game/caverns.js` runs it. Rock is capped so it never
+  hides walkable ground on screen (walls in front of a passage cut down Diablo-style); where walkable ground stands over
+  walkable ground (the shaft's ledges, the plateau's edge) sprites are clipped at the horizon and the terrain is cut away
+  round the hero. Free-standing stalagmites, clusters, columns and the stalactites over open floor are 3D models baked to
+  sprites (they sort with the creatures); stalactites in front of the tall back walls, torches, water, the falls and the
+  particles are live. The 60 creatures are a faction like the Air Pirates (`src/data/depthsedge.js`, `de_` ids, three
+  atlases), Biome `depths_edge` (overworld, regular
+  rotation); the skull reaches it with `caverns`.
+- **Engine hooks:** `render.js` (the cave's backdrop, no floor chunks, live decals, the baked props, `horizon` clipping in
+  the creature case, no hop arcs on a smooth field (`map.smoothField`), water on the minimap), `game.js` (load, build,
+  run, dialog, log, the skull), `biomes.js`, `audio.js` (`depths_edge`, `depths_edge_falls` beds), `quest.js`,
+  `map.js` (`map.losRise`: on a map that sets it, ground must rise that many levels above both ends to block sight;
+  the caves use 2.2 tiles, so a cavern's mounds hide nothing but the shaft's ledges and the plateau's cliff do).
+- **Design calls made without asking** (worth confirming): the passage at the falls' foot is a fade to the shaft's foot
+  (a height field can't enter a spiral at its foot from outside); the shaft is a funnel whose ledge winds about three
+  turns up its walls (~350 tiles); one boss 45%, two 35%, three 20%, each a raid boss at reduced life with no execute
+  timer; the regular overworld rotation.
+- **Verified:** `caverns_map.mjs` (24 seeds: route joined, no way up but the climb, no rock hides floor), `caverns.js all`
+  (every variant: picking, the passage, the summit with 1-3 bosses, the portal; auto-play takes a whole cave with a
+  level-1 paladin at depth 3 in 17-20 game minutes, four runs of four), `data_check.mjs`, `flow.js`, `tower.js`,
+  `mountain.js`, `hud.js`. Shots looked at for every variant.
+- **Not verified:** real phones (three.js under the 2D frame with nine point lights), Safari/iOS. Spells and projectiles
+  are not clipped behind higher ground; a monster behind the falls' curtain draws in front of it.
+
+
 ## October 23, 2026 — player requests: auto-play hands off the gear, +N gear kept, Sell all (branch `feat/autoplay-gear-sell-all`)
 - **Request (a player):** auto-play kept changing their equipment and sold a +8 ring: an option to turn that off. And
   a Sell all button in the inventory with one confirmation (selling an Epic or better item asks every time).
