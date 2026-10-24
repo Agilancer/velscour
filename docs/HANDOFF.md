@@ -14,6 +14,33 @@ Contents
 
 ---
 
+## October 24, 2026 — see-through outlines, life bars over every enemy, wall-base outlines (branch `feat/see-through-outlines`)
+- **Request:** heroes, monsters and pets must always be visible (only another creature in front may hide them), so a
+  level 117 Astronomer filling the screen with novas still shows where everything is; outlines can be turned off
+  (default on). Enemy life bars get the same treatment and every enemy has one, sub-bosses and bosses too (setting,
+  default on). New setting (default off): an outline along the foot of the dungeon's walls over every effect, creatures
+  excluded.
+- **Done:** a see-through layer (`drawSeeThrough` in `render.js`, `xray`/`drawXray` in `creature.js`). In the depth
+  pass each creature notes its rim (transform, alpha, sprite rect) and life bar in depth order; after the effects
+  *and the lighting* they go on one screen-sized canvas: wall-base lines first (`drawWallBases`: floor/void edges of
+  seen tiles), then per creature its body cut out (`destination-out`, only where something already lies under it), its
+  ring (`ringCanvas`: the rank colour at 1.4 CSS px in a dark halo, the body cut out, cached in the rim LRU, now 384)
+  and its bar. Only the box round what was drawn is cleared and blitted. With outlines on, the ring replaces the rim
+  under the sprite (no extra draw). Bars: every enemy with `targetable !== false`, boss bars wider and taller
+  (`BAR` colours); off restores the old flash over a monster just hit (never bosses). Champion/unique names sit above
+  the bar (`c.barTop`). Settings: `outlines` (on), `lifeBars` (on), `wallLines` (off) in `state.js` and the dialog.
+  `.dialog-box` now scrolls inside the screen (the settings dialog was taller than a landscape phone).
+- **Design calls made without asking:** outlines and bars draw after the lighting, so creatures in the dark show too;
+  townsfolk and vendors get no see-through ring (they keep their lit rim); creatures hidden behind higher ground in the
+  caverns still show their ring and bar; wall lines are dungeon-only (not overworlds) and only where the hero has seen;
+  farther bars are hidden by nearer bodies, like the rings.
+- **Verified:** `tools/tests/seethrough.js` (desktop + `mobile`: every rank, the hero and a pet show through a white
+  cover only with outlines on; every enemy and the boss has a bar, none with it off; a nearer body cuts a farther
+  ring; wall lines; Supernova / Big Bang / Starstorm shots), `flow.js`, `rims.js`, `hud.js`, `mobile.js`,
+  `caverns.js 0,3 noauto`, `tower.js 0 0 noauto`. Frame cost (RX 9070 XT, ~40 monsters on screen): about +1-2 ms with
+  outlines and bars on.
+- **Not verified:** real phones, Safari/iOS.
+
 ## October 23, 2026 — DEPTH'S EDGE CAVERNS: passages, caverns, a lake under a tall waterfall, a spiral climb (branch `feat/depths-edge-caverns`)
 - **Request:** a new biome: narrow dungeon-like passages that open into large caverns and back, monsters all the way,
   torches on the walls, stalactites and stalagmites everywhere, three.js stalactites/stalagmites and height-mapped

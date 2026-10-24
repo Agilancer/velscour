@@ -45,6 +45,7 @@ node tools/tests/options.js                        # settings: lock skill bar, h
 node tools/tests/mobile.js                         # 844x390 touch layout + joystick
 node tools/tests/hud.js                            # HUD art: 15-slot bar keys, save migration, minimap ring, buttons, Quest Log, touch pages
 node tools/tests/rims.js                           # monster rims (rank colours, green summons, gold hero), pet see-through walls, enlargeable target window
+node tools/tests/seethrough.js [mobile]            # see-through outlines + life bars over spells/walls/darkness, every enemy's bar, wall-base lines, settings
 node tools/tests/levelup.js                        # level-up banner: Velscour's 2,000 taunts, mood colours, no mood twice in a row, lines fit
 node tools/tests/breach_dragon.js [parts] [floor]   # Eternal Breach wyrm: 7 colours, passes, bridge ambush, the fight (auto-play kills it), Heart gate
 node tools/tests/boss.js                           # Depth 100 Velscour arena + a depth 37 guardian
