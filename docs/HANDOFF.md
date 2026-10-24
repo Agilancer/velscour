@@ -14,6 +14,30 @@ Contents
 
 ---
 
+## October 23, 2026 — cloud saves with Google sign-in (branch `feat/cloud-saves`)
+- **Request (user):** cloud saves via Google (Apple later). The user made the Firebase project `velscour` (Google
+  sign-in on, `agilancer.github.io` authorized, Firestore with per-user rules) and gave the web config.
+- **Built:** `src/game/cloud.js` (lazy Firebase SDK from gstatic, one Firestore document per class, three-way merge
+  against what the device last synced, pushes at most once a minute while playing, offline retries). The UI is in
+  `src/ui/screens.js`: a Settings > Cloud save row (Sign in with Google / account dialog with Sync now and Sign out),
+  the "Two copies of a hero" dialog, and the title footer status. `save.js` gained `onSaveChange` and
+  `replaceClassHero`. See docs/CLOUD_SAVES.md.
+- **Follow-up (user):** push every 5 minutes, and "NO WAY anyone could lose their saved games". Now: a hero replaced
+  or deleted here (or a cloud copy written over) is backed up to IndexedDB first, or nothing changes
+  (`src/game/herobackup.js`, Settings > Hero backups restores); a missing hero is only a deletion when the player
+  deleted it (tombstones in the cloud, `st.deleted` here), otherwise it's copied back; unreadable local saves and
+  damaged cloud copies change nothing; a failed local write isn't counted as synced. The rules are in
+  docs/CLOUD_SAVES.md.
+- **Follow-up (user):** guard the game's own saving: unreadable saves (truncated, not a list) were overwritten by the
+  next autosave. Now `writeAll` sets the old text aside first (`velscour_saves_v1_unreadable_<time>`, or IndexedDB's
+  `raw` store when localStorage is full) and refuses to save until a copy exists (a "Not saving" warning); the title
+  explains, Settings > Hero backups downloads it. New `savesafe.js` (12 checks).
+- **Tests:** new `cloud.js` (4 devices on a fake Firebase: 43 checks, including lost, corrupt, damaged, no-IndexedDB
+  and restore cases; the real SDK loads and Firestore denies a signed-out read), `flow`, `mobile`, `hud`, `options`,
+  `select`, `stash`. (`options.js` and `select.js` can time out when six browser tests run at once; `main` does the
+  same. They pass alone.) The real Google popup can't run in cloud containers
+  (apis.google.com is blocked), so the first real sign-in has to be tried on a device.
+
 ## October 23, 2026 — THE SERPENTINE TOWER: the upper cut, auto-play up the middle (branch `fix/tower-upper-cut`)
 - **Request (user):** the next level of stairs must not be in view on the right of the screen, and auto-play should
   walk up the centre of the stair instead of hugging the handrail.

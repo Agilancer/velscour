@@ -35,6 +35,8 @@ node tools/tests/encounters.js [kinds]             # dungeon encounters with peo
 node tools/tests/rings.js                          # ring augments in a live dungeon, skill mastery, ring/forge UI shots
 node tools/tests/flow.js                           # town -> portal -> boss -> exit -> depth 2 -> death -> reload
 node tools/tests/stash.js                          # town storage chest: 300 slots, store/take, auto-play stashing
+node tools/tests/savesafe.js                       # unreadable saves never written over: set aside before the first save (localStorage or IndexedDB), downloadable, refused + warned when no room
+node tools/tests/cloud.js [nosdk]                  # cloud saves (Google sign-in + Firestore): 4 devices on a fake Firebase (push, pull, conflicts, tombstones, offline, backups + restore, lost/corrupt/damaged saves change nothing) + real SDK smoke
 node tools/tests/autoshop.js [classes] [rounds]     # auto-play wears everything it buys (none sold back), loot filter, keepers, chest sort
 node tools/tests/rarity.js [classes] [samples]     # gear rarity worth in item levels, level 25 Rare > level 10 Mythic, drop odds
 node tools/tests/ui.js                             # skill tree, inventory, socketing, vendors
@@ -181,7 +183,9 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   from the `/velscour/` subpath on GitHub Pages. The `/src/...` imports in `tools/tests/` are fine, because the
   tests run against a local server at the root.
 - Saves live in localStorage under `velscour_saves_v1`, one hero per class (the newest save of a class is its hero; `heroesByClass()`). If you change the save shape, extend `migrate()` in
-  `src/game/save.js` so existing heroes keep loading.
+  `src/game/save.js` so existing heroes keep loading. Saves that can't be read are never written over (set aside first; run `savesafe.js`). Signed-in players' heroes are also copied to Firebase (`src/game/cloud.js`, docs/CLOUD_SAVES.md): one Firestore
+  document per class, merged three ways against `velscour_cloud_v1`. It must never lose a save: back up before any local change
+  (`src/game/herobackup.js`), and a missing hero is only deleted by a tombstone (rules in docs/CLOUD_SAVES.md); changes to saving or `src/game/cloud.js`: run `cloud.js`.
 - After any gameplay change, run at least `flow.js` and the `skills.js` classes you touched. Run `mobile.js`
   and `hud.js` for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
   `autoplay.js` for a class or two as well. Auto-play's town errands (buying, selling, stashing, gambling) or the loot filter (`src/game/lootfilter.js`): run `autoshop.js` and `stash.js`. Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`. Pet art (`assets/source/pet_animations/`, `tools/build_pet_animations.py`, `src/core/petart.js`; watch them in `tools/pet_viewer.html`): run `petanims.js`.

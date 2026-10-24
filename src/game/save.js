@@ -3,16 +3,64 @@ import { CLASSES } from '../data/classes.js';
 import { rollItem } from '../data/items.js';
 import { drawBiome } from '../data/biomes.js';
 import { migrateBar, BAR_SIZE } from '../data/bar.js';
+import { stashRaw, listRaw } from './herobackup.js';
 
 const KEY = 'velscour_saves_v1';
+const ASIDE = KEY + '_unreadable_';   // + time: save data that couldn't be read, set aside before anything replaced it
+const watchers = [];
+/** fn(classId, deletedIds) after a hero of that class is saved, or deleted by the player (game/cloud.js syncs it). */
+export function onSaveChange(fn) { watchers.push(fn); }
+const changed = (classId, deleted) => { for (const fn of watchers) try { fn(classId, deleted); } catch (e) { console.warn(e); } };
 
+let unreadable = false;   // the saves are there but don't parse: cloud sync must not touch them
 function readAll() {
   let list;
-  try { list = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; }
-  return Array.isArray(list) ? list : [];
+  const raw = localStorage.getItem(KEY);
+  try { list = JSON.parse(raw || '[]'); } catch (e) { unreadable = true; return []; }
+  unreadable = !Array.isArray(list);
+  return unreadable ? [] : list;
 }
-function writeAll(list) {
-  try { localStorage.setItem(KEY, JSON.stringify(list)); return true; } catch (e) { console.warn('Save failed', e); return false; }
+/** False when this device's saves exist but can't be read (cloud.js then changes nothing). */
+export function savesReadable() { readAll(); return !unreadable; }
+function writeAll(list) {   // callers have just run readAll(), so `unreadable` is current
+  if (unreadable && !setAside()) return false;   // never write over saves that couldn't be read until they're copied
+  try { localStorage.setItem(KEY, JSON.stringify(list)); return true; } catch (e) {
+    console.warn('Save failed', e);
+    if (unreadable && asideKey) moveAside();   // the copy took the room: move it to IndexedDB, the next save fits
+    return false;
+  }
+}
+// Unreadable saves are copied aside (localStorage, or IndexedDB when that's full) before the first write replaces
+// them; until a copy exists every write is refused. Settings > Hero backups lists them for download.
+let asideDone = null, asidePending = null, asideKey = null;
+function setAside() {
+  const raw = localStorage.getItem(KEY);
+  if (raw === null || raw === asideDone) return true;
+  try { const k = ASIDE + Date.now(); localStorage.setItem(k, raw); asideDone = raw; asideKey = k; return true; } catch (e) { /* no room: IndexedDB */ }
+  if (!asidePending) asidePending = stashRaw(raw).then(() => { asideDone = raw; }, (e) => { console.warn('Could not set the unreadable saves aside', e); saveBlocked(); }).finally(() => { asidePending = null; });
+  saveBlocked();
+  return false;
+}
+function moveAside() {
+  const k = asideKey, raw = k && localStorage.getItem(k);
+  asideKey = null;
+  if (raw !== null && raw !== undefined) stashRaw(raw).then(() => localStorage.removeItem(k), (e) => console.warn(e));   // removed only once IndexedDB holds it
+}
+let blockedOnce = false;
+function saveBlocked() {
+  if (blockedOnce || typeof dispatchEvent !== 'function') return;
+  blockedOnce = true;
+  dispatchEvent(new CustomEvent('velscour-save-blocked'));
+}
+/** Unreadable save data that was set aside: [{ at, text }], newest first. */
+export async function unreadableSaves() {
+  const out = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(ASIDE)) out.push({ at: Number(k.slice(ASIDE.length)) || 0, text: localStorage.getItem(k) });
+  }
+  try { out.push(...(await listRaw()).map((r) => ({ at: r.at, text: r.text }))); } catch (e) { /* no IndexedDB */ }
+  return out.sort((a, b) => b.at - a.at);
 }
 
 export function listSaves() {
@@ -22,9 +70,15 @@ export function writeSave(char) {
   char.lastPlayed = Date.now();
   const list = readAll().filter((c) => c.id !== char.id);
   list.push(char);
-  return writeAll(list);
+  const ok = writeAll(list);
+  changed(char.classId);
+  return ok;
 }
-export function deleteSave(id) { writeAll(readAll().filter((c) => c.id !== id)); }
+export function deleteSave(id) {
+  const list = readAll(), gone = list.find((c) => c.id === id);
+  writeAll(list.filter((c) => c.id !== id));
+  if (gone) changed(gone.classId, [id]);
+}
 /** One hero per class: classId -> that class's most recently played hero. (Older saves may hold several heroes of a
  * class; the newest one is the class's hero, and deleting it deletes them all.) */
 export function heroesByClass() {
@@ -32,7 +86,22 @@ export function heroesByClass() {
   for (const c of listSaves()) if (!out[c.classId]) out[c.classId] = c;
   return out;
 }
-export function deleteClassSaves(classId) { writeAll(readAll().filter((c) => c.classId !== classId)); }
+export function deleteClassSaves(classId) {
+  const list = readAll();
+  writeAll(list.filter((c) => c.classId !== classId));
+  changed(classId, list.filter((c) => c.classId === classId).map((c) => c.id));
+}
+/** Every save of a class (old saves may hold several). */
+export function classSaves(classId) { return readAll().filter((c) => c.classId === classId); }
+/** A class's hero from the cloud (or null): replaces every local save of that class, keeping its lastPlayed.
+ * cloud.js backs the old ones up first (game/herobackup.js). Refuses when the saves can't be read. */
+export function replaceClassHero(classId, char) {
+  const all = readAll();
+  if (unreadable) return false;
+  const list = all.filter((c) => c.classId !== classId);
+  if (char) list.push(char);
+  return writeAll(list);
+}
 
 export function newCharData(classId, name) {
   const C = CLASSES[classId];
