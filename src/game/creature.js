@@ -38,25 +38,50 @@ function tinted(img, f) {
 export const RIM = { normal: '#e0302a', champion: '#5a9aff', unique: '#ffc040', boss: '#ff7a1a', ally: '#48e868', hero: '#ffe9a8', folk: '#c08cff', vendor: '#3ee0e0' };
 const RIM_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [0.71, 0.71], [-0.71, 0.71], [0.71, -0.71], [-0.71, -0.71]];
 // One LRU over every sprite's rims (img id + frame/colour/thickness -> padded rim canvas): per-image maps kept every
-// rim of every look ever seen, ~100 MB after a few levels, more than iOS lets a page hold in canvases.
-const rims = new Map(), rimIds = new WeakMap(), RIM_MAX = 256;
-let rimSeq = 0;
-function rimCanvas(img, sx, sy, sw, sh, col, o) {
+// rim of every look ever seen, ~100 MB after a few levels, more than iOS lets a page hold in canvases. The see-through
+// layer's rings (ringCanvas) share it, so it holds a frame's rim and ring for a screen of monsters and pets.
+const rims = new Map(), rimIds = new WeakMap(), RIM_MAX = 384;
+let rimSeq = 0, rimT = null, rimO = 0, scratch = null;
+function rimKey(img, sx, sy, sw, sh, col, o) {
   let id = rimIds.get(img);
   if (!id) rimIds.set(img, (id = ++rimSeq));
   const key = id + ':' + sx + ',' + sy + ',' + sw + ',' + sh + col + o;
-  let c = rims.get(key);
-  if (c) { rims.delete(key); rims.set(key, c); }
-  else {
-    if (rims.size >= RIM_MAX) rims.delete(rims.keys().next().value);
-    const p = Math.ceil(o) + 1;
-    c = makeCanvas(sw + p * 2, sh + p * 2);
-    const x = c.getContext('2d');
-    for (const [ux, uy] of RIM_DIRS) x.drawImage(img, sx, sy, sw, sh, p + ux * o, p + uy * o, sw, sh);
-    x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height);
-    c._pad = p;
-    rims.set(key, c);
-  }
+  const c = rims.get(key);
+  if (c) { rims.delete(key); rims.set(key, c); return c; }
+  if (rims.size >= RIM_MAX) rims.delete(rims.keys().next().value);
+  return key;
+}
+// the sprite's silhouette stamped 8 ways o source px out, filled with col (x: a canvas padded p round the sprite)
+function stamp(x, img, sx, sy, sw, sh, p, o, col) {
+  x.globalCompositeOperation = 'source-over';
+  for (const [ux, uy] of RIM_DIRS) x.drawImage(img, sx, sy, sw, sh, p + ux * o, p + uy * o, sw, sh);
+  x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, sw + p * 2, sh + p * 2);
+}
+function rimCanvas(img, sx, sy, sw, sh, col, o) {
+  const key = rimKey(img, sx, sy, sw, sh, col, o);
+  if (typeof key !== 'string') return key;
+  const p = Math.ceil(o) + 1, c = makeCanvas(sw + p * 2, sh + p * 2);
+  stamp(c.getContext('2d'), img, sx, sy, sw, sh, p, o, col);
+  c._pad = p;
+  rims.set(key, c);
+  return c;
+}
+/** The see-through ring: col 1.4x the rim's thickness o in a dark halo out to 2.4x (both on its 2^(n/4) steps), the
+ * body cut out of it, so the layer draws it in one go. */
+function ringCanvas(img, sx, sy, sw, sh, col, o) {
+  const key = rimKey(img, sx, sy, sw, sh, 'ring' + col, o);
+  if (typeof key !== 'string') return key;
+  const dO = Math.min(32, o * 2.378), cO = Math.min(32, o * 1.414), p = Math.ceil(dO) + 1, W = sw + p * 2, H = sh + p * 2;
+  const c = makeCanvas(W, H), x = c.getContext('2d');
+  stamp(x, img, sx, sy, sw, sh, p, dO, 'rgba(0,0,0,0.8)');
+  if (!scratch || scratch.width < W || scratch.height < H) scratch = makeCanvas(Math.max(W, scratch ? scratch.width : 0), Math.max(H, scratch ? scratch.height : 0));
+  const s = scratch.getContext('2d');
+  s.globalCompositeOperation = 'source-over'; s.clearRect(0, 0, W, H);
+  stamp(s, img, sx, sy, sw, sh, p, cO, col);
+  x.globalCompositeOperation = 'source-over'; x.drawImage(scratch, 0, 0, W, H, 0, 0, W, H);
+  x.globalCompositeOperation = 'destination-out'; x.drawImage(img, sx, sy, sw, sh, p, p, sw, sh);
+  c._pad = p;
+  rims.set(key, c);
   return c;
 }
 
@@ -65,15 +90,80 @@ export function clearRims() { rims.clear(); }
 
 /** A col rim under a sprite: drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh) args in the sprite's current transform.
  * grow: how far a spawning creature has grown in (0..1); the rim keeps its full-size thickness meanwhile (it shrinks
- * with the sprite): a thickness per growth step baked ~20 rims per spawn, some padded 33 px. */
-export function drawRim(ctx, col, img, sx, sy, sw, sh, dx, dy, dw, dh, grow = 1) {
-  if (!col || !img || !img.width || dw < 4 || dh < 4) return;
+ * with the sprite): a thickness per growth step baked ~20 rims per spawn, some padded 33 px. under false: only work out
+ * the thickness and transform (rimO, rimT), for a see-through ring that stands in for it. */
+export function drawRim(ctx, col, img, sx, sy, sw, sh, dx, dy, dw, dh, grow = 1, under = true) {
+  if (!col || !img || !img.width || dw < 4 || dh < 4) return false;
   // 1 CSS px in the sprite's source px, snapped to 2^(n/4) steps so zoom, squash and spawn growth reuse a few bakes
   const t = ctx.getTransform(), kx = dw / sw, ky = dh / sh, g = Math.max(0.1, Math.min(1, grow));
   const o = Math.min(32, Math.max(0.25, 2 ** (Math.round(Math.log2(G.dpr / ((Math.hypot(t.a, t.b) || 1) * (kx + ky) / 2 / g)) * 4) / 4)));
-  const c = rimCanvas(img, sx, sy, sw, sh, col, o), p = c._pad;
-  ctx.drawImage(c, dx - p * kx, dy - p * ky, dw + p * 2 * kx, dh + p * 2 * ky);
+  if (under) { const c = rimCanvas(img, sx, sy, sw, sh, col, o), p = c._pad; ctx.drawImage(c, dx - p * kx, dy - p * ky, dw + p * 2 * kx, dh + p * 2 * ky); }
+  rimT = t; rimO = o;
+  return true;
 }
+
+// The see-through layer (render.js drawSeeThrough). While the world draws, each creature's rim and life bar are noted
+// in depth order; after the spells and the lighting they are laid over the whole scene again, every body cutting out
+// what was laid before it, so a hero, monster or pet shows through novas, walls and darkness but never over a nearer
+// body. on: noting (the world's depth pass only); list[0..n): {who, t (transform), a (alpha), col, o, img, src/dst rect, bar}.
+export const xray = { on: false, n: 0, list: [] };
+// the device px bounds of rect (x, y, w, h) under transform t, written to out at i
+const bounds = (out, i, t, x, y, w, h) => {
+  out[i] = out[i + 1] = Infinity; out[i + 2] = out[i + 3] = -Infinity;
+  for (let k = 0; k < 4; k++) {
+    const u = k & 1 ? x + w : x, v = k & 2 ? y + h : y, X = t.a * u + t.c * v + t.e, Y = t.b * u + t.d * v + t.f;
+    if (X < out[i]) out[i] = X; if (X > out[i + 2]) out[i + 2] = X; if (Y < out[i + 1]) out[i + 1] = Y; if (Y > out[i + 3]) out[i + 3] = Y;
+  }
+};
+const at = [0, 0, 0, 0], laid = []; // laid: the bounds of every ring and bar on the layer so far, 4 numbers each
+
+/** Lays the noted rims (rings: Settings › see-through outlines) and life bars on oc, which has the canvas's device
+ * px; camT is the camera's transform; under: wall lines already lie everywhere. Grows box [x0, y0, x1, y1] round it. */
+export function drawXray(oc, camT, rings, box, under) {
+  let nl = 0;
+  const lay = (t, x, y, w, h) => {
+    bounds(laid, nl, t, x, y, w, h);
+    if (laid[nl] < box[0]) box[0] = laid[nl]; if (laid[nl + 1] < box[1]) box[1] = laid[nl + 1];
+    if (laid[nl + 2] > box[2]) box[2] = laid[nl + 2]; if (laid[nl + 3] > box[3]) box[3] = laid[nl + 3];
+    nl += 4;
+  };
+  for (let i = 0; i < xray.n; i++) {
+    const e = xray.list[i], kx = e.dw / e.sw, ky = e.dh / e.sh;
+    oc.setTransform(e.t);
+    oc.globalAlpha = e.a;
+    // the body cuts out whatever farther rims, bars and wall lines lie under it; nothing laid there, nothing to cut
+    let cut = under || nl > 4096;
+    if (!cut) {
+      bounds(at, 0, e.t, e.dx, e.dy, e.dw, e.dh);
+      for (let j = 0; j < nl && !cut; j += 4) cut = at[0] < laid[j + 2] && at[2] > laid[j] && at[1] < laid[j + 3] && at[3] > laid[j + 1];
+    }
+    if (cut) {
+      oc.globalCompositeOperation = 'destination-out';
+      oc.drawImage(e.img, e.sx, e.sy, e.sw, e.sh, e.dx, e.dy, e.dw, e.dh);
+    }
+    if (rings) {
+      oc.globalCompositeOperation = 'source-over';
+      const c = ringCanvas(e.img, e.sx, e.sy, e.sw, e.sh, e.col, e.o), p = c._pad;
+      oc.drawImage(c, e.dx - p * kx, e.dy - p * ky, e.dw + p * 2 * kx, e.dh + p * 2 * ky);
+      lay(e.t, e.dx - p * kx, e.dy - p * ky, e.dw + p * 2 * kx, e.dh + p * 2 * ky);
+    }
+    if (e.bar) {
+      oc.setTransform(camT);
+      oc.globalCompositeOperation = 'source-over';
+      oc.globalAlpha = Math.max(0.5, e.a);
+      lifeBar(oc, e.bx, e.by, e.bw, e.bh, e.bf, e.bc);
+      lay(camT, e.bx - 1, e.by, e.bw + 2, e.bh);
+    }
+    e.who = e.img = e.t = null; e.bar = false; // nothing held past the frame
+  }
+  oc.globalCompositeOperation = 'source-over'; oc.globalAlpha = 1;
+  xray.n = 0;
+}
+function lifeBar(ctx, x, y, w, h, f, col) {
+  ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(x - 1, y, w + 2, h);
+  ctx.fillStyle = col; ctx.fillRect(x, y + 1, w * f, h - 2);
+}
+const BAR = { normal: '#c02010', champion: '#4a8aff', unique: '#e0a030', boss: '#ff7a1a' };
 
 export class Creature {
   constructor(o = {}) {
@@ -230,7 +320,13 @@ export class Creature {
   }
   /** The rim under the sprite: drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh) args in the sprite's current transform. */
   drawRim(ctx, img, sx, sy, sw, sh, dx, dy, dw, dh) {
-    drawRim(ctx, this.rimColor(), img, sx, sy, sw, sh, dx, dy, dw, dh, this.spawnT < 0.3 ? this.spawnT / 0.3 : 1);
+    const col = this.rimColor(), note = xray.on && !this.ghostDraw && xray.n < 2000; // the cap: noting left on outside a world frame
+    // with see-through outlines on, the ring laid over the scene stands in for the rim under the sprite
+    if (!drawRim(ctx, col, img, sx, sy, sw, sh, dx, dy, dw, dh, this.spawnT < 0.3 ? this.spawnT / 0.3 : 1, !note || G.settings.outlines === false) || !note) return;
+    const e = xray.list[xray.n] || (xray.list[xray.n] = { bar: false });
+    xray.n++;
+    e.who = this; e.t = rimT; e.o = rimO; e.a = ctx.globalAlpha; e.col = col; e.img = img;
+    e.sx = sx; e.sy = sy; e.sw = sw; e.sh = sh; e.dx = dx; e.dy = dy; e.dw = dw; e.dh = dh;
   }
   /** World-px size of the sprite. */
   spriteDims(img) {
@@ -403,18 +499,21 @@ export class Creature {
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(px, py - 6, 4 + Math.sin(this.animT * 6), 0, TAU); ctx.stroke();
     }
-    // health bar for damaged normal monsters
-    if (this.team === 'enemy' && this.hpShow > 0 && this.rank !== 'boss') {
-      const bw = Math.max(22, Math.min(46, w * 0.8));
-      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(px - bw / 2 - 1, py - 8, bw + 2, 4);
-      ctx.fillStyle = this.rank === 'unique' ? '#e0a030' : this.rank === 'champion' ? '#4a8aff' : '#c02010';
-      ctx.fillRect(px - bw / 2, py - 7, bw * clamp(this.hp / this.maxHp, 0, 1), 2);
-    }
-    if (this.team === 'player' && !this.isPlayer && this.summon && this.maxHp > 0 && this.hp < this.maxHp) {
-      const bw = 24;
-      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(px - bw / 2 - 1, py - 8, bw + 2, 4);
-      ctx.fillStyle = '#30c040'; ctx.fillRect(px - bw / 2, py - 7, bw * clamp(this.hp / this.maxHp, 0, 1), 2);
-    }
+    // life bars: over every enemy, bosses too (Settings › life bars; off, one only flashes up over a monster that was
+    // hit, bosses aside) and over hurt summons. In the world's frame they go on the see-through layer, over the spells.
+    let col = null, bw = 24, bh = 4;
+    if (this.team === 'enemy' && (G.settings.lifeBars !== false ? this.targetable !== false : this.hpShow > 0 && this.rank !== 'boss')) {
+      const big = this.rank === 'boss';
+      bw = big ? Math.max(40, Math.min(84, w * 0.75)) : Math.max(22, Math.min(46, w * 0.8)); bh = big ? 6 : 4;
+      col = BAR[this.rank] || BAR.normal;
+    } else if (this.team === 'player' && !this.isPlayer && this.summon && this.maxHp > 0 && this.hp < this.maxHp) col = '#30c040';
+    this.barTop = null;
+    if (!col) return;
+    const x = px - bw / 2, y = py - 4 - bh, f = clamp(this.hp / this.maxHp, 0, 1);
+    this.barTop = y; // champion and unique names sit above it (render.js drawOverheadNames)
+    const e = xray.on && xray.n && xray.list[xray.n - 1];
+    if (e && e.who === this) { e.bar = true; e.bx = x; e.by = y; e.bw = bw; e.bh = bh; e.bf = f; e.bc = col; }
+    else lifeBar(ctx, x, y, bw, bh, f, col);
   }
 }
 

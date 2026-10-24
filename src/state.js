@@ -29,6 +29,9 @@ export const G = {
     hideItemNames: false, // no item name labels on the ground (hover still shows one)
     autoSkillPoints: true, // auto-play spends skill points
     autoGear: true, // auto-play equips, sells, buys, stashes and upgrades gear (off: hands off, potions only)
+    outlines: true, // see-through rims round the hero, monsters and pets, over spells, walls and darkness
+    lifeBars: true, // a life bar over every enemy, bosses too (off: only over a monster just hit)
+    wallLines: false, // a line along the foot of the dungeon's walls, over the spells
   },
 };
 

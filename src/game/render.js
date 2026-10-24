@@ -19,7 +19,7 @@ import { enemyImage } from '../core/enemyart.js';
 import { drawPetCorpse } from '../core/petart.js';
 import { drawLootLabels } from './loot.js';
 import { castleTileDressing, drawCastleParticles, drawCastleWater } from '../gfx/castleground.js';
-import { drawRim, RIM } from './creature.js';
+import { drawRim, RIM, xray, drawXray } from './creature.js';
 import { drawNebula } from '../gfx/breach.js';
 import { drawWyrm } from '../gfx/breachdragon.js';
 import { skyBack, skyWorld, skyFx, skyFront, drawSkyGate } from '../gfx/skyship.js';
@@ -670,6 +670,7 @@ export function renderWorld(ctx, world) {
   else if (world.map.voidFace) drawNebula(ctx, W, H, camera.x * camera.zoom * G.dpr, camera.y * camera.zoom * G.dpr); // the Breach's void
   else if (world.map.hgt && !world.map.castleMat && !world.map.noSky) drawSky(ctx, W, H, camera.x * camera.zoom * G.dpr, camera.y * camera.zoom * G.dpr, world.night);
   camera.apply(ctx);
+  const camT = ctx.getTransform();
   ctx.imageSmoothingEnabled = true;
   // 'medium' (mipmapped) downscaling of the big floor/wall atlases costs several times 'low' per draw, and those are
   // most of the frame: tiles and walls always draw 'low'; sprites use 'low' on touch or when resolution is reduced.
@@ -863,6 +864,7 @@ export function renderWorld(ctx, world) {
   }
   sorted.sort((a, b) => a.d - b.d);
   let q = hq;
+  xray.n = 0; xray.on = true; // creatures note their rims and bars for the see-through layer (drawSeeThrough)
   for (const it of sorted) {
     const o = it.o, lq = it.f === 2 ? 'low' : hq;
     if (lq !== q) ctx.imageSmoothingQuality = q = lq;
@@ -901,7 +903,10 @@ export function renderWorld(ctx, world) {
         const hz=map.hgt&&!map.smoothField?hopZ(o,map):0; // hopping up or dropping down a step of the terrain (a smooth field has none)
         if(hz)o.z=oldZ+hz;
         const hc=world.cave?world.cave.horizon(o):null; // behind higher ground in the caves: hidden below its edge
-        if(hc===-Infinity){if(hz)o.z=oldZ;o.sbox=null;break;}
+        if(hc===-Infinity){ // drawn under an empty clip all the same: its rim and bar still show on the see-through layer
+          ctx.save();ctx.beginPath();ctx.rect(0,0,0,0);ctx.clip();o.draw(ctx);ctx.restore();
+          if(hz)o.z=oldZ;o.sbox=null;break;
+        }
         if(hc!==null){ctx.save();ctx.beginPath();ctx.rect(vr.x0-200,vr.y0-900,vr.x1-vr.x0+400,hc-(vr.y0-900));ctx.clip();}
         o.draw(ctx);
         if(hc!==null)ctx.restore();
@@ -935,6 +940,7 @@ export function renderWorld(ctx, world) {
       }
     }
   }
+  xray.on = false;
   if (q !== hq) ctx.imageSmoothingQuality = hq;
   if (tall && p && !p.dead && views[0]?.hero && views[0].hid === G.frame) {
     // the hero behind one of the Castle's walls: a faint silhouette over it, so he is never lost from sight
@@ -964,6 +970,7 @@ export function renderWorld(ctx, world) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   drawLighting(ctx, world);
   if (world.sky) skyFront(ctx, W, H, world, Math.min(0.05, G.dt || 0.016)); // rain, snow, ash, wind, fog, lightning
+  drawSeeThrough(ctx, world, camT, hq, tx0, ty0, tx1, ty1);
   if (G.hurtFlash > 0) {
     ctx.fillStyle = `rgba(160,0,0,${Math.min(0.45, G.hurtFlash)})`;
     ctx.fillRect(0, 0, W, H);
@@ -982,6 +989,53 @@ export function renderWorld(ctx, world) {
   // Keep capacity without retaining creatures/loot that have left the world.
   for (const item of pool) item.o = null;
   top.length = 0;
+}
+
+// The see-through layer, over the lit scene: the wall bases (Settings, off by default), then every creature's rim and
+// life bar in depth order (creature.js drawXray), each body cutting out whatever it stands in front of. One canvas the
+// size of the screen; only the box round what was drawn is cleared and blitted.
+let seeCanvas = null;
+const seeBox = [0, 0, 0, 0], seeLast = [0, 0, 0, 0];
+function drawSeeThrough(ctx, world, camT, hq, tx0, ty0, tx1, ty1) {
+  const st = G.settings, W = ctx.canvas.width, H = ctx.canvas.height;
+  const walls = st.wallLines === true && world.kind === 'dungeon' && !world.biome.overworld;
+  if (!xray.n && !walls) return;
+  if (!seeCanvas || seeCanvas.width !== W || seeCanvas.height !== H) { seeCanvas = makeCanvas(W, H); seeLast.fill(0); }
+  const oc = seeCanvas.getContext('2d'), box = seeBox;
+  oc.setTransform(1, 0, 0, 1, 0, 0);
+  if (seeLast[2] > seeLast[0]) oc.clearRect(seeLast[0], seeLast[1], seeLast[2] - seeLast[0], seeLast[3] - seeLast[1]);
+  oc.imageSmoothingQuality = hq;
+  box[0] = box[1] = Infinity; box[2] = box[3] = -Infinity;
+  const under = walls && drawWallBases(oc, world.map, camT, tx0, ty0, tx1, ty1);
+  if (under) { box[0] = box[1] = 0; box[2] = W; box[3] = H; }
+  drawXray(oc, camT, st.outlines !== false, box, under);
+  const x0 = Math.max(0, Math.floor(box[0]) - 2), y0 = Math.max(0, Math.floor(box[1]) - 2);
+  const x1 = Math.min(W, Math.ceil(box[2]) + 2), y1 = Math.min(H, Math.ceil(box[3]) + 2);
+  seeLast[0] = x0; seeLast[1] = y0; seeLast[2] = Math.max(x0, x1); seeLast[3] = Math.max(y0, y1);
+  if (x1 > x0 && y1 > y0) ctx.drawImage(seeCanvas, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
+}
+
+// Settings › wall outlines: a line along every wall's foot (the floor's edge against the void), where the hero has seen
+function drawWallBases(oc, map, camT, tx0, ty0, tx1, ty1) {
+  const { t, w, seen } = map;
+  oc.setTransform(camT);
+  oc.beginPath();
+  let n = 0;
+  const seg = (ax, ay, bx, by) => { oc.moveTo((ax - ay) * HW, (ax + ay) * HH); oc.lineTo((bx - by) * HW, (bx + by) * HH); n++; };
+  for (let y = ty0; y <= ty1; y++) for (let x = tx0; x <= tx1; x++) {
+    const i = y * w + x;
+    if (t[i] !== 1 || !seen[i]) continue;
+    if (!map.tile(x - 1, y)) seg(x, y, x, y + 1);
+    if (!map.tile(x + 1, y)) seg(x + 1, y, x + 1, y + 1);
+    if (!map.tile(x, y - 1)) seg(x, y, x + 1, y);
+    if (!map.tile(x, y + 1)) seg(x, y + 1, x + 1, y + 1);
+  }
+  if (!n) return false;
+  const z = camera.zoom;
+  oc.lineCap = oc.lineJoin = 'round';
+  oc.strokeStyle = 'rgba(0,0,0,0.75)'; oc.lineWidth = 3.5 / z; oc.stroke();
+  oc.strokeStyle = 'rgba(240,226,192,0.95)'; oc.lineWidth = 1.5 / z; oc.stroke();
+  return true;
 }
 
 /** The light falloff (alpha 1 at the centre to 0 at the rim), drawn with 'destination-out' to cut the darkness. */
@@ -1106,7 +1160,7 @@ function drawOverheadNames(ctx, world) {
   for (const c of world.creatures) {
     if (c.dead || !c.sbox) continue;
     if (c.rank === 'champion' || c.rank === 'unique') {
-      const x = (c.sbox[0] + c.sbox[2]) / 2, y = c.sbox[1] - 8;
+      const x = (c.sbox[0] + c.sbox[2]) / 2, y = c.barTop != null ? camera.toScreen(0, c.barTop)[1] - 3 : c.sbox[1] - 8; // above its life bar
       drawLabel(ctx, c.name, x * d, y * d, nameFont, c.rank === 'unique' ? '#ffc040' : '#80b0ff', 3 * d);
     }
   }
