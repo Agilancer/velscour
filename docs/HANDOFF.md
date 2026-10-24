@@ -14,6 +14,23 @@ Contents
 
 ---
 
+## October 23, 2026 — player requests: auto-play hands off the gear, +N gear kept, Sell all (branch `feat/autoplay-gear-sell-all`)
+- **Request (a player):** auto-play kept changing their equipment and sold a +8 ring: an option to turn that off. And
+  a Sell all button in the inventory with one confirmation (selling an Epic or better item asks every time).
+- **Settings › "Auto-play manages gear"** (`G.settings.autoGear`, default on, `gearOn()` in autoplay.js). Off: auto-play
+  never equips, sells, buys, drops, stashes, sockets, upgrades or enchants anything. In town it only visits the
+  alchemist (and still chats with Homunculus). It picks up loot while the bag has room, never drops gear to make room,
+  and goes to town only for potions or a full bag, where it waits for the player like it does for sealed treasures
+  (`bagWait`). Turning auto-play on says which mode it's in.
+- **+N gear is never sold or dropped** (`upgraded()`): `fitScore`'s freshness bonus (`ageGain`, up to +0.28) lets a
+  new ring replace an older upgraded one, and `sellJunk` then sold it; now `sellJunk`/`worstBag` skip it and the chest
+  stop stores it as a keeper (`autoStash: 'keep'`, `forChest`), so it only comes back out as an upgrade. A full chest
+  sells the gear auto-play stored with +N gear last, and now says so in the log.
+- **Sell all** (`Vendor.sellAll`, next to Sort while a vendor is open): every piece of gear in the bag after one
+  dialog with the count, the gold and a count per rarity. Gems, sealed treasures and equipped gear stay.
+- Test: `tools/tests/autogear.js [mobile]` (new); `autoplay.js <class> <min> handsoff` fails if the gear ever changes
+  and sells the bag's gear for the "player" when auto-play waits in town. The chest summary prints every 5 minutes.
+
 ## October 23, 2026 — cloud saves with Google sign-in (branch `feat/cloud-saves`)
 - **Request (user):** cloud saves via Google (Apple later). The user made the Firebase project `velscour` (Google
   sign-in on, `agilancer.github.io` authorized, Firestore with per-user rules) and gave the web config.
@@ -3850,7 +3867,11 @@ See the `open_issues` field.
   armorer, gem merchant (fuse triples, buy gems for empty sockets), jeweler (add sockets when it has spare gems),
   blacksmith (+1 upgrades by gain per gold), enchanter (add an affix), gambler (when gold > 8 gamble prices); then the
   portal. Budgets keep 10 healing potions' worth of gold in reserve. Selling keeps upgrades for the next 6 levels and
-  gems of the top tiers; it pries valuable gems out of gear it sells when unsocketing is cheap.
+  gems of the top tiers; it pries valuable gems out of gear it sells when unsocketing is cheap. Gear upgraded at the
+  blacksmith (+N) is never sold or dropped: the chest stop keeps it (`forChest`, `autoStash: 'keep'`).
+- **Hands off the gear** (Settings › "Auto-play manages gear", `G.settings.autoGear`): with it off, `optimizeGear`,
+  `socketGems` and `worstBag` do nothing, every town stop but the alchemist is skipped (`handsOff`, `idle`), and
+  `needTown` fires only for potions or a full bag (which waits in town for the player).
 - **Screens**: it clicks "Return to Town" on the death screen (after 2.5 s) and "Continue" on the victory screen.
 
 ### Tuning knobs

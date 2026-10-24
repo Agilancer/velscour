@@ -38,6 +38,7 @@ node tools/tests/stash.js                          # town storage chest: 300 slo
 node tools/tests/savesafe.js                       # unreadable saves never written over: set aside before the first save (localStorage or IndexedDB), downloadable, refused + warned when no room
 node tools/tests/cloud.js [nosdk]                  # cloud saves (Google sign-in + Firestore): 4 devices on a fake Firebase (push, pull, conflicts, tombstones, offline, backups + restore, lost/corrupt/damaged saves change nothing) + real SDK smoke
 node tools/tests/autoshop.js [classes] [rounds]     # auto-play wears everything it buys (none sold back), loot filter, keepers, chest sort
+node tools/tests/autogear.js [mobile]              # "Auto-play manages gear" off (potions only, full bag waits in town), +N gear to the chest, vendor Sell all
 node tools/tests/rarity.js [classes] [samples]     # gear rarity worth in item levels, level 25 Rare > level 10 Mythic, drop odds
 node tools/tests/ui.js                             # skill tree, inventory, socketing, vendors
 node tools/tests/options.js                        # settings: lock skill bar, hide item names, auto skill points off; skill tree Respec (50 gold x level^2)
@@ -107,7 +108,7 @@ node tools/tests/slimecourt.js [secs] [play]       # Slime Lord's court: 60 Glym
 node tools/tests/petanims.js [keys]                # pet atlases (docs/PET_SUMMON_ANIMATIONS.md): every summon in every state, dead poses, shots
 node tools/tests/pets.js [seeds]                   # minion pathing: round walls, keep up, fight round corners, leash, idle
 node tools/tests/select.js [mobile]                # hero select: one hero per class, play/new/delete, old duplicate saves
-node tools/tests/autoplay.js wizard 15 [mobile]    # auto-play soak: a new hero plays N game minutes at ~30x speed
+node tools/tests/autoplay.js wizard 15 [mobile] [handsoff]  # auto-play soak: a new hero plays N game minutes at ~30x speed (handsoff: gear never changes)
 node tools/tests/balance.js paladin,wizard 146 30  # a geared hero for depth D, auto-play: deaths, depths cleared (BAL_GEAR=3 weaker gear; 'god' 4th arg: DPS)
 node tools/tests/balance_model.mjs paladin         # no browser: hero life vs monster hits by depth (the curve in src/data/depth.js)
 node tools/tests/tuning.js all 1,10,40,160 12      # every class auto-plays vs training dummies: seconds per normal (one / pack of 5), class ratios (toughness, DMG_TUNE)

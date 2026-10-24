@@ -347,6 +347,7 @@ export function settingsDialog() {
     <label>Hide dropped item names</label><input type="checkbox" data-k="hideItemNames" ${st.hideItemNames ? 'checked' : ''}>
     <label>Lock skill bar (auto-play only fills empty slots)</label><input type="checkbox" data-k="lockSkillBar" ${st.lockSkillBar ? 'checked' : ''}>
     <label>Auto skill point assignment (auto-play)</label><input type="checkbox" data-k="autoSkillPoints" ${st.autoSkillPoints !== false ? 'checked' : ''}>
+    <label title="Off: auto-play never equips, sells, buys, stashes, sockets, upgrades or enchants gear; in town it only buys potions, and waits there when the bag is full">Auto-play manages gear (equip, sell, buy, upgrade)</label><input type="checkbox" data-k="autoGear" ${st.autoGear !== false ? 'checked' : ''}>
   </div>`;
   const d = UI.dialog({ title: 'Settings', html, buttons: [{ label: 'Done', fn: () => { camera.computeZoom(); saveSettings(); } }] });
   d.box.querySelector('select').value = String(st.gore);
