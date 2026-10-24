@@ -28,6 +28,7 @@ export const G = {
     lockSkillBar: false, // auto-play only fills empty bar slots
     hideItemNames: false, // no item name labels on the ground (hover still shows one)
     autoSkillPoints: true, // auto-play spends skill points
+    autoGear: true, // auto-play equips, sells, buys, stashes and upgrades gear (off: hands off, potions only)
   },
 };
 

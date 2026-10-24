@@ -295,6 +295,13 @@ export function renderInventory(body) {
   const sortBtn = el('button', 'btn small', 'Sort');
   sortBtn.onclick = () => { sortBag(); sfx('ui'); };
   info.appendChild(sortBtn);
+  if (G.ui.vendor && G.ui.vendor.active) {
+    const sellAll = el('button', 'btn small', 'Sell all');
+    sellAll.title = 'Sell every piece of gear in your bag (gems and sealed treasures are kept). Asks once.';
+    sellAll.disabled = !c.bag.some((b) => b && b.type === 'gear' && !b.sealed);
+    sellAll.onclick = () => { sfx('ui'); G.ui.vendor.sellAll(); };
+    info.appendChild(sellAll);
+  }
   mid.appendChild(info);
   wrap.appendChild(mid);
   wrap.appendChild(statsBlock());
