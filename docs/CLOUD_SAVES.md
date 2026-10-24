@@ -14,8 +14,13 @@ The code is `src/game/cloud.js` and `src/game/herobackup.js`, the screens are in
    (`deleteSave`/`deleteClassSaves` report the ids; `st.deleted`). A hero gone from the cloud counts as deleted only
    when a tombstone names it (`{ deleted: true, id }`; documents are never removed). Otherwise the missing side gets
    a copy back. So wiped or corrupt saves, or a lost cloud document, can never spread a deletion.
-3. **Unreadable saves stop the sync.** If `velscour_saves_v1` exists but doesn't parse (`savesReadable()`), the sync
-   changes nothing, here or in the cloud, and `replaceClassHero` refuses to write.
+3. **Unreadable saves are never written over.** If `velscour_saves_v1` exists but doesn't parse or isn't a list
+   (`savesReadable()`), the sync changes nothing, here or in the cloud, and `replaceClassHero` refuses to write. The
+   game's own saving is guarded too (`writeAll` in save.js, for every player): before the first new save replaces
+   them, the unreadable text is set aside under `velscour_saves_v1_unreadable_<time>` (or in IndexedDB's `raw` store
+   when localStorage is full; a copy that then crowds out the save moves there). Until a copy exists, every save is
+   refused and the player is warned. The title explains, and Settings > Hero backups downloads the data. A signed-in
+   player's heroes then come back from the cloud (rule 2). Test: `tools/tests/savesafe.js`.
 4. **Damaged cloud copies aren't loaded.** A cloud hero must unpack and match its record (id, class, lastPlayed,
    level, equip, bag) before it can replace anything (`unpackChecked`).
 5. **A failed local write isn't counted as synced**, so the old copy can't later be sent over a newer cloud one.

@@ -6,7 +6,7 @@ import { sfx, applyVolumes, initAudio } from '../core/audio.js';
 import { CLASS_IDS, A } from '../core/assets.js';
 import { CLASSES, ATTRS } from '../data/classes.js';
 import { UI, $ } from './ui.js';
-import { listSaves, heroesByClass, deleteClassSaves, classSaves, writeSave } from '../game/save.js';
+import { listSaves, heroesByClass, deleteClassSaves, classSaves, writeSave, savesReadable, unreadableSaves } from '../game/save.js';
 import { backupHeroes, listBackups } from '../game/herobackup.js';
 import { heroCanvas, excitable, preloadPortraits } from './heroanim.js';
 import { savedGearPreview } from '../core/gearart.js';
@@ -69,7 +69,15 @@ export function titleScreen() {
   Cloud.flush();
   Cloud.sync();
   if (Cloud.conflicts.size) conflictDialogs();
+  if (!unreadableNoted && !savesReadable()) {
+    unreadableNoted = true;
+    UI.dialog({ title: 'Saved heroes unreadable', html: `<p>The heroes saved in this browser could not be read. VELSCOUR will not write over them: before anything new is saved, the old data is set aside.</p><p class="dim">Settings &gt; Hero backups can download it, so it can be recovered.${Cloud.signedIn ? ' Heroes in your Google cloud save come back on their own once the next save is made.' : ''}</p>`, buttons: [{ label: 'OK' }] });
+  }
 }
+let unreadableNoted = false;
+if (typeof addEventListener === 'function') addEventListener('velscour-save-blocked', () => {
+  UI.dialog({ title: 'Not saving', html: '<p>The heroes saved in this browser could not be read, and there was no room to set them aside, so the game is not saving over them. Free some browser storage (or use another browser) and reload.</p>', buttons: [{ label: 'OK' }] });
+});
 
 // ------------------------------------------------------------ cloud saves (game/cloud.js)
 const ago = (t) => {
@@ -119,11 +127,27 @@ const WHY = { cloud: 'replaced by the cloud copy', deleted: 'deleted on another 
 export function backupsDialog() {
   const d = UI.dialog({ title: 'Hero Backups', html: '<p class="dim">Loading…</p>', buttons: [{ label: 'Done' }], cls: 'backups-dialog' });
   const body = d.box.querySelector('.dlg-body');
-  listBackups().then((list) => {
+  Promise.all([listBackups().catch(() => null), unreadableSaves()]).then(([list, raws]) => {
     if (!d.box.isConnected) return;
-    if (!list.length) { body.innerHTML = '<p>No backups yet. Whenever cloud sync replaces or deletes a hero on this device, the old one is kept here.</p>'; return; }
+    if (!list && !raws.length) { body.innerHTML = '<p>Backups can\'t be opened in this browser.</p>'; return; }
+    list = list || [];
+    if (!list.length && !raws.length) { body.innerHTML = '<p>No backups yet. Whenever cloud sync replaces or deletes a hero on this device, the old one is kept here.</p>'; return; }
     body.innerHTML = `<p class="dim" style="font-size:12px">${G.mode === 'game' ? 'Return to the title screen to restore a hero.' : 'Restoring makes that copy the class\'s hero; the one it replaces is backed up too.'}</p><div class="backup-list"></div>`;
     const box = body.querySelector('.backup-list');
+    for (const r of raws) {   // unreadable save data set aside by save.js: download it for recovery
+      const row = el('div', 'backup-row', `<span><b>Unreadable saved heroes</b> · ${fmtInt(Math.ceil(r.text.length / 1024))} KB<br><span class="dim">set aside before a new save · ${new Date(r.at).toLocaleString()}</span></span>`);
+      const btn = el('button', 'btn small', 'Download');
+      btn.onclick = () => {
+        sfx('ui');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([r.text], { type: 'application/json' }));
+        a.download = `velscour-unreadable-saves-${new Date(r.at).toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+      };
+      row.appendChild(btn);
+      box.appendChild(row);
+    }
     for (const b of list) {
       const h = b.hero, C = CLASSES[b.cls];
       const row = el('div', 'backup-row', `<span><b>${escapeHtml(h.name)}</b> · ${C ? C.name : escapeHtml(b.cls)} · Lv ${h.level} · Depth ${h.depth} · ${fmtInt(h.gold || 0)} gold<br><span class="dim">${WHY[b.why] || escapeHtml(b.why)} · ${new Date(b.at).toLocaleString()}</span></span>`);
@@ -142,7 +166,7 @@ export function backupsDialog() {
       row.appendChild(btn);
       box.appendChild(row);
     }
-  }).catch(() => { if (d.box.isConnected) body.innerHTML = '<p>Backups can\'t be opened in this browser.</p>'; });
+  }).catch((e) => { console.warn(e); if (d.box.isConnected) body.innerHTML = '<p>Backups can\'t be opened in this browser.</p>'; });
   return d;
 }
 
@@ -307,7 +331,7 @@ export function settingsDialog() {
   const st = G.settings;
   const html = `<div class="settings-grid">
     <label>Cloud save (Google account)</label><button class="btn small" data-cloud></button>
-    <label>Hero backups (kept by cloud sync)</label><button class="btn small" data-backups>View</button>
+    <label>Hero backups</label><button class="btn small" data-backups>View</button>
     <label>Sound effects</label><input type="range" min="0" max="1" step="0.05" value="${st.sfx}" data-k="sfx">
     <label>Music</label><input type="range" min="0" max="1" step="0.05" value="${st.music}" data-k="music">
     <label>Ambience</label><input type="range" min="0" max="1" step="0.05" value="${st.amb ?? 0.5}" data-k="amb">

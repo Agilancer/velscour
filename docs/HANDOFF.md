@@ -28,6 +28,10 @@ Contents
   deleted it (tombstones in the cloud, `st.deleted` here), otherwise it's copied back; unreadable local saves and
   damaged cloud copies change nothing; a failed local write isn't counted as synced. The rules are in
   docs/CLOUD_SAVES.md.
+- **Follow-up (user):** guard the game's own saving: unreadable saves (truncated, not a list) were overwritten by the
+  next autosave. Now `writeAll` sets the old text aside first (`velscour_saves_v1_unreadable_<time>`, or IndexedDB's
+  `raw` store when localStorage is full) and refuses to save until a copy exists (a "Not saving" warning); the title
+  explains, Settings > Hero backups downloads it. New `savesafe.js` (12 checks).
 - **Tests:** new `cloud.js` (4 devices on a fake Firebase: 43 checks, including lost, corrupt, damaged, no-IndexedDB
   and restore cases; the real SDK loads and Firestore denies a signed-out read), `flow`, `mobile`, `hud`, `options`,
   `select`, `stash`. (`options.js` and `select.js` can time out when six browser tests run at once; `main` does the
