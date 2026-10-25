@@ -12,6 +12,7 @@ import { titleScreen } from './ui/screens.js';
 import { Cloud } from './game/cloud.js';
 import { Vendor } from './ui/vendor.js';
 import { Stash } from './ui/stash.js';
+import { Reliquary } from './ui/reliquary.js';
 import { game } from './game/game.js';
 import { dropBakes } from './game/render.js';
 import { controls } from './game/controls.js';
@@ -138,6 +139,7 @@ async function boot() {
   UI.init();
   UI.vendor = Vendor;
   UI.stash = Stash;
+  UI.reliquary = Reliquary;
   window.addEventListener('error', (e) => reportError(e.error || e.message));
   window.addEventListener('unhandledrejection', (e) => reportError(e.reason));
   window.addEventListener('beforeunload', () => { if (G.char) game.autosave(); });

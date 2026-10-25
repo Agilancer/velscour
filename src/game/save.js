@@ -1,6 +1,6 @@
 // LocalStorage persistence for heroes.
 import { CLASSES } from '../data/classes.js';
-import { rollItem } from '../data/items.js';
+import { rollItem, HOLLOW } from '../data/items.js';
 import { drawBiome } from '../data/biomes.js';
 import { migrateBar, BAR_SIZE } from '../data/bar.js';
 import { stashRaw, listRaw } from './herobackup.js';
@@ -159,6 +159,9 @@ export function migrate(c) {
   if (c.classId === 'barbarian') c.rage = Math.max(0, Math.min(100, Number(c.rage) || 0));
   c.homunculus = c.homunculus || { talks: 0, chapter: 0, told: [], recap: [] }; // the blacksmith's axe story (game/homunculus.js)
   c.mastery = c.mastery || {}; // skill mastery: {skillId: [level 1-1000, xp]}
+  c.comm = c.comm || { open: [], done: [] }; // Town Commissions (game/commissions.js)
+  // plain (Common) gear takes more sockets now, as Glyphword bases (data/items.js HOLLOW)
+  for (const it of [...Object.values(c.equip || {}), ...(c.bag || []), ...(c.stash || [])]) if (it && it.type === 'gear' && it.rarity === 0 && !it.relic && HOLLOW[it.slot] > (it.maxSockets || 0)) it.maxSockets = HOLLOW[it.slot];
   // Sky Battle cut scenes watched ('<story or base>:<scene>'): seen ones play at 20x. A hero who fought one before this
   // was kept has seen the weathers' scenes.
   if (!c.skySeen) c.skySeen = c.lastSkyVariant ? Object.fromEntries(['intro', 'mid', 'parley', 'hooks', 'victory'].map((n) => [`base:${n}`, 1])) : {};

@@ -14,6 +14,47 @@ Contents
 
 ---
 
+## October 25, 2026 — Heirlooms, Covenants, Sigils and Glyphwords; the Reliquary; Town Commissions; Velscour's last stand (branch `feat/loot-codex-velscour-finale`)
+- **Request (user, from a player's comment):** Diablo II style uniques, sets and runewords under new names, a larger
+  long-term stash / collection, long-form quest lines from town that add objectives when you reach a biome, a much more
+  interesting final fight with Velscour (5-10 minutes), and "final boss" in the skull's message box to jump straight to it.
+  Approved from mockups (`tools/tests/out/proposal/`, not committed) before building.
+- **Done:**
+  - **Sigil Stones** (D2 runes): the `sig` gem, its tier the rank (20: Ash ... Thane), a stat by slot (weapon / armor /
+    ring) about 1.4x one stat of the best gem of its depth; rank r drops from depth 24 r (rare from normals, 45% from
+    guardians, 25% rare chests); three fuse into the next rank at the Gem Forge (`sigilFuseCost`, no refining).
+  - **Glyphwords** (runewords): 18 recipes in `src/data/relics.js`. Sigils in order in a plain (Common) item with exactly
+    that many sockets; Commons now take up to 6/4/3 sockets by slot (`HOLLOW`, save migration bumps old ones).
+    Recognised live by `glyphOf` (pry the stones out and it's plain again). Recipes are always shown (Codex, Sigil tooltips).
+  - **Heirlooms** (uniques): 36, fixed lines + a power, 2 sockets; a quarter of Legendary/Mythic drops and an eighth of
+    Epics (when one exists for the slot/level). **Covenants** (sets): 6 sets x 5 pieces, bonuses at 2/3/4 pieces and a
+    power at 5, scaled by the lowest piece's level; one in 25 Rare+ drops, x3 from BOSS ROOMs. Powers reuse the
+    legendary flags and new procs (`src/game/relicprocs.js`: pillar, meteor, stars, nova, chain, heal, consecrate).
+  - **Balance** (`relic_balance.js`, paladin/wizard/ranger at H 60/120/200): Heirloom ~13.5 item levels over a Common
+    (Legendary 13.6, Mythic 15.6), Covenant piece ~8.4 (Epic 7.9), a full set about five Mythics. `TUNE` in relics.js.
+  - **The Reliquary**: a second chest by the well; 6 vault tabs x 96 shared by every hero (localStorage, not the hero
+    save); tabs open at 25%/80% of the Codex and after 1 and 3 finished commission lines. **Codex**: every Heirloom,
+    Covenant piece, Glyphword and Sigil any hero found; 40%/60% give every hero +3%/+5% magic find, 100% a title.
+  - **Town Commissions**: 6 lines, 25 chapters (`src/game/commissions.js`); up to 3 open, offered on arriving in town
+    by depth reached; relic chapters place glowing objects in a level of the named biome, elite/raid/clear chapters
+    count kills or clears there; the three-portal choice favours a waiting biome (and auto-play picks it). Chapter
+    rewards: gold, two Sigils, often a Covenant piece; a finished line: a Heirloom. Quest Log section.
+  - **Velscour** (`src/game/velscour.js`): five phases (Throne; Four Seals with Wardens and flame walls; Crown of
+    Hellfire with a lava tide, Doom Brand, Mirror of Sin; Into the Abyss with Heart Shards, shades, lanterns and the
+    dark; True Form with APOCALYPSE safe circles, then bound to the four obelisks at 10%). Life gates + a damage cap
+    (`PACE`, applied in combat.hit via `absorb`) keep it 5+ minutes for anyone; `HP_MUL` 2. The arena
+    seals. Executes at 15:00; `DMG_MUL` 0.7. Without god mode (`velscour_real.js`, depth-500 gear) paladins and wizards won
+    6/7 in 6-8 min, rangers 3/5 in 8-12 min. A real win drops a Heirloom, a Covenant piece and a deep Sigil. "final boss" (or "velscour") in the skull's
+    box: `game.finalBoss()`, the throne at the hero's depth (`world.practice`: no victory screen, no relic hoard).
+  - **Auto-play**: commission objects, Glyphwords at the jeweler (`glyphwork`), relics are kept (never sold), the
+    Velscour arena counts as sealed, and his hazards expose `danger`/`safeAt`/`autoGoal`.
+- **Verified:** `relics.js`, `relic_balance.js`, `velscour.js` (auto-play beat him at depth 500 in 7.0 min, every
+  phase), plus the regression list in the PR.
+- **Design calls made without asking:** relic numbers scale with item level (unlike D2's fixed items) so they last 500
+  depths; Glyphword recipes are public; practice fights scale to the hero's depth; relics go to the storage chest
+  instead of being sold; happenings are off in the throne.
+- **Not verified:** real phones; the Reliquary's touch layout only by CSS.
+
 ## October 25, 2026 — mobile long-session sweep: leaks, canvas churn, autosave freeze, frame cap (branch `perf/mobile-long-session`)
 - **Request (user):** a thorough bug check and graphics optimisation, especially on mobile: "really bad frame rate drops,
   especially after 30+ minutes of play".

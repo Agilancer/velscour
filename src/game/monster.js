@@ -1106,6 +1106,7 @@ export class Monster extends Creature {
 
   // ------------------------------------------------------------------ bosses
   bossUpdate(dt) {
+    if (this.vel && this.vel.holdBoss()) return; // Velscour hovering, hidden or bound (game/velscour.js)
     const w = this.world, p = w.player;
     if (!p || p.dead) return this.idle(dt);
     const t = this.pickTarget() || p;

@@ -5,6 +5,7 @@ import { UI } from './ui.js';
 import { BIOME_BY_ID } from '../data/biomes.js';
 import { isRaidDepth } from '../world/dungeon.js';
 import { FINAL_DEPTH } from '../data/depth.js';
+import { commissionsHtml } from '../game/commissions.js';
 
 const step = (done, html) => `<div class="q-step${done ? ' done' : ''}"><i>${done ? '&#10004;' : '&#9670;'}</i><span>${html}</span></div>`;
 const nextRaid = (d) => { let n = Math.max(5, Math.ceil(d / 5) * 5); if (n === FINAL_DEPTH) n += 5; return n; };
@@ -110,6 +111,7 @@ export function renderQuest(body) {
   }
   h += '</div>';
   const deepest = c.deepest || 0, pctV = Math.min(100, deepest / FINAL_DEPTH * 100);
+  h += commissionsHtml(c, w, step);
   h += `<div class="q-sec"><h3>The Great Quest</h3><div class="q-title">Slay Demon Lord Velscour at Depth ${FINAL_DEPTH}</div>`;
   h += `<div class="q-bar"><div style="width:${pctV}%"></div><span>Deepest depth cleared: ${deepest} / ${FINAL_DEPTH}</span></div>`;
   if (deepest >= FINAL_DEPTH) h += step(true, 'Velscour has fallen. The Endless Torment goes on below.');

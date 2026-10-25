@@ -23,6 +23,9 @@ import { freeSlot } from '../data/bar.js';
 import { bardCompose, bardUpdate, harmonyMul } from './bard.js';
 import { ASTRONOMER, astroAfterCast, astroUpdate } from './astronomer.js';
 import { sigCast, sigHit, sigUpdate } from './signature.js';
+import { relicBonuses } from '../data/relics.js';
+import { relicProc } from './relicprocs.js';
+import { noteFind, codexMf } from './reliquary.js';
 
 // XP for the next level. The (L/30)^1.5 term paces a hero who clears every depth to stay ~10-50 levels above its
 // monsters and reach ~270 by Velscour (depth 500, monster level 258); without it a full-clearing hero hit level 300
@@ -86,6 +89,10 @@ export class Player extends Creature {
       if (slot === 'weapon') weapon = it;
       if (it.legendary) legendary[it.legendary] = true;
     }
+    // Heirloom, Covenant and Glyphword powers and set bonuses (data/relics.js)
+    const rb = relicBonuses(c.equip);
+    for (const [k, v] of rb.stats) put(k, v);
+    Object.assign(legendary, rb.legs);
     // buffs
     let buffDmg = 0, buffAs = 0, buffArmor = 0, buffRes = 0, buffRegen = 0, buffSpeed = 0, buffCrit = 0, buffThorns = 0, buffLeech = 0, buffBlock = 0, buffLife = 0, buffCdr = 0, buffProj = 0;
     let buffReduce = 0, buffMf = 0, buffGf = 0, buffXp = 0;
@@ -98,11 +105,11 @@ export class Player extends Creature {
     }
     // Defiance (deaths in this five-depth block) and the town's blessing (game/defiance.js)
     const hb = heroBonus(c);
-    buffDmg += hb.dmg; buffLife += hb.life; buffReduce += hb.reduce; buffMf += hb.mf; buffGf += hb.gf; buffXp += hb.xp;
+    buffDmg += hb.dmg; buffLife += hb.life; buffReduce += hb.reduce; buffMf += hb.mf + (this.codexMf = codexMf()); buffGf += hb.gf; buffXp += hb.xp;
     const attr = (k) => c.attrs[k] + (add[k] || 0) + (add.allAttr || 0);
     const str = attr('str'), dex = attr('dex'), vit = attr('vit'), int = attr('int');
     const st = {
-      str, dex, vit, int, legendary,
+      str, dex, vit, int, legendary, procs: rb.procs,
       armor: Math.round((itemArmorSum + (add.armor || 0) + str) * (1 + ((add.armorPct || 0) + buffArmor) / 100)),
       res: {
         fire: (add.resFire || 0) + (add.resAll || 0) + buffRes,
@@ -414,6 +421,7 @@ export class Player extends Creature {
     }
     this.mana -= cost;
     if (this.st.legendary.surge && chance(0.15)) { this.mana += cost; sparkle(this.x, this.y, 30, '#c060ff', 6, 0.3); }
+    if (this.st.procs.length) relicProc(this, 'cast', target && !target.dead ? target : null, 0);
     const spd = sk.attack ? this.st.atkSpeed : this.st.castSpeed;
     this.castLock = useTime(sk) / (1 + spd / 100);
     this.cooldowns[sk.id] = cooldown(sk) * (1 - this.st.cdr / 100) * quick;
@@ -461,6 +469,7 @@ export class Player extends Creature {
     if (this.st.legendary.hammer && !(this.classId === 'barbarian' && o.sk === 'barbarian.0.0') && ++this.hitCounter % 6 === 0) {
       this.world.addHazard(new Orbit({ world: this.world, src: this, n: 1, radius: 1.6, dur: 2.5, spiral: true, fx: 'hammer', el: 'holy', dmg: [dmg * 0.5, dmg * 0.7], o: {}, speed: 5 }));
     }
+    if (!o.proc && this.st.procs.length) relicProc(this, 'hit', tgt, dmg);
   }
 
   // ------------------------------------------------------------------ gear look
@@ -636,6 +645,7 @@ export class Player extends Creature {
 
 /** Put an item in the first free bag slot (gems stack). */
 export function addToBag(c, item) {
+  if (c === G.char) noteFind(item); // the Codex (game/reliquary.js) records relics and Sigils as they come in
   if (item.type === 'gem') {
     const same = c.bag.find((b) => b && b.type === 'gem' && b.gem === item.gem && b.tier === item.tier);
     if (same) { same.count = (same.count || 1) + (item.count || 1); return true; }

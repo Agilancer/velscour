@@ -75,6 +75,8 @@ import { startTownLife } from './townlife.js';
 import { toggleInventory } from '../ui/inventory.js';
 import { toggleTree, toggleBook } from '../ui/skills.js';
 import { toggleQuest } from '../ui/quest.js';
+import { setupVelscour } from './velscour.js';
+import { offerCommissions, setupCommissions, commissionClear, wantedBiomes, LINE_BY_ID, commState } from './commissions.js';
 import { titleScreen, hide as hideScreen, deathScreen, victoryScreen, pauseMenu, helpDialog } from '../ui/screens.js';
 
 const PICK_WAIT = 8; // seconds auto-play gives the player to choose a portal down (portalChoice)
@@ -281,8 +283,13 @@ export const game = {
       let [x, y] = [t.start[0] + 1.5, t.start[1] - 0.5];
       if (!t.map.walkable(x, y)) [x, y] = t.map.randomNear(t.start[0], t.start[1], 2.5);
       world.npcs.push({ stash: true, name: 'Storage Chest', x, y, reach: 1.6, flip: false, use: () => Stash.open() });
+      // the Reliquary, the vault every hero shares (ui/reliquary.js), on the well's other side
+      let [rx, ry] = [t.start[0] - 1.5, t.start[1] - 0.5];
+      if (!t.map.walkable(rx, ry) || Math.hypot(rx - x, ry - y) < 1.5) [rx, ry] = t.map.randomNear(t.start[0] - 1, t.start[1], 2.5);
+      world.npcs.push({ stash: true, reliquary: true, name: 'The Reliquary', x: rx, y: ry, reach: 1.6, flip: false, use: () => G.ui.reliquary.open() });
     }
     c.townVisitCount = (c.townVisitCount || 0) + 1;
+    offerCommissions(c); // Town Commissions (game/commissions.js)
     // the townsfolk, visiting adventurers, little set pieces and (about one visit in four) a special event
     const life = startTownLife(world, t, c, c.townVisitCount);
     void preloadTownSheets(life.agents.map((a) => a.townsfolkSpriteId));
@@ -351,6 +358,9 @@ export const game = {
             G.char.skyVariant = SKY_ALL.find((v) => v.id === want || v.weather.toLowerCase().includes(want || '#') || v.name.toLowerCase().includes(want || '#'))?.id;
             close();
             this.teleportToBiome(BIOME_BY_ID.skyship);
+          } else if (['final boss', 'finalboss', 'velscour'].includes(message.trim().toLowerCase())) {
+            close();
+            this.finalBoss(); // straight into Velscour's arena, scaled to this depth
           } else if (message.trim().toLowerCase() === 'tower') {
             close();
             this.teleportToBiome(BIOME_BY_ID.serpentine_tower);
@@ -383,6 +393,19 @@ export const game = {
         } },
       ],
     });
+  },
+
+  /** The skull's "final boss": Velscour's throne at the hero's depth, the hero set down inside his arena. */
+  async finalBoss() {
+    await this.teleportToBiome(BIOME_BY_ID.throne);
+    const w = G.world, p = G.player;
+    if (!w || !w.velscour || !p) return;
+    const [x, y] = w.map.nudge(22.5, 26.5, 0.4);
+    p.x = x; p.y = y; p.path = null; p.moveTarget = null; p.attackTarget = null;
+    for (const s of w.creatures) if (s.team === 'player' && s !== p) [s.x, s.y] = w.map.randomNear(x, y, 1.5);
+    w.map.reveal(x, y, 30);
+    camera.follow(x, y, 0, true);
+    UI.log(`<b style="color:#ff4020">Velscour answers.</b> ${w.practice ? `This is a practice fight at Depth ${w.depth}: no victory, no relic hoard, but every phase of the real one.` : 'This is the real thing.'}`, '#ffb0a0');
   },
 
   async teleportToBiome(biome) {
@@ -503,6 +526,7 @@ export const game = {
     ];
     // monsters
     const lvl = depthLevel(depth);
+    world.practice = biome.id === 'throne' && depth !== FINAL_DEPTH; // "final boss" from the skull: Velscour at this depth
     for (const s of greedPacks(gen.spawns, greedOf(c))) { // the Greed lever: bigger packs, champion leaders (game/greed.js)
       if (s.rank === 'raid') {
         const m = makeRaidBoss(world, gen.raid, depth, lvl + 3);
@@ -515,6 +539,7 @@ export const game = {
         const m = makeMonster(world, s.arch, biome, lvl + 2, 'boss', s.x, s.y, 0, s.look);
         world.add(m);
         world.boss = m;
+        if (m.isVelscour) setupVelscour(world, m, gen); // his five-phase last stand (game/velscour.js)
         continue;
       }
       const n = s.n;
@@ -532,7 +557,8 @@ export const game = {
       }
     }
     world.roster = [...new Set(gen.spawns.filter((s) => s.arch && !['raid', 'boss'].includes(s.rank)).map((s) => s.arch))];
-    if (!sky) setupHappenings(world, gen.start, gen); // omens, shrines, treasure imps, cursed chests (game/happenings.js)
+    if (!sky && biome.id !== 'throne') setupHappenings(world, gen.start, gen); // omens, shrines, treasure imps, cursed chests (game/happenings.js)
+    setupCommissions(world, gen.start); // this depth's Town Commission objectives (game/commissions.js)
     greedWorld(world, c); // the Greed lever and its Hoard multiply the omen's loot dials
     tickBlessing(c);
     world.onBossAwake = (m) => {
@@ -552,7 +578,7 @@ export const game = {
       sfx('gate');
       UI.refresh();
       this.autosave();
-      if (m.isVelscour) setTimeout(() => victoryScreen(() => {}), 3200);
+      if (m.isVelscour && !world.practice) setTimeout(() => victoryScreen(() => {}), 3200);
     };
     if (sky) {   // the Sky Battle (game/skybattle.js): one of eight weathers or thirty stories, never the last one twice
       world.overworldScenario = createSkyBattle(world, gen, biome, depth, { variant: c.skyVariant, last: c.lastSkyVariant, seen: c.skySeen || {} }, () => {
@@ -680,15 +706,20 @@ export const game = {
   portalChoice(world, opts = {}) {
     if (this.pick) return;
     const c = G.char, next = world.depth + 1;
-    const cards = biomeChoices(c, next, 3).map((id) => {
+    const ids = biomeChoices(c, next, 3);
+    // a Town Commission waiting for a biome: its portal turns up among the three more often (game/commissions.js)
+    const want = wantedBiomes(c).filter((id) => BIOME_BY_ID[id] && !ids.includes(id) && id !== c.lastBiome);
+    if (want.length && ids.length && next !== FINAL_DEPTH && Math.random() < 0.4) ids[ids.length - 1] = want[Math.floor(Math.random() * want.length)];
+    const cards = ids.map((id) => {
       const biome = BIOME_BY_ID[id] || BIOME_BY_ID.catacombs;
-      return { id: biome.id, biome, omen: omenable(next, biome) ? rollOmen(next) : undefined };
+      const comm = commState(c).open.find((e) => { const ch = LINE_BY_ID[e.id] && LINE_BY_ID[e.id].chapters[e.ch]; return ch && ch.biome === biome.id; });
+      return { id: biome.id, biome, omen: omenable(next, biome) ? rollOmen(next) : undefined, comm: comm && LINE_BY_ID[comm.id].name };
     });
     let sel = 0, chosen = false;
     const tag = (cd) => (cd.biome.id === 'throne' ? '<b style="color:#ff4020">Demon Lord Velscour awaits</b>' : cd.biome.id === 'skyship' ? 'Sky battle' : cd.biome.overworld ? 'Overworld trial' : isRaidDepth(next) ? '<b style="color:#ff6030">BOSS ROOM</b>' : 'Dungeon');
     const omenLine = (cd) => (cd.omen === undefined ? '' : cd.omen ? `<span class="pc-omen" style="color:${OMENS[cd.omen].color}"><b>${OMENS[cd.omen].name}</b>${OMENS[cd.omen].text}</span>` : '<span class="pc-omen dim"><b>No omen</b>A quiet depth.</span>');
     const html = `<p class="dim">${cards.length > 1 ? `Depth ${next} lies beyond ${['', 'one', 'two', 'three'][cards.length]} portals. Choose your way down.` : `The way down opens onto Depth ${next}.`}</p>
-      <div class="pc-row">${cards.map((cd, i) => `<button type="button" class="pc-card${i === sel ? ' sel' : ''}" data-i="${i}" style="--pc:${cd.biome.torch || '#ff8040'}"><i class="pc-swirl"></i><b class="pc-name">${escapeHtml(cd.biome.name)}</b><span class="pc-tag">${tag(cd)}</span>${omenLine(cd)}</button>`).join('')}</div>
+      <div class="pc-row">${cards.map((cd, i) => `<button type="button" class="pc-card${i === sel ? ' sel' : ''}" data-i="${i}" style="--pc:${cd.biome.torch || '#ff8040'}"><i class="pc-swirl"></i><b class="pc-name">${escapeHtml(cd.biome.name)}</b><span class="pc-tag">${tag(cd)}</span>${cd.comm ? `<span class="pc-omen" style="color:#8fe0ff"><b>Commission</b>${escapeHtml(cd.comm)}</span>` : ''}${omenLine(cd)}</button>`).join('')}</div>
       <p class="pc-auto"></p>`;
     const go = (town) => {
       this.pick = null;
@@ -710,7 +741,7 @@ export const game = {
       if (this.pick) this.pick.t = Math.min(this.pick.t, 3); // auto-play goes where it was told, after a moment
     }));
     // auto-play's own pick: a portal with an omen (more to see, and most of them pay), else any
-    const autoPick = () => { const o = cards.map((cd, i) => (cd.omen ? i : -1)).filter((i) => i >= 0); return o.length ? o[Math.floor(Math.random() * o.length)] : Math.floor(Math.random() * cards.length); };
+    const autoPick = () => { const k = cards.findIndex((cd) => cd.comm); if (k >= 0) return k; const o = cards.map((cd, i) => (cd.omen ? i : -1)).filter((i) => i >= 0); return o.length ? o[Math.floor(Math.random() * o.length)] : Math.floor(Math.random() * cards.length); };
     this.pick = {
       t: PICK_WAIT, el: d.box.querySelector('.pc-auto'), last: '',
       choose: () => { d.close(); if (!chosen) sel = autoPick(); go(opts.auto ? opts.town : Auto.needTown()); },
@@ -736,6 +767,7 @@ export const game = {
   /** A cleared depth: if it ends the Defiance block, the stacks are spent (and say so). */
   brokeThrough(depth) {
     const c = G.char, had = c.defiance && c.defiance.n;
+    commissionClear(G.world);
     greedCleared(G.world, c); // the Greed lever pays into the Hoard (game/greed.js)
     if (!clearDefiance(c, depth)) return;
     if (G.player) G.player.recompute();

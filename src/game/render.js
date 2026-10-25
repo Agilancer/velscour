@@ -428,8 +428,12 @@ function drawCorpse(ctx, c) {
 
 function drawNpc(ctx, n) {
   if (n.stash) {
-    drawChest(ctx, { x: n.x, y: n.y, rare: true, opened: !!(G.ui.stash && G.ui.stash.active) });
     const x = isoX(n.x, n.y), y = isoY(n.x, n.y);
+    if (n.reliquary) { // a golden glow round the vault every hero shares
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + Math.sin(G.time * 2) * 0.12;
+      ctx.drawImage(glowSprite('#ffd070'), x - 40, y - 46, 80, 64); ctx.restore();
+    }
+    drawChest(ctx, { x: n.x, y: n.y, rare: true, opened: !!(n.reliquary ? G.ui.reliquary && G.ui.reliquary.active : G.ui.stash && G.ui.stash.active) });
     n.sbox = [x - 24, y - 40, x + 24, y + 6];
     return;
   }

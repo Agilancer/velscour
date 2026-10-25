@@ -244,13 +244,71 @@ export const GEMS = {
   titan: { name: 'Titan Heart', color: '#c06030', special: true, stats: [['areaPct', 4]], desc: 'Bigger areas' },
   seeker: { name: 'Seeker\'s Eye', color: '#40ffc0', special: true, stats: [['homing', 0.34], ['projSpeed', 5]], desc: 'Homing projectiles' },
   classgem: { name: 'Tear of the Ancients', color: '#ffe0a0', special: true, stats: [['skillsAll', 0.34]], desc: '+Skill levels' },
+  // Sigil Stones (the 'sig' gem; its tier is the rank, 0-19): what a stone gives depends on the slot it sits in, and
+  // set in the right order in a plain item they write a Glyphword (data/relics.js). Three fuse into the next rank.
+  sig: { name: 'Sigil Stone', color: '#ffd88a', sigil: true, stats: [] },
 };
 const GEM_KEYS = Object.keys(GEMS);
-const NORMAL_GEMS = GEM_KEYS.filter((k) => !GEMS[k].special);
+const NORMAL_GEMS = GEM_KEYS.filter((k) => !GEMS[k].special && !GEMS[k].sigil);
 const SPECIAL_GEMS = GEM_KEYS.filter((k) => GEMS[k].special);
 
-export function gemStats(gem, tier) {
+// ---------------------------------------------------------------- Sigil Stones
+// w: in a weapon, a: in armor (head, body, off-hand, hands, legs, feet), r: in a ring. A rank r stone gives base x
+// sigilMult(r): about 1.4x one stat of the best gem that drops at the same depth (a stone gives one stat, a gem two),
+// so a Sigil is worth socketing on its own; whole skill levels stay whole. Rank r drops from depth 24 r.
+export const SIGILS = [
+  { name: 'Ash', color: '#ff8040', w: ['firePct', 4], a: ['resFire', 3], r: ['life', 6] },
+  { name: 'Bryn', color: '#80c8ff', w: ['coldPct', 4], a: ['resCold', 3], r: ['mana', 5] },
+  { name: 'Cael', color: '#fff080', w: ['lightPct', 4], a: ['resLight', 3], r: ['magicFind', 2] },
+  { name: 'Dov', color: '#80e060', w: ['poisonPct', 4], a: ['resPoison', 3], r: ['goldFind', 4] },
+  { name: 'Esk', color: '#c8c0b0', w: ['physPct', 4], a: ['armor', 8], r: ['str', 2] },
+  { name: 'Fen', color: '#e05040', w: ['dmgPct', 3], a: ['life', 8], r: ['dex', 2] },
+  { name: 'Gur', color: '#a08060', w: ['flatDmg', 1.5], a: ['armorPct', 3], r: ['vit', 2] },
+  { name: 'Hask', color: '#ffb060', w: ['atkSpeed', 1.5], a: ['lifeRegen', 0.6], r: ['atkSpeed', 1.2] },
+  { name: 'Ivo', color: '#c090ff', w: ['castSpeed', 1.5], a: ['mana', 6], r: ['castSpeed', 1.2] },
+  { name: 'Jorn', color: '#f0f0f0', w: ['critChance', 0.6], a: ['block', 0.8], r: ['critChance', 0.5] },
+  { name: 'Kesh', color: '#ffc040', w: ['critDmg', 4], a: ['resAll', 1.5], r: ['critDmg', 3] },
+  { name: 'Lyr', color: '#fff4c0', w: ['holyPct', 4], a: ['reduce', 0.3], r: ['int', 2] },
+  { name: 'Mord', color: '#9060c0', w: ['shadowPct', 4], a: ['lifeSteal', 0.3], r: ['manaSteal', 0.3] },
+  { name: 'Nath', color: '#80a0ff', w: ['arcanePct', 4], a: ['cdr', 0.5], r: ['cdr', 0.4] },
+  { name: 'Orr', color: '#c02030', w: ['bloodPct', 4], a: ['thorns', 3], r: ['lifePct', 0.5] },
+  { name: 'Pell', color: '#60e0c0', w: ['areaPct', 1.2], a: ['lifePct', 0.5], r: ['areaPct', 1] },
+  { name: 'Quell', color: '#ff6060', w: ['bossDmg', 3], a: ['resAll', 1.5], r: ['bossDmg', 2] },
+  { name: 'Ruv', color: '#e0c080', w: ['allAttr', 1.2], a: ['allAttr', 1.2], r: ['allAttr', 1.2] },
+  { name: 'Syl', color: '#ffe0f0', w: ['dmgPct', 4], a: ['reduce', 0.35], r: ['xpPct', 0.5] },
+  { name: 'Thane', color: '#ffd700', w: ['skillsAll', 1], a: ['lifePct', 0.45], r: ['skillsAll', 1] },
+];
+export const SIGIL_MAX = SIGILS.length - 1;
+const FIXED = new Set(['skillsAll']);
+/** A rank's multiplier on its stones' base values (1.4 at rank 0 up to 49 at rank 19, like the gem grades). */
+export const sigilMult = (rank) => 1.4 * (1 + 34 * Math.pow(rank / SIGIL_MAX, 1.3));
+/** The slot letter a socket counts as for a Sigil: w(eapon), r(ing) or a(rmor). */
+export const sigilSlot = (slot) => (slot === 'weapon' ? 'w' : slot === 'ring' ? 'r' : 'a');
+export function sigilStats(rank, slot) {
+  const S = SIGILS[clamp(rank, 0, SIGIL_MAX)];
+  if (!slot) return [];
+  const [s, b] = S[sigilSlot(slot)];
+  const v = FIXED.has(s) ? b : b * sigilMult(rank);
+  return [[s, Math.round(v * 10) / 10]];
+}
+/** The deepest Sigil rank a depth can drop (rank r from depth 24 r). */
+export const sigilCap = (depth) => clamp(Math.floor(depth / 24), 0, SIGIL_MAX);
+/** A Sigil from depth `depth`: mostly the few ranks just under its cap. */
+export function rollSigil(depth, bonus = 0) {
+  const cap = sigilCap(depth);
+  let r = cap;
+  while (r > 0 && chance(0.55 - bonus * 0.1)) r--;
+  return makeGem('sig', r);
+}
+/** Gold to fuse three rank r Sigils into one rank r + 1 (follows the gold curve of the depth they drop at). */
+export const sigilFuseCost = (rank) => Math.round(goldPile(depthLevelOf(rank * 24 + 12)) * 6);
+const depthLevelOf = (d) => (d <= 60 ? d : Math.round(60 + (d - 60) * 0.45));
+/** The highest grade a gem kind reaches (Sigils have twenty ranks). */
+export const gemMaxTier = (gem) => (GEMS[gem] && GEMS[gem].sigil ? SIGIL_MAX : MAX_GEM_TIER);
+
+export function gemStats(gem, tier, slot) {
   const g = GEMS[gem];
+  if (g.sigil) return sigilStats(tier, slot);
   return g.stats.map(([s, v]) => {
     let val = v * GEM_MULT[tier];
     if (['extraProj', 'chainPlus', 'pierce', 'homing', 'skillsAll'].includes(s)) val = Math.max(0, Math.floor((tier + 1) * v + 0.0001));
@@ -259,6 +317,7 @@ export function gemStats(gem, tier) {
   }).filter(([, v]) => v > 0);
 }
 export function gemName(gem, tier) {
+  if (GEMS[gem].sigil) return `${SIGILS[clamp(tier, 0, SIGIL_MAX)].name} Sigil`;
   const t = GEM_TIERS[tier];
   return (t ? t + ' ' : '') + GEMS[gem].name;
 }
@@ -267,7 +326,7 @@ let UID = Date.now() % 1000000;
 export const newUid = () => ++UID;
 
 export function makeGem(gem, tier) {
-  return { uid: newUid(), type: 'gem', gem, tier: clamp(tier, 0, MAX_GEM_TIER), count: 1, ilvl: tier * 15 + 1 };
+  return { uid: newUid(), type: 'gem', gem, tier: clamp(tier, 0, gemMaxTier(gem)), count: 1, ilvl: GEMS[gem] && GEMS[gem].sigil ? tier * 24 + 1 : tier * 15 + 1 };
 }
 export function rollGem(ilvl) {
   const maxTier = clamp(Math.floor(ilvl / 16), 0, 7); // the top two tiers only come from the Gem Forge
@@ -317,6 +376,9 @@ export const mfMul = (mf, id) => 1 + Math.max(0, mf) / 100 * [0, 0.6, 0.8, 0.9, 
 const EPIC_A = ['Doom', 'Soul', 'Blood', 'Grim', 'Storm', 'Night', 'Wrath', 'Bone', 'Dread', 'Ember', 'Frost', 'Shadow', 'Hell', 'Star', 'Void', 'Rune', 'Gore', 'Plague', 'Dawn', 'Ash'];
 const EPIC_B = ['bringer', 'reaver', 'fang', 'song', 'ward', 'call', 'bane', 'shard', 'heart', 'grasp', 'veil', 'brand', 'mourn', 'fall', 'spire', 'maw', 'crest', 'thorn', 'whisper', 'edge'];
 
+/** Plain (Common) items take extra sockets, as Glyphword bases (data/relics.js): this many per slot. */
+export const HOLLOW = { weapon: 6, body: 6, offhand: 4, head: 4, legs: 4, hands: 3, feet: 3, ring: 0 };
+
 export function rollItem(ilvl, opts = {}) {
   ilvl = Math.max(1, Math.round(ilvl));
   const slot = opts.slot || pick(['weapon', 'weapon', 'offhand', 'head', 'head', 'body', 'body', 'body', 'hands', 'legs', 'feet', 'ring', 'ring']);
@@ -356,7 +418,7 @@ export function rollItem(ilvl, opts = {}) {
   const R = RARITY[rarity];
   rollAffixes(item, CORE_LINES);
   rollAffixes(item, R.perks, true);
-  item.maxSockets = slot === 'ring' ? [0, 0, 1, 1, 2, 2][rarity] : R.sockets;
+  item.maxSockets = slot === 'ring' ? [0, 0, 1, 1, 2, 2][rarity] : rarity === 0 ? HOLLOW[slot] : R.sockets;
   item.sockets = Math.min(item.maxSockets, chance(0.45) ? randi(0, Math.ceil(item.maxSockets / 2)) : 0);
   if (rarity >= 4) item.legendary = pick(Object.keys(LEGENDARY));
   if (rarity >= 3) item.title = pick(EPIC_A) + pick(EPIC_B);
@@ -399,8 +461,16 @@ export const SEAL_RARITY = 3;
 export const SEAL_GAP = 15 * 60;
 export const SEALED_COLOR = '#ffdf8a';
 
+/** Heirlooms, Covenants and Glyphwords (data/relics.js): their colours, and the hook that adds their stats. */
+export const RELIC_COLORS = { heir: '#d9b45a', cov: '#35e0b8', glyph: '#f2e2b0' };
+export const RELIC_NAMES = { heir: 'Heirloom', cov: 'Covenant', glyph: 'Glyphword' };
+export const RELIC_HOOK = { stats: null, glyph: null };
+
 export function itemName(item) {
   if (item.sealed) return 'Sealed Treasure';
+  if (item.relic && item.uname) return item.uname + (item.upg ? ` +${item.upg}` : '');
+  const gw = item.type === 'gear' && RELIC_HOOK.glyph && RELIC_HOOK.glyph(item);
+  if (gw) return gw.name + (item.upg ? ` +${item.upg}` : '');
   if (item.type === 'gem') return gemName(item.gem, item.tier);
   if (item.type === 'potion') return item.name;
   if (item.rname) return item.rname + (item.upg ? ` +${item.upg}` : '');
@@ -417,8 +487,10 @@ export function itemBaseLine(item) {
 }
 export function itemColor(item) {
   if (item.sealed) return SEALED_COLOR;
-  if (item.type === 'gem') return GEMS[item.gem].special ? '#ff9a2a' : '#c8f0ff';
+  if (item.type === 'gem') return GEMS[item.gem].sigil ? '#ffd88a' : GEMS[item.gem].special ? '#ff9a2a' : '#c8f0ff';
   if (item.type === 'potion') return '#ffffff';
+  if (item.relic) return RELIC_COLORS[item.relic];
+  if (item.type === 'gear' && RELIC_HOOK.glyph && RELIC_HOOK.glyph(item)) return RELIC_COLORS.glyph;
   return RARITY[item.rarity].color;
 }
 
@@ -430,8 +502,9 @@ export function itemStats(item) {
   if (item.type !== 'gear') return out;
   const am = 1 + (item.upg || 0) * 0.04;
   for (const a of item.affixes) out.push([a.s, Math.round(a.v * (a.implicit ? 1 : am) * 10) / 10]);
-  for (const g of item.gems) for (const s of gemStats(g.gem, g.tier)) out.push(s);
+  for (const g of item.gems) for (const s of gemStats(g.gem, g.tier, item.slot)) out.push(s);
   for (const s of legendaryStats(item)) out.push(s);
+  if (RELIC_HOOK.stats && (item.relic || item.gems.length)) for (const s of RELIC_HOOK.stats(item)) out.push(s);
   return out;
 }
 
@@ -442,8 +515,8 @@ export function itemDmg(item) {
 export function itemArmor(item) { return Math.round((item.armor || 0) * upgMult(item)); }
 
 export function itemValue(item) {
-  if (item.type === 'gem') return Math.round((GEMS[item.gem].special ? 400 : 60) * Math.pow(2.6, item.tier));
-  const base = 12 * Math.pow(1.06, item.ilvl) * [1, 2.5, 6, 15, 40, 100][item.rarity];
+  if (item.type === 'gem') return GEMS[item.gem].sigil ? Math.round(goldPile(depthLevelOf(item.tier * 24 + 12)) * 8) : Math.round((GEMS[item.gem].special ? 400 : 60) * Math.pow(2.6, item.tier));
+  const base = 12 * Math.pow(1.06, item.ilvl) * [1, 2.5, 6, 15, 40, 100][item.rarity] * (item.relic ? { heir: 2.5, cov: 2 }[item.relic] : RELIC_HOOK.glyph && RELIC_HOOK.glyph(item) ? 60 : 1);
   return Math.round(base * (1 + item.affixes.length * 0.15) * (1 + item.sockets * 0.2) * (1 + (item.upg || 0) * 0.3));
 }
 

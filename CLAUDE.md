@@ -40,6 +40,10 @@ node tools/tests/cloud.js [nosdk]                  # cloud saves (Google sign-in
 node tools/tests/autoshop.js [classes] [rounds]     # auto-play wears everything it buys (none sold back), loot filter, keepers, chest sort
 node tools/tests/autogear.js [mobile]              # "Auto-play manages gear" off (potions only, a full bag plays on), +N gear to the chest, vendor Sell all
 node tools/tests/stalegear.js                      # auto-play swaps a stale +10 piece full of top gems for far better new gear, moving the gems
+node tools/tests/relics.js                         # Heirlooms, Covenants, Sigils, Glyphwords (by hand and by auto-play), the shared Reliquary + Codex, Town Commissions (auto-play does a chapter)
+node tools/tests/relic_balance.js [classes] [n]    # Heirloom / Covenant piece / full set worth in item levels, like rarity.js (Heirloom ~ Legendary, piece ~ Epic, set ~ five Mythics)
+node tools/tests/velscour.js [noauto]              # Velscour's five phases stepped by hand + "final boss" from the skull, then auto-play beats him at depth 500 (5-10 min)
+node tools/tests/velscour_real.js [classes] [n]    # Velscour without god mode: depth-500 gear, wins / minutes / phase reached per class
 node tools/tests/rarity.js [classes] [samples]     # gear rarity worth in item levels, level 25 Rare > level 10 Mythic, drop odds
 node tools/tests/ui.js                             # skill tree, inventory, socketing, vendors
 node tools/tests/options.js                        # settings: lock skill bar, hide item names, auto skill points off; skill tree Respec (50 gold x level^2)
@@ -206,7 +210,11 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   (`src/game/raid.js`, every 5th depth): run `raid.js` (and `raid_sigs.js` for `src/game/raidsigs.js`). Rings, augments or skill mastery (`src/data/rings.js`,
   `src/game/augments.js`): run `rings.js`. The town generator (`src/world/town.js`): run `town.js` with a few seeds. Town life (`src/game/townlife.js`, `src/game/townanimals.js`, `src/data/townscripts.js`, `src/game/townsfolkvisuals.js`, `src/gfx/emotes.js`): run `townlife.js`, `townsfolk.mjs` and `town_visuals.mjs`; rebuild the people sheets with `python tools/build_people_pack.py <VELSCOUR_People_and_Animals.zip>` (docs/PEOPLE_AND_ANIMALS.md). Homunculus the Proud, the blacksmith (`src/game/homunculus.js`, `src/data/homunculus.js`; 30 poses cut by `python tools/homunculus.py` from `assets/source/npc/homunculus/`; his axe story lives in `G.char.homunculus`; Varrow's great axe is a three.js model, `tools/varrowaxe3d.html`/`.js` skinned with chunks of the Runeblade skins, baked by `node tools/varrowaxe3d_bake.js` (`preview` for a turntable) into `assets/sprites/npc/varrow_axe.webp`, drawn by `src/gfx/varrowaxe.js`): run `homunculus.mjs` and `homunculus.js`. Dungeon encounters with people (`src/game/encounters.js`) and scenario/forest NPCs (`src/game/folk.js`): run `encounters.js` and `scenarios.js`. THE ETERNAL BREACH (the purple portal's challenge biome: `src/world/breach.js`, `src/game/breach.js`, `src/gfx/breach.js`, `src/data/breach.js`; docs/ETERNAL_BREACH.md; art from `python tools/eternalbreach.py`): run `breach_gen.mjs` and `breach.js`; its monsters (`breach` art) must never join the regular draws.
 - Velscour waits at `FINAL_DEPTH` (500, `src/data/depth.js`); monster levels come from `depthLevel(depth)`, never the
-  raw depth.
+  raw depth. His fight is `src/game/velscour.js` (five phases, life gates, a damage cap; "final boss" in the skull's message
+  box starts it at any depth as practice): run `velscour.js`. Heirlooms, Covenants, Sigil Stones and Glyphwords
+  (`src/data/relics.js`, Sigils in `src/data/items.js`, powers in `src/game/relicprocs.js`), the shared Reliquary and
+  Codex (`src/game/reliquary.js`, `src/ui/reliquary.js`, localStorage `velscour_reliquary_v1`) and Town Commissions
+  (`src/game/commissions.js`, `G.char.comm`): run `relics.js` (and `relic_balance.js` after changing their numbers).
 
 ## Git / GitHub
 - The working branch is `claude/amazing-rubin-kguehz`. PR https://github.com/Agilancer/velscour/pull/1

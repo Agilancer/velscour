@@ -14,6 +14,8 @@ import { classHitFx } from '../gfx/classfx.js';
 import { astroOnKill } from './astronomer.js';
 import { sigKill } from './signature.js';
 import { armorDiv } from '../data/depth.js';
+import { relicProc } from './relicprocs.js';
+import { commissionKill } from './commissions.js';
 
 const PLAYER_RES = { fire: 'fire', cold: 'cold', light: 'light', poison: 'poison', acid: 'poison' };
 const LEECH_K = 2; // life/mana leech: a whole monster's life taken returns LEECH_K x leech% of the hero's own
@@ -96,12 +98,14 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     if (tgt.rank === 'boss' && (o.freeze || o.stun)) { o = { ...o, freeze: false, stun: o.stun && chance(0.15) }; }
   }
   dmg = tgt.isPlayer && G.godMode ? 0 : Math.max(1, dmg * rand(0.92, 1.08));
+  if (tgt.vel) dmg = tgt.vel.absorb(dmg); // Velscour's life gates and damage cap (game/velscour.js)
 
   const byHero = !tgt.isPlayer && tgt.team !== 'player' && (fromPlayer || (src && src.team === 'player'));
   if (byHero) Meter.add(Math.min(dmg, Math.max(0, tgt.hp)));
   if (byHero && src && src.isPlayer && !o.dot) G.lastHit = tgt; // the HUD's target window
   if (byHero && src && src.isPlayer && o.sk && !o.dot) classHitFx(src, tgt, o.sk, el); // the class's own splash (gfx/classfx.js)
   tgt.hp -= dmg;
+  if (tgt.isPlayer && !o.dot && src && src !== tgt && tgt.st.procs && tgt.st.procs.length) relicProc(tgt, 'hurt', src, dmg);
   tgt.flash = 0.12;
   if (tgt.onDamaged && !o.dot) tgt.onDamaged(src, dmg);
   tgt.hpShow = 3;
@@ -258,10 +262,11 @@ export function kill(tgt, src, info = {}) {
         aoe(world, p, tgt.x, tgt.y, 1.6, tgt.maxHp * 0.35, 'blood', { dot: true, crit: false });
       }
       if (leg.vamp) p.heal(p.maxHp * 0.02, true);
+      if (p.st.procs && p.st.procs.length && !info.proc) relicProc(p, 'kill', tgt, 0);
       if (p.chart && tgt.team === 'enemy') astroOnKill(p, tgt); // the fallen may become a star on the Astronomer's chart
       if (p.sig && !info.sig) sigKill(p, tgt, src); // the class signature (game/signature.js); its own kills never feed it
     }
-    if (tgt.team === 'enemy') dropLoot(world, tgt);
+    if (tgt.team === 'enemy') { dropLoot(world, tgt); commissionKill(world, tgt); }
     if (world.onKill) world.onKill(tgt); // streaks, challenges (game/happenings.js)
   }
   if (tgt.rank === 'boss' && world) {
