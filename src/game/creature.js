@@ -362,9 +362,11 @@ export class Creature {
     }
     const fly = this.fly ? 16 + Math.sin(this.animT * 3) * 4 : 0;
     const z = this.z + fly + bob;
-    // shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.38)';
-    ctx.beginPath(); ctx.ellipse(px, py, Math.max(8, Math.min(w, h) * 0.32), Math.max(4, Math.min(w, h) * 0.14), 0, 0, TAU); ctx.fill();
+    // shadow (none under Velscour's Mirror of Sin copies: game/velscour.js)
+    if (!this.noShadow) {
+      ctx.fillStyle = 'rgba(0,0,0,0.38)';
+      ctx.beginPath(); ctx.ellipse(px, py, Math.max(8, Math.min(w, h) * 0.32), Math.max(4, Math.min(w, h) * 0.14), 0, 0, TAU); ctx.fill();
+    }
     // elite aura
     if (this.aura) {
       ctx.globalCompositeOperation = 'lighter';

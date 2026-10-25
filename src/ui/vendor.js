@@ -8,7 +8,7 @@ import { getItem, changed, renderInventory } from './inventory.js';
 import { addToBag } from '../game/player.js';
 import {
   rollItem, rollGem, makeGem, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost,
-  rerollAffixes, addAffix, RARITY, rarityAt, POTION_PRICE, POTION_INFO, GEMS, gemName, SLOT_NAMES, WEAPONS, MAX_GEM_TIER, gemFuseCost, gemRefineCost, slotFor,
+  rerollAffixes, addAffix, RARITY, rarityAt, POTION_PRICE, POTION_INFO, GEMS, gemName, SLOT_NAMES, WEAPONS, MAX_GEM_TIER, gemFuseCost, gemRefineCost, slotFor, gemMaxTier, sigilFuseCost,
 } from '../data/items.js';
 import { CLASSES } from '../data/classes.js';
 import { potionIcon } from '../core/assets.js';
@@ -191,8 +191,8 @@ export const Vendor = {
   combineBox(body) {
     const c = G.char;
     const box = el('div', 'service-box');
-    box.innerHTML = `<b>Gem Forge</b><div class="dim" style="font-size:12px">Fuse three identical gems into one of the next grade, or pay to refine a single gem. Grades: Chipped → Flawed → Gem → Flawless → Perfect → Royal → Imperial → Celestial → Abyssal → Eternal.</div>`;
-    const gems = c.bag.map((b, i) => ({ b, i })).filter(({ b }) => b && b.type === 'gem' && b.tier < MAX_GEM_TIER);
+    box.innerHTML = `<b>Gem Forge</b><div class="dim" style="font-size:12px">Fuse three identical gems into one of the next grade, or pay to refine a single gem. Grades: Chipped → Flawed → Gem → Flawless → Perfect → Royal → Imperial → Celestial → Abyssal → Eternal. Three Sigil Stones of a rank fuse into one of the next rank (Sigils can't be refined).</div>`;
+    const gems = c.bag.map((b, i) => ({ b, i })).filter(({ b }) => b && b.type === 'gem' && b.tier < gemMaxTier(b.gem));
     const fusable = gems.filter(({ b }) => (b.count || 1) >= 3);
     if (fusable.length) {
       const all = el('button', 'btn small', 'Fuse all');
@@ -204,7 +204,7 @@ export const Vendor = {
     for (const { b, i } of gems) {
       const row = el('div', 'row forge-row');
       row.appendChild(el('span', '', `<span style="color:${GEMS[b.gem].color}">◆</span> ${escapeHtml(gemName(b.gem, b.tier))}${(b.count || 1) > 1 ? ` <span class="dim">x${b.count}</span>` : ''}`));
-      const fuse = gemFuseCost(b.tier), refine = gemRefineCost(b.tier, GEMS[b.gem].special);
+      const sig = GEMS[b.gem].sigil, fuse = fuseCost(b), refine = gemRefineCost(b.tier, GEMS[b.gem].special);
       const f = el('button', 'btn small', `Fuse 3 → ${escapeHtml(gemName(b.gem, b.tier + 1))} (${fmtInt(fuse)}g)`);
       f.disabled = (b.count || 1) < 3 || c.gold < fuse;
       f.onclick = () => { if (fuseGem(c, i)) { sfx('levelup'); UI.log(`Forged <span style="color:#c8f0ff">${escapeHtml(gemName(b.gem, b.tier + 1))}</span>!`); changed(); } };
@@ -218,7 +218,7 @@ export const Vendor = {
         UI.log(`Refined into <span style="color:#c8f0ff">${escapeHtml(gemName(b.gem, b.tier + 1))}</span>.`);
         changed();
       };
-      row.appendChild(f); row.appendChild(u);
+      row.appendChild(f); if (!sig) row.appendChild(u);
       box.appendChild(row);
     }
     body.appendChild(box);
@@ -260,7 +260,7 @@ export const Vendor = {
           it.gems = [];
           sfx('gold');
         });
-        box.appendChild(el('div', 'dim', `Sockets by rarity: ${RARITY.map((r) => `${r.name} ${r.sockets}`).join(', ')}.`));
+        box.appendChild(el('div', 'dim', `Sockets by rarity: ${RARITY.map((r) => `${r.name} ${r.sockets}`).join(', ')}. Plain (Common) items take up to 6 (weapons, body armor), 4 (helms, off-hands, legs) or 3 (hands, feet): bases for Glyphwords.`));
       }
     }
     body.appendChild(box);
@@ -291,11 +291,13 @@ export const Vendor = {
   },
 };
 
+/** What fusing three of a gem stack costs (Sigils follow the gold curve of their depth). */
+export const fuseCost = (b) => (GEMS[b.gem].sigil ? sigilFuseCost(b.tier) : gemFuseCost(b.tier));
 /** Fuse three gems of the stack at bag index i into one of the next grade. */
 export function fuseGem(c, i) {
   const b = c.bag[i];
-  if (!b || b.type !== 'gem' || (b.count || 1) < 3 || b.tier >= MAX_GEM_TIER) return false;
-  const cost = gemFuseCost(b.tier);
+  if (!b || b.type !== 'gem' || (b.count || 1) < 3 || b.tier >= gemMaxTier(b.gem)) return false;
+  const cost = fuseCost(b);
   if (c.gold < cost) return false;
   c.gold -= cost;
   b.count = (b.count || 1) - 3;
@@ -308,9 +310,9 @@ export function fuseAll(c, budget = Infinity) {
   let n = 0;
   for (let guard = 0; guard < 200; guard++) {
     let best = -1;
-    c.bag.forEach((b, i) => { if (b && b.type === 'gem' && (b.count || 1) >= 3 && b.tier < MAX_GEM_TIER && gemFuseCost(b.tier) <= Math.min(c.gold, budget) && (best < 0 || b.tier < c.bag[best].tier)) best = i; });
+    c.bag.forEach((b, i) => { if (b && b.type === 'gem' && (b.count || 1) >= 3 && b.tier < gemMaxTier(b.gem) && fuseCost(b) <= Math.min(c.gold, budget) && (best < 0 || b.tier < c.bag[best].tier)) best = i; });
     if (best < 0) break;
-    budget -= gemFuseCost(c.bag[best].tier);
+    budget -= fuseCost(c.bag[best]);
     fuseGem(c, best); n++;
   }
   return n;

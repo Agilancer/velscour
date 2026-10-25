@@ -12,6 +12,9 @@ import { GroundItem } from '../game/loot.js';
 import { classSprite } from '../core/assets.js';
 import { heroPortrait } from '../core/gearart.js';
 import { openSeal } from './sealed.js';
+import { glyphOf } from '../data/relics.js';
+import { noteFind } from '../game/reliquary.js';
+import { sparkle } from '../gfx/vfx.js';
 
 const DOLL = { head: [2, 1], weapon: [1, 2], body: [2, 2], offhand: [3, 2], hands: [1, 3], legs: [2, 3], feet: [2, 4], ring1: [4, 1], ring2: [4, 2], ring3: [4, 3], ring4: [4, 4] };
 
@@ -64,10 +67,17 @@ export function socketGem(gemIdx, target) {
   const c = G.char, gem = c.bag[gemIdx], it = getItem(target);
   if (!gem || gem.type !== 'gem' || !it || it.type !== 'gear') return false;
   if (it.gems.length >= it.sockets) { UI.log(it.sockets ? 'No free sockets. Visit the Jeweler to add more.' : 'This item has no sockets. The Jeweler can add some.', '#ff8080'); sfx('error'); return false; }
+  const was = glyphOf(it);
   it.gems.push({ gem: gem.gem, tier: gem.tier });
   if ((gem.count || 1) > 1) gem.count--; else c.bag[gemIdx] = null;
-  UI.log(`Socketed <span style="color:#c8f0ff">${gemName(gem.gem, gem.tier)}</span> into ${escapeHtml(itemName(it))}.`);
-  sfx('gold');
+  UI.log(`Socketed <span style="color:${itemColor(gem)}">${gemName(gem.gem, gem.tier)}</span> into ${escapeHtml(itemName(it))}.`);
+  const gw = glyphOf(it);
+  if (gw && !was) {
+    UI.log(`The Sigils flare: <b style="color:${itemColor(it)}">${escapeHtml(gw.name)}</b> is written!`, '#f2e2b0');
+    if (G.player) { sparkle(G.player.x, G.player.y, 40, '#f2e2b0', 18, 0.6); G.player.recompute(); }
+    noteFind(it);
+    sfx('levelup');
+  } else sfx('gold');
   changed();
   return true;
 }
@@ -89,6 +99,7 @@ function handleDropOnBag(idx, data) {
   const c = G.char;
   if (data.type === 'shop') return G.ui.vendor && G.ui.vendor.buy(data, idx);
   if (data.type === 'stash') return G.ui.stash && G.ui.stash.take(data.idx);
+  if (data.type === 'vault') return G.ui.reliquary && G.ui.reliquary.take(data.idx, data.tab);
   if (data.type !== 'item') return false;
   if (data.where === 'bag') {
     if (data.idx === idx) return false;
@@ -128,7 +139,7 @@ function bagSlot(idx) {
     onRight: () => quickUse(idx),
     onDropWorld: (data) => (data.where === 'bag' ? dropFromBag(data.idx) : false),
   });
-  droppable(d, (data) => handleDropOnBag(idx, data), (data) => data.type === 'item' || data.type === 'shop' || data.type === 'stash');
+  droppable(d, (data) => handleDropOnBag(idx, data), (data) => data.type === 'item' || data.type === 'shop' || data.type === 'stash' || data.type === 'vault');
   if (it) UI.tip(d, () => itemTooltip(c.bag[idx], { compare: c.bag[idx] && c.bag[idx].slot ? c.equip[slotFor(c.equip, c.bag[idx])] : null, price: G.ui.vendor && G.ui.vendor.active ? Math.max(1, Math.floor(itemValue(c.bag[idx]) / 4)) : 0, priceLabel: 'Sells for', hint: G.ui.vendor && G.ui.vendor.active ? 'Right-click to sell' : G.ui.stash && G.ui.stash.active ? 'Right-click to store' : it.sealed ? 'Right-click / double-click to break the seal' : it.type === 'gear' ? 'Right-click / double-click to equip' : it.type === 'gem' ? 'Drag onto gear to socket' : '' }));
   return d;
 }

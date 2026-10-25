@@ -18,6 +18,7 @@ import { drawBiome } from '../data/biomes.js';
 import { augHits } from '../data/rings.js';
 import { canLearn } from '../ui/skills.js';
 import { equipFromBag, socketGem, dropFromBag, changed } from '../ui/inventory.js';
+import { GLYPHWORDS, glyphOf } from '../data/relics.js';
 import { Vendor, fuseAll } from '../ui/vendor.js';
 import { Stash, addToStash } from '../ui/stash.js';
 import { activeFilter, filterPasses, filterKeeps } from './lootfilter.js';
@@ -361,7 +362,7 @@ const gearOn = () => G.settings.autoGear !== false;
 /** A town stop auto-play skips while the gear is the player's (everything but the alchemist). */
 const handsOff = (step) => !gearOn() && step.vendor !== 'alchemist';
 /** Gear upgraded at the blacksmith (+N): auto-play keeps it in the chest, never sells or drops it. */
-const upgraded = (it) => it.type === 'gear' && (it.upg || 0) > 0;
+const upgraded = (it) => it.type === 'gear' && ((it.upg || 0) > 0 || !!it.relic || !!glyphOf(it)); // +N gear and relics are kept (the chest)
 /** What auto-play puts in the storage chest: gems, the loot filter's keepers, +N gear, and good gear the hero is still
  *  too low-level to wear. */
 const forChest = (it, c) => !it.sealed && !it.locked && (it.type === 'gem' || filterKeeps(it) || upgraded(it) || (it.type === 'gear' && (it.req || 1) > c.level && it.rarity >= 2));
@@ -1024,7 +1025,7 @@ export const Auto = {
     else if (ct && !foes.includes(ct)) foes.push(ct);
     // retreat to the town portal when nearly dead with nothing left to heal with
     const healLeft = c.potions.hp + c.potions.rejuv > 0 || this.readySkill((s) => s.kind === 'heal');
-    const sealed = w.raid && w.raid.sealed; // no way out of a sealed boss room
+    const sealed = (w.raid && w.raid.sealed) || (w.velscour && w.velscour.phase > 0 && !w.velscour.m.dead); // no way out of a sealed boss room or Velscour's arena
     if (!this.retreat && p.hp < p.maxHp * stanceOf(c).retreat && !healLeft && foes.length && !sealed) this.retreat = true;
     if (this.retreat && (p.hp > p.maxHp * 0.75 || !foes.length && p.hp > p.maxHp * 0.5)) this.retreat = false;
     if (this.retreat) {
@@ -1048,6 +1049,19 @@ export const Auto = {
     this.target = null;
     // keep pets and buffs up between fights
     if (p.castLock <= 0 && !p.channel) this.preCast(w);
+    // Town Commission objects (game/commissions.js): walk to each one in the level and use it
+    const co = w.chests.filter((ch) => ch.commission && !ch.opened && !this.giveUp.has(ch));
+    if (co.length) {
+      let best = null, bd = Infinity;
+      for (const ch of co) { const d = this.navDist(ch.x, ch.y); if (d < bd) { bd = d; best = ch; } }
+      if (best && bd < 400) {
+        if (this.lootFor !== best) { this.lootFor = best; this.lootT = 0; }
+        if ((this.lootT += dt) > 60) this.giveUp.add(best); // can't get there
+        this.setStatus(`Commission: the ${best.label}`);
+        if (this.goTo(best.x, best.y, (best.reach || 1.3) - 0.2, dt)) best.use();
+        this.watchStuck(dt); return;
+      }
+    }
     // townsfolk bounties on the overworld maps (game/wanderers.js): take them, fetch the heirloom, hunt the mark
     const bg = w.kind === 'dungeon' && w.overworldScenario && bountyGoal(w);
     if (bg && this.navDist(bg.x, bg.y) < 80 && !(this.bountySkip > w.time)) {
@@ -1288,6 +1302,7 @@ export const Auto = {
   },
   inDanger(list, x, y) {
     for (const d of list) {
+      if (d.outside) { if (((x - d.x) / d.rx) ** 2 + ((y - d.y) / d.ry) ** 2 > 1) return true; continue; } // Velscour's lava tide
       if (d.ring) {
         const r = Math.hypot(x - d.x, y - d.y);
         if (r > d.r0 && r < d.r1 && Math.abs(angleDiff(d.gap, Math.atan2(y - d.y, x - d.x))) > d.gapW / 2) return true;
@@ -2049,9 +2064,47 @@ export const Auto = {
       c.gold -= cost; it.sockets++; added++;
       G.ui.log(`Auto-play had a socket added to ${escapeHtml(itemName(it))}.`, '#c8f0ff');
     }
+    this.glyphwork();
     this.socketGems();
     this.buyGear(Vendor.stock.rings || []); // the jeweler's rings: augments for the bar's skills
     changed();
+  },
+
+  /**
+   * Write a Glyphword (data/relics.js) when the bag's Sigils spell one: take a plain item of a slot it fits (from the
+   * bag, else a shop's), give it exactly that many sockets, set the Sigils in order. optimizeGear then decides whether
+   * to wear it; a written word is kept (it's never sold: upgraded-or-relic rule in sellJunk).
+   */
+  glyphwork() {
+    const c = G.char, p = G.player;
+    if (!gearOn()) return false;
+    const have = {};
+    for (const b of c.bag) if (b && b.type === 'gem' && GEMS[b.gem].sigil) have[b.tier] = (have[b.tier] || 0) + (b.count || 1);
+    if (!Object.keys(have).length) return false;
+    const lvl = Math.max(1, c.level);
+    for (const gw of [...GLYPHWORDS].reverse()) { // the deepest words first
+      const need = {};
+      for (const r of gw.sig) need[r] = (need[r] || 0) + 1;
+      if (!Object.entries(need).every(([r, n]) => (have[r] || 0) >= n)) continue;
+      const n = gw.sig.length;
+      const fits = (it) => it && it.type === 'gear' && it.rarity === 0 && !it.relic && !it.locked && !it.sealed && gw.slots.includes(it.slot) && it.maxSockets >= n && it.sockets <= n && !it.gems.length && (it.req || 1) <= c.level && it.ilvl >= lvl - 12;
+      let idx = c.bag.findIndex(fits);
+      if (idx < 0) {
+        for (const list of [Vendor.stock.weapons, Vendor.stock.armor]) {
+          const i = (list || []).findIndex((it) => fits(it) && itemValue(it) <= this.budget(0.3));
+          if (i >= 0 && bagFree(c) && Vendor.buy({ type: 'shop', list, i })) { idx = c.bag.findIndex(fits); break; }
+        }
+      }
+      if (idx < 0) continue;
+      const it = c.bag[idx];
+      let cost = 0; const s0 = it.sockets;
+      while (it.sockets < n) { cost += socketCost(it); it.sockets++; }
+      if (cost > c.gold) { it.sockets = s0; continue; }
+      c.gold -= cost;
+      for (const r of gw.sig) { const gi = c.bag.findIndex((b) => b && b.type === 'gem' && b.gem === 'sig' && b.tier === r); socketGem(gi, { where: 'bag', idx: c.bag.indexOf(it) }); }
+      if (glyphOf(it)) { G.ui.log(`Auto-play wrote the Glyphword <b style="color:#f2e2b0">${escapeHtml(gw.name)}</b>.`, '#f2e2b0'); this.optimizeGear(); return true; }
+    }
+    return false;
   },
 
   blacksmith() {

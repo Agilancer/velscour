@@ -13,6 +13,36 @@ import { gearIcon } from '../core/gearart.js';
 import { AUGMENTS } from '../data/rings.js';
 import { depthLevel } from '../data/depth.js';
 import { filterPasses } from './lootfilter.js';
+import { rollSigil, SIGILS } from '../data/items.js';
+import { maybeRelic } from '../data/relics.js';
+
+const sigilCache = new Map();
+/** A Sigil Stone's icon: a dark rune slab with its sigil's mark in the stone's colour, more ornate by rank. */
+export function sigilIcon(rank, size = 48) {
+  const key = rank + '|' + size;
+  let c = sigilCache.get(key);
+  if (c) return c;
+  c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d'), S = SIGILS[rank] || SIGILS[0], s = size;
+  x.translate(s / 2, s / 2);
+  const w = s * 0.56, h = s * 0.72, r = s * 0.12;
+  const g = x.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+  g.addColorStop(0, '#5a5048'); g.addColorStop(1, '#1c1814');
+  x.fillStyle = g; x.strokeStyle = '#0a0806'; x.lineWidth = Math.max(2, s / 20);
+  x.beginPath(); x.moveTo(-w / 2 + r, -h / 2); x.arcTo(w / 2, -h / 2, w / 2, h / 2, r); x.arcTo(w / 2, h / 2, -w / 2, h / 2, r); x.arcTo(-w / 2, h / 2, -w / 2, -h / 2, r); x.arcTo(-w / 2, -h / 2, w / 2, -h / 2, r); x.closePath();
+  x.fill(); x.stroke();
+  // the mark: strokes seeded by the rank, so each stone has its own glyph
+  x.shadowColor = S.color; x.shadowBlur = s * (0.12 + rank * 0.008);
+  x.strokeStyle = S.color; x.lineWidth = Math.max(2, s / 16); x.lineCap = 'round';
+  let q = rank * 7919 + 13;
+  const rnd = () => ((q = (q * 16807) % 2147483647) / 2147483647);
+  x.beginPath(); x.moveTo(0, -h * 0.32); x.lineTo(0, h * 0.32);
+  for (let i = 0; i < 2 + (rank % 3); i++) { const y0 = (rnd() - 0.5) * h * 0.55, dx = (rnd() < 0.5 ? -1 : 1) * w * 0.3; x.moveTo(0, y0); x.lineTo(dx, y0 + (rnd() - 0.5) * h * 0.3); }
+  x.stroke();
+  if (rank >= 10) { x.shadowBlur = 0; x.strokeStyle = 'rgba(255,230,160,.55)'; x.lineWidth = 1; x.strokeRect(-w / 2 + 3, -h / 2 + 3, w - 6, h - 6); }
+  sigilCache.set(key, c);
+  return c;
+}
 
 export class GroundItem {
   constructor(x, y, kind, data = {}) {
@@ -144,6 +174,7 @@ function sealedIcon(size) {
 /** Inventory icon canvas for any item. */
 export function itemIcon(item, size = 48) {
   if (item.sealed) return sealedIcon(size);
+  if (item.type === 'gem' && GEMS[item.gem].sigil) return sigilIcon(item.tier, size);
   if (item.type === 'gem') return gemIcon(item.gem, GEMS[item.gem].color, item.tier, size);
   if (item.type === 'potion') return potionIcon(item.color, size);
   if (item.slot === 'ring') return ringIcon(MATERIALS[item.tier].color, elem((AUGMENTS[(item.aug && item.aug[0] || {}).id] || {}).el || 'arcane').glow, item.rarity, size);
@@ -184,10 +215,14 @@ export function dropLoot(world, m) {
   // gear
   const items = rank === 'boss' ? randi(4, 6) + (world.depth % 10 === 0 ? 2 : 0) : rank === 'unique' ? randi(2, 3) : rank === 'champion' ? (chance(0.6) ? randi(1, 2) : 0) : (chance(0.085 * (world.lootMul || 1)) ? 1 : 0); // lootMul: omens (game/happenings.js)
   const bonus = rank === 'boss' ? 1.2 : rank === 'unique' ? 0.6 : rank === 'champion' ? 0.3 : 0;
+  const boost = world.raid || m.isRaid || m.isVelscour ? 3 : 1; // BOSS ROOMs triple the Covenant odds (data/relics.js)
   for (let i = 0; i < items; i++) {
     const ilvl = lvl + (rank === 'boss' ? 2 : rank === 'normal' ? 0 : 1) + randi(-1, 1);
-    add('item', { item: rollItem(ilvl, { mf: st.magicFind + (world.mfAdd || 0), bonus }) });
+    add('item', { item: maybeRelic(rollItem(ilvl, { mf: st.magicFind + (world.mfAdd || 0), bonus }), boost) });
   }
+  // Sigil Stones: rare from the rank and file, common from guardians
+  const sig = { normal: 0.004, champion: 0.03, unique: 0.08, boss: 0.45 }[rank] * (world.lootMul || 1);
+  if (world.depth && chance(sig)) add('item', { item: rollSigil(world.depth, rank === 'boss' ? 1 : 0) });
   // rings: a guardian usually drops one
   if ((rank === 'boss' && chance(0.6)) || (rank === 'unique' && chance(0.2))) add('item', { item: rollItem(lvl + 2, { slot: 'ring', mf: st.magicFind + (world.mfAdd || 0), bonus }) });
   // gems
@@ -199,7 +234,8 @@ export function dropChest(world, chest, depth) {
   const st = G.player ? G.player.st : { magicFind: 0, goldFind: 0 };
   const n = chest.rare ? randi(3, 5) : randi(1, 3);
   const add = (kind, data) => world.addLoot(new GroundItem(chest.x, chest.y + 0.3, kind, data));
-  for (let i = 0; i < n; i++) add('item', { item: rollItem(depthLevel(depth) + 1, { mf: st.magicFind + (world.mfAdd || 0), bonus: chest.rare ? 0.8 : 0.25 }) });
+  for (let i = 0; i < n; i++) add('item', { item: maybeRelic(rollItem(depthLevel(depth) + 1, { mf: st.magicFind + (world.mfAdd || 0), bonus: chest.rare ? 0.8 : 0.25 })) });
+  if (chance(chest.rare ? 0.25 : 0.06)) add('item', { item: rollSigil(depth) });
   for (let i = 0; i < randi(2, 4); i++) add('gold', { amount: Math.round((10 + depthLevel(depth) * 4) * goldScale(depthLevel(depth)) * rand(0.6, 1.4) * (1 + st.goldFind / 100)) });
   if (chance(chest.rare ? 0.8 : 0.3)) add('item', { item: rollGem(depthLevel(depth) + 4) });
   if (chance(0.5)) add('potion', { item: potionItem(pick(['hp', 'mp', 'rejuv'])) });

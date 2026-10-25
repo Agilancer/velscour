@@ -327,7 +327,7 @@ export const HUD = {
       if (boss && boss.raid) for (const k of boss.raid.marks) { const d = el('div', 'boss-mark'); d.style.left = k * 100 + '%'; tr.appendChild(d); }
     });
     if (boss) set('bossHp', Math.round((boss.hp / boss.maxHp) * 500) / 5, (v) => { $('#boss-fill').style.width = v + '%'; });
-    set('bossSub', boss && boss.raid ? boss.raid.label() : '', (v) => { $('#boss-sub').textContent = v; });
+    set('bossSub', boss && boss.raid ? boss.raid.label() : boss && boss.vel ? boss.vel.label() : '', (v) => { $('#boss-sub').textContent = v; });
     set('bossWard', !!(boss && boss.ward < 1), (v) => { $('#boss-bar').classList.toggle('warded', v); });
     const forest = w?.biome?.id === 'dark_forest';
     const breach = !!w?.breach;

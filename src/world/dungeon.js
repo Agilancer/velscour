@@ -166,7 +166,7 @@ function generateCastleKeepLayout(depth, biome, tileset, seed, layout) {
 }
 
 export function generateDungeon(depth, biome, tileset, seed) {
-  if (depth === FINAL_DEPTH) return generateThrone(biome, tileset, seed);
+  if (depth === FINAL_DEPTH || biome.id === 'throne') return generateThrone(biome, tileset, seed); // the throne at any depth: "final boss" practice
   if (biome.id === 'castle_keep' && !isRaidDepth(depth)) {
     const layout = CASTLE_KEEP_LAYOUTS[Math.abs((depth - 1) % CASTLE_KEEP_LAYOUTS.length)];
     return generateCastleKeepLayout(depth, biome, tileset, seed, layout);

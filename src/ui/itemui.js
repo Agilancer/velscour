@@ -7,6 +7,8 @@ import { elem } from '../gfx/vfx.js';
 import { CLASSES } from '../data/classes.js';
 import { itemIconURL } from './icons.js';
 import { finishOf, gearFxOf } from '../core/gearart.js';
+import { RELIC_COLORS, RELIC_NAMES, SIGILS, SIGIL_MAX, sigilStats, sigilCap } from '../data/items.js';
+import { HEIRLOOM_BY_ID, COVENANT_BY_ID, PIECE_BY_ID, POWERS, GLYPHWORDS, glyphOf, wornSets, powerText, lineValue, TUNE } from '../data/relics.js';
 
 export function itemCell(item) {
   const d = el('div', 'itemicon');
@@ -31,9 +33,11 @@ export function itemCell(item) {
 
 export function rarityClass(item) {
   if (!item) return '';
-  if (item.type === 'gem') return GEMS[item.gem].special ? 'r4' : 'r2';
+  if (item.type === 'gem') return GEMS[item.gem].sigil ? 'rsig' : GEMS[item.gem].special ? 'r4' : 'r2';
   if (item.type !== 'gear') return 'r0';
-  return item.sealed ? 'rs' : 'r' + item.rarity;
+  if (item.sealed) return 'rs';
+  if (item.relic) return 'r' + item.relic;
+  return glyphOf(item) ? 'rglyph' : 'r' + item.rarity;
 }
 
 export function itemTooltip(item, opts = {}) {
@@ -43,7 +47,14 @@ export function itemTooltip(item, opts = {}) {
   const col = itemColor(item);
   let h = `<div class="tt-name" style="color:${col}">${escapeHtml(item.unid ? 'Unidentified ' + SLOT_NAMES[item.slot] : itemName(item))}</div>`;
   if (item.locked) h += '<div class="tt-base" style="color:#ffd860">🔒 Locked: auto-play never equips, swaps, sells, stores or changes it, and you can\'t sell or drop it</div>';
-  if (item.type === 'gem') {
+  if (item.type === 'gem' && GEMS[item.gem].sigil) {
+    const r = item.tier, S = SIGILS[r];
+    h += `<div class="tt-base">Sigil Stone · Rank ${r + 1} of ${SIGIL_MAX + 1} · drops from Depth ${r * 24 || 1}${item.count > 1 ? ` · Stack of ${item.count}` : ''}</div><div class="tt-sep"></div>`;
+    for (const [where, slot] of [['Weapon', 'weapon'], ['Armor, helm, shield', 'body'], ['Ring', 'ring']]) for (const [s, v] of sigilStats(r, slot)) h += `<div class="tt-gem">${where}: ${escapeHtml(statLabel(s, v, trees))}</div>`;
+    const uses = GLYPHWORDS.filter((w) => w.sig.includes(r)).map((w) => w.name);
+    h += `<div class="tt-sep"></div><div class="dim">Socket it like a gem. Set Sigils in the right order in a plain (white) item with exactly that many sockets to write a Glyphword${uses.length ? ` (${uses.slice(0, 4).map(escapeHtml).join(', ')}${uses.length > 4 ? '…' : ''})` : ''}.${r < SIGIL_MAX ? ` Fuse 3 at the Gem Forge for one ${SIGILS[r + 1].name}.` : ''}</div>`;
+    void S;
+  } else if (item.type === 'gem') {
     const g = GEMS[item.gem];
     h += `<div class="tt-base">${g.special ? 'Rare Pattern Gem' : 'Gem'} · Grade ${item.tier + 1}/${MAX_GEM_TIER + 1}${item.count > 1 ? ` · Stack of ${item.count}` : ''}</div>`;
     for (const [s, v] of gemStats(item.gem, item.tier)) h += `<div class="tt-gem">${escapeHtml(statLabel(s, v, trees))}</div>`;
@@ -56,7 +67,9 @@ export function itemTooltip(item, opts = {}) {
     if (item.unid) {
       h += `<div class="tt-base">${SLOT_NAMES[item.slot]} · Item Level ${item.ilvl}</div><div class="dim">Its true nature is revealed once purchased.</div>`;
     } else {
-      h += `<div class="tt-base">${escapeHtml(itemBaseLine(item))} · ${RARITY[item.rarity].name} ${SLOT_NAMES[item.slot]} · iLvl ${item.ilvl} · <span title="Item level + the rarity's worth in levels: what the item's numbers are rolled at">Power ${powerLevel(item.ilvl, item.rarity)}</span></div>`;
+      const gw = glyphOf(item), kind = item.relic || (gw ? 'glyph' : null);
+      if (gw) h += `<div class="tt-base" style="color:${RELIC_COLORS.glyph}">'${gw.sig.map((r) => SIGILS[r].name).join(' · ')}'</div>`;
+      h += `<div class="tt-base">${escapeHtml(itemBaseLine(item))} · ${kind ? `<b style="color:${RELIC_COLORS[kind]}">${RELIC_NAMES[kind]}</b>` : RARITY[item.rarity].name} ${SLOT_NAMES[item.slot]} · iLvl ${item.ilvl} · <span title="Item level + the rarity's worth in levels: what the item's numbers are rolled at">Power ${powerLevel(item.ilvl, item.rarity)}</span></div>`;
       const fin = finishOf(item), gfx = gearFxOf(item);
       if (fin || gfx) h += `<div class="dim" style="font-style:italic">${fin ? escapeHtml(fin.name) + ' finish' : ''}${fin && gfx ? ' · ' : ''}${gfx ? 'Aura: ' + escapeHtml(gfx.name) : ''}</div>`;
       if (item.dmg) { const [a, b] = itemDmg(item); h += `<div>Damage: <b>${a}–${b}</b>${cmp(opts.compare, item, 'dmg')}</div>`; }
@@ -74,11 +87,12 @@ export function itemTooltip(item, opts = {}) {
         const L = LEGENDARY[item.legendary];
         h += `<div class="tt-leg"><b>${L.name}:</b> ${escapeHtml(legendaryDesc(item))}</div>`;
       }
+      h += relicLines(item, trees);
       if (item.maxSockets) {
         h += `<div class="tt-sep"></div><div class="dim">Sockets: ${item.sockets}/${item.maxSockets}</div>`;
         for (let i = 0; i < item.sockets; i++) {
           const g = item.gems[i];
-          if (g) h += `<div class="tt-gem">◆ ${escapeHtml(gemName(g.gem, g.tier))}: ${gemStats(g.gem, g.tier).map(([s, v]) => escapeHtml(statLabel(s, v, trees))).join(', ')}</div>`;
+          if (g) h += `<div class="tt-gem">◆ ${escapeHtml(gemName(g.gem, g.tier))}: ${gemStats(g.gem, g.tier, item.slot).map(([s, v]) => escapeHtml(statLabel(s, v, trees))).join(', ')}</div>`;
           else h += '<div class="dim">◇ Empty socket</div>';
         }
       }
@@ -104,3 +118,40 @@ function cmp(other, item, kind) {
 }
 
 export { itemStats };
+
+/** Heirloom power and flavour, Covenant set list and bonuses, Glyphword lines and power (data/relics.js). */
+function relicLines(item, trees) {
+  let h = '';
+  const pl = powerLevel(item.ilvl, 5);
+  if (item.relic === 'heir') {
+    const H = HEIRLOOM_BY_ID[item.rid];
+    if (!H) return '';
+    const P = POWERS[H.power];
+    h += `<div class="tt-leg" style="color:${RELIC_COLORS.heir}"><b>${P.name}:</b> ${escapeHtml(powerText(P, pl))}</div>`;
+    h += `<div class="dim" style="font-style:italic;margin-top:4px">"${escapeHtml(H.flavor)}"</div>`;
+  } else if (item.relic === 'cov') {
+    const C = COVENANT_BY_ID[item.cset];
+    if (!C) return '';
+    const eq = G.char ? G.char.equip : {};
+    const worn = new Set(Object.values(eq).filter((x) => x && x.relic === 'cov').map((x) => x.rid));
+    const w = wornSets(eq)[C.id] || { n: 0, ilvl: item.ilvl };
+    const col = RELIC_COLORS.cov;
+    h += `<div class="tt-sep"></div><div style="color:${col};font-family:var(--font-head)">${escapeHtml(C.name)} (${w.n}/${C.pieces.length})</div>`;
+    for (const p of C.pieces) h += worn.has(p.id) ? `<div style="color:${col}">✔ ${escapeHtml(p.name)}</div>` : `<div class="dim">✗ ${escapeHtml(p.name)}</div>`;
+    h += '<div class="tt-sep"></div>';
+    const lvl = w.n ? w.ilvl : item.ilvl;
+    C.bonus.forEach(([s, k], i) => { const on = w.n >= i + 2; h += `<div style="color:${on ? col : '#7a7060'}">(${i + 2}) ${escapeHtml(statLabel(s, lineValue(s, lvl, k * TUNE.set), trees))}</div>`; });
+    const P = POWERS[C.power];
+    h += `<div style="color:${w.n >= 5 ? col : '#7a7060'}">(5) <b>${P.name}:</b> ${escapeHtml(powerText(P, powerLevel(lvl, 3)))}</div>`;
+    h += '<div class="dim" style="font-size:12px">Set bonuses follow the lowest item level among the pieces you wear.</div>';
+  } else {
+    const gw = glyphOf(item);
+    if (!gw) return '';
+    const col = RELIC_COLORS.glyph;
+    h += `<div class="tt-sep"></div><div style="color:${col};font-family:var(--font-head)">Glyphword: ${escapeHtml(gw.name)}</div>`;
+    for (const s of gw.lines) h += `<div class="tt-line" style="color:${col}">${escapeHtml(statLabel(s, lineValue(s, item.ilvl, gw.k * TUNE.glyph), trees))}</div>`;
+    for (const [s, v] of gw.extra || []) h += `<div class="tt-line" style="color:${col}">${escapeHtml(statLabel(s, v, trees))}</div>`;
+    if (gw.power) { const P = POWERS[gw.power]; h += `<div class="tt-leg" style="color:${col}"><b>${P.name}:</b> ${escapeHtml(powerText(P, pl))}</div>`; }
+  }
+  return h;
+}
