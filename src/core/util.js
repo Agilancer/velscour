@@ -87,11 +87,55 @@ const rgbCache = new Map();
 export function hexToRgb(hex) {
   let c = rgbCache.get(hex);
   if (c) return c;
+  if (hex[0] !== '#' && /[^0-9a-f]/i.test(hex)) return cssRgb(hex);   // rgb(), hsl(), a name: not black
   const h = hex.replace('#', '');
   const v = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
   c = Object.freeze([(v >> 16) & 255, (v >> 8) & 255, v & 255]);
   if (rgbCache.size < 512) rgbCache.set(hex, c);
   return c;
+}
+// any CSS colour (#hex, rgb(), hsl(), a name) as [r, g, b]: hexToRgb reads only hex, and turned an hsl() into black.
+// The canvas parses it: fillStyle reads back as #rrggbb, or rgba() when translucent.
+export function cssRgb(col) {
+  if (col[0] === '#') return hexToRgb(col);
+  let c = rgbCache.get(col);
+  if (c) return c;
+  const x = measureCtx();
+  x.fillStyle = '#000'; x.fillStyle = col;
+  const n = x.fillStyle;
+  c = n[0] === '#' ? hexToRgb(n) : Object.freeze((n.match(/[\d.]+/g) || []).slice(0, 3).map(Number));
+  if (rgbCache.size < 512) rgbCache.set(col, c);
+  return c;
+}
+/**
+ * A small sprite cache for colour-keyed glows and discs: colours are snapped to 5 bits a channel (a hue cycling every
+ * frame used to bake a new canvas every frame, forever) and at `max` sprites the oldest canvas is repainted for the new
+ * colour instead of a new one made. Only for sprites drawn at once and never kept by the caller.
+ */
+export function colourSprites(max, size, paint) {
+  const byStr = new Map(), byQ = new Map();
+  return (col) => {
+    let c = byStr.get(col);
+    if (c) return c;
+    const [r, g, b] = cssRgb(col), q = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+    c = byQ.get(q);
+    if (!c) {
+      if (byQ.size >= max) { const k = byQ.keys().next().value; c = byQ.get(k); byQ.delete(k); byStr.clear(); c.width = size; }   // (resets the canvas)
+      else c = makeCanvas(size, size);
+      paint(c.getContext('2d'), (r & ~7) | 4, (g & ~7) | 4, (b & ~7) | 4);
+      byQ.set(q, c);
+    }
+    if (byStr.size >= 2048) byStr.clear();
+    byStr.set(col, c);
+    return c;
+  };
+}
+/** One shared 2D context for measureText (each label/number baked used to make a throwaway canvas just to measure). */
+let measurer = null;
+export function measureCtx(font) {
+  if (!measurer) measurer = makeCanvas(1, 1).getContext('2d');
+  if (font && measurer.font !== font) measurer.font = font;
+  return measurer;
 }
 export function rgbToHex(r, g, b) {
   return '#' + [r, g, b].map((v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0')).join('');

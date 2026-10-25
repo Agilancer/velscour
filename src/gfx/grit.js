@@ -14,8 +14,10 @@ const css = (c, f, a = 1) => {
 };
 
 /** Up to 40 opaque colours from inside the tile's diamond. */
+let sampler = null;   // one CPU-side canvas for every sample (a new one per floor variant was a canvas each)
 function sample(f) {
-  const c = makeCanvas(32, 16), x = c.getContext('2d', { willReadFrequently: true });
+  const x = sampler || (sampler = makeCanvas(32, 16).getContext('2d', { willReadFrequently: true }));
+  x.clearRect(0, 0, 32, 16);
   try { x.drawImage(f.img, f.sx, f.sy, f.w, f.h, 0, 0, 32, 16); } catch (e) { return null; }
   let d;
   try { d = x.getImageData(0, 0, 32, 16).data; } catch (e) { return null; }

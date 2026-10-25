@@ -291,11 +291,25 @@ export class TileMap {
   }
   smooth(sx, sy, path, r = 0.28) {
     // drop intermediate nodes with clear line of sight
+    // Between two tile centres the answer is the same for every monster on the hero's flow field, and a pack
+    // re-plans several times a second (up to ~66 wide checks for a 12-step path, most of a frame's update in narrow
+    // corridors): those are remembered for half a second.
+    const now = performance.now();
+    if (!this._los || now - this._losT > 500) { this._los = new Map(); this._losT = now; }
+    const C = this._los, W = this.w, WH = W * this.h, rk = Math.round(r * 50) & 63;
+    const centre = (v) => v - Math.floor(v) === 0.5;
+    const los = (ax, ay, bx, by) => {
+      if (!centre(ax) || !centre(ay) || !centre(bx) || !centre(by)) return this.losWide(ax, ay, bx, by, r);
+      const key = ((Math.floor(ay) * W + Math.floor(ax)) * WH + Math.floor(by) * W + Math.floor(bx)) * 64 + rk;
+      let v = C.get(key);
+      if (v === undefined) { v = this.losWide(ax, ay, bx, by, r); C.set(key, v); }
+      return v;
+    };
     const out = [];
     let ax = sx, ay = sy, i = 0;
     while (i < path.length) {
       let j = path.length - 1;
-      while (j > i && !this.losWide(ax, ay, path[j][0], path[j][1], r)) j--;
+      while (j > i && !los(ax, ay, path[j][0], path[j][1])) j--;
       out.push(path[j]);
       ax = path[j][0]; ay = path[j][1];
       i = j + 1;

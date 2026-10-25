@@ -32,6 +32,7 @@ export const TouchUI = {
       let holdT = null, longT = null, fired = false;
       b.addEventListener('pointerdown', (e) => {
         e.preventDefault(); e.stopPropagation();
+        clearInterval(holdT); clearTimeout(longT);   // a second finger on the button: the first one's repeat must not run on forever
         b.classList.add('pressed');
         fired = false;
         try { b.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
@@ -45,6 +46,7 @@ export const TouchUI = {
       const up = () => { b.classList.remove('pressed'); clearInterval(holdT); clearTimeout(longT); holdT = null; longT = null; };
       b.addEventListener('pointerup', up);
       b.addEventListener('pointercancel', up);
+      b.addEventListener('lostpointercapture', up);
       b.addEventListener('contextmenu', (e) => { e.preventDefault(); chooser(t.bar); });
       root.appendChild(b);
       this.btns.push(t);

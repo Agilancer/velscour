@@ -66,13 +66,32 @@ export async function unreadableSaves() {
 export function listSaves() {
   return readAll().sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
 }
+// The autosave (every 30 s) used to parse and re-encode every hero on the device to change one: with full stashes on
+// all classes that was 1.5 MB of JSON and a 100-200 ms freeze on a phone. What this tab last wrote is kept as one JSON
+// text per hero; while the stored data is still exactly that, only the hero being saved is encoded again.
+let memo = null;   // { raw, parts: Map(id -> JSON) }
 export function writeSave(char) {
   char.lastPlayed = Date.now();
-  const list = readAll().filter((c) => c.id !== char.id);
-  list.push(char);
-  const ok = writeAll(list);
+  const raw = localStorage.getItem(KEY);
+  let ok;
+  if (memo && raw === memo.raw) {
+    const parts = new Map(memo.parts);
+    parts.delete(char.id); parts.set(char.id, JSON.stringify(char));   // (to the end, as filter + push did)
+    const out = '[' + [...parts.values()].join(',') + ']';
+    try { localStorage.setItem(KEY, out); ok = true; memo = { raw: out, parts }; } catch (e) { console.warn('Save failed', e); ok = false; memo = null; }
+  } else {
+    const list = readAll().filter((c) => c.id !== char.id);
+    list.push(char);
+    ok = writeAll(list);
+    memo = ok && !unreadable ? remember(list) : null;
+  }
   changed(char.classId);
   return ok;
+}
+function remember(list) {
+  const parts = new Map(list.map((c) => [c.id, JSON.stringify(c)]));
+  const raw = '[' + [...parts.values()].join(',') + ']';
+  return raw === localStorage.getItem(KEY) ? { raw, parts } : null;
 }
 export function deleteSave(id) {
   const list = readAll(), gone = list.find((c) => c.id === id);

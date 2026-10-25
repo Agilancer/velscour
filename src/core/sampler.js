@@ -102,7 +102,7 @@ export function playNote(name, midi, { at = 0, dur = 0.5, vel = 0.8, art = 'norm
   const end = t + Math.min(natural, hold + DAMP) + 0.02;
   src.start(t, off); src.stop(end);
   const v = { id, src, g, end };
-  src.onended = () => { const i = live.indexOf(v); if (i >= 0) live.splice(i, 1); };
+  src.onended = () => { const i = live.indexOf(v); if (i >= 0) live.splice(i, 1); src.disconnect(); g.disconnect(); };   // (finished notes unplugged: WebKit keeps processing wired ones)
   live.push(v);
   while (live.length > MAX_VOICES) fade(live.shift(), 0.04);
   return v;
