@@ -40,13 +40,16 @@ export function canLearn(sk) {
   return null;
 }
 
-export function learn(sk) {
+/** Points a click spends: Shift +5, Ctrl / Cmd / Alt as many as it takes (max level or no points left). */
+export const clickPoints = (e) => (e && (e.ctrlKey || e.metaKey || e.altKey) ? Infinity : e && e.shiftKey ? 5 : 1);
+
+/** Put up to `n` points into a skill (stops at its max level or when the points run out). */
+export function learn(sk, n = 1) {
   const why = canLearn(sk);
   if (why) { UI.log(why, '#ff8080'); sfx('error'); return; }
   const c = G.char;
   const first = !c.skills[sk.id];
-  c.skills[sk.id] = (c.skills[sk.id] || 0) + 1;
-  c.skillPoints--;
+  for (let k = 0; k < n && !canLearn(sk); k++) { c.skills[sk.id] = (c.skills[sk.id] || 0) + 1; c.skillPoints--; }
   sfx('buff');
   skillUp(sk, c.skills[sk.id]);
   if (first) {
@@ -125,9 +128,15 @@ export function skillDetail(sk) {
   const why = canLearn(sk);
   const lb = el('button', 'btn small', base ? 'Upgrade (+1)' : 'Learn');
   lb.disabled = !!why;
-  if (why) lb.title = why;
-  lb.onclick = () => learn(sk);
+  lb.title = why || 'Shift-click: +5 · Ctrl-click: as many as it takes';
+  lb.onclick = (e) => learn(sk, clickPoints(e));
   row.appendChild(lb);
+  // more at once: +5, and up to its max level (or as far as the points go)
+  if (!why && c.skillPoints > 1) {
+    const room = Math.min(c.skillPoints, MAX_SKILL_LEVEL - base);
+    if (room >= 5) { const b5 = el('button', 'btn small', '+5'); b5.onclick = () => learn(sk, 5); row.appendChild(b5); }
+    if (room > 1) { const bm = el('button', 'btn small', `Max (+${room})`); bm.title = 'As many points as it takes to max this skill, or all you have'; bm.onclick = () => learn(sk, room); row.appendChild(bm); }
+  }
   if (why && why !== 'No skill points') row.appendChild(el('span', 'dim', why));
   box.appendChild(row);
   if (L > 0) {
@@ -149,8 +158,8 @@ function makeDrag(node, sk) {
     data: () => ((G.char.skills[sk.id] || 0) > 0 ? { type: 'skill', id: sk.id } : null),
     icon: () => skillIconURL(sk),
     onClick: () => { selected = sk.id; sfx('ui'); UI.refresh(); },
-    onDouble: () => learn(sk),
-    onRight: () => learn(sk),
+    onDouble: (e) => learn(sk, clickPoints(e)),
+    onRight: (e) => learn(sk, clickPoints(e)),
   });
 }
 
@@ -160,7 +169,7 @@ export function renderTree(body) {
   const C = CLASSES[c.classId];
   const head = el('div', 'row');
   head.style.justifyContent = 'space-between';
-  head.innerHTML = `<span>Skill Points: <b class="gold-text" style="font-size:18px">${c.skillPoints}</b></span><span class="dim" style="font-size:12px">Click to inspect · double/right-click to learn · drag to the skill bar</span>`;
+  head.innerHTML = `<span>Skill Points: <b class="gold-text" style="font-size:18px">${c.skillPoints}</b></span><span class="dim" style="font-size:12px">Click to inspect · double/right-click to learn (Shift +5, Ctrl max) · drag to the skill bar</span>`;
   const rb = el('button', 'btn small respec-btn', `Respec (${respecCost(c.level).toLocaleString()} gold)`);
   rb.title = 'Refund all spent skill points: 50 gold x level squared';
   if (c.gold < respecCost(c.level)) rb.style.opacity = '.45';

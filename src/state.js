@@ -28,10 +28,12 @@ export const G = {
     lockSkillBar: false, // auto-play only fills empty bar slots
     hideItemNames: false, // no item name labels on the ground (hover still shows one)
     autoSkillPoints: true, // auto-play spends skill points
+    autoStatPoints: true, // auto-play spends attribute points
     autoGear: true, // auto-play equips, sells, buys, stashes and upgrades gear (off: hands off, potions only)
     outlines: true, // see-through rims round the hero, monsters and pets, over spells, walls and darkness
     lifeBars: true, // a life bar over every enemy, bosses too (off: only over a monster just hit)
     wallLines: false, // a line along the foot of the dungeon's walls, over the spells
+    noSkipCine: false, // "Don't skip cutscenes": Sky Battle scenes already seen play at 1x, not 20x
   },
 };
 

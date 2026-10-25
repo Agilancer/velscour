@@ -44,7 +44,14 @@ node tools/tests/skyship.js [clear|storm,...|all] [auto]     # whole battles at 
    hatch: a rare chest's drop, one item at loot bonus 1.6, and a 35% chance of a guaranteed Epic (20% of those a
    Legendary), capped by item level like every drop. First clear: +1 skill point.
 
-Cut scenes (`src/game/cinema.js`) can't be skipped, with or without auto-play. They show letterbox bars, a scripted
+**Stories.** Besides the eight weathers there are thirty stories with their own boarders, captains, knights, dialogue
+and sometimes a gauntlet of bosses and a master: [SKY_STORIES.md](SKY_STORIES.md).
+
+Cut scenes (`src/game/cinema.js`) can't be skipped, with or without auto-play, but a scene the hero has already watched
+(per story; the eight weathers count as one) plays at 20x (`Cine.fast`, `CINE_FAST`; game.js runs that many cut-scene
+steps a frame, the voice blips are muted and a "▶▶ x20" note shows in the top bar). `G.char.skySeen` holds
+`<story|base>:<scene>`; heroes who fought one before have the weathers' scenes marked seen (`migrate`). Settings ›
+"Don't skip cutscenes" (`noSkipCine`, off) plays them at 1x. They show letterbox bars, a scripted
 camera (pans, zooms, shakes), title cards, and a dialogue panel with a portrait, the speaker's name, typed text and a
 syllable-blip voice. While one plays, there's no input, no auto-play and no monster thinks; only the scene's actors
 move. Shots already in the air, lightning, frost and a captain's entrance don't hurt the hero while a scene holds them

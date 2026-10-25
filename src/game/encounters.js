@@ -13,7 +13,7 @@ import { addEffect, Ring, Column, sparkle, floatText, addLight, burst } from '..
 import { makeMonster } from './monster.js';
 import { ambush } from './mayhem.js';
 import { GroundItem, dropChest } from './loot.js';
-import { rollItem, rollGem } from '../data/items.js';
+import { rollItem, rollGem, goldScale } from '../data/items.js';
 import { depthLevel } from '../data/depth.js';
 import { UI } from '../ui/ui.js';
 import { TOWNSFOLK, ANIMALS } from '../data/townsfolk.js';
@@ -40,7 +40,7 @@ const reward = (world, at, { items = 1, rare = false, gold = 1, gem = false } = 
   const lvl = lvlOf(world), p = world.player;
   for (let i = 0; i < items; i++) world.addLoot(new GroundItem(at.x + rand(-0.6, 0.6), at.y + rand(-0.6, 0.6), 'item', { item: rollItem(lvl + (rare ? 3 : 1), { mf: p ? p.st.magicFind : 0, bonus: rare ? 2 : 1 }) }));
   if (gem) world.addLoot(new GroundItem(at.x + rand(-0.6, 0.6), at.y + rand(-0.6, 0.6), 'item', { item: rollGem(lvl + 4) }));
-  world.addLoot(new GroundItem(at.x + rand(-0.5, 0.5), at.y + rand(-0.5, 0.5), 'gold', { amount: Math.round((30 + lvl * 7) * gold * rand(0.8, 1.3)) }));
+  world.addLoot(new GroundItem(at.x + rand(-0.5, 0.5), at.y + rand(-0.5, 0.5), 'gold', { amount: Math.round((30 + lvl * 7) * goldScale(lvl) * gold * rand(0.8, 1.3)) }));
 };
 const pack = (world, at, n, rank = 'normal') => {
   const arch = pick(world.roster || ['skeleton']), out = [];

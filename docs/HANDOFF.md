@@ -14,6 +14,45 @@ Contents
 
 ---
 
+## October 25, 2026 — a player's late-game requests, 20x seen cut scenes, 30 Sky Battle stories (branch `claude/airship-cutscene-stories-w867qx`)
+- **Request (a player, relayed by the user):** an option to stop auto-play spending attribute points, and a respec;
+  more points per click; the Golden Scarab should pay gold; gold is short in the mid/late game (scale the Greed Hoard?);
+  the bug where auto-play buys an item and sells it at 1/4; with "Auto-play manages gear" off the hero waits in town on
+  a full bag (can't leave it overnight); lock items so auto-play leaves them alone (it once swapped an Epic ring for an
+  Uncommon and sold the Epic). The user added: seen Sky Battle cut scenes play at 20x unless Settings › "Don't skip
+  cutscenes"; 30 new Sky Battle stories with new characters (an undead armada with a Necromancer and his bosses, a
+  Slime Lord with a HUGE slime, ...).
+- **Points:** Settings › "Auto attribute point assignment" (`autoStatPoints`, on). Stats panel: Respec attributes
+  (25 gold x level², `attrRespec` in `src/ui/inventory.js`); the + takes Shift +5, Ctrl all. Skill tree: `learn(sk, n)`,
+  Shift +5 / Ctrl max on double/right-click, and +5 / Max buttons in the skill's panel.
+- **Gear:** `it.locked` (a Lock / Unlock button in the item panel, a padlock on the icon and in the tooltip): auto-play
+  never equips, swaps out, sells, stores, sockets, upgrades or enchants it; the player can't sell or drop it, Sell all
+  skips it. The buy-then-sell bug: the weaponsmith and the armorer both sell shields, so auto-play bought one at the
+  first and a better one at the second and sold the first (`betterElsewhere` now buys only the best across the shops;
+  0 of 277 bought pieces sold back at levels 80-280, was ~1.5%). `fitScore`'s freshness bonus no longer applies to a
+  lower rarity (the Epic-for-Uncommon swap). Gear off: a full bag no longer sends the hero to town or keeps it there:
+  it plays on and leaves new gear on the ground (one log line).
+- **Gold:** gold piles follow prices past level ~85 (`goldPile` = max(3 + 2.2 lvl, 1.5 x 1.06^lvl), `goldScale` on every
+  other source: chests, the imp, nemesis, challenges, encounters, wanderers, scenarios). The Golden Scarab pays 40
+  piles of gold (gold find counts), no XP. The Treasure Imp drops 24 bigger piles and counts gold find and Greed. The
+  Hoard's cap grows with the deepest depth (50 + deepest/2, to 300); stacks over 50 add gold only.
+- **Cut scenes:** see docs/SKY_BATTLE.md (`Cine.fast`, `G.char.skySeen`, `noSkipCine`).
+- **Stories:** docs/SKY_STORIES.md. `src/data/skystories/s0.js` (the Necromancer, the Slime Lord) was written first as
+  the reference; s1-s4 (7 each) by four parallel sub-agents from the same brief, then checked by `skystories.mjs` and
+  played by `skyship.js stories`. Engine: `CREW`/`capOf`/`focusOf`/`scene()`/the gauntlet in `src/game/skybattle.js`.
+  A new hero gets an unseen story 70% of the time.
+- **Design calls made without asking:** the 20x applies to whole seen scenes (cards and camera too), per scene; the
+  attribute respec costs half the skill respec; locks are gear-only; the gold curve's constants (1.5 x 1.06^lvl, scarab
+  40 piles, imp 24); with gear on, a bag full of sealed treasures still waits in town (unchanged).
+- **Verified:** `locks.js` (new), `skystories.mjs` (new: 30 stories, 1,115 lines), `skyship.js` on all 30 stories (every
+  phase, gauntlets, every line frames its speaker, no errors; seen arrival 16.5 s -> 0.9 s at 20x) and `clear,storm`,
+  `autoshop.js`, `autogear.js` (updated for the no-wait rule; its "every purchase worn" check failed once in three runs
+  on a random roll), `spectate.js` (updated: the scarab pays gold; its Greed-pack count failed once in two runs, random
+  dungeons), `options.js`, `flow.js`, `happenings.js`, `hud.js`, `ui.js`, `mobile.js`, `stash.js`, `autoplay.js paladin 5`,
+  `data_check.mjs`. Shots of the gauntlets looked at (Mother Ooze, Morvane, Nine-Arms).
+- **Not verified:** real phones, Safari/iOS; the stories' balance at very deep depths (gauntlet bosses are raid-less
+  captains at 0.55-0.75x life, the master 1.6x).
+
 ## October 24, 2026 — see-through outlines, life bars over every enemy, wall-base outlines (branch `feat/see-through-outlines`)
 - **Request:** heroes, monsters and pets must always be visible (only another creature in front may hide them), so a
   level 117 Astronomer filling the screen with novas still shows where everything is; outlines can be turned off

@@ -129,6 +129,7 @@ export const Vendor = {
     const it = getItem(ref);
     if (!it) return false;
     if (ref.where === 'equip') { UI.log('Unequip it first.', '#ff8080'); return false; }
+    if (it.locked) { UI.log('That item is locked. Unlock it first (its panel in the inventory).', '#ffd860'); sfx('error'); return false; }
     if (it.sealed) { UI.log('Break the seal first: nobody buys a sealed treasure.', '#ffdf8a'); sfx('error'); return false; }
     const n = it.type === 'gem' ? 1 : 1;
     const price = Math.max(1, Math.floor(itemValue(it) / 4)) * n;
@@ -148,7 +149,7 @@ export const Vendor = {
   /** Sell every piece of gear in the bag after one confirmation (gems and sealed treasures stay). */
   sellAll() {
     const c = G.char;
-    const sold = c.bag.map((it, i) => ({ it, i })).filter(({ it }) => it && it.type === 'gear' && !it.sealed);
+    const sold = c.bag.map((it, i) => ({ it, i })).filter(({ it }) => it && it.type === 'gear' && !it.sealed && !it.locked);
     if (!sold.length) { UI.log('No gear in your bag to sell.', '#ff8080'); sfx('error'); return false; }
     const price = (it) => Math.max(1, Math.floor(itemValue(it) / 4));
     const total = sold.reduce((a, { it }) => a + price(it), 0);
@@ -156,7 +157,7 @@ export const Vendor = {
     const kinds = RARITY.map((r) => ({ r, n: sold.filter(({ it }) => it.rarity === r.id).length })).filter((k) => k.n).reverse()
       .map((k) => `<span style="color:${k.r.color}">${k.n} ${k.r.name}</span>`).join(' · ');
     UI.confirm('Sell all gear?', `Sell <b>${sold.length}</b> piece${sold.length > 1 ? 's' : ''} of gear for <span class="gold-text">${fmtInt(total)} gold</span>?<br>${kinds}` +
-      `<br><span class="dim">Gems in your bag are kept${gems ? `; ${gems} socketed gem${gems > 1 ? 's go' : ' goes'} with ${gems > 1 ? 'their' : 'its'} gear` : ''}. Equipped gear${sealed ? ' and sealed treasures are' : ' is'} not sold.</span>`, () => {
+      `<br><span class="dim">Gems in your bag are kept${gems ? `; ${gems} socketed gem${gems > 1 ? 's go' : ' goes'} with ${gems > 1 ? 'their' : 'its'} gear` : ''}. Equipped gear, locked items${sealed ? ' and sealed treasures are' : ' are'} not sold.</span>`, () => {
       let n = 0, gold = 0;
       for (const { it, i } of sold) if (c.bag[i] === it) { c.bag[i] = null; gold += price(it); n++; } // still where it was
       c.gold += gold;

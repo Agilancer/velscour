@@ -25,6 +25,7 @@ export function itemCell(item) {
   }
   if (item.unid) d.appendChild(el('span', 'upg', '?'));
   if (item.sealed) d.classList.add('sealed');
+  if (item.locked) { const k = el('span', 'lockb', '🔒'); k.style.cssText = 'position:absolute;left:1px;top:0;font-size:10px;line-height:1;filter:drop-shadow(0 0 2px #000);pointer-events:none'; d.appendChild(k); }
   return d;
 }
 
@@ -41,6 +42,7 @@ export function itemTooltip(item, opts = {}) {
   const trees = p ? CLASSES[p.classId].trees : null;
   const col = itemColor(item);
   let h = `<div class="tt-name" style="color:${col}">${escapeHtml(item.unid ? 'Unidentified ' + SLOT_NAMES[item.slot] : itemName(item))}</div>`;
+  if (item.locked) h += '<div class="tt-base" style="color:#ffd860">🔒 Locked: auto-play never equips, swaps, sells, stores or changes it, and you can\'t sell or drop it</div>';
   if (item.type === 'gem') {
     const g = GEMS[item.gem];
     h += `<div class="tt-base">${g.special ? 'Rare Pattern Gem' : 'Gem'} · Grade ${item.tier + 1}/${MAX_GEM_TIER + 1}${item.count > 1 ? ` · Stack of ${item.count}` : ''}</div>`;

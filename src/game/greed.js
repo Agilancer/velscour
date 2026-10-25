@@ -9,11 +9,14 @@ import { chance, clamp } from '../core/util.js';
 import { UI } from '../ui/ui.js';
 
 export const GREED_MAX = 5;
-export const HOARD_MAX = 50; // stacks
-const HOARD_LOOT = 0.02; // +2% drops and gold per stack (+100% at the cap)
+export const HOARD_MAX = 50; // stacks that count for drops and magic find
+const HOARD_LOOT = 0.02; // +2% drops and gold per stack (+100% drops at 50)
+/** The Hoard grows past 50 with the hero's deepest depth (one more stack per 2 depths, to 300): stacks over 50 add gold
+ *  only, so a deep hero's greed pays for deep prices. */
+export const hoardCap = (c = G.char) => HOARD_MAX + clamp(Math.floor(((c && c.deepest) || 0) / 2), 0, 250);
 
 export const greedOf = (c = G.char) => clamp((c && c.greed) | 0, 0, GREED_MAX);
-export const hoardOf = (c = G.char) => clamp((c && c.hoard) | 0, 0, HOARD_MAX);
+export const hoardOf = (c = G.char) => clamp((c && c.hoard) | 0, 0, hoardCap(c));
 
 /** What lever level g does (also the tooltip's numbers). */
 export function greedMods(g, hoard = 0) {
@@ -22,7 +25,7 @@ export function greedMods(g, hoard = 0) {
     extra: 0.12 * g, // extra monsters per pack, as a share
     trait: 0.08 * g, // a pack without a trait gains one
     hp: 1 + 0.1 * g, dmg: 1 + 0.06 * g, xp: 1 + 0.1 * g,
-    loot: (1 + 0.25 * g) * (1 + HOARD_LOOT * hoard), gold: (1 + 0.3 * g) * (1 + HOARD_LOOT * hoard), mf: 20 * g + 2 * hoard,
+    loot: (1 + 0.25 * g) * (1 + HOARD_LOOT * Math.min(hoard, HOARD_MAX)), gold: (1 + 0.3 * g) * (1 + HOARD_LOOT * hoard), mf: 20 * g + 2 * Math.min(hoard, HOARD_MAX),
   };
 }
 
@@ -77,8 +80,8 @@ export function greedCleared(world, c = G.char) {
   if (!c || !g || world.greedPaid) return;
   world.greedPaid = true;
   const before = hoardOf(c);
-  c.hoard = Math.min(HOARD_MAX, before + g);
-  if (c.hoard > before) UI.log(`<b style="color:#ffc040">The Hoard grows</b> to ${c.hoard} (+${Math.round(HOARD_LOOT * c.hoard * 100)}% drops and gold while greedy). Die and it's gone.`, '#ffc040');
+  c.hoard = Math.min(hoardCap(c), before + g);
+  if (c.hoard > before) UI.log(`<b style="color:#ffc040">The Hoard grows</b> to ${c.hoard} (+${Math.round(HOARD_LOOT * Math.min(c.hoard, HOARD_MAX) * 100)}% drops, +${Math.round(HOARD_LOOT * c.hoard * 100)}% gold while greedy). Die and it's gone.`, '#ffc040');
 }
 
 /** Death spends the Hoard and drops the lever. Returns true if there was anything to lose. */

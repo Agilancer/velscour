@@ -135,8 +135,8 @@ function prop(ctx, name, frame, x, y, rot = 0, k = 1) {
 let baseT = null;   // skyFx's world transform while it draws turned props
 const ctx_alpha = (a) => { CTX.globalAlpha = a; };
 /** A painted pirate standing at world px (x, y), feet there, h px tall, flipped to face the ironclad. */
-function crewman(art, x, y, h, flip, bob) {
-  const img = enemyImage(art, null);
+function crewman(art, x, y, h, flip, bob, swap = null) {
+  const img = enemyImage(art, swap);
   if (!img) return;
   const w = h * img.width / img.height, fx = (img._art && img._art.fx != null ? img._art.fx : img.width / 2) / img.width;
   if (!flip) { CTX.drawImage(img, x - w * fx, y - bob - h, w, h); return; }
@@ -159,7 +159,7 @@ export function skyWorld(ctx, world) {
     // the crew waiting at the rail
     for (const c of o.crew || []) {
       const [cx, cy] = tilePx(o.x + c.x, o.y + c.z, o.lv + (c.y || 0) * LV);
-      crewman(c.art, cx, cy, c.h, c.flip, Math.abs(Math.sin(t * 6 + c.ph)) * 2);
+      crewman(c.art, cx, cy, c.h, c.flip, Math.abs(Math.sin(t * 6 + c.ph)) * 2, c.swap);
     }
     if (o.flag) whiteFlag(ctx, ...tilePx(o.x, o.y - 5, o.lv), t);
     if (o.burn) for (let i = 0; i < o.burn.length; i++) {   // fires on a hit hull

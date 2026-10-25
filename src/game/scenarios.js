@@ -12,7 +12,7 @@ import { addEffect, Ring, Column, burst, sparkle, spawn, floatText, addLight, gl
 import { makeMonster } from './monster.js';
 import { ambush } from './mayhem.js';
 import { GroundItem, dropChest } from './loot.js';
-import { rollItem, rarityAt } from '../data/items.js';
+import { rollItem, rarityAt, goldScale } from '../data/items.js';
 import { depthLevel } from '../data/depth.js';
 import { biomeScenario, TAGS } from '../data/biomerooms.js';
 import { TOWNSFOLK } from '../data/townsfolk.js';
@@ -310,7 +310,7 @@ function makeScenario(world, start, info, need) {
         if (!S.active && dist(m.x, m.y, p.x, p.y) < 10) { begin('Catch it before it escapes!'); m.awake = true; }
         if (!S.active) return;
         m.status.fear = { t: 1 };
-        if (chance(dt * 1.5)) world.addLoot(new GroundItem(m.x, m.y, 'gold', { amount: Math.round(5 + lvl * 1.5) }));
+        if (chance(dt * 1.5)) world.addLoot(new GroundItem(m.x, m.y, 'gold', { amount: Math.round((5 + lvl * 1.5) * goldScale(lvl)) }));
         if ((S.left -= dt) <= 0) { addEffect(new Ring(m.x, m.y, 2, 0.1, 0.5, COLOR, 4)); m.dead = true; fail('It escaped'); }
       };
       progress(() => S.active ? `${Math.max(0, Math.ceil(S.left))}s before it escapes` : 'Somewhere on this depth');

@@ -447,6 +447,12 @@ export function itemValue(item) {
   return Math.round(base * (1 + item.affixes.length * 0.15) * (1 + item.sockets * 0.2) * (1 + (item.upg || 0) * 0.3));
 }
 
+/** A gold pile at monster level `lvl`. Prices grow ~1.06x a level (items, upgrades, sockets, gambling), so past level ~85
+ *  piles follow the same curve (1.5 x 1.06^level, a Normal item's price) instead of the old straight line, which left
+ *  late-game heroes unable to afford anything. goldScale: how much richer than the line (every gold source uses it). */
+export const goldPile = (lvl) => Math.max(3 + lvl * 2.2, 1.5 * Math.pow(1.06, lvl));
+export const goldScale = (lvl) => goldPile(lvl) / (3 + lvl * 2.2);
+
 export function upgradeCost(item) { return Math.round(60 * Math.pow(1.06, item.ilvl) * Math.pow(1.7, item.upg || 0) * (1 + item.rarity * 0.5)); }
 export function socketCost(item) { return Math.round(150 * Math.pow(1.05, item.ilvl) * Math.pow(2, item.sockets) * (1 + item.rarity * 0.3)); }
 export function enchantCost(item, add) { return Math.round((add ? 400 : 180) * Math.pow(1.055, item.ilvl) * (1 + item.rarity * 0.6)); }
