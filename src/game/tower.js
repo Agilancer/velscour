@@ -8,7 +8,7 @@ import { G } from '../state.js';
 import { UI } from '../ui/ui.js';
 import { HUD } from '../ui/hud.js';
 import { camera, setWarp, warpMoved, isoX, isoY, HW, HH } from '../core/view.js';
-import { rand, chance, pick, clamp, TAU, shuffle } from '../core/util.js';
+import { rand, chance, pick, clamp, TAU, shuffle, fmtInt } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { VZ, CUT_N, CUT_C, upCut } from '../world/tower.js';
 import { drawTower3D, drawTowerFront, tickTower3D, buildTower3D, disposeTower3D, spawnShip, loadAirships, airshipsReady } from '../gfx/tower3d.js';
@@ -255,7 +255,18 @@ export function createTowerRun(world, gen, biome, onSuccess) {
     const p = world.player;
     G.flash = 1; sfx('portal'); camera.shake(4);
     const pets = world.creatures.filter((c) => c !== p && c.team === 'player' && !c.dead);
-    const loot = world.loot.filter((l) => l.x >= g.XR);   // all of it comes up: there's no way back down for it
+    // the stair's drops come up (there's no way back down for them), but its gold goes straight into the purse and the
+    // log says where the rest came from: a pile waiting on the roof looked like items left over from an earlier visit
+    let gold = 0;
+    const loot = world.loot.filter((l) => {
+      if (l.x < g.XR) return false;
+      if (l.kind === 'gold' && l.amount > 0) { gold += l.amount; return false; }
+      return true;
+    });
+    world.loot = world.loot.filter((l) => l.x < g.XR || loot.includes(l));
+    if (gold) { G.char.gold += gold; UI.log(`You gather ${fmtInt(gold)} gold left on the stair.`, '#ffd34a'); }
+    const items = loot.filter((l) => l.kind === 'item').length;
+    if (items) UI.log(`${items} item${items > 1 ? 's' : ''} you left on the stair ${items > 1 ? 'were' : 'was'} carried up to the roof.`, '#c8b890');
     world.creatures = world.creatures.filter((c) => c === p || pets.includes(c));
     // the hero's own effects that ride with him (orbits, whirls, auras, zones that follow) come up; the rest stay below,
     // and the rope layer is made again on the roof for its climbers

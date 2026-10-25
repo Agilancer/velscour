@@ -263,7 +263,9 @@ export function heroDamage(p) {
 
 /** One number for "how strong is the hero": log offense + log effective life + a little utility. */
 export function charScore(p) {
-  const st = p.st, lvl = Math.max(1, depthLevel((G.char && G.char.depth) || 1), p.char.level);
+  // armor is weighed against the monsters' level (as combat does), not the hero's: a level 420 hero at depth 500 meets
+  // level 260 monsters, and the hero's level made every point of armor look worthless
+  const st = p.st, lvl = Math.max(1, depthLevel((G.char && G.char.depth) || 1));
   const off = buildPower(p, CROWD, null, true).total; // attributes and gear follow the build focus too
   const armK = st.armor / (st.armor + armorDiv(lvl));
   const res = ['fire', 'cold', 'light', 'poison'].reduce((a, k) => a + clamp(st.res[k], -100, 75), 0) / 4 / 100;
@@ -281,20 +283,47 @@ function augScore(p) {
   for (const a of p.augs) { const n = bar.filter((sk) => augHits(a, sk)).length; if (n) v += a.pow * (0.12 + 0.03 * Math.min(4, n - 1)); }
   return v;
 }
-/** Score with item `it` equipped (a ring tries each ring slot): {s, slot}. */
-function fitScore(p, it) {
+/**
+ * The gems `it` would carry if it replaced `old`: its own, plus old's moved across (best first) into its free sockets.
+ * `buy`: also count the sockets the jeweler could add now (in town, with the gold). Gems need bag room on the way.
+ */
+function movedGems(c, it, old, buy) {
+  if (!old || !old.gems.length || it.uid === old.uid || bagFree(c) < old.gems.length || c.gold < unsocketCost(old)) return null;
+  let sockets = it.sockets, gold = c.gold - unsocketCost(old);
+  while (buy && sockets < it.maxSockets && sockets - it.gems.length < old.gems.length) {
+    const cost = socketCost({ ...it, sockets });
+    if (cost > gold * 0.5) break;
+    gold -= cost; sockets++;
+  }
+  const room = sockets - it.gems.length;
+  if (room <= 0) return null;
+  const take = [...old.gems].sort((a, b) => b.tier - a.tier).slice(0, room);
+  return { gems: [...it.gems, ...take], sockets, moved: take.length };
+}
+/**
+ * Score with item `it` equipped (a ring tries each ring slot): {s, slot, move}. The worn piece's gems count as moved
+ * into `it` (auto-play pries them out when it swaps), so a +10 old piece full of top gems no longer beats a far
+ * better new one just because the new one's sockets are empty.
+ */
+function fitScore(p, it, buy = G.world && G.world.kind === 'town', keep = null) {
   const c = p.char;
-  let best = { s: -Infinity, slot: it.slot };
+  let best = { s: -Infinity, slot: it.slot, move: null };
   for (const slot of it.slot === 'ring' ? RING_SLOTS : [it.slot]) {
     const old = c.equip[slot];
-    if (old && old.locked) continue;   // the player locked what's worn there
-    const s = simulate(p, () => { c.equip[slot] = it; return () => { c.equip[slot] = old; }; });
+    if (old && (old.locked || (keep && keep.has(old.uid)))) continue;   // the player locked what's worn there (keep: just put on)
+    const move = movedGems(c, it, old, buy);
+    const s = simulate(p, () => {
+      const g0 = it.gems, s0 = it.sockets, og = old && old.gems;
+      c.equip[slot] = it;
+      if (move) { it.gems = move.gems; it.sockets = move.sockets; old.gems = []; }
+      return () => { c.equip[slot] = old; it.gems = g0; it.sockets = s0; if (old) old.gems = og; };
+    });
     // The aggregate stat score can make an upgraded, socketed low-level item look "good enough"
     // forever. Give gear a modest progression value so auto-play actually replaces stale pieces.
     const targetIlvl = Math.max(1, c.level, depthLevel(c.depth || 1));
     const freshness = (gear) => gear ? clamp((gear.ilvl || 1) / targetIlvl, 0, 1) : 0;
     const ageGain = old && it.rarity < old.rarity ? 0 : 0.28 * (freshness(it) - freshness(old));   // never a downgrade in rarity for being newer
-    if (s + ageGain > best.s) best = { s: s + ageGain, slot };
+    if (s + ageGain > best.s) best = { s: s + ageGain, slot, move };
   }
   return best;
 }
@@ -323,7 +352,9 @@ function simulate(p, mutate) {
 
 // ================================================================== small helpers
 /** The score a piece must beat to be worn (optimizeGear); buying or picking up by a looser bar sells it again. */
-const equipBar = (cur) => cur * 1.004 + 0.002;
+/** The score a piece must beat to be worn (optimizeGear); buying or picking up by a looser bar sells it again. A fixed
+ *  margin: a share of the score (it grows with level) asked a depth 500 hero for ~17% more before a swap. */
+const equipBar = (cur) => cur + 0.05;
 /** Settings › "Auto-play manages gear". Off: it never equips, sells, buys, drops, stashes, sockets, upgrades or
  *  enchants anything; in town it only buys potions, and a full bag waits in town for the player (bagWait). */
 const gearOn = () => G.settings.autoGear !== false;
@@ -648,13 +679,14 @@ export const Auto = {
     const p = G.player, c = G.char;
     let any = false;
     if (!gearOn()) return false;
+    const placed = new Set(); // what this call put on stays on (a later pass swapped an old ring back over a new one)
     for (let pass = 0; pass < 3; pass++) {
       const cur = simulate(p, () => () => {});
-      let best = -1, bs = equipBar(cur), bslot = null;
+      let best = -1, bs = equipBar(cur), bslot = null, bmove = null;
       c.bag.forEach((it, i) => {
         if (!it || it.type !== 'gear' || it.unid || it.sealed || it.locked || (it.req || 1) > c.level) return;
-        const f = fitScore(p, it);
-        if (f.s > bs) { bs = f.s; best = i; bslot = f.slot; }
+        const f = fitScore(p, it, undefined, placed);
+        if (f.s > bs) { bs = f.s; best = i; bslot = f.slot; bmove = f.move; }
       });
       // a fresh look: body armor or a helm of the same or better rarity that's nearly as strong gets worn anyway
       if (best < 0) {
@@ -663,17 +695,32 @@ export const Auto = {
           if (best >= 0 || !it || it.type !== 'gear' || it.unid || it.sealed || it.locked || (it.req || 1) > c.level || (it.slot !== 'body' && it.slot !== 'head') || this.worn.has(it.uid)) return;
           const old = c.equip[it.slot];
           if (old && (old.locked || it.rarity < old.rarity || it.ilvl < old.ilvl - 4)) return;
-          if (fitScore(p, it).s > cur * 0.975) { best = i; bslot = it.slot; }
+          const f = fitScore(p, it); if (f.s > cur - 0.02) { best = i; bslot = f.slot; bmove = f.move; }
         });
       }
       if (best < 0) break;
       if (this.worn) { this.worn.add(c.bag[best].uid); if (c.equip[bslot]) this.worn.add(c.equip[bslot].uid); }
-      const it = c.bag[best];
+      const it = c.bag[best], was = c.equip[bslot];
+      placed.add(it.uid);
       equipFromBag(best, bslot);
       G.ui.log(`Auto-play equipped <span style="color:${itemColor(it)}">${escapeHtml(itemName(it))}</span>.`, '#8fe0ff');
+      if (bmove && was && was.gems.length) this.moveGems(was, it, bmove.sockets);
       any = true;
     }
     return any;
+  },
+
+  /** Pry the gems out of `from` (just taken off) and set the best of them into `to`, adding sockets up to `sockets`. */
+  moveGems(from, to, sockets) {
+    const c = G.char, cost = unsocketCost(from);
+    if (c.gold < cost || bagFree(c) < from.gems.length) return;
+    c.gold -= cost;
+    for (const g of from.gems) addToBag(c, makeGem(g.gem, g.tier));
+    const n = from.gems.length;
+    from.gems = [];
+    while (to.sockets < Math.min(sockets, to.maxSockets) && c.gold >= socketCost(to)) { c.gold -= socketCost(to); to.sockets++; }
+    this.socketGems();
+    G.ui.log(`Auto-play moved ${n} gem${n > 1 ? 's' : ''} into <span style="color:${itemColor(to)}">${escapeHtml(itemName(to))}</span>.`, '#c8f0ff');
   },
 
   /** Fill free sockets of equipped gear with the bag gems that help most. */
@@ -1825,7 +1872,7 @@ export const Auto = {
     if (!list || !bagFree(c)) return false;
     const cur = simulate(p, () => () => {});
     const bar = Math.max(equipBar(cur), cur + 0.012);
-    return list.some((it) => it && it.type === 'gear' && (it.req || 1) <= c.level && itemValue(it) <= this.budget(0.85) && fitScore(p, it).s > bar);
+    return list.some((it) => it && it.type === 'gear' && (it.req || 1) <= c.level && itemValue(it) <= this.budget(0.85) && fitScore(p, it, false).s > bar);
   },
   potionsWanted() {
     const c = G.char;
@@ -1892,7 +1939,7 @@ export const Auto = {
         if (bagFree(c) > 15 || GEMS[it.gem].special || it.tier >= top - 1) return;
       } else if (it.type === 'gear' && (it.req || 1) > c.level && (it.req || 1) <= c.level + 6 && it.rarity >= 2 && !future[it.slot]) {
         const s = fitScore(p, it).s;
-        if (s > simulate(p, () => () => {}) * 1.02) { future[it.slot] = true; return; }
+        if (s > simulate(p, () => () => {}) + 0.02) { future[it.slot] = true; return; }
       }
       // gems socketed in gear we're selling: pry them out when that's cheap compared to their worth
       if (it.type === 'gear' && it.gems.length) {
@@ -1938,7 +1985,7 @@ export const Auto = {
         if (!it || it.type !== 'gear' || (it.req || 1) > c.level) return;
         const price = itemValue(it);
         if (price > this.budget(0.85)) return;
-        const f = fitScore(p, it);
+        const f = fitScore(p, it, false); // judged on its own sockets: the gold for new ones goes on the buy
         if (f.s <= bar || done.has(f.slot)) return; // must clear the bar optimizeGear wears it by, or sellJunk sells it straight back
         if (this.betterElsewhere(it, f.s, list)) return; // another shop has a stronger one for this slot: buying both sold this one straight back
         const v = (f.s - cur) / (0.3 + price / Math.max(1, c.gold));
@@ -1959,7 +2006,7 @@ export const Auto = {
     const p = G.player, c = G.char;
     for (const l of [Vendor.stock.weapons, Vendor.stock.armor, Vendor.stock.rings]) {
       if (!l || l === list) continue;
-      for (const o of l) if (o && o !== it && o.type === 'gear' && o.slot === it.slot && (o.req || 1) <= c.level && itemValue(o) <= this.budget(0.85) && fitScore(p, o).s > s) return true;
+      for (const o of l) if (o && o !== it && o.type === 'gear' && o.slot === it.slot && (o.req || 1) <= c.level && itemValue(o) <= this.budget(0.85) && fitScore(p, o, false).s > s) return true;
     }
     return false;
   },

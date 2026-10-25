@@ -39,6 +39,7 @@ node tools/tests/savesafe.js                       # unreadable saves never writ
 node tools/tests/cloud.js [nosdk]                  # cloud saves (Google sign-in + Firestore): 4 devices on a fake Firebase (push, pull, conflicts, tombstones, offline, backups + restore, lost/corrupt/damaged saves change nothing) + real SDK smoke
 node tools/tests/autoshop.js [classes] [rounds]     # auto-play wears everything it buys (none sold back), loot filter, keepers, chest sort
 node tools/tests/autogear.js [mobile]              # "Auto-play manages gear" off (potions only, a full bag plays on), +N gear to the chest, vendor Sell all
+node tools/tests/stalegear.js                      # auto-play swaps a stale +10 piece full of top gems for far better new gear, moving the gems
 node tools/tests/rarity.js [classes] [samples]     # gear rarity worth in item levels, level 25 Rare > level 10 Mythic, drop odds
 node tools/tests/ui.js                             # skill tree, inventory, socketing, vendors
 node tools/tests/options.js                        # settings: lock skill bar, hide item names, auto skill points off; skill tree Respec (50 gold x level^2)
