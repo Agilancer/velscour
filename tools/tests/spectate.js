@@ -54,7 +54,8 @@ const check = (ok, msg) => { console.log(`${ok ? 'ok  ' : 'FAIL'} ${msg}`); if (
       return { caught: (G.char.critters || 0) - b.n, gold: G.char.gold - b.gold, xp: G.char.level > b.lvl || G.char.xp > b.xp, override: Auto.overrideT, status: Auto.status };
     });
     check(r.caught === 1, `${key}: caught by a ${mobile ? 'tap' : 'click'}`);
-    check(r.xp && r.gold === 0, `${key}: paid experience only (gold ${r.gold})`);
+    if (key === 'scarab') check(r.gold > 0 && !r.xp, `${key}: paid gold only (gold ${r.gold})`);   // the Golden Scarab pays gold
+    else check(r.xp && r.gold === 0, `${key}: paid experience only (gold ${r.gold})`);
     check(!(r.override > 0) && !/Manual/.test(r.status), `${key}: auto-play kept control (overrideT ${r.override}, "${r.status}")`);
   }
   // one that gets away

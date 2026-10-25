@@ -74,6 +74,7 @@ export function socketGem(gemIdx, target) {
 export function dropFromBag(idx) {
   const c = G.char, it = c.bag[idx], p = G.player;
   if (!it || !G.world) return false;
+  if (it.locked) { UI.log('That item is locked. Unlock it first (its panel in the inventory).', '#ffd860'); sfx('error'); return false; }
   if (it.type === 'gear' && it.sealed === undefined) it.sealed = false; // already opened: it doesn't seal again on the floor
   c.bag[idx] = null;
   const g = new GroundItem(p.x, p.y, it.type === 'potion' ? 'potion' : 'item', { item: it });
@@ -184,6 +185,8 @@ function detailBox() {
   } else {
     btn('Unequip', () => unequip(sel.slot));
   }
+  // a lock: auto-play leaves the item alone (worn: never swapped out; in the bag or chest: never equipped, sold or moved)
+  if (it.type === 'gear') btn(it.locked ? '🔓 Unlock' : '🔒 Lock', () => { if (it.locked) delete it.locked; else it.locked = true; UI.log(it.locked ? `<b>${escapeHtml(itemName(it))}</b> locked: auto-play won't touch it${sel.where === 'equip' ? ' or swap it out' : ''}.` : `<b>${escapeHtml(itemName(it))}</b> unlocked.`, '#ffd860'); changed(); });
   if (it.type === 'gear' && it.gems.length) {
     const cost = unsocketCost(it);
     const needed = new Set(it.gems.filter((g) => !G.char.bag.some((b) => b && b.type === 'gem' && b.gem === g.gem && b.tier === g.tier)).map((g) => `${g.gem}:${g.tier}`)).size;
@@ -223,7 +226,8 @@ function statsBlock() {
     row.innerHTML = `<span title="${ATTRS[k].desc}">${ATTRS[k].name}${C.primary === k ? ' <span style="color:#ffd34a" title="Primary: +1% damage per point">★</span>' : ''}</span><b>${st[k]}</b>`;
     if (c.statPoints > 0) {
       const plus = el('button', 'plus', '+');
-      plus.onclick = (e) => { const n = e.shiftKey ? Math.min(5, c.statPoints) : 1; c.attrs[k] += n; c.statPoints -= n; sfx('ui'); changed(); };
+      plus.title = 'Shift-click: +5 · Ctrl-click: every point';
+      plus.onclick = (e) => { const n = Math.min(c.statPoints, e.ctrlKey || e.metaKey || e.altKey ? Infinity : e.shiftKey ? 5 : 1); c.attrs[k] += n; c.statPoints -= n; sfx('ui'); changed(); };
       row.appendChild(plus);
     }
     attrs.appendChild(row);
@@ -236,6 +240,14 @@ function statsBlock() {
     auto.onclick = () => { autoAllocate(); sfx('ui'); };
     r.appendChild(auto);
     box.appendChild(r);
+  }
+  const spent = attrsSpent();
+  if (spent > 0) {
+    const rb = el('button', 'btn small', `Respec attributes (${fmtInt(attrRespecCost(c.level))} gold)`);
+    rb.title = 'Refund every attribute point you (or auto-play) spent: 25 gold x level squared';
+    if (c.gold < attrRespecCost(c.level)) rb.style.opacity = '.45';
+    rb.onclick = () => { sfx('ui'); attrRespecDialog(); };
+    box.appendChild(rb);
   }
   const g = el('div', 'stats-grid');
   const rows = [
@@ -257,6 +269,27 @@ function statsBlock() {
   box.appendChild(g);
   box.appendChild(el('div', 'dim', `Kills ${fmtInt(c.kills || 0)} · Deaths ${c.deaths || 0} · Deepest ${c.deepest || 0}`));
   return box;
+}
+
+/** Attribute points spent so far (everything over the class's starting attributes). */
+const attrsSpent = () => { const c = G.char, B = CLASSES[c.classId].base; return ['str', 'dex', 'vit', 'int'].reduce((a, k) => a + Math.max(0, c.attrs[k] - B[k]), 0); };
+export const attrRespecCost = (lv) => 25 * lv * lv;
+/** Refund every spent attribute point (back to the class's starting attributes) for 25 gold x level squared. */
+export function attrRespec() {
+  const c = G.char, cost = attrRespecCost(c.level), n = attrsSpent();
+  if (!n || c.gold < cost) return false;
+  c.attrs = { ...c.attrs, ...CLASSES[c.classId].base };
+  c.statPoints += n; c.gold -= cost;
+  sfx('buff');
+  UI.log(`Attributes reset: <b>${n}</b> attribute points refunded for ${fmtInt(cost)} gold.`, '#ffd860');
+  changed();
+  return true;
+}
+function attrRespecDialog() {
+  const c = G.char, cost = attrRespecCost(c.level), n = attrsSpent();
+  if (c.gold < cost) { UI.log(`Respeccing attributes costs ${fmtInt(cost)} gold.`, '#ff8080'); sfx('error'); return; }
+  const auto = G.settings.autoStatPoints !== false;
+  UI.confirm('Respec Attributes', `Refund all <b>${n}</b> spent attribute points for <b class="gold-text">${fmtInt(cost)} gold</b> (25 x level&sup2;)?${auto ? '<br><span class="dim">Auto-play spends attribute points on its own: turn off "Auto attribute point assignment" in Settings to place them yourself.</span>' : ''}`, attrRespec, 'Respec');
 }
 
 export function autoAllocate() {

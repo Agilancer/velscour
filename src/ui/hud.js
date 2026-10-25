@@ -17,7 +17,7 @@ import { Meter } from '../game/dpsmeter.js';
 import { heroDamage } from '../game/autoplay.js';
 import { madnessReady, madnessOn, unleashMadness } from '../game/mayhem.js';
 import { smiteReady, smiteArmed, toggleSmite } from '../game/smite.js';
-import { greedOf, hoardOf, greedMods, setGreed, GREED_MAX } from '../game/greed.js';
+import { greedOf, hoardOf, hoardCap, greedMods, setGreed, GREED_MAX } from '../game/greed.js';
 import { STANCES, Auto } from '../game/autoplay.js';
 import { sealedCount, openNextSeal } from './sealed.js';
 import { defianceText } from '../game/defiance.js';
@@ -72,7 +72,7 @@ export const HUD = {
       <div><b>Reckless</b>: stands in the thick of it, barely kites, drinks late, dives for the guardian under-levelled.</div>`);
     UI.tip($('#greed'), () => { const g = greedOf(), M = greedMods(g, hoardOf()); return `<b style="color:#ffc040">The Greed lever: ${g} / ${GREED_MAX}</b>
       <div>Each notch: +7% champion packs, +12% pack size, +8% monster traits, monsters +10% life and +6% damage. Pays +25% drops, +30% gold, +20% magic find.</div>
-      <div>Every depth cleared with the lever up adds its level to the <b>Hoard</b> (+2% drops and gold a stack while greedy, up to 50). A death loses the Hoard and drops the lever.</div>
+      <div>Every depth cleared with the lever up adds its level to the <b>Hoard</b>: +2% drops and gold a stack while greedy (drops up to 50 stacks). Its cap grows with your deepest depth (now ${hoardCap()}); stacks over 50 add gold only. A death loses the Hoard and drops the lever.</div>
       <div class="dim">Takes hold from the next depth. Now: ×${M.loot.toFixed(2)} drops, ×${M.gold.toFixed(2)} gold, +${M.mf}% magic find.</div>`; });
     // tap / click the target window to blow it up (about 2.25x, capped to the screen); again to shrink it back
     $('#target-box').addEventListener('click', (e) => { e.stopPropagation(); this.tbBig = !this.tbBig; this.last.tbCls = null; this.updateTarget(); });

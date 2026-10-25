@@ -1,8 +1,8 @@
 // Auto-play's gear setting, +N gear kept in the chest, and the vendors' Sell all button.
 //   node tools/tests/autogear.js [mobile]
 // 1. Settings › "Auto-play manages gear" off: a much better bag item stays in the bag, a full bag isn't emptied to make
-//    room, the town round only visits the alchemist (bag, gear and stash untouched), and a full bag waits in town for
-//    the player, then goes on once a slot is free.
+//    room, the town round only visits the alchemist (bag, gear and stash untouched), and a full bag neither sends it to
+//    town nor keeps it there: it goes back down and leaves new gear on the ground (a player asleep at the screen).
 // 2. On: every piece of gear auto-play buys from a shop gets worn at once (equipBar). Gear upgraded at the blacksmith
 //    (+N) is never sold or dropped: a town round puts it in the storage chest, it stays there unless it's an upgrade,
 //    and a full chest sells the other gear auto-play stored first.
@@ -56,7 +56,7 @@ const mobile = process.argv[2] === 'mobile';
     const items = await import('/src/data/items.js');
     const { Auto } = await import('/src/game/autoplay.js');
     const c = G.char, out = { untouched: window.uids() === window.before, pots: c.potions.hp };
-    // a nearly full bag doesn't send it to town; a full one does (it waits there for the player); no dropping for room
+    // neither a nearly full bag nor a full one sends it to town (it plays on, leaving gear on the ground); no dropping for room
     for (let i = 0; i < c.bag.length; i++) if (!c.bag[i]) c.bag[i] = items.rollItem(5, { slot: 'feet', rarity: 0 });
     for (let i = 0; i < 10; i++) c.bag[c.bag.length - 1 - i] = null;
     c.potions.hp = 20;
@@ -76,9 +76,9 @@ const mobile = process.argv[2] === 'mobile';
   check(off2.untouched, 'hands off: bag, equipment and stash untouched by the town round');
   check(off2.pots > 0, `hands off: still buys potions (${off2.pots} healing)`);
   check(offTown.left !== 'town', 'hands off: left town through the portal');
-  check(!off2.townLow && off2.townFull, 'hands off: only a full bag sends the hero to town');
+  check(!off2.townLow && !off2.townFull, 'hands off: a full bag does not send the hero to town');
   check(!off2.room && off2.fullKept, 'hands off: a full bag is not emptied to make room');
-  check(offWait.waited && offWait.left !== 'town', 'hands off: a full bag waits in town, then goes on once the player frees a slot');
+  check(!offWait.waited && offWait.left !== 'town', 'hands off: a full bag does not keep the hero in town');
 
   // ---- 2. hands on: what it buys, it wears
   const on = await page.evaluate(async () => {

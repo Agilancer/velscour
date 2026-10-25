@@ -15,7 +15,7 @@ import { hit, aoe } from './combat.js';
 import { makeMonster, makeElite, monsterBase } from './monster.js';
 import { ambush } from './mayhem.js';
 import { GroundItem, dropChest } from './loot.js';
-import { rollItem, rollGem, potionItem, itemName, itemColor, rarityAt } from '../data/items.js';
+import { rollItem, rollGem, potionItem, itemName, itemColor, rarityAt, goldScale } from '../data/items.js';
 import { depthLevel, isRaidDepth, FINAL_DEPTH } from '../data/depth.js';
 import { addToBag } from './player.js';
 import { UI } from '../ui/ui.js';
@@ -309,7 +309,7 @@ export function spawnNemesis(world, [x, y], N) {
     UI.log(`<b style="color:#ff4a3a">Revenge!</b> ${m.name} will not gloat again.`, '#ff8070');
     addEffect(new Column(m.x, m.y, '#ff4030', 1, 40, 420)); camera.shake(6); sfx('gate');
     for (let i = 0; i < 4; i++) world.addLoot(new GroundItem(m.x, m.y, 'item', { item: rollItem(lvl + 3, { mf: p.st.magicFind, bonus: 1.5 }) }));
-    for (let i = 0; i < 8; i++) world.addLoot(new GroundItem(m.x, m.y, 'gold', { amount: Math.round((20 + lvl * 5) * rand(0.7, 1.4)) }));
+    for (let i = 0; i < 8; i++) world.addLoot(new GroundItem(m.x, m.y, 'gold', { amount: Math.round((20 + lvl * 5) * goldScale(lvl) * rand(0.7, 1.4)) }));
   };
   world.add(m);
   world.happen.nemesis = m;
@@ -317,6 +317,8 @@ export function spawnNemesis(world, [x, y], N) {
 }
 
 // ------------------------------------------------------------------------------------------------ treasure imp
+/** A Treasure Imp's coins: `base` on the old line, kept up with prices (goldScale), gold find and the Greed lever. */
+const impGold = (world, lvl, base) => Math.round(base * goldScale(lvl) * rand(0.7, 1.5) * (1 + ((G.player && G.player.st.goldFind) || 0) / 100) * (world.goldMul || 1));
 export function spawnImp(world) {
   const p = world.player, map = world.map;
   let at = null;
@@ -333,12 +335,12 @@ export function spawnImp(world) {
   const base = m.onDamaged.bind(m);
   m.onDamaged = (src, d) => {
     base(src, d);
-    if (chance(0.35)) world.addLoot(new GroundItem(m.x, m.y, 'gold', { amount: Math.round((10 + lvl * 3) * rand(0.6, 1.4)) }));
+    if (chance(0.45)) world.addLoot(new GroundItem(m.x, m.y, 'gold', { amount: impGold(world, lvl, 10 + lvl * 3) }));
   };
   m.onDeath = () => {
     sfx('gold'); sfx('chest'); camera.shake(5);
     explosionFx(m.x, m.y, 1.6, 'holy', 'eruption');
-    for (let i = 0; i < 14; i++) world.addLoot(new GroundItem(m.x, m.y, 'gold', { amount: Math.round((15 + lvl * 4) * rand(0.6, 1.6)) }));
+    for (let i = 0; i < 24; i++) world.addLoot(new GroundItem(m.x + rand(-0.6, 0.6), m.y + rand(-0.6, 0.6), 'gold', { amount: impGold(world, lvl, 25 + lvl * 6) }));
     for (let i = 0; i < randi(3, 5); i++) world.addLoot(new GroundItem(m.x, m.y, 'item', { item: rollItem(lvl + 2, { mf: G.player.st.magicFind, bonus: 1.3 }) }));
     if (chance(0.5)) world.addLoot(new GroundItem(m.x, m.y, 'item', { item: rollGem(lvl + 6) }));
     UI.centerMsg('TREASURE IMP SLAIN', 'It burst like a piÃ±ata', 2);
@@ -358,7 +360,7 @@ function impTick(world, dt) {
   if (m.dead) { H.imp = null; return; }
   m.status.fear = { t: 1 }; // it always runs from the hero
   if (chance(dt * 8)) sparkle(m.x, m.y, 20, '#ffd040', 1, 0.3);
-  if (chance(dt * 1.2)) world.addLoot(new GroundItem(m.x, m.y, 'gold', { amount: Math.round(5 + depthLevel(world.depth) * 1.5) }));
+  if (chance(dt * 1.2)) world.addLoot(new GroundItem(m.x, m.y, 'gold', { amount: impGold(world, depthLevel(world.depth), 5 + depthLevel(world.depth) * 1.5) }));
   if ((H.impLeft -= dt) <= 0) {
     addEffect(new Ring(m.x, m.y, 2, 0.1, 0.5, '#ffd040', 4)); addEffect(new Column(m.x, m.y, '#ffd040', 0.5, 20, 240));
     floatText(m.x, m.y, 70, 'Escaped!', '#ffd040', 14, { life: 1.6 });
@@ -388,7 +390,7 @@ function challengeTick(world, dt) {
     UI.centerMsg('CHALLENGE MET', 'Velscour grudgingly pays up', 2.2);
     addEffect(new Column(p.x, p.y, '#ffd040', 0.9, 30, 360));
     for (let i = 0; i < 3; i++) world.addLoot(new GroundItem(p.x, p.y, 'item', { item: rollItem(lvl + 2, { mf: p.st.magicFind, bonus: 1 }) }));
-    for (let i = 0; i < 6; i++) world.addLoot(new GroundItem(p.x, p.y, 'gold', { amount: Math.round((20 + lvl * 5) * rand(0.7, 1.3)) }));
+    for (let i = 0; i < 6; i++) world.addLoot(new GroundItem(p.x, p.y, 'gold', { amount: Math.round((20 + lvl * 5) * goldScale(lvl) * rand(0.7, 1.3)) }));
     world.addLoot(new GroundItem(p.x, p.y, 'potion', { item: potionItem(pick(['rejuv', 'fury'])) }));
     sfx('gate');
   } else if (C.left <= 0) {

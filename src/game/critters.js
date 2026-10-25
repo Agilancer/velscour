@@ -1,7 +1,8 @@
 // Gilded critters: little treasures that cross the screen now and then (a gilded wisp drifting through the air, a
 // starmoth, a golden scarab scuttling over the floor, now and then a prismatic wisp). Auto-play never chases them:
 // they are the player's to tap (or click) before they get away. They aren't creatures, so nothing fights them.
-// Each pays one thing: a big sum of experience, a share of the hero's next level (pay.xp). A red arrow bobs over
+// Each pays one thing: a big sum of experience, a share of the hero's next level (pay.xp), or, the Golden Scarab, a
+// heap of gold (pay.gold: that many gold piles of the hero's level, gold find counted). A red arrow bobs over
 // each one and sparks stream up from it so players know to tap.
 // Only a click or a tap catches one: the hero never does (they shy away from the hero, and nothing but
 // catchCritterAt calls catchCritter).
@@ -15,14 +16,15 @@ import { sfx } from '../core/audio.js';
 import { camera, isoX, isoY } from '../core/view.js';
 import { addEffect, Ring, glowSprite, sparkle, spawn, floatText, addLight } from '../gfx/vfx.js';
 import { xpToNext } from './player.js';
+import { goldPile } from '../data/items.js';
 import { UI } from '../ui/ui.js';
 
 // fly: drifts in the air (z), else scuttles on the floor. w: odds. life: seconds before it gets away.
-// pay.xp: experience, as a share of xpToNext(hero level).
+// pay.xp: experience, as a share of xpToNext(hero level); pay.gold: gold piles (items.js goldPile) at the hero's level.
 export const CRITTERS = {
   wisp: { name: 'Gilded Wisp', color: '#ffd040', fly: true, w: 45, life: 12, speed: 1.3, pay: { xp: 0.05 } },
   moth: { name: 'Starmoth', color: '#a8c8ff', fly: true, w: 25, life: 11, speed: 1.6, pay: { xp: 0.06 } },
-  scarab: { name: 'Golden Scarab', color: '#ffb030', fly: false, w: 22, life: 10, speed: 2.1, pay: { xp: 0.08 } },
+  scarab: { name: 'Golden Scarab', color: '#ffb030', fly: false, w: 22, life: 10, speed: 2.1, pay: { gold: 40 } },
   prism: { name: 'Prismatic Wisp', color: '#ff80e0', fly: true, w: 8, life: 9, speed: 2, pay: { xp: 0.15 } },
 };
 const KEYS = Object.keys(CRITTERS);
@@ -195,7 +197,7 @@ export function spawnCritter(world, key = null) {
     sparkle(x, y, c.z, c.K.color, 10, 0.4);
     sfx('pickup', 0.5);
     const ch = G.char;
-    if (ch && !ch.tips.critter) { ch.tips.critter = true; UI.log(`A <b style="color:${c.K.color}">${c.K.name}</b>! ${G.touch ? 'Tap' : 'Click'} it before it gets away: each gilded critter is worth a big sum of experience, and auto-play leaves them to you.`, '#ffe2a0'); }
+    if (ch && !ch.tips.critter) { ch.tips.critter = true; UI.log(`A <b style="color:${c.K.color}">${c.K.name}</b>! ${G.touch ? 'Tap' : 'Click'} it before it gets away: each gilded critter is worth a big sum of experience (a Golden Scarab, a pile of gold), and auto-play leaves them to you.`, '#ffe2a0'); }
     return c;
   }
   return null;
@@ -237,14 +239,15 @@ export function catchCritter(cr) {
   const p = G.player, c = G.char, K = cr.K;
   if (!p || !c || !cr.alive) return;
   cr.caught = true;
-  const x = Math.max(5, Math.round(xpToNext(c.level) * K.pay.xp * rand(0.9, 1.1)));
-  p.gainXp(x, true);
-  floatText(cr.x, cr.y, cr.z + 24, `+${fmtInt(x)} XP`, '#a8c8ff', 16, { life: 1.8 });
+  const gold = !!K.pay.gold;
+  const x = gold ? Math.round(goldPile(c.level) * K.pay.gold * rand(0.85, 1.15) * (1 + p.st.goldFind / 100)) : Math.max(5, Math.round(xpToNext(c.level) * K.pay.xp * rand(0.9, 1.1)));
+  if (gold) { c.gold += x; sfx('gold'); } else p.gainXp(x, true);
+  floatText(cr.x, cr.y, cr.z + 24, `+${fmtInt(x)} ${gold ? 'gold' : 'XP'}`, gold ? '#ffd040' : '#a8c8ff', 16, { life: 1.8 });
   addEffect(new Ring(cr.x, cr.y, 0.1, 1.6, 0.45, K.color, 4, { z: cr.z }));
   sparkle(cr.x, cr.y, cr.z, K.color, 24, 0.5);
   sparkle(cr.x, cr.y, cr.z, '#ffffff', 8, 0.3);
   sfx('levelup', 0.35);
   c.critters = (c.critters || 0) + 1;
-  UI.log(`Caught a <b style="color:${K.color}">${K.name}</b>: ${fmtInt(x)} experience.`, '#ffe2a0');
+  UI.log(`Caught a <b style="color:${K.color}">${K.name}</b>: ${fmtInt(x)} ${gold ? 'gold' : 'experience'}.`, '#ffe2a0');
   UI.refresh();
 }

@@ -48,7 +48,10 @@ function voice(text, v = {}) {
 /** The game's own zoom (settings, screen size), without touching the camera. */
 function baseZoom() { const z = camera.zoom; camera.computeZoom(); const b = camera.zoom; camera.zoom = z; return b; }
 
+/** How much faster a scene the hero has already watched plays (game.js runs that many steps a frame). */
+export const CINE_FAST = 20;
 export const Cine = {
+  fast: false,   // this scene was seen: it plays at CINE_FAST (set by the director's first step, game/skybattle.js scene())
   active: false, steps: [], i: 0, t: 0, speed: 1, bars: 0, card: null, line: null, cam: null, shook: false, back: null,
   onEnd: null, zoom0: 1,
   /** Start a scene (or queue it after the one playing). */
@@ -58,7 +61,7 @@ export const Cine = {
     this.zoom0 = baseZoom(); this.back = null; this.cam = null;
   },
   stop() {
-    this.active = false; G.cine = false; this.steps = []; this.line = null; this.card = null; this.cam = null;
+    this.active = false; G.cine = false; this.fast = false; this.steps = []; this.line = null; this.card = null; this.cam = null;
     this.back = { t: 0, z0: camera.zoom };   // ease the zoom home (game.js's camera.follow brings the frame back to the hero)
     const f = this.onEnd; this.onEnd = null; if (f) f();
   },
@@ -122,7 +125,7 @@ export const Cine = {
       this.line = { ...d, t: 0, shown: 0 };
       s.dur = s.dur ?? 1.4 + d.text.length * 0.045;
       if (d.onStart) d.onStart();
-      voice(d.text, d.voice);
+      if (!this.fast) voice(d.text, d.voice);
     }
   },
   done(s) {
@@ -158,6 +161,11 @@ export function drawCine(ctx, W, H) {
     ctx.fillStyle = '#ffd9a0'; ctx.fillText(C.title, W / 2, H * 0.36);
     if (C.sub) { ctx.font = `italic ${Math.round(sub * dpr)}px "Alegreya", serif`; ctx.fillStyle = '#e8d8c0'; ctx.fillText(C.sub, W / 2, H * 0.36 + big * 0.95 * dpr); }
     ctx.globalAlpha = 1;
+  }
+  if (Cine.fast && k > 0.5) {   // fast-forwarding a scene already seen
+    const fs = Math.round(clamp(G.H / 52, 10, 14) * dpr);
+    ctx.font = `${fs}px "Alegreya Sans", "Segoe UI", sans-serif`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#c8b898'; ctx.fillText(`▶▶ x${CINE_FAST}  ·  seen before  (Settings: Don't skip cutscenes)`, W - pad * dpr, bar / 2);
   }
   const L = Cine.line;
   if (L && k > 0.5) {

@@ -23,8 +23,9 @@ import { enemyImage } from '../core/enemyart.js';
 import { depthLevel } from '../data/depth.js';
 import { rollItem, rarityAt } from '../data/items.js';
 import { TOWNSFOLK } from '../data/townsfolk.js';
-import { AIR_CREW, AIR_CAPTAIN, crewFor, AIR_ARCHS } from '../data/airpirates.js';
-import { SKY_VARIANT, SKY_VARIANTS, SKY_WAVES, DOCKS } from '../data/skybattle.js';
+import { AIR_CREW, AIR_CAPTAIN } from '../data/airpirates.js';
+import { ART_BY_ID, SWAPS } from '../data/bestiary.js';
+import { SKY_VARIANT, SKY_VARIANTS, SKY_STORY_VARIANTS, SKY_WAVES, DOCKS } from '../data/skybattle.js';
 import { conversation, twistLine, CAPTAIN_CRIES, FAREWELLS, fillLine, CONVERSATION_COUNT, betrayal, ALLY_CRIES, CHARGE_LINES, HOOK_LINES2 } from '../data/skytalk.js';
 import { RUNEBLADE_PALETTES, RUNEBLADE_SKINS, preloadRuneblade, drawRuneblade3D } from '../gfx/runeblade3d.js';
 import { OX, OY, LV, FC_H, QD_H, GATE, LANDING, beam, sheer, inner, sAt, zAt } from '../world/skyship.js';
@@ -53,16 +54,30 @@ export const KNIGHT_ACTS = {
   attack: ['attack', (t) => ({ dx: Math.min(1, t * 5) * 6, rot: Math.min(1, t * 5) * 0.12 })],
 };
 
-/** Pick a variant: `id` or a weighted random one (never the one just played). */
-export function pickVariant(id, last) {
+/** Pick a variant: `id`, else (never the one just played) one of the stories the hero hasn't seen 70% of the time
+ *  while there are any, else any weather or story. `seen` is G.char.skySeen. */
+export function pickVariant(id, last, seen = {}) {
   if (id && SKY_VARIANT[id]) return SKY_VARIANT[id];
-  const pool = SKY_VARIANTS.filter((v) => v.id !== last);
-  return pick(pool);
+  const fresh = SKY_STORY_VARIANTS.filter((v) => v.id !== last && !seen[v.id + ':intro']);
+  if (fresh.length && chance(0.7)) return pick(fresh);
+  return pick([...SKY_VARIANTS, ...SKY_STORY_VARIANTS].filter((v) => v.id !== last));
 }
+/** Whose cut scenes these are: each story is its own; the eight weathers share one (the same battle and beats). */
+export const skySeenKey = (v) => (v.story ? v.id : 'base');
 
 export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
-  const map = world.map, st = castle3dState(), A = st.anchors, v = pickVariant(opts.variant, opts.last);
+  const map = world.map, st = castle3dState(), A = st.anchors, v = pickVariant(opts.variant, opts.last, opts.seen);
   const lvl = depthLevel(depth), base = monsterBase(lvl);
+  // the boarders and the named cast: a story's own (any painted art, palette swapped), else the Air Pirates
+  const swapOf = (x) => (typeof x === 'string' ? SWAPS[x] || null : x || null);
+  const CREW = v.crew ? v.crew.map((c) => ({ id: c.art, art: c.art, arch: c.arch, h: c.h || ART_BY_ID[c.art]?.h || AIR_CREW.find((a) => a.id === c.art)?.h || 56, swap: swapOf(c.swap), name: c.name }))
+    : AIR_CREW.map((a) => ({ ...a, art: a.id, swap: null }));
+  const crewFor = (arch) => CREW.filter((a) => a.arch === arch);
+  const ARCHS = [...new Set(CREW.map((a) => a.arch))];
+  const pickCrew = () => pick(CREW);
+  /** A captain, boss or master by key: a story's cast entry, else an Air Pirate captain. */
+  const capOf = (key) => { const c = v.cast && v.cast[key]; return c ? { ...c, id: key, art: c.art || key, swap: swapOf(c.swap) } : { ...AIR_CAPTAIN[key], art: key, swap: null }; };
+  const L = v.lines || {};   // a story's own lines (docs/SKY_STORIES.md); the weathers draw from data/skytalk.js
   const S = world.sky = { v, boats: [], galleon: null, hooks: [], shots: [], bolts: [], ropes: [], blades: [], flash: 0, gateColor: '#ff5020', gateFlash: 0, windK: 1, fogR: 1 };
   if (v.night) { world.night = true; world.darkK = v.dark; } else if (v.dark) world.darkK = v.dark;
   world.raining = false;
@@ -73,6 +88,8 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
   const walk = (x, y) => map.walkable(x, y);
   const near = (x, y, r = 2) => { if (walk(x, y)) return [x, y]; const q = map.randomNear(x, y, r); return q && walk(q[0], q[1]) ? q : [OX + 0.5, OY + 0.5]; };
   const ctx = () => ({ hero: hero().name, class: classNameOf(), weather: v.weather.toLowerCase(), cap: run.cap?.name || '', captitle: run.cap?.title || '', k1: run.k1?.first || '', k2: run.k2?.first || '' });
+  /** Fill a line's tokens: {hero} {class} {k1} {k2} {cap}..., and a story's {@castKey} (that character's name). */
+  const fillAll = (t) => fillLine(t.replace(/\{@(\w+)\}/g, (m, k) => (v.cast && v.cast[k] ? v.cast[k].name : m)), ctx());
   const classNameOf = () => { const c = G.char.classId || ''; return c.split('_').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ').replace('Arcane Sorcerer', 'Astronomer'); };
   const live = new Set();   // the pirates on the deck this fight brought
   const drop = (arr, x) => { const i = arr.indexOf(x); if (i >= 0) arr.splice(i, 1); };
@@ -88,7 +105,7 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     const dock = dockSpot(kind, dz), from = { x: dock.x - 16, y: dock.y + 18, lv: dock.lv + 40 };
     const K = A.skiffs[kind], spots = K.deck.slice().sort(() => Math.random() - 0.5);
     const b = { kind, dz, x: from.x, y: from.y, lv: from.lv, alpha: 0, ramp: 0, phase: Math.floor(rand(0, 4)), st: 'in', t: 0, dock, from, wait: o.wait ?? 0.9, hold: o.hold ?? 2.5, leap: o.leap !== false,
-      crew: crew.map((c, i) => ({ ...c, x: spots[i % spots.length][0] + rand(-0.15, 0.15), z: spots[i % spots.length][2] + rand(-0.15, 0.15), h: AIR_CREW.find((a) => a.id === c.art)?.h ?? c.h ?? 56, flip: false, ph: rand(0, 6) })) };
+      crew: crew.map((c, i) => ({ ...c, x: spots[i % spots.length][0] + rand(-0.15, 0.15), z: spots[i % spots.length][2] + rand(-0.15, 0.15), h: c.h ?? CREW.find((a) => a.art === c.art)?.h ?? 56, flip: false, ph: rand(0, 6) })) };
     S.boats.push(b);
     return b;
   }
@@ -105,7 +122,7 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
       if (b.drops > 0 && b.y < OY + 12 && (b.dropT = (b.dropT ?? 0) - dt) <= 0) {
         b.dropT = 0.45; b.drops--;
         const to = near(b.x + 3 + rand(-2.5, 2.5), b.y + rand(-1, 1));
-        spawnPirate(pick(AIR_CREW).id, chance(0.25) ? 'champion' : 'normal', null, to, b.wave, 'rope', () => [b.x + 0.4, b.y + 0.2, b.lv]);
+        spawnPirate(pickCrew().id, chance(0.25) ? 'champion' : 'normal', null, to, b.wave, 'rope', () => [b.x + 0.4, b.y + 0.2, b.lv]);
       }
       if (b.y < OY - 32) b.dead = true;
       return;
@@ -188,19 +205,21 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     };
   }
   function spawnPirate(art, rank, from, to, wave = run.wave, how = 'leap', anchor = null) {
-    const a = AIR_CREW.find((q) => q.id === art) || pick(AIR_CREW);
-    const m = makeMonster(world, a.arch, biome, lvl + (rank === 'normal' ? 0 : 1), rank, to[0], to[1], 0, { art: a.id, swap: null });
+    const a = CREW.find((q) => q.art === art) || pickCrew();
+    const m = makeMonster(world, a.arch, biome, lvl + (rank === 'normal' ? 0 : 1), rank, to[0], to[1], 0, { art: a.art, swap: a.swap });
     if (a.shot && m.proj) m.proj = { ...m.proj, fx: a.shot };
+    if (v.crew) { m.artH = a.h; m.split = false; if (a.name) m.name = a.name; }   // a story's boarders keep their size; a slime doesn't split into the dungeon's looks
     world.add(m); m.sky = true; m.wave = wave; live.add(m);
     if (how === 'rope') rappelIn(m, to, anchor); else leap(m, from, to);
     return m;
   }
   function spawnCaptain(id, from, to, rank = 'boss', onLand, o = {}) {
-    const a = AIR_CAPTAIN[id];
-    const m = makeMonster(world, a.arch, biome, lvl + 2, rank, to[0], to[1], 0, { art: a.id, swap: null });
+    const a = capOf(id);
+    const m = makeMonster(world, a.arch, biome, lvl + (o.lv ?? 2), rank, to[0], to[1], 0, { art: a.art, swap: a.swap });
     if (a.shot && m.proj) m.proj = { ...m.proj, fx: a.shot };
-    m.name = a.name; m.title = a.title; m.captain = a; m.sky = true; m.moveT = rand(5, 8);
-    m.scale = 1;   // the boss rank's 1.9 would make a captain three heroes tall: they stand about one and a half (their art's h)
+    m.name = a.name; m.title = a.title; m.captain = a; m.castKey = id; run.castM[id] = m; m.sky = true; m.moveT = rand(5, 8); m.split = false;
+    m.scale = 1; m.artH = a.h;   // the boss rank's 1.9 would make a captain three heroes tall: they stand about one and a half (their art's h)
+    if (o.hp) { m.maxHp *= o.hp; m.hp = m.maxHp; }
     world.add(m); live.add(m);
     if (o.swing) { m.x = from[0]; m.y = from[1]; m.z = from[2] * HS - elevationAt(m.x, m.y); swingAcross(m, o.swing, to, { dur: 1.7, onLand }); }
     else leap(m, from, to, { arc: 140, onLand });
@@ -210,9 +229,10 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
   function crewList(n, champions, uniques, wave) {
     const out = [];
     for (let i = 0; i < n; i++) {
-      const arch = chance(0.18) ? pick(['demon', 'knight']) : pick(AIR_ARCHS.filter((x) => x !== 'demon'));
+      const heavy = ARCHS.filter((x) => x === 'demon' || x === 'knight'), light = ARCHS.filter((x) => x !== 'demon');
+      const arch = heavy.length && chance(0.18) ? pick(heavy) : pick(light.length ? light : ARCHS);
       const a = pick(crewFor(arch));
-      out.push({ art: a.id, rank: i < uniques ? 'unique' : i < uniques + champions ? 'champion' : 'normal', wave });
+      out.push({ art: a.art, swap: a.swap, h: a.h, rank: i < uniques ? 'unique' : i < uniques + champions ? 'champion' : 'normal', wave });
     }
     return out;
   }
@@ -223,18 +243,20 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
   // warmLevelArt), not in the middle of the parley. Bright, never clashing: two hues a third to a half of the wheel
   // apart, both lifted and saturated.
   const KNIGHTS = (() => {
-    const ks = TOWNSFOLK.filter((q) => q.knight), a = pick(ks), b = pick(ks.filter((q) => q !== a)), h1 = rand(0, 360), h2 = (h1 + rand(120, 180)) % 360;
+    const ks = TOWNSFOLK.filter((q) => q.knight), h1 = rand(0, 360), h2 = (h1 + rand(120, 180)) % 360;
     const pal = (h) => ({ hue: Math.round(h), sat: +rand(1.3, 1.6).toFixed(2), light: +rand(0.05, 0.12).toFixed(2) });
+    if (v.knights) return v.knights.map((k, i) => [ks.find((q) => q.name.split(' ')[0] === k.base) || ks[i], pal(k.hue ?? (i ? h2 : h1)), k.name]);   // a story's own two
+    const a = pick(ks), b = pick(ks.filter((q) => q !== a));
     return [[a, pal(h1)], [b, pal(h2)]];
   })();
   const bladeSkin = (i) => RUNEBLADE_SKINS[(i * 2 + run.talk) % RUNEBLADE_SKINS.length].id;
   S.warm = () => { for (const [q, palette] of KNIGHTS) townSprite(q.spriteId, palette); preloadRuneblade(bladeSkin(0)); preloadRuneblade(bladeSkin(1)); };
   function makeKnights() {
-    const mk = ([q, palette], x, z) => {
+    const mk = ([q, palette, name], x, z) => {
       const [tx, ty] = tileOf(x, z);
       const n = makeFolk(world, q, tx, ty, { calm: true, still: true, palette });
-      n.first = q.name.split(' ')[0];
-      n.name = `Sky-Knight ${n.first}`;
+      n.first = name ? name.replace(/^Sky-Knight /, '') : q.name.split(' ')[0];
+      n.name = name || `Sky-Knight ${n.first}`;
       n.lift = 0;   // px over the ground under them (standing on a boat or the flagship)
       n.motion = () => { const a = n.actPose ? n.actPose() : null; return a ? { ...a, dy: (a.dy || 0) + n.lift } : { dy: n.lift }; };
       world.npcs.push(n);
@@ -338,7 +360,7 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
       if (!tgt) { k.chase = true; k.follow = heroSide(k === run.k1 ? -1 : 1); continue; }
       if (td < 2.4 && k.atkCd <= 0) { strike(k, tgt); continue; }
       k.chase = true; k.follow = () => near(tgt.x + (k.x < tgt.x ? -1 : 1), tgt.y, 1);
-      if ((k.cryT = (k.cryT ?? rand(4, 8)) - dt) <= 0) { k.cryT = rand(6, 11); k.say(fillLine(pick(ALLY_CRIES), ctx()), 2.2); }
+      if ((k.cryT = (k.cryT ?? rand(4, 8)) - dt) <= 0) { k.cryT = rand(6, 11); k.say(fillAll(pick(v.story ? ALLY_CRIES.filter((t) => !/black sail/i.test(t)) : ALLY_CRIES)), 2.2); }
     }
   }
   /** A spot along the flagship's rail (her crew's places): [tile x, tile y, level]. */
@@ -354,8 +376,8 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     if (!heroImg) { heroImg = new Image(); heroImg.src = `assets/sprites/select/${G.char.classId}.webp`; }
     if (heroImg.complete && heroImg.naturalWidth) { const s = w / heroImg.naturalWidth * 1.6; cx.drawImage(heroImg, x + w / 2 - heroImg.naturalWidth * s / 2, y - 4, heroImg.naturalWidth * s, heroImg.naturalHeight * s); }
   };
-  const monsterPortrait = (art) => (cx, x, y, w, h, t) => {
-    const img = enemyImage(art, null); if (!img) return;
+  const monsterPortrait = (art, swap = null) => (cx, x, y, w, h, t) => {
+    const img = enemyImage(art, swap); if (!img) return;
     const s = w / img.width * 1.5, sh = Math.sin(t * 30) * (t < 0.3 ? 2 : 0);
     cx.drawImage(img, x + w / 2 - img.width * s / 2 + sh, y - h * 0.08, img.width * s, img.height * s);
   };
@@ -365,16 +387,19 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     const f = Math.max(0, townFrameOf(n.townsfolkSpriteId, n.emotion === 'dead' ? 'scared' : n.emotion || 'idle'));
     cx.drawImage(sheet, f * TOWN_FRAME_W + 64, 0, 128, 110, x - w * 0.1, y, w * 1.2, w * 1.2 * 110 / 128);
   };
+  const capSpeaker = (a) => ({ name: a.name, color: '#ff9a6a', portrait: monsterPortrait(a.art, a.swap), voice: { pitch: a.voice || 0.7, wave: 'sawtooth' } });
   const speaker = (who) => who === 'hero' ? { name: G.char.name, color: '#9fd0ff', portrait: heroPortrait, voice: { pitch: 1, wave: 'square' } }
-    : who === 'cap' ? { name: run.cap.name, color: '#ff9a6a', portrait: monsterPortrait(run.cap.id), voice: { pitch: run.cap.voice || 0.7, wave: 'sawtooth' } }
-      : { name: run[who].name, color: who === 'k1' ? '#ffd27a' : '#a8f0c0', portrait: knightPortrait(run[who]), voice: { pitch: who === 'k1' ? 1.15 : 0.9, wave: 'triangle' } };
+    : who === 'cap' ? capSpeaker(run.cap)
+      : who === 'k1' || who === 'k2' ? { name: run[who].name, color: who === 'k1' ? '#ffd27a' : '#a8f0c0', portrait: knightPortrait(run[who]), voice: { pitch: who === 'k1' ? 1.15 : 0.9, wave: 'triangle' } }
+        : { ...capSpeaker(capOf(who)), color: who === v.gauntlet?.master ? '#d090ff' : '#ff9a6a' };   // a story's cast member
   /** A spoken line as a cut scene step: who says it (the camera frames them: `focus`), the knight's act. */
   function sayStep(line) {
     const sp = speaker(line.who), npc = line.who === 'k1' || line.who === 'k2' ? run[line.who] : null;
-    return { say: { ...sp, text: line.text, focus: () => faceOf(actor(line.who)),
+    return { say: { ...sp, text: line.text, focus: () => focusOf(line.who),
       onStart: () => {
         if (npc) { act(npc, line.act, 1.4 + line.text.length * 0.045); if (G.char) npc.face(p().x, p().y); }
-        if (line.who === 'cap' && run.capM) { run.capM.animT += 0.5; if (line.act === 'angry' || line.act === 'laugh') camera.shakeAmt = Math.max(camera.shakeAmt, 2); }
+        const m = line.who === 'cap' ? run.capM : actor(line.who);
+        if (m && m.animT !== undefined && !npc) { m.animT += 0.5; if (line.act === 'angry' || line.act === 'laugh') camera.shakeAmt = Math.max(camera.shakeAmt, 2); }
       } } };
   }
 
@@ -390,7 +415,19 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     const h = e.isPlayer ? 60 : e.townsfolkSpriteId ? 57 : (e.artH || 50) * (e.scale || 1);
     return [isoX(e.x, e.y), isoY(e.x, e.y) - (e.z || 0) - (e.lift || 0) - h * k];
   };
-  const actor = (who) => who === 'hero' ? p() : who === 'cap' ? run.capM : run[who];
+  /** Who speaks: the hero, the parley's captain, a knight, or a story's cast member (on the deck, else painted at the
+   *  flagship's rail or on a boat). */
+  const actor = (who) => {
+    if (who === 'hero') return p();
+    if (who === 'cap') return run.capM && !run.capM.dead ? run.capM : actor(v.finals[0]);
+    if (who === 'k1' || who === 'k2') return run[who];
+    const m = [...live].find((q) => q.castKey === who && !q.dead) || run.castM[who];
+    return m && world.creatures.includes(m) ? m : null;   // a fallen one is framed where it lies
+  };
+  /** A painted crew record standing for cast member `key` (the flagship's rail, a boat): [owner, record]. */
+  const paintedOf = (key) => { for (const o of [S.galleon, ...S.boats]) { const c = o && o.crew.find((q) => q.cap === key); if (c) return [o, c]; } return null; };
+  /** The point a line's shot frames: the speaker's face, wherever they are. */
+  const focusOf = (who) => { const a = actor(who); if (a) return faceOf(a); const pc = paintedOf(who === 'cap' ? v.finals[0] : who); return pc ? crewFace(pc[0], pc[1]) : who === 'cap' || v.cast?.[who] ? galleonAt() : faceOf(p()); };
   /** A painted pirate standing on a boat or the flagship (its crew record). */
   const crewFace = (o, c) => flat(o.x + c.x, o.y + c.z, o.lv + (c.y || 0) * LV, c.h * 0.62);
   const boatAt = (b) => flat(b.x, b.y, b.lv, 40);
@@ -403,20 +440,23 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
   const backToHero = (dur = 1) => on(() => faceOf(p(), 0.4), 1, dur, { wait: true });
   // close-up zooms: a captain stands a head and a half taller than the hero
   const CLOSE = { hero: 3.0, cap: 2.4, k1: 3.2, k2: 3.2 };
+  const closeOf = (who) => CLOSE[who] || clamp(2.4 * 90 / (capOf(who).h || 90), 1.1, 2.6);   // a story's cast: the bigger, the wider
   /** A dialogue shot: close on the speaker, the frame leaning a little toward whoever they talk to, a slow push in. */
-  const lineShot = (who, to = null, zoom = CLOSE[who] || 2.4, push = 0.025) =>
-    on(() => { const a = faceOf(actor(who)); return to ? mix(a, faceOf(actor(to)), 0.22) : a; }, zoom, 0.9, { pace: 700, push });
+  const lineShot = (who, to = null, zoom = closeOf(who), push = 0.025) =>
+    on(() => { const a = focusOf(who), b = to && focusOf(to); return b && Math.hypot(b[0] - a[0], b[1] - a[1]) < 420 ? mix(a, b, 0.22) : a; }, zoom, 0.9, { pace: 700, push });   // no lean across to another ship
 
   // ------------------------------------------------------------------ the run
   const run = {
     id: 'skyship', type: 'skybattle', completed: false, failed: false, active: true, stage: 0, markers: [], route: [], escort: null, routeIndex: 0,
-    variant: v, phase: 'intro', wave: -1, talk: Math.floor(rand(0, CONVERSATION_COUNT)), t: 0, cap: null, capM: null, k1: null, k2: null, finals: [],
+    variant: v, castM: {}, phase: 'intro', wave: -1, talk: Math.floor(rand(0, CONVERSATION_COUNT)), t: 0, cap: null, capM: null, k1: null, k2: null, finals: [],
     get title() { return run.completed ? 'The Sky Is Yours' : `${v.name}`; },
     get description() {
       const ph = run.phase;
       return run.completed ? 'The gate is the way on. The hoard chest waits on the hatch.'
         : ph === 'waves' ? `Hold the deck: boarding wave ${run.wave + 1} of ${SKY_WAVES.length}.`
-          : ph === 'mid' ? `Defeat ${AIR_CAPTAIN[v.mid_boss].name}.`
+          : ph === 'mid' ? `Defeat ${capOf(v.mid_boss).name}.`
+            : ph === 'gauntlet' || ph === 'gauntlet-next' ? `Defeat ${capOf(v.gauntlet.master).name}'s champions.`
+              : ph === 'master' ? `Defeat ${capOf(v.gauntlet.master).name}.`
             : ph === 'flagship' ? 'The flagship closes in. Survive her broadsides.'
               : ph === 'final' ? 'Defeat the two captains on your deck.' : 'Hold the deck.';
     },
@@ -425,13 +465,24 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
   };
   world.skyRun = run;
 
+  // ---- cut scenes a hero has watched once (per story; the weathers share theirs) fast-forward at 20x the next time,
+  // unless Settings > "Don't skip cutscenes" (game/cinema.js Cine.fast)
+  const seenKey = skySeenKey(v);
+  function scene(name, steps, onEnd) {
+    const c = G.char, k = `${seenKey}:${name}`, seen = !!(c && c.skySeen && c.skySeen[k]);
+    Cine.play([{ do: () => { Cine.fast = seen && !G.settings.noSkipCine; } }, ...steps, { do: () => { Cine.fast = false; if (c) (c.skySeen ||= {})[k] = 1; } }], onEnd);
+  }
+  const fl = (ln) => ({ ...ln, text: fillAll(ln.text) });
+  /** After a scene: the knights back at the hero's side, fighting. */
+  const knightsBack = () => { for (const k of [run.k1, run.k2]) if (k) { k.ally = true; k.chase = true; k.follow = heroSide(k === run.k1 ? -1 : 1); } };
+
   // ---- the arrival: down through the clouds astern, the whole ironclad, along the deck to the bridge, in on the gate;
   // it flares and the hero steps out onto the landing
   function intro() {
     const pl = p(), gate = tileOf(0.5, GATE.z + 0.1), land = tileOf(LANDING[0] + 0.5, LANDING[1]);
     pl.x = gate[0]; pl.y = gate[1]; pl.alpha = 0;
     const landing = () => flat(land[0], land[1], lvAt(...land), 30);   // the hero's chest on the landing
-    Cine.play([
+    scene('intro', [
       { do: () => { [camera.x, camera.y] = flat(OX + 9, OY + 26, 60); camera.zoom = Cine.zoom0 * 0.42; S.through = 1; } },
       { card: [v.name.toUpperCase(), `${v.weather} · Depth ${depth}`], dur: 3.4 },
       on(() => flat(OX + 0.5, OY + 1, 10), 0.52, 3.6, { wait: true, ease: 'out', drift: [-6, -3] }),
@@ -442,7 +493,7 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
       { do: () => { run.walkTo(pl, land, 0.9, true); } },
       { wait: 1.0 },
       lineShot('hero', null, 2.7),
-      { say: { name: G.char.name, color: '#9fd0ff', portrait: heroPortrait, text: pick(ARRIVE), voice: { pitch: 1 }, focus: () => faceOf(p()) } },
+      { say: { name: G.char.name, color: '#9fd0ff', portrait: heroPortrait, text: L.arrive ? fillAll(L.arrive) : pick(ARRIVE), voice: { pitch: 1 }, focus: () => faceOf(p()) } },
       // the deck to hold: from the hero on the landing out over the waist
       { card: ['HOLD THE DECK', v.hazardText || v.blurb], dur: 2.8 },
       on(() => mix(faceOf(p(), 0.4), flat(OX + 0.5, OY + 2, 0), 0.5), 0.8, 1.6, { wait: true, drift: [0, 6] }),
@@ -497,18 +548,18 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
   // ---- the mid-boss: a captain and an escort come over from a gasbag
   function midBoss() {
     run.phase = 'mid';
-    const id = v.mid_boss, a = AIR_CAPTAIN[id], dz = 3;
-    const b = launchBoat('gasbag', dz, [{ art: id, captain: true }, ...crewList(3, 1, 0, 99)], { wait: 1e9, hold: 3 });
+    const id = v.mid_boss, a = capOf(id), dz = 3;
+    const b = launchBoat('gasbag', dz, [{ art: a.art, swap: a.swap, cap: id, captain: true }, ...crewList(3, 1, 0, 99)], { wait: 1e9, hold: 3 });
     b.crew[0].h = a.h; b.crew[0].x = 0; b.crew[0].z = 0;
     run.midBoat = b;
     const capFace = () => b.crew[0] && b.crew[0].captain ? crewFace(b, b.crew[0]) : faceOf(run.midM);
-    Cine.play([
+    scene('mid', [
       // pick the gasbag up out in the clouds and follow it in
       on(() => boatAt(b), 0.85, 1.3, { pace: 900 }),
       { until: () => b.st === 'dock', max: 8 },
       on(capFace, 2.1, 0.9, { wait: true, push: 0.03 }),
       { card: [a.name.toUpperCase(), a.title], dur: 2.6 },
-      { say: { name: a.name, color: '#ff9a6a', portrait: monsterPortrait(id), text: fillLine(pick(CAPTAIN_CRIES), ctx()), voice: { pitch: a.voice, wave: 'sawtooth' }, focus: capFace } },
+      { say: { ...capSpeaker(a), text: fillAll(L.mid || pick(CAPTAIN_CRIES)), focus: capFace } },
       { do: () => {
         // he takes a rope from the balloon and swings across the deck
         b.crew.shift();
@@ -527,7 +578,7 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
   // ---- the parley, the truce and the twist
   function parley() {
     run.phase = 'parley';
-    const id = v.finals[0], a = AIR_CAPTAIN[id];
+    const id = v.finals[0], a = capOf(id);
     run.cap = a;
     [run.k1, run.k2] = makeKnights();
     // they come over from a gasbag under a white flag, the knights at their captain's side on its deck: the captain
@@ -536,19 +587,19 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     const onBoat = (dx, dz) => () => [b.x + dx, b.y + dz, b.lv];
     run.k1.follow = onBoat(0.7, -1.2); run.k2.follow = onBoat(0.7, 1.4);
     const pl = p(), heroAt = tileOf(-1.2, 0.2), capAt = tileOf(-4.0, 0.0);
-    const lines = conversation(run.talk, ctx());
+    const lines = L.parley ? L.parley.map((ln) => ({ ...ln, text: fillAll(ln.text) })) : conversation(run.talk, ctx());
     const group = (k = 0.62) => [faceOf(pl, k), faceOf(run.capM, k), faceOf(run.k1, k), faceOf(run.k2, k)];
     const steps = [
       // the hero goes to meet them (round the fittings, down the stairs if he's up on a deck) while the gasbag comes in
       { do: () => { b.flag = true; run.goTo(pl, heroAt, 4); warmBlades(); } },
-      { card: ['PARLEY', 'A white flag flies from a gasbag'], dur: 2.6 },
+      { card: ['PARLEY', v.parleySub || 'A white flag flies from a gasbag'], dur: 2.6 },
       on(() => boatAt(b), 0.9, 1.4, { pace: 900 }),
       { until: () => b.st === 'dock', max: 8 },
       fit(() => [boatAt(b), flat(b.x, b.y, b.lv, 110), faceOf(pl, 0), faceOf(pl, 1)], 1.4, 1.0, { wait: true }),
       { do: () => {
         // the captain over the rail, frozen in peace; the knights hop down behind
-        const m = makeMonster(world, a.arch, biome, lvl + 2, 'boss', capAt[0], capAt[1], 0, { art: a.id, swap: null });
-        m.name = a.name; m.title = a.title; m.captain = a; m.sky = true; m.parley = true; m.scale = 1; world.add(m); run.capM = m;
+        const m = makeMonster(world, a.arch, biome, lvl + 2, 'boss', capAt[0], capAt[1], 0, { art: a.art, swap: a.swap });
+        m.name = a.name; m.title = a.title; m.captain = a; m.sky = true; m.parley = true; m.scale = 1; m.artH = a.h; world.add(m); run.capM = m;
         m.entering = () => {}; m.targetable = false; m.awake = true; m.flip = true;
         m.x = b.x; m.y = b.y; m.z = b.lv * HS - elevationAt(b.x, b.y);
         const fx = b.x, fy = b.y, flv = b.lv; let t = 0;
@@ -568,7 +619,8 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     let prev = 'cap';
     lines.forEach((ln, j) => {
       const to = ln.who === 'hero' ? (prev !== 'hero' ? prev : 'cap') : 'hero';
-      if (j === 7) steps.push(fit(() => [faceOf(run.k1, 0), faceOf(run.k1, 1.1), faceOf(run.k2, 0), faceOf(run.k2, 1.1)], 2.3, 0.8, { pace: 700, push: 0.03 }));
+      if (j === 7 && !L.parley) steps.push(fit(() => [faceOf(run.k1, 0), faceOf(run.k1, 1.1), faceOf(run.k2, 0), faceOf(run.k2, 1.1)], 2.3, 0.8, { pace: 700, push: 0.03 }));
+      else if (L.parley) steps.push(lineShot(ln.who, to));
       else if (j !== 8) steps.push(lineShot(ln.who, to, CLOSE[ln.who] * (j === 3 ? 0.8 : 1), j === 3 ? 0.05 : 0.025));
       steps.push(sayStep(ln));
       prev = ln.who;
@@ -579,11 +631,13 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     // ...the flagship: out of a cloud bank to port, guns already run out
     steps.push({ do: () => { camera.shakeAmt = 10; sfx('boss'); S.flash = 0.4; spawnGalleon(); } });
     steps.push(on(galleonAt, 0.62, 1.1, { ease: 'out', wait: true, push: 0.025 }));
-    steps.push({ card: ['THE BLACK MOURNING', 'The flagship of Velscour\'s sky fleet'], dur: 3 });
+    steps.push({ card: [v.ship || 'THE BLACK MOURNING', v.shipSub || 'The flagship of Velscour\'s sky fleet'], dur: 3 });
     steps.push({ do: () => rangingShots() });
     steps.push({ wait: 2.6 });
-    steps.push(lineShot('cap', null, CLOSE.cap));
-    steps.push(sayStep(twistLine(run.talk, ctx())));
+    for (const ln of L.twist ? L.twist.map((q) => ({ ...q, text: fillAll(q.text) })) : [twistLine(run.talk, ctx())]) {
+      steps.push(lineShot(ln.who, ln.who === 'cap' ? null : 'hero'));
+      steps.push(sayStep(ln));
+    }
     steps.push({ do: () => {
       // the captain leaps back to the gasbag, which runs for the flagship
       const m = run.capM, fx = m.x, fy = m.y, f0 = lvAt(fx, fy); let t = 0;
@@ -598,14 +652,14 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     steps.push({ wait: 0.7 });
     steps.push(fit(() => [faceOf(run.k1, 0), faceOf(run.k1, 1.1), faceOf(run.k2, 0), faceOf(run.k2, 1.1)], 2.0, 0.5, { push: 0.02 }));
     steps.push({ wait: 1.9 });
-    for (const ln of betrayal(run.talk, ctx())) {
+    for (const ln of L.betrayal ? L.betrayal.map((q) => ({ ...q, text: fillAll(q.text) })) : betrayal(run.talk, ctx())) {
       steps.push(lineShot(ln.who, ln.who === 'hero' ? 'k1' : 'hero'));
       steps.push(sayStep(ln));
     }
     steps.push({ do: () => { for (const k of [run.k1, run.k2]) { k.ally = true; k.follow = heroSide(k === run.k1 ? -1 : 1); k.chase = true; act(k, 'flex', 1.6); } } });
     steps.push(fit(() => [faceOf(pl, 0), faceOf(pl, 1), galleonAt()], 1, 1.2, { wait: true, min: 0.55 }));
     steps.push(backToHero(0.9));
-    Cine.play(steps, () => { run.phase = 'flagship'; run.t = 0; run.volleyT = 2.5; run.returnT = 2; run.duelT = 0; });
+    scene('parley', steps, () => { run.phase = 'flagship'; run.t = 0; run.volleyT = 2.5; run.returnT = 2; run.duelT = 0; });
   }
   /** The flagship's first broadside, falling short: shot bursting in the air off the ironclad's port side. */
   function rangingShots() {
@@ -623,10 +677,12 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     S.bank = { x: far.x, y: far.y, lv: far.lv, t: 0 };
     // her crew along the starboard rail (painted extras; the captains among them)
     const G0 = A.galleon;
-    G0.rail.forEach(([x, y, z], i) => { if (i !== 1 && i !== 3) S.galleon.crew.push({ art: pick(AIR_CREW).id, x, y, z, h: 56, flip: false, ph: rand(0, 6) }); });
+    G0.rail.forEach(([x, y, z], i) => { if (i !== 1 && i !== 3 && !(v.gauntlet && i === 0)) { const c = pickCrew(); S.galleon.crew.push({ art: c.art, swap: c.swap, x, y, z, h: v.crew ? c.h : 56, flip: false, ph: rand(0, 6) }); } });
     // the parley's captain (back aboard) and the second captain stand among them, the two knights beside the first
     const [ida, idb] = v.finals;
-    for (const [id, i] of [[ida, 2], [idb, 4]]) { const [x, y, z] = G0.rail[i]; S.galleon.crew.push({ art: id, cap: id, x, y, z, h: AIR_CAPTAIN[id].h * 0.95, flip: false, ph: rand(0, 6) }); }
+    const onRail = (id, i) => { const a = capOf(id), [x, y, z] = G0.rail[i % G0.rail.length]; S.galleon.crew.push({ art: a.art, swap: a.swap, cap: id, x, y, z, h: a.h * 0.95, flip: false, ph: rand(0, 6) }); };
+    onRail(ida, 2); onRail(idb, 4);
+    if (v.gauntlet) onRail(v.gauntlet.master, 0);   // a story's master watches from her rail until he comes over himself
   }
   function galleonTick(dt) {
     const g = S.galleon; if (!g) return;
@@ -680,12 +736,12 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     ];
     // the knights run to the rail and throw first: nobody fires on their truce and sails away
     for (const [k, dz, i] of [[k1, -2.5, 0], [k2, 4.5, 1]]) {
-      const ln = HOOK_LINES2[Math.floor(rand(0, HOOK_LINES2.length))], who = i ? 'k2' : 'k1';
+      const ln = L.hooks ? L.hooks[i] : HOOK_LINES2[Math.floor(rand(0, HOOK_LINES2.length))], who = i ? 'k2' : 'k1';
       steps.push({ do: () => { k.chase = false; k.follow = null; run.goTo(k, near(...tileOf(-(inner(sAt(dz)) - 1.0), dz)), 5.5); } });
       steps.push(on(() => faceOf(k), 1.7, 0.7, { pace: 900 }));
       steps.push({ until: () => !k.going, max: 2.5 });
       steps.push(on(() => mix(faceOf(k), flat(...gRail(i)), 0.25), 2.2, 0.5, { pace: 700, push: 0.03 }));
-      steps.push(sayStep({ who, text: fillLine(ln[0], ctx()), act: ln[1] }));
+      steps.push(sayStep({ who, text: fillAll(ln[0]), act: ln[1] }));
       steps.push({ do: () => throwHook([OX - inner(sAt(dz)) + 0.6, OY + dz, (sheer(sAt(dz)) + 1.0) * LV], gRail(i)) });
       steps.push(fit(() => [faceOf(k, 0), faceOf(k, 1), flat(...gRail(i))], 1.8, 0.5));
       steps.push({ wait: 0.6 });
@@ -697,12 +753,12 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     steps.push({ do: () => { for (const h of S.hooks) h.taut = 1; g.close.x += 1.2; camera.shake(8); sfx('thud'); } });
     steps.push({ wait: 0.8 });
     // the two captains among the flagship's crew at her rail: close on them, the second calls across
-    const [ida, idb] = v.finals, a = AIR_CAPTAIN[ida], bb = AIR_CAPTAIN[idb];
+    const [ida, idb] = v.finals, a = capOf(ida), bb = capOf(idb);
     const capOnRail = (id) => () => { const c = g.crew.find((q) => q.cap === id); return c ? crewFace(g, c) : galleonAt(); };
     steps.push(fit(() => [capOnRail(ida)(), capOnRail(idb)()], 2.0, 1.0, { wait: true, push: 0.02 }));
     steps.push({ card: [`${a.name.toUpperCase()}  &  ${bb.name.toUpperCase()}`, `${a.title} · ${bb.title}`], dur: 2.8 });
     steps.push(on(capOnRail(idb), 2.1, 0.6, { push: 0.03 }));
-    steps.push({ say: { name: bb.name, color: '#ff9a6a', portrait: monsterPortrait(idb), text: fillLine(pick(CAPTAIN_CRIES), ctx()), voice: { pitch: bb.voice, wave: 'sawtooth' }, focus: capOnRail(idb) } });
+    steps.push({ say: { ...capSpeaker(bb), text: fillAll(L.second || pick(CAPTAIN_CRIES)), focus: capOnRail(idb) } });
     steps.push({ do: () => {
       // the captains leave their places on the rail: the first leaps the gap, the second swings over from the mainmast
       const mast = () => [g.x, g.y - 0.8, g.lv + 17 * LV];
@@ -718,7 +774,7 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     for (const [k, i] of [[k1, 0], [k2, 1]]) {
       const who = i ? 'k2' : 'k1';
       steps.push(lineShot(who));
-      steps.push(sayStep({ who, text: fillLine(CHARGE_LINES[(run.talk + i * 2) % CHARGE_LINES.length], ctx()), act: 'rage' }));
+      steps.push(sayStep({ who, text: fillAll(L.charge ? L.charge[i] : CHARGE_LINES[(run.talk + i * 2) % CHARGE_LINES.length]), act: 'rage' }));
       steps.push({ do: () => strike(k, run.finals[i], true) });
       steps.push(fit(() => [faceOf(k, 0), faceOf(k, 1.2), faceOf(run.finals[i], 0), faceOf(run.finals[i], 1)], 1.9, 0.4));
       steps.push({ wait: 0.9 });
@@ -726,7 +782,67 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     steps.push({ until: () => !k1.jumping && !k2.jumping && !k1.slash && !k2.slash, max: 3 });
     steps.push({ do: () => { for (const k of [k1, k2]) { k.ally = true; k.chase = true; k.follow = heroSide(k === k1 ? -1 : 1); } } });
     steps.push(backToHero(0.9));
-    Cine.play(steps, () => { run.phase = 'final'; run.t = 0; UI.centerMsg('THE LAST FIGHT', 'Both captains are on your deck', 2.2); });
+    scene('hooks', steps, () => { run.phase = 'final'; run.t = 0; UI.centerMsg('THE LAST FIGHT', 'Both captains are on your deck', 2.2); });
+  }
+
+  // ---- a story's gauntlet: the master at the flagship's rail sends his champions over wave by wave, then comes himself
+  const GA = v.gauntlet;
+  function gauntletIntro() {
+    run.phase = 'gauntlet'; run.gw = -1; run.gBoss = [];
+    settleKnights();
+    const mk = GA.master, ma = capOf(mk);
+    const steps = [
+      fit(() => [focusOf(mk), faceOf(p(), 0.4)], 1.2, 1.2, { wait: true, min: 0.5 }),
+      on(() => focusOf(mk), closeOf(mk), 0.8, { wait: true, push: 0.02 }),
+      { card: [ma.name.toUpperCase(), ma.title], dur: 2.6 },
+    ];
+    for (const ln of GA.intro) { steps.push(lineShot(ln.who, ln.who === mk ? null : mk)); steps.push(sayStep(fl(ln))); }
+    scene('gauntlet', steps, () => { knightsBack(); nextGauntlet(); });
+  }
+  /** The next wave's champions (1-2) leap and swing over from her rail; after the last, the master. */
+  function nextGauntlet() {
+    const wv = GA.waves[++run.gw];
+    if (!wv) { masterComes(); return; }
+    settleKnights();
+    const g = S.galleon, mast = () => (S.galleon ? [S.galleon.x, S.galleon.y - 0.8, S.galleon.lv + 17 * LV] : [OX - 15, OY, 40]);
+    const steps = [lineShot(wv.line.who, wv.line.who === 'hero' ? GA.master : 'hero'), sayStep(fl(wv.line)),
+      { do: () => {
+        run.gBoss = wv.keys.map((key, i) => {
+          const sw = i === 1, from = g ? flagRail(i ? 4 : 2) : [OX - 15, OY + i * 3, 6];
+          return spawnCaptain(key, from, near(...tileOf(-2.2 + (sw ? 1.6 : 0), i ? 2.6 : -1.2)), 'boss', null, { hp: wv.keys.length > 1 ? 0.55 : 0.75, ...(sw ? { swing: mast } : {}) });
+        });
+        world.boss = run.gBoss[0];
+      } },
+      fit(() => [...run.gBoss.map((m) => faceOf(m)), faceOf(p(), 0.4)], 1.4, 0.6),
+      { until: () => run.gBoss.every((m) => !m.entering), max: 5 },
+    ];
+    for (const key of wv.keys) { steps.push(on(() => focusOf(key), closeOf(key), 0.5, { push: 0.02 })); steps.push({ card: [capOf(key).name.toUpperCase(), capOf(key).title], dur: 2.0 }); steps.push({ wait: 1.6 }); }
+    steps.push(backToHero(0.8));
+    scene('gw' + run.gw, steps, () => { knightsBack(); run.phase = 'gauntlet'; });
+  }
+  /** The master's last words with everyone, his card, and over the rail he comes. */
+  function masterComes() {
+    settleKnights();
+    const mk = GA.master, ma = capOf(mk), steps = [];
+    for (const ln of GA.finale) { steps.push(lineShot(ln.who, ln.who === mk ? 'hero' : mk)); steps.push(sayStep(fl(ln))); }
+    steps.push({ do: () => {
+      if (S.galleon) S.galleon.crew = S.galleon.crew.filter((c) => c.cap !== mk);
+      run.masterM = spawnCaptain(mk, S.galleon ? flagRail(0) : [OX - 15, OY, 6], near(...tileOf(-1.6, 1)), 'boss', null, { hp: 1.6, lv: 3 });
+      world.boss = run.masterM;
+    } });
+    steps.push(fit(() => [faceOf(run.masterM, 1.1), faceOf(run.masterM, -0.1), faceOf(p(), 0.4)], 1.3, 0.6));
+    steps.push({ until: () => run.masterM && !run.masterM.entering, max: 5 });
+    steps.push(on(() => faceOf(run.masterM), closeOf(mk) * 0.85, 0.5, { push: 0.02 }));
+    steps.push({ card: [ma.name.toUpperCase(), ma.title], dur: 2.6 });
+    steps.push(backToHero(0.8));
+    scene('master', steps, () => { knightsBack(); run.phase = 'master'; UI.centerMsg(ma.name.toUpperCase(), 'The last of them', 2.2); });
+  }
+  function masterFalls() {
+    run.phase = 'masterdead'; world.boss = null;
+    settleKnights();
+    const steps = [{ wait: 0.8 }];
+    for (const ln of GA.death) { steps.push(lineShot(ln.who, ln.who === 'hero' ? GA.master : 'hero')); steps.push(sayStep(fl(ln))); }
+    scene('death', steps, () => victory());
   }
 
   // ---- victory
@@ -746,9 +862,9 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     if (run.k1 && g) {
       // still not joining: they leap onto the limping flagship to have words with whoever fired that broadside
       for (const [i, who] of [[0, 'k1'], [1, 'k2']]) {
-        const ln = FAREWELLS[(run.talk + i * 3) % FAREWELLS.length];
+        const ln = L.farewell ? L.farewell[i] : FAREWELLS[(run.talk + i * 3) % FAREWELLS.length];
         steps.push(lineShot(who, 'hero'));
-        steps.push(sayStep({ who, text: fillLine(ln[0], ctx()), act: ln[1] }));
+        steps.push(sayStep({ who, text: fillAll(ln[0]), act: ln[1] }));
       }
       steps.push({ do: () => { for (const [k, i, dly] of [[run.k1, 1, 0], [run.k2, 3, 0.3]]) run.later(dly, () => { k.ally = false; knightJump(k, () => flagRail(i), 1.1, 110, () => { k.onFlagship = true; }); }); } });
       steps.push(fit(() => [faceOf(run.k1), faceOf(run.k2), flat(...flagRail(1)), flat(...flagRail(3))], 1.4, 0.7));
@@ -768,10 +884,10 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
     steps.push({ do: () => spawnHoard() });
     steps.push({ wait: 1.2 });
     steps.push(on(() => mix(faceOf(p()), chestAt(), 0.3), 2.3, 0.8, { pace: 700, push: 0.02 }));
-    steps.push({ say: { name: G.char.name, color: '#9fd0ff', portrait: heroPortrait, text: pick(VICTORY), voice: { pitch: 1 }, focus: () => faceOf(p()) } });
+    steps.push({ say: { name: G.char.name, color: '#9fd0ff', portrait: heroPortrait, text: L.victory ? fillAll(L.victory) : pick(VICTORY), voice: { pitch: 1 }, focus: () => faceOf(p()) } });
     steps.push(backToHero(0.9));
     run.hoardAt = near(OX + 0.5, OY + 0.5);
-    Cine.play(steps, () => { run.completed = true; run.phase = 'done'; UI.refresh(); onSuccess(); });
+    scene('victory', steps, () => { run.completed = true; run.phase = 'done'; UI.refresh(); onSuccess(); });
   }
   function spawnHoard() {
     const [x, y] = run.hoardAt || near(OX + 0.5, OY + 0.5);
@@ -803,7 +919,7 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
       const mv = pick([...m.captain.moves, 'climb', 'swing', 'rappel']);
       if (mv === 'crew') {
         const boat = S.boats.find((b) => b.st === 'dock') , from = boat ? [boat.x, boat.y, boat.lv] : S.galleon ? galleonPort() : [OX - 18, OY + rand(-5, 5), 40];
-        for (let i = 0; i < 2 + (lvl > 40 ? 1 : 0); i++) run.later(i * 0.4, () => spawnPirate(pick(AIR_CREW).id, 'normal', from, near(pl.x + rand(-3, 3), pl.y + rand(-3, 3)), 99));
+        for (let i = 0; i < 2 + (lvl > 40 ? 1 : 0); i++) run.later(i * 0.4, () => spawnPirate(pickCrew().id, 'normal', from, near(pl.x + rand(-3, 3), pl.y + rand(-3, 3)), 99));
         floatText(m.x, m.y, 80, 'ALL HANDS!', '#ffb070', 16);
       } else if (mv === 'hook') {
         addEffect(new Telegraph({ kind: 'line', x: m.x, y: m.y, ang: Math.atan2(pl.y - m.y, pl.x - m.x), len: Math.hypot(pl.x - m.x, pl.y - m.y), w: 0.5, dur: 0.8, color: '#c0a070' }), 'ground');
@@ -847,7 +963,7 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
       } else if (mv === 'rappel') {
         // boarders slide down ropes out of the sky around the hero
         floatText(m.x, m.y, 80, 'DROP THE LINES!', '#ffb070', 16);
-        for (let i = 0; i < 2 + (lvl > 40 ? 1 : 0); i++) run.later(i * 0.35, () => spawnPirate(pick(AIR_CREW).id, 'normal', null, near(pl.x + rand(-3, 3), pl.y + rand(-3, 3)), 99, 'rope'));
+        for (let i = 0; i < 2 + (lvl > 40 ? 1 : 0); i++) run.later(i * 0.35, () => spawnPirate(pickCrew().id, 'normal', null, near(pl.x + rand(-3, 3), pl.y + rand(-3, 3)), 99, 'rope'));
       } else if (mv === 'smoke') {
         smoke(m.x, m.y, 10, '#2a2a30', 14, 20);
         const to = near(pl.x - (m.x - pl.x) * 0.5, pl.y - (m.y - pl.y) * 0.5, 1.5);
@@ -964,13 +1080,18 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
         const to = [g.x + rand(-2, 2), g.y + rand(-8, 8), g.lv + rand(0, 1) * LV];
         cannon(shipPort(), to, () => { burst(to[0], to[1], to[2] * HS, 'fire', 14, 4); smoke(to[0], to[1], to[2] * HS, '#3a3230', 5, 16); if (chance(0.4) && g.burn.length < 7) g.burn.push([rand(-3, 3), rand(-1, 1), rand(-12, 12)]); sfx('explode', 0.3); }, 1.0);
       }
-      if (run.duelT > 9 && !run.drop1) { run.drop1 = true; for (let i = 0; i < 3; i++) run.later(i * 0.4, () => spawnPirate(pick(AIR_CREW).id, i ? 'normal' : 'champion', galleonPort(), near(OX - 3 + rand(-1, 2), OY + rand(-6, 8)), 98)); }
-      if (run.duelT > 18 && !run.drop2) { run.drop2 = true; for (let i = 0; i < 4; i++) run.later(i * 0.4, () => spawnPirate(pick(AIR_CREW).id, 'normal', galleonPort(), near(OX - 3 + rand(-1, 2), OY + rand(-6, 8)), 98)); }
+      if (run.duelT > 9 && !run.drop1) { run.drop1 = true; for (let i = 0; i < 3; i++) run.later(i * 0.4, () => spawnPirate(pickCrew().id, i ? 'normal' : 'champion', galleonPort(), near(OX - 3 + rand(-1, 2), OY + rand(-6, 8)), 98)); }
+      if (run.duelT > 18 && !run.drop2) { run.drop2 = true; for (let i = 0; i < 4; i++) run.later(i * 0.4, () => spawnPirate(pickCrew().id, 'normal', galleonPort(), near(OX - 3 + rand(-1, 2), OY + rand(-6, 8)), 98)); }
       if (g.k >= 1 && ![...live].some((m) => !m.dead)) hooks();
     } else if (run.phase === 'final') {
 
-      if (run.finals.length && run.finals.every((m) => m.dead) && ![...live].some((m) => !m.dead)) { world.boss = null; victory(); }
+      if (run.finals.length && run.finals.every((m) => m.dead) && ![...live].some((m) => !m.dead)) { world.boss = null; if (GA) gauntletIntro(); else victory(); }
       else if (world.boss && world.boss.dead) world.boss = run.finals.find((m) => !m.dead) || null;
+    } else if (run.phase === 'gauntlet') {
+      if (run.gBoss.every((m) => m.dead) && ![...live].some((m) => !m.dead)) { world.boss = null; run.phase = 'gauntlet-next'; run.later(1.2, () => nextGauntlet()); }
+      else if (world.boss && world.boss.dead) world.boss = run.gBoss.find((m) => !m.dead) || null;
+    } else if (run.phase === 'master') {
+      if (run.masterM && run.masterM.dead && ![...live].some((m) => !m.dead)) masterFalls();
     }
   }
   /** At night (and in dark weather) the ship's lanterns, braziers, furnaces and the gate light the deck. */

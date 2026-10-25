@@ -1,3 +1,5 @@
+import { SKY_STORIES } from './skystories.js';
+
 // The Sky Battle's eight scenarios (docs/SKY_BATTLE.md): the same battle (boarding waves, a mid-boss, more waves, the
 // parley, the flagship, the hooks, two captains) under different skies. In six of them the weather fights too.
 // Captains are Air Pirate ids (data/airpirates.js). `sky` is the gradient top to bottom; `far`/`mid` the two cloud
@@ -66,7 +68,15 @@ export const SKY_VARIANTS = [
     mid_boss: 'ap_the_gallows_king', finals: ['ap_the_last_boarding_saint', 'ap_captain_sable_vane'], amb: 'skyship_ash',
   },
 ];
-export const SKY_VARIANT = Object.fromEntries(SKY_VARIANTS.map((v) => [v.id, v]));
+/** The thirty stories (data/skystories.js, docs/SKY_STORIES.md), each laid over its `base` weather: the base's sky, clouds,
+ *  boats and hazard unless the story names its own. `story` marks them. */
+export const SKY_STORY_VARIANTS = SKY_STORIES.map((s) => {
+  const b = SKY_VARIANTS.find((v) => v.id === s.base) || SKY_VARIANTS[0];
+  return { ...b, mid_boss: s.mid, ...s, story: true, amb: s.amb || b.amb };
+});
+/** The eight weathers and the thirty stories. */
+export const SKY_ALL = [...SKY_VARIANTS, ...SKY_STORY_VARIANTS];
+export const SKY_VARIANT = Object.fromEntries(SKY_ALL.map((v) => [v.id, v]));
 
 /**
  * The boarding waves, easy to hard: each boat brings `n` boarders; `champion`/`unique` of them are elites.

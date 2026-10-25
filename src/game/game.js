@@ -48,10 +48,10 @@ import { loadCastle3D, releaseCastle3D, loadBaked, castle3dState, warmBaked } fr
 import { generateSkyship } from '../world/skyship.js';
 import { warmSky } from '../gfx/skyship.js';
 import { createSkyBattle } from './skybattle.js';
-import { SKY_VARIANTS } from '../data/skybattle.js';
+import { SKY_ALL } from '../data/skybattle.js';
 import { TOWNSFOLK } from '../data/townsfolk.js';
 const TOWNSFOLK_KNIGHTS = TOWNSFOLK.filter((q) => q.knight).map((q) => q.spriteId);
-import { Cine } from './cinema.js';
+import { Cine, CINE_FAST } from './cinema.js';
 import { lights, updateVfx } from '../gfx/vfx.js';
 import { World } from './world.js';
 import { Player } from './player.js';
@@ -348,7 +348,7 @@ export const game = {
           } else if (/^(sky|airship|air|pirates?)(\s|$)/i.test(message.trim())) {
             // the Sky Battle; 'sky storm', 'sky night'... picks its scenario
             const want = message.trim().toLowerCase().split(/\s+/)[1];
-            G.char.skyVariant = SKY_VARIANTS.find((v) => v.id === want || v.weather.toLowerCase().includes(want || '#'))?.id;
+            G.char.skyVariant = SKY_ALL.find((v) => v.id === want || v.weather.toLowerCase().includes(want || '#') || v.name.toLowerCase().includes(want || '#'))?.id;
             close();
             this.teleportToBiome(BIOME_BY_ID.skyship);
           } else if (message.trim().toLowerCase() === 'tower') {
@@ -368,7 +368,7 @@ export const game = {
 
   openVelscourTeleport() {
     const options = [...BETA_BIOMES, ...BIOMES].map((biome) => `<option value="${escapeHtml(biome.id)}">${escapeHtml(biome.name)}${biome.overworld ? ' · Overworld' : ''}${biome.beta ? ' (Beta)' : ''}</option>`).join('')
-      + SKY_VARIANTS.map((v) => `<option value="skyship:${v.id}">${escapeHtml(BIOME_BY_ID.skyship.name)}: ${escapeHtml(v.name)} (${escapeHtml(v.weather)})</option>`).join('');
+      + SKY_ALL.map((v) => `<option value="skyship:${v.id}">${escapeHtml(BIOME_BY_ID.skyship.name)}: ${escapeHtml(v.name)} (${escapeHtml(v.weather)})</option>`).join('');
     const dialog = UI.dialog({
       title: 'CHOOSE YOUR DOOM',
       cls: 'velscour-teleport-dialog',
@@ -554,8 +554,8 @@ export const game = {
       this.autosave();
       if (m.isVelscour) setTimeout(() => victoryScreen(() => {}), 3200);
     };
-    if (sky) {   // the Sky Battle (game/skybattle.js): one of eight scenarios, never the last one twice
-      world.overworldScenario = createSkyBattle(world, gen, biome, depth, { variant: c.skyVariant, last: c.lastSkyVariant }, () => {
+    if (sky) {   // the Sky Battle (game/skybattle.js): one of eight weathers or thirty stories, never the last one twice
+      world.overworldScenario = createSkyBattle(world, gen, biome, depth, { variant: c.skyVariant, last: c.lastSkyVariant, seen: c.skySeen || {} }, () => {
         exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
         const first = !c.cleared[depth];
         c.cleared[depth] = true;
@@ -647,7 +647,7 @@ export const game = {
     if (world.night) UI.log(world.raining ? 'Night has fallen, and the rain with it.' : 'Night has fallen over the land.', '#a0b0d0');
     if (biome.id === 'sea_of_sand') UI.log(`Secure ${gen.scenarioCount} marked scenario area${gen.scenarioCount===1?'':'s'} to open the exit. Rewards improve with each clear.`, '#ffe2a0');
     else if (biome.id === 'mountainside') UI.log('The trail switchbacks up the cliffs to the summit. A ledge a hop high can be climbed; taller cliffs only jumped down.', '#ffe2a0');
-    else if (sky) UI.log(`${world.sky.v.name}: hold the deck against the Air Pirates' boarding waves. ${world.sky.v.hazardText || ''}`, '#ffe2a0');
+    else if (sky) UI.log(`${world.sky.v.name}: ${world.sky.v.story ? world.sky.v.blurb + ' Hold the deck.' : 'hold the deck against the Air Pirates\' boarding waves.'} ${world.sky.v.hazardText || ''}`, '#ffe2a0');
     else if (biome.tower) UI.log(`${gen.variant.name}: ${gen.variant.epithet}. Climb the stair; things wait on the floors above, and some will not wait.`, '#ffe2a0');
     else if (biome.cave) UI.log(`${gen.variant.name}: ${gen.variant.epithet}. The passages lead down to a lake under a great waterfall; the way on is a long climb to its top.`, '#ffe2a0');
     else if (forest) UI.log(`The Dark Forest closes in. The Heart lies deep in the north-east labyrinth; ${gen.glades.length} glades hold trials and treasure along the way.`, '#c8f0a0');
@@ -944,6 +944,8 @@ export const game = {
     if (G.cine && !G.paused) {   // a cut scene (game/cinema.js): no input, no auto-play, no monster thinks; the scene's actors move
       input.endFrame();
       cineTick(w, dt);
+      // a scene this hero has seen plays at 20x (Cine.fast; Settings > "Don't skip cutscenes" keeps it at 1x)
+      for (let i = 1; i < CINE_FAST && Cine.fast && G.cine && G.world === w; i++) { G.time += dt; Cine.update(dt); cineTick(w, dt); }
     } else if (G.hitStop > 0) { G.hitStop -= dt; controls.update(0); }
     else if (!G.paused) {
       Auto.noteInput();
