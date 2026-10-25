@@ -14,6 +14,23 @@ Contents
 
 ---
 
+## October 25, 2026 — Velscour faces the hero, sits on his throne, summons demons (branch `fix/velscour-throne`)
+- **Request (user):** Velscour didn't face the right way in the final fight; put the Castle biome's throne in his throne
+  room, palette-swapped to match him, on 2 x 2 floor tiles so he can sit on it; make him summon demons in a phase.
+- **Cause of the facing:** the painted replacement atlas (`assets/sprites/replacements/atlas.json`) stores `fx` as a
+  fraction (0.5) while `creature.js` reads it as pixels, so every va_ sprite was anchored at its left edge and a turn
+  threw it a whole width sideways. `core/replacementart.js` now measures each cell's feet column from its bottom
+  eighth (Velscour: 0.35 of his width). This also re-centres raid crystals, totems, turrets and other va_ art.
+  Velscour also turns to the hero every frame now (his boss AI only turned while walking or swinging).
+- **Throne:** `tools/velscourthrone.py` cuts `furniture_01_throne_dais` from the Castle pack, recolours it (blood-red
+  velvet, bone-gold trim, blackened iron, charcoal stone) and writes `assets/tiles/throne/velscour_throne.webp/.json`;
+  `gfx/velscourthrone.js` loads it with the throne level; `generateThrone` blocks tiles 21-22 x 10-11 and places it.
+  He sits on it (`SEAT`, `SEAT_Z` in game/velscour.js) until the fight begins, leaps down, and hovers over it in phase 2.
+- **Legion of the Pit:** phases 3 and 5 (and while bound to the obelisks): a hellgate opens beside him and up to four
+  Pit Demons / Imps climb out (at most eight alive).
+- **Verified:** `velscour.js` (new checks: throne, anchor, legion), `flow`, `boss`, `raid`, `rims`, `enemies`,
+  `familiars`, `skills` (totem master, gunner, necromancer).
+
 ## October 25, 2026 — Heirlooms, Covenants, Sigils and Glyphwords; the Reliquary; Town Commissions; Velscour's last stand (branch `feat/loot-codex-velscour-finale`)
 - **Request (user, from a player's comment):** Diablo II style uniques, sets and runewords under new names, a larger
   long-term stash / collection, long-form quest lines from town that add objectives when you reach a biome, a much more
