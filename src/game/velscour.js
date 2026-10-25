@@ -1,9 +1,10 @@
 // Demon Lord Velscour's last stand (the throne arena, world/dungeon.js generateThrone): five phases, 5-10 minutes.
+//   0  He waits seated on his throne (the Castle's throne dais in his colours, gfx/velscourthrone.js) and leaps down.
 //   1  The Lord Upon the Throne (100-80%): Hellbrand cleaves, Chains of Velscour drag the hero in, Throne Guard.
 //   2  The Four Seals (at 80%, he can't be hurt): four seal crystals, each held by a Seal Warden, while flame walls
 //      sweep the floor. Seals left after two minutes make him 15% stronger each for the rest of the fight.
 //   3  Crown of Hellfire (80-50%): lava creeps in from the arena's edge and ebbs; meteor spirals, Doom Brand (a lava
-//      pool where the hero stood), Mirror of Sin (copies of him).
+//      pool where the hero stood), Mirror of Sin (copies of him), Legion of the Pit (demons from a hellgate; also phase 5).
 //   4  Into the Abyss (at 50%, 75 s): the dark falls; three Heart Shards drift round the arena, each broken tears 5% off
 //      his life; shades pour in; away from the two Soul Lanterns the dark itself hurts.
 //   5  True Form (to 0%): bigger and faster; every 25 s APOCALYPSE hits the whole arena but three glowing circles.
@@ -33,7 +34,8 @@ export const DMG_MUL = 0.7;       // his hits: the fight runs ~4x longer than th
 export const PACE = 1 / 220;      // the most of his life he can lose a second (banked up to 3 s)
 export const ENRAGE_T = 15 * 60;  // he executes the hero after fifteen minutes (slow builds: geared rangers took 9-12)
 const C = { x: 22, y: 17.5, rx: 16, ry: 13.5 }; // the arena ellipse
-const THRONE = [22, 10.5];
+// his throne (gfx/velscourthrone.js, tiles 21-22 x 10-11): where he sits, how high the seat is, where he lands
+const SEAT = [22.95, 12.2], SEAT_Z = 74, FRONT = [22.5, 15];
 const SEALS = [[22, 6.5, 'North'], [35, 17.5, 'East'], [22, 28.5, 'South'], [9, 17.5, 'West']];
 const OBELISKS = [[12, 10], [32, 10], [12, 24], [32, 24]];
 const LANTERNS = [[13.5, 20], [30.5, 20]];
@@ -45,6 +47,8 @@ export function setupVelscour(world, m, gen) {
   m.vel = V; world.velscour = V;
   m.maxHp *= HP_MUL; m.hp = m.maxHp; m.dmg *= DMG_MUL;
   m.onDeath = () => V.onDeath();
+  // seated on his throne until the hero comes
+  m.x = SEAT[0]; m.y = SEAT[1]; m.z = SEAT_Z; V.seated = true;
   world.addHazard(V);
   return V;
 }
@@ -70,12 +74,15 @@ class VelscourFight {
   update(dt) {
     const m = this.m, p = this.p, w = this.world;
     if (m.dead) return false;
+    addLight(22, 11.5, 4.5, 0.9, 50, '#ff5020'); // the throne's own hellish glow
     if (!p) return true;
     if (!this.phase) {
-      if (!m.awake && !(inArena(p.x, p.y, 0.92) && dist(p.x, p.y, m.x, m.y) < 14)) { this.lastHp = m.hp; return true; }
+      this.faceHero();
+      if (!(inArena(p.x, p.y, 0.92) && dist(p.x, p.y, m.x, m.y) < 15)) { m.awake = false; this.lastHp = m.hp; return true; }
       this.begin();
     }
     if (p.dead) return true;
+    this.faceHero();
     this.t += dt;
     this.pace(dt);
     // the clock
@@ -117,8 +124,28 @@ class VelscourFight {
     return take;
   }
 
+  /** He always turns to the hero (his own AI only turned while walking or swinging, so he cast spells with his back
+   *  to them); not mid-charge, and not while the hero is straight above or below him on screen. */
+  faceHero() {
+    const m = this.m, p = this.p;
+    if (!p || (m.state === 'act' && m.action && m.action.kind === 'charge')) return;
+    const dx = isoX(p.x, p.y) - isoX(m.x, m.y);
+    if (Math.abs(dx) > 10) { m.flip = dx < 0; m.flipAt = -1; m.facing = angleTo(m.x, m.y, p.x, p.y); }
+  }
+  /** Off the throne: a leap down to the foot of the dais. */
+  stand() {
+    const m = this.m, w = this.world;
+    if (!this.seated) return;
+    this.seated = false;
+    smoke(m.x, m.y, SEAT_Z, '#140808', 8, 12);
+    const [x, y] = w.map.nudge(FRONT[0], FRONT[1], 0.8);
+    m.x = x; m.y = y; m.z = 0; m.nav = null;
+    explosionFx(x, y, 2.6, 'fire', 'eruption', { shake: 12 });
+    sfx('thud');
+  }
   begin() {
     const m = this.m, w = this.world;
+    this.stand();
     this.phase = 1; this.t = 0; m.awake = true;
     this.lastHp = m.hp;
     m.patterns = ['slam', 'charge', 'volley', 'meteor'];
@@ -228,7 +255,7 @@ class VelscourFight {
     this.land();
     this.phase = 3; this.gate = 0.5;
     this.m.patterns = ['nova', 'spiral', 'meteor', 'beam', 'volley', 'slam'];
-    this.cd = { spiral: 6, doom: 10, mirror: 18, brand: 5 };
+    this.cd = { spiral: 6, doom: 10, mirror: 18, brand: 5, legion: 8 };
     this.lava = new LavaRing(this);
     this.world.addHazard(this.lava);
     UI.centerMsg('CROWN OF HELLFIRE', msg, 3);
@@ -241,6 +268,30 @@ class VelscourFight {
     this.tick('spiral', dt, 12, () => this.meteorSpiral());
     this.tick('doom', dt, 15, () => this.doomBrand());
     this.tick('mirror', dt, 28, () => this.mirror());
+    this.tick('legion', dt, 22, () => this.legion());
+  }
+  /** Legion of the Pit: a hellgate tears open beside him and demons climb out (at most eight of his alive at once). */
+  legion() {
+    const m = this.m, w = this.world, p = this.p;
+    const alive = w.creatures.filter((c) => c.pitSpawn && !c.dead).length;
+    const n = Math.min(4, 8 - alive);
+    if (n <= 0 || this.hold) return;
+    const a = angleTo(m.x, m.y, p.x, p.y) + (Math.random() < 0.5 ? 1.2 : -1.2);
+    const [gx, gy] = w.map.nudge(m.x + Math.cos(a) * 3, m.y + Math.sin(a) * 3, 0.6);
+    addEffect(new Telegraph({ kind: 'circle', x: gx, y: gy, r: 1.8, dur: 1.2, color: '#ff4010' }), 'ground');
+    UI.log('<b style="color:#ff5020">Legion of the Pit</b>: Velscour tears open a hellgate and his demons climb out!', '#ffb090');
+    floatText(m.x, m.y, 160, 'RISE, MY LEGION', '#ff5020', 16, { life: 1.6 });
+    sfx('roar', 0.7);
+    w.addHazard({ t: 1.2, team: 'enemy', update(dt) {
+      this.t -= dt; if (this.t > 0) return true;
+      explosionFx(gx, gy, 2, 'fire', 'eruption'); addEffect(new Ring(gx, gy, 0.2, 2.2, 0.6, '#ff3010', 5)); sfx('summon');
+      for (let i = 0; i < n; i++) {
+        const [x, y] = w.map.randomNear(gx, gy, 1.6);
+        const d = makeMonster(w, i % 2 ? 'imp' : 'demon', w.biome, m.level - 2, i === 0 ? 'champion' : 'normal', x, y);
+        d.awake = true; d.aggro = p; d.maxHp *= 0.55; d.hp = d.maxHp; d.pitSpawn = true; d.name = i % 2 ? 'Pit Imp' : 'Pit Demon';
+        w.add(d); smoke(x, y, 0, '#200808', 5, 9);
+      }
+      return false; }, draw() {} });
   }
   meteorSpiral() {
     const m = this.m, w = this.world;
@@ -331,7 +382,7 @@ class VelscourFight {
     m.scale *= 1.3; m.speed *= 1.2; m.atkCd *= 0.75; m.dmg *= 1.12;
     m.patterns = ['slam', 'nova', 'volley', 'charge', 'summon', 'meteor', 'spiral', 'beam'];
     m.patternQ = [];
-    this.cd = { apoc: 8, brand: 5, spiral: 9, doom: 12 };
+    this.cd = { apoc: 8, brand: 5, spiral: 9, doom: 12, legion: 14 };
     UI.centerMsg('TRUE FORM', left ? `${left} shard${left > 1 ? 's' : ''} survived the dark` : 'The heart is broken — he is not', 3);
     UI.log('Velscour sheds his crown. <b>APOCALYPSE</b> will scour the arena: get into a glowing circle when it comes.', '#ffb0a0');
     addEffect(new Ring(m.x, m.y, 0.3, 7, 1, '#ff2000', 8)); sfx('roar'); sfx('boss');
@@ -340,6 +391,7 @@ class VelscourFight {
   // ---------------------------------------------------------------- phase 5: True Form (and the obelisks at 10%)
   p5(dt, bound = false) {
     this.tick('apoc', dt, 25, () => this.apocalypse());
+    this.tick('legion', dt, bound ? 14 : 26, () => this.legion());
     if (bound) return;
     this.tick('brand', dt, 7, () => this.hellbrand());
     this.tick('spiral', dt, 14, () => this.meteorSpiral());
@@ -399,13 +451,13 @@ class VelscourFight {
     const m = this.m, w = this.world;
     this.hold = true; m.invuln = 1e9; m.targetable = false; m.state = 'idle'; m.action = null;
     smoke(m.x, m.y, 0, '#140808', 8, 14);
-    const [x, y] = w.map.nudge(THRONE[0], THRONE[1], 0.6); m.x = x; m.y = y; m.nav = null;
-    m.flyLift = 30; m.fly = true;
-    addEffect(new Ring(x, y, 0.3, 4, 1, '#b080ff', 6));
+    m.x = SEAT[0]; m.y = SEAT[1]; m.nav = null; m.z = SEAT_Z + 24; m.fly = true; // above his throne
+    addEffect(new Ring(FRONT[0], FRONT[1] - 2, 0.3, 4, 1, '#b080ff', 6));
   }
   land() {
     const m = this.m;
-    this.hold = false; m.invuln = 0; m.targetable = true; m.fly = false;
+    this.hold = false; m.invuln = 0; m.targetable = true; m.fly = false; m.z = 0;
+    const [x, y] = this.world.map.nudge(FRONT[0], FRONT[1], 0.8); m.x = x; m.y = y;
     explosionFx(m.x, m.y, 3, 'fire', 'eruption', { shake: 10 });
     sfx('thud'); sfx('roar');
   }
@@ -439,7 +491,7 @@ class VelscourFight {
     drop(makeHeirloom(lvl)); drop(makeCovenant(lvl)); drop(makeGem('sig', Math.min(SIGIL_MAX, 15 + Math.floor(rand(0, 5))))); drop(rollSigil(w.depth, 2));
   }
   /** The boss's own AI pauses while he hovers, hides or is bound (game/monster.js bossUpdate). */
-  holdBoss() { const m = this.m; if (!this.hold) return false; m.moving = false; if (this.p) m.face(angleTo(m.x, m.y, this.p.x, this.p.y)); return true; }
+  holdBoss() { const m = this.m; if (!this.hold && !this.seated) return false; m.moving = false; return true; }
   draw() {}
 }
 

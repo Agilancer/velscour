@@ -90,6 +90,7 @@ export function torchAtWallSegment(s) {
 
 /** Every fifth depth (but the throne at FINAL_DEPTH) ends in a BOSS ROOM with a raid boss (game/raid.js). */
 import { isRaidDepth, FINAL_DEPTH, density } from '../data/depth.js';
+import { throneSprite, THRONE_ART } from '../gfx/velscourthrone.js';
 export { isRaidDepth };
 
 // the boss room: an arena east of the maze, reached by a corridor from its far end
@@ -779,6 +780,10 @@ function generateThrone(biome, tileset, seed) {
   for (const [x, y] of [[12, 10], [32, 10], [12, 24], [32, 24]]) {
     if (ob && map.walkableTile(x, y)) { map.block[y * W + x] = 1; props.push({ kind: 'scatter', x: x + 0.5, y: y + 0.5, spr: ob, k: tileset.k }); }
   }
+  // his throne (gfx/velscourthrone.js): the Castle's throne dais in his colours on a 2 x 2 footing, its front corner at
+  // (23, 12); he sits on it until the fight begins (game/velscour.js SEAT)
+  for (let y = 10; y <= 11; y++) for (let x = 21; x <= 22; x++) map.block[y * W + x] = 1;
+  props.push({ kind: 'scatter', x: 23, y: 12, spr: throneSprite(), k: 1 / THRONE_ART.over, throne: true });
   return {
     map, rooms: [{ x: ar.x, y: ar.y, w: ar.w, h: ar.h, mx: 22, my: 17 }], spawns, props, chests: [{ x: 22.5, y: 72.5, rare: true }], torches, wallHangings,
     start: [22, 73], exit: [22, 7], bossRoom: { x: ar.x, y: ar.y, w: ar.w, h: ar.h, mx: 22, my: 17 }, throne: true,

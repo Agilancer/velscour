@@ -76,6 +76,7 @@ import { toggleInventory } from '../ui/inventory.js';
 import { toggleTree, toggleBook } from '../ui/skills.js';
 import { toggleQuest } from '../ui/quest.js';
 import { setupVelscour } from './velscour.js';
+import { loadVelscourThrone } from '../gfx/velscourthrone.js';
 import { offerCommissions, setupCommissions, commissionClear, wantedBiomes, LINE_BY_ID, commState } from './commissions.js';
 import { titleScreen, hide as hideScreen, deathScreen, victoryScreen, pauseMenu, helpDialog } from '../ui/screens.js';
 
@@ -454,6 +455,7 @@ export const game = {
     if (biome.id === 'skyship') return Promise.all([loadBaked('assets/tiles/skyship/'), preloadTownSheets(TOWNSFOLK_KNIGHTS)]); // the baked ironclad, boats and galleon; the sky-knights
     if (biome.tower) return loadTower3D(); // three.js and the tower's textures
     if (biome.cave) { G.caveNext = G.caveVariant ?? Math.floor(Math.random() * CAVE_VARIANTS.length); return loadCave3D(G.caveNext); } // three.js and this cave's textures
+    if (biome.id === 'throne') return Promise.all([loadBiomeArt(biome), loadVelscourThrone()]); // his recoloured throne
     if (!biome.overworld) return Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]);
     return Promise.resolve();
   },

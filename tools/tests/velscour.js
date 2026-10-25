@@ -33,7 +33,10 @@ const noauto = process.argv.includes('noauto');
   const fb = await page.evaluate(() => { const { G } = window.VELSCOUR, w = G.world, p = w.player, b = w.boss; return { practice: w.practice, biome: w.biome.id, depth: w.depth, inArena: ((p.x - 22) / 16) ** 2 + ((p.y - 17.5) / 13.5) ** 2 < 1, boss: b && b.name, d: Math.hypot(p.x - b.x, p.y - b.y) }; });
   console.log(JSON.stringify(fb));
   check(fb.biome === 'throne' && fb.practice && fb.depth === 60, '"final boss" builds Velscour\'s throne at the hero\'s depth (practice)');
-  check(fb.inArena && fb.d < 14, 'the hero is set down inside his arena');
+  check(fb.inArena && fb.d < 15, 'the hero is set down inside his arena');
+  const th = await page.evaluate(async () => { const { G } = window.VELSCOUR, w = G.world, b = w.boss; const { replacementImage } = await import('/src/core/replacementart.js'); const img = replacementImage('va_velscour'); return { prop: w.props.some((p) => p.throne && p.spr.img && p.spr.img.complete && p.spr.img.naturalWidth > 0), blocked: [21, 22].every((x) => [10, 11].every((y) => w.map.block[y * w.map.w + x])), fx: img && img._art.fx / img.width }; });
+  check(th.prop && th.blocked, 'his recoloured throne stands on a 2x2 footing');
+  check(th.fx > 0.2 && th.fx < 0.8, `his art is anchored at its feet (fx ${th.fx && th.fx.toFixed(2)} of its width), so a turn mirrors him in place`);
   await step(1);
 
   // ---- 2. every phase by hand
@@ -60,8 +63,10 @@ const noauto = process.argv.includes('noauto');
   await step(0.5);
   s = await ph();
   check(s.phase === 3 && !s.invuln, `the seals broken, he lands: phase 3 (${s.label})`);
-  await page.evaluate(() => { const V = window.VELSCOUR.G.world.velscour; V.cd.mirror = 0; V.cd.doom = 0; V.cd.spiral = 0; });
+  await page.evaluate(() => { const V = window.VELSCOUR.G.world.velscour; V.cd.mirror = 0; V.cd.doom = 0; V.cd.spiral = 0; V.cd.legion = 0; });
   await step(6);
+  const pit = await page.evaluate(() => window.VELSCOUR.G.world.creatures.filter((c) => c.pitSpawn && !c.dead).length);
+  check(pit >= 2, `Legion of the Pit: demons climb out of a hellgate (${pit})`);
   const p3 = await page.evaluate(() => { const w = window.VELSCOUR.G.world; return { lava: w.hazards.some((h) => h.constructor.name === 'LavaRing'), mirrors: w.velscour.parts.filter((c) => c.vk === 'mirror' && !c.dead).length }; });
   check(p3.lava && p3.mirrors === 2, `lava tide and two Mirrors of Sin (${JSON.stringify(p3)})`);
   await shot('velscour_p3_hellfire');
