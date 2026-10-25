@@ -1,6 +1,6 @@
 // Gameplay options: "Lock skill bar" (auto-play only fills empty slots), "Hide dropped item names" (no ground
 // labels, the item still picks up by clicking it), "Auto skill point assignment" off (auto-play keeps the points),
-// and the skill tree's Respec button (50 gold x level squared).
+// and the skill tree's Respec button (100 gold x level).
 const { openGame, report } = require('./harness');
 
 (async () => {
@@ -77,7 +77,7 @@ const { openGame, report } = require('./harness');
   await page.click('.dialog-box button.red'); await page.waitForTimeout(300);
   const after = await page.evaluate(() => { const { G } = window.VELSCOUR; return { gold: G.char.gold, pts: G.char.skillPoints, skills: { ...G.char.skills }, bar: G.char.bar.slice() }; });
   const spent = Object.entries(before.skills).reduce((a, [id, lv]) => a + lv - (before.granted[id] ? 1 : 0), 0);
-  check(before.gold - after.gold === 50 * 20 * 20, `respec costs 50 x 20^2 = 20,000 gold (${before.gold - after.gold})`);
+  check(before.gold - after.gold === 50 * 20 * 2, `respec costs 50 x 20 x 2 = 2,000 gold (${before.gold - after.gold})`);
   check(after.pts === before.pts + spent, `respec refunds ${spent} points (${after.pts - before.pts})`);
   check(after.bar.every((id) => !id || after.skills[id] > 0), 'bar holds only learned skills after respec');
   await shot('options_respec_done');

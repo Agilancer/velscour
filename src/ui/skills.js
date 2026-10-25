@@ -61,9 +61,9 @@ export function learn(sk, n = 1) {
   G.game.autosave();
 }
 
-export const respecCost = (lv) => 50 * lv * lv;
+export const respecCost = (lv) => 50 * lv * 2;
 
-/** Refund every skill point (granted skills keep their free rank) for 50 gold x level squared. Mastery stays. */
+/** Refund every skill point (granted skills keep their free rank) for 100 gold x level. Mastery stays. */
 export function respec() {
   const c = G.char, cost = respecCost(c.level);
   let refund = 0;
@@ -88,7 +88,7 @@ function respecDialog() {
   const spent = Object.entries(c.skills).reduce((a, [id, lv]) => a + lv - (c.granted && c.granted[id] ? Math.min(1, lv) : 0), 0);
   if (!spent) { UI.log('No skill points to refund.', '#ff8080'); sfx('error'); return; }
   if (c.gold < cost) { UI.log(`Respec costs ${cost.toLocaleString()} gold.`, '#ff8080'); sfx('error'); return; }
-  UI.confirm('Respec Skills', `Refund all <b>${spent}</b> spent skill points for <b class="gold-text">${cost.toLocaleString()} gold</b> (50 x level&sup2;)? Skill mastery is kept.`, respec, 'Respec');
+  UI.confirm('Respec Skills', `Refund all <b>${spent}</b> spent skill points for <b class="gold-text">${cost.toLocaleString()} gold</b> (100 x level)? Skill mastery is kept.`, respec, 'Respec');
 }
 
 export function assign(slotIdx, skillId) {
@@ -171,7 +171,7 @@ export function renderTree(body) {
   head.style.justifyContent = 'space-between';
   head.innerHTML = `<span>Skill Points: <b class="gold-text" style="font-size:18px">${c.skillPoints}</b></span><span class="dim" style="font-size:12px">Click to inspect · double/right-click to learn (Shift +5, Ctrl max) · drag to the skill bar</span>`;
   const rb = el('button', 'btn small respec-btn', `Respec (${respecCost(c.level).toLocaleString()} gold)`);
-  rb.title = 'Refund all spent skill points: 50 gold x level squared';
+  rb.title = 'Refund all spent skill points: 100 gold x level';
   if (c.gold < respecCost(c.level)) rb.style.opacity = '.45';
   rb.onclick = () => { sfx('ui'); respecDialog(); };
   head.appendChild(rb);

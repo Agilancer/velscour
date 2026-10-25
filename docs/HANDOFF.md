@@ -116,7 +116,7 @@ Contents
   cutscenes"; 30 new Sky Battle stories with new characters (an undead armada with a Necromancer and his bosses, a
   Slime Lord with a HUGE slime, ...).
 - **Points:** Settings › "Auto attribute point assignment" (`autoStatPoints`, on). Stats panel: Respec attributes
-  (25 gold x level², `attrRespec` in `src/ui/inventory.js`); the + takes Shift +5, Ctrl all. Skill tree: `learn(sk, n)`,
+  (25 gold x level², `attrRespec` in `src/ui/inventory.js`); the + takes Shift +5, Ctrl all. Skill tree: Respec (100 gold x level, `respecCost`), `learn(sk, n)`,
   Shift +5 / Ctrl max on double/right-click, and +5 / Max buttons in the skill's panel.
 - **Gear:** `it.locked` (a Lock / Unlock button in the item panel, a padlock on the icon and in the tooltip): auto-play
   never equips, swaps out, sells, stores, sockets, upgrades or enchants it; the player can't sell or drop it, Sell all
