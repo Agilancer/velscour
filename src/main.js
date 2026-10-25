@@ -63,24 +63,34 @@ function renderTitle(dt) {
 
 // Adaptive resolution: when a device misses its frame budget, trade backing-store
 // pixels for frame rate in 2 s windows, and earn them back after 10 s of headroom.
-const ar = { t: 0, n: 0, good: 0 };
+// Every change re-bakes the floor chunks at the new size, so a phone hovering near the limits used to see-saw
+// (down, 10 s later up, down again): each step back up that has to be undone soon after doubles the wait (to 2 min).
+const ar = { t: 0, n: 0, good: 0, need: 5, upAt: -1e9 };
 function adaptRes(raw) {
   if (G.mode !== 'game' || document.hidden) { ar.t = ar.n = 0; return; }
   // Do not discard very slow frames: that prevented adaptation precisely when
   // biome generation/painting made the phone stall for >250 ms.
   ar.t += Math.min(raw, 0.25); ar.n++;
   if (ar.t < 2) return;
-  const fps = ar.n / ar.t, s = G.resScale || 1;
+  const fps = ar.n / ar.t, s = G.resScale || 1, now = performance.now();
   ar.t = ar.n = 0;
-  const minScale = G.touch ? 0.7 : 0.75;
-  const slowFps = G.touch ? 45 : 50;
-  if (fps < slowFps && s > minScale) { G.resScale = Math.max(minScale, s * 0.85); ar.good = 0; resize(); }
-  else if (fps > 57 && s < 1) { if (++ar.good >= 5) { G.resScale = Math.min(1, s / 0.85); ar.good = 0; resize(); } }
+  const minScale = G.touch ? 0.7 : 0.75, cap = G.settings.fpsCap || 0;
+  // under a frame cap the budget is the cap's, not 60
+  const slowFps = cap ? cap * 0.8 : G.touch ? 45 : 50, fastFps = cap ? cap * 0.95 : 57;
+  if (fps < slowFps && s > minScale) {
+    if (now - ar.upAt < 20000) ar.need = Math.min(60, ar.need * 2);
+    G.resScale = Math.max(minScale, s * 0.85); ar.good = 0; resize();
+  } else if (fps > fastFps && s < 1) { if (++ar.good >= ar.need) { G.resScale = Math.min(1, s / 0.85); ar.good = 0; ar.upAt = now; resize(); } }
   else ar.good = 0;
 }
 
 let last = performance.now();
 function loop(now) {
+  requestAnimationFrame(loop);
+  // Settings › frame rate cap: a phone drawing 30 frames a second instead of 60 does half the work and heats up less
+  // (a hot phone slows itself down after a long session); 2 ms slack so a 60 Hz display shows every other frame
+  const cap = G.mode === 'game' ? G.settings.fpsCap || 0 : 0;
+  if (cap && now - last < 1000 / cap - 2) return;
   const raw = Math.max(0, (now - last) / 1000), dt = Math.min(0.05, raw);
   last = now;
   adaptRes(raw);
@@ -102,7 +112,6 @@ function loop(now) {
     if (G.ctx) for (let i = 0; i < 64; i++) G.ctx.restore();
   }
   input.endFrame();
-  requestAnimationFrame(loop);
 }
 
 let errShown = 0;

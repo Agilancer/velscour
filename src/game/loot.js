@@ -1,6 +1,6 @@
 // Drops on the ground: gold, health/mana orbs, potions, gear and gems.
 import { G } from '../state.js';
-import { rand, chance, randi, TAU, pick, clamp } from '../core/util.js';
+import { rand, chance, randi, TAU, pick, clamp, measureCtx } from '../core/util.js';
 import { isoX, isoY, camera } from '../core/view.js';
 import { sfx } from '../core/audio.js';
 import { spawn, glowSprite, sparkle, floatText, addLight, elem } from '../gfx/vfx.js';
@@ -213,8 +213,7 @@ function labelSprite(text, color, font) {
   const key = font + '|' + color + '|' + text;
   let e = labelCache.get(key);
   if (e) return e;
-  const probe = document.createElement('canvas').getContext('2d'); probe.font = font;
-  const tw = probe.measureText(text).width, fs = parseFloat(font), pad = 2;
+  const tw = measureCtx(font).measureText(text).width, fs = parseFloat(font), pad = 2;
   const c = document.createElement('canvas'); c.width = Math.ceil(tw) + pad * 2; c.height = Math.ceil(fs * 1.6) + pad * 2;
   const g = c.getContext('2d'); g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = color;
   g.fillText(text, c.width / 2, c.height / 2);

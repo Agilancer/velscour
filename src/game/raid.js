@@ -857,7 +857,8 @@ class Raid {
     if (w.player) { w.player.raidDmgMul = 1; w.player.raidTakenMul = 1; }
     w.darkK = 0; m.reflect = false;
     // fight record, for balancing (tools/tests/autoplay.js prints it)
-    (G.raidLog || (G.raidLog = [])).push({ boss: this.tpl.id, depth: this.depth, secs: Math.round(this.t), minHp: +(this.minHp ?? 1).toFixed(2), phases: this.phases.length, mods: this.mods.join(',') });
+    if ((G.raidLog || (G.raidLog = [])).length > 50) G.raidLog.shift();
+    G.raidLog.push({ boss: this.tpl.id, depth: this.depth, secs: Math.round(this.t), minHp: +(this.minHp ?? 1).toFixed(2), phases: this.phases.length, mods: this.mods.join(',') });
     for (const c of [...this.wards, ...this.minions]) if (!c.dead) { c.dead = true; burst(c.x, c.y, 30, this.tpl.el, 12, 2); }
     // a raid boss pays out like three guardians
     if (w.player) { dropLoot(w, m); dropLoot(w, m); }

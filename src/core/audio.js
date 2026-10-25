@@ -149,13 +149,17 @@ export function sfx(name, vol = 1, pitch = 1) {
   try {
     const p = pitch * (0.92 + Math.random() * 0.16);
     if (playSample(name, vol, p, now)) return;
-    if (vol !== 1) {
-      const g = ac.createGain(); g.gain.value = vol;
-      const prev = sfxBus; sfxBus = g; g.connect(prev);
-      fn(now, p);
-      sfxBus = prev;
-    } else fn(now, p);
+    voice(vol, () => fn(now, p));
   } catch (e) { /* audio errors are never fatal */ }
+}
+// A procedural sound's oscillators, filters and gains go through a gain of their own that is unplugged once the sound
+// is over (the longest is ~2.5 s): left wired into the mix, a long session piles up thousands of finished nodes, which
+// WebKit keeps processing.
+function voice(vol, play) {
+  const g = ac.createGain(); g.gain.value = vol;
+  const prev = sfxBus; sfxBus = g; g.connect(prev);
+  try { play(); } finally { sfxBus = prev; }
+  setTimeout(() => g.disconnect(), 6000);
 }
 
 
@@ -258,11 +262,9 @@ function playSample(name, vol, p, now) {
   const src = ac.createBufferSource(); src.buffer = buffers[buf]; src.playbackRate.value = p;
   const g = ac.createGain(); g.gain.value = d.v * vol;
   src.connect(g); g.connect(sfxBus); src.start(now);
+  src.onended = () => { src.disconnect(); g.disconnect(); };
   live.push(now + buffers[buf].duration / p);
-  if (d.layer) {
-    const lg = ac.createGain(); lg.gain.value = vol * 0.6; lg.connect(sfxBus);
-    const prev = sfxBus; sfxBus = lg; SOUNDS[d.layer](now, p); sfxBus = prev;
-  }
+  if (d.layer) voice(vol * 0.6, () => SOUNDS[d.layer](now, p));
   return true;
 }
 

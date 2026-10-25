@@ -1,7 +1,7 @@
 // World renderer: floors, decals, depth-sorted walls/entities, effects, lighting, minimap.
 import { G } from '../state.js';
 import { camera, isoX, isoY, HW, HH, TW, TH } from '../core/view.js';
-import { makeCanvas, TAU, clamp, rgba, shade, hexToRgb } from '../core/util.js';
+import { makeCanvas, TAU, clamp, rgba, shade, hexToRgb, measureCtx } from '../core/util.js';
 import { drawDecals, drawEffects, drawParticles, drawTexts, lights, glowSprite, stampDecals, bakedDecals } from '../gfx/vfx.js';
 import { orbitShieldDepth } from '../gfx/lancershields.js';
 import { drawWallTorch, wallTorchRect } from '../gfx/walltorches.js';
@@ -1135,8 +1135,7 @@ function nameLabel(text, font, fill, lw) {
   const key = font + '|' + fill + '|' + lw + '|' + text;
   let c = labels.get(key);
   if (c) { labels.delete(key); labels.set(key, c); return c; }
-  const probe = makeCanvas(1, 1).getContext('2d'); probe.font = font;
-  const m = probe.measureText(text), pad = Math.ceil(lw) + 2;
+  const m = measureCtx(font).measureText(text), pad = Math.ceil(lw) + 2;
   const asc = Math.ceil(m.actualBoundingBoxAscent || parseFloat(font.match(/(\d+)px/)[1]) * 0.8), desc = Math.ceil(m.actualBoundingBoxDescent || 0);
   c = makeCanvas(Math.ceil(m.width) + pad * 2, asc + desc + pad * 2);
   const g = c.getContext('2d');

@@ -34,6 +34,7 @@ export const G = {
     lifeBars: true, // a life bar over every enemy, bosses too (off: only over a monster just hit)
     wallLines: false, // a line along the foot of the dungeon's walls, over the spells
     noSkipCine: false, // "Don't skip cutscenes": Sky Battle scenes already seen play at 1x, not 20x
+    fpsCap: 0, // frame rate cap: 0 none, 30 (phones run cooler over a long session)
   },
 };
 

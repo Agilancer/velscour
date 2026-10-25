@@ -3,7 +3,7 @@ import { drawDkSkull } from './dkskull.js';
 import { G } from '../state.js';
 import { A } from '../core/assets.js';
 import { camera, isoX, isoY, HW, HH, screenDirToTile } from '../core/view.js';
-import { makeCanvas, rand, TAU, hexToRgb, shade, randi, pick, fmt, shuffle, clamp } from '../core/util.js';
+import { makeCanvas, rand, TAU, shade, randi, pick, fmt, shuffle, clamp, colourSprites, measureCtx } from '../core/util.js';
 import { groundHidden } from './terrain.js';
 
 export const ELEM = {
@@ -42,34 +42,17 @@ export const texts = [];
 export const lights = [];
 
 // ---------------------------------------------------------------- caches
-const glowCache = new Map();
-export function glowSprite(color) {
-  let c = glowCache.get(color);
-  if (c) return c;
-  c = makeCanvas(64, 64);
-  const x = c.getContext('2d');
-  const [r, g, b] = hexToRgb(color);
+// colour-keyed sprites: snapped colours, bounded, repainted in place (util.colourSprites)
+export const glowSprite = colourSprites(192, 64, (x, r, g, b) => {
   const grad = x.createRadialGradient(32, 32, 0, 32, 32, 32);
   grad.addColorStop(0, `rgba(${r},${g},${b},1)`);
   grad.addColorStop(0.25, `rgba(${r},${g},${b},.6)`);
   grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
   x.fillStyle = grad; x.fillRect(0, 0, 64, 64);
-  glowCache.set(color, c);
-  return c;
-}
+});
 
 // a filled antialiased disc per colour, for smoke puffs: one drawImage instead of building and filling an arc path
-const discCache = new Map();
-function discSprite(color) {
-  let c = discCache.get(color);
-  if (!c) {
-    c = makeCanvas(64, 64);
-    const x = c.getContext('2d');
-    x.fillStyle = color; x.beginPath(); x.arc(32, 32, 32, 0, TAU); x.fill();
-    discCache.set(color, c);
-  }
-  return c;
-}
+const discSprite = colourSprites(64, 64, (x, r, g, b) => { x.fillStyle = `rgb(${r},${g},${b})`; x.beginPath(); x.arc(32, 32, 32, 0, TAU); x.fill(); });
 
 const splatMasks = [];
 function makeSplatMasks() {
@@ -93,6 +76,8 @@ function splatSprite(color, idx) {
   const key = color + idx;
   let c = splatCache.get(key);
   if (c) return c;
+  // decals keep their sprite (d.spr), so an evicted one is only dropped from the cache, never repainted
+  if (splatCache.size >= 256) splatCache.delete(splatCache.keys().next().value);
   c = makeCanvas(64, 64);
   const x = c.getContext('2d');
   x.drawImage(splatMasks[idx], 0, 0);
@@ -565,38 +550,69 @@ const DMG_STYLE = {
   dot: { size: 13, life: 0.85, pop: 1 },
 };
 const PIX = 1.5;
-const numCache = new Map();
-
-function numSprite(text, style, color) {
-  const key = style + '|' + (color || '') + '|' + text;
-  let c = numCache.get(key);
-  if (c) { numCache.delete(key); numCache.set(key, c); return c; }
+// Numbers are put together from glyphs baked once per style/colour (an outline layer and a fill layer, so every fill
+// sits over every outline as with one strokeText + fillText): a new value used to shape its text again, make two
+// canvases and, for a crit, read its pixels back from the GPU to find the drip roots. Sprites the LRU drops are reused.
+const numCache = new Map(), glyphSets = new Map(), numFree = [];
+function glyphSet(style, color) {
+  const key = style + '|' + (color || '');
+  let G_ = glyphSets.get(key);
+  if (G_) return G_;
   const S = DMG_STYLE[style], fs = Math.round(S.size / PIX), font = `900 ${fs}px Cinzel, Georgia, serif`;
-  const probe = makeCanvas(1, 1).getContext('2d'); probe.font = font;
-  const tw = Math.ceil(probe.measureText(text).width), o = Math.max(1, Math.round(fs * 0.12));
-  const w = tw + o * 2 + 4, h = Math.ceil(fs * 1.25) + o * 2 + 4;
-  c = makeCanvas(w, h);
-  const g = c.getContext('2d'), cx = w / 2, cy = h / 2, ty = cy + fs * 0.06;
-  g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
-  g.lineWidth = o * 2; g.strokeStyle = '#0a0303'; g.strokeText(text, cx, ty);
+  const o = Math.max(1, Math.round(fs * 0.12)), h = Math.ceil(fs * 1.25) + o * 2 + 4;
+  G_ = { key, S, fs, font, o, h, cy: h / 2, ty: h / 2 + fs * 0.06, color, map: new Map() };
+  // keep the fallback font out of the cache until Cinzel has loaded
+  if (!document.fonts || document.fonts.check(font)) glyphSets.set(key, G_);
+  return G_;
+}
+function glyph(gs, ch) {
+  let e = gs.map.get(ch);
+  if (e) return e;
+  const { S, fs, font, o, h, ty } = gs, adv = measureCtx(font).measureText(ch).width, w = Math.ceil(adv) + o * 2 + 4;
+  const prep = (c) => { const g = c.getContext('2d'); g.font = font; g.textAlign = 'left'; g.textBaseline = 'middle'; g.lineJoin = 'round'; return g; };
+  const line = makeCanvas(w, h), fill = makeCanvas(w, h);
+  let g = prep(line); g.lineWidth = o * 2; g.strokeStyle = '#0a0303'; g.strokeText(ch, o + 2, ty);
+  g = prep(fill);
   if (S.fill) {
     const lg = g.createLinearGradient(0, ty - fs * 0.45, 0, ty + fs * 0.45);
     lg.addColorStop(0, S.fill[0]); lg.addColorStop(0.5, S.fill[1]); lg.addColorStop(1, S.fill[2]);
     g.fillStyle = lg;
-  } else g.fillStyle = color || '#ffffff';
-  g.fillText(text, cx, ty);
-  if (S.blood) {
-    // drip roots: the lowest inked pixel of a few glyph columns
-    const d = g.getImageData(0, 0, w, h).data, roots = [];
-    for (let x = 2; x < w - 2; x++) {
-      for (let y = h - 1; y > cy; y--) if (d[(y * w + x) * 4 + 3] > 200) { roots.push([x - cx, y - cy]); break; }
-    }
+  } else g.fillStyle = gs.color || '#ffffff';
+  g.fillText(ch, o + 2, ty);
+  e = { line, fill, adv, w, low: null };
+  if (S.blood) {   // the lowest inked pixel of each column (read once per glyph)
+    const a = line.getContext('2d').getImageData(0, 0, w, h).data, b = g.getImageData(0, 0, w, h).data;
+    e.low = new Int16Array(w).fill(-1);
+    for (let x = 0; x < w; x++) for (let y = h - 1; y > gs.cy; y--) { const k = (y * w + x) * 4 + 3; if (a[k] > 200 || b[k] > 200) { e.low[x] = y; break; } }
+  }
+  if (glyphSets.get(gs.key) === gs) gs.map.set(ch, e);
+  return e;
+}
+function numSprite(text, style, color) {
+  const key = style + '|' + (color || '') + '|' + text;
+  let c = numCache.get(key);
+  if (c) { numCache.delete(key); numCache.set(key, c); return c; }
+  const gs = glyphSet(style, color), { o, h } = gs, gl = [];
+  let tw = 0;
+  for (const ch of text) { const e = glyph(gs, ch); gl.push(e); tw += e.adv; }
+  const w = Math.ceil(tw) + o * 2 + 4;
+  c = numFree.pop() || makeCanvas(w, h);
+  c.width = w; c.height = h; c.roots = null;   // (also clears a reused canvas)
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  // centred like the whole-string text was: the pen starts where a centred string of width tw would
+  const x0 = Math.round(w / 2 - tw / 2) - o - 2;
+  for (const layer of ['line', 'fill']) { let pen = x0; for (const e of gl) { g.drawImage(e[layer], Math.round(pen), 0); pen += e.adv; } }
+  if (gs.S.blood) {
+    const low = new Int16Array(w).fill(-1), cx = w / 2, cy = gs.cy, roots = [];
+    let pen = x0;
+    for (const e of gl) { const p0 = Math.round(pen); for (let x = 0; x < e.w; x++) { const X = p0 + x; if (X >= 0 && X < w && e.low[x] > low[X]) low[X] = e.low[x]; } pen += e.adv; }
+    for (let x = 2; x < w - 2; x++) if (low[x] >= 0) roots.push([x - cx, low[x] - cy]);
     c.roots = roots;
   }
-  // keep the fallback font out of the cache until Cinzel has loaded
-  if (!document.fonts || document.fonts.check(font)) {
+  if (glyphSets.get(gs.key) === gs) {
     numCache.set(key, c);
-    if (numCache.size > 400) numCache.delete(numCache.keys().next().value);
+    if (numCache.size > 400) { const k = numCache.keys().next().value, old = numCache.get(k); numCache.delete(k); if (numFree.length < 32) numFree.push(old); }
   }
   return c;
 }
@@ -867,8 +883,7 @@ function outlinedText(text, font, color, lw) {
   const key = font + '|' + color + '|' + text;
   let c = textCache.get(key);
   if (c) return c;
-  const probe = makeCanvas(1, 1).getContext('2d'); probe.font = font;
-  const m = probe.measureText(text), pad = Math.ceil(lw) + 2, fs = parseFloat(font.split(' ')[1]) || 12;
+  const m = measureCtx(font).measureText(text), pad = Math.ceil(lw) + 2, fs = parseFloat(font.split(' ')[1]) || 12;
   const asc = Math.ceil(m.actualBoundingBoxAscent || fs * 0.8), desc = Math.ceil(m.actualBoundingBoxDescent || fs * 0.25);
   c = makeCanvas(Math.ceil(m.width) + pad * 2, asc + desc + pad * 2);
   const g = c.getContext('2d');

@@ -14,6 +14,58 @@ Contents
 
 ---
 
+## October 25, 2026 — mobile long-session sweep: leaks, canvas churn, autosave freeze, frame cap (branch `perf/mobile-long-session`)
+- **Request (user):** a thorough bug check and graphics optimisation, especially on mobile: "really bad frame rate drops,
+  especially after 30+ minutes of play".
+- **How it was measured:** new `tools/tests/longrun.js` (a hero auto-plays N game minutes on the 844x390 touch layout,
+  a frame drawn every other update; per game minute: JS heap after a forced GC, live canvases and their memory charged
+  to the code that made them, DOM nodes, timers, median frame cost) and `tools/tests/levelmem.js` (level after level).
+  **Pitfall:** CDP `Runtime.queryObjects` results stay alive until their object group is released; an early version of
+  the probe pinned every canvas and world it counted and showed a fake 100 -> 740 MB "leak". Both probes release now.
+- **Found and fixed:**
+  - `glowSprite` (and the smoke `discSprite`) cached one canvas per colour string, unbounded. The prism critter and
+    fireworks pass `hsl(<float hue>)`, a new string every frame: ~960 glow canvases after 20 minutes on `main`, more
+    every minute a prism critter flies. And `hexToRgb` read hsl() as black, so those glows were invisible. Now
+    `util.colourSprites`: colours parsed by the canvas (`cssRgb`: hex, rgb(), hsl(), names), snapped to 5 bits a
+    channel, at most 192 (64 discs), the oldest repainted in place. `hexToRgb` hands non-hex colours to `cssRgb`.
+    Blood splat sprites are capped at 256 (decals keep their own reference).
+  - Damage numbers: every new value shaped its text again, made two canvases (a 1x1 measuring probe and the sprite)
+    and, for a crit, read the sprite back from the GPU (`getImageData`) for the drip roots. Now numbers are put together
+    from glyphs baked once per style/colour (an outline layer and a fill layer, so fills stay over outlines), the drip
+    roots come from per-glyph columns read once, and sprites the LRU drops are reused. Pixel-compared with the old
+    numbers. Labels, floating texts and loot labels share one measuring context (`util.measureCtx`); grit samples
+    share one CPU canvas.
+  - Over a 30-minute soak: canvases made 14,559 -> 6,943, still alive at the end 4,049 -> ~2,400 (levels off), JS heap
+    14 -> 24 MB on `main` vs 14 -> 18 MB.
+  - **Autosave froze the game every 30 s**: `writeSave` parsed and re-encoded every hero on the device to change one
+    (16 classes with full stashes: 1.5 MB, 100-180 ms at 4x CPU throttle). It now keeps what it last wrote as one JSON
+    text per hero and re-encodes only the hero being saved while the stored text is still exactly that (else the old
+    full path). 3x faster; `savesafe.js` and `cloud.js` pass.
+  - **Sounds:** procedural sound effects left their oscillators/filters/gains wired into the mix forever (WebKit keeps
+    processing wired nodes, so audio cost grows over a session). Each sound now goes through its own gain that is
+    unplugged 6 s later (`voice` in audio.js); samples and the Bard's harpsichord notes disconnect when they end.
+  - Adaptive resolution see-sawed on phones near the limits (down, 10 s later up, down again), and every change
+    re-baked all floor chunks: a step up that has to be undone within 20 s now doubles the wait before the next (to 2
+    min). Under a frame cap it judges against the cap, not 60.
+  - **New setting: Frame rate cap** (None / 30 fps, `G.settings.fpsCap`, default None). 30 fps halves the work, which
+    keeps a phone cooler; a hot phone throttles itself after a long session, which is the most likely cause of the
+    "after 30 minutes" drops on a real device. The main loop skips frames; `requestAnimationFrame` now comes first in
+    `loop`, so a throw outside the try blocks can no longer stop the game.
+  - Monster path smoothing (`map.smooth`) remembers tile-centre to tile-centre wide line-of-sight answers for half a
+    second (a pack re-plans several times a second over the same segments): identical results (seeded benchmark,
+    same positions after 600 frames), update 0-20% cheaper in packed levels (noisy). `mobs.js`: 0 stuck.
+  - Bugs: a second finger on a touch skill button left the first press's 120 ms repeat timer running forever (it
+    kept casting); `lostpointercapture` also ends a press now. `G.raidLog` grew forever (capped at 50).
+- **Verified:** `longrun.js` 30 min on `main` and on the branch side by side, `levelmem.js`, `flow`, `savesafe`,
+  `options`, `cloud`, `mobile`, `hud`, `skills wizard,paladin`, `bard` (its "too few Cadences" fails on `main` too when
+  given 1 minute; passes at its default 4), `spectate`, `mobs`, `pets`, `seethrough` (one random failure in four runs,
+  `main` fails one of three on a different check), `autoplay wizard 5 mobile`, `data_check`. Damage numbers compared
+  pixel for pixel; the settings row and an in-fight frame looked at.
+- **Not verified:** real phones (thermal behaviour, Safari's audio graph, iOS canvas memory), the frame cap on a real
+  60/120 Hz display. Headless numbers are SwiftShader and say nothing about GPU cost.
+- **Design calls made without asking:** the frame cap defaults to None (worth suggesting 30 to players with hot
+  phones); glow colours are snapped to 5 bits a channel (not visible on soft glows).
+
 ## October 25, 2026 — a player's late-game requests, 20x seen cut scenes, 30 Sky Battle stories (branch `claude/airship-cutscene-stories-w867qx`)
 - **Request (a player, relayed by the user):** an option to stop auto-play spending attribute points, and a respec;
   more points per click; the Golden Scarab should pay gold; gold is short in the mid/late game (scale the Greed Hoard?);
