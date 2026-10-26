@@ -311,7 +311,7 @@ export function gemStats(gem, tier, slot) {
   if (g.sigil) return sigilStats(tier, slot);
   return g.stats.map(([s, v]) => {
     let val = v * GEM_MULT[tier];
-    if (['extraProj', 'chainPlus', 'pierce', 'homing', 'skillsAll'].includes(s)) val = Math.max(0, Math.floor((tier + 1) * v + 0.0001));
+    if (['extraProj', 'chainPlus', 'pierce', 'homing', 'skillsAll'].includes(s)) val = Math.max(s === 'chainPlus' || s === 'pierce' ? 1 : 0, Math.floor((tier + 1) * v + 0.0001)); // every Chainlink gives at least +1
     else val = Math.round(val * 10) / 10;
     return [s, val];
   }).filter(([, v]) => v > 0);

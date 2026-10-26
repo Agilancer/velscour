@@ -69,9 +69,9 @@ export const SKILLDATA = {
       'Absolute Zero|nova|cold|frost|r=2.2 n=2 freeze cd=8', 'Frozen Orb Barrage|proj|cold|orb|n=3 spray spread=60 cd=4', 'Ice Golem|summon|cold|golem|sum=icegolem max=1 cd=20', 'Cryo Beam|beam|cold|laser|dur=2.5 freeze cd=5',
     ],
     [
-      'Charged Bolt|proj|light|spark|n=5 rand spd=0.8', 'Static Field|nova|light|lightning|r=1', 'Telekinesis|proj|arcane|orb|knock stun', 'Teleport|blink|light|lightning|range=1.5 cd=1',
-      'Lightning|beam|light|lightning|range=1.2', 'Chain Lightning|chain|light|lightning|n=5', 'Thunder Clap|nova|light|lightning|stun r=1.1', 'Ball Lightning|proj|light|orb|pierce spd=0.6 r=1.5',
-      'Thunderstorm|summon|light|cloud|sum=stormcloud max=1 dur=15 cd=15', 'Lightning Nova|nova|light|lightning|r=1.5', 'Energy Shield|buff|arcane|shield|buff=res,armor amt=40 dur=30 cd=30', 'Shock Wave|fissure|light|shock|range=1.3',
+      'Charged Bolt|proj|light|spark|n=5 rand spd=0.8 range=1.2 bounce=1 wander', 'Static Field|nova|light|lightning|r=1.2 static=25 dmg=0.5 cd=1', 'Spark|proj|light|spark|n=4 spread=40 spd=0.9 range=2 bounce=4 wander=2 dmg=0.75', 'Teleport|blink|light|lightning|range=1.5 cd=1',
+      'Lightning|beam|light|lightning|range=1.2', 'Chain Lightning|chain|light|lightning|n=5', 'Thunder Clap|aoe|light|lightning|stun knock clap r=1.1 dmg=0.55', 'Ball Lightning|proj|light|orb|pierce spd=0.6 r=1.5',
+      'Thunderstorm|summon|light|cloud|sum=stormcloud max=1 dur=15 cd=15', 'Lightning Nova|nova|light|lightning|r=1.5 n=2 dmg=0.5 arcs=2', 'Energy Shield|buff|arcane|shield|buff=res,armor amt=40 dur=30 cd=30', 'Shock Wave|fissure|light|shock|range=1.3',
       'Storm Lances|strike|light|lightning|n=5', 'Tesla Coil|summon|light|tesla|sum=tesla max=2 dur=15 cd=10', 'Arc Field|zone|light|storm|r=1.5 dur=5', 'Overload|buff|light|aura|pulse buff=as amt=30 dur=12 cd=25',
       'Tempest|cyclone|light|storm|n=4 dur=6 cd=8', "Thor's Hammer|aoe|light|pillar|r=2.2 dmg=2.6 cd=4", 'Lightning Mastery|buff|light|aura|buff=crit,dmg amt=40 dur=15 cd=40', 'Hand of Zeus|strike|light|lightning|n=12 r=1.5 cd=8',
     ],

@@ -110,6 +110,10 @@ export class Projectile {
       const turn = Math.cos(this.t * this.weave + this.seed) * 7 * dt * Math.max(0.25, 1 - this.t * 1.2), c = Math.cos(turn), s = Math.sin(turn), vx = this.vx;
       this.vx = vx * c - this.vy * s; this.vy = vx * s + this.vy * c;
     }
+    if (this.wander) { // Charged Bolt / Spark: crackling, erratic flight
+      const turn = rand(-1, 1) * this.wander * 9 * dt, c = Math.cos(turn), s = Math.sin(turn), vx = this.vx;
+      this.vx = vx * c - this.vy * s; this.vy = vx * s + this.vy * c;
+    }
     // boomerang return: home to the thrower's hand wherever he has moved, over walls, hitting all again on the way
     if (this.ret && !this.returning && (this.t > this.turnAt || this.t > 12)) this.turnBack();
     if (this.returning) {
@@ -180,18 +184,19 @@ export class Projectile {
       }
       this.hitSet.add(c.id);
     }
-    if (this.pierce > 0) { this.pierce--; return; }
     if (this.returning) return; // on its way home it cuts through everything
+    // bounce to a fresh enemy first, then pierce (Chainlink's bounces and pierces stack)
     if (this.bounce > 0) {
-      this.bounce--;
       const n = w.hostiles(this.team, c.x, c.y, 6).filter((x) => !this.hitSet.has(x.id))[0];
       if (n) {
+        this.bounce--;
         const a = angleTo(this.x, this.y, n.x, n.y), sp = Math.hypot(this.vx, this.vy);
         this.vx = Math.cos(a) * sp; this.vy = Math.sin(a) * sp;
-        this.life = this.t + 1.2; this.turnAt = this.t + 0.8; this.bounced = true;
+        this.life = Math.max(this.life, this.t + 1.2); this.turnAt = this.t + 0.8; this.bounced = true;
         return;
       }
     }
+    if (this.pierce > 0) { this.pierce--; return; }
     if (this.ret) { if (this.bounced) this.turnBack(); return; } // boomerangs keep going; a spent ricochet flies home
     if (!this.exp) hitSpark(this.x, this.y, this.z, this.el);
     this.dead = true;
@@ -711,14 +716,14 @@ export class Dash {
 // ===================================================================== Nova wave (expanding ring that damages once)
 export class NovaWave {
   constructor(o) {
-    Object.assign(this, { t: 0, dur: 0.38, r: 3, o: {}, fx: 'nova', ground: true }, o);
+    Object.assign(this, { t: 0, dur: 0.38, r: 3, o: {}, fx: 'nova', ground: true, arcN: 0 }, o);
     this.E = elem(this.el);
     this.team = this.src ? this.src.team : this.team;
     this.hitSet = new Set();
     addEffect(new Ring(this.x, this.y, 0.2, this.r, this.dur + 0.1, this.E.glow, 6, { fill: true }));
     addEffect(new Ring(this.x, this.y, 0.1, this.r * 0.9, this.dur + 0.2, this.E.core, 2));
     // radial particles flavoured by fx
-    const n = Math.round(14 + this.r * 8);
+    const n = Math.min(160, Math.round(14 + this.r * 8));
     for (let i = 0; i < n; i++) {
       const a = (i / n) * TAU, sp = this.r / this.dur * rand(0.8, 1.05);
       const type = ['frost', 'shard', 'spike', 'earth', 'bone', 'thorn'].includes(this.fx) ? 'shard' : this.fx === 'crow' ? 'dot' : 'glow';
@@ -735,6 +740,17 @@ export class NovaWave {
       if (this.hitSet.has(c.id)) continue;
       this.hitSet.add(c.id);
       hit(this.src, c, roll(this.dmg), this.el, { ...this.o, ang: angleTo(this.x, this.y, c.x, c.y), aoe: true });
+      if (this.staticPct && !c.dead) {
+        // Static Field: a share of current life, never below a floor (bosses lose less and keep more)
+        const boss = c.rank === 'boss', cut = Math.min(c.hp * this.staticPct / 100 * (boss ? 0.4 : 1), c.hp - c.maxHp * (boss ? 0.5 : 0.25));
+        if (cut > 0) hit(this.src, c, cut, this.el, { dot: true, crit: false, noArc: true, sk: this.o.sk });
+      }
+      if (this.arcs && this.arcN < 4 && !c.dead) {
+        // Lightning Nova: the first few struck throw off arcs
+        this.arcN++;
+        const next = this.world.hostiles(this.team, c.x, c.y, 4).find((x) => x !== c && !this.hitSet.has(x.id));
+        if (next) chainHit(this.world, this.src, c.x, c.y, next, this.arcs - 1, roll(this.dmg) * 0.25, this.el, this.E.glow, { sk: this.o.sk });
+      }
       if (this.pullIn && !c.static) { const a = angleTo(c.x, c.y, this.x, this.y); c.kbx += Math.cos(a) * 8; c.kby += Math.sin(a) * 8; }
     }
     if (this.heal && this.t < dt * 1.5) for (const c of this.world.alliesOf(this.team, this.x, this.y, this.r)) c.heal ? c.heal(c.maxHp * 0.06) : (c.hp = Math.min(c.maxHp, c.hp + c.maxHp * 0.06));

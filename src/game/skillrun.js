@@ -125,7 +125,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
           if (p.dead) return;
           w.addHazard(new Projectile({
             world: w, src: p, x: p.x + Math.cos(a) * 0.3, y: p.y + Math.sin(a) * 0.3, ang: a, speed, range, fx, el, dmg, o,
-            pierce: (m.pierce ? 99 : 0) + Math.floor(st.pierce || 0), bounce: (m.bounce || 0) + (m.bounce ? Math.floor(st.chainPlus || 0) : 0),
+            pierce: (m.pierce ? 99 : 0) + Math.floor(st.pierce || 0), bounce: (m.bounce || 0) + (m.ret || m.ricochet ? 0 : Math.floor(st.chainPlus || 0)), wander: m.wander === true ? 1 : m.wander || 0,
             home: m.home || st.homing ? 1 : 0, split: m.split || chance((st.splitChance || 0) / 100), ret: m.ret, lob: m.lob,
             tx: tx + (m.lob && n > 1 ? rand(-1, 1) : 0), ty: ty + (m.lob && n > 1 ? rand(-1, 1) : 0),
             exp: m.exp ? 1.1 * (m.r ?? 1) * area : 0, chain: m.chain ? m.chain + Math.floor(st.chainPlus || 0) : 0,
@@ -149,7 +149,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
     }
     case 'nova': {
       const n = m.n || 1;
-      for (let i = 0; i < n; i++) later(w, i * 0.28, () => { if (!p.dead) w.addHazard(new NovaWave({ world: w, src: p, x: p.x, y: p.y, r: 3 * (m.r ?? 1) * area, dmg, el, fx, o, heal: m.heal, pullIn: m.pull })); });
+      for (let i = 0; i < n; i++) later(w, i * 0.28, () => { if (!p.dead) w.addHazard(new NovaWave({ world: w, src: p, x: p.x, y: p.y, r: 3 * (m.r ?? 1) * area, dmg, el, fx, o, heal: m.heal, pullIn: m.pull, staticPct: m.static || 0, arcs: m.arcs || 0 })); });
       if (m.pull) sfx('shadow');
       break;
     }
@@ -199,6 +199,18 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
         later(w, fall, () => explode(w, p, x, y, r, dmg, el, o, fx));
       } else {
         explode(w, p, x, y, r, dmg, el, o, fx);
+        if (m.clap) { // Thunder Clap: a beat later lightning strikes every stunned foe
+          camera.shake(5);
+          later(w, 0.3, () => {
+            let k = 0;
+            for (const t of w.hostiles(p.team, x, y, r + 1.5)) {
+              if (!t.status || !t.status.stun || t.status.stun.t <= 0) continue;
+              if (k++ < 12) addEffect(new Bolt(t.x, t.y, 220, t.x, t.y, 6, E.glow, 0.22, 3));
+              hit(p, t, roll(dmg) * 0.6, el, { ...o, stun: false, knock: false, aoe: true });
+            }
+            if (k) sfx('light', 0.8);
+          });
+        }
       }
       break;
     }

@@ -292,7 +292,7 @@ export function explosionFx(x, y, r, el, fx = 'explosion', opts = {}) {
   const big = r >= 1.6;
   addEffect(new Ring(x, y, 0.2, r, 0.35 + r * 0.08, E.glow, 4 + r * 2, { fill: true }));
   if (big) addEffect(new Ring(x, y, 0.1, r * 1.25, 0.6, E.core, 2));
-  burst(x, y, 10, el, Math.round(14 + r * 12), 2.5 + r * 2, { size: 1.2 });
+  burst(x, y, 10, el, Math.min(160, Math.round(14 + r * 12)), 2.5 + r * 2, { size: 1.2 });
   spawn({ type: 'glow', x, y, z: 12, life: 0.25, size: 18 * r, size1: 26 * r, color: E.core, add: true });
   addLight(x, y, 4 + r * 3, 1.4);
   switch (fx) {

@@ -189,7 +189,8 @@ export function describe(sk, L, dmg) {
   const flags = [];
   if (m.pierce) flags.push('Pierces');
   if (m.home) flags.push('Homing');
-  if (m.bounce) flags.push(`Bounces ${m.bounce}x`);
+  if (m.bounce) flags.push(`Bounces ${m.bounce}x off walls and between enemies`);
+  if (m.wander) flags.push('Wanders erratically');
   if (m.chain) flags.push(`Chains to ${m.chain} more`);
   if (m.exp) flags.push('Explodes');
   if (m.split) flags.push('Splits on hit');
@@ -245,6 +246,10 @@ export function describe(sk, L, dmg) {
     case 'corpse': s = `Consume up to ${n} corpses near the target${m.heal ? ', healing you and' : ','} dealing ${D} plus a share of each corpse's life.`; break;
     default: s = `Deals ${D}.`;
   }
+  // the Storm tree's own mechanics
+  if (m.static) s = `Charge the air around you for ${D}, then tear away ${m.static}% of every enemy's current life (${Math.round(m.static * 0.4)}% on bosses). It never takes a foe below a quarter of its life (half for bosses).`;
+  if (m.clap) s = `Clap thunder down at the target for ${D}, stunning and hurling enemies back. A beat later lightning strikes every stunned foe for 60% more.`;
+  if (m.arcs) s = `Release ${n} expanding rings of lightning around you, each dealing ${D}. The first enemies each ring strikes throw off arcs that leap to ${m.arcs} more.`;
   if (ASTRO_TEXT[m.astro]) s = ASTRO_TEXT[m.astro](D, m) + (sk.kind === 'buff' ? ' ' + s : '');
   if (sk.classId === 'arcane_sorcerer' && !['buff', 'heal', 'summon'].includes(sk.kind) && !['chart', 'ignite', 'heavensmap'].includes(m.astro)) flags.push(m.free ? 'Every third cast charts a star' : 'Charts a star where it lands');
   for (const k in NOTE_MODS) if (m[k]) flags.push(NOTE_MODS[k]);
