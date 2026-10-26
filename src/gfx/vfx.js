@@ -245,8 +245,10 @@ export class Bolt {
   build() {
     const ax = isoX(this.x0, this.y0), ay = isoY(this.x0, this.y0) - this.z0;
     const bx = isoX(this.x1, this.y1), by = isoY(this.x1, this.y1) - this.z1;
+    // the tower's warp throws cut-away points 1e7 px off: such a bolt would need a million segments
+    if (Math.abs(ax) > 1e6 || Math.abs(ay) > 1e6 || Math.abs(bx) > 1e6 || Math.abs(by) > 1e6) { this.seg = []; return; }
     const len = Math.hypot(bx - ax, by - ay);
-    const n = Math.max(3, Math.floor(len / 12));
+    const n = Math.min(48, Math.max(3, Math.floor(len / 12)));
     const nx = -(by - ay) / (len || 1), ny = (bx - ax) / (len || 1);
     const pts = [[ax, ay]];
     for (let i = 1; i < n; i++) {
@@ -263,6 +265,7 @@ export class Bolt {
   }
   draw(ctx) {
     if (!this.seg) this.build();
+    if (this.seg.length < 2) return;
     const k = this.t / this.dur;
     ctx.globalAlpha = 1 - k * 0.7;
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
