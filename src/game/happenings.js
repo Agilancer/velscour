@@ -25,7 +25,7 @@ import { TOWNSFOLK } from '../data/townsfolk.js';
 import { setupScenario, scenarioTick } from './scenarios.js';
 import { smiteKill } from './smite.js';
 import { greedTick } from './greed.js';
-import { heresyTick, worldHeresies } from './heresies.js';
+import { worldHeresies } from './heresies.js';
 
 // ------------------------------------------------------------------------------------------------ omens
 // A level-wide twist, announced on arrival. mon: applied to every enemy as it appears (ambushes too).
@@ -435,7 +435,6 @@ export function happeningsTick(world, dt) {
   if (!H || !p || p.dead) return;
   H.t += dt;
   greedTick(world, dt); // the Greed lever's tougher monsters (game/greed.js)
-  heresyTick(world, dt); // the Heresies' (game/heresies.js): Iron Hide, Cruel Hand, the Legion's hellgates...
   if (H.streakT > 0) H.streakT -= dt;
   // the omen marks every enemy as it appears
   if (H.omen && OMENS[H.omen].mon && (H.monT = (H.monT || 0) - dt) <= 0) {

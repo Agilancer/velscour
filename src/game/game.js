@@ -81,7 +81,7 @@ import { offerCommissions, setupCommissions, commissionClear, wantedBiomes, LINE
 import { titleScreen, hide as hideScreen, deathScreen, victoryScreen, pauseMenu, helpDialog } from '../ui/screens.js';
 // the Endgame (docs/ENDGAME.md): Heresies, Abyssal Rifts, Velscour Unbound, Infernal Marks
 import { endgameUnlocked, unlockEndgame } from './endgame.js';
-import { heresySpawns, heresyWorld, heresyBegin, heresiesOf, worldRank, MARKS_RANK } from './heresies.js';
+import { heresySpawns, heresyWorld, heresyBegin, heresyTick, heresiesOf, worldRank, MARKS_RANK } from './heresies.js';
 import { createRiftRun, riftTick, riftOpen, riftDepth, riftLevel, fmtTime } from './rifts.js';
 import { unboundReady, spendKeys, keysOf } from './unbound.js';
 import { grantMarks } from './marks.js';
@@ -1194,6 +1194,7 @@ export const game = {
       ambushTick(w, dt);
       if (w.kind === 'town') townTick(w, dt); else if (!w.sky) happeningsTick(w, dt);
       if (w.rift) riftTick(w, dt); // the Abyssal Rift's clock (game/rifts.js)
+      if (w.heresy) heresyTick(w, dt); // the Heresies as monsters appear, the Legion's hellgates (game/heresies.js; the Breach has no happenings tick)
       madnessTick(dt);
       spectateTick(w, dt); // gilded critters, the SMITE reticle (game/spectate.js)
       footsteps(p, w.kind === 'town' ? 'dirt' : STEP_SURFACE[w.biome && w.biome.id] || 'stone');
