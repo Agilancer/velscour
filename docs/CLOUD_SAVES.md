@@ -61,7 +61,27 @@ The code is `src/game/cloud.js` and `src/game/herobackup.js`, the screens are in
     meantime, it becomes a conflict instead of an overwrite. The class being played is never pulled; the player gets
     one log line, and the choice waits for the title screen.
 - **Offline:** work stays dirty, the status reads offline, and it retries every 2 minutes and on the `online` event.
-- **Sign out** keeps the heroes on the device and clears `base`, so a later sign-in merges from scratch.
+- **The account record** (the Endgame's shared record, `src/game/endgame.js`, docs/ENDGAME.md): one more document,
+  `users/{uid}/account/endgame`, holding `{ v, unlocked, marks: { pts, xp, spent: { life, crit, mf, rift } }, bests,
+  keysFound, unboundWins, at }`. It is not a hero: it never conflicts and never asks; `mergeEndgame(local, cloud,
+  base)` folds the two copies into one that loses nothing, three ways against `st.endBase` (the record this device
+  last synced, in `velscour_cloud_v1`):
+  - **Counters** (`marks.pts`, `keysFound`, `unboundWins`): the base plus what each side earned since it, so 10
+    Marks earned on one device and 5 on another while apart end at 15 on both. Never below either side or the base.
+    No base (a first sign-in on this device): the larger.
+  - **Spending** (`marks.spent`): each side's change since the base, per category (a reset on one device and a spend
+    on the other both hold). If the sum is more than the Marks (the same free Marks spent on both devices), this
+    device's spending wins. A side with fewer Marks than the base is damaged and its spending is ignored. No base:
+    the spending of the side with more Marks.
+  - **The rest:** `marks.xp` the larger, `unlocked` the earliest time, `bests` the better rift per class. A damaged
+    record (junk values, spending past its Marks) is sanitised by `fixEndgame` first, so it lowers nothing; the next
+    sync writes the merged record back over it.
+  The sync (`syncAccount`, part of every full sync, and 60 s after any change to the record outside play's XP ticks)
+  adopts the merge here, sets the base to what it read, and writes the merge back in a transaction that checks the
+  document still holds what was read (another device wrote in between: read and merge again, up to 3 times); after
+  the write the base is the merge. XP towards the next Mark alone does not wake the sync.
+- **Sign out** keeps the heroes and the account record on the device and clears `base` and `endBase`, so a later
+  sign-in merges from scratch.
 
 ## Costs
 On the free tier (50,000 reads and 20,000 writes a day), one write every 5 minutes while playing allows roughly 1,600

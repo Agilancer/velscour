@@ -3,7 +3,8 @@
 // a conflict picked from the dialog, the in-game warning, deleting (tombstones), a first sign-in that must not
 // overwrite, offline and back, reload resumes the session, sign out. No save is lost: every replaced hero is backed up
 // (and restorable from Settings), a hero lost on either side is copied back instead of deleted, unreadable local saves
-// and damaged cloud copies change nothing, a device without IndexedDB (no backups) changes nothing, the 5-minute push. Then a smoke test of the real SDK (12.19.0 from npm when the
+// and damaged cloud copies change nothing, a device without IndexedDB (no backups) changes nothing, the 5-minute push;
+// the Endgame's account record (Infernal Marks earned on two devices apart add up, never lowered). Then a smoke test of the real SDK (12.19.0 from npm when the
 // gstatic CDN is blocked): it loads, the popup goes to velscour.firebaseapp.com, and Firestore refuses a signed-out read.
 // node tools/tests/cloud.js [nosdk]
 const fs = require('fs');
@@ -299,6 +300,59 @@ const check = (ok, msg, fails) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg);
     await run(A.page, 'seed', [['bard', 'Lyre', 1]]);
     await idle(A.page);
     check(!await cloudHero(A.page, 'bard'), 'A signed out: a new hero does not go up', fails);
+
+    // 16. the Endgame's account record (users/{uid}/account/endgame) on two more devices of one account: Infernal
+    // Marks earned apart add up (a three-way merge against the record each device last synced), spending holds, the
+    // unlock keeps the earliest time, rift bests merge per class, a damaged cloud copy lowers nothing, sign-out keeps it
+    const U = { uid: 'u3', displayName: 'Mark Player', email: 'marks@example.com' }, DOC = 'users/u3/account/endgame';
+    const E = await device('E', U), F = await device('F', U);
+    try {
+      const rec = (d) => d.page.evaluate(async () => { const { endgame } = await import('/src/game/endgame.js'); const r = endgame(); return { pts: r.marks.pts, spent: r.marks.spent, bests: Object.keys(r.bests).sort().join(','), unlocked: r.unlocked }; });
+      const doc = () => E.page.evaluate((p) => window.__store('get', p), DOC);
+      const act = (d, fn, ...a) => d.page.evaluate(`(async () => { const M = await import('/src/game/marks.js'); const E = await import('/src/game/endgame.js'); (${fn})(M, E, ...${JSON.stringify(a)}); })()`);
+      const signIn = (d) => d.page.evaluate(async () => { const { Cloud } = await import('/src/game/cloud.js'); await Cloud.signIn(); });
+      const sp = (r) => `${r.pts} (life ${r.spent.life}, crit ${r.spent.crit})`;
+      await signIn(E);
+      await act(E, (M) => { M.grantMarks(10, 'test'); M.spendMark('life', 4); });
+      await sync(E.page); await idle(E.page);
+      let c = await doc();
+      check(c && c.marks.pts === 10 && c.marks.spent.life === 4, `account E: earns 10 Marks, 4 on Vitality, syncs: the cloud holds ${c && c.marks.pts}/${c && c.marks.spent.life}`, fails);
+      await signIn(F); await idle(F.page);
+      let rf = await rec(F);
+      check(rf.pts === 10 && rf.spent.life === 4, `account F signs in: sees ${sp(rf)}`, fails);
+      // apart: E offline earns 6 (and slays Velscour, a paladin rift best); F earns 3, spends 2 on Precision (an earlier unlock, a wizard best)
+      await E.page.evaluate(() => { window.__OFFLINE = true; });
+      await act(E, (M, E) => { M.grantMarks(6, 'test'); E.unlockEndgame(); E.noteRiftBest('paladin', 12, 300); });
+      await sync(E.page); await idle(E.page);
+      await act(F, (M, E, t) => { M.grantMarks(3, 'test'); M.spendMark('crit', 2); E.endgame().unlocked = t; E.noteRiftBest('wizard', 9, 200); }, Date.now() - 864e5);
+      await sync(F.page); await idle(F.page);
+      c = await doc();
+      check(c.marks.pts === 13, `account F syncs while E is offline: the cloud holds ${c.marks.pts}`, fails);
+      await E.page.evaluate(() => { window.__OFFLINE = false; });
+      await sync(E.page); await idle(E.page);
+      await sync(F.page); await idle(F.page);
+      const re = await rec(E); rf = await rec(F); c = await doc();
+      check(re.pts === 19 && rf.pts === 19 && c.marks.pts === 19, `account: 10 + 6 + 3 Marks earned apart -> E ${re.pts}, F ${rf.pts}, cloud ${c.marks.pts} (no Mark lost)`, fails);
+      check(sp(re) === '19 (life 4, crit 2)' && sp(rf) === sp(re), `account: spending holds on both: E ${sp(re)}, F ${sp(rf)}`, fails);
+      check(re.unlocked === rf.unlocked && re.unlocked < Date.now() - 8e7 && re.bests === 'paladin,wizard' && rf.bests === re.bests, `account: the unlock keeps the earliest time, rift bests merge (${re.bests})`, fails);
+      // a damaged cloud copy: nothing lowered here, and the next sync mends it
+      await E.page.evaluate((p) => window.__store('put', [p, { v: 1, unlocked: 'x', marks: { pts: 'x', xp: 'y', spent: { life: 99 } }, bests: { paladin: { tier: 'z' } }, keysFound: 'q' }]), DOC);
+      await sync(F.page); await idle(F.page);
+      rf = await rec(F); c = await doc();
+      check(sp(rf) === '19 (life 4, crit 2)' && rf.bests === 'paladin,wizard' && rf.unlocked === re.unlocked, `account: a damaged cloud copy (pts 'x', 99 on Vitality) lowers nothing on F: ${sp(rf)}`, fails);
+      check(c.marks.pts === 19 && c.marks.spent.life === 4 && c.marks.spent.crit === 2, `account: F's sync mends the cloud copy (${c.marks.pts}, life ${c.marks.spent.life})`, fails);
+      await act(E, (M) => { M.grantMarks(1, 'test'); });
+      await sync(E.page); await idle(E.page); await sync(F.page); await idle(F.page);
+      rf = await rec(F);
+      check(rf.pts === 20 && (await rec(E)).pts === 20, `account: one more Mark on E after the mend reaches F once (${rf.pts})`, fails);
+      // sign-out keeps the record here and forgets the base
+      await E.page.evaluate(async () => { const { Cloud } = await import('/src/game/cloud.js'); await Cloud.signOut(); });
+      const out = await E.page.evaluate(() => ({ rec: JSON.parse(localStorage.getItem('velscour_endgame_v1')).marks.pts, base: 'endBase' in JSON.parse(localStorage.getItem('velscour_cloud_v1')) }));
+      check(out.rec === 20 && !out.base, `account E signs out: its record stays (${out.rec} Marks), the merge base goes`, fails);
+    } finally {
+      errs.push(...E.errors.map((e) => 'E ' + e), ...F.errors.map((e) => 'F ' + e));
+      await E.browser.close(); await F.browser.close();
+    }
   } finally {
     errs.push(...A.errors.map((e) => 'A ' + e), ...B.errors.map((e) => 'B ' + e));
     await A.browser.close(); await B.browser.close();
