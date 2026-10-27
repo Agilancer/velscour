@@ -18,6 +18,7 @@ import { riftLevel } from '../data/rifts.js';
 import { riftOpen } from './rifts.js';
 import { endgameUnlocked } from './endgame.js';
 import { heresyAllows } from './heresies.js';
+import { marksFree, autoSpend } from './marks.js';
 import { drawBiome } from '../data/biomes.js';
 import { augHits } from '../data/rings.js';
 import { canLearn } from '../ui/skills.js';
@@ -550,6 +551,7 @@ export const Auto = {
     const p = G.player, c = G.char;
     let dirty = false;
     if (c.statPoints > 0 && G.settings.autoStatPoints !== false) { this.spendStats(); dirty = true; }
+    if (marksFree() > 0 && G.settings.autoStatPoints !== false && autoSpend()) dirty = true; // Infernal Marks (game/marks.js), spread evenly
     if (c.skillPoints > 0 && G.settings.autoSkillPoints !== false) { if (this.spendSkills()) dirty = true; }
     const sig = Object.entries(c.skills).map((e) => e.join(':')).join(',') + '|' + c.level;
     if (sig !== this.lastSig) { this.lastSig = sig; this.arrangeBar(); dirty = true; }
@@ -1237,7 +1239,7 @@ export const Auto = {
     const c = G.char;
     this.sinceTown = (this.sinceTown || 0) + 1;
     if (gearOn() && bagFree(c) < BAG_LOW) return true; // hands off the gear: a full bag doesn't stop it (it leaves new gear on the ground)
-    if (c.potions.hp < 5 && c.gold > potionPrice('hp', c) * 6) return true;
+    if (c.potions.hp < 5 && c.gold > potionPrice('hp', c) * 6 && heresyAllows('potion', c, null)) return true; // (Dry Throat: none to buy)
     if (this.sinceTown >= 4 && gearOn() && c.gold > 400 * Math.pow(1.06, c.level)) return true;
     return false;
   },

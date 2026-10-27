@@ -753,7 +753,7 @@ export const game = {
     const cards = ids.map((id) => {
       const biome = BIOME_BY_ID[id] || BIOME_BY_ID.catacombs;
       const comm = commState(c).open.find((e) => { const ch = LINE_BY_ID[e.id] && LINE_BY_ID[e.id].chapters[e.ch]; return ch && ch.biome === biome.id; });
-      return { id: biome.id, biome, omen: omenable(next, biome) ? rollOmen(next) || (heresiesOf(c).includes('omens') ? anyOmen() : null) : undefined, comm: comm && LINE_BY_ID[comm.id].name }; // Black Omens: always one
+      return { id: biome.id, biome, omen: omenable(next, biome) ? rollOmen(next) || (heresiesOf(c).includes('omens') ? anyOmen() : null) : heresiesOf(c).includes('omens') && next > FINAL_DEPTH && !biome.overworld && !isRaidDepth(next) ? anyOmen() : undefined, comm: comm && LINE_BY_ID[comm.id].name }; // Black Omens: always one
     });
     let sel = 0, chosen = false;
     const tag = (cd) => (cd.biome.id === 'throne' ? '<b style="color:#ff4020">Demon Lord Velscour awaits</b>' : cd.biome.id === 'skyship' ? 'Sky battle' : cd.biome.overworld ? 'Overworld trial' : isRaidDepth(next) ? '<b style="color:#ff6030">BOSS ROOM</b>' : 'Dungeon');

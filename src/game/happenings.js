@@ -101,11 +101,11 @@ export function setupHappenings(world, start, gen) {
   // the portal the hero took showed this depth's omen (game.portalChoice): keep its word
   const c0 = G.char, told = c0 && c0.nextOmen !== undefined ? c0.nextOmen : undefined;
   if (c0) delete c0.nextOmen;
-  if (world.kind !== 'dungeon' || world.raid || gen.raid || depth >= FINAL_DEPTH || world.biome.overworld) return;
+  // Black Omens (game/heresies.js): every level carries an omen, the Endless Torment's too (where nothing else happens)
+  const black = worldHeresies(world).includes('omens'), torment = black && depth > FINAL_DEPTH;
+  if (world.kind !== 'dungeon' || world.raid || gen.raid || (depth >= FINAL_DEPTH && !torment) || world.biome.overworld) return;
   const H = world.happen;
-  setupScenario(world, start); // one of the biome's twenty optional set pieces (game/scenarios.js)
-  // the omen (Black Omens Heresy: always one)
-  const black = worldHeresies(world).includes('omens');
+  if (!torment) setupScenario(world, start); // one of the biome's twenty optional set pieces (game/scenarios.js)
   const omen = told !== undefined ? (OMENS[told] ? told : black ? pick(OMEN_KEYS) : null) : rollOmen(depth) || (black ? pick(OMEN_KEYS) : null);
   if (omen) {
     H.omen = omen;
@@ -114,6 +114,7 @@ export function setupHappenings(world, start, gen) {
     world.goldMul = O.gold || 1;
     if (O.dark) world.darkK = Math.max(world.darkK || 0, O.dark);
   }
+  if (torment) { if (H.omen === 'champions') for (const m of world.creatures) if (m.team === 'enemy' && m.rank === 'normal' && chance(0.12)) makeElite(m, 'champion', depth, world); return; }
   const want = 1 + (chance(0.6) ? 1 : 0) + (chance(0.35) ? 1 : 0) + (H.omen === 'vault' ? 3 : 0);
   const spots = roomSpots(world, start, want + 3);
   // shrines
