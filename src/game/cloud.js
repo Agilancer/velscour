@@ -9,6 +9,7 @@
 import { G } from '../state.js';
 import { heroesByClass, replaceClassHero, classSaves, savesReadable, onSaveChange } from './save.js';
 import { backupHeroes } from './herobackup.js';
+import { endgame, adoptEndgame, sameEndgame, fixEndgame, onEndgameChange } from './endgame.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/12.19.0/';
 const CONFIG = {
@@ -52,6 +53,24 @@ function firebaseBackend() {
         t.set(ref, { ...rec, gz: rec.gz ? fs.Bytes.fromUint8Array(rec.gz) : null, at: fs.serverTimestamp() });
         return { ok: true };
       });
+    },
+    // the Endgame's account record (game/endgame.js) and the Abyssal Rifts' honour board (game/leaderboard.js)
+    account(uid) {
+      const ref = fs.doc(db, 'users', uid, 'account', 'endgame');
+      return fs.runTransaction(db, async (t) => { const d = await t.get(ref); return d.exists() ? d.data() : null; });
+    },
+    putAccount(uid, rec) {
+      const ref = fs.doc(db, 'users', uid, 'account', 'endgame');
+      return fs.runTransaction(db, async (t) => { t.set(ref, { ...rec, at: fs.serverTimestamp() }); return { ok: true }; });
+    },
+    async board(cls) {
+      const out = [];
+      (await fs.getDocs(fs.collection(db, 'boards', cls, 'entries'))).forEach((d) => { out.push({ uid: d.id, ...d.data() }); });
+      return out;
+    },
+    putBoard(cls, uid, rec) {
+      const ref = fs.doc(db, 'boards', cls, 'entries', uid);
+      return fs.runTransaction(db, async (t) => { t.set(ref, { ...rec, at: fs.serverTimestamp() }); return { ok: true }; });
     },
   };
   function fromDoc(r) { return { ...r, gz: r.gz && r.gz.toUint8Array ? r.gz.toUint8Array() : r.gz || null }; }
@@ -170,13 +189,32 @@ async function syncAll() {
     }
   }
   for (const cls of Object.keys(st.base)) if (!st.base[cls]) delete st.base[cls];
+  try { await syncAccount(); } catch (e) { if (/offline|unavailable|network|fetch/i.test(String(e && (e.code || e.message)))) throw e; console.warn('Cloud save (account):', e); }
   st.last = Date.now();
   saveState();
   setStatus(err ? 'error' : Cloud.conflicts.size ? 'conflict' : 'ok', err);
 }
+/** The Endgame's account record (game/endgame.js): the cloud's and this device's merged (nothing is ever lost), then
+ * written back when the merge changed the cloud's copy. */
+async function syncAccount() {
+  if (!st.uid || !be.account) return;
+  const cloud = await be.account(st.uid);
+  adoptEndgame(cloud);                                   // what the cloud had that this device lacked
+  if (!cloud || !sameEndgame(cloud, endgame())) await be.putAccount(st.uid, fixEndgame(endgame()));
+  accountDirty = false;
+}
+let accountDirty = false, accountT = 0;
+const ACCOUNT_DELAY = 60e3;
+onEndgameChange(() => {
+  if (!st.uid) return;
+  accountDirty = true;
+  if (!ready) return;
+  if (!accountT) accountT = setTimeout(() => { accountT = 0; if (accountDirty) queue(syncAccount); }, ACCOUNT_DELAY);
+});
 async function flush() {
   if (!st.uid) return;
   clearTimeout(pushT); pushT = 0;
+  if (accountDirty) { clearTimeout(accountT); accountT = 0; try { await syncAccount(); } catch (e) { console.warn('Cloud save (account):', e); } }
   if (!savesReadable()) { setStatus('error', UNREADABLE); return; }
   const local = heroesByClass();
   for (const cls of [...dirty]) {
@@ -213,6 +251,13 @@ export const Cloud = {
   /** fn(what): 'status' | 'change' (local heroes were replaced from the cloud) | 'conflict' | 'idle'. */
   on(fn) { listeners.push(fn); },
   useBackend(b) { be = b; ready = null; },
+  /** The backend once it is connected (the honour board reads through it), else null. */
+  get backend() { return be && ready ? be : null; },
+  /** The honour board of a class (game/leaderboard.js): every entry, as stored. */
+  async board(cls) { await ready; return be && be.board ? be.board(cls) : []; },
+  /** This player's entry on a class's board (signed in only). */
+  async putBoard(cls, rec) { if (!st.uid) return false; await ready; if (!be || !be.putBoard) return false; await be.putBoard(cls, st.uid, rec); return true; },
+  get uid() { return st.uid; },
   /** Load the SDK (the settings dialog calls this so the sign-in popup opens inside the tap). */
   preload() {
     if (!ready) {

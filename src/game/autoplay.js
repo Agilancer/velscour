@@ -14,6 +14,10 @@ import { SUMMONS } from '../data/summons.js';
 import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS, powerLevel } from '../data/items.js';
 import { depthLevel, armorDiv } from '../data/depth.js';
 import { breachLevel } from '../data/breach.js';
+import { riftLevel } from '../data/rifts.js';
+import { riftOpen } from './rifts.js';
+import { endgameUnlocked } from './endgame.js';
+import { heresyAllows } from './heresies.js';
 import { drawBiome } from '../data/biomes.js';
 import { augHits } from '../data/rings.js';
 import { canLearn } from '../ui/skills.js';
@@ -407,15 +411,17 @@ export const Auto = {
   dest: 'standard',
   askDest() {
     if (G.autoDest) { this.dest = G.autoDest; return; } // tests
-    const c = G.char, f = this.breachFloor();
+    const c = G.char, f = this.breachFloor(), rt = this.riftTier(), rift = endgameUnlocked(c);
+    if (this.dest === 'rift' && !rift) this.dest = 'standard';
     const d = G.ui.dialog({
       title: 'Where to, adventurer?', cls: 'auto-dest',
       html: `<p>Auto-play is on. Which portal should it take?</p>
-        <div class="pc-row"><button type="button" class="pc-card${this.dest !== 'breach' ? ' sel' : ''}" data-d="standard" style="--pc:#ff8040"><i class="pc-swirl"></i><b class="pc-name">Standard Adventure Portal</b><span class="pc-tag">The descent: Depth ${c.depth}</span></button>
-        <button type="button" class="pc-card${this.dest === 'breach' ? ' sel' : ''}" data-d="breach" style="--pc:#b050ff"><i class="pc-swirl"></i><b class="pc-name">THE ETERNAL BREACH</b><span class="pc-tag">Challenge: Floor ${f} (monster level ${breachLevel(f)}, you are ${c.level})</span></button></div>
+        <div class="pc-row"><button type="button" class="pc-card${this.dest === 'standard' ? ' sel' : ''}" data-d="standard" style="--pc:#ff8040"><i class="pc-swirl"></i><b class="pc-name">Standard Adventure Portal</b><span class="pc-tag">The descent: Depth ${c.depth}</span></button>
+        <button type="button" class="pc-card${this.dest === 'breach' ? ' sel' : ''}" data-d="breach" style="--pc:#b050ff"><i class="pc-swirl"></i><b class="pc-name">THE ETERNAL BREACH</b><span class="pc-tag">Challenge: Floor ${f} (monster level ${breachLevel(f)}, you are ${c.level})</span></button>
+        ${rift ? `<button type="button" class="pc-card${this.dest === 'rift' ? ' sel' : ''}" data-d="rift" style="--pc:#20e0ff"><i class="pc-swirl"></i><b class="pc-name">ABYSSAL RIFT</b><span class="pc-tag">Against the clock: Tier ${rt} (monster level ${riftLevel(rt)}, you are ${c.level})</span></button>` : ''}</div>
         <p class="pc-auto"></p>`,
       closable: false,
-      buttons: [{ label: 'Standard Adventure Portal', fn: () => this.setDest('standard') }, { label: 'THE ETERNAL BREACH', cls: 'red', fn: () => this.setDest('breach') }],
+      buttons: [{ label: 'Standard Adventure Portal', fn: () => this.setDest('standard') }, { label: 'THE ETERNAL BREACH', cls: 'red', fn: () => this.setDest('breach') }, ...(rift ? [{ label: 'ABYSSAL RIFT', cls: 'red', fn: () => this.setDest('rift') }] : [])],
     });
     // the cards choose too; with no choice in DEST_WAIT seconds auto-play keeps the portal it took last
     d.box.querySelectorAll('.pc-card').forEach((b) => b.addEventListener('click', () => { sfx('ui'); d.close(); this.setDest(b.dataset.d); }));
@@ -427,12 +433,21 @@ export const Auto = {
     if (!k) return;
     if (!k.el.isConnected || !this.on) { this.destPick = null; if (k.el.isConnected) k.d.close(); return; }
     if ((k.t -= dt) <= 0) { this.destPick = null; k.d.close(); this.setDest(this.dest); return; }
-    const txt = `Auto-play takes the ${this.dest === 'breach' ? 'Eternal Breach' : 'Standard Adventure Portal'} in ${Math.ceil(k.t)}… tap one to choose.`;
+    const txt = `Auto-play takes the ${this.dest === 'breach' ? 'Eternal Breach' : this.dest === 'rift' ? 'Abyssal Rift' : 'Standard Adventure Portal'} in ${Math.ceil(k.t)}… tap one to choose.`;
     if (txt !== k.last) { k.last = txt; k.el.innerHTML = txt; }
   },
   setDest(d) {
     this.dest = d; this.town = null; this.destPick = null;
-    G.ui.log(d === 'breach' ? `Auto-play heads for <b style="color:#c080ff">THE ETERNAL BREACH</b> (Floor ${this.breachFloor()}).` : 'Auto-play takes the Standard Adventure Portal.', '#8fe0ff');
+    G.ui.log(d === 'breach' ? `Auto-play heads for <b style="color:#c080ff">THE ETERNAL BREACH</b> (Floor ${this.breachFloor()}).` : d === 'rift' ? `Auto-play heads for the <b style="color:#20e0ff">Abyssal Rift</b> (Tier ${this.riftTier()}).` : 'Auto-play takes the Standard Adventure Portal.', '#8fe0ff');
+  },
+  // ---------------------------------------------------------------- ABYSSAL RIFTS (docs/ENDGAME.md)
+  /** Can the hero take rift tier T? Its monsters at most two levels above the hero. */
+  riftReady(T) { return riftLevel(T) <= (G.char?.level || 1) + 2; },
+  /** The tier auto-play enters: the highest open one the hero is ready for (tier 1 at the least). */
+  riftTier() {
+    let t = riftOpen(G.char);
+    while (t > 1 && !this.riftReady(t)) t--;
+    return t;
   },
   /** Can the hero take Breach floor n? Its monsters at most two levels above the hero. */
   breachReady(n) { return breachLevel(n) <= (G.char?.level || 1) + 2; },
@@ -761,7 +776,7 @@ export const Auto = {
   wantLootNow(g) {
     const c = G.char, p = G.player;
     if (this.ignore.has(g.item || g) || this.giveUp.has(g)) return false;
-    if (g.kind === 'gold') return true;
+    if (g.kind === 'gold' || g.kind === 'key') return true;
     if (g.kind === 'orb_hp') return p.hp < p.maxHp * 0.85;
     if (g.kind === 'orb_mp') return p.mana < p.maxMana * 0.7;
     if (g.kind === 'potion') return (c.potions[g.item.kind] || 0) < 30;
@@ -1209,6 +1224,8 @@ export const Auto = {
     const town = this.needTown();
     this.transitT = 3;
     if (w.breach) { G.game.breachExit(w, { auto: true, town }); return; }
+    if (w.rift) { G.game.riftExit(w, { auto: true, town }); return; }
+    if (w.unbound) { G.ui.log('Auto-play heads back to town.', '#8fe0ff'); G.game.enterTown(); return; }
     // the three portals down (game.portalChoice): the player has a few seconds to pick before auto-play does
     if (G.game.portalChoice) { G.game.portalChoice(w, { auto: true, town }); return; }
     c.depth = next;
@@ -1350,7 +1367,7 @@ export const Auto = {
   // ---------------------------------------------------------------- potions
   potions(w) {
     const p = G.player, c = G.char;
-    if (p.potionCd > 0 || p.dead) return;
+    if (p.potionCd > 0 || p.dead || !heresyAllows('potion', c, w)) return; // Dry Throat (game/heresies.js): it never tries
     const boss = w.boss && !w.boss.dead && w.boss.awake && dist(p.x, p.y, w.boss.x, w.boss.y) < 14;
     const hpK = p.hp / p.maxHp;
     const regen = p.potionRegen.some((r) => r.hp > 0);
@@ -1770,13 +1787,15 @@ export const Auto = {
       if (this.townSocial(dt)) return;
       // done: through the portal (the purple one when auto-play was told to take the Breach)
       const breach = this.dest === 'breach' && w.portals.find((q) => q.breach);
-      const po = breach || w.portals[0];
-      this.setStatus(breach ? `To THE ETERNAL BREACH — Floor ${this.breachFloor()}` : `To the portal — Depth ${c.depth}`);
+      const rift = this.dest === 'rift' && endgameUnlocked(c) && w.portals.find((q) => q.rift);
+      const po = breach || rift || w.portals[0];
+      this.setStatus(breach ? `To THE ETERNAL BREACH — Floor ${this.breachFloor()}` : rift ? `To the Abyssal Rift — Tier ${this.riftTier()}` : `To the portal — Depth ${c.depth}`);
       if (this.goTo(po.x, po.y, 1.3, dt)) {
         G.ui.closeAll();
         this.transitT = 4;
         this.sinceTown = 0;
         if (breach) G.game.enterBreach(this.breachFloor());
+        else if (rift) G.game.enterRift(this.riftTier());
         else G.game.enterDungeon();
       }
       this.watchStuck(dt);

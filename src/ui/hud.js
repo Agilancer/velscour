@@ -329,6 +329,19 @@ export const HUD = {
     if (boss) set('bossHp', Math.round((boss.hp / boss.maxHp) * 500) / 5, (v) => { $('#boss-fill').style.width = v + '%'; });
     set('bossSub', boss && boss.raid ? boss.raid.label() : boss && boss.vel ? boss.vel.label() : '', (v) => { $('#boss-sub').textContent = v; });
     set('bossWard', !!(boss && boss.ward < 1), (v) => { $('#boss-bar').classList.toggle('warded', v); });
+    // the Abyssal Rift's clock and quota (game/rifts.js)
+    const R = w && w.rift;
+    set('rift', R ? `${R.tier}|${Math.ceil(R.left)}|${R.pct}|${R.guardian ? 1 : 0}|${R.done ? 1 : 0}|${R.failed ? 1 : 0}` : '', (v) => {
+      $('#rift-bar').classList.toggle('hidden', !R);
+      if (!R) return;
+      const left = Math.ceil(R.left);
+      $('#rift-tier').textContent = `Tier ${R.tier}`;
+      $('#rift-clock').textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+      $('#rift-fill').style.width = (R.done ? 100 : R.pct) + '%';
+      $('#rift-pct').textContent = R.done ? 'closed' : R.failed ? 'collapsed' : R.guardian ? 'the Guardian' : R.pct + '%';
+      $('#rift-bar').classList.toggle('urgent', !R.done && !R.failed && left <= 60);
+      $('#rift-bar').classList.toggle('boss', !!boss);
+    });
     const forest = w?.biome?.id === 'dark_forest';
     const breach = !!w?.breach;
     const sand = (w?.biome?.id === 'sea_of_sand' || forest || breach) && w.overworldScenario?.hud ? w.overworldScenario.hud : null;

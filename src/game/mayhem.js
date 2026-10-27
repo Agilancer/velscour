@@ -142,7 +142,7 @@ export function ambushTick(w, dt) {
   if (w.boss && w.boss.awake && !w.boss.dead) return;
   if (w.ambushT === undefined) w.ambushT = rand(25, 40);
   if ((w.ambushT -= dt) > 0) return;
-  w.ambushT = rand(30, 55) * Math.max(0.6, 1 - w.depth * 0.004);
+  w.ambushT = rand(30, 55) * Math.max(0.6, 1 - w.depth * 0.004) / (w.heresyAmbush || 1); // Ambush Weather (game/heresies.js): three times as often
   // not on top of a fight that is already big
   if (w.hostiles('player', p.x, p.y, 9).length > 8) { w.ambushT = 8; return; }
   ambush(w);

@@ -25,6 +25,7 @@ import { TOWNSFOLK } from '../data/townsfolk.js';
 import { setupScenario, scenarioTick } from './scenarios.js';
 import { smiteKill } from './smite.js';
 import { greedTick } from './greed.js';
+import { heresyTick, worldHeresies } from './heresies.js';
 
 // ------------------------------------------------------------------------------------------------ omens
 // A level-wide twist, announced on arrival. mon: applied to every enemy as it appears (ambushes too).
@@ -43,6 +44,7 @@ const OMEN_KEYS = Object.keys(OMENS);
 export const omenable = (depth, biome) => !!biome && !biome.overworld && !isRaidDepth(depth) && depth < FINAL_DEPTH;
 /** A depth's omen roll: an OMENS key, or null for a quiet one. */
 export const rollOmen = (depth) => (chance(Math.min(0.45, 0.22 + depth * 0.004)) ? pick(OMEN_KEYS) : null);
+export const anyOmen = () => pick(OMEN_KEYS);
 
 // ------------------------------------------------------------------------------------------------ shrines
 export const SHRINES = {
@@ -102,8 +104,9 @@ export function setupHappenings(world, start, gen) {
   if (world.kind !== 'dungeon' || world.raid || gen.raid || depth >= FINAL_DEPTH || world.biome.overworld) return;
   const H = world.happen;
   setupScenario(world, start); // one of the biome's twenty optional set pieces (game/scenarios.js)
-  // the omen
-  const omen = told !== undefined ? (OMENS[told] ? told : null) : rollOmen(depth);
+  // the omen (Black Omens Heresy: always one)
+  const black = worldHeresies(world).includes('omens');
+  const omen = told !== undefined ? (OMENS[told] ? told : black ? pick(OMEN_KEYS) : null) : rollOmen(depth) || (black ? pick(OMEN_KEYS) : null);
   if (omen) {
     H.omen = omen;
     const O = OMENS[H.omen];
@@ -141,7 +144,7 @@ export function setupHappenings(world, start, gen) {
   }
   // the monster that last killed the hero is back, and it remembers
   const c = G.char;
-  if (c && c.nemesis && depth >= c.nemesis.depth - 5 && spots.length) spawnNemesis(world, spots.pop(), c.nemesis);
+  if (c && c.nemesis && (depth >= c.nemesis.depth - 5 || black) && spots.length) spawnNemesis(world, spots.pop(), c.nemesis);
   if (H.omen === 'champions') {
     for (const m of world.creatures) if (m.team === 'enemy' && m.rank === 'normal' && chance(0.12)) makeElite(m, 'champion', depth, world);
   }
@@ -162,7 +165,7 @@ export function announceHappenings(world) {
 }
 
 // ------------------------------------------------------------------------------------------------ interactables
-function obelisk(ctx, x, y, col, lit, h = 34) {
+export function obelisk(ctx, x, y, col, lit, h = 34) {
   ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(x, y, 15, 6, 0, 0, TAU); ctx.fill();
   ctx.fillStyle = '#3a3640'; ctx.beginPath(); ctx.moveTo(x - 13, y - 2); ctx.lineTo(x, y + 4); ctx.lineTo(x + 13, y - 2); ctx.lineTo(x, y - 8); ctx.fill();
   ctx.fillStyle = '#56505e'; ctx.beginPath(); ctx.moveTo(x - 7, y - 4); ctx.lineTo(x - 4, y - h); ctx.lineTo(x, y - h - 6); ctx.lineTo(x, y); ctx.fill();
@@ -432,6 +435,7 @@ export function happeningsTick(world, dt) {
   if (!H || !p || p.dead) return;
   H.t += dt;
   greedTick(world, dt); // the Greed lever's tougher monsters (game/greed.js)
+  heresyTick(world, dt); // the Heresies' (game/heresies.js): Iron Hide, Cruel Hand, the Legion's hellgates...
   if (H.streakT > 0) H.streakT -= dt;
   // the omen marks every enemy as it appears
   if (H.omen && OMENS[H.omen].mon && (H.monT = (H.monT || 0) - dt) <= 0) {

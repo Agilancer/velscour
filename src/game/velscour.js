@@ -28,6 +28,8 @@ import { UI } from '../ui/ui.js';
 import { GroundItem } from './loot.js';
 import { makeHeirloom, makeCovenant } from '../data/relics.js';
 import { rollSigil, SIGIL_MAX, makeGem } from '../data/items.js';
+import { setupUnbound } from './unbound.js';
+import { legionGate } from './heresies.js';
 
 export const HP_MUL = 2;          // his life on top of a boss's x40 (tuned with tools/tests/velscour.js)
 export const DMG_MUL = 0.7;       // his hits: the fight runs ~4x longer than the old one, so each hurts less (tools/tests/balance.js BAL_BIOME=throne)
@@ -50,6 +52,7 @@ export function setupVelscour(world, m, gen) {
   // seated on his throne until the hero comes
   m.x = SEAT[0]; m.y = SEAT[1]; m.z = SEAT_Z; V.seated = true;
   world.addHazard(V);
+  if (world.unbound) setupUnbound(V); // the rematch's court and chains (game/unbound.js, docs/ENDGAME.md)
   return V;
 }
 
@@ -272,26 +275,11 @@ class VelscourFight {
   }
   /** Legion of the Pit: a hellgate tears open beside him and demons climb out (at most eight of his alive at once). */
   legion() {
-    const m = this.m, w = this.world, p = this.p;
+    const m = this.m, w = this.world;
     const alive = w.creatures.filter((c) => c.pitSpawn && !c.dead).length;
     const n = Math.min(4, 8 - alive);
     if (n <= 0 || this.hold) return;
-    const a = angleTo(m.x, m.y, p.x, p.y) + (Math.random() < 0.5 ? 1.2 : -1.2);
-    const [gx, gy] = w.map.nudge(m.x + Math.cos(a) * 3, m.y + Math.sin(a) * 3, 0.6);
-    addEffect(new Telegraph({ kind: 'circle', x: gx, y: gy, r: 1.8, dur: 1.2, color: '#ff4010' }), 'ground');
-    UI.log('<b style="color:#ff5020">Legion of the Pit</b>: Velscour tears open a hellgate and his demons climb out!', '#ffb090');
-    floatText(m.x, m.y, 160, 'RISE, MY LEGION', '#ff5020', 16, { life: 1.6 });
-    sfx('roar', 0.7);
-    w.addHazard({ t: 1.2, team: 'enemy', update(dt) {
-      this.t -= dt; if (this.t > 0) return true;
-      explosionFx(gx, gy, 2, 'fire', 'eruption'); addEffect(new Ring(gx, gy, 0.2, 2.2, 0.6, '#ff3010', 5)); sfx('summon');
-      for (let i = 0; i < n; i++) {
-        const [x, y] = w.map.randomNear(gx, gy, 1.6);
-        const d = makeMonster(w, i % 2 ? 'imp' : 'demon', w.biome, m.level - 2, i === 0 ? 'champion' : 'normal', x, y);
-        d.awake = true; d.aggro = p; d.maxHp *= 0.55; d.hp = d.maxHp; d.pitSpawn = true; d.name = i % 2 ? 'Pit Imp' : 'Pit Demon';
-        w.add(d); smoke(x, y, 0, '#200808', 5, 9);
-      }
-      return false; }, draw() {} });
+    legionGate(w, m, n, m.level, { src: true }); // the hellgate the Legion Heresy shares (game/heresies.js)
   }
   meteorSpiral() {
     const m = this.m, w = this.world;

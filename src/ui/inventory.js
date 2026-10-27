@@ -14,6 +14,9 @@ import { heroPortrait } from '../core/gearart.js';
 import { openSeal } from './sealed.js';
 import { glyphOf } from '../data/relics.js';
 import { noteFind } from '../game/reliquary.js';
+import { marksTotal, marksFree } from '../game/marks.js';
+import { heresyRankOf } from '../game/heresies.js';
+import { endgameUnlocked } from '../game/endgame.js';
 import { sparkle } from '../gfx/vfx.js';
 
 const DOLL = { head: [2, 1], weapon: [1, 2], body: [2, 2], offhand: [3, 2], hands: [1, 3], legs: [2, 3], feet: [2, 4], ring1: [4, 1], ring2: [4, 2], ring3: [4, 3], ring4: [4, 4] };
@@ -276,9 +279,13 @@ function statsBlock() {
   if (st.fortitude > 1) rows.push(['Fortitude', `+${Math.round((st.fortitude - 1) * 100)}% Life`]);
   if (st.extraProj) rows.push(['Extra Projectiles', '+' + Math.floor(st.extraProj)]);
   if (st.skillsAll) rows.push(['All Skills', '+' + Math.floor(st.skillsAll)]);
+  if (marksTotal()) rows.push(['Infernal Marks', `${marksTotal()} (${marksFree()} free)`]);
+  if (heresyRankOf(c)) rows.push(['Heresy rank', String(heresyRankOf(c))]);
+  if (c.keys) rows.push(['Abyssal Keys', `${c.keys}`]);
   for (const [k, v] of rows) g.innerHTML += `<span class="dim">${k}</span><span class="v">${v}</span>`;
   box.appendChild(g);
   box.appendChild(el('div', 'dim', `Kills ${fmtInt(c.kills || 0)} · Deaths ${c.deaths || 0} · Deepest ${c.deepest || 0}`));
+  if (endgameUnlocked(c)) { const mb = el('button', 'btn small', 'Infernal Marks'); mb.onclick = () => { sfx('ui'); G.ui.marks.open(); }; box.appendChild(mb); }
   return box;
 }
 
