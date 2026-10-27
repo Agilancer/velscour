@@ -41,28 +41,56 @@ must compare like with like) and not in Velscour Unbound. The Quest Log and the 
 | crowned | Crowned Champions | 2 | champions roll 2 extra affixes, uniques 1 (`heresyMonster`: `makeElite`'s affix keys) |
 | thirst | Dry Throat | 3 | no potions of any kind (`Player.usePotion` refuses with "The Heresy forbids it"; auto-play never tries) |
 | fifth | The Fifth Phase | 2 | BOSS ROOM bosses fight one phase more (`heresyRaid(raid)`: the next template phase, or Final Stand again, with a new mark) and roll one more modifier |
-| legion | The Legion Follows | 3 | every ~45 s a hellgate opens near the hero and 2-4 Pit Demons/Imps climb out (the hazard from velscour.js `legion`, moved to `src/game/heresies.js legionGate(world, x, y, n, level)` and shared) |
+| legion | The Legion Follows | 3 | every 40-55 s (the first after 25-40) a hellgate opens in the hero's sight, on ground joined to him, and 2-4 Pit Demons/Imps (level `depthLevel(depth) - 2`, the first a champion, at most 8 alive) climb out (the hazard from velscour.js `legion`, moved to `src/game/heresies.js legionGate(world, near, n, level, opts)` and shared). Its clock stands still while a guardian or BOSS ROOM boss is awake. Runs from `game.update` (`heresyTick`), so the Breach has it too |
 | iron | Iron Hide | 2 | monsters +50% life |
 | cruel | Cruel Hand | 3 | monsters +30% damage |
-| ambush | Ambush Weather | 1 | ambush arrivals 3x as often (`mayhem.ambushTick` reads `world.heresyAmbush`) |
+| ambush | Ambush Weather | 1 | ambush arrivals 3x as often, the first wait too (`mayhem.ambushTick` reads `world.heresyAmbush`; like every ambush, not in BOSS ROOMs or the Breach) |
 | omens | Black Omens | 1 | every omenable depth has an omen (the portal choice rolls one), and a Nemesis always returns |
 | glass | Glass Cannon | 2 | the hero: -25% life, +15% damage (`heresyHero(c)` summed in `Player.recompute` like Defiance) |
-| hunger | Hunger of the Abyss | 2 | no life or mana orbs drop, no life regeneration from gear or buffs |
-| gaze | Velscour's Gaze | 2 | monsters notice the hero from 2.5x as far (`aggroRange *= 2.5`) and never lose him |
+| hunger | Hunger of the Abyss | 2 | no life or mana orbs drop from any source (kills, the Feeding Frenzy omen: `heresyWorld` filters `world.addLoot`), no life regeneration from gear or buffs |
+| gaze | Velscour's Gaze | 2 | monsters notice the hero from 2.5x as far (`aggroRange *= 2.5`; a raid boss's 0 stays 0) and, once awake, never lose him (`m.gaze`: `Monster.pickTarget` tracks him anywhere, like a hunter) |
 
 Rank = the sum of the ranks on (max 26). `heresyMods(rank)` → `{ mf: 4 * rank, gold: 1 + 0.04 * rank, loot: 1 +
 0.02 * rank, xp: 1 + 0.02 * rank, sigil: 1 + 0.05 * rank, relic: 1 + 0.04 * rank }`. Where they land: `heresyWorld(world,
 c)` runs after `greedWorld` in `buildDungeon` and `buildBreach` and multiplies `world.lootMul`, `world.goldMul`,
-`world.mfAdd`, `world.xpMul`, `world.sigilMul` (new; `dropLoot` multiplies the Sigil odds and `maybeRelic`'s boost by it);
-`world.heresy = { ids, rank }`. `heresyTick(world, dt)` (from `happeningsTick`, next to `greedTick`) marks every enemy as
-it appears (`m._heresy`), applies iron/cruel/gaze/crowned, and runs the Legion clock. At rank >= 10 **Abyssal Keys** may
+`world.mfAdd`, `world.sigilMul` and `world.relicMul` (new; `dropLoot` multiplies the Sigil odds and `maybeRelic`'s boost
+by them; the Sigil odds also carry `lootMul`, so x3.5 at rank 26); XP is paid per monster (`m.xp *= M.xp` in
+`heresyMonster`, nothing reads a world XP dial). `world.heresy = { ids, rank }` is set by `heresyBegin` before the monsters
+are made (BOSS ROOM bosses read it), `null` in rifts and Unbound. `heresyTick(world, dt)` (from `game.update`, after
+`riftTick`, wherever `world.heresy` is set) marks every enemy as it appears (`m._heresy`, once: iron/cruel never
+compound), applies iron/cruel/gaze/crowned and the XP, and runs the Legion clock. At rank >= 10 **Abyssal Keys** may
 drop from BOSS ROOM bosses past depth 600 (below). Milestone text in the altar: rank 10 "the keys", 20 "+1 Mark per depth
 cleared" (`grantMarks(1)` in `brokeThrough` when rank >= 20).
 
-Altar panel (`Heresies.open()`, `UI.openPanel('heresies', ...)`, class `heresy-panel`, works on touch): one row per
-Heresy (name, rank pips, description, toggle), the total rank and its rewards, the milestones, a warning that they take
-hold from the next level, and the three endgame buttons (Rift gate, Velscour Unbound with the key count, Infernal
-Marks). Locked before the Endgame: the panel says so and shows the list greyed.
+Altar panel (`Heresies.open()`, `UI.openPanel('heresies', ...)`, class `heresy-panel`, CSS `.hx-*`): the rank with a
+bar (ticks at the milestones) and its rewards as chips, a note that they take hold from the next level (inside a level
+built with another set it says the changes wait), one row per Heresy (the whole row is a switch: name, rank pips,
+description), the milestones, "Renounce all", and the three doors (Abyssal Rift `game.confirmRift()`, Velscour Unbound
+`game.enterUnbound()` with the key count, disabled under three keys, Infernal Marks `G.ui.marks.open()`). A toggle
+autosaves. On a touch screen: one column, 50x28 switches, 48 px doors, the body scrolls. Locked before the Endgame: the
+panel says so, the list is greyed and disabled, the rift door too. The altar itself is `t.altar` from `generateTown`
+(a reachable tile about 5.5 tiles from the plaza's centre), an obelisk grey while locked, red once open, glowing while a
+Heresy is on.
+
+Where they stop: Ambush Weather has no effect in BOSS ROOMs or the Breach (`ambushTick` skips them); **Black Omens only
+reaches omenable depths (below 500)**: `setupHappenings` returns early from Depth 500 on and `omenable` is false there, so
+in the Endless Torment it is a rank point for nothing (proposal, not applied: let Black Omens past the `depth >=
+FINAL_DEPTH` return in `setupHappenings` for the omen block alone, and `portalChoice` roll one past 500 when it is on).
+
+Measured (`tools/tests/heresies.js balance` / `each`, a paladin geared for Depth 521 like `balance.js` BAL_GEAR 8, headless
+SwiftShader on a shared 4-CPU box, so timings are rough; ranges over 4 runs): a depth-520/521 level holds 586-675
+monsters, **1,013-1,435 with Twinned Packs** (a seeded level: exactly x2 pack monsters); champions carry 2 affixes (4 with
+Crowned), uniques 3 (4); the build takes 70-210 ms either way. `game.update()` per frame standing at the start: 1.7-2.8 ms
+without, 2.4-5.9 ms with Twinned Packs (x1.1-2.4: it follows the monsters awake and fighting near the hero, sleeping ones
+cost almost nothing); under auto-play 2.8-3.3 ms vs 3.6-4.8 ms (x1.1-1.6), and all twelve 3.8-6.6 ms (x1.2-2.4: Velscour's
+Gaze wakes up to ~300 monsters that then all chase the hero). God-mode auto-play's first 25 kills: 8-25 s without, 7-38 s
+with Twinned Packs, 4-36 s under all twelve (the level matters more than the Heresies; Gaze brings the packs to it).
+Without god mode, 60-90 s on a fresh level: no Heresy lived every run (lowest life 4-94%), every single Heresy lived but
+one Crowned Champions run (died once in two), all twelve died in 2 of 4 runs (18 s, 57 s; lowest life 66% when it lived).
+Rank 26 is not for the hero's own depth; a few ranks are. Auto-play's 3-minute soak from a new wizard with Twinned Packs,
+Dry Throat, Iron Hide, Gaze and the Legion (rank 13) at Depth 1: 2 deaths, 26 kills (none, 74 kills without).
+If the frame cost matters on phones, the caps to try (not applied): Twinned Packs as `n: Math.min(s.n * 2, s.n + 6)`, and
+Gaze's "never loses him" for the 60 nearest awake monsters only (the rest forget him past 30 tiles as before).
 
 ## 2. Abyssal Rifts (`src/data/rifts.js`, `src/game/rifts.js`, `src/ui/rifts.js`, `src/game/leaderboard.js`)
 Short timed dungeons. **Tier T is as deadly as Depth 500 + 10 T** (`riftDepth(T) = FINAL_DEPTH + 10 * T`,
@@ -172,8 +200,9 @@ category's points, its bonus now and at the next point. `grantMarks(n, why)` log
 Cloud: in the account record (above), merged by max.
 
 ## Balance targets (checked by the tests and tools)
-- Heresies at full rank (26): x1.52 loot, +104% magic find, +52% XP; a normal with Iron Hide + Cruel Hand takes ~4.5 s and
-  hits for ~1.3x; Twinned Packs double the crowd. `heresies.js` measures a depth-520 level: monsters, affixes, dials.
+- Heresies at full rank (26): x1.52 loot, +104% magic find, +52% XP, Sigils x3.5 (x2.3 x the x1.52 loot), relics x2.04;
+  a normal with Iron Hide + Cruel Hand takes ~4.5 s and hits for ~1.3x; Twinned Packs double the crowd. `heresies.js`
+  measures a depth-520 level: monsters, affixes, dials, frame cost, auto-play's kill pace, survival (above).
 - Rifts (`rift_balance.js`, the endgame.js model): a geared hero of its level clears tier T's quota in 3-5 minutes and the
   guardian in 1-2, so a tier at the hero's level fits the 7-minute clock with time to spare, and tiers 6-10 levels above
   the hero do not. `rifts.js`: auto-play clears tier 1 at depth-500 gear in god mode in under the limit.

@@ -67,6 +67,10 @@ export function heresyWorld(world, c = G.char) {
   world.relicMul = (world.relicMul || 1) * M.relic; // (XP: per monster, heresyMonster)
   if (ids.includes('ambush')) world.heresyAmbush = 3;
   if (ids.includes('legion')) world.legionT = rand(25, 40);
+  if (ids.includes('hunger')) { // no orbs from any source (kills, the Feeding Frenzy omen, ...)
+    const add = world.addLoot;
+    world.addLoot = function (l) { return l && (l.kind === 'orb_hp' || l.kind === 'orb_mp') ? l : add.call(this, l); };
+  }
 }
 /** Each enemy as it appears (packs, ambushes, adds): Iron Hide, Cruel Hand, Velscour's Gaze, Crowned Champions, the XP bonus. */
 export function heresyMonster(m, ids) {
@@ -75,7 +79,7 @@ export function heresyMonster(m, ids) {
   if (!ids || !ids.length) return;
   if (ids.includes('iron')) { m.maxHp *= 1.5; m.hp *= 1.5; }
   if (ids.includes('cruel')) m.dmg *= 1.3;
-  if (ids.includes('gaze')) { m.aggroRange = (m.aggroRange || 8.5) * 2.5; m.gaze = true; }
+  if (ids.includes('gaze')) { m.aggroRange = (m.aggroRange ?? 8.5) * 2.5; m.gaze = true; } // (a raid boss's 0 stays 0; Monster.pickTarget: an awake one never loses the hero)
   if (ids.includes('crowned') && (m.rank === 'champion' || m.rank === 'unique') && m.affixes) {
     const keys = Object.keys(ELITE_AFFIXES).filter((k) => !m.affixes.includes(k) && (k !== 'multishot' || ['ranged', 'caster'].includes(m.ai)));
     for (const k of shuffle(keys).slice(0, m.rank === 'champion' ? 2 : 1)) {
@@ -98,10 +102,11 @@ export function heresyTick(world, dt) {
     world.heresyT = 0.4;
     for (const m of world.creatures) if (!m._heresy && !m.dead) heresyMonster(m, H.ids);
   }
-  if (world.legionT !== undefined && !p.dead && (world.legionT -= dt) <= 0) {
+  // the Legion's clock stands still while a guardian or BOSS ROOM boss is awake; at most 8 of its demons alive
+  if (world.legionT !== undefined && !p.dead && !(world.boss && world.boss.awake && !world.boss.dead) && (world.legionT -= dt) <= 0) {
     world.legionT = rand(40, 55);
     const alive = world.creatures.filter((c) => c.pitSpawn && !c.dead).length;
-    if (alive < 8 && !(world.boss && world.boss.awake && !world.boss.dead)) legionGate(world, p, Math.min(4, 8 - alive, 2 + Math.floor(rand(0, 3))), depthLevel(world.depth || 1));
+    if (alive < 8) legionGate(world, p, Math.min(4, 8 - alive, 2 + Math.floor(rand(0, 3))), depthLevel(world.depth || 1));
   }
 }
 /**
@@ -112,7 +117,12 @@ export function legionGate(world, near, n, lvl, opts = {}) {
   const w = world, p = w.player;
   if (!p || n <= 0) return null;
   const a = opts.src ? angleTo(near.x, near.y, p.x, p.y) + (Math.random() < 0.5 ? 1.2 : -1.2) : rand(0, Math.PI * 2);
-  const [gx, gy] = w.map.nudge(near.x + Math.cos(a) * (opts.src ? 3 : 4.5), near.y + Math.sin(a) * (opts.src ? 3 : 4.5), 0.6);
+  let [gx, gy] = w.map.nudge(near.x + Math.cos(a) * (opts.src ? 3 : 4.5), near.y + Math.sin(a) * (opts.src ? 3 : 4.5), 0.6);
+  // the Heresy's gate: in the hero's sight, on ground joined to him (not behind a wall, not on another island of the Breach)
+  if (!opts.src) for (let i = 0; i < 24; i++) {
+    const b = rand(0, Math.PI * 2), r = rand(3.5, 5.5), x = near.x + Math.cos(b) * r, y = near.y + Math.sin(b) * r;
+    if (w.map.circleFree(x, y, 0.6) && w.map.flowAt(x, y) >= 0 && w.map.los(near.x, near.y, x, y)) { gx = x; gy = y; break; }
+  }
   addEffect(new Telegraph({ kind: 'circle', x: gx, y: gy, r: 1.8, dur: 1.2, color: '#ff4010' }), 'ground');
   if (G.ui && G.ui.log) G.ui.log(`<b style="color:#ff5020">Legion of the Pit</b>: ${opts.src ? 'Velscour tears open a hellgate and his demons climb out!' : 'a hellgate tears open beside you; Velscour\'s demons climb out.'}`, '#ffb090');
   if (opts.src) floatText(near.x, near.y, 160, 'RISE, MY LEGION', '#ff5020', 16, { life: 1.6 });
