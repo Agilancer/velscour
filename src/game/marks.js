@@ -2,10 +2,13 @@
 // MAX_LEVEL (one per xpToNext(MAX_LEVEL), Player.gainXp), from Abyssal Rift clears (riftMarks) and from Heresy rank 20
 // (one per depth cleared). Each is spent on one of four categories; a category's bonus grows with diminishing returns
 // (eff: 50% of the cap at 100 points, 75% at 200, 97% at 500), so even a thousand Marks leave the Endless Torment's
-// wall standing (+30% life at the very most). The points live in the shared record (game/endgame.js), merged by max.
+// wall standing (+30% life at the very most). The points live in the shared record (game/endgame.js), which the cloud
+// merges three ways (game/cloud.js), so Marks earned on two devices add up.
 import { G } from '../state.js';
 import { endgame, saveEndgame, MARK_CATS } from './endgame.js';
 import { xpToNext, MAX_LEVEL } from './player.js';
+import { sfx } from '../core/audio.js';
+import { floatText, addEffect, Ring } from '../gfx/vfx.js';
 
 export const CATS = {
   life: { name: 'Vitality', per: 0.3, cap: 30, unit: '% life', color: '#ff6a5a', desc: 'More life.' },
@@ -38,16 +41,25 @@ function changed() {
   if (G.player) G.player.recompute();
   if (G.ui && G.ui.refresh) G.ui.refresh();
 }
-/** XP earned at the level cap: Marks when it adds up. Returns how many were earned. */
+let xpDirty = false, xpSaved = 0;
+/** XP earned at the level cap: Marks when it adds up (saved at once), else saved at most every 5 s and on autosave. */
 export function gainMarkXp(xp) {
   const m = endgame().marks;
   m.xp += Math.max(0, xp || 0);
   let n = 0;
   const cost = markXp();
   while (m.xp >= cost) { m.xp -= cost; m.pts++; n++; }
-  if (n) { changed(); announce(n, 'from the abyss'); } else if (G.frame % 300 === 0) saveEndgame();
+  if (n) { xpDirty = false; xpSaved = Date.now(); changed(); announce(n, 'from the abyss', true); } else if (xp > 0) { xpDirty = true; if (Date.now() - xpSaved > 5000) saveMarkXp(); }
   return n;
 }
+/** Write XP towards the next Mark if any is unsaved (game.autosave). */
+export function saveMarkXp() {
+  if (!xpDirty) return;
+  xpDirty = false; xpSaved = Date.now();
+  saveEndgame(true);
+}
+/** At the level cap: { xp, need } towards the next Mark (the HUD's XP bar, the character sheet), else null. */
+export const capXp = (c = G.char) => (c && c.level >= MAX_LEVEL ? { xp: endgame().marks.xp, need: markXp() } : null);
 /** Marks given outright (rift clears, Heresy milestones). */
 export function grantMarks(n, why = '') {
   n = Math.max(0, Math.floor(n));
@@ -57,7 +69,12 @@ export function grantMarks(n, why = '') {
   announce(n, why);
   return n;
 }
-function announce(n, why) {
+function announce(n, why, fx) {
+  const p = G.player;
+  if (p && G.world) {
+    floatText(p.x, p.y, 96, `+${n} INFERNAL MARK${n > 1 ? 'S' : ''}`, '#ff9050', 18, { life: 2.6, vz: 22 });
+    if (fx) { addEffect(new Ring(p.x, p.y, 0.3, 2.6, 0.9, '#ff6a20', 4)); sfx('levelup', 0.5); }
+  }
   if (G.ui && G.ui.log) G.ui.log(`<b style="color:#ff9050">+${n} Infernal Mark${n > 1 ? 's' : ''}</b>${why ? ` ${why}` : ''} <span class="dim">(${marksFree()} to spend)</span>`, '#ffc0a0');
 }
 /** Spend a free Mark on a category. */

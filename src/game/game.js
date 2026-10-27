@@ -84,7 +84,7 @@ import { endgameUnlocked, unlockEndgame } from './endgame.js';
 import { heresySpawns, heresyWorld, heresyBegin, heresyTick, heresiesOf, worldRank, MARKS_RANK } from './heresies.js';
 import { createRiftRun, riftTick, riftOpen, riftDepth, riftLevel, fmtTime } from './rifts.js';
 import { unboundReady, spendKeys, keysOf } from './unbound.js';
-import { grantMarks } from './marks.js';
+import { grantMarks, saveMarkXp } from './marks.js';
 import { Heresies } from '../ui/heresies.js';
 import { Rifts } from '../ui/rifts.js';
 import { Marks } from '../ui/marks.js';
@@ -227,6 +227,7 @@ export const game = {
   autosave() {
     if (!G.char) return;
     writeSave(G.char);
+    saveMarkXp();   // XP towards the next Infernal Mark (game/marks.js)
     saveT = 0;
   },
 

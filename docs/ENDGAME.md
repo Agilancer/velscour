@@ -19,12 +19,19 @@ Marks columns in `endgame.js`. Data lives in `src/data/heresies.js`, `src/data/r
 ```
 API: `endgame()` (cached, like `reliquary()`), `saveEndgame()`, `resetEndgameCache()`, `endgameUnlocked()`
 (record.unlocked, or the current hero's `c.cleared[FINAL_DEPTH]`), `unlockEndgame()` (called from
-`game.buildDungeon`'s `onBossKilled` when `m.isVelscour && !world.practice && !world.unbound`), `mergeEndgame(a, b)`:
-monotone, never loses anything: `unlocked` = earliest truthy, `marks.pts` = max (spent copied from the side with the
-larger pts; ties: `a`; spent clamped to pts), `bests[cls]` = the higher tier (then the faster time), counters = max.
+`game.buildDungeon`'s `onBossKilled` when `m.isVelscour && !world.practice && !world.unbound`),
+`mergeEndgame(local, cloud, base)`: never loses anything. `base` is the record this device last synced (`st.endBase` in
+`velscour_cloud_v1`; null on a first sign-in). Counters (`marks.pts`, `keysFound`, `unboundWins`) = the base plus what
+each side earned since it (no base: the larger), never below either side or the base; `marks.spent` = each side's
+change since the base per category (only one side changed: that side's), this device's if the sum passes the Marks, a
+side with fewer Marks than the base counts as damaged (its spending ignored), no base: the larger side's; `marks.xp`
+the larger; `unlocked` = earliest truthy; `bests[cls]` = the higher tier (then the faster time); everything sanitised and
+spending clamped to the Marks by `fixEndgame`. `saveEndgame(quiet)`: quiet (XP towards a Mark only) skips the listeners.
 Cloud: `Cloud` pushes the record after a change (debounced 60 s, and on `flush`) and merges on every `sync` through two
-new backend calls, `account(uid)` and `putAccount(uid, rec)`; `src/game/cloud.js` keeps its three-way rules for heroes
-untouched. The fake backend in `tools/tests/cloud.js` gets the two calls too (`runTransaction` get/set on the path
+new backend calls, `account(uid)` and `putAccount(uid, rec, expect)` (a transaction that writes only if the document
+still holds `expect`, else the sync reads and merges again); the base becomes what was read, then the merge once it is
+written; sign-out clears it and keeps the local record. Rules and cases in docs/CLOUD_SAVES.md; `src/game/cloud.js` keeps
+its three-way rules for heroes untouched. The fake backend in `tools/tests/cloud.js` gets the two calls too (`runTransaction` get/set on the path
 `users/{uid}/account/endgame`).
 
 ## 1. Heresies (`src/data/heresies.js`, `src/game/heresies.js`, `src/ui/heresies.js`)
@@ -156,9 +163,13 @@ power `demonlord`: +2 All Skills, +25% damage to bosses, and a Pit Demon of the 
 wins: 0, best: 0 }` (seconds), `endgame().unboundWins`.
 
 ## 4. Infernal Marks (`src/game/marks.js`, `src/ui/marks.js`)
-Account-wide, endless. A Mark is earned by **XP past the level cap** (`Player.gainXp` at `MAX_LEVEL` hands the XP to
-`gainMarkXp(xp)`; one Mark costs `MARK_XP = xpToNext(MAX_LEVEL)`), by **rift clears** (`riftMarks(tier)`) and at
-**Heresy rank 20** (one per depth cleared). Four categories, points spent one at a time in the Marks panel (from the
+Account-wide, endless. A Mark is earned by **XP past the level cap** (`Player.gainXp` at `MAX_LEVEL` hands the XP,
+after the out-levelling penalty, to `gainMarkXp(xp)`; one Mark costs `markXp() = xpToNext(MAX_LEVEL)` = 204,707,941;
+the 599 -> 600 level's spare XP counts), by **rift clears** (`riftMarks(tier)`) and at **Heresy rank 20** (one per
+depth cleared). A Mark is saved at once (a float text "+1 INFERNAL MARK" over the hero, a ring, a chime and a log
+line); XP alone at most every 5 s and on `game.autosave` (`saveMarkXp`), so nothing is lost to a reload. At the cap
+the HUD's XP bar turns ember red and shows the progress to the next Mark (`capXp(c)`), and so does the character
+sheet's XP line. Four categories, points spent one at a time in the Marks panel (from the
 altar, the character sheet's "Marks" button and the skull's "marks"); "Spend all (balanced)" and a free "Reset".
 Bonuses diminish, so the Endless Torment wall holds: `eff(n) = 100 * (1 - 0.993 ** n)` (50 at 100 points, 75 at 200,
 97 at 500, never 100) and
@@ -167,9 +178,15 @@ life +0.3% x eff (<= +30% life)    crit +0.1 x eff (<= +10% crit chance)
 mf   +0.5% x eff (<= +50% magic find)   rift +0.6 s x eff (<= +60 s on the rift clock)
 ```
 `markBonuses()` → `{ life, crit, mf, rift }`; `Player.recompute` adds life and mf with the Defiance bonus and crit to
-`critChance`; `riftTime()` adds rift. The character sheet shows "Infernal Marks: 37 (12 free)"; the panel shows each
-category's points, its bonus now and at the next point. `grantMarks(n, why)` logs. Unspent Marks sit in `pts - sum(spent)`.
-Cloud: in the account record (above), merged by max.
+`critChance` (inside the 75 clamp); `riftTime()` adds rift. Measured (`marks.js`): 100 points = +15.14% maxHp, +5.05
+crit, +25.23 MF, +30.28 s; 500 Vitality = +29.11%. The character sheet shows "Infernal Marks: 37 (12 free)" and an
+"Infernal Marks" button; the Quest Log a line; the panel (`ui/marks.js`, two columns on touch) shows the total, the free
+count, the XP towards the next Mark, and per category its points, bonus, a bar of the cap reached, +1/+5/+25, then
+"Spend all (balanced)" and "Reset (free)". `grantMarks(n, why)` logs. Unspent Marks sit in `pts - sum(spent)`.
+Cloud: in the account record (above), merged three ways so Marks earned on two devices add up.
+Rate (`marks.js`, a level-600 hero full-clearing a level): 0.04 Marks per depth at depths 1000-1200 (he out-levels the
+monsters: XP x0.1), 0.33 at 1240, 0.5 at 1260 (monster level 600), 0.67 at 1400; Heresy rank 20 adds 1 per depth; a
+rift clear `ceil(tier / 4)` (tier 70, as deadly as depth 1200: 18).
 
 ## Balance targets (checked by the tests and tools)
 - Heresies at full rank (26): x1.52 loot, +104% magic find, +52% XP; a normal with Iron Hide + Cruel Hand takes ~4.5 s and
@@ -177,6 +194,9 @@ Cloud: in the account record (above), merged by max.
 - Rifts (`rift_balance.js`, the endgame.js model): a geared hero of its level clears tier T's quota in 3-5 minutes and the
   guardian in 1-2, so a tier at the hero's level fits the 7-minute clock with time to spare, and tiers 6-10 levels above
   the hero do not. `rifts.js`: auto-play clears tier 1 at depth-500 gear in god mode in under the limit.
-- Marks: a hero at the cap with 300 Marks (+~26% life) at depth 1200: a normal's hit still 15%+ of life, BOSS ROOMs
-  still ~550 s (`endgame.js` prints a "marks" column).
+- Marks (`endgame.js paladin,wizard 8 marks=0,300,1000,1000L`: the same geared heroes measured at each count): at
+  depth 1200, 300 Marks spent balanced (+12.3% life, +4.1 crit) give life x1.11-1.12 and a BOSS ROOM in x0.95-0.99 of
+  the time; 1000 (+24.8%, +8.3) life x1.22-1.25, ROOM x0.91-0.99; 1000 all on Vitality life x1.26-1.30, ROOM x1.00.
+  The wall is the kill time (ROOM ~460-560 s at 1200) and it holds. A normal's hit is 3-5% of a capped hero's life
+  even with no Marks (2-4% with 1000), so "15%+ of life" was never the baseline; Marks cut it by at most a fifth.
 - Unbound: `unbound.js` steps every phase and auto-play wins at depth 500 in god mode in 7-12 minutes.

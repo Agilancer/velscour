@@ -21,6 +21,7 @@ import { greedOf, hoardOf, hoardCap, greedMods, setGreed, GREED_MAX } from '../g
 import { STANCES, Auto } from '../game/autoplay.js';
 import { sealedCount, openNextSeal } from './sealed.js';
 import { defianceText } from '../game/defiance.js';
+import { capXp } from '../game/marks.js';
 
 const POTIONS = ['hp', 'mp', 'rejuv', 'fury'];
 // hud slot index -> bar index (skills) or potion kind: LMB, ` 1-9 0 - =, the potions, RMB
@@ -292,9 +293,10 @@ export const HUD = {
       $('#hoard').textContent = hd ? `Hoard ${hd}` : '';
     });
     set('madt', on ? `MADNESS ${Math.ceil(c.madT)}s` : ready ? 'Madness — ready' : `Madness ${Math.floor((c.madness || 0) * 100)}%`, (v) => { $('#mad-text').textContent = v; });
-    const need = xpToNext(c.level);
-    set('xp', Math.round((c.xp / need) * 1000) / 10, (v) => { $('#xp-fill').style.width = v + '%'; });
-    set('xpt', `Level ${c.level} · ${fmtInt(c.xp)} / ${fmtInt(need)} XP`, (v) => { $('#xp-text').textContent = v; });
+    const mk = capXp(c), need = mk ? mk.need : xpToNext(c.level), xpNow = mk ? mk.xp : c.xp;   // at the cap: towards the next Infernal Mark
+    set('xp', Math.round((xpNow / need) * 1000) / 10, (v) => { $('#xp-fill').style.width = v + '%'; });
+    set('xpmk', !!mk, (v) => { $('#xp-fill').classList.toggle('mk-xp', v); });
+    set('xpt', `Level ${c.level} · ${fmtInt(xpNow)} / ${fmtInt(need)} XP${mk ? ' to the next Infernal Mark' : ''}`, (v) => { $('#xp-text').textContent = v; });
     for (const s of this.slots) {
       if (typeof s.map === 'string') {
         const n = c.potions[s.map] || 0;

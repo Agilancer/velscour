@@ -35,9 +35,10 @@ export function endgame() {
   E = fixEndgame(r);
   return E;
 }
-export function saveEndgame() {
+/** Write the record; quiet: XP towards a Mark only, nothing the cloud needs at once. */
+export function saveEndgame(quiet) {
   try { localStorage.setItem(KEY, JSON.stringify(endgame())); } catch (e) { /* storage full or blocked: it lives on for this visit */ }
-  for (const fn of listeners) try { fn(); } catch (e) { console.warn(e); }
+  if (!quiet) for (const fn of listeners) try { fn(); } catch (e) { console.warn(e); }
 }
 /** fn() after every save (the cloud copy, game/cloud.js). */
 export function onEndgameChange(fn) { listeners.push(fn); }
@@ -65,26 +66,37 @@ export function noteRiftBest(cls, tier, time) {
 }
 
 /**
- * Two copies of the record (this device's and the cloud's) as one. Monotone: nothing a player earned on either side
- * is lost. The unlock keeps the earliest time; Marks keep the larger total (and that side's spending, clamped);
- * every class keeps its better rift; counters keep the larger.
+ * Two copies of the record (this device's and the cloud's) as one, never losing what either side earned. base: the
+ * record this device last synced (game/cloud.js), or null on a first sign-in. Marks, keys found and Unbound wins are
+ * counters: with a base, what each side earned since it is added (two devices earning 10 and 5 apart end at 15); with
+ * none, the larger. Never below either side or the base (a damaged copy lowers nothing). Spending: each side's change
+ * since the base, per category (only one side changed: that side's); more than the Marks allow: this device's. A side
+ * with fewer Marks than the base is damaged and its spending is ignored. No base: the larger side's spending. XP to
+ * the next Mark: the larger. The unlock keeps the earliest time; every class keeps its better rift.
  */
-export function mergeEndgame(a, b) {
+export function mergeEndgame(a, b, base) {
   a = fixEndgame(a); b = fixEndgame(b);
-  const o = blank();
+  const B = base ? fixEndgame(base) : null, o = blank();
+  const add = (x, y, z) => (B ? Math.max(x, y, z + Math.max(0, x - z) + Math.max(0, y - z)) : Math.max(x, y));
   o.unlocked = a.unlocked && b.unlocked ? Math.min(a.unlocked, b.unlocked) : a.unlocked || b.unlocked;
-  const big = b.marks.pts > a.marks.pts ? b : a;
-  o.marks = { pts: big.marks.pts, xp: Math.max(a.marks.xp, b.marks.xp), spent: { ...big.marks.spent } };
+  o.marks.pts = add(a.marks.pts, b.marks.pts, B && B.marks.pts);
+  o.marks.xp = Math.max(a.marks.xp, b.marks.xp);
+  if (B) {
+    const sa = a.marks.pts < B.marks.pts ? B.marks.spent : a.marks.spent, sb = b.marks.pts < B.marks.pts ? B.marks.spent : b.marks.spent;
+    const s = {};
+    for (const k of MARK_CATS) s[k] = Math.max(0, sa[k] + sb[k] - B.marks.spent[k]);
+    o.marks.spent = MARK_CATS.reduce((t, k) => t + s[k], 0) <= o.marks.pts ? s : { ...sa };
+  } else o.marks.spent = { ...(b.marks.pts > a.marks.pts ? b : a).marks.spent };
   for (const cls of new Set([...Object.keys(a.bests), ...Object.keys(b.bests)])) o.bests[cls] = betterRift(a.bests[cls], b.bests[cls]) ? { ...b.bests[cls] } : { ...a.bests[cls] };
-  o.keysFound = Math.max(a.keysFound, b.keysFound);
-  o.unboundWins = Math.max(a.unboundWins, b.unboundWins);
+  o.keysFound = add(a.keysFound, b.keysFound, B && B.keysFound);
+  o.unboundWins = add(a.unboundWins, b.unboundWins, B && B.unboundWins);
   return fixEndgame(o);
 }
 /** The same record on both sides? (so the cloud copy is only written when something changed) */
 export const sameEndgame = (a, b) => JSON.stringify(fixEndgame(a)) === JSON.stringify(fixEndgame(b));
-/** Replace the local record with a merged one (the cloud sync). Returns true when it changed. */
-export function adoptEndgame(rec) {
-  const merged = mergeEndgame(endgame(), rec);
+/** Replace the local record with its merge with the cloud's (base: the last synced). Returns true when it changed. */
+export function adoptEndgame(rec, base) {
+  const merged = mergeEndgame(endgame(), rec, base);
   if (sameEndgame(merged, endgame())) return false;
   E = merged;
   saveEndgame();

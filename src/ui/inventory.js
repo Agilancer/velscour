@@ -14,7 +14,7 @@ import { heroPortrait } from '../core/gearart.js';
 import { openSeal } from './sealed.js';
 import { glyphOf } from '../data/relics.js';
 import { noteFind } from '../game/reliquary.js';
-import { marksTotal, marksFree } from '../game/marks.js';
+import { marksTotal, marksFree, capXp } from '../game/marks.js';
 import { heresyRankOf } from '../game/heresies.js';
 import { endgameUnlocked } from '../game/endgame.js';
 import { sparkle } from '../gfx/vfx.js';
@@ -232,8 +232,8 @@ function statsBlock() {
   const p = G.player, c = G.char, st = p.st, C = CLASSES[c.classId];
   const box = el('div', 'col');
   box.style.minWidth = '210px';
-  const need = xpToNext(c.level);
-  box.appendChild(el('div', '', `<b style="font-family:Cinzel;color:#ffe2a0;font-size:16px">${escapeHtml(c.name)}</b><div class="dim">Level ${c.level} ${C.name}</div><div class="dim" style="font-size:12px">XP ${fmtInt(c.xp)} / ${fmtInt(need)}</div>`));
+  const need = xpToNext(c.level), mk = capXp(c);   // at the cap: XP towards the next Infernal Mark
+  box.appendChild(el('div', '', `<b style="font-family:Cinzel;color:#ffe2a0;font-size:16px">${escapeHtml(c.name)}</b><div class="dim">Level ${c.level} ${C.name}</div><div class="dim" style="font-size:12px">${mk ? `Next Infernal Mark ${fmtInt(mk.xp)} / ${fmtInt(mk.need)} XP` : `XP ${fmtInt(c.xp)} / ${fmtInt(need)}`}</div>`));
   const attrs = el('div', '');
   for (const k of ['str', 'dex', 'vit', 'int']) {
     const row = el('div', 'attr-row');
