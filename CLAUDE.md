@@ -43,6 +43,11 @@ node tools/tests/stalegear.js                      # auto-play swaps a stale +10
 node tools/tests/relics.js                         # Heirlooms, Covenants, Sigils, Glyphwords (by hand and by auto-play), the shared Reliquary + Codex, Town Commissions (auto-play does a chapter)
 node tools/tests/relic_balance.js [classes] [n]    # Heirloom / Covenant piece / full set worth in item levels, like rarity.js (Heirloom ~ Legendary, piece ~ Epic, set ~ five Mythics)
 node tools/tests/velscour.js [noauto]              # Velscour's five phases stepped by hand + "final boss" from the skull, then auto-play beats him at depth 500 (5-10 min)
+node tools/tests/heresies.js                       # the Endgame (docs/ENDGAME.md): the Altar of Heresy, every Heresy's effect on a level, the rank's rewards, auto-play under them
+node tools/tests/rifts.js                          # Abyssal Rifts: the clock, the quota, the Guardian, collapse/death/win, tier jumps, the honour board on a fake Firestore, auto-play clears a tier
+node tools/tests/rift_balance.js                   # rift tiers vs the clock for a hero of the tier's level (model, like endgame.js)
+node tools/tests/unbound.js                        # Velscour Unbound: Abyssal Keys, the court, the Pact, every phase stepped, the Crown and Unbound Heirlooms, auto-play wins
+node tools/tests/marks.js                          # Infernal Marks: XP past the cap, spending, the bonuses on the sheet, shared across heroes, the account record's cloud merge
 node tools/tests/velscour_real.js [classes] [n]    # Velscour without god mode: depth-500 gear, wins / minutes / phase reached per class
 node tools/tests/rarity.js [classes] [samples]     # gear rarity worth in item levels, level 25 Rare > level 10 Mythic, drop odds
 node tools/tests/ui.js                             # skill tree, inventory, socketing, vendors
