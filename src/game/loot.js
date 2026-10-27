@@ -99,7 +99,7 @@ export class GroundItem {
         return false;
       }
     }
-    if (this.t > 120 && this.kind !== 'item') return false;
+    if (this.t > 120 && this.kind !== 'item' && this.kind !== 'key') return false; // (an Abyssal Key waits)
     // light pillars for good loot
     if (this.kind === 'item' && this.item.rarity >= 2) {
       const r = this.item.sealed ? SEAL_RARITY : this.item.rarity;
@@ -224,7 +224,7 @@ export function itemIcon(item, size = 48) {
   const mat = MATERIALS[item.tier].color;
   const pal = { m: mat, w: '#ffffff', b: item.icon === 'shield' ? '#5a2a1a' : '#5a3a20', g: item.rarity >= 3 ? '#ffd040' : '#b08a3a', c: item.rarity >= 2 ? RARITY_COLORS[item.rarity] : '#8a6a40', e: '#ff4040', k: '#101010' };
   if (item.icon === 'orb') { pal.c = mat; pal.e = '#c060ff'; }
-  if (item.icon === 'staff' || item.icon === 'wand') { pal.c = ['#a0a0a0', '#60ff60', '#60a0ff', '#c060ff', '#ffa020', '#ff4058'][item.rarity]; pal.b = '#6a4a2a'; pal.e = '#ffffff'; }
+  if (item.icon === 'staff' || item.icon === 'wand') { pal.c = ['#a0a0a0', '#60ff60', '#60a0ff', '#c060ff', '#ffa020', '#ff4058', '#20e0ff'][item.rarity]; pal.b = '#6a4a2a'; pal.e = '#ffffff'; }
   c = replacementIcon('item_' + item.icon, size, mat) || pixelSprite(item.icon, pal, 4);
   iconCache.set(key, c);
   return c;
@@ -308,7 +308,7 @@ export function drawLootLabels(ctx, world, mouse) {
   const placed = [];
   let shown = false;
   for (const l of world.loot) {
-    if (l.kind !== 'item' && l.kind !== 'potion' && !(l.kind === 'gold' && l.amount > 0)) continue;
+    if (l.kind !== 'item' && l.kind !== 'potion' && l.kind !== 'key' && !(l.kind === 'gold' && l.amount > 0)) continue;
     if (p && Math.hypot(p.x - l.x, p.y - l.y) > 14) continue;
     if (l.kind === 'gold' && !G.settings.showGoldLabels) continue;
     if (G.settings.hideItemNames) {

@@ -766,7 +766,7 @@ export const Auto = {
 
   /** Would we pick this ground item up? (gear verdicts are cached for a couple of seconds: they simulate) */
   wantLoot(g) {
-    if (g.kind !== 'item') return this.wantLootNow(g);
+    if (g.kind !== 'item') return this.wantLootNow(g); // (keys included: wantLootNow says yes)
     const now = G.world.time, hit = this.wantCache.get(g);
     if (hit && now - hit.t < 2) return hit.v;
     const v = this.wantLootNow(g);

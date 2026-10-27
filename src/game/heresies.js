@@ -11,6 +11,7 @@ import { explosionFx } from '../gfx/shapes.js';
 import { ELITE_AFFIXES } from '../data/enemies.js';
 import { HERESIES, HERESY_BY_ID, heresyRank, heresyMods, KEYS_RANK, MARKS_RANK } from '../data/heresies.js';
 import { endgameUnlocked } from './endgame.js';
+import { depthLevel } from '../data/depth.js';
 import { makeMonster } from './monster.js';
 
 export { HERESIES, HERESY_BY_ID, heresyRank, heresyMods, KEYS_RANK, MARKS_RANK };
@@ -63,8 +64,7 @@ export function heresyWorld(world, c = G.char) {
   world.goldMul = (world.goldMul || 1) * M.gold;
   world.mfAdd = (world.mfAdd || 0) + M.mf;
   world.sigilMul = (world.sigilMul || 1) * M.sigil;
-  world.relicMul = (world.relicMul || 1) * M.relic;
-  world.xpMul = (world.xpMul || 1) * M.xp;
+  world.relicMul = (world.relicMul || 1) * M.relic; // (XP: per monster, heresyMonster)
   if (ids.includes('ambush')) world.heresyAmbush = 3;
   if (ids.includes('legion')) world.legionT = rand(25, 40);
 }
@@ -101,7 +101,7 @@ export function heresyTick(world, dt) {
   if (world.legionT !== undefined && !p.dead && (world.legionT -= dt) <= 0) {
     world.legionT = rand(40, 55);
     const alive = world.creatures.filter((c) => c.pitSpawn && !c.dead).length;
-    if (alive < 8 && !(world.boss && world.boss.awake && !world.boss.dead)) legionGate(world, p, Math.min(4, 8 - alive, 2 + Math.floor(rand(0, 3))), (world.boss && world.boss.level) || p.level);
+    if (alive < 8 && !(world.boss && world.boss.awake && !world.boss.dead)) legionGate(world, p, Math.min(4, 8 - alive, 2 + Math.floor(rand(0, 3))), depthLevel(world.depth || 1));
   }
 }
 /**
