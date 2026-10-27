@@ -18,6 +18,8 @@ import { homunculusPose } from '../gfx/homunculus.js';
 import { enemyImage } from '../core/enemyart.js';
 import { drawPetCorpse } from '../core/petart.js';
 import { drawLootLabels } from './loot.js';
+import { skillIcon } from '../ui/icons.js';
+import { SKILLS } from '../data/skills.js';
 import { castleTileDressing, drawCastleParticles, drawCastleWater } from '../gfx/castleground.js';
 import { drawRim, RIM, xray, drawXray } from './creature.js';
 import { drawNebula } from '../gfx/breach.js';
@@ -1187,6 +1189,7 @@ function drawOverheadNames(ctx, world) {
     if (sx < -200 || sy < -40 || sx > G.W + 200 || sy > G.H + 40) continue;
     drawLabel(ctx, po.label, sx * d, sy * d, nameFont, po.active ? '#ffd0a0' : '#909090', 3 * d);
   }
+  drawMinionCounts(ctx, world, d); // over the portal labels
   // hovered monster info (desktop)
   const h = G.hover;
   if (h && !h.dead && h.team === 'enemy' && h.rank !== 'boss') {
@@ -1206,6 +1209,43 @@ function drawOverheadNames(ctx, world) {
       ctx.fillText(h.affixes.map((a) => ({ strong: 'Extra Strong', fast: 'Extra Fast', tough: 'Stone Skin', fiery: 'Fire Enchanted', frozen: 'Cold Aura', shocking: 'Lightning Enchanted', vampiric: 'Vampiric', teleport: 'Teleporting', multishot: 'Multishot', thorns: 'Thorns', regen: 'Regenerating' }[a] || a)).join(' · '), W / 2, y + 36 * d);
     }
   }
+}
+
+const minionIcons = new Map();
+/** A skill's icon, at most one fresh build a second while its painted art is still loading (skillIcon won't cache that one). */
+function minionIcon(id) {
+  let e = minionIcons.get(id);
+  if (!e || (!e.done && G.time - e.t > 1)) {
+    const c = skillIcon(SKILLS[id], 32);
+    e = { c, t: G.time, done: skillIcon(SKILLS[id], 32) === c };
+    minionIcons.set(id, e);
+  }
+  return e.c;
+}
+/** Over the hero's head: one icon per summoning skill with how many of its minions are out (settings: minionCounts). */
+function drawMinionCounts(ctx, world, d) {
+  const hero = world.player;
+  if (!hero || hero.dead || !hero.sbox || G.settings.minionCounts === false) return;
+  const n = new Map();
+  for (const c of world.creatures) if (c.summon && !c.dead && c.owner === hero && c.skillId && SKILLS[c.skillId]) n.set(c.skillId, (n.get(c.skillId) || 0) + 1);
+  if (!n.size) return;
+  const s = Math.round(22 * d), pad = Math.round(3 * d), sp = Math.round(4 * d);
+  ctx.font = `700 ${Math.round(13 * d)}px Cinzel, Georgia, serif`;
+  const pills = [...n].map(([id, k]) => ({ id, k: String(k), w: s + pad * 3 + Math.ceil(ctx.measureText(String(k)).width) }));
+  const total = pills.reduce((a, q) => a + q.w, 0) + sp * (pills.length - 1);
+  let x = Math.round((hero.sbox[0] + hero.sbox[2]) / 2 * d - total / 2);
+  const y = Math.round((hero.sbox[1] - 8) * d - s - pad * 2), h = s + pad * 2;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3 * d; ctx.strokeStyle = '#000';
+  for (const q of pills) {
+    ctx.fillStyle = 'rgba(10,6,4,0.62)'; ctx.fillRect(x, y, q.w, h);
+    ctx.strokeStyle = 'rgba(200,170,110,0.45)'; ctx.lineWidth = Math.max(1, d); ctx.strokeRect(x + 0.5, y + 0.5, q.w - 1, h - 1);
+    ctx.drawImage(minionIcon(q.id), x + pad, y + pad, s, s);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3 * d; ctx.strokeText(q.k, x + s + pad * 2, y + h / 2 + d);
+    ctx.fillStyle = '#f2e6c8'; ctx.fillText(q.k, x + s + pad * 2, y + h / 2 + d);
+    x += q.w + sp;
+  }
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'center';
 }
 
 // ------------------------------------------------------------------ minimap
