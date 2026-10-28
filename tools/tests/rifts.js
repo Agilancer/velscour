@@ -278,6 +278,19 @@ async function endPart(page, shot, step) {
     return { jump: R.result.jump, first: R.result.first, best: R.result.best, cleared: G.char.rifts.cleared[1], bestTime: G.char.rifts.bestTime[1], open: G.char.rifts.open };
   });
   check(slow.jump === 1 && !slow.first && !slow.best && slow.cleared === 2 && slow.bestTime < 200 && slow.open === 4, `a slow second clear (90%): +${slow.jump} tier, not first, no new best, best time kept (${slow.bestTime})`);
+  // auto-play's exit: on when ready, else home
+  const ex = await page.evaluate(async () => {
+    const { G, game } = window.VELSCOUR, c = G.char;
+    const { Auto } = await import('/src/game/autoplay.js');
+    c.level = 300; c.rifts.open = 9; // riftLevel(2) 267 .. riftLevel(9) 299: tier 2 is next and ready
+    game.riftExit(G.world, { auto: true });
+    await new Promise((r) => { const t = setInterval(() => { if (G.world.rift && G.world.rift.tier === 2 && document.querySelector('#loading').classList.contains('hidden')) { clearInterval(t); r(); } }, 50); });
+    const a = G.world.rift.tier;
+    G.world.rift.done = true; G.world.rift.result = { next: 3 }; c.level = 240; // tier 3 (272) is too deadly for a level 240 hero
+    game.riftExit(G.world, { auto: true });
+    return { a, b: G.world.kind, ready: Auto.riftReady(3) };
+  });
+  check(ex.a === 2 && ex.b === 'town' && !ex.ready, `auto-play's exit: on to tier ${ex.a} when ready; home when the next tier is too deadly (${ex.b})`);
   // a hero that took Velscour's gift (game/deathgift.js): its fast clear keeps its own best but never the account's, and
   // never posts; the tier dialog and the results say so
   await clean(page);
@@ -293,20 +306,7 @@ async function endPart(page, shot, step) {
     delete G.char.cheated;
     return { board: R.result.board, best: R.result.best, same: JSON.stringify(endgame().bests.wizard) === b0, own: G.char.rifts.bestTime[1], res: /Velscour's gift/.test(res), dlg: /Velscour's gift/.test(dlg) };
   });
-  check(gift.board === 'barred' && !gift.best && gift.same && gift.own === 20 && gift.res && gift.dlg, `Velscour's gift: a 0:20 clear is the hero's own best (${gift.own}) but not the account's, never posted ("${gift.board}"), and the results and tier dialog say so`);
-  // auto-play's exit: on when ready, else home
-  const ex = await page.evaluate(async () => {
-    const { G, game } = window.VELSCOUR, c = G.char;
-    const { Auto } = await import('/src/game/autoplay.js');
-    c.level = 300; c.rifts.open = 9; // riftLevel(2) 267 .. riftLevel(9) 299: tier 2 is next and ready
-    game.riftExit(G.world, { auto: true });
-    await new Promise((r) => { const t = setInterval(() => { if (G.world.rift && G.world.rift.tier === 2 && document.querySelector('#loading').classList.contains('hidden')) { clearInterval(t); r(); } }, 50); });
-    const a = G.world.rift.tier;
-    G.world.rift.done = true; G.world.rift.result = { next: 3 }; c.level = 240; // tier 3 (272) is too deadly for a level 240 hero
-    game.riftExit(G.world, { auto: true });
-    return { a, b: G.world.kind, ready: Auto.riftReady(3) };
-  });
-  check(ex.a === 2 && ex.b === 'town' && !ex.ready, `auto-play's exit: on to tier ${ex.a} when ready; home when the next tier is too deadly (${ex.b})`);
+  check(gift.board === 'barred' && !gift.best && gift.same && gift.own === 20 && gift.res && gift.dlg, `Velscour's gift: a 0:20 clear is the hero's own best (${gift.own}) but not the account's, never posted ("${gift.board}"), and the results and tier dialog say so ${JSON.stringify(gift)}`);
 }
 
 async function autoPart(page, shot, step) {
