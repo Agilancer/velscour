@@ -129,7 +129,7 @@ let automapCanvas = null;
 
 // Build the level's monster sprites (palette swap, hit flash, corpse shade) behind the loading screen: each swap reads
 // pixels back from the GPU, and doing that on a monster's first hit or death stalled the frame (worst on phones).
-// Yields every ~40 ms so the loading screen keeps painting.
+// Yields every ~40 ms so the loading screen keeps painting (not while hidden: a hidden page's chained timers can wait a minute).
 async function warmLevelArt(w) {
   const seen = new Set();
   if (w.map.hgt) terrainOf(w.map); // a height map's draw order and occluders (the Castle's 100k columns): behind the loading screen, not the first frame
@@ -143,7 +143,7 @@ async function warmLevelArt(w) {
     if (seen.has(k)) continue;
     seen.add(k);
     if (enemyImage(c.art, c.swap)) { enemyImage(c.art, c.swap, 'flash'); enemyImage(c.art, c.swap, 'dark'); }
-    if (performance.now() - t > 40) { await new Promise((r) => setTimeout(r, 0)); t = performance.now(); }
+    if (performance.now() - t > 40 && !document.hidden) { await new Promise((r) => setTimeout(r, 0)); t = performance.now(); }
   }
   // what earlier levels built and this one never asked for goes (a long run carried every level's sprites)
   if (G.world === w) { trimArtCaches(); clearRims(); }
