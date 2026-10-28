@@ -64,6 +64,7 @@ import { renderWorld, drawMinimap, preloadTownSheets, releaseTownSheets } from '
 import { controls } from './controls.js';
 import { Auto } from './autoplay.js';
 import { writeSave, newCharData, migrate } from './save.js';
+import { grantDeathGift, DEATH_PHRASE } from './deathgift.js';
 import { clearVfx, floatText, sparkle, addEffect, Ring } from '../gfx/vfx.js';
 import { Meter } from './dpsmeter.js';
 import { UI } from '../ui/ui.js';
@@ -366,6 +367,12 @@ export const game = {
           if (['HAIL VELSCOUR!', '13', '65', '69', '666', '6669'].includes(message)) {
             close();
             this.openVelscourTeleport();
+          } else if (message === DEATH_PHRASE) { // exact, case sensitive
+            close();
+            if (Auto.on) Auto.toggle(false);
+            grantDeathGift();
+            if (G.world?.kind !== 'town') this.enterTown(); // the town portal now opens on Depth 500
+            else this.autosave();
           } else if (message.trim().toLowerCase() === 'mountain') {
             close();
             this.teleportToBiome(BIOME_BY_ID.mountainside); // the Mountainside beta
