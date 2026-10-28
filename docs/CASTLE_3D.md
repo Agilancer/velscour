@@ -12,7 +12,8 @@ Each castle variant (docs/CASTLE_VARIANTS.md) is its own layout and its own bake
 python tools/castle3d.py textures        # masonry, slate and plank textures, the variants' stones and roofs -> assets/source/castle3d/tex/
 node tools/castle3d_bake.js [ids|all]    # bake -> assets/source/castle3d/out/[<dir>/] (1.5 px per world px, the shipped scale)
 node tools/castle3d_bake.js preview 169,196[,w,h,S] [id]   # one framed 3D view of an area -> tools/tests/out/
-python tools/castle3d.py pack [ids|all]  # -> assets/tiles/castle3d/[<dir>/] (lossless WebP pages + index.json)
+python tools/castle3d.py pack [ids|all]  # -> assets/tiles/castle3d/[<dir>/] (lossless WebP pages + index.json), then repack
+python tools/castle3d.py repack [ids|all] # re-cut the published pages into 2048 px pages grouped by place
 node tools/tests/castle3d.js [--castle=ids|all]   # in the game: wall-walk, stairs, tunnel, throne room, doors, drawbridge, overview
 node tools/tests/castle_overworld.mjs    # 100 seeds: sealed curtains, open gates, wall-walk, rooms, doors (no browser)
 node tools/tests/scenarios.js            # a bot plays every Castle scenario (the drawbridge comes down for it)
@@ -53,7 +54,11 @@ Pure data, so it also runs under Node. Both the game and the bake read it.
 - **Light** is fixed to the camera, from the upper left, with one fixed shadow frustum over the whole castle.
 - **Pieces:** a second pass writes each pixel's tile (and layer: 0 masonry, 1 what stands over a walkway). The render is
   cut into one piece per tile and layer. Identical pieces are merged (same shape, colours within 6), which leaves
-  about 3,000. They are packed into three 4096-wide pages at 1.5 px per world px.
+  about 3,000 (Goldspire, three rings: 6,600). The bake packs them into 4096 px pages at 1.5 px per world px; `pack`
+  then re-cuts them (`repack`) into 2048 px pages grouped by where they stand on the map, each cropped to the rows it
+  uses, so a view draws from three or four small pages instead of every big one. A frame that needed all of a castle's
+  4096 px pages swapped them through the GPU every frame once they outgrew its texture budget (Goldspire's five: 0.6
+  fps on a phone-sized screen with the CPU slowed 4x; 30 fps after the re-cut).
 - **Roofs** are baked per building and cut into 32 px columns.
 - **Moving parts:** the drawbridge (9 frames, upright to flat, with chains), the portcullis (9 frames, rising) and every
   door's two leaves (6 frames). They are rendered among the masonry drawn depth-only, so a jamb or arch in front of them
@@ -74,7 +79,10 @@ Pure data, so it also runs under Node. Both the game and the bake read it.
   opens the crossing. Doors swing open while anyone is within about 3 tiles and close behind them.
 
 ## Limits
-- **Memory:** the pages decode to about 36 Mpx (around 140 MB), which is fine on desktop. Phones may want a 1x bake.
+- **Memory:** a castle's pages decode to 30-87 Mpx (Goldspire the most, about 330 MB), and the whole browser sits at
+  about 800-900 MB in a castle (Chromium, `castle_phone.js`); leaving the Castle lets them go. A 1x bake would quarter
+  that, but on a phone the castle is drawn at about 1.3 device px per baked px, so it would look soft. Real phones and
+  Safari are untested.
 - Door leaves on walls facing away from the camera (the cathedral's west door, the great hall's north door) are hidden
   by their own walls.
 - The scenario bot finishes every Castle scenario, but several now have longer waits between fights (up to 37 s):

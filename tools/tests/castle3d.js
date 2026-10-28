@@ -14,6 +14,15 @@ const only = (process.argv.slice(2).find((a) => !a.startsWith('--')) || '').spli
       return arg === 'all' ? CASTLE_VARIANTS.map((v) => v.id) : arg ? arg.split(',') : [CASTLE_VARIANTS[0].id];
     }, castleArg);
     await page.evaluate(async () => { await window.VELSCOUR.game.newChar('paladin', 'Castle 3D QA'); });
+    // every story line wraps into its teller's three-line bubble at the real font (townspeech.js: 196 px less 24)
+    const over = await page.evaluate(async () => {
+      const { CASTLE_VARIANTS } = await import('/src/data/castles.js');
+      await document.fonts.load('600 11px "Alegreya Sans"');
+      const ctx = document.createElement('canvas').getContext('2d'); ctx.font = '600 11px "Alegreya Sans", "Segoe UI", sans-serif';
+      const rows = (t) => { let n = 1, line = ''; for (const w of t.split(/\s+/)) { const next = line ? line + ' ' + w : w; if (line && ctx.measureText(next).width > 196 - 24) { n++; line = w; } else line = next; } return n; };
+      return CASTLE_VARIANTS.flatMap((v) => ['herald', 'lord'].flatMap((k) => v.story[k].lines.filter((l) => rows(l) > 3).map((l) => `${v.id} ${k}: ${l}`)));
+    });
+    if (over.length) errors.push('[castle3d] story lines too long for a three-line bubble: ' + over.join(' / '));
     for (const id of ids) {
       const info = await page.evaluate(async (id) => {
         const { G, game } = window.VELSCOUR;
@@ -26,7 +35,7 @@ const only = (process.argv.slice(2).find((a) => !a.startsWith('--')) || '').spli
         // the story's herald by the road speaks up when the hero walks up to them (game/castlestory.js)
         const tellers = G.world.npcs.filter((n) => n.storyLines), herald = tellers[0];
         if (herald) { G.player.x = herald.x + 1.2; G.player.y = herald.y + 1.2; for (let k = 0; k < 10; k++) G.world.update(0.05); }
-        const story = { tellers: tellers.length, said: herald?.talkText || '' };
+        const story = { tellers: tellers.length, said: herald?.talkText || '', lines: herald?.bubbleLines };
         G.world.creatures = G.world.creatures.filter((c) => c === G.player); G.world.npcs.length = 0; G.world.rebuildGrid();
         const m = G.world.map, L = (await import('/src/world/castle3d.js')).castle3d(id), R0 = L.rings[0], RI = L.rings[L.rings.length - 1], D = m.drawbridge;
         const st = (await import('/src/gfx/castle3dart.js')).castle3dState(id);
@@ -50,7 +59,7 @@ const only = (process.argv.slice(2).find((a) => !a.startsWith('--')) || '').spli
       const { views, keepOff, ...rest } = info;
       console.log('castle', id, JSON.stringify(rest));
       if (!info.pieces) errors.push(`[castle3d ${id}] the bake did not load`);
-      if (info.story.tellers !== 2 || !info.story.said) errors.push(`[castle3d ${id}] the herald and the lord are missing, or the herald said nothing`);
+      if (info.story.tellers !== 2 || !info.story.said || info.story.lines !== 3) errors.push(`[castle3d ${id}] the herald and the lord are missing, or the herald said nothing`);
       if (!info.hgt) errors.push(`[castle3d ${id}] the Castle has no height map`);
       if (info.wall < 0) errors.push(`[castle3d ${id}] no path up a stair onto the outer wall-walk`);
       if (info.throne < 0) errors.push(`[castle3d ${id}] no path into the throne room`);

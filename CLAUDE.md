@@ -89,6 +89,7 @@ node tools/tests/castle_visual.js [views] [--grid] [--castle=ids|all] # Castle s
 node tools/tests/castle3d.js [views] [--castle=ids|all] # the 3D Castle (docs/CASTLE_3D.md): wall-walk, stairs, tunnel, throne room, doors, drawbridge, overview
 node tools/tests/castle_autoplay.js [classes]       # auto-play takes the Castle's stairs to wall foes (no hits from below) and back down, never leaps off
 node tools/tests/castle_variants.js [ids|all] [secs] # auto-play in each castle variant: from the road through the drawbridge to the shrine, starts the scenario
+node tools/tests/castle_phone.js [ids|all] [portrait] [throttle] # each castle on an emulated phone (4x CPU): art size/decode, memory, frame cost, joystick over the drawbridge, shots
 node tools/tests/overworld_look.js [biome] [seed]    # screenshots of an overworld's spots for art review (scatter in context, sizes, hills)
 node tools/tests/skyship.js [clear|storm,...|all|stories] [auto]  # the Sky Battle (docs/SKY_BATTLE.md): whole battles per scenario or story, gauntlets, every line frames its speaker, seen scenes at 20x, shots
 node tools/tests/skystories.mjs [ids]              # the 30 Sky Battle stories (docs/SKY_STORIES.md): art, cast, speakers, acts, tokens, line lengths (no browser)

@@ -56,7 +56,24 @@ Everything about a castle lives in one record in [`src/data/castles.js`](../src/
 6. In the game: `node tools/tests/castle3d.js --castle=<id>` and `node tools/tests/castle_visual.js --castle=<id>`;
    look at the shots. `node tools/tests/scenarios.js - <id>` plays all 35 Castle scenarios in it, and
    `node tools/tests/castle_variants.js <id>` lets auto-play find its way in from the road and start the scenario.
+7. On a phone-sized screen with the CPU slowed 4x: `node tools/tests/castle_phone.js <id>` (and `<id> portrait`): the
+   art's size and decode time, memory, frames per second while auto-play walks it, the joystick over the drawbridge.
 
 The drawbridge starts raised and comes down when the hero walks within 11 tiles of it. Route planners plan across it
 while it is up (`map.planOpen`, used by auto-play's road field, `buildRoadNav`), so auto-play heads for the gate wherever it stands
 instead of stalling at the moat when the gate isn't straight ahead.
+
+## On phones
+
+Tested only in Chromium emulating a phone (`castle_phone.js`: touch, 844 x 390 or 390 x 844 at DPR 2, the CPU slowed
+4x, the machine's real GPU), never on a real phone or in Safari.
+- Each castle downloads 7-20 MB of art once per visit (lossless WebP) and decodes it to 30-87 Mpx; with the game's
+  other art the browser sits at about 800-900 MB in a castle, and leaving the Castle lets the castle's art go. Castles
+  never follow each other (no biome comes twice in a row), so one castle's art is gone before the next is loaded.
+- The art is cut into 2048 px pages grouped by place (`castle3d.py repack`), so a view draws from a few of them. Drawn
+  from 4096 px pages that each held pieces from all over the castle, every frame needed every page, and Goldspire's
+  five (about 320 MB) outgrew the GPU's texture cache: 0.6 fps. Re-cut: 30 fps. Every castle runs at about 25-55 fps
+  there.
+- Building a castle level takes 2-8 s on the slowed CPU (behind the loading screen).
+- The herald and the lord speak in the three-line bubble (as at the forge) and hold each line long enough to read it.
+

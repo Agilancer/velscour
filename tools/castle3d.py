@@ -4,7 +4,8 @@ The 3D castle's bake inputs and outputs (docs/CASTLE_3D.md).
 
     python tools/castle3d.py textures        # masonry from the Castle Keep pack, the variants' roofs -> assets/source/castle3d/tex/
     node tools/castle3d_bake.js [ids|all]    # three.js bake -> assets/source/castle3d/out/[<dir>/] (PNG pages + index)
-    python tools/castle3d.py pack [ids|all]  # out/ -> assets/tiles/castle3d/[<dir>/] (lossless WebP + index.json)
+    python tools/castle3d.py pack [ids|all]  # out/ -> assets/tiles/castle3d/[<dir>/] (lossless WebP + index.json), then repack
+    python tools/castle3d.py repack [ids|all]  # re-cut the published pages into 2048 px pages grouped by place (see repack)
 
 textures: the Castle Keep pack's wall materials are horizontally tileable strips; they are also made to tile
 vertically (the strip's top and bottom cross-faded over a band of courses), so a wall of any height wraps them.
@@ -209,6 +210,126 @@ def pack(ids=None):
         json.dump(idx, open(os.path.join(out, "index.json"), "w"), separators=(",", ":"))
         print("castle3d %s: %d pages, %d pieces, %d tiles, %.1f MB" % (vid, len(idx["pages"]), len(idx["pieces"]), len(idx["tiles"]) // 3,
               sum(os.path.getsize(os.path.join(out, p)) for p in idx["pages"]) / 1e6))
+    repack(ids)
+
+
+def _save_page(args):
+    img, path = args
+    img.save(path, "WEBP", lossless=True, quality=100, method=6)
+
+
+def repack(ids=None, page=2048):
+    """Re-cut a castle's published pages into smaller ones grouped by where their pieces stand on the map, so a view
+    draws from a few pages instead of all of them. A phone's GPU keeps some 128-256 MB of textures: the bake's 4096 px
+    pages (64 MB each) all drawn in one frame swapped in and out every frame (Goldspire's five: ~0.7 s a frame on a 4x
+    slowed CPU). The pieces are the same pixels; each page is cropped to the rows it uses."""
+    from multiprocessing import Pool
+    dirs, W = variant_dirs(), 336
+    for vid in (ids or [next(iter(dirs))]):
+        out = os.path.join(OUT, dirs[vid])
+        idx = json.load(open(os.path.join(out, "index.json")))
+        S, P = idx["S"], idx["pieces"]
+        old = []
+        for p in idx["pages"]:
+            with Image.open(os.path.join(out, p)) as im:
+                old.append(im.convert("RGBA"))
+        # where each piece is drawn (world px, screen space): a tile's at its ground corner, a roof strip's absolute, a
+        # moving part's at its anchor; a piece several tiles share goes with the first of them
+        ground = [None] * len(P)
+        t = idx["tiles"]
+        for k in range(0, len(t), 3):
+            if ground[t[k + 2]] is None:
+                x, y = t[k] % W, t[k] // W
+                ground[t[k + 2]] = ((x - y) * 32, (x + y) * 16)
+        mv = idx.get("moving") or {}
+        for m in [mv[k] for k in ("drawbridge", "portcullis") if k in mv] + list(mv.get("doors", [])):
+            ax, ay = m["anchor"]
+            for i in m["frames"]:
+                if ground[i] is None:
+                    ground[i] = ((ax - ay) * 32, (ax + ay) * 16)
+        centre = [((ground[i] or (0, 0))[0] + p[5] + p[3] / S / 2, (ground[i] or (0, 0))[1] + p[6] + p[4] / S / 2) for i, p in enumerate(P)]
+        gut = 1
+
+        def shelves(items):   # {piece: (x, y)} on one page (skyline, lowest spot first; tallest first), or None
+            sky = [[0, 0, page]]   # segments [x, y, w] of the skyline, left to right
+            place = {}
+            for i in sorted(items, key=lambda i: (-P[i][4], -P[i][3])):
+                w, h = P[i][3] + gut, P[i][4] + gut
+                best = None
+                for k in range(len(sky)):
+                    x, top, room, j = sky[k][0], 0, 0, k
+                    if x + w > page:
+                        break
+                    while room < w:
+                        top, room, j = max(top, sky[j][1]), room + sky[j][2], j + 1
+                    if top + h <= page + gut and (best is None or top < best[1]):
+                        best = (x, top, k, j)
+                if best is None:
+                    return None
+                x, top, k, j = best
+                place[i] = (x, top)
+                end = sky[j - 1][0] + sky[j - 1][2]
+                rest = [[x + w, sky[j - 1][1], end - x - w]] if end > x + w else []
+                sky[k:j] = [[x, top + h, w]] + rest
+                merged = [sky[0]]
+                for s in sky[1:]:
+                    if s[1] == merged[-1][1]:
+                        merged[-1][2] += s[2]
+                    else:
+                        merged.append(s)
+                sky = merged
+            return place
+
+        groups = []
+
+        def split(items):   # halve along the longer side (by area) until a half fits a page
+            area = sum((P[i][3] + gut) * (P[i][4] + gut) for i in items)
+            if area <= page * page * 0.9:
+                place = shelves(items)
+                if place is not None:
+                    groups.append(place)
+                    return
+            xs, ys = [centre[i][0] for i in items], [centre[i][1] for i in items]
+            axis = 0 if max(xs) - min(xs) >= max(ys) - min(ys) else 1
+            items = sorted(items, key=lambda i: centre[i][axis])
+            run, half, cut = 0, area / 2, 1
+            for k, i in enumerate(items):
+                run += (P[i][3] + gut) * (P[i][4] + gut)
+                if run >= half:
+                    cut = max(1, min(len(items) - 1, k + 1))
+                    break
+            split(items[:cut])
+            split(items[cut:])
+
+        split(list(range(len(P))))
+        pieces, jobs, names = [None] * len(P), [], []
+        for g, place in enumerate(groups):
+            h = max(y + P[i][4] for i, (x, y) in place.items())
+            img = Image.new("RGBA", (page, h), (0, 0, 0, 0))
+            for i, (x, y) in place.items():
+                pg, sx, sy, w, hh, ox, oy = P[i]
+                img.paste(old[pg].crop((sx, sy, sx + w, sy + hh)), (x, y))
+                pieces[i] = [g, x, y, w, hh, ox, oy]
+            name = "pieces_%d.webp" % g
+            names.append(name)
+            jobs.append((img, os.path.join(out, name + ".tmp")))
+        # every piece cut from its new page is the same pixels as from its old one
+        for i, (g, x, y, w, h, _, _) in enumerate(pieces):
+            pg, sx, sy = P[i][:3]
+            if old[pg].crop((sx, sy, sx + w, sy + h)).tobytes() != jobs[g][0].crop((x, y, x + w, y + h)).tobytes():
+                sys.exit("repack %s: piece %d changed" % (vid, i))
+        with Pool() as pool:
+            pool.map(_save_page, jobs)
+        for f in os.listdir(out):
+            if f.startswith("pieces_") and f.endswith(".webp"):
+                os.remove(os.path.join(out, f))
+        for name in names:
+            os.replace(os.path.join(out, name + ".tmp"), os.path.join(out, name))
+        idx["pages"], idx["pieces"] = names, pieces
+        json.dump(idx, open(os.path.join(out, "index.json"), "w"), separators=(",", ":"))
+        mpx = sum(page * max(y + P[i][4] for i, (x, y) in pl.items()) for pl in groups) / 1e6
+        print("castle3d %s: repacked into %d pages of %d px by place, %.1f Mpx decoded, %.1f MB" % (vid, len(names), page, mpx,
+              sum(os.path.getsize(os.path.join(out, n)) for n in names) / 1e6))
 
 
 if __name__ == "__main__":
@@ -216,6 +337,9 @@ if __name__ == "__main__":
     if cmd == "pack":
         arg = sys.argv[2] if len(sys.argv) > 2 else ""
         pack(list(variant_dirs()) if arg == "all" else arg.split(",") if arg else None)
+    elif cmd == "repack":
+        arg = sys.argv[2] if len(sys.argv) > 2 else ""
+        repack(list(variant_dirs()) if arg == "all" else arg.split(",") if arg else None)
     elif cmd == "textures":
         textures()
     else:
