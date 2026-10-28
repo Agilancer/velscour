@@ -260,13 +260,14 @@ export class World {
       }
     }
     // ambient particles around the camera
-    if (!b || !b.ambient) return;
+    const amb = this.ambientFx || b?.ambient;   // a castle variant's own drift (snow, ash, petals...) over the biome's
+    if (!amb) return;
     this.ambT += dt;
     const rate = G.touch ? 10 : 22;
     while (this.ambT > 1 / rate) {
       this.ambT -= 1 / rate;
       const [tx, ty] = camera.screenToTile(rand(0, G.W), rand(-G.H * 0.1, G.H));
-      const a = b.ambient, col = a.color;
+      const a = amb, col = a.color;
       switch (a.type) {
         case 'snow': spawn({ type: 'dot', x: tx, y: ty, z: rand(80, 160), vx: rand(-0.3, 0.3), vy: rand(0.1, 0.4), vz: -rand(25, 45), life: 4, size: rand(1.2, 2.4), color: col }); break;
         case 'ember': spawn({ type: 'glow', x: tx, y: ty, z: rand(0, 30), vx: rand(-0.3, 0.3), vy: rand(-0.3, 0.3), vz: rand(15, 40), life: rand(1.5, 3), size: rand(1, 2.2), size1: 0, color: col, add: true }); break;

@@ -71,8 +71,8 @@ function liftWilds(map,rng,flags,seed,reserved) {
   let lo=Infinity,hi=-Infinity;for(let i=0;i<N;i++){lo=Math.min(lo,hgt[i]);hi=Math.max(hi,hgt[i]);}
   Object.assign(map,{hgt,climb:4,drop:10,minLevel:lo,maxLevel:hi,baseLevel:lo-14,noSky:true,_terr:null});
 }
-export function generateOverworld(depth,biome,seed) {
-  if (biome.id === 'castle') return generateCastle(depth,biome,seed);
+export function generateOverworld(depth,biome,seed,variant=null) {
+  if (biome.id === 'castle') return generateCastle(depth,biome,seed,variant);
   if (biome.id === 'sea_of_sand') return generateSeaOfSand(depth,biome,seed);
   const rng=new RNG(seed), map=new TileMap(W,H), flags=new Uint8Array(W*H);
   map.t.fill(1);map.losBlocks=true;

@@ -6,12 +6,14 @@ The game never runs three.js: it draws the baked pieces as the columns of a heig
 docs/MOUNTAINSIDE.md), so you walk along the tops of the walls, climb stairs to them, pass through gate tunnels and
 explore the keep, all at no runtime 3D cost.
 
+Each castle variant (docs/CASTLE_VARIANTS.md) is its own layout and its own bake, in `assets/tiles/castle3d/<dir>/`
+(the first castle's stays in `assets/tiles/castle3d/`); the game loads only the one it is building.
 ```bash
-python tools/castle3d.py textures        # masonry, slate and plank textures -> assets/source/castle3d/tex/
-node tools/castle3d_bake.js              # bake -> assets/source/castle3d/out/ (CASTLE3D_S=1.5 is the shipped scale)
-node tools/castle3d_bake.js preview 169,196[,w,h]   # one framed 3D view of an area -> tools/tests/out/
-python tools/castle3d.py pack            # -> assets/tiles/castle3d/ (lossless WebP pages + index.json)
-node tools/tests/castle3d.js             # in the game: wall-walk, stairs, tunnel, throne room, doors, drawbridge, overview
+python tools/castle3d.py textures        # masonry, slate and plank textures, the variants' stones and roofs -> assets/source/castle3d/tex/
+node tools/castle3d_bake.js [ids|all]    # bake -> assets/source/castle3d/out/[<dir>/] (1.5 px per world px, the shipped scale)
+node tools/castle3d_bake.js preview 169,196[,w,h,S] [id]   # one framed 3D view of an area -> tools/tests/out/
+python tools/castle3d.py pack [ids|all]  # -> assets/tiles/castle3d/[<dir>/] (lossless WebP pages + index.json)
+node tools/tests/castle3d.js [--castle=ids|all]   # in the game: wall-walk, stairs, tunnel, throne room, doors, drawbridge, overview
 node tools/tests/castle_overworld.mjs    # 100 seeds: sealed curtains, open gates, wall-walk, rooms, doors (no browser)
 node tools/tests/scenarios.js            # a bot plays every Castle scenario (the drawbridge comes down for it)
 ```
@@ -44,8 +46,10 @@ Pure data, so it also runs under Node. Both the game and the bake read it.
   across parts. Boxes are cut round every arched opening. Walls carry arrow slits, string courses, pilasters and
   mullioned lancet windows (`face` parts). Parapets get breastworks and merlons on a 2-tile rhythm.
 - **Materials:** the Castle Keep pack's ashlar (greyed toward the castle pack's limestone) and chapel carving, made to
-  tile vertically. Each texture doubles as its own **bump map**. Roofs use procedural slate, and the doors and
-  drawbridge procedural planks with iron bands.
+  tile vertically; the variants also use the pack's other wall materials (brick, ironstone, fleur-de-lis panels, and
+  slate stone, basalt, rubble, mossy stone and sooty brick cut from its ten-material source sheet), tinted. Each texture
+  doubles as its own **bump map**. Roofs use procedural slate (or a variant's pantiles, fish scales, copper seams, with
+  moss, snow or soot), and the doors and drawbridge procedural planks with iron bands.
 - **Light** is fixed to the camera, from the upper left, with one fixed shadow frustum over the whole castle.
 - **Pieces:** a second pass writes each pixel's tile (and layer: 0 masonry, 1 what stands over a walkway). The render is
   cut into one piece per tile and layer. Identical pieces are merged (same shape, colours within 6), which leaves
