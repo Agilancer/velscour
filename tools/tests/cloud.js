@@ -32,6 +32,7 @@ const FAKE = {
     export const collection = (db, ...p) => ({ path: p.join('/') });
     export const doc = (db, ...p) => ({ path: p.join('/'), id: p[p.length - 1] });
     export const serverTimestamp = () => Date.now();
+    export async function deleteDoc(ref) { return net('put', [ref.path, null]); }
     export async function getDocs(col) { const docs = await net('list', col.path); return { forEach: (fn) => docs.forEach((d) => fn({ id: d.id, data: () => wrap(d.data) })) }; }
     export async function runTransaction(db, fn) {
       const writes = [];
@@ -384,6 +385,23 @@ const check = (ok, msg, fails) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg);
     check(keys === 'at,build,cls,level,marks,name,tier,time,v' && e.v === 1 && Number.isInteger(e.tier) && e.time > 0 && e.cls === 'wizard' && e.build.gear.weapon.rarity === 6 && Array.isArray(e.build.bar), `board: the entry has the fields firestore.rules allows (${keys})`, fails);
     const top = await A.page.evaluate(async () => { const { Board } = await import('/src/game/leaderboard.js'); return (await Board.top('wizard')).map((x) => `${x.name} ${x.tier} ${x.time}`); });
     check(top.join(', ') === 'Cy 15 300, Bo 12 190, Ann 12 220', `board: top() orders Cy, Bo, Ann (${top.join(', ')})`, fails);
+    // a hero that took Velscour's gift (game/deathgift.js) is never listed: Dax posts clean, takes the gift, and his entry
+    // comes off at once; a gift taken signed out (or on another device) is caught by the next sync
+    await as(A, 'u-dax', 'Dax');
+    const pDax = await post(A, 'Dax', 14, 200), e0 = await entry('u-dax');
+    const gifted = await A.page.evaluate(async () => {
+      const { newCharData } = await import('/src/game/save.js'); const { Board } = await import('/src/game/leaderboard.js');
+      const c = newCharData('wizard', 'Dax'); c.cheated = true; return Board.submit(c, 30, 100);
+    });
+    const e1 = await entry('u-dax');
+    await A.page.evaluate((v) => window.__store('put', ['boards/wizard/entries/u-dax', v]), e0);
+    const e2 = await entry('u-dax');
+    await A.page.evaluate(async () => {
+      const { newCharData, writeSave } = await import('/src/game/save.js'); const { Cloud } = await import('/src/game/cloud.js');
+      const c = newCharData('wizard', 'Dax'); c.cheated = true; writeSave(c); await Cloud.sync(true);
+    });
+    const e3 = await entry('u-dax');
+    check(pDax.ok && e0 && e0.tier === 14 && gifted.barred && !e1 && e2 && !e3, `board: Dax's clean run is listed; with Velscour's gift his post is refused and his entry comes off (${JSON.stringify(gifted)}), and a sync takes it off again`, fails);
     const V = await device('V'), W = await device('W', null, false, { width: 844, height: 390, mobile: true });
     try {
       for (const [d, nm] of [[V, 'rift_board'], [W, 'rift_board_phone']]) {

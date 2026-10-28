@@ -291,6 +291,22 @@ async function endPart(page, shot, step) {
     return { a, b: G.world.kind, ready: Auto.riftReady(3) };
   });
   check(ex.a === 2 && ex.b === 'town' && !ex.ready, `auto-play's exit: on to tier ${ex.a} when ready; home when the next tier is too deadly (${ex.b})`);
+  // a hero that took Velscour's gift (game/deathgift.js): its fast clear keeps its own best but never the account's, and
+  // never posts; the tier dialog and the results say so
+  await clean(page);
+  await build(page, 1, 98);
+  await killUntil(page, 'quota');
+  const gift = await page.evaluate(async () => {
+    const { G } = window.VELSCOUR, w = G.world, R = w.rift; const { kill } = await import('/src/game/combat.js');
+    const { endgame } = await import('/src/game/endgame.js'); const { Rifts } = await import('/src/ui/rifts.js');
+    const b0 = JSON.stringify(endgame().bests.wizard); G.char.cheated = true;
+    R.t = 20; kill(R.guardian, G.player);
+    const d = Rifts.results(R, { next: R.result.next, onTown: () => {}, onNext: () => {} }), res = d.box.textContent; d.close();
+    const o = Rifts.open(1), dlg = o.box.textContent; o.close();
+    delete G.char.cheated;
+    return { board: R.result.board, best: R.result.best, same: JSON.stringify(endgame().bests.wizard) === b0, own: G.char.rifts.bestTime[1], res: /Velscour's gift/.test(res), dlg: /Velscour's gift/.test(dlg) };
+  });
+  check(gift.board === 'barred' && !gift.best && gift.same && gift.own === 20 && gift.res && gift.dlg, `Velscour's gift: a 0:20 clear is the hero's own best (${gift.own}) but not the account's, never posted ("${gift.board}"), and the results and tier dialog say so ${JSON.stringify(gift)}`);
 }
 
 async function autoPart(page, shot, step) {

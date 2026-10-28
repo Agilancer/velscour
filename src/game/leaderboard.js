@@ -14,6 +14,9 @@ export function buildSnapshot(c) {
   return { bar: (c.bar || []).filter(Boolean).slice(0, 15), gear, level: c.level | 0, marks: marksTotal() };
 }
 
+/** A hero that took Velscour's gift (game/deathgift.js) cheated: it never posts, and its class's entry comes off. */
+export const barred = (c) => !!(c && c.cheated);
+
 /** A board entry's time stamp as milliseconds: the real SDK hands back a Timestamp, the tests' fake a number. */
 export const atMs = (at) => (at && typeof at.toMillis === 'function' ? at.toMillis() : Number(at) || 0);
 
@@ -21,10 +24,13 @@ export const Board = {
   /** Post this hero's run (only when signed in; the backend keeps the better of it and the entry already there).
    * Resolves the backend's { ok, kept }, or false when it could not post. */
   async submit(c, tier, time) {
+    if (barred(c)) { await this.withdraw(c.classId).catch(() => false); return { barred: true }; }
     if (!Cloud.signedIn || !Cloud.backend) return false;
     const rec = { v: 1, name: String(c.name || 'Hero').slice(0, 24), cls: c.classId, tier: tier | 0, time: Math.max(0.1, Math.round(time * 10) / 10), at: Date.now(), level: c.level | 0, marks: marksTotal(), build: buildSnapshot(c) };
     return Cloud.putBoard(c.classId, rec);
   },
+  /** Take this player's entry of a class off the board (signed in): true once it is gone, false when signed out. */
+  async withdraw(cls) { return Cloud.signedIn ? Cloud.delBoard(cls) : false; },
   /** The top n entries of a class, best tier first, then the fastest, then the first to post. Loads the SDK;
    * throws when the board can't be reached. `at` comes back a number (the SDK stores a Timestamp). */
   async top(cls, n = 50) {

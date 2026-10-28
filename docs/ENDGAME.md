@@ -142,7 +142,8 @@ run = { tier, t, limit: riftTime(), progress, total, quota, guardian, gT, done, 
   max(open, tier + jump)`, `best`, `cleared[tier]++`, `bestTime[tier] = min`; `grantMarks(riftMarks(tier))` (`ceil(tier /
   10)`); `noteRiftBest` puts it in the account record's `bests[cls]` when it beats it (higher tier, or the same tier
   faster), and then `Board.submit` posts it to the honour board (signed in); `run.result.board` says how that went
-  (`posted` / `kept` / `signedout` / `offline`). "THE RIFT IS CLOSED", the exit opens; `game.riftExit(world, opts)`
+  (`posted` / `kept` / `signedout` / `offline`). A hero that took Velscour's gift (`c.cheated`, `barred(c)`) records
+  neither: no account best, no post, `barred`, and its class's entry is withdrawn (docs/CLOUD_SAVES.md). "THE RIFT IS CLOSED", the exit opens; `game.riftExit(world, opts)`
   shows the results (`Rifts.results`: the time and its share of the clock, the tiers opened, Marks, the prize, a new best
   and the board) with "On to Tier T+jump" / "Return to Town". Auto-play (`opts.auto`): on to `tier + jump` when
   `riftReady` says so, else to the highest open tier it is ready for if that is still a climb (`riftTier()`), else home
