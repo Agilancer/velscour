@@ -6,7 +6,8 @@
 //   ROOM's life and 0.65x its hits in three phases, their self-healing at 35%; the first at the east guard post when he rises, the second out of
 //   phase 3's first hellgate. Their own Raid loop runs without its seal, its execute clock or its enrage (his 20-minute
 //   clock is the only one), casting at 1/1.6 its pace while he fights too.
-//   The Pact: while one of them lives he takes 40% of every hit (m.ward) and his damage cap fills at 40% of its pace.
+//   The Pact: for two minutes after each of them steps in (while it lives) he takes 40% of every hit (m.ward) and his
+//   damage cap fills at 40% of its pace; then that courtier's Pact wanes.
 //   Abyssal Crown and Unbound Chains: velscour.js.
 import { G } from '../state.js';
 import { clamp, chance, pick, shuffle, angleTo } from '../core/util.js';
@@ -27,7 +28,7 @@ export const UNBOUND_KEYS = 3;
  *  plain fight 5-6): his life on top of HP_MUL (he sits at the damage cap, so it mostly sizes his seals, shards and
  *  obelisks), his hits instead of DMG_MUL, the clock, the court's life and hits (of a BOSS ROOM boss's) and cast pace
  *  while he fights, the Pact's ward, the Crown's odds after the first win, an Unbound Chains obelisk's life (of his). */
-export const UNBOUND = { hp: 2.4, dmg: 0.85, enrage: 20 * 60, courtHp: 0.8, courtDmg: 0.65, courtGap: 1.6, courtHeal: 0.35, pact: 0.4, crown: 0.25, obelisk: 0.035 };
+export const UNBOUND = { hp: 2.4, dmg: 0.85, enrage: 20 * 60, courtHp: 0.8, courtDmg: 0.65, courtGap: 1.6, courtHeal: 0.35, pact: 0.4, pactFor: 120, crown: 0.25, obelisk: 0.035 };
 // the throne arena as a raid arena (Raid.inside, startInter's leap); the gate is off the map so its seal blocks nothing
 const ARENA = { x: 6, y: 4, w: 32, h: 27, cx: 22, cy: 17.5, gate: { x: -40, y0: -40, y1: -39 } };
 const POST = [31, 13]; // the east guard post
@@ -80,7 +81,7 @@ function summonCourt(V, i, x, y) {
   const w = V.world, m = V.m;
   const b = makeRaidBoss(w, ARENA, w.depth, m.level, { tpl: V.courtTpl[i], art: V.courtArt[i], court: true, hp: UNBOUND.courtHp, dmg: UNBOUND.courtDmg });
   [b.x, b.y] = w.map.nudge(x, y, 1);
-  b.awake = true; b.post = [b.x, b.y];
+  b.awake = true; b.post = [b.x, b.y]; b.bornT = V.t;
   const heal = b.heal.bind(b); b.heal = (n) => heal(n * UNBOUND.courtHeal); // their wards, orbs and drains mend them a third as much: with him in the fight a hero can't play every mechanic, and Ysol outhealed a wizard for 20 minutes
   const R = b.raid;
   R.execT = Infinity; R.enrage = () => {}; // (Raid.update reads both; enraged stays false so it casts at its own pace)
@@ -137,10 +138,14 @@ export function courtGate(V) {
 export function unboundTick(V, dt) {
   const m = V.m, w = V.world;
   const alive = V.court.filter((b) => !b.dead);
-  m.ward = alive.length ? UNBOUND.pact : 1;
+  // a courtier holds the Pact for its first two minutes in the fight (pactFor), then it wanes: a courtier a hero can't
+  // bring down (Ser Valdric's tether, Ashenward's furnace) froze him at a phase gate for the whole 20-minute clock
+  const binding = alive.filter((b) => V.t - (b.bornT ?? V.t) < UNBOUND.pactFor);
+  for (const b of alive) if (!b.waned && !binding.includes(b)) { b.waned = true; UI.centerMsg('THE PACT WANES', `${b.raid.tpl.name} no longer shields him`, 2.4); addEffect(new Ring(m.x, m.y, 0.3, 4, 0.8, '#20e0ff', 5)); }
+  m.ward = binding.length ? UNBOUND.pact : 1;
   // the Pact holds for every hero: of the damage cap's refill (VelscourFight.pace) only the ward's share stays, so a hero
   // far over the cap (whose 40% would still fill it) loses the same 60% of his pace as one under it
-  if (alive.length && V.phase) V.bank = Math.max(0, V.bank - m.maxHp * PACE * dt * (1 - UNBOUND.pact));
+  if (binding.length && V.phase) V.bank = Math.max(0, V.bank - m.maxHp * PACE * dt * (1 - UNBOUND.pact));
   // the timed objectives (seals: two minutes, shards: the abyss) come before the court for auto-play: the court gives up its
   // priority meanwhile (else the courtier at hand beat a seal ten tiles off, and all four seals ran out)
   const timed = V.phase === 2 || V.phase === 4;

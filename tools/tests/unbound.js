@@ -14,7 +14,8 @@
 //    Heresy rank 10 with the drop forced (G.forceKey, tests only) drops one key that outlasts 120 s; auto-play walks to
 //    it; the pickup counts (c.keys, the account's keysFound) and the sheet shows it; enterUnbound refuses two keys and
 //    takes three (the throne, not practice, c.depth untouched, the hero in the arena).
-// 3. The fight stepped by hand (god mode): the first of the court at the east guard post and the Pact (a hit lands 40%);
+// 3. The fight stepped by hand (god mode): the first of the court at the east guard post and the Pact (a hit lands 40%;
+//    it wanes after a courtier's two minutes);
 //    its death breaks the Pact and opens nothing; the seals; phase 3's first hellgate brings the second; four Heart
 //    Shards; two APOCALYPSE circles; the first binding, the second at 5%; his death drops the hoard, an Unbound Heirloom
 //    and the Crown, counts the win, opens 'Exit — to town', clears no depth, shows no victory screen. Death in Unbound:
@@ -175,6 +176,9 @@ const gearN = +((process.argv.find((a) => a.startsWith('gear=')) || 'gear=60').s
     const c0 = s.court[0];
     check(s.phase === 1 && s.court.length === 1 && !c0.dead && Math.hypot(c0.post[0] - 31, c0.post[1] - 13) < 1.5 && !c0.boss, `phase 1: ${c0 && c0.id} of his court steps out at the east guard post (${c0 && c0.post.map((v) => v.toFixed(1))}); world.boss stays Velscour`);
     check(s.ward === 0.4 && s.warded && /Pact/.test(s.label), `the Pact: ward ${s.ward}, the boss bar warded (${s.label})`);
+    // the Pact wanes once a courtier has stood two minutes (pactFor), whether or not it lives
+    const wane = await page.evaluate(async () => { const { G, game } = window.VELSCOUR, V = G.world.velscour, b = V.court[0], t0 = b.bornT; b.bornT = V.t - 121; game.update(1 / 30); const w1 = V.m.ward; b.bornT = t0; b.waned = false; game.update(1 / 30); return [w1, V.m.ward]; });
+    check(wane[0] === 1 && wane[1] === 0.4, `the Pact wanes after two minutes of a courtier (ward ${wane[0]}), and holds while it is fresh (${wane[1]})`);
     console.log('     in the arena: ' + await page.evaluate(() => window.VELSCOUR.G.world.creatures.filter((c) => !c.dead && c.team === 'enemy').map((c) => c.name + (c.summon ? '*' : '')).join(', ')));
     await page.evaluate(() => { window.VELSCOUR.G.ui.msgEl.style.opacity = '0'; });
     await shot('unbound_p1_court');
