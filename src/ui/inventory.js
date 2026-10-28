@@ -234,7 +234,7 @@ function statsBlock() {
   const attrs = el('div', '');
   for (const k of ['str', 'dex', 'vit', 'int']) {
     const row = el('div', 'attr-row');
-    row.innerHTML = `<span title="${ATTRS[k].desc}">${ATTRS[k].name}${C.primary === k ? ' <span style="color:#ffd34a" title="Primary: +1% damage per point">★</span>' : ''}</span><b>${st[k]}</b>`;
+    row.innerHTML = `<span title="${ATTRS[k].desc}">${ATTRS[k].name}${C.primary === k ? ' <span style="color:#ffd34a" title="Primary: +1% damage per point">★</span>' : ''}</span><b>${Math.round(st[k])}</b>`;
     if (c.statPoints > 0) {
       const plus = el('button', 'plus', '+');
       plus.title = 'Shift-click: +5 · Ctrl-click: every point';
