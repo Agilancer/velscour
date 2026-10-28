@@ -201,32 +201,73 @@ Unbound.
 ## 3. Velscour Unbound (`src/game/unbound.js`, additions to `src/game/velscour.js`, `src/data/relics.js`)
 Three **Abyssal Keys** (`c.keys`, a counter; a ground item `GroundItem(x, y, 'key')` drawn as a cyan key glyph, picked
 up by `Player.pickup` → `c.keys++`, `endgame().keysFound++`) open the rematch. They drop from BOSS ROOM bosses past depth
-600 (chance `0.06 + 0.002 * (depth - 600)`, capped 0.25, only with Heresy rank >= 10) and from rift guardians (above).
+600 (chance `0.06 + 0.002 * (depth - 600)`, capped 0.25, only with Heresy rank >= 10) and from rift guardians (`0.12 +
+0.005 * tier` from tier 10, capped 0.5). `keyChance(world, m)` (read by `loot.dropLoot`) rolls **once per boss** (`m._keyRoll`:
+`dropLoot` runs three times for a BOSS ROOM boss), never for the court; `G.forceKey = true` (tests only) makes the key
+certain wherever one can drop. A key on the floor never fades (the 120-s rule skips it) and auto-play walks to it.
 `unboundReady(c)` = keys >= 3 and the Endgame unlocked. The altar panel and the skull's message box ("unbound") start it:
 `game.enterUnbound()` spends the keys and builds the throne at `D = max(FINAL_DEPTH, c.depth)` with `G.unboundNext =
 true` (consumed by `buildDungeon`: `world.unbound = true`, `world.practice = false`); `c.depth` is untouched; the hero is
-set down in the arena like `finalBoss()`. In Unbound `onBossKilled` opens the exit but changes no `cleared`/`deepest`; the
-exit and the town portal lead to town only.
+set down in the arena like `finalBoss()` (the court's art is loaded with the level). In Unbound `onBossKilled` opens the
+exit ('Exit — to town') but changes no `cleared`/`deepest` and shows no victory screen; the exit and the town portal lead
+to town only. Death (`game.unboundDeath`): the death screen ("on Velscour's throne"), back to town, no Defiance, the
+keys stay spent.
 
-`setupVelscour(world, m, gen)` reads `world.unbound` and calls `setupUnbound(V)` which adds, on top of the five phases:
-- **The Court of the Abyss**: two of the twenty signature raid bosses (`RAID_BOSSES` with `sigs: true`, never the same
-  two) made by `makeRaidBoss(world, arena, depth, level, { tpl })` with an arena rect over the ellipse (`{ x: 6, y: 4, w:
-  32, h: 27, cx: 22, cy: 17.5, gate: { x: 22, y0: 31, y1: 32 } }`); their life x0.55 and damage x0.8 of a BOSS ROOM's.
-  The first stands at the east guard post when the fight begins (phase 1), the second steps out of the hellgate at
-  Crown of Hellfire (phase 3). They use their own `Raid` loop; `Raid.seal` is skipped for them (`opts.court = true`).
-- **The Pact**: while a court boss lives Velscour takes 60% less damage (`m.ward = 0.4`; the boss bar shows it warded).
-- **Abyssal Crown**: APOCALYPSE leaves two safe circles instead of three; the abyss drifts four Heart Shards.
-- **Unbound Chains**: the obelisks at 10% come back once (a second binding at 5%).
-- HP_MUL x1.3 on top (2.6), DMG_MUL 0.85, `ENRAGE_T` 20 minutes; `PACE` as is (life gates keep it 7-12 minutes).
-- Auto-play: the court bosses carry `raidPriority` so it kills them first; the hazards publish danger/safeAt/autoGoal as
-  before.
+`setupVelscour(world, m, gen)` reads `world.unbound` and calls `setupUnbound(V)` which adds, on top of the five phases
+(dials in `UNBOUND`, `src/game/unbound.js`):
+- **The Court of the Abyss**: two of the signature raid bosses (`RAID_BOSSES` with `sigs: true` but the Pipe Organ, whose
+  Danse Macabre wants a square hall: in the oval with its lava auto-play dodged it for 14 minutes; never the same two, never
+  the last fight's pair: `c.unbound.court`) made by `makeRaidBoss(world, ARENA, depth, his level, { tpl, art, court: true,
+  hp: 1.2, dmg: 0.8 })` over `ARENA = { x: 6, y: 4, w: 32, h: 27, cx: 22, cy: 17.5, gate: { x: -40, y0:
+  -40, y1: -39 } }` (the gate off the map: their seal blocks nothing). The first steps out at the east guard post [31,
+  13] when he rises (`begin`), the second climbs out of phase 3's first hellgate (the Legion's first call in Crown of
+  Hellfire opens it instead). They run their own `Raid` loop awake from the start, with no execute clock (`execT =
+  Infinity`) and no enrage (`enrage` is a no-op: his 20-minute clock is the only one), in three phases (their first, second
+  and last: two ward interludes, not three), casting at 1/1.6 of their pace while he fights too (phases 1, 3, 5: both
+  sets of hazards at once left auto-play no ground, Ser Valdric beside the lava lived 14 minutes); a courtier that strays
+  out of the arena, or into phase 3's lava where a melee hero won't follow, for 1.5 s is set back at its post. In
+  the Seals and the abyss the seals, their Wardens and the Heart Shards carry `raidPriority` 9-9.5 and the court drops its
+  6 to 0, so auto-play breaks the timed objectives first (the courtier at hand used to win over a seal ten tiles off). Their `raid.onDeath` is replaced (`courtDeath`): wards and adds die, two
+  `dropLoot`s, the hero's sunder/polarity multipliers reset, but `w.darkK` stays (the abyss owns the dark; in phase 4 it is
+  held at 0.93 every frame). They are never `world.boss`/`world.raid` (the HUD shows him; they carry the life bars of any
+  monster) and `onBossKilled` returns on `m.raid.court`. `raidPriority` 6: auto-play kills them first.
+- **The Pact**: while a courtier lives Velscour takes 40% of every hit (`m.ward = 0.4`, cyan tethers from them to him; the
+  boss bar shows it warded and "Pact: slay his court") **and his damage cap refills at 40% of its pace** (`unboundTick`
+  drains 60% of the refill from `V.bank`; `absorb()`, `pace()` and `PACE` are untouched). Without the second half a hero
+  far over the cap (2.5x it, as the test hero is) never felt the Pact: Velscour reached 80% while his first courtier lived.
+- **Abyssal Crown**: APOCALYPSE leaves two safe circles instead of three; the abyss drifts four Heart Shards at -4% each.
+- **Unbound Chains**: after the first binding breaks (at 10%) the life gate stops at 5%, where he binds himself to four
+  fresh obelisks (`V.bound2`); only then can he die. In Unbound an obelisk holds 3.5% of his life (2% in the plain fight).
+- His life x2.4 on top of `HP_MUL` (4.8), his hits x0.85 (instead of `DMG_MUL` 0.7), the clock 20 minutes
+  (`V.enrageT`, the label's clock reads it); `PACE` as is. All dials are `UNBOUND` in `src/game/unbound.js`.
 
-On his death (`onDeath`, Unbound): the usual hoard, plus **one Unbound Heirloom** (`makeHeirloom(lvl, { unbound: true
-})`) and, the first win always and then one in four, **the Crown of the Demon Lord**. Both are Heirlooms with `unbound:
-true` in `HEIRLOOMS` (never from `maybeRelic`; they count in the Codex): the Crown (`crown_demon`, head slot, minIlvl 250,
-power `demonlord`: +2 All Skills, +25% damage to bosses, and a Pit Demon of the Legion fights for you) and four more
-(weapon `abyssal_edge`, body `mantle_unbound`, ring `seal_of_the_pit`, offhand `heart_of_the_abyss`). `c.unbound = {
-wins: 0, best: 0 }` (seconds), `endgame().unboundWins`.
+Measured (`node tools/tests/unbound.js autoonly [runs]`: auto-play, god mode, a paladin at level 259 in the best of 60
+item level 262 drops a slot, +8, gems, from a fixed seed; `gear=5` the best of 5; `original` the plain fight): the plain
+fight 5.0-6.2 minutes (it sits at the damage cap: 20% of his life in 45 s). Velscour Unbound as shipped: 6.2-12.8 minutes
+(mean 7.6, median 6.9, 10 fights) for that hero, 8.3-13.5 (mean 10.1, 4 fights) for the weaker one; a courtier lives
+35-260 s, mostly 50-100 s, two thirds of it in its two ward interludes; the long fights are a first courtier that a melee
+hero struggles with (Ophaniel's gaze, Thessaly's trumpet: 200-340 s). On the way (about 90 fights): the brief's dials
+(x1.3, court 0.55, four phases, the Pact on hits only) gave 8.0-16.6 (a third interlude, and a Pact that never bound a
+hero over the cap); three phases alone 5.0-8.0; the Pact on the cap with the court at 1.25-2.2: 6.0-10.9 plus two
+22-minute deadlocks (Valdric and the Organ in phase 3: fixed by the cast pace, the lava rule and leaving the Organ out);
+x1.3 -> x2.4 and the 3.5% obelisks each added 0.3-0.5 minutes; court x1.6 instead of x1.2 only lengthened the tails.
+
+On his death (`unboundSpoils`): the court falls with him (no loot), the usual hoard, plus **one Unbound Heirloom**
+(`makeHeirloom(lvl, { unbound: true })`, one of the four) and, the first win always (`c.unbound.wins === 0` then) and
+then one in four, **the Crown of the Demon Lord**, both open (never sealed); the Codex notes them on pickup.
+`c.unbound = { wins, best (seconds), court }`, `endgame().unboundWins++`.
+
+| Unbound Heirloom | slot | power |
+|---|---|---|
+| Crown of the Demon Lord (`crown_demon`, only by its id) | head | `demonlord`: +2 All Skills, +25% damage to bosses; a Pit Demon of the Legion (a permanent summon, `relicprocs.js pitDemon`) climbs out of a hellgate at the hero's first blow, cast or wound in a level, follows him from level to level, hits for 60% of his recent hit, leaves when the Crown does, returns 20 s after it falls |
+| The Abyssal Edge (`abyssal_edge`) | weapon (sword) | `abyssal_edge`: hits have a 15% chance to tear a void rift at the target for 200% of the hit as Shadow (proc fx `void`) |
+| Mantle of the Unbound (`mantle_unbound`) | body | `unbound_mantle`: 12% damage reduction; immune to the abyss's dread (legendary flag `dreadless`) |
+| Seal of the Pit (`seal_of_the_pit`) | ring | `pit_seal`: +1 Pierce, +20% critical damage; slain demons heal 2% (proc `only: 'demon'`) |
+| Heart of the Abyss (`heart_of_the_abyss`) | offhand (orb) | `abyss_heart`: +15% damage; casts have a 10% chance to drop three meteors (proc fx `stars`, `n: 3`) |
+
+All five have `unbound: true` (minIlvl 250, lines worth ~4.6-4.7 core lines, rings 2.9): `makeHeirloom` leaves them out
+unless `opts.unbound` (the Crown, `crown: true`, only by `opts.id`), so `maybeRelic` never makes one; `CODEX_TOTAL.h`
+counts them (41).
 
 ## 4. Infernal Marks (`src/game/marks.js`, `src/ui/marks.js`)
 Account-wide, endless. A Mark is earned by **XP past the level cap** (`Player.gainXp` at `MAX_LEVEL` hands the XP,
@@ -268,4 +309,5 @@ rift clear `ceil(tier / 4)` (tier 70, as deadly as depth 1200: 18).
   the time; 1000 (+24.8%, +8.3) life x1.22-1.25, ROOM x0.91-0.99; 1000 all on Vitality life x1.26-1.30, ROOM x1.00.
   The wall is the kill time (ROOM ~460-560 s at 1200) and it holds. A normal's hit is 3-5% of a capped hero's life
   even with no Marks (2-4% with 1000), so "15%+ of life" was never the baseline; Marks cut it by at most a fifth.
-- Unbound: `unbound.js` steps every phase and auto-play wins at depth 500 in god mode in 7-12 minutes.
+- Unbound: `unbound.js` steps every phase and auto-play wins at depth 500 in god mode in 7-12 minutes (measured 6.2-13.5,
+  mean 8.3 over 14 fights; the plain fight 5-6).
