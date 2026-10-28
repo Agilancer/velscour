@@ -14,18 +14,23 @@ export function buildSnapshot(c) {
   return { bar: (c.bar || []).filter(Boolean).slice(0, 15), gear, level: c.level | 0, marks: marksTotal() };
 }
 
+/** A board entry's time stamp as milliseconds: the real SDK hands back a Timestamp, the tests' fake a number. */
+export const atMs = (at) => (at && typeof at.toMillis === 'function' ? at.toMillis() : Number(at) || 0);
+
 export const Board = {
-  /** Post this hero's run (only when signed in; the backend decides the rest). Resolves false when it could not. */
+  /** Post this hero's run (only when signed in; the backend keeps the better of it and the entry already there).
+   * Resolves the backend's { ok, kept }, or false when it could not post. */
   async submit(c, tier, time) {
     if (!Cloud.signedIn || !Cloud.backend) return false;
-    const rec = { v: 1, name: String(c.name || 'Hero').slice(0, 24), cls: c.classId, tier: tier | 0, time: Math.round(time * 10) / 10, at: Date.now(), level: c.level | 0, marks: marksTotal(), build: buildSnapshot(c) };
+    const rec = { v: 1, name: String(c.name || 'Hero').slice(0, 24), cls: c.classId, tier: tier | 0, time: Math.max(0.1, Math.round(time * 10) / 10), at: Date.now(), level: c.level | 0, marks: marksTotal(), build: buildSnapshot(c) };
     return Cloud.putBoard(c.classId, rec);
   },
-  /** The top n entries of a class, best tier first then the fastest time; [] when offline or signed out. */
+  /** The top n entries of a class, best tier first, then the fastest, then the first to post. Loads the SDK;
+   * throws when the board can't be reached. `at` comes back a number (the SDK stores a Timestamp). */
   async top(cls, n = 50) {
-    if (!Cloud.backend) return [];
     const all = await Cloud.board(cls);
-    return all.filter((e) => e && Number.isFinite(e.tier) && Number.isFinite(e.time)).sort((a, b) => b.tier - a.tier || a.time - b.time).slice(0, n);
+    return all.filter((e) => e && Number.isFinite(e.tier) && Number.isFinite(e.time)).map((e) => ({ ...e, at: atMs(e.at) }))
+      .sort((a, b) => b.tier - a.tier || a.time - b.time || a.at - b.at).slice(0, n);
   },
 };
 export { G };

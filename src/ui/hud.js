@@ -333,7 +333,7 @@ export const HUD = {
     set('bossWard', !!(boss && boss.ward < 1), (v) => { $('#boss-bar').classList.toggle('warded', v); });
     // the Abyssal Rift's clock and quota (game/rifts.js)
     const R = w && w.rift;
-    set('rift', R ? `${R.tier}|${Math.ceil(R.left)}|${R.pct}|${R.guardian ? 1 : 0}|${R.done ? 1 : 0}|${R.failed ? 1 : 0}` : '', (v) => {
+    set('rift', R ? `${R.tier}|${Math.ceil(R.left)}|${R.pct}|${R.guardian ? 1 : 0}|${R.done ? 1 : 0}|${R.failed ? 1 : 0}|${boss ? 1 : 0}` : '', (v) => {
       $('#rift-bar').classList.toggle('hidden', !R);
       if (!R) return;
       const left = Math.ceil(R.left);
@@ -343,6 +343,7 @@ export const HUD = {
       $('#rift-pct').textContent = R.done ? 'closed' : R.failed ? 'collapsed' : R.guardian ? 'the Guardian' : R.pct + '%';
       $('#rift-bar').classList.toggle('urgent', !R.done && !R.failed && left <= 60);
       $('#rift-bar').classList.toggle('boss', !!boss);
+      $('#rift-bar').classList.toggle('guard', !!R.guardian && !R.done && !R.failed);
     });
     const forest = w?.biome?.id === 'dark_forest';
     const breach = !!w?.breach;

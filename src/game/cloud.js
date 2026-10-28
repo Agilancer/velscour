@@ -73,9 +73,15 @@ function firebaseBackend() {
       (await fs.getDocs(fs.collection(db, 'boards', cls, 'entries'))).forEach((d) => { out.push({ uid: d.id, ...d.data() }); });
       return out;
     },
+    /** Post a run unless the entry already holds a better one (a higher tier, or the same tier as fast): { ok, kept }. */
     putBoard(cls, uid, rec) {
       const ref = fs.doc(db, 'boards', cls, 'entries', uid);
-      return fs.runTransaction(db, async (t) => { t.set(ref, { ...rec, at: fs.serverTimestamp() }); return { ok: true }; });
+      return fs.runTransaction(db, async (t) => {
+        const d = await t.get(ref), cur = d.exists() ? d.data() : null;
+        if (cur && !(rec.tier > cur.tier || (rec.tier === cur.tier && rec.time < cur.time))) return { ok: false, kept: true };
+        t.set(ref, { ...rec, at: fs.serverTimestamp() });
+        return { ok: true, kept: false };
+      });
     },
   };
   function fromDoc(r) { return { ...r, gz: r.gz && r.gz.toUint8Array ? r.gz.toUint8Array() : r.gz || null }; }
@@ -271,10 +277,11 @@ export const Cloud = {
   useBackend(b) { be = b; ready = null; },
   /** The backend once it is connected (the honour board reads through it), else null. */
   get backend() { return be && ready ? be : null; },
-  /** The honour board of a class (game/leaderboard.js): every entry, as stored. */
-  async board(cls) { await ready; return be && be.board ? be.board(cls) : []; },
-  /** This player's entry on a class's board (signed in only). */
-  async putBoard(cls, rec) { if (!st.uid) return false; await ready; if (!be || !be.putBoard) return false; await be.putBoard(cls, st.uid, rec); return true; },
+  /** The honour board of a class (game/leaderboard.js): every entry, as stored. Loads the SDK (a signed-out reader
+   * too: the board is public); throws when Google can't be reached. */
+  async board(cls) { await this.preload(); return be.board ? be.board(cls) : []; },
+  /** This player's entry on a class's board (signed in, connected): the backend's { ok, kept }, or false. */
+  async putBoard(cls, rec) { if (!st.uid || !ready) return false; await ready; return be && be.putBoard ? be.putBoard(cls, st.uid, rec) : false; },
   get uid() { return st.uid; },
   /** Load the SDK (the settings dialog calls this so the sign-in popup opens inside the tap). */
   preload() {
