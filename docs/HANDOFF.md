@@ -2983,6 +2983,15 @@ Do these in order, unless the user asks for something else. Their feedback after
 - If `G.mode==='game' && G.world`, the frame runs `game.update(dt); game.render()`. Otherwise it runs `renderTitle(dt)`.
 - Exceptions are caught and sent to `reportError`. Only the first 4 reach `UI.log`; all go to the console.
 - After that, `input.endFrame()` always runs, then the next rAF is requested.
+- **Hidden pages** (minimised, covered by other windows, a locked PC) get no rAF, and their timers are throttled to
+  1/s, then to 1/min after five minutes. A Blob Web Worker (`startTicker`) posts 30 ticks a second; `tick()` steps
+  `game.update` (no render) in `<= 1/30` s steps to catch the game clock up to real time while `document.hidden`, or
+  when rAF has been silent for 500 ms on a visible page whose ticks still arrive on time. Both drivers share `last`, so
+  nothing is stepped twice. `loop()` sets `lastFrame` before the frame-rate cap's early return: the cap compares with
+  `last`, which the ticker keeps moving, so counting only drawn frames left the ticker in charge and nothing drawn
+  after a hidden spell. `warmLevelArt` skips its loading-screen yields while hidden, because chained timers can
+  wait a minute. Test: `background.js` (raw CDP, because Playwright pins pages visible). The OS still suspends phone
+  browsers when locked, and Chrome's Energy Saver can freeze a silent hidden tab after 5 minutes.
 - `game.update` (game.js:319) order:
   1. Key toggles (I/K/T/B/H/Tab/M/Esc).
   2. `G.paused = ui.modal || (pauseMenus && dungeon && panel open)`.
