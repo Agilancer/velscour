@@ -14,6 +14,32 @@ Contents
 
 ---
 
+## October 28, 2026 — the castles on phones (branch `fix/castle-phone-pass`)
+- **Request:** test the new castles, especially on phones. No real phone was available: Chromium emulating one
+  (`tools/tests/castle_phone.js`: touch, 844 x 390 and 390 x 844 at DPR 2, the CPU slowed 4x, the machine's GPU), plus the
+  live site in a phone-sized browser (all eleven castles' pages served from the `/velscour/` path; Hoarfrost played in
+  portrait: name card, log, touch controls fine).
+- **Found and fixed:** Goldspire ran at 0.6 fps (1.4 s a frame). Its five 4096 px pages (about 320 MB of textures) each
+  held pieces from all over the castle, so every frame drew from all of them, and past the GPU's texture budget they were
+  swapped in and out every frame. `python tools/castle3d.py repack` re-cuts a castle's published pages into 2048 px
+  pages grouped by where their pieces stand (skyline-packed, cropped, checked pixel for pixel; `pack` runs it after a
+  bake); a view now draws from three or four. All eleven castles re-cut, Ironcrown too: Goldspire 30 fps. Downloads grew
+  a little (all castles 110 -> 123 MB; Goldspire 17 -> 20 MB): grouping by place compresses worse.
+- **Found and fixed:** 42 of the 55 herald and lord lines were longer than the two-line speech bubble and were cut off
+  with an ellipsis (on every screen). They speak in the forge's three-line bubble now, each line held 3.8 s or one second
+  per 15 characters; `castle3d.js` checks every story line fits at the real font.
+- **Measured, left alone:** each castle visit decodes 30-87 Mpx of castle art; the emulated phone's browser sits at about
+  800-900 MB in a castle and lets the castle go when you leave (castles never follow each other). A 1x bake would
+  quarter that but look soft (phones draw the castle at about 1.3 device px per baked px). Building a castle level takes
+  2-8 s on the slowed CPU, behind the loading screen.
+- **Verified:** `castle_phone.js` for every castle in a fresh browser after the re-cut (all pass: 12-42 fps on the
+  slowed phone, the busier the machine the lower; the joystick walks the hero over every drawbridge in 7-13 s; name card
+  and herald on screen), `castle3d.js` (re-cut art loads and draws, every story line fits its bubble). Not rerun after
+  the re-cut: the portrait pass (portrait was checked on the live site before it).
+- **Not verified:** a real phone, Safari/iOS (WebKit has its own image and canvas memory limits).
+
+---
+
 ## October 28, 2026 — ten Castle variants: their own layouts, stone, palettes and stories (branch `feat/castle-variants`)
 - **Request:** ten new unique variants of the Castle overworld: palette swaps so the castles are different colours,
   different layouts, different little stories.
