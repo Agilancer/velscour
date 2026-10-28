@@ -1,14 +1,16 @@
 // Velscour's first seconds without god mode, traced: a depth-500-geared hero (like velscour_real.js) set down in his
 // arena; every drop in life is logged with the fight's clock, what was near and who hit last, until the hero dies or
 // `secs` of fight pass. For finding deaths that happen right as the fight begins.
-//   node tools/tests/velscour_probe.js [class] [attempts] [secs] [unbound]
+//   node tools/tests/velscour_probe.js [class] [attempts] [secs] [unbound] [court=ysol,nyx] [every=15]   (every: a status line
+//   each N seconds of the fight: his life and phase, the court's, what auto-play is doing and hitting)
 const { openGame, report } = require('./harness');
 const cls = process.argv[2] || 'ranger', attempts = +(process.argv[3] || 4), secs = +(process.argv[4] || 20), unbound = process.argv.includes('unbound');
+const court = (process.argv.find((a) => a.startsWith('court=')) || '').slice(6), every = +((process.argv.find((a) => a.startsWith('every=')) || 'every=0').slice(6));
 
 (async () => {
   const { browser, page, errors } = await openGame();
   for (let a = 0; a < attempts; a++) {
-    const r = await page.evaluate(async ({ cls, secs, unbound }) => {
+    const r = await page.evaluate(async ({ cls, secs, unbound, court, every }) => {
       const { G, game } = window.VELSCOUR;
       const { Auto, charScore } = await import('/src/game/autoplay.js');
       const { rollItem, rollGem, SLOTS } = await import('/src/data/items.js');
@@ -33,6 +35,7 @@ const cls = process.argv[2] || 'ranger', attempts = +(process.argv[3] || 4), sec
       c.potions = { hp: 15, mp: 15, rejuv: 6, fury: 3 };
       G.godMode = false;
       game.enterTown(); await new Promise((r) => setTimeout(r, 600));
+      if (court) G.unboundCourt = court.split(',');
       if (unbound) { const { unlockEndgame } = await import('/src/game/endgame.js'); unlockEndgame(); c.keys = 3; await game.enterUnbound(); }
       else await game.finalBoss();
       const w = G.world, V = w.velscour, P = G.player, log = [];
@@ -48,11 +51,15 @@ const cls = process.argv[2] || 'ranger', attempts = +(process.argv[3] || 4), sec
           log.push(`t=${V.t.toFixed(2)} ph${V.phase} -${Math.round(((last - P.hp) / P.maxHp) * 100)}% -> ${Math.round((P.hp / P.maxHp) * 100)}% near=[${near.join('; ')}] hz=[${[...new Set(w.hazards.map((h) => h.constructor.name))].join(',')}] boss@${Math.hypot(V.m.x - P.x, V.m.y - P.y).toFixed(1)}`);
         }
         last = P.hp;
+        if (every && t % (30 * every) === 0 && log.length < 80) {
+          const ct = (V.court || []).map((b) => `${b.raid.tpl.id} ${Math.round((b.hp / b.maxHp) * 100)}%${b.dead ? '†' : ''}${b.raid.inter ? ' warded(' + b.raid.wards.filter((x) => !x.dead).length + ')' : ''} ward${b.ward}`).join(' / ');
+          log.push(`[${V.t.toFixed(0)}s] ph${V.phase} V ${Math.round((V.m.hp / V.m.maxHp) * 100)}% ward${V.m.ward} | court ${ct} | hero ${Math.round((P.hp / P.maxHp) * 100)}% pots ${c.potions.hp + c.potions.rejuv} | ${Auto.status || ''} | tgt ${(P.attackTarget && P.attackTarget.name) || '-'}`);
+        }
         if (t % 120 === 0) await new Promise((r) => setTimeout(r, 0));
       }
       Auto.toggle(false);
       return { dead: P.dead, t: +V.t.toFixed(2), phase: V.phase, killer, maxHp: P.maxHp, armor: P.st.armor, res: P.st.res, log };
-    }, { cls, secs, unbound });
+    }, { cls, secs, unbound, court, every });
     console.log(`${cls} #${a + 1}: dead=${r.dead} at ${r.t}s phase ${r.phase} killer=${r.killer} life ${r.maxHp} armor ${r.armor} res ${JSON.stringify(r.res)}`);
     for (const l of r.log) console.log('   ' + l);
   }
