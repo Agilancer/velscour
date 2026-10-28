@@ -21,6 +21,10 @@ const depth = +((process.argv.find((a) => a.startsWith('depth=')) || `depth=${un
       const { depthLevel } = await import('/src/data/depth.js');
       const ML = depthLevel(depth);
       if (Auto.on) Auto.toggle(false);
+      // the last attempt's death or victory screen comes up a moment after it (setTimeout): let it, then clear it, or it
+      // lands in this fight (auto-play clicks it and walks the new hero out of the arena)
+      await new Promise((r) => setTimeout(r, 3600));
+      document.querySelectorAll('.screen').forEach((s) => s.remove()); G.ui.modalCount = 0;
       await game.newChar(cls, 'Realbot');
       document.querySelectorAll('.screen').forEach((s) => s.remove()); G.ui.modalCount = 0; G.ui.closeAll();
       const c = G.char, p = G.player;

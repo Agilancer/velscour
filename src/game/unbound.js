@@ -27,7 +27,7 @@ export const UNBOUND_KEYS = 3;
  *  plain fight 5-6): his life on top of HP_MUL (he sits at the damage cap, so it mostly sizes his seals, shards and
  *  obelisks), his hits instead of DMG_MUL, the clock, the court's life and hits (of a BOSS ROOM boss's) and cast pace
  *  while he fights, the Pact's ward, the Crown's odds after the first win, an Unbound Chains obelisk's life (of his). */
-export const UNBOUND = { hp: 2.4, dmg: 0.85, enrage: 20 * 60, courtHp: 1.2, courtDmg: 0.8, courtGap: 1.6, pact: 0.4, crown: 0.25, obelisk: 0.035 };
+export const UNBOUND = { hp: 2.4, dmg: 0.85, enrage: 20 * 60, courtHp: 0.8, courtDmg: 0.65, courtGap: 1.6, pact: 0.4, crown: 0.25, obelisk: 0.035 };
 // the throne arena as a raid arena (Raid.inside, startInter's leap); the gate is off the map so its seal blocks nothing
 const ARENA = { x: 6, y: 4, w: 32, h: 27, cx: 22, cy: 17.5, gate: { x: -40, y0: -40, y1: -39 } };
 const POST = [31, 13]; // the east guard post
