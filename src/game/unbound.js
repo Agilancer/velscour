@@ -156,7 +156,7 @@ export function unboundTick(V, dt) {
     // while he fights too (phases 1, 3, 5) a courtier casts at 1/1.6 its pace: both their hazards at once left auto-play
     // no ground to stand on (Ser Valdric beside the lava tide: 14 minutes of dodging)
     const R = b.raid;
-    b.raidPriority = timed ? 0 : 6;
+    b.raidPriority = timed || b.waned ? 0 : 6; // (once its Pact has waned, he is the target again: a wizard spent 19 minutes on Vexis)
     if (R.gap > (R.gap0 ?? Infinity) && !V.hold) R.gap *= UNBOUND.courtGap;
     R.gap0 = R.gap;
     if ((b.tetherT = (b.tetherT || 0) - dt) <= 0 && !V.hold) { b.tetherT = 0.2; addEffect(new Bolt(b.x, b.y, 80, m.x, m.y, 110, '#20e0ff', 0.16, 2)); }
