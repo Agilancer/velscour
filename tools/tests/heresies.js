@@ -421,13 +421,14 @@ async function gear521(page) {
     const gz = await page.evaluate(async () => {
       const { G } = window.VELSCOUR, X = window.HX, H = await import('/src/game/heresies.js'), { makeMonster } = await import('/src/game/monster.js'), out = {};
       for (const [k, ids] of [['none', []], ['on', ['gaze']]]) {
-        const w = X.build(21, ids), p = w.player, map = w.map;
+        const w = X.build(21, ids, { seed: 2100 }), p = w.player, map = w.map;
         for (const m of X.foes(w)) if (m.rank !== 'boss') m.dead = true;
-        // a spot 40+ tiles from the hero, walkable and joined to him
+        const len = (x, y) => { const q = map.findPath(x, y, p.x, p.y, 40000); let L = 0; if (q) for (let i = 1; i < q.length; i++) L += Math.hypot(q[i][0] - q[i - 1][0], q[i][1] - q[i - 1][1]); return +L.toFixed(1); };
+        // a spot 40+ tiles from the hero and 50+ tiles of path, walkable and joined to him
         let spot = null;
-        for (let i = 0; i < 4000 && !spot; i++) { const x = 1 + Math.random() * (map.w - 2), y = 1 + Math.random() * (map.h - 2); if (map.walkable(x, y) && Math.hypot(x - p.x, y - p.y) > 40 && map.findPath(x, y, p.x, p.y, 20000)) spot = [x, y]; }
+        for (let i = 0; i < 4000 && !spot; i++) { const x = 1 + Math.random() * (map.w - 2), y = 1 + Math.random() * (map.h - 2); if (map.walkable(x, y) && Math.hypot(x - p.x, y - p.y) > 40 && len(x, y) > 50) spot = [x, y]; }
         const m = makeMonster(w, 'skeleton', w.biome, 21, 'normal', spot[0], spot[1]); w.add(m); H.heresyTick(w, 1);
-        const walk = () => { const q = map.findPath(m.x, m.y, p.x, p.y, 40000); let L = 0; if (q) for (let i = 1; i < q.length; i++) L += Math.hypot(q[i][0] - q[i - 1][0], q[i][1] - q[i - 1][1]); return +L.toFixed(1); };
+        const walk = () => len(m.x, m.y);
         out[k] = { range: m.aggroRange, gaze: !!m.gaze, d0: walk() };
         m.awake = true; out[k].target = m.pickTarget() === p;
         p.update = function () { this.hp = this.maxHp; };

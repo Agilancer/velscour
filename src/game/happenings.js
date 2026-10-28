@@ -117,6 +117,8 @@ export function setupHappenings(world, start, gen) {
   if (torment) { if (H.omen === 'champions') for (const m of world.creatures) if (m.team === 'enemy' && m.rank === 'normal' && chance(0.12)) makeElite(m, 'champion', depth, world); return; }
   const want = 1 + (chance(0.6) ? 1 : 0) + (chance(0.35) ? 1 : 0) + (H.omen === 'vault' ? 3 : 0);
   const spots = roomSpots(world, start, want + 3);
+  // the monster that last killed the hero is back, and it remembers (its spot first: the shrines and caches can't take it)
+  const c = G.char, nemSpot = c && c.nemesis && (depth >= c.nemesis.depth - 5 || black) ? spots.pop() : null;
   // shrines
   const nShrines = chance(0.7) ? (chance(0.35) ? 2 : 1) : 0;
   for (let i = 0; i < nShrines && spots.length; i++) addShrine(world, spots.pop(), pick(SHRINE_KEYS));
@@ -143,9 +145,7 @@ export function setupHappenings(world, start, gen) {
       }
     }
   }
-  // the monster that last killed the hero is back, and it remembers
-  const c = G.char;
-  if (c && c.nemesis && (depth >= c.nemesis.depth - 5 || black) && spots.length) spawnNemesis(world, spots.pop(), c.nemesis);
+  if (nemSpot) spawnNemesis(world, nemSpot, c.nemesis);
   if (H.omen === 'champions') {
     for (const m of world.creatures) if (m.team === 'enemy' && m.rank === 'normal' && chance(0.12)) makeElite(m, 'champion', depth, world);
   }

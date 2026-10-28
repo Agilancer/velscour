@@ -582,7 +582,7 @@ export function makeRaidBoss(world, arena, depth, level, opts = {}) {
   const art = ART_BY_ID[artId];
   const mods = rollMods(depth);
   const fifth = worldHeresies(world).includes('fifth'); // the Fifth Phase Heresy: one more modifier (and a phase, below)
-  if (fifth) { const more = Object.keys(RAID_MODS).filter((k) => !mods.includes(k)); if (more.length) mods.push(pick(more)); }
+  if (fifth) { const more = Object.keys(RAID_MODS).filter((k) => !mods.includes(k) && k !== tpl.innate); if (more.length) mods.push(pick(more)); }
   if (tpl.innate && !mods.includes(tpl.innate)) mods.unshift(tpl.innate);
   const has = (k) => mods.includes(k);
   const m = makeMonster(world, art.arch, world.biome, level, 'boss', arena.cx + 4, arena.cy, 0, { art: artId, swap: null });
