@@ -21,6 +21,7 @@ import { greedOf, hoardOf, hoardCap, greedMods, setGreed, GREED_MAX } from '../g
 import { STANCES, Auto } from '../game/autoplay.js';
 import { sealedCount, openNextSeal } from './sealed.js';
 import { defianceText } from '../game/defiance.js';
+import { capXp } from '../game/marks.js';
 
 const POTIONS = ['hp', 'mp', 'rejuv', 'fury'];
 // hud slot index -> bar index (skills) or potion kind: LMB, ` 1-9 0 - =, the potions, RMB
@@ -292,9 +293,10 @@ export const HUD = {
       $('#hoard').textContent = hd ? `Hoard ${hd}` : '';
     });
     set('madt', on ? `MADNESS ${Math.ceil(c.madT)}s` : ready ? 'Madness — ready' : `Madness ${Math.floor((c.madness || 0) * 100)}%`, (v) => { $('#mad-text').textContent = v; });
-    const need = xpToNext(c.level);
-    set('xp', Math.round((c.xp / need) * 1000) / 10, (v) => { $('#xp-fill').style.width = v + '%'; });
-    set('xpt', `Level ${c.level} · ${fmtInt(c.xp)} / ${fmtInt(need)} XP`, (v) => { $('#xp-text').textContent = v; });
+    const mk = capXp(c), need = mk ? mk.need : xpToNext(c.level), xpNow = mk ? mk.xp : c.xp;   // at the cap: towards the next Infernal Mark
+    set('xp', Math.round((xpNow / need) * 1000) / 10, (v) => { $('#xp-fill').style.width = v + '%'; });
+    set('xpmk', !!mk, (v) => { $('#xp-fill').classList.toggle('mk-xp', v); });
+    set('xpt', `Level ${c.level} · ${fmtInt(xpNow)} / ${fmtInt(need)} XP${mk ? ' to the next Infernal Mark' : ''}`, (v) => { $('#xp-text').textContent = v; });
     for (const s of this.slots) {
       if (typeof s.map === 'string') {
         const n = c.potions[s.map] || 0;
@@ -329,6 +331,20 @@ export const HUD = {
     if (boss) set('bossHp', Math.round((boss.hp / boss.maxHp) * 500) / 5, (v) => { $('#boss-fill').style.width = v + '%'; });
     set('bossSub', boss && boss.raid ? boss.raid.label() : boss && boss.vel ? boss.vel.label() : '', (v) => { $('#boss-sub').textContent = v; });
     set('bossWard', !!(boss && boss.ward < 1), (v) => { $('#boss-bar').classList.toggle('warded', v); });
+    // the Abyssal Rift's clock and quota (game/rifts.js)
+    const R = w && w.rift;
+    set('rift', R ? `${R.tier}|${Math.ceil(R.left)}|${R.pct}|${R.guardian ? 1 : 0}|${R.done ? 1 : 0}|${R.failed ? 1 : 0}|${boss ? 1 : 0}` : '', (v) => {
+      $('#rift-bar').classList.toggle('hidden', !R);
+      if (!R) return;
+      const left = Math.ceil(R.left);
+      $('#rift-tier').textContent = `Tier ${R.tier}`;
+      $('#rift-clock').textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+      $('#rift-fill').style.width = (R.done ? 100 : R.pct) + '%';
+      $('#rift-pct').textContent = R.done ? 'closed' : R.failed ? 'collapsed' : R.guardian ? 'the Guardian' : R.pct + '%';
+      $('#rift-bar').classList.toggle('urgent', !R.done && !R.failed && left <= 60);
+      $('#rift-bar').classList.toggle('boss', !!boss);
+      $('#rift-bar').classList.toggle('guard', !!R.guardian && !R.done && !R.failed);
+    });
     const forest = w?.biome?.id === 'dark_forest';
     const breach = !!w?.breach;
     const sand = (w?.biome?.id === 'sea_of_sand' || forest || breach) && w.overworldScenario?.hud ? w.overworldScenario.hud : null;

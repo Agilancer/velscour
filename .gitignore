@@ -9,3 +9,6 @@ tools/runeblade3d_kit/out/
 
 # the Sky Battle bake output (tools/skyship_bake.js); assets/tiles/skyship/ is what ships
 assets/source/skyship/out/
+
+# Claude Code worktrees (the harness makes them for parallel agents)
+.claude/worktrees/
