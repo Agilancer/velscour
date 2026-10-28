@@ -79,7 +79,7 @@ export function heresyMonster(m, ids) {
   if (!ids || !ids.length) return;
   if (ids.includes('iron')) { m.maxHp *= 1.5; m.hp *= 1.5; }
   if (ids.includes('cruel')) m.dmg *= 1.3;
-  if (ids.includes('gaze')) { m.aggroRange = (m.aggroRange ?? 8.5) * 2.5; m.gaze = true; } // (a raid boss's 0 stays 0; Monster.pickTarget: an awake one never loses the hero)
+  if (ids.includes('gaze')) { m.aggroRange = (m.aggroRange ?? 8.5) * 2; m.gaze = true; } // (a raid boss's 0 stays 0; Monster.pickTarget: an awake one never loses the hero)
   if (ids.includes('crowned') && (m.rank === 'champion' || m.rank === 'unique') && m.affixes) {
     const keys = Object.keys(ELITE_AFFIXES).filter((k) => !m.affixes.includes(k) && (k !== 'multishot' || ['ranged', 'caster'].includes(m.ai)));
     for (const k of shuffle(keys).slice(0, m.rank === 'champion' ? 2 : 1)) {

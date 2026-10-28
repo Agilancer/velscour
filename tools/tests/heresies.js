@@ -9,7 +9,7 @@
 //    phase stepped; sig bosses get 'Beyond the End'), legion (hellgates in a plain depth and the Eternal Breach, never in a
 //    rift; level, cap of 8, the clock pauses while a boss is awake), iron/cruel (once, never compounding), ambush (a third
 //    of the wait), omens (every omenable depth, the portal cards, the Nemesis returns), glass (the sheet, only where in
-//    force), hunger (no orbs over 200 kills, no regeneration), gaze (2.5x aggro range, an awake monster never loses the
+//    force), hunger (no orbs over 200 kills, no regeneration), gaze (2x aggro range, an awake monster never loses the
 //    hero); none in rifts or Velscour Unbound; the HUD subtitle, the Quest Log; heresyWorld's dials at rank 26; the
 //    rank-20 Mark; Abyssal Key odds at rank 10 vs 9.
 // 3. auto: auto-play under Dry Throat never calls usePotion while its life is low (and does without the Heresy).
@@ -437,7 +437,7 @@ async function gear521(page) {
       return out;
     });
     console.log('gaze', JSON.stringify(gz));
-    check(gz.on.gaze && Math.abs(gz.on.range / gz.none.range - 2.5) < 1e-9, `Velscour's Gaze: aggro range ${gz.none.range} -> ${gz.on.range} tiles`);
+    check(gz.on.gaze && Math.abs(gz.on.range / gz.none.range - 2) < 1e-9, `Velscour's Gaze: aggro range ${gz.none.range} -> ${gz.on.range} tiles`);
     check(gz.on.target && !gz.none.target, `an awake monster ${gz.on.d0} tiles of path away keeps the hero (without it, it forgets him)`);
     check(gz.on.d1 < gz.on.d0 - 15 && gz.none.home < 4 && !gz.none.tgt, `it comes for him: ${gz.on.d0} -> ${gz.on.d1} tiles of path in 8 s (without: it idles ${gz.none.home} tiles from its spot)`);
     // --- the rank: HUD subtitle, Quest Log, dials at 26, the rank-20 Mark

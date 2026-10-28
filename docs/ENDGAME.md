@@ -55,7 +55,7 @@ must compare like with like) and not in Velscour Unbound. The Quest Log and the 
 | omens | Black Omens | 1 | every omenable depth has an omen (the portal choice rolls one), and a Nemesis always returns |
 | glass | Glass Cannon | 2 | the hero: -25% life, +15% damage (`heresyHero(c)` summed in `Player.recompute` like Defiance) |
 | hunger | Hunger of the Abyss | 2 | no life or mana orbs drop from any source (kills, the Feeding Frenzy omen: `heresyWorld` filters `world.addLoot`), no life regeneration from gear or buffs |
-| gaze | Velscour's Gaze | 2 | monsters notice the hero from 2.5x as far (`aggroRange *= 2.5`; a raid boss's 0 stays 0) and, once awake, never lose him (`m.gaze`: `Monster.pickTarget` tracks him anywhere, like a hunter) |
+| gaze | Velscour's Gaze | 2 | monsters notice the hero from twice as far (`aggroRange *= 2`, was 2.5: with every Heresy on it woke 300+ monsters at once and doubled the frame cost; a raid boss's 0 stays 0) and, once awake, never lose him (`m.gaze`: `Monster.pickTarget` tracks him anywhere, like a hunter) |
 
 Rank = the sum of the ranks on (max 26). `heresyMods(rank)` → `{ mf: 4 * rank, gold: 1 + 0.04 * rank, loot: 1 +
 0.02 * rank, xp: 1 + 0.02 * rank, sigil: 1 + 0.05 * rank, relic: 1 + 0.04 * rank }`. Where they land: `heresyWorld(world,
@@ -140,7 +140,7 @@ run = { tier, t, limit: riftTime(), progress, total, quota, guardian, gT, done, 
   says "Slain in Abyssal Rift Tier N").
 - Win: `time = run.t`, `jump = riftJump(time / limit)` (<= 0.5 → 3 tiers, <= 0.8 → 2, else 1), `c.rifts.open =
   max(open, tier + jump)`, `best`, `cleared[tier]++`, `bestTime[tier] = min`; `grantMarks(riftMarks(tier))` (`ceil(tier /
-  4)`); `noteRiftBest` puts it in the account record's `bests[cls]` when it beats it (higher tier, or the same tier
+  10)`); `noteRiftBest` puts it in the account record's `bests[cls]` when it beats it (higher tier, or the same tier
   faster), and then `Board.submit` posts it to the honour board (signed in); `run.result.board` says how that went
   (`posted` / `kept` / `signedout` / `offline`). "THE RIFT IS CLOSED", the exit opens; `game.riftExit(world, opts)`
   shows the results (`Rifts.results`: the time and its share of the clock, the tiers opened, Marks, the prize, a new best
@@ -293,7 +293,7 @@ count, the XP towards the next Mark, and per category its points, bonus, a bar o
 Cloud: in the account record (above), merged three ways so Marks earned on two devices add up.
 Rate (`marks.js`, a level-600 hero full-clearing a level): 0.04 Marks per depth at depths 1000-1200 (he out-levels the
 monsters: XP x0.1), 0.33 at 1240, 0.5 at 1260 (monster level 600), 0.67 at 1400; Heresy rank 20 adds 1 per depth; a
-rift clear `ceil(tier / 4)` (tier 70, as deadly as depth 1200: 18).
+rift clear `ceil(tier / 10)` (was tier / 4, 18 a clear at tier 70: rifts dwarfed XP and the Heresies; now 1 a clear to tier 10, 3 at tiers 21-30, where a hero of the tier's level meets the wall).
 
 ## Balance targets (checked by the tests and tools)
 - Heresies at full rank (26): x1.52 loot, +104% magic find, +52% XP, Sigils x3.5 (x2.3 x the x1.52 loot), relics x2.04;

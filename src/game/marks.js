@@ -34,7 +34,7 @@ export function markBonuses() {
   return o;
 }
 /** Marks for clearing an Abyssal Rift of this tier. */
-export const riftMarks = (tier) => Math.max(1, Math.ceil(tier / 4));
+export const riftMarks = (tier) => Math.max(1, Math.ceil(tier / 10)); // (was tier / 4: rifts dwarfed every other source)
 
 function changed() {
   saveEndgame();
