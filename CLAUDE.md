@@ -34,7 +34,7 @@ node tools/tests/homunculus.js                      # the blacksmith live: bubbl
 node tools/tests/encounters.js [kinds]             # dungeon encounters with people (captive, knight's last stand, peddler, wizard, witch, Greener) + rats
 node tools/tests/rings.js                          # ring augments in a live dungeon, skill mastery, ring/forge UI shots
 node tools/tests/flow.js                           # town -> portal -> boss -> exit -> depth 2 -> death -> reload
-node tools/tests/deathgift.js [classes]            # "DEATH IS THE ONLY WAY OUT, MY KIND SIR." to Velscour: level 350, Mythic +10 gear, depth 500
+node tools/tests/deathgift.js [classes]            # "DEATH IS THE ONLY WAY OUT, MY KIND SIR." to Velscour: level 350, Mythic +10 gear, depth 500; the hero is barred from the Honour Board
 node tools/tests/stash.js                          # town storage chest: 300 slots, store/take, auto-play stashing
 node tools/tests/savesafe.js                       # unreadable saves never written over: set aside before the first save (localStorage or IndexedDB), downloadable, refused + warned when no room
 node tools/tests/cloud.js [nosdk]                  # cloud saves (Google sign-in + Firestore): 4 devices on a fake Firebase (push, pull, conflicts, tombstones, offline, backups + restore, lost/corrupt/damaged saves change nothing) + real SDK smoke

@@ -36,10 +36,14 @@ The code is `src/game/cloud.js` and `src/game/herobackup.js`, the screens are in
   written by their owner only; the Abyssal Rifts' honour board (`boards/{classId}/entries/{uid}`) is read by anyone and
   each player creates or updates only their own entry (checked fields: `v == 1`, `name` a string of at most 24,
   `cls` the path's class, `tier` an int 1..10000, `time` a number > 0, `level`/`marks` ints, `at` the server time,
-  `build` a map; no deletes). **To deploy them**: Firebase console > Firestore Database > Rules, paste the file, Publish
+  `build` a map); a player may delete only their own entry (the game does when a hero takes Velscour's gift). **To deploy them**: Firebase console > Firestore Database > Rules, paste the file, Publish
   (or `firebase deploy --only firestore:rules` with the Firebase CLI). Until then the board's reads and writes fail
   with permission-denied (the game says it could not reach the board) and the account record's sync logs a warning.
   The web config in `cloud.js` is public by design. The rules are what protect the saves.
+- **Velscour's gift is a cheat.** A hero sent "DEATH IS THE ONLY WAY OUT, MY KIND SIR." (`src/game/deathgift.js`) gets
+  `c.cheated = true` for good: `Board.submit` refuses it (`barred`), its rift wins never reach the account record's
+  bests, and its class's entry comes off the board (`Board.withdraw` → `Cloud.delBoard` at once when signed in, and every
+  full sync deletes the entry of each local hero marked so, which covers a gift taken signed out or on another device).
 - **The honour board is an honour board.** Saves live in each browser's localStorage, so a player can edit a hero and
   post any tier and time; the rules only keep entries well formed and in their owner's name. Every entry records the
   build (the skill bar, the worn gear's names, rarities and item levels, the level and Infernal Marks) so readers can

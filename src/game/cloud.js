@@ -83,6 +83,8 @@ function firebaseBackend() {
         return { ok: true, kept: false };
       });
     },
+    /** Take this player's entry off a class's board (a hero that took Velscour's gift, game/deathgift.js). */
+    delBoard(cls, uid) { return fs.deleteDoc(fs.doc(db, 'boards', cls, 'entries', uid)); },
   };
   function fromDoc(r) { return { ...r, gz: r.gz && r.gz.toUint8Array ? r.gz.toUint8Array() : r.gz || null }; }
 }
@@ -200,6 +202,8 @@ async function syncAll() {
     }
   }
   for (const cls of Object.keys(st.base)) if (!st.base[cls]) delete st.base[cls];
+  // a hero that took Velscour's gift (game/deathgift.js) is never listed: its class's entry comes off the honour board
+  for (const [cls, h] of Object.entries(heroesByClass())) if (h.cheated && be.delBoard) try { await be.delBoard(cls, st.uid); } catch (e) { console.warn('Honour board:', e); }
   try { await syncAccount(); } catch (e) { if (/offline|unavailable|network|fetch/i.test(String(e && (e.code || e.message)))) throw e; console.warn('Cloud save (account):', e); }
   st.last = Date.now();
   saveState();
@@ -283,6 +287,8 @@ export const Cloud = {
   /** This player's entry on a class's board (signed in, connected): the backend's { ok, kept }, or false. */
   async putBoard(cls, rec) { if (!st.uid || !ready) return false; await ready; return be && be.putBoard ? be.putBoard(cls, st.uid, rec) : false; },
   get uid() { return st.uid; },
+  /** Take this player's entry of a class off the board (signed in, connected): true once it is gone. */
+  async delBoard(cls) { if (!st.uid || !ready) return false; await ready; if (!be || !be.delBoard) return false; await be.delBoard(cls, st.uid); return true; },
   /** Load the SDK (the settings dialog calls this so the sign-in popup opens inside the tap). */
   preload() {
     if (!ready) {

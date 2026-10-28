@@ -9,7 +9,7 @@ import { RARITY, SLOTS, SLOT_NAMES } from '../data/items.js';
 import { RIFT_QUOTA, riftDepth, riftLevel, fmtTime } from '../data/rifts.js';
 import { riftOpen, riftTime } from '../game/rifts.js';
 import { endgame } from '../game/endgame.js';
-import { Board } from '../game/leaderboard.js';
+import { Board, barred } from '../game/leaderboard.js';
 import { Cloud } from '../game/cloud.js';
 
 const num = (v) => (Number.isFinite(+v) ? +v : 0);
@@ -42,7 +42,7 @@ export const Rifts = {
       html: `<p>The gate opens on <b style="color:#20e0ff">a rift torn in the abyss</b>: a short dungeon and its arena, against the clock.</p>
         <p class="dim">Slay ${Math.round(RIFT_QUOTA * 100)}% of the rift's monsters (a champion counts four, a unique eight) to wake the Guardian, then slay it before <b>${fmtTime(riftTime())}</b> runs out. Finish in half the time and the win opens three tiers; in 80%, two; else one. Falling here costs no Defiance and leaves your descent where it is.</p>
         <label class="velscour-message-label" for="rift-pick">Tier</label><select id="rift-pick" class="velscour-biome-select">${tiers.join('')}</select>
-        <p class="breach-warn" id="rift-warn"></p>
+        <p class="breach-warn" id="rift-warn"></p>${barred(c) ? '<p class="breach-warn">This hero took Velscour\'s gift: its runs are never listed on the Honour Board.</p>' : ''}
         <p class="rb-stats dim">Best: ${r.best ? `Tier ${r.best}` : 'none yet'}${acc ? ` · your ${escapeHtml(CLASSES[c.classId]?.name || c.classId)}s' best Tier ${acc.tier} in ${fmtTime(acc.time)}` : ''} · ${r.runs | 0} run${r.runs === 1 ? '' : 's'}, ${Object.values(r.cleared).reduce((a, n) => a + n, 0)} closed, ${r.fails | 0} collapsed, ${r.deaths | 0} fallen</p>`,
       buttons: [{ label: 'Not yet' }, { label: 'Honour Board', keepOpen: true, fn: () => this.board() }, { label: 'Enter the Rift', cls: 'red', fn: () => G.game.enterRift(+d.box.querySelector('#rift-pick').value) }],
     });
@@ -54,7 +54,7 @@ export const Rifts = {
   /** A closed rift: what it paid, and on to the next tier or home. */
   results(R, o) {
     const r = R.result || {}, time = r.time ?? R.t, jump = r.jump || 1, marks = r.marks || 0;
-    const board = { posted: 'posted to the Honour Board', kept: 'the Honour Board keeps your better run', signedout: 'sign in with Google in Settings to post it to the Honour Board', offline: 'the Honour Board could not be reached' }[r.board];
+    const board = { posted: 'posted to the Honour Board', kept: 'the Honour Board keeps your better run', signedout: 'sign in with Google in Settings to post it to the Honour Board', offline: 'the Honour Board could not be reached', barred: 'this hero took Velscour\'s gift: it is never listed on the Honour Board' }[r.board];
     return UI.dialog({
       title: `Rift Tier ${R.tier} Closed`, cls: 'rift-dialog rift-results',
       html: `<div class="rr-time"><b>${fmtTime(time)}</b><span>of ${fmtTime(R.limit)} · ${Math.round((time / R.limit) * 100)}% of the clock</span></div>
@@ -76,7 +76,7 @@ export const Rifts = {
     const row = (e, i, own) => `<div class="rb-row${own ? ' rb-mine' : ''}" data-i="${i}" tabindex="0"><span class="rb-rank">${i + 1}</span><span class="rb-name">${escapeHtml(String(e.name || 'Hero'))}</span><b>Tier ${num(e.tier) | 0}</b><span class="rb-time">${fmtTime(num(e.time))}</span><i class="dim">lvl ${num(e.level) | 0}</i></div><div class="rb-build hidden">${buildHtml(e)}</div>`;
     const fill = async () => {
       const id = sel.value, n = ++seq, mine = endgame().bests[id];
-      you.innerHTML = `<span>Your best on this browser</span><b>${mine ? `Tier ${mine.tier} · ${fmtTime(mine.time)}` : 'no rift closed yet'}</b>${Cloud.signedIn ? '' : '<p class="dim">Sign in with Google in Settings to be listed.</p>'}`;
+      you.innerHTML = `<span>Your best on this browser</span><b>${mine ? `Tier ${mine.tier} · ${fmtTime(mine.time)}` : 'no rift closed yet'}</b>${G.char && G.char.classId === id && barred(G.char) ? '<p class="dim">This hero took Velscour\'s gift: it is never listed.</p>' : Cloud.signedIn ? '' : '<p class="dim">Sign in with Google in Settings to be listed.</p>'}`;
       list.innerHTML = '<div class="rb-msg dim">Loading…</div>';
       let rows = null;
       try { rows = await Board.top(id, 1000); } catch (e) { console.warn('Honour board:', e); }

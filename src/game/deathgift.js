@@ -1,6 +1,7 @@
 // "DEATH IS THE ONLY WAY OUT, MY KIND SIR." sent to Velscour: level 350, the best gear of the hero's class (Mythic,
 // +10, perfect rolls and an extra enchanted line, Eternal gems, max-power ring augments), every skill and mastery
-// maxed, a full potion belt, a fortune in gold, and the way down opened to Depth 500.
+// maxed, a full potion belt, a fortune in gold, and the way down opened to Depth 500. It is a cheat: the hero is marked
+// for good (c.cheated) and never listed on the Honour Board (game/leaderboard.js).
 import { G } from '../state.js';
 import { sfx, levelUpFanfare } from '../core/audio.js';
 import { CLASSES } from '../data/classes.js';
@@ -10,6 +11,7 @@ import { AUGMENTS, SCOPE_MUL, augPower } from '../data/rings.js';
 import { FINAL_DEPTH } from '../data/depth.js';
 import { MAX_MASTERY } from './augments.js';
 import { addToBag } from './player.js';
+import { Board } from './leaderboard.js';
 
 export const DEATH_PHRASE = 'DEATH IS THE ONLY WAY OUT, MY KIND SIR.';
 const GIFT_LEVEL = 350, MYTHIC = 5;
@@ -63,6 +65,8 @@ export function grantDeathGift() {
   const c = G.char, p = G.player;
   if (!c || !p) return;
   const C = CLASSES[c.classId];
+  c.cheated = true; // for good: never listed on the Honour Board, and its class's entry there comes off now (or at the next sign-in)
+  Board.withdraw(c.classId).catch((e) => console.warn('Honour board:', e));
   const ilvl = Math.max(c.level, GIFT_LEVEL); // items of the hero's own level are the best they can wear
   // level 350, its attribute points spent on the class's attribute and vitality
   const gained = Math.max(0, GIFT_LEVEL - c.level);
@@ -103,6 +107,7 @@ export function grantDeathGift() {
   if (G.ui) {
     if (G.ui.hud) G.ui.hud.levelUp(c.level, levelUpFanfare());
     G.ui.log('<b style="color:#ff3020">Velscour answers.</b> Level 350, his finest arms, and the road to Depth 500. Come die properly.', '#ffd860');
+    G.ui.log('This hero took Velscour\'s gift: it will never be listed on the Honour Board.', '#ff9070');
     G.ui.refresh();
   }
 }

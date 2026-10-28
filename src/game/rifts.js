@@ -14,7 +14,7 @@ import { rollItem, rollSigil, rarityAt, ABYSSAL, goldPile, RARITY } from '../dat
 import { RIFT_TIME, RIFT_QUOTA, RIFT_DENSITY, RIFT_GUARDIAN_HP, riftDepth, riftLevel, riftJump, riftWeight, riftReward, fmtTime } from '../data/rifts.js';
 import { markBonuses, grantMarks, riftMarks } from './marks.js';
 import { noteRiftBest, endgame } from './endgame.js';
-import { Board } from './leaderboard.js';
+import { Board, barred } from './leaderboard.js';
 import { Cloud } from './cloud.js';
 
 export { RIFT_TIME, RIFT_QUOTA, RIFT_DENSITY, riftDepth, riftLevel, riftJump, riftReward, fmtTime };
@@ -100,10 +100,11 @@ export function riftWin(world, m) {
   drop('item', { item: rollItem(lvl, { rarity: rar, mf: p ? p.st.magicFind : 0 }) });
   for (let i = 0; i < RW.sigils; i++) drop('item', { item: rollSigil(world.depth, RW.sigilBonus) });
   for (let i = 0; i < 4; i++) drop('gold', { amount: Math.round(goldPile(lvl) * rand(2, 4) * (1 + ((p && p.st.goldFind) || 0) / 100)) });
-  // records: this hero's, the account's, the honour board's
-  const best = noteRiftBest(c.classId, tier, time);
+  // records: this hero's, the account's, the honour board's (a hero that took Velscour's gift keeps only its own)
+  const cheat = barred(c), best = !cheat && noteRiftBest(c.classId, tier, time);
   R.result = { tier, time, jump, next: tier + jump, marks, first, rarity: rar, best, personal: c.rifts.bestTime[tier] === Math.round(time * 10) / 10 };
-  if (best) { // the honour board keeps the better of this and the entry already there (game/cloud.js putBoard)
+  if (cheat) { R.result.board = 'barred'; Board.withdraw(c.classId).catch((e) => console.warn('Honour board:', e)); }
+  else if (best) { // the honour board keeps the better of this and the entry already there (game/cloud.js putBoard)
     R.result.board = Cloud.signedIn ? 'pending' : 'signedout';
     Board.submit(c, tier, time).then((r) => { R.result.board = r && r.ok ? 'posted' : r && r.kept ? 'kept' : Cloud.signedIn ? 'offline' : 'signedout'; })
       .catch((e) => { R.result.board = 'offline'; console.warn('Honour board:', e); });
