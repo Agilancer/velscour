@@ -45,6 +45,8 @@ import { createCaveRun, useCaverns } from './caverns.js';
 import { loadCave3D, cave3dReady } from '../gfx/cave3d.js';
 import { loadCastlePack, releaseCastlePack } from '../gfx/castle.js';
 import { loadCastle3D, releaseCastle3D, loadBaked, castle3dState, warmBaked } from '../gfx/castle3dart.js';
+import { CASTLE_VARIANTS } from '../data/castles.js';
+import { addCastleStory } from './castlestory.js';
 import { generateSkyship } from '../world/skyship.js';
 import { warmSky } from '../gfx/skyship.js';
 import { createSkyBattle } from './skybattle.js';
@@ -477,7 +479,11 @@ export const game = {
   // the art a level of this biome needs before it can be generated (the portal and Velscour's level select share it)
   loadLevelArt(biome, mix = null) {
     if (biome.id === 'sea_of_sand') return loadSeaOfSandPack();
-    if (biome.id === 'castle') return Promise.all([loadCastlePack(), loadCastle3D(), loadDarkForestTrees()]);
+    if (biome.id === 'castle') { // one of the castles (src/data/castles.js), never the one seen last; the first if its bake won't load
+      const last = CASTLE_VARIANTS.findIndex((v) => v.id === G.char?.lastCastle), k = Math.floor(Math.random() * (CASTLE_VARIANTS.length - (last >= 0 ? 1 : 0)));
+      G.castleNext = G.castleVariant ?? (last >= 0 && k >= last ? k + 1 : k);
+      return Promise.all([loadCastlePack(), loadCastle3D(G.castleNext).catch((e) => { console.warn(e); G.castleNext = 0; return loadCastle3D(0); }), loadDarkForestTrees()]);
+    }
     if (biome.id === 'dark_forest') return Promise.all([loadBiomeArt(biome), loadDarkForestTrees()]);
     if (biome.challenge) return loadBiomeArt(biome); // the Breach's two packs (pack, wallPack, moreFloors/morePacks)
     if (biome.id === 'mountainside') return Promise.all([loadBiomeArt(BIOME_BY_ID.dark_forest), loadDarkForestTrees()]); // its floors, props and pines
@@ -530,7 +536,7 @@ export const game = {
       : sky ? generateSkyship(depth, biome, seed, castle3dState())
       : biome.tower ? generateTower(depth, biome, seed, G.towerVariant)
       : biome.cave ? generateCaverns(depth, biome, seed, G.caveVariant ?? G.caveNext)
-      : biome.overworld ? generateOverworld(depth, biome, seed) : generateDungeon(depth, biome, tileset, seed);
+      : biome.overworld ? generateOverworld(depth, biome, seed, biome.id === 'castle' ? G.castleVariant ?? G.castleNext : null) : generateDungeon(depth, biome, tileset, seed);
     const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches, wallHangings: gen.wallHangings, looks: gen.looks, townTiles: gen.townTiles || null, buildings: gen.buildings || [] });
     if (gen.layoutId) { world.layoutId = gen.layoutId; world.layoutName = gen.layoutName; }
     world.rooms = gen.rooms || [];
@@ -698,6 +704,7 @@ export const game = {
     });
     this.setWorld(world, gen.start, old);
     announceHappenings(world);
+    if (biome.id === 'castle') { addCastleStory(world, gen); world.ambientFx = gen.variant?.look?.ambient || null; c.lastCastle = gen.variant?.id; }
     if (biome.overworld && !sky && !biome.cave) {
       // townsfolk on the road: reachable landmarks to walk between (game/wanderers.js)
       const spots = [], map = gen.map;
@@ -706,8 +713,9 @@ export const game = {
         if (map.walkable(x, y) && map.findPath(gen.start[0], gen.start[1], x, y, 9000)) spots.push([x, y]);
       }
       if (spots.length >= 2 && !biome.beta && !biome.tower) addWanderers(world, spots, biome.id === 'castle' ? 6 : forest ? 4 : 5);
-      world.raining = biome.id !== 'sea_of_sand' && !biome.tower && Math.random() < 0.3; // a wet day in the Wilds or on the walls
-      if (!biome.tower && Math.random() < 0.25) { world.darkK = biome.id === 'sea_of_sand' ? 0.45 : 0.6; world.night = true; } // nightfall: torches, spells and portals glow
+      const look = gen.variant?.look || {};   // a castle variant has its own odds of rain and of night
+      world.raining = biome.id !== 'sea_of_sand' && !biome.tower && Math.random() < (look.rain ?? 0.3); // a wet day in the Wilds or on the walls
+      if (!biome.tower && Math.random() < (look.night ?? 0.25)) { world.darkK = biome.id === 'sea_of_sand' ? 0.45 : 0.6; world.night = true; } // nightfall: torches, spells and portals glow
     }
     if (!biome.beta) recordBiomeVisit(c, biome, depth); // a beta biome leaves the overworld guarantee alone
     c.lastBiome = biome.id;
@@ -722,7 +730,10 @@ export const game = {
     else if (biome.tower) UI.log(`${gen.variant.name}: ${gen.variant.epithet}. Climb the stair; things wait on the floors above, and some will not wait.`, '#ffe2a0');
     else if (biome.cave) UI.log(`${gen.variant.name}: ${gen.variant.epithet}. The passages lead down to a lake under a great waterfall; the way on is a long climb to its top.`, '#ffe2a0');
     else if (forest) UI.log(`The Dark Forest closes in. The Heart lies deep in the north-east labyrinth; ${gen.glades.length} glades hold trials and treasure along the way.`, '#c8f0a0');
-    else if (biome.overworld) UI.log('Activate the glowing shrine and complete its objective to open the exit.', '#ffe2a0');
+    else if (biome.overworld) {
+      if (biome.id === 'castle' && gen.variant?.story?.intro) UI.log(gen.variant.story.intro, '#e8d0a8');
+      UI.log('Activate the glowing shrine and complete its objective to open the exit.', '#ffe2a0');
+    }
     else if (!c.tips.dungeon) { c.tips.dungeon = true; setTimeout(() => UI.log('Find the exit portal. It stays sealed until the depth\'s guardian is slain. The blue portal returns you to town.', '#ffe2a0'), 1500); }
     this.autosave();
   },

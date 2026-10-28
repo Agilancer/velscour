@@ -873,6 +873,9 @@ export const Auto = {
     const s0 = sy * W + sx, T = m.t, Bl = m.block;
     // each tile's height-legal steps (map.stepMask, worked out once a map)
     const SM = m.stepMask();
+    // a raised drawbridge is planned across (straight, not diagonally): it comes down as the hero walks up to it
+    // (game/castle3d.js), so a goal inside the walls is not given up at the moat
+    const DB = m.planOpen && m.drawbridge && !m.drawbridge.down ? new Set(m.drawbridge.tiles) : null;
     c[s0] = 0; d[s0] = 0; bk[0].push(s0);
     let left = 1;
     for (let cur = 0; left > 0; cur++) {
@@ -882,9 +885,11 @@ export const Auto = {
         if (c[i] !== cur) continue;
         const sm = SM[i];
         for (let k = 0; k < 9; k++) {
-          if (!((sm >> k) & 1)) continue;
-          const ox = (k % 3) - 1, oy = ((k / 3) | 0) - 1, ni = i + oy * W + ox;
-          if (T[ni] !== 1 || Bl[ni]) continue;
+          const step = (sm >> k) & 1;
+          if (!step && !(DB && (k & 1))) continue;
+          const ox = (k % 3) - 1, oy = ((k / 3) | 0) - 1, ni = i + oy * W + ox, db = DB && (DB.has(ni) || DB.has(i));
+          if (!step && !db) continue;
+          if ((T[ni] !== 1 || Bl[ni]) && !(db && DB.has(ni))) continue;
           if (ox && oy && (T[i + ox] !== 1 || Bl[i + ox] || T[i + oy * W] !== 1 || Bl[i + oy * W])) continue;
           const nc = cur + (ox && oy ? (R[ni] ? 3 : 7) : (R[ni] ? 2 : 5));
           if (nc >= c[ni]) continue;

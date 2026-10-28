@@ -14,6 +14,52 @@ Contents
 
 ---
 
+## October 28, 2026 — ten Castle variants: their own layouts, stone, palettes and stories (branch `feat/castle-variants`)
+- **Request:** ten new unique variants of the Castle overworld: palette swaps so the castles are different colours,
+  different layouts, different little stories.
+- **Done:** see [CASTLE_VARIANTS.md](CASTLE_VARIANTS.md). `src/data/castles.js` holds eleven castles (the old one is
+  Ironcrown) as data: layout (rings, tower styles, gates, stairs, where the keep/cathedral/hall stand), look (bake
+  materials, ground recolour, water tint, particles, night/rain odds, forest trees), plan (river, mere/bog pools, ward
+  yards, village, fields, graveyard, siege, ruin) and story (intro, herald, lord, dressing `set`).
+  `src/world/castle3d.js` builds any layout (new: square corner towers, half-round interval towers, one to three rings,
+  any gatehouse x); `src/world/castleworld.js` reads every coordinate from the layout and plan (bailey lanes and roads
+  are worked out from the gates, the wall-walk lanterns and the milestones from the curtain and the roads) and dresses
+  each story (`STORY_SETS`). Each variant has its own bake in `assets/tiles/castle3d/<id>/` (`castle3d_bake.js <id>`,
+  `castle3d.py pack <id>`); the game loads only the one it builds (`loadCastle3D(v)` through `loadBaked`), picked at
+  random but never the last one seen (`c.lastCastle`); `G.castleVariant` forces one. New textures: five more stones cut
+  from the Castle Keep pack's ten-material sheet, nine painted roofs (`castle3d.py textures`). `src/game/castlestory.js`:
+  the herald by the road and the lord in the council chamber. Variant particles via `world.ambientFx` (world.js), water
+  tint/current colour via `map.castleWater` (castleground.js), five more tent cloths (castle.js).
+- **Ported onto main** (the work began on an older base): main's height-mapped castle (moat faces, arched bridges,
+  banners, trails, road nav, loose scatter) is kept and reads the variant's rings, gates, river and roads; Ironcrown
+  keeps main's bake and main's inner south stair (x 164).
+- **Bugs fixed:** main's 16 wall-walk lanterns were added and then deleted again by the "nothing stands in the masonry"
+  pass, leaving their tiles blocked by nothing you could see; they now stay (`onWall`). Main's fallen masonry could land
+  at a stair's foot and wall off a stair (seen on Goldspire's inner ring): it and the story dressing keep two tiles clear
+  of every stair. Auto-play's road field (`buildRoadNav`) plans across the raised drawbridge (`map.planOpen`), so a goal
+  inside the walls isn't given up at the moat; the bridge still comes down as the hero nears it. The ground's edge-blend
+  cache was keyed by floor index only, so a castle visited after another drew the previous castle's colours along its
+  seams (now keyed by image). `assets/source/castle3d/out/` (the bakes' PNG pages, ~380 MB) is git-ignored.
+- **Design calls made without asking** (worth confirming): Ironcrown stays in the rotation as one of eleven; the same
+  three buildings (keep, cathedral, great hall) in every castle, moved, so all 35 scenarios work everywhere; the
+  gatehouse always faces south (the drawbridge frames are baked that way) and posterns are on the north side (the
+  painted bridge spans north-south); every variant keeps a siege camp (its scenarios need the engines and cages), restyled
+  by its story; the bakes add about 100 MB of lossless WebP to the repo (7-17 MB a castle, loaded one at a time).
+- **Verified:** `castle_overworld.mjs` (11 castles x 55 seeds, all 35 scenarios each, main's stricter
+  checks generalised: at most 0.1% of any wall-walk out of reach), `castle3d.js --castle=all` (bakes, stairs, throne
+  room, drawbridge, roof fade, herald), `castle_visual.js --castle=all` (looked at a sample), `castle_variants.js` (a
+  level-30 auto-play hero gets into every castle and starts its scenario in 25-83 s), `scenarios.js` (every scenario
+  finishes; Hexenmere's rampart siege and Solenne's last stand on the ramparts flag 29-30 s waits between fights, as
+  they did before the port), main's `castle_walls.js`, `castle_keep.js`, `castle_autoplay.js` and `skyship.js` (the
+  Sky Battle shares the bake loader), `flow.js`, `mobile.js`, `hud.js`, `autoplay.js wizard 5`, `data_check.mjs`.
+- **Not verified:** real phones: a castle's bake decodes to 2-5 pages of 4096 px (Goldspire, the biggest, about 60 Mpx).
+- **Tools:** `node tools/castle_map.mjs [ids]` draws top-down plans without a browser (layout design);
+  `castle_overworld.mjs [seeds] [ids]` checks every variant against all 35 scenarios; `castle3d.js` and
+  `castle_visual.js` take `--castle=ids|all`; `scenarios.js - <ids|all>` plays the Castle scenarios in chosen castles
+  (by default they rotate through all eleven); `castle_variants.js [ids]` lets auto-play find its way in.
+
+---
+
 ## October 28, 2026 — THE ENDGAME: Heresies, Abyssal Rifts, Velscour Unbound, Infernal Marks (branch `feat/endgame`)
 - **Request (user):** "What would you suggest as an endgame? People have beaten Velscour and want more." Then: build all
   four suggestions (not the later options: hardcore, seasons, affix rerolls), balance them over several iterations, check
