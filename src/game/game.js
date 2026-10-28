@@ -1093,7 +1093,7 @@ export const game = {
       G.unboundNext = true;
       this.buildDungeon(depth, biome);
       const w = G.world;
-      await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])], true).catch((e) => console.warn(e));
+      await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : []), ...(w.velscour ? w.velscour.courtArt || [] : [])], true).catch((e) => console.warn(e)); // (his court steps in later)
       await warmLevelArt(w);
       releaseLevelArt(biome);
       const p = G.player;
@@ -1129,7 +1129,7 @@ export const game = {
         p.dead = false; p.buffs = []; p.recompute(); p.hp = p.maxHp; p.mana = p.maxMana;
         this.enterTown();
         UI.log('Velscour Unbound keeps his throne. Three more Abyssal Keys buy another try.', '#ffb0a0');
-      }, { where: 'by Velscour Unbound', note: 'Your gear, levels and skills endure, and your descent is untouched. The three keys are spent.' });
+      }, { where: "on Velscour's throne", note: 'Your gear, levels and skills endure, and your descent is untouched. The three keys are spent.' });
     }, 1700);
   },
 
