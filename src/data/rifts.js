@@ -5,7 +5,9 @@ import { FINAL_DEPTH, depthLevel } from './depth.js';
 import { clamp } from '../core/util.js';
 
 export const RIFT_TIME = 420;  // seconds on the clock
-export const RIFT_QUOTA = 0.7; // the share of the level's monster weight that wakes the Guardian
+export const RIFT_QUOTA = 0.6;   // the share of the level's monster weight that wakes the Guardian
+export const RIFT_DENSITY = 0.8; // packs per room against a standard level's (world/dungeon.js opts.density)
+export const RIFT_GUARDIAN_HP = 0.6; // the Guardian's life against a BOSS ROOM boss's (it fights after the quota, on the clock)
 export const RIFT_STEP = 10;   // depths per tier
 export const riftDepth = (T) => FINAL_DEPTH + RIFT_STEP * Math.max(1, T | 0);
 export const riftLevel = (T) => depthLevel(riftDepth(T));

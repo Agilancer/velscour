@@ -66,44 +66,57 @@ Marks). Locked before the Endgame: the panel says so and shows the list greyed.
 
 ## 2. Abyssal Rifts (`src/data/rifts.js`, `src/game/rifts.js`, `src/ui/rifts.js`, `src/game/leaderboard.js`)
 Short timed dungeons. **Tier T is as deadly as Depth 500 + 10 T** (`riftDepth(T) = FINAL_DEPTH + 10 * T`,
-`riftLevel(T) = depthLevel(riftDepth(T))`; tier 1: monster level 263, tier 50: 483, tier 100: 708). The **Abyssal Rift
-gate** is a third portal in town (`world.portals` entry `{ rift: true, color: '#20e0ff', label: 'Abyssal Rift', use: () =>
-game.confirmRift() }`) placed on the breach yard's road three tiles short of the purple portal (`t.rift` from
-`generateTown`: the walkable tile nearest 3.2 tiles from `t.breach` toward the plaza). `c.rifts = { open: 1, best: 0,
-cleared: {tier: times}, bestTime: {tier: secs}, runs: 0, fails: 0, deaths: 0 }` (migrate adds it).
+`riftLevel(T) = depthLevel(riftDepth(T))`; tier 1: monster level 263, tier 10: 303, tier 50: 483, tier 100: 708). The
+**Abyssal Rift gate** is a third portal in town (`world.portals` entry `{ rift: true, color: '#20e0ff', label, use: () =>
+game.confirmRift() }`, lit and labelled "Abyssal Rift — Tier N" once the Endgame is open, "(sealed)" and refusing before)
+on the breach yard's road short of the purple portal (`t.rift` from `generateTown`). `c.rifts = { open: 1, best: 0,
+cleared: {tier: times}, bestTime: {tier: secs}, runs: 0, fails: 0, deaths: 0 }` (migrate adds it); `c.lastRift` (the last
+biome) and `c.lastRiftBoss` (the last Guardian) keep two runs in a row from repeating.
 
-The dialog (`game.confirmRift(tier)`, class `rift-dialog`): a tier select (1 .. `c.rifts.open`), each line "Tier 7 — as
-deadly as Depth 570 (monster level 294) · best 4:12", the clock the hero gets, a warning when the monsters are more than 4
-levels above the hero, and an **Honour Board** button (below). `game.enterRift(tier)` → `game.buildRift(tier, seed)`:
-a random standard dungeon biome (`BIOMES` that are neither overworld, beta, challenge, tower nor cave; never the same
-twice running), `generateDungeon(depth, biome, tileset, seed, { raid: true, small: true })` (new `opts`: `raid` forces
-the arena, `small` clamps the chunk grid to 4 x 4, so a rift is a short maze and a BOSS ROOM); the `rank: 'raid'` spawn
-is **not** placed at build. `world.rift = createRiftRun(world, gen, tier, { onWin, onFail })`:
+The dialog (`game.confirmRift(tier)` → `Rifts.open`, class `rift-dialog`): a tier select (`c.rifts.open` .. 1), each line
+"Tier 7 — as deadly as Depth 570 (monster level 290) · best 3:21", the rules and the clock the hero gets, a warning when
+the monsters are more than 4 levels above the hero, the hero's record (best tier, runs, closed, collapsed, fallen) and an
+**Honour Board** button. `game.enterRift(tier)` → `game.buildRift(tier, biome, mix, seed = G.riftSeed ?? random)`: a
+random standard dungeon biome (`BIOMES` that are neither overworld, beta, challenge, tower nor cave, nor the throne; never
+the same twice running), `generateDungeon(depth, biome, tileset, seed, { raid: true, small: true, density: RIFT_DENSITY
+})` (`opts.raid` forces the arena, `opts.small` clamps the chunk grid to 4 x 4, `opts.density` thins the normal packs: a
+rift holds ~150-200 monsters in ~40 packs), the `rank: 'raid'`/`'boss'` spawn is **not** placed, no Heresy applies
+(`world.heresy` stays null), its monsters are `riftLevel(T)` (champions and uniques +1).
+`world.rift = createRiftRun(world, gen, tier, { onWin, onFail, onBack })`:
 ```
-run = { tier, t: 0, limit: riftTime(), progress: 0, quota, total, guardian: null, done: false, failed: false,
-        label(), update(dt), kill(m), spawnGuardian() }
+run = { tier, t, limit: riftTime(), progress, total, quota, guardian, gT, done, failed, backT, result, label() }
 ```
-- `riftTime() = RIFT_TIME (420 s) + markBonuses().rift` (Haste Marks, below). The clock runs in `game.update` next to
-  `happeningsTick` (`riftTick(w, dt)`), so menus pause it.
-- Progress: `riftProgressOf(m)`: normal 1, champion 4, unique 8 (minions 1), summons/pit spawns 0; `quota = RIFT_QUOTA
-  (0.7) * total` where total is summed over the build's spawns. `combat.kill` calls `riftKill(world, m)` next to
-  `commissionKill`.
-- At the quota: "THE GUARDIAN STIRS": `makeRaidBoss(world, gen.raid, depth, lvl + 3)` in the arena, `world.boss = m`,
-  `world.raid = m.raid`, its `onDeath` chained to `riftWin`. The raid's own seal/execute rules stand.
-- Timer out before the guardian dies: `riftCollapse`: "THE RIFT COLLAPSES", loot on the ground is lost, `c.rifts.fails++`,
-  the hero is back in town after 2.5 s (no Defiance, the descent untouched); auto-play's `dest` stays `rift`, the tier
-  stays open.
-- Death: `game.riftDeath(src)` like `breachDeath` (no Defiance, `c.rifts.deaths++`, the death screen names the tier).
+- `riftTime() = RIFT_TIME + markBonuses().rift` (Haste Marks). The clock runs in `game.update` (`riftTick(w, dt)`), so
+  menus and dialogs stop it (`G.paused`); warnings at 1:00, 0:30 and 0:10.
+- Progress: `riftWeight(m)`: normal 1, champion 4 (every champion of a pack), unique 8, a unique's minions 1; summons,
+  pit spawns, Velscour's parts and bosses 0. `total` sums the monsters the level was built with and `quota = ceil(total x
+  RIFT_QUOTA)`. `combat.kill` calls `riftKill(world, m)` for every death (the hero's pets and ambush arrivals count too).
+- At the quota "THE GUARDIAN STIRS": `makeRaidBoss(world, gen.raid, depth, riftLevel + 3, { tpl, hp: RIFT_GUARDIAN_HP })`
+  in the arena, one of the 28 classic BOSS ROOM bosses (the twenty signature fights of `raidsigs.js` are long puzzles
+  that ran past the clock in testing; they stay the BOSS ROOM's and Unbound's), never `c.lastRiftBoss` (`opts.tpl`
+  keeps `c.lastRaid`, the BOSS ROOM's own no-repeat, untouched); `world.boss`, `world.raid`; its `onDeath` chained to
+  `riftWin`. The raid's own seal, wards, enrage and execute rules stand; the boss bar shows it once it wakes and the
+  rift bar moves below it.
+- The clock runs out: `riftCollapse` ("THE RIFT COLLAPSES"): `c.rifts.fails++`, the hero can't be hurt
+  (`p.invuln = 3`) and is back in town 2.5 s of game time later (`backT`, `hooks.onBack`) with the level's loot lost; no
+  Defiance, the descent untouched, the tier stays open; auto-play's `dest` stays `rift`.
+- Leaving any other way (the town portal, auto-play's retreat) is a fail too: `game.setWorld` calls `riftLeave(old)`.
+- Death: `game.riftDeath(src)` like `breachDeath` (no Defiance, `c.rifts.deaths++`, not also a fail; the death screen
+  says "Slain in Abyssal Rift Tier N").
 - Win: `time = run.t`, `jump = riftJump(time / limit)` (<= 0.5 → 3 tiers, <= 0.8 → 2, else 1), `c.rifts.open =
   max(open, tier + jump)`, `best`, `cleared[tier]++`, `bestTime[tier] = min`; `grantMarks(riftMarks(tier))` (`ceil(tier /
-  4)`); the account record's `bests[cls]` and the Honour Board get the run when it beats the hero's best (higher tier, or
-  the same tier faster). The exit opens; `game.riftExit(world, opts)` offers "On to Tier T+jump" / "Return to Town"
-  (auto-play: on when `riftReady(next)`, else home). HUD: `#rift-bar` under the area name: `ABYSSAL RIFT · TIER 12 ·
-  4:31 · 63%` (red under a minute), the guardian uses the boss bar.
-- Guardian loot (`riftReward(tier, first)`, dropped by `riftWin` on top of the raid's own two `dropLoot`s): one gear item
-  at item level `riftLevel + 2` of rarity **Abyssal** with chance `min(0.6, 0.1 + 0.02 * tier)` (the first clear of a tier:
-  always), else Mythic (`rarityAt`); two Sigils (`rollSigil(depth, 1 + floor(tier / 10))`); gold; from tier 10 an
-  **Abyssal Key** with chance `0.12 + 0.005 * tier`.
+  4)`); `noteRiftBest` puts it in the account record's `bests[cls]` when it beats it (higher tier, or the same tier
+  faster), and then `Board.submit` posts it to the honour board (signed in); `run.result.board` says how that went
+  (`posted` / `kept` / `signedout` / `offline`). "THE RIFT IS CLOSED", the exit opens; `game.riftExit(world, opts)`
+  shows the results (`Rifts.results`: the time and its share of the clock, the tiers opened, Marks, the prize, a new best
+  and the board) with "On to Tier T+jump" / "Return to Town". Auto-play (`opts.auto`): on to `tier + jump` when
+  `riftReady` says so, else to the highest open tier it is ready for if that is still a climb (`riftTier()`), else home
+  (and home when it wants to trade). HUD: `#rift-bar` under the area name: `ABYSSAL RIFT · Tier 12 · 4:31 · [bar] 63%`
+  ("the Guardian" at the quota, "closed" / "collapsed"), urgent and pulsing red under a minute.
+- The Guardian's hoard (`riftReward(tier, first)`, dropped by `riftWin` on top of the raid's own loot): one gear item at
+  item level `riftLevel + 2` of rarity **Abyssal** with chance `min(0.6, 0.1 + 0.02 * tier)` (a tier's first clear:
+  always), else Mythic (`rarityAt`); two Sigils (`rollSigil(depth, 1 + floor(tier / 10))`); four gold piles; from tier 10
+  an **Abyssal Key** (game/unbound.js `keyChance`, rolled in `dropLoot`).
 
 **Abyssal** is a seventh rarity in `RARITY` (`src/data/items.js`): `{ id: 6, name: 'Abyssal', color: '#20e0ff', weight: 0,
 lv: 12, perks: 2, sockets: 5, bonus: 0, minIlvl: 200, fullIlvl: 200 }`: never rolled by `rollRarity` (weight 0), made by
@@ -112,18 +125,44 @@ designs/finishes for it (`rarityName` falls back); the loot filter dialog lists 
 17 item levels (Mythic 15).
 
 Honour board (`src/game/leaderboard.js`, `Board`): Firestore `boards/{classId}/entries/{uid}` →
-`{ v: 1, name, cls, tier, time, at, level, marks, build: { bar: [skill ids], gear: { slot: { name, rarity, ilvl, relic } } } }`,
-written with the backend's new `putBoard(cls, uid, rec)` only when signed in and the run beats the account's best;
-`Board.top(cls)` reads `board(cls)` (all entries, sorted tier desc / time asc on the client, top 50). The Honour Board
-dialog (`Rifts.board()`): a class select, rows (rank, hero name, tier, time, level), a row opens the build; "Sign in with
-Google in Settings to be listed" when signed out; the account's own best is always shown. It is an **honour** board: saves
-are local, so a cheat can post anything; the build is recorded beside every entry. `firestore.rules` in the repo holds
-the rules the project needs (public read of boards, writes by the owner only, field checks; the account document by its
-owner only).
+`{ v: 1, name, cls, tier, time, at, level, marks, build: { bar: [skill ids], gear: { slot: { name, rarity, ilvl, relic,
+upg } }, level, marks } }`. `Board.submit(c, tier, time)` (signed in only) goes through the backend's `putBoard(cls, uid,
+rec)`, a **read-compare-set transaction**: it reads the entry and writes only a better run (a higher tier, or the same
+tier faster), resolving `{ ok, kept }`, so a stale or offline device can't replace a better entry. `Board.top(cls)` reads
+`board(cls)` (all of a class's entries; `Cloud.board` loads the SDK first, signed out too) and sorts tier desc, time asc,
+then the earliest post; `at` comes back a number (`atMs`: the real SDK returns a Timestamp). The Honour Board dialog
+(`Rifts.board(cls)`, class `rift-board`): a class select, "your best on this browser" (the account record) with "Sign in
+with Google in Settings to be listed" when signed out, "Loading…" / "Could not reach the board" / "Nobody listed yet" /
+rows (rank, hero, tier, time, level; the player's own row highlighted, and shown below the top 50 when it is further
+down); a row opens the build (skills on the bar by name, the gear per slot in its rarity colour with +upgrades and item
+level, level, Marks, the date). Everything read from the board is escaped. It is an **honour** board: saves are local,
+so a cheat can post anything; the build beside every entry lets readers judge it. `firestore.rules` holds the rules
+(public read of boards, create/update by the owner only with field checks, no deletes; heroes and the account record by
+their owner only); docs/CLOUD_SAVES.md says how to deploy them.
+
+**Tunables** (`src/data/rifts.js`) and what they were tuned on (`tools/tests/rift_balance.js`, a model fitted on 24
+god-mode auto-play runs; `tools/tests/rifts.js` "auto"): `RIFT_TIME` 420 s, `RIFT_QUOTA` 0.6 (was 0.7), `RIFT_DENSITY`
+0.8 (was 1: ~167 monsters, weight ~270, quota ~163 in ~45 packs), `RIFT_GUARDIAN_HP` 0.6 (the Guardian's life against a
+BOSS ROOM boss's: ~12 normals of its level, was ~19). With the skeleton's numbers a hero **at** the tier's level needed
+69-90% of the clock at tiers 1-10 in the model (paladin; wizard 72-81%) and auto-play lost all four real at-level tier-10
+runs; a full-clear hero (level 270) needed 68-78% of tier 1. Now (model, at the tier's level, paladin / wizard): tier 1
+64-73 / 48%, tier 5 50-53 / 48%, tier 10 45-71 / 50%; the full-clear hero 47-56 / 53% of tier 1. Real auto-play runs at
+the tier's level (god mode): tier 1 32-56% (one paladin run lost to a slow Nine-Throat), tier 10 39-72%, all won; ten
+levels over, from town, 27-96%. Ten levels under: the paladin's damage follows its gear (x1.02-1.15 a level in the fits)
+and the clock bites from tier ~10 (82-109%); the wizard's barely moves within a tier, so 10 under still fits (59-82%).
+**The wall**: from tier ~20 (monster level ~350) an at-level hero's damage falls behind monster life (x1.068 a level), as
+in the Endless Torment: at the tier's level tier 20 took 67-191% of the clock across model runs (gear rolls swing it most there), tier 30 74-148%, tier
+40 67-115%, tier 60 131-322%; those tiers want gear past the hero's level (Abyssal prizes, relics, Marks). Hero levels
+from full clears: ~267 at depth 500, ~270 at tier 1, 420-436 at tier 40 (depth 900). A run's time also swings with the
+biome's monsters: a tier-1 normal had 0.9e12 to 1.05e13 life across the runs (the archetype's life multiplier).
 
 Auto-play: a third card in `askDest` (`'rift'`): "Abyssal Rift · Tier N"; `riftReady(T)` = `riftLevel(T) <= level + 2`,
-`riftTier()` = the highest open tier the hero is ready for; in a rift it hunts everything, fights the guardian, takes the
-exit (next tier when ready, else home to trade). It never chooses Heresies and never opens Velscour Unbound.
+`riftTier()` = the highest open tier the hero is ready for. In a rift it hunts the whole level (`huntGoal` treats it as
+farming), and once the Guardian stirs it **rushes** to the arena (`riftRush`): no loot, and it fights only the Guardian or
+what blocks the way (no ground gained on the path for 1.5 s), so the chasers follow it in; in the arena it fights the
+Guardian like a BOSS ROOM boss. Healthy and barely hurt, it stops side-stepping telegraphs for 4 s after 2 s of it (the
+Breach's bravery, quicker on the clock). It takes the exit as above. It never chooses Heresies and never opens Velscour
+Unbound.
 
 ## 3. Velscour Unbound (`src/game/unbound.js`, additions to `src/game/velscour.js`, `src/data/relics.js`)
 Three **Abyssal Keys** (`c.keys`, a counter; a ground item `GroundItem(x, y, 'key')` drawn as a cyan key glyph, picked
@@ -174,9 +213,11 @@ Cloud: in the account record (above), merged by max.
 ## Balance targets (checked by the tests and tools)
 - Heresies at full rank (26): x1.52 loot, +104% magic find, +52% XP; a normal with Iron Hide + Cruel Hand takes ~4.5 s and
   hits for ~1.3x; Twinned Packs double the crowd. `heresies.js` measures a depth-520 level: monsters, affixes, dials.
-- Rifts (`rift_balance.js`, the endgame.js model): a geared hero of its level clears tier T's quota in 3-5 minutes and the
-  guardian in 1-2, so a tier at the hero's level fits the 7-minute clock with time to spare, and tiers 6-10 levels above
-  the hero do not. `rifts.js`: auto-play clears tier 1 at depth-500 gear in god mode in under the limit.
+- Rifts (`rift_balance.js`, the endgame.js model fitted on auto-play runs): a geared hero of the tier's level clears it in
+  50-70% of the 7-minute clock (quota ~2 minutes, the Guardian ~1) up to tier ~20, where the Endless Torment's wall
+  begins; a full-clear hero takes tier 1 in under 60%; a level-273 hero can't touch tier 40. Ten levels under, the clock
+  bites for gear-driven classes (paladin) from tier ~10, not for the wizard. `rifts.js`: auto-play clears tier 1 at
+  depth-500 gear in god mode under the limit (27-96% of the clock across runs, the biome's monsters decide most of it).
 - Marks: a hero at the cap with 300 Marks (+~26% life) at depth 1200: a normal's hit still 15%+ of life, BOSS ROOMs
   still ~550 s (`endgame.js` prints a "marks" column).
 - Unbound: `unbound.js` steps every phase and auto-play wins at depth 500 in god mode in 7-12 minutes.

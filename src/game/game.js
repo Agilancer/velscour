@@ -82,7 +82,7 @@ import { titleScreen, hide as hideScreen, deathScreen, victoryScreen, pauseMenu,
 // the Endgame (docs/ENDGAME.md): Heresies, Abyssal Rifts, Velscour Unbound, Infernal Marks
 import { endgameUnlocked, unlockEndgame } from './endgame.js';
 import { heresySpawns, heresyWorld, heresyBegin, heresyTick, heresiesOf, worldRank, MARKS_RANK } from './heresies.js';
-import { createRiftRun, riftTick, riftOpen, riftDepth, riftLevel, fmtTime } from './rifts.js';
+import { createRiftRun, riftTick, riftOpen, riftDepth, riftLevel, fmtTime, riftLeave, RIFT_QUOTA, RIFT_DENSITY } from './rifts.js';
 import { unboundReady, spendKeys, keysOf } from './unbound.js';
 import { grantMarks } from './marks.js';
 import { Heresies } from '../ui/heresies.js';
@@ -251,6 +251,7 @@ export const game = {
 
   setWorld(world, start, oldWorld) {
     const p = G.player;
+    if (oldWorld && oldWorld.rift && oldWorld !== world) riftLeave(oldWorld); // walking out of an unfinished rift is a fail
     const keep = this.carrySummons(oldWorld);
     clearVfx();
     UI.closeAll();
@@ -723,7 +724,7 @@ export const game = {
     UI.dialog({
       title: 'Return to Town?',
       html: `<p>You will return to Herrington Hollow. ${w?.breach ? `Floor ${w.breach.floor} of the Eternal Breach` : w?.rift ? `The Rift (Tier ${w.rift.tier}) collapses behind you; it` : w?.unbound ? 'Velscour Unbound' : `Depth ${G.char.depth}`} will be re-forged when you come back.</p>`,
-      buttons: [{ label: 'Stay' }, { label: 'Return', fn: () => { sfx('portal'); if (w && w.rift && !w.rift.done) { w.rift.failed = true; G.char.rifts.fails = (G.char.rifts.fails || 0) + 1; } this.enterTown(); } }],
+      buttons: [{ label: 'Stay' }, { label: 'Return', fn: () => { sfx('portal'); this.enterTown(); } }],
     });
   },
 
@@ -983,7 +984,7 @@ export const game = {
   },
   enterRift(tier) {
     const c = G.char;
-    if (!endgameUnlocked()) return;
+    if (!endgameUnlocked() || this.riftLoading) return; // one rift at a time (auto-play may step on the gate again while it loads)
     tier = Math.max(1, Math.min(riftOpen(c), tier | 0 || 1));
     const pool = BIOMES.filter((b) => !b.overworld && !b.beta && !b.challenge && !b.tower && !b.cave && b.id !== 'throne' && b.id !== c.lastRift);
     const biome = pick(pool.length ? pool : BIOMES.filter((b) => !b.overworld)) || BIOME_BY_ID.catacombs;
@@ -993,9 +994,11 @@ export const game = {
     document.getElementById('loading-text').textContent = `Into the Abyssal Rift — Tier ${tier}…`;
     loading.classList.remove('hidden');
     sfx('portal');
+    this.riftLoading = true;
     setTimeout(async () => {
       try { await this.loadLevelArt(biome, mix); } catch (e) { console.warn(e); }
       try {
+        this.riftLoading = false;
         this.buildRift(tier, biome, mix);
         const w = G.world;
         await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])], true).catch((e) => console.warn(e));
@@ -1009,7 +1012,7 @@ export const game = {
     const c = G.char, old = G.world, depth = riftDepth(tier), lvl = riftLevel(tier);
     const tileset = mix ? mixedTileSet(biome, mix, Math.random() < 0.5) : biomeTileSet(biome);
     keepTileSets(tileset);
-    const gen = generateDungeon(depth, biome, tileset, seed, { raid: true, small: true });
+    const gen = generateDungeon(depth, biome, tileset, seed, { raid: true, small: true, density: RIFT_DENSITY });
     const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches, wallHangings: gen.wallHangings, looks: gen.looks, townTiles: null, buildings: [] });
     world.rooms = gen.rooms || [];
     world.chests = gen.chests.map((ch) => ({ ...ch, opened: false, reach: 1.3, use() { if (this.opened) return; this.opened = true; sfx('chest'); sfx('gold'); dropChest(world, this, depth); sparkle(this.x, this.y, 20, '#ffd060', 20, 0.5); } }));
@@ -1033,7 +1036,8 @@ export const game = {
     world.roster = [...new Set(gen.spawns.filter((s) => s.arch && !['raid', 'boss'].includes(s.rank)).map((s) => s.arch))];
     world.rift = createRiftRun(world, gen, tier, {
       onWin: () => { exit.active = true; exit.color = '#20e0ff'; exit.label = 'Exit — onward or home'; addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#20e0ff', 5)); sfx('gate'); UI.refresh(); this.autosave(); },
-      onFail: () => { this.autosave(); setTimeout(() => { if (G.world === world) { stopMusic(); this.enterTown(); UI.log(`The Rift threw you back into Herrington Hollow. Tier ${tier} waits at the gate.`, '#a0f0ff'); } }, 2500); },
+      onFail: () => this.autosave(),
+      onBack: () => { if (G.world === world) { stopMusic(); this.enterTown(); UI.log(`The Rift threw you back into Herrington Hollow. Tier ${tier} waits at the gate.`, '#a0f0ff'); } },
     });
     c.rifts.runs = (c.rifts.runs || 0) + 1;
     world.onBossAwake = (m) => { UI.centerMsg(m.name, `${m.title}${m.raid && m.raid.mods.length ? ' · ' + m.raid.modText() : ''}`, 3); sfx('boss'); };
@@ -1043,16 +1047,17 @@ export const game = {
     HUD.setArea('Abyssal Rift', `Tier ${tier} · ${biome.name} · as deadly as Depth ${depth}`);
     playMusic('wilds', { delay: 2 }); setAmbience(biome.id);
     UI.centerMsg('ABYSSAL RIFT', `Tier ${tier} · ${fmtTime(world.rift.limit)} on the clock`, 3);
-    UI.log(`<b style="color:#20e0ff">Abyssal Rift Tier ${tier}</b> (${biome.name}, as deadly as Depth ${depth}): slay ${Math.round(100 * 0.7)}% of the rift's monsters to wake the Guardian in the arena, and slay it before the clock runs out. Faster wins open more tiers.`, '#a0f0ff');
+    UI.log(`<b style="color:#20e0ff">Abyssal Rift Tier ${tier}</b> (${biome.name}, as deadly as Depth ${depth}): slay ${Math.round(100 * RIFT_QUOTA)}% of the rift's monsters to wake the Guardian in the arena, and slay it before the clock runs out. Faster wins open more tiers.`, '#a0f0ff');
     this.autosave();
   },
   /** The exit of a closed rift: on to the next tier, or home. opts.auto: auto-play's call (opts.town: it wants to shop). */
   riftExit(world, opts = {}) {
     const R = world.rift, next = Math.min(riftOpen(), R.result ? R.result.next : R.tier + 1);
     if (Auto.on) Auto.transitT = 3;
-    if (opts.auto) {
-      if (opts.town || !Auto.riftReady(next)) { UI.log(opts.town ? 'Auto-play heads back to town to trade.' : `Auto-play judges Tier ${next} too deadly for now and heads home.`, '#8fe0ff'); sfx('portal'); this.enterTown(); }
-      else this.enterRift(next);
+    if (opts.auto) { // on to the next tier, or the highest open one it is ready for when that is still a climb; else home
+      const go = Auto.riftReady(next) ? next : Auto.riftTier();
+      if (opts.town || go <= R.tier) { UI.log(opts.town ? 'Auto-play heads back to town to trade.' : `Auto-play judges Tier ${next} too deadly for now and heads home.`, '#8fe0ff'); sfx('portal'); this.enterTown(); }
+      else this.enterRift(go);
       return;
     }
     Rifts.results(R, { onNext: () => this.enterRift(next), onTown: () => { sfx('portal'); this.enterTown(); }, next });

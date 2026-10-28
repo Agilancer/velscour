@@ -443,6 +443,8 @@ export const Auto = {
   // ---------------------------------------------------------------- ABYSSAL RIFTS (docs/ENDGAME.md)
   /** Can the hero take rift tier T? Its monsters at most two levels above the hero. */
   riftReady(T) { return riftLevel(T) <= (G.char?.level || 1) + 2; },
+  /** A rift whose Guardian stirred but has not woken (the hero is not in its arena yet): auto-play makes for it. */
+  riftRush(w) { const g = w.rift && w.rift.guardian; return !!g && !g.dead && !g.awake && !w.rift.done; },
   /** The tier auto-play enters: the highest open one the hero is ready for (tier 1 at the least). */
   riftTier() {
     let t = riftOpen(G.char);
@@ -1021,9 +1023,11 @@ export const Auto = {
     // danger first: hide from a raid boss's cataclysm, step out of telegraphed attacks and enemy ground effects
     if (this.takeCover(dt)) { this.watchStuck(dt); return; }
     // the Breach's casters can keep him side-stepping all fight long: healthy and barely hurt, he pushes on a while
+    // (so does a rift's clock)
     if (this.braveT > 0) this.braveT -= dt;
-    if (!(w.breach && this.braveT > 0 && p.hp > p.maxHp * 0.6) && this.dodgeDanger(dt)) {
-      if (w.breach && (this.dodgeRun = (this.dodgeRun || 0) + dt) > 6 && p.hp > p.maxHp * 0.7 && this.hurt < 0.02) { this.braveT = 3; this.dodgeRun = 0; }
+    const brave = w.breach || w.rift;
+    if (!(brave && this.braveT > 0 && p.hp > p.maxHp * 0.6) && this.dodgeDanger(dt)) {
+      if (brave && (this.dodgeRun = (this.dodgeRun || 0) + dt) > (w.rift ? 2 : 6) && p.hp > p.maxHp * 0.7 && this.hurt < 0.02) { this.braveT = w.rift ? 4 : 3; this.dodgeRun = 0; }
       this.watchStuck(dt); return;
     }
     this.dodgeRun = Math.max(0, (this.dodgeRun || 0) - dt * 0.5);
@@ -1033,7 +1037,14 @@ export const Auto = {
     if (p.classId === 'dragoon' && w.time < this.dragoonCastUntil) {
       this.setStatus('Spearstorm!'); p.moveVec = [0, 0]; return;
     }
-    const foes = enemyNear(w, p, 13).filter((m) => w.map.los(p.x, p.y, m.x, m.y));
+    // an Abyssal Rift's Guardian has stirred: on the clock, so auto-play runs for its arena (the chasers follow it in),
+    // and once the rift is closed for the exit (picking up the hoard on the way); it fights only what blocks the way
+    // (no ground gained on the path for 1.5 s: then 4.5 s of fighting, and it tries to run on again)
+    const rush = this.riftRush(w), dash = rush ? w.boss : w.rift && w.rift.done ? w.portals.find((q) => q.type === 'exit') : null;
+    if (dash) { const nd = this.navDist(dash.x, dash.y); if (!(nd > (this.rushBest ?? Infinity) - 0.5)) { this.rushBest = nd; this.rushT = 0; } else if ((this.rushT = (this.rushT || 0) + dt) > 6) this.rushT = -1.5; }
+    else this.rushBest = this.rushT = undefined;
+    const blocked = dash && this.rushT > 1.5;
+    const foes = enemyNear(w, p, 13).filter((m) => w.map.los(p.x, p.y, m.x, m.y) && (!dash || m === w.boss || (blocked && Math.hypot(m.x - p.x, m.y - p.y) < 4)));
     // a foe he is taking the stairs to stays in mind while the walls and stairs hide it (12 s from the last sighting)
     const ct = this.climbTo;
     if (ct && (ct.dead || w.time - this.climbSeen > 12)) this.climbTo = null;
@@ -1125,7 +1136,7 @@ export const Auto = {
       this.watchStuck(dt); return;
     }
     // loot, chests, then the job at hand
-    if (this.lootStep(w, dt)) { this.watchStuck(dt); return; }
+    if (!rush && this.lootStep(w, dt)) { this.watchStuck(dt); return; }
     const exit = w.portals.find((q) => q.type === 'exit');
     const bossDead = !w.boss || w.boss.dead;
     if (bossDead && exit && exit.active) {
@@ -1169,7 +1180,8 @@ export const Auto = {
   huntGoal(w) {
     const p = G.player, c = G.char;
     const S = stanceOf(c);
-    const farm = c.level < depthLevel(w.depth) + S.farm; // the monster level, not the raw depth (they part after depth 60)
+    if (w.rift && w.boss && !w.boss.dead) return w.boss; // the Guardian ends the run: straight to it
+    const farm = !!w.rift || c.level < depthLevel(w.depth) + S.farm; // the monster level, not the raw depth (they part after depth 60); a rift's quota wants the whole level
     let best = null, bd = Infinity;
     for (const m of w.creatures) {
       if (m.dead || m.team !== 'enemy' || m.targetable === false || this.giveUp.has(m)) continue;

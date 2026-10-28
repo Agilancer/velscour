@@ -11,12 +11,13 @@ import { UI } from '../ui/ui.js';
 import { makeRaidBoss, RAID_BOSSES } from './raid.js';
 import { GroundItem } from './loot.js';
 import { rollItem, rollSigil, rarityAt, ABYSSAL, goldPile, RARITY } from '../data/items.js';
-import { RIFT_TIME, RIFT_QUOTA, riftDepth, riftLevel, riftJump, riftWeight, riftReward, fmtTime } from '../data/rifts.js';
+import { RIFT_TIME, RIFT_QUOTA, RIFT_DENSITY, RIFT_GUARDIAN_HP, riftDepth, riftLevel, riftJump, riftWeight, riftReward, fmtTime } from '../data/rifts.js';
 import { markBonuses, grantMarks, riftMarks } from './marks.js';
 import { noteRiftBest, endgame } from './endgame.js';
 import { Board } from './leaderboard.js';
+import { Cloud } from './cloud.js';
 
-export { RIFT_TIME, RIFT_QUOTA, riftDepth, riftLevel, riftJump, riftReward, fmtTime };
+export { RIFT_TIME, RIFT_QUOTA, RIFT_DENSITY, riftDepth, riftLevel, riftJump, riftReward, fmtTime };
 /** The clock a rift gives: the base plus Haste Marks. */
 export const riftTime = () => RIFT_TIME + markBonuses().rift;
 /** May the hero enter tier T: 1 .. the tier his wins opened. */
@@ -24,7 +25,8 @@ export const riftOpen = (c = G.char) => Math.max(1, (c && c.rifts && c.rifts.ope
 
 /** The run object, kept on world.rift. */
 export function createRiftRun(world, gen, tier, hooks = {}) {
-  const total = gen.spawns.reduce((s, sp) => s + (sp.rank === 'raid' || sp.rank === 'boss' ? 0 : (sp.rank === 'unique' ? 8 + (sp.n - 1) : sp.rank === 'champion' ? 4 + (sp.n - 1) * 1 : sp.n)), 0);
+  // the quota counts what the level holds (every champion of a pack is one; a unique's minions are normals)
+  const total = world.creatures.reduce((s, m) => s + (m.team === 'enemy' && !m.dead ? riftWeight(m) : 0), 0);
   const run = {
     tier, t: 0, limit: riftTime(), progress: 0, total: Math.max(1, total), quota: Math.max(1, Math.ceil(total * RIFT_QUOTA)),
     guardian: null, done: false, failed: false, gen, world, hooks, warned: {},
@@ -50,12 +52,13 @@ export function spawnGuardian(world) {
   const R = world.rift, A = R.gen.raid;
   if (!R || R.guardian || !A) return null;
   const depth = world.depth, lvl = riftLevel(R.tier);
-  const c = G.char, tpl = pick(RAID_BOSSES.filter((b) => b.id !== (c && c.lastRiftBoss)));
+  // the classic BOSS ROOM bosses: the twenty signature fights (game/raidsigs.js) are puzzles that run past a rift's clock
+  const c = G.char, tpl = pick(RAID_BOSSES.filter((b) => !b.sigs && b.id !== (c && c.lastRiftBoss)));
   if (c) c.lastRiftBoss = tpl.id;
-  const m = makeRaidBoss(world, A, depth, lvl + 3, { tpl });
+  const m = makeRaidBoss(world, A, depth, lvl + 3, { tpl, hp: RIFT_GUARDIAN_HP });
   world.add(m);
   world.boss = m; world.raid = m.raid;
-  R.guardian = m;
+  R.guardian = m; R.gT = R.t;
   const od = m.onDeath;
   m.onDeath = () => { od(); riftWin(world, m); };
   m.raid.announced = true; // no "BOSS ROOM" banner: the rift's own
@@ -69,6 +72,7 @@ export function spawnGuardian(world) {
 /** The clock (game.update, next to happeningsTick). */
 export function riftTick(world, dt) {
   const R = world.rift, p = world.player;
+  if (R && R.failed && R.backT > 0) { if ((R.backT -= dt) <= 0 && R.hooks.onBack) R.hooks.onBack(); return; } // thrown out 2.5 s after the collapse (game time)
   if (!R || R.done || R.failed || !p || p.dead) return;
   R.t += dt;
   const left = R.left;
@@ -99,19 +103,32 @@ export function riftWin(world, m) {
   // records: this hero's, the account's, the honour board's
   const best = noteRiftBest(c.classId, tier, time);
   R.result = { tier, time, jump, next: tier + jump, marks, first, rarity: rar, best, personal: c.rifts.bestTime[tier] === Math.round(time * 10) / 10 };
-  if (best) Board.submit(c, tier, time).catch((e) => console.warn('Honour board:', e));
+  if (best) { // the honour board keeps the better of this and the entry already there (game/cloud.js putBoard)
+    R.result.board = Cloud.signedIn ? 'pending' : 'signedout';
+    Board.submit(c, tier, time).then((r) => { R.result.board = r && r.ok ? 'posted' : r && r.kept ? 'kept' : Cloud.signedIn ? 'offline' : 'signedout'; })
+      .catch((e) => { R.result.board = 'offline'; console.warn('Honour board:', e); });
+  }
   UI.centerMsg('THE RIFT IS CLOSED', `Tier ${tier} in ${fmtTime(time)} · Tier${jump > 1 ? 's' : ''} ${tier + 1}${jump > 1 ? `-${tier + jump}` : ''} open`, 4);
-  UI.log(`<b style="color:#20e0ff">Abyssal Rift Tier ${tier}</b> closed in ${fmtTime(time)} (${Math.round(k * 100)}% of the clock): +${jump} tier${jump > 1 ? 's' : ''}, a <b style="color:${RARITY[rar].color}">${RARITY[rar].name}</b> prize${best ? ', <b>a new best</b> for your ' + c.classId.replace('_', ' ') : ''}.`, '#a0f0ff');
+  UI.log(`<b style="color:#20e0ff">Abyssal Rift Tier ${tier}</b> closed in ${fmtTime(time)} (${Math.round(k * 100)}% of the clock): +${jump} tier${jump > 1 ? 's' : ''}, ${/^[AEIOU]/.test(RARITY[rar].name) ? 'an' : 'a'} <b style="color:${RARITY[rar].color}">${RARITY[rar].name}</b> prize${best ? ', <b>a new best</b> for your ' + c.classId.replace('_', ' ') : ''}.`, '#a0f0ff');
   addEffect(new Column(m.x, m.y, '#20e0ff', 1.4, 60, 420)); G.flash = 0.5; sfx('levelup');
   if (R.hooks.onWin) R.hooks.onWin(R.result);
+}
+
+/** The hero left a rift that was neither won nor lost (the town portal, auto-play's retreat): a fail (game.setWorld). */
+export function riftLeave(world) {
+  const R = world.rift, c = G.char;
+  if (!R || R.done || R.failed || !c) return;
+  R.failed = true;
+  c.rifts.fails = (c.rifts.fails || 0) + 1;
 }
 
 /** The clock ran out: the rift collapses, the hero is thrown back to town. */
 export function riftCollapse(world) {
   const R = world.rift, c = G.char, p = world.player;
   if (!R || R.done || R.failed) return;
-  R.failed = true;
+  R.failed = true; R.backT = 2.5;
   c.rifts.fails = (c.rifts.fails || 0) + 1;
+  if (p) p.invuln = 3; // nothing lands in the collapse
   UI.centerMsg('THE RIFT COLLAPSES', `Tier ${R.tier} · the clock ran out`, 3.5);
   UI.log(`<b style="color:#ff6050">The Rift collapses</b> round you: the clock ran out ${R.guardian ? 'with the Guardian still standing' : `at ${R.pct}% of the quota`}. Tier ${R.tier} is still yours to try.`, '#ffb0a0');
   explosionFx(p.x, p.y, 5, 'arcane', 'eruption', { shake: 16 }); G.flash = 0.8; sfx('explode'); sfx('portal');

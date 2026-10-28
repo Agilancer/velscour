@@ -31,11 +31,21 @@ The code is `src/game/cloud.js` and `src/game/herobackup.js`, the screens are in
 ## How it works
 - **Firebase project `velscour`** (console.firebase.google.com, owned by the user, free Spark plan). Authentication has
   Google enabled. The authorized domains are `localhost`, `agilancer.github.io` and the Firebase defaults. Firestore
-  (Standard edition) has these rules:
-  ```
-  match /users/{uid}/{document=**} { allow read, write: if request.auth != null && request.auth.uid == uid; }
-  ```
+  (Standard edition) runs the rules in [`firestore.rules`](../firestore.rules) at the repo root: a player's heroes
+  (`users/{uid}/heroes/{classId}`) and account record (`users/{uid}/account/endgame`, docs/ENDGAME.md) are read and
+  written by their owner only; the Abyssal Rifts' honour board (`boards/{classId}/entries/{uid}`) is read by anyone and
+  each player creates or updates only their own entry (checked fields: `v == 1`, `name` a string of at most 24,
+  `cls` the path's class, `tier` an int 1..10000, `time` a number > 0, `level`/`marks` ints, `at` the server time,
+  `build` a map; no deletes). **To deploy them**: Firebase console > Firestore Database > Rules, paste the file, Publish
+  (or `firebase deploy --only firestore:rules` with the Firebase CLI). Until then the board's reads and writes fail
+  with permission-denied (the game says it could not reach the board) and the account record's sync logs a warning.
   The web config in `cloud.js` is public by design. The rules are what protect the saves.
+- **The honour board is an honour board.** Saves live in each browser's localStorage, so a player can edit a hero and
+  post any tier and time; the rules only keep entries well formed and in their owner's name. Every entry records the
+  build (the skill bar, the worn gear's names, rarities and item levels, the level and Infernal Marks) so readers can
+  judge it. A post is a transaction that reads the entry and writes only a better run (a higher tier, or the same tier
+  faster), so a stale device can't replace a better one. The board dialog loads the SDK when opened, signed in or not
+  (an explicit tap), and reads one class's entries (one read per entry).
 - **The SDK** (`firebase-app`, `firebase-auth`, `firebase-firestore-lite`, 12.19.0) is imported from gstatic only
   for a device that is signed in, or when the pointer reaches the sign-in button. Players who never sign in load
   nothing extra. The sign-in uses `signInWithPopup`; the popup waits on Google's iframe from `apis.google.com`.
@@ -69,6 +79,8 @@ player-hours a day. A full sync reads one document per hero.
 
 ## Not done yet
 - Apple sign-in (needs an Apple Developer account; Firebase supports it with the same code plus an `OAuthProvider('apple.com')`).
-- Settings, the taunt deck and the Bard's heard melodies stay per device.
+- Settings, the taunt deck, the Bard's heard melodies and the Reliquary stay per device. The Endgame record (Marks,
+  rift bests, the unlock) is per browser too and merges into the signed-in account's copy, so a second Google account
+  in the same browser inherits it.
 - The real popup can't be tested in cloud containers (gstatic and apis.google.com are blocked there). `cloud.js` routes
   the SDK from the npm package and checks that it loads and that Firestore refuses a signed-out read.
