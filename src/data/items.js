@@ -22,7 +22,7 @@ export const RARITY = [
   { id: 4, name: 'Legendary', color: '#ff9a2a', weight: 0.14, lv: 8, perks: 1, sockets: 4, bonus: 2.8, minIlvl: 45, fullIlvl: 60 },
   { id: 5, name: 'Mythic', color: '#ff4058', weight: 0.012, lv: 10, perks: 2, sockets: 4, bonus: 3.4, minIlvl: 60, fullIlvl: 80 },
   // Abyssal never rolls from a kill (weight 0): Abyssal Rift Guardians and Velscour Unbound make it (docs/ENDGAME.md)
-  { id: 6, name: 'Abyssal', color: '#20e0ff', weight: 0, lv: 12, perks: 2, sockets: 5, bonus: 0, minIlvl: 200, fullIlvl: 200 },
+  { id: 6, name: 'Abyssal', color: '#20e0ff', weight: 0, lv: 14, perks: 3, sockets: 5, bonus: 0, minIlvl: 200, fullIlvl: 200 },
 ];
 export const ABYSSAL = 6;
 /** How much of a rarity's drop odds item level ilvl has unlocked: 0 below its minIlvl, ramping to 1 at fullIlvl. */

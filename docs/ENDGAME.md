@@ -141,10 +141,9 @@ run = { tier, t: 0, limit: riftTime(), progress: 0, quota, total, guardian: null
   **Abyssal Key** with chance `0.12 + 0.005 * tier`.
 
 **Abyssal** is a seventh rarity in `RARITY` (`src/data/items.js`): `{ id: 6, name: 'Abyssal', color: '#20e0ff', weight: 0,
-lv: 12, perks: 2, sockets: 5, bonus: 0, minIlvl: 200, fullIlvl: 200 }`: never rolled by `rollRarity` (weight 0), made by
+lv: 14, perks: 3, sockets: 5, bonus: 0, minIlvl: 200, fullIlvl: 200 }`: never rolled by `rollRarity` (weight 0), made by
 `rollItem(ilvl, { rarity: 6 })`; `mfMul` gets a seventh entry; `css/style.css` `.r6`; `core/gearart.js` uses the Mythic
-designs/finishes for it (`rarityName` falls back); the loot filter dialog lists it; `rarity.js` prints it. Worth about
-17 item levels (Mythic 15).
+designs/finishes for it (`rarityName` falls back); the loot filter dialog lists it; `rarity.js` prints it. Worth 21 item levels over a Common (Mythic 15.8, Legendary 11; tools/tests/rarity.js): each step up is bigger than the last.
 
 Honour board (`src/game/leaderboard.js`, `Board`): Firestore `boards/{classId}/entries/{uid}` →
 `{ v: 1, name, cls, tier, time, at, level, marks, build: { bar: [skill ids], gear: { slot: { name, rarity, ilvl, relic } } } }`,
