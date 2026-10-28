@@ -324,7 +324,8 @@ async function gear521(page) {
       for (let i = 0; i < 6; i++) { w.legionT = 0.02; X.step(1.4); out.max = Math.max(out.max || 0, pit()); }
       out.cap = pit();
       // the clock stands still while the guardian is awake
-      const b = w.boss; b.awake = true; w.legionT = 3; X.step(4); out.paused = +w.legionT.toFixed(2); b.awake = false; X.step(2); out.ran = +w.legionT.toFixed(2);
+      // (on a fresh seeded level: on this one the guardian can be dead by now)
+      const wb = X.build(521, ['legion'], { seed: 77 }), b = wb.boss; b.awake = true; wb.legionT = 3; X.step(4); out.paused = +wb.legionT.toFixed(2); out.bossDead = b.dead; b.awake = false; X.step(2); out.ran = +wb.legionT.toFixed(2);
       // the Eternal Breach
       game.buildBreach(3); const B = G.world; out.breach = !!B.breach && B.heresy && B.heresy.ids.includes('legion');
       for (const m of X.foes(B)) if (Math.hypot(m.x - B.player.x, m.y - B.player.y) < 12) m.dead = true;
@@ -443,10 +444,12 @@ async function gear521(page) {
     // --- the rank: HUD subtitle, Quest Log, dials at 26, the rank-20 Mark
     const rk = await page.evaluate(async () => {
       const { G, game } = window.VELSCOUR, X = window.HX, H = await import('/src/game/heresies.js'), M = await import('/src/game/marks.js'), { toggleQuest } = await import('/src/ui/quest.js');
-      const ALL = H.HERESIES.map((h) => h.id), out = {};
+      const ALL = H.HERESIES.map((h) => h.id), out = {}, { OMENS } = await import('/src/game/happenings.js'); // (before the build: an await after it lets a frame mark the monsters)
       const w = X.build(521, ALL);
       out.rank = w.heresy.rank; out.sub = document.getElementById('area-sub').textContent;
-      out.dials = { loot: +w.lootMul.toFixed(3), gold: +w.goldMul.toFixed(3), mf: w.mfAdd, sigil: +w.sigilMul.toFixed(3), relic: +w.relicMul.toFixed(3) };
+      const O = (w.happen && OMENS[w.happen.omen]) || {}; // Black Omens: the level's omen multiplies loot and gold too
+      out.omen = w.happen && w.happen.omen;
+      out.dials = { loot: +(w.lootMul / (O.loot || 1)).toFixed(3), gold: +(w.goldMul / (O.gold || 1)).toFixed(3), mf: w.mfAdd, sigil: +w.sigilMul.toFixed(3), relic: +w.relicMul.toFixed(3) };
       const m = X.foes(w).find((f) => f.rank === 'normal'); const xp0 = m.xp; H.heresyTick(w, 1); out.xp = +(m.xp / xp0).toFixed(3);
       toggleQuest(); out.quest = [...document.querySelectorAll('.panel')].map((p) => p.textContent).join(' ').match(/Heresy rank \d+ \([^)]*\)/)?.[0] || '';
       return out;
@@ -511,12 +514,12 @@ async function gear521(page) {
     await gear521(page);
     const ALLIDS = JSON.stringify(ALL);
     const bal = await page.evaluate(async (ALL) => {
-      const { G, game } = window.VELSCOUR, X = window.HX, H = await import('/src/game/heresies.js'), { Auto } = await import('/src/game/autoplay.js');
+      const { G, game } = window.VELSCOUR, X = window.HX, H = await import('/src/game/heresies.js'), { Auto } = await import('/src/game/autoplay.js'), { OMENS } = await import('/src/game/happenings.js');
       const out = {};
       for (const [k, ids] of [['none', []], ['twins', ['twins']], ['all', ALL]]) {
         const lv = [];
         for (let i = 0; i < 2; i++) {
-          const b0 = performance.now(), w = X.build(520 + i, ids), bms = performance.now() - b0; H.heresyTick(w, 1); const f = X.foes(w);
+          const b0 = performance.now(), w = X.build(520 + i, ids, { seed: 500 + i }), bms = performance.now() - b0; H.heresyTick(w, 1); const f = X.foes(w); // seeded: every set builds the same two levels
           // update() per frame, the hero standing at the start (god mode, 300 frames)
           G.godMode = true; let ms = 0;
           for (let t = 0; t < 300; t++) { G.dt = 1 / 30; G.time += G.dt; G.frame++; const a = performance.now(); game.update(1 / 30); ms += performance.now() - a; if (t % 60 === 0) await new Promise((r) => setTimeout(r, 0)); }
@@ -524,7 +527,7 @@ async function gear521(page) {
         }
         const flat = (k2) => lv.flatMap((l) => l[k2]);
         const w = G.world;
-        out[k] = { monsters: lv.map((l) => l.n), buildMs: lv.map((l) => Math.round(l.bms)), champs: flat('champ').length, champAff: +(flat('champ').reduce((s, v) => s + v, 0) / Math.max(1, flat('champ').length)).toFixed(2), uniqAff: +(flat('uniq').reduce((s, v) => s + v, 0) / Math.max(1, flat('uniq').length)).toFixed(2), dials: { loot: +(w.lootMul || 1).toFixed(2), gold: +(w.goldMul || 1).toFixed(2), mf: w.mfAdd || 0, sigil: +(w.sigilMul || 1).toFixed(2), relic: +(w.relicMul || 1).toFixed(2) } };
+        out[k] = { monsters: lv.map((l) => l.n), buildMs: lv.map((l) => Math.round(l.bms)), champs: flat('champ').length, champAff: +(flat('champ').reduce((s, v) => s + v, 0) / Math.max(1, flat('champ').length)).toFixed(2), uniqAff: +(flat('uniq').reduce((s, v) => s + v, 0) / Math.max(1, flat('uniq').length)).toFixed(2), dials: { loot: +((w.lootMul || 1) / ((w.happen && OMENS[w.happen.omen] || {}).loot || 1)).toFixed(2), gold: +((w.goldMul || 1) / ((w.happen && OMENS[w.happen.omen] || {}).gold || 1)).toFixed(2), mf: w.mfAdd || 0, sigil: +(w.sigilMul || 1).toFixed(2), relic: +(w.relicMul || 1).toFixed(2) } };
         out[k].updMs = +(lv.reduce((a, l) => a + l.ms, 0) / lv.length).toFixed(2); out[k].awake = lv.map((l) => l.awake);
         // auto-play from the start, god mode, three levels of 90 s: seconds to the first 25 kills (a room's worth), kills,
         // update() cost; then one level without god mode: does a hero geared for the depth live through 90 s?
