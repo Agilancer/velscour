@@ -14,6 +14,34 @@ Contents
 
 ---
 
+## October 28, 2026 — held weapons and off-hands: 50 designs per class set, by rarity (branch `feat/held-gear`)
+- **Request:** the hero visibly holds his weapon and off-hand: three.js models posed in the 2D sprite's fists as if the
+  sprite were a flat card (the user drew the Paladin's mace held across the body, head up on the belt); then every
+  class with a class-fitting off-hand; then 50 unique designs per class weapon/off-hand across the rarities, fancier
+  by rarity, palette-swappable, with small versions as icons and ground drops, gems as glowing dots, rarity glows and
+  particles (fire, frost, lightning crackles, orbits...), faint rarity sparkles on armor/helmets, and settings to turn
+  the held gear and its effects off. The gear must turn with the hero.
+- **Tools:** `tools/handheld3d.js` (the rig: sprite as a depth card, per-armor fists found by template matching, a
+  dome fist the haft passes into; `bakePiece`/`bakeIcon`), `tools/handheld3d_kits.js` (the class poses, `POSE`),
+  `tools/weapons3d_parts.js` (rarity material kits, clean-steel blades with bright edges, jewels, runes, shards,
+  markers), `tools/weapons3d_families.js` (swords, axes, maces, spears, lances, staves, wands, bows, arrows, pistols,
+  bombs, lutes, drums, boomerangs, shields, tomes, orbs, skulls, idols, lanterns, jars, daggers, crossbows, scythes),
+  `tools/weapons3d.js` (35 SETS, 50 seeded designs each: 10/10/9/8/7/6), `tools/weapons3d.html` (review sheets),
+  `tools/weapons3d_bake.js` (bake; `HELD_OUT` bakes elsewhere). Textures: `assets/source/materials/`.
+- **Game:** `assets/sprites/held/` (per set a lossless WebP atlas of held sprites, region masks and icons; json with
+  offsets from the fist, sockets and effect points; `index.json` with every class's fists per armor), `src/data/held.js`
+  (`heldSetOf`, `CLASS_FOCUS`, `heldElement`), `src/gfx/heldart.js` (looks, recolour, the hero composite, icons,
+  inventory portrait, the effects layer), `src/gfx/heldfx.js` (stateless particles), hooks in `Player.artFrame` /
+  `drawArtLayer`, `itemIcon`, `itemIconURL`, ground drops, `loadClassPack`, settings `heldGear` / `heldFx`.
+- **Gameplay change:** new off-hand bases (tome, skull, idol, lantern, jar, bomb, drum, quiver, rang) with spell,
+  crit or cast implicits; every class but the Barbarian now starts and shops with its own off-hand
+  (`CLASSES[].offhand`); random off-hands favour shields and orbs and the wearer's own kind.
+- **Verified:** `heldgear.js all` (16 classes x 5 rarities x both facings, settings, icons, ground), `herolook.js`,
+  `flow.js`, `ui.js`, `hud.js`, `mobile.js`, `autoplay.js gunner 6`, `data_check.mjs`.
+- **Not done:** attack/walk poses (the stance is locked, the gear rides the standing sprite), the select screen shows
+  the hero without his gear, the Paladin's catalog items keep their painted icons, a Ranger with a bow and a shield
+  shows only the bow (both want the left hand).
+
 ## October 28, 2026 — the castles on phones (branch `fix/castle-phone-pass`)
 - **Request:** test the new castles, especially on phones. No real phone was available: Chromium emulating one
   (`tools/tests/castle_phone.js`: touch, 844 x 390 and 390 x 844 at DPR 2, the CPU slowed 4x, the machine's GPU), plus the
