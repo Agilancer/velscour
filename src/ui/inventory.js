@@ -92,7 +92,7 @@ export function dropFromBag(idx) {
   if (it.type === 'gear' && it.sealed === undefined) it.sealed = false; // already opened: it doesn't seal again on the floor
   c.bag[idx] = null;
   const g = new GroundItem(p.x, p.y, it.type === 'potion' ? 'potion' : 'item', { item: it });
-  g.t = -1.5; // don't instantly re-pick
+  g.t = -1.5; g.dropped = true; // not picked straight back up (auto-pickup leaves it alone: a click still takes it)
   G.world.addLoot(g);
   UI.selected = null;
   changed();

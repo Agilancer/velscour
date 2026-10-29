@@ -13,7 +13,7 @@ import { depthLevel, fortitude, logCurve } from '../data/depth.js';
 import { heroBonus } from './defiance.js';
 import { MAX_MASTERY, masteryNeed, masteryMul, masteryTier, TIER_NAMES } from './augments.js';
 import { castSkill, Timer } from './skillrun.js';
-import { Orbit, Area, BeamCh, Whirl } from './hazards.js';
+import { Orbit, Area, BeamCh, Whirl, Leap } from './hazards.js';
 import { hit, aoe } from './combat.js';
 import { heroLook, heroFrame, gearFxOf, finishOf } from '../core/gearart.js';
 import { castArtFx } from '../gfx/artfx.js';
@@ -552,6 +552,9 @@ export class Player extends Creature {
       hit(src, this, amount, k === 'burn' ? 'fire' : k === 'poison' ? 'poison' : 'blood', { dot: true });
     });
     if (this.dead) return;
+    // a dash, leap or beam whose effect was swept away under him (a level section changing round him: game/caverns.js,
+    // dunes.js, tower.js) would hold him channelling for good, unable to move or fight: let it go
+    if (this.channel && this.world && !this.world.hazards.includes(this.channel)) { if (this.channel instanceof Leap) this.z = 0; this.channel = null; }
     // regen
     if (this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + st.lifeRegen * dt);
     if (this.mana < this.maxMana) this.mana = Math.min(this.maxMana, this.mana + st.manaRegen * dt);
