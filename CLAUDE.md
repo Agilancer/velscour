@@ -128,6 +128,7 @@ node tools/tests/phoenix.js [mobile]               # Ranger 3D golden phoenix: t
 node tools/tests/totem3d.js [mobile]               # Totem Master 3D great totem: model states/face orders, bursts out of the ground, blast, sinks (stepped sheet)
 node tools/tests/runeblade3d.js                    # Death Knight Runeblade 3D model: all 5 skins, 16 turns, rune slots, 30 level looks + reforge, hover + Obliteration shots
 node tools/tests/runeblade_familiar.js [secs] [mobile] # Death Knight sword familiar: frost skulls, 15 flight patterns, swings, 5 sword skills, Rune Weapon summons, soak
+node tools/tests/bonegibs.js                       # bone gibs (three.js skulls/rib cages/femurs baked by tools/bones3d_bake.js): sheet, looks, kill shots
 node tools/tests/familiars.js                      # pet art: every pet summon's look, rainbow slimelings rising + hopping
 node tools/tests/slimecourt.js [secs] [play]       # Slime Lord's court: 60 Glymmora sets, every kind's abilities, pounces, blinks, idle games, shots
 node tools/tests/petanims.js [keys]                # pet atlases (docs/PET_SUMMON_ANIMATIONS.md): every summon in every state, dead poses, shots
@@ -214,6 +215,8 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `src/gfx/heldart.js` lays the piece in the worn armor's fist on the hero image (so it mirrors with facing), recolours
   metal/trim/grip by the look's PALETTES finish and glow by the item's element, and draws gem dots and rarity effects
   (`src/gfx/heldfx.js`). Settings `heldGear` / `heldFx`.
+  Gibs: half the chunks are the painted sprites in `assets/sprites/gibs.webp`, the rest bones: three.js models (`tools/bones3d.js`) baked by
+  `node tools/bones3d_bake.js` into the data sheet `assets/sprites/bones.webp` that `src/gfx/bonegibs.js` paints in the gib's bone and blood colours.
   Never hand-edit the generated files in `assets/sprites|ui|tiles|audio`.
 - Paths must stay **relative** (`assets/...`, `src/main.js`, never `/assets/...`), because the site is served
   from the `/velscour/` subpath on GitHub Pages. The `/src/...` imports in `tools/tests/` are fine, because the

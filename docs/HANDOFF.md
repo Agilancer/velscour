@@ -3103,7 +3103,13 @@ Do these in order, unless the user asks for something else. Their feedback after
   - `sparkle(x,y,z,color,n=1,spread=.3)` (:104).
   - `smoke(x,y,z,color,n=4,size=8)` (:110).
   - `bloodSpray(x,y,z,angle,n,color,force=1)` (:117).
-  - `gibs(x,y,z,n,color,boneColor,force=1,sets)`. With `sets` (from `gibSets()` in combat.js: bone, flesh, limb, bug, demon, eye by gore type/arch) every other chunk is a sprite from `assets/sprites/gibs.webp` (cut from `assets/source/gibs/gibs_1..5.jpg` by `python3 tools/process_assets.py gibs`, `tools/gibpack.py`), capped at 90 live (40 on touch). Rock, spark and ecto keep plain rects.
+  - `gibs(x,y,z,n,color,boneColor,force=1,sets)`. With `sets` (from `gibSets()` in combat.js: bone, flesh, limb, bug, demon, eye by gore type/arch) every other chunk is a sprite from `assets/sprites/gibs.webp` (cut from `assets/source/gibs/gibs_1..5.jpg` by `python3 tools/process_assets.py gibs`, `tools/gibpack.py`), capped at 90 live (40 on touch). The other chunks (all of them for rock, spark and ecto) are bones, `gibs(..., sets, {blood, scale, loose})`:
+    three.js skulls, rib cages, ribs, femurs, humeri, pelvises, jaws and vertebrae (`tools/bones3d.js`, true to size against each other; viewer
+    `tools/bones3d.html`) baked by `node tools/bones3d_bake.js` into `assets/sprites/bones.webp` + `.json`, a data sheet of 16 tumbling turns and
+    8-16 lying poses per bone (R light, G half-blood field, B soak field, A body/outline). `src/gfx/bonegibs.js` paints it per bone colour + blood
+    colour + look (clean, blood on one end, the other end, soaked) on first use. A third are bone-white (`boneColor`), the rest in the gib's
+    `color`; blood is `o.blood` (combat passes the monster's; null for skeletons, so theirs stay clean). A burst holds at most one skull, rib
+    cage, pelvis and jaw; `loose` (Whirlwind's rage chunks off the living) none. Rects only until the sheet loads. Test: `tools/tests/bonegibs.js`.
   - `addDecal(x,y,color,size=1,kind='splat'|'pool'|'scorch'|'frost',alpha=.9)` (:144).
   - Effect classes:
     - `Ring(x,y,r0,r1,dur,color,width=4,{z=2,fill,add=true})` (:152)
