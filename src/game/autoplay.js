@@ -328,7 +328,9 @@ function fitScore(p, it, buy = G.world && G.world.kind === 'town', keep = null) 
     // forever. Give gear a modest progression value so auto-play actually replaces stale pieces.
     const targetIlvl = Math.max(1, c.level, depthLevel(c.depth || 1));
     const freshness = (gear) => gear ? clamp((gear.ilvl || 1) / targetIlvl, 0, 1) : 0;
-    const ageGain = old && it.rarity < old.rarity ? 0 : 0.28 * (freshness(it) - freshness(old));   // never a downgrade in rarity for being newer
+    // never a downgrade in rarity for being newer, but an older piece of lower rarity still pays for its age: zeroing
+    // both made the swap back free, and an old Common ring and a newer Uncommon one took turns every tick for hours
+    const age = 0.28 * (freshness(it) - freshness(old)), ageGain = old && it.rarity < old.rarity ? Math.min(0, age) : age;
     if (s + ageGain > best.s) best = { s: s + ageGain, slot, move };
   }
   return best;
