@@ -14,6 +14,16 @@ Contents
 
 ---
 
+## October 29, 2026 — Riftgate at portal size, VELSCOUR DEFENSE on the title screen (branch `feat/riftgate-title`)
+- **Request:** make the blue portal to the Defense game the same size as the other portals, and add a blue button
+  to the title screen that goes to VELSCOUR DEFENSE as well.
+- **Done:** `drawRiftgate` (`src/gfx/riftgate.js`) draws its whole effect at `SCALE` 0.65 round its foot, so the vortex
+  matches the dungeon and Breach portals (drawn 1.3x in `drawPortal`); its `reach` is 1.7 like theirs. The title
+  menu has a `btn blue` VELSCOUR DEFENSE button under Heroes (`.btn.blue` in `css/style.css`) that opens
+  `defense/index.html`.
+- **Verified:** `tools/tests/riftgate.js` (12 seeds, now also clicks the title button), `flow.js`, `titlefx.js`;
+  title shots at 1280x720, 844x390 and 390x844.
+
 ## October 29, 2026 — VELSCOUR DEFENSE: Acts II-V (300 stages), side modes, balance for months, iPhone (branch `feat/defense-act2`)
 - **Request:** balance the Defense game thoroughly so it can't be beaten in a day and takes weeks upon weeks of
   stronger cards to reach the end; use tons of different VELSCOUR monsters; add 120 levels (Acts II and III) and more

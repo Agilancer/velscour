@@ -1,12 +1,12 @@
 // The Riftgate in Herrington Hollow: the blue-black tear that leads to VELSCOUR DEFENSE (defense/, a separate game
-// with its own page and save). Bigger and wilder than the dungeon portal: a black core in a churning blue vortex,
+// with its own page and save). The dungeon portal's size but wilder: a black core in a churning blue vortex,
 // lightning crawling round its rim, rune stones orbiting, and the ground cracked open beneath it.
 import { G } from '../state.js';
 import { isoX, isoY } from '../core/view.js';
 import { TAU } from '../core/util.js';
 import { glowSprite } from './vfx.js';
 
-const STONES = 7;
+const STONES = 7, SCALE = 0.65;   // drawn at the size of the other portals (drawPortal in render.js)
 /** Where the Riftgate stands: across the square from the dungeon portal, on open walkable ground. */
 export function riftgateSpot(t) {
   const m = t.map, C = t.center, P = t.portal, dx = C.x - P.x, dy = C.y - P.y, l = Math.hypot(dx, dy) || 1;
@@ -22,8 +22,9 @@ export function riftgateSpot(t) {
 }
 
 export function drawRiftgate(ctx, p) {
-  const x = isoX(p.x, p.y), y = isoY(p.x, p.y), t = G.time, H = 120, cy = y - H * 0.55;
+  const t = G.time, H = 120, x = 0, y = 0, cy = -H * 0.55;
   ctx.save();
+  ctx.translate(isoX(p.x, p.y), isoY(p.x, p.y)); ctx.scale(SCALE, SCALE);
   // the ground split open: dark cracks and a glow seeping out of them
   ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55 + Math.sin(t * 2) * 0.15;
   ctx.drawImage(glowSprite('#2a4cff'), x - 70, y - 26, 140, 52);

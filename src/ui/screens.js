@@ -51,6 +51,7 @@ export function titleScreen() {
       if (c) G.game.loadChar(c);
     });
     add(`Heroes <span style="font-size:13px;color:#a8977c">· ${used}/${CLASS_IDS.length}</span>`, () => classSelect(last ? last.classId : 'paladin'));
+    add('VELSCOUR DEFENSE', () => { location.href = 'defense/index.html'; }, 'btn blue'); // the Riftgate's game (defense/), from the title too
     add('Settings', settingsDialog, 'btn');
     add('Credits', () => creditsScreen(titleScreen), 'btn');
     add('How to Play', helpDialog, 'btn');

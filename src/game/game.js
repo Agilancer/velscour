@@ -328,7 +328,7 @@ export const game = {
     // the Abyssal Rift gate (game.confirmRift): lit once the Endgame is open
     // the Riftgate to VELSCOUR DEFENSE (defense/: its own page and save), across the square from the dungeon portal
     const rg = t.riftgate || (t.riftgate = riftgateSpot(t));
-    if (rg) world.portals.push({ x: rg.x, y: rg.y, active: true, color: '#3a6cff', reach: 2.4, riftgate: true, label: 'The Riftgate: VELSCOUR DEFENSE', use: () => this.confirmRiftgate() });
+    if (rg) world.portals.push({ x: rg.x, y: rg.y, active: true, color: '#3a6cff', reach: 1.7, riftgate: true, label: 'The Riftgate: VELSCOUR DEFENSE', use: () => this.confirmRiftgate() });
     if (t.rift) world.portals.push({ x: t.rift.x, y: t.rift.y, rift: true, color: '#20e0ff', reach: 1.7, get active() { return endgameUnlocked(); }, set active(v) {}, get label() { return endgameUnlocked() ? `Abyssal Rift — Tier ${riftOpen()}` : 'Abyssal Rift (sealed)'; }, use: () => this.confirmRift() });
     // the hero steps out of the portal, a little way down its road toward the square
     const P = t.portal, C = t.center, l = Math.hypot(C.x - P.x, C.y - P.y) || 1;
