@@ -189,6 +189,8 @@ node defense/tests/diag_save.mjs out/save_casual_80.json 276,277 3   # why a sta
 node defense/tests/diag_stage.mjs 289      # a maxed squad against a weak horde: a stage that can't be won at all
 node defense/tests/defense.js [mobile]     # browser: menus, stages of all five acts, three modes, wheel zoom, 3D packs, inspector
 node defense/tests/iphone.js               # browser: every view fits an iPhone in portrait and landscape (touch)
+node defense/tests/maps.mjs                # every stage's map: routes from each rift to the Heart, spare posts by the road (no browser)
+node defense/tests/perf.js [stages] [portrait|landscape] [throttle]   # browser: frame cost of a battle on a slowed phone + CPU profile
 node tools/tests/riftgate.js [seeds]       # the main game: the Riftgate in town, through it and back
 ```
 Serve the repo root first. Screenshots go to `defense/tests/out/` (git-ignored).

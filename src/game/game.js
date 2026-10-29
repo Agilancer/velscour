@@ -68,7 +68,7 @@ import { clearRims } from './creature.js';
 import { applyTrait, rollTrait, ambushTick, madnessTick, unleashMadness } from './mayhem.js';
 import { makeRaidBoss } from './raid.js';
 import { dropChest } from './loot.js';
-import { renderWorld, drawMinimap, preloadTownSheets, releaseTownSheets } from './render.js';
+import { renderWorld, drawMinimap, preloadTownSheets, releaseTownSheets, propReach } from './render.js';
 import { controls } from './controls.js';
 import { Auto } from './autoplay.js';
 import { writeSave, newCharData, migrate } from './save.js';
@@ -285,6 +285,8 @@ export const game = {
     camera.computeZoom();
     camera.follow(p.x, p.y, 0, true);
     world.map.reveal(p.x, p.y, 12);
+    world.map.stepMask(); // the steps every path search reads (map.js), worked out here rather than mid fight
+    propReach(world); // and the props' culling box (render.js), once the ground's heights are set
     preloadBarFx(p, SKILLS);
   },
 

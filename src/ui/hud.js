@@ -1,6 +1,6 @@
 // In-game HUD built on top of the provided skill-bar art.
 import { G } from '../state.js';
-import { el, fmt, fmtInt, escapeHtml, clamp } from '../core/util.js';
+import { el, fmt, fmtInt, escapeHtml, clamp, drawFiltered } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { A, potionIcon } from '../core/assets.js';
 import { UI, $, droppable } from './ui.js';
@@ -399,9 +399,11 @@ export const HUD = {
           row.appendChild(d);
         }
       }
-      // the message log grows up from the skill bar: keep it below the buff row (phones in landscape are short)
-      const lg = $('#log');
-      if (lg && !document.body.classList.contains('portrait')) {
+      // the message log grows up from the skill bar: keep it below the buff row (phones in landscape are short);
+      // measured only when the row's size or the layout changed, since reading rects forces a layout mid frame
+      const lg = $('#log'), lk = row.children.length + '|' + innerWidth + 'x' + innerHeight + '|' + document.body.className;
+      if (lg && this.last.logFit !== lk && !document.body.classList.contains('portrait')) {
+        this.last.logFit = lk;
         const room = Math.floor(lg.getBoundingClientRect().bottom - row.getBoundingClientRect().bottom - 6);
         const v = row.children.length && room > 0 ? room + 'px' : '';
         if (lg.style.maxHeight !== v) lg.style.maxHeight = v;
@@ -469,9 +471,7 @@ export const HUD = {
     const dw = bw * k, dh = bh * k;
     g.clearRect(0, 0, S, S);
     g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-    g.filter = 'brightness(1.35) contrast(1.1)'; // dungeon art is dark; lift it so it reads small
-    g.drawImage(img, bx, by, bw, bh, (S - dw) / 2, S - pad - dh, dw, dh);
-    g.filter = 'none';
+    drawFiltered(g, 'brightness(1.35) contrast(1.1)', img, bx, by, bw, bh, (S - dw) / 2, S - pad - dh, dw, dh); // dungeon art is dark; lift it so it reads small
   },
 
   /** The level-up banner: a dark vignette, the title and new level bleeding in from blur, then Velscour's two lines. */

@@ -521,6 +521,7 @@ export const Auto = {
     this.thinkT -= dt;
     if (this.thinkT <= 0) { this.thinkT = 1; this.manageHero(); }
     p.moveVec = [0, 0];
+    if (this.nav && this.nav.job) this.stepRoadNav(2);   // the next road field, a slice a frame (buildNav)
     if (w.kind === 'town') this.townTick(dt);
     else this.dungeonTick(dt);
   },
@@ -833,73 +834,100 @@ export const Auto = {
       let found = false;
       for (let r = 1; r < 3 && !found; r++) for (let oy = -r; oy <= r && !found; oy++) for (let ox = -r; ox <= r && !found; ox++) if (m.walkableTile(sx + ox, sy + oy)) { sx += ox; sy += oy; found = true; }
     }
-    if (!(m.road && this.nav.from === sy * W + sx && this.nav.c && w.time - this.nav.at < 2)) d.fill(-1);
     if (m.road) {
-      // the Castle's field covers 100k tiles (~10 ms): built again only once the hero has left his tile, or every 2 s
-      const at = sy * W + sx, now = w.time;
-      if (this.nav.from === at && this.nav.c && now - this.nav.at < 2) { this.navT = 0.35; return; }
-      this.nav.from = at; this.nav.at = now;
-      return this.buildRoadNav(sx, sy);
+      // the Castle's field covers 100k tiles (~9 ms, three or four times that on a phone): built again only once the
+      // hero has left his tile, or every 2 s, and then over the next frames (stepRoadNav, 2 ms a frame) while the last
+      // one serves; roadPath starts from the hero, wherever he is along it. A hero far from its origin waits for none.
+      const at = sy * W + sx, now = w.time, nav = this.nav;
+      this.navT = 0.35;
+      if (nav.c && nav.from === at && now - nav.at < 2) return;
+      const far = !nav.c || Math.max(Math.abs((nav.from % W) - sx), Math.abs(((nav.from / W) | 0) - sy)) > 6;
+      if (!far) { if (!nav.job) nav.job = this.roadJob(sx, sy); return; }
+      nav.job = this.roadJob(sx, sy);
+      this.stepRoadNav(Infinity);
+      return;
     }
+    d.fill(-1);
     this.nav.from = -1;
+    // straight off the typed arrays (the dunes and caverns are 60k tiles, rebuilt every 0.35 s): stepMask holds each
+    // tile's in-bounds, height-legal steps (map.stepsOk), floor and props are read live
+    const T = m.t, Bl = m.block, SM = m.stepMask();
     let h = 0, t = 0;
+    if (!m.inb(sx, sy)) { this.navT = 0.35; return; }
     q[t++] = sy * W + sx; d[sy * W + sx] = 0;
     while (h < t) {
-      const i = q[h++], x = i % W, y = (i / W) | 0, nd = d[i] + 1;
-      for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
-        if (!ox && !oy) continue;
-        const nx = x + ox, ny = y + oy;
-        if (!m.walkableTile(nx, ny)) continue;
-        if (ox && oy && (!m.walkableTile(x + ox, y) || !m.walkableTile(x, y + oy))) continue;
-        if (m.hgt && !m.stepsOk(x, y, ox, oy)) continue; // a height map: only hops and drops
-        const ni = ny * W + nx;
-        if (d[ni] !== -1) continue;
+      const i = q[h++], nd = d[i] + 1, sm = SM[i];
+      for (let k = 0; k < 9; k++) {
+        if (!((sm >> k) & 1)) continue;
+        const ox = (k % 3) - 1, oy = ((k / 3) | 0) - 1, ni = i + oy * W + ox;
+        if (d[ni] !== -1 || T[ni] !== 1 || Bl[ni]) continue;
+        if (ox && oy && (T[i + ox] !== 1 || Bl[i + ox] || T[i + oy * W] !== 1 || Bl[i + oy * W])) continue;
         d[ni] = nd; q[t++] = ni;
       }
     }
     this.navT = 0.35;
   },
+  /** Start a road field from tile (sx, sy) in spare buffers (stepRoadNav runs it). */
+  roadJob(sx, sy) {
+    const m = G.world.map, W = m.w, N = W * m.h, nav = this.nav;
+    // the buffers of a search left unfinished (the hero was carried off), else the last field's
+    let j = nav.job && nav.job.d.length === N ? nav.job : null;
+    if (!j && nav.spare && nav.spare.d.length === N) { j = nav.spare; nav.spare = null; }
+    j ||= { d: new Int32Array(N), c: new Int32Array(N), p: new Int32Array(N), bk: Array.from({ length: 8 }, () => []) };
+    j.d.fill(-1); j.c.fill(0x3fffffff); j.p.fill(-1);
+    for (const b of j.bk) b.length = 0;
+    // a raised drawbridge is planned across (straight, not diagonally): it comes down as the hero walks up to it
+    // (game/castle3d.js), so a goal inside the walls is not given up at the moat
+    // (a byte per tile, not a Set: two lookups per step of a 100k-tile search cost more than the rest of it)
+    j.DB = null;
+    if (m.planOpen && m.drawbridge && !m.drawbridge.down) {
+      if (nav.dbOf !== m.drawbridge || !nav.db || nav.db.length !== N) { nav.db = new Uint8Array(N); for (const i of m.drawbridge.tiles) nav.db[i] = 1; nav.dbOf = m.drawbridge; }
+      j.DB = nav.db;
+    }
+    j.m = m; j.s0 = sy * W + sx; j.at = G.world.time; j.cur = 0; j.left = 1;
+    j.c[j.s0] = 0; j.d[j.s0] = 0; j.bk[0].push(j.s0);
+    return j;
+  },
   /**
+   * Run the road field's search (roadJob) for up to `ms`; once done it becomes the field (nav.d, nav.c, nav.p).
    * On a map with roads (map.road: the Castle's roads, lanes, trails and paving) the field is the cheapest way rather
    * than the shortest: a step onto road costs 2, onto open ground 5 (diagonals 3 / 7), so the hero keeps to the roads
    * and trails unless leaving them saves real distance. Dial's buckets; d still counts the steps, p the way back.
    */
-  buildRoadNav(sx, sy) {
-    const m = G.world.map, W = m.w, N = W * m.h, R = m.road, d = this.nav.d;
-    const c = this.nav.c && this.nav.c.length === N ? this.nav.c : (this.nav.c = new Int32Array(N));
-    const pv = this.nav.p && this.nav.p.length === N ? this.nav.p : (this.nav.p = new Int32Array(N));
-    c.fill(0x3fffffff); pv.fill(-1);
-    const B = 8, bk = this.nav.bk || (this.nav.bk = Array.from({ length: B }, () => []));
-    for (const b of bk) b.length = 0;
-    const s0 = sy * W + sx, T = m.t, Bl = m.block;
+  stepRoadNav(ms) {
+    const nav = this.nav, j = nav.job, m = j.m;
+    if (m !== G.world.map) { nav.job = null; return; }
+    const W = m.w, R = m.road, T = m.t, Bl = m.block, d = j.d, c = j.c, pv = j.p, bk = j.bk, B = 8, DB = j.DB;
     // each tile's height-legal steps (map.stepMask, worked out once a map)
     const SM = m.stepMask();
-    // a raised drawbridge is planned across (straight, not diagonally): it comes down as the hero walks up to it
-    // (game/castle3d.js), so a goal inside the walls is not given up at the moat
-    const DB = m.planOpen && m.drawbridge && !m.drawbridge.down ? new Set(m.drawbridge.tiles) : null;
-    c[s0] = 0; d[s0] = 0; bk[0].push(s0);
-    let left = 1;
-    for (let cur = 0; left > 0; cur++) {
+    const OX = [-1, 0, 1, -1, 0, 1, -1, 0, 1], OFF = OX.map((ox, k) => (((k / 3) | 0) - 1) * W + ox);
+    const end = performance.now() + ms;
+    let cur = j.cur, left = j.left, n = 0;
+    for (; left > 0; cur++) {
       const b = bk[cur % B];
       while (b.length) {
+        if ((++n & 2047) === 0 && performance.now() > end) { j.cur = cur; j.left = left; return; }
         const i = b.pop(); left--;
         if (c[i] !== cur) continue;
-        const sm = SM[i];
+        const sm = SM[i], dbi = DB ? DB[i] : 0;
         for (let k = 0; k < 9; k++) {
           const step = (sm >> k) & 1;
           if (!step && !(DB && (k & 1))) continue;
-          const ox = (k % 3) - 1, oy = ((k / 3) | 0) - 1, ni = i + oy * W + ox, db = DB && (DB.has(ni) || DB.has(i));
-          if (!step && !db) continue;
-          if ((T[ni] !== 1 || Bl[ni]) && !(db && DB.has(ni))) continue;
-          if (ox && oy && (T[i + ox] !== 1 || Bl[i + ox] || T[i + oy * W] !== 1 || Bl[i + oy * W])) continue;
-          const nc = cur + (ox && oy ? (R[ni] ? 3 : 7) : (R[ni] ? 2 : 5));
+          const ni = i + OFF[k], dbn = DB ? DB[ni] : 0;
+          if (!step && !dbn && !dbi) continue;
+          if ((T[ni] !== 1 || Bl[ni]) && !dbn) continue;
+          const diag = !(k & 1);   // (k 4, the tile itself, is never a step)
+          if (diag) { const a = i + OX[k], o = i + OFF[k] - OX[k]; if (T[a] !== 1 || Bl[a] || T[o] !== 1 || Bl[o]) continue; }
+          const nc = cur + (diag ? (R[ni] ? 3 : 7) : (R[ni] ? 2 : 5));
           if (nc >= c[ni]) continue;
           c[ni] = nc; d[ni] = d[i] + 1; pv[ni] = i;
           bk[nc % B].push(ni); left++;
         }
       }
     }
-    this.navT = 0.35;
+    // done: it serves now, and the old field's buffers wait for the next search
+    nav.spare = nav.c ? { d: nav.d, c: nav.c, p: nav.p, bk: nav.bk || Array.from({ length: B }, () => []) } : null;
+    nav.d = d; nav.c = c; nav.p = pv; nav.bk = bk; nav.from = j.s0; nav.at = j.at; nav.job = null;
   },
   /** Path distance (tiles) from the hero to (x,y), or Infinity. */
   navDist(x, y) {
@@ -958,6 +986,11 @@ export const Auto = {
     const path = [];
     for (let guard = 0; pv[cur] >= 0 && guard < 20000; guard++) { path.push([(cur % W) + 0.5, ((cur / W) | 0) + 0.5]); cur = pv[cur]; }
     path.reverse();
+    // the field's origin can be a few tiles behind the hero (buildNav builds the next one over several frames): join
+    // the way at its point nearest him, not back where it starts
+    let k0 = 0, kd = Infinity;
+    for (let k = 0; k < Math.min(path.length - 1, 16); k++) { const dd = dist(p.x, p.y, path[k][0], path[k][1]); if (dd < kd) { kd = dd; k0 = k; } }
+    if (k0) path.splice(0, k0);
     if (path.length) path[path.length - 1] = [gx, gy];
     // smooth: skip a waypoint only if the straight line stays all on road, or all off it
     const same = (ax, ay, bx, by) => {
@@ -1204,11 +1237,12 @@ export const Auto = {
     if (!d) return null;
     if (this.front && this.front.t > w.time) return this.front.at;
     let best = -1, bd = Infinity;
+    const W = m.w, H = m.h, T = m.t, S = m.seen, unseen = (j) => T[j] === 1 && !S[j];
     for (let i = 0; i < d.length; i++) {
       const v = d[i];
       if (v < 2 || v >= bd) continue;
-      const x = i % m.w, y = (i / m.w) | 0;
-      if (!m.seen[i] || [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([ox, oy]) => m.tile(x + ox, y + oy) === 1 && !m.seen[(y + oy) * m.w + x + ox])) { bd = v; best = i; }
+      const x = i % W, y = (i / W) | 0;
+      if (!S[i] || (x + 1 < W && unseen(i + 1)) || (x > 0 && unseen(i - 1)) || (y + 1 < H && unseen(i + W)) || (y > 0 && unseen(i - W))) { bd = v; best = i; }
     }
     if (best < 0) return null;
     const at = [(best % m.w) + 0.5, ((best / m.w) | 0) + 0.5];
