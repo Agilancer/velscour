@@ -48,14 +48,18 @@ async function loot(page) {
     const { G } = window.VELSCOUR, p = G.player, w = G.world;
     const { GroundItem } = await import('/src/game/loot.js');
     const { rollGem } = await import('/src/data/items.js');
-    for (let i = 0; i < 6; i++) { const [x, y] = w.map.randomNear(p.x, p.y, 3); const g = w.addLoot(new GroundItem(x, y, 'item', { item: rollGem(20) })); g.z = 0; g.vz = 0; g.t = 1; g.stuck = true; }
+    for (let i = 0, n = 0; n < 6 && i < 200; i++) { // each on a spot a short walk away (not behind a wall on a random level)
+      const [x, y] = w.map.randomNear(p.x, p.y, 3), path = w.map.findPath(p.x, p.y, x, y, 400);
+      if (!path || path.length > 6) continue;
+      const g = w.addLoot(new GroundItem(x, y, 'item', { item: rollGem(20) })); g.z = 0; g.vz = 0; g.t = 1; g.stuck = true; n++;
+    }
     const pick = p.pickup.bind(p); p.pickup = (g) => (g.stuck ? false : pick(g));
   });
   const S = await run(page, 60, `
     const busy = /Picking up|Collecting/.test(Auto.status);
     if (busy) { S.busy = (S.busy || 0) + 1 / 30; S.last = t; }
     return S.last !== undefined && t - S.last > 3;`);
-  check(S.busy !== undefined && S.busy < 13, `a pile he can't pick up is given up in ${(S.busy || 0).toFixed(1)} s of trying (was 8 s an item: 48 s)`);
+  check(S.busy !== undefined && S.busy < 13, `a pile he can't pick up is given up in ${S.busy !== undefined ? S.busy.toFixed(1) + ' s' : 'no time (he never went for it)'} of trying (was 8 s an item: 48 s)`);
 }
 
 async function channel(page) {
