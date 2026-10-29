@@ -14,6 +14,43 @@ Contents
 
 ---
 
+## October 28, 2026 — no standing about waiting for spawns (branch `fix/no-spawn-waits`)
+- **Request:** the Paladin sometimes stood still for 5-20 s waiting for a scenario's or spawn routine's next monsters;
+  no spawn wait over about a second, but don't spawn everything at once.
+- **Found and fixed** (the rule everywhere: waves stay staggered, but the moment the hero has nothing to hit the next
+  one comes, or whatever is on its way hurries):
+  - **Serpentine Tower roof** (the 5-20 s): 3 s intro, 3.5 s rests, a pirate boat's 5 s approach + 1.25 s ramp + crew
+    0.55 s apart, rope climbs of 2.45 s, and the flagship's 8 s approach + ramp + a 5 s gangplank walk only after the
+    roof was clear. Now 0.1 s beats; the next wave is called while two of the current one still stand; the flagship
+    sails 2.5 s into wave 3; and with nothing on the roof to hit everything arriving hurries (docs/SERPENTINE_TOWER.md).
+  - **Depth's Edge summit**: 2.8 s intro, a 2 s minimum per boss, 4 s rests, adds 0.8 s late. Now 0.1 s beats, adds at
+    once, and a boss climbing the falls finishes in half a second when nothing is up there to hit.
+  - **Cursed Chest**: waves were 7 s apart even when one was dead in two; now the next comes 0.5 s after it falls.
+  - **Velscour's Challenge**: only 5 foes were sent, so a cleared area meant running the clock out; now with no foe
+    within 10 tiles Velscour sends 4-6 more within 0.6 s (staggered drops).
+  - **Dark Forest Lantern Vigil**: waves every 12 s with nothing between. The lantern waves keep their 12 s clock (calling
+    them on clear grew them too fast and the lanterns all went out by 25 s); now, with nothing alive between waves, a
+    small pack comes out of the dark at the hero after half a second. Wisps: 1 s between them, not 1.5 s.
+  - **Ambush entrances** (`mayhem.js enter`): drops 0.75-1 s (were 0.9-1.3), burrows 1 s (were 1.2).
+- **Left alone (not spawn waits):** overworld scenarios already spawn the next phase the moment the last dies; the
+  zone/fairy-ring captures (4-6 s standing on a point) are holds; the Castle rampart fights' "longest wait" in
+  `scenarios.js` is the bot walking the wall walk to foes that already exist.
+- **Verified:** a frame-by-frame measurement of the longest stretch with nothing targetable, from the roof's start to
+  the captain landing (11 tower scenarios) and through the summit (1-3 bosses), with foes dying instantly and 1.5 s
+  after landing: tower 1.0-1.3 s worst (was ~14 s before the captain), summit 0.35-0.7 s. Then `tower.js` (all 20
+  roof scenarios won, portal open; auto-play took the tower in 4 game minutes), `caverns.js` (all 6 summits +
+  auto-play), `dark_forest.js noshots noauto` (all 13 trials; the vigil won, longest wait 2.1 s), `happenings.js`,
+  `mayhem.js`, `flow.js`, `autoplay.js paladin 12` (depth 4, no deaths). `tower.js` now shoots the flagship once it
+  docks and clears wave 3 before waiting for the captain, since the 'ship' step can now last one frame; its wait for a
+  boat stops when the flagship sails (boatless roofs are now won inside that minute). On main as of PR #211:
+  `tower_edge.js`, `flow.js`, `mayhem.js`, `caverns.js 0`, `tower.js 0 0,1,4`, `dark_forest.js noshots noauto` pass.
+  `happenings.js`'s "auto-play used >= 6/9 interactables" is noisy: 12 repeats of that trial gave a mean of 8.25/9 here
+  (one 5/9; one full run 4/9) vs 8.7/9 on main; the low ones had no challenge running and the cursed chest now ends
+  sooner (10-19 s vs 17-21 s), so it reads as chance, but watch it.
+- **Local servers:** a stray "Failed to load resource" 404 can fail a long test's exit code: `python -m http.server`
+  has a listen backlog of 5, so a burst of module requests gets refused on `::1` and Chromium retries
+  `127.0.0.1:8123`, where another project's server may be listening. Serve on a free port with a bigger backlog
+  (`h.ThreadingHTTPServer.request_queue_size = 256`) and set `BASE_URL`.
 ## October 28, 2026 — the Sea of Sand's ten dune variants and their pyramids (branch `feat/sea-of-sand-variants`)
 - **Request:** ten new Sea of Sand variants: rolling dunes from height mapping, smooth transitions and desert
   textures, much bigger than the original with more checkpoints, new scenarios, new enemies and boss fights
