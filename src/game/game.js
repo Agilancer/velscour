@@ -43,6 +43,10 @@ import { loadTower3D, tower3dReady } from '../gfx/tower3d.js';
 import { generateCaverns, CAVE_VARIANTS } from '../world/caverns.js';
 import { createCaveRun, useCaverns } from './caverns.js';
 import { loadCave3D, cave3dReady } from '../gfx/cave3d.js';
+import { generateDunes } from '../world/dunes.js';
+import { createDuneRun, useDunes } from './dunes.js';
+import { loadDunes3D, dunes3dReady } from '../gfx/dunes3d.js';
+import { DUNE_VARIANTS } from '../data/dunes.js';
 import { loadCastlePack, releaseCastlePack } from '../gfx/castle.js';
 import { loadCastle3D, releaseCastle3D, loadBaked, castle3dState, warmBaked } from '../gfx/castle3dart.js';
 import { CASTLE_VARIANTS } from '../data/castles.js';
@@ -275,6 +279,7 @@ export const game = {
     useTerrain(world.map); // a height map lifts the ground plane (gfx/terrain.js); flat maps clear it
     useTower(world); // the Serpentine Tower lays the grid onto its spiral stair (game/tower.js)
     useCaverns(world); // the Depth's Edge Caverns lift everything onto their smooth height field (game/caverns.js)
+    useDunes(world); // so do the Sea of Sand's dunes and pyramids (game/dunes.js)
     camera.computeZoom();
     camera.follow(p.x, p.y, 0, true);
     world.map.reveal(p.x, p.y, 12);
@@ -399,6 +404,10 @@ export const game = {
           } else if (['caverns', 'caves', 'cave', 'depths edge', "depth's edge"].includes(message.trim().toLowerCase())) {
             close();
             this.teleportToBiome(BIOME_BY_ID.depths_edge);
+          } else if (['pyramid', 'pyramids', 'dunes', 'tomb'].includes(message.trim().toLowerCase())) {
+            close();
+            G.sandVariant = 1 + Math.floor(Math.random() * DUNE_VARIANTS.length);   // one of the dune variants, not the flat maze
+            this.teleportToBiome(BIOME_BY_ID.sea_of_sand).finally(() => { G.sandVariant = undefined; });
           }
         } },
       ],
@@ -478,7 +487,13 @@ export const game = {
 
   // the art a level of this biome needs before it can be generated (the portal and Velscour's level select share it)
   loadLevelArt(biome, mix = null) {
-    if (biome.id === 'sea_of_sand') return loadSeaOfSandPack();
+    if (biome.id === 'sea_of_sand') { // the flat cliff maze (0) or one of the ten dune variants with their pyramids (src/data/dunes.js), never the one seen last
+      const c = G.char, kept = c?.seaOfSandRuns?.[c.depth], n = DUNE_VARIANTS.length + 1, last = c?.lastSand ?? -1;
+      const k = Math.floor(Math.random() * (n - (last >= 0 ? 1 : 0)));
+      G.sandNext = G.sandVariant ?? (kept ? kept.dunes || 0 : last >= 0 && k >= last ? k + 1 : k);
+      if (G.sandNext > 0) return loadDunes3D().catch((e) => { console.warn(e); G.sandNext = 0; return loadSeaOfSandPack(); });
+      return loadSeaOfSandPack();
+    }
     if (biome.id === 'castle') { // one of the castles (src/data/castles.js), never the one seen last; the first if its bake won't load
       const last = CASTLE_VARIANTS.findIndex((v) => v.id === G.char?.lastCastle), k = Math.floor(Math.random() * (CASTLE_VARIANTS.length - (last >= 0 ? 1 : 0)));
       G.castleNext = G.castleVariant ?? (last >= 0 && k >= last ? k + 1 : k);
@@ -536,7 +551,9 @@ export const game = {
       : sky ? generateSkyship(depth, biome, seed, castle3dState())
       : biome.tower ? generateTower(depth, biome, seed, G.towerVariant)
       : biome.cave ? generateCaverns(depth, biome, seed, G.caveVariant ?? G.caveNext)
+      : biome.id === 'sea_of_sand' && (G.sandVariant ?? G.sandNext) > 0 && dunes3dReady() ? generateDunes(depth, biome, seed, (G.sandVariant ?? G.sandNext) - 1)
       : biome.overworld ? generateOverworld(depth, biome, seed, biome.id === 'castle' ? G.castleVariant ?? G.castleNext : null) : generateDungeon(depth, biome, tileset, seed);
+    if (biome.id === 'sea_of_sand') { c.lastSand = gen.dunes ? 1 + DUNE_VARIANTS.indexOf(gen.variant) : 0; if (gen.dunes) c.seaOfSandRuns[depth] = { seed, dunes: c.lastSand }; }
     const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches, wallHangings: gen.wallHangings, looks: gen.looks, townTiles: gen.townTiles || null, buildings: gen.buildings || [] });
     if (gen.layoutId) { world.layoutId = gen.layoutId; world.layoutName = gen.layoutName; }
     world.rooms = gen.rooms || [];
@@ -642,7 +659,17 @@ export const game = {
         sfx('gate'); UI.refresh(); this.autosave();
       });
       c.lastSkyVariant = world.sky.v.id; delete c.skyVariant;
-    } else if (biome.id === 'sea_of_sand') world.overworldScenario = createSeaOfSandScenario(world, gen, biome, () => {
+    } else if (gen.dunes) createDuneRun(world, gen, biome, () => {
+      exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
+      const first = !c.cleared[depth];
+      c.cleared[depth] = true;
+      c.deepest = Math.max(c.deepest || 0, depth);
+      this.brokeThrough(depth);
+      if (first) { c.skillPoints++; UI.log(`Bonus skill point for winning ${gen.variant.pyramid.name}!`, '#ffd860'); }
+      addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#40a0ff', 5));
+      sfx('gate'); UI.refresh(); this.autosave();
+    });
+    else if (biome.id === 'sea_of_sand') world.overworldScenario = createSeaOfSandScenario(world, gen, biome, () => {
       exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
       const first = !c.cleared[depth];
       c.cleared[depth] = true;
@@ -705,7 +732,7 @@ export const game = {
     this.setWorld(world, gen.start, old);
     announceHappenings(world);
     if (biome.id === 'castle') { addCastleStory(world, gen); world.ambientFx = gen.variant?.look?.ambient || null; c.lastCastle = gen.variant?.id; }
-    if (biome.overworld && !sky && !biome.cave) {
+    if (biome.overworld && !sky && !biome.cave && !gen.dunes) {
       // townsfolk on the road: reachable landmarks to walk between (game/wanderers.js)
       const spots = [], map = gen.map;
       for (let i = 0; i < 60 && spots.length < 9; i++) {
@@ -724,7 +751,8 @@ export const game = {
     const kin = tileset.mixed && BIOME_BY_ID[tileset.mixed];
     if (!sky) UI.centerMsg((gen.variant ? gen.variant.name : biome.name).toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);
     if (world.night) UI.log(world.raining ? 'Night has fallen, and the rain with it.' : 'Night has fallen over the land.', '#a0b0d0');
-    if (biome.id === 'sea_of_sand') UI.log(`Secure ${gen.scenarioCount} marked scenario area${gen.scenarioCount===1?'':'s'} to open the exit. Rewards improve with each clear.`, '#ffe2a0');
+    if (gen.dunes) UI.log(`${gen.variant.name}: ${gen.variant.intro} ${gen.dunes.camps.length} waystones stand between you and its door.`, '#ffe2a0');
+    else if (biome.id === 'sea_of_sand') UI.log(`Secure ${gen.scenarioCount} marked scenario area${gen.scenarioCount===1?'':'s'} to open the exit. Rewards improve with each clear.`, '#ffe2a0');
     else if (biome.id === 'mountainside') UI.log('The trail switchbacks up the cliffs to the summit. A ledge a hop high can be climbed; taller cliffs only jumped down.', '#ffe2a0');
     else if (sky) UI.log(`${world.sky.v.name}: ${world.sky.v.story ? world.sky.v.blurb + ' Hold the deck.' : 'hold the deck against the Air Pirates\' boarding waves.'} ${world.sky.v.hazardText || ''}`, '#ffe2a0');
     else if (biome.tower) UI.log(`${gen.variant.name}: ${gen.variant.epithet}. Climb the stair; things wait on the floors above, and some will not wait.`, '#ffe2a0');

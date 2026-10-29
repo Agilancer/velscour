@@ -14,6 +14,48 @@ Contents
 
 ---
 
+## October 28, 2026 — the Sea of Sand's ten dune variants and their pyramids (branch `feat/sea-of-sand-variants`)
+- **Request:** ten new Sea of Sand variants: rolling dunes from height mapping, smooth transitions and desert
+  textures, much bigger than the original with more checkpoints, new scenarios, new enemies and boss fights
+  hand-picked to fit, in a Sea of Sand palette swap. Then: three.js pyramids to explore, BIG ones, entered from
+  outside, going down and round through rooms of fights and scenarios to a boss deep inside and the portal on.
+- **Done:** see [SEA_OF_SAND_DUNES.md](SEA_OF_SAND_DUNES.md). `src/data/dunes.js` (ten variants: sands, sky, dune
+  shape, waystones, pyramid, roster, swap, bosses), `src/world/dunes.js` (the generator: dunes 168-188 tiles a side
+  against the classic 72, six to nine waystones on a zig-zag caravan trail, ridges, oases, the plaza and the
+  pyramid in the far corner; the tomb: seven chambers on a ring of landings and ramped corridors, about 19 tiles
+  down to a 30x30 burial chamber, a treasury), `src/gfx/dunes3d.js` (two three.js scenes; the sand is the pack's own
+  floor tiles unprojected into seamless squares and recoloured; procedural masonry with glyph bands; smooth or
+  stepped pyramids with a gold capstone and a sinking door slab; oases; braziers and sconces; seals; baked
+  obelisks, columns, urns, sarcophagus; a skirt of dunes past the map's edges), `src/game/dunes.js` (eight waystone
+  fights, six tomb-room fights plus a tomb boss, the door, the burial chamber's master, the portal, the HUD, the
+  Quest Log page, auto-play's `objective` and `duty`).
+- **Also fixed on the way:** monster names doubled a look's tint ("Copper Copper Sun Wizard": `monster.js` skips a
+  tint the art's name already has). Auto-play gained a general `duty` push (`autoplay.js`, before combat): a
+  scenario can name a place the hero must reach mid-fight, and after 5 s of fighting he pushes through to it for
+  up to 3 s (only the dunes use it so far).
+- **Design calls made without asking** (worth confirming):
+  - The classic flat maze stays in the rotation as variant 0 of 11, picked at random but never the one seen last
+    (`c.lastSand`). The skull's words `pyramid`, `pyramids`, `dunes`, `tomb` go straight to a dune variant.
+  - The tomb is a second region of the same tile grid (east of the dunes), not a separate level: the party fades
+    from the door to the entrance hall, the way back seals, and only the hero's region is drawn and picked.
+  - The bosses are raid bosses on plain templates (no signature casts) wearing the chosen art: the tomb boss at
+    half life and the master at full. Breakables (obelisks, egg sacs, canopic jars) are static monsters with art
+    `va_crystal`, `eb_m105` and `gold_chalice`.
+  - The 2D light map is driven by a copy of the biome with `dark` 0.06 by day (0.42 at night), not the Sea of
+    Sand's own 0.58, which turned the sunlit sand to mud.
+  - Dig progress is kept when the hero steps off a cache (it used to drain); a room's fight starts only a tile
+    inside it, so its slab never shuts the hero out; a room's foes always arrive inside it (a spawn radius used to
+    reach past the closed slab into the next landing and softlock the room), and any that get out are put back.
+  - Breakable relics have 0.9x a champion golem's life (the waves round them are the fight).
+- **Verified:** `dunes_map.mjs all 8` (10 variants x 8 seeds: trail, tomb, climb, depth, counts), `dunes.js all`
+  (every variant live: picking error 0, a camp, the door, the tomb, a room won, the master killed, the portal
+  walkable, shots looked at), `dunes.js moonlit,copper mobile`, `dunes.js golden auto noflow` (a level-1 paladin in god
+  mode takes the whole level by itself in 40 game minutes: seven waystones by 17, the door, six rooms, the master), `data_check.mjs`,
+  `sea_of_sand_generation.mjs`, `sea_of_sand.js`, `scenarios.js none` (the classic Sea of Sand routes),
+  `balance_model.mjs`, `flow.js`, `hud.js`, `mobile.js`, `autoplay.js wizard 5`. Frame cost at 844x390 on this
+  machine's GPU (d3d11): 60 fps on the dunes and in the tomb, also at 4x CPU throttle.
+- **Not verified:** real phones (only the 844x390 headless layout and a desktop GPU); Safari's WebGL.
+
 ## October 28, 2026 — the castles on phones (branch `fix/castle-phone-pass`)
 - **Request:** test the new castles, especially on phones. No real phone was available: Chromium emulating one
   (`tools/tests/castle_phone.js`: touch, 844 x 390 and 390 x 844 at DPR 2, the CPU slowed 4x, the machine's GPU), plus the
