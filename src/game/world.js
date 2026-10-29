@@ -138,7 +138,8 @@ export class World {
   update(dt) {
     this.time += dt;
     lights.length = 0; // refilled by this update's addLight calls, drawn by the next render (paused frames keep the last set)
-    this.pathBudget = 10; // A* searches monsters and minions may run this frame (Monster.navTo)
+    this.pathBudget = 10; // A* searches monsters and minions may run this frame (Monster.navTo), and for at most
+    this.pathEnd = performance.now() + 3; // 3 ms of it: a phone a few times slower runs fewer, the rest wait a frame
     const p = this.player;
     // flow field toward the player for monster path finding
     this.flowTimer -= dt;

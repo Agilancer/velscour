@@ -68,7 +68,7 @@ import { clearRims } from './creature.js';
 import { applyTrait, rollTrait, ambushTick, madnessTick, unleashMadness } from './mayhem.js';
 import { makeRaidBoss } from './raid.js';
 import { dropChest } from './loot.js';
-import { renderWorld, drawMinimap, preloadTownSheets, releaseTownSheets } from './render.js';
+import { renderWorld, drawMinimap, preloadTownSheets, releaseTownSheets, propReach } from './render.js';
 import { controls } from './controls.js';
 import { Auto } from './autoplay.js';
 import { writeSave, newCharData, migrate } from './save.js';
@@ -151,6 +151,16 @@ async function warmLevelArt(w) {
     if (seen.has(k)) continue;
     seen.add(k);
     if (enemyImage(c.art, c.swap)) { enemyImage(c.art, c.swap, 'flash'); enemyImage(c.art, c.swap, 'dark'); }
+    if (performance.now() - t > 40 && !document.hidden) { await new Promise((r) => setTimeout(r, 0)); t = performance.now(); }
+  }
+  // and the looks the level has chosen for what arrives later (waves, ambushes, summons), so their first frame
+  // doesn't build them
+  for (const l of (w.looks && w.looks.all ? w.looks.all() : [])) {
+    if (!l || !l.art || G.world !== w) continue;
+    const k = l.art + '|' + swapKey(l.swap);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    if (enemyImage(l.art, l.swap)) { enemyImage(l.art, l.swap, 'flash'); enemyImage(l.art, l.swap, 'dark'); }
     if (performance.now() - t > 40 && !document.hidden) { await new Promise((r) => setTimeout(r, 0)); t = performance.now(); }
   }
   // what earlier levels built and this one never asked for goes (a long run carried every level's sprites)
@@ -285,6 +295,8 @@ export const game = {
     camera.computeZoom();
     camera.follow(p.x, p.y, 0, true);
     world.map.reveal(p.x, p.y, 12);
+    world.map.stepMask(); // the steps every path search reads (map.js), worked out here rather than mid fight
+    propReach(world); // and the props' culling box (render.js), once the ground's heights are set
     preloadBarFx(p, SKILLS);
   },
 

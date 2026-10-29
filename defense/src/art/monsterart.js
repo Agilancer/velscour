@@ -1,6 +1,6 @@
 // Velscour's painted monsters (assets/sprites/enemies/*): one pose each, cut from their sheets and cached.
 // Variants: 'base', 'flash' (white, when hit), 'elite' (a darker, redder breed), 'ghost' (green: the necromancer's raised).
-import { makeCanvas } from '../core/util.js';
+import { makeCanvas, drawFiltered } from '../core/util.js';
 import { ART, loadAssetJSON, loadImage } from '../core/assets.js';
 
 let meta = null;
@@ -21,10 +21,11 @@ export function monsterImage(id, variant = 'base', maxH = 160) {
   c = makeCanvas(cell.w * k, cell.h * k);
   const x = c.getContext('2d');
   x.imageSmoothingQuality = 'high';
-  if (variant === 'elite') x.filter = 'saturate(1.4) brightness(0.8) sepia(0.25) hue-rotate(-20deg)';
-  if (variant === 'ghost') x.filter = 'grayscale(1) sepia(1) hue-rotate(70deg) saturate(2.2) brightness(1.1)';
-  x.drawImage(img, cell.x, cell.y, cell.w, cell.h, 0, 0, c.width, c.height);
-  x.filter = 'none';
+  // tints baked once (by hand where canvas filters don't work); a corpse is its look darkened, not a filter a frame
+  const f = [/elite/.test(variant) && 'saturate(1.4) brightness(0.8) sepia(0.25) hue-rotate(-20deg)', variant === 'ghost' && 'grayscale(1) sepia(1) hue-rotate(70deg) saturate(2.2) brightness(1.1)',
+    /corpse/.test(variant) && 'brightness(0.45) saturate(0.6)'].filter(Boolean).join(' ');
+  if (f) drawFiltered(x, f, img, cell.x, cell.y, cell.w, cell.h, 0, 0, c.width, c.height);
+  else x.drawImage(img, cell.x, cell.y, cell.w, cell.h, 0, 0, c.width, c.height);
   if (variant === 'flash') { x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(255,255,255,0.85)'; x.fillRect(0, 0, c.width, c.height); }
   c.fx = cell.fx / cell.w;
   cuts.set(key, c);

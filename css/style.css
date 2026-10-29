@@ -596,9 +596,10 @@ body.touch #hud-bar { left: calc(50% - 4vw); }
 body.touch #minimap-wrap { width: 84px; margin: 17px 18px 18px; }
 body.touch #hud-top-right { flex-direction: row-reverse; align-items: flex-start; }
 body.touch #hud-buttons { flex-wrap: wrap; justify-content: flex-end; max-width: 46vw; }
-body.touch #boss-bar { width: 28vw; left: 38%; top: 8px; } /* clear of the area name on the left */
-body.touch #sand-objective { top:48px; left:41%; width:min(400px,48vw); padding:5px 8px; gap:7px; font-size:11px; } /* clear of the Greed lever on the right */
-@media (max-width: 720px) { body.touch #boss-bar { width: 26vw; left: 31%; } }
+body.touch { --cc-left: max(41%, calc(146px + min(200px, 24vw))); } /* the centre column (landscape): under the stance and Greed row, clear of the stats and the minimap */
+body.touch #boss-bar { width: min(400px, 48vw); left: var(--cc-left); top: 80px; }
+body.touch #sand-objective { top:80px; left:var(--cc-left); width:min(400px,48vw); padding:5px 8px; gap:7px; font-size:11px; } /* the centre column */
+body.touch #boss-bar:not(.hidden) ~ #sand-objective { top: 124px; } /* under the boss bar (the dunes' tomb master) */
 body.touch #boss-name { font-size: 13px; letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 body.touch #boss-sub { font-size: 10px; min-height: 11px; }
 body.touch .hbtn { width: 38px; height: 41px; }
@@ -656,9 +657,9 @@ body.touch.portrait #hud-top-right { right: max(5px, env(safe-area-inset-right))
 body.touch.portrait #minimap-wrap { width: 64px; margin: 4px 8px; }
 body.touch.portrait .hbtn { width: 32px; height: 34px; }
 body.touch.portrait #hud-buttons { max-width: 44vw; }
-body.touch.portrait #boss-bar { top: max(92px, calc(env(safe-area-inset-top) + 84px)); left: 50%; width: min(66vw, 320px); }
-body.touch.portrait #madness { position: absolute; left: 50%; top: calc(max(154px, env(safe-area-inset-top) + 146px) - 100vh + var(--hud-w) * var(--hud-k)); bottom: auto; width: 42vw; }
-body.touch.portrait #barbarian-rage { position: absolute; left: 50%; top: calc(max(178px, env(safe-area-inset-top) + 170px) - 100vh + var(--hud-w) * var(--hud-k)); bottom: auto; width: 42vw; }
+body.touch.portrait #boss-bar { top: max(316px, calc(env(safe-area-inset-top) + 308px)); left: 50%; width: min(92vw, 360px); } /* a band of its own under MADNESS / SMITE: the stats and the buttons fill the top */
+body.touch.portrait #madness { position: absolute; left: calc(100vw - max(5px, env(safe-area-inset-right)) - 21vw); top: calc(max(284px, env(safe-area-inset-top) + 276px) - 100vh + var(--hud-w) * var(--hud-k)); bottom: auto; width: 42vw; }
+body.touch.portrait #barbarian-rage { position: absolute; left: calc(100vw - max(5px, env(safe-area-inset-right)) - 21vw); top: calc(max(308px, env(safe-area-inset-top) + 300px) - 100vh + var(--hud-w) * var(--hud-k)); bottom: auto; width: 42vw; }
 body.touch.portrait #center-msg { top: 32%; }
 body.touch.portrait #log { left: 8px; right: 8px; top: auto; bottom: auto; height: min(13vh,100px); max-height: none; overflow: hidden; }
 body.touch.portrait #touch-buttons { z-index: 7; }
@@ -759,12 +760,14 @@ body.touch .item-detail, body.touch .skill-detail { width: 230px; font-size: 12p
 #rift-bar.guard #rift-fill { background: linear-gradient(#fff0a0, #e0a020); }
 #rift-bar.guard #rift-pct { color: #ffd860; }
 @keyframes riftpulse { 50% { box-shadow: 0 0 16px #ff4030; } }
-body.touch #rift-bar { top: 50px; left: 38%; padding: 2px 8px; gap: 6px; font-size: 11px; } /* under the boss bar's column: clear of the area name and the buttons */
+body.touch #rift-bar { top: 80px; left: var(--cc-left); padding: 2px 8px; gap: 6px; font-size: 11px; } /* the centre column */
 body.touch #rift-bar #rift-track { width: 70px; }
 body.touch #rift-bar b { display: none; }
-body.touch #rift-bar.boss { top: 62px; }
-@media (max-width: 720px) { body.touch #rift-bar { left: 31%; } }
-body.touch.portrait #rift-bar, body.touch.portrait #rift-bar.boss { left: 8px; transform: none; top: max(212px, calc(env(safe-area-inset-top) + 204px)); } /* under MADNESS / SMITE, left of the buttons */
+body.touch #rift-bar.boss { top: 124px; } /* under the Guardian's bar */
+/* upright, the rift bar and the scenario objective join the left column (hud.js layoutMobile), under the auto-play line */
+body.touch.portrait #hud-top-left > #rift-bar, body.touch.portrait #hud-top-left > #sand-objective { position: relative; left: auto; top: auto; transform: none; margin-top: 4px; }
+body.touch.portrait #hud-top-left > #rift-bar { display: inline-flex; }
+body.touch.portrait #hud-top-left > #sand-objective { width: min(214px, calc(100vw - 176px)); } /* (clear of the stance on the right) */
 .hx-locked { padding: 8px 10px; margin-bottom: 8px; border: 1px solid #7a3020; border-radius: 6px; background: rgba(60,10,5,.5); color: #ffb0a0; }
 .hx-head { margin-bottom: 6px; }
 .hx-rank { font: 700 16px var(--font-head); color: #ff8060; }

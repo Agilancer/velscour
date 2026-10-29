@@ -295,7 +295,7 @@ export class Monster extends Creature {
       N.part = false; N.none = false;
       if (!N.force && map.losWide(this.x, this.y, gx, gy, r)) N.path = null;
       else if (flow && (N.path = map.flowPath(this.x, this.y, r))) { N.part = true; N.force = false; }
-      else if (w.pathBudget > 0) {
+      else if (w.pathBudget > 0 && (w.pathBudget === 10 || performance.now() < w.pathEnd)) {
         w.pathBudget--; N.path = map.findPath(this.x, this.y, gx, gy, far ? 12000 : 2500, r); N.force = false;
         if (!N.path) N.t = rand(1.5, 2.5); // no way there (a sealed boss room...): don't search again for a while
         N.none = !N.path;

@@ -14,6 +14,101 @@ Contents
 
 ---
 
+## October 29, 2026 — optimization and pathing sweep of every map, for phones (branch `perf/mobile-map-sweep`)
+- **Request:** an optimization sweep and pathing check of all maps, especially the newest modes, optimized for mobile in
+  particular; make sure it looks great and runs great on all platforms.
+- **How it was measured:** no GPU in this container (SwiftShader), so draw times say little about a phone; the script
+  cost does. New `tools/tests/mode_cpu.js [modes] [secs] [throttle]`: a hero auto-plays each kind of map on the 844x390
+  touch layout at 4x CPU throttle and it prints ms per frame in `game.update` (and render's own script), the worst
+  frame and what inside costs most (inclusive/self). New `defense/tests/perf.js` does the same for a Defense battle on an
+  iPhone-sized screen, `defense/tests/maps.mjs` checks every Defense stage's routes and posts (no browser).
+- **Found and fixed (CPU; every change checked to give identical results where it says so):**
+  - Auto-play's distance field (`buildNav`): the plain BFS (dunes, caverns, forest: 36k-60k tiles every 0.35 s) went
+    through `walkableTile`/`stepsOk` calls; now straight off the typed arrays and `map.stepMask()` (identical fields,
+    0 of 410k tiles differ; 2.8x faster on the dunes, 4x in the caverns). `frontier()` allocated an array and closure
+    per tile each second; now inline (same tile).
+  - The Castle's road field (`buildRoadNav`, 100k tiles): two `Set.has` per step for the raised drawbridge; a byte
+    mask now (23-27 ms -> 9 ms a build, identical c/d/p). And it no longer runs in one go: `roadJob`/`stepRoadNav`
+    build the next field over the following frames, 2 ms a frame, while the last one serves (identical when sliced
+    into 24-42 pieces); `roadPath` joins the way at its point nearest the hero (the field's origin can lag a few tiles);
+    a hero more than 6 tiles from the origin (a teleport) gets it at once.
+  - Monster A* (`findPath`) and the flow field read the typed arrays and `stepMask` too (identical paths on 2,100
+    random queries over 7 maps, identical flow fields). The A* budget is now 10 searches *and* 3 ms a frame (the first
+    always runs; a monster without one keeps its path and tries next frame), and path smoothing looks at most 24 nodes
+    ahead (movers re-plan long before; a long castle path was smoothed against its far end first, costing more than
+    the search). `map.stepMask()` is built in `setWorld`, behind the loading screen.
+  - The small minimap walked every tile of the map 5x a second (100k in the Castle) before culling; now only the
+    window it shows (pixel-identical; Castle 3.9 -> 1.3 ms).
+  - `renderWorld` projected every prop (2,600 in the Castle, 1,100 in the Wilds) each frame to cull it; a tile-box
+    pre-filter (the view widened by the farthest any prop reaches and the ground's height range, `propReach`, built in
+    `setWorld`) skips ~80% of them first; checked over 11 maps x 40 views: never drops a prop the exact test keeps. Not
+    used on the Serpentine Tower (its warp bends tile space).
+  - The HUD read two element rects (a forced layout) every 0.25 s for the log's height; now only when the buff row's
+    size or the layout changes.
+  - Result, `game.update` at 4x throttle, mean / worst frame (before -> after): Castle 24.9/191 -> 11.3/30 ms, dunes
+    16.7/109 -> 6.5/21, Dark Forest 18.6/196 -> 9.0/27, Depth's Edge 9.0/26 -> 4.7/9, Mountainside 12.2/30 -> 6.1/17,
+    Catacombs 14.1/34 -> 8.2/28, town 1.8/57 -> 1.2/6; Breach, Sky Battle, Tower, rifts unchanged (already 2-12 ms;
+    the rift's worst frames are 17-34 ms, a single 139 ms frame seen once did not come back in three more rifts).
+- **Pathing bugs found and fixed:**
+  - **Depth's Edge Caverns:** about 1 seed in 120 the route was cut short of the notch (3 of 360 seeds): the seam of
+    rock kept between the high gallery and the floor below ate the notch's inner end where the gallery ran close, so
+    `notchIn` (the route's last waypoint and the shaft trigger) was solid rock. `generateCaverns` now pulls `notchIn`
+    back along the notch to its last open tile (good seeds unchanged: nothing is drawn from the RNG).
+    `caverns_map.mjs 60` (360 seeds) all ok; `caverns.js 0` (auto-play delve, climb, summit) passes.
+- **Checked, no bugs:** every generator (`dunes_map.mjs all`, `caverns_map.mjs`, `breach_gen.mjs` 60 seeds,
+  `sea_of_sand_generation.mjs` 100, `castle_overworld.mjs` 11 castles x 55 seeds x 35 scenarios), Defense's 300 stages
+  (461 routes, every rift reaches the Heart by the shortest road), `mobs.js` (389 monsters, 0 stuck, every guardian
+  arrives), `pets.js`, `legion.js`, `autoloops.js`, `castle_autoplay.js`, `castle_variants.js` (in 25 / 48 s),
+  `scenarios.js` (all finish; the two rampart fights' 28 s waits are the known ones).
+- **Mobile / all platforms:**
+  - **three.js is vendored** (`vendor/three/`, 0.170.0, MIT, 690 KB): the import maps (`index.html`,
+    `defense/index.html`) pointed at cdn.jsdelivr.net, which this container (and any network that blocks or loses it)
+    can't reach; the Tower and the Caverns then fell back to the Wilds, the pyramids to the flat maze, Defense's packs
+    failed. Same origin also saves a phone a DNS + TLS handshake. The tools' bake pages still use the CDN.
+  - **Canvas filters everywhere:** WebKit has long lacked `ctx.filter` or drawn offscreen canvases unfiltered, so
+    baked tints (wall hangings, frozen/charmed monsters, slime colours, pet tints, the target window, Defense's elite /
+    ghost monsters and region recolours) came out plain on iPhones. `util.drawFiltered` / `filterPixels` (both games)
+    test once and otherwise put the colour filters through the pixels by the CSS matrices (within 4/255 of Chromium's
+    own; `globalThis.VELSCOUR_NO_CANVAS_FILTER = true` forces the fallback for tests). Defense's corpses and stunned
+    heroes used a `ctx.filter` every frame; now baked looks.
+  - **Phone HUD:** the scenario objective (dunes, Dark Forest, Breach) sat on the stance buttons at 844x390, also on
+    Greed and the stats at 667x375, and on the stats and the menu column in portrait; MADNESS/SMITE crossed the Auto
+    button in portrait. Moved (under the stance row in landscape; the rift bar's place in portrait; the bars to the
+    left column): no overlaps at 844x390, 667x375, 390x844, 1280x720.
+- **Left alone (worth knowing):** the 3D modes' cost under SwiftShader is ~80% PBR fragment shading (Tower: MeshStandard
+  with bump maps and 6 lights); a real phone GPU does that far faster, so the look was kept (switching to Lambert on
+  touch would be the lever if a real phone struggles). Defense's battle script is light (sim < 1 ms, draw ~9 ms at 4x).
+  A Defense change was tried and taken back: giving stages 178 and 258 (exactly as many roadside posts as heroes) a
+  spare post moved the seeded dedicated Commander from stage 260 to 298 by day 56, so the fitted calendar leans on
+  them; `maps.mjs` lists them and fails only if a stage ever has fewer posts than heroes.
+- **Verified:** the above, plus `flow.js`, `mobile.js`, `hud.js`, `seethrough.js` (3 of 3; one failure under full
+  load, flaky as noted before), `town.js`, `rooms.js`, `overworld.js`, `autoplay.js wizard 5 mobile`, `castle_walls.js`,
+  `tower.js 0 0,1 noauto`, `dunes.js golden`, `dark_forest.js noshots noauto`, `mountain.js noshots noauto`,
+  `breach.js`, `rifts.js` (+ `phone`), `sea_of_sand.js`, `spectate.js mobile`, `defense/tests/iphone.js`,
+  `modes_smoke.mjs 30`. `defense/tests/defense.js mobile` fails "mode bossrush/vault" on `main` too, and its 3D pack
+  step needs 3-6 more taps than it gives under SwiftShader, on `main` too.
+- **Not verified:** real phones and Safari/WebKit (still only Chromium emulating them); GPU frame times.
+- **Second pass, the rest of the main game** (the user: "do this on normal VELSCOUR too"):
+  - Pathing everywhere: `rooms.js` on all 33 dungeon biomes x 4 levels (every floor tile, exit and chest reachable),
+    `mobs.js 41` (every one of the 41 biomes: 1,239 monsters, 5 stuck = 0.4%, every guardian arrives; the test now loads
+    each biome's art with `game.loadLevelArt`, it threw on the Dark Forest past its first ten levels),
+    `biome_scenarios.js` on all 32 biomes (640 scenarios, all finish), `velscour.js noauto`, `raid.js 30`.
+  - `mode_cpu.js dungeons,raid,velscour,unbound` (every dungeon biome, a BOSS ROOM, Velscour, Unbound; new modes and
+    `PHONE=portrait`): 6-15 ms of update a frame at 4x, render script 8-24 ms, spread over many small loops (no single
+    lever left; the particle cap is already 1,400 on touch). Portrait runs in line with landscape.
+  - **Velscour's demons:** his summons' looks were chosen (and their sprites built) on the frame the first one stepped
+    out (a 45-96 ms frame at 4x). `setupVelscour` chooses them with the level, and `warmLevelArt` now also builds every
+    look the level has chosen (`looks.all()`), not only those of the creatures standing in it. No spike in three fights;
+    live canvases +~50 (+3 MB) on entering a level, no growth over a seeded 12-level `levelmem` run against `main`.
+  - **Phone HUD in fights:** in boss fights and rifts the boss bar ran over the area name, the stats and the menu
+    buttons, the rift bar over the stance, MADNESS/SMITE over the target window (portrait), the log over the target
+    window and the auto-play line (landscape). Landscape: one centre column under the stance/Greed row (`--cc-left`)
+    stacks the boss bar, then the rift bar or the objective; the log is fitted below the whole left column (only a line
+    or two while a target is up on a short phone). Portrait: MADNESS/SMITE (and Rage) on the right under Greed, the boss
+    bar in its own band below, the rift bar and the objective moved into the left column's flow (`layoutMobile`).
+    No overlaps in the Dunes, Dark Forest, Breach, rifts, BOSS ROOMs, Velscour and the castles at 844x390, 667x375 and
+    390x844. `mobile.js`, `hud.js`, `rifts.js phone`, `spectate.js mobile`, `breach.js town,rules`, `options.js` pass.
+
 ## October 29, 2026 — Riftgate at portal size, VELSCOUR DEFENSE on the title screen (branch `feat/riftgate-title`)
 - **Request:** make the blue portal to the Defense game the same size as the other portals, and add a blue button
   to the title screen that goes to VELSCOUR DEFENSE as well.

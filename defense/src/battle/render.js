@@ -1,12 +1,20 @@
 // The battlefield on one screen (Fantasica's fixed view) in Velscour's isometric style: the map is a floating
 // diorama of tile columns, heroes on their posts, the horde on the road, the rift tears and the Bastion Heart.
-import { TAU, clamp, rgba, rand, makeCanvas } from '../core/util.js';
+import { TAU, clamp, rgba, rand, makeCanvas, drawFiltered } from '../core/util.js';
 import { isoX, isoY, HW, HH, HZ, TW, dressMap, loadTheme, THEMES } from '../art/terrain.js';
 import { heroCanvas, ELEMENT_COL } from '../art/heroart.js';
 import { monsterImage } from '../art/monsterart.js';
 import { ART } from '../core/assets.js';
 import { D } from '../state.js';
 import * as FX from './fx.js';
+
+// a stunned hero, greyed once per picture (a canvas filter every frame is a slow path, and missing in some browsers)
+const grey = new WeakMap();
+function stunned(img) {
+  let c = grey.get(img);
+  if (!c) { c = makeCanvas(img.width, img.height); drawFiltered(c.getContext('2d'), 'grayscale(0.7) brightness(0.8)', img, 0, 0); grey.set(img, c); }
+  return c;
+}
 
 export class BattleView {
   constructor(canvas) {
@@ -69,7 +77,7 @@ export class BattleView {
   heartHit() { this.heartFlash = 0.6; }
   banner(text, col) { this.onBanner?.(text, col); }
   skillName(u, id) { this.onSkill?.(u, id); }
-  corpse(m) { const img = monsterImage(m.art, m.elite ? 'elite' : 'base'); if (img) this.corpses.push({ img, x: m.x, y: m.y, z: m.z, h: this.mH(m), face: m.face, t: 0, air: m.air }); if (this.corpses.length > 40) this.corpses.shift(); }
+  corpse(m) { const img = monsterImage(m.art, m.elite ? 'elite-corpse' : 'corpse'); if (img) this.corpses.push({ img, x: m.x, y: m.y, z: m.z, h: this.mH(m), face: m.face, t: 0, air: m.air }); if (this.corpses.length > 40) this.corpses.shift(); }
   mH(m) { return (ART.byId[m.art]?.h || 50) * (m.R.h || 1) * (m.boss ? 1.6 : m.lt ? 1.35 : m.elite ? 1.1 : 1) * (m.child ? 0.7 : 1) * 0.82; }
 
   update(dt) {
@@ -181,9 +189,8 @@ export class BattleView {
     const x = isoX(c.x, c.y), y = isoY(c.x, c.y, c.z), h = c.h, w = h * c.img.width / c.img.height, k = Math.min(1, c.t / 0.25);
     ctx.save(); ctx.globalAlpha = Math.max(0, 1 - Math.max(0, c.t - 0.8) / 0.8) * 0.85;
     ctx.translate(x, y - 2); ctx.scale(c.face < 0 ? -1 : 1, 1); ctx.rotate(-Math.PI / 2 * 0.85 * k); ctx.scale(1, 1 - 0.38 * k);
-    ctx.filter = 'brightness(0.45) saturate(0.6)';
-    ctx.drawImage(c.img, -w / 2, -h, w, h);
-    ctx.filter = 'none'; ctx.restore();
+    ctx.drawImage(c.img, -w / 2, -h, w, h);   // (darkened when it was cut: monsterImage's corpse looks)
+    ctx.restore();
   }
   drawMonster(ctx, m, t) {
     const img = monsterImage(m.art, m.hitT > 0 ? 'flash' : m.elite ? 'elite' : 'base');
@@ -233,9 +240,8 @@ export class BattleView {
     const s = 56 / (img.feet - img.headTop), w = img.width * s, h = img.height * s;
     const atk = u.anim < 0.16 ? Math.sin(u.anim / 0.16 * Math.PI) : 0, breathe = Math.sin(t * 2.4 + u.id) * 0.012;
     ctx.save(); ctx.translate(x + atk * 4 * u.face, y - lift); ctx.scale(u.face < 0 ? -1 : 1, 1); ctx.scale(1 - breathe, 1 + breathe);
-    if (u.stun > 0) ctx.filter = 'grayscale(0.7) brightness(0.8)';
-    ctx.drawImage(img, -w / 2, -img.feet * s, w, h);
-    ctx.filter = 'none'; ctx.restore();
+    ctx.drawImage(u.stun > 0 ? stunned(img) : img, -w / 2, -img.feet * s, w, h);
+    ctx.restore();
     // empower pips, the skill charge ring and stars when stunned
     for (let i = 1; i < u.lvl; i++) { ctx.fillStyle = '#ffd060'; ctx.beginPath(); ctx.arc(x - (u.lvl - 2) * 4 + (i - 1) * 8, y + 7, 2.4, 0, TAU); ctx.fill(); }
     const ch = clamp(u.charge / u.def.skill.charge, 0, 1);

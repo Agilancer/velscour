@@ -40,7 +40,8 @@ Planned in screen-aligned axes (a to the right of the screen, b toward the camer
   lake cavern. Floor heights ramp along the passages and are smoothed and held under the climb limit.
 - **The lake cavern**: a lake (deep in the middle, a walkable shallow rim, a beach) fed by the plunge pool under the
   falls, and walls 17 tiles high. The waterfall drops from a spur of the plateau (where the river spills) straight
-  into the plunge pool. A notch at the cliff's foot beside it holds the passage mouth.
+  into the plunge pool. A notch at the cliff's foot beside it holds the passage mouth (where the gallery runs close, the rock kept between
+  them can eat the notch's inner end: `notchIn` is then pulled back to the notch's last open tile).
 - **The plateau** (the top of the falls, HP 13-16 tiles up by variant) behind the lake: higher ground behind lower
   never hides it. A river crosses it from a spring in the back wall to the lip; it is shallow and walkable.
 - **The shaft**, to the right of the plateau: a pool at its foot (with a rope of water falling into it out of the

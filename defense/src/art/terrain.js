@@ -1,7 +1,7 @@
 // The battlefield in Velscour's iso tiles: each region dresses a map in one of the main game's floor/prop packs
 // (assets/tiles/*), recoloured where a region needs it (Frostfang's ice, the Rift's blood). A map becomes a set of
 // tile columns (top floor + cliff faces down to the next tile or the diorama's base), cached once per battle.
-import { makeCanvas, RNG, shade, rgba } from '../core/util.js';
+import { makeCanvas, RNG, shade, rgba, drawFiltered } from '../core/util.js';
 import { loadImage, loadAssetJSON } from '../core/assets.js';
 import { K } from '../battle/map.js';
 
@@ -113,8 +113,8 @@ export async function loadTheme(id) {
     const done = new Map();
     const recolor = (img) => {
       if (done.has(img)) return done.get(img);
-      const c = makeCanvas(img.width, img.height), x = c.getContext('2d');
-      x.filter = T.filter; x.drawImage(img, 0, 0);
+      const c = makeCanvas(img.width, img.height);
+      drawFiltered(c.getContext('2d'), T.filter, img, 0, 0);   // (by hand where canvas filters don't work)
       done.set(img, c);
       return c;
     };
