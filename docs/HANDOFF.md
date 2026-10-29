@@ -14,6 +14,35 @@ Contents
 
 ---
 
+## October 29, 2026 — VELSCOUR DEFENSE: a separate tower-defense card game behind the Riftgate (branch `feat/velscour-defense`)
+- **Request:** a bigger, crazier blue/black portal in town leading to a completely different game in the VELSCOUR
+  universe, VELSCOUR DEFENSE: a gacha game with no microtransactions (heroes, gear and more to roll for), named
+  characters of each class built from all of VELSCOUR's art (the newest held weapons too), everything as packs of
+  cards that look like Magic: The Gathering cards, 3D foil pack opening, Fantasica as the model (5 videos, articles,
+  screenshots researched) but free, a character tower defense on predetermined paths with VELSCOUR's monsters and
+  class projectiles/slashes, isometric with height mapping, an auto-play mode, at least 80 levels, 20 dialogs from each
+  of the 16 characters at the beginning and end of levels, and kept in its own area of the codebase. Then: 1,000 waves
+  that get incrementally harder; in-match upgrades that reset and permanent ones outside; 30 maps that unlock as you
+  clear them; tests and iteration so it is not too easy but not too steep; daily login and hourly rewards; red dots;
+  an auto-play that plays well and upgrades heroes (but never spends currency or opens packs); all sorts of powers;
+  the Bard's music only on an occasional charge-up attack. Then commit, PR and merge.
+- **Done:** see [`defense/docs/DEFENSE.md`](../defense/docs/DEFENSE.md) (the design, the Fantasica findings, the systems,
+  the difficulty fitting) and [`defense/docs/STORY.md`](../defense/docs/STORY.md) (the cast and the arc). All in
+  `defense/` (own page, modules, save, tests, tools); the main game only gained `src/gfx/riftgate.js`, the Riftgate
+  in `enterTown` (`world.portals`, after the dungeon portal, the Breach and before the Abyssal Rift gate) with
+  `confirmRiftgate`, and one line in `drawPortal`.
+- **Design calls made without asking** (worth confirming): Fantasica's heroes-as-towers (no blocking, no hero life) over
+  classic blockers; 80 stages share the 1,000 waves (6 to 20 per stage) rather than an endless mode; stages 31-80 replay
+  the 30 battlefields turned, in their region's tiles; Bastion's Resolve (+6% attack per defeat in a row at a stage, up
+  to +36%) so no stage walls; gold levels every hero to 100 and duplicates only add stars; the Bastion Works research
+  is the Commander's, not auto-play's; Defense's eighth region is "Beyond the Riftgate" (the main game has an Abyssal
+  Rift gate); the Bard plays one of the main game's two-bar melodies on the harpsichord in Crescendo.
+- **Verified:** `defense/tests/defense.js` and `defense.js mobile` (boot, every menu, briefing, a stage played on auto
+  through its scenes to a win, five later regions, an Armory pack and a hero x10 summon in 3D, the inspector),
+  `defense/tests/balance.mjs` (the whole campaign in about 200 auto battles, 57 of 80 first-try wins, worst stage a
+  dozen tries), `defense/tools/check_dialogs.mjs` (320 dialogs), `tools/tests/riftgate.js` (12 town seeds), `flow.js`.
+- **Not verified:** real phones and Safari/iOS; human play balance (the curve is fitted to auto-play).
+
 ## October 28, 2026 — no standing about waiting for spawns (branch `fix/no-spawn-waits`)
 - **Request:** the Paladin sometimes stood still for 5-20 s waiting for a scenario's or spawn routine's next monsters;
   no spawn wait over about a second, but don't spawn everything at once.
