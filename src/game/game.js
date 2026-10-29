@@ -1,5 +1,6 @@
 // Game flow: characters, town, dungeon depths, death, victory.
 import { G } from '../state.js';
+import { riftgateSpot } from '../gfx/riftgate.js';
 import { input } from '../core/input.js';
 import { camera } from '../core/view.js';
 import { sfx, playMusic, stopMusic, setAmbience, stopAmbience, footsteps } from '../core/audio.js';
@@ -325,6 +326,9 @@ export const game = {
     // THE ETERNAL BREACH's purple portal (game.confirmBreach, docs/ETERNAL_BREACH.md)
     if (t.breach) world.portals.push({ x: t.breach.x, y: t.breach.y, active: true, breach: true, color: '#a040ff', reach: 1.7, label: 'THE ETERNAL BREACH', use: () => this.confirmBreach() });
     // the Abyssal Rift gate (game.confirmRift): lit once the Endgame is open
+    // the Riftgate to VELSCOUR DEFENSE (defense/: its own page and save), across the square from the dungeon portal
+    const rg = t.riftgate || (t.riftgate = riftgateSpot(t));
+    if (rg) world.portals.push({ x: rg.x, y: rg.y, active: true, color: '#3a6cff', reach: 2.4, riftgate: true, label: 'The Riftgate: VELSCOUR DEFENSE', use: () => this.confirmRiftgate() });
     if (t.rift) world.portals.push({ x: t.rift.x, y: t.rift.y, rift: true, color: '#20e0ff', reach: 1.7, get active() { return endgameUnlocked(); }, set active(v) {}, get label() { return endgameUnlocked() ? `Abyssal Rift — Tier ${riftOpen()}` : 'Abyssal Rift (sealed)'; }, use: () => this.confirmRift() });
     // the hero steps out of the portal, a little way down its road toward the square
     const P = t.portal, C = t.center, l = Math.hypot(C.x - P.x, C.y - P.y) || 1;
@@ -350,6 +354,14 @@ export const game = {
     townHappening(world); // a festival, a blessing, a gift (game/happenings.js)
     p.hp = p.maxHp; p.mana = p.maxMana;
     this.autosave();
+  },
+
+  confirmRiftgate() {
+    UI.dialog({
+      title: 'The Riftgate',
+      html: `<p>A blue-black wound in the air, far older and stranger than the dungeon portal. Beyond it Velscour's horde marches on the Bastion, and sixteen heroes wait for a Commander.</p><p class="dim">VELSCOUR DEFENSE is a separate game with its own cards and save; your hero here is not touched. A way back waits on the other side.</p>`,
+      buttons: [{ label: 'Not yet' }, { label: 'Step through', cls: 'red', fn: () => { this.autosave(); location.href = 'defense/index.html'; } }],
+    });
   },
 
   confirmDungeon() {

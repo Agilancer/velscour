@@ -8,6 +8,12 @@ straight from `main` at https://agilancer.github.io/velscour/.
 requirements, current status, open issues, the next steps, and a subsystem reference.
 This file only covers the essentials.
 
+**VELSCOUR DEFENSE** (`defense/`) is a second, separate game: a Fantasica-style tower defense with Rift Card packs,
+reached through the Riftgate in town (`src/gfx/riftgate.js`). It has its own page, modules, save
+(`velscour_defense_v1`), tests and docs (**[`defense/docs/DEFENSE.md`](defense/docs/DEFENSE.md)**); it reads `assets/`
+but never imports `src/`. Keep the two apart: main-game work should not touch `defense/`, and Defense work should not
+touch `src/` beyond the Riftgate hook.
+
 ## Run it
 ```bash
 python3 -m http.server 8123          # from the repo root; ES modules need http, not file://
@@ -34,6 +40,9 @@ node tools/tests/homunculus.js                      # the blacksmith live: bubbl
 node tools/tests/encounters.js [kinds]             # dungeon encounters with people (captive, knight's last stand, peddler, wizard, witch, Greener) + rats
 node tools/tests/rings.js                          # ring augments in a live dungeon, skill mastery, ring/forge UI shots
 node tools/tests/flow.js                           # town -> portal -> boss -> exit -> depth 2 -> death -> reload
+node tools/tests/riftgate.js [seeds]               # the Riftgate to VELSCOUR DEFENSE: placed in every town, through it and back
+node defense/tests/defense.js [mobile]             # VELSCOUR DEFENSE (its own game, defense/docs/DEFENSE.md): menus, a stage on auto, 3D packs
+node defense/tests/balance.mjs 80 1500             # Defense's difficulty curve: the whole campaign on auto, no browser
 node tools/tests/deathgift.js [classes]            # "DEATH IS THE ONLY WAY OUT, MY KIND SIR." to Velscour: level 350, Mythic +10 gear, depth 500; the hero is barred from the Honour Board
 node tools/tests/stash.js                          # town storage chest: 300 slots, store/take, auto-play stashing
 node tools/tests/savesafe.js                       # unreadable saves never written over: set aside before the first save (localStorage or IndexedDB), downloadable, refused + warned when no room
