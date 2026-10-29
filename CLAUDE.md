@@ -8,6 +8,12 @@ straight from `main` at https://agilancer.github.io/velscour/.
 requirements, current status, open issues, the next steps, and a subsystem reference.
 This file only covers the essentials.
 
+**VELSCOUR DEFENSE** (`defense/`) is a second, separate game: a Fantasica-style tower defense with Rift Card packs,
+reached through the Riftgate in town (`src/gfx/riftgate.js`). It has its own page, modules, save
+(`velscour_defense_v1`), tests and docs (**[`defense/docs/DEFENSE.md`](defense/docs/DEFENSE.md)**); it reads `assets/`
+but never imports `src/`. Keep the two apart: main-game work should not touch `defense/`, and Defense work should not
+touch `src/` beyond the Riftgate hook.
+
 ## Run it
 ```bash
 python3 -m http.server 8123          # from the repo root; ES modules need http, not file://
@@ -34,6 +40,9 @@ node tools/tests/homunculus.js                      # the blacksmith live: bubbl
 node tools/tests/encounters.js [kinds]             # dungeon encounters with people (captive, knight's last stand, peddler, wizard, witch, Greener) + rats
 node tools/tests/rings.js                          # ring augments in a live dungeon, skill mastery, ring/forge UI shots
 node tools/tests/flow.js                           # town -> portal -> boss -> exit -> depth 2 -> death -> reload
+node tools/tests/riftgate.js [seeds]               # the Riftgate to VELSCOUR DEFENSE: placed in every town, through it and back
+node defense/tests/defense.js [mobile]             # VELSCOUR DEFENSE (its own game, defense/docs/DEFENSE.md): menus, a stage on auto, 3D packs
+node defense/tests/balance.mjs 80 1500             # Defense's difficulty curve: the whole campaign on auto, no browser
 node tools/tests/deathgift.js [classes]            # "DEATH IS THE ONLY WAY OUT, MY KIND SIR." to Velscour: level 350, Mythic +10 gear, depth 500; the hero is barred from the Honour Board
 node tools/tests/stash.js                          # town storage chest: 300 slots, store/take, auto-play stashing
 node tools/tests/savesafe.js                       # unreadable saves never written over: set aside before the first save (localStorage or IndexedDB), downloadable, refused + warned when no room
@@ -128,6 +137,7 @@ node tools/tests/phoenix.js [mobile]               # Ranger 3D golden phoenix: t
 node tools/tests/totem3d.js [mobile]               # Totem Master 3D great totem: model states/face orders, bursts out of the ground, blast, sinks (stepped sheet)
 node tools/tests/runeblade3d.js                    # Death Knight Runeblade 3D model: all 5 skins, 16 turns, rune slots, 30 level looks + reforge, hover + Obliteration shots
 node tools/tests/runeblade_familiar.js [secs] [mobile] # Death Knight sword familiar: frost skulls, 15 flight patterns, swings, 5 sword skills, Rune Weapon summons, soak
+node tools/tests/bonegibs.js                       # bone gibs (three.js skulls/rib cages/femurs baked by tools/bones3d_bake.js): sheet, looks, kill shots
 node tools/tests/familiars.js                      # pet art: every pet summon's look, rainbow slimelings rising + hopping
 node tools/tests/slimecourt.js [secs] [play]       # Slime Lord's court: 60 Glymmora sets, every kind's abilities, pounces, blinks, idle games, shots
 node tools/tests/petanims.js [keys]                # pet atlases (docs/PET_SUMMON_ANIMATIONS.md): every summon in every state, dead poses, shots
@@ -216,6 +226,8 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `src/gfx/heldart.js` lays the piece in the worn armor's fist on the hero image (so it mirrors with facing), recolours
   metal/trim/grip by the look's PALETTES finish and glow by the item's element, and draws gem dots and rarity effects
   (`src/gfx/heldfx.js`). Settings `heldGear` / `heldFx`.
+  Gibs: half the chunks are the painted sprites in `assets/sprites/gibs.webp`, the rest bones: three.js models (`tools/bones3d.js`) baked by
+  `node tools/bones3d_bake.js` into the data sheet `assets/sprites/bones.webp` that `src/gfx/bonegibs.js` paints in the gib's bone and blood colours.
   Never hand-edit the generated files in `assets/sprites|ui|tiles|audio`.
 - Paths must stay **relative** (`assets/...`, `src/main.js`, never `/assets/...`), because the site is served
   from the `/velscour/` subpath on GitHub Pages. The `/src/...` imports in `tools/tests/` are fine, because the
