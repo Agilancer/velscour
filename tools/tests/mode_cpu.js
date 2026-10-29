@@ -5,14 +5,21 @@
 // that cost the most inside update (inclusive and self time).
 // Usage: node tools/tests/mode_cpu.js [modes,comma] [secs] [throttle] [depth]
 //   modes: town, a biome id (catacombs, castle, sea_of_sand, dark_forest, mountainside, skyship, serpentine_tower,
-//   depths_edge, overworld...), breach, rift; default: a sample of every kind of map
+//   depths_edge, overworld...), breach, rift, raid (a depth 30 BOSS ROOM), velscour (his throne fight), unbound
+//   (Velscour Unbound); 'dungeons': every dungeon biome; default: a sample of every kind of map
+//   PHONE=portrait: an upright phone (390x844) instead of 844x390
 const { openGame, report } = require('./harness');
 const DEF = 'town,catacombs,overworld,castle,sea_of_sand,dark_forest,mountainside,skyship,serpentine_tower,depths_edge,breach,rift';
-const modes = (process.argv[2] || DEF).split(',').filter(Boolean);
+let modes = (process.argv[2] || DEF).split(',').filter(Boolean);
+const VP = process.env.PHONE === 'portrait' ? { width: 390, height: 844 } : { width: 844, height: 390 };
 const secs = +(process.argv[3] || 6), rate = +(process.argv[4] || 4), depth = +(process.argv[5] || 24);
 
 (async () => {
-  const { browser, ctx, page, errors } = await openGame({ width: 844, height: 390, mobile: true });
+  const { browser, ctx, page, errors } = await openGame({ ...VP, mobile: true });
+  if (modes.includes('dungeons')) {
+    const ids = await page.evaluate(async () => (await import('/src/data/biomes.js')).BIOMES.filter((b) => !b.overworld && !b.challenge && b.id !== 'throne').map((b) => b.id));
+    modes = modes.flatMap((m) => (m === 'dungeons' ? ids : [m]));
+  }
   await page.evaluate(async () => {
     const { G, game } = window.VELSCOUR;
     await game.newChar('wizard', 'Cpu');
@@ -38,7 +45,13 @@ const secs = +(process.argv[3] || 6), rate = +(process.argv[4] || 4), depth = +(
         const { endgame, saveEndgame } = await import('/src/game/endgame.js');
         endgame().unlocked = Date.now(); saveEndgame();
         game.enterRift(1); await until(() => G.world.rift && loaded());
-      } else if (BIOME_BY_ID[mode]) await game.teleportToBiome(BIOME_BY_ID[mode]);
+      } else if (mode === 'raid') { game.enterTown(); await until(loaded); G.char.depth = 30; await game.teleportToBiome(BIOME_BY_ID.cathedral); }
+      else if (mode === 'velscour') { game.enterTown(); await until(loaded); await game.finalBoss(); }
+      else if (mode === 'unbound') {
+        const E = await import('/src/game/endgame.js'); E.unlockEndgame();
+        game.enterTown(); await until(loaded); Object.assign(G.char, { keys: 3, depth: 510, deepest: 509 }); G.char.unbound ||= { wins: 0, best: 0 };
+        await game.enterUnbound();
+      } else if (BIOME_BY_ID[mode]) { if (G.world.kind !== 'town') { game.enterTown(); await until(loaded); } G.char.depth = depth; await game.teleportToBiome(BIOME_BY_ID[mode]); }
       else return false;
       document.querySelectorAll('.screen').forEach((s) => s.remove());
       G.ui.modalCount = 0;

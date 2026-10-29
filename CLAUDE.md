@@ -79,7 +79,7 @@ node tools/tests/arch3d.js [biome] [design]        # 3D-baked arches (docs/ARCH_
 node tools/tests/rooms.js [biomes] [levels]        # shaped rooms + scatter set pieces: reachability, chests, screenshots
 node tools/tests/wanderers.js [minutes]            # overworld townsfolk walk/flee, bounties taken and paid by auto-play
 node tools/tests/biome_perf.js [ids] [depth]       # per-biome frame cost with auto-play on + CPU profile hot spots
-node tools/tests/mode_cpu.js [modes] [secs]        # script cost of update (and render) per map/mode on a slowed phone (town, every overworld, Breach, rift): what inside costs most
+node tools/tests/mode_cpu.js [modes] [secs]        # script cost of update (and render) per map/mode on a slowed phone (town, every overworld, Breach, rift, raid, velscour, unbound, 'dungeons' = every dungeon biome; PHONE=portrait): what inside costs most
 node tools/tests/mobs.js [levels]                  # monster pathing: awake monsters + guardians must reach the hero (stuck <= 2%)
 node tools/tests/bot.js paladin 2                  # bot plays depths 1..2, prints balance stats
 node tools/tests/skills.js wizard,gunner           # cast every skill of a class (all 16 if no arg; slow)

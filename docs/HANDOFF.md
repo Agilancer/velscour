@@ -88,6 +88,26 @@ Contents
   `modes_smoke.mjs 30`. `defense/tests/defense.js mobile` fails "mode bossrush/vault" on `main` too, and its 3D pack
   step needs 3-6 more taps than it gives under SwiftShader, on `main` too.
 - **Not verified:** real phones and Safari/WebKit (still only Chromium emulating them); GPU frame times.
+- **Second pass, the rest of the main game** (the user: "do this on normal VELSCOUR too"):
+  - Pathing everywhere: `rooms.js` on all 33 dungeon biomes x 4 levels (every floor tile, exit and chest reachable),
+    `mobs.js 41` (every one of the 41 biomes: 1,239 monsters, 5 stuck = 0.4%, every guardian arrives; the test now loads
+    each biome's art with `game.loadLevelArt`, it threw on the Dark Forest past its first ten levels),
+    `biome_scenarios.js` on all 32 biomes (640 scenarios, all finish), `velscour.js noauto`, `raid.js 30`.
+  - `mode_cpu.js dungeons,raid,velscour,unbound` (every dungeon biome, a BOSS ROOM, Velscour, Unbound; new modes and
+    `PHONE=portrait`): 6-15 ms of update a frame at 4x, render script 8-24 ms, spread over many small loops (no single
+    lever left; the particle cap is already 1,400 on touch). Portrait runs in line with landscape.
+  - **Velscour's demons:** his summons' looks were chosen (and their sprites built) on the frame the first one stepped
+    out (a 45-96 ms frame at 4x). `setupVelscour` chooses them with the level, and `warmLevelArt` now also builds every
+    look the level has chosen (`looks.all()`), not only those of the creatures standing in it. No spike in three fights;
+    live canvases +~50 (+3 MB) on entering a level, no growth over a seeded 12-level `levelmem` run against `main`.
+  - **Phone HUD in fights:** in boss fights and rifts the boss bar ran over the area name, the stats and the menu
+    buttons, the rift bar over the stance, MADNESS/SMITE over the target window (portrait), the log over the target
+    window and the auto-play line (landscape). Landscape: one centre column under the stance/Greed row (`--cc-left`)
+    stacks the boss bar, then the rift bar or the objective; the log is fitted below the whole left column (only a line
+    or two while a target is up on a short phone). Portrait: MADNESS/SMITE (and Rage) on the right under Greed, the boss
+    bar in its own band below, the rift bar and the objective moved into the left column's flow (`layoutMobile`).
+    No overlaps in the Dunes, Dark Forest, Breach, rifts, BOSS ROOMs, Velscour and the castles at 844x390, 667x375 and
+    390x844. `mobile.js`, `hud.js`, `rifts.js phone`, `spectate.js mobile`, `breach.js town,rules`, `options.js` pass.
 
 ## October 29, 2026 — Riftgate at portal size, VELSCOUR DEFENSE on the title screen (branch `feat/riftgate-title`)
 - **Request:** make the blue portal to the Defense game the same size as the other portals, and add a blue button

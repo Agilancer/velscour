@@ -153,6 +153,16 @@ async function warmLevelArt(w) {
     if (enemyImage(c.art, c.swap)) { enemyImage(c.art, c.swap, 'flash'); enemyImage(c.art, c.swap, 'dark'); }
     if (performance.now() - t > 40 && !document.hidden) { await new Promise((r) => setTimeout(r, 0)); t = performance.now(); }
   }
+  // and the looks the level has chosen for what arrives later (waves, ambushes, summons), so their first frame
+  // doesn't build them
+  for (const l of (w.looks && w.looks.all ? w.looks.all() : [])) {
+    if (!l || !l.art || G.world !== w) continue;
+    const k = l.art + '|' + swapKey(l.swap);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    if (enemyImage(l.art, l.swap)) { enemyImage(l.art, l.swap, 'flash'); enemyImage(l.art, l.swap, 'dark'); }
+    if (performance.now() - t > 40 && !document.hidden) { await new Promise((r) => setTimeout(r, 0)); t = performance.now(); }
+  }
   // what earlier levels built and this one never asked for goes (a long run carried every level's sprites)
   if (G.world === w) { trimArtCaches(); clearRims(); }
 }

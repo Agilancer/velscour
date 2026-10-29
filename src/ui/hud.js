@@ -158,6 +158,12 @@ export const HUD = {
 
   layoutMobile() {
     const portrait = G.touch && innerHeight > innerWidth;
+    // upright, the rift bar and the scenario objective join the left column's flow under the auto-play line (the
+    // column's height changes with the area name, the target window and the stats, so a fixed place gets run into);
+    // otherwise they stand after the boss bar, in the centre column (css: #boss-bar ~)
+    const rift = $('#rift-bar'), obj = $('#sand-objective');
+    if (portrait && rift.parentElement !== $('#hud-top-left')) $('#hud-top-left').append(rift, obj);
+    else if (!portrait && rift.parentElement === $('#hud-top-left')) $('#boss-bar').after(rift, obj);
     const compact = G.touch && (portrait || !G.settings.mobileSkillBar);
     document.body.classList.toggle('compact-mobile-hud', compact);
     const hud = $('#hud'), img = $('#hud-img'), xp = $('#xp-track'), rail = $('#hud-rail');
@@ -401,11 +407,13 @@ export const HUD = {
       }
       // the message log grows up from the skill bar: keep it below the buff row (phones in landscape are short);
       // measured only when the row's size or the layout changed, since reading rects forces a layout mid frame
-      const lg = $('#log'), lk = row.children.length + '|' + innerWidth + 'x' + innerHeight + '|' + document.body.className;
-      if (lg && this.last.logFit !== lk && !document.body.classList.contains('portrait')) {
+      // (below the whole left column: the target window and the auto-play line stand under the buff row)
+      const lg = $('#log'), lk = row.children.length + '|' + innerWidth + 'x' + innerHeight + '|' + document.body.className + '|' + $('#target-box').className + '|' + $('#auto-status').className;
+      const lr = lg && this.last.logFit !== lk && !document.body.classList.contains('portrait') && lg.getBoundingClientRect();
+      if (lr && lr.width) {   // (not while the HUD is hidden: nothing has a size then)
         this.last.logFit = lk;
-        const room = Math.floor(lg.getBoundingClientRect().bottom - row.getBoundingClientRect().bottom - 6);
-        const v = row.children.length && room > 0 ? room + 'px' : '';
+        const room = Math.floor(lr.bottom - $('#hud-top-left').getBoundingClientRect().bottom - 6);
+        const v = Math.max(0, room) + 'px';
         if (lg.style.maxHeight !== v) lg.style.maxHeight = v;
       }
     }
