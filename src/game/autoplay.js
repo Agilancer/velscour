@@ -1078,6 +1078,18 @@ export const Auto = {
       if (this.goTo(sh.x, sh.y, sh.reach - 0.2, dt)) sh.use();
       this.watchStuck(dt); return;
     }
+    // a fight that needs him somewhere (a cache to dig, a relic to break, back inside its ring: game/dunes.js `duty`):
+    // after a few seconds of fighting he pushes through to it, and stands on a cache until it is dug
+    const duty = foes.length && w.overworldScenario && w.overworldScenario.duty;
+    if (duty) {
+      if (duty.hold && dist(p.x, p.y, duty.x, duty.y) <= duty.reach) { this.setStatus(duty.label); p.path = null; p.moveVec = [0, 0]; this.dutyT = this.dutyPush = 0; return; }
+      if (!(this.dutyPush > 0) && (this.dutyT = (this.dutyT || 0) + dt) > 5) { this.dutyPush = 3; this.dutyT = 0; }
+      if (this.dutyPush > 0) {
+        this.dutyPush -= dt; this.setStatus(duty.label);
+        if (this.goTo(duty.x, duty.y, duty.reach * 0.8, dt)) this.dutyPush = 0;
+        this.watchStuck(dt); return;
+      }
+    } else this.dutyT = this.dutyPush = 0;
     if (foes.length) { this.combat(foes, false); this.watchStuck(dt); return; }
     this.target = null;
     // keep pets and buffs up between fights

@@ -1327,7 +1327,7 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
     art: art ? art.id : null, swap: art ? (variant ? greaterSwap(look.swap) : look.swap) : null, artH: art ? art.h : 0,
     level, maxHp: B.hp * A.hp, hp: B.hp * A.hp, dmg: B.dmg * A.dmg, xp: B.xp * (A.xp || 1),
     speed: A.spd * rand(0.92, 1.08), el, res, goreType: gore, bloodColor: gore === 'flesh' ? biome.blood : null,
-    name: art ? [tier, look.tint || (!tier && adj), art.name].filter(Boolean).join(' ') : `${adj} ${tierName}`.trim(), atkCd: 1.2, range: A.range, proj: A.proj ? { ...A.proj, fx: archId === 'archer' ? 'arrow' : A.proj.fx === 'blob' ? 'blob' : PROJ_FX[el] || A.proj.fx } : null,
+    name: art ? [tier, look.tint ? (art.name.toLowerCase().includes(look.tint.toLowerCase()) ? null : look.tint) : !tier && adj, art.name].filter(Boolean).join(' ') : `${adj} ${tierName}`.trim(), atkCd: 1.2, range: A.range, proj: A.proj ? { ...A.proj, fx: archId === 'archer' ? 'arrow' : A.proj.fx === 'blob' ? 'blob' : PROJ_FX[el] || A.proj.fx } : null,
     undead, demon: art && art.demon !== undefined ? art.demon : A.demon, fly: art && art.fly !== undefined ? art.fly : A.fly, ghost: A.ghost, poison: A.poison, split: A.split,
     summoner: A.summoner && chance(A.summoner), aoeCaster: A.aoe, rank: 'normal', x, y,
   });
