@@ -43,6 +43,8 @@ button { font-family: var(--font-head); }
 .btn:disabled { opacity: .45; cursor: default; }
 .btn.small { padding: 4px 10px; font-size: 12px; }
 .btn.red { background: linear-gradient(#5e1410, #2a0705); border-color: #8f2a20; }
+.btn.blue { background: linear-gradient(#14306e, #060f2c); border-color: #3a6cff; color: #cfe0ff; }
+.btn.blue:hover { background: linear-gradient(#1e449a, #0a1840); border-color: #7aa0ff; color: #fff; }
 .btn.big { font-size: 22px; padding: 12px 34px; }
 
 /* ---------------------------------------------------------------------- HUD */

@@ -1,6 +1,7 @@
 // The Riftgate in Herrington Hollow (src/gfx/riftgate.js): it stands across the square from the dungeon portal on open
 // ground for every town seed, the dungeon portal stays first (auto-play uses it), its dialog steps through to VELSCOUR
-// DEFENSE (defense/index.html), and that page's way back returns to the main game with the hero's save untouched.
+// DEFENSE (defense/index.html), that page's way back returns to the main game with the hero's save untouched, and the
+// title screen's blue VELSCOUR DEFENSE button goes there too.
 //   node tools/tests/riftgate.js [seeds=12]
 const { openGame, report } = require('./harness');
 
@@ -39,6 +40,11 @@ const { openGame, report } = require('./harness');
   await page.waitForFunction(() => window.VELSCOUR && document.querySelector('#loading').classList.contains('hidden'), null, { timeout: 30000 });
   const back = await page.evaluate(() => JSON.parse(localStorage.getItem('velscour_saves_v1') || '[]').map?.((s) => s.name) || Object.keys(JSON.parse(localStorage.getItem('velscour_saves_v1') || '{}')));
   console.log('back in VELSCOUR; saves:', JSON.stringify(back).slice(0, 120), 'hero was', name);
+  // the title screen's blue button
+  await page.waitForSelector('.title-menu .btn.blue'); await page.waitForTimeout(600);
+  await shot('riftgate_title');
+  await Promise.all([page.waitForURL('**/defense/index.html', { timeout: 15000 }), page.click('.title-menu .btn.blue')]);
+  console.log('title button opened', await page.evaluate(() => document.title));
   report(errors);
   await browser.close();
 })();
