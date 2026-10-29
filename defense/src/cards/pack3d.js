@@ -12,6 +12,8 @@ import { sfx } from '../core/audio.js';
 let THREE = null, R = null, open = false;
 export const packOpen = () => open;
 const CW = 2.52, CH = 3.52;
+/** What the camera sees at depth z: its width and height in world units (phones held upright see a narrow strip). */
+const view = (z = 0) => { const h = 2 * Math.tan(18 * Math.PI / 180) * (10 - z); return { h, w: h * innerWidth / innerHeight }; };
 
 const VERT = `varying vec2 vUv; varying vec3 vN; varying vec3 vV; varying vec3 vP;
 void main(){ vUv = uv; vec4 wp = modelMatrix * vec4(position, 1.0); vP = wp.xyz; vN = normalize(mat3(modelMatrix) * normal); vV = normalize(cameraPosition - wp.xyz); gl_Position = projectionMatrix * viewMatrix * wp; }`;
@@ -197,19 +199,23 @@ export async function openPack3D(pack, results, opts = {}) {
   body.position.y = -4.75 * 0.045; strip.position.y = 4.75 * 0.455;
   packG.add(body, strip);
   packG.position.set(0, -6, 0);
+  packG.scale.setScalar(Math.min(1, view(0).w * 0.86 / 3.1, view(0).h * 0.78 / 4.75));
   R.scene.add(packG);
   tween(0.9, (k) => { packG.position.y = -6 + 6 * k; packG.rotation.z = (1 - k) * 0.4; }, null, ease.back);
   let state = 'pack', idleT = 0;
   R.onFrame = (dt) => { if (state === 'pack') { idleT += dt; packG.rotation.y = Math.sin(idleT * 1.3) * 0.25; packG.rotation.x = Math.sin(idleT * 0.9) * 0.08; packG.position.y = Math.sin(idleT * 2) * 0.08; } };
   // the cards, stacked face down inside the pack
-  const cards = results.map((r, i) => { const m = cardMesh(r.card, r.entry, null); m.position.set(0, -0.3, -0.2 - i * 0.012); m.rotation.y = Math.PI; m.visible = false; m.userData.r = r; R.scene.add(m); return m; });
+  const s0 = Math.min(1, view(0.6).w * 0.86 / CW, view(0.6).h * 0.7 / CH), sNear = Math.min(1, view(2.6).w * 0.9 / CW, view(2.6).h * 0.76 / CH);
+  const cards = results.map((r, i) => { const m = cardMesh(r.card, r.entry, null); m.position.set(0, -0.3, -0.2 - i * 0.012); m.scale.setScalar(s0); m.rotation.y = Math.PI; m.visible = false; m.userData.r = r; R.scene.add(m); return m; });
   const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
   let busy = false, revealed = 0;
-  const layout = () => { // where revealed cards end up: a fan (small packs) or a grid (big ones)
-    const n = cards.length, cols = n <= 5 ? n : Math.ceil(n / 2), rows = n <= 5 ? 1 : 2, sc = n <= 5 ? 0.72 : 0.56;
-    const aspect = innerWidth / innerHeight, wv = 2 * Math.tan(36 * Math.PI / 360) * 10 * aspect;
-    const gap = Math.min(CW * sc * 1.08, (wv * 0.92) / cols);
-    return cards.map((_, i) => { const c = i % cols, r = Math.floor(i / cols); return { x: (c - (cols - 1) / 2) * gap, y: rows === 1 ? -0.3 : (r === 0 ? 1.15 : -1.95), s: Math.min(sc, gap / CW / 1.06), rz: rows === 1 ? (c - (cols - 1) / 2) * -0.04 : 0 }; });
+  const layout = () => { // where revealed cards end up: the grid that shows them biggest on this screen (a fan in one row)
+    const n = cards.length, V = view(-0.5), aw = V.w * 0.94, ah = V.h * 0.74;
+    let best = null;
+    for (let cols = 1; cols <= n; cols++) { const rows = Math.ceil(n / cols), s = Math.min(0.72, aw / cols / (CW * 1.06), ah / rows / (CH * 1.06)); if (!best || s > best.s + 1e-6) best = { cols, rows, s }; }
+    const { cols, rows, s } = best, gx = CW * s * 1.06, gy = CH * s * 1.06;
+    return cards.map((_, i) => { const c = i % cols, r = Math.floor(i / cols), inRow = r === rows - 1 ? n - cols * (rows - 1) : cols;
+      return { x: (c - (inRow - 1) / 2) * gx, y: -0.3 + ((rows - 1) / 2 - r) * gy, s, rz: rows === 1 ? (c - (cols - 1) / 2) * -0.04 : 0 }; });
   };
   const tear = async () => {
     state = 'tearing'; busy = true; hintEl.textContent = '';
@@ -230,7 +236,8 @@ export async function openPack3D(pack, results, opts = {}) {
     busy = !fast;
     sfx(r.card.rarity >= 4 ? 'portcullis_gate' : 'door_open', r.card.rarity >= 4 ? 0.8 : 0.45);
     if (!fast) {
-      tween(0.45, (k) => { c.position.z = 1.4 + k * 1.2; c.rotation.y = Math.PI * (1 - k); c.position.y = -0.1 + Math.sin(k * Math.PI) * 0.4; }, null, ease.inOut);
+      const sa = c.scale.x;
+      tween(0.45, (k) => { c.position.z = 1.4 + k * 1.2; c.scale.setScalar(sa + (sNear - sa) * k); c.rotation.y = Math.PI * (1 - k); c.position.y = -0.1 + Math.sin(k * Math.PI) * 0.4; }, null, ease.inOut);
       await wait(0.45);
       nameEl.style.color = col; nameEl.textContent = `${r.card.name}${r.foil ? ' ✦ FOIL' : ''}${r.dup ? (r.card.type === 'hero' ? ' · duplicate: ascension ↑' : ' · another copy') : ' · NEW'}`; nameEl.style.opacity = 1;
       if (r.card.rarity >= 2) burst(new THREE.Vector3(c.position.x, c.position.y, c.position.z), col, 50 + r.card.rarity * 40, 2 + r.card.rarity);
@@ -286,7 +293,7 @@ export async function inspectCard(card, entry, stats) {
   setup();
   R.riftMat.uniforms.tint.value.set(RARITIES[card.rarity].color);
   const m = cardMesh(card, entry, stats);
-  m.scale.setScalar(1.25); R.scene.add(m);
+  m.scale.setScalar(Math.min(1.25, view(0).w * 0.88 / CW, view(0).h * 0.72 / CH)); R.scene.add(m);
   ui(`<div class="p3-hint">${card.name}</div><div class="p3-ui"><button class="btn ghost" data-k="flip">Flip</button><button class="btn green" data-k="close">Close</button></div>`);
   let rx = 0, ry = 0, tx = 0, ty = 0, drag = null, flip = 0;
   R.onFrame = (dt) => { if (!drag) { ty += (Math.sin(R.t * 0.7) * 0.35 + flip - ty) * dt * 2; tx += (Math.sin(R.t * 0.5) * 0.12 - tx) * dt * 2; } rx += (tx - rx) * dt * 8; ry += (ty - ry) * dt * 8; m.rotation.set(rx, ry, 0); };

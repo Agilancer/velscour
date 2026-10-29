@@ -4,6 +4,7 @@
 import { RNG, clamp, dist } from '../core/util.js';
 import { ROLES, hpMul, defMul, terrainK } from '../data/waves.js';
 import { routeAt } from './map.js';
+import { ART } from '../core/assets.js';
 
 export const STEP = 1 / 60;
 // In-battle upgrades, reset every battle: empowering a hero (levels 2-5) and three Bastion works
@@ -18,10 +19,11 @@ const MAX_POISON = 5;
 export class Battle {
   /**
    * opt: { map, stage: {n, waves}, waves: stageWaves(), squad: [unit defs], ally: unit def | null,
-   *        bonus: { valorCap, valorRate, startValor, heart, deploy } (permanent research), seed }
+   *        bonus: { valorCap, valorRate, startValor, heart, deploy } (permanent research), seed,
+   *        more: (i) => wave | null (endless: waves never run out), noRally }
    */
   constructor(opt) {
-    Object.assign(this, { map: opt.map, stage: opt.stage, waves: opt.waves, squad: opt.squad.slice(), bonus: opt.bonus || {} });
+    Object.assign(this, { map: opt.map, stage: opt.stage, waves: opt.waves, squad: opt.squad.slice(), bonus: opt.bonus || {}, sealed: !!opt.sealed });
     if (opt.ally) this.squad.push({ ...opt.ally, ally: true });
     const b = this.bonus;
     this.rng = new RNG(opt.seed || 'battle:' + opt.stage.n);
@@ -35,7 +37,8 @@ export class Battle {
     this.works = { drums: 0, ward: 0, rally: 0 };
     this.cooldown = this.squad.map(() => 0);   // redeploy cooldowns per squad slot
     this.done = false; this.won = false; this.gold = 0; this.valorSpent = 0;
-    this.uid = 0;
+    this.uid = 0; this.drops = []; this.more = opt.more || null; this.noRally = !!opt.noRally; this.mutations = 0;
+    this.topUp();
     this.lenK = terrainK(this.stage.n);
   }
 
@@ -78,7 +81,7 @@ export class Battle {
     this.cooldown[u.slot] = 8; this.retreats = (this.retreats || 0) + 1;
     this.ev({ type: 'retreat', u });
   }
-  bastionCost(k) { return BASTION[k].costs[this.works[k]] ?? Infinity; }
+  bastionCost(k) { return k === 'rally' && this.noRally ? Infinity : BASTION[k].costs[this.works[k]] ?? Infinity; }
   buyBastion(k) {
     const c = this.bastionCost(k);
     if (this.valor < c || this.done) return false;
@@ -99,6 +102,7 @@ export class Battle {
   atkOf(u) {
     let k = (1 + 0.22 * (u.lvl - 1)) * (1 + 0.1 * this.works.rally) * (1 + (this.bonus.resolve || 0));
     for (const b of u.buffs) k += b.atk || 0;
+    for (const o of this.units) if (o !== u && o.def.mods.auraAtk && dist(o.x, o.y, u.x, u.y) <= 2.6) k += o.def.mods.auraAtk;   // heroes who make the others strike harder
     const m = u.def.mods;
     if (m.killStack) k += Math.min(0.4, u.kills * m.killStack);
     return u.def.atk * k;
@@ -115,11 +119,14 @@ export class Battle {
   spawnMonster(gr, g, s0 = 0, parent = null) {
     const R = ROLES[gr.role], route = this.map.routes[gr.route % this.map.routes.length];
     const elite = !parent && gr.elite && this.rng.chance(gr.elite);
-    const hp = R.hp * hpMul(g) * (elite ? 2.2 : 1) * (parent ? 0.35 : 1) * this.lenK * clamp(route.len / 27, 0.5, 1.25); // short roads: less to kill
-    const m = { id: ++this.uid, role: gr.role, R, art: gr.art, route, s: s0, x: 0, y: 0, z: 0, hp, maxHp: hp, def: R.def * defMul(g), res: R.res,
-      speed: R.speed * (1 + g / 4000) * (elite ? 0.95 : 1), air: !!R.air, elite, g, slow: 0, slowT: 0, stun: 0, burn: 0, burnT: 0, poison: [],
+    const hp = R.hp * (gr.hpK || 1) * hpMul(g) * (elite ? 2.2 : 1) * (parent ? 0.35 : 1) * this.lenK * clamp(route.len / 27, 0.5, 1.25); // short roads: less to kill
+    const m = { id: ++this.uid, role: gr.role, R, art: gr.art, route, s: s0, x: 0, y: 0, z: 0, hp, maxHp: hp, def: R.def * defMul(g) * (gr.defK || 1), res: Math.min(0.8, R.res + (gr.res || 0)),
+      speed: R.speed * (1 + g / 4000) * (elite ? 0.95 : 1) * (gr.speedK || 1), air: !!R.air, elite, g, slow: 0, slowT: 0, stun: 0, burn: 0, burnT: 0, poison: [],
       held: null, abil: 2 + this.rng.range(0, 3), summonT: R.summon || 0, enraged: false, face: 1, anim: this.rng.next() * 9, hitT: 0,
-      boss: gr.role === 'boss', lt: gr.role === 'lieutenant', child: !!parent };
+      boss: gr.role === 'boss', lt: gr.role === 'lieutenant' || gr.role === 'warlord', child: !!parent, arch: ART.byId?.[gr.art]?.arch || 'skeleton',
+      burrowCD: R.burrow ? 2 + this.rng.range(0, R.burrow) : 0, burrowT: 0, warded: !!gr.shieldAll };
+    if (gr.blinkAll && !R.blink) m.R = { ...R, blink: 6 };   // a mutated horde: every foe blinks or burrows
+    if (gr.burrowAll && !R.burrow && !R.air) { m.R = { ...m.R, burrow: 7 }; m.burrowCD = 2 + this.rng.range(0, 7); }
     routeAt(route, m.s, this.tmp || (this.tmp = [0, 0, 0]));
     [m.x, m.y, m.z] = this.tmp;
     this.monsters.push(m);
@@ -131,8 +138,14 @@ export class Battle {
     for (const gr of w.groups) for (let i = 0; i < gr.count; i++) this.queue.push({ at: this.t + (gr.delay || 0) + i * gr.gap, gr, g: w.g });
     this.queue.sort((a, b) => a.at - b.at);
     this.waveDone = false;
-    this.ev({ type: 'wave', i: this.waveI, g: w.g, big: w.big, boss: w.groups.some((g) => g.role === 'boss'), lt: w.groups.some((g) => g.role === 'lieutenant') });
+    this.mutations = w.muts?.length || 0;
+    this.ev({ type: 'wave', i: this.waveI, g: w.g, muts: w.muts, big: w.big, boss: w.groups.some((g) => g.role === 'boss'), lt: w.groups.some((g) => g.role === 'lieutenant') });
     this.waveI++;
+    this.topUp();
+  }
+  /** Endless runs: keep two waves queued past the current one. */
+  topUp() {
+    while (this.more && this.waves.length < this.waveI + 2) { const w = this.more(this.waves.length); this.waves.push(w); this.total += w.groups.reduce((s, g) => s + g.count, 0); }
   }
 
   // ------------------------------------------------------------------ the tick
@@ -146,6 +159,7 @@ export class Battle {
     while (this.queue.length && this.queue[0].at <= this.t) { const q = this.queue.shift(); this.spawnMonster(q.gr, q.g); this.spawned++; this.lastSpawn = this.t; }
     if (!this.waveDone && !this.queue.length) { this.waveDone = true; this.nextWaveAt = this.t + 12; }
     if (this.waveDone && !this.monsters.length && this.nextWaveAt > this.t + 2.5 && this.waveI < this.waves.length) this.nextWaveAt = this.t + 2.5;
+    this.auras();
     this.updateMonsters(dt);
     this.updateUnits(dt);
     this.updateShots(dt);
@@ -156,6 +170,7 @@ export class Battle {
   }
   finish(won) {
     this.done = true; this.won = won;
+    this.wavesCleared = won ? this.waves.length : Math.max(0, this.waveI - 1);
     const pct = this.kills / Math.max(1, this.total + this.splits);
     this.pct = clamp(pct, 0, 1);
     this.stars = !won ? 0 : this.leaked === 0 ? 3 : this.pct >= 0.9 ? 2 : 1;
@@ -163,6 +178,14 @@ export class Battle {
   }
   ev(e) { this.events.push(e); }
 
+  /** Shieldbearers cover the foes around them (30% less damage), captains hurry them (+25% speed). */
+  auras() {
+    for (const m of this.monsters) { m.shielded = m.warded; m.rallied = false; }
+    for (const a of this.monsters) {
+      if (!a.R.shield && !a.R.rally) continue;
+      for (const o of this.monsters) if (o !== a && Math.abs(o.x - a.x) < 1.8 && Math.abs(o.y - a.y) < 1.8 && dist(o.x, o.y, a.x, a.y) <= 1.7) { if (a.R.shield) o.shielded = true; if (a.R.rally) o.rallied = true; }
+    }
+  }
   updateMonsters(dt) {
     const tmp = this.tmp;
     for (let i = this.monsters.length - 1; i >= 0; i--) {
@@ -175,6 +198,7 @@ export class Battle {
       }
       if (m.hp <= 0) continue;
       if (m.slowT > 0) m.slowT -= dt; else m.slow = 0;
+      if (m.R.burrow) { if (m.burrowT > 0) m.burrowT -= dt; else if ((m.burrowCD -= dt) <= 0) { m.burrowCD = m.R.burrow; m.burrowT = 2; this.ev({ type: 'burrow', m }); } }
       if (m.stun > 0) { m.stun -= dt; continue; }
       // abilities
       if ((m.abil -= dt) <= 0) this.monsterAbility(m);
@@ -193,7 +217,7 @@ export class Battle {
         if (m.held.hp !== undefined && (m.abil2 = (m.abil2 || 0) - dt) <= 0) { m.abil2 = 1; m.held.hp -= m.maxHp * 0.05 + 4; }
         continue;
       }
-      const sp = m.speed * (1 - clamp(m.slow, 0, 0.7)) * (m.enraged ? 1.4 : 1);
+      const sp = m.speed * (1 - clamp(m.slow, 0, 0.7)) * (m.enraged ? 1.4 : 1) * (m.rallied ? 1 + 0.25 : 1) * (m.burrowT > 0 ? 1.5 : 1);
       const px = m.x;
       m.s += sp * dt;
       if (m.s >= m.route.len) { this.leak(m, i); continue; }
@@ -206,6 +230,14 @@ export class Battle {
   monsterAbility(m) {
     const R = m.R;
     m.abil = 3;
+    if (R.blink) { // a blink two tiles down the road
+      m.abil = R.blink;
+      const from = [m.x, m.y, m.z];
+      m.s = Math.min(m.route.len - 0.6, m.s + 2);
+      routeAt(m.route, m.s, this.tmp); [m.x, m.y, m.z] = this.tmp;
+      this.ev({ type: 'blink', m, from });
+      return;
+    }
     if (R.heal) {
       m.abil = 2;
       for (const o of this.monsters) if (o !== m && o.hp > 0 && dist(o.x, o.y, m.x, m.y) < 1.8) o.hp = Math.min(o.maxHp, o.hp + o.maxHp * R.heal);
@@ -213,7 +245,7 @@ export class Battle {
     }
     if (R.hex || R.roar) {
       m.abil = R.hex || R.roar;
-      const r = R.roar ? (m.boss ? 3 : 2.5) : 2.5, near = this.units.filter((u) => dist(u.x, u.y, m.x, m.y) <= r);
+      const r = R.roar ? (m.boss ? 3 : 2.5) : 2.5, near = this.units.filter((u) => !u.def.mods.steadfast && dist(u.x, u.y, m.x, m.y) <= r);   // the steadfast are never stunned
       if (!near.length) { m.abil = 1; return; }
       const hit = R.hex ? [near[Math.floor(this.rng.next() * near.length)]] : near;
       for (const u of hit) { u.stun = Math.max(u.stun, R.roar ? (m.boss ? 2 : 1.5) : 2); }
@@ -230,6 +262,7 @@ export class Battle {
   /** Deal damage; returns what was dealt. dot: damage over time (no mitigation, already per frame). */
   damage(m, amt, u, el, dot = false, mult = 1) {
     if (m.dead || m.hp <= 0) return 0;
+    if (m.burrowT > 0 && !dot) return 0;   // under the ground: only poison and fire reach it
     let d = amt;
     if (!dot) {
       const magic = u ? u.def.kit.dmg === 'magic' : false;
@@ -240,6 +273,8 @@ export class Battle {
         if ((m.boss || m.lt) && mm.vsBoss) d *= 1 + mm.vsBoss;
         if (mm.crit && this.rng.chance(mm.crit)) { d *= 2; this.ev({ type: 'crit', m }); }
       }
+      if (m.shielded) d *= 0.7;
+      const tb = this.bonus.trophy?.[m.arch]; if (tb) d *= 1 + tb;   // trophy cards of this monster's family
       m.hitT = 0.12;
       this.ev({ type: 'hit', m, d, el, u });
     }
@@ -256,6 +291,10 @@ export class Battle {
     this.gold += Math.round((m.boss ? 80 : m.lt ? 30 : m.elite ? 5 : m.minion ? 0.5 : 2) * (1 + m.g / 40));
     if (u) { u.kills++; if (u.def.mods.killValor) this.valor = Math.min(this.valorCap, this.valor + u.def.mods.killValor); }
     this.ev({ type: 'kill', m, u });
+    if (this.bonus.drops && this.drops.length < 3 && !m.minion) {
+      const p = (m.boss ? 0.5 : m.R.name === 'Warlord' ? 0.2 : m.lt ? 0.25 : m.R.rally ? 0.06 : m.elite ? 0.02 : 0.004) * this.bonus.drops;
+      if (this.rng.chance(p)) { this.drops.push(m.art); this.ev({ type: 'trophy', m }); }
+    }
     if (m.R.split && !m.child) {
       for (let k = 0; k < m.R.split; k++) {
         const c = this.spawnMonster({ role: 'runner', art: m.art, route: this.map.routes.indexOf(m.route) }, m.g, Math.max(0, m.s - 0.25 * k), m);
@@ -269,7 +308,7 @@ export class Battle {
   }
 
   // ------------------------------------------------------------------ heroes
-  inRange(u, m, extra = 0) { return (!m.air || u.def.kit.air) && dist(u.x, u.y, m.x, m.y) <= this.rangeOf(u, m) + extra; }
+  inRange(u, m, extra = 0) { return (!m.air || u.def.kit.air) && !(m.burrowT > 0) && dist(u.x, u.y, m.x, m.y) <= this.rangeOf(u, m) + extra; }
   target(u, extra = 0) {
     let best = null, bs = -1;
     for (const m of this.monsters) {
@@ -536,7 +575,7 @@ export class Battle {
         if (!m || m.air) return false;
         const s = Math.min(m.route.len - 0.5, m.s + 1.2), p = routeAt(m.route, s, [0, 0, 0]);
         if (id === 'thundertotem') this.zones.push({ kind: 'totem', u, route: m.route, s, x: p[0], y: p[1], z: p[2], r: 2, t: 8 + (mods.skillLong || 0), tick: 0, every: 0.5, dmg: atk * 0.6 * P, el: 'light', slow: 0.35 + (mods.slow || 0) });
-        else this.zones.push({ kind: 'jelly', u, route: m.route, s, x: p[0], y: p[1], z: p[2], r: 1, t: 6, hold: 3 + (mods.block || 0) + u.def.kit.block, holding: new Set(), tick: 0, every: 0.5, dmg: atk * 0.3 * P, el: 'acid', slow: 0.4 });
+        else this.zones.push({ kind: 'jelly', u, route: m.route, s, x: p[0], y: p[1], z: p[2], r: 1, t: 6 + (mods.skillLong || 0), hold: 3 + (mods.block || 0) + u.def.kit.block, holding: new Set(), tick: 0, every: 0.5, dmg: atk * 0.3 * P, el: 'acid', slow: 0.4 });
         where = { x: p[0], y: p[1], z: p[2] };
         break;
       }

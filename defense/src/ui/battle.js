@@ -2,7 +2,7 @@
 // speed and AUTO), the closing dialogs and the result. Fantasica's flow: tap a hero, tap a post, confirm.
 import { D, save } from '../state.js';
 import { el, escapeHtml, clamp, fmt } from '../core/util.js';
-import { LEVELS, TOTAL_WAVES } from '../data/campaign.js';
+import { LEVELS, REGIONS, TOTAL_WAVES } from '../data/campaign.js';
 import { CARDS } from '../data/cards.js';
 import { startStage, finishStage, regionOf, resolveOf } from '../meta/progress.js';
 import { STEP, BASTION } from '../battle/sim.js';
@@ -15,8 +15,9 @@ import { portrait } from './portrait.js';
 import { playStageDialogs } from './dialog.js';
 import { show, toast, modal } from './app.js';
 import { sfx, preloadSfx, preloadPiano, playAmbience, playMusic } from '../core/audio.js';
-import { upgradeCharacters, pickSquad, nextStage } from '../meta/autopilot.js';
-import { renderCard } from '../cards/cardart.js';
+import { ART } from '../core/assets.js';
+import { startMode, finishMode, bestWave } from '../meta/modes.js';
+import { seals } from '../meta/seals.js';
 
 const SKILL_NAMES = {};
 let ctl = null;
@@ -28,24 +29,42 @@ export async function playStage(n, opts = {}) {
   const ui = document.getElementById('ui');
   ui.innerHTML = `<div class="screen full" style="display:grid;place-items:center;background:radial-gradient(#0c1638,#05060c 70%)"><div style="text-align:center"><div class="cinzel" style="font-size:14px;color:#8aa0d0">${escapeHtml(R.name)} · Stage ${n}</div><h1 class="cinzel" style="color:#ffdf9a;margin:6px 0">${escapeHtml(L.name)}</h1><div class="dim">Opening the rift…</div></div></div>`;
   const b = startStage(s, n);
-  const roster = stageRoster(n);
+  await enter(b, { n, L, R, arts: Object.values(stageRoster(n)).flat(), auto: opts.auto });
+  await playStageDialogs(n, 'begin', { title: `Stage ${n} · ${L.name}` });
+  if (!ctl) return;
+  begin('QUEST START');
+}
+/** Begin a side mode (modes.js): no dialogs; endless runs load each new wave's monsters as it is made. */
+export async function playMode(id) {
+  const s = D.save, r = startMode(s, id);
+  if (!r) { toast('No runs left today'); return false; }
+  const { b, m, n } = r, R = REGIONS[Math.floor((n - 1) / 10)], ui = document.getElementById('ui');
+  ui.innerHTML = `<div class="screen full" style="display:grid;place-items:center;background:radial-gradient(#0c1638,#05060c 70%)"><div style="text-align:center"><div class="cinzel" style="font-size:14px;color:#8aa0d0">${escapeHtml(R.name)} · ${m.kind === 'endless' ? 'Endless' : 'Challenge'}</div><h1 class="cinzel" style="color:#ffdf9a;margin:6px 0">${m.icon} ${escapeHtml(m.name)}</h1><div class="dim">${b.sealed ? 'Opening the rift…' : 'No Rift Seal: a training run, small rewards'}</div></div></div>`;
+  if (b.more) { const more = b.more; b.more = (i) => { const w = more(i); loadMonsters(w.groups.map((g) => g.art)).catch(() => {}); return w; }; }
+  const L = { ...LEVELS[n - 1], name: m.name, wave0: 0 };
+  await enter(b, { n, L, R, m, arts: b.waves.flatMap((w) => w.groups.map((g) => g.art)) });
+  begin(m.kind === 'endless' ? 'HOLD THE LINE' : 'CHALLENGE');
+  return true;
+}
+async function enter(b, { n, L, R, m = null, arts, auto }) {
+  const s = D.save;
   await Promise.all([
     ...[...new Set(b.squad.map((d) => d.cls))].map((c) => loadHeroArt(c).catch(() => {})),
-    loadMonsters(Object.values(roster).flat()).catch(() => {}),
+    loadMonsters(arts).catch(() => {}),
   ]);
   preloadSfx();
   if (b.squad.some((d) => d.cls === 'bard')) preloadPiano();
   const view = new BattleView(document.getElementById('bf'));
   await view.setup(b, R.id);
   playMusic(null); playAmbience(view.theme.amb, 0.55);
-  ctl = { n, b, view, L, R, sel: null, slot: null, preview: null, speed: s.settings.speed || 1, paused: true, acc: 0, done: false, auto: !!opts.auto || s.settings.autoBattle, campaign: !!opts.campaign };
-  ui.innerHTML = '';
+  ctl = { n, b, view, L, R, mode: m, sel: null, slot: null, preview: null, speed: s.settings.speed || 1, paused: true, acc: 0, done: false, auto: !!auto || s.settings.autoBattle };
+  document.getElementById('ui').innerHTML = '';
   view.fit();
-  await playStageDialogs(n, 'begin', { title: `Stage ${n} · ${L.name}`, auto: ctl.campaign && s.settings.autoCampaign });
-  if (!ctl) return;
+}
+function begin(banner) {
   buildHud();
   ctl.paused = false;
-  view.banner('QUEST START', '#ffdf9a');
+  ctl.view.banner(banner, '#ffdf9a');
   sfx('portcullis_gate', 0.6);
 }
 
@@ -70,7 +89,7 @@ function buildHud() {
   const ui = document.getElementById('ui'), { b, L, n } = ctl;
   ui.innerHTML = '';
   const top = el('div', 'bhud-top');
-  top.innerHTML = `<div class="bh-box bh-stage"><span class="n">${n}. ${escapeHtml(L.name)}</span><span class="w" data-k="wave"></span></div>
+  top.innerHTML = `<div class="bh-box bh-stage"><span class="n">${ctl.mode ? ctl.mode.icon : n + '.'} ${escapeHtml(L.name)}</span><span class="w" data-k="wave"></span></div>
     <div class="bh-box bh-heart" data-k="heart"></div>
     <div class="bh-box bh-valor"><div class="lbl"><span>VALOR</span><b data-k="valor"></b></div><div class="bar"><i data-k="vbar"></i></div></div>
     <div class="bh-box" data-k="foes" title="Monsters left"></div>
@@ -99,10 +118,37 @@ function buildHud() {
   ui.appendChild(bot);
   const panel = el('div', 'unit-panel panel hidden'); ui.appendChild(panel);
   ctl.hud = { top, boss, call, works, tray, panel };
-  // canvas input
-  const cv = document.getElementById('bf');
-  cv.onpointermove = (e) => { if (e.pointerType !== 'mouse' || ctl.slot === null) return; const p = ctl.view.postAt(e.clientX, e.clientY); setPreview(p && b.postFree(p.id) ? p : null); };
-  cv.onpointerdown = (e) => onTap(e.clientX, e.clientY, e.pointerType);
+  // canvas input: a tap acts, a drag pans, two fingers pinch, the wheel zooms, a double tap/click fits the field again
+  const cv = document.getElementById('bf'), pts = new Map();
+  let drag = null, pinch = null, lastTap = 0;
+  const two = () => { const [a, c] = [...pts.values()]; return { d: Math.hypot(a[0] - c[0], a[1] - c[1]) || 1, mx: (a[0] + c[0]) / 2, my: (a[1] + c[1]) / 2 }; };
+  cv.onpointerdown = (e) => {
+    cv.setPointerCapture?.(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size === 2) { pinch = two(); drag = null; } else if (pts.size === 1) drag = { x: e.clientX, y: e.clientY, moved: false };
+  };
+  cv.onpointermove = (e) => {
+    const prev = pts.get(e.pointerId);
+    if (prev) {
+      pts.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pinch && pts.size >= 2) { const p = two(); ctl.view.zoomBy(p.d / pinch.d, p.mx, p.my); ctl.view.panBy(p.mx - pinch.mx, p.my - pinch.my); pinch = p; return; }
+      if (drag && !drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 10) drag.moved = true;
+      if (drag?.moved) { ctl.view.panBy(e.clientX - prev[0], e.clientY - prev[1]); return; }
+    }
+    if (e.pointerType !== 'mouse' || ctl.slot === null) return;
+    const p = ctl.view.postAt(e.clientX, e.clientY); setPreview(p && b.postFree(p.id) ? p : null);
+  };
+  const up = (e) => {
+    const had = pts.delete(e.pointerId);
+    if (pinch) { if (pts.size < 2) pinch = null; drag = null; return; }
+    if (had && drag && !drag.moved && e.type === 'pointerup') {
+      if (performance.now() - lastTap < 300 && !ctl.slot && !ctl.view.postAt(e.clientX, e.clientY)) ctl.view.resetView();
+      else onTap(e.clientX, e.clientY, e.pointerType);
+      lastTap = performance.now();
+    }
+    drag = null;
+  };
+  cv.onpointerup = cv.onpointercancel = up;
+  cv.onwheel = (e) => { e.preventDefault(); ctl.view.zoomBy(Math.exp(-clamp(e.deltaY, -120, 120) * 0.0018), e.clientX, e.clientY); };
   updateHud(true);
 }
 function pickSlot(i) {
@@ -164,8 +210,8 @@ function updateHud(force) {
   if (!ctl?.hud) return;
   const { b, hud, L } = ctl;
   const q = (k) => hud.top.querySelector(`[data-k=${k}]`);
-  const wave = Math.min(b.waveI, b.waves.length), g = L.wave0 + Math.max(1, wave);
-  q('wave').textContent = `Wave ${Math.max(1, wave)}/${b.waves.length} · ${g} of ${TOTAL_WAVES}`;
+  const wave = Math.max(1, Math.min(b.waveI, b.waves.length)), M = ctl.mode;
+  q('wave').textContent = !M ? `Wave ${wave}/${b.waves.length} · ${L.wave0 + wave} of ${TOTAL_WAVES}` : M.kind === 'endless' ? `Wave ${wave} · best ${bestWave(D.save, M.id)}${b.mutations ? ` · ${b.mutations} mutation${b.mutations > 1 ? 's' : ''}` : ''}` : `Wave ${wave}/${b.waves.length}`;
   q('heart').innerHTML = `❤ ${b.heart}/${b.heartMax}`;
   q('valor').textContent = `${Math.floor(b.valor)} / ${b.valorCap}`;
   q('vbar').style.width = (b.valor / b.valorCap * 100).toFixed(1) + '%';
@@ -174,7 +220,7 @@ function updateHud(force) {
   q('auto').classList.toggle('on', ctl.auto);
   const boss = b.monsters.find((m) => m.boss || m.lt);
   hud.boss.classList.toggle('hidden', !boss);
-  if (boss) { hud.boss.querySelector('.nm').textContent = boss.boss ? ctl.R.boss : 'Lieutenant · ' + ctl.R.lieutenant; hud.boss.querySelector('i').style.width = clamp(boss.hp / boss.maxHp, 0, 1) * 100 + '%'; }
+  if (boss) { const nm = ART.byId[boss.art]?.name || ''; hud.boss.querySelector('.nm').textContent = boss.boss ? (!ctl.mode && ctl.R.bossTitle) || nm : (boss.role === 'warlord' ? 'Warlord · ' : 'Lieutenant · ') + nm; hud.boss.querySelector('i').style.width = clamp(boss.hp / boss.maxHp, 0, 1) * 100 + '%'; }
   hud.call.classList.toggle('hidden', !(b.waveDone && b.waveI < b.waves.length && b.nextWaveAt - b.t > 1.5));
   if (!hud.call.classList.contains('hidden')) hud.call.textContent = `Call next wave (+${Math.round(b.nextWaveAt - b.t)} Valor)`;
   for (const x of hud.works.children) {
@@ -215,75 +261,63 @@ function updateHud(force) {
 
 function pauseMenu() {
   ctl.paused = true;
-  modal(`<h2>Paused</h2><p class="dim">Stage ${ctl.n} · ${escapeHtml(ctl.L.name)}</p>`, [
-    { label: 'Retreat from battle', cls: 'red', fn: () => { ctl.b.heart = 0; ctl.b.finish(false); ctl.paused = false; } },
+  const endless = ctl.mode?.kind === 'endless';
+  modal(`<h2>Paused</h2><p class="dim">${ctl.mode ? escapeHtml(ctl.mode.name) : `Stage ${ctl.n} · ${escapeHtml(ctl.L.name)}`}</p>${endless ? '<p class="dim">Ending the run pays for every wave held.</p>' : ''}`, [
+    { label: endless ? 'End the run' : 'Retreat from battle', cls: 'red', fn: () => { ctl.b.heart = 0; ctl.b.finish(false); ctl.paused = false; } },
     { label: 'Resume', cls: 'green', fn: () => { ctl.paused = false; } },
   ], { onClose: () => { ctl && (ctl.paused = false); }, sticky: false });
 }
 
 // ------------------------------------------------------------------ the end
 async function endBattle() {
-  const { b, n, L } = ctl, s = D.save;
-  const res = finishStage(s, n, b);
+  const { b, n, L, mode } = ctl, s = D.save;
+  const res = mode ? finishMode(s, mode, b) : finishStage(s, n, b);
   save(true);
   document.getElementById('ui').innerHTML = '';
-  ctl.view.banner(b.won ? (b.stars === 3 ? 'COMPLETE VICTORY!' : 'QUEST CLEAR') : 'THE HEART BREAKS', b.won ? '#ffdf9a' : '#ff5040');
-  sfx(b.won ? 'chest_open' : 'sword_blocked', 0.8);
+  const endless = mode?.kind === 'endless';
+  ctl.view.banner(endless ? `${res.held} WAVES HELD` : b.won ? (b.stars === 3 ? 'COMPLETE VICTORY!' : 'QUEST CLEAR') : 'THE HEART BREAKS', b.won || endless ? '#ffdf9a' : '#ff5040');
+  sfx(b.won || (endless && res.held) ? 'chest_open' : 'sword_blocked', 0.8);
   await new Promise((r) => setTimeout(r, 1600));
-  if (b.won) await playStageDialogs(n, 'end', { title: `Stage ${n} · ${L.name}`, auto: ctl.campaign && s.settings.autoCampaign });
+  if (b.won && !mode) await playStageDialogs(n, 'end', { title: `Stage ${n} · ${L.name}` });
   if (!ctl) return;
   resultScreen(res);
 }
+const lootRow = (res) => `<div class="loot"><div class="cur gold"><i>◉</i>+${fmt(res.gold)}</div><div class="cur shard"><i>◆</i>+${fmt(res.shards)}</div><div class="cur essence"><i>✧</i>+${fmt(res.essence)}</div>
+  ${res.tickets ? `<div class="cur ticket"><i>🎟</i>+${res.tickets}</div>` : ''}${res.legend ? `<div class="cur ticket legend"><i>🎟</i>+${res.legend} Legend</div>` : ''}${res.first ? '<div class="cur"><b style="color:#9ad0ff">FIRST CLEAR</b></div>' : ''}</div>
+  ${res.trophies?.length ? `<div class="trophy-drops">${res.trophies.map((t) => `<span class="${t.dup ? 'dim' : ''}">🏆 ${escapeHtml(t.card.name)}${t.dup ? ' (dupe: essence)' : ' <b>NEW</b>'}</span>`).join('')}</div>` : ''}`;
 function resultScreen(res) {
-  const { b, n, L } = ctl, s = D.save, ui = document.getElementById('ui');
-  const pct = Math.round((b.pct || 0) * 100);
+  const { b, n, L, mode } = ctl, s = D.save, ui = document.getElementById('ui');
+  const pct = Math.round((b.pct || 0) * 100), endless = mode?.kind === 'endless';
+  const title = endless ? `${res.held} waves held` : b.won ? (b.stars === 3 ? 'Complete Victory!' : 'Quest Clear') : 'Defeat';
+  const seal = res.sealed === false || b.sealed === false ? `<div class="seal-note">No Rift Seal: ${mode ? 'a training run paid a fraction' : 'only a seventh of the gold'}. Seals refill one every 30 minutes (${seals(s)} now).</div>` : '';
   const box = el('div', 'modal-bg');
   box.innerHTML = `<div class="modal result">
-    <div class="dim cinzel">Stage ${n} · ${escapeHtml(L.name)}</div>
-    <h1 class="cinzel" style="color:${b.won ? '#ffdf9a' : '#ff6a50'}">${b.won ? (b.stars === 3 ? 'Complete Victory!' : 'Quest Clear') : 'Defeat'}</h1>
-    <div class="big-stars">${[1, 2, 3].map((k) => `<span class="${k <= b.stars ? '' : 'off'}">★</span>`).join('')}</div>
-    <div class="dim">Enemy ${pct}% destroyed · ${b.kills} slain · ${b.leaked} reached the Heart · waves ${L.wave0 + 1}-${L.wave0 + L.waves} of ${TOTAL_WAVES}</div>
-    <div class="loot"><div class="cur gold"><i>◉</i>+${fmt(res.gold)}</div><div class="cur shard"><i>◆</i>+${res.shards}</div>${res.first ? '<div class="cur"><b style="color:#9ad0ff">FIRST CLEAR</b></div>' : ''}</div>
+    <div class="dim cinzel">${mode ? `${mode.icon} ${escapeHtml(mode.name)}` : `Stage ${n} · ${escapeHtml(L.name)}`}</div>
+    <h1 class="cinzel" style="color:${b.won || endless ? '#ffdf9a' : '#ff6a50'}">${title}</h1>
+    ${endless ? `<div class="dim">Best: ${bestWave(s, mode.id)} waves${b.mutations ? ` · ${b.mutations} mutations (+${b.mutations * 15}% pay)` : ''}</div>` : `<div class="big-stars">${[1, 2, 3].map((k) => `<span class="${k <= b.stars ? '' : 'off'}">★</span>`).join('')}</div>`}
+    <div class="dim">Enemy ${pct}% destroyed · ${b.kills} slain · ${b.leaked} reached the Heart${mode ? '' : ` · waves ${L.wave0 + 1}-${L.wave0 + L.waves} of ${TOTAL_WAVES}`}</div>
+    ${lootRow(res)}${seal}
     ${res.recruit ? `<div class="panel" style="margin:8px auto;max-width:420px"><b style="color:#ffdf9a">${escapeHtml(res.recruit.name)}</b> joins the Bastion! <div class="dim">Their Rift Card is in your collection and squad.</div></div>` : ''}
-    ${!b.won ? `<div class="dim" style="margin:8px 0">Bastion's Resolve: your heroes strike ${Math.round(resolveOf(s, n) * 100)}% harder here until you win. Level heroes, equip gear, or bring other heroes.</div>` : ''}
-    <div class="row" style="justify-content:center;margin-top:12px" data-k="btns"></div>
-    <div class="dim" data-k="autoline" style="margin-top:8px"></div></div>`;
+    ${!b.won && !mode ? `<div class="dim" style="margin:8px 0">Bastion's Resolve: your heroes strike ${Math.round(resolveOf(s, n) * 100)}% harder here until you win. Level heroes, ascend them with essence, equip gear, or play the Modes for more.</div>` : ''}
+    <div class="row" style="justify-content:center;margin-top:12px" data-k="btns"></div></div>`;
   ui.appendChild(box);
   const btns = box.querySelector('[data-k=btns]');
-  const go = (fn) => { cancelAuto(); leaveBattle(); fn(); };
+  const go = (fn) => { leaveBattle(); fn(); };
   const add = (label, cls, fn) => { const x = el('button', 'btn ' + cls, label); x.onclick = () => go(fn); btns.appendChild(x); };
-  if (b.won && n < LEVELS.length) add(`Next: Stage ${n + 1} ▸`, 'big green', () => playStage(n + 1));
-  add('Retry', 'blue', () => playStage(n));
-  add('Campaign', 'ghost', () => show('campaign', { region: Math.floor((n - 1) / 10) }));
-  add('Bastion', 'ghost', () => show('hub'));
-  // auto-campaign: upgrade the characters and go on by itself
-  let t = null;
-  const cancelAuto = () => clearInterval(t);
-  if (ctl.campaign && D.save.settings.autoCampaign) {
-    let left = 4;
-    const line = box.querySelector('[data-k=autoline]');
-    const tick = () => {
-      line.innerHTML = `Auto-campaign: upgrading heroes and moving on in ${left}… <button class="btn ghost" style="padding:2px 8px">Stop</button>`;
-      line.querySelector('button').onclick = () => { cancelAuto(); D.save.settings.autoCampaign = false; save(); line.textContent = 'Auto-campaign stopped.'; };
-      if (left-- <= 0) { cancelAuto(); go(() => autoCampaignNext()); }
-    };
-    tick(); t = setInterval(tick, 1000);
+  if (mode) {
+    add('Again', 'big green', async () => { if (!(await playMode(mode.id))) show('modes'); });
+    add('Modes', 'ghost', () => show('modes'));
+  } else {
+    if (b.won && n < LEVELS.length) add(`Next: Stage ${n + 1} ▸`, 'big green', () => playStage(n + 1));
+    add('Retry', 'blue', () => playStage(n));
+    add('Campaign', 'ghost', () => show('campaign', { region: Math.floor((n - 1) / 10) }));
   }
-}
-let fails = 0;
-export function autoCampaignNext() {
-  const s = D.save;
-  fails = s.progress[s.frontier]?.losses || 0;
-  pickSquad(s);
-  const log = upgradeCharacters(s);
-  if (log.length) toast('Auto-play: ' + log.slice(0, 3).join(', ') + (log.length > 3 ? '…' : ''));
-  save(true);
-  playStage(nextStage(s, fails), { campaign: true, auto: true });
+  add('Bastion', 'ghost', () => show('hub'));
 }
 export function leaveBattle() {
   if (!ctl) return;
   const cv = document.getElementById('bf');
-  cv.onpointermove = cv.onpointerdown = null;
+  cv.onpointermove = cv.onpointerdown = cv.onpointerup = cv.onpointercancel = cv.onwheel = null;
   ctl = null;
   playAmbience(null);
 }

@@ -1,6 +1,6 @@
 // From cards to battle: a hero card's level, stars, equipped gear and the Bastion's research make the unit the battle
 // sim deploys. Permanent upgrades all live here; in-battle ones are the sim's (Empower, Bastion works).
-import { CARDS, heroBase, LEVEL_CAP } from '../data/cards.js';
+import { CARDS, heroBase, levelCapOf, TROPHY_CAP } from '../data/cards.js';
 import { KITS } from '../data/kits.js';
 import { heroBaseLook, HERO_BY_ID, HEROES } from '../data/heroes.js';
 import { RNG } from '../core/util.js';
@@ -37,7 +37,8 @@ export function unitDef(heroId, save, opts = {}) {
 /** One number to sort heroes by: damage per second with range and skill folded in. */
 export function powerOf(d) {
   const dps = d.atk / d.rate * (1 + (d.kit.splash || 0) * 0.6 + (d.kit.cleave || 0) * 0.5 + ((d.kit.chain || 0) + (d.mods.chain || 0)) * 0.25 + (d.kit.pierce ? 0.4 : 0) + (d.mods.multishot || 0) * 0.7);
-  return Math.round(dps * (1 + 0.12 * d.range) * (1 + (d.mods.skillPower || 0) * 0.3 + (d.mods.skillCharge || 0) * 0.3) * (1 + (d.mods.crit || 0)) * 10);
+  return Math.round(dps * (1 + 0.12 * d.range) * (1 + (d.mods.skillPower || 0) * 0.3 + (d.mods.skillCharge || 0) * 0.3) * (1 + (d.mods.crit || 0))
+    * (1 + (d.mods.auraAtk || 0) * 2.5) * (1 + (d.mods.steadfast ? 0.06 : 0)) * 10);
 }
 
 /** The Rift Ally for stage n: a guest hero (Fantasica's Call Ally) at about the stage's strength, deployable once. */
@@ -48,7 +49,13 @@ export function stageAlly(n, save) {
   return { ...d, name: d.name + ' (Ally)' };
 }
 
-export const levelCap = (e) => LEVEL_CAP[(e.stars || 1) - 1];
+export const levelCap = (e, id) => levelCapOf(id ? CARDS['h:' + id].rarity : 2, e.stars || 1);
+/** Damage bonus against each monster family from the trophy cards owned. */
+export function trophyBonus(save) {
+  const out = {};
+  for (const [id, e] of Object.entries(save.cards)) { if (!id.startsWith('x:') || !(e.n > 0)) continue; const c = CARDS[id]; if (c) out[c.arch] = Math.min(TROPHY_CAP, (out[c.arch] || 0) + c.trophy); }
+  return out;
+}
 export const ownedHeroes = (save) => Object.keys(save.cards).filter((id) => id.startsWith('h:') && save.cards[id].n > 0).map((id) => id.slice(2));
 export const heroCard = (id) => CARDS['h:' + id];
 export { HERO_BY_ID };

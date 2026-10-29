@@ -277,3 +277,55 @@ h1, h2, h3, .cinzel { font-family: 'Cinzel', serif; letter-spacing: 0.04em; }
   .hub { grid-template-columns: 1fr minmax(220px, 280px); }
   .hub-side { display: flex; }
 }
+
+/* Modes, essence, Rift Seals, trophies on the result */
+.cur.essence i { background: radial-gradient(#e8d0ff, #7a2ad0); color: #100018; }
+.cur.seal i { background: radial-gradient(#d0f0ff, #1a7a9a); color: #001418; }
+.mode-h { color: #ffdf9a; margin: 14px 0 8px; font-size: 16px; }
+.modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.mode { display: flex; flex-direction: column; gap: 6px; }
+.mode.locked { opacity: 0.5; }
+.mode.ready { border-color: #6a8a30; }
+.mode-top { display: flex; gap: 10px; align-items: center; }
+.mode-ico { font-size: 26px; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 8px; background: #0a0d18; border: 1px solid #252c46; flex: none; }
+.mode-meta { font-size: 12px; }
+.mode-text { font-size: 13px; color: #c8cce0; flex: 1; }
+.mode-extra { font-size: 12px; color: #9ad0ff; }
+.mode .btn { align-self: flex-start; }
+.trophy-drops { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; margin: 8px 0; font-size: 13px; }
+.trophy-drops b { color: #ffdf9a; }
+.seal-note { font-size: 12px; color: #9ac8e0; margin: 6px 0; }
+.trophy-sum { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; font-size: 12px; }
+.trophy-sum span { background: #1a0a0c; border: 1px solid #4a1a20; border-radius: 12px; padding: 2px 9px; text-transform: capitalize; }
+.trophy-sum span.maxed { border-color: #c8a040; color: #ffdf9a; }
+.acts { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 6px; }
+.act-tab { flex: none; border: 1px solid #3a2a50; background: #120c20; border-radius: 8px; padding: 5px 12px; font-family: 'Cinzel', serif; font-weight: 700; font-size: 12px; color: var(--dim); }
+.act-tab.on { color: #e8d0ff; border-color: #7a4ad0; background: #1e1030; }
+.act-tab.locked { opacity: .4; }
+
+/* phones held upright: the battle HUD in two rows on top, the Bastion works in a row over the tray */
+@media (orientation: portrait) and (max-width: 760px) {
+  .bhud-top { flex-wrap: wrap; gap: 5px; padding: 5px 6px; }
+  .bh-box { padding: 3px 6px; white-space: nowrap; }
+  .bh-stage { max-width: 46vw; }
+  .bh-valor { min-width: 0; flex: 1; }
+  .bh-sp { flex-basis: 100%; justify-content: flex-end; }
+  .bh-btn { padding: 5px 8px; min-width: 36px; }
+  .bossbar { top: 92px; width: 70vw; left: 8px; transform: none; }
+  .callwave { top: 88px; padding: 6px 10px; font-size: 13px; }
+  .bhud-bot { flex-direction: column; align-items: stretch; gap: 4px; }
+  .works { flex-direction: row; }
+  .work { flex: 1; width: auto; min-width: 0; }
+  .work small { display: none; }
+  .tray { width: 100%; }
+  .unit-panel { bottom: 128px; right: 6px; width: min(230px, 62vw); }
+}
+/* notches and home bars */
+.topbar { padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right)); padding-top: env(safe-area-inset-top); height: calc(var(--top) + env(safe-area-inset-top)); }
+.bhud-top { padding-top: max(6px, env(safe-area-inset-top)); padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
+.bhud-bot { padding-bottom: max(6px, env(safe-area-inset-bottom)); padding-left: max(6px, env(safe-area-inset-left)); padding-right: max(6px, env(safe-area-inset-right)); }
+.navbar { height: calc(var(--nav) + env(safe-area-inset-bottom)); }
+.screen { top: calc(var(--top) + env(safe-area-inset-top)); bottom: calc(var(--nav) + env(safe-area-inset-bottom)); padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+.screen.full { top: 0; bottom: 0; }
+@media (max-width: 480px) { .topbar .title { display: none; } .topbar { gap: 5px; } .topbar .cur { padding: 2px 6px 2px 3px; } }
+.awk { color: #ff5a40; text-shadow: 0 0 6px rgba(255,60,30,.6); }

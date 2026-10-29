@@ -2,11 +2,13 @@
 // weapon and off-hand sets (50 designs each), its 26 Grim Nocturne armors and 15 enclosed helmets, plus relics.
 // Card ids: h:<hero> w:<cls>:<design> o:<cls>:<design> a:<cls>:<armor 1-26> m:<cls>:<helm 1-15> r:<relic>
 import { ART } from '../core/assets.js';
-import { RNG } from '../core/util.js';
+import { RNG, hashStr } from '../core/util.js';
+import { REGIONS } from './campaign.js';
 import { HEROES } from './heroes.js';
 import { KITS, CLASS_IDS } from './kits.js';
+import { RELICS2 } from './relics2.js';
 
-export const TYPES = { hero: 'Hero', weapon: 'Weapon', offhand: 'Off-hand', armor: 'Armor', helm: 'Helm', relic: 'Relic' };
+export const TYPES = { hero: 'Hero', weapon: 'Weapon', offhand: 'Off-hand', armor: 'Armor', helm: 'Helm', relic: 'Relic', trophy: 'Trophy' };
 export const SLOTS = ['weapon', 'offhand', 'armor', 'helm', 'relic'];
 
 // Relics: anyone can wear one. [id, name, rarity, gem art (assets/sprites/replacements atlas), mods, text]
@@ -54,7 +56,7 @@ const HELM_WORDS = ['Visor', 'Greathelm', 'Barbute', 'Crown-helm', 'Sallet', 'Ba
 
 /** The catalog: id -> card. Built once ART (the art index) has loaded. */
 export const CARDS = {};
-export const POOLS = { hero: [], weapon: [], offhand: [], armor: [], helm: [], relic: [] };
+export const POOLS = { hero: [], weapon: [], offhand: [], armor: [], helm: [], relic: [], trophy: [] };
 let built = false;
 export function buildCatalog() {
   if (built) return CARDS;
@@ -91,7 +93,15 @@ export function buildCatalog() {
         finish: fin(r, rng), mods, text: describe(mods), flavor: flavorFor('helm', cls, r, rng) });
     }
   }
-  for (const [id, name, r, gem, mods, text] of RELICS) add({ id: 'r:' + id, type: 'relic', cls: null, rarity: r, name, gem, mods, text, flavor: 'Found in the rift\'s wake, still warm.' });
+  for (const [id, name, r, gem, mods, text] of [...RELICS, ...RELICS2]) add({ id: 'r:' + id, type: 'relic', cls: null, rarity: r, name, gem, mods, text, flavor: 'Found in the rift\'s wake, still warm.' });
+  // a trophy for every painted monster: dropped by it in battle (with a Seal) or found in Bestiary packs
+  const bosses = new Set(REGIONS.map((R) => R.boss)), finals = new Set(['The Wound Without End', 'Obsidian Volcano Beast', 'The Throne That Screams', 'Cathedral Devourer']);
+  for (const m of ART.monsters) {
+    const r = finals.has(m.name) ? 5 : bosses.has(m.name) ? 4 : m.lone ? 3 : m.boss ? 2 : hashStr(m.id) % 3 === 0 ? 1 : 0, pct = TROPHY_PCT[r];
+    add({ id: 'x:' + m.id, type: 'trophy', cls: null, rarity: r, name: m.name, monster: m.id, arch: m.arch, trophy: pct, mods: {},
+      text: `+${+(pct * 100).toFixed(1)}% damage to every ${m.arch} foe. A family's trophies add up, to +${TROPHY_CAP * 100}%.`,
+      flavor: TROPHY_FLAVOR[hashStr(m.id + 'f') % TROPHY_FLAVOR.length] });
+  }
   return CARDS;
 }
 function add(c) { CARDS[c.id] = c; POOLS[c.type].push(c); }
@@ -113,12 +123,28 @@ const FLAVOR = {
   helm: ['What you cannot see cannot frighten you. Mostly.', 'Halvard approves of helmets. Halvard approves of very little.', 'A face of iron for a long night.'],
 };
 function flavorFor(kind, cls, r, rng) { return rng.pick(FLAVOR[kind]); }
+const TROPHY_FLAVOR = ['Mortimer thanked it, after.', 'Wren carved a notch for it.', 'Jasper is still writing its verse.', 'Maudlin\'s crows picked it clean.',
+  'It came out of the rift. It did not go back.', 'Gloop has eaten worse. Gloop says so.', 'Halvard looked at it once. That was enough.', 'Brakka wanted a bigger one.'];
 
 /** Card-level numbers: a hero's base stats at card level L and stars s (gear and research come in power.js). */
 export function heroBase(card, L = 1, s = 1) {
   const kit = KITS[card.cls], k = (1 + 0.1 * (L - 1)) * (1 + 0.15 * (s - 1)) * [0.8, 0.9, 1, 1.25, 1.55, 1.95][card.rarity];
   return { atk: kit.atk * k, rate: kit.rate, range: kit.range, cost: kit.cost + Math.max(0, card.rarity - 2) * 2 };
 }
-export const LEVEL_CAP = [100, 100, 100, 100, 100];
-export const ASCEND_DUPES = [1, 2, 3, 4];
+/** A hero's level cap: by rarity (Rare 30 .. Mythic 60) plus 10 a star; ascended to 5★ a Rare tops out at 70 and a Mythic at
+ * 100, awakened to 10★ at 120 and 150. */
+export const levelCapOf = (rarity, stars = 1) => [30, 30, 30, 40, 50, 60][rarity] + 10 * (stars - 1);
 export const levelCost = (L) => Math.round(6 * Math.pow(L, 1.75) + 12);
+/**
+ * Essence to raise a hero from `stars` to stars + 1: ascension to 5★, then Awakening to 10★ (the long sink for the months
+ * after the first squad is ascended: every awakened star is +15% attack and +10 levels, and costs far more). Infinity at 10.
+ */
+export const MAX_STARS = 10;
+export const ascendCost = (rarity, stars) => (stars >= MAX_STARS ? Infinity : Math.round([60, 160, 380, 900, 1500, 2400, 3600, 5200, 7300][stars - 1] * [1, 1, 1, 1.7, 2.8, 4.5][rarity]));
+/** Essence a duplicate hero card turns into, by rarity; what salvaging a spare gear copy gives; refining gear. */
+export const DUPE_ESSENCE = [0, 0, 30, 90, 240, 600];
+export const SALVAGE = [1, 2, 5, 12, 30, 75];
+export const refineCost = (rarity, refine) => [6, 12, 24, 50, 100, 200][rarity] * (refine + 1);
+// trophy cards: one per painted monster; each adds damage against its family (arch), the family capped at +25%
+export const TROPHY_PCT = [0.005, 0.008, 0.012, 0.02, 0.035, 0.05];
+export const TROPHY_CAP = 0.25;

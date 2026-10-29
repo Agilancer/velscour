@@ -7,11 +7,11 @@ export const D = { save: null, screen: null, battle: null, time: 0, touch: false
 
 export function freshSave() {
   const s = {
-    v: 1, created: Date.now(), gold: 400, shards: 300, tickets: { hero: 2, legend: 0 }, essence: 0,
+    v: 2, created: Date.now(), gold: 400, shards: 300, tickets: { hero: 2, legend: 0 }, essence: 0, seals: { n: 40, t: Date.now() },
     cards: {}, squad: STARTERS.slice(), progress: {}, frontier: 1, research: {}, pity: { hero: 0 },
     daily: { last: '', day: 0, freePack: '' }, hourly: { last: Date.now() }, quests: { date: '', list: [] }, achieved: {},
     stats: { battles: 0, wins: 0, kills: 0, packs: 0, cards: 0, bestWave: 0, deploys: 0, skills: 0 },
-    settings: { speed: 1, autoBattle: false, autoCampaign: false, sfx: 0.7, music: 0.4, skipDialogs: false },
+    settings: { speed: 1, autoBattle: false, sfx: 0.7, music: 0.4, skipDialogs: false },
     seen: {}, newCards: [], log: [],
   };
   for (const id of STARTERS) s.cards['h:' + id] = { n: 1, lvl: 1, stars: 1, equip: {} };
@@ -23,6 +23,10 @@ export function migrate(s) {
   for (const k of Object.keys(f)) if (s[k] === undefined) s[k] = f[k];
   for (const k of Object.keys(f.settings)) if (s.settings[k] === undefined) s.settings[k] = f.settings[k];
   for (const k of Object.keys(f.stats)) if (s.stats[k] === undefined) s.stats[k] = f.stats[k];
+  // v1 -> v2: duplicate counters became essence (60 each, the old Rare rate)
+  for (const e of Object.values(s.cards)) if (e.dupes) { s.essence += e.dupes * 60; delete e.dupes; }
+  delete s.settings.autoCampaign;   // auto-campaign is gone: auto-battle plays a battle, the Commander picks the next
+  s.v = 2;
   return s;
 }
 
