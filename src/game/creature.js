@@ -463,7 +463,7 @@ export class Creature {
     const lx = this.lunge > 0 ? (Math.cos(this.facing) - Math.sin(this.facing)) * this.lunge * 8 : 0;
     const ly = this.lunge > 0 ? (Math.cos(this.facing) + Math.sin(this.facing)) * this.lunge * 4 : 0;
     const dx = -a.ax * k, dy = -a.ay * k * squash;
-    const where = { img: a.img, x: px + lx, y: py + ly - z, dx, dy, k, flip: this.flip };
+    const where = { img: a.img, x: px + lx, y: py + ly - z, dx, dy, k, sq: squash, flip: this.flip };
     if (this.drawArtLayer) this.drawArtLayer(ctx, 'back', where);
     ctx.save();
     if (this.alpha !== undefined) ctx.globalAlpha = this.alpha;
