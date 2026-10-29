@@ -8,6 +8,7 @@ import { biomeTileSet, loadBiomeArt, mixedTileSet, keepTileSets } from '../core/
 import { loadArtFor, enemyImage, markArtCaches, trimArtCaches } from '../core/enemyart.js';
 import { loadClassArt } from '../core/classart.js';
 import { loadGearArt } from '../core/gearart.js';
+import { loadHeld } from '../gfx/heldart.js';
 import { preloadBarFx } from '../gfx/artfx.js';
 import { SKILLS } from '../data/skills.js';
 import { setClassItems, setRingContext, SEAL_GAP } from '../data/items.js';
@@ -186,13 +187,13 @@ export const game = {
     this.startChar(c, true);
   },
   async loadChar(c) {
-    await this.loadClassPack(c.classId);
+    await this.loadClassPack(c.classId, c);
     this.startChar(migrate(c), false);
   },
-  async loadClassPack(classId) {
+  async loadClassPack(classId, char = null) {
     const el = document.getElementById('loading');
     const slow = setTimeout(() => el && el.classList.remove('hidden'), 250);
-    const [meta] = await Promise.all([loadClassArt(classId), loadGearArt(classId)]);
+    const [meta] = await Promise.all([loadClassArt(classId), loadGearArt(classId), loadHeld(classId, char)]);
     clearTimeout(slow);
     if (el) el.classList.add('hidden');
     setClassItems(classId, meta);

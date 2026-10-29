@@ -18,6 +18,7 @@ import { hit, aoe } from './combat.js';
 import { heroLook, heroFrame, gearFxOf, finishOf } from '../core/gearart.js';
 import { castArtFx } from '../gfx/artfx.js';
 import { drawGearFx, updateGearFx } from '../gfx/gearfx.js';
+import { heldHero, drawHeldLayer } from '../gfx/heldart.js';
 import { fxColor } from '../data/gear.js';
 import { freeSlot } from '../data/bar.js';
 import { bardCompose, bardUpdate, harmonyMul } from './bard.js';
@@ -493,8 +494,11 @@ export class Player extends Creature {
    * has no gear art, and the old class sprite stands in). A single frame, drawn with the usual bob.
    */
   artFrame() {
-    const eq = this.char.equip, img = heroLook(this.classId, eq.body, eq.head);
-    if (!img) return null;
+    const eq = this.char.equip, base = heroLook(this.classId, eq.body, eq.head);
+    if (!base) return null;
+    // the weapon and off-hand in his fists (src/gfx/heldart.js), unless the settings turn held gear off
+    const held = G.settings.heldGear !== false ? heldHero(base, this.classId, eq) : null, img = held ? held.img : base;
+    this.heldArt = { held, base };
     const f = heroFrame(this.classId, this.spriteH);
     return { img, frame: 0, cw: img.width, ch: img.height, ax: f.ax, ay: f.ay, k: f.k };
   }
@@ -508,6 +512,7 @@ export class Player extends Creature {
   drawArtLayer(ctx, layer, art) {
     const g = this.gearFx();
     if (g) drawGearFx(ctx, this, g.fx, g.col, layer, art);
+    if (layer === 'front' && this.heldArt && G.settings.heldGear !== false) drawHeldLayer(ctx, this, this.heldArt.held, this.heldArt.base, art);
   }
 
   // ------------------------------------------------------------------ death
