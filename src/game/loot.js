@@ -93,7 +93,7 @@ export class GroundItem {
       const k = Math.min(1, dt * 9);
       this.x += (p.x - this.x) * k; this.y += (p.y - this.y) * k;
     }
-    const auto = this.kind !== 'item' || ((G.touch || G.settings.autoLoot) && filterPasses(this.item)); // the loot filter (game/lootfilter.js)
+    const auto = !this.dropped && (this.kind !== 'item' || ((G.touch || G.settings.autoLoot) && filterPasses(this.item))); // the loot filter (game/lootfilter.js); never what the hero dropped
     if (this.t > 0.35 && (d < 0.55 || (p.lootTarget === this && d < 1.2)) && (auto || p.lootTarget === this)) {
       if (p.pickup(this)) {
         if (p.lootTarget === this) p.lootTarget = null;

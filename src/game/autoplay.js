@@ -469,7 +469,8 @@ export const Auto = {
     this.town = null; this.sealWaiting = false; this.transitT = 0; this.stuck = { t: 0, x: 0, y: 0, n: 0 }; this.jiggle = null;
     this.target = null; this.dodge = null; this.retreat = false; this.ignore = new WeakSet(); this.lastSig = '';
     this.screenT = 0; this.lastCast = {}; this.stall = null; this.banT = 0; this.shun = new WeakMap(); this.giveUp = new WeakSet();
-    this.lootFor = null; this.lootT = 0; this.wantCache = new WeakMap(); this.hurt = 0; this.lastHp = -1; this.climbTo = null;
+    this.lootFor = null; this.lootT = 0; this.lootDry = 0; this.lootBusy = -99; this.lootSpent = new WeakMap(); this.stalls = new WeakMap(); this.hunts = new WeakMap(); this.edgeT = 0; this.dangerList = null;
+    this.wantCache = new WeakMap(); this.hurt = 0; this.lastHp = -1; this.climbTo = null;
     this.dragoonJumps = 0; this.dragoonJumpGoal = 3 + Math.floor(Math.random() * 6);
     this.dragoonCastUntil = 0; this.dragoonLastBarrage = 0; this.dragoonLastWeaveAt = -1;
     G.heroListen = null;
@@ -974,7 +975,7 @@ export const Auto = {
     return out;
   },
   /** Steer toward (gx,gy) along a path. Returns true when there. */
-  goTo(gx, gy, near = 0.35, dt = 0) {
+  goTo(gx, gy, near = 0.35, dt = 0, hold = true) {
     const p = G.player;
     if (dist(p.x, p.y, gx, gy) <= near) { this.path = null; return true; }
     if (!this.path || !this.goal || dist(this.goal[0], this.goal[1], gx, gy) > 0.7 || this.navT <= 0) {
@@ -992,8 +993,21 @@ export const Auto = {
     }
     let [nx, ny] = this.path[0];
     if (this.jiggle && this.jiggle.t > 0) { this.jiggle.t -= dt; nx = p.x + Math.cos(this.jiggle.a); ny = p.y + Math.sin(this.jiggle.a); }
+    if (hold && this.holdEdge(nx, ny, dt)) return false; // (not when running for cover or a raid mechanic)
     this.steer(nx, ny);
     return false;
+  },
+  /** The next step would take him into a telegraph or burning ground he just got out of: wait at its edge (it is
+   *  usually gone in a second) instead of stepping in and dodging straight back out, over and over. After 1.5 s he
+   *  walks on through it, not dodging for 2 s while he is healthy. */
+  holdEdge(nx, ny, dt) {
+    const L = this.dangerList, p = G.player;
+    if (!L || !L.length) { this.edgeT = 0; return false; }
+    const dx = nx - p.x, dy = ny - p.y, l = Math.hypot(dx, dy) || 1, s = Math.min(0.6, l);
+    if (this.inDanger(L, p.x, p.y) || !this.inDanger(L, p.x + (dx / l) * s, p.y + (dy / l) * s)) { this.edgeT = 0; return false; }
+    if ((this.edgeT += dt || G.dt || 1 / 30) > 1.5) { this.edgeT = 0; this.braveT = 2; return false; }
+    p.moveVec = [0, 0];
+    return true;
   },
   steer(x, y) {
     const p = G.player, dx = x - p.x, dy = y - p.y, l = Math.hypot(dx, dy);
@@ -1033,7 +1047,8 @@ export const Auto = {
     // (so does a rift's clock)
     if (this.braveT > 0) this.braveT -= dt;
     const brave = w.breach || w.rift;
-    if (!(brave && this.braveT > 0 && p.hp > p.maxHp * 0.6) && this.dodgeDanger(dt)) {
+    this.dangerList = null; // (dodgeDanger fills it: goTo waits at the edge of what it holds)
+    if (!(this.braveT > 0 && p.hp > p.maxHp * 0.6) && this.dodgeDanger(dt)) {
       if (brave && (this.dodgeRun = (this.dodgeRun || 0) + dt) > (w.rift ? 2 : 6) && p.hp > p.maxHp * 0.7 && this.hurt < 0.02) { this.braveT = w.rift ? 4 : 3; this.dodgeRun = 0; }
       this.watchStuck(dt); return;
     }
@@ -1051,7 +1066,8 @@ export const Auto = {
     if (dash) { const nd = this.navDist(dash.x, dash.y); if (!(nd > (this.rushBest ?? Infinity) - 0.5)) { this.rushBest = nd; this.rushT = 0; } else if ((this.rushT = (this.rushT || 0) + dt) > 6) this.rushT = -1.5; }
     else this.rushBest = this.rushT = undefined;
     const blocked = dash && this.rushT > 1.5;
-    const foes = enemyNear(w, p, 13).filter((m) => w.map.los(p.x, p.y, m.x, m.y) && (!dash || m === w.boss || (blocked && Math.hypot(m.x - p.x, m.y - p.y) < 4)));
+    // (a foe he landed nothing on in 12 s of trying is left alone for a while: fighting it on is the loop)
+    const foes = enemyNear(w, p, 13).filter((m) => w.map.los(p.x, p.y, m.x, m.y) && (!dash || m === w.boss || (blocked && Math.hypot(m.x - p.x, m.y - p.y) < 4)) && !(this.shun.get(m) > w.time));
     // a foe he is taking the stairs to stays in mind while the walls and stairs hide it (12 s from the last sighting)
     const ct = this.climbTo;
     if (ct && (ct.dead || w.time - this.climbSeen > 12)) this.climbTo = null;
@@ -1072,8 +1088,8 @@ export const Auto = {
     // a shrine a few steps away is worth grabbing even mid-fight (game/happenings.js)
     const sh = w.chests.find((ch) => ch.shrine && !ch.opened && !this.giveUp.has(ch) && dist(p.x, p.y, ch.x, ch.y) < 5);
     if (sh && this.navDist(sh.x, sh.y) < 7) {
-      if (this.lootFor !== sh) { this.lootFor = sh; this.lootT = 0; }
-      if ((this.lootT += dt) > 6) this.giveUp.add(sh);
+      this.lootFor = sh;
+      if ((this.lootT = this.spend(sh, dt)) > 6) this.giveUp.add(sh);
       this.setStatus(`Activating the ${sh.label}`);
       if (this.goTo(sh.x, sh.y, sh.reach - 0.2, dt)) sh.use();
       this.watchStuck(dt); return;
@@ -1100,8 +1116,8 @@ export const Auto = {
       let best = null, bd = Infinity;
       for (const ch of co) { const d = this.navDist(ch.x, ch.y); if (d < bd) { bd = d; best = ch; } }
       if (best && bd < 400) {
-        if (this.lootFor !== best) { this.lootFor = best; this.lootT = 0; }
-        if ((this.lootT += dt) > 60) this.giveUp.add(best); // can't get there
+        this.lootFor = best;
+        if ((this.lootT = this.spend(best, dt)) > 60) this.giveUp.add(best); // can't get there
         this.setStatus(`Commission: the ${best.label}`);
         if (this.goTo(best.x, best.y, (best.reach || 1.3) - 0.2, dt)) best.use();
         this.watchStuck(dt); return;
@@ -1167,6 +1183,11 @@ export const Auto = {
     const goal = this.huntGoal(w);
     if (goal) {
       this.setStatus(goal === w.boss ? `Hunting the guardian${w.boss.name ? ' — ' + w.boss.name : ''}` : 'Clearing the level');
+      // no ground gained on it in 8 s of hunting it (the path field reaches a spot the hero can't): leave it for 30 s
+      const nd = this.navDist(goal.x, goal.y);
+      let h = this.hunts.get(goal);
+      if (!h || nd < h.d - 1) this.hunts.set(goal, h = { d: nd, t: 0 });
+      else if ((h.t += dt) > 8 && goal !== w.boss) { this.shun.set(goal, w.time + 30); this.hunts.delete(goal); }
       this.goTo(goal.x, goal.y, 1, dt);
     } else {
       // nothing known to hunt: walk to the nearest reachable tile not yet revealed, else to the exit
@@ -1203,7 +1224,7 @@ export const Auto = {
     const farm = !!w.rift || c.level < depthLevel(w.depth) + S.farm; // the monster level, not the raw depth (they part after depth 60); a rift's quota wants the whole level
     let best = null, bd = Infinity;
     for (const m of w.creatures) {
-      if (m.dead || m.team !== 'enemy' || m.targetable === false || this.giveUp.has(m)) continue;
+      if (m.dead || m.team !== 'enemy' || m.targetable === false || this.giveUp.has(m) || this.shun.get(m) > w.time) continue;
       const d = this.navDist(m.x, m.y);
       if (d === Infinity) continue;
       const lim = m.goblin ? 60 : farm ? 999 : S.lim;
@@ -1215,28 +1236,43 @@ export const Auto = {
     return best;
   },
 
+  /** Seconds spent going for this loot, chest or shrine, summed over every try (flipping between targets can't reset it). */
+  spend(o, dt) { const s = (this.lootSpent.get(o) || 0) + dt; this.lootSpent.set(o, s); return s; },
   /** Pick up good loot, gold and orbs, and open chests, when they're close. Returns true while busy with it. */
   lootStep(w, dt) {
     const p = G.player, c = G.char;
     let best = null, bd = 16;
     for (const g of w.loot) {
-      if (g.z > 0 || g.t < 0.4) continue;
+      if (g.z > 0 || g.t < 0.4 || this.giveUp.has(g)) continue;
       const lim = g.kind === 'gold' ? 9 : g.kind.startsWith('orb') ? 7 : 16;
       const d = this.navDist(g.x, g.y);
       if (d > lim || d >= bd || !this.wantLoot(g)) continue;
       bd = d; best = g;
     }
     for (const ch of w.chests) {
-      if (ch.opened || this.giveUp.has(ch)) continue;
+      if (ch.opened || ch.inert || this.giveUp.has(ch)) continue; // (inert: a scenario's goal marker, nothing to use)
       const d = this.navDist(ch.x, ch.y);
       if (d < (ch.far || 14) && d - (ch.far ? 6 : 0) < bd) { bd = d - (ch.far ? 6 : 0); best = ch; } // shrines and caches are worth a walk
     }
-    if (!best) { this.lootT = 0; return false; }
-    if (this.lootFor !== best) { this.lootFor = best; this.lootT = 0; }
-    this.lootT += dt;
+    // the last target picked up (gone from the ground) or opened: the looting is getting somewhere
+    const lf = this.lootFor;
+    if (lf && (w.chests.includes(lf) ? lf.opened : !w.loot.includes(lf))) { this.lootDry = 0; this.lootFor = null; }
+    if (!best) return false;
+    this.lootFor = best;
+    // the time on each target is summed (a hero flipping between two items, or losing sight of one for a frame, never
+    // starts its clock over), and 10 s with nothing coming off the ground gives up the whole pile there (a bag that
+    // won't take it, a spot he can't stand on)
+    if (w.time - this.lootBusy > 5) this.lootDry = 0;
+    this.lootBusy = w.time;
+    this.lootT = this.spend(best, dt);
     if (this.lootT > (best.far ? 20 : 8)) { this.giveUp.add(best); return false; } // unreachable
+    if ((this.lootDry = (this.lootDry || 0) + dt) > (best.far ? 20 : 10)) {
+      for (const g of w.loot) if (dist(g.x, g.y, best.x, best.y) < 6) this.giveUp.add(g);
+      this.giveUp.add(best); this.lootDry = 0;
+      return false;
+    }
     if (best.use) {
-      this.setStatus(best.shrine ? `Activating the ${best.label}` : best.label ? `Opening the ${best.label}` : 'Opening a chest');
+      this.setStatus(best.shrine ? `Activating the ${best.label}` : best.scen ? best.label : best.label ? `Opening the ${best.label}` : 'Opening a chest'); // (a scenario's says what it does)
       if (this.goTo(best.x, best.y, (best.reach || 1.3) - 0.2, dt)) best.use();
       return true;
     }
@@ -1297,7 +1333,7 @@ export const Auto = {
       this.cover = best;
     }
     this.setStatus('Taking cover!');
-    this.goTo(this.cover[0], this.cover[1], 0.3, dt);
+    this.goTo(this.cover[0], this.cover[1], 0.3, dt, false);
     return true;
   },
 
@@ -1326,7 +1362,7 @@ export const Auto = {
     // keep shooting on the way when the hero can
     const foes = enemyNear(w, p, 13);
     if (foes.length && p.castLock <= 0 && !r.holdFire) { const t = this.pickTarget(foes); if (t) { const pick = this.chooseSkill(foes, t, dist(p.x, p.y, t.x, t.y), true); if (pick && !['leap', 'dash'].includes(pick.sk.kind) && p.tryUseSkill(pick.sk, pick.x, pick.y, pick.sk.kind === 'melee' ? t : null)) this.countFocus(pick.sk); } }
-    this.goTo(g.x, g.y, Math.max(0.3, g.r * 0.6), dt);
+    this.goTo(g.x, g.y, Math.max(0.3, g.r * 0.6), dt, false);
     return true;
   },
 
@@ -1367,6 +1403,7 @@ export const Auto = {
     // a lobbed shot is worth eating once or twice to close on a shooter: healthy and not melting, push through
     const tough = p.hp > p.maxHp * 0.7 && this.hurt < 0.03 && enemyNear(w, p, 4).length < 3 && this.target && !this.target.dead && dist(p.x, p.y, this.target.x, this.target.y) > 2.2;
     if (tough) list = list.filter((d) => !d.minor);
+    this.dangerList = list;
     if (this.dodge) {
       this.dodge.t -= dt;
       if (this.dodge.t > 0 && this.inDanger(list, p.x, p.y)) { this.setStatus('Dodging!'); this.steer(this.dodge.x, this.dodge.y); return true; }
@@ -1488,13 +1525,15 @@ export const Auto = {
     if (!t) return;
     // a foe on another level that the hero can walk to (the Castle's walls by their stairs): go there to fight it
     const climb = !fleeing && this.offTier(t.x, t.y) && this.navDist(t.x, t.y) < 220;
-    // watchdog: if the target's life hasn't moved in a while, stop casting utility skills, then try another target
-    const sw = this.stall;
-    if (!sw || sw.m !== t || t.hp < sw.hp - 1) this.stall = { m: t, hp: t.hp, t: 0 };
-    else if (!climb && (sw.t += 1 / 30) > 12) {
-      this.banT = 10;
-      if (sw.t > 25 && t.rank !== 'boss') { this.shun.set(t, w.time + 30); this.stall = null; }
+    // watchdog: a target whose life hasn't moved in 4 s is walked right up to, after 6 s only damage is thrown at it, and
+    // after 12 s (never a boss) it is left alone for 30 s. Kept per target, so flipping between two never starts it over.
+    let sw = this.stalls.get(t);
+    if (!sw || t.hp < sw.hp - 1) this.stalls.set(t, sw = { m: t, hp: t.hp, t: 0 });
+    else if (!climb && (sw.t += 1 / 30) > 6) {
+      this.banT = 5;
+      if (sw.t > 12 && t.rank !== 'boss') { this.shun.set(t, w.time + 30); this.stalls.delete(t); }
     }
+    this.stall = sw;
     if (this.banT > 0) this.banT -= 1 / 30;
     p.aim = [t.x, t.y];
     if (!fleeing) this.setStatus(`Fighting ${t.name || 'a monster'}`);
@@ -1558,7 +1597,7 @@ export const Auto = {
     // If a point-blank Spearstorm is ready, finish approaching after a leap
     // instead of idling at the primary jump attack's much greater reach.
     if (p.classId === 'dragoon' && this.readySkill((sk) => sk.m.barrage)) reach = Math.min(reach, 1.8);
-    if (this.stall && this.stall.t > 6) reach = Math.min(reach, 1.6); // nothing is landing: walk right up to it
+    if (this.stall && this.stall.t > 4) reach = Math.min(reach, 1.6); // nothing is landing: walk right up to it
     // shooters and casters: don't trade shots from the edge of range (they win that), close in to a sure hit
     else if ((t.ai === 'ranged' || t.ai === 'caster') && p.hp > p.maxHp * 0.55) reach = Math.min(reach, Math.max(2.4, reach * (0.65 - 0.25 * bold)));
     // ranged builds back off between casts from a crowd, from a melee foe closing in, or from anything when hurt (how

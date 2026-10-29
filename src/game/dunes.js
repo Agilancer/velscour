@@ -431,6 +431,7 @@ export function createDuneRun(world, gen, biome, onSuccess) {
         break;
       case 'storm': {
         if (e.t < e.limit) {
+          if (!live.length) e.spawnT = Math.min(e.spawnT ?? 3, 0.6); // nothing left to fight in the storm: the next pair now
           if ((e.spawnT = (e.spawnT ?? 3) - dt) <= 0 && live.length < 9) { e.spawnT = 5; wave(e, 2, { how: 'drop', r0: 3, r1: 7 }); }
         } else if (!e.rider) {
           const [x, y] = spotNear(p.x, p.y, 3, 6);
@@ -454,12 +455,14 @@ export function createDuneRun(world, gen, biome, onSuccess) {
       case 'duel': if (e.boss && e.boss.dead && !live.length) return finishEnc(e); break;
       case 'oasis': {
         e.got = e.foes.filter((m) => m.dead).length;
+        if (!live.length) e.spawnT = Math.min(e.spawnT ?? 0, 0.5);
         if (e.got < 16 && (e.spawnT = (e.spawnT ?? 0) - dt) <= 0 && live.length < 8) { e.spawnT = 3.2; const a = rand(0, 6.283); wave(e, 3, { at: [e.x + Math.cos(a) * e.r, e.y + Math.sin(a) * e.r], r0: 0, r1: 3, how: 'burrow' }); }
         if (e.got >= 16 && !live.length) return finishEnc(e);
         break;
       }
       case 'guardians': {
         const dorm = e.foes.filter((m) => m.dormant && !m.dead);
+        if (!live.some((m) => !m.dormant)) e.nextWake = Math.min(e.nextWake, 0.6); // the woken pair cut down: the next stirs at once
         if (dorm.length && (e.nextWake -= dt) <= 0) {
           e.nextWake = 9;
           for (const m of dorm.slice(0, 2)) { m.dormant = false; m.static = false; m.targetable = true; m.awake = true; m.hunter = true; m.swap = null; addEffect(new Ring(m.x, m.y, 0.3, 2.5, 0.6, v.pyramid.glyph, 4)); burst(m.x, m.y, 12, 'arcane', 24, 4); camera.shake(3); sfx('roar', 0.5); }

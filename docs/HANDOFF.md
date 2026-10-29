@@ -43,6 +43,65 @@ Contents
   dozen tries), `defense/tools/check_dialogs.mjs` (320 dialogs), `tools/tests/riftgate.js` (12 town seeds), `flow.js`.
 - **Not verified:** real phones and Safari/iOS; human play balance (the curve is fitted to auto-play).
 
+## October 28, 2026 — auto-play loops and the waits left (branch `fix/autoplay-loops`)
+- **Request:** a gifted level-350 Lancer stood in a won Abyssal Rift (Tier 1, Obsidian Vault, Warlord Brannoc slain)
+  in its loot pile, "AUTO · Picking up Ruv Sigil", 30 s DPS 0; "go over all the pathing stuff everywhere", characters
+  stuck in weird loops or waiting for things that take too long to spawn.
+- **Not reproduced exactly** (the gifted Lancer leaves a won rift 2-4 s after the win in every headless run, with a
+  full bag and auto-pickup too), so every way auto-play could go round in circles there was closed:
+  - **Loot** (`lootStep`): the 8 s give-up clock was shared and reset whenever the target changed or a frame found
+    nothing, so two items it couldn't take (or one it lost sight of for a frame) kept it "Picking up" for good; a pile
+    it couldn't take cost 8 s an item. Now the time is summed per target (`spend`, also shrines and commissions), and
+    10 s with nothing coming off the ground gives up everything within 6 tiles (`lootDry`). Items dropped from the bag
+    (`dropFromBag`, also auto-play's `makeRoom`) are never auto-picked up again (`g.dropped`; a click still takes them).
+  - **Frozen hero** (`Player.update`): the Caverns (`toShaft`), the Dunes' tomb and the Tower's roof sweep the
+    hazards away when a section changes; a dash, leap or beam the hero was in kept `p.channel` pointing at the swept
+    effect, so he could never move or attack again. A channel no longer in the world's hazards is now let go.
+  - **Fights** (`combat`): the no-damage watchdog was 12 s / 25 s and started over whenever the target changed; it is
+    per target now (`stalls`), walks right up at 4 s, damage only at 6 s, leaves it 30 s at 12 s. A shunned foe used
+    to be fought on when it was the only one in sight (`pickTarget` skips it only with others about): `foes` and
+    `huntGoal` now leave shunned foes out. Hunting a foe gains no ground in 8 s of trying (`hunts`): shunned 30 s.
+  - **Dodging** (`goTo` → `holdEdge`): with a telegraph or burning ground between him and his goal he stepped in,
+    dodged out and stepped in again each frame ("Dodging!" flipping 55 times in 8 s). He now waits at the edge up to
+    1.5 s, then walks through (2 s of no dodging while above 60% life); not when running for cover or a raid mechanic.
+  - **Scenario markers**: the escort's "far altar" is only where to lead the soul (its `use` does nothing) but
+    auto-play walked to it and "used" it for 20 s; markers with `inert` are skipped. Scenario markers' statuses read as
+    their labels ("Smash the idol", not "Opening the The far altar").
+- **Spawn waits** (the rule from the entry below):
+  - **Dungeon scenarios** (`scenarios.js`): the relic's three waves came 8 s apart whatever happened (now the next
+    comes 0.6 s after one is cut down); the ward's waves 3 s after its attackers are gone (now 0.8 s); the hourglass
+    slaughter's waves every 6 s while its clock ran (now 0.5 s after a wave falls).
+  - **Sea of Sand dune rooms** (`dunes.js`): the guardians woke two at a time 9 s apart (the next pair now stirs 0.6 s
+    after the woken ones fall), the storm's pairs every 5 s and the oasis's waves every 3.2 s even with nothing alive.
+  - **Sky Battle** (`skybattle.js`; a stall soak caught a Necromancer standing on the deck 17-26 s): every wave
+    waited 2.5 s, then boats took 4.5 s to come alongside and 0.9 s to drop the ramp; the flagship's duel ran 26 s with
+    boarders only at 9 s and 18 s. Now the next wave is called while the last two boarders of this one stand, and with
+    nothing on the deck to hit (`S.calm`) `hurry()` brings the next arrival at once, one at a time (a boarder in the
+    air lands in 0.25 s, else a docked boat's next leaps, else the nearest boat is alongside in 0.4 s, else the
+    flyover drops, else the next boat sets out); the flagship closes 6x faster on a clear deck and sends boarders in
+    threes all the way in; beats before the mid-boss/parley scenes 0.3 s, between gauntlet champions 0.3 s. Longest
+    stretch with nothing to hit, first wave to victory: 9-15 s before, 0.83-0.93 s now (docs/SKY_BATTLE.md).
+- **Also fixed:** `townlife.js` dog chase read `dog.goal[0]` after the dog had already arrived (a thrown update).
+- **Left alone:** town errands (10 s with Homunculus, 8-10 s listening to townsfolk) are the town-life features, not
+  loops; zone/hold captures; monster pathing (`mobs.js`: 320 monsters, 0 stuck, every guardian arrives) and pets
+  (`pets.js` passes; its one failure seen once was a flaky idle-wander check, also on `main`).
+- **Tools:** `tools/tests/autoloops.js` builds each loop on purpose and times the escape (on `main`: 47 s for an
+  untakeable pile, frozen for good after a swept dash, 8+ s at the far altar, 33 s on an unhurtable foe, 55 dodges and
+  8 s to cross burning ground; now 9.7 s, free, 0, 11.7 s, 1 dodge and 2.6 s; and out of a won rift 3.5 s after the win).
+  `tools/tests/stalls.js [class] [minutes] [standard|rift|breach] [gift] [autoloot] [fullbag] [god]` is the stall
+  finder that found them: a soak that flags a status unchanged > 7 s, the hero parked 10 s, 15 s without a kill and
+  flip-flops, each with the auto-play state (it never fails; read the flags).
+- **Verified:** `autoloops.js` (all six; the same test on `main` fails five), `flow.js`, `rifts.js` (auto-play: the
+  Guardian dead at 17% of the clock, on to tier 3), `skills.js lancer`, `autoplay.js lancer 12` (depth 4, no deaths)
+  and `paladin 10` (depth 3, no deaths), `mobs.js`, `pets.js`, `happenings.js`, `townlife.js` (every event),
+  `biome_scenarios.js` (every mechanic completes), `dunes.js all`, `skystories.mjs`, `skyship.js all`, `skyship.js
+  stories`, `skyship.js clear auto` (auto-play battles 178-208 s, longest wait 0.9 s outside the captains' own
+  entrances: a 3.4 s rope swing, a 1.3 s leap), the real main loop (rAF, loading, drawing) with a gifted Lancer through
+  rift tiers 1, 4, 7 and 10 (out 2-3 s after each win), and `stalls.js` soaks (Lancer descent, rifts and Breach,
+  Necromancer, Paladin: what is left is long walks, hold objectives and slow fights against uniques).
+- **Not verified:** the user's own save (relics, settings, the bag) was not available; the exact loop in the
+  screenshot never happened headless, on `main` or here.
+
 ## October 28, 2026 — no standing about waiting for spawns (branch `fix/no-spawn-waits`)
 - **Request:** the Paladin sometimes stood still for 5-20 s waiting for a scenario's or spawn routine's next monsters;
   no spawn wait over about a second, but don't spawn everything at once.
