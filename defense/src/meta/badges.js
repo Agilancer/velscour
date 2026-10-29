@@ -6,6 +6,7 @@ import { canLevel, canAscend, wearable } from './upgrade.js';
 import { RESEARCH, researchCost } from './research.js';
 import { SLOTS, CARDS } from '../data/cards.js';
 import { unitDef, ownedHeroes } from './power.js';
+import { MODES, entriesLeft } from './modes.js';
 
 export function heroDot(save, id) {
   if (canLevel(save, id) || canAscend(save, id)) return true;
@@ -21,7 +22,8 @@ export function badges(save) {
     collection: save.newCards.length > 0,
     squad: save.squad.some((id) => save.cards['h:' + id] && heroDot(save, id)),
     works: Object.keys(RESEARCH).some((k) => (save.research[k] || 0) < RESEARCH[k].max && save.gold >= researchCost(k, save.research[k] || 0)),
-    campaign: !save.progress[save.frontier] && save.frontier <= 80,
+    campaign: !save.progress[save.frontier] && save.frontier <= 300,
+    modes: save.frontier >= 6 && MODES.some((m) => m.kind !== 'endless' && entriesLeft(save, m.id) > 0),
   };
 }
 export { unitDef, ownedHeroes, CARDS };

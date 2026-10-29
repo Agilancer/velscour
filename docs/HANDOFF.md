@@ -14,6 +14,35 @@ Contents
 
 ---
 
+## October 29, 2026 — VELSCOUR DEFENSE: Acts II-V (300 stages), side modes, balance for months, iPhone (branch `feat/defense-act2`)
+- **Request:** balance the Defense game thoroughly so it can't be beaten in a day and takes weeks upon weeks of
+  stronger cards to reach the end; use tons of different VELSCOUR monsters; add 120 levels (Acts II and III) and more
+  cards; then go to level 300 with two more acts, letting players get quite a way before it gets hard and stalls,
+  with other modes (different endless and challenge modes) for currency and pulls on the side; pinch-to-zoom and
+  mouse-wheel zoom; remove auto-campaign; make the UI fit an iPhone in portrait and landscape, especially the cards.
+  Then commit, PR and merge.
+- **Done:** see [`defense/docs/DEFENSE.md`](../defense/docs/DEFENSE.md): five acts and 30 regions (300 stages, 5,000
+  waves, 40 maps, all 690 painted monsters fielded, captains/warlords and three new monster roles), 584 dialogs
+  (`part5-12.js`, the arc in `defense/docs/STORY.md`), 3,106 cards (96 heroes, 64 relics, 690 monster trophies),
+  Rift Seals, essence, Awakening to 10 stars, ten side modes (`meta/modes.js`, the Modes tab), pinch/wheel zoom and
+  drag-pan, auto-campaign removed, auto-battle that holds every road, the iPhone layout pass (safe areas, a portrait
+  battle HUD, cards and 3D packs fitted to narrow screens).
+- **Design calls made without asking** (worth confirming): the time gate is Rift Seals (40, one every 30 minutes;
+  a battle without one pays a seventh of its gold) rather than stamina, so play is never blocked; essence is the
+  scarce currency (ascension, Awakening, refining) and Awakening to 10 stars is the long sink; the calendar the curve
+  is fitted to (day 1 about 40 stages, day 7 about 100, day 28 about 165, the Demon Lord after three to four months);
+  the challenges sit at 50-80% of the frontier's strength so a player keeping pace wins them; the Works' Forge of Valor
+  goes to level 120 as the late gold sink; Bastion's Resolve builds to +60%; armour grows slowly after Act I (it made physical heroes useless late); Act IV/V region names and bosses; the final
+  boss is "Velscour's Shadow" (the Demon Lord himself stays the main game's).
+- **Verified:** `defense/tests/balance.mjs` with real battles: a casual Commander wins on day 104, a dedicated one
+  is at 267 of 300 on day 84 (calendar 268), a grinder at 259 on day 42; nobody passes stage 29 on day 1 or 134 in a
+  week (table in DEFENSE.md); `calibrate.mjs` (two seeds a stage, per-map terrain factors),
+  `defense/tests/iphone.js` (every view fits at 390x844 and 844x390, no errors), `defense/tests/defense.js` (menus,
+  stages from all five acts, three modes, wheel zoom, 3D packs, inspector), `defense/tests/modes_smoke.mjs`,
+  `defense/tools/check_dialogs.mjs` (584 dialogs, 0 problems).
+- **Not verified:** real iPhones and Safari (Chromium with an iPhone viewport and touch only); human play balance
+  (the curve is fitted to auto-play).
+
 ## October 29, 2026 — VELSCOUR DEFENSE: a separate tower-defense card game behind the Riftgate (branch `feat/velscour-defense`)
 - **Request:** a bigger, crazier blue/black portal in town leading to a completely different game in the VELSCOUR
   universe, VELSCOUR DEFENSE: a gacha game with no microtransactions (heroes, gear and more to roll for), named

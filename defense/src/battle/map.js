@@ -12,6 +12,7 @@ function transform(rows, tf) {
   g = g.map((r) => { while (r.length < w) r.push('.'); return r; });
   if (tf.includes('T')) g = g[0].map((_, x) => g.map((r) => r[x]));
   if (tf.includes('F')) g = g.map((r) => r.reverse());
+  if (tf.includes('V')) g = g.reverse();
   return g;
 }
 

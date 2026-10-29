@@ -41,8 +41,10 @@ node tools/tests/encounters.js [kinds]             # dungeon encounters with peo
 node tools/tests/rings.js                          # ring augments in a live dungeon, skill mastery, ring/forge UI shots
 node tools/tests/flow.js                           # town -> portal -> boss -> exit -> depth 2 -> death -> reload
 node tools/tests/riftgate.js [seeds]               # the Riftgate to VELSCOUR DEFENSE: placed in every town, through it and back
-node defense/tests/defense.js [mobile]             # VELSCOUR DEFENSE (its own game, defense/docs/DEFENSE.md): menus, a stage on auto, 3D packs
-node defense/tests/balance.mjs 80 1500             # Defense's difficulty curve: the whole campaign on auto, no browser
+node defense/tests/defense.js [mobile]             # VELSCOUR DEFENSE (its own game, defense/docs/DEFENSE.md): menus, stages of all 5 acts on auto, modes, zoom, 3D packs
+node defense/tests/iphone.js [portrait|landscape]  # Defense on an iPhone-sized touch screen: every view fits (cards, packs, inspector, battle HUD)
+node defense/tests/balance.mjs [profiles] [days]   # Defense's calendar: casual/dedicated/grinder Commanders play real days of battles, no browser
+node defense/tests/modes_smoke.mjs [days]          # Defense's endless and challenge modes, played headless after N days
 node tools/tests/deathgift.js [classes]            # "DEATH IS THE ONLY WAY OUT, MY KIND SIR." to Velscour: level 350, Mythic +10 gear, depth 500; the hero is barred from the Honour Board
 node tools/tests/stash.js                          # town storage chest: 300 slots, store/take, auto-play stashing
 node tools/tests/savesafe.js                       # unreadable saves never written over: set aside before the first save (localStorage or IndexedDB), downloadable, refused + warned when no room

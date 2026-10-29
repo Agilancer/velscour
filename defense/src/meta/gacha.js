@@ -1,7 +1,8 @@
 // The Summoning Altar: packs of Rift Cards bought only with Soul Shards earned by playing (no money, ever), with
 // published odds, a pity counter, and a free pack every day. Duplicates ascend heroes and refine gear.
 import { RNG } from '../core/util.js';
-import { POOLS, CARDS } from '../data/cards.js';
+import { POOLS, CARDS, DUPE_ESSENCE } from '../data/cards.js';
+import { monstersUpTo } from '../data/waves.js';
 import { ownedHeroes } from './power.js';
 
 export const PACKS = [
@@ -15,6 +16,8 @@ export const PACKS = [
     odds: [34, 28, 22, 10, 5, 1], last: [0, 0, 62, 26, 10, 2], text: '3 relics, the last Rare or better.' },
   { id: 'bastion', name: 'Bastion Booster', sub: 'A hero and a kit to go with them', price: 220, count: 8, mixed: true, color: '#e8c070', art: 'bard',
     odds: [30, 28, 24, 12, 5, 1], text: '8 cards: 1 hero, 3 weapons or off-hands, 2 armors or helms, 1 relic, 1 Rare-or-better card of any kind.' },
+  { id: 'bestiary', name: 'Bestiary Booster', sub: 'Trophies of monsters you have faced', price: 70, count: 4, types: ['trophy'], color: '#9a2a2a', art: 'necromancer',
+    odds: [44, 30, 15, 7, 3, 1], last: [0, 0, 60, 28, 9, 3], text: '4 trophy cards of monsters from the stages you have reached, the last Rare or better.' },
   { id: 'daily', name: 'Daily Rift Pack', sub: 'Free, once a day', price: 0, count: 3, mixed: true, daily: true, color: '#6ad870', art: 'ranger',
     odds: [40, 30, 20, 7, 2.5, 0.5], text: '3 cards of any kind. Comes back every day.' },
 ];
@@ -24,8 +27,11 @@ export const today = () => new Date().toISOString().slice(0, 10);
 
 function rollRarity(rng, odds) { return rng.weighted(odds.map((w, r) => [r, w])); }
 function pickCard(rng, type, rarity, save) {
-  let pool = POOLS[type].filter((c) => c.rarity === rarity);
-  for (let r = rarity; !pool.length && r >= 0; r--) pool = POOLS[type].filter((c) => c.rarity === r);
+  const met = type === 'trophy' ? monstersUpTo(Math.min(300, save.frontier)) : null;
+  const base = met ? POOLS.trophy.filter((c) => met.has(c.monster)) : POOLS[type];
+  let pool = base.filter((c) => c.rarity === rarity);
+  for (let r = rarity; !pool.length && r >= 0; r--) pool = base.filter((c) => c.rarity === r);
+  if (!pool.length) pool = base.length ? base : POOLS[type];
   if (type !== 'hero' && type !== 'relic') { // most gear fits heroes you have
     const mine = new Set(ownedHeroes(save).map((id) => CARDS['h:' + id].cls));
     const fit = pool.filter((c) => mine.has(c.cls));
@@ -83,13 +89,12 @@ export function openPack(save, pack, ten = false, rng = new RNG(Date.now() ^ (sa
 /** Put a card in the collection: new, or a duplicate that ascends a hero / adds a copy of gear. */
 export function grant(save, card, foil = false) {
   let e = save.cards[card.id], dup = !!e && e.n > 0;
-  if (!e) e = save.cards[card.id] = card.type === 'hero' ? { n: 0, lvl: 1, stars: 1, dupes: 0, equip: {} } : { n: 0, refine: 0 };
+  if (!e) e = save.cards[card.id] = card.type === 'hero' ? { n: 0, lvl: 1, stars: 1, equip: {} } : card.type === 'trophy' ? { n: 0 } : { n: 0, refine: 0 };
   if (card.type === 'hero') {
-    if (dup) {
-      if (e.stars < 5) e.dupes = (e.dupes || 0) + 1;
-      else save.essence += 60 * (card.rarity + 1);
-    } else e.n = 1;
-  } else e.n++;
+    if (dup) save.essence += DUPE_ESSENCE[card.rarity];
+    else e.n = 1;
+  } else if (card.type === 'trophy') { if (dup) save.essence += 1 + card.rarity; else e.n = 1; }
+  else e.n++;
   if (foil) e.foil = true;
   if (!dup) { save.newCards.push(card.id); save.stats.cards++; }
   return { card, foil, dup, entry: e };

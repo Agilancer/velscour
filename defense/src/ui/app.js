@@ -3,6 +3,7 @@
 import { D, save } from '../state.js';
 import { el, fmt, escapeHtml } from '../core/util.js';
 import { badges } from '../meta/badges.js';
+import { seals, SEAL_MAX } from '../meta/seals.js';
 import { initAudio, sfx } from '../core/audio.js';
 
 const screens = {};
@@ -11,9 +12,9 @@ export function registerScreen(name, mod) { screens[name] = mod; }
 
 const NAV = [
   ['hub', 'Bastion', '🏰'], ['campaign', 'Campaign', '⚔'], ['squad', 'Squad', '🛡'], ['summon', 'Summon', '✦'],
-  ['collection', 'Cards', '🂠'], ['works', 'Works', '⚒'], ['rewards', 'Rewards', '🎁'],
+  ['collection', 'Cards', '🂠'], ['modes', 'Modes', '∞'], ['rewards', 'Rewards', '🎁'],
 ];
-const TITLES = { hub: 'The Bastion', campaign: 'Campaign', squad: 'Squad', summon: 'Summoning Altar', collection: 'Rift Cards', works: 'Bastion Works', rewards: 'Rewards', settings: 'Settings', hero: 'Hero' };
+const TITLES = { hub: 'The Bastion', campaign: 'Campaign', squad: 'Squad', summon: 'Summoning Altar', collection: 'Rift Cards', works: 'Bastion Works', modes: 'Modes', rewards: 'Rewards', settings: 'Settings', hero: 'Hero' };
 
 export function show(name, args = {}) {
   const ui = document.getElementById('ui');
@@ -39,7 +40,9 @@ function topbar(title) {
   b.innerHTML = `<div class="title">${escapeHtml(title)}</div>
     <div class="cur gold" title="Gold"><i>◉</i>${fmt(s.gold)}</div>
     <div class="cur shard" title="Soul Shards: earned in battle and from rewards, spent at the Summoning Altar"><i>◆</i>${fmt(s.shards)}</div>
+    <div class="cur essence" title="Essence: from duplicates, salvage, battles and the Modes; ascends heroes and refines gear"><i>✧</i>${fmt(s.essence)}</div>
     <div class="cur ticket" title="Summon tickets"><i>🎟</i>${s.tickets.hero + s.tickets.legend}</div>
+    <div class="cur seal" title="Rift Seals: a battle with one pays in full; one refills every 30 minutes"><i>⛬</i>${seals(s)}/${SEAL_MAX}</div>
     <button class="btn ghost" data-k="settings" style="padding:5px 9px">⚙</button>`;
   b.querySelector('[data-k=settings]').onclick = () => { sfx('door_open', 0.4); show('settings'); };
   return b;

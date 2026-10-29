@@ -7,6 +7,7 @@ import { KITS, RARITIES, FRAMES, CLASS_FRAME } from '../data/kits.js';
 import { TYPES, CARDS } from '../data/cards.js';
 import { heroCanvas, heldCanvas, armorCanvas, helmCanvas, loadHeroArt, loadHeldSet, heroArtReady, ELEMENT_COL } from '../art/heroart.js';
 import { heroBaseLook } from '../data/heroes.js';
+import { loadMonsters, monsterImage } from '../art/monsterart.js';
 
 export const CARD_W = 630, CARD_H = 880;
 let gems = null;
@@ -15,6 +16,7 @@ export async function ensureCardArt(card) {
     if (!gems) { const [meta, img] = await Promise.all([loadAssetJSON('assets/sprites/replacements/atlas.json'), loadImage('assets/sprites/replacements/atlas.webp')]); gems = { meta, img }; }
     return;
   }
+  if (card.type === 'trophy') return loadMonsters([card.monster]);
   if (!heroArtReady(card.cls)) await loadHeroArt(card.cls);
   if (card.set) await loadHeldSet(card.set);
 }
@@ -60,7 +62,7 @@ function wrap(ctx, text, maxW) {
 
 /** The art window's picture for a card, drawn into (X, Y, W, H). */
 function drawArt(ctx, card, entry, X, Y, W, H) {
-  const F = frameOf(card), cl = card.cls ? ART.classes[card.cls] : null, accent = cl?.color || '#c8a0ff', r = new RNG(card.id);
+  const F = frameOf(card), cl = card.cls ? ART.classes[card.cls] : null, accent = card.type === 'trophy' ? '#c83028' : cl?.color || '#c8a0ff', r = new RNG(card.id);
   // backdrop: a dusk sky in the card's colour with rift light and a horizon
   const g = ctx.createLinearGradient(0, Y, 0, Y + H);
   g.addColorStop(0, shade(mixHex(accent, '#0a1030', 0.55), -0.3)); g.addColorStop(0.62, shade(mixHex(accent, '#1a1a2a', 0.65), -0.1)); g.addColorStop(1, '#07080e');
@@ -101,6 +103,9 @@ function drawArt(ctx, card, entry, X, Y, W, H) {
       ctx.imageSmoothingEnabled = !!meta; ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(src, bx, by, bw, bh, X + W / 2 - bw * k / 2, Y + H * 0.5 - bh * k / 2, bw * k, bh * k);
     }
+  } else if (card.type === 'trophy') {   // the monster itself, painted, on a blood-red ground
+    const img = monsterImage(card.monster, card.rarity >= 3 ? 'elite' : 'base', 420);
+    if (img) { const k = Math.min(W * 0.84 / img.width, H * 0.86 / img.height); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(img, X + W / 2 - img.width * k * img.fx, Y + H * 0.95 - img.height * k, img.width * k, img.height * k); }
   } else if (card.type === 'relic' && gems) {
     const c = gems.meta[card.gem] || gems.meta.gem_diamond;
     if (c) { const k = Math.min(W * 0.55 / c.w, H * 0.62 / c.h); ctx.imageSmoothingEnabled = true; ctx.drawImage(gems.img, c.x, c.y, c.w, c.h, X + W / 2 - c.w * k / 2, Y + H * 0.48 - c.h * k / 2, c.w * k, c.h * k); }
@@ -200,7 +205,9 @@ export function renderCard(card, entry = null, scale = 0.5, stats = null) {
   ctx.font = '800 20px "Alegreya Sans", sans-serif';
   if (hero) {
     const st = entry?.stars || 1;
-    ctx.fillStyle = '#c08a10'; ctx.fillText('★'.repeat(st), TX + 10, TY + TH_ + 30); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillText('★'.repeat(5 - st), TX + 10 + ctx.measureText('★'.repeat(st)).width, TY + TH_ + 30);
+    // five stars; awakened ones (6-10) turn crimson from the left
+    const aw = Math.max(0, st - 5), gold = Math.min(5, st) - aw, sw = ctx.measureText('★').width;
+    ['#e8402a', '#c08a10', 'rgba(0,0,0,0.35)'].forEach((c, k) => { ctx.fillStyle = c; const n0 = [0, aw, aw + gold][k], n = [aw, gold, 5 - aw - gold][k]; ctx.fillText('★'.repeat(n), TX + 10 + n0 * sw, TY + TH_ + 30); });
     if (entry) { ctx.fillStyle = '#f0e8d8'; ctx.fillText('Lv ' + entry.lvl, TX + 130, TY + TH_ + 30); }
     // the ATK box, bottom right
     const atk = Math.round(stats?.atk ?? KITS[card.cls].atk * RARITIES[card.rarity].mult), rng = (stats?.range ?? KITS[card.cls].range).toFixed(1);

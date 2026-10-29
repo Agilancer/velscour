@@ -15,7 +15,7 @@ export function schedule() {
   let seed = 7;
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
   const ids = CAST.map((c) => c.id), slots = [], pairUse = {}, partnerUse = Object.fromEntries(ids.map((i) => [i, 0]));
-  REGIONS.forEach((R, ri) => {
+  REGIONS.filter((R) => R.act === 1).forEach((R, ri) => {
     const leads = ids.flatMap((id) => Array(R.featured.includes(id) ? 4 : 2).fill(id));
     // 10 stages x 4 slots, no hero leading twice in a stage: deal the most frequent first, to the emptiest stage
     const stages = Array.from({ length: 10 }, () => []);
@@ -49,7 +49,39 @@ export function schedule() {
   return slots;
 }
 
+/** Acts II and III: a dialog at the beginning of every stage, and at the end of every lieutenant and boss stage. */
+export function schedule2() {
+  let seed = 11;
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const ids = CAST.map((c) => c.id), slots = [], leads = Object.fromEntries(ids.map((i) => [i, 0])), pairUse = {};
+  REGIONS.filter((R) => R.act > 1).forEach((R) => {
+    const ri = REGIONS.indexOf(R), want = [];
+    for (let k = 0; k < 10; k++) { want.push([k, 'begin']); if (k === 4 || k === 9) want.push([k, 'end']); }
+    // the region's featured heroes lead two each, the least used of the rest fill the other four
+    const pool = [...R.featured, ...R.featured, ...ids.filter((i) => !R.featured.includes(i)).sort((a, b) => leads[a] - leads[b] || rnd() - 0.5).slice(0, 4)];
+    pool.sort(() => rnd() - 0.5);
+    want.forEach(([k, at], j) => {
+      const L = LEVELS[ri * 10 + k], lead = pool[j];
+      leads[lead]++;
+      let best = null, bs = -1e9;
+      for (const p of ids) {
+        if (p === lead) continue;
+        const key = [lead, p].sort().join('|');
+        const sc = aff(lead, p) * 1.1 + (R.featured.includes(p) ? 1 : 0) - (pairUse[key] || 0) * 1.4 + rnd() * 1.2;
+        if (sc > bs) { bs = sc; best = p; }
+      }
+      pairUse[[lead, best].sort().join('|')] = (pairUse[[lead, best].sort().join('|')] || 0) + 1;
+      slots.push({ id: `L${String(L.n).padStart(3, '0')}${at === 'begin' ? 'b' : 'e'}1`, level: L.n, at, lead, with: best });
+    });
+  });
+  return slots;
+}
+
 if (process.argv[1] && process.argv[1].endsWith('dialog_schedule.mjs')) {
+  const s2 = schedule2();
+  writeFileSync(new URL('../docs/dialog_schedule2.json', import.meta.url), JSON.stringify(s2, null, 0).replace(/\},\{/g, '},\n{'));
+  const l2 = {}; for (const d of s2) l2[d.lead] = (l2[d.lead] || 0) + 1;
+  console.log('Acts II-III:', s2.length, 'dialogs;', Object.entries(l2).map(([k, v]) => k + ' ' + v).join(', '));
   const s = schedule();
   writeFileSync(new URL('../docs/dialog_schedule.json', import.meta.url), JSON.stringify(s, null, 0).replace(/\},\{/g, '},\n{'));
   const leads = {}, partners = {};

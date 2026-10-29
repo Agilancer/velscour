@@ -26,13 +26,34 @@ export class BattleView {
     this.sky = null;
   }
   fit() {
-    const [x0, y0, x1, y1] = this.dress.bounds, m = this.margins = D.H < 500 ? { top: 46, bottom: 92, left: 6, right: 6 } : { top: 62, bottom: 118, left: 10, right: 10 };
-    const W = D.W - m.left - m.right, H = D.H - m.top - m.bottom;
-    this.zoom = Math.min(W / (x1 - x0), H / (y1 - y0)) * 0.97;
-    this.cx = (x0 + x1) / 2; this.cy = (y0 + y1) / 2;
-    this.ox = m.left + W / 2; this.oy = m.top + H / 2;
+    const [x0, y0, x1, y1] = this.dress.bounds, portrait = D.H > D.W * 1.1;
+    const m = this.margins = portrait ? { top: 92, bottom: 128, left: 4, right: 4 } : D.H < 500 ? { top: 38, bottom: 58, left: 6, right: 6 } : { top: 62, bottom: 118, left: 10, right: 10 };
+    const W = D.W - m.left - m.right, H = D.H - m.top - m.bottom, fitW = W / (x1 - x0), fitH = H / (y1 - y0);
+    // the whole field on one screen (Fantasica); upright phones show it a little larger than their width and pan
+    this.baseZoom = (portrait ? Math.min(fitW * 1.65, fitH) : Math.min(fitW, fitH)) * 0.97;
+    this.minZoom = Math.min(1, fitW * 0.97 / this.baseZoom);   // pinched all the way out, the whole field shows
+    this.userZoom = Math.max(this.minZoom, this.userZoom ?? 1); this.panX ??= 0; this.panY ??= 0;
+    this.mcx = (x0 + x1) / 2; this.mcy = (y0 + y1) / 2; this.mw = x1 - x0; this.mh = y1 - y0;
+    this.ox = m.left + W / 2; this.oy = m.top + H / 2; this.vw = W; this.vh = H;
+    this.applyView();
     this.sky = null;
   }
+  /** Zoom (pinch, wheel) and pan (drag) on top of the fitted view; the field never leaves the screen. */
+  applyView() {
+    this.zoom = this.baseZoom * this.userZoom;
+    const sx = Math.max(0, (this.mw * this.zoom - this.vw) / 2 / this.zoom + 40 / this.zoom), sy = Math.max(0, (this.mh * this.zoom - this.vh) / 2 / this.zoom + 40 / this.zoom);
+    this.panX = clamp(this.panX, -sx, sx); this.panY = clamp(this.panY, -sy, sy);
+    this.cx = this.mcx + this.panX; this.cy = this.mcy + this.panY;
+  }
+  zoomBy(f, sx = this.ox, sy = this.oy) {
+    const wx = (sx - this.ox) / this.zoom + this.cx, wy = (sy - this.oy) / this.zoom + this.cy;   // keep the point under the fingers still
+    this.userZoom = clamp(this.userZoom * f, this.minZoom, 3.2);
+    this.zoom = this.baseZoom * this.userZoom;
+    this.panX = wx - (sx - this.ox) / this.zoom - this.mcx; this.panY = wy - (sy - this.oy) / this.zoom - this.mcy;
+    this.applyView();
+  }
+  panBy(dx, dy) { this.panX -= dx / this.zoom; this.panY -= dy / this.zoom; this.applyView(); }
+  resetView() { this.userZoom = 1; this.panX = 0; this.panY = 0; this.applyView(); }
   // world <-> screen (CSS px)
   toScreen(x, y, z = 0) { return [(isoX(x, y) - this.cx) * this.zoom + this.ox, (isoY(x, y, z) - this.cy) * this.zoom + this.oy]; }
   postAt(sx, sy) {

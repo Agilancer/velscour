@@ -13,6 +13,7 @@ import * as squad from './ui/squad.js';
 import * as collection from './ui/collection.js';
 import * as summon from './ui/summon.js';
 import * as works from './ui/works.js';
+import * as modes from './ui/modes.js';
 import * as rewards from './ui/rewards.js';
 import * as settings from './ui/settings.js';
 import { initAudio, applyVolumes } from './core/audio.js';
@@ -65,7 +66,7 @@ async function boot() {
   buildCatalog();
   await loadCardBack();
   set(1);
-  for (const [k, m] of Object.entries({ hub, campaign, squad, collection, summon, works, rewards, settings, hero: collection.heroScreen })) registerScreen(k, m);
+  for (const [k, m] of Object.entries({ hub, campaign, squad, collection, summon, works, modes, rewards, settings, hero: collection.heroScreen })) registerScreen(k, m);
   applyVolumes();
   document.getElementById('loading').classList.add('done');
   setTimeout(() => document.getElementById('loading').remove(), 600);

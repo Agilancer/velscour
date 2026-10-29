@@ -35,6 +35,52 @@ export const THEMES = {
   rift: { pack: 'cathedral_graveyard', filter: 'hue-rotate(-28deg) saturate(1.7) brightness(0.62) contrast(1.15)', ground: ['grave_soil', 'choir_slate', 'grave_gravel', 'dead_grass'], path: ['nave_flagstone', 'terracotta_nave'], pad: 'marble_checker',
     big: ['saint_statue', 'buttress_fragment', 'pipe_organ', 'funerary_obelisk', 'mourning_angel'], small: ['broken_urn', 'tracery_rubble', 'votive_candles', 'ivy_roots'],
     cliff: '#3a0e16', water: '#5a0a14', lava: true, sky: ['#2a0610', '#060104'], ambient: 'riftmote', amb: 'cave_storm' },
+  // Acts II and III (big/small props come from the pack's own scatter when not listed)
+  sewers: { pack: 'sewers', ground: ['packed_grit_muck', 'wet_pebble_silt', 'algae_cobbles', 'calcified_limestone'], path: ['sewer_cobbles', 'culvert_brick_pavers'], pad: 'iron_studded_flagstone',
+    cliff: '#3c4038', water: '#3a4a22', sky: ['#121a14', '#030504'], ambient: 'spore', amb: 'cave' },
+  glasswind: { sand: true, filter: 'saturate(1.25) hue-rotate(-12deg) brightness(1.12) contrast(1.05)', ground: ['mica_sand', 'pale_leeward_sand', 'wind_combed_sand', 'fine_dune_sand'], path: ['ochre_hardpan'], pad: 'rose_quartz_gravel',
+    big: ['scatter_09_wind_carved_boulder', 'scatter_12_giant_skull', 'scatter_11_fossil_ribcage', 'scatter_05_dead_snag'], small: ['tree_04_saltbush', 'tree_06_spiny_aloe'],
+    cliff: '#c8a070', water: '#5ab0c8', sky: ['#6a4a2a', '#1a0e06'], ambient: 'sand', amb: 'beach_storm' },
+  boneorchard: { pack: 'dark_forest', trees: true, filter: 'grayscale(0.6) sepia(0.35) brightness(0.95)', ground: ['dead_leaves', 'root_soil', 'peat', 'shale_chips'], path: ['gravel_path', 'packed_mud'], pad: 'shale_chips',
+    small: ['wolf_bones', 'deer_skull', 'twisted_roots', 'dead_bramble', 'stone_cairn'], cliff: '#5a5044', water: '#2a2a22', sky: ['#2a241e', '#080604'], ambient: 'dust', amb: 'forest_day' },
+  hoarfrost: { pack: 'castle_keep', filter: 'saturate(0.2) brightness(1.45) hue-rotate(-20deg)', ground: ['pale_keep_limestone', 'ivory_chapel_marble', 'bluegray_bastion_slate'], path: ['weathered_gatehouse_flag', 'rough_battlement_block'], pad: 'royal_inlay_slab',
+    big: ['knight_memorial', 'empty_suit_of_armor', 'stone_gargoyle', 'carved_lion_statue'], small: ['cannonball_pile', 'broken_lance', 'cracked_tile_rubble'], cliff: '#a8c4d8', water: '#9ad8f0', sky: ['#3a4a5a', '#0c141c'], ambient: 'snow', amb: 'forest_night_storm' },
+  sunken: { pack: 'eternal_breach', filter: 'hue-rotate(150deg) saturate(1.2) brightness(0.85)', ground: ['weathered_limestone', 'mossless_cobble', 'cold_grave_gravel', 'ossuary_chips'], path: ['riftworn_flagstone', 'chapel_terracotta'], pad: 'bone_inlay_mosaic',
+    cliff: '#2a4a50', water: '#1a6a7a', sky: ['#0e2a30', '#02080a'], ambient: 'spore', amb: 'sea' },
+  caldera: { pack: 'catacombs', filter: 'sepia(0.6) hue-rotate(-25deg) saturate(2) brightness(0.75)', ground: ['black_basalt', 'charcoal_flagstone', 'grave_gravel', 'burial_terracotta'], path: ['slate_bricks', 'weathered_cobbles'], pad: 'mortuary_tesserae',
+    big: ['incense_brazier', 'torch_stand', 'funerary_obelisk', 'fallen_column'], small: ['gothic_rubble', 'ossuary_urn', 'skull_pyramid'], cliff: '#3a1a0e', water: '#ff6a20', lava: true, sky: ['#3a1206', '#0a0402'], ambient: 'ember', amb: 'cave_storm' },
+  veilscar: { pack: 'veilscar_march', ground: ['rift_heath_loam', 'ash_bruised_turf', 'dead_fern_soil', 'black_peat', 'cracked_heather'], path: ['violet_seam_gravel', 'split_slate_ground'], pad: 'moonlit_clay',
+    cliff: '#3a2c44', water: '#3a2a5a', sky: ['#24163a', '#06040c'], ambient: 'riftmote', amb: 'forest_night' },
+  abbey: { pack: 'cathedral_graveyard', filter: 'saturate(0.5) hue-rotate(190deg) brightness(1.05)', ground: ['nave_flagstone', 'limestone_squares', 'choir_slate', 'grave_soil'], path: ['marble_checker', 'terracotta_nave'], pad: 'marble_checker',
+    big: ['mourning_angel', 'saint_statue', 'confessional', 'pipe_organ', 'celtic_cross'], small: ['votive_candles', 'broken_headstone', 'grave_lantern', 'funeral_flowers'], cliff: '#5a5a66', water: '#304050', sky: ['#1e2230', '#06070a'], ambient: 'dust', amb: 'inside_night_rain' },
+  mirefen: { pack: 'dark_forest', trees: true, filter: 'hue-rotate(35deg) saturate(1.3) brightness(0.85)', ground: ['damp_moss', 'black_loam', 'peat', 'packed_mud'], path: ['packed_mud', 'gravel_path'], pad: 'shale_chips',
+    small: ['poison_mushrooms', 'pale_mushrooms', 'fern_clump', 'reeds', 'hollow_log'], cliff: '#2e3a22', water: '#3a4a1a', sky: ['#14200e', '#040602'], ambient: 'spore', amb: 'river_loop' },
+  foundry: { pack: 'castle_keep', filter: 'sepia(0.7) saturate(1.4) hue-rotate(-10deg) brightness(0.8)', ground: ['charcoal_guardstone', 'sootdark_great_hall', 'rough_battlement_block'], path: ['crimson_armory_brick', 'weathered_gatehouse_flag'], pad: 'royal_inlay_slab',
+    big: ['siege_cannon_wreck', 'keep_ballista', 'chain_winch', 'drawbridge_crank', 'armory_barrel'], small: ['cannonball_pile', 'spear_bundle', 'cracked_tile_rubble'], cliff: '#4a3020', water: '#a04a10', lava: true, sky: ['#2a1a10', '#080402'], ambient: 'ember', amb: 'torch_loop' },
+  breach: { pack: 'eternal_breach', ground: ['ashen_grave_cobbles', 'rootbound_burial_earth', 'ossuary_chips', 'black_slag_basalt'], path: ['riftworn_flagstone', 'bone_inlay_mosaic'], pad: 'chapel_terracotta',
+    cliff: '#2a1830', water: '#2a0a3a', sky: ['#1e0e2a', '#05020a'], ambient: 'riftmote', amb: 'cave_storm' },
+  ashroad: { pack: 'veilscar_march', filter: 'grayscale(0.85) brightness(0.8) sepia(0.2)', ground: ['ash_bruised_turf', 'black_peat', 'bone_dust_patch', 'split_slate_ground'], path: ['iron_sand_track', 'violet_seam_gravel'], pad: 'moonlit_clay',
+    cliff: '#3a3632', water: '#2a2a2a', sky: ['#24201c', '#060504'], ambient: 'ember', amb: 'cave_storm' },
+  deeps: { pack: 'sewers', filter: 'brightness(0.55) saturate(0.6) hue-rotate(180deg)', ground: ['packed_grit_muck', 'calcified_limestone', 'wet_pebble_silt'], path: ['sewer_cobbles', 'weathered_sluice_slabs'], pad: 'iron_studded_flagstone',
+    cliff: '#1e2228', water: '#0e1a24', sky: ['#080a10', '#010203'], ambient: 'dust', amb: 'cave' },
+  crystal: { pack: 'catacombs', filter: 'hue-rotate(160deg) saturate(1.8) brightness(1.1)', ground: ['crypt_limestone', 'black_basalt', 'ossuary_aggregate', 'charcoal_flagstone'], path: ['slate_bricks', 'weathered_cobbles'], pad: 'mortuary_tesserae',
+    big: ['funerary_obelisk', 'headless_angel', 'votive_idol', 'fallen_column'], small: ['vigil_candles', 'offering_bowl', 'ossuary_urn'], cliff: '#2a5a6a', water: '#4ad8e8', sky: ['#0e2a3a', '#02080c'], ambient: 'riftmote', amb: 'cave_rain' },
+  drowned: { pack: 'eternal_breach', filter: 'hue-rotate(185deg) saturate(1.3) brightness(0.75)', ground: ['weathered_limestone', 'mossless_cobble', 'cold_grave_gravel'], path: ['riftworn_flagstone', 'chapel_terracotta'], pad: 'bone_inlay_mosaic',
+    cliff: '#1a3048', water: '#0a3a5a', sky: ['#0a1a2e', '#02050a'], ambient: 'spore', amb: 'sea_storm' },
+  morrow: { pack: 'cathedral_graveyard', filter: 'grayscale(0.9) brightness(1.15) sepia(0.15)', ground: ['dead_grass', 'grave_soil', 'grave_gravel', 'muddy_path'], path: ['limestone_squares', 'nave_flagstone'], pad: 'marble_checker',
+    big: ['celtic_cross', 'knight_chest_tomb', 'mourning_angel', 'funerary_obelisk'], small: ['broken_headstone', 'rounded_headstone', 'dry_wreath', 'old_grave_mound'], cliff: '#6a6660', water: '#3a3a3a', sky: ['#2e2c2a', '#080808'], ambient: 'dust', amb: 'forest_day_storm' },
+  teeth: { pack: 'castle_keep', filter: 'hue-rotate(-30deg) saturate(2) brightness(0.7) sepia(0.3)', ground: ['crimson_armory_brick', 'charcoal_guardstone', 'sootdark_great_hall'], path: ['weathered_gatehouse_flag', 'rough_battlement_block'], pad: 'royal_inlay_slab',
+    big: ['stone_gargoyle', 'broken_throne', 'chapel_window_ruin', 'ruined_doorway'], small: ['cracked_tile_rubble', 'prison_shackle', 'brazier_ash'], cliff: '#3a0a10', water: '#8a1018', lava: true, sky: ['#2a0608', '#060102'], ambient: 'ember', amb: 'cave_storm' },
+  archive: { pack: 'cathedral_graveyard', filter: 'sepia(0.8) saturate(2.2) hue-rotate(-20deg) brightness(0.85)', ground: ['nave_flagstone', 'terracotta_nave', 'choir_slate'], path: ['marble_checker', 'limestone_squares'], pad: 'marble_checker',
+    big: ['pipe_organ', 'prayer_lectern', 'confessional', 'cathedral_altar'], small: ['votive_candles', 'tracery_rubble', 'resting_censer'], cliff: '#4a2010', water: '#ff7a20', lava: true, sky: ['#3a1406', '#0a0402'], ambient: 'ember', amb: 'torch_loop' },
+  hooks: { pack: 'dark_forest', trees: true, filter: 'hue-rotate(250deg) saturate(1.4) brightness(0.75)', ground: ['black_loam', 'damp_moss', 'root_soil', 'dark_turf'], path: ['gravel_path', 'packed_mud'], pad: 'shale_chips',
+    small: ['spider_eggs', 'wrapped_corpse', 'hanging_effigy', 'twisted_roots', 'dead_bramble'], cliff: '#2a1a34', water: '#1a0e2a', sky: ['#180e24', '#040208'], ambient: 'spore', amb: 'forest_night' },
+  rampart: { pack: 'castle_keep', filter: 'saturate(0.3) brightness(0.65) contrast(1.2)', ground: ['bluegray_bastion_slate', 'rough_battlement_block', 'charcoal_guardstone'], path: ['weathered_gatehouse_flag', 'pale_keep_limestone'], pad: 'royal_inlay_slab',
+    big: ['keep_ballista', 'empty_suit_of_armor', 'stone_keep_crest', 'chain_winch'], small: ['cannonball_pile', 'spear_bundle', 'broken_lance'], cliff: '#3a3c40', water: '#20242a', sky: ['#1a1c20', '#040506'], ambient: 'snow', amb: 'inside_night_storm' },
+  hall: { pack: 'eternal_breach', filter: 'hue-rotate(-50deg) saturate(2) brightness(0.5) contrast(1.3)', ground: ['black_slag_basalt', 'ossuary_chips', 'ashen_grave_cobbles'], path: ['bone_inlay_mosaic', 'riftworn_flagstone'], pad: 'chapel_terracotta',
+    cliff: '#1a0408', water: '#3a020a', lava: true, sky: ['#1a0206', '#030001'], ambient: 'riftmote', amb: 'cave_storm' },
+  throne: { pack: 'eternal_breach', filter: 'hue-rotate(-40deg) saturate(1.6) brightness(0.6) contrast(1.2)', ground: ['black_slag_basalt', 'ashen_grave_cobbles', 'ossuary_chips'], path: ['bone_inlay_mosaic', 'riftworn_flagstone'], pad: 'chapel_terracotta',
+    cliff: '#2a0610', water: '#5a0a14', lava: true, sky: ['#2a0610', '#060104'], ambient: 'riftmote', amb: 'cave_storm' },
 };
 
 const atlases = new Map();
@@ -54,6 +100,9 @@ export async function loadTheme(id) {
     const p = `assets/tiles/${T.pack}/`, [j, fl, sc] = await Promise.all([loadAssetJSON(p + 'pack.json'), loadImage(p + 'floors.webp'), loadImage(p + 'scatter.webp')]);
     for (const f of j.floors) floors[f.name] = { img: fl, x: f.x, y: f.y, w: f.w, h: f.h };
     for (const s of j.scatter) props[s.name] = { img: sc, x: s.x, y: s.y, w: s.w, h: s.h, ox: s.ox, oy: s.oy, k: 0.4 };
+    // a pack without hand-picked props: its tall pieces stand on the T cells, its small ones scatter
+    if (!T.big) T.big = j.scatter.filter((s) => s.h >= 100 && s.block !== false).map((s) => s.name);
+    if (!T.small) T.small = j.scatter.filter((s) => s.h < 80).map((s) => s.name);
     if (T.trees) {
       const [tj, ti] = await Promise.all([loadAssetJSON(p + 'trees.json'), loadImage(p + 'trees.webp')]);
       T.big = [];

@@ -1,7 +1,8 @@
-// The campaign map: eight regions of ten stages on 30 battlefields; each opens when the one before it is won.
+// The campaign map: five acts, 30 regions of ten stages on 40 battlefields; each stage opens when the one before it is won.
 import { D } from '../state.js';
 import { el, escapeHtml, makeCanvas } from '../core/util.js';
-import { LEVELS, REGIONS, TOTAL_WAVES } from '../data/campaign.js';
+import { LEVELS, REGIONS, TOTAL_WAVES, ACTS } from '../data/campaign.js';
+import { seals, SEAL_MAX } from '../meta/seals.js';
 import { buildMap, K } from '../battle/map.js';
 import { stageRoster, deployLimit, heartBase, ROLES } from '../data/waves.js';
 import { stageUnlocked, resolveOf } from '../meta/progress.js';
@@ -18,23 +19,31 @@ import { sfx } from '../core/audio.js';
 let region = null;
 export function render(root, args = {}) {
   const s = D.save;
-  region = args.region ?? region ?? Math.min(7, Math.floor((Math.min(s.frontier, 80) - 1) / 10));
+  region = args.region ?? region ?? Math.min(REGIONS.length - 1, Math.floor((Math.min(s.frontier, LEVELS.length) - 1) / 10));
+  // the acts, then the regions of the chosen act
+  const act = ACTS.find((a) => region * 10 + 1 >= a.from && region * 10 + 1 <= a.to), acts = el('div', 'acts');
+  for (const a of ACTS) {
+    const t = el('button', 'act-tab' + (a === act ? ' on' : '') + (a.from > s.frontier ? ' locked' : ''), escapeHtml(a.name));
+    t.onclick = () => { if (a.from > s.frontier) { sfx('sword_blocked', 0.3); return; } show('campaign', { region: Math.min(Math.floor((Math.min(s.frontier, a.to) - 1) / 10), (a.to - 10) / 10) }); };
+    acts.appendChild(t);
+  }
   const tabs = el('div', 'regions');
   REGIONS.forEach((R, i) => {
+    if (i * 10 + 1 < act.from || i * 10 + 1 > act.to) return;
     const t = el('button', 'region-tab' + (i === region ? ' on' : '') + (i * 10 + 1 > s.frontier ? ' locked' : ''), `${i + 1}. ${escapeHtml(R.name)}`);
     t.onclick = () => { region = i; show('campaign', { region: i }); };
     tabs.appendChild(t);
   });
-  root.appendChild(tabs);
+  root.append(acts, tabs);
   const R = REGIONS[region], seenMaps = new Set(LEVELS.filter((L) => L.n < s.frontier).map((L) => stageMapRef(L.n).map));
   root.insertAdjacentHTML('beforeend', `<div class="region-head"><h2>${escapeHtml(R.name)}</h2><div class="dim">${escapeHtml(R.blurb)}</div>
-    <div class="dim" style="font-size:12px;margin-top:4px">Battlefields unlocked: ${Math.min(30, seenMaps.size + (s.frontier <= 80 ? 1 : 0))} of 30 · best wave ${s.stats.bestWave} of ${TOTAL_WAVES}</div></div>`);
+    <div class="dim" style="font-size:12px;margin-top:4px">Battlefields unlocked: ${Math.min(MAPS.length, seenMaps.size + (s.frontier <= LEVELS.length ? 1 : 0))} of ${MAPS.length} · best wave ${s.stats.bestWave} of ${TOTAL_WAVES}</div></div>`);
   const grid = el('div', 'stages');
   for (let k = 0; k < 10; k++) {
     const n = region * 10 + k + 1, L = LEVELS[n - 1], P = s.progress[n], open = stageUnlocked(s, n);
     const c = el('button', 'stage' + (open ? '' : ' locked') + (L.boss ? ' boss' : '') + (n === s.frontier ? ' frontier' : ''));
     c.appendChild(mapThumb(n, 320, 184));
-    c.insertAdjacentHTML('beforeend', `${L.boss ? '<span class="tag">BOSS</span>' : L.lieutenant ? '<span class="tag lt">LIEUTENANT</span>' : ''}${n === s.frontier && open ? '<span class="tag new">NEW</span>' : ''}
+    c.insertAdjacentHTML('beforeend', `${L.boss ? '<span class="tag">BOSS</span>' : L.lieutenant ? '<span class="tag lt">LIEUTENANT</span>' : L.warlord ? '<span class="tag lt">WARLORD</span>' : ''}${n === s.frontier && open ? '<span class="tag new">NEW</span>' : ''}
       <div class="st-body"><div class="st-n">STAGE ${n} · waves ${L.wave0 + 1}-${L.wave0 + L.waves}</div><div class="st-name">${escapeHtml(L.name)}</div>
       <div class="st-stars">${[1, 2, 3].map((i) => `<span class="${P && P.stars >= i ? '' : 'off'}">★</span>`).join('')}</div></div>`);
     c.onclick = () => { if (!open) { sfx('sword_blocked', 0.3); return; } sfx('door_open', 0.4); brief(n); };
@@ -70,7 +79,7 @@ function shadeHex(h, f) { const n = parseInt(h.slice(1), 16), r = (n >> 16) & 25
 export async function brief(n) {
   const s = D.save, L = LEVELS[n - 1], R = REGIONS[Math.floor((n - 1) / 10)], roster = stageRoster(n), P = s.progress[n], ref = stageMapRef(n);
   const box = el('div');
-  box.innerHTML = `<button class="btn ghost close" data-k="x">✕</button><div class="dim cinzel">${escapeHtml(R.name)} · Stage ${n}${L.boss ? ' · BOSS' : L.lieutenant ? ' · LIEUTENANT' : ''}</div><h2 class="cinzel">${escapeHtml(L.name)}</h2>
+  box.innerHTML = `<button class="btn ghost close" data-k="x">✕</button><div class="dim cinzel">${escapeHtml(R.name)} · Stage ${n}${L.boss ? ' · BOSS' : L.lieutenant ? ' · LIEUTENANT' : L.warlord ? ' · WARLORD' : ''}</div><h2 class="cinzel">${escapeHtml(L.name)}</h2>
     <p class="dim" style="margin:4px 0 10px">${escapeHtml(L.blurb)}</p>
     <div class="brief"><div><div data-k="map"></div><div class="dim" style="font-size:12px;margin-top:4px">Battlefield: ${escapeHtml(MAPS[ref.map].name)}${ref.tf ? ' (turned)' : ''}</div></div>
     <div><div class="kv"><span>Waves</span><b>${L.waves} (${L.wave0 + 1}-${L.wave0 + L.waves} of ${TOTAL_WAVES})</b>
@@ -80,12 +89,13 @@ export async function brief(n) {
       ${resolveOf(s, n) ? `<span>Resolve</span><b style="color:#9ad0ff">+${Math.round(resolveOf(s, n) * 100)}% attack (after defeats)</b>` : ''}</div>
       <div style="margin-top:8px"><b class="cinzel" style="font-size:13px">The horde</b><div class="foes" data-k="foes"></div></div>
       <div style="margin-top:8px" data-k="ally"></div></div></div>
-    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" data-k="squad">Squad</button><button class="btn big green" data-k="go">Begin ▸</button></div>`;
+    <div class="seal-note" style="text-align:right">${seals(s) > 0 ? `Spends a Rift Seal (${seals(s)}/${SEAL_MAX}) for full rewards and trophy drops` : P?.clears ? 'No Rift Seals left: this battle pays a seventh of the gold, no shards or trophies' : 'No Rift Seals left, but a first clear always pays in full'}</div>
+    <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost" data-k="squad">Squad</button><button class="btn big green" data-k="go">Begin ▸</button></div>`;
   const m = modal(box, [], { wide: true });
   box.querySelector('[data-k=map]').appendChild(Object.assign(mapThumb(n, 420, 240), { className: 'map' }));
   box.querySelector('[data-k=x]').onclick = m.close;
   box.querySelector('[data-k=squad]').onclick = () => { m.close(); show('squad'); };
-  box.querySelector('[data-k=go]').onclick = () => { m.close(); playStage(n, { campaign: true }); };
+  box.querySelector('[data-k=go]').onclick = () => { m.close(); playStage(n); };
   const ally = stageAlly(n, s), a = box.querySelector('[data-k=ally]');
   a.innerHTML = `<b class="cinzel" style="font-size:13px">Rift Ally</b><div class="row" style="align-items:center"></div><div class="dim" style="font-size:12px">A guest hero for this stage, outside your Deploy Limit (Fantasica's Call Ally).</div>`;
   a.querySelector('.row').append(portrait(ally.look, 42, 56, { bust: true }), el('span', '', `${escapeHtml(ally.full)} · Lv ${ally.lvl}`));
@@ -94,7 +104,7 @@ export async function brief(n) {
   await loadMonsters(ids.map((x) => x[1])).catch(() => {});
   const foes = box.querySelector('[data-k=foes]');
   for (const [role, id] of ids) {
-    if ((role === 'boss' && !L.boss) || (role === 'lieutenant' && !L.lieutenant)) continue;
+    if ((role === 'boss' && !L.boss) || (role === 'lieutenant' && !L.lieutenant) || !id) continue;
     const f = el('div', 'foe'), img = monsterImage(id, 'base', 120);
     if (img) { const i = new Image(); i.src = img.toDataURL(); f.appendChild(i); }
     f.insertAdjacentHTML('beforeend', `<span>${ROLES[role].name}${ROLES[role].air ? ' ✈' : ''}</span>`);

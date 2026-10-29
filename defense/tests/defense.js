@@ -1,5 +1,5 @@
-// VELSCOUR DEFENSE in a real browser: boot, every menu, a stage played on auto (dialogs, HUD, combat, result), a pack
-// opened in 3D, the card inspector, the hero sheet, and the phone layout. Screenshots in defense/tests/out/.
+// VELSCOUR DEFENSE in a real browser: boot, every menu, a stage played on auto (dialogs, HUD, combat, result), stages
+// from all five acts, the side modes, wheel zoom, a pack opened in 3D, the card inspector, the hero sheet, and the phone layout. Screenshots in defense/tests/out/.
 // Serve the repo root first (python -m http.server 8317), then:
 //   NODE_PATH=<global node_modules> node defense/tests/defense.js [mobile]
 const path = require('path'), fs = require('fs');
@@ -27,7 +27,7 @@ const mobile = process.argv.includes('mobile');
   await page.waitForTimeout(1200);
   await step('hub', async () => { await shot('hub'); });
   await step('menus', async () => {
-    for (const s of ['campaign', 'squad', 'collection', 'works', 'rewards', 'summon', 'settings']) {
+    for (const s of ['campaign', 'squad', 'collection', 'modes', 'works', 'rewards', 'summon', 'settings']) {
       await page.evaluate((s) => window.VDEF.show(s), s); await page.waitForTimeout(s === 'summon' || s === 'collection' ? 1800 : 600); await shot('menu_' + s);
     }
   });
@@ -61,12 +61,29 @@ const mobile = process.argv.includes('mobile');
     if (s.frontier < 2) throw new Error('stage 1 not won on auto');
   });
   // a later region's look: a boss stage with the region's tiles
-  for (const n of [24, 47, 56, 70, 80]) {
+  for (const n of [24, 56, 80, 125, 190, 240, 300]) {
     await step('stage ' + n + ' look', async () => {
       await page.evaluate(async (n) => { const b = await import('/defense/src/ui/battle.js'); b.leaveBattle(); window.VDEF.D.save.settings.skipDialogs = true; window.VDEF.D.save.frontier = Math.max(window.VDEF.D.save.frontier, n); b.playStage(n); }, n);
       await page.waitForSelector('.bhud-top', { timeout: 30000 });
       await page.evaluate(() => { const c = window.VDEF.ctl(); c.auto = true; c.speed = 3; });
-      await page.waitForTimeout(n === 80 ? 26000 : 12000); await shot('stage_' + n);
+      await page.waitForTimeout(n > 80 ? 6000 : n % 10 === 0 ? 26000 : 12000); await shot('stage_' + n);
+    });
+  }
+  // the side modes: an endless run and a challenge, the mouse wheel zooms the field
+  for (const id of ['bossrush', 'shifting', 'vault']) {
+    await step('mode ' + id, async () => {
+      await page.evaluate(async (id) => { const b = await import('/defense/src/ui/battle.js'); b.leaveBattle(); window.VDEF.D.save.frontier = Math.max(window.VDEF.D.save.frontier, 120); window.VDEF.D.save.settings.autoBattle = true; b.playMode(id); }, id);
+      await page.waitForSelector('.bhud-top', { timeout: 30000 });
+      await page.evaluate(() => { const c = window.VDEF.ctl(); c.speed = 3; });
+      await page.waitForTimeout(12000);
+      const z0 = await page.evaluate(() => window.VDEF.ctl().view.zoom);
+      await page.mouse.move(mobile ? 422 : 800, mobile ? 195 : 450); await page.mouse.wheel(0, -400); await page.waitForTimeout(400);
+      const z1 = await page.evaluate(() => window.VDEF.ctl().view.zoom);
+      await shot('mode_' + id);
+      console.log('      zoom', z0.toFixed(2), '->', z1.toFixed(2), await page.$eval('[data-k=wave]', (e) => e.textContent));
+      if (!(z1 > z0)) throw new Error('the wheel did not zoom');
+      await page.evaluate(() => { const b = window.VDEF.ctl().b; b.heart = 0; b.finish(false); });
+      await page.waitForSelector('.result', { timeout: 20000 }); await page.waitForTimeout(500); await shot('mode_' + id + '_result');
     });
   }
   await page.evaluate(async () => { const b = await import('/defense/src/ui/battle.js'); b.leaveBattle(); window.VDEF.show('hub'); });
