@@ -154,15 +154,17 @@ export function heldFree(item, cls) {
 
 /**
  * Draw a whole piece (heldFree) with its guard at (x, y), `len` from the guard to the point along screen angle a. A flat
- * sprite: `spin` round its length narrows it edge-on and shows its mirror image from behind. Returns its effect points
+ * sprite: `spin` round its length narrows it edge-on and shows its mirror image from behind. rim(img, sx, sy, sw, sh,
+ * dx, dy, dw, dh), if given, draws an outline under it in the same transform. Returns its effect points
  * in ctx units { pts: { guard, tip, head, line, orbit, slots }, k: units per sprite px, face: 0..1 how square-on }.
  */
-export function drawHeldFree(ctx, f, x, y, a, len, spin = 0) {
+export function drawHeldFree(ctx, f, x, y, a, len, spin = 0, rim = null) {
   const P = f.pts, g = P.guard, k = len / Math.max(1, g[1] - (P.tip ? P.tip[1] : 0)), c = Math.cos(spin);
   const sx = (c < 0 ? -1 : 1) * Math.max(0.1, Math.abs(c)) * k, r = a + Math.PI / 2, cr = Math.cos(r), sr = Math.sin(r);
   ctx.save();
   ctx.translate(x, y); ctx.rotate(r); ctx.scale(sx, k);
   ctx.imageSmoothingEnabled = k < 1;
+  if (rim) rim(f.img, 0, 0, f.img.width, f.img.height, -g[0], -g[1], f.img.width, f.img.height);
   ctx.drawImage(f.img, -g[0], -g[1]);
   ctx.restore();
   const at = (p) => { const u = (p[0] - g[0]) * sx, v = (p[1] - g[1]) * k; return [x + cr * u - sr * v, y + sr * u + cr * v]; };
