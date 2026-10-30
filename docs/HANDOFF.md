@@ -49,6 +49,30 @@ Contents
 - Not done: Fortunato only offers sheets to Bards (other classes can still write or read one they carry); the reader
   takes no rhythm from the tab (the skills set it); a pasted song was checked through the note tap, not by ear.
 
+## October 29, 2026 — the damage scale: hero damage on the scale of hero life (branch `feat/damage-scale`)
+- **Request:** heroes hit for billions with ~30k life, so a future PvP mode would be one-shots. Make the damage numbers
+  smaller and PvP-ready **without changing gameplay at all**.
+- **Why:** monster life and hero damage ("power") grow ~1.068 a level and more (`toughness`); hero life and monster
+  hits ("life") grow about linearly (x `fortitude`).
+- **What:** `dmgScale(L)` / `shownDmg(raw, L)` / `heroDmgLevel(c)` in `src/data/depth.js`. Every power figure the
+  player sees is divided by `dmgScale` of the monster hit (damage numbers and the DPS meter, `hit` in combat.js) or of
+  the hero's depth (`heroDmgLevel`: stats plaque Attack/DPS, sheet Weapon Dmg, item Damage + compare, the flatDmg and
+  thorns lines, skill tooltips). A normal monster's life reads about half a same-level hero's (148 at depth 5, 670 at
+  60, 2,015 at 150, 13,663 at 500); `fmtDmg` (util.js) keeps decimals under 10. The hp term repeats monsterBase's: keep
+  them in step.
+- **Display only, on purpose:** the simulation still runs on raw numbers, so kill speed, leech (a share of raw damage
+  dealt), DoTs, arcs, augments, auto-play's damage-vs-life choices and every balance curve are untouched. Scaling the
+  real numbers would mean dividing at `hit` per target level, and DoTs, chain arcs, leech, thorns, augments, ripostes
+  and auto-play all reuse a dealt amount, so each would need its own fix to stay identical.
+- **Measured** (`tools/tests/dmgscale.js`, Paladin/Wizard geared for the depth, auto-play, god mode): the sheet's
+  single-target DPS is 8-35% of a same-level hero's life a second (most ~12%), the main attack ~1-5% of life a hit,
+  crits up to ~13%. Depth 500 Paladin: 28.9k life, Attack 327, sheet DPS 3.5k, 30 s average 30k (whole packs).
+- **PvP (future):** a hero's raw damage against a hero = `shownDmg(raw, arena level)`, then the defender's armor,
+  resistances and reduction as `hit` does for monster blows: ~8 s of focused damage to kill a same-level hero.
+- **Looks odd:** weapon damage reads tiny (0.1-1) because base weapon damage is a sliver of a hit next to skill
+  damage, mastery and bonuses; it was always so, the scale just shows it.
+- `balance.js` now prints `dps` on the shown scale (Meter).
+
 ## October 30, 2026 — the lowered drawbridge floated short of the pier (every castle)
 - **Request:** the bridge on the Cinderhold castle map is broken (a player's screenshot: the lowered drawbridge hangs
   up by the gate with a gap over the moat before the stone pier); fix it, then check the other bridges.
