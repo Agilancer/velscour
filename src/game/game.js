@@ -1087,6 +1087,7 @@ export const game = {
     const gen = generateDungeon(depth, biome, tileset, seed, { raid: true, small: true, density: RIFT_DENSITY });
     const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches, wallHangings: gen.wallHangings, looks: gen.looks, townTiles: null, buildings: [] });
     world.rooms = gen.rooms || [];
+    world.riftHold = true; // rift monsters keep the old Endless Torment life (data/depth.js riftHold)
     world.chests = gen.chests.map((ch) => ({ ...ch, opened: false, reach: 1.3, use() { if (this.opened) return; this.opened = true; sfx('chest'); sfx('gold'); dropChest(world, this, depth); sparkle(this.x, this.y, 20, '#ffd060', 20, 0.5); } }));
     const [sx, sy] = gen.start;
     let tp = gen.townPortal || [sx + 1.6, sy - 0.6];

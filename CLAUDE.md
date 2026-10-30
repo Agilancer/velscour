@@ -162,7 +162,7 @@ node tools/tests/balance_model.mjs paladin         # no browser: hero life vs mo
 node tools/tests/dmgscale.js [depths] [classes]    # the damage scale (shownDmg, display only): shown hits vs hero life at depths 5-500, plaque, tooltips
 node tools/tests/tuning.js all 1,10,40,160 12      # every class auto-plays vs training dummies: seconds per normal (one / pack of 5), class ratios (toughness, DMG_TUNE)
 BAL_STANCE=cautious,balanced,reckless BAL_RAID=1 node tools/tests/balance.js wizard 30 6   # stances side by side; start at a BOSS ROOM gate
-node tools/tests/endgame.js paladin,wizard [8] [rush] # hero level by depth from dungeon XP (cap 600, Endless Torment to 1200), kill times + % of life per hit (no simulation)
+node tools/tests/endgame.js paladin,wizard [8] [rush|deep] # hero level by depth from dungeon XP (cap 3000 at depth ~6600; deep: depths 500-7500), kill times + % of life per hit (no simulation)
 node tools/tests/happenings.js                     # omens, shrines, treasure imp, cursed chest, challenge, nemesis, town events, Defiance
 node tools/tests/perf.js 6 wizard 1                # frame cost on a phone-sized screen: fps, update/render ms (last arg: CPU throttle)
 node tools/tests/longrun.js wizard 30                # long session on a phone layout: heap, live canvases (and who made them), frame cost per game minute

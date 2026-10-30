@@ -9,7 +9,7 @@ import { CLASSES, DMG_TUNE, DMG_TUNE_AT } from '../data/classes.js';
 import { SKILLS, CLASS_SKILLS, effLevel, skillBaseDamage, manaCost, rageCost, cooldown, useTime, weaponCoef, grantedSkillsAt, skillRange } from '../data/skills.js';
 import { SLOTS, RING_SLOTS, itemStats, itemDmg, itemArmor, GEMS, shownEquip } from '../data/items.js';
 import { augHits, augmentable } from '../data/rings.js';
-import { depthLevel, fortitude, logCurve } from '../data/depth.js';
+import { depthLevel, fortitude, logCurve, MAX_LEVEL } from '../data/depth.js';
 import { heroBonus } from './defiance.js';
 import { MAX_MASTERY, masteryNeed, masteryMul, masteryTier, TIER_NAMES } from './augments.js';
 import { castSkill, Timer } from './skillrun.js';
@@ -35,10 +35,13 @@ import { endgame, saveEndgame } from './endgame.js';
 // XP for the next level. The (L/30)^1.5 term paces a hero who clears every depth to stay ~10-50 levels above its
 // monsters and reach ~270 by Velscour (depth 500, monster level 258); without it a full-clearing hero hit level 300
 // by depth 160. Past level 240 a level costs L/240 times the level-240 price, so in the Endless Torment (depths past
-// 500) a full-clearing hero keeps pace with its monsters and reaches the cap around depth 1200 (tools/tests/endgame.js).
+// 500) a full-clearing hero keeps pace with its monsters. Past 600 a level costs (L/600)^XP_K times the level-600 price
+// (a deep depth's XP grows ~level^1.5), so the hero stays level with the monsters to the cap (MAX_LEVEL, data/depth.js)
+// around depth 6600 (tools/tests/endgame.js deep).
 const xpCurve = (L) => (60 * L * L + 40 * L) * (1 + Math.pow(L / 30, 1.5));
-export const xpToNext = (L) => Math.round(L <= 240 ? xpCurve(L) : xpCurve(240) * L / 240);
-export const MAX_LEVEL = 600;
+const XP_K = 1.6, XP600 = xpCurve(240) * 600 / 240;
+export const xpToNext = (L) => Math.round(L <= 240 ? xpCurve(L) : L <= 600 ? xpCurve(240) * L / 240 : XP600 * Math.pow(L / 600, XP_K));
+export { MAX_LEVEL };
 /** The class's damage tuning at a hero level (data/classes.js DMG_TUNE). */
 export function classTune(cls, level) {
   const T = DMG_TUNE[cls];

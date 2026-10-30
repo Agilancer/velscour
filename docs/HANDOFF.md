@@ -14,6 +14,40 @@ Contents
 
 ---
 
+## October 30, 2026 — level cap 3000, the Endless Torment to depth ~6600, uncapped Infernal Marks (branch `fix/level-cap-3000`)
+
+Discord bug reports: (1) "Next point mark on life is worth less than 0.00" (453 Vitality points); (2) "Lvl 600 is the cap and
+I just dropped a weapon that needs lvl 602". The user: fix them, raise max level and depth a lot, quick balance check.
+- **Item level requirement** never passes the cap: `item.req = Math.min(ilvl, MAX_LEVEL)` (`src/data/items.js` rollItem).
+  `MAX_LEVEL` now lives in `src/data/depth.js` (player.js re-exports it) so items.js can read it without a cycle.
+- **Level cap 600 -> 3000.** `xpToNext` past 600 = the level-600 price x `(L/600)^1.6` (a deep depth's XP grows ~level^1.5),
+  so a full-clearing hero stays level with its monsters: 957 at depth 2000 (monster level 933), 1904 at 4000 (1833),
+  3000 at depth ~6600 (3003). Existing heroes at 600 simply level again; Marks from XP start at the new cap.
+- **Depth.** There was no hard depth cap; the practical end was the cap plus monster life outgrowing hero damage (normals
+  ~50 s at depth 1000, hours by 3000). `toughness` (`src/data/depth.js`) no longer holds flat at 1690 past level 258: it
+  eases off to match a pace-keeping hero's damage (~1.061 a level at first, ~1.053 deep; measured by the new
+  `endgame.js ... deep`), and holds again past level 3000, where the wall is (the hero can't level, life x1.068 a level).
+  Monster damage past level 600 follows `(level/600)^2.2` instead of 1.006 a level (hero life grows ~level^2.3).
+  Unchanged below monster level 258 (depth 500): the standard `endgame.js` matches the old numbers.
+- **Abyssal Rifts keep their old difficulty** (their tiers and honour board were tuned on the flat 1690):
+  `world.riftHold` (set by `game.buildRift`) multiplies rift monsters' and Guardians' life by `riftHold(level)` =
+  1690 / toughness (`makeMonster`, `makeRaidBoss`). `rift_balance.js` passes.
+- **Infernal Marks uncapped** (`src/game/marks.js`): `eff(n) = 140 * (sqrt(1 + n/100) - 1)`; the n-th point adds
+  `1/sqrt(1 + n/100)` of the first (`worthNext`), so the 454th Vitality point adds +0.09% (it read +0.00 under
+  `100 * (1 - 0.993^n)`). Per point: life 0.3, crit 0.06 (was 0.1), MF 0.5, Haste 0.3 s (was 0.6; 453 points still
+  give the old ~57 s). The panel's bar shows how far the next point's worth has fallen ("79% of the first").
+- **Gold** past level 600 grows from `goldLvl` (`src/data/items.js`: 600 + 40 ln(1 + (L-600)/40); level 3000 counts as ~764)
+  in every gold source and price (piles, item value, upgrade/socket/enchant costs, gambling, Breach gold), or level-3000
+  piles would be 70 digits. Still ~3e19 a pile at 3000; a compact gold format would help (not done).
+- **Balance check** (`endgame.js paladin,wizard,barbarian 4 deep`, full clears, 3 geared heroes per depth): seconds to
+  kill a normal at depth 500/1000/2000/3000/4000/5000/6000/6600 — paladin 3.0/2.7/4.7/6.2/9.5/8.1/5.8/15.7, wizard
+  3.3/4.0/3.8/5.8/6.9/5.4/11.1/14.5, barbarian 1.4/1.5/1.4/4.7/6.7/4.5/6.5/10.3; BOSS ROOM 60-400 s by the same ratio
+  (the model's raw life, before wards); a normal's hit 2-5% of life throughout, BOSS ROOM 2-10%. Past the cap (depth 7500)
+  kill times are ~1e13 s: the wall. A 40%-clear rusher is ~850 levels behind at depth 6600 and must grind.
+- Tests: `marks.js` (updated for 3000 and the new curve; adds a 454th-point check), `endgame.js paladin 4` (unchanged to
+  depth 500), `endgame.js ... deep` (new), `rift_balance.js`, `rifts.js`, `flow.js`, `data_check.mjs`,
+  `balance_model.mjs`; a probe at depth 7000 with a level-3000 hero: no NaN/Infinity, every item asks for at most 3000.
+
 ## October 29, 2026 — vanity looks: wear any helmet/armor for looks, keep your stats (branch `feat/vanity-slots`)
 
 Player request: look the way you want without giving up stats.
@@ -516,8 +550,8 @@ Player request: look the way you want without giving up stats.
     jumps by time; Abyssal rarity (`RARITY[6]`, weight 0, worth 21 item levels) from Guardians; honour board per class.
   - **Velscour Unbound** (`src/game/unbound.js`, Unbound branches of `src/game/velscour.js`, Unbound Heirlooms and the
     Crown of the Demon Lord in `src/data/relics.js`): three Abyssal Keys; two signature raid bosses as his court; the Pact.
-  - **Infernal Marks** (`src/game/marks.js`, `src/ui/marks.js`): XP past level 600, rift clears (ceil(T/10)), Heresy 20;
-    four tapering categories; auto-play spends them.
+  - **Infernal Marks** (`src/game/marks.js`, `src/ui/marks.js`): XP past the level cap (3000 since Oct 30; was 600), rift clears (ceil(T/10)), Heresy 20;
+    four tapering, uncapped categories; auto-play spends them.
 - **Balance iterations** (numbers in ENDGAME.md): Abyssal +2 power levels and a perk (worth 17.2 -> 21); rift quota 0.7 ->
   0.6, density 0.8, Guardian 0.6x; rift Marks tier/4 -> tier/10; Gaze aggro x2.5 -> x2 (frame cost); Unbound court
   1.2x -> 0.8x life, 0.8x -> 0.65x hits, self-healing 35%, each courtier's Pact wanes after 120 s, auto-play turns back to

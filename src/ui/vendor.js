@@ -14,7 +14,7 @@ import { CLASSES } from '../data/classes.js';
 import { potionIcon } from '../core/assets.js';
 import { VENDORS } from '../world/town.js';
 import { depthLevel } from '../data/depth.js';
-import { sheetItem } from '../data/items.js';
+import { sheetItem, goldLvl } from '../data/items.js';
 import { SHEET_PRICE } from '../data/tabs.js';
 
 const VBY = Object.fromEntries(VENDORS.map((v) => [v.id, v]));
@@ -271,7 +271,7 @@ export const Vendor = {
   gambleBox(body) {
     const c = G.char;
     const lvl = Math.max(c.level, depthLevel(c.depth || 1));
-    const price = Math.round(180 * Math.pow(1.065, lvl));
+    const price = Math.round(180 * Math.pow(1.065, goldLvl(lvl)));
     body.appendChild(el('div', 'dim', 'Buy an unidentified item of your level. Gambled items are far more likely to be Rare or better.'));
     const grid = el('div', 'row');
     grid.style.marginTop = '8px';
