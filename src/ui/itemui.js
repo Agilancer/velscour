@@ -87,7 +87,7 @@ export function itemTooltip(item, opts = {}) {
       const fin = finishOf(item), gfx = gearFxOf(item);
       if (fin || gfx) h += `<div class="dim" style="font-style:italic">${fin ? escapeHtml(fin.name) + ' finish' : ''}${fin && gfx ? ' · ' : ''}${gfx ? 'Aura: ' + escapeHtml(gfx.name) : ''}</div>`;
       if (item.dmg) { const [a, b] = itemDmg(item); h += `<div>Damage: <b>${shown(a)}–${shown(b)}</b>${cmp(opts.compare, item, 'dmg')}</div>`; }
-      if (item.armor) h += `<div>Armor: <b>${itemArmor(item)}</b>${cmp(opts.compare, item, 'armor')}</div>`;
+      if (item.armor) h += `<div>Armor: <b>${fmtInt(itemArmor(item))}</b>${cmp(opts.compare, item, 'armor')}</div>`;
       if (item.upg) h += `<div style="color:#ffd34a">Upgraded +${item.upg}</div>`;
       const req = item.req || 1;
       h += `<div style="color:${p && p.char.level < req ? '#ff5050' : '#a8977c'}">Requires Level ${req}</div>`;
@@ -126,7 +126,7 @@ function cmp(other, item, kind) {
   }
   if (kind === 'armor' && other.armor !== undefined) {
     const d = itemArmor(item) - itemArmor(other);
-    return d ? ` <span class="${d > 0 ? 'cmp-up' : 'cmp-down'}">(${d > 0 ? '+' : ''}${d})</span>` : '';
+    return d ? ` <span class="${d > 0 ? 'cmp-up' : 'cmp-down'}">(${d > 0 ? '+' : ''}${fmtInt(d)})</span>` : '';
   }
   return '';
 }

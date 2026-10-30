@@ -14,6 +14,19 @@ Contents
 
 ---
 
+## October 30, 2026 — compact big numbers: 386.7Qi gold, not 21 digits (branch `fix/compact-numbers`)
+
+A player's screenshot showed `386,663,983,316,678,800,000 gold`, weapon damage and armor in 13-15 digits.
+- `src/core/util.js`: `fmtBig(n)` = 4 significant digits and a thousands suffix (k M B T Qa Qi Sx Sp Oc No Dc, then
+  e-notation: `7.60e58`). `fmtInt` keeps exact commas below a billion and uses `fmtBig` from there (past 2^53 the digits
+  were made up anyway); `fmt` (HUD orbs, damage numbers, `fmtDmg`) has the same suffixes with one decimal (was capped at
+  T: `620089.0T`).
+- Raw numbers now go through them: the sheet's Life/Mana/Armor, item armor and its compare, flat affix values from a
+  billion up (`statLabel`), gold pick-up float text and ground labels. Gold, prices and costs already used `fmtInt`.
+- Tests: ui, hud, locks, mobile, flow, dmgscale (paladin D150 once logged 0 hits with four browsers at once; alone it
+  passes), marks (its sheet XP-line regex now takes `2.688B`). A level-3000 probe with 3.87e20 gold: no run of 15+ digits
+  on the inventory screen.
+
 ## October 30, 2026 — level cap 3000, the Endless Torment to depth ~6600, uncapped Infernal Marks (branch `fix/level-cap-3000`)
 
 Discord bug reports: (1) "Next point mark on life is worth less than 0.00" (453 Vitality points); (2) "Lvl 600 is the cap and
