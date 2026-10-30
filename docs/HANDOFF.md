@@ -14,6 +14,41 @@ Contents
 
 ---
 
+## October 30, 2026 — Bard Music Sheets: paste tablature, lock it, the Bard plays it from five Tabs (branch `feat/bard-music-sheets`)
+
+- **Ask** (a player on Discord, then the user): a piece of paper the player can write a song on by pasting tablature, sold
+  cheap in town; lock it to keep it as an item; a Bard loads songs into 5 new "Tab" slots and plays them whatever skills
+  he uses.
+- **The item** (`type: 'sheet'`, `sheetItem()`/`sheetName()` in `data/items.js`; `{ text, title, bpm, inked }`, `inked` being
+  the sheet's lock so the general `locked` keep-it flag stays separate): Fortunato the Gambler sells Blank Music Sheets to
+  Bards for 20 gold (`Vendor.sheetBox`). Right-click (or Write/Edit) opens the sheet's editor (`ui/sheets.js`): title,
+  optional BPM, a monospace textarea to paste into, a live status line (notes, tab blocks and strings, key, tempo, or
+  what's wrong), Listen (the first 64 notes in the tab's own spacing on the harpsichord), Save, Lock (asks once; a locked
+  sheet can't be changed and only reads). Locked sheets confirm before selling; auto-play never sells them.
+- **The reader** (`data/tabs.js`, pure): runs of string lines (`e|--0--3--|`, labels optional, any tuning from the string
+  names, ukulele GCEA, 2-9 strings, 2-digit frets, `x4` repeats and technique letters ignored) are read column by column,
+  block after block; a column is one event, highest note first (the melody), top 4 notes kept. No tab: note names
+  (`E4 D4 C4`, `C D E` at octave 4, chords `C4+E4+G4`) if most of the text is note names. `Tempo: 120`/`120 bpm` lines set
+  the tempo. The tune is moved by octaves so its melody sits round E4, notes folded into E2..E6, and spelled in the major
+  key that fits it best (its key signature shows on the staff). Up to 24,000 characters, 4,000 notes per sheet. BPM is
+  clamped to 100-180, since a performed bar times the Cadence's gameplay.
+- **The Tabs** (`G.char.tabs`, 5 slots, `G.char.tabAt` = the one playing; `migrate()` gives old heroes five empty ones):
+  a row under the Bard's paper doll; drag or right-click a locked sheet in, right-click to take it out, the playing Tab
+  glows, and the row says what plays. A Tab's detail box: Play next (restarts it from its first note), Read, Take out.
+- **The music** (`bard.js` `nextBar`/`tabSong`/`songHeads`, `bardmusic.js` `songArrangement`): with a loaded sheet each bar
+  is written from the current Tab's song instead of the melodies. Every notehead any skill writes takes the song's next
+  note once (no re-fitting; its chord rides along in the left hand), the rhythm is the glyphs', the skill's touch sets the
+  articulation; the bass clef plays the bar an octave lower. A Cadence performs the bar as written and lands on the song's
+  next note (rung 1.5 beats with its octave below) instead of a finishing bar; sheet bars don't count toward the
+  never-twice song memory. When a song ends it wraps to its start for the rest of that bar, then the next loaded Tab
+  plays (round to the first). Discords and the 6 s idle reset drop the bar but not the song's place. Auto-play's rhythm
+  fitting (`bardFitGain`) is 0 for sheets. No loaded sheets: the melodies as before.
+- Test: `tools/tests/musicsheet.js [minutes] [mobile]` (reader cases, buy/write/lock/load through the real DOM, 160 casts of
+  every note skill: written heads + landings follow the song in order and hand over to Tab 2, Play next, empty Tabs back
+  to the melodies, save + old-save migration, sellJunk keeps sheets, an auto-play soak). Shots `sheet_*.png`.
+- Not done: Fortunato only offers sheets to Bards (other classes can still write or read one they carry); the reader
+  takes no rhythm from the tab (the skills set it); a pasted song was checked through the note tap, not by ear.
+
 ## October 29, 2026 — the damage scale: hero damage on the scale of hero life (branch `feat/damage-scale`)
 - **Request:** heroes hit for billions with ~30k life, so a future PvP mode would be one-shots. Make the damage numbers
   smaller and PvP-ready **without changing gameplay at all**.
