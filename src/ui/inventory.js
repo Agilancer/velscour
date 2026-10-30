@@ -7,7 +7,7 @@ import { UI, draggable, droppable } from './ui.js';
 import { itemCell, itemTooltip, rarityClass } from './itemui.js';
 import { SLOTS, SLOT_NAMES, VANITY_SLOTS, shownEquip, itemName, itemColor, GEMS, gemName, itemValue, fitsSlot, slotFor, unsocketCost, makeGem } from '../data/items.js';
 import { CLASSES, ATTRS } from '../data/classes.js';
-import { xpToNext } from '../game/player.js';
+import { xpToNext, CRIT_OVER } from '../game/player.js';
 import { addToBag } from '../game/player.js';
 import { GroundItem } from '../game/loot.js';
 import { classSprite } from '../core/assets.js';
@@ -353,6 +353,7 @@ function statsBlock() {
     ['Block', `${Math.round(st.block)}%`], ['Life Regen', `${st.lifeRegen.toFixed(1)}/s`],
     ['Magic Find', `+${Math.round(st.magicFind)}%`], ['Gold Find', `+${Math.round(st.goldFind)}%`],
   ];
+  if (st.critOver) rows.push(['Crit past 75%', `+${st.critOver.toFixed(1)}% → +${Math.round(st.critOver * CRIT_OVER)}% crit dmg`]);
   if (st.reduce) rows.push(['Damage Reduction', `${Math.round(st.reduce)}%`]);
   if (st.fortitude > 1) rows.push(['Fortitude', `+${Math.round((st.fortitude - 1) * 100)}% Life`]);
   if (p.marks && p.marks.life) rows.push(['Vitality (Marks)', `+${p.marks.life}% more Life`]);

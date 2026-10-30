@@ -291,7 +291,7 @@ saved records) is `st.drops`: `dropLoot` multiplies a kill's gear and gems by `1
 the Sigil chance by it, like the Greed lever. As plain life % and magic find they were lost beside gear's hundreds and
 thousands of percent (a player's report, October 30, 2026).
 `markBonuses()` → `{ life, crit, critDmg, mf, rift }`; `Player.recompute` multiplies maxHp by `1 + life / 100`, adds crit
-to `critChance` (inside the 75 clamp) and critDmg to `critDmg`, and sets `st.drops = mf`; `riftTime()` adds rift. Measured
+to `critChance` (inside the 75 clamp; past it, like all crit chance, 2% critical damage per 1%: `CRIT_OVER`) and critDmg to `critDmg`, and sets `st.drops = mf`; `riftTime()` adds rift. Measured
 (`marks.js`): 100 points = x1.232 maxHp, +3.48 crit and +28.99 crit damage, +14.5% drops, +17.40 s; 500 Vitality =
 x1.81; the 454th Vitality point +0.12%; 1000 Fortune: 300 champions dropped x1.74 the items (+81%). The character sheet shows "Infernal Marks: 37 (12 free)" and an
 "Infernal Marks" button; the Quest Log a line; the panel (`ui/marks.js`, two columns on touch) shows the total, the free

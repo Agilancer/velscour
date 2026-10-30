@@ -48,6 +48,9 @@ export function classTune(cls, level) {
   return T ? logCurve(DMG_TUNE_AT.map((L, i) => [L, T[i]]), level) : 1;
 }
 
+/** Critical damage for each 1% of crit chance past the 75% cap. */
+export const CRIT_OVER = 2;
+
 const ELEM_KEYS = ['fire', 'cold', 'light', 'poison', 'arcane', 'holy', 'shadow', 'blood', 'acid'];
 
 export class Player extends Creature {
@@ -119,6 +122,8 @@ export class Player extends Creature {
     buffLife += hh.life; buffDmg += hh.dmg; // (Marks' life multiplies maxHp below; their Fortune is st.drops, game/loot.js)
     const attr = (k) => c.attrs[k] + (add[k] || 0) + (add.allAttr || 0);
     const str = attr('str'), dex = attr('dex'), vit = attr('vit'), int = attr('int');
+    // crit chance caps at 75%: what lies past it is not wasted, each 1% becomes CRIT_OVER% critical damage
+    const critRaw = 5 + dex * 0.1 + (add.critChance || 0) + buffCrit / 4 + mk.crit, critOver = Math.max(0, critRaw - 75);
     const st = {
       str, dex, vit, int, legendary, procs: rb.procs,
       armor: Math.round((itemArmorSum + (add.armor || 0) + str) * (1 + ((add.armorPct || 0) + buffArmor) / 100)),
@@ -129,8 +134,8 @@ export class Player extends Creature {
         poison: (add.resPoison || 0) + (add.resAll || 0) + buffRes,
         magic: Math.round(((add.resAll || 0) + buffRes) * 0.75),
       },
-      critChance: clamp(5 + dex * 0.05 + (add.critChance || 0) + buffCrit / 4 + mk.crit, 0, 75),
-      critDmg: 50 + (add.critDmg || 0) + mk.critDmg,
+      critChance: clamp(critRaw, 0, 75), critOver,
+      critDmg: 50 + (add.critDmg || 0) + mk.critDmg + critOver * CRIT_OVER,
       atkSpeed: Math.min(150, dex * 0.3 + (add.atkSpeed || 0) + buffAs),
       castSpeed: Math.min(150, int * 0.1 + (add.castSpeed || 0) + buffAs),
       moveSpeed: Math.min(80, (add.moveSpeed || 0) + buffSpeed * 0.6),

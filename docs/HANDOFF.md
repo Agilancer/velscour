@@ -42,6 +42,12 @@ I just dropped a weapon that needs lvl 602". The user: fix them, raise max level
   kill's gear, gems and Sigil chance, `st.drops` in `dropLoot`: +14.5% at 100, +51% at 500, +81% at 1000; key `mf` kept
   for saves), and Precision adds critical damage (+0.5% x eff) beside its crit chance. The sheet shows "Vitality (Marks)"
   and "More Drops (Marks)" rows. `marks.js` checks the multiplier and counts drops from 300 champions with and without.
+- **Crit past the cap** (the same player: "critical chance has a hard cap of 75% which makes it a bad choice ... to match one
+  eternal jade you need more than 400 dex points"): crit chance past 75% now becomes critical damage, `CRIT_OVER` = 2% per
+  1% (`Player.recompute`, `st.critOver`; the sheet shows a "Crit past 75%" row), so Jades, Marks and dex are never wasted;
+  dex gives 0.1% crit chance a point (was 0.05). `tuning.js ranger,gunner,bard,boomerang_knight,wizard 40,160,400 8` with
+  0.05 and 0.1: the difference is inside the run-to-run noise (an unchanged wizard ran 1.2-4.1 s at depth 400).
+  `marks.js` checks the overflow (1000 Precision on a capped hero: +19.5% chance -> +39% crit damage on top of their own).
 - **Gold** past level 600 grows from `goldLvl` (`src/data/items.js`: 600 + 40 ln(1 + (L-600)/40); level 3000 counts as ~764)
   in every gold source and price (piles, item value, upgrade/socket/enchant costs, gambling, Breach gold), or level-3000
   piles would be 70 digits. Still ~3e19 a pile at 3000; a compact gold format would help (not done).
