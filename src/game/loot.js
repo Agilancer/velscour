@@ -1,6 +1,6 @@
 // Drops on the ground: gold, health/mana orbs, potions, gear and gems.
 import { G } from '../state.js';
-import { rand, chance, randi, TAU, pick, clamp, measureCtx } from '../core/util.js';
+import { rand, chance, randi, TAU, pick, clamp, measureCtx, fmtInt } from '../core/util.js';
 import { isoX, isoY, camera } from '../core/view.js';
 import { sfx } from '../core/audio.js';
 import { spawn, glowSprite, sparkle, floatText, addLight, elem } from '../gfx/vfx.js';
@@ -66,7 +66,7 @@ export class GroundItem {
     this.r = 0.35;
   }
   get label() {
-    if (this.kind === 'gold') return `${this.amount} Gold`;
+    if (this.kind === 'gold') return `${fmtInt(this.amount)} Gold`;
     if (this.kind === 'item') return itemName(this.item);
     if (this.kind === 'potion') return this.item.name;
     if (this.kind === 'key') return 'Abyssal Key';

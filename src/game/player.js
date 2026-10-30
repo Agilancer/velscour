@@ -1,6 +1,6 @@
 // The hero.
 import { G } from '../state.js';
-import { rand, chance, clamp, angleTo, dist, TAU } from '../core/util.js';
+import { rand, chance, clamp, angleTo, dist, TAU, fmtInt } from '../core/util.js';
 import { sfx, levelUpFanfare } from '../core/audio.js';
 import { camera } from '../core/view.js';
 import { floatText, addEffect, Column, Ring, Sigil, SigilFlames, SkyBolts, sparkle, burst, spawn, elem, bloodSpray, smoke } from '../gfx/vfx.js';
@@ -352,7 +352,7 @@ export class Player extends Creature {
     switch (g.kind) {
       case 'gold':
         c.gold += g.amount; sfx('gold');
-        floatText(this.x, this.y, 46, `+${g.amount} gold`, '#ffd34a', 12);
+        floatText(this.x, this.y, 46, `+${fmtInt(g.amount)} gold`, '#ffd34a', 12);
         return true;
       case 'orb_hp': this.heal(this.maxHp * 0.15); sfx('orb'); return true;
       case 'orb_mp': this.mana = Math.min(this.maxMana, this.mana + this.maxMana * 0.18); sfx('orb'); floatText(this.x, this.y, 46, '+mana', '#6a8aff', 11); return true;

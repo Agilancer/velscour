@@ -343,9 +343,9 @@ function statsBlock() {
   }
   const g = el('div', 'stats-grid');
   const rows = [
-    ['Life', `${Math.round(p.hp)} / ${p.maxHp}`], ['Mana', `${Math.round(p.mana)} / ${p.maxMana}`],
+    ['Life', `${fmtInt(p.hp)} / ${fmtInt(p.maxHp)}`], ['Mana', `${fmtInt(p.mana)} / ${fmtInt(p.maxMana)}`],
     ['Weapon Dmg', `${fmtDmg(shownDmg(st.weapon[0], heroDmgLevel(c)))}–${fmtDmg(shownDmg(st.weapon[1], heroDmgLevel(c)))}`], ['Damage Bonus', `+${Math.round(st.dmgPct + st.primary)}%`],
-    ['Armor', st.armor], ['Crit', `${st.critChance.toFixed(1)}% / +${Math.round(st.critDmg)}%`],
+    ['Armor', fmtInt(st.armor)], ['Crit', `${st.critChance.toFixed(1)}% / +${Math.round(st.critDmg)}%`],
     ['Attack Speed', `+${Math.round(st.atkSpeed)}%`], ['Cast Speed', `+${Math.round(st.castSpeed)}%`],
     ['Move Speed', `+${Math.round(st.moveSpeed)}%`], ['Fire Res', `${Math.min(75, st.res.fire)}%`],
     ['Cold Res', `${Math.min(75, st.res.cold)}%`], ['Lightning Res', `${Math.min(75, st.res.light)}%`],

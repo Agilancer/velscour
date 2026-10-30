@@ -135,7 +135,7 @@ const { openGame, report } = require('./harness');
       unlockEndgame();
       UI.openPanel('inventory', 'Inventory', renderInventory);
       const t = document.querySelector('[data-panel="inventory"]').textContent;
-      return { xpLine: /Next Infernal Mark [\d,]+ \/ [\d,]+ XP/.test(t), row: /Infernal Marks\d+ \(\d+ free\)/.test(t), btn: [...document.querySelectorAll('[data-panel="inventory"] button')].some((b) => b.textContent === 'Infernal Marks') };
+      return { xpLine: /Next Infernal Mark [\d,.]+[A-Za-z]* \/ [\d,.]+[A-Za-z]* XP/.test(t), row: /Infernal Marks\d+ \(\d+ free\)/.test(t), btn: [...document.querySelectorAll('[data-panel="inventory"] button')].some((b) => b.textContent === 'Infernal Marks') };
     });
     check(sheet.xpLine, 'the sheet\'s XP line shows the next Mark at the cap');
     check(sheet.row && sheet.btn, 'the sheet has the Infernal Marks row and button');

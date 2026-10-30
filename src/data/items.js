@@ -1,5 +1,5 @@
 // Items, affixes, gems and legendary powers.
-import { rand, randi, pick, weighted, clamp, chance } from '../core/util.js';
+import { rand, randi, pick, weighted, clamp, chance, fmtInt } from '../core/util.js';
 import { rollAugments, RING_NAMES, AUGMENTS, KIND_NAMES } from './rings.js';
 import { SKILLS } from './skills.js';
 import { SHEET_PRICE } from './tabs.js';
@@ -589,7 +589,7 @@ export function statLabel(s, v, classTrees) {
   };
   if (special[s]) return special[s];
   if (!a) return `${s}: ${v}`;
-  let t = a.t.replace('{v}', v);
+  let t = a.t.replace('{v}', typeof v === 'number' && Math.abs(v) >= 1e9 ? fmtInt(v) : v); // deep flat affixes: 1.234T, not 13 digits
   if (classTrees) t = t.replace('{tree0}', classTrees[0]).replace('{tree1}', classTrees[1]).replace('{tree2}', classTrees[2]).replace('{tree3}', classTrees[3] || classTrees[0]);
   return t;
 }
