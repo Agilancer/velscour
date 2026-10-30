@@ -116,7 +116,7 @@ export class Player extends Creature {
     buffDmg += hb.dmg; buffLife += hb.life; buffReduce += hb.reduce; buffMf += hb.mf + (this.codexMf = codexMf()); buffGf += hb.gf; buffXp += hb.xp;
     // the Endgame (docs/ENDGAME.md): Infernal Marks (every hero's) and the Glass Cannon Heresy (this hero's)
     const mk = this.marks = markBonuses(), hh = heresyHero(c);
-    buffLife += mk.life + hh.life; buffDmg += hh.dmg; buffMf += mk.mf;
+    buffLife += hh.life; buffDmg += hh.dmg; // (Marks' life multiplies maxHp below; their Fortune is st.drops, game/loot.js)
     const attr = (k) => c.attrs[k] + (add[k] || 0) + (add.allAttr || 0);
     const str = attr('str'), dex = attr('dex'), vit = attr('vit'), int = attr('int');
     const st = {
@@ -130,7 +130,7 @@ export class Player extends Creature {
         magic: Math.round(((add.resAll || 0) + buffRes) * 0.75),
       },
       critChance: clamp(5 + dex * 0.05 + (add.critChance || 0) + buffCrit / 4 + mk.crit, 0, 75),
-      critDmg: 50 + (add.critDmg || 0),
+      critDmg: 50 + (add.critDmg || 0) + mk.critDmg,
       atkSpeed: Math.min(150, dex * 0.3 + (add.atkSpeed || 0) + buffAs),
       castSpeed: Math.min(150, int * 0.1 + (add.castSpeed || 0) + buffAs),
       moveSpeed: Math.min(80, (add.moveSpeed || 0) + buffSpeed * 0.6),
@@ -140,6 +140,7 @@ export class Player extends Creature {
       thorns: (add.thorns || 0) + buffThorns * c.level * 0.2,
       goldFind: (add.goldFind || 0) + buffGf,
       magicFind: (add.magicFind || 0) + buffMf,
+      drops: mk.mf,
       xpPct: (add.xpPct || 0) + buffXp,
       reduce: Math.min(60, (add.reduce || 0) + buffReduce),
       fortitude: fortitude(c.level),
@@ -175,7 +176,7 @@ export class Player extends Creature {
     }
     if (weapon) { const fd = add.flatDmg || 0; st.weapon = [st.weapon[0] + fd, st.weapon[1] + fd]; }
     const lifePct = (add.lifePct || 0) + buffLife;
-    this.maxHp = Math.round((C.life + (c.level - 1) * C.lifeLvl + vit * 3 + (add.life || 0)) * (1 + lifePct / 100) * st.fortitude);
+    this.maxHp = Math.round((C.life + (c.level - 1) * C.lifeLvl + vit * 3 + (add.life || 0)) * (1 + lifePct / 100) * st.fortitude * (1 + mk.life / 100));
     this.maxMana = Math.round(C.mana + (c.level - 1) * C.manaLvl + int * 2 + (add.mana || 0));
     st.lifeRegen = heresyAllows('regen', c) ? 0.6 + c.level * 0.12 + vit * 0.05 + (add.lifeRegen || 0) + this.maxHp * st.regenPct / 100 : 0; // Hunger of the Abyss: none
     st.manaRegen = 1.6 + c.level * 0.15 + int * 0.06 + (add.manaRegen || 0);

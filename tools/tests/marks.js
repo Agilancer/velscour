@@ -5,8 +5,9 @@
 //     every 5 s and on autosave, and marks.xp survives a page reload; the HUD XP bar and the sheet's XP line show the
 //     progress to the next Mark at the cap.
 //  2. Spending: free count, +n, more than free, reset, autoSpend spreads, the bonuses on the hero (100 Vitality =
-//     +17.4% maxHp exactly, 500 = +60.9% (no cap: the 454th point still adds +0.09), +3.48 crit inside the 75 clamp,
-//     +28.99 MF, +17.4 s on riftTime()), a damaged
+//     x1.232 maxHp (a multiplier of its own), 500 = x1.81 (no cap: the 454th point still adds +0.12), +3.48 crit inside
+//     the 75 clamp and +28.99 crit damage, +14.5% more drops (st.drops; dropLoot on 300 champions: ~x1.81 the items at
+//     1000 Fortune), +17.4 s on riftTime()), a damaged
 //     record clamped, mergeEndgame's base rules (the cloud side is in cloud.js).
 //  3. Shared: a second hero of another class has the same bonuses; deleting heroes keeps the Marks; the panel (its
 //     buttons by click), the sheet's row and button, the Quest Log line, the skull's "marks"; desktop + phone shots.
@@ -166,18 +167,22 @@ const { openGame, report } = require('./harness');
       c.level = MAX_LEVEL; for (const k in c.equip) c.equip[k] = null; p.recompute();   // no gear: the life pool is the Marks' alone
       const r = E.endgame(); r.marks.pts = 0; M.resetMarks();
       const o = {};
-      const base = { hp: p.maxHp, crit: p.st.critChance, mf: p.st.magicFind, rift: riftTime() };
+      const base = { hp: p.maxHp, crit: p.st.critChance, critDmg: p.st.critDmg, mf: p.st.magicFind, drops: p.st.drops, rift: riftTime() };
       o.base = base;
       o.grant = M.grantMarks(1000, 'for the test');
       o.free0 = M.marksFree();
       o.spent100 = M.spendMark('life', 100) + M.spendMark('crit', 100) + M.spendMark('mf', 100) + M.spendMark('rift', 100);
-      o.at100 = { life: p.maxHp / base.hp, crit: p.st.critChance - base.crit, mf: p.st.magicFind - base.mf, rift: riftTime() - base.rift, b: M.markBonuses() };
+      o.at100 = { life: p.maxHp / base.hp, crit: p.st.critChance - base.crit, critDmg: p.st.critDmg - base.critDmg, drops: p.st.drops - base.drops, mf: p.st.magicFind - base.mf, rift: riftTime() - base.rift, b: M.markBonuses() };
       o.free1 = M.marksFree();
       o.over = M.spendMark('life', 9999);   // only what is free
       o.free2 = M.marksFree();
       M.resetMarks(); o.afterReset = { free: M.marksFree(), hp: p.maxHp, total: M.marksTotal() };
       M.spendMark('life', 500); o.at500 = p.maxHp / base.hp; o.b500 = M.bonusAt('life', 500); o.next453 = M.bonusAt('life', 454) - M.bonusAt('life', 453);
       M.resetMarks();
+      // Fortune: more drops from the same kills (dropLoot on 300 champions, then again with 1000 Marks in Fortune)
+      const { dropLoot } = await import('/src/game/loot.js');
+      const drops = () => { const w = G.world, n0 = w.loot.length; for (let i = 0; i < 300; i++) dropLoot(w, { x: p.x, y: p.y, level: 60, rank: 'champion' }); const got = w.loot.slice(n0).filter((l) => l.kind === 'item').length; w.loot.length = n0; return got; };
+      o.drop0 = drops(); M.spendMark('mf', 1000); o.drop1 = drops(); o.dropPct = p.st.drops; M.resetMarks();
       p.buffs.push({ id: 'test-crit', stats: { crit: 400 }, t: 99, dur: 99 }); p.recompute();
       const hi = p.st.critChance; M.spendMark('crit', 1000); o.clamp = [hi, p.st.critChance];
       p.buffs = p.buffs.filter((b) => b.id !== 'test-crit'); M.resetMarks();
@@ -205,13 +210,16 @@ const { openGame, report } = require('./harness');
       return o;
     });
     const b = sp.at100;
-    console.log(`  100 points each: life x${b.life.toFixed(4)} (bonus ${b.b.life}%), crit +${b.crit.toFixed(2)}, MF +${b.mf.toFixed(2)}, rift +${b.rift.toFixed(2)} s; 500 Vitality: x${sp.at500.toFixed(4)} (${sp.b500}%)`);
+    console.log(`  100 points each: life x${b.life.toFixed(4)} (bonus ${b.b.life}%), crit +${b.crit.toFixed(2)} / +${b.critDmg.toFixed(2)} damage, drops +${b.drops}%, rift +${b.rift.toFixed(2)} s; 500 Vitality: x${sp.at500.toFixed(4)} (${sp.b500}%)`);
     check(sp.grant === 1000 && sp.free0 === 1000 && sp.spent100 === 400 && sp.free1 === 600, 'grantMarks(1000): 1000 free; 100 into each category leaves 600');
-    check(Math.abs(b.life - 1.1740) < 3 / sp.base.hp && b.b.life.toFixed(1) === '17.4', `100 Vitality: +${((b.life - 1) * 100).toFixed(2)}% on maxHp (${sp.base.hp} -> ${Math.round(sp.base.hp * b.life)})`);
-    check(Math.abs(sp.at500 - 1.6088) < 3 / sp.base.hp && sp.b500.toFixed(1) === '60.9', `500 Vitality: +${((sp.at500 - 1) * 100).toFixed(2)}% life`);
-    check(sp.next453 >= 0.08, `the 454th Vitality point still adds +${sp.next453.toFixed(2)}% (it read +0.00 under the old cap)`);
+    check(Math.abs(b.life - 1.232) < 3 / sp.base.hp && b.b.life.toFixed(1) === '23.2', `100 Vitality: +${((b.life - 1) * 100).toFixed(2)}% on maxHp (${sp.base.hp} -> ${Math.round(sp.base.hp * b.life)})`);
+    check(Math.abs(sp.at500 - 1.8117) < 3 / sp.base.hp && sp.b500.toFixed(1) === '81.2', `500 Vitality: +${((sp.at500 - 1) * 100).toFixed(2)}% life`);
+    check(sp.next453 >= 0.1, `the 454th Vitality point still adds +${sp.next453.toFixed(2)}% (it read +0.00 under the old cap)`);
     check(Math.abs(b.crit - 3.48) < 0.011, `100 Precision: +${b.crit.toFixed(2)} crit chance`);
-    check(Math.abs(b.mf - 28.99) < 0.011, `100 Fortune: +${b.mf.toFixed(2)} magic find`);
+    check(Math.abs(b.critDmg - 28.99) < 0.011, `100 Precision: +${b.critDmg.toFixed(2)} critical damage`);
+    check(Math.abs(b.drops - 14.5) < 0.011 && b.mf === 0, `100 Fortune: +${b.drops}% more drops (magic find unchanged: +${b.mf})`);
+    const dr = sp.drop1 / Math.max(1, sp.drop0);
+    check(Math.abs(dr - (1 + sp.dropPct / 100)) < 0.25, `1000 Fortune (+${sp.dropPct}% drops): 300 champions dropped ${sp.drop0} -> ${sp.drop1} items (x${dr.toFixed(2)})`);
     check(Math.abs(b.rift - 17.40) < 0.011, `100 Haste: +${b.rift.toFixed(2)} s on the rift clock`);
     check(sp.over === 600 && sp.free2 === 0, `spending more than is free spends only the free (${sp.over})`);
     check(sp.afterReset.free === 1000 && sp.afterReset.total === 1000 && sp.afterReset.hp === sp.base.hp, 'Reset gives every point back and the bonuses go');

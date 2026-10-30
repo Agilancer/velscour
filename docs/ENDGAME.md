@@ -283,11 +283,17 @@ Bonuses diminish but never stop: `eff(n) = 140 * (sqrt(1 + n / 100) - 1)` (58 at
 324 at 1000); the n-th point adds `1 / sqrt(1 + n / 100)` of the first's worth (`worthNext`: half at 300, ~30% at 1000).
 It was `100 * (1 - 0.993 ** n)`, a cap: a player's 454th Vitality point read "+0.00" (October 30, 2026). Then
 ```
-life +0.3% x eff    crit +0.06 x eff (inside the 75% clamp)    mf +0.5% x eff    rift +0.3 s x eff
+life +0.4% more x eff    crit +0.06 x eff (inside the 75% clamp) and +0.5% critical damage x eff
+mf   +0.25% more drops x eff    rift +0.3 s x eff
 ```
-`markBonuses()` → `{ life, crit, mf, rift }`; `Player.recompute` adds life and mf with the Defiance bonus and crit to
-`critChance` (inside the 75 clamp); `riftTime()` adds rift. Measured (`marks.js`): 100 points = +17.40% maxHp, +3.48
-crit, +28.99 MF, +17.40 s; 500 Vitality = +60.88%; the 454th Vitality point +0.09%. The character sheet shows "Infernal Marks: 37 (12 free)" and an
+Vitality is a multiplier of its own on `maxHp` (after gear's life %, Defiance and Fortitude), and Fortune (key `mf`, kept for
+saved records) is `st.drops`: `dropLoot` multiplies a kill's gear and gems by `1 + drops / 100` (rounded at random) and
+the Sigil chance by it, like the Greed lever. As plain life % and magic find they were lost beside gear's hundreds and
+thousands of percent (a player's report, October 30, 2026).
+`markBonuses()` → `{ life, crit, critDmg, mf, rift }`; `Player.recompute` multiplies maxHp by `1 + life / 100`, adds crit
+to `critChance` (inside the 75 clamp) and critDmg to `critDmg`, and sets `st.drops = mf`; `riftTime()` adds rift. Measured
+(`marks.js`): 100 points = x1.232 maxHp, +3.48 crit and +28.99 crit damage, +14.5% drops, +17.40 s; 500 Vitality =
+x1.81; the 454th Vitality point +0.12%; 1000 Fortune: 300 champions dropped x1.74 the items (+81%). The character sheet shows "Infernal Marks: 37 (12 free)" and an
 "Infernal Marks" button; the Quest Log a line; the panel (`ui/marks.js`, two columns on touch) shows the total, the free
 count, the XP towards the next Mark, and per category its points, bonus, a bar of how far the next point's worth has fallen, +1/+5/+25, then
 "Spend all (balanced)" and "Reset (free)". `grantMarks(n, why)` logs. Unspent Marks sit in `pts - sum(spent)`.

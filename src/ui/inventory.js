@@ -355,6 +355,8 @@ function statsBlock() {
   ];
   if (st.reduce) rows.push(['Damage Reduction', `${Math.round(st.reduce)}%`]);
   if (st.fortitude > 1) rows.push(['Fortitude', `+${Math.round((st.fortitude - 1) * 100)}% Life`]);
+  if (p.marks && p.marks.life) rows.push(['Vitality (Marks)', `+${p.marks.life}% more Life`]);
+  if (st.drops) rows.push(['More Drops (Marks)', `+${st.drops}%`]);
   if (st.extraProj) rows.push(['Extra Projectiles', '+' + Math.floor(st.extraProj)]);
   if (st.skillsAll) rows.push(['All Skills', '+' + Math.floor(st.skillsAll)]);
   if (marksTotal()) rows.push(['Infernal Marks', `${marksTotal()} (${marksFree()} free)`]);

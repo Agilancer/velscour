@@ -3,7 +3,7 @@ import { G } from '../state.js';
 import { el, escapeHtml, fmtInt } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { UI } from './ui.js';
-import { CATS, marksTotal, marksFree, marksIn, bonusAt, worthNext, spendMark, resetMarks, autoSpend, markXp } from '../game/marks.js';
+import { CATS, marksTotal, marksFree, marksIn, bonusAt, alsoAt, worthNext, spendMark, resetMarks, autoSpend, markXp } from '../game/marks.js';
 import { endgame, MARK_CATS } from '../game/endgame.js';
 import { MAX_LEVEL } from '../game/player.js';
 
@@ -27,9 +27,9 @@ export const Marks = {
     for (const k of MARK_CATS) {
       const C = CATS[k], n = marksIn(k), now = bonusAt(k, n), next = bonusAt(k, n + 1);
       const row = el('div', 'mk-row', `<div class="mk-name"><b>${escapeHtml(C.name)}</b><span class="mk-pts">${fmtInt(n)}</span></div>` +
-        `<div class="mk-val"><b>+${num(now)}</b>${escapeHtml(C.unit)}</div>` +
+        `<div class="mk-val"><b>+${num(now)}</b>${escapeHtml(C.unit)}${C.also ? ` · <b>+${num(alsoAt(k, n))}</b>${escapeHtml(C.also.unit)}` : ''}</div>` +
         `<div class="mk-bar" title="The next point adds ${Math.round(worthNext(n) * 100)}% of what the first one did"><i style="width:${(100 - worthNext(n) * 100).toFixed(1)}%"></i></div>` +
-        `<div class="dim mk-next">${escapeHtml(C.desc)} Next point +${nextTxt(next - now)} · ${Math.round(worthNext(n) * 100)}% of the first</div>`);
+        `<div class="dim mk-next">${escapeHtml(C.desc)} Next point +${nextTxt(next - now)}${C.also ? ` / +${nextTxt(alsoAt(k, n + 1) - alsoAt(k, n))}` : ''} · ${Math.round(worthNext(n) * 100)}% of the first</div>`);
       row.style.setProperty('--mk', C.color);
       row.dataset.cat = k;
       const btns = el('div', 'mk-btns');

@@ -36,6 +36,12 @@ I just dropped a weapon that needs lvl 602". The user: fix them, raise max level
   `1/sqrt(1 + n/100)` of the first (`worthNext`), so the 454th Vitality point adds +0.09% (it read +0.00 under
   `100 * (1 - 0.993^n)`). Per point: life 0.3, crit 0.06 (was 0.1), MF 0.5, Haste 0.3 s (was 0.6; 453 points still
   give the old ~57 s). The panel's bar shows how far the next point's worth has fallen ("79% of the first").
+- **Marks made worth having** (a second report: "the Infernal Mark bonuses are lackluster, just in my offhand I have way
+  more %life ... I have 4331% magic find and I can get 50% via infernal marks"): Vitality is now its own multiplier on maxHp
+  (+0.4% more x eff: x1.23 at 100 points, x1.81 at 500), Fortune is more drops like the Greed lever (+0.25% x eff on a
+  kill's gear, gems and Sigil chance, `st.drops` in `dropLoot`: +14.5% at 100, +51% at 500, +81% at 1000; key `mf` kept
+  for saves), and Precision adds critical damage (+0.5% x eff) beside its crit chance. The sheet shows "Vitality (Marks)"
+  and "More Drops (Marks)" rows. `marks.js` checks the multiplier and counts drops from 300 champions with and without.
 - **Gold** past level 600 grows from `goldLvl` (`src/data/items.js`: 600 + 40 ln(1 + (L-600)/40); level 3000 counts as ~764)
   in every gold source and price (piles, item value, upgrade/socket/enchant costs, gambling, Breach gold), or level-3000
   piles would be 70 digits. Still ~3e19 a pile at 3000; a compact gold format would help (not done).
