@@ -152,6 +152,7 @@ node tools/tests/select.js [mobile]                # hero select: one hero per c
 node tools/tests/autoplay.js wizard 15 [mobile] [handsoff]  # auto-play soak: a new hero plays N game minutes at ~30x speed (handsoff: gear never changes)
 node tools/tests/autoloops.js [loot,channel,marker,immune,edge,rift]  # auto-play's old loops built on purpose: loot it can't take, a swept-away dash, a goal marker, an unhurtable foe, burning ground, leaving a won rift
 node tools/tests/stalls.js [class] [min] [standard|rift|breach] [gift] [autoloot] [fullbag] [god]  # stall finder: flags where auto-play gets nowhere (same status, parked, no kills, flip-flops) with its state
+node tools/tests/dodge.js [fights] [secs]          # auto-play vs quakes/charges down corridors (wyrm, knight, charging guardian): blows landed, backing out to open ground
 node tools/tests/background.js [class] [secs]      # hidden window (minimised/covered/locked PC): game + auto-play keep real time (raw CDP, needs a desktop)
 node tools/tests/balance.js paladin,wizard 146 30  # a geared hero for depth D, auto-play: deaths, depths cleared (BAL_GEAR=3 weaker gear; 'god' 4th arg: DPS)
 node tools/tests/balance_model.mjs paladin         # no browser: hero life vs monster hits by depth (the curve in src/data/depth.js)
