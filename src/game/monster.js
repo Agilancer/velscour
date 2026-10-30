@@ -11,7 +11,7 @@ import { ARCH, ARCH_MOVES, ELITE_AFFIXES, bossName, uniqueName } from '../data/e
 import { SUMMONS } from '../data/summons.js';
 import { turretMuzzle } from '../gfx/gunner3d.js';
 import { bodyR } from '../world/map.js';
-import { toughness, danger, densityXp, riftHold } from '../data/depth.js';
+import { toughness, danger, densityXp, riftHold, dmgScale } from '../data/depth.js';
 import { attachSlime, slimeUpdate, courtDef } from './slimecourt.js';
 import { ART_BY_ID, REVIVED, greaterSwap, rollLooks, uniqueSwap } from '../data/bestiary.js';
 
@@ -97,7 +97,7 @@ export class Monster extends Creature {
     if (d > 0) {
       if (this.affixes && this.affixes.includes('vampiric')) this.heal(d * 0.3);
       const th = this.curses.thorns;
-      if (th && th.t > 0) hit(th.src, this, d * th.amt / 100, 'phys', { dot: true, crit: false });
+      if (th && th.t > 0) hit(th.src, this, d * th.amt / 100 * (target.isPlayer ? dmgScale(this.level || 1) : 1), 'phys', { dot: true, crit: false }); // a blow on the hero is on the life scale (combat.js thorns)
       if (this.leech && this.owner) leechHeal(this.owner, target, d, this.leech * 0.15);
     }
     return d;

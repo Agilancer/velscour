@@ -1,7 +1,7 @@
 // Item cells and tooltip HTML.
 import { G } from '../state.js';
 import { el, escapeHtml, fmtInt, fmtDmg } from '../core/util.js';
-import { shownDmg, heroDmgLevel } from '../data/depth.js';
+import { shownWeapon, heroDmgLevel } from '../data/depth.js';
 import { itemName, itemBaseLine, itemColor, itemStats, itemDmg, itemArmor, statLabel, RARITY, GEMS, gemStats, gemName, LEGENDARY, legendaryDesc, powerLevel, SLOT_NAMES, POTION_INFO, MAX_GEM_TIER, augTarget } from '../data/items.js';
 import { AUGMENTS } from '../data/rings.js';
 import { elem } from '../gfx/vfx.js';
@@ -13,10 +13,10 @@ import { keyName } from '../data/melodies.js';
 import { RELIC_COLORS, RELIC_NAMES, SIGILS, SIGIL_MAX, sigilStats, sigilCap } from '../data/items.js';
 import { HEIRLOOM_BY_ID, COVENANT_BY_ID, PIECE_BY_ID, POWERS, GLYPHWORDS, glyphOf, wornSets, powerText, lineValue, TUNE } from '../data/relics.js';
 
-// power figures (weapon damage, flat damage, thorns) on the shown scale of the hero's depth (data/depth.js)
-const shown = (v) => fmtDmg(shownDmg(v, heroDmgLevel(G.char)));
-const POWER = { flatDmg: 1, thorns: 1 };
-const label = (s, v, trees) => statLabel(s, POWER[s] ? shown(v) : v, trees);
+// weapon figures (an item's Damage, flat weapon damage) on the weapon scale of the hero's depth (data/depth.js); thorns
+// are already on the shown scale (combat.js)
+const shown = (v) => fmtDmg(shownWeapon(v, heroDmgLevel(G.char)));
+const label = (s, v, trees) => statLabel(s, s === 'flatDmg' ? shown(v) : v, trees);
 
 export function itemCell(item) {
   const d = el('div', 'itemicon');
@@ -122,7 +122,7 @@ function cmp(other, item, kind) {
   if (kind === 'dmg' && other.dmg) {
     const a = itemDmg(item), b = itemDmg(other);
     const d = (a[0] + a[1]) / 2 - (b[0] + b[1]) / 2;
-    return Math.abs(shownDmg(d, heroDmgLevel(G.char))) >= 0.005 ? ` <span class="${d > 0 ? 'cmp-up' : 'cmp-down'}">(${d > 0 ? '+' : ''}${shown(d)})</span>` : '';
+    return Math.abs(shownWeapon(d, heroDmgLevel(G.char))) >= 0.05 ? ` <span class="${d > 0 ? 'cmp-up' : 'cmp-down'}">(${d > 0 ? '+' : ''}${shown(d)})</span>` : '';
   }
   if (kind === 'armor' && other.armor !== undefined) {
     const d = itemArmor(item) - itemArmor(other);

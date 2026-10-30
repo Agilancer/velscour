@@ -14,6 +14,28 @@ Contents
 
 ---
 
+## October 30, 2026 — thorns that work, weapon figures ~100, no dark hole in tomb walls (branch `fix/thorns-weapon-numbers`)
+
+Discord: "0.00 thorns damage ... all items that had thorns damage are 0.00", "nobody likes the tiny numbers now", and
+"walking close to these walls projects a strange shadow on them" (the Sea of Sand tomb, depth 72).
+- **Thorns were really ~0**, not just shown so: the affix grows linearly with item level, monster life 1.068 a level, so
+  past the first depths a thorn did nothing (and on the damage scale it read 0.00). Now thorns are on the shown scale:
+  `combat.js` lands `thorns x dmgScale(attacker level)`, the Iron Maiden / Thornhold reflect (150% of the blow, itself on
+  the life scale) the same, and so does the thorns curse when the blow was on the hero (`Monster.deal`). `st.thorns` is
+  `(gear + buff x level x 0.03) x fortitude` (buff was x 0.2 against raw life). Measured (`dmgscale.js`, a level-appropriate
+  thorns affix): a normal attacker dies in 37-49 blows at depths 5, 60, 500 and 1500 (a thorns buff ~8-16). The sheet has a
+  Thorns row; item lines show the affix as rolled.
+- **Weapon figures** (an item's Damage and its compare, the sheet's Weapon Base, "+N Weapon Damage") have their own scale,
+  `shownWeapon(raw, level)` (`src/data/depth.js`): a Common weapon of the hero's depth's level averages 100, Rare ~120,
+  Legendary ~155, Mythic ~170-195, at every level (they read 0.03-1 on the hit scale). Hits, the Attack/DPS plaque and skill
+  tooltips stay on the hit scale (`shownDmg`).
+- **The tomb's "shadow"** was the 3D cutaway (`caveCut` in `src/gfx/dunes3d.js`): always on, it discarded wall pixels nearer
+  the camera than the hero inside a 300x240 px ellipse, and the walls' dark inner faces filled the hole. Now `cr.cut` is on
+  only while ground in front really covers the hero (`heroHidden` in `game/dunes.js`, held 0.4 s), which inside the tomb is
+  never (its walls are meshes, not ground, and sprites draw over the 3D anyway), and a cut also drops back faces so the
+  floor behind shows. The caverns (`cave3d.js`) keep their region-gated cut.
+- Tests: `dmgscale.js` adds the thorns/weapon check; dunes (red), flow, ui, `skills.js paladin`, `autoplay.js paladin 3`.
+
 ## October 30, 2026 — macros: several skills on one key; "Weapon Base" on the sheet (branch `feat/macros`)
 
 Discord: "when manually playing I need to play like a pianist to use all my buffs, 4567890- every 30 seconds or so".
@@ -167,7 +189,7 @@ Player request: look the way you want without giving up stats.
 - **PvP (future):** a hero's raw damage against a hero = `shownDmg(raw, arena level)`, then the defender's armor,
   resistances and reduction as `hit` does for monster blows: ~8 s of focused damage to kill a same-level hero.
 - **Looks odd:** weapon damage reads tiny (0.1-1) because base weapon damage is a sliver of a hit next to skill
-  damage, mastery and bonuses; it was always so, the scale just shows it.
+  damage, mastery and bonuses; it was always so, the scale just shows it. (Oct 30: weapon figures now use `shownWeapon`, ~100.)
 - `balance.js` now prints `dps` on the shown scale (Meter).
 
 ## October 30, 2026 — the lowered drawbridge floated short of the pier (every castle)

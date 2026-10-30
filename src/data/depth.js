@@ -71,5 +71,12 @@ export const densityXp = (lvl) => { const d = lvl <= 60 ? lvl : 60 + (lvl - 60) 
  */
 export const dmgScale = (lvl) => (30 * Math.pow(1.068, lvl - 1) * toughness(lvl)) / ((100 + lvl * 9.5) * fortitude(lvl));
 export const shownDmg = (raw, lvl) => raw / dmgScale(Math.max(1, lvl || 1));
+/**
+ * Weapon figures (an item's Damage, the sheet's Weapon Base, "+N Weapon Damage") have a scale of their own: a Common
+ * weapon of the level averages 100 (a Rare ~150-250 by its extra power levels). On the hit scale above a weapon read
+ * 0.03-1, since its base damage is a sliver of a hit next to skills, mastery and bonuses (players read it as broken).
+ */
+export const weaponRef = (lvl) => 3.4 * Math.pow(1.052, lvl - 1) * (1 + lvl * 0.012);
+export const shownWeapon = (raw, lvl) => (raw / weaponRef(Math.max(1, lvl || 1))) * 100;
 /** The level tooltips and the stats plaque measure against: the monsters of the hero's depth (as heroDamage does). */
 export const heroDmgLevel = (c) => depthLevel((c && c.depth) || 1);
