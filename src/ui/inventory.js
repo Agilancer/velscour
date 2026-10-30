@@ -344,7 +344,7 @@ function statsBlock() {
   const g = el('div', 'stats-grid');
   const rows = [
     ['Life', `${fmtInt(p.hp)} / ${fmtInt(p.maxHp)}`], ['Mana', `${fmtInt(p.mana)} / ${fmtInt(p.maxMana)}`],
-    ['Weapon Dmg', `${fmtDmg(shownDmg(st.weapon[0], heroDmgLevel(c)))}–${fmtDmg(shownDmg(st.weapon[1], heroDmgLevel(c)))}`], ['Damage Bonus', `+${Math.round(st.dmgPct + st.primary)}%`],
+    ['Weapon Base', `${fmtDmg(shownDmg(st.weapon[0], heroDmgLevel(c)))}–${fmtDmg(shownDmg(st.weapon[1], heroDmgLevel(c)))}`, "The weapon's own damage, before skills, attributes and every bonus: the Attack and DPS plaque shows what you deal"], ['Damage Bonus', `+${Math.round(st.dmgPct + st.primary)}%`],
     ['Armor', fmtInt(st.armor)], ['Crit', `${st.critChance.toFixed(1)}% / +${Math.round(st.critDmg)}%`],
     ['Attack Speed', `+${Math.round(st.atkSpeed)}%`], ['Cast Speed', `+${Math.round(st.castSpeed)}%`],
     ['Move Speed', `+${Math.round(st.moveSpeed)}%`], ['Fire Res', `${Math.min(75, st.res.fire)}%`],
@@ -363,7 +363,7 @@ function statsBlock() {
   if (marksTotal()) rows.push(['Infernal Marks', `${marksTotal()} (${marksFree()} free)`]);
   if (heresyRankOf(c)) rows.push(['Heresy rank', String(heresyRankOf(c))]);
   if (c.keys) rows.push(['Abyssal Keys', `${c.keys}`]);
-  for (const [k, v] of rows) g.innerHTML += `<span class="dim">${k}</span><span class="v">${v}</span>`;
+  for (const [k, v, tip] of rows) g.innerHTML += `<span class="dim"${tip ? ` title="${escapeHtml(tip)}"` : ''}>${k}</span><span class="v"${tip ? ` title="${escapeHtml(tip)}"` : ''}>${v}</span>`;
   box.appendChild(g);
   box.appendChild(el('div', 'dim', `Kills ${fmtInt(c.kills || 0)} · Deaths ${c.deaths || 0} · Deepest ${c.deepest || 0}`));
   if (endgameUnlocked(c)) { const mb = el('button', 'btn small', 'Infernal Marks'); mb.onclick = () => { sfx('ui'); G.ui.marks.open(); }; box.appendChild(mb); }

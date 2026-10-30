@@ -34,6 +34,7 @@ import { heroVisit } from './townlife.js';
 import { homunculusChat, isHomunculus } from './homunculus.js';
 import { effects, Telegraph } from '../gfx/vfx.js';
 import { BAR_SIZE, LMB, RMB, FILL_ORDER, SLOT_KEYS, freeSlot } from '../data/bar.js';
+import { macroKeys } from './macros.js';
 
 const OFFENSIVE = new Set(['melee', 'proj', 'nova', 'aoe', 'beam', 'chain', 'wall', 'zone', 'orbit', 'cyclone', 'whirl', 'leap', 'dash', 'trap', 'rain', 'strike', 'fissure', 'corpse']);
 const CROWD = 2.2; // enemies a typical cast is expected to reach, for planning
@@ -496,7 +497,7 @@ export const Auto = {
   noteInput() {
     if (!this.on) return;
     const k = input.keys;
-    const keys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ...SLOT_KEYS.filter(Boolean)];
+    const keys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ...SLOT_KEYS.filter(Boolean), ...macroKeys()];
     if (input.joy.active || input.worldTouch || keys.some((x) => k.has(x)) || ((input.mouse.left || input.mouse.right) && input.mouse.inside && input.lastPointerType === 'mouse')) this.overrideT = 1.5;
   },
 
