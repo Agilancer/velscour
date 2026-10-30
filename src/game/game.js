@@ -97,6 +97,8 @@ import { grantMarks, saveMarkXp } from './marks.js';
 import { Heresies } from '../ui/heresies.js';
 import { Rifts } from '../ui/rifts.js';
 import { Marks } from '../ui/marks.js';
+import { MacrosUI } from '../ui/macros.js';
+import { Macros } from './macros.js';
 
 const PICK_WAIT = 8; // seconds auto-play gives the player to choose a portal down (portalChoice)
 
@@ -215,6 +217,7 @@ export const game = {
   },
 
   startChar(c, fresh) {
+    Macros.reset();
     hideScreen();
     if (Auto.on) Auto.toggle(false);
     G.char = c;
@@ -422,6 +425,7 @@ export const game = {
             this.enterUnbound(); // the rematch, for three Abyssal Keys (docs/ENDGAME.md)
           } else if (['heresy', 'heresies', 'altar'].includes(message.trim().toLowerCase())) { close(); Heresies.open(); }
           else if (['marks', 'infernal marks'].includes(message.trim().toLowerCase())) { close(); Marks.open(); }
+          else if (['macro', 'macros'].includes(message.trim().toLowerCase())) { close(); MacrosUI.open(); }
           else if (['rift', 'rifts', 'abyssal rift'].includes(message.trim().toLowerCase())) { close(); this.confirmRift(); }
           else if (message.trim().toLowerCase() === 'tower') {
             close();

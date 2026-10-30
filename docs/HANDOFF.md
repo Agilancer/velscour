@@ -14,6 +14,30 @@ Contents
 
 ---
 
+## October 30, 2026 — macros: several skills on one key; "Weapon Base" on the sheet (branch `feat/macros`)
+
+Discord: "when manually playing I need to play like a pianist to use all my buffs, 4567890- every 30 seconds or so".
+- **Macros** (`src/data/macros.js` saved shape, `src/game/macros.js` casting, `src/ui/macros.js` panel): five per hero in
+  `G.char.macros` (`{ name, skills: [ids], key, keep }`, `migrate()` gives old heroes five; up to 8 skills each). Keys
+  R E Y U O by default (also J L N; a key moved to one macro leaves the one that had it). A press queues the list;
+  `Macros.tick` (from `controls.update`, before input is cleared) casts the next whenever `castLock` is over (waiting out
+  a non-beam channel; a queue that hasn't moved in 4 s is dropped), skipping skills on cooldown, short of mana or not
+  learned. Casting goes through `controls.castSkill(sk)`, the bar keys' own aiming (`useSlot` now calls it). Nothing in
+  town or with a panel open. **Keep up**: every 0.25 s, with a foe within 12 tiles and auto-play off, a buff whose effect
+  is gone (or under 1 s) and any skill with a 3 s+ cooldown that is ready joins the queue. Auto-play's `noteInput`
+  counts macro keys as the player taking over.
+- **Panel**: the skill tree's **Macros** button, the pause menu, the skull's "macros". Per macro: name, key, Keep up,
+  Cast, the skills as icons (click to take out), "+ Add a skill" (learned skills, bar key and "buff" shown), Clear, or
+  "Add the bar's buffs" on an empty one. It does not re-render under a name being typed.
+- **Touch**: a purple button per macro with skills (`TouchUI.layoutMacros`): an outer arc beyond the skill ring in
+  landscape, a row over the tray in portrait. In portrait the touch buttons used to sit over every open panel (z-index
+  7): `body.panel-open` (set by `UI.onPanelsChanged`) hides them there.
+- Help lists the keys. **"Weapon Dmg" on the sheet is now "Weapon Base"**, with a tooltip: it is the weapon's own damage
+  before skills, attributes and bonuses (a player read 0.03 as their damage).
+- Test: `tools/tests/macros.js` (save shape and migrate, order, skip on cooldown, panel open, town, Keep up on/off/re-cast
+  one, auto-play on, round trip, the panel by its controls, touch at 844x390 and 390x844: inside, no overlap, a tap casts,
+  the panel fits). hud, mobile, ui, flow, `autoplay.js paladin 3`, `skills.js paladin` pass.
+
 ## October 30, 2026 — compact big numbers: 386.7Qi gold, not 21 digits (branch `fix/compact-numbers`)
 
 A player's screenshot showed `386,663,983,316,678,800,000 gold`, weapon damage and armor in 13-15 digits.

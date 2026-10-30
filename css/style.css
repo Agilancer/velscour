@@ -688,6 +688,7 @@ body.touch.portrait #barbarian-rage { position: absolute; left: calc(100vw - max
 body.touch.portrait #center-msg { top: 32%; }
 body.touch.portrait #log { left: 8px; right: 8px; top: auto; bottom: auto; height: min(13vh,100px); max-height: none; overflow: hidden; }
 body.touch.portrait #touch-buttons { z-index: 7; }
+body.touch.portrait.panel-open #touch-buttons { display: none; } /* they sat over every panel */
 body.touch.portrait #touch-buttons.portrait-grid .tbtn.portrait-tile { border-radius: 9px; border-color: rgba(194,151,81,.82); background: linear-gradient(145deg,rgba(41,25,14,.94),rgba(10,7,6,.96)); box-shadow: 0 2px 8px #000, inset 0 1px 0 rgba(255,224,160,.12); }
 body.touch.portrait #touch-buttons.portrait-grid .tbtn.portrait-tile canvas { border-radius: 6px; width: 88%; height: 88%; }
 body.touch.portrait #touch-buttons.portrait-grid .tbtn.portrait-tile .k { top: 2px; left: 3px; right: auto; min-width: 12px; padding: 0 2px; border-radius: 3px; background: rgba(7,5,4,.75); color: #f5d89e; font-size: 8px; line-height: 11px; }
@@ -879,6 +880,25 @@ body.touch .mk-why { display: none; }
 body.touch .mk-btns .btn, body.touch .mk-foot .btn { min-width: 40px; min-height: 30px; }
 body.touch .mk-next { display: none; }
 body.touch .mk-btns { grid-column: 1 / 3; }
+.macros-panel .mc-why { font-size: 12px; margin-bottom: 8px; }
+.mc-row { padding: 6px 8px; margin-bottom: 6px; border: 1px solid #3a2e22; border-left: 3px solid var(--gold-dim); border-radius: 6px; background: rgba(16,10,6,.55); }
+.mc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.mc-head .mc-name { flex: 1 1 120px; min-width: 0; width: auto; padding: 3px 6px; font-size: 14px; }
+.mc-key, .mc-add { background: #160e08; color: #e8d8c0; border: 1px solid #5a4630; border-radius: 4px; padding: 3px 4px; font: inherit; font-size: 13px; }
+.mc-keep { display: flex; align-items: center; gap: 4px; font-size: 13px; color: #d8c8a8; cursor: pointer; white-space: nowrap; }
+.mc-skills { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; }
+.mc-chip { position: relative; width: 38px; height: 38px; border: 1px solid var(--gold-dim); border-radius: 5px; background: #0c0805; cursor: pointer; }
+.mc-chip img { width: 100%; height: 100%; border-radius: 4px; display: block; }
+.mc-chip .mc-n { position: absolute; left: 2px; top: 0; font: 700 10px var(--font-body); color: var(--gold); text-shadow: 0 0 2px #000, 0 0 2px #000; }
+.mc-chip .mc-x { position: absolute; right: 1px; top: -3px; font-size: 13px; color: #ff8070; text-shadow: 0 0 2px #000; opacity: 0; }
+.mc-chip:hover .mc-x, body.touch .mc-chip .mc-x { opacity: 1; }
+.mc-chip.gone { opacity: .4; }
+body.touch .mc-chip { width: 42px; height: 42px; }
+body.touch .mc-key, body.touch .mc-add, body.touch .mc-head .mc-name, body.touch .mc-row .btn { min-height: 32px; font-size: 14px; }
+body.touch .mc-keep input { width: 20px; height: 20px; }
+body.touch .macros-panel .mc-why { display: none; }
+.tbtn.macro { border-color: #8a6ad0; background: rgba(16,8,24,.8); }
+.tbtn.macro .k { top: auto; bottom: 1px; font-size: 8px; color: #d8c8ff; }
 .rift-dialog { border-color: #1a8aa0; box-shadow: 0 0 40px #000, 0 0 18px rgba(32,224,255,.18); }
 .rift-dialog h2 { color: #80f0ff; text-shadow: 0 0 10px rgba(32,224,255,.45); }
 .rift-dialog .velscour-biome-select { width: 100%; }
