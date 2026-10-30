@@ -12,6 +12,7 @@ import { GroundItem } from '../game/loot.js';
 import { classSprite } from '../core/assets.js';
 import { heroPortrait, heroLook } from '../core/gearart.js';
 import { heldPortraitArgs } from '../gfx/heldart.js';
+import { tabRow, sheetButtons, useSheet, unloadTab } from './sheets.js';
 import { openSeal } from './sealed.js';
 import { glyphOf } from '../data/relics.js';
 import { noteFind } from '../game/reliquary.js';
@@ -27,6 +28,7 @@ export function getItem(ref) {
   if (!ref) return null;
   if (ref.where === 'bag') return c.bag[ref.idx];
   if (ref.where === 'equip') return c.equip[ref.slot];
+  if (ref.where === 'tab') return (c.tabs || [])[ref.idx];
   return null;
 }
 
@@ -116,6 +118,7 @@ function handleDropOnBag(idx, data) {
     return true;
   }
   if (data.where === 'equip') return unequip(data.slot, idx);
+  if (data.where === 'tab') return unloadTab(data.idx, idx);
   return false;
 }
 function handleDropOnEquip(slot, data) {
@@ -144,7 +147,7 @@ function bagSlot(idx) {
     onDropWorld: (data) => (data.where === 'bag' ? dropFromBag(data.idx) : false),
   });
   droppable(d, (data) => handleDropOnBag(idx, data), (data) => data.type === 'item' || data.type === 'shop' || data.type === 'stash' || data.type === 'vault');
-  if (it) UI.tip(d, () => itemTooltip(c.bag[idx], { compare: c.bag[idx] && c.bag[idx].slot ? c.equip[slotFor(c.equip, c.bag[idx])] : null, price: G.ui.vendor && G.ui.vendor.active ? Math.max(1, Math.floor(itemValue(c.bag[idx]) / 4)) : 0, priceLabel: 'Sells for', hint: G.ui.vendor && G.ui.vendor.active ? 'Right-click to sell' : G.ui.stash && G.ui.stash.active ? 'Right-click to store' : it.sealed ? 'Right-click / double-click to break the seal' : it.type === 'gear' ? 'Right-click / double-click to equip' : it.type === 'gem' ? 'Drag onto gear to socket' : '' }));
+  if (it) UI.tip(d, () => itemTooltip(c.bag[idx], { compare: c.bag[idx] && c.bag[idx].slot ? c.equip[slotFor(c.equip, c.bag[idx])] : null, price: G.ui.vendor && G.ui.vendor.active ? Math.max(1, Math.floor(itemValue(c.bag[idx]) / 4)) : 0, priceLabel: 'Sells for', hint: G.ui.vendor && G.ui.vendor.active ? 'Right-click to sell' : G.ui.stash && G.ui.stash.active ? 'Right-click to store' : it.sealed ? 'Right-click / double-click to break the seal' : it.type === 'gear' ? 'Right-click / double-click to equip' : it.type === 'gem' ? 'Drag onto gear to socket' : it.type === 'sheet' ? (it.inked && c.classId === 'bard' ? 'Right-click to load it into a Tab' : it.inked ? 'Right-click to read it' : 'Right-click to write on it') : '' }));
   return d;
 }
 
@@ -155,6 +158,7 @@ function quickUse(idx) {
   if (G.ui.vendor && G.ui.vendor.active) { G.ui.vendor.sell({ where: 'bag', idx }); return; }
   if (G.ui.stash && G.ui.stash.active) { G.ui.stash.store(idx); return; }
   if (it.type === 'gear') equipFromBag(idx);
+  else if (it.type === 'sheet') useSheet(idx);
   else if (it.type === 'gem') { UI.selected = { where: 'bag', idx }; UI.log('Drag the gem onto a socketed item to insert it.'); UI.refresh(); }
 }
 
@@ -195,9 +199,11 @@ function detailBox() {
       const targets = [...SLOTS.map((s) => ({ where: 'equip', slot: s })), ...G.char.bag.map((b, i) => ({ where: 'bag', idx: i }))].filter((r) => { const x = getItem(r); return x && x.type === 'gear' && x.gems.length < x.sockets; });
       if (targets.length) btn(`Socket (${targets.length} items)`, () => pickSocketTarget(sel.idx, targets));
     }
+    if (it.type === 'sheet') sheetButtons(btn, sel, it);
     if (G.ui.vendor && G.ui.vendor.active && !it.sealed) btn(`Sell (${fmtInt(Math.max(1, Math.floor(itemValue(it) / 4)))}g)`, () => G.ui.vendor.sell(sel));
     btn('Drop', () => dropFromBag(sel.idx), 'small red');
-  } else {
+  } else if (sel.where === 'tab') sheetButtons(btn, sel, it);
+  else {
     btn('Unequip', () => unequip(sel.slot));
   }
   // a lock: auto-play leaves the item alone (worn: never swapped out; in the bag or chest: never equipped, sold or moved)
@@ -337,6 +343,7 @@ export function renderInventory(body) {
   doll.appendChild(portrait);
   for (const s of SLOTS) doll.appendChild(equipSlot(s));
   left.appendChild(doll);
+  if (c.classId === 'bard') left.appendChild(tabRow());
   left.appendChild(detailBox());
   wrap.appendChild(left);
   const mid = el('div', 'col');

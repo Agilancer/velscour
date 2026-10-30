@@ -7,6 +7,8 @@ import { elem } from '../gfx/vfx.js';
 import { CLASSES } from '../data/classes.js';
 import { itemIconURL } from './icons.js';
 import { finishOf, gearFxOf } from '../core/gearart.js';
+import { readSheet, sheetTempo } from '../data/tabs.js';
+import { keyName } from '../data/melodies.js';
 import { RELIC_COLORS, RELIC_NAMES, SIGILS, SIGIL_MAX, sigilStats, sigilCap } from '../data/items.js';
 import { HEIRLOOM_BY_ID, COVENANT_BY_ID, PIECE_BY_ID, POWERS, GLYPHWORDS, glyphOf, wornSets, powerText, lineValue, TUNE } from '../data/relics.js';
 
@@ -61,6 +63,12 @@ export function itemTooltip(item, opts = {}) {
     h += `<div class="tt-sep"></div><div class="dim">Drag onto gear with a free socket to insert.${item.tier < MAX_GEM_TIER ? ' Fuse 3 (or refine 1) at the Gem Forge (Gem Merchant) for the next grade.' : ''}</div>`;
   } else if (item.type === 'potion') {
     h += `<div class="dim">${POTION_INFO[item.kind]}</div>`;
+  } else if (item.type === 'sheet') {
+    const r = item.text.trim() ? readSheet(item.text) : null;
+    h += `<div class="tt-base">Music Sheet · ${item.inked ? 'Locked' : r ? 'Draft' : 'Blank'}</div>`;
+    if (r && r.ev) h += `<div>${fmtInt(r.ev.length)} notes · ${keyName(r.key)} · ${sheetTempo(item, r)} BPM</div>`;
+    else if (r) h += `<div style="color:#ff8080">${escapeHtml(r.err)}</div>`;
+    h += `<div class="tt-sep"></div><div class="dim">${item.inked ? "A Bard loads it into one of his five Tabs: every note his skills write takes the song's next note, whichever skill wrote it." : "Paste tablature or note names onto it, then lock it to keep the song. Only locked sheets go in a Bard's Tabs."}</div>`;
   } else if (item.sealed) {
     h += `<div class="tt-base">Epic or better · Item Level ${item.ilvl}</div><div style="color:${col}">What lies inside is anyone's guess until the seal is broken.</div><div class="tt-sep"></div><div class="dim">${G.touch ? 'Tap' : 'Click'} <b>Break the Seal</b>, or the SEALED button on the HUD. It can't be sold or worn sealed.</div>`;
   } else {

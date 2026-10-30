@@ -2084,7 +2084,7 @@ export const Auto = {
     const steps = [];
     if (c.stash && c.stash.some((b) => b && (b.type === 'gem' || this.stashUpgrade(b)))) steps.push({ stash: true, label: 'Checking the storage chest', fn: () => this.unstash() });
     const gear = (k) => () => this.gearGain(Vendor.stock[k]);
-    steps.push({ vendor: 'weapons', label: 'Selling loot', want: () => c.bag.some((b) => b && b.type !== 'gem' && !b.sealed && !upgraded(b)) || this.gearGain(Vendor.stock.weapons), fn: () => { this.sellJunk(); if (this.buyGear(Vendor.stock.weapons)) this.sellJunk(); } }); // sell what the new piece replaced too: a nearly full bag has no slot for it
+    steps.push({ vendor: 'weapons', label: 'Selling loot', want: () => c.bag.some((b) => b && b.type !== 'gem' && b.type !== 'sheet' && !b.sealed && !upgraded(b)) || this.gearGain(Vendor.stock.weapons), fn: () => { this.sellJunk(); if (this.buyGear(Vendor.stock.weapons)) this.sellJunk(); } }); // sell what the new piece replaced too: a nearly full bag has no slot for it
     steps.push({ vendor: 'alchemist', label: 'Buying potions', want: () => this.potionsWanted(), fn: () => this.buyPotions() });
     steps.push({ vendor: 'armor', label: 'Browsing armor', want: gear('armor'), fn: () => { if (this.buyGear(Vendor.stock.armor)) this.sellJunk(); } });
     if (c.bag.some((b) => b && b.type === 'gem') || c.gold > 2000) steps.push({ vendor: 'gems', label: 'Visiting the gem merchant', fn: () => this.gemShop() });
@@ -2166,7 +2166,7 @@ export const Auto = {
     let gold = 0, n = 0;
     const future = {};
     c.bag.forEach((it, i) => {
-      if (!it || it.sealed || it.locked || filterKeeps(it) || upgraded(it)) return; // only the player breaks a seal or sells what's locked; keepers and +N gear go to the chest
+      if (!it || it.sealed || it.locked || it.type === 'sheet' || filterKeeps(it) || upgraded(it)) return; // only the player breaks a seal or sells what's locked; keepers and +N gear go to the chest
       if (it.type === 'gem') {
         const top = Math.max(0, ...SLOTS.flatMap((s) => (c.equip[s] ? c.equip[s].gems.map((g) => g.tier) : [])), ...c.bag.filter((b) => b && b.type === 'gem').map((b) => b.tier));
         if (bagFree(c) > 15 || GEMS[it.gem].special || GEMS[it.gem].sigil || it.tier >= top - 1) return;
