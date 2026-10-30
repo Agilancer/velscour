@@ -1,7 +1,8 @@
 // Item cells and tooltip HTML.
 import { G } from '../state.js';
 import { el, escapeHtml, fmtInt, fmtDmg } from '../core/util.js';
-import { shownWeapon, heroDmgLevel } from '../data/depth.js';
+import { shownWeapon, shownDmg, heroDmgLevel } from '../data/depth.js';
+import { SKILLS, effLevel } from '../data/skills.js';
 import { itemName, itemBaseLine, itemColor, itemStats, itemDmg, itemArmor, statLabel, RARITY, GEMS, gemStats, gemName, LEGENDARY, legendaryDesc, powerLevel, SLOT_NAMES, POTION_INFO, MAX_GEM_TIER, augTarget } from '../data/items.js';
 import { AUGMENTS } from '../data/rings.js';
 import { elem } from '../gfx/vfx.js';
@@ -17,6 +18,19 @@ import { HEIRLOOM_BY_ID, COVENANT_BY_ID, PIECE_BY_ID, POWERS, GLYPHWORDS, glyphO
 // are already on the shown scale (combat.js)
 const shown = (v) => fmtDmg(shownWeapon(v, heroDmgLevel(G.char)));
 const label = (s, v, trees) => statLabel(s, s === 'flatDmg' ? shown(v) : v, trees);
+
+/** A damaging augment's damage on this hero, on the shown scale: its share of the targeted skill's hit (or of the
+ *  plaque's Attack, for "all skills" and kinds), so a ring reads like a skill ("≈ 9.4K a meteor"). */
+function augDamage(p, a, A) {
+  if (!p || !A.hit) return '';
+  const sk = a.sk && SKILLS[a.sk];
+  let base = 0, on = '';
+  if (sk && (p.char.skills[a.sk] || 0) > 0) { const d = p.skillDamage(sk, Math.max(1, effLevel(p, sk))); base = (d[0] + d[1]) / 2; on = `${sk.name}'s`; }
+  else if (!sk && G.ui.hud && G.ui.hud.sheet) { base = G.ui.hud.sheet.atk; on = 'your Attack'; }
+  if (!(base > 0)) return '';
+  const [k, what] = A.hit(a.pow), L = heroDmgLevel(p.char);
+  return `<div class="tt-augdmg">≈ <b>${fmtDmg(shownDmg(base * k, L))}</b> ${escapeHtml(what)} <span class="dim">(on ${escapeHtml(on)} ${fmtDmg(shownDmg(base, L))} hit)</span></div>`;
+}
 
 export function itemCell(item) {
   const d = el('div', 'itemicon');
@@ -95,7 +109,7 @@ export function itemTooltip(item, opts = {}) {
       for (const a of item.affixes) h += `<div class="tt-line" style="color:${a.implicit ? '#d8d0c0' : a.perk ? '#d8c078' : '#8fb4ff'}">${escapeHtml(label(a.s, a.v, trees))}</div>`;
       if (item.aug) for (const a of item.aug) {
         const A = AUGMENTS[a.id], col = elem(A.el).glow, has = !a.sk || (p && p.char.skills[a.sk]);
-        h += `<div class="tt-aug" style="border-left:3px solid ${col};padding-left:6px;margin:4px 0"><b style="color:${col}">${A.name}</b> <span class="dim">· ${escapeHtml(augTarget(a))}${has ? '' : ' (not learned)'}</span><div style="color:#e8d8b8;font-size:12px">${escapeHtml(A.desc(a.pow))}</div></div>`;
+        h += `<div class="tt-aug" style="border-left:3px solid ${col};padding-left:6px;margin:4px 0"><b style="color:${col}">${A.name}</b> <span class="dim">· ${escapeHtml(augTarget(a))}${has ? '' : ' (not learned)'}</span><div style="color:#e8d8b8;font-size:12px">${escapeHtml(A.desc(a.pow))}</div>${augDamage(p, a, A)}</div>`;
       }
       if (item.legendary) {
         const L = LEGENDARY[item.legendary];

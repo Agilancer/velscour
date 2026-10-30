@@ -14,6 +14,22 @@ Contents
 
 ---
 
+## October 30, 2026 — Velscour Unbound worth winning; ring augments say their damage (branch `fix/unbound-rewards-augment-damage`)
+
+Discord: "what's the point of killing Unbound Velscour? killed him 10 times ... I get better drops from abyssal rift" and
+"I can't tell how good these rings are because they don't tell the damage".
+- **Unbound spoils** (`unboundSpoils` in `src/game/unbound.js`, dials `UNBOUND.abyssal` / `UNBOUND.marks`): on top of the
+  hoard (a Heirloom, a Covenant piece, two Sigil Stones), the Unbound Heirloom and the Crown (first win, then 1 in 4), each
+  win now drops **3 open Abyssal items** (the top rarity; a rift Guardian drops one item, Abyssal 10-60% of the time) and
+  grants **20 Infernal Marks** (a rift clear 1-8). The Unbound Heirloom is one the Codex lacks while any is missing, so four
+  wins find all four (it was random: repeats from the second win). A log line lists the spoils.
+- **Ring augments**: Void Rift and Blood Pact now state their numbers (rift: 30% x power of the hit 3x a second for 2.6 s;
+  bleed: 25% x power of the hit a second for 3 s). Every damaging augment has `hit(pow) = [share, what]` in
+  `src/data/rings.js`, and the tooltip adds "≈ N a meteor (on Fire Bolt's M hit)": the targeted skill's average hit, or the
+  plaque's Attack for "all skills", on the shown scale (`augDamage` in `src/ui/itemui.js`).
+- Tests: `unbound.js noauto nophone` (adds: 3 Abyssal + 20 Marks on the win; four picked-up wins give four different Unbound
+  Heirlooms), rings, ui, data_check.
+
 ## October 30, 2026 — thorns that work, weapon figures ~100, no dark hole in tomb walls (branch `fix/thorns-weapon-numbers`)
 
 Discord: "0.00 thorns damage ... all items that had thorns damage are 0.00", "nobody likes the tiny numbers now", and
