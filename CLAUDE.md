@@ -142,6 +142,7 @@ node tools/tests/legion.js                         # Necromancer skeleton summon
 node tools/tests/dk_ghoul.js                       # Death Knight ghoul: frost dk_ghoul atlas, small, leaps from range; frost skulls on Death Coil
 node tools/tests/phoenix.js [mobile]               # Ranger 3D golden phoenix: turntable, wing/tail tips, banks, glides, ember trail, stoop
 node tools/tests/totem3d.js [mobile]               # Totem Master 3D great totem: model states/face orders, bursts out of the ground, blast, sinks (stepped sheet)
+node tools/tests/dkblade.js [design]               # Death Knight flying sword = his equipped greatsword, 2D sprite vs live 3D model (Mythic +10, gems, runes), on his back out of a fight/in town; compare live in tools/dkblade.html
 node tools/tests/runeblade3d.js                    # Death Knight Runeblade 3D model: all 5 skins, 16 turns, rune slots, 30 level looks + reforge, hover + Obliteration shots
 node tools/tests/runeblade_familiar.js [secs] [mobile] # Death Knight sword familiar: frost skulls, 15 flight patterns, swings, 5 sword skills, Rune Weapon summons, soak
 node tools/tests/bonegibs.js                       # bone gibs (three.js skulls/rib cages/femurs baked by tools/bones3d_bake.js): sheet, looks, kill shots
@@ -235,6 +236,12 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `src/gfx/heldart.js` lays the piece in the worn armor's fist on the hero image (so it mirrors with facing), recolours
   metal/trim/grip by the look's PALETTES finish and glow by the item's element, and draws gem dots and rarity effects
   (`src/gfx/heldfx.js`). Settings `heldGear` / `heldFx`.
+  The Death Knight's 50 greatswords are each a unique build (`tools/weapons3d_greatswords.js`: within a rarity no blade or
+  guard repeats, and no two of the 50 share blade + guard + pommel), baked with a whole upright sprite (`heldFree`) and
+  one three.js JSON model per design (`assets/models/held/greatswords/NN.json`, `src/gfx/heldmodel3d.js`). They are his
+  flying sword (2D by default, setting `dkBlade` 'model' for 3D, 'runeblade' for the old Runeblade); it rests on his back
+  out of a fight and in town, and is not drawn in his hand. Run `dkblade.js`, `runeblade3d.js`, `runeblade_familiar.js`,
+  `heldgear.js` and `signatures.js death_knight`.
   Gibs: half the chunks are the painted sprites in `assets/sprites/gibs.webp`, the rest bones: three.js models (`tools/bones3d.js`) baked by
   `node tools/bones3d_bake.js` into the data sheet `assets/sprites/bones.webp` that `src/gfx/bonegibs.js` paints in the gib's bone and blood colours.
   Never hand-edit the generated files in `assets/sprites|ui|tiles|audio`.
