@@ -12,7 +12,7 @@ import { heroCanvas, excitable, preloadPortraits } from './heroanim.js';
 import { savedGearPreview } from '../core/gearart.js';
 import { attachTitleFx } from './titlefx.js';
 import { creditsScreen } from './credits.js';
-import { RARITY } from '../data/items.js';
+import { RARITY, shownEquip } from '../data/items.js';
 import { FILTER_ROWS, lootFilter } from '../game/lootfilter.js';
 import { Cloud } from '../game/cloud.js';
 
@@ -225,7 +225,8 @@ export function classSelect(sel = 'paladin', back = titleScreen) {
   const showSavedGear = (id, anim) => {
     const h = heroes[id];
     if (!h || !h.equip) return;
-    savedGearPreview(id, h.equip.body, h.equip.head).then(art => {
+    const look = shownEquip(h);
+    savedGearPreview(id, look.body, look.head).then(art => {
       if (!art || !s.isConnected || anim.id !== id) return;
       anim.setArt(art);
       anim.canvas.dataset.gearPreview = 'ready';

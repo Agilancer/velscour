@@ -9,7 +9,7 @@ import { G } from '../state.js';
 import { makeCanvas, hexToRgb, randi, chance, pick, clamp } from '../core/util.js';
 import { HELD_PER, HELD_START, heldSetOf, heldElement } from '../data/held.js';
 import { PALETTES } from '../data/gear.js';
-import { GEMS, RARITY } from '../data/items.js';
+import { GEMS, RARITY, shownEquip } from '../data/items.js';
 import { paletteLuts, itemLook, finishOf, gearMeta } from '../core/gearart.js';
 import { fxColor, drawHeldFx, drawGearSparkle } from './heldfx.js';
 import { addLight } from './vfx.js';
@@ -273,7 +273,7 @@ export function drawHeldLayer(ctx, p, held, base, where) {
   }
   if (!fx) return;
   if (top >= 4) addLight(p.x, p.y, 1.4 + (top - 4) * 0.8, 0.3);
-  const eq = p.char?.equip;
+  const eq = p.char?.equip && shownEquip(p.char);
   if (base && eq && ((eq.body?.rarity | 0) >= 2 || (eq.head?.rarity | 0) >= 2)) {
     drawGearSparkle(ctx, sparkleSpots(base, p.classId), { body: eq.body && { rarity: eq.body.rarity, col: gearCol(eq.body) }, head: eq.head && { rarity: eq.head.rarity, col: gearCol(eq.head) } }, t, map, s, { size: 1.3 });
   }
