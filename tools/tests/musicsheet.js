@@ -1,10 +1,11 @@
 // Music Sheets (src/data/tabs.js, src/ui/sheets.js, the song path in src/game/bard.js):
 //  1. the tab reader: guitar/bass/ukulele/drop-D tab, note names, chords, tempo lines, junk
-//  2. Fortunato sells blank sheets to a Bard; the editor takes a pasted tab, locks it; it loads into a Tab
+//  2. Fortunato sells blank sheets to a Bard; a blank one opens with Ode to Joy on it; the editor takes a pasted tab,
+//     locks it; it loads into a Tab
 //  3. in a dungeon every written head and every landing takes the song's next note in order, whatever the skill;
 //     a song that ends hands over to the next loaded Tab; "Play next" restarts a Tab; empty Tabs go back to the melodies
 //  4. saves keep the Tabs (and old saves get five empty ones); auto-play never sells a sheet; a short auto-play soak
-//  Shots: sheet_shop.png, sheet_editor.png, sheet_tabs.png, sheet_bar.png (+ _mobile with the mobile arg)
+//  Shots: sheet_shop.png, sheet_starter.png, sheet_editor.png, sheet_tabs.png, sheet_bar.png (+ _mobile with the mobile arg)
 //   node tools/tests/musicsheet.js [autoplay minutes, default 2] [mobile]
 const { openGame, report, OUT_DIR } = require('./harness');
 const minutes = +(process.argv[2] || 2);
@@ -71,12 +72,24 @@ E|---------------------------|---------------------------|`;
     await new Promise((r) => setTimeout(r, 100));
     const ta = document.querySelector('.sh-text');
     if (!ta) return { err: 'no editor' };
-    ta.value = ODE; ta.dispatchEvent(new Event('input'));
-    await new Promise((r) => setTimeout(r, 300));
-    return { status: document.querySelector('.sh-status').innerText, idx };
+    // a blank sheet opens with the whole of Ode to Joy written on it, ready to edit
+    const { STARTER } = await import('/src/ui/sheets.js');
+    const starter = { same: ta.value === STARTER, status: document.querySelector('.sh-status').innerText, lock: !document.querySelector('.dialog-box .btn.red').disabled };
+    return { starter, idx };
   }, ODE);
   if (ed.err) fail(ed.err);
-  else if (!/26 notes/.test(ed.status)) fail('editor status: ' + ed.status);
+  else {
+    if (!ed.starter.same) fail('a blank sheet did not open with Ode to Joy on it');
+    if (!/62 notes/.test(ed.starter.status) || !ed.starter.lock) fail('the starter tune does not read as 62 lockable notes: ' + ed.starter.status);
+  }
+  await page.screenshot({ path: `${OUT_DIR}/sheet_starter${SUF}.png` });
+  const ed2 = await page.evaluate(async (ODE) => { // paste over it
+    const ta = document.querySelector('.sh-text');
+    ta.value = ODE; ta.dispatchEvent(new Event('input'));
+    await new Promise((r) => setTimeout(r, 300));
+    return document.querySelector('.sh-status').innerText;
+  }, ODE);
+  if (!/26 notes/.test(ed2)) fail('editor status: ' + ed2);
   await page.screenshot({ path: `${OUT_DIR}/sheet_editor${SUF}.png` });
   const locked = await page.evaluate(async (idx) => {
     const { G } = window.VELSCOUR;

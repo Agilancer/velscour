@@ -109,14 +109,22 @@ export function useSheet(idx) {
   if (it.inked && isBard()) loadTab(idx); else sheetEditor(it);
 }
 
-const EXAMPLE = `Ode to Joy
+// A blank sheet opens with this already written on it (all four phrases, standard tuning), to edit or paste over
+export const STARTER = `Ode to Joy
 Tempo: 120
-e|-0-0-1-3-3-1-0-------0-0---|
-B|---------------3-1-1-----3-|
-G|---------------------------|
-D|---------------------------|
-A|---------------------------|
-E|---------------------------|`;
+e|-0-0-1-3-3-1-0---------0-0-----|-0-0-1-3-3-1-0---------0-------|
+B|---------------3-1-1-3-----3-3-|---------------3-1-1-3---3-1-1-|
+G|-------------------------------|-------------------------------|
+D|-------------------------------|-------------------------------|
+A|-------------------------------|-------------------------------|
+E|-------------------------------|-------------------------------|
+
+e|-----0-----0-1-0-----0-1-0---------|-0-0-1-3-3-1-0---------0-------|
+B|-3-3---1-3-------1-3-------3-1-3---|---------------3-1-1-3---3-1-1-|
+G|---------------------------------0-|-------------------------------|
+D|-----------------------------------|-------------------------------|
+A|-----------------------------------|-------------------------------|
+E|-----------------------------------|-------------------------------|`;
 const HELP = `<b>Guitar, bass or ukulele tab</b>: one line per string, highest on top (<code>e|--0--3--</code>); any tuning in the
 string names (<code>D|</code> for drop D), or none for standard. Columns are read left to right; numbers in one column
 sound together (the top note is the melody). Bends, slides and hammer-ons are read as plain notes.<br>
@@ -158,7 +166,7 @@ export function sheetEditor(it) {
   const html = `<div class="sheet-ed">
     <div class="sheet-fields"><label>Title <input class="sh-title" maxlength="40" ${ro} value="${escapeHtml(it.title || '')}" placeholder="Untitled Song"></label>
     <label>BPM <input class="sh-bpm" type="number" min="${BPM_RANGE[0]}" max="${BPM_RANGE[1]}" ${ro} value="${it.bpm || ''}" placeholder="${DEFAULT_BPM}"></label></div>
-    <textarea class="sh-text" spellcheck="false" wrap="off" maxlength="${SHEET_MAX}" ${ro} placeholder="${escapeHtml('Paste tablature or note names here, e.g.\n\n' + EXAMPLE)}">${escapeHtml(it.text || '')}</textarea>
+    <textarea class="sh-text" spellcheck="false" wrap="off" maxlength="${SHEET_MAX}" ${ro} placeholder="Paste tablature or note names here.">${escapeHtml(it.text || (it.inked ? '' : STARTER))}</textarea>
     <div class="sh-status"></div>
     ${it.inked ? '' : `<details class="sh-help"><summary>How to write a sheet</summary><div>${HELP}</div></details>`}
   </div>`;

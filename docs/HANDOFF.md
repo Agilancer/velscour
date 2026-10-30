@@ -21,7 +21,8 @@ Contents
   he uses.
 - **The item** (`type: 'sheet'`, `sheetItem()`/`sheetName()` in `data/items.js`; `{ text, title, bpm, inked }`, `inked` being
   the sheet's lock so the general `locked` keep-it flag stays separate): Fortunato the Gambler sells Blank Music Sheets to
-  Bards for 20 gold (`Vendor.sheetBox`). Right-click (or Write/Edit) opens the sheet's editor (`ui/sheets.js`): title,
+  Bards for 20 gold (`Vendor.sheetBox`). Right-click (or Write/Edit) opens the sheet's editor (`ui/sheets.js`); a blank
+  sheet opens with all of Ode to Joy already written on it as guitar tab (`STARTER`), to edit or paste over: title,
   optional BPM, a monospace textarea to paste into, a live status line (notes, tab blocks and strings, key, tempo, or
   what's wrong), Listen (the first 64 notes in the tab's own spacing on the harpsichord), Save, Lock (asks once; a locked
   sheet can't be changed and only reads). Locked sheets confirm before selling; auto-play never sells them.
