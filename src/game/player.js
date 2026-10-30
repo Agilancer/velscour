@@ -142,7 +142,9 @@ export class Player extends Creature {
       lifeSteal: (add.lifeSteal || 0) + buffLeech / 4,
       manaSteal: add.manaSteal || 0,
       block: Math.min(60, (add.block || 0) + buffBlock / 2),
-      thorns: (add.thorns || 0) + buffThorns * c.level * 0.2,
+      // on the shown scale (combat.js), x Fortitude like life: one affix kills a normal in ~40 reflected blows at any depth,
+      // a thorns buff (Vengeance Aura...) in ~8-16 (it was level x 0.2 against raw life: nothing past the first depths)
+      thorns: ((add.thorns || 0) + buffThorns * c.level * 0.03) * fortitude(c.level),
       goldFind: (add.goldFind || 0) + buffGf,
       magicFind: (add.magicFind || 0) + buffMf,
       drops: mk.mf,

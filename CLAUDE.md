@@ -160,7 +160,7 @@ node tools/tests/dodge.js [fights] [secs]          # auto-play vs quakes/charges
 node tools/tests/background.js [class] [secs]      # hidden window (minimised/covered/locked PC): game + auto-play keep real time (raw CDP, needs a desktop)
 node tools/tests/balance.js paladin,wizard 146 30  # a geared hero for depth D, auto-play: deaths, depths cleared (BAL_GEAR=3 weaker gear; 'god' 4th arg: DPS)
 node tools/tests/balance_model.mjs paladin         # no browser: hero life vs monster hits by depth (the curve in src/data/depth.js)
-node tools/tests/dmgscale.js [depths] [classes]    # the damage scale (shownDmg, display only): shown hits vs hero life at depths 5-500, plaque, tooltips
+node tools/tests/dmgscale.js [depths] [classes]    # the damage scale (shownDmg, display only): shown hits vs hero life at depths 5-500, plaque, tooltips; thorns kill in ~40 blows, weapons read ~100 (shownWeapon)
 node tools/tests/tuning.js all 1,10,40,160 12      # every class auto-plays vs training dummies: seconds per normal (one / pack of 5), class ratios (toughness, DMG_TUNE)
 BAL_STANCE=cautious,balanced,reckless BAL_RAID=1 node tools/tests/balance.js wizard 30 6   # stances side by side; start at a BOSS ROOM gate
 node tools/tests/endgame.js paladin,wizard [8] [rush|deep] # hero level by depth from dungeon XP (cap 3000 at depth ~6600; deep: depths 500-7500), kill times + % of life per hit (no simulation)

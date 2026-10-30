@@ -1,7 +1,7 @@
 // Inventory + character sheet.
 import { G } from '../state.js';
 import { el, fmtInt, fmtDmg, escapeHtml } from '../core/util.js';
-import { shownDmg, heroDmgLevel } from '../data/depth.js';
+import { shownWeapon, heroDmgLevel } from '../data/depth.js';
 import { sfx } from '../core/audio.js';
 import { UI, draggable, droppable } from './ui.js';
 import { itemCell, itemTooltip, rarityClass } from './itemui.js';
@@ -344,7 +344,7 @@ function statsBlock() {
   const g = el('div', 'stats-grid');
   const rows = [
     ['Life', `${fmtInt(p.hp)} / ${fmtInt(p.maxHp)}`], ['Mana', `${fmtInt(p.mana)} / ${fmtInt(p.maxMana)}`],
-    ['Weapon Base', `${fmtDmg(shownDmg(st.weapon[0], heroDmgLevel(c)))}–${fmtDmg(shownDmg(st.weapon[1], heroDmgLevel(c)))}`, "The weapon's own damage, before skills, attributes and every bonus: the Attack and DPS plaque shows what you deal"], ['Damage Bonus', `+${Math.round(st.dmgPct + st.primary)}%`],
+    ['Weapon Base', `${fmtDmg(shownWeapon(st.weapon[0], heroDmgLevel(c)))}–${fmtDmg(shownWeapon(st.weapon[1], heroDmgLevel(c)))}`, "The weapon's own damage before skills, attributes and bonuses, rated so a Common weapon of your depth's level averages 100: the Attack and DPS plaque shows what you deal"], ['Damage Bonus', `+${Math.round(st.dmgPct + st.primary)}%`],
     ['Armor', fmtInt(st.armor)], ['Crit', `${st.critChance.toFixed(1)}% / +${Math.round(st.critDmg)}%`],
     ['Attack Speed', `+${Math.round(st.atkSpeed)}%`], ['Cast Speed', `+${Math.round(st.castSpeed)}%`],
     ['Move Speed', `+${Math.round(st.moveSpeed)}%`], ['Fire Res', `${Math.min(75, st.res.fire)}%`],
@@ -354,6 +354,7 @@ function statsBlock() {
     ['Magic Find', `+${Math.round(st.magicFind)}%`], ['Gold Find', `+${Math.round(st.goldFind)}%`],
   ];
   if (st.critOver) rows.push(['Crit past 75%', `+${st.critOver.toFixed(1)}% → +${Math.round(st.critOver * CRIT_OVER)}% crit dmg`]);
+  if (st.thorns > 0) rows.push(['Thorns', fmtInt(st.thorns), 'Attackers take this much damage per blow (gear and buffs, times Fortitude)']);
   if (st.reduce) rows.push(['Damage Reduction', `${Math.round(st.reduce)}%`]);
   if (st.fortitude > 1) rows.push(['Fortitude', `+${Math.round((st.fortitude - 1) * 100)}% Life`]);
   if (p.marks && p.marks.life) rows.push(['Vitality (Marks)', `+${p.marks.life}% more Life`]);
