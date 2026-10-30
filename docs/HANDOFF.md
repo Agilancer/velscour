@@ -14,6 +14,18 @@ Contents
 
 ---
 
+## October 30, 2026 — the caverns' cutaway hole; sealed treasures take no sockets (branch `fix/cave-cut-sealed-sockets`)
+
+Discord: "that same shadow issue happens in the waterfall caves too" (the Depth's Edge shaft) and "you can add a socket and
+socket a gem into a sealed treasure".
+- **Caverns** (`src/game/caverns.js`, `src/gfx/cave3d.js`): the tomb fix (below) for the shaft and gallery: `cr.cut` only
+  while rock in front really covers the hero (`heroHidden`, held 0.4 s), and the cut drops the rock's back faces so what
+  lies behind shows instead of a dark slab. `caverns.js 1 noauto` passes (shots of the shaft's foot, middle and top).
+- **Sealed treasures**: `socketGem` refuses them ("Break the seal first"), the Socket picker leaves them out, and the
+  Jeweler's, blacksmith's and enchanter's service box shows a note and no buttons for one (`Vendor.serviceBox`). A seal only
+  hides a pre-rolled item, so gems put in before this fix stay when it is broken. `ui.js` checks gem, socket, upgrade and
+  enchant on a sealed item.
+
 ## October 30, 2026 — Velscour Unbound worth winning; ring augments say their damage (branch `fix/unbound-rewards-augment-damage`)
 
 Discord: "what's the point of killing Unbound Velscour? killed him 10 times ... I get better drops from abyssal rift" and

@@ -106,6 +106,7 @@ export function takeOffLook(slot, toIdx) {
 export function socketGem(gemIdx, target) {
   const c = G.char, gem = c.bag[gemIdx], it = getItem(target);
   if (!gem || gem.type !== 'gem' || !it || it.type !== 'gear') return false;
+  if (it.sealed) { UI.log('Break the seal first: nothing goes into a sealed treasure.', '#ffdf8a'); sfx('error'); return false; }
   if (it.gems.length >= it.sockets) { UI.log(it.sockets ? 'No free sockets. Visit the Jeweler to add more.' : 'This item has no sockets. The Jeweler can add some.', '#ff8080'); sfx('error'); return false; }
   const was = glyphOf(it);
   it.gems.push({ gem: gem.gem, tier: gem.tier });
@@ -266,7 +267,7 @@ function detailBox() {
     else if (it.type === 'gear') btn('Equip', () => equipFromBag(sel.idx));
     if (it.type === 'gear' && !it.sealed && VANITY_SLOTS.includes(it.slot)) btn('Wear as look', () => wearLook(sel.idx));
     if (it.type === 'gem') {
-      const targets = [...SLOTS.map((s) => ({ where: 'equip', slot: s })), ...G.char.bag.map((b, i) => ({ where: 'bag', idx: i }))].filter((r) => { const x = getItem(r); return x && x.type === 'gear' && x.gems.length < x.sockets; });
+      const targets = [...SLOTS.map((s) => ({ where: 'equip', slot: s })), ...G.char.bag.map((b, i) => ({ where: 'bag', idx: i }))].filter((r) => { const x = getItem(r); return x && x.type === 'gear' && !x.sealed && x.gems.length < x.sockets; });
       if (targets.length) btn(`Socket (${targets.length} items)`, () => pickSocketTarget(sel.idx, targets));
     }
     if (it.type === 'sheet') sheetButtons(btn, sel, it);

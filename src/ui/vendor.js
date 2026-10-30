@@ -245,7 +245,8 @@ export const Vendor = {
       b.onclick = () => { c.gold -= cost; fn(); changed(); };
       box.appendChild(b);
     };
-    if (it && it.type === 'gear') {
+    if (it && it.sealed) box.appendChild(el('div', 'dim', 'Break the seal first: no socket, upgrade or enchantment goes onto a sealed treasure.'));
+    else if (it && it.type === 'gear') {
       if (kind === 'upgrade') {
         if ((it.upg || 0) >= 10) box.appendChild(el('div', 'dim', 'This item is fully upgraded (+10).'));
         else btn(`Upgrade to +${(it.upg || 0) + 1}`, upgradeCost(it), true, () => { it.upg = (it.upg || 0) + 1; sfx('thud'); UI.log(`${escapeHtml(itemName(it))} upgraded!`, '#ffd34a'); });
