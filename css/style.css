@@ -934,3 +934,4 @@ body.touch .rift-board .velscour-biome-select { padding: 5px 10px; }
 body.touch .rb-list { max-height: none; }
 body.touch .rb-row { grid-template-columns: 22px 1fr 54px 40px 48px; gap: 5px; font-size: 12px; }
 body.touch .rb-build { padding-left: 10px; }
+.tt-augdmg { font-size: 12px; color: #ffcf7a; margin-top: 1px; }

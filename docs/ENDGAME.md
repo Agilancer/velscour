@@ -253,8 +253,9 @@ hero over the cap); three phases alone 5.0-8.0; the Pact on the cap with the cou
 22-minute deadlocks (Valdric and the Organ in phase 3: fixed by the cast pace, the lava rule and leaving the Organ out);
 x1.3 -> x2.4 and the 3.5% obelisks each added 0.3-0.5 minutes; court x1.6 instead of x1.2 only lengthened the tails.
 
-On his death (`unboundSpoils`): the court falls with him (no loot), the usual hoard, plus **one Unbound Heirloom**
-(`makeHeirloom(lvl, { unbound: true })`, one of the four) and, the first win always (`c.unbound.wins === 0` then) and
+On his death (`unboundSpoils`): the court falls with him (no loot), the usual hoard, **3 open Abyssal items**
+(`UNBOUND.abyssal`), **20 Infernal Marks** (`UNBOUND.marks`; both since Oct 30, 2026), plus **one Unbound Heirloom**
+(one the Codex lacks while any is missing, then `makeHeirloom(lvl, { unbound: true })`, one of the four) and, the first win always (`c.unbound.wins === 0` then) and
 then one in four, **the Crown of the Demon Lord**, both open (never sealed); the Codex notes them on pickup.
 `c.unbound = { wins, best (seconds), court }`, `endgame().unboundWins++`.
 
