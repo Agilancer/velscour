@@ -25,6 +25,8 @@ import { bardCompose, bardUpdate, harmonyMul } from './bard.js';
 import { ASTRONOMER, astroAfterCast, astroUpdate } from './astronomer.js';
 import { sigCast, sigHit, sigUpdate } from './signature.js';
 import { bladeOnBack } from './sigs/deathknight.js';
+
+const FREE_CAST = new Set(['buff', 'summon']);
 import { relicBonuses } from '../data/relics.js';
 import { relicProc } from './relicprocs.js';
 import { noteFind, codexMf } from './reliquary.js';
@@ -404,6 +406,41 @@ export class Player extends Creature {
   }
 
   // ------------------------------------------------------------------ skills
+  /** Casting an offensive spell roots the hero for its use time; buffs, summons, totems and turrets don't. */
+  get rooted() { return this.castLock > 0 && !this.castFree; }
+
+  /** Settings > Auto-cast summons: re-raise any summon on the skill bar the moment one of its pets is missing. */
+  autoSummon(dt) {
+    if (G.settings.autoSummon === false || G.autoplayOn || !this.world || this.world.kind === 'town' || this.dead) return;
+    if ((this.autoSumT = (this.autoSumT || 0) - dt) > 0) return;
+    this.autoSumT = 0.2;
+    if (this.channel) return;
+    const w = this.world, mine = w.creatures.filter((c) => c.summon && c.owner === this && !c.dead);
+    let foe;
+    for (const id of new Set(this.char.bar || [])) {
+      const sk = id && SKILLS[id];
+      if (!sk || sk.kind !== 'summon' || this.canUse(sk)) continue;
+      const m = sk.m, L = this.skillLevel(sk), grow = m.grow ? Math.floor((L - 1) / 5) : 0, n = (m.n || 1) + grow;
+      const cap = (m.max || (m.dur ? 99 : (m.n || 1))) + grow; // the same cap createSummon enforces
+      if (mine.filter((c) => c.skillId === sk.id).length >= cap || mine.length + n > 40) continue;
+      let tx = this.x + Math.cos(this.facing) * 1.2, ty = this.y + Math.sin(this.facing) * 1.2;
+      if (m.sum === 'revive') {
+        const c = w.corpses.find((c) => !c.used && dist(c.x, c.y, this.x, this.y) < 5);
+        if (!c) continue;
+        tx = c.x; ty = c.y;
+      } else if (m.dur) { // timed summons wait for a fight
+        if (foe === undefined) foe = w.nearestHostile(this.team, this.x, this.y, 10) || null;
+        if (!foe) continue;
+      }
+      // raised at once, between the hero's own casts: keep whatever attack he is in the middle of
+      const lock = this.castLock, free = this.castFree, aim = this.aim;
+      this.castLock = 0;
+      const ok = this.tryUseSkill(sk, tx, ty);
+      if (lock > 0) { this.castLock = lock; this.castFree = free; this.aim = aim; }
+      if (ok) return;
+    }
+  }
+
   canUse(sk) {
     const L = this.skillLevel(sk);
     if (!L) return 'unlearned';
@@ -452,6 +489,7 @@ export class Player extends Creature {
     if (this.st.procs.length) relicProc(this, 'cast', target && !target.dead ? target : null, 0);
     const spd = sk.attack ? this.st.atkSpeed : this.st.castSpeed;
     this.castLock = useTime(sk) / (1 + spd / 100);
+    this.castFree = FREE_CAST.has(sk.kind); // Diablo style: buffs, summons, totems and turrets don't root the hero
     this.cooldowns[sk.id] = cooldown(sk) * (1 - this.st.cdr / 100) * quick;
     this.aim = [tx, ty];
     this.lastEl = sk.el;
@@ -599,6 +637,7 @@ export class Player extends Creature {
     if (changed) this.recompute();
     this.scale = (this.buffs.some((b) => b.transform) ? 1.22 : 1) * (this.sigScale || 1); // sigScale: the Slime Lord's mass
     for (const k in this.cooldowns) if (this.cooldowns[k] > 0) this.cooldowns[k] -= dt;
+    this.autoSummon(dt);
     if (this.castLock > 0) {
       this.castLock -= dt;
       if (this.castLock <= 0 && this.queued) { const q = this.queued; this.queued = null; this.tryUseSkill(q.sk, q.tx, q.ty, q.target); }
@@ -622,7 +661,7 @@ export class Player extends Creature {
     if (this.channel) return;
     // movement
     this.moving = false;
-    if (this.castLock > 0) return;
+    if (this.rooted) return;
     const [vx, vy] = this.moveVec;
     if (vx || vy) {
       this.moveTarget = null; this.path = null; this.attackTarget = null; this.interact = null;
