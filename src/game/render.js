@@ -30,6 +30,7 @@ import { heresyRankOf } from './heresies.js';
 import { addLight } from '../gfx/vfx.js';
 import { drawTerrain, drawColumn, occludersFor, occludersOfRect, occluderObj, clipAdd, hiddenBehind, standKey, hopZ, drawSky, terrainShade, HS } from '../gfx/terrain.js';
 import { drawRiftgate } from '../gfx/riftgate.js';
+import { fpBegin, fpClip, fpDepth, fpProject, fpScale, fp, PX, EYE } from '../gfx/firstperson.js';
 
 let lightCanvas = null, glowCanvas = null, vignette = null, vigKey = '';
 const transitionSprites = new Map();
@@ -1038,6 +1039,139 @@ export function renderWorld(ctx, world) {
   for (const item of pool) item.o = null;
   top.length = 0;
 }
+
+// First person (gfx/firstperson.js): the level in 3D, then everything on it as billboards, far to near, each scaled
+// round its foot by its depth and clipped to the screen columns no nearer wall covers. Returns false when the 3D view
+// can't draw yet (three.js still loading): the caller draws the usual view.
+const fpList = [];
+const fpPos = [0, 0];
+export function renderFirstPerson(ctx, world) {
+  const W = G.W * G.dpr, H = G.H * G.dpr;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  if (!fpBegin(ctx, world, (g, x0, y0, x1, y1) => drawFloorTiles(g, world, x0, y0, x1, y1, true))) return false;
+  camera.apply(ctx);
+  const camT = ctx.getTransform(), z = camera.zoom;
+  const hq = G.touch || (G.resScale || 1) < 0.95 ? 'low' : 'medium';
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = hq;
+  const vr = camera.viewRect(40), map = world.map, p = world.player, far = fp.far + 1;
+  let n = 0;
+  // f: 1 creature, 2 townsperson, 3 loot, 4 chest, 5 portal, 6 prop, 7 tree, 8 building, 9 torch, 10 hanging,
+  // 11 corpse, 12 fallen pet, 13 ground hazard (laid flat), 14 hazard (unscaled); hw: half its width in sprite px
+  const add = (x, y, f, o, hw) => {
+    const d = fpDepth(x, y);
+    if (d < 0.3 || d > far) return;
+    fpProject(x, y, 0, fpPos);
+    const half = hw * fp.f / (PX * d);
+    if (fpPos[0] + half < 0 || fpPos[0] - half > G.W) return;
+    const it = fpList[n] || (fpList[n] = {});
+    n++; it.d = d; it.f = f; it.o = o; it.x = x; it.y = y; it.sx = fpPos[0]; it.half = f === 14 ? hw * z : half;
+  };
+  for (const c of world.creatures) {
+    c.sbox = null;
+    if (c.dead || c === p || c.hidden) continue;
+    add(c.x, c.y, 1, c, 50 * (c.scale || 1));
+  }
+  for (const nn of world.npcs) { nn.sbox = null; if (!nn.hidden) add(nn.x, nn.y, 2, nn, 40); }
+  for (const l of world.loot) add(l.x, l.y, 3, l, 30);
+  for (const c of world.chests) add(c.x, c.y, 4, c, 50);
+  for (const po of world.portals) add(po.x, po.y, 5, po, 80);
+  for (const pr of world.props) {
+    if (pr.caveProp || pr.roofOf) continue;
+    add(pr.x, pr.y, pr.tree ? 7 : 6, pr, pr.spr && pr.k ? (pr.spr.w * pr.k) / 2 + Math.abs(pr.spr.ox * pr.k) : 70);
+  }
+  const tc = map.treeCells;
+  if (tc) {
+    const r = far, bx0 = Math.max(0, Math.floor((p.x - r) / tc.B)), bx1 = Math.min(tc.bw - 1, Math.floor((p.x + r) / tc.B));
+    const by0 = Math.max(0, Math.floor((p.y - r) / tc.B)), by1 = Math.min(tc.bh - 1, Math.floor((p.y + r) / tc.B));
+    for (let by = by0; by <= by1; by++) for (let bx = bx0; bx <= bx1; bx++) for (const pr of tc.cells[by * tc.bw + bx]) add(pr.x, pr.y, 7, pr, (pr.spr.w * pr.k) / 2 + Math.abs(pr.spr.ox * pr.k));
+  }
+  for (const b of world.buildings) add(b.cx, b.cy, 8, b, (b.spr.w * b.k) / 2 + Math.abs(b.spr.ox * b.k));
+  for (const t of world.torches) add(t.mountX ?? t.x, t.mountY ?? t.y, 9, t, 30);
+  for (const h of world.wallHangings) add(h.mountX, h.mountY, 10, h, 50);
+  for (const c of world.corpses) add(c.x, c.y, 11, c, 60);
+  for (const f of world.fallen || []) add(f.x, f.y, 12, f, 40);
+  const loose = [];
+  for (const h of world.hazards) {
+    if (h.shieldVariant || typeof h.x !== 'number' || typeof h.y !== 'number') { loose.push(h); continue; }
+    if (h.ground) add(h.x, h.y, 13, h, 160); else add(h.x, h.y, 14, h, 200);
+  }
+  fpList.length = Math.max(fpList.length, n);
+  const list = fpList.slice(0, n).sort((a, b) => b.d - a.d);
+
+  drawEffects(ctx, 'ground');
+  for (const it of list) {
+    const o = it.o, d = it.d, k = it.f === 14 ? 1 : fpScale(Math.max(d, 1.4)); // nothing grows past its size a stride off
+    const onWall = it.f === 9 || it.f === 10;
+    const clip = fpClip(ctx, it.sx - it.half, it.sx + it.half, onWall ? d - 0.6 : d);
+    if (!clip) continue;
+    const px = isoX(it.x, it.y), py = isoY(it.x, it.y);
+    ctx.setTransform(camT);
+    if (k !== 1) { ctx.translate(px, py); ctx.scale(k, it.f === 13 ? k * Math.min(1, (2 * EYE) / d) : k); ctx.translate(-px, -py); }
+    const fade = clamp(Math.min((far - d) / 4, (d - 0.3) / 0.5), 0, 1); // into the dark far off; see-through right on the eye
+    switch (it.f) {
+      case 1: {
+        if (fade < 1) ctx.globalAlpha = fade;
+        G.barK = clamp(k, 0.45, 0.85) / k;
+        o.draw(ctx);
+        G.barK = 0;
+        const img = o.spriteImage(), [w, h] = o.spriteDims(img), kz = k * z, lift = (o.z || 0) + (o.fly ? 16 : 0);
+        camera.tileToScreen(o.x, o.y).forEach((v, i) => { fpPos[i] = v; });
+        o.sbox = [fpPos[0] - (w / 2) * kz, fpPos[1] - (h + lift) * kz, fpPos[0] + (w / 2) * kz, fpPos[1] - (o.z || 0) * kz];
+        if (o.barTop != null) o.barTop = py + (o.barTop - py) * k;
+        break;
+      }
+      case 2: {
+        drawNpc(ctx, o);
+        const s = o.sbox;
+        if (s) o.sbox = [px + (s[0] - px) * k, py + (s[1] - py) * k, px + (s[2] - px) * k, py + (s[3] - py) * k];
+        break;
+      }
+      case 3: o.draw(ctx); break;
+      case 4: drawChest(ctx, o); break;
+      case 5: drawPortal(ctx, o); break;
+      case 6: drawProp(ctx, o, fade); break;
+      case 7: drawTree(ctx, o, false); break;
+      case 8: drawBuilding(ctx, o, fade); break;
+      case 9: drawWallTorch(ctx, o, world.biome, G.time, fade); break;
+      case 10: drawWallHanging(ctx, o, world.biome, fade); break;
+      case 11: drawCorpse(ctx, o); break;
+      case 12: drawPetCorpse(ctx, o, px, py); break;
+      case 13: case 14: if (fade < 1) ctx.globalAlpha = fade; o.draw(ctx); break;
+    }
+    ctx.globalAlpha = 1;
+    if (clip === 2) ctx.restore();
+  }
+  ctx.setTransform(camT);
+  for (const h of loose) {
+    if (h.shieldVariant && h.pos) { for (let i = 0; i < h.pos.length; i++) h.drawShield(ctx, i); }
+    else h.draw(ctx);
+  }
+  drawParticles(ctx, vr);
+  ctx.globalCompositeOperation = 'lighter';
+  drawEffects(ctx, 'top');
+  ctx.globalCompositeOperation = 'source-over';
+  for (const it of list) it.o = null;
+
+  // ---------------------------------------------------------- screen space
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (!fpVignette || fpVignette.width !== Math.ceil(W / 4) || fpVignette.height !== Math.ceil(H / 4)) {
+    fpVignette = makeCanvas(Math.ceil(W / 4), Math.ceil(H / 4));
+    const v = fpVignette.getContext('2d'), vw = fpVignette.width, vh = fpVignette.height;
+    const g = v.createRadialGradient(vw / 2, vh / 2, Math.min(vw, vh) * 0.4, vw / 2, vh / 2, Math.max(vw, vh) * 0.75);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.55)');
+    v.fillStyle = g; v.fillRect(0, 0, vw, vh);
+  }
+  ctx.drawImage(fpVignette, 0, 0, W, H);
+  if (G.hurtFlash > 0) { ctx.fillStyle = `rgba(160,0,0,${Math.min(0.45, G.hurtFlash)})`; ctx.fillRect(0, 0, W, H); }
+  if (G.flash > 0) { ctx.fillStyle = `rgba(255,250,230,${Math.min(0.8, G.flash)})`; ctx.fillRect(0, 0, W, H); }
+  if (p && p.hp < p.maxHp * 0.3 && !p.dead) { ctx.fillStyle = `rgba(120,0,0,${0.15 + Math.sin(G.time * 6) * 0.08})`; ctx.fillRect(0, 0, W, H); }
+  drawOverheadNames(ctx, world);
+  G.lootBoxes = drawLootLabels(ctx, world, G.input && G.input.lastPointerType === 'mouse' ? G.input.mouse : null);
+  drawTexts(ctx);
+  return true;
+}
+let fpVignette = null;
 
 // The see-through layer, over the lit scene: the wall bases (Settings, off by default), then every creature's rim and
 // life bar in depth order (creature.js drawXray), each body cutting out whatever it stands in front of. One canvas the

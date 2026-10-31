@@ -14,6 +14,26 @@ Contents
 
 ---
 
+## October 30, 2026 — first-person view (branch `feat/first-person-view`)
+- **Settings › First-person view** (`G.settings.firstPerson`, off by default): the game through the hero's eyes in
+  the town, dungeons and every flat overworld. The Serpentine Tower and the caverns keep their own 3D views.
+- `src/gfx/firstperson.js`: three.js (the same import map as the tower) draws the floor (the level's own floor art,
+  painted once onto a top-down canvas by `drawFloorTiles` through an iso→square transform; settled blood is stamped in
+  every 2.5 s), walls on every floor/void edge (the biome's straight wall piece, mask 10, sheared upright; the town
+  and wilds use blocks cut from the floor) and a ceiling indoors (sky outdoors), with fog from the biome's
+  `dark`/`light`. It also casts one ray per 2-3 css px column for a wall depth buffer.
+- `renderFirstPerson` (`src/game/render.js`): every creature, townsperson, prop, tree, building, torch, chest,
+  portal, corpse and loot is drawn far to near with its usual draw code, scaled round its foot by depth (capped at its size
+  1.4 tiles off), faded into the fog and clipped to the columns no nearer wall covers. Spells, particles and effects
+  draw at projected positions, unscaled. Life bars keep near a fixed size (`G.barK` in `creature.js`).
+- A warp (`setWarp` in `core/view.js`) projects tile positions onto the screen, so `camera.screenToTile` picks the
+  floor: clicking, hover, labels, damage numbers and touch taps all work unchanged. While it is on, `camera.fixed`
+  holds the camera at 0,0.
+- Controls (`controls.js` → `fpSteer`): A/D or the joystick's x turn, W/S or its y walk where the view looks. The view
+  eases round to the hero's facing while he walks to a click, fights or plays himself; turning by hand holds it 0.8 s.
+- Test: `tools/tests/firstperson.js [biomes] [mobile]`. In SwiftShader a first-person frame cost about the same as the
+  usual view (8-14 ms against 9-11 ms).
+
 ## October 30, 2026 — the caverns' cutaway hole; sealed treasures take no sockets (branch `fix/cave-cut-sealed-sockets`)
 
 Discord: "that same shadow issue happens in the waterfall caves too" (the Depth's Edge shaft) and "you can add a socket and

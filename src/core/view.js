@@ -20,6 +20,7 @@ let WARP = null, WPICK = null, wkx = NaN, wky = NaN;
 const wout = [0, 0];
 export function setWarp(warp, pick) { WARP = warp; WPICK = pick; wkx = NaN; }
 export function warpMoved() { wkx = NaN; }
+export const currentWarp = () => WARP;
 const warped = (x, y) => { if (x !== wkx || y !== wky) { wkx = x; wky = y; WARP(x, y, wout); } return wout; };
 export const isoX = (x, y) => (WARP ? warped(x, y)[0] : (x - y) * HW);
 export const isoY = (x, y) => (WARP ? warped(x, y)[1] : (x + y) * HH - (ELEV ? ELEV(x, y) : 0));
@@ -42,6 +43,7 @@ export const camera = {
   leadY: 0,
   zoomK: 1, // a level's own zoom factor (the tower's roof pulls back to show the airships)
   follow(tx, ty, dt, snap = false) {
+    if (this.fixed) return; // first person (gfx/firstperson.js) holds the camera still: its warp does the placing
     const wx = isoX(tx, ty) + this.leadX, wy = isoY(tx, ty) - 24 + this.leadY;
     if (snap) { this.x = wx; this.y = wy; return; }
     const k = 1 - Math.pow(0.0005, dt);
