@@ -1059,7 +1059,7 @@ export const Auto = {
   /** Notice when the hero walks into a wall or a crowd and wiggle free. */
   watchStuck(dt) {
     const p = G.player, s = this.stuck;
-    const trying = (p.moveVec[0] || p.moveVec[1]) && p.castLock <= 0 &&
+    const trying = (p.moveVec[0] || p.moveVec[1]) && !p.rooted &&
       (!p.channel || (p.channel instanceof Whirl && p.classId === 'barbarian'));
     s.t += dt;
     if (s.t < 0.6) return;
@@ -1650,7 +1650,7 @@ export const Auto = {
     const R = this.rules;
     if (R && R.holdFire && t.rank === 'boss') { this.setStatus('Holding fire — riposte!'); if (!this.kite([t])) p.moveVec = [0, 0]; return; }
     if (!fleeing && !R && this.openGround(t, d)) return;
-    if (R && R.move && !fleeing && p.castLock <= 0 && Math.hypot(p.moveVec[0], p.moveVec[1]) < 0.1) {
+    if (R && R.move && !fleeing && !p.rooted && Math.hypot(p.moveVec[0], p.moveVec[1]) < 0.1) {
       // static builds while standing: circle the target between casts
       const a = angleTo(t.x, t.y, p.x, p.y) + (this.strafe || (this.strafe = 1)) * 0.9, sx = t.x + Math.cos(a) * Math.max(2, d), sy = t.y + Math.sin(a) * Math.max(2, d);
       if (!G.world.map.circleFree(sx, sy, 0.3)) this.strafe = -this.strafe; else this.steer(sx, sy);

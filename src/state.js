@@ -36,6 +36,7 @@ export const G = {
     wallLines: false, // a line along the foot of the dungeon's walls, over the spells
     heldGear: true, // the hero holds his weapon and off-hand (src/gfx/heldart.js)
     heldFx: true, // their glows and particles, gem sparks and rarity sparkles on armor (with held gear on)
+    autoSummon: true, // re-raise pets, totems and turrets on the skill bar the moment one is missing (Player.autoSummon)
     firstPerson: false, // watch the game through the hero's eyes (gfx/firstperson.js)
     dkBlade: 'sprite', // the Death Knight's flying sword: 'sprite' (his sword as a 2D object), 'model' (live three.js), 'runeblade'
     noSkipCine: false, // "Don't skip cutscenes": Sky Battle scenes already seen play at 1x, not 20x
