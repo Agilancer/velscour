@@ -517,7 +517,9 @@ export class Creature {
     } else if (this.team === 'player' && !this.isPlayer && this.summon && this.maxHp > 0 && this.hp < this.maxHp) col = '#30c040';
     this.barTop = null;
     if (!col) return;
-    const x = px - bw / 2, y = py - 4 - bh, f = clamp(this.hp / this.maxHp, 0, 1);
+    const kb = G.barK || 1; // first person scales a creature by its depth; its bar keeps near a fixed size
+    bw *= kb; bh *= kb;
+    const x = px - bw / 2, y = py - 4 * kb - bh, f = clamp(this.hp / this.maxHp, 0, 1);
     this.barTop = y; // champion and unique names sit above it (render.js drawOverheadNames)
     const e = xray.on && xray.n && xray.list[xray.n - 1];
     if (e && e.who === this) { e.bar = true; e.bx = x; e.by = y; e.bw = bw; e.bh = bh; e.bf = f; e.bc = col; }

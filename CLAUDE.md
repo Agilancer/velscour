@@ -70,6 +70,7 @@ node tools/tests/ui.js                             # skill tree, inventory, sock
 node tools/tests/macros.js                         # macros: several skills on one key (R E Y U O), Keep up, the panel, touch buttons (both orientations), save shape
 node tools/tests/options.js                        # settings: lock skill bar, hide item names, auto skill points off; skill tree Respec (50 gold x level^2)
 node tools/tests/mobile.js                         # 844x390 touch layout + joystick
+node tools/tests/firstperson.js [biomes] [mobile] # Settings > First-person view (gfx/firstperson.js): 3D walls/floor, billboards, click/W/D steering, auto-play, off again
 node tools/tests/hud.js                            # HUD art: 15-slot bar keys, save migration, minimap ring, buttons, Quest Log, touch pages
 node tools/tests/rims.js                           # monster rims (rank colours, green summons, gold hero), pet see-through walls, enlargeable target window
 node tools/tests/seethrough.js [mobile]            # see-through outlines + life bars over spells/walls/darkness, every enemy's bar, wall-base lines, settings
@@ -255,7 +256,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   document per class, merged three ways against `velscour_cloud_v1`. It must never lose a save: back up before any local change
   (`src/game/herobackup.js`), and a missing hero is only deleted by a tombstone (rules in docs/CLOUD_SAVES.md); changes to saving or `src/game/cloud.js`: run `cloud.js`.
 - After any gameplay change, run at least `flow.js` and the `skills.js` classes you touched. Run `mobile.js`
-  and `hud.js` for UI changes. Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
+  and `hud.js` for UI changes. The first-person view (`src/gfx/firstperson.js`, `renderFirstPerson` in `render.js`, the warp it sets in `core/view.js`): run `firstperson.js` (and `firstperson.js catacombs mobile`). Changes to skills, items, vendors or monster AI can confuse auto-play (`src/game/autoplay.js`), so run
   `autoplay.js` for a class or two as well, and `autoloops.js` for changes to how auto-play chooses, gives up or moves (`lootStep`, `combat`, `huntGoal`, `goTo`, `dodgeDanger`). The main loop and its hidden-page ticker (`src/main.js`): run `background.js`. Macros (`src/game/macros.js`, `src/ui/macros.js`, `src/data/macros.js`, `controls.castSkill`, the touch macro buttons): run `macros.js`. Auto-play's town errands (buying, selling, stashing, gambling) or the loot filter (`src/game/lootfilter.js`): run `autoshop.js`, `stash.js`, `autogear.js` and `locks.js` (`ringloop.js` and `stalegear.js` for what it wears: `fitScore`, `optimizeGear`). Changes to minion AI or `map.findPath`: run `pets.js` and `legion.js`. Pet art (`assets/source/pet_animations/`, `tools/build_pet_animations.py`, `src/core/petart.js`; watch them in `tools/pet_viewer.html`): run `petanims.js`.
   Held gear (`src/gfx/heldart.js`, `src/gfx/heldfx.js`, `src/data/held.js`, a re-bake of `assets/sprites/held/`): run `heldgear.js` and `herolook.js`.
   Changes to monster movement (`Monster.navTo/chase`, `map.move`, the flow field): run `mobs.js`. Overworld scenarios

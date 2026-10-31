@@ -5,6 +5,7 @@ import { camera, screenDirToTile } from '../core/view.js';
 import { dist, angleTo } from '../core/util.js';
 import { SKILLS, skillRange, needsTarget } from '../data/skills.js';
 import { SLOT_KEYS, RMB } from '../data/bar.js';
+import { fp, fpSteer } from '../gfx/firstperson.js';
 import { Macros } from './macros.js';
 
 function creatureAt(sx, sy) {
@@ -93,7 +94,12 @@ export const controls = {
     }
     if (input.joy.active) { mx = input.joy.vx; my = input.joy.vy; }
     let mag = Math.hypot(mx, my);
-    if (mag > 0.15) {
+    if (fp.on) {
+      // first person: left/right turn the view, up/down walk where it looks (gfx/firstperson.js)
+      const turn = Math.abs(mx) > 0.15 ? mx : 0, fwd = Math.abs(my) > 0.15 ? -my : 0;
+      const mv = fpSteer(dt, p, turn, Math.max(-1, Math.min(1, fwd)), false);
+      p.moveVec = mv || [0, 0];
+    } else if (mag > 0.15) {
       let [tx, ty] = screenDirToTile(mx, my);
       const l = Math.hypot(tx, ty);
       const k = Math.min(1, mag) / (l || 1);

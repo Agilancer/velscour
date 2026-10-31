@@ -337,6 +337,7 @@ export function settingsDialog() {
     <label>Sound effects</label><input type="range" min="0" max="1" step="0.05" value="${st.sfx}" data-k="sfx">
     <label>Music</label><input type="range" min="0" max="1" step="0.05" value="${st.music}" data-k="music">
     <label>Ambience</label><input type="range" min="0" max="1" step="0.05" value="${st.amb ?? 0.5}" data-k="amb">
+    <label title="Watch the game through the hero's eyes. A/D or the joystick turn, W/S walk; click the floor to walk there">First-person view</label><input type="checkbox" data-k="firstPerson" ${st.firstPerson ? 'checked' : ''}>
     <label>Camera zoom</label><input type="range" min="0.7" max="1.6" step="0.05" value="${st.zoom}" data-k="zoom">
     <label>Gore</label><select data-k="gore"><option value="0">Off</option><option value="1">Bloody</option><option value="2">Extreme</option></select>
     <label title="30 draws half the frames: smoother than a frame rate that keeps dipping, and a phone stays cooler (a hot phone slows itself down after a long session)">Frame rate cap</label><select data-k="fpsCap"><option value="0">None</option><option value="30">30 fps (cooler phone)</option></select>
@@ -431,6 +432,7 @@ export function helpDialog() {
     <div><kbd>R</kbd> <kbd>E</kbd> <kbd>Y</kbd> <kbd>U</kbd> <kbd>O</kbd> macros: several skills on one key, set up from the skill tree's <b>Macros</b> button (or the menu)</div>
     <div><kbd>I</kbd> inventory · <kbd>K</kbd> skill tree · <kbd>B</kbd> skill book · <kbd>Q</kbd> quest log</div>
     <div><kbd>Tab</kbd>/<kbd>M</kbd> map · <kbd>Esc</kbd> menu · wheel zoom</div>
+    <div>First-person view (Settings): <kbd>A</kbd>/<kbd>D</kbd> turn, <kbd>W</kbd>/<kbd>S</kbd> walk, click the floor to walk there</div>
     <div><kbd>P</kbd> or the <b>Auto</b> button: auto-play (the hero fights, loots, shops and delves on autopilot)</div>
     <div><kbd>G</kbd> MADNESS · <kbd>F</kbd> SMITE, then click where it should strike (both fill as you fight)</div>
     <div><b style="color:#ffe2a0">While the hero plays</b></div>

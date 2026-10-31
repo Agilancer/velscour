@@ -68,7 +68,8 @@ import { clearRims } from './creature.js';
 import { applyTrait, rollTrait, ambushTick, madnessTick, unleashMadness } from './mayhem.js';
 import { makeRaidBoss } from './raid.js';
 import { dropChest } from './loot.js';
-import { renderWorld, drawMinimap, preloadTownSheets, releaseTownSheets, propReach } from './render.js';
+import { fpWanted, fpRelease } from '../gfx/firstperson.js';
+import { renderWorld, renderFirstPerson, drawMinimap, preloadTownSheets, releaseTownSheets, propReach } from './render.js';
 import { controls } from './controls.js';
 import { Auto } from './autoplay.js';
 import { writeSave, newCharData, migrate } from './save.js';
@@ -1301,7 +1302,8 @@ export const game = {
   render() {
     const w = G.world;
     if (!w) return;
-    renderWorld(G.ctx, w);
+    // first person (Settings) draws through the hero's eyes; until three.js is in, and everywhere else, the usual view
+    if (!(fpWanted(w) && renderFirstPerson(G.ctx, w))) { fpRelease(); renderWorld(G.ctx, w); }
     if (G.showAutomap) {
       const W = G.W * G.dpr, H = G.H * G.dpr;
       if (!automapCanvas || automapCanvas.width !== W || automapCanvas.height !== H) automapCanvas = makeCanvas(W, H);
