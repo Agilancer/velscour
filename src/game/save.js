@@ -1,6 +1,6 @@
 // LocalStorage persistence for heroes.
 import { CLASSES } from '../data/classes.js';
-import { rollItem, HOLLOW } from '../data/items.js';
+import { rollItem, HOLLOW, AFFIX_BY_STAT, affixScale, powerLevel, flatDmgValue, LINE_MULT, PERK_MULT } from '../data/items.js';
 import { drawBiome } from '../data/biomes.js';
 import { migrateBar, BAR_SIZE } from '../data/bar.js';
 import { TAB_SLOTS } from '../data/tabs.js';
@@ -141,7 +141,7 @@ export function newCharData(classId, name) {
     gold: 150, potions: { hp: 6, mp: 4, rejuv: 1, fury: 1 },
     depth: 1, deepest: 0, nextBiome: null, biomeBag: [], cleared: {}, overworldMisses: 0, overworldLastVisit: null, seaOfSandRuns: {}, darkForestRuns: {}, breach: { best: 0, cleared: {} },
     heresy: { on: [] }, rifts: { open: 1, best: 0, cleared: {}, bestTime: {}, runs: 0, fails: 0, deaths: 0 }, keys: 0, unbound: { wins: 0, best: 0 }, // the Endgame (docs/ENDGAME.md)
-    kills: 0, deaths: 0, created: Date.now(), lastPlayed: Date.now(), tips: {},
+    kills: 0, deaths: 0, created: Date.now(), lastPlayed: Date.now(), tips: {}, wdmg: 1,
   };
   c.equip.weapon = rollItem(1, { slot: 'weapon', base: C.weapon, rarity: 0 });
   c.equip.weapon.affixes = c.equip.weapon.affixes.filter((a) => a.implicit);
@@ -151,6 +151,18 @@ export function newCharData(classId, name) {
   c.equip.weapon.sockets = 1;
   c.nextBiome = drawBiome(c, 1); // the first descent is a random biome too
   return c;
+}
+
+/** Every gear item anywhere in a save (worn, bag, stash, vanity, sealed contents...). */
+function eachGear(o, fn, depth = 0) {
+  if (!o || typeof o !== 'object' || depth > 6) return;
+  if (o.type === 'gear' && Array.isArray(o.affixes)) fn(o);
+  for (const k in o) if (o[k] && typeof o[k] === 'object') eachGear(o[k], fn, depth + 1);
+}
+function rescaleFlatDmg(it, a) {
+  const pl = powerLevel(it.ilvl || 1, it.rarity || 0), A = AFFIX_BY_STAT.flatDmg;
+  const roll = Math.max(0, Math.min(1, ((a.v || 1) / (affixScale(A.sc, pl) * (a.perk ? PERK_MULT : LINE_MULT)) - A.min) / (A.max - A.min)));
+  a.v = flatDmgValue(roll, pl, a.perk);
 }
 
 /** Fill in fields added by later versions. */
@@ -171,6 +183,8 @@ export function migrate(c) {
   c.homunculus = c.homunculus || { talks: 0, chapter: 0, told: [], recap: [] }; // the blacksmith's axe story (game/homunculus.js)
   c.mastery = c.mastery || {}; // skill mastery: {skillId: [level 1-1000, xp]}
   c.comm = c.comm || { open: [], done: [] }; // Town Commissions (game/commissions.js)
+  // "+N Weapon Damage" moved onto the weapon damage curve: old lines keep their roll, at the new scale
+  if (!c.wdmg) { eachGear(c, (it) => { for (const a of it.affixes || []) if (a.s === 'flatDmg') rescaleFlatDmg(it, a); }); c.wdmg = 1; }
   // plain (Common) gear takes more sockets now, as Glyphword bases (data/items.js HOLLOW)
   for (const it of [...Object.values(c.equip || {}), ...(c.bag || []), ...(c.stash || [])]) if (it && it.type === 'gear' && it.rarity === 0 && !it.relic && HOLLOW[it.slot] > (it.maxSockets || 0)) it.maxSockets = HOLLOW[it.slot];
   // Sky Battle cut scenes watched ('<story or base>:<scene>'): seen ones play at 20x. A hero who fought one before this
