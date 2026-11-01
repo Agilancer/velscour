@@ -6,6 +6,7 @@ import { migrateBar, BAR_SIZE } from '../data/bar.js';
 import { TAB_SLOTS } from '../data/tabs.js';
 import { newMacros, migrateMacros } from '../data/macros.js';
 import { stashRaw, listRaw } from './herobackup.js';
+import { BAG_COLS, BAG_ROWS, fixBag } from '../data/bag.js';
 
 const KEY = 'velscour_saves_v1';
 const ASIDE = KEY + '_unreadable_';   // + time: save data that couldn't be read, set aside before anything replaced it
@@ -135,7 +136,7 @@ export function newCharData(classId, name) {
     vanity: { head: null, body: null }, hideHelm: false,
     macros: newMacros(), // game/macros.js
     mastery: {}, rage: 0, townSeed: (Math.random() * 1e9) | 0,
-    bag: Array(60).fill(null),
+    bag: Array(BAG_COLS * BAG_ROWS).fill(null), // more rows are bought in the inventory (data/bag.js)
     stash: Array(300).fill(null),
     tabs: Array(TAB_SLOTS).fill(null), tabAt: 0, // the Bard's Tabs: locked Music Sheets he plays (data/tabs.js)
     gold: 150, potions: { hp: 6, mp: 4, rejuv: 1, fury: 1 },
@@ -195,7 +196,7 @@ export function migrate(c) {
   // heroes made before the shuffle bag always started in the catacombs: give an unexplored hero a random start
   if (c.nextBiome === 'catacombs' && !c.deepest && !c.lastBiome) c.nextBiome = drawBiome(c, c.depth || 1);
   c.bar = migrateBar(c.bar); // 10 slots (LMB, 1-8, RMB) -> 15 (LMB, ` 1-9 0 - =, RMB)
-  while (c.bag.length < 60) c.bag.push(null);
+  fixBag(c); // 6 rows, plus any bought
   if (!Array.isArray(c.stash)) c.stash = [];
   while (c.stash.length < 300) c.stash.push(null);
   if (!Array.isArray(c.tabs)) c.tabs = [];

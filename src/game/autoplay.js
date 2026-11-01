@@ -28,6 +28,7 @@ import { Vendor, fuseAll } from '../ui/vendor.js';
 import { Stash, addToStash } from '../ui/stash.js';
 import { activeFilter, filterPasses, filterKeeps } from './lootfilter.js';
 import { addToBag } from './player.js';
+import { nextRowCost, buyBagRow } from '../data/bag.js';
 import { Delayed, Area, Whirl, Fissure } from './hazards.js';
 import { bountyGoal } from './wanderers.js';
 import { heroVisit } from './townlife.js';
@@ -1959,7 +1960,11 @@ export const Auto = {
     const p = G.player, w = G.world, c = G.char;
     this.navT -= dt;
     if (!this.nav || this.navT <= 0) this.buildNav();
-    if (!this.town) this.town = { steps: this.townPlan(), i: 0, phase: 'walk', t: 0 };
+    if (!this.town) {
+      // a bigger bag when the gold is idle: the next row at a quarter of the purse (data/bag.js)
+      if (gearOn() && nextRowCost(c) && c.gold >= nextRowCost(c) * 4) { const cost = nextRowCost(c); if (buyBagRow(c)) { G.ui.log(`Auto-play buys a bag row for ${fmtInt(cost)} gold.`, '#ffd860'); changed(); } }
+      this.town = { steps: this.townPlan(), i: 0, phase: 'walk', t: 0 };
+    }
     const T = this.town;
     // skip errands with nothing to do there (a fresh hero heads straight for the portal); checked on arrival at
     // each step, so gold from the first sale still counts

@@ -21,6 +21,7 @@ import { marksTotal, marksFree, capXp } from '../game/marks.js';
 import { heresyRankOf } from '../game/heresies.js';
 import { endgameUnlocked } from '../game/endgame.js';
 import { sparkle } from '../gfx/vfx.js';
+import { bagRows, nextRowCost, buyBagRow, BAG_MAX_ROWS } from '../data/bag.js';
 
 const DOLL = { head: [2, 1], weapon: [1, 2], body: [2, 2], offhand: [3, 2], hands: [1, 3], legs: [2, 3], feet: [2, 4], ring1: [4, 1], ring2: [4, 2], ring3: [4, 3], ring4: [4, 4] };
 
@@ -428,6 +429,7 @@ export function renderInventory(body) {
   const bag = el('div', 'bag');
   for (let i = 0; i < c.bag.length; i++) bag.appendChild(bagSlot(i));
   mid.appendChild(bag);
+  if (nextRowCost(c)) mid.appendChild(bagRowButton());
   const info = el('div', 'row');
   info.innerHTML = `<span class="gold-text">◉ ${fmtInt(c.gold)} gold</span><span class="dim">· Potions: <span style="color:#ff6060">${c.potions.hp}</span> / <span style="color:#6a8aff">${c.potions.mp}</span> / <span style="color:#c060ff">${c.potions.rejuv}</span> / <span style="color:#ffa020">${c.potions.fury}</span></span>`;
   const sortBtn = el('button', 'btn small', 'Sort');
@@ -444,6 +446,24 @@ export function renderInventory(body) {
   wrap.appendChild(mid);
   wrap.appendChild(statsBlock());
   body.appendChild(wrap);
+}
+
+/** Buy the next bag row: 10 more slots, each row twice the gold of the last (data/bag.js). */
+function bagRowButton() {
+  const c = G.char, cost = nextRowCost(c), row = bagRows(c) + 1;
+  const b = el('button', 'btn small bag-buy' + (c.gold < cost ? ' poor' : ''), `+ Bag row ${row} of ${BAG_MAX_ROWS} · <span class="gold-text">${fmtInt(cost)} gold</span>`);
+  b.title = '10 more bag slots. Each row costs twice the last.';
+  b.onclick = () => {
+    if (G.char.gold < cost) { UI.log(`Bag row ${row} costs ${fmtInt(cost)} gold.`, '#ff8080'); sfx('error'); return; }
+    sfx('ui');
+    UI.confirm('Buy a Bag Row', `Add bag row <b>${row}</b> (10 slots) for <b class="gold-text">${fmtInt(cost)} gold</b>?`, () => {
+      if (!buyBagRow(G.char)) { sfx('error'); return; }
+      sfx('gold');
+      UI.log(`Your bag grows: row <b>${row}</b> added for ${fmtInt(cost)} gold.`, '#ffd860');
+      changed();
+    }, 'Buy');
+  };
+  return b;
 }
 
 function sortBag() {
