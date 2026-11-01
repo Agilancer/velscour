@@ -75,6 +75,7 @@ export function preloadTownSheets(ids) {
 }
 function townPaletteSheet(id,img,palette) {
   if(!img?.complete||!img.naturalWidth||!palette)return img;
+  if(palette.build){const k=`${id}:build:${palette.key}`;if(!townPaletteSheets.has(k))townPaletteSheets.set(k,palette.build(img));return townPaletteSheets.get(k);} // a sheet made by its owner (the Pirate Seas' Lampwardens)
   const key=`${id}:${palette.hue||0}:${palette.sat??1}:${palette.light||0}`;
   if(townPaletteSheets.has(key))return townPaletteSheets.get(key);
   const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
@@ -392,7 +393,9 @@ function drawScenarioGlyph(ctx, p) {
 }
 function drawPortal(ctx, p) {
   if (p.skygate) return drawSkyGate(ctx, p);
+  if (p.seagate) return; // the Pirate Seas: the Dawnwake's bell-tower door is the portal, in three.js (gfx/seabattle3d.js)
   if (p.riftgate) return drawRiftgate(ctx, p);
+  if (p.type === 'objective' && G.cine && G.world && G.world.seaRun) return; // the Pirate Seas: no gameplay marks in a cut scene
   if (p.type === 'shrine' || p.type === 'objective') return drawScenarioGlyph(ctx, p);
   const x = isoX(p.x, p.y), y = isoY(p.x, p.y);
   const active = p.active;
@@ -507,7 +510,7 @@ function drawNpc(ctx, n) {
   } else top = 50;
   ctx.restore();
   if (alpha < 1) ctx.globalAlpha = 1;
-  const spriteY = y - m.bob - top;
+  const spriteY = y - m.bob - top * (q && q.sy || 1) - (q && q.dy || 0); // a scripted motion's lift and scale (a knight on a boat, Pip aloft, big Tolland)
   if (n.vendor) {
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + Math.sin(G.time * 3) * 0.1;
     ctx.drawImage(glowSprite('#ffd060'), x - 6, y - vh - 18, 12, 12);
@@ -957,7 +960,10 @@ export function renderWorld(ctx, world) {
           if(hz)o.z=oldZ;o.sbox=null;break;
         }
         if(hc!==null){ctx.save();ctx.beginPath();ctx.rect(vr.x0-200,vr.y0-900,vr.x1-vr.x0+400,hc-(vr.y0-900));ctx.clip();}
+        const mk=world.cave&&world.cave.mask?world.cave.mask(o):null; // the Pirate Seas: masts and the funnel in front cut their shapes out of it
+        if(mk){ctx.save();ctx.beginPath();ctx.rect(vr.x0-200,vr.y0-900,vr.x1-vr.x0+400,vr.y1-vr.y0+1800);mk(ctx);ctx.clip('evenodd');}
         o.draw(ctx);
+        if(mk)ctx.restore();
         if(hc!==null)ctx.restore();
         if(hz)o.z=oldZ;
         const img = o.spriteImage();

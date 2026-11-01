@@ -176,6 +176,13 @@ export function migrate(c) {
   // Sky Battle cut scenes watched ('<story or base>:<scene>'): seen ones play at 20x. A hero who fought one before this
   // was kept has seen the weathers' scenes.
   if (!c.skySeen) c.skySeen = c.lastSkyVariant ? Object.fromEntries(['intro', 'mid', 'parley', 'hooks', 'victory'].map((n) => [`base:${n}`, 1])) : {};
+  // the Pirate Seas (game/seabattle.js): sea battles won ('<id>': 1, one of Tolland's bells each) and cut scenes watched
+  // ('cine:<scene>'); the count of bells rung; the battle fought last (never the next one, if there's a choice)
+  if (!c.seaSeen || typeof c.seaSeen !== 'object') c.seaSeen = {};
+  c.seaBells = Math.max(0, Math.floor(Number(c.seaBells) || 0));
+  // sea battles won in all (Brask's first-win line plays once): a hero from before this kept counts the ones in seaSeen
+  if (!(c.seaWins >= 0)) c.seaWins = Object.keys(c.seaSeen).filter((k) => !k.startsWith('cine:')).length;
+  if (typeof c.lastSeaVariant !== 'string') c.lastSeaVariant = null;
   for (const s of ['ring1', 'ring2', 'ring3', 'ring4']) if (!(s in c.equip)) c.equip[s] = null;
   c.vanity = Object.assign({ head: null, body: null }, c.vanity); // looks only: worn over the real gear, no stats
   c.hideHelm = !!c.hideHelm;

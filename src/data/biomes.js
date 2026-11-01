@@ -233,6 +233,16 @@ export const BIOMES = [
     torch: '#ffb050', fog: '#0a1020',
   },
   {
+    // the Pirate Seas (docs/PIRATE_SEAS.md): the Lampwardens' Dawnwake against the Black Tide's boarders, drawn live in
+    // three.js on open water (world/seaship.js, game/seabattle.js, gfx/seabattle3d.js)
+    id: 'pirate_seas', name: 'The Pirate Seas', pack: 'town', overworld: true, sea: true,
+    palette: null, dark: 0.04, light: 14,
+    ambient: { type: 'mote', color: '#d8eef0' }, mon: { hue: 0, sat: 1, light: 0 },
+    el: 'phys', blood: '#8a0b08', adj: ['Salt-Rimed', 'Storm-Tossed', 'Black-Tide', 'Fog-Bound'],
+    roster: ['skeleton', 'ghoul', 'archer', 'knight', 'cultist', 'hound', 'demon', 'beetle'],
+    torch: '#7dffa0', fog: '#0a1a24',
+  },
+  {
     // a wide stone tower climbed by a spiral stair, drawn live in three.js; air pirates and bosses on the roof
     // (world/tower.js, game/tower.js, gfx/tower3d.js, docs/SERPENTINE_TOWER.md)
     id: 'serpentine_tower', name: 'The Serpentine Tower', pack: 'town', overworld: true, tower: true,

@@ -28,6 +28,7 @@ export function renderQuest(body) {
     if (b?.id === 'sea_of_sand') h += step(false, 'A linked Sea of Sand route with one to five timed scenario areas lies beyond.');
     else if (b?.id === 'mountainside') h += step(false, 'The Mountainside (beta) lies beyond: a switchback climb up the cliffs to the summit.');
     else if (b?.id === 'skyship') h += step(false, "The Sky Lanes lie beyond: the Air Pirates board the heroes' airship in waves, then their flagship comes.");
+    else if (b?.sea) h += step(false, "The Pirate Seas lie beyond: the Black Tide's boats come up from astern to board the Lampwardens' Dawnwake, wave on wave.");
     else if (b?.id === 'dark_forest') h += step(false, 'The Dark Forest lies beyond: trails, labyrinths, five trial glades and the Heart of the Forest.');
     else if (b?.tower) h += step(false, 'The Serpentine Tower lies beyond: a spiral stair to a roof where bosses and sky pirates wait.');
     else if (b?.cave) h += step(false, "The Depth's Edge Caverns lie beyond: passages and caverns, a lake under a waterfall, and a long climb to the top of the falls.");
@@ -64,6 +65,13 @@ export function renderQuest(body) {
         h += step(at > 5, "Survive the flagship's broadsides.");
         h += step(sc.completed, 'Defeat the two captains who board from her.');
         h += step(sc.completed, sc.completed ? 'The gate is the exit now, and the hoard chest waits on the hatch.' : escapeHtml(sc.description));
+      } else if (w.biome?.sea) {
+        const ph = sc.phase, at = ['intro', 'waves', 'mid', 'finalIntro', 'final', 'victory', 'done'].indexOf(ph), waves = sc.wave + 1;
+        h += step(at > 0, `<b>${escapeHtml(sc.variant.name)}</b> <span class="dim">— ${escapeHtml(sc.variant.weatherName)}</span>`);
+        h += step(at > 2 || (ph === 'waves' && waves > 3), 'Defeat the captain who swings over after the third wave.');
+        h += step(at > 2, `Hold the deck against five boarding waves${ph === 'waves' ? `: <b>${waves}/5</b>` : ''}.`);
+        h += step(sc.completed, "Defeat the Black Tide's captain when he comes aboard.");
+        h += step(sc.completed, sc.completed ? "The bell tower's door is the way on, and a chest waits on the hatch." : escapeHtml(sc.description));
       } else if (w.biome?.tower) {
         const top = sc.phase !== 'climb';
         h += step(top, `Climb ${escapeHtml(sc.variant.name)} to the stairhead door <span class="dim">— ${sc.altitude}% of the way up</span>.`);

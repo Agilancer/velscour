@@ -551,6 +551,10 @@ export class Sprite {
 export function addEffect(e, layer = 'top') { e.layer = layer; effects.push(e); return e; }
 
 export function floatText(x, y, z, text, color = '#fff', size = 14, opts = {}) {
+  if (!opts.dmg && typeof text === 'string' && /[a-z]/i.test(text)) {   // (not damage numbers: two hits are two numbers)
+    const key = text.replace(/[\d.%]+/g, '#');
+    for (const t of texts) if (!t.dmg && t.max - t.life < 0.5 && Math.abs(t.x - x) + Math.abs(t.y - y) < 1.5 && typeof t.text === 'string' && t.text.replace(/[\d.%]+/g, '#') === key) { t.text = text; return; }
+  }
   if (texts.length > 120) texts.shift();
   texts.push({ x, y, z, text, color, size, life: opts.life || 0.9, max: opts.life || 0.9, vz: opts.vz ?? 45, dx: rand(-10, 10), crit: opts.crit, dmg: opts.dmg });
 }

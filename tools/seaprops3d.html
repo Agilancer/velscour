@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sea Props 3D</title>
+<!-- The Pirate Seas' small set pieces (tools/seaship3d_props.js) on the sea (tools/sea3d.js), from the game's iso camera.
+     http://localhost:8123/tools/seaprops3d.html  ?set=props|reef  ?weather=day|storm|night|sunset|fog|blood  ?walk=1 (reef walk rects)  ?out=0,2 (snuff those false lamps)
+     window.SEA_PROPS.view('iso'|'close'|'top'|'lamp0'..'lamp2') frames a view; SEA_PROPS.step(sec) advances time;
+     SEA_PROPS.setLamp(i, on) lights or snuffs a reef lamp. -->
+<style>
+  html, body { margin: 0; height: 100%; background: #6aa0d8; overflow: hidden; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { seaMaterials } from './seaship3d.js';
+import { buildSea } from './sea3d.js';
+import { buildProp } from './seaship3d_props.js';
+
+const Q = new URLSearchParams(location.search);
+const opt = { out: (Q.get('out') || '').split(',').filter(Boolean).map(Number), set: Q.get('set') || 'props', weather: Q.get('weather') || 'day', walk: Q.get('walk') === '1', still: Q.get('still') === '1' };
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gl'), antialias: false, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+const scene = new THREE.Scene();
+let FH = 12;
+const cam = new THREE.OrthographicCamera(-FH, FH, FH, -FH, -600, 600);
+const TARGET = new THREE.Vector3();
+function look(p, az = 45, el = 30) {
+  const a = az * Math.PI / 180, e = el * Math.PI / 180;
+  cam.position.set(Math.cos(e) * Math.sin(a), Math.sin(e), Math.cos(e) * Math.cos(a)).multiplyScalar(200).add(p);
+  cam.up.set(0, 1, 0); cam.lookAt(p); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
+}
+const hemi = new THREE.HemisphereLight(0xd4e6ff, 0x2a4a6a, 0.5 * Math.PI);
+scene.add(new THREE.AmbientLight(0xffffff, 0.25 * Math.PI), hemi);
+const sun = new THREE.DirectionalLight(0xfff1dc, 1.25 * Math.PI);
+sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.04;
+Object.assign(sun.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, near: 1, far: 400 });
+scene.add(sun, sun.target);
+const SKY = { day: [0x3a6eb8, 0x9cc8ee], storm: [0x2a333c, 0x6a7680], night: [0x05080f, 0x1a2a48], sunset: [0x3a3a7a, 0xf0a070], fog: [0x9aa8b0, 0xc6d0d4], blood: [0x2a0a12, 0xc06048] };
+const LIGHT = { day: [1.25, 0xfff1dc, 0.5], storm: [0.55, 0xc8d4e0, 0.45], night: [0.25, 0x8aa0ff, 0.3], sunset: [1.0, 0xffb080, 0.45], fog: [0.6, 0xe8eef0, 0.6], blood: [0.9, 0xff9070, 0.4] };
+const sea = buildSea(scene, { size: 300, seg: 200, weather: opt.weather });
+{
+  const c = document.createElement('canvas'); c.width = 2; c.height = 256; const x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 0, 256), [a, b] = SKY[opt.weather] || SKY.day;
+  g.addColorStop(0, '#' + a.toString(16).padStart(6, '0')); g.addColorStop(1, '#' + b.toString(16).padStart(6, '0')); x.fillStyle = g; x.fillRect(0, 0, 2, 256);
+  scene.background = new THREE.CanvasTexture(c); scene.background.colorSpace = THREE.SRGBColorSpace;
+  const [k, col, h] = LIGHT[opt.weather] || LIGHT.day; sun.intensity = k * Math.PI; sun.color.set(col); hemi.intensity = h * Math.PI;
+  if (opt.weather === 'fog') scene.fog = new THREE.Fog(0xc6d0d4, 120, 260);
+}
+const M = await seaMaterials('../assets/source/airship/textures/');
+const halo = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, '#fff'); g.addColorStop(0.25, '#fff8'); g.addColorStop(1, '#fff0'); x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+const glows = [], errors = [];
+const KINDS = opt.set === 'reef' ? ['reef'] : ['mine', 'buoy', 'keg', 'torpedo', 'flotsam', 'wreck'];
+const list = [];
+for (const k of KINDS) {
+  try {
+    const p = buildProp(M, k); const g = new THREE.Group(); g.add(p.root); scene.add(g); list.push({ k, p, g, x: 0, z: 0 });
+    for (const gl of p.info.glow) {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, color: gl.c, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+      s.position.set(gl.x, gl.y, gl.z); s.scale.setScalar(gl.r); p.root.add(s); glows.push(s);
+      if (gl.light) { const L = new THREE.PointLight(gl.c, 22, gl.lr || 7, 1.6); L.position.set(gl.x, gl.y + 0.3, gl.z); p.root.add(L); }
+    }
+    if (opt.walk && p.info.walk) for (const [x0, z0, x1, z1, y] of p.info.walk) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.06, z1 - z0), new THREE.MeshBasicMaterial({ color: 0x40ff60, transparent: true, opacity: 0.35, depthWrite: false }));
+      m.position.set((x0 + x1) / 2, y + 0.05, (z0 + z1) / 2); p.root.add(m);
+    }
+  } catch (e) { errors.push(`${k}: ${e.message}`); console.error(k, e); }
+}
+/** Lay the props out: a row along the screen's right for azimuth az, or a grid (cols across, rows into the picture). */
+function layout(az, cols = 99) {
+  const a = az * Math.PI / 180, R = [Math.cos(a), -Math.sin(a)], D = [-Math.sin(a), -Math.cos(a)];
+  const rows = Math.ceil(list.length / cols), w = list.map((o) => Math.max(o.p.info.length || 2, o.p.info.beam || 2));
+  for (let r = 0; r < rows; r++) {
+    const row = list.slice(r * cols, (r + 1) * cols), ww = w.slice(r * cols, (r + 1) * cols), tot = ww.reduce((s, v) => s + v + 3, 0);
+    let u = -tot / 2;
+    row.forEach((o, i) => { u += ww[i] / 2 + 1.5; const d = (r - (rows - 1) / 2) * 9; o.x = R[0] * u + D[0] * d; o.z = R[1] * u + D[1] * d; o.g.position.set(o.x, 0, o.z); u += ww[i] / 2 + 1.5; });
+  }
+}
+function frame(az, el, pad = 1.1) {
+  const b = new THREE.Box3(); for (const o of list) { o.g.updateMatrixWorld(true); b.expandByObject(o.p.root); }
+  look(b.getCenter(TARGET), az, el);
+  const pts = []; for (const x of [b.min.x, b.max.x]) for (const y of [Math.max(b.min.y, -1), b.max.y]) for (const z of [b.min.z, b.max.z]) pts.push(new THREE.Vector3(x, y, z).applyMatrix4(cam.matrixWorldInverse));
+  const asp = innerWidth / innerHeight, hw = Math.max(...pts.map((p) => Math.abs(p.x - pts.reduce((s, q) => s + q.x, 0) / pts.length))), hh = Math.max(...pts.map((p) => Math.abs(p.y - pts.reduce((s, q) => s + q.y, 0) / pts.length)));
+  FH = Math.max(hh, hw / asp) * pad; resize();
+  const d = new THREE.Vector3(-0.6, 0.85, 0.5).normalize().transformDirection(cam.matrixWorld);
+  sun.target.position.copy(TARGET); sun.position.copy(d).multiplyScalar(180).add(TARGET);
+  sea.follow(TARGET.x, TARGET.z);
+}
+function resize() { renderer.setSize(innerWidth, innerHeight, false); const a = innerWidth / innerHeight; Object.assign(cam, { left: -FH * a, right: FH * a, top: FH, bottom: -FH }); cam.updateProjectionMatrix(); }
+addEventListener('resize', resize);
+const VIEWS = {
+  iso: () => { layout(45); frame(45, 30, opt.set === 'reef' ? 1.05 : 1.15); },
+  close: () => { if (opt.set === 'reef') { layout(45); frame(45, 30); look(new THREE.Vector3(6, 1, -2), 120, 24); FH = 8; resize(); } else { layout(30, 3); frame(30, 20, 1.04); } },
+  top: () => { layout(45); frame(45, 80, 1.05); },
+  lamp0: () => lampView(0), lamp1: () => lampView(1), lamp2: () => lampView(2),
+};
+function lampView(i) { layout(45); frame(45, 30); const p = list[0].p.info.lamps?.[i]; if (p) { look(new THREE.Vector3(p[0], p[1] - 1.2, p[2]), 45, 30); FH = 4.2; resize(); } }
+function setLamp(i, on) { for (const o of list) o.p.setLamp?.(i, on); }
+for (const i of opt.out) setLamp(i, false);
+function view(v = 'iso') { (VIEWS[v] || VIEWS.iso)(); }
+let t = 0;
+function update(d) {
+  t += d;
+  for (const o of list) {
+    if (!o.p.info.fixed) { const r = sea.ride(o.x, o.z, 0, o.p.info.hl || 1, o.p.info.hb || 1, t); o.p.root.position.y = r.y; o.p.root.rotation.x = -r.pitch; o.p.root.rotation.z = r.roll; }
+    o.p.anim?.(t, d);
+  }
+  glows.forEach((g, i) => { g.material.opacity = 0.5 + 0.15 * Math.sin(t * 9 + i * 1.7); });
+  sea.setShips([]);
+  sea.update(d, t, { camera: cam, height: renderer.domElement.height, sun, hemi });
+}
+view('iso');
+let last = performance.now();
+function loop(now) { const dt = opt.still ? 0 : Math.min(0.05, (now - last) / 1000); last = now; update(dt); renderer.render(scene, cam); requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+const step = (sec) => { for (let i = 0; i < Math.round(sec * 30); i++) update(1 / 30); renderer.render(scene, cam); };
+window.SEA_PROPS = { ready: true, scene, cam, sea, list, view, step, setLamp, errors, M, get info() { return Object.fromEntries(list.map((o) => [o.k, o.p.info])); } };
+</script>
+</body>
+</html>

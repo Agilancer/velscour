@@ -135,6 +135,7 @@ const SOUNDS = {
   door: (t) => SOUNDS.thud(t, 0.7),
   gate: (t) => { tone(t, 0.8, { wave: 'sawtooth', f0: 70, f1: 50, vol: 0.12 }); noise(t, 0.8, { type: 'bandpass', f0: 900, f1: 400, q: 6, vol: 0.2 }); },
   step: (t, p) => noise(t, 0.05, { f0: 700 * p, f1: 200, vol: 0.06 }),
+  bell: (t, p) => { [[1, 0.16, 2.4], [2.0, 0.09, 1.6], [2.76, 0.07, 1.2], [5.4, 0.04, 0.7], [0.5, 0.06, 2.8]].forEach(([k, v, d]) => tone(t, d, { wave: 'sine', f0: 392 * k * p, f1: 392 * k * p * 0.995, vol: v, a: 0.004 })); },
   note: (t, p) => { const f = [523, 587, 659, 784, 880][Math.floor(Math.random() * 5)]; tone(t, 0.3, { wave: 'triangle', f0: f * p, vol: 0.12 }); },
 };
 
@@ -413,6 +414,7 @@ export function seekMusic(t) {
 // then crossfading to another of its beds. Beds sit lower while a song plays and come up in the breaks between songs.
 const AMB = {
   skyship_clear: ['sea', 'beach'], skyship_storm: ['sea_storm', 'forest_day_storm'], skyship_night: ['sea', 'forest_night'], skyship_fog: ['sea_rain', 'sea'],
+  pirate_seas_fog: ['sea_rain', 'sea'], pirate_seas_blood: ['sea_storm', 'sea'], pirate_seas_day: ['sea', 'beach'],
   skyship_sunset: ['beach', 'sea'], skyship_gale: ['sea_storm', 'beach_storm'], skyship_blizzard: ['cave_storm', 'sea_storm'], skyship_ash: ['torch_loop', 'cave_storm'],
   town: ['forest_night', 'forest_night_rain', 'forest_day'],
   catacombs: ['inside_night', 'cave'], frozen: ['cave_storm', 'forest_night_storm'],
