@@ -57,6 +57,10 @@ import { generateSkyship } from '../world/skyship.js';
 import { warmSky } from '../gfx/skyship.js';
 import { createSkyBattle } from './skybattle.js';
 import { SKY_ALL } from '../data/skybattle.js';
+import { generateSeaship } from '../world/seaship.js';
+import { createSeaBattle, useSea, pickSeaVariant } from './seabattle.js';
+import { loadFleet, sea3dReady } from '../gfx/seabattle3d.js';
+import { SEA_VARIANTS } from '../data/seabattle.js';
 import { TOWNSFOLK } from '../data/townsfolk.js';
 const TOWNSFOLK_KNIGHTS = TOWNSFOLK.filter((q) => q.knight).map((q) => q.spriteId);
 import { Cine, CINE_FAST } from './cinema.js';
@@ -103,7 +107,7 @@ import { Macros } from './macros.js';
 
 const PICK_WAIT = 8; // seconds auto-play gives the player to choose a portal down (portalChoice)
 
-const STEP_SURFACE = { sunken: 'water', plague: 'water', sewers: 'water', serpent: 'water', library: 'wood', gilded: 'wood', sea_of_sand:'sand', dark_forest:'wood', skyship:'wood' };   // footstep sounds; default stone
+const STEP_SURFACE = { sunken: 'water', plague: 'water', sewers: 'water', serpent: 'water', library: 'wood', gilded: 'wood', sea_of_sand:'sand', dark_forest:'wood', skyship:'wood', pirate_seas:'wood' };   // footstep sounds; default stone
 
 const VELSCOUR_TAUNT_STARTS = [
   'WHY ARE YOU TRYING TO CONTACT VELSCOUR', 'WHAT MADE YOU THINK VELSCOUR WANTS TO HEAR FROM YOU',
@@ -145,6 +149,7 @@ async function warmLevelArt(w) {
   const seen = new Set();
   if (w.map.hgt) terrainOf(w.map); // a height map's draw order and occluders (the Castle's 100k columns): behind the loading screen, not the first frame
   warmSky(w); // the Sky Battle's clouds
+  if (w.seaState && w.seaState.warm) w.seaState.warm(); // the Pirate Seas' Lampwardens (recoloured townsfolk sheets)
   if (w.map.c3struct || w.sky) warmBaked(G.ctx); // the baked 3D pages (the Castle's masonry, the airships)
   let t = performance.now();
   markArtCaches();
@@ -237,6 +242,7 @@ export const game = {
     this.enterTown();
     if (fresh) {
       setTimeout(() => {
+        if (G.world && G.world.kind !== 'town') return;   // (a test or the skull has already taken the hero elsewhere)
         UI.centerMsg('HERRINGTON HOLLOW', 'The last town above the abyss', 3.5);
         UI.log(`Welcome, ${escapeHtml(c.name)}. Visit the vendors, then step into the <b style="color:#ff8050">portal</b> at the edge of town.`, '#ffe2a0');
         UI.log('You have <b>1 skill point</b> — open the Skill Tree (K) to learn your first ability.', '#ffd860');
@@ -296,6 +302,7 @@ export const game = {
     useTower(world); // the Serpentine Tower lays the grid onto its spiral stair (game/tower.js)
     useCaverns(world); // the Depth's Edge Caverns lift everything onto their smooth height field (game/caverns.js)
     useDunes(world); // so do the Sea of Sand's dunes and pyramids (game/dunes.js)
+    useSea(world); // the Pirate Seas' three.js scene goes when the hero leaves the Dawnwake (game/seabattle.js)
     camera.computeZoom();
     camera.follow(p.x, p.y, 0, true);
     world.map.reveal(p.x, p.y, 12);
@@ -385,7 +392,7 @@ export const game = {
     const biome = BIOME_BY_ID[c.depth === FINAL_DEPTH ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
     UI.dialog({
       title: `Depth ${c.depth}`,
-      html: `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(biome.name)}</b>.</p><p class="dim">${biome.id === 'sea_of_sand' ? 'Follow the cliff maze and clear every marked scenario area to open the exit.' : biome.id === 'mountainside' ? 'Climb the switchback trail to the summit and defeat its Warden. Ledges a hop high can be climbed; taller cliffs cannot.' : biome.id === 'skyship' ? "Step out onto the heroes' airship. Hold the deck against the Air Pirates' boarding waves, their captains and their flagship; victory turns the gate into the exit." : biome.id === 'dark_forest' ? 'Find your way through the woods and labyrinths to the Heart of the Forest. Its trial opens the way on; the glades along the trails hold trials of their own, and their rewards.' : biome.tower ? 'Climb the spiral stair to the roof. Three waves of bosses hold it, and then their master comes on an airship.' : biome.cave ? 'Follow the passages and caverns to the underground lake. At the foot of its waterfall a passage climbs a long, spiralling shaft to the top of the falls, where its masters wait.' : biome.overworld ? 'Activate the scenario shrine and complete its trial to open the exit.' : 'Find the exit. It is sealed until its guardian is slain.'}${c.depth === FINAL_DEPTH ? '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>' : !biome.overworld && isRaidDepth(c.depth) ? '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>' : ''}</p>`,
+      html: `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(biome.name)}</b>.</p><p class="dim">${biome.id === 'sea_of_sand' ? 'Follow the cliff maze and clear every marked scenario area to open the exit.' : biome.id === 'mountainside' ? 'Climb the switchback trail to the summit and defeat its Warden. Ledges a hop high can be climbed; taller cliffs cannot.' : biome.id === 'skyship' ? "Step out onto the heroes' airship. Hold the deck against the Air Pirates' boarding waves, their captains and their flagship; victory turns the gate into the exit." : biome.sea ? "Step out onto the Dawnwake, the Lampwardens' steam frigate. Hold her deck against the Black Tide's boarders, wave on wave, and their captain; victory opens the bell tower's door onward." : biome.id === 'dark_forest' ? 'Find your way through the woods and labyrinths to the Heart of the Forest. Its trial opens the way on; the glades along the trails hold trials of their own, and their rewards.' : biome.tower ? 'Climb the spiral stair to the roof. Three waves of bosses hold it, and then their master comes on an airship.' : biome.cave ? 'Follow the passages and caverns to the underground lake. At the foot of its waterfall a passage climbs a long, spiralling shaft to the top of the falls, where its masters wait.' : biome.overworld ? 'Activate the scenario shrine and complete its trial to open the exit.' : 'Find the exit. It is sealed until its guardian is slain.'}${c.depth === FINAL_DEPTH ? '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>' : !biome.overworld && isRaidDepth(c.depth) ? '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>' : ''}</p>`,
       buttons: [{ label: 'Not yet' }, { label: 'Enter', cls: 'red', fn: () => this.enterDungeon() }],
     });
   },
@@ -412,6 +419,12 @@ export const game = {
           } else if (message.trim().toLowerCase() === 'mountain') {
             close();
             this.teleportToBiome(BIOME_BY_ID.mountainside); // the Mountainside beta
+          } else if (/^(seas?|naval|dawnwake)(\s|$)/i.test(message.trim())) {
+            // the Pirate Seas; 'sea fog', 'sea redwater'... picks its battle
+            const want = message.trim().toLowerCase().split(/\s+/)[1];
+            G.char.seaVariant = SEA_VARIANTS.find((v) => v.id === want || v.weather === want || v.name.toLowerCase().includes(want || '#'))?.id;
+            close();
+            this.teleportToBiome(BIOME_BY_ID.pirate_seas);
           } else if (/^(sky|airship|air|pirates?)(\s|$)/i.test(message.trim())) {
             // the Sky Battle; 'sky storm', 'sky night'... picks its scenario
             const want = message.trim().toLowerCase().split(/\s+/)[1];
@@ -449,7 +462,8 @@ export const game = {
 
   openVelscourTeleport() {
     const options = [...BETA_BIOMES, ...BIOMES].map((biome) => `<option value="${escapeHtml(biome.id)}">${escapeHtml(biome.name)}${biome.overworld ? ' · Overworld' : ''}${biome.beta ? ' (Beta)' : ''}</option>`).join('')
-      + SKY_ALL.map((v) => `<option value="skyship:${v.id}">${escapeHtml(BIOME_BY_ID.skyship.name)}: ${escapeHtml(v.name)} (${escapeHtml(v.weather)})</option>`).join('');
+      + SKY_ALL.map((v) => `<option value="skyship:${v.id}">${escapeHtml(BIOME_BY_ID.skyship.name)}: ${escapeHtml(v.name)} (${escapeHtml(v.weather)})</option>`).join('')
+      + SEA_VARIANTS.map((v) => `<option value="pirate_seas:${v.id}">${escapeHtml(BIOME_BY_ID.pirate_seas.name)}: ${escapeHtml(v.name)} (${escapeHtml(v.weatherName)})</option>`).join('');
     const dialog = UI.dialog({
       title: 'CHOOSE YOUR DOOM',
       cls: 'velscour-teleport-dialog',
@@ -459,6 +473,7 @@ export const game = {
         { label: 'Teleport', cls: 'red', fn: () => {
           let id = dialog.box.querySelector('#velscour-biome').value;
           if (id.startsWith('skyship:')) { G.char.skyVariant = id.slice(8); id = 'skyship'; }
+          if (id.startsWith('pirate_seas:')) { G.char.seaVariant = id.slice(12); id = 'pirate_seas'; }
           const biome = BIOME_BY_ID[id];
           if (biome) this.teleportToBiome(biome);
         } },
@@ -534,6 +549,11 @@ export const game = {
     if (biome.id === 'mountainside') return Promise.all([loadBiomeArt(BIOME_BY_ID.dark_forest), loadDarkForestTrees()]); // its floors, props and pines
     if (biome.id === 'skyship') return Promise.all([loadBaked('assets/tiles/skyship/'), preloadTownSheets(TOWNSFOLK_KNIGHTS)]); // the baked ironclad, boats and galleon; the sky-knights
     if (biome.tower) return loadTower3D(); // three.js and the tower's textures
+    if (biome.sea) {   // the scenario is picked now, so its fleet's models and its own monsters' art load with the rest
+      const c = G.char, sc = pickSeaVariant(c?.seaVariant, c?.lastSeaVariant, c?.seaSeen || {});
+      G.seaNext = sc.id;
+      return Promise.all([loadFleet([...(sc.fleet || []), 'longboat', 'cutter', 'brig']), preloadTownSheets(['05_road_guard', '25_royal_heir', '41_friar']), sc.art ? loadArtFor(sc.art) : null]);
+    }
     if (biome.cave) { G.caveNext = G.caveVariant ?? Math.floor(Math.random() * CAVE_VARIANTS.length); return loadCave3D(G.caveNext); } // three.js and this cave's textures
     if (biome.id === 'throne') return Promise.all([loadBiomeArt(biome), loadVelscourThrone()]); // his recoloured throne
     if (!biome.overworld) return Promise.all([loadBiomeArt(biome), mix && loadBiomeArt(mix)]);
@@ -568,6 +588,7 @@ export const game = {
     const c = G.char;
     if (biome.tower && !tower3dReady()) { UI.log('Clouds hide the Serpentine Tower today (three.js could not be loaded).', '#a0a0a0'); biome = BIOME_BY_ID.overworld; }
     if (biome.cave && !cave3dReady()) { UI.log("A rockfall seals the Depth's Edge Caverns today (three.js could not be loaded).", '#a0a0a0'); biome = BIOME_BY_ID.overworld; }
+    if (biome.sea && !sea3dReady()) { UI.log('A storm keeps the Dawnwake in harbour today (three.js could not be loaded).', '#a0a0a0'); biome = BIOME_BY_ID.overworld; }
     const old = G.world;
     const forest = biome.id === 'dark_forest';
     const tileset = forest ? biomeTileSet(biome) : biome.overworld ? biomeTileSet(TOWN_BIOME) : mix ? mixedTileSet(biome, mix, Math.random() < 0.5) : biomeTileSet(biome);
@@ -576,9 +597,10 @@ export const game = {
     // the two overworlds that save their progress per depth rebuild the same map after a town trip
     const kept = biome.id === 'sea_of_sand' ? c.seaOfSandRuns[depth] : forest ? c.darkForestRuns[depth] : null;
     const seed = kept ? kept.seed : (Math.random() * 1e9) | 0;
-    const sky = biome.id === 'skyship';
+    const sky = biome.id === 'skyship', sea = !!biome.sea;
     const gen = forest ? generateDarkForest(depth, biome, tileset, seed) : biome.id === 'mountainside' ? generateMountain(depth, biome, seed)
       : sky ? generateSkyship(depth, biome, seed, castle3dState())
+      : sea ? generateSeaship(depth, biome, seed, SEA_VARIANTS.find((q) => q.id === (G.seaNext || c.seaVariant))?.size)
       : biome.tower ? generateTower(depth, biome, seed, G.towerVariant)
       : biome.cave ? generateCaverns(depth, biome, seed, G.caveVariant ?? G.caveNext)
       : biome.id === 'sea_of_sand' && (G.sandVariant ?? G.sandNext) > 0 && dunes3dReady() ? generateDunes(depth, biome, seed, (G.sandVariant ?? G.sandNext) - 1)
@@ -601,7 +623,7 @@ export const game = {
     let tp = gen.townPortal || [sx + 1.6, sy - 0.6];
     if (!gen.map.walkable(tp[0], tp[1])) tp = gen.map.randomNear(sx, sy, 2);
     const exit = {
-      x: gen.exit[0], y: gen.exit[1], type: 'exit', active: false, color: '#5a5a60', reach: 1.6, label: 'Sealed Exit', skygate: sky,
+      x: gen.exit[0], y: gen.exit[1], type: 'exit', active: false, color: '#5a5a60', reach: 1.6, label: 'Sealed Exit', skygate: sky, seagate: sea,
       use: () => this.useExit(world, exit),
     };
     world.portals = [
@@ -643,7 +665,7 @@ export const game = {
       }
     }
     world.roster = [...new Set(gen.spawns.filter((s) => s.arch && !['raid', 'boss'].includes(s.rank)).map((s) => s.arch))];
-    if (!sky && biome.id !== 'throne') setupHappenings(world, gen.start, gen); // omens, shrines, treasure imps, cursed chests (game/happenings.js)
+    if (!sky && !sea && biome.id !== 'throne') setupHappenings(world, gen.start, gen); // omens, shrines, treasure imps, cursed chests (game/happenings.js)
     setupCommissions(world, gen.start); // this depth's Town Commission objectives (game/commissions.js)
     greedWorld(world, c); // the Greed lever and its Hoard multiply the omen's loot dials
     heresyWorld(world, c); // the Heresies' rank pays on top (none in Unbound)
@@ -689,6 +711,18 @@ export const game = {
         sfx('gate'); UI.refresh(); this.autosave();
       });
       c.lastSkyVariant = world.sky.v.id; delete c.skyVariant;
+    } else if (sea) {   // the Pirate Seas (game/seabattle.js): a battle the hero hasn't won, never the last one twice
+      createSeaBattle(world, gen, biome, depth, { variant: G.seaNext || c.seaVariant, last: c.lastSeaVariant, seen: c.seaSeen || {} }, () => {
+        exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
+        const first = !c.cleared[depth];
+        c.cleared[depth] = true;
+        c.deepest = Math.max(c.deepest || 0, depth);
+        this.brokeThrough(depth);
+        const bell = world.seaRun.bell ? ` Brother Tolland has rung <b style="color:#ffe0a0">${world.seaRun.bell} bell${world.seaRun.bell > 1 ? 's' : ''}</b> on the Shattered Coast.` : '';
+        if (first || bell) UI.log(`${first ? 'Bonus skill point for holding the Dawnwake!' : 'The Dawnwake is held.'}${bell}`, '#ffd860');
+        sfx('gate'); UI.refresh(); this.autosave();
+      });
+      c.lastSeaVariant = world.seaRun.variant.id; delete c.seaVariant; G.seaNext = undefined;
     } else if (gen.dunes) createDuneRun(world, gen, biome, () => {
       exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
       const first = !c.cleared[depth];
@@ -762,7 +796,7 @@ export const game = {
     this.setWorld(world, gen.start, old);
     announceHappenings(world);
     if (biome.id === 'castle') { addCastleStory(world, gen); world.ambientFx = gen.variant?.look?.ambient || null; c.lastCastle = gen.variant?.id; }
-    if (biome.overworld && !sky && !biome.cave && !gen.dunes) {
+    if (biome.overworld && !sky && !sea && !biome.cave && !gen.dunes) {
       // townsfolk on the road: reachable landmarks to walk between (game/wanderers.js)
       const spots = [], map = gen.map;
       for (let i = 0; i < 60 && spots.length < 9; i++) {
@@ -777,14 +811,15 @@ export const game = {
     if (!biome.beta) recordBiomeVisit(c, biome, depth); // a beta biome leaves the overworld guarantee alone
     c.lastBiome = biome.id;
     HUD.setArea(world.unbound ? 'Velscour Unbound' : `Depth ${depth}${depth > FINAL_DEPTH ? ' — Endless Torment' : ''}`, (biome.overworld ? `${gen.variant ? gen.variant.name : biome.name} · ${world.overworldScenario.title}` : gen.raid ? `${biome.name} · Boss Room` : biome.name) + (worldRank(world) ? ` · Heresy ${worldRank(world)}` : ''));
-    playMusic('wilds', { delay: 4 + Math.random() * 20 }); setAmbience(sky ? world.sky.v.amb : biome.id);
+    playMusic('wilds', { delay: 4 + Math.random() * 20 }); setAmbience(sky ? world.sky.v.amb : sea ? world.seaRun.variant.amb : biome.id);
     const kin = tileset.mixed && BIOME_BY_ID[tileset.mixed];
-    if (!sky) UI.centerMsg((gen.variant ? gen.variant.name : biome.name).toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);
+    if (!sky && !sea) UI.centerMsg((gen.variant ? gen.variant.name : biome.name).toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);
     if (world.night) UI.log(world.raining ? 'Night has fallen, and the rain with it.' : 'Night has fallen over the land.', '#a0b0d0');
     if (gen.dunes) UI.log(`${gen.variant.name}: ${gen.variant.intro} ${gen.dunes.camps.length} waystones stand between you and its door.`, '#ffe2a0');
     else if (biome.id === 'sea_of_sand') UI.log(`Secure ${gen.scenarioCount} marked scenario area${gen.scenarioCount===1?'':'s'} to open the exit. Rewards improve with each clear.`, '#ffe2a0');
     else if (biome.id === 'mountainside') UI.log('The trail switchbacks up the cliffs to the summit. A ledge a hop high can be climbed; taller cliffs only jumped down.', '#ffe2a0');
     else if (sky) UI.log(`${world.sky.v.name}: ${world.sky.v.story ? world.sky.v.blurb + ' Hold the deck.' : 'hold the deck against the Air Pirates\' boarding waves.'} ${world.sky.v.hazardText || ''}`, '#ffe2a0');
+    else if (sea) UI.log(`${world.seaRun.variant.name}: ${world.seaRun.variant.blurb} Hold the Dawnwake's deck against the Black Tide's boarders.`, '#ffe2a0');
     else if (biome.tower) UI.log(`${gen.variant.name}: ${gen.variant.epithet}. Climb the stair; things wait on the floors above, and some will not wait.`, '#ffe2a0');
     else if (biome.cave) UI.log(`${gen.variant.name}: ${gen.variant.epithet}. The passages lead down to a lake under a great waterfall; the way on is a long climb to its top.`, '#ffe2a0');
     else if (forest) UI.log(`The Dark Forest closes in. The Heart lies deep in the north-east labyrinth; ${gen.glades.length} glades hold trials and treasure along the way.`, '#c8f0a0');
@@ -833,7 +868,7 @@ export const game = {
       return { id: biome.id, biome, omen: omenable(next, biome) ? rollOmen(next) || (heresiesOf(c).includes('omens') ? anyOmen() : null) : heresiesOf(c).includes('omens') && next > FINAL_DEPTH && !biome.overworld && !isRaidDepth(next) ? anyOmen() : undefined, comm: comm && LINE_BY_ID[comm.id].name }; // Black Omens: always one
     });
     let sel = 0, chosen = false;
-    const tag = (cd) => (cd.biome.id === 'throne' ? '<b style="color:#ff4020">Demon Lord Velscour awaits</b>' : cd.biome.id === 'skyship' ? 'Sky battle' : cd.biome.overworld ? 'Overworld trial' : isRaidDepth(next) ? '<b style="color:#ff6030">BOSS ROOM</b>' : 'Dungeon');
+    const tag = (cd) => (cd.biome.id === 'throne' ? '<b style="color:#ff4020">Demon Lord Velscour awaits</b>' : cd.biome.id === 'skyship' ? 'Sky battle' : cd.biome.sea ? 'Sea battle' : cd.biome.overworld ? 'Overworld trial' : isRaidDepth(next) ? '<b style="color:#ff6030">BOSS ROOM</b>' : 'Dungeon');
     const omenLine = (cd) => (cd.omen === undefined ? '' : cd.omen ? `<span class="pc-omen" style="color:${OMENS[cd.omen].color}"><b>${OMENS[cd.omen].name}</b>${OMENS[cd.omen].text}</span>` : '<span class="pc-omen dim"><b>No omen</b>A quiet depth.</span>');
     const html = `<p class="dim">${cards.length > 1 ? `Depth ${next} lies beyond ${['', 'one', 'two', 'three'][cards.length]} portals. Choose your way down.` : `The way down opens onto Depth ${next}.`}</p>
       <div class="pc-row">${cards.map((cd, i) => `<button type="button" class="pc-card${i === sel ? ' sel' : ''}" data-i="${i}" style="--pc:${cd.biome.torch || '#ff8040'}"><i class="pc-swirl"></i><b class="pc-name">${escapeHtml(cd.biome.name)}</b><span class="pc-tag">${tag(cd)}</span>${cd.comm ? `<span class="pc-omen" style="color:#8fe0ff"><b>Commission</b>${escapeHtml(cd.comm)}</span>` : ''}${omenLine(cd)}</button>`).join('')}</div>
@@ -1275,7 +1310,7 @@ export const game = {
       if (w.overworldScenario) w.overworldScenario.update(dt);
       if (w.map.c3struct && !w.map.sky) castle3dTick(w, dt);
       ambushTick(w, dt);
-      if (w.kind === 'town') townTick(w, dt); else if (!w.sky) happeningsTick(w, dt);
+      if (w.kind === 'town') townTick(w, dt); else if (!w.sky && !w.seaRun) happeningsTick(w, dt);
       if (w.rift) riftTick(w, dt); // the Abyssal Rift's clock (game/rifts.js)
       if (w.heresy) heresyTick(w, dt); // the Heresies as monsters appear, the Legion's hellgates (game/heresies.js; the Breach has no happenings tick)
       madnessTick(dt);

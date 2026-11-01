@@ -159,7 +159,14 @@ export function drawCine(ctx, W, H) {
     ctx.globalAlpha = clamp(a, 0, 1); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = `${Math.round(big * dpr)}px "Cinzel", "Alegreya", serif`; ctx.fillStyle = '#000'; ctx.fillText(C.title, W / 2 + 3 * dpr, H * 0.36 + 3 * dpr);
     ctx.fillStyle = '#ffd9a0'; ctx.fillText(C.title, W / 2, H * 0.36);
-    if (C.sub) { ctx.font = `italic ${Math.round(sub * dpr)}px "Alegreya", serif`; ctx.fillStyle = '#e8d8c0'; ctx.fillText(C.sub, W / 2, H * 0.36 + big * 0.95 * dpr); }
+    if (C.sub) {   // the line under the title: on a dark plate, outlined, near the title's weight (it is often the payoff)
+      const fs = Math.round(Math.max(sub, big * 0.52) * dpr), sy = H * 0.36 + big * 1.0 * dpr;
+      ctx.font = `italic 600 ${fs}px "Alegreya", serif`;
+      const tw = ctx.measureText(C.sub).width, pw = tw + fs * 1.6, ph = fs * 1.55;
+      ctx.fillStyle = 'rgba(8,6,10,0.62)'; ctx.fillRect(W / 2 - pw / 2, sy - ph / 2, pw, ph);
+      ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, fs * 0.16); ctx.strokeStyle = '#000'; ctx.strokeText(C.sub, W / 2, sy);
+      ctx.fillStyle = '#f4e6cc'; ctx.fillText(C.sub, W / 2, sy);
+    }
     ctx.globalAlpha = 1;
   }
   if (Cine.fast && k > 0.5) {   // fast-forwarding a scene already seen
@@ -183,7 +190,14 @@ export function drawCine(ctx, W, H) {
     const n = Math.floor(L.t * 42), shown = L.text.slice(0, n);
     const lines = wrap(ctx, L.text, maxW);
     let used = 0;
-    lines.forEach((ln, j) => { const part = shown.slice(used, used + ln.length); used += ln.length + 1; ctx.fillText(part, tx, py + (f + 4 + 2) * dpr + j * lh * dpr); });
+    lines.forEach((ln, j) => {
+      const part = shown.slice(used, used + ln.length), yy = py + (f + 4 + 2) * dpr + j * lh * dpr; used += ln.length + 1;
+      const mk = L.mark, at = mk ? part.indexOf(mk.word) : -1;
+      if (at < 0) { ctx.fillText(part, tx, yy); return; }
+      // a marked word in its own colour (the Pirate Seas: the Ember's name, said aloud)
+      const pre = part.slice(0, at), w = part.slice(at, at + mk.word.length), x1 = tx + ctx.measureText(pre).width, x2 = x1 + ctx.measureText(w).width;
+      ctx.fillText(pre, tx, yy); ctx.fillStyle = mk.color; ctx.fillText(w, x1, yy); ctx.fillStyle = '#f2e8d8'; ctx.fillText(part.slice(at + mk.word.length), x2, yy);
+    });
     ctx.globalAlpha = 1;
   }
 }

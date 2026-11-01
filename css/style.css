@@ -242,6 +242,8 @@ body.touch #sealed-btn i { width: 16px; height: 16px; }
 #sand-timer { color:#ffb86a; font-weight:800; font-variant-numeric:tabular-nums; }
 #center-msg { position: absolute; top: 24%; left: 0; right: 0; text-align: center; font: 900 clamp(22px, 4vw, 44px) var(--font-head); color: var(--gold-bright); text-shadow: 0 0 10px #000, 0 0 20px #a40; pointer-events: none; opacity: 0; transition: opacity .5s; letter-spacing: 3px; }
 #center-msg.below { top: 60%; } /* the level-up banner holds the top of the screen */
+body.at-sea #levelup { top: 31%; } /* the Pirate Seas: the top band is the scenario's banners and its meter */
+#center-msg.top { top: 64px; font-size: clamp(16px, 2.4vw, 26px); letter-spacing: 2px; } /* a fight's running banners, under the boss bar */
 #center-msg small { display: block; font-size: .45em; color: var(--text); letter-spacing: 1px; }
 
 /* hero stats plaque (top left) */

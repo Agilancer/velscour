@@ -80,16 +80,23 @@ export const UI = {
     if (color) d.style.color = color;
     this.logEl.appendChild(d);
     while (this.logEl.children.length > 6) this.logEl.firstChild.remove();
-    setTimeout(() => d.remove(), 6200);
+    const sea = !!(G.world && G.world.seaRun), life = sea ? 4000 : 6200;   // at sea the deck's left edge is where the boats come from
+    if (sea) { d.style.transition = 'opacity .6s'; setTimeout(() => { d.style.opacity = '0'; }, life - 600); }
+    setTimeout(() => d.remove(), life);
   },
-  centerMsg(title, sub = '', dur = 2.6) {
+  /** A centred banner; o.top puts it in the band under the boss bar, smaller (a fight's running banners). */
+  centerMsg(title, sub = '', dur = 2.6, o = {}) {
     this.msgEl.innerHTML = `${escapeHtml(title)}${sub ? `<small>${escapeHtml(sub)}</small>` : ''}`;
     const lu = this.hud && this.hud.lu;
-    this.msgEl.classList.toggle('below', !!(lu && performance.now() < lu.end));
+    this.msgEl.classList.toggle('top', !!o.top);
+    this.msgEl.classList.toggle('below', !o.top && !!(lu && performance.now() < lu.end));
     this.msgEl.style.opacity = '1';
     clearTimeout(this.msgT);
     this.msgT = setTimeout(() => { this.msgEl.style.opacity = '0'; }, dur * 1000);
   },
+
+  clearCenterMsg() { clearTimeout(this.msgT); this.msgEl.style.opacity = '0'; },
+  clearLog() { this.logEl.innerHTML = ''; },
 
   // ------------------------------------------------------------- dialogs
   dialog({ title, html, buttons = [], closable = true, cls = '' }) {

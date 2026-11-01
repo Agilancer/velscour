@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sea Ships 3D</title>
+<!-- The Pirate Seas fleet (docs/PIRATE_SEAS.md) on Bellmourn's water (tools/sea3d.js), seen from the game's iso camera
+     with the bows to the upper right. Every ship builder is its own module, loaded when its scene is picked, so one
+     broken ship never stops the rest. http://localhost:8123/tools/seaships3d.html
+     ?scene=<name>  ?px=1|2|3  ?weather=day|storm|night|sunset|fog|blood  ?figures=0  ?still=1
+     window.SEA.view(name) frames a preset view (iso, close, side, top, bow, stern, deck); SEA.step(sec) advances. -->
+<style>
+  html, body { margin: 0; height: 100%; background: #6aa0d8; overflow: hidden; font: 12px monospace; color: #fff; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+  #hud { position: fixed; left: 10px; top: 8px; text-shadow: 1px 1px 0 #000a; white-space: pre; pointer-events: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="hud"></div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { seaMaterials } from './seaship3d.js';
+import { buildSea } from './sea3d.js';
+
+const Q = new URLSearchParams(location.search);
+const opt = { px: +(Q.get('px') || 2), figures: Q.get('figures') !== '0', still: Q.get('still') === '1', paused: false,
+  scene: Q.get('scene') || 'lineup', weather: Q.get('weather') || 'day', hud: Q.get('hud') !== '0' };
+const HERO = 60 / Math.cos(Math.PI / 6) / (32 * Math.SQRT2);   // a 60 px hero in tile units (1.53)
+
+// ------------------------------------------------------------------ the fleet: module, export, args
+// size: the class the critics and scenarios use. Every builder returns { root, anim(t, dt), info } with
+// info.waterline (deck-relative y of the waterline), info.hl / info.hb (half length / beam at the waterline).
+const FLEET = {
+  longboat:   { mod: './seaship3d_small.js', fn: 'buildLongboat', size: 'small', name: 'Pirate longboat' },
+  cutter:     { mod: './seaship3d_small.js', fn: 'buildSeaCutter', size: 'small', name: 'Harpoon cutter (sea)' },
+  brig:       { mod: './seaship3d_brig.js', fn: 'buildBrig', size: 'medium', name: 'Corsair gun-brig' },
+  hulk:       { mod: './seaship3d_brig.js', fn: 'buildBrig', args: [{ hulk: true }], size: 'medium', name: 'The Red Tide hulk (brig, dismasted) with the blood idol' },
+  grappler:   { mod: './seaship3d_brig.js', fn: 'buildGrappler', size: 'medium', name: 'Grapple steamer' },
+  galleon:    { mod: './seaship3d_galleon.js', fn: 'buildSeaGalleon', size: 'large', name: 'Black-sail galleon' },
+  dreadnought:{ mod: './seaship3d_dreadnought.js', fn: 'buildDreadnought', size: 'huge', name: 'Velscour\'s dreadnought' },
+  carrier:    { mod: './seaship3d_carrier.js', fn: 'buildCarrier', size: 'super huge', name: 'The Gunners\' carrier' },
+  kestrel:    { mod: './seaship3d_jets.js', fn: 'buildJet', args: ['kestrel'], size: 'aircraft', name: 'Brass Kestrel fighter', air: 4 },
+  thunderhawk:{ mod: './seaship3d_jets.js', fn: 'buildJet', args: ['thunderhawk'], size: 'aircraft', name: 'Thunderhawk torpedo bomber', air: 4 },
+  dawnwake:   { mod: './seaship3d_dawnwake.js', fn: 'buildDawnwake', size: 'heroes', name: 'The Dawnwake (the heroes\' ship)' },
+  lightship:  { mod: './seaship3d_lightship.js', fn: 'buildLightship', size: 'ally', name: 'Lampwarden lightship' },
+  tender:     { mod: './seaship3d_tender.js', fn: 'buildTender', size: 'ally', name: 'Lampwarden tender' },
+  airgalleon: { mod: './airship3d.js', fn: 'buildAirship', size: 'air', name: 'Air pirate galleon (existing)', air: 14 },
+  gasbag:     { mod: './airship3d_skiffs.js', fn: 'buildSkiff', args: ['gasbag', 1], size: 'air', name: 'Air pirate gasbag (existing)', air: 10 },
+};
+const SIZE_ORDER = ['longboat', 'cutter', 'brig', 'grappler', 'galleon', 'dreadnought', 'carrier'];
+
+// ------------------------------------------------------------------ three.js
+const glc = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({ canvas: glc, antialias: false, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+const scene = new THREE.Scene();
+let FH = 22;
+const cam = new THREE.OrthographicCamera(-FH, FH, FH, -FH, -600, 600);
+const controls = new OrbitControls(cam, glc);
+const TARGET = new THREE.Vector3();
+function look(x = TARGET.x, y = TARGET.y, z = TARGET.z, zoom = 1, az = 45, el = 30) {
+  const a = az * Math.PI / 180, e = el * Math.PI / 180, p = new THREE.Vector3(x, y, z);
+  cam.position.set(Math.cos(e) * Math.sin(a), Math.sin(e), Math.cos(e) * Math.cos(a)).multiplyScalar(200).add(p);
+  cam.up.set(0, 1, 0); cam.zoom = zoom; cam.lookAt(p); cam.updateProjectionMatrix(); controls.target.copy(p); controls.update();
+}
+const hemi = new THREE.HemisphereLight(0xd4e6ff, 0x2a4a6a, 0.5 * Math.PI);
+scene.add(new THREE.AmbientLight(0xffffff, 0.25 * Math.PI), hemi);
+const sun = new THREE.DirectionalLight(0xfff1dc, 1.25 * Math.PI);
+sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.04;
+Object.assign(sun.shadow.camera, { left: -80, right: 80, top: 80, bottom: -80, near: 1, far: 400 });
+scene.add(sun, sun.target);
+function aimSun() {   // from the upper left, a little in front (camera space), as in the other 3D tools
+  look(TARGET.x, TARGET.y, TARGET.z); cam.updateMatrixWorld();
+  const d = new THREE.Vector3(-0.6, 0.85, 0.5).normalize().transformDirection(cam.matrixWorld);
+  sun.target.position.copy(TARGET); sun.position.copy(d).multiplyScalar(180).add(TARGET);
+}
+const SKY = { day: [0x3a6eb8, 0x9cc8ee], storm: [0x2a333c, 0x6a7680], night: [0x05080f, 0x1a2a48], sunset: [0x3a3a7a, 0xf0a070], fog: [0x9aa8b0, 0xc6d0d4], blood: [0x2a0a12, 0xc06048] };
+const LIGHT = { day: [1.25, 0xfff1dc, 0.5], storm: [0.55, 0xc8d4e0, 0.45], night: [0.25, 0x8aa0ff, 0.3], sunset: [1.0, 0xffb080, 0.45], fog: [0.6, 0xe8eef0, 0.6], blood: [0.9, 0xff9070, 0.4] };
+const skyTex = (w) => {
+  const c = document.createElement('canvas'); c.width = 2; c.height = 256; const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, 256), [a, b] = SKY[w] || SKY.day;
+  g.addColorStop(0, '#' + a.toString(16).padStart(6, '0')); g.addColorStop(1, '#' + b.toString(16).padStart(6, '0'));
+  x.fillStyle = g; x.fillRect(0, 0, 2, 256); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+};
+const sea = buildSea(scene, { size: 1100, seg: 360, weather: opt.weather });
+function setWeather(w) {
+  opt.weather = w; sea.setWeather(w); scene.background = skyTex(w);
+  const [k, c, h] = LIGHT[w] || LIGHT.day; sun.intensity = k * Math.PI; sun.color.set(c); hemi.intensity = h * Math.PI;
+  scene.fog = w === 'fog' ? new THREE.Fog(0xc6d0d4, 120, 260) : null;
+}
+setWeather(opt.weather);
+
+const M = await seaMaterials('../assets/source/airship/textures/');
+const halo = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+  const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, '#fff'); g.addColorStop(0.25, '#fff8'); g.addColorStop(1, '#fff0');
+  x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+const glows = [];
+function addGlows(ship) {
+  for (const gl of ship.info.glow || []) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, color: gl.c, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+    s.position.set(gl.x, gl.y, gl.z); s.scale.setScalar(gl.r); s.userData.big = gl.r > 2.8; ship.root.add(s); glows.push(s);
+    if (gl.light) { const p = new THREE.PointLight(gl.c, 22, gl.lr || 7, 1.6); p.position.set(gl.x, gl.y + 0.5, gl.z); ship.root.add(p); }
+  }
+}
+// figures at the game's hero size: Air Pirates from the expansion pack, and class portraits for the heroes
+const texCache = {};
+const loadTex = (url) => texCache[url] ||= new THREE.TextureLoader().loadAsync(url).then((t) => { t.colorSpace = THREE.SRGBColorSpace; t.magFilter = t.minFilter = THREE.NearestFilter; return t; });
+const CREW = ['000_tarcoat_deckhand', '001_saltwind_cutlass_raider', '003_boarding_pike_corsair', '005_gale_glass_harpooner', '010_quartermaster_breaker',
+  '017_shipbreaker_mauler', '020_iron_rib_captain_s_guard', '013_cinderbomb_grenadier', '004_chainhook_climber', '011_red_sash_duelist', '015_hook_leg_veteran', '023_salt_rust_boarding_shield'];
+async function figure(parent, kind, i, x, y, z) {
+  let url, frameH = 192, foot = 9, h;
+  if (kind === 'pirate') url = `../assets/source/enemies/air/crew/${CREW[i % CREW.length]}.png`;
+  else { url = `../assets/sprites/select/${kind}.webp`; }
+  let t; try { t = await loadTex(url); } catch { return; }
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, alphaTest: 0.5 }));
+  if (kind === 'pirate') { h = HERO * Math.cos(Math.PI / 6) * frameH / 108; s.center.set(0.5, foot / frameH); }
+  else { h = HERO * Math.cos(Math.PI / 6) / 0.9; s.center.set(0.5, 0.02); }
+  s.scale.set(h * t.image.width / t.image.height, h, 1);
+  s.position.set(x, y + 0.02, z); s.userData.figure = true; s.visible = opt.figures; parent.add(s);
+}
+
+// ------------------------------------------------------------------ ships on the water
+const world = new THREE.Group(); scene.add(world);
+let cur = null;
+const built = {};
+const errors = [];
+async function make(key) {
+  const f = FLEET[key];
+  const mod = await import(f.mod);
+  const ship = mod[f.fn](M, ...(f.args || []));
+  ship.key = key; ship.info.waterline ??= f.air ? 0 : -1.5;
+  if (f.size === 'aircraft') { ship.setGear?.(false); ship.setThrottle?.(1); }
+  // smoke, steam and halos draw after the sea (renderOrder 1), or the sea hides whatever of them is over the water
+  ship.root.traverse((o) => { if ((o.isSprite || o.isPoints) && o.renderOrder < 3) o.renderOrder = 3; });
+  addGlows(ship);
+  ship.root.traverse((o) => { if (o.isSprite && o.renderOrder < 3) o.renderOrder = 3; });
+  return ship;
+}
+/** A ship on the sea at (x, z), heading h (0 = bow toward -Z), speed for the wake; air craft fly at f.air above it. */
+function afloat(ship, x, z, h = 0, speed = 0.5, phase = 0) {
+  const g = new THREE.Group(); g.add(ship.root); g.position.set(x, 0, z); g.rotation.y = h;
+  const f = FLEET[ship.key], wl = ship.info.waterline, hl = ship.info.hl || (ship.info.length || 10) / 2, hb = ship.info.hb || (ship.info.beam || 4) / 2;
+  g.userData = { ship, x, z, h, speed, hl, hb, air: f.air, phase };
+  return g;
+}
+function ride(g, t) {
+  const u = g.userData, ship = u.ship;
+  if (u.air) { ship.root.position.y = u.air + Math.sin(t * 0.7 + u.phase) * 0.3; ship.root.rotation.z = Math.sin(t * 0.5 + u.phase) * 0.02; return; }
+  const r = sea.ride(u.x, u.z, u.h, u.hl, u.hb, t), big = Math.min(1, 14 / u.hl);
+  ship.root.position.y = r.y - ship.info.waterline;
+  ship.root.rotation.x = -r.pitch * (0.4 + 0.6 * big); ship.root.rotation.z = r.roll * (0.35 + 0.65 * big) + (ship.info.list || 0);
+}
+const SCENES = {};
+for (const k of Object.keys(FLEET)) SCENES[k] = { name: FLEET[k].name, ships: [[k, 0, 0, 0, 0.35]], crew: true };
+SCENES.lineup = { name: 'Size line-up: small, medium, large, huge, super huge', lineup: true };
+SCENES.battle = { name: 'Battle: the Dawnwake against the dreadnought, a brig and the air pirates', ships: [['dawnwake', 0, 0, 0, 0.6], ['dreadnought', -62, -18, 0.15, 0.4], ['brig', 30, -28, -0.3, 0.8], ['longboat', -16, 8, -1.2, 0.9], ['gasbag', -12, 14, 0.2, 0], ['airgalleon', -40, 30, 0.3, 0]] };
+SCENES.carrierdeck = { name: 'Carrier flight deck: jets on the catapults, the Gunners\' crew', ships: [['carrier', 0, 0, 0, 0.25]], crew: true, view: 'deck' };
+
+async function buildScene(name) {
+  const S = SCENES[name], root = new THREE.Group(), list = [];
+  let specs = S.ships;
+  if (S.lineup) {               // abeam, smallest first, each bow to the upper right, spaced by beam
+    specs = []; let x = 0;
+    for (const k of SIZE_ORDER) { specs.push([k, x, 0, 0, 0.2]); }
+  }
+  const made = [];
+  for (const sp of specs) { try { made.push([await make(sp[0]), sp]); } catch (e) { errors.push(`${sp[0]}: ${e.message}`); console.error(sp[0], e); } }
+  if (S.lineup) {                // lay them out by their beams once built
+    let x = 0;
+    for (const [ship, sp] of made) { const hb = ship.info.hb || ship.info.beam / 2 || 3; x += hb + 3; sp[1] = x; x += hb + 3; }
+    const mid = x / 2; for (const [, sp] of made) sp[1] -= mid;
+  }
+  for (const [ship, [k, x, z, h, spd]] of made) {
+    const g = afloat(ship, x, z, h, spd, list.length * 1.7); root.add(g); list.push(g);
+    if (S.crew && ship.info.crew) {
+      const heroes = ['paladin', 'wizard', 'gunner', 'ranger', 'death_knight', 'bard'];
+      await Promise.all(ship.info.crew.map(([x, y, z, who], i) => figure(ship.root, who === 'hero' ? heroes[i % heroes.length] : 'pirate', i, x, y, z)));
+    }
+  }
+  return { root, list, name };
+}
+async function setScene(name) {
+  if (!SCENES[name]) name = 'lineup';
+  opt.scene = name;
+  built[name] ||= await buildScene(name);
+  world.clear(); cur = built[name]; world.add(cur.root);
+  view(SCENES[name].view || 'iso');
+  info();
+}
+
+// ------------------------------------------------------------------ views
+function extent() {
+  const b = new THREE.Box3();
+  for (const g of cur.list) { g.updateMatrixWorld(true); b.expandByObject(g.userData.ship.root); }
+  if (b.isEmpty()) b.set(new THREE.Vector3(-10, -2, -10), new THREE.Vector3(10, 6, 10));
+  return b;
+}
+/** Preset views: iso (the game camera), close (3/4 from the bow quarter, nearer), side (port beam), top, bow, stern, deck. */
+function view(v = 'iso') {
+  const b = extent(), c = b.getCenter(new THREE.Vector3()), s = b.getSize(new THREE.Vector3());
+  const big = Math.max(s.x, s.z, s.y * 1.6);
+  const presets = {
+    iso: [45, 30, 0.62], close: [140, 18, 1.05], side: [-90, 8, 0.85], top: [45, 80, 0.75], bow: [190, 14, 1.0], stern: [10, 20, 1.0], deck: [45, 30, 1.9], game: [45, 30, 0],
+  };
+  const [az, el, k] = presets[v] || presets.iso;
+  TARGET.copy(c); if (v === 'deck') TARGET.y = 0.5;
+  aimSun(); look(c.x, v === 'deck' ? 0.5 : c.y, c.z, 1, az, el); cam.updateMatrixWorld();
+  // fit: the box's corners in camera space, so a long ship seen end-on or across fills the frame alike.
+  // game: the game's own scale, 45.25 screen px a tile across (a 64 x 32 tile) at 1 px per world px, not fitted.
+  let fx = 0, fy = 0;
+  for (let i = 0; i < 8; i++) {
+    const p = new THREE.Vector3(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z).sub(c).applyMatrix4(new THREE.Matrix4().extractRotation(cam.matrixWorldInverse));
+    fx = Math.max(fx, Math.abs(p.x)); fy = Math.max(fy, Math.abs(p.y));
+  }
+  const fit = Math.max(fy, fx / (innerWidth / innerHeight)) * 1.08;
+  FH = v === 'game' ? innerHeight / opt.px / 2 / 45.25 : v === 'deck' ? big * 0.5 / k : fit * Math.min(1, 0.62 / k * 1.25);   // iso fits the ship; close and the others come a little nearer
+  resize(); look(c.x, v === 'deck' ? 0.5 : c.y, c.z, 1, az, el);
+  sea.follow(c.x, c.z);
+  opt.view = v; info();
+}
+function resize() {
+  renderer.setSize(Math.ceil(innerWidth / opt.px), Math.ceil(innerHeight / opt.px), false);
+  const a = innerWidth / innerHeight; cam.left = -FH * a; cam.right = FH * a; cam.top = FH; cam.bottom = -FH; cam.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+
+// ------------------------------------------------------------------ loop + keys
+const hud = document.getElementById('hud');
+function info() {
+  if (!opt.hud) { hud.textContent = ''; return; }
+  const list = Object.keys(SCENES).join(' ');
+  const ships = cur.list.map((g) => { const i = g.userData.ship.info; return `${g.userData.ship.key} ${(i.length || 0).toFixed(0)}x${(i.beam || 0).toFixed(0)}`; }).join(', ');
+  hud.textContent = `${SCENES[opt.scene].name.toUpperCase()}   [${opt.view}] [${opt.weather}]\n${ships}\n${errors.length ? 'ERRORS: ' + errors.join(' | ') + '\n' : ''}`
+    + `scenes: ${list}\nV view · 1-6 weather · S splash · C cannon column · F figures · P pixel ${opt.px}x · space pause`;
+}
+const VIEWS = ['iso', 'game', 'close', 'side', 'top', 'bow', 'stern', 'deck'], WEATHERS = ['day', 'storm', 'night', 'sunset', 'fog', 'blood'];
+addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  if (k === 'v') view(VIEWS[(VIEWS.indexOf(opt.view) + 1) % VIEWS.length]);
+  else if (k >= '1' && k <= '6') setWeather(WEATHERS[+k - 1]);
+  else if (k === 's') sea.splash(TARGET.x + (Math.random() - 0.5) * 20, TARGET.z + 10 + Math.random() * 6, 1);
+  else if (k === 'c') sea.column(TARGET.x + (Math.random() - 0.5) * 20, TARGET.z + 12, 1.2);
+  else if (k === 'f') { opt.figures = !opt.figures; cur.root.traverse((o) => { if (o.userData.figure) o.visible = opt.figures; }); }
+  else if (k === 'p') { opt.px = opt.px % 3 + 1; resize(); }
+  else if (k === ' ') opt.paused = !opt.paused;
+  info();
+});
+let t = 0;
+function update(d) {
+  t += d;
+  const foam = [];
+  for (const g of cur.list) {
+    const u = g.userData; ride(g, t); u.ship.anim?.(t, d);
+    if (!u.air) foam.push({ x: u.x, z: u.z, heading: u.h, hl: u.hl, hb: u.hb, speed: u.speed, wake: u.hl * 3.2 });
+  }
+  sea.setShips(foam);
+  glows.forEach((g, i) => { g.material.opacity = (g.userData.big ? 0.75 : 0.45) + 0.12 * Math.sin(t * 9 + i * 1.7); });
+  sea.update(d, t, { camera: cam, height: renderer.domElement.height, sun, hemi });
+}
+await setScene(opt.scene);
+let last = performance.now();
+function frame(now) {
+  const dt = opt.still ? 0 : Math.min(0.05, (now - last) / 1000); last = now;
+  update(opt.paused ? 0 : dt);
+  renderer.render(scene, cam);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+const step = (sec) => { for (let i = 0; i < Math.round(sec * 30); i++) update(1 / 30); renderer.render(scene, cam); };
+window.SEA = { scene, cam, renderer, sea, opt, look, view, setScene, setWeather, step, errors, FLEET, SCENES, get cur() { return cur; }, ready: true };
+</script>
+</body>
+</html>

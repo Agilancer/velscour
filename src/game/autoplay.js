@@ -1198,7 +1198,8 @@ export const Auto = {
           !a || Math.hypot(b.x-p.x,b.y-p.y) < Math.hypot(a.x-p.x,a.y-p.y) ? b : a, null);
       }
       // the Breach's fights keep arriving: after a while fighting with an objective waiting, push through to it
-      if (objective && nearEnemy && w.breach) { this.objWait = (this.objWait || 0) + dt; if (this.objWait > 10) this.objPush = 4; } else this.objWait = 0;
+      // (ow.pushObjective: the Pirate Seas, an objective that holds the fight back, game/seabattle.js)
+      if (objective && nearEnemy && (w.breach || ow.pushObjective)) { this.objWait = (this.objWait || 0) + dt; if (this.objWait > 10) this.objPush = 4; } else this.objWait = 0;
       if (this.objPush > 0) this.objPush -= dt;
       if (objective && (!nearEnemy || this.objPush > 0)) {
         this.setStatus('Completing '+ow.title);

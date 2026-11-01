@@ -89,7 +89,7 @@ export class TileMap {
     for (let i = 1; i < steps; i++) {
       const t = i / steps;
       const tx = Math.floor(x0 + dx * t), ty = Math.floor(y0 + dy * t);
-      if (!this.tile(tx,ty) || (this.losBlocks && this.block[ty*this.w+tx])) return false;
+      if ((!this.tile(tx,ty) && !this.losOverWater) || (this.losBlocks && this.block[ty*this.w+tx])) return false;   // losOverWater: the Pirate Seas (the sea hides nothing)
       if (H && H[ty * this.w + tx] > top) return false;
     }
     return true;
