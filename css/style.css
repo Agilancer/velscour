@@ -366,6 +366,8 @@ body.at-sea #levelup { top: 31%; } /* the Pirate Seas: the top band is the scena
 .eslot { position: relative; border: 1px solid #4a3620; background: rgba(0,0,0,.55); border-radius: 3px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .eslot .lbl { position: absolute; bottom: 1px; left: 0; right: 0; text-align: center; font-size: 9px; color: #6d5a40; pointer-events: none; text-transform: uppercase; }
 .bag { display: grid; grid-template-columns: repeat(10, 44px); grid-auto-rows: 44px; gap: 3px; }
+.bag-buy { align-self: stretch; }
+.bag-buy.poor { opacity: .55; }
 .bslot { position: relative; border: 1px solid #3a2a18; background: rgba(0,0,0,.5); border-radius: 2px; cursor: pointer; }
 .vanity-row { display: flex; align-items: center; gap: 6px; padding: 6px; background: radial-gradient(#1e1428, #0b0710); border: 1px solid var(--line); border-radius: 4px; }
 .vanity-title { display: flex; flex-direction: column; font-family: Cinzel, serif; font-size: 12px; color: #d8c8ff; margin-right: auto; }

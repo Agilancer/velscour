@@ -14,6 +14,16 @@ Contents
 
 ---
 
+## November 1, 2026 — buy more bag rows with gold (branch `feat/buy-bag-rows`)
+
+A player asked to buy more inventory rows, each costing more. The bag starts at 6 rows of 10; a button under it
+buys rows 7..12 for 5k, 10k, 20k, 40k, 80k and 160k gold (the player's prices), through a confirm dialog.
+- `src/data/bag.js`: the prices, `buyBagRow`, `fixBag`. The row count is just `c.bag.length / 10`, so saves keep
+  bought rows with no new field; `migrate()` calls `fixBag` (pads to 60 and a whole row, drops empty slots past 120).
+- `src/ui/inventory.js` `bagRowButton()`; the panel scrolls once the bag is tall (it already did on phones).
+- Auto-play (gear managed) buys the next row on arriving in town when it holds 4x the price; hands-off never does.
+- Test: `node tools/tests/bagrows.js [mobile]`. Also ran flow, ui, stash, autogear, mobile, hud, autoplay.
+
 ## October 30, 2026 — first-person view (branch `feat/first-person-view`)
 - **Settings › First-person view** (`G.settings.firstPerson`, off by default): the game through the hero's eyes in
   the town, dungeons and every flat overworld. The Serpentine Tower and the caverns keep their own 3D views.
