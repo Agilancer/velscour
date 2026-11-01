@@ -88,7 +88,9 @@ off one landing holds chests and its guards.
   looks off the end of the world; it stays low past the near edges.
 - **Masonry** is procedural (`masonry`): staggered courses or flagstones, glyph bands every fourth course, in the
   pyramid's stone colours. Obelisks, columns, urns and the sarcophagus are 3D models baked to sprites (`bakeProps`),
-  drawn in the depth-sorted pass by `world.cave.drawProp` so they hide whoever walks behind them.
+  drawn in the depth-sorted pass by `world.cave.drawProp` so they hide whoever walks behind them. The jars along a
+  room's walls and its columns keep 2 tiles clear of every corridor's mouth (`nearWay`): a row of jars across the way
+  in looked like a wall, and the one gap it left was easily plugged by a pet or a foe.
 
 ## Auto-play
 `run.objective` drives it between fights (`autoplay.js` reads `ow.objective`): the next waystone, then inside a
@@ -101,7 +103,8 @@ ring when kiting has drawn him out. After 5 s of fighting, auto-play pushes thro
 ## Tests
 - `node tools/tests/dunes_map.mjs [ids|all] [seeds]`: no browser. The trail joins the start, every waystone and the
   door; the tomb joins its entrance to the burial chamber with every seal open; at most 20 steps over the climb limit;
-  the chamber at least 12 tiles under the entrance; counts of spawns and props. Writes `out/dunes_map_<id>.png`.
+  the chamber at least 12 tiles under the entrance; every corridor's mouth open its full width two tiles into its room,
+  no jar within 2 tiles of one; counts of spawns and props. Writes `out/dunes_map_<id>.png`.
 - `node tools/tests/dunes.js [ids|all] [mobile] [auto] [noflow]`: the live game. Shots per stage
   (`dunes_<id>_{arrive,camp,pyramid,door,tomb,room,chamber}.png`). `auto` then lets auto-play take the first
   variant's whole level with a level-1 paladin in god mode, logging its progress.

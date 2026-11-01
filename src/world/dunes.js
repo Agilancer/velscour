@@ -466,11 +466,21 @@ export function generateDunes(depth, biome, seed, force = null) {
     if (t && !torches.some((o) => !o.stand && (o.x - t.x) ** 2 + (o.y - t.y) ** 2 < 36)) torches.push(t);
   }
   const blockT = (x, y) => { const i = I(Math.floor(x), Math.floor(y)); if (walk[i]) map.block[i] = 1; };
+  // floor outside the room within d tiles: a corridor's mouth (a jar there would fence the way in or out)
+  const nearWay = (rm, x, y, d = 2) => {
+    const tx = Math.floor(x), ty = Math.floor(y);
+    for (let oy = -d; oy <= d; oy++) for (let ox = -d; ox <= d; ox++) {
+      const X = tx + ox, Y = ty + oy, t = tileAt(X, Y);
+      if (t >= 0 && walk[t] && (X < rm.x0 || X > rm.x1 || Y < rm.y0 || Y > rm.y1)) return true;
+    }
+    return false;
+  };
   const tombProps = (rm, kind) => {
     const w = rm.x1 - rm.x0 + 1, h = rm.y1 - rm.y0 + 1;
     if (kind === 'columns' && w > 11 && h > 11) {
       for (const fy of [0.3, 0.7]) for (let fx = 0.2; fx <= 0.81; fx += 0.2) {
         const x = Math.floor(rm.x0 + w * fx), y = Math.floor(rm.y0 + h * fy);
+        if (nearWay(rm, x, y) || nearWay(rm, x + 1, y + 1)) continue;
         props.push({ x: x + 1, y: y + 1, caveProp: 'pillar', m: 0, flip: false, h: VIS_IN[DREG.hall] });
         blockT(x, y); blockT(x + 1, y); blockT(x, y + 1); blockT(x + 1, y + 1);
       }
@@ -478,7 +488,7 @@ export function generateDunes(depth, biome, seed, force = null) {
     for (let n = 0; n < Math.round((w + h) / 4); n++) {   // jars and urns along the walls
       const side = rng.int(0, 3), along = rng.range(1.5, (side % 2 ? h : w) - 1.5);
       const x = side === 0 ? rm.x0 + along : side === 1 ? rm.x0 + 0.8 : side === 2 ? rm.x0 + along : rm.x1 + 0.2, y = side === 0 ? rm.y0 + 0.8 : side === 1 ? rm.y0 + along : side === 2 ? rm.y1 + 0.2 : rm.y0 + along;
-      if (!map.block[I(Math.floor(x), Math.floor(y))] && !nearP(x, y, 1.4)) { props.push({ x, y, caveProp: 'urn', m: rng.int(0, 2), flip: rng.chance(0.5) }); blockT(x, y); }
+      if (!map.block[I(Math.floor(x), Math.floor(y))] && !nearP(x, y, 1.4) && !nearWay(rm, x, y)) { props.push({ x, y, caveProp: 'urn', m: rng.int(0, 2), flip: rng.chance(0.5) }); blockT(x, y); }
     }
   };
   rooms.forEach((rm, k) => { if (rm.room && k) tombProps(rm, rng.chance(0.55) ? 'columns' : 'plain'); });
