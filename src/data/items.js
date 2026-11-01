@@ -4,7 +4,7 @@ import { rollAugments, RING_NAMES, AUGMENTS, KIND_NAMES } from './rings.js';
 import { SKILLS } from './skills.js';
 import { SHEET_PRICE } from './tabs.js';
 import { CLASS_FOCUS } from './held.js';
-import { MAX_LEVEL } from './depth.js';
+import { MAX_LEVEL, weaponRef } from './depth.js';
 
 // lv: the rarity's power bonus in item levels. Every number on an item (base damage, armor, affix values, ring
 // powers, legendary powers) comes from its power level = item level + lv. Every rarity rolls the same CORE_LINES
@@ -369,7 +369,12 @@ export function affixScale(sc, pl) {
   if (sc < 0.01) return 1 + pl * sc;
   return (1 + AFFIX_ANCHOR * sc) * (1 + pl * sc * AFFIX_K) / (1 + AFFIX_ANCHOR * sc * AFFIX_K);
 }
+// "+N Weapon Damage" rides the weapon damage curve (rollItem: weaponRef of the power level): 18-72% of a Common
+// weapon's average at any depth. On the gentle affix curve it read "+0.00" on deep weapons (shownWeapon).
+export const FLAT_DMG_K = 0.12;
+export const flatDmgValue = (roll, pl, perk) => Math.max(1, Math.round((1 + 3 * roll) * FLAT_DMG_K * weaponRef(pl) * (perk ? PERK_MULT : LINE_MULT)));
 export function affixValue(a, ilvl, rarity, roll = Math.random()) {
+  if (a.s === 'flatDmg') return flatDmgValue(roll, powerLevel(ilvl, rarity), a.perk);
   const base = a.min + (a.max - a.min) * roll;
   const v = base * affixScale(a.sc, powerLevel(ilvl, rarity)) * (a.perk ? PERK_MULT : LINE_MULT);
   return a.min >= 1 && a.max <= 2 && a.sc === 0 ? Math.round(base) : Math.max(1, Math.round(v));
