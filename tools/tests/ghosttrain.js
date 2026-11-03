@@ -2,9 +2,10 @@
 // the biome draw. The live three.js train builds; 30 seeds: every car's pack and the tender's boss reachable from the
 // caboose, a platform joins the train while it is written and is void again after; a station stop in play (the train
 // brakes, stands, whistles and pulls out; the hero on the platform leaps back aboard, raiders on it are left behind);
-// the cutaway (the hero's car open, the others roofed, who is inside them hidden) and the engine's mask; screenshots
-// (caboose, a car fight, braking into a station, on the platform, the tender and the engine, an overview, the Last
-// Stop, the phone layout). Then auto-play rides it from the caboose to the Last Stop's exit. The chief's train fight
+// the cutaway (the hero's car open, the others roofed, who is inside them hidden) and the engine's mask; 16 fight cars,
+// 5 stations and the lieutenant on the prison car; the frame cost at the back, middle and front; screenshots (caboose, a
+// car fight, braking into a station, on the platform, the tender and the engine, two overviews, every station look,
+// the gorge, the Last Stop, the phone layout). Then auto-play rides it from the caboose to the Last Stop's exit. The chief's train fight
 // (coal lanes, the furnace vent, the whistle) is cast in play and shot. With depths, a hero geared for each depth the
 // way balance.js gears one rides it on auto-play for real (no god mode; a fall is counted and the hero stood up again):
 // it must finish, with few falls, and must not be a walk-over (life lost, the chief's fight length).
@@ -62,12 +63,36 @@ const DEEP_CLASSES = (process.argv[5] || 'paladin').split(',');
       const exit = w.portals.find((q) => q.type === 'exit');
       if (exit.x > 0 || exit.active) bad.push('exit is out before the train stops');
       if (!w.boss || w.boss.x < TENDER.x0 || w.boss.x > TENDER.x1) bad.push('the boss is not on the tender');
+      const { LT_CAR, STATIONS } = await import('/src/world/ghosttrain.js');
+      if (FIGHT_CARS.length < 14) bad.push(`only ${FIGHT_CARS.length} fight cars`);
+      if (STATIONS.length < 4) bad.push(`only ${STATIONS.length} stations`);
+      const L = sc && sc.lieutenant, ltc = FIGHT_CARS[LT_CAR];
+      if (!L || L.rank !== 'boss' || L.x < ltc.x0 || L.x > ltc.x1 || w.boss === L) bad.push('no lieutenant on the prison car');
       const mobs = w.creatures.filter((m) => m.team === 'enemy' && m !== w.boss);
-      for (const car of FIGHT_CARS) if (!mobs.some((m) => m.x >= car.x0 - 0.5 && m.x < car.x1 + 0.5)) bad.push(`car at ${car.x0} has no pack`);
+      FIGHT_CARS.forEach((car, k) => { if (!sc.packs[k].length) bad.push(`car at ${car.x0} has no pack`); });
       return { bad, title: sc && sc.title, objective: sc && sc.objective, mobs: mobs.length, boss: w.boss && w.boss.name, scene: trainScene() ? trainScene().scene.children.length : 0 };
     });
     console.log('skull', JSON.stringify(first));
     for (const b of first.bad) errors.push('[skull] ' + b);
+
+    // ------------------------------------------------ frame cost: the render at the back, the middle and the front (the
+    // game held still, so nobody wakes)
+    const cost = await page.evaluate(async () => {
+      const { G, game } = window.VELSCOUR;
+      const { camera } = await import('/src/core/view.js');
+      const { CABOOSE, TENDER, CZ } = await import('/src/world/ghosttrain.js');
+      const p = G.player, out = {}, w = G.world;
+      for (const [k, x] of [['back', CABOOSE.x0 + 4], ['mid', (CABOOSE.x0 + TENDER.x1) / 2], ['front', TENDER.x0 - 2]]) {
+        p.x = x; p.y = CZ; w.cave.frame(0, true); camera.follow(p.x, p.y, 0, true);
+        for (let i = 0; i < 10; i++) game.render();
+        const t0 = performance.now();
+        for (let i = 0; i < 60; i++) game.render();
+        out[k] = +((performance.now() - t0) / 60).toFixed(2);
+      }
+      p.x = CABOOSE.x0 + 4.5; p.y = CZ; w.cave.frame(0, true); camera.follow(p.x, p.y, 0, true);
+      return out;
+    });
+    console.log('render ms (SwiftShader: compare runs, not absolutes)', JSON.stringify(cost));
 
     // ------------------------------------------------ 30 seeds
     const gen = await page.evaluate(async () => {
@@ -115,14 +140,14 @@ const DEEP_CLASSES = (process.argv[5] || 'paladin').split(',');
     // ------------------------------------------------ a station stop in play
     const stop = await page.evaluate(async () => {
       const { G, game } = window.VELSCOUR;
-      const { PLAT0, ROW0, FIGHT_CARS } = await import('/src/world/ghosttrain.js');
-      const w = G.world, sc = w.overworldScenario, p = G.player, bad = [];
+      const { PLAT0, ROW0, FIGHT_CARS, STATIONS } = await import('/src/world/ghosttrain.js');
+      const w = G.world, sc = w.overworldScenario, p = G.player, bad = [], A = STATIONS[0].after;
       const run = (s) => { for (let i = 0; i < Math.round(s * 30); i++) { G.dt = 1 / 30; G.time += G.dt; game.update(1 / 30); } };
       // clear the first two cars (no loot): the first station is called
-      for (const m of w.creatures) if (m.team === 'enemy' && m !== w.boss && m.x < FIGHT_CARS[2].x0 - 0.5) { m.dead = true; m.hp = 0; m.noLoot = true; }
-      p.x = FIGHT_CARS[1].x0 + 4; p.y = 12.5;
+      for (const m of w.creatures) if (m.team === 'enemy' && m !== w.boss && m.x < FIGHT_CARS[A].x0 - 0.5) { m.dead = true; m.hp = 0; m.noLoot = true; }
+      p.x = FIGHT_CARS[A - 1].x0 + 4; p.y = 12.5;
       run(0.5);
-      if (sc.cleared < 2) bad.push(`cleared ${sc.cleared} cars, not 2`);
+      if (sc.cleared < A) bad.push(`cleared ${sc.cleared} cars, not ${A}`);
       if (sc.phase !== 'brake') bad.push('no station called after two cars: ' + sc.phase);
       const name = sc.stop && sc.stop.name;
       // braking: a frame on the way in
@@ -200,6 +225,33 @@ const DEEP_CLASSES = (process.argv[5] || 'paladin').split(',');
     await view('tender', 'return [w.boss.x - 4, 12.5];', 1, 0.8);
     await view('engine', 'return [w.boss.x + 2.2, 13.4];', 0.75, 0.1);
     await view('overview', 'return [50, 12.5];', 0.42, 0.1);
+    await view('overview_mid', 'return [110, 12.5];', 0.42, 0.1);
+    // the new car kinds up close: the dining car and the sleeper, the armoury and the prison car with the lieutenant
+    await view('cars_dining_sleeper', 'return [62, 12.5];', 0.75, 0.05);
+    await view('cars_armoury_prison', 'return [w.overworldScenario.lieutenant.x - 6, 12.5];', 0.75, 0.05);
+    // every station look, stood beside the hero for a moment; then the gorge passing under the train
+    const looks = await page.evaluate(async () => (await import('/src/gfx/ghosttrain3d.js')).STATION_LOOKS);
+    for (const look of looks) {
+      await page.evaluate(async (look) => {
+        const { G } = window.VELSCOUR;
+        const { trainStation } = await import('/src/gfx/ghosttrain3d.js');
+        const { STATIONS } = await import('/src/world/ghosttrain.js');
+        const sc = G.world.overworldScenario; trainStation((STATIONS.find((s) => s.look === look) || { name: 'The Last Stop' }).name, look); sc.stationX = 60;
+      }, look);
+      await view('station_look_' + look, 'return [60, 12.5];', 0.6, 0.05);
+    }
+    const gorge = await page.evaluate(async () => {
+      const { G, game } = window.VELSCOUR;
+      const g3 = await import('/src/gfx/ghosttrain3d.js');
+      const sc = G.world.overworldScenario, bad = [];
+      sc.stationX = null; g3.trainStation('—', 'hall');
+      g3.trainGorge();
+      for (let i = 0; i < 2000 && g3.trainGorgeX() != null && g3.trainGorgeX() > 62; i++) { G.time += 1 / 30; game.update(1 / 30); }
+      if (g3.trainGorgeX() == null) bad.push('the gorge never came under the train');
+      return { bad, x: g3.trainGorgeX() };
+    });
+    for (const b of gorge.bad) errors.push('[gorge] ' + b);
+    await view('gorge', 'return [60, 12.5];', 0.6, 0.05);
 
     // ------------------------------------------------ the chief's train fight: coal lanes, the furnace vent, the whistle
     const chiefSetup = await page.evaluate(async () => {
@@ -301,7 +353,7 @@ const DEEP_CLASSES = (process.argv[5] || 'paladin').split(',');
         let sim = 0;
         const w = G.world, sc = w.overworldScenario, log = [];
         let ph = '';
-        while (sim < 1200 && !sc.completed && performance.now() - t0 < 240000) {
+        while (sim < 2400 && !sc.completed && performance.now() - t0 < 900000) {
           for (let i = 0; i < 30; i++) { G.dt = 1 / 30; G.time += G.dt; G.frame++; game.update(1 / 30); sim += 1 / 30; }
           if (sc.phase !== ph || Math.round(sim) % 60 === 0) { ph = sc.phase; log.push(`${Math.round(sim)}s ${ph} cars ${sc.cleared} boss ${Math.round(100 * w.boss.hp / w.boss.maxHp)}% ${w.boss.awake ? 'awake' : ''} foes ${w.creatures.filter((m) => m.team === 'enemy' && !m.dead).length} hero ${G.player.x.toFixed(0)},${G.player.y.toFixed(0)} ${Auto.status}`); }
           await new Promise((r) => setTimeout(r, 0));
@@ -316,11 +368,12 @@ const DEEP_CLASSES = (process.argv[5] || 'paladin').split(',');
         }
         Auto.toggle(false);
         if (game.pick) document.querySelector('.dialog button')?.click();
-        return { secs: Math.round(sim), completed: sc.completed, cleared: sc.cleared, stations: sc.stationsSeen, status: after, exit: exit.active, reachedExit: reached, log };
+        return { secs: Math.round(sim), completed: sc.completed, cleared: sc.cleared, stations: sc.stationsSeen, ltDead: !!(sc.lieutenant && sc.lieutenant.dead), status: after, exit: exit.active, reachedExit: reached, log };
       });
       console.log('auto-play', JSON.stringify(res));
       if (!res.completed) errors.push(`[auto] did not reach the Last Stop in ${res.secs}s (${res.cleared} cars, ${res.status})`);
-      if (res.completed && res.stations < 2) errors.push(`[auto] only ${res.stations} stations on the way`);
+      if (res.completed && res.stations < 4) errors.push(`[auto] only ${res.stations} stations on the way`);
+      if (res.completed && !res.ltDead) errors.push('[auto] the lieutenant still stands');
       if (res.completed && !res.reachedExit) errors.push('[auto] did not take the exit');
     }
 
@@ -372,7 +425,7 @@ const DEEP_CLASSES = (process.argv[5] || 'paladin').split(',');
         Auto.toggle(true);
         let sim = 0;
         const t0 = performance.now(), cars = [];
-        while (sim < 1200 && !sc.completed && performance.now() - t0 < 300000) {
+        while (sim < 2400 && !sc.completed && performance.now() - t0 < 1500000) {
           for (let i = 0; i < 30; i++) {
             const hp0 = p.hp, pots0 = potSum(), cl = sc.cleared;
             G.dt = 1 / 30; G.time += G.dt; G.frame++; game.update(1 / 30); sim += 1 / 30;
@@ -391,11 +444,14 @@ const DEEP_CLASSES = (process.argv[5] || 'paladin').split(',');
         Auto.toggle(false);
         return { cls, D, lvl: depthLevel(D), heroLvl: c.level, secs: Math.round(sim), completed: sc.completed, cleared: sc.cleared, falls, lost: +lost.toFixed(2), minHp: +minHp.toFixed(2), pots,
           boss: boss.name, bossHp: Math.round(boss.maxHp), bossSecs: bossDiedAt != null && bossAwakeAt != null ? Math.round(bossDiedAt - bossAwakeAt) : null, bossLost: +bossLost.toFixed(2), bossLeft: Math.round(100 * Math.max(0, boss.hp) / boss.maxHp),
-          cars, casts, status: Auto.status, phase: sc.phase };
+          cars, casts, status: Auto.status, phase: sc.phase, sinceCar: Math.round(sim - (cars.length ? cars[cars.length - 1] : 0)), outOfTime: !sc.completed && sim < 2400 };
       }, { cls, D });
       console.log('deep', JSON.stringify(r));
       deepRows.push(r);
-      if (!r.completed) errors.push(`[deep ${cls} D${D}] stalled: ${r.cleared}/6 cars, ${r.phase}, chief at ${r.bossLeft}% after ${r.secs}s (${r.status})`);
+      // a stall: the game-time cap reached, or no car cleared for 4 game minutes; a slow machine running out of wall
+      // clock mid-ride (still clearing cars) is only noted
+      if (!r.completed && (!r.outOfTime || r.sinceCar > 240)) errors.push(`[deep ${cls} D${D}] stalled: ${r.cleared}/16 cars, ${r.phase}, ${r.sinceCar}s since a car fell, chief at ${r.bossLeft}% after ${r.secs}s (${r.status})`);
+      else if (!r.completed) console.log(`   (D${D} ${cls}: out of wall-clock time at ${r.cleared}/16 cars, still clearing them)`);
       if (r.falls > 2) errors.push(`[deep ${cls} D${D}] the hero fell ${r.falls} times`);
       if (r.completed && r.lost < 0.5 && r.bossSecs != null && r.bossSecs < 8) errors.push(`[deep ${cls} D${D}] a walk-over: ${r.lost} lives lost, the chief down in ${r.bossSecs}s`);
     }

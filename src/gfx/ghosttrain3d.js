@@ -8,7 +8,9 @@
 // material, so the whole train is a few dozen draw calls.
 import { G } from '../state.js';
 import { camera, HW } from '../core/view.js';
-import { CARS, ENGINE, TENDER, CZ, ROW0, ROWS, PLAT0, PLAT1, PLAT_LEN, crateCells } from '../world/ghosttrain.js';
+import { CARS, ENGINE, TENDER, CABOOSE, CZ, ROW0, ROWS, PLAT0, PLAT1, PLAT_LEN, crateCells } from '../world/ghosttrain.js';
+/** The train's middle and the length of the land laid round it (ground, ballast, rails; the scenery's wrap). */
+const MID = Math.round((CABOOSE.x0 + ENGINE.x1) / 2), LAND = ENGINE.x1 - CABOOSE.x0 + 240;
 
 const SC = HW * Math.SQRT2;   // world px a unit across the screen
 const SKY = 0x141a26;         // the night beyond the lamps
@@ -172,7 +174,7 @@ function mats() {
     edge: new T.LineBasicMaterial({ color: 0x0a0806, transparent: true, opacity: 0.45, depthWrite: false }),
   };
 }
-const BODY = { caboose: 'blood', gondola: 'iron', coach: 'blood', flat: 'wood', boxcar: 'dark', mail: 'blood', tender: 'iron' };
+const BODY = { caboose: 'blood', gondola: 'iron', coach: 'blood', flat: 'wood', boxcar: 'dark', mail: 'blood', tender: 'iron', sleeper: 'cedar', armoury: 'dark', prison: 'iron', dining: 'blood' };
 
 // ------------------------------------------------------------------ the train
 const Y_RAIL = -1.1, Y_GROUND = -1.25;
@@ -263,6 +265,48 @@ function buildTrain(scene, M, glows) {
       for (const [kk, z, o] of [[k, z0 - 0.03, -1], [cut, z1 + 0.03, 1]]) { kk.box(2.2, 1.5, 0.05, M.redMetal, cx, 0.95, z); kk.box(2.6, 0.08, 0.06, M.bronze, cx, 1.75, z + o * 0.01, { edge: false }); kk.box(0.08, 1.5, 0.07, M.black, cx, 0.95, z + o * 0.01, { edge: false }); }
       for (const [x, y] of crateCells(car)) k.box(0.9, 0.8, 0.9, M.crate, x + 0.5, 0.4, y + 0.5);
       glow(car.x0 + 1, 1.4, CZ, 1.6);
+    } else if (car.kind === 'sleeper') {
+      // the second coach style: cedar sides, small paired windows, a raised clerestory roof with its own lit strip
+      roofed(); windows(7, 0.9, 1.25);
+      cut.box(L - 1.6, 0.42, 1.3, M.dark, cx, h + 0.55, CZ); cut.box(L - 1.4, 0.08, 1.5, M.bronze, cx, h + 0.8, CZ, { edge: false });
+      for (const z of [CZ - 0.66, CZ + 0.66]) cut.box(L - 2.4, 0.16, 0.04, M.window, cx, h + 0.55, z, { edge: false });
+      lantern(k, cx, h - 0.35, z0 - 0.15);
+      glow(cx, 1.6, CZ, 2.0);
+    } else if (car.kind === 'armoury') {
+      // dark iron, a red iron door; racks of spears and shields along the far wall
+      roofed(); windows(2, 1.05, 1.4);
+      for (const [kk, z] of [[k, z0 - 0.03], [cut, z1 + 0.03]]) { kk.box(1.6, 1.4, 0.05, M.redMetal, cx, 0.85, z); kk.box(1.9, 0.08, 0.06, M.bronze, cx, 1.6, z, { edge: false }); }
+      for (const [x, y] of crateCells(car)) {
+        k.box(0.9, 0.08, 0.5, M.black, x + 0.5, 0.25, y + 0.35); k.box(0.9, 0.08, 0.5, M.black, x + 0.5, 1.15, y + 0.35);
+        for (let i = 0; i < 4; i++) { const sx = x + 0.17 + i * 0.22; k.box(0.04, 1.3, 0.04, M.cedar, sx, 0.75, y + 0.35, { edge: false }); k.add(new T.ConeGeometry(0.05, 0.22, 4), M.steel, sx, 1.5, y + 0.35, { edge: false }); }
+        k.cyl(0.3, 0.3, 0.06, M.bronze, x + 0.5, 0.75, y + 0.68, { rx: Math.PI / 2, seg: 10 });
+      }
+      lantern(k, car.x0 + 0.25, h - 0.35, z0 - 0.15);
+      glow(cx, 1.5, CZ, 1.8, 0xff9a50);
+    } else if (car.kind === 'prison') {
+      // grey iron, barred windows, two iron cages on the far row
+      roofed();
+      for (let i = 0; i < 4; i++) {
+        const x = car.x0 + (i + 0.5) * (L / 4);
+        for (const [kk, z] of [[k, z0 + 0.05], [cut, z1 - 0.05]]) { kk.box(0.6, 0.45, 0.14, M.fire, x, 1.15, z, { edge: false }); for (let b = -2; b <= 2; b++) kk.box(0.04, 0.5, 0.18, M.black, x + b * 0.12, 1.15, z, { edge: false }); }
+      }
+      for (const [x0c] of [[car.x0 + 2], [car.x0 + 6]]) {
+        k.box(2, 0.08, 0.95, M.black, x0c + 1, 1.5, ROW0 + 0.5); k.box(2, 0.08, 0.95, M.black, x0c + 1, 0.04, ROW0 + 0.5, { edge: false });
+        for (let b = 0; b <= 10; b++) k.box(0.05, 1.5, 0.05, M.black, x0c + b * 0.2, 0.75, ROW0 + 0.97, { edge: false });
+        for (const bx of [x0c, x0c + 2]) for (let b = 0; b < 5; b++) k.box(0.05, 1.5, 0.05, M.black, bx, 0.75, ROW0 + 0.05 + b * 0.22, { edge: false });
+      }
+      lantern(k, cx, h - 0.35, z0 - 0.15);
+      glow(cx, 1.5, CZ, 1.6, 0xff6030);
+    } else if (car.kind === 'dining') {
+      // deep red, wide lit windows; tables with lamps and benches along the far row
+      roofed(); windows(4, 0.75, 1.4);
+      for (const [x, y] of crateCells(car)) {
+        k.box(0.8, 0.06, 0.7, M.cedar, x + 0.5, 0.55, y + 0.5); k.box(0.12, 0.55, 0.12, M.black, x + 0.5, 0.27, y + 0.5);
+        k.box(0.14, 0.12, 0.14, M.lamp, x + 0.5, 0.65, y + 0.5, { edge: false }); glow(x + 0.5, 0.7, y + 0.5, 0.9, 0xffd080);
+        for (const dx of [-0.42, 0.42]) k.box(0.18, 0.35, 0.6, M.cedar, x + 0.5 + dx, 0.18, y + 0.5);
+      }
+      lantern(k, car.x0 + 0.25, h - 0.35, z0 - 0.15); lantern(k, car.x1 - 0.25, h - 0.35, z0 - 0.15);
+      glow(cx, 1.6, CZ, 2.2);
     } else if (car.kind === 'gondola') {
       // a war wagon: iron walls with battlements, spiked corner posts
       merlons(k, M.iron, car.x0, car.x1, h, z0 + 0.05); merlons(cut, M.iron, car.x0, car.x1, h, z1 - 0.05);
@@ -327,7 +371,7 @@ function buildTrain(scene, M, glows) {
     if (cut) { const g = cut.build(new T.Group(), M.edge); scene.add(g); cuts.push({ g, x0: car.x0, x1: car.x1, roof: car.roof }); }
   }
   // the track: two steel rails on a ballast strip, far longer than the view
-  for (const z of [CZ - 0.72, CZ + 0.72]) k.box(320, 0.1, 0.1, M.rail, 50, Y_RAIL - 0.05, z, { edge: false });
+  for (const z of [CZ - 0.72, CZ + 0.72]) k.box(LAND, 0.1, 0.1, M.rail, MID, Y_RAIL - 0.05, z, { edge: false });
   const g = k.build(new T.Group(), M.edge);
   scene.add(g);
   return { g, cuts };
@@ -349,7 +393,7 @@ function buildDrivers(scene, M) {
 }
 
 // ------------------------------------------------------------------ the land going by
-const SCN_N = 46;
+const SCN_N = Math.round(46 * LAND / 320), SCN_X0 = CABOOSE.x0 - 66, SCN_SPAN = LAND - 100;
 function buildScenery(scene, M) {
   const inst = (geo, mat, n) => { const m = new T.InstancedMesh(geo, mat, n); m.instanceMatrix.setUsage(T.DynamicDrawUsage); m.frustumCulled = false; scene.add(m); return m; };
   const I = {
@@ -367,17 +411,18 @@ function buildScenery(scene, M) {
     if (it.kind === 'pole') it.z = 8.6;   // the telegraph line along the far side
     it.h = it.kind === 'tree' ? 2.4 + rnd() * 2.4 : it.kind === 'pole' ? 4.2 : 1; it.s = 0.6 + rnd() * 0.7; it.ry = rnd() * 6.28; it.lean = (rnd() - 0.5) * 0.2;
   };
-  for (let i = 0; i < SCN_N; i++) { const it = {}; roll(it, -60 + (i / SCN_N) * 220 + rnd() * 4); items.push(it); }
+  for (let i = 0; i < SCN_N; i++) { const it = {}; roll(it, SCN_X0 + (i / SCN_N) * SCN_SPAN + rnd() * 4); items.push(it); }
   return { I, items, roll };
 }
-function placeScenery(N, scroll) {
+function placeScenery(N, scroll, gorgeX = null) {
   const m4 = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), p = new T.Vector3(), s = new T.Vector3(), I = N.I;
   const set = (mesh, i, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0) => { e.set(rx, ry, rz); q.setFromEuler(e); m4.compose(p.set(x, y, z), q, s.set(sx, sy, sz)); mesh.setMatrixAt(i, m4); };
   const hide = (mesh, i) => set(mesh, i, 0, -99, 0, 0.001, 0.001, 0.001);
   N.items.forEach((it, i) => {
     let x = it.x - scroll;
-    if (x < -60) { N.roll(it, it.x + 220); x = it.x - scroll; }
+    if (x < SCN_X0) { N.roll(it, it.x + SCN_SPAN); x = it.x - scroll; }
     const g = Y_GROUND;
+    if (gorgeX != null && Math.abs(x - gorgeX) < GORGE_W / 2 + 1.5) { for (const k in I) hide(I[k], i); return; }   // nothing stands in the gorge
     if (it.kind === 'tree') { set(I.trunk, i, x, g + it.h * 0.35, it.z, it.s, it.h * 0.7, it.s, 0, it.ry, it.lean); set(I.crown, i, x + it.lean, g + it.h * 0.8, it.z, it.s * 1.3, it.h * 0.42, it.s * 1.3, 0, it.ry, 0); }
     else { hide(I.trunk, i); hide(I.crown, i); }
     if (it.kind === 'bush') set(I.bush, i, x, g + 0.2 * it.s, it.z, it.s * 1.4, it.s, it.s * 1.4, 0, it.ry, 0); else hide(I.bush, i);
@@ -385,6 +430,38 @@ function placeScenery(N, scroll) {
     if (it.kind === 'rock') set(I.rock, i, x, g + 0.1, it.z, it.s * 1.2, it.s * 0.6, it.s, it.ry, it.ry, 0); else hide(I.rock, i);
   });
   for (const k in I) I[k].instanceMatrix.needsUpdate = true;
+}
+
+// ------------------------------------------------------------------ the gorge (a scenic beat)
+const GORGE_W = 34;
+/** A gorge across the line, centred on x 0 (moved to S.gorgeX): the land falls away into the dark (a chasm laid over
+ *  the ground and ballast, a thread of river far down), rock lips at both edges, and the train runs over an iron
+ *  trestle: two lattice girders under the cars, a deck of sleepers and the piers going down. */
+function buildGorge(scene, M) {
+  const k = kit(), y = Y_GROUND + 0.1, w = GORGE_W;
+  // (the ground and ballast write no depth and draw first, the chasm over them: the trestle's piers below ground
+  // level then show against the dark as if it went down)
+  const chasm = new T.Mesh(new T.PlaneGeometry(w, 320), new T.MeshBasicMaterial({ color: 0x07090d, depthWrite: false }));
+  chasm.rotation.x = -Math.PI / 2; chasm.position.set(0, y, CZ); chasm.renderOrder = -1;
+  const river = new T.Mesh(new T.PlaneGeometry(2.2, 320), new T.MeshBasicMaterial({ color: 0x1a2a3a, depthWrite: false }));
+  river.rotation.x = -Math.PI / 2; river.position.set(3, y + 0.01, CZ); river.renderOrder = -1;
+  for (const sx of [-1, 1]) {
+    for (let z = CZ - 60; z < CZ + 60; z += 2.2) k.box(1.4 + rnd() * 1.2, 0.5 + rnd() * 0.6, 2.2, M.rock, sx * (w / 2 + 0.2 + rnd() * 0.5), Y_GROUND + 0.2, z, { edge: false });
+  }
+  const zA = ROW0 - 0.35, zB = ROW0 + ROWS + 0.35;
+  for (const z of [zA, zB]) {
+    k.box(w + 2, 0.16, 0.14, M.iron, 0, Y_RAIL - 0.1, z); k.box(w + 2, 0.16, 0.14, M.iron, 0, Y_RAIL - 1.5, z);
+    for (let x = -w / 2 - 1; x < w / 2 + 1; x += 1.4) {
+      k.box(0.1, 1.5, 0.1, M.black, x, Y_RAIL - 0.8, z, { edge: false });
+      k.box(0.07, 2.0, 0.07, M.black, x + 0.7, Y_RAIL - 0.8, z, { rz: 0.75, edge: false });
+    }
+  }
+  for (let x = -w / 2 - 1; x < w / 2 + 1; x += 0.9) k.box(0.22, 0.1, zB - zA + 0.3, M.black, x, Y_RAIL - 0.12, CZ, { edge: false });
+  for (let x = -w / 2 + 6; x < w / 2 - 5; x += 7) for (const z of [zA, zB]) k.box(0.5, 3.4, 0.5, M.stone, x, Y_RAIL - 3.2, z);
+  const g = k.build(new T.Group(), M.edge);
+  g.add(chasm, river);
+  g.visible = false; scene.add(g);
+  return g;
 }
 
 // ------------------------------------------------------------------ a station
@@ -396,7 +473,11 @@ function signTex(name) {
   x.fillStyle = '#f4ecd4'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(t0, 128, 25);
   const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t;
 }
-function buildStation(scene, M) {
+/** A station, its buildings by `look` (data/STATIONS in world/ghosttrain.js): the same platform, lamps and sign each
+ *  time, and across the track the hall and belfry ('hall'), a chapel ('chapel'), a water tower ('water'), a signal box
+ *  ('signal') or a goods shed ('goods'), all from the same brick, slate, stone, iron and bronze. */
+export const STATION_LOOKS = ['hall', 'chapel', 'water', 'signal', 'goods'];
+function buildStation(scene, M, look = 'hall') {
   const k = kit(), L = PLAT_LEN + 2, zf = PLAT0 + 0.12, zn = PLAT1 + 0.7, glows = [];
   // the platform on the near side, level with the car floors; a white safety edge along the track
   k.box(L, 1.25, zn - zf, M.stone, 0, -0.625, (zf + zn) / 2);
@@ -408,21 +489,65 @@ function buildStation(scene, M) {
     glows.push({ x, y: 2.4, z: zn - 0.35, r: 2.2, c: 0xffc070 });
   }
   for (const x of [-8, 8]) { k.box(2, 0.1, 0.5, M.cedar, x, 0.45, zn - 0.5); k.box(2, 0.5, 0.08, M.cedar, x, 0.7, zn - 0.25); }
-  // across the track: a gothic station hall (brick, pointed lit windows and door, buttresses, a steep slate roof with
-  // finials) and its belfry, on its own strip of platform
+  // across the track, on its own strip of platform: the buildings of this look
   k.box(L, 1.25, 3, M.stone, 0, -0.625, 9.3);
-  k.box(10, 2.8, 3.2, M.brick, 0, 1.4, 6.6);
-  const roof = new T.CylinderGeometry(2.0, 2.0, 10.6, 3); roof.scale(1, 1, 1.7);
-  k.add(roof, M.slate, 0, 4.4, 6.6, { rz: Math.PI / 2, rx: -Math.PI / 2 });
-  for (const x of [-5.3, 5.3]) k.add(new T.ConeGeometry(0.14, 0.7, 4), M.bronze, x, 7.4, 6.6, { edge: false });
-  for (const x of [-3.6, -1.6, 3.6]) arch(k, M.window, x, 0.9, 1.9, 0.7, 8.22, 0.06);
-  arch(k, M.cedar, 1.2, 0, 1.7, 1.0, 8.22, 0.08);
-  for (const x of [-4.95, -2.6, 2.4, 4.95]) { k.box(0.4, 2.2, 0.5, M.stone, x, 1.1, 8.3); k.add(new T.ConeGeometry(0.3, 0.5, 4), M.stone, x, 2.45, 8.3, { ry: Math.PI / 4, edge: false }); }
-  k.box(2, 5.2, 2, M.brick, -6.2, 2.6, 6.2);
-  arch(k, M.window, -6.2, 3.4, 4.3, 0.6, 7.22, 0.06);
-  k.add(new T.ConeGeometry(1.6, 2.6, 4), M.slate, -6.2, 6.5, 6.2, { ry: Math.PI / 4 });
-  k.add(new T.ConeGeometry(0.1, 0.8, 4), M.bronze, -6.2, 8.1, 6.2, { edge: false });
-  glows.push({ x: 1.2, y: 2.2, z: 8.5, r: 2, c: 0xffb060 });
+  /** A brick house w x h, its ridge roof of slate, at x (z: its front face), pointed windows `wins` (x offsets). */
+  const house = (x, w, h, d, z, wins, door = null) => {
+    k.box(w, h, d, M.brick, x, h / 2, z - d / 2);
+    const roof = new T.CylinderGeometry(d * 0.62, d * 0.62, w + 0.6, 3); roof.scale(1, 1, 1.7);
+    k.add(roof, M.slate, x, h + d * 0.5, z - d / 2, { rz: Math.PI / 2, rx: -Math.PI / 2 });
+    for (const dx of wins) arch(k, M.window, x + dx, 0.9, Math.min(h - 0.6, 1.9), 0.7, z + 0.02, 0.06);
+    if (door != null) { arch(k, M.cedar, x + door, 0, 1.7, 1.0, z + 0.02, 0.08); glows.push({ x: x + door, y: 2.2, z: z + 0.3, r: 2, c: 0xffb060 }); }
+  };
+  /** A square brick tower with a lit window and a slate spire, its foot at y 0. */
+  const tower = (x, z, w, h) => {
+    k.box(w, h, w, M.brick, x, h / 2, z);
+    arch(k, M.window, x, h - 1.8, h - 0.9, 0.6, z + w / 2 + 0.02, 0.06);
+    k.add(new T.ConeGeometry(w * 0.8, w * 1.3, 4), M.slate, x, h + w * 0.65, z, { ry: Math.PI / 4 });
+    k.add(new T.ConeGeometry(0.1, 0.8, 4), M.bronze, x, h + w * 1.3 + 0.3, z, { edge: false });
+  };
+  const buttress = (xs, z) => { for (const x of xs) { k.box(0.4, 2.2, 0.5, M.stone, x, 1.1, z); k.add(new T.ConeGeometry(0.3, 0.5, 4), M.stone, x, 2.45, z, { ry: Math.PI / 4, edge: false }); } };
+  if (look === 'chapel') {
+    // a chapel: a tall narrow nave, buttressed, a great pointed window, a belfry at each end
+    house(-1, 7, 3.6, 3, 8.2, [-2.4, 0.4], 2.2);
+    arch(k, M.window, -3.2, 1.6, 3.0, 1.0, 8.24, 0.06);
+    buttress([-4.4, -1.7, 1.2, 2.4], 8.3);
+    tower(-6.4, 6.2, 2, 6.2); tower(4.6, 6.4, 1.6, 4.6);
+  } else if (look === 'water') {
+    // a water stop: an iron tank on stone legs with a spout over the track, a small brick shelter
+    for (const dx of [-1.1, 1.1]) for (const dz of [-1.1, 1.1]) k.box(0.45, 3.4, 0.45, M.stone, -3 + dx, 1.7, 6.6 + dz);
+    k.box(3, 0.25, 3, M.black, -3, 3.5, 6.6);
+    k.cyl(1.6, 1.6, 2.2, M.iron, -3, 4.75, 6.6, { seg: 12 });
+    for (const y of [3.9, 4.75, 5.6]) k.cyl(1.66, 1.66, 0.1, M.bronze, -3, y, 6.6, { seg: 12, edge: false });
+    k.add(new T.ConeGeometry(1.9, 1.2, 12), M.slate, -3, 6.45, 6.6);
+    k.box(0.22, 0.22, 3.6, M.black, -3, 4.2, 4.4, { rx: 0.35 });
+    house(5, 4.6, 2.4, 2.6, 8.2, [-1], 1.1);
+    for (let i = 0; i < 4; i++) k.box(0.9, 0.8, 0.9, M.crate, 8.4 + (i % 2) * 1.0, 0.4 + (i >> 1) * 0.8, 7.6);
+    glows.push({ x: -3, y: 3.2, z: 8.1, r: 1.8, c: 0xffc070 });
+  } else if (look === 'signal') {
+    // a junction: a signal box (a brick base, a glazed cabin above, a slate roof), a long low brick wall, a signal post
+    k.box(3.6, 2.2, 2.6, M.brick, -2.5, 1.1, 6.9);
+    k.box(3.8, 1.3, 2.8, M.cedar, -2.5, 2.85, 6.9);
+    k.box(3.2, 0.6, 2.84, M.window, -2.5, 2.95, 6.9, { edge: false });
+    k.add(new T.ConeGeometry(2.8, 1.4, 4), M.slate, -2.5, 4.2, 6.9, { ry: Math.PI / 4 });
+    arch(k, M.cedar, -1.6, 0, 1.7, 0.9, 8.22, 0.08);
+    k.box(9, 1.3, 0.5, M.brick, 5, 0.65, 8.0); k.box(9.2, 0.12, 0.6, M.stone, 5, 1.36, 8.0, { edge: false });
+    k.box(0.16, 4.6, 0.16, M.black, 9.5, 2.3, 8.6); k.box(1.1, 0.22, 0.08, M.redMetal, 9.95, 4.2, 8.6, { edge: false });
+    k.box(0.22, 0.22, 0.14, M.fire, 9.5, 3.8, 8.7, { edge: false });
+    glows.push({ x: -2.5, y: 2.95, z: 8.4, r: 2.4, c: 0xffc070 }, { x: 9.5, y: 3.8, z: 8.8, r: 1.2, c: 0xff4020 });
+  } else if (look === 'goods') {
+    // a goods yard: a long brick shed with a great cedar door, crates stacked along the strip
+    house(-1, 12, 3.2, 3.4, 8.2, [-4.6, 3.6]);
+    k.box(2.4, 2.4, 0.1, M.cedar, -1, 1.2, 8.24); k.box(2.6, 0.12, 0.12, M.bronze, -1, 2.45, 8.26, { edge: false });
+    glows.push({ x: -1, y: 2.6, z: 8.5, r: 2.2, c: 0xffb060 });
+    for (let i = 0; i < 7; i++) k.box(0.9, 0.8, 0.9, M.crate, 6.2 + (i % 4) * 1.0, 0.4 + (i >> 2) * 0.8, 9.6 - (i % 2) * 0.2);
+  } else {
+    // a gothic station hall (brick, pointed lit windows and door, buttresses, a steep slate roof with finials), a belfry
+    house(0, 10, 2.8, 3.2, 8.2, [-3.6, -1.6, 3.6], 1.2);
+    for (const x of [-5.3, 5.3]) k.add(new T.ConeGeometry(0.14, 0.7, 4), M.bronze, x, 7.4, 6.6, { edge: false });
+    buttress([-4.95, -2.6, 2.4, 4.95], 8.3);
+    tower(-6.2, 6.2, 2, 5.2);
+  }
   const g = k.build(new T.Group(), M.edge);
   const sign = new T.Mesh(new T.PlaneGeometry(4, 0.75), new T.MeshBasicMaterial({ map: signTex('—') }));
   sign.position.set(4.5, 1.9, zn - 0.3); g.add(sign);
@@ -440,18 +565,20 @@ export function buildTrain3D(world) {
   const scene = new T.Scene(), M = mats(), few = G.touch;
   scene.add(new T.HemisphereLight(0xa8b8d8, 0x302418, 1.15 * Math.PI), new T.AmbientLight(0x505868, 0.45 * Math.PI));
   const moon = new T.DirectionalLight(0xd0dcff, 0.9 * Math.PI);
-  moon.position.set(-20, 60, -10).add(new T.Vector3(50, 0, CZ)); moon.target.position.set(50, 0, CZ); scene.add(moon, moon.target);
+  moon.position.set(-20, 60, -10).add(new T.Vector3(MID, 0, CZ)); moon.target.position.set(MID, 0, CZ); scene.add(moon, moon.target);
   scene.fog = new T.Fog(SKY, 40, 120);
-  const ground = new T.Mesh(new T.PlaneGeometry(320, 320), new T.MeshLambertMaterial({ map: canvasTex(128, 128, groundPaint, 40, 40) }));
-  ground.rotation.x = -Math.PI / 2; ground.position.set(50, Y_GROUND, CZ); scene.add(ground);
-  const ballast = new T.Mesh(new T.PlaneGeometry(320, 2.9), new T.MeshLambertMaterial({ map: canvasTex(64, 32, ballastPaint, 160, 1) }));
-  ballast.rotation.x = -Math.PI / 2; ballast.position.set(50, Y_GROUND + 0.06, CZ); scene.add(ballast);
+  const ground = new T.Mesh(new T.PlaneGeometry(LAND, 320), new T.MeshLambertMaterial({ map: canvasTex(128, 128, groundPaint, LAND / 8, 40) }));
+  ground.rotation.x = -Math.PI / 2; ground.position.set(MID, Y_GROUND, CZ); ground.material.depthWrite = false; ground.renderOrder = -3; scene.add(ground);
+  const ballast = new T.Mesh(new T.PlaneGeometry(LAND, 2.9), new T.MeshLambertMaterial({ map: canvasTex(64, 32, ballastPaint, LAND / 2, 1) }));
+  ballast.rotation.x = -Math.PI / 2; ballast.position.set(MID, Y_GROUND + 0.06, CZ); ballast.material.depthWrite = false; ballast.renderOrder = -2; scene.add(ballast);
   const glowList = [];
   const train = buildTrain(scene, M, glowList);
   const drivers = buildDrivers(scene, M);
   const scn = buildScenery(scene, M);
-  const st = buildStation(scene, M);
-  S = { scene, M, world, t: 0, scroll: 0, speed: 0, fire: 1, ground, ballast, train, cuts: train.cuts, drivers, scn, st, glows: [], lightSrc: [], pool: [], smoke: [], smokeT: 0, steamT: 0, stationX: null };
+  const stations = {};
+  for (const look of STATION_LOOKS) stations[look] = buildStation(scene, M, look);
+  const st = stations.hall, gorge = buildGorge(scene, M);
+  S = { scene, M, world, t: 0, scroll: 0, speed: 0, fire: 1, ground, ballast, train, cuts: train.cuts, drivers, scn, st, stations, gorge, gorgeX: null, glows: [], lightSrc: [], pool: [], smoke: [], smokeT: 0, steamT: 0, stationX: null };
   const addGlow = (gl, parent) => {
     const s = new T.Sprite(new T.SpriteMaterial({ map: halo(), color: gl.c, blending: T.AdditiveBlending, depthWrite: false, transparent: true }));
     const engine = gl.x >= ENGINE.x0 && parent === S.scene;
@@ -459,7 +586,7 @@ export function buildTrain3D(world) {
     S.lightSrc.push({ o: parent, p: new T.Vector3(gl.x, gl.y + 0.3, gl.z), c: gl.c, r: 7, w: new T.Vector3(), engine });
   };
   for (const gl of glowList) addGlow(gl, scene);
-  for (const gl of st.glows) addGlow(gl, st.g);
+  for (const k2 in stations) for (const gl of stations[k2].glows) addGlow(gl, stations[k2].g);
   S.engineGlows = S.glows.filter((s) => s.userData.engine);
   for (let i = 0; i < 56; i++) {
     const s = new T.Sprite(new T.SpriteMaterial({ map: puff(), color: 0x888888, depthWrite: false, transparent: true, opacity: 0 }));
@@ -471,11 +598,18 @@ export function buildTrain3D(world) {
   S.watch = setInterval(() => { if (S && G.world !== S.world) disposeTrain3D(); }, 2500);
   return S;
 }
-/** Name the station on its sign (tickTrain3D's stationX places it). */
-export function trainStation(name) {
+/** The station coming in: its buildings by `look` (STATION_LOOKS) and its name on the sign (tickTrain3D's stationX
+ *  places it). */
+export function trainStation(name, look = 'hall') {
   if (!S) return;
+  S.st.g.visible = false;
+  S.st = S.stations[look] || S.stations.hall;
   const m = S.st.sign.material; if (m.map) m.map.dispose(); m.map = signTex(name); m.needsUpdate = true;
 }
+/** The gorge comes in from ahead (the trestle bridge under the train) and passes behind; tickTrain3D moves it. */
+export function trainGorge() { if (S) S.gorgeX = ENGINE.x1 + 70; }
+/** Where the gorge's middle is (tile x), or null while the line runs over plain ground. */
+export const trainGorgeX = () => (S ? S.gorgeX : null);
 /** The cars cut away round the hero (x: his tile x; null: none): their roofs and near sides hidden. */
 export function trainCutaway(x) {
   if (!S) return;
@@ -506,13 +640,16 @@ export function tickTrain3D(dt, { speed = 0, stationX = null, fire = 1 } = {}) {
   const dx = speed * dt; S.scroll += dx;
   S.ground.material.map.offset.x = (S.scroll / 8) % 1;
   S.ballast.material.map.offset.x = (S.scroll / 2) % 1;
-  placeScenery(S.scn, S.scroll);
+  if (S.gorgeX != null) { S.gorgeX -= dx; if (S.gorgeX < CABOOSE.x0 - 70) S.gorgeX = null; }
+  S.gorge.visible = S.gorgeX != null;
+  if (S.gorge.visible) S.gorge.position.x = S.gorgeX;
+  placeScenery(S.scn, S.scroll, S.gorgeX);
   // the driving wheels turn with the ground (r 0.7), the side rods follow their crank pins
   const a = -S.scroll / 0.7;
   for (const g of S.drivers.wheels) g.rotation.z = a;
   for (const rod of S.drivers.rods) rod.position.set(ENGINE.x0 + 5.45 + 0.35 * Math.cos(a), Y_RAIL + 0.7 + 0.35 * Math.sin(a), rod.userData.z + (rod.userData.z < CZ ? -0.08 : 0.08));
   S.stationX = stationX;
-  S.st.g.visible = stationX != null && Math.abs(stationX - 50) < 170;
+  S.st.g.visible = stationX != null && Math.abs(stationX - MID) < LAND / 2;
   if (S.st.g.visible) S.st.g.position.x = stationX;
   // coal smoke from the chimney (trailing back while she runs, rising when she stands), steam from the cylinders
   if (fire > 0.05 && (S.smokeT -= dt) <= 0) {
@@ -551,7 +688,7 @@ export function drawTrain3D(ctx, focus) {
   if (rd.w !== pw || rd.h !== ph) { rd.gl.setSize(pw, ph, false); rd.w = pw; rd.h = ph; }
   const cx = camera.x + camera.shakeX, cy = camera.y + camera.shakeY, hw = G.W / 2 / z, hh = G.H / 2 / z, cam = rd.cam;
   cam.left = (cx - hw) / SC; cam.right = (cx + hw) / SC; cam.top = -(cy - hh) / SC; cam.bottom = -(cy + hh) / SC; cam.updateProjectionMatrix();
-  const [fx, fy, fz] = focus || [50, 0, CZ];
+  const [fx, fy, fz] = focus || [MID, 0, CZ];
   const d0 = 800 - (fx * rd.dir.x + fy * rd.dir.y + fz * rd.dir.z);
   S.scene.fog.near = d0 + 22; S.scene.fog.far = d0 + 95;
   const near = [];
