@@ -175,6 +175,7 @@ node tools/tests/signatures.js [classes|all] [secs]   # class signatures (src/ga
 node tools/tests/boomerang.js [casts] [json] [skills] # Boomerang Knight: damage per cast per skill, every boomerang returns to his hand, 3D boomerang model sheets + shots
 node tools/tests/paladin.js [dps|auto|shield|shots|all] [levels] # Paladin: every skill's damage vs the hammers (per-skill pow=), auto-play's hammer + Shield Throw build and cast mix, Shield Throw ricochets + blast, 3D sheets + shots
 node tools/tests/gunner3d.js [video] [mobile]      # Gunner 3D turrets + Bombing Run biplane: sheets, heads track, shots from the barrel, walk through turrets, the plane; video -> out/gunner3d_action.mp4
+node tools/tests/assetmanager.js                   # the asset manager page (tools/assetmanager/): every section on PC + phone, previews, search, flags/notes, exports
 ```
 Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, because layout bugs don't throw.
 - In cloud containers, Chromium is at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` and
@@ -250,6 +251,12 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   Gibs: half the chunks are the painted sprites in `assets/sprites/gibs.webp`, the rest bones: three.js models (`tools/bones3d.js`) baked by
   `node tools/bones3d_bake.js` into the data sheet `assets/sprites/bones.webp` that `src/gfx/bonegibs.js` paints in the gib's bone and blood colours.
   Never hand-edit the generated files in `assets/sprites|ui|tiles|audio`.
+- **Asset manager** (`tools/assetmanager/`, live at https://agilancer.github.io/velscour/tools/assetmanager/): lists every
+  sprite, texture and 3D model as custom art or placeholder, from the game's own catalogs. After adding, replacing or
+  removing art (or changing how something is drawn), rebuild it with `node tools/assetmanager/build.mjs` (Node + Pillow;
+  the sorting rules are in its section functions) and commit `manifest.json` and `thumbs/`. Code-drawn placeholders
+  (skill icons, sigils, the phoenix...) are rendered by `tools/assetmanager/capture.js` (needs the server); rerun it when
+  those draw functions change. Run `assetmanager.js` after changing the page.
 - Paths must stay **relative** (`assets/...`, `src/main.js`, never `/assets/...`), because the site is served
   from the `/velscour/` subpath on GitHub Pages. The `/src/...` imports in `tools/tests/` are fine, because the
   tests run against a local server at the root.

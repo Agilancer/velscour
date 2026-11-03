@@ -14,6 +14,35 @@ Contents
 
 ---
 
+## November 3, 2026 — the asset manager (branch `feat/asset-manager`)
+
+The user asked for an asset manager for every sprite, texture and 3D model, listing per section what has custom art or
+textured 3D models and what is still placeholder, usable on phone and PC from a repo link.
+- **Page** `tools/assetmanager/` (`index.html`, `app.js`, `style.css`; plain JS, no deps), on Pages at
+  https://agilancer.github.io/velscour/tools/assetmanager/. Nine sections (Monsters & Bosses, Heroes & Armor, Summons &
+  Pets, Townsfolk & NPCs, Items & Loot, Held Weapons, Spells/Effects/Icons, Environments & Textures, Interface) plus two
+  views across them (All 3D models, All textures). Each section shows "Custom art and textured 3D models" then
+  "Placeholder art", by group. A card opens a detail panel (bottom sheet on phones): a zoomable preview cropped from the
+  real atlas, every frame/variant, why it has its status, its files (open / GitHub), the rebuild command, upload and docs
+  links, and per-browser tracking (Needs art / Requested / In progress / Ready to import / Approved + notes in
+  localStorage `velscour_assetmgr_v1`). The menu exports an art to-do (Markdown), the current list (CSV), and a JSON
+  backup that restores on another device. Hash routes: `#/s/<section>`, `#/a/<asset id>`.
+- **Statuses** (`KINDS` in `build.mjs`): custom = `art` (your packs), `ai` (generated: the replacement pack, the 48 small
+  Heavenly sprites, wall hangings, the old townsfolk pack), `3d` (three.js with image textures); placeholder = `flat3d`
+  (three.js without image textures: phoenix, totem, hammers, boomerangs, critters, bone gibs, the Breach wyrm body),
+  `recolor` (borrowed/recoloured: 23 palette-swapped dungeon biomes, dunes, Mountainside, Revive, Pirate Seas crews…),
+  `ascii` (Treasure Imp, emotes), `code` (skill icons, spell effects, sigils, key, panels…), `none` (gloves/legs/boots on
+  the hero).
+- **Builder** `tools/assetmanager/build.mjs` imports the game's catalogs (bestiary, summons, skills, items, biomes, raid
+  bosses, held sets, gear, packs…) and writes `manifest.json`; `thumbs.py` (Pillow) crops a thumbnail per asset into 96 px
+  WebP sheets (biome thumbnails get the biome's palette swap). `capture.js` renders the code-drawn placeholders with the
+  game's own functions into `captures/`. 2,177 assets, 124 of them placeholder (several are groups: e.g. one card per
+  class for ~70 skill icons). Test: `tools/tests/assetmanager.js`.
+- Findings worth acting on (from the survey): the **Treasure Imp is always the ASCII imp** (`happenings.js` spawns it with
+  look `null`); 1,280 skills exist, not 980 (4 trees per class); `assets/sprites/townsfolk/` (66 MB) is no longer read;
+  the 613 blue-slime familiar cells and four `npc_tobin/mira/cael/gorm` replacement cells are unused; the pet sheets
+  override the 56 `va_*` summon drawings, which now only show while loading.
+
 ## November 1, 2026 — buy more bag rows with gold (branch `feat/buy-bag-rows`)
 
 A player asked to buy more inventory rows, each costing more. The bag starts at 6 rows of 10; a button under it

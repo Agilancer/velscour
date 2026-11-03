@@ -38,6 +38,12 @@ const ITEMS = M.items.map((it, i) => {
   return o;
 });
 const BY_ID = Object.fromEntries(ITEMS.map((it) => [it.id, it]));
+// views across sections: every 3D model, every texture
+const VIEWS = [
+  { id: 'models', name: 'All 3D models', blurb: 'Every three.js model, wherever it lives: baked to sprites (held weapons, turrets, critters, castles, ships) or drawn live (the tower, caverns, the Pirate Seas, the phoenix and totem).', test: (it) => it.y === 'model' },
+  { id: 'textures', name: 'All textures', blurb: 'Floors, walls, props and the material swatches the 3D models are painted with.', test: (it) => it.y === 'texture' },
+].map((v) => ({ ...v, virtual: true, items: ITEMS.filter(v.test) }));
+const secById = (id) => SECS.find((s) => s.id === id) || VIEWS.find((v) => v.id === id);
 const count = (items) => {
   const c = { all: items.length, custom: 0, ph: 0 };
   for (const k in KINDS) c[k] = 0;
@@ -68,8 +74,11 @@ const observe = (root) => root.querySelectorAll('.th[data-t]').forEach((el) => i
 const state = { sec: null, q: '', filt: store.filt || 'all', open: null, more: new Set() };
 function parse() {
   const p = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
-  if (p[0] === 'a' && BY_ID[p[1]]) return { sec: BY_ID[p[1]].sec.id, open: p[1] };
-  if (p[0] === 's' && SECS.some((s) => s.id === p[1])) return { sec: p[1], group: p[2] === 'g' ? +p[3] : null };
+  if (p[0] === 'a' && BY_ID[p[1]]) {
+    const it = BY_ID[p[1]], cur = state.sec && secById(state.sec);
+    return { sec: state.q || (cur && cur.items.includes(it)) ? state.sec : it.sec.id, open: p[1] };
+  }
+  if (p[0] === 's' && secById(p[1])) return { sec: p[1], group: p[2] === 'g' ? +p[3] : null };
   return { sec: null };
 }
 let lastKey = '';
@@ -94,11 +103,13 @@ function meter(c) {
 function renderNav() {
   $('#nav').innerHTML = `<a href="#/"${state.sec ? '' : ' aria-current="page"'}><span class="lbl">Overview</span><span class="n">${TOTAL.all}</span>${meter(TOTAL)}</a>` +
     SECS.map((s) => { const c = count(s.items);
-      return `<a href="#/s/${s.id}"${state.sec === s.id ? ' aria-current="page"' : ''}><span class="lbl">${esc(s.name)}</span><span class="n">${c.all}</span>${meter(c)}</a>`; }).join('');
+      return `<a href="#/s/${s.id}"${state.sec === s.id ? ' aria-current="page"' : ''}><span class="lbl">${esc(s.name)}</span><span class="n">${c.all}</span>${meter(c)}</a>`; }).join('') +
+    `<span class="navsep">Across sections</span>` + VIEWS.map((v) => { const c = count(v.items);
+      return `<a href="#/s/${v.id}" class="view"${state.sec === v.id ? ' aria-current="page"' : ''}><span class="lbl">${esc(v.name)}</span><span class="n">${c.all}</span>${meter(c)}</a>`; }).join('');
   $('#nav [aria-current]')?.scrollIntoView({ inline: 'center', block: 'nearest' });
 }
 function scope() {
-  let items = state.sec ? SECS.find((s) => s.id === state.sec).items : ITEMS;
+  let items = state.sec ? secById(state.sec).items : ITEMS;
   if (state.q) { const words = state.q.toLowerCase().split(/\s+/).filter(Boolean); items = items.filter((it) => words.every((w) => it._s.includes(w))); }
   return items;
 }
@@ -130,11 +141,11 @@ function renderMain() {
   const main = $('#main');
   if (!state.sec && !state.q) { main.innerHTML = overview(); observeStrips(main); return; }
   const items = scope().filter((it) => pass(it));
-  const sec = state.sec && SECS.find((s) => s.id === state.sec);
+  const sec = state.sec && secById(state.sec), across = !sec || sec.virtual;
   const c = count(scope());
   let h = '';
   if (sec) {
-    h += `<div class="sechead"><div><h1>${esc(sec.name)}</h1><p class="lede">${esc(sec.blurb)}</p></div>${tally(c)}</div>${meter(c)}`;
+    h += `<div class="sechead"><div><h1>${esc(sec.name)}</h1><p class="lede">${esc(sec.blurb)}</p></div>${tally(c)}</div>${meter(c)}${kinds(c)}`;
   } else h += `<div class="sechead"><div><h1>Search</h1><p class="lede">${items.length} of ${ITEMS.length} assets match “${esc(state.q)}”.</p></div></div>`;
   if (!items.length) h += `<p class="empty">Nothing here with this filter.</p>`;
   for (const [list, title, blurb] of [['custom', 'Custom art and textured 3D models', 'Painted or imported art, generated art packs, and 3D models with real textures.'],
@@ -144,8 +155,8 @@ function renderMain() {
     h += `<section class="block"><div class="blockhead"><span class="dot" style="--c:var(--k-${list === 'ph' ? 'ascii' : 'art'})"></span><h2>${title}</h2><span class="n">${part.length}</span></div>`;
     if (sec) h += `<p class="lede" style="font-size:14px">${blurb}</p>`;
     const byG = new Map();
-    for (const it of part) { const k = state.sec ? it.grp.i : `${it.sec.i}:${it.grp.i}`; if (!byG.has(k)) byG.set(k, []); byG.get(k).push(it); }
-    for (const [, list2] of byG) h += group(list2[0].grp, list2, !state.sec);
+    for (const it of part) { const k = it.grp.i; if (!byG.has(k)) byG.set(k, []); byG.get(k).push(it); }
+    for (const [, list2] of byG) h += group(list2[0].grp, list2, across);
     h += `</section>`;
   }
   main.innerHTML = h;
@@ -153,10 +164,10 @@ function renderMain() {
   markOpen();
 }
 function tally(c) {
-  const st = (n, label, k) => `<div class="stat" style="--c:var(--k-${k})"><b>${n}</b><span>${label}</span></div>`;
-  return `<div class="tally">${st(c.all, 'assets', 'art').replace('--c:var(--k-art)', '--c:var(--text)')}` +
-    Object.entries(KINDS).filter(([k]) => c[k]).map(([k, v]) => st(c[k], v.label, k)).join('') + `</div>`;
+  const st = (n, label, col) => `<div class="stat" style="--c:${col}"><b>${n}</b><span>${label}</span></div>`;
+  return `<div class="tally">${st(c.all, 'assets', 'var(--text)')}${st(c.custom, 'custom art &amp; 3D', 'var(--k-art)')}${st(c.ph, 'placeholder', 'var(--k-ascii)')}</div>`;
 }
+const kinds = (c) => `<div class="kinds">${Object.entries(KINDS).filter(([k]) => c[k]).map(([k, v]) => `<span title="${esc(v.blurb)}"><span class="dot" style="--c:var(--k-${k})"></span>${esc(v.label)} <b>${c[k]}</b></span>`).join('')}</div>`;
 function group(g, items, withSec) {
   const key = `${g.i}:${state.filt}:${KINDS[items[0].k].list}`;
   const all = state.more.has(key) || state.q;
@@ -190,7 +201,7 @@ function overview() {
   let h = `<div class="sechead"><div><h1>All game art</h1><p class="lede">${TOTAL.all} sprites, textures and 3D models across ${SECS.length} sections: ` +
     `<b style="color:var(--k-art)">${TOTAL.custom}</b> with custom art or textured 3D models and <b style="color:var(--k-ascii)">${TOTAL.ph}</b> still on placeholder art. ` +
     `Tap anything to see its files, preview it and flag it for new art.</p></div>${tally(TOTAL)}</div>${meter(TOTAL)}`;
-  h += `<div class="legend">${k.map(([id, v]) => `<span title="${esc(v.blurb)}"><span class="dot" style="--c:var(--k-${id})"></span>${esc(v.label)}<span class="dim">: ${esc(v.blurb)}</span></span>`).join('')}</div>`;
+  h += `<details class="legendbox"${innerWidth >= 700 ? ' open' : ''}><summary>What the colours mean</summary><div class="legend">${k.map(([id, v]) => `<span><span class="dot" style="--c:var(--k-${id})"></span><b>${esc(v.label)} <span class="dim" style="font-weight:400">${TOTAL[id]}${v.list === 'ph' ? ' · placeholder' : ''}</span></b><small>${esc(v.blurb)}</small></span>`).join('')}</div></details>`;
   h += `<div class="ovgrid">` + SECS.map((s) => {
     const c = count(s.items);
     const pics = s.items.filter((it) => it.t && !isPh(it));
@@ -223,10 +234,7 @@ function image(path) {
   return imgs.get(path);
 }
 const view = { zoom: 'fit', bg: 'checker', smooth: false, frame: 0 };
-function closeDetail() {
-  const it = state.open && BY_ID[state.open];
-  go(it ? `#/s/${it.sec.id}` : '#/');
-}
+function closeDetail() { go(state.sec ? `#/s/${state.sec}` : '#/'); }
 function renderDetail() {
   const d = $('#detail'), it = state.open && BY_ID[state.open];
   markOpen();
@@ -245,7 +253,7 @@ function renderDetail() {
     h += `<div class="stagebar"><span class="seg">${['fit', 1, 2, 4].map((z) => `<button data-zoom="${z}" aria-pressed="${String(view.zoom) === String(z)}">${z === 'fit' ? 'Fit' : z + '×'}</button>`).join('')}</span>` +
       `<span class="seg">${['checker', 'dark', 'light', 'grass'].map((b) => `<button data-bg="${b}" aria-pressed="${view.bg === b}" title="${b} backdrop">${b[0].toUpperCase() + b.slice(1)}</button>`).join('')}</span>` +
       `<span class="seg"><button data-smooth aria-pressed="${!view.smooth}" title="Show pixels sharp">Sharp</button></span><span class="sp"></span><span id="dims"></span></div>`;
-    if (frames.length > 1) h += `<div class="frames" id="frames">${frames.slice(0, 400).map((_, n) => `<button data-frame="${n}" aria-pressed="${n === view.frame}" aria-label="Frame ${n + 1}"><canvas width="1" height="1"></canvas></button>`).join('')}</div>` +
+    if (frames.length > 1) h += `<div class="frames" id="frames">${frames.slice(0, 400).map((_, n) => `<button data-frame="${n}" aria-pressed="${n === view.frame}" aria-label="${esc(it.names && it.names.length === frames.length ? it.names[n] : 'Frame ' + (n + 1))}" title="${esc(it.names && it.names.length === frames.length ? it.names[n] : 'Frame ' + (n + 1))}"><canvas width="1" height="1"></canvas></button>`).join('')}</div>` +
       (frames.length > 400 ? `<p class="dim" style="font-size:13px">Showing the first 400 of ${frames.length}.</p>` : '');
   }
   h += `<div class="status" style="--c:var(--k-${it.k})"><span class="dot"></span><div><b>${esc(kd.label)}</b>${kd.list === 'ph' ? ' <span class="dim">(placeholder)</span>' : ''}<p>${esc(why)}</p></div></div>`;
@@ -254,7 +262,8 @@ function renderDetail() {
     (it.d ? `<dt>About</dt><dd>${esc(it.d)}</dd>` : '') +
     (g.note && !it.d ? `<dt>Group</dt><dd>${esc(g.note)}</dd>` : '') +
     (g.code ? `<dt>Code</dt><dd>${g.code.split(' ').map((c) => `<a href="${gh(c)}" target="_blank" rel="noopener"><code>${esc(c)}</code></a>`).join(' ')}</dd>` : '') + `</dl>`;
-  if (it.names?.length) h += `<div class="sect"><h3>Includes</h3><ul class="names">${it.names.map((n) => `<li>${esc(n)}</li>`).join('')}</ul></div>`;
+  if (it.names?.length) h += `<div class="sect"><h3>Includes</h3><ul class="names">${it.names.slice(0, 120).map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` +
+    (it.names.length > 120 ? `<p class="dim" style="font-size:13px;margin:4px 0 0">…and ${it.names.length - 120} more</p>` : '') + `</div>`;
   if (files.length) h += `<div class="sect"><h3>Files</h3><ul class="files">${files.map((f) => `<li><code>${esc(f)}</code><a href="${ROOT + f}" target="_blank" rel="noopener">Open</a><a href="${gh(f)}" target="_blank" rel="noopener">GitHub</a></li>`).join('')}</ul></div>`;
   const acts = [];
   if (g.v) acts.push(`<a class="btn" href="${ROOT + g.v}" target="_blank" rel="noopener">Open the live 3D viewer</a>`);
@@ -277,6 +286,7 @@ async function drawStage(it, frames) {
     const [, x = 0, y = 0, w = im.naturalWidth, h = im.naturalHeight] = fr;
     const box = Math.max(200, st.clientWidth - 24), boxH = Math.max(220, Math.min(innerHeight * 0.45, 460));
     let z = view.zoom === 'fit' ? Math.min(box / w, boxH / h) : +view.zoom;
+    if (view.zoom === 'fit') z = Math.min(z, 4);
     if (view.zoom === 'fit' && z > 1 && !view.smooth) z = Math.max(1, Math.floor(z));
     const cv = document.createElement('canvas'), dpr = devicePixelRatio || 1;
     cv.width = Math.max(1, Math.round(w * z * dpr)); cv.height = Math.max(1, Math.round(h * z * dpr));
@@ -285,7 +295,8 @@ async function drawStage(it, frames) {
     cx.imageSmoothingQuality = 'high';
     cx.drawImage(im, x, y, w, h, 0, 0, cv.width, cv.height);
     st.textContent = ''; st.append(cv);
-    $('#dims').textContent = `${w}×${h} px${frames.length > 1 ? ` · ${view.frame + 1}/${frames.length}` : ''}`;
+    const nm = it.names && it.names.length === frames.length ? it.names[view.frame] : '';
+    $('#dims').textContent = `${nm ? nm + ' · ' : ''}${w}×${h} px${frames.length > 1 ? ` · ${view.frame + 1}/${frames.length}` : ''}`;
   } catch (e) { st.innerHTML = `<div class="msg">${esc(e.message)}</div>`; }
 }
 function drawFrames(frames) {
@@ -353,6 +364,7 @@ function download(name, text, type) {
 const csvCell = (v) => /[",\n]/.test(v = String(v ?? '')) ? `"${v.replace(/"/g, '""')}"` : v;
 $('#menu').addEventListener('click', (e) => {
   const act = e.target.closest('button')?.dataset.act; if (!act) return;
+  toggleMenu(false);
   const stamp = new Date().toISOString().slice(0, 10);
   if (act === 'md') {
     const todo = ITEMS.filter((it) => isPh(it) || (track(it).f && track(it).f !== 'approved'));
