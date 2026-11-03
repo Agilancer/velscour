@@ -60,6 +60,12 @@ export function aboardSpot(map, x) {
   return [CABOOSE.x0 + 4.5, CZ];
 }
 
+/** Elite packs on the train by depth (a dungeon's 2 + depth/25 champions and 1 + depth/45 uniques, at a train's
+ *  ten-odd packs): 2 champions at first (cars 4 and 6), 5 by depth 150; a unique from 60, two from 120. */
+export const trainElites = (depth) => ({ champs: 2 + Math.floor(Math.min(depth, 150) / 50), uniques: Math.floor(Math.min(depth, 150) / 60) });
+/** Which packs the elites lead, first to last: [car, pack]. The first ones are the forward cars' leaders. */
+const ELITE_ORDER = [[5, 0], [3, 0], [4, 0], [2, 0], [1, 0], [5, 1], [3, 1]];
+
 export function generateGhostTrain(depth, biome, seed) {
   const rng = new RNG(seed), map = new TileMap(GT_W, GT_H);
   for (const car of CARS) {
@@ -72,18 +78,24 @@ export function generateGhostTrain(depth, biome, seed) {
   }
   map.noSky = true;
   map.ghostTrain = true;
-  // ---- monsters: a pack or two on every fight car (worse further forward), the raiders' chief on the tender
+  // ---- monsters: a pack or two on every fight car (worse further forward), the raiders' chief on the tender. Deeper
+  // down it fills up as a dungeon does (world/dungeon.js): a third pack on the forward cars from depth 60, a raider
+  // more a pack past 30 (and 100), and more of the packs led by elites (trainElites).
   const looks = rollLooks(biome, rng.fn()), spawns = [], roster = biome.roster;
   for (const a of roster) looks.pick(a);   // every look the boarders may take is chosen (and its art loaded) now
   FIGHT_CARS.forEach((car, k) => {
-    const packs = k < 2 ? 1 : 2;
+    const packs = k < 2 ? 1 : depth >= 60 ? 3 : 2;
     for (let p = 0; p < packs; p++) {
       let x, y, tries = 0;
       do { x = rng.range(car.x0 + 1.5, car.x1 - 1.5); y = ROW0 + rng.int(0, ROWS - 1) + 0.5; } while (!map.walkable(x, y) && ++tries < 30);
       const arch = rng.pick(roster);
-      spawns.push({ x, y, arch, n: rng.int(2, 3) + (k >> 1), rank: (k === 3 || k === 5) && p === 0 ? 'champion' : 'normal', look: looks.pick(arch), car: k });
+      const n = rng.int(2, 3) + (k >> 1) + (depth > 30 && rng.chance(0.4) ? 1 : 0) + (depth >= 100 ? 1 : 0);
+      spawns.push({ x, y, arch, n, rank: 'normal', look: looks.pick(arch), car: k, p });
     }
   });
+  const { champs, uniques } = trainElites(depth);
+  ELITE_ORDER.map(([k, p]) => spawns.find((s) => s.car === k && s.p === p)).filter(Boolean).slice(0, champs + uniques)
+    .forEach((s, i) => { s.rank = i < uniques ? 'unique' : 'champion'; s.n = s.rank === 'unique' ? Math.max(3, Math.min(5, s.n)) : Math.min(4, s.n); });   // (a dungeon's elite pack sizes)
   const boss = looks.boss(roster, rng.fn());
   spawns.push({ x: TENDER.x0 + 2.5, y: CZ, arch: boss ? boss.arch : 'knight', rank: 'boss', look: boss ? boss.look : looks.pick('knight') });
   map.seen.fill(0);

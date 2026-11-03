@@ -4,11 +4,17 @@
 // brakes, stands, whistles and pulls out; the hero on the platform leaps back aboard, raiders on it are left behind);
 // the cutaway (the hero's car open, the others roofed, who is inside them hidden) and the engine's mask; screenshots
 // (caboose, a car fight, braking into a station, on the platform, the tender and the engine, an overview, the Last
-// Stop, the phone layout). Then auto-play rides it from the caboose to the Last Stop's exit.
-//   node tools/tests/ghosttrain.js [shots|noshots] [auto|noauto]      (start the server first: python3 -m http.server 8123)
+// Stop, the phone layout). Then auto-play rides it from the caboose to the Last Stop's exit. The chief's train fight
+// (coal lanes, the furnace vent, the whistle) is cast in play and shot. With depths, a hero geared for each depth the
+// way balance.js gears one rides it on auto-play for real (no god mode; a fall is counted and the hero stood up again):
+// it must finish, with few falls, and must not be a walk-over (life lost, the chief's fight length).
+//   node tools/tests/ghosttrain.js [shots|noshots] [auto|noauto] [depths, e.g. 50,150,300] [classes]
+//   (start the server first: python3 -m http.server 8123)
 const { openGame, report } = require('./harness');
 const SHOTS = process.argv[2] !== 'noshots';
 const AUTO = process.argv[3] !== 'noauto';
+const DEPTHS = (process.argv[4] || '').split(',').filter(Boolean).map(Number);
+const DEEP_CLASSES = (process.argv[5] || 'paladin').split(',');
 
 (async () => {
   const { browser, page, errors, shot } = await openGame({ width: 1366, height: 860 });
@@ -194,6 +200,55 @@ const AUTO = process.argv[3] !== 'noauto';
     await view('tender', 'return [w.boss.x - 4, 12.5];', 1, 0.8);
     await view('engine', 'return [w.boss.x + 2.2, 13.4];', 0.75, 0.1);
     await view('overview', 'return [50, 12.5];', 0.42, 0.1);
+
+    // ------------------------------------------------ the chief's train fight: coal lanes, the furnace vent, the whistle
+    const chiefSetup = await page.evaluate(async () => {
+      const { G, game } = window.VELSCOUR;
+      const { ROW0 } = await import('/src/world/ghosttrain.js');
+      const w = G.world, sc = w.overworldScenario, b = w.boss, p = G.player, bad = [];
+      const run = (s) => { for (let i = 0; i < Math.round(s * 30); i++) { G.dt = 1 / 30; G.time += G.dt; game.update(1 / 30); } };
+      for (const m of w.creatures) if (m.team === 'enemy' && m !== b) { m.dead = true; m.hp = 0; m.noLoot = true; }
+      p.x = b.x - 3.5; p.y = ROW0 + 1.5; b.awake = true; b.state = 'idle'; b.hp = b.maxHp;
+      sc.chief.t = 99; run(0.2);
+      sc.chief.cast('coal'); run(0.25);   // (the page's own loop runs on while the shot is taken: catch the lanes early)
+      const lanes = (await import('/src/gfx/vfx.js')).effects.filter((e) => e.kind === 'line' && e.color === '#ff3a14').length;
+      if (lanes !== 2) bad.push(`${lanes} coal lanes telegraphed, not 2`);
+      if (b.state !== 'windup' || b.action.kind !== 'train_coal') bad.push('the chief does not stand to throw: ' + b.state);
+      return { bad, lanes };
+    });
+    for (const b of chiefSetup.bad) errors.push('[chief] ' + b);
+    await view('chief_coal', 'return null;', 1, 0.05);
+    const chiefVent = await page.evaluate(async () => {
+      const { G, game } = window.VELSCOUR;
+      const { TENDER, CZ } = await import('/src/world/ghosttrain.js');
+      const { effects } = await import('/src/gfx/vfx.js');
+      const w = G.world, sc = w.overworldScenario, b = w.boss, p = G.player, bad = [];
+      const run = (s) => { for (let i = 0; i < Math.round(s * 30); i++) { G.dt = 1 / 30; G.time += G.dt; game.update(1 / 30); } };
+      run(1.5); b.state = 'idle'; b.action = null;
+      p.x = TENDER.x0 - 0.5; p.y = CZ; run(0.1);
+      sc.chief.cast('vent'); run(0.8);
+      if (Math.abs(b.x - (TENDER.x1 - 2.6)) > 0.3) bad.push(`the chief did not leap to the coal heap: ${b.x.toFixed(1)}`);
+      if (!effects.some((e) => e.kind === 'circle' && e.color === '#e8f4ff')) bad.push('no steam telegraph');
+      return { bad, bx: b.x };
+    });
+    for (const b of chiefVent.bad) errors.push('[chief] ' + b);
+    await view('chief_vent', 'return null;', 0.9, 0.05);
+    const chiefWhistle = await page.evaluate(async () => {
+      const { G, game } = window.VELSCOUR;
+      const w = G.world, sc = w.overworldScenario, b = w.boss, bad = [];
+      const run = (s) => { for (let i = 0; i < Math.round(s * 30); i++) { G.dt = 1 / 30; G.time += G.dt; game.update(1 / 30); } };
+      run(1.2); b.state = 'idle'; b.action = null;
+      const before = w.creatures.filter((m) => m.team === 'enemy' && !m.dead && m !== b).length;
+      b.hp = b.maxHp * 0.6; sc.chief.t = 99; run(0.2);
+      if (sc.chief.casts.whistle !== 1) bad.push('no whistle at 2/3 life');
+      run(1.6);
+      const after = w.creatures.filter((m) => m.team === 'enemy' && !m.dead && m !== b).length;
+      if (after <= before) bad.push('nobody leapt aboard at the whistle');
+      return { bad, casts: sc.chief.casts, boarders: after - before };
+    });
+    console.log('chief', JSON.stringify({ coal: chiefSetup, vent: chiefVent, whistle: chiefWhistle }));
+    for (const b of chiefWhistle.bad) errors.push('[chief] ' + b);
+    await view('chief_whistle', 'return null;', 1, 0.05);
     const last = await page.evaluate(async () => {
       const { G, game } = window.VELSCOUR;
       const { PLAT0 } = await import('/src/world/ghosttrain.js');
@@ -267,6 +322,86 @@ const AUTO = process.argv[3] !== 'noauto';
       if (!res.completed) errors.push(`[auto] did not reach the Last Stop in ${res.secs}s (${res.cleared} cars, ${res.status})`);
       if (res.completed && res.stations < 2) errors.push(`[auto] only ${res.stations} stations on the way`);
       if (res.completed && !res.reachedExit) errors.push('[auto] did not take the exit');
+    }
+
+
+    // ------------------------------------------------ deep depths: a hero geared for the depth, auto-play, no god mode
+    const deepRows = [];
+    for (const cls of DEEP_CLASSES) for (const D of DEPTHS) {
+      const r = await page.evaluate(async ({ cls, D }) => {
+        const { G, game } = window.VELSCOUR;
+        const { Auto } = await import('/src/game/autoplay.js');
+        const { depthLevel } = await import('/src/data/depth.js');
+        const { rollItem, rollGem } = await import('/src/data/items.js');
+        const { xpToNext } = await import('/src/game/player.js');
+        const { BIOME_BY_ID } = await import('/src/data/biomes.js');
+        if (Auto.on) Auto.toggle(false);
+        await game.newChar(cls, 'Deep');
+        document.querySelectorAll('.screen').forEach((s) => s.remove()); G.ui.modalCount = 0; G.ui.closeAll();
+        // geared as balance.js gears a hero arriving at depth D
+        const c = G.char, L = depthLevel(D), lvl = Math.min(3000, L + 1);
+        c.level = lvl; c.xp = Math.round(xpToNext(lvl) * 0.3);
+        c.statPoints += (lvl - 1) * 5; c.skillPoints += (lvl - 1) + Math.max(0, D - 1);
+        for (let d = 1; d < D; d++) c.cleared[d] = true;
+        c.deepest = D - 1; c.depth = D;
+        c.gold = Math.round(800 * Math.pow(1.05, L));
+        c.potions = { hp: 10, mp: 6, rejuv: 3, fury: 2 };
+        Auto.spendStats(); Auto.spendSkills(); Auto.arrangeBar();
+        for (let round = 0; round < 8; round++) {
+          c.bag = c.bag.map(() => null);
+          for (let i = 0; i < 25 && i < c.bag.length; i++) { const it = rollItem(L - Math.floor(Math.random() * 7), { mf: 60, bonus: Math.random() < 0.12 ? 1.2 : 0.15 }); it.unid = false; c.bag[i] = it; }
+          G.player.recompute(); Auto.optimizeGear();
+        }
+        c.bag = c.bag.map(() => null);
+        for (const it of Object.values(c.equip)) if (it && it.type === 'gear') {
+          it.upg = Math.min(6, 2 + Math.floor(L / 40));
+          it.sockets = Math.max(it.sockets, Math.min(it.maxSockets, 2));
+          while (it.gems.length < it.sockets) { const g = rollGem(L); it.gems.push({ gem: g.gem, tier: g.tier }); }
+        }
+        const M = Math.min(1000, Math.round(20 + D * 1.6));
+        c.bar.filter(Boolean).forEach((id, i) => { c.mastery[id] = [Math.max(1, Math.round(M * (i < 2 ? 1 : 0.55))), 0]; });
+        Auto.spendSkills(); Auto.arrangeBar(); G.player.recompute();
+        G.godMode = false; G.autoOpenSeals = true;
+        await game.teleportToBiome(BIOME_BY_ID.ghost_train);
+        const w = G.world, sc = w.overworldScenario, p = G.player, boss = w.boss;
+        p.hp = p.maxHp; p.mana = p.maxMana;
+        // a fall is counted, and the hero stood up again where he fell (so one soak measures the whole ride)
+        let falls = 0, lost = 0, minHp = 1, pots = 0, bossAwakeAt = null, bossDiedAt = null, bossLost = 0;
+        p.die = () => { falls++; p.hp = p.maxHp; p.status = {}; };
+        const potSum = () => Object.values(G.char.potions).reduce((a, n) => a + n, 0);
+        Auto.toggle(true);
+        let sim = 0;
+        const t0 = performance.now(), cars = [];
+        while (sim < 1200 && !sc.completed && performance.now() - t0 < 300000) {
+          for (let i = 0; i < 30; i++) {
+            const hp0 = p.hp, pots0 = potSum(), cl = sc.cleared;
+            G.dt = 1 / 30; G.time += G.dt; G.frame++; game.update(1 / 30); sim += 1 / 30;
+            if (G.player !== p || G.world !== w) break;
+            if (p.hp < hp0) { lost += (hp0 - p.hp) / p.maxHp; if (bossAwakeAt != null && bossDiedAt == null) bossLost += (hp0 - p.hp) / p.maxHp; }
+            minHp = Math.min(minHp, p.hp / p.maxHp);
+            if (potSum() < pots0) pots += pots0 - potSum();
+            if (sc.cleared > cl) cars.push(Math.round(sim));
+            if (boss.awake && bossAwakeAt == null) bossAwakeAt = sim;
+            if (boss.dead && bossDiedAt == null) bossDiedAt = sim;
+          }
+          if (G.player !== p || G.world !== w) break;
+          await new Promise((r) => setTimeout(r, 0));
+        }
+        const casts = sc.chief ? { ...sc.chief.casts } : {};
+        Auto.toggle(false);
+        return { cls, D, lvl: depthLevel(D), heroLvl: c.level, secs: Math.round(sim), completed: sc.completed, cleared: sc.cleared, falls, lost: +lost.toFixed(2), minHp: +minHp.toFixed(2), pots,
+          boss: boss.name, bossHp: Math.round(boss.maxHp), bossSecs: bossDiedAt != null && bossAwakeAt != null ? Math.round(bossDiedAt - bossAwakeAt) : null, bossLost: +bossLost.toFixed(2), bossLeft: Math.round(100 * Math.max(0, boss.hp) / boss.maxHp),
+          cars, casts, status: Auto.status, phase: sc.phase };
+      }, { cls, D });
+      console.log('deep', JSON.stringify(r));
+      deepRows.push(r);
+      if (!r.completed) errors.push(`[deep ${cls} D${D}] stalled: ${r.cleared}/6 cars, ${r.phase}, chief at ${r.bossLeft}% after ${r.secs}s (${r.status})`);
+      if (r.falls > 2) errors.push(`[deep ${cls} D${D}] the hero fell ${r.falls} times`);
+      if (r.completed && r.lost < 0.5 && r.bossSecs != null && r.bossSecs < 8) errors.push(`[deep ${cls} D${D}] a walk-over: ${r.lost} lives lost, the chief down in ${r.bossSecs}s`);
+    }
+    if (deepRows.length) {
+      console.log('\nDEEP  class        depth mlvl  secs falls lives-lost min-hp pots  chief-secs chief-lost casts');
+      for (const r of deepRows) console.log(`  ${r.cls.padEnd(12)} ${String(r.D).padStart(5)} ${String(r.lvl).padStart(4)} ${String(r.secs).padStart(5)} ${String(r.falls).padStart(5)} ${r.lost.toFixed(2).padStart(10)} ${r.minHp.toFixed(2).padStart(6)} ${String(r.pots).padStart(4)} ${String(r.bossSecs).padStart(11)} ${r.bossLost.toFixed(2).padStart(10)} ${JSON.stringify(r.casts)}`);
     }
 
     // ------------------------------------------------ phone layout
