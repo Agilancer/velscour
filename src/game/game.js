@@ -32,11 +32,10 @@ import { loadSeaOfSandPack, releaseSeaOfSandPack } from '../gfx/seaofsand.js';
 import { createDarkForestRun } from './darkforest.js';
 import { generateDarkForest } from '../world/darkforest.js';
 import { loadDarkForestTrees } from '../gfx/darkforest.js';
-import { generateMountain } from '../world/mountain.js';
 import { generateBreach } from '../world/breach.js';
 import { createBreachRun, chestAt, breachMonster } from './breach.js';
 import { breachDepth, breachLevel, BREACH_ART, BREACH_ARCHS } from '../data/breach.js';
-import { createMountainRun } from './mountain.js';
+import { useAlpine } from './alpine.js';
 import { castle3dTick } from './castle3d.js';
 import { useTerrain, terrainOf } from '../gfx/terrain.js';
 import { generateTower } from '../world/tower.js';
@@ -304,6 +303,7 @@ export const game = {
     useTower(world); // the Serpentine Tower lays the grid onto its spiral stair (game/tower.js)
     useCaverns(world); // the Depth's Edge Caverns lift everything onto their smooth height field (game/caverns.js)
     useDunes(world); // so do the Sea of Sand's dunes and pyramids (game/dunes.js)
+    useAlpine(world); // and the mountains: the Mountainside and the Snowy Summit (game/alpine.js)
     useSea(world); // the Pirate Seas' three.js scene goes when the hero leaves the Dawnwake (game/seabattle.js)
     camera.computeZoom();
     camera.follow(p.x, p.y, 0, true);
@@ -394,7 +394,7 @@ export const game = {
     const biome = BIOME_BY_ID[c.depth === FINAL_DEPTH ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
     UI.dialog({
       title: `Depth ${c.depth}`,
-      html: `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(biome.name)}</b>.</p><p class="dim">${regionOf(biome) ? regionOf(biome).portal : biome.id === 'sea_of_sand' ? 'Follow the cliff maze and clear every marked scenario area to open the exit.' : biome.id === 'mountainside' ? 'Climb the switchback trail to the summit and defeat its Warden. Ledges a hop high can be climbed; taller cliffs cannot.' : biome.id === 'skyship' ? "Step out onto the heroes' airship. Hold the deck against the Air Pirates' boarding waves, their captains and their flagship; victory turns the gate into the exit." : biome.sea ? "Step out onto the Dawnwake, the Lampwardens' steam frigate. Hold her deck against the Black Tide's boarders, wave on wave, and their captain; victory opens the bell tower's door onward." : biome.id === 'dark_forest' ? 'Find your way through the woods and labyrinths to the Heart of the Forest. Its trial opens the way on; the glades along the trails hold trials of their own, and their rewards.' : biome.tower ? 'Climb the spiral stair to the roof. Three waves of bosses hold it, and then their master comes on an airship.' : biome.cave ? 'Follow the passages and caverns to the underground lake. At the foot of its waterfall a passage climbs a long, spiralling shaft to the top of the falls, where its masters wait.' : biome.overworld ? 'Activate the scenario shrine and complete its trial to open the exit.' : 'Find the exit. It is sealed until its guardian is slain.'}${c.depth === FINAL_DEPTH ? '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>' : !biome.overworld && isRaidDepth(c.depth) ? '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>' : ''}</p>`,
+      html: `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(biome.name)}</b>.</p><p class="dim">${regionOf(biome) ? regionOf(biome).portal : biome.id === 'sea_of_sand' ? 'Follow the cliff maze and clear every marked scenario area to open the exit.' : biome.id === 'skyship' ? "Step out onto the heroes' airship. Hold the deck against the Air Pirates' boarding waves, their captains and their flagship; victory turns the gate into the exit." : biome.sea ? "Step out onto the Dawnwake, the Lampwardens' steam frigate. Hold her deck against the Black Tide's boarders, wave on wave, and their captain; victory opens the bell tower's door onward." : biome.id === 'dark_forest' ? 'Find your way through the woods and labyrinths to the Heart of the Forest. Its trial opens the way on; the glades along the trails hold trials of their own, and their rewards.' : biome.tower ? 'Climb the spiral stair to the roof. Three waves of bosses hold it, and then their master comes on an airship.' : biome.cave ? 'Follow the passages and caverns to the underground lake. At the foot of its waterfall a passage climbs a long, spiralling shaft to the top of the falls, where its masters wait.' : biome.overworld ? 'Activate the scenario shrine and complete its trial to open the exit.' : 'Find the exit. It is sealed until its guardian is slain.'}${c.depth === FINAL_DEPTH ? '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>' : !biome.overworld && isRaidDepth(c.depth) ? '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>' : ''}</p>`,
       buttons: [{ label: 'Not yet' }, { label: 'Enter', cls: 'red', fn: () => this.enterDungeon() }],
     });
   },
@@ -421,9 +421,6 @@ export const game = {
           } else if (regionByWord(message)) {
             close();
             this.teleportToBiome(BIOME_BY_ID[regionByWord(message).id]); // a new region (game/regions.js)
-          } else if (message.trim().toLowerCase() === 'mountain') {
-            close();
-            this.teleportToBiome(BIOME_BY_ID.mountainside); // the Mountainside beta
           } else if (/^(seas?|naval|dawnwake)(\s|$)/i.test(message.trim())) {
             // the Pirate Seas; 'sea fog', 'sea redwater'... picks its battle
             const want = message.trim().toLowerCase().split(/\s+/)[1];
@@ -532,6 +529,38 @@ export const game = {
     }
   },
 
+  /**
+   * Straight on into a follow-on region at the same depth (the Mountainside's summit into the Snowy Summit): the loot
+   * lying round the hero comes along, auto-play stays on, and a trip to town comes back to it (c.nextBiome).
+   */
+  async continueTo(id) {
+    const c = G.char, old = G.world, biome = BIOME_BY_ID[id];
+    if (!c || !old || !biome || this._continuing) return;
+    this._continuing = true;
+    const p = G.player, depth = old.depth, carry = p ? old.loot.filter((l) => Math.hypot(l.x - p.x, l.y - p.y) < 14) : [];
+    c.nextBiome = id;
+    const loading = document.getElementById('loading');
+    document.getElementById('loading-text').textContent = `Depth ${depth} — ${biome.name}…`;
+    loading.classList.remove('hidden');
+    sfx('portal');
+    try {
+      await this.loadLevelArt(biome, null);
+      this.buildDungeon(depth, biome, null);
+      const w = G.world;
+      for (const l of carry) { const [x, y] = w.map.randomNear(p.x, p.y, 1.8); l.x = x; l.y = y; l.z = 0; l.vx = l.vy = 0; l.vz = 40; w.addLoot(l); }
+      if (carry.length) UI.log('The spoils of the summit came with you.', '#ffe2a0');
+      await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])], true).catch((e) => console.warn(e));
+      await warmLevelArt(w);
+      releaseLevelArt(biome);
+    } catch (e) {
+      console.warn(e);
+    } finally {
+      this._continuing = false;
+      loading.classList.add('hidden');
+      this.autosave();
+    }
+  },
+
   /** Pre-build the current level's monster sprites (what the loading screen does after buildDungeon; for tests). */
   warmArt() { return warmLevelArt(G.world); },
 
@@ -552,7 +581,6 @@ export const game = {
     }
     if (biome.id === 'dark_forest') return Promise.all([loadBiomeArt(biome), loadDarkForestTrees()]);
     if (biome.challenge) return loadBiomeArt(biome); // the Breach's two packs (pack, wallPack, moreFloors/morePacks)
-    if (biome.id === 'mountainside') return Promise.all([loadBiomeArt(BIOME_BY_ID.dark_forest), loadDarkForestTrees()]); // its floors, props and pines
     if (biome.id === 'skyship') return Promise.all([loadBaked('assets/tiles/skyship/'), preloadTownSheets(TOWNSFOLK_KNIGHTS)]); // the baked ironclad, boats and galleon; the sky-knights
     if (biome.tower) return loadTower3D(); // three.js and the tower's textures
     if (biome.sea) {   // the scenario is picked now, so its fleet's models and its own monsters' art load with the rest
@@ -606,7 +634,7 @@ export const game = {
     const seed = kept ? kept.seed : (Math.random() * 1e9) | 0;
     const sky = biome.id === 'skyship', sea = !!biome.sea;
     const reg = regionOf(biome);
-    const gen = reg ? reg.generate(depth, biome, seed) : forest ? generateDarkForest(depth, biome, tileset, seed) : biome.id === 'mountainside' ? generateMountain(depth, biome, seed)
+    const gen = reg ? reg.generate(depth, biome, seed) : forest ? generateDarkForest(depth, biome, tileset, seed)
       : sky ? generateSkyship(depth, biome, seed, castle3dState())
       : sea ? generateSeaship(depth, biome, seed, SEA_VARIANTS.find((q) => q.id === (G.seaNext || c.seaVariant))?.size)
       : biome.tower ? generateTower(depth, biome, seed, G.towerVariant)
@@ -772,16 +800,6 @@ export const game = {
       addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#40a0ff', 5));
       sfx('gate'); UI.refresh(); this.autosave();
     });
-    else if (biome.id === 'mountainside') world.overworldScenario = createMountainRun(world, gen, biome, () => {
-      exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
-      const first = !c.cleared[depth];
-      c.cleared[depth] = true;
-      c.deepest = Math.max(c.deepest || 0, depth);
-      this.brokeThrough(depth);
-      if (first) { c.skillPoints++; UI.log('Bonus skill point for taking the summit!', '#ffd860'); }
-      addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#40a0ff', 5));
-      sfx('gate'); UI.refresh(); this.autosave();
-    });
     else if (biome.tower) createTowerRun(world, gen, biome, () => {
       exit.active = true; exit.color = '#40a0ff'; exit.label = 'Exit — continue';
       const first = !c.cleared[depth];
@@ -837,7 +855,6 @@ export const game = {
     if (reg) { const t = reg.intro && reg.intro(world, gen); if (t) UI.log(t, '#ffe2a0'); }
     else if (gen.dunes) UI.log(`${gen.variant.name}: ${gen.variant.intro} ${gen.dunes.camps.length} waystones stand between you and its door.`, '#ffe2a0');
     else if (biome.id === 'sea_of_sand') UI.log(`Secure ${gen.scenarioCount} marked scenario area${gen.scenarioCount===1?'':'s'} to open the exit. Rewards improve with each clear.`, '#ffe2a0');
-    else if (biome.id === 'mountainside') UI.log('The trail switchbacks up the cliffs to the summit. A ledge a hop high can be climbed; taller cliffs only jumped down.', '#ffe2a0');
     else if (sky) UI.log(`${world.sky.v.name}: ${world.sky.v.story ? world.sky.v.blurb + ' Hold the deck.' : 'hold the deck against the Air Pirates\' boarding waves.'} ${world.sky.v.hazardText || ''}`, '#ffe2a0');
     else if (sea) UI.log(`${world.seaRun.variant.name}: ${world.seaRun.variant.blurb} Hold the Dawnwake's deck against the Black Tide's boarders.`, '#ffe2a0');
     else if (biome.tower) UI.log(`${gen.variant.name}: ${gen.variant.epithet}. Climb the stair; things wait on the floors above, and some will not wait.`, '#ffe2a0');

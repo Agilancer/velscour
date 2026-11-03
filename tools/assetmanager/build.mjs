@@ -435,13 +435,13 @@ async function effects() {
 async function environments() {
   section('environments', 'Environments & Textures', 'Dungeon biomes, overworlds and their tile packs, the 3D scenes and ships, and the texture library the 3D models are painted with.');
   const { BIOMES } = await imp('src/data/biomes.js');
-  const PACKS = { catacombs: 'Catacombs', castle_keep: 'Castle Keep', cathedral_graveyard: 'Cathedral and Graveyard', sewers: 'Sewers', dark_forest: 'Dark Forest', eternal_breach: 'Eternal Breach (walls)', veilscar_march: 'Veilscar March (floors and props)' };
+  const PACKS = { catacombs: 'Catacombs', castle_keep: 'Castle Keep', cathedral_graveyard: 'Cathedral and Graveyard', sewers: 'Sewers', dark_forest: 'Dark Forest', eternal_breach: 'Eternal Breach (walls)', veilscar_march: 'Veilscar March (floors and props)', snowy_summit: 'Snowy Summit' };
   const P = {};
   for (const k in PACKS) P[k] = json(`assets/tiles/${k}/pack.json`);
   const biggest = (pack, list) => { const s = P[pack].scatter; const ids = list || s.map((_, i) => i); let b = ids[0]; for (const i of ids) if (s[i] && s[i].w * s[i].h > s[b].w * s[b].h) b = i; return [`assets/tiles/${pack}/scatter.webp`, rect(s[b])]; };
   const scatterIds = (b) => { const r = b.part?.scatter; return r ? r.flatMap(([a, z]) => Array.from({ length: z - a + 1 }, (_, i) => a - 1 + i)).filter((i) => P[b.pack].scatter[i]) : null; };
   const BA = { doc: 'docs/BIOME_ART.md', code: 'src/data/biomes.js src/core/assets.js', cmd: 'python3 tools/process_assets.py biomes', dir: 'assets/source/biomes' };
-  const OUT = new Set(['overworld', 'castle', 'sea_of_sand', 'dark_forest', 'skyship', 'pirate_seas', 'serpentine_tower', 'depths_edge']);
+  const OUT = new Set(['overworld', 'castle', 'sea_of_sand', 'dark_forest', 'skyship', 'pirate_seas', 'serpentine_tower', 'depths_edge', 'mountainside']);
   let g = group('Dungeon biomes', { ...BA, note: 'Dungeons are built from the painted packs; most biomes recolour a pack (palette swap) and borrow floors and props from others.' });
   for (const b of BIOMES.filter((b) => !OUT.has(b.id))) {
     const own = !b.palette, packs = [b.pack, b.wallPack, ...(b.morePacks || []).map((m) => m[0]), ...(b.moreFloors || []).map((m) => m[0])].filter(Boolean);
@@ -462,7 +462,8 @@ async function environments() {
     ['sea_of_sand', 'Sea of Sand (classic maze)', 'art', ['assets/tiles/sea_of_sand/tree.webp', rect(SOS.atlases.tree[0])], 'The Sea of Sand pack.', 'docs/SEA_OF_SAND.md'],
     ['dunes', 'Sea of Sand dunes and pyramids', 'recolor', null, 'Live three.js: the sand is the Sea of Sand floor art recoloured, tomb and pyramid masonry is drawn in code, props bake with flat colours (src/gfx/dunes3d.js).', 'docs/SEA_OF_SAND_DUNES.md'],
     ['dark_forest', 'The Dark Forest', 'art', ['assets/tiles/dark_forest/trees.webp', rect(json('assets/tiles/dark_forest/trees.json').trees[0])], 'The Dark Forest pack and its 15 towering trees.', 'docs/DARK_FOREST.md'],
-    ['mountainside', 'Mountainside (beta)', 'recolor', null, 'Town and Dark Forest floors recoloured, with procedural rock cliffs (src/gfx/mountainart.js, src/gfx/terrain.js).', 'docs/MOUNTAINSIDE.md'],
+    ['mountainside', 'Mountainside', '3d', ['assets/tiles/snowy_summit/materials/snow_capped_granite.webp'], 'Live three.js height field (src/gfx/alpine3d.js): town and Dark Forest floors recoloured (src/gfx/mountainart.js) up to the snow line, Snowy Summit floors and props above it, cliffs from the Snowy Summit wall materials.', 'docs/MOUNTAINSIDE.md'],
+    ['snowy_summit', 'The Snowy Summit', '3d', ['assets/tiles/snowy_summit/materials/ice_bound_shale.webp'], 'Live three.js mountain range in the Snowy Summit pack: its floors per tile, its wall materials on the cliffs, its props, arches, gates and shrine walls.', 'docs/SNOWY_SUMMIT.md'],
     ['breach', 'The Eternal Breach', 'art', exists('assets/The_Eternal_Breach_Expanded_Pack/The_Eternal_Breach/Overview.png') ? ['assets/The_Eternal_Breach_Expanded_Pack/The_Eternal_Breach/Overview.png'] : null, 'Veilscar March floors and props, Eternal Breach walls. The void and island undersides are drawn in code.', 'docs/ETERNAL_BREACH.md'],
     ['skyship', 'The Sky Lanes (Sky Battle)', '3d', skyFr('galleon'), 'Airships baked from three.js models textured with the airship pack; the sky and clouds are drawn in code.', 'docs/SKY_BATTLE.md'],
     ['pirate_seas', 'The Pirate Seas', '3d', null, 'Live three.js ships textured with the airship pack; the sea is a procedural shader.', 'docs/PIRATE_SEAS.md'],
@@ -482,6 +483,9 @@ async function environments() {
     if (walls.length) add(g, { id: `pack_${k}_walls`, n: `${name}: walls and arches`, k: 'art', y: 'texture', c: walls.length, fr: walls, files: [`${dir}/pack.json`] });
     add(g, { id: `pack_${k}_scatter`, n: `${name}: props`, k: 'art', y: 'texture', c: p.scatter.length, fr: p.scatter.map((f) => [`${dir}/scatter.webp`, rect(f)]), names: p.scatter.map((f) => f.name), thumb: biggest(k), files: [`${dir}/pack.json`] });
   }
+  g = group('Snowy Summit cliff materials', { note: 'The pack\'s five wall materials: the mountains\' 3D cliffs (snow caps taken back to stone, recoloured per map).', dir: 'assets/source/biomes', doc: 'docs/SNOWY_SUMMIT.md', code: 'src/gfx/alpine3d.js' });
+  for (const f of fs.readdirSync('assets/tiles/snowy_summit/materials').filter((f) => f.endsWith('.webp')).sort())
+    add(g, { id: 'ss_mat_' + f.slice(0, -5), n: titleCase(f.slice(0, -5).replace(/_/g, ' ')), k: 'art', y: 'texture', src: [`assets/tiles/snowy_summit/materials/${f}`] });
   const ap = 'assets/tiles/approved_biomes';
   g = group('Temple biome and wilds art', { note: 'The five temple biomes\' painted floors and props, and the Forsaken Wilds trees and scatter.', doc: 'docs/APPROVED_BIOME_ART.md', code: 'src/gfx/approvedbiomeart.js src/gfx/overworldart.js' });
   const grid = (f, w, h, cols, rows) => Array.from({ length: cols * rows }, (_, i) => [`${ap}/${f}`, [(i % cols) * w, Math.floor(i / cols) * h, w, h]]);

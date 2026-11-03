@@ -29,6 +29,7 @@ import { endgameUnlocked } from './endgame.js';
 import { heresyRankOf } from './heresies.js';
 import { addLight } from '../gfx/vfx.js';
 import { drawTerrain, drawColumn, occludersFor, occludersOfRect, occluderObj, clipAdd, hiddenBehind, standKey, hopZ, drawSky, terrainShade, HS } from '../gfx/terrain.js';
+import { hopArc } from './alpine.js';
 import { drawRiftgate } from '../gfx/riftgate.js';
 import { fpBegin, fpClip, fpDepth, fpProject, fpScale, fp, PX, EYE } from '../gfx/firstperson.js';
 
@@ -952,7 +953,7 @@ export function renderWorld(ctx, world) {
       }
       case 6: {
         const oldZ=o.z||0;
-        const hz=map.hgt&&!map.smoothField?hopZ(o,map):0; // hopping up or dropping down a step of the terrain (a smooth field has none)
+        const hz=!map.hgt?0:!map.smoothField?hopZ(o,map):map.hopArc?hopArc(o,map):0; // hopping up or dropping down a step of the terrain (a smooth field: the mountains' ledges only)
         if(hz)o.z=oldZ+hz;
         const hc=world.cave?world.cave.horizon(o):null; // behind higher ground in the caves: hidden below its edge
         if(hc===-Infinity){ // drawn under an empty clip all the same: its rim and bar still show on the see-through layer

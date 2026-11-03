@@ -50,7 +50,7 @@ async function openGame({ width = 1280, height = 720, mobile = false, intro = fa
   page.on('pageerror', (e) => errors.push('[pageerror] ' + e.message + ' ' + (e.stack || '').split('\n').slice(1, 3).join(' | ')));
   await page.goto(BASE_URL + '/index.html');
   await page.waitForFunction(() => window.VELSCOUR && document.querySelector('#loading').classList.contains('hidden'), null, { timeout: 30000 });
-  const shot = (name) => page.screenshot({ path: path.join(OUT_DIR, name + '.png') });
+  const shot = (name) => page.screenshot({ path: path.join(OUT_DIR, name + '.png'), timeout: 120000 });   // (SwiftShader's 3D scenes can take seconds a frame)
   return { browser, ctx, page, errors, shot };
 }
 

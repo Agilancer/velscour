@@ -212,7 +212,7 @@ export class World {
   /** Doors swing open (and stay open) when anyone walks up to them. They never block: monsters path straight through. */
   openDoors() {
     for (const d of this.map.doors) {
-      if (d.open || this.query(d.x, d.y, 1.1).length === 0) continue;
+      if (d.open || d.locked || this.query(d.x, d.y, 1.1).length === 0) continue;   // (a locked one: the Snowy Summit's gates)
       d.open = true;
       sfx('door', 0.8);
     }

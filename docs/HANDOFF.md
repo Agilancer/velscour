@@ -14,6 +14,44 @@ Contents
 
 ---
 
+## November 3, 2026 — Mountainside out of beta, and THE SNOWY SUMMIT (branch `claude/mountainside-beta-release-p53gw6`)
+
+The user asked to take the Mountainside out of beta with sloped surfaces and hops, three times larger, a switchback
+trail with fights the whole way and the Snowy Summit pack's tiles on its very top; on finishing it the party goes straight
+into a new open-world biome, **The Snowy Summit** (their four uploaded zips): thin ridgelines across a mountain range in
+three.js, bigger plateau fights between them, and one of five snow-palette-swapped bosses on the peak. Two critic
+passes (two 20-year game designers) were asked for, then push, PR and merge.
+- **Shared three.js mountains** (`src/world/alpine.js`, `src/gfx/alpine3d.js`, `src/game/alpine.js`): tile heights in
+  levels become a vertex field 4 a tile edge (walk-apart neighbours blend into slopes, hop-apart ones meet at a crisp
+  ledge, rock tiles take their own shape; convex corners cut, notches filled; the caverns' cap). The scene: each tile's
+  floor art from an atlas through an index texture, triplanar cliffs from the pack's wall materials (snow caps taken back
+  to stone), snow on gentle rock above a snow line, a skirt past the edges, a drifting sea of cloud, a painted sky with
+  far ranges. `world.cave` gives elevation, picking and the horizon (the caverns' methods); `hopArc` (render.js case 6,
+  `map.hopArc`) hops creatures up ledges with an arc (and a dust puff for the hero) on the smooth field.
+- **Mountainside** (docs/MOUNTAINSIDE.md): 72 x 104, ten cliff bands, a way up at alternate ends (a graded ramp, or a
+  scramble of hop steps), terraces a hop high, crags, shelves with chests; walk 3 levels, hop 7, drop 10; cliffs block
+  sight (so packs above don't wake across them). ~37 packs along the ~550-tile trail, champions at each way up, leap-down
+  ambushes off the cliffs; Snowy Summit floors and props on the top two bands; the Summit Warden. Now a region
+  (`src/game/regions/mountain.js`) in `BIOMES` (the rotation); its old game.js branches are gone. On the Warden's death
+  `game.continueTo('snowy_summit')` carries the party and the loot round them on, and `c.nextBiome` keeps a town trip
+  coming back to the Summit.
+- **The Snowy Summit** (docs/SNOWY_SUMMIT.md): a region in `BETA_BIOMES` (`follows: 'mountainside'`), skull words
+  `summit`/`snow`/`peak`/`ridge`. 112 x 112: camp, four plateaus, the peak, joined by ridges 2-3 tiles wide with hop steps;
+  the range falls into the cloud, other peaks and the true summit's spire stand behind. Ridge packs of 1-2, climb-ups
+  over the rim; plateau fights (Buried in the Snow, The Frozen Camp, Avalanche, The Howling Cairns, The Pack of the
+  Heights), each gated by the pack's `frozen_iron_gate` doors (`door.locked`, `world.openDoors` skips locked ones) and
+  paid with a chest; the peak's shrine (altar, owl, basin, braziers, sentinels, bell, an arch and a ruined ashlar wall);
+  one of five raid bosses in a snow swap (`SUMMIT_BOSSES`: Glacier Crown Titan, Blizzard Woolback, Frostmane Werebear,
+  Bonewhite Crypt Dragon, Rime Antler Lich) at 72% life, no execute timer; the exit opens on the peak.
+- **Art**: `assets/tiles/snowy_summit/` (runtime atlases as delivered, `materials/*.webp`), the four zips merged into
+  `assets/source/biomes/Snowy_Summit_Biome_Pack.zip`; `LIT` and `WALK_OVER` take the pack's lit and walk-over props.
+- **Tests**: `tools/tests/mountain.js` (rewritten) and `tools/tests/summit.js` (new); auto-play loops stub `game.render`
+  (SwiftShader's 3D readback otherwise runs the clock at real time); the harness's screenshots wait up to 120 s.
+- **Design calls made without asking** (worth a look): "three times larger" read as three times the area (72 x 104,
+  not 150 x 150, which would be a ~2,000-tile trail); the hop height (7 levels, 28 px) and walk step (3 levels); the
+  plateau gates; the five bosses and their templates; Summit at 112 x 112 with four plateaus; a town trip returns to the
+  Summit, not the Mountainside.
+
 ## November 3, 2026 — the asset manager (branch `feat/asset-manager`)
 
 The user asked for an asset manager for every sprite, texture and 3D model, listing per section what has custom art or

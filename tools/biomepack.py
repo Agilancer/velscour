@@ -42,6 +42,9 @@ WALK_OVER = {"supine_skeleton", "vigil_candles", "rolled_shroud", "chain_and_sha
              "bordered_fresh_grave", "old_grave_mound", "dry_wreath", "coffin_boards", "fallen_railing",
              # Castle Keep
              "fallen_tapestry", "stained_glass_shards", "cannonball_pile", "cracked_tile_rubble",
+             # Snowy Summit
+             "slate_chip_scatter", "fallen_alpine_branch", "snowbound_votive_candles", "fur_bedroll", "snowy_timber_heap",
+             "climbing_rope_and_pitons", "frosted_offering_bowl", "broken_timber_fence", "climbing_pick_and_map", "mountain_boots_and_belt",
              "brazier_ash", "keep_keyring", "prison_shackle", "spear_bundle", "broken_crown", "broken_lance",
              "votive_candles", "tracery_rubble", "resting_censer", "ivy_roots", "funeral_flowers",
              # Sewers

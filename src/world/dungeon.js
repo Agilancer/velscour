@@ -621,7 +621,8 @@ const LIT = { grave_lantern: 2.2,
   starfall_brazier: 3.5, voidflame_brazier: 3.7, aether_lantern: 2.5,
   stellar_conduit: 3.8, nebula_shrine: 4.1, astral_fountain: 3.2,
   convergence_dais: 3.6, singularity_heart: 4.5, portal_anchor: 3.7,
-  campfire: 3.4, lantern_stake: 2.4, glowing_crystal: 2.6 };
+  campfire: 3.4, lantern_stake: 2.4, glowing_crystal: 2.6,
+  summit_floor_lantern: 2.4, snowbound_votive_candles: 2, hooked_lantern_stand: 2.6, frosted_iron_brazier: 3.4, summit_torch_stand: 3.2 };
 
 function shuffleWith(a, rng) {
   for (let i = a.length - 1; i > 0; i--) { const j = rng.int(0, i); [a[i], a[j]] = [a[j], a[i]]; }
