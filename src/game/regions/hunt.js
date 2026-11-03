@@ -10,6 +10,7 @@ import { createHuntRun, huntQuest } from '../hunt.js';
 registerRegion({
   id: 'great_hunt',
   words: ['hunt', 'great hunt', 'the great hunt', 'beast'],
+  minLevel: 10, // the user's rule: no hunting before level 10
   portal: 'Track the beast by its signs. Wound it, follow its blood, corner it in its lair.',
   townLine: 'The Great Hunt lies beyond: one great beast, tracked by its signs, worn down, cornered in its lair.',
   // the Mountainside's floors and the Dark Forest's props and towering trees

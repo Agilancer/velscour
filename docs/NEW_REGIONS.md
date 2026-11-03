@@ -23,6 +23,10 @@ this file good enough that another account can pick up where it stopped.
   `registerRegion({...})` (the fields are documented at the top of `regions.js`). `src/game/regions/index.js` imports
   all four. `game.js` (portal text, skull words, art loading, the three.js fallback, generation, the run and its win,
   ambience, the arrival log) and the Quest Log (`src/ui/quest.js`) read the registry, so a region touches no shared file.
+- `minLevel` (optional) gates a region by the hero's level: `regionNeeds(biome, level)` in `regions.js` is checked by
+  `teleportToBiome` (so the skull word too: Velscour refuses with one line), the HAIL VELSCOUR! list (the option is
+  greyed out with "Reach level N") and `confirmDungeon`/`enterDungeon` (a saved `nextBiome` above the hero's level is
+  redrawn). The Great Hunt uses it (level 10).
 - The biomes are in `BETA_BIOMES` (`src/data/biomes.js`, `region: true`): never in the biome bag or the overworld
   guarantee, reached from Velscour's skull (the region's `words`, or the HAIL VELSCOUR! list). A placeholder region
   registers nothing, so its biome plays as the Forsaken Wilds.
@@ -42,7 +46,7 @@ Integration branch: `feat/new-regions`. Each region was built on its own branch 
 | The Iron Express (`ghost_train`) | playable beta (car to car, two stations, the chief's train fight: coal lanes, steam vent, whistle; tuned and soaked by auto-play at depths 1, 50, 150, 300) | docs/GHOST_TRAIN.md | `tools/tests/ghosttrain.js [shots] [auto] [depths] [classes]` |
 | The Endless Siege | playable beta (gates, winches, ballistae, waves, a walkable wall-walk with stairs; auto-play wins at depths 8, 60, 150, 320 with no falls) | docs/ENDLESS_SIEGE.md | `tools/tests/siege.js` |
 | The Deep Rail Mines | playable beta (carts both ways: ride back up, back out of a junction; switches, tiered packs and levels, arched tunnel mouths, boss at the Bottom; auto-play wins it) | docs/DEEP_RAIL_MINES.md | `tools/tests/mines.js` |
-| The Great Hunt | playable: track by signs, three fights with flight and a blood trail, the kill in the lair; auto-play wins it | docs/GREAT_HUNT.md | `tools/tests/hunt.js` |
+| The Great Hunt | playable from level 10 (`minLevel`): track by signs, three fights with flight and a blood trail, the kill in the lair; auto-play wins it without god mode at Depths 9 (level 10), 60 and 150 | docs/GREAT_HUNT.md | `tools/tests/hunt.js` |
 
 ## Picking it up
 1. `git fetch origin && git checkout feat/new-regions` (or the region's own branch if it is ahead; check

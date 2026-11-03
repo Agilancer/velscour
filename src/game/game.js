@@ -103,7 +103,7 @@ import { Heresies } from '../ui/heresies.js';
 import { Rifts } from '../ui/rifts.js';
 import { Marks } from '../ui/marks.js';
 import { MacrosUI } from '../ui/macros.js';
-import { regionOf, regionByWord } from './regions.js';
+import { regionOf, regionByWord, regionNeeds } from './regions.js';
 import './regions/index.js';
 import { Macros } from './macros.js';
 
@@ -391,6 +391,7 @@ export const game = {
 
   confirmDungeon() {
     const c = G.char;
+    if (regionNeeds(BIOME_BY_ID[c.nextBiome], c.level)) c.nextBiome = drawBiome(c, c.depth); // a region above his level (game/regions.js)
     const biome = BIOME_BY_ID[c.depth === FINAL_DEPTH ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
     UI.dialog({
       title: `Depth ${c.depth}`,
@@ -466,7 +467,7 @@ export const game = {
   },
 
   openVelscourTeleport() {
-    const options = [...BETA_BIOMES, ...BIOMES].map((biome) => `<option value="${escapeHtml(biome.id)}">${escapeHtml(biome.name)}${biome.overworld ? ' · Overworld' : ''}${biome.beta ? ' (Beta)' : ''}</option>`).join('')
+    const options = [...BETA_BIOMES, ...BIOMES].map((biome) => { const need = regionNeeds(biome, G.char?.level); return `<option value="${escapeHtml(biome.id)}"${need ? ' disabled' : ''}>${escapeHtml(biome.name)}${biome.overworld ? ' · Overworld' : ''}${biome.beta ? ' (Beta)' : ''}${need ? ` · Reach level ${need}` : ''}</option>`; }).join('')
       + SKY_ALL.map((v) => `<option value="skyship:${v.id}">${escapeHtml(BIOME_BY_ID.skyship.name)}: ${escapeHtml(v.name)} (${escapeHtml(v.weather)})</option>`).join('')
       + SEA_VARIANTS.map((v) => `<option value="pirate_seas:${v.id}">${escapeHtml(BIOME_BY_ID.pirate_seas.name)}: ${escapeHtml(v.name)} (${escapeHtml(v.weatherName)})</option>`).join('');
     const dialog = UI.dialog({
@@ -502,6 +503,11 @@ export const game = {
   async teleportToBiome(biome) {
     const c = G.char;
     if (!c || !biome) return;
+    const need = regionNeeds(biome, c.level); // a region's level gate (game/regions.js)
+    if (need) {
+      UI.dialog({ title: 'VELSCOUR SAYS NO', cls: 'velscour-contact-dialog', html: `<p class="velscour-taunt">LEVEL ${c.level}? ADORABLE. Come back at level ${need}. ${escapeHtml(biome.name)} does not hunt snacks.</p>`, buttons: [{ label: 'Close' }] });
+      return;
+    }
     if (Auto.on) Auto.toggle(false);
     const depth = Math.max(1, G.world?.kind === 'dungeon' ? G.world.depth : c.depth || 1);
     c.depth = depth;
@@ -569,7 +575,7 @@ export const game = {
   enterDungeon() {
     const c = G.char;
     const depth = c.depth;
-    if (depth !== FINAL_DEPTH && (!c.nextBiome || c.nextBiome === 'throne')) c.nextBiome = drawBiome(c, depth);
+    if (depth !== FINAL_DEPTH && (!c.nextBiome || c.nextBiome === 'throne' || regionNeeds(BIOME_BY_ID[c.nextBiome], c.level))) c.nextBiome = drawBiome(c, depth);
     const biome = BIOME_BY_ID[depth === FINAL_DEPTH ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
     const mix = mixPartner(biome); // a like-coloured biome whose tiles this level borrows, or null
     const loading = document.getElementById('loading');

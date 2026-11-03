@@ -304,12 +304,13 @@ function build(depth, biome, seed, savedSeed) {
   let townPortal = [START[0] - 1.8, START[1] + 1.2];
   if (!map.circleFree(townPortal[0], townPortal[1], 0.4)) townPortal = map.randomNear(START[0], START[1], 2.5, rng.fn());
 
-  // ---- monsters: packs through the woods' open ground, never at the camp or where the beast waits
+  // ---- monsters: packs through the woods' open ground, never at the camp or where the beast waits (15 tiles clear,
+  // so a dodge out of its slam doesn't wake a pack and the beast is fought alone with its brood)
   const looks = rollLooks(biome, rng.fn()), spawns = [];
   const archs = biome.roster.filter((a) => a !== 'golem');
   for (let n = 0, tries = 0; n < 20 && tries < 600; tries++) {
     const x = rng.int(4, W - 5) + 0.5, y = rng.int(4, H - 5) + 0.5, k = kind[id(Math.floor(x), Math.floor(y))];
-    if (!map.circleFree(x, y, 0.35) || k >= HK.GROUND || dist([x, y], START) < 14 || grounds.some((g) => dist([x, y], g) < 10) || nearClue(x, y, 3)) continue;
+    if (!map.circleFree(x, y, 0.35) || k >= HK.GROUND || dist([x, y], START) < 14 || grounds.some((g) => dist([x, y], g) < 15) || nearClue(x, y, 3)) continue;
     if (spawns.some((s) => dist([x, y], [s.x, s.y]) < 6)) continue;
     const arch = rng.pick(archs);
     spawns.push({ x, y, arch, n: rng.int(2, 4), rank: n % 6 === 5 ? 'champion' : 'normal', look: looks.pick(arch) });

@@ -134,7 +134,7 @@ node tools/tests/caverns.js [variants] [noauto]    # Depth's Edge Caverns (live 
 node tools/tests/ghosttrain.js [noshots] [noauto]  # The Iron Express (region ghost_train, live three.js): car to car, stations, the chief, auto-play to the Last Stop
 node tools/tests/siege.js [noshots] [noauto] [depth] # The Endless Siege: wall-walk by the stairs only, gates hold, no blows across heights, winches, ballistae, auto-play holds every wave (SIEGE_CLASS, SIEGE_MORTAL)
 node tools/tests/mines.js [seeds] [noauto] [noshots] # The Deep Rail Mines: shafts joined by rail, carts, junction switches, the Bottom, auto-play rides down
-node tools/tests/hunt.js [noshots] [noauto]       # The Great Hunt: signs and lair reachable, the beast flees at 75/50/25%, blood trail, auto-play kills it
+node tools/tests/hunt.js [noshots] [noauto]       # The Great Hunt: level-10 gate on every way in, signs and lair reachable, the beast flees at 75/50/25%, blood trail, auto-play kills it
 node tools/tests/tower_edge.js                      # Serpentine Tower edge cases: stairhead carries pets/loot/effects, arrivals land on floor, deaths, town and back
 node tools/tests/heavenly.js                       # 60 distinct Heavenly monsters, painted floors/props, monster atlas export
 node tools/tests/worldwide_biomes.js               # 32 combat biomes, home/visitor/legacy spawns, town/wilds art and exact iso fences
