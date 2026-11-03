@@ -10,6 +10,7 @@ import { endgameUnlocked } from '../game/endgame.js';
 import { heresyRankOf, heresiesOf, heresyText } from '../game/heresies.js';
 import { riftOpen, fmtTime } from '../game/rifts.js';
 import { marksTotal, marksFree } from '../game/marks.js';
+import { regionOf } from '../game/regions.js';
 
 const step = (done, html) => `<div class="q-step${done ? ' done' : ''}"><i>${done ? '&#10004;' : '&#9670;'}</i><span>${html}</span></div>`;
 const nextRaid = (d) => { let n = Math.max(5, Math.ceil(d / 5) * 5); if (n === FINAL_DEPTH) n += 5; return n; };
@@ -25,7 +26,8 @@ export function renderQuest(body) {
     h += step(false, `Step into the <b style="color:#ff8050">portal</b> at the edge of Herrington Hollow${b ? `. It opens on <b>${escapeHtml(b.name)}</b>` : ''}.`);
     if (c.depth === FINAL_DEPTH) h += step(false, '<b style="color:#ff4020">Demon Lord Velscour</b> waits on his throne.');
     else if (isRaidDepth(c.depth) && !b?.overworld) h += step(false, '<b style="color:#ff6030">A BOSS ROOM</b> lies at the end of this depth.');
-    if (b?.id === 'sea_of_sand') h += step(false, 'A linked Sea of Sand route with one to five timed scenario areas lies beyond.');
+    if (regionOf(b)) h += step(false, regionOf(b).townLine);
+    else if (b?.id === 'sea_of_sand') h += step(false, 'A linked Sea of Sand route with one to five timed scenario areas lies beyond.');
     else if (b?.id === 'mountainside') h += step(false, 'The Mountainside (beta) lies beyond: a switchback climb up the cliffs to the summit.');
     else if (b?.id === 'skyship') h += step(false, "The Sky Lanes lie beyond: the Air Pirates board the heroes' airship in waves, then their flagship comes.");
     else if (b?.sea) h += step(false, "The Pirate Seas lie beyond: the Black Tide's boats come up from astern to board the Lampwardens' Dawnwake, wave on wave.");
@@ -52,7 +54,8 @@ export function renderQuest(body) {
       h += `<div class="dim q-note">Best floor beaten: ${b.best || 0}. Foes slain on this floor: ${fmtInt(w.kills || 0)}</div>`;
     } else if (w.overworldScenario) {
       const sc = w.overworldScenario;
-      if (w.biome?.id === 'mountainside') {
+      if (regionOf(w.biome) && regionOf(w.biome).quest) h += regionOf(w.biome).quest(sc, step);
+      else if (w.biome?.id === 'mountainside') {
         h += step(sc.reached, `Climb the switchback trail to the summit <span class="dim">— altitude ${sc.altitude}%</span>.`);
         h += step(false, '<span class="dim">A ledge up to a hop high can be climbed; taller cliffs only jumped down, and the tallest not at all.</span>');
         h += step(sc.completed, 'Defeat the <b>Summit Warden</b> on the peak.');
