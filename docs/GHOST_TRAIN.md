@@ -61,15 +61,19 @@ the existing `town` bed.
 ## The 3D (`src/gfx/ghosttrain3d.js`)
 - The Pirate Seas' camera (orthographic, 30 degrees down, 45 round; tile (x, y) at height h is (x, h, y)) rendered at
   one pixel per world px behind the sprites. Car floors at height 0, rails at -1.1, ground at -1.25.
-- Painted cars: a red caboose with a cupola and tail lamp, a green gondola, maroon coaches with a cream band and brass
-  line, a flat car with stakes and crates, a brown boxcar, a green mail van; plank floors, black underframes, red
-  wheels and buffers, lamp-lit windows, grey roofs. The locomotive: green boiler with brass bands and dome, black
-  smokebox and chimney, a green cab with lit windows and the firebox glowing, red driving wheels with turning side
-  rods, a red buffer beam and cowcatcher, a headlamp. Thin dark outlines on every edge so it reads at a glance.
+- The look is a grimdark gothic war train (the user asked for "Warhammer Fantasy vibes": the mood only, no names or
+  emblems), in dark riveted iron, bronze and deep red. Cars: deep red plank sides over riveted iron armour plates,
+  pointed (gothic) lit windows with bronze sills, dark iron roofs with a bronze ridge and spikes along the eaves, iron
+  lanterns; the caboose has a battlemented watch turret and a banner; the gondola and the tender are war wagons with
+  battlements, spiked corner posts and red banners; the flat car has spiked iron stakes. The locomotive: an armoured
+  octagonal boiler in bronze bands, a deep red iron cab with battlements, pointed windows, glowing furnace grates and
+  two war banners, a spiked dome, a crowned chimney ringed with iron spikes, a bronze skull on the smokebox door with
+  furnace-lit eyes, a spiked iron ram for a cowcatcher, red iron driving wheels with bronze hubs and turning side
+  rods. Thin dark outlines on every edge so it reads at a glance.
 - Textures are the repo's own (no new art), loaded with three.js in `loadTrain3D` (`TEX`): the airship pack's
   planks and metals (`assets/source/airship/textures/`: grey boards tinted per car for the painted sides, worn oak
   floors, riveted black iron, hammered gunmetal tinted green/grey for the boiler, cab and roofs, flaked iron tinted red
-  for wheels and buffers, stained brass, weathered cedar benches) and the castle bake's (`assets/source/castle3d/tex/`:
+  for wheels and buffers, stained brass, weathered cedar benches, coarse sail canvas tinted red for the banners) and the castle bake's (`assets/source/castle3d/tex/`:
   `wood` crates, `brick` station house, `slate` roof, `ashlar` platforms), the same runtime paths the Serpentine Tower
   loads. Grey ones are brought to a set brightness and tinted by the material colour, so the colour scheme holds.
   UVs are world-space (`boxUV`, a box projection, units per repeat from `TEX`), so a texture keeps its scale on every
@@ -80,8 +84,9 @@ the existing `town` bed.
 - Static geometry is merged per material with `BufferGeometryUtils`; each car's roof and near side are one group of
   their own (the cutaway). Point lights (3 on touch, 5 on desktop) go to the lamps nearest the hero; the run adds 2D
   lights for the car lamps, the firebox, the headlamp and the station lamps against the night.
-- The station: a stone (ashlar) platform with a white edge, lamps, benches and a name sign (canvas text) on the near side;
-  across the track a brick station house with a slate roof and lit windows. One group moved to `stationX`.
+- The station: a stone (ashlar) platform with a white edge, iron lanterns on posts, benches and a name sign (canvas
+  text) on the near side; across the track a gothic brick hall (pointed lit windows and door, stone buttresses, a steep
+  slate roof with bronze finials) and a belfry with a spire. One group moved to `stationX`.
 - The scene is disposed when the hero is on another level (a 2.5 s check against `G.world`) or the next train is
   built. `ready()` is false if three.js can't load, and the region plays as the Forsaken Wilds.
 

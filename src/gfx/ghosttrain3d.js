@@ -29,6 +29,7 @@ const TEX = {
   brick: [CST + 'brick.png', 1.4, false, 0],
   slate: [CST + 'slate.png', 1.6, false, 0],
   stone: [CST + 'ashlar.png', 1.5, true, 0.8],                                            // the platforms
+  cloth: [AIR + 'sailcloth/CLOTH-01_Coarse_Sail_Canvas.png', 1.0, true, 0.75],        // banners
 };
 const IMG = {};
 const loadImg = (src) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('no ' + src)); i.src = src; });
@@ -160,121 +161,168 @@ function mats() {
     return m;
   };
   return {
-    // painted wood by car (the grey boards tinted), painted and bare metal on the engine, brick, slate and stone
-    red: L(0xa02c1e, 'boards', 0xc23a28), green: L(0x1f5034, 'boards', 0x2a6a44), maroon: L(0x6a1c20, 'boards', 0x8a2a2c), brown: L(0x7a4024, 'boards', 0x9a5430),
+    // a war engine's palette: dark riveted iron, bronze, deep red; boards and oak where wood shows; brick, slate, stone
+    blood: L(0x7a1a14, 'boards', 0x8e2018), iron: L(0x2a2a30, 'iron', 0x4a4a54), dark: L(0x26282e, 'gun', 0x3c3e48),
+    redMetal: L(0x7a1a14, 'rust', 0x9a2016), wheel: L(0x8a1a12, 'rust', 0xa8241a), bronze: L(0xa07040, 'brass', 0xd09a68),
     wood: L(0x7a5a3a, 'deck', 0xd8c0a0), crate: L(0x8a6a40, 'crate'), cedar: L(0x7a5a3a, 'cedar'), deck: L(0x7a5a3a, 'deck', 0xd8b890),
-    engGreen: L(0x1f5034, 'gun', 0x2c6a44), redMetal: L(0xa02c1e, 'rust', 0xc0301e), wheel: L(0xb02218, 'rust', 0xc42a1c),
-    black: L(0x1d1d20, 'iron', 0x3a3a40), roof: L(0x4a4a4e, 'gun', 0x4e5058), steel: L(0x5c5e62, 'gun', 0x9a9ca2), brass: L(0xc09440, 'brass'),
-    cream: L(0xd8c8a0), coal: L(0x18181a), stone: L(0x8a847a, 'stone', 0xb0a898), brick: L(0x8a4a34, 'brick'), slate: L(0x3a3e48, 'slate', 0xb8bcc8),
+    black: L(0x1d1d20, 'iron', 0x3a3a40), steel: L(0x5c5e62, 'gun', 0x9a9ca2), cloth: L(0x8a1810, 'cloth', 0x9a1c14),
+    cream: L(0xd8c8a0), coal: L(0x18181a), stone: L(0x8a847a, 'stone', 0xb0a898), brick: L(0x8a4a34, 'brick'), slate: L(0x3a3e48, 'slate', 0xa8acb8),
     rail: L(0xa0a0a4), trunk: L(0x4a3424), leaf: L(0x2a4a2c), rock: L(0x6a6a64), pole: L(0x5a4430),
-    window: new T.MeshBasicMaterial({ color: 0xffc66a }), fire: new T.MeshBasicMaterial({ color: 0xff8a30 }), lamp: new T.MeshBasicMaterial({ color: 0xfff0c8 }),
+    window: new T.MeshBasicMaterial({ color: 0xffb860 }), fire: new T.MeshBasicMaterial({ color: 0xff7a24 }), lamp: new T.MeshBasicMaterial({ color: 0xffe0a0 }),
     edge: new T.LineBasicMaterial({ color: 0x0a0806, transparent: true, opacity: 0.45, depthWrite: false }),
   };
 }
-const BODY = { caboose: 'red', gondola: 'green', coach: 'maroon', flat: 'wood', boxcar: 'brown', mail: 'green', tender: 'engGreen' };
+const BODY = { caboose: 'blood', gondola: 'iron', coach: 'blood', flat: 'wood', boxcar: 'dark', mail: 'blood', tender: 'iron' };
 
 // ------------------------------------------------------------------ the train
 const Y_RAIL = -1.1, Y_GROUND = -1.25;
 /** Box from x0..x1 (tiles), on z (tiles), y0..y1. */
 const span = (k, mat, x0, x1, y0, y1, z, d, o) => k.box(x1 - x0, y1 - y0, d, mat, (x0 + x1) / 2, (y0 + y1) / 2, z, o);
+/** Iron spikes (4-sided cones) along x from x0 to x1 every `step`, standing on y at z; `dir` 1 up. */
+const spikes = (k, M, x0, x1, y, z, step = 0.9, h = 0.32) => { for (let x = x0; x <= x1 + 1e-6; x += step) k.add(new T.ConeGeometry(0.08, h, 4), M.black, x, y + h / 2, z, { edge: false }); };
+/** Battlements: merlons along x on top of a wall (y) at z, `d` deep. */
+const merlons = (k, mat, x0, x1, y, z, d = 0.14, step = 0.7) => { for (let x = x0 + step / 2; x < x1; x += step) k.box(step * 0.5, 0.22, d, mat, x, y + 0.11, z); };
+/** A pointed (gothic) window lit from inside: a pane and a diamond on top for its arch, on the wall at z. */
+const arch = (k, mat, x, y0, y1, w, z, d = 0.14) => {
+  k.box(w, y1 - y0, d, mat, x, (y0 + y1) / 2, z, { edge: false });
+  const s2 = w / Math.SQRT2; k.box(s2, s2, d, mat, x, y1, z, { rz: Math.PI / 4, edge: false });
+};
+/** Riveted armour plates along x on the wall at z, from y0 to y1 (a hair proud of it). */
+const plates = (k, M, x0, x1, y0, y1, z, out) => { const n = Math.max(1, Math.round((x1 - x0) / 1.5)), w = (x1 - x0) / n; for (let i = 0; i < n; i++) k.box(w - 0.06, y1 - y0, 0.06, M.iron, x0 + (i + 0.5) * w, (y0 + y1) / 2, z + out * 0.05); };
 function buildTrain(scene, M, glows) {
   const k = kit(), z0 = ROW0 - 0.1, z1 = ROW0 + ROWS + 0.1, W = z1 - z0, cuts = [];
-  const glow = (x, y, z, r, c = 0xffc070) => glows.push({ x, y, z, r, c });
+  const glow = (x, y, z, r, c = 0xffb060) => glows.push({ x, y, z, r, c });
+  /** An iron lantern on a bracket (and its light). */
+  const lantern = (kk, x, y, z) => { kk.box(0.22, 0.3, 0.22, M.black, x, y, z); kk.box(0.14, 0.18, 0.24, M.lamp, x, y, z, { edge: false }); kk.add(new T.ConeGeometry(0.17, 0.18, 4), M.black, x, y + 0.24, z, { ry: Math.PI / 4, edge: false }); glow(x, y, z, 1.5); };
+  /** A war banner: an iron pole with a crossbar and a red cloth hanging from it. */
+  const banner = (kk, x, y, z, h = 1.6) => {
+    kk.box(0.07, h, 0.07, M.black, x, y + h / 2, z); kk.add(new T.ConeGeometry(0.07, 0.25, 4), M.bronze, x, y + h + 0.12, z, { edge: false });
+    kk.box(0.7, 0.05, 0.05, M.bronze, x - 0.35, y + h - 0.1, z, { edge: false });
+    kk.box(0.62, 0.9, 0.03, M.cloth, x - 0.36, y + h - 0.58, z); kk.add(new T.ConeGeometry(0.31, 0.3, 3), M.cloth, x - 0.36, y + h - 1.17, z, { rz: Math.PI, edge: false });
+  };
   for (const car of CARS) {
-    const L = car.x1 - car.x0, cx = (car.x0 + car.x1) / 2, body = M[BODY[car.kind]] || M.black, h = car.wall;
+    const L = car.x1 - car.x0, cx = (car.x0 + car.x1) / 2, body = M[BODY[car.kind]] || M.iron, h = car.wall;
     const cut = car.kind === 'engine' ? null : kit();   // this car's roof and near side: hidden while the hero is in it
     if (car.kind !== 'engine') {
       k.box(L, 0.22, W, M.deck, cx, -0.11, CZ, { edge: false });   // the plank floor the fight is on
-      k.box(L, 0.24, 0.12, body, cx, -0.12, z0 - 0.01); k.box(L, 0.24, 0.12, body, cx, -0.12, z1 + 0.01);   // the sole bars
+      k.box(L, 0.3, 0.14, M.iron, cx, -0.12, z0 - 0.02); k.box(L, 0.3, 0.14, M.iron, cx, -0.12, z1 + 0.02);   // the iron sole bars
       k.box(L - 0.6, 0.32, W - 0.7, M.black, cx, -0.4, CZ, { edge: false });    // the underframe
-      for (const bx of [car.x0 + 1.5, car.x1 - 1.5]) {                           // two bogies, red wheels
+      for (const bx of [car.x0 + 1.5, car.x1 - 1.5]) {                           // two bogies, red iron wheels
         k.box(2.0, 0.24, W - 0.5, M.black, bx, -0.62, CZ);
         for (const dx of [-0.6, 0.6]) for (const wz of [z0 + 0.08, z1 - 0.08]) k.cyl(0.4, 0.4, 0.14, M.wheel, bx + dx, Y_RAIL + 0.4, wz, { rx: Math.PI / 2, seg: 14 });
       }
-      for (const bz of [CZ - 1, CZ + 1]) for (const bx of [car.x0 - 0.12, car.x1 + 0.12]) k.cyl(0.12, 0.12, 0.25, M.wheel, bx, -0.32, bz, { rz: Math.PI / 2, seg: 8 });   // buffers
-      if (car.kind !== 'tender') k.box(0.9, 0.1, 1.6, M.steel, car.x1 + 0.5, -0.05, CZ);   // the gangway plate
+      for (const bz of [CZ - 1, CZ + 1]) for (const bx of [car.x0 - 0.12, car.x1 + 0.12]) k.cyl(0.12, 0.12, 0.25, M.bronze, bx, -0.32, bz, { rz: Math.PI / 2, seg: 8 });   // buffers
+      if (car.kind !== 'tender') k.box(0.9, 0.1, 1.6, M.iron, car.x1 + 0.5, -0.05, CZ);   // the gangway plate
     }
-    // the sides: the far one whole, the near one a sill (always) and the rest in the cutaway
+    // the sides: the far one whole, the near one a sill (always) and the rest in the cutaway; armour along the bottom
     if (car.kind !== 'engine') {
       span(k, body, car.x0, car.x1, 0, h, z0 + 0.05, 0.1);
       span(k, body, car.x0, car.x1, 0, Math.min(h, 0.35), z1 - 0.05, 0.1);
       if (h > 0.35) span(cut, body, car.x0, car.x1, 0.35, h, z1 - 0.05, 0.1);
+      if (car.kind !== 'flat') {
+        plates(k, M, car.x0, car.x1, 0, Math.min(h, 0.7), z0, -1);
+        plates(k, M, car.x0, car.x1, 0, Math.min(h, 0.35), z1, 1);
+        if (h > 0.35) plates(cut, M, car.x0, car.x1, 0.35, Math.min(h, 0.7), z1, 1);
+      }
     }
-    const windows = (n, y0, y1, side = 'both') => {
+    const windows = (n, y0, y1) => {
       for (let i = 0; i < n; i++) {
-        const x = car.x0 + (i + 0.5) * (L / n), w = Math.min(0.9, L / n - 0.5);
-        if (side !== 'near') k.box(w, y1 - y0, 0.14, M.window, x, (y0 + y1) / 2, z0 + 0.05, { edge: false });
-        if (side !== 'far') cut.box(w, y1 - y0, 0.14, M.window, x, (y0 + y1) / 2, z1 - 0.05, { edge: false });
+        const x = car.x0 + (i + 0.5) * (L / n), w = Math.min(0.62, L / n - 0.6);
+        arch(k, M.window, x, y0, y1, w, z0 + 0.05); arch(cut, M.window, x, y0, y1, w, z1 - 0.05);
+        k.box(w + 0.12, 0.06, 0.16, M.bronze, x, y0 - 0.03, z0 + 0.05, { edge: false }); cut.box(w + 0.12, 0.06, 0.16, M.bronze, x, y0 - 0.03, z1 - 0.05, { edge: false });
       }
     };
     const roofed = () => {
-      // end walls either side of the door, the roof (and a clerestory on the coaches), a cream band
+      // end walls either side of the door; a dark iron roof with a bronze ridge and spikes along its eaves
       for (const ex of [car.x0 + 0.05, car.x1 - 0.05]) { k.box(0.1, h, 0.75, body, ex, h / 2, z0 + 0.37); cut.box(0.1, h, 0.75, body, ex, h / 2, z1 - 0.37); }
-      cut.box(L + 0.2, 0.12, W + 0.3, M.roof, cx, h + 0.06, CZ);
-      cut.box(L - 0.2, 0.16, W - 0.3, M.roof, cx, h + 0.2, CZ);
+      cut.box(L + 0.2, 0.12, W + 0.3, M.dark, cx, h + 0.06, CZ);
+      cut.box(L - 0.2, 0.22, W - 0.6, M.dark, cx, h + 0.23, CZ);
+      cut.box(L - 0.2, 0.06, 0.2, M.bronze, cx, h + 0.37, CZ, { edge: false });
+      for (const z of [z0 - 0.08, z1 + 0.08]) spikes(cut, M, car.x0 + 0.3, car.x1 - 0.3, h + 0.12, z, 0.85, 0.3);
+      span(k, M.bronze, car.x0, car.x1, h - 0.12, h - 0.06, z0 - 0.02, 0.04, { edge: false }); span(cut, M.bronze, car.x0, car.x1, h - 0.12, h - 0.06, z1 + 0.02, 0.04, { edge: false });
     };
     if (car.kind === 'caboose') {
       roofed();
-      cut.box(2.4, 0.7, 1.6, M.red, car.x0 + 3.2, h + 0.6, CZ); cut.box(2.6, 0.1, 1.8, M.roof, car.x0 + 3.2, h + 1.0, CZ);   // the cupola
-      cut.box(1.6, 0.35, 1.64, M.window, car.x0 + 3.2, h + 0.6, CZ, { edge: false });
-      windows(3, 0.9, 1.5);
+      cut.box(2.4, 0.8, 1.6, M.iron, car.x0 + 3.2, h + 0.7, CZ); cut.box(2.6, 0.1, 1.8, M.dark, car.x0 + 3.2, h + 1.15, CZ);   // the watch turret
+      merlons(cut, M.iron, car.x0 + 2.0, car.x0 + 4.4, h + 1.2, CZ - 0.85, 0.12, 0.6); merlons(cut, M.iron, car.x0 + 2.0, car.x0 + 4.4, h + 1.2, CZ + 0.85, 0.12, 0.6);
+      cut.box(1.6, 0.3, 1.64, M.window, car.x0 + 3.2, h + 0.72, CZ, { edge: false });
+      windows(3, 0.85, 1.35);
       k.box(0.6, 0.9, 0.6, M.black, car.x0 + 0.4, 0.45, CZ - 0.6);   // the stove
-      span(k, M.cream, car.x0, car.x1, 1.62, 1.72, z0 - 0.02, 0.04, { edge: false });
+      banner(k, car.x0 + 0.9, h, z0 + 0.2, 1.4);
       glow(car.x0 - 0.15, 1.3, z1 - 0.3, 1.4, 0xff4020);   // the tail lamp
     } else if (car.kind === 'coach') {
-      roofed(); windows(5, 0.85, 1.5);
-      for (const [kk, z] of [[k, z0 - 0.02], [cut, z1 + 0.02]]) { span(kk, M.cream, car.x0, car.x1, 0.62, 0.72, z, 0.04, { edge: false }); span(kk, M.brass, car.x0, car.x1, 1.62, 1.68, z, 0.04, { edge: false }); }
+      roofed(); windows(5, 0.8, 1.3);
+      lantern(k, car.x0 + 0.25, h - 0.35, z0 - 0.15); lantern(k, car.x1 - 0.25, h - 0.35, z0 - 0.15);
       glow(cx, 1.6, CZ, 2.2);
     } else if (car.kind === 'mail') {
-      roofed(); windows(3, 1.0, 1.4);
-      for (const [kk, z] of [[k, z0 - 0.02], [cut, z1 + 0.02]]) span(kk, M.cream, car.x0, car.x1, 1.55, 1.65, z, 0.04, { edge: false });
+      roofed(); windows(3, 0.95, 1.35);
+      lantern(k, cx, h - 0.35, z0 - 0.15);
       glow(cx, 1.6, CZ, 2.0);
     } else if (car.kind === 'boxcar') {
       roofed();
-      for (const [kk, z] of [[k, z0 - 0.03], [cut, z1 + 0.03]]) { kk.box(2.2, 1.6, 0.05, M.red, cx, 0.85, z); kk.box(2.6, 0.08, 0.06, M.steel, cx, 1.7, z, { edge: false }); }
+      for (const [kk, z, o] of [[k, z0 - 0.03, -1], [cut, z1 + 0.03, 1]]) { kk.box(2.2, 1.5, 0.05, M.redMetal, cx, 0.95, z); kk.box(2.6, 0.08, 0.06, M.bronze, cx, 1.75, z + o * 0.01, { edge: false }); kk.box(0.08, 1.5, 0.07, M.black, cx, 0.95, z + o * 0.01, { edge: false }); }
       for (const [x, y] of crateCells(car)) k.box(0.9, 0.8, 0.9, M.crate, x + 0.5, 0.4, y + 0.5);
       glow(car.x0 + 1, 1.4, CZ, 1.6);
     } else if (car.kind === 'gondola') {
-      for (let x = car.x0 + 1; x < car.x1; x += 1.5) { k.box(0.1, h, 0.06, M.black, x, h / 2, z0 - 0.04, { edge: false }); cut.box(0.1, h - 0.35, 0.06, M.black, x, 0.35 + (h - 0.35) / 2, z1 + 0.04, { edge: false }); }
+      // a war wagon: iron walls with battlements, spiked corner posts
+      merlons(k, M.iron, car.x0, car.x1, h, z0 + 0.05); merlons(cut, M.iron, car.x0, car.x1, h, z1 - 0.05);
       for (const ex of [car.x0 + 0.05, car.x1 - 0.05]) { k.box(0.1, h, 0.7, body, ex, h / 2, z0 + 0.35); k.box(0.1, 0.35, 0.7, body, ex, 0.175, z1 - 0.35); }
+      for (const ex of [car.x0 + 0.1, car.x1 - 0.1]) { k.box(0.18, h + 0.4, 0.18, M.black, ex, (h + 0.4) / 2, z0 + 0.05); k.add(new T.ConeGeometry(0.1, 0.35, 4), M.black, ex, h + 0.57, z0 + 0.05, { edge: false }); }
+      banner(k, cx, h, z0 + 0.12, 1.5);
     } else if (car.kind === 'flat') {
-      for (let x = car.x0 + 0.3; x < car.x1; x += 1.4) { k.box(0.12, 0.8, 0.12, M.black, x, 0.4, z0 + 0.06); k.box(0.12, 0.8, 0.12, M.black, x, 0.4, z1 - 0.06); }
+      // iron stakes with spiked tops, crates lashed down
+      for (let x = car.x0 + 0.3; x < car.x1; x += 1.4) for (const z of [z0 + 0.06, z1 - 0.06]) { k.box(0.12, 0.8, 0.12, M.black, x, 0.4, z); k.add(new T.ConeGeometry(0.08, 0.28, 4), M.black, x, 0.94, z, { edge: false }); }
       for (const [x, y] of crateCells(car)) { k.box(0.9, 0.75, 0.9, M.crate, x + 0.5, 0.38, y + 0.5); k.box(0.94, 0.06, 0.94, M.black, x + 0.5, 0.6, y + 0.5, { edge: false }); }
+      lantern(k, car.x0 + 4.5, 0.95, z0 + 0.06);
     } else if (car.kind === 'tender') {
       for (const ex of [car.x0 + 0.05]) { k.box(0.1, h, 0.7, body, ex, h / 2, z0 + 0.35); k.box(0.1, 0.35, 0.7, body, ex, 0.175, z1 - 0.35); }
       k.box(0.1, h, W, body, car.x1 - 0.05, h / 2, CZ);
-      for (const [kk, z] of [[k, z0 - 0.02], [cut, z1 + 0.02]]) span(kk, M.redMetal, car.x0, car.x1, 0.8, 0.86, z, 0.04, { edge: false });
+      merlons(k, M.iron, car.x0, car.x1, h, z0 + 0.05); merlons(cut, M.iron, car.x0, car.x1, h, z1 - 0.05);
+      for (const [kk, z] of [[k, z0 - 0.04], [cut, z1 + 0.04]]) span(kk, M.redMetal, car.x0, car.x1, 0.78, 0.86, z, 0.04, { edge: false });
       for (let i = 0; i < 9; i++) k.add(new T.DodecahedronGeometry(0.45 + rnd() * 0.35), M.coal, car.x1 - 0.9 - rnd() * 1.3, 0.25 + rnd() * 0.45, z0 + 0.5 + rnd() * (W - 1), { rx: rnd() * 3, ry: rnd() * 3 });
-      glow(car.x0 + 0.4, 1.2, z0 + 0.2, 1.5);
+      banner(k, car.x0 + 0.6, h, z0 + 0.15, 1.7);
+      lantern(k, car.x0 + 0.3, h + 0.2, z0 + 0.6);
     } else if (car.kind === 'engine') {
-      const x0 = car.x0, x1 = car.x1, cab = 3, by = 1.0;
+      const x0 = car.x0, x1 = car.x1, cab = 3, by = 1.0, bl = x1 - 1.4 - (x0 + cab);
       k.box(L + 0.4, 0.3, W - 0.2, M.black, cx + 0.2, -0.15, CZ);                // the running board
       k.box(L - 1, 0.4, W - 1.2, M.black, cx - 0.3, -0.5, CZ, { edge: false });
-      for (const z of [z0 + 0.06, z1 - 0.06]) k.box(L - 3.6, 0.1, 0.06, M.redMetal, x0 + cab + (L - 3.6) / 2 + 0.2, -0.02, z, { edge: false });
-      // the cab: green with brass-framed lit windows, a black roof, the firebox glowing inside
-      k.box(cab, 2.2, 0.12, M.engGreen, x0 + cab / 2, 1.1, z0 + 0.1); k.box(cab, 2.2, 0.12, M.engGreen, x0 + cab / 2, 1.1, z1 - 0.1);
-      k.box(0.12, 2.2, W - 0.2, M.engGreen, x0 + cab - 0.06, 1.1, CZ);
-      k.box(cab + 0.5, 0.14, W + 0.3, M.black, x0 + cab / 2, 2.3, CZ);
-      for (const z of [z0 + 0.04, z1 - 0.04]) { k.box(1.1, 0.7, 0.06, M.window, x0 + 1.6, 1.45, z, { edge: false }); k.box(1.3, 0.9, 0.04, M.brass, x0 + 1.6, 1.45, z + (z < CZ ? 0.02 : -0.02), { edge: false }); }
+      for (const z of [z0 + 0.06, z1 - 0.06]) k.box(L - 3.6, 0.1, 0.06, M.bronze, x0 + cab + (L - 3.6) / 2 + 0.2, -0.02, z, { edge: false });
+      // the cab: a deep red iron keep, pointed lit windows, a battlemented roof, war banners, the furnace grates glowing
+      k.box(cab, 2.2, 0.12, M.redMetal, x0 + cab / 2, 1.1, z0 + 0.1); k.box(cab, 2.2, 0.12, M.redMetal, x0 + cab / 2, 1.1, z1 - 0.1);
+      k.box(0.12, 2.2, W - 0.2, M.redMetal, x0 + cab - 0.06, 1.1, CZ);
+      plates(k, M, x0, x0 + cab, 0, 0.8, z0 + 0.1, -1); plates(k, M, x0, x0 + cab, 0, 0.8, z1 - 0.1, 1);
+      k.box(cab + 0.5, 0.16, W + 0.3, M.dark, x0 + cab / 2, 2.3, CZ);
+      merlons(k, M.iron, x0 - 0.25, x0 + cab + 0.25, 2.38, z0 - 0.05, 0.16, 0.6); merlons(k, M.iron, x0 - 0.25, x0 + cab + 0.25, 2.38, z1 + 0.05, 0.16, 0.6);
+      for (const z of [z0 + 0.04, z1 - 0.04]) { arch(k, M.window, x0 + 1.6, 1.05, 1.6, 0.6, z, 0.06); k.box(0.9, 0.08, 0.08, M.bronze, x0 + 1.6, 1.0, z, { edge: false }); }
+      for (const z of [z0 + 0.02, z1 - 0.02]) for (let i = 0; i < 3; i++) k.box(0.5, 0.06, 0.04, M.fire, x0 + cab - 0.55, 0.15 + i * 0.13, z, { edge: false });   // the grate
       k.box(0.6, 0.6, 1.2, M.fire, x0 + cab - 0.4, 0.5, CZ, { edge: false });
-      // the boiler (green, brass bands), the black smokebox, the dome, the chimney
-      const bl = x1 - 1.4 - (x0 + cab);
-      k.cyl(1.0, 1.0, bl, M.engGreen, x0 + cab + bl / 2, by, CZ, { rz: Math.PI / 2, seg: 18 });
-      for (let x = x0 + cab + 0.8; x < x1 - 1.6; x += 1.6) k.cyl(1.04, 1.04, 0.1, M.brass, x, by, CZ, { rz: Math.PI / 2, seg: 18, edge: false });
-      k.cyl(1.02, 1.02, 1.4, M.black, x1 - 0.7, by, CZ, { rz: Math.PI / 2, seg: 18 });
-      k.cyl(0.5, 0.5, 0.08, M.steel, x1 + 0.02, by, CZ, { rz: Math.PI / 2, seg: 16, edge: false });
-      k.cyl(0.36, 0.44, 0.55, M.brass, x0 + cab + bl * 0.45, by + 1.15, CZ, { seg: 14 });
-      k.cyl(0.16, 0.2, 0.4, M.brass, x0 + cab + 0.6, by + 1.15, CZ, { seg: 8 });
-      k.cyl(0.36, 0.36, 1.4, M.black, x1 - 0.8, by + 1.6, CZ, { seg: 14 });
-      k.cyl(0.48, 0.38, 0.2, M.black, x1 - 0.8, by + 2.35, CZ, { seg: 14 });
-      k.cyl(0.49, 0.49, 0.06, M.brass, x1 - 0.8, by + 2.46, CZ, { seg: 14, edge: false });
-      // cylinders and steam pipes, the red buffer beam, buffers, the cowcatcher, the headlamp
-      for (const z of [z0 + 0.25, z1 - 0.25]) k.cyl(0.32, 0.32, 1.3, M.black, x1 - 1.2, -0.45, z, { rz: Math.PI / 2, seg: 12 });
+      banner(k, x0 + 0.15, 2.38, z0 + 0.05, 1.5); banner(k, x0 + 0.15, 2.38, z1 - 0.05, 1.5);
+      // the boiler: an armoured octagonal shell in bronze bands, a riveted iron smokebox
+      k.cyl(1.08, 1.08, bl, M.iron, x0 + cab + bl / 2, by, CZ, { rz: Math.PI / 2, seg: 8 });
+      for (let x = x0 + cab + 0.2; x < x1 - 1.3; x += 1.5) k.cyl(1.13, 1.13, 0.14, M.bronze, x, by, CZ, { rz: Math.PI / 2, seg: 8, edge: false });
+      k.cyl(1.1, 1.1, 1.4, M.dark, x1 - 0.7, by, CZ, { rz: Math.PI / 2, seg: 16 });
+      // a bronze skull on the smokebox door, its eyes the furnace
+      k.cyl(0.62, 0.62, 0.08, M.iron, x1 + 0.02, by, CZ, { rz: Math.PI / 2, seg: 16, edge: false });
+      k.add(new T.SphereGeometry(0.46, 10, 8), M.bronze, x1 + 0.08, by + 0.12, CZ, { edge: false });
+      k.box(0.3, 0.28, 0.5, M.bronze, x1 + 0.22, by - 0.32, CZ, { edge: false });
+      for (let t = -2; t <= 2; t++) k.box(0.06, 0.12, 0.07, M.cream, x1 + 0.38, by - 0.22, CZ + t * 0.09, { edge: false });
+      for (const dz of [-0.18, 0.18]) k.box(0.1, 0.16, 0.16, M.fire, x1 + 0.5, by + 0.14, CZ + dz, { edge: false });
+      k.box(0.08, 0.12, 0.08, M.black, x1 + 0.53, by - 0.04, CZ, { edge: false });
+      // the dome and safety valve, spiked; the crowned chimney
+      k.cyl(0.38, 0.46, 0.55, M.bronze, x0 + cab + bl * 0.45, by + 1.15, CZ, { seg: 8 });
+      k.add(new T.ConeGeometry(0.12, 0.45, 4), M.black, x0 + cab + bl * 0.45, by + 1.65, CZ, { edge: false });
+      k.cyl(0.16, 0.2, 0.4, M.bronze, x0 + cab + 0.6, by + 1.15, CZ, { seg: 8 });
+      k.cyl(0.36, 0.36, 1.3, M.black, x1 - 0.8, by + 1.55, CZ, { seg: 10 });
+      k.cyl(0.62, 0.36, 0.42, M.iron, x1 - 0.8, by + 2.4, CZ, { seg: 10 });
+      k.cyl(0.64, 0.64, 0.07, M.bronze, x1 - 0.8, by + 2.62, CZ, { seg: 10, edge: false });
+      for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; k.add(new T.ConeGeometry(0.07, 0.42, 4), M.black, x1 - 0.8 + Math.cos(a) * 0.56, by + 2.85, CZ + Math.sin(a) * 0.56, { edge: false }); }
+      // cylinders, the red buffer beam, a spiked iron ram for a cowcatcher, a lantern on the smokebox
+      for (const z of [z0 + 0.25, z1 - 0.25]) k.cyl(0.32, 0.32, 1.3, M.black, x1 - 1.2, -0.45, z, { rz: Math.PI / 2, seg: 8 });
       k.box(0.2, 0.42, W, M.redMetal, x1 + 0.15, -0.3, CZ);
-      for (const bz of [CZ - 1, CZ + 1]) k.cyl(0.13, 0.13, 0.3, M.black, x1 + 0.4, -0.3, bz, { rz: Math.PI / 2, seg: 8 });
-      for (let i = -3; i <= 3; i++) k.box(0.1, 0.12, 1.5, M.redMetal, x1 + 0.7, -0.75, CZ + i * 0.42, { ry: i * 0.12, rz: 0.5 });
-      k.box(0.34, 0.34, 0.34, M.black, x1 + 0.1, by + 1.15, CZ); k.box(0.06, 0.24, 0.24, M.lamp, x1 + 0.28, by + 1.15, CZ, { edge: false });
-      glow(x1 + 0.6, by + 1.15, CZ, 3.2, 0xfff0c8); glow(x0 + cab - 0.4, 0.9, CZ, 2.4, 0xff7a2a);
+      k.add(new T.ConeGeometry(0.75, 1.5, 4), M.iron, x1 + 0.95, -0.45, CZ, { rz: -Math.PI / 2, rx: Math.PI / 4 });
+      for (const dz of [-0.7, 0, 0.7]) k.add(new T.ConeGeometry(0.1, 0.6, 4), M.bronze, x1 + 0.9 + (dz ? 0 : 0.5), -0.45, CZ + dz, { rz: -Math.PI / 2, edge: false });
+      lantern(k, x1 - 0.2, by + 1.25, CZ);
+      glow(x1 + 0.55, by + 0.14, CZ, 2.4, 0xff6020); glow(x0 + cab - 0.4, 0.9, CZ, 2.4, 0xff7a2a); glow(x0 + cab - 0.55, 0.3, z1, 1.4, 0xff6a20);
     }
     if (cut) { const g = cut.build(new T.Group(), M.edge); scene.add(g); cuts.push({ g, x0: car.x0, x1: car.x1, roof: car.roof }); }
   }
@@ -292,7 +340,7 @@ function buildDrivers(scene, M) {
       const g = new T.Group(), x = ENGINE.x0 + 3.8 + i * 1.65;
       g.add(new T.Mesh(new T.TorusGeometry(0.62, 0.09, 6, 18), M.wheel));
       for (let s = 0; s < 6; s++) { const sp = new T.Mesh(new T.BoxGeometry(0.07, 1.2, 0.05), M.wheel); sp.rotation.z = (s * Math.PI) / 6; g.add(sp); }
-      const hub = new T.Mesh(new T.CylinderGeometry(0.15, 0.15, 0.14, 8), M.steel); hub.rotation.x = Math.PI / 2; g.add(hub);
+      const hub = new T.Mesh(new T.CylinderGeometry(0.15, 0.15, 0.14, 8), M.bronze); hub.rotation.x = Math.PI / 2; g.add(hub);
       g.position.set(x, Y_RAIL + 0.7, z); scene.add(g); out.push(g);
     }
     const rod = new T.Mesh(new T.BoxGeometry(3.6, 0.1, 0.06), M.steel); rod.userData.z = z; scene.add(rod); rods.push(rod);
@@ -353,15 +401,28 @@ function buildStation(scene, M) {
   // the platform on the near side, level with the car floors; a white safety edge along the track
   k.box(L, 1.25, zn - zf, M.stone, 0, -0.625, (zf + zn) / 2);
   k.box(L, 0.03, 0.22, M.cream, 0, 0.01, zf + 0.2, { edge: false });
-  for (let x = -L / 2 + 2; x <= L / 2 - 2; x += 5.5) { k.box(0.12, 2.3, 0.12, M.black, x, 1.15, zn - 0.35); k.box(0.3, 0.3, 0.3, M.lamp, x, 2.35, zn - 0.35, { edge: false }); glows.push({ x, y: 2.35, z: zn - 0.35, r: 2.2, c: 0xffd890 }); }
+  for (let x = -L / 2 + 2; x <= L / 2 - 2; x += 5.5) {
+    k.box(0.12, 2.3, 0.12, M.black, x, 1.15, zn - 0.35); k.box(0.36, 0.06, 0.06, M.black, x, 2.15, zn - 0.35, { edge: false });
+    k.box(0.28, 0.34, 0.28, M.black, x, 2.4, zn - 0.35); k.box(0.2, 0.24, 0.3, M.lamp, x, 2.4, zn - 0.35, { edge: false });
+    k.add(new T.ConeGeometry(0.22, 0.3, 4), M.black, x, 2.72, zn - 0.35, { ry: Math.PI / 4, edge: false });
+    glows.push({ x, y: 2.4, z: zn - 0.35, r: 2.2, c: 0xffc070 });
+  }
   for (const x of [-8, 8]) { k.box(2, 0.1, 0.5, M.cedar, x, 0.45, zn - 0.5); k.box(2, 0.5, 0.08, M.cedar, x, 0.7, zn - 0.25); }
-  // across the track: the station house, brick with a slate roof and lit windows, on its own strip of platform
+  // across the track: a gothic station hall (brick, pointed lit windows and door, buttresses, a steep slate roof with
+  // finials) and its belfry, on its own strip of platform
   k.box(L, 1.25, 3, M.stone, 0, -0.625, 9.3);
   k.box(10, 2.8, 3.2, M.brick, 0, 1.4, 6.6);
-  k.add(new T.CylinderGeometry(2.1, 2.1, 10.6, 3), M.slate, 0, 3.85, 6.6, { rz: Math.PI / 2, rx: -Math.PI / 2 });
-  for (const x of [-3.4, -1.2, 3.4]) k.box(1.0, 1.1, 0.06, M.window, x, 1.4, 8.22, { edge: false });
-  k.box(1.1, 2, 0.06, M.cedar, 1.2, 1.0, 8.22);
-  glows.push({ x: 1.2, y: 2.3, z: 8.4, r: 2, c: 0xffc070 });
+  const roof = new T.CylinderGeometry(2.0, 2.0, 10.6, 3); roof.scale(1, 1, 1.7);
+  k.add(roof, M.slate, 0, 4.4, 6.6, { rz: Math.PI / 2, rx: -Math.PI / 2 });
+  for (const x of [-5.3, 5.3]) k.add(new T.ConeGeometry(0.14, 0.7, 4), M.bronze, x, 7.4, 6.6, { edge: false });
+  for (const x of [-3.6, -1.6, 3.6]) arch(k, M.window, x, 0.9, 1.9, 0.7, 8.22, 0.06);
+  arch(k, M.cedar, 1.2, 0, 1.7, 1.0, 8.22, 0.08);
+  for (const x of [-4.95, -2.6, 2.4, 4.95]) { k.box(0.4, 2.2, 0.5, M.stone, x, 1.1, 8.3); k.add(new T.ConeGeometry(0.3, 0.5, 4), M.stone, x, 2.45, 8.3, { ry: Math.PI / 4, edge: false }); }
+  k.box(2, 5.2, 2, M.brick, -6.2, 2.6, 6.2);
+  arch(k, M.window, -6.2, 3.4, 4.3, 0.6, 7.22, 0.06);
+  k.add(new T.ConeGeometry(1.6, 2.6, 4), M.slate, -6.2, 6.5, 6.2, { ry: Math.PI / 4 });
+  k.add(new T.ConeGeometry(0.1, 0.8, 4), M.bronze, -6.2, 8.1, 6.2, { edge: false });
+  glows.push({ x: 1.2, y: 2.2, z: 8.5, r: 2, c: 0xffb060 });
   const g = k.build(new T.Group(), M.edge);
   const sign = new T.Mesh(new T.PlaneGeometry(4, 0.75), new T.MeshBasicMaterial({ map: signTex('—') }));
   sign.position.set(4.5, 1.9, zn - 0.3); g.add(sign);
@@ -371,7 +432,7 @@ function buildStation(scene, M) {
 }
 
 // ------------------------------------------------------------------ build / tick / draw
-const ENGINE_STACK = () => [ENGINE.x1 - 0.8, 3.5, CZ];
+const ENGINE_STACK = () => [ENGINE.x1 - 0.8, 3.7, CZ];
 /** The scene for one run; `world` is the level it belongs to (the scene goes when the hero leaves it). */
 export function buildTrain3D(world) {
   disposeTrain3D();
@@ -515,7 +576,7 @@ export function disposeTrain3D() {
 }
 /** The engine's silhouette for the sprite masks: [x0, x1, z0, z1, y0, y1] boxes (the cab, the boiler, the chimney). */
 export const ENGINE_BOXES = [
-  [ENGINE.x0, ENGINE.x0 + 3.25, ROW0 - 0.25, ROW0 + ROWS + 0.25, -1.1, 2.4],
-  [ENGINE.x0 + 3, ENGINE.x1 + 0.3, CZ - 1.1, CZ + 1.1, -1.1, 2.05],
-  [ENGINE.x1 - 1.3, ENGINE.x1 - 0.3, CZ - 0.5, CZ + 0.5, 2, 3.5],
+  [ENGINE.x0 - 0.25, ENGINE.x0 + 3.25, ROW0 - 0.25, ROW0 + ROWS + 0.25, -1.1, 2.6],
+  [ENGINE.x0 + 3, ENGINE.x1 + 0.6, CZ - 1.15, CZ + 1.15, -1.1, 2.15],
+  [ENGINE.x1 - 1.45, ENGINE.x1 - 0.15, CZ - 0.65, CZ + 0.65, 2, 4.05],
 ];
