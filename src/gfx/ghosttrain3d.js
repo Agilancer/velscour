@@ -8,7 +8,7 @@
 // material, so the whole train is a few dozen draw calls.
 import { G } from '../state.js';
 import { camera, HW } from '../core/view.js';
-import { CARS, ENGINE, CZ, ROW0, ROWS, PLAT0, PLAT1, PLAT_LEN, crateCells } from '../world/ghosttrain.js';
+import { CARS, ENGINE, TENDER, CZ, ROW0, ROWS, PLAT0, PLAT1, PLAT_LEN, crateCells } from '../world/ghosttrain.js';
 
 const SC = HW * Math.SQRT2;   // world px a unit across the screen
 const SKY = 0x141a26;         // the night beyond the lamps
@@ -461,7 +461,7 @@ export function buildTrain3D(world) {
   for (const gl of glowList) addGlow(gl, scene);
   for (const gl of st.glows) addGlow(gl, st.g);
   S.engineGlows = S.glows.filter((s) => s.userData.engine);
-  for (let i = 0; i < 34; i++) {
+  for (let i = 0; i < 56; i++) {
     const s = new T.Sprite(new T.SpriteMaterial({ map: puff(), color: 0x888888, depthWrite: false, transparent: true, opacity: 0 }));
     s.renderOrder = 4; s.visible = false; scene.add(s); S.smoke.push({ s, life: 0 });
   }
@@ -484,6 +484,19 @@ export function trainCutaway(x) {
 function emit(x, y, z, vx, vy, vz, life, color, s0, s1, a) {
   const sm = S.smoke.find((q) => q.life <= 0); if (!sm) return;
   Object.assign(sm, { x, y, z, vx, vy, vz, life, max: life, s0, s1, a }); sm.s.material.color.setHex(color); sm.s.visible = true;
+}
+/** The chief's fight (game/ghosttrain.js): 'vent', the furnace blowing steam out over the tender from both sides of
+ *  the cab; 'whistle', a white plume shrieking up from the cab roof. */
+export function trainVent(kind) {
+  if (!S) return;
+  if (kind === 'whistle') {
+    for (let i = 0; i < 8; i++) emit(ENGINE.x0 + 1.4 + rnd() * 0.4, 2.8, CZ + (rnd() - 0.5) * 0.4, -S.speed * 0.3 + (rnd() - 0.5) * 0.4, 3.2 + rnd() * 1.6, (rnd() - 0.5) * 0.5, 1.1 + rnd() * 0.5, 0xf2f4f6, 0.3, 2.2, 0.8);
+    return;
+  }
+  for (let i = 0; i < 18; i++) {
+    const side = i % 2 ? 1 : -1, x = TENDER.x1 - 0.5 - rnd() * 4;
+    emit(x, 0.2 + rnd() * 0.8, CZ + side * (ROWS / 2 + 0.1), -1.5 - rnd() * 2, 0.8 + rnd(), side * (1.6 + rnd() * 1.8), 1 + rnd() * 0.6, 0xe8ecf0, 0.6, 3.4, 0.75);
+  }
 }
 /** Game time: the land streams by at `speed` tiles a second, the station stands at `stationX` (null: none), the
  *  engine's fire burns at `fire` (0..1: its smoke and firebox). */
