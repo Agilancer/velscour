@@ -38,7 +38,7 @@ Integration branch: `feat/new-regions`. Each region was built on its own branch 
 | Region | Status | Doc | Test |
 |---|---|---|---|
 | The Ghost Train | in progress | docs/GHOST_TRAIN.md | `tools/tests/ghosttrain.js` |
-| The Endless Siege | in progress | docs/ENDLESS_SIEGE.md | `tools/tests/siege.js` |
+| The Endless Siege | playable, auto-play wins (depths 8, 60) | docs/ENDLESS_SIEGE.md | `tools/tests/siege.js` |
 | The Deep Rail Mines | in progress | docs/DEEP_RAIL_MINES.md | `tools/tests/mines.js` |
 | The Great Hunt | in progress | docs/GREAT_HUNT.md | `tools/tests/hunt.js` |
 
