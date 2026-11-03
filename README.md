@@ -99,6 +99,8 @@ src/ui/                        HUD, touch controls, inventory, skill tree/book, 
 
 ## Art
 
+**Asset manager:** [agilancer.github.io/velscour/tools/assetmanager/](https://agilancer.github.io/velscour/tools/assetmanager/) lists every sprite, texture and 3D model in the game (PC and phone), split into custom art / textured 3D models and placeholder art, with previews, the source files, the rebuild command, and flags and notes for tracking new art. Rebuild its list after art changes with `node tools/assetmanager/build.mjs`.
+
 The five themed dungeons (Desert Temple, Ice Temple, Hell, Astral Plane and Heavenly) now use 40 painted floor diamonds and 40 painted props cut from three approved sprite sheets, with 12 painted celestial monster designs replacing procedural first-rank Heavenly variants. All wall geometry, monster IDs and gameplay systems are preserved; see [Approved Biome Artwork](docs/APPROVED_BIOME_ART.md).
 
 An additional compact 400 × 240 native-resolution atlas contributes one floor accent and one prop to each of those five themes, plus five Forsaken Wilds tree sprites. See [Biome Variant Art](docs/BIOME_VARIANT_ART.md).

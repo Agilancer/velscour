@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0706">
+<title>Velscour Asset Manager</title>
+<link rel="icon" href="../../assets/ui/icon.png">
+<link rel="apple-touch-icon" href="../../assets/ui/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- Every sprite, texture and 3D model the game uses, split into custom art and placeholders.
+     The list is tools/assetmanager/manifest.json, built from the game's own catalogs by
+     `node tools/assetmanager/build.mjs` (thumbnails by thumbs.py). Serve the repo root and open /tools/assetmanager/. -->
+<header id="top">
+  <a class="brand" href="#/" aria-label="Overview">
+    <img src="../../assets/ui/icon.png" alt="" width="28" height="28">
+    <span><b>VELSCOUR</b> <i>Asset Manager</i></span>
+  </a>
+  <div class="search">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.06l4.24 4.24-1.4 1.4-4.24-4.24A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"/></svg>
+    <input id="q" type="search" placeholder="Search names, ids, files" autocomplete="off" spellcheck="false">
+  </div>
+  <button id="menuBtn" class="iconbtn" aria-label="Tools and export">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+  </button>
+</header>
+<nav id="nav" aria-label="Sections"></nav>
+<div id="bar">
+  <div id="filters" role="radiogroup" aria-label="Show"></div>
+  <div class="viewtog" role="group" aria-label="Layout">
+    <button data-view="grid" aria-label="Grid"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg></button>
+    <button data-view="list" aria-label="List"><svg viewBox="0 0 24 24"><path d="M4 5h4v4H4zm6 1h10v2H10zM4 10h4v4H4zm6 1h10v2H10zM4 15h4v4H4zm6 1h10v2H10z"/></svg></button>
+  </div>
+</div>
+<main id="main"><p class="loading">Loading the asset list…</p></main>
+<aside id="detail" hidden aria-label="Asset details"></aside>
+<div id="scrim" hidden></div>
+<div id="menu" hidden>
+  <h3>Your tracking</h3>
+  <p class="dim">Flags and notes stay in this browser. Export them to move to another device, or to hand a to-do list to an artist.</p>
+  <button data-act="md">Download art to-do (Markdown)</button>
+  <button data-act="csv">Download current list (CSV)</button>
+  <button data-act="backup">Back up flags and notes (JSON)</button>
+  <label class="filebtn">Restore flags and notes…<input type="file" accept=".json,application/json" data-act="restore"></label>
+  <button data-act="clear" class="danger">Clear all flags and notes</button>
+  <h3>About this list</h3>
+  <p class="dim" id="about"></p>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
