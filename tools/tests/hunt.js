@@ -1,19 +1,110 @@
-// THE GREAT HUNT (docs/GREAT_HUNT.md): reached through Velscour's skull ("hunt"). 40 seeds: 96 x 96, every clue, the
+// THE GREAT HUNT (docs/GREAT_HUNT.md): reached through Velscour's skull ("hunt") from level 10 (`minLevel`): a level-9
+// hero is refused by the skull word, the HAIL VELSCOUR! list (greyed out), teleportToBiome and a saved portal; a
+// level-10 hero gets in. 40 seeds: 96 x 96, every clue, the
 // three hunting grounds, the lair, the exit and the caches reachable from the camp, three clues a leg. The hunt in play:
 // a sign read, the beast woken, its life gate (a huge hit only takes it to the flee mark), the flight down the next leg
 // with its blood trail, its wounds carried over to the next ground. Screenshots: the camp, a sign, the beast at bay,
-// the flight, the blood trail, the lair, an overview, the phone layout. Then auto-play tracks it down and kills it.
+// the flight, the blood trail, the lair, an overview, the phone layout. Then auto-play tracks it down and kills it, with
+// no god mode: a level-10 hero at Depth 9, and heroes geared as balance.js does at Depths 60 and 150.
 //   node tools/tests/hunt.js [shots|noshots] [auto|noauto]      (start the server first: python3 -m http.server 8123)
 const { openGame, report } = require('./harness');
 const SHOTS = process.argv[2] !== 'noshots';
 const AUTO = process.argv[3] !== 'noauto';
+const inHunt = () => window.VELSCOUR.G.world?.biome?.id === 'great_hunt';
+
+// a hero as balance.js builds one arriving at depth D: level, auto-play's stats and skills, the best of `rounds` x 25
+// drops near the depth's item level with upgrades and gems, and skill mastery
+async function gearHero(page, cls, D, lvl, rounds) {
+  await page.evaluate(async ({ cls, D, lvl, rounds }) => {
+    const { G, game } = window.VELSCOUR;
+    const { Auto } = await import('/src/game/autoplay.js');
+    const { depthLevel } = await import('/src/data/depth.js');
+    const { rollItem, rollGem } = await import('/src/data/items.js');
+    const { xpToNext } = await import('/src/game/player.js');
+    if (Auto.on) Auto.toggle(false);
+    await game.newChar(cls, 'Hunter');
+    document.querySelectorAll('.screen').forEach((s) => s.remove()); G.ui.modalCount = 0; G.ui.closeAll();
+    const c = G.char, p = G.player, L = depthLevel(D);
+    c.level = lvl; c.xp = Math.round(xpToNext(lvl) * 0.3);
+    c.statPoints += (lvl - 1) * 5; c.skillPoints += (lvl - 1) + Math.max(0, D - 1);
+    for (let d = 1; d < D; d++) c.cleared[d] = true;
+    c.deepest = D - 1; c.depth = D;
+    c.potions = { hp: 10, mp: 6, rejuv: 3, fury: 2 };
+    Auto.spendStats(); Auto.spendSkills(); Auto.arrangeBar();
+    for (let round = 0; round < rounds; round++) {
+      c.bag = c.bag.map(() => null);
+      for (let i = 0; i < 25 && i < c.bag.length; i++) { const it = rollItem(L - Math.floor(Math.random() * 7), { mf: 60, bonus: Math.random() < 0.12 ? 1.2 : 0.15 }); it.unid = false; c.bag[i] = it; }
+      p.recompute(); Auto.optimizeGear();
+    }
+    c.bag = c.bag.map(() => null);
+    for (const it of Object.values(c.equip)) if (it && it.type === 'gear') {
+      it.upg = Math.min(6, 2 + Math.floor(L / 40));
+      it.sockets = Math.max(it.sockets, Math.min(it.maxSockets, 2));
+      while (it.gems.length < it.sockets) { const g = rollGem(L); it.gems.push({ gem: g.gem, tier: g.tier }); }
+    }
+    const M = Math.min(1000, Math.round(20 + D * 1.6));
+    c.bar.filter(Boolean).forEach((id, i) => { c.mastery[id] = [Math.max(1, Math.round(M * (i < 2 ? 1 : 0.55))), 0]; });
+    Auto.spendSkills(); Auto.arrangeBar(); p.recompute(); p.hp = p.maxHp; p.mana = p.maxMana;
+    G.godMode = false;
+  }, { cls, D, lvl, rounds });
+}
 
 (async () => {
   const { browser, page, errors, shot } = await openGame({ width: 1366, height: 860 });
   try {
-    // ------------------------------------------------ reached through the skull
-    await page.evaluate(async () => { await window.VELSCOUR.game.newChar('paladin', 'Hunter'); window.VELSCOUR.G.char.depth = 6; });
+    // ------------------------------------------------ the level gate: a level-9 hero is refused everywhere
+    await page.evaluate(async () => { await window.VELSCOUR.game.newChar('paladin', 'Hunter'); const c = window.VELSCOUR.G.char; c.depth = 6; c.level = 9; });
     await page.waitForTimeout(300);
+    const refused = async (what) => {
+      await page.waitForTimeout(400);
+      if (SHOTS && what === 'skull word') await shot('hunt_gate_refused');
+      const r = await page.evaluate(() => {
+        const box = [...document.querySelectorAll('.dialog-box')].find((b) => /VELSCOUR SAYS NO/.test(b.textContent));
+        const text = box ? box.querySelector('.velscour-taunt')?.textContent : null;
+        if (box) box.querySelector('button').click();
+        return { text, biome: window.VELSCOUR.G.world?.biome?.id || window.VELSCOUR.G.world?.kind };
+      });
+      if (!r.text) errors.push(`[gate] ${what}: no refusal`);
+      if (r.biome === 'great_hunt') errors.push(`[gate] ${what}: a level-9 hero got in`);
+      return r.text;
+    };
+    const listOption = async () => {
+      await page.click('#velscour-skull');
+      await page.fill('#velscour-message', 'HAIL VELSCOUR!');
+      await page.click('.velscour-contact-dialog button:has-text("Send")');
+      return page.evaluate(() => {
+        const o = document.querySelector('#velscour-biome option[value="great_hunt"]'), r = o && { disabled: o.disabled, text: o.textContent };
+        document.querySelector('.velscour-teleport-dialog button')?.click(); // Cancel
+        return r;
+      });
+    };
+    await page.click('#velscour-skull');
+    await page.fill('#velscour-message', 'hunt');
+    await page.click('.velscour-contact-dialog button:has-text("Send")');
+    const line = await refused('skull word');
+    const opt = await listOption();
+    if (!opt || !opt.disabled || !/Reach level 10/.test(opt.text)) errors.push(`[gate] the HAIL VELSCOUR! list: ${JSON.stringify(opt)}`);
+    await page.evaluate(async () => { const { BIOME_BY_ID } = await import('/src/data/biomes.js'); await window.VELSCOUR.game.teleportToBiome(BIOME_BY_ID.great_hunt); });
+    await refused('teleportToBiome');
+    // a saved portal (an old save's nextBiome): redrawn, both in the portal dialog and on entering
+    const portal = await page.evaluate(async () => {
+      const { G, game } = window.VELSCOUR;
+      G.char.nextBiome = 'great_hunt'; game.confirmDungeon();
+      const shown = G.char.nextBiome;
+      document.querySelectorAll('.screen').forEach((s) => s.remove()); G.ui.modalCount = 0;
+      G.char.nextBiome = 'great_hunt'; game.enterDungeon();
+      return { shown, entered: G.char.nextBiome };
+    });
+    await page.waitForTimeout(300);
+    await page.waitForFunction(() => document.querySelector('#loading').classList.contains('hidden'), null, { timeout: 30000 });
+    if (portal.shown === 'great_hunt' || portal.entered === 'great_hunt' || await page.evaluate(inHunt)) errors.push(`[gate] a saved portal let a level-9 hero in: ${JSON.stringify(portal)}`);
+    // level 10: the list's option opens, and the skull word below takes him in
+    await page.evaluate(async () => { const { G, game } = window.VELSCOUR; await game.enterTown(); G.char.level = 10; G.char.depth = 6; });
+    const opt10 = await listOption();
+    if (!opt10 || opt10.disabled || /Reach level/.test(opt10.text)) errors.push(`[gate] level 10: the list's option is still locked (${JSON.stringify(opt10)})`);
+    console.log('gate', JSON.stringify({ line, locked: opt?.text, open: opt10?.text, portal }));
+
+    // ------------------------------------------------ reached through the skull (level 10)
     await page.click('#velscour-skull');
     await page.fill('#velscour-message', 'hunt');
     await page.click('.velscour-contact-dialog button:has-text("Send")');
@@ -154,33 +245,38 @@ const AUTO = process.argv[3] !== 'noauto';
       await page.evaluate(async () => { const { G } = window.VELSCOUR; const { camera } = await import('/src/core/view.js'); G.settings.zoom = 1; camera.computeZoom(); G.huntBeast = undefined; });
     }
 
-    // ------------------------------------------------ auto-play tracks the beast down and kills it
+    // ------------------------------------------------ auto-play tracks the beast down and kills it, no god mode:
+    // a level-10 hero at Depth 9 (the floor of the gate) and geared heroes at Depths 60 and 150
     if (AUTO) {
-      const res = await page.evaluate(async () => {
-        const { G, game } = window.VELSCOUR;
-        const { Auto } = await import('/src/game/autoplay.js');
-        const { BIOME_BY_ID } = await import('/src/data/biomes.js');
-        // a new hero at Depth 3 (a fresh level-1 hero dodges more than he hits a depth 6 beast once it enrages)
-        G.godMode = true; G.char.depth = 3; G.world.depth = 3;
-        await game.teleportToBiome(BIOME_BY_ID.great_hunt);
-        Auto.toggle(true);
-        const t0 = performance.now();
-        let sim = 0;
-        const w = G.world, sc = w.overworldScenario, log = [];
-        let last = '';
-        while (sim < 1500 && !sc.completed && performance.now() - t0 < 240000) {
-          for (let i = 0; i < 30; i++) { G.dt = 1 / 30; G.time += G.dt; G.frame++; game.update(1 / 30); sim += 1 / 30; }
-          const k = `${sc.stage}:${sc.phase}`;
-          if (k !== last) { log.push(`${Math.round(sim)}s ${k} ${sc.life}% read ${sc.read}`); last = k; }
-          await new Promise((r) => setTimeout(r, 0));
-        }
-        Auto.toggle(false);
-        return { secs: Math.round(sim), completed: sc.completed, beast: sc.def.name, life: sc.life, read: sc.read, log, status: Auto.status, exit: w.portals.find((q) => q.type === 'exit')?.active };
-      });
-      console.log('auto-play', JSON.stringify(res));
-      if (!res.completed) errors.push(`[auto] did not finish the hunt in ${res.secs}s (stage log ${res.log.join(' | ')}, ${res.status})`);
-      else if (!res.exit) errors.push('[auto] the exit did not open');
-      if (SHOTS) { await page.evaluate(() => window.VELSCOUR.game.render()); await shot('hunt_auto_end'); }
+      for (const [cls, D, lvl, rounds] of [['paladin', 9, 10, 3], ['wizard', 60, 61, 8], ['ranger', 150, 102, 8]]) {
+        await gearHero(page, cls, D, lvl, rounds);
+        const res = await page.evaluate(async () => {
+          const { G, game } = window.VELSCOUR;
+          const { Auto } = await import('/src/game/autoplay.js');
+          const { BIOME_BY_ID } = await import('/src/data/biomes.js');
+          await game.teleportToBiome(BIOME_BY_ID.great_hunt);
+          Auto.toggle(true);
+          const t0 = performance.now();
+          let sim = 0, fight = 0, dodge = 0;
+          const w = G.world, sc = w.overworldScenario, p = G.player, log = [];
+          let last = '';
+          while (sim < 1200 && !sc.completed && !p.dead && G.world === w && performance.now() - t0 < 240000) {
+            for (let i = 0; i < 30; i++) {
+              G.dt = 1 / 30; G.time += G.dt; G.frame++; game.update(1 / 30); sim += 1 / 30;
+              if (sc.phase === 'fight') { fight += 1 / 30; if (/Dodg/.test(Auto.status)) dodge += 1 / 30; }
+            }
+            const k = `${sc.stage}:${sc.phase}`;
+            if (k !== last) { log.push(`${Math.round(sim)}s ${k} ${sc.life}%`); last = k; }
+            await new Promise((r) => setTimeout(r, 0));
+          }
+          Auto.toggle(false);
+          return { level: G.char.level, secs: Math.round(sim), fighting: Math.round(fight), dodging: Math.round(dodge), completed: sc.completed, died: p.dead || G.world !== w, beast: sc.def.name, life: sc.life, log: log.join(' | '), exit: w.portals.find((q) => q.type === 'exit')?.active };
+        });
+        console.log(`auto-play ${cls} L${lvl} D${D}`, JSON.stringify(res));
+        if (!res.completed) errors.push(`[auto ${cls} D${D}] did not finish the hunt in ${res.secs}s${res.died ? ' (died)' : ''} (${res.log})`);
+        else if (!res.exit) errors.push(`[auto ${cls} D${D}] the exit did not open`);
+        if (SHOTS) { await page.evaluate(() => window.VELSCOUR.game.render()); await shot(`hunt_auto_end_d${D}`); }
+      }
     }
 
     // ------------------------------------------------ phone layout
@@ -190,6 +286,7 @@ const AUTO = process.argv[3] !== 'noauto';
         const { G, game } = window.VELSCOUR;
         const { BIOME_BY_ID } = await import('/src/data/biomes.js');
         await game.newChar('ranger', 'Phone');
+        G.char.level = 10; // the hunt opens at level 10
         await game.teleportToBiome(BIOME_BY_ID.great_hunt);
         const c = G.world.overworldScenario.clues[0], p = G.player; p.x = c.x + 2; p.y = c.y + 2;
         for (let i = 0; i < 20; i++) { G.time += 1 / 30; game.update(1 / 30); }

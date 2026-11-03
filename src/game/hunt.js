@@ -7,12 +7,13 @@
 import { makeMonster } from './monster.js';
 import { depthLevel } from '../data/depth.js';
 import { ART_BY_ID } from '../data/bestiary.js';
+import { ARCH } from '../data/enemies.js';
 import { UI } from '../ui/ui.js';
 import { G } from '../state.js';
 import { sfx } from '../core/audio.js';
 import { addDecal, addEffect, Ring, floatText, smoke } from '../gfx/vfx.js';
 import { GroundItem } from './loot.js';
-import { rollItem, rarityAt } from '../data/items.js';
+import { rollItem, rarityAt, potionItem } from '../data/items.js';
 import { CLUE_BLOOD } from '../world/hunt.js';
 
 // the quarry: a lone giant of set 2 (data/bestiary.js), its hunt name and the brood that follows its kills
@@ -27,7 +28,8 @@ export const HUNT_BEASTS = [
   { id: 'bloodcrest', art: 'bloodcrest_hydra', name: 'The Bloodcrest', brood: 'scorpion' },
   { id: 'blackhorn', art: 'obsidian_horn_dragon', name: 'Blackhorn', brood: 'imp' },
 ];
-const BEAST_HP = 2.2;            // times a guardian's life: four fights' worth
+const BEAST_HP = 1.6;            // times a guardian's life, over four fights (2.2 kept weak heroes at it 10+ minutes)
+const BEAST_DMG = 0.8;           // times a guardian's blows: four fights with no town between (x1.15 once enraged)
 const GATES = [0.75, 0.5, 0.25, 0]; // it flees from ground k at this share of its life (the lair: never)
 const FLEE_SPEED = 7.5;          // tiles a second down the trail
 const CLUE_TEXT = {
@@ -58,12 +60,21 @@ export function createHuntRun(world, gen, biome, depth, onWin) {
   if (c) c.lastHunt = def.id;
   const g0 = H.grounds[0];
   const m = makeMonster(world, art.arch, biome, lvl + 2, 'boss', g0[0], g0[1], 0, { art: def.art, swap: null });
-  m.name = def.name; m.maxHp *= BEAST_HP; m.hp = m.maxHp; m.xp *= 3; m.scale = (m.scale || 1) * 1.25;
+  // one beast as fair as the next: an abomination hits over three times as hard as a spider, so both are pulled in
+  const A = ARCH[art.arch] || {};
+  m.name = def.name; m.maxHp *= BEAST_HP * Math.pow(1.4 / (A.hp || 1.4), 0.25); m.hp = m.maxHp; m.xp *= 3;
+  m.dmg *= BEAST_DMG * Math.pow(1.2 / (A.dmg || 1.2), 0.6); m.scale = (m.scale || 1) * 1.25;
   m.affixes = (m.affixes || []).filter((k) => !['regen', 'teleport', 'fast'].includes(k));
+  // a beast's blows: stomp, charge, spines, boulders. No summons (its brood is its help), no nova or spiral (fired
+  // from inside a body this big, every shot hit a melee hero: 300 life in a blink), no beam, and none of a boss's
+  // 50% enrage (it cut the gaps between blows under 2 s and auto-play dodged all third fight); it angers by fight
+  m.patterns = ['slam', 'charge', 'volley', 'meteor'];
+  m.phase = 0; m.patternQ = [];
   m.home = [g0[0], g0[1]];
   const blood = m.bloodColor || biome.blood || '#7c1610';
   world.add(m);
   world.boss = m;
+  world.ambushT = Infinity; // no ambushes (game/mayhem.js): these are its woods, and the hunt is the danger
   world.looks?.pick?.(def.brood); // the brood's look is chosen now, so its art loads with the level's
   const brood = [];
 
@@ -100,6 +111,8 @@ export function createHuntRun(world, gen, biome, depth, onWin) {
       const p = world.player;
       if (run.completed || !p) return;
       if (!run.painted) { run.painted = true; paintClues(0); markNext(); } // decals after setWorld's clearVfx
+      // nobody raises the dead in its woods: a cultist's endless skeletons buried long fights (100+ of them)
+      if ((run.calmT = (run.calmT || 0) - dt) <= 0) { run.calmT = 1; for (const c of world.creatures) if (c.summoner && c.team === 'enemy') c.summoner = false; }
       if (m.dead) return finish();
       for (const cl of run.clues) if (cl.leg === run.stage && !cl.read && Math.hypot(p.x - cl.x, p.y - cl.y) < 2.6) read(cl);
       if (run.phase === 'track' && m.awake) startFight();
@@ -153,6 +166,7 @@ export function createHuntRun(world, gen, biome, depth, onWin) {
     for (const cl of run.clues) if (cl.leg === run.stage) cl.read = true;
     unmarkAll();
     UI.centerMsg(def.name.toUpperCase(), ENCOUNTER[run.stage], 2.8);
+    if (run.stage >= 2 && !m.angry) { m.angry = true; m.atkCd *= 0.88; m.speed *= 1.1; m.dmg *= 1.15; floatText(m.x, m.y, 90, 'ENRAGED!', '#ff4020', 22, { life: 1.5 }); }
     sfx('roar'); sfx('boss', 0.7);
     addEffect(new Ring(m.x, m.y, 0.3, 4.5, 0.9, '#ff3020', 5));
     // its brood, drawn by the blood: none at first, more each time
@@ -169,7 +183,9 @@ export function createHuntRun(world, gen, biome, depth, onWin) {
     m.targetable = false; m.state = 'idle'; m.action = null; m.aggro = null; m.target = null;
     for (const s of Object.values(m.status)) if (s) s.t = 0;
     UI.centerMsg('IT FLEES', 'Follow the blood', 2.6);
-    UI.log(`${def.name} breaks off and crashes into the woods.`, '#ff9070');
+    UI.log(`${def.name} breaks off and crashes into the woods. A dead hunter's satchel lies where it stood.`, '#ff9070');
+    // the satchel: a hunt is four fights with no town between, so each flight leaves a little to drink
+    for (const [k, dx] of [['hp', -0.5], ['hp', 0], ['rejuv', 0.5]]) world.addLoot(new GroundItem(m.x + dx, m.y + 0.5, 'potion', { item: potionItem(k) }));
     sfx('roar', 0.8);
     paintClues(run.stage);
     markNext();

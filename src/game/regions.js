@@ -17,9 +17,16 @@
 //   amb       an ambience key (src/core/audio.js AMB); default the biome id
 //   wilds     true: Forsaken Wilds extras (rain/night rolls) apply
 //   castleArt true: the Castle pack stays loaded after the build (releaseLevelArt in game.js; the Siege's masonry)
+//   minLevel  the hero's level it opens at (default none): below it the skull word, the HAIL VELSCOUR! list and a
+//             saved portal all refuse (game.js reads regionNeeds)
 export const REGIONS = {};
 export function registerRegion(r) { REGIONS[r.id] = r; return r; }
 export const regionOf = (biome) => (biome && REGIONS[biome.id]) || null;
+/** The level a hero of this level still needs for this biome's region (its minLevel), or 0 when he may go. */
+export function regionNeeds(biome, level) {
+  const r = regionOf(biome);
+  return r && r.minLevel && (level || 1) < r.minLevel ? r.minLevel : 0;
+}
 /** The region a skull message names, or null. */
 export function regionByWord(message) {
   const m = String(message || '').trim().toLowerCase();
