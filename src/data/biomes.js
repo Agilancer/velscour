@@ -483,6 +483,44 @@ export const BETA_BIOMES = [
     roster: ['hound', 'golem', 'gargoyle', 'bat', 'archer', 'skeleton', 'knight', 'elemental', 'spider', 'cultist', 'wraith', 'imp'],
     torch: '#ffc078', fog: '#0c1622',
   },
+  // the four new regions (src/game/regions/, docs/NEW_REGIONS.md); each region module owns its map, art and run
+  {
+    // the Iron Express, a steam train raiders have taken (id kept: ghost_train): fight car to car while it runs,
+    // stations to stop at, their chief on the tender
+    id: 'ghost_train', name: 'The Iron Express', pack: 'town', overworld: true, beta: true, painted: false, wallPack: null, region: true,
+    palette: null, dark: 0.35, light: 12,
+    ambient: { type: 'dust', color: '#d8c8a8' }, mon: { hue: 15, sat: 0.95, light: 0 },
+    el: 'physical', blood: '#7a1810', adj: ['Rattling', 'Smoke-Choked', 'Runaway', 'Iron-Shod'],
+    roster: ['archer', 'knight', 'cultist', 'hound', 'skeleton', 'zombie', 'ghoul', 'imp', 'bat', 'spider'],
+    torch: '#ffb060', fog: '#141820',
+  },
+  {
+    // a fortress besieged by an undead horde that never stops: hold the walls in waves, repair gates, man ballistae
+    id: 'endless_siege', name: 'The Endless Siege', pack: 'town', overworld: true, beta: true, painted: false, wallPack: null, region: true,
+    palette: null, dark: 0.4, light: 11,
+    ambient: { type: 'ember', color: '#ffb070' }, mon: { hue: 20, sat: 0.8, light: -0.03 },
+    el: 'fire', blood: '#6a1410', adj: ['Besieged', 'Burning', 'Unyielding', 'Battered'],
+    roster: ['skeleton', 'zombie', 'ghoul', 'knight', 'archer', 'golem', 'wraith', 'abomination', 'cultist', 'imp'],
+    torch: '#ffa050', fog: '#160c08',
+  },
+  {
+    // a dwarven mine overrun from below: minecarts between shafts, branching rails, worse the deeper you dig
+    id: 'deep_mines', name: 'The Deep Rail Mines', pack: 'town', overworld: true, beta: true, painted: false, wallPack: null, region: true,
+    palette: null, dark: 0.82, light: 7.5,
+    ambient: { type: 'dust', color: '#c8a070' }, mon: { hue: 30, sat: 0.8, light: -0.04 },
+    el: 'physical', blood: '#7a1810', adj: ['Collapsing', 'Lamp-Lit', 'Bottomless', 'Ore-Veined'],
+    roster: ['spider', 'golem', 'bat', 'skeleton', 'zombie', 'elemental', 'imp', 'abomination', 'worm', 'beetle'],
+    torch: '#ffc070', fog: '#120c08',
+  },
+  {
+    // one colossal beast per hunt: track it by its kills and wounds, wear it down over several fights, corner it in its lair
+    id: 'great_hunt', name: 'The Great Hunt', pack: 'town', overworld: true, beta: true, painted: false, wallPack: null, region: true,
+    palette: null, dark: 0.3, light: 13,
+    ambient: { type: 'leaf', color: '#d0c890' }, mon: { hue: 30, sat: 0.9, light: 0.02 },
+    el: 'physical', blood: '#7c1610', adj: ['Trampled', 'Blood-Trailed', 'Wild', 'Stalked'],
+    roster: ['hound', 'spider', 'bat', 'archer', 'beetle', 'scorpion', 'cultist', 'imp', 'golem', 'gargoyle'],
+    torch: '#ffc078', fog: '#0c1408',
+  },
 ];
 
 // THE ETERNAL BREACH (docs/ETERNAL_BREACH.md): the challenge biome behind the purple portal in Herrington Hollow. Never in

@@ -8,15 +8,14 @@ import THREE_CHAINS from '../game/seascen/three_chains.js';
 import FIRE_BELOW from '../game/seascen/fire_below.js';
 import HARPOON_WEATHER from '../game/seascen/harpoon_weather.js';
 import THE_LIGHTLESS from '../game/seascen/the_lightless.js';
-import FLIGHT_DECK from '../game/seascen/flight_deck.js';
 import SEA_COMING_OVER from '../game/seascen/sea_coming_over.js';
 import RED_TIDE from '../game/seascen/red_tide.js';
 import WRECKERS_REEF from '../game/seascen/wreckers_reef.js';
 import LASHED_TOGETHER from '../game/seascen/lashed_together.js';
 import NINTH_BELL from '../game/seascen/ninth_bell.js';
 
-// in doc order; a scenario still a stub (null) is left out
-export const SEA_SCENARIOS = [GULLWRACK_LIGHT, ACROSS_THE_PLANK, THREE_CHAINS, FIRE_BELOW, HARPOON_WEATHER, THE_LIGHTLESS, FLIGHT_DECK, SEA_COMING_OVER, RED_TIDE, WRECKERS_REEF, LASHED_TOGETHER, NINTH_BELL].filter(Boolean);
+// in doc order; a scenario still a stub (null) is left out (#7 Flight Deck, the carrier, was taken out at the user's ask)
+export const SEA_SCENARIOS = [GULLWRACK_LIGHT, ACROSS_THE_PLANK, THREE_CHAINS, FIRE_BELOW, HARPOON_WEATHER, THE_LIGHTLESS, SEA_COMING_OVER, RED_TIDE, WRECKERS_REEF, LASHED_TOGETHER, NINTH_BELL].filter(Boolean);
 /** (The director's older name for them.) */
 export const SEA_VARIANTS = SEA_SCENARIOS;
 export const SEA_VARIANT = Object.fromEntries(SEA_VARIANTS.map((v) => [v.id, v]));
