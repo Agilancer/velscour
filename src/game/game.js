@@ -103,7 +103,7 @@ import { Heresies } from '../ui/heresies.js';
 import { Rifts } from '../ui/rifts.js';
 import { Marks } from '../ui/marks.js';
 import { MacrosUI } from '../ui/macros.js';
-import { regionOf, regionByWord, regionNeeds } from './regions.js';
+import { REGIONS, regionOf, parseRegionWord, regionNeeds, rollRegionVariant } from './regions.js';
 import './regions/index.js';
 import { Macros } from './macros.js';
 
@@ -419,9 +419,11 @@ export const game = {
             grantDeathGift();
             if (G.world?.kind !== 'town') this.enterTown(); // the town portal now opens on Depth 500
             else this.autosave();
-          } else if (regionByWord(message)) {
+          } else if (parseRegionWord(message)) {
+            const { region, want } = parseRegionWord(message);
             close();
-            this.teleportToBiome(BIOME_BY_ID[regionByWord(message).id]); // a new region (game/regions.js)
+            if (want) (G.regionWant ||= {})[region.id] = want; // 'train 3': that variant
+            this.teleportToBiome(BIOME_BY_ID[region.id]); // a new region (game/regions.js)
           } else if (message.trim().toLowerCase() === 'mountain') {
             close();
             this.teleportToBiome(BIOME_BY_ID.mountainside); // the Mountainside beta
@@ -468,6 +470,7 @@ export const game = {
 
   openVelscourTeleport() {
     const options = [...BETA_BIOMES, ...BIOMES].map((biome) => { const need = regionNeeds(biome, G.char?.level); return `<option value="${escapeHtml(biome.id)}"${need ? ' disabled' : ''}>${escapeHtml(biome.name)}${biome.overworld ? ' · Overworld' : ''}${biome.beta ? ' (Beta)' : ''}${need ? ` · Reach level ${need}` : ''}</option>`; }).join('')
+      + Object.values(REGIONS).flatMap((r) => { const b = BIOME_BY_ID[r.id], need = regionNeeds(b, G.char?.level); return (r.variants || []).map((v) => `<option value="${escapeHtml(r.id)}:${escapeHtml(v.id)}"${need ? ' disabled' : ''}>${escapeHtml(b.name)}: ${escapeHtml(v.name)}${need ? ` · Reach level ${need}` : ''}</option>`); }).join('')
       + SKY_ALL.map((v) => `<option value="skyship:${v.id}">${escapeHtml(BIOME_BY_ID.skyship.name)}: ${escapeHtml(v.name)} (${escapeHtml(v.weather)})</option>`).join('')
       + SEA_VARIANTS.map((v) => `<option value="pirate_seas:${v.id}">${escapeHtml(BIOME_BY_ID.pirate_seas.name)}: ${escapeHtml(v.name)} (${escapeHtml(v.weatherName)})</option>`).join('');
     const dialog = UI.dialog({
@@ -480,6 +483,7 @@ export const game = {
           let id = dialog.box.querySelector('#velscour-biome').value;
           if (id.startsWith('skyship:')) { G.char.skyVariant = id.slice(8); id = 'skyship'; }
           if (id.startsWith('pirate_seas:')) { G.char.seaVariant = id.slice(12); id = 'pirate_seas'; }
+          if (REGIONS[id.split(':')[0]] && id.includes(':')) { (G.regionWant ||= {})[id.split(':')[0]] = id.split(':')[1]; id = id.split(':')[0]; } // a region's variant
           const biome = BIOME_BY_ID[id];
           if (biome) this.teleportToBiome(biome);
         } },
@@ -543,7 +547,7 @@ export const game = {
 
   // the art a level of this biome needs before it can be generated (the portal and Velscour's level select share it)
   loadLevelArt(biome, mix = null) {
-    if (regionOf(biome)) return regionOf(biome).load(biome); // a new region (game/regions.js)
+    if (regionOf(biome)) { rollRegionVariant(regionOf(biome)); return regionOf(biome).load(biome); } // a new region and its variant (game/regions.js)
     if (biome.id === 'sea_of_sand') { // the flat cliff maze (0) or one of the ten dune variants with their pyramids (src/data/dunes.js), never the one seen last
       const c = G.char, kept = c?.seaOfSandRuns?.[c.depth], n = DUNE_VARIANTS.length + 1, last = c?.lastSand ?? -1;
       const k = Math.floor(Math.random() * (n - (last >= 0 ? 1 : 0)));
