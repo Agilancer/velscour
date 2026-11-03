@@ -1,6 +1,7 @@
 // THE IRON EXPRESS (region id ghost_train; docs/GHOST_TRAIN.md): the run. Raiders have taken the night express; the
 // hero boards at the caboose and fights forward car by car while it runs (world/ghosttrain.js), and more of them leap
-// aboard from the line-side now and then. After the second and the fourth car are cleared it pulls in at a station:
+// aboard from the line-side now and then. Their lieutenant holds the prison car halfway along, and the line crosses a
+// gorge on an iron trestle. Five times, as the cars are cleared (STATIONS), it pulls in at a station:
 // the platform is walkable while it stands there (chests and raiders on it), and when it pulls out whoever is still
 // on it is left behind (the hero leaps back aboard). The raiders' chief holds the tender; once he falls the brakes go
 // on, the train runs into the Last Stop, and the exit opens on that platform. world.cave is the hook into render.js
@@ -17,12 +18,11 @@ import { dropChest } from './loot.js';
 import { addEffect, addLight, Telegraph, Ring, sparkle, smoke, burst, spawn, floatText } from '../gfx/vfx.js';
 import { lineTargets } from './hazards.js';
 import { depthLevel } from '../data/depth.js';
-import { FIGHT_CARS, TENDER, ENGINE, CABOOSE, CZ, ROW0, ROWS, PLAT0, PLAT1, PLAT_LEN, platformOn, platformOff, onPlatform, aboardSpot, carAt } from '../world/ghosttrain.js';
-import { buildTrain3D, tickTrain3D, drawTrain3D, trainStation, trainCutaway, trainVent, ENGINE_BOXES } from '../gfx/ghosttrain3d.js';
+import { FIGHT_CARS, TENDER, ENGINE, CABOOSE, CZ, ROW0, ROWS, PLAT0, PLAT1, PLAT_LEN, STATIONS, LT_CAR, GORGE_AFTER, platformOn, platformOff, onPlatform, aboardSpot, carAt } from '../world/ghosttrain.js';
+import { buildTrain3D, tickTrain3D, drawTrain3D, trainStation, trainCutaway, trainVent, trainGorge, trainGorgeX, ENGINE_BOXES } from '../gfx/ghosttrain3d.js';
 
 const V = 9, A = 3.2;                 // cruising speed (tiles a second) and braking
 const STOP = 30, WHISTLE = 8;         // seconds at a station; the warning before she pulls out
-const STATIONS = [{ after: 2, name: 'Hollowmere Halt' }, { after: 4, name: "Saint Vey's Crossing" }];
 const LAST = 'The Last Stop';
 const VZ1 = HW * Math.SQRT2 * Math.cos(Math.PI / 6);   // world px a unit of height
 /** How much deeper depths press (0 at depth 1, 1 from 150): boarders come sooner and more of them. */
@@ -31,6 +31,7 @@ const BARK = {
   coal: ["Stoke 'em!", 'Have some coal!', 'Shovel it on!'],
   vent: ['Open the firebox!', 'Let her blow!', 'Mind the steam!'],
   whistle: ['All hands!', 'Boys, to me!', 'Off my train!'],
+  lieutenant: ['Hold the line!', 'Lads! Over here!', 'Not past me!'],
 };
 
 /** The engine's silhouette on screen (world px): one convex hull of its boxes, for cutting sprites behind it. */
@@ -53,6 +54,16 @@ export function createGhostTrainRun(world, gen, biome, depth, onSuccess) {
   const exit = world.portals.find((q) => q.type === 'exit');
   if (exit) { exit.x = exit.y = -100; }   // the exit opens on the Last Stop's platform
   const p = () => world.player;
+  // the lieutenant on the prison car halfway along: a guardian a level under the chief, two thirds of his life, no
+  // affix (game.js spawns one guardian a level, world.boss; he is the run's own)
+  let lieutenant = null;
+  if (gen.lieutenant) {
+    const L = gen.lieutenant;
+    lieutenant = makeMonster(world, L.arch, biome, lvl + 1, 'boss', L.x, L.y, 0, L.look);
+    lieutenant.maxHp *= 0.66; lieutenant.hp = lieutenant.maxHp; lieutenant.affixes = []; lieutenant.lieutenant = true;
+    lieutenant.name = 'Lieutenant ' + lieutenant.name.replace(/^THE /, '');
+    world.add(lieutenant);
+  }
   // each fight car's pack (game.js has spawned them from gen.spawns)
   const packs = FIGHT_CARS.map(() => []);
   for (const m of world.creatures) {
@@ -64,20 +75,24 @@ export function createGhostTrainRun(world, gen, biome, depth, onSuccess) {
   // the chief is the ride's one big fight: a guardian's life (game.js) x1.0 at first, rising to x1.6 by depth 150
   // (deep down he otherwise fell in seconds)
   if (boss) { boss.maxHp *= 1 + 0.6 * press(depth); boss.hp = boss.maxHp; }
-  world.onBossAwake = (m) => { UI.centerMsg(m.name, 'He holds the engine', 3); sfx('boss'); };
+  world.onBossAwake = (m) => {
+    if (m === lieutenant) { UI.centerMsg(m.name, 'He holds the middle of the train', 3); floatText(m.x, m.y, (m.artH || 60) * (m.scale || 1) + 12, pick(BARK.lieutenant), '#ffc080', 16, { life: 1.6, vz: 18 }); sfx('boss', 0.7); return; }
+    UI.centerMsg(m.name, 'He holds the engine', 3); sfx('boss');
+  };
   const hull = engineHull();
 
   const run = {
     id: 'ghost_train', type: 'train', completed: false, failed: false, active: true, markers: [], route: [], stage: 0,
     shrine: { x: CABOOSE.x0 + 4, y: CZ, reach: 2, label: 'Caboose', use() {} },
     phase: 'run',          // run | brake | stop | leave | dying | last | done
-    speed: V, stationX: null, stop: null, nextStation: 0, stationsSeen: 0, fire: 1, t: 0,
+    speed: V, stationX: null, stop: null, nextStation: 0, stationsSeen: 0, stations: STATIONS.length, fire: 1, t: 0, gorge: 0, lieutenant,
     cleared: 0, carDone: FIGHT_CARS.map(() => false), boardT: 20, boarders: new Set(),
     chief: { t: 4, k: 0, whistles: [0.66, 0.33], casts: { coal: 0, vent: 0, whistle: 0 }, later: [] },
     get title() { return run.completed ? 'The Last Stop' : run.cleared >= FIGHT_CARS.length ? 'Stop the Engine' : 'Fight to the Engine'; },
     get description() {
       if (run.completed) return 'The train has stopped. The exit is open on the platform.';
       if (run.stop && run.phase === 'stop') return `${run.stop.name}: step off to loot, or stay aboard.`;
+      if (lieutenant && !lieutenant.dead && run.cleared >= LT_CAR) return 'Their lieutenant holds the prison car.';
       return run.cleared >= FIGHT_CARS.length ? "The raiders' chief holds the tender." : `Clear the cars: ${run.cleared}/${FIGHT_CARS.length}.`;
     },
     /** Seconds before she pulls out of the station she stands at (null: not at one). */
@@ -86,6 +101,7 @@ export function createGhostTrainRun(world, gen, biome, depth, onSuccess) {
     update(dt) { tick(dt); },
   };
   world.trainRun = run;
+  run.packs = packs;   // (each fight car's monsters: the test reads them)
 
   // ------------------------------------------------------------------ the renderer's hook (world.cave)
   const cr = world.cave = {
@@ -158,12 +174,12 @@ export function createGhostTrainRun(world, gen, biome, depth, onSuccess) {
   }
 
   // ------------------------------------------------------------------ stations
-  function station(name, last = false) {
+  function station(name, last = false, look = 'hall') {
     const pl = p();
     const x = Math.round(clamp(pl ? pl.x : CABOOSE.x0 + 12, CABOOSE.x0 + PLAT_LEN / 2 - 3, TENDER.x1 - PLAT_LEN / 2 + 2));
     run.stop = { name, x, last, t: 0, chests: [], whistled: false };
     run.stationX = x + 110; run.phase = 'brake'; run.stationsSeen += last ? 0 : 1;
-    trainStation(name);
+    trainStation(name, look);
     UI.centerMsg(name.toUpperCase(), last ? 'Brakes on. She runs into her last stop.' : 'A station ahead. She slows.', 3);
     sfx('bell', 0.8);
   }
@@ -178,7 +194,8 @@ export function createGhostTrainRun(world, gen, biome, depth, onSuccess) {
       world.chests.push(ch); S.chests.push(ch);
     };
     if (S.last) {
-      chest(S.x - 4, true); chest(S.x + 4, Math.random() < 0.5); chest(S.x + 0.5, false);
+      // the long ride pays: five chests, two of them rare
+      chest(S.x - 8, true); chest(S.x - 4, Math.random() < 0.5); chest(S.x + 0.5, false); chest(S.x + 4, true); chest(S.x + 8, false);
       if (exit) { exit.x = S.x - 0.5; exit.y = PLAT0 + 2.4; }
       finish();
       return;
@@ -347,13 +364,24 @@ export function createGhostTrainRun(world, gen, biome, depth, onSuccess) {
       UI.centerMsg(`CAR ${k + 1} CLEAR`, run.cleared >= FIGHT_CARS.length ? 'The tender. Their chief holds the engine.' : `${FIGHT_CARS.length - run.cleared} to go`, 2.2);
     });
     const st = STATIONS[run.nextStation];
-    if (st && run.cleared >= st.after && run.phase === 'run' && !run.completed) { run.nextStation++; station(st.name); }
+    if (st && run.cleared >= st.after && run.phase === 'run' && !run.completed && trainGorgeX() == null) { run.nextStation++; station(st.name, false, st.look); }
+    // the gorge: once, between stations, while she runs
+    if (!run.gorge && run.cleared >= GORGE_AFTER && run.phase === 'run' && !run.completed) {
+      run.gorge = 1; trainGorge();
+      UI.centerMsg("HANGMAN'S GORGE", 'She crosses on the old iron trestle.', 3); sfx('gate', 0.5);
+    }
     // the raiders' chief falls: the brakes go on, the train runs into the Last Stop
     if (boss && boss.dead && run.fire >= 1 && run.phase !== 'dying') {
       if (run.phase === 'stop' && run.stop && !run.stop.last) depart();
       run.phase = 'dying'; run.fire = 0.999; run.stop = null; run.stationX = null; run.speed = V;
       UI.centerMsg('THE ENGINE IS YOURS', 'Brakes on. She slows.', 3);
       sfx('gate', 0.7);
+    }
+    // the lieutenant whistles his men aboard once, at half his life
+    if (lieutenant && !lieutenant.dead && !lieutenant.whistled && lieutenant.hp < lieutenant.maxHp * 0.5) {
+      lieutenant.whistled = true; trainVent('whistle'); sfx('bell', 0.7);
+      floatText(lieutenant.x, lieutenant.y, (lieutenant.artH || 60) * (lieutenant.scale || 1) + 12, pick(BARK.whistle), '#ffc080', 16, { life: 1.6, vz: 18 });
+      board(2 + Math.round(press(depth)));
     }
     // the chief's fight with the train
     if (boss && !boss.dead) chiefTick(dt, boss.awake && pl && !pl.dead && Math.abs(pl.x - boss.x) < 14 && !onPlatform(pl.x, pl.y));
@@ -363,7 +391,7 @@ export function createGhostTrainRun(world, gen, biome, depth, onSuccess) {
       for (const m of run.boarders) if (m.dead) run.boarders.delete(m);
       if ((run.boardT -= dt) <= 0) {
         run.boardT = rand(22, 32) / (1 + 0.5 * press(depth));   // ~15-21 s from depth 150
-        if (run.boarders.size < 8 && run.cleared < FIGHT_CARS.length) board(2 + Math.min(3, run.cleared >> 1) + Math.round(press(depth)));   // none once the tender is reached
+        if (run.boarders.size < 8 && run.cleared < FIGHT_CARS.length) board(2 + Math.min(3, run.cleared >> 2) + Math.floor(press(depth)));   // none once the tender is reached
       }
     }
     // lamplight for the 2D darkness: the cars' lamps near the hero, the firebox, the headlamp, the station's lamps
