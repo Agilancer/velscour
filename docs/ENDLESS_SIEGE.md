@@ -4,6 +4,27 @@ A keep under siege by an undead horde that never stops coming: tower defence ins
 regions (docs/NEW_REGIONS.md). Reached from Velscour's skull: `siege`, `endless siege`, `the endless siege`,
 `hold the walls` (or the HAIL VELSCOUR! list). Never drawn into the biome rotation (`BETA_BIOMES`).
 
+## Five variants (November 2026)
+Each level rolls one of five keeps (`SIEGE_VARIANTS` in `src/world/siege.js`; the generic plumbing in
+`src/game/regions.js`: never the one seen last). The skull word plus a number, id or a piece of the name picks one
+(`siege 3`, `siege pass`, `siege swamp`); the HAIL VELSCOUR! list shows them all. Every variant keeps the same rules
+(gates held while the hero is inside, winches, ballistae, horn, resolve, the wall-walk by its stairs only).
+
+| # | Variant (`id`) | Keep | Ground and season | Horde, Gate-Breakers, lord | Twist |
+|---|---|---|---|---|---|
+| 1 | The Old Keep (`keep`) | square, 3 gates (2 south, 1 east), 4 corner towers, 3 ballistae, 4 stairs | the town pack's grass/mud/gravel; ember drift | skeletons, zombies, archers, ghouls, cultists, knights, wraiths, imps; golems/abominations; *Lord of the Endless Siege* | none: the plain siege |
+| 2 | The Frozen Border Fort (`frost`) | wide and shallow (43 x 29), 2 gates on the south wall, a 5th tower between them, 4 ballistae | the Castle pack's floors under a snow palette, pale ice glazing the field; snowfall; frost-blue dead (cold) | skeletons, archers, ghouls, wraiths, gargoyles, knights; golems; *Marshal of the White Death* | **ice** slows the dead 40% while they cross it; the wave before the last comes in a **blizzard** (ballistae see 60% as far, the dead +15% speed, dimmer, snow streaks) |
+| 3 | The Burning River Wall (`river`) | small square (33), 2 gates (the Bridge Gate south, the Mill Gate east), 3 stairs; two town houses inside | warm brick and setts, cart ruts; a river in an L round the town (sunk, three wide), one **bridge** before each gate, the only ways across; embers, often night | zombies, skeletons, archers, hounds, cultists, imps (fire); demons/abominations; *the Burning Lord* | **fire-pots** on the walk over each gate: tip one and burning oil hits every dead at the gate's foot for 90% of a monster's life and leaves the ground burning (refilled each lull; auto-play tips one at 4+ dead); the **fire wave** (before the last) comes burning, its blows on the gates count 1.5x |
+| 4 | The Mountain Pass Fortress (`pass`) | 30 x 30, **one** great gate, its east wall against the mountain, 2 ballistae (SW, SE), 4 stairs | grey grit and gravel; a winding gully up to the gate between crags that rise a step a tile away from it (blocked rock, pines and boulders on it); dust | skeletons, archers, ghouls, hounds, gargoyles, knights; golems; *King under the Pass* | **rockfalls**: every 3.5-6.5 s a telegraphed rock (meteor) falls on the dead in the pass more than 3 tiles out, 50-60% of a monster's life |
+| 5 | The Swamp Abbey (`mire`) | 37 x 33, 3 gates (the Abbey Gate south; the Mire and Bone Gates east), a flight on the east wall's inside | mossy brick, damp mud and puddles under a swamp palette; sunk green **mire pools** all over the field, willows and reeds; fireflies, permanent **fog** (dim) | zombies, ghouls, spiders, worms, cultists, shrooms (poison); abominations; *the Plague Abbot* | the dead **rise from the mire**: spawn points beside the pools from 6 tiles off the walls outwards (no far edge); the **plague** lord leaves a poison cloud every 4.5 s and, unlike the others, wears the resolve down (1.2/s) inside the walls |
+
+The layout (`siegeLayout(id)`) derives everything from a variant's two outer lines (`LX`, `LY`): the walls two deep
+inside them, the corner towers (plus extras), the ballistae on towers (feet in the courtyard), gate lines, flanks,
+passages and winches; `terrain(x, y)` adds the ground outside (rock, water, bridge, ice, pool). The run
+(`createSiegeRun`) reads `gen.lay`: its horde joins in roster order (3 kinds from wave 1, 2 more from wave 2, the rest
+from wave 3; the heavies as Gate-Breakers), its biome overrides (element, monster tint, blood, drift, torch) are laid
+over the biome for the level (`world.biome`, `world.ambientFx`), and its twist runs in `twistTick`.
+
 ## How it plays
 - **The map** (64 x 64): the keep's courtyard at the top of the screen (low x + y), the field the dead cross below it.
   A ring of height-mapped curtain wall (14 levels) with 5 x 5 corner towers (22) and raised gatehouse flanks (18),
@@ -61,11 +82,12 @@ was needed.
 
 ## Files
 - `src/game/regions/siege.js`: the registry entry (words, load, ready, generate, run, intro, quest, `castleArt`).
-- `src/world/siege.js`: `generateSiege(depth, biome, seed)`; layout constants (`RING`, `GATES`, `BALLISTAE`, `KEEP`,
-  `LV`, `STAIRS` + `stairTiles()`), `keepSprite()` for the Castle Keep pack's scatter.
+- `src/world/siege.js`: `SIEGE_VARIANTS`, `siegeLayout(id)`, `generateSiege(depth, biome, seed, variantId)`; `LV`,
+  `stairTiles()`, `keepSprite()` for the Castle Keep pack's scatter.
 - `src/game/siege.js`: `createSiegeRun()` (the waves, gates, winches, ballistae, resolve, objective, HUD).
 - `src/gfx/siege.js`: the portcullis, winch, ballista and standard drawing; `SiegeBolt` (the bolt effect).
-- `tools/tests/siege.js`: `node tools/tests/siege.js [shots|noshots] [auto|noauto] [depth]` (`SIEGE_CLASS=wizard`
+- `tools/tests/siege.js`: `node tools/tests/siege.js [shots|noshots] [auto|noauto] [depth] [variants|all]` (every
+  variant by default: 8 seeds each, the rules, the wall-walk and the twist in play, shots, auto-play; `SIEGE_CLASS=wizard`
   for another auto-play hero, `SIEGE_MORTAL=1` without god mode). The auto-play hero is geared the way
   `balance.js` gears one (level, the best of 200 drops of the last item levels, +upgrades, gems, mastery). It fails if
   the keep falls more than once every two waves.
@@ -78,20 +100,25 @@ Wall faces and wall-walk tops: the Castle pack's masonry (`gfx/castlewalls.js` F
 `castleRampartTops`). Ballistae (`keep_ballista`), winches (`chain_winch`), the standard (`royal_banner_stand`),
 cannon wrecks, braziers, stores and the courtyard flagstones: the Castle Keep biome pack. Stakes, barricades, stores:
 the Castle pack's scatter; tents: `castleTent`. Ground, buildings, dead trees: the town pack; bones, shields, banners:
-`gfx/overworldart.js`. Monsters: the biome roster's painted looks. The portcullis and the bolts are drawn in Canvas 2D.
-No three.js.
+`gfx/overworldart.js`. Monsters: the variant roster's painted looks. The portcullis and the bolts are drawn in Canvas 2D.
+No three.js. The other four variants' ground is the Castle pack's sixty floors (`castleFloorTiles(palette)`: grass,
+grit, setts, brick, mud and its moat waters for the river, the ice and the mire pools), recoloured per variant with the
+Castle variants' palettes (snow, swamp, grey stone, firelit), and their rampart tops tinted to match; the fire-pots
+are the Castle Keep pack's brazier with Canvas flames; trees, reeds, boulders and houses from the town pack.
 
 ## Status
-Playable, with a walkable wall-walk, and won by auto-play at every depth tried (the auto-play hero geared the way
-`balance.js` gears one; `node tools/tests/siege.js noshots auto <depth>`, game seconds):
+Playable in five variants, with a walkable wall-walk in each, and won by auto-play in every variant at every depth
+tried (the auto-play hero geared the way `balance.js` gears one; `node tools/tests/siege.js noshots auto <depth>`;
+falls = times the keep was overrun; game seconds):
 
-| Depth (waves) | Hero | Result |
-|---|---|---|
-| 8 (4) | paladin lvl 11, god | 4/4, keep never fell, ~210-260 s |
-| 150 (7) | paladin lvl 102, god / mortal | 7/7, never fell, no deaths, ~330 s |
-| 150 (7) | wizard lvl 102, god | 7/7, never fell, ~540 s (shoots from the walk over the gates) |
-| 320 (7) | paladin lvl 178, god / mortal | 7/7, never fell, no deaths, ~350-410 s |
-| 320 (7) | wizard lvl 178, mortal | 7/7, never fell, no deaths, ~410 s |
+| Depth (waves) | Hero | Old Keep | Frozen Fort | River Wall | Mountain Pass | Swamp Abbey |
+|---|---|---|---|---|---|---|
+| 8 (4) | paladin lvl 11-16, god | won, 0 falls, 261 s | won, 0, 164 s | won, 0, 188 s | won, 0, 146 s | won, 0, 215 s |
+| 150 (7) | paladin lvl 102-105, god | won, 0, 451 s | won, 0, 398 s | won, 0, 409 s | won, 0, 299 s | won, 0, 454 s |
+| 320 (7) | paladin lvl 178, mortal | won, 0, no deaths, 351 s | won, 0, no deaths, 397 s | won, 0, no deaths, 398 s | won, 0, no deaths, 266 s | won, 0, no deaths, 382 s |
+
+Before the variants (the Old Keep only): a wizard at 150 (god) and 320 (mortal) also won with no falls (~540 / 410 s),
+shooting from the walk over the gates.
 
 No tuning was needed: the waves already scale through `monsterBase(depthLevel(depth))` (monster life and blows,
 ballista bolts at 60% of a normal monster's life). The one weak spot is gear: the old lighter-geared test hero (4
@@ -100,6 +127,10 @@ rounds of 20 drops, no upgrades, gems or mastery) at depth 150 still wins but th
 and half the gates). `flow.js` passes.
 
 ## Next
+- Variants: the blizzard's snow streaks are thin at a glance; the mire's pools read best by day (the fog keeps it dim);
+  the river has no ford, so the dead file over two bridges (a third crossing or a ford would spread them).
+- Each variant's ground is one recoloured Castle palette; a variant's own walls (snow-capped merlons, charred timber
+  hoardings on the river wall, a mossy abbey) would set them further apart.
 - Defenders (garrison archers) on the walk; the dead's own archers could aim at a hero on the walls more often.
 - A lintel/arch over each gate passage (`castleSpan` in gfx/castlewalls.js could draw one) and gatehouse roofs; the
   walk is cut at each gate (a single-level height map has no bridge over the passage), so it runs in three stretches.

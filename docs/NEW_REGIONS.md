@@ -44,7 +44,7 @@ Integration branch: `feat/new-regions`. Each region was built on its own branch 
 | Region | Status | Doc | Test |
 |---|---|---|---|
 | The Iron Express (`ghost_train`) | playable beta (16 cars, 5 stations, a lieutenant halfway, Hangman's Gorge, the chief's train fight: coal lanes, steam vent, whistle; tuned and soaked by auto-play at depths 1, 50, 150, 300) | docs/GHOST_TRAIN.md | `tools/tests/ghosttrain.js [shots] [auto] [depths] [classes]` |
-| The Endless Siege | playable beta (gates, winches, ballistae, waves, a walkable wall-walk with stairs; auto-play wins at depths 8, 60, 150, 320 with no falls) | docs/ENDLESS_SIEGE.md | `tools/tests/siege.js` |
+| The Endless Siege | playable beta in five variants (the Old Keep, the Frozen Border Fort, the Burning River Wall, the Mountain Pass Fortress, the Swamp Abbey: own walls, gates, ground, horde, lord and twist); gates, winches, ballistae, waves, a walkable wall-walk with stairs; auto-play wins every variant at depths 8, 150, 320 with no falls | docs/ENDLESS_SIEGE.md | `tools/tests/siege.js [shots] [auto] [depth] [variants]` |
 | The Deep Rail Mines | playable beta (carts both ways: ride back up, back out of a junction; switches, tiered packs and levels, arched tunnel mouths, boss at the Bottom; auto-play wins it) | docs/DEEP_RAIL_MINES.md | `tools/tests/mines.js` |
 | The Great Hunt | playable from level 10 (`minLevel`): track by signs, three fights with flight and a blood trail, the kill in the lair; auto-play wins it without god mode at Depths 9 (level 10), 60 and 150 | docs/GREAT_HUNT.md | `tools/tests/hunt.js` |
 
