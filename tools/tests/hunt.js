@@ -1,15 +1,19 @@
-// THE GREAT HUNT (docs/GREAT_HUNT.md): reached through Velscour's skull ("hunt") from level 10 (`minLevel`): a level-9
-// hero is refused by the skull word, the HAIL VELSCOUR! list (greyed out), teleportToBiome and a saved portal; a
-// level-10 hero gets in. 40 seeds: 96 x 96, every clue, the
-// three hunting grounds, the lair, the exit and the caches reachable from the camp, three clues a leg. The hunt in play:
-// a sign read, the beast woken, its life gate (a huge hit only takes it to the flee mark), the flight down the next leg
-// with its blood trail, its wounds carried over to the next ground. Screenshots: the camp, a sign, the beast at bay,
-// the flight, the blood trail, the lair, an overview, the phone layout. Then auto-play tracks it down and kills it, with
-// no god mode: a level-10 hero at Depth 9, and heroes geared as balance.js does at Depths 60 and 150.
-//   node tools/tests/hunt.js [shots|noshots] [auto|noauto]      (start the server first: python3 -m http.server 8123)
+// THE GREAT HUNT (docs/GREAT_HUNT.md): reached through Velscour's skull ("hunt", "hunt 3", "hunt fen") from level 10
+// (`minLevel`): a level-9 hero is refused by the skull word, the HAIL VELSCOUR! list (the region and its five lands
+// greyed out), teleportToBiome and a saved portal; a level-10 hero gets in.
+// The five lands (data/huntlands.js) over 20 seeds each: 96 x 96, every clue, the three hunting grounds, the lair, the
+// exit and the caches reachable from the camp, three clues a leg, A* to the lair; the Crags' slope never steps more
+// than 3 levels and peaks at the lair; the Fen's pools stay off the trail. Each land in play: a sign read, the beast
+// woken, its life gate (a huge hit only takes it to the flee mark), the flight and its trail, its wounds carried over,
+// and its twist (the blizzard hides the marked sign; the poison pools; the burrower buried, erupting under the hero at a
+// sign and surfacing to fight; the winged beast flying to the next ground). Screenshots of each land (hunt_<land>_*.png).
+// Then auto-play hunts each land with no god mode: a level-10 hero at Depth 9; and two geared as balance.js does at
+// Depths 60 and 150. Then the phone layout.
+//   node tools/tests/hunt.js [shots|noshots] [auto|noauto] [lands]   (start the server first: python3 -m http.server 8123)
 const { openGame, report } = require('./harness');
 const SHOTS = process.argv[2] !== 'noshots';
 const AUTO = process.argv[3] !== 'noauto';
+const LANDS = (process.argv[4] || 'wood,tundra,fen,badlands,crags').split(',');
 const inHunt = () => window.VELSCOUR.G.world?.biome?.id === 'great_hunt';
 
 // a hero as balance.js builds one arriving at depth D: level, auto-play's stats and skills, the best of `rounds` x 25
@@ -48,6 +52,14 @@ async function gearHero(page, cls, D, lvl, rounds) {
     G.godMode = false;
   }, { cls, D, lvl, rounds });
 }
+// into the hunt on that land (null: let it roll)
+const enter = (page, land) => page.evaluate(async (land) => {
+  const { G, game } = window.VELSCOUR;
+  const { BIOME_BY_ID } = await import('/src/data/biomes.js');
+  if (land) (G.regionWant ||= {}).great_hunt = land;
+  await game.teleportToBiome(BIOME_BY_ID.great_hunt);
+  return G.world?.overworldScenario?.land?.id;
+}, land);
 
 (async () => {
   const { browser, page, errors, shot } = await openGame({ width: 1366, height: 860 });
@@ -68,22 +80,25 @@ async function gearHero(page, cls, D, lvl, rounds) {
       if (r.biome === 'great_hunt') errors.push(`[gate] ${what}: a level-9 hero got in`);
       return r.text;
     };
-    const listOption = async () => {
+    // the region's own option and its five lands' in the HAIL VELSCOUR! list
+    const listOptions = async () => {
       await page.click('#velscour-skull');
       await page.fill('#velscour-message', 'HAIL VELSCOUR!');
       await page.click('.velscour-contact-dialog button:has-text("Send")');
       return page.evaluate(() => {
-        const o = document.querySelector('#velscour-biome option[value="great_hunt"]'), r = o && { disabled: o.disabled, text: o.textContent };
+        const r = [...document.querySelectorAll('#velscour-biome option')].filter((o) => /^great_hunt(:|$)/.test(o.value)).map((o) => ({ value: o.value, disabled: o.disabled, text: o.textContent }));
         document.querySelector('.velscour-teleport-dialog button')?.click(); // Cancel
         return r;
       });
     };
-    await page.click('#velscour-skull');
-    await page.fill('#velscour-message', 'hunt');
-    await page.click('.velscour-contact-dialog button:has-text("Send")');
-    const line = await refused('skull word');
-    const opt = await listOption();
-    if (!opt || !opt.disabled || !/Reach level 10/.test(opt.text)) errors.push(`[gate] the HAIL VELSCOUR! list: ${JSON.stringify(opt)}`);
+    for (const word of ['hunt', 'hunt 3']) {
+      await page.click('#velscour-skull');
+      await page.fill('#velscour-message', word);
+      await page.click('.velscour-contact-dialog button:has-text("Send")');
+      await refused(word === 'hunt' ? 'skull word' : `skull word '${word}'`);
+    }
+    const opts = await listOptions();
+    if (opts.length !== 6 || opts.some((o) => !o.disabled || !/Reach level 10/.test(o.text))) errors.push(`[gate] the HAIL VELSCOUR! list: ${JSON.stringify(opts)}`);
     await page.evaluate(async () => { const { BIOME_BY_ID } = await import('/src/data/biomes.js'); await window.VELSCOUR.game.teleportToBiome(BIOME_BY_ID.great_hunt); });
     await refused('teleportToBiome');
     // a saved portal (an old save's nextBiome): redrawn, both in the portal dialog and on entering
@@ -98,131 +113,179 @@ async function gearHero(page, cls, D, lvl, rounds) {
     await page.waitForTimeout(300);
     await page.waitForFunction(() => document.querySelector('#loading').classList.contains('hidden'), null, { timeout: 30000 });
     if (portal.shown === 'great_hunt' || portal.entered === 'great_hunt' || await page.evaluate(inHunt)) errors.push(`[gate] a saved portal let a level-9 hero in: ${JSON.stringify(portal)}`);
-    // level 10: the list's option opens, and the skull word below takes him in
+    // level 10: the list's options open, and the skull word below takes him in
     await page.evaluate(async () => { const { G, game } = window.VELSCOUR; await game.enterTown(); G.char.level = 10; G.char.depth = 6; });
-    const opt10 = await listOption();
-    if (!opt10 || opt10.disabled || /Reach level/.test(opt10.text)) errors.push(`[gate] level 10: the list's option is still locked (${JSON.stringify(opt10)})`);
-    console.log('gate', JSON.stringify({ line, locked: opt?.text, open: opt10?.text, portal }));
+    const opts10 = await listOptions();
+    if (opts10.length !== 6 || opts10.some((o) => o.disabled || /Reach level/.test(o.text))) errors.push(`[gate] level 10: the list is still locked (${JSON.stringify(opts10)})`);
+    console.log('gate', JSON.stringify({ locked: opts.map((o) => o.text), open: opts10.length, portal }));
 
-    // ------------------------------------------------ reached through the skull (level 10)
+    // ------------------------------------------------ reached through the skull (level 10): 'hunt fen' picks the Fen
     await page.click('#velscour-skull');
-    await page.fill('#velscour-message', 'hunt');
+    await page.fill('#velscour-message', 'hunt fen');
     await page.click('.velscour-contact-dialog button:has-text("Send")');
     await page.waitForFunction(() => window.VELSCOUR.G.world?.biome?.id === 'great_hunt' && document.querySelector('#loading').classList.contains('hidden'), null, { timeout: 30000 });
     const first = await page.evaluate(async () => {
       const { G } = window.VELSCOUR;
       const { ART_BY_ID } = await import('/src/data/bestiary.js');
       const { HUNT_BEASTS } = await import('/src/game/hunt.js');
+      const { HUNT_LANDS } = await import('/src/data/huntlands.js');
+      const { ARCH } = await import('/src/data/enemies.js');
       const bad = [], w = G.world, sc = w.overworldScenario, m = w.map;
       if (m.w !== 96 || m.h !== 96) bad.push(`map is ${m.w} x ${m.h}`);
       if (!sc || sc.id !== 'great_hunt') bad.push('no hunt run');
+      if (sc.land.id !== 'fen') bad.push(`'hunt fen' built ${sc.land.id}`);
       if (!sc.beast || w.boss !== sc.beast) bad.push('the beast is not the level boss');
-      for (const b of HUNT_BEASTS) { const a = ART_BY_ID[b.art]; if (!a) bad.push(`beast art ${b.art} missing`); else if (!a.lone) bad.push(`${b.art} is not a giant`); }
+      if (!sc.land.beasts.some((b) => b.id === sc.def.id)) bad.push(`${sc.def.name} is not a beast of ${sc.land.name}`);
+      if (HUNT_LANDS.length !== 5) bad.push(`${HUNT_LANDS.length} lands`);
+      for (const b of HUNT_BEASTS) { const a = ART_BY_ID[b.art]; if (!a) bad.push(`beast art ${b.art} missing`); else if (!a.lone) bad.push(`${b.art} is not a giant`); if (!ARCH[b.brood]) bad.push(`${b.id}'s brood ${b.brood} is no archetype`); }
+      for (const L of HUNT_LANDS) {
+        for (const k of [...L.kinds0, ...L.kinds, 'blood']) { if (!L.text[k]) bad.push(`${L.id}: no text for ${k}`); if (!(k in L.clues)) bad.push(`${L.id}: no props for ${k}`); }
+        for (const a of L.roster) if (!ARCH[a]) bad.push(`${L.id}: roster ${a} is no archetype`);
+      }
       if (sc.clues.length !== 12) bad.push(`${sc.clues.length} clues`);
       if (!w.portals.some((q) => q.type === 'objective')) bad.push('no sign marked');
-      return { bad, title: sc.title, beast: sc.beast.name, art: sc.beast.art, hp: Math.round(sc.beast.maxHp), props: w.props.length, trees: w.props.filter((p) => p.tree).length, mobs: w.creatures.length };
+      return { bad, land: sc.land.name, title: sc.title, beast: sc.beast.name, art: sc.beast.art, hp: Math.round(sc.beast.maxHp), props: w.props.length, mobs: w.creatures.length, beasts: HUNT_BEASTS.length };
     });
     console.log('skull', JSON.stringify(first));
     for (const b of first.bad) errors.push('[skull] ' + b);
 
-    // ------------------------------------------------ 40 seeds
-    const gen = await page.evaluate(async () => {
+    // ------------------------------------------------ every land over 20 seeds
+    const gen = await page.evaluate(async (LANDS) => {
       const { BIOME_BY_ID } = await import('/src/data/biomes.js');
-      const { generateHunt } = await import('/src/world/hunt.js');
-      const biome = BIOME_BY_ID.great_hunt, bad = [], stats = [];
-      let ms = 0;
-      for (let n = 1; n <= 40; n++) {
-        const seed = n * 6151 + 3, t0 = performance.now();
-        let g;
-        try { g = generateHunt(6, biome, seed); } catch (e) { bad.push(`seed ${seed}: ${e.message}`); continue; }
-        ms = Math.max(ms, performance.now() - t0);
-        const m = g.map, W = m.w, I = (x, y) => Math.floor(y) * W + Math.floor(x), h = g.hunt;
-        const seen = new Uint8Array(W * m.h), q = [I(g.start[0], g.start[1])]; seen[q[0]] = 1;
-        for (let a = 0; a < q.length; a++) {
-          const i = q[a], x = i % W, y = (i / W) | 0;
-          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = I(x + dx, y + dy); if (m.walkableTile(x + dx, y + dy) && !seen[j]) { seen[j] = 1; q.push(j); } }
+      const { generateHunt, HK } = await import('/src/world/hunt.js');
+      const { loadSeaOfSandPack } = await import('/src/gfx/seaofsand.js');
+      await loadSeaOfSandPack(); // the Badlands' ground and cliffs
+      const biome = BIOME_BY_ID.great_hunt, bad = [], out = {};
+      for (const land of LANDS) {
+        const stats = [];
+        let ms = 0;
+        for (let n = 1; n <= 20; n++) {
+          const seed = n * 6151 + 3, t0 = performance.now();
+          let g;
+          try { g = generateHunt(6, biome, seed, land); } catch (e) { bad.push(`${land} seed ${seed}: ${e.message}`); continue; }
+          ms = Math.max(ms, performance.now() - t0);
+          const m = g.map, W = m.w, I = (x, y) => Math.floor(y) * W + Math.floor(x), h = g.hunt;
+          if (h.land !== land) bad.push(`${land} seed ${seed}: built ${h.land}`);
+          const seen = new Uint8Array(W * m.h), q = [I(g.start[0], g.start[1])]; seen[q[0]] = 1;
+          for (let a = 0; a < q.length; a++) {
+            const i = q[a], x = i % W, y = (i / W) | 0;
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = I(x + dx, y + dy); if (m.walkableTile(x + dx, y + dy) && (!m.hgt || m.stepOk(i, j)) && !seen[j]) { seen[j] = 1; q.push(j); } }
+          }
+          const need = [['exit', g.exit], ['lair', h.lair], ...h.grounds.map((p, k) => ['ground ' + k, p]), ...h.clues.map((c) => [`clue ${c.leg}.${c.n}`, [c.x, c.y]]), ...g.chests.map((c, k) => ['chest ' + k, [c.x, c.y]])];
+          for (const [what, p] of need) if (!seen[I(p[0], p[1])]) bad.push(`${land} seed ${seed}: ${what} unreachable`);
+          for (let leg = 0; leg < 4; leg++) if (h.clues.filter((c) => c.leg === leg).length !== 3) bad.push(`${land} seed ${seed}: leg ${leg} has ${h.clues.filter((c) => c.leg === leg).length} clues`);
+          for (const [k, path] of h.paths.entries()) { const off = path.filter(([x, y]) => !m.walkable(x, y)).length; if (off > 2) bad.push(`${land} seed ${seed}: leg ${k} has ${off} blocked trail points`); }
+          if (!m.findPath(g.start[0], g.start[1], h.lair[0], h.lair[1], 60000)) bad.push(`${land} seed ${seed}: A* finds no way to the lair`);
+          if (land === 'crags') {
+            if (!m.hgt) bad.push(`crags seed ${seed}: no height map`);
+            else {
+              let steep = 0, top = -1e9;
+              for (let y = 0; y < m.h; y++) for (let x = 0; x < W - 1; x++) {
+                const i = y * W + x;
+                if (!m.block[i] && !m.block[i + 1] && Math.abs(m.hgt[i] - m.hgt[i + 1]) > 3) steep++;
+                if (y < m.h - 1 && !m.block[i] && !m.block[i + W] && Math.abs(m.hgt[i] - m.hgt[i + W]) > 3) steep++;
+                if (!m.block[i]) top = Math.max(top, m.hgt[i]);
+              }
+              if (steep) bad.push(`crags seed ${seed}: ${steep} open steps over 3 levels`);
+              if (m.hgt[I(h.lair[0], h.lair[1])] < top - 3) bad.push(`crags seed ${seed}: the lair (${m.hgt[I(h.lair[0], h.lair[1])]}) is not the peak (${top})`);
+            }
+          } else if (m.hgt) bad.push(`${land} seed ${seed}: a height map`);
+          if (land === 'fen') {
+            if ((h.pools || []).length < 6) bad.push(`fen seed ${seed}: ${(h.pools || []).length} pools`);
+            for (const pl of h.pools || []) if (h.paths.some((pp) => pp.some((t) => Math.hypot(t[0] - pl.x, t[1] - pl.y) < pl.r + 1.5))) bad.push(`fen seed ${seed}: a pool on the trail`);
+          }
+          if (land === 'badlands' && !g.props.some((p) => p.spr?.cliff)) bad.push(`badlands seed ${seed}: no cliffs`);
+          stats.push({ open: seen.reduce((a, v) => a + v, 0), props: g.props.length, spawns: g.spawns.length, trail: h.paths.reduce((a, p) => a + p.length, 0) });
         }
-        const need = [['exit', g.exit], ['lair', h.lair], ...h.grounds.map((p, k) => ['ground ' + k, p]), ...h.clues.map((c) => [`clue ${c.leg}.${c.n}`, [c.x, c.y]]), ...g.chests.map((c, k) => ['chest ' + k, [c.x, c.y]])];
-        for (const [what, p] of need) if (!seen[I(p[0], p[1])]) bad.push(`seed ${seed}: ${what} unreachable`);
-        for (let leg = 0; leg < 4; leg++) if (h.clues.filter((c) => c.leg === leg).length !== 3) bad.push(`seed ${seed}: leg ${leg} has ${h.clues.filter((c) => c.leg === leg).length} clues`);
-        // the beast runs the trail: every leg's line on open ground, and A* from the camp to the lair
-        for (const [k, path] of h.paths.entries()) { const off = path.filter(([x, y]) => !m.walkable(x, y)).length; if (off > 2) bad.push(`seed ${seed}: leg ${k} has ${off} blocked trail points`); }
-        if (!m.findPath(g.start[0], g.start[1], h.lair[0], h.lair[1], 60000)) bad.push(`seed ${seed}: A* finds no way to the lair`);
-        const open = seen.reduce((a, v) => a + v, 0);
-        stats.push({ open, props: g.props.length, spawns: g.spawns.length, chests: g.chests.length, trail: h.paths.reduce((a, p) => a + p.length, 0) });
+        const avg = (k) => Math.round(stats.reduce((a, s) => a + s[k], 0) / Math.max(1, stats.length));
+        out[land] = { maxMs: Math.round(ms), open: avg('open'), trail: avg('trail'), props: avg('props'), packs: avg('spawns') };
       }
-      const avg = (k) => Math.round(stats.reduce((a, s) => a + s[k], 0) / Math.max(1, stats.length));
-      return { bad, maxMs: Math.round(ms), avg: { open: avg('open'), trail: avg('trail'), props: avg('props'), spawns: avg('spawns'), chests: avg('chests') } };
-    });
-    console.log('generation', JSON.stringify(gen));
-    for (const b of gen.bad) errors.push('[gen] ' + b);
+      return { bad, out };
+    }, LANDS);
+    console.log('generation', JSON.stringify(gen.out));
+    for (const b of gen.bad.slice(0, 30)) errors.push('[gen] ' + b);
 
-    // ------------------------------------------------ the hunt in play: a sign, the gate, the flight, the wounds kept
-    const play = await page.evaluate(async () => {
-      const { G, game } = window.VELSCOUR;
-      const { hit } = await import('/src/game/combat.js');
-      const { bakedDecals } = await import('/src/gfx/vfx.js');
-      const w = G.world, sc = w.overworldScenario, m = sc.beast, p = G.player, bad = [], out = {};
-      G.godMode = true;
-      const tick = (n) => { for (let i = 0; i < n; i++) { G.time += 1 / 30; game.update(1 / 30); } };
-      for (const c of w.creatures) if (c !== p && c !== m && c.team === 'enemy') c.dead = true;
-      tick(2);
-      // a sign read by walking up to it, and the next one marked
-      const c0 = sc.clues[0];
-      p.x = c0.x; p.y = c0.y + 0.5; tick(3);
-      if (!c0.read) bad.push('the first sign was not read');
-      const mk = w.portals.find((q) => q.type === 'objective');
-      if (!mk || Math.hypot(mk.x - sc.clues[1].x, mk.y - sc.clues[1].y) > 0.1) bad.push('the second sign is not marked');
-      // up to the beast: it wakes, the fight starts
-      const g0 = [m.x, m.y];
-      p.x = g0[0] + 3; p.y = g0[1] + 3; tick(30);
-      if (sc.phase !== 'fight') bad.push('the beast did not wake (phase ' + sc.phase + ')');
-      // a hit for its whole life: the gate holds it at the flee mark
-      hit(p, m, m.maxHp * 5, 'phys', { crit: false });
-      out.afterBigHit = Math.round(m.hp / m.maxHp * 100);
-      if (m.dead) bad.push('one hit killed it at the first ground');
-      else if (Math.abs(m.hp / m.maxHp - 0.75) > 0.01) bad.push(`the gate held it at ${out.afterBigHit}%, not 75%`);
-      const dec0 = bakedDecals.length;
-      tick(2);
-      if (sc.phase !== 'flee' || sc.stage !== 1) bad.push(`no flight after the gate (phase ${sc.phase}, stage ${sc.stage})`);
-      if (m.targetable !== false) bad.push('the fleeing beast can be hit');
-      // let it run; the hero stays put, so it leaves his sight and parks on the next ground
-      let t = 0;
-      while (sc.phase === 'flee' && t < 30) { tick(15); t += 0.5; }
-      const g1 = sc.clues.length && sc.phase === 'track' ? [m.x, m.y] : null;
-      out.fleeSecs = t;
-      if (sc.phase !== 'track') bad.push('the beast never reached the next ground');
-      else {
-        const want = w.map.hunt.anchors[2];
-        if (Math.hypot(g1[0] - want[0], g1[1] - want[1]) > 0.5) bad.push('it parked away from the second ground');
-      }
-      out.blood = bakedDecals.length - dec0;
-      if (out.blood < 20) bad.push(`only ${out.blood} blood splats down the trail`);
-      out.carried = Math.round(m.hp / m.maxHp * 100);
-      if (out.carried !== 75) bad.push(`its wounds did not carry over (${out.carried}%)`);
-      if (m.awake || m.targetable === false) bad.push('it is not resting on the new ground');
-      // the second leg's first clue is marked
-      const c3 = sc.clues.find((c) => c.leg === 1 && c.n === 0), mk2 = w.portals.find((q) => q.type === 'objective');
-      if (!mk2 || Math.hypot(mk2.x - c3.x, mk2.y - c3.y) > 0.1) bad.push('the blood trail\'s first sign is not marked');
-      out.title = sc.title;
-      return { bad, ...out };
-    });
-    console.log('play', JSON.stringify(play));
-    for (const b of play.bad) errors.push('[play] ' + b);
+    // ------------------------------------------------ each land in play: a sign, the gate, the flight, the wounds kept, the twist
+    for (const land of LANDS) {
+      await enter(page, land);
+      const play = await page.evaluate(async () => {
+        const { G, game } = window.VELSCOUR;
+        const { hit } = await import('/src/game/combat.js');
+        const { bakedDecals } = await import('/src/gfx/vfx.js');
+        const { Area, Delayed } = await import('/src/game/hazards.js');
+        const w = G.world, sc = w.overworldScenario, m = sc.beast, p = G.player, bad = [], out = { land: sc.land.id, beast: m.name }, twist = sc.land.twist;
+        G.godMode = true;
+        const tick = (n, each) => { for (let i = 0; i < n; i++) { G.time += 1 / 30; game.update(1 / 30); if (each) each(); } };
+        for (const c of w.creatures) if (c !== p && c !== m && c.team === 'enemy') c.dead = true;
+        tick(2);
+        if (twist === 'burrow' && (m.alpha !== 0 || m.targetable !== false)) bad.push('the burrower is not under the sand');
+        if (twist === 'mire') { out.pools = w.hazards.filter((h) => h instanceof Area && h.fx === 'poison').length; if (out.pools < 6) bad.push(`${out.pools} poison pools`); }
+        // a sign read by walking up to it, and the next one marked
+        const c0 = sc.clues[0];
+        p.x = c0.x; p.y = c0.y + 0.5; tick(3);
+        if (!c0.read) bad.push('the first sign was not read');
+        if (twist === 'burrow' && !w.hazards.some((h) => h instanceof Delayed && Math.hypot(h.x - p.x, h.y - p.y) < 1.5)) bad.push('no eruption under the hero at the sign');
+        const mk = w.portals.find((q) => q.type === 'objective');
+        if (!mk || Math.hypot(mk.x - sc.clues[1].x, mk.y - sc.clues[1].y) > 0.1) bad.push('the second sign is not marked');
+        // the White Waste: a blizzard hides the marked sign, and lifts again
+        if (twist === 'blizzard') {
+          sc.storm.t = 0; tick(2);
+          if (!sc.storm.on || w.portals.some((q) => q.type === 'objective')) bad.push('the blizzard did not hide the trail');
+          sc.storm.t = 0; tick(2);
+          if (sc.storm.on || !w.portals.some((q) => q.type === 'objective')) bad.push('the trail did not show again after the blizzard');
+        }
+        // up to the beast: it wakes, the fight starts
+        p.x = m.x + 3; p.y = m.y + 3; tick(30);
+        if (sc.phase !== 'fight') bad.push('the beast did not wake (phase ' + sc.phase + ')');
+        if (twist === 'burrow' && (m.alpha !== 1 || m.targetable === false)) bad.push('the burrower did not surface to fight');
+        // a hit for its whole life: the gate holds it at the flee mark
+        const drunk = () => Object.values(G.char.potions).reduce((a, v) => a + v, 0), pot0 = drunk();
+        hit(p, m, m.maxHp * 5, 'phys', { crit: false });
+        out.afterBigHit = Math.round(m.hp / m.maxHp * 100);
+        if (m.dead) bad.push('one hit killed it at the first ground');
+        else if (Math.abs(m.hp / m.maxHp - 0.75) > 0.01) bad.push(`the gate held it at ${out.afterBigHit}%, not 75%`);
+        const dec0 = bakedDecals.length;
+        tick(2);
+        if (sc.phase !== 'flee' || sc.stage !== 1) bad.push(`no flight after the gate (phase ${sc.phase}, stage ${sc.stage})`);
+        if (m.targetable !== false) bad.push('the fleeing beast can be hit');
+        // let it go; the hero stays put, so it leaves his sight and parks on the next ground
+        let t = 0, zMax = 0, aMin = 1;
+        while (sc.phase === 'flee' && t < 30) { tick(15, () => { zMax = Math.max(zMax, m.z || 0); aMin = Math.min(aMin, m.alpha ?? 1); }); t += 0.5; }
+        out.fleeSecs = t;
+        if (twist === 'wings' && zMax < 40) bad.push(`it never took wing (z ${Math.round(zMax)})`);
+        if (twist === 'burrow' && aMin > 0.05) bad.push('it never went under the sand');
+        if (sc.phase !== 'track') bad.push('the beast never reached the next ground');
+        else if (Math.hypot(m.x - w.map.hunt.anchors[2][0], m.y - w.map.hunt.anchors[2][1]) > 0.5) bad.push('it parked away from the second ground');
+        out.trail = bakedDecals.length - dec0;
+        if (out.trail < 15) bad.push(`only ${out.trail} splats on its trail`);
+        out.carried = Math.round(m.hp / m.maxHp * 100);
+        if (out.carried !== 75) bad.push(`its wounds did not carry over (${out.carried}%)`);
+        if (m.awake || (twist !== 'burrow' && m.targetable === false)) bad.push('it is not resting on the new ground');
+        if (twist === 'burrow' && !m.buried) bad.push('it is not back under the sand');
+        if (m.z) bad.push('it is still in the air');
+        const c3 = sc.clues.find((c) => c.leg === 1 && c.n === 0), mk2 = w.portals.find((q) => q.type === 'objective');
+        if (!sc.storm?.on && (!mk2 || Math.hypot(mk2.x - c3.x, mk2.y - c3.y) > 0.1)) bad.push('the next leg\'s first sign is not marked');
+        out.potions = w.loot.filter((l) => l.kind === 'potion').length + Math.max(0, drunk() - pot0); // (on the ground, or already picked up)
+        if (out.potions < 3) bad.push(`no hunter's satchel (${out.potions} potions)`);
+        G.godMode = false;
+        return { bad, ...out };
+      });
+      console.log('play', JSON.stringify(play));
+      for (const b of play.bad) errors.push(`[play ${land}] ` + b);
+    }
 
-    // ------------------------------------------------ screenshots
+    // ------------------------------------------------ screenshots of each land
     if (SHOTS) {
-      await page.evaluate(async () => { const { G, game } = window.VELSCOUR; const { BIOME_BY_ID } = await import('/src/data/biomes.js'); G.huntBeast = 'moon_eater'; await game.teleportToBiome(BIOME_BY_ID.great_hunt); G.godMode = true; });
       const at = async (name, fn, zoom = 1, steps = 12) => {
         await page.evaluate(async ([src, zoom, steps]) => {
           const { G, game } = window.VELSCOUR;
           const { camera } = await import('/src/core/view.js');
           const w = G.world, m = w.map, p = G.player, sc = w.overworldScenario;
           const r = new Function('G', 'w', 'm', 'p', 'sc', src)(G, w, m, p, sc);
-          if (r) { p.x = r[0]; p.y = r[1]; }
+          if (r) { const q = m.walkable(r[0], r[1]) ? r : m.randomNear(r[0], r[1], 2.5) || r; p.x = q[0]; p.y = q[1]; }
           p.moveVec = [0, 0]; p.path = null;
           G.settings.zoom = zoom; camera.computeZoom();
-          m.reveal(p.x, p.y, 16);
+          m.reveal(p.x, p.y, zoom < 0.5 ? 70 : 16);
           for (let i = 0; i < steps; i++) { G.time += 1 / 30; game.update(1 / 30); }
           camera.follow(p.x, p.y, 0, true);
           game.render();
@@ -230,31 +293,33 @@ async function gearHero(page, cls, D, lvl, rounds) {
         await page.waitForTimeout(150);
         await shot('hunt_' + name);
       };
-      await at('camp', 'return [w.map.hunt.anchors[0][0] + 1, w.map.hunt.anchors[0][1] + 1];');
-      await at('sign', 'const c = sc.clues[0]; return [c.x + c.nx * 2.5, c.y + c.ny * 2.5];', 1.3);
-      await at('sign2', 'const c = sc.clues[1]; return [c.x + 1.5, c.y + 1.5];', 1.3);
-      await at('beast', 'const g = w.map.hunt.anchors[1]; return [g[0] + 5, g[1] + 5];', 1, 40);
-      await at('fight', 'const b = sc.beast; return [b.x + 2.5, b.y + 2.5];', 1, 60);
-      // the flight: the gate, a moment of running
-      // the flight: a blow to its flee mark, then a moment of running
-      await page.evaluate(async () => { const { G } = window.VELSCOUR; const { hit } = await import('/src/game/combat.js'); const b = G.world.overworldScenario.beast; hit(G.player, b, b.maxHp, 'phys', { crit: false }); });
-      await at('flee', 'return null;', 1, 45);
-      await at('blood_trail', 'const path = w.map.hunt.paths[1]; const q = path[Math.floor(path.length * 0.3)]; return [q[0], q[1]];', 1, 120);
-      await at('lair', 'const l = w.map.hunt.anchors[4]; return [l[0] + 4, l[1] + 4];', 1);
-      await at('overview', 'return [48, 48];', 0.3);
-      await page.evaluate(async () => { const { G } = window.VELSCOUR; const { camera } = await import('/src/core/view.js'); G.settings.zoom = 1; camera.computeZoom(); G.huntBeast = undefined; });
+      for (const land of LANDS) {
+        await enter(page, land);
+        await page.evaluate(() => { const { G } = window.VELSCOUR; G.godMode = true; for (const c of G.world.creatures) if (c.team === 'enemy' && c !== G.world.boss && Math.hypot(c.x - G.player.x, c.y - G.player.y) < 30) c.dead = true; });
+        await at(land + '_camp', 'return [w.map.hunt.anchors[0][0] + 1, w.map.hunt.anchors[0][1] + 1];');
+        await at(land + '_sign', 'const c = sc.clues[1]; return [c.x + c.nx * 1.5, c.y + c.ny * 1.5];', 1.3);
+        await at(land + '_fight', 'const b = sc.beast; return [b.x + 3, b.y + 3];', 1, 70);
+        // the flight: a blow to its flee mark, then a moment of running
+        await page.evaluate(async () => { const { G } = window.VELSCOUR; const { hit } = await import('/src/game/combat.js'); const b = G.world.overworldScenario.beast; hit(G.player, b, b.maxHp, 'phys', { crit: false }); });
+        await at(land + '_flee', 'return null;', 1, 40);
+        if (land === 'tundra') { await page.evaluate(() => { window.VELSCOUR.G.world.overworldScenario.storm.t = 0; }); await at('tundra_blizzard', 'const c = sc.clues[3]; return [c.x + 1, c.y + 1];', 1, 30); }
+        await at(land + '_lair', 'const l = w.map.hunt.anchors[4]; return [l[0] + 4, l[1] + 4];', 1);
+        await at(land + '_overview', 'return [48, 48];', 0.3);
+        await page.evaluate(async () => { const { G } = window.VELSCOUR; const { camera } = await import('/src/core/view.js'); G.settings.zoom = 1; camera.computeZoom(); G.godMode = false; });
+      }
     }
 
-    // ------------------------------------------------ auto-play tracks the beast down and kills it, no god mode:
-    // a level-10 hero at Depth 9 (the floor of the gate) and geared heroes at Depths 60 and 150
+    // ------------------------------------------------ auto-play hunts each land, no god mode: a level-10 hero at Depth 9
+    // (the gate's floor) on every land, then geared heroes at Depths 60 and 150 on lands of their own
     if (AUTO) {
-      for (const [cls, D, lvl, rounds] of [['paladin', 9, 10, 3], ['wizard', 60, 61, 8], ['ranger', 150, 102, 8]]) {
+      const runs = [...LANDS.map((land, i) => [['paladin', 'necromancer', 'wizard', 'ranger', 'death_knight'][i % 5], 9, 10, 3, land]),
+        ['wizard', 60, 61, 8, LANDS[1 % LANDS.length]], ['ranger', 150, 102, 8, LANDS[4 % LANDS.length]]];
+      for (const [cls, D, lvl, rounds, land] of runs) {
         await gearHero(page, cls, D, lvl, rounds);
+        await enter(page, land);
         const res = await page.evaluate(async () => {
           const { G, game } = window.VELSCOUR;
           const { Auto } = await import('/src/game/autoplay.js');
-          const { BIOME_BY_ID } = await import('/src/data/biomes.js');
-          await game.teleportToBiome(BIOME_BY_ID.great_hunt);
           Auto.toggle(true);
           const t0 = performance.now();
           let sim = 0, fight = 0, dodge = 0;
@@ -270,12 +335,12 @@ async function gearHero(page, cls, D, lvl, rounds) {
             await new Promise((r) => setTimeout(r, 0));
           }
           Auto.toggle(false);
-          return { level: G.char.level, secs: Math.round(sim), fighting: Math.round(fight), dodging: Math.round(dodge), completed: sc.completed, died: p.dead || G.world !== w, beast: sc.def.name, life: sc.life, log: log.join(' | '), exit: w.portals.find((q) => q.type === 'exit')?.active };
+          return { land: sc.land.id, level: G.char.level, secs: Math.round(sim), fighting: Math.round(fight), dodging: Math.round(dodge), completed: sc.completed, died: p.dead || G.world !== w, beast: sc.def.name, life: sc.life, log: log.join(' | '), exit: w.portals.find((q) => q.type === 'exit')?.active };
         });
         console.log(`auto-play ${cls} L${lvl} D${D}`, JSON.stringify(res));
-        if (!res.completed) errors.push(`[auto ${cls} D${D}] did not finish the hunt in ${res.secs}s${res.died ? ' (died)' : ''} (${res.log})`);
-        else if (!res.exit) errors.push(`[auto ${cls} D${D}] the exit did not open`);
-        if (SHOTS) { await page.evaluate(() => window.VELSCOUR.game.render()); await shot(`hunt_auto_end_d${D}`); }
+        if (!res.completed) errors.push(`[auto ${cls} D${D} ${res.land}] did not finish the hunt in ${res.secs}s${res.died ? ' (died)' : ''} (${res.beast}: ${res.log})`);
+        else if (!res.exit) errors.push(`[auto ${cls} D${D} ${res.land}] the exit did not open`);
+        if (SHOTS) { await page.evaluate(() => window.VELSCOUR.game.render()); await shot(`hunt_auto_end_${res.land}_d${D}`); }
       }
     }
 
@@ -287,8 +352,9 @@ async function gearHero(page, cls, D, lvl, rounds) {
         const { BIOME_BY_ID } = await import('/src/data/biomes.js');
         await game.newChar('ranger', 'Phone');
         G.char.level = 10; // the hunt opens at level 10
+        (G.regionWant ||= {}).great_hunt = 'crags';
         await game.teleportToBiome(BIOME_BY_ID.great_hunt);
-        const c = G.world.overworldScenario.clues[0], p = G.player; p.x = c.x + 2; p.y = c.y + 2;
+        const c = G.world.overworldScenario.clues[0], p = G.player; p.x = c.x; p.y = c.y;
         for (let i = 0; i < 20; i++) { G.time += 1 / 30; game.update(1 / 30); }
         game.render();
       });
