@@ -13,12 +13,46 @@ import { CARS, ENGINE, TENDER, CABOOSE, CZ, ROW0, ROWS, PLAT0, PLAT1, PLAT_LEN, 
 const MID = Math.round((CABOOSE.x0 + ENGINE.x1) / 2), LAND = ENGINE.x1 - CABOOSE.x0 + 240;
 
 const SC = HW * Math.SQRT2;   // world px a unit across the screen
-const SKY = 0x141a26;         // the night beyond the lamps
 let T = null, BGU = null, R = null, S = null;
+/** The five variants' looks (world/ghosttrain.js VARIANTS has their play): the sky and lights; the ground (a Depth's
+ *  Edge seamless tile, tinted; null: the painted meadow) and the sea; the livery (material colours over the defaults);
+ *  the scenery (tree style, colours, what stands far and near); the scenic beat's colours; the engine's front. */
+const LOOKS = {
+  forest: {
+    sky: 0x141a26, hemi: [0xa8b8d8, 0x302418, 1.15], amb: [0x505868, 0.45], moon: [0xd0dcff, 0.9], ground: null, ballast: 0xffffff,
+    livery: {}, trees: 'leaf', far: [['tree', 0.5], ['pole', 0.16], ['bush', 0.19], ['rock', 0.15]], near: [['bush', 0.5], ['rock', 0.3], ['tree', 0.2]],
+    beat: { chasm: 0x07090d, floor: 0x1a2a3a, floorW: 2.2, wall: 0x6a6a64 }, front: 'ram',
+  },
+  frost: {
+    sky: 0x1c2433, hemi: [0xd0e0f8, 0x404a5c, 1.3], amb: [0x607088, 0.5], moon: [0xe0ecff, 1.0], ground: ['snowG', 0xeef2f8, 4], ballast: 0xb8c0cc,
+    livery: { blood: 0x1e3c62, redMetal: 0x2a4a72, cloth: 0x1e3c72, slate: 0xffffff, slateTex: 'roofSnow', leaf: 0x203a30, trunk: 0x3a2c22, rock: 0xd8e0ea, bush: 0xeef2f8 },
+    trees: 'pine', far: [['tree', 0.6], ['pole', 0.14], ['bush', 0.12], ['rock', 0.14]], near: [['bush', 0.5], ['rock', 0.3], ['tree', 0.2]],
+    beat: { wall: 0x5a6270, cap: 0xeef2f8 }, front: 'plough',
+  },
+  badlands: {
+    sky: 0x8a6440, hemi: [0xffe4b8, 0x7a5434, 1.7], amb: [0x8a7058, 0.6], moon: [0xfff0d0, 1.5], ground: ['sandG', 0xd8a870, 4], ballast: 0xc8a882,
+    livery: { blood: 0xb8884e, redMetal: 0x8a5a30, cloth: 0xd0b890, wheel: 0x6a3a1a, leaf: 0x4a6a34, trunk: 0x5a7a3a, rock: 0xb0744a, bush: 0x8a7a48 },
+    trees: 'cactus', far: [['mesa', 0.3], ['tree', 0.25], ['pole', 0.15], ['rock', 0.3]], near: [['bush', 0.45], ['rock', 0.4], ['tree', 0.15]],
+    beat: { chasm: 0x3a2414, floor: 0x8a6a40, floorW: 3.5, wall: 0xa06a40 }, front: 'canopy',
+  },
+  storm: {
+    sky: 0x0e161c, hemi: [0x98b0c0, 0x202a30, 1.0], amb: [0x40505a, 0.45], moon: [0xb8d0e0, 0.7], ground: ['rockG', 0x5a6658, 4], ballast: 0x9098a0,
+    sea: ['waterG', 0x4a7484], livery: { blood: 0x1e4a3a, redMetal: 0x2a3e34, cloth: 0x1e4a3a, leaf: 0x34482a, rock: 0x4a5258, bush: 0x3a4a2a },
+    trees: 'leaf', far: [['rock', 0.7], ['pole', 0.3]], near: [['bush', 0.55], ['rock', 0.45]],
+    beat: { wall: 0x7a7a74 }, front: 'bell',
+  },
+  cinder: {
+    sky: 0x1a0806, hemi: [0xff9a70, 0x400a04, 1.0], amb: [0x502018, 0.5], moon: [0xffa070, 0.6], ground: ['ashG', 0x4a3a34, 4], ballast: 0x6a5a50,
+    livery: { blood: 0x2c2826, redMetal: 0x5a1a10, cloth: 0x8a2a10, trunk: 0x1a1412, rock: 0x2a2220, bush: 0x5a1a0a },
+    trees: 'dead', far: [['tree', 0.35], ['pole', 0.15], ['rock', 0.3], ['bush', 0.2]], near: [['rock', 0.6], ['bush', 0.25], ['tree', 0.15]],
+    beat: { chasm: 0x1a0604, floor: 0xff5a14, floorW: 9, glow: true, wall: 0x2a2220 }, front: 'grates',
+  },
+};
+const lookOf = (id) => LOOKS[id] || LOOKS.forest;
 
 // The repo's own textures (the airship pack's planks and metals, the castle bake's brick, slate and stone; no new
 // art): [file, units a repeat across, grey (tinted by the material's colour) or natural, mean brightness wanted].
-const AIR = 'assets/source/airship/textures/', CST = 'assets/source/castle3d/tex/';
+const AIR = 'assets/source/airship/textures/', CST = 'assets/source/castle3d/tex/', DEC = 'assets/tiles/depths_edge/';
 const TEX = {
   boards: [AIR + 'ship_planks/SHIP-06_Salt_Bleached_Greyboards.png', 1.6, true, 0.82],   // painted car sides
   deck: [AIR + 'ship_planks/SHIP-02_Salt_Worn_Oak.png', 1.6, false, 0.4],               // car floors
@@ -30,8 +64,12 @@ const TEX = {
   brass: [AIR + 'metal/MET-09_Oxide_Stained_Brass.png', 0.8, false, 0.62],
   brick: [CST + 'brick.png', 1.4, false, 0],
   slate: [CST + 'slate.png', 1.6, false, 0],
+  roofSnow: [CST + 'roof_snow.png', 1.6, false, 0],                                     // the frozen pass's roofs
   stone: [CST + 'ashlar.png', 1.5, true, 0.8],                                            // the platforms
   cloth: [AIR + 'sailcloth/CLOTH-01_Coarse_Sail_Canvas.png', 1.0, true, 0.75],        // banners
+  // the variants' ground and sea: the Depth's Edge seamless tiles, greyed and tinted (LOOKS)
+  snowG: [DEC + 'tex/DEC-06.webp', 4, true, 0.85], sandG: [DEC + 'tex/DEC-10.webp', 4, true, 0.7], rockG: [DEC + 'tex/DEC-01.webp', 4, true, 0.55],
+  ashG: [DEC + 'tex/DEC-04.webp', 4, true, 0.45], waterG: [DEC + 'water/DEC-WS01.webp', 6, true, 0.5, [0, 0, 512, 512]],
 };
 const IMG = {};
 const loadImg = (src) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('no ' + src)); i.src = src; });
@@ -43,10 +81,11 @@ export async function loadTrain3D() {
 }
 /** A texture from IMG[key], greyed (to be tinted) or not, brought to a mean brightness; null if it didn't load. */
 function texOf(key) {
-  const img = IMG[key], [, , grey, mean] = TEX[key];
+  const img = IMG[key], [, , grey, mean, crop] = TEX[key];
   if (!img) return null;
-  const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
-  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0);
+  const c = document.createElement('canvas'); c.width = crop ? crop[2] : img.naturalWidth; c.height = crop ? crop[3] : img.naturalHeight;
+  const x = c.getContext('2d', { willReadFrequently: true });
+  if (crop) x.drawImage(img, crop[0], crop[1], crop[2], crop[3], 0, 0, crop[2], crop[3]); else x.drawImage(img, 0, 0);
   if (grey || mean) {
     const id = x.getImageData(0, 0, c.width, c.height), d = id.data, n = d.length / 4;
     let sum = 0; for (let i = 0; i < d.length; i += 4) sum += (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11) / 255;
@@ -152,7 +191,7 @@ function kit() {
     },
   };
 }
-function mats() {
+function mats(lv = {}) {
   const tex = {};
   for (const k in TEX) tex[k] = texOf(k);
   /** A Lambert material: flat `c`, or texture `key` tinted `tint` (white: its own colours) when it loaded. */
@@ -164,12 +203,12 @@ function mats() {
   };
   return {
     // a war engine's palette: dark riveted iron, bronze, deep red; boards and oak where wood shows; brick, slate, stone
-    blood: L(0x7a1a14, 'boards', 0x8e2018), iron: L(0x2a2a30, 'iron', 0x4a4a54), dark: L(0x26282e, 'gun', 0x3c3e48),
-    redMetal: L(0x7a1a14, 'rust', 0x9a2016), wheel: L(0x8a1a12, 'rust', 0xa8241a), bronze: L(0xa07040, 'brass', 0xd09a68),
+    blood: L(lv.blood ?? 0x7a1a14, 'boards', lv.blood ?? 0x8e2018), iron: L(0x2a2a30, 'iron', 0x4a4a54), dark: L(0x26282e, 'gun', 0x3c3e48),
+    redMetal: L(lv.redMetal ?? 0x7a1a14, 'rust', lv.redMetal ?? 0x9a2016), wheel: L(lv.wheel ?? 0x8a1a12, 'rust', lv.wheel ?? 0xa8241a), bronze: L(0xa07040, 'brass', 0xd09a68),
     wood: L(0x7a5a3a, 'deck', 0xd8c0a0), crate: L(0x8a6a40, 'crate'), cedar: L(0x7a5a3a, 'cedar'), deck: L(0x7a5a3a, 'deck', 0xd8b890),
-    black: L(0x1d1d20, 'iron', 0x3a3a40), steel: L(0x5c5e62, 'gun', 0x9a9ca2), cloth: L(0x8a1810, 'cloth', 0x9a1c14),
-    cream: L(0xd8c8a0), coal: L(0x18181a), stone: L(0x8a847a, 'stone', 0xb0a898), brick: L(0x8a4a34, 'brick'), slate: L(0x3a3e48, 'slate', 0xa8acb8),
-    rail: L(0xa0a0a4), trunk: L(0x4a3424), leaf: L(0x2a4a2c), rock: L(0x6a6a64), pole: L(0x5a4430),
+    black: L(0x1d1d20, 'iron', 0x3a3a40), steel: L(0x5c5e62, 'gun', 0x9a9ca2), cloth: L(lv.cloth ?? 0x8a1810, 'cloth', lv.cloth ?? 0x9a1c14),
+    cream: L(0xd8c8a0), coal: L(0x18181a), stone: L(0x8a847a, 'stone', 0xb0a898), brick: L(0x8a4a34, 'brick'), slate: L(lv.slate ?? 0x3a3e48, lv.slateTex || 'slate', lv.slate ?? 0xa8acb8),
+    rail: L(0xa0a0a4), trunk: L(lv.trunk ?? 0x4a3424), leaf: L(lv.leaf ?? 0x2a4a2c), rock: L(lv.rock ?? 0x6a6a64), pole: L(0x5a4430), shrub: L(lv.bush ?? lv.leaf ?? 0x2a4a2c),
     window: new T.MeshBasicMaterial({ color: 0xffb860 }), fire: new T.MeshBasicMaterial({ color: 0xff7a24 }), lamp: new T.MeshBasicMaterial({ color: 0xffe0a0 }),
     edge: new T.LineBasicMaterial({ color: 0x0a0806, transparent: true, opacity: 0.45, depthWrite: false }),
   };
@@ -191,7 +230,7 @@ const arch = (k, mat, x, y0, y1, w, z, d = 0.14) => {
 };
 /** Riveted armour plates along x on the wall at z, from y0 to y1 (a hair proud of it). */
 const plates = (k, M, x0, x1, y0, y1, z, out) => { const n = Math.max(1, Math.round((x1 - x0) / 1.5)), w = (x1 - x0) / n; for (let i = 0; i < n; i++) k.box(w - 0.06, y1 - y0, 0.06, M.iron, x0 + (i + 0.5) * w, (y0 + y1) / 2, z + out * 0.05); };
-function buildTrain(scene, M, glows) {
+function buildTrain(scene, M, glows, front = 'ram') {
   const k = kit(), z0 = ROW0 - 0.1, z1 = ROW0 + ROWS + 0.1, W = z1 - z0, cuts = [];
   const glow = (x, y, z, r, c = 0xffb060) => glows.push({ x, y, z, r, c });
   /** An iron lantern on a bracket (and its light). */
@@ -363,8 +402,17 @@ function buildTrain(scene, M, glows) {
       // cylinders, the red buffer beam, a spiked iron ram for a cowcatcher, a lantern on the smokebox
       for (const z of [z0 + 0.25, z1 - 0.25]) k.cyl(0.32, 0.32, 1.3, M.black, x1 - 1.2, -0.45, z, { rz: Math.PI / 2, seg: 8 });
       k.box(0.2, 0.42, W, M.redMetal, x1 + 0.15, -0.3, CZ);
-      k.add(new T.ConeGeometry(0.75, 1.5, 4), M.iron, x1 + 0.95, -0.45, CZ, { rz: -Math.PI / 2, rx: Math.PI / 4 });
-      for (const dz of [-0.7, 0, 0.7]) k.add(new T.ConeGeometry(0.1, 0.6, 4), M.bronze, x1 + 0.9 + (dz ? 0 : 0.5), -0.45, CZ + dz, { rz: -Math.PI / 2, edge: false });
+      if (front === 'plough') {
+        // a snowplough: a red-and-iron wedge over the rails, its blade edged in bronze
+        for (const sz of [-1, 1]) { k.box(1.9, 0.9, 0.12, M.redMetal, x1 + 0.95, -0.55, CZ + sz * 0.72, { ry: sz * 0.7 }); k.box(1.9, 0.08, 0.14, M.bronze, x1 + 0.95, -0.12, CZ + sz * 0.72, { ry: sz * 0.7, edge: false }); }
+        k.add(new T.ConeGeometry(0.2, 1.0, 4), M.iron, x1 + 1.75, -0.55, CZ, { edge: false });
+      } else {
+        k.add(new T.ConeGeometry(0.75, 1.5, 4), M.iron, x1 + 0.95, -0.45, CZ, { rz: -Math.PI / 2, rx: Math.PI / 4 });
+        for (const dz of [-0.7, 0, 0.7]) k.add(new T.ConeGeometry(0.1, 0.6, 4), M.bronze, x1 + 0.9 + (dz ? 0 : 0.5), -0.45, CZ + dz, { rz: -Math.PI / 2, edge: false });
+      }
+      if (front === 'canopy') { k.box(cab + 0.9, 0.06, W + 0.9, M.cloth, x0 + cab / 2, 2.75, CZ); for (const z of [z0 - 0.4, z1 + 0.4]) for (const x of [x0 - 0.3, x0 + cab + 0.3]) k.box(0.06, 0.4, 0.06, M.black, x, 2.55, z, { edge: false }); }
+      if (front === 'bell') { k.cyl(0.18, 0.3, 0.4, M.bronze, x0 + cab + 2.2, by + 1.3, CZ, { seg: 10 }); k.box(0.5, 0.06, 0.06, M.black, x0 + cab + 2.2, by + 1.55, CZ, { edge: false }); lantern(k, x1 - 0.2, by + 0.6, z0 + 0.1); lantern(k, x1 - 0.2, by + 0.6, z1 - 0.1); }
+      if (front === 'grates') for (const z of [CZ - 1.12, CZ + 1.12]) for (let x = x0 + cab + 0.8; x < x1 - 1.6; x += 1.5) { k.box(0.6, 0.14, 0.04, M.fire, x, by - 0.2, z, { edge: false }); glow(x, by - 0.2, z, 1.0, 0xff5a14); }
       lantern(k, x1 - 0.2, by + 1.25, CZ);
       glow(x1 + 0.55, by + 0.14, CZ, 2.4, 0xff6020); glow(x0 + cab - 0.4, 0.9, CZ, 2.4, 0xff7a2a); glow(x0 + cab - 0.55, 0.3, z1, 1.4, 0xff6a20);
     }
@@ -394,27 +442,33 @@ function buildDrivers(scene, M) {
 
 // ------------------------------------------------------------------ the land going by
 const SCN_N = Math.round(46 * LAND / 320), SCN_X0 = CABOOSE.x0 - 66, SCN_SPAN = LAND - 100;
-function buildScenery(scene, M) {
+function buildScenery(scene, M, L = LOOKS.forest) {
   const inst = (geo, mat, n) => { const m = new T.InstancedMesh(geo, mat, n); m.instanceMatrix.setUsage(T.DynamicDrawUsage); m.frustumCulled = false; scene.add(m); return m; };
+  // the tree's crown by the look: a leafy lump, a pine's cone, a cactus's arm, none (dead trees)
+  const crown = L.trees === 'pine' ? new T.ConeGeometry(0.9, 1.6, 7) : L.trees === 'cactus' ? new T.CylinderGeometry(0.22, 0.22, 0.7, 6) : new T.IcosahedronGeometry(1, 0);
+  const trunk = L.trees === 'cactus' ? new T.CylinderGeometry(0.3, 0.34, 1, 7) : L.trees === 'dead' ? new T.CylinderGeometry(0.05, 0.2, 1, 5) : new T.CylinderGeometry(0.12, 0.24, 1, 6);
   const I = {
-    trunk: inst(new T.CylinderGeometry(0.12, 0.24, 1, 6), M.trunk, SCN_N), crown: inst(new T.IcosahedronGeometry(1, 0), M.leaf, SCN_N),
-    bush: inst(new T.DodecahedronGeometry(0.5), M.leaf, SCN_N), pole: inst(new T.BoxGeometry(0.16, 1, 0.16), M.pole, SCN_N),
+    trunk: inst(trunk, L.trees === 'cactus' ? M.leaf : M.trunk, SCN_N), crown: inst(crown, M.leaf, SCN_N),
+    bush: inst(new T.DodecahedronGeometry(0.5), M.shrub, SCN_N), pole: inst(new T.BoxGeometry(0.16, 1, 0.16), M.pole, SCN_N),
     bar: inst(new T.BoxGeometry(0.08, 0.08, 1.4), M.pole, SCN_N), rock: inst(new T.DodecahedronGeometry(0.5), M.rock, SCN_N),
   };
   const items = [];
+  const pickKind = (list) => { let r = rnd(); for (const [k, w] of list) if ((r -= w) <= 0) return k; return list[list.length - 1][0]; };
   const roll = (it, x) => {
     const far = rnd() < 0.6;
     // the near side keeps clear of the platforms and low (a tall tree there would stand over the cars being fought on)
     it.x = x; it.z = far ? -12 + rnd() * 18 : 21.5 + rnd() * 14;
-    const r = rnd();
-    it.kind = far ? (r < 0.5 ? 'tree' : r < 0.66 ? 'pole' : r < 0.85 ? 'bush' : 'rock') : (r < 0.5 ? 'bush' : r < 0.8 || it.z < 28 ? 'rock' : 'tree');
+    it.kind = pickKind(far ? L.far : L.near);
+    if (!far && it.kind === 'tree' && it.z < 28) it.kind = 'rock';
     if (it.kind === 'pole') it.z = 8.6;   // the telegraph line along the far side
-    it.h = it.kind === 'tree' ? 2.4 + rnd() * 2.4 : it.kind === 'pole' ? 4.2 : 1; it.s = 0.6 + rnd() * 0.7; it.ry = rnd() * 6.28; it.lean = (rnd() - 0.5) * 0.2;
+    if (it.kind === 'mesa') it.z = -14 + rnd() * 10;   // a flat-topped butte, far off
+    it.h = it.kind === 'tree' ? (L.trees === 'cactus' ? 1.4 + rnd() * 1.2 : 2.4 + rnd() * 2.4) : it.kind === 'pole' ? 4.2 : it.kind === 'mesa' ? 3 + rnd() * 3 : 1;
+    it.s = 0.6 + rnd() * 0.7; it.ry = rnd() * 6.28; it.lean = (rnd() - 0.5) * 0.2;
   };
   for (let i = 0; i < SCN_N; i++) { const it = {}; roll(it, SCN_X0 + (i / SCN_N) * SCN_SPAN + rnd() * 4); items.push(it); }
-  return { I, items, roll };
+  return { I, items, roll, L };
 }
-function placeScenery(N, scroll, gorgeX = null) {
+function placeScenery(N, scroll, gorgeX = null, beatW = GORGE_W, nearOnly = false) {
   const m4 = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), p = new T.Vector3(), s = new T.Vector3(), I = N.I;
   const set = (mesh, i, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0) => { e.set(rx, ry, rz); q.setFromEuler(e); m4.compose(p.set(x, y, z), q, s.set(sx, sy, sz)); mesh.setMatrixAt(i, m4); };
   const hide = (mesh, i) => set(mesh, i, 0, -99, 0, 0.001, 0.001, 0.001);
@@ -422,12 +476,18 @@ function placeScenery(N, scroll, gorgeX = null) {
     let x = it.x - scroll;
     if (x < SCN_X0) { N.roll(it, it.x + SCN_SPAN); x = it.x - scroll; }
     const g = Y_GROUND;
-    if (gorgeX != null && Math.abs(x - gorgeX) < GORGE_W / 2 + 1.5) { for (const k in I) hide(I[k], i); return; }   // nothing stands in the gorge
-    if (it.kind === 'tree') { set(I.trunk, i, x, g + it.h * 0.35, it.z, it.s, it.h * 0.7, it.s, 0, it.ry, it.lean); set(I.crown, i, x + it.lean, g + it.h * 0.8, it.z, it.s * 1.3, it.h * 0.42, it.s * 1.3, 0, it.ry, 0); }
-    else { hide(I.trunk, i); hide(I.crown, i); }
+    if (gorgeX != null && Math.abs(x - gorgeX) < beatW / 2 + 1.5 && (!nearOnly || it.z > CZ)) { for (const k in I) hide(I[k], i); return; }   // nothing stands in the gorge
+    const tr = N.L.trees;
+    if (it.kind === 'tree') {
+      if (tr === 'cactus') { set(I.trunk, i, x, g + it.h / 2, it.z, it.s, it.h, it.s, 0, it.ry, 0); set(I.crown, i, x + 0.35 * it.s, g + it.h * 0.6, it.z, it.s, it.s, it.s, 0, it.ry, 0); }
+      else if (tr === 'dead') { set(I.trunk, i, x, g + it.h * 0.45, it.z, it.s, it.h * 0.9, it.s, 0, it.ry, it.lean * 2); hide(I.crown, i); }
+      else { set(I.trunk, i, x, g + it.h * 0.35, it.z, it.s, it.h * 0.7, it.s, 0, it.ry, it.lean); set(I.crown, i, x + it.lean, g + it.h * (tr === 'pine' ? 0.7 : 0.8), it.z, it.s * 1.3, it.h * (tr === 'pine' ? 0.5 : 0.42), it.s * 1.3, 0, it.ry, 0); }
+    } else { hide(I.trunk, i); hide(I.crown, i); }
     if (it.kind === 'bush') set(I.bush, i, x, g + 0.2 * it.s, it.z, it.s * 1.4, it.s, it.s * 1.4, 0, it.ry, 0); else hide(I.bush, i);
     if (it.kind === 'pole') { set(I.pole, i, x, g + it.h / 2, it.z, 1, it.h, 1); set(I.bar, i, x, g + it.h - 0.3, it.z, 1, 1, 1.4); } else { hide(I.pole, i); hide(I.bar, i); }
-    if (it.kind === 'rock') set(I.rock, i, x, g + 0.1, it.z, it.s * 1.2, it.s * 0.6, it.s, it.ry, it.ry, 0); else hide(I.rock, i);
+    if (it.kind === 'rock') set(I.rock, i, x, g + 0.1, it.z, it.s * 1.2, it.s * 0.6, it.s, it.ry, it.ry, 0);
+    else if (it.kind === 'mesa') set(I.rock, i, x, g + it.h * 0.45, it.z, it.s * 9, it.h, it.s * 7, 0, it.ry, 0);
+    else hide(I.rock, i);
   });
   for (const k in I) I[k].instanceMatrix.needsUpdate = true;
 }
@@ -437,17 +497,74 @@ const GORGE_W = 34;
 /** A gorge across the line, centred on x 0 (moved to S.gorgeX): the land falls away into the dark (a chasm laid over
  *  the ground and ballast, a thread of river far down), rock lips at both edges, and the train runs over an iron
  *  trestle: two lattice girders under the cars, a deck of sleepers and the piers going down. */
-function buildGorge(scene, M) {
-  const k = kit(), y = Y_GROUND + 0.1, w = GORGE_W;
+/** The scenic beat by the variant: a gorge on its trestle (colours by the look: a river, a dry bed, lava), a tunnel
+ *  (the avalanche shed: rock walls, portals, the land gone dark) or a sea wall (the sea right up to the near side). */
+function buildBeat(scene, M, L, kind) {
+  if (kind === 'tunnel') return buildTunnel(scene, M, L);
+  if (kind === 'seawall') return buildSeaWall(scene, M, L);
+  return buildGorge(scene, M, L);
+}
+const TUNNEL_W = 64, WALL_W = 60;
+/** Width of the variant's beat (tiles along the line). */
+export const trainBeatW = () => (!S ? GORGE_W : S.beatKind === 'tunnel' ? TUNNEL_W : S.beatKind === 'seawall' ? WALL_W : GORGE_W);
+function darkPlane(w, color, x = 0, z = CZ, d = 320) {
+  const m = new T.Mesh(new T.PlaneGeometry(w, d), new T.MeshBasicMaterial({ color, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2; m.position.set(x, Y_GROUND + 0.1, z); m.renderOrder = -1; return m;
+}
+function buildTunnel(scene, M, L) {
+  const k = kit(), w = TUNNEL_W, rock = new T.MeshLambertMaterial({ color: L.beat.wall }), cap = new T.MeshLambertMaterial({ color: L.beat.cap || L.beat.wall });
+  const zF = ROW0 - 1.3, zN = ROW0 + ROWS + 1.0;
+  k.box(w, 7, 1.6, rock, 0, Y_GROUND + 3.5, zF - 0.8); k.box(w + 1, 0.4, 2.2, cap, 0, Y_GROUND + 7.1, zF - 0.8);          // the far wall
+  k.box(w, 1.5, 0.8, rock, 0, Y_GROUND + 0.75, zN + 0.4);                                                         // a low near wall
+  for (const ex of [-w / 2, w / 2]) {                                                                               // the portals
+    for (const z of [zF - 0.5, zN + 0.4]) k.box(1.2, 4.6, 1.2, M.stone, ex, Y_GROUND + 2.3, z);
+    k.box(1.2, 0.8, zN - zF + 2.4, M.stone, ex, Y_GROUND + 4.9, (zF + zN) / 2);
+    k.box(1.4, 0.3, zN - zF + 2.8, cap, ex, Y_GROUND + 5.45, (zF + zN) / 2);
+  }
+  for (let x = -w / 2 + 4; x < w / 2; x += 8) { k.box(0.3, 0.4, 0.3, M.black, x, 2.4, zF + 0.1, { edge: false }); glowsOf(k).push({ x, y: 2.2, z: zF + 0.3, r: 1.4, c: 0xffc070 }); }   // its lamps
+  const g = k.build(new T.Group(), M.edge);
+  g.add(darkPlane(w, 0x050608));
+  g.userData.glows = glowsOf(k);
+  g.visible = false; scene.add(g);
+  return g;
+}
+const glowsOf = (k) => (k._glows ||= []);
+function buildSeaWall(scene, M, L) {
+  const k = kit(), w = WALL_W, zN = ROW0 + ROWS + 0.9;
+  k.box(w, 2.0, 0.9, M.stone, 0, Y_RAIL - 0.6, zN + 0.45);                                                         // the wall
+  for (let x = -w / 2; x < w / 2; x += 1.2) k.box(0.7, 0.4, 0.3, M.stone, x, Y_RAIL + 0.6, zN + 0.75, { edge: false });   // its parapet
+  for (let x = -w / 2 + 3; x < w / 2; x += 10) lanternPost(k, M, x, zN + 0.5);
+  const g = k.build(new T.Group(), M.edge);
+  const sea = new T.Mesh(new T.PlaneGeometry(w, 160), seaMat(L));
+  sea.rotation.x = -Math.PI / 2; sea.position.set(0, Y_GROUND + 0.12, zN + 81); sea.renderOrder = -1; g.add(sea);
+  g.userData.sea = sea; g.userData.glows = glowsOf(k);
+  g.visible = false; scene.add(g);
+  return g;
+}
+function lanternPost(k, M, x, z) {
+  k.box(0.1, 1.6, 0.1, M.black, x, Y_RAIL + 1.1, z); k.box(0.24, 0.3, 0.24, M.lamp, x, Y_RAIL + 1.95, z, { edge: false });
+  glowsOf(k).push({ x, y: Y_RAIL + 1.95, z, r: 1.6, c: 0xffd890 });
+}
+/** The sea's material: the Depth's Edge water tile tinted (LOOKS sea), a flat sea colour if it didn't load. */
+function seaMat(L) {
+  const [key, tint] = L.sea || ['waterG', 0x4a7484];
+  const t = texOf(key);
+  if (t) { t.repeat.set(8, 24); }
+  return new T.MeshLambertMaterial({ color: tint, map: t || null, depthWrite: false });
+}
+function buildGorge(scene, M, L = LOOKS.forest) {
+  const k = kit(), y = Y_GROUND + 0.1, w = GORGE_W, B = L.beat;
   // (the ground and ballast write no depth and draw first, the chasm over them: the trestle's piers below ground
   // level then show against the dark as if it went down)
-  const chasm = new T.Mesh(new T.PlaneGeometry(w, 320), new T.MeshBasicMaterial({ color: 0x07090d, depthWrite: false }));
+  const chasm = new T.Mesh(new T.PlaneGeometry(w, 320), new T.MeshBasicMaterial({ color: B.chasm, depthWrite: false }));
   chasm.rotation.x = -Math.PI / 2; chasm.position.set(0, y, CZ); chasm.renderOrder = -1;
-  const river = new T.Mesh(new T.PlaneGeometry(2.2, 320), new T.MeshBasicMaterial({ color: 0x1a2a3a, depthWrite: false }));
+  const river = new T.Mesh(new T.PlaneGeometry(B.floorW, 320), new T.MeshBasicMaterial({ color: B.floor, depthWrite: false }));
   river.rotation.x = -Math.PI / 2; river.position.set(3, y + 0.01, CZ); river.renderOrder = -1;
+  const lip = new T.MeshLambertMaterial({ color: B.wall });
   for (const sx of [-1, 1]) {
-    for (let z = CZ - 60; z < CZ + 60; z += 2.2) k.box(1.4 + rnd() * 1.2, 0.5 + rnd() * 0.6, 2.2, M.rock, sx * (w / 2 + 0.2 + rnd() * 0.5), Y_GROUND + 0.2, z, { edge: false });
+    for (let z = CZ - 60; z < CZ + 60; z += 2.2) k.box(1.4 + rnd() * 1.2, 0.5 + rnd() * 0.6, 2.2, lip, sx * (w / 2 + 0.2 + rnd() * 0.5), Y_GROUND + 0.2, z, { edge: false });
   }
+  if (B.glow) for (let z = CZ - 30; z < CZ + 40; z += 6) glowsOf(k).push({ x: 3, y: Y_GROUND + 0.4, z, r: 5, c: 0xff5014 });   // the lava's light
   const zA = ROW0 - 0.35, zB = ROW0 + ROWS + 0.35;
   for (const z of [zA, zB]) {
     k.box(w + 2, 0.16, 0.14, M.iron, 0, Y_RAIL - 0.1, z); k.box(w + 2, 0.16, 0.14, M.iron, 0, Y_RAIL - 1.5, z);
@@ -460,6 +577,7 @@ function buildGorge(scene, M) {
   for (let x = -w / 2 + 6; x < w / 2 - 5; x += 7) for (const z of [zA, zB]) k.box(0.5, 3.4, 0.5, M.stone, x, Y_RAIL - 3.2, z);
   const g = k.build(new T.Group(), M.edge);
   g.add(chasm, river);
+  g.userData.glows = glowsOf(k);
   g.visible = false; scene.add(g);
   return g;
 }
@@ -562,23 +680,31 @@ const ENGINE_STACK = () => [ENGINE.x1 - 0.8, 3.7, CZ];
 export function buildTrain3D(world) {
   disposeTrain3D();
   renderer();
-  const scene = new T.Scene(), M = mats(), few = G.touch;
-  scene.add(new T.HemisphereLight(0xa8b8d8, 0x302418, 1.15 * Math.PI), new T.AmbientLight(0x505868, 0.45 * Math.PI));
-  const moon = new T.DirectionalLight(0xd0dcff, 0.9 * Math.PI);
+  const vid = world.trainVariant ? world.trainVariant.id : 'forest', L = lookOf(vid), beatKind = world.trainVariant ? world.trainVariant.beat.kind : 'gorge';
+  const scene = new T.Scene(), M = mats(L.livery), few = G.touch;
+  const hemi = new T.HemisphereLight(L.hemi[0], L.hemi[1], L.hemi[2] * Math.PI), ambL = new T.AmbientLight(L.amb[0], L.amb[1] * Math.PI);
+  const moon = new T.DirectionalLight(L.moon[0], L.moon[1] * Math.PI);
+  scene.add(hemi, ambL);
   moon.position.set(-20, 60, -10).add(new T.Vector3(MID, 0, CZ)); moon.target.position.set(MID, 0, CZ); scene.add(moon, moon.target);
-  scene.fog = new T.Fog(SKY, 40, 120);
-  const ground = new T.Mesh(new T.PlaneGeometry(LAND, 320), new T.MeshLambertMaterial({ map: canvasTex(128, 128, groundPaint, LAND / 8, 40) }));
+  scene.fog = new T.Fog(L.sky, 40, 120);
+  // the ground: the painted meadow, or the look's seamless tile tinted (GU units a repeat; tickTrain3D scrolls it)
+  let gmap = null, GU = 8;
+  if (L.ground) { gmap = texOf(L.ground[0]); if (gmap) { GU = L.ground[2]; gmap.repeat.set(LAND / GU, 320 / GU); } }
+  const ground = new T.Mesh(new T.PlaneGeometry(LAND, 320), new T.MeshLambertMaterial(gmap ? { map: gmap, color: L.ground[1] } : L.ground ? { color: L.ground[1] } : { map: canvasTex(128, 128, groundPaint, LAND / 8, 40) }));
   ground.rotation.x = -Math.PI / 2; ground.position.set(MID, Y_GROUND, CZ); ground.material.depthWrite = false; ground.renderOrder = -3; scene.add(ground);
-  const ballast = new T.Mesh(new T.PlaneGeometry(LAND, 2.9), new T.MeshLambertMaterial({ map: canvasTex(64, 32, ballastPaint, LAND / 2, 1) }));
+  // the storm coast: the sea all along the far side, up to the telegraph line
+  let sea = null;
+  if (L.sea) { sea = new T.Mesh(new T.PlaneGeometry(LAND, 160), seaMat(L)); sea.rotation.x = -Math.PI / 2; sea.position.set(MID, Y_GROUND + 0.04, ROW0 - 5 - 80); sea.renderOrder = -2; scene.add(sea); }
+  const ballast = new T.Mesh(new T.PlaneGeometry(LAND, 2.9), new T.MeshLambertMaterial({ map: canvasTex(64, 32, ballastPaint, LAND / 2, 1), color: L.ballast }));
   ballast.rotation.x = -Math.PI / 2; ballast.position.set(MID, Y_GROUND + 0.06, CZ); ballast.material.depthWrite = false; ballast.renderOrder = -2; scene.add(ballast);
   const glowList = [];
-  const train = buildTrain(scene, M, glowList);
+  const train = buildTrain(scene, M, glowList, L.front);
   const drivers = buildDrivers(scene, M);
-  const scn = buildScenery(scene, M);
+  const scn = buildScenery(scene, M, L);
   const stations = {};
   for (const look of STATION_LOOKS) stations[look] = buildStation(scene, M, look);
-  const st = stations.hall, gorge = buildGorge(scene, M);
-  S = { scene, M, world, t: 0, scroll: 0, speed: 0, fire: 1, ground, ballast, train, cuts: train.cuts, drivers, scn, st, stations, gorge, gorgeX: null, glows: [], lightSrc: [], pool: [], smoke: [], smokeT: 0, steamT: 0, stationX: null };
+  const st = stations.hall, gorge = buildBeat(scene, M, L, beatKind);
+  S = { scene, M, world, L, vid, beatKind, GU, sea, hemi, ambL, moon, lit: 1, t: 0, scroll: 0, speed: 0, fire: 1, ground, ballast, train, cuts: train.cuts, drivers, scn, st, stations, gorge, gorgeX: null, glows: [], lightSrc: [], pool: [], smoke: [], smokeT: 0, steamT: 0, sprayT: 0, stationX: null };
   const addGlow = (gl, parent) => {
     const s = new T.Sprite(new T.SpriteMaterial({ map: halo(), color: gl.c, blending: T.AdditiveBlending, depthWrite: false, transparent: true }));
     const engine = gl.x >= ENGINE.x0 && parent === S.scene;
@@ -587,13 +713,14 @@ export function buildTrain3D(world) {
   };
   for (const gl of glowList) addGlow(gl, scene);
   for (const k2 in stations) for (const gl of stations[k2].glows) addGlow(gl, stations[k2].g);
+  for (const gl of gorge.userData.glows || []) addGlow(gl, gorge);
   S.engineGlows = S.glows.filter((s) => s.userData.engine);
   for (let i = 0; i < 56; i++) {
     const s = new T.Sprite(new T.SpriteMaterial({ map: puff(), color: 0x888888, depthWrite: false, transparent: true, opacity: 0 }));
     s.renderOrder = 4; s.visible = false; scene.add(s); S.smoke.push({ s, life: 0 });
   }
   for (let i = 0; i < (few ? 3 : 5); i++) { const L = new T.PointLight(0xffffff, 0, 7, 1.5); scene.add(L); S.pool.push(L); }
-  placeScenery(scn, 0);
+  placeScenery(scn, 0, null);
   // the scene belongs to this level: it goes once the hero is elsewhere (nothing else ticks it then)
   S.watch = setInterval(() => { if (S && G.world !== S.world) disposeTrain3D(); }, 2500);
   return S;
@@ -607,7 +734,7 @@ export function trainStation(name, look = 'hall') {
   const m = S.st.sign.material; if (m.map) m.map.dispose(); m.map = signTex(name); m.needsUpdate = true;
 }
 /** The gorge comes in from ahead (the trestle bridge under the train) and passes behind; tickTrain3D moves it. */
-export function trainGorge() { if (S) S.gorgeX = ENGINE.x1 + 70; }
+export function trainGorge() { if (S) S.gorgeX = ENGINE.x1 + trainBeatW() / 2 + 14; }
 /** Where the gorge's middle is (tile x), or null while the line runs over plain ground. */
 export const trainGorgeX = () => (S ? S.gorgeX : null);
 /** The cars cut away round the hero (x: his tile x; null: none): their roofs and near sides hidden. */
@@ -638,12 +765,18 @@ export function tickTrain3D(dt, { speed = 0, stationX = null, fire = 1 } = {}) {
   if (!S) return;
   S.t += dt; S.speed = speed; S.fire = fire;
   const dx = speed * dt; S.scroll += dx;
-  S.ground.material.map.offset.x = (S.scroll / 8) % 1;
+  if (S.ground.material.map) S.ground.material.map.offset.x = (S.scroll / S.GU) % 1;
+  if (S.sea && S.sea.material.map) { S.sea.material.map.offset.x = (S.scroll / 20) % 1; S.sea.material.map.offset.y = (S.t * 0.02) % 1; }
   S.ballast.material.map.offset.x = (S.scroll / 2) % 1;
-  if (S.gorgeX != null) { S.gorgeX -= dx; if (S.gorgeX < CABOOSE.x0 - 70) S.gorgeX = null; }
+  if (S.gorgeX != null) { S.gorgeX -= dx; if (S.gorgeX < CABOOSE.x0 - trainBeatW() / 2 - 14) S.gorgeX = null; }
   S.gorge.visible = S.gorgeX != null;
   if (S.gorge.visible) S.gorge.position.x = S.gorgeX;
-  placeScenery(S.scn, S.scroll, S.gorgeX);
+  placeScenery(S.scn, S.scroll, S.gorgeX, trainBeatW(), S.beatKind === 'seawall');
+  // spray over the sea wall
+  if (S.beatKind === 'seawall' && S.gorgeX != null && (S.sprayT -= dt) <= 0) {
+    S.sprayT = 0.12;
+    emit(S.gorgeX + (rnd() - 0.5) * WALL_W, Y_RAIL + 0.6, ROW0 + ROWS + 1.6, -speed * 0.4, 2.5 + rnd() * 2, -0.6 - rnd(), 1.0 + rnd() * 0.5, 0xe8f2f6, 0.5, 2.6, 0.7);
+  }
   // the driving wheels turn with the ground (r 0.7), the side rods follow their crank pins
   const a = -S.scroll / 0.7;
   for (const g of S.drivers.wheels) g.rotation.z = a;
@@ -689,6 +822,10 @@ export function drawTrain3D(ctx, focus) {
   const cx = camera.x + camera.shakeX, cy = camera.y + camera.shakeY, hw = G.W / 2 / z, hh = G.H / 2 / z, cam = rd.cam;
   cam.left = (cx - hw) / SC; cam.right = (cx + hw) / SC; cam.top = -(cy - hh) / SC; cam.bottom = -(cy + hh) / SC; cam.updateProjectionMatrix();
   const [fx, fy, fz] = focus || [MID, 0, CZ];
+  // inside the tunnel the sky's light goes (the lamps stay)
+  const inT = S.beatKind === 'tunnel' && S.gorgeX != null && Math.abs(fx - S.gorgeX) < TUNNEL_W / 2;
+  S.lit += ((inT ? 0.2 : 1) - S.lit) * 0.08;
+  S.hemi.intensity = S.L.hemi[2] * Math.PI * S.lit; S.ambL.intensity = S.L.amb[1] * Math.PI * S.lit; S.moon.intensity = S.L.moon[1] * Math.PI * S.lit;
   const d0 = 800 - (fx * rd.dir.x + fy * rd.dir.y + fz * rd.dir.z);
   S.scene.fog.near = d0 + 22; S.scene.fog.far = d0 + 95;
   const near = [];
@@ -705,7 +842,7 @@ export function drawTrain3D(ctx, focus) {
     const l = n[1], fl = 0.92 + 0.08 * Math.sin(S.t * 9 + i * 1.7) * Math.sin(S.t * 5.3 + i);
     L.position.copy(l.w); L.color.setHex(l.c); L.distance = l.r; L.intensity = 9 * fl * (l.engine ? 0.3 + 0.7 * S.fire : 1);
   }
-  rd.gl.setClearColor(SKY, 1);
+  rd.gl.setClearColor(S.L.sky, 1);
   rd.gl.render(S.scene, cam);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false;

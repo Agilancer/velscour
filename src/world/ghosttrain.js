@@ -23,30 +23,99 @@ export const KINDS = {
   dining: { roof: true, wall: 1.9, cells: [2, 4, 6] },      // tables
   tender: { roof: false, wall: 1.0 }, engine: { roof: true, wall: 0 },
 };
-/** The fight cars from the back. The lieutenant holds the prison car halfway along (LT_CAR). */
-const FIGHT = ['gondola', 'coach', 'flat', 'boxcar', 'dining', 'sleeper', 'armoury', 'prison', 'gondola', 'mail', 'flat', 'coach', 'boxcar', 'dining', 'armoury', 'sleeper'];
+/** The lieutenant's car, halfway along (its kind is the variant's). */
 export const LT_CAR = 7;
-/** The stations: called once this many cars are clear; `look` picks the buildings (gfx/ghosttrain3d.js STATION_LOOKS). */
-export const STATIONS = [
-  { after: 2, name: 'Hollowmere Halt', look: 'hall' }, { after: 5, name: 'Gallowmarsh Water Stop', look: 'water' },
-  { after: 8, name: "Saint Vey's Crossing", look: 'chapel' }, { after: 11, name: 'Blackwick Junction', look: 'signal' },
-  { after: 14, name: 'Coldharbour Goods', look: 'goods' },
+/** The five Iron Express variants (regions.js picks one a level; gfx/ghosttrain3d.js LOOKS has their colours):
+ *  the consist (16 fight cars from the back), the stations (`after` cars clear; `look`: gfx STATION_LOOKS), the
+ *  scenic beat, the weather and night, the lieutenant and the chief's throw and vent, and their lines. */
+const AFTER = [2, 5, 8, 11, 14];
+const st = (list) => list.map(([name, look], i) => ({ after: AFTER[i], name, look }));
+export const VARIANTS = [
+  {
+    id: 'forest', name: 'Night Forest', intro: 'Night over the forest. Tickets, please.',
+    consist: ['gondola', 'coach', 'flat', 'boxcar', 'dining', 'sleeper', 'armoury', 'prison', 'gondola', 'mail', 'flat', 'coach', 'boxcar', 'dining', 'armoury', 'sleeper'],
+    stations: st([['Hollowmere Halt', 'hall'], ['Gallowmarsh Water Stop', 'water'], ["Saint Vey's Crossing", 'chapel'], ['Blackwick Junction', 'signal'], ['Coldharbour Goods', 'goods']]),
+    last: ['The Last Stop', 'hall'],
+    beat: { kind: 'gorge', after: 7, name: "HANGMAN'S GORGE", line: 'She crosses on the old iron trestle.' },
+    sky: { dark: 0.35, fog: '#141820', torch: '#ffb060', ambient: null, rain: false },
+    lt: { title: 'Lieutenant', car: 'the prison car' },
+    chief: { card: 'He holds the engine', throwEl: 'fire', ventEl: 'fire', vent: '#e6edf2', dust: '#1c1612' },
+    barks: { coal: ["Stoke 'em!", 'Have some coal!', 'Shovel it on!'], vent: ['Open the firebox!', 'Let her blow!', 'Mind the steam!'], whistle: ['All hands!', 'Boys, to me!', 'Off my train!'], lieutenant: ['Hold the line!', 'Lads! Over here!', 'Not past me!'] },
+  },
+  {
+    id: 'frost', name: 'Frozen Pass', intro: 'Snow on the pass. Mind the ice.',
+    consist: ['flat', 'boxcar', 'coach', 'armoury', 'gondola', 'sleeper', 'dining', 'armoury', 'flat', 'mail', 'boxcar', 'coach', 'gondola', 'sleeper', 'dining', 'mail'],
+    stations: st([['Rimeholt Halt', 'signal'], ['Whitecap Water Stop', 'water'], ["Saint Ysolde's Chapel", 'chapel'], ['Coldspur Junction', 'hall'], ['Frostgate Goods', 'goods']]),
+    last: ['Summit Stop', 'hall'],
+    beat: { kind: 'tunnel', after: 7, name: 'THE AVALANCHE SHED', line: 'Into the dark under the snow.' },
+    sky: { dark: 0.3, fog: '#1c2433', torch: '#ffd8a0', ambient: { type: 'snow', color: '#eef4ff' }, rain: false },
+    lt: { title: 'Frost-Warden', car: 'the armoury' },
+    chief: { card: 'He holds the plough engine', throwEl: 'cold', ventEl: 'cold', vent: '#e8f4ff', dust: '#c8d8e8' },
+    barks: { coal: ['Ice on the line!', 'Have some hail!', 'Cold enough?'], vent: ['Frost the boiler!', 'Let her freeze!', 'Mind the rime!'], whistle: ['All hands!', 'Out of the snow, lads!', 'Off my plough!'], lieutenant: ['Hold the pass!', 'Nobody thaws!', 'Not past me!'] },
+  },
+  {
+    id: 'badlands', name: 'Desert Badlands', intro: 'Sun-bleached rails. Watch the dust.',
+    consist: ['gondola', 'flat', 'gondola', 'mail', 'boxcar', 'coach', 'flat', 'mail', 'gondola', 'dining', 'boxcar', 'flat', 'armoury', 'coach', 'gondola', 'mail'],
+    stations: st([['Dry Creek Halt', 'water'], ['Bonewell Water Stop', 'water'], ["Saint Ardan's Mission", 'chapel'], ['Mesa Junction', 'signal'], ['Rattlerock Goods', 'goods']]),
+    last: ['Dustfall Terminus', 'hall'],
+    beat: { kind: 'gorge', after: 7, name: 'THE DRY CANYON', line: 'A long way down. Hold on.' },
+    sky: { dark: 0.12, fog: '#4a3420', torch: '#ffd080', ambient: { type: 'sand', color: '#d8b078' }, rain: false },
+    lt: { title: 'Dust Marshal', car: 'the bullion car' },
+    chief: { card: 'He holds the engine', throwEl: 'fire', ventEl: 'fire', vent: '#e8d8b8', dust: '#8a6a40' },
+    barks: { coal: ['Hot cinders!', 'Eat dust!', 'Shovel it on!'], vent: ['Open her up!', 'Let her blow!', "Scalding, ain't it?"], whistle: ['Posse up!', 'Boys, to me!', 'Off my train!'], lieutenant: ['This is my strongbox!', 'Draw!', 'Not past me!'] },
+  },
+  {
+    id: 'storm', name: 'Storm Coast', intro: 'Storm off the sea. Hold on to something.',
+    consist: ['coach', 'mail', 'sleeper', 'boxcar', 'dining', 'coach', 'gondola', 'prison', 'sleeper', 'flat', 'mail', 'armoury', 'coach', 'boxcar', 'dining', 'sleeper'],
+    stations: st([['Gullcry Halt', 'hall'], ["Wreckers' Crossing", 'chapel'], ['Saltmarsh Water Stop', 'water'], ['Lighthouse Junction', 'signal'], ['Harbour Goods', 'goods']]),
+    last: ['Stormhaven', 'hall'],
+    beat: { kind: 'seawall', after: 7, name: 'THE SEA WALL', line: 'Spray over the line. Keep your feet.' },
+    sky: { dark: 0.42, fog: '#0c1418', torch: '#ffe0a0', ambient: null, rain: true },
+    lt: { title: 'Bosun', car: 'the brig' },
+    chief: { card: 'He holds the engine', throwEl: 'cold', ventEl: 'cold', vent: '#dce8ec', dust: '#2a3a40' },
+    barks: { coal: ['Brine and hail!', 'Overboard with you!', 'Shovel it on!'], vent: ['Open the firebox!', 'Blow, you devil!', 'Mind the steam!'], whistle: ['All hands on deck!', 'Boys, to me!', 'Off my train!'], lieutenant: ['Batten down!', 'Into the brig!', 'Not past me!'] },
+  },
+  {
+    id: 'cinder', name: 'Cinder Line', intro: 'Ash on the wind. The forges never sleep.',
+    consist: ['gondola', 'flat', 'boxcar', 'gondola', 'armoury', 'flat', 'gondola', 'armoury', 'boxcar', 'gondola', 'flat', 'prison', 'gondola', 'armoury', 'boxcar', 'flat'],
+    stations: st([['Slagheap Halt', 'goods'], ['Bellows Water Stop', 'water'], ["Saint Ember's", 'chapel'], ['Furnace Junction', 'signal'], ['Foundry Gate', 'hall']]),
+    last: ['The Crucible', 'goods'],
+    beat: { kind: 'gorge', after: 7, name: 'THE LAVA GORGE', line: 'Molten rock below. Do not fall.' },
+    sky: { dark: 0.38, fog: '#1a0a06', torch: '#ff7a30', ambient: { type: 'ember', color: '#ff7030' }, rain: false },
+    lt: { title: 'Forgemaster', car: 'the armoury' },
+    chief: { card: 'He holds the furnace engine', throwEl: 'fire', ventEl: 'fire', vent: '#5a4a44', dust: '#2a1a14' },
+    barks: { coal: ['Slag! Have it!', 'Molten for you!', 'Shovel it on!'], vent: ['Open the furnace!', 'Let her roar!', 'Mind the fire!'], whistle: ['Forge crews!', 'Boys, to me!', 'Off my line!'], lieutenant: ['Back to the anvil!', 'Hammers up!', 'Not past me!'] },
+  },
 ];
-/** The gorge the line crosses on its trestle (a scenic beat, gfx/ghosttrain3d.js trainGorge): once this many are clear. */
-export const GORGE_AFTER = 7;
+export const variantOf = (id) => VARIANTS.find((v) => v.id === id) || VARIANTS[0];
+/** The stations of the variant in use (useVariant fills it; the run and the test read it). */
+export const STATIONS = [];
+/** The scenic beat comes once this many cars are clear (the variant's). */
+export let GORGE_AFTER = 7;
+let current = null;
+/** The variant this train is built as (its consist written into CARS, its stations into STATIONS). */
+export function useVariant(id) {
+  const v = variantOf(id);
+  current = v;
+  FIGHT_CARS.forEach((car, k) => { const kind = v.consist[k]; Object.assign(car, { kind, cells: undefined }, KINDS[kind]); });
+  STATIONS.length = 0; STATIONS.push(...v.stations);
+  GORGE_AFTER = v.beat.after;
+  return v;
+}
+export const trainVariant = () => current || useVariant('forest');
 /** The cars from the back: { kind, x0, x1, i, roof, wall, crates } (x1 exclusive), one tile of gangway between each. */
 export function trainLayout() {
   const cars = [];
   let x = X0;
   const add = (kind, len) => { cars.push({ kind, x0: x, x1: x + len, i: cars.length, ...KINDS[kind] }); x += len + 1; };
   add('caboose', 7);
-  for (const k of FIGHT) add(k, 9);
+  for (const k of VARIANTS[0].consist) add(k, 9);
   add('tender', 8);
   add('engine', 11);
   return cars;
 }
 export const CARS = trainLayout();
-export const FIGHT_CARS = CARS.slice(1, 1 + FIGHT.length);
+export const FIGHT_CARS = CARS.slice(1, 1 + VARIANTS[0].consist.length);
 export const TENDER = CARS.find((c) => c.kind === 'tender'), ENGINE = CARS.find((c) => c.kind === 'engine'), CABOOSE = CARS[0];
 /** The blocked tiles on a car's far row (crates, racks, cages, tables): [x, y] tiles. */
 export const crateCells = (car) => (car.cells || []).map((dx) => [car.x0 + dx, ROW0]);
@@ -81,12 +150,13 @@ export function aboardSpot(map, x) {
 export const trainElites = (depth) => ({ champs: 4 + Math.floor(Math.min(depth, 150) / 50), uniques: Math.floor(Math.min(depth, 150) / 75) });
 /** Which packs the elites lead, first to last: [car, pack]: every third car's leader from the front, then the rest. */
 const ELITE_ORDER = (() => {
-  const n = FIGHT.length, out = [];
+  const n = VARIANTS[0].consist.length, out = [];
   for (const p of [0, 1]) for (let off = 0; off < 3; off++) for (let k = n - 1 - off; k >= 1; k -= 3) if (k !== LT_CAR) out.push([k, p]);
   return out;
 })();
 
-export function generateGhostTrain(depth, biome, seed) {
+export function generateGhostTrain(depth, biome, seed, variant = 'forest') {
+  const v = useVariant(variant);
   const rng = new RNG(seed), map = new TileMap(GT_W, GT_H);
   for (const car of CARS) {
     const gap = car.kind === 'engine' ? 0 : 1;   // the gangway to the next car
@@ -124,6 +194,6 @@ export function generateGhostTrain(depth, biome, seed) {
   map.seen.fill(0);
   return {
     map, props: [], buildings: [], wallHangings: [], torches: [], townTiles: null, looks, spawns, chests: [], rooms: [],
-    start: [CABOOSE.x0 + 4.5, CZ], townPortal: [CABOOSE.x0 + 1.8, CZ], exit: [TENDER.x0 + 3, CZ], seed, cars: CARS, lieutenant,
+    start: [CABOOSE.x0 + 4.5, CZ], townPortal: [CABOOSE.x0 + 1.8, CZ], exit: [TENDER.x0 + 3, CZ], seed, cars: CARS, lieutenant, variant: v,
   };
 }

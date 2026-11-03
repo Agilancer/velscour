@@ -2,7 +2,7 @@
 
 Raiders have taken the night express across the Forsaken Wilds. The hero boards at the caboose and fights forward
 car by car while the train runs (sixteen of them); more raiders leap aboard from the line-side now and then. Their
-lieutenant holds the prison car halfway along, and the line crosses Hangman's Gorge on an iron trestle. Five times it
+lieutenant holds the prison car halfway along, and the line crosses Hangman's Gorge on an iron trestle (in the night forest; there are five variants). Five times it
 pulls in at a station: step off to loot the platform, or stay aboard. The raiders' chief holds the tender; when he
 falls the brakes go on and the train runs into **The Last Stop**, where the exit opens on the platform.
 
@@ -26,8 +26,33 @@ the boss come from the existing bestiary (`rollLooks`, `looks.boss`): no new art
 the existing `town` bed. The chief's fight adds `trainVent(kind)` to the 3D (steam from the tender, the whistle's plume;
 the puff pool grew from 34 to 56).
 
-The ride was made ~2.5x longer (16 fight cars instead of 6, 5 stations instead of 2, a lieutenant and the gorge): see
-the sections below. Auto-play now takes ~5 game minutes at depth 1 (it took ~2).
+The ride was made ~2.5x longer (16 fight cars instead of 6, 5 stations instead of 2, a lieutenant and a scenic beat): see
+the sections below. Auto-play now takes ~5 game minutes at depth 1 (it took ~2). It comes in five variants (below).
+
+## The five variants
+A level of the region rolls one of five (`variants` in `src/game/regions/ghosttrain.js`, the plumbing in
+`src/game/regions.js`: never the one seen last; `train 3`, `train frost` or the HAIL VELSCOUR! list picks one). The
+play side of each is `VARIANTS` in `src/world/ghosttrain.js` (`useVariant(id)` writes its consist into `CARS` and its
+stations into `STATIONS`), the look `LOOKS` in `src/gfx/ghosttrain3d.js`. Same length, packs, elites and chief fight in
+all five, so the balance holds; what changes:
+
+| | Night Forest (`forest`) | Frozen Pass (`frost`) | Desert Badlands (`badlands`) | Storm Coast (`storm`) | Cinder Line (`cinder`) |
+|---|---|---|---|---|---|
+| Land | the painted meadow, leafy trees | snow (DEC-06 tinted white), pines, snowdrift boulders | sand (DEC-10 ochre), cacti, mesas | wet rock (DEC-01), the sea (DEC-WS01) all along the far side | ash (DEC-04 dark), dead black trees, glowing scrub |
+| Night | dark 0.35, dust | 0.3 blue, snow | 0.12 (dusk), blowing sand | 0.42, rain | 0.38 red, embers |
+| Livery | deep red, red banners | navy blue cars, snowy roofs | sun-bleached ochre, tan banners | bottle green | soot black, ember-red banners |
+| Engine front | spiked ram | a red snowplough wedge | the ram, a canvas sun canopy over the cab | the ram, a brass bell, two storm lanterns | the ram, glowing grates along the boiler |
+| Consist | mixed, prison car halfway | flats and boxcars first, armouries | gondolas and mail (strongboxes) | coaches, sleepers, diners (a liner) | gondolas, flats, armouries (ore and arms) |
+| Stations | Hollowmere Halt, Gallowmarsh Water Stop, Saint Vey's Crossing, Blackwick Junction, Coldharbour Goods; The Last Stop | Rimeholt Halt, Whitecap Water Stop, Saint Ysolde's Chapel, Coldspur Junction, Frostgate Goods; Summit Stop | Dry Creek Halt, Bonewell Water Stop, Saint Ardan's Mission, Mesa Junction, Rattlerock Goods; Dustfall Terminus | Gullcry Halt, Wreckers' Crossing, Saltmarsh Water Stop, Lighthouse Junction, Harbour Goods; Stormhaven | Slagheap Halt, Bellows Water Stop, Saint Ember's, Furnace Junction, Foundry Gate; The Crucible |
+| Beat | Hangman's Gorge: a trestle over a dark river | The Avalanche Shed: a tunnel, rock walls and portals, lamps; the land and the 2D night go dark (`world.darkK`) and the 3D lights dim | The Dry Canyon: a trestle over a dry bed | The Sea Wall: the sea up to the near side, a stone wall with lamps, spray (3D puffs, 2D drops over the cars) | The Lava Gorge: a trestle over molten rock, its glow lighting the cars |
+| Lieutenant | Lieutenant, the prison car | Frost-Warden, the armoury | Dust Marshal, the bullion car | Bosun, the brig | Forgemaster, the armoury |
+| Chief's throw / vent | coal, fire / steam | ice, cold / frost | hot cinders, fire / steam | brine and hail, cold / steam | slag, fire / furnace smoke |
+
+Each has its own intro line, the chief's and the lieutenant's barks, the Last Stop's name, and the Quest Log names the
+variant. The night, fog, torch and drift are a copy of the biome set on `world.biome` by the run (`createGhostTrainRun`),
+so the shared `BETA_BIOMES` entry is unchanged. No new art: the ground and sea are the Depth's Edge seamless tiles
+(`assets/tiles/depths_edge/tex|water`), greyed and tinted like the other textures; everything else is the existing
+three.js parts in new colours.
 
 ## The level (`src/world/ghosttrain.js`)
 - A 200 x 24 map. The cars lie end to end along tile x on rows 11-13 (`ROW0`, three wide): the caboose (7 tiles, its
@@ -57,7 +82,7 @@ the sections below. Auto-play now takes ~5 game minutes at depth 1 (it took ~2).
   stop is centred on the hero's x (clamped to the train).
 - Stations, each its own buildings (`look`), are called as the cars are cleared: Hollowmere Halt (2, the hall),
   Gallowmarsh Water Stop (5, a water tower), Saint Vey's Crossing (8, a chapel), Blackwick Junction (11, a signal box)
-  and Coldharbour Goods (14, a goods shed); never while the gorge is passing. Two chests and 3-5 raiders on each
+  and Coldharbour Goods (14, a goods shed); never over the scenic beat (a station due then comes once the beat is behind the hero). Two chests and 3-5 raiders on each
   platform (5-7 from depth 60, a champion leading them). On departure the hero and his allies on the platform leap back aboard (`aboardSpot`: the
   nearest walkable car tile, never a crate), raiders on it are left behind (removed, no loot), ground loot is swept
   aboard and unopened chests go.
@@ -69,7 +94,7 @@ the sections below. Auto-play now takes ~5 game minutes at depth 1 (it took ~2).
   middle of the train"; at half his life he whistles 2-3 raiders aboard. He belongs to the prison car's pack (the car
   is clear when he falls) and drops a guardian's loot.
 - Hangman's Gorge: once `GORGE_AFTER` (7) cars are clear and she is running, `trainGorge()` brings the gorge in from
-  ahead; it passes under the whole train in ~35 s (a card, no fight of its own).
+  ahead; it passes under the whole train in ~30 s (a card, no fight of its own).
 - A car is clear when every monster spawned on it is dead (`CAR n CLEAR`). The boss's card reads "He holds the engine".
 - The chief: a guardian (game.js, level +2) whose life is x1 shallow, rising to x1.6 by depth 150 (deep down he fell
   in 7-8 s). His fight uses the train (`chiefTick`, while he is awake and the hero within 14 tiles and aboard): a cast
@@ -142,7 +167,7 @@ the sections below. Auto-play now takes ~5 game minutes at depth 1 (it took ~2).
   built. `ready()` is false if three.js can't load, and the region plays as the Forsaken Wilds.
 
 ## Test (`tools/tests/ghosttrain.js`)
-The skull word reaches it and it is never drawn into the rotation; 16 cars, 5 stations, the lieutenant on the prison
+The skull word reaches it (`train 1`: the variant by number) and it is never drawn into the rotation; 16 cars, 5 stations, the lieutenant on the prison
 car, a pack on every car; the render time at the back, middle and front; 30 seeds (every spawn and the town portal reachable,
 nothing walkable off the train, a platform joins and leaves); a station in play (brakes, stands with chests and
 raiders, the hero left on the platform leaps back aboard, the platform is void again, the ground streams by); the
@@ -150,7 +175,10 @@ cutaway and hiding, the engine mask; shots of the new cars, two overviews, every
 train; the chief's train fight cast on cue (two coal lanes and his wind-up, the leap to
 the coal heap under the steam ring, the whistle at 2/3 life bringing raiders aboard; shots `chief_coal`, `chief_vent`,
 `chief_whistle`); the chief's fall to the Last Stop (exit open and reachable); the three.js
-fallback and the scene's disposal; auto-play from the caboose to the exit (a fresh paladin at depth 1, about five game
+fallback and the scene's disposal; every variant built by number (its consist, stations, 3D look and beat, night,
+rain, lieutenant and Quest Log checked), shot (`variant_<id>`, `_beat`, `_station`, `_tender`; the tunnel must go dark)
+and soaked on auto-play (`SOAK` game seconds, default 150: at least three cars); auto-play from the caboose to the exit
+on one variant (`VARIANT=<id>`, else random) (a fresh paladin at depth 1, about five game
 minutes; at least 4 stations and the lieutenant down on the way); screenshots including the phone layout.
 
 `node tools/tests/ghosttrain.js noshots noauto 50,150,300 paladin,wizard`: for each depth (and class) a hero geared
@@ -185,6 +213,10 @@ lost 3.0 / 1.0 / 0.5 lives in 2 minutes at 50 / 150 / 300 (paladin) and 2.4 in 4
 is harsher per minute for a squishy caster (no room to kite), about even for the paladin.
 
 ## Next
+- Variants (where they stand): all five built, checked, shot and soaked by `ghosttrain.js` (passes: every variant's
+  150 s soak clears 8-13 cars; a full cinder ride finished in 248 s with 4 stations). Not yet: deep-depth soaks per
+  variant, `flow.js` after the variants, a look at the frozen pass's snow roofs (`roofSnow`, added last, shot but not
+  reviewed), and the badlands/cinder consists clear faster (more open cars) than the forest.
 - Tune: more classes and seeds in the deep soak (one run each so far). The wizard at depth 150 is the hard case (15
   lives and 29 potions over ten minutes, a 131 s chief); depth 300 is on the easy side, as plain dungeons are for this
   gear. The stop length (30 s) against how fast heroes loot. Some fast chief fights see only the whistles (he dies

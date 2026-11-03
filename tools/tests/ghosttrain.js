@@ -9,6 +9,9 @@
 // (coal lanes, the furnace vent, the whistle) is cast in play and shot. With depths, a hero geared for each depth the
 // way balance.js gears one rides it on auto-play for real (no god mode; a fall is counted and the hero stood up again):
 // it must finish, with few falls, and must not be a walk-over (life lost, the chief's fight length).
+// Every variant (world/ghosttrain.js VARIANTS: forest, frost, badlands, storm, cinder) is built, checked (consist,
+// stations, its look and beat), shot (a car fight, the beat under the train, a station, the tender) and soaked on
+// auto-play for a few game minutes; the full ride is auto-played on one (VARIANT=<id>, else a random one).
 //   node tools/tests/ghosttrain.js [shots|noshots] [auto|noauto] [depths, e.g. 50,150,300] [classes]
 //   (start the server first: python3 -m http.server 8123)
 const { openGame, report } = require('./harness');
@@ -16,6 +19,7 @@ const SHOTS = process.argv[2] !== 'noshots';
 const AUTO = process.argv[3] !== 'noauto';
 const DEPTHS = (process.argv[4] || '').split(',').filter(Boolean).map(Number);
 const DEEP_CLASSES = (process.argv[5] || 'paladin').split(',');
+const SOAK = +(process.env.SOAK || 150);   // game seconds of auto-play on each variant
 
 (async () => {
   const { browser, page, errors, shot } = await openGame({ width: 1366, height: 860 });
@@ -45,7 +49,7 @@ const DEEP_CLASSES = (process.argv[5] || 'paladin').split(',');
     await page.evaluate(async () => { await window.VELSCOUR.game.newChar('paladin', 'Rider'); window.VELSCOUR.G.char.depth = 6; });
     await page.waitForTimeout(300);
     await page.click('#velscour-skull');
-    await page.fill('#velscour-message', 'train');
+    await page.fill('#velscour-message', 'train 1');   // (the number picks the variant: the night forest)
     await page.click('.velscour-contact-dialog button:has-text("Send")');
     await page.waitForFunction(() => window.VELSCOUR.G.world?.biome?.id === 'ghost_train' && document.querySelector('#loading').classList.contains('hidden'), null, { timeout: 30000 });
     const first = await page.evaluate(async () => {
@@ -97,14 +101,14 @@ const DEEP_CLASSES = (process.argv[5] || 'paladin').split(',');
     // ------------------------------------------------ 30 seeds
     const gen = await page.evaluate(async () => {
       const { BIOME_BY_ID } = await import('/src/data/biomes.js');
-      const { generateGhostTrain, platformOn, platformOff, PLAT0, ROW0 } = await import('/src/world/ghosttrain.js');
+      const { generateGhostTrain, platformOn, platformOff, PLAT0, ROW0, VARIANTS, useVariant } = await import('/src/world/ghosttrain.js');
       const biome = BIOME_BY_ID.ghost_train, bad = [];
       if (biome.name !== 'The Iron Express') bad.push('biome is named ' + biome.name);
       let ms = 0, spawns = 0;
       for (let n = 1; n <= 30; n++) {
         const seed = n * 7919 + 3, t0 = performance.now();
         let g;
-        try { g = generateGhostTrain(6, biome, seed); } catch (e) { bad.push(`seed ${seed}: ${e.message}`); continue; }
+        try { g = generateGhostTrain(6, biome, seed, VARIANTS[n % VARIANTS.length].id); } catch (e) { bad.push(`seed ${seed}: ${e.message}`); continue; }
         ms = Math.max(ms, performance.now() - t0);
         const m = g.map, W = m.w;
         const reach = () => {
@@ -127,6 +131,7 @@ const DEEP_CLASSES = (process.argv[5] || 'paladin').split(',');
         platformOff(m);
         if (m.walkable(x0 + 5.5, PLAT0 + 1.5)) bad.push(`seed ${seed}: the platform stayed after it left`);
       }
+      useVariant(window.VELSCOUR.G.world.trainVariant.id);   // (back to the level's own consist)
       return { bad, maxMs: Math.round(ms), spawns };
     });
     console.log('generation', JSON.stringify(gen));
@@ -339,14 +344,96 @@ const DEEP_CLASSES = (process.argv[5] || 'paladin').split(',');
     console.log('fallback', JSON.stringify(fallback));
     for (const b of fallback.bad) errors.push('[fallback] ' + b);
 
+
+    // ------------------------------------------------ every variant: built, checked, shot, and soaked on auto-play
+    const vids = await page.evaluate(async () => (await import('/src/world/ghosttrain.js')).VARIANTS.map((v) => v.id));
+    for (const [vi, vid] of vids.entries()) {
+      const built = await page.evaluate(async ([vid, vi]) => {
+        const { G, game } = window.VELSCOUR;
+        const { BIOME_BY_ID } = await import('/src/data/biomes.js');
+        const { REGIONS } = await import('/src/game/regions.js');
+        const { FIGHT_CARS, STATIONS, LT_CAR, variantOf } = await import('/src/world/ghosttrain.js');
+        const { trainScene } = await import('/src/gfx/ghosttrain3d.js');
+        await game.newChar('paladin', 'Rider'); G.char.depth = 6; G.godMode = true;
+        (G.regionWant ||= {}).ghost_train = String(vi + 1);   // (by number, as the skull's 'train 3')
+        await game.teleportToBiome(BIOME_BY_ID.ghost_train);
+        const w = G.world, sc = w.overworldScenario, v = variantOf(vid), bad = [];
+        if (!sc || !sc.variant || sc.variant.id !== vid) return { bad: [`asked for ${vid}, built ${sc && sc.variant && sc.variant.id}`] };
+        if (REGIONS.ghost_train.variants.length !== 5) bad.push('the region lists ' + REGIONS.ghost_train.variants.length + ' variants');
+        FIGHT_CARS.forEach((c, k) => { if (c.kind !== v.consist[k]) bad.push(`car ${k} is a ${c.kind}, not a ${v.consist[k]}`); });
+        if (STATIONS.map((q) => q.name).join() !== v.stations.map((q) => q.name).join()) bad.push('the stations are not the variant\'s');
+        const S3 = trainScene();
+        if (!S3 || S3.vid !== vid || S3.beatKind !== v.beat.kind) bad.push(`the 3D is ${S3 && S3.vid}/${S3 && S3.beatKind}`);
+        if (w.biome.dark !== v.sky.dark || w.biome.fog !== v.sky.fog) bad.push('the night is not the variant\'s');
+        if (!!w.raining !== !!v.sky.rain) bad.push('rain: ' + w.raining);
+        if (!sc.lieutenant || !sc.lieutenant.name.startsWith(v.lt.title)) bad.push('the lieutenant is ' + (sc.lieutenant && sc.lieutenant.name));
+        const quest = REGIONS.ghost_train.quest(sc, (d, h) => h + ' | ').replace(/<[^>]+>/g, '');
+        if (!quest.includes(v.name)) bad.push('the Quest Log does not name the variant');
+        return { bad, name: v.name, consist: FIGHT_CARS.map((c) => c.kind).join(','), lt: sc.lieutenant && sc.lieutenant.name, quest };
+      }, [vid, vi]);
+      console.log('variant ' + vid, JSON.stringify({ ...built, quest: undefined }));
+      for (const b of built.bad) errors.push(`[variant ${vid}] ` + b);
+      if (built.bad.length) continue;
+      await view(`variant_${vid}`, `const e = w.creatures.find((c) => c.team === 'enemy' && c !== w.boss && c.x > 34 && c.x < 44); return e ? [e.x - 2.2, 12.5] : [38, 12.5];`, 0.85, 1);
+      // the beat under the train, then a station beside it, then the tender
+      const beat = await page.evaluate(async () => {
+        const { G, game } = window.VELSCOUR;
+        const g3 = await import('/src/gfx/ghosttrain3d.js');
+        const w = G.world, p = G.player, bad = [];
+        p.x = 60; p.y = 12.5;   // (no car is cleared, so no station is called over the beat)
+        g3.trainGorge();
+        for (let i = 0; i < 2000 && g3.trainGorgeX() != null && g3.trainGorgeX() > 62; i++) { G.time += 1 / 30; game.update(1 / 30); }
+        if (g3.trainGorgeX() == null) bad.push('the beat never came under the train');
+        for (let i = 0; i < 45; i++) { G.time += 1 / 30; game.update(1 / 30); }
+        return { bad, x: g3.trainGorgeX(), darkK: +(w.darkK || 0).toFixed(2) };
+      });
+      for (const b of beat.bad) errors.push(`[variant ${vid} beat] ` + b);
+      if (vid === 'frost' && !(beat.darkK > 0.5)) errors.push(`[variant ${vid} beat] the tunnel is not dark: ${beat.darkK}`);
+      await view(`variant_${vid}_beat`, 'return [60, 12.5];', 0.6, 0.05);
+      await page.evaluate(async () => {
+        const { G } = window.VELSCOUR;
+        const g3 = await import('/src/gfx/ghosttrain3d.js');
+        const { STATIONS } = await import('/src/world/ghosttrain.js');
+        const sc = G.world.overworldScenario, S3 = g3.trainScene();
+        S3.gorgeX = null; G.world.darkK = 0;
+        g3.trainStation(STATIONS[2].name, STATIONS[2].look); sc.stationX = 60;
+      });
+      await view(`variant_${vid}_station`, 'return [60, 12.5];', 0.6, 0.05);
+      await page.evaluate(() => { window.VELSCOUR.G.world.overworldScenario.stationX = null; });
+      await view(`variant_${vid}_tender`, 'return [w.boss.x - 3, 12.5];', 0.75, 0.05);
+      // a short soak on auto-play: a fresh hero fights forward from the caboose
+      if (AUTO) {
+        const soak = await page.evaluate(async ([vi, secs]) => {
+          const { G, game } = window.VELSCOUR;
+          const { Auto } = await import('/src/game/autoplay.js');
+          const { BIOME_BY_ID } = await import('/src/data/biomes.js');
+          await game.newChar('paladin', 'Soak'); G.char.depth = 1; G.godMode = true;
+          (G.regionWant ||= {}).ghost_train = String(vi + 1);
+          await game.teleportToBiome(BIOME_BY_ID.ghost_train);
+          const w = G.world, sc = w.overworldScenario, t0 = performance.now();
+          Auto.toggle(true);
+          let sim = 0;
+          while (sim < secs && !sc.completed && performance.now() - t0 < 240000) {
+            for (let i = 0; i < 30; i++) { G.dt = 1 / 30; G.time += G.dt; G.frame++; game.update(1 / 30); sim += 1 / 30; }
+            await new Promise((r) => setTimeout(r, 0));
+          }
+          Auto.toggle(false);
+          return { variant: sc.variant.id, secs: Math.round(sim), cleared: sc.cleared, stations: sc.stationsSeen, phase: sc.phase, status: Auto.status, foes: w.creatures.filter((m) => m.team === 'enemy' && !m.dead).length };
+        }, [vi, SOAK]);
+        console.log(`soak ${vid}`, JSON.stringify(soak));
+        if (soak.cleared < Math.floor(SOAK / 50)) errors.push(`[variant ${vid} soak] only ${soak.cleared} cars in ${soak.secs}s (${soak.status})`);
+      }
+    }
+
     // ------------------------------------------------ auto-play rides it to the Last Stop
     if (AUTO) {
-      const res = await page.evaluate(async () => {
+      const res = await page.evaluate(async (want) => {
         const { G, game } = window.VELSCOUR;
         const { Auto } = await import('/src/game/autoplay.js');
         const { BIOME_BY_ID } = await import('/src/data/biomes.js');
         // as in seabattle.js: a fresh hero at depth 1 fights it for real (god mode only keeps the soak from dying)
         await game.newChar('paladin', 'Conductor'); G.char.depth = 1; G.godMode = true;
+        if (want) (G.regionWant ||= {}).ghost_train = want;
         await game.teleportToBiome(BIOME_BY_ID.ghost_train);
         Auto.toggle(true);
         const t0 = performance.now();
@@ -368,8 +455,8 @@ const DEEP_CLASSES = (process.argv[5] || 'paladin').split(',');
         }
         Auto.toggle(false);
         if (game.pick) document.querySelector('.dialog button')?.click();
-        return { secs: Math.round(sim), completed: sc.completed, cleared: sc.cleared, stations: sc.stationsSeen, ltDead: !!(sc.lieutenant && sc.lieutenant.dead), status: after, exit: exit.active, reachedExit: reached, log };
-      });
+        return { variant: w.trainVariant.id, secs: Math.round(sim), completed: sc.completed, cleared: sc.cleared, stations: sc.stationsSeen, ltDead: !!(sc.lieutenant && sc.lieutenant.dead), status: after, exit: exit.active, reachedExit: reached, log };
+      }, process.env.VARIANT || '');
       console.log('auto-play', JSON.stringify(res));
       if (!res.completed) errors.push(`[auto] did not reach the Last Stop in ${res.secs}s (${res.cleared} cars, ${res.status})`);
       if (res.completed && res.stations < 4) errors.push(`[auto] only ${res.stations} stations on the way`);
