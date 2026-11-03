@@ -14,9 +14,49 @@ const SC = HW * Math.SQRT2;   // world px a unit across the screen
 const SKY = 0x141a26;         // the night beyond the lamps
 let T = null, BGU = null, R = null, S = null;
 
-/** three.js and its geometry utilities; rejects if they fail (the region then plays as the Forsaken Wilds). */
+// The repo's own textures (the airship pack's planks and metals, the castle bake's brick, slate and stone; no new
+// art): [file, units a repeat across, grey (tinted by the material's colour) or natural, mean brightness wanted].
+const AIR = 'assets/source/airship/textures/', CST = 'assets/source/castle3d/tex/';
+const TEX = {
+  boards: [AIR + 'ship_planks/SHIP-06_Salt_Bleached_Greyboards.png', 1.6, true, 0.82],   // painted car sides
+  deck: [AIR + 'ship_planks/SHIP-02_Salt_Worn_Oak.png', 1.6, false, 0.4],               // car floors
+  crate: [CST + 'wood.png', 0.9, false, 0.5],
+  cedar: [AIR + 'wood/WOOD-04_Weathered_Cedar.png', 1.2, false, 0.45],                   // benches, the station door
+  iron: [AIR + 'metal/MET-02_Riveted_Black_Iron.png', 1.4, true, 0.55],                  // frames, smokebox, chimney
+  gun: [AIR + 'metal/MET-01_Hammered_Gunmetal.png', 1.4, true, 0.8],                     // painted metal: boiler, cab, roofs
+  rust: [AIR + 'metal/MET-03_Flaked_Iron.png', 0.9, true, 0.8],                           // wheels, buffers, buffer beam
+  brass: [AIR + 'metal/MET-09_Oxide_Stained_Brass.png', 0.8, false, 0.62],
+  brick: [CST + 'brick.png', 1.4, false, 0],
+  slate: [CST + 'slate.png', 1.6, false, 0],
+  stone: [CST + 'ashlar.png', 1.5, true, 0.8],                                            // the platforms
+};
+const IMG = {};
+const loadImg = (src) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('no ' + src)); i.src = src; });
+/** three.js, its geometry utilities and the textures; rejects if three.js fails (the region then plays as the
+ *  Forsaken Wilds). A texture that fails leaves its parts their flat colour. */
 export async function loadTrain3D() {
   if (!T) [T, BGU] = await Promise.all([import('three'), import('three/addons/utils/BufferGeometryUtils.js')]);
+  await Promise.all(Object.entries(TEX).map(([k, [src]]) => IMG[k] || loadImg(src).then((i) => { IMG[k] = i; }).catch((e) => console.warn(e))));
+}
+/** A texture from IMG[key], greyed (to be tinted) or not, brought to a mean brightness; null if it didn't load. */
+function texOf(key) {
+  const img = IMG[key], [, , grey, mean] = TEX[key];
+  if (!img) return null;
+  const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0);
+  if (grey || mean) {
+    const id = x.getImageData(0, 0, c.width, c.height), d = id.data, n = d.length / 4;
+    let sum = 0; for (let i = 0; i < d.length; i += 4) sum += (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11) / 255;
+    const k = mean ? mean / Math.max(0.05, sum / n) : 1;
+    for (let i = 0; i < d.length; i += 4) {
+      if (grey) { const v = Math.min(255, (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11) * k); d[i] = d[i + 1] = d[i + 2] = v; }
+      else { d[i] = Math.min(255, d[i] * k); d[i + 1] = Math.min(255, d[i + 1] * k); d[i + 2] = Math.min(255, d[i + 2] * k); }
+    }
+    x.putImageData(id, 0, 0);
+  }
+  const t = new T.CanvasTexture(c);
+  t.colorSpace = T.SRGBColorSpace; t.wrapS = t.wrapT = T.RepeatWrapping; t.magFilter = T.NearestFilter; t.anisotropy = 4;
+  return t;
 }
 export const train3dReady = () => !!(T && BGU);
 export const trainScene = () => S;
@@ -74,18 +114,26 @@ const ballastPaint = (x, w, h) => {
   for (let i = 0; i < 500; i++) { x.fillStyle = rnd() < 0.5 ? '#5c5854' : '#383532'; x.fillRect((rnd() * w) | 0, (rnd() * h) | 0, 2, 2); }
   for (const sx of [0.1, 0.6]) { x.fillStyle = '#3a2a1c'; x.fillRect(sx * w, h * 0.08, w * 0.16, h * 0.84); x.fillStyle = '#4e3a28'; x.fillRect(sx * w, h * 0.08, w * 0.16, 2); }
 };
-/** The platform's flagstones. */
-const flagPaint = (x, w, h) => {
-  x.fillStyle = '#7a756c'; x.fillRect(0, 0, w, h);
-  for (let y = 0; y < h; y += 16) for (let X = (y / 16) % 2 ? 8 : 0; X < w; X += 16) { x.fillStyle = rnd() < 0.5 ? '#86807a' : '#706a62'; x.fillRect(X + 1, y + 1, 14, 14); }
-};
 
+
+/** World-space UVs (a box projection on each face's main axis), `su` x `sv` units a repeat: a texture keeps its scale
+ *  on every part, however long, and merged parts share one material. */
+function boxUV(g, su, sv) {
+  const P = g.attributes.position, N = g.attributes.normal, U = g.attributes.uv;
+  if (!U) return;
+  for (let i = 0; i < P.count; i++) {
+    const ax = Math.abs(N.getX(i)), ay = Math.abs(N.getY(i)), az = Math.abs(N.getZ(i)), x = P.getX(i), y = P.getY(i), z = P.getZ(i);
+    if (ax >= ay && ax >= az) U.setXY(i, z / su, y / sv); else if (ay >= az) U.setXY(i, x / su, z / sv); else U.setXY(i, x / su, y / sv);
+  }
+  U.needsUpdate = true;
+}
 // ------------------------------------------------------------------ a builder that merges by material
 function kit() {
   const parts = new Map(), edges = [], m4 = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), one = new T.Vector3(1, 1, 1), p = new T.Vector3();
   const add = (geo, mat, x, y, z, o = {}) => {
     e.set(o.rx || 0, o.ry || 0, o.rz || 0); q.setFromEuler(e); m4.compose(p.set(x, y, z), q, one);
     const g = (geo.index ? geo.toNonIndexed() : geo).applyMatrix4(m4); if (g !== geo) geo.dispose();
+    if (mat.map && mat.userData.su) boxUV(g, mat.userData.su, mat.userData.sv);
     if (!parts.has(mat)) parts.set(mat, []);
     parts.get(mat).push(g);
     if (o.edge !== false) edges.push(new T.EdgesGeometry(g, 35));
@@ -102,19 +150,28 @@ function kit() {
   };
 }
 function mats() {
-  const L = (c, o = {}) => new T.MeshLambertMaterial({ color: c, ...o });
-  const flags = canvasTex(64, 64, flagPaint, (PLAT_LEN + 2) / 2, 3);
+  const tex = {};
+  for (const k in TEX) tex[k] = texOf(k);
+  /** A Lambert material: flat `c`, or texture `key` tinted `tint` (white: its own colours) when it loaded. */
+  const L = (c, key = null, tint = 0xffffff) => {
+    const t = key && tex[key];
+    const m = new T.MeshLambertMaterial({ color: t ? tint : c, map: t || null });
+    if (t) { const su = TEX[key][1]; m.userData.su = su; m.userData.sv = su * t.image.height / t.image.width; }
+    return m;
+  };
   return {
-    // painted steel and wood, by car
-    red: L(0xa02c1e), green: L(0x1f5034), maroon: L(0x6a1c20), brown: L(0x7a4024), black: L(0x1d1d20), cream: L(0xd8c8a0),
-    roof: L(0x4a4a4e), steel: L(0x5c5e62), brass: L(0xc09440), wheel: L(0xb02218), wood: L(0x7a5a3a), crate: L(0x8a6a40),
-    deck: L(0x7a5a3a), deck2: L(0x6a4c30), coal: L(0x18181a), stone: L(0xffffff, { map: flags }), brick: L(0x8a4a34), slate: L(0x3a3e48),
+    // painted wood by car (the grey boards tinted), painted and bare metal on the engine, brick, slate and stone
+    red: L(0xa02c1e, 'boards', 0xc23a28), green: L(0x1f5034, 'boards', 0x2a6a44), maroon: L(0x6a1c20, 'boards', 0x8a2a2c), brown: L(0x7a4024, 'boards', 0x9a5430),
+    wood: L(0x7a5a3a, 'deck', 0xd8c0a0), crate: L(0x8a6a40, 'crate'), cedar: L(0x7a5a3a, 'cedar'), deck: L(0x7a5a3a, 'deck', 0xd8b890),
+    engGreen: L(0x1f5034, 'gun', 0x2c6a44), redMetal: L(0xa02c1e, 'rust', 0xc0301e), wheel: L(0xb02218, 'rust', 0xc42a1c),
+    black: L(0x1d1d20, 'iron', 0x3a3a40), roof: L(0x4a4a4e, 'gun', 0x4e5058), steel: L(0x5c5e62, 'gun', 0x9a9ca2), brass: L(0xc09440, 'brass'),
+    cream: L(0xd8c8a0), coal: L(0x18181a), stone: L(0x8a847a, 'stone', 0xb0a898), brick: L(0x8a4a34, 'brick'), slate: L(0x3a3e48, 'slate', 0xb8bcc8),
     rail: L(0xa0a0a4), trunk: L(0x4a3424), leaf: L(0x2a4a2c), rock: L(0x6a6a64), pole: L(0x5a4430),
     window: new T.MeshBasicMaterial({ color: 0xffc66a }), fire: new T.MeshBasicMaterial({ color: 0xff8a30 }), lamp: new T.MeshBasicMaterial({ color: 0xfff0c8 }),
     edge: new T.LineBasicMaterial({ color: 0x0a0806, transparent: true, opacity: 0.45, depthWrite: false }),
   };
 }
-const BODY = { caboose: 'red', gondola: 'green', coach: 'maroon', flat: 'wood', boxcar: 'brown', mail: 'green', tender: 'green' };
+const BODY = { caboose: 'red', gondola: 'green', coach: 'maroon', flat: 'wood', boxcar: 'brown', mail: 'green', tender: 'engGreen' };
 
 // ------------------------------------------------------------------ the train
 const Y_RAIL = -1.1, Y_GROUND = -1.25;
@@ -127,7 +184,7 @@ function buildTrain(scene, M, glows) {
     const L = car.x1 - car.x0, cx = (car.x0 + car.x1) / 2, body = M[BODY[car.kind]] || M.black, h = car.wall;
     const cut = car.kind === 'engine' ? null : kit();   // this car's roof and near side: hidden while the hero is in it
     if (car.kind !== 'engine') {
-      for (let b = 0; b < 8; b++) k.box(L, 0.22, W / 8 - 0.02, b % 2 ? M.deck : M.deck2, cx, -0.11, z0 + (b + 0.5) * (W / 8), { edge: false });   // the plank floor the fight is on
+      k.box(L, 0.22, W, M.deck, cx, -0.11, CZ, { edge: false });   // the plank floor the fight is on
       k.box(L, 0.24, 0.12, body, cx, -0.12, z0 - 0.01); k.box(L, 0.24, 0.12, body, cx, -0.12, z1 + 0.01);   // the sole bars
       k.box(L - 0.6, 0.32, W - 0.7, M.black, cx, -0.4, CZ, { edge: false });    // the underframe
       for (const bx of [car.x0 + 1.5, car.x1 - 1.5]) {                           // two bogies, red wheels
@@ -186,23 +243,23 @@ function buildTrain(scene, M, glows) {
     } else if (car.kind === 'tender') {
       for (const ex of [car.x0 + 0.05]) { k.box(0.1, h, 0.7, body, ex, h / 2, z0 + 0.35); k.box(0.1, 0.35, 0.7, body, ex, 0.175, z1 - 0.35); }
       k.box(0.1, h, W, body, car.x1 - 0.05, h / 2, CZ);
-      for (const [kk, z] of [[k, z0 - 0.02], [cut, z1 + 0.02]]) span(kk, M.red, car.x0, car.x1, 0.8, 0.86, z, 0.04, { edge: false });
+      for (const [kk, z] of [[k, z0 - 0.02], [cut, z1 + 0.02]]) span(kk, M.redMetal, car.x0, car.x1, 0.8, 0.86, z, 0.04, { edge: false });
       for (let i = 0; i < 9; i++) k.add(new T.DodecahedronGeometry(0.45 + rnd() * 0.35), M.coal, car.x1 - 0.9 - rnd() * 1.3, 0.25 + rnd() * 0.45, z0 + 0.5 + rnd() * (W - 1), { rx: rnd() * 3, ry: rnd() * 3 });
       glow(car.x0 + 0.4, 1.2, z0 + 0.2, 1.5);
     } else if (car.kind === 'engine') {
       const x0 = car.x0, x1 = car.x1, cab = 3, by = 1.0;
       k.box(L + 0.4, 0.3, W - 0.2, M.black, cx + 0.2, -0.15, CZ);                // the running board
       k.box(L - 1, 0.4, W - 1.2, M.black, cx - 0.3, -0.5, CZ, { edge: false });
-      for (const z of [z0 + 0.06, z1 - 0.06]) k.box(L - 3.6, 0.1, 0.06, M.red, x0 + cab + (L - 3.6) / 2 + 0.2, -0.02, z, { edge: false });
+      for (const z of [z0 + 0.06, z1 - 0.06]) k.box(L - 3.6, 0.1, 0.06, M.redMetal, x0 + cab + (L - 3.6) / 2 + 0.2, -0.02, z, { edge: false });
       // the cab: green with brass-framed lit windows, a black roof, the firebox glowing inside
-      k.box(cab, 2.2, 0.12, M.green, x0 + cab / 2, 1.1, z0 + 0.1); k.box(cab, 2.2, 0.12, M.green, x0 + cab / 2, 1.1, z1 - 0.1);
-      k.box(0.12, 2.2, W - 0.2, M.green, x0 + cab - 0.06, 1.1, CZ);
+      k.box(cab, 2.2, 0.12, M.engGreen, x0 + cab / 2, 1.1, z0 + 0.1); k.box(cab, 2.2, 0.12, M.engGreen, x0 + cab / 2, 1.1, z1 - 0.1);
+      k.box(0.12, 2.2, W - 0.2, M.engGreen, x0 + cab - 0.06, 1.1, CZ);
       k.box(cab + 0.5, 0.14, W + 0.3, M.black, x0 + cab / 2, 2.3, CZ);
       for (const z of [z0 + 0.04, z1 - 0.04]) { k.box(1.1, 0.7, 0.06, M.window, x0 + 1.6, 1.45, z, { edge: false }); k.box(1.3, 0.9, 0.04, M.brass, x0 + 1.6, 1.45, z + (z < CZ ? 0.02 : -0.02), { edge: false }); }
       k.box(0.6, 0.6, 1.2, M.fire, x0 + cab - 0.4, 0.5, CZ, { edge: false });
       // the boiler (green, brass bands), the black smokebox, the dome, the chimney
       const bl = x1 - 1.4 - (x0 + cab);
-      k.cyl(1.0, 1.0, bl, M.green, x0 + cab + bl / 2, by, CZ, { rz: Math.PI / 2, seg: 18 });
+      k.cyl(1.0, 1.0, bl, M.engGreen, x0 + cab + bl / 2, by, CZ, { rz: Math.PI / 2, seg: 18 });
       for (let x = x0 + cab + 0.8; x < x1 - 1.6; x += 1.6) k.cyl(1.04, 1.04, 0.1, M.brass, x, by, CZ, { rz: Math.PI / 2, seg: 18, edge: false });
       k.cyl(1.02, 1.02, 1.4, M.black, x1 - 0.7, by, CZ, { rz: Math.PI / 2, seg: 18 });
       k.cyl(0.5, 0.5, 0.08, M.steel, x1 + 0.02, by, CZ, { rz: Math.PI / 2, seg: 16, edge: false });
@@ -213,9 +270,9 @@ function buildTrain(scene, M, glows) {
       k.cyl(0.49, 0.49, 0.06, M.brass, x1 - 0.8, by + 2.46, CZ, { seg: 14, edge: false });
       // cylinders and steam pipes, the red buffer beam, buffers, the cowcatcher, the headlamp
       for (const z of [z0 + 0.25, z1 - 0.25]) k.cyl(0.32, 0.32, 1.3, M.black, x1 - 1.2, -0.45, z, { rz: Math.PI / 2, seg: 12 });
-      k.box(0.2, 0.42, W, M.red, x1 + 0.15, -0.3, CZ);
+      k.box(0.2, 0.42, W, M.redMetal, x1 + 0.15, -0.3, CZ);
       for (const bz of [CZ - 1, CZ + 1]) k.cyl(0.13, 0.13, 0.3, M.black, x1 + 0.4, -0.3, bz, { rz: Math.PI / 2, seg: 8 });
-      for (let i = -3; i <= 3; i++) k.box(0.1, 0.12, 1.5, M.red, x1 + 0.7, -0.75, CZ + i * 0.42, { ry: i * 0.12, rz: 0.5 });
+      for (let i = -3; i <= 3; i++) k.box(0.1, 0.12, 1.5, M.redMetal, x1 + 0.7, -0.75, CZ + i * 0.42, { ry: i * 0.12, rz: 0.5 });
       k.box(0.34, 0.34, 0.34, M.black, x1 + 0.1, by + 1.15, CZ); k.box(0.06, 0.24, 0.24, M.lamp, x1 + 0.28, by + 1.15, CZ, { edge: false });
       glow(x1 + 0.6, by + 1.15, CZ, 3.2, 0xfff0c8); glow(x0 + cab - 0.4, 0.9, CZ, 2.4, 0xff7a2a);
     }
@@ -297,13 +354,13 @@ function buildStation(scene, M) {
   k.box(L, 1.25, zn - zf, M.stone, 0, -0.625, (zf + zn) / 2);
   k.box(L, 0.03, 0.22, M.cream, 0, 0.01, zf + 0.2, { edge: false });
   for (let x = -L / 2 + 2; x <= L / 2 - 2; x += 5.5) { k.box(0.12, 2.3, 0.12, M.black, x, 1.15, zn - 0.35); k.box(0.3, 0.3, 0.3, M.lamp, x, 2.35, zn - 0.35, { edge: false }); glows.push({ x, y: 2.35, z: zn - 0.35, r: 2.2, c: 0xffd890 }); }
-  for (const x of [-8, 8]) { k.box(2, 0.1, 0.5, M.wood, x, 0.45, zn - 0.5); k.box(2, 0.5, 0.08, M.wood, x, 0.7, zn - 0.25); }
+  for (const x of [-8, 8]) { k.box(2, 0.1, 0.5, M.cedar, x, 0.45, zn - 0.5); k.box(2, 0.5, 0.08, M.cedar, x, 0.7, zn - 0.25); }
   // across the track: the station house, brick with a slate roof and lit windows, on its own strip of platform
   k.box(L, 1.25, 3, M.stone, 0, -0.625, 9.3);
   k.box(10, 2.8, 3.2, M.brick, 0, 1.4, 6.6);
   k.add(new T.CylinderGeometry(2.1, 2.1, 10.6, 3), M.slate, 0, 3.85, 6.6, { rz: Math.PI / 2, rx: -Math.PI / 2 });
   for (const x of [-3.4, -1.2, 3.4]) k.box(1.0, 1.1, 0.06, M.window, x, 1.4, 8.22, { edge: false });
-  k.box(1.1, 2, 0.06, M.wood, 1.2, 1.0, 8.22);
+  k.box(1.1, 2, 0.06, M.cedar, 1.2, 1.0, 8.22);
   glows.push({ x: 1.2, y: 2.3, z: 8.4, r: 2, c: 0xffc070 });
   const g = k.build(new T.Group(), M.edge);
   const sign = new T.Mesh(new T.PlaneGeometry(4, 0.75), new T.MeshBasicMaterial({ map: signTex('—') }));

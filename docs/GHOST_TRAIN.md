@@ -66,13 +66,21 @@ the existing `town` bed.
   wheels and buffers, lamp-lit windows, grey roofs. The locomotive: green boiler with brass bands and dome, black
   smokebox and chimney, a green cab with lit windows and the firebox glowing, red driving wheels with turning side
   rods, a red buffer beam and cowcatcher, a headlamp. Thin dark outlines on every edge so it reads at a glance.
+- Textures are the repo's own (no new art), loaded with three.js in `loadTrain3D` (`TEX`): the airship pack's
+  planks and metals (`assets/source/airship/textures/`: grey boards tinted per car for the painted sides, worn oak
+  floors, riveted black iron, hammered gunmetal tinted green/grey for the boiler, cab and roofs, flaked iron tinted red
+  for wheels and buffers, stained brass, weathered cedar benches) and the castle bake's (`assets/source/castle3d/tex/`:
+  `wood` crates, `brick` station house, `slate` roof, `ashlar` platforms), the same runtime paths the Serpentine Tower
+  loads. Grey ones are brought to a set brightness and tinted by the material colour, so the colour scheme holds.
+  UVs are world-space (`boxUV`, a box projection, units per repeat from `TEX`), so a texture keeps its scale on every
+  part and merged parts share one material. A texture that fails to load leaves its parts a flat colour.
 - The train never moves: the ground and ballast scroll, ~46 instanced items (trees, telegraph poles, bushes, rocks;
   low ones only on the near side, none where the platforms stand) slide past and wrap, coal smoke trails back from the
   chimney (rises when stopped, thins as she brakes) and steam puffs from the cylinders while she runs.
 - Static geometry is merged per material with `BufferGeometryUtils`; each car's roof and near side are one group of
   their own (the cutaway). Point lights (3 on touch, 5 on desktop) go to the lamps nearest the hero; the run adds 2D
   lights for the car lamps, the firebox, the headlamp and the station lamps against the night.
-- The station: a flagstone platform with a white edge, lamps, benches and a name sign (canvas text) on the near side;
+- The station: a stone (ashlar) platform with a white edge, lamps, benches and a name sign (canvas text) on the near side;
   across the track a brick station house with a slate roof and lit windows. One group moved to `stationX`.
 - The scene is disposed when the hero is on another level (a 2.5 s check against `G.world`) or the next train is
   built. `ready()` is false if three.js can't load, and the region plays as the Forsaken Wilds.
