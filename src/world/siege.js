@@ -1,8 +1,12 @@
 // THE ENDLESS SIEGE (docs/ENDLESS_SIEGE.md): a 64 x 64 fortress map. The keep's curtain is a ring of height-mapped
 // masonry (the Castle's wall faces, gfx/castlewalls.js) with towers on the corners and flanking three gates; the
 // courtyard lies at the top of the screen (low x + y), the field the horde crosses below it (+x, +y), so the walls
-// show their faces to the dead coming up from the siege camp. Behind the keep a rock cliff rises. Walls and towers are
-// solid; the gate passages are open ground the run (game/siege.js) holds shut against the dead.
+// show their faces to the dead coming up from the siege camp. Behind the keep a rock cliff rises. The wall tops are a
+// wall-walk (the Castle's height-map rules, docs/MOUNTAINSIDE.md: a hop up is `climb` 4 levels, a drop at most 10):
+// flights of stairs (`STAIRS`) climb from the courtyard, one step a tile, the walk runs along the curtain, the gate
+// flanks stand one step over it and the corner towers (the ballistae's) one more; a parapet (blocked merlons and
+// crenels) runs along every edge over the field, so nothing outside can climb up and nothing on top can step off. The
+// gate passages are open ground the run (game/siege.js) holds shut against the dead.
 import { TileMap } from './map.js';
 import { RNG } from '../core/util.js';
 import { TW } from '../core/view.js';
@@ -16,7 +20,20 @@ import { BIOME_BY_ID } from '../data/biomes.js';
 
 export const SW = 64, SH = 64;
 const K = TW / 160;                       // town-pack tiles are 160 x 80
-export const LV = Object.freeze({ wall: 14, tower: 22, gate: 19, cliff: 34, merlon: 3 });
+export const LV = Object.freeze({ wall: 14, step: 18, tower: 22, gate: 18, cliff: 34, merlon: 3 });
+/** The flights up to the wall-walk: three steps (4, 8, 12 levels) two tiles wide from the foot step (x, y), rising
+ *  along (dx, dy) to the walk; the side flights rise toward -x so their risers face the camera. One or two per stretch
+ *  of walk the gates cut apart: the west and north walls (with the north-east), between the West and Great Gates, and
+ *  east of the Great Gate (with the south-east). */
+export const STAIRS = Object.freeze([
+  { x: 6, y: 22, dx: -1, dy: 0 }, { x: 18, y: 6, dx: 0, dy: -1 }, { x: 17, y: 31, dx: -1, dy: 0 }, { x: 27, y: 31, dx: -1, dy: 0 },
+]);
+/** Every tile of a flight with its level: [x, y, lv]. */
+export const stairTiles = (st) => {
+  const out = [];
+  for (let k = 0; k < 3; k++) for (let w = 0; w < 2; w++) out.push([st.x + st.dx * k + (st.dx ? 0 : w), st.y + st.dy * k + (st.dx ? w : 0), 4 * (k + 1)]);
+  return out;
+};
 /** The curtain: wall tiles fill [X0, X1) x [Y0, Y1) two deep; the courtyard is [IN0, IN1) on both axes. */
 export const RING = Object.freeze({ X0: 2, Y0: 2, X1: 35, Y1: 35, IN0: 4, IN1: 33 });
 // the gates: axis 'x' spans x on the south wall (faces +y), 'y' spans y on the east wall (faces +x); a0 = first tile,
@@ -84,17 +101,25 @@ export function generateSiege(depth, biome, seed) {
   const tops = castleRampartTops(), top0 = tiles.length;
   tiles.push(...tops);
   const topAt = (x, y) => (tops.length ? top0 + ((x * 3 + y * 5) % tops.length) : FL.block);   // the slabs in their four turns
-  // ---- heights and solids
+  // ---- heights and solids: the curtain, towers and gate flanks are walkable tops; a parapet over the field
+  const stairLv = new Map();
+  for (const st of STAIRS) for (const [x, y, lv] of stairTiles(st)) stairLv.set(I(x, y), lv);
+  const raised = (x, y) => x >= 0 && y >= 0 && x < W && y < H && (tower(x, y) || (wall(x, y) && !inGate(x, y)));
+  const fieldAt = (x, y) => x >= RING.X0 && y >= RING.Y0 && x < W && y < H && !insideKeep(x, y) && !raised(x, y);
+  const parapet = (x, y) => raised(x, y) && (!insideKeep(x, y) || fieldAt(x + 1, y) || fieldAt(x - 1, y) || fieldAt(x, y + 1) || fieldAt(x, y - 1));
+  const nextTower = (x, y) => tower(x + 1, y) || tower(x - 1, y) || tower(x, y + 1) || tower(x, y - 1);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = I(x, y);
-    if (tower(x, y)) { hgt[i] = LV.tower; faceArt[i] = FACE.tower; faceBand[i] = LV.tower - 4; map.block[i] = 1; map.v[i] = topAt(x, y); continue; }
+    if (stairLv.has(i)) { hgt[i] = stairLv.get(i); faceArt[i] = FACE.wall; map.v[i] = FL.block; continue; }
     if (inGate(x, y)) { map.v[i] = FL.block; continue; }
-    if (wall(x, y) && flank(x, y)) { hgt[i] = LV.gate; faceArt[i] = FACE.tower; faceBand[i] = LV.gate - 4; map.block[i] = 1; map.v[i] = topAt(x, y); continue; }
-    if (wall(x, y)) {
-      // the outer row of the front walls is crenellated: a merlon every other tile
-      const front = (y === RING.Y1 - 1 && x >= RING.IN0) || (x === RING.X1 - 1 && y >= RING.IN0);
-      hgt[i] = LV.wall + (front && (x + y) % 2 === 0 ? LV.merlon : 0);
-      faceArt[i] = FACE.wall; faceBand[i] = LV.wall - 2; map.block[i] = 1; map.v[i] = topAt(x, y); continue;
+    if (raised(x, y)) {
+      // the top: a tower's floor, a gate flank one step over the walk, the walk (a step up where it meets a tower)
+      const isT = tower(x, y), isF = !isT && flank(x, y), base = isT ? LV.tower : isF ? LV.gate : nextTower(x, y) ? LV.step : LV.wall;
+      faceArt[i] = isT || isF ? FACE.tower : FACE.wall; faceBand[i] = isT || isF ? base - 4 : LV.wall - 2; map.v[i] = topAt(x, y);
+      hgt[i] = base;
+      // the parapet: merlons and crenels, both blocked (a crenel lets a shot through, not a body)
+      if (parapet(x, y)) { hgt[i] = base + ((x + y) % 2 === 0 ? LV.merlon : 0); map.block[i] = 1; }
+      continue;
     }
     if (x < RING.X0 || y < RING.Y0) { hgt[i] = LV.cliff + (x + y < 3 ? 6 : 0); map.block[i] = 1; map.v[i] = FL.stone; continue; }   // the rock the keep is built against
     if (inCourtyard(x, y)) { map.v[i] = rng.chance(0.08) ? FL.moss : rng.chance(0.05) ? FL.slate : FL.flag; continue; }
@@ -103,6 +128,11 @@ export function generateSiege(depth, biome, seed) {
     map.v[i] = d < 3 ? FL.dirt : n > 1.5 ? FL.mud : n > 0.3 ? FL.dirt : n < -1.1 ? FL.gravel : FL.grass;
     if (x >= W - 2 || y >= H - 2) map.block[i] = 1;
   }
+  // the ballistae stand in the middle of their towers' tops
+  for (const b of BALLISTAE) map.block[I(Math.floor(b.at[0]), Math.floor(b.at[1]))] = 1;
+  // the wall-walk's tiles: the run lends them to auto-play as the Castle's `rampartDeck` for a fighter (game/siege.js)
+  map.siegeDeck = new Uint8Array(N);
+  for (let i = 0; i < N; i++) if (hgt[i] >= LV.wall && hgt[i] < LV.cliff && !map.block[i]) map.siegeDeck[i] = 1;
   // soft seams between the field's materials (the Forsaken Wilds' transitions: world/overworld.js)
   const MATS = ['grass', 'gravel', 'dirt', 'mud'], pairs = Object.keys(A.town.meta.transitions), mat = map.v.slice();
   const field = (x, y) => x >= 0 && y >= 0 && x < W && y < H && !hgt[I(x, y)] && !inCourtyard(x, y) && !inGate(x, y) && mat[I(x, y)] < 4;
@@ -117,14 +147,20 @@ export function generateSiege(depth, biome, seed) {
     map.v[i] = shape < 0 || pair < 0 ? n : 6 + pair * 8 + shape;
   }
   for (const g of GATES) for (let k = 0; k < 3; k++) { const [x, y] = g.axis === 'x' ? [g.a0 + k, RING.Y1 - 1] : [RING.X1 - 1, g.a0 + k]; map.v[I(x, y)] = FL.grate; }
+  // losBlocks off: sight is the height map's (walls hide the field from the courtyard, the parapet hides nothing from the
+  // walk); meleeStep: no blow lands between the walk and the ground under it (monster.js atkRange)
   Object.assign(map, { hgt, faceArt, faceBand, climb: 4, drop: 10, walkStep: 4, tallOcclusion: true, baseLevel: 0, noSky: true, flowRange: 96,
-    minLevel: 0, maxLevel: LV.cliff + 6, siege: true });
+    minLevel: 0, maxLevel: LV.cliff + 6, siege: true, losBlocks: false, meleeStep: 10 });
 
   // ---- props
   const props = [], buildings = [], keep = new Set();
   const reserve = (x, y, r) => { for (let yy = Math.floor(y - r); yy <= y + r; yy++) for (let xx = Math.floor(x - r); xx <= x + r; xx++) if (Math.hypot(xx + 0.5 - x, yy + 0.5 - y) <= r) keep.add(I(xx, yy)); };
   reserve(...KEEP.start, 2.5); reserve(...KEEP.banner, 2.2); reserve(...KEEP.exit, 2.5); reserve(...KEEP.portal, 1.6);
   for (const b of BALLISTAE) reserve(...b.foot, 1.8);
+  for (const st of STAIRS) {   // the flights and their feet
+    for (const [x, y] of stairTiles(st)) keep.add(I(x, y));
+    reserve(st.x - st.dx * 1.2 + (st.dx ? 0.5 : 1), st.y - st.dy * 1.2 + (st.dx ? 1 : 0.5), 1.5);
+  }
   for (const g of GATES) {   // the passage and a lane each side of it
     const c = g.a0 + 1.5;
     for (let s = -7; s <= 7; s += 0.5) { const [x, y] = g.axis === 'x' ? [c, LINE + s] : [LINE + s, c]; reserve(x, y, 2.6); }
@@ -207,8 +243,9 @@ export function generateSiege(depth, biome, seed) {
   for (const p of [KEEP.exit, KEEP.banner, ...BALLISTAE.map((b) => b.foot), ...GATES.map((g) => (g.axis === 'x' ? [g.a0 + 1.5, LINE + 3] : [LINE + 3, g.a0 + 1.5]))])
     if (!seen[I(Math.floor(p[0]), Math.floor(p[1]))]) throw new Error('Endless Siege: unreachable ' + p.join(',') + '; seed ' + seed);
   if (spawnPts.length < 8) throw new Error('Endless Siege: too few spawn points; seed ' + seed);
-  const chests = [{ x: 5.5, y: 5.5, rare: rng.chance(0.25) }, { x: 50.5 + rng.range(-1, 1), y: 50.5 + rng.range(-1, 1), rare: true }]
-    .map((c) => { const [x, y] = map.randomNear(c.x, c.y, 1.5, rng.fn()); return { ...c, x, y }; });
+  // a chest on the north-west tower (a walk round the walls for it), one in the siege camp
+  const camp = map.randomNear(50.5 + rng.range(-1, 1), 50.5 + rng.range(-1, 1), 1.5, rng.fn());
+  const chests = [{ x: 3.5, y: 3.5, rare: rng.chance(0.25) }, { x: camp[0], y: camp[1], rare: true }];
   return { map, props, buildings, wallHangings: [], townTiles: tiles, looks, spawns: [], chests, torches: [],
     start: KEEP.start, exit: KEEP.exit, townPortal: KEEP.portal, spawnPts, roster, boss, braziers, seed, reach: seen };
 }

@@ -132,7 +132,7 @@ node tools/tests/tower.js [variants] [scenarios] [noauto]  # Serpentine Tower (l
 node tools/tests/caverns_map.mjs [seeds]           # Depth's Edge Caverns generator, no browser: 6 variants, route joined, no shortcut up, cap (no rock hides floor), map images
 node tools/tests/caverns.js [variants] [noauto]    # Depth's Edge Caverns (live three.js): every variant, picking, lake, the passage into the shaft, the climb, 1-3 bosses, portal, shots, auto-play
 node tools/tests/ghosttrain.js [noshots] [noauto]  # The Iron Express (region ghost_train, live three.js): car to car, stations, the chief, auto-play to the Last Stop
-node tools/tests/siege.js [noshots] [noauto] [depth] # The Endless Siege: walls/gates reachable, gates hold, winches, ballistae, auto-play holds every wave
+node tools/tests/siege.js [noshots] [noauto] [depth] # The Endless Siege: wall-walk by the stairs only, gates hold, no blows across heights, winches, ballistae, auto-play holds every wave (SIEGE_CLASS, SIEGE_MORTAL)
 node tools/tests/mines.js [seeds] [noauto] [noshots] # The Deep Rail Mines: shafts joined by rail, carts, junction switches, the Bottom, auto-play rides down
 node tools/tests/hunt.js [noshots] [noauto]       # The Great Hunt: signs and lair reachable, the beast flees at 75/50/25%, blood trail, auto-play kills it
 node tools/tests/tower_edge.js                      # Serpentine Tower edge cases: stairhead carries pets/loot/effects, arrivals land on floor, deaths, town and back
