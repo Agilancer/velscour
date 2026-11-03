@@ -16,6 +16,7 @@ import { depthLevel } from '../data/depth.js';
 import { GATES, BALLISTAE, KEEP, LINE, RING, LV, insideKeep, inCourtyard } from '../world/siege.js';
 import { drawGate, drawWinch, drawBallista, drawStandard, SiegeBolt, resetSiegeArt } from '../gfx/siege.js';
 import { HS } from '../gfx/terrain.js';
+import { SKILLS } from '../data/skills.js';
 
 const PREP = 40, LULL = 30, BOLTS = 6, RANGE = 21;
 const CAPTAIN = (t) => `<b style="color:#ffcf80">Captain Hale:</b> ${t}`;
@@ -33,6 +34,8 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
     [g.x, g.y] = g.axis === 'x' ? [c, LINE] : [LINE, c];
     g.stand = g.axis === 'x' ? [c, RING.IN1 + 0.5] : [RING.IN1 + 0.5, c];     // in the passage, behind the portcullis
     g.out = g.axis === 'x' ? [c, LINE + 2] : [LINE + 2, c];
+    // on the wall-walk over it: the flanks' inner tiles, either side of the passage (a shooter's post)
+    g.posts = [g.a0 - 0.5, g.a0 + 3.5].map((u) => (g.axis === 'x' ? [u, RING.IN1 + 0.5] : [RING.IN1 + 0.5, u]));
     g.draw = (ctx) => drawGate(ctx, g);
     return g;
   });
@@ -93,7 +96,11 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
       const inside = foes.filter((m) => inCourtyard(m.x, m.y));
       if (inside.length) { const m = near(inside); return { x: m.x, y: m.y, reach: 2 }; }
       const hot = gates.filter((g) => !g.broken).map((g) => [g, foes.filter((m) => Math.hypot(m.x - g.out[0], m.y - g.out[1]) < 5).length]).sort((a, b) => b[1] - a[1])[0];
-      if (hot && hot[1]) return { x: hot[0].stand[0], y: hot[0].stand[1], reach: 1 };
+      if (hot && hot[1]) {
+        // a shooter takes the wall-walk over that gate (the nearer flank) and looses down; a fighter stands behind the gate
+        if (ranged()) { const [x, y] = hot[0].posts.reduce((a, q) => (Math.hypot(q[0] - p.x, q[1] - p.y) < Math.hypot(a[0] - p.x, a[1] - p.y) ? q : a)); return { x, y, reach: 0.8 }; }
+        return { x: hot[0].stand[0], y: hot[0].stand[1], reach: 1 };
+      }
       const empty = balls.filter((b) => b.ammo < 2);
       if (empty.length) { const b = near(empty); return { x: b.foot[0], y: b.foot[1], reach: 1.1, use: () => load(b) }; }
       const broke = gates.find((g) => g.broken && !foes.some((m) => Math.hypot(m.x - g.x, m.y - g.y) < 6));
@@ -104,6 +111,11 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
     },
     update(dt) { tick(dt); },
   };
+  /** Does the hero fight from range (auto-play's own test, Auto.meleeBuild, turned round)? */
+  function ranged() {
+    const c = G.char, sk = c && SKILLS[c.bar[0]];
+    return !!c && !['lancer', 'barbarian', 'dragoon'].includes(c.classId) && !(sk && ['melee', 'whirl', 'leap', 'dash'].includes(sk.kind));
+  }
   /** The work waiting between waves: gates to mend, ballistae to load (auto-play's objectives). */
   function chores() {
     const out = [];
@@ -273,6 +285,9 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
   let hudEl = null, hudT = 0, chaseT = 0;
   function tick(dt) {
     const p = world.player;
+    // a fighter on the walls goes down the stairs to what he fights below (and up to what climbed them), as on the
+    // Castle's walls (autoplay.js offTier reads rampartDeck); a shooter stays up there and looses down
+    map.rampartDeck = ranged() ? null : map.siegeDeck;
     holdGates(dt);
     ballistae(dt);
     for (const m of live) if (m.dead) { if (!m.noLoot) run.kills++; live.delete(m); }

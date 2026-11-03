@@ -401,7 +401,11 @@ export class Monster extends Creature {
     this.navTo(t.x, t.y, dt, speed, flow);
   }
 
-  atkRange(t) { return this.r + t.r + (this.atkReach || 0.55); }
+  atkRange(t) {
+    const m = this.world.map;   // meleeStep (the Endless Siege's walls): no blow between levels further apart than that
+    if (m.meleeStep != null && Math.abs(m.hgt[m.tileIdx(this.x, this.y)] - m.hgt[m.tileIdx(t.x, t.y)]) > m.meleeStep) return -1;
+    return this.r + t.r + (this.atkReach || 0.55);
+  }
 
   startAction(kind, windup, data = {}) {
     this.state = 'windup';

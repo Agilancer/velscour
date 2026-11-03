@@ -40,7 +40,7 @@ Integration branch: `feat/new-regions`. Each region was built on its own branch 
 | Region | Status | Doc | Test |
 |---|---|---|---|
 | The Iron Express (`ghost_train`) | built (beta) | docs/GHOST_TRAIN.md | `tools/tests/ghosttrain.js` |
-| The Endless Siege | playable beta (gates, winches, ballistae, waves; auto-play wins at depths 8, 60) | docs/ENDLESS_SIEGE.md | `tools/tests/siege.js` |
+| The Endless Siege | playable beta (gates, winches, ballistae, waves, a walkable wall-walk with stairs; auto-play wins at depths 8, 60, 150, 320 with no falls) | docs/ENDLESS_SIEGE.md | `tools/tests/siege.js` |
 | The Deep Rail Mines | playable beta (carts, junction switches, tiered packs, boss at the Bottom; auto-play wins it) | docs/DEEP_RAIL_MINES.md | `tools/tests/mines.js` |
 | The Great Hunt | playable: track by signs, three fights with flight and a blood trail, the kill in the lair; auto-play wins it | docs/GREAT_HUNT.md | `tools/tests/hunt.js` |
 
