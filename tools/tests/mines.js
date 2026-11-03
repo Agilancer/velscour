@@ -4,11 +4,16 @@
 // three.js; a ride carries the hero down a line in a cut scene; a junction's switch changes the line; riding to the
 // Bottom and killing what waits there opens the exit. The carts ride back up: down then up lands in the shaft above,
 // a junction can be backed out of to take the other line, and the Bottom rides up too. Monsters level up by tier, and
-// tunnel mouths get arches. Then auto-play takes a whole mine without riding back up. Screenshots in out/mines_*.
-//   node tools/tests/mines.js [seeds=60] [noauto] [noshots]   (start the server first: python3 -m http.server 8123)
+// tunnel mouths get arches. Then the five variants (world/mines.js MINE_VARIANTS): each builds over many seeds with its
+// own lattice and twist, then live: its tile set, light and roster, a ride with its twist (slow carts and wading pools,
+// the vein's mending, magma flares, a cave-in on a loose roof), shots, and auto-play clears it without riding back up.
+// Screenshots in out/mines_* (mines_v_<variant>*.png per variant).
+//   node tools/tests/mines.js [seeds=30 a variant] [noauto] [noshots] [variants=dwarven,flooded,...]
+//   (start the server first: python3 -m http.server 8123)
 const { openGame, report } = require('./harness');
 const arg = (k) => process.argv.slice(2).includes(k);
-const SEEDS = Number(process.argv.slice(2).find((a) => /^\d+$/.test(a)) || 60);
+const SEEDS = Number(process.argv.slice(2).find((a) => /^\d+$/.test(a)) || 30);
+const ONLY = (process.argv.slice(2).find((a) => a.startsWith('variants=')) || '').slice(9).split(',').filter(Boolean);
 const AUTO = !arg('noauto'), SHOTS = !arg('noshots');
 
 const step = (page, secs) => page.evaluate(async (secs) => {   // run the game for `secs` at 60 fps, rendering every 4th frame
@@ -17,7 +22,7 @@ const step = (page, secs) => page.evaluate(async (secs) => {   // run the game f
   game.render();
 }, secs);
 const waitMine = (page) => page.waitForFunction(() => window.VELSCOUR.G.world?.biome?.id === 'deep_mines' && window.VELSCOUR.G.world.overworldScenario?.type === 'mines'
-  && document.querySelector('#loading').classList.contains('hidden'), null, { timeout: 90000 });
+  && window.VELSCOUR.G.world !== window.__oldWorld && document.querySelector('#loading').classList.contains('hidden'), null, { timeout: 90000 });
 /** Stand the hero by shaft `sid`'s cart (as if he had ridden there), monsters near it gone. */
 const toCart = (page, sid) => page.evaluate((sid) => {
   const { G } = window.VELSCOUR, w = G.world, run = w.overworldScenario, S = run.mine.shafts[sid], p = w.player;
@@ -34,28 +39,49 @@ const toCart = (page, sid) => page.evaluate((sid) => {
     // ------------------------------------------------ the skull
     await page.waitForTimeout(300);
     await page.click('#velscour-skull');
-    await page.fill('#velscour-message', 'mines');
+    await page.fill('#velscour-message', 'mines dwarven');
     await page.click('.velscour-contact-dialog button:has-text("Send")');
     await waitMine(page);
     await page.waitForTimeout(300);
+    // (before the generation pass below loads every variant's packs, which evicts the level's recoloured set from the cache)
+    await page.evaluate(async () => { const { mineTileSet } = await import('/src/world/mines.js'), w = window.VELSCOUR.G.world; window.__ts = w.tileset === mineTileSet(w.overworldScenario.variant); });
 
     // ------------------------------------------------ generation over many seeds
     const gen = await page.evaluate(async (SEEDS) => {
-      const { generateMines, checkMines } = await import('/src/world/mines.js'), { BIOME_BY_ID } = await import('/src/data/biomes.js');
-      const b = BIOME_BY_ID.deep_mines, bad = [], shapes = {}, t0 = performance.now();
-      let rides = 0, junctions = 0, tunnels = 0, worst = 0, arches = 0;
-      for (let i = 0; i < SEEDS; i++) {
-        const depth = [3, 12, 30, 60, 150][i % 5], seed = (i * 2654435761) >>> 0;
-        const t = performance.now(), g = generateMines(depth, b, seed); worst = Math.max(worst, performance.now() - t);
+      const { generateMines, checkMines, MINE_VARIANTS, applyMineLook } = await import('/src/world/mines.js'), { BIOME_BY_ID } = await import('/src/data/biomes.js');
+      const { loadBiomeArt } = await import('/src/core/assets.js');
+      const bad = [], shapes = {}, t0 = performance.now(), per = {};
+      let rides = 0, junctions = 0, tunnels = 0, worst = 0, arches = 0, n = 0;
+      for (const V of MINE_VARIANTS) {
+        await loadBiomeArt(V.art);
+        const b = { ...BIOME_BY_ID.deep_mines }; applyMineLook(b, V);
+        const pv = (per[V.id] = { shapes: {}, pools: 0, caveLines: 0, roster: new Set(), bosses: new Set(), off: [], bossOff: 0 });
+      for (let i = 0; i < SEEDS; i++, n++) {
+        const depth = [3, 12, 30, 60, 150][i % 5], seed = (i * 2654435761 + V.id.length * 97) >>> 0;
+        const t = performance.now(), g = generateMines(depth, b, seed, V); worst = Math.max(worst, performance.now() - t);
         const c = checkMines(g);
-        if (!c.ok) bad.push(`seed ${seed} depth ${depth}: ${c.bad.slice(0, 3).join('; ')}`);
+        if (!c.ok) bad.push(`${V.id} seed ${seed} depth ${depth}: ${c.bad.slice(0, 3).join('; ')}`);
+        pv.shapes[g.mine.shape.join('')] = (pv.shapes[g.mine.shape.join('')] || 0) + 1;
+        pv.pools += g.mine.pools.length; pv.caveLines += g.mine.edges.filter((e) => e.caveAt).length;
+        for (const sp of g.spawns) { if (sp.rank === 'boss') { pv.bosses.add(sp.arch); if (!V.boss.includes(sp.arch)) pv.bossOff++; } else pv.roster.add(sp.arch); }
+        for (const sp of g.spawns) if (sp.rank !== 'boss' && !V.look.roster.includes(sp.arch)) pv.off.push(sp.arch);
+        if (!V.shapes.some((sh) => sh.join() === g.mine.shape.join())) bad.push(`${V.id}: a shape not its own (${g.mine.shape})`);
         shapes[g.mine.shape.join('')] = (shapes[g.mine.shape.join('')] || 0) + 1;
         rides += c.rides; junctions += c.junctions; tunnels += g.mine.edges.length; arches += g.mine.arches;
-        // packs grow down the mine: the mean pack size and rank per tier
       }
-      return { bad, shapes, rides: rides / SEEDS, junctions: junctions / SEEDS, lines: tunnels / SEEDS, arches: arches / SEEDS, ms: Math.round(performance.now() - t0), worstMs: Math.round(worst) };
+        pv.roster = [...pv.roster]; pv.bosses = [...pv.bosses]; pv.off = [...new Set(pv.off)];
+      }
+      return { bad, per, shapes, rides: rides / n, junctions: junctions / n, lines: tunnels / n, arches: arches / n, ms: Math.round(performance.now() - t0), worstMs: Math.round(worst) };
     }, SEEDS);
-    console.log('generation', JSON.stringify({ ...gen, bad: gen.bad.length }));
+    console.log('generation', JSON.stringify({ ...gen, per: undefined, bad: gen.bad.length }));
+    for (const [id, pv] of Object.entries(gen.per)) {
+      console.log(`  ${id}`, JSON.stringify(pv));
+      if (pv.off.length) errors.push(`[gen] ${id}: monsters off its roster: ${pv.off.join(', ')}`);
+      if (pv.bossOff > SEEDS * 0.25) errors.push(`[gen] ${id}: ${pv.bossOff} of ${SEEDS} bosses not its own kind`);
+      if ((id === 'flooded' || id === 'forge') && pv.pools < SEEDS) errors.push(`[gen] ${id}: too few pools (${pv.pools} in ${SEEDS} mines)`);
+      if (id === 'haunted' && pv.caveLines < SEEDS) errors.push(`[gen] haunted: too few loose roofs (${pv.caveLines} in ${SEEDS} mines)`);
+      if (id !== 'haunted' && pv.caveLines) errors.push(`[gen] ${id}: loose roofs outside the Collapsed Dig`);
+    }
     for (const b of gen.bad.slice(0, 10)) errors.push('[gen] ' + b);
     if (gen.junctions < 1) errors.push('[gen] no junctions');
     if (gen.arches < gen.lines * 0.5) errors.push(`[gen] few tunnel mouths have arches (${gen.arches} for ${gen.lines} lines)`);
@@ -74,11 +100,12 @@ const toCart = (page, sid) => page.evaluate((sid) => {
       }
       const perTier = Object.entries(tiers).map(([k, t]) => [+k, +(t.n / t.shafts.size).toFixed(1), t.elite, t.nn ? +(t.lv / t.nn).toFixed(1) : 0]);
       const atlas = minecartAtlas();
-      return { L: run.mine.L, carts: shafts, levers, tileset: w.tileset === mineTileSet(), atlas: atlas ? [atlas.width, atlas.height] : null, shafts: mine.length, perTier,
+      return { L: run.mine.L, carts: shafts, levers, variant: run.variant.id, tileset: window.__ts, atlas: atlas ? [atlas.width, atlas.height] : null, shafts: mine.length, perTier,
         boss: w.boss && { name: w.boss.name, art: w.boss.art, at: run.shaftAt(w.boss.x, w.boss.y)?.name }, title: run.title, start: run.at.name };
     });
     console.log('live', JSON.stringify(info));
     if (!info.tileset) errors.push('[live] the world does not draw with the mine tile set');
+    if (info.variant !== 'dwarven') errors.push('[live] the skull word "mines dwarven" built ' + info.variant);
     if (!info.atlas) errors.push('[live] the minecart was not baked (three.js)');
     if (!info.carts) errors.push('[live] no carts');
     if (!info.boss || info.boss.at !== 'The Bottom') errors.push('[live] no boss at the Bottom');
@@ -239,22 +266,105 @@ const toCart = (page, sid) => page.evaluate((sid) => {
     console.log('quest', q.replace(/\s+/g, ' '));
     if (!/Ride the minecarts/.test(q)) errors.push('[quest] the Quest Log has no mine steps');
 
-    // ------------------------------------------------ auto-play takes a whole mine
-    if (AUTO) {
-      await page.evaluate(async () => {
+    // ------------------------------------------------ the five variants: live, their twists, shots, auto-play
+    const VARIANTS = ONLY.length ? ONLY : ['dwarven', 'flooded', 'crystal', 'forge', 'haunted'];
+    for (const vid of VARIANTS) {
+      await page.evaluate(async (vid) => {
         const { G, game } = window.VELSCOUR, { BIOME_BY_ID } = await import('/src/data/biomes.js');
+        window.__oldWorld = G.world;
         await game.newChar('paladin', 'Digger');
         G.char.depth = 3; G.godMode = true;
         if (G.world) G.world.depth = 3;
+        (G.regionWant ||= {}).deep_mines = vid;
         await game.teleportToBiome(BIOME_BY_ID.deep_mines);
-      });
+      }, vid);
       await waitMine(page);
+      const live = await page.evaluate(async () => {
+        const { G } = window.VELSCOUR, w = G.world, run = w.overworldScenario, V = run.variant, { mineTileSet } = await import('/src/world/mines.js');
+        const foes = w.creatures.filter((c) => c.team === 'enemy' && !c.dead);
+        return { id: V.id, name: V.name, shape: run.mine.shape.join(''), tileset: w.tileset === mineTileSet(V), torch: w.biome.torch === V.look.torch, dark: w.biome.dark,
+          off: [...new Set(foes.filter((c) => c !== w.boss && !V.look.roster.includes(c.arch)).map((c) => c.arch))], boss: w.boss && w.boss.arch, pools: run.mine.pools.length,
+          caves: run.mine.edges.filter((e) => e.caveAt).length, intro: [...document.querySelectorAll('#log *')].map((e) => e.textContent).filter((t) => t.includes(V.name)).length };
+      });
+      console.log(`variant ${vid}`, JSON.stringify(live));
+      if (live.id !== vid) errors.push(`[${vid}] G.regionWant built ${live.id}`);
+      if (!live.tileset || !live.torch) errors.push(`[${vid}] the world is not in the variant's tile set or light`);
+      if (live.off.length) errors.push(`[${vid}] monsters off its roster: ${live.off}`);
+      // a ride with the twist: the haunted one on a loose roof, the crystal one hurt first
+      const r1 = await page.evaluate(() => {
+        const { G, game } = window.VELSCOUR, w = G.world, run = w.overworldScenario, V = run.variant, p = w.player, M = run.mine;
+        let S = M.shafts[0], k = 0;
+        if (V.twist === 'cavein') { const e = M.edges.find((q) => q.caveAt && q.from.cart); if (e) { S = e.from; k = S.out.indexOf(e); } }
+        S.pick = k; run.at = S; S.cart.ang = S.out[k].pts[0][2];
+        [p.x, p.y] = S.offOut;
+        for (const m of w.creatures) if (m.team === 'enemy' && !m.dead && Math.hypot(m.x - p.x, m.y - p.y) < 10 && m !== w.boss) m.dead = true;
+        if (V.twist === 'glow') p.hp = p.maxHp * 0.4;
+        S.cart.portal.use();
+        const e = run.ride && run.ride.e, half = e ? (e.caveAt || 0.45) * e.len + 0.6 : 0;
+        let maxV = 0, i = 0;
+        for (; i < 60 * 30 && run.ride && run.ride.s < half; i++) { G.time += 1 / 60; game.update(1 / 60); maxV = Math.max(maxV, run.ride.v); }
+        game.render();
+        return { riding: !!run.ride, to: e && e.to.name, maxV, caveins: run.caveins, t: i / 60 };
+      });
+      if (SHOTS) await shot(`mines_v_${vid}_ride`);
+      const r2 = await page.evaluate(() => {
+        const { G, game } = window.VELSCOUR, w = G.world, run = w.overworldScenario, p = w.player, t0 = w.time;
+        let maxV = 0;
+        for (let i = 0; i < 60 * 30 && (run.ride || G.cine); i++) { G.time += 1 / 60; game.update(1 / 60); if (run.ride) maxV = Math.max(maxV, run.ride.v); }
+        return { at: run.at.name, inShaft: run.shaftAt(p.x, p.y)?.name, walk: w.map.walkable(p.x, p.y), hp: p.hp / p.maxHp, mends: run.mends, caveins: run.caveins, maxV, rubble: run.mine.edges.some((e) => e.rubble && e.rubble.length) };
+      });
+      console.log(`  ride`, JSON.stringify({ ...r1, ...r2 }));
+      if (!r1.riding || r2.at !== r1.to || r2.inShaft !== r1.to || !r2.walk) errors.push(`[${vid}] the ride did not set the hero down in ${r1.to}: ${JSON.stringify(r2)}`);
+      if (vid === 'flooded' && Math.max(r1.maxV, r2.maxV) > 4.9) errors.push(`[flooded] the cart ran at ${Math.max(r1.maxV, r2.maxV)} tiles/s (should crawl)`);
+      if (vid !== 'flooded' && Math.max(r1.maxV, r2.maxV) < 7) errors.push(`[${vid}] the cart never reached full speed`);
+      if (vid === 'crystal' && (!r2.mends || !(r2.hp > 0.55))) errors.push(`[crystal] the vein did not mend the rider (life ${r2.hp})`);
+      if (vid === 'haunted' && live.caves && (r2.caveins !== 1 || !r2.rubble)) errors.push(`[haunted] no cave-in on a loose roof: ${JSON.stringify(r2)}`);
+      if (vid === 'haunted' && SHOTS) {   // the cave-in from close up: ride the loose line back up and stop as it comes down
+        await page.evaluate(() => {
+          const { G, game } = window.VELSCOUR, w = G.world, run = w.overworldScenario, s = run.at, c = run.parkedAt(s), p = w.player;
+          if (!c || !c.at.caveAt) return;
+          [p.x, p.y] = s.offIn; c.portal.use();
+          const n0 = run.caveins;
+          for (let i = 0; i < 60 * 30 && run.ride && run.caveins === n0; i++) { G.time += 1 / 60; game.update(1 / 60); }
+          for (let i = 0; i < 20; i++) { G.time += 1 / 60; game.update(1 / 60); }
+          game.render();
+        });
+        await shot('mines_v_haunted_cavein');
+        await page.evaluate(() => { const { G, game } = window.VELSCOUR, run = G.world.overworldScenario; for (let i = 0; i < 60 * 30 && (run.ride || G.cine); i++) { G.time += 1 / 60; game.update(1 / 60); } });
+      }
+      // pools: wade into water (slowed), stand by magma (it flares under you)
+      if (live.pools) {
+        const pool = await page.evaluate(() => {
+          const { G, game } = window.VELSCOUR, w = G.world, run = w.overworldScenario, p = w.player, M = run.mine;
+          const q = M.pools.find((o) => M.shafts[o.shaft] === run.at) || M.pools[0], S = M.shafts[q.shaft];
+          run.at = S;
+          const lava = q.kind === 'magma';
+          if (lava) { const a = Math.atan2(S.y - q.y, S.x - q.x); [p.x, p.y] = [q.x + Math.cos(a) * (q.r + 1.3), q.y + Math.sin(a) * (q.r + 1.3)]; if (!w.map.walkable(p.x, p.y)) [p.x, p.y] = w.map.randomNear(p.x, p.y, 2); }
+          else [p.x, p.y] = [q.x, q.y];
+          for (const m of w.creatures) if (m.team === 'enemy' && !m.dead && Math.hypot(m.x - p.x, m.y - p.y) < 12 && m !== w.boss) m.dead = true;
+          p.path = null; p.moveTarget = null;
+          const f0 = run.flares;
+          let slowed = false, ring = false;
+          for (let i = 0; i < 60 * 7; i++) {
+            G.time += 1 / 60; game.update(1 / 60);
+            if (p.status.slow && p.status.slow.t > 0) slowed = true;
+            if (lava && run.flares > f0 && !ring) { ring = true; for (let j = 0; j < 40; j++) { G.time += 1 / 60; game.update(1 / 60); } break; }
+          }
+          game.render();
+          return { kind: q.kind, slowed, flares: run.flares - f0 };
+        });
+        console.log('  pool', JSON.stringify(pool));
+        if (pool.kind === 'water' && !pool.slowed) errors.push('[flooded] wading a pool did not slow the hero');
+        if (pool.kind === 'magma' && !pool.flares) errors.push('[forge] a magma pool beside the hero never flared');
+      } else if (vid === 'flooded' || vid === 'forge') errors.push(`[${vid}] this mine has no pools`);
+      if (SHOTS) { if (!live.pools) await step(page, 0.6); await shot(`mines_v_${vid}`); }
+      if (!AUTO) continue;
       const res = await page.evaluate(async () => {
         const { G, game } = window.VELSCOUR, { Auto } = await import('/src/game/autoplay.js');
         const w = G.world, run = w.overworldScenario, t0 = performance.now(), log = [];
         Auto.toggle(true);
         let last = '';
-        for (let s = 0; s < 60 * 25 && G.world === w; s++) {   // up to 25 game minutes
+        for (let s = 0; s < 60 * 30 && G.world === w; s++) {   // up to 30 game minutes
           for (let i = 0; i < 60; i++) { G.time += 1 / 60; game.update(1 / 60); }
           const ph = run.at.name + (run.completed ? ' done' : '');
           if (ph !== last) { log.push(`${(s / 60).toFixed(1)} min: ${ph}`); last = ph; }
@@ -262,12 +372,14 @@ const toCart = (page, sid) => page.evaluate((sid) => {
         }
         Auto.toggle(false);
         const ex = w.portals.find((q) => q.type === 'exit');
-        return { log, done: run.completed, rides: run.rides, ridesUp: run.ridesUp, path: run.path, exit: ex && ex.active, ms: Math.round(performance.now() - t0) };
+        return { log, done: run.completed, rides: run.rides, ridesUp: run.ridesUp, path: run.path, exit: ex && ex.active, caveins: run.caveins, flares: run.flares, ms: Math.round(performance.now() - t0) };
       });
-      console.log('auto-play', JSON.stringify(res));
-      if (!res.done || !res.exit) errors.push('[auto-play] did not clear the mine');
-      if (res.ridesUp) errors.push('[auto-play] rode back up (ping-pong): ' + res.path.join(' > '));
-      if (SHOTS) { await step(page, 0.5); await shot('mines_auto_end'); }
+      console.log('  auto-play', JSON.stringify(res));
+      if (!res.done || !res.exit) errors.push(`[${vid} auto-play] did not clear the mine`);
+      // the twist ride above went down one line by hand (and the haunted one back up): only auto-play's own rides count
+      const handUp = vid === 'haunted' && SHOTS && live.caves ? 1 : 0;
+      if (res.ridesUp > handUp) errors.push(`[${vid} auto-play] rode back up (ping-pong): ` + res.path.join(' > '));
+      if (SHOTS) { await step(page, 0.5); await shot(`mines_v_${vid}_end`); }
     }
   } catch (e) { errors.push(String(e && e.stack || e)); }
   await browser.close();

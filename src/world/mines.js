@@ -1,5 +1,6 @@
 // THE DEEP RAIL MINES (docs/DEEP_RAIL_MINES.md): a dwarven mine overrun from below. Shafts (cave chambers) hang in
-// tiers down the screen, the Lift Head at the top and the Bottom at the foot; minecart lines run between them through
+// tiers down the screen, the Lift Head at the top and the Bottom at the foot (five variants, MINE_VARIANTS: the
+// floors, walls, light, lattice, roster, boss and a twist each); minecart lines run between them through
 // tunnels the hero can't walk (floor, but blocked: only a cart goes there). Tiers widen and narrow like a lattice
 // (1-2-3-2-1 and so on), so every line runs to a neighbouring shaft of the next tier and no two lines cross; a shaft
 // with two lines down is a junction, and its switch picks the line. Packs grow denser and tougher tier by tier, and
@@ -18,25 +19,72 @@ import { torchAtWallSegment, archesFor } from './dungeon.js';
 
 const R2 = Math.SQRT1_2;
 const DA = 30, DB = 27;                 // tiles between neighbouring shafts across a tier, and between tiers
-const SHAPES = [[1, 2, 3, 2, 1], [1, 2, 1, 2, 1], [1, 2, 3, 3, 2, 1]];
 const NAMES = ['Lamp Gallery', 'Old Hoist', 'Copper Drift', 'Flooded Stope', 'Bone Seam', 'Black Adit', 'Glimmer Vein', 'Cinder Winze',
   'Iron Throat', 'Hollow Sump', 'Saltpetre Cut', 'Widow Drift', 'Dead Lamp Stope', 'Sunken Gallery', 'Gravel Run', 'Tallow Cut'];
-// what waits at the Bottom: the heavy things that dig (the biome roster narrows it)
-const DIGGERS = ['worm', 'golem', 'abomination', 'spider', 'elemental', 'beetle'];
 // mine clutter from the packs (the Crystal Caverns' stones and crystals, the town's crates, tools and wheels)
 const CLUTTER = /crate|barrel|tool|wheel|cart|rope|firewood|brick|anvil|bucket|sack|crystal|cairn|rubble|column|stone|bone|lantern|plank|chain/;
+const DEEP = BIOME_BY_ID.deep_mines;
+// the mine biome's own look (data/biomes.js), the first variant's; the others swap these fields in (applyMineLook)
+const LOOK_KEYS = ['dark', 'light', 'ambient', 'mon', 'el', 'blood', 'adj', 'roster', 'torch', 'fog'];
+const BASE_LOOK = Object.fromEntries(LOOK_KEYS.map((k) => [k, DEEP && DEEP[k]]));
+const artOf = (id, extra) => { const b = BIOME_BY_ID[id]; return { pack: b.pack, wallPack: b.wallPack, part: b.part, moreFloors: b.moreFloors, morePacks: b.morePacks, ...extra }; };
 
-/** The mine's look: the Crystal Caverns' shale and gravel round rough rock, recoloured to rust and lamp-brown, with
- * the town's mine furniture. (A biome of its own for the tile set cache; never in a bag.) */
-export const MINE_ART = (() => {
-  const c = BIOME_BY_ID.crystal;
-  return {
-    id: 'deep_mines_art', name: 'The Deep Rail Mines', pack: c.pack, wallPack: c.wallPack, part: c.part, moreFloors: c.moreFloors,
-    morePacks: c.morePacks, palette: { colorize: [30, 0.42], light: -0.03, contrast: 1.2 },
-    townProps: ['crate_stack', 'closed_barrel', 'tool_rack', 'broken_wheel', 'cart_debris', 'rope_and_hook', 'firewood_stack', 'tiles_and_bricks', 'water_bucket', 'anvil_stump'],
-  };
-})();
-export const mineTileSet = () => biomeTileSet(MINE_ART);
+/**
+ * The five mines. Each one's floors and walls come from a painted biome's packs (data/biomes.js ART) in its own
+ * palette (`art`), its light from `look` (the biome fields it swaps in), its lattice from `shapes` (tiers of shafts,
+ * widening and narrowing by one), its packs from `look.roster` and its Bottom from `boss`. `twist` is what the run
+ * does differently (game/mines.js): ore (rich seams: more chests), water (flooded tunnels and pools that slow, carts
+ * that crawl), glow (lit crystals everywhere, a ride mends you), magma (lava under the rails, pools that flare),
+ * cavein (loose roofs: some lines rain rock on the cart).
+ */
+export const MINE_VARIANTS = [
+  { id: 'dwarven', name: 'The Dwarven Mine', amb: 'catacombs', twist: 'ore',
+    hint: 'Rich seams: the shafts hold more chests than most.',
+    art: artOf('crystal', { id: 'deep_mines_art', palette: { colorize: [30, 0.42], light: -0.03, contrast: 1.2 },
+      townProps: ['crate_stack', 'closed_barrel', 'tool_rack', 'broken_wheel', 'cart_debris', 'rope_and_hook', 'firewood_stack', 'tiles_and_bricks', 'water_bucket', 'anvil_stump'] }),
+    shapes: [[1, 2, 3, 2, 1], [1, 2, 1, 2, 1], [1, 2, 3, 3, 2, 1]],
+    boss: ['worm', 'golem', 'abomination', 'spider', 'elemental', 'beetle'], look: BASE_LOOK },
+  { id: 'flooded', name: 'The Flooded Workings', amb: 'sunken', twist: 'water', vmax: 4.8, acc: 3,
+    hint: 'The water slows everything, the carts too.',
+    art: artOf('sunken', { id: 'deep_mines_flooded', palette: { colorize: [182, 0.36], light: -0.02, contrast: 1.12 },
+      townProps: ['water_bucket', 'closed_barrel', 'rope_and_hook', 'broken_wheel', 'cart_debris', 'crate_stack'] }),
+    clutter: /barrel|bucket|rope|wheel|cart|crate|bone|skull|stone|column|urn|chain|plank|rubble/,
+    shapes: [[1, 2, 1, 2, 1, 2, 1], [1, 2, 3, 2, 1, 2, 1]],
+    boss: ['abomination', 'worm', 'slime', 'ghoul', 'zombie'],
+    look: { dark: 0.84, light: 7, ambient: { type: 'drip', color: '#7ae0e0' }, mon: { hue: 150, sat: 0.9, light: 0 }, el: 'cold', blood: '#2a6a7a',
+      adj: ['Drowned', 'Sodden', 'Waterlogged', 'Silted'], roster: ['zombie', 'skeleton', 'ghoul', 'wraith', 'slime', 'worm', 'eye', 'spider'], torch: '#70e8e0', fog: '#03121a' } },
+  { id: 'crystal', name: 'The Crystal Vein', amb: 'crystal', twist: 'glow', lit: 0.6,
+    hint: 'The vein mends you: every ride restores some life and mana.',
+    art: artOf('crystal', { id: 'deep_mines_crystal', palette: { colorize: [196, 0.58], light: 0.06, contrast: 1.25 } }),
+    clutter: /crystal|cairn|stone|column|rubble|bone|obelisk|shard|geode|rock/,
+    shapes: [[1, 2, 3, 4, 3, 2, 1], [1, 2, 3, 3, 2, 1]],
+    boss: ['elemental', 'golem', 'gargoyle', 'eye'],
+    look: { dark: 0.66, light: 9.5, ambient: { type: 'glitter', color: '#a0ffff' }, mon: { hue: 170, sat: 1.4, light: 0.06 }, el: 'light', blood: '#40c0ff',
+      adj: ['Crystalline', 'Prismatic', 'Shardborn', 'Vein-Lit'], roster: ['elemental', 'golem', 'gargoyle', 'eye', 'spider', 'beetle', 'bat', 'scorpion', 'slime'], torch: '#90ffff', fog: '#041418' } },
+  { id: 'forge', name: 'The Forge-Deep', amb: 'molten', twist: 'magma',
+    hint: 'Magma pools flare: step out of the ring.',
+    art: artOf('molten', { id: 'deep_mines_forge', palette: { colorize: [14, 0.85], light: 0.03, contrast: 1.3 },
+      townProps: ['anvil_stump', 'cold_forge', 'smith_bellows', 'tool_rack', 'firewood_stack', 'tiles_and_bricks'] }),
+    shapes: [[1, 2, 1, 2, 1], [1, 2, 3, 2, 1]],
+    boss: ['golem', 'elemental', 'gargoyle', 'abomination'],
+    look: { dark: 0.74, light: 8, ambient: { type: 'ember', color: '#ff8a30' }, mon: { hue: -20, sat: 1.3, light: 0 }, el: 'fire', blood: '#ff5a10',
+      adj: ['Molten', 'Cinder', 'Slag-Crusted', 'Forge-Born'], roster: ['imp', 'demon', 'elemental', 'golem', 'hound', 'cultist', 'beetle', 'gargoyle'], torch: '#ff7020', fog: '#200802' } },
+  { id: 'haunted', name: 'The Collapsed Dig', amb: 'shadow', twist: 'cavein', torches: 0.5,
+    hint: 'Loose roofs: some lines rain rock on the cart.',
+    art: artOf('abyss', { id: 'deep_mines_haunted', palette: { colorize: [150, 0.16], light: -0.05, contrast: 1.2 },
+      townProps: ['cart_debris', 'broken_wheel', 'tiles_and_bricks', 'rope_and_hook'] }),
+    clutter: /rubble|cairn|stone|column|bone|skull|grave|wheel|cart|rope|brick|chain|rune/,
+    shapes: [[1, 2, 3, 2, 1], [1, 2, 3, 3, 2, 1], [1, 2, 1, 2, 1, 2, 1]],
+    boss: ['wraith', 'ghoul', 'abomination', 'zombie'],
+    look: { dark: 0.85, light: 7, ambient: { type: 'mote', color: '#c0ffe0' }, mon: { hue: 140, sat: 0.45, light: 0.05 }, el: 'shadow', blood: '#3a5a4a',
+      adj: ['Haunted', 'Buried', 'Grave-Cold', 'Restless'], roster: ['wraith', 'skeleton', 'ghoul', 'zombie', 'eye', 'bat', 'cultist', 'knight'], torch: '#b0ffd0', fog: '#050c0a' } },
+];
+export const mineVariant = (id) => MINE_VARIANTS.find((v) => v.id === id) || MINE_VARIANTS[0];
+/** The first mine's look (kept for callers that know only the one). */
+export const MINE_ART = MINE_VARIANTS[0].art;
+export const mineTileSet = (V = MINE_VARIANTS[0]) => biomeTileSet(V.art);
+/** Swap a variant's light, ambience, monster palette, element and roster into the mine biome (before the build). */
+export function applyMineLook(biome, V) { for (const k of LOOK_KEYS) if (V.look[k] !== undefined) biome[k] = V.look[k]; }
 
 /** Sample a Z-shaped rail (tile-centre corners, rounded) every `step` tiles: [[x, y, angle], ...] and its length. */
 export function railPath(pts, step = 0.25) {
@@ -75,8 +123,9 @@ export function railPath(pts, step = 0.25) {
   return { pts: res, len, step };
 }
 
-function plan(depth, rng) {
-  const shape = depth >= 30 && rng.chance(0.5) ? SHAPES[2] : rng.pick(SHAPES);
+function plan(depth, rng, V) {
+  const longest = V.shapes.reduce((a, b) => (b.length > a.length ? b : a));
+  const shape = depth >= 30 && rng.chance(0.5) ? longest : rng.pick(V.shapes);
   const L = shape.length - 1, shafts = [];
   shape.forEach((n, k) => {
     for (let i = 0; i < n; i++) {
@@ -138,9 +187,9 @@ function mouth(map, room, e, s, out) {
   return { axis: ax === 'x' ? 'y' : 'x', line: out ? inA + 1 : inA, a0: c - 1, a1: c + 2 };
 }
 
-function build(depth, biome, seed, ts) {
+function build(depth, biome, seed, ts, V) {
   const rng = new RNG(seed), rnd = () => rng.next();
-  const P = plan(depth, rng), { shafts, edges, L } = P;
+  const P = plan(depth, rng, V), { shafts, edges, L } = P;
   // tile centres, then translated into the grid
   for (const s of shafts) { s.x = (s.a + s.b) * R2; s.y = (s.b - s.a) * R2; }
   const M = 9, x0 = Math.min(...shafts.map((s) => s.x - s.R)) - M, y0 = Math.min(...shafts.map((s) => s.y - s.R)) - M;
@@ -173,6 +222,7 @@ function build(depth, biome, seed, ts) {
     e.corners = xDom ? [O, [m, O[1]], [m, I[1]], I] : [O, [O[0], m], [I[0], m], I];
     e.xDom = xDom;
     Object.assign(e, railPath(e.corners));
+    if (V.twist === 'cavein' && rng.chance(0.5)) e.caveAt = rng.range(0.35, 0.6);   // a loose roof part way along
   }
   // check: a line keeps clear of every shaft but its two, and of lines that share neither end
   for (const e of edges) {
@@ -239,30 +289,59 @@ function build(depth, biome, seed, ts) {
   };
   const props = [], chests = [], spawns = [];
   const looks = rollLooks(biome, rnd), roster = biome.roster;
-  const scat = ts.scatter.filter((e) => CLUTTER.test(e.name)), clutter = scat.length >= 4 ? scat : ts.scatter;
-  const lit = clutter.filter((e) => /lantern|candle|brazier|crystal/.test(e.name));
+  const scat = ts.scatter.filter((e) => (V.clutter || CLUTTER).test(e.name)), clutter = scat.length >= 4 ? scat : ts.scatter;
+  const lit = clutter.filter((e) => /lantern|candle|brazier|crystal/.test(e.name)), litRate = V.lit || 0.15;
+  const pools = [];   // water (slows) or magma (blocked; it flares): [{x, y, r, kind, shaft}]
   for (const s of shafts) {
     let open = flood(s);
     const cells = cellsOf(s).sort(() => rnd() - 0.5);
+    // the flooded mine's pools and the forge's magma, clear of the stops and the rails
+    if ((V.twist === 'water' || V.twist === 'magma') && s.k > 0) {
+      const magma = V.twist === 'magma';
+      for (let j = 0, tries = 0; j < (magma ? 2 : 3) && tries < 40; tries++) {
+        const [cx, cy] = rng.pick(cells), r = magma ? rng.range(1.1, 1.6) : rng.range(1.3, 2.3), x = cx + 0.5, y = cy + 0.5;
+        if (pools.some((q) => Math.hypot(q.x - x, q.y - y) < q.r + r + 1.5) || Math.hypot(x - s.x, y - s.y) < (s.k === L ? 4 : 0)) continue;
+        const disc = [];
+        let ok = true;
+        for (let ty = Math.floor(y - r); ty <= y + r && ok; ty++) for (let tx = Math.floor(x - r); tx <= x + r; tx++) {
+          if (Math.hypot(tx + 0.5 - x, ty + 0.5 - y) > r) continue;
+          const i = ty * W + tx;
+          if (!map.inb(tx, ty) || room[i] !== s.id || !map.walkableTile(tx, ty) || keep[i]) { ok = false; break; }
+          disc.push(i);
+        }
+        if (!ok || !disc.length) continue;
+        if (magma) {   // the pool is rock to walk on: only where it cuts nothing off
+          for (const i of disc) map.block[i] = 1;
+          const m = flood(s);
+          if (m !== open - disc.length) { for (const i of disc) map.block[i] = 0; continue; }
+          open = m;
+        }
+        for (const i of disc) keep[i] = 1;
+        pools.push({ x, y, r, kind: V.twist, shaft: s.id });
+        j++;
+      }
+    }
     const free = cells.filter(([x, y]) => !keep[y * W + x]);
     // clutter: blockers only where they cut nothing off, mostly against the walls
     const edgeCell = ([x, y]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => !map.tile(x + dx, y + dy) || map.block[(y + dy) * W + x + dx]);
-    let n = Math.round(s.R * 0.9);
+    let n = Math.round(s.R * (V.twist === 'glow' ? 1.3 : 0.9));
     for (const [x, y] of free.filter(edgeCell).concat(free.filter((c) => !edgeCell(c)))) {
       if (n <= 0) break;
       const i = y * W + x;
       if (keep[i] || map.block[i]) continue;
-      const e = rng.chance(0.15) && lit.length ? rng.pick(lit) : rng.pick(clutter);
+      const e = rng.chance(litRate) && lit.length ? rng.pick(lit) : rng.pick(clutter);
       if (e.block) { map.block[i] = 1; const m = flood(s); if (m !== open - 1) { map.block[i] = 0; continue; } open = m; }
-      props.push({ kind: 'scatter', x: x + 0.5, y: y + 0.5, spr: e, k: ts.k, flip: rng.chance(0.5), light: /lantern|candle|brazier/.test(e.name) ? 2.4 : /crystal/.test(e.name) ? 1.6 : 0 });
+      props.push({ kind: 'scatter', x: x + 0.5, y: y + 0.5, spr: e, k: ts.k, flip: rng.chance(0.5), light: /lantern|candle|brazier/.test(e.name) ? 2.4 : /crystal/.test(e.name) ? (V.twist === 'glow' ? 2.6 : 1.6) : 0 });
       keep[i] = 1; n--;
     }
     // packs: denser and tougher every tier down; none on the buffer stop
     const spot = (minIn) => { for (let t = 0; t < 80; t++) { const [x, y] = rng.pick(cells); if (!map.walkableTile(x, y) || (keep[y * W + x] && t < 60) || Math.hypot(x + 0.5 - s.inAt[0], y + 0.5 - s.inAt[1]) < minIn) continue; return [x + 0.5, y + 0.5]; } return [s.x, s.y]; };
     const arch = () => rng.pick(roster);
     if (s.k === L) {
-      const prefer = DIGGERS.filter((a) => roster.includes(a));
-      const g = looks.boss(prefer.length ? prefer : roster);
+      const prefer = V.boss;   // (a boss need not be one of the packs' kinds)
+      // the variant's own kind of boss, if the bestiary has boss art for one (a few tries; else what it offers)
+      let g = null;
+      for (let t = 0; t < 4 && !(g && V.boss.includes(g.arch)); t++) g = looks.boss(prefer.length ? [rng.pick(prefer)] : roster);
       spawns.push(g ? { x: s.x, y: s.y, arch: g.arch, n: 1, rank: 'boss', look: g.look, tier: s.k } : { x: s.x, y: s.y, arch: 'golem', n: 1, rank: 'boss', tier: s.k });
       for (let j = 0; j < 2; j++) { const [x, y] = spot(6); const a = arch(); spawns.push({ x, y, arch: a, n: rng.int(2, 3), rank: 'champion', look: looks.pick(a), tier: s.k }); }
       const [cx, cy] = spot(5); chests.push({ x: cx, y: cy, rare: true });
@@ -276,7 +355,8 @@ function build(depth, biome, seed, ts) {
       const rank = uniq ? 'unique' : 'normal'; uniq = false;
       spawns.push({ x, y, arch: a, n: rng.int(2, 3) + (s.k >> 1), rank, champ: rank === 'normal' && rng.chance(0.12 * s.k), look: looks.pick(a), tier: s.k });
     }
-    if (s.k > 0 && rng.chance(0.5 + 0.08 * s.k)) { const [x, y] = spot(3); chests.push({ x, y, rare: rng.chance(0.08 * s.k) }); }
+    const rich = V.twist === 'ore';   // the dwarven mine's seams: a chest in every junction, more elsewhere
+    if (s.k > 0 && (rng.chance(0.5 + 0.08 * s.k + (rich ? 0.3 : 0)) || (rich && s.out.length > 1))) { const [x, y] = spot(3); chests.push({ x, y, rare: rng.chance(0.08 * s.k + (rich ? 0.1 : 0)) }); }
   }
   // lamps: torches on the back walls of the shafts, sparser down the tunnels
   const edgeSet = new Set(map.segments.map((sg) => sg.dir + sg.mx + ',' + sg.my + (sg.front ? 'f' : '')));
@@ -286,7 +366,7 @@ function build(depth, biome, seed, ts) {
     if (sg.front || ![-1, 1].every((d) => edgeSet.has(along(sg, d)))) continue;
     const ti = Math.floor(sg.my) * W + Math.floor(sg.mx);   // the floor tile behind a back wall
     const inRoom = ti >= 0 && ti < room.length && room[ti] >= 0;
-    if (!rng.chance(inRoom ? 0.2 : 0.1) || taken.some(([x, y]) => Math.hypot(x - sg.mx, y - sg.my) < (inRoom ? 4 : 6))) continue;
+    if (!rng.chance((inRoom ? 0.2 : 0.1) * (V.torches || 1)) || taken.some(([x, y]) => Math.hypot(x - sg.mx, y - sg.my) < (inRoom ? 4 : 6))) continue;
     torches.push(torchAtWallSegment(sg)); taken.push([sg.mx, sg.my]);
   }
   const top = shafts[0], bottom = shafts[shafts.length - 1];
@@ -294,14 +374,15 @@ function build(depth, biome, seed, ts) {
   return {
     map, props, torches, wallHangings: [], buildings: [], townTiles: null, looks, spawns, chests, rooms: [],
     start, exit: bottom.exitAt, townPortal: [start[0] - 1.5, start[1] + 1.5], seed, tileset: ts,
-    mine: { shape: P.shape, L, shafts, edges, room, rail, arches: openings.length },
+    mine: { shape: P.shape, L, shafts, edges, room, rail, arches: openings.length, pools, variant: V },
   };
 }
 
-/** The level: the mine's map, its shafts and lines, packs, chests, lamps; `tileset` is the mine's own. */
-export function generateMines(depth, biome, seed, ts = mineTileSet()) {
+/** The level: the mine's map, its shafts and lines, packs, chests, lamps; `tileset` is the variant's own. The biome
+ * should already wear the variant's look (applyMineLook), its roster above all. */
+export function generateMines(depth, biome, seed, V = MINE_VARIANTS[0], ts = mineTileSet(V)) {
   for (let k = 0; k < 24; k++) {
-    const gen = build(depth, biome, (seed + k * 7919) >>> 0, ts);
+    const gen = build(depth, biome, (seed + k * 7919) >>> 0, ts, V);
     if (gen) return gen;
   }
   throw new Error('Deep Rail Mines: no layout for seed ' + seed);
