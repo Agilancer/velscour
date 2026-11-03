@@ -185,7 +185,7 @@ async function warmLevelArt(w) {
 // (The painted biome packs stay: there are only a few, and fetching one again decoded a second copy while the
 // browser still held the first, which cost more renderer memory than it saved.)
 function releaseLevelArt(biome) {
-  if (biome?.id !== 'castle') releaseCastlePack();
+  if (biome?.id !== 'castle' && !regionOf(biome)?.castleArt) releaseCastlePack(); // (a region drawn with its masonry keeps it)
   if (biome?.id !== 'castle' && biome?.id !== 'skyship') releaseCastle3D();
   if (biome?.id !== 'sea_of_sand') releaseSeaOfSandPack(); // loadArtFor fetches it again for ss_ monsters elsewhere
   if (!biome?.overworld && biome?.id !== 'town') releaseTownSheets();
