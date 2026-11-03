@@ -40,6 +40,15 @@ this file good enough that another account can pick up where it stopped.
 Integration branch: `feat/new-regions`. Each region was built on its own branch off it, merged back when it worked:
 `feat/ghost-train`, `feat/endless-siege`, `feat/deep-rail-mines`, `feat/great-hunt`.
 
+Second pass (November 3, 2026, `feat/regions-polish`, merged): the rough spots fixed, the Hunt gated at level 10, the
+train made ~2.5x longer, and **five variants per region** (`variants` in the registry: rolled per level, never the one
+seen last; the skull word plus a number or name, `siege 3`, or the HAIL VELSCOUR! list picks one).
+- **Done:** the Great Hunt's five lands and the Endless Siege's five keeps (both tested, auto-play wins every one).
+- **Not merged yet, out of compute:** the Iron Express and Deep Rail Mines variants. Their work in progress is pushed on
+  `fix/regions-train` and `fix/regions-mines` (each doc's *Next* says where it stopped). Merge `main` into the branch,
+  finish five `variants` the way `src/game/regions/siege.js` and `hunt.js` do, run the region's test and `flow.js`,
+  then open a PR.
+
 ## Status
 | Region | Status | Doc | Test |
 |---|---|---|---|
