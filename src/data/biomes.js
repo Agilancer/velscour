@@ -485,13 +485,14 @@ export const BETA_BIOMES = [
   },
   // the four new regions (src/game/regions/, docs/NEW_REGIONS.md); each region module owns its map, art and run
   {
-    // a spectral locomotive crossing the Wilds: fight car to car while it moves, stations to stop at, the engine is the boss
-    id: 'ghost_train', name: 'The Ghost Train', pack: 'town', overworld: true, beta: true, painted: false, wallPack: null, region: true,
-    palette: null, dark: 0.55, light: 10,
-    ambient: { type: 'ember', color: '#9fe8d0' }, mon: { hue: 160, sat: 0.7, light: -0.02 },
-    el: 'cold', blood: '#3a8a7a', adj: ['Spectral', 'Rattling', 'Cinder-Choked', 'Night-Bound'],
-    roster: ['skeleton', 'wraith', 'zombie', 'ghoul', 'cultist', 'knight', 'bat', 'archer', 'imp', 'eye'],
-    torch: '#7affd0', fog: '#081614',
+    // the Iron Express, a steam train raiders have taken (id kept: ghost_train): fight car to car while it runs,
+    // stations to stop at, their chief on the tender
+    id: 'ghost_train', name: 'The Iron Express', pack: 'town', overworld: true, beta: true, painted: false, wallPack: null, region: true,
+    palette: null, dark: 0.35, light: 12,
+    ambient: { type: 'dust', color: '#d8c8a8' }, mon: { hue: 15, sat: 0.95, light: 0 },
+    el: 'physical', blood: '#7a1810', adj: ['Rattling', 'Smoke-Choked', 'Runaway', 'Iron-Shod'],
+    roster: ['archer', 'knight', 'cultist', 'hound', 'skeleton', 'zombie', 'ghoul', 'imp', 'bat', 'spider'],
+    torch: '#ffb060', fog: '#141820',
   },
   {
     // a fortress besieged by an undead horde that never stops: hold the walls in waves, repair gates, man ballistae
