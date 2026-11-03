@@ -1,13 +1,14 @@
 // THE DEEP RAIL MINES, drawn (docs/DEEP_RAIL_MINES.md): the rails (ties and two steel rails along each line, on the
 // floor under everything else), the junction switches, and the minecart: a three.js model baked once into sprites
-// from the game's own camera (orthographic, 30 degrees down, 45 round; one unit = one tile), sixteen headings over
-// half a turn (a cart is the same both ways), each twice: the whole cart, and only its near walls and wheels, drawn
-// again over a rider so he stands inside it. Without three.js a flat 2D cart stands in.
+// from the game's own camera (orthographic, 30 degrees down, 45 round; one unit = one tile), 32 headings round a full
+// turn (a lamp hangs off its front, so it faces the way it rolls, down a line or back up it), each twice: the whole
+// cart, and only its near walls and wheels, drawn again over a rider so he stands inside it. Without three.js a flat
+// 2D cart stands in.
 import { isoX, isoY, camera, HW } from '../core/view.js';
 import { makeCanvas } from '../core/util.js';
 
 const SC = HW * Math.SQRT2;            // world px per tile (one three.js unit) across the screen
-const N = 16, OS = 2, CW = 220, CH = 170, OY = 0.7;   // headings; oversampling; cell size (baked px); the foot's height in the cell
+const N = 32, OS = 2, CW = 220, CH = 170, OY = 0.7;   // headings; oversampling; cell size (baked px); the foot's height in the cell
 let T = null, ATLAS = null;
 
 /** three.js and the cart sprites. Rejects if three.js can't be fetched (the 2D cart stands in). */
@@ -68,11 +69,17 @@ function bakeCart() {
   // a load of ore, a few nuggets catching the lamp light
   const rock = (r, m, x, y, z) => { const g = new T.IcosahedronGeometry(r, 0); part(g, m, x, y, z, false).rotation.set(x * 7, z * 5, y * 3); };
   for (let i = 0; i < 14; i++) { const u = (i * 0.618) % 1, v = (i * 0.414) % 1; rock(0.11 + (i % 4) * 0.03, i % 7 === 3 ? gold : ore, (u - 0.5) * (Lx - 0.35), y0 + H * 0.62 + (i % 3) * 0.05, (v - 0.5) * (Wz - 0.3)); }
+  // the front (+x, the way it rolls): a lamp on an iron bracket; the back: a brake lever
+  part(box(0.05, 0.42, 0.05), iron, Lx / 2 + 0.04, y0 + H + 0.12, 0, true);
+  part(box(0.2, 0.04, 0.05), iron, Lx / 2 + 0.12, y0 + H + 0.32, 0, true);
+  part(box(0.13, 0.16, 0.13), new T.MeshLambertMaterial({ color: 0xffd070, emissive: 0xffa020, emissiveIntensity: 1.4 }), Lx / 2 + 0.2, y0 + H + 0.22, 0, true);
+  part(box(0.15, 0.03, 0.15), dark, Lx / 2 + 0.2, y0 + H + 0.31, 0, true);
+  part(box(0.05, 0.5, 0.05), rust, -Lx / 2 - 0.05, y0 + H * 0.5, Wz * 0.3, true).rotation.z = 0.35;
   // bake: every heading, the whole cart (row 0) and its near half (row 1)
   const atlas = makeCanvas(CW * N, CH * 2), ag = atlas.getContext('2d');
   const toCam = [Math.SQRT1_2, Math.SQRT1_2];
   for (let i = 0; i < N; i++) {
-    const phi = -(i * Math.PI) / N;
+    const phi = -(i * 2 * Math.PI) / N;
     cart.rotation.y = phi;
     for (const layer of [0, 1]) {
       for (const m of cart.children) {
@@ -90,7 +97,7 @@ function bakeCart() {
 }
 
 /** A heading in tiles (radians) to its baked column. */
-const col = (ang) => { const a = ((ang % Math.PI) + Math.PI) % Math.PI; return Math.round(a / (Math.PI / N)) % N; };
+const col = (ang) => { const T2 = 2 * Math.PI, a = ((ang % T2) + T2) % T2; return Math.round(a / (T2 / N)) % N; };
 
 /** The minecart at (x, y) heading `ang`; layer 0 the whole cart, 1 its near walls only (over a rider). */
 export function drawCart(ctx, x, y, ang, layer = 0, alpha = 1) {
@@ -115,6 +122,7 @@ function flatCart(ctx, x, y, ang, layer) {
   ctx.beginPath(); q.forEach(([a, b], i) => (i ? ctx.lineTo(a, b - h) : ctx.moveTo(a, b - h))); ctx.closePath(); ctx.fill(); ctx.stroke();
   if (layer) return;
   ctx.beginPath(); q.forEach(([a, b], i) => (i ? ctx.lineTo(a, b) : ctx.moveTo(a, b))); ctx.closePath(); ctx.fill(); ctx.stroke();
+  const [lx, ly] = P(L + 0.12, 0); ctx.fillStyle = '#ffd070'; ctx.fillRect(lx - 3, ly - h - 10, 6, 7);   // the lamp at its front
 }
 
 /** A junction switch: an iron post, a lever thrown toward the line it's set to (-1 left / +1 right), a lamp on top. */

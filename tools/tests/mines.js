@@ -2,7 +2,9 @@
 // shaft reached by cart from the Lift Head, the Bottom among them, each shaft's cart walkable from its buffer stop,
 // tunnels blocked, no line through a foreign shaft, the boss and the exit in reach); the cart sprites bake in
 // three.js; a ride carries the hero down a line in a cut scene; a junction's switch changes the line; riding to the
-// Bottom and killing what waits there opens the exit; then auto-play takes a whole mine. Screenshots in out/mines_*.
+// Bottom and killing what waits there opens the exit. The carts ride back up: down then up lands in the shaft above,
+// a junction can be backed out of to take the other line, and the Bottom rides up too. Monsters level up by tier, and
+// tunnel mouths get arches. Then auto-play takes a whole mine without riding back up. Screenshots in out/mines_*.
 //   node tools/tests/mines.js [seeds=60] [noauto] [noshots]   (start the server first: python3 -m http.server 8123)
 const { openGame, report } = require('./harness');
 const arg = (k) => process.argv.slice(2).includes(k);
@@ -41,21 +43,22 @@ const toCart = (page, sid) => page.evaluate((sid) => {
     const gen = await page.evaluate(async (SEEDS) => {
       const { generateMines, checkMines } = await import('/src/world/mines.js'), { BIOME_BY_ID } = await import('/src/data/biomes.js');
       const b = BIOME_BY_ID.deep_mines, bad = [], shapes = {}, t0 = performance.now();
-      let rides = 0, junctions = 0, tunnels = 0, worst = 0;
+      let rides = 0, junctions = 0, tunnels = 0, worst = 0, arches = 0;
       for (let i = 0; i < SEEDS; i++) {
         const depth = [3, 12, 30, 60, 150][i % 5], seed = (i * 2654435761) >>> 0;
         const t = performance.now(), g = generateMines(depth, b, seed); worst = Math.max(worst, performance.now() - t);
         const c = checkMines(g);
         if (!c.ok) bad.push(`seed ${seed} depth ${depth}: ${c.bad.slice(0, 3).join('; ')}`);
         shapes[g.mine.shape.join('')] = (shapes[g.mine.shape.join('')] || 0) + 1;
-        rides += c.rides; junctions += c.junctions; tunnels += g.mine.edges.length;
+        rides += c.rides; junctions += c.junctions; tunnels += g.mine.edges.length; arches += g.mine.arches;
         // packs grow down the mine: the mean pack size and rank per tier
       }
-      return { bad, shapes, rides: rides / SEEDS, junctions: junctions / SEEDS, lines: tunnels / SEEDS, ms: Math.round(performance.now() - t0), worstMs: Math.round(worst) };
+      return { bad, shapes, rides: rides / SEEDS, junctions: junctions / SEEDS, lines: tunnels / SEEDS, arches: arches / SEEDS, ms: Math.round(performance.now() - t0), worstMs: Math.round(worst) };
     }, SEEDS);
     console.log('generation', JSON.stringify({ ...gen, bad: gen.bad.length }));
     for (const b of gen.bad.slice(0, 10)) errors.push('[gen] ' + b);
     if (gen.junctions < 1) errors.push('[gen] no junctions');
+    if (gen.arches < gen.lines * 0.5) errors.push(`[gen] few tunnel mouths have arches (${gen.arches} for ${gen.lines} lines)`);
 
     // ------------------------------------------------ the live mine
     const info = await page.evaluate(async () => {
@@ -67,9 +70,9 @@ const toCart = (page, sid) => page.evaluate((sid) => {
       for (const c of w.creatures) {
         if (c.team !== 'enemy' || c.dead) continue;
         const s = run.shaftAt(c.x, c.y); if (!s) continue;
-        const t = (tiers[s.k] ||= { n: 0, elite: 0, shafts: new Set() }); t.n++; t.shafts.add(s.id); if (c.rank !== 'normal') t.elite++;
+        const t = (tiers[s.k] ||= { n: 0, elite: 0, lv: 0, nn: 0, shafts: new Set() }); t.n++; t.shafts.add(s.id); if (c.rank !== 'normal') t.elite++; else { t.lv += c.level; t.nn++; }
       }
-      const perTier = Object.entries(tiers).map(([k, t]) => [+k, +(t.n / t.shafts.size).toFixed(1), t.elite]);
+      const perTier = Object.entries(tiers).map(([k, t]) => [+k, +(t.n / t.shafts.size).toFixed(1), t.elite, t.nn ? +(t.lv / t.nn).toFixed(1) : 0]);
       const atlas = minecartAtlas();
       return { L: run.mine.L, carts: shafts, levers, tileset: w.tileset === mineTileSet(), atlas: atlas ? [atlas.width, atlas.height] : null, shafts: mine.length, perTier,
         boss: w.boss && { name: w.boss.name, art: w.boss.art, at: run.shaftAt(w.boss.x, w.boss.y)?.name }, title: run.title, start: run.at.name };
@@ -81,6 +84,8 @@ const toCart = (page, sid) => page.evaluate((sid) => {
     if (!info.boss || info.boss.at !== 'The Bottom') errors.push('[live] no boss at the Bottom');
     const pt = info.perTier.filter(([k]) => k > 0 && k < info.L);   // monsters per shaft by tier: more below
     if (pt.length >= 2 && pt[pt.length - 1][1] < pt[0][1]) errors.push('[live] the deep shafts hold fewer monsters than the first: ' + JSON.stringify(info.perTier));
+    const lv = info.perTier.filter((t) => t[3]).sort((a, b) => a[0] - b[0]);   // normal monsters' mean level by tier: higher below
+    if (lv.length >= 2 && !(lv[lv.length - 1][3] > lv[0][3])) errors.push('[live] monster levels do not grow by tier: ' + JSON.stringify(info.perTier));
 
     await step(page, 1.2); if (SHOTS) await shot('mines_start');
     // ------------------------------------------------ a ride, frame by frame
@@ -105,6 +110,45 @@ const toCart = (page, sid) => page.evaluate((sid) => {
     if (ride.at !== ride.want || ride.shaft !== ride.want || !ride.walk) errors.push('[ride] the ride did not set the hero down in ' + ride.want);
     if (ride.off) errors.push('[ride] the hero rode over walkable ground outside the shafts (an open tunnel)');
     await step(page, 1.5); if (SHOTS) await shot('mines_arrival');
+    // ------------------------------------------------ and back up: the cart waits at the lower stop
+    const upRide = async (name) => {
+      const r = await page.evaluate(async () => {
+        const { G, game } = window.VELSCOUR, w = G.world, run = w.overworldScenario, s = run.at, c = run.parkedAt(s);
+        if (!c) return { err: 'no cart parked at ' + s.name };
+        const portal = w.portals.find((q) => q.type === 'minecart' && Math.abs(q.x - c.x) < 0.01 && Math.abs(q.y - c.y) < 0.01), want = c.shaft;
+        const p = w.player; [p.x, p.y] = s.offIn;   // where the hero stepped off
+        for (const m of w.creatures) if (m.team === 'enemy' && !m.dead && Math.hypot(m.x - p.x, m.y - p.y) < 9 && m !== w.boss) m.dead = true;
+        const label = portal && portal.label, n0 = run.ridesUp;
+        portal.use();
+        const started = !!run.ride && run.ride.up && !!G.cine;
+        for (let i = 0; i < 100; i++) { G.time += 1 / 60; game.update(1 / 60); }
+        game.render();
+        // the cart faces the way it goes: back up the line (the reverse of the line's own heading)
+        const R = run.ride, fwd = R ? R.e.pts[Math.min(R.e.pts.length - 1, Math.round((R.e.len - R.s) / R.e.step))][2] : 0;
+        const faces = R ? Math.cos(R.cart.ang - fwd) < -0.7 : false;
+        return { label, started, faces, want: want.name, n0 };
+      });
+      if (r.err) { errors.push('[up] ' + r.err); return r; }
+      if (SHOTS) await shot(name + '_riding');
+      const end = await page.evaluate(() => {
+        const { G, game } = window.VELSCOUR, w = G.world, run = w.overworldScenario, p = w.player;
+        for (let i = 0; i < 60 * 30 && (run.ride || G.cine); i++) { G.time += 1 / 60; game.update(1 / 60); }
+        const s = run.at, c = s.cart;
+        return { at: s.name, shaft: run.shaftAt(p.x, p.y)?.name, walk: w.map.walkable(p.x, p.y) && w.map.circleFree(p.x, p.y, 0.3), z: p.z, home: !!c && !c.at && Math.hypot(c.x - s.outAt[0], c.y - s.outAt[1]) < 0.01, ridesUp: run.ridesUp, cine: !!G.cine };
+      });
+      Object.assign(r, end);
+      await step(page, 1.2); if (SHOTS) await shot(name + '_arrival');
+      return r;
+    };
+    const up1 = await upRide('mines_up');
+    console.log('up', JSON.stringify(up1));
+    if (!up1.err) {
+      if (!up1.started) errors.push('[up] the parked cart did not ride back up');
+      if (!/back up/.test(up1.label || '')) errors.push('[up] the parked cart has no "back up" label: ' + up1.label);
+      if (!up1.faces) errors.push('[up] the cart does not face the way it rides (up the line)');
+      if (up1.at !== up1.want || up1.shaft !== up1.want || !up1.walk || up1.z) errors.push(`[up] the ride up did not set the hero down on open ground in ${up1.want}: ${JSON.stringify(up1)}`);
+      if (!up1.home || up1.ridesUp !== up1.n0 + 1) errors.push('[up] the cart is not home at its out stop after the ride up');
+    }
     // mid-ride shot on the next line
     const mid = await page.evaluate(async () => {
       const { G, game } = window.VELSCOUR, w = G.world, run = w.overworldScenario, s = run.at, p = w.player;
@@ -123,6 +167,25 @@ const toCart = (page, sid) => page.evaluate((sid) => {
     if (mid.junction && mid.junction[0] === mid.junction[1]) errors.push('[switch] the switch did not change the line');
     if (SHOTS) await shot('mines_riding');
     await page.evaluate(() => { const { G, game } = window.VELSCOUR, run = G.world.overworldScenario; for (let i = 0; i < 60 * 30 && (run.ride || G.cine); i++) { G.time += 1 / 60; game.update(1 / 60); } });
+    // ------------------------------------------------ back out of a junction: down one line, back up, the other line
+    const backout = await page.evaluate(() => {
+      const { G, game } = window.VELSCOUR, w = G.world, run = w.overworldScenario, p = w.player;
+      const J = run.mine.shafts.find((s) => s.out.length > 1 && !s.cart.at);
+      if (!J) return null;
+      const settle = () => { for (let i = 0; i < 60 * 30 && (run.ride || G.cine); i++) { G.time += 1 / 60; game.update(1 / 60); } for (let i = 0; i < 20; i++) { G.time += 1 / 60; game.update(1 / 60); } };
+      const clear = () => { for (const m of w.creatures) if (m.team === 'enemy' && !m.dead && Math.hypot(m.x - p.x, m.y - p.y) < 9 && m !== w.boss) m.dead = true; };
+      [p.x, p.y] = J.offOut; run.at = J; clear();
+      const first = J.out[J.pick].to; J.cart.portal.use(); settle();
+      const a = run.at;
+      [p.x, p.y] = a.offIn; clear(); run.parkedAt(a).portal.use(); settle();
+      const back = run.at;
+      J.lever.use();
+      const second = J.out[J.pick].to; [p.x, p.y] = J.offOut; J.cart.portal.use(); settle();
+      return { junction: J.name, first: first.name, a: a.name, back: back.name, second: second.name, b: run.at.name, inB: run.shaftAt(p.x, p.y)?.name };
+    });
+    console.log('back out', JSON.stringify(backout));
+    if (backout && (backout.a !== backout.first || backout.back !== backout.junction || backout.second === backout.first || backout.b !== backout.second || backout.inB !== backout.second))
+      errors.push('[back out] could not back out of the junction and take the other line: ' + JSON.stringify(backout));
     // a junction shaft, if there is one: the switch and the cart side by side
     const jn = await page.evaluate(() => { const j = window.VELSCOUR.G.world.overworldScenario.mine.shafts.find((s) => s.out.length > 1 && !s.cart.used); return j ? j.id : -1; });
     let back = null;
@@ -158,6 +221,20 @@ const toCart = (page, sid) => page.evaluate((sid) => {
     console.log('bottom', JSON.stringify(fight));
     if (!fight.done || !fight.exit) errors.push('[bottom] killing the boss did not open the exit');
     await step(page, 1); if (SHOTS) await shot('mines_exit');
+    // ------------------------------------------------ the Bottom rides back up too (the exit stays the way on)
+    const up2 = await upRide('mines_up_bottom');
+    console.log('up from the Bottom', JSON.stringify(up2));
+    if (up2.err || !up2.started || up2.at !== up2.want || up2.shaft !== up2.want || !up2.walk) errors.push('[up] could not ride up from the Bottom: ' + JSON.stringify(up2));
+    const again = await page.evaluate(() => {   // and down again: the run still knows it's won, the exit still open
+      const { G, game } = window.VELSCOUR, w = G.world, run = w.overworldScenario, p = w.player, o = run.objective;
+      if (!o) return { err: 'no way back down' };
+      [p.x, p.y] = [o.x, o.y]; o.use();
+      for (let i = 0; i < 60 * 30 && (run.ride || G.cine); i++) { G.time += 1 / 60; game.update(1 / 60); }
+      const ex = w.portals.find((q) => q.type === 'exit');
+      return { bottom: run.bottom, done: run.completed, exit: ex && ex.active };
+    });
+    console.log('down again', JSON.stringify(again));
+    if (!again.bottom || !again.done || !again.exit) errors.push('[up] riding back down to the Bottom failed: ' + JSON.stringify(again));
     const q = await page.evaluate(async () => { const { renderQuest } = await import('/src/ui/quest.js'); const d = document.createElement('div'); renderQuest(d); return d.textContent.slice(0, 400); });
     console.log('quest', q.replace(/\s+/g, ' '));
     if (!/Ride the minecarts/.test(q)) errors.push('[quest] the Quest Log has no mine steps');
@@ -185,10 +262,11 @@ const toCart = (page, sid) => page.evaluate((sid) => {
         }
         Auto.toggle(false);
         const ex = w.portals.find((q) => q.type === 'exit');
-        return { log, done: run.completed, rides: run.rides, exit: ex && ex.active, ms: Math.round(performance.now() - t0) };
+        return { log, done: run.completed, rides: run.rides, ridesUp: run.ridesUp, path: run.path, exit: ex && ex.active, ms: Math.round(performance.now() - t0) };
       });
       console.log('auto-play', JSON.stringify(res));
       if (!res.done || !res.exit) errors.push('[auto-play] did not clear the mine');
+      if (res.ridesUp) errors.push('[auto-play] rode back up (ping-pong): ' + res.path.join(' > '));
       if (SHOTS) { await step(page, 0.5); await shot('mines_auto_end'); }
     }
   } catch (e) { errors.push(String(e && e.stack || e)); }
