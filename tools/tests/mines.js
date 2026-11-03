@@ -3,7 +3,7 @@
 // tunnels blocked, no line through a foreign shaft, the boss and the exit in reach); the cart sprites bake in
 // three.js; a ride carries the hero down a line in a cut scene; a junction's switch changes the line; riding to the
 // Bottom and killing what waits there opens the exit; then auto-play takes a whole mine. Screenshots in out/mines_*.
-//   node tools/tests/mines.js [seeds=60] [noauto] [noshots]   (server first: python -m http.server 8203; BASE_URL=http://localhost:8203)
+//   node tools/tests/mines.js [seeds=60] [noauto] [noshots]   (start the server first: python3 -m http.server 8123)
 const { openGame, report } = require('./harness');
 const arg = (k) => process.argv.slice(2).includes(k);
 const SEEDS = Number(process.argv.slice(2).find((a) => /^\d+$/.test(a)) || 60);

@@ -16,6 +16,7 @@
 //   winText   the log line on a first clear ('Bonus skill point for ...')
 //   amb       an ambience key (src/core/audio.js AMB); default the biome id
 //   wilds     true: Forsaken Wilds extras (rain/night rolls) apply
+//   castleArt true: the Castle pack stays loaded after the build (releaseLevelArt in game.js; the Siege's masonry)
 export const REGIONS = {};
 export function registerRegion(r) { REGIONS[r.id] = r; return r; }
 export const regionOf = (biome) => (biome && REGIONS[biome.id]) || null;
