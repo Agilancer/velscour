@@ -1,0 +1,94 @@
+// THE IRON EXPRESS (region id ghost_train; docs/GHOST_TRAIN.md): the train as a level. The cars lie end to end along
+// tile x (the caboose at the back, the engine in front), three tiles wide on rows ROW0..ROW0+2; off the train is void
+// while it runs. A station's platform lies on the near side (rows PLAT0..PLAT1-1, toward the camera) and is written
+// into the map only while the train stands at it (platformOn/platformOff). The train is drawn live in three.js
+// (gfx/ghosttrain3d.js): one unit a tile, the car floors at height 0 where the sprites stand. Pure data (runs under Node).
+import { TileMap } from './map.js';
+import { RNG } from '../core/util.js';
+import { rollLooks } from '../data/bestiary.js';
+
+export const GT_W = 100, GT_H = 24;
+export const ROW0 = 11, ROWS = 3, CZ = ROW0 + ROWS / 2;   // the cars' rows; their centre line
+export const PLAT0 = ROW0 + ROWS, PLAT1 = PLAT0 + 5;      // a platform's rows (near side)
+export const PLAT_LEN = 24;                                // a platform's length in tiles
+const X0 = 6;
+/** The car types: a roof (the cutaway hides it over the hero), the near side's height, crates (blocked) on the far row. */
+export const KINDS = {
+  caboose: { roof: true, wall: 1.9 }, gondola: { roof: false, wall: 1.0 }, coach: { roof: true, wall: 1.9 },
+  flat: { roof: false, wall: 0.35, crates: true }, boxcar: { roof: true, wall: 1.9, crates: true }, mail: { roof: true, wall: 1.9 },
+  tender: { roof: false, wall: 1.0 }, engine: { roof: true, wall: 0 },
+};
+const FIGHT = ['gondola', 'coach', 'flat', 'boxcar', 'coach', 'mail'];
+/** The cars from the back: { kind, x0, x1, i, roof, wall, crates } (x1 exclusive), one tile of gangway between each. */
+export function trainLayout() {
+  const cars = [];
+  let x = X0;
+  const add = (kind, len) => { cars.push({ kind, x0: x, x1: x + len, i: cars.length, ...KINDS[kind] }); x += len + 1; };
+  add('caboose', 7);
+  for (const k of FIGHT) add(k, 9);
+  add('tender', 8);
+  add('engine', 11);
+  return cars;
+}
+export const CARS = trainLayout();
+export const FIGHT_CARS = CARS.slice(1, 1 + FIGHT.length);
+export const TENDER = CARS.find((c) => c.kind === 'tender'), ENGINE = CARS.find((c) => c.kind === 'engine'), CABOOSE = CARS[0];
+/** Crates on the far row of a flat car or a boxcar: [x, y] tiles. */
+export const crateCells = (car) => (car.crates ? [car.x0 + 2, car.x0 + 3, car.x0 + 6].map((x) => [x, ROW0]) : []);
+/** The car at tile x (a gangway belongs to the car behind it), or null. */
+export const carAt = (x) => CARS.find((c) => x >= c.x0 && x < c.x1 + 1) || null;
+
+/** After the walk map changes (a platform written or wiped): the path search's caches go. */
+export function mapChanged(map) { map._stepMask = null; map._los = null; map.flowFrom = [-999, -999]; }
+/** Write a platform from x0 to x1 (tiles) beside the train: walkable, level with the car floors. */
+export function platformOn(map, x0, x1) {
+  for (let y = PLAT0; y < PLAT1; y++) for (let x = Math.max(0, x0); x < Math.min(map.w, x1); x++) { const i = y * map.w + x; map.t[i] = 1; map.block[i] = 0; map.seen[i] = 1; }
+  mapChanged(map);
+}
+export function platformOff(map) {
+  for (let y = PLAT0; y < PLAT1; y++) for (let x = 0; x < map.w; x++) { const i = y * map.w + x; map.t[i] = 0; map.block[i] = 0; }
+  mapChanged(map);
+}
+export const onPlatform = (x, y) => y >= PLAT0 && y < PLAT1;
+/** A walkable spot on the cars nearest tile x (the near row first): where someone left on a platform lands. */
+export function aboardSpot(map, x) {
+  const lo = CABOOSE.x0 + 1.5, hi = TENDER.x1 - 2.5;
+  for (let d = 0; d < 12; d += 0.5) for (const s of [1, -1]) for (const y of [ROW0 + 2.5, ROW0 + 1.5, ROW0 + 0.5]) {
+    const tx = Math.min(hi, Math.max(lo, x + d * s));
+    if (map.walkable(tx, y)) return [tx, y];
+  }
+  return [CABOOSE.x0 + 4.5, CZ];
+}
+
+export function generateGhostTrain(depth, biome, seed) {
+  const rng = new RNG(seed), map = new TileMap(GT_W, GT_H);
+  for (const car of CARS) {
+    const gap = car.kind === 'engine' ? 0 : 1;   // the gangway to the next car
+    for (let y = ROW0; y < ROW0 + ROWS; y++) for (let x = car.x0; x < car.x1 + gap; x++) {
+      const i = y * GT_W + x; map.t[i] = 1;
+      if (car.kind === 'engine' || (car.kind === 'tender' && x >= car.x1 - 2) || (car.kind === 'caboose' && x === car.x0)) map.block[i] = 1;   // the engine; the coal heap; the stove
+    }
+    for (const [x, y] of crateCells(car)) map.block[y * GT_W + x] = 1;
+  }
+  map.noSky = true;
+  map.ghostTrain = true;
+  // ---- monsters: a pack or two on every fight car (worse further forward), the raiders' chief on the tender
+  const looks = rollLooks(biome, rng.fn()), spawns = [], roster = biome.roster;
+  for (const a of roster) looks.pick(a);   // every look the boarders may take is chosen (and its art loaded) now
+  FIGHT_CARS.forEach((car, k) => {
+    const packs = k < 2 ? 1 : 2;
+    for (let p = 0; p < packs; p++) {
+      let x, y, tries = 0;
+      do { x = rng.range(car.x0 + 1.5, car.x1 - 1.5); y = ROW0 + rng.int(0, ROWS - 1) + 0.5; } while (!map.walkable(x, y) && ++tries < 30);
+      const arch = rng.pick(roster);
+      spawns.push({ x, y, arch, n: rng.int(2, 3) + (k >> 1), rank: (k === 3 || k === 5) && p === 0 ? 'champion' : 'normal', look: looks.pick(arch), car: k });
+    }
+  });
+  const boss = looks.boss(roster, rng.fn());
+  spawns.push({ x: TENDER.x0 + 2.5, y: CZ, arch: boss ? boss.arch : 'knight', rank: 'boss', look: boss ? boss.look : looks.pick('knight') });
+  map.seen.fill(0);
+  return {
+    map, props: [], buildings: [], wallHangings: [], torches: [], townTiles: null, looks, spawns, chests: [], rooms: [],
+    start: [CABOOSE.x0 + 4.5, CZ], townPortal: [CABOOSE.x0 + 1.8, CZ], exit: [TENDER.x0 + 3, CZ], seed, cars: CARS,
+  };
+}

@@ -5,6 +5,8 @@ The user picked four region ideas and asked for all of them at once (November 3,
 1. **The Ghost Train** (`ghost_train`): a spectral locomotive crosses the Wilds. Fight car to car while it moves.
    It stops at haunted stations where you can step off to loot or stay aboard. The engine car is the boss. A set piece
    like the Sea and Sky battles, with **three.js models** (the train above all).
+   *Later the user asked for an ordinary steam train: it is now **The Iron Express**, raiders on a night express
+   (id, files and skull word `train` unchanged; docs/GHOST_TRAIN.md).*
 2. **The Endless Siege** (`endless_siege`): a fortress under siege by an undead horde that never stops coming. Hold the
    walls in waves, repair gates and man ballistae between them. Tower defense inside the ARPG.
 3. **The Deep Rail Mines** (`deep_mines`): a dwarven mine overrun by something below. Ride minecarts between shafts,
@@ -37,7 +39,7 @@ Integration branch: `feat/new-regions`. Each region was built on its own branch 
 ## Status
 | Region | Status | Doc | Test |
 |---|---|---|---|
-| The Ghost Train | in progress | docs/GHOST_TRAIN.md | `tools/tests/ghosttrain.js` |
+| The Iron Express (`ghost_train`) | built (beta) | docs/GHOST_TRAIN.md | `tools/tests/ghosttrain.js` |
 | The Endless Siege | in progress | docs/ENDLESS_SIEGE.md | `tools/tests/siege.js` |
 | The Deep Rail Mines | in progress | docs/DEEP_RAIL_MINES.md | `tools/tests/mines.js` |
 | The Great Hunt | in progress | docs/GREAT_HUNT.md | `tools/tests/hunt.js` |
