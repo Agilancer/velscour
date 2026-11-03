@@ -17,12 +17,49 @@
 //   amb       an ambience key (src/core/audio.js AMB); default the biome id
 //   wilds     true: Forsaken Wilds extras (rain/night rolls) apply
 //   castleArt true: the Castle pack stays loaded after the build (releaseLevelArt in game.js; the Siege's masonry)
+//   minLevel  the hero's level it opens at (default none): below it the skull word, the HAIL VELSCOUR! list and a
+//             saved portal all refuse (game.js reads regionNeeds)
+//   variants  [{ id, name }, ...] its five variants. A level rolls one, never the one seen last; the skull word plus
+//             a number, id or name ('train 3', 'siege frost') or the HAIL VELSCOUR! list picks one. load() and
+//             generate() read the level's variant with regionVariant(region).
+import { G } from '../state.js';
+
 export const REGIONS = {};
 export function registerRegion(r) { REGIONS[r.id] = r; return r; }
 export const regionOf = (biome) => (biome && REGIONS[biome.id]) || null;
-/** The region a skull message names, or null. */
-export function regionByWord(message) {
-  const m = String(message || '').trim().toLowerCase();
-  for (const r of Object.values(REGIONS)) if ((r.words || []).includes(m)) return r;
+/** The level a hero of this level still needs for this biome's region (its minLevel), or 0 when he may go. */
+export function regionNeeds(biome, level) {
+  const r = regionOf(biome);
+  return r && r.minLevel && (level || 1) < r.minLevel ? r.minLevel : 0;
+}
+/** A region's variant by number (1-based), id or a piece of its name, or null. */
+export function findVariant(r, want) {
+  const vs = r?.variants || [], w = String(want ?? '').trim().toLowerCase();
+  if (!w) return null;
+  return vs[Number(w) - 1] || vs.find((v) => v.id === w) || vs.find((v) => v.name.toLowerCase().includes(w)) || null;
+}
+/** The region a skull message names and the variant it asks for: { region, want } ('train', 'train 3'), or null. */
+export function parseRegionWord(message) {
+  const m = String(message || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  for (const r of Object.values(REGIONS)) for (const w of r.words || []) {
+    if (m === w) return { region: r, want: null };
+    if (m.startsWith(w + ' ') && findVariant(r, m.slice(w.length + 1))) return { region: r, want: m.slice(w.length + 1) };
+  }
   return null;
 }
+/** The region a skull message names, or null. */
+export const regionByWord = (message) => parseRegionWord(message)?.region || null;
+/** Roll the variant the next level of this region is built as: the one asked for (G.regionWant[id], used once),
+ * else any but the one seen last (G.char.lastRegionVariant). */
+export function rollRegionVariant(r) {
+  if (!r?.variants?.length) return null;
+  const c = G.char, want = G.regionWant?.[r.id];
+  if (G.regionWant) delete G.regionWant[r.id];
+  let v = findVariant(r, want);
+  if (!v) { const last = c?.lastRegionVariant?.[r.id], pool = r.variants.filter((q) => q.id !== last); v = pool[Math.floor(Math.random() * pool.length)] || r.variants[0]; }
+  (G.regionNext ||= {})[r.id] = v;
+  if (c) (c.lastRegionVariant ||= {})[r.id] = v.id;
+  return v;
+}
+/** The variant this level of the region is built as (rolled by loadLevelArt; rolled here if a test skipped it). */
+export const regionVariant = (r) => G.regionNext?.[r.id] || rollRegionVariant(r);

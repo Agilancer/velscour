@@ -14,7 +14,7 @@ import { RNG } from '../core/util.js';
 import { rollLooks } from '../data/bestiary.js';
 import { BIOME_BY_ID } from '../data/biomes.js';
 import { biomeTileSet } from '../core/assets.js';
-import { torchAtWallSegment } from './dungeon.js';
+import { torchAtWallSegment, archesFor } from './dungeon.js';
 
 const R2 = Math.SQRT1_2;
 const DA = 30, DB = 27;                 // tiles between neighbouring shafts across a tier, and between tiers
@@ -96,6 +96,48 @@ function plan(depth, rng) {
   return { shape, L, shafts, edges };
 }
 
+/**
+ * Where line `e` crosses shaft `s`'s wall (out of it if `out`, else into it), square the wall off so the 3-wide tunnel
+ * meets a straight run of wall: an arch opening {axis, line, a0, a1}, or null if the mouth isn't a clean straight.
+ */
+function mouth(map, room, e, s, out) {
+  const W = map.w, P = out ? e.pts : e.pts.slice().reverse();
+  let k = P.findIndex((p) => room[Math.floor(p[1]) * W + Math.floor(p[0])] !== s.id);
+  if (k < 1) return null;
+  // the line must run straight along a row (+x) or column (+y) for two tiles either side of the crossing
+  const ang = P[k][2], ax = Math.abs(Math.sin(ang)) < 0.02 ? 'x' : Math.abs(Math.cos(ang)) < 0.02 ? 'y' : null;
+  if (!ax) return null;
+  for (let j = Math.max(0, k - 8); j < Math.min(P.length, k + 8); j++) if (Math.abs(P[j][2] - ang) > 0.02) return null;
+  const along = ax === 'x' ? 0 : 1, c = Math.floor(P[k][1 - along]);   // the tunnel's middle row (or column)
+  const T = (a, b) => (ax === 'x' ? [a, b] : [b, a]);                    // (along, across) to tile (x, y)
+  const idx = (a, b) => { const [x, y] = T(a, b); return y * W + x; };
+  // out of a shaft the line heads +along, so the shaft is the low side; into one the shaft is the high side
+  const st = out ? 1 : -1, a0 = Math.floor(P[k][along]), mine = (a, b) => map.inb(...T(a, b)) && room[idx(a, b)] === s.id;
+  const ins = (b) => {   // the shaft's outermost tile along row b, near the crossing (null: none)
+    let a = a0;
+    if (mine(a, b)) { while (mine(a + st, b) && Math.abs(a - a0) < 12) a += st; return a; }
+    while (!mine(a, b) && Math.abs(a - a0) < 12) a -= st;
+    return mine(a, b) ? a : null;
+  };
+  // the wall line: past the furthest reach of the shaft across the five rows (three tunnel, two flank)
+  let edge = null;
+  for (let b = c - 2; b <= c + 2; b++) { const a = ins(b); if (a === null) return null; edge = edge === null ? a : out ? Math.max(edge, a) : Math.min(edge, a); }
+  const inA = edge, outA = out ? edge + 1 : edge - 1;
+  for (let b = c - 2; b <= c + 2; b++) {
+    if (!map.inb(...T(inA, b)) || !map.inb(...T(outA, b))) return null;
+    const flank = b === c - 2 || b === c + 2, o = idx(outA, b);
+    if (flank ? map.t[o] : !map.t[o] || !map.block[o]) return null;   // flanks must be rock beyond, the middle the tunnel
+  }
+  // fill the shaft out to the wall line (floor of the shaft, open), and open the tunnel tiles inside it
+  for (let b = c - 2; b <= c + 2; b++) {
+    for (let a = ins(b); out ? a <= inA : a >= inA; a += out ? 1 : -1) {
+      const i = idx(a, b);
+      map.t[i] = 1; map.block[i] = 0; room[i] = s.id;
+    }
+  }
+  return { axis: ax === 'x' ? 'y' : 'x', line: out ? inA + 1 : inA, a0: c - 1, a1: c + 2 };
+}
+
 function build(depth, biome, seed, ts) {
   const rng = new RNG(seed), rnd = () => rng.next();
   const P = plan(depth, rng), { shafts, edges, L } = P;
@@ -108,8 +150,10 @@ function build(depth, biome, seed, ts) {
   const room = new Int16Array(W * H).fill(-1);
   const names = NAMES.slice().sort(() => rnd() - 0.5);
   for (const s of shafts) {
-    const d = Math.round(s.R * 0.42);
-    s.inAt = [s.x - d, s.y - d]; s.outAt = [s.x + d, s.y + d];
+    // the buffer stop toward the back wall; the out stop two tiles in from the old mouth spot, so the front wall's art
+    // doesn't hide the cart (`mouthAt` is where the line used to start: the jog is planned from there)
+    const d = Math.round(s.R * 0.42), o = Math.max(1, d - 2);
+    s.inAt = [s.x - d, s.y - d]; s.mouthAt = [s.x + d, s.y + d]; s.outAt = [s.x + o, s.y + o];
     s.name = s.k === 0 ? 'The Lift Head' : s.k === L ? 'The Bottom' : names[s.id % names.length];
     s.tier = s.k; s.tiers = L;
     // the chamber: a lumpy disc
@@ -122,10 +166,10 @@ function build(depth, biome, seed, ts) {
   }
   // the lines: Z-shaped along rows and columns, from a shaft's out stop to the next one's buffer stop
   for (const e of edges) {
-    const O = e.from.outAt, I = e.to.inAt, dx = I[0] - O[0], dy = I[1] - O[1];
+    const O = e.from.outAt, Q = e.from.mouthAt, I = e.to.inAt, dx = I[0] - Q[0], dy = I[1] - Q[1];
     const xDom = e.to.u > e.from.u + 0.1 ? true : e.to.u < e.from.u - 0.1 ? false : dx >= dy;
     const f = rng.range(0.42, 0.58);
-    const m = Math.floor(xDom ? O[0] + dx * f : O[1] + dy * f) + 0.5;
+    const m = Math.floor(xDom ? Q[0] + dx * f : Q[1] + dy * f) + 0.5;
     e.corners = xDom ? [O, [m, O[1]], [m, I[1]], I] : [O, [O[0], m], [I[0], m], I];
     e.xDom = xDom;
     Object.assign(e, railPath(e.corners));
@@ -151,6 +195,13 @@ function build(depth, biome, seed, ts) {
       if (!map.t[i]) { map.t[i] = 1; map.block[i] = 1; }
     }
   }
+  // arches over the tunnel mouths: square the shaft's wall off round each mouth (a 3-tile gap flanked by wall on a
+  // straight line), then give it one of the pack's 3-span arches
+  const openings = [], designs = archesFor(ts, 3);
+  if (designs.length) for (const e of edges) for (const [s, out] of [[e.from, true], [e.to, false]]) {
+    const o = mouth(map, room, e, s, out);
+    if (o) openings.push({ ...o, kind: 'arch', design: rng.pick(designs), flip: rng.chance(0.5) });
+  }
   // floors: a paving per shaft (most share the mine's main one), the tunnels another, the odd feature tile
   const bases = ts.bases.length ? ts.bases.slice().sort(() => rnd() - 0.5) : [0];
   const main = bases[0], hall = bases[1 % bases.length];
@@ -165,14 +216,14 @@ function build(depth, biome, seed, ts) {
     map.v[i] = F.length && rng.chance(room[i] >= 0 ? 0.07 : 0.03) ? rng.pick(F) : b;
   }
   const fams = ts.families.slice().sort(() => rnd() - 0.5);
-  map.buildWalls(ts, rnd, [], fams.length ? [[fams[0], 5], [fams[1 % fams.length], 3], [fams[2 % fams.length], 1.5]] : null);
+  map.buildWalls(ts, rnd, openings, fams.length ? [[fams[0], 5], [fams[1 % fams.length], 3], [fams[2 % fams.length], 1.5]] : null);
 
   // what each shaft holds: keep the rails, stops, switch and the way across clear
   const keep = new Uint8Array(W * H);
   const keepAround = (p, r) => { for (let y = Math.floor(p[1] - r); y <= p[1] + r; y++) for (let x = Math.floor(p[0] - r); x <= p[0] + r; x++) if (map.inb(x, y)) keep[y * W + x] = 1; };
   for (let i = 0; i < rail.length; i++) if (rail[i]) { keep[i] = 1; const x = i % W, y = (i / W) | 0; for (const j of [i - 1, i + 1, i - W, i + W]) if (j >= 0 && j < keep.length && Math.abs((j % W) - x) + Math.abs(((j / W) | 0) - y) === 1) keep[j] = 1; }
   for (const s of shafts) {
-    keepAround(s.inAt, 2.2); keepAround(s.outAt, 2.2); keepAround([s.x, s.y], s.k === L ? 3 : 1);
+    keepAround(s.inAt, 2.2); keepAround(s.outAt, 2.2); if (s.k === L) keepAround(s.mouthAt, 2.2); keepAround([s.x, s.y], s.k === L ? 3 : 1);
     if (s.out.length > 1) { s.leverAt = [s.outAt[0] - 1.6, s.outAt[1] + 0.2]; keepAround(s.leverAt, 1); }
   }
   const cellsOf = (s) => {
@@ -215,7 +266,7 @@ function build(depth, biome, seed, ts) {
       spawns.push(g ? { x: s.x, y: s.y, arch: g.arch, n: 1, rank: 'boss', look: g.look, tier: s.k } : { x: s.x, y: s.y, arch: 'golem', n: 1, rank: 'boss', tier: s.k });
       for (let j = 0; j < 2; j++) { const [x, y] = spot(6); const a = arch(); spawns.push({ x, y, arch: a, n: rng.int(2, 3), rank: 'champion', look: looks.pick(a), tier: s.k }); }
       const [cx, cy] = spot(5); chests.push({ x: cx, y: cy, rare: true });
-      s.exitAt = s.outAt;
+      s.exitAt = s.mouthAt;
       continue;
     }
     const packs = s.k === 0 ? 1 : Math.min(4, 1 + s.k + (s.R > 8.5 ? 1 : 0));
@@ -243,7 +294,7 @@ function build(depth, biome, seed, ts) {
   return {
     map, props, torches, wallHangings: [], buildings: [], townTiles: null, looks, spawns, chests, rooms: [],
     start, exit: bottom.exitAt, townPortal: [start[0] - 1.5, start[1] + 1.5], seed, tileset: ts,
-    mine: { shape: P.shape, L, shafts, edges, room, rail },
+    mine: { shape: P.shape, L, shafts, edges, room, rail, arches: openings.length },
   };
 }
 
@@ -272,6 +323,7 @@ export function checkMines(gen) {
     if (s.k > 0 && !s.in.length) bad.push(`${s.name}: no line in`);
     const from = s.inAt;
     if (!map.walkable(from[0], from[1])) bad.push(`${s.name}: buffer stop on rock`);
+    if (s.out.length && (!map.walkable(s.outAt[0], s.outAt[1]) || room[map.tileIdx(s.outAt[0], s.outAt[1])] !== s.id)) bad.push(`${s.name}: out stop off the floor`);
     if (s.out.length && !walk(from, s.outAt)) bad.push(`${s.name}: its cart can't be walked to`);
     if (s.exitAt && !walk(from, s.exitAt)) bad.push(`${s.name}: the exit can't be walked to`);
   }
