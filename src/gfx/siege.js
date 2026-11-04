@@ -5,7 +5,7 @@ import { G } from '../state.js';
 import { HW, HH } from '../core/view.js';
 import { clamp } from '../core/util.js';
 import { glowSprite } from './vfx.js';
-import { keepSprite, LINE } from '../world/siege.js';
+import { keepSprite } from '../world/siege.js';
 
 const hash = (k, s) => { let h = Math.imul(k ^ 0x5bd1e995, 0x27d4eb2d) ^ s; h = Math.imul(h ^ (h >>> 15), 0x85ebca6b); return ((h ^ (h >>> 13)) >>> 0) / 4294967296; };
 
@@ -40,12 +40,12 @@ function pulseRing(ctx, x, y, color, r = 22) {
 }
 
 /**
- * A gate: an iron portcullis between two timber posts, standing on its line (35) across a three-tile passage. It rises
+ * A gate: an iron portcullis between two timber posts, standing on its line (g.line) across a three-tile passage. It rises
  * when the hero walks through and drops behind him; battered, its bars bend and fall out; broken, it is a heap.
  */
 export function drawGate(ctx, g) {
   const P = (u, z) => {
-    const [x, y] = g.axis === 'x' ? [g.a0 + u, LINE] : [LINE, g.a0 + u];
+    const [x, y] = g.axis === 'x' ? [g.a0 + u, g.line] : [g.line, g.a0 + u];
     return [(x - y) * HW, (x + y) * HH - z];
   };
   const f = g.hp / g.max, lift = g.lift * 40, H = 50, B = 62, wood = '#4a3020', woodL = '#7a5434';   // grid H tall, beam at B px
@@ -119,6 +119,22 @@ export function drawStandard(ctx, s, x, y) {
   sprite(ctx, ks('royal_banner_stand'), x, y);
   const p = G.player;
   if (p && s.ready() && Math.hypot(p.x - s.x, p.y - s.y) < 5) label(ctx, x, y - 112, 'Sound the horn', '#ffe090');
+}
+
+/** A fire-pot on the walk over a gate (the Burning River Wall): a brazier of oil, burning while it is full. */
+export function drawFirePot(ctx, o, x, y) {
+  if (o.full) pulseRing(ctx, x, y, '#ff6020', 18);
+  sprite(ctx, ks('brazier_ash'), x, y, false, o.full ? 1 : 0.7);
+  if (o.full) {
+    ctx.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < 3; k++) {
+      const f = Math.sin(G.time * 9 + k * 2.1), h = 14 + f * 4;
+      ctx.globalAlpha = 0.55; ctx.drawImage(glowSprite(k ? '#ff9030' : '#ffd060'), x - 9 + k * 4, y - 40 - h, 12, h + 6);
+    }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  }
+  const p = G.player;
+  if (p && o.full && Math.hypot(p.x - o.x, p.y - o.y) < 4) label(ctx, x, y - 54, 'Tip the fire-pot', '#ffb070');
 }
 
 /**

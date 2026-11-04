@@ -9,8 +9,8 @@ import { loadTrain3D, train3dReady } from '../../gfx/ghosttrain3d.js';
 registerRegion({
   id: 'ghost_train',
   words: ['train', 'iron express', 'express', 'all aboard'],
-  portal: 'Raiders have taken the night express. Board at the caboose and fight forward, car by car, to the engine. She stops at stations: step off to loot, but be aboard when she leaves.',
-  townLine: 'The Iron Express runs beyond: six cars held by raiders, two stations, and their chief on the tender.',
+  portal: 'Raiders have taken the night express. Board at the caboose and fight forward, car by car, past their lieutenant to the engine. She stops at five stations: step off to loot, but be aboard when she leaves.',
+  townLine: 'The Iron Express runs beyond: sixteen cars held by raiders, five stations, a lieutenant halfway along and their chief on the tender.',
   load: () => loadTrain3D().catch((e) => console.warn(e)),
   ready: train3dReady,
   generate: generateGhostTrain,
@@ -19,9 +19,11 @@ registerRegion({
   quest(sc, step) {
     const n = sc.carDone.length, left = sc.leavesIn;
     let h = step(sc.cleared >= n, `Fight forward car by car: <b>${sc.cleared}/${n}</b> cleared.`);
-    h += step(sc.completed || (sc.stationsSeen >= 2 && !sc.stop), sc.stop && !sc.stop.last
+    const L = sc.lieutenant;
+    if (L) h += step(L.dead, L.dead ? 'Their lieutenant is down.' : 'Halfway along, their lieutenant holds the prison car.');
+    h += step(sc.completed || (sc.stationsSeen >= sc.stations && !sc.stop), sc.stop && !sc.stop.last
       ? `<b>${sc.stop.name}</b>${left != null ? `: she leaves in <b>${left}s</b>` : ''}. Step off to loot, or stay aboard.`
-      : `Stations: <b>${sc.stationsSeen}/2</b> <span class="dim">— step off to loot; be aboard when she leaves.</span>`);
+      : `Stations: <b>${sc.stationsSeen}/${sc.stations}</b> <span class="dim">— step off to loot; be aboard when she leaves.</span>`);
     h += step(sc.completed || sc.fire < 1, "Defeat the raiders' chief on the tender.");
     h += step(sc.completed, sc.completed ? 'The Last Stop: the exit is open on the platform.' : 'His fall puts the brakes on.');
     return h;

@@ -23,6 +23,10 @@ this file good enough that another account can pick up where it stopped.
   `registerRegion({...})` (the fields are documented at the top of `regions.js`). `src/game/regions/index.js` imports
   all four. `game.js` (portal text, skull words, art loading, the three.js fallback, generation, the run and its win,
   ambience, the arrival log) and the Quest Log (`src/ui/quest.js`) read the registry, so a region touches no shared file.
+- `minLevel` (optional) gates a region by the hero's level: `regionNeeds(biome, level)` in `regions.js` is checked by
+  `teleportToBiome` (so the skull word too: Velscour refuses with one line), the HAIL VELSCOUR! list (the option is
+  greyed out with "Reach level N") and `confirmDungeon`/`enterDungeon` (a saved `nextBiome` above the hero's level is
+  redrawn). The Great Hunt uses it (level 10).
 - The biomes are in `BETA_BIOMES` (`src/data/biomes.js`, `region: true`): never in the biome bag or the overworld
   guarantee, reached from Velscour's skull (the region's `words`, or the HAIL VELSCOUR! list). A placeholder region
   registers nothing, so its biome plays as the Forsaken Wilds.
@@ -36,13 +40,22 @@ this file good enough that another account can pick up where it stopped.
 Integration branch: `feat/new-regions`. Each region was built on its own branch off it, merged back when it worked:
 `feat/ghost-train`, `feat/endless-siege`, `feat/deep-rail-mines`, `feat/great-hunt`.
 
+Second pass (November 3, 2026, `feat/regions-polish`, merged): the rough spots fixed, the Hunt gated at level 10, the
+train made ~2.5x longer, and **five variants per region** (`variants` in the registry: rolled per level, never the one
+seen last; the skull word plus a number or name, `siege 3`, or the HAIL VELSCOUR! list picks one).
+- **Done:** the Great Hunt's five lands and the Endless Siege's five keeps (both tested, auto-play wins every one).
+- **Not merged yet, out of compute:** the Iron Express and Deep Rail Mines variants. Their work in progress is pushed on
+  `fix/regions-train` and `fix/regions-mines` (each doc's *Next* says where it stopped). Merge `main` into the branch,
+  finish five `variants` the way `src/game/regions/siege.js` and `hunt.js` do, run the region's test and `flow.js`,
+  then open a PR.
+
 ## Status
 | Region | Status | Doc | Test |
 |---|---|---|---|
-| The Iron Express (`ghost_train`) | built (beta) | docs/GHOST_TRAIN.md | `tools/tests/ghosttrain.js` |
-| The Endless Siege | playable beta (gates, winches, ballistae, waves; auto-play wins at depths 8, 60) | docs/ENDLESS_SIEGE.md | `tools/tests/siege.js` |
-| The Deep Rail Mines | playable beta (carts, junction switches, tiered packs, boss at the Bottom; auto-play wins it) | docs/DEEP_RAIL_MINES.md | `tools/tests/mines.js` |
-| The Great Hunt | playable: track by signs, three fights with flight and a blood trail, the kill in the lair; auto-play wins it | docs/GREAT_HUNT.md | `tools/tests/hunt.js` |
+| The Iron Express (`ghost_train`) | playable beta (16 cars, 5 stations, a lieutenant halfway, Hangman's Gorge, the chief's train fight: coal lanes, steam vent, whistle; tuned and soaked by auto-play at depths 1, 50, 150, 300) | docs/GHOST_TRAIN.md | `tools/tests/ghosttrain.js [shots] [auto] [depths] [classes]` |
+| The Endless Siege | playable beta in five variants (the Old Keep, the Frozen Border Fort, the Burning River Wall, the Mountain Pass Fortress, the Swamp Abbey: own walls, gates, ground, horde, lord and twist); gates, winches, ballistae, waves, a walkable wall-walk with stairs; auto-play wins every variant at depths 8, 150, 320 with no falls | docs/ENDLESS_SIEGE.md | `tools/tests/siege.js [shots] [auto] [depth] [variants]` |
+| The Deep Rail Mines | playable beta (carts both ways: ride back up, back out of a junction; switches, tiered packs and levels, arched tunnel mouths, boss at the Bottom; auto-play wins it) | docs/DEEP_RAIL_MINES.md | `tools/tests/mines.js` |
+| The Great Hunt | playable from level 10 (`minLevel`): track by signs, three fights with flight and a trail, the kill in the lair; five lands (`variants`: the Black Wood, the White Waste with blizzards, the Drowned Fen with poison pools, the Red Badlands with a burrower, the Storm Crags with a winged beast and a lair on the peak), each its own ground, beasts, brood and signs; auto-play wins every land without god mode at Depth 9 (level 10), and at 60 and 150 | docs/GREAT_HUNT.md | `tools/tests/hunt.js [shots] [auto] [lands]` |
 
 ## Picking it up
 1. `git fetch origin && git checkout feat/new-regions` (or the region's own branch if it is ahead; check

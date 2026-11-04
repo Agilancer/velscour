@@ -13,31 +13,41 @@ import { hit } from './combat.js';
 import { dropChest } from './loot.js';
 import { addEffect, addLight, Ring, burst, smoke, sparkle, floatText, spawn } from '../gfx/vfx.js';
 import { depthLevel } from '../data/depth.js';
-import { GATES, BALLISTAE, KEEP, LINE, RING, LV, insideKeep, inCourtyard } from '../world/siege.js';
-import { drawGate, drawWinch, drawBallista, drawStandard, SiegeBolt, resetSiegeArt } from '../gfx/siege.js';
+import { LV } from '../world/siege.js';
+import { drawGate, drawWinch, drawBallista, drawStandard, drawFirePot, SiegeBolt, resetSiegeArt } from '../gfx/siege.js';
+import { Area, Delayed } from './hazards.js';
 import { HS } from '../gfx/terrain.js';
+import { SKILLS } from '../data/skills.js';
 
 const PREP = 40, LULL = 30, BOLTS = 6, RANGE = 21;
 const CAPTAIN = (t) => `<b style="color:#ffcf80">Captain Hale:</b> ${t}`;
 /** How many waves a siege at this depth asks for: 4, one more every 50 depths, at most 7. */
 export const siegeWaves = (depth) => Math.min(7, 4 + Math.floor(depth / 50));
 
-export function createSiegeRun(world, gen, biome, depth, onSuccess) {
+export function createSiegeRun(world, gen, biome0, depth, onSuccess) {
   resetSiegeArt();
+  // the variant's keep (world/siege.js siegeLayout): its gates, ballistae, standard, horde, lord and twist; its season
+  // (the element and tint of the dead, the drift in the air, the torches) laid over the biome for this level
+  const L = gen.lay, { gates: GATES, ballistae: BALLISTAE, keep: KEEP, insideKeep, inCourtyard } = L;
+  const biome = L.biome ? { ...biome0, ...L.biome } : biome0;
+  if (L.biome) { world.biome = biome; world.ambientFx = L.biome.ambient || null; }
+  if (L.fog) { world.darkK = L.fog; world.night = true; }   // the swamp's fog: always dim, never pitch dark
   const map = world.map, lvl = depthLevel(depth), base = monsterBase(lvl), total = siegeWaves(depth);
-  const live = new Set(), queue = [];
+  const live = new Set(), queue = [], twist = L.twist, special = total - 2;   // the twist's own wave: the one before the last
   // ---- the gates, their winches, the ballistae and the standard (world.chests entries: drawn and clicked like chests)
   const gates = GATES.map((G0) => {
     const g = { ...G0, hp: 100, max: 100, broken: false, lift: 0, hitT: 0, attackers: 0, mendCd: 0, inert: true, opened: true, reach: 0 };
     const c = g.a0 + 1.5;
-    [g.x, g.y] = g.axis === 'x' ? [c, LINE] : [LINE, c];
-    g.stand = g.axis === 'x' ? [c, RING.IN1 + 0.5] : [RING.IN1 + 0.5, c];     // in the passage, behind the portcullis
-    g.out = g.axis === 'x' ? [c, LINE + 2] : [LINE + 2, c];
+    [g.x, g.y] = g.axis === 'x' ? [c, g.line] : [g.line, c];
+    g.stand = g.axis === 'x' ? [c, g.inner + 0.5] : [g.inner + 0.5, c];     // in the passage, behind the portcullis
+    g.out = g.axis === 'x' ? [c, g.line + 2] : [g.line + 2, c];
+    // on the wall-walk over it: the flanks' inner tiles, either side of the passage (a shooter's post)
+    g.posts = [g.a0 - 0.5, g.a0 + 3.5].map((u) => (g.axis === 'x' ? [u, g.inner + 0.5] : [g.inner + 0.5, u]));
     g.draw = (ctx) => drawGate(ctx, g);
     return g;
   });
   const winches = gates.map((g) => {
-    const [x, y] = g.axis === 'x' ? [g.a0 - 0.9, RING.IN1 - 1.4] : [RING.IN1 - 1.4, g.a0 - 0.9];
+    const [x, y] = g.axis === 'x' ? [g.a0 - 0.9, g.inner - 1.4] : [g.inner - 1.4, g.a0 - 0.9];
     const w = { x, y, gate: g, reach: 1.6, flip: g.axis === 'y', label: 'Gate winch', dot: '#ffb040',
       needs: () => g.broken || g.hp < g.max,
       get opened() { return !w.needs(); },
@@ -57,13 +67,21 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
     get opened() { return !standard.ready(); },
     use() { if (standard.ready()) startWave(); else floatText(standard.x, standard.y, 70, 'Hold the walls!', '#ffd080', 13); },
     draw: (ctx, px, py) => drawStandard(ctx, standard, px, py) };
-  world.chests.push(...gates, ...winches, ...balls, standard);
+  // the river wall's fire-pots: one on the walk over each gate, tipped onto the dead at its foot (refilled between waves)
+  const pots = twist === 'fire' ? gates.map((g) => {
+    const [x, y] = g.posts[0], o = { x, y, gate: g, full: true, reach: 1.6, label: 'Fire-pot', dot: '#ff7030',
+      get opened() { return !o.full; },
+      use() { pour(o); },
+      draw: (ctx, px, py) => drawFirePot(ctx, o, px, py) };
+    return o;
+  }) : [];
+  world.chests.push(...gates, ...winches, ...balls, ...pots, standard);
 
   const run = {
     id: 'endless_siege', type: 'siege', active: true, completed: false, failed: false, markers: [], route: [], stage: 0,
     shrine: { x: standard.x, y: standard.y, reach: 2, use() {} },
     phase: 'prep', wave: 0, total, t: PREP, resolve: 100, falls: 0, kills: 0, spawnT: 0, lastSpawn: 0, boss: null, bossDue: false,
-    gates, winches, ballistae: balls, standard, live, queue,
+    gates, winches, ballistae: balls, pots, standard, live, queue, variant: L.id, lay: L, twist, blizzard: false,
     get title() {
       return run.completed ? 'The Siege Is Broken' : run.phase === 'wave' ? `Hold the Walls — Wave ${run.wave + 1}/${total}` : `Ready the Walls — Wave ${run.wave + 1}/${total}`;
     },
@@ -93,7 +111,14 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
       const inside = foes.filter((m) => inCourtyard(m.x, m.y));
       if (inside.length) { const m = near(inside); return { x: m.x, y: m.y, reach: 2 }; }
       const hot = gates.filter((g) => !g.broken).map((g) => [g, foes.filter((m) => Math.hypot(m.x - g.out[0], m.y - g.out[1]) < 5).length]).sort((a, b) => b[1] - a[1])[0];
-      if (hot && hot[1]) return { x: hot[0].stand[0], y: hot[0].stand[1], reach: 1 };
+      // a full fire-pot over a gate with a crowd at its foot: tip it
+      const pot = pots.find((o) => o.full && foes.filter((m) => Math.hypot(m.x - o.gate.out[0], m.y - o.gate.out[1]) < 3.2).length >= 4);
+      if (pot) return { x: pot.x, y: pot.y, reach: 1.2, use: () => pour(pot) };
+      if (hot && hot[1]) {
+        // a shooter takes the wall-walk over that gate (the nearer flank) and looses down; a fighter stands behind the gate
+        if (ranged()) { const [x, y] = hot[0].posts.reduce((a, q) => (Math.hypot(q[0] - p.x, q[1] - p.y) < Math.hypot(a[0] - p.x, a[1] - p.y) ? q : a)); return { x, y, reach: 0.8 }; }
+        return { x: hot[0].stand[0], y: hot[0].stand[1], reach: 1 };
+      }
       const empty = balls.filter((b) => b.ammo < 2);
       if (empty.length) { const b = near(empty); return { x: b.foot[0], y: b.foot[1], reach: 1.1, use: () => load(b) }; }
       const broke = gates.find((g) => g.broken && !foes.some((m) => Math.hypot(m.x - g.x, m.y - g.y) < 6));
@@ -104,6 +129,11 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
     },
     update(dt) { tick(dt); },
   };
+  /** Does the hero fight from range (auto-play's own test, Auto.meleeBuild, turned round)? */
+  function ranged() {
+    const c = G.char, sk = c && SKILLS[c.bar[0]];
+    return !!c && !['lancer', 'barbarian', 'dragoon'].includes(c.classId) && !(sk && ['melee', 'whirl', 'leap', 'dash'].includes(sk.kind));
+  }
   /** The work waiting between waves: gates to mend, ballistae to load (auto-play's objectives). */
   function chores() {
     const out = [];
@@ -129,11 +159,13 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
     floatText(b.x, b.y, 110, `${b.max} bolts`, '#ffe0a0', 13);
   }
   // ---- the waves
-  const ROSTER = gen.roster.length ? gen.roster : ['skeleton', 'zombie'];
-  const tier = (k) => ROSTER.filter((a) => (k >= 2 || !['knight', 'wraith', 'imp', 'golem', 'abomination'].includes(a)) && (k >= 1 || !['ghoul', 'cultist'].includes(a)) && !['golem', 'abomination'].includes(a));
+  // the variant's horde: its first three kinds from the first wave, two more from the second, the rest from the third;
+  // its heavies come as Gate-Breakers
+  const ROSTER = L.roster.length ? L.roster : ['skeleton', 'zombie'], HEAVY = L.heavy;
+  const tier = (k) => ROSTER.slice(0, k >= 2 ? ROSTER.length : k >= 1 ? 5 : 3);
   function buildWave(k) {
     const n = Math.min(42, 10 + 4 * k + Math.floor(depth / 25)), pool = tier(k).length ? tier(k) : ROSTER;
-    const heavy = ROSTER.filter((a) => a === 'golem' || a === 'abomination');
+    const heavy = HEAVY;
     for (let i = 0; i < n; i++) queue.push({ arch: pick(pool), rank: i < k ? 'champion' : 'normal' });
     if (k >= 2 && heavy.length) for (let i = 0; i < 1 + (k >> 1); i++) queue.splice(Math.floor(rand(0.3, 1) * queue.length), 0, { arch: pick(heavy), rank: 'normal', ram: true });
     run.bossDue = k === total - 1;
@@ -142,7 +174,9 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
     if (run.phase === 'wave' || run.completed) return;
     run.phase = 'wave'; run.t = 0; run.spawnT = 1.5; run.lastSpawn = world.time;
     buildWave(run.wave);
-    UI.centerMsg(run.wave === total - 1 ? 'THE LAST WAVE' : `WAVE ${run.wave + 1}`, run.wave === total - 1 ? 'Their lord comes with it' : 'Hold the walls', 2.6);
+    const sp = run.wave === special && TWIST_WAVE[twist];
+    if (twist === 'frost') setBlizzard(run.wave === special);
+    UI.centerMsg(run.wave === total - 1 ? 'THE LAST WAVE' : sp ? sp[0] : `WAVE ${run.wave + 1}`, run.wave === total - 1 ? 'Their lord comes with it' : sp ? sp[1] : 'Hold the walls', 2.6);
     UI.log(CAPTAIN(pick(['Here they come!', 'To the gates!', 'They never stop. Neither do we.', 'Bolts loose at will!'])), '#e8d8b8');
     sfx('boss', 0.5);
   }
@@ -152,8 +186,11 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
     world.add(m);
     m.awake = true; m.hunter = true; m.siegeWave = run.wave; m.ram = !!e.ram;
     if (e.ram) { m.name = 'Gate-Breaker ' + m.name; m.scale = (m.scale || 1) * 1.1; }
+    if (run.wave === special && twist === 'fire') m.burning = true;          // the fire wave: they come burning
+    if (run.blizzard) m.speed *= 1.15;                                         // the blizzard drives them on
     live.add(m);
-    smoke(m.x, m.y, 4, '#2a2018', 3, 9); burst(m.x, m.y, 6, 'phys', 6, 1.5);
+    if (twist === 'plague') { smoke(m.x, m.y, 2, '#3a4a20', 4, 10); burst(m.x, m.y, 4, 'poison', 8, 1.2); }   // up out of the mire
+    else { smoke(m.x, m.y, 4, '#2a2018', 3, 9); burst(m.x, m.y, 6, 'phys', 6, 1.5); }
     return m;
   }
   function spawnBoss() {
@@ -162,13 +199,14 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
     world.add(m);
     m.awake = true; m.hunter = true; m.siegeWave = run.wave; m.ram = true;
     live.add(m); world.boss = m; run.boss = m; run.bossDue = false;
-    UI.centerMsg(m.name, 'Lord of the Endless Siege', 3.2);
+    if (twist === 'plague') { m.plague = true; m.plagueT = 3; }
+    UI.centerMsg(m.name, L.lord, 3.2);
     sfx('boss'); smoke(m.x, m.y, 6, '#1a1210', 8, 14);
   }
   function clearWave() {
     run.wave++; run.resolve = Math.min(100, run.resolve + 20);
     if (run.wave >= total) return victory();
-    run.phase = 'lull'; run.t = LULL;
+    run.phase = 'lull'; run.t = LULL; refill(); setBlizzard(false);
     UI.centerMsg(`WAVE ${run.wave} HELD`, 'Mend the gates. Load the ballistae.', 2.8);
     UI.log(CAPTAIN(pick(['Breathe. Then back to the walls.', 'Mend what they broke.', 'More are coming. Always more.'])), '#e8d8b8');
     sfx('gate');
@@ -179,13 +217,13 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
     live.clear(); queue.length = 0;
     if (run.boss && run.boss.dead) world.boss = null;
     for (const g of gates) { g.broken = false; g.hp = Math.max(g.hp, g.max * 0.5); }
-    run.resolve = 100; run.phase = 'lull'; run.t = LULL;
+    run.resolve = 100; run.phase = 'lull'; run.t = LULL; refill(); setBlizzard(false);
     UI.centerMsg('THE KEEP IS OVERRUN', 'Fall back. They come again.', 3.2);
     UI.log(CAPTAIN('We held the inner yard. Barely. Again!'), '#e8b8a8');
     sfx('die', 0.6);
   }
   function victory() {
-    run.completed = true; run.phase = 'done';
+    run.completed = true; run.phase = 'done'; setBlizzard(false);
     world.boss = null;
     UI.centerMsg('THE SIEGE IS BROKEN', 'The exit is open', 3.5);
     UI.log(CAPTAIN('They break! The keep stands. Go, before the next tide.'), '#ffe2a0');
@@ -225,7 +263,7 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
       for (const m of live) {
         if (m.dead || m.entering || m.targetable === false) continue;
         const d = Math.hypot(m.x - b.x, m.y - b.y);
-        if (d > RANGE) continue;
+        if (d > (run.blizzard ? RANGE * 0.6 : RANGE)) continue;
         const held = gates.some((g) => !g.broken && Math.hypot(m.x - g.out[0], m.y - g.out[1]) < 3.5), s = d - (held ? 8 : 0) - (inCourtyard(m.x, m.y) ? 4 : 0);
         if (s < bd) { bd = s; best = m; }
       }
@@ -248,15 +286,15 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
       for (const g of gates) {
         if (g.broken) continue;
         const [u, v] = g.axis === 'x' ? [m.x, m.y] : [m.y, m.x];
-        if (u < g.a0 - 0.3 || u > g.a0 + 3.3 || v < RING.IN1 - 0.05 || v >= LINE + 0.42) continue;
-        if (g.axis === 'x') m.y = LINE + 0.42; else m.x = LINE + 0.42;
+        if (u < g.a0 - 0.3 || u > g.a0 + 3.3 || v < g.inner - 0.05 || v >= g.line + 0.42) continue;
+        if (g.axis === 'x') m.y = g.line + 0.42; else m.x = g.line + 0.42;
         g.attackers++;
         if (p && Math.hypot(p.x - m.x, p.y - m.y) < 1.5) continue;   // the hero is right there: it fights him instead
         if ((m.batT = (m.batT ?? rand(0, 0.8)) - dt) > 0) continue;
         m.batT = (m.atkCd || 1.2) * rand(0.9, 1.3);
         m.face && m.face(g.axis === 'x' ? -Math.PI / 2 : Math.PI);
         m.lunge = 1;
-        g.hp -= (HIT[m.rank] || 2) * (m.ram ? 3 : 1);
+        g.hp -= (HIT[m.rank] || 2) * (m.ram ? 3 : 1) * (m.burning ? 1.5 : 1);
         g.hitT = 0.15;
         burst(m.x - (g.axis === 'y' ? 0.4 : 0), m.y - (g.axis === 'x' ? 0.4 : 0), 26, 'phys', 3, 1.2);
         if (chance(0.5)) sfx('thud', 0.35, rand(0.8, 1.1));
@@ -269,12 +307,66 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
       }
     }
   }
+  // ---- the variants' twists
+  const TWIST_WAVE = { frost: ['A BLIZZARD', 'The ballistae can barely see. The dead come faster.'], fire: ['THE FIRE WAVE', 'They come burning. Their blows set the gates alight.'] };
+  function refill() { for (const o of pots) o.full = true; }
+  /** Tip a fire-pot: burning oil on the dead at its gate's foot, and the ground there burning a while. */
+  function pour(o) {
+    if (!o.full) { floatText(o.x, o.y, 90, 'Empty until the wave is held', '#c0b0a0', 12); return; }
+    o.full = false;
+    const [x, y] = o.gate.out;
+    shooter.owner = world.player; shooter.x = x; shooter.y = y;
+    for (const m of live) if (!m.dead && Math.hypot(m.x - x, m.y - y) < 3.2) hit(shooter, m, base.hp * (m.rank === 'boss' ? 0.3 : 0.9), 'fire', { crit: false });
+    world.addHazard(new Area({ world, src: shooter, x, y, r: 2.4, dur: 4, tick: 0.5, dmg: [base.hp * 0.06, base.hp * 0.08], el: 'fire', fx: 'fire' }));
+    for (let k = 0; k < 24; k++) spawn({ type: 'flame', x: x + rand(-2, 2), y: y + rand(-1.6, 1.6), z: rand(0, 20), vz: rand(20, 60), life: rand(0.5, 1.1), size: rand(4, 7), size1: 0.3, add: true });
+    sfx('fire', 0.8); sfx('explode', 0.4);
+    floatText(o.x, o.y, 100, 'Burning oil!', '#ff9050', 14);
+  }
+  function setBlizzard(on) {
+    if (twist !== 'frost' || run.blizzard === on) return;
+    run.blizzard = on;
+    world.darkK = on ? Math.max(world.darkK || 0, 0.45) : (world.night ? 0.6 : 0);
+  }
+  let rockT = 5;
+  function twistTick(dt) {
+    const p = world.player;
+    if (twist === 'frost') {
+      // ice: the dead slip and slow on it
+      for (const m of live) if (!m.dead && !m.fly && map.siegeIce[map.tileIdx(m.x, m.y)]) { const s = m.status; if (!s.slow || s.slow.t < 0.2) s.slow = { t: 0.35, amt: 0.4 }; }
+      if (run.blizzard && p) for (let k = 0; k < 8; k++) spawn({ type: 'streak', x: p.x + rand(-11, 9), y: p.y + rand(-11, 9), z: rand(60, 170), vx: -3, vy: 1.6, vz: -60, life: 1.4, size: 2, color: '#f2f8ff' });
+    } else if (twist === 'fire') {
+      if (chance(dt * 8)) { const m = pick([...live]); if (m && m.burning && !m.dead) spawn({ type: 'flame', x: m.x + rand(-0.2, 0.2), y: m.y + rand(-0.2, 0.2), z: rand(20, 50), vz: rand(15, 35), life: rand(0.3, 0.6), size: rand(3, 5), size1: 0.3, add: true }); }
+    } else if (twist === 'rockfall') {
+      // rocks come down the slopes onto the dead in the pass (never once they are at the gate or inside)
+      if (run.phase === 'wave' && (rockT -= dt) <= 0) {
+        rockT = rand(3.5, 6.5);
+        const out = [...live].filter((m) => !m.dead && !insideKeep(m.x, m.y) && L.outFrom(m.x, m.y) > 3);
+        if (out.length) {
+          const m = pick(out), x = m.x + rand(-1, 1), y = m.y + rand(-1, 1);
+          shooter.owner = world.player; shooter.x = x; shooter.y = y;
+          world.addHazard(new Delayed({ world, src: shooter, x, y, r: 1.8, delay: 1.1, fx: 'meteor', el: 'phys', dmg: [base.hp * 0.5, base.hp * 0.6], showRing: true }));
+          sfx('thud', 0.5, 0.6);
+        }
+      }
+    } else if (twist === 'plague') {
+      // fog over the mire; their lord leaves the plague behind him
+      if (chance(dt * 5) && gen.spawnPts.length) { const [x, y] = pick(gen.spawnPts); smoke(x, y, 2, '#2a3418', 5, 14); }
+      for (const m of live) if (m.plague && !m.dead && (m.plagueT -= dt) <= 0) {
+        m.plagueT = 4.5;
+        world.addHazard(new Area({ world, src: m, x: m.x, y: m.y, r: 2.1, dur: 5, tick: 0.5, dmg: [m.dmg * 0.2, m.dmg * 0.3], el: 'poison', fx: 'poison' }));
+      }
+    }
+  }
   // ---- the frame
   let hudEl = null, hudT = 0, chaseT = 0;
   function tick(dt) {
     const p = world.player;
+    // a fighter on the walls goes down the stairs to what he fights below (and up to what climbed them), as on the
+    // Castle's walls (autoplay.js offTier reads rampartDeck); a shooter stays up there and looses down
+    map.rampartDeck = ranged() ? null : map.siegeDeck;
     holdGates(dt);
     ballistae(dt);
+    twistTick(dt);
     for (const m of live) if (m.dead) { if (!m.noLoot) run.kills++; live.delete(m); }
     if (world.darkK || world.night) for (const [x, y] of gen.braziers) addLight(x, y, 4, 0.9, 30, '#ffa050');
     if (chance(dt * 3)) { const [x, y] = pick(gen.braziers); spawn({ type: 'flame', x: x + rand(-0.15, 0.15), y: y + rand(-0.15, 0.15), z: 30, vz: rand(10, 30), life: rand(0.3, 0.6), size: rand(2.5, 4), size1: 0.3, add: true }); }
@@ -294,7 +386,7 @@ export function createSiegeRun(world, gen, biome, depth, onSuccess) {
     if (run.bossDue && queue.length < 6) spawnBoss();
     // the dead inside the walls wear down the keep
     let drain = 0;
-    for (const m of live) if (!m.dead && m.rank !== 'boss' && inCourtyard(m.x, m.y)) drain += m.rank === 'champion' ? 0.6 : 0.3;   // (their lord is the fight itself)
+    for (const m of live) if (!m.dead && (m.rank !== 'boss' || m.plague) && inCourtyard(m.x, m.y)) drain += m.plague ? 1.2 : m.rank === 'champion' ? 0.6 : 0.3;   // (their lord is the fight itself; but the plague spreads)
     run.resolve -= Math.min(3, drain) * dt;
     if (run.resolve <= 0) { run.resolve = 0; return overrun(); }
     // stragglers that lost their way (a fight carried off somewhere) are brought back to the gates
