@@ -13,7 +13,7 @@ import { rollLooks, SWAPS } from '../data/bestiary.js';
 import { buildField, fieldLevels, reachFrom, LV, AS, fbm, smooth } from './alpine.js';
 import { vnoise } from './caverns.js';
 
-export const SW = 112, SH = 112;
+export const SW = 128, SH = 128;
 export const CLIMB = 7, DROP = 10, WALK = 3;
 
 /** The five bosses of the peak: art, raid template (game/raid.js), title, and the swap that puts each in the snow. */
@@ -58,51 +58,67 @@ function build(depth, biome, seed) {
   const I = (x, y) => y * W + x, inMap = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
   const set = biomeTileSet(BIOME_BY_ID.snowy_summit);
 
-  // ---------------------------------------------------------------- the route: camp, four plateaus, the peak
-  const NPL = 4, nodes = [], d0 = W + H - 30, d1 = 38;
+  // ---------------------------------------------------------------- the route: camp, four plateaus, the peak, and a
+  // saddle (a knob of rock to stand on, no fight) halfway along every leg, so each leg is two ridges with a bend
+  const NPL = 4, main = [], d0 = W + H - 34, d1 = 40;
   let h = 12;
   for (let i = 0; i <= NPL + 1; i++) {
     const t = i / (NPL + 1), d = d0 + (d1 - d0) * t;
-    const s = i === 0 ? rng.range(-6, 6) : i === NPL + 1 ? rng.range(-8, 8) : (i % 2 ? 1 : -1) * rng.range(17, 27);
+    const s = i === 0 ? rng.range(-6, 6) : i === NPL + 1 ? rng.range(-8, 8) : (i % 2 ? 1 : -1) * rng.range(28, 36);
     const kind = i === 0 ? 'start' : i === NPL + 1 ? 'peak' : 'plateau';
-    nodes.push({ i, kind, x: (d + s) / 2, y: (d - s) / 2, r: kind === 'start' ? 4.6 : kind === 'peak' ? 8 : rng.range(6.4, 8.2), h, ph: rng.range(0, 6.28) });
-    h += kind === 'start' ? rng.range(3.6, 4.4) : rng.range(4.2, 5.4);
+    main.push({ kind, x: (d + s) / 2, y: (d - s) / 2, r: kind === 'start' ? 4.6 : kind === 'peak' ? 10.5 : rng.range(6.6, 8.4), h, ph: rng.range(0, 6.28) });
+    h += kind === 'start' ? rng.range(3.8, 4.6) : rng.range(4.4, 5.6);
   }
+  const nodes = [];
+  main.forEach((n, k) => {
+    if (k) {
+      const A = main[k - 1], dx = n.x - A.x, dy = n.y - A.y, L = Math.hypot(dx, dy), o = (k % 2 ? 1 : -1) * rng.range(5, 9);
+      nodes.push({ kind: 'saddle', x: (A.x + n.x) / 2 - dy / L * o, y: (A.y + n.y) / 2 + dx / L * o, r: rng.range(2.6, 3.3), h: (A.h + n.h) / 2 + rng.range(-0.2, 0.4), ph: rng.range(0, 6.28) });
+    }
+    nodes.push(n);
+  });
+  nodes.forEach((n, i) => { n.i = i; });
+  const peakI = nodes.length - 1;
+  // the plateaus' fights, chosen here so their camps and cairns can be laid out with them
+  const KINDS = ['ambush', 'camp', 'avalanche', 'cairns', 'pack'];
+  for (let k = KINDS.length - 1; k > 0; k--) { const j = rng.int(0, k); [KINDS[k], KINDS[j]] = [KINDS[j], KINDS[k]]; }
+  nodes.filter((n) => n.kind === 'plateau').forEach((n, k) => { n.enc = KINDS[k]; });
   const radiusAt = (n, a) => n.r * (0.84 + 0.32 * vnoise(Math.cos(a) * 1.6 + n.ph, Math.sin(a) * 1.6 + n.ph * 2, ns + n.i * 3));
 
   // ---------------------------------------------------------------- tiles: plateaus, then ridges between them
   const lv = new Int16Array(N), walk = new Uint8Array(N), reg = new Int8Array(N).fill(-1), ridgeOf = new Int8Array(N).fill(-1), stepOf = new Int8Array(N), bestD = new Float32Array(N).fill(1e9);
-  for (const n of nodes) for (let y = Math.floor(n.y - n.r * 1.3); y <= Math.ceil(n.y + n.r * 1.3); y++) for (let x = Math.floor(n.x - n.r * 1.3); x <= Math.ceil(n.x + n.r * 1.3); x++) {
-    if (!inMap(x, y)) continue;
-    const dx = x + 0.5 - n.x, dy = y + 0.5 - n.y;
-    if (Math.hypot(dx, dy) > radiusAt(n, Math.atan2(dy, dx))) continue;
-    const i = I(x, y);
-    walk[i] = 1; reg[i] = n.i;
-    lv[i] = Math.round(n.h * LV + (fbm(x * 0.22, y * 0.22, ns + 3) - 0.5) * (n.kind === 'plateau' ? 4 : 2));
-  }
+  const layNode = (n) => {
+    for (let y = Math.floor(n.y - n.r * 1.3); y <= Math.ceil(n.y + n.r * 1.3); y++) for (let x = Math.floor(n.x - n.r * 1.3); x <= Math.ceil(n.x + n.r * 1.3); x++) {
+      if (!inMap(x, y)) continue;
+      const dx = x + 0.5 - n.x, dy = y + 0.5 - n.y;
+      if (Math.hypot(dx, dy) > radiusAt(n, Math.atan2(dy, dx))) continue;
+      const i = I(x, y);
+      walk[i] = 1; reg[i] = n.i; ridgeOf[i] = -1;
+      lv[i] = Math.round(n.h * LV + (fbm(x * 0.22, y * 0.22, ns + 3) - 0.5) * (n.kind === 'plateau' || n.kind === 'peak' ? 4 : 1.5));
+    }
+  };
+  nodes.forEach(layNode);
   const ridges = [];
-  for (let r = 0; r < nodes.length - 1; r++) {
-    const A = nodes[r], B = nodes[r + 1], dx = B.x - A.x, dy = B.y - A.y, L = Math.hypot(dx, dy), px = -dy / L, py = dx / L;
-    const mids = rng.chance(0.5) ? [0.5] : [0.34, 0.68];
-    const pts = [[A.x, A.y], ...mids.map((t) => { const o = rng.range(-6, 6); return [A.x + dx * t + px * o, A.y + dy * t + py * o]; }), [B.x, B.y]];
-    const smp = curve(pts), len = smp[smp.length - 1][2];
-    // where it leaves A and reaches B
+  /** A ridge from A to B (nodes; A may be a bare point, r 0) through pts: its curve, its height profile, its tiles. */
+  const addRidge = (A, B, pts, maxSteps = 3) => {
+    const r = ridges.length, smp = curve(pts), len = smp[smp.length - 1][2];
     let s0 = 0, s1 = len;
-    for (const q of smp) if (Math.hypot(q[0] - A.x, q[1] - A.y) <= A.r * 0.8) s0 = q[2];
+    for (const q of smp) if (A.r && Math.hypot(q[0] - A.x, q[1] - A.y) <= A.r * 0.8) s0 = q[2];
     for (let k = smp.length - 1; k >= 0; k--) if (Math.hypot(smp[k][0] - B.x, smp[k][1] - B.y) <= B.r * 0.8) s1 = smp[k][2];
-    const hw = rng.range(1.05, 1.42), Rl = (B.h - A.h) * LV, run = Math.max(4, s1 - s0);
+    const hw = rng.range(1.05, 1.4), Rl = (B.h - A.h) * LV, run = Math.max(4, s1 - s0);
     // hop steps: one to three rock steps a hop high, the rest of the rise a walk (the undulation keeps it under WALK)
-    const ns_ = Math.min(3, Math.max(1, Math.floor((Rl - run * 2.1) / (CLIMB - 1)) + rng.int(0, 1))), steps = [];
-    for (let k = 0; k < ns_; k++) steps.push({ t: 0.22 + 0.56 * (k + rng.range(0.2, 0.8)) / ns_, up: rng.int(5, CLIMB - 1) });
-    const stepsUp = steps.reduce((a, q) => a + q.up, 0), amp = Math.min(5, run * 0.08), cyc = rng.chance(0.5) ? 1 : 1.5;
-    const profile = (s) => {
-      const t = Math.min(1, Math.max(0, (s - s0) / run));
+    const nst = Math.min(maxSteps, Math.max(1, Math.floor((Rl - run * 2.1) / (CLIMB - 1)) + rng.int(0, 1))), steps = [];
+    for (let k = 0; k < nst; k++) steps.push({ t: 0.22 + 0.56 * (k + rng.range(0.2, 0.8)) / nst, up: Math.min(rng.int(5, CLIMB - 1), Math.max(4, Math.round(Rl / nst))) });
+    const stepsUp = steps.reduce((a, q) => a + q.up, 0), amp = Math.min(4, run * 0.07), cyc = rng.chance(0.5) ? 1 : 1.5;
+    const profile = (sv) => {
+      const t = Math.min(1, Math.max(0, (sv - s0) / run));
       let v = A.h * LV + (Rl - stepsUp) * t + amp * Math.sin(Math.PI * 2 * cyc * t) * Math.sin(Math.PI * t);
       let si = 0;
       for (const q of steps) if (t >= q.t) { v += q.up; si++; }
       return [v, si];
     };
-    ridges.push({ r, A, B, smp, s0, s1, hw, steps, profile, len });
+    const R = { r, A, B, smp, s0, s1, hw, steps, profile, len };
+    ridges.push(R);
     for (const q of smp) {
       if (q[2] < s0 - 1 || q[2] > s1 + 1) continue;
       for (let y = Math.floor(q[1] - hw - 1); y <= Math.ceil(q[1] + hw + 1); y++) for (let x = Math.floor(q[0] - hw - 1); x <= Math.ceil(q[0] + hw + 1); x++) {
@@ -112,6 +128,33 @@ function build(depth, biome, seed) {
         const [v, si] = profile(q[2]);
         walk[i] = 1; ridgeOf[i] = r; stepOf[i] = si; lv[i] = Math.round(v); bestD[i] = d;
       }
+    }
+    return R;
+  };
+  for (let k = 0; k < nodes.length - 1; k++) {
+    const A = nodes[k], B = nodes[k + 1], dx = B.x - A.x, dy = B.y - A.y, L = Math.hypot(dx, dy), px = -dy / L, py = dx / L, sg = rng.chance(0.5) ? 1 : -1;
+    // an S: two bends to either side
+    const pts = [[A.x, A.y], ...[0.33, 0.67].map((t, q) => { const o = sg * (q ? -1 : 1) * rng.range(2.5, 5.5); return [A.x + dx * t + px * o, A.y + dy * t + py * o]; }), [B.x, B.y]];
+    addRidge(A, B, pts);
+  }
+  // a spur off one ridge to a pinnacle with a chest and its guard: a dead end, reward for the detour
+  let pinnacle = null;
+  {
+    const isWalk = (x, y) => inMap(Math.floor(x), Math.floor(y)) && walk[I(Math.floor(x), Math.floor(y))];
+    const cands = ridges.filter((R) => R.r >= 2 && R.A.kind !== 'start');
+    for (let t = 0; t < 24 && !pinnacle; t++) {
+      const R = cands[rng.int(0, cands.length - 1)], s = R.s0 + (R.s1 - R.s0) * rng.range(0.35, 0.65), k = R.smp.findIndex((q) => q[2] >= s);
+      if (k < 3) continue;
+      const q = R.smp[k], qa = R.smp[k - 3], dx = q[0] - qa[0], dy = q[1] - qa[1], l = Math.hypot(dx, dy) || 1, side = rng.chance(0.5) ? 1 : -1;
+      const nx = -dy / l * side, ny = dx / l * side, len = rng.range(9, 13), end = [q[0] + nx * len, q[1] + ny * len];
+      if (end[0] < 10 || end[1] < 10 || end[0] > W - 10 || end[1] > H - 10) continue;
+      let clear = true;
+      for (let u = 3; u <= len + 4 && clear; u += 0.5) for (let o = -4.5; o <= 4.5 && clear; o += 1.5) if (isWalk(q[0] + nx * u - ny * o, q[1] + ny * u + nx * o)) clear = false;
+      if (!clear) continue;
+      const hq = R.profile(q[2])[0] / LV, P = { kind: 'pinnacle', x: end[0], y: end[1], r: 2.5, h: hq + 0.65, ph: rng.range(0, 6.28), i: nodes.length };
+      nodes.push(P); layNode(P);
+      addRidge({ x: q[0], y: q[1], r: 0, h: hq }, P, [[q[0], q[1]], [q[0] + nx * len * 0.5 + ny * rng.range(-1.5, 1.5), q[1] + ny * len * 0.5 - nx * rng.range(-1.5, 1.5)], end], 1).spur = true;
+      pinnacle = P;
     }
   }
   // the climb limit: walkable neighbours more than a walk apart are eased together, unless a hop step lies between them
@@ -131,7 +174,11 @@ function build(depth, biome, seed) {
     }
     if (!moved) break;
   }
-  const start = nodes[0], peak = nodes[NPL + 1];
+  const start = nodes[0], peak = nodes[peakI];
+  // the shrine's dais: the back third of the peak a hop above the rest
+  for (let y = Math.floor(peak.y - peak.r * 1.3); y <= Math.ceil(peak.y + peak.r * 1.3); y++) for (let x = Math.floor(peak.x - peak.r * 1.3); x <= Math.ceil(peak.x + peak.r * 1.3); x++) {
+    if (inMap(x, y) && reg[I(x, y)] === peakI && x + y + 1 < peak.x + peak.y - peak.r * 0.42) lv[I(x, y)] = Math.round(peak.h * LV) + 5;
+  }
   const s0i = I(Math.floor(start.x), Math.floor(start.y)), pki = I(Math.floor(peak.x), Math.floor(peak.y));
   if (!walk[s0i] || !walk[pki]) return null;
   const up = reachFrom(W, H, lv, walk, null, s0i, CLIMB, DROP), down = reachFrom(W, H, lv, walk, null, pki, CLIMB, DROP);
@@ -160,8 +207,14 @@ function build(depth, biome, seed) {
     if (near[ti] < r * 0.75) continue;
     peaks.push({ x, y, r, h: nh[ti] + rng.range(4, 11) }); k++;
   }
-  // the true summit: a spire of rock towering behind the shrine on the peak's shoulder
-  { const back = peak.r + 5.5; peaks.push({ x: peak.x - back * 0.72, y: peak.y - back * 0.72, r: 12, h: peak.h + rng.range(9, 13), spire: true }); }
+  // the peak is the top of the range: nothing round it stands higher
+  for (const p of peaks) { const dp = Math.hypot(p.x - peak.x, p.y - peak.y); p.h = Math.min(p.h, peak.h - 3 - Math.max(0, 40 - dp) * 0.05); }
+  /** Nothing behind the peak (up-screen of it, within 40 tiles) may show over its rim: under a line falling 0.65 a tile. */
+  const behindPeak = (x, y) => {
+    const d = Math.hypot(x - peak.x, y - peak.y) - peak.r * 0.9;
+    if (d <= 0 || x + y > peak.x + peak.y + 6) return peak.h - 3;   // (and nothing anywhere stands over the peak)
+    return Math.max(valley - 6, Math.min(peak.h - 3, peak.h - 0.4 - 0.65 * d));
+  };
   const rk = new Float32Array(N);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = I(x, y);
@@ -170,10 +223,11 @@ function build(depth, biome, seed) {
     let v = hn - (0.8 + 1.0 * d + 0.03 * d * d) - (fbm(x * 0.17, y * 0.17, ns + 41) - 0.5) * Math.min(3, d * 0.5);
     for (const p of peaks) {
       const dd = Math.hypot(x + 0.5 - p.x, y + 0.5 - p.y) / p.r;
-      if (dd < 1) v = Math.max(v, p.h * Math.pow(1 - dd, p.spire ? 1.6 : 1.25) + valley * dd + (fbm(x * 0.3, y * 0.3, ns + 43) - 0.5) * (p.spire ? 3 : 2));
+      if (dd < 1) v = Math.max(v, p.h * Math.pow(1 - dd, 1.25) + valley * dd + (fbm(x * 0.3, y * 0.3, ns + 43) - 0.5) * 2);
     }
-    if (d < 3 && !(near[i] >= 2 && peaks.some((p) => p.spire && Math.hypot(x + 0.5 - p.x, y + 0.5 - p.y) < p.r))) v = Math.min(v, hn - 0.55 - d * 0.75);   // next to the way the rock falls away (but the spire behind the peak)
+    if (d < 3) v = Math.min(v, hn - 0.55 - d * 0.75);   // next to the way the rock always falls away from it
     rk[i] = Math.max(valley - 2 + fbm(x * 0.05, y * 0.05, ns + 47) * 2.5, v);
+    rk[i] = Math.min(rk[i], behindPeak(x + 0.5, y + 0.5));
   }
 
   // ---------------------------------------------------------------- the field, the map
@@ -197,27 +251,36 @@ function build(depth, biome, seed) {
   map.losRise = Math.round(1.6 * LV);
   map.losBlocks = true;
 
-  // ---------------------------------------------------------------- gates: the frozen iron gate on each plateau's way on
+  // ---------------------------------------------------------------- gates: a frozen iron gate across each plateau's way
+  // on (open when its fight is won) and its way in (shut behind the hero while it is fought), and the peak's way in
   const gates = [];
-  for (let r = 1; r <= NPL; r++) {
-    const R = ridges[r], n = nodes[r];
-    const k0 = R.smp.findIndex((q) => q[2] >= R.s0 + 1.5);
-    if (k0 < 0) continue;
-    let made = null;
-    for (let k = k0; k < Math.min(R.smp.length - 3, k0 + 10) && !made; k++) {
-      const q = R.smp[k], qa = R.smp[Math.max(0, k - 3)], qb = R.smp[Math.min(R.smp.length - 1, k + 3)];
+  const nodeTile = (n) => I(Math.floor(n.x), Math.floor(n.y));
+  /** The first grid line along ridge R (from s, stepping ds) where 2-4 of its tiles cross and blocking them cuts a from b. */
+  const findGate = (R, sFrom, ds, a, b, role) => {
+    const k0 = R.smp.findIndex((q) => q[2] >= sFrom);
+    if (k0 < 0) return null;
+    const half = R.smp.findIndex((q) => q[2] >= (R.s0 + R.s1) / 2);
+    for (let k = k0; k >= 3 && k < R.smp.length - 3 && (ds > 0 ? k <= half : k >= half); k += ds) {
+      const q = R.smp[k], qa = R.smp[k - 3], qb = R.smp[k + 3];
       const ddx = qb[0] - qa[0], ddy = qb[1] - qa[1], axis = Math.abs(ddx) >= Math.abs(ddy) ? 'y' : 'x';
-      const L = Math.round(axis === 'y' ? q[0] : q[1]), fwd = axis === 'y' ? Math.sign(ddx) : Math.sign(ddy);
+      const L = Math.round(axis === 'y' ? q[0] : q[1]), fwd = (axis === 'y' ? Math.sign(ddx) : Math.sign(ddy)) * ds;
       const col = fwd > 0 ? L : L - 1, c0 = Math.round(axis === 'y' ? q[1] : q[0]);
       const tiles = [];
-      for (let a = c0 - 4; a <= c0 + 4; a++) { const [x, y] = axis === 'y' ? [col, a] : [a, col]; if (inMap(x, y) && walk[I(x, y)] && reg[I(x, y)] < 0) tiles.push(a); }
-      if (tiles.length < 2 || tiles.length > 4 || tiles[tiles.length - 1] - tiles[0] !== tiles.length - 1) continue;
-      const tIdx = tiles.map((a) => (axis === 'y' ? I(col, a) : I(a, col)));
-      const blocked = new Uint8Array(N); for (const i of tIdx) blocked[i] = 1;
-      if (reachFrom(W, H, lv, walk, blocked, I(Math.floor(n.x), Math.floor(n.y)), CLIMB, DROP)[I(Math.floor(nodes[r + 1].x), Math.floor(nodes[r + 1].y))]) continue;
-      made = { r, axis, line: L, a0: tiles[0], a1: tiles[tiles.length - 1] + 1, tiles: tIdx, fwd, design: 'frozen_iron_gate' };
+      for (let t = c0 - 4; t <= c0 + 4; t++) { const [x, y] = axis === 'y' ? [col, t] : [t, col]; if (inMap(x, y) && walk[I(x, y)] && reg[I(x, y)] < 0) tiles.push(t); }
+      if (tiles.length < 2 || tiles.length > 5 || tiles[tiles.length - 1] - tiles[0] !== tiles.length - 1) continue;
+      const tIdx = tiles.map((t) => (axis === 'y' ? I(col, t) : I(t, col)));
+      if (tIdx.some((ii) => gates.some((g) => g.tiles.includes(ii)))) continue;
+      const blocked = new Uint8Array(N); for (const ii of tIdx) blocked[ii] = 1;
+      if (reachFrom(W, H, lv, walk, blocked, nodeTile(a), CLIMB, DROP)[nodeTile(b)]) continue;
+      return { node: a.i, role, axis, line: L, a0: tiles[0], a1: tiles[tiles.length - 1] + 1, tiles: tIdx, design: 'frozen_iron_gate' };
     }
-    if (made) gates.push(made);
+    return null;
+  };
+  for (const n of nodes) {
+    if (n.kind !== 'plateau' && n.kind !== 'peak') continue;
+    const out = ridges.find((R) => R.A === n), inn = ridges.find((R) => R.B === n && !R.spur);
+    if (out) { const g = findGate(out, out.s0 + 1.5, 1, n, out.B, 'out'); if (!g) return null; gates.push(g); }   // every gate, or another seed
+    if (inn) { const g = findGate(inn, inn.s1 - 1.5, -1, n, inn.A, 'in'); if (!g) return null; g.open = true; gates.push(g); }
   }
   // the gates' doors, an arch over the way onto the peak and out of the camp, ruined shrine walls at the peak's back
   map.walls = []; map.doors = [];
@@ -228,15 +291,15 @@ function build(depth, biome, seed) {
       const first = a === g.a0, dir = g.axis === 'x' ? (first ? 'SE' : 'NW') : (first ? 'SW' : 'NE');
       const art = set.doors[g.design]?.[dir] || Object.values(set.doors)[0][dir];
       const [cx, cy] = g.axis === 'x' ? [a + 0.5, g.line] : [g.line, a + 0.5];
-      const door = { kind: 'door', x: cx, y: cy, axis: g.axis, open: false, locked: true, art };
+      const door = { kind: 'door', x: cx, y: cy, axis: g.axis, open: !!g.open, locked: true, art };
       map.doors.push(door); doors.push(door);
       for (const part of ['L', 'R', 'leaf']) {
         const sl = art[part === 'leaf' ? 'open' : 'closed'].find((p) => p.part === part);
         if (sl) map.walls.push({ kind: 'door', door, part, x: cx, y: cy, depth: cx + cy + sl.du + sl.dv });
       }
     }
-    for (const i of g.tiles) map.block[i] = 1;
-    gateDoors.push({ r: g.r, doors, tiles: g.tiles });
+    if (!g.open) for (const i of g.tiles) map.block[i] = 1;
+    gateDoors.push({ node: g.node, role: g.role, doors, tiles: g.tiles });
   }
   const archAt = (R, sAt, design) => {
     const k = R.smp.findIndex((q) => q[2] >= sAt);
@@ -250,7 +313,7 @@ function build(depth, biome, seed) {
     for (const sl of sls) { const a = dir === 'NW' || dir === 'NE' ? -sl.a : sl.a; map.walls.push({ kind: 'arch', x: cx, y: cy, axis, r: sl, depth: cx + cy + a }); }
   };
   archAt(ridges[0], ridges[0].s0 + 2.5, 'slate_pass_gateway');
-  archAt(ridges[NPL], ridges[NPL].s1 - 2.5, 'summit_shrine_portal');
+  { const R = ridges.find((q) => q.B === peak); archAt(R, R.s1 - 4.5, 'summit_shrine_portal'); }
   // the shrine's back wall: a run of ruined ashlar along the peak's far rim, the ground behind it barred
   const wallRun = () => {
     const fam = set.walls.summit_shrine_ashlar ? 'summit_shrine_ashlar' : set.families[0], Wset = set.walls[fam];
@@ -283,12 +346,13 @@ function build(depth, biome, seed) {
     if (!walk[i]) {
       const hh = rk[i];
       name = hh < valley + 1.5 ? (n > 0.55 ? 'glacier_ice' : 'branching_ice_crack') : near[i] < 2 ? (n > 0.6 ? 'exposed_rock' : 'snow_seamed_shale') : q > 0.62 ? 'granite_scree' : n > 0.7 ? 'scree_drift' : 'windpacked_snow';
-    } else if (r === NPL + 1) {
+    } else if (r === peakI) {
       const d = Math.hypot(x + 0.5 - peak.x, y + 0.5 - peak.y);
       name = d < 1.2 ? 'weathered_sun' : d < 2.6 ? (m > 0.6 ? 'wind_knot_paving' : 'summit_shrine_paving') : d < 4 ? (n > 0.6 ? 'shattered_shrine_tile' : 'frosted_cobbles') : (n > 0.55 ? 'wind_ripples' : m > 0.7 ? 'blue_snow_crust' : 'windpacked_snow');
     } else if (r === 0) name = m > 0.6 ? 'sled_groove' : n > 0.6 ? 'crossed_bootprints' : q > 0.6 ? 'runner_tracks' : 'bootprints';
+    else if (r > 0 && nodes[r].kind !== 'plateau') name = n > 0.6 ? 'snow_seamed_shale' : m > 0.65 ? 'exposed_rock' : 'windpacked_snow';   // a saddle, a pinnacle
     else if (r > 0) {
-      name = q > 0.72 ? 'wind_ripples' : n > 0.82 ? 'scree_drift' : m > 0.78 ? 'powdered_gravel' : n < 0.18 ? 'blue_snow_crust' : 'windpacked_snow';
+      name = q > 0.72 ? 'wind_ripples' : nz(x, y, 9, 79) > 0.9 ? 'slate_chips' : n < 0.18 ? 'blue_snow_crust' : 'windpacked_snow';
       if (rng.chance(0.04)) name = rng.pick(['paw_tracks', 'hare_tracks', 'small_bones', 'fallen_feather', 'antler_fragment', 'frozen_puddle', 'buried_crimson_stain', 'hoof_impressions', 'cairn_fragments']);
     } else {
       const st = [i - 1, i + 1, i - W, i + W].some((j) => j >= 0 && j < N && walk[j] && ridgeOf[j] === ridgeOf[i] && stepOf[j] !== stepOf[i]);
@@ -301,8 +365,8 @@ function build(depth, biome, seed) {
   const { VW, VH, own, near: vnear } = F, vmat = new Uint8Array(VW * VH * 4);
   for (let k = 0; k < VW * VH; k++) {
     const u = (k % VW) / AS, w = ((k / VW) | 0) / AS, rock = own[k] < 0;
-    vmat[k * 4] = rock ? 255 : 0;
-    vmat[k * 4 + 1] = rock ? 255 * smooth(0.5, 4, vnear[k]) * 0.3 : 0;
+    vmat[k * 4] = rock ? (vnear[k] < 0.6 ? 200 : 255) : 0;   // the rim just off walkable ground: dark bare rock
+    vmat[k * 4 + 1] = rock ? 255 * smooth(1.2, 9, vnear[k]) * 0.85 : 0;   // haze: the deep drops fade toward the mist
     vmat[k * 4 + 2] = 255 * (0.3 + 0.7 * fbm(u * 0.18, w * 0.18, ns + 81));
     vmat[k * 4 + 3] = 255 * smooth(0.42, 0.58, fbm(u * 0.06, w * 0.06, ns + 83));
   }
@@ -329,23 +393,37 @@ function build(depth, biome, seed) {
   const campKit = [['abandoned_summit_sled', 1.8, -1.2], ['snowbound_supply_crate', 2.4, 0.6], ['fur_bedroll', -1.6, 1.4], ['frosted_iron_brazier', -0.4, -2.2, 3.4], ['shattered_expedition_crate', -2.4, -0.6], ['climbing_pick_and_map', 0.8, 2.2], ['trail_cairn_pedestal', -2, 2.6]];
   for (const [name, dx, dy, light] of campKit) put(name, start.x + dx, start.y + dy, { light: light || 0 });
   // the peak's shrine: its altar at the back, the owl, the basin, braziers, sentinels at the rim
-  const peakKit = [['mountain_shrine_altar', 0, -3.4], ['stone_owl_idol', -2.6, -3], ['frozen_shrine_basin', 2.6, -2.8], ['frosted_iron_brazier', -3.6, -1, 3.4], ['frosted_iron_brazier', 3.6, -1, 3.4],
-    ['standing_stone_sentinel', -5, 1.5], ['standing_stone_sentinel', 5, 1.5], ['kneeling_pilgrim_stone', -3, 4], ['summit_warning_bell', 4.2, 3.6], ['snowbound_votive_candles', -1.2, -2.2, 2], ['snowbound_votive_candles', 1.3, -2.1, 2]];
-  for (const [name, dx, dy, light] of peakKit) put(name, peak.x + dx, peak.y + dy, { light: light || 0 });
+  // (the arena's middle stays clear for the boss: everything stands round its rim, on the far side)
+  const R0 = peak.r * 0.66, peakKit = [['mountain_shrine_altar', -0.7, -0.7, 0, true], ['stone_owl_idol', -0.95, -0.25, 0, true], ['frozen_shrine_basin', -0.25, -0.95, 0, true],
+    ['frosted_iron_brazier', -0.98, 0.2, 3.4, true], ['frosted_iron_brazier', 0.2, -0.98, 3.4, true], ['standing_stone_sentinel', -0.6, 0.8, 0, true], ['standing_stone_sentinel', 0.8, -0.6, 0, true],
+    ['kneeling_pilgrim_stone', 0.95, 0.3, 0, false], ['summit_warning_bell', 0.3, 0.95, 0, true], ['snowbound_votive_candles', -0.55, -0.45, 2, false], ['snowbound_votive_candles', -0.45, -0.55, 2, false]];
+  for (const [name, dx, dy, light, blk] of peakKit) put(name, peak.x + dx * R0, peak.y + dy * R0, { light, block: blk });
   // the plateaus: boulders and ice round their rims, a cairn and a pedestal, a few tracks of the dead
-  for (let r = 1; r <= NPL; r++) {
-    const n = nodes[r];
+  for (const n of nodes.filter((q) => q.kind === 'plateau')) {
+    const r = n.i;
+    // what the fight leaves to see from the ridge: the raiders' camp round its fire, the cairns' footings, a lost party
+    if (n.enc === 'camp') {
+      put('frosted_iron_brazier', n.x, n.y, { light: 3.6 });
+      for (let k = 0; k < 4; k++) { const a = k * 1.57 + 0.4; put(k % 2 ? 'fur_bedroll' : 'snowbound_supply_crate', n.x + Math.cos(a) * 2.4, n.y + Math.sin(a) * 2.4); }
+      put('shattered_expedition_crate', n.x + 3.6, n.y - 1); put('broken_timber_fence', n.x - 3.4, n.y + 1.6);
+    } else if (n.enc === 'ambush') { put('abandoned_summit_sled', n.x + 1.5, n.y - 1); put('mountain_boots_and_belt', n.x - 1.4, n.y + 1.2); put('climbing_pick_and_map', n.x + 0.4, n.y + 2); }
+    else if (n.enc === 'avalanche') put('summit_warning_bell', n.x - 2, n.y - 2.5);
+    n.cairns = n.enc === 'cairns' ? [0, 1, 2].map((k) => { const a = n.ph + k * 2.094, rr = n.r * 0.5; return [n.x + Math.cos(a) * rr, n.y + Math.sin(a) * rr]; }) : null;
+    if (n.cairns) for (const [cx, cy] of n.cairns) taken[I(Math.floor(cx), Math.floor(cy))] = 1;
     for (let k = 0; k < 9; k++) {
-      const a = rng.range(0, 6.28), rr = radiusAt(n, a) * rng.range(0.62, 0.86), x = n.x + Math.cos(a) * rr, y = n.y + Math.sin(a) * rr, i = I(Math.floor(x), Math.floor(y));
+      const a = rng.range(0, 6.28), rr = radiusAt(n, a) * rng.range(0.66, 0.86), x = n.x + Math.cos(a) * rr, y = n.y + Math.sin(a) * rr, i = I(Math.floor(x), Math.floor(y));
       if (!inMap(Math.floor(x), Math.floor(y)) || !walk[i] || reg[i] !== r) continue;
       put(rng.pick(['snow_capped_boulder', 'frost_split_boulder', 'glacier_ice_spire', 'glacier_crystal_cluster', 'snowy_boulder_rubble', 'jagged_slate_spur', 'alpine_menhir', 'broken_ice_chunk', 'granite_column_stump']), x, y);
     }
-    put(rng.pick(['snowy_rock_cairn', 'trail_cairn_pedestal', 'leaning_wind_knot_slab']), n.x + rng.range(-2, 2), n.y + rng.range(-2, 2));
-    for (let k = 0; k < 3; k++) put(rng.pick(['slate_chip_scatter', 'fallen_alpine_branch', 'snowy_timber_heap', 'broken_timber_fence', 'mountain_boots_and_belt']), n.x + rng.range(-4, 4), n.y + rng.range(-4, 4));
+    if (n.enc !== 'camp') put(rng.pick(['snowy_rock_cairn', 'trail_cairn_pedestal', 'leaning_wind_knot_slab']), n.x + rng.range(-2, 2), n.y + rng.range(-2, 2));
+    for (let k = 0; k < 3; k++) put(rng.pick(['slate_chip_scatter', 'fallen_alpine_branch', 'snowy_timber_heap']), n.x + rng.range(-4, 4), n.y + rng.range(-4, 4));
   }
+  // a saddle: a cairn to mark it; the pinnacle: a strongbox's ruin beside its chest
+  for (const n of nodes.filter((q) => q.kind === 'saddle')) put(rng.pick(['snowy_rock_cairn', 'notched_trail_marker', 'alpine_menhir']), n.x + rng.range(-1, 1), n.y + rng.range(-1, 1), { block: false });
+  if (pinnacle) { put('shattered_expedition_crate', pinnacle.x + 0.9, pinnacle.y - 0.6, { block: false }); put('summit_torch_stand', pinnacle.x - 0.9, pinnacle.y - 0.5, { light: 3, block: false }); }
   // along the ridges: trail markers, pitons at the hop steps, now and then a fallen pine or a spur on the rim
   for (const R of ridges) {
-    for (let s = R.s0 + 6; s < R.s1 - 4; s += rng.range(9, 13)) {
+    for (let s = R.s0 + 6; s < R.s1 - 4 && !R.spur; s += rng.range(9, 13)) {
       const q = R.smp.find((p) => p[2] >= s);
       if (!q) continue;
       for (let t = 0; t < 8; t++) {
@@ -371,19 +449,19 @@ function build(depth, biome, seed) {
     return reachFrom(W, H, hgt, walk, bl, s0i, CLIMB, DROP)[pki] && reachFrom(W, H, hgt, walk, bl, pki, CLIMB, DROP)[s0i];
   };
   if (!passable()) {
-    for (const pr of props) { const i = I(Math.floor(pr.x), Math.floor(pr.y)); if (reg[i] < 0 || reg[i] === NPL + 1 || near[i] === 0) { if (!gates.some((g) => g.tiles.includes(i))) map.block[i] = 0; } }
+    for (const pr of props) { const i = I(Math.floor(pr.x), Math.floor(pr.y)); if (reg[i] < 0 || reg[i] === peakI || near[i] === 0) { if (!gates.some((g) => g.tiles.includes(i))) map.block[i] = 0; } }
     if (!passable()) return null;
   }
 
   // ---------------------------------------------------------------- the way, for auto-play and the HUD; the ridge packs
   const reach = reachFrom(W, H, hgt, walk, null, s0i, CLIMB, DROP);
   const route = [];
-  for (let r = 0; r < ridges.length; r++) {
-    const R = ridges[r];
-    route.push({ x: nodes[r].x, y: nodes[r].y, node: r });
-    for (let s = R.s0 + 4; s < R.s1 - 2; s += 5) { const q = R.smp.find((p) => p[2] >= s); if (q) route.push({ x: q[0], y: q[1], ridge: r }); }
+  for (const R of ridges) {
+    if (R.spur) continue;
+    route.push({ x: R.A.x, y: R.A.y, node: R.A.i });
+    for (let s = R.s0 + 4; s < R.s1 - 2; s += 5) { const q = R.smp.find((p) => p[2] >= s); if (q) route.push({ x: q[0], y: q[1], ridge: R.r }); }
   }
-  route.push({ x: peak.x, y: peak.y, node: NPL + 1 });
+  route.push({ x: peak.x, y: peak.y, node: peakI });
   const base = rollLooks(biome, rng.fn());
   const looks = {
     pick(arch, r = Math.random) { const l = base.pick(arch, r); return l && { ...l, swap: SNOW_LOOKS[Math.floor(r() * SNOW_LOOKS.length)], tint: 'Frostbitten' }; },
@@ -391,6 +469,7 @@ function build(depth, biome, seed) {
   };
   const spawns = [], leaps = [];
   for (const R of ridges) {
+    if (R.spur) continue;
     let n = 0;
     for (let s = R.s0 + 7; s < R.s1 - 5; s += rng.range(8, 12)) {
       const q = R.smp.find((p) => p[2] >= s);
@@ -409,25 +488,37 @@ function build(depth, biome, seed) {
   }
 
   const look = {
-    rock: ['snow_capped_granite', null], rockB: ['ice_bound_shale', null], tint: '#ffffff',
-    snow: [-99, -98], snowC: '#eef3f8', mist: [valley + 2.5, valley - 2], mistC: '#dfe7ee',
-    cloud: { y: valley + 1.6, color: '#f6f8fb', shade: '#b4c0d0', k: 0.86 },
+    rock: ['snow_capped_granite', null], rockB: ['ice_bound_shale', null], tint: '#ffffff', rockScale: 0.2, rockL: 0.3, snowK: [0.58, 0.84],
+    snow: [-99, -98], snowC: '#eef3f8', mist: [valley + 3, valley + 0.5], mistC: '#dfe7ee', flank: '#9fb0c6',
+    cloud: { y: valley + 1.6, color: '#f6f8fb', shade: '#b4c0d0', k: 0.86, wisp: 0.35 },
     sun: '#fff4e2', sunI: 2.4, amb: '#d4deea', ambI: 1.05, hemiSky: '#dceaf8', hemiGround: '#9aa4b4', hemiI: 1.35,
-    sky: ['#4a78b0', '#9cc0e0', '#e4ecf2'], far: ['#b8c8d8', '#98aec4', '#7d94ae'], rockScale: 0.32, bump: 1.15,
+    sky: ['#4a78b0', '#9cc0e0', '#e4ecf2'], far: ['#b8c8d8', '#98aec4', '#7d94ae'], bump: 1.15,
   };
   const edgeH = (x, y) => F.H2(Math.min(W - 0.01, Math.max(0, x)), Math.min(H - 0.01, Math.max(0, y)));
   const skirt = (x, y) => {
     const ex = Math.min(W, Math.max(0, x)), ey = Math.min(H, Math.max(0, y)), d = Math.hypot(x - ex, y - ey), he = edgeH(x, y);
     if (x > 0 && y > 0 && x < W && y < H) return he - 0.3;
     const n1 = fbm(x * 0.06, y * 0.06, ns + 91), n2 = fbm(x * 0.19, y * 0.19, ns + 93);
-    if ((x < 0 || y < 0) && x <= W && y <= H) { const k = d * d / (d * d + 30); return he + k * (8 + 22 * n1 + 6 * n2); }   // behind: the range goes on
+    if ((x < 0 || y < 0) && x <= W && y <= H) {   // behind: the range goes on, never over the peak near it
+      const k = d * d / (d * d + 30), dp = Math.hypot(x - peak.x, y - peak.y);
+      return Math.min(he + k * (8 + 22 * n1 + 6 * n2), behindPeak(x, y));
+    }
     return Math.max(valley - 6, he - d * 0.9 - 3 * n1);   // in front: falling into the cloud
   };
 
-  const av = { W, H, F, tfloor, floors: set.floors, vmat, look, skirt, skirtP: 46 };
-  map.summit = { nodes, ridges, gates: gateDoors, route, peak, start, reg, ridgeOf, valley, shrineWall };
+  const av = { W, H, F, tfloor, floors: set.floors, vmat, look, skirt, skirtP: 46, snowFloor: FI.windpacked_snow, flankSnowFloor: FI.blue_snow_crust, stepFloor: FI.snowy_slate_flags,
+    noFlip: new Set(['bootprints', 'crossed_bootprints', 'sled_groove', 'runner_tracks', 'snowy_slate_flags', 'compact_snow_path', 'weathered_sun'].map((n) => FI[n])) };
+  map.hopDust = '#eef2f6';
+  // the pinnacle: a chest and its guard
+  const chests = [];
+  if (pinnacle && reach[nodeTile(pinnacle)]) {
+    chests.push({ x: pinnacle.x, y: pinnacle.y - 0.4, rare: true });
+    const arch = rng.pick(['golem', 'gargoyle', 'knight']);
+    spawns.push({ x: pinnacle.x + 0.6, y: pinnacle.y + 0.8, arch, n: 1, rank: 'champion', look: looks.pick(arch, rng.fn()), zone: 'pinnacle' });
+  }
+  map.summit = { nodes, ridges, gates: gateDoors, route, peak, start, reg, ridgeOf, valley, shrineWall, pinnacle, peakI };
   return {
-    map, props, buildings: [], wallHangings: [], torches: [], looks, spawns, chests: [],
+    map, props, buildings: [], wallHangings: [], torches: [], looks, spawns, chests,
     start: [start.x, start.y], exit: [peak.x, peak.y + 1.5], seed, alpine: av, nodes, ridges, route, gates: gateDoors, leaps, bosses: SUMMIT_BOSSES,
   };
 }

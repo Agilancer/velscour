@@ -509,6 +509,8 @@ export const game = {
       delete c.seaOfSandRuns[depth];
     }
     if (biome.id === 'dark_forest' && c.darkForestRuns) delete c.darkForestRuns[depth];
+    if (c.mountainRuns) delete c.mountainRuns[depth];   // the mountains keep their maps per depth: a teleport forges new ones
+    if (c.summitRuns) delete c.summitRuns[depth];
     const loading = document.getElementById('loading');
     document.getElementById('loading-text').textContent = `Answering Velscour — Depth ${depth} · ${biome.name}…`;
     loading.classList.remove('hidden');
@@ -539,6 +541,7 @@ export const game = {
     this._continuing = true;
     const p = G.player, depth = old.depth, carry = p ? old.loot.filter((l) => Math.hypot(l.x - p.x, l.y - p.y) < 14) : [];
     c.nextBiome = id;
+    if (id === 'snowy_summit' && c.summitRuns) delete c.summitRuns[depth];   // a fresh range above a fresh summit
     const loading = document.getElementById('loading');
     document.getElementById('loading-text').textContent = `Depth ${depth} — ${biome.name}…`;
     loading.classList.remove('hidden');
@@ -630,10 +633,10 @@ export const game = {
     keepTileSets(tileset);
     c.seaOfSandRuns ||= {}; c.darkForestRuns ||= {};
     // the two overworlds that save their progress per depth rebuild the same map after a town trip
-    const kept = biome.id === 'sea_of_sand' ? c.seaOfSandRuns[depth] : forest ? c.darkForestRuns[depth] : null;
+    const reg = regionOf(biome);
+    const kept = biome.id === 'sea_of_sand' ? c.seaOfSandRuns[depth] : forest ? c.darkForestRuns[depth] : reg && reg.kept ? reg.kept(c, depth) : null;   // (a region may keep its map per depth: the mountains)
     const seed = kept ? kept.seed : (Math.random() * 1e9) | 0;
     const sky = biome.id === 'skyship', sea = !!biome.sea;
-    const reg = regionOf(biome);
     const gen = reg ? reg.generate(depth, biome, seed) : forest ? generateDarkForest(depth, biome, tileset, seed)
       : sky ? generateSkyship(depth, biome, seed, castle3dState())
       : sea ? generateSeaship(depth, biome, seed, SEA_VARIANTS.find((q) => q.id === (G.seaNext || c.seaVariant))?.size)
@@ -883,7 +886,11 @@ export const game = {
     if (world.breach) this.breachExit(world);
     else if (world.rift) this.riftExit(world);
     else if (world.unbound) { sfx('portal'); this.enterTown(); }
-    else this.portalChoice(world);
+    else {
+      if (c.mountainRuns) delete c.mountainRuns[world.depth];   // the mountains of a depth left behind are done with
+      if (c.summitRuns) delete c.summitRuns[world.depth];
+      this.portalChoice(world);
+    }
   },
 
   /**
@@ -985,6 +992,7 @@ export const game = {
         // back to the start of this five-depth block (BOSS ROOMs are checkpoints), a Defiance stack stronger
         c.depth = blockStart(depth);
         c.nextBiome = drawBiome(c, c.depth);
+        delete c.mountainRuns; delete c.summitRuns;   // the mountains' checkpoints don't outlive a death
         const p = G.player;
         p.dead = false;
         p.buffs = [];

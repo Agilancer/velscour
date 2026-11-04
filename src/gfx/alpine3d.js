@@ -14,7 +14,7 @@ import { loadImage } from '../core/assets.js';
 import { VZ } from '../world/caverns.js';
 
 const SC = HW * Math.SQRT2;          // world px per tile across the screen (one three.js unit)
-const CELL = 64, PAD = 4, SLOT = CELL + 2 * PAD;
+const CELL = 128, PAD = 4, SLOT = CELL + 2 * PAD;
 const MATS = ['snow_capped_granite', 'ice_bound_shale', 'frost_niche_slate', 'ruined_alpine_drywall', 'summit_shrine_ashlar'];
 let T = null, R = null, S = null;
 const IMG = {};
@@ -69,7 +69,7 @@ function floorAtlas(floors) {
   return { canvas: c, cols, rows };
 }
 /** A wall material (160 x 256, a capped course top and bottom) as a 160 x 160 rock face seamless both ways. */
-function rockFace(img, swap) {
+function rockFace(img, swap, contrast = 1, target = 0.42) {
   const c = makeCanvas(160, 160), g = c.getContext('2d');
   g.drawImage(img, 0, 40, 160, 160, 0, 0, 160, 160);
   // the top 28 rows fade into the rows that follow the bottom, so the face repeats up the cliff without a seam
@@ -85,10 +85,15 @@ function rockFace(img, swap) {
   const L = (i) => (px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11) / 255;
   for (let i = 0; i < px.length; i += 4) if (L(i) < 0.45) { sr += px[i]; sg += px[i + 1]; sb += px[i + 2]; n++; }
   sr /= n || 1; sg /= n || 1; sb /= n || 1;
+  let lum = 0;
   for (let i = 0; i < px.length; i += 4) {
-    const l = L(i), f = Math.min(1, Math.max(0, (l - 0.42) / 0.3)) * 0.85, k = 0.82;
+    const l = L(i), f = Math.min(1, Math.max(0, (l - 0.42) / 0.3)) * 0.85, k = 0.82 * contrast;
     px[i] = (px[i] * (1 - f) + sr * f) * k + sr * (1 - k); px[i + 1] = (px[i + 1] * (1 - f) + sg * f) * k + sg * (1 - k); px[i + 2] = (px[i + 2] * (1 - f) + sb * f) * k + sb * (1 - k);
+    lum += L(i);
   }
+  // and lifted to a mid value (mean luminance ~0.42), so a cliff is a mid grey stone, not a black hole
+  const gain = Math.min(2.4, target / Math.max(0.05, lum / (px.length / 4)));
+  for (let i = 0; i < px.length; i += 4) { px[i] = Math.min(255, px[i] * gain); px[i + 1] = Math.min(255, px[i + 1] * gain); px[i + 2] = Math.min(255, px[i + 2] * gain); }
   g.putImageData(d, 0, 0);
   return swap ? recolor(c, swap) : c;
 }
@@ -97,7 +102,8 @@ function noiseTex(N = 128, seed = 1) {
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const a = (x / N) * 6.2832, b = (y / N) * 6.2832;
     const v = 0.5 + 0.2 * Math.sin(a * 2 + Math.sin(b * 3 + seed) * 1.7) * Math.cos(b * 2 + Math.cos(a * 3)) + 0.16 * Math.sin(a * 5 + b * 4 + seed) * Math.sin(b * 6 - a * 2) + 0.08 * Math.sin(a * 11 - b * 9);
-    d.data.set([255 * clamp(v, 0, 1), 0, 0, 255], (y * N + x) * 4);
+    const u = 0.5 + 0.2 * Math.cos(a * 3 - Math.sin(b * 2 + seed) * 1.3) * Math.sin(b * 3 + Math.cos(a * 2)) + 0.15 * Math.cos(a * 4 - b * 5 + seed) * Math.sin(b * 7 + a * 3) + 0.08 * Math.cos(a * 9 + b * 10);
+    d.data.set([255 * clamp(v, 0, 1), 255 * clamp(u, 0, 1), 0, 255], (y * N + x) * 4);
   }
   g.putImageData(d, 0, 0);
   return c;
@@ -108,22 +114,36 @@ function terrainMaterial(uni) {
   const m = new T.MeshStandardMaterial({ roughness: 0.94, metalness: 0, side: T.FrontSide });
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uni);
-    sh.vertexShader = 'attribute vec4 cmat;\nvarying vec3 vWp; varying vec3 vWn; varying vec4 vMat;\n' + sh.vertexShader.replace('#include <begin_vertex>',
-      '#include <begin_vertex>\nvWp = position; vWn = normal; vMat = cmat;');
-    sh.fragmentShader = `uniform sampler2D tAtlas, tIdx, tRA, tRB, tN; uniform vec2 uMapWH, uAtlasN, uSnow, uMist; uniform float uRS, uBump;
-uniform vec3 uSnowC, uMistC, uTint;
-varying vec3 vWp; varying vec3 vWn; varying vec4 vMat;
+    sh.vertexShader = 'attribute vec4 cmat; attribute float csnow;\nvarying vec3 vWp; varying vec3 vWn; varying vec4 vMat; varying float vSnow;\n' + sh.vertexShader.replace('#include <begin_vertex>',
+      '#include <begin_vertex>\nvWp = position; vWn = normal; vMat = cmat; vSnow = csnow;');
+    sh.fragmentShader = `uniform sampler2D tAtlas, tIdx, tRA, tRB, tN; uniform vec2 uMapWH, uAtlasN, uSnow, uMist, uSnowK; uniform float uRS, uBump, uSnowId, uStepId;
+uniform vec3 uSnowC, uMistC, uTint, uFlank;
+varying vec3 vWp; varying vec3 vWn; varying vec4 vMat; varying float vSnow;
 float alpH = 0.0;
-vec3 cellC(vec2 t, vec2 p) {
-  t = clamp(t, vec2(0.0), uMapWH - 1.0);
-  float id = floor(texture2D(tIdx, (t + 0.5) / uMapWH).r * 255.0 + 0.5);
+vec3 cellAt(float id, vec2 q) {
   vec2 cell = vec2(mod(id, uAtlasN.x), floor(id / uAtlasN.x));
-  vec2 uv = (cell * ${SLOT.toFixed(1)} + ${PAD.toFixed(1)} + fract(p) * ${CELL.toFixed(1)}) / (uAtlasN * ${SLOT.toFixed(1)});
+  vec2 uv = (cell * ${SLOT.toFixed(1)} + ${PAD.toFixed(1)} + fract(q) * ${CELL.toFixed(1)}) / (uAtlasN * ${SLOT.toFixed(1)});
   return texture2D(tAtlas, uv).rgb;
 }
+// a tile's floor, mirrored and turned as its flags say (G channel: 1 mirror x, 2 mirror y, 4 swap), so a field of one
+// floor doesn't show its grid
+vec3 cellC(vec2 t, vec2 p) {
+  t = clamp(t, vec2(0.0), uMapWH - 1.0);
+  vec2 rg = texture2D(tIdx, (t + 0.5) / uMapWH).rg * 255.0 + 0.5;
+  float id = floor(rg.x), fl = floor(rg.y);
+  vec2 q = fract(p);
+  if (mod(fl, 2.0) >= 1.0) q.x = 1.0 - q.x;
+  if (mod(floor(fl / 2.0), 2.0) >= 1.0) q.y = 1.0 - q.y;
+  if (fl >= 4.0) q = q.yx;
+  return cellAt(id, q);
+}
 vec3 floorAt(vec2 p) {
-  vec2 f = p - 0.5, i0 = floor(f), w = smoothstep(0.32, 0.68, f - i0);
+  vec2 f = p - 0.5 + (texture2D(tN, p * 0.31).rg - 0.5) * 0.7, i0 = floor(f), w = smoothstep(0.3, 0.7, f - i0);
   return mix(mix(cellC(i0, p), cellC(i0 + vec2(1.0, 0.0), p), w.x), mix(cellC(i0 + vec2(0.0, 1.0), p), cellC(i0 + vec2(1.0, 1.0), p), w.x), w.y);
+}
+vec3 rockAt(sampler2D t, vec3 w3, float s) {
+  vec2 uxy = vec2(vWp.x, -vWp.y) * s, uzy = vec2(vWp.z, -vWp.y) * s, uxz = vWp.xz * s;
+  return texture2D(t, uxy).rgb * w3.z + texture2D(t, uzy).rgb * w3.x + texture2D(t, uxz).rgb * w3.y;
 }
 vec3 perturbAlp(vec3 sp, vec3 sn, vec2 dH, float fd) {
   vec3 sx = dFdx(sp), sy = dFdy(sp), r1 = cross(sy, sn), r2 = cross(sn, sx);
@@ -133,19 +153,42 @@ vec3 perturbAlp(vec3 sp, vec3 sn, vec2 dH, float fd) {
 ` + sh.fragmentShader
       .replace('#include <map_fragment>', `
   vec3 n = normalize(vWn), w3 = pow(abs(n), vec3(6.0)); w3 /= (w3.x + w3.y + w3.z);
-  vec2 uxy = vec2(vWp.x, -vWp.y) * uRS, uzy = vec2(vWp.z, -vWp.y) * uRS, uxz = vWp.xz * uRS;
-  vec3 rA = texture2D(tRA, uxy).rgb * w3.z + texture2D(tRA, uzy).rgb * w3.x + texture2D(tRA, uxz).rgb * w3.y;
-  vec3 rB = texture2D(tRB, uxy).rgb * w3.z + texture2D(tRB, uzy).rgb * w3.x + texture2D(tRB, uxz).rgb * w3.y;
-  float nz = texture2D(tN, vWp.xz * 0.045).r, nz2 = texture2D(tN, vWp.xz * 0.21 + 0.3).r, nz3 = texture2D(tN, vec2(vWp.x + vWp.z, vWp.y) * 0.07).r;
-  vec3 rock = mix(rA, rB, vMat.w) * uTint;
-  rock = mix(vec3(dot(rock, vec3(0.3, 0.59, 0.11))), rock, 0.85) * (0.8 + 0.42 * nz3);   // macro tone down the face
-  // walkable ground is its floor art up to the ledge's crease; rock shows its floor art only where it lies gentle
-  float flatK = vMat.x > 0.5 ? smoothstep(0.66, 0.9, n.y) : smoothstep(0.42, 0.62, n.y);
-  vec3 alb = mix(rock, floorAt(vWp.xz), flatK);
-  // snow lies on the rock above the snow line wherever it isn't too steep, in drifts
-  float sn = vMat.x * smoothstep(uSnow.x, uSnow.y, vWp.y + (nz - 0.5) * 3.0) * smoothstep(0.5, 0.74, n.y + (nz - 0.5) * 0.22);
-  alb = mix(alb, uSnowC * (0.9 + 0.12 * nz2), sn);
-  alb *= mix(1.0, 0.62, vMat.y) * (0.9 + 0.2 * vMat.z);
+  vec2 nzz = texture2D(tN, vWp.xz * 0.022).rg;
+  float nz = nzz.x, nz2 = nzz.y, nz3 = texture2D(tN, vec2(vWp.x + vWp.z, vWp.y) * 0.07).r;
+  // walkable ground is its floor art; a ledge's face between two walkable tiles is laid stone steps (light: a hop), a
+  // cliff's face rock (dark: a wall); rock shows its floor art only where it lies gentle. Each only where it shows.
+  // vMat.x: 0 walkable, ~0.78 the rock rim just off walkable ground (dark, bare: an outline under every path edge), 1 rock
+  bool walk = vMat.x < 0.4, rim = !walk && vMat.x < 0.9;
+  float flatK = walk ? smoothstep(0.62, 0.88, n.y) : smoothstep(0.72, 0.92, n.y);
+  vec3 alb = vec3(0.0);
+  if (flatK > 0.001) {
+    alb = floorAt(vWp.xz);
+    // floor art on rock (a gentle scree you can't walk) is darker, greyer and shaded with the rock, so it never reads as path
+    if (!walk) alb = mix(vec3(dot(alb, vec3(0.3, 0.59, 0.11))), alb, 0.6) * 0.78 * (0.82 + 0.36 * nz3);
+  }
+  if (flatK < 0.999) {
+    vec3 face;
+    if (walk) {
+      vec2 sq = (w3.z > w3.x ? vec2(vWp.x, -vWp.y * 1.4) : vec2(vWp.z, -vWp.y * 1.4)) * 0.9;
+      face = cellAt(uStepId, sq) * 1.1;
+    } else {
+      // the rock at two scales and in two stones, mixed by a slow noise: no wallpaper over a big face
+      vec3 r1 = rockAt(tRA, w3, uRS), r2 = rockAt(tRB, w3, uRS * 0.43);
+      face = mix(r1, r2, clamp(smoothstep(0.3, 0.7, nz) * 0.7 + vMat.w * 0.3, 0.0, 1.0)) * uTint;
+      face = mix(vec3(dot(face, vec3(0.3, 0.59, 0.11))), face, 0.85) * (0.82 + 0.36 * nz3);   // macro tone down the face
+    }
+    alb = mix(face, alb, flatK);
+  }
+  // snow lies on the rock above the snow line where the ground (blurred: csnow) isn't too steep, in broad drifts, in the
+  // pack's own snow, shaded down the flanks so the path stays the brightest thing on screen
+  float sn = rim ? 0.0 : step(0.4, vMat.x) * smoothstep(uSnow.x, uSnow.y, vWp.y + (nz - 0.5) * 3.0) * smoothstep(uSnowK.x, uSnowK.y, vSnow + (nz2 - 0.5) * 0.3);
+  if (sn > 0.001) {
+    vec3 snow = cellAt(uSnowId, vWp.xz) * uSnowC;
+    snow = mix(snow * 0.62, uFlank, 0.4 + vMat.y * 0.3);   // well below the path's own snow, toward the flank's blue-grey
+    alb = mix(alb, snow, sn);
+  }
+  if (rim) alb *= 0.55;
+  alb = mix(alb, uMistC * 0.8, vMat.y * 0.42) * (0.9 + 0.2 * vMat.z);
   alpH = dot(alb, vec3(0.3, 0.59, 0.11));
   diffuseColor.rgb *= alb;`)
       .replace('#include <normal_fragment_maps>', 'normal = perturbAlp(-vViewPosition, normal, vec2(dFdx(alpH), dFdy(alpH)) * uBump, faceDirection);')
@@ -168,12 +211,15 @@ export function buildAlpine3D(av) {
   disposeAlpine3D();
   renderer();
   const L = av.look, at = floorAtlas(av.floors);
-  const idx = new T.DataTexture(av.tfloor, av.W, av.H, T.RedFormat, T.UnsignedByteType);
+  // the index texture: each tile's floor (R) and its mirror/turn flags (G), none for floors with a direction to them
+  const rg = new Uint8Array(av.W * av.H * 2), keep = av.noFlip || new Set();
+  for (let i = 0; i < av.W * av.H; i++) { rg[i * 2] = av.tfloor[i]; rg[i * 2 + 1] = keep.has(av.tfloor[i]) ? 0 : (hash(i % av.W, (i / av.W) | 0, 77) * 8) | 0; }
+  const idx = new T.DataTexture(rg, av.W, av.H, T.RGFormat, T.UnsignedByteType);
   idx.magFilter = idx.minFilter = T.NearestFilter; idx.flipY = false; idx.needsUpdate = true;
   const atlas = tex(at.canvas, { flip: false }); atlas.wrapS = atlas.wrapT = T.ClampToEdgeWrapping; atlas.minFilter = T.LinearFilter; atlas.generateMipmaps = false;
   const M = {
     atlas, idx, n: tex(noiseTex(128, 3), { srgb: false }),
-    ra: tex(rockFace(IMG[L.rock[0]], L.rock[1])), rb: tex(rockFace(IMG[(L.rockB || L.rock)[0]], (L.rockB || L.rock)[1])),
+    ra: tex(rockFace(IMG[L.rock[0]], L.rock[1], 1, L.rockL ?? 0.42)), rb: tex(rockFace(IMG[(L.rockB || L.rock)[0]], (L.rockB || L.rock)[1], 0.7, L.rockL ?? 0.42)),
     cloud: tex(noiseTex(256, 9), { srgb: false }),
   };
   const uni = {
@@ -181,7 +227,8 @@ export function buildAlpine3D(av) {
     uMapWH: { value: new T.Vector2(av.W, av.H) }, uAtlasN: { value: new T.Vector2(at.cols, at.rows) },
     uSnow: { value: new T.Vector2(L.snow[0], L.snow[1]) }, uMist: { value: new T.Vector2(L.mist[0], L.mist[1]) },
     uRS: { value: L.rockScale ?? 0.55 }, uBump: { value: L.bump ?? 1.1 },
-    uSnowC: { value: rgb3(L.snowC || '#e8eef4') }, uMistC: { value: rgb3(L.mistC) }, uTint: { value: rgb3(L.tint || '#ffffff') },
+    uSnowC: { value: rgb3(L.snowC || '#e8eef4') }, uMistC: { value: rgb3(L.mistC) }, uTint: { value: rgb3(L.tint || '#ffffff') }, uFlank: { value: rgb3(L.flank || '#9fb0c6') },
+    uSnowId: { value: av.flankSnowFloor ?? av.snowFloor ?? 0 }, uStepId: { value: av.stepFloor ?? 0 }, uSnowK: { value: new T.Vector2(...(L.snowK || [0.42, 0.74])) },
   };
   const scene = new T.Scene(); scene.background = null;
   const root = new T.Group(); scene.add(root);
@@ -191,18 +238,41 @@ export function buildAlpine3D(av) {
   buildClouds(av);
   scene.add(new T.AmbientLight(col(L.amb), L.ambI ?? 0.75));
   scene.add(new T.HemisphereLight(col(L.hemiSky), col(L.hemiGround), L.hemiI ?? 1.5));
-  const sun = new T.DirectionalLight(col(L.sun), L.sunI ?? 2.2); sun.position.set(-60, 70, 25); scene.add(sun, sun.target);
+  // the sun from the upper left in front, so both faces the camera sees take some of it; a cool fill from the right
+  const sun = new T.DirectionalLight(col(L.sun), L.sunI ?? 2.2); sun.position.set(-25, 70, 55); scene.add(sun, sun.target);
+  const fill = new T.DirectionalLight(col(L.fill || '#8fa6c4'), L.fillI ?? 0.6); fill.position.set(60, 30, 40); scene.add(fill, fill.target);
   return S;
 }
 
+/** How flat the ground lies round each vertex (its normal's y over the field blurred about a tile): where snow can lie. */
+function snowWeights(F) {
+  const { VW, VH, hv, S: s0 } = F, N = VW * VH;
+  let a = Float32Array.from(hv), b = new Float32Array(N);
+  for (let pass = 0; pass < 2; pass++) {
+    for (let j = 0; j < VH; j++) for (let i = 0; i < VW; i++) {
+      let t = 0, n = 0;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const x = i + di, y = j + dj; if (x >= 0 && y >= 0 && x < VW && y < VH) { t += a[y * VW + x]; n++; } }
+      b[j * VW + i] = t / n;
+    }
+    [a, b] = [b, a];
+  }
+  const out = new Float32Array(N), at = (i, j) => a[Math.min(VH - 1, Math.max(0, j)) * VW + Math.min(VW - 1, Math.max(0, i))];
+  for (let j = 0; j < VH; j++) for (let i = 0; i < VW; i++) {
+    const dx = (at(i + 1, j) - at(i - 1, j)) * s0 / 2, dz = (at(i, j + 1) - at(i, j - 1)) * s0 / 2;
+    out[j * VW + i] = 1 / Math.hypot(dx, 1, dz);
+  }
+  return out;
+}
+
 function buildTerrain(av) {
-  const { F, vmat } = av, { VW, VH, hv, S: s0 } = F, CH = 24 * s0, s = 1 / s0;
+  const { F, vmat } = av, { VW, VH, hv, S: s0 } = F, CH = 24 * s0, s = 1 / s0, sw = snowWeights(F);
   const h = (i, j) => hv[Math.min(VH - 1, Math.max(0, j)) * VW + Math.min(VW - 1, Math.max(0, i))];
   for (let cj = 0; cj < VH - 1; cj += CH) for (let ci = 0; ci < VW - 1; ci += CH) {
     const i1 = Math.min(VW - 1, ci + CH), j1 = Math.min(VH - 1, cj + CH), cw = i1 - ci + 1, chh = j1 - cj + 1;
-    const pos = new Float32Array(cw * chh * 3), nor = new Float32Array(cw * chh * 3), cm = new Uint8Array(cw * chh * 4), idx = [];
+    const pos = new Float32Array(cw * chh * 3), nor = new Float32Array(cw * chh * 3), cm = new Uint8Array(cw * chh * 4), cs = new Float32Array(cw * chh), idx = [];
     for (let j = cj; j <= j1; j++) for (let i = ci; i <= i1; i++) {
       const k = j * VW + i, q = (j - cj) * cw + (i - ci);
+      cs[q] = sw[k];
       pos[q * 3] = i * s; pos[q * 3 + 1] = hv[k]; pos[q * 3 + 2] = j * s;
       const dx = (h(i + 1, j) - h(i - 1, j)) / (2 * s), dz = (h(i, j + 1) - h(i, j - 1)) / (2 * s), l = Math.hypot(dx, 1, dz);
       nor[q * 3] = -dx / l; nor[q * 3 + 1] = 1 / l; nor[q * 3 + 2] = -dz / l;
@@ -214,7 +284,7 @@ function buildTerrain(av) {
     }
     const g = new T.BufferGeometry();
     g.setAttribute('position', new T.BufferAttribute(pos, 3)); g.setAttribute('normal', new T.BufferAttribute(nor, 3));
-    g.setAttribute('cmat', new T.BufferAttribute(cm, 4, true));
+    g.setAttribute('cmat', new T.BufferAttribute(cm, 4, true)); g.setAttribute('csnow', new T.BufferAttribute(cs, 1));
     g.setIndex(idx); g.computeBoundingSphere();
     const mesh = new T.Mesh(g, S.mtl); mesh.matrixAutoUpdate = false;
     S.root.add(mesh);
@@ -225,13 +295,15 @@ function buildTerrain(av) {
  * the edge a little under the map's own ground, so no crack shows between the two grids. */
 function buildSkirt(av) {
   const { W, H } = av, P = av.skirtP ?? 48, st = 1, NX = W + 2 * P + 1, NY = H + 2 * P + 1;
-  const pos = new Float32Array(NX * NY * 3), nor = new Float32Array(NX * NY * 3), cm = new Uint8Array(NX * NY * 4), idx = [];
+  const pos = new Float32Array(NX * NY * 3), nor = new Float32Array(NX * NY * 3), cm = new Uint8Array(NX * NY * 4), cs = new Float32Array(NX * NY), idx = [];
   const hs = (x, y) => av.skirt(x, y);
   for (let b = 0; b < NY; b++) for (let a = 0; a < NX; a++) {
     const x = -P + a * st, y = -P + b * st, q = b * NX + a, y0 = hs(x, y);
     const dx = hs(x + 0.5, y) - hs(x - 0.5, y), dz = hs(x, y + 0.5) - hs(x, y - 0.5), l = Math.hypot(dx, 1, dz);
-    pos.set([x, y0, y], q * 3); nor.set([-dx / l, 1 / l, -dz / l], q * 3);
-    cm.set([255, 0, 100 + 155 * hash(a, b, 5), 255 * (hash(a >> 3, b >> 3, 7) > 0.5 ? 1 : 0)], q * 4);
+    pos.set([x, y0, y], q * 3); nor.set([-dx / l, 1 / l, -dz / l], q * 3); cs[q] = 1 / l;
+    // the range fades into the haze with distance from the map
+    const dd = Math.hypot(x - Math.min(W, Math.max(0, x)), y - Math.min(H, Math.max(0, y)));
+    cm.set([255, 255 * Math.min(1, 0.25 + Math.min(1, Math.max(0, (dd - 4) / 32)) * 0.75), 100 + 155 * hash(a, b, 5), 255 * (hash(a >> 3, b >> 3, 7) > 0.5 ? 1 : 0)], q * 4);
   }
   for (let b = 0; b < NY - 1; b++) for (let a = 0; a < NX - 1; a++) {
     const x = -P + a * st, y = -P + b * st;
@@ -240,7 +312,7 @@ function buildSkirt(av) {
   }
   const g = new T.BufferGeometry();
   g.setAttribute('position', new T.BufferAttribute(pos, 3)); g.setAttribute('normal', new T.BufferAttribute(nor, 3));
-  g.setAttribute('cmat', new T.BufferAttribute(cm, 4, true));
+  g.setAttribute('cmat', new T.BufferAttribute(cm, 4, true)); g.setAttribute('csnow', new T.BufferAttribute(cs, 1));
   g.setIndex(idx); g.computeBoundingSphere();
   const mesh = new T.Mesh(g, S.mtl); mesh.matrixAutoUpdate = false; S.root.add(mesh);
 }
@@ -249,19 +321,26 @@ function buildSkirt(av) {
 function buildClouds(av) {
   const C = av.look.cloud;
   if (!C) return;
-  const P = (av.skirtP ?? 48) + 40, w = av.W + 2 * P, h = av.H + 2 * P;
-  const g = new T.PlaneGeometry(w, h, 1, 1); g.rotateX(-Math.PI / 2); g.translate(av.W / 2, C.y, av.H / 2);
   S.cloudUni = { tN: { value: S.M.cloud }, uT: { value: 0 }, uC: { value: rgb3(C.color) }, uS: { value: rgb3(C.shade || '#9aa8bc') }, uK: { value: C.k ?? 0.85 } };
-  const m = new T.ShaderMaterial({ uniforms: S.cloudUni, transparent: true, depthWrite: false,
+  cloudLayer(av, C.y, S.cloudUni, 3);
+  // and thin wisps a little above it, so the cliffs don't stop at a hard line where they meet the cloud
+  S.wispUni = { ...S.cloudUni, uK: { value: C.wisp ?? 0.35 }, uT: S.cloudUni.uT };
+  cloudLayer(av, C.y + 1.2, S.wispUni, 4, 1.7);
+}
+function cloudLayer(av, y, uni, order, scale = 1) {
+  const P = (av.skirtP ?? 48) + 40, w = av.W + 2 * P, h = av.H + 2 * P;
+  const g = new T.PlaneGeometry(w, h, 1, 1); g.rotateX(-Math.PI / 2); g.translate(av.W / 2, y, av.H / 2);
+  const uS = { ...uni, uZ: { value: scale } };
+  const m = new T.ShaderMaterial({ uniforms: uS, transparent: true, depthWrite: false,
     vertexShader: 'varying vec3 vP; void main() { vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: `uniform sampler2D tN; uniform float uT, uK; uniform vec3 uC, uS; varying vec3 vP;
+    fragmentShader: `uniform sampler2D tN; uniform float uT, uK, uZ; uniform vec3 uC, uS; varying vec3 vP;
 void main() {
-  float a = texture2D(tN, vP.xz * 0.012 + vec2(uT * 0.0035, uT * 0.0012)).r, b = texture2D(tN, vP.xz * 0.031 - vec2(uT * 0.002, -uT * 0.004)).r;
+  float a = texture2D(tN, vP.xz * 0.012 * uZ + vec2(uT * 0.0035, uT * 0.0012)).r, b = texture2D(tN, vP.xz * 0.031 * uZ - vec2(uT * 0.002, -uT * 0.004)).r;
   float d = smoothstep(0.3, 0.75, a * 0.6 + b * 0.5);
   vec3 c = mix(uS, uC, smoothstep(0.35, 0.85, b * 0.7 + a * 0.4));
   gl_FragColor = vec4(c, uK * (0.55 + 0.45 * d));
 }` });
-  const mesh = new T.Mesh(g, m); mesh.renderOrder = 3; mesh.frustumCulled = false;
+  const mesh = new T.Mesh(g, m); mesh.renderOrder = order; mesh.frustumCulled = false;
   S.root.add(mesh);
 }
 
@@ -326,7 +405,7 @@ export function drawAlpine3D(ctx, cr) {
   cam.left = (cx - hw) / SC; cam.right = (cx + hw) / SC; cam.top = -(cy - hh) / SC; cam.bottom = -(cy + hh) / SC; cam.updateProjectionMatrix();
   rd.gl.setClearColor(0x000000, 0);
   rd.gl.render(S.scene, cam);
-  const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false;
+  const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = W / pw > 1.5;   // a phone's big upscale smoothed, not a mosaic
   ctx.drawImage(rd.gl.domElement, 0, 0, W, H);
   ctx.imageSmoothingEnabled = sm;
 }

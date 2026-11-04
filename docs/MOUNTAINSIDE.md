@@ -40,7 +40,9 @@ its own beyond `continueTo` (the hand-over) and `useAlpine` in `setWorld`.
   slope 8-10 rows apart. The bands rise a level a row.
 - Each band has **one way up**, at alternate ends (east on even bands, west on odd), so the trail switchbacks: a graded
   **ramp** three wide cut through the cliff (a walk all the way), or a **scramble**, a stair of rock steps 5-6 levels
-  each (hops). A ramp's shoulders are rock where it runs more than a hop above or below the ground beside it.
+  each (hops), pale gravel treads between stone risers. A ledge's face between two walkable tiles is drawn as laid stone
+  steps (light), a cliff's as rock (darker), so a hop reads apart from a wall; rope posts (pitons in the snow) stand
+  beside the trail's hops. A ramp's shoulders are rock where it runs more than a hop above or below the ground beside it.
 - Half the bands whose way in was a ramp have a **terrace step** a hop high across them (more hops on the trail).
   Crags too tall to climb dot the slope (taken back if they would cut the climb), and up to six **shelves** sit a hop
   above the ground round them, each with a chest.
@@ -58,18 +60,30 @@ its own beyond `continueTo` (the hand-over) and `useAlpine` in `setWorld`.
   is never placed where ground in front of it rises over its foot (sprites draw over the 3D).
 
 ## Fights all the way
-- A pack beside the trail every 15-21 tiles of it (2-5 strong, every fifth a champion's, now and then a unique), and a
-  champion's pack at the top of every way up. `mountain.js` checks no stretch of 48 trail tiles goes without one.
+- A pack beside the trail every 15-21 tiles of it (2-5 strong, every seventh a champion's, now and then a unique), a
+  pack at the top of every way up (a champion's at half of them), a breather round each climbers' camp, and two archers on
+  each shelf near the trail, shooting down until someone hops up to them. `mountain.js` checks no stretch of 64 trail
+  tiles goes without a fight.
 - **Leaps**: just past every other way up, two or three things wait on the cliff top above the next leg; when the hero
   passes beneath they leap down onto the trail (a telegraphed landing).
 - Monsters are the regular bestiary; from the band below the snow line up they wear frost and rime swaps
   ("Frostbitten"). The mountain's own ambushes replace mayhem's (`world.ambushT = Infinity`).
-- **The Summit Warden** (a golem boss in a frost swap) waits on the summit. Its fall: "SUMMIT WON", and 3.2 s later
-  `game.continueTo('snowy_summit')` carries the party (and the loot lying round them) into the Snowy Summit at the same
-  depth; `c.nextBiome` is the Summit from then on, so a town trip comes back to it.
+- **The Summit Warden** (a golem boss in a frost swap) waits on the summit. Its fall wakes a portal under the Snowy
+  Summit pack's slate-pass arch at the back of the summit (the camera pans to it); walking into it (auto-play's
+  objective; on its own after 20 s) runs `game.continueTo('snowy_summit')`, which carries the party (and the loot lying
+  round them) into the Snowy Summit at the same depth; `c.nextBiome` is the Summit from then on, so a town trip comes
+  back to it.
+- **Checkpoints**: the map is kept per depth (`c.mountainRuns[depth] = { seed, camp }`); the three climbers' camps are
+  checkpoints, and a town trip returns to the highest one reached. The minimap marks the trail ahead and the next way up.
 
 ## The look
-- Daylight: `world.darkK = 0`, the 3D carries the light (sun from the upper left, hemisphere, ambient). The sky is a
+- Daylight: `world.darkK = 0`, the 3D carries the light (a sun from the upper left in front, so both faces the camera sees
+  take some; a cool fill from the right; hemisphere, ambient). Cliffs are the Snowy Summit pack's granite and shale with
+  their snow caps taken back to stone, normalised to a mid grey (`rockFace`), at two scales mixed by noise; rock far from
+  the trail hazes toward the mist; a dark bare rim lies under every walkable edge. Snow on rock (above the snow line) is
+  the pack's snow crust where the blurred ground is gentle. Floor art on rock is greyed and shaded so it never reads as
+  path. Floors are mirrored/turned per tile (not the directional ones) with wobbly seams. The 3D upscale is smoothed on
+  phones (over 1.5x). The sky is a
   painted gradient with a pale sun and three ranges of far snowy peaks drifting with the camera; past the map's edges a
   skirt of rock carries on (rising behind, falling into cloud in front), and a sea of cloud drifts below the foot.
 - Leaf drift low down, snow from the band below the snow line ("THE SNOW LINE" on entering it). Zoom 0.92.
@@ -80,5 +94,5 @@ node tools/tests/mountain.js [shots|noshots] [auto|noauto] [seeds]
 ```
 It checks: in the rotation (and the Summit never drawn alone), 72 x 104 with a smooth field and hops, per seed: the
 summit reachable and the way back down, chests reachable, 40+ hop steps, the trail all walks and hops (6+ hops), 8+
-ways up, no 48 trail tiles without a fight; in play: a hop climbs and rises in an arc, a cliff doesn't climb, A* and
+ways up, no 64 trail tiles without a fight (the camps' breathers are meant), three camps, the gateway arch; in play: a hop climbs and rises in an arc, a cliff doesn't climb, A* and
 the flow field follow the rules, picking lands on the tile; shots; auto-play climbs, wins and arrives in the Summit.

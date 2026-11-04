@@ -38,16 +38,21 @@ export function createSummitRun(world, gen, biome, depth, win) {
   const exit = world.portals.find((q) => q.type === 'exit');
   const exitAt = [exit.x, exit.y];
   exit.x = exit.y = -100;   // the portal opens on the peak when its boss falls
-  const zoomOf = (p) => { const r = sm.reg[map.tileIdx(p.x, p.y)]; return r > 0 ? 0.84 : 0.9; };
+  const regAt = (x, y) => sm.reg[map.tileIdx(x, y)], kindAt = (x, y) => { const r = regAt(x, y); return r >= 0 ? sm.nodes[r].kind : 'ridge'; };
+  const zoomOf = (p) => { const k = kindAt(p.x, p.y); return k === 'plateau' || k === 'peak' ? 0.84 : 0.9; };
   const cr = alpineHook(world, gen.alpine, { zoom: zoomOf });
-  const kinds = shuffle(KINDS.slice());
-  const plateaus = sm.nodes.filter((n) => n.kind === 'plateau').map((n, k) => ({
-    n, i: n.i, kind: kinds[k % kinds.length], name: SUMMIT_ENCOUNTERS[kinds[k % kinds.length]][0], x: n.x, y: n.y, r: n.r,
-    state: 'idle', t: 0, wave: 0, foes: [], objs: [], gate: sm.gates.find((g) => g.r === n.i) || null,
+  const gateOf = (n, role) => sm.gates.find((g) => g.node === n.i && g.role === role) || null;
+  const plateaus = sm.nodes.filter((n) => n.kind === 'plateau').map((n) => ({
+    n, i: n.i, kind: n.enc || 'ambush', name: SUMMIT_ENCOUNTERS[n.enc || 'ambush'][0], x: n.x, y: n.y, r: n.r,
+    state: 'idle', t: 0, wave: 0, foes: [], objs: [], gate: gateOf(n, 'out'), gateIn: gateOf(n, 'in'),
   }));
+  const peakIn = gateOf(peak, 'in');
   const leaps = (gen.leaps || []).map((l) => ({ ...l, done: false }));
   const alive = (list) => list.filter((m) => !m.dead && world.creatures.includes(m));
   let routeAt = 0;
+  const c = G.char;
+  c.summitRuns ||= {};
+  const kept = c.summitRuns[depth] && c.summitRuns[depth].seed === gen.seed ? c.summitRuns[depth] : (c.summitRuns[depth] = { seed: gen.seed, won: 0 });
 
   const run = {
     id: 'snowy_summit', type: 'summit', completed: false, failed: false, active: true, markers: [], route: [], stage: 0, escort: null, routeIndex: 0,
@@ -60,6 +65,13 @@ export function createSummitRun(world, gen, biome, depth, win) {
       return e ? `${e.name}: ${SUMMIT_ENCOUNTERS[e.kind][1]}` : 'Walk the ridgelines up the range to its peak.';
     },
     get won() { return plateaus.filter((e) => e.state === 'done').length; },
+    /** Mid-fight, where the fight needs the hero (autoplay.js): the nearest standing cairn. */
+    get duty() {
+      const e = current(), p = world.player;
+      if (!e || e.kind !== 'cairns' || !p) return null;
+      const o = alive(e.objs).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
+      return o ? { x: o.x, y: o.y, reach: 1.8, label: 'Breaking the Howling Cairns' } : null;
+    },
     /** How far up the range the hero is, 0..100 %. */
     get altitude() {
       const p = world.player;
@@ -92,16 +104,58 @@ export function createSummitRun(world, gen, biome, depth, win) {
         if (Math.hypot(q.x - p.x, q.y - p.y) < 3.2) { routeAt = k; break; }
       }
       for (const e of plateaus) {
-        if (e.state === 'idle' && Math.hypot(p.x - e.x, p.y - e.y) < e.r * 0.72) startEnc(e);
+        if (e.state === 'idle' && regAt(p.x, p.y) === e.i && Math.hypot(p.x - e.x, p.y - e.y) < e.r * 0.9) startEnc(e);
         if (e.state === 'fight') tickEnc(e, dt);
       }
       for (const l of leaps) if (!l.done && Math.hypot(p.x - l.at[0], p.y - l.at[1]) < 5.5) climbUp(l);
-      if (run.phase === 'climb' && Math.hypot(p.x - peak.x, p.y - peak.y) < peak.r * 0.8) startPeak();
+      if (run.phase === 'climb' && Math.hypot(p.x - peak.x, p.y - peak.y) < peak.r + 9) startPeak();
+      if (run.phase === 'peak' && peakIn && !run.sealed && run.boss && run.boss.awake && regAt(p.x, p.y) === peak.i) { run.sealed = true; shut(peakIn); }
       if (run.phase === 'peak' && run.boss && run.boss.dead && !run.completed) finishPeak();
     },
   };
   world.summitRun = run;
   function current() { return plateaus.find((e) => e.state === 'fight') || null; }
+  /** The minimap's marks: the way ahead (a few waypoints), the gates (red shut, blue open), the pinnacle's chest. */
+  cr.mapMarks = () => {
+    const out = [];
+    for (let k = routeAt + 1; k < Math.min(sm.route.length, routeAt + 6); k++) out.push([sm.route[k].x, sm.route[k].y, k === routeAt + 1 ? '#ffe070' : 'rgba(255,224,112,0.55)', k === routeAt + 1 ? 3 : 1.8]);
+    for (const g of sm.gates) { const d = g.doors[0]; if (d && map.seen[map.tileIdx(d.x, d.y)]) out.push([d.x, d.y, d.open ? '#60a0ff' : '#ff5040', 2.4]); }
+    return out;
+  };
+  // what each fight shows from the ridge before it starts: the camp's raiders asleep round their fire, the pack, the cairns
+  for (const e of plateaus) {
+    if (e.kind === 'camp') {
+      for (let k = 0; k < 6; k++) { const a = k * 1.05 + 0.3, [x, y] = spotNear(e.x + Math.cos(a) * 2.6, e.y + Math.sin(a) * 2.6, 0, 1.2, onPlateau(e)); if (x != null) dormant(e, foe(e, x, y, { how: null })); }
+      const [x, y] = spotNear(e.x, e.y, 1, 2.2, onPlateau(e));
+      if (x != null) { const m = foe(e, x, y, { arch: pick(['knight', 'golem', 'cultist']), rank: 'unique', how: null }); m.name = `${m.name}, Chief of the Camp`; dormant(e, m); }
+    } else if (e.kind === 'pack') {
+      const [x, y] = spotNear(e.x, e.y, 0.5, 2, onPlateau(e));
+      if (x != null) dormant(e, foe(e, x, y, { arch: pick(['hound', 'golem', 'gargoyle']), rank: 'unique', how: null }));
+      for (let k = 0; k < 5; k++) { const [hx, hy] = spotNear(e.x, e.y, 1.5, 4, onPlateau(e)); if (hx != null) dormant(e, foe(e, hx, hy, { arch: 'hound', how: null })); }
+    } else if (e.kind === 'cairns') {
+      for (const [x, y] of e.n.cairns || []) {
+        const m = makeMonster(world, 'golem', biome, lvl, 'champion', x, y, 0, { art: 'va_crystal', swap: { colorize: [195, 0.5], light: 0.15 }, tint: 'Ice' });
+        m.name = 'Howling Cairn'; m.static = true; m.speed = 0; m.raidPriority = 5; m.maxHp *= 0.85; m.hp = m.maxHp; m.scale = (m.scale || 1) * 1.15; m.awake = true; m.xp *= 0.5;   // raidPriority: auto-play breaks them before their brood
+        m.wardTick = () => { m.moving = false; };
+        world.add(m); e.objs.push(m);
+      }
+    }
+  }
+  /** Asleep and slow to notice until its fight starts (so the group is fought on its plateau, not drawn out onto a ridge). */
+  function dormant(e, m) { if (!m) return; m.awake = false; m.hunter = false; m.aggroRange = 3; m.static = true; m.targetable = false; m.dormantFor = e; }   // asleep: not to be woken or drawn out from the ridge
+  // back after a town trip: the fights already won stay won, their gates open, and the hero arrives at the last of them
+  if (kept.won) {
+    for (const e of plateaus.slice(0, kept.won)) {
+      e.state = 'done';
+      for (const m of [...e.foes, ...e.objs]) m.dead = true;
+      for (const g of [e.gate, e.gateIn]) if (g) { for (const d of g.doors) { d.open = true; d.locked = false; } for (const i of g.tiles) map.block[i] = 0; }
+    }
+    const last = plateaus[kept.won - 1], [ax, ay] = map.randomNear(last.x, last.y, 1.5);
+    gen.start = [ax, ay];
+    const tp = world.portals.find((q) => q.type === 'town');
+    if (tp) [tp.x, tp.y] = map.randomNear(ax + 1.5, ay - 0.5, 1.5);
+    routeAt = Math.max(0, sm.route.findIndex((q) => q.node === last.i));
+  }
 
   // ---------------------------------------------------------------- monsters
   function spotNear(x0, y0, r0, r1, keep = null) {
@@ -113,10 +167,11 @@ export function createSummitRun(world, gen, biome, depth, win) {
     }
     return [null, null];
   }
-  const onPlateau = (e) => (x, y) => sm.reg[map.tileIdx(x, y)] === e.i;
+  function onPlateau(e) { return (x, y) => sm.reg[map.tileIdx(x, y)] === e.i; }
   function foe(e, x, y, { arch = pick(biome.roster), rank = 'normal', how = 'burrow', delay = 0 } = {}) {
     const m = makeMonster(world, arch, biome, lvl + (rank === 'normal' ? 0 : 1), rank, x, y, 0, world.looks.pick(arch, Math.random));
     world.add(m); m.hunter = true; m.awake = true;
+    if (!how) return e && e.foes.push(m), m;
     if (delay <= 0) enter(m, how);
     else { m.targetable = false; m.alpha = 0; let d = delay; m.entering = (t) => { if ((d -= t) <= 0) enter(m, how); }; }
     if (e) e.foes.push(m);
@@ -160,36 +215,42 @@ export function createSummitRun(world, gen, biome, depth, win) {
     e.state = 'fight'; e.t = 0; e.wave = 1;
     UI.centerMsg(e.name.toUpperCase(), SUMMIT_ENCOUNTERS[e.kind][1], 3);
     sfx('roar', 0.6);
+    // the way in shuts behind the hero: the plateau is fought on the plateau
+    if (e.gateIn) shut(e.gateIn);
+    for (const m of alive(e.foes)) { m.awake = true; m.hunter = true; m.aggroRange = 8.5; if (m.dormantFor) { m.static = false; m.targetable = true; m.dormantFor = null; } }
     switch (e.kind) {
-      case 'ambush': wave(e, 5, { how: 'burrow' }); break;
-      case 'camp': {
-        // raiders round a fire, their chief among them
-        wave(e, 6, { how: 'teleport', r0: 1.5, r1: 5 });
-        const [x, y] = spotNear(e.x, e.y, 0.5, 2.5, onPlateau(e));
-        if (x != null) { const m = foe(e, x, y, { arch: pick(['knight', 'golem', 'cultist']), rank: 'unique', how: 'teleport' }); if (m) m.name = `${m.name}, Chief of the Camp`; }
-        break;
-      }
-      case 'avalanche': e.fallT = 1.2; e.dropT = 0.4; e.dropped = 0; e.limit = 15; break;
-      case 'cairns': {
-        for (let k = 0; k < 3; k++) {
-          const [x, y] = spotNear(e.x, e.y, 2.5, e.r * 0.7, onPlateau(e));
+      case 'ambush': {
+        // the snow heaves where they will come up, then they come
+        UI.log('The snow of the plateau heaves...', '#d0e0f0');
+        for (let k = 0; k < 5; k++) {
+          const [x, y] = spotNear(e.x, e.y, 2.5, e.r * 0.8, onPlateau(e));
           if (x == null) continue;
-          const m = makeMonster(world, 'golem', biome, lvl, 'champion', x, y, 0, { art: 'va_crystal', swap: { colorize: [195, 0.5], light: 0.15 }, tint: 'Ice' });
-          m.name = 'Howling Cairn'; m.static = true; m.speed = 0; m.maxHp *= 0.85; m.hp = m.maxHp; m.scale = (m.scale || 1) * 1.15; m.awake = true; m.xp *= 0.5;
-          m.wardTick = () => { m.moving = false; };
-          world.add(m); e.objs.push(m);
-          addEffect(new Column(x, y, '#a8e0ff', 0.6, 20, 200)); burst(x, y, 12, 'cold', 20, 4);
+          addEffect(new Telegraph({ kind: 'circle', x, y, r: 0.9, dur: 1 + k * 0.2, color: '#e0ecff' }), 'ground');
+          foe(e, x, y, { how: 'burrow', delay: 1 + k * 0.2, rank: k === 0 && depth > 6 ? 'champion' : 'normal' });
         }
-        e.callT = 1; break;
-      }
-      case 'pack': {
-        const [x, y] = spotNear(e.x, e.y, 1, 3, onPlateau(e));
-        if (x != null) foe(e, x, y, { arch: pick(['hound', 'golem', 'gargoyle']), rank: 'unique', how: 'drop' });
-        wave(e, 5, { how: 'burrow', arch: 'hound', rank: 'normal' });
         break;
       }
+      case 'avalanche':
+        e.fallT = 1.8; e.dropT = 1.2; e.dropped = 0; e.limit = 15;
+        UI.log('The slope above groans. Keep moving!', '#d0e0f0'); camera.shake(4); sfx('thud', 0.6);
+        break;
+      case 'cairns': for (const o of e.objs) { addEffect(new Column(o.x, o.y, '#a8e0ff', 0.6, 20, 200)); burst(o.x, o.y, 12, 'cold', 20, 4); } e.callT = 1.5; break;
+      default: break;   // the camp and the pack wait on the plateau already
     }
     if (G.game?.autosave) G.game.autosave();
+  }
+  function shut(g) {
+    for (const d of g.doors) { d.open = false; d.locked = true; }
+    for (const i of g.tiles) map.block[i] = 1;
+    // anyone standing in the gateway is put through it, onto the near side
+    for (const m of world.creatures) if (!m.dead && g.tiles.includes(map.tileIdx(m.x, m.y))) { const [x, y] = map.randomNear(m.x, m.y, 2); m.x = x; m.y = y; }
+    map.flowFrom = [-9, -9];
+    sfx('gate', 0.5);
+  }
+  function open(g) {
+    for (const d of g.doors) { d.locked = false; d.open = true; }
+    for (const i of g.tiles) map.block[i] = 0;
+    map.flowFrom = [-9, -9];
   }
   function tickEnc(e, dt) {
     e.t += dt;
@@ -228,8 +289,8 @@ export function createSummitRun(world, gen, biome, depth, win) {
       case 'cairns': {
         const objs = alive(e.objs);
         if (objs.length && (e.callT -= dt) <= 0) {   // each cairn howls one up out of the snow, while it stands
-          e.callT = 4.2;
-          if (live.length < 7) for (const o of objs) {
+          e.callT = 5;
+          if (live.length < 6) for (const o of objs) {
             const [x, y] = spotNear(o.x, o.y, 1.2, 3, onPlateau(e));
             if (x != null) { foe(e, x, y, { how: 'burrow' }); addEffect(new Ring(o.x, o.y, 0.2, 2.2, 0.5, '#a8e0ff', 4)); }
           }
@@ -246,13 +307,13 @@ export function createSummitRun(world, gen, biome, depth, win) {
     sfx('gate', 0.7);
     const [cx, cy] = map.randomNear(e.x, e.y, 1.6);
     world.chests.push({ x: cx, y: cy, opened: false, reach: 1.3, rare: e.kind === 'camp' || e.kind === 'pack', use() { if (this.opened) return; this.opened = true; sfx('chest'); sfx('gold'); dropChest(world, this, depth); sparkle(this.x, this.y, 20, '#ffd060', 20, 0.5); } });
+    if (e.gateIn) open(e.gateIn);
     if (e.gate) {
-      for (const d of e.gate.doors) { d.locked = false; d.open = true; }
-      for (const i of e.gate.tiles) map.block[i] = 0;
-      map.flowFrom = [-9, -9];
+      open(e.gate);
       const d = e.gate.doors[0];
       if (d) { addEffect(new Ring(d.x, d.y, 0.2, 2.6, 0.7, '#cfe8ff', 5)); burst(d.x, d.y, 14, 'cold', 26, 4); }
     }
+    kept.won = plateaus.indexOf(e) + 1;
     if (G.game?.autosave) G.game.autosave();
     UI.refresh();
   }
@@ -269,18 +330,23 @@ export function createSummitRun(world, gen, biome, depth, win) {
     const m = makeRaidBoss(world, arena, depth, lvl + 3, { tpl, art: art ? def.art : undefined });
     m.scale = 2.5; m.maxHp *= 0.72; m.hp = m.maxHp; m.swap = def.swap;
     m.raid.execT = Infinity;   // no execute timer on the peak: the climb was the clock
+    m.raid.label = function () { return this.inter ? `Warded — break the crystals! (${this.wards.filter((q) => !q.dead).length} left)` : `Phase ${this.pi + 1}/${this.phases.length} · ${this.phase.name}${this.enraged ? ' · ENRAGED' : ''}`; };
     world.add(m); world.boss = m; world.raid = m.raid;
-    const [x, y] = map.randomNear(peak.x, peak.y - 1, 1.5);
+    // the arena is the peak itself, not the raid's square (whose corners reach out over the last ridge)
+    const inside = m.raid.inside.bind(m.raid);
+    m.raid.inside = (q, pad) => (q === world.player ? regAt(q.x, q.y) === peak.i : inside(q, pad));
+    // it waits at the back of the arena, before the shrine, and wakes when the hero comes onto the peak (raid.js)
+    const [x, y] = map.randomNear(peak.x - peak.r * 0.3, peak.y - peak.r * 0.3, 1.2);
     m.x = x; m.y = y;
-    enter(m, 'drop');
     run.boss = m;
-    cr.lookAt(peak.x, peak.y, 2.2);
+    cr.lookAt(m.x, m.y, 2.6);
     UI.centerMsg(name.toUpperCase(), def.title, 3.4);
-    UI.log(`<b style="color:#a8e0ff">${name}</b>, ${def.title}, comes down on the peak.`, '#d0e8ff');
-    sfx('boss'); sfx('roar', 0.8); camera.shake(7);
+    UI.log(`<b style="color:#a8e0ff">${name}</b>, ${def.title}, waits on the peak.`, '#d0e8ff');
+    sfx('boss'); sfx('roar', 0.8); camera.shake(4);
   }
   function finishPeak() {
     run.completed = true;
+    if (peakIn) open(peakIn);
     exit.x = exitAt[0]; exit.y = exitAt[1];
     for (let k = 0; k < 2; k++) {
       const [cx, cy] = map.randomNear(peak.x + (k ? 2 : -2), peak.y + 1, 1.2);

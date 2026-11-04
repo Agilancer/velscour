@@ -14,6 +14,7 @@ registerRegion({
   townLine: 'The Snowy Summit lies beyond: ridgelines and plateaus up a mountain range to its peak.',
   load: (biome) => Promise.all([loadBiomeArt(biome), loadAlpine3D()]),
   ready: () => alpine3dReady() && biomeTileSet(BIOME_BY_ID.snowy_summit).pack === 'snowy_summit',
+  kept: (c, depth) => c.summitRuns && c.summitRuns[depth],   // a town trip comes back to the same range, its won plateaus still won
   generate: (depth, biome, seed) => generateSummit(depth, biome, seed),
   createRun: (world, gen, biome, depth, win) => createSummitRun(world, gen, biome, depth, win),
   intro: (world) => `The Snowy Summit: ${world.summitRun.plateaus.length} plateaus and their gates lie along the ridgelines between you and the peak.`,

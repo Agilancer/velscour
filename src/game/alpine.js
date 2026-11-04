@@ -8,7 +8,7 @@ import { clamp } from '../core/util.js';
 import { VZ } from '../world/caverns.js';
 import { LV } from '../world/alpine.js';
 import { buildAlpine3D, drawAlpine3D, tickAlpine3D, disposeAlpine3D, alpineScene } from '../gfx/alpine3d.js';
-import { smoke } from '../gfx/vfx.js';
+import { spawn } from '../gfx/vfx.js';
 
 const K = HH / VZ;   // rise per tile of depth seen edge-on
 
@@ -101,12 +101,16 @@ export function alpineHook(world, av, opts = {}) {
  */
 export function hopArc(o, map) {
   const ti = map.tileIdx(o.x, o.y), lv = map.hgt[ti];
-  if (o._hopMap !== map) { o._hopMap = map; o._lv = lv; o._arc = null; return 0; }
+  if (o._hopMap !== map) { o._hopMap = map; o._lv = lv; o._ti = ti; o._arc = null; return 0; }
+  if (lv === o._lv) o._ti = ti;
   if (lv !== o._lv) {
-    const dl = lv - o._lv, walk = map.walkStep ?? 3;
+    const dl = lv - o._lv, walk = map.walkStep ?? 3, prev = o._ti ?? ti, w = map.w;
+    o._ti = ti;
+    // only a step to the next tile hops (a blink, a leap or a teleport just lands)
+    if (Math.abs((prev % w) - (ti % w)) > 1 || Math.abs(((prev / w) | 0) - ((ti / w) | 0)) > 1 || Math.abs(dl) > (map.drop ?? 10) * 2) { o._lv = lv; o._arc = null; return 0; }
     if (dl > walk) o._arc = { t0: G.time, dur: 0.2 + dl * 0.012, a: 7 + dl * 2.4 };
     else if (-dl > walk + 2) o._arc = { t0: G.time, dur: 0.16 + -dl * 0.008, a: 4 + -dl * 0.5 };
-    if (o._arc && o._arc.t0 === G.time && o === G.player) smoke(o.x, o.y, 3, '#d0c8b8', 5, 8);   // the hero kicks up a little dust or snow
+    if (o._arc && o._arc.t0 === G.time && o === G.player && dl > 0) for (let k = 0; k < 3; k++) spawn({ type: 'dot', x: o.x + (Math.random() - 0.5) * 0.4, y: o.y + (Math.random() - 0.5) * 0.4, z: 2, vx: (Math.random() - 0.5) * 0.8, vy: (Math.random() - 0.5) * 0.8, vz: 25 + Math.random() * 20, g: 140, life: 0.4, size: 2.4, color: map.hopDust || '#b8ab94' });   // a little kicked-up dust or snow
     o._lv = lv;
   }
   const a = o._arc;

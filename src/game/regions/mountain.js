@@ -17,6 +17,7 @@ registerRegion({
   // the mountain floors (town + Dark Forest packs), its pines, the Snowy Summit pack for the top bands, three.js
   load: () => Promise.all([loadBiomeArt(BIOME_BY_ID.dark_forest), loadDarkForestTrees(), loadBiomeArt(BIOME_BY_ID.snowy_summit), loadAlpine3D()]),
   ready: () => alpine3dReady() && darkForestTreesReady() && biomeTileSet(BIOME_BY_ID.snowy_summit).pack === 'snowy_summit',
+  kept: (c, depth) => c.mountainRuns && c.mountainRuns[depth],   // a town trip comes back to the same mountain, at the highest camp reached
   generate: (depth, biome, seed) => generateMountain(depth, biome, seed),
   createRun: (world, gen, biome, depth) => createMountainRun(world, gen, biome, depth, () => G.game.continueTo('snowy_summit')),
   intro: () => 'The trail switchbacks up the cliffs to the summit, and things hold it all the way. A ledge a hop high can be climbed; the cliffs cannot.',

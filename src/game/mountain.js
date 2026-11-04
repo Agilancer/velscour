@@ -27,11 +27,34 @@ export function createMountainRun(world, gen, biome, depth, onSummit) {
   const bandAt = (x, y) => mt.band[map.tileIdx(x, y)];
   const top = map.hgt[map.tileIdx(sx, sy)];
   const leaps = (gen.leaps || []).map((l) => ({ ...l, done: false }));
-  let snowSaid = false, halfSaid = false, winT = -1;
+  let snowSaid = false, halfSaid = false, gateT = -1;
+  // the climbers' camps are checkpoints: a town trip brings the hero back to the highest one reached (the same mountain)
+  const c = G.char;
+  c.mountainRuns ||= {};
+  const kept = c.mountainRuns[depth] && c.mountainRuns[depth].seed === gen.seed ? c.mountainRuns[depth] : (c.mountainRuns[depth] = { seed: gen.seed, camp: -1 });
+  const camps = (gen.camps || []).map((q) => ({ x: q[0], y: q[1], ti: trail.reduce((b, t, k) => (Math.hypot(t % W + 0.5 - q[0], ((t / W) | 0) + 0.5 - q[1]) < Math.hypot(trail[b] % W + 0.5 - q[0], ((trail[b] / W) | 0) + 0.5 - q[1]) ? k : b), 0) }));
+  let startProgress = 0;
+  if (kept.camp >= 0 && camps[kept.camp]) {
+    const cp = camps[kept.camp], [ax, ay] = map.randomNear(cp.x, cp.y, 1.6);
+    gen.start = [ax, ay]; startProgress = cp.ti;
+    const tp = world.portals.find((q) => q.type === 'town');
+    if (tp) [tp.x, tp.y] = map.randomNear(ax + 1.2, ay - 0.6, 1.5);
+    for (const l of leaps) if (l.ti < cp.ti) l.done = true;
+  }
+  const [gx, gy] = gen.gate || [sx, sy - 2];
+  /** The minimap's marks: the trail a little way ahead, and the next way up (or the gateway, once it's open). */
+  cr.mapMarks = () => {
+    const out = [];
+    if (run.won) { out.push([gx, gy, '#a8d8ff', 3.2]); return out; }
+    for (let k = run.progress + 6; k < Math.min(trail.length, run.progress + 60); k += 6) out.push([tx(k), ty(k), 'rgba(255,224,112,0.55)', 1.6]);
+    const r = mt.ramps.find((q) => trail.findIndex((t) => Math.hypot(t % W + 0.5 - q.foot[0], ((t / W) | 0) + 0.5 - q.foot[1]) < 2.5) > run.progress);
+    if (r) out.push([r.foot[0], r.foot[1], '#ffe070', 3]);
+    return out;
+  };
 
   const run = {
     id: 'mountainside', type: 'climb', completed: false, failed: false, active: true, reached: false, won: false,
-    markers: [], route: [], stage: 0, escort: null, routeIndex: 0, progress: 0,
+    markers: [], route: [], stage: 0, escort: null, routeIndex: 0, progress: startProgress,
     shrine: { x: sx, y: sy, reach: 2, label: 'Summit', use() {} },
     get title() { return run.won ? 'The Summit Is Won' : run.reached ? 'Defeat the Summit Warden' : 'Climb to the Summit'; },
     get description() {
@@ -45,7 +68,7 @@ export function createMountainRun(world, gen, biome, depth, onSummit) {
       return Math.round(clamp((lv - map.minLevel) / Math.max(1, top - map.minLevel), 0, 1) * 100);
     },
     get objective() {
-      if (run.won) return undefined;
+      if (run.won) return { x: gx, y: gy, reach: 1.5, use: () => gate.use() };   // through the gateway
       if (run.progress > trail.length - 14 || run.reached) return { x: sx, y: sy + 1.5, reach: 2.5 };
       const k = Math.min(trail.length - 1, run.progress + 10);
       return { x: tx(k), y: ty(k), reach: 1.6 };
@@ -56,6 +79,12 @@ export function createMountainRun(world, gen, biome, depth, onSummit) {
       if (!p) return;
       // how far along the trail the hero has come: the nearest trail tile a little way ahead of the last one
       for (let k = Math.min(trail.length - 1, run.progress + 30); k > run.progress; k--) if (Math.hypot(tx(k) - p.x, ty(k) - p.y) < 2.6) { run.progress = k; break; }
+      camps.forEach((cp, k) => {
+        if (k <= kept.camp || Math.hypot(p.x - cp.x, p.y - cp.y) > 3.2) return;
+        kept.camp = k;
+        UI.log("A climbers' camp. If you go back to town, the way back up starts here.", '#cfe0f0');
+        if (G.game?.autosave) G.game.autosave();
+      });
       const b = bandAt(p.x, p.y);
       world.ambientFx = b >= mt.snowBand - 1 ? { type: 'snow', color: '#f4f8ff' } : null;
       if (!snowSaid && b >= mt.snowBand) { snowSaid = true; UI.centerMsg('THE SNOW LINE', 'The Snowy Summit looms above', 2.6); }
@@ -66,16 +95,23 @@ export function createMountainRun(world, gen, biome, depth, onSummit) {
         UI.centerMsg('THE SUMMIT', world.boss ? `${world.boss.name}, its Warden, stirs` : 'Its Warden stirs', 3);
       }
       if (!run.won && world.boss && world.boss.dead) {
-        run.won = true; winT = 3.2;
-        UI.centerMsg('SUMMIT WON', 'The trail climbs on into the Snowy Summit', 3.5);
-        UI.log('The Warden falls. Above the summit the trail climbs on, into the snow and the high ridges of the range.', '#cfe8ff');
+        run.won = true; gateT = 20;
+        world.portals.push(gate);
+        UI.centerMsg('SUMMIT WON', 'The gateway in the peak rock is open', 3.5);
+        UI.log('The Warden falls, and the old gateway in the peak rock wakes. Beyond it the trail climbs on, into the snow and the high ridges of the range.', '#cfe8ff');
         sfx('gate');
-        addEffect(new Ring(sx, sy + 1, 0.2, 4, 1.2, '#cfe8ff', 6));
+        addEffect(new Ring(gx, gy, 0.2, 3, 1.2, '#cfe8ff', 6));
+        cr.lookAt(gx, gy, 2);
       }
-      if (winT > 0 && (winT -= dt) <= 0) { run.completed = true; onSummit(); }
+      // through the gateway (or on after a while: nobody is left on the summit to wait for)
+      if (gateT > 0 && (gateT -= dt) <= 0) gate.use();
     },
   };
 
+  const gate = {
+    x: gx, y: gy, type: 'gate', active: true, color: '#a8d8ff', reach: 1.6, label: 'The Snowy Summit',
+    use() { if (run.completed) return; run.completed = true; gateT = -1; onSummit(); },
+  };
   /** Things on the cliff top above the trail leap down onto it as the hero passes beneath. */
   function leap(l) {
     l.done = true;

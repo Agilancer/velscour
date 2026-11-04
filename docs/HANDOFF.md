@@ -36,8 +36,8 @@ passes (two 20-year game designers) were asked for, then push, PR and merge.
   `game.continueTo('snowy_summit')` carries the party and the loot round them on, and `c.nextBiome` keeps a town trip
   coming back to the Summit.
 - **The Snowy Summit** (docs/SNOWY_SUMMIT.md): a region in `BETA_BIOMES` (`follows: 'mountainside'`), skull words
-  `summit`/`snow`/`peak`/`ridge`. 112 x 112: camp, four plateaus, the peak, joined by ridges 2-3 tiles wide with hop steps;
-  the range falls into the cloud, other peaks and the true summit's spire stand behind. Ridge packs of 1-2, climb-ups
+  `summit`/`snow`/`peak`/`ridge`. 128 x 128: camp, four plateaus, the peak, saddles between, joined by ridges 2-3 tiles
+  wide with hop steps (~280 tiles of way); the range falls into the cloud, nothing higher than the peak. Ridge packs of 1-2, climb-ups
   over the rim; plateau fights (Buried in the Snow, The Frozen Camp, Avalanche, The Howling Cairns, The Pack of the
   Heights), each gated by the pack's `frozen_iron_gate` doors (`door.locked`, `world.openDoors` skips locked ones) and
   paid with a chest; the peak's shrine (altar, owl, basin, braziers, sentinels, bell, an arch and a ruined ashlar wall);
@@ -47,10 +47,22 @@ passes (two 20-year game designers) were asked for, then push, PR and merge.
   `assets/source/biomes/Snowy_Summit_Biome_Pack.zip`; `LIT` and `WALK_OVER` take the pack's lit and walk-over props.
 - **Tests**: `tools/tests/mountain.js` (rewritten) and `tools/tests/summit.js` (new); auto-play loops stub `game.render`
   (SwiftShader's 3D readback otherwise runs the clock at real time); the harness's screenshots wait up to 120 s.
+- **Two critic rounds** (a level/encounter designer and an art director, both briefed as 20-year ARPG veterans, reading
+  the shots and the code). Acted on: lighting and values (sun in front, a cool fill, rock normalised to mid/dark stone,
+  haze instead of black, a dark rim under every walkable edge, snow from a blurred field in the pack's snow crust), rock at
+  two scales, floors 128 px and mirrored/turned per tile with wobbly seams, wavier and irregular cliff bands, stone-step
+  faces on hop ledges (rock on cliffs), mist matched to the cloud plus a wisp layer, phone upscale smoothing; the Summit
+  2.5x longer (128 x 128, saddles, S-curved ridges, a pinnacle spur with a chest), camps/packs/cairns visible on their
+  plateaus and untouchable until stepped on, gates on the way in too (every gate, or another seed), a bigger peak arena
+  with a dais, the boss waiting on it and waking (and the gate shutting) only when the hero is on the peak, nothing higher
+  than the peak, no fake Execute countdown; the Mountainside's champions halved, breathers at the camps, archers on the
+  shelves, rope posts at the hops, the camps as checkpoints (they were never placed: fixed), the slate-pass gateway on into
+  the Summit; per-depth seeds (`c.mountainRuns`, `c.summitRuns`: cleared by a death, an exit or a teleport). Bugs the
+  critics caught: a comment that swallowed the cairns' setup; climbers' camps and ramp signs never placed; missing gates.
 - **Design calls made without asking** (worth a look): "three times larger" read as three times the area (72 x 104,
   not 150 x 150, which would be a ~2,000-tile trail); the hop height (7 levels, 28 px) and walk step (3 levels); the
-  plateau gates; the five bosses and their templates; Summit at 112 x 112 with four plateaus; a town trip returns to the
-  Summit, not the Mountainside.
+  plateau gates (in and out); the five bosses and their templates; the Summit at 128 x 128 with four plateaus and five
+  saddles; a town trip returns to the Summit, not the Mountainside; the climbers' camps as checkpoints.
 
 ## November 3, 2026 — the asset manager (branch `feat/asset-manager`)
 

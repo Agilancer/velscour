@@ -48,12 +48,18 @@ const MOBILE = process.argv.includes('mobile');
         if (!reachFrom(W, H, m.hgt, walk, open, s0, CLIMB, DROP)[pk]) bad.push(`seed ${seed}: the peak unreachable with the gates open`);
         if (!reachFrom(W, H, m.hgt, walk, open, pk, CLIMB, DROP)[s0]) bad.push(`seed ${seed}: no way back down`);
         if (reachFrom(W, H, m.hgt, walk, m.block, s0, CLIMB, DROP)[pk]) bad.push(`seed ${seed}: the peak reachable with the gates shut`);
-        if (sm.gates.length < 3) bad.push(`seed ${seed}: only ${sm.gates.length} gates`);
-        for (const gt of sm.gates) {
-          const before = reachFrom(W, H, m.hgt, walk, m.block, at(sm.nodes[gt.r]), CLIMB, DROP);
-          if (before[at(sm.nodes[gt.r + 1])]) bad.push(`seed ${seed}: gate ${gt.r} shuts nothing`);
+        const outs = sm.gates.filter((g) => g.role === 'out'), ins = sm.gates.filter((g) => g.role === 'in');
+        if (outs.length < 3) bad.push(`seed ${seed}: only ${outs.length} gates on the ways on`);
+        if (ins.length < 3) bad.push(`seed ${seed}: only ${ins.length} gates on the ways in`);
+        for (const gt of outs) if (reachFrom(W, H, m.hgt, walk, m.block, at(sm.nodes[gt.node]), CLIMB, DROP)[pk]) bad.push(`seed ${seed}: the gate out of node ${gt.node} shuts nothing`);
+        for (const gt of ins) {   // shut, it keeps the plateau from the way back
+          const bl = Uint8Array.from(open); for (const i of gt.tiles) bl[i] = 1;
+          if (reachFrom(W, H, m.hgt, walk, bl, at(sm.nodes[gt.node]), CLIMB, DROP)[s0]) bad.push(`seed ${seed}: the gate into node ${gt.node} shuts nothing`);
         }
-        if (sm.nodes.filter((q) => q.kind === 'plateau').length !== 4) bad.push(`seed ${seed}: ${sm.nodes.length - 2} plateaus`);
+        if (sm.nodes.filter((q) => q.kind === 'plateau').length !== 4) bad.push(`seed ${seed}: ${sm.nodes.filter((q) => q.kind === 'plateau').length} plateaus`);
+        if (sm.nodes.filter((q) => q.kind === 'saddle').length !== 5) bad.push(`seed ${seed}: ${sm.nodes.filter((q) => q.kind === 'saddle').length} saddles`);
+        if (sm.pinnacle && !g.chests.length) bad.push(`seed ${seed}: the pinnacle has no chest`);
+        if (sm.pinnacle && !reachFrom(W, H, m.hgt, walk, open, s0, CLIMB, DROP)[at(sm.pinnacle)]) bad.push(`seed ${seed}: the pinnacle unreachable`);
         const st = stepStats(W, H, m.hgt, walk, WALK, CLIMB);
         if (st.hop < 4) bad.push(`seed ${seed}: only ${st.hop} hop steps`);
         // the ridges are thin: across each ridge (perpendicular to it) at most 4 walkable tiles
@@ -67,16 +73,19 @@ const MOBILE = process.argv.includes('mobile');
           for (let t = -4; t <= 4; t += 0.5) { const x = Math.floor(q[0] + px * t), y = Math.floor(q[1] + py * t); if (x >= 0 && y >= 0 && x < W && y < H && walk[I(x, y)] && sm.reg[I(x, y)] < 0) n++; }
           if (n > 9) wide++;
         }
-        if (wide > 3) bad.push(`seed ${seed}: ${wide} wide ridge sections`);
+        if (wide > 6) bad.push(`seed ${seed}: ${wide} wide ridge sections`);   // (two bends of an S, or a ridge by a saddle, can lie close)
         // the way gains height: every plateau above the last, the peak highest
-        for (let k = 1; k < sm.nodes.length; k++) if (m.hgt[at(sm.nodes[k])] <= m.hgt[at(sm.nodes[k - 1])]) bad.push(`seed ${seed}: node ${k} no higher than node ${k - 1}`);
+        const way = sm.nodes.filter((q) => q.kind !== 'pinnacle');
+        for (let k = 1; k < way.length; k++) if (m.hgt[at(way[k])] <= m.hgt[at(way[k - 1])]) bad.push(`seed ${seed}: node ${k} no higher than node ${k - 1}`);
+        let routeLen = 0; for (let k = 1; k < sm.route.length; k++) routeLen += Math.hypot(sm.route[k].x - sm.route[k - 1].x, sm.route[k].y - sm.route[k - 1].y);
         const ridgePacks = g.spawns.filter((s) => s.zone === 'ridge');
         if (ridgePacks.some((s) => s.n > 2)) bad.push(`seed ${seed}: a ridge pack of more than two`);
-        if (ridgePacks.length < 6) bad.push(`seed ${seed}: only ${ridgePacks.length} ridge packs`);
-        stats.push({ ridgeTiles, hop: st.hop, gates: sm.gates.length, rise: Math.round((m.maxLevel - m.minLevel) / 9.8), props: g.props.length, packs: ridgePacks.length, leaps: g.leaps.length });
+        if (ridgePacks.length < 10) bad.push(`seed ${seed}: only ${ridgePacks.length} ridge packs`);
+        if (routeLen < 220) bad.push(`seed ${seed}: the way is only ${Math.round(routeLen)} tiles`);
+        stats.push({ routeLen: Math.round(routeLen), pinnacle: sm.pinnacle ? 1 : 0, ridgeTiles, hop: st.hop, gates: sm.gates.length, rise: Math.round((m.maxLevel - m.minLevel) / 9.8), props: g.props.length, packs: ridgePacks.length, leaps: g.leaps.length });
       }
       const avg = (k) => Math.round(stats.reduce((a, s) => a + s[k], 0) / Math.max(1, stats.length));
-      return { bad, maxMs: Math.round(ms), avg: Object.fromEntries(['ridgeTiles', 'hop', 'gates', 'rise', 'props', 'packs', 'leaps'].map((k) => [k, avg(k)])) };
+      return { bad, maxMs: Math.round(ms), avg: Object.fromEntries(['routeLen', 'pinnacle', 'ridgeTiles', 'hop', 'gates', 'rise', 'props', 'packs', 'leaps'].map((k) => [k, avg(k)])) };
     }, SEEDS);
     console.log('generation', JSON.stringify(gen));
     for (const b of gen.bad) errors.push('[gen] ' + b);
@@ -115,8 +124,8 @@ const MOBILE = process.argv.includes('mobile');
           for (const c of w.creatures) if (c.team === 'enemy' && !c.dead && Math.hypot(c.x - e.x, c.y - e.y) < e.r + 6 && !c.isRaid) { c.targetable = true; c.static = false; c.entering = null; c.alpha = 1; hit(null, c, c.maxHp * 10, 'phys', { force: true }); }
           step(15); t += 0.5;
         }
-        const shut = e.gate ? e.gate.tiles.filter((i) => m.block[i]).length : 0, doors = e.gate ? e.gate.doors.every((d) => d.open) : true;
-        out.push({ kind: e.kind, state: e.state, secs: t, gate: !!e.gate, shut, doors, chest: w.chests.some((c) => Math.hypot(c.x - e.x, c.y - e.y) < 3) });
+        const shut = [e.gate, e.gateIn].filter(Boolean).reduce((a, g) => a + g.tiles.filter((i) => m.block[i]).length, 0), doors = [e.gate, e.gateIn].filter(Boolean).every((g) => g.doors.every((d) => d.open));
+        out.push({ kind: e.kind, state: e.state, secs: t, gate: !!e.gate, gateIn: !!e.gateIn, shut, doors, chest: w.chests.some((c) => Math.hypot(c.x - e.x, c.y - e.y) < 3) });
         if (e.state !== 'done') bad.push(`${e.kind}: not won in 90 s`);
         if (shut || !doors) bad.push(`${e.kind}: its gate still shut`);
       }

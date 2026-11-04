@@ -25,6 +25,7 @@ const XL = 5, XR = MW - 7;               // the walkable columns: the west ridge
 export const CLIMB = 7, DROP = 10, WALK = 3;
 const SL = 1;                            // levels a row the bands rise
 const K = TW / 160;
+const h01 = (x, y, s) => { let h = Math.imul(x ^ 0x5bd1e995, 0x27d4eb2d) ^ Math.imul(y ^ s, 0x165667b1); h = Math.imul(h ^ (h >>> 15), 0x85ebca6b); return ((h ^ (h >>> 13)) >>> 0) / 4294967296; };
 
 /** Snowy Summit floors laid on the top bands (and on the Summit itself): names from the pack. */
 export const SNOW_FLOORS = ['windpacked_snow', 'compact_snow_path', 'powdered_gravel', 'granite_scree', 'snow_seamed_shale', 'wind_ripples',
@@ -51,7 +52,7 @@ function build(depth, biome, seed) {
 
   // ---------------------------------------------------------------- the plan: cliffs, their ways up, terraces
   const CL = [];
-  for (let v = rng.int(9, 10); v <= MH - 17; v += rng.int(8, 10)) CL.push(v);
+  for (let v = rng.int(9, 10); v <= MH - 17; v += rng.int(7, 12)) CL.push(v);   // irregular, so the bands don't read as terraces
   const NB = CL.length + 1;                       // bands: 0 the foot .. NB-1 the summit plateau
   const PEAK = MH - 5;                            // rows from here up are the peak's rock
   const thick = CL.map(() => (rng.chance(0.45) ? 2 : 1));
@@ -61,8 +62,8 @@ function build(depth, biome, seed) {
   const scramble = CL.map((_, k) => k % 2 === 1);
   const ph = CL.map(() => [rng.range(0, 6.28), rng.range(0, 6.28)]);
   const cliffV = (k, x) => {
-    const wob = Math.round(1.1 * Math.sin(x * 0.17 + ph[k][0]) + 0.6 * Math.sin(x * 0.41 + ph[k][1]));
-    return CL[k] + (Math.abs(x - RX[k]) <= 4 ? 0 : wob);
+    const wob = 2.5 * Math.sin(x * 0.09 + ph[k][0]) + 0.7 * Math.sin(x * 0.37 + ph[k][1]);
+    return CL[k] + Math.round(wob * smooth(4, 10, Math.abs(x - RX[k])));   // straight where its way up crosses it
   };
   const cliffTop = (k, x) => cliffV(k, x) + thick[k] - 1;
   // a terrace step a hop high across the bands whose way in was a graded ramp (the scrambles have their own hops)
@@ -217,7 +218,7 @@ function build(depth, biome, seed) {
   const floors = mountainFloorList(), FI = Object.fromEntries(floors.map((f, i) => [f.name, i]));
   const SNOWB = NB - 2;   // the bands from here up are the Snowy Summit's
   const ZONE = [
-    ['grass', 'meadow', 'petals'], ['deep_grass', 'ferns', 'meadow'], ['grass', 'turf', 'moss'], ['alpine', 'deep_grass', 'ferns'],
+    ['grass', 'meadow', 'petals'], ['deep_grass', 'meadow', 'moss'], ['grass', 'turf', 'moss'], ['alpine', 'deep_grass', 'moss'],
     ['alpine', 'grass', 'moss'], ['alpine', 'dry_grass', 'lichen'], ['dry_grass', 'alpine', 'lichen'], ['dry_grass', 'scree', 'lichen'],
   ];
   const tfloor = new Uint8Array(N), band = new Uint8Array(N);
@@ -227,11 +228,11 @@ function build(depth, biome, seed) {
     const snow = b >= SNOWB || v >= PEAK, z = Math.min(ZONE.length - 1, Math.floor(b * ZONE.length / Math.max(1, SNOWB)));
     let name;
     if (!walk[i]) name = snow ? (n > 0.5 ? 's:windpacked_snow' : 's:granite_scree') : kind[i] === 3 || kind[i] === 5 ? (n > 0.55 ? 'stone' : 'scree') : (n > 0.5 ? 'scree' : 'stone');
-    else if (kind[i] === 2) name = snow ? 's:snowy_slate_flags' : ramps.find((r) => r.tiles.includes(i))?.scramble ? 'stone' : 'steps';
+    else if (kind[i] === 2) name = snow ? 's:snowy_slate_flags' : ramps.find((r) => r.tiles.includes(i))?.scramble ? 'gravel' : 'steps';   // a scramble's treads pale between its stone risers
     else if (snow) {
-      if (onTrail[i] === 2) name = m > 0.55 ? 's:bootprints' : 's:compact_snow_path';
-      else if (onTrail[i] === 1) name = 's:compact_snow_path';
-      else name = q > 0.72 ? 's:wind_ripples' : n > 0.68 ? 's:exposed_rock' : m > 0.7 ? 's:powdered_gravel' : b === SNOWB && n < 0.3 ? 's:alpine_tuft' : 's:windpacked_snow';
+      if (onTrail[i] === 2) name = h01(x, y, 5) < 0.5 ? 's:windpacked_snow' : m > 0.6 ? 's:bootprints' : 's:compact_snow_path';   // (not every tile: no corduroy)
+      else if (onTrail[i] === 1) name = 's:windpacked_snow';
+      else { const n2 = nz(x, y, 11, 43), offT = ![-2, -1, 0, 1, 2].some((d) => [-2, -1, 0, 1, 2].some((e) => onTrail[I(Math.min(W - 1, Math.max(0, x + d)), Math.min(H - 1, Math.max(0, y + e)))])); name = q > 0.72 ? 's:wind_ripples' : n2 > 0.82 && offT ? 's:exposed_rock' : m > 0.78 ? 's:powdered_gravel' : b === SNOWB && n < 0.3 ? 's:alpine_tuft' : 's:windpacked_snow'; }
     } else if (onTrail[i] === 2) name = z <= 2 ? 'dirt' : z <= 5 ? (m < 0.55 ? 'dirt' : 'gravel') : 'gravel';
     else if (onTrail[i] === 1) name = z <= 2 ? (m < 0.5 ? 'mud' : 'dirt') : z <= 5 ? (m < 0.5 ? 'dirt' : 'wash') : 'wash';
     else if (kind[i] === 7) name = 'lichen';
@@ -246,8 +247,8 @@ function build(depth, biome, seed) {
   for (let k = 0; k < VW * VH; k++) {
     const u = (k % VW) / AS, w = ((k / VW) | 0) / AS;
     const rock = own[k] < 0;
-    vmat[k * 4] = rock ? 255 : 0;
-    vmat[k * 4 + 1] = rock ? 255 * smooth(0.6, 3, vnear[k]) * 0.35 : 0;
+    vmat[k * 4] = rock ? (vnear[k] < 0.6 ? 200 : 255) : 0;   // the rim just off walkable ground: dark bare rock
+    vmat[k * 4 + 1] = rock ? 255 * smooth(1.5, 9, vnear[k]) * 0.5 : 0;   // haze: rock far from the trail fades toward the mist
     vmat[k * 4 + 2] = 255 * (0.25 + 0.75 * fbm(u * 0.21, w * 0.21, ns + 51));
     vmat[k * 4 + 3] = 255 * smooth(0.4, 0.6, fbm(u * 0.08, w * 0.08, ns + 53));
   }
@@ -318,9 +319,10 @@ function build(depth, biome, seed) {
     }
   }
   // the trail's markers: a cairn now and then beside the path; at each way up a sign at its foot, rope posts at its top
+  /** The nearest free tile beside trail tile c (the trail is laid three wide, so two or three tiles out), within a walk of it. */
   const beside = (c) => {
     const x = c % W, y = (c / W) | 0;
-    for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, 1]]) {
+    for (let r = 1; r <= 3; r++) for (const [dx, dy] of [[r, 0], [0, r], [-r, 0], [0, -r], [r, r], [-r, r], [r, -r], [-r, -r]]) {
       const nx = x + dx, ny = y + dy;
       if (free(nx, ny) && Math.abs(lv[I(nx, ny)] - lv[c]) <= WALK) return [nx, ny];
     }
@@ -335,17 +337,27 @@ function build(depth, biome, seed) {
   for (const r of ramps) {
     for (const [v, name] of [[r.va - 1, 'trail_sign'], [r.vb + 1, 'rope_post']]) {
       const y = yOf(v);
-      for (const x of [r.x - 3, r.x + 3]) {
+      for (const x of [r.x - 4, r.x + 4, r.x - 5, r.x + 5]) {
         if (!free(x, y)) continue;
         if (bandOf(x, v) >= SNOWB ? snowy(name === 'trail_sign' ? 'notched_trail_marker' : 'hooked_lantern_stand', x + 0.5, y + 0.5, { light: name === 'trail_sign' ? 0 : 2.6 }) : dark(name, x + 0.5, y + 0.5)) block(x, y);
         break;
       }
     }
   }
+  // a rope post (pitons in the snow) beside the trail where it hops, once a stretch: the hops are the trail's to read
+  for (let k = 1, last = -99; k < trail.length; k++) {
+    if (Math.abs(lv[trail[k]] - lv[trail[k - 1]]) <= WALK || k - last < 14) continue;
+    const at = beside(trail[k]);
+    if (!at) continue;
+    const snowB = bandOf(at[0], vOf(at[1])) >= SNOWB;
+    if (snowB ? snowy('climbing_rope_and_pitons', at[0] + 0.5, at[1] + 0.5, { block: false }) : dark('rope_post', at[0] + 0.5, at[1] + 0.5)) { taken[I(at[0], at[1])] = 1; last = k; }
+  }
   // climbers' camps beside the trail a third and two thirds of the way up; the last one in the snow
   const camps = [];
   for (const f of [0.3, 0.62, 0.86]) {
-    const at = beside(trail[Math.floor(trail.length * f)]);
+    // the first spot beside the trail near that far up (not on a way up, where nothing is placed)
+    let at = null;
+    for (let d = 0; d < 40 && !at; d++) { const k = Math.floor(trail.length * f) + (d % 2 ? -1 : 1) * (d >> 1); if (k > 0 && k < trail.length) at = beside(trail[k]); }
     if (!at) continue;
     const [cx, cy] = at, snowB = bandOf(cx, vOf(cy)) >= SNOWB;
     if (snowB) { if (snowy('frosted_iron_brazier', cx + 0.5, cy + 0.5, { light: 3.4 })) block(cx, cy); }
@@ -362,8 +374,8 @@ function build(depth, biome, seed) {
   // the summit: an old shrine and its altar, braziers, the warning bell, cairns round the peak
   const sx0 = Math.floor(SUMMIT[0]), sy0 = Math.floor(SUMMIT[1]);
   const summitProp = (name, dx, dy, o) => { const x = sx0 + dx, y = sy0 + dy; if (x < XL || x > XR || y < 0 || y >= H || !walk[I(x, y)] || onTrail[I(x, y)] === 2) return; const p = snowy(name, x + 0.5, y + 0.5, o); if (p) block(x, y); };
-  summitProp('mountain_shrine_altar', 0, -3);
-  summitProp('frosted_iron_brazier', -3, -2, { light: 3.4 }); summitProp('frosted_iron_brazier', 3, -2, { light: 3.4 });
+  summitProp('mountain_shrine_altar', -4, -2);   // (the middle of the back row is the gateway's: braziers flank it)
+  summitProp('frosted_iron_brazier', -2, -3, { light: 3.4 }); summitProp('frosted_iron_brazier', 2, -3, { light: 3.4 });
   summitProp('summit_warning_bell', -5, 1); summitProp('standing_stone_sentinel', 5, 1);
   summitProp('snowy_rock_cairn', -4, 4); summitProp('alpine_menhir', 4, 4);
 
@@ -395,19 +407,29 @@ function build(depth, biome, seed) {
     return null;
   };
   let n = 0;
+  const campTi = camps.map((c) => trail.findIndex((t) => Math.hypot(t % W + 0.5 - c[0], ((t / W) | 0) + 0.5 - c[1]) < 2.5)).filter((k) => k >= 0);
   for (let k = 18; k < trail.length - 14; k += rng.int(15, 21)) {
+    if (campTi.some((c) => Math.abs(k - c) < 13)) continue;   // a breather round each climbers' camp
     const at = offTrail(k, 2.6);
     if (!at) continue;
     const v = vOf(Math.floor(at[1])), b = bandOf(Math.floor(at[0]), v), arch = rng.pick(archs);
-    spawns.push({ x: at[0], y: at[1], arch, n: rng.int(2, 3 + Math.min(2, b >> 2)), rank: n % 5 === 4 ? 'champion' : n % 11 === 7 ? 'unique' : 'normal', look: pickLook(arch, b >= SNOWB), zone: 'trail', ti: k });
+    spawns.push({ x: at[0], y: at[1], arch, n: rng.int(2, 3 + Math.min(2, b >> 2)), rank: n % 7 === 6 ? 'champion' : n % 11 === 7 ? 'unique' : 'normal', look: pickLook(arch, b >= SNOWB), zone: 'trail', ti: k });
     n++;
+  }
+  // archers on the shelves above the trail: they shoot down at it until someone hops up to them
+  for (const [sx, sy] of shelves) {
+    const k = trail.findIndex((t) => Math.hypot(t % W + 0.5 - sx, ((t / W) | 0) + 0.5 - sy) < 6);
+    const i = I(Math.floor(sx), Math.floor(sy));
+    if (k < 0 || !reach[i]) continue;
+    const snowB = bandOf(Math.floor(sx), vOf(Math.floor(sy))) >= SNOWB;
+    spawns.push({ x: Math.floor(sx) + 0.5, y: Math.floor(sy) + 0.5, arch: 'archer', n: 2, rank: 'normal', look: pickLook('archer', snowB), zone: 'shelf', ti: k });
   }
   const leaps = [];
   for (const r of ramps) {
     const top = trail.findIndex((c) => Math.hypot(c % W + 0.5 - r.top[0], ((c / W) | 0) + 0.5 - r.top[1]) < 2.2);
     if (top < 0) continue;
     const at = offTrail(Math.min(trail.length - 1, top + 4), 2.2);
-    if (at) { const arch = rng.pick(archs), snowB = bandOf(Math.floor(at[0]), vOf(Math.floor(at[1]))) >= SNOWB; spawns.push({ x: at[0], y: at[1], arch, n: rng.int(3, 4), rank: 'champion', look: pickLook(arch, snowB), zone: 'landing', ti: top }); }
+    if (at) { const arch = rng.pick(archs), snowB = bandOf(Math.floor(at[0]), vOf(Math.floor(at[1]))) >= SNOWB; spawns.push({ x: at[0], y: at[1], arch, n: rng.int(3, 4), rank: r.k % 2 === 0 ? 'champion' : 'normal', look: pickLook(arch, snowB), zone: 'landing', ti: top }); }   // a champion at half the ways up
     // a leap-down ambush on the trail just past every other way up: they wait on the cliff top above the next leg
     if (r.k % 2 === 0 && r.k + 1 < CL.length) {
       const k2 = top + 10;
@@ -422,10 +444,10 @@ function build(depth, biome, seed) {
   const top = B[NB - 1] / LV, footLv = B[0] / LV;
   const look = {
     rock: ['snow_capped_granite', { sat: 0.82, light: -0.02 }], rockB: ['ice_bound_shale', { sat: 0.7, light: -0.04 }], tint: '#e8e2d8',
-    snow: [B[SNOWB - 1] / LV + 1, B[SNOWB] / LV + 1.5], snowC: '#e9eef3', mist: [footLv - 2.5, footLv - 7], mistC: '#c8d4dc',
-    cloud: { y: footLv - 3.2, color: '#eef2f6', shade: '#a8b4c4', k: 0.8 },
+    snow: [B[SNOWB - 1] / LV + 1, B[SNOWB] / LV + 1.5], snowC: '#e9eef3', mist: [footLv - 0.2, footLv - 3.7], mistC: '#c8d4dc', flank: '#a8b4c4',
+    cloud: { y: footLv - 3.2, color: '#eef2f6', shade: '#a8b4c4', k: 0.8, wisp: 0.32 },
     sun: '#fff1dc', sunI: 2.3, amb: '#c8d0dc', ambI: 0.85, hemiSky: '#cfe0f0', hemiGround: '#7a705e', hemiI: 1.35,
-    sky: ['#5b86b8', '#a8c4dc', '#e0e6ea'], far: ['#9fb4c8', '#8197ad', '#6c8199'], rockScale: 0.34, bump: 1.0,
+    sky: ['#5b86b8', '#a8c4dc', '#e0e6ea'], far: ['#9fb4c8', '#8197ad', '#6c8199'], rockScale: 0.24, bump: 1.0,
   };
   const edgeH = (x, y) => F.H2(Math.min(W - 0.01, Math.max(0, x)), Math.min(H - 0.01, Math.max(0, y)));
   const skirt = (x, y) => {
@@ -440,10 +462,22 @@ function build(depth, biome, seed) {
     return Math.min(he, top) - d * 1.4 - 1.5 * n1;   // in front: the mountain falls away into the cloud
   };
 
-  const av = { W, H, F, tfloor, floors, vmat, look, skirt, skirtP: 44 };
-  map.mountain = { trail, summit: SUMMIT, shelves, camps, ramps, bands: NB, snowBand: SNOWB, band };
+  const av = { W, H, F, tfloor, floors, vmat, look, skirt, skirtP: 44, snowFloor: FI['s:windpacked_snow'], flankSnowFloor: FI['s:blue_snow_crust'], stepFloor: FI.steps,
+    noFlip: new Set(['steps', 's:bootprints', 's:snowy_slate_flags', 's:compact_snow_path'].map((n) => FI[n])) };
+  map.hopDust = '#b8ab94';
+  // the gateway on into the Snowy Summit: the pack's slate pass arch at the back of the summit, the rock rising behind it
+  // (game/mountain.js opens a portal under it when the Warden falls)
+  const GATE = [SUMMIT[0], yOf(PEAK - 1) + 0.9];
+  {
+    const L = yOf(PEAK - 1), cx = SUMMIT[0], sls = snowSet.arches.slate_pass_gateway?.SE;
+    map.walls = [];
+    if (sls) for (const sl of sls) map.walls.push({ kind: 'arch', x: cx, y: L, axis: 'x', r: sl, depth: cx + L + sl.a });
+    map.indexWalls();
+    for (let x = Math.floor(cx) - 1; x <= Math.floor(cx) + 1; x++) for (let y = L; y <= L + 1; y++) { const i = I(x, y); if (walk[i]) { taken[i] = 1; map.block[i] = 0; } }
+  }
+  map.mountain = { trail, summit: SUMMIT, shelves, camps, ramps, bands: NB, snowBand: SNOWB, band, gate: GATE };
   return {
     map, props, buildings: [], wallHangings: [], torches: [], townTiles: mountainFloors(), looks, spawns, chests,
-    start: START, exit: SUMMIT, summit: SUMMIT, trail, leaps, ramps, seed, alpine: av, lv, walk,
+    start: START, exit: SUMMIT, summit: SUMMIT, trail, leaps, ramps, seed, alpine: av, lv, walk, gate: GATE, camps,
   };
 }

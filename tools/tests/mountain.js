@@ -70,16 +70,18 @@ const SEEDS = +(process.argv[4] || 30);
         if (walls) bad.push(`seed ${seed}: ${walls} trail steps taller than a hop`);
         if (hops < 6) bad.push(`seed ${seed}: the trail hops only ${hops} times`);
         if (g.ramps.length < 8) bad.push(`seed ${seed}: only ${g.ramps.length} ways up`);
+        if (g.camps.length < 3) bad.push(`seed ${seed}: only ${g.camps.length} climbers' camps (checkpoints)`);
+        if (!m.walls.some((o) => o.kind === 'arch')) bad.push(`seed ${seed}: no gateway arch on the summit`);
         // fights all the way: no stretch of 40 trail tiles without a pack near it
         const packs = g.spawns.filter((s) => s.zone === 'trail' || s.zone === 'landing').map((s) => s.ti).sort((a, b) => a - b);
         let gap = packs[0] ?? 999;
         for (let k = 1; k < packs.length; k++) gap = Math.max(gap, packs[k] - packs[k - 1]);
         gap = Math.max(gap, g.trail.length - (packs[packs.length - 1] ?? 0));
-        if (gap > 48) bad.push(`seed ${seed}: ${gap} trail tiles without a fight`);
-        stats.push({ seed, trail: g.trail.length, hops, ...st, rise: m.maxLevel - m.minLevel, props: g.props.length, packs: g.spawns.length, leaps: g.leaps.length, chests: g.chests.length, gap });
+        if (gap > 64) bad.push(`seed ${seed}: ${gap} trail tiles without a fight`);   // (the breathers round the camps are meant)
+        stats.push({ seed, camps: g.camps.length, trail: g.trail.length, hops, ...st, rise: m.maxLevel - m.minLevel, props: g.props.length, packs: g.spawns.length, leaps: g.leaps.length, chests: g.chests.length, gap });
       }
       const avg = (k) => Math.round(stats.reduce((a, s) => a + s[k], 0) / Math.max(1, stats.length));
-      return { bad, maxMs: Math.round(ms), avg: Object.fromEntries(['trail', 'hops', 'slope', 'hop', 'wall', 'rise', 'props', 'packs', 'leaps', 'chests', 'gap'].map((k) => [k, avg(k)])) };
+      return { bad, maxMs: Math.round(ms), avg: Object.fromEntries(['camps', 'trail', 'hops', 'slope', 'hop', 'wall', 'rise', 'props', 'packs', 'leaps', 'chests', 'gap'].map((k) => [k, avg(k)])) };
     }, SEEDS);
     console.log('generation', JSON.stringify(gen));
     for (const b of gen.bad) errors.push('[gen] ' + b);

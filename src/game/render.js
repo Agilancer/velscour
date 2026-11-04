@@ -1441,5 +1441,6 @@ export function drawMinimap(world, dt, canvas, big = false) {
     if (m.team === 'enemy' && d < 14) dot(m.x, m.y, m.rank === 'boss' ? '#ff8000' : m.rank !== 'normal' ? '#ffb040' : '#ff3030', m.rank === 'boss' ? 4 : 2);
     else if (m.team === 'player') dot(m.x, m.y, '#40ff60', 1.8);
   }
+  if (world.cave && world.cave.mapMarks) for (const [x, y, col, r] of world.cave.mapMarks()) dot(x, y, col, (r || 2.4) * (big ? 1.6 : 1));   // the mountains: the trail ahead, the next way up, gates
   dot(p.x, p.y, '#ffffff', big ? 5 : 3.2);
 }
