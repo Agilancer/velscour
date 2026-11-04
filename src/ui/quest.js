@@ -28,7 +28,6 @@ export function renderQuest(body) {
     else if (isRaidDepth(c.depth) && !b?.overworld) h += step(false, '<b style="color:#ff6030">A BOSS ROOM</b> lies at the end of this depth.');
     if (regionOf(b)) h += step(false, regionOf(b).townLine);
     else if (b?.id === 'sea_of_sand') h += step(false, 'A linked Sea of Sand route with one to five timed scenario areas lies beyond.');
-    else if (b?.id === 'mountainside') h += step(false, 'The Mountainside (beta) lies beyond: a switchback climb up the cliffs to the summit.');
     else if (b?.id === 'skyship') h += step(false, "The Sky Lanes lie beyond: the Air Pirates board the heroes' airship in waves, then their flagship comes.");
     else if (b?.sea) h += step(false, "The Pirate Seas lie beyond: the Black Tide's boats come up from astern to board the Lampwardens' Dawnwake, wave on wave.");
     else if (b?.id === 'dark_forest') h += step(false, 'The Dark Forest lies beyond: trails, labyrinths, five trial glades and the Heart of the Forest.');
@@ -55,12 +54,7 @@ export function renderQuest(body) {
     } else if (w.overworldScenario) {
       const sc = w.overworldScenario;
       if (regionOf(w.biome) && regionOf(w.biome).quest) h += regionOf(w.biome).quest(sc, step);
-      else if (w.biome?.id === 'mountainside') {
-        h += step(sc.reached, `Climb the switchback trail to the summit <span class="dim">— altitude ${sc.altitude}%</span>.`);
-        h += step(false, '<span class="dim">A ledge up to a hop high can be climbed; taller cliffs only jumped down, and the tallest not at all.</span>');
-        h += step(sc.completed, 'Defeat the <b>Summit Warden</b> on the peak.');
-        h += step(sc.completed, sc.completed ? 'The exit on the peak is open — descend or return to town.' : "The Warden's fall opens the way on.");
-      } else if (w.biome?.id === 'skyship') {
+      else if (w.biome?.id === 'skyship') {
         const ph = sc.phase, at = ['intro', 'waves', 'mid', 'parley', 'flagship', 'hooks', 'final', 'victory', 'done'].indexOf(ph), waves = sc.wave + 1;
         h += step(at > 0, `<b>${escapeHtml(sc.variant.name)}</b> <span class="dim">— ${escapeHtml(sc.variant.weather)}</span>`);
         h += step(at > 2 || (ph === 'waves' && waves > 3), 'Defeat the captain who swings aboard after the third wave.');

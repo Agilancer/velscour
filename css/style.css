@@ -228,7 +228,7 @@ body.touch #sealed-btn i { width: 16px; height: 16px; }
 .badge { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #b0160f; color: #fff; font: 700 11px var(--font-body); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 6px #f22; animation: pulse 1.2s infinite; }
 @keyframes pulse { 50% { transform: scale(1.15); } }
 #boss-bar { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: min(520px, 60vw); text-align: center; pointer-events: none; }
-#boss-name { font: 900 18px var(--font-head); color: #ff6a3a; text-shadow: 0 0 6px #000, 0 0 10px #a00; letter-spacing: 2px; }
+#boss-name { font: 900 18px var(--font-head); color: #ff6a3a; text-shadow: 0 0 2px #000, 0 1px 2px #000, 0 0 6px #000, 0 0 10px #a00;   /* (dark outline: the title stays legible over the snow) */ letter-spacing: 2px; }
 #boss-track { height: 14px; border: 2px solid #6a1a10; background: #1a0503; margin-top: 3px; border-radius: 2px; box-shadow: 0 0 10px #000; }
 #boss-fill { height: 100%; width: 100%; background: linear-gradient(#ff3a20, #8a0a02); transition: width .15s; }
 #boss-track { position: relative; }

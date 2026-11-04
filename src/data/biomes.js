@@ -264,6 +264,17 @@ export const BIOMES = [
     torch: '#ffb060', fog: '#050509',
   },
   {
+    // a switchback climb up a mountainside to its summit, one smooth height field drawn live in three.js
+    // (world/mountain.js, game/mountain.js, gfx/alpine3d.js, docs/MOUNTAINSIDE.md); its summit leads straight on to
+    // the Snowy Summit (below, a region of its own)
+    id: 'mountainside', name: 'Mountainside', pack: 'town', overworld: true, painted: false, wallPack: null,
+    palette: null, dark: 0.3, light: 13,
+    ambient: { type: 'leaf', color: '#d8e6c0' }, mon: { hue: 8, sat: 0.9, light: 0.04 },
+    el: 'cold', blood: '#7c1610', adj: ['Windswept', 'Craggy', 'High', 'Rimed'],
+    roster: ['hound', 'golem', 'gargoyle', 'bat', 'archer', 'skeleton', 'knight', 'elemental', 'spider', 'cultist', 'wraith', 'imp'],
+    torch: '#ffc078', fog: '#0c1622',
+  },
+  {
     id: 'desert_temple', name: 'Temple of the Sunless Dynasty', pack: 'desert_temple',
     palette: null, dark: 0.77, light: 8.2,
     ambient: { type: 'sand', color: '#d9ac70' },
@@ -471,17 +482,19 @@ export function mixPartner(biome, rnd = Math.random) {
   return kin.length ? kin[Math.floor(rnd() * kin.length)] : null;
 }
 
-// Beta biomes: never in a biome bag or the overworld guarantee. Velscour's skull button reaches them (the "mountain"
-// message, or first on the HAIL VELSCOUR! list; game.js openVelscourContact).
+// Beta biomes and follow-on regions: never in a biome bag or the overworld guarantee. Velscour's skull button reaches
+// them (a region's words, or the HAIL VELSCOUR! list; game.js openVelscourContact).
 export const BETA_BIOMES = [
   {
-    // a height-mapped climb up a mountainside to its summit (world/mountain.js, docs/MOUNTAINSIDE.md)
-    id: 'mountainside', name: 'Mountainside', pack: 'town', overworld: true, beta: true, painted: false, wallPack: null,
-    palette: null, dark: 0.3, light: 13,
-    ambient: { type: 'leaf', color: '#d8e6c0' }, mon: { hue: 8, sat: 0.9, light: 0.04 },
-    el: 'cold', blood: '#7c1610', adj: ['Windswept', 'Craggy', 'High', 'Rimed'],
-    roster: ['hound', 'golem', 'gargoyle', 'bat', 'archer', 'skeleton', 'knight', 'elemental', 'spider', 'cultist', 'wraith', 'imp'],
-    torch: '#ffc078', fog: '#0c1622',
+    // THE SNOWY SUMMIT (docs/SNOWY_SUMMIT.md): where the Mountainside's summit leads, never drawn on its own. Thin
+    // ridgelines across a mountain range, plateaus where groups fight, the peak and one of five snow-swapped bosses;
+    // a three.js height field like the Mountainside's, in the Snowy Summit pack (assets/tiles/snowy_summit/)
+    id: 'snowy_summit', name: 'The Snowy Summit', pack: 'snowy_summit', overworld: true, packArt: true, painted: false, wallPack: null, region: true, follows: 'mountainside',
+    palette: null, dark: 0.2, light: 14,
+    ambient: { type: 'snow', color: '#f2f6fc' }, mon: { hue: 200, sat: 0.6, light: 0.1 },
+    el: 'cold', blood: '#7c1424', adj: ['Frostbitten', 'Rime-Bound', 'Howling', 'Snowblind'],
+    roster: ['hound', 'golem', 'gargoyle', 'bat', 'archer', 'skeleton', 'knight', 'elemental', 'wraith', 'cultist', 'imp', 'ghoul'],
+    torch: '#ffc890', fog: '#1a2230',
   },
   // the four new regions (src/game/regions/, docs/NEW_REGIONS.md); each region module owns its map, art and run
   {

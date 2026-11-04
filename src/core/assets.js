@@ -30,7 +30,7 @@ export const A = {
   biomeSets: {}, // `${biome}|${pack}` -> recoloured tile set (biomeTileSet)
 };
 
-function loadImage(src) {
+export function loadImage(src) {
   return new Promise((res, rej) => {
     const img = new Image();
     img.onload = () => res(img);
