@@ -116,14 +116,14 @@ function terrainMaterial(uni) {
     Object.assign(sh.uniforms, uni);
     sh.vertexShader = 'attribute vec4 cmat; attribute float csnow;\nvarying vec3 vWp; varying vec3 vWn; varying vec4 vMat; varying float vSnow;\n' + sh.vertexShader.replace('#include <begin_vertex>',
       '#include <begin_vertex>\nvWp = position; vWn = normal; vMat = cmat; vSnow = csnow;');
-    sh.fragmentShader = `uniform sampler2D tAtlas, tIdx, tRA, tRB, tN; uniform vec2 uMapWH, uAtlasN, uSnow, uMist, uSnowK; uniform float uRS, uBump, uSnowId, uStepId;
+    sh.fragmentShader = `uniform sampler2D tAtlas, tIdx, tRA, tRB, tN; uniform vec2 uMapWH, uAtlasN, uSnow, uMist, uSnowK; uniform float uRS, uBump, uSnowId, uStepId, uWinter, uFloorBump, uTime;
 uniform vec3 uSnowC, uMistC, uTint, uFlank;
 varying vec3 vWp; varying vec3 vWn; varying vec4 vMat; varying float vSnow;
-float alpH = 0.0;
-vec3 cellAt(float id, vec2 q) {
+float alpH = 0.0, alpLod = 0.0, alpSnow = 0.0;
+vec3 cellAt(float id, vec2 q, float lod) {
   vec2 cell = vec2(mod(id, uAtlasN.x), floor(id / uAtlasN.x));
   vec2 uv = (cell * ${SLOT.toFixed(1)} + ${PAD.toFixed(1)} + fract(q) * ${CELL.toFixed(1)}) / (uAtlasN * ${SLOT.toFixed(1)});
-  return texture2D(tAtlas, uv).rgb;
+  return textureLod(tAtlas, uv, lod).rgb;
 }
 // a tile's floor, mirrored and turned as its flags say (G channel: 1 mirror x, 2 mirror y, 4 swap), so a field of one
 // floor doesn't show its grid
@@ -131,11 +131,13 @@ vec3 cellC(vec2 t, vec2 p) {
   t = clamp(t, vec2(0.0), uMapWH - 1.0);
   vec2 rg = texture2D(tIdx, (t + 0.5) / uMapWH).rg * 255.0 + 0.5;
   float id = floor(rg.x), fl = floor(rg.y);
+  // a wind floor runs on unbroken from tile to tile at twice the size, its lines wandering, so ripples read as one snowfield
+  if (fl >= 8.0) return cellAt(id, p * 0.5 + (texture2D(tN, p * 0.021).rg - 0.5) * 1.1, max(0.0, alpLod - 1.0));
   vec2 q = fract(p);
   if (mod(fl, 2.0) >= 1.0) q.x = 1.0 - q.x;
   if (mod(floor(fl / 2.0), 2.0) >= 1.0) q.y = 1.0 - q.y;
   if (fl >= 4.0) q = q.yx;
-  return cellAt(id, q);
+  return cellAt(id, q, alpLod);
 }
 vec3 floorAt(vec2 p) {
   vec2 f = p - 0.5 + (texture2D(tN, p * 0.31).rg - 0.5) * 0.7, i0 = floor(f), w = smoothstep(0.3, 0.7, f - i0);
@@ -145,6 +147,13 @@ vec3 rockAt(sampler2D t, vec3 w3, float s) {
   vec2 uxy = vec2(vWp.x, -vWp.y) * s, uzy = vec2(vWp.z, -vWp.y) * s, uxz = vWp.xz * s;
   return texture2D(t, uxy).rgb * w3.z + texture2D(t, uzy).rgb * w3.x + texture2D(t, uxz).rgb * w3.y;
 }
+// the rolling drifts under the snow, in tiles of height: long wind-carved dunes, smooth so they light cleanly
+float snowH(vec2 p) {
+  float w = sin(p.y * 0.31 + 1.7 * sin(p.x * 0.17)) + sin(p.x * 0.23 - 1.3 * sin(p.y * 0.13 + 2.0));
+  float r = dot(p, vec2(0.82, 0.57)) * 1.25 + w * 1.6;
+  return 0.2 * sin(r) + 0.07 * sin(r * 2.3 + w * 2.0 + 1.0) + 0.14 * sin(p.x * 0.41 + w) * sin(p.y * 0.37 - w);
+}
+float glintH(vec2 p) { vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); }
 vec3 perturbAlp(vec3 sp, vec3 sn, vec2 dH, float fd) {
   vec3 sx = dFdx(sp), sy = dFdy(sp), r1 = cross(sy, sn), r2 = cross(sn, sx);
   float det = dot(sx, r1) * fd;
@@ -152,6 +161,8 @@ vec3 perturbAlp(vec3 sp, vec3 sn, vec2 dH, float fd) {
 }
 ` + sh.fragmentShader
       .replace('#include <map_fragment>', `
+  // the atlas's mip level from the ground's own derivatives (fract would seam them), held inside its padding
+  alpLod = clamp(log2(max(length(dFdx(vWp.xz)), length(dFdy(vWp.xz))) * ${CELL.toFixed(1)}), 0.0, 2.0);
   vec3 n = normalize(vWn), w3 = pow(abs(n), vec3(6.0)); w3 /= (w3.x + w3.y + w3.z);
   vec2 nzz = texture2D(tN, vWp.xz * 0.022).rg;
   float nz = nzz.x, nz2 = nzz.y, nz3 = texture2D(tN, vec2(vWp.x + vWp.z, vWp.y) * 0.07).r;
@@ -163,6 +174,17 @@ vec3 perturbAlp(vec3 sp, vec3 sn, vec2 dH, float fd) {
   vec3 alb = vec3(0.0);
   if (flatK > 0.001) {
     alb = floorAt(vWp.xz);
+    if (uWinter > 0.0) {
+      // what is snow (bright, little colour) is graded from the art's own light: blue in the hollows, warm white on the crests
+      float l = dot(alb, vec3(0.3, 0.59, 0.11)), hi = max(alb.r, max(alb.g, alb.b)), lo = min(alb.r, min(alb.g, alb.b));
+      alpSnow = flatK * smoothstep(0.2, 0.34, l) * (1.0 - smoothstep(0.34, 0.55, (hi - lo) / max(hi, 0.001)));
+      if (alpSnow > 0.001) {
+        vec3 g = mix(vec3(0.36, 0.48, 0.74), vec3(0.62, 0.71, 0.86), smoothstep(0.2, 0.46, l));
+        g = mix(g, vec3(0.84, 0.84, 0.83), smoothstep(0.44, 0.78, l));
+        g *= mix(vec3(0.74, 0.82, 1.0), vec3(1.04, 1.02, 0.98), smoothstep(-0.25, 0.22, snowH(vWp.xz)));
+        alb = mix(alb, g, alpSnow);
+      }
+    }
     // floor art on rock (a gentle scree you can't walk) is darker, greyer and shaded with the rock, so it never reads as path
     if (!walk) alb = mix(vec3(dot(alb, vec3(0.3, 0.59, 0.11))), alb, 0.6) * 0.78 * (0.82 + 0.36 * nz3);
   }
@@ -170,7 +192,7 @@ vec3 perturbAlp(vec3 sp, vec3 sn, vec2 dH, float fd) {
     vec3 face;
     if (walk) {
       vec2 sq = (w3.z > w3.x ? vec2(vWp.x, -vWp.y * 1.4) : vec2(vWp.z, -vWp.y * 1.4)) * 0.9;
-      face = cellAt(uStepId, sq) * 1.1;
+      face = cellAt(uStepId, sq, alpLod) * 1.1;
     } else {
       // the rock at two scales and in two stones, mixed by a slow noise: no wallpaper over a big face
       vec3 r1 = rockAt(tRA, w3, uRS), r2 = rockAt(tRB, w3, uRS * 0.43);
@@ -181,18 +203,37 @@ vec3 perturbAlp(vec3 sp, vec3 sn, vec2 dH, float fd) {
   }
   // snow lies on the rock above the snow line where the ground (blurred: csnow) isn't too steep, in broad drifts, in the
   // pack's own snow, shaded down the flanks so the path stays the brightest thing on screen
-  float sn = rim ? 0.0 : step(0.4, vMat.x) * smoothstep(uSnow.x, uSnow.y, vWp.y + (nz - 0.5) * 3.0) * smoothstep(uSnowK.x, uSnowK.y, vSnow + (nz2 - 0.5) * 0.3);
+  float sn = rim ? 0.0 : step(0.4, vMat.x) * smoothstep(uSnow.x, uSnow.y, vWp.y + (nz - 0.5) * 3.0);
+  if (uWinter > 0.0) {
+    // a hard, broken edge: the snow packs into the rock's cracks and ledges and stops, no grey smear down the cliff
+    float fine = texture2D(tN, vWp.xz * 0.37 + vWp.y * 0.11).r + texture2D(tN, vec2(vWp.x - vWp.z, vWp.y * 1.6) * 0.21).g - 1.0;
+    float e = vSnow + (nz2 - 0.5) * 0.3 + fine * 0.13 - dot(alb, vec3(0.3, 0.59, 0.11)) * 0.22, m = 0.5 * (uSnowK.x + uSnowK.y) - 0.02;
+    sn *= smoothstep(m - 0.014, m + 0.014, e);
+  } else sn *= smoothstep(uSnowK.x, uSnowK.y, vSnow + (nz2 - 0.5) * 0.3);
   if (sn > 0.001) {
-    vec3 snow = cellAt(uSnowId, vWp.xz) * uSnowC;
-    snow = mix(snow * 0.62, uFlank, 0.4 + vMat.y * 0.3);   // well below the path's own snow, toward the flank's blue-grey
+    vec3 snow = cellAt(uSnowId, vWp.xz, alpLod) * uSnowC;
+    if (uWinter > 0.0) { snow = mix(snow * 0.82, uFlank, 0.16 + vMat.y * 0.3); alpSnow = max(alpSnow, sn * 0.6); }
+    else snow = mix(snow * 0.62, uFlank, 0.4 + vMat.y * 0.3);   // well below the path's own snow, toward the flank's blue-grey
     alb = mix(alb, snow, sn);
   }
   if (rim) alb *= 0.55;
   alb = mix(alb, uMistC * 0.8, vMat.y * 0.42) * (0.9 + 0.2 * vMat.z);
-  alpH = dot(alb, vec3(0.3, 0.59, 0.11));
+  // the bump is the rock's own light; painted floors already carry theirs (uFloorBump), and snow rolls over its drifts
+  alpH = dot(alb, vec3(0.3, 0.59, 0.11)) * mix(1.0, uFloorBump, flatK);
+  if (uWinter > 0.0) alpH = mix(alpH, snowH(vWp.xz) / max(uBump, 0.01), min(1.0, alpSnow * 1.4));
   diffuseColor.rgb *= alb;`)
       .replace('#include <normal_fragment_maps>', 'normal = perturbAlp(-vViewPosition, normal, vec2(dFdx(alpH), dFdy(alpH)) * uBump, faceDirection);')
       .replace('#include <dithering_fragment>', `#include <dithering_fragment>
+  if (alpSnow > 0.01) {
+    // spindrift: thin veils of snow blown along the ground on the wind
+    vec2 wnd = vec2(0.82, 0.57) * uTime, wp = vec2(vWp.x * 0.57 - vWp.z * 0.82, vWp.x * 0.82 + vWp.z * 0.57);
+    float a = texture2D(tN, vWp.xz * 0.05 - wnd * 0.016).r, b = texture2D(tN, vWp.xz * 0.15 - wnd * 0.06).g, c = texture2D(tN, vec2(wp.x * 0.95, wp.y * 0.24) - vec2(0.0, uTime * 0.17)).r;
+    gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.97, 0.985, 1.0), alpSnow * 0.5 * smoothstep(0.5, 0.74, a * 0.6 + b * 0.5) * smoothstep(0.42, 0.72, c));
+    // ice glints: a grain here and there catching the sun, each on its own beat
+    vec2 gc = floor(vWp.xz * 24.0);
+    float gh = glintH(gc), tw = pow(max(0.0, sin(uTime * (1.1 + gh * 1.7) + gh * 90.0)), 10.0);
+    if (gh > 0.972) gl_FragColor.rgb += vec3(0.95, 0.98, 1.0) * tw * alpSnow * smoothstep(0.5, 0.0, length(fract(vWp.xz * 24.0) - 0.5));
+  }
   gl_FragColor.rgb = mix(gl_FragColor.rgb, uMistC, smoothstep(uMist.x, uMist.y, vWp.y) * 0.92);`);
   };
   m.customProgramCacheKey = () => 'alpineterrain';
@@ -204,7 +245,8 @@ vec3 perturbAlp(vec3 sp, vec3 sn, vec2 dH, float fd) {
  * The scene of one level. av (game/alpine.js): { W, H, F (world/alpine.js buildField), tfloor (Uint8Array: each
  * tile's index into floors), floors [{img, sx, sy, w, h}], vmat (Uint8Array, 4 a vertex: rock, dark, shade, rock
  * B), look: { rock: [material, swap], rockB, tint, snow [lo, hi], snowC, mist [y0, y1], mistC, cloud {y, color, k},
- * sun, sunI, amb, ambI, hemiSky, hemiGround, hemiI, sky [top, mid, low], far [colours], peaks }, skirt(x, y) }.
+ * sun, sunI, amb, ambI, hemiSky, hemiGround, hemiI, sky [top, mid, low], far [colours], peaks, winter (1: graded snow,
+ * drifts, spindrift, glints), floorBump }, skirt(x, y), windFloors (Set of floors that run on unbroken as one field) }.
  */
 export function buildAlpine3D(av) {
   if (S && S.av === av) return S;
@@ -212,11 +254,11 @@ export function buildAlpine3D(av) {
   renderer();
   const L = av.look, at = floorAtlas(av.floors);
   // the index texture: each tile's floor (R) and its mirror/turn flags (G), none for floors with a direction to them
-  const rg = new Uint8Array(av.W * av.H * 2), keep = av.noFlip || new Set();
-  for (let i = 0; i < av.W * av.H; i++) { rg[i * 2] = av.tfloor[i]; rg[i * 2 + 1] = keep.has(av.tfloor[i]) ? 0 : (hash(i % av.W, (i / av.W) | 0, 77) * 8) | 0; }
+  const rg = new Uint8Array(av.W * av.H * 2), keep = av.noFlip || new Set(), wind = av.windFloors || new Set();
+  for (let i = 0; i < av.W * av.H; i++) { rg[i * 2] = av.tfloor[i]; rg[i * 2 + 1] = wind.has(av.tfloor[i]) ? 8 : keep.has(av.tfloor[i]) ? 0 : (hash(i % av.W, (i / av.W) | 0, 77) * 8) | 0; }
   const idx = new T.DataTexture(rg, av.W, av.H, T.RGFormat, T.UnsignedByteType);
   idx.magFilter = idx.minFilter = T.NearestFilter; idx.flipY = false; idx.needsUpdate = true;
-  const atlas = tex(at.canvas, { flip: false }); atlas.wrapS = atlas.wrapT = T.ClampToEdgeWrapping; atlas.minFilter = T.LinearFilter; atlas.generateMipmaps = false;
+  const atlas = tex(at.canvas, { flip: false }); atlas.wrapS = atlas.wrapT = T.ClampToEdgeWrapping;   // mipped (alpLod): unfiltered, shrinking it is a shimmer of noise
   const M = {
     atlas, idx, n: tex(noiseTex(128, 3), { srgb: false }),
     ra: tex(rockFace(IMG[L.rock[0]], L.rock[1], 1, L.rockL ?? 0.42)), rb: tex(rockFace(IMG[(L.rockB || L.rock)[0]], (L.rockB || L.rock)[1], 0.7, L.rockL ?? 0.42)),
@@ -228,6 +270,7 @@ export function buildAlpine3D(av) {
     uSnow: { value: new T.Vector2(L.snow[0], L.snow[1]) }, uMist: { value: new T.Vector2(L.mist[0], L.mist[1]) },
     uRS: { value: L.rockScale ?? 0.55 }, uBump: { value: L.bump ?? 1.1 },
     uSnowC: { value: rgb3(L.snowC || '#e8eef4') }, uMistC: { value: rgb3(L.mistC) }, uTint: { value: rgb3(L.tint || '#ffffff') }, uFlank: { value: rgb3(L.flank || '#9fb0c6') },
+    uWinter: { value: L.winter ?? 0 }, uFloorBump: { value: L.floorBump ?? 1 }, uTime: { value: 0 },
     uSnowId: { value: av.flankSnowFloor ?? av.snowFloor ?? 0 }, uStepId: { value: av.stepFloor ?? 0 }, uSnowK: { value: new T.Vector2(...(L.snowK || [0.42, 0.74])) },
   };
   const scene = new T.Scene(); scene.background = null;
@@ -390,6 +433,7 @@ function drawSky(ctx, W, H, L) {
 export function tickAlpine3D(dt) {
   if (!S) return;
   S.t += dt;
+  S.uni.uTime.value = S.t;
   if (S.cloudUni) S.cloudUni.uT.value = S.t;
 }
 /** Draw the level behind the sprites (cr = world.cave, game/alpine.js). */
