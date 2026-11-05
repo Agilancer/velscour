@@ -63,6 +63,20 @@ for (const id of ids) {
     if (dv.chamber.h > dv.rooms[0].h - 12) fail(`${tag}: the burial chamber is only ${(dv.rooms[0].h - dv.chamber.h).toFixed(1)} tiles below the entrance`);
     if (gen.spawns.length < 12) fail(`${tag}: ${gen.spawns.length} spawns`);
     if (gen.props.length < 120) fail(`${tag}: ${gen.props.length} props`);
+    // a corridor's mouth stays open its full width two tiles into the room, and no jar stands within 2 tiles of one
+    // (a row of jars across the way in reads as a wall, and a pet or a foe plugs the one gap left)
+    const jars = new Set(gen.props.filter((o) => o.caveProp === 'urn').map((o) => Math.floor(o.y) * m.w + Math.floor(o.x)));
+    for (const rm of [...dv.rooms.filter((r) => r.room), dv.chamber]) {
+      const out = (x, y) => x < rm.x0 || x > rm.x1 || y < rm.y0 || y > rm.y1;
+      for (let y = rm.y0; y <= rm.y1; y++) for (let x = rm.x0; x <= rm.x1; x++) {
+        const i = y * m.w + x;
+        for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) if (out(x + ox, y + oy) && m.t[i + oy * m.w + ox] && (m.block[i] || m.block[i - oy * m.w - ox])) fail(`${tag}: a prop narrows the way in at ${x},${y} (${rm.name})`);
+        if (!jars.has(i)) continue;
+        let way = false;
+        for (let oy = -2; oy <= 2 && !way; oy++) for (let ox = -2; ox <= 2; ox++) if (out(x + ox, y + oy) && m.t[(y + oy) * m.w + x + ox]) { way = true; break; }
+        if (way) fail(`${tag}: a jar at ${x},${y} stands in a corridor's mouth (${rm.name})`);
+      }
+    }
   }
   // the plan of the last seed
   const m = last.map, dv = last.dunes, W = m.w, H = m.h, PX = 2, img = Buffer.alloc(W * PX * H * PX * 3);
