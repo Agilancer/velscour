@@ -48,6 +48,12 @@ export function sigilIcon(rank, size = 48) {
   return c;
 }
 
+// Seconds a monster's lesser drop waits on the ground (Common, Uncommon, Rare; a gem). A long fight drops hundreds that
+// auto-play rightly walks past, and nothing else ever cleared them. Epics and up, sealed treasures, relics, Sigil Stones,
+// keys, what the hero dropped, chest and quest rewards don't fade. 0: never.
+const FADE = [45, 60, 120];
+export const fadeOf = (it) => (it.relic ? 0 : it.type === 'gem' ? (GEMS[it.gem].sigil ? 0 : 180) : it.type === 'gear' ? FADE[it.rarity] || 0 : 0);
+
 export class GroundItem {
   constructor(x, y, kind, data = {}) {
     this.x = x; this.y = y; this.z = 0;
@@ -102,6 +108,7 @@ export class GroundItem {
       }
     }
     if (this.t > 120 && this.kind !== 'item' && this.kind !== 'key') return false; // (an Abyssal Key waits)
+    if (this.fades && this.t > this.fades && p.lootTarget !== this) return false;
     // light pillars for good loot
     if (this.kind === 'item' && this.item.rarity >= 2) {
       const r = this.item.sealed ? SEAL_RARITY : this.item.rarity;
@@ -262,7 +269,8 @@ export function dropLoot(world, m) {
   const boost = (world.raid || m.isRaid || m.isVelscour ? 3 : 1) * (world.relicMul || 1); // BOSS ROOMs triple the Covenant odds (data/relics.js); Heresies raise them
   for (let i = 0; i < items; i++) {
     const ilvl = lvl + (rank === 'boss' ? 2 : rank === 'normal' ? 0 : 1) + randi(-1, 1);
-    add('item', { item: maybeRelic(rollItem(ilvl, { mf: st.magicFind + (world.mfAdd || 0), bonus }), boost) });
+    const item = maybeRelic(rollItem(ilvl, { mf: st.magicFind + (world.mfAdd || 0), bonus }), boost);
+    add('item', { item, fades: fadeOf(item) });
   }
   // Sigil Stones: rare from the rank and file, common from guardians (Heresies: world.sigilMul)
   const sig = { normal: 0.004, champion: 0.03, unique: 0.08, boss: 0.45 }[rank] * (world.lootMul || 1) * (world.sigilMul || 1) * q;
@@ -273,7 +281,7 @@ export function dropLoot(world, m) {
   if ((rank === 'boss' && chance(0.6)) || (rank === 'unique' && chance(0.2))) add('item', { item: rollItem(lvl + 2, { slot: 'ring', mf: st.magicFind + (world.mfAdd || 0), bonus }) });
   // gems
   const gems = more(rank === 'boss' ? randi(1, 3) : chance(rank === 'normal' ? 0.025 : 0.25) ? 1 : 0);
-  for (let i = 0; i < gems; i++) add('item', { item: rollGem(lvl + (rank === 'boss' ? 6 : 0)) });
+  for (let i = 0; i < gems; i++) { const item = rollGem(lvl + (rank === 'boss' ? 6 : 0)); add('item', { item, fades: fadeOf(item) }); }
 }
 
 export function dropChest(world, chest, depth) {
@@ -305,40 +313,70 @@ function labelSprite(text, color, font) {
   return e;
 }
 
+// Which drops get a name: a budget by screen height, the best first, and lesser ones only close by. The rest show a name
+// under the mouse and take a click on the item, like Settings > Hide dropped item names (Show every item name: no limit).
+const labelRank = (l) => {
+  if (l.kind === 'key') return 9;
+  if (l.kind !== 'item') return 0; // gold, potions
+  const it = l.item;
+  if (it.sealed) return 8;
+  if (it.type !== 'gear') return 3; // gems, Sigil Stones, sheets
+  return filterPasses(it) ? it.rarity || 0 : -1; // the loot filter says no: never named unprompted
+};
+const labelReach = (r) => (r < 0 ? 0 : r < 2 ? 5 : r === 2 ? 9 : 14);
+export const labelBudget = (screenH) => clamp(Math.floor(screenH / 48), 8, 20);
+
+function drawLabel(ctx, spr, sx, sy, w, h, hover) {
+  ctx.fillStyle = hover ? 'rgba(40,30,80,0.9)' : 'rgba(0,0,0,0.72)';
+  ctx.fillRect((sx - w / 2) * G.dpr, (sy - h / 2) * G.dpr, w * G.dpr, h * G.dpr);
+  ctx.drawImage(spr.c, Math.round(sx * G.dpr - spr.c.width / 2), Math.round((sy + 1) * G.dpr - spr.c.height / 2));
+}
+
 export function drawLootLabels(ctx, world, mouse) {
-  const boxes = [];
-  const p = world.player;
+  const boxes = [], silent = [], cand = [], placed = [];
+  const p = world.player, S = G.settings, all = S.allItemNames && !S.hideItemNames;
   const font = `${Math.round(12 * G.dpr)}px "Alegreya Sans", sans-serif`;
-  const placed = [];
-  let shown = false;
+  const h = 16;
   for (const l of world.loot) {
     if (l.kind !== 'item' && l.kind !== 'potion' && l.kind !== 'key' && !(l.kind === 'gold' && l.amount > 0)) continue;
-    if (p && Math.hypot(p.x - l.x, p.y - l.y) > 14) continue;
-    if (l.kind === 'gold' && !G.settings.showGoldLabels) continue;
-    if (G.settings.hideItemNames) {
-      // no labels: an unseen hit box on the item itself still picks it up, and the name shows only under the mouse
-      const [gx, gy] = camera.tileToScreen(l.x, l.y, 6), z = camera.zoom || 1;
-      const box = { x: gx, y: gy, w: 30 * z, h: 24 * z, loot: l };
-      boxes.push(box);
-      if (shown || !mouse || Math.abs(mouse.x - gx) >= box.w / 2 || Math.abs(mouse.y - gy) >= box.h / 2) continue;
-      shown = true;
-    }
+    const d = p ? Math.hypot(p.x - l.x, p.y - l.y) : 0;
+    if (d > 14) continue;
+    if (l.kind === 'gold' && !S.showGoldLabels) continue;
+    const r = labelRank(l);
+    if (S.hideItemNames || (!all && d > labelReach(r))) { l.named = false; silent.push(l); continue; }
+    l.nameScore = r * 100 - d + (l.named ? 2 : 0); // (a name keeps its place until something clearly better comes along)
+    cand.push(l);
+  }
+  const budget = all ? Infinity : labelBudget(ctx.canvas.height / G.dpr);
+  const keep = cand.length > budget ? new Set([...cand].sort((a, b) => b.nameScore - a.nameScore).slice(0, budget)) : null;
+  for (const l of cand) { // (in ground order, so the stacks hold still as the hero walks)
+    if (keep && !keep.has(l)) { l.named = false; silent.push(l); continue; }
     const [sx, sy0] = camera.tileToScreen(l.x, l.y, 26);
-    let sy = sy0;
-    const text = l.label, spr = labelSprite(text, l.color, font);
-    const w = spr.tw / G.dpr + 10, h = 16;
+    let sy = sy0, free = false;
+    const spr = labelSprite(l.label, l.color, font), w = spr.tw / G.dpr + 10;
     // avoid overlapping labels
     for (let k = 0; k < 8; k++) {
-      if (!placed.some((b) => Math.abs(b.x - sx) < (b.w + w) / 2 && Math.abs(b.y - sy) < h)) break;
+      if ((free = !placed.some((b) => Math.abs(b.x - sx) < (b.w + w) / 2 && Math.abs(b.y - sy) < h))) break;
       sy -= h + 1;
     }
+    if (!free && !all) { l.named = false; silent.push(l); continue; } // a wall of names reads as nothing: no room, no name
+    l.named = true;
     const box = { x: sx, y: sy, w, h, loot: l };
     placed.push(box);
-    const hover = G.settings.hideItemNames || (mouse && Math.abs(mouse.x - sx) < w / 2 && Math.abs(mouse.y - sy) < h / 2);
-    ctx.fillStyle = hover ? 'rgba(40,30,80,0.9)' : 'rgba(0,0,0,0.72)';
-    ctx.fillRect((sx - w / 2) * G.dpr, (sy - h / 2) * G.dpr, w * G.dpr, h * G.dpr);
-    ctx.drawImage(spr.c, Math.round(sx * G.dpr - spr.c.width / 2), Math.round((sy + 1) * G.dpr - spr.c.height / 2));
+    drawLabel(ctx, spr, sx, sy, w, h, mouse && Math.abs(mouse.x - sx) < w / 2 && Math.abs(mouse.y - sy) < h / 2);
     boxes.push(box);
+  }
+  // no name: an unseen hit box on the item itself (after the labels: a label under the mouse wins), its name under the mouse
+  let shown = !mouse || boxes.some((b) => Math.abs(mouse.x - b.x) < b.w / 2 && Math.abs(mouse.y - b.y) < b.h / 2);
+  const z = camera.zoom || 1;
+  for (const l of silent) {
+    const [gx, gy] = camera.tileToScreen(l.x, l.y, 6);
+    const box = { x: gx, y: gy, w: 30 * z, h: 24 * z, loot: l };
+    boxes.push(box);
+    if (shown || Math.abs(mouse.x - gx) >= box.w / 2 || Math.abs(mouse.y - gy) >= box.h / 2) continue;
+    shown = true;
+    const [sx, sy] = camera.tileToScreen(l.x, l.y, 26), spr = labelSprite(l.label, l.color, font), w = spr.tw / G.dpr + 10;
+    drawLabel(ctx, spr, sx, sy, w, h, true);
   }
   return boxes;
 }

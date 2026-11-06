@@ -67,6 +67,7 @@ node tools/tests/unbound.js                        # Velscour Unbound: Abyssal K
 node tools/tests/marks.js                          # Infernal Marks: XP past the cap, spending, the bonuses on the sheet, shared across heroes, the account record's cloud merge
 node tools/tests/velscour_real.js [classes] [n]    # Velscour without god mode: depth-500 gear, wins / minutes / phase reached per class
 node tools/tests/rarity.js [classes] [samples]     # gear rarity worth in item levels, level 25 Rare > level 10 Mythic, drop odds
+node tools/tests/lootlabels.js [mobile]            # ground loot: label budget, junk named only close by, hover/click on the unnamed, fading drops, the cap, what never fades
 node tools/tests/ui.js                             # skill tree, inventory, socketing, vendors
 node tools/tests/macros.js                         # macros: several skills on one key (R E Y U O), Keep up, the panel, touch buttons (both orientations), save shape
 node tools/tests/options.js                        # settings: lock skill bar, hide item names, auto skill points off; skill tree Respec (50 gold x level^2)
