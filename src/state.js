@@ -27,6 +27,7 @@ export const G = {
     mobileSkillBar: true,
     lockSkillBar: false, // auto-play only fills empty bar slots
     hideItemNames: false, // no item name labels on the ground (hover still shows one)
+    allItemNames: false, // every drop nearby named, with no budget (game/loot.js drawLootLabels)
     autoSkillPoints: true, // auto-play spends skill points
     autoStatPoints: true, // auto-play spends attribute points
     autoGear: true, // auto-play equips, sells, buys, stashes and upgrades gear (off: hands off, potions only)

@@ -9,6 +9,7 @@ import { bodyR } from '../world/map.js';
 
 const CELL = 2;
 
+const LOOT_CAP = 240;
 export class World {
   constructor(kind, opts) {
     this.kind = kind; // 'town' | 'dungeon'
@@ -44,7 +45,15 @@ export class World {
     return c;
   }
   addHazard(h) { h.world = this; this.hazards.push(h); return h; }
-  addLoot(l) { this.loot.push(l); return l; }
+  addLoot(l) {
+    this.loot.push(l);
+    if (this.loot.length > LOOT_CAP) { // the shortest-lived fading drop goes first, oldest first (game/loot.js FADE)
+      let v = -1;
+      this.loot.forEach((g, i) => { if (g.fades && (v < 0 || g.fades < this.loot[v].fades) && (!this.player || this.player.lootTarget !== g)) v = i; });
+      if (v >= 0) this.loot.splice(v, 1);
+    }
+    return l;
+  }
 
   rebuildGrid() {
     for (const cell of this.grid.values()) { cell.length = 0; this.gridPool.push(cell); }

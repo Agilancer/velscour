@@ -27,6 +27,7 @@ import { GLYPHWORDS, glyphOf } from '../data/relics.js';
 import { Vendor, fuseAll } from '../ui/vendor.js';
 import { Stash, addToStash } from '../ui/stash.js';
 import { activeFilter, filterPasses, filterKeeps } from './lootfilter.js';
+import { fadeOf } from './loot.js';
 import { addToBag } from './player.js';
 import { nextRowCost, buyBagRow } from '../data/bag.js';
 import { Delayed, Area, Whirl, Fissure } from './hazards.js';
@@ -831,6 +832,8 @@ export const Auto = {
     const old = G.char.bag[i];
     this.ignore.add(old);
     dropFromBag(i);
+    const g = G.world.loot[G.world.loot.length - 1];
+    if (g && g.item === old) g.fades = fadeOf(old); // (its own junk: not a keepsake the hero set down)
     return true;
   },
 
