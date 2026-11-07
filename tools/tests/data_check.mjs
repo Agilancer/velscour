@@ -1,5 +1,5 @@
 // Node-only sanity check of the skill data (no browser needed):
-// 20 skills per tree (3 trees per class, the Necromancer 4), valid kinds/elements, summons exist, unique names, describe() works;
+// 9 skills per tree (4 trees per class), valid kinds/elements, summons exist, unique names, describe() works;
 // every monster look points at a cut sheet cell and every archetype has art; biome bag and mixing rules.
 //   node tools/tests/data_check.mjs
 const { SKILLS, CLASS_SKILLS, describe, skillBaseDamage, manaCost } = await import(new URL('../../src/data/skills.js', import.meta.url));
@@ -10,7 +10,7 @@ const KINDS = 'melee proj nova aoe beam chain wall zone orbit cyclone whirl leap
 const ELEMENTS = ['phys', 'fire', 'cold', 'light', 'poison', 'arcane', 'holy', 'shadow', 'blood', 'acid'];
 const kinds = {}; const fxs = {}; const bad = [];
 for (const [c, list] of Object.entries(CLASS_SKILLS)) {
-  if (list.length !== CLASSES[c].trees.length * 20) bad.push(`${c} has ${list.length} skills for ${CLASSES[c].trees.length} trees`);
+  if (list.length !== CLASSES[c].trees.length * 9) bad.push(`${c} has ${list.length} skills for ${CLASSES[c].trees.length} trees`);
   const names = new Set();
   for (const s of list) {
     kinds[s.kind] = (kinds[s.kind] || 0) + 1;

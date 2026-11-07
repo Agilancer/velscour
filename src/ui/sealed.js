@@ -6,7 +6,7 @@
 import { G } from '../state.js';
 import { el, escapeHtml } from '../core/util.js';
 import { sfx } from '../core/audio.js';
-import { RARITY, itemName, itemColor } from '../data/items.js';
+import { RARITY, itemName, itemColor, canEquipItem } from '../data/items.js';
 import { UI } from './ui.js';
 import { itemTooltip } from './itemui.js';
 import { itemIcon } from '../game/loot.js';
@@ -84,7 +84,7 @@ function land(card, tile) {
   const row = box.querySelector('.rv-btns');
   const btn = (label, fn, cls = '') => { const b = el('button', 'btn small ' + cls, label); b.onclick = (e) => { e.stopPropagation(); sfx('ui'); fn(); }; row.appendChild(b); };
   const idx = c.bag.indexOf(it);
-  if (idx >= 0 && it.type === 'gear' && (it.req || 1) <= c.level) btn('Equip', () => { const i = c.bag.indexOf(it); if (i >= 0) equipFromBag(i); close(); });
+  if (idx >= 0 && it.type === 'gear' && canEquipItem(c, it)) btn('Equip', () => { const i = c.bag.indexOf(it); if (i >= 0) equipFromBag(i); close(); });
   btn('Keep', close);
   const more = sealedCount(c);
   if (more) btn(`Next seal (${more})`, () => { close(); openNextSeal(); }, 'red');

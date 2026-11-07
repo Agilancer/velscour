@@ -1,6 +1,10 @@
 // LocalStorage persistence for heroes.
 import { CLASSES } from '../data/classes.js';
-import { rollItem, HOLLOW } from '../data/items.js';
+import { MAX_LEVEL } from '../data/depth.js';
+import { rollItem, HOLLOW, WEAPONS, OFFHANDS, ARMORS, AFFIX_BY_STAT, affixValue, powerLevel, tierOf, itemReqStat, charEffectiveStat, augTarget } from '../data/items.js';
+import { SCOPE_MUL, augPower, augmentable, AUGMENTS } from '../data/rings.js';
+import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, grantedSkillsAt } from '../data/skills.js';
+import { TALENTS, isTalentLockedByChoice, isTalentPrereqMet } from '../data/talents.js';
 import { drawBiome } from '../data/biomes.js';
 import { migrateBar, BAR_SIZE } from '../data/bar.js';
 import { TAB_SLOTS } from '../data/tabs.js';
@@ -129,9 +133,9 @@ export function newCharData(classId, name) {
   const C = CLASSES[classId];
   const c = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    version: 1, name, classId, level: 1, xp: 0,
-    attrs: { ...C.base }, statPoints: 0, skillPoints: 1,
-    skills: {}, granted: {}, bar: Array(BAR_SIZE).fill(null),
+    version: 1, rebalancedV1: true, name, classId, level: 1, xp: 0,
+    attrs: { ...C.base }, statPoints: 0, skillPoints: 1, talentPoints: 0,
+    skills: {}, talents: {}, granted: {}, bar: Array(BAR_SIZE).fill(null),
     equip: { weapon: null, offhand: null, head: null, body: null, hands: null, legs: null, feet: null, ring1: null, ring2: null, ring3: null, ring4: null },
     vanity: { head: null, body: null }, hideHelm: false,
     macros: newMacros(), // game/macros.js
@@ -154,8 +158,120 @@ export function newCharData(classId, name) {
   return c;
 }
 
+function migrateLegacyGearItem(it) {
+  if (!it || it.type !== 'gear') return;
+  if (it.ilvl > 30) {
+    it.ilvl = it.ilvl <= 260
+      ? Math.round(30 + 70 * ((it.ilvl - 30) / 230))
+      : Math.min(120, 100 + Math.floor((it.ilvl - 260) / 100));
+  }
+  it.ilvl = Math.max(1, Math.round(it.ilvl || 1));
+  it.tier = tierOf(it.ilvl);
+  it.req = Math.min(it.ilvl, MAX_LEVEL);
+  const rar = it.rarity || 0;
+  const pl = powerLevel(it.ilvl, rar);
+  if (it.slot === 'weapon') {
+    const W = WEAPONS[it.base] || WEAPONS.sword;
+    const avg = (6 + pl * 1.8 + 0.022 * pl * pl) * W.dmg;
+    const maxAllowed = Math.max(2, Math.round(avg * 1.2));
+    if (!Array.isArray(it.dmg) || it.dmg[1] > maxAllowed * 1.25) {
+      it.dmg = [Math.max(1, Math.round(avg * 0.8)), maxAllowed];
+    }
+  } else if (it.slot === 'offhand' || ARMORS[it.slot]) {
+    const mult = it.slot === 'offhand' ? (OFFHANDS[it.base] || OFFHANDS.shield).armor : ARMORS[it.slot].armor;
+    const baseArm = (8 + pl * 2.4 + 0.025 * pl * pl) * mult;
+    if (typeof it.armor === 'number' && it.armor > Math.round(baseArm * 1.25)) {
+      it.armor = Math.max(1, Math.round(baseArm));
+    }
+  }
+  for (const a of it.affixes || []) {
+    if (!a || a.implicit) continue;
+    const def = AFFIX_BY_STAT[a.s];
+    if (!def || def.sc === 0) continue;
+    const cap = it.relic ? affixValue(def, it.ilvl, 5, 1) * 1.8 : affixValue(def, it.ilvl, rar, 1);
+    if (a.v > cap) a.v = cap >= 10 ? Math.round(cap) : Math.round(cap * 10) / 10;
+  }
+  if (it.slot === 'ring' && Array.isArray(it.aug)) {
+    for (const a of it.aug) {
+      if (!a) continue;
+      const scope = a.sk ? SCOPE_MUL.skill : a.kind ? SCOPE_MUL.kind : SCOPE_MUL.all;
+      const maxPow = Math.round(augPower(pl) * scope * 1.15 * 100) / 100;
+      if (a.pow > maxPow) a.pow = maxPow;
+    }
+  }
+  const reqStat = itemReqStat(it);
+  if (reqStat) it.reqStat = reqStat;
+  else delete it.reqStat;
+}
+
+function migrateToLv100Rebalance(c) {
+  if (c.rebalancedV1) return;
+  const oldLevel = Math.max(1, Math.floor(Number(c.level) || 1));
+  if (oldLevel > MAX_LEVEL) {
+    c.level = MAX_LEVEL;
+    c.xp = 0;
+    const C = CLASSES[c.classId];
+    if (C && c.attrs) {
+      const maxPts = (MAX_LEVEL - 1) * 5;
+      const keys = ['str', 'dex', 'vit', 'int'];
+      const diffs = keys.map((k) => Math.max(0, (c.attrs[k] || 0) - C.base[k]));
+      const spent = diffs.reduce((a, b) => a + b, 0);
+      const unspent = Math.max(0, c.statPoints || 0);
+      const total = spent + unspent;
+      if (total > maxPts) {
+        const scale = spent > 0 ? Math.min(1, maxPts / total) : 0;
+        let newSpent = 0;
+        keys.forEach((k, idx) => {
+          const add = Math.floor(diffs[idx] * scale);
+          c.attrs[k] = C.base[k] + add;
+          newSpent += add;
+        });
+        c.statPoints = Math.max(0, maxPts - newSpent);
+      }
+    }
+    let excessSkills = oldLevel - MAX_LEVEL;
+    const takeUnspent = Math.min(Math.max(0, c.skillPoints || 0), excessSkills);
+    c.skillPoints = Math.max(0, (c.skillPoints || 0) - takeUnspent);
+    excessSkills -= takeUnspent;
+    if (excessSkills > 0 && c.skills) {
+      const ids = Object.keys(c.skills);
+      while (excessSkills > 0) {
+        let trimmed = false;
+        ids.sort((a, b) => (c.skills[b] || 0) - (c.skills[a] || 0));
+        for (const id of ids) {
+          const minKeep = c.granted && c.granted[id] ? 1 : 1;
+          if ((c.skills[id] || 0) > minKeep) {
+            c.skills[id]--;
+            excessSkills--;
+            trimmed = true;
+            if (excessSkills <= 0) break;
+          }
+        }
+        if (!trimmed) break;
+      }
+    }
+  }
+  const allItems = [
+    ...Object.values(c.equip || {}),
+    ...Object.values(c.vanity || {}),
+    ...(c.bag || []),
+    ...(c.stash || []),
+  ];
+  for (const it of allItems) migrateLegacyGearItem(it);
+  // Ensure already-equipped weapon/offhand remain wearable on migrated saves
+  for (const slot of ['weapon', 'offhand']) {
+    const eq = c.equip && c.equip[slot];
+    if (eq && eq.reqStat) {
+      const have = charEffectiveStat(c, eq.reqStat.stat, slot);
+      if (have < eq.reqStat.val) eq.reqStat.val = have;
+    }
+  }
+  c.rebalancedV1 = true;
+}
+
 /** Fill in fields added by later versions. */
 export function migrate(c) {
+  migrateToLv100Rebalance(c);
   c.potions = Object.assign({ hp: 0, mp: 0, rejuv: 0, fury: 0 }, c.potions);
   c.cleared = c.cleared || {};
   c.seaOfSandRuns = c.seaOfSandRuns || {};
@@ -167,6 +283,64 @@ export function migrate(c) {
   c.keys = Math.max(0, c.keys | 0);
   c.unbound = Object.assign({ wins: 0, best: 0 }, c.unbound);
   c.granted = c.granted || {};
+  c.skills = c.skills || {};
+  c.skillPoints = Math.max(0, c.skillPoints | 0);
+  // Migrate pruned or out-of-class skill IDs: refund spent skill points, preserve free grants on valid skills
+  for (const [id, rawLv] of Object.entries(c.skills)) {
+    const lv = Math.max(0, rawLv | 0);
+    const sk = SKILLS[id];
+    if (!sk || sk.classId !== c.classId || lv <= 0) {
+      const paid = Math.max(0, lv - (c.granted[id] ? 1 : 0));
+      c.skillPoints += paid;
+      delete c.skills[id];
+      delete c.granted[id];
+    } else if (lv > MAX_SKILL_LEVEL) {
+      c.skillPoints += lv - MAX_SKILL_LEVEL;
+      c.skills[id] = MAX_SKILL_LEVEL;
+    } else {
+      c.skills[id] = lv;
+    }
+  }
+  for (const gid of Object.keys(c.granted)) {
+    if (!SKILLS[gid] || SKILLS[gid].classId !== c.classId) delete c.granted[gid];
+  }
+  for (const gid of grantedSkillsAt(c.classId, c.level || 1)) {
+    if (!c.granted[gid] && SKILLS[gid]) {
+      c.granted[gid] = true;
+      c.skills[gid] = Math.min(MAX_SKILL_LEVEL, (c.skills[gid] || 0) + 1);
+    }
+  }
+  c.talents = c.talents || {};
+  if (!Number.isInteger(c.talentPoints)) {
+    const earnedTalents = Math.floor((c.level || 1) / 5);
+    const spentTalents = Object.values(c.talents).reduce((acc, v) => acc + (Number(v) || 0), 0);
+    c.talentPoints = Math.max(0, earnedTalents - spentTalents);
+  }
+  c.talentPoints = Math.max(0, c.talentPoints | 0);
+  // Migrate overhauled talent IDs, ranks, and prerequisite/choice constraints: refund orphaned points cleanly
+  for (const [tid, rawRk] of Object.entries(c.talents)) {
+    const rk = Math.max(0, rawRk | 0);
+    const node = TALENTS[tid];
+    if (!node || node.classId !== c.classId || rk <= 0) {
+      c.talentPoints += rk;
+      delete c.talents[tid];
+    } else if (rk > node.maxRank) {
+      c.talentPoints += rk - node.maxRank;
+      c.talents[tid] = node.maxRank;
+    } else {
+      c.talents[tid] = rk;
+    }
+  }
+  for (let row = 0; row <= 4; row++) {
+    for (const [tid, rk] of Object.entries(c.talents)) {
+      const node = TALENTS[tid];
+      if (!node || node.row !== row) continue;
+      if ((c.level || 1) < node.reqLevel || isTalentLockedByChoice(c, node) || !isTalentPrereqMet(c, node)) {
+        c.talentPoints += rk;
+        delete c.talents[tid];
+      }
+    }
+  }
   c.tips = c.tips || {};
   if (c.classId === 'barbarian') c.rage = Math.max(0, Math.min(100, Number(c.rage) || 0));
   c.homunculus = c.homunculus || { talks: 0, chapter: 0, told: [], recap: [] }; // the blacksmith's axe story (game/homunculus.js)
@@ -188,6 +362,9 @@ export function migrate(c) {
   c.vanity = Object.assign({ head: null, body: null }, c.vanity); // looks only: worn over the real gear, no stats
   c.hideHelm = !!c.hideHelm;
   c.macros = migrateMacros(c.macros);
+  for (const m of c.macros) {
+    if (Array.isArray(m.skills)) m.skills = m.skills.filter((id) => SKILLS[id] && SKILLS[id].classId === c.classId);
+  }
   if (c.townSeed === undefined) c.townSeed = (Math.random() * 1e9) | 0;
   if (!Array.isArray(c.biomeBag)) c.biomeBag = [];
   if (!Number.isInteger(c.overworldMisses)) c.overworldMisses = 0;
@@ -196,9 +373,38 @@ export function migrate(c) {
   // heroes made before the shuffle bag always started in the catacombs: give an unexplored hero a random start
   if (c.nextBiome === 'catacombs' && !c.deepest && !c.lastBiome) c.nextBiome = drawBiome(c, c.depth || 1);
   c.bar = migrateBar(c.bar); // 10 slots (LMB, 1-8, RMB) -> 15 (LMB, ` 1-9 0 - =, RMB)
+  c.bar = c.bar.map((id) => (id && SKILLS[id] && SKILLS[id].classId === c.classId && c.skills[id] > 0 ? id : null));
+  if (!c.bar[0]) {
+    const clsSkills = CLASS_SKILLS[c.classId] || [];
+    const def = clsSkills.find((s) => s.m.free && c.skills[s.id] > 0) || clsSkills.find((s) => c.skills[s.id] > 0);
+    if (def) c.bar[0] = def.id;
+  }
   fixBag(c); // 6 rows, plus any bought
   if (!Array.isArray(c.stash)) c.stash = [];
   while (c.stash.length < 300) c.stash.push(null);
+  // Remap orphaned ring skill augments from pruned 80-skill trees onto valid augmentable skills in the same tree/class
+  for (const it of [...Object.values(c.equip || {}), ...(c.bag || []), ...(c.stash || [])]) {
+    if (!it || !Array.isArray(it.aug)) continue;
+    let remapped = false;
+    for (const a of it.aug) {
+      if (a && a.sk && !SKILLS[a.sk]) {
+        const parts = String(a.sk).split('.');
+        const targetCls = CLASS_SKILLS[parts[0]] ? parts[0] : c.classId;
+        const targetTree = Number(parts[1]) || 0;
+        const oldIdx = Number(parts[2]) || 0;
+        const allPool = (CLASS_SKILLS[targetCls] || []).filter(augmentable);
+        const treePool = allPool.filter((s) => s.tree === targetTree);
+        const pool = treePool.length ? treePool : allPool;
+        if (pool.length) {
+          a.sk = pool[oldIdx % pool.length].id;
+          remapped = true;
+        }
+      }
+    }
+    if (remapped && it.slot === 'ring' && it.rname && !it.uname && it.aug[0] && AUGMENTS[it.aug[0].id]) {
+      it.rname = `${AUGMENTS[it.aug[0].id].word} ${it.baseName} of ${augTarget(it.aug[0])}`;
+    }
+  }
   if (!Array.isArray(c.tabs)) c.tabs = [];
   while (c.tabs.length < TAB_SLOTS) c.tabs.push(null);
   if (!Number.isInteger(c.tabAt) || c.tabAt < 0 || c.tabAt >= TAB_SLOTS) c.tabAt = 0;

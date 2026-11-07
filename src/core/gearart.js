@@ -78,7 +78,7 @@ async function loadClassGear(cls) {
   if (a.width < meta.cols * fw || a.height < rows * fh || am.width !== a.width || am.height !== a.height) {
     throw new Error(cls + ' armor atlas does not match its gear.json');
   }
-  if (!helmetHelms.meta.classes.includes(cls)) throw new Error('No helmet art for ' + cls);
+  if (!helmetHelms.meta.classes.includes(cls) && cls !== 'monk') throw new Error('No helmet art for ' + cls);
   return { cls, meta, armor: pixels(a), amask: channel(am), helmetHelms };
 }
 
@@ -216,7 +216,8 @@ const recolouredHelms = new Map();
 /** The shared atlas cell for this class and design, with the item's finish applied. */
 function helmetPixels(cls, id, pi, set, src = S) {
   const data = src[set + 'Helms'], [cw, ch] = data.meta.frame;
-  const col = data.meta.classes.indexOf(cls), sx = col * cw, sy = (id - 1) * ch, aw = data.atlas.width;
+  const helmCls = data.meta.classes.includes(cls) ? cls : 'barbarian';
+  const col = data.meta.classes.indexOf(helmCls), sx = col * cw, sy = (id - 1) * ch, aw = data.atlas.width;
   const key = set + '|' + cls + '|' + id + '|' + pi;
   let result = recolouredHelms.get(key);
   if (result) return result;
@@ -236,7 +237,8 @@ function helmetPixels(cls, id, pi, set, src = S) {
 
 function helmetPlacement(meta, box, design, set, src = S) {
   const helmets = src[set + 'Helms'], [cw, ch] = helmets.meta.frame;
-  const f = resolveHelmetFit(helmets.meta, helmets.placements, src.cls, design, meta.headTop);
+  const helmCls = helmets.meta.classes.includes(src.cls) ? src.cls : 'barbarian';
+  const f = resolveHelmetFit(helmets.meta, helmets.placements, helmCls, design, meta.headTop);
   const { x: dx, y: dy, scaleX: sx, scaleY: sy, rotation = 0 } = f;
   const [x0, y0, x1, y1] = box;
   const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;

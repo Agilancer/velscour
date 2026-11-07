@@ -33,16 +33,16 @@ function hero(L, ilvl) {
   const a = { ...C.base }; a[prim] += pts * 0.6; a.vit += pts * 0.4;
   const at = (k) => a[k] + (add[k] || 0) + (add.allAttr || 0);
   const vit = at('vit'), str = at('str'), primary = at(prim);
-  const hp = (C.life + (L - 1) * C.lifeLvl + vit * 3 + (add.life || 0)) * (1 + ((add.lifePct || 0) + MARKS_LIFE) / 100) * fortitude(L);
-  const arm = (armor + (add.armor || 0) + str) * (1 + (add.armorPct || 0) / 100);
-  const res = Math.min(75, (add.resAll || 0) + (add.resFire || 0));
+  const hp = (C.life + (L - 1) * C.lifeLvl + Math.round(Math.pow(L - 1, 2) * 0.45) + vit * 6 + (add.life || 0)) * (1 + ((add.lifePct || 0) + MARKS_LIFE) / 100) * fortitude(L);
+  const arm = (armor + (add.armor || 0) + str + (L - 1) * 1.5) * (1 + (add.armorPct || 0) / 100);
+  const res = Math.min(75, (add.resAll || 0) + (add.resFire || 0) + Math.round((L - 1) * 0.2));
   return { hp, arm, res, wdmg, add, primary, regen: 0.6 + L * 0.12 + vit * 0.05 + (add.lifeRegen || 0), ls: add.lifeSteal || 0 };
 }
 const sk = { row: 6, m: {}, kind: 'proj' };
 if (MARKS_LIFE) console.log(`Infernal Marks: +${MARKS_LIFE}% life in the life pool`);
 console.log(`class ${cls}: depth -> mlvl | hero hp armor%  hitN hitN%  | dps  ttk(norm) ttk(champ) ttk(boss) | hits to die (norm/champ/boss)`);
 console.log('(rough: DPS here over-counts; the in-browser numbers come from balance.js. Hits to die is the number to watch.)');
-for (const depth of [5, 20, 40, 60, 80, 100, 120, 140, 150, 160, 180, 200, 250, 300, 400, 500, ...(MARKS_LIFE ? [700, 1000, 1200] : [])]) {
+for (const depth of [5, 15, 20, 40, 60, 80, 100, 120, 140, 150, 160, 180, 200, 250, 300, 400, 500, ...(MARKS_LIFE ? [700, 1000, 1200] : [])]) {
   const L = depthLevel(depth), h = hero(Math.min(3000, L + 2), L);
   const B = monsterBase(L);
   const mit = 1 - h.arm / (h.arm + armorDiv(L));
@@ -53,6 +53,8 @@ for (const depth of [5, 20, 40, 60, 80, 100, 120, 140, 150, 160, 180, 200, 250, 
   const hitD = (base + h.wdmg * 0.6) * mult * (1 + 0.15 * 0.5);
   const dps = hitD * 1.6;
   const mhit = B.dmg * mit, ehit = B.dmg * (1 - h.res / 100);
+  const fgMul = 6 + Math.pow(Math.min(depth, 500) / 500, 0.75) * 32;
   const f = (x) => x.toFixed(1).padStart(6);
-  console.log(`${String(depth).padStart(4)} -> ${String(L).padStart(3)} | ${String(Math.round(h.hp)).padStart(6)} ${f(100 * (1 - mit))} ${f(mhit)} ${f(100 * mhit / h.hp)}% | ${String(Math.round(dps)).padStart(7)} ${f(B.hp / dps)} ${f(B.hp * 3 / dps)} ${f(B.hp * (10 + Math.min(depth, 120) / 10) * 2 / dps)} | ${f(h.hp / mhit)} ${f(h.hp / (mhit * 1.4))} ${f(h.hp / (mhit * 1.9 * 2))}`);
+  console.log(`${String(depth).padStart(4)} -> ${String(L).padStart(3)} | ${String(Math.round(h.hp)).padStart(6)} ${f(100 * (1 - mit))} ${f(mhit)} ${f(100 * mhit / h.hp)}% | ${String(Math.round(dps)).padStart(7)} ${f(B.hp / dps)} ${f(B.hp * 3.5 / dps)} ${f(B.hp * fgMul / dps)} | ${f(h.hp / mhit)} ${f(h.hp / (mhit * 1.35))} ${f(h.hp / (mhit * 1.7 * 2))}`);
 }
+process.exit(0);

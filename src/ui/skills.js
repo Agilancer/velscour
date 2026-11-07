@@ -12,6 +12,7 @@ import { SLOT_LABELS, freeSlot } from '../data/bar.js';
 import { MAX_MASTERY, masteryNeed, masteryMul, masteryTier, TIER_NAMES } from '../game/augments.js';
 import { AUGMENTS } from '../data/rings.js';
 import { skillUp } from './skillup.js';
+import { skillMorphFor, applySkillMorph } from '../data/talents.js';
 
 /** A skill's damage range on the shown scale of the hero's depth (data/depth.js). */
 const skillDmg = (sk, L) => G.player.skillDamage(sk, L).map((v) => fmtDmg(shownDmg(v, heroDmgLevel(G.char))));
@@ -32,7 +33,6 @@ function masteryHtml(sk, compact) {
 
 export { SLOT_LABELS };
 let curTree = 0;
-let selected = null;
 
 export function canLearn(sk) {
   const c = G.char;
@@ -79,7 +79,10 @@ export function respec() {
   c.skillPoints += refund;
   c.gold -= cost;
   c.bar = c.bar.map((id) => (id && c.skills[id] > 0 ? id : null));
-  if (!c.bar[0]) c.bar[0] = `${c.classId}.0.0`;
+  if (!c.bar[0]) {
+    const def = (CLASS_SKILLS[c.classId] || []).find((s) => s.m.free && c.skills[s.id] > 0) || (CLASS_SKILLS[c.classId] || [])[0];
+    if (def) c.bar[0] = def.id;
+  }
   sfx('buff');
   UI.log(`Skills reset: <b>${refund}</b> skill points refunded for ${cost.toLocaleString()} gold.`, '#ffd860');
   G.player.recompute();
@@ -109,23 +112,32 @@ export function skillDetail(sk) {
   const p = G.player, c = G.char;
   const box = el('div', 'skill-detail');
   if (!sk) { box.innerHTML = '<div class="dim">Select a skill to see what it does. Drag learned skills onto your skill bar, or use the buttons to assign them.</div>'; return box; }
+  const morph = skillMorphFor(p, sk);
+  const effSk = morph ? applySkillMorph(sk, morph) : sk;
   const base = c.skills[sk.id] || 0;
   const L = effLevel(p, sk);
-  const E = elem(sk.el);
+  const E = elem(effSk.el);
   const showL = Math.max(1, L);
   const dmg = skillDmg(sk, showL);
   const tags = [sk.kind, E.name, CLASSES[sk.classId].trees[sk.tree]].map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join('');
-  let h = `<h3>${escapeHtml(sk.name)}</h3><div>${tags}</div>`;
+  let h = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+    <img src="${skillIconURL(sk)}" alt="" style="width:48px;height:48px;border-radius:5px;border:1px solid #6b4e28;flex-shrink:0">
+    <div><h3 style="margin:0 0 3px">${escapeHtml(sk.name)}</h3><div>${tags}</div></div>
+  </div>`;
   h += `<div class="dim" style="margin:4px 0">Level ${base}${L > base ? ` <span style="color:#8fb4ff">(+${L - base})</span>` : ''} / ${MAX_SKILL_LEVEL} · Requires character level ${sk.reqLevel}${sk.prereq ? ` · Requires ${escapeHtml(SKILLS[sk.prereq].name)}` : ''}</div>`;
-  h += `<p style="margin:6px 0">${describe(sk, showL, dmg)}</p>`;
+  h += `<p style="margin:6px 0">${describe(effSk, showL, dmg)}</p>`;
+  if (morph && morph.labels && morph.labels.length) {
+    h += `<div style="margin:4px 0;font-size:12px;color:#ffb86c">Talent Morphs: <b>${morph.labels.map(escapeHtml).join(', ')}</b></div>`;
+  }
   const mc = manaCost(sk, showL), rc = rageCost(sk), cd = cooldown(sk);
-  h += `<div class="dim">${rc ? 'Rage' : 'Mana'}: <b style="color:${rc ? '#ff9933' : '#8fb4ff'}">${rc || mc || (sk.classId === 'barbarian' && sk.kind === 'whirl' ? '10 to start · 10/s' : 'Free')}</b>${cd ? ` · Cooldown: <b>${(cd * (1 - p.st.cdr / 100)).toFixed(1)}s</b>` : ''}</div>`;
+  const effCd = cd ? Math.max(0.2, cd * (1 - p.st.cdr / 100) * (1 - (morph ? morph.cdPct || 0 : 0) / 100)) : 0;
+  h += `<div class="dim">${rc ? 'Rage' : 'Mana'}: <b style="color:${rc ? '#ff9933' : '#8fb4ff'}">${rc || mc || (sk.classId === 'barbarian' && sk.kind === 'whirl' ? '10 to start · 10/s' : 'Free')}</b>${effCd ? ` · Cooldown: <b>${effCd.toFixed(1)}s</b>` : ''}</div>`;
   if (base < MAX_SKILL_LEVEL) {
     const nd = skillDmg(sk, Math.max(1, L + 1));
     h += `<div class="dim" style="margin-top:4px;font-size:12px">Next level: ${nd[0]}–${nd[1]} damage, ${rageCost(sk) ? rageCost(sk) + ' Rage' : manaCost(sk, L + 1) + ' mana'}</div>`;
   }
-  if (base) h += masteryHtml(sk);
-  h += `<div class="dim" style="font-size:12px;margin-top:2px">Synergy: +3% damage per point in other ${escapeHtml(CLASSES[sk.classId].trees[sk.tree])} skills (now x${p.synergy(sk).toFixed(2)})</div>`;
+  if (base) h += masteryHtml(effSk);
+  h += `<div class="dim" style="font-size:12px;margin-top:2px">Synergy: +1.5% damage per point in other ${escapeHtml(CLASSES[sk.classId].trees[sk.tree])} skills (now x${p.synergy(sk).toFixed(2)})</div>`;
   box.innerHTML = h;
   const row = el('div', 'row');
   row.style.marginTop = '8px';
@@ -156,12 +168,86 @@ export function skillDetail(sk) {
   return box;
 }
 
+export function skillTooltip(sk) {
+  if (!sk) return '';
+  const p = G.player, c = G.char;
+  const morph = skillMorphFor(p, sk);
+  const effSk = morph ? applySkillMorph(sk, morph) : sk;
+  const base = c.skills[sk.id] || 0;
+  const L = effLevel(p, sk);
+  const E = elem(effSk.el);
+  const showL = Math.max(1, L);
+  const dmg = skillDmg(sk, showL);
+  const tags = [sk.kind, E.name, CLASSES[sk.classId].trees[sk.tree]].map((t) => `<span class="tt-skill-tag">${escapeHtml(t)}</span>`).join('');
+  let h = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">
+    <img src="${skillIconURL(sk)}" alt="" style="width:44px;height:44px;border-radius:5px;border:1px solid #6b4e28;flex-shrink:0">
+    <div style="min-width:0">
+      <div class="tt-name" style="color:var(--gold-bright);margin-bottom:2px">${escapeHtml(sk.name)}</div>
+      <div>${tags}</div>
+    </div>
+  </div>`;
+  h += `<div class="dim" style="font-size:12px;margin:3px 0">Level <b style="color:#f3e5c8">${base}</b>${L > base ? ` <span style="color:#8fb4ff">(+${L - base})</span>` : ''} / ${MAX_SKILL_LEVEL} · Req. Lv ${sk.reqLevel}${sk.prereq ? ` · Needs ${escapeHtml(SKILLS[sk.prereq].name)}` : ''}</div>`;
+  h += `<div style="margin:6px 0;line-height:1.4">${describe(effSk, showL, dmg)}</div>`;
+  if (morph && morph.labels && morph.labels.length) {
+    h += `<div style="margin:4px 0;font-size:12px;color:#ffb86c">Talent Morphs: <b>${morph.labels.map(escapeHtml).join(', ')}</b></div>`;
+  }
+  const mc = manaCost(sk, showL), rc = rageCost(sk), cd = cooldown(sk);
+  const effCd = cd ? Math.max(0.2, cd * (1 - p.st.cdr / 100) * (1 - (morph ? morph.cdPct || 0 : 0) / 100)) : 0;
+  h += `<div class="dim" style="font-size:13px">${rc ? 'Rage' : 'Mana'}: <b style="color:${rc ? '#ff9933' : '#8fb4ff'}">${rc || mc || (sk.classId === 'barbarian' && sk.kind === 'whirl' ? '10 to start · 10/s' : 'Free')}</b>${effCd ? ` · Cooldown: <b>${effCd.toFixed(1)}s</b>` : ''}</div>`;
+  if (base < MAX_SKILL_LEVEL) {
+    const nd = skillDmg(sk, Math.max(1, L + 1));
+    h += `<div class="dim" style="margin-top:3px;font-size:12px">Next level: ${nd[0]}–${nd[1]} damage, ${rageCost(sk) ? rageCost(sk) + ' Rage' : manaCost(sk, L + 1) + ' mana'}</div>`;
+  }
+  if (base) {
+    h += `<div style="margin-top:5px">${masteryHtml(effSk, true)}</div>`;
+    const aug = p.augFor(effSk);
+    if (aug) h += `<div style="margin-top:3px;font-size:12px">Ring augments: ${Object.entries(aug).map(([id, pw]) => `<b style="color:${elem(AUGMENTS[id].el).glow}">${AUGMENTS[id].name}</b> <span class="dim">(${pw.toFixed(2)})</span>`).join(', ')}</div>`;
+  }
+  h += `<div class="dim" style="font-size:11.5px;margin-top:4px">Synergy: +1.5% dmg per point in ${escapeHtml(CLASSES[sk.classId].trees[sk.tree])} (x${p.synergy(sk).toFixed(2)})</div>`;
+
+  const actions = [];
+  const why = canLearn(sk);
+  if (c.skillPoints > 0) {
+    h += `<div class="tt-skill-up">`;
+    h += `<div class="tt-skill-pts"><span class="dim">Skill Points Available:</span> <b class="gold-text">${c.skillPoints}</b></div>`;
+    if (!why) {
+      h += `<div class="tt-skill-btns">`;
+      const addAct = (label, fn, title = '') => {
+        const idx = actions.length;
+        actions.push({ label, fn, keepOpen: true });
+        h += `<button type="button" class="btn small" data-tt-act="${idx}"${title ? ` title="${escapeHtml(title)}"` : ''}>${escapeHtml(label)}</button>`;
+      };
+      addAct(base ? 'Upgrade (+1)' : 'Learn (+1)', (e) => learn(sk, clickPoints(e)), 'Shift-click: +5 · Ctrl-click: max');
+      const room = Math.min(c.skillPoints, MAX_SKILL_LEVEL - base);
+      if (room >= 5) addAct('+5', () => learn(sk, 5));
+      if (room > 1) addAct(`Max (+${room})`, () => learn(sk, room));
+      h += `</div>`;
+    } else {
+      h += `<div style="font-size:12px;color:${why === 'Maxed' ? '#ffd34a' : '#ff8080'}">${escapeHtml(why === 'Maxed' ? 'Max Rank Reached (20/20)' : why)}</div>`;
+    }
+    h += `</div>`;
+  } else if (!base && why && why !== 'No skill points') {
+    h += `<div style="margin-top:6px;font-size:12px;color:#ff8080">${escapeHtml(why)}</div>`;
+  }
+
+  if (L > 0) {
+    h += `<div class="tt-sep" style="margin-top:8px"></div><div class="dim" style="font-size:11.5px">Assign to slot:</div><div class="assign-row">`;
+    SLOT_LABELS.forEach((lab, i) => {
+      const idx = actions.length;
+      actions.push({ label: lab, fn: () => assign(i, sk.id), keepOpen: true });
+      h += `<button type="button" class="btn small${c.bar[i] === sk.id ? ' red' : ''}" data-tt-act="${idx}">${escapeHtml(lab)}</button>`;
+    });
+    h += `</div>`;
+  }
+
+  return { html: h, actions, interactive: true };
+}
+
 function makeDrag(node, sk) {
   draggable(node, {
     key: 'skill:' + sk.id,
     data: () => ((G.char.skills[sk.id] || 0) > 0 ? { type: 'skill', id: sk.id } : null),
     icon: () => skillIconURL(sk),
-    onClick: () => { selected = sk.id; sfx('ui'); UI.refresh(); },
     onDouble: (e) => learn(sk, clickPoints(e)),
     onRight: (e) => learn(sk, clickPoints(e)),
   });
@@ -173,16 +259,23 @@ export function renderTree(body) {
   const C = CLASSES[c.classId];
   const head = el('div', 'row');
   head.style.justifyContent = 'space-between';
-  head.innerHTML = `<span>Skill Points: <b class="gold-text" style="font-size:18px">${c.skillPoints}</b></span><span class="dim" style="font-size:12px">Click to inspect · double/right-click to learn (Shift +5, Ctrl max) · drag to the skill bar</span>`;
-  const rb = el('button', 'btn small respec-btn', `Respec (${respecCost(c.level).toLocaleString()} gold)`);
+  head.innerHTML = `<span>Skill Points: <b class="gold-text" style="font-size:18px">${c.skillPoints}</b></span>`;
+  const rb = el('button', 'btn small respec-btn', `Respec (${respecCost(c.level).toLocaleString()}g)`);
   rb.title = 'Refund all spent skill points: 100 gold x level';
   if (c.gold < respecCost(c.level)) rb.style.opacity = '.45';
   rb.onclick = () => { sfx('ui'); respecDialog(); };
   const mb = el('button', 'btn small', 'Macros');
   mb.title = 'Cast several skills with one key (ui/macros.js)';
   mb.onclick = () => G.ui.macros.open();
+  const tbBtn = el('button', 'btn small', `Talents (T)${c.talentPoints > 0 ? ` [${c.talentPoints}]` : ''}`);
+  tbBtn.title = 'Open Passive Talent Tree (T)';
+  tbBtn.onclick = () => {
+    sfx('ui');
+    UI.closePanel('tree');
+    import('./talents.js').then(({ toggleTalents }) => toggleTalents());
+  };
   const btns = el('span', 'row');
-  btns.append(mb, rb);
+  btns.append(tbBtn, mb, rb);
   head.appendChild(btns);
   body.appendChild(head);
   const tabs = el('div', 'tabs');
@@ -193,7 +286,7 @@ export function renderTree(body) {
     tabs.appendChild(tb);
   });
   body.appendChild(tabs);
-  const wrap = el('div', 'inv-wrap');
+  const stage = el('div', 'tree-stage');
   const grid = el('div', 'tree');
   const skills = CLASS_SKILLS[c.classId].filter((s) => s.tree === curTree);
   for (const sk of skills) {
@@ -209,14 +302,12 @@ export function renderTree(body) {
     if (!lv && why && why !== 'No skill points') node.classList.add('locked');
     if (!why) node.classList.add('avail');
     if (lv) node.classList.add('has');
-    if (selected === sk.id) node.classList.add('sel');
     if (sk.row > 0) node.appendChild(el('div', 'link'));
     node.appendChild(el('span', 'lvl', String(lv)));
     const M = lv && c.mastery && c.mastery[sk.id] ? c.mastery[sk.id][0] : 0;
     if (M > 1) node.appendChild(el('span', 'mlvl', String(M)));
-    node.title = sk.name;
     makeDrag(node, sk);
-    UI.tip(node, () => `<b style="color:#ffe2a0">${escapeHtml(sk.name)}</b><div class="dim">Level ${lv}/${MAX_SKILL_LEVEL} · Req. lvl ${sk.reqLevel}</div><div style="max-width:260px">${describe(sk, Math.max(1, effLevel(G.player, sk)), skillDmg(sk, Math.max(1, effLevel(G.player, sk))))}</div>`);
+    UI.tip(node, () => skillTooltip(sk), { interactive: true, key: 'skill:' + sk.id });
     grid.appendChild(node);
   }
   ROW_LEVELS.forEach((lv, r) => {
@@ -226,18 +317,18 @@ export function renderTree(body) {
     lab.style.width = '0'; lab.style.whiteSpace = 'nowrap';
     grid.appendChild(lab);
   });
-  wrap.appendChild(grid);
-  wrap.appendChild(skillDetail(selected && SKILLS[selected] && SKILLS[selected].tree === curTree ? SKILLS[selected] : selected ? SKILLS[selected] : null));
-  body.appendChild(wrap);
+  stage.appendChild(grid);
+  stage.appendChild(el('div', 'dim tree-hint', G.touch ? 'Tap a skill to inspect, upgrade & assign' : 'Hover a skill to inspect & upgrade · double/right-click to learn · drag to bar'));
+  body.appendChild(stage);
 }
 
 export function renderBook(body) {
   const c = G.char, p = G.player;
   body.innerHTML = '';
-  body.appendChild(el('div', 'dim', 'Your learned abilities. Drag one onto a skill bar slot (LMB, `, 1–9, 0, -, =, RMB) or tap it and choose a slot.'));
-  const wrap = el('div', 'inv-wrap');
+  body.appendChild(el('div', 'dim', 'Your learned abilities. Drag one onto a skill bar slot (LMB, `, 1–9, 0, -, =, RMB) or hover/tap it to assign a slot.'));
   const list = el('div', 'book-list');
   list.style.minWidth = 'min(420px, 90vw)';
+  list.style.marginTop = '8px';
   const learned = CLASS_SKILLS[c.classId].filter((s) => (c.skills[s.id] || 0) > 0);
   if (!learned.length) list.appendChild(el('div', 'dim', 'No skills learned yet.'));
   for (const sk of learned) {
@@ -248,15 +339,15 @@ export function renderBook(body) {
     cv.getContext('2d').drawImage(skillIcon(sk, 64), 0, 0);
     it.appendChild(cv);
     const slot = c.bar.indexOf(sk.id);
-    const meta = el('div', 'meta', `<b>${escapeHtml(sk.name)}</b> <span class="dim">Lv ${L}${slot >= 0 ? ` · [${SLOT_LABELS[slot]}]` : ''}</span>${masteryHtml(sk, true)}<p>${describe(sk, L, skillDmg(sk, L))}</p>`);
+    const morph = skillMorphFor(p, sk);
+    const effSk = morph ? applySkillMorph(sk, morph) : sk;
+    const meta = el('div', 'meta', `<b>${escapeHtml(sk.name)}</b> <span class="dim">Lv ${L}${slot >= 0 ? ` · [${SLOT_LABELS[slot]}]` : ''}${morph && morph.labels.length ? ` · <span style="color:#ffb86c">${morph.labels.map(escapeHtml).join(', ')}</span>` : ''}</span>${masteryHtml(effSk, true)}<p>${describe(effSk, L, skillDmg(sk, L))}</p>`);
     it.appendChild(meta);
-    if (selected === sk.id) it.style.borderColor = '#ffe2a0';
     makeDrag(it, sk);
+    UI.tip(it, () => skillTooltip(sk), { interactive: true, key: 'book:' + sk.id });
     list.appendChild(it);
   }
-  wrap.appendChild(list);
-  wrap.appendChild(skillDetail(selected ? SKILLS[selected] : null));
-  body.appendChild(wrap);
+  body.appendChild(list);
 }
 
 export function toggleTree() {

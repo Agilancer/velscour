@@ -52,6 +52,15 @@ export function titleScreen() {
     });
     add(`Heroes <span style="font-size:13px;color:#a8977c">· ${used}/${CLASS_IDS.length}</span>`, () => classSelect(last ? last.classId : 'paladin'));
     add('VELSCOUR DEFENSE', () => { location.href = 'defense/index.html'; }, 'btn blue'); // the Riftgate's game (defense/), from the title too
+    const comp = el('div', 'row');
+    comp.style.justifyContent = 'center';
+    for (const [lbl, href] of [['Hero Classes', 'classes.html'], ['Bestiary', 'bestiary.html']]) {
+      const b = el('button', 'btn', lbl);
+      b.style.flex = '1';
+      b.onclick = () => { if (!s.classList.contains('title-ready')) return; initAudio(); sfx('ui'); location.href = href; };
+      comp.appendChild(b);
+    }
+    menu.appendChild(comp);
     add('Settings', settingsDialog, 'btn');
     add('Credits', () => creditsScreen(titleScreen), 'btn');
     add('How to Play', helpDialog, 'btn');
@@ -432,7 +441,7 @@ export function helpDialog() {
     <div><kbd>&#96;</kbd> <kbd>1</kbd>–<kbd>9</kbd> <kbd>0</kbd> <kbd>-</kbd> <kbd>=</kbd> cast skills at the cursor (13 keys + both mouse buttons)</div>
     <div><kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd> <kbd>V</kbd> potions</div>
     <div><kbd>R</kbd> <kbd>E</kbd> <kbd>Y</kbd> <kbd>U</kbd> <kbd>O</kbd> macros: several skills on one key, set up from the skill tree's <b>Macros</b> button (or the menu)</div>
-    <div><kbd>I</kbd> inventory · <kbd>K</kbd> skill tree · <kbd>B</kbd> skill book · <kbd>Q</kbd> quest log</div>
+    <div><kbd>I</kbd> inventory · <kbd>K</kbd> skill tree · <kbd>T</kbd> talents · <kbd>B</kbd> skill book · <kbd>Q</kbd> quest log</div>
     <div><kbd>Tab</kbd>/<kbd>M</kbd> map · <kbd>Esc</kbd> menu · wheel zoom</div>
     <div>First-person view (Settings): <kbd>A</kbd>/<kbd>D</kbd> turn, <kbd>W</kbd>/<kbd>S</kbd> walk, click the floor to walk there</div>
     <div><kbd>P</kbd> or the <b>Auto</b> button: auto-play (the hero fights, loots, shops and delves on autopilot)</div>

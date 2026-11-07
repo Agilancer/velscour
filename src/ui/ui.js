@@ -1,5 +1,6 @@
 // UI core: panels, dialogs, tooltips, drag & drop, message log.
 import { onArtLoad } from '../core/classart.js';
+import { onSkillSheetLoad } from './icons.js';
 import { G } from '../state.js';
 import { el, escapeHtml } from '../core/util.js';
 import { sfx } from '../core/audio.js';
@@ -16,6 +17,14 @@ export const UI = {
   init() {
     G.ui = this;
     onArtLoad(() => this.refresh()); // armor icons and the portrait appear once their strips arrive
+    onSkillSheetLoad(() => {
+      if (this.hud && this.hud.slots) for (const s of this.hud.slots) if (s.last && typeof s.map !== 'string') s.last.icon = undefined;
+      if (G.touchUI) {
+        if (G.touchUI.btns) for (const t of G.touchUI.btns) if (t.last) t.last.id = undefined;
+        if (G.touchUI.macroBtns) for (const m of G.touchUI.macroBtns) m.last = undefined;
+      }
+      this.refresh();
+    });
     this.panelsEl = $('#panels');
     this.screensEl = $('#screens');
     this.tipEl = $('#tooltip');
@@ -23,7 +32,26 @@ export const UI = {
     this.msgEl = $('#center-msg');
     this.ghost = $('#drag-ghost');
     initDnD();
-    document.addEventListener('pointermove', (e) => { if (!this.tipEl.classList.contains('hidden') && e.pointerType === 'mouse') this.placeTip(e.clientX, e.clientY); });
+    this.tipEl.addEventListener('pointerenter', () => {
+      if (this.tipHideT) { clearTimeout(this.tipHideT); this.tipHideT = 0; }
+    });
+    this.tipEl.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse' && this.isInteractiveTip && !this.isTouchTip) {
+        this.scheduleHideTip();
+      }
+    });
+    document.addEventListener('pointermove', (e) => {
+      if (!this.tipEl.classList.contains('hidden') && e.pointerType === 'mouse' && !this.isTouchTip && !this.isInteractiveTip) {
+        this.placeTip(e.clientX, e.clientY);
+      }
+    });
+    document.addEventListener('pointerdown', (e) => {
+      if (this.tipEl && !this.tipEl.classList.contains('hidden')) {
+        if (this.tipEl.contains(e.target)) return;
+        if (this.touchTipTarget && this.touchTipTarget.contains(e.target)) return;
+        this.hideTip();
+      }
+    });
   },
 
   // ------------------------------------------------------------- panels
@@ -55,11 +83,12 @@ export const UI = {
   closePanel(name) {
     const p = this.panels.get(name);
     if (!p) return;
+    const hadTipInside = this.touchTipTarget && p.root.contains(this.touchTipTarget);
     p.root.remove();
     this.panels.delete(name);
     this.renderers.delete(name);
     if (p.opts.onClose) p.opts.onClose();
-    if (!this.panels.size) { this.selected = null; this.hideTip(); }
+    if (!this.panels.size || hadTipInside) { if (!this.panels.size) this.selected = null; this.hideTip(); }
     this.onPanelsChanged();
   },
   closeAll() { for (const k of [...this.panels.keys()]) this.closePanel(k); },
@@ -69,6 +98,15 @@ export const UI = {
     for (const [name, r] of this.renderers) {
       const p = this.panels.get(name);
       if (p) { const st = p.body.scrollTop; r(p.body, p); p.body.scrollTop = st; }
+    }
+    if (this.tipEl && !this.tipEl.classList.contains('hidden') && this.tipKey && this.tipRefreshFn) {
+      const safeKey = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(this.tipKey) : this.tipKey.replace(/"/g, '\\"');
+      const nextAnchor = document.querySelector(`[data-tip-key="${safeKey}"]`);
+      if (nextAnchor) {
+        this.showTip(this.tipRefreshFn(), 0, 0, this.isTouchTip, nextAnchor, { interactive: this.isInteractiveTip, key: this.tipKey, fn: this.tipRefreshFn });
+      } else {
+        this.hideTip();
+      }
     }
     if (this.hud) this.hud.refreshStatic();
   },
@@ -125,25 +163,119 @@ export const UI = {
   },
 
   // ------------------------------------------------------------- tooltip
-  showTip(html, x, y) {
-    if (G.touch) return;
+  scheduleHideTip(ms = 130) {
+    clearTimeout(this.tipHideT);
+    this.tipHideT = setTimeout(() => { this.tipHideT = 0; this.hideTip(); }, ms);
+  },
+  showTip(content, x, y, isTouch = false, anchorEl = null, opts = {}) {
+    let html = '', actions = null, interactive = !!opts.interactive;
+    if (content && typeof content === 'object') {
+      html = content.html || '';
+      actions = content.actions || null;
+      if (content.interactive) interactive = true;
+    } else {
+      html = content || '';
+    }
+    if (!html) return;
+    if (this.tipHideT) { clearTimeout(this.tipHideT); this.tipHideT = 0; }
     this.tipEl.innerHTML = html;
+    this.isTouchTip = isTouch;
+    this.isInteractiveTip = interactive;
+    this.touchTipTarget = anchorEl;
+    this.tipKey = opts.key || null;
+    this.tipRefreshFn = opts.fn || null;
+    this.tipEl.classList.toggle('touch-open', isTouch);
+    this.tipEl.classList.toggle('interactive', interactive);
     this.tipEl.classList.remove('hidden');
-    this.placeTip(x, y);
+    if (actions && actions.length) {
+      this.tipEl.querySelectorAll('[data-tt-act]').forEach((btn) => {
+        const idx = +btn.dataset.ttAct;
+        const act = actions[idx];
+        if (act && act.fn) {
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            if (!act.keepOpen) this.hideTip();
+            act.fn(e);
+          };
+        }
+      });
+    }
+    if (interactive && anchorEl) this.placeTipAtAnchor(anchorEl);
+    else this.placeTip(x, y);
+  },
+  placeTipAtAnchor(anchorEl) {
+    const t = this.tipEl;
+    t.style.maxWidth = 'min(340px, calc(100vw - 16px))';
+    t.style.maxHeight = 'calc(100vh - 24px)';
+    t.style.overflowY = 'auto';
+    const a = anchorEl.getBoundingClientRect();
+    const r = t.getBoundingClientRect();
+    let nx, ny;
+    if (a.right + 10 + r.width <= innerWidth - 8) {
+      nx = a.right + 10;
+      ny = a.top - 6;
+    } else if (a.left - 10 - r.width >= 8) {
+      nx = a.left - r.width - 10;
+      ny = a.top - 6;
+    } else {
+      nx = (innerWidth - r.width) / 2;
+      ny = a.bottom + 8 + r.height <= innerHeight - 8 ? a.bottom + 8 : a.top - r.height - 8;
+    }
+    nx = Math.max(8, Math.min(nx, innerWidth - r.width - 8));
+    ny = Math.max(8, Math.min(ny, innerHeight - r.height - 8));
+    t.style.left = Math.round(nx) + 'px';
+    t.style.top = Math.round(ny) + 'px';
   },
   placeTip(x, y) {
-    const t = this.tipEl, r = t.getBoundingClientRect();
+    const t = this.tipEl;
+    t.style.maxWidth = 'min(340px, calc(100vw - 16px))';
+    t.style.maxHeight = 'calc(100vh - 24px)';
+    t.style.overflowY = 'auto';
+    const r = t.getBoundingClientRect();
     let nx = x + 18, ny = y + 12;
-    if (nx + r.width > innerWidth - 4) nx = x - r.width - 14;
-    if (ny + r.height > innerHeight - 4) ny = innerHeight - r.height - 4;
-    t.style.left = Math.max(4, nx) + 'px';
-    t.style.top = Math.max(4, ny) + 'px';
+    if (nx + r.width > innerWidth - 8) nx = x - r.width - 14;
+    if (ny + r.height > innerHeight - 8) ny = innerHeight - r.height - 8;
+    nx = Math.max(8, Math.min(nx, innerWidth - r.width - 8));
+    ny = Math.max(8, Math.min(ny, innerHeight - r.height - 8));
+    t.style.left = Math.round(nx) + 'px';
+    t.style.top = Math.round(ny) + 'px';
   },
-  hideTip() { this.tipEl.classList.add('hidden'); },
-  /** Attach hover tooltip to an element. html may be a function. */
-  tip(elm, html) {
-    elm.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse' && !drag.active) this.showTip(typeof html === 'function' ? html() : html, e.clientX, e.clientY); });
-    elm.addEventListener('pointerleave', () => this.hideTip());
+  hideTip() {
+    if (this.tipHideT) { clearTimeout(this.tipHideT); this.tipHideT = 0; }
+    this.tipEl.classList.add('hidden');
+    this.tipEl.classList.remove('touch-open', 'interactive');
+    this.isTouchTip = false;
+    this.isInteractiveTip = false;
+    this.touchTipTarget = null;
+    this.tipKey = null;
+    this.tipRefreshFn = null;
+  },
+  /** Attach hover tooltip to an element (and tap on touch). html may be a function returning string or { html, actions }. */
+  tip(elm, html, opts = {}) {
+    const fn = typeof html === 'function' ? html : () => html;
+    if (opts.key) elm.dataset.tipKey = opts.key;
+    elm.addEventListener('pointerenter', (e) => {
+      if (e.pointerType === 'mouse' && !drag.active) {
+        if (this.tipHideT) { clearTimeout(this.tipHideT); this.tipHideT = 0; }
+        this.showTip(fn(), e.clientX, e.clientY, false, elm, { ...opts, fn });
+      }
+    });
+    elm.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse' && !this.isTouchTip) {
+        if (opts.interactive || this.isInteractiveTip) this.scheduleHideTip();
+        else this.hideTip();
+      }
+    });
+    elm.addEventListener('pointerup', (e) => {
+      if (e.pointerType !== 'mouse' || G.touch) {
+        if (!drag.active) {
+          const content = fn();
+          if (content) {
+            this.showTip(content, e.clientX, e.clientY, true, elm, { ...opts, fn });
+          }
+        }
+      }
+    });
   },
 };
 
