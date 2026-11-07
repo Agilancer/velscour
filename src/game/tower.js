@@ -803,7 +803,7 @@ function minimap(world, tw, c, W, H, big) {
     c.fillText(`Turn ${Math.min(Math.floor(turns) + 1, Math.ceil(g.v.turns))}/${Math.ceil(g.v.turns)}`, cx, cy + 4);
     const dot = (x, y, col, r) => { const a = a0 + ((g.s(x) / g.C) % 1) * TAU, q = g.r(y) * k; c.fillStyle = col; c.beginPath(); c.arc(cx + Math.cos(a) * q, cy + Math.sin(a) * q, r, 0, TAU); c.fill(); };
     for (const m of world.creatures) {
-      if (m.dead || m === p || m.x < g.XR || Math.abs(g.s(m.x) - s) > 30) continue;
+      if (m.dead || m === p || m.clutter || m.x < g.XR || Math.abs(g.s(m.x) - s) > 30) continue;
       dot(m.x, m.y, m.team === 'enemy' ? (m.rank !== 'normal' ? '#ffb040' : '#ff3030') : '#40ff60', 2);
     }
     dot(g.door[0], g.door[1], '#ff8040', big ? 6 : 3.5);
@@ -812,6 +812,6 @@ function minimap(world, tw, c, W, H, big) {
   }
   const dot = (x, y, col, r) => { const dx = x - g.AX, dy = y - g.AY; c.fillStyle = col; c.beginPath(); c.arc(cx + (dx - dy) * k * 0.72, cy + (dx + dy) * k * 0.36, r, 0, TAU); c.fill(); };
   for (const po of world.portals) if (po.x < g.XR && po.x > 0) dot(po.x, po.y, po.active ? po.color : '#888', big ? 6 : 4);
-  for (const m of world.creatures) if (!m.dead && m !== p && m.x < g.XR && m.x > -30) dot(m.x, m.y, m.team === 'enemy' ? (m.rank === 'boss' ? '#ff8000' : '#ff3030') : '#40ff60', m.rank === 'boss' ? 4 : 2);
+  for (const m of world.creatures) if (!m.dead && m !== p && !m.clutter && m.x < g.XR && m.x > -30) dot(m.x, m.y, m.team === 'enemy' ? (m.rank === 'boss' ? '#ff8000' : '#ff3030') : '#40ff60', m.rank === 'boss' ? 4 : 2);
   dot(p.x, p.y, '#ffffff', big ? 5 : 3.2);
 }

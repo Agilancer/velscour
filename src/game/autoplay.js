@@ -31,6 +31,7 @@ import { fadeOf } from './loot.js';
 import { addToBag } from './player.js';
 import { nextRowCost, buyBagRow } from '../data/bag.js';
 import { Delayed, Area, Whirl, Fissure } from './hazards.js';
+import { hit } from './combat.js';
 import { bountyGoal } from './wanderers.js';
 import { heroVisit } from './townlife.js';
 import { homunculusChat, isHomunculus } from './homunculus.js';
@@ -384,7 +385,7 @@ function bagWait(c) { return bagFree(c) === 0; }
 function sellPrice(it) { return Math.max(1, Math.floor(itemValue(it) / 4)) * (it.type === 'gem' ? (it.count || 1) : 1); }
 function vendorNpc(w, id) { return w.npcs.find((n) => n.vendor && n.vendor.id === id); }
 function potionPrice(k, c) { return Math.round(POTION_PRICE[k] * (1 + c.level * 0.08)); }
-function enemyNear(w, p, r) { return w.hostiles('player', p.x, p.y, r).filter((m) => !m.dead && m.team === 'enemy'); }
+function enemyNear(w, p, r) { return w.hostiles('player', p.x, p.y, r).filter((m) => !m.dead && m.team === 'enemy' && !m.clutter); }
 function segDist(px, py, x0, y0, x1, y1) {
   const dx = x1 - x0, dy = y1 - y0, l2 = dx * dx + dy * dy || 1;
   const t = clamp(((px - x0) * dx + (py - y0) * dy) / l2, 0, 1);
@@ -505,7 +506,7 @@ export const Auto = {
 
   // ---------------------------------------------------------------- main tick (after controls.update)
   update(dt) {
-    if (!this.on) return;
+    if (!this.on || G.cine) return;
     // a bug in the bot must never stop the world from updating
     try { this.tick(dt); } catch (e) {
       console.error('auto-play:', e);
@@ -543,7 +544,7 @@ export const Auto = {
   listen(dt) {
     const L = G.heroListen, p = G.player, w = G.world;
     if (!L) return false;
-    if ((L.t -= dt) <= 0 || L.who.hidden || w.creatures.some((m) => !m.dead && m.team === 'enemy' && m.awake && dist(m.x, m.y, p.x, p.y) < 7)) { G.heroListen = null; return false; }
+    if ((L.t -= dt) <= 0 || L.who.hidden || w.creatures.some((m) => !m.dead && m.team === 'enemy' && !m.clutter && m.awake && dist(m.x, m.y, p.x, p.y) < 7)) { G.heroListen = null; return false; }
     p.moveVec = [0, 0];
     p.facing = Math.atan2(L.who.y - p.y, L.who.x - p.x);
     this.setStatus(`Listening to ${L.who.name}`);
@@ -874,8 +875,11 @@ export const Auto = {
       for (let k = 0; k < 9; k++) {
         if (!((sm >> k) & 1)) continue;
         const ox = (k % 3) - 1, oy = ((k / 3) | 0) - 1, ni = i + oy * W + ox;
-        if (d[ni] !== -1 || T[ni] !== 1 || Bl[ni]) continue;
-        if (ox && oy && (T[i + ox] !== 1 || Bl[i + ox] || T[i + oy * W] !== 1 || Bl[i + oy * W])) continue;
+        const bl = Bl[ni] && (!m.clutter || !m.clutter[ni]);
+        if (d[ni] !== -1 || T[ni] !== 1 || bl) continue;
+        const blX = Bl[i + ox] && (!m.clutter || !m.clutter[i + ox]);
+        const blY = Bl[i + oy * W] && (!m.clutter || !m.clutter[i + oy * W]);
+        if (ox && oy && (T[i + ox] !== 1 || blX || T[i + oy * W] !== 1 || blY)) continue;
         d[ni] = nd; q[t++] = ni;
       }
     }
@@ -978,7 +982,8 @@ export const Auto = {
       for (let oy = -1; oy <= 1 && next < 0; oy++) for (let ox = -1; ox <= 1; ox++) {
         const nx = x + ox, ny = y + oy;
         if ((!ox && !oy) || !m.inb(nx, ny)) continue;
-        if (ox && oy && (!m.walkableTile(x + ox, y) || !m.walkableTile(x, y + oy))) continue;
+        const okTile = (tx, ty) => m.walkableTile(tx, ty) || (m.clutter && m.clutter[ty * W + tx]);
+        if (ox && oy && (!okTile(x + ox, y) || !okTile(x, y + oy))) continue;
         if (m.hgt && !m.stepsOk(nx, ny, -ox, -oy)) continue; // walked from there to here
         if (d[ny * W + nx] === d[cur] - 1) { next = ny * W + nx; break; }
       }
@@ -1039,6 +1044,11 @@ export const Auto = {
       else break;
     }
     let [nx, ny] = this.path[0];
+    const blocking = this.getBlockingClutter(nx, ny, 1.8);
+    if (blocking) {
+      this.attackClutter(blocking);
+      return false;
+    }
     if (this.jiggle && this.jiggle.t > 0) { this.jiggle.t -= dt; nx = p.x + Math.cos(this.jiggle.a); ny = p.y + Math.sin(this.jiggle.a); }
     if (hold && this.holdEdge(nx, ny, dt)) return false; // (not when running for cover or a raid mechanic)
     this.steer(nx, ny);
@@ -1074,9 +1084,67 @@ export const Auto = {
     if (trying && (moved < 0.12 || noGain)) {
       s.n++;
       this.navT = 0; this.path = null;
+      const clutter = this.getNearbyClutter(2.2);
+      if (clutter) {
+        this.attackClutter(clutter);
+        s.n = 0;
+        return;
+      }
       if (s.n >= 2) this.jiggle = { t: 0.35, a: Math.random() * TAU };
     } else s.n = 0;
     s.t = 0; s.x = p.x; s.y = p.y; s.wp = this.path && this.path[0]; s.wd = s.wp ? dist(p.x, p.y, s.wp[0], s.wp[1]) : 0;
+  },
+  getNearbyClutter(r = 2.0) {
+    const p = G.player, w = G.world;
+    if (!w || !w.creatures) return null;
+    let closest = null, cd = r * r;
+    for (const c of w.creatures) {
+      if (c.clutter && !c.dead) {
+        const d = dist(p.x, p.y, c.x, c.y);
+        if (d * d <= cd) {
+          cd = d * d;
+          closest = c;
+        }
+      }
+    }
+    return closest;
+  },
+  getBlockingClutter(nx, ny, maxDist = 1.8) {
+    const p = G.player, w = G.world;
+    if (!w || !w.creatures) return null;
+    const dx = nx - p.x, dy = ny - p.y, len = Math.hypot(dx, dy);
+    if (len < 1e-3) return null;
+    const ux = dx / len, uy = dy / len;
+    let closest = null, cd = maxDist * maxDist;
+    for (const c of w.creatures) {
+      if (c.clutter && !c.dead) {
+        const d = dist(p.x, p.y, c.x, c.y);
+        if (d * d <= cd) {
+          const dot = (c.x - p.x) * ux + (c.y - p.y) * uy;
+          if (dot > -0.2) {
+            cd = d * d;
+            closest = c;
+          }
+        }
+      }
+    }
+    return closest;
+  },
+  attackClutter(c) {
+    const p = G.player;
+    if (!c || c.dead || !p || p.dead) return false;
+    p.facing = Math.atan2(c.y - p.y, c.x - p.x);
+    p.moveVec = [Math.cos(p.facing), Math.sin(p.facing)];
+
+    const skills = this.barSkills();
+    const primary = (G.char && G.char.bar && SKILLS[G.char.bar[0]]) || skills[0];
+    const sk = (primary && p.canUse(primary)) ? primary : skills.find((s) => p.canUse(s) && ['melee', 'smash', 'slash', 'proj', 'aoe', 'nova', 'fissure', 'beam', 'dash'].includes(s.kind));
+
+    if (sk && p.tryUseSkill(sk, c.x, c.y, c)) {
+      return true;
+    }
+    hit(p, c, 1, 'phys', { melee: true });
+    return true;
   },
 
   // ================================================================ dungeon
@@ -1273,7 +1341,7 @@ export const Auto = {
     const farm = !!w.rift || c.level < depthLevel(w.depth) + S.farm; // the monster level, not the raw depth (they part after depth 60); a rift's quota wants the whole level
     let best = null, bd = Infinity;
     for (const m of w.creatures) {
-      if (m.dead || m.team !== 'enemy' || m.targetable === false || this.giveUp.has(m) || this.shun.get(m) > w.time) continue;
+      if (m.dead || m.team !== 'enemy' || m.targetable === false || m.clutter || this.giveUp.has(m) || this.shun.get(m) > w.time) continue;
       const d = this.navDist(m.x, m.y);
       if (d === Infinity) continue;
       const lim = m.goblin ? 60 : farm ? 999 : S.lim;

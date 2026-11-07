@@ -32,10 +32,10 @@ const TRAILSIDE = ['fern_clump', 'pale_mushrooms', 'reeds', 'twisted_roots', 'wo
 const LANDMARKS = ['camp', 'well', 'shrine', 'obelisk', 'swamp', 'webs'];
 const N4 = [[0, -1, 1], [1, 0, 2], [0, 1, 4], [-1, 0, 8]];
 const LAB_FLOORS = {
-  mossy_ruins: [['gravel_path', 'shale_chips'], ['ancient_paving', 'mossy_cobbles', 'broken_path_stones', 'sunken_rune']],
-  thorn_hedge: [['dead_leaves', 'packed_mud'], ['red_leaves', 'bronze_leaves', 'thorn_litter', 'broken_path_stones']],
-  tangled_roots: [['pine_needles', 'packed_mud'], ['bark_fragments', 'pine_cones', 'mossy_cobbles', 'exposed_roots']],
-  blackwood_trunks: [['packed_mud', 'gravel_path'], ['bark_fragments', 'broken_path_stones', 'hoof_marks', 'pale_mushrooms']],
+  mossy_ruins: [['ancient_paving', 'gravel_wash'], ['broken_path_stones', 'mossy_cobbles', 'sunken_rune', 'stepping_stones']],
+  thorn_hedge: [['stepping_stones', 'gravel_path'], ['broken_path_stones', 'shale_chips', 'ancient_paving', 'bronze_leaves']],
+  tangled_roots: [['gravel_path', 'stepping_stones'], ['broken_path_stones', 'mossy_cobbles', 'shale_chips', 'ancient_paving']],
+  blackwood_trunks: [['gravel_wash', 'gravel_path'], ['ancient_paving', 'broken_path_stones', 'mossy_cobbles', 'shale_chips']],
 };
 
 function segDist(px, py, ax, ay, bx, by) {
@@ -192,7 +192,7 @@ function build(depth, biome, tileset, seed, savedSeed) {
     // two legs through a sideways-shifted midpoint, so trails wander instead of running on the grid
     const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, s = rng.range(-1.6, 1.6);
     const mid = [(a[0] + b[0]) / 2 - dy / l * s, (a[1] + b[1]) / 2 + dx / l * s];
-    const r = major ? 1.6 : 1.1;
+    const r = major ? 2.1 : 1.5;
     stamp(a[0], a[1], mid[0], mid[1], r, major ? MAJOR : MINOR);
     stamp(mid[0], mid[1], b[0], b[1], r, major ? MAJOR : MINOR);
   };
@@ -316,17 +316,17 @@ function build(depth, biome, tileset, seed, savedSeed) {
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = I(x, y), k = kind[i], n = noise(x, y, 0.07, so);
     let v;
-    if (k === MAJOR) v = rng.chance(0.09) ? pickF(['cart_ruts', 'hoof_marks', 'wolf_tracks', 'deer_tracks', 'broken_path_stones']) : f('packed_mud');
-    else if (k === MINOR) v = rng.chance(0.08) ? pickF(['fern_litter', 'exposed_roots', 'scattered_acorns', 'deer_tracks', 'red_leaves']) : f(n > 0.3 ? 'pine_needles' : 'dead_leaves');
+    if (k === MAJOR) v = rng.chance(0.22) ? pickF(['broken_path_stones', 'ancient_paving', 'stepping_stones', 'cart_ruts']) : f(n > 0 ? 'gravel_wash' : 'gravel_path');
+    else if (k === MINOR) v = rng.chance(0.20) ? pickF(['stepping_stones', 'broken_path_stones', 'mossy_cobbles', 'deer_tracks']) : f(n > 0.2 ? 'shale_chips' : n > -0.3 ? 'gravel_path' : 'packed_mud');
     else if (k === CORRIDOR || k === ARCH || k === PIER || k === WALL) {
       // each labyrinth's corridors in a floor that stands out from its walls
       const fl = LAB_FLOORS[labs[labOf[i]]?.family] || LAB_FLOORS.mossy_ruins;
-      v = rng.chance(0.14) ? pickF(fl[1]) : f(fl[0][(n > 0) | 0]);
+      v = rng.chance(0.22) ? pickF(fl[1]) : f(fl[0][(n > 0) | 0]);
     }
-    else if (k === HEART) v = rng.chance(0.25) ? pickF(['ancient_paving', 'sunken_rune', 'mossy_cobbles']) : f('damp_moss');
-    else if (k === GLADE || k === CLEARING) v = rng.chance(0.07) ? pickF(['fern_litter', 'white_petals', 'pale_mushrooms', 'dead_grass']) : f(n > 0.4 ? 'damp_moss' : 'dark_turf');
+    else if (k === HEART) v = rng.chance(0.35) ? pickF(['ancient_paving', 'sunken_rune', 'stepping_stones', 'mossy_cobbles']) : f('ancient_paving');
+    else if (k === GLADE || k === CLEARING) v = rng.chance(0.12) ? pickF(['white_petals', 'pale_mushrooms', 'stepping_stones', 'mossy_cobbles']) : f(n > 0.3 ? 'damp_moss' : 'dark_turf');
     else v = rng.chance(0.05) ? pickF(['exposed_roots', 'rotting_wood', 'pine_cones', 'bark_fragments', 'green_lichen', 'black_fungi']) :
-      f(n > 0.75 ? 'pine_needles' : n > 0.2 ? 'black_loam' : n > -0.4 ? 'dead_leaves' : n > -0.9 ? 'root_soil' : 'peat');
+      f(n > 0.6 ? 'pine_needles' : n > 0.1 ? 'black_loam' : n > -0.5 ? 'dead_leaves' : n > -0.85 ? 'root_soil' : 'peat');
     for (const [cx, cy, r, list, glade] of special) {
       const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
       if (list.length && d < r && (glade ? k === GLADE && rng.chance(0.16) : rng.chance(1.1 - d / r))) v = pickF(list);
@@ -394,7 +394,7 @@ function build(depth, biome, tileset, seed, savedSeed) {
     const x = i % W, y = (i / W) | 0;
     if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) continue;
     const edge = nearOpen(x, y, 1), far = !nearOpen(x, y, 3);
-    const sp = edge ? 1.3 : far ? 2.3 : 1.75;
+    const sp = edge ? 2.6 : far ? 1.55 : 1.8;
     const px = x + 0.5 + rng.range(-0.22, 0.22), py = y + 0.5 + rng.range(-0.22, 0.22);
     let ok = true;
     const R = Math.ceil(sp);
@@ -405,7 +405,8 @@ function build(depth, biome, tileset, seed, savedSeed) {
     if (!ok) continue;
     const spr = darkForestTree(rng.pick(TREES[stand(x, y)]));
     if (!spr) continue;
-    const p = { kind: 'scatter', x: px, y: py, spr, k: darkTreeK(rng.range(0.7, 0.9)), flip: rng.chance(0.5), tree: true };
+    const kScale = edge ? rng.range(0.60, 0.72) : rng.range(0.70, 0.86);
+    const p = { kind: 'scatter', x: px, y: py, spr, k: darkTreeK(kScale), flip: rng.chance(0.5), tree: true };
     placed.push(p); treeGrid[i] = placed.length;
   }
   // undergrowth fills the gaps along the wood's edge; trailside clutter is walk-over only

@@ -100,7 +100,54 @@
   <div id="screens"></div>
   <div id="tooltip" class="hidden"></div>
   <div id="drag-ghost" class="hidden"></div>
-  <div id="loading"><div class="spinner"></div><div id="loading-bar"><div id="loading-fill"></div></div><div id="loading-text">Summoning the depths&hellip;</div></div>
+  <div id="loading">
+    <div class="loading-backdrop"></div>
+    <div class="loading-frame">
+      <span class="loading-corner corner-tl"></span>
+      <span class="loading-corner corner-tr"></span>
+      <span class="loading-corner corner-bl"></span>
+      <span class="loading-corner corner-br"></span>
+      <div class="loading-content">
+        <div class="loading-sigil-wrap">
+          <svg class="loading-sigil-outer" viewBox="0 0 160 160">
+            <circle cx="80" cy="80" r="74" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.6" />
+            <circle cx="80" cy="80" r="64" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.8" />
+            <circle cx="80" cy="16" r="3" fill="currentColor" />
+            <circle cx="144" cy="80" r="3" fill="currentColor" />
+            <circle cx="80" cy="144" r="3" fill="currentColor" />
+            <circle cx="16" cy="80" r="3" fill="currentColor" />
+            <circle cx="125" cy="35" r="2" fill="currentColor" />
+            <circle cx="125" cy="125" r="2" fill="currentColor" />
+            <circle cx="35" cy="125" r="2" fill="currentColor" />
+            <circle cx="35" cy="35" r="2" fill="currentColor" />
+          </svg>
+          <svg class="loading-sigil-inner" viewBox="0 0 120 120">
+            <polygon points="60,12 102,84 18,84" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.75" />
+            <polygon points="60,108 18,36 102,36" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.75" />
+            <circle cx="60" cy="60" r="42" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3 5" opacity="0.5" />
+          </svg>
+          <canvas id="loading-eye" class="loading-eye loading-sigil-core" width="36" height="24"></canvas>
+        </div>
+        <div class="loading-header">
+          <h2 id="loading-title">VELSCOUR</h2>
+          <div id="loading-sub">The Abyss Awaits</div>
+        </div>
+        <div class="loading-bar-container">
+          <div id="loading-bar-wrap">
+            <div class="loading-bar-cap left"></div>
+            <div id="loading-bar"><div id="loading-fill"><div class="loading-fill-glow"></div></div></div>
+            <div class="loading-bar-cap right"></div>
+            <span id="loading-percent">0%</span>
+          </div>
+          <div id="loading-text">Summoning the depths&hellip;</div>
+        </div>
+        <div id="loading-tip-wrap">
+          <div class="loading-tip-label">ABYSSAL WHISPER</div>
+          <div id="loading-tip-text">The deeper you delve, the stronger the Defiance becomes. Slay floor champions to shatter the wall and open the way.</div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 <!-- three.js 0.170.0 (vendor/three/, same origin: no CDN to miss on a phone network), fetched only when a level draws in 3D (the Serpentine Tower, the Caverns, the pyramids) -->
 <script type="importmap">{ "imports": {

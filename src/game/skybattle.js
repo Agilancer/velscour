@@ -15,7 +15,7 @@ import { aoe } from './combat.js';
 import { makeFolk } from './folk.js';
 import { townSprite } from './render.js';
 import { TOWN_FRAME_W, TOWN_FRAME_H, townFrameOf } from './townsfolkvisuals.js';
-import { Cine } from './cinema.js';
+import { Cine, drawHeroCutscenePortrait, getHeroCutscenePortrait } from './cinema.js';
 import { GroundItem, dropChest } from './loot.js';
 import { addEffect, addLight, Ring, Telegraph, smoke, burst, sparkle, floatText, spawn, glowSprite } from '../gfx/vfx.js';
 import { castle3dState } from '../gfx/castle3dart.js';
@@ -389,11 +389,8 @@ export function createSkyBattle(world, gen, biome, depth, opts, onSuccess) {
   const KNIGHT_GRIEF = ['CAPTAIN!', 'No no no no NO!', 'You will pay for that! Eventually!', 'Captain... I will sing the shanty of you.'];
 
   // ------------------------------------------------------------------ portraits for the dialogue panel
-  let heroImg = null;
-  const heroPortrait = (cx, x, y, w, h) => {
-    if (!heroImg) { heroImg = new Image(); heroImg.src = `assets/sprites/select/${G.char.classId}.webp`; }
-    if (heroImg.complete && heroImg.naturalWidth) { const s = w / heroImg.naturalWidth * 1.6; cx.drawImage(heroImg, x + w / 2 - heroImg.naturalWidth * s / 2, y - 4, heroImg.naturalWidth * s, heroImg.naturalHeight * s); }
-  };
+  getHeroCutscenePortrait();
+  const heroPortrait = drawHeroCutscenePortrait;
   const monsterPortrait = (art, swap = null) => (cx, x, y, w, h, t) => {
     const img = enemyImage(art, swap); if (!img) return;
     const s = w / img.width * 1.5, sh = Math.sin(t * 30) * (t < 0.3 ? 2 : 0);
