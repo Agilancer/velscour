@@ -8,6 +8,7 @@
 // Physics frame, in world px: a = screen right, b = toward the camera along the ground, h = up.
 // Projection: screen x = a, screen y = b / 2 - h (so a ground tile (x, y) is a = (x - y) * 32, b = (x + y) * 32).
 import { elevationAt } from '../core/view.js';
+import { getBannerSkin, getBannerRoll } from './bannergen.js';
 
 export const BANNER_SKIN = 'assets/fx/lancer/banner_skin.png';
 export const BANNER_POLE = 'assets/fx/lancer/banner_pole.png';
@@ -147,7 +148,9 @@ function canvas(w, h) {
 export function drawBanner(ctx, p, s, fallback = '#2a4a9a') {
   const cl = s.cloth; if (!cl) return false;
   preloadBanner();
-  const { pos } = cl, m = cl.m, M = ctx.getTransform(), sk = art.skin && art.skin.ok ? art.skin.im : null;
+  const { pos } = cl, m = cl.m, M = ctx.getTransform();
+  const customSkin = (p && p.bannerCanvas) || (p && p.char && p.char.banner && getBannerSkin(p.char.banner)) || (s && s.bannerCanvas);
+  const sk = customSkin || (art.skin && art.skin.ok ? art.skin.im : null);
   const n = C * R, sx = new Float64Array(n), sy = new Float64Array(n);
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   for (let i = 0; i < n; i++) { // to device px
@@ -171,7 +174,9 @@ export function drawBanner(ctx, p, s, fallback = '#2a4a9a') {
     t.b = (pos[a + 1] + pos[b + 1] + pos[c + 1]) / 3; t.key = 2 * t.b + (pos[a + 2] + pos[b + 2] + pos[c + 2]) / 3;
   }
   tris.sort((u, v) => u.key - v.key);
-  const vt = (i) => [((i % C) / (C - 1)) * (sk ? sk.naturalWidth : 1), (((i / C) | 0) / (R - 1)) * cl.unf * (sk ? sk.naturalHeight : 1)];
+  const skW = sk ? (sk.naturalWidth || sk.width) : 1;
+  const skH = sk ? (sk.naturalHeight || sk.height) : 1;
+  const vt = (i) => [((i % C) / (C - 1)) * skW, (((i / C) | 0) / (R - 1)) * cl.unf * skH];
   const layer = (list) => {
     if (!list.length) return;
     const g = canvas(x1 - x0, y1 - y0);
@@ -200,8 +205,9 @@ export function drawBanner(ctx, p, s, fallback = '#2a4a9a') {
   layer(tris.filter((t) => t.b >= poleB));
   if (cl.unf < 0.97) { // the rest of the cloth, still rolled up along the bottom edge
     ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const roll = (p && p.bannerRoll) || (p && p.char && p.char.banner && getBannerRoll(p.char.banner)) || art.roll;
     const line = (w, col, dy) => { ctx.beginPath(); for (let c = 0; c < C; c++) { const k = ((R - 1) * C + c) * 3; ctx[c ? 'lineTo' : 'moveTo'](pos[k], pos[k + 1] / 2 - pos[k + 2] + dy); } ctx.lineWidth = w; ctx.strokeStyle = col; ctx.stroke(); };
-    line(3.6 * m[3], art.roll, 0.6); line(1, 'rgba(255,255,255,0.35)', -0.6);
+    line(3.6 * m[3], roll, 0.6); line(1, 'rgba(255,255,255,0.35)', -0.6);
     ctx.restore();
   }
   return true;

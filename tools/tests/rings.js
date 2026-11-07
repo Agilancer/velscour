@@ -12,8 +12,8 @@ const { openGame, report } = require('./harness');
     const { G, game } = window.VELSCOUR;
     const c = G.char;
     c.level = 30;
-    for (const id of ['paladin.0.0', 'paladin.0.1', 'paladin.0.3', 'paladin.0.4', 'paladin.0.8', 'paladin.0.12', 'paladin.0.9', 'paladin.0.13']) c.skills[id] = 10;
-    c.bar = Array(15).fill(null); c.bar[0] = 'paladin.0.4'; c.bar[1] = 'paladin.0.12'; c.bar[2] = 'paladin.0.1'; c.bar[3] = 'paladin.0.3'; c.bar[4] = 'paladin.0.9'; c.bar[5] = 'paladin.0.13';
+    for (const id of ['paladin.0.0', 'paladin.0.1', 'paladin.0.3', 'paladin.0.4', 'paladin.0.6', 'paladin.0.8', 'paladin.1.3', 'paladin.3.5']) c.skills[id] = 10;
+    c.bar = Array(15).fill(null); c.bar[0] = 'paladin.0.1'; c.bar[1] = 'paladin.3.5'; c.bar[2] = 'paladin.1.3'; c.bar[3] = 'paladin.0.3'; c.bar[4] = 'paladin.0.4'; c.bar[5] = 'paladin.0.6';
     G.godMode = true;
     const { BIOME_BY_ID } = await import('/src/data/biomes.js');
     game.buildDungeon(12, BIOME_BY_ID.catacombs);
@@ -37,7 +37,7 @@ const { openGame, report } = require('./harness');
       const hpBefore = w.creatures.filter((m) => m.team === 'enemy' && !m.dead).reduce((a, m) => a + m.hp, 0);
       const SK = (await import('/src/data/skills.js')).SKILLS;
       const sim = (t) => { for (let k = 0; k < t * 60; k++) { p.castLock = 0; for (const s in p.cooldowns) p.cooldowns[s] = 0; w.update(1 / 60); } };
-      for (let r = 0; r < 4; r++) for (const sid of ['paladin.0.4', 'paladin.0.12', 'paladin.0.1', 'paladin.0.3', 'paladin.0.0', 'paladin.0.9']) {
+      for (let r = 0; r < 4; r++) for (const sid of ['paladin.0.1', 'paladin.3.5', 'paladin.1.3', 'paladin.0.3', 'paladin.0.0', 'paladin.0.4']) {
         const t = w.creatures.find((m) => m.team === 'enemy' && !m.dead) || { x: p.x + 2, y: p.y };
         p.mana = p.maxMana; p.castLock = 0; p.cooldowns = {};
         p.tryUseSkill(SK[sid], t.x, t.y, t); sim(0.25);
@@ -54,7 +54,7 @@ const { openGame, report } = require('./harness');
   const ms = await page.evaluate(async () => {
     const { G } = window.VELSCOUR;
     const { SKILLS } = await import('/src/data/skills.js');
-    const p = G.player, sk = SKILLS['paladin.0.12'];
+    const p = G.player, sk = SKILLS['paladin.0.1'];
     const d1 = p.skillDamage(sk, 10)[1];
     p.gainMastery(sk.id, 5e6);
     const m = G.char.mastery[sk.id];
@@ -63,20 +63,20 @@ const { openGame, report } = require('./harness');
   });
   console.log('mastery', JSON.stringify(ms));
   if (!(ms.level > 50 && ms.d2 > ms.d1)) errors.push('mastery did not level or scale damage');
-  // pictures: Wheel of Hammers + Storm Tether + Immolation, at mastery 1 and 1000
+  // pictures: Solar Hammer + Storm Tether + Immolation, at mastery 1 and 1000
   for (const M of [1, 1000]) {
     await page.evaluate(async (M) => {
       const { G } = window.VELSCOUR;
       const { SKILLS } = await import('/src/data/skills.js');
       const { rollItem } = await import('/src/data/items.js');
       const c = G.char, p = G.player, w = G.world;
-      c.mastery['paladin.0.12'] = [M, 0];
+      c.mastery['paladin.3.5'] = [M, 0];
       const ring = rollItem(20, { slot: 'ring', rarity: 4 });
-      ring.aug = [{ id: 'tether', sk: 'paladin.0.12', pow: 1.6 }, { id: 'ignite', sk: 'paladin.0.12', pow: 1.6 }];
+      ring.aug = [{ id: 'tether', sk: 'paladin.3.5', pow: 1.6 }, { id: 'ignite', sk: 'paladin.3.5', pow: 1.6 }];
       c.equip.ring1 = ring; p.recompute();
       w.hazards.length = 0;
       p.cooldowns = {}; p.castLock = 0; p.mana = p.maxMana;
-      p.tryUseSkill(SKILLS['paladin.0.12'], p.x + 1, p.y);
+      p.tryUseSkill(SKILLS['paladin.3.5'], p.x + 1, p.y);
       const v = await import('/src/core/view.js'); v.camera.zoom = 1.4;
     }, M);
     await page.waitForTimeout(900);

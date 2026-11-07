@@ -11,8 +11,9 @@ import { MEASURE, NOTES, beatsOf } from '../data/notation.js';
 import { bardNoteFor, bardFitGain, bardPerforming } from './bard.js';
 import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, spearBarrageAreas, buffAmount, curseAmount, skillDuration, effLevel, ricochetCount } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
-import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS, powerLevel, goldLvl } from '../data/items.js';
-import { depthLevel, armorDiv } from '../data/depth.js';
+import { CLASSES } from '../data/classes.js';
+import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS, powerLevel, goldLvl, canEquipItem, BASE_REQ_STAT, charEffectiveStat } from '../data/items.js';
+import { depthLevel, armorDiv, MAX_LEVEL } from '../data/depth.js';
 import { breachLevel } from '../data/breach.js';
 import { riftLevel } from '../data/rifts.js';
 import { riftOpen } from './rifts.js';
@@ -22,6 +23,7 @@ import { marksFree, autoSpend } from './marks.js';
 import { drawBiome } from '../data/biomes.js';
 import { augHits } from '../data/rings.js';
 import { canLearn } from '../ui/skills.js';
+import { CLASS_TALENTS, canLearnTalent, learnTalent, skillMorphFor, applySkillMorph } from '../data/talents.js';
 import { equipFromBag, socketGem, dropFromBag, changed } from '../ui/inventory.js';
 import { GLYPHWORDS, glyphOf } from '../data/relics.js';
 import { Vendor, fuseAll } from '../ui/vendor.js';
@@ -123,7 +125,10 @@ function engageRange(sk, t, bold = 0) {
   const r = reachOf(sk);
   return Math.max(Math.min(r * 0.8, 2.6), Math.min(r * (0.8 - 0.4 * bold), 8 - 2.5 * bold));
 }
-const cdOf = (p, sk) => cooldown(sk) * (1 - p.st.cdr / 100);
+const cdOf = (p, sk) => {
+  const morph = p ? skillMorphFor(p, sk) : null;
+  return cooldown(sk) * (1 - p.st.cdr / 100) * (1 - (morph ? morph.cdPct || 0 : 0) / 100);
+};
 const avg = (d) => (d[0] + d[1]) / 2;
 const critMul = (p) => 1 + (p.st.critChance / 100) * (p.st.critDmg / 100);
 const summonMax = (sk) => sk.m.max || sk.m.n || 1;
@@ -146,6 +151,7 @@ const focusSkills = (classId) => {
   if (classId === 'barbarian') return list.filter((sk) => sk.kind === 'whirl' || sk.kind === 'leap' || sk.kind === 'dash' || sk.name === 'Earthquake');
   if (classId === 'lancer') return list.filter((sk) => sk.m.shields || sk.kind === 'leap' || sk.kind === 'dash');
   if (classId === 'dragoon') return list.filter((sk) => sk.kind === 'leap' || sk.kind === 'dash' || sk.m.barrage || sk.m.weave);
+  if (classId === 'monk') return list.filter((sk) => sk.kind === 'dash' || sk.kind === 'leap' || sk.kind === 'melee' || sk.kind === 'cyclone');
   return null;
 };
 const mobility = (sk) => ['leap', 'dash', 'blink'].includes(sk.kind) ||
@@ -172,6 +178,7 @@ function focusMul(classId, sk) {
   if (classId === 'barbarian') return sk.kind === 'whirl' ? 6 : mobility(sk) ? 1.8 : 1;
   if (classId === 'lancer') return sk.m.shields ? 5 : mobility(sk) ? 1.8 : 1;
   if (classId === 'dragoon') return sk.m.barrage ? 5 : sk.kind === 'leap' ? 5 : sk.m.weave ? 2.5 : mobility(sk) ? 1.8 : 1;
+  if (classId === 'monk') return sk.kind === 'melee' ? 3.5 : mobility(sk) ? 2.2 : 1;
   if (PET_CLASSES.has(classId) && sk.kind === 'summon') return sk.m.dur ? 2.5 : 4;
   if (classId === 'bard') return sk.m.dacapo ? 2 : sk.kind === 'proj' || sk.kind === 'orbit' || sk.kind === 'rain' ? 1.5 : 1; // notes in the air
   if (classId === 'arcane_sorcerer') return sk.m.astro ? 2.5 : sk.fx === 'starmissile' ? 1.5 : 1; // the Astronomer: falling suns, black holes, star swarms
@@ -180,8 +187,10 @@ function focusMul(classId, sk) {
 
 /** Damage per second one skill adds when used as often as its cast time, cooldown and mana allow. */
 function skillDps(p, sk, L, crowd = CROWD) {
-  const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, crowd, L) * critMul(p);
-  const period = Math.max(castTime(p, sk), cdOf(p, sk), 0.05);
+  const morph = skillMorphFor(p, sk);
+  const effSk = morph ? applySkillMorph(sk, morph) : sk;
+  const per = avg(p.skillDamage(sk, L)) * hitsPerCast(effSk, crowd, L) * critMul(p);
+  const period = Math.max(castTime(p, effSk), cdOf(p, sk), 0.05);
   const cost = manaCost(sk, L), rage = rageCost(sk);
   const supply = p.st.manaRegen + p.maxMana / 40;
   const sustain = cost ? Math.min(1, supply / (cost / period)) :
@@ -218,19 +227,22 @@ export function buildPower(p, crowd = CROWD, only = null, focus = false) {
   }
   const ref = Math.max(base, 1);
   for (const sk of learned) {
-    const L = effLevel(p, sk), m = sk.m;
+    const morph = skillMorphFor(p, sk);
+    const effSk = morph ? applySkillMorph(sk, morph) : sk;
+    const L = effLevel(p, sk), m = effSk.m;
     if (sk.kind === 'corpse') parts.push({ sk, v: skillDps(p, sk, L, crowd).dps * 0.35, role: 'cd' });
     else if (sk.kind === 'summon') {
       const def = SUMMONS[m.sum] || { dmg: 1, atk: { cd: 1 } };
-      const n = m.sum === 'revive' ? (m.n || 1) * 0.5 : summonMax(sk);
-      const up = m.dur ? Math.min(1, m.dur / Math.max(m.dur, cooldown(sk) * (1 - p.st.cdr / 100), 1)) : 1;
-      const one = avg(p.skillDamage(sk, L)) * (def.dmg || 1) * (1 + (p.st.summonPct || 0) / 100) / ((def.atk && def.atk.cd) || 1);
+      const n = m.sum === 'revive' ? (m.n || 1) * 0.5 : summonMax(effSk);
+      const up = m.dur ? Math.min(1, m.dur / Math.max(m.dur, cdOf(p, sk), 1)) : 1;
+      const sumMul = (1 + (p.st.summonPct || 0) / 100) * (1 + (morph ? morph.summonDmgPct || 0 : 0) / 100);
+      const one = avg(p.skillDamage(sk, L)) * (def.dmg || 1) * sumMul / ((def.atk && def.atk.cd) || 1);
       // under a pet focus every extra minion counts on its own too
-      const pets = focus && PET_CLASSES.has(c.classId) ? ref * 0.12 * petsOf(sk) * up : 0;
+      const pets = focus && PET_CLASSES.has(c.classId) ? ref * 0.12 * petsOf(effSk) * up : 0;
       parts.push({ sk, v: (one * n * up * 0.55 + ref * 0.05) * fm(sk) + pets, role: 'summon' });
     } else if (sk.kind === 'buff') {
-      const amt = buffAmount(sk, L) / 100, dur = skillDuration(sk, L);
-      const up = Math.min(1, dur / Math.max(dur, cooldown(sk) * (1 - p.st.cdr / 100)));
+      const amt = buffAmount(sk, L) / 100, dur = skillDuration(effSk, L);
+      const up = Math.min(1, dur / Math.max(dur, cdOf(p, sk)));
       let v = 0;
       for (const b of m.buff || ['dmg']) v += (b === 'dmg' || b === 'as') ? amt : b === 'crit' ? amt * 0.15 : amt * 0.25;
       if (m.pulse) v += avg(p.skillDamage(sk, L)) * crowd / ref;
@@ -571,6 +583,7 @@ export const Auto = {
     if (c.statPoints > 0 && G.settings.autoStatPoints !== false) { this.spendStats(); dirty = true; }
     if (marksFree() > 0 && G.settings.autoStatPoints !== false && autoSpend()) dirty = true; // Infernal Marks (game/marks.js), spread evenly
     if (c.skillPoints > 0 && G.settings.autoSkillPoints !== false) { if (this.spendSkills()) dirty = true; }
+    if ((c.talentPoints || 0) > 0 && G.settings.autoSkillPoints !== false) { if (this.spendTalents()) dirty = true; }
     const sig = Object.entries(c.skills).map((e) => e.join(':')).join(',') + '|' + c.level;
     if (sig !== this.lastSig) { this.lastSig = sig; this.arrangeBar(); dirty = true; }
     if (this.optimizeGear()) dirty = true;
@@ -579,8 +592,16 @@ export const Auto = {
   },
 
   spendStats() {
-    const p = G.player, c = G.char;
+    const p = G.player, c = G.char, C = CLASSES[c.classId];
+    const reqStats = C ? [...new Set([BASE_REQ_STAT[C.weapon], C.offhand && BASE_REQ_STAT[C.offhand]].filter(Boolean))] : [];
+    const targetReq = c.level > 1 ? 20 + (Math.min(c.level, MAX_LEVEL) - 1) * 2 : 0;
     while (c.statPoints > 0) {
+      const needStat = targetReq > 0 ? reqStats.find((stKey) => charEffectiveStat(c, stKey) < targetReq) : null;
+      if (needStat) {
+        c.attrs[needStat]++;
+        c.statPoints--;
+        continue;
+      }
       let best = 'vit', bs = -Infinity;
       for (const k of ['str', 'dex', 'vit', 'int']) {
         const s = simulate(p, () => { c.attrs[k]++; return () => { c.attrs[k]--; }; });
@@ -595,6 +616,39 @@ export const Auto = {
   /** The Paladin alternates hammers and Shield Throw: hammers cast since his last shield. */
   hammersSince: 1,
   countFocus(sk) { if (sk.m.ricochet) this.hammersSince = 0; else if (isHammer(sk)) this.hammersSince++; },
+
+  /** Spend dedicated Talent Points (awarded 1 every 5 hero levels) on the Passive Talent Tree (T). */
+  spendTalents() {
+    const p = G.player, c = G.char;
+    const tBranches = CLASS_TALENTS[c.classId];
+    if (!tBranches) return false;
+    let spent = false;
+    while ((c.talentPoints || 0) > 0) {
+      const prefBranch = clamp(mainTree(p), 0, tBranches.length - 1);
+      let bestNode = null, bestScore = -Infinity;
+      for (let bIdx = 0; bIdx < tBranches.length; bIdx++) {
+        for (const node of tBranches[bIdx].nodes) {
+          if (!canLearnTalent(c, node)) continue;
+          const gain = simulate(p, () => {
+            c.talents = c.talents || {};
+            c.talents[node.id] = (c.talents[node.id] || 0) + 1;
+            return () => {
+              if (!--c.talents[node.id]) delete c.talents[node.id];
+            };
+          });
+          const score = gain + (bIdx === prefBranch ? 0.04 : 0) + (node.choice ? 0.025 : 0);
+          if (score > bestScore) { bestScore = score; bestNode = node; }
+        }
+      }
+      if (!bestNode || !learnTalent(c, bestNode.id)) break;
+      p.recompute();
+      spent = true;
+      if ((c.talents[bestNode.id] || 0) === 1) {
+        G.ui.log(`Auto-play unlocked talent <b>${escapeHtml(bestNode.name)}</b>.`, '#8fe0ff');
+      }
+    }
+    return spent;
+  },
 
   /** Put each skill point where it raises buildPower most (counting the prerequisites a new skill needs). */
   spendSkills() {
@@ -720,7 +774,7 @@ export const Auto = {
       const cur = simulate(p, () => () => {});
       let best = -1, bs = equipBar(cur), bslot = null, bmove = null;
       c.bag.forEach((it, i) => {
-        if (!it || it.type !== 'gear' || it.unid || it.sealed || it.locked || (it.req || 1) > c.level) return;
+        if (!it || it.type !== 'gear' || it.unid || it.sealed || it.locked || !canEquipItem(c, it)) return;
         const f = fitScore(p, it, undefined, placed);
         if (f.s > bs) { bs = f.s; best = i; bslot = f.slot; bmove = f.move; }
       });
@@ -728,7 +782,7 @@ export const Auto = {
       if (best < 0) {
         this.worn = this.worn || new Set();
         c.bag.forEach((it, i) => {
-          if (best >= 0 || !it || it.type !== 'gear' || it.unid || it.sealed || it.locked || (it.req || 1) > c.level || (it.slot !== 'body' && it.slot !== 'head') || this.worn.has(it.uid)) return;
+          if (best >= 0 || !it || it.type !== 'gear' || it.unid || it.sealed || it.locked || !canEquipItem(c, it) || (it.slot !== 'body' && it.slot !== 'head') || this.worn.has(it.uid)) return;
           const old = c.equip[it.slot];
           if (old && (old.locked || it.rarity < old.rarity || it.ilvl < old.ilvl - 4)) return;
           const f = fitScore(p, it); if (f.s > cur - 0.02) { best = i; bslot = f.slot; bmove = f.move; }
@@ -809,12 +863,12 @@ export const Auto = {
     if (it.type === 'gem') return filterPasses(it) && (gemBagFree(c) > 0 || (c.gemBag || []).some((b) => b && b.type === 'gem' && b.gem === it.gem && b.tier === it.tier));
     if (it.type !== 'gear' || it.sealed) return free > 0; // a sealed treasure is Epic or better: always worth a slot
     if (f) { // the player's loot filter (game/lootfilter.js) decides, plus upgrades to wear unless that's off too
-      if (!filterPasses(it) && !(f.upgrades && (it.req || 1) <= c.level && this.isUpgrade(it))) return false;
+      if (!filterPasses(it) && !(f.upgrades && canEquipItem(c, it) && this.isUpgrade(it))) return false;
       return free > 0 || this.worstBag(itemValue(it)) >= 0;
     }
-    const upgrade = (it.req || 1) <= c.level && this.isUpgrade(it);
+    const upgrade = canEquipItem(c, it) && this.isUpgrade(it);
     if (upgrade) return true;
-    if ((it.slot === 'body' || it.slot === 'head') && (it.req || 1) <= c.level && (!c.equip[it.slot] || it.rarity >= c.equip[it.slot].rarity) && free > 0) return true; // new looks
+    if ((it.slot === 'body' || it.slot === 'head') && canEquipItem(c, it) && (!c.equip[it.slot] || it.rarity >= c.equip[it.slot].rarity) && free > 0) return true; // new looks
     const minRarity = free > 30 ? 1 : free > 12 ? 2 : 3;
     if (it.rarity < minRarity) return false;
     return free > 0 || this.worstBag(itemValue(it)) >= 0;
@@ -2133,7 +2187,7 @@ export const Auto = {
     if (!list || !bagFree(c)) return false;
     const cur = simulate(p, () => () => {});
     const bar = Math.max(equipBar(cur), cur + 0.012);
-    return list.some((it) => it && it.type === 'gear' && (it.req || 1) <= c.level && itemValue(it) <= this.budget(0.85) && fitScore(p, it, false).s > bar);
+    return list.some((it) => it && it.type === 'gear' && canEquipItem(c, it) && itemValue(it) <= this.budget(0.85) && fitScore(p, it, false).s > bar);
   },
   potionsWanted() {
     const c = G.char;
@@ -2141,7 +2195,7 @@ export const Auto = {
   },
   /** Stored gear to take out: an upgrade now, or what auto-play put away until the hero could wear it (to wear or sell).
    *  What the player stored stays put: auto-play would sell it. */
-  stashUpgrade(it) { return it.type === 'gear' && !it.sealed && !it.locked && (it.req || 1) <= G.char.level && ((it.autoStash === true && bagFree(G.char) >= 12) || this.isUpgrade(it)); },
+  stashUpgrade(it) { return it.type === 'gear' && !it.sealed && !it.locked && canEquipItem(G.char, it) && ((it.autoStash === true && bagFree(G.char) >= 12) || this.isUpgrade(it)); },
   /** Storage chest: take out stored gear that's an upgrade now. Gems remain stored. */
   unstash() {
     const c = G.char;
@@ -2265,7 +2319,7 @@ export const Auto = {
       const cur = simulate(p, () => () => {}), bar = Math.max(equipBar(cur), cur + 0.012);
       let best = -1, bv = 0, bslot = null;
       list.forEach((it, i) => {
-        if (!it || it.type !== 'gear' || (it.req || 1) > c.level) return;
+        if (!it || it.type !== 'gear' || !canEquipItem(c, it)) return;
         const price = itemValue(it);
         if (price > this.budget(0.85)) return;
         const f = fitScore(p, it, false); // judged on its own sockets: the gold for new ones goes on the buy
@@ -2289,7 +2343,7 @@ export const Auto = {
     const p = G.player, c = G.char;
     for (const l of [Vendor.stock.weapons, Vendor.stock.armor, Vendor.stock.rings]) {
       if (!l || l === list) continue;
-      for (const o of l) if (o && o !== it && o.type === 'gear' && o.slot === it.slot && (o.req || 1) <= c.level && itemValue(o) <= this.budget(0.85) && fitScore(p, o, false).s > s) return true;
+      for (const o of l) if (o && o !== it && o.type === 'gear' && o.slot === it.slot && canEquipItem(c, o) && itemValue(o) <= this.budget(0.85) && fitScore(p, o, false).s > s) return true;
     }
     return false;
   },
@@ -2355,7 +2409,7 @@ export const Auto = {
       for (const r of gw.sig) need[r] = (need[r] || 0) + 1;
       if (!Object.entries(need).every(([r, n]) => (have[r] || 0) >= n)) continue;
       const n = gw.sig.length;
-      const fits = (it) => it && it.type === 'gear' && it.rarity === 0 && !it.relic && !it.locked && !it.sealed && gw.slots.includes(it.slot) && it.maxSockets >= n && it.sockets <= n && !it.gems.length && (it.req || 1) <= c.level && it.ilvl >= lvl - 12;
+      const fits = (it) => it && it.type === 'gear' && it.rarity === 0 && !it.relic && !it.locked && !it.sealed && gw.slots.includes(it.slot) && it.maxSockets >= n && it.sockets <= n && !it.gems.length && canEquipItem(c, it) && it.ilvl >= lvl - 12;
       let idx = c.bag.findIndex(fits);
       if (idx < 0) {
         for (const list of [Vendor.stock.weapons, Vendor.stock.armor]) {

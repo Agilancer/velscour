@@ -8,6 +8,7 @@ import { rand, pick, randi, clamp, escapeHtml, dist, makeCanvas, fmtInt, swapKey
 import { biomeTileSet, loadBiomeArt, mixedTileSet, keepTileSets } from '../core/assets.js';
 import { loadArtFor, enemyImage, markArtCaches, trimArtCaches } from '../core/enemyart.js';
 import { loadClassArt } from '../core/classart.js';
+import { preloadSkillSheets } from '../ui/icons.js';
 import { loadGearArt } from '../core/gearart.js';
 import { loadHeld } from '../gfx/heldart.js';
 import { preloadBarFx } from '../gfx/artfx.js';
@@ -89,6 +90,7 @@ import { JewelBox } from '../ui/jewelbox.js';
 import { startTownLife } from './townlife.js';
 import { toggleInventory } from '../ui/inventory.js';
 import { toggleTree, toggleBook } from '../ui/skills.js';
+import { toggleTalents } from '../ui/talents.js';
 import { toggleQuest } from '../ui/quest.js';
 import { setupVelscour } from './velscour.js';
 import { loadVelscourThrone } from '../gfx/velscourthrone.js';
@@ -219,7 +221,7 @@ export const game = {
   async loadClassPack(classId, char = null) {
     const el = document.getElementById('loading');
     const slow = setTimeout(() => el && el.classList.remove('hidden'), 250);
-    const [meta] = await Promise.all([loadClassArt(classId), loadGearArt(classId), loadHeld(classId, char)]);
+    const [meta] = await Promise.all([loadClassArt(classId), loadGearArt(classId), loadHeld(classId, char), preloadSkillSheets(classId)]);
     clearTimeout(slow);
     if (el) el.classList.add('hidden');
     setClassItems(classId, meta);
@@ -230,6 +232,7 @@ export const game = {
     hideScreen();
     if (Auto.on) Auto.toggle(false);
     G.char = c;
+    preloadSkillSheets(c.classId);
     setRingContext(c.classId, c.skills);
     const p = new Player(c);
     G.player = p;
@@ -1419,6 +1422,7 @@ export const game = {
     switch (act) {
       case 'inventory': case 'character': toggleInventory(); break;
       case 'skills': toggleTree(); break;
+      case 'talents': toggleTalents(); break;
       case 'book': toggleBook(); break;
       case 'quest': toggleQuest(); break;
       case 'menu': pauseMenu(); break;
@@ -1433,7 +1437,8 @@ export const game = {
     const ui = UI;
     if (!ui.modal) {
       if (input.consume('KeyI')) toggleInventory();
-      if (input.consume('KeyK') || input.consume('KeyT')) toggleTree();
+      if (input.consume('KeyK')) toggleTree();
+      if (input.consume('KeyT')) toggleTalents();
       if (input.consume('KeyB')) toggleBook();
       if (input.consume('KeyQ')) toggleQuest();
       if (input.consume('KeyH')) useHearth();

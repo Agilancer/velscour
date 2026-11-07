@@ -5,7 +5,7 @@ import { shownDmg, heroDmgLevel } from '../data/depth.js';
 import { sfx } from '../core/audio.js';
 import { A, potionIcon } from '../core/assets.js';
 import { UI, $, droppable } from './ui.js';
-import { skillIconURL } from './icons.js';
+import { skillIconURL, ultimateIconURL } from './icons.js';
 import { SKILLS, effLevel, manaCost, rageCost, cooldown, CLASS_SKILLS } from '../data/skills.js';
 import { xpToNext } from '../game/player.js';
 import { drawMinimap } from '../game/render.js';
@@ -17,7 +17,7 @@ const TAUNT_KEY = 'velscour_taunts_v1'; // Velscour's level-up deck: the last mo
 import { Meter } from '../game/dpsmeter.js';
 import { heroDamage } from '../game/autoplay.js';
 import { madnessReady, madnessOn, unleashMadness } from '../game/mayhem.js';
-import { smiteReady, smiteArmed, toggleSmite } from '../game/smite.js';
+import { smiteReady, smiteArmed, toggleSmite, getUltimate } from '../game/smite.js';
 import { hearthReady, hearthChanneling, hearthOf, hearthSecondsLeft, useHearth } from '../game/hearth.js';
 import { greedOf, hoardOf, hoardCap, greedMods, setGreed, GREED_MAX } from '../game/greed.js';
 import { STANCES, Auto } from '../game/autoplay.js';
@@ -63,6 +63,13 @@ export const HUD = {
     this.initFrames(geo);
     $('#madness-btn').addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); unleashMadness(); });
     $('#smite-btn').addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); toggleSmite(); });
+    $('#smite-btn').removeAttribute('title');
+    const ultTip = () => {
+      const u = getUltimate(G.char?.classId);
+      return `<b style="color:${u.color}">${escapeHtml(u.name)} (F)</b><div>${escapeHtml(u.desc)}</div><div class="dim">Fills from kills (champions, uniques and guardians count more). Press F or click to arm, then ${G.touch ? 'tap' : 'click'} where to strike.</div>`;
+    };
+    UI.tip($('#smite-btn'), ultTip);
+    UI.tip($('#smite-track'), ultTip);
     $('#hearth-btn').addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); useHearth(); });
     $('#sealed-btn').addEventListener('click', (e) => { e.stopPropagation(); sfx('ui'); openNextSeal(); });
     // the spectator's dials: auto-play's stance and the Greed lever (game/autoplay.js STANCES, game/greed.js)
@@ -249,8 +256,13 @@ export const HUD = {
         if (id && SKILLS[id]) { s.icon.src = skillIconURL(SKILLS[id]); s.icon.style.display = 'block'; } else s.icon.style.display = 'none';
       }
     }
-    const sp = $('#sp-badge'), stb = $('#stat-badge');
+    const sp = $('#sp-badge'), stb = $('#stat-badge'), tb = $('#talent-badge');
     sp.textContent = c.skillPoints; sp.classList.toggle('hidden', !c.skillPoints);
+    if (tb) {
+      const talentPts = c.talentPoints || 0;
+      tb.textContent = talentPts;
+      tb.classList.toggle('hidden', !talentPts);
+    }
     stb.textContent = c.statPoints; stb.classList.toggle('hidden', !c.statPoints);
     if (G.touchUI) G.touchUI.refresh();
   },
@@ -275,16 +287,32 @@ export const HUD = {
       $('#madness-btn').classList.toggle('hidden', v !== 'full');
       if (v === 'full') { sfx('levelup', 0.4); UI.log('MADNESS is full: press the MADNESS button (G) to unleash it.', '#ff6090'); }
     });
-    // SMITE (game/smite.js)
+    // CLASS ULTIMATE (game/smite.js)
+    const ult = getUltimate(c.classId);
     const sReady = smiteReady(), sArmed = smiteArmed();
-    set('smite', Math.round(clamp(c.smite || 0, 0, 1) * 1000) / 10, (v) => { $('#smite-fill').style.width = v + '%'; });
-    set('smitest', sArmed ? 'armed' : sReady ? 'full' : '', (v) => {
-      $('#smite-track').className = v;
-      $('#smite-btn').classList.toggle('hidden', !v);
-      $('#smite-btn').classList.toggle('armed', v === 'armed');
-      $('#smite-btn').textContent = v === 'armed' ? 'AIMING…' : 'SMITE';
+    set('ultCls', c.classId, (cls) => {
+      const u = getUltimate(cls);
+      const btn = $('#smite-btn'), fill = $('#smite-fill'), track = $('#smite-track');
+      btn.style.borderColor = u.color;
+      btn.style.boxShadow = `0 0 14px ${u.haloColor}, inset 0 0 10px ${u.color}`;
+      btn.style.textShadow = `0 0 6px ${u.haloColor}, 0 0 2px #000`;
+      fill.style.background = `linear-gradient(90deg, ${u.haloColor}, ${u.color})`;
+      track.style.borderColor = u.haloColor;
     });
-    set('smitet', sArmed ? (G.touch ? 'Smite — tap the ground' : 'Smite — click the ground') : sReady ? 'Smite — ready' : `Smite ${Math.floor((c.smite || 0) * 100)}%`, (v) => { $('#smite-text').textContent = v; });
+    set('smite', Math.round(clamp(c.smite || 0, 0, 1) * 1000) / 10, (v) => { $('#smite-fill').style.width = v + '%'; });
+    set('smitest', `${c.classId}|${sArmed ? 'armed' : sReady ? 'full' : ''}`, () => {
+      const st = sArmed ? 'armed' : sReady ? 'full' : '';
+      $('#smite-track').className = st;
+      const btn = $('#smite-btn');
+      btn.classList.toggle('hidden', !st);
+      btn.classList.toggle('armed', st === 'armed');
+      if (st === 'armed') {
+        btn.textContent = 'AIMING…';
+      } else {
+        btn.innerHTML = `<img src="${ultimateIconURL(c.classId, 32)}" style="width:20px;height:20px;vertical-align:-4px;margin-right:6px;border-radius:50%;pointer-events:none">${escapeHtml(ult.title)}`;
+      }
+    });
+    set('smitet', sArmed ? `${ult.name} — ${G.touch ? 'tap' : 'click'} the ground` : sReady ? `${ult.name} — ready` : `${ult.name} ${Math.floor((c.smite || 0) * 100)}%`, (v) => { $('#smite-text').textContent = v; });
     if (G.canvas) G.canvas.classList.toggle('aiming', sArmed);
     // HEARTHSTONE (game/hearth.js)
     const hReady = hearthReady(), hChan = hearthChanneling(), hVal = hearthOf(c);
@@ -499,8 +527,9 @@ export const HUD = {
 
   /** The level-up banner: a dark vignette, the title and new level bleeding in from blur, then Velscour's two lines. */
   levelUp(level, sound) {
-    const box = $('#levelup'), num = $('#lu-num');
+    const box = $('#levelup'), num = $('#lu-num'), sub = $('#levelup .lu-sub');
     num.textContent = level;
+    if (sub) sub.innerHTML = level % 5 === 0 ? '+5 attribute points &middot; +1 skill point &middot; +1 talent point' : '+5 attribute points &middot; +1 skill point';
     const now = performance.now();
     if (this.lu && now < this.lu.end) { // more levels while it's up: punch the number again
       num.classList.remove('punch'); void num.offsetWidth; num.classList.add('punch');
