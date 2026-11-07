@@ -103,13 +103,17 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
   if (tgt.vel) dmg = tgt.vel.absorb(dmg); // Velscour's life gates and damage cap (game/velscour.js)
 
   const byHero = !tgt.isPlayer && tgt.team !== 'player' && (fromPlayer || (src && src.team === 'player'));
+  // o.lightFx: a rapid multi-hit (the Lancer's tower-shield rings) shows its full feedback on about one hit in sixteen,
+  // a damage number on about one in three; the damage itself is untouched
+  const showFx = !o.lightFx || chance(0.06), showNum = !o.lightFx || crit || chance(0.35);
   const tLvl = tgt.level || depthLevel((world && world.depth) || 1); // what the hero sees is shownDmg (data/depth.js), not raw power
   if (byHero) Meter.add(shownDmg(Math.min(dmg, Math.max(0, tgt.hp)), tLvl));
   if (byHero && src && src.isPlayer && !o.dot) G.lastHit = tgt; // the HUD's target window
-  if (byHero && src && src.isPlayer && o.sk && !o.dot) classHitFx(src, tgt, o.sk, el); // the class's own splash (gfx/classfx.js)
+  if (byHero && src && src.isPlayer && o.sk && !o.dot && showFx) classHitFx(src, tgt, o.sk, el); // the class's own splash (gfx/classfx.js)
   tgt.hp -= dmg;
   if (tgt.isPlayer && !o.dot && src && src !== tgt && tgt.st.procs && tgt.st.procs.length) relicProc(tgt, 'hurt', src, dmg);
   tgt.flash = 0.12;
+  if (tgt.team === 'enemy') tgt.regenSuppress = o.dot ? Math.max(tgt.regenSuppress || 0, 3.0) : 6.0;
   if (tgt.onDamaged && !o.dot) tgt.onDamaged(src, dmg);
   tgt.hpShow = 3;
   if (!tgt.isPlayer && !o.dot) tgt.awake = true;
@@ -121,11 +125,11 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     if (tgt.isPlayer) {
       damageText(tgt.x, tgt.y, z, dmg, o.dot ? 'dot' : 'hurt', '#ff4030');
       if (!o.dot) { sfx('hurt'); G.hurtFlash = Math.min(0.5, (G.hurtFlash || 0) + dmg / tgt.maxHp * 2); camera.shake(Math.min(8, 2 + (dmg / tgt.maxHp) * 30)); }
-    } else if (byHero) {
+    } else if (byHero && showNum && dmg > 0) {
       damageText(tgt.x, tgt.y, z, Math.max(1, shownDmg(dmg, tLvl)), crit ? 'crit' : o.dot ? 'dot' : 'hit', elem(el).glow);
     }
   }
-  if (!o.dot || chance(0.15)) {
+  if ((!o.dot || chance(0.15)) && showFx) {
     const ang = o.ang ?? (src ? angleTo(src.x, src.y, tgt.x, tgt.y) : rand(TAU));
     const force = clamp(dmg / tgt.maxHp, 0.05, 1);
     if (!(tgt.goreType === 'spark' || tgt.goreType === 'ecto') || chance(0.5)) bloodSpray(tgt.x, tgt.y, 28, ang, Math.round(4 + force * 18), bloodOf(tgt), 0.7 + force);
@@ -158,7 +162,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
   } else if (byHero && o.sk) tgt.lastSk = o.sk;
   if (tgt.curses.thorns && tgt.curses.thorns.t > 0 && tgt.isPlayer === false && src && src.team === 'player') { /* handled when monster attacks */ }
 
-  if (tgt.hp <= 0) kill(tgt, src, { el, overkill: -tgt.hp / tgt.maxHp, crit, aoe: o.aoe, sig: o.sig });
+  if (tgt.hp <= 0) kill(tgt, src, { el, overkill: -tgt.hp / tgt.maxHp, crit, aoe: o.aoe, sig: o.sig, proc: o.proc });
   return dmg;
 }
 
@@ -273,7 +277,7 @@ export function kill(tgt, src, info = {}) {
     if (tgt.team === 'enemy') { dropLoot(world, tgt); commissionKill(world, tgt); if (world.rift) riftKill(world, tgt); }
     if (world.onKill) world.onKill(tgt); // streaks, challenges (game/happenings.js)
   }
-  if (tgt.rank === 'boss' && world) {
+  if ((tgt.rank === 'boss' || tgt.rank === 'raid' || tgt === world?.boss) && world) {
     for (const c of world.creatures) if (c.summon && !c.dead) c.cheerT = 2.5;
     if (world.onBossKilled) world.onBossKilled(tgt);
   }

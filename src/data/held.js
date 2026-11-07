@@ -9,7 +9,7 @@ export const HELD_COUNT = HELD_PER.reduce((a, b) => a + b, 0);
 export const CLASS_FOCUS = {
   paladin: 'shield', ranger: 'quiver', wizard: 'tome', necromancer: 'orb', dragoon: 'shield', totem_master: 'idol',
   death_knight: 'skull', arcane_sorcerer: 'orb', carrion_witch: 'lantern', bard: 'drum', slime_lord: 'jar',
-  boomerang_knight: 'rang', lancer: 'shield', dragon_knight: 'shield', gunner: 'bomb',
+  boomerang_knight: 'rang', lancer: 'shield', dragon_knight: 'shield', gunner: 'bomb', monk: 'tome',
 };
 
 /** The set an item of `base` shows in, in `slot`, held by `cls` (null: no held art). */

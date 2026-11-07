@@ -3,7 +3,7 @@
 export const TREE4_NAMES = {
   paladin: 'Radiant Ascension', ranger: 'Starshot', wizard: 'Prismatic', barbarian: 'Bloodrage', totem_master: 'Spirit Walk',
   death_knight: 'Runeblade', arcane_sorcerer: 'Constellations', carrion_witch: 'Grave Moon', bard: 'Grand Finale', slime_lord: 'Primordial',
-  boomerang_knight: 'Tempest Orbit', lancer: 'Radiant Lance', dragon_knight: 'Wyrmfire Ascendant', gunner: 'Heavy Ordnance',
+  boomerang_knight: 'Tempest Orbit', lancer: 'Radiant Lance', dragon_knight: 'Wyrmfire Ascendant', gunner: 'Heavy Ordnance', monk: 'Transcendence',
 };
 
 export const TREE4 = {
@@ -104,5 +104,12 @@ export const TREE4 = {
     'Howitzer Volley|proj|fire|rocket|n=6 spread=50 exp', 'Rail Shot|beam|light|laser|dur=1.2 dmg=1.4 cd=3', 'Drone Swarm|summon|light|drone|sum=drone n=3 dur=15 cd=20', 'Napalm Strip|fissure|fire|fire|range=1.5',
     'Saturation Bombing|rain|fire|bomb|n=18 r=1.8 cd=4', 'Tesla Grid|summon|light|tesla|sum=tesla n=2 dur=15 cd=15', 'Overclocked Rounds|buff|light|aura|buff=as,crit amt=35 dur=12 cd=30', 'Cluster Rockets|proj|fire|rocket|split n=3 spread=30 exp',
     'Kinetic Lance|aoe|light|nuke|r=2.6 dmg=3 delay=1 cd=8', 'War Machine|summon|fire|mech|sum=mech n=1 dur=25 cd=45', 'Thermite Rain|rain|fire|meteor|n=22 r=2.2 dur=3 cd=10', 'Annihilator Beam|beam|light|laser|dur=3 dmg=1.7 cd=8',
+  ],
+  monk: [
+    'Palm of the Dawn|melee|holy|smash|free wc=1 cleave', 'Spirit Bell|nova|holy|shock|r=1.2 stun', 'Zen Dash|dash|phys|wind|range=1.2', 'Chi Burst|proj|holy|orb|n=3 spread=25',
+    'Seven-Sided Strike|melee|phys|slash|n=7 dmg=0.55', 'Inner Sanctuary|zone|holy|holy|heal r=1.4 dur=6 cd=10', 'Sweeping Gale|cyclone|phys|wind|n=2 dur=3', 'Mantra of Restoration|heal|holy|light|amt=20 cd=8',
+    'Dragon Kick|leap|fire|charge|r=1.5 dmg=1.6', 'Chakras Open|buff|holy|aura|buff=as,speed amt=30 dur=15 cd=25', 'Astral Palm|proj|holy|laser|pierce spd=1.6 dmg=1.8', 'Orbiting Beads|orbit|holy|orb|n=6 dur=6 cd=8',
+    'Fist of the Falling Star|strike|holy|lightning|n=4 cd=4', 'Cyclone of Spirit|whirl|holy|wind|dur=2.5 dmg=1.2', 'Mantra of Conviction|curse|holy|sigil|curse=amp r=1.5', 'Spirit Echo|summon|holy|clone|sum=clone n=2 dur=15 cd=25',
+    'Heavenly Palm|aoe|holy|pillar|r=2.2 dmg=2.8 cd=6', 'Avatar of Enlightenment|buff|holy|transform|buff=dmg,armor,as amt=40 dur=15 cd=40', 'Wave of Light|fissure|holy|wave|range=1.8 knock cd=4', 'Nirvana Flash|nova|holy|holy|n=3 r=1.8 stun cd=8',
   ],
 };

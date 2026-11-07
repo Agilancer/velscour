@@ -1,4 +1,4 @@
-// "DEATH IS THE ONLY WAY OUT, MY KIND SIR." sent to Velscour: level 350, the best gear of the hero's class (Mythic,
+// "DEATH IS THE ONLY WAY OUT, MY KIND SIR." sent to Velscour: level 100, the best gear of the hero's class (Mythic,
 // +10, perfect rolls and an extra enchanted line, Eternal gems, max-power ring augments), every skill and mastery
 // maxed, a full potion belt, a fortune in gold, and the way down opened to Depth 500. It is a cheat: the hero is marked
 // for good (c.cheated) and never listed on the Honour Board (game/leaderboard.js).
@@ -6,15 +6,15 @@ import { G } from '../state.js';
 import { sfx, levelUpFanfare } from '../core/audio.js';
 import { CLASSES } from '../data/classes.js';
 import { CLASS_SKILLS, MAX_SKILL_LEVEL } from '../data/skills.js';
-import { RARITY, CORE_LINES, AFFIX_BY_STAT, RING_SLOTS, MAX_GEM_TIER, rollItem, affixValue, augTarget, powerLevel } from '../data/items.js';
+import { RARITY, CORE_LINES, AFFIX_BY_STAT, RING_SLOTS, MAX_GEM_TIER, rollItem, affixValue, augTarget, powerLevel, BASE_REQ_STAT, charEffectiveStat } from '../data/items.js';
 import { AUGMENTS, SCOPE_MUL, augPower } from '../data/rings.js';
-import { FINAL_DEPTH } from '../data/depth.js';
+import { FINAL_DEPTH, MAX_LEVEL } from '../data/depth.js';
 import { MAX_MASTERY } from './augments.js';
 import { addToBag } from './player.js';
 import { Board } from './leaderboard.js';
 
 export const DEATH_PHRASE = 'DEATH IS THE ONLY WAY OUT, MY KIND SIR.';
-const GIFT_LEVEL = 350, MYTHIC = 5;
+const GIFT_LEVEL = MAX_LEVEL, MYTHIC = 5;
 const SLOT_LETTER = { weapon: 'W', offhand: 'O', head: 'H', body: 'B', hands: 'G', legs: 'L', feet: 'F', ring: 'R' };
 const LEGEND = { weapon: 'crit', offhand: 'echo', head: 'nova', body: 'phoenix', hands: 'vamp', legs: 'giant', feet: 'wraith' };
 const RING_LEGEND = ['thunder', 'hammer', 'orbit', 'bloodbath'];
@@ -69,10 +69,18 @@ export function grantDeathGift() {
   c.cheated = true; // for good: never listed on the Honour Board, and its class's entry there comes off now (or at the next sign-in)
   Board.withdraw(c.classId).catch((e) => console.warn('Honour board:', e));
   const ilvl = Math.max(c.level, GIFT_LEVEL); // items of the hero's own level are the best they can wear
-  // level 350, its attribute points spent on the class's attribute and vitality
+  // level 100, its attribute points spent on required weapon/offhand stats, the class's attribute and vitality
   const gained = Math.max(0, GIFT_LEVEL - c.level);
   c.level = Math.max(c.level, GIFT_LEVEL); c.xp = 0;
-  const pts = c.statPoints + gained * 5;
+  let pts = c.statPoints + gained * 5;
+  const offBase = C.offhand || (C.primary === 'int' ? 'orb' : 'shield');
+  const targetReq = 20 + (GIFT_LEVEL - 1) * 2;
+  for (const stKey of [...new Set([BASE_REQ_STAT[C.weapon], BASE_REQ_STAT[offBase]].filter(Boolean))]) {
+    const need = Math.max(0, targetReq - charEffectiveStat(c, stKey));
+    const add = Math.min(pts, need);
+    c.attrs[stKey] += add;
+    pts -= add;
+  }
   const main = C.primary === 'vit' ? pts : Math.round(pts * 0.6);
   c.attrs[C.primary] += main; c.attrs.vit += pts - main; c.statPoints = 0;
   p.applyGrants();
@@ -82,7 +90,6 @@ export function grantDeathGift() {
   // the gear; what the hero wore goes to the bag (or the chest when the bag is full)
   const pg = PRIMARY_GEM[C.primary];
   const armorGems = ['ruby', 'diamond', pg, 'bloodstone'];
-  const offBase = C.offhand || (C.primary === 'int' ? 'orb' : 'shield');
   const gear = {
     weapon: bestItem(C, 'weapon', C.weapon, ilvl, LEGEND.weapon, ['classgem', 'chainlink', 'bloodstone', pg]),
     offhand: c.classId === 'barbarian' && !C.offhand
@@ -107,7 +114,7 @@ export function grantDeathGift() {
   sfx('levelup', 1);
   if (G.ui) {
     if (G.ui.hud) G.ui.hud.levelUp(c.level, levelUpFanfare());
-    G.ui.log('<b style="color:#ff3020">Velscour answers.</b> Level 350, his finest arms, and the road to Depth 500. Come die properly.', '#ffd860');
+    G.ui.log('<b style="color:#ff3020">Velscour answers.</b> Level 100, his finest arms, and the road to Depth 500. Come die properly.', '#ffd860');
     G.ui.log('This hero took Velscour\'s gift: it will never be listed on the Honour Board.', '#ff9070');
     G.ui.refresh();
   }

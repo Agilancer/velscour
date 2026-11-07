@@ -395,6 +395,29 @@ export const SKILLDATA = {
       'Death Machine|summon|fire|mech|sum=mech max=1 cd=60', 'Satellite Laser|beam|light|laser|dur=3 dmg=1.8 cd=6', 'Turret Fortress|summon|phys|turret|sum=turret n=4 dur=15 cd=40', 'Overdrive|buff|light|transform|buff=dmg,as,cdr amt=50 party dur=15 cd=60',
     ],
   ],
+  monk: [
+    [
+      'Fist of Fury|melee|phys|smash|free wc=1', 'Flying Kick|dash|phys|charge|range=1.1 knock', 'Tiger Claw|melee|phys|slash|bleed cleave', 'Sweeping Crescent|melee|phys|spin|arc=360 r=1.1',
+      'Hundred Fists|melee|phys|smash|n=5 dmg=0.6', 'Vaulting Leap|leap|phys|earth|range=1.3 r=1.2', 'Iron Palm|melee|phys|smash|stun dmg=1.5', 'Spinning Crane Kick|cyclone|phys|wind|n=1 dur=3',
+      'Thousand Lotus Flurry|melee|phys|slash|n=8 dmg=0.45', 'Crushing Impact|aoe|phys|shock|r=1.4 stun cd=3', 'Wind Walker|dash|phys|wind|range=1.5 exp', 'Spirit Whirl|whirl|phys|wind|dur=2.5',
+      'Fatal Touch|melee|phys|smash|dmg=2.6 crit=20 cd=4', 'Tempest Flurry|melee|phys|slash|n=10 dmg=0.4', 'Earthshaker Kick|aoe|phys|earth|r=1.8 dmg=2.0 knock cd=4', 'Storm of Blows|nova|phys|shock|n=2 r=1.5',
+      'Grandmaster Strike|melee|phys|smash|dmg=3.5 exp r=1.6 cd=5', 'Asura Stance|buff|phys|aura|buff=as,dmg amt=45 dur=12 cd=35', 'Dragon Tail Sweep|melee|fire|spin|arc=360 r=1.6 dmg=2.2 cd=3', 'Quaking Heavens|fissure|phys|earth|range=1.8 knock',
+    ],
+    [
+      'Chi Bolt|proj|holy|bolt|free wc=0.8', 'Mantra of Healing|heal|holy|light|amt=16 cd=6', 'Inner Peace|buff|holy|shield|buff=armor amt=35 dur=20 cd=25', 'Spark of Spirit|chain|holy|spirit|n=3',
+      'Radiant Bell|aoe|holy|holy|r=1.3 stun delay=0.4', 'Mantra of Retribution|buff|holy|aura|buff=thorns amt=35 dur=25 cd=30 pulse', 'Spirit Ward|zone|holy|holy|heal r=1.2 dur=6 cd=10', 'Purifying Wave|fissure|holy|wave|range=1.2',
+      'Chi Orb|proj|holy|orb|exp r=1.2', 'Mantra of Swiftness|buff|holy|aura|buff=speed,as amt=25 dur=20 cd=30 party', 'Sanctified Bell|aoe|holy|pillar|r=1.6 dmg=1.8 cd=3', 'Spirit Chains|chain|holy|spirit|n=6',
+      'Heavenly Halo|orbit|holy|orb|n=4 dur=8 cd=10', 'Transcendental Aura|buff|holy|aura|buff=dmg,res amt=30 dur=15 cd=35', 'Sunken Bell|strike|holy|holy|n=4 cd=6', 'Mantra of Renewal|heal|holy|light|amt=32 cd=12',
+      'Divine Lotus|zone|holy|holy|r=2.0 dur=8 heal pow=0.3 cd=15', 'Pillar of Nirvana|aoe|holy|pillar|r=2.2 dmg=2.8 cd=6', 'Seraphic Cloak|buff|holy|shield|buff=armor,res amt=60 dur=10 cd=35', 'Resonating Bellstrike|nova|holy|holy|n=3 r=1.8 cd=5',
+    ],
+    [
+      'Dragon Strike|melee|fire|smash|burn exp', 'Tiger Pounce|dash|fire|charge|range=1.1 exp', 'Flaming Lotus|proj|fire|orb|exp r=1.0', 'Breath of the Wyrm|beam|fire|flame|dur=1.2 range=0.6',
+      'Tiger Roar|nova|phys|shock|r=1.2 slow', 'Blazing Palm|melee|fire|smash|exp r=1.3 dmg=1.5', 'Dragon Breath|beam|fire|flame|dur=1.8 cone', 'Fiery Ascent|leap|fire|charge|r=1.4 dmg=1.4',
+      'Twin Dragons|proj|fire|fireball|n=2 spread=20 exp', 'Tiger Claw Shred|melee|phys|slash|bleed n=3 dmg=0.8', 'Infernal Wave|fissure|fire|fire|range=1.5 burn', 'Dragon Ring|orbit|fire|fireball|n=4 dur=6 cd=8',
+      'Tiger Pounce Storm|leap|fire|charge|r=1.6 dmg=2.0 exp', 'Dragon Tempest|cyclone|fire|wind|n=2 dur=4', 'Flaming Fist Barrage|melee|fire|smash|n=6 dmg=0.65', 'Inferno Palm|aoe|fire|explosion|r=1.8 dmg=2.2 cd=4',
+      'Dragon Ascendant|buff|fire|transform|buff=dmg,speed amt=40 dur=15 cd=40', 'Cataclysmic Dragon Slam|aoe|fire|meteor|r=2.4 dmg=3.0 cd=6', 'Wrath of the White Tiger|fissure|fire|earth|range=2.0 knock cd=4', 'Breath of Nirvana|beam|fire|laser|dur=2.5 dmg=1.6 cd=8',
+    ],
+  ],
 };
 // every class gets a fourth tree (data/skilltrees4.js); the Necromancer's and Dragoon's are already in
 for (const [c, tree] of Object.entries(TREE4)) if (SKILLDATA[c].length === 3) SKILLDATA[c].push(tree);

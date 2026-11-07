@@ -15,7 +15,7 @@ export const CLASS_IDS = [
   'paladin', 'ranger', 'wizard', 'necromancer',
   'barbarian', 'dragoon', 'totem_master', 'death_knight',
   'arcane_sorcerer', 'carrion_witch', 'bard', 'slime_lord',
-  'boomerang_knight', 'lancer', 'dragon_knight', 'gunner',
+  'boomerang_knight', 'lancer', 'dragon_knight', 'gunner', 'monk',
 ];
 
 export const A = {
