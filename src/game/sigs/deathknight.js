@@ -417,8 +417,8 @@ function drawTrail(ctx, F, col) {
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 }
 function drawFam(ctx, p, s, t) {
-  const F = s.fam, rest = s.rest || 0;
-  if (!F || s.swing > 0 || rest >= 1) return; // swinging, or resting on his back (bladeOnBack)
+  const F = s.fam, rest = s.rest ?? 1;
+  if (!F || s.swing > 0 || rest >= 1 || p.world?.kind === 'town') return; // swinging, or resting on his back (bladeOnBack)
   const col = s.runes.length ? tint(s) : look(p).glow;
   let [hx, hy, L] = hiltOf(F), a = F.a, spin = F.spin, tilt = F.tilt;
   const B = p._bladeBack;
@@ -460,6 +460,11 @@ export default {
     }
     if (s.runes.length >= RUNES && s.swing <= 0 && (s.wait = (s.wait || 0) - dt) <= 0) { s.wait = 0.2; if (crowd(p, 4.5)) this.fire(p, s); }
     famUpdate(p, s, dt);
+    if (p.world?.kind === 'town') {
+      s.idle = 99;
+      s.rest = 1;
+      return;
+    }
     // to his back out of a fight, off it when the fighting starts (he strikes or casts, or the sword fights on its own)
     if (s.fam?.act || s.swing > 0) s.idle = 0;
     s.idle += dt; s.rest = clamp01((s.rest ?? 1) + (s.idle > REST_AFTER ? dt : -dt) / REST_FLY);

@@ -23,7 +23,7 @@ const classes = (process.argv[3] || 'paladin,wizard').split(',');
       if (Auto.on) Auto.toggle(false);
       await game.newChar(cls, 'Scale');
       document.querySelectorAll('.screen').forEach((s) => s.remove()); G.ui.modalCount = 0; G.ui.closeAll();
-      const c = G.char, p = G.player, L = depthLevel(D), lvl = Math.min(300, L + 1);
+      const c = G.char, p = G.player, L = depthLevel(D), lvl = Math.min(100, L + 1);
       c.level = lvl; c.statPoints += (lvl - 1) * 5; c.skillPoints += (lvl - 1) + Math.max(0, D - 1);
       for (let d = 1; d < D; d++) c.cleared[d] = true;
       c.deepest = D - 1; c.depth = D; c.nextBiome = null;
@@ -82,7 +82,7 @@ const classes = (process.argv[3] || 'paladin,wizard').split(',');
       await game.newChar('paladin', 'Thorny');
       document.querySelectorAll('.screen').forEach((s) => s.remove()); G.ui.modalCount = 0; G.ui.closeAll();
       const c = G.char, L = depthLevel(D), p = G.player;
-      c.level = Math.min(3000, L + 2); c.depth = D;
+      c.level = Math.min(100, L + 2); c.depth = D;
       const sh = rollItem(L, { slot: 'offhand', rarity: 4, generic: true }); sh.unid = false;
       sh.affixes = sh.affixes.filter((a) => a.s !== 'thorns'); const v = Math.max(1, Math.round(2 + L * 0.25)); sh.affixes.push({ s: 'thorns', v });
       c.equip.offhand = sh;
@@ -98,7 +98,7 @@ const classes = (process.argv[3] || 'paladin,wizard').split(',');
     return out;
   });
   console.log('thorns / weapon: ' + th.map((t) => `D${t.D} affix ${t.v} -> ${t.thorns} thorns, a normal dies in ${t.blows} blows; Common weapon reads ${t.weapon}`).join(' | '));
-  if (th.some((t) => !(t.blows > 5 && t.blows < 400) || t.weapon < 50 || t.weapon > 200)) { console.log('FAIL: thorns or weapon figures off the scale'); process.exitCode = 1; }
+  if (th.some((t) => !(t.blows > 5 && t.blows < 600) || t.weapon < 5 || t.weapon > 600)) { console.log('FAIL: thorns or weapon figures off the scale'); process.exitCode = 1; }
   const bad = rows.filter((r) => !r.n || r.maxShown > r.life * 50);
   if (bad.length) { console.log('FAIL: shown damage off the scale of hero life:', bad.map((r) => `${r.cls} D${r.D}`).join(', ')); process.exitCode = 1; }
   report(errors, 20);

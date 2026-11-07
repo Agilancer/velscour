@@ -11,8 +11,9 @@ import { MEASURE, NOTES, beatsOf } from '../data/notation.js';
 import { bardNoteFor, bardFitGain, bardPerforming } from './bard.js';
 import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, spearBarrageAreas, buffAmount, curseAmount, skillDuration, effLevel, ricochetCount } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
-import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS, powerLevel, goldLvl } from '../data/items.js';
-import { depthLevel, armorDiv } from '../data/depth.js';
+import { CLASSES } from '../data/classes.js';
+import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS, powerLevel, goldLvl, canEquipItem, BASE_REQ_STAT, charEffectiveStat } from '../data/items.js';
+import { depthLevel, armorDiv, MAX_LEVEL } from '../data/depth.js';
 import { breachLevel } from '../data/breach.js';
 import { riftLevel } from '../data/rifts.js';
 import { riftOpen } from './rifts.js';
@@ -22,15 +23,18 @@ import { marksFree, autoSpend } from './marks.js';
 import { drawBiome } from '../data/biomes.js';
 import { augHits } from '../data/rings.js';
 import { canLearn } from '../ui/skills.js';
+import { CLASS_TALENTS, canLearnTalent, learnTalent, skillMorphFor, applySkillMorph } from '../data/talents.js';
 import { equipFromBag, socketGem, dropFromBag, changed } from '../ui/inventory.js';
 import { GLYPHWORDS, glyphOf } from '../data/relics.js';
 import { Vendor, fuseAll } from '../ui/vendor.js';
 import { Stash, addToStash } from '../ui/stash.js';
+import { JewelBox, addToJewelBox } from '../ui/jewelbox.js';
 import { activeFilter, filterPasses, filterKeeps } from './lootfilter.js';
 import { fadeOf } from './loot.js';
 import { addToBag } from './player.js';
 import { nextRowCost, buyBagRow } from '../data/bag.js';
 import { Delayed, Area, Whirl, Fissure } from './hazards.js';
+import { hit } from './combat.js';
 import { bountyGoal } from './wanderers.js';
 import { heroVisit } from './townlife.js';
 import { homunculusChat, isHomunculus } from './homunculus.js';
@@ -122,7 +126,10 @@ function engageRange(sk, t, bold = 0) {
   const r = reachOf(sk);
   return Math.max(Math.min(r * 0.8, 2.6), Math.min(r * (0.8 - 0.4 * bold), 8 - 2.5 * bold));
 }
-const cdOf = (p, sk) => cooldown(sk) * (1 - p.st.cdr / 100);
+const cdOf = (p, sk) => {
+  const morph = p ? skillMorphFor(p, sk) : null;
+  return cooldown(sk) * (1 - p.st.cdr / 100) * (1 - (morph ? morph.cdPct || 0 : 0) / 100);
+};
 const avg = (d) => (d[0] + d[1]) / 2;
 const critMul = (p) => 1 + (p.st.critChance / 100) * (p.st.critDmg / 100);
 const summonMax = (sk) => sk.m.max || sk.m.n || 1;
@@ -145,6 +152,7 @@ const focusSkills = (classId) => {
   if (classId === 'barbarian') return list.filter((sk) => sk.kind === 'whirl' || sk.kind === 'leap' || sk.kind === 'dash' || sk.name === 'Earthquake');
   if (classId === 'lancer') return list.filter((sk) => sk.m.shields || sk.kind === 'leap' || sk.kind === 'dash');
   if (classId === 'dragoon') return list.filter((sk) => sk.kind === 'leap' || sk.kind === 'dash' || sk.m.barrage || sk.m.weave);
+  if (classId === 'monk') return list.filter((sk) => sk.kind === 'dash' || sk.kind === 'leap' || sk.kind === 'melee' || sk.kind === 'cyclone');
   return null;
 };
 const mobility = (sk) => ['leap', 'dash', 'blink'].includes(sk.kind) ||
@@ -171,6 +179,7 @@ function focusMul(classId, sk) {
   if (classId === 'barbarian') return sk.kind === 'whirl' ? 6 : mobility(sk) ? 1.8 : 1;
   if (classId === 'lancer') return sk.m.shields ? 5 : mobility(sk) ? 1.8 : 1;
   if (classId === 'dragoon') return sk.m.barrage ? 5 : sk.kind === 'leap' ? 5 : sk.m.weave ? 2.5 : mobility(sk) ? 1.8 : 1;
+  if (classId === 'monk') return sk.kind === 'melee' ? 3.5 : mobility(sk) ? 2.2 : 1;
   if (PET_CLASSES.has(classId) && sk.kind === 'summon') return sk.m.dur ? 2.5 : 4;
   if (classId === 'bard') return sk.m.dacapo ? 2 : sk.kind === 'proj' || sk.kind === 'orbit' || sk.kind === 'rain' ? 1.5 : 1; // notes in the air
   if (classId === 'arcane_sorcerer') return sk.m.astro ? 2.5 : sk.fx === 'starmissile' ? 1.5 : 1; // the Astronomer: falling suns, black holes, star swarms
@@ -179,8 +188,10 @@ function focusMul(classId, sk) {
 
 /** Damage per second one skill adds when used as often as its cast time, cooldown and mana allow. */
 function skillDps(p, sk, L, crowd = CROWD) {
-  const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, crowd, L) * critMul(p);
-  const period = Math.max(castTime(p, sk), cdOf(p, sk), 0.05);
+  const morph = skillMorphFor(p, sk);
+  const effSk = morph ? applySkillMorph(sk, morph) : sk;
+  const per = avg(p.skillDamage(sk, L)) * hitsPerCast(effSk, crowd, L) * critMul(p);
+  const period = Math.max(castTime(p, effSk), cdOf(p, sk), 0.05);
   const cost = manaCost(sk, L), rage = rageCost(sk);
   const supply = p.st.manaRegen + p.maxMana / 40;
   const sustain = cost ? Math.min(1, supply / (cost / period)) :
@@ -217,19 +228,22 @@ export function buildPower(p, crowd = CROWD, only = null, focus = false) {
   }
   const ref = Math.max(base, 1);
   for (const sk of learned) {
-    const L = effLevel(p, sk), m = sk.m;
+    const morph = skillMorphFor(p, sk);
+    const effSk = morph ? applySkillMorph(sk, morph) : sk;
+    const L = effLevel(p, sk), m = effSk.m;
     if (sk.kind === 'corpse') parts.push({ sk, v: skillDps(p, sk, L, crowd).dps * 0.35, role: 'cd' });
     else if (sk.kind === 'summon') {
       const def = SUMMONS[m.sum] || { dmg: 1, atk: { cd: 1 } };
-      const n = m.sum === 'revive' ? (m.n || 1) * 0.5 : summonMax(sk);
-      const up = m.dur ? Math.min(1, m.dur / Math.max(m.dur, cooldown(sk) * (1 - p.st.cdr / 100), 1)) : 1;
-      const one = avg(p.skillDamage(sk, L)) * (def.dmg || 1) * (1 + (p.st.summonPct || 0) / 100) / ((def.atk && def.atk.cd) || 1);
+      const n = m.sum === 'revive' ? (m.n || 1) * 0.5 : summonMax(effSk);
+      const up = m.dur ? Math.min(1, m.dur / Math.max(m.dur, cdOf(p, sk), 1)) : 1;
+      const sumMul = (1 + (p.st.summonPct || 0) / 100) * (1 + (morph ? morph.summonDmgPct || 0 : 0) / 100);
+      const one = avg(p.skillDamage(sk, L)) * (def.dmg || 1) * sumMul / ((def.atk && def.atk.cd) || 1);
       // under a pet focus every extra minion counts on its own too
-      const pets = focus && PET_CLASSES.has(c.classId) ? ref * 0.12 * petsOf(sk) * up : 0;
+      const pets = focus && PET_CLASSES.has(c.classId) ? ref * 0.12 * petsOf(effSk) * up : 0;
       parts.push({ sk, v: (one * n * up * 0.55 + ref * 0.05) * fm(sk) + pets, role: 'summon' });
     } else if (sk.kind === 'buff') {
-      const amt = buffAmount(sk, L) / 100, dur = skillDuration(sk, L);
-      const up = Math.min(1, dur / Math.max(dur, cooldown(sk) * (1 - p.st.cdr / 100)));
+      const amt = buffAmount(sk, L) / 100, dur = skillDuration(effSk, L);
+      const up = Math.min(1, dur / Math.max(dur, cdOf(p, sk)));
       let v = 0;
       for (const b of m.buff || ['dmg']) v += (b === 'dmg' || b === 'as') ? amt : b === 'crit' ? amt * 0.15 : amt * 0.25;
       if (m.pulse) v += avg(p.skillDamage(sk, L)) * crowd / ref;
@@ -297,7 +311,7 @@ function augScore(p) {
  * `buy`: also count the sockets the jeweler could add now (in town, with the gold). Gems need bag room on the way.
  */
 function movedGems(c, it, old, buy) {
-  if (!old || !old.gems.length || it.uid === old.uid || bagFree(c) < old.gems.length || c.gold < unsocketCost(old)) return null;
+  if (!old || !old.gems.length || it.uid === old.uid || gemBagFree(c) < old.gems.length || c.gold < unsocketCost(old)) return null;
   let sockets = it.sockets, gold = c.gold - unsocketCost(old);
   while (buy && sockets < it.maxSockets && sockets - it.gems.length < old.gems.length) {
     const cost = socketCost({ ...it, sockets });
@@ -379,12 +393,13 @@ const forChest = (it, c) => !it.sealed && !it.locked && (it.type === 'gem' || fi
 /** Gamble only with this many gambles' worth of gold: a miss sells back for ~5% of its price. */
 const GAMBLE_GOLD = 20;
 function bagFree(c) { return c.bag.reduce((a, b) => a + (b ? 0 : 1), 0); }
+function gemBagFree(c) { return (c.gemBag || []).reduce((a, b) => a + (b ? 0 : 1), 0); }
 /** In town with no free bag slot left after trading (sealed treasures, or nothing auto-play may sell or stash): wait for the player. */
 function bagWait(c) { return bagFree(c) === 0; }
 function sellPrice(it) { return Math.max(1, Math.floor(itemValue(it) / 4)) * (it.type === 'gem' ? (it.count || 1) : 1); }
 function vendorNpc(w, id) { return w.npcs.find((n) => n.vendor && n.vendor.id === id); }
 function potionPrice(k, c) { return Math.round(POTION_PRICE[k] * (1 + c.level * 0.08)); }
-function enemyNear(w, p, r) { return w.hostiles('player', p.x, p.y, r).filter((m) => !m.dead && m.team === 'enemy'); }
+function enemyNear(w, p, r) { return w.hostiles('player', p.x, p.y, r).filter((m) => !m.dead && m.team === 'enemy' && !m.clutter); }
 function segDist(px, py, x0, y0, x1, y1) {
   const dx = x1 - x0, dy = y1 - y0, l2 = dx * dx + dy * dy || 1;
   const t = clamp(((px - x0) * dx + (py - y0) * dy) / l2, 0, 1);
@@ -505,7 +520,7 @@ export const Auto = {
 
   // ---------------------------------------------------------------- main tick (after controls.update)
   update(dt) {
-    if (!this.on) return;
+    if (!this.on || G.cine) return;
     // a bug in the bot must never stop the world from updating
     try { this.tick(dt); } catch (e) {
       console.error('auto-play:', e);
@@ -543,7 +558,7 @@ export const Auto = {
   listen(dt) {
     const L = G.heroListen, p = G.player, w = G.world;
     if (!L) return false;
-    if ((L.t -= dt) <= 0 || L.who.hidden || w.creatures.some((m) => !m.dead && m.team === 'enemy' && m.awake && dist(m.x, m.y, p.x, p.y) < 7)) { G.heroListen = null; return false; }
+    if ((L.t -= dt) <= 0 || L.who.hidden || w.creatures.some((m) => !m.dead && m.team === 'enemy' && !m.clutter && m.awake && dist(m.x, m.y, p.x, p.y) < 7)) { G.heroListen = null; return false; }
     p.moveVec = [0, 0];
     p.facing = Math.atan2(L.who.y - p.y, L.who.x - p.x);
     this.setStatus(`Listening to ${L.who.name}`);
@@ -569,6 +584,7 @@ export const Auto = {
     if (c.statPoints > 0 && G.settings.autoStatPoints !== false) { this.spendStats(); dirty = true; }
     if (marksFree() > 0 && G.settings.autoStatPoints !== false && autoSpend()) dirty = true; // Infernal Marks (game/marks.js), spread evenly
     if (c.skillPoints > 0 && G.settings.autoSkillPoints !== false) { if (this.spendSkills()) dirty = true; }
+    if ((c.talentPoints || 0) > 0 && G.settings.autoSkillPoints !== false) { if (this.spendTalents()) dirty = true; }
     const sig = Object.entries(c.skills).map((e) => e.join(':')).join(',') + '|' + c.level;
     if (sig !== this.lastSig) { this.lastSig = sig; this.arrangeBar(); dirty = true; }
     if (this.optimizeGear()) dirty = true;
@@ -577,8 +593,16 @@ export const Auto = {
   },
 
   spendStats() {
-    const p = G.player, c = G.char;
+    const p = G.player, c = G.char, C = CLASSES[c.classId];
+    const reqStats = C ? [...new Set([BASE_REQ_STAT[C.weapon], C.offhand && BASE_REQ_STAT[C.offhand]].filter(Boolean))] : [];
+    const targetReq = c.level > 1 ? 20 + (Math.min(c.level, MAX_LEVEL) - 1) * 2 : 0;
     while (c.statPoints > 0) {
+      const needStat = targetReq > 0 ? reqStats.find((stKey) => charEffectiveStat(c, stKey) < targetReq) : null;
+      if (needStat) {
+        c.attrs[needStat]++;
+        c.statPoints--;
+        continue;
+      }
       let best = 'vit', bs = -Infinity;
       for (const k of ['str', 'dex', 'vit', 'int']) {
         const s = simulate(p, () => { c.attrs[k]++; return () => { c.attrs[k]--; }; });
@@ -593,6 +617,39 @@ export const Auto = {
   /** The Paladin alternates hammers and Shield Throw: hammers cast since his last shield. */
   hammersSince: 1,
   countFocus(sk) { if (sk.m.ricochet) this.hammersSince = 0; else if (isHammer(sk)) this.hammersSince++; },
+
+  /** Spend dedicated Talent Points (awarded 1 every 5 hero levels) on the Passive Talent Tree (T). */
+  spendTalents() {
+    const p = G.player, c = G.char;
+    const tBranches = CLASS_TALENTS[c.classId];
+    if (!tBranches) return false;
+    let spent = false;
+    while ((c.talentPoints || 0) > 0) {
+      const prefBranch = clamp(mainTree(p), 0, tBranches.length - 1);
+      let bestNode = null, bestScore = -Infinity;
+      for (let bIdx = 0; bIdx < tBranches.length; bIdx++) {
+        for (const node of tBranches[bIdx].nodes) {
+          if (!canLearnTalent(c, node)) continue;
+          const gain = simulate(p, () => {
+            c.talents = c.talents || {};
+            c.talents[node.id] = (c.talents[node.id] || 0) + 1;
+            return () => {
+              if (!--c.talents[node.id]) delete c.talents[node.id];
+            };
+          });
+          const score = gain + (bIdx === prefBranch ? 0.04 : 0) + (node.choice ? 0.025 : 0);
+          if (score > bestScore) { bestScore = score; bestNode = node; }
+        }
+      }
+      if (!bestNode || !learnTalent(c, bestNode.id)) break;
+      p.recompute();
+      spent = true;
+      if ((c.talents[bestNode.id] || 0) === 1) {
+        G.ui.log(`Auto-play unlocked talent <b>${escapeHtml(bestNode.name)}</b>.`, '#8fe0ff');
+      }
+    }
+    return spent;
+  },
 
   /** Put each skill point where it raises buildPower most (counting the prerequisites a new skill needs). */
   spendSkills() {
@@ -718,7 +775,7 @@ export const Auto = {
       const cur = simulate(p, () => () => {});
       let best = -1, bs = equipBar(cur), bslot = null, bmove = null;
       c.bag.forEach((it, i) => {
-        if (!it || it.type !== 'gear' || it.unid || it.sealed || it.locked || (it.req || 1) > c.level) return;
+        if (!it || it.type !== 'gear' || it.unid || it.sealed || it.locked || !canEquipItem(c, it)) return;
         const f = fitScore(p, it, undefined, placed);
         if (f.s > bs) { bs = f.s; best = i; bslot = f.slot; bmove = f.move; }
       });
@@ -726,7 +783,7 @@ export const Auto = {
       if (best < 0) {
         this.worn = this.worn || new Set();
         c.bag.forEach((it, i) => {
-          if (best >= 0 || !it || it.type !== 'gear' || it.unid || it.sealed || it.locked || (it.req || 1) > c.level || (it.slot !== 'body' && it.slot !== 'head') || this.worn.has(it.uid)) return;
+          if (best >= 0 || !it || it.type !== 'gear' || it.unid || it.sealed || it.locked || !canEquipItem(c, it) || (it.slot !== 'body' && it.slot !== 'head') || this.worn.has(it.uid)) return;
           const old = c.equip[it.slot];
           if (old && (old.locked || it.rarity < old.rarity || it.ilvl < old.ilvl - 4)) return;
           const f = fitScore(p, it); if (f.s > cur - 0.02) { best = i; bslot = f.slot; bmove = f.move; }
@@ -747,7 +804,7 @@ export const Auto = {
   /** Pry the gems out of `from` (just taken off) and set the best of them into `to`, adding sockets up to `sockets`. */
   moveGems(from, to, sockets) {
     const c = G.char, cost = unsocketCost(from);
-    if (c.gold < cost || bagFree(c) < from.gems.length) return;
+    if (c.gold < cost || gemBagFree(c) < from.gems.length) return;
     c.gold -= cost;
     for (const g of from.gems) addToBag(c, makeGem(g.gem, g.tier));
     const n = from.gems.length;
@@ -757,7 +814,7 @@ export const Auto = {
     G.ui.log(`Auto-play moved ${n} gem${n > 1 ? 's' : ''} into <span style="color:${itemColor(to)}">${escapeHtml(itemName(to))}</span>.`, '#c8f0ff');
   },
 
-  /** Fill free sockets of equipped gear with the bag gems that help most. */
+  /** Fill free sockets of equipped gear with the gem-bag/bag gems that help most. */
   socketGems() {
     const p = G.player, c = G.char;
     let any = false;
@@ -768,15 +825,19 @@ export const Auto = {
         const it = c.equip[slot];
         if (!it || it.locked || it.gems.length >= it.sockets) continue;
         const tried = new Set();
-        c.bag.forEach((g, gi) => {
+        const gemSources = [
+          ...((c.gemBag || []).map((g, gi) => ({ g, gi, where: 'gemBag' }))),
+          ...((c.bag || []).map((g, gi) => ({ g, gi, where: 'bag' }))),
+        ];
+        gemSources.forEach(({ g, gi, where }) => {
           if (!g || g.type !== 'gem' || GEMS[g.gem].sigil || tried.has(g.gem + g.tier)) return; // Sigils wait for a Glyphword
           tried.add(g.gem + g.tier);
           const s = simulate(p, () => { it.gems.push({ gem: g.gem, tier: g.tier }); return () => { it.gems.pop(); }; });
-          if (s > bs) { bs = s; best = { gi, slot }; }
+          if (s > bs) { bs = s; best = { gi, slot, where }; }
         });
       }
       if (!best) break;
-      socketGem(best.gi, { where: 'equip', slot: best.slot });
+      socketGem(best.gi, { where: 'equip', slot: best.slot }, best.where);
       any = true;
     }
     return any;
@@ -800,15 +861,15 @@ export const Auto = {
     if (g.kind === 'potion') return (c.potions[g.item.kind] || 0) < 30;
     if (g.kind !== 'item') return false;
     const it = g.item, free = bagFree(c), f = activeFilter();
-    if (it.type === 'gem') return (!f || f.gems) && (free > 0 || c.bag.some((b) => b && b.type === 'gem' && b.gem === it.gem && b.tier === it.tier) || this.worstBag(itemValue(it)) >= 0);
+    if (it.type === 'gem') return filterPasses(it) && (gemBagFree(c) > 0 || (c.gemBag || []).some((b) => b && b.type === 'gem' && b.gem === it.gem && b.tier === it.tier));
     if (it.type !== 'gear' || it.sealed) return free > 0; // a sealed treasure is Epic or better: always worth a slot
     if (f) { // the player's loot filter (game/lootfilter.js) decides, plus upgrades to wear unless that's off too
-      if (!filterPasses(it) && !(f.upgrades && (it.req || 1) <= c.level && this.isUpgrade(it))) return false;
+      if (!filterPasses(it) && !(f.upgrades && canEquipItem(c, it) && this.isUpgrade(it))) return false;
       return free > 0 || this.worstBag(itemValue(it)) >= 0;
     }
-    const upgrade = (it.req || 1) <= c.level && this.isUpgrade(it);
+    const upgrade = canEquipItem(c, it) && this.isUpgrade(it);
     if (upgrade) return true;
-    if ((it.slot === 'body' || it.slot === 'head') && (it.req || 1) <= c.level && (!c.equip[it.slot] || it.rarity >= c.equip[it.slot].rarity) && free > 0) return true; // new looks
+    if ((it.slot === 'body' || it.slot === 'head') && canEquipItem(c, it) && (!c.equip[it.slot] || it.rarity >= c.equip[it.slot].rarity) && free > 0) return true; // new looks
     const minRarity = free > 30 ? 1 : free > 12 ? 2 : 3;
     if (it.rarity < minRarity) return false;
     return free > 0 || this.worstBag(itemValue(it)) >= 0;
@@ -874,8 +935,11 @@ export const Auto = {
       for (let k = 0; k < 9; k++) {
         if (!((sm >> k) & 1)) continue;
         const ox = (k % 3) - 1, oy = ((k / 3) | 0) - 1, ni = i + oy * W + ox;
-        if (d[ni] !== -1 || T[ni] !== 1 || Bl[ni]) continue;
-        if (ox && oy && (T[i + ox] !== 1 || Bl[i + ox] || T[i + oy * W] !== 1 || Bl[i + oy * W])) continue;
+        const bl = Bl[ni] && (!m.clutter || !m.clutter[ni]);
+        if (d[ni] !== -1 || T[ni] !== 1 || bl) continue;
+        const blX = Bl[i + ox] && (!m.clutter || !m.clutter[i + ox]);
+        const blY = Bl[i + oy * W] && (!m.clutter || !m.clutter[i + oy * W]);
+        if (ox && oy && (T[i + ox] !== 1 || blX || T[i + oy * W] !== 1 || blY)) continue;
         d[ni] = nd; q[t++] = ni;
       }
     }
@@ -978,7 +1042,8 @@ export const Auto = {
       for (let oy = -1; oy <= 1 && next < 0; oy++) for (let ox = -1; ox <= 1; ox++) {
         const nx = x + ox, ny = y + oy;
         if ((!ox && !oy) || !m.inb(nx, ny)) continue;
-        if (ox && oy && (!m.walkableTile(x + ox, y) || !m.walkableTile(x, y + oy))) continue;
+        const okTile = (tx, ty) => m.walkableTile(tx, ty) || (m.clutter && m.clutter[ty * W + tx]);
+        if (ox && oy && (!okTile(x + ox, y) || !okTile(x, y + oy))) continue;
         if (m.hgt && !m.stepsOk(nx, ny, -ox, -oy)) continue; // walked from there to here
         if (d[ny * W + nx] === d[cur] - 1) { next = ny * W + nx; break; }
       }
@@ -1039,6 +1104,11 @@ export const Auto = {
       else break;
     }
     let [nx, ny] = this.path[0];
+    const blocking = this.getBlockingClutter(nx, ny, 1.8);
+    if (blocking) {
+      this.attackClutter(blocking);
+      return false;
+    }
     if (this.jiggle && this.jiggle.t > 0) { this.jiggle.t -= dt; nx = p.x + Math.cos(this.jiggle.a); ny = p.y + Math.sin(this.jiggle.a); }
     if (hold && this.holdEdge(nx, ny, dt)) return false; // (not when running for cover or a raid mechanic)
     this.steer(nx, ny);
@@ -1074,9 +1144,67 @@ export const Auto = {
     if (trying && (moved < 0.12 || noGain)) {
       s.n++;
       this.navT = 0; this.path = null;
+      const clutter = this.getNearbyClutter(2.2);
+      if (clutter) {
+        this.attackClutter(clutter);
+        s.n = 0;
+        return;
+      }
       if (s.n >= 2) this.jiggle = { t: 0.35, a: Math.random() * TAU };
     } else s.n = 0;
     s.t = 0; s.x = p.x; s.y = p.y; s.wp = this.path && this.path[0]; s.wd = s.wp ? dist(p.x, p.y, s.wp[0], s.wp[1]) : 0;
+  },
+  getNearbyClutter(r = 2.0) {
+    const p = G.player, w = G.world;
+    if (!w || !w.creatures) return null;
+    let closest = null, cd = r * r;
+    for (const c of w.creatures) {
+      if (c.clutter && !c.dead) {
+        const d = dist(p.x, p.y, c.x, c.y);
+        if (d * d <= cd) {
+          cd = d * d;
+          closest = c;
+        }
+      }
+    }
+    return closest;
+  },
+  getBlockingClutter(nx, ny, maxDist = 1.8) {
+    const p = G.player, w = G.world;
+    if (!w || !w.creatures) return null;
+    const dx = nx - p.x, dy = ny - p.y, len = Math.hypot(dx, dy);
+    if (len < 1e-3) return null;
+    const ux = dx / len, uy = dy / len;
+    let closest = null, cd = maxDist * maxDist;
+    for (const c of w.creatures) {
+      if (c.clutter && !c.dead) {
+        const d = dist(p.x, p.y, c.x, c.y);
+        if (d * d <= cd) {
+          const dot = (c.x - p.x) * ux + (c.y - p.y) * uy;
+          if (dot > -0.2) {
+            cd = d * d;
+            closest = c;
+          }
+        }
+      }
+    }
+    return closest;
+  },
+  attackClutter(c) {
+    const p = G.player;
+    if (!c || c.dead || !p || p.dead) return false;
+    p.facing = Math.atan2(c.y - p.y, c.x - p.x);
+    p.moveVec = [Math.cos(p.facing), Math.sin(p.facing)];
+
+    const skills = this.barSkills();
+    const primary = (G.char && G.char.bar && SKILLS[G.char.bar[0]]) || skills[0];
+    const sk = (primary && p.canUse(primary)) ? primary : skills.find((s) => p.canUse(s) && ['melee', 'smash', 'slash', 'proj', 'aoe', 'nova', 'fissure', 'beam', 'dash'].includes(s.kind));
+
+    if (sk && p.tryUseSkill(sk, c.x, c.y, c)) {
+      return true;
+    }
+    hit(p, c, 1, 'phys', { melee: true });
+    return true;
   },
 
   // ================================================================ dungeon
@@ -1273,7 +1401,7 @@ export const Auto = {
     const farm = !!w.rift || c.level < depthLevel(w.depth) + S.farm; // the monster level, not the raw depth (they part after depth 60); a rift's quota wants the whole level
     let best = null, bd = Infinity;
     for (const m of w.creatures) {
-      if (m.dead || m.team !== 'enemy' || m.targetable === false || this.giveUp.has(m) || this.shun.get(m) > w.time) continue;
+      if (m.dead || m.team !== 'enemy' || m.targetable === false || m.clutter || this.giveUp.has(m) || this.shun.get(m) > w.time) continue;
       const d = this.navDist(m.x, m.y);
       if (d === Infinity) continue;
       const lim = m.goblin ? 60 : farm ? 999 : S.lim;
@@ -1326,7 +1454,7 @@ export const Auto = {
       return true;
     }
     this.setStatus(best.kind === 'item' ? `Picking up ${best.label}` : 'Collecting');
-    if (best.kind === 'item' && best.item.type !== 'potion' && bagFree(c) === 0 && !(best.item.type === 'gem' && c.bag.some((b) => b && b.type === 'gem' && b.gem === best.item.gem && b.tier === best.item.tier))) {
+    if (best.kind === 'item' && best.item.type !== 'potion' && best.item.type !== 'gem' && bagFree(c) === 0) {
       if (!this.makeRoom(best.item)) { this.ignore.add(best.item); return false; }
     }
     p.lootTarget = best.kind === 'item' || best.kind === 'potion' ? best : null;
@@ -1994,23 +2122,29 @@ export const Auto = {
       }
       T.sealNote = false;
       if (this.townSocial(dt)) return;
-      // done: through the portal (the purple one when auto-play was told to take the Breach)
+      // done: through the portal (the purple one when auto-play was told to take the Breach, or Hearthstone portal)
       const breach = this.dest === 'breach' && w.portals.find((q) => q.breach);
       const rift = this.dest === 'rift' && endgameUnlocked(c) && w.portals.find((q) => q.rift);
-      const po = breach || rift || w.portals[0];
-      this.setStatus(breach ? `To THE ETERNAL BREACH — Floor ${this.breachFloor()}` : rift ? `To the Abyssal Rift — Tier ${this.riftTier()}` : `To the portal — Depth ${c.depth}`);
+      const hearth = !breach && !rift && w.portals.find((q) => q.hearth);
+      const po = breach || rift || hearth || w.portals[0];
+      this.setStatus(breach ? `To THE ETERNAL BREACH — Floor ${this.breachFloor()}` : rift ? `To the Abyssal Rift — Tier ${this.riftTier()}` : hearth ? 'Returning through Hearthstone portal' : `To the portal — Depth ${c.depth}`);
       if (this.goTo(po.x, po.y, 1.3, dt)) {
         G.ui.closeAll();
         this.transitT = 4;
         this.sinceTown = 0;
-        if (breach) G.game.enterBreach(this.breachFloor());
+        if (hearth) po.use();
+        else if (breach) G.game.enterBreach(this.breachFloor());
         else if (rift) G.game.enterRift(this.riftTier());
         else G.game.enterDungeon();
       }
       this.watchStuck(dt);
       return;
     }
-    const npc = step.stash ? w.npcs.find((n) => n.stash) : vendorNpc(w, step.vendor);
+    const npc = step.jewelBox
+      ? w.npcs.find((n) => n.jewelBox)
+      : step.stash
+        ? w.npcs.find((n) => n.stash && !n.reliquary && !n.jewelBox)
+        : vendorNpc(w, step.vendor);
     if (!npc) { T.i++; return; }
     T.t += dt;
     if (T.phase === 'walk') {
@@ -2032,7 +2166,11 @@ export const Auto = {
       return;
     }
     if (T.phase === 'open') {
-      try { if (step.stash) Stash.open(); else Vendor.open(step.vendor); } catch (e) { console.warn('auto-play could not open a vendor', e); }
+      try {
+        if (step.jewelBox) JewelBox.open();
+        else if (step.stash) Stash.open();
+        else Vendor.open(step.vendor);
+      } catch (e) { console.warn('auto-play could not open a storage/vendor', e); }
       T.phase = 'act'; T.t = 0;
       return;
     }
@@ -2092,17 +2230,19 @@ export const Auto = {
   townPlan() {
     const c = G.char;
     const steps = [];
-    if (c.stash && c.stash.some((b) => b && (b.type === 'gem' || this.stashUpgrade(b)))) steps.push({ stash: true, label: 'Checking the storage chest', fn: () => this.unstash() });
+    if (c.stash && c.stash.some((b) => b && this.stashUpgrade(b))) steps.push({ stash: true, label: 'Checking the storage chest', fn: () => this.unstash() });
     const gear = (k) => () => this.gearGain(Vendor.stock[k]);
     steps.push({ vendor: 'weapons', label: 'Selling loot', want: () => c.bag.some((b) => b && b.type !== 'gem' && b.type !== 'sheet' && !b.sealed && !upgraded(b)) || this.gearGain(Vendor.stock.weapons), fn: () => { this.sellJunk(); if (this.buyGear(Vendor.stock.weapons)) this.sellJunk(); } }); // sell what the new piece replaced too: a nearly full bag has no slot for it
     steps.push({ vendor: 'alchemist', label: 'Buying potions', want: () => this.potionsWanted(), fn: () => this.buyPotions() });
     steps.push({ vendor: 'armor', label: 'Browsing armor', want: gear('armor'), fn: () => { if (this.buyGear(Vendor.stock.armor)) this.sellJunk(); } });
-    if (c.bag.some((b) => b && b.type === 'gem') || c.gold > 2000) steps.push({ vendor: 'gems', label: 'Visiting the gem merchant', fn: () => this.gemShop() });
-    steps.push({ vendor: 'socket', label: 'Visiting the jeweler', want: () => c.bag.some((b) => b && b.type === 'gem') || this.equipped().some((it) => it.sockets < it.maxSockets && socketCost(it) <= this.budget(0.3)) || this.gearGain(Vendor.stock.rings), fn: () => this.jeweler() });
+    const hasGems = () => ((c.gemBag || []).concat(c.bag || [])).some((b) => b && b.type === 'gem');
+    if (hasGems() || c.gold > 2000) steps.push({ vendor: 'gems', label: 'Visiting the gem merchant', fn: () => this.gemShop() });
+    steps.push({ vendor: 'socket', label: 'Visiting the jeweler', want: () => hasGems() || this.equipped().some((it) => it.sockets < it.maxSockets && socketCost(it) <= this.budget(0.3)) || this.gearGain(Vendor.stock.rings), fn: () => this.jeweler() });
     steps.push({ vendor: 'upgrade', chat: true, label: 'Visiting Homunculus the Proud', want: () => this.equipped().some((it) => (it.upg || 0) < 10 && upgradeCost(it) <= this.budget(0.45)), fn: () => this.blacksmith() });
     steps.push({ vendor: 'enchant', label: 'Enchanting gear', want: () => this.equipped().some((it) => it.rarity >= 1 && enchantCost(it, true) <= this.budget(0.2)), fn: () => this.enchanter() });
     steps.push({ vendor: 'gamble', label: 'Gambling', want: () => c.gold >= Math.round(180 * Math.pow(1.065, goldLvl(Math.max(c.level, depthLevel(c.depth || 1))))) * GAMBLE_GOLD && bagFree(c) >= 3, fn: () => { this.gamble(); this.sellJunk(); } });
-    steps.push({ stash: true, label: 'Stashing gems and gear for later', want: () => c.bag.some((b) => b && forChest(b, c)), fn: () => this.stashExtras() });
+    steps.push({ jewelBox: true, label: 'Stashing gems in the jewel box', want: () => hasGems(), fn: () => this.stashJewels() });
+    steps.push({ stash: true, label: 'Stashing gear in the storage chest', want: () => (c.bag || []).some((b) => b && b.type !== 'gem' && forChest(b, c)), fn: () => this.stashExtras() });
     return steps;
   },
   wants(f) { try { return !!f(); } catch (e) { return true; } },
@@ -2115,7 +2255,7 @@ export const Auto = {
     if (!list || !bagFree(c)) return false;
     const cur = simulate(p, () => () => {});
     const bar = Math.max(equipBar(cur), cur + 0.012);
-    return list.some((it) => it && it.type === 'gear' && (it.req || 1) <= c.level && itemValue(it) <= this.budget(0.85) && fitScore(p, it, false).s > bar);
+    return list.some((it) => it && it.type === 'gear' && canEquipItem(c, it) && itemValue(it) <= this.budget(0.85) && fitScore(p, it, false).s > bar);
   },
   potionsWanted() {
     const c = G.char;
@@ -2123,31 +2263,57 @@ export const Auto = {
   },
   /** Stored gear to take out: an upgrade now, or what auto-play put away until the hero could wear it (to wear or sell).
    *  What the player stored stays put: auto-play would sell it. */
-  stashUpgrade(it) { return it.type === 'gear' && !it.sealed && !it.locked && (it.req || 1) <= G.char.level && ((it.autoStash === true && bagFree(G.char) >= 12) || this.isUpgrade(it)); },
-  /** Storage chest: take out the gems (for the jeweler and fusing) and the stored gear that's an upgrade now. */
+  stashUpgrade(it) { return it.type === 'gear' && !it.sealed && !it.locked && canEquipItem(G.char, it) && ((it.autoStash === true && bagFree(G.char) >= 12) || this.isUpgrade(it)); },
+  /** Storage chest: take out stored gear that's an upgrade now. Gems remain stored. */
   unstash() {
     const c = G.char;
     c.stash.forEach((it, i) => {
-      if (!it || (it.type === 'gear' && (bagFree(c) < 2 || !this.stashUpgrade(it)))) return;
+      if (!it || it.type !== 'gear' || bagFree(c) < 2 || !this.stashUpgrade(it)) return;
       if (!addToBag(c, it)) return;
       c.stash[i] = null;
-      if (it.type !== 'gear') return;
       this.optimizeGear();
       const j = c.bag.indexOf(it);
       if (j >= 0 && it.autoStash !== true) { c.bag[j] = null; c.stash[i] = it; } // not worn after all (rings weigh each other): a stored keeper goes back, unsold
     });
     changed();
   },
-  /** Storage chest: put away every gem, the +N gear and the good gear the hero is still too low-level to wear. */
+  /** Jewel Box: put away every gem and sigil from gemBag and bag. */
+  stashJewels() {
+    const c = G.char;
+    let n = 0;
+    if (c.gemBag) {
+      c.gemBag.forEach((it, i) => {
+        if (!it || it.type !== 'gem') return;
+        if (addToJewelBox(c, it)) { c.gemBag[i] = null; n++; }
+      });
+    }
+    if (c.bag) {
+      c.bag.forEach((it, i) => {
+        if (!it || it.type !== 'gem') return;
+        if (addToJewelBox(c, it)) { c.bag[i] = null; n++; }
+      });
+    }
+    if (n) G.ui.log(`Auto-play stored ${n} gem${n > 1 ? 's' : ''} in the Jewel Box.`, '#d8b4fe');
+    changed();
+  },
+  /** Storage chest: put away the +N gear, keepers, and the good gear the hero is still too low-level to wear. */
   stashExtras() {
     const c = G.char;
     let n = 0;
-    const store = () => c.bag.forEach((it, i) => {
-      if (!it || !forChest(it, c)) return;
-      // future gear comes back out once the hero can wear it; keepers (+N, the loot filter's) only as an upgrade
-      if (it.type === 'gear') it.autoStash = filterKeeps(it) || upgraded(it) ? 'keep' : true;
-      if (addToStash(c, it)) { c.bag[i] = null; n++; } else delete it.autoStash;
-    });
+    const store = () => {
+      c.bag.forEach((it, i) => {
+        if (!it || !forChest(it, c)) return;
+        // future gear comes back out once the hero can wear it; keepers (+N, the loot filter's) only as an upgrade
+        if (it.type === 'gear') it.autoStash = filterKeeps(it) || upgraded(it) ? 'keep' : true;
+        if (addToStash(c, it)) { c.bag[i] = null; n++; } else delete it.autoStash;
+      });
+      if (c.gemBag) {
+        c.gemBag.forEach((it, i) => {
+          if (!it || !forChest(it, c)) return;
+          if (addToStash(c, it)) { c.gemBag[i] = null; n++; }
+        });
+      }
+    };
     store();
     // a full chest: make room by selling the weakest gear auto-play stored (+N gear last, then lowest rarity and item
     // level), then store the rest
@@ -2168,26 +2334,22 @@ export const Auto = {
     return Math.max(0, (c.gold - reserve) * frac);
   },
 
-  /** Sell everything in the bag that isn't an upgrade or a near-future one; keep gems unless the bag is crowded, and
-   *  +N gear (for the chest). */
+  /** Sell everything in the bag that isn't an upgrade or a near-future one; gems and sigils are never sold (stored in the jewel box), nor sheets, keepers, or +N gear. */
   sellJunk() {
     const p = G.player, c = G.char;
     this.optimizeGear();
     let gold = 0, n = 0;
     const future = {};
     c.bag.forEach((it, i) => {
-      if (!it || it.sealed || it.locked || it.type === 'sheet' || filterKeeps(it) || upgraded(it)) return; // only the player breaks a seal or sells what's locked; keepers and +N gear go to the chest
-      if (it.type === 'gem') {
-        const top = Math.max(0, ...SLOTS.flatMap((s) => (c.equip[s] ? c.equip[s].gems.map((g) => g.tier) : [])), ...c.bag.filter((b) => b && b.type === 'gem').map((b) => b.tier));
-        if (bagFree(c) > 15 || GEMS[it.gem].special || GEMS[it.gem].sigil || it.tier >= top - 1) return;
-      } else if (it.type === 'gear' && (it.req || 1) > c.level && (it.req || 1) <= c.level + 6 && it.rarity >= 2 && !future[it.slot]) {
+      if (!it || it.type === 'gem' || it.sealed || it.locked || it.type === 'sheet' || filterKeeps(it) || upgraded(it)) return; // only the player breaks a seal or sells what's locked; keepers and +N gear go to the chest; gems go to the jewel box
+      if (it.type === 'gear' && (it.req || 1) > c.level && (it.req || 1) <= c.level + 6 && it.rarity >= 2 && !future[it.slot]) {
         const s = fitScore(p, it).s;
         if (s > simulate(p, () => () => {}) + 0.02) { future[it.slot] = true; return; }
       }
       // gems socketed in gear we're selling: pry them out when that's cheap compared to their worth
       if (it.type === 'gear' && it.gems.length) {
         const worth = it.gems.reduce((a, g) => a + itemValue(makeGem(g.gem, g.tier)) / 4, 0);
-        if (worth > unsocketCost(it) * 1.5 && c.gold >= unsocketCost(it) && bagFree(c) >= it.gems.length) {
+        if (worth > unsocketCost(it) * 1.5 && c.gold >= unsocketCost(it) && gemBagFree(c) >= it.gems.length) {
           c.gold -= unsocketCost(it);
           for (const g of it.gems) addToBag(c, makeGem(g.gem, g.tier));
           it.gems = [];
@@ -2225,7 +2387,7 @@ export const Auto = {
       const cur = simulate(p, () => () => {}), bar = Math.max(equipBar(cur), cur + 0.012);
       let best = -1, bv = 0, bslot = null;
       list.forEach((it, i) => {
-        if (!it || it.type !== 'gear' || (it.req || 1) > c.level) return;
+        if (!it || it.type !== 'gear' || !canEquipItem(c, it)) return;
         const price = itemValue(it);
         if (price > this.budget(0.85)) return;
         const f = fitScore(p, it, false); // judged on its own sockets: the gold for new ones goes on the buy
@@ -2249,7 +2411,7 @@ export const Auto = {
     const p = G.player, c = G.char;
     for (const l of [Vendor.stock.weapons, Vendor.stock.armor, Vendor.stock.rings]) {
       if (!l || l === list) continue;
-      for (const o of l) if (o && o !== it && o.type === 'gear' && o.slot === it.slot && (o.req || 1) <= c.level && itemValue(o) <= this.budget(0.85) && fitScore(p, o, false).s > s) return true;
+      for (const o of l) if (o && o !== it && o.type === 'gear' && o.slot === it.slot && canEquipItem(c, o) && itemValue(o) <= this.budget(0.85) && fitScore(p, o, false).s > s) return true;
     }
     return false;
   },
@@ -2273,7 +2435,7 @@ export const Auto = {
         const gain = simulate(p, () => { it.gems.push({ gem: g.gem, tier: g.tier }); return () => { it.gems.pop(); }; }) - cur;
         if (gain > 0.003 && gain / itemValue(g) > bv) { bv = gain / itemValue(g); best = i; }
       });
-      if (best < 0 || !bagFree(c)) break;
+      if (best < 0 || (!gemBagFree(c) && !(c.gemBag || []).some((b) => b && b.type === 'gem' && b.gem === list[best].gem && b.tier === list[best].tier))) break;
       Vendor.buy({ type: 'shop', list, i: best });
       this.socketGems();
     }
@@ -2282,7 +2444,7 @@ export const Auto = {
 
   jeweler() {
     const c = G.char;
-    const spare = c.bag.reduce((a, b) => a + (b && b.type === 'gem' ? b.count || 1 : 0), 0);
+    const spare = ((c.gemBag || []).concat(c.bag || [])).reduce((a, b) => a + (b && b.type === 'gem' ? b.count || 1 : 0), 0);
     let added = 0;
     for (const s of ['weapon', 'body', 'offhand', 'head', 'legs', 'hands', 'feet']) {
       const it = c.equip[s];
@@ -2299,15 +2461,15 @@ export const Auto = {
   },
 
   /**
-   * Write a Glyphword (data/relics.js) when the bag's Sigils spell one: take a plain item of a slot it fits (from the
+   * Write a Glyphword (data/relics.js) when the gem-bag/bag's Sigils spell one: take a plain item of a slot it fits (from the
    * bag, else a shop's), give it exactly that many sockets, set the Sigils in order. optimizeGear then decides whether
    * to wear it; a written word is kept (it's never sold: upgraded-or-relic rule in sellJunk).
    */
   glyphwork() {
-    const c = G.char, p = G.player;
+    const c = G.char;
     if (!gearOn()) return false;
     const have = {};
-    for (const b of c.bag) if (b && b.type === 'gem' && GEMS[b.gem].sigil) have[b.tier] = (have[b.tier] || 0) + (b.count || 1);
+    for (const b of ((c.gemBag || []).concat(c.bag || []))) if (b && b.type === 'gem' && GEMS[b.gem].sigil) have[b.tier] = (have[b.tier] || 0) + (b.count || 1);
     if (!Object.keys(have).length) return false;
     const lvl = Math.max(1, c.level);
     for (const gw of [...GLYPHWORDS].reverse()) { // the deepest words first
@@ -2315,7 +2477,7 @@ export const Auto = {
       for (const r of gw.sig) need[r] = (need[r] || 0) + 1;
       if (!Object.entries(need).every(([r, n]) => (have[r] || 0) >= n)) continue;
       const n = gw.sig.length;
-      const fits = (it) => it && it.type === 'gear' && it.rarity === 0 && !it.relic && !it.locked && !it.sealed && gw.slots.includes(it.slot) && it.maxSockets >= n && it.sockets <= n && !it.gems.length && (it.req || 1) <= c.level && it.ilvl >= lvl - 12;
+      const fits = (it) => it && it.type === 'gear' && it.rarity === 0 && !it.relic && !it.locked && !it.sealed && gw.slots.includes(it.slot) && it.maxSockets >= n && it.sockets <= n && !it.gems.length && canEquipItem(c, it) && it.ilvl >= lvl - 12;
       let idx = c.bag.findIndex(fits);
       if (idx < 0) {
         for (const list of [Vendor.stock.weapons, Vendor.stock.armor]) {
@@ -2329,7 +2491,15 @@ export const Auto = {
       while (it.sockets < n) { cost += socketCost(it); it.sockets++; }
       if (cost > c.gold) { it.sockets = s0; continue; }
       c.gold -= cost;
-      for (const r of gw.sig) { const gi = c.bag.findIndex((b) => b && b.type === 'gem' && b.gem === 'sig' && b.tier === r); socketGem(gi, { where: 'bag', idx: c.bag.indexOf(it) }); }
+      for (const r of gw.sig) {
+        let gi = c.gemBag ? c.gemBag.findIndex((b) => b && b.type === 'gem' && b.gem === 'sig' && b.tier === r) : -1;
+        let where = 'gemBag';
+        if (gi < 0) {
+          gi = c.bag.findIndex((b) => b && b.type === 'gem' && b.gem === 'sig' && b.tier === r);
+          where = 'bag';
+        }
+        socketGem(gi, { where: 'bag', idx: c.bag.indexOf(it) }, where);
+      }
       if (glyphOf(it)) { G.ui.log(`Auto-play wrote the Glyphword <b style="color:#f2e2b0">${escapeHtml(gw.name)}</b>.`, '#f2e2b0'); this.optimizeGear(); return true; }
     }
     return false;

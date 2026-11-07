@@ -2117,6 +2117,12 @@ export const CLASS_TAUNTS = {
     ['cheer', 'Bang! Bang! Bang!|My trigger-happy little champion!'],
     ['sulk', 'You never even look at me|You just look down that barrel'],
   ],
+  monk: [
+    ['dread', 'A monk from the secluded high temples…|Meditation cannot quiet the hunger below'],
+    ['rage', 'Your mantras ring through the stone!|THE CHASM WILL DROWN OUT YOUR CHANTS!'],
+    ['dread', 'Inner peace is a brittle glass, monk|The deep knows how to shatter it'],
+    ['dread', 'You seek enlightenment in the dark|Only oblivion answers'],
+  ],
 };
 
 /** Fixed lines for milestone levels, [mood, text]. */

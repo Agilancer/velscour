@@ -1,5 +1,6 @@
 // UI core: panels, dialogs, tooltips, drag & drop, message log.
 import { onArtLoad } from '../core/classart.js';
+import { onSkillSheetLoad } from './icons.js';
 import { G } from '../state.js';
 import { el, escapeHtml } from '../core/util.js';
 import { sfx } from '../core/audio.js';
@@ -18,6 +19,14 @@ export const UI = {
   init() {
     G.ui = this;
     onArtLoad(() => this.refresh()); // armor icons and the portrait appear once their strips arrive
+    onSkillSheetLoad(() => {
+      if (this.hud && this.hud.slots) for (const s of this.hud.slots) if (s.last && typeof s.map !== 'string') s.last.icon = undefined;
+      if (G.touchUI) {
+        if (G.touchUI.btns) for (const t of G.touchUI.btns) if (t.last) t.last.id = undefined;
+        if (G.touchUI.macroBtns) for (const m of G.touchUI.macroBtns) m.last = undefined;
+      }
+      this.refresh();
+    });
     this.panelsEl = $('#panels');
     this.screensEl = $('#screens');
     this.tipEl = $('#tooltip');
@@ -113,6 +122,15 @@ export const UI = {
         r(p.body, p);
         p.body.scrollTop = st;
         if (expanded) p.body.querySelector('.character-more')?.setAttribute('open', '');
+      }
+    }
+    if (this.tipEl && !this.tipEl.classList.contains('hidden') && this.tipKey && this.tipRefreshFn) {
+      const safeKey = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(this.tipKey) : this.tipKey.replace(/"/g, '\\"');
+      const nextAnchor = document.querySelector(`[data-tip-key="${safeKey}"]`);
+      if (nextAnchor) {
+        this.showTip(this.tipRefreshFn(), 0, 0, this.isTouchTip, nextAnchor, { interactive: this.isInteractiveTip, key: this.tipKey, fn: this.tipRefreshFn });
+      } else {
+        this.hideTip();
       }
     }
     if (this.tipEl && !this.tipEl.classList.contains('hidden') && this.tipKey && this.tipRefreshFn) {

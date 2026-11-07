@@ -21,7 +21,14 @@ export function loadTab(idx, slot) {
   const c = G.char, it = c.bag[idx], tabs = tabsOf(c);
   if (!isSheet(it)) return false;
   if (!isBard()) { UI.log('Only a Bard can play a music sheet.', '#ff8080'); sfx('error'); return false; }
-  if (!it.inked) { UI.log('Lock the sheet first: only locked sheets go in your Tabs.', '#ff8080'); sfx('error'); return false; }
+  if (!it.inked) {
+    const r = it.text && it.text.trim() ? readSheet(it.text) : null;
+    if (!r || !r.ev || !r.ev.length) {
+      UI.log('There is no tune on that sheet.', '#ff8080'); sfx('error'); return false;
+    }
+    confirmLockAndLoad(idx, slot);
+    return false;
+  }
   if (!readSheet(it.text).ev) { UI.log('There is no tune on that sheet.', '#ff8080'); sfx('error'); return false; }
   const to = slot ?? tabs.findIndex((t) => !t);
   if (to < 0) { UI.log('All five Tabs are full. Take a sheet out first.', '#ff8080'); sfx('error'); return false; }
@@ -34,13 +41,34 @@ export function loadTab(idx, slot) {
   changed();
   return true;
 }
+
+export function confirmLockAndLoad(idx, slot) {
+  const c = G.char, it = c.bag[idx];
+  if (!it || !isSheet(it)) return;
+  const r = it.text && it.text.trim() ? readSheet(it.text) : null;
+  if (!r || !r.ev || !r.ev.length) {
+    UI.log('There is no tune on that sheet.', '#ff8080'); sfx('error'); return;
+  }
+  const to = slot ?? tabsOf(c).findIndex((t) => !t);
+  if (to < 0) {
+    UI.log('All five Tabs are full. Take a sheet out first.', '#ff8080'); sfx('error'); return;
+  }
+  const name = it.title || r.title || 'Untitled Song';
+  UI.confirm('Lock & Equip sheet?', `Lock <b style="color:#ffd88a">${escapeHtml(name)}</b> and load it into Tab ${to + 1}? (Music sheets must be locked before performing).`, () => {
+    it.inked = true;
+    it.title = name;
+    sfx('levelup');
+    loadTab(idx, to);
+  }, 'Lock & Equip');
+}
+
 /** A Tab -> the bag (the first free slot, or `toIdx`, swapping a locked sheet from there into the Tab). */
 export function unloadTab(slot, toIdx) {
   const c = G.char, tabs = tabsOf(c), it = tabs[slot];
   if (!it) return false;
   if (toIdx !== undefined && c.bag[toIdx]) {
     const other = c.bag[toIdx];
-    if (isSheet(other) && other.inked) return loadTab(toIdx, slot);
+    if (isSheet(other)) return loadTab(toIdx, slot);
     toIdx = undefined;
   }
   const i = toIdx ?? c.bag.findIndex((b) => !b);
@@ -81,7 +109,7 @@ export function tabRow() {
       onDouble: () => unloadTab(i),
       onRight: () => unloadTab(i),
     });
-    droppable(d, (data) => data.where === 'bag' && loadTab(data.idx, i), (data) => data.type === 'item' && data.where === 'bag' && isSheet(c.bag[data.idx]) && c.bag[data.idx].inked);
+    droppable(d, (data) => data.where === 'bag' && loadTab(data.idx, i), (data) => data.type === 'item' && data.where === 'bag' && isSheet(c.bag[data.idx]));
     if (it) UI.tip(d, () => itemTooltip(tabs[i], { hint: `Tab ${i + 1}${now && now.slot === i ? ` · now playing (note ${fmtInt(now.at + 1)} of ${fmtInt(now.of)})` : ''} · right-click to take it out` }));
     row.appendChild(d);
   }
@@ -97,8 +125,16 @@ export function sheetButtons(btn, sel, it) {
     btn('Take out', () => unloadTab(sel.idx));
     return;
   }
-  if (!it.inked) btn(it.text.trim() ? 'Edit' : 'Write', () => sheetEditor(it));
-  else {
+  if (!it.inked) {
+    if (isBard()) {
+      const r = it.text && it.text.trim() ? readSheet(it.text) : null;
+      if (r && r.ev && r.ev.length) {
+        btn('Lock & Equip', () => confirmLockAndLoad(sel.idx));
+      }
+    }
+    btn(it.text && it.text.trim() ? 'Edit' : 'Write', () => sheetEditor(it));
+    if (it.text && it.text.trim()) btn('Read', () => sheetEditor(it));
+  } else {
     if (isBard()) btn('Load into a Tab', () => loadTab(sel.idx));
     btn('Read', () => sheetEditor(it));
   }
@@ -106,7 +142,14 @@ export function sheetButtons(btn, sel, it) {
 /** Right-click on a sheet in the bag: a locked one goes in a Tab (a Bard's), any other opens. */
 export function useSheet(idx) {
   const it = G.char.bag[idx];
-  if (it.inked && isBard()) loadTab(idx); else sheetEditor(it);
+  if (!it) return;
+  if (isBard()) {
+    if (it.inked) loadTab(idx);
+    else if (it.text && it.text.trim() && readSheet(it.text).ev?.length) confirmLockAndLoad(idx);
+    else sheetEditor(it);
+  } else {
+    sheetEditor(it);
+  }
 }
 
 // A blank sheet opens with this already written on it (all four phrases, standard tuning), to edit or paste over
@@ -149,7 +192,7 @@ function listen(text, bpm, onEnd) {
       const now = audioNow();
       while (p.i < n && t0 + at[p.i] * spb < now + 0.4) {
         const e = r.ev[p.i], t = t0 + at[p.i] * spb, d = Math.max(0.15, r.gaps[p.i] * 0.5 * spb);
-        e.forEach((m, k) => p.voices.push(playNote('harpsichord', m, { at: t, dur: d, vel: k ? 0.38 : 0.75, art: d > 0.4 ? 'normal_held' : 'normal_short' })));
+        e.forEach((m, k) => p.voices.push(playNote('lute', m, { at: t, dur: d, vel: k ? 0.38 : 0.75, art: d > 0.4 ? 'normal_held' : 'normal_short' })));
         if (p.voices.length > 24) p.voices.splice(0, p.voices.length - 24);
         p.i++;
       }
@@ -173,9 +216,14 @@ export function sheetEditor(it) {
   const done = (close) => { stopPreview(); close(); };
   const buttons = [
     { label: 'Listen', keepOpen: true, fn: () => toggleListen() },
-    ...(it.inked ? [] : [
+    ...(it.inked ? [
+      { label: 'Unlock to Edit', cls: 'dim', keepOpen: true, fn: (close) => unlock(close) },
+    ] : [
       { label: 'Save', keepOpen: true, fn: (close) => { save(); done(close); UI.log(`Saved <span style="color:#e8dcc0">${escapeHtml(itemName(it))}</span>.`); } },
       { label: 'Lock', cls: 'red', keepOpen: true, fn: (close) => lock(close) },
+      ...(isBard() ? [
+        { label: 'Lock & Equip', cls: 'amber', keepOpen: true, fn: (close) => lockAndEquip(close) },
+      ] : []),
     ]),
     { label: 'Close', keepOpen: true, fn: done },
   ];
@@ -195,6 +243,8 @@ export function sheetEditor(it) {
       bpm.placeholder = r.bpm || DEFAULT_BPM;
     }
     if (lockBtn) lockBtn.disabled = !r || !!r.err;
+    const equipBtn = [...d.box.querySelectorAll('.row .btn')].find((b) => b.textContent === 'Lock & Equip');
+    if (equipBtn) equipBtn.disabled = !r || !!r.err;
     listenBtn.disabled = !r || !!r.err;
   }
   function save() {
@@ -211,6 +261,40 @@ export function sheetEditor(it) {
       UI.log(`Locked <span style="color:#ffd88a">${escapeHtml(itemName(it))}</span>.${isBard() ? ' Load it into a Tab to play it.' : ''}`);
       changed();
     }, 'Lock');
+  }
+  function lockAndEquip(close) {
+    save();
+    const r = readSheet(it.text);
+    if (!r || !r.ev || !r.ev.length) {
+      UI.log('There is no tune on that sheet.', '#ff8080'); sfx('error'); return;
+    }
+    const c = G.char, tabs = tabsOf(c);
+    const to = tabs.findIndex((t) => !t);
+    if (to < 0) {
+      UI.log('All five Tabs are full. Take a sheet out first.', '#ff8080'); sfx('error'); return;
+    }
+    UI.confirm('Lock & Equip sheet?', `Lock <b style="color:#ffd88a">${escapeHtml(it.title || 'Untitled Song')}</b> and equip to Tab ${to + 1}?`, () => {
+      it.inked = true; it.title = it.title || 'Untitled Song';
+      done(close); sfx('levelup');
+      const bIdx = c.bag.findIndex((b) => b === it);
+      if (bIdx >= 0) {
+        loadTab(bIdx, to);
+      } else {
+        tabs[to] = it;
+        bardRetune(G.player);
+        UI.log(`Loaded <span style="color:${itemColor(it)}">${escapeHtml(itemName(it))}</span> into Tab ${to + 1}.`);
+        changed();
+      }
+    }, 'Lock & Equip');
+  }
+  function unlock(close) {
+    const c = G.char, tabs = tabsOf(c);
+    const tabIdx = tabs.findIndex((t) => t === it);
+    if (tabIdx >= 0) unloadTab(tabIdx);
+    it.inked = false;
+    done(close);
+    sheetEditor(it);
+    UI.log(`Unlocked <span style="color:#ffd88a">${escapeHtml(itemName(it))}</span> for editing.`);
   }
   function toggleListen() {
     if (preview) { stopPreview(); listenBtn.textContent = 'Listen'; return; }

@@ -14,8 +14,8 @@ import { Projectile, lineTargets } from './hazards.js';
 export const MAX_MASTERY = 1000;
 /** XP a skill needs to go from mastery level L to L+1. */
 export const masteryNeed = (L) => Math.round(30 * Math.pow(L, 1.5) + 10 * L);
-/** Damage multiplier at mastery level M: about x1.6 at 50, x2.4 at 100, x5 at 250, x11 at 500, x29 at 1000. */
-export const masteryMul = (M) => 1 + 0.012 * (M - 1) + Math.pow(M / 250, 2);
+/** Damage multiplier at mastery level M: bounded up to +50% at 1000 so skill mastery stays balanced on the 1:1 curve. */
+export const masteryMul = (M) => 1 + 0.5 * Math.min(1, Math.max(0, M - 1) / 999);
 /** Size of a skill's effects at mastery level M: up to +80% at 1000. */
 export const masteryVis = (M) => 1 + Math.min(1, (M - 1) / 999) * 0.8;
 /** Visual tier: 0 below 25, then 1 (25), 2 (100), 3 (250), 4 (500), 5 (750), 6 (1000). */
@@ -49,7 +49,7 @@ export function augHit(src, owner, tgt, dmg, el, o) {
     switch (id) {
       case 'ignite':
         s.burn = { t: 3, dps: Math.max(s.burn && s.burn.t > 0 ? s.burn.dps : 0, dmg * 0.37 * p), src: owner };
-        if (chance(0.5 * k)) burst(tgt.x, tgt.y, 30, 'fire', 4, 1.5, { up: 2 });
+        if (chance(0.5 * k * (o.lightFx ? 0.25 : 1))) burst(tgt.x, tgt.y, 30, 'fire', o.lightFx ? 2 : 4, 1.5, { up: 2 });
         break;
       case 'venom': {
         const cur = s.poison && s.poison.t > 0 ? s.poison.dps : 0;
@@ -76,8 +76,8 @@ export function augHit(src, owner, tgt, dmg, el, o) {
         }
         break;
       case 'detonate':
-        if (chance(Math.min(0.7, 0.22 * p) * k)) {
-          explosionFx(tgt.x, tgt.y, 1.4, 'fire', 'explosion', { sound: chance(0.4), shakeMul: 0.4 });
+        if (chance(Math.min(0.7, 0.22 * p) * k * (o.lightFx ? 0.08 : 1))) {
+          explosionFx(tgt.x, tgt.y, o.lightFx ? 0.4 : 1.4, 'fire', 'explosion', { sound: chance(o.lightFx ? 0.08 : 0.4), shakeMul: o.lightFx ? 0.05 : 0.4, lightFx: !!o.lightFx });
           for (const c of w.hostiles(owner.team, tgt.x, tgt.y, 1.7)) hitLater(src, c, dmg * 0.75 * p, el === 'phys' ? 'fire' : el, { ...proc, aoe: true });
         }
         break;
@@ -194,17 +194,26 @@ export function augHazard(h, dt) {
   const pts = points(h);
   if (!pts) return;
   const vis = h.o.vis || 1;
+  // Multi-point hazards (such as orbiting shield rings with up to 10 shields each)
+  // must normalize emission rate so particles do not multiply into a blinding swarm
+  const isShieldOrbit = !!h.shieldVariant || !!h.o?.shields;
+  const density = isShieldOrbit ? (0.04 / Math.max(1, pts.length)) : (1 / Math.max(1, pts.length * 0.7));
   for (const id in A) {
     const g = GLOW[id];
     if (!g) continue;
-    for (const [x, y] of pts) {
-      if (!chance(dt * (id === 'ignite' ? 26 : 12) * vis)) continue;
-      if (id === 'ignite') spawn({ type: 'glow', x: x + rand(-0.12, 0.12), y: y + rand(-0.12, 0.12), z: rand(16, 32), vz: rand(30, 70), life: rand(0.3, 0.55), size: rand(3, 5.5) * vis, size1: 0.5, color: chance(0.5) ? g[0] : g[1], add: true });
-      else if (id === 'venom') spawn({ type: 'glow', x, y, z: 24, vz: -25, g: 120, life: 0.6, size: 2.5 * vis, size1: 1, color: chance(0.6) ? g[0] : g[1], add: true });
-      else if (id === 'frost') spawn({ type: 'shard', x: x + rand(-0.15, 0.15), y: y + rand(-0.15, 0.15), z: rand(18, 30), vz: -8, life: 0.5, size: 2.4 * vis, color: g[0], rot: rand(TAU) });
-      else if (id === 'blood') spawn({ type: 'blood', x, y, z: 24, vz: 0, g: 260, life: 0.8, size: 1.8, color: g[0] });
-      else if (id === 'rift') smoke(x, y, 22, '#1a0628', 1, 5 * vis);
-      else spawn({ type: 'glow', x: x + rand(-0.1, 0.1), y: y + rand(-0.1, 0.1), z: rand(18, 30), vz: 15, life: 0.4, size: 2.6 * vis, size1: 0, color: chance(0.5) ? g[0] : g[1], add: true });
+    const testPts = isShieldOrbit ? [pts[(Math.random() * pts.length) | 0]] : pts;
+    for (const [x, y] of testPts) {
+      const rate = isShieldOrbit ? 1.2 : (id === 'ignite' ? 12 : 6);
+      if (!chance(dt * rate * vis * density)) continue;
+      if (isShieldOrbit) {
+        // Discreet, non-blinding motes on orbiting shields that preserve combat visibility
+        spawn({ type: 'glow', x: x + rand(-0.03, 0.03), y: y + rand(-0.03, 0.03), z: rand(18, 26), vz: rand(3, 10), life: rand(0.12, 0.22), size: rand(0.65, 0.95) * vis, size1: 0.2, color: chance(0.5) ? g[0] : g[1], add: false });
+      } else if (id === 'ignite') spawn({ type: 'glow', x: x + rand(-0.06, 0.06), y: y + rand(-0.06, 0.06), z: rand(16, 28), vz: rand(15, 35), life: rand(0.2, 0.35), size: rand(1.4, 2.2) * vis, size1: 0.3, color: chance(0.5) ? g[0] : g[1], add: true });
+      else if (id === 'venom') spawn({ type: 'glow', x, y, z: 24, vz: -25, g: 120, life: 0.4, size: 1.8 * vis, size1: 0.8, color: chance(0.6) ? g[0] : g[1], add: true });
+      else if (id === 'frost') spawn({ type: 'shard', x: x + rand(-0.1, 0.1), y: y + rand(-0.1, 0.1), z: rand(18, 30), vz: -8, life: 0.35, size: 1.6 * vis, color: g[0], rot: rand(TAU) });
+      else if (id === 'blood') spawn({ type: 'blood', x, y, z: 24, vz: 0, g: 260, life: 0.5, size: 1.4, color: g[0] });
+      else if (id === 'rift') smoke(x, y, 22, '#1a0628', 1, 3 * vis);
+      else spawn({ type: 'glow', x: x + rand(-0.06, 0.06), y: y + rand(-0.06, 0.06), z: rand(18, 28), vz: 10, life: 0.25, size: rand(1.3, 2.0) * vis, size1: 0, color: chance(0.5) ? g[0] : g[1], add: true });
     }
   }
   if (A.tether) tether(h, owner, pts, A.tether, dt);

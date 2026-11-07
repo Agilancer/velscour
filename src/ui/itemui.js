@@ -3,7 +3,7 @@ import { G } from '../state.js';
 import { el, escapeHtml, fmtInt, fmtDmg } from '../core/util.js';
 import { shownWeapon, shownDmg, heroDmgLevel } from '../data/depth.js';
 import { SKILLS, effLevel } from '../data/skills.js';
-import { itemName, itemBaseLine, itemColor, itemStats, itemDmg, itemArmor, statLabel, RARITY, GEMS, gemStats, gemName, LEGENDARY, legendaryDesc, powerLevel, SLOT_NAMES, POTION_INFO, MAX_GEM_TIER, augTarget } from '../data/items.js';
+import { itemName, itemBaseLine, itemColor, itemStats, itemDmg, itemArmor, statLabel, RARITY, GEMS, gemStats, gemName, LEGENDARY, legendaryDesc, powerLevel, SLOT_NAMES, POTION_INFO, MAX_GEM_TIER, augTarget, itemReqStat, charEffectiveStat, STAT_NAMES } from '../data/items.js';
 import { AUGMENTS } from '../data/rings.js';
 import { elem } from '../gfx/vfx.js';
 import { CLASSES } from '../data/classes.js';
@@ -88,7 +88,11 @@ export function itemTooltip(item, opts = {}) {
     h += `<div class="tt-base">Music Sheet · ${item.inked ? 'Locked' : r ? 'Draft' : 'Blank'}</div>`;
     if (r && r.ev) h += `<div>${fmtInt(r.ev.length)} notes · ${keyName(r.key)} · ${sheetTempo(item, r)} BPM</div>`;
     else if (r) h += `<div style="color:#ff8080">${escapeHtml(r.err)}</div>`;
-    h += `<div class="tt-sep"></div><div class="dim">${item.inked ? "A Bard loads it into one of his five Tabs: every note his skills write takes the song's next note, whichever skill wrote it." : "Paste tablature or note names onto it, then lock it to keep the song. Only locked sheets go in a Bard's Tabs."}</div>`;
+    h += `<div class="tt-sep"></div><div class="dim">${item.inked ? "A Bard loads it into one of his five Tabs: every note his skills write takes the song's next note, whichever skill wrote it." : "Paste tablature or note names onto it, then lock it to play. Right-click or use 'Lock & Equip' to load into a Tab."}</div>`;
+  } else if (item.type === 'banner_kit') {
+    h += `<div class="tt-base">Banner Customization Kit · Lancer Only</div>`;
+    h += `<div class="dim">Sold by Fortunato the Gambler. Open the kit to tailor the cloth silhouette, field colors, heraldic patterns, and crest of your 3D War Banner.</div>`;
+    h += `<div class="tt-sep"></div><div class="dim">${G.touch ? 'Tap' : 'Right-click'} or select <b>Customize Banner</b> to open the banner studio.</div>`;
   } else if (item.sealed) {
     h += `<div class="tt-base">Epic or better · Item Level ${item.ilvl}</div><div style="color:${col}">What lies inside is anyone's guess until the seal is broken.</div><div class="tt-sep"></div><div class="dim">${G.touch ? 'Tap' : 'Click'} <b>Break the Seal</b>, or the SEALED button on the HUD. It can't be sold or worn sealed.</div>`;
   } else {
@@ -105,6 +109,12 @@ export function itemTooltip(item, opts = {}) {
       if (item.upg) h += `<div style="color:#ffd34a">Upgraded +${item.upg}</div>`;
       const req = item.req || 1;
       h += `<div style="color:${p && p.char.level < req ? '#ff5050' : '#a8977c'}">Requires Level ${req}</div>`;
+      const reqStat = itemReqStat(item);
+      if (reqStat) {
+        const cur = p && p.char ? charEffectiveStat(p.char, reqStat.stat, item.slot) : 0;
+        const meets = cur >= reqStat.val;
+        h += `<div style="color:${meets ? '#a8977c' : '#ff5050'}">Requires ${reqStat.val} ${STAT_NAMES[reqStat.stat]}${!meets && p ? ` (${cur}/${reqStat.val})` : ''}</div>`;
+      }
       h += '<div class="tt-sep"></div>';
       for (const a of item.affixes) h += `<div class="tt-line" style="color:${a.implicit ? '#d8d0c0' : a.perk ? '#d8c078' : '#8fb4ff'}">${escapeHtml(label(a.s, a.v, trees))}</div>`;
       if (item.aug) for (const a of item.aug) {

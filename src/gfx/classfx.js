@@ -83,6 +83,10 @@ const THEMES = {
     for (let i = 0; i < n; i++) fling(x, y, 26, i % 2 ? '#ffc060' : '#fff3c0', 4.5 * k, 'streak', { size: 1.4 });
     smoke(x, y, 24, '#4a4440', Math.ceil(n / 6), 5 * k);
   } },
+  monk: { c: ['#ffaa30', '#fff8e0', '#7a3800'], fx(x, y, n, k) { // golden chi motes, spirit ripples
+    for (let i = 0; i < n; i++) rise(x, y, 10, i % 2 ? '#ffaa30' : '#fff4b0', k, 0.4);
+    spiral(x, y, 6, '#ffd060', Math.min(12, n / 2), 0.5 * k, 30);
+  } },
 };
 const DEF = THEMES.paladin;
 export const CLASS_THEMES = THEMES;

@@ -17,6 +17,8 @@ import { armorDiv, depthLevel, shownDmg, dmgScale } from '../data/depth.js';
 import { relicProc } from './relicprocs.js';
 import { commissionKill } from './commissions.js';
 import { riftKill } from './rifts.js';
+import { SKILLS } from '../data/skills.js';
+import { skillMorphFor } from '../data/talents.js';
 
 const PLAYER_RES = { fire: 'fire', cold: 'cold', light: 'light', poison: 'poison', acid: 'poison' };
 const LEECH_K = 2; // life/mana leech: a whole monster's life taken returns LEECH_K x leech% of the hero's own
@@ -38,6 +40,11 @@ function bloodOf(c) {
 export function hit(src, tgt, amount, el = 'phys', o = {}) {
   if (!tgt || tgt.dead || tgt.invuln > 0 || amount <= 0) return 0;
   if (tgt.targetable === false && !o.force) return 0;
+  if (tgt.clutter) {
+    tgt.hp = 0;
+    kill(tgt, src, { ...o, crit: false, overkill: 0 });
+    return 1;
+  }
   const world = tgt.world || G.world;
   let dmg = amount;
   let crit = false;
@@ -75,6 +82,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     let res = (tgt.res && tgt.res[el === 'astral' ? 'arcane' : el]) || 0;
     if (el === 'arcane' || el === 'astral') res *= 0.5;
     dmg *= 1 - clamp(res, -1, 0.9);
+    if (tgt.dmgReduce) dmg *= 1 - clamp(tgt.dmgReduce, 0, 0.75);
     if (el === 'holy' && (tgt.undead || tgt.demon)) dmg *= 1.5;
     const C = tgt.curses;
     if (C.amp && C.amp.t > 0) dmg *= 1 + C.amp.amt / 100;
@@ -103,13 +111,17 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
   if (tgt.vel) dmg = tgt.vel.absorb(dmg); // Velscour's life gates and damage cap (game/velscour.js)
 
   const byHero = !tgt.isPlayer && tgt.team !== 'player' && (fromPlayer || (src && src.team === 'player'));
+  // o.lightFx: a rapid multi-hit (the Lancer's tower-shield rings) shows its full feedback on about one hit in sixteen,
+  // a damage number on about one in three; the damage itself is untouched
+  const showFx = !o.lightFx || chance(0.06), showNum = !o.lightFx || crit || chance(0.35);
   const tLvl = tgt.level || depthLevel((world && world.depth) || 1); // what the hero sees is shownDmg (data/depth.js), not raw power
   if (byHero) Meter.add(shownDmg(Math.min(dmg, Math.max(0, tgt.hp)), tLvl));
   if (byHero && src && src.isPlayer && !o.dot) G.lastHit = tgt; // the HUD's target window
-  if (byHero && src && src.isPlayer && o.sk && !o.dot) classHitFx(src, tgt, o.sk, el); // the class's own splash (gfx/classfx.js)
+  if (byHero && src && src.isPlayer && o.sk && !o.dot && showFx) classHitFx(src, tgt, o.sk, el); // the class's own splash (gfx/classfx.js)
   tgt.hp -= dmg;
   if (tgt.isPlayer && !o.dot && src && src !== tgt && tgt.st.procs && tgt.st.procs.length) relicProc(tgt, 'hurt', src, dmg);
   tgt.flash = 0.12;
+  if (tgt.team === 'enemy') tgt.regenSuppress = o.dot ? Math.max(tgt.regenSuppress || 0, 3.0) : 6.0;
   if (tgt.onDamaged && !o.dot) tgt.onDamaged(src, dmg);
   tgt.hpShow = 3;
   if (!tgt.isPlayer && !o.dot) tgt.awake = true;
@@ -121,11 +133,11 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     if (tgt.isPlayer) {
       damageText(tgt.x, tgt.y, z, dmg, o.dot ? 'dot' : 'hurt', '#ff4030');
       if (!o.dot) { sfx('hurt'); G.hurtFlash = Math.min(0.5, (G.hurtFlash || 0) + dmg / tgt.maxHp * 2); camera.shake(Math.min(8, 2 + (dmg / tgt.maxHp) * 30)); }
-    } else if (byHero) {
+    } else if (byHero && showNum && dmg > 0) {
       damageText(tgt.x, tgt.y, z, Math.max(1, shownDmg(dmg, tLvl)), crit ? 'crit' : o.dot ? 'dot' : 'hit', elem(el).glow);
     }
   }
-  if (!o.dot || chance(0.15)) {
+  if ((!o.dot || chance(0.15)) && showFx) {
     const ang = o.ang ?? (src ? angleTo(src.x, src.y, tgt.x, tgt.y) : rand(TAU));
     const force = clamp(dmg / tgt.maxHp, 0.05, 1);
     if (!(tgt.goreType === 'spark' || tgt.goreType === 'ecto') || chance(0.5)) bloodSpray(tgt.x, tgt.y, 28, ang, Math.round(4 + force * 18), bloodOf(tgt), 0.7 + force);
@@ -146,8 +158,12 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     if (st.manaSteal > 0) src.mana = Math.min(src.maxMana, src.mana + share * src.maxMana * st.manaSteal / 100);
     if (tgt.curses.leech && tgt.curses.leech.t > 0) src.heal(share * src.maxHp * tgt.curses.leech.amt / 100 * 0.3, true);
     src.onHit && src.onHit(tgt, dmg, el, o);
-  } else if (src && src.summon && src.leech && src.owner) {
-    leechHeal(src.owner, tgt, dmg, src.leech * 0.2);
+  } else if (src && src.summon && (src.leech || src.selfLeech) && src.owner) {
+    if (src.leech) leechHeal(src.owner, tgt, dmg, src.leech * 0.25);
+    if (src.selfLeech && !src.dead) {
+      const share = Math.min(1, dmg / Math.max(1, tgt.maxHp)) * LEECH_K;
+      src.hp = Math.min(src.maxHp, src.hp + share * src.maxHp * src.selfLeech);
+    }
   }
   // ring augments ride on skill hits (o.aug) and on the hits of a skill's minions; the skill earns mastery for kills
   if (byHero && !o.proc) {
@@ -158,7 +174,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
   } else if (byHero && o.sk) tgt.lastSk = o.sk;
   if (tgt.curses.thorns && tgt.curses.thorns.t > 0 && tgt.isPlayer === false && src && src.team === 'player') { /* handled when monster attacks */ }
 
-  if (tgt.hp <= 0) kill(tgt, src, { el, overkill: -tgt.hp / tgt.maxHp, crit, aoe: o.aoe, sig: o.sig });
+  if (tgt.hp <= 0) kill(tgt, src, { el, overkill: -tgt.hp / tgt.maxHp, crit, aoe: o.aoe, sig: o.sig, proc: o.proc });
   return dmg;
 }
 
@@ -224,6 +240,10 @@ export function kill(tgt, src, info = {}) {
   const world = tgt.world;
   const owner = src && src.owner ? src.owner : src;
   const byPlayer = owner && (owner.isPlayer || owner.team === 'player');
+  if (tgt.clutter) {
+    if (typeof tgt.die === 'function') tgt.die(src);
+    return;
+  }
   if (tgt.onDeath) tgt.onDeath(src);
   if (tgt.summon) {
     burst(tgt.x, tgt.y, 20, tgt.el || 'arcane', 10, 2);
@@ -266,6 +286,26 @@ export function kill(tgt, src, info = {}) {
         aoe(world, p, tgt.x, tgt.y, 1.6, tgt.maxHp * 0.35, 'blood', { dot: true, crit: false });
       }
       if (leg.vamp) p.heal(p.maxHp * 0.02, true);
+      if (tgt.lastSk && SKILLS[tgt.lastSk]) {
+        const km = skillMorphFor(p, SKILLS[tgt.lastSk]);
+        if (km && km.resetOnKill && p.cooldowns && p.cooldowns[tgt.lastSk] > 0) {
+          p.cooldowns[tgt.lastSk] = 0;
+          floatText(p.x, p.y, 62, 'Reset!', '#ffd860', 11);
+        }
+      }
+      if (p.st && p.st.talentOnKill && p.st.talentOnKill.length && !info.proc) {
+        for (const ok of p.st.talentOnKill) {
+          const stKey = ok.status === 'slow' ? 'chill' : ok.status;
+          const hasSt = tgt.status && ((tgt.status[ok.status] && tgt.status[ok.status].t > 0) || (tgt.status[stKey] && tgt.status[stKey].t > 0));
+          if (hasSt) {
+            explosionFx(tgt.x, tgt.y, 1.35, ok.el, ok.el === 'poison' || ok.el === 'shadow' ? 'void' : 'explosion', { sound: false });
+            aoe(world, p, tgt.x, tgt.y, 1.65, tgt.maxHp * (ok.pctMaxHp || 0.2), ok.el, {
+              dot: true, crit: false, proc: true,
+              burn: ok.el === 'fire', poison: ok.el === 'poison', bleed: ok.el === 'blood', slow: ok.el === 'cold',
+            });
+          }
+        }
+      }
       if (p.st.procs && p.st.procs.length && !info.proc) relicProc(p, 'kill', tgt, 0);
       if (p.chart && tgt.team === 'enemy') astroOnKill(p, tgt); // the fallen may become a star on the Astronomer's chart
       if (p.sig && !info.sig) sigKill(p, tgt, src); // the class signature (game/signature.js); its own kills never feed it
@@ -273,7 +313,7 @@ export function kill(tgt, src, info = {}) {
     if (tgt.team === 'enemy') { dropLoot(world, tgt); commissionKill(world, tgt); if (world.rift) riftKill(world, tgt); }
     if (world.onKill) world.onKill(tgt); // streaks, challenges (game/happenings.js)
   }
-  if (tgt.rank === 'boss' && world) {
+  if ((tgt.rank === 'boss' || tgt.rank === 'raid' || tgt === world?.boss) && world) {
     for (const c of world.creatures) if (c.summon && !c.dead) c.cheerT = 2.5;
     if (world.onBossKilled) world.onBossKilled(tgt);
   }

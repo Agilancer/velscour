@@ -47,8 +47,8 @@ export async function loadHeld(cls, char = null) {
   for (const n of names) ensureSet(n);
   await Promise.all([...names].map((n) => sets.get(n)?.p));
 }
-const DEFAULTS = { weapon: { paladin: 'mace', ranger: 'bow', wizard: 'staff', necromancer: 'wand', barbarian: 'axe', dragoon: 'spear', totem_master: 'staff', death_knight: 'sword', arcane_sorcerer: 'wand', carrion_witch: 'staff', bard: 'lute', slime_lord: 'mace', boomerang_knight: 'boomerang', lancer: 'spear', dragon_knight: 'sword', gunner: 'pistol' } };
-function defaultBase(cls, slot) { return slot === 'weapon' ? DEFAULTS.weapon[cls] : cls === 'barbarian' ? 'axe' : { ranger: 'quiver', wizard: 'tome', necromancer: 'orb', totem_master: 'idol', death_knight: 'skull', arcane_sorcerer: 'orb', carrion_witch: 'lantern', bard: 'drum', slime_lord: 'jar', boomerang_knight: 'rang', gunner: 'bomb' }[cls] || 'shield'; }
+const DEFAULTS = { weapon: { paladin: 'mace', ranger: 'bow', wizard: 'staff', necromancer: 'wand', barbarian: 'axe', dragoon: 'spear', totem_master: 'staff', death_knight: 'sword', arcane_sorcerer: 'wand', carrion_witch: 'staff', bard: 'lute', slime_lord: 'mace', boomerang_knight: 'boomerang', lancer: 'spear', dragon_knight: 'sword', gunner: 'pistol', monk: 'staff' } };
+function defaultBase(cls, slot) { return slot === 'weapon' ? DEFAULTS.weapon[cls] : cls === 'barbarian' ? 'axe' : { ranger: 'quiver', wizard: 'tome', necromancer: 'orb', totem_master: 'idol', death_knight: 'skull', arcane_sorcerer: 'orb', carrion_witch: 'lantern', bard: 'drum', slime_lord: 'jar', boomerang_knight: 'rang', gunner: 'bomb', monk: 'tome' }[cls] || 'shield'; }
 
 // ------------------------------------------------------------------ looks
 function finishFor(R) {
@@ -180,14 +180,14 @@ const swordFlies = (cls, pc) => cls === 'death_knight' && !!pc.d.free && G.setti
 function heldPieces(cls, equip) {
   const fists = index?.fists?.[cls];
   if (!fists) return [];
-  const armor = clamp((equip.body && itemLook(equip.body)?.[0]) || 1, 1, fists.length), F = fists[armor - 1];
+  const armor = clamp((equip.body && itemLook(equip.body, cls)?.[0]) || 1, 1, fists.length), F = fists[armor - 1];
   const out = [];
   for (const slot of ['weapon', 'offhand']) {
     const it = equip[slot];
     if (!it || it.type !== 'gear' || !heldSetOf(it.base, slot, cls)) continue;
     const pc = pieceOf(it, slot, cls);
     if (!pc) return null;
-    if (slot === 'weapon' && swordFlies(cls, pc)) continue; // the Death Knight's sword flies at his side or rests on his back
+    if (slot === 'weapon' && swordFlies(cls, pc) && !equip._preview) continue; // the Death Knight's sword flies at his side or rests on his back
     if (out.some((o) => o.hand === pc.hand)) continue; // both pieces want the same hand: the main hand wins
     const f = F[pc.hand], pt = (p) => p && [f[0] + p[0], f[1] + p[1], p[2]];
     const P = pc.d.pts;
@@ -266,7 +266,13 @@ const gearCol = (it) => { const f = finishOf(it); return hexToRgb(f?.glow || RAR
  */
 export function drawHeldLayer(ctx, p, held, base, where) {
   const fx = G.settings.heldFx !== false, sgn = where.flip ? -1 : 1, HD = (base?.width || 512) / W, sq = where.sq || 1;
-  const map = (ax, ay) => [where.x + sgn * (where.dx + ax * HD * where.k), where.y + where.dy + ay * HD * where.k * sq];
+  const rot = where.rot || 0, sx = where.sx ?? 1, sy = where.sy ?? 1;
+  const cos = rot ? Math.cos(rot) : 1, sin = rot ? Math.sin(rot) : 0;
+  const map = (ax, ay) => {
+    const lx = (where.dx + ax * HD * where.k) * sx;
+    const ly = (where.dy + ay * HD * where.k * sq) * sy;
+    return [where.x + sgn * (lx * cos - ly * sin), where.y + lx * sin + ly * cos];
+  };
   const s = HD * where.k, t = G.time || 0;
   let top = -1;
   for (const [i, pc] of (held?.pieces || []).entries()) {
@@ -275,7 +281,7 @@ export function drawHeldLayer(ctx, p, held, base, where) {
   }
   if (!fx) return;
   if (top >= 4) addLight(p.x, p.y, 1.4 + (top - 4) * 0.8, 0.3);
-  const eq = p.char?.equip && shownEquip(p.char);
+  const eq = (p.char?.equip && shownEquip(p.char)) || p.gear;
   if (base && eq && ((eq.body?.rarity | 0) >= 2 || (eq.head?.rarity | 0) >= 2)) {
     drawGearSparkle(ctx, sparkleSpots(base, p.classId), { body: eq.body && { rarity: eq.body.rarity, col: gearCol(eq.body) }, head: eq.head && { rarity: eq.head.rarity, col: gearCol(eq.head) } }, t, map, s, { size: 1.3 });
   }

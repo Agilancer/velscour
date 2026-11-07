@@ -1,13 +1,14 @@
 // Split Inventory (Backpack) + Character & Stats sheet.
 import { G } from '../state.js';
 import { el, fmtInt, fmtDmg, escapeHtml } from '../core/util.js';
-import { shownWeapon, heroDmgLevel } from '../data/depth.js';
+import { shownWeapon, heroDmgLevel, MAX_LEVEL } from '../data/depth.js';
 import { sfx } from '../core/audio.js';
 import { UI, draggable, droppable } from './ui.js';
 import { itemCell, itemTooltip, rarityClass } from './itemui.js';
 import {
   SLOTS, SLOT_NAMES, VANITY_SLOTS, shownEquip, itemName, itemColor, GEMS, gemName,
   itemValue, fitsSlot, slotFor, unsocketCost, makeGem, canWearVanity, itemBaseDisplayName,
+  itemReqStat, charEffectiveStat, canEquipItem, BASE_REQ_STAT, STAT_NAMES,
 } from '../data/items.js';
 import { CLASSES, ATTRS } from '../data/classes.js';
 import { xpToNext, CRIT_OVER, addToBag } from '../game/player.js';
@@ -16,6 +17,7 @@ import { classSprite } from '../core/assets.js';
 import { heroPortrait, heroLook } from '../core/gearart.js';
 import { heldPortraitArgs } from '../gfx/heldart.js';
 import { tabRow, sheetButtons, useSheet, unloadTab } from './sheets.js';
+import { openBannerCustomizer } from './bannercustomizer.js';
 import { openSeal } from './sealed.js';
 import { glyphOf } from '../data/relics.js';
 import { noteFind } from '../game/reliquary.js';
@@ -23,7 +25,7 @@ import { marksTotal, marksFree, capXp } from '../game/marks.js';
 import { heresyRankOf } from '../game/heresies.js';
 import { endgameUnlocked } from '../game/endgame.js';
 import { sparkle } from '../gfx/vfx.js';
-import { bagRows, nextRowCost, buyBagRow, BAG_MAX_ROWS } from '../data/bag.js';
+import { bagRows, nextRowCost, buyBagRow, BAG_MAX_ROWS, gemBagRows, nextGemBagRowCost, canBuyGemBagRow, buyGemBagRow, GEM_BAG_MAX_ROWS } from '../data/bag.js';
 
 export const DOLL = { head: [2, 1], weapon: [1, 2], body: [2, 2], offhand: [3, 2], hands: [1, 3], legs: [2, 3], feet: [2, 4], ring1: [4, 1], ring2: [4, 2], ring3: [4, 3], ring4: [4, 4] };
 
@@ -31,6 +33,7 @@ export function getItem(ref) {
   const c = G.char;
   if (!ref || !c) return null;
   if (ref.where === 'bag') return c.bag[ref.idx];
+  if (ref.where === 'gemBag') return c.gemBag ? c.gemBag[ref.idx] : null;
   if (ref.where === 'equip') return c.equip[ref.slot];
   if (ref.where === 'vanity') return (c.vanity || {})[ref.slot];
   if (ref.where === 'tab') return (c.tabs || [])[ref.idx];
@@ -50,6 +53,15 @@ export function equipFromBag(idx, slot) {
   if (it.sealed) { UI.log('Break the seal first.', '#ffdf8a'); return false; }
   if ((it.req || 1) > c.level) { UI.log(`Requires level ${it.req}.`, '#ff8080'); sfx('error'); return false; }
   const to = slot && fitsSlot(it, slot, c.classId) ? slot : slotFor(c.equip, it, c.classId);
+  const reqStat = itemReqStat(it);
+  if (reqStat) {
+    const cur = charEffectiveStat(c, reqStat.stat, to);
+    if (cur < reqStat.val) {
+      UI.log(`Requires ${reqStat.val} ${STAT_NAMES[reqStat.stat]} (you have ${cur}).`, '#ff8080');
+      sfx('error');
+      return false;
+    }
+  }
   const old = c.equip[to];
   c.equip[to] = it;
   c.bag[idx] = old || null;
@@ -65,7 +77,7 @@ export function unequip(slot, toIdx) {
   let i = toIdx ?? c.bag.findIndex((b) => !b);
   if (i < 0 || (toIdx !== undefined && c.bag[toIdx])) {
     const other = toIdx !== undefined ? c.bag[toIdx] : null;
-    if (fitsSlot(other, slot, c.classId) && (other.req || 1) <= c.level) { c.bag[toIdx] = it; c.equip[slot] = other; changed(); return true; }
+    if (fitsSlot(other, slot, c.classId) && canEquipItem(c, other, slot)) { c.bag[toIdx] = it; c.equip[slot] = other; changed(); return true; }
     if (i < 0) { UI.log('Inventory full.', '#ff8080'); sfx('error'); return false; }
     i = c.bag.findIndex((b) => !b);
   }
@@ -134,15 +146,17 @@ export function takeOffLook(slot, toIdx) {
   changed();
   return true;
 }
-
-export function socketGem(gemIdx, target) {
-  const c = G.char, gem = c.bag[gemIdx], it = getItem(target);
+export function socketGem(gemIdx, target, fromWhere = null) {
+  const c = G.char;
+  const container = fromWhere === 'gemBag' ? c.gemBag : fromWhere === 'bag' ? c.bag : (c.gemBag && c.gemBag[gemIdx] ? c.gemBag : c.bag);
+  const gem = container ? container[gemIdx] : null;
+  const it = getItem(target);
   if (!gem || gem.type !== 'gem' || !it || it.type !== 'gear') return false;
   if (it.sealed) { UI.log('Break the seal first: nothing goes into a sealed treasure.', '#ffdf8a'); sfx('error'); return false; }
   if (it.gems.length >= it.sockets) { UI.log(it.sockets ? 'No free sockets. Visit the Jeweler to add more.' : 'This item has no sockets. The Jeweler can add some.', '#ff8080'); sfx('error'); return false; }
   const was = glyphOf(it);
   it.gems.push({ gem: gem.gem, tier: gem.tier });
-  if ((gem.count || 1) > 1) gem.count--; else c.bag[gemIdx] = null;
+  if ((gem.count || 1) > 1) gem.count--; else container[gemIdx] = null;
   UI.log(`Socketed <span style="color:${itemColor(gem)}">${gemName(gem.gem, gem.tier)}</span> into ${escapeHtml(itemName(it))}.`);
   const gw = glyphOf(it);
   if (gw && !was) {
@@ -154,13 +168,13 @@ export function socketGem(gemIdx, target) {
   changed();
   return true;
 }
-
-export function dropFromBag(idx) {
-  const c = G.char, it = c.bag[idx], p = G.player;
+export function dropFromBag(idx, where = 'bag') {
+  const c = G.char, container = where === 'gemBag' && c.gemBag ? c.gemBag : c.bag;
+  const it = container[idx], p = G.player;
   if (!it || !G.world) return false;
   if (it.locked) { UI.log('That item is locked. Unlock it first (its panel in the inventory).', '#ffd860'); sfx('error'); return false; }
   if (it.type === 'gear' && it.sealed === undefined) it.sealed = false; // already opened: it doesn't seal again on the floor
-  c.bag[idx] = null;
+  container[idx] = null;
   const g = new GroundItem(p.x, p.y, it.type === 'potion' ? 'potion' : 'item', { item: it });
   g.t = -1.5; g.dropped = true; // not picked straight back up (auto-pickup leaves it alone: a click still takes it)
   G.world.addLoot(g);
@@ -169,22 +183,32 @@ export function dropFromBag(idx) {
   return true;
 }
 
+export function isGemItem(it) {
+  return !!(it && it.type === 'gem');
+}
+
 function handleDropOnBag(idx, data) {
   const c = G.char;
   if (data.type === 'shop') return G.ui.vendor && G.ui.vendor.buy(data, idx);
   if (data.type === 'stash') return G.ui.stash && G.ui.stash.take(data.idx);
+  if (data.type === 'jewelbox') return G.ui.jewelBox && G.ui.jewelBox.take(data.idx);
   if (data.type === 'vault') return G.ui.reliquary && G.ui.reliquary.take(data.idx, data.tab);
   if (data.type !== 'item') return false;
+  if (data.where === 'gemBag') {
+    const a = c.gemBag ? c.gemBag[data.idx] : null;
+    const b = c.bag[idx];
+    if (a && a.type === 'gem' && b && b.type === 'gear') {
+      return socketGem(data.idx, { where: 'bag', idx }, 'gemBag');
+    }
+    UI.log('Gems and runes belong in the Gem Bag.', '#ff8080');
+    sfx('error');
+    return false;
+  }
   if (data.where === 'bag') {
     if (data.idx === idx) return false;
     const a = c.bag[data.idx], b = c.bag[idx];
-    if (a && a.type === 'gem' && b && b.type === 'gear') return socketGem(data.idx, { where: 'bag', idx });
-    if (a && b && a.type === 'gem' && b.type === 'gem' && a.gem === b.gem && a.tier === b.tier) {
-      b.count = (b.count || 1) + (a.count || 1);
-      c.bag[data.idx] = null;
-      changed();
-      return true;
-    }
+    if (a && a.type === 'gem' && b && b.type === 'gear') return socketGem(data.idx, { where: 'bag', idx }, 'bag');
+    if (a && b && a.type === 'gem' && b.type === 'gem' && a.gem === b.gem && a.tier === b.tier) { b.count = (b.count || 1) + (a.count || 1); c.bag[data.idx] = null; changed(); return true; }
     c.bag[data.idx] = b; c.bag[idx] = a;
     UI.selected = { where: 'bag', idx };
     changed();
@@ -196,12 +220,62 @@ function handleDropOnBag(idx, data) {
   return false;
 }
 
+function handleDropOnGemBag(idx, data) {
+  const c = G.char;
+  if (!Array.isArray(c.gemBag)) c.gemBag = Array(30).fill(null);
+  if (data.type === 'shop') return G.ui.vendor && G.ui.vendor.buy(data);
+  if (data.type === 'stash') return G.ui.stash && G.ui.stash.take(data.idx);
+  if (data.type === 'jewelbox') return G.ui.jewelBox && G.ui.jewelBox.take(data.idx);
+  if (data.type === 'vault') return G.ui.reliquary && G.ui.reliquary.take(data.idx, data.tab);
+  if (data.type !== 'item') return false;
+  if (data.where === 'bag') {
+    const a = c.bag[data.idx];
+    if (!isGemItem(a)) {
+      UI.log('Only gems and runes can be placed in the Gem Bag.', '#ff8080');
+      sfx('error');
+      return false;
+    }
+    const b = c.gemBag[idx];
+    if (b && b.gem === a.gem && b.tier === a.tier) {
+      b.count = (b.count || 1) + (a.count || 1);
+      c.bag[data.idx] = null;
+    } else {
+      c.gemBag[idx] = a;
+      c.bag[data.idx] = b;
+    }
+    UI.selected = { where: 'gemBag', idx };
+    changed();
+    return true;
+  }
+  if (data.where === 'gemBag') {
+    if (data.idx === idx) return false;
+    const a = c.gemBag[data.idx], b = c.gemBag[idx];
+    if (a && b && a.type === 'gem' && b.type === 'gem' && a.gem === b.gem && a.tier === b.tier) {
+      b.count = (b.count || 1) + (a.count || 1);
+      c.gemBag[data.idx] = null;
+    } else {
+      c.gemBag[data.idx] = b;
+      c.gemBag[idx] = a;
+    }
+    UI.selected = { where: 'gemBag', idx };
+    changed();
+    return true;
+  }
+  return false;
+}
+
 function handleDropOnEquip(slot, data) {
   const c = G.char;
-  if (data.type !== 'item' || data.where !== 'bag') return false;
+  if (data.type !== 'item') return false;
+  if (data.where === 'gemBag') {
+    const it = c.gemBag ? c.gemBag[data.idx] : null;
+    if (it && it.type === 'gem') return c.equip[slot] ? socketGem(data.idx, { where: 'equip', slot }, 'gemBag') : false;
+    return false;
+  }
+  if (data.where !== 'bag') return false;
   const it = c.bag[data.idx];
   if (!it) return false;
-  if (it.type === 'gem') return c.equip[slot] ? socketGem(data.idx, { where: 'equip', slot }) : false;
+  if (it.type === 'gem') return c.equip[slot] ? socketGem(data.idx, { where: 'equip', slot }, 'bag') : false;
   if (!fitsSlot(it, slot, c.classId)) { sfx('error'); return false; }
   return equipFromBag(data.idx, slot);
 }
@@ -229,11 +303,11 @@ function bagSlot(idx) {
     data: () => (c.bag[idx] ? { type: 'item', where: 'bag', idx } : null),
     icon: () => d.querySelector('img') && d.querySelector('img').src,
     onClick: () => selectSlotEl(d, c.bag[idx] ? { where: 'bag', idx } : null),
-    onDouble: () => quickUse(idx),
-    onRight: () => quickUse(idx),
-    onDropWorld: (data) => (data.where === 'bag' ? dropFromBag(data.idx) : false),
+    onDouble: () => quickUse(idx, 'bag'),
+    onRight: () => quickUse(idx, 'bag'),
+    onDropWorld: (data) => (data.where === 'bag' ? dropFromBag(data.idx, 'bag') : false),
   });
-  droppable(d, (data) => handleDropOnBag(idx, data), (data) => data.type === 'item' || data.type === 'shop' || data.type === 'stash' || data.type === 'vault');
+  droppable(d, (data) => handleDropOnBag(idx, data), (data) => data.type === 'item' || data.type === 'shop' || data.type === 'stash' || data.type === 'vault' || data.type === 'jewelbox');
   if (it) UI.tip(d, () => bagTip(idx));
   return d;
 }
@@ -249,19 +323,58 @@ function bagTip(idx) {
       priceLabel: 'Sells for',
       hint: G.ui.vendor && G.ui.vendor.active
         ? 'Right-click or double-tap to sell'
-        : G.ui.stash && G.ui.stash.active
-          ? 'Right-click or double-tap to store'
-          : G.ui.reliquary && G.ui.reliquary.active
-            ? 'Right-click or double-tap to store in Reliquary'
-            : it.sealed
-              ? 'Right-click or double-tap to break the seal'
-              : it.type === 'gear'
-                ? 'Right-click or double-tap to equip'
-                : it.type === 'gem'
-                  ? 'Drag onto gear to socket'
-                  : it.type === 'sheet'
-                    ? (it.inked && c.classId === 'bard' ? 'Right-click to load into a Tab' : it.inked ? 'Right-click to read' : 'Right-click to write on it')
-                    : '',
+        : G.ui.jewelBox && G.ui.jewelBox.active
+          ? (it.type === 'gem' ? 'Right-click or double-tap to store in Jewel Box' : '')
+          : G.ui.stash && G.ui.stash.active
+            ? 'Right-click or double-tap to store'
+            : G.ui.reliquary && G.ui.reliquary.active
+              ? 'Right-click or double-tap to store in Reliquary'
+              : it.sealed
+                ? 'Right-click or double-tap to break the seal'
+                : it.type === 'gear'
+                  ? 'Right-click or double-tap to equip'
+                  : it.type === 'gem'
+                    ? 'Drag onto gear to socket'
+                    : it.type === 'banner_kit'
+                      ? 'Right-click or double-tap to customize banner'
+                      : it.type === 'sheet'
+                        ? (it.inked && c.classId === 'bard' ? 'Right-click to load into a Tab' : it.inked ? 'Right-click to read' : 'Right-click to write on it')
+                        : '',
+      actions: acts,
+    }),
+    actions: acts,
+  };
+}
+
+function gemBagSlot(idx) {
+  const c = G.char, it = c.gemBag ? c.gemBag[idx] : null;
+  const d = el('div', 'bslot gem-slot ' + rarityClass(it));
+  const sel = UI.selected;
+  if (sel && sel.where === 'gemBag' && sel.idx === idx) d.classList.add('sel');
+  if (it) d.appendChild(itemCell(it));
+  draggable(d, {
+    key: 'gemBag:' + idx,
+    data: () => (c.gemBag && c.gemBag[idx] ? { type: 'item', where: 'gemBag', idx } : null),
+    icon: () => d.querySelector('img') && d.querySelector('img').src,
+    onClick: () => selectSlotEl(d, c.gemBag && c.gemBag[idx] ? { where: 'gemBag', idx } : null),
+    onDouble: () => quickUse(idx, 'gemBag'),
+    onRight: () => quickUse(idx, 'gemBag'),
+    onDropWorld: (data) => (data.where === 'gemBag' ? dropFromBag(data.idx, 'gemBag') : false),
+  });
+  droppable(d, (data) => handleDropOnGemBag(idx, data), (data) => data.type === 'item' || data.type === 'shop' || data.type === 'stash' || data.type === 'vault' || data.type === 'jewelbox');
+  if (it) UI.tip(d, () => gemBagTip(idx));
+  return d;
+}
+
+function gemBagTip(idx) {
+  const c = G.char, it = c.gemBag && c.gemBag[idx];
+  if (!it) return '';
+  const acts = getGemBagActions(idx);
+  return {
+    html: itemTooltip(it, {
+      price: G.ui.vendor && G.ui.vendor.active ? Math.max(1, Math.floor(itemValue(it) / 4)) : 0,
+      priceLabel: 'Sells for',
+      hint: G.ui.vendor && G.ui.vendor.active ? 'Right-click or double-tap to sell' : G.ui.jewelBox && G.ui.jewelBox.active ? 'Right-click or double-tap to store in Jewel Box' : G.ui.stash && G.ui.stash.active ? 'Right-click or double-tap to store' : 'Drag onto gear to socket',
       actions: acts,
     }),
     actions: acts,
@@ -324,20 +437,24 @@ function vanityTip(slot) {
   };
 }
 
-function quickUse(idx) {
-  const c = G.char, it = c.bag[idx];
+function quickUse(idx, where = 'bag') {
+  const c = G.char, container = where === 'gemBag' && c.gemBag ? c.gemBag : c.bag;
+  const it = container[idx];
   if (!it) return;
-  if (it.sealed && !(G.ui.stash && G.ui.stash.active) && !(G.ui.reliquary && G.ui.reliquary.active)) { openSeal(idx); return; }
-  if (G.ui.vendor && G.ui.vendor.active) { G.ui.vendor.sell({ where: 'bag', idx }); return; }
-  if (G.ui.stash && G.ui.stash.active) { G.ui.stash.store(idx); return; }
-  if (G.ui.reliquary && G.ui.reliquary.active) { G.ui.reliquary.store(idx); return; }
+  if (it.sealed && where === 'bag' && !(G.ui.stash && G.ui.stash.active) && !(G.ui.reliquary && G.ui.reliquary.active)) { openSeal(idx); return; }
+  if (G.ui.vendor && G.ui.vendor.active) { G.ui.vendor.sell({ where, idx }); return; }
+  if (G.ui.jewelBox && G.ui.jewelBox.active) {
+    if (it.type === 'gem') { G.ui.jewelBox.store(idx, where); return; }
+    UI.log('Only gems and runes can be stored in the Jewel Box.', '#ff8080');
+    sfx('error');
+    return;
+  }
+  if (G.ui.stash && G.ui.stash.active) { G.ui.stash.store(idx, where); return; }
+  if (G.ui.reliquary && G.ui.reliquary.active) { G.ui.reliquary.store(idx, where); return; }
   if (it.type === 'gear') equipFromBag(idx);
   else if (it.type === 'sheet') useSheet(idx);
-  else if (it.type === 'gem') {
-    UI.selected = { where: 'bag', idx };
-    UI.log('Drag the gem onto a socketed item to insert it.');
-    UI.refresh();
-  }
+  else if (it.type === 'banner_kit') openBannerCustomizer({ bagIdx: idx });
+  else if (it.type === 'gem') { UI.selected = { where, idx }; UI.log('Drag the gem onto a socketed item to insert it.'); UI.refresh(); }
 }
 
 function equipSlot(slot) {
@@ -356,7 +473,14 @@ function equipSlot(slot) {
     onDouble: () => unequip(slot),
     onRight: () => (G.ui.vendor && G.ui.vendor.active ? selectSlotEl(d, { where: 'equip', slot }) : unequip(slot)),
   });
-  droppable(d, (data) => handleDropOnEquip(slot, data), (data) => data.type === 'item' && data.where === 'bag' && G.char.bag[data.idx] && (fitsSlot(G.char.bag[data.idx], slot, c.classId) || G.char.bag[data.idx].type === 'gem'));
+  droppable(
+    d,
+    (data) => handleDropOnEquip(slot, data),
+    (data) => data.type === 'item' && (
+      (data.where === 'gemBag' && G.char.gemBag && G.char.gemBag[data.idx] && G.char.gemBag[data.idx].type === 'gem') ||
+      (data.where === 'bag' && G.char.bag[data.idx] && (fitsSlot(G.char.bag[data.idx], slot, c.classId) || G.char.bag[data.idx].type === 'gem'))
+    )
+  );
   if (it) UI.tip(d, () => equipTip(slot));
   return d;
 }
@@ -423,8 +547,9 @@ function vanityRow() {
 function removeGemsAction(c, it) {
   if (!it || it.type !== 'gear' || !it.gems || !it.gems.length) return null;
   const cost = unsocketCost(it);
-  const needed = new Set(it.gems.filter((g) => !c.bag.some((b) => b && b.type === 'gem' && b.gem === g.gem && b.tier === g.tier)).map((g) => `${g.gem}:${g.tier}`)).size;
-  const free = c.bag.filter((b) => !b).length;
+  const gemList = c.gemBag || c.bag;
+  const needed = new Set(it.gems.filter((g) => !gemList.some((b) => b && b.type === 'gem' && b.gem === g.gem && b.tier === g.tier)).map((g) => `${g.gem}:${g.tier}`)).size;
+  const free = gemList.filter((b) => !b).length;
   if (c.gold < cost || free < needed) return null;
   return {
     label: `Remove gems (${fmtInt(cost)}g)`,
@@ -450,7 +575,10 @@ function getBagActions(idx) {
     if (VANITY_SLOTS.includes(it.slot)) acts.push({ label: 'Wear as look', fn: () => wearLook(idx) });
   } else if (it.type === 'gem') {
     const targets = [...SLOTS.map((s) => ({ where: 'equip', slot: s })), ...c.bag.map((b, i) => ({ where: 'bag', idx: i }))].filter((r) => { const x = getItem(r); return x && x.type === 'gear' && !x.sealed && x.gems.length < x.sockets; });
-    if (targets.length) acts.push({ label: `Socket (${targets.length})`, fn: () => pickSocketTarget(idx, targets) });
+    if (targets.length) acts.push({ label: `Socket (${targets.length})`, fn: () => pickSocketTarget(idx, targets, 'bag') });
+    if (G.ui.jewelBox && G.ui.jewelBox.active) acts.push({ label: 'Store in Jewel Box', fn: () => G.ui.jewelBox.store(idx, 'bag') });
+  } else if (it.type === 'banner_kit') {
+    acts.push({ label: 'Customize Banner', fn: () => openBannerCustomizer({ bagIdx: idx }) });
   }
   if (it.type === 'sheet') {
     sheetButtons((lbl, fn, cls) => acts.push({ label: lbl, fn, cls }), { where: 'bag', idx }, it);
@@ -480,6 +608,20 @@ function getBagActions(idx) {
   return acts;
 }
 
+function getGemBagActions(idx) {
+  const c = G.char, it = c.gemBag && c.gemBag[idx];
+  if (!it) return [];
+  const acts = [];
+  const targets = [...SLOTS.map((s) => ({ where: 'equip', slot: s })), ...c.bag.map((b, i) => ({ where: 'bag', idx: i }))].filter((r) => { const x = getItem(r); return x && x.type === 'gear' && !x.sealed && x.gems.length < x.sockets; });
+  if (targets.length) acts.push({ label: `Socket (${targets.length})`, fn: () => pickSocketTarget(idx, targets, 'gemBag') });
+  if (G.ui.jewelBox && G.ui.jewelBox.active) acts.push({ label: 'Store in Jewel Box', fn: () => G.ui.jewelBox.store(idx, 'gemBag') });
+  if (G.ui.vendor && G.ui.vendor.active) acts.push({ label: `Sell (${fmtInt(Math.max(1, Math.floor(itemValue(it) / 4)))}g)`, fn: () => G.ui.vendor.sell({ where: 'gemBag', idx }) });
+  if (G.ui.stash && G.ui.stash.active) acts.push({ label: 'Store', fn: () => G.ui.stash.store(idx, 'gemBag') });
+  acts.push({ label: it.locked ? '🔓 Unlock' : '🔒 Lock', fn: () => { if (it.locked) delete it.locked; else it.locked = true; changed(); } });
+  acts.push({ label: 'Drop', fn: () => dropFromBag(idx, 'gemBag'), cls: 'small red' });
+  return acts;
+}
+
 function getEquipActions(slot) {
   const c = G.char, it = c.equip[slot];
   if (!it) return [];
@@ -503,10 +645,10 @@ function getVanityActions(slot) {
   return [{ label: 'Take off look', fn: () => takeOffLook(slot) }];
 }
 
-function pickSocketTarget(gemIdx, targets) {
+function pickSocketTarget(gemIdx, targets, fromWhere = 'bag') {
   const html = targets.map((r, i) => { const x = getItem(r); return `<button class="btn small" data-i="${i}" style="display:block;width:100%;margin:3px 0;color:${itemColor(x)}">${escapeHtml(itemName(x))} (${x.gems.length}/${x.sockets})</button>`; }).join('');
   const d = UI.dialog({ title: 'Socket into…', html: `<div style="max-height:50vh;overflow:auto">${html}</div>`, buttons: [{ label: 'Cancel' }] });
-  d.box.querySelectorAll('[data-i]').forEach((b) => { b.onclick = () => { d.close(); socketGem(gemIdx, targets[+b.dataset.i]); }; });
+  d.box.querySelectorAll('[data-i]').forEach((b) => { b.onclick = () => { d.close(); socketGem(gemIdx, targets[+b.dataset.i], fromWhere); }; });
 }
 
 function statsBlock() {
@@ -547,7 +689,7 @@ function statsBlock() {
   const g = el('div', 'stats-grid stats-primary');
   const rows = [
     ['Life', `${fmtInt(p.hp)} / ${fmtInt(p.maxHp)}`], ['Mana', `${fmtInt(p.mana)} / ${fmtInt(p.maxMana)}`],
-    ['Weapon Base', `${fmtDmg(shownWeapon(st.weapon[0], heroDmgLevel(c)))}–${fmtDmg(shownWeapon(st.weapon[1], heroDmgLevel(c)))}`, "The weapon's own damage before skills, attributes and bonuses, rated so a Common weapon of your depth's level averages 100: the Attack and DPS plaque shows what you deal"], ['Damage Bonus', `+${Math.round(st.dmgPct + st.primary)}%`],
+    ['Weapon Base', `${fmtDmg(shownWeapon(st.weapon[0], heroDmgLevel(c)))}–${fmtDmg(shownWeapon(st.weapon[1], heroDmgLevel(c)))}`, "The weapon's base damage before skills, attributes and bonuses: the Attack and DPS plaque shows what you deal"], ['Damage Bonus', `+${Math.round(st.dmgPct + st.primary)}%`],
     ['Armor', fmtInt(st.armor)], ['Crit', `${st.critChance.toFixed(1)}% / +${Math.round(st.critDmg)}%`],
     ['Attack Speed', `+${Math.round(st.atkSpeed)}%`], ['Cast Speed', `+${Math.round(st.castSpeed)}%`],
     ['Move Speed', `+${Math.round(st.moveSpeed)}%`], ['Fire Res', `${Math.min(75, st.res.fire)}%`],
@@ -592,6 +734,10 @@ export function attrRespec() {
   if (!n || c.gold < cost) return false;
   c.attrs = { ...c.attrs, ...CLASSES[c.classId].base };
   c.statPoints += n; c.gold -= cost;
+  for (const slot of ['weapon', 'offhand']) {
+    const it = c.equip[slot];
+    if (it && !canEquipItem(c, it, slot)) unequip(slot);
+  }
   sfx('buff');
   UI.log(`Attributes reset: <b>${n}</b> attribute points refunded for ${fmtInt(cost)} gold.`, '#ffd860');
   changed();
@@ -606,7 +752,15 @@ function attrRespecDialog() {
 
 export function autoAllocate() {
   const c = G.char, C = CLASSES[c.classId];
+  const reqStats = [...new Set([BASE_REQ_STAT[C.weapon], C.offhand && BASE_REQ_STAT[C.offhand]].filter(Boolean))];
+  const targetReq = c.level > 1 ? 20 + (Math.min(c.level, MAX_LEVEL) - 1) * 2 : 0;
   while (c.statPoints > 0) {
+    const needStat = targetReq > 0 ? reqStats.find((stKey) => charEffectiveStat(c, stKey) < targetReq) : null;
+    if (needStat) {
+      c.attrs[needStat]++;
+      c.statPoints--;
+      continue;
+    }
     const r = Math.random();
     const k = r < 0.55 ? C.primary : r < 0.85 ? 'vit' : C.primary === 'int' ? 'dex' : 'int';
     c.attrs[k === 'vit' && C.primary === 'vit' ? 'str' : k]++;
@@ -664,6 +818,7 @@ export function toggleCharacter() {
 
 export function renderInventory(body, panel) {
   const c = G.char;
+  if (!Array.isArray(c.gemBag)) c.gemBag = Array(30).fill(null);
   if (panel && panel.root) panel.root.classList.add('inventory-panel');
   body.innerHTML = '';
   const wrap = el('div', 'inv-wrap bag-view');
@@ -698,6 +853,22 @@ export function renderInventory(body, panel) {
   mid.appendChild(bag);
   if (nextRowCost(c)) mid.appendChild(bagRowButton());
 
+  const gemTitleRow = el('div', 'inv-section-title');
+  gemTitleRow.style.marginTop = '8px';
+  const gemUsed = c.gemBag.filter(Boolean).length;
+  gemTitleRow.innerHTML = `<div class="inv-title-label">Gem Bag <span>${gemUsed} / ${c.gemBag.length}</span></div>`;
+  const sortGemsBtn = el('button', 'btn small', 'Sort');
+  sortGemsBtn.title = 'Sort gems and runes by tier and grade';
+  sortGemsBtn.onclick = () => { sortGemBag(); sfx('ui'); };
+  gemTitleRow.appendChild(sortGemsBtn);
+  mid.appendChild(gemTitleRow);
+
+  const gemBagEl = el('div', 'bag gem-bag');
+  for (let i = 0; i < c.gemBag.length; i++) gemBagEl.appendChild(gemBagSlot(i));
+  mid.appendChild(gemBagEl);
+  const gemBagBuyBtn = gemBagRowButton(c);
+  if (gemBagBuyBtn) mid.appendChild(gemBagBuyBtn);
+
   const info = el('div', 'row inv-bag-actions');
   info.innerHTML = `<span class="gold-text">◉ ${fmtInt(c.gold)} gold</span><span class="dim">· Potions: <span style="color:#ff6060">${c.potions.hp}</span> / <span style="color:#6a8aff">${c.potions.mp}</span> / <span style="color:#c060ff">${c.potions.rejuv}</span> / <span style="color:#ffa020">${c.potions.fury}</span></span>`;
   if (G.ui.vendor && G.ui.vendor.active) {
@@ -730,12 +901,68 @@ function bagRowButton() {
   return b;
 }
 
+function gemBagRowButton(c) {
+  const rows = gemBagRows(c);
+  if (rows >= GEM_BAG_MAX_ROWS) return null;
+  const next = rows + 1;
+  const cost = nextGemBagRowCost(c);
+  const can = canBuyGemBagRow(c);
+  const b = el('button', 'btn small bag-buy gem-bag-buy' + (can ? '' : ' poor'), `+ Gem Bag row ${next} of ${GEM_BAG_MAX_ROWS} (${cost} Marks)`);
+  b.title = can ? `Buy another row of 10 gem slots for ${cost} Infernal Marks` : `Requires ${cost} unspent Infernal Marks (you have ${marksFree()})`;
+  b.onclick = () => {
+    sfx('ui');
+    if (!canBuyGemBagRow(c)) {
+      UI.log(`You need ${cost} free Infernal Marks to buy row ${next}.`, '#ff8080');
+      return;
+    }
+    UI.dialog({
+      title: `Gem Bag row ${next} of ${GEM_BAG_MAX_ROWS}`,
+      html: `<p>Expand your Gem Bag by 1 row (10 slots) for <b style="color:#ffd860">${cost} Infernal Marks</b>?</p>`,
+      buttons: [
+        { label: 'Cancel' },
+        { label: `Buy for ${cost} Marks`, cls: 'red', fn: () => {
+          if (buyGemBagRow(c)) {
+            changed();
+            const panel = UI.panels?.get('inventory');
+            if (panel) renderInventory(panel.body);
+          }
+        }},
+      ],
+    });
+  };
+  return b;
+}
+
 export function sortBag() {
   const c = G.char;
   const items = c.bag.filter(Boolean);
   const rank = (it) => (it.type === 'gear' ? 0 : it.type === 'gem' ? 1 : 2);
   items.sort((a, b) => rank(a) - rank(b) || (b.rarity || 0) - (a.rarity || 0) || (a.slot || '').localeCompare(b.slot || '') || (b.ilvl || 0) - (a.ilvl || 0));
-  c.bag = c.bag.map((_, i) => items[i] || null);
+  const bagLen = Math.max(60, c.bag.length);
+  c.bag = Array(bagLen).fill(null).map((_, i) => items[i] || null);
+  UI.selected = null;
+  changed();
+}
+
+export function sortGemBag() {
+  const c = G.char;
+  if (!Array.isArray(c.gemBag)) c.gemBag = Array(30).fill(null);
+  const items = c.gemBag.filter(Boolean);
+  const gemRank = (it) => {
+    if (!it || it.type !== 'gem') return 99;
+    const g = GEMS[it.gem];
+    if (g && g.sigil) return 0;
+    if (g && g.special) return 1;
+    return 2;
+  };
+  items.sort((a, b) =>
+    gemRank(a) - gemRank(b) ||
+    (b.tier || 0) - (a.tier || 0) ||
+    (a.gem || '').localeCompare(b.gem || '') ||
+    (b.count || 1) - (a.count || 1)
+  );
+  const gemLen = Math.max(30, c.gemBag.length);
+  c.gemBag = Array(gemLen).fill(null).map((_, i) => items[i] || null);
   UI.selected = null;
   changed();
 }
