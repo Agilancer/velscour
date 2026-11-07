@@ -325,6 +325,29 @@ export function shieldView(model, angle, s) {
   return c;
 }
 
+/** The Lancer's thrown shield (Shield Throw / Shield Disc): uses the same upright spinning 3D golden shield model
+ *  as his floating Bulwark shield spells, whirling cleanly as it flies and bounces between enemies. */
+export function drawLancerThrownShield(ctx, pr) {
+  const record = preloadLancerShield(pr.shieldVariant || 'round');
+  if (!record?.ready) return false;
+  const px = isoX(pr.x, pr.y), gy = isoY(pr.x, pr.y), py = gy - pr.z;
+  const s = pr.size || 1, prev = ctx.globalAlpha;
+  ctx.globalAlpha = prev * 0.25; ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.ellipse(px, gy, 11 * s, 5 * s, 0, 0, Math.PI * 2); ctx.fill();
+  if (pr.E && pr.el !== 'phys') {
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = prev * 0.28;
+    const r = 18 * s; ctx.drawImage(glowSprite(pr.E.glow), px - r, py - r, r * 2, r * 2);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  ctx.globalAlpha = prev;
+  const img = shieldView(record.model, Math.atan2(pr.vy, pr.vx) + pr.t * 10, 1.0 * s);
+  const smooth = ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, px - img.width / 2, py - img.height / 2);
+  ctx.imageSmoothingEnabled = smooth;
+  return true;
+}
+
 /** The Paladin's Shield Throw: the round model thrown flat like a discus, level with the isometric ground (face up),
  *  spinning in its own plane (the emblem turns) with a slight wobble, its shadow on the ground beneath. pr is the Projectile. */
 export function drawThrownShield(ctx, pr) {

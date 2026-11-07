@@ -565,13 +565,11 @@ const ENRAGE_T = 180, EXECUTE_T = 300; // seconds from waking until the boss enr
  * on its own; tools/tests/endgame.js).
  */
 // a BOSS ROOM boss is 26 x 1.3 x this many normals of its level (monsterBase's toughness keeps a normal at ~3 s of hero
-// damage at every depth): ~12 normals at depth 5, ~19 by depth 500. Its wards, adds and mechanics stretch that ~3.5x,
-// so auto-play takes about two minutes (tools/tests/balance.js with BAL_RAID=1 ... god)
-export const raidHpMul = (depth) => 0.35 + Math.min(depth, 500) * 0.0004;
-// a BOSS ROOM boss hits for this many normals of its level: 2.7 to depth 10, easing to 1.9 by depth 100 (deeper rooms
-// bring a fourth phase and more modifiers, and every hero died in its first depth-100 room at 2.7; was 3.6 when the
-// fights lasted 20 s, not two minutes)
-export const raidHitMul = (depth) => 2.7 * (1 - 0.3 * clamp((depth - 10) / 90, 0, 1));
+// damage at every depth): ~25 normals at depth 5, ~42 by depth 500. Its wards, adds and mechanics stretch that ~3.5x,
+// so fights run ~45-90 seconds of active mechanical engagement.
+export const raidHpMul = (depth) => 0.22 + Math.pow(Math.min(depth, 500) / 500, 0.75) * 0.85;
+// a BOSS ROOM boss hits for this many normals of its level: smoothly scales so early raid bosses are survivable.
+export const raidHitMul = (depth) => 1.35 + 1.15 * Math.pow(Math.min(depth, 500) / 500, 0.6);
 /** opts.tpl / opts.art: a given template (copied, maybe renamed) and look instead of a random one (game/tower.js).
  *  opts.court: one of Velscour Unbound's court (game/unbound.js): it never seals the arena or announces a BOSS ROOM.
  *  opts.hp / opts.dmg: multipliers on a BOSS ROOM's. */
@@ -593,7 +591,7 @@ export function makeRaidBoss(world, arena, depth, level, opts = {}) {
     ai: 'raid', el: tpl.el, res: { [tpl.el]: 0.4, ...(m.undead ? { poison: 0.5, shadow: 0.3 } : null) },
     scale: has('colossal') ? 2.75 : 2.4, r: 1.05, atkReach: 0.35, speed: 2.4 * (tpl.spd || 1) * (has('colossal') ? 0.88 : 1), atkCd: 1.3,
     maxHp: B.hp * 26 * raidHpMul(depth) * (has('colossal') ? 1.35 : 1) * (tpl.hp || 1) * 1.3 * (opts.hp || 1), dmg: raidHitMul(depth) * B.dmg * (has('empowered') ? 1.25 : 1) * (opts.dmg || 1), xp: B.xp * 60,
-    name: tpl.name.toUpperCase(), title: tpl.title, aura: elem(tpl.el).glow, affixes: has('vampiric') ? ['vampiric'] : [],
+    name: tpl.name.toUpperCase(), title: tpl.title, aura: elem(tpl.el).glow, affixes: [],
     moves: null, patterns: [], isRaid: true, ward: 1, aggroRange: 0,
   });
   m.hp = m.maxHp;

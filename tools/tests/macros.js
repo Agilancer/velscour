@@ -12,7 +12,7 @@
 //   node tools/tests/macros.js
 const { openGame, report } = require('./harness');
 
-const BUFFS = ['paladin.1.1', 'paladin.1.3', 'paladin.1.5', 'paladin.1.8'];
+const BUFFS = ['paladin.1.1', 'paladin.1.4', 'paladin.1.6', 'paladin.1.8'];
 let fails = 0;
 const check = (ok, msg) => { console.log(`${ok ? 'ok  ' : 'FAIL'} ${msg}`); if (!ok) fails++; };
 

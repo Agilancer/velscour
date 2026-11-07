@@ -14,7 +14,7 @@ import { CLASSES } from '../data/classes.js';
 import { potionIcon } from '../core/assets.js';
 import { VENDORS } from '../world/town.js';
 import { depthLevel } from '../data/depth.js';
-import { sheetItem, goldLvl } from '../data/items.js';
+import { sheetItem, bannerKitItem, BANNER_KIT_PRICE, goldLvl } from '../data/items.js';
 import { SHEET_PRICE } from '../data/tabs.js';
 
 const VBY = Object.fromEntries(VENDORS.map((v) => [v.id, v]));
@@ -292,6 +292,30 @@ export const Vendor = {
     }
     body.appendChild(grid);
     if (c.classId === 'bard') this.sheetBox(body);
+    if (c.classId === 'lancer') this.bannerKitBox(body);
+  },
+
+  /** Fortunato's banner kit: customize the 3D war banner that follows the Lancer. */
+  bannerKitBox(body) {
+    const c = G.char, row = el('div', 'service-box row');
+    const ic = el('div', 'bslot r2');
+    Object.assign(ic.style, { width: '40px', height: '40px', flex: 'none' });
+    ic.appendChild(itemCell(bannerKitItem()));
+    row.appendChild(ic);
+    const desc = el('div', '', `<b>Lancer's Banner Kit</b> <span class="dim">· ride under your own colors!</span><div class="dim" style="font-size:12px">Contains heraldic dyes, cloth cuts, and crests to customize the 3D War Banner trailing your Lancer.</div>`);
+    desc.style.flex = '1';
+    row.appendChild(desc);
+    const b = el('button', 'btn small', `Buy Kit (${fmtInt(BANNER_KIT_PRICE)}g)`);
+    b.disabled = c.gold < BANNER_KIT_PRICE || c.bag.filter((x) => !x).length < 1;
+    b.onclick = () => {
+      c.gold -= BANNER_KIT_PRICE;
+      addToBag(c, bannerKitItem());
+      sfx('gold');
+      UI.log('Purchased <span style="color:#ffd860">Lancer\'s Banner Kit</span>. Open it from your bag to customize your banner!');
+      changed();
+    };
+    row.appendChild(b);
+    body.appendChild(row);
   },
 
   /** Fortunato's paper: blank Music Sheets for a Bard to write songs on (data/tabs.js, ui/sheets.js). */

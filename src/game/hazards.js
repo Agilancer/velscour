@@ -7,7 +7,7 @@ import { spawn, burst, addEffect, Ring, Bolt, Beam, Slash, Telegraph, elem, glow
 import { emitWhirlCyclone, captureWhirlGibs, drawWhirlCyclone } from '../gfx/barbarianwhirl.js';
 import { drawShape, trail, explosionFx, hitSpark } from '../gfx/shapes.js';
 import { bardProjInit, bardProjUpdate, bardProjHit, bardProjDraw, bardOrbitDraw, bardRainDraw, bardBeamDraw } from './bard.js';
-import { drawLancerOrbitShield, drawThrownShield } from '../gfx/lancershields.js';
+import { drawLancerOrbitShield, drawLancerThrownShield, drawThrownShield } from '../gfx/lancershields.js';
 import { drawCosmicBeam } from '../gfx/cosmos.js';
 import { drawFlyingRang, drawRang3D, rangSkin, groundHeading } from '../gfx/boomerang3d.js';
 import { screenAngle } from '../gfx/vfx.js';
@@ -254,6 +254,7 @@ export class Projectile {
     }
     if (this.note) return bardProjDraw(ctx, this, px, py);
     if ((this.fx === 'rang' || this.fx === 'chakram') && drawFlyingRang(ctx, this)) return; // the 3D boomerang
+    if (this.fx === 'tshield' && drawLancerThrownShield(ctx, this)) return; // the Lancer's spinning 3D shield
     if (this.fx === 'pshield' && drawThrownShield(ctx, this)) return; // the Paladin's thrown 3D shield
     const a = screenAngle(Math.atan2(this.vy, this.vx));
     drawShape(ctx, this.fx === 'pshield' ? 'disc' : this.fx, px, py, a, this.size, this.E, this.t); // a disc while the shield model loads
@@ -489,10 +490,10 @@ export class Orbit {
         const k = c.id * 100 + i;
         if ((this.cd.get(c.id) || 0) > this.t) continue;
         this.cd.set(c.id, this.t + 0.33);
-        hit(this.src, c, roll(this.dmg), this.el, { ...this.o, ang: a + Math.PI / 2 });
+        hit(this.src, c, roll(this.dmg), this.el, { ...this.o, ang: a + Math.PI / 2, lightFx: !!this.shieldVariant || this.o.lightFx });
         void k;
       }
-      if (chance(dt * 10)) trail(this.fx, x, y, 24, this.E, dt, this.size);
+      if (!this.shieldVariant && chance(dt * 10)) trail(this.fx, x, y, 24, this.E, dt, this.size);
     }
     return true;
   }
@@ -659,7 +660,18 @@ export class Leap {
       explode(this.world, s, s.x, s.y, this.r, this.dmg, this.el, { ...this.o, knock: this.o.knock || 0.6 }, this.fx === 'meteor' || this.fx === 'dragon' ? 'meteor' : this.fx === 'holy' ? 'holy' : 'eruption');
       sfx('thud');
       addDecal(s.x, s.y, 'rgba(10,6,4,0.6)', this.r * 0.5, 'scorch', 0.7);
-      if (this.nova) this.world.addHazard(new NovaWave({ world: this.world, src: s, x: s.x, y: s.y, r: this.r * 1.6, dmg: this.dmg.map((v) => v * 0.5), el: this.el, fx: this.fx }));
+      if (this.nova) this.world.addHazard(new NovaWave({ world: this.world, src: s, x: s.x, y: s.y, r: this.r * 1.6, dmg: this.dmg.map((v) => v * 0.5), el: this.el, fx: this.fx, o: this.o }));
+      if (this.quake) {
+        const qDmg = this.dmg.map((v) => v * (0.4 * this.quake));
+        this.world.addHazard(new NovaWave({ world: this.world, src: s, x: s.x, y: s.y, r: this.r * (1.45 + 0.2 * this.quake), dmg: qDmg, el: this.el, fx: 'shock', o: { ...this.o, stun: true } }));
+        for (let i = 0; i < 4; i++) {
+          const a = (i / 4) * TAU + rand(-0.2, 0.2);
+          this.world.addHazard(new Fissure({ world: this.world, src: s, x: s.x, y: s.y, ang: a, len: 2.8 + this.quake * 0.6, w: 0.75, fx: 'earth', el: this.el, dmg: qDmg, o: this.o }));
+        }
+      }
+      if (this.crater) {
+        this.world.addHazard(new Area({ world: this.world, src: s, x: s.x, y: s.y, r: this.r * 1.15, dur: 4, tick: 0.45, dmg: this.dmg.map((v) => v * 0.28), el: 'fire', fx: 'fire', o: { ...this.o, burn: true } }));
+      }
       return false;
     }
     return true;
