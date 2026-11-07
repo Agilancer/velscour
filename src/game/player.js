@@ -34,15 +34,9 @@ import { markBonuses, gainMarkXp } from './marks.js';
 import { heresyHero, heresyAllows } from './heresies.js';
 import { endgame, saveEndgame } from './endgame.js';
 
-// XP for the next level. The (L/30)^1.5 term paces a hero who clears every depth to stay ~10-50 levels above its
-// monsters and reach ~270 by Velscour (depth 500, monster level 258); without it a full-clearing hero hit level 300
-// by depth 160. Past level 240 a level costs L/240 times the level-240 price, so in the Endless Torment (depths past
-// 500) a full-clearing hero keeps pace with its monsters. Past 600 a level costs (L/600)^XP_K times the level-600 price
-// (a deep depth's XP grows ~level^1.5), so the hero stays level with the monsters to the cap (MAX_LEVEL, data/depth.js)
-// around depth 6600 (tools/tests/endgame.js deep).
-const xpCurve = (L) => (60 * L * L + 40 * L) * (1 + Math.pow(L / 30, 1.5));
-const XP_K = 1.6, XP600 = xpCurve(240) * 600 / 240;
-export const xpToNext = (L) => Math.round(L <= 240 ? xpCurve(L) : L <= 600 ? xpCurve(240) * L / 240 : XP600 * Math.pow(L / 600, XP_K));
+// XP for the next level across the Level 1-100 progression curve.
+const xpCurve = (L) => (45 * L * L + 35 * L) * (1 + Math.pow(L / 25, 1.25));
+export const xpToNext = (L) => Math.round(xpCurve(Math.max(1, L)));
 export { MAX_LEVEL };
 /** The class's damage tuning at a hero level (data/classes.js DMG_TUNE). */
 export function classTune(cls, level) {
@@ -128,13 +122,13 @@ export class Player extends Creature {
     const critRaw = 5 + dex * 0.1 + (add.critChance || 0) + buffCrit / 4 + mk.crit, critOver = Math.max(0, critRaw - 75);
     const st = {
       str, dex, vit, int, legendary, procs: rb.procs,
-      armor: Math.round((itemArmorSum + (add.armor || 0) + str) * (1 + ((add.armorPct || 0) + buffArmor) / 100)),
+      armor: Math.round((itemArmorSum + (add.armor || 0) + str + (c.level - 1) * 1.5) * (1 + ((add.armorPct || 0) + buffArmor) / 100)),
       res: {
-        fire: (add.resFire || 0) + (add.resAll || 0) + buffRes,
-        cold: (add.resCold || 0) + (add.resAll || 0) + buffRes,
-        light: (add.resLight || 0) + (add.resAll || 0) + buffRes,
-        poison: (add.resPoison || 0) + (add.resAll || 0) + buffRes,
-        magic: Math.round(((add.resAll || 0) + buffRes) * 0.75),
+        fire: (add.resFire || 0) + (add.resAll || 0) + buffRes + Math.round((c.level - 1) * 0.2),
+        cold: (add.resCold || 0) + (add.resAll || 0) + buffRes + Math.round((c.level - 1) * 0.2),
+        light: (add.resLight || 0) + (add.resAll || 0) + buffRes + Math.round((c.level - 1) * 0.2),
+        poison: (add.resPoison || 0) + (add.resAll || 0) + buffRes + Math.round((c.level - 1) * 0.2),
+        magic: Math.round(((add.resAll || 0) + buffRes + Math.round((c.level - 1) * 0.2)) * 0.75),
       },
       critChance: clamp(critRaw, 0, 75), critOver,
       critDmg: 50 + (add.critDmg || 0) + mk.critDmg + critOver * CRIT_OVER,
@@ -175,7 +169,7 @@ export class Player extends Creature {
       regenPct: buffRegen / 10,
     };
     for (const k of ELEM_KEYS) st.elemPct[k] = (add[k + 'Pct'] || 0) + int;
-    st.weapon = weapon ? itemDmg(weapon) : [1, 3];
+    st.weapon = weapon ? itemDmg(weapon) : [Math.round(1 + (c.level - 1) * 0.4), Math.round(3 + (c.level - 1) * 0.8)];
     // Barbarians can carry an actual second melee weapon instead of a shield.
     const second = c.equip.offhand;
     if (this.classId === 'barbarian' && second?.slot === 'weapon') {
@@ -185,10 +179,14 @@ export class Player extends Creature {
     }
     if (weapon) { const fd = add.flatDmg || 0; st.weapon = [st.weapon[0] + fd, st.weapon[1] + fd]; }
     const lifePct = (add.lifePct || 0) + buffLife;
-    this.maxHp = Math.round((C.life + (c.level - 1) * C.lifeLvl + vit * 3 + (add.life || 0)) * (1 + lifePct / 100) * st.fortitude * (1 + mk.life / 100));
+    const baseHp = C.life + (c.level - 1) * C.lifeLvl + Math.round(Math.pow(c.level - 1, 2) * 0.45) + vit * 6 + (add.life || 0);
+    this.maxHp = Math.round(baseHp * (1 + lifePct / 100) * st.fortitude * (1 + mk.life / 100));
     this.maxMana = Math.round(C.mana + (c.level - 1) * C.manaLvl + int * 2 + (add.mana || 0));
-    st.lifeRegen = heresyAllows('regen', c) ? 0.6 + c.level * 0.12 + vit * 0.05 + (add.lifeRegen || 0) + this.maxHp * st.regenPct / 100 : 0; // Hunger of the Abyss: none
-    st.manaRegen = 1.6 + c.level * 0.15 + int * 0.06 + (add.manaRegen || 0);
+    const inTown = this.world && this.world.kind === 'town';
+    st.naturalLifeRegen = 1.2 + c.level * 0.35 + vit * 0.08;
+    st.bonusLifeRegen = (add.lifeRegen || 0) + this.maxHp * st.regenPct / 100;
+    st.lifeRegen = heresyAllows('regen', c) ? ((inTown ? st.naturalLifeRegen : 0) + st.bonusLifeRegen) : 0; // Hunger of the Abyss: none
+    st.manaRegen = (1.0 + c.level * 0.04 + int * 0.04 + (add.manaRegen || 0)) * (1 + (add.manaRegenPct || 0) / 100);
     this.st = st;
     this.augs = RING_SLOTS.flatMap((s) => (c.equip[s] && c.equip[s].aug) || []);
     this.augCache = new Map();
@@ -243,15 +241,16 @@ export class Player extends Creature {
   synergy(sk) {
     let pts = 0;
     for (const s of CLASS_SKILLS[this.classId]) if (s.tree === sk.tree && s.id !== sk.id) pts += this.char.skills[s.id] || 0;
-    return 1 + pts * 0.03;
+    return 1 + pts * 0.015;
   }
 
   skillDamage(sk, L) {
     const st = this.st;
     const base = skillBaseDamage(sk, L);
     const wc = weaponCoef(sk);
-    const elBonus = sk.el === 'phys' ? st.physPct : st.elemPct[sk.el] || 0;
-    let mult = (1 + (st.dmgPct + st.primary + elBonus) / 100) * this.synergy(sk) * masteryMul(this.mastery(sk)) * classTune(this.classId, this.char.level) * (sk.m.pow ?? 1);
+    const elBonus = (sk.el === 'phys' ? st.physPct : st.elemPct[sk.el] || 0) * 0.25;
+    const primBonus = st.primary * 0.28;
+    let mult = (1 + (st.dmgPct * 0.35 + primBonus + elBonus) / 100) * this.synergy(sk) * masteryMul(this.mastery(sk)) * classTune(this.classId, this.char.level) * (sk.m.pow ?? 1);
     if (st.legendary.berserk) mult *= 1 + 0.04 * Math.floor((1 - this.hp / this.maxHp) * 10);
     if (this.score) mult *= harmonyMul(this); // the Bard's Harmony
     const lo = (base * 0.85 + st.weapon[0] * wc) * mult, hi = (base * 1.15 + st.weapon[1] * wc) * mult;
@@ -358,8 +357,20 @@ export class Player extends Creature {
         c.gold += g.amount; sfx('gold');
         floatText(this.x, this.y, 46, `+${fmtInt(g.amount)} gold`, '#ffd34a', 12);
         return true;
-      case 'orb_hp': this.heal(this.maxHp * 0.15); sfx('orb'); return true;
-      case 'orb_mp': this.mana = Math.min(this.maxMana, this.mana + this.maxMana * 0.18); sfx('orb'); floatText(this.x, this.y, 46, '+mana', '#6a8aff', 11); return true;
+      case 'orb_hp': {
+        const healAmt = Math.round(this.maxHp * 0.20);
+        this.heal(healAmt);
+        floatText(this.x, this.y, 46, `+${fmtInt(healAmt)} life`, '#ff6a6a', 12);
+        sfx('orb');
+        return true;
+      }
+      case 'orb_mp': {
+        const manaAmt = Math.round(this.maxMana * 0.15);
+        this.mana = Math.min(this.maxMana, this.mana + manaAmt);
+        sfx('orb');
+        floatText(this.x, this.y, 46, `+${fmtInt(manaAmt)} mana`, '#6a8aff', 11);
+        return true;
+      }
       case 'key': { // an Abyssal Key (docs/ENDGAME.md): three open Velscour Unbound
         c.keys = (c.keys | 0) + 1; endgame().keysFound++; saveEndgame();
         sfx('levelup', 0.5); floatText(this.x, this.y, 56, `ABYSSAL KEY ${Math.min(3, c.keys)}/3`, '#20e0ff', 15, { life: 2 });
@@ -587,7 +598,7 @@ export class Player extends Creature {
 
   // ------------------------------------------------------------------ update
   update(dt) {
-    const st = this.st;
+    const c = this.char, st = this.st;
     this.animT += dt;
     const gfx = this.gearFx();
     if (gfx) updateGearFx(this, gfx.fx, gfx.col, dt);
@@ -606,8 +617,11 @@ export class Player extends Creature {
     // a dash, leap or beam whose effect was swept away under him (a level section changing round him: game/caverns.js,
     // dunes.js, tower.js) would hold him channelling for good, unable to move or fight: let it go
     if (this.channel && this.world && !this.world.hazards.includes(this.channel)) { if (this.channel instanceof Leap) this.z = 0; this.channel = null; }
-    // regen
-    if (this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + st.lifeRegen * dt);
+    // regen: natural baseline HP regen only recovers in town; outside town only gear/buff regen applies
+    const inTown = this.world && this.world.kind === 'town';
+    const effectiveRegen = heresyAllows('regen', c) ? ((inTown ? Math.max(st.naturalLifeRegen || 0, this.maxHp * 0.25) : 0) + (st.bonusLifeRegen || 0)) : 0;
+    st.lifeRegen = inTown ? ((st.naturalLifeRegen || 0) + (st.bonusLifeRegen || 0)) : (st.bonusLifeRegen || 0);
+    if (this.hp < this.maxHp && effectiveRegen > 0) this.hp = Math.min(this.maxHp, this.hp + effectiveRegen * dt);
     if (this.mana < this.maxMana) this.mana = Math.min(this.maxMana, this.mana + st.manaRegen * dt);
     for (let i = this.potionRegen.length - 1; i >= 0; i--) {
       const r = this.potionRegen[i];

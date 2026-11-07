@@ -1,6 +1,8 @@
 // LocalStorage persistence for heroes.
 import { CLASSES } from '../data/classes.js';
-import { rollItem, HOLLOW } from '../data/items.js';
+import { MAX_LEVEL } from '../data/depth.js';
+import { rollItem, HOLLOW, WEAPONS, OFFHANDS, ARMORS, AFFIX_BY_STAT, affixValue, powerLevel, tierOf, itemReqStat, charEffectiveStat } from '../data/items.js';
+import { SCOPE_MUL, augPower } from '../data/rings.js';
 import { drawBiome } from '../data/biomes.js';
 import { migrateBar, BAR_SIZE } from '../data/bar.js';
 import { TAB_SLOTS } from '../data/tabs.js';
@@ -129,7 +131,7 @@ export function newCharData(classId, name) {
   const C = CLASSES[classId];
   const c = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    version: 1, name, classId, level: 1, xp: 0,
+    version: 1, rebalancedV1: true, name, classId, level: 1, xp: 0,
     attrs: { ...C.base }, statPoints: 0, skillPoints: 1,
     skills: {}, granted: {}, bar: Array(BAR_SIZE).fill(null),
     equip: { weapon: null, offhand: null, head: null, body: null, hands: null, legs: null, feet: null, ring1: null, ring2: null, ring3: null, ring4: null },
@@ -154,8 +156,120 @@ export function newCharData(classId, name) {
   return c;
 }
 
+function migrateLegacyGearItem(it) {
+  if (!it || it.type !== 'gear') return;
+  if (it.ilvl > 30) {
+    it.ilvl = it.ilvl <= 260
+      ? Math.round(30 + 70 * ((it.ilvl - 30) / 230))
+      : Math.min(120, 100 + Math.floor((it.ilvl - 260) / 100));
+  }
+  it.ilvl = Math.max(1, Math.round(it.ilvl || 1));
+  it.tier = tierOf(it.ilvl);
+  it.req = Math.min(it.ilvl, MAX_LEVEL);
+  const rar = it.rarity || 0;
+  const pl = powerLevel(it.ilvl, rar);
+  if (it.slot === 'weapon') {
+    const W = WEAPONS[it.base] || WEAPONS.sword;
+    const avg = (6 + pl * 1.8 + 0.022 * pl * pl) * W.dmg;
+    const maxAllowed = Math.max(2, Math.round(avg * 1.2));
+    if (!Array.isArray(it.dmg) || it.dmg[1] > maxAllowed * 1.25) {
+      it.dmg = [Math.max(1, Math.round(avg * 0.8)), maxAllowed];
+    }
+  } else if (it.slot === 'offhand' || ARMORS[it.slot]) {
+    const mult = it.slot === 'offhand' ? (OFFHANDS[it.base] || OFFHANDS.shield).armor : ARMORS[it.slot].armor;
+    const baseArm = (8 + pl * 2.4 + 0.025 * pl * pl) * mult;
+    if (typeof it.armor === 'number' && it.armor > Math.round(baseArm * 1.25)) {
+      it.armor = Math.max(1, Math.round(baseArm));
+    }
+  }
+  for (const a of it.affixes || []) {
+    if (!a || a.implicit) continue;
+    const def = AFFIX_BY_STAT[a.s];
+    if (!def || def.sc === 0) continue;
+    const cap = it.relic ? affixValue(def, it.ilvl, 5, 1) * 1.8 : affixValue(def, it.ilvl, rar, 1);
+    if (a.v > cap) a.v = cap >= 10 ? Math.round(cap) : Math.round(cap * 10) / 10;
+  }
+  if (it.slot === 'ring' && Array.isArray(it.aug)) {
+    for (const a of it.aug) {
+      if (!a) continue;
+      const scope = a.sk ? SCOPE_MUL.skill : a.kind ? SCOPE_MUL.kind : SCOPE_MUL.all;
+      const maxPow = Math.round(augPower(pl) * scope * 1.15 * 100) / 100;
+      if (a.pow > maxPow) a.pow = maxPow;
+    }
+  }
+  const reqStat = itemReqStat(it);
+  if (reqStat) it.reqStat = reqStat;
+  else delete it.reqStat;
+}
+
+function migrateToLv100Rebalance(c) {
+  if (c.rebalancedV1) return;
+  const oldLevel = Math.max(1, Math.floor(Number(c.level) || 1));
+  if (oldLevel > MAX_LEVEL) {
+    c.level = MAX_LEVEL;
+    c.xp = 0;
+    const C = CLASSES[c.classId];
+    if (C && c.attrs) {
+      const maxPts = (MAX_LEVEL - 1) * 5;
+      const keys = ['str', 'dex', 'vit', 'int'];
+      const diffs = keys.map((k) => Math.max(0, (c.attrs[k] || 0) - C.base[k]));
+      const spent = diffs.reduce((a, b) => a + b, 0);
+      const unspent = Math.max(0, c.statPoints || 0);
+      const total = spent + unspent;
+      if (total > maxPts) {
+        const scale = spent > 0 ? Math.min(1, maxPts / total) : 0;
+        let newSpent = 0;
+        keys.forEach((k, idx) => {
+          const add = Math.floor(diffs[idx] * scale);
+          c.attrs[k] = C.base[k] + add;
+          newSpent += add;
+        });
+        c.statPoints = Math.max(0, maxPts - newSpent);
+      }
+    }
+    let excessSkills = oldLevel - MAX_LEVEL;
+    const takeUnspent = Math.min(Math.max(0, c.skillPoints || 0), excessSkills);
+    c.skillPoints = Math.max(0, (c.skillPoints || 0) - takeUnspent);
+    excessSkills -= takeUnspent;
+    if (excessSkills > 0 && c.skills) {
+      const ids = Object.keys(c.skills);
+      while (excessSkills > 0) {
+        let trimmed = false;
+        ids.sort((a, b) => (c.skills[b] || 0) - (c.skills[a] || 0));
+        for (const id of ids) {
+          const minKeep = c.granted && c.granted[id] ? 1 : 1;
+          if ((c.skills[id] || 0) > minKeep) {
+            c.skills[id]--;
+            excessSkills--;
+            trimmed = true;
+            if (excessSkills <= 0) break;
+          }
+        }
+        if (!trimmed) break;
+      }
+    }
+  }
+  const allItems = [
+    ...Object.values(c.equip || {}),
+    ...Object.values(c.vanity || {}),
+    ...(c.bag || []),
+    ...(c.stash || []),
+  ];
+  for (const it of allItems) migrateLegacyGearItem(it);
+  // Ensure already-equipped weapon/offhand remain wearable on migrated saves
+  for (const slot of ['weapon', 'offhand']) {
+    const eq = c.equip && c.equip[slot];
+    if (eq && eq.reqStat) {
+      const have = charEffectiveStat(c, eq.reqStat.stat, slot);
+      if (have < eq.reqStat.val) eq.reqStat.val = have;
+    }
+  }
+  c.rebalancedV1 = true;
+}
+
 /** Fill in fields added by later versions. */
 export function migrate(c) {
+  migrateToLv100Rebalance(c);
   c.potions = Object.assign({ hp: 0, mp: 0, rejuv: 0, fury: 0 }, c.potions);
   c.cleared = c.cleared || {};
   c.seaOfSandRuns = c.seaOfSandRuns || {};
