@@ -5,7 +5,8 @@ import { shownDmg, heroDmgLevel } from '../data/depth.js';
 import { sfx } from '../core/audio.js';
 import { A, potionIcon } from '../core/assets.js';
 import { UI, $, droppable } from './ui.js';
-import { skillIconURL, ultimateIconURL } from './icons.js';
+import { skillIconURL, smiteIcon, madnessIcon, ultimateIcon } from './icons.js';
+import { CLASSES } from '../data/classes.js';
 import { SKILLS, effLevel, manaCost, rageCost, cooldown, CLASS_SKILLS } from '../data/skills.js';
 import { xpToNext } from '../game/player.js';
 import { drawMinimap } from '../game/render.js';
@@ -61,6 +62,22 @@ export const HUD = {
     // the bar's aspect (and how much room it takes at the bottom) comes from the art's geometry
     document.documentElement.style.setProperty('--hud-k', String(geo.h / geo.w));
     this.initFrames(geo);
+
+    // Render special ability procedural icons onto their canvases
+    const madIcon = $('#madness-btn .special-icon');
+    if (madIcon) madIcon.getContext('2d').drawImage(madnessIcon(64), 0, 0);
+    const smiteIconEl = $('#smite-btn .special-icon');
+    if (smiteIconEl) smiteIconEl.getContext('2d').drawImage(smiteIcon(64), 0, 0);
+    const hearthIconEl = $('#hearth-btn .special-icon');
+    if (hearthIconEl) { // a glowing blue hearthstone
+      const x = hearthIconEl.getContext('2d'), gr = x.createRadialGradient(28, 26, 3, 32, 32, 30);
+      gr.addColorStop(0, '#e8faff'); gr.addColorStop(0.35, '#58c4ff'); gr.addColorStop(0.75, '#0e4c72'); gr.addColorStop(1, '#041828');
+      x.fillStyle = gr; x.beginPath(); x.arc(32, 32, 31, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#2a3440'; x.strokeStyle = '#7fd8ff'; x.lineWidth = 2;
+      x.beginPath(); x.ellipse(32, 36, 14, 17, 0, 0, Math.PI * 2); x.fill(); x.stroke();
+      x.fillStyle = '#9ce4ff'; x.font = 'bold 18px serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('⌂', 32, 37);
+    }
+
     $('#madness-btn').addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); unleashMadness(); });
     $('#smite-btn').addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); toggleSmite(); });
     $('#smite-btn').removeAttribute('title');
@@ -72,6 +89,9 @@ export const HUD = {
     UI.tip($('#smite-track'), ultTip);
     $('#hearth-btn').addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); useHearth(); });
     $('#sealed-btn').addEventListener('click', (e) => { e.stopPropagation(); sfx('ui'); openNextSeal(); });
+    const toggleXpDetails = (e) => { e.stopPropagation(); $('#xp-text')?.classList.toggle('show-full'); };
+    $('#xp-track')?.addEventListener('pointerdown', toggleXpDetails);
+    $('#xp-text')?.addEventListener('pointerdown', toggleXpDetails);
     // the spectator's dials: auto-play's stance and the Greed lever (game/autoplay.js STANCES, game/greed.js)
     for (const b of document.querySelectorAll('#stance button')) b.addEventListener('click', (e) => { e.stopPropagation(); if (!G.char) return; G.char.stance = b.dataset.st; sfx('ui'); UI.log(`Auto-play stance: <b>${STANCES[b.dataset.st].name}</b>.`, '#8fe0ff'); });
     for (const b of document.querySelectorAll('#greed .gr-btn')) b.addEventListener('click', (e) => { e.stopPropagation(); sfx('ui'); setGreed(greedOf() + +b.dataset.d); });
@@ -81,10 +101,12 @@ export const HUD = {
       <div><b>Cautious</b>: kites anything that closes in, fights from the edge of its reach, drinks early, runs for town sooner, out-levels each depth before its guardian.</div>
       <div><b>Balanced</b>: the default: kites crowds and when hurt.</div>
       <div><b>Reckless</b>: stands in the thick of it, barely kites, drinks late, dives for the guardian under-levelled.</div>`);
-    UI.tip($('#greed'), () => { const g = greedOf(), M = greedMods(g, hoardOf()); return `<b style="color:#ffc040">The Greed lever: ${g} / ${GREED_MAX}</b>
+    UI.tip($('#greed'), () => {
+      const g = greedOf(), M = greedMods(g, hoardOf()); return `<b style="color:#ffc040">The Greed lever: ${g} / ${GREED_MAX}</b>
       <div>Each notch: +7% champion packs, +12% pack size, +8% monster traits, monsters +10% life and +6% damage. Pays +25% drops, +30% gold, +20% magic find.</div>
       <div>Every depth cleared with the lever up adds its level to the <b>Hoard</b>: +2% drops and gold a stack while greedy (drops up to 50 stacks). Its cap grows with your deepest depth (now ${hoardCap()}); stacks over 50 add gold only. A death loses the Hoard and drops the lever.</div>
-      <div class="dim">Takes hold from the next depth. Now: ×${M.loot.toFixed(2)} drops, ×${M.gold.toFixed(2)} gold, +${M.mf}% magic find.</div>`; });
+      <div class="dim">Takes hold from the next depth. Now: ×${M.loot.toFixed(2)} drops, ×${M.gold.toFixed(2)} gold, +${M.mf}% magic find.</div>`;
+    });
     // tap / click the target window to blow it up (about 2.25x, capped to the screen); again to shrink it back
     $('#target-box').addEventListener('click', (e) => { e.stopPropagation(); this.tbBig = !this.tbBig; this.last.tbCls = null; this.updateTarget(); });
     const wrap = $('#hud-slots');
@@ -104,7 +126,7 @@ export const HUD = {
       const entry = { d, icon, cd, cdt, cnt, nomana, map, last: {} };
       this.slots.push(entry);
       if (typeof map === 'string') {
-        d.title = { hp: 'Healing Potion (Z)', mp: 'Mana Potion (X)', rejuv: 'Rejuvenation Potion (C)', fury: 'Elixir of Fury (V)' }[map];
+        d.title = { hp: 'Healing Potion (Z)', mp: 'Mana Potion (X)', rejuv: 'Rejuvenation Potion (R)', fury: 'Elixir of Fury (V)' }[map];
         d.addEventListener('pointerdown', (e) => { e.stopPropagation(); G.player && G.player.usePotion(map); });
       } else {
         d.title = `Skill slot ${SLOT_LABELS[map]}`;
@@ -143,6 +165,7 @@ export const HUD = {
       <div><b>DPS</b>: what your skill bar deals to one foe per second at your current stats: crits, attack and cast speed, cooldowns, mana and minions.</div>
       <div><b>Avg DPS · 30s</b>: the damage you and your minions really dealt over the last 30 seconds, divided by 30. The bars show each second.</div>
       <div><b>Player Deaths</b> and <b>Total Monsters Killed</b>: this hero's lifetime counts.</div>`);
+    this.applyVisibilitySettings();
   },
 
   /** The minimap sits in the ring's open middle (a little oval); the ring overhangs it on every side. */
@@ -167,6 +190,7 @@ export const HUD = {
   },
 
   layoutMobile() {
+    if (!A.hudGeo) return;
     const portrait = G.touch && innerHeight > innerWidth;
     // upright, the rift bar and the scenario objective join the left column's flow under the auto-play line (the
     // column's height changes with the area name, the target window and the stats, so a fixed place gets run into);
@@ -176,23 +200,28 @@ export const HUD = {
     else if (!portrait && rift.parentElement === $('#hud-top-left')) $('#boss-bar').after(rift, obj);
     const compact = G.touch && (portrait || !G.settings.mobileSkillBar);
     document.body.classList.toggle('compact-mobile-hud', compact);
-    const hud = $('#hud'), img = $('#hud-img'), xp = $('#xp-track'), rail = $('#hud-rail');
+    const hud = $('#hud'), img = $('#hud-img'), xp = $('#xp-track'), xpText = $('#xp-text'), rail = $('#hud-rail');
     hud.classList.toggle('compact-mobile', compact);
     img.src = compact ? 'assets/ui/hud-orbs.webp' : 'assets/ui/hud.webp';
-    xp.classList.toggle('hidden', compact);
     rail.classList.toggle('hidden', compact);
-    const size = innerHeight > innerWidth ? 38 : 42;
     const bar = $('#hud-bar').getBoundingClientRect();
-    if (portrait) {
+    if (compact) {
+      img.style.display = 'none';
       if (!this.portraitOrbFrames) {
         const makeFrame = (name, src) => {
           const frame = new Image();
-          frame.className = 'portrait-orb-frame';
+          frame.className = 'portrait-orb-frame mobile-orb-frame';
           frame.alt = '';
           frame.draggable = false;
           frame.src = src;
           frame.dataset.orb = name;
-          $('#hud-bar').appendChild(frame);
+          const barEl = $('#hud-bar');
+          const ref = $('#life-cover');
+          if (ref && ref.parentNode === barEl) {
+            barEl.insertBefore(frame, ref);
+          } else {
+            barEl.appendChild(frame);
+          }
           return frame;
         };
         this.portraitOrbFrames = [
@@ -200,45 +229,219 @@ export const HUD = {
           makeFrame('mana', 'assets/ui/hud-orb-mana.webp'),
         ];
       }
-      const frameW = Math.max(74, Math.min(98, innerWidth * .24));
+
+      const potionSize = portrait ? 36 : 40;
+      const potionGap = portrait ? 4 : 6;
+      const potionRowW = potionSize * 4 + potionGap * 3;
+      const x0 = (bar.width - potionRowW) / 2;
+
+      const frameW = portrait ? 60 : 68;
       const scale = frameW / 270;
       const frameH = 296 * scale;
-      const inset = Math.max(5, innerWidth * .015);
-      const x = [inset, innerWidth - frameW - inset];
-      const y = bar.height - frameH;
-      this.portraitOrbFrames.forEach((frame, i) => Object.assign(frame.style, {
-        display: 'block', left: `${x[i]}px`, top: `${y}px`, width: `${frameW}px`, height: `${frameH}px`,
-      }));
+      const orbGap = portrait ? 4 : 8;
+
+      const lifeFrameX = x0 - orbGap - frameW;
+      const manaFrameX = x0 + potionRowW + orbGap;
+
+      // Move potions up and position XP bar below them extending between the HP and MP orbs
+      const xpTrackH = portrait ? 8 : 9;
+      const bottomPadding = portrait ? 3 : 2;
+      const xpTrackY = bar.height - xpTrackH - bottomPadding;
+      const potionToXpGap = portrait ? 7 : 8;
+      const potionY = xpTrackY - potionToXpGap - potionSize;
+
+      // Vertically center the orbs to bracket both the potions and the XP bar
+      const clusterCenterY = (potionY + xpTrackY + xpTrackH) / 2;
+      const frameY = clusterCenterY - 145.5 * scale;
+
+      // Extend XP bar between HP and MP orbs (tucking slightly under their outer decorative bezels)
+      const tuck = portrait ? 4 : 6;
+      const xpLeft = lifeFrameX + frameW - tuck;
+      const xpRight = manaFrameX + tuck;
+      const xpWidth = xpRight - xpLeft;
+
+      if (xp) {
+        Object.assign(xp.style, {
+          left: `${xpLeft}px`,
+          top: `${xpTrackY}px`,
+          width: `${xpWidth}px`,
+          height: `${xpTrackH}px`,
+          transform: 'none',
+          display: 'block',
+        });
+      }
+
+      if (xpText) {
+        Object.assign(xpText.style, {
+          left: `${xpLeft}px`,
+          top: `${xpTrackY}px`,
+          width: `${xpWidth}px`,
+          height: `${xpTrackH}px`,
+          transform: 'none',
+          display: 'flex',
+          fontSize: portrait ? '8px' : '9px',
+        });
+      }
+
+      // Keep gauge-box (Rage meter) floating cleanly above the potions
+      // (portrait: the touch layout centres it above the skill tray instead, see TouchUI.placePortraitExtras)
+      const gaugeBox = $('#gauge-box');
+      if (gaugeBox && !(portrait && G.touchUI?.portraitAnchors)) {
+        gaugeBox.style.top = 'auto';
+        gaugeBox.style.bottom = `${bar.height - potionY + 6}px`;
+      }
+
+      // Position #special-actions (Smite & Madness buttons): in portrait, Smite flanks HP orb on left, Madness flanks MP orb on right
+      const madnessBtn = $('#madness-btn');
+      const smiteBtn = $('#smite-btn');
+      const hearthBtn = $('#hearth-btn');
+      const spec = $('#special-actions');
+      if (portrait) {
+        const btnSize = 46;
+        const hudBarBottom = window.innerHeight - bar.bottom;
+        const btnBottom = hudBarBottom + (bar.height - frameY - frameH) + (frameH - btnSize) / 2;
+        if (madnessBtn) {
+          const mLeft = Math.min(bar.width - btnSize - 4, manaFrameX + frameW + 6);
+          Object.assign(madnessBtn.style, {
+            position: 'absolute',
+            left: `${mLeft}px`,
+            right: 'auto',
+            bottom: `${btnBottom}px`,
+            top: 'auto',
+            width: `${btnSize}px`,
+            height: `${btnSize}px`,
+            zIndex: '6',
+          });
+        }
+        G.touchUI?.placePortraitExtras?.();
+        if (smiteBtn) {
+          const sLeft = Math.max(4, lifeFrameX - btnSize - 6);
+          Object.assign(smiteBtn.style, {
+            position: 'absolute',
+            left: `${sLeft}px`,
+            right: 'auto',
+            bottom: `${btnBottom}px`,
+            top: 'auto',
+            width: `${btnSize}px`,
+            height: `${btnSize}px`,
+            zIndex: '6',
+          });
+        }
+        if (hearthBtn) { // the Hearthstone sits over Smite, beside the life orb
+          const hLeft = Math.max(4, lifeFrameX - btnSize - 6);
+          Object.assign(hearthBtn.style, {
+            position: 'absolute',
+            left: `${hLeft}px`,
+            right: 'auto',
+            bottom: `${btnBottom + btnSize + 8}px`,
+            top: 'auto',
+            width: `${btnSize}px`,
+            height: `${btnSize}px`,
+            zIndex: '6',
+          });
+        }
+      } else {
+        if (madnessBtn) madnessBtn.removeAttribute('style');
+        if (smiteBtn) smiteBtn.removeAttribute('style');
+        if (hearthBtn) hearthBtn.removeAttribute('style');
+        if (spec) {
+          const hudBarRect = bar;
+          const lifeScreenLeft = hudBarRect.left + lifeFrameX;
+          const specW = 170; // three 50px buttons + gaps (Smite, Madness, Hearth)
+          if (lifeScreenLeft > specW + 10) {
+            const leftPos = Math.max(8, lifeScreenLeft - specW - 8);
+            spec.style.left = `${leftPos}px`;
+            spec.style.bottom = `${hudBarRect.height - potionY - potionSize}px`;
+            spec.classList.remove('compact-portrait');
+          } else {
+            spec.style.left = '12px';
+            spec.style.bottom = `${hudBarRect.height + 8}px`;
+            spec.classList.add('compact-portrait');
+          }
+        }
+      }
+
+      this.portraitOrbFrames[0].style.cssText = `display:block;left:${lifeFrameX}px;top:${frameY}px;width:${frameW}px;height:${frameH}px;`;
+      this.portraitOrbFrames[1].style.cssText = `display:block;left:${manaFrameX}px;top:${frameY}px;width:${frameW}px;height:${frameH}px;`;
+
       const [lifeGeo, manaGeo] = A.hudGeo.orbs;
       const orbPos = [
-        { frameX: x[0], cx: lifeGeo.cx, cy: lifeGeo.cy, r: lifeGeo.r },
-        { frameX: x[1], cx: manaGeo.cx - 1730, cy: manaGeo.cy, r: manaGeo.r },
+        { frameX: lifeFrameX, cx: lifeGeo.cx, cy: lifeGeo.cy, r: lifeGeo.r },
+        { frameX: manaFrameX, cx: manaGeo.cx - 1730, cy: manaGeo.cy, r: manaGeo.r },
       ];
-      const placePortraitOrb = (cover, text, p) => {
+      const placeOrb = (cover, text, p) => {
         const cx = p.frameX + p.cx * scale;
-        const cy = y + p.cy * scale;
+        const cy = frameY + p.cy * scale;
         const diameter = p.r * 2 * scale;
         Object.assign(cover.style, { left: `${cx - diameter / 2}px`, top: `${cy - diameter / 2}px`, width: `${diameter}px`, height: `${diameter}px` });
-        Object.assign(text.style, { left: `${cx - 42}px`, top: `${cy - 7}px`, width: '84px', fontSize: '10px' });
+        Object.assign(text.style, { left: `${cx - 42}px`, top: `${cy - 7}px`, width: '84px', fontSize: portrait ? '9.5px' : '10.5px' });
       };
-      placePortraitOrb($('#life-cover'), $('#life-text'), orbPos[0]);
-      placePortraitOrb($('#mana-cover'), $('#mana-text'), orbPos[1]);
+      placeOrb($('#life-cover'), $('#life-text'), orbPos[0]);
+      placeOrb($('#mana-cover'), $('#mana-text'), orbPos[1]);
+
+      this.slots.forEach((s) => {
+        const potion = typeof s.map === 'string';
+        if (potion) s.icon.style.opacity = '1';
+        s.d.classList.toggle('hidden', !potion);
+        if (potion) {
+          Object.assign(s.d.style, {
+            left: `${x0 + POTIONS.indexOf(s.map) * (potionSize + potionGap)}px`,
+            top: `${potionY}px`,
+            width: `${potionSize}px`,
+            height: `${potionSize}px`,
+          });
+        }
+      });
     } else {
-      if (this.portraitOrbFrames) this.portraitOrbFrames.forEach((frame) => { frame.style.display = 'none'; });
+      img.style.display = '';
+      img.src = 'assets/ui/hud.webp';
+      if (this.portraitOrbFrames) {
+        this.portraitOrbFrames.forEach((frame) => { frame.style.display = 'none'; });
+      }
       this.placeOrbs(A.hudGeo);
-    }
-    const gap = 8, x0 = (bar.width - (size * 4 + gap * 3)) / 2, y = bar.height - size - (innerHeight > innerWidth ? 10 : 8);
-    this.slots.forEach((s) => {
-      const potion = typeof s.map === 'string';
-      if (potion) s.icon.style.opacity = compact ? '1' : '0';
-      s.d.classList.toggle('hidden', compact && !potion);
-      if (compact && potion) Object.assign(s.d.style, { left: `${x0 + POTIONS.indexOf(s.map) * (size + gap)}px`, top: `${y}px`, width: `${size}px`, height: `${size}px` });
-      else {
+
+      if (xp) {
+        const g = A.hudGeo;
+        Object.assign(xp.style, {
+          left: pct(g.xp.x, g.w),
+          top: pct(g.xp.y, g.h),
+          width: pct(g.xp.w, g.w),
+          height: pct(g.xp.h, g.h),
+          transform: '',
+          display: '',
+        });
+      }
+      if (xpText) xpText.removeAttribute('style');
+      const gaugeBox = $('#gauge-box');
+      if (gaugeBox) {
+        gaugeBox.style.top = '';
+        gaugeBox.style.bottom = '';
+      }
+      const spec = $('#special-actions');
+      if (spec) spec.removeAttribute('style');
+      const madnessBtn = $('#madness-btn');
+      if (madnessBtn) madnessBtn.removeAttribute('style');
+      const smiteBtn = $('#smite-btn');
+      if (smiteBtn) smiteBtn.removeAttribute('style');
+      const hearthBtn = $('#hearth-btn');
+      if (hearthBtn) hearthBtn.removeAttribute('style');
+
+      this.slots.forEach((s) => {
+        const potion = typeof s.map === 'string';
+        if (potion) s.icon.style.opacity = '0';
+        s.d.classList.remove('hidden');
         const g = A.hudGeo, m = SLOT_MAP.indexOf(s.map);
         const slot = g.slots[m];
-        if (slot) Object.assign(s.d.style, { left: `${(slot.x / g.w) * 100}%`, top: `${(slot.y / g.h) * 100}%`, width: `${(slot.w / g.w) * 100}%`, height: `${(slot.h / g.h) * 100}%` });
-      }
-    });
+        if (slot) {
+          Object.assign(s.d.style, {
+            left: `${(slot.x / g.w) * 100}%`,
+            top: `${(slot.y / g.h) * 100}%`,
+            width: `${(slot.w / g.w) * 100}%`,
+            height: `${(slot.h / g.h) * 100}%`,
+          });
+        }
+      });
+    }
   },
 
   refreshStatic() {
@@ -281,50 +484,124 @@ export const HUD = {
     set('lt', `${fmt(Math.max(0, p.hp))}/${fmt(p.maxHp)}`, (v) => { $('#life-text').textContent = v; });
     set('mt', `${fmt(p.mana)}/${fmt(p.maxMana)}`, (v) => { $('#mana-text').textContent = v; });
     const ready = madnessReady(), on = madnessOn();
-    set('mad', Math.round(clamp(c.madness || 0, 0, 1) * 1000) / 10, (v) => { $('#mad-fill').style.width = v + '%'; });
+    const madPct = on ? clamp((c.madT || 0) / 30, 0, 1) : clamp(c.madness || 0, 0, 1);
+    const madK = Math.round(madPct * 1000) / 10;
+    set('mad', madK, (v) => {
+      const ringFill = $('#madness-btn .ring-fill');
+      if (ringFill) ringFill.style.strokeDashoffset = (144.5 * (1 - v / 100)).toFixed(1);
+      const fill = $('#mad-fill');
+      if (fill) fill.style.width = v + '%';
+    });
     set('madst', ready ? 'full' : on ? 'on' : '', (v) => {
-      $('#madness').className = v;
-      $('#madness-btn').classList.toggle('hidden', v !== 'full');
-      if (v === 'full') { sfx('levelup', 0.4); UI.log('MADNESS is full: press the MADNESS button (G) to unleash it.', '#ff6090'); }
-    });
-    // CLASS ULTIMATE (game/smite.js)
-    const ult = getUltimate(c.classId);
-    const sReady = smiteReady(), sArmed = smiteArmed();
-    set('ultCls', c.classId, (cls) => {
-      const u = getUltimate(cls);
-      const btn = $('#smite-btn'), fill = $('#smite-fill'), track = $('#smite-track');
-      btn.style.borderColor = u.color;
-      btn.style.boxShadow = `0 0 14px ${u.haloColor}, inset 0 0 10px ${u.color}`;
-      btn.style.textShadow = `0 0 6px ${u.haloColor}, 0 0 2px #000`;
-      fill.style.background = `linear-gradient(90deg, ${u.haloColor}, ${u.color})`;
-      track.style.borderColor = u.haloColor;
-    });
-    set('smite', Math.round(clamp(c.smite || 0, 0, 1) * 1000) / 10, (v) => { $('#smite-fill').style.width = v + '%'; });
-    set('smitest', `${c.classId}|${sArmed ? 'armed' : sReady ? 'full' : ''}`, () => {
-      const st = sArmed ? 'armed' : sReady ? 'full' : '';
-      $('#smite-track').className = st;
-      const btn = $('#smite-btn');
-      btn.classList.toggle('hidden', !st);
-      btn.classList.toggle('armed', st === 'armed');
-      if (st === 'armed') {
-        btn.textContent = 'AIMING…';
-      } else {
-        btn.innerHTML = `<img src="${ultimateIconURL(c.classId, 32)}" style="width:20px;height:20px;vertical-align:-4px;margin-right:6px;border-radius:50%;pointer-events:none">${escapeHtml(ult.title)}`;
+      const btn = $('#madness-btn');
+      if (btn) {
+        btn.classList.toggle('hidden', v !== 'full');
+        btn.classList.toggle('ready', v === 'full');
+        btn.classList.toggle('active', v === 'on');
+        btn.classList.toggle('charging', !v);
+      }
+      const madTrack = $('#mad-track');
+      if (madTrack) {
+        madTrack.classList.toggle('full', v === 'full');
+        madTrack.classList.toggle('on', v === 'on');
+      }
+      const mad = $('#madness');
+      if (mad) mad.className = v;
+      if (v === 'full') {
+        sfx('levelup', 0.4);
+        if (btn) {
+          btn.classList.remove('just-ready');
+          void btn.offsetWidth;
+          btn.classList.add('just-ready');
+        }
+        UI.log('MADNESS is full: press the MADNESS button (G) to unleash it.', '#ff6090');
       }
     });
-    set('smitet', sArmed ? `${ult.name} — ${G.touch ? 'tap' : 'click'} the ground` : sReady ? `${ult.name} — ready` : `${ult.name} ${Math.floor((c.smite || 0) * 100)}%`, (v) => { $('#smite-text').textContent = v; });
+    set('madt', on ? `${Math.ceil(c.madT)}s` : ready ? 'READY' : `${Math.floor(madPct * 100)}%`, (v) => {
+      const st = $('#madness-btn .special-status');
+      if (st) st.textContent = v;
+      const madTxt = $('#mad-text');
+      if (madTxt) madTxt.textContent = on ? `MADNESS ${Math.ceil(c.madT)}s` : ready ? 'Madness — ready' : `Madness ${Math.floor((c.madness || 0) * 100)}%`;
+    });
+
+    // CLASS ULTIMATE (game/smite.js): the round F button wears the class's ultimate
+    const ult = getUltimate(c.classId);
+    const sReady = smiteReady(), sArmed = smiteArmed();
+    const smitePct = clamp(c.smite || 0, 0, 1);
+    set('ultCls', c.classId, (cls) => {
+      const u = getUltimate(cls);
+      const btn = $('#smite-btn');
+      if (btn) {
+        btn.setAttribute('aria-label', u.name);
+        const ring = btn.querySelector('.ring-fill');
+        if (ring) { ring.style.stroke = u.color; ring.style.filter = `drop-shadow(0 0 4px ${u.haloColor})`; }
+        const cv = btn.querySelector('.special-icon');
+        if (cv) { const x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); x.drawImage(ultimateIcon(cls, 64), 0, 0, cv.width, cv.height); }
+      }
+      const fill = $('#smite-fill'), track = $('#smite-track');
+      if (fill) fill.style.background = `linear-gradient(90deg, ${u.haloColor}, ${u.color})`;
+      if (track) track.style.borderColor = u.haloColor;
+    });
+    const smiteK = Math.round(smitePct * 1000) / 10;
+    set('smite', smiteK, (v) => {
+      const ringFill = $('#smite-btn .ring-fill');
+      if (ringFill) ringFill.style.strokeDashoffset = (144.5 * (1 - v / 100)).toFixed(1);
+      const fill = $('#smite-fill');
+      if (fill) fill.style.width = v + '%';
+    });
+    set('smitest', sArmed ? 'armed' : sReady ? 'full' : '', (v) => {
+      const btn = $('#smite-btn');
+      if (btn) {
+        btn.classList.toggle('hidden', !v);
+        btn.classList.toggle('ready', v === 'full');
+        btn.classList.toggle('armed', v === 'armed');
+        btn.classList.toggle('charging', !v);
+      }
+      const smiteTrack = $('#smite-track');
+      if (smiteTrack) {
+        smiteTrack.classList.toggle('full', v === 'full');
+        smiteTrack.classList.toggle('armed', v === 'armed');
+      }
+      if (v === 'full' && btn) {
+        btn.classList.remove('just-ready');
+        void btn.offsetWidth;
+        btn.classList.add('just-ready');
+      }
+    });
+    set('smitet', sArmed ? 'AIM' : sReady ? 'READY' : `${Math.floor(smitePct * 100)}%`, (v) => {
+      const st = $('#smite-btn .special-status');
+      if (st) st.textContent = v;
+      const smiteTxt = $('#smite-text');
+      if (smiteTxt) smiteTxt.textContent = sArmed ? `${ult.name} — ${G.touch ? 'tap' : 'click'} the ground` : sReady ? `${ult.name} — ready` : `${ult.name} ${Math.floor((c.smite || 0) * 100)}%`;
+    });
     if (G.canvas) G.canvas.classList.toggle('aiming', sArmed);
-    // HEARTHSTONE (game/hearth.js)
+    // HEARTHSTONE (game/hearth.js): the round H button
     const hReady = hearthReady(), hChan = hearthChanneling(), hVal = hearthOf(c);
-    set('hearth', Math.round(clamp(hVal, 0, 1) * 1000) / 10, (v) => { $('#hearth-fill').style.width = v + '%'; });
+    set('hearth', Math.round(clamp(hVal, 0, 1) * 1000) / 10, (v) => {
+      const ringFill = $('#hearth-btn .ring-fill');
+      if (ringFill) ringFill.style.strokeDashoffset = (144.5 * (1 - v / 100)).toFixed(1);
+      const fill = $('#hearth-fill');
+      if (fill) fill.style.width = v + '%';
+    });
     set('hearthst', hChan ? 'channeling' : hReady ? 'full' : '', (v) => {
-      $('#hearth-track').className = v;
-      $('#hearth-btn').classList.toggle('hidden', !v);
-      $('#hearth-btn').classList.toggle('channeling', v === 'channeling');
-      $('#hearth-btn').textContent = v === 'channeling' ? 'HEARTHING…' : 'HEARTH';
+      const btn = $('#hearth-btn');
+      if (btn) {
+        btn.classList.toggle('hidden', !v);
+        btn.classList.toggle('ready', v === 'full');
+        btn.classList.toggle('active', v === 'channeling');
+        btn.classList.toggle('charging', !v);
+      }
+      const track = $('#hearth-track');
+      if (track) track.className = v;
     });
     const hSec = hearthSecondsLeft(c);
-    set('heartht', hChan ? 'Hearth — hold still…' : hReady ? 'Hearth — ready' : hVal >= 1 ? 'Hearth — charged' : `Hearth ${Math.floor(hSec / 60)}:${String(hSec % 60).padStart(2, '0')}`, (v) => { $('#hearth-text').textContent = v; });
+    set('heartht', hChan ? 'GO' : hReady ? 'READY' : hVal >= 1 ? 'TOWN' : `${Math.floor(hSec / 60)}:${String(hSec % 60).padStart(2, '0')}`, (v) => {
+      const st = $('#hearth-btn .special-status');
+      if (st) st.textContent = v;
+      const txt = $('#hearth-text');
+      if (txt) txt.textContent = hChan ? 'Hearth — hold still…' : hReady ? 'Hearth — ready' : hVal >= 1 ? 'Hearth — charged' : `Hearth ${v}`;
+    });
+
     // sealed treasures waiting in the bag (ui/sealed.js)
     const nSeal = sealedCount(c);
     set('sealed', nSeal, (v) => { $('#sealed-btn').classList.toggle('hidden', !v); $('#sealed-text').textContent = `${v} SEALED`; });
@@ -340,11 +617,21 @@ export const HUD = {
       $('#greed').classList.toggle('on', g > 0);
       $('#hoard').textContent = hd ? `Hoard ${hd}` : '';
     });
-    set('madt', on ? `MADNESS ${Math.ceil(c.madT)}s` : ready ? 'Madness — ready' : `Madness ${Math.floor((c.madness || 0) * 100)}%`, (v) => { $('#mad-text').textContent = v; });
     const mk = capXp(c), need = mk ? mk.need : xpToNext(c.level), xpNow = mk ? mk.xp : c.xp;   // at the cap: towards the next Infernal Mark
     set('xp', Math.round((xpNow / need) * 1000) / 10, (v) => { $('#xp-fill').style.width = v + '%'; });
     set('xpmk', !!mk, (v) => { $('#xp-fill').classList.toggle('mk-xp', v); });
-    set('xpt', `Level ${c.level} · ${fmtInt(xpNow)} / ${fmtInt(need)} XP${mk ? ' to the next Infernal Mark' : ''}`, (v) => { $('#xp-text').textContent = v; });
+    const clsName = (CLASSES[c.classId] && CLASSES[c.classId].name) || (p && p.cls && p.cls.name) || 'Hero';
+    const xpPct = Math.floor(clamp((xpNow / (need || 1)), 0, 1) * 100);
+    const shortText = mk ? `Infernal Mark (${xpPct}%)` : `Level ${c.level} ${clsName}`;
+    const fullText = mk
+      ? `Level ${c.level} ${clsName} · ${fmtInt(xpNow)} / ${fmtInt(need)} XP (${xpPct}% to the next Infernal Mark)`
+      : `Level ${c.level} ${clsName} · ${fmtInt(xpNow)} / ${fmtInt(need)} XP (${xpPct}%)`;
+    set('xpt', `${shortText}|${fullText}`, () => {
+      const elText = $('#xp-text');
+      if (elText) {
+        elText.innerHTML = `<span class="xp-text-short">${escapeHtml(shortText)}</span><span class="xp-text-full">${escapeHtml(fullText)}</span>`;
+      }
+    });
     for (const s of this.slots) {
       if (typeof s.map === 'string') {
         const n = c.potions[s.map] || 0;
@@ -397,13 +684,13 @@ export const HUD = {
     const breach = !!w?.breach;
     const sand = (w?.biome?.id === 'sea_of_sand' || forest || breach) && w.overworldScenario?.hud ? w.overworldScenario.hud : null;
     set('sandHud', sand ? `${sand.title}|${sand.beat}|${sand.total}|${sand.progress}|${sand.timer}` : '', (v) => {
-      const panel=$('#sand-objective');
-      panel.classList.toggle('hidden',!sand);
-      if(sand){
-        $('#sand-title').textContent=sand.title;
-        $('#sand-beat').textContent=forest?`Glades ${sand.beat}/${sand.total}`:breach?`Shrines ${sand.beat}/${sand.total}`:`Area ${sand.beat}/${sand.total}`;
-        $('#sand-progress').textContent=sand.progress;
-        $('#sand-timer').textContent=sand.timer?`Time ${sand.timer}`:'';
+      const panel = $('#sand-objective');
+      panel.classList.toggle('hidden', !sand);
+      if (sand) {
+        $('#sand-title').textContent = sand.title;
+        $('#sand-beat').textContent = forest ? `Glades ${sand.beat}/${sand.total}` : breach ? `Shrines ${sand.beat}/${sand.total}` : `Area ${sand.beat}/${sand.total}`;
+        $('#sand-progress').textContent = sand.progress;
+        $('#sand-timer').textContent = sand.timer ? `Time ${sand.timer}` : '';
       }
     });
     // buffs
@@ -467,6 +754,12 @@ export const HUD = {
   updateStats(dt) {
     const p = G.player, c = G.char;
     if (Meter.char !== c) { Meter.char = c; Meter.reset(); this.sheetT = 0; }
+    const stats = $('#hero-stats');
+    if (stats) stats.classList.toggle('hidden', G.settings.showHeroStats === false);
+    if (G.settings.showHeroStats === false) {
+      this.updateTarget();
+      return;
+    }
     this.statT = (this.statT || 0) - dt;
     if (this.statT > 0) return;
     this.statT = 0.1;
@@ -498,6 +791,12 @@ export const HUD = {
   /** The target window: the hovered / attacked / last-hit monster's picture and name; it stays up, greyed, once slain. */
   updateTarget() {
     const p = G.player, w = G.world, box = $('#target-box');
+    if (!box) return;
+    box.classList.toggle('no-pic', G.settings.showTargetSprite === false);
+    if (G.settings.showTargetBox === false) {
+      box.classList.add('hidden');
+      return;
+    }
     if (this.tbWorld !== w) { this.tbWorld = w; this.tb = null; if (G.lastHit && !w.creatures.includes(G.lastHit)) G.lastHit = null; }
     const live = (m) => m && !m.dead && m.team === 'enemy' && m.targetable !== false && !m.clutter;
     const at = p.attackTarget && p.attackTarget.target;
@@ -507,12 +806,13 @@ export const HUD = {
     set('tbOn', !!t, (v) => box.classList.toggle('hidden', !v));
     if (!t) return;
     const dead = !!t.dead || t.hp <= 0;
-    set('tbCls', (dead ? 'dead ' : '') + (this.tbBig ? 'big ' : '') + 'r-' + (t.rank || 'normal'), (v) => { box.className = v; });
+    const noPic = G.settings.showTargetSprite === false;
+    set('tbCls', (dead ? 'dead ' : '') + (this.tbBig ? 'big ' : '') + (noPic ? 'no-pic ' : '') + 'r-' + (t.rank || 'normal'), (v) => { box.className = v; });
     set('tbName', t.name || '???', (v) => { $('#tb-name').textContent = v; box.title = v; });
     set('tbHp', dead ? 0 : Math.ceil(clamp(t.hp / t.maxHp, 0, 1) * 100), (v) => { $('#tb-fill').style.width = v + '%'; });
     const rank = { champion: 'Champion', unique: 'Unique', boss: 'Boss' }[t.rank] || '';
     set('tbSub', dead ? 'Slain' : [t.level ? 'Level ' + t.level : '', rank].filter(Boolean).join(' · '), (v) => { $('#tb-sub').textContent = v; });
-    if (dead) return; // keep the last living picture
+    if (dead || noPic) return; // keep the last living picture or skip if sprite disabled
     const img = t.spriteImage && t.spriteImage();
     if (!img || !img.width || (this.tbImg === img && this.tbFor === t)) return;
     this.tbImg = img; this.tbFor = t;
@@ -553,12 +853,28 @@ export const HUD = {
     later(at + dur + 0.9, () => box.classList.add('hidden'));
   },
 
-  setArea(name, sub) { $('#area-name').textContent = name; $('#area-sub').textContent = sub || ''; },
-  show(v) { $('#hud').classList.toggle('hidden', !v); if (v) this.layoutMobile(); },
+  applyVisibilitySettings() {
+    const stats = $('#hero-stats');
+    if (stats) stats.classList.toggle('hidden', G.settings.showHeroStats === false);
+    const box = $('#target-box');
+    if (box) {
+      box.classList.toggle('no-pic', G.settings.showTargetSprite === false);
+      if (G.settings.showTargetBox === false) {
+        box.classList.add('hidden');
+      }
+    }
+  },
+
+  setArea(name, sub) {
+    const an = $('#area-name'), as = $('#area-sub');
+    if (an) an.textContent = name;
+    if (as) as.textContent = sub || '';
+  },
+  show(v) { $('#hud').classList.toggle('hidden', !v); if (v) { this.layoutMobile(); this.applyVisibilitySettings(); } },
 };
 
 function slotTip(map) {
-  if (typeof map === 'string') return `<b>${{ hp: 'Healing Potion', mp: 'Mana Potion', rejuv: 'Rejuvenation Potion', fury: 'Elixir of Fury' }[map]}</b><div class="dim">Key ${{ hp: 'Z', mp: 'X', rejuv: 'C', fury: 'V' }[map]} · Buy more from the Alchemist</div>`;
+  if (typeof map === 'string') return `<b>${{ hp: 'Healing Potion', mp: 'Mana Potion', rejuv: 'Rejuvenation Potion', fury: 'Elixir of Fury' }[map]}</b><div class="dim">Key ${{ hp: 'Z', mp: 'X', rejuv: 'R', fury: 'V' }[map]} · Buy more from the Alchemist</div>`;
   const id = G.char.bar[map];
   if (!id) return `<b>Empty slot [${SLOT_LABELS[map]}]</b><div class="dim">Click to choose a skill, or drag one here from the Skill Book (B).</div>`;
   const sk = SKILLS[id];

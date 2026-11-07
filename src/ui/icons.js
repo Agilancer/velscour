@@ -1818,3 +1818,120 @@ export function ultimateIconURL(classId, size = 64) {
   }
   return u;
 }
+
+export function madnessIcon(size = 64) {
+  const key = 'special_madness|' + size;
+  let c = cache.get(key);
+  if (c) return c;
+  c = makeCanvas(size, size);
+  const x = c.getContext('2d', { willReadFrequently: true });
+  const s = size / 64;
+  const h = size / 2;
+
+  x.save();
+  x.beginPath();
+  x.arc(h, h, h - 2 * s, 0, TAU);
+  x.clip();
+
+  const bg = x.createRadialGradient(h, h * 0.5, 2, h, h, h * 1.15);
+  bg.addColorStop(0, '#46092e');
+  bg.addColorStop(0.5, '#1e0316');
+  bg.addColorStop(1, '#060105');
+  x.fillStyle = bg;
+  x.fillRect(0, 0, size, size);
+
+  x.save();
+  x.translate(h, h);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * TAU;
+    x.strokeStyle = rgba('#ff1060', 0.28);
+    x.lineWidth = 2.5 * s;
+    x.beginPath();
+    x.moveTo(Math.cos(a) * 8 * s, Math.sin(a) * 8 * s);
+    x.quadraticCurveTo(
+      Math.cos(a + 0.6) * 18 * s, Math.sin(a + 0.6) * 18 * s,
+      Math.cos(a + 1.2) * 28 * s, Math.sin(a + 1.2) * 28 * s
+    );
+    x.stroke();
+  }
+  x.restore();
+
+  x.save();
+  x.translate(h, h);
+  const drawFlame = (fx, fy, scaleY, col) => {
+    x.fillStyle = col;
+    x.beginPath();
+    x.moveTo(fx - 4 * s, fy);
+    x.quadraticCurveTo(fx - 6 * s, fy - 10 * s * scaleY, fx, fy - 18 * s * scaleY);
+    x.quadraticCurveTo(fx + 6 * s, fy - 10 * s * scaleY, fx + 4 * s, fy);
+    x.closePath();
+    x.fill();
+  };
+  drawFlame(-12 * s, 6 * s, 0.7, 'rgba(180, 20, 100, 0.5)');
+  drawFlame(12 * s, 6 * s, 0.7, 'rgba(180, 20, 100, 0.5)');
+  drawFlame(-6 * s, -4 * s, 1.1, 'rgba(255, 30, 110, 0.7)');
+  drawFlame(6 * s, -4 * s, 1.1, 'rgba(255, 30, 110, 0.7)');
+  drawFlame(0, -6 * s, 1.3, '#ff4090');
+  x.restore();
+
+  x.save();
+  x.translate(h, h);
+
+  const eyeGrad = x.createRadialGradient(0, 0, 1, 0, 0, 16 * s);
+  eyeGrad.addColorStop(0, '#ffd8ea');
+  eyeGrad.addColorStop(0.35, '#ff2070');
+  eyeGrad.addColorStop(0.7, '#880845');
+  eyeGrad.addColorStop(1, '#2c0418');
+
+  x.beginPath();
+  x.moveTo(-20 * s, 0);
+  x.quadraticCurveTo(-10 * s, -13 * s, 0, -13 * s);
+  x.quadraticCurveTo(10 * s, -13 * s, 20 * s, 0);
+  x.quadraticCurveTo(10 * s, 13 * s, 0, 13 * s);
+  x.quadraticCurveTo(-10 * s, 13 * s, -20 * s, 0);
+  x.closePath();
+  x.fillStyle = eyeGrad;
+  x.fill();
+  x.strokeStyle = '#ff6aa8';
+  x.lineWidth = 1.8 * s;
+  x.stroke();
+
+  x.strokeStyle = 'rgba(60, 0, 30, 0.8)';
+  x.lineWidth = 2 * s;
+  x.beginPath();
+  x.arc(0, 0, 8.5 * s, 0, TAU);
+  x.stroke();
+
+  x.fillStyle = '#080105';
+  x.beginPath();
+  x.moveTo(0, -10 * s);
+  x.quadraticCurveTo(3.5 * s, 0, 0, 10 * s);
+  x.quadraticCurveTo(-3.5 * s, 0, 0, -10 * s);
+  x.closePath();
+  x.fill();
+
+  x.fillStyle = '#ffffff';
+  x.beginPath();
+  x.arc(-1.5 * s, -2.5 * s, 1.5 * s, 0, TAU);
+  x.fill();
+
+  x.restore();
+  x.restore();
+
+  cache.set(key, c);
+  return c;
+}
+
+export function smiteIconURL(size = 64) {
+  const key = 'special_smite_url|' + size;
+  let u = urlCache.get(key);
+  if (!u) { u = smiteIcon(size).toDataURL(); urlCache.set(key, u); }
+  return u;
+}
+
+export function madnessIconURL(size = 64) {
+  const key = 'special_madness_url|' + size;
+  let u = urlCache.get(key);
+  if (!u) { u = madnessIcon(size).toDataURL(); urlCache.set(key, u); }
+  return u;
+}

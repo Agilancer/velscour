@@ -138,6 +138,14 @@ export function itemTooltip(item, opts = {}) {
   }
   if (opts.price) h += `<div class="tt-price">${opts.priceLabel || 'Price'}: ${fmtInt(opts.price)} gold</div>`;
   if (opts.hint) h += `<div class="dim" style="margin-top:4px;font-size:12px">${opts.hint}</div>`;
+  if (opts.actions && opts.actions.length) {
+    h += '<div class="tt-actions">';
+    for (let i = 0; i < opts.actions.length; i++) {
+      const act = opts.actions[i];
+      h += `<button type="button" class="btn ${act.cls || 'small'}" data-tt-act="${i}">${escapeHtml(act.label)}</button>`;
+    }
+    h += '</div>';
+  }
   return h;
 }
 

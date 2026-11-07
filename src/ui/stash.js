@@ -47,7 +47,7 @@ export const Stash = {
     this.lastScrollTop = 0;
     sfx('ui');
     UI.openPanel('stash', 'Storage Chest', (b) => this.render(b), { onClose: () => { this.active = false; UI.closePanel('inventory'); }, cls: 'stash-panel' });
-    UI.openPanel('inventory', 'Your Inventory', renderInventory);
+    UI.openPanel('inventory', 'Backpack', renderInventory, { cls: 'inventory-panel' });
   },
   /** Bag/GemBag/JewelBox slot -> chest. */
   store(idx, where = 'bag') {
@@ -151,7 +151,12 @@ export const Stash = {
         },
         (data) => data.type === 'item' || data.type === 'jewelbox'
       );
-      if (it) UI.tip(d, () => itemTooltip(c.stash[i], { hint: 'Right-click to take' }));
+      if (it) UI.tip(d, () => {
+        const cur = c.stash[i];
+        if (!cur) return '';
+        const acts = [{ label: 'Take', fn: () => this.take(i) }];
+        return { html: itemTooltip(cur, { hint: 'Right-click or double-tap to take', actions: acts }), actions: acts };
+      });
       grid.appendChild(d);
     });
     body.appendChild(grid);

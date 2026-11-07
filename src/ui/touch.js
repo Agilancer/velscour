@@ -10,9 +10,14 @@ import { Macros, MACRO_N } from '../game/macros.js';
 
 // Landscape uses the original radial skill cluster; portrait shows all 14 skill
 // slots as a compact bottom tray, with LMB kept as the large attack control.
-const POS = [[1, 180], [1, 225], [1, 270], [2, 198], [2, 213.4], [2, 228.8], [2, 244.2], [2, 259.6], [2, 275]];
+// Landscape positions are [radius (in scale units), angle in degrees] around the ATK button,
+// on two true arcs with even steps so every neighbour sits the same distance apart.
+// Inner arc (r 104, every 30°): flip, RMB, 1, 2 — from straight left of ATK to straight above it.
+// Outer arc (r 160, every 18°): 3-8 over the same quarter circle.
+const R1 = 104, R2 = 160;
+const POS = [[R1, 210], [R1, 240], [R1, 270], [R2, 180], [R2, 198], [R2, 216], [R2, 234], [R2, 252], [R2, 270]];
 const PAGES = [[RMB, 2, 3, 4, 5, 6, 7, 8, 9], [10, 11, 12, 13, 1]]; // RMB 1-8 | 9 0 - = `
-const FLIP = [1.5, 186]; // between the arcs, left of RMB
+const FLIP = [R1, 180]; // straight left of ATK, first stop on the inner arc
 
 export const TouchUI = {
   btns: [],
@@ -20,6 +25,8 @@ export const TouchUI = {
   init() {
     G.touchUI = this;
     const root = $('#touch-buttons');
+    root.innerHTML = '';
+    this.btns = [];
     for (let bar = 0; bar < 15; bar++) {
       const pos = POS[bar - 1] || [0, 0];
       const [ring, ang] = bar === 0 ? [0, 0] : pos;
@@ -69,13 +76,6 @@ export const TouchUI = {
     f.title = 'More skills';
     f.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); this.setPage(1 - this.page); });
     root.appendChild(f);
-    this.madnessBtn = $('#madness-btn');
-    this.madnessHome = $('#madness');
-    this.madnessBtn.classList.add('touch-madness');
-    this.smiteBtn = $('#smite-btn'); // SMITE (game/smite.js) moves with it in portrait
-    this.smiteBtn.classList.add('touch-smite');
-    this.hearthBtn = $('#hearth-btn'); // HEARTHSTONE (game/hearth.js) moves with it in portrait
-    this.hearthBtn.classList.add('touch-hearth');
     window.addEventListener('resize', () => this.layout());
     this.setPage(0);
   },
@@ -85,37 +85,54 @@ export const TouchUI = {
     this.layout();
     this.refresh();
   },
+  /**
+   * Portrait: centre the gauge box (Rage, ...) in the band above the skill tray to the left of the ATK button.
+   * Fixed (viewport) coordinates, so the HUD's own layout pass (hud.js layoutMobile) can re-apply them cleanly.
+   */
+  placePortraitExtras() {
+    const a = this.portraitAnchors;
+    if (!a || innerHeight <= innerWidth) return;
+    const gb = $('#gauge-box');
+    if (gb) {
+      gb.classList.add('portrait-band');
+      Object.assign(gb.style, { position: 'fixed', left: '0px', top: '0px', right: 'auto', bottom: 'auto', transform: 'none' });
+      const r = gb.getBoundingClientRect();
+      Object.assign(gb.style, { left: (a.gx - r.left) + 'px', width: a.gw + 'px', top: (a.gy - r.top) + 'px', transform: 'translateY(-50%)', zIndex: '7' });
+    }
+  },
+  clearPortraitExtras() {
+    const gb = $('#gauge-box');
+    if (gb && gb.classList.contains('portrait-band')) {
+      gb.classList.remove('portrait-band');
+      for (const k of ['position', 'left', 'width', 'top', 'bottom', 'transform', 'zIndex']) gb.style[k] = '';
+    }
+  },
   layout() {
+    if (!this.btns || !this.btns.length) return;
     const W = innerWidth, H = innerHeight;
     const portrait = H > W;
     const s = Math.max(0.72, Math.min(1.15, Math.min(W, H) / 400));
     const main = 72 * s, small = 44 * s;
     const cx = W - 14 - main / 2;
     const cy = H - 14 - main / 2 - (H < 420 ? 0 : 10);
-    const radii = [0, 92 * s, 170 * s];
-    const rad = (ring) => (ring % 1 ? (radii[Math.floor(ring)] + radii[Math.ceil(ring)]) / 2 : radii[ring]);
     const root = $('#touch-buttons');
     root.style.width = W + 'px'; root.style.height = H + 'px';
     root.style.left = '0'; root.style.top = '0'; root.style.right = 'auto'; root.style.bottom = 'auto';
     root.classList.toggle('portrait-grid', portrait);
-    const put = (b, ring, ang, size) => {
-      const r = rad(ring), a = (ang * Math.PI) / 180;
+    const put = (b, dist, ang, size) => {
+      const r = dist * s, a = (ang * Math.PI) / 180;
       const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
       Object.assign(b.style, { width: size + 'px', height: size + 'px', left: x - size / 2 + 'px', top: y - size / 2 + 'px' });
     };
     if (portrait) {
-      if (this.madnessBtn.parentElement !== root) root.appendChild(this.madnessBtn);
-      if (this.smiteBtn.parentElement !== root) root.appendChild(this.smiteBtn);
-      if (this.hearthBtn.parentElement !== root) root.appendChild(this.hearthBtn);
       const tile = Math.min(44, Math.max(32, (W - 40 - 24) / 7)), gap = 4;
       const trayH = tile * 2 + gap;
-      const safeBottom = parseFloat(getComputedStyle(document.body).getPropertyValue('--portrait-safe-bottom')) || 0;
-      // sit above the corner orb frames (hud.js layoutMobile sizes them the same way)
-      const orbTop = $('#hud-bar').getBoundingClientRect().bottom - Math.max(74, Math.min(98, W * .24)) * 296 / 270;
-      const trayTop = Math.max(H * .34, Math.min(H - trayH - safeBottom - 12, orbTop - trayH - 6));
-      const mainSize = Math.min(92, Math.max(72, W * .22));
+      const hudBarRect = $('#hud-bar').getBoundingClientRect();
+      const orbTop = hudBarRect.top + 6;
+      const trayTop = Math.max(H * .26, orbTop - trayH - 12);
+      const mainSize = Math.min(84, Math.max(72, W * .20));
       const logHeight = Math.min(H * .13, 100);
-      const logTop = Math.max(H * .34, trayTop - mainSize - logHeight - 32);
+      const logTop = Math.max(H * .20, trayTop - mainSize - logHeight - 24);
       Object.assign($('#log').style, { left: '8px', right: '8px', top: `${logTop}px`, bottom: 'auto', height: `${logHeight}px`, maxHeight: 'none' });
       const trayW = tile * 7 + gap * 6, x0 = (W - trayW) / 2;
       this.btns.forEach((t, i) => {
@@ -123,26 +140,29 @@ export const TouchUI = {
         t.bar = i; t.k.textContent = i === 0 ? 'ATK' : SLOT_LABELS[i];
         t.b.classList.remove('hidden');
         if (i === 0) {
-          const size = mainSize, x = W - size / 2 - 16, y = trayTop - size / 2 - 12;
-          Object.assign(t.b.style, { width: size + 'px', height: size + 'px', left: x - size / 2 + 'px', top: y - size / 2 + 'px' });
+          const size = mainSize;
+          // ATK sits above the right end of the tray, nudged right toward the screen edge
+          const x = Math.min(W - size - 6, x0 + trayW - size + 18);
+          const y = trayTop - size - 12;
+          Object.assign(t.b.style, { width: size + 'px', height: size + 'px', left: x + 'px', top: y + 'px' });
         } else {
           const n = i - 1, col = n % 7, row = Math.floor(n / 7);
           Object.assign(t.b.style, { width: tile + 'px', height: tile + 'px', left: (x0 + col * (tile + gap)) + 'px', top: (trayTop + row * (tile + gap)) + 'px' });
         }
         t.b.classList.toggle('portrait-tile', i > 0);
       });
-      const madnessW = Math.min(W * .36, 132);
-      Object.assign(this.madnessBtn.style, { boxSizing: 'border-box', width: madnessW + 'px', height: '36px', left: ((W - madnessW) / 2) + 'px', top: (trayTop - 46) + 'px', transform: 'none' });
-      Object.assign(this.smiteBtn.style, { boxSizing: 'border-box', width: madnessW + 'px', height: '36px', left: ((W - madnessW) / 2) + 'px', top: (trayTop - 90) + 'px', transform: 'none' });
-      Object.assign(this.hearthBtn.style, { boxSizing: 'border-box', width: madnessW + 'px', height: '36px', left: ((W - madnessW) / 2) + 'px', top: (trayTop - 134) + 'px', transform: 'none' });
-      // macros: a row over the tray's left end, up to the attack button
-      const ms = 36, atkLeft = W - mainSize - 16 - 8;
-      this.macroSpots = (n) => { const x = x0 + n * (ms + 6); return x + ms > atkLeft ? null : [x, trayTop - ms - 10, ms]; };
+      const bandH = 46, atkX = Math.min(W - mainSize - 6, x0 + trayW - mainSize + 18);
+      const bandY = trayTop - bandH - 12;
+      const gx = x0, gw = Math.max(80, atkX - 12 - gx);
+      this.portraitAnchors = { gx, gw, gy: bandY + bandH / 2 };
+      this.placePortraitExtras();
+      // macros: a row over the gauge band, up to the attack button
+      const ms = 36, atkLeft = atkX - 8, macroY = bandY - ms - 8;
+      this.macroSpots = (n) => { const x = x0 + n * (ms + 6); return x + ms > atkLeft ? null : [x, macroY, ms]; };
     } else {
+      this.portraitAnchors = null;
+      this.clearPortraitExtras();
       Object.assign($('#log').style, { left: '', right: '', top: '', bottom: '', height: '', maxHeight: '' });
-      if (this.madnessBtn.parentElement !== this.madnessHome) this.madnessHome.insertBefore(this.madnessBtn, this.madnessHome.firstChild);
-      if (this.smiteBtn.parentElement !== this.madnessHome) this.madnessBtn.after(this.smiteBtn);
-      if (this.hearthBtn.parentElement !== this.madnessHome) this.smiteBtn.after(this.hearthBtn);
       this.btns.forEach((t, i) => {
         if (i === 0) { t.bar = 0; t.k.textContent = 'ATK'; t.b.classList.remove('hidden'); put(t.b, 0, 0, main); return; }
         const bar = i <= POS.length ? PAGES[this.page][i - 1] : undefined;
@@ -159,11 +179,8 @@ export const TouchUI = {
         this.flipBtn.classList.toggle('on', this.page > 0);
         put(this.flipBtn, FLIP[0], FLIP[1], 32 * s);
       }
-      Object.assign(this.madnessBtn.style, { width: '', height: '', left: '', top: '', transform: '' });
-      Object.assign(this.smiteBtn.style, { width: '', height: '', left: '', top: '', transform: '' });
-      Object.assign(this.hearthBtn.style, { width: '', height: '', left: '', top: '', transform: '' });
       // macros: an outer arc beyond the skill ring, from its left end upwards
-      const ms = 34 * s, r = radii[2] + 58 * s;
+      const ms = 34 * s, r = (R2 + 68) * s;
       this.macroSpots = (n) => { const a = ((200 + n * 14) * Math.PI) / 180, x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r; return [x - ms / 2, y - ms / 2, ms]; };
     }
     this.layoutMacros();

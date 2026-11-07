@@ -12,6 +12,8 @@ export const UI = {
   renderers: new Map(),
   modalCount: 0,
   selected: null,
+  windowOrder: 30,
+  windowPositions: new Map(),
   get modal() { return this.modalCount > 0; },
 
   init() {
@@ -32,6 +34,7 @@ export const UI = {
     this.msgEl = $('#center-msg');
     this.ghost = $('#drag-ghost');
     initDnD();
+    window.addEventListener('resize', () => this.layoutPanels());
     this.tipEl.addEventListener('pointerenter', () => {
       if (this.tipHideT) { clearTimeout(this.tipHideT); this.tipHideT = 0; }
     });
@@ -67,6 +70,8 @@ export const UI = {
       close.title = 'Close (Esc)';
       close.onclick = () => { sfx('ui'); this.closePanel(name); };
       head.appendChild(close);
+      head.addEventListener('pointerdown', (e) => this.startPanelMove(e, name));
+      root.addEventListener('pointerdown', () => this.focusPanel(name));
       root.appendChild(head);
       const body = el('div', 'panel-body');
       root.appendChild(body);
@@ -75,8 +80,11 @@ export const UI = {
       this.panels.set(name, p);
     }
     p.head.querySelector('h2').textContent = title;
+    p.opts = opts;
     this.renderers.set(name, render);
     render(p.body, p);
+    this.focusPanel(name);
+    this.layoutPanels();
     this.onPanelsChanged();
     return p;
   },
@@ -89,15 +97,41 @@ export const UI = {
     this.renderers.delete(name);
     if (p.opts.onClose) p.opts.onClose();
     if (!this.panels.size || hadTipInside) { if (!this.panels.size) this.selected = null; this.hideTip(); }
+    this.layoutPanels();
     this.onPanelsChanged();
   },
-  closeAll() { for (const k of [...this.panels.keys()]) this.closePanel(k); },
+  closeAll() {
+    for (const k of [...this.panels.keys()]) this.closePanel(k);
+    this.closeAllDialogs();
+  },
+  closeAllDialogs() {
+    if (this.screensEl) {
+      const screens = this.screensEl.querySelectorAll('.screen');
+      screens.forEach((s) => s.remove());
+    }
+    this.modalCount = 0;
+  },
   isOpen(name) { return this.panels.has(name); },
   anyOpen() { return this.panels.size > 0; },
   refresh() {
     for (const [name, r] of this.renderers) {
       const p = this.panels.get(name);
-      if (p) { const st = p.body.scrollTop; r(p.body, p); p.body.scrollTop = st; }
+      if (p) {
+        const st = p.body.scrollTop;
+        const expanded = p.body.querySelector('.character-more')?.open;
+        r(p.body, p);
+        p.body.scrollTop = st;
+        if (expanded) p.body.querySelector('.character-more')?.setAttribute('open', '');
+      }
+    }
+    if (this.tipEl && !this.tipEl.classList.contains('hidden') && this.tipKey && this.tipRefreshFn) {
+      const safeKey = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(this.tipKey) : this.tipKey.replace(/"/g, '\\"');
+      const nextAnchor = document.querySelector(`[data-tip-key="${safeKey}"]`);
+      if (nextAnchor) {
+        this.showTip(this.tipRefreshFn(), 0, 0, this.isTouchTip, nextAnchor, { interactive: this.isInteractiveTip, key: this.tipKey, fn: this.tipRefreshFn });
+      } else {
+        this.hideTip();
+      }
     }
     if (this.tipEl && !this.tipEl.classList.contains('hidden') && this.tipKey && this.tipRefreshFn) {
       const safeKey = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(this.tipKey) : this.tipKey.replace(/"/g, '\\"');
@@ -110,15 +144,98 @@ export const UI = {
     }
     if (this.hud) this.hud.refreshStatic();
   },
-  onPanelsChanged() { document.body.classList.toggle('panel-open', this.panels.size > 0); if (this.hud) this.hud.refreshStatic(); }, // (portrait touch hides its buttons under a panel)
+  onPanelsChanged() {
+    document.body.classList.toggle('panel-open', this.panels.size > 0);
+    if (this.panelsEl) this.panelsEl.classList.toggle('multi-panel', this.panels.size > 1);
+    if (this.hud) this.hud.refreshStatic();
+  }, // (portrait touch hides its buttons under a panel)
+
+  desktopPanels() {
+    if (document.body.classList.contains('portrait') || window.innerHeight > window.innerWidth) return false;
+    return !G.touch && !document.body.classList.contains('touch');
+  },
+  focusPanel(name) {
+    const p = this.panels.get(name);
+    if (p && this.desktopPanels()) p.root.style.zIndex = ++this.windowOrder;
+  },
+  panelBounds(p) {
+    const host = this.panelsEl.getBoundingClientRect();
+    return { w: host.width, h: host.height, pw: p.root.offsetWidth, ph: p.root.offsetHeight };
+  },
+  placePanel(name, x, y) {
+    const p = this.panels.get(name);
+    if (!p) return;
+    const { w, h, pw, ph } = this.panelBounds(p);
+    const left = Math.max(0, Math.min(x, Math.max(0, w - pw)));
+    const top = Math.max(0, Math.min(y, Math.max(0, h - Math.min(ph, 48))));
+    p.root.style.left = `${left}px`;
+    p.root.style.top = `${top}px`;
+    this.windowPositions.set(name, { x: left, y: top, moved: true });
+  },
+  layoutPanels() {
+    if (!this.panelsEl) return;
+    const isPortrait = document.body.classList.contains('portrait') || window.innerHeight > window.innerWidth;
+    if (isPortrait || !this.desktopPanels()) {
+      for (const [, p] of this.panels) {
+        p.root.style.left = '';
+        p.root.style.top = '';
+        p.root.style.width = '';
+      }
+      return;
+    }
+    const host = this.panelsEl.getBoundingClientRect();
+    const inventory = this.panels.get('inventory');
+    const partner = [...this.panels].find(([name]) => ['vendor', 'stash', 'reliquary', 'character', 'jewelbox'].includes(name));
+    const canPair = inventory && partner && host.width >= inventory.root.offsetWidth + partner[1].root.offsetWidth + 22;
+    for (const [name, p] of this.panels) {
+      const saved = this.windowPositions.get(name);
+      if (saved?.moved && !(canPair && (name === 'inventory' || name === partner[0]))) {
+        this.placePanel(name, saved.x, saved.y);
+        continue;
+      }
+      const pw = p.root.offsetWidth, ph = p.root.offsetHeight;
+      let x = Math.max(0, (host.width - pw) / 2);
+      if (canPair) {
+        const total = inventory.root.offsetWidth + partner[1].root.offsetWidth + 12;
+        const start = (host.width - total) / 2;
+        if (name === 'inventory') x = start + partner[1].root.offsetWidth + 12;
+        else if (name === partner[0]) x = start;
+      }
+      p.root.style.left = `${Math.round(x)}px`;
+      p.root.style.top = `${Math.max(0, Math.min(10, host.height - ph))}px`;
+    }
+  },
+  startPanelMove(e, name) {
+    if (!this.desktopPanels() || e.button !== 0 || e.target.closest('button, input, select')) return;
+    const p = this.panels.get(name);
+    if (!p) return;
+    e.preventDefault();
+    this.focusPanel(name);
+    const host = this.panelsEl.getBoundingClientRect();
+    const r = p.root.getBoundingClientRect();
+    const dx = e.clientX - r.left, dy = e.clientY - r.top;
+    p.head.setPointerCapture(e.pointerId);
+    p.root.classList.add('moving');
+    const move = (ev) => this.placePanel(name, ev.clientX - host.left - dx, ev.clientY - host.top - dy);
+    const end = () => {
+      p.root.classList.remove('moving');
+      p.head.removeEventListener('pointermove', move);
+      p.head.removeEventListener('pointerup', end);
+      p.head.removeEventListener('pointercancel', end);
+    };
+    p.head.addEventListener('pointermove', move);
+    p.head.addEventListener('pointerup', end);
+    p.head.addEventListener('pointercancel', end);
+  },
 
   // ------------------------------------------------------------- messages
   log(html, color) {
+    if (!this.logEl) return;
     const d = el('div', '', html);
     if (color) d.style.color = color;
     this.logEl.appendChild(d);
     while (this.logEl.children.length > 6) this.logEl.firstChild.remove();
-    const sea = !!(G.world && G.world.seaRun), life = sea ? 4000 : 6200;   // at sea the deck's left edge is where the boats come from
+    const sea = !!(G.world && G.world.seaRun), life = sea ? 4000 : 6200; // at sea the deck's left edge is where the boats come from
     if (sea) { d.style.transition = 'opacity .6s'; setTimeout(() => { d.style.opacity = '0'; }, life - 600); }
     setTimeout(() => d.remove(), life);
   },

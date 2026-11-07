@@ -88,7 +88,7 @@ import { Vendor } from '../ui/vendor.js';
 import { Stash } from '../ui/stash.js';
 import { JewelBox } from '../ui/jewelbox.js';
 import { startTownLife } from './townlife.js';
-import { toggleInventory } from '../ui/inventory.js';
+import { toggleInventory, toggleCharacter } from '../ui/inventory.js';
 import { toggleTree, toggleBook } from '../ui/skills.js';
 import { toggleTalents } from '../ui/talents.js';
 import { toggleQuest } from '../ui/quest.js';
@@ -264,7 +264,7 @@ export const game = {
         UI.centerMsg('HERRINGTON HOLLOW', 'The last town above the abyss', 3.5);
         UI.log(`Welcome, ${escapeHtml(c.name)}. Visit the vendors, then step into the <b style="color:#ff8050">portal</b> at the edge of town.`, '#ffe2a0');
         UI.log('You have <b>1 skill point</b> — open the Skill Tree (K) to learn your first ability.', '#ffd860');
-        if (!G.touch) UI.log('Left-click to move/attack, right-click, ` 1–9 0 - = for skills, Z X C V for potions, Q for the quest log.');
+        if (!G.touch) UI.log('Left-click to move/attack, right-click, ` 1–9 0 - = for skills, Z X R V for potions, C for character, I for backpack, Q for the quest log.');
         else UI.log('Left thumb moves, tap to attack, skill buttons on the right.');
       }, 400);
     }
@@ -1486,7 +1486,8 @@ export const game = {
 
   hudAction(act) {
     switch (act) {
-      case 'inventory': case 'character': toggleInventory(); break;
+      case 'inventory': toggleInventory(); break;
+      case 'character': case 'stats': toggleCharacter(); break;
       case 'skills': toggleTree(); break;
       case 'talents': toggleTalents(); break;
       case 'book': toggleBook(); break;
@@ -1503,6 +1504,7 @@ export const game = {
     const ui = UI;
     if (!ui.modal) {
       if (input.consume('KeyI')) toggleInventory();
+      if (input.consume('KeyC')) toggleCharacter();
       if (input.consume('KeyK')) toggleTree();
       if (input.consume('KeyT')) toggleTalents();
       if (input.consume('KeyB')) toggleBook();

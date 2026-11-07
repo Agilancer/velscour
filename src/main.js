@@ -40,8 +40,9 @@ function resize() {
   G.canvas.width = Math.round(G.W * G.dpr);
   G.canvas.height = Math.round(G.H * G.dpr);
   camera.computeZoom();
-  const portrait = G.touch && G.H > G.W;
+  const portrait = G.H > G.W || window.innerHeight > window.innerWidth;
   document.body.classList.toggle('portrait', portrait);
+  document.body.classList.toggle('landscape', !portrait);
   document.body.classList.toggle('compact-mobile-hud', G.touch && (portrait || !G.settings.mobileSkillBar));
 }
 

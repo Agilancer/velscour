@@ -35,6 +35,8 @@ const { openGame, report } = require('./harness');
   // The game consumes keys on its next frame; I and Escape in one frame close the bag again.
   await page.waitForFunction(() => !window.VELSCOUR.G.ui.anyOpen());
   await page.keyboard.press('KeyI');
+  await page.waitForTimeout(200);
+  await page.keyboard.press('KeyC');
   await page.waitForTimeout(400);
   await page.hover('.bslot >> nth=0');
   await page.waitForTimeout(300);

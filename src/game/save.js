@@ -140,7 +140,7 @@ export function newCharData(classId, name) {
     attrs: { ...C.base }, statPoints: 0, skillPoints: 1, talentPoints: 0,
     skills: {}, talents: {}, granted: {}, bar: Array(BAR_SIZE).fill(null),
     equip: { weapon: null, offhand: null, head: null, body: null, hands: null, legs: null, feet: null, ring1: null, ring2: null, ring3: null, ring4: null },
-    vanity: { head: null, body: null }, hideHelm: false,
+    vanity: { head: null, body: null, weapon: null, offhand: null }, hideHelm: false,
     macros: newMacros(), // game/macros.js
     mastery: {}, rage: 0, hearth: 1, townSeed: (Math.random() * 1e9) | 0,
     bag: Array(BAG_COLS * BAG_ROWS).fill(null), // more rows are bought in the inventory (data/bag.js)
@@ -379,7 +379,7 @@ export function migrate(c) {
   if (!(c.seaWins >= 0)) c.seaWins = Object.keys(c.seaSeen).filter((k) => !k.startsWith('cine:')).length;
   if (typeof c.lastSeaVariant !== 'string') c.lastSeaVariant = null;
   for (const s of ['ring1', 'ring2', 'ring3', 'ring4']) if (!(s in c.equip)) c.equip[s] = null;
-  c.vanity = Object.assign({ head: null, body: null }, c.vanity); // looks only: worn over the real gear, no stats
+  c.vanity = Object.assign({ head: null, body: null, weapon: null, offhand: null }, c.vanity); // looks only: worn over the real gear, no stats
   c.hideHelm = !!c.hideHelm;
   c.macros = migrateMacros(c.macros);
   for (const m of c.macros) {
