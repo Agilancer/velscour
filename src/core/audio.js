@@ -103,6 +103,7 @@ const SOUNDS = {
   light: (t, p) => { const o = ac.createOscillator(); o.type = 'sawtooth'; const g = ac.createGain(); env(g, t, 0.003, 0.12, 0.2); for (let i = 0; i < 8; i++) o.frequency.setValueAtTime(R(150, 1800) * p, t + i * 0.02); o.connect(g); g.connect(sfxBus); o.start(t); o.stop(t + 0.25); noise(t, 0.15, { type: 'highpass', f0: 3000, vol: 0.2 }); },
   arcane: (t, p) => { tone(t, 0.3, { f0: 500 * p, f1: 1400 * p, vol: 0.12 }); tone(t, 0.3, { f0: 750 * p, f1: 2100 * p, vol: 0.06, wave: 'triangle' }); },
   holy: (t, p) => { [523, 659, 784].forEach((f, i) => tone(t + i * 0.02, 0.5, { f0: f * p, vol: 0.07, a: 0.03 })); },
+  ready_hearth: (t, p) => { [523, 659, 784, 1046].forEach((f, i) => tone(t + i * 0.05, 0.45, { f0: f * p, vol: 0.09, wave: 'triangle' })); },
   shadow: (t, p) => { tone(t, 0.4, { wave: 'sawtooth', f0: 220 * p, f1: 55, vol: 0.12 }); noise(t, 0.3, { f0: 600, f1: 100, vol: 0.2 }); },
   poison: (t, p) => { for (let i = 0; i < 5; i++) tone(t + i * 0.04, 0.06, { f0: R(200, 500) * p, f1: R(400, 800), vol: 0.07 }); },
   acid: (t, p) => { noise(t, 0.25, { type: 'bandpass', f0: 500 * p, f1: 200, q: 8, vol: 0.4 }); SOUNDS.poison(t, p * 0.7); },

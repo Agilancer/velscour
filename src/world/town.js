@@ -17,6 +17,7 @@ export const VENDORS = [
   { id: 'gems', name: 'Zafir the Lapidary', title: 'Gem Merchant', sprite: 'totem_master', pal: { hue: 200, sat: 0.9 }, sign: 'orb', greet: 'Every stone remembers the light. Three of a kind, and I can make them sing louder.' },
   { id: 'socket', name: 'Jamie the Curator', title: 'Jeweler', sprite: 'wizard', pal: { hue: 60, sat: 0.7 }, sign: 'boots', greet: 'A socket is a promise. I can drill your gear - or pry those gems back out.' },
   { id: 'gamble', name: 'Fortunato', title: 'Gambler', sprite: 'bard', pal: { hue: 180, sat: 1 }, sign: 'bow', greet: 'Fortune favours the foolish! Unidentified treasures - who knows what lurks inside?' },
+  { id: 'infernal', name: 'Malakor the Ash-Wanderer', title: 'Travelling Merchant · Relics of the Pit', sprite: 'necromancer', pal: { hue: 345, sat: 1.25, light: 0.03 }, sign: 'orb', travelling: true, greet: 'Marks of the deep abyss... yes, the reek of brimstone clings to you. Bring me Infernal Marks, traveller, and these sealed coffers are yours.' },
 ];
 
 // Ground materials in the pack's transition order; a pair's A side is the earlier one.
@@ -277,7 +278,7 @@ function rollTown(tileset, seed, last) {
     if (vendor) npcs.push({ vendor, x: sx ? cx + 2.3 : cx + 0.75, y: sx ? cy + 0.75 : cy + 2.3, flip: !sx });
     return b;
   };
-  for (const v of shuffle(VENDORS.slice(), rng)) if (!place(v.id, v) && !last) return null;
+  for (const v of shuffle(VENDORS.filter((v) => !v.travelling), rng)) if (!place(v.id, v) && !last) return null;
   const houses = ['inn', 'bakery', 'stables', ...Array(rng.int(2, 5)).fill('cottage')];
   for (const n of houses) place(n, null);
 
@@ -476,13 +477,6 @@ function rollTown(tileset, seed, last) {
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = I(x + dx, y + dy); if (map.walkableTile(x + dx, y + dy) && !seen[j]) { seen[j] = 1; q.push(j); } }
   }
   const reach = (x, y) => seen[I(Math.floor(x), Math.floor(y))];
-  if (buildings.some((b) => !b.approach.length || b.approach.some(([x, y]) => !reach(x, y)))) {
-    if (last) throw new Error('Could not connect every town entrance');
-    return null;
-  }
-  if (!last && (npcs.length < VENDORS.length || !reach(portal.x, portal.y) || !reach(breach.x, breach.y) || npcs.some((n) => !reach(n.x, n.y)))) return null;
-  // the Endgame's places (docs/ENDGAME.md): the Abyssal Rift gate on the breach yard's road, short of the purple portal,
-  // and the Altar of Heresy at the plaza's edge; both on walkable, reachable, unbuilt ground
   const spot = (fx, fy, r0, r1) => {
     let best = null, bd = 99;
     for (let ty = Math.floor(fy - r1); ty <= fy + r1; ty++) for (let tx = Math.floor(fx - r1); tx <= fx + r1; tx++) {
@@ -493,6 +487,37 @@ function rollTown(tileset, seed, last) {
     }
     return best;
   };
+  // travelling vendors: stand just off the square without a house
+  for (const tv of VENDORS.filter((v) => v.travelling)) {
+    const aM = aP - 1.8;
+    const mSpot = spot(C.x + 0.5 + Math.cos(aM) * 5.0, C.y + 0.5 + Math.sin(aM) * 5.0, 0, 3) ||
+                  spot(C.x + 0.5 + Math.cos(aP + 2.2) * 5.2, C.y + 0.5 + Math.sin(aP + 2.2) * 5.2, 0, 3) ||
+                  spot(C.x + 0.5, C.y + 0.5, 4.0, 7.5);
+    if (mSpot) {
+      npcs.push({
+        vendor: tv,
+        x: mSpot.x,
+        y: mSpot.y,
+        flip: mSpot.x < C.x + 0.5,
+        aura: 0.45,
+        auraCol: '#ff5522',
+      });
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1]]) {
+        const px = mSpot.x + dx, py = mSpot.y + dy;
+        if (free(px, py, true) && Math.hypot(px - start[0], py - start[1]) > 1.8) {
+          prop('handcart', px, py, { solid: true, flip: dx < 0 });
+          break;
+        }
+      }
+    }
+  }
+  if (buildings.some((b) => !b.approach.length || b.approach.some(([x, y]) => !reach(x, y)))) {
+    if (last) throw new Error('Could not connect every town entrance');
+    return null;
+  }
+  if (!last && (npcs.length < VENDORS.length || !reach(portal.x, portal.y) || !reach(breach.x, breach.y) || npcs.some((n) => !reach(n.x, n.y)))) return null;
+  // the Endgame's places (docs/ENDGAME.md): the Abyssal Rift gate on the breach yard's road, short of the purple portal,
+  // and the Altar of Heresy at the plaza's edge; both on walkable, reachable, unbuilt ground
   const toC = Math.atan2(C.y + 0.5 - breach.y, C.x + 0.5 - breach.x);
   const rift = spot(breach.x + Math.cos(toC) * 3.6, breach.y + Math.sin(toC) * 3.6, 0, 2.5) || spot(breach.x, breach.y, 2.7, 4.5);
   const altar = spot(C.x + 0.5 + Math.cos(aB + 1.3) * 5.5, C.y + 0.5 + Math.sin(aB + 1.3) * 5.5, 0, 3) || spot(C.x + 0.5, C.y + 0.5, 4, 7);

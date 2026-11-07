@@ -6,14 +6,17 @@ import { migrateBar, BAR_SIZE } from '../data/bar.js';
 import { TAB_SLOTS } from '../data/tabs.js';
 import { newMacros, migrateMacros } from '../data/macros.js';
 import { stashRaw, listRaw } from './herobackup.js';
-import { BAG_COLS, BAG_ROWS, fixBag } from '../data/bag.js';
+import {
+  BAG_COLS, BAG_ROWS, GEM_BAG_COLS, GEM_BAG_BASE_ROWS, JEWEL_BOX_COLS, JEWEL_BOX_BASE_ROWS,
+  fixBag, fixGemBag, fixStash, fixJewelBox,
+} from '../data/bag.js';
 
 const KEY = 'velscour_saves_v1';
 const ASIDE = KEY + '_unreadable_';   // + time: save data that couldn't be read, set aside before anything replaced it
-const watchers = [];
+var watchers;
 /** fn(classId, deletedIds) after a hero of that class is saved, or deleted by the player (game/cloud.js syncs it). */
-export function onSaveChange(fn) { watchers.push(fn); }
-const changed = (classId, deleted) => { for (const fn of watchers) try { fn(classId, deleted); } catch (e) { console.warn(e); } };
+export function onSaveChange(fn) { (watchers ||= []).push(fn); }
+const changed = (classId, deleted) => { for (const fn of (watchers || [])) try { fn(classId, deleted); } catch (e) { console.warn(e); } };
 
 let unreadable = false;   // the saves are there but don't parse: cloud sync must not touch them
 function readAll() {
@@ -135,9 +138,11 @@ export function newCharData(classId, name) {
     equip: { weapon: null, offhand: null, head: null, body: null, hands: null, legs: null, feet: null, ring1: null, ring2: null, ring3: null, ring4: null },
     vanity: { head: null, body: null }, hideHelm: false,
     macros: newMacros(), // game/macros.js
-    mastery: {}, rage: 0, townSeed: (Math.random() * 1e9) | 0,
+    mastery: {}, rage: 0, hearth: 1, townSeed: (Math.random() * 1e9) | 0,
     bag: Array(BAG_COLS * BAG_ROWS).fill(null), // more rows are bought in the inventory (data/bag.js)
+    gemBag: Array(GEM_BAG_COLS * GEM_BAG_BASE_ROWS).fill(null), // dedicated carrier for gems & runes
     stash: Array(300).fill(null),
+    jewelBox: Array(JEWEL_BOX_COLS * JEWEL_BOX_BASE_ROWS).fill(null), // dedicated town vault for gems & runes
     tabs: Array(TAB_SLOTS).fill(null), tabAt: 0, // the Bard's Tabs: locked Music Sheets he plays (data/tabs.js)
     gold: 150, potions: { hp: 6, mp: 4, rejuv: 1, fury: 1 },
     depth: 1, deepest: 0, nextBiome: null, biomeBag: [], cleared: {}, overworldMisses: 0, overworldLastVisit: null, seaOfSandRuns: {}, darkForestRuns: {}, breach: { best: 0, cleared: {} },
@@ -169,6 +174,7 @@ export function migrate(c) {
   c.granted = c.granted || {};
   c.tips = c.tips || {};
   if (c.classId === 'barbarian') c.rage = Math.max(0, Math.min(100, Number(c.rage) || 0));
+  if (c.hearth === undefined) c.hearth = 1;
   c.homunculus = c.homunculus || { talks: 0, chapter: 0, told: [], recap: [] }; // the blacksmith's axe story (game/homunculus.js)
   c.mastery = c.mastery || {}; // skill mastery: {skillId: [level 1-1000, xp]}
   c.comm = c.comm || { open: [], done: [] }; // Town Commissions (game/commissions.js)
@@ -197,8 +203,37 @@ export function migrate(c) {
   if (c.nextBiome === 'catacombs' && !c.deepest && !c.lastBiome) c.nextBiome = drawBiome(c, c.depth || 1);
   c.bar = migrateBar(c.bar); // 10 slots (LMB, 1-8, RMB) -> 15 (LMB, ` 1-9 0 - =, RMB)
   fixBag(c); // 6 rows, plus any bought
-  if (!Array.isArray(c.stash)) c.stash = [];
-  while (c.stash.length < 300) c.stash.push(null);
+  fixGemBag(c);
+  fixStash(c);
+  fixJewelBox(c);
+  // Migrate legacy gems from c.bag into c.gemBag (or overflow into c.jewelBox)
+  for (let i = 0; i < c.bag.length; i++) {
+    const it = c.bag[i];
+    if (!it || it.type !== 'gem') continue;
+    const same = c.gemBag.find((b) => b && b.type === 'gem' && b.gem === it.gem && b.tier === it.tier);
+    if (same) {
+      same.count = (same.count || 1) + (it.count || 1);
+      c.bag[i] = null;
+      continue;
+    }
+    const freeGem = c.gemBag.findIndex((b) => !b);
+    if (freeGem >= 0) {
+      c.gemBag[freeGem] = it;
+      c.bag[i] = null;
+      continue;
+    }
+    const sameJb = c.jewelBox.find((b) => b && b.type === 'gem' && b.gem === it.gem && b.tier === it.tier);
+    if (sameJb) {
+      sameJb.count = (sameJb.count || 1) + (it.count || 1);
+      c.bag[i] = null;
+      continue;
+    }
+    const freeJb = c.jewelBox.findIndex((b) => !b);
+    if (freeJb >= 0) {
+      c.jewelBox[freeJb] = it;
+      c.bag[i] = null;
+    }
+  }
   if (!Array.isArray(c.tabs)) c.tabs = [];
   while (c.tabs.length < TAB_SLOTS) c.tabs.push(null);
   if (!Number.isInteger(c.tabAt) || c.tabAt < 0 || c.tabAt >= TAB_SLOTS) c.tabAt = 0;
