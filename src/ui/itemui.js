@@ -88,7 +88,11 @@ export function itemTooltip(item, opts = {}) {
     h += `<div class="tt-base">Music Sheet · ${item.inked ? 'Locked' : r ? 'Draft' : 'Blank'}</div>`;
     if (r && r.ev) h += `<div>${fmtInt(r.ev.length)} notes · ${keyName(r.key)} · ${sheetTempo(item, r)} BPM</div>`;
     else if (r) h += `<div style="color:#ff8080">${escapeHtml(r.err)}</div>`;
-    h += `<div class="tt-sep"></div><div class="dim">${item.inked ? "A Bard loads it into one of his five Tabs: every note his skills write takes the song's next note, whichever skill wrote it." : "Paste tablature or note names onto it, then lock it to keep the song. Only locked sheets go in a Bard's Tabs."}</div>`;
+    h += `<div class="tt-sep"></div><div class="dim">${item.inked ? "A Bard loads it into one of his five Tabs: every note his skills write takes the song's next note, whichever skill wrote it." : "Paste tablature or note names onto it, then lock it to play. Right-click or use 'Lock & Equip' to load into a Tab."}</div>`;
+  } else if (item.type === 'banner_kit') {
+    h += `<div class="tt-base">Banner Customization Kit · Lancer Only</div>`;
+    h += `<div class="dim">Sold by Fortunato the Gambler. Open the kit to tailor the cloth silhouette, field colors, heraldic patterns, and crest of your 3D War Banner.</div>`;
+    h += `<div class="tt-sep"></div><div class="dim">${G.touch ? 'Tap' : 'Right-click'} or select <b>Customize Banner</b> to open the banner studio.</div>`;
   } else if (item.sealed) {
     h += `<div class="tt-base">Epic or better · Item Level ${item.ilvl}</div><div style="color:${col}">What lies inside is anyone's guess until the seal is broken.</div><div class="tt-sep"></div><div class="dim">${G.touch ? 'Tap' : 'Click'} <b>Break the Seal</b>, or the SEALED button on the HUD. It can't be sold or worn sealed.</div>`;
   } else {

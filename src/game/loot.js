@@ -218,6 +218,45 @@ function sealedIcon(size) {
   iconCache.set(key, c);
   return c;
 }
+export function bannerKitIcon(size = 48) {
+  const key = 'item_banner_kit|' + size;
+  let c = iconCache.get(key);
+  if (c) return c;
+  c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d'), s = size / 48;
+  x.save();
+  const bg = x.createRadialGradient(24 * s, 24 * s, 3 * s, 24 * s, 24 * s, 24 * s);
+  bg.addColorStop(0, 'rgba(70, 114, 207, 0.45)');
+  bg.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  x.fillStyle = bg;
+  x.fillRect(0, 0, size, size);
+  x.strokeStyle = '#7c5a32'; x.lineWidth = 2.4 * s; x.lineCap = 'round';
+  x.beginPath(); x.moveTo(24 * s, 6 * s); x.lineTo(24 * s, 44 * s); x.stroke();
+  x.strokeStyle = '#d4af37'; x.lineWidth = 2 * s;
+  x.beginPath(); x.moveTo(8 * s, 11 * s); x.lineTo(40 * s, 11 * s); x.stroke();
+  x.fillStyle = '#ffd860';
+  x.beginPath(); x.moveTo(24 * s, 3 * s); x.lineTo(27 * s, 8 * s); x.lineTo(21 * s, 8 * s); x.closePath(); x.fill();
+  x.fillStyle = '#224488';
+  x.beginPath();
+  x.moveTo(10 * s, 11 * s);
+  x.lineTo(38 * s, 11 * s);
+  x.lineTo(38 * s, 35 * s);
+  x.lineTo(24 * s, 42 * s);
+  x.lineTo(10 * s, 35 * s);
+  x.closePath();
+  x.fill();
+  x.strokeStyle = '#e6be44'; x.lineWidth = 1.2 * s; x.stroke();
+  x.fillStyle = '#edf2fa';
+  x.beginPath();
+  x.moveTo(24 * s, 18 * s); x.lineTo(27 * s, 23 * s); x.lineTo(24 * s, 30 * s); x.lineTo(21 * s, 23 * s);
+  x.closePath();
+  x.fill();
+  x.strokeStyle = '#ffdf68'; x.lineWidth = 1 * s;
+  x.beginPath(); x.moveTo(17 * s, 30 * s); x.lineTo(31 * s, 18 * s); x.stroke();
+  x.restore();
+  iconCache.set(key, c);
+  return c;
+}
 /** Inventory icon canvas for any item. */
 export function itemIcon(item, size = 48) {
   if (item.sealed) return sealedIcon(size);
@@ -225,6 +264,7 @@ export function itemIcon(item, size = 48) {
   if (item.type === 'gem') return gemIcon(item.gem, GEMS[item.gem].color, item.tier, size);
   if (item.type === 'potion') return potionIcon(item.color, size);
   if (item.type === 'sheet') return sheetIcon(item, size);
+  if (item.type === 'banner_kit') return bannerKitIcon(size);
   if (item.slot === 'ring') return ringIcon(MATERIALS[item.tier].color, elem((AUGMENTS[(item.aug && item.aug[0] || {}).id] || {}).el || 'arcane').glow, item.rarity, size);
   if (item.art) { const a = artIcon(item, size); if (a) return a; }
   { const g = gearIcon(item, size) || heldIcon(item, size); if (g) return g; } // body/head gear art, the held weapon designs

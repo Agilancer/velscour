@@ -175,9 +175,9 @@ function sing(sc, note) {
   const M = sc.song || bardMelody(sc), spb = 60 / M.tempo, t = audioNow(), N = NOTES[note.g], each = (N.beats / (N.heads || 1)) * spb, tag = { kind: 'write', bar: sc.bar };
   const art = artFor(note.reg, (note.sound || N.beats * TPB) / TPB), dbl = REGISTERS[note.reg] && REGISTERS[note.reg].double;
   sc.wv = note.heads.flatMap((h) => {
-    const at = t + (h.at - note.at) * spb, v = [playNote('harpsichord', h.midi, { at, dur: Math.max(0.12, each), vel: 0.62, art, tag })];
-    if (dbl && h.midi >= 67) v.push(playNote('harpsichord', h.midi - 12, { at, dur: Math.max(0.12, each), vel: 0.32, art, tag }));
-    for (const m of h.ch || []) v.push(playNote('harpsichord', m, { at, dur: Math.max(0.12, each), vel: 0.3, art, tag }));
+    const at = t + (h.at - note.at) * spb, v = [playNote('lute', h.midi, { at, dur: Math.max(0.12, each), vel: 0.62, art, tag })];
+    if (dbl && h.midi >= 67) v.push(playNote('lute', h.midi - 12, { at, dur: Math.max(0.12, each), vel: 0.32, art, tag }));
+    for (const m of h.ch || []) v.push(playNote('lute', m, { at, dur: Math.max(0.12, each), vel: 0.3, art, tag }));
     return v;
   });
   if (sc.song) return;   // a sheet's chords are its own
@@ -185,7 +185,7 @@ function sing(sc, note) {
   if (ch !== sc.wch) { // the bass of a new chord
     sc.wch = ch;
     const lo = sc.key === 'bass' ? 36 : 40, pc = chordPcs(M.key, ch)[0], bass = lo + ((pc - lo) % 12 + 12) % 12;
-    sc.wv.push(playNote('harpsichord', bass, { at: t, dur: Math.min(1.2, 2 * spb), vel: 0.4, art: 'normal_held', tag }));
+    sc.wv.push(playNote('lute', bass, { at: t, dur: Math.min(1.2, 2 * spb), vel: 0.4, art: 'normal_held', tag }));
   }
 }
 
@@ -212,7 +212,7 @@ export function bardCompose(p, sk, L) {
     if (instReady() && !playing(sc) && !sc.pending) { // a rolled tonic chord in the clef's octave
       const M = sc.song || bardMelody(sc), base = N.clef === 'bass' ? 48 : 60, t = audioNow();
       stopVoices(sc.wv || [], 0.05);
-      sc.wv = (sc.song ? [0, 4, 7].map((x) => (M.key.pc + x) % 12) : chordPcs(M.key, M.B.chords[3])).map((pc, i) => playNote('harpsichord', base + pc, { at: t + i * 0.045, dur: 0.6, vel: 0.5, art: 'normal_held', tag: { kind: 'clef', bar: sc.bar } }));
+      sc.wv = (sc.song ? [0, 4, 7].map((x) => (M.key.pc + x) % 12) : chordPcs(M.key, M.B.chords[3])).map((pc, i) => playNote('lute', base + pc, { at: t + i * 0.045, dur: 0.6, vel: 0.5, art: 'normal_held', tag: { kind: 'clef', bar: sc.bar } }));
     }
     return;
   }
@@ -238,7 +238,7 @@ function discord(p, sc) {
   if (G.bardStats) G.bardStats.dis++;
   floatText(p.x, p.y, 92, 'Discord', '#ff6060', 12);
   stopVoices(sc.wv || [], 0.05);
-  if (instReady() && !playing(sc)) { const t = audioNow(), tag = { kind: 'discord', bar: sc.bar }; [48, 49, 54, 55, 61].forEach((m, i) => playNote('harpsichord', m, { at: t + i * 0.012, dur: 0.45, vel: 0.6, art: 'marcato_short', tag })); }
+  if (instReady() && !playing(sc)) { const t = audioNow(), tag = { kind: 'discord', bar: sc.bar }; [48, 49, 54, 55, 61].forEach((m, i) => playNote('lute', m, { at: t + i * 0.012, dur: 0.45, vel: 0.6, art: 'marcato_short', tag })); }
   else if (!instReady()) sfx('error', 0.5);
 }
 

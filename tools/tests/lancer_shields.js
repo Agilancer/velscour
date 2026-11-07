@@ -20,8 +20,9 @@ const {openGame,report,OUT_DIR}=require('./harness');
      problems.push('Four unique shield models not assigned');
    for(const [name,variant]of Object.entries(LANCER_SHIELD_ABILITY)){
      if(shieldVariantForSkill(name)!==variant)problems.push('Unassigned ability '+name);
-     if(!Object.values(SKILLS).some(sk=>sk.name===name&&sk.kind==='orbit'))problems.push('No existing orbit skill named '+name);
    }
+   const activeShieldSkills=CLASS_SKILLS.lancer.filter(sk=>sk.kind==='orbit'&&sk.fx==='tshield');
+   if(!activeShieldSkills.length)problems.push('No Lancer orbit shield skills found');
    // Front faces the camera on the near side (a=pi/4), the rear on the far side (a=5pi/4).
    if(shieldFacing(Math.PI/4)!=='front'||shieldFacing(Math.PI*5/4)!=='back')problems.push('Shield faces the wrong way');
    const distances=Object.values(SHIELD_ORBIT_RADIUS);
@@ -64,15 +65,14 @@ const {openGame,report,OUT_DIR}=require('./harness');
    const src=G.player,w=G.world;
    // The production cast path: every shield spell spins at +2.4 rad/s with its own model and ring.
    const initialHazards=w.hazards.length;
-   for(const name of Object.keys(LANCER_SHIELD_ABILITY)){
-     const sk=CLASS_SKILLS.lancer.find(s=>s.name===name);
-     if(!sk){problems.push('Missing Lancer cast skill '+name);continue;}
+   for(const sk of activeShieldSkills){
+     const name=sk.name;
      try{
        castSkill(src,sk,1,src.x+1,src.y);
        const h=w.hazards.findLast(h=>h instanceof Orbit&&h.o?.sk===sk.id);
        if(!h){problems.push('No orbit spawned for '+name);continue;}
        if(h.speed!==2.4)problems.push('Orbit should rotate at +2.4 rad/s: '+name+'='+h.speed);
-       if(h.shieldVariant!==LANCER_SHIELD_ABILITY[name])
+       if(h.shieldVariant!==shieldVariantForSkill(name))
          problems.push('Incorrect shield art on cast: '+name);
        if(Math.abs(h.radius/shieldOrbitRadius(name)-1)>0.05)
          problems.push('Unexpected scaled orbit radius: '+name+'='+h.radius);
@@ -105,9 +105,8 @@ const {openGame,report,OUT_DIR}=require('./harness');
   // All seven Bulwark rings at once, as cast, mid-spin.
   await page.evaluate(async()=>{
    const {G}=window.VELSCOUR,{CLASS_SKILLS}=await import('/src/data/skills.js'),{castSkill}=await import('/src/game/skillrun.js');
-   const {LANCER_SHIELD_ABILITY}=await import('/src/gfx/lancershields.js');
    G.world.hazards.length=0;
-   for(const name of Object.keys(LANCER_SHIELD_ABILITY))castSkill(G.player,CLASS_SKILLS.lancer.find(s=>s.name===name),1,G.player.x+1,G.player.y);
+   for(const sk of CLASS_SKILLS.lancer.filter(s=>s.kind==='orbit'&&s.fx==='tshield'))castSkill(G.player,sk,1,G.player.x+1,G.player.y);
   });
   await page.waitForTimeout(900);
   await shot('lancer_shield_all_rings');

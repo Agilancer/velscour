@@ -14,6 +14,7 @@ import { classSprite } from '../core/assets.js';
 import { heroPortrait, heroLook } from '../core/gearart.js';
 import { heldPortraitArgs } from '../gfx/heldart.js';
 import { tabRow, sheetButtons, useSheet, unloadTab } from './sheets.js';
+import { openBannerCustomizer } from './bannercustomizer.js';
 import { openSeal } from './sealed.js';
 import { glyphOf } from '../data/relics.js';
 import { noteFind } from '../game/reliquary.js';
@@ -193,7 +194,7 @@ function bagSlot(idx) {
     onDropWorld: (data) => (data.where === 'bag' ? dropFromBag(data.idx) : false),
   });
   droppable(d, (data) => handleDropOnBag(idx, data), (data) => data.type === 'item' || data.type === 'shop' || data.type === 'stash' || data.type === 'vault');
-  if (it) UI.tip(d, () => itemTooltip(c.bag[idx], { compare: c.bag[idx] && c.bag[idx].slot ? c.equip[slotFor(c.equip, c.bag[idx])] : null, price: G.ui.vendor && G.ui.vendor.active ? Math.max(1, Math.floor(itemValue(c.bag[idx]) / 4)) : 0, priceLabel: 'Sells for', hint: G.ui.vendor && G.ui.vendor.active ? 'Right-click to sell' : G.ui.stash && G.ui.stash.active ? 'Right-click to store' : it.sealed ? 'Right-click / double-click to break the seal' : it.type === 'gear' ? 'Right-click / double-click to equip' : it.type === 'gem' ? 'Drag onto gear to socket' : it.type === 'sheet' ? (it.inked && c.classId === 'bard' ? 'Right-click to load it into a Tab' : it.inked ? 'Right-click to read it' : 'Right-click to write on it') : '' }));
+  if (it) UI.tip(d, () => itemTooltip(c.bag[idx], { compare: c.bag[idx] && c.bag[idx].slot ? c.equip[slotFor(c.equip, c.bag[idx])] : null, price: G.ui.vendor && G.ui.vendor.active ? Math.max(1, Math.floor(itemValue(c.bag[idx]) / 4)) : 0, priceLabel: 'Sells for', hint: G.ui.vendor && G.ui.vendor.active ? 'Right-click to sell' : G.ui.stash && G.ui.stash.active ? 'Right-click to store' : it.sealed ? 'Right-click / double-click to break the seal' : it.type === 'gear' ? 'Right-click / double-click to equip' : it.type === 'gem' ? 'Drag onto gear to socket' : it.type === 'banner_kit' ? 'Right-click / double-click to customize banner' : it.type === 'sheet' ? (it.inked && c.classId === 'bard' ? 'Right-click to load it into a Tab' : it.inked ? 'Right-click to read it' : 'Right-click to write on it') : '' }));
   return d;
 }
 
@@ -205,6 +206,7 @@ function quickUse(idx) {
   if (G.ui.stash && G.ui.stash.active) { G.ui.stash.store(idx); return; }
   if (it.type === 'gear') equipFromBag(idx);
   else if (it.type === 'sheet') useSheet(idx);
+  else if (it.type === 'banner_kit') openBannerCustomizer({ bagIdx: idx });
   else if (it.type === 'gem') { UI.selected = { where: 'bag', idx }; UI.log('Drag the gem onto a socketed item to insert it.'); UI.refresh(); }
 }
 
@@ -281,6 +283,7 @@ function detailBox() {
       if (targets.length) btn(`Socket (${targets.length} items)`, () => pickSocketTarget(sel.idx, targets));
     }
     if (it.type === 'sheet') sheetButtons(btn, sel, it);
+    if (it.type === 'banner_kit') btn('Customize Banner', () => openBannerCustomizer({ bagIdx: sel.idx }));
     if (G.ui.vendor && G.ui.vendor.active && !it.sealed) btn(`Sell (${fmtInt(Math.max(1, Math.floor(itemValue(it) / 4)))}g)`, () => G.ui.vendor.sell(sel));
     btn('Drop', () => dropFromBag(sel.idx), 'small red');
   } else if (sel.where === 'tab') sheetButtons(btn, sel, it);

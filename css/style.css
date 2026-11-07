@@ -970,3 +970,127 @@ body.touch .rb-list { max-height: none; }
 body.touch .rb-row { grid-template-columns: 22px 1fr 54px 40px 48px; gap: 5px; font-size: 12px; }
 body.touch .rb-build { padding-left: 10px; }
 .tt-augdmg { font-size: 12px; color: #ffcf7a; margin-top: 1px; }
+
+
+/* ------------------------------------------------ Lancer War Banner Customizer */
+.banner-customizer-dialog {
+  width: min(720px, 94vw);
+  max-width: min(720px, 94vw);
+  text-align: left;
+}
+.banner-cust-wrap {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 10px 0 16px;
+}
+.banner-preview-pane {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 160px;
+}
+.banner-canvas-frame {
+  border: 2px solid #8e6a3c;
+  background: radial-gradient(#20160d, #0b0805);
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: inset 0 0 24px #000, 0 4px 16px rgba(0, 0, 0, 0.8);
+}
+.banner-live-canvas {
+  display: block;
+  width: 144px;
+  height: 288px;
+  image-rendering: pixelated;
+}
+.banner-unfurl-ctrl {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  font-size: 11px;
+  text-align: center;
+}
+.banner-unfurl-slider {
+  width: 100%;
+  accent-color: #ffd860;
+  cursor: pointer;
+}
+.banner-options-pane {
+  flex: 1 1 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 280px;
+}
+.banner-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.banner-section-title {
+  font: 700 12px var(--font-head);
+  color: #f1cc89;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid #5a3c1e;
+  padding-bottom: 3px;
+}
+.banner-btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.banner-sel-btn {
+  font-size: 11px !important;
+  padding: 4px 9px !important;
+  border: 1px solid #5a3e22 !important;
+  background: rgba(30, 20, 13, 0.8) !important;
+  color: #d2c0a2 !important;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.banner-sel-btn:hover {
+  background: #3e2a18 !important;
+  border-color: #dfaa4e !important;
+  color: #ffffff !important;
+}
+.banner-sel-btn.active {
+  background: linear-gradient(180deg, #6c4b24, #3a220d) !important;
+  border-color: #ffd860 !important;
+  color: #ffd860 !important;
+  box-shadow: 0 0 8px rgba(255, 216, 96, 0.45);
+  font-weight: 700;
+}
+.banner-swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.banner-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid #1a1008;
+  box-shadow: 0 0 0 1px #5a3c1e, 0 2px 4px #000;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.banner-swatch:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px #f0c850, 0 3px 6px #000;
+}
+.banner-swatch.sel {
+  transform: scale(1.22);
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px #ffd860, 0 0 12px rgba(255, 216, 96, 0.7);
+}

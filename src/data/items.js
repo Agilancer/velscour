@@ -604,6 +604,7 @@ export function itemName(item) {
   if (item.type === 'gem') return gemName(item.gem, item.tier);
   if (item.type === 'potion') return item.name;
   if (item.type === 'sheet') return sheetName(item);
+  if (item.type === 'banner_kit') return item.name || "Lancer's Banner Kit";
   if (item.rname) return item.rname + (item.upg ? ` +${item.upg}` : '');
   if (item.uname) return item.uname + (item.upg ? ` +${item.upg}` : '');
   const base = `${MATERIALS[item.tier].name} ${item.baseName}`;
@@ -621,6 +622,7 @@ export function itemColor(item) {
   if (item.type === 'gem') return GEMS[item.gem].sigil ? '#ffd88a' : GEMS[item.gem].special ? '#ff9a2a' : '#c8f0ff';
   if (item.type === 'potion') return '#ffffff';
   if (item.type === 'sheet') return item.inked ? '#ffd88a' : '#e8dcc0';
+  if (item.type === 'banner_kit') return '#ffd860';
   if (item.relic) return RELIC_COLORS[item.relic];
   if (item.type === 'gear' && RELIC_HOOK.glyph && RELIC_HOOK.glyph(item)) return RELIC_COLORS.glyph;
   return RARITY[item.rarity].color;
@@ -648,6 +650,7 @@ export function itemArmor(item) { return Math.round((item.armor || 0) * upgMult(
 
 export function itemValue(item) {
   if (item.type === 'sheet') return SHEET_PRICE;
+  if (item.type === 'banner_kit') return BANNER_KIT_PRICE;
   if (item.type === 'gem') return GEMS[item.gem].sigil ? Math.round(goldPile(depthLevelOf(item.tier * 24 + 12)) * 8) : Math.round((GEMS[item.gem].special ? 400 : 60) * Math.pow(2.6, item.tier));
   const base = 12 * Math.pow(1.06, goldLvl(item.ilvl)) * [1, 2.5, 6, 15, 40, 100, 250][item.rarity] * (item.relic ? { heir: 2.5, cov: 2 }[item.relic] : RELIC_HOOK.glyph && RELIC_HOOK.glyph(item) ? 60 : 1);
   return Math.round(base * (1 + item.affixes.length * 0.15) * (1 + item.sockets * 0.2) * (1 + (item.upg || 0) * 0.3));
@@ -721,3 +724,16 @@ export const POTION_INFO = {
   rejuv: 'Instantly restores 35% Life and Mana.',
   fury: '+30% Damage and Attack Speed for 15 seconds.',
 };
+
+export const BANNER_KIT_PRICE = 75;
+/**
+ * A Lancer's Banner Kit (Fortunato sells them): allows a Lancer to customize their 3D war banner.
+ */
+export function bannerKitItem() {
+  return {
+    uid: newUid(),
+    type: 'banner_kit',
+    name: "Lancer's Banner Kit",
+    rarity: 2,
+  };
+}
