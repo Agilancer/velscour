@@ -24,7 +24,7 @@ export function reliquary() {
   try { R = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { R = null; }
   if (!R || !Array.isArray(R.tabs)) R = blank();
   while (R.tabs.length < VAULT_TABS) R.tabs.push([]);
-  for (const t of R.tabs) while (t.length < VAULT_SIZE) t.push(null);
+  for (const t of R.tabs) while (t.length < VAULT_SIZE || t.length % 12 !== 0) t.push(null);
   R.codex = R.codex || {};
   R.lines = R.lines || 0;
   return R;
