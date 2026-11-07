@@ -19,6 +19,82 @@ import { G } from '../state.js';
 import { camera, isoX, isoY, HH } from '../core/view.js';
 import { clamp } from '../core/util.js';
 import { audioCtx, audioOut } from '../core/audio.js';
+import { shownEquip } from '../data/items.js';
+import { heroLook, heroPortrait, characterPaperdollPortrait } from '../core/gearart.js';
+import { heldPortraitArgs } from '../gfx/heldart.js';
+
+let cutscenePortraitCanvas = null;
+let cutscenePortraitSig = '';
+let fallbackSelectImg = null;
+let fallbackSelectCls = '';
+
+/**
+ * Resolves and caches a square bust portrait of the player's paperdoll with their current equipped gear and held weapons.
+ */
+export function getHeroCutscenePortrait(w = 160, h = 160) {
+  if (!G.char) return null;
+  const eq = shownEquip(G.char);
+  const sig = (G.char.classId || '') + '|' + JSON.stringify([
+    eq?.body?.base, eq?.body?.look,
+    eq?.head?.base, eq?.head?.look,
+    eq?.weapon?.base, eq?.weapon?.look,
+    eq?.offhand?.base, eq?.offhand?.look,
+    w, h
+  ]);
+  if (cutscenePortraitCanvas && cutscenePortraitSig === sig) {
+    return cutscenePortraitCanvas;
+  }
+
+  // 1. Synchronous attempt if gear art and held gear are already loaded in memory
+  try {
+    const look = heroLook(G.char.classId, eq?.body, eq?.head);
+    const held = heldPortraitArgs(look, G.char.classId, eq);
+    const cv = heroPortrait(G.char.classId, eq?.body, eq?.head, w, h, ...held);
+    if (cv) {
+      cutscenePortraitCanvas = cv;
+      cutscenePortraitSig = sig;
+      return cv;
+    }
+  } catch (e) { /* continue to async */ }
+
+  // 2. Async load via characterPaperdollPortrait
+  characterPaperdollPortrait(G.char, w, h).then((cv) => {
+    if (cv) {
+      cutscenePortraitCanvas = cv;
+      cutscenePortraitSig = sig;
+    }
+  });
+
+  return cutscenePortraitCanvas;
+}
+
+/**
+ * Draws the player's paperdoll portrait with their current gear into a cutscene dialogue box.
+ */
+export function drawHeroCutscenePortrait(cx, x, y, w, h, t = 0) {
+  const cv = getHeroCutscenePortrait(160, 160);
+  if (cv && (cv.naturalWidth || cv.width)) {
+    const nw = cv.naturalWidth || cv.width;
+    const nh = cv.naturalHeight || cv.height;
+    const scale = Math.min(w / nw, h / nh) * 1.05;
+    const dw = nw * scale;
+    const dh = nh * scale;
+    const bob = Math.sin((t || 0) * 8) * (t < 0.35 ? 1 : 0.4);
+    cx.drawImage(cv, x + (w - dw) / 2, y + (h - dh) / 2 + bob, dw, dh);
+    return;
+  }
+  if (G.char?.classId && typeof Image !== 'undefined') {
+    if (!fallbackSelectImg || fallbackSelectCls !== G.char.classId) {
+      fallbackSelectCls = G.char.classId;
+      fallbackSelectImg = new Image();
+      fallbackSelectImg.src = `assets/sprites/select/${G.char.classId}.webp`;
+    }
+    if (fallbackSelectImg.complete && fallbackSelectImg.naturalWidth) {
+      const s = (w / fallbackSelectImg.naturalWidth) * 1.6;
+      cx.drawImage(fallbackSelectImg, x + w / 2 - (fallbackSelectImg.naturalWidth * s) / 2, y - 4, fallbackSelectImg.naturalWidth * s, fallbackSelectImg.naturalHeight * s);
+    }
+  }
+}
 
 const ease = { lin: (k) => k, io: (k) => k * k * (3 - 2 * k), out: (k) => 1 - (1 - k) ** 3, in: (k) => k * k };
 
@@ -59,10 +135,23 @@ export const Cine = {
     if (this.active) { this.steps.push(...steps); if (onEnd) { const prev = this.onEnd; this.onEnd = () => { prev && prev(); onEnd(); }; } return; }
     this.active = true; G.cine = true; this.steps = steps.slice(); this.i = 0; this.t = 0; this.onEnd = onEnd; this.line = null; this.card = null;
     this.zoom0 = baseZoom(); this.back = null; this.cam = null;
+    if (G.player) {
+      G.player.moveVec = [0, 0];
+      G.player.moveTarget = null;
+      G.player.path = null;
+      G.player.attackTarget = null;
+      G.player.interact = null;
+      G.player.moving = false;
+    }
   },
   stop() {
     this.active = false; G.cine = false; this.fast = false; this.steps = []; this.line = null; this.card = null; this.cam = null;
     this.back = { t: 0, z0: camera.zoom };   // ease the zoom home (game.js's camera.follow brings the frame back to the hero)
+    if (G.player) {
+      G.player.moveVec = [0, 0];
+      G.player.moveTarget = null;
+      G.player.path = null;
+    }
     const f = this.onEnd; this.onEnd = null; if (f) f();
   },
   /** Drop a scene without its ending: the hero left the world it played in (else its camera and hidden HUD follow
@@ -181,7 +270,9 @@ export function drawCine(ctx, W, H) {
     ctx.globalAlpha = Math.min(1, L.t / 0.15);
     ctx.fillStyle = '#120c0a'; ctx.fillRect(x0, py, pw, ph);
     ctx.strokeStyle = L.color || '#c9a060'; ctx.lineWidth = 2 * dpr; ctx.strokeRect(x0 + 1, py + 1, pw - 2, ph - 2);
-    if (L.portrait) { ctx.save(); ctx.beginPath(); ctx.rect(x0 + 3, py + 3, pw - 6, ph - 6); ctx.clip(); L.portrait(ctx, x0 + 3, py + 3, pw - 6, ph - 6, L.t); ctx.restore(); }
+    const isHero = L.who === 'hero' || L.isHero || (G.char && L.name === G.char.name && !L.isNPC);
+    const portraitFn = isHero ? drawHeroCutscenePortrait : L.portrait;
+    if (portraitFn) { ctx.save(); ctx.beginPath(); ctx.rect(x0 + 3, py + 3, pw - 6, ph - 6); ctx.clip(); portraitFn(ctx, x0 + 3, py + 3, pw - 6, ph - 6, L.t); ctx.restore(); }
     const tx = x0 + pw + f * dpr, maxW = Math.min(W - tx - pad * dpr, 820 * dpr);
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.font = `bold ${Math.round(f * dpr)}px "Cinzel", "Alegreya", serif`; ctx.fillStyle = L.color || '#ffd9a0';

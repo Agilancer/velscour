@@ -40,6 +40,11 @@ function bloodOf(c) {
 export function hit(src, tgt, amount, el = 'phys', o = {}) {
   if (!tgt || tgt.dead || tgt.invuln > 0 || amount <= 0) return 0;
   if (tgt.targetable === false && !o.force) return 0;
+  if (tgt.clutter) {
+    tgt.hp = 0;
+    kill(tgt, src, { ...o, crit: false, overkill: 0 });
+    return 1;
+  }
   const world = tgt.world || G.world;
   let dmg = amount;
   let crit = false;
@@ -235,6 +240,10 @@ export function kill(tgt, src, info = {}) {
   const world = tgt.world;
   const owner = src && src.owner ? src.owner : src;
   const byPlayer = owner && (owner.isPlayer || owner.team === 'player');
+  if (tgt.clutter) {
+    if (typeof tgt.die === 'function') tgt.die(src);
+    return;
+  }
   if (tgt.onDeath) tgt.onDeath(src);
   if (tgt.summon) {
     burst(tgt.x, tgt.y, 20, tgt.el || 'arcane', 10, 2);

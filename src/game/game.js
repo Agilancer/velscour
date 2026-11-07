@@ -96,6 +96,7 @@ import { setupVelscour } from './velscour.js';
 import { loadVelscourThrone } from '../gfx/velscourthrone.js';
 import { offerCommissions, setupCommissions, commissionClear, wantedBiomes, LINE_BY_ID, commState } from './commissions.js';
 import { titleScreen, hide as hideScreen, deathScreen, victoryScreen, pauseMenu, helpDialog } from '../ui/screens.js';
+import { LoadingScreen } from '../ui/loading.js';
 // the Endgame (docs/ENDGAME.md): Heresies, Abyssal Rifts, Velscour Unbound, Infernal Marks
 import { endgameUnlocked, unlockEndgame } from './endgame.js';
 import { heresySpawns, heresyWorld, heresyBegin, heresyTick, heresiesOf, worldRank, MARKS_RANK } from './heresies.js';
@@ -219,11 +220,22 @@ export const game = {
     this.startChar(migrate(c), false);
   },
   async loadClassPack(classId, char = null) {
-    const el = document.getElementById('loading');
-    const slow = setTimeout(() => el && el.classList.remove('hidden'), 250);
+    let shown = false;
+    const slow = setTimeout(() => {
+      shown = true;
+      LoadingScreen.show({
+        title: 'VELSCOUR',
+        subtitle: 'Awakening Hero',
+        text: 'Summoning class regalia…',
+        progress: 35,
+      });
+    }, 250);
     const [meta] = await Promise.all([loadClassArt(classId), loadGearArt(classId), loadHeld(classId, char), preloadSkillSheets(classId)]);
     clearTimeout(slow);
-    if (el) el.classList.add('hidden');
+    if (shown) {
+      LoadingScreen.setProgress(100, 'Hero ready');
+      await LoadingScreen.hide();
+    }
     setClassItems(classId, meta);
   },
 
@@ -632,22 +644,30 @@ export const game = {
     if (biome.id === 'dark_forest' && c.darkForestRuns) delete c.darkForestRuns[depth];
     if (c.mountainRuns) delete c.mountainRuns[depth];   // the mountains keep their maps per depth: a teleport forges new ones
     if (c.summitRuns) delete c.summitRuns[depth];
-    const loading = document.getElementById('loading');
-    document.getElementById('loading-text').textContent = `Answering Velscour — Depth ${depth} · ${biome.name}…`;
-    loading.classList.remove('hidden');
+    LoadingScreen.show({
+      title: biome.name,
+      subtitle: `Depth ${depth} · Answering Velscour`,
+      text: `Answering Velscour — Depth ${depth} · ${biome.name}…`,
+      progress: 15,
+    });
     try {
       const mix = mixPartner(biome);
+      LoadingScreen.setProgress(30, `Summoning ${biome.name}…`);
       await this.loadLevelArt(biome, mix);
+      LoadingScreen.setProgress(55, 'Forging realm…');
       this.buildDungeon(depth, biome, mix);
       const w = G.world;
+      LoadingScreen.setProgress(75, 'Awakening inhabitants…');
       await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])], true).catch((e) => console.warn(e));
+      LoadingScreen.setProgress(90, 'Warming the flame…');
       await warmLevelArt(w);
       releaseLevelArt(biome);
+      LoadingScreen.setProgress(100, 'Arriving…');
     } catch (e) {
       console.warn(e);
       UI.log('The abyss rejected that destination. Try the skull again.', '#ff8060');
     } finally {
-      loading.classList.add('hidden');
+      await LoadingScreen.hide();
       this.autosave();
     }
   },
@@ -663,24 +683,32 @@ export const game = {
     const p = G.player, depth = old.depth, carry = p ? old.loot.filter((l) => Math.hypot(l.x - p.x, l.y - p.y) < 14) : [];
     c.nextBiome = id;
     if (id === 'snowy_summit' && c.summitRuns) delete c.summitRuns[depth];   // a fresh range above a fresh summit
-    const loading = document.getElementById('loading');
-    document.getElementById('loading-text').textContent = `Depth ${depth} — ${biome.name}…`;
-    loading.classList.remove('hidden');
+    LoadingScreen.show({
+      title: biome.name,
+      subtitle: `Depth ${depth}`,
+      text: `Depth ${depth} — ${biome.name}…`,
+      progress: 15,
+    });
     sfx('portal');
     try {
+      LoadingScreen.setProgress(30, `Summoning ${biome.name}…`);
       await this.loadLevelArt(biome, null);
+      LoadingScreen.setProgress(55, 'Forging realm…');
       this.buildDungeon(depth, biome, null);
       const w = G.world;
       for (const l of carry) { const [x, y] = w.map.randomNear(p.x, p.y, 1.8); l.x = x; l.y = y; l.z = 0; l.vx = l.vy = 0; l.vz = 40; w.addLoot(l); }
       if (carry.length) UI.log('The spoils of the summit came with you.', '#ffe2a0');
+      LoadingScreen.setProgress(75, 'Awakening inhabitants…');
       await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])], true).catch((e) => console.warn(e));
+      LoadingScreen.setProgress(90, 'Warming the flame…');
       await warmLevelArt(w);
       releaseLevelArt(biome);
+      LoadingScreen.setProgress(100, 'Arriving…');
     } catch (e) {
       console.warn(e);
     } finally {
       this._continuing = false;
-      loading.classList.add('hidden');
+      await LoadingScreen.hide();
       this.autosave();
     }
   },
@@ -725,21 +753,31 @@ export const game = {
     if (depth !== FINAL_DEPTH && (!c.nextBiome || c.nextBiome === 'throne' || regionNeeds(BIOME_BY_ID[c.nextBiome], c.level))) c.nextBiome = drawBiome(c, depth);
     const biome = BIOME_BY_ID[depth === FINAL_DEPTH ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
     const mix = mixPartner(biome); // a like-coloured biome whose tiles this level borrows, or null
-    const loading = document.getElementById('loading');
-    document.getElementById('loading-text').textContent = `Descending to Depth ${depth} — ${biome.name}…`;
-    loading.classList.remove('hidden');
+    LoadingScreen.show({
+      title: biome.name,
+      subtitle: `Descending to Depth ${depth}`,
+      text: `Descending to Depth ${depth} — ${biome.name}…`,
+      progress: 15,
+    });
     sfx('portal');
     // fetch this biome's art first (about 1 MB); if that fails the default set stands in
     setTimeout(async () => {
-      try { await this.loadLevelArt(biome, mix); } catch (e) { console.warn(e); }
       try {
+        LoadingScreen.setProgress(25, `Mapping ${biome.name}…`);
+        await this.loadLevelArt(biome, mix);
+      } catch (e) { console.warn(e); }
+      try {
+        LoadingScreen.setProgress(50, 'Forging labyrinth…');
         this.buildDungeon(depth, biome, mix);
         // the level's monster art (set 2 sheets load per level); a failed sheet falls back to pixel sprites
         const w = G.world;
+        LoadingScreen.setProgress(75, 'Summoning inhabitants…');
         await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])], true).catch((e) => console.warn(e));
+        LoadingScreen.setProgress(90, 'Preparing the veil…');
         await warmLevelArt(w);
         releaseLevelArt(biome);
-      } finally { loading.classList.add('hidden'); }
+        LoadingScreen.setProgress(100, 'Arriving…');
+      } finally { await LoadingScreen.hide(); }
     }, 40);
   },
 
@@ -1159,19 +1197,29 @@ export const game = {
     floor = Math.max(1, Math.min(this.breachOpen(), floor | 0 || 1));
     c.breach ||= { best: 0, cleared: {} };
     c.breach.floor = floor;
-    const loading = document.getElementById('loading');
-    document.getElementById('loading-text').textContent = `Into the Eternal Breach — Floor ${floor}…`;
-    loading.classList.remove('hidden');
+    LoadingScreen.show({
+      title: 'The Eternal Breach',
+      subtitle: `Floor ${floor}`,
+      text: `Into the Eternal Breach — Floor ${floor}…`,
+      progress: 15,
+    });
     sfx('portal');
     setTimeout(async () => {
-      try { await this.loadLevelArt(BREACH_BIOME); } catch (e) { console.warn(e); }
       try {
+        LoadingScreen.setProgress(30, 'Unsealing breach wards…');
+        await this.loadLevelArt(BREACH_BIOME);
+      } catch (e) { console.warn(e); }
+      try {
+        LoadingScreen.setProgress(55, 'Forging the shattered rift…');
         this.buildBreach(floor);
         const w = G.world;
+        LoadingScreen.setProgress(75, 'Summoning breach horrors…');
         await loadArtFor(BREACH_ART.map((a) => a.id), true).catch((e) => console.warn(e)); // the Breach's six atlases (~1.6 MB)
+        LoadingScreen.setProgress(90, 'Stabilizing dimensions…');
         await warmLevelArt(w);
         releaseLevelArt(BREACH_BIOME);
-      } finally { loading.classList.add('hidden'); }
+        LoadingScreen.setProgress(100, 'Arriving…');
+      } finally { await LoadingScreen.hide(); }
     }, 40);
   },
 
@@ -1269,21 +1317,31 @@ export const game = {
     const biome = pick(pool.length ? pool : BIOMES.filter((b) => !b.overworld)) || BIOME_BY_ID.catacombs;
     c.lastRift = biome.id;
     const mix = mixPartner(biome);
-    const loading = document.getElementById('loading');
-    document.getElementById('loading-text').textContent = `Into the Abyssal Rift — Tier ${tier}…`;
-    loading.classList.remove('hidden');
+    LoadingScreen.show({
+      title: 'Abyssal Rift',
+      subtitle: `Tier ${tier} · ${biome.name}`,
+      text: `Into the Abyssal Rift — Tier ${tier}…`,
+      progress: 15,
+    });
     sfx('portal');
     this.riftLoading = true;
     setTimeout(async () => {
-      try { await this.loadLevelArt(biome, mix); } catch (e) { console.warn(e); }
+      try {
+        LoadingScreen.setProgress(30, 'Breaching dimensional folds…');
+        await this.loadLevelArt(biome, mix);
+      } catch (e) { console.warn(e); }
       try {
         this.riftLoading = false;
+        LoadingScreen.setProgress(55, 'Weaving rift chaos…');
         this.buildRift(tier, biome, mix);
         const w = G.world;
+        LoadingScreen.setProgress(75, 'Empowering champions…');
         await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])], true).catch((e) => console.warn(e));
+        LoadingScreen.setProgress(90, 'Igniting the beacon…');
         await warmLevelArt(w);
         releaseLevelArt(biome);
-      } finally { loading.classList.add('hidden'); }
+        LoadingScreen.setProgress(100, 'Arriving…');
+      } finally { await LoadingScreen.hide(); }
     }, 40);
   },
   /** A rift level: a small maze and a BOSS ROOM arena of a standard biome, as deadly as depth 500 + 10 T, no boss until the quota. */
@@ -1370,15 +1428,22 @@ export const game = {
     if (Auto.on) Auto.toggle(false);
     spendKeys(c);
     const depth = Math.max(FINAL_DEPTH, G.world?.kind === 'dungeon' && !G.world.rift ? G.world.depth : c.depth || 1), biome = BIOME_BY_ID.throne;
-    const loading = document.getElementById('loading');
-    document.getElementById('loading-text').textContent = `Velscour Unbound — Depth ${depth}…`;
-    loading.classList.remove('hidden');
+    LoadingScreen.show({
+      title: 'Velscour Unbound',
+      subtitle: `Depth ${depth}`,
+      text: `Velscour Unbound — Depth ${depth}…`,
+      progress: 15,
+    });
     try {
+      LoadingScreen.setProgress(30, 'Unsealing the throne room…');
       await this.loadLevelArt(biome);
       G.unboundNext = true;
+      LoadingScreen.setProgress(55, 'Rebuilding the court…');
       this.buildDungeon(depth, biome);
       const w = G.world;
+      LoadingScreen.setProgress(75, 'Awakening the demon lord…');
       await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : []), ...(w.velscour ? w.velscour.courtArt || [] : [])], true).catch((e) => console.warn(e)); // (his court steps in later)
+      LoadingScreen.setProgress(90, 'Preparing the battleground…');
       await warmLevelArt(w);
       releaseLevelArt(biome);
       const p = G.player;
@@ -1389,13 +1454,14 @@ export const game = {
         w.map.reveal(x, y, 30);
         camera.follow(x, y, 0, true);
       }
+      LoadingScreen.setProgress(100, 'Arriving…');
       UI.log('<b style="color:#ff4020">Velscour Unbound.</b> The keys turn; the Demon Lord rises with his court at his side. There is no practice here.', '#ffb0a0');
     } catch (e) {
       console.warn(e); G.unboundNext = false;
       c.keys += 3; // the keys come back
       UI.log('The abyss rejected the keys. Try again.', '#ff8060');
     } finally {
-      loading.classList.add('hidden');
+      await LoadingScreen.hide();
       this.autosave();
     }
     return true;

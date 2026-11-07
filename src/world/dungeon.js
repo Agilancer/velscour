@@ -319,7 +319,7 @@ export function generateDungeon(depth, biome, tileset, seed, opts = {}) {
 
   // ---- spawns
   const spawns = [];
-  const roster = biome.roster;
+  const roster = biome.roster && biome.roster.length ? biome.roster : ['ghoul', 'skeleton'];
   const rnd = () => rng.next();
   const looks = rollLooks(biome, rnd); // this level's bestiary: which art and palette swap each archetype gets
   const dens = density(depth) * (opts.density || 1); // opts.density: Abyssal Rifts thin the packs (data/rifts.js RIFT_DENSITY)
@@ -468,6 +468,11 @@ function placeObstacles(map, rooms, tileset, rng, startRoom) {
     return false;
   };
   const voidAround = (x, y) => [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => !map.tile(x + dx, y + dy)).length;
+  // hallway-like floor: the run of floor through the tile is 3 or less across one axis (a 2-3 wide corridor, a
+  // cave passage, a tiny junction room). Nothing is placed there, walk-over clutter included, so the routes
+  // between rooms stay clear.
+  const run = (x, y, dx, dy) => { let n = 1; for (let k = 1; k <= 3 && map.tile(x + dx * k, y + dy * k); k++) n++; for (let k = 1; k <= 3 && map.tile(x - dx * k, y - dy * k); k++) n++; return n; };
+  const hallway = (x, y) => run(x, y, 1, 0) <= 3 || run(x, y, 0, 1) <= 3;
   // a level shows a dozen or so of the pack's props, so rooms look furnished rather than random
   const pool = shuffleWith(scat.slice(), rng).slice(0, rng.int(10, 16));
   for (const r0 of rooms) {
@@ -481,7 +486,7 @@ function placeObstacles(map, rooms, tileset, rng, startRoom) {
     };
     // ...and the room centre, where loot chests go
     const ok = (x, y) => inRoom(x, y) && !(r.keep && Math.hypot(x + 0.5 - r.keep[0], y + 0.5 - r.keep[1]) < 2) && map.walkableTile(x, y) && !nearDoor(x, y) && !used.has(y * W + x)
-      && (Math.abs(x - Math.floor(r.mx)) > 1 || Math.abs(y - Math.floor(r.my)) > 1);
+      && !hallway(x, y) && (Math.abs(x - Math.floor(r.mx)) > 1 || Math.abs(y - Math.floor(r.my)) > 1);
     const cells = [];
     for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (ok(x, y)) cells.push([x, y]);
     if (!cells.length) continue;
