@@ -11,8 +11,9 @@ import { MEASURE, NOTES, beatsOf } from '../data/notation.js';
 import { bardNoteFor, bardFitGain, bardPerforming } from './bard.js';
 import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, spearBarrageAreas, buffAmount, curseAmount, skillDuration, effLevel, ricochetCount } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
-import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS, powerLevel, goldLvl } from '../data/items.js';
-import { depthLevel, armorDiv } from '../data/depth.js';
+import { CLASSES } from '../data/classes.js';
+import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS, powerLevel, goldLvl, canEquipItem, BASE_REQ_STAT, charEffectiveStat } from '../data/items.js';
+import { depthLevel, armorDiv, MAX_LEVEL } from '../data/depth.js';
 import { breachLevel } from '../data/breach.js';
 import { riftLevel } from '../data/rifts.js';
 import { riftOpen } from './rifts.js';
@@ -577,8 +578,16 @@ export const Auto = {
   },
 
   spendStats() {
-    const p = G.player, c = G.char;
+    const p = G.player, c = G.char, C = CLASSES[c.classId];
+    const reqStats = C ? [...new Set([BASE_REQ_STAT[C.weapon], C.offhand && BASE_REQ_STAT[C.offhand]].filter(Boolean))] : [];
+    const targetReq = c.level > 1 ? 20 + (Math.min(c.level, MAX_LEVEL) - 1) * 2 : 0;
     while (c.statPoints > 0) {
+      const needStat = targetReq > 0 ? reqStats.find((stKey) => charEffectiveStat(c, stKey) < targetReq) : null;
+      if (needStat) {
+        c.attrs[needStat]++;
+        c.statPoints--;
+        continue;
+      }
       let best = 'vit', bs = -Infinity;
       for (const k of ['str', 'dex', 'vit', 'int']) {
         const s = simulate(p, () => { c.attrs[k]++; return () => { c.attrs[k]--; }; });
@@ -718,7 +727,7 @@ export const Auto = {
       const cur = simulate(p, () => () => {});
       let best = -1, bs = equipBar(cur), bslot = null, bmove = null;
       c.bag.forEach((it, i) => {
-        if (!it || it.type !== 'gear' || it.unid || it.sealed || it.locked || (it.req || 1) > c.level) return;
+        if (!it || it.type !== 'gear' || it.unid || it.sealed || it.locked || !canEquipItem(c, it)) return;
         const f = fitScore(p, it, undefined, placed);
         if (f.s > bs) { bs = f.s; best = i; bslot = f.slot; bmove = f.move; }
       });
@@ -726,7 +735,7 @@ export const Auto = {
       if (best < 0) {
         this.worn = this.worn || new Set();
         c.bag.forEach((it, i) => {
-          if (best >= 0 || !it || it.type !== 'gear' || it.unid || it.sealed || it.locked || (it.req || 1) > c.level || (it.slot !== 'body' && it.slot !== 'head') || this.worn.has(it.uid)) return;
+          if (best >= 0 || !it || it.type !== 'gear' || it.unid || it.sealed || it.locked || !canEquipItem(c, it) || (it.slot !== 'body' && it.slot !== 'head') || this.worn.has(it.uid)) return;
           const old = c.equip[it.slot];
           if (old && (old.locked || it.rarity < old.rarity || it.ilvl < old.ilvl - 4)) return;
           const f = fitScore(p, it); if (f.s > cur - 0.02) { best = i; bslot = f.slot; bmove = f.move; }
@@ -803,12 +812,12 @@ export const Auto = {
     if (it.type === 'gem') return (!f || f.gems) && (free > 0 || c.bag.some((b) => b && b.type === 'gem' && b.gem === it.gem && b.tier === it.tier) || this.worstBag(itemValue(it)) >= 0);
     if (it.type !== 'gear' || it.sealed) return free > 0; // a sealed treasure is Epic or better: always worth a slot
     if (f) { // the player's loot filter (game/lootfilter.js) decides, plus upgrades to wear unless that's off too
-      if (!filterPasses(it) && !(f.upgrades && (it.req || 1) <= c.level && this.isUpgrade(it))) return false;
+      if (!filterPasses(it) && !(f.upgrades && canEquipItem(c, it) && this.isUpgrade(it))) return false;
       return free > 0 || this.worstBag(itemValue(it)) >= 0;
     }
-    const upgrade = (it.req || 1) <= c.level && this.isUpgrade(it);
+    const upgrade = canEquipItem(c, it) && this.isUpgrade(it);
     if (upgrade) return true;
-    if ((it.slot === 'body' || it.slot === 'head') && (it.req || 1) <= c.level && (!c.equip[it.slot] || it.rarity >= c.equip[it.slot].rarity) && free > 0) return true; // new looks
+    if ((it.slot === 'body' || it.slot === 'head') && canEquipItem(c, it) && (!c.equip[it.slot] || it.rarity >= c.equip[it.slot].rarity) && free > 0) return true; // new looks
     const minRarity = free > 30 ? 1 : free > 12 ? 2 : 3;
     if (it.rarity < minRarity) return false;
     return free > 0 || this.worstBag(itemValue(it)) >= 0;
@@ -2115,7 +2124,7 @@ export const Auto = {
     if (!list || !bagFree(c)) return false;
     const cur = simulate(p, () => () => {});
     const bar = Math.max(equipBar(cur), cur + 0.012);
-    return list.some((it) => it && it.type === 'gear' && (it.req || 1) <= c.level && itemValue(it) <= this.budget(0.85) && fitScore(p, it, false).s > bar);
+    return list.some((it) => it && it.type === 'gear' && canEquipItem(c, it) && itemValue(it) <= this.budget(0.85) && fitScore(p, it, false).s > bar);
   },
   potionsWanted() {
     const c = G.char;
@@ -2123,7 +2132,7 @@ export const Auto = {
   },
   /** Stored gear to take out: an upgrade now, or what auto-play put away until the hero could wear it (to wear or sell).
    *  What the player stored stays put: auto-play would sell it. */
-  stashUpgrade(it) { return it.type === 'gear' && !it.sealed && !it.locked && (it.req || 1) <= G.char.level && ((it.autoStash === true && bagFree(G.char) >= 12) || this.isUpgrade(it)); },
+  stashUpgrade(it) { return it.type === 'gear' && !it.sealed && !it.locked && canEquipItem(G.char, it) && ((it.autoStash === true && bagFree(G.char) >= 12) || this.isUpgrade(it)); },
   /** Storage chest: take out the gems (for the jeweler and fusing) and the stored gear that's an upgrade now. */
   unstash() {
     const c = G.char;
@@ -2225,7 +2234,7 @@ export const Auto = {
       const cur = simulate(p, () => () => {}), bar = Math.max(equipBar(cur), cur + 0.012);
       let best = -1, bv = 0, bslot = null;
       list.forEach((it, i) => {
-        if (!it || it.type !== 'gear' || (it.req || 1) > c.level) return;
+        if (!it || it.type !== 'gear' || !canEquipItem(c, it)) return;
         const price = itemValue(it);
         if (price > this.budget(0.85)) return;
         const f = fitScore(p, it, false); // judged on its own sockets: the gold for new ones goes on the buy
@@ -2249,7 +2258,7 @@ export const Auto = {
     const p = G.player, c = G.char;
     for (const l of [Vendor.stock.weapons, Vendor.stock.armor, Vendor.stock.rings]) {
       if (!l || l === list) continue;
-      for (const o of l) if (o && o !== it && o.type === 'gear' && o.slot === it.slot && (o.req || 1) <= c.level && itemValue(o) <= this.budget(0.85) && fitScore(p, o, false).s > s) return true;
+      for (const o of l) if (o && o !== it && o.type === 'gear' && o.slot === it.slot && canEquipItem(c, o) && itemValue(o) <= this.budget(0.85) && fitScore(p, o, false).s > s) return true;
     }
     return false;
   },
@@ -2315,7 +2324,7 @@ export const Auto = {
       for (const r of gw.sig) need[r] = (need[r] || 0) + 1;
       if (!Object.entries(need).every(([r, n]) => (have[r] || 0) >= n)) continue;
       const n = gw.sig.length;
-      const fits = (it) => it && it.type === 'gear' && it.rarity === 0 && !it.relic && !it.locked && !it.sealed && gw.slots.includes(it.slot) && it.maxSockets >= n && it.sockets <= n && !it.gems.length && (it.req || 1) <= c.level && it.ilvl >= lvl - 12;
+      const fits = (it) => it && it.type === 'gear' && it.rarity === 0 && !it.relic && !it.locked && !it.sealed && gw.slots.includes(it.slot) && it.maxSockets >= n && it.sockets <= n && !it.gems.length && canEquipItem(c, it) && it.ilvl >= lvl - 12;
       let idx = c.bag.findIndex(fits);
       if (idx < 0) {
         for (const list of [Vendor.stock.weapons, Vendor.stock.armor]) {

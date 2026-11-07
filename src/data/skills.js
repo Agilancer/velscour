@@ -66,17 +66,19 @@ export function grantedSkillsAt(cls, level) {
 
 /** Effective level of a skill for a player: invested + item bonuses. */
 export function effLevel(player, sk) {
-  const base = player.char.skills[sk.id] || 0;
+  const skObj = typeof sk === 'string' ? SKILLS[sk] : sk;
+  const id = skObj?.id || (typeof sk === 'string' ? sk : null);
+  const base = (player.char && player.char.skills && id && player.char.skills[id]) || 0;
   if (!base) return 0;
   const st = player.st || {};
-  return base + Math.floor((st.skillsAll || 0) + (st['skillTree' + sk.tree] || 0));
+  return base + Math.floor((st.skillsAll || 0) + (skObj ? (st['skillTree' + skObj.tree] || 0) : 0));
 }
 
 /** Raw (pre player-multiplier) damage per hit for a skill at level L. */
 export function skillBaseDamage(sk, L) {
-  const row = sk.row;
-  const lv = 1 + 0.17 * (L - 1) + 0.004 * (L - 1) * (L - 1);
-  let d = (6 + row * 3.2) * lv * (1 + row * 0.4) * (sk.m.dmg ?? 1) * (KIND_DMG[sk.kind] ?? 1);
+  const row = sk.tierRow ?? sk.row;
+  const lv = 1 + 0.12 * (L - 1) + 0.0025 * (L - 1) * (L - 1);
+  let d = (7 + row * 3.5) * lv * (1 + row * 0.2) * (sk.m.dmg ?? 1) * (KIND_DMG[sk.kind] ?? 1);
   if (sk.kind === 'proj' && (sk.m.n || 1) > 1) d /= Math.pow(sk.m.n, 0.35);
   if (sk.kind === 'rain' || sk.kind === 'strike') d /= Math.pow((sk.m.n || 1) / 6, 0.25) || 1;
   if (sk.m.free) d *= 0.85;
@@ -87,7 +89,8 @@ export function rageCost(sk) { return sk.classId === 'barbarian' ? (sk.m.rage ||
 export function manaCost(sk, L) {
   if (sk.classId === 'barbarian' && (sk.kind === 'whirl' || rageCost(sk))) return 0; // Barbarian Rage abilities do not consume mana
   if (sk.m.free) return 0;
-  return Math.round((2.5 + sk.row * 2.4) * (1 + 0.07 * (L - 1)) * (sk.m.mana ?? 1) * (KIND_MANA[sk.kind] ?? 1));
+  const row = sk.tierRow ?? sk.row;
+  return Math.round((2.5 + Math.pow(row, 1.4) * 3.2) * (1 + 0.09 * (L - 1)) * (sk.m.mana ?? 1) * (KIND_MANA[sk.kind] ?? 1));
 }
 export function cooldown(sk) { return sk.m.cd ?? KIND_CD[sk.kind] ?? 0; }
 export function useTime(sk) { return sk.m.barrage ? 0 : KIND_USE[sk.kind] ?? 0.42; }
