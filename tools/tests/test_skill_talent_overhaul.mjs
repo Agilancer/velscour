@@ -260,6 +260,7 @@ console.log('3. Testing specific live gameplay morphs (sumSwap, el conversion, w
   while (canLearnTalent(cc, cdNode)) learnTalent(cc, cdNode.id);
   cp.recompute();
   assert(cp.st.cheatDeath, 'cheatDeath active on player');
+  cp.st.block = 0;
   cp.hp = 10;
   hit(bossFoe, cp, 999999, 'fire', { force: true });
   assert.equal(cp.dead, false, 'cheatDeath prevented player death');
