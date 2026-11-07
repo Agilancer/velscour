@@ -1,0 +1,1714 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#090706">
+  <title>VELSCOUR - Bestiary Compendium</title>
+  <link rel="icon" href="assets/ui/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Alegreya+Sans:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090706;
+      --bg-darker: #050403;
+      --panel: #140d0a;
+      --card-bg: #18110d;
+      --card-hover: #221813;
+      --border: #382519;
+      --border-highlight: #704828;
+      --gold: #d4af37;
+      --gold-bright: #ffe57f;
+      --gold-dim: #9a7b2c;
+      --crimson: #c22f1c;
+      --crimson-glow: rgba(194, 47, 28, 0.4);
+      --text: #e6dac6;
+      --text-dim: #a8947e;
+      --text-muted: #73604f;
+      --font-title: 'Cinzel', serif;
+      --font-body: 'Alegreya Sans', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image:
+        radial-gradient(ellipse at 50% 0%, rgba(138, 28, 12, 0.22) 0%, rgba(9, 7, 6, 0) 70%),
+        radial-gradient(ellipse at 50% 100%, rgba(60, 20, 10, 0.3) 0%, rgba(9, 7, 6, 0) 80%);
+      background-attachment: fixed;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #0c0807;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #382519;
+      border-radius: 4px;
+      border: 1px solid #1a120e;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #603d25;
+    }
+
+    /* Header */
+    header {
+      background: linear-gradient(180deg, rgba(20, 14, 10, 0.98) 0%, rgba(12, 8, 6, 0.95) 100%);
+      border-bottom: 2px solid var(--border);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7);
+      padding: 24px 20px 20px;
+      position: relative;
+    }
+
+    .header-top {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-logo {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.5));
+    }
+
+    .brand-titles h1 {
+      font-family: var(--font-title);
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: #fff;
+      text-transform: uppercase;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 14px rgba(212, 175, 55, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-titles h1 span {
+      color: var(--gold);
+    }
+
+    .brand-titles p {
+      color: var(--text-dim);
+      font-size: 14px;
+      letter-spacing: 0.5px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-action {
+      background: linear-gradient(180deg, #2a1a12 0%, #170d08 100%);
+      color: var(--gold);
+      border: 1px solid var(--border-highlight);
+      font-family: var(--font-title);
+      font-size: 13px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    .btn-action:hover {
+      background: linear-gradient(180deg, #3d251a 0%, #26160e 100%);
+      border-color: var(--gold);
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(212, 175, 55, 0.25);
+    }
+
+    /* Stats Ribbon */
+    .stats-ribbon {
+      max-width: 1400px;
+      margin: 18px auto 0;
+      padding-top: 14px;
+      border-top: 1px solid rgba(120, 80, 50, 0.2);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 24px;
+      align-items: center;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .stat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stat-badge b {
+      color: var(--gold-bright);
+      font-family: var(--font-title);
+      font-size: 15px;
+    }
+
+    /* Sticky Control Toolbar */
+    .toolbar-sticky {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(13, 9, 7, 0.96);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8);
+      padding: 14px 20px;
+    }
+
+    .toolbar-wrap {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .toolbar-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Search Box */
+    .search-box {
+      flex: 1 1 280px;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      background: #140d0a;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 15px;
+      padding: 9px 36px 9px 12px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-box input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+      background: #1a110d;
+    }
+
+    .search-box .clear-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+      display: none;
+    }
+
+    .search-box input:not(:placeholder-shown)+.clear-btn {
+      display: block;
+    }
+
+    /* Select Inputs */
+    .filter-select {
+      background: #160e0a;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      padding: 8px 10px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .filter-select:hover {
+      border-color: var(--border-highlight);
+    }
+
+    .filter-select:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 8px rgba(212, 175, 55, 0.2);
+    }
+
+    .filter-select option {
+      background: #1a120e;
+      color: var(--text);
+    }
+
+    /* Palette Quick Pill */
+    .palette-pill-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .counter-pill {
+      margin-left: auto;
+      font-size: 13px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .counter-pill b {
+      color: var(--gold);
+    }
+
+    .btn-reset {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: all 0.2s;
+    }
+
+    .btn-reset:hover {
+      border-color: var(--crimson);
+      color: #ff9999;
+    }
+
+    /* Main Container */
+    main {
+      max-width: 1400px;
+      margin: 24px auto 80px;
+      padding: 0 20px;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state h3 {
+      font-family: var(--font-title);
+      font-size: 22px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    /* Grid Layout */
+    .monster-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
+      gap: 18px;
+    }
+
+    /* Monster Card */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      background: var(--card-hover);
+      border-color: var(--border-highlight);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 16px rgba(212, 175, 55, 0.2);
+    }
+
+    .card.is-boss {
+      border-color: rgba(212, 175, 55, 0.45);
+      background: linear-gradient(180deg, #1d140e 0%, #150d09 100%);
+    }
+
+    .card.is-boss:hover {
+      border-color: var(--gold-bright);
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.8), 0 0 20px rgba(212, 175, 55, 0.4);
+    }
+
+    /* Card Badges Row */
+    .card-topbar {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      right: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .badge-boss {
+      background: linear-gradient(135deg, #a67c1e 0%, #5a400a 100%);
+      color: #fff;
+      font-family: var(--font-title);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 3px 7px;
+      border-radius: 3px;
+      border: 1px solid var(--gold);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+
+    .badge-element {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 3px;
+      background: rgba(10, 6, 4, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Sprite Stage */
+    .sprite-stage {
+      width: 100%;
+      height: 180px;
+      background: radial-gradient(circle at 50% 60%, rgba(55, 30, 18, 0.35) 0%, rgba(12, 8, 6, 0.95) 75%);
+      border-bottom: 1px solid rgba(80, 50, 30, 0.25);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .sprite-stage canvas {
+      max-width: 100%;
+      max-height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8));
+      transition: transform 0.3s ease;
+    }
+
+    .card:hover .sprite-stage canvas {
+      transform: scale(1.08);
+    }
+
+    .sprite-placeholder {
+      font-size: 28px;
+      opacity: 0.25;
+      animation: pulse 1.8s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse {
+      from {
+        opacity: 0.15;
+        transform: scale(0.95);
+      }
+
+      to {
+        opacity: 0.4;
+        transform: scale(1.05);
+      }
+    }
+
+    /* Card Details */
+    .card-body {
+      padding: 12px 14px 14px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      gap: 8px;
+    }
+
+    .card-title-wrap {
+      border-bottom: 1px solid rgba(90, 60, 40, 0.2);
+      padding-bottom: 6px;
+    }
+
+    .card-title {
+      font-family: var(--font-title);
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card.is-boss .card-title {
+      color: var(--gold-bright);
+    }
+
+    .card-subtitle {
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      margin-top: 2px;
+    }
+
+    /* Stat Pips Bar */
+    .stat-pips {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      background: rgba(10, 6, 4, 0.6);
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(60, 40, 25, 0.4);
+      font-size: 11.5px;
+      text-align: center;
+    }
+
+    .stat-pip {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .stat-pip span {
+      color: var(--text-muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-pip b {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    /* Tags Row */
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: auto;
+    }
+
+    .tag {
+      background: #1f140e;
+      border: 1px solid rgba(80, 50, 30, 0.4);
+      color: var(--text-dim);
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .tag.tag-move {
+      color: #ffd080;
+      border-color: rgba(212, 175, 55, 0.3);
+    }
+
+    .tag.tag-trait {
+      color: #b0c4de;
+      border-color: rgba(100, 149, 237, 0.3);
+    }
+
+    /* Modal Dossier */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-dossier {
+      background: linear-gradient(180deg, #1b120c 0%, #100b07 100%);
+      border: 2px solid var(--border-highlight);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9), 0 0 30px rgba(180, 120, 40, 0.25);
+      border-radius: 8px;
+      width: 100%;
+      max-width: 880px;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transform: scale(0.96);
+      transition: transform 0.25s ease;
+    }
+
+    .modal-overlay.open .modal-dossier {
+      transform: scale(1);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(25, 15, 10, 0.8);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+      border-color: var(--gold);
+      color: #fff;
+      background: #3a1a10;
+    }
+
+    .modal-nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(20, 12, 8, 0.85);
+      border: 1px solid var(--border);
+      color: var(--gold);
+      width: 40px;
+      height: 48px;
+      cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      transition: all 0.2s;
+    }
+
+    .modal-nav-btn:hover {
+      background: #2f1d13;
+      border-color: var(--gold);
+      color: #fff;
+    }
+
+    .modal-nav-prev {
+      left: 8px;
+      border-radius: 4px 0 0 4px;
+    }
+
+    .modal-nav-next {
+      right: 8px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .modal-content {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    /* Modal Left: Showcase */
+    .modal-showcase {
+      background: radial-gradient(circle at 50% 50%, rgba(60, 30, 15, 0.4) 0%, rgba(10, 6, 4, 0.98) 80%);
+      border-right: 1px solid var(--border);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .modal-canvas-wrap {
+      width: 280px;
+      height: 280px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(8, 5, 4, 0.6);
+      border: 1px solid rgba(80, 50, 30, 0.4);
+      border-radius: 6px;
+      box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8);
+    }
+
+    .modal-canvas-wrap canvas {
+      max-width: 100%;
+      max-height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.9));
+    }
+
+    .modal-controls {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modal-swatches-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .swatches-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      max-height: 90px;
+      overflow-y: auto;
+      padding: 4px;
+      background: rgba(10, 6, 4, 0.6);
+      border: 1px solid rgba(60, 40, 25, 0.4);
+      border-radius: 4px;
+    }
+
+    .swatch-btn {
+      padding: 3px 8px;
+      background: #1f140e;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 11px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .swatch-btn:hover {
+      border-color: var(--gold);
+      color: #fff;
+    }
+
+    .swatch-btn.active {
+      background: var(--gold-dim);
+      border-color: var(--gold-bright);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    /* Modal Right: Data Dossier */
+    .modal-info {
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-header h2 {
+      font-family: var(--font-title);
+      font-size: 24px;
+      color: var(--gold-bright);
+      letter-spacing: 1px;
+      line-height: 1.2;
+    }
+
+    .modal-header .modal-sub {
+      color: var(--text-dim);
+      font-size: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    .dossier-section {
+      border-top: 1px solid rgba(80, 50, 30, 0.3);
+      padding-top: 12px;
+    }
+
+    .dossier-section h4 {
+      font-family: var(--font-title);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--gold-dim);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dossier-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .dossier-stat-card {
+      background: rgba(14, 9, 7, 0.7);
+      border: 1px solid rgba(60, 40, 25, 0.5);
+      border-radius: 4px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dossier-stat-card .label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .dossier-stat-card .value {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .moves-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .move-item {
+      background: rgba(20, 13, 9, 0.6);
+      border: 1px solid rgba(80, 50, 30, 0.3);
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
+    .move-item b {
+      color: var(--gold);
+      margin-right: 6px;
+    }
+
+    .dossier-text {
+      font-size: 13.5px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    /* Back to Top */
+    #back-to-top {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(25, 16, 12, 0.9);
+      border: 1px solid var(--border-highlight);
+      color: var(--gold);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+      transition: all 0.2s;
+      z-index: 40;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #back-to-top.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #back-to-top:hover {
+      background: #3f2619;
+      color: #fff;
+      transform: translateY(-2px);
+    }
+
+    /* Responsive */
+    @media (max-width: 860px) {
+      .modal-content {
+        grid-template-columns: 1fr;
+      }
+
+      .modal-showcase {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .modal-canvas-wrap {
+        width: 220px;
+        height: 220px;
+      }
+
+      .modal-nav-btn {
+        display: none;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .monster-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 12px;
+      }
+
+      .sprite-stage {
+        height: 140px;
+      }
+
+      .card-title {
+        font-size: 13px;
+      }
+
+      .stat-pips {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .header-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-top">
+      <div class="brand-wrap">
+        <img class="brand-logo" src="assets/ui/velscour_contact_skull.png" alt="Velscour">
+        <div class="brand-titles">
+          <h1>VELSCOUR · <span>BESTIARY</span></h1>
+          <p>Compendium of every fiend, guardian, and colossus of the Abyss</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="classes.html" class="btn-action">Hero Classes</a>
+        <a href="index.html" class="btn-action"
+          style="color:var(--gold-bright);border-color:var(--gold);">Play Game →</a>
+      </div>
+    </div>
+    <div class="stats-ribbon">
+      <div class="stat-badge"><span>Total Catalogue:</span> <b id="stat-total">1,090+</b></div>
+      <div class="stat-badge"><span>Bosses & Guardians:</span> <b id="stat-bosses">280</b></div>
+      <div class="stat-badge"><span>Archetypes:</span> <b>22+ Base</b></div>
+      <div class="stat-badge"><span>Expansions:</span> <b>8 Biome Packs</b></div>
+      <div class="stat-badge"><span>Palette Swaps:</span> <b>29 Biome Tints</b></div>
+    </div>
+  </header>
+
+  <!-- Sticky Controls Toolbar -->
+  <div class="toolbar-sticky">
+    <div class="toolbar-wrap">
+      <!-- Row 1: Search & Major Filters -->
+      <div class="toolbar-row">
+        <div class="search-box">
+          <input type="search" id="search-input"
+            placeholder="Search by name, ID, archetype, or ability (e.g. Cleaver, Lich, Colossus, combo)...">
+          <button class="clear-btn" id="clear-search" aria-label="Clear Search">✕</button>
+        </div>
+
+        <select class="filter-select" id="filter-expansion" title="Filter by Expansion / Biome Set">
+          <option value="">All Expansions (1,090+)</option>
+          <option value="set1">Set 1: Undead & Demonic (70)</option>
+          <option value="set2">Set 2: Giants & Colossi (300)</option>
+          <option value="set3">Set 3: Lords of the Deep & Arena (260)</option>
+          <option value="breach">The Eternal Breach (230)</option>
+          <option value="sea_of_sand">The Sea of Sand (70)</option>
+          <option value="depths_edge">Depths Edge & Catacombs (60)</option>
+          <option value="air">The Pirate Skies (40)</option>
+          <option value="heavenly">The Heavenly Sanctum (60)</option>
+          <option value="velscour">Lords of Velscour (Demon Lord)</option>
+        </select>
+
+        <select class="filter-select" id="filter-rank" title="Filter by Encounter Rank">
+          <option value="">All Ranks</option>
+          <option value="boss">Bosses & Guardians Only (280)</option>
+          <option value="pack">Pack / Minion Creatures Only</option>
+        </select>
+
+        <select class="filter-select" id="filter-arch" title="Filter by AI Archetype">
+          <option value="">All Archetypes</option>
+          <option value="melee">Melee Fighters</option>
+          <option value="ranged">Ranged Skirmishers</option>
+          <option value="caster">Spellcasters & Summoners</option>
+          <option value="brute">Colossal Brutes</option>
+          <option value="charger">Chargers & Hounds</option>
+          <option value="beamer">Beamers & Eyes</option>
+          <option value="nova">Nova Emitters</option>
+          <option value="swarm">Swarm & Flyers</option>
+          <option value="exploder">Volatile Exploders</option>
+        </select>
+      </div>
+
+      <!-- Row 2: Elements, Traits, Palette Swap & Sort -->
+      <div class="toolbar-row">
+        <select class="filter-select" id="filter-element" title="Filter by Element">
+          <option value="">All Elements</option>
+          <option value="phys">⚔️ Physical</option>
+          <option value="fire">🔥 Fire</option>
+          <option value="cold">❄️ Cold</option>
+          <option value="lightning">⚡ Lightning</option>
+          <option value="poison">☠️ Poison</option>
+          <option value="shadow">🌑 Shadow</option>
+          <option value="arcane">✨ Arcane</option>
+          <option value="holy">☀️ Holy</option>
+          <option value="blood">🩸 Blood</option>
+        </select>
+
+        <select class="filter-select" id="filter-trait" title="Filter by Trait">
+          <option value="">All Traits</option>
+          <option value="undead">💀 Undead</option>
+          <option value="demon">😈 Demon</option>
+          <option value="fly">🪶 Flying</option>
+          <option value="armor">🛡️ Armored</option>
+        </select>
+
+        <div class="palette-pill-wrap">
+          <span>Palette:</span>
+          <select class="filter-select" id="filter-swap" title="Preview monsters with game biome palette swaps">
+            <option value="">Authored Colors (Default)</option>
+            <option value="ember">🔥 Ember (Fiery Orange)</option>
+            <option value="frost">❄️ Frost (Glacial Ice)</option>
+            <option value="venom">☠️ Venom (Toxic Green)</option>
+            <option value="blood">🩸 Blood (Crimson Gore)</option>
+            <option value="void">🌌 Void (Dark Violet)</option>
+            <option value="abyss">🌊 Abyss (Deep Stygian)</option>
+            <option value="infernal">🌋 Infernal (Brimstone)</option>
+            <option value="ash">🌫️ Ash (Monochrome Dusk)</option>
+            <option value="sand">🏜️ Sand (Sunbleached)</option>
+            <option value="gilded">👑 Gilded (Burnished Gold)</option>
+            <option value="storm">⚡ Storm (Arcane Blue)</option>
+            <option value="shadow">🌑 Shadow (Darkened Umbra)</option>
+            <option value="obsidian">💎 Obsidian (Glossy Slate)</option>
+            <option value="crystal">🔮 Crystal (Prismatic Teal)</option>
+            <option value="bone">🦴 Bone (Ivory Calcite)</option>
+            <option value="spectral">👻 Spectral (Ghostly Ecto)</option>
+            <option value="amethyst">🟣 Amethyst (Rich Purple)</option>
+            <option value="verdigris">🌿 Verdigris (Aged Copper)</option>
+            <option value="rust">⚙️ Rust (Corroded Iron)</option>
+          </select>
+        </div>
+
+        <select class="filter-select" id="filter-sort" title="Sort Order">
+          <option value="name_asc">Sort: Name (A → Z)</option>
+          <option value="name_desc">Sort: Name (Z → A)</option>
+          <option value="height_desc">Sort: Height (Tallest First)</option>
+          <option value="height_asc">Sort: Height (Shortest First)</option>
+          <option value="hp_desc">Sort: HP (Highest First)</option>
+          <option value="dmg_desc">Sort: Damage (Highest First)</option>
+          <option value="spd_desc">Sort: Speed (Fastest First)</option>
+        </select>
+
+        <div class="counter-pill">
+          <span id="counter-text">Showing <b>0</b> creatures</span>
+          <button class="btn-reset" id="btn-reset" title="Reset all search filters">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Grid -->
+  <main>
+    <div id="bestiary-grid" class="monster-grid"></div>
+    <div id="empty-state" class="empty-state" style="display:none">
+      <h3>No creatures matched your search</h3>
+      <p>Try clearing filters or searching for another term like "skeleton", "lich", "dragon", or "boss".</p>
+    </div>
+  </main>
+
+  <!-- Detailed Dossier Modal -->
+  <div class="modal-overlay" id="detail-modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-dossier">
+      <button class="modal-close" id="modal-close" aria-label="Close Dossier">✕</button>
+      <button class="modal-nav-btn modal-nav-prev" id="modal-prev" aria-label="Previous Monster">‹</button>
+      <button class="modal-nav-btn modal-nav-next" id="modal-next" aria-label="Next Monster">›</button>
+
+      <div class="modal-content">
+        <!-- Left: Showcase -->
+        <div class="modal-showcase">
+          <div class="modal-canvas-wrap">
+            <canvas id="modal-canvas" width="280" height="280"></canvas>
+          </div>
+          <div class="modal-controls">
+            <div class="modal-swatches-label">
+              <span>Live Biome Palette</span>
+              <span id="modal-active-swap-name">Default</span>
+            </div>
+            <div class="swatches-grid" id="modal-swatches"></div>
+          </div>
+        </div>
+
+        <!-- Right: Data -->
+        <div class="modal-info">
+          <div class="modal-header">
+            <h2 id="modal-name">Monster Name</h2>
+            <div class="modal-sub">
+              <span id="modal-arch-badge" class="tag">Archetype</span>
+              <span id="modal-rank-badge" class="badge-boss">Boss</span>
+              <span id="modal-elem-badge" class="badge-element">Element</span>
+              <span id="modal-sheet-text" style="color:var(--text-muted);font-size:12px;">Sheet: set1/skeletons</span>
+            </div>
+          </div>
+
+          <div class="dossier-section">
+            <h4>Combat Profile & AI</h4>
+            <p id="modal-ai-desc" class="dossier-text">Detailed behavior description.</p>
+          </div>
+
+          <div class="dossier-section">
+            <h4>Base Archetype Attributes</h4>
+            <div class="dossier-stats-grid">
+              <div class="dossier-stat-card"><span class="label">Health Mult</span><span class="value"
+                  id="modal-hp">1.0x</span></div>
+              <div class="dossier-stat-card"><span class="label">Damage Mult</span><span class="value"
+                  id="modal-dmg">1.0x</span></div>
+              <div class="dossier-stat-card"><span class="label">Move Speed</span><span class="value"
+                  id="modal-spd">2.5</span></div>
+              <div class="dossier-stat-card"><span class="label">World Height</span><span class="value" id="modal-h">54
+                  px</span></div>
+              <div class="dossier-stat-card"><span class="label">Hit Radius</span><span class="value"
+                  id="modal-r">0.32</span></div>
+              <div class="dossier-stat-card"><span class="label">Pack Size</span><span class="value" id="modal-pack">3 -
+                  6</span></div>
+            </div>
+          </div>
+
+          <div class="dossier-section" id="modal-moves-section">
+            <h4>Signature Combat Abilities</h4>
+            <div class="moves-list" id="modal-moves-list"></div>
+          </div>
+
+          <div class="dossier-section">
+            <h4>Slain Dynamics & Gore</h4>
+            <p id="modal-gore-desc" class="dossier-text">Gore description.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Back to top button -->
+  <button id="back-to-top" aria-label="Back to Top">▲</button>
+
+  <!-- ES Module Script -->
+  <script type="module">
+    import { BESTIARY, SWAPS } from './src/data/bestiary.js';
+    import { ARCH, ARCH_MOVES, GORE } from './src/data/enemies.js';
+    import { enemyImage, loadArtFor } from './src/core/enemyart.js';
+
+    // Descriptions for combat abilities
+    const MOVE_INFO = {
+      combo: { name: 'Combo Flurry', desc: 'Strikes the target with three rapid, consecutive weapon blows in close melee.' },
+      lunge: { name: 'Leaping Lunge', desc: 'Suddenly leaps across open distance directly onto the hero with staggering impact.' },
+      whirl: { name: 'Whirlwind Spin', desc: 'Spins weapon in a 360-degree radius, striking every adjacent enemy.' },
+      quake: { name: 'Fissure Quake', desc: 'Slams the earth to send a destructive ground fissure tearing forward.' },
+      hook: { name: 'Chain Meat-Hook', desc: 'Hurls an iron chain to snare and drag the hero directly into melee reach.' },
+      frenzy: { name: 'Enraged Frenzy', desc: 'Gains heightened attack and movement speed as its vitality diminishes.' },
+      snipe: { name: 'Piercing Snipe', desc: 'Takes aim and fires a high-velocity piercing shot across long distance.' },
+      fan: { name: 'Spread Fan', desc: 'Unleashes a wide 5-projectile arc volley covering escape paths.' },
+      burst: { name: 'Leading Burst', desc: 'Fires three or more consecutive projectiles predicting hero vector movement.' },
+      lob: { name: 'Caustic Lob', desc: 'Arcs a bile glob over walls and obstacles that leaves a hazard puddle.' },
+      blink: { name: 'Phase Blink', desc: 'Tactically teleports backward to safety whenever closed down in melee.' },
+      runes: { name: 'Abyssal Runes', desc: 'Places three delayed detonation runes on the floor around the target.' },
+      orbs: { name: 'Orbital Ring', desc: 'Summons an expanding ring of slow-moving energy spheres that track outward.' },
+      sweep: { name: 'Beamer Sweep', desc: 'Channels a piercing continuous energy beam swept across a lethal arc.' },
+      web: { name: 'Venom Web', desc: 'Launches a sticky web projectile that roots and severely slows victims.' },
+      slam: { name: 'Crushing Slam', desc: 'Heavy overhead ground strike dealing colossal area shock damage.' },
+      charge: { name: 'Dune Charge', desc: 'Rushes forward at extreme velocity, trampling all targets in line of sight.' },
+      nova: { name: 'Elemental Nova', desc: 'Discharges an explosive radial burst outwards in all directions.' },
+      meteor: { name: 'Meteor Fall', desc: 'Calls down searing brimstone meteors from the sky on target ground.' }
+    };
+
+    const AI_INFO = {
+      melee: { name: 'Melee Combatant', desc: 'Closes directly into melee range and executes rapid weapon and claw attacks.' },
+      ranged: { name: 'Ranged Skirmisher', desc: 'Keeps distance while firing accurate projectile volleys and repositioning.' },
+      caster: { name: 'Abyssal Spellcaster', desc: 'Channels high-damage elemental spells, floor runes, or summons reinforcements.' },
+      brute: { name: 'Colossal Brute', desc: 'Heavily armored titan with immense health pools and devastating area attacks.' },
+      charger: { name: 'Vicious Charger', desc: 'Circles warily before unleashing high-speed lunges and closing rushes.' },
+      beamer: { name: 'Beamer / Watcher', desc: 'Hovers in position, projecting lethal sustained beams and orbital spheres.' },
+      nova: { name: 'Nova Emitter', desc: 'Pulses dangerous shockwaves or poison clouds in continuous radial pulses.' },
+      swarm: { name: 'Swarm / Pack', desc: 'Fast, erratic flyer that overwhelms targets in coordinated numbers.' },
+      exploder: { name: 'Volatile Exploder', desc: 'Sprints recklessly toward the hero and self-detonates on impact.' },
+      boss: { name: 'Abyssal Boss / Lord', desc: 'Major encounter with multi-phase abilities, unique mechanics, and enrage timers.' }
+    };
+
+    const GORE_INFO = {
+      flesh: { name: 'Flesh & Blood', desc: 'Splashes deep crimson blood and scatters organic remains when destroyed.' },
+      bone: { name: 'Bone & Calcite', desc: 'Shatters into flying bone shards, rib cages, and pale marrow dust.' },
+      goo: { name: 'Toxic Slime', desc: 'Bursts into toxic green ooze and acidic puddles upon dissolution.' },
+      ecto: { name: 'Spectral Ectoplasm', desc: 'Dissolves into ethereal turquoise mist and ghostly residual spirits.' },
+      rock: { name: 'Living Stone', desc: 'Collapses into solid granite rubble, heavy boulders, and stone chunks.' },
+      spark: { name: 'Primal Spark', desc: 'Erupts into incandescent fire sparks, embers, and burning motes.' }
+    };
+
+    const ELEMENT_INFO = {
+      phys: { name: 'Physical', icon: '⚔️', color: '#c8b496' },
+      fire: { name: 'Fire', icon: '🔥', color: '#ff6214' },
+      cold: { name: 'Cold', icon: '❄️', color: '#5ec8ff' },
+      lightning: { name: 'Lightning', icon: '⚡', color: '#ffd232' },
+      poison: { name: 'Poison', icon: '☠️', color: '#66e044' },
+      shadow: { name: 'Shadow', icon: '🌑', color: '#b066ff' },
+      arcane: { name: 'Arcane', icon: '✨', color: '#e055ff' },
+      holy: { name: 'Holy', icon: '☀️', color: '#fff088' },
+      blood: { name: 'Blood', icon: '🩸', color: '#e02838' },
+      acid: { name: 'Acid', icon: '🧪', color: '#a0f020' },
+      light: { name: 'Light', icon: '✨', color: '#ffe080' }
+    };
+
+    // Expansion category helper
+    function getExpansion(sheet, id) {
+      if (id === 'va_velscour') return { key: 'velscour', name: 'Lords of Velscour' };
+      if (sheet.startsWith('set1/')) return { key: 'set1', name: 'Set 1: Undead & Demonic' };
+      if (sheet.startsWith('set2/')) return { key: 'set2', name: 'Set 2: Giants & Colossi' };
+      if (sheet.startsWith('set3/')) return { key: 'set3', name: 'Set 3: Lords of the Deep & Arena' };
+      if (sheet.startsWith('breach/')) return { key: 'breach', name: 'The Eternal Breach' };
+      if (sheet === 'sea_of_sand') return { key: 'sea_of_sand', name: 'The Sea of Sand' };
+      if (sheet.startsWith('depths_edge/')) return { key: 'depths_edge', name: 'Depths Edge & Catacombs' };
+      if (sheet.startsWith('air/')) return { key: 'air', name: 'The Pirate Skies' };
+      if (sheet === 'heavenly/generated') return { key: 'heavenly', name: 'The Heavenly Sanctum' };
+      return { key: 'other', name: 'Other' };
+    }
+
+    // Assemble the full catalogue (injecting Demon Lord Velscour)
+    const VELSCOUR_LORD = {
+      id: 'va_velscour',
+      name: 'Demon Lord Velscour',
+      arch: 'velscour',
+      sheet: 'replacements',
+      h: 94,
+      boss: true,
+      lone: true,
+      demon: true,
+      gore: 'flesh',
+      el: 'fire',
+      desc: 'The ancient Demon Lord entombed beneath the world, whose dark fiery will fuels the nightmare depths of the Abyss.'
+    };
+
+    const CATALOGUE = [VELSCOUR_LORD, ...BESTIARY].map((raw, index) => {
+      const archKey = raw.arch || 'skeleton';
+      const arch = ARCH[archKey] || ARCH[archKey.toLowerCase()] || ARCH.skeleton || {};
+      const moves = ARCH_MOVES[archKey] || ARCH_MOVES[archKey.toLowerCase()] || [];
+      const exp = getExpansion(raw.sheet, raw.id);
+      const isBoss = !!(raw.boss || raw.lone || arch.ai === 'boss');
+      const isUndead = !!(raw.undead || arch.undead);
+      const isDemon = !!(raw.demon || arch.demon);
+      const isFly = !!(raw.fly || arch.fly);
+      const isArmor = !!(raw.armor || arch.armor);
+      const elem = raw.el || arch.el || 'phys';
+      const gore = raw.gore || arch.gore || 'flesh';
+
+      return {
+        ...raw,
+        index,
+        archKey,
+        arch,
+        moves,
+        expansion: exp,
+        isBoss,
+        isUndead,
+        isDemon,
+        isFly,
+        isArmor,
+        elem,
+        gore,
+        hpMult: arch.hp !== undefined ? arch.hp : 1,
+        dmgMult: arch.dmg !== undefined ? arch.dmg : 1,
+        speed: arch.spd !== undefined ? arch.spd : 2.5,
+        radius: arch.r !== undefined ? arch.r : 0.35,
+        pack: arch.pack || (isBoss ? [1, 1] : [2, 4]),
+        height: raw.h || 54
+      };
+    });
+
+    // Populate header stats
+    document.getElementById('stat-total').textContent = CATALOGUE.length.toLocaleString();
+    const bossesCount = CATALOGUE.filter(m => m.isBoss).length;
+    document.getElementById('stat-bosses').textContent = bossesCount.toLocaleString();
+
+    // DOM Elements
+    const gridEl = document.getElementById('bestiary-grid');
+    const emptyStateEl = document.getElementById('empty-state');
+    const counterTextEl = document.getElementById('counter-text');
+    const searchInput = document.getElementById('search-input');
+    const clearSearchBtn = document.getElementById('clear-search');
+    const expSelect = document.getElementById('filter-expansion');
+    const rankSelect = document.getElementById('filter-rank');
+    const archSelect = document.getElementById('filter-arch');
+    const elemSelect = document.getElementById('filter-element');
+    const traitSelect = document.getElementById('filter-trait');
+    const swapSelect = document.getElementById('filter-swap');
+    const sortSelect = document.getElementById('filter-sort');
+    const resetBtn = document.getElementById('btn-reset');
+    const backToTopBtn = document.getElementById('back-to-top');
+
+    // Modal DOM Elements
+    const modalEl = document.getElementById('detail-modal');
+    const modalCloseBtn = document.getElementById('modal-close');
+    const modalPrevBtn = document.getElementById('modal-prev');
+    const modalNextBtn = document.getElementById('modal-next');
+    const modalCanvas = document.getElementById('modal-canvas');
+    const modalName = document.getElementById('modal-name');
+    const modalArchBadge = document.getElementById('modal-arch-badge');
+    const modalRankBadge = document.getElementById('modal-rank-badge');
+    const modalElemBadge = document.getElementById('modal-elem-badge');
+    const modalSheetText = document.getElementById('modal-sheet-text');
+    const modalAiDesc = document.getElementById('modal-ai-desc');
+    const modalHp = document.getElementById('modal-hp');
+    const modalDmg = document.getElementById('modal-dmg');
+    const modalSpd = document.getElementById('modal-spd');
+    const modalH = document.getElementById('modal-h');
+    const modalR = document.getElementById('modal-r');
+    const modalPack = document.getElementById('modal-pack');
+    const modalMovesList = document.getElementById('modal-moves-list');
+    const modalGoreDesc = document.getElementById('modal-gore-desc');
+    const modalSwatches = document.getElementById('modal-swatches');
+    const modalActiveSwapName = document.getElementById('modal-active-swap-name');
+
+    let currentFiltered = [...CATALOGUE];
+    let modalMonsterIndex = 0;
+    let currentGlobalSwap = null;
+    let modalCustomSwap = null;
+
+    // Sprite drawing helper
+    function renderSpriteToCanvas(cv, spriteCanvas) {
+      const ctx = cv.getContext('2d');
+      const w = cv.width, h = cv.height;
+      ctx.clearRect(0, 0, w, h);
+      if (!spriteCanvas) return;
+
+      const sw = spriteCanvas.width, sh = spriteCanvas.height;
+      const padding = 12;
+      const scale = Math.min((w - padding * 2) / sw, (h - padding * 2) / sh, 2.2);
+      const dw = Math.round(sw * scale);
+      const dh = Math.round(sh * scale);
+      const dx = Math.round((w - dw) / 2);
+      const dy = Math.round((h - dh) / 2);
+
+      // Floor Shadow
+      const shadowY = Math.min(h - 10, dy + dh - 4);
+      const shadowW = Math.max(18, dw * 0.42);
+      const shadowH = Math.max(6, shadowW * 0.28);
+      const grad = ctx.createRadialGradient(w / 2, shadowY, 0, w / 2, shadowY, shadowW);
+      grad.addColorStop(0, 'rgba(0, 0, 0, 0.7)');
+      grad.addColorStop(0.65, 'rgba(0, 0, 0, 0.25)');
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(w / 2, shadowY, shadowW, shadowH, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pixel Sprite
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(spriteCanvas, dx, dy, dw, dh);
+    }
+
+    // Lazy load sprites via IntersectionObserver
+    const observer = new IntersectionObserver((entries) => {
+      const loadBatch = [];
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const card = entry.target;
+          observer.unobserve(card);
+          const id = card.dataset.id;
+          if (id) loadBatch.push({ card, id });
+        }
+      }
+      if (!loadBatch.length) return;
+
+      const ids = loadBatch.map(b => b.id);
+      loadArtFor(ids).then(() => {
+        for (const { card, id } of loadBatch) {
+          drawCardSprite(card, id, currentGlobalSwap);
+        }
+      });
+    }, { rootMargin: '300px 0px' });
+
+    function drawCardSprite(card, id, swapKey) {
+      const cv = card.querySelector('.sprite-canvas');
+      const placeholder = card.querySelector('.sprite-placeholder');
+      if (!cv) return;
+      const swap = swapKey ? SWAPS[swapKey] : null;
+      const sprite = enemyImage(id, swap);
+      if (sprite) {
+        renderSpriteToCanvas(cv, sprite);
+        cv.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+      }
+    }
+
+    // Create Card DOM
+    function createCardElement(m) {
+      const card = document.createElement('div');
+      card.className = `card ${m.isBoss ? 'is-boss' : ''}`;
+      card.dataset.id = m.id;
+      card.dataset.index = m.index;
+
+      const elInfo = ELEMENT_INFO[m.elem] || ELEMENT_INFO.phys;
+
+      card.innerHTML = `
+        <div class="card-topbar">
+          ${m.isBoss ? '<span class="badge-boss">👑 BOSS</span>' : '<span></span>'}
+          <span class="badge-element" style="color:${elInfo.color}">${elInfo.icon} ${elInfo.name}</span>
+        </div>
+        <div class="sprite-stage">
+          <canvas class="sprite-canvas" width="160" height="160" style="display:none"></canvas>
+          <div class="sprite-placeholder">💀</div>
+        </div>
+        <div class="card-body">
+          <div class="card-title-wrap">
+            <div class="card-title" title="${escapeHtml(m.name)}">${escapeHtml(m.name)}</div>
+            <div class="card-subtitle">
+              <span>${escapeHtml(m.archKey)}</span>
+              <span>H: ${m.height}px</span>
+            </div>
+          </div>
+          <div class="stat-pips">
+            <div class="stat-pip"><span>HP</span><b>${m.hpMult}x</b></div>
+            <div class="stat-pip"><span>ATK</span><b>${m.dmgMult}x</b></div>
+            <div class="stat-pip"><span>SPD</span><b>${m.speed}</b></div>
+            <div class="stat-pip"><span>PACK</span><b>${m.pack[0]}-${m.pack[1]}</b></div>
+          </div>
+          <div class="card-tags">
+            ${m.isUndead ? '<span class="tag tag-trait">Undead</span>' : ''}
+            ${m.isDemon ? '<span class="tag tag-trait">Demon</span>' : ''}
+            ${m.isFly ? '<span class="tag tag-trait">Flying</span>' : ''}
+            ${m.isArmor ? '<span class="tag tag-trait">Armored</span>' : ''}
+            ${m.moves.slice(0, 2).map(mv => `<span class="tag tag-move">${mv}</span>`).join('')}
+          </div>
+        </div>
+      `;
+
+      card.addEventListener('click', () => openModal(m));
+      return card;
+    }
+
+    // Escape helper
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+      }[tag] || tag));
+    }
+
+    // Apply Filter & Sort
+    function applyFilters() {
+      const query = searchInput.value.trim().toLowerCase();
+      const exp = expSelect.value;
+      const rank = rankSelect.value;
+      const arch = archSelect.value;
+      const elem = elemSelect.value;
+      const trait = traitSelect.value;
+      const sort = sortSelect.value;
+      const newSwap = swapSelect.value;
+
+      currentFiltered = CATALOGUE.filter(m => {
+        if (query) {
+          const matchName = m.name.toLowerCase().includes(query);
+          const matchId = m.id.toLowerCase().includes(query);
+          const matchArch = m.archKey.toLowerCase().includes(query);
+          const matchMove = m.moves.some(mv => mv.toLowerCase().includes(query));
+          if (!matchName && !matchId && !matchArch && !matchMove) return false;
+        }
+
+        if (exp && m.expansion.key !== exp) return false;
+        if (rank === 'boss' && !m.isBoss) return false;
+        if (rank === 'pack' && m.isBoss) return false;
+        if (arch && m.arch.ai !== arch && m.archKey !== arch) return false;
+        if (elem && m.elem !== elem) return false;
+
+        if (trait === 'undead' && !m.isUndead) return false;
+        if (trait === 'demon' && !m.isDemon) return false;
+        if (trait === 'fly' && !m.isFly) return false;
+        if (trait === 'armor' && !m.isArmor) return false;
+
+        return true;
+      });
+
+      // Sort
+      currentFiltered.sort((a, b) => {
+        if (sort === 'name_asc') return a.name.localeCompare(b.name);
+        if (sort === 'name_desc') return b.name.localeCompare(a.name);
+        if (sort === 'height_desc') return b.height - a.height;
+        if (sort === 'height_asc') return a.height - b.height;
+        if (sort === 'hp_desc') return b.hpMult - a.hpMult;
+        if (sort === 'dmg_desc') return b.dmgMult - a.dmgMult;
+        if (sort === 'spd_desc') return b.speed - a.speed;
+        return 0;
+      });
+
+      currentGlobalSwap = newSwap || null;
+      renderGrid();
+    }
+
+    function renderGrid() {
+      observer.disconnect();
+      gridEl.innerHTML = '';
+
+      counterTextEl.innerHTML = `Showing <b>${currentFiltered.length.toLocaleString()}</b> of ${CATALOGUE.length.toLocaleString()} creatures`;
+
+      if (currentFiltered.length === 0) {
+        emptyStateEl.style.display = 'block';
+        return;
+      }
+      emptyStateEl.style.display = 'none';
+
+      const fragment = document.createDocumentFragment();
+      for (const m of currentFiltered) {
+        const card = createCardElement(m);
+        fragment.appendChild(card);
+        observer.observe(card);
+      }
+      gridEl.appendChild(fragment);
+    }
+
+    // Modal Dossier Logic
+    function openModal(m) {
+      modalMonsterIndex = currentFiltered.indexOf(m);
+      if (modalMonsterIndex < 0) modalMonsterIndex = 0;
+      modalCustomSwap = currentGlobalSwap;
+      updateModalContent(m);
+      modalEl.classList.add('open');
+      modalEl.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      modalEl.classList.remove('open');
+      modalEl.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    function navigateModal(delta) {
+      if (!currentFiltered.length) return;
+      modalMonsterIndex = (modalMonsterIndex + delta + currentFiltered.length) % currentFiltered.length;
+      updateModalContent(currentFiltered[modalMonsterIndex]);
+    }
+
+    function updateModalContent(m) {
+      modalName.textContent = m.name;
+      modalArchBadge.textContent = m.archKey.toUpperCase();
+      modalSheetText.textContent = `Sheet: ${m.sheet} (Cell ${m.i !== undefined ? m.i : 0})`;
+
+      // Boss badge
+      if (m.isBoss) {
+        modalRankBadge.style.display = 'inline-block';
+        modalRankBadge.textContent = m.lone ? '👑 COLOSSAL GUARDIAN' : '👑 BOSS ENCOUNTER';
+      } else {
+        modalRankBadge.style.display = 'none';
+      }
+
+      // Element badge
+      const elInfo = ELEMENT_INFO[m.elem] || ELEMENT_INFO.phys;
+      modalElemBadge.style.color = elInfo.color;
+      modalElemBadge.innerHTML = `${elInfo.icon} ${elInfo.name} Power`;
+
+      // AI description
+      const ai = AI_INFO[m.arch.ai] || AI_INFO.melee;
+      modalAiDesc.innerHTML = `<b>${ai.name}</b>: ${ai.desc} ${m.arch.range ? `Engages targets from up to ${m.arch.range} tiles away.` : ''}`;
+
+      // Stats
+      modalHp.textContent = `${m.hpMult}x`;
+      modalDmg.textContent = `${m.dmgMult}x`;
+      modalSpd.textContent = `${m.speed}`;
+      modalH.textContent = `${m.height} px`;
+      modalR.textContent = `${m.radius}`;
+      modalPack.textContent = `${m.pack[0]} - ${m.pack[1]}`;
+
+      // Moves list
+      if (m.moves.length > 0) {
+        document.getElementById('modal-moves-section').style.display = 'block';
+        modalMovesList.innerHTML = m.moves.map(mv => {
+          const info = MOVE_INFO[mv] || { name: mv, desc: 'Special combat maneuver executed during battle.' };
+          return `<div class="move-item"><b>${info.name}:</b> ${info.desc}</div>`;
+        }).join('');
+      } else {
+        document.getElementById('modal-moves-section').style.display = 'none';
+      }
+
+      // Gore
+      const gore = GORE_INFO[m.gore] || GORE_INFO.flesh;
+      modalGoreDesc.innerHTML = `<b>${gore.name}</b>: ${gore.desc}`;
+
+      // Swatches
+      modalActiveSwapName.textContent = modalCustomSwap ? (modalCustomSwap[0].toUpperCase() + modalCustomSwap.slice(1)) : 'Default';
+      buildSwatches(m);
+
+      // Render modal canvas sprite
+      loadArtFor([m.id]).then(() => {
+        drawModalSprite(m);
+      });
+    }
+
+    function drawModalSprite(m) {
+      const swap = modalCustomSwap ? SWAPS[modalCustomSwap] : null;
+      const sprite = enemyImage(m.id, swap);
+      if (sprite) {
+        renderSpriteToCanvas(modalCanvas, sprite);
+      }
+    }
+
+    function buildSwatches(m) {
+      modalSwatches.innerHTML = '';
+      const swatches = [
+        ['', 'Default'],
+        ['ember', 'Ember'],
+        ['frost', 'Frost'],
+        ['venom', 'Venom'],
+        ['blood', 'Blood'],
+        ['void', 'Void'],
+        ['abyss', 'Abyss'],
+        ['infernal', 'Infernal'],
+        ['ash', 'Ash'],
+        ['sand', 'Sand'],
+        ['gilded', 'Gilded'],
+        ['storm', 'Storm'],
+        ['shadow', 'Shadow'],
+        ['obsidian', 'Obsidian'],
+        ['crystal', 'Crystal'],
+        ['bone', 'Bone'],
+        ['spectral', 'Spectral'],
+        ['amethyst', 'Amethyst'],
+        ['verdigris', 'Verdigris'],
+        ['rust', 'Rust']
+      ];
+
+      for (const [key, label] of swatches) {
+        const btn = document.createElement('button');
+        btn.className = `swatch-btn ${modalCustomSwap === key || (!modalCustomSwap && !key) ? 'active' : ''}`;
+        btn.textContent = label;
+        btn.onclick = () => {
+          modalCustomSwap = key || null;
+          modalActiveSwapName.textContent = label;
+          modalSwatches.querySelectorAll('.swatch-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          drawModalSprite(m);
+        };
+        modalSwatches.appendChild(btn);
+      }
+    }
+
+    // Event Listeners
+    searchInput.addEventListener('input', applyFilters);
+    clearSearchBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      applyFilters();
+    });
+
+    expSelect.addEventListener('change', applyFilters);
+    rankSelect.addEventListener('change', applyFilters);
+    archSelect.addEventListener('change', applyFilters);
+    elemSelect.addEventListener('change', applyFilters);
+    traitSelect.addEventListener('change', applyFilters);
+    swapSelect.addEventListener('change', applyFilters);
+    sortSelect.addEventListener('change', applyFilters);
+
+    resetBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      expSelect.value = '';
+      rankSelect.value = '';
+      archSelect.value = '';
+      elemSelect.value = '';
+      traitSelect.value = '';
+      swapSelect.value = '';
+      sortSelect.value = 'name_asc';
+      applyFilters();
+    });
+
+    modalCloseBtn.addEventListener('click', closeModal);
+    modalPrevBtn.addEventListener('click', () => navigateModal(-1));
+    modalNextBtn.addEventListener('click', () => navigateModal(1));
+
+    modalEl.addEventListener('click', (e) => {
+      if (e.target === modalEl) closeModal();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (modalEl.classList.contains('open')) {
+        if (e.key === 'Escape') closeModal();
+        if (e.key === 'ArrowLeft') navigateModal(-1);
+        if (e.key === 'ArrowRight') navigateModal(1);
+      } else if (e.key === '/' && document.activeElement !== searchInput) {
+        e.preventDefault();
+        searchInput.focus();
+      }
+    });
+
+    // Back to top scroll listener
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 400) {
+        backToTopBtn.classList.add('visible');
+      } else {
+        backToTopBtn.classList.remove('visible');
+      }
+    });
+
+    backToTopBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // Initial render
+    applyFilters();
+  </script>
+</body>
+
+</html>

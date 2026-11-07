@@ -18,14 +18,14 @@ import { MAX_LEVEL } from './depth.js';
 // Epic before item level 30, Legendary before 45 or Mythic before 60 (rarityAt caps the guaranteed rewards the same
 // way).
 export const RARITY = [
-  { id: 0, name: 'Common', color: '#e8e8e8', weight: 70, lv: 0, perks: 0, sockets: 1, bonus: 0, minIlvl: 1, fullIlvl: 1 },
-  { id: 1, name: 'Uncommon', color: '#4fd65a', weight: 21, lv: 2, perks: 0, sockets: 2, bonus: 1, minIlvl: 1, fullIlvl: 1 },
-  { id: 2, name: 'Rare', color: '#4f8dff', weight: 6, lv: 3, perks: 1, sockets: 3, bonus: 1.6, minIlvl: 3, fullIlvl: 8 },
-  { id: 3, name: 'Epic', color: '#b45cff', weight: 1, lv: 7, perks: 1, sockets: 3, bonus: 2.2, minIlvl: 30, fullIlvl: 40 },
-  { id: 4, name: 'Legendary', color: '#ff9a2a', weight: 0.14, lv: 8, perks: 1, sockets: 4, bonus: 2.8, minIlvl: 45, fullIlvl: 60 },
-  { id: 5, name: 'Mythic', color: '#ff4058', weight: 0.012, lv: 10, perks: 2, sockets: 4, bonus: 3.4, minIlvl: 60, fullIlvl: 80 },
+  { id: 0, name: 'Common', color: '#e8e8e8', weight: 32, lv: 0, perks: 0, sockets: 1, bonus: 0, minIlvl: 1, fullIlvl: 1 },
+  { id: 1, name: 'Uncommon', color: '#4fd65a', weight: 10, lv: 2, perks: 0, sockets: 2, bonus: 1, minIlvl: 1, fullIlvl: 1 },
+  { id: 2, name: 'Rare', color: '#4f8dff', weight: 6, lv: 4, perks: 1, sockets: 3, bonus: 1.6, minIlvl: 3, fullIlvl: 8 },
+  { id: 3, name: 'Epic', color: '#b45cff', weight: 1, lv: 6, perks: 1, sockets: 3, bonus: 2.2, minIlvl: 15, fullIlvl: 25 },
+  { id: 4, name: 'Legendary', color: '#ff9a2a', weight: 0.14, lv: 9, perks: 1, sockets: 4, bonus: 2.8, minIlvl: 30, fullIlvl: 45 },
+  { id: 5, name: 'Mythic', color: '#ff4058', weight: 0.012, lv: 12, perks: 2, sockets: 4, bonus: 3.4, minIlvl: 50, fullIlvl: 70 },
   // Abyssal never rolls from a kill (weight 0): Abyssal Rift Guardians and Velscour Unbound make it (docs/ENDGAME.md)
-  { id: 6, name: 'Abyssal', color: '#20e0ff', weight: 0, lv: 14, perks: 3, sockets: 5, bonus: 0, minIlvl: 200, fullIlvl: 200 },
+  { id: 6, name: 'Abyssal', color: '#20e0ff', weight: 0, lv: 16, perks: 3, sockets: 5, bonus: 0, minIlvl: 80, fullIlvl: 100 },
 ];
 export const ABYSSAL = 6;
 /** How much of a rarity's drop odds item level ilvl has unlocked: 0 below its minIlvl, ramping to 1 at fullIlvl. */
@@ -62,40 +62,128 @@ export const fitsSlot = (it, slot, classId = null) => !!it && it.type === 'gear'
 /** The equipment slot an item goes to: its own, or for a ring the first empty ring slot (else the first). */
 export const slotFor = (equip, it, classId = null) => (classId === 'barbarian' && it.slot === 'weapon' && equip.weapon && !equip.offhand ? 'offhand' : it.slot !== 'ring' ? it.slot : RING_SLOTS.find((s) => !equip[s]) || RING_SLOTS[0]);
 
+// Stat requirements for weapons and off-hands: archetype enforcement
+// Strength: blunt weapons (maces, hammers), spears/lances, swords, axes, shields
+// Dexterity: bows, crossbows, pistols, instruments (lutes, drums), daggers, quivers, bombs, boomerangs
+// Intellect: staves, wands, scythes, orbs, tomes, lanterns, idols, skulls, jars
+export const BASE_REQ_STAT = {
+  sword: 'str',
+  axe: 'str',
+  mace: 'str',
+  hammer: 'str',
+  spear: 'str',
+  shield: 'str',
+
+  bow: 'dex',
+  crossbow: 'dex',
+  pistol: 'dex',
+  lute: 'dex',
+  dagger: 'dex',
+  boomerang: 'dex',
+  quiver: 'dex',
+  drum: 'dex',
+  bomb: 'dex',
+  rang: 'dex',
+
+  staff: 'int',
+  wand: 'int',
+  scythe: 'int',
+  orb: 'int',
+  tome: 'int',
+  lantern: 'int',
+  skull: 'int',
+  idol: 'int',
+  jar: 'int',
+};
+
+export const STAT_NAMES = {
+  str: 'Strength',
+  dex: 'Dexterity',
+  int: 'Intellect',
+  vit: 'Vitality',
+};
+
+/** The stat requirement for a weapon or off-hand ({ stat, val }), or null if none (level 1 starter items have none). */
+export function itemReqStat(item) {
+  if (!item || item.type !== 'gear') return null;
+  if (item.slot !== 'weapon' && item.slot !== 'offhand') return null;
+  if ((item.req ?? item.ilvl ?? 1) <= 1) return null;
+  const stat = BASE_REQ_STAT[item.base];
+  if (!stat) return null;
+  if (item.reqStat && item.reqStat.stat && typeof item.reqStat.val === 'number') {
+    return item.reqStat;
+  }
+  const lv = Math.max(1, Math.min(item.req || item.ilvl || 1, MAX_LEVEL));
+  const val = 20 + (lv - 1) * 2;
+  return { stat, val };
+}
+
+/** Calculates the character's total effective attribute score (base + gear), optionally excluding a slot being swapped. */
+export function charEffectiveStat(c, stat, excludingSlot = null) {
+  if (!c || !c.attrs) return 0;
+  let total = Number(c.attrs[stat]) || 0;
+  if (c.equip) {
+    for (const [slot, it] of Object.entries(c.equip)) {
+      if (it && it.type === 'gear' && slot !== excludingSlot && Array.isArray(it.affixes)) {
+        for (const a of it.affixes) {
+          if (a.s === stat && typeof a.v === 'number') total += a.v;
+          if (a.s === 'allAttr' && typeof a.v === 'number') total += a.v;
+        }
+      }
+    }
+  }
+  return Math.round(total);
+}
+
+/** Returns whether character c meets the level and stat requirements to equip item it into slot. */
+export function canEquipItem(c, it, slot = null) {
+  if (!it || it.type !== 'gear') return false;
+  if ((it.req || 1) > (c.level || 1)) return false;
+  const reqStat = itemReqStat(it);
+  if (reqStat) {
+    const cur = charEffectiveStat(c, reqStat.stat, slot || it.slot);
+    if (cur < reqStat.val) return false;
+  }
+  return true;
+}
+
 export const WEAPONS = {
-  sword: { names: ['Shortsword', 'Longsword', 'Broadsword', 'Bastard Sword', 'Runeblade'], icon: 'sword', dmg: 1.0, spd: 1.0 },
-  axe: { names: ['Hatchet', 'War Axe', 'Bearded Axe', 'Battle Axe', 'Executioner'], icon: 'axe', dmg: 1.15, spd: 0.92 },
-  mace: { names: ['Club', 'Mace', 'Flanged Mace', 'Morning Star', 'Reliquary Mace'], icon: 'mace', dmg: 1.05, spd: 0.97 },
-  hammer: { names: ['War Hammer', 'Maul', 'Great Maul', 'Earthbreaker', 'Titan Hammer'], icon: 'hammer', dmg: 1.25, spd: 0.85 },
-  dagger: { names: ['Knife', 'Dirk', 'Stiletto', 'Kris', 'Soul Blade'], icon: 'dagger', dmg: 0.75, spd: 1.25, crit: 4 },
-  staff: { names: ['Quarterstaff', 'Gnarled Staff', 'Battle Staff', 'Archon Staff', 'Elder Staff'], icon: 'staff', dmg: 0.95, spd: 1.0, cast: 8 },
-  wand: { names: ['Twig Wand', 'Bone Wand', 'Grim Wand', 'Lich Wand', 'Unearthed Wand'], icon: 'wand', dmg: 0.8, spd: 1.1, cast: 10 },
-  bow: { names: ['Short Bow', 'Hunter\'s Bow', 'Composite Bow', 'Long War Bow', 'Matriarchal Bow'], icon: 'bow', dmg: 1.0, spd: 1.05 },
-  crossbow: { names: ['Light Crossbow', 'Arbalest', 'Siege Crossbow', 'Ballista', 'Demon Crossbow'], icon: 'crossbow', dmg: 1.2, spd: 0.85 },
-  spear: { names: ['Spear', 'Pike', 'Partizan', 'War Lance', 'Dragon Lance'], icon: 'spear', dmg: 1.1, spd: 0.95 },
-  scythe: { names: ['Sickle', 'Scythe', 'War Scythe', 'Reaper', 'Thresher'], icon: 'scythe', dmg: 1.2, spd: 0.9 },
-  pistol: { names: ['Flintlock', 'Blunderbuss', 'Hand Cannon', 'Repeater', 'Dragon Pistol'], icon: 'pistol', dmg: 1.0, spd: 1.1 },
-  boomerang: { names: ['Throwing Stick', 'Boomerang', 'Glaive', 'Chakram', 'Moon Glaive'], icon: 'boomerang', dmg: 0.95, spd: 1.1 },
-  lute: { names: ['Lute', 'Mandolin', 'War Lyre', 'Siren Harp', 'Lute of Ages'], icon: 'lute', dmg: 0.85, spd: 1.1, cast: 5 },
+  sword: { names: ['Shortsword', 'Longsword', 'Broadsword', 'Bastard Sword', 'Runeblade'], icon: 'sword', dmg: 1.0, spd: 1.0, crit: 3, classes: ['paladin', 'barbarian', 'bard', 'lancer', 'death_knight', 'dragon_knight'] },
+  axe: { names: ['Hatchet', 'War Axe', 'Bearded Axe', 'Battle Axe', 'Executioner'], icon: 'axe', dmg: 1.15, spd: 0.92, critDmg: 12, classes: ['barbarian'] },
+  mace: { names: ['Cudgel', 'Mace', 'Flanged Mace', 'Morning Star', 'Sanctified Mace'], icon: 'mace', dmg: 1.08, spd: 0.96, holyPct: 8, classes: ['paladin', 'slime_lord', 'monk'] },
+  hammer: { names: ['War Hammer', 'Maul', 'Great Maul', 'Earthbreaker', 'Titan Maul'], icon: 'hammer', dmg: 1.25, spd: 0.85, areaPct: 8, classes: ['paladin', 'barbarian'] },
+  dagger: { names: ['Poignard', 'Dirk', 'Stiletto', 'Kris', 'Ritual Blade'], icon: 'dagger', dmg: 0.80, spd: 1.22, crit: 6, classes: ['bard', 'ranger', 'necromancer', 'carrion_witch', 'monk'] },
+  staff: { names: ['Quarterstaff', 'Gnarled Staff', 'Runed Staff', 'Archon Staff', 'Elder Staff'], icon: 'staff', dmg: 0.95, spd: 1.0, cast: 8, spell: 8, classes: ['wizard', 'carrion_witch', 'totem_master', 'monk'] },
+  wand: { names: ['Yew Wand', 'Bone Wand', 'Grim Wand', 'Lich Wand', 'Grave Wand'], icon: 'wand', dmg: 0.85, spd: 1.1, cast: 10, cdr: 4, classes: ['necromancer', 'wizard', 'arcane_sorcerer'] },
+  bow: { names: ['Short Bow', "Hunter's Bow", 'Composite Bow', 'Long War Bow', 'Wardwood Bow'], icon: 'bow', dmg: 1.0, spd: 1.06, atkSpeed: 6, classes: ['ranger'] },
+  crossbow: { names: ['Light Crossbow', 'Arbalest', 'Siege Crossbow', 'Heavy Arbalest', 'Dread Crossbow'], icon: 'crossbow', dmg: 1.18, spd: 0.88, critDmg: 15, classes: ['ranger', 'gunner'] },
+  spear: { names: ['Spear', 'Pike', 'Partizan', 'War Lance', 'Vanguard Lance'], icon: 'spear', dmg: 1.12, spd: 0.96, pierce: 1, classes: ['lancer', 'dragoon'] },
+  scythe: { names: ['Sickle', 'Scythe', 'War Scythe', 'Reaper', 'Soul Thresher'], icon: 'scythe', dmg: 1.18, spd: 0.9, lifeSteal: 2, classes: ['necromancer', 'carrion_witch'] },
+  pistol: { names: ['Flintlock', 'Blunderbuss', 'Hand Cannon', 'Repeater', 'Ironclad Pistol'], icon: 'pistol', dmg: 1.0, spd: 1.12, crit: 4, classes: ['gunner'] },
+  lute: { names: ['Lute', 'Mandolin', 'War Lyre', 'Skald Harp', 'Choir Lute'], icon: 'lute', dmg: 0.88, spd: 1.1, cast: 6, cdr: 5, classes: ['bard'] },
+  boomerang: { names: ['Throwing Stick', 'Boomerang', 'Glaive', 'Chakram', 'Moon Glaive'], icon: 'boomerang', dmg: 0.95, spd: 1.1, crit: 4, classes: ['boomerang_knight'] },
 };
+export const ACTIVE_WEAPONS = Object.keys(WEAPONS);
+
 export const OFFHANDS = {
-  shield: { names: ['Buckler', 'Kite Shield', 'Tower Shield', 'Aegis', 'Bulwark'], icon: 'shield', armor: 1.0, block: [8, 16] },
-  orb: { names: ['Glass Orb', 'Eldritch Orb', 'Sacred Globe', 'Eye of Night', 'Star of Ruin'], icon: 'orb', armor: 0.25, spell: [6, 14] },
-  // the classes' own off-hands (src/data/held.js CLASS_FOCUS); icon: the painted fallback until the held art loads
-  tome: { names: ['Primer', 'Grimoire', 'Tome of Embers', 'Codex Arcanum', 'Book of Ages'], icon: 'orb', armor: 0.25, spell: [6, 14] },
-  skull: { names: ['Bleached Skull', 'Rime Skull', 'Frost Skull', 'Lich Skull', 'Skull of the Old King'], icon: 'orb', armor: 0.4, spell: [5, 12] },
-  idol: { names: ['Carved Idol', 'Spirit Idol', 'Ancestor Idol', 'Thunder Idol', 'Idol of the First Tribe'], icon: 'orb', armor: 0.4, spell: [5, 12] },
-  lantern: { names: ['Tin Lantern', 'Iron Lantern', 'Corpse Lantern', 'Grave Lantern', 'Lantern of the Hollow Moon'], icon: 'orb', armor: 0.3, spell: [6, 14] },
-  jar: { names: ['Specimen Jar', 'Ooze Flask', 'Gel Reliquary', 'Living Jar', 'Heart of the Mire'], icon: 'orb', armor: 0.6, spell: [4, 10] },
-  bomb: { names: ['Powder Bomb', 'Grenade', 'Shrapnel Bomb', "Dragon's Breath", 'Doomsday Charge'], icon: 'orb', armor: 0.2, crit: [3, 7] },
-  drum: { names: ['Tambourine', 'Frame Drum', 'War Drum', 'Siren Bell', 'Drum of Thunders'], icon: 'orb', armor: 0.3, cast: [6, 12] },
-  quiver: { names: ['Arrow', 'Barbed Arrow', "Hunter's Arrow", 'Seeker Arrow', 'Arrow of the Last Light'], icon: 'bow', armor: 0.2, crit: [3, 7] },
-  rang: { names: ['Throwing Stick', 'Small Rang', 'Twin Rang', 'Glaive', 'Moon Rang'], icon: 'boomerang', armor: 0.25, spell: [4, 10] },
+  shield: { names: ['Buckler', 'Kite Shield', 'Tower Shield', 'Aegis', 'Bulwark'], icon: 'shield', armor: 1.1, block: [10, 18], reduce: [2, 4], classes: ['paladin', 'lancer', 'dragoon', 'dragon_knight'] },
+  orb: { names: ['Glass Orb', 'Eldritch Orb', 'Phylactery Globe', 'Eye of Night', 'Void Sphere'], icon: 'orb', armor: 0.3, spell: [8, 16], summon: [8, 14], classes: ['necromancer', 'wizard', 'arcane_sorcerer'] },
+  tome: { names: ['Primer', 'Grimoire', 'Tome of Embers', 'Codex Arcanum', 'Book of Ages'], icon: 'orb', armor: 0.25, spell: [10, 18], cdr: [4, 8], classes: ['wizard', 'monk'] },
+  lantern: { names: ['Tin Lantern', 'Iron Lantern', 'Corpse Lantern', 'Grave Lantern', 'Hollow Moon Lantern'], icon: 'orb', armor: 0.35, spell: [8, 16], leech: [2, 4], classes: ['carrion_witch'] },
+  bomb: { names: ['Powder Bomb', 'Iron Grenade', 'Shrapnel Charge', 'Siege Satchel', 'Ordnance Pack'], icon: 'orb', armor: 0.3, crit: [4, 8], area: [6, 12], classes: ['gunner'] },
+  drum: { names: ['Tambourine', 'Frame Drum', 'War Drum', 'Skald Bell', 'Thunder Drum'], icon: 'orb', armor: 0.35, cast: [6, 12], cdr: [4, 8], classes: ['bard'] },
+  quiver: { names: ['Broadhead Quiver', 'Barbed Quiver', "Stalker's Quiver", 'Bodkin Quiver', 'Warden Quiver'], icon: 'bow', armor: 0.25, crit: [4, 8], atkSpd: [6, 12], classes: ['ranger'] },
+  skull: { names: ['Bleached Skull', 'Rime Skull', 'Frost Skull', 'Lich Skull', 'Skull of the Old King'], icon: 'orb', armor: 0.4, spell: [8, 16], cdr: [4, 8], classes: ['death_knight'] },
+  idol: { names: ['Carved Idol', 'Spirit Idol', 'Ancestor Idol', 'Thunder Idol', 'Idol of the First Tribe'], icon: 'orb', armor: 0.4, spell: [8, 16], summon: [6, 12], classes: ['totem_master'] },
+  jar: { names: ['Specimen Jar', 'Ooze Flask', 'Gel Reliquary', 'Living Jar', 'Heart of the Mire'], icon: 'orb', armor: 0.6, spell: [6, 14], reduce: [2, 4], classes: ['slime_lord'] },
+  rang: { names: ['Throwing Stick', 'Small Rang', 'Twin Rang', 'Glaive', 'Moon Rang'], icon: 'boomerang', armor: 0.25, spell: [6, 14], crit: [4, 8], classes: ['boomerang_knight'] },
 };
-/** A random off-hand base: mostly shields and orbs, often the wearer's own kind. */
+export const ACTIVE_OFFHANDS = Object.keys(OFFHANDS);
+
+/** A random off-hand base from the active pool: favors the wearer's focus, shields, and caster off-hands. */
 function offhandBase() {
   const own = CLASS_FOCUS[ringCtx.classId];
-  return chance(0.3) && own ? own : chance(0.45) ? 'shield' : chance(0.4) ? 'orb' : pick(Object.keys(OFFHANDS));
+  return chance(0.4) && own ? own : chance(0.35) ? 'shield' : pick(ACTIVE_OFFHANDS);
 }
 export const ARMORS = {
   head: { names: ['Cap', 'Helm', 'Great Helm', 'Winged Helm', 'Crown'], icon: 'helm', armor: 0.6 },
@@ -412,24 +500,38 @@ export function rollItem(ilvl, opts = {}) {
   const art = opts.generic || slot === 'ring' ? null : classItem(slot, rarity, opts.base);
   if (art) opts = { ...opts, base: art.base };
   if (slot === 'weapon') {
-    item.base = opts.base || pick(Object.keys(WEAPONS));
-    const W = WEAPONS[item.base];
-    const avg = 3.4 * Math.pow(1.052, pl - 1) * W.dmg * (1 + pl * 0.012);
-    item.dmg = [Math.max(1, Math.round(avg * 0.75)), Math.max(2, Math.round(avg * 1.25))];
+    item.base = opts.base || pick(ACTIVE_WEAPONS);
+    const W = WEAPONS[item.base] || WEAPONS.sword;
+    const avg = (6 + pl * 1.8 + 0.022 * pl * pl) * W.dmg;
+    item.dmg = [Math.max(1, Math.round(avg * 0.8)), Math.max(2, Math.round(avg * 1.2))];
     item.icon = W.icon;
     item.baseName = W.names[Math.min(4, Math.floor(tier / 2))];
     if (W.crit) item.affixes.push({ s: 'critChance', v: W.crit, implicit: true });
+    if (W.critDmg) item.affixes.push({ s: 'critDmg', v: W.critDmg, implicit: true });
     if (W.cast) item.affixes.push({ s: 'castSpeed', v: W.cast, implicit: true });
+    if (W.atkSpeed) item.affixes.push({ s: 'atkSpeed', v: W.atkSpeed, implicit: true });
+    if (W.spell) item.affixes.push({ s: 'dmgPct', v: W.spell, implicit: true });
+    if (W.holyPct) item.affixes.push({ s: 'holyPct', v: W.holyPct, implicit: true });
+    if (W.areaPct) item.affixes.push({ s: 'areaPct', v: W.areaPct, implicit: true });
+    if (W.cdr) item.affixes.push({ s: 'cdr', v: W.cdr, implicit: true });
+    if (W.lifeSteal) item.affixes.push({ s: 'lifeSteal', v: W.lifeSteal, implicit: true });
+    if (W.pierce) item.affixes.push({ s: 'pierce', v: W.pierce, implicit: true });
   } else if (slot === 'offhand') {
     item.base = opts.base || offhandBase();
-    const O = OFFHANDS[item.base];
-    item.armor = Math.round(6 * O.armor * Math.pow(1.045, pl - 1) * (0.85 + Math.random() * 0.3));
+    const O = OFFHANDS[item.base] || OFFHANDS.shield;
+    item.armor = Math.max(1, Math.round((8 + pl * 2.4 + 0.025 * pl * pl) * O.armor * (0.9 + Math.random() * 0.2)));
     item.icon = O.icon;
     item.baseName = O.names[Math.min(4, Math.floor(tier / 2))];
     if (O.block) item.affixes.push({ s: 'block', v: randi(O.block[0], O.block[1]), implicit: true });
-    if (O.spell) item.affixes.push({ s: 'dmgPct', v: randi(O.spell[0], O.spell[1]) + Math.floor(ilvl / 10), implicit: true });
+    if (O.reduce) item.affixes.push({ s: 'reduce', v: randi(O.reduce[0], O.reduce[1]), implicit: true });
+    if (O.spell) item.affixes.push({ s: 'dmgPct', v: randi(O.spell[0], O.spell[1]) + Math.floor(ilvl / 12), implicit: true });
+    if (O.summon) item.affixes.push({ s: 'summonPct', v: randi(O.summon[0], O.summon[1]), implicit: true });
     if (O.crit) item.affixes.push({ s: 'critChance', v: randi(O.crit[0], O.crit[1]), implicit: true });
     if (O.cast) item.affixes.push({ s: 'castSpeed', v: randi(O.cast[0], O.cast[1]), implicit: true });
+    if (O.cdr) item.affixes.push({ s: 'cdr', v: randi(O.cdr[0], O.cdr[1]), implicit: true });
+    if (O.atkSpd) item.affixes.push({ s: 'atkSpeed', v: randi(O.atkSpd[0], O.atkSpd[1]), implicit: true });
+    if (O.area) item.affixes.push({ s: 'areaPct', v: randi(O.area[0], O.area[1]), implicit: true });
+    if (O.leech) item.affixes.push({ s: 'lifeSteal', v: randi(O.leech[0], O.leech[1]), implicit: true });
   } else if (slot === 'ring') {
     item.base = 'ring'; item.icon = 'ring';
     item.baseName = RING_NAMES[tier];
@@ -437,7 +539,7 @@ export function rollItem(ilvl, opts = {}) {
   } else {
     item.base = slot;
     const A = ARMORS[slot];
-    item.armor = Math.round(6 * A.armor * Math.pow(1.045, pl - 1) * (0.85 + Math.random() * 0.3));
+    item.armor = Math.max(1, Math.round((8 + pl * 2.4 + 0.025 * pl * pl) * A.armor * (0.9 + Math.random() * 0.2)));
     item.icon = A.icon;
     item.baseName = A.names[Math.min(4, Math.floor(tier / 2))];
   }
@@ -457,6 +559,8 @@ export function rollItem(ilvl, opts = {}) {
     item.suf = rarity >= 2 && suf ? AFFIX_BY_STAT[suf.s].suf : (suf && !pre ? AFFIX_BY_STAT[suf.s].suf : null);
   }
   item.req = Math.min(ilvl, MAX_LEVEL); // a level N item needs a level N hero (never past the cap): each level up opens the next step of gear
+  const reqStat = itemReqStat(item);
+  if (reqStat) item.reqStat = reqStat;
   if (opts.unid) item.unid = true;
   return item;
 }

@@ -16,7 +16,7 @@ import { addEffect, Telegraph, Ring, Bolt, Beam, Column, burst, spawn, sparkle, 
 import { explosionFx } from '../gfx/shapes.js';
 import { hit } from './combat.js';
 import { Projectile, Delayed, Area, lineTargets } from './hazards.js';
-import { makeMonster, Monster } from './monster.js';
+import { makeMonster, Monster, monsterBase } from './monster.js';
 import { UI } from '../ui/ui.js';
 import { BESTIARY } from '../data/bestiary.js';
 import { enemyArtReady } from '../core/enemyart.js';
@@ -739,7 +739,7 @@ sig('null_orbs', 'Null Orbs', (R) => {
         const a = angleTo(this.x, this.y, m.x, m.y); this.x += Math.cos(a) * 0.9 * dt; this.y += Math.sin(a) * 0.9 * dt;
         const p = hero(R);
         if (p && dist(p.x, p.y, this.x, this.y) < 0.8) { burst(this.x, this.y, 30, 'arcane', 20, 3); floatText(this.x, this.y, 50, 'Orb absorbed', '#d0a0ff', 12); p.heal && p.heal(p.maxHp * 0.03); return false; }
-        if (dist(m.x, m.y, this.x, this.y) < 1.4) { m.heal(m.maxHp * 0.05); floatText(m.x, m.y, 100, '+HEAL', '#a040ff', 15); addEffect(new Ring(m.x, m.y, 0.5, 3, 0.5, '#a040ff', 4)); return false; }
+        if (dist(m.x, m.y, this.x, this.y) < 1.4) { m.heal(monsterBase(m.level || 1).hp * 0.2); floatText(m.x, m.y, 100, '+HEAL', '#a040ff', 15); addEffect(new Ring(m.x, m.y, 0.5, 3, 0.5, '#a040ff', 4)); return false; }
         addLight(this.x, this.y, 1.6, 0.8);
         return true;
       },
@@ -945,7 +945,7 @@ sig('thralls', 'Blood Thralls', (R) => {
     const [x, y] = randFloor(R, 3);
     add(R, x, y, { name: 'Blood Thrall', ai: 'melee', hp: 0.03, dmg: 0.45, sprite: 'ghoul', arch: 'ghoul', artH: 48, priority: 7, gore: 'blood',
       tick(c, dt) {
-        m.heal(m.maxHp * 0.012 * dt);
+        m.heal(monsterBase(m.level || 1).hp * 0.015 * dt);
         if ((c.beam = (c.beam || 0) - dt) <= 0) { c.beam = 0.1; addEffect(new Bolt(c.x, c.y, 30, m.x, m.y, 70, '#ff2030', 0.1, 3)); }
         const p = hero(R); if (p) c.moveToward(p.x, p.y, dt, 1.4);
       },

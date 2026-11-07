@@ -52,6 +52,15 @@ export function titleScreen() {
     });
     add(`Heroes <span style="font-size:13px;color:#a8977c">· ${used}/${CLASS_IDS.length}</span>`, () => classSelect(last ? last.classId : 'paladin'));
     add('VELSCOUR DEFENSE', () => { location.href = 'defense/index.html'; }, 'btn blue'); // the Riftgate's game (defense/), from the title too
+    const comp = el('div', 'row');
+    comp.style.justifyContent = 'center';
+    for (const [lbl, href] of [['Hero Classes', 'classes.html'], ['Bestiary', 'bestiary.html']]) {
+      const b = el('button', 'btn', lbl);
+      b.style.flex = '1';
+      b.onclick = () => { if (!s.classList.contains('title-ready')) return; initAudio(); sfx('ui'); location.href = href; };
+      comp.appendChild(b);
+    }
+    menu.appendChild(comp);
     add('Settings', settingsDialog, 'btn');
     add('Credits', () => creditsScreen(titleScreen), 'btn');
     add('How to Play', helpDialog, 'btn');

@@ -61,15 +61,11 @@ function rollMoves(arch, rank, variant, depth) {
 export const VELSCOUR_HP = 60;
 export function monsterBase(level) {
   return {
-    // toughness (data/depth.js) sizes life to the heroes' damage at that level: a few seconds a normal monster
-    hp: 30 * Math.pow(1.068, level - 1) * toughness(level),
-    // damage keeps its 1.058 a level to level 60, then grows slower (1.04, then 1.006 past 140): hero life and
-    // armor only grow with levels and gear, and at 1.058 a normal hit took ~45% of a geared hero's life by depth 160;
-    // past 140 hero life grows ~0.6% a level (tools/tests/endgame.js), and 1.016 had normal hits at 35-60% by depth 500;
-    // danger (data/depth.js) softens it where hero life lags, now that fights last long enough for every monster to hit;
-    // past 600 hero life grows like level^2.3 (fortitude x gear), so damage follows (level/600)^2.2, not 1.006 a level
-    dmg: 1.2 * (4.4 + Math.min(level, 10) * 0.24) * Math.pow(1.058, Math.min(level, 60) - 1) * Math.pow(1.04, clamp(level - 60, 0, 80)) * Math.pow(1.006, clamp(level - 140, 0, 460)) * Math.pow(Math.max(1, level / 600), 2.2) * danger(level),
-    xp: 4 * Math.pow(level, 1.5) * densityXp(level), // fewer monsters a level than before (data/depth.js density)
+    // Polynomial Level 1-100 monster HP and damage on the same 1:1 scale as Player HP and Player Damage:
+    // At Lv1: ~70 HP, 12 dmg; at Lv20: ~515 HP, 76 dmg; at Lv50: ~1880 HP, 258 dmg; at Lv100: ~5955 HP, 780 dmg.
+    hp: Math.round((55 + level * 14 + 0.45 * level * level) * toughness(level)),
+    dmg: Math.round((10 + level * 2.2 + 0.055 * level * level) * danger(level)),
+    xp: 4 * Math.pow(level, 1.5) * densityXp(level),
   };
 }
 
@@ -95,7 +91,11 @@ export class Monster extends Creature {
   deal(target, amount, el, o = {}) {
     const d = hit(this, target, amount, el, o);
     if (d > 0) {
-      if (this.affixes && this.affixes.includes('vampiric')) this.heal(d * 0.3);
+      if (this.affixes && this.affixes.includes('vampiric') && this.rank !== 'boss') {
+        const cap = (monsterBase(this.level || 1).hp || 100) * 0.01;
+        const targetMul = target.isPlayer ? 1 : 0.2;
+        this.heal(Math.min(d * 0.08 * targetMul, cap));
+      }
       const th = this.curses.thorns;
       if (th && th.t > 0) hit(th.src, this, d * th.amt / 100 * (target.isPlayer ? dmgScale(this.level || 1) : 1), 'phys', { dot: true, crit: false }); // a blow on the hero is on the life scale (combat.js thorns)
       if (this.leech && this.owner) leechHeal(this.owner, target, d, this.leech * 0.15);
@@ -104,6 +104,7 @@ export class Monster extends Creature {
   }
 
   onDamaged(src) {
+    this.regenSuppress = 6.0; // Taking direct damage suppresses regeneration for 6 seconds
     if (!this.affixes) return;
     if (this.affixes.includes('shocking') && (this.shockCd || 0) <= 0) {
       this.shockCd = 1.2;
@@ -143,6 +144,7 @@ export class Monster extends Creature {
     const w = this.world;
     this.animT += dt;
     this.lifeT += dt;
+    if (this.regenSuppress > 0) this.regenSuppress -= dt;
     if (this.shockCd > 0) this.shockCd -= dt;
     if (this.thornCd > 0) this.thornCd -= dt;
     if (this.invuln > 0) this.invuln -= dt;
@@ -154,7 +156,19 @@ export class Monster extends Creature {
     const ch = this.curses.charm;
     if (ch && ch.t <= 0 && ch.team) { this.team = ch.team; ch.team = null; this.aggro = null; }
     if (this.partyBuff && (this.partyBuff.t -= dt) <= 0) this.partyBuff = null;
-    if (this.affixes && this.affixes.includes('regen')) this.heal(this.maxHp * 0.02 * dt);
+
+    // Regeneration: suppressed for 6s after taking hits; DoTs (burn, poison, bleed) keep it suppressed for 3s
+    const hasDot = (this.status.burn && this.status.burn.t > 0) ||
+      (this.status.poison && this.status.poison.t > 0) ||
+      (this.status.bleed && this.status.bleed.t > 0);
+    if (hasDot) this.regenSuppress = Math.max(this.regenSuppress || 0, 3.0);
+
+    // Only non-boss monsters with 'regen' affix regenerate, and ONLY when out of combat (regenSuppress <= 0)
+    if (this.affixes && this.affixes.includes('regen') && !(this.regenSuppress > 0) && this.hp < this.maxHp && this.rank !== 'boss') {
+      const capPerSec = (monsterBase(this.level || 1).hp || 100) * 0.01;
+      const healAmt = Math.min(this.maxHp * 0.001, capPerSec) * dt;
+      this.heal(healAmt);
+    }
     if (this.affixes && this.affixes.includes('frozen') && w.player) {
       const p = w.player;
       if (dist(this.x, this.y, p.x, p.y) < 3) p.status.chill = { t: 0.5, amt: 0.3 };
@@ -1386,24 +1400,25 @@ export function makeElite(m, rank, depth, world) {
   m.rank = rank;
   const keys = Object.keys(ELITE_AFFIXES).filter((k) => k !== 'multishot' || ['ranged', 'caster'].includes(m.ai));
   if (rank === 'champion') {
-    m.maxHp *= 3; m.dmg *= 1.4; m.xp *= 3; m.aura = '#4a8aff'; m.scale = 1.15;
+    m.maxHp *= 3.5; m.dmg *= 1.35; m.xp *= 3.5; m.aura = '#4a8aff'; m.scale = 1.15;
     m.affixes = shuffle(keys).slice(0, depth > 40 ? 2 : 1);
     m.name = 'Champion ' + m.name;
   } else if (rank === 'unique') {
-    m.maxHp *= 5; m.dmg *= 1.6; m.xp *= 6; m.aura = '#ffb030'; m.scale = 1.3;
+    m.maxHp *= 6; m.dmg *= 1.5; m.xp *= 7; m.aura = '#ffb030'; m.scale = 1.3;
     m.affixes = shuffle(keys).slice(0, depth > 50 ? 3 : 2);
     m.name = uniqueName();
     if (m.art) m.swap = uniqueSwap();
   } else if (rank === 'boss') {
     const vel = m.arch === 'velscour';
     if (vel) { m.art = 'va_velscour'; m.artH = 94; m.swap = null; }
-    // Velscour: the final fight (was 40x, less than a plain depth-500 guardian)
-    // a guardian is 10-22 plain normals whatever its build (a brute archetype's own bulk counts only partly)
-    m.maxHp *= vel ? VELSCOUR_HP : (10 + Math.min(depth, 120) / 10) / Math.pow(Math.max(1, ARCH[m.arch]?.hp || 1), 0.7); m.dmg *= vel ? 2.8 : 1.9; m.xp *= vel ? 200 : 25;
+    // Velscour: final encounter (~120x normal monster life after HP_MUL)
+    // Floor Guardians: scales smoothly from 6x at depth 1 up to ~38x at depth 500
+    const fgMul = 6 + Math.pow(Math.min(depth, 500) / 500, 0.75) * 32;
+    m.maxHp *= vel ? VELSCOUR_HP : fgMul / Math.pow(Math.max(1, ARCH[m.arch]?.hp || 1), 0.7); m.dmg *= vel ? 2.8 : 1.7; m.xp *= vel ? 200 : 25;
     m.aura = vel ? '#ff2000' : '#ff4020';
     m.scale = vel ? 1.6 : 1.9; m.r *= vel ? 1 : 1.6;
     m.ai = 'boss';
-    m.affixes = depth > 20 && !vel ? shuffle(keys.filter((k) => !['teleport', 'multishot', 'fast'].includes(k))).slice(0, 1) : [];
+    m.affixes = depth > 20 && !vel ? shuffle(keys.filter((k) => !['teleport', 'multishot', 'fast', 'regen', 'vampiric'].includes(k))).slice(0, 1) : [];
     m.name = vel ? 'DEMON LORD VELSCOUR' : (ARCH[m.arch]?.bossName || bossName());
     m.isVelscour = vel;
     const base = ['slam', 'nova', 'volley', 'charge', 'summon', 'meteor', 'spiral', 'beam'];

@@ -3,7 +3,7 @@ import { G } from '../state.js';
 import { el, escapeHtml, fmtInt, fmtDmg } from '../core/util.js';
 import { shownWeapon, shownDmg, heroDmgLevel } from '../data/depth.js';
 import { SKILLS, effLevel } from '../data/skills.js';
-import { itemName, itemBaseLine, itemColor, itemStats, itemDmg, itemArmor, statLabel, RARITY, GEMS, gemStats, gemName, LEGENDARY, legendaryDesc, powerLevel, SLOT_NAMES, POTION_INFO, MAX_GEM_TIER, augTarget } from '../data/items.js';
+import { itemName, itemBaseLine, itemColor, itemStats, itemDmg, itemArmor, statLabel, RARITY, GEMS, gemStats, gemName, LEGENDARY, legendaryDesc, powerLevel, SLOT_NAMES, POTION_INFO, MAX_GEM_TIER, augTarget, itemReqStat, charEffectiveStat, STAT_NAMES } from '../data/items.js';
 import { AUGMENTS } from '../data/rings.js';
 import { elem } from '../gfx/vfx.js';
 import { CLASSES } from '../data/classes.js';
@@ -105,6 +105,12 @@ export function itemTooltip(item, opts = {}) {
       if (item.upg) h += `<div style="color:#ffd34a">Upgraded +${item.upg}</div>`;
       const req = item.req || 1;
       h += `<div style="color:${p && p.char.level < req ? '#ff5050' : '#a8977c'}">Requires Level ${req}</div>`;
+      const reqStat = itemReqStat(item);
+      if (reqStat) {
+        const cur = p && p.char ? charEffectiveStat(p.char, reqStat.stat, item.slot) : 0;
+        const meets = cur >= reqStat.val;
+        h += `<div style="color:${meets ? '#a8977c' : '#ff5050'}">Requires ${reqStat.val} ${STAT_NAMES[reqStat.stat]}${!meets && p ? ` (${cur}/${reqStat.val})` : ''}</div>`;
+      }
       h += '<div class="tt-sep"></div>';
       for (const a of item.affixes) h += `<div class="tt-line" style="color:${a.implicit ? '#d8d0c0' : a.perk ? '#d8c078' : '#8fb4ff'}">${escapeHtml(label(a.s, a.v, trees))}</div>`;
       if (item.aug) for (const a of item.aug) {
