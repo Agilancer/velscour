@@ -52,7 +52,7 @@ export const Vendor = {
     const v = VBY[vid];
     sfx('ui');
     UI.openPanel('vendor', `${v.name} — ${v.title}`, (b) => this.render(b), { onClose: () => { this.active = null; UI.closePanel('inventory'); }, cls: 'vendor-panel' });
-    UI.openPanel('inventory', 'Your Inventory', renderInventory);
+    UI.openPanel('inventory', 'Backpack', renderInventory, { cls: 'inventory-panel' });
   },
 
   render(body) {
@@ -89,7 +89,24 @@ export const Vendor = {
           onDouble: () => this.buy({ type: 'shop', list, i }),
           onRight: () => this.buy({ type: 'shop', list, i }),
         });
-        UI.tip(d, () => itemTooltip(list[i], { price: itemValue(list[i]), compare: list[i].slot ? G.char.equip[slotFor(G.char.equip, list[i])] : null, hint: 'Right-click or double-click to buy' }));
+        UI.tip(d, () => {
+          const cur = list[i];
+          if (!cur) return '';
+          const acts = [{
+            label: `Buy for ${fmtInt(itemValue(cur))}g`,
+            fn: () => this.buy({ type: 'shop', list, i }),
+            cls: G.char.gold >= itemValue(cur) ? 'small' : 'small disabled',
+          }];
+          return {
+            html: itemTooltip(cur, {
+              price: itemValue(cur),
+              compare: cur.slot ? G.char.equip[slotFor(G.char.equip, cur)] : null,
+              hint: 'Right-click or double-tap to buy',
+              actions: acts,
+            }),
+            actions: acts,
+          };
+        });
       }
       grid.appendChild(d);
     });

@@ -45,7 +45,7 @@ export const Macros = {
     const c = G.char, p = G.player, w = G.world;
     if (!c || !c.macros || !p || !w) return;
     if (p.dead || w.kind === 'town') { this.queue.length = 0; return; }
-    c.macros.forEach((m, i) => { if (m.key && input.consume(m.key)) this.run(i); });
+    c.macros.forEach((m, i) => { if (m.key && m.skills.length && input.consume(m.key)) this.run(i); });
     if ((this.keepT -= dt) <= 0) {
       this.keepT = 0.25;
       const keep = c.macros.filter((m) => m.keep && m.skills.length);

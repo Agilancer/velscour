@@ -34,7 +34,7 @@ export const Reliquary = {
     this.active = true;
     sfx('ui');
     UI.openPanel('reliquary', 'The Reliquary', (b) => this.render(b), { onClose: () => { this.active = false; UI.closePanel('inventory'); }, cls: 'reliquary-panel' });
-    UI.openPanel('inventory', 'Your Inventory', renderInventory);
+    UI.openPanel('inventory', 'Backpack', renderInventory, { cls: 'inventory-panel' });
   },
   /** Bag slot -> the open vault tab. */
   store(idx) {
@@ -81,7 +81,12 @@ export const Reliquary = {
       if (it) d.appendChild(itemCell(it));
       draggable(d, { key: 'vault:' + i, data: () => (t[i] ? { type: 'vault', idx: i, tab: this.tab } : null), icon: () => d.querySelector('img') && d.querySelector('img').src, onRight: () => this.take(i), onDouble: () => this.take(i) });
       droppable(d, (data) => (data.type === 'item' && data.where === 'bag' ? this.store(data.idx) : false), (data) => data.type === 'item' && data.where === 'bag');
-      if (it) UI.tip(d, () => itemTooltip(t[i], { hint: 'Right-click to take' }));
+      if (it) UI.tip(d, () => {
+        const cur = t[i];
+        if (!cur) return '';
+        const acts = [{ label: 'Take', fn: () => this.take(i) }];
+        return { html: itemTooltip(cur, { hint: 'Right-click or double-tap to take', actions: acts }), actions: acts };
+      });
       grid.appendChild(d);
     });
     body.appendChild(grid);

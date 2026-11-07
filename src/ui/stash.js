@@ -40,7 +40,7 @@ export const Stash = {
     this.active = true;
     sfx('ui');
     UI.openPanel('stash', 'Storage Chest', (b) => this.render(b), { onClose: () => { this.active = false; UI.closePanel('inventory'); }, cls: 'stash-panel' });
-    UI.openPanel('inventory', 'Your Inventory', renderInventory);
+    UI.openPanel('inventory', 'Backpack', renderInventory, { cls: 'inventory-panel' });
   },
   /** Bag slot -> chest. */
   store(idx) {
@@ -79,7 +79,12 @@ export const Stash = {
       if (it) d.appendChild(itemCell(it));
       draggable(d, { key: 'stash:' + i, data: () => (c.stash[i] ? { type: 'stash', idx: i } : null), icon: () => d.querySelector('img') && d.querySelector('img').src, onRight: () => this.take(i), onDouble: () => this.take(i) });
       droppable(d, (data) => (data.type === 'item' && data.where === 'bag' ? this.store(data.idx) : false), (data) => data.type === 'item' && data.where === 'bag');
-      if (it) UI.tip(d, () => itemTooltip(c.stash[i], { hint: 'Right-click to take' }));
+      if (it) UI.tip(d, () => {
+        const cur = c.stash[i];
+        if (!cur) return '';
+        const acts = [{ label: 'Take', fn: () => this.take(i) }];
+        return { html: itemTooltip(cur, { hint: 'Right-click or double-tap to take', actions: acts }), actions: acts };
+      });
       grid.appendChild(d);
     });
     body.appendChild(grid);
