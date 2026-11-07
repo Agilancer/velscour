@@ -24,7 +24,7 @@ export const G = {
     dmgNumbers: true,
     shake: true,
     zoom: 1,
-    mobileSkillBar: true,
+    mobileSkillBar: false, // landscape phones: full 15-slot bar art (off: orbs + potions only, the touch buttons hold the skills)
     lockSkillBar: false, // auto-play only fills empty bar slots
     hideItemNames: false, // no item name labels on the ground (hover still shows one)
     allItemNames: false, // every drop nearby named, with no budget (game/loot.js drawLootLabels)
@@ -42,6 +42,9 @@ export const G = {
     dkBlade: 'sprite', // the Death Knight's flying sword: 'sprite' (his sword as a 2D object), 'model' (live three.js), 'runeblade'
     noSkipCine: false, // "Don't skip cutscenes": Sky Battle scenes already seen play at 1x, not 20x
     fpsCap: 0, // frame rate cap: 0 none, 30 (phones run cooler over a long session)
+    showHeroStats: true, // show/hide the #hero-stats div
+    showTargetBox: true, // show/hide the #target-box div
+    showTargetSprite: true, // choose if target-box shows the target sprite or not
   },
 };
 
@@ -51,6 +54,7 @@ export function loadSettings() {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     Object.assign(G.settings, s);
+    if (!s.mobileHudV2) { G.settings.mobileSkillBar = false; G.settings.mobileHudV2 = true; }
   } catch (e) { /* ignore */ }
 }
 export function saveSettings() {

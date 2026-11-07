@@ -130,12 +130,12 @@ const { openGame, report } = require('./harness');
     await page.evaluate(() => { document.querySelector('#xp-text').style.opacity = ''; });
     const sheet = await page.evaluate(async () => {
       const { UI } = await import('/src/ui/ui.js');
-      const { renderInventory } = await import('/src/ui/inventory.js');
+      const { renderCharacter } = await import('/src/ui/inventory.js');
       const { unlockEndgame } = await import('/src/game/endgame.js');
       unlockEndgame();
-      UI.openPanel('inventory', 'Inventory', renderInventory);
-      const t = document.querySelector('[data-panel="inventory"]').textContent;
-      return { xpLine: /Next Infernal Mark [\d,.]+[A-Za-z]* \/ [\d,.]+[A-Za-z]* XP/.test(t), row: /Infernal Marks\d+ \(\d+ free\)/.test(t), btn: [...document.querySelectorAll('[data-panel="inventory"] button')].some((b) => b.textContent === 'Infernal Marks') };
+      UI.openPanel('character', 'Character & Stats', renderCharacter, { cls: 'character-panel' });
+      const t = document.querySelector('[data-panel="character"]').textContent;
+      return { xpLine: /Next Infernal Mark [\d,.]+[A-Za-z]* \/ [\d,.]+[A-Za-z]* XP/.test(t), row: /Infernal Marks\d+ \(\d+ free\)/.test(t), btn: [...document.querySelectorAll('[data-panel="character"] button')].some((b) => b.textContent === 'Infernal Marks') };
     });
     check(sheet.xpLine, 'the sheet\'s XP line shows the next Mark at the cap');
     check(sheet.row && sheet.btn, 'the sheet has the Infernal Marks row and button');

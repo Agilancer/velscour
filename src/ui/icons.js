@@ -238,3 +238,231 @@ export function itemIconURL(item) {
   if (!u) { u = itemIcon(item, 48).toDataURL(); itemUrlCache.set(key, u); }
   return u;
 }
+
+export function smiteIcon(size = 64) {
+  const key = 'special_smite|' + size;
+  let c = cache.get(key);
+  if (c) return c;
+  c = makeCanvas(size, size);
+  const x = c.getContext('2d', { willReadFrequently: true });
+  const s = size / 64;
+  const h = size / 2;
+
+  x.save();
+  x.beginPath();
+  x.arc(h, h, h - 2 * s, 0, TAU);
+  x.clip();
+
+  const bg = x.createRadialGradient(h, h * 0.42, 2, h, h, h * 1.15);
+  bg.addColorStop(0, '#5e3a0a');
+  bg.addColorStop(0.5, '#241204');
+  bg.addColorStop(1, '#070302');
+  x.fillStyle = bg;
+  x.fillRect(0, 0, size, size);
+
+  x.save();
+  x.translate(h, size * 0.1);
+  const nRays = 8;
+  for (let i = 0; i < nRays; i++) {
+    const a = (i / (nRays - 1) - 0.5) * Math.PI * 0.72 + Math.PI / 2;
+    const len = size * 0.75;
+    const gBeam = x.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
+    gBeam.addColorStop(0, 'rgba(255, 242, 190, 0.5)');
+    gBeam.addColorStop(1, 'rgba(255, 170, 30, 0)');
+    x.fillStyle = gBeam;
+    x.beginPath();
+    x.moveTo(0, 0);
+    x.lineTo(Math.cos(a - 0.07) * len, Math.sin(a - 0.07) * len);
+    x.lineTo(Math.cos(a + 0.07) * len, Math.sin(a + 0.07) * len);
+    x.closePath();
+    x.fill();
+  }
+  x.restore();
+
+  x.strokeStyle = 'rgba(255, 220, 90, 0.45)';
+  x.lineWidth = 2 * s;
+  x.beginPath();
+  x.arc(h, h * 0.74, size * 0.28, 0, TAU);
+  x.stroke();
+
+  x.save();
+  x.translate(h, h * 0.96);
+
+  const hGrip = x.createLinearGradient(-3 * s, 0, 3 * s, 0);
+  hGrip.addColorStop(0, '#4a2c0f');
+  hGrip.addColorStop(0.5, '#8c5a24');
+  hGrip.addColorStop(1, '#2c1806');
+  x.fillStyle = hGrip;
+  x.fillRect(-2.5 * s, -6 * s, 5 * s, 22 * s);
+
+  x.fillStyle = '#ffcf52';
+  x.fillRect(-3.5 * s, 14 * s, 7 * s, 3 * s);
+  x.fillRect(-3 * s, 0 * s, 6 * s, 1.5 * s);
+  x.fillRect(-3 * s, 6 * s, 6 * s, 1.5 * s);
+
+  x.save();
+  x.translate(0, -12 * s);
+  const hHead = x.createLinearGradient(-15 * s, -9 * s, 15 * s, 9 * s);
+  hHead.addColorStop(0, '#fff6c2');
+  hHead.addColorStop(0.35, '#ffcc33');
+  hHead.addColorStop(0.75, '#cc8810');
+  hHead.addColorStop(1, '#663905');
+  x.fillStyle = hHead;
+  x.strokeStyle = '#ffe894';
+  x.lineWidth = 1.5 * s;
+
+  x.beginPath();
+  x.moveTo(-15 * s, -8 * s);
+  x.lineTo(-12 * s, -11 * s);
+  x.lineTo(12 * s, -11 * s);
+  x.lineTo(15 * s, -8 * s);
+  x.lineTo(17 * s, 0);
+  x.lineTo(15 * s, 8 * s);
+  x.lineTo(12 * s, 11 * s);
+  x.lineTo(-12 * s, 11 * s);
+  x.lineTo(-15 * s, 8 * s);
+  x.lineTo(-17 * s, 0);
+  x.closePath();
+  x.fill();
+  x.stroke();
+
+  x.strokeStyle = '#ffffff';
+  x.lineWidth = 2 * s;
+  x.beginPath();
+  x.moveTo(0, -6 * s); x.lineTo(0, 6 * s);
+  x.moveTo(-5 * s, 0); x.lineTo(5 * s, 0);
+  x.stroke();
+
+  x.strokeStyle = '#fff8e0';
+  x.lineWidth = 1.8 * s;
+  x.beginPath();
+  x.moveTo(-16 * s, -2 * s); x.lineTo(-21 * s, -7 * s); x.lineTo(-23 * s, -5 * s);
+  x.moveTo(16 * s, -2 * s); x.lineTo(21 * s, -7 * s); x.lineTo(23 * s, -5 * s);
+  x.moveTo(-16 * s, 3 * s); x.lineTo(-22 * s, 7 * s);
+  x.moveTo(16 * s, 3 * s); x.lineTo(22 * s, 7 * s);
+  x.stroke();
+
+  x.restore();
+  x.restore();
+  x.restore();
+
+  cache.set(key, c);
+  return c;
+}
+
+export function madnessIcon(size = 64) {
+  const key = 'special_madness|' + size;
+  let c = cache.get(key);
+  if (c) return c;
+  c = makeCanvas(size, size);
+  const x = c.getContext('2d', { willReadFrequently: true });
+  const s = size / 64;
+  const h = size / 2;
+
+  x.save();
+  x.beginPath();
+  x.arc(h, h, h - 2 * s, 0, TAU);
+  x.clip();
+
+  const bg = x.createRadialGradient(h, h * 0.5, 2, h, h, h * 1.15);
+  bg.addColorStop(0, '#46092e');
+  bg.addColorStop(0.5, '#1e0316');
+  bg.addColorStop(1, '#060105');
+  x.fillStyle = bg;
+  x.fillRect(0, 0, size, size);
+
+  x.save();
+  x.translate(h, h);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * TAU;
+    x.strokeStyle = rgba('#ff1060', 0.28);
+    x.lineWidth = 2.5 * s;
+    x.beginPath();
+    x.moveTo(Math.cos(a) * 8 * s, Math.sin(a) * 8 * s);
+    x.quadraticCurveTo(
+      Math.cos(a + 0.6) * 18 * s, Math.sin(a + 0.6) * 18 * s,
+      Math.cos(a + 1.2) * 28 * s, Math.sin(a + 1.2) * 28 * s
+    );
+    x.stroke();
+  }
+  x.restore();
+
+  x.save();
+  x.translate(h, h);
+  const drawFlame = (fx, fy, scaleY, col) => {
+    x.fillStyle = col;
+    x.beginPath();
+    x.moveTo(fx - 4 * s, fy);
+    x.quadraticCurveTo(fx - 6 * s, fy - 10 * s * scaleY, fx, fy - 18 * s * scaleY);
+    x.quadraticCurveTo(fx + 6 * s, fy - 10 * s * scaleY, fx + 4 * s, fy);
+    x.closePath();
+    x.fill();
+  };
+  drawFlame(-12 * s, 6 * s, 0.7, 'rgba(180, 20, 100, 0.5)');
+  drawFlame(12 * s, 6 * s, 0.7, 'rgba(180, 20, 100, 0.5)');
+  drawFlame(-6 * s, -4 * s, 1.1, 'rgba(255, 30, 110, 0.7)');
+  drawFlame(6 * s, -4 * s, 1.1, 'rgba(255, 30, 110, 0.7)');
+  drawFlame(0, -6 * s, 1.3, '#ff4090');
+  x.restore();
+
+  x.save();
+  x.translate(h, h);
+
+  const eyeGrad = x.createRadialGradient(0, 0, 1, 0, 0, 16 * s);
+  eyeGrad.addColorStop(0, '#ffd8ea');
+  eyeGrad.addColorStop(0.35, '#ff2070');
+  eyeGrad.addColorStop(0.7, '#880845');
+  eyeGrad.addColorStop(1, '#2c0418');
+
+  x.beginPath();
+  x.moveTo(-20 * s, 0);
+  x.quadraticCurveTo(-10 * s, -13 * s, 0, -13 * s);
+  x.quadraticCurveTo(10 * s, -13 * s, 20 * s, 0);
+  x.quadraticCurveTo(10 * s, 13 * s, 0, 13 * s);
+  x.quadraticCurveTo(-10 * s, 13 * s, -20 * s, 0);
+  x.closePath();
+  x.fillStyle = eyeGrad;
+  x.fill();
+  x.strokeStyle = '#ff6aa8';
+  x.lineWidth = 1.8 * s;
+  x.stroke();
+
+  x.strokeStyle = 'rgba(60, 0, 30, 0.8)';
+  x.lineWidth = 2 * s;
+  x.beginPath();
+  x.arc(0, 0, 8.5 * s, 0, TAU);
+  x.stroke();
+
+  x.fillStyle = '#080105';
+  x.beginPath();
+  x.moveTo(0, -10 * s);
+  x.quadraticCurveTo(3.5 * s, 0, 0, 10 * s);
+  x.quadraticCurveTo(-3.5 * s, 0, 0, -10 * s);
+  x.closePath();
+  x.fill();
+
+  x.fillStyle = '#ffffff';
+  x.beginPath();
+  x.arc(-1.5 * s, -2.5 * s, 1.5 * s, 0, TAU);
+  x.fill();
+
+  x.restore();
+  x.restore();
+
+  cache.set(key, c);
+  return c;
+}
+
+export function smiteIconURL(size = 64) {
+  const key = 'special_smite_url|' + size;
+  let u = urlCache.get(key);
+  if (!u) { u = smiteIcon(size).toDataURL(); urlCache.set(key, u); }
+  return u;
+}
+
+export function madnessIconURL(size = 64) {
+  const key = 'special_madness_url|' + size;
+  let u = urlCache.get(key);
+  if (!u) { u = madnessIcon(size).toDataURL(); urlCache.set(key, u); }
+  return u;
+}

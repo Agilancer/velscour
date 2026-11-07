@@ -11,6 +11,8 @@ export const UI = {
   renderers: new Map(),
   modalCount: 0,
   selected: null,
+  windowOrder: 30,
+  windowPositions: new Map(),
   get modal() { return this.modalCount > 0; },
 
   init() {
@@ -23,7 +25,27 @@ export const UI = {
     this.msgEl = $('#center-msg');
     this.ghost = $('#drag-ghost');
     initDnD();
-    document.addEventListener('pointermove', (e) => { if (!this.tipEl.classList.contains('hidden') && e.pointerType === 'mouse') this.placeTip(e.clientX, e.clientY); });
+    window.addEventListener('resize', () => this.layoutPanels());
+    this.tipEl.addEventListener('pointerenter', () => {
+      if (this.tipHideT) { clearTimeout(this.tipHideT); this.tipHideT = 0; }
+    });
+    this.tipEl.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse' && this.isInteractiveTip && !this.isTouchTip) {
+        this.scheduleHideTip();
+      }
+    });
+    document.addEventListener('pointermove', (e) => {
+      if (!this.tipEl.classList.contains('hidden') && e.pointerType === 'mouse' && !this.isTouchTip && !this.isInteractiveTip) {
+        this.placeTip(e.clientX, e.clientY);
+      }
+    });
+    document.addEventListener('pointerdown', (e) => {
+      if (this.tipEl && !this.tipEl.classList.contains('hidden')) {
+        if (this.tipEl.contains(e.target)) return;
+        if (this.touchTipTarget && this.touchTipTarget.contains(e.target)) return;
+        this.hideTip();
+      }
+    });
   },
 
   // ------------------------------------------------------------- panels
@@ -39,6 +61,8 @@ export const UI = {
       close.title = 'Close (Esc)';
       close.onclick = () => { sfx('ui'); this.closePanel(name); };
       head.appendChild(close);
+      head.addEventListener('pointerdown', (e) => this.startPanelMove(e, name));
+      root.addEventListener('pointerdown', () => this.focusPanel(name));
       root.appendChild(head);
       const body = el('div', 'panel-body');
       root.appendChild(body);
@@ -47,40 +71,153 @@ export const UI = {
       this.panels.set(name, p);
     }
     p.head.querySelector('h2').textContent = title;
+    p.opts = opts;
     this.renderers.set(name, render);
     render(p.body, p);
+    this.focusPanel(name);
+    this.layoutPanels();
     this.onPanelsChanged();
     return p;
   },
   closePanel(name) {
     const p = this.panels.get(name);
     if (!p) return;
+    const hadTipInside = this.touchTipTarget && p.root.contains(this.touchTipTarget);
     p.root.remove();
     this.panels.delete(name);
     this.renderers.delete(name);
     if (p.opts.onClose) p.opts.onClose();
-    if (!this.panels.size) { this.selected = null; this.hideTip(); }
+    if (!this.panels.size || hadTipInside) { if (!this.panels.size) this.selected = null; this.hideTip(); }
+    this.layoutPanels();
     this.onPanelsChanged();
   },
-  closeAll() { for (const k of [...this.panels.keys()]) this.closePanel(k); },
+  closeAll() {
+    for (const k of [...this.panels.keys()]) this.closePanel(k);
+    this.closeAllDialogs();
+  },
+  closeAllDialogs() {
+    if (this.screensEl) {
+      const screens = this.screensEl.querySelectorAll('.screen');
+      screens.forEach((s) => s.remove());
+    }
+    this.modalCount = 0;
+  },
   isOpen(name) { return this.panels.has(name); },
   anyOpen() { return this.panels.size > 0; },
   refresh() {
     for (const [name, r] of this.renderers) {
       const p = this.panels.get(name);
-      if (p) { const st = p.body.scrollTop; r(p.body, p); p.body.scrollTop = st; }
+      if (p) {
+        const st = p.body.scrollTop;
+        const expanded = p.body.querySelector('.character-more')?.open;
+        r(p.body, p);
+        p.body.scrollTop = st;
+        if (expanded) p.body.querySelector('.character-more')?.setAttribute('open', '');
+      }
+    }
+    if (this.tipEl && !this.tipEl.classList.contains('hidden') && this.tipKey && this.tipRefreshFn) {
+      const safeKey = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(this.tipKey) : this.tipKey.replace(/"/g, '\\"');
+      const nextAnchor = document.querySelector(`[data-tip-key="${safeKey}"]`);
+      if (nextAnchor) {
+        this.showTip(this.tipRefreshFn(), 0, 0, this.isTouchTip, nextAnchor, { interactive: this.isInteractiveTip, key: this.tipKey, fn: this.tipRefreshFn });
+      } else {
+        this.hideTip();
+      }
     }
     if (this.hud) this.hud.refreshStatic();
   },
-  onPanelsChanged() { document.body.classList.toggle('panel-open', this.panels.size > 0); if (this.hud) this.hud.refreshStatic(); }, // (portrait touch hides its buttons under a panel)
+  onPanelsChanged() {
+    document.body.classList.toggle('panel-open', this.panels.size > 0);
+    if (this.panelsEl) this.panelsEl.classList.toggle('multi-panel', this.panels.size > 1);
+    if (this.hud) this.hud.refreshStatic();
+  }, // (portrait touch hides its buttons under a panel)
+
+  desktopPanels() {
+    if (document.body.classList.contains('portrait') || window.innerHeight > window.innerWidth) return false;
+    return !G.touch && !document.body.classList.contains('touch');
+  },
+  focusPanel(name) {
+    const p = this.panels.get(name);
+    if (p && this.desktopPanels()) p.root.style.zIndex = ++this.windowOrder;
+  },
+  panelBounds(p) {
+    const host = this.panelsEl.getBoundingClientRect();
+    return { w: host.width, h: host.height, pw: p.root.offsetWidth, ph: p.root.offsetHeight };
+  },
+  placePanel(name, x, y) {
+    const p = this.panels.get(name);
+    if (!p) return;
+    const { w, h, pw, ph } = this.panelBounds(p);
+    const left = Math.max(0, Math.min(x, Math.max(0, w - pw)));
+    const top = Math.max(0, Math.min(y, Math.max(0, h - Math.min(ph, 48))));
+    p.root.style.left = `${left}px`;
+    p.root.style.top = `${top}px`;
+    this.windowPositions.set(name, { x: left, y: top, moved: true });
+  },
+  layoutPanels() {
+    if (!this.panelsEl) return;
+    const isPortrait = document.body.classList.contains('portrait') || window.innerHeight > window.innerWidth;
+    if (isPortrait || !this.desktopPanels()) {
+      for (const [, p] of this.panels) {
+        p.root.style.left = '';
+        p.root.style.top = '';
+        p.root.style.width = '';
+      }
+      return;
+    }
+    const host = this.panelsEl.getBoundingClientRect();
+    const inventory = this.panels.get('inventory');
+    const partner = [...this.panels].find(([name]) => ['vendor', 'stash', 'reliquary', 'character', 'jewelbox'].includes(name));
+    const canPair = inventory && partner && host.width >= inventory.root.offsetWidth + partner[1].root.offsetWidth + 22;
+    for (const [name, p] of this.panels) {
+      const saved = this.windowPositions.get(name);
+      if (saved?.moved && !(canPair && (name === 'inventory' || name === partner[0]))) {
+        this.placePanel(name, saved.x, saved.y);
+        continue;
+      }
+      const pw = p.root.offsetWidth, ph = p.root.offsetHeight;
+      let x = Math.max(0, (host.width - pw) / 2);
+      if (canPair) {
+        const total = inventory.root.offsetWidth + partner[1].root.offsetWidth + 12;
+        const start = (host.width - total) / 2;
+        if (name === 'inventory') x = start + partner[1].root.offsetWidth + 12;
+        else if (name === partner[0]) x = start;
+      }
+      p.root.style.left = `${Math.round(x)}px`;
+      p.root.style.top = `${Math.max(0, Math.min(10, host.height - ph))}px`;
+    }
+  },
+  startPanelMove(e, name) {
+    if (!this.desktopPanels() || e.button !== 0 || e.target.closest('button, input, select')) return;
+    const p = this.panels.get(name);
+    if (!p) return;
+    e.preventDefault();
+    this.focusPanel(name);
+    const host = this.panelsEl.getBoundingClientRect();
+    const r = p.root.getBoundingClientRect();
+    const dx = e.clientX - r.left, dy = e.clientY - r.top;
+    p.head.setPointerCapture(e.pointerId);
+    p.root.classList.add('moving');
+    const move = (ev) => this.placePanel(name, ev.clientX - host.left - dx, ev.clientY - host.top - dy);
+    const end = () => {
+      p.root.classList.remove('moving');
+      p.head.removeEventListener('pointermove', move);
+      p.head.removeEventListener('pointerup', end);
+      p.head.removeEventListener('pointercancel', end);
+    };
+    p.head.addEventListener('pointermove', move);
+    p.head.addEventListener('pointerup', end);
+    p.head.addEventListener('pointercancel', end);
+  },
 
   // ------------------------------------------------------------- messages
   log(html, color) {
+    if (!this.logEl) return;
     const d = el('div', '', html);
     if (color) d.style.color = color;
     this.logEl.appendChild(d);
     while (this.logEl.children.length > 6) this.logEl.firstChild.remove();
-    const sea = !!(G.world && G.world.seaRun), life = sea ? 4000 : 6200;   // at sea the deck's left edge is where the boats come from
+    const sea = !!(G.world && G.world.seaRun), life = sea ? 4000 : 6200; // at sea the deck's left edge is where the boats come from
     if (sea) { d.style.transition = 'opacity .6s'; setTimeout(() => { d.style.opacity = '0'; }, life - 600); }
     setTimeout(() => d.remove(), life);
   },
@@ -125,25 +262,119 @@ export const UI = {
   },
 
   // ------------------------------------------------------------- tooltip
-  showTip(html, x, y) {
-    if (G.touch) return;
+  scheduleHideTip(ms = 130) {
+    clearTimeout(this.tipHideT);
+    this.tipHideT = setTimeout(() => { this.tipHideT = 0; this.hideTip(); }, ms);
+  },
+  showTip(content, x, y, isTouch = false, anchorEl = null, opts = {}) {
+    let html = '', actions = null, interactive = !!opts.interactive;
+    if (content && typeof content === 'object') {
+      html = content.html || '';
+      actions = content.actions || null;
+      if (content.interactive) interactive = true;
+    } else {
+      html = content || '';
+    }
+    if (!html) return;
+    if (this.tipHideT) { clearTimeout(this.tipHideT); this.tipHideT = 0; }
     this.tipEl.innerHTML = html;
+    this.isTouchTip = isTouch;
+    this.isInteractiveTip = interactive;
+    this.touchTipTarget = anchorEl;
+    this.tipKey = opts.key || null;
+    this.tipRefreshFn = opts.fn || null;
+    this.tipEl.classList.toggle('touch-open', isTouch);
+    this.tipEl.classList.toggle('interactive', interactive);
     this.tipEl.classList.remove('hidden');
-    this.placeTip(x, y);
+    if (actions && actions.length) {
+      this.tipEl.querySelectorAll('[data-tt-act]').forEach((btn) => {
+        const idx = +btn.dataset.ttAct;
+        const act = actions[idx];
+        if (act && act.fn) {
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            if (!act.keepOpen) this.hideTip();
+            act.fn(e);
+          };
+        }
+      });
+    }
+    if (interactive && anchorEl) this.placeTipAtAnchor(anchorEl);
+    else this.placeTip(x, y);
+  },
+  placeTipAtAnchor(anchorEl) {
+    const t = this.tipEl;
+    t.style.maxWidth = 'min(340px, calc(100vw - 16px))';
+    t.style.maxHeight = 'calc(100vh - 24px)';
+    t.style.overflowY = 'auto';
+    const a = anchorEl.getBoundingClientRect();
+    const r = t.getBoundingClientRect();
+    let nx, ny;
+    if (a.right + 10 + r.width <= innerWidth - 8) {
+      nx = a.right + 10;
+      ny = a.top - 6;
+    } else if (a.left - 10 - r.width >= 8) {
+      nx = a.left - r.width - 10;
+      ny = a.top - 6;
+    } else {
+      nx = (innerWidth - r.width) / 2;
+      ny = a.bottom + 8 + r.height <= innerHeight - 8 ? a.bottom + 8 : a.top - r.height - 8;
+    }
+    nx = Math.max(8, Math.min(nx, innerWidth - r.width - 8));
+    ny = Math.max(8, Math.min(ny, innerHeight - r.height - 8));
+    t.style.left = Math.round(nx) + 'px';
+    t.style.top = Math.round(ny) + 'px';
   },
   placeTip(x, y) {
-    const t = this.tipEl, r = t.getBoundingClientRect();
+    const t = this.tipEl;
+    t.style.maxWidth = 'min(340px, calc(100vw - 16px))';
+    t.style.maxHeight = 'calc(100vh - 24px)';
+    t.style.overflowY = 'auto';
+    const r = t.getBoundingClientRect();
     let nx = x + 18, ny = y + 12;
-    if (nx + r.width > innerWidth - 4) nx = x - r.width - 14;
-    if (ny + r.height > innerHeight - 4) ny = innerHeight - r.height - 4;
-    t.style.left = Math.max(4, nx) + 'px';
-    t.style.top = Math.max(4, ny) + 'px';
+    if (nx + r.width > innerWidth - 8) nx = x - r.width - 14;
+    if (ny + r.height > innerHeight - 8) ny = innerHeight - r.height - 8;
+    nx = Math.max(8, Math.min(nx, innerWidth - r.width - 8));
+    ny = Math.max(8, Math.min(ny, innerHeight - r.height - 8));
+    t.style.left = Math.round(nx) + 'px';
+    t.style.top = Math.round(ny) + 'px';
   },
-  hideTip() { this.tipEl.classList.add('hidden'); },
-  /** Attach hover tooltip to an element. html may be a function. */
-  tip(elm, html) {
-    elm.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse' && !drag.active) this.showTip(typeof html === 'function' ? html() : html, e.clientX, e.clientY); });
-    elm.addEventListener('pointerleave', () => this.hideTip());
+  hideTip() {
+    if (this.tipHideT) { clearTimeout(this.tipHideT); this.tipHideT = 0; }
+    this.tipEl.classList.add('hidden');
+    this.tipEl.classList.remove('touch-open', 'interactive');
+    this.isTouchTip = false;
+    this.isInteractiveTip = false;
+    this.touchTipTarget = null;
+    this.tipKey = null;
+    this.tipRefreshFn = null;
+  },
+  /** Attach hover tooltip to an element (and tap on touch). html may be a function returning string or { html, actions }. */
+  tip(elm, html, opts = {}) {
+    const fn = typeof html === 'function' ? html : () => html;
+    if (opts.key) elm.dataset.tipKey = opts.key;
+    elm.addEventListener('pointerenter', (e) => {
+      if (e.pointerType === 'mouse' && !drag.active) {
+        if (this.tipHideT) { clearTimeout(this.tipHideT); this.tipHideT = 0; }
+        this.showTip(fn(), e.clientX, e.clientY, false, elm, { ...opts, fn });
+      }
+    });
+    elm.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse' && !this.isTouchTip) {
+        if (opts.interactive || this.isInteractiveTip) this.scheduleHideTip();
+        else this.hideTip();
+      }
+    });
+    elm.addEventListener('pointerup', (e) => {
+      if (e.pointerType !== 'mouse' || G.touch) {
+        if (!drag.active) {
+          const content = fn();
+          if (content) {
+            this.showTip(content, e.clientX, e.clientY, true, elm, { ...opts, fn });
+          }
+        }
+      }
+    });
   },
 };
 

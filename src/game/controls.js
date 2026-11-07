@@ -76,13 +76,13 @@ export const controls = {
     const p = G.player, w = G.world;
     if (!p || !w) return;
     const ui = G.ui;
-    const blocked = ui.modal || (G.paused);
+    const blocked = ui.modal || G.paused || G.cine;
     // ---- hover
     const mouse = input.mouse;
     const useMouse = input.lastPointerType === 'mouse';
     G.hover = useMouse && mouse.inside ? creatureAt(mouse.x, mouse.y) : null;
     if (G.hover && G.hover.team === 'player') G.hover = null;
-    if (p.dead || blocked) { p.moveVec = [0, 0]; input.endFrame(); return; }
+    if (p.dead || blocked) { p.moveVec = [0, 0]; p.moveTarget = null; p.path = null; p.attackTarget = null; p.interact = null; p.moving = false; input.endFrame(); return; }
 
     // ---- direct movement (WASD / joystick)
     let mx = 0, my = 0;
@@ -149,7 +149,7 @@ export const controls = {
     SLOT_KEYS.forEach((k, i) => { if (k && (input.consume(k) || (input.down(k) && p.castLock <= 0))) this.useSlot(i); });
     if (input.consume('KeyZ')) p.usePotion('hp');
     if (input.consume('KeyX')) p.usePotion('mp');
-    if (input.consume('KeyC')) p.usePotion('rejuv');
+    if (input.consume('KeyR')) p.usePotion('rejuv');
     if (input.consume('KeyV')) p.usePotion('fury');
 
     // ---- touch world taps
