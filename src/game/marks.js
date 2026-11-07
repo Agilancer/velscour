@@ -32,6 +32,27 @@ export const marksTotal = () => endgame().marks.pts;
 export const marksSpent = () => MARK_CATS.reduce((s, k) => s + endgame().marks.spent[k], 0);
 export const marksFree = () => marksTotal() - marksSpent();
 export const marksIn = (k) => endgame().marks.spent[k] || 0;
+
+/** Check if player has enough free/unspent Infernal Marks. */
+export const canAffordMarks = (cost) => marksFree() >= cost;
+
+/** Deduct Infernal Marks for account/character purchases (e.g. storage rows, sealed chests). */
+export function deductMarks(cost) {
+  cost = Math.max(0, Math.floor(cost));
+  if (!cost) return true;
+  if (marksFree() < cost) return false;
+  endgame().marks.pts -= cost;
+  changed();
+  const p = G.player;
+  if (p && G.world) {
+    floatText(p.x, p.y, 96, `-${cost} INFERNAL MARK${cost > 1 ? 'S' : ''}`, '#ffd860', 18, { life: 2.6, vz: 22 });
+    sfx('levelup', 0.6);
+  }
+  if (G.ui && G.ui.log) {
+    G.ui.log(`<b style="color:#ffd860">-${cost} Infernal Mark${cost > 1 ? 's' : ''}</b> <span class="dim">(${marksFree()} free marks remain)</span>`, '#ffd860');
+  }
+  return true;
+}
 /** A category's second bonus for n points (Precision's critical damage), or 0. */
 export const alsoAt = (k, n) => (CATS[k].also ? Math.round(CATS[k].also.per * eff(n) * 100) / 100 : 0);
 /** The bonuses every hero gets now: { life % more, crit %, critDmg %, mf = % more drops, rift s }. */

@@ -13,6 +13,7 @@ import { titleScreen } from './ui/screens.js';
 import { Cloud } from './game/cloud.js';
 import { Vendor } from './ui/vendor.js';
 import { Stash } from './ui/stash.js';
+import { JewelBox } from './ui/jewelbox.js';
 import { Reliquary } from './ui/reliquary.js';
 import { Heresies } from './ui/heresies.js';
 import { Rifts } from './ui/rifts.js';
@@ -281,6 +282,7 @@ async function boot() {
   UI.init();
   UI.vendor = Vendor;
   UI.stash = Stash;
+  UI.jewelBox = JewelBox;
   UI.reliquary = Reliquary;
   UI.heresies = Heresies; UI.rifts = Rifts; UI.marks = Marks; // the Endgame's panels (docs/ENDGAME.md)
   UI.macros = MacrosUI;

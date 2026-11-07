@@ -28,21 +28,16 @@ import { bladeOnBack } from './sigs/deathknight.js';
 
 const FREE_CAST = new Set(['buff', 'summon']);
 import { relicBonuses } from '../data/relics.js';
+import { computeTalentBonuses, skillMorphFor, applySkillMorph } from '../data/talents.js';
 import { relicProc } from './relicprocs.js';
 import { noteFind, codexMf } from './reliquary.js';
 import { markBonuses, gainMarkXp } from './marks.js';
 import { heresyHero, heresyAllows } from './heresies.js';
 import { endgame, saveEndgame } from './endgame.js';
 
-// XP for the next level. The (L/30)^1.5 term paces a hero who clears every depth to stay ~10-50 levels above its
-// monsters and reach ~270 by Velscour (depth 500, monster level 258); without it a full-clearing hero hit level 300
-// by depth 160. Past level 240 a level costs L/240 times the level-240 price, so in the Endless Torment (depths past
-// 500) a full-clearing hero keeps pace with its monsters. Past 600 a level costs (L/600)^XP_K times the level-600 price
-// (a deep depth's XP grows ~level^1.5), so the hero stays level with the monsters to the cap (MAX_LEVEL, data/depth.js)
-// around depth 6600 (tools/tests/endgame.js deep).
-const xpCurve = (L) => (60 * L * L + 40 * L) * (1 + Math.pow(L / 30, 1.5));
-const XP_K = 1.6, XP600 = xpCurve(240) * 600 / 240;
-export const xpToNext = (L) => Math.round(L <= 240 ? xpCurve(L) : L <= 600 ? xpCurve(240) * L / 240 : XP600 * Math.pow(L / 600, XP_K));
+// XP for the next level across the Level 1-100 progression curve.
+const xpCurve = (L) => (45 * L * L + 35 * L) * (1 + Math.pow(L / 25, 1.25));
+export const xpToNext = (L) => Math.round(xpCurve(Math.max(1, L)));
 export { MAX_LEVEL };
 /** The class's damage tuning at a hero level (data/classes.js DMG_TUNE). */
 export function classTune(cls, level) {
@@ -79,6 +74,8 @@ export class Player extends Creature {
     this.bashRageClaim = -1;
     this.whirlAuto = false;
     this.phoenixCd = 0;
+    this.talentCheatCd = 0;
+    this.morphHealCd = 0;
     this.infernoT = 0;
     this.st = {};
     this.recompute();
@@ -106,6 +103,13 @@ export class Player extends Creature {
     const rb = relicBonuses(c.equip);
     for (const [k, v] of rb.stats) put(k, v);
     Object.assign(legendary, rb.legs);
+    // Passive Talent Tree bonuses (data/talents.js)
+    const tb = computeTalentBonuses(c);
+    for (const [k, v] of Object.entries(tb.stats)) {
+      if (k === 'allStats') put('allAttr', v);
+      else if (k === 'manaMax') put('mana', v);
+      else put(k, v);
+    }
     // buffs
     let buffDmg = 0, buffAs = 0, buffArmor = 0, buffRes = 0, buffRegen = 0, buffSpeed = 0, buffCrit = 0, buffThorns = 0, buffLeech = 0, buffBlock = 0, buffLife = 0, buffCdr = 0, buffProj = 0;
     let buffReduce = 0, buffMf = 0, buffGf = 0, buffXp = 0;
@@ -128,13 +132,13 @@ export class Player extends Creature {
     const critRaw = 5 + dex * 0.1 + (add.critChance || 0) + buffCrit / 4 + mk.crit, critOver = Math.max(0, critRaw - 75);
     const st = {
       str, dex, vit, int, legendary, procs: rb.procs,
-      armor: Math.round((itemArmorSum + (add.armor || 0) + str) * (1 + ((add.armorPct || 0) + buffArmor) / 100)),
+      armor: Math.round((itemArmorSum + (add.armor || 0) + str + (c.level - 1) * 1.5) * (1 + ((add.armorPct || 0) + buffArmor) / 100)),
       res: {
-        fire: (add.resFire || 0) + (add.resAll || 0) + buffRes,
-        cold: (add.resCold || 0) + (add.resAll || 0) + buffRes,
-        light: (add.resLight || 0) + (add.resAll || 0) + buffRes,
-        poison: (add.resPoison || 0) + (add.resAll || 0) + buffRes,
-        magic: Math.round(((add.resAll || 0) + buffRes) * 0.75),
+        fire: (add.resFire || 0) + (add.resAll || 0) + buffRes + Math.round((c.level - 1) * 0.2),
+        cold: (add.resCold || 0) + (add.resAll || 0) + buffRes + Math.round((c.level - 1) * 0.2),
+        light: (add.resLight || 0) + (add.resAll || 0) + buffRes + Math.round((c.level - 1) * 0.2),
+        poison: (add.resPoison || 0) + (add.resAll || 0) + buffRes + Math.round((c.level - 1) * 0.2),
+        magic: Math.round(((add.resAll || 0) + buffRes + Math.round((c.level - 1) * 0.2)) * 0.75),
       },
       critChance: clamp(critRaw, 0, 75), critOver,
       critDmg: 50 + (add.critDmg || 0) + mk.critDmg + critOver * CRIT_OVER,
@@ -175,7 +179,7 @@ export class Player extends Creature {
       regenPct: buffRegen / 10,
     };
     for (const k of ELEM_KEYS) st.elemPct[k] = (add[k + 'Pct'] || 0) + int;
-    st.weapon = weapon ? itemDmg(weapon) : [1, 3];
+    st.weapon = weapon ? itemDmg(weapon) : [Math.round(1 + (c.level - 1) * 0.4), Math.round(3 + (c.level - 1) * 0.8)];
     // Barbarians can carry an actual second melee weapon instead of a shield.
     const second = c.equip.offhand;
     if (this.classId === 'barbarian' && second?.slot === 'weapon') {
@@ -185,13 +189,24 @@ export class Player extends Creature {
     }
     if (weapon) { const fd = add.flatDmg || 0; st.weapon = [st.weapon[0] + fd, st.weapon[1] + fd]; }
     const lifePct = (add.lifePct || 0) + buffLife;
-    this.maxHp = Math.round((C.life + (c.level - 1) * C.lifeLvl + vit * 3 + (add.life || 0)) * (1 + lifePct / 100) * st.fortitude * (1 + mk.life / 100));
+    const baseHp = C.life + (c.level - 1) * C.lifeLvl + Math.round(Math.pow(c.level - 1, 2) * 0.45) + vit * 6 + (add.life || 0);
+    this.maxHp = Math.round(baseHp * (1 + lifePct / 100) * st.fortitude * (1 + mk.life / 100));
     this.maxMana = Math.round(C.mana + (c.level - 1) * C.manaLvl + int * 2 + (add.mana || 0));
-    st.lifeRegen = heresyAllows('regen', c) ? 0.6 + c.level * 0.12 + vit * 0.05 + (add.lifeRegen || 0) + this.maxHp * st.regenPct / 100 : 0; // Hunger of the Abyss: none
-    st.manaRegen = 1.6 + c.level * 0.15 + int * 0.06 + (add.manaRegen || 0);
+    const inTown = this.world && this.world.kind === 'town';
+    st.naturalLifeRegen = 1.2 + c.level * 0.35 + vit * 0.08;
+    st.bonusLifeRegen = (add.lifeRegen || 0) + this.maxHp * st.regenPct / 100;
+    st.lifeRegen = heresyAllows('regen', c) ? ((inTown ? st.naturalLifeRegen : 0) + st.bonusLifeRegen) : 0; // Hunger of the Abyss: none
+    st.manaRegen = (1.0 + c.level * 0.04 + int * 0.04 + (add.manaRegen || 0)) * (1 + (add.manaRegenPct || 0) / 100);
+    st.talents = tb.mods;
+    st.talentSkillMults = tb.skillMults;
+    st.talentMorphs = tb.morphs;
+    st.cheatDeath = tb.cheatDeath;
+    st.talentOnKill = tb.onKill;
+    st.knightCapPlus = tb.knightCapPlus || 0;
     this.st = st;
     this.augs = RING_SLOTS.flatMap((s) => (c.equip[s] && c.equip[s].aug) || []);
     this.augCache = new Map();
+    this.morphCache = new Map();
     if (this.hp > this.maxHp) this.hp = this.maxHp;
     if (this.mana > this.maxMana) this.mana = this.maxMana;
     this.speed = 4.2 * (this.classId === 'barbarian' ? 1.25 : 1) * (1 + st.moveSpeed / 100);
@@ -243,17 +258,30 @@ export class Player extends Creature {
   synergy(sk) {
     let pts = 0;
     for (const s of CLASS_SKILLS[this.classId]) if (s.tree === sk.tree && s.id !== sk.id) pts += this.char.skills[s.id] || 0;
-    return 1 + pts * 0.03;
+    return 1 + pts * 0.015;
   }
 
   skillDamage(sk, L) {
     const st = this.st;
+    const morph = skillMorphFor(this, sk);
+    const effEl = (morph && morph.el) || sk.el;
     const base = skillBaseDamage(sk, L);
     const wc = weaponCoef(sk);
-    const elBonus = sk.el === 'phys' ? st.physPct : st.elemPct[sk.el] || 0;
-    let mult = (1 + (st.dmgPct + st.primary + elBonus) / 100) * this.synergy(sk) * masteryMul(this.mastery(sk)) * classTune(this.classId, this.char.level) * (sk.m.pow ?? 1);
+    const elBonus = (effEl === 'phys' ? st.physPct : st.elemPct[effEl] || 0) * 0.25;
+    const primBonus = st.primary * 0.28;
+    let mult = (1 + (st.dmgPct * 0.35 + primBonus + elBonus) / 100) * this.synergy(sk) * masteryMul(this.mastery(sk)) * classTune(this.classId, this.char.level) * (sk.m.pow ?? 1);
     if (st.legendary.berserk) mult *= 1 + 0.04 * Math.floor((1 - this.hp / this.maxHp) * 10);
     if (this.score) mult *= harmonyMul(this); // the Bard's Harmony
+    if (st.talentSkillMult && st.talentSkillMult[sk.id]) mult *= st.talentSkillMult[sk.id];
+    if (st.talentSkillMults) {
+      for (const tm of st.talentSkillMults) {
+        const treeOk = tm.tree === null || tm.tree === undefined || (Array.isArray(tm.tree) ? tm.tree.includes(sk.tree) : tm.tree === sk.tree);
+        const kindOk = !tm.kind || (Array.isArray(tm.kind) ? tm.kind.includes(sk.kind) : tm.kind === sk.kind);
+        const skOk = !tm.skills || tm.skills.includes(sk.name);
+        if (treeOk && kindOk && skOk) mult *= 1 + tm.pct / 100;
+      }
+    }
+    if (morph && morph.dmgPct) mult *= 1 + morph.dmgPct / 100;
     const lo = (base * 0.85 + st.weapon[0] * wc) * mult, hi = (base * 1.15 + st.weapon[1] * wc) * mult;
     return [Math.max(1, Math.round(lo)), Math.max(2, Math.round(hi))];
   }
@@ -293,15 +321,21 @@ export class Player extends Creature {
     c.level++;
     c.statPoints += 5;
     c.skillPoints += 1;
+    const earnedTalent = c.level % 5 === 0;
+    if (earnedTalent) {
+      c.talentPoints = (c.talentPoints || 0) + 1;
+    }
     const granted = this.applyGrants();
     this.recompute();
     this.hp = this.maxHp; this.mana = this.maxMana;
     this.levelUpFx();
     if (G.ui) {
       if (G.ui.hud) G.ui.hud.levelUp(c.level, levelUpFanfare());
+      if (earnedTalent) G.ui.log('You earned a <b>Talent Point</b>! Open the Passive Talent Tree (T) to spend it.', '#ffd860');
       for (const id of granted) G.ui.log(`New ability learned: <b>${SKILLS[id].name}</b>`, '#ffd860');
       G.ui.refresh();
     }
+    if (G.game?.autosave) G.game.autosave();
   }
   /** Grimdark level-up: a dark sigil bursting into flames, a column of blood-red hellfire, rainbow lightning forking
    *  into the sky, smoke and a blood fountain, a shove. */
@@ -337,9 +371,17 @@ export class Player extends Creature {
       if (!c.granted[id]) {
         c.granted[id] = true;
         if (!c.skills[id]) { c.skills[id] = 1; out.push(id); }
-        // auto-slot into the first free bar slot
+        // auto-slot into the first free bar slot (0-mana basic attacks prefer LMB)
         if (!c.bar.includes(id)) {
-          if (id.endsWith('.0.0') && !c.bar[0]) c.bar[0] = id;
+          const gSk = SKILLS[id];
+          if (gSk && gSk.m && gSk.m.free) {
+            const prev = c.bar[0];
+            c.bar[0] = id;
+            if (prev && prev !== id) {
+              const free = freeSlot(c.bar);
+              if (free >= 0) c.bar[free] = prev;
+            }
+          } else if (id.endsWith('.0.0') && !c.bar[0]) c.bar[0] = id;
           else {
             const free = freeSlot(c.bar);
             if (free >= 0) c.bar[free] = id;
@@ -358,8 +400,20 @@ export class Player extends Creature {
         c.gold += g.amount; sfx('gold');
         floatText(this.x, this.y, 46, `+${fmtInt(g.amount)} gold`, '#ffd34a', 12);
         return true;
-      case 'orb_hp': this.heal(this.maxHp * 0.15); sfx('orb'); return true;
-      case 'orb_mp': this.mana = Math.min(this.maxMana, this.mana + this.maxMana * 0.18); sfx('orb'); floatText(this.x, this.y, 46, '+mana', '#6a8aff', 11); return true;
+      case 'orb_hp': {
+        const healAmt = Math.round(this.maxHp * 0.20);
+        this.heal(healAmt);
+        floatText(this.x, this.y, 46, `+${fmtInt(healAmt)} life`, '#ff6a6a', 12);
+        sfx('orb');
+        return true;
+      }
+      case 'orb_mp': {
+        const manaAmt = Math.round(this.maxMana * 0.15);
+        this.mana = Math.min(this.maxMana, this.mana + manaAmt);
+        sfx('orb');
+        floatText(this.x, this.y, 46, `+${fmtInt(manaAmt)} mana`, '#6a8aff', 11);
+        return true;
+      }
       case 'key': { // an Abyssal Key (docs/ENDGAME.md): three open Velscour Unbound
         c.keys = (c.keys | 0) + 1; endgame().keysFound++; saveEndgame();
         sfx('levelup', 0.5); floatText(this.x, this.y, 56, `ABYSSAL KEY ${Math.min(3, c.keys)}/3`, '#20e0ff', 15, { life: 2 });
@@ -373,7 +427,7 @@ export class Player extends Creature {
         return true;
       case 'item': {
         const ok = addToBag(c, g.item);
-        if (!ok) { if (!g.warned) { g.warned = true; floatText(this.x, this.y, 50, 'Inventory full', '#ff8080', 12); sfx('error'); } return false; }
+        if (!ok) { if (!g.warned) { g.warned = true; floatText(this.x, this.y, 50, g.item.type === 'gem' ? 'Gem Bag full' : 'Inventory full', '#ff8080', 12); sfx('error'); } return false; }
         sfx('pickup');
         if (G.ui) { G.ui.log(`Picked up <span style="color:${g.color}">${g.label}</span>`); G.ui.refresh(); }
         return true;
@@ -418,9 +472,10 @@ export class Player extends Creature {
     const w = this.world, mine = w.creatures.filter((c) => c.summon && c.owner === this && !c.dead);
     let foe;
     for (const id of new Set(this.char.bar || [])) {
-      const sk = id && SKILLS[id];
-      if (!sk || sk.kind !== 'summon' || this.canUse(sk)) continue;
-      const m = sk.m, L = this.skillLevel(sk), grow = m.grow ? Math.floor((L - 1) / 5) : 0, n = (m.n || 1) + grow;
+      const baseSk = id && SKILLS[id];
+      if (!baseSk || baseSk.kind !== 'summon' || this.canUse(baseSk)) continue;
+      const sk = applySkillMorph(baseSk, skillMorphFor(this, baseSk));
+      const m = sk.m, L = this.skillLevel(baseSk), grow = m.grow ? Math.floor((L - 1) / 5) : 0, n = (m.n || 1) + grow;
       const cap = (m.max || (m.dur ? 99 : (m.n || 1))) + grow; // the same cap createSummon enforces
       if (mine.filter((c) => c.skillId === sk.id).length >= cap || mine.length + n > 40) continue;
       let tx = this.x + Math.cos(this.facing) * 1.2, ty = this.y + Math.sin(this.facing) * 1.2;
@@ -435,13 +490,15 @@ export class Player extends Creature {
       // raised at once, between the hero's own casts: keep whatever attack he is in the middle of
       const lock = this.castLock, free = this.castFree, aim = this.aim;
       this.castLock = 0;
-      const ok = this.tryUseSkill(sk, tx, ty);
+      const ok = this.tryUseSkill(baseSk, tx, ty);
       if (lock > 0) { this.castLock = lock; this.castFree = free; this.aim = aim; }
       if (ok) return;
     }
   }
 
-  canUse(sk) {
+  canUse(skOrId) {
+    const sk = typeof skOrId === 'string' ? SKILLS[skOrId] : skOrId;
+    if (!sk) return 'unlearned';
     const L = this.skillLevel(sk);
     if (!L) return 'unlearned';
     if ((this.cooldowns[sk.id] || 0) > 0) return 'cooldown';
@@ -450,7 +507,8 @@ export class Player extends Creature {
     return null;
   }
 
-  tryUseSkill(sk, tx, ty, target = null) {
+  tryUseSkill(skOrId, tx, ty, target = null) {
+    const sk = typeof skOrId === 'string' ? SKILLS[skOrId] : skOrId;
     if (this.dead || !sk) return false;
     if (sk.classId === 'barbarian' && ((sk.kind === 'whirl' && this.rage < 10) || this.rage < rageCost(sk))) {
       if ((this.noRageT || 0) <= 0) { floatText(this.x, this.y, 60, 'Need Rage', '#ff9933', 12); this.noRageT = 0.8; }
@@ -490,9 +548,11 @@ export class Player extends Creature {
     const spd = sk.attack ? this.st.atkSpeed : this.st.castSpeed;
     this.castLock = useTime(sk) / (1 + spd / 100);
     this.castFree = FREE_CAST.has(sk.kind); // Diablo style: buffs, summons, totems and turrets don't root the hero
-    this.cooldowns[sk.id] = cooldown(sk) * (1 - this.st.cdr / 100) * quick;
+    const morph = skillMorphFor(this, sk);
+    const morphCdMul = morph && morph.cdPct ? 1 - morph.cdPct / 100 : 1;
+    this.cooldowns[sk.id] = cooldown(sk) * (1 - this.st.cdr / 100) * quick * morphCdMul;
     this.aim = [tx, ty];
-    this.lastEl = sk.el;
+    this.lastEl = (morph && morph.el) || sk.el;
     if (sk.id === 'barbarian.0.0') this.bashCastSerial++;
     const ok = castSkill(this, sk, L, tx, ty);
     if (ok === false) { this.mana += cost; this.cooldowns[sk.id] = 0; return false; }
@@ -577,6 +637,18 @@ export class Player extends Creature {
       sfx('roar');
       return;
     }
+    const cdCheat = this.st && this.st.cheatDeath;
+    if (cdCheat && !(this.talentCheatCd > 0)) {
+      this.talentCheatCd = cdCheat.cd || 120;
+      this.hp = Math.max(1, Math.round(this.maxHp * (cdCheat.healPct || 0.45)));
+      this.invuln = Math.max(this.invuln || 0, 1.5);
+      const cEl = cdCheat.el || 'holy', E = elem(cEl);
+      addEffect(new Column(this.x, this.y, E.glow, 0.9, 46, 280));
+      burst(this.x, this.y, 20, cEl, 36, 4.5);
+      floatText(this.x, this.y, 70, cdCheat.name || 'SECOND CHANCE!', E.glow, 18, { life: 1.5 });
+      sfx('roar');
+      return;
+    }
     if (this.dead) return;
     this.dead = true;
     this.hp = 0;
@@ -587,13 +659,15 @@ export class Player extends Creature {
 
   // ------------------------------------------------------------------ update
   update(dt) {
-    const st = this.st;
+    const c = this.char, st = this.st;
     this.animT += dt;
     const gfx = this.gearFx();
     if (gfx) updateGearFx(this, gfx.fx, gfx.col, dt);
     if (this.invuln > 0) this.invuln -= dt;
     if (this.noManaT > 0) this.noManaT -= dt;
     if (this.phoenixCd > 0) this.phoenixCd -= dt;
+    if (this.talentCheatCd > 0) this.talentCheatCd -= dt;
+    if (this.morphHealCd > 0) this.morphHealCd -= dt;
     if (this.furyT > 0) this.furyT -= dt;
     if (this.noRageT > 0) this.noRageT -= dt;
     if (this.classId === 'bard' && this.world) bardUpdate(this, dt);
@@ -606,8 +680,11 @@ export class Player extends Creature {
     // a dash, leap or beam whose effect was swept away under him (a level section changing round him: game/caverns.js,
     // dunes.js, tower.js) would hold him channelling for good, unable to move or fight: let it go
     if (this.channel && this.world && !this.world.hazards.includes(this.channel)) { if (this.channel instanceof Leap) this.z = 0; this.channel = null; }
-    // regen
-    if (this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + st.lifeRegen * dt);
+    // regen: natural baseline HP regen only recovers in town; outside town only gear/buff regen applies
+    const inTown = this.world && this.world.kind === 'town';
+    const effectiveRegen = heresyAllows('regen', c) ? ((inTown ? Math.max(st.naturalLifeRegen || 0, this.maxHp * 0.25) : 0) + (st.bonusLifeRegen || 0)) : 0;
+    st.lifeRegen = inTown ? ((st.naturalLifeRegen || 0) + (st.bonusLifeRegen || 0)) : (st.bonusLifeRegen || 0);
+    if (this.hp < this.maxHp && effectiveRegen > 0) this.hp = Math.min(this.maxHp, this.hp + effectiveRegen * dt);
     if (this.mana < this.maxMana) this.mana = Math.min(this.maxMana, this.mana + st.manaRegen * dt);
     for (let i = this.potionRegen.length - 1; i >= 0; i--) {
       const r = this.potionRegen[i];
@@ -727,12 +804,17 @@ export class Player extends Creature {
   }
 }
 
-/** Put an item in the first free bag slot (gems stack). */
+/** Put an item in the first free bag slot (gems & runes go into the dedicated Gem Bag and stack). */
 export function addToBag(c, item) {
   if (c === G.char) noteFind(item); // the Codex (game/reliquary.js) records relics and Sigils as they come in
   if (item.type === 'gem') {
-    const same = c.bag.find((b) => b && b.type === 'gem' && b.gem === item.gem && b.tier === item.tier);
+    if (!Array.isArray(c.gemBag)) c.gemBag = Array(30).fill(null);
+    const same = c.gemBag.find((b) => b && b.type === 'gem' && b.gem === item.gem && b.tier === item.tier);
     if (same) { same.count = (same.count || 1) + (item.count || 1); return true; }
+    const gi = c.gemBag.findIndex((b) => !b);
+    if (gi < 0) return false;
+    c.gemBag[gi] = item;
+    return true;
   }
   const i = c.bag.findIndex((b) => !b);
   if (i < 0) return false;

@@ -47,8 +47,8 @@ export async function loadHeld(cls, char = null) {
   for (const n of names) ensureSet(n);
   await Promise.all([...names].map((n) => sets.get(n)?.p));
 }
-const DEFAULTS = { weapon: { paladin: 'mace', ranger: 'bow', wizard: 'staff', necromancer: 'wand', barbarian: 'axe', dragoon: 'spear', totem_master: 'staff', death_knight: 'sword', arcane_sorcerer: 'wand', carrion_witch: 'staff', bard: 'lute', slime_lord: 'mace', boomerang_knight: 'boomerang', lancer: 'spear', dragon_knight: 'sword', gunner: 'pistol' } };
-function defaultBase(cls, slot) { return slot === 'weapon' ? DEFAULTS.weapon[cls] : cls === 'barbarian' ? 'axe' : { ranger: 'quiver', wizard: 'tome', necromancer: 'orb', totem_master: 'idol', death_knight: 'skull', arcane_sorcerer: 'orb', carrion_witch: 'lantern', bard: 'drum', slime_lord: 'jar', boomerang_knight: 'rang', gunner: 'bomb' }[cls] || 'shield'; }
+const DEFAULTS = { weapon: { paladin: 'mace', ranger: 'bow', wizard: 'staff', necromancer: 'wand', barbarian: 'axe', dragoon: 'spear', totem_master: 'staff', death_knight: 'sword', arcane_sorcerer: 'wand', carrion_witch: 'staff', bard: 'lute', slime_lord: 'mace', boomerang_knight: 'boomerang', lancer: 'spear', dragon_knight: 'sword', gunner: 'pistol', monk: 'staff' } };
+function defaultBase(cls, slot) { return slot === 'weapon' ? DEFAULTS.weapon[cls] : cls === 'barbarian' ? 'axe' : { ranger: 'quiver', wizard: 'tome', necromancer: 'orb', totem_master: 'idol', death_knight: 'skull', arcane_sorcerer: 'orb', carrion_witch: 'lantern', bard: 'drum', slime_lord: 'jar', boomerang_knight: 'rang', gunner: 'bomb', monk: 'tome' }[cls] || 'shield'; }
 
 // ------------------------------------------------------------------ looks
 function finishFor(R) {

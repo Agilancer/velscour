@@ -64,7 +64,7 @@ export function drawShape(ctx, fx, x, y, a, s, E, t, extra = {}) {
     }
     case 'tshield': { // the Lancer's tower shield: upright, steel-rimmed, its face lit by the skill's element
       const sw = 11 * s * (0.7 + 0.3 * Math.abs(Math.cos(a))), sh = 24 * s;
-      glow(ctx, 0, 0, 22 * s, E.glow, 0.55 + 0.15 * Math.sin(t * 8));
+      glow(ctx, 0, 0, 10 * s, E.glow, 0.25 + 0.05 * Math.sin(t * 8));
       ctx.fillStyle = '#20242c';
       ctx.beginPath(); ctx.moveTo(-sw - 1.5, -sh / 2 - 1.5); ctx.lineTo(sw + 1.5, -sh / 2 - 1.5); ctx.lineTo(sw + 1.5, sh * 0.3); ctx.lineTo(0, sh / 2 + 3); ctx.lineTo(-sw - 1.5, sh * 0.3); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#b8c4d4';
@@ -290,11 +290,16 @@ export function trail(fx, x, y, z, E, dt, s = 1) {
 export function explosionFx(x, y, r, el, fx = 'explosion', opts = {}) {
   const E = elem(el);
   const big = r >= 1.6;
-  addEffect(new Ring(x, y, 0.2, r, 0.35 + r * 0.08, E.glow, 4 + r * 2, { fill: true }));
-  if (big) addEffect(new Ring(x, y, 0.1, r * 1.25, 0.6, E.core, 2));
-  burst(x, y, 10, el, Math.min(160, Math.round(14 + r * 12)), 2.5 + r * 2, { size: 1.2 });
-  spawn({ type: 'glow', x, y, z: 12, life: 0.25, size: 18 * r, size1: 26 * r, color: E.core, add: true });
-  addLight(x, y, 4 + r * 3, 1.4);
+  if (!opts.lightFx) {
+    addEffect(new Ring(x, y, 0.2, r, 0.35 + r * 0.08, E.glow, 4 + r * 2, { fill: true }));
+    if (big) addEffect(new Ring(x, y, 0.1, r * 1.25, 0.6, E.core, 2));
+  }
+  const count = opts.lightFx ? 4 : Math.min(160, Math.round(14 + r * 12));
+  burst(x, y, 10, el, count, opts.lightFx ? 1.4 : 2.5 + r * 2, { size: opts.lightFx ? 0.7 : 1.2 });
+  if (!opts.lightFx) {
+    spawn({ type: 'glow', x, y, z: 12, life: 0.25, size: 18 * r, size1: 26 * r, color: E.core, add: true });
+    addLight(x, y, 4 + r * 3, 1.4);
+  }
   switch (fx) {
     case 'meteor': case 'nuke': case 'eruption':
       for (let i = 0; i < 8 + r * 4; i++) {

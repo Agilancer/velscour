@@ -10,13 +10,16 @@ export const FILTER_ROWS = [
   { k: 'armor', name: 'Armor (head, body, hands, legs, feet)', test: (it) => it.slot !== 'weapon' && it.slot !== 'offhand' && it.slot !== 'ring' },
   { k: 'ring', name: 'Rings', test: (it) => it.slot === 'ring' },
 ];
-export const FILTER_DEFAULT = { on: false, weapon: 0, offhand: 0, armor: 0, ring: 0, gems: true, upgrades: true, keep: false };
+export const FILTER_DEFAULT = { on: false, weapon: 0, offhand: 0, armor: 0, ring: 0, gems: 0, upgrades: true, keep: false };
 
 /** The filter's settings, filled with defaults (old settings have none). */
 export function lootFilter() {
   const f = G.settings.lootFilter;
   if (!f || typeof f !== 'object') return (G.settings.lootFilter = { ...FILTER_DEFAULT });
   for (const k in FILTER_DEFAULT) if (f[k] === undefined) f[k] = FILTER_DEFAULT[k];
+  // Migrate legacy boolean gems to tier grade (true -> 0: all, false -> -1: none)
+  if (f.gems === true) f.gems = 0;
+  else if (f.gems === false) f.gems = -1;
   return f;
 }
 /** The filter when it's switched on, else null. */
@@ -26,7 +29,13 @@ export const activeFilter = () => { const f = lootFilter(); return f.on ? f : nu
 export function filterPasses(it) {
   const f = activeFilter();
   if (!f || !it) return true;
-  if (it.type === 'gem') return !!f.gems;
+  if (it.type === 'gem') {
+    const minTier = f.gems === true ? 0 : f.gems === false ? -1 : (typeof f.gems === 'number' ? f.gems : 0);
+    if (minTier < 0) return false;
+    // Sigil stones always pass if gem pickup is enabled
+    if (it.gem === 'sig') return true;
+    return (it.tier ?? 0) >= minTier;
+  }
   if (it.type !== 'gear' || it.sealed) return true;
   const row = FILTER_ROWS.find((r) => r.test(it));
   const min = row ? f[row.k] : 0;

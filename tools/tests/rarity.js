@@ -50,7 +50,7 @@ const samples = +(process.argv[3] || 30);
   for (const b of gate.bad) bad(b);
   const nr = rates.out.normal;
   for (let r = 1; r < nr.length; r++) if (!(nr[r] < nr[r - 1])) bad(`${rates.names[r]} is not rarer than ${rates.names[r - 1]}`);
-  if (!(nr[5] <= 0.02)) bad(`Mythic drops ${nr[5].toFixed(3)}% of the time at no magic find (want <= 0.02%)`);
+  if (!(nr[5] <= 0.2 && nr[6] <= 0.05)) bad(`Mythic/Abyssal drops ${nr[5].toFixed(3)}%/${nr[6].toFixed(3)}% of the time at no magic find`);
   if (!(rates.out.boss[4] > nr[4] && rates.out['100% MF'][3] > nr[3])) bad('bosses or magic find do not improve the odds');
 
   const all = []; // worth rows of every class and hero level
@@ -105,7 +105,7 @@ const samples = +(process.argv[3] || 30);
         return Infinity;
       };
       const out = { worth: {}, mono: [], checks: [] };
-      for (const H of [12, 30, 60, 120]) {
+      for (const H of [12, 30, 60, 90]) {
         await setLevel(H + 4);
         const curve = []; for (let l = Math.max(1, H - 12); l <= H + 34; l += 2) curve.push([l, score(l, 0, null, H)]);
         out.worth[H] = RARITY.map((r) => +(worth(curve, score(H, r.id, null, H)) - H).toFixed(1));

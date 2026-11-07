@@ -78,7 +78,7 @@ async function loadClassGear(cls) {
   if (a.width < meta.cols * fw || a.height < rows * fh || am.width !== a.width || am.height !== a.height) {
     throw new Error(cls + ' armor atlas does not match its gear.json');
   }
-  if (!helmetHelms.meta.classes.includes(cls)) throw new Error('No helmet art for ' + cls);
+  if (!helmetHelms.meta.classes.includes(cls) && cls !== 'monk') throw new Error('No helmet art for ' + cls);
   return { cls, meta, armor: pixels(a), amask: channel(am), helmetHelms };
 }
 
