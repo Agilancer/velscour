@@ -99,6 +99,12 @@ export const CLASSES = {
     trees: ['Firearms', 'Explosives', 'Engineering'],
     desc: 'A powder-stained engineer. Bullet hell, rocket barrages, turrets, drones and a death laser.',
   },
+  monk: {
+    name: 'Monk', primary: 'dex', base: { str: 22, dex: 28, vit: 24, int: 16 }, life: 86, mana: 50, lifeLvl: 16, manaLvl: 3.5,
+    weapon: 'staff', offhand: 'tome', element: 'holy', color: '#ffaa30',
+    trees: ['Martial Arts', 'Spirit & Mantras', 'Dragon & Tiger'],
+    desc: 'A disciplined martial artist of the secluded monasteries. Harnesses inner chi through lightning-fast hand strikes, soaring kicks, and sacred defensive mantras.',
+  },
 };
 for (const [c, name] of Object.entries(TREE4_NAMES)) if (CLASSES[c].trees.length === 3) CLASSES[c].trees.push(name);
 
@@ -125,6 +131,7 @@ export const DMG_TUNE = {
   lancer: [1.08, 1.1, 1.1, 1.1],
   dragon_knight: [1.05, 1.05, 1.05, 1.05],
   gunner: [0.96, 0.98, 0.98, 0.98],
+  monk: [1.04, 1.05, 1.05, 1.05],
 };
 
 export const ATTRS = {

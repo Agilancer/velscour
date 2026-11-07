@@ -150,10 +150,10 @@ export function canEquipItem(c, it, slot = null) {
 export const WEAPONS = {
   sword: { names: ['Shortsword', 'Longsword', 'Broadsword', 'Bastard Sword', 'Runeblade'], icon: 'sword', dmg: 1.0, spd: 1.0, crit: 3, classes: ['paladin', 'barbarian', 'bard', 'lancer', 'death_knight', 'dragon_knight'] },
   axe: { names: ['Hatchet', 'War Axe', 'Bearded Axe', 'Battle Axe', 'Executioner'], icon: 'axe', dmg: 1.15, spd: 0.92, critDmg: 12, classes: ['barbarian'] },
-  mace: { names: ['Cudgel', 'Mace', 'Flanged Mace', 'Morning Star', 'Sanctified Mace'], icon: 'mace', dmg: 1.08, spd: 0.96, holyPct: 8, classes: ['paladin', 'slime_lord'] },
+  mace: { names: ['Cudgel', 'Mace', 'Flanged Mace', 'Morning Star', 'Sanctified Mace'], icon: 'mace', dmg: 1.08, spd: 0.96, holyPct: 8, classes: ['paladin', 'slime_lord', 'monk'] },
   hammer: { names: ['War Hammer', 'Maul', 'Great Maul', 'Earthbreaker', 'Titan Maul'], icon: 'hammer', dmg: 1.25, spd: 0.85, areaPct: 8, classes: ['paladin', 'barbarian'] },
-  dagger: { names: ['Poignard', 'Dirk', 'Stiletto', 'Kris', 'Ritual Blade'], icon: 'dagger', dmg: 0.80, spd: 1.22, crit: 6, classes: ['bard', 'ranger', 'necromancer', 'carrion_witch'] },
-  staff: { names: ['Quarterstaff', 'Gnarled Staff', 'Runed Staff', 'Archon Staff', 'Elder Staff'], icon: 'staff', dmg: 0.95, spd: 1.0, cast: 8, spell: 8, classes: ['wizard', 'carrion_witch', 'totem_master'] },
+  dagger: { names: ['Poignard', 'Dirk', 'Stiletto', 'Kris', 'Ritual Blade'], icon: 'dagger', dmg: 0.80, spd: 1.22, crit: 6, classes: ['bard', 'ranger', 'necromancer', 'carrion_witch', 'monk'] },
+  staff: { names: ['Quarterstaff', 'Gnarled Staff', 'Runed Staff', 'Archon Staff', 'Elder Staff'], icon: 'staff', dmg: 0.95, spd: 1.0, cast: 8, spell: 8, classes: ['wizard', 'carrion_witch', 'totem_master', 'monk'] },
   wand: { names: ['Yew Wand', 'Bone Wand', 'Grim Wand', 'Lich Wand', 'Grave Wand'], icon: 'wand', dmg: 0.85, spd: 1.1, cast: 10, cdr: 4, classes: ['necromancer', 'wizard', 'arcane_sorcerer'] },
   bow: { names: ['Short Bow', "Hunter's Bow", 'Composite Bow', 'Long War Bow', 'Wardwood Bow'], icon: 'bow', dmg: 1.0, spd: 1.06, atkSpeed: 6, classes: ['ranger'] },
   crossbow: { names: ['Light Crossbow', 'Arbalest', 'Siege Crossbow', 'Heavy Arbalest', 'Dread Crossbow'], icon: 'crossbow', dmg: 1.18, spd: 0.88, critDmg: 15, classes: ['ranger', 'gunner'] },
@@ -168,7 +168,7 @@ export const ACTIVE_WEAPONS = Object.keys(WEAPONS);
 export const OFFHANDS = {
   shield: { names: ['Buckler', 'Kite Shield', 'Tower Shield', 'Aegis', 'Bulwark'], icon: 'shield', armor: 1.1, block: [10, 18], reduce: [2, 4], classes: ['paladin', 'lancer', 'dragoon', 'dragon_knight'] },
   orb: { names: ['Glass Orb', 'Eldritch Orb', 'Phylactery Globe', 'Eye of Night', 'Void Sphere'], icon: 'orb', armor: 0.3, spell: [8, 16], summon: [8, 14], classes: ['necromancer', 'wizard', 'arcane_sorcerer'] },
-  tome: { names: ['Primer', 'Grimoire', 'Tome of Embers', 'Codex Arcanum', 'Book of Ages'], icon: 'orb', armor: 0.25, spell: [10, 18], cdr: [4, 8], classes: ['wizard'] },
+  tome: { names: ['Primer', 'Grimoire', 'Tome of Embers', 'Codex Arcanum', 'Book of Ages'], icon: 'orb', armor: 0.25, spell: [10, 18], cdr: [4, 8], classes: ['wizard', 'monk'] },
   lantern: { names: ['Tin Lantern', 'Iron Lantern', 'Corpse Lantern', 'Grave Lantern', 'Hollow Moon Lantern'], icon: 'orb', armor: 0.35, spell: [8, 16], leech: [2, 4], classes: ['carrion_witch'] },
   bomb: { names: ['Powder Bomb', 'Iron Grenade', 'Shrapnel Charge', 'Siege Satchel', 'Ordnance Pack'], icon: 'orb', armor: 0.3, crit: [4, 8], area: [6, 12], classes: ['gunner'] },
   drum: { names: ['Tambourine', 'Frame Drum', 'War Drum', 'Skald Bell', 'Thunder Drum'], icon: 'orb', armor: 0.35, cast: [6, 12], cdr: [4, 8], classes: ['bard'] },

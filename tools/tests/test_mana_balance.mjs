@@ -12,7 +12,7 @@ for (const [classId, skills] of Object.entries(CLASS_SKILLS)) {
   const cost = manaCost(freeSkill, 1);
   assert.strictEqual(cost, 0, `Free skill ${freeSkill.name} for ${classId} must cost 0 mana`);
 }
-console.log('✔ All 16 classes have a verified 0-mana basic attack');
+console.log(`✔ All ${Object.keys(CLASSES).length} classes have a verified 0-mana basic attack`);
 
 // 2. Verify Row 0 starting spenders cost <= 4 mana at L=1 (Early Game Protection)
 let testedRow0 = 0;
