@@ -70,11 +70,14 @@ const fail = (msg) => { console.log('FAIL', msg); process.exitCode = 1; };
   // minimap ring sits around the map, the six buttons are images
   const geo = await page.evaluate(() => {
     const m = document.querySelector('#minimap').getBoundingClientRect(), r = document.querySelector('#minimap-ring').getBoundingClientRect();
-    return { m: [m.x, m.y, m.width, m.height], r: [r.x, r.y, r.width, r.height], btns: [...document.querySelectorAll('.hbtn img')].map((i) => i.complete && i.naturalWidth > 0) };
+    return { m: [m.x, m.y, m.width, m.height], r: [r.x, r.y, r.width, r.height], btns: [...document.querySelectorAll('.hbtn img')].map((i) => i.complete && i.naturalWidth > 0),
+      // each button must be what a click at its centre lands on (a pointer-events: none parent once ate every click)
+      hits: [...document.querySelectorAll('.hbtn')].filter((b) => { const q = b.getBoundingClientRect(); return !b.contains(document.elementFromPoint(q.x + q.width / 2, q.y + q.height / 2)); }).map((b) => b.dataset.act) };
   });
   console.log('minimap', geo.m.map(Math.round).join(','), 'ring', geo.r.map(Math.round).join(','));
   if (!(geo.r[0] < geo.m[0] && geo.r[1] < geo.m[1] && geo.r[0] + geo.r[2] > geo.m[0] + geo.m[2] && geo.r[1] + geo.r[3] > geo.m[1] + geo.m[3])) fail('ring does not surround the minimap');
-  if (geo.btns.length !== 6 || geo.btns.some((x) => !x)) fail('HUD button art missing');
+  if (geo.btns.length !== 8 || geo.btns.some((x) => !x)) fail('HUD button art missing');
+  if (geo.hits.length) fail('HUD buttons not clickable: ' + geo.hits.join(','));
   await page.click('.hbtn[data-act="quest"]');
   await page.waitForTimeout(400);
   const q = await page.evaluate(() => { const p = document.querySelector('.panel[data-panel="quest"]'); return p ? p.innerText : ''; });

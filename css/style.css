@@ -314,7 +314,7 @@ body.touch #sealed-btn i { width: 16px; height: 16px; }
 #minimap { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; background: rgba(0,0,0,.6); cursor: pointer; }
 #minimap-ring { position: absolute; width: 140%; pointer-events: none; filter: drop-shadow(0 2px 6px #000); }
 #hud-buttons { display: flex; gap: 0; }
-.hbtn { position: relative; width: 52px; height: 56px; border: 0; background: none; cursor: pointer; padding: 0; display: block; }
+.hbtn { position: relative; width: 52px; height: 56px; border: 0; background: none; cursor: pointer; padding: 0; display: block; pointer-events: auto; }
 .hbtn img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 2px 3px #000); transition: filter .12s, transform .12s; }
 .hbtn:hover img { filter: drop-shadow(0 0 5px rgba(255,190,90,.75)) brightness(1.15); }
 .hbtn:active img { transform: scale(.94); }
