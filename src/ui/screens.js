@@ -407,10 +407,12 @@ export function lootFilterDialog(onDone) {
   const f = lootFilter();
   const hue = ['white', 'green', 'blue', 'purple', 'orange', 'red', 'cyan'];
   const opts = `<option value="-1">None</option>` + RARITY.map((r, i) => `<option value="${i}" style="color:${r.color}">${r.name}${i < RARITY.length - 1 ? ' or better' : ''} (${hue[i]})</option>`).join('');
+  const gemGradeNames = ['Chipped', 'Flawed', 'Standard', 'Flawless', 'Perfect', 'Royal', 'Imperial', 'Celestial', 'Abyssal', 'Eternal'];
+  const gemOpts = `<option value="-1">None</option>` + gemGradeNames.map((name, i) => `<option value="${i}">${name}${i < gemGradeNames.length - 1 ? ' or better' : ''}</option>`).join('');
   const html = `<div class="settings-grid">
     <label><b>Use the loot filter</b></label><input type="checkbox" data-f="on" ${f.on ? 'checked' : ''}>
     ${FILTER_ROWS.map((r) => `<label>${r.name}</label><select data-f="${r.k}">${opts}</select>`).join('')}
-    <label>Gems (all of them)</label><input type="checkbox" data-f="gems" ${f.gems ? 'checked' : ''}>
+    <label>Gems & Runes</label><select data-f="gems">${gemOpts}</select>
     <label>Auto-play also picks up upgrades it will wear</label><input type="checkbox" data-f="upgrades" ${f.upgrades ? 'checked' : ''}>
     <label>Auto-play keeps what passes (stores it in the chest instead of selling it)</label><input type="checkbox" data-f="keep" ${f.keep ? 'checked' : ''}>
   </div><p class="dim" style="font-size:12px;max-width:520px">With the filter on, auto-play and walk-over pickup take only what passes. Clicking or tapping an item still picks it up, and sealed treasures always pass.</p>`;
@@ -436,11 +438,11 @@ export function helpDialog() {
     <div><kbd>Tab</kbd>/<kbd>M</kbd> map · <kbd>Esc</kbd> menu · wheel zoom</div>
     <div>First-person view (Settings): <kbd>A</kbd>/<kbd>D</kbd> turn, <kbd>W</kbd>/<kbd>S</kbd> walk, click the floor to walk there</div>
     <div><kbd>P</kbd> or the <b>Auto</b> button: auto-play (the hero fights, loots, shops and delves on autopilot)</div>
-    <div><kbd>G</kbd> MADNESS · <kbd>F</kbd> SMITE, then click where it should strike (both fill as you fight)</div>
+    <div><kbd>G</kbd> MADNESS · <kbd>F</kbd> SMITE, then click where it should strike (both fill as you fight) · <kbd>H</kbd> HEARTHSTONE (two-way town portal) · <kbd>F1</kbd> How to Play</div>
     <div><b style="color:#ffe2a0">While the hero plays</b></div>
     <div>Click or tap <b style="color:#ffd040">gilded critters</b> before they get away (follow the red arrows): each is worth a big sum of experience (a Golden Scarab, a pile of gold). Auto-play leaves them to you.</div>
     <div>Now and then an Epic or better drops <b style="color:#ffdf8a">sealed</b>: break the seals from the SEALED button or the inventory. Auto-play waits in town when the bag is full of what it can't sell, until a slot is free.</div>
-    <div><b>Loot filter</b> (Settings): pick which weapons, off-hands, armor and rings (by rarity) and whether gems get picked up, by auto-play and by walking over them.</div>
+    <div><b>Loot filter</b> (Settings): pick which weapons, off-hands, armor, rings (by rarity) and gems &amp; runes (by grade) get picked up, by auto-play and by walking over them.</div>
     <div>Pick one of three portals down at each cleared exit (auto-play picks after 8 seconds). Set auto-play's stance, and pull the <b style="color:#ffc040">Greed</b> lever for tougher depths and richer drops; a death loses the Hoard.</div>
     <div><b style="color:#ffe2a0">Mobile</b></div>
     <div>Left thumb: virtual joystick</div>

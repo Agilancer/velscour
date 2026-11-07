@@ -10,6 +10,7 @@ import { TW } from './view.js';
 import { loadReplacementArt } from './replacementart.js';
 import { loadEnemyArt } from './enemyart.js';
 import { preloadSong } from './audio.js';
+import { walkOverProp } from '../data/walkover.js';
 
 export const CLASS_IDS = [
   'paladin', 'ranger', 'wizard', 'necromancer',
@@ -181,7 +182,7 @@ export function biomeTileSet(biome) {
     const src = 'pack:' + p.meta.pack_id, fimg = isoFixImage(src), fix = fimg && (pal ? recolor(fimg, pal) : fimg);
     return p.meta.scatter.map((s) => {
       const f = fix && isoFix(src, s.name);
-      return { img, sx: s.x, sy: s.y, w: s.w, h: s.h, ox: s.ox, oy: s.oy, ...(f && { ...f, img: fix }), fp: s.fp, block: s.block, name: s.name };
+      return { img, sx: s.x, sy: s.y, w: s.w, h: s.h, ox: s.ox, oy: s.oy, ...(f && { ...f, img: fix }), fp: s.fp, block: !!(s.block && !walkOverProp(s.name)), name: s.name };
     });
   };
   const inR = (rs, i) => !rs || rs.some(([a, b]) => i + 1 >= a && i + 1 <= b);
@@ -221,7 +222,7 @@ export function biomeTileSet(biome) {
   if (extra) {
     const n = set.features.length;
     for (const f of extra.floors) { for (let j = 0; j < Math.max(1, n / extra.floors.length); j++) set.features.push(set.floors.length); set.floors.push(f); }
-    set.scatter.push(...extra.scatter);
+    set.scatter.push(...extra.scatter.map((s) => (walkOverProp(s.name) ? { ...s, block: false } : s)));
   }
   if (A.chestImg && A.chestMeta) {
     const img = pal ? recolor(A.chestImg, pal) : A.chestImg;
