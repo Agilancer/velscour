@@ -278,12 +278,12 @@ function drawProp(ctx, pr, alpha) {
 function treeFade(o, hx, hy) {
   const s = o.spr, k = o.k, w = s.w * k, x = isoX(o.x, o.y), y = isoY(o.x, o.y);
   const top = y + s.oy * k, cut = top + s.split * k, py = hy - 30;
-  // a see-through window round the hero: every canopy in front of him within ~a tree and a half fades, nearest most
-  const dx = Math.abs(hx - x), reach = w * 0.5 + 70;
-  if (py > y + 10 || py < top - 30 || dx > reach) return null;
-  const t = clamp((dx - w * 0.1) / (reach - w * 0.1), 0, 1);
-  const canopy = 0.22 + 0.78 * t * t;
-  const trunk = py > cut - 20 && dx < w * 0.3 ? 0.45 + 0.55 * t : 1;
+  // a see-through window round the hero: every canopy in front of him fades, nearest most
+  const dx = Math.abs(hx - x), reach = w * 0.65 + 110;
+  if (py > y + 30 || py < top - 50 || dx > reach) return null;
+  const t = clamp((dx - w * 0.05) / (reach - w * 0.05), 0, 1);
+  const canopy = 0.18 + 0.82 * (t * t * t);
+  const trunk = py > cut - 20 && dx < w * 0.35 ? 0.4 + 0.6 * t : 1;
   return canopy < 0.98 || trunk < 1 ? [canopy, trunk] : null;
 }
 /** The tree's fade for everyone behind it: the hero's wide window, and a tight one right round anyone else. */
@@ -738,6 +738,7 @@ export function renderWorld(ctx, world) {
   ctx.imageSmoothingQuality = hq;
   const fc = world.floorNow;
   drawDecals(ctx, vr, world.tower || world.cave ? () => false : (d, px, py) => decalStamped(fc, d, px, py)); // the tower turns: its blood can't bake
+  drawMapEdgeFade(ctx, world, camT, tx0, ty0, tx1, ty1);
   const tall = map.hgt && map.tallOcclusion;
   for (const c of world.corpses) {
     if (tall && hiddenBehind(map, c.x, c.y)) continue; // behind the Castle's walls
@@ -1076,7 +1077,7 @@ export function renderFirstPerson(ctx, world) {
   };
   for (const c of world.creatures) {
     c.sbox = null;
-    if (c.dead || c === p || c.hidden) continue;
+    if (c.dead || c === p || c.hidden || c.clutter) continue;
     add(c.x, c.y, 1, c, 50 * (c.scale || 1));
   }
   for (const nn of world.npcs) { nn.sbox = null; if (!nn.hidden) add(nn.x, nn.y, 2, nn, 40); }
@@ -1225,6 +1226,100 @@ function drawWallBases(oc, map, camT, tx0, ty0, tx1, ty1) {
   oc.strokeStyle = 'rgba(0,0,0,0.75)'; oc.lineWidth = 3.5 / z; oc.stroke();
   oc.strokeStyle = 'rgba(240,226,192,0.95)'; oc.lineWidth = 1.5 / z; oc.stroke();
   return true;
+}
+
+/** Shading on the perimeter of the map so the world fades seamlessly into the black void. */
+function drawMapEdgeFade(ctx, world, camT, tx0, ty0, tx1, ty1) {
+  const map = world.map;
+  if (!map || world.tower || world.cave || world.sky || map.voidFace) return;
+  if (world.kind === 'dungeon' && !world.biome?.overworld) return;
+  const W = map.w, H = map.h;
+  const F = 6; // fade width in tiles
+  // If no map edge is anywhere near the current view, skip
+  if (tx0 > F && tx1 < W - 1 - F && ty0 > F && ty1 < H - 1 - F) return;
+
+  const pad = 40;
+  const pX = (x, y) => (x - y) * HW;
+  const pY = (x, y) => (x + y) * HH;
+
+  const applyStops = (g) => {
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(0.2, 'rgba(0,0,0,0.05)');
+    g.addColorStop(0.4, 'rgba(0,0,0,0.18)');
+    g.addColorStop(0.6, 'rgba(0,0,0,0.40)');
+    g.addColorStop(0.8, 'rgba(0,0,0,0.70)');
+    g.addColorStop(1, 'rgba(0,0,0,1)');
+  };
+
+  ctx.setTransform(camT);
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+
+  // 1. South edge (y = H): along line y = const
+  if (ty1 >= H - 1 - F) {
+    const sx = pX(W / 2, H - F), sy = pY(W / 2, H - F);
+    const ex = sx - 12.8 * F, ey = sy + 25.6 * F;
+    const g = ctx.createLinearGradient(sx, sy, ex, ey);
+    applyStops(g);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(pX(-pad, H - F), pY(-pad, H - F));
+    ctx.lineTo(pX(W + pad, H - F), pY(W + pad, H - F));
+    ctx.lineTo(pX(W + pad, H + pad), pY(W + pad, H + pad));
+    ctx.lineTo(pX(-pad, H + pad), pY(-pad, H + pad));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 2. North edge (y = 0): along line y = const
+  if (ty0 <= F) {
+    const sx = pX(W / 2, F), sy = pY(W / 2, F);
+    const ex = sx + 12.8 * F, ey = sy - 25.6 * F;
+    const g = ctx.createLinearGradient(sx, sy, ex, ey);
+    applyStops(g);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(pX(-pad, F), pY(-pad, F));
+    ctx.lineTo(pX(W + pad, F), pY(W + pad, F));
+    ctx.lineTo(pX(W + pad, -pad), pY(W + pad, -pad));
+    ctx.lineTo(pX(-pad, -pad), pY(-pad, -pad));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 3. East edge (x = W): along line x = const
+  if (tx1 >= W - 1 - F) {
+    const sx = pX(W - F, H / 2), sy = pY(W - F, H / 2);
+    const ex = sx + 12.8 * F, ey = sy + 25.6 * F;
+    const g = ctx.createLinearGradient(sx, sy, ex, ey);
+    applyStops(g);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(pX(W - F, -pad), pY(W - F, -pad));
+    ctx.lineTo(pX(W - F, H + pad), pY(W - F, H + pad));
+    ctx.lineTo(pX(W + pad, H + pad), pY(W + pad, H + pad));
+    ctx.lineTo(pX(W + pad, -pad), pY(W + pad, -pad));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 4. West edge (x = 0): along line x = const
+  if (tx0 <= F) {
+    const sx = pX(F, H / 2), sy = pY(F, H / 2);
+    const ex = sx - 12.8 * F, ey = sy - 25.6 * F;
+    const g = ctx.createLinearGradient(sx, sy, ex, ey);
+    applyStops(g);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(pX(F, -pad), pY(F, -pad));
+    ctx.lineTo(pX(F, H + pad), pY(F, H + pad));
+    ctx.lineTo(pX(-pad, H + pad), pY(-pad, H + pad));
+    ctx.lineTo(pX(-pad, -pad), pY(-pad, -pad));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.restore();
 }
 
 /** The light falloff (alpha 1 at the centre to 0 at the rim), drawn with 'destination-out' to cut the darkness. */
@@ -1436,7 +1531,7 @@ export function drawMinimap(world, dt, canvas, big = false) {
   for (const ch of world.chests) if (!ch.opened && map.seen[Math.floor(ch.y) * map.w + Math.floor(ch.x)]) dot(ch.x, ch.y, ch.dot || '#ffd040', big ? 4 : 2.5);
   for (const n of world.npcs) dot(n.x, n.y, '#ffe090', big ? 4 : 2.5);
   for (const m of world.creatures) {
-    if (m.dead || m === p) continue;
+    if (m.dead || m === p || m.clutter) continue;
     const d = Math.hypot(m.x - p.x, m.y - p.y);
     if (m.team === 'enemy' && d < 14) dot(m.x, m.y, m.rank === 'boss' ? '#ff8000' : m.rank !== 'normal' ? '#ffb040' : '#ff3030', m.rank === 'boss' ? 4 : 2);
     else if (m.team === 'player') dot(m.x, m.y, '#40ff60', 1.8);

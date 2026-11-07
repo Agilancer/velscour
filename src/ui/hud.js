@@ -458,7 +458,7 @@ export const HUD = {
   updateTarget() {
     const p = G.player, w = G.world, box = $('#target-box');
     if (this.tbWorld !== w) { this.tbWorld = w; this.tb = null; if (G.lastHit && !w.creatures.includes(G.lastHit)) G.lastHit = null; }
-    const live = (m) => m && !m.dead && m.team === 'enemy' && m.targetable !== false;
+    const live = (m) => m && !m.dead && m.team === 'enemy' && m.targetable !== false && !m.clutter;
     const at = p.attackTarget && p.attackTarget.target;
     const cur = live(G.hover) ? G.hover : live(at) ? at : live(G.lastHit) ? G.lastHit : null;
     if (cur) this.tb = cur;

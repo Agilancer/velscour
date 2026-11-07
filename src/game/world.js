@@ -1,5 +1,6 @@
 // World: everything that lives in the current level.
 import { augHazard } from './augments.js';
+import { Clutter } from './clutter.js';
 import { G } from '../state.js';
 import { camera, isoX, isoY } from '../core/view.js';
 import { rand, dist2, TAU, chance } from '../core/util.js';
@@ -35,13 +36,42 @@ export class World {
     this.exitOpen = kind === 'town';
     this.kills = 0;
     this.lastPlayerTile = -1;
+    if (this.kind === 'dungeon') {
+      this.initClutter();
+    }
+  }
+
+  initClutter() {
+    if (!this.map || !this.props || this.map.darkForest) return;
+    const W = this.map.w, H = this.map.h;
+    if (!this.map.clutter) this.map.clutter = new Uint8Array(W * H);
+    for (const pr of this.props) {
+      if ((pr.kind === 'scatter' || pr.kind === 'decor') && !pr.throne && !pr.tree) {
+        const tx = Math.floor(pr.x), ty = Math.floor(pr.y);
+        if (tx >= 0 && tx < W && ty >= 0 && ty < H) {
+          const idx = ty * W + tx;
+          if (this.map.block && this.map.block[idx]) {
+            this.map.clutter[idx] = 1;
+            pr.destructible = true;
+            const c = new Clutter(this, pr);
+            this.add(c);
+          }
+        }
+      }
+    }
   }
 
   add(c) {
     c.world = this;
     // never start inside a wall or prop: a body that overlaps one can't take a step
-    if (this.map && !c.ghost && !c.isPlayer) [c.x, c.y] = this.map.nudge(c.x, c.y, bodyR(c));
+    if (this.map && !c.ghost && !c.isPlayer && !c.clutter) [c.x, c.y] = this.map.nudge(c.x, c.y, bodyR(c));
     this.creatures.push(c);
+    return c;
+  }
+  remove(c) {
+    const idx = this.creatures.indexOf(c);
+    if (idx !== -1) this.creatures.splice(idx, 1);
+    if (c.world === this) c.world = null;
     return c;
   }
   addHazard(h) { h.world = this; this.hazards.push(h); return h; }

@@ -8,6 +8,7 @@ import { rand, TAU } from './core/util.js';
 import { UI, $ } from './ui/ui.js';
 import { HUD } from './ui/hud.js';
 import { TouchUI } from './ui/touch.js';
+import { LoadingScreen } from './ui/loading.js';
 import { titleScreen } from './ui/screens.js';
 import { Cloud } from './game/cloud.js';
 import { Vendor } from './ui/vendor.js';
@@ -21,7 +22,6 @@ import { game } from './game/game.js';
 import { dropBakes } from './game/render.js';
 import { controls } from './game/controls.js';
 import { initSpectate } from './game/spectate.js';
-import { glowSprite } from './gfx/vfx.js';
 import { applyVolumes, preloadSong, TITLE_SONG } from './core/audio.js';
 
 function resize() {
@@ -46,24 +46,129 @@ function resize() {
 
 // ---------------------------------------------------------- title backdrop
 const embers = [];
+function makeTitleEmber(W, H, spawnAnywhere = false) {
+  const life = rand(4.0, 9.5);
+  const t = spawnAnywhere ? rand(0, life) : 0;
+  return {
+    x: rand(0, W),
+    y: spawnAnywhere ? rand(-20, H + 20) : H + rand(5, 30),
+    vx: rand(-12, 12),
+    vy: rand(28, 75),
+    t,
+    life,
+    sz: rand(0.8, 2.2),
+    seed: rand(100),
+    drift: rand(-8, 8),
+    swayAmp: rand(14, 28),
+    flutterFreq: rand(6, 14),
+    flickerRate: rand(10, 20),
+    baseAlpha: rand(0.45, 0.95),
+    popTimer: rand(1.0, 3.5),
+    flare: 0,
+    trailLen: rand(0.03, 0.065),
+  };
+}
+
 function renderTitle(dt) {
   const ctx = G.ctx, W = G.canvas.width, H = G.canvas.height;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, '#060203'); g.addColorStop(0.7, '#1a0503'); g.addColorStop(1, '#3a0a04');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  while (embers.length < 140) embers.push({ x: rand(W), y: H + rand(0, H), vy: rand(20, 80), vx: rand(-15, 15), s: rand(1, 3.5), ph: rand(TAU) });
+
+  const maxEmbers = G.touch ? 75 : 140;
+  const initial = embers.length === 0;
+  while (embers.length < maxEmbers) embers.push(makeTitleEmber(W, H, initial));
+
+  const dpr = G.dpr || 1;
   ctx.globalCompositeOperation = 'lighter';
-  for (const e of embers) {
-    e.y -= e.vy * dt * G.dpr; e.x += (e.vx + Math.sin(G.time + e.ph) * 12) * dt * G.dpr;
-    if (e.y < -20) { e.y = H + 10; e.x = rand(W); }
-    const a = Math.min(1, e.y / H + 0.2);
-    ctx.globalAlpha = a;
-    const s = e.s * 5 * G.dpr;
-    ctx.drawImage(glowSprite(e.s > 2.5 ? '#ffb040' : '#ff4010'), e.x - s, e.y - s, s * 2, s * 2);
+  ctx.lineCap = 'round';
+
+  for (let i = 0; i < embers.length; i++) {
+    const e = embers[i];
+    e.t += dt;
+    const u = e.t / e.life;
+    if (u >= 1 || e.y < -40 || e.x < -30 || e.x > W + 30) {
+      embers[i] = makeTitleEmber(W, H, false);
+      continue;
+    }
+
+    const eddy1 = Math.sin(e.y * 0.007 + G.time * 1.6 + e.seed) * e.swayAmp;
+    const eddy2 = Math.cos(e.x * 0.012 - G.time * 2.2 + e.seed * 1.5) * (e.swayAmp * 0.45);
+    const flutter = Math.sin(G.time * e.flutterFreq + e.seed * 2.5) * (e.swayAmp * 0.3);
+    e.vx += (eddy1 + eddy2 + flutter + e.drift) * dt * 1.2;
+    e.vx *= (1 - dt * 1.1);
+
+    e.popTimer -= dt;
+    if (e.popTimer <= 0) {
+      e.popTimer = rand(1.5, 4.0);
+      e.vx += rand(-18, 18);
+      e.vy += rand(8, 20);
+      e.flare = 0.55;
+      e.drift = rand(-10, 10);
+    }
+    if (e.flare > 0) e.flare = Math.max(0, e.flare - dt * 2.0);
+
+    e.x += e.vx * dt * dpr;
+    e.y -= e.vy * dt * dpr;
+
+    const fadeIn = u < 0.08 ? u / 0.08 : 1;
+    const fadeOut = u > 0.8 ? (1 - u) / 0.2 : 1;
+    const flicker = 0.8 + 0.2 * Math.sin(e.t * e.flickerRate + e.seed);
+    const brightness = Math.min(1.5, flicker + e.flare);
+    const alpha = Math.max(0, Math.min(1, fadeIn * fadeOut * e.baseAlpha * brightness));
+    if (alpha <= 0.01) continue;
+
+    let r, g2, b;
+    if (u < 0.25) {
+      const k = u / 0.25;
+      r = 255; g2 = Math.round(230 - 65 * k); b = Math.round(140 - 110 * k);
+    } else if (u < 0.6) {
+      const k = (u - 0.25) / 0.35;
+      r = 255; g2 = Math.round(165 - 95 * k); b = Math.round(30 - 20 * k);
+    } else if (u < 0.85) {
+      const k = (u - 0.6) / 0.25;
+      r = Math.round(255 - 85 * k); g2 = Math.round(70 - 52 * k); b = Math.round(10 - 5 * k);
+    } else {
+      const k = (u - 0.85) / 0.15;
+      r = Math.round(170 - 90 * k); g2 = Math.round(18 - 12 * k); b = 5;
+    }
+
+    const trailTime = e.trailLen * (1 + e.flare * 0.7);
+    const tx = e.x - e.vx * trailTime * dpr;
+    const ty = e.y + e.vy * trailTime * dpr;
+
+    ctx.strokeStyle = `rgba(${r},${g2},${b},${(alpha * 0.75).toFixed(3)})`;
+    ctx.lineWidth = Math.max(0.6 * dpr, e.sz * dpr * 0.65);
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(e.x, e.y);
+    ctx.stroke();
+
+    const headR = Math.max(0.7 * dpr, e.sz * dpr * 0.6);
+    ctx.fillStyle = `rgba(${r},${g2},${b},${alpha.toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, headR, 0, TAU);
+    ctx.fill();
+
+    if (brightness > 1.1 || u < 0.2) {
+      ctx.fillStyle = `rgba(255,255,230,${Math.min(1, alpha * 1.2).toFixed(3)})`;
+      const coreR = Math.max(0.4 * dpr, headR * 0.45);
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, coreR, 0, TAU);
+      ctx.fill();
+    }
   }
+
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
+  const cx = W * 0.5, cy = H * 0.5, rad = Math.max(W, H) * 0.72;
+  const vig = ctx.createRadialGradient(cx, cy, rad * 0.25, cx, cy, rad);
+  vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  vig.addColorStop(0.65, 'rgba(0, 0, 0, 0.6)');
+  vig.addColorStop(1, 'rgba(0, 0, 0, 0.94)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
 }
 
 // Adaptive resolution: when a device misses its frame budget, trade backing-store
@@ -186,10 +291,16 @@ async function boot() {
   G.canvas.addEventListener('contextrestored', dropBakes); // a GPU reset wiped the baked floors (game/render.js)
   requestAnimationFrame(loop);
   startTicker();
+  LoadingScreen.show({
+    title: 'VELSCOUR',
+    subtitle: 'The Abyss Awaits',
+    text: 'Summoning the depths…',
+    progress: 0,
+  });
   try {
     // the title song downloads in full alongside the art, so on mobile its intro never waits on the network
     let pa = 0, ps = 0;
-    const show = () => { const p = pa * 0.8 + ps * 0.2; $('#loading-text').textContent = `Summoning the depths… ${Math.round(p * 100)}%`; $('#loading-fill').style.width = `${(p * 100).toFixed(1)}%`; };
+    const show = () => { const p = pa * 0.8 + ps * 0.2; LoadingScreen.setProgress(p * 100, 'Summoning the depths…'); };
     await Promise.all([loadAssets((p) => { pa = p; show(); }), preloadSong(TITLE_SONG, (p) => { ps = p; show(); }).then(() => { ps = 1; show(); })]);
   } catch (e) {
     $('#loading-text').innerHTML = `Could not load game assets.<br><small>${e.message}</small><br><small>If you opened index.html directly from disk, serve the folder over http instead (see README).</small>`;
@@ -198,8 +309,8 @@ async function boot() {
   HUD.init();
   if (G.touch) TouchUI.init();
   applyVolumes();
-  $('#loading').classList.add('hidden');
   titleScreen();
+  await LoadingScreen.hide();
   Cloud.start(); // a device signed in to Google picks its session back up and syncs (game/cloud.js)
   // prefetch monster art while the player is on the title screen; then redraw skill icons that show summon art
   const redrawIcons = () => {

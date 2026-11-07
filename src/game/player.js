@@ -659,7 +659,16 @@ export class Player extends Creature {
     }
     if (!canAct) { this.moving = false; return; }
     if (this.channel) return;
-    // movement
+    // movement: completely frozen during cutscenes
+    if (G.cine) {
+      this.moveVec = [0, 0];
+      this.moveTarget = null;
+      this.path = null;
+      this.attackTarget = null;
+      this.interact = null;
+      this.moving = false;
+      return;
+    }
     this.moving = false;
     if (this.rooted) return;
     const [vx, vy] = this.moveVec;
