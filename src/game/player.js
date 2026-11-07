@@ -427,7 +427,7 @@ export class Player extends Creature {
         return true;
       case 'item': {
         const ok = addToBag(c, g.item);
-        if (!ok) { if (!g.warned) { g.warned = true; floatText(this.x, this.y, 50, 'Inventory full', '#ff8080', 12); sfx('error'); } return false; }
+        if (!ok) { if (!g.warned) { g.warned = true; floatText(this.x, this.y, 50, g.item.type === 'gem' ? 'Gem Bag full' : 'Inventory full', '#ff8080', 12); sfx('error'); } return false; }
         sfx('pickup');
         if (G.ui) { G.ui.log(`Picked up <span style="color:${g.color}">${g.label}</span>`); G.ui.refresh(); }
         return true;
@@ -795,12 +795,17 @@ export class Player extends Creature {
   }
 }
 
-/** Put an item in the first free bag slot (gems stack). */
+/** Put an item in the first free bag slot (gems & runes go into the dedicated Gem Bag and stack). */
 export function addToBag(c, item) {
   if (c === G.char) noteFind(item); // the Codex (game/reliquary.js) records relics and Sigils as they come in
   if (item.type === 'gem') {
-    const same = c.bag.find((b) => b && b.type === 'gem' && b.gem === item.gem && b.tier === item.tier);
+    if (!Array.isArray(c.gemBag)) c.gemBag = Array(30).fill(null);
+    const same = c.gemBag.find((b) => b && b.type === 'gem' && b.gem === item.gem && b.tier === item.tier);
     if (same) { same.count = (same.count || 1) + (item.count || 1); return true; }
+    const gi = c.gemBag.findIndex((b) => !b);
+    if (gi < 0) return false;
+    c.gemBag[gi] = item;
+    return true;
   }
   const i = c.bag.findIndex((b) => !b);
   if (i < 0) return false;

@@ -492,7 +492,7 @@ function build(depth, biome, seed) {
     snow: [-99, -98], snowC: '#eef3f8', mist: [valley + 3, valley + 0.5], mistC: '#dfe7ee', flank: '#9fb0c6',
     cloud: { y: valley + 1.6, color: '#f6f8fb', shade: '#b4c0d0', k: 0.86, wisp: 0.35 },
     sun: '#fff4e2', sunI: 2.4, amb: '#d4deea', ambI: 1.05, hemiSky: '#dceaf8', hemiGround: '#9aa4b4', hemiI: 1.35,
-    sky: ['#4a78b0', '#9cc0e0', '#e4ecf2'], far: ['#b8c8d8', '#98aec4', '#7d94ae'], bump: 1.15,
+    sky: ['#4a78b0', '#9cc0e0', '#e4ecf2'], far: ['#b8c8d8', '#98aec4', '#7d94ae'], bump: 1.15, winter: 1, floorBump: 0.12,
   };
   const edgeH = (x, y) => F.H2(Math.min(W - 0.01, Math.max(0, x)), Math.min(H - 0.01, Math.max(0, y)));
   const skirt = (x, y) => {
@@ -507,6 +507,7 @@ function build(depth, biome, seed) {
   };
 
   const av = { W, H, F, tfloor, floors: set.floors, vmat, look, skirt, skirtP: 46, snowFloor: FI.windpacked_snow, flankSnowFloor: FI.blue_snow_crust, stepFloor: FI.snowy_slate_flags,
+    windFloors: new Set(['windpacked_snow', 'wind_ripples', 'blue_snow_crust', 'compact_snow_path', 'drift_lip'].map((n) => FI[n])),
     noFlip: new Set(['bootprints', 'crossed_bootprints', 'sled_groove', 'runner_tracks', 'snowy_slate_flags', 'compact_snow_path', 'weathered_sun'].map((n) => FI[n])) };
   map.hopDust = '#eef2f6';
   // the pinnacle: a chest and its guard

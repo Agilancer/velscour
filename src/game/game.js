@@ -4,7 +4,7 @@ import { riftgateSpot } from '../gfx/riftgate.js';
 import { input } from '../core/input.js';
 import { camera } from '../core/view.js';
 import { sfx, playMusic, stopMusic, setAmbience, stopAmbience, footsteps } from '../core/audio.js';
-import { rand, pick, randi, escapeHtml, dist, makeCanvas, fmtInt, swapKey } from '../core/util.js';
+import { rand, pick, randi, clamp, escapeHtml, dist, makeCanvas, fmtInt, swapKey } from '../core/util.js';
 import { biomeTileSet, loadBiomeArt, mixedTileSet, keepTileSets } from '../core/assets.js';
 import { loadArtFor, enemyImage, markArtCaches, trimArtCaches } from '../core/enemyart.js';
 import { loadClassArt } from '../core/classart.js';
@@ -24,6 +24,7 @@ import { setupHappenings, announceHappenings, happeningsTick, townHappening, tow
 import { greedOf, greedPacks, greedWorld, greedCleared, greedDeath } from './greed.js';
 import { spectateTick } from './spectate.js';
 import { toggleSmite } from './smite.js';
+import { hearthTick, useHearth, closeHearthPortals } from './hearth.js';
 import { generateTown, makeTownTiles, rollTownWeather } from '../world/town.js';
 import { generateOverworld } from '../world/overworld.js';
 import { createOverworldScenario } from './overworld.js';
@@ -85,6 +86,7 @@ import { HUD } from '../ui/hud.js';
 import { TouchUI } from '../ui/touch.js';
 import { Vendor } from '../ui/vendor.js';
 import { Stash } from '../ui/stash.js';
+import { JewelBox } from '../ui/jewelbox.js';
 import { startTownLife } from './townlife.js';
 import { toggleInventory } from '../ui/inventory.js';
 import { toggleTree, toggleBook } from '../ui/skills.js';
@@ -328,7 +330,7 @@ export const game = {
     t.map.seen.fill(0);
     const world = new World('town', { map: t.map, tileset, biome: TOWN_BIOME, depth: 0, townTiles, buildings: t.buildings, props: t.props, wallHangings: t.wallHangings });
     world.raining = rollTownWeather();
-    world.npcs = t.npcs.map((n) => ({ vendor: n.vendor, x: n.x, y: n.y, reach: 1.8, flip: n.flip, use: () => Vendor.open(n.vendor.id) }));
+    world.npcs = t.npcs.map((n) => ({ vendor: n.vendor, x: n.x, y: n.y, reach: 1.8, flip: n.flip, aura: n.aura, auraCol: n.auraCol, use: () => Vendor.open(n.vendor.id) }));
     // the storage chest, beside the well
     {
       let [x, y] = [t.start[0] + 1.5, t.start[1] - 0.5];
@@ -338,6 +340,12 @@ export const game = {
       let [rx, ry] = [t.start[0] - 1.5, t.start[1] - 0.5];
       if (!t.map.walkable(rx, ry) || Math.hypot(rx - x, ry - y) < 1.5) [rx, ry] = t.map.randomNear(t.start[0] - 1, t.start[1], 2.5);
       world.npcs.push({ stash: true, reliquary: true, name: 'The Reliquary', x: rx, y: ry, reach: 1.6, flip: false, use: () => G.ui.reliquary.open() });
+      // the Jewel Box, dedicated 300-slot gem & rune vault (ui/jewelbox.js), near the well
+      let [jx, jy] = [t.start[0], t.start[1] - 1.6];
+      if (!t.map.walkable(jx, jy) || Math.hypot(jx - x, jy - y) < 1.4 || Math.hypot(jx - rx, jy - ry) < 1.4) {
+        [jx, jy] = t.map.randomNear(t.start[0], t.start[1] - 1.2, 2.6);
+      }
+      world.npcs.push({ stash: true, jewelBox: true, name: 'Jewel Box', x: jx, y: jy, reach: 1.6, flip: false, use: () => JewelBox.open() });
     }
     // the Altar of Heresy (ui/heresies.js), a dark obelisk at the plaza's edge: the Endgame's door (docs/ENDGAME.md)
     if (t.altar) world.npcs.push({ altar: true, name: 'Altar of Heresy', x: t.altar.x, y: t.altar.y, reach: 1.7, flip: false, use: () => Heresies.open() });
@@ -392,15 +400,115 @@ export const game = {
     });
   },
 
+  /** The one-line "what to do here" blurb for a biome (the town portal's floor picker). */
+  biomeBlurb(biome) {
+    if (regionOf(biome)) return regionOf(biome).portal;
+    return biome.id === 'sea_of_sand' ? 'Follow the cliff maze and clear every marked scenario area to open the exit.'
+      : biome.id === 'skyship' ? "Step out onto the heroes' airship. Hold the deck against the Air Pirates' boarding waves, their captains and their flagship; victory turns the gate into the exit."
+      : biome.sea ? "Step out onto the Dawnwake, the Lampwardens' steam frigate. Hold her deck against the Black Tide's boarders, wave on wave, and their captain; victory opens the bell tower's door onward."
+      : biome.id === 'dark_forest' ? 'Find your way through the woods and labyrinths to the Heart of the Forest. Its trial opens the way on; the glades along the trails hold trials of their own, and their rewards.'
+      : biome.tower ? 'Climb the spiral stair to the roof. Three waves of bosses hold it, and then their master comes on an airship.'
+      : biome.cave ? 'Follow the passages and caverns to the underground lake. At the foot of its waterfall a passage climbs a long, spiralling shaft to the top of the falls, where its masters wait.'
+      : biome.overworld ? 'Activate the scenario shrine and complete its trial to open the exit.'
+      : 'Find the exit. It is sealed until its guardian is slain.';
+  },
+
+  /** The deepest floor the town portal can open on: any floor down to one past the deepest cleared. */
+  maxPortalFloor(c = G.char) {
+    return Math.max(1, c?.depth || 1, (c?.deepest || 0) + 1);
+  },
+
+  /**
+   * The town portal's floor picker: a slider (1 .. deepest reached) kept in sync with a number box
+   * (typing, its arrow spinners, ArrowUp/Down, PageUp/Down, Home/End) and -/+ steppers.
+   */
   confirmDungeon() {
     const c = G.char;
     if (regionNeeds(BIOME_BY_ID[c.nextBiome], c.level)) c.nextBiome = drawBiome(c, c.depth); // a region above his level (game/regions.js)
-    const biome = BIOME_BY_ID[c.depth === FINAL_DEPTH ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
-    UI.dialog({
-      title: `Depth ${c.depth}`,
-      html: `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(biome.name)}</b>.</p><p class="dim">${regionOf(biome) ? regionOf(biome).portal : biome.id === 'sea_of_sand' ? 'Follow the cliff maze and clear every marked scenario area to open the exit.' : biome.id === 'skyship' ? "Step out onto the heroes' airship. Hold the deck against the Air Pirates' boarding waves, their captains and their flagship; victory turns the gate into the exit." : biome.sea ? "Step out onto the Dawnwake, the Lampwardens' steam frigate. Hold her deck against the Black Tide's boarders, wave on wave, and their captain; victory opens the bell tower's door onward." : biome.id === 'dark_forest' ? 'Find your way through the woods and labyrinths to the Heart of the Forest. Its trial opens the way on; the glades along the trails hold trials of their own, and their rewards.' : biome.tower ? 'Climb the spiral stair to the roof. Three waves of bosses hold it, and then their master comes on an airship.' : biome.cave ? 'Follow the passages and caverns to the underground lake. At the foot of its waterfall a passage climbs a long, spiralling shaft to the top of the falls, where its masters wait.' : biome.overworld ? 'Activate the scenario shrine and complete its trial to open the exit.' : 'Find the exit. It is sealed until its guardian is slain.'}${c.depth === FINAL_DEPTH ? '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>' : !biome.overworld && isRaidDepth(c.depth) ? '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>' : ''}</p>`,
-      buttons: [{ label: 'Not yet' }, { label: 'Enter', cls: 'red', fn: () => this.enterDungeon() }],
+    const current = Math.max(1, c.depth || 1);
+    const maxFloor = Math.max(current, this.maxPortalFloor(c));
+    const currentBiome = BIOME_BY_ID[current === FINAL_DEPTH ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
+
+    const describe = (d) => {
+      let tail = '';
+      if (d === FINAL_DEPTH) tail = '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>';
+      if (d === current) {
+        if (d !== FINAL_DEPTH && !currentBiome.overworld && isRaidDepth(d)) tail = '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>';
+        return `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(currentBiome.name)}</b>.</p><p class="dim">${this.biomeBlurb(currentBiome)}${tail}</p>`;
+      }
+      if (d !== FINAL_DEPTH && isRaidDepth(d)) tail = '<br><b style="color:#ff6030">This depth may end in a BOSS ROOM.</b>';
+      return `<p>The portal's glow shifts. A fresh path will be drawn into <b style="color:#ffb070">Depth ${d}</b>.</p><p class="dim">Monsters, loot and the biome are rolled for this depth when you step through.${tail}</p>`;
+    };
+
+    const dialog = UI.dialog({
+      title: 'Enter the Depths',
+      cls: 'floor-pick-dialog',
+      html: `
+        <div class="floor-pick">
+          <div class="floor-pick-head">
+            <span class="floor-pick-label">Depth</span>
+            <div class="floor-pick-num">
+              <button type="button" class="btn floor-pick-step" data-step="-1" title="Previous floor">&#8722;</button>
+              <input type="number" class="floor-pick-input" min="1" max="${maxFloor}" step="1" value="${current}" inputmode="numeric" aria-label="Depth to enter">
+              <button type="button" class="btn floor-pick-step" data-step="1" title="Next floor">+</button>
+            </div>
+            <span class="floor-pick-max">of ${maxFloor}</span>
+          </div>
+          <input type="range" class="floor-pick-range" min="1" max="${maxFloor}" step="1" value="${current}" aria-label="Depth slider" ${maxFloor <= 1 ? 'disabled' : ''}>
+          <div class="floor-pick-ticks"><span>1</span><span>Deepest reached: ${maxFloor}</span></div>
+          <div class="floor-pick-desc"></div>
+        </div>`,
+      buttons: [
+        { label: 'Cancel' },
+        { label: 'Enter the Depths', cls: 'red floor-pick-go', fn: () => this.enterDungeonAt(value) },
+      ],
     });
+
+    const box = dialog.box;
+    const range = box.querySelector('.floor-pick-range');
+    const num = box.querySelector('.floor-pick-input');
+    const desc = box.querySelector('.floor-pick-desc');
+    const goBtn = box.querySelector('.floor-pick-go');
+    let value = current;
+    const set = (v, fromTyping = false) => {
+      const n = parseInt(v, 10);
+      if (!Number.isFinite(n)) return;
+      value = clamp(n, 1, maxFloor);
+      range.value = value;
+      if (!fromTyping || String(value) !== num.value) num.value = value;
+      range.style.setProperty('--pct', maxFloor > 1 ? `${((value - 1) / (maxFloor - 1)) * 100}%` : '100%');
+      desc.innerHTML = describe(value);
+      if (goBtn) goBtn.textContent = `Enter Depth ${value}`;
+    };
+    range.addEventListener('input', () => set(range.value));
+    num.addEventListener('input', () => { if (num.value !== '') set(num.value, true); });
+    num.addEventListener('change', () => set(num.value === '' ? value : num.value));
+    num.addEventListener('blur', () => set(num.value === '' ? value : num.value));
+    box.querySelectorAll('.floor-pick-step').forEach((b) => b.addEventListener('click', () => { sfx('ui'); set(value + Number(b.dataset.step)); }));
+    // keyboard: keep keys out of the game while the picker is up; arrows/Page/Home/End step the floor; Enter goes, Escape cancels
+    box.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      const step = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 10, PageDown: -10 }[e.key];
+      if (step && (e.target === num || e.target === range || e.target === box)) { e.preventDefault(); set(value + step); }
+      else if (e.key === 'Home') { e.preventDefault(); set(1); }
+      else if (e.key === 'End') { e.preventDefault(); set(maxFloor); }
+      else if (e.key === 'Enter') { e.preventDefault(); set(num.value === '' ? value : num.value); goBtn?.click(); }
+      else if (e.key === 'Escape') { e.preventDefault(); dialog.close(); }
+    });
+    set(current);
+    setTimeout(() => { num.focus(); num.select(); }, 30);
+  },
+
+  /** Step through the town portal onto a chosen floor (1 .. deepest reached). */
+  enterDungeonAt(depth) {
+    const c = G.char, current = c.depth || 1;
+    depth = clamp(depth | 0, 1, this.maxPortalFloor(c));
+    if (depth !== current) {
+      c.depth = depth;
+      delete c.nextOmen;
+      c.nextBiome = depth === FINAL_DEPTH ? 'throne' : drawBiome(c, depth);
+    }
+    this.enterDungeon();
   },
 
   openVelscourContact() {
@@ -611,6 +719,7 @@ export const game = {
   },
 
   enterDungeon() {
+    closeHearthPortals();
     const c = G.char;
     const depth = c.depth;
     if (depth !== FINAL_DEPTH && (!c.nextBiome || c.nextBiome === 'throne' || regionNeeds(BIOME_BY_ID[c.nextBiome], c.level))) c.nextBiome = drawBiome(c, depth);
@@ -1332,7 +1441,8 @@ export const game = {
       if (input.consume('KeyT')) toggleTalents();
       if (input.consume('KeyB')) toggleBook();
       if (input.consume('KeyQ')) toggleQuest();
-      if (input.consume('KeyH')) helpDialog();
+      if (input.consume('KeyH')) useHearth();
+      if (input.consume('F1')) helpDialog();
       if (input.consume('KeyP')) Auto.toggle();
       if (input.consume('KeyG')) unleashMadness();
       if (input.consume('KeyF')) toggleSmite();
@@ -1374,6 +1484,7 @@ export const game = {
       if (w.rift) riftTick(w, dt); // the Abyssal Rift's clock (game/rifts.js)
       if (w.heresy) heresyTick(w, dt); // the Heresies as monsters appear, the Legion's hellgates (game/heresies.js; the Breach has no happenings tick)
       madnessTick(dt);
+      hearthTick(dt);
       spectateTick(w, dt); // gilded critters, the SMITE reticle (game/spectate.js)
       footsteps(p, w.kind === 'town' ? 'dirt' : STEP_SURFACE[w.biome && w.biome.id] || 'stone');
       Meter.tick(dt);

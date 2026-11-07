@@ -18,6 +18,7 @@ import { Meter } from '../game/dpsmeter.js';
 import { heroDamage } from '../game/autoplay.js';
 import { madnessReady, madnessOn, unleashMadness } from '../game/mayhem.js';
 import { smiteReady, smiteArmed, toggleSmite, getUltimate } from '../game/smite.js';
+import { hearthReady, hearthChanneling, hearthOf, hearthSecondsLeft, useHearth } from '../game/hearth.js';
 import { greedOf, hoardOf, hoardCap, greedMods, setGreed, GREED_MAX } from '../game/greed.js';
 import { STANCES, Auto } from '../game/autoplay.js';
 import { sealedCount, openNextSeal } from './sealed.js';
@@ -69,6 +70,7 @@ export const HUD = {
     };
     UI.tip($('#smite-btn'), ultTip);
     UI.tip($('#smite-track'), ultTip);
+    $('#hearth-btn').addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); useHearth(); });
     $('#sealed-btn').addEventListener('click', (e) => { e.stopPropagation(); sfx('ui'); openNextSeal(); });
     // the spectator's dials: auto-play's stance and the Greed lever (game/autoplay.js STANCES, game/greed.js)
     for (const b of document.querySelectorAll('#stance button')) b.addEventListener('click', (e) => { e.stopPropagation(); if (!G.char) return; G.char.stance = b.dataset.st; sfx('ui'); UI.log(`Auto-play stance: <b>${STANCES[b.dataset.st].name}</b>.`, '#8fe0ff'); });
@@ -312,6 +314,17 @@ export const HUD = {
     });
     set('smitet', sArmed ? `${ult.name} — ${G.touch ? 'tap' : 'click'} the ground` : sReady ? `${ult.name} — ready` : `${ult.name} ${Math.floor((c.smite || 0) * 100)}%`, (v) => { $('#smite-text').textContent = v; });
     if (G.canvas) G.canvas.classList.toggle('aiming', sArmed);
+    // HEARTHSTONE (game/hearth.js)
+    const hReady = hearthReady(), hChan = hearthChanneling(), hVal = hearthOf(c);
+    set('hearth', Math.round(clamp(hVal, 0, 1) * 1000) / 10, (v) => { $('#hearth-fill').style.width = v + '%'; });
+    set('hearthst', hChan ? 'channeling' : hReady ? 'full' : '', (v) => {
+      $('#hearth-track').className = v;
+      $('#hearth-btn').classList.toggle('hidden', !v);
+      $('#hearth-btn').classList.toggle('channeling', v === 'channeling');
+      $('#hearth-btn').textContent = v === 'channeling' ? 'HEARTHING…' : 'HEARTH';
+    });
+    const hSec = hearthSecondsLeft(c);
+    set('heartht', hChan ? 'Hearth — hold still…' : hReady ? 'Hearth — ready' : hVal >= 1 ? 'Hearth — charged' : `Hearth ${Math.floor(hSec / 60)}:${String(hSec % 60).padStart(2, '0')}`, (v) => { $('#hearth-text').textContent = v; });
     // sealed treasures waiting in the bag (ui/sealed.js)
     const nSeal = sealedCount(c);
     set('sealed', nSeal, (v) => { $('#sealed-btn').classList.toggle('hidden', !v); $('#sealed-text').textContent = `${v} SEALED`; });

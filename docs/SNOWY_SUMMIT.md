@@ -102,7 +102,15 @@ middle clear for the boss.
   about 50°: `snowK` 0.58-0.84) in the granite and shale materials normalised to a darker stone (`rockL` 0.3), deep drops
   hazing into the mist above the cloud sea and its wisps.
 - Floors are drawn at 128 px a tile, each mirrored or turned by a hash of its tile (but the directional ones: bootprints,
-  sled grooves, slate flags, the compact path, the sun mosaic), their seams wobbled by noise.
+  sled grooves, slate flags, the compact path, the sun mosaic), their seams wobbled by noise. The atlas is mipped, its
+  level taken from the ground's own derivatives and held inside the cells' padding (unfiltered, shrinking it shimmers).
+- **The snow** (`look.winter`, in `gfx/alpine3d.js`; the Mountainside leaves it off). `windFloors` run on unbroken from
+  tile to tile at twice the size, with no flips and their lines slowly wandering, so ripples read as one snowfield. What
+  is snow (bright, little colour) is graded from the art's own light: blue in the hollows, warm white on the crests.
+  The bump comes from `snowH`, smooth wind-carved drifts in tiles of height, never from the albedo: bumping the painted
+  grain (`floorBump` 0.12 on the Summit's other floors) is an emboss filter that turns the art into a noisy knit. Snow on
+  the flanks has a hard broken edge and packs into the rock's cracks instead of smearing down the cliff. Live: veils of
+  spindrift blow along the ground, and now and then a grain glints.
 
 ## Test
 ```bash

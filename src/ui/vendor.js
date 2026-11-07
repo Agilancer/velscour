@@ -16,6 +16,8 @@ import { VENDORS } from '../world/town.js';
 import { depthLevel } from '../data/depth.js';
 import { sheetItem, bannerKitItem, BANNER_KIT_PRICE, goldLvl } from '../data/items.js';
 import { SHEET_PRICE } from '../data/tabs.js';
+import { marksFree, deductMarks } from '../game/marks.js';
+import { Marks } from './marks.js';
 
 const VBY = Object.fromEntries(VENDORS.map((v) => [v.id, v]));
 
@@ -23,6 +25,7 @@ export const Vendor = {
   active: null,
   stock: {},
   shopSel: null,
+  body: null,
 
   restock() {
     const c = G.char;
@@ -51,16 +54,33 @@ export const Vendor = {
     this.shopSel = null;
     const v = VBY[vid];
     sfx('ui');
-    UI.openPanel('vendor', `${v.name} — ${v.title}`, (b) => this.render(b), { onClose: () => { this.active = null; UI.closePanel('inventory'); }, cls: 'vendor-panel' });
+    UI.openPanel('vendor', `${v.name} — ${v.title}`, (b) => this.render(b), { onClose: () => { this.active = null; this.body = null; UI.closePanel('inventory'); }, cls: 'vendor-panel' });
     UI.openPanel('inventory', 'Your Inventory', renderInventory);
   },
 
-  render(body) {
+  render(body = null) {
+    body = body || this.body;
+    if (!body || !this.active) return;
+    this.body = body;
     const v = VBY[this.active];
+    if (!v) return;
     const c = G.char;
     body.innerHTML = '';
     body.appendChild(el('div', 'vendor-greet', `“${escapeHtml(v.greet)}”`));
-    body.appendChild(el('div', 'row', `<span class="gold-text">◉ ${fmtInt(c.gold)} gold</span><span class="dim" style="font-size:12px">· Sell: right-click an item in your bag or drag it here</span>`));
+    const goldRow = el('div', 'row');
+    goldRow.appendChild(el('span', 'gold-text', `◉ ${fmtInt(c.gold)} gold`));
+    if (this.active === 'infernal') {
+      const freeMarks = marksFree();
+      const markSpan = el('span', 'gold-text', `★ ${fmtInt(freeMarks)} Infernal Mark${freeMarks === 1 ? '' : 's'}`);
+      markSpan.style.cssText = 'color:#ff5533;font-weight:bold;margin-left:14px;cursor:pointer;';
+      markSpan.title = 'Click to view Infernal Marks panel';
+      markSpan.onclick = () => Marks.open();
+      goldRow.appendChild(markSpan);
+    }
+    body.appendChild(goldRow);
+    const sellZone = el('div', 'shop-sellzone', 'Drop a backpack item here to sell · Right-click an item to sell it');
+    droppable(sellZone, (data) => (data.type === 'item' ? this.sell(data) : false), (data) => data.type === 'item');
+    body.appendChild(sellZone);
     droppable(body, (data) => (data.type === 'item' ? this.sell(data) : false), (data) => data.type === 'item');
     switch (this.active) {
       case 'weapons': this.shopGrid(body, this.stock.weapons); break;
@@ -71,15 +91,20 @@ export const Vendor = {
       case 'enchant': this.serviceBox(body, 'enchant'); break;
       case 'socket': this.serviceBox(body, 'socket'); body.appendChild(el('div', 'vendor-sub', '<b>Rings</b> <span class="dim">· each ring augments your skills</span>')); this.shopGrid(body, this.stock.rings || []); break;
       case 'gamble': this.gambleBox(body); break;
+      case 'infernal': this.infernalBox(body); break;
     }
   },
 
   shopGrid(body, list) {
+    body.appendChild(el('div', 'inv-section-title', `Stock <span>${list.filter(Boolean).length} available</span>`));
     const grid = el('div', 'shop-grid');
     list.forEach((it, i) => {
       const d = el('div', 'bslot ' + rarityClass(it));
       if (this.shopSel === i) d.classList.add('sel');
-      if (it) d.appendChild(itemCell(it));
+      if (it) {
+        d.appendChild(itemCell(it));
+        d.appendChild(el('span', 'shop-price', `${fmtInt(itemValue(it))}g`));
+      }
       if (it) {
         draggable(d, {
           key: 'shop:' + i,
@@ -136,11 +161,18 @@ export const Vendor = {
     const n = it.type === 'gem' ? 1 : 1;
     const price = Math.max(1, Math.floor(itemValue(it) / 4)) * n;
     const sellIt = () => {
-      if (it.type === 'gem' && (it.count || 1) > 1) it.count--; else c.bag[ref.idx] = null;
+      if (it.type === 'gem' && (it.count || 1) > 1) {
+        it.count--;
+      } else if (ref.where === 'gemBag') {
+        if (c.gemBag) c.gemBag[ref.idx] = null;
+      } else {
+        c.bag[ref.idx] = null;
+      }
       c.gold += price;
       sfx('gold');
       UI.log(`Sold ${escapeHtml(itemName(it))} for ${fmtInt(price)} gold.`, '#ffd34a');
-      if (UI.selected && UI.selected.where === 'bag' && UI.selected.idx === ref.idx && !c.bag[ref.idx]) UI.selected = null;
+      const curSlot = ref.where === 'gemBag' ? c.gemBag?.[ref.idx] : c.bag[ref.idx];
+      if (UI.selected && UI.selected.where === ref.where && UI.selected.idx === ref.idx && !curSlot) UI.selected = null;
       changed();
     };
     if ((it.type === 'gear' && it.rarity >= 3) || (it.type === 'sheet' && it.inked)) UI.confirm('Sell item?', `Sell <span style="color:${itemColor(it)}">${escapeHtml(itemName(it))}</span> for ${fmtInt(price)} gold?`, sellIt, 'Sell');
@@ -159,7 +191,7 @@ export const Vendor = {
     const kinds = RARITY.map((r) => ({ r, n: sold.filter(({ it }) => it.rarity === r.id).length })).filter((k) => k.n).reverse()
       .map((k) => `<span style="color:${k.r.color}">${k.n} ${k.r.name}</span>`).join(' · ');
     UI.confirm('Sell all gear?', `Sell <b>${sold.length}</b> piece${sold.length > 1 ? 's' : ''} of gear for <span class="gold-text">${fmtInt(total)} gold</span>?<br>${kinds}` +
-      `<br><span class="dim">Gems in your bag are kept${gems ? `; ${gems} socketed gem${gems > 1 ? 's go' : ' goes'} with ${gems > 1 ? 'their' : 'its'} gear` : ''}. Equipped gear, locked items${sealed ? ' and sealed treasures are' : ' are'} not sold.</span>`, () => {
+      `<br><span class="dim">Gems in your Gem Bag are kept${gems ? `; ${gems} socketed gem${gems > 1 ? 's go' : ' goes'} with ${gems > 1 ? 'their' : 'its'} gear` : ''}. Equipped gear, locked items${sealed ? ' and sealed treasures are' : ' are'} not sold.</span>`, () => {
       let n = 0, gold = 0;
       for (const { it, i } of sold) if (c.bag[i] === it) { c.bag[i] = null; gold += price(it); n++; } // still where it was
       c.gold += gold;
@@ -194,7 +226,11 @@ export const Vendor = {
     const c = G.char;
     const box = el('div', 'service-box');
     box.innerHTML = `<b>Gem Forge</b><div class="dim" style="font-size:12px">Fuse three identical gems into one of the next grade, or pay to refine a single gem. Grades: Chipped → Flawed → Gem → Flawless → Perfect → Royal → Imperial → Celestial → Abyssal → Eternal. Three Sigil Stones of a rank fuse into one of the next rank (Sigils can't be refined).</div>`;
-    const gems = c.bag.map((b, i) => ({ b, i })).filter(({ b }) => b && b.type === 'gem' && b.tier < gemMaxTier(b.gem));
+    const gemSources = [
+      ...((c.gemBag || []).map((b, i) => ({ b, i, where: 'gemBag' }))),
+      ...((c.bag || []).map((b, i) => ({ b, i, where: 'bag' }))),
+    ];
+    const gems = gemSources.filter(({ b }) => b && b.type === 'gem' && b.tier < gemMaxTier(b.gem));
     const fusable = gems.filter(({ b }) => (b.count || 1) >= 3);
     if (fusable.length) {
       const all = el('button', 'btn small', 'Fuse all');
@@ -203,18 +239,24 @@ export const Vendor = {
       box.appendChild(all);
     }
     if (!gems.length) box.appendChild(el('div', 'dim', 'You carry no gems the forge can work.'));
-    for (const { b, i } of gems) {
+    for (const { b, i, where } of gems) {
       const row = el('div', 'row forge-row');
       row.appendChild(el('span', '', `<span style="color:${GEMS[b.gem].color}">◆</span> ${escapeHtml(gemName(b.gem, b.tier))}${(b.count || 1) > 1 ? ` <span class="dim">x${b.count}</span>` : ''}`));
       const sig = GEMS[b.gem].sigil, fuse = fuseCost(b), refine = gemRefineCost(b.tier, GEMS[b.gem].special);
       const f = el('button', 'btn small', `Fuse 3 → ${escapeHtml(gemName(b.gem, b.tier + 1))} (${fmtInt(fuse)}g)`);
       f.disabled = (b.count || 1) < 3 || c.gold < fuse;
-      f.onclick = () => { if (fuseGem(c, i)) { sfx('levelup'); UI.log(`Forged <span style="color:#c8f0ff">${escapeHtml(gemName(b.gem, b.tier + 1))}</span>!`); changed(); } };
+      f.onclick = () => { if (fuseGem(c, i, where)) { sfx('levelup'); UI.log(`Forged <span style="color:#c8f0ff">${escapeHtml(gemName(b.gem, b.tier + 1))}</span>!`); changed(); } };
       const u = el('button', 'btn small', `Refine 1 (${fmtInt(refine)}g)`);
       u.disabled = c.gold < refine;
       u.onclick = () => {
         c.gold -= refine;
-        if ((b.count || 1) > 1) b.count--; else c.bag[i] = null;
+        if ((b.count || 1) > 1) {
+          b.count--;
+        } else if (where === 'gemBag') {
+          if (c.gemBag) c.gemBag[i] = null;
+        } else {
+          c.bag[i] = null;
+        }
         addToBag(c, makeGem(b.gem, b.tier + 1));
         sfx('arcane');
         UI.log(`Refined into <span style="color:#c8f0ff">${escapeHtml(gemName(b.gem, b.tier + 1))}</span>.`);
@@ -233,7 +275,12 @@ export const Vendor = {
     const slot = el('div', 'bslot ' + rarityClass(it));
     slot.style.width = '56px'; slot.style.height = '56px'; slot.style.display = 'inline-block'; slot.style.verticalAlign = 'middle';
     if (it) slot.appendChild(itemCell(it));
-    droppable(slot, (data) => { if (data.type !== 'item') return false; UI.selected = data.where === 'bag' ? { where: 'bag', idx: data.idx } : { where: 'equip', slot: data.slot }; UI.refresh(); return true; }, (data) => data.type === 'item');
+    droppable(slot, (data) => {
+      if (data.type !== 'item' || (data.where !== 'bag' && data.where !== 'equip')) return false;
+      UI.selected = data.where === 'bag' ? { where: 'bag', idx: data.idx } : { where: 'equip', slot: data.slot };
+      UI.refresh();
+      return true;
+    }, (data) => data.type === 'item' && (data.where === 'bag' || data.where === 'equip'));
     const head = el('div', 'row');
     head.appendChild(slot);
     head.appendChild(el('div', '', it && it.type === 'gear' ? `<b style="color:${itemColor(it)}">${escapeHtml(itemName(it))}</b><div class="dim">${RARITY[it.rarity].name} · iLvl ${it.ilvl}${it.upg ? ` · +${it.upg}` : ''} · Sockets ${it.sockets}/${it.maxSockets}</div>` : '<span class="dim">Select or drag an item (bag or equipped) here.</span>'));
@@ -339,19 +386,163 @@ export const Vendor = {
     }
     body.appendChild(row);
   },
+
+  /** Malakor the Ash-Wanderer: trade Infernal Marks for Sealed Chests. */
+  infernalBox(body) {
+    const c = G.char;
+    const free = marksFree();
+
+    const banner = el('div', 'dim', 'The wanderer trades relics salvaged from the deepest abysses. Exchange your <b>Infernal Marks</b> for sealed coffers. Break the seal in your backpack or via the HUD button to reveal the treasure within!');
+    banner.style.cssText = 'margin-bottom:12px;font-size:13px;line-height:1.4;';
+    body.appendChild(banner);
+
+    const chestOffers = [
+      {
+        id: 'mystery',
+        name: 'Sealed Mystery Casket',
+        cost: 1,
+        desc: 'An iron-bound coffer pulled from the outer depths. Contains an <b>Epic or better</b> item scaled to your level.',
+        rarityText: 'Epic+',
+        rollRarity: () => {
+          const mf = G.player?.st?.magicFind || 0;
+          const r = Math.random();
+          if (r < Math.min(0.12, 0.03 * (1 + mf / 200))) return 5;
+          if (r < Math.min(0.40, 0.20 * (1 + mf / 150))) return 4;
+          return 3;
+        },
+      },
+      {
+        id: 'weapon',
+        name: 'Sealed Armament Coffer',
+        cost: 2,
+        desc: 'A heavy warded coffer containing an <b>Epic or better Weapon or Offhand</b>.',
+        rarityText: 'Epic+ Weapon / Offhand',
+        slot: () => (Math.random() < 0.75 ? 'weapon' : 'offhand'),
+        rollRarity: () => {
+          const mf = G.player?.st?.magicFind || 0;
+          const r = Math.random();
+          if (r < Math.min(0.15, 0.04 * (1 + mf / 200))) return 5;
+          if (r < Math.min(0.45, 0.25 * (1 + mf / 150))) return 4;
+          return 3;
+        },
+      },
+      {
+        id: 'armor',
+        name: 'Sealed Armor Vault',
+        cost: 2,
+        desc: 'A runed lockbox containing <b>Epic or better Armor</b> (Helm, Chest, Legs, Boots, or Gloves).',
+        rarityText: 'Epic+ Armor',
+        slot: () => pick(['head', 'body', 'legs', 'feet', 'hands']),
+        rollRarity: () => {
+          const mf = G.player?.st?.magicFind || 0;
+          const r = Math.random();
+          if (r < Math.min(0.15, 0.04 * (1 + mf / 200))) return 5;
+          if (r < Math.min(0.45, 0.25 * (1 + mf / 150))) return 4;
+          return 3;
+        },
+      },
+      {
+        id: 'reliquary',
+        name: 'Sealed Abyssal Reliquary',
+        cost: 5,
+        desc: 'A forbidden relic chest pulsing with dark brimstone. Guaranteed <b>Legendary or Mythic</b>!',
+        rarityText: 'Guaranteed Legendary / Mythic',
+        rollRarity: () => {
+          const mf = G.player?.st?.magicFind || 0;
+          const r = Math.random();
+          return r < Math.min(0.35, 0.15 * (1 + mf / 150)) ? 5 : 4;
+        },
+      },
+    ];
+
+    const list = el('div', 'infernal-chest-list');
+    list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:6px;';
+
+    for (const offer of chestOffers) {
+      const row = el('div', 'service-box row');
+      row.style.cssText += ';align-items:center;padding:10px;background:rgba(25,10,12,0.5);border:1px solid rgba(255,80,40,0.3);';
+
+      const ic = el('div', 'bslot r3 sealed');
+      Object.assign(ic.style, { width: '42px', height: '42px', flex: 'none' });
+      ic.appendChild(itemCell({ type: 'gear', sealed: true, rarity: offer.id === 'reliquary' ? 4 : 3 }));
+      row.appendChild(ic);
+
+      const info = el('div', '');
+      info.style.cssText = 'flex:1;margin-left:12px;margin-right:12px;';
+      info.innerHTML = `<div style="font-size:14px;font-weight:bold;color:#ffdf8a">${escapeHtml(offer.name)} <span style="font-size:11px;color:#ff6644;font-weight:normal">(${offer.rarityText})</span></div><div class="dim" style="font-size:12px;margin-top:2px;line-height:1.3">${offer.desc}</div>`;
+      row.appendChild(info);
+
+      const btn = el('button', 'btn small', `Trade <b>${offer.cost} Mark${offer.cost > 1 ? 's' : ''}</b>`);
+      btn.style.cssText = 'flex:none;white-space:nowrap;min-width:115px;color:#ffd860;';
+      const bagFull = c.bag.filter((x) => !x).length < 1;
+      const canAfford = free >= offer.cost;
+      btn.disabled = !canAfford || bagFull;
+      if (bagFull) {
+        btn.title = 'Inventory is full';
+      } else if (!canAfford) {
+        btn.title = `Requires ${offer.cost} unspent Infernal Marks (you have ${free})`;
+      }
+      btn.onclick = () => this.buySealedChest(offer);
+      row.appendChild(btn);
+
+      list.appendChild(row);
+    }
+
+    body.appendChild(list);
+  },
+
+  buySealedChest(offer) {
+    const c = G.char;
+    if (!c) return false;
+    if (marksFree() < offer.cost) {
+      UI.log(`Not enough unspent Infernal Marks (need ${offer.cost}, have ${marksFree()}).`, '#ff8080');
+      sfx('error');
+      return false;
+    }
+    if (c.bag.filter((x) => !x).length < 1) {
+      UI.log('Inventory is full! Free up a slot first.', '#ff8080');
+      sfx('error');
+      return false;
+    }
+    if (!deductMarks(offer.cost)) {
+      UI.log('Failed to deduct Infernal Marks.', '#ff8080');
+      sfx('error');
+      return false;
+    }
+
+    const lvl = Math.max(c.level, depthLevel(c.depth || 1));
+    const slot = offer.slot ? offer.slot() : undefined;
+    const rarity = offer.rollRarity();
+    const it = rollItem(lvl, {
+      slot,
+      rarity,
+      mf: (G.player?.st?.magicFind || 0) + 50,
+      bonus: 0.5,
+    });
+    it.sealed = true;
+    addToBag(c, it);
+
+    sfx('levelup', 0.7);
+    sfx('shadow', 0.8);
+    UI.log(`The wanderer passes you a <b style="color:#ffdf8a">Sealed Treasure</b> (${escapeHtml(offer.name)})! Break the seal to unveil it.`, '#ffd860');
+    changed();
+    this.render();
+    return true;
+  },
 };
 
 /** What fusing three of a gem stack costs (Sigils follow the gold curve of their depth). */
 export const fuseCost = (b) => (GEMS[b.gem].sigil ? sigilFuseCost(b.tier) : gemFuseCost(b.tier));
-/** Fuse three gems of the stack at bag index i into one of the next grade. */
-export function fuseGem(c, i) {
-  const b = c.bag[i];
+/** Fuse three gems of the stack at container index i into one of the next grade. */
+export function fuseGem(c, i, where = 'gemBag') {
+  const container = where === 'bag' ? c.bag : (c.gemBag && c.gemBag[i] ? c.gemBag : c.bag);
+  const b = container && container[i];
   if (!b || b.type !== 'gem' || (b.count || 1) < 3 || b.tier >= gemMaxTier(b.gem)) return false;
   const cost = fuseCost(b);
   if (c.gold < cost) return false;
   c.gold -= cost;
   b.count = (b.count || 1) - 3;
-  if (b.count <= 0) c.bag[i] = null;
+  if (b.count <= 0) container[i] = null;
   addToBag(c, makeGem(b.gem, b.tier + 1));
   return true;
 }
@@ -360,10 +551,24 @@ export function fuseAll(c, budget = Infinity, keepSigils = false) {
   let n = 0;
   for (let guard = 0; guard < 200; guard++) {
     let best = -1;
-    c.bag.forEach((b, i) => { if (b && b.type === 'gem' && !b.locked && !(keepSigils && GEMS[b.gem].sigil) && (b.count || 1) >= 3 && b.tier < gemMaxTier(b.gem) && fuseCost(b) <= Math.min(c.gold, budget) && (best < 0 || b.tier < c.bag[best].tier)) best = i; });
+    let bestWhere = 'gemBag';
+    const checkList = (list, where) => {
+      list.forEach((b, i) => {
+        if (b && b.type === 'gem' && !b.locked && !(keepSigils && GEMS[b.gem].sigil) && (b.count || 1) >= 3 && b.tier < gemMaxTier(b.gem) && fuseCost(b) <= Math.min(c.gold, budget)) {
+          const currentBest = best < 0 ? null : (bestWhere === 'gemBag' ? c.gemBag[best] : c.bag[best]);
+          if (!currentBest || b.tier < currentBest.tier) {
+            best = i;
+            bestWhere = where;
+          }
+        }
+      });
+    };
+    if (c.gemBag) checkList(c.gemBag, 'gemBag');
+    if (c.bag) checkList(c.bag, 'bag');
     if (best < 0) break;
-    budget -= fuseCost(c.bag[best]);
-    fuseGem(c, best); n++;
+    const cur = bestWhere === 'gemBag' ? c.gemBag[best] : c.bag[best];
+    budget -= fuseCost(cur);
+    fuseGem(c, best, bestWhere); n++;
   }
   return n;
 }

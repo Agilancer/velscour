@@ -378,7 +378,8 @@ const labelRank = (l) => {
   if (l.kind !== 'item') return 0; // gold, potions
   const it = l.item;
   if (it.sealed) return 8;
-  if (it.type !== 'gear') return 3; // gems, Sigil Stones, sheets
+  if (it.type === 'gem') return filterPasses(it) ? 3 : -1;
+  if (it.type !== 'gear') return 3; // sheets
   return filterPasses(it) ? it.rarity || 0 : -1; // the loot filter says no: never named unprompted
 };
 const labelReach = (r) => (r < 0 ? 0 : r < 2 ? 5 : r === 2 ? 9 : 14);

@@ -1,7 +1,7 @@
 // LocalStorage persistence for heroes.
 import { CLASSES } from '../data/classes.js';
 import { MAX_LEVEL } from '../data/depth.js';
-import { rollItem, HOLLOW, WEAPONS, OFFHANDS, ARMORS, AFFIX_BY_STAT, affixValue, powerLevel, tierOf, itemReqStat, charEffectiveStat, augTarget } from '../data/items.js';
+import { rollItem, HOLLOW, WEAPONS, OFFHANDS, ARMORS, AFFIX_BY_STAT, affixValue, powerLevel, tierOf, itemReqStat, charEffectiveStat, augTarget, affixScale, flatDmgValue, LINE_MULT, PERK_MULT } from '../data/items.js';
 import { SCOPE_MUL, augPower, augmentable, AUGMENTS } from '../data/rings.js';
 import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, grantedSkillsAt } from '../data/skills.js';
 import { TALENTS, isTalentLockedByChoice, isTalentPrereqMet } from '../data/talents.js';
@@ -10,14 +10,17 @@ import { migrateBar, BAR_SIZE } from '../data/bar.js';
 import { TAB_SLOTS } from '../data/tabs.js';
 import { newMacros, migrateMacros } from '../data/macros.js';
 import { stashRaw, listRaw } from './herobackup.js';
-import { BAG_COLS, BAG_ROWS, fixBag } from '../data/bag.js';
+import {
+  BAG_COLS, BAG_ROWS, GEM_BAG_COLS, GEM_BAG_BASE_ROWS, JEWEL_BOX_COLS, JEWEL_BOX_BASE_ROWS,
+  fixBag, fixGemBag, fixStash, fixJewelBox,
+} from '../data/bag.js';
 
 const KEY = 'velscour_saves_v1';
 const ASIDE = KEY + '_unreadable_';   // + time: save data that couldn't be read, set aside before anything replaced it
-const watchers = [];
+var watchers;
 /** fn(classId, deletedIds) after a hero of that class is saved, or deleted by the player (game/cloud.js syncs it). */
-export function onSaveChange(fn) { watchers.push(fn); }
-const changed = (classId, deleted) => { for (const fn of watchers) try { fn(classId, deleted); } catch (e) { console.warn(e); } };
+export function onSaveChange(fn) { (watchers ||= []).push(fn); }
+const changed = (classId, deleted) => { for (const fn of (watchers || [])) try { fn(classId, deleted); } catch (e) { console.warn(e); } };
 
 let unreadable = false;   // the saves are there but don't parse: cloud sync must not touch them
 function readAll() {
@@ -139,14 +142,16 @@ export function newCharData(classId, name) {
     equip: { weapon: null, offhand: null, head: null, body: null, hands: null, legs: null, feet: null, ring1: null, ring2: null, ring3: null, ring4: null },
     vanity: { head: null, body: null }, hideHelm: false,
     macros: newMacros(), // game/macros.js
-    mastery: {}, rage: 0, townSeed: (Math.random() * 1e9) | 0,
+    mastery: {}, rage: 0, hearth: 1, townSeed: (Math.random() * 1e9) | 0,
     bag: Array(BAG_COLS * BAG_ROWS).fill(null), // more rows are bought in the inventory (data/bag.js)
+    gemBag: Array(GEM_BAG_COLS * GEM_BAG_BASE_ROWS).fill(null), // dedicated carrier for gems & runes
     stash: Array(300).fill(null),
+    jewelBox: Array(JEWEL_BOX_COLS * JEWEL_BOX_BASE_ROWS).fill(null), // dedicated town vault for gems & runes
     tabs: Array(TAB_SLOTS).fill(null), tabAt: 0, // the Bard's Tabs: locked Music Sheets he plays (data/tabs.js)
     gold: 150, potions: { hp: 6, mp: 4, rejuv: 1, fury: 1 },
     depth: 1, deepest: 0, nextBiome: null, biomeBag: [], cleared: {}, overworldMisses: 0, overworldLastVisit: null, seaOfSandRuns: {}, darkForestRuns: {}, breach: { best: 0, cleared: {} },
     heresy: { on: [] }, rifts: { open: 1, best: 0, cleared: {}, bestTime: {}, runs: 0, fails: 0, deaths: 0 }, keys: 0, unbound: { wins: 0, best: 0 }, // the Endgame (docs/ENDGAME.md)
-    kills: 0, deaths: 0, created: Date.now(), lastPlayed: Date.now(), tips: {},
+    kills: 0, deaths: 0, created: Date.now(), lastPlayed: Date.now(), tips: {}, wdmg: 1,
   };
   c.equip.weapon = rollItem(1, { slot: 'weapon', base: C.weapon, rarity: 0 });
   c.equip.weapon.affixes = c.equip.weapon.affixes.filter((a) => a.implicit);
@@ -269,6 +274,18 @@ function migrateToLv100Rebalance(c) {
   c.rebalancedV1 = true;
 }
 
+/** Every gear item anywhere in a save (worn, bag, stash, vanity, sealed contents...). */
+function eachGear(o, fn, depth = 0) {
+  if (!o || typeof o !== 'object' || depth > 6) return;
+  if (o.type === 'gear' && Array.isArray(o.affixes)) fn(o);
+  for (const k in o) if (o[k] && typeof o[k] === 'object') eachGear(o[k], fn, depth + 1);
+}
+function rescaleFlatDmg(it, a) {
+  const pl = powerLevel(it.ilvl || 1, it.rarity || 0), A = AFFIX_BY_STAT.flatDmg;
+  const roll = Math.max(0, Math.min(1, ((a.v || 1) / (affixScale(A.sc, pl) * (a.perk ? PERK_MULT : LINE_MULT)) - A.min) / (A.max - A.min)));
+  a.v = flatDmgValue(roll, pl, a.perk);
+}
+
 /** Fill in fields added by later versions. */
 export function migrate(c) {
   migrateToLv100Rebalance(c);
@@ -343,9 +360,12 @@ export function migrate(c) {
   }
   c.tips = c.tips || {};
   if (c.classId === 'barbarian') c.rage = Math.max(0, Math.min(100, Number(c.rage) || 0));
+  if (c.hearth === undefined) c.hearth = 1;
   c.homunculus = c.homunculus || { talks: 0, chapter: 0, told: [], recap: [] }; // the blacksmith's axe story (game/homunculus.js)
   c.mastery = c.mastery || {}; // skill mastery: {skillId: [level 1-1000, xp]}
   c.comm = c.comm || { open: [], done: [] }; // Town Commissions (game/commissions.js)
+  // "+N Weapon Damage" moved onto the weapon damage curve: old lines keep their roll, at the new scale
+  if (!c.wdmg) { eachGear(c, (it) => { for (const a of it.affixes || []) if (a.s === 'flatDmg') rescaleFlatDmg(it, a); }); c.wdmg = 1; }
   // plain (Common) gear takes more sockets now, as Glyphword bases (data/items.js HOLLOW)
   for (const it of [...Object.values(c.equip || {}), ...(c.bag || []), ...(c.stash || [])]) if (it && it.type === 'gear' && it.rarity === 0 && !it.relic && HOLLOW[it.slot] > (it.maxSockets || 0)) it.maxSockets = HOLLOW[it.slot];
   // Sky Battle cut scenes watched ('<story or base>:<scene>'): seen ones play at 20x. A hero who fought one before this
@@ -380,8 +400,37 @@ export function migrate(c) {
     if (def) c.bar[0] = def.id;
   }
   fixBag(c); // 6 rows, plus any bought
-  if (!Array.isArray(c.stash)) c.stash = [];
-  while (c.stash.length < 300) c.stash.push(null);
+  fixGemBag(c);
+  fixStash(c);
+  fixJewelBox(c);
+  // Migrate legacy gems from c.bag into c.gemBag (or overflow into c.jewelBox)
+  for (let i = 0; i < c.bag.length; i++) {
+    const it = c.bag[i];
+    if (!it || it.type !== 'gem') continue;
+    const same = c.gemBag.find((b) => b && b.type === 'gem' && b.gem === it.gem && b.tier === it.tier);
+    if (same) {
+      same.count = (same.count || 1) + (it.count || 1);
+      c.bag[i] = null;
+      continue;
+    }
+    const freeGem = c.gemBag.findIndex((b) => !b);
+    if (freeGem >= 0) {
+      c.gemBag[freeGem] = it;
+      c.bag[i] = null;
+      continue;
+    }
+    const sameJb = c.jewelBox.find((b) => b && b.type === 'gem' && b.gem === it.gem && b.tier === it.tier);
+    if (sameJb) {
+      sameJb.count = (sameJb.count || 1) + (it.count || 1);
+      c.bag[i] = null;
+      continue;
+    }
+    const freeJb = c.jewelBox.findIndex((b) => !b);
+    if (freeJb >= 0) {
+      c.jewelBox[freeJb] = it;
+      c.bag[i] = null;
+    }
+  }
   // Remap orphaned ring skill augments from pruned 80-skill trees onto valid augmentable skills in the same tree/class
   for (const it of [...Object.values(c.equip || {}), ...(c.bag || []), ...(c.stash || [])]) {
     if (!it || !Array.isArray(it.aug)) continue;
