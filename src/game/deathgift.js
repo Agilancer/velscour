@@ -70,8 +70,10 @@ export function grantDeathGift() {
   Board.withdraw(c.classId).catch((e) => console.warn('Honour board:', e));
   const ilvl = Math.max(c.level, GIFT_LEVEL); // items of the hero's own level are the best they can wear
   // level 100, its attribute points spent on required weapon/offhand stats, the class's attribute and vitality
+  const prevLevel = c.level;
   const gained = Math.max(0, GIFT_LEVEL - c.level);
   c.level = Math.max(c.level, GIFT_LEVEL); c.xp = 0;
+  c.talentPoints = (c.talentPoints || 0) + Math.max(0, Math.floor(c.level / 5) - Math.floor(prevLevel / 5));
   let pts = c.statPoints + gained * 5;
   const offBase = C.offhand || (C.primary === 'int' ? 'orb' : 'shield');
   const targetReq = 20 + (GIFT_LEVEL - 1) * 2;

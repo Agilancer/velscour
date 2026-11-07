@@ -5,14 +5,14 @@ import { SUMMONS } from './summons.js';
 import { ELEM } from '../gfx/vfx.js';
 import { NOTES, NOTE_MODS, REGISTERS, registerOf } from './notation.js';
 
-export const ROW_LEVELS = [1, 6, 12, 20, 30];
+export const ROW_LEVELS = [1, 12, 30];
 export const MAX_SKILL_LEVEL = 20;
 export const SKILLS = {};
 export const CLASS_SKILLS = {};
 
 // Skills granted for free as the hero levels up: [character level, tree, index]
-export const GRANTS = [[1, 0, 0], [2, 1, 0], [4, 2, 0], [8, 0, 4], [12, 1, 4], [16, 2, 4], [22, 0, 8], [28, 1, 8], [34, 2, 8]];
-const DRAGOON_GRANTS = [[1, 3, 0], [2, 3, 1], [4, 3, 2], [6, 3, 3]];
+export const GRANTS = [[1, 0, 0], [1, 2, 0], [3, 1, 0], [12, 0, 3], [16, 1, 3], [20, 2, 3], [30, 0, 6], [34, 1, 6], [38, 2, 6]];
+const DRAGOON_GRANTS = [[1, 3, 0], [2, 3, 1], [4, 3, 2]];
 
 const KIND_DMG = {
   melee: 1.15, proj: 1.0, nova: 0.95, aoe: 1.35, beam: 1.2, chain: 0.95, wall: 0.32, zone: 0.3, orbit: 0.5, cyclone: 0.38,
@@ -25,7 +25,7 @@ const KIND_MANA = {
 };
 const KIND_CD = { summon: 0.6, leap: 0.7, dash: 0.6, blink: 0.4, heal: 4, trap: 0.3 };
 const KIND_USE = { melee: 0.36, proj: 0.32, buff: 0.3, summon: 0.4, curse: 0.35, blink: 0.2, dash: 0.25, leap: 0.25 };
-const ATTACK_FX = new Set(['arrow', 'bullet', 'rang', 'javelin', 'blade', 'axe', 'chakram', 'rock', 'disc', 'pshield', 'bomb', 'rocket']);
+const ATTACK_FX = new Set(['arrow', 'bullet', 'rang', 'javelin', 'blade', 'axe', 'chakram', 'rock', 'disc', 'pshield', 'tshield', 'bomb', 'rocket']);
 
 function parseMods(str) {
   const m = {};
@@ -46,10 +46,10 @@ for (const [cls, trees] of Object.entries(SKILLDATA)) {
   trees.forEach((tree, t) => {
     tree.forEach((line, i) => {
       const [name, kind, el, fx, mods] = line.split('|');
-      const row = Math.floor(i / 4), col = i % 4;
+      const row = Math.floor(i / 3), col = i % 3;
       const sk = {
-        id: `${cls}.${t}.${i}`, classId: cls, tree: t, idx: i, row, col, name, kind, el, fx, m: parseMods(mods || ''),
-        reqLevel: ROW_LEVELS[row], prereq: i >= 4 ? `${cls}.${t}.${i - 4}` : null,
+        id: `${cls}.${t}.${i}`, classId: cls, tree: t, idx: i, row, col, tierRow: row * 2, name, kind, el, fx, m: parseMods(mods || ''),
+        reqLevel: ROW_LEVELS[row], prereq: i >= 3 ? `${cls}.${t}.${i - 3}` : null,
       };
       if (!sk.m.note && fx.startsWith('n_')) sk.m.note = fx.slice(2); // a Bard note projectile writes its own glyph
       sk.attack = ['melee', 'whirl', 'leap', 'dash'].includes(kind) || (kind === 'proj' && ATTACK_FX.has(fx)) || (kind === 'rain' && ATTACK_FX.has(fx));
@@ -150,7 +150,7 @@ export function needsTarget(sk) { return !['buff', 'heal', 'summon'].includes(sk
 
 const FXNAME = {
   arrow: 'arrow', bullet: 'bullet', rang: 'boomerang', javelin: 'javelin', blade: 'blade', axe: 'axe', chakram: 'chakram', rock: 'boulder',
-  disc: 'shield', pshield: 'shield', bomb: 'bomb', rocket: 'rocket', bolt: 'bolt', orb: 'orb', fireball: 'fireball', hammer: 'hammer', skull: 'spirit skull',
+  disc: 'shield', pshield: 'shield', tshield: 'shield', bomb: 'bomb', rocket: 'rocket', bolt: 'bolt', orb: 'orb', fireball: 'fireball', hammer: 'hammer', skull: 'spirit skull',
   spear: 'spear', shard: 'shard', crow: 'crow', note: 'note', blob: 'glob', star: 'star', wave: 'wave', missile: 'missile', locust: 'locust',
   wolf: 'ghost wolf', dragon: 'drake', rune: 'rune', tooth: 'tooth', bone: 'bone shard', card: 'card', spark: 'spark', spirit: 'spirit', chain: 'chain',
   feather: 'feather', totem: 'totem', meteor: 'meteor', ice: 'ice shard', acid: 'acid drop', firework: 'firework', blood: 'blood drop',

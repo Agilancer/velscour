@@ -45,11 +45,10 @@ const {openGame,report}=require('./harness');
       if(fitsSlot(c.equip.weapon,'offhand','paladin'))problems.push('Other class dual wield allowed');
       if(slotFor(c.equip,c.equip.weapon,'barbarian')!=='offhand')problems.push('Auto slot must choose second weapon');
       const bash=SKILLS['barbarian.0.0'];
-      const whirlwind=SKILLS['barbarian.0.4'];
+      const whirlwind=SKILLS['barbarian.0.3'];
       if(manaCost(whirlwind,1)!==0)problems.push('Whirlwind should consume Rage, not mana');
-      for(const id of ['barbarian.2.13','barbarian.2.18']){
-        const sk=SKILLS[id];
-        if(sk.kind==='orbit'||sk.fx==='hammer')problems.push('Barbarian still has orbit hammer '+id);
+      for(const sk of Object.values(SKILLS).filter(s=>s.classId==='barbarian')){
+        if(sk.kind==='orbit'||sk.fx==='hammer')problems.push('Barbarian still has orbit hammer '+sk.id);
       }
       await game.newChar('barbarian','Rage QA');
       G.godMode=true;

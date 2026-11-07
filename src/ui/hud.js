@@ -254,8 +254,13 @@ export const HUD = {
         if (id && SKILLS[id]) { s.icon.src = skillIconURL(SKILLS[id]); s.icon.style.display = 'block'; } else s.icon.style.display = 'none';
       }
     }
-    const sp = $('#sp-badge'), stb = $('#stat-badge');
+    const sp = $('#sp-badge'), stb = $('#stat-badge'), tb = $('#talent-badge');
     sp.textContent = c.skillPoints; sp.classList.toggle('hidden', !c.skillPoints);
+    if (tb) {
+      const talentPts = c.talentPoints || 0;
+      tb.textContent = talentPts;
+      tb.classList.toggle('hidden', !talentPts);
+    }
     stb.textContent = c.statPoints; stb.classList.toggle('hidden', !c.statPoints);
     if (G.touchUI) G.touchUI.refresh();
   },
@@ -509,8 +514,9 @@ export const HUD = {
 
   /** The level-up banner: a dark vignette, the title and new level bleeding in from blur, then Velscour's two lines. */
   levelUp(level, sound) {
-    const box = $('#levelup'), num = $('#lu-num');
+    const box = $('#levelup'), num = $('#lu-num'), sub = $('#levelup .lu-sub');
     num.textContent = level;
+    if (sub) sub.innerHTML = level % 5 === 0 ? '+5 attribute points &middot; +1 skill point &middot; +1 talent point' : '+5 attribute points &middot; +1 skill point';
     const now = performance.now();
     if (this.lu && now < this.lu.end) { // more levels while it's up: punch the number again
       num.classList.remove('punch'); void num.offsetWidth; num.classList.add('punch');

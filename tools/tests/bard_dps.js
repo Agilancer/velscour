@@ -4,7 +4,7 @@
 //   node tools/tests/bard_dps.js [seconds per run, default 60] [runs, default 3]
 const { openGame } = require('./harness');
 const secs = +(process.argv[2] || 60), runs = +(process.argv[3] || 3);
-const BAR = ['bard.0.0', 'bard.1.0', 'bard.2.0', 'bard.2.1', 'bard.1.11', 'bard.1.1', 'bard.1.2', 'bard.1.6', 'bard.3.3', 'bard.0.1', 'bard.2.15', 'bard.3.1', 'bard.1.13', 'bard.0.11', 'bard.2.7'];
+const BAR = ['bard.0.0', 'bard.1.0', 'bard.2.0', 'bard.2.1', 'bard.1.4', 'bard.1.1', 'bard.1.2', 'bard.1.6', 'bard.3.3', 'bard.0.1', 'bard.2.4', 'bard.3.1', 'bard.1.5', 'bard.0.6', 'bard.2.7'];
 
 (async () => {
   const { browser, page } = await openGame();

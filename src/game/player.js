@@ -28,6 +28,7 @@ import { bladeOnBack } from './sigs/deathknight.js';
 
 const FREE_CAST = new Set(['buff', 'summon']);
 import { relicBonuses } from '../data/relics.js';
+import { computeTalentBonuses, skillMorphFor, applySkillMorph } from '../data/talents.js';
 import { relicProc } from './relicprocs.js';
 import { noteFind, codexMf } from './reliquary.js';
 import { markBonuses, gainMarkXp } from './marks.js';
@@ -73,6 +74,8 @@ export class Player extends Creature {
     this.bashRageClaim = -1;
     this.whirlAuto = false;
     this.phoenixCd = 0;
+    this.talentCheatCd = 0;
+    this.morphHealCd = 0;
     this.infernoT = 0;
     this.st = {};
     this.recompute();
@@ -100,6 +103,13 @@ export class Player extends Creature {
     const rb = relicBonuses(c.equip);
     for (const [k, v] of rb.stats) put(k, v);
     Object.assign(legendary, rb.legs);
+    // Passive Talent Tree bonuses (data/talents.js)
+    const tb = computeTalentBonuses(c);
+    for (const [k, v] of Object.entries(tb.stats)) {
+      if (k === 'allStats') put('allAttr', v);
+      else if (k === 'manaMax') put('mana', v);
+      else put(k, v);
+    }
     // buffs
     let buffDmg = 0, buffAs = 0, buffArmor = 0, buffRes = 0, buffRegen = 0, buffSpeed = 0, buffCrit = 0, buffThorns = 0, buffLeech = 0, buffBlock = 0, buffLife = 0, buffCdr = 0, buffProj = 0;
     let buffReduce = 0, buffMf = 0, buffGf = 0, buffXp = 0;
@@ -187,9 +197,16 @@ export class Player extends Creature {
     st.bonusLifeRegen = (add.lifeRegen || 0) + this.maxHp * st.regenPct / 100;
     st.lifeRegen = heresyAllows('regen', c) ? ((inTown ? st.naturalLifeRegen : 0) + st.bonusLifeRegen) : 0; // Hunger of the Abyss: none
     st.manaRegen = (1.0 + c.level * 0.04 + int * 0.04 + (add.manaRegen || 0)) * (1 + (add.manaRegenPct || 0) / 100);
+    st.talents = tb.mods;
+    st.talentSkillMults = tb.skillMults;
+    st.talentMorphs = tb.morphs;
+    st.cheatDeath = tb.cheatDeath;
+    st.talentOnKill = tb.onKill;
+    st.knightCapPlus = tb.knightCapPlus || 0;
     this.st = st;
     this.augs = RING_SLOTS.flatMap((s) => (c.equip[s] && c.equip[s].aug) || []);
     this.augCache = new Map();
+    this.morphCache = new Map();
     if (this.hp > this.maxHp) this.hp = this.maxHp;
     if (this.mana > this.maxMana) this.mana = this.maxMana;
     this.speed = 4.2 * (this.classId === 'barbarian' ? 1.25 : 1) * (1 + st.moveSpeed / 100);
@@ -246,13 +263,25 @@ export class Player extends Creature {
 
   skillDamage(sk, L) {
     const st = this.st;
+    const morph = skillMorphFor(this, sk);
+    const effEl = (morph && morph.el) || sk.el;
     const base = skillBaseDamage(sk, L);
     const wc = weaponCoef(sk);
-    const elBonus = (sk.el === 'phys' ? st.physPct : st.elemPct[sk.el] || 0) * 0.25;
+    const elBonus = (effEl === 'phys' ? st.physPct : st.elemPct[effEl] || 0) * 0.25;
     const primBonus = st.primary * 0.28;
     let mult = (1 + (st.dmgPct * 0.35 + primBonus + elBonus) / 100) * this.synergy(sk) * masteryMul(this.mastery(sk)) * classTune(this.classId, this.char.level) * (sk.m.pow ?? 1);
     if (st.legendary.berserk) mult *= 1 + 0.04 * Math.floor((1 - this.hp / this.maxHp) * 10);
     if (this.score) mult *= harmonyMul(this); // the Bard's Harmony
+    if (st.talentSkillMult && st.talentSkillMult[sk.id]) mult *= st.talentSkillMult[sk.id];
+    if (st.talentSkillMults) {
+      for (const tm of st.talentSkillMults) {
+        const treeOk = tm.tree === null || tm.tree === undefined || (Array.isArray(tm.tree) ? tm.tree.includes(sk.tree) : tm.tree === sk.tree);
+        const kindOk = !tm.kind || (Array.isArray(tm.kind) ? tm.kind.includes(sk.kind) : tm.kind === sk.kind);
+        const skOk = !tm.skills || tm.skills.includes(sk.name);
+        if (treeOk && kindOk && skOk) mult *= 1 + tm.pct / 100;
+      }
+    }
+    if (morph && morph.dmgPct) mult *= 1 + morph.dmgPct / 100;
     const lo = (base * 0.85 + st.weapon[0] * wc) * mult, hi = (base * 1.15 + st.weapon[1] * wc) * mult;
     return [Math.max(1, Math.round(lo)), Math.max(2, Math.round(hi))];
   }
@@ -292,15 +321,21 @@ export class Player extends Creature {
     c.level++;
     c.statPoints += 5;
     c.skillPoints += 1;
+    const earnedTalent = c.level % 5 === 0;
+    if (earnedTalent) {
+      c.talentPoints = (c.talentPoints || 0) + 1;
+    }
     const granted = this.applyGrants();
     this.recompute();
     this.hp = this.maxHp; this.mana = this.maxMana;
     this.levelUpFx();
     if (G.ui) {
       if (G.ui.hud) G.ui.hud.levelUp(c.level, levelUpFanfare());
+      if (earnedTalent) G.ui.log('You earned a <b>Talent Point</b>! Open the Passive Talent Tree (T) to spend it.', '#ffd860');
       for (const id of granted) G.ui.log(`New ability learned: <b>${SKILLS[id].name}</b>`, '#ffd860');
       G.ui.refresh();
     }
+    if (G.game?.autosave) G.game.autosave();
   }
   /** Grimdark level-up: a dark sigil bursting into flames, a column of blood-red hellfire, rainbow lightning forking
    *  into the sky, smoke and a blood fountain, a shove. */
@@ -336,9 +371,17 @@ export class Player extends Creature {
       if (!c.granted[id]) {
         c.granted[id] = true;
         if (!c.skills[id]) { c.skills[id] = 1; out.push(id); }
-        // auto-slot into the first free bar slot
+        // auto-slot into the first free bar slot (0-mana basic attacks prefer LMB)
         if (!c.bar.includes(id)) {
-          if (id.endsWith('.0.0') && !c.bar[0]) c.bar[0] = id;
+          const gSk = SKILLS[id];
+          if (gSk && gSk.m && gSk.m.free) {
+            const prev = c.bar[0];
+            c.bar[0] = id;
+            if (prev && prev !== id) {
+              const free = freeSlot(c.bar);
+              if (free >= 0) c.bar[free] = prev;
+            }
+          } else if (id.endsWith('.0.0') && !c.bar[0]) c.bar[0] = id;
           else {
             const free = freeSlot(c.bar);
             if (free >= 0) c.bar[free] = id;
@@ -429,9 +472,10 @@ export class Player extends Creature {
     const w = this.world, mine = w.creatures.filter((c) => c.summon && c.owner === this && !c.dead);
     let foe;
     for (const id of new Set(this.char.bar || [])) {
-      const sk = id && SKILLS[id];
-      if (!sk || sk.kind !== 'summon' || this.canUse(sk)) continue;
-      const m = sk.m, L = this.skillLevel(sk), grow = m.grow ? Math.floor((L - 1) / 5) : 0, n = (m.n || 1) + grow;
+      const baseSk = id && SKILLS[id];
+      if (!baseSk || baseSk.kind !== 'summon' || this.canUse(baseSk)) continue;
+      const sk = applySkillMorph(baseSk, skillMorphFor(this, baseSk));
+      const m = sk.m, L = this.skillLevel(baseSk), grow = m.grow ? Math.floor((L - 1) / 5) : 0, n = (m.n || 1) + grow;
       const cap = (m.max || (m.dur ? 99 : (m.n || 1))) + grow; // the same cap createSummon enforces
       if (mine.filter((c) => c.skillId === sk.id).length >= cap || mine.length + n > 40) continue;
       let tx = this.x + Math.cos(this.facing) * 1.2, ty = this.y + Math.sin(this.facing) * 1.2;
@@ -446,13 +490,15 @@ export class Player extends Creature {
       // raised at once, between the hero's own casts: keep whatever attack he is in the middle of
       const lock = this.castLock, free = this.castFree, aim = this.aim;
       this.castLock = 0;
-      const ok = this.tryUseSkill(sk, tx, ty);
+      const ok = this.tryUseSkill(baseSk, tx, ty);
       if (lock > 0) { this.castLock = lock; this.castFree = free; this.aim = aim; }
       if (ok) return;
     }
   }
 
-  canUse(sk) {
+  canUse(skOrId) {
+    const sk = typeof skOrId === 'string' ? SKILLS[skOrId] : skOrId;
+    if (!sk) return 'unlearned';
     const L = this.skillLevel(sk);
     if (!L) return 'unlearned';
     if ((this.cooldowns[sk.id] || 0) > 0) return 'cooldown';
@@ -461,7 +507,8 @@ export class Player extends Creature {
     return null;
   }
 
-  tryUseSkill(sk, tx, ty, target = null) {
+  tryUseSkill(skOrId, tx, ty, target = null) {
+    const sk = typeof skOrId === 'string' ? SKILLS[skOrId] : skOrId;
     if (this.dead || !sk) return false;
     if (sk.classId === 'barbarian' && ((sk.kind === 'whirl' && this.rage < 10) || this.rage < rageCost(sk))) {
       if ((this.noRageT || 0) <= 0) { floatText(this.x, this.y, 60, 'Need Rage', '#ff9933', 12); this.noRageT = 0.8; }
@@ -501,9 +548,11 @@ export class Player extends Creature {
     const spd = sk.attack ? this.st.atkSpeed : this.st.castSpeed;
     this.castLock = useTime(sk) / (1 + spd / 100);
     this.castFree = FREE_CAST.has(sk.kind); // Diablo style: buffs, summons, totems and turrets don't root the hero
-    this.cooldowns[sk.id] = cooldown(sk) * (1 - this.st.cdr / 100) * quick;
+    const morph = skillMorphFor(this, sk);
+    const morphCdMul = morph && morph.cdPct ? 1 - morph.cdPct / 100 : 1;
+    this.cooldowns[sk.id] = cooldown(sk) * (1 - this.st.cdr / 100) * quick * morphCdMul;
     this.aim = [tx, ty];
-    this.lastEl = sk.el;
+    this.lastEl = (morph && morph.el) || sk.el;
     if (sk.id === 'barbarian.0.0') this.bashCastSerial++;
     const ok = castSkill(this, sk, L, tx, ty);
     if (ok === false) { this.mana += cost; this.cooldowns[sk.id] = 0; return false; }
@@ -588,6 +637,18 @@ export class Player extends Creature {
       sfx('roar');
       return;
     }
+    const cdCheat = this.st && this.st.cheatDeath;
+    if (cdCheat && !(this.talentCheatCd > 0)) {
+      this.talentCheatCd = cdCheat.cd || 120;
+      this.hp = Math.max(1, Math.round(this.maxHp * (cdCheat.healPct || 0.45)));
+      this.invuln = Math.max(this.invuln || 0, 1.5);
+      const cEl = cdCheat.el || 'holy', E = elem(cEl);
+      addEffect(new Column(this.x, this.y, E.glow, 0.9, 46, 280));
+      burst(this.x, this.y, 20, cEl, 36, 4.5);
+      floatText(this.x, this.y, 70, cdCheat.name || 'SECOND CHANCE!', E.glow, 18, { life: 1.5 });
+      sfx('roar');
+      return;
+    }
     if (this.dead) return;
     this.dead = true;
     this.hp = 0;
@@ -605,6 +666,8 @@ export class Player extends Creature {
     if (this.invuln > 0) this.invuln -= dt;
     if (this.noManaT > 0) this.noManaT -= dt;
     if (this.phoenixCd > 0) this.phoenixCd -= dt;
+    if (this.talentCheatCd > 0) this.talentCheatCd -= dt;
+    if (this.morphHealCd > 0) this.morphHealCd -= dt;
     if (this.furyT > 0) this.furyT -= dt;
     if (this.noRageT > 0) this.noRageT -= dt;
     if (this.classId === 'bard' && this.world) bardUpdate(this, dt);

@@ -18,13 +18,99 @@ import { slimeIconParts } from '../gfx/slimeart.js';
 const cache = new Map();
 const urlCache = new Map();
 
+// Optional painted icon atlases in assets/ui/skills/:
+//   - ${classId}_skills.png  : 4 rows (trees 0..3) x 9 cols (skills 0..8), 64x64 px per cell (576x256)
+//   - ${classId}_talents.png : 3 rows (branches 0..2) x 8 cols (nodes 0..7), 64x64 px per cell (512x192)
+// Falls back seamlessly to procedural HTML5 canvas icons whenever a sheet does not exist yet.
+const SKILL_SHEET_DIR = 'assets/ui/skills/';
+const skillSheets = new Map(); // `${classId}_${kind}` -> { status: 'loading'|'ready'|'missing', img, promise }
+let sheetLoadFn = null, sheetLoadTimer = 0;
+
+/** Register a batched callback invoked whenever a skill or talent PNG sheet finishes loading. */
+export function onSkillSheetLoad(fn) { sheetLoadFn = fn; }
+
+function notifySheetLoaded() {
+  cache.clear();
+  urlCache.clear();
+  if (sheetLoadFn && !sheetLoadTimer) {
+    sheetLoadTimer = setTimeout(() => { sheetLoadTimer = 0; sheetLoadFn(); }, 20);
+  }
+}
+
+function requestSheet(classId, kind) {
+  if (!classId || typeof globalThis.location === 'undefined') return { status: 'missing', img: null };
+  const k = `${classId}_${kind}`;
+  let rec = skillSheets.get(k);
+  if (rec) return rec;
+  rec = { status: 'loading', img: null, promise: null };
+  rec.promise = new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      rec.status = 'ready';
+      rec.img = img;
+      notifySheetLoaded();
+      resolve(img);
+    };
+    img.onerror = () => {
+      rec.status = 'missing';
+      resolve(null);
+    };
+    img.src = `${SKILL_SHEET_DIR}${k}.png`;
+  });
+  skillSheets.set(k, rec);
+  return rec;
+}
+
+/** Preload both `${classId}_skills.png` and `${classId}_talents.png` ahead of rendering; resolves cleanly if missing. */
+export function preloadSkillSheets(classId) {
+  if (!classId || typeof globalThis.location === 'undefined') return Promise.resolve();
+  return Promise.all([
+    requestSheet(classId, 'skills').promise,
+    requestSheet(classId, 'talents').promise,
+  ]);
+}
+
+function sheetCellFor(sk) {
+  if (!sk) return null;
+  if (sk.isTalent && sk.classId && Number.isInteger(sk.sheetRow) && Number.isInteger(sk.sheetCol)) {
+    if (sk.sheetRow >= 0 && sk.sheetRow < 3 && sk.sheetCol >= 0 && sk.sheetCol < 8) {
+      return { kind: 'talents', classId: sk.classId, row: sk.sheetRow, col: sk.sheetCol, rows: 3, cols: 8 };
+    }
+    return null;
+  }
+  const parts = typeof sk.id === 'string' ? sk.id.split('.') : [];
+  if (parts.length === 3) {
+    const cls = sk.classId || parts[0];
+    const row = Number(parts[1]), col = Number(parts[2]);
+    if (cls && Number.isInteger(row) && Number.isInteger(col) && row >= 0 && row < 4 && col >= 0 && col < 9) {
+      return { kind: 'skills', classId: cls, row, col, rows: 4, cols: 9 };
+    }
+  }
+  return null;
+}
+
 export function skillIcon(sk, size = 64) {
   const key = sk.id + '|' + size;
   let c = cache.get(key);
   if (c) return c;
   c = makeCanvas(size, size);
-  let keep = true; // false while a summon's painted art is still loading: draw the fallback, don't cache it
+  let keep = true; // false while a sheet or summon's painted art is still loading: draw the fallback, don't cache it
   const x = c.getContext('2d', { willReadFrequently: true }); // CPU-backed: read back by toDataURL with no GPU stall (~10-150 ms)
+  const cell = sheetCellFor(sk);
+  if (cell) {
+    const sh = requestSheet(cell.classId, cell.kind);
+    if (sh.status === 'ready' && sh.img && sh.img.naturalWidth > 0 && sh.img.naturalHeight > 0) {
+      const cw = sh.img.naturalWidth / cell.cols;
+      const ch = sh.img.naturalHeight / cell.rows;
+      x.drawImage(sh.img, cell.col * cw, cell.row * ch, cw, ch, 0, 0, size, size);
+      x.strokeStyle = 'rgba(0,0,0,0.45)';
+      x.lineWidth = 1;
+      x.strokeRect(0.5, 0.5, size - 1, size - 1);
+      cache.set(key, c);
+      return c;
+    }
+    if (sh.status === 'loading') keep = false;
+  }
   const E = elem(sk.classId === 'arcane_sorcerer' && sk.el === 'arcane' ? 'astral' : sk.el); // the Astronomer's blue starlight
   const s = size / 64;
   // background
@@ -81,6 +167,7 @@ export function skillIcon(sk, size = 64) {
       for (let i = 0; i < n; i++) {
         const off = n > 1 ? (i - (n - 1) / 2) * 12 : 0;
         if (sk.kind === 'rain') drawShape(x, sk.fx === 'ice' ? 'shard' : sk.fx === 'acid' ? 'blob' : sk.fx, off, -4 + Math.abs(off) * 0.4, Math.PI / 2 + 0.3, 1.4, E, 0.3);
+        else if (sk.fx === 'tshield') drawShape(x, 'tshield', off * 0.6, off, 0, 1.5 - (n - 1) * 0.25, E, 0.4);
         else drawShape(x, sk.fx, off * 0.6, off, -0.6, 2.1 - n * 0.3, E, 0.4);
       }
       break;
@@ -226,6 +313,28 @@ export function skillIconURL(sk) {
   let u = urlCache.get(sk.id);
   if (!u) { u = skillIcon(sk, 64).toDataURL(); if (cache.has(sk.id + '|64')) urlCache.set(sk.id, u); }
   return u;
+}
+
+function talentIconSpec(node) {
+  return {
+    id: 'tal_' + node.id,
+    isTalent: true,
+    classId: node.classId,
+    sheetRow: node.sheetRow ?? node.branch ?? 0,
+    sheetCol: node.sheetCol ?? 0,
+    el: node.el || 'phys',
+    fx: node.fx || 'light',
+    kind: node.choice ? 'aoe' : 'buff',
+    m: {},
+  };
+}
+
+export function talentIcon(node, size = 64) {
+  return skillIcon(talentIconSpec(node), size);
+}
+
+export function talentIconURL(node) {
+  return skillIconURL(talentIconSpec(node));
 }
 
 const itemUrlCache = new Map();

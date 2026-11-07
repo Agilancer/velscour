@@ -19,6 +19,7 @@ import { multN } from '../data/rings.js';
 import { noteTier } from '../data/notation.js';
 import { bardCastFx, bardNoteFor } from './bard.js';
 import { ASTRONOMER, astroCast, mirrorShots, cometStrike } from './astronomer.js';
+import { skillMorphFor, applySkillMorph } from '../data/talents.js';
 
 const roll = (d) => rand(d[0], d[1]);
 
@@ -50,18 +51,24 @@ function clampTarget(w, p, tx, ty, range) {
  * Returns false if the skill could not be used (e.g. no corpses).
  */
 export function castSkill(p, sk, L, tx, ty, opts = {}) {
+  const baseSk = sk;
+  const morph = p && p.isPlayer ? skillMorphFor(p, baseSk) : null;
+  if (morph) sk = applySkillMorph(sk, morph);
   // ring augments (Multiplicity adds to the skill's count, Colossus to its size) and mastery (bigger effects)
-  const aug = p.augFor ? p.augFor(sk) : null, M = p.mastery ? p.mastery(sk) : 1;
+  const aug = p.augFor ? p.augFor(baseSk) : null, M = p.mastery ? p.mastery(baseSk) : 1;
   const vis = masteryVis(M) * (aug && aug.colossus ? 1 + 0.35 * aug.colossus : 1);
   if (aug && aug.multiply) sk = withMore(sk, multN(aug.multiply));
+
   const w = p.world, m = sk.m, st = p.st;
   const astro = sk.classId === ASTRONOMER;
   const el = astro && sk.el === 'arcane' ? 'astral' : sk.el, E = elem(el); // the Astronomer's arcane flies as blue starlight
   let fx = sk.fx;
-  const dmg = p.skillDamage(sk, L);
-  const area = (1 + (st.areaPct || 0) / 100) * vis;
+  const dmg = p.skillDamage(baseSk, L);
+  const area = (1 + ((st.areaPct || 0) + (morph ? morph.areaPct : 0)) / 100) * vis;
   const ang = angleTo(p.x, p.y, tx, ty);
   const o = statusOpts(m);
+  if (m.curse && sk.kind !== 'curse') o.curse = Array.isArray(m.curse) ? m.curse : [m.curse];
+  else delete o.curse;
   o.sk = sk.id; o.vis = vis;
   if (sk.id === 'barbarian.0.0') o.rageCast = p.bashCastSerial;
   if (aug) o.aug = aug;
@@ -69,7 +76,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
   if (bard >= 0) { o.bardT = bard; if (m.free) fx = 'n_' + bardNoteFor(p, sk); } // the basic note shrinks to fit the bar
   if (!opts.echo) { masteryCastFx(p, sk, M, tx, ty); classCastFx(p, sk, L, tx, ty); if (bard >= 0) bardCastFx(p, sk, L, tx, ty); }
   // Canon: the same phrase answers itself a moment later
-  if (bard >= 0 && m.canon && !opts.echo) later(w, 0.32, () => { if (!p.dead && p.world === w) castSkill(p, sk, L, p.aim ? p.aim[0] : tx, p.aim ? p.aim[1] : ty, { echo: true }); });
+  if (bard >= 0 && m.canon && !opts.echo) later(w, 0.32, () => { if (!p.dead && p.world === w) castSkill(p, baseSk, L, p.aim ? p.aim[0] : tx, p.aim ? p.aim[1] : ty, { echo: true }); });
   p.face(ang);
   // the Astronomer's special spells (`astro=`): true replaced the kind's cast, false failed, undefined adds to it
   const special = astro ? astroCast(p, sk, L, tx, ty, { dmg, area, o, el, E }) : undefined;
@@ -118,6 +125,12 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       const speed = 9 * (m.spd ?? 1) * (1 + (st.projSpeed || 0) / 100) * (fx === 'bullet' ? 1.4 : fx === 'arrow' ? 1.25 : 1);
       const range = 10 * (m.range ?? 1);
       if (fx === 'pshield') preloadLancerShield('round'); // Shield Throw flies the Lancer's round 3D shield
+      let thrownShieldVariant = null;
+      if (fx === 'tshield') {
+        const activeOrbit = sk.name !== 'Shield Disc' && w.hazards.find((h) => h instanceof Orbit && h.src === p && !h.dead && h.shieldVariant);
+        thrownShieldVariant = activeOrbit ? activeOrbit.shieldVariant : 'round';
+        preloadLancerShield(thrownShieldVariant);
+      }
       for (let i = 0; i < n; i++) {
         const a = m.ring ? ang + (i / n) * TAU : m.rand ? ang + rand(-spread / 2 - 0.1, spread / 2 + 0.1) : ang + (n > 1 ? (i / (n - 1) - 0.5) * spread : 0);
         const delay = m.rand ? i * 0.035 : 0;
@@ -130,7 +143,8 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
             tx: tx + (m.lob && n > 1 ? rand(-1, 1) : 0), ty: ty + (m.lob && n > 1 ? rand(-1, 1) : 0),
             exp: m.exp ? 1.1 * (m.r ?? 1) * area : 0, chain: m.chain ? m.chain + Math.floor(st.chainPlus || 0) : 0,
             spray: m.spray, pull: m.pull, size: (m.r ?? 1) * vis, r: 0.3 * (m.r ?? 1) * Math.sqrt(vis), dur: m.dur, light: el !== 'phys', skin: sk.name,
-            ...(m.ricochet ? { ricochet: Math.min(m.ricochet, ricochetCount(sk, L) + Math.floor(st.chainPlus || 0)), blast: RICOCHET_BLAST * area, split: false } : null),
+            ...(thrownShieldVariant ? { shieldVariant: thrownShieldVariant } : null),
+            ...(m.ricochet ? { ricochet: Math.min(m.ricochet, ricochetCount(sk, L) + Math.floor(st.chainPlus || 0) + (morph ? morph.extraBounce : 0)), blast: RICOCHET_BLAST * area, split: false } : null),
             ...(bard >= 0 ? { bm: m, tier: bard } : null),
           }));
         });
@@ -143,7 +157,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
           w.addHazard(new Projectile({ world: w, src: p, x: mx, y: my, ang: a, speed, range, fx, el, dmg: dmg.map((v) => v * 0.3), o, pierce: m.pierce ? 99 : 0, home: 1, size: 0.8 * (m.r ?? 1) * vis, r: 0.3 * (m.r ?? 1), ret: m.ret, exp: m.exp ? 1.1 * (m.r ?? 1) * area : 0, pull: m.pull }));
         }
       }
-      sfx(fx === 'arrow' || fx === 'javelin' ? 'bow' : fx === 'bullet' || fx === 'rocket' ? 'shoot' : fx === 'note' || bard >= 0 ? 'note' : fx === 'rang' || fx === 'blade' || fx === 'axe' ? 'swing' : E.sfx, 0.7);
+      if (p.classId !== 'bard') sfx(fx === 'arrow' || fx === 'javelin' ? 'bow' : fx === 'bullet' || fx === 'rocket' ? 'shoot' : fx === 'note' || bard >= 0 ? 'note' : fx === 'rang' || fx === 'blade' || fx === 'axe' ? 'swing' : E.sfx, 0.7);
       p.lunge = 0.6;
       break;
     }
@@ -267,20 +281,27 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       w.addHazard(new Whirl({ world: w, src: p, tx, ty, dur: m.dur || 2,
         r: 1.35 * (m.r ?? 1) * area, dmg, el, fx, o,
         speed: barbarian ? Math.max(5.4, p.speed * 1.15) : 4.2,
-        rage: barbarian, pull: barbarian ? (m.suck || 0) + (L >= 6 ? 0.55 : 0) : 0,
+        rage: barbarian, pull: (barbarian ? ((m.suck || 0) + (L >= 6 ? 0.55 : 0)) : 0) + (m.pull ? 0.65 : 0),
         lightning: barbarian && (m.lightning || L >= 12),
         tornadoes: barbarian ? (m.tornado || 0) + (L >= 16 ? 2 : 0) : 0 }));
       break;
     }
     case 'leap': {
       const [x, y] = clampTarget(w, p, tx, ty, 6.5 * (m.range ?? 1));
-      const lp = w.addHazard(new Leap({ world: w, src: p, tx: x, ty: y, r: 1.6 * (m.r ?? 1) * area, dmg, el, fx, o, nova: m.nova }));
+      const lp = w.addHazard(new Leap({
+        world: w, src: p, tx: x, ty: y,
+        r: 1.6 * (m.r ?? 1) * area,
+        dmg, el, fx, o,
+        nova: m.nova || !!(morph && (morph.novaOnCast || morph.stun)),
+        quake: morph && morph.stun ? 1 : 0,
+        crater: !!(morph && morph.trail),
+      }));
       if (sk.classId === 'dragoon') lanceLeap(lp, sk.name); // energy lance + a trail per leap skill
       sfx('swing');
       break;
     }
     case 'dash':
-      w.addHazard(new Dash({ world: w, src: p, ang, len: Math.min(5 * (m.range ?? 1), Math.max(2, dist(p.x, p.y, tx, ty) + 0.5)), dmg, el, fx, o, n: m.n || 1, exp: m.exp }));
+      w.addHazard(new Dash({ world: w, src: p, ang, len: Math.min(5 * (m.range ?? 1), Math.max(2, dist(p.x, p.y, tx, ty) + 0.5)), dmg, el, fx, o, n: m.n || 1, exp: m.exp || !!(morph && (morph.trail || morph.novaOnCast || morph.stun)) }));
       if (m.lance) energyLance(p, ang, 2.2 + Math.min(20, L) * 0.05, el, 0.45 * (m.n || 1) + 0.2, L, m.prism).ride = true; // couched lance rides the charge
       sfx('swing');
       break;
@@ -299,23 +320,24 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
     case 'summon':
       return summonCast(p, sk, L, tx, ty, dmg);
     case 'buff': {
-      const amt = buffAmount(sk, L), dur = skillDuration(sk, L);
+      const amt = buffAmount(sk, L), dur = skillDuration(sk, L) * (1 + (morph ? morph.durPct : 0) / 100);
       const stats = {};
       for (const b of m.buff || ['dmg']) stats[b] = amt;
       const buff = p.addBuff({ id: sk.id, name: sk.name, el, fx, stats, t: dur, max: dur, pulse: m.pulse ? { dmg, acc: 0 } : null, transform: m.transform, slowPulse: m.slow });
       if (m.party) for (const c of w.creatures) if (c.summon && c.owner === p && !c.dead) c.partyBuff = { stats, t: dur };
       w.addHazard(new AuraFx({ world: w, src: p, el, buff, transform: m.transform }));
-      burst(p.x, p.y, 20, el, 24, 3, { up: 1.5 });
-      addEffect(new Ring(p.x, p.y, 0.2, 1.6, 0.5, E.glow, 4));
+      const isShieldBuff = sk.classId === 'lancer' || fx === 'shield';
+      burst(p.x, p.y, 20, el, isShieldBuff ? 6 : 24, isShieldBuff ? 1.5 : 3, { up: isShieldBuff ? 0.8 : 1.5 });
+      if (!isShieldBuff) addEffect(new Ring(p.x, p.y, 0.2, 1.6, 0.5, E.glow, 4));
       if (m.transform) { addEffect(new Column(p.x, p.y, E.glow, 0.6, 30, 200)); sfx('roar'); }
-      sfx(fx === 'shout' ? 'roar' : fx === 'note' || bard >= 0 ? 'note' : 'buff');
+      if (p.classId !== 'bard') sfx(fx === 'shout' ? 'roar' : fx === 'note' || bard >= 0 ? 'note' : 'buff');
       break;
     }
     case 'curse': {
       const self = m.at === 'self';
       const [x, y] = self ? [p.x, p.y] : clampTarget(w, p, tx, ty, 9);
       const r = 2.2 * (m.r ?? 1) * area;
-      const amt = curseAmount(sk, L), dur = skillDuration(sk, L);
+      const amt = curseAmount(sk, L), dur = skillDuration(sk, L) * (1 + (morph ? morph.durPct : 0) / 100);
       const targets = w.hostiles(p.team, x, y, r);
       for (const t of targets) for (const c of m.curse || ['amp']) applyCurse(p, t, c, amt, m.dur && ['stun', 'freeze'].includes(c) ? m.dur : dur, dmg, area);
       addEffect(new Ring(x, y, 0.2, r, 0.6, E.glow, 3, { fill: true }));
@@ -323,7 +345,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       if (fx === 'shout') { addEffect(new Ring(x, y, 0.1, r * 1.2, 0.4, '#ffffff', 3)); sfx('roar'); }
       else if (fx === 'flash') { G.flash = 0.35; sfx('explode', 0.5); }
       else if (fx === 'smoke') smoke(x, y, 6, '#3a3640', 14, 16);
-      else sfx(fx === 'note' || bard >= 0 ? 'note' : 'shadow');
+      else if (p.classId !== 'bard') sfx(fx === 'note' || bard >= 0 ? 'note' : 'shadow');
       if (!targets.length && !self) floatText(x, y, 30, 'Cursed ground', E.glow, 11);
       break;
     }
@@ -393,10 +415,52 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
     default:
       break;
   }
-  // gem / legendary on-cast procs
+  // gem / legendary / talent morph on-cast procs
   if (!opts.echo) {
     if (st.novaOnCast && chance(st.novaOnCast / 100)) w.addHazard(new NovaWave({ world: w, src: p, x: p.x, y: p.y, r: 2.4 * area, dmg: dmg.map((v) => v * 0.5), el, fx: 'nova', o: {} }));
     if (st.orbitOnCast && chance(st.orbitOnCast / 100)) w.addHazard(new Orbit({ world: w, src: p, n: 1, radius: 1.4, dur: 5, fx: 'orb', el, dmg: dmg.map((v) => v * 0.4), o: {} }));
+    if (morph) {
+      if (morph.healPct > 0 && !(p.morphHealCd > 0)) {
+        p.heal(p.maxHp * (morph.healPct / 100));
+        p.morphHealCd = 0.75;
+      }
+      if (morph.rageGain > 0 && p.gainRage) {
+        p.gainRage(morph.rageGain);
+      }
+      if (morph.trail) {
+        const tEl = morph.trail;
+        const [cx, cy] = ['nova', 'melee', 'whirl', 'buff'].includes(sk.kind) ? [p.x, p.y] : clampTarget(w, p, tx, ty, 8.5);
+        w.addHazard(new Area({
+          world: w, src: p, x: cx, y: cy, r: 1.55 * area, dur: 3.5, tick: 0.5,
+          dmg: dmg.map((v) => v * 0.25), el: tEl, fx: tEl === 'cold' ? 'frost' : tEl === 'poison' || tEl === 'acid' ? 'void' : 'fire',
+          o: { burn: tEl === 'fire', poison: tEl === 'poison', slow: tEl === 'cold' || tEl === 'acid' },
+        }));
+      }
+      if (morph.novaOnCast) {
+        const nEl = morph.novaOnCast;
+        if (sk.kind === 'curse' && m.at !== 'self') {
+          const [cx, cy] = clampTarget(w, p, tx, ty, 9);
+          explode(w, p, cx, cy, 2.1 * area, dmg.map((v) => v * 0.55), nEl, o, nEl === 'shadow' ? 'void' : 'explosion');
+        } else {
+          w.addHazard(new NovaWave({
+            world: w, src: p, x: p.x, y: p.y, r: 2.5 * area, dmg: dmg.map((v) => v * 0.48), el: nEl,
+            fx: nEl === 'cold' ? 'frost' : nEl === 'light' ? 'lightning' : 'nova', o,
+          }));
+        }
+      }
+      if (morph.waveProjs && morph.waveProjs.length) {
+        for (const wp of morph.waveProjs) {
+          for (let i = 0; i < wp.n; i++) {
+            const a = ang + (wp.n > 1 ? (i / (wp.n - 1) - 0.5) * 0.32 : 0);
+            w.addHazard(new Projectile({
+              world: w, src: p, x: p.x + Math.cos(a) * 0.35, y: p.y + Math.sin(a) * 0.35,
+              ang: a, speed: 11.5, range: 7.5, fx: wp.fx, el: wp.el,
+              dmg: dmg.map((v) => v * wp.dmgMul), o, pierce: 99, light: wp.el !== 'phys',
+            }));
+          }
+        }
+      }
+    }
   }
   return true;
 }

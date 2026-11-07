@@ -14,6 +14,7 @@ import { bodyR } from '../world/map.js';
 import { toughness, danger, densityXp, riftHold, dmgScale } from '../data/depth.js';
 import { attachSlime, slimeUpdate, courtDef } from './slimecourt.js';
 import { ART_BY_ID, REVIVED, greaterSwap, rollLooks, uniqueSwap } from '../data/bestiary.js';
+import { skillMorphFor } from '../data/talents.js';
 
 const LEASH = 10; // minions fight what's within this many tiles of the hero
 const CHASE = 1.3, CHASE_MAX = 4.6; // monsters' pursuit pace: x1.3, up to 4.6 tiles/s (the hero runs 4.2) unless faster already
@@ -1468,27 +1469,44 @@ export function createSummon(p, sk, L, x, y, dmgRange, corpse) {
   if (SUMMONS[key] && SUMMONS[key].court) [key, def] = courtDef(key, p); // the Slime Lord's rainbow broods
   else { if (SUMMONS[key] && SUMMONS[key].pool) key = pick(SUMMONS[key].pool); def = SUMMONS[key]; } // Grave Warband, Conclave of Bones
   if (!def) return null;
-  const sp = 1 + (p.st.summonPct || 0) / 100;
+  const morph = p && p.isPlayer ? skillMorphFor(p, sk) : null;
+  const sp = 1 + ((p.st && p.st.summonPct) || 0) / 100;
   const avg = (dmgRange[0] + dmgRange[1]) / 2;
   const hp = Math.max(20, p.maxHp * def.hp * (1 + 0.08 * (L - 1)) * sp);
   const m = buildSummon(p, def, key, x, y, avg * def.dmg * sp, hp, sk.m.dur || 0);
   m.skillId = sk.id;
   m.aug = p.augFor ? p.augFor(sk) : null; // ring augments ride on the minion's hits (combat.hit)
   if (p.mastery) { const M = p.mastery(sk); m.scale = (m.scale || 1) * (1 + Math.min(1, (M - 1) / 999) * 0.35); }
+  // Talent Morph minion fortification & offense (data/talents.js)
+  if (morph) {
+    if (morph.summonHpPct > 0) {
+      m.maxHp = m.hp = Math.round(m.maxHp * (1 + morph.summonHpPct / 100));
+      m.dmgReduce = Math.min(0.65, (m.dmgReduce || 0) + Math.min(0.35, morph.summonHpPct * 0.003));
+    }
+    if (morph.summonDmgPct > 0) {
+      m.dmg *= 1 + morph.summonDmgPct / 100;
+      m.atkCd = Math.max(0.25, m.atkCd * (1 - Math.min(0.25, morph.summonDmgPct * 0.003)));
+    }
+    if (morph.leech) {
+      m.leech = (m.leech || 0) + 0.2;
+      m.selfLeech = (m.selfLeech || 0) + 0.15;
+    }
+  }
   if (corpse) {
     m.sprite = corpse.sprite; m.pal = shiftPalette(corpse.pal || {}, { hue: 120, sat: 0.5, light: 0.05 }); m.px = corpse.px; m.fly = corpse.fly;
     if (corpse.art) { m.art = corpse.art; m.swap = REVIVED; m.artH = corpse.artH; }
     m.name = 'Revived ' + (corpse.art ? ART_BY_ID[corpse.art].name : ARCH[corpse.arch] ? ARCH[corpse.arch].names[0] : 'Monster');
-    m.maxHp = m.hp = Math.max(hp, corpse.maxHp * 0.6 / toughness(corpse.level || 1)); // monster life is sized to hero damage, not monster hits
+    m.maxHp = m.hp = Math.max(m.maxHp, corpse.maxHp * 0.6 / toughness(corpse.level || 1)); // monster life is sized to hero damage, not monster hits
     m.aura = '#40ff80';
   }
   // enforce per-skill maximum and a global cap
   const mine = w.creatures.filter((c) => c.summon && c.skillId === sk.id && !c.dead);
   const max = (sk.m.max || (sk.m.dur ? 99 : (sk.m.n || 1))) + (sk.m.grow ? Math.floor((L - 1) / 5) : 0);
   while (mine.length >= max) { const old = mine.shift(); old.dead = true; burst(old.x, old.y, 20, old.el || 'arcane', 8, 2); }
-  if (key.startsWith('kn_')) { // the Lancer's Knight Order: at most 4 knights in the field
+  if (key.startsWith('kn_')) { // the Lancer's Knight Order: at most 4 knights in the field (+knightCapPlus with Grand Commander)
+    const knCap = 4 + ((p.st && p.st.knightCapPlus) || 0);
     const kn = w.creatures.filter((c) => c.summon && !c.dead && c.owner === p && c.summonKey && c.summonKey.startsWith('kn_'));
-    while (kn.length >= 4) { const old = kn.shift(); old.dead = true; burst(old.x, old.y, 20, old.el || 'arcane', 8, 2); }
+    while (kn.length >= knCap) { const old = kn.shift(); old.dead = true; burst(old.x, old.y, 20, old.el || 'arcane', 8, 2); }
   }
   const all = w.creatures.filter((c) => c.summon && !c.dead && c.owner === p);
   if (all.length >= 40) all[0].dead = true;

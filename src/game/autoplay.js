@@ -23,6 +23,7 @@ import { marksFree, autoSpend } from './marks.js';
 import { drawBiome } from '../data/biomes.js';
 import { augHits } from '../data/rings.js';
 import { canLearn } from '../ui/skills.js';
+import { CLASS_TALENTS, canLearnTalent, learnTalent, skillMorphFor, applySkillMorph } from '../data/talents.js';
 import { equipFromBag, socketGem, dropFromBag, changed } from '../ui/inventory.js';
 import { GLYPHWORDS, glyphOf } from '../data/relics.js';
 import { Vendor, fuseAll } from '../ui/vendor.js';
@@ -123,7 +124,10 @@ function engageRange(sk, t, bold = 0) {
   const r = reachOf(sk);
   return Math.max(Math.min(r * 0.8, 2.6), Math.min(r * (0.8 - 0.4 * bold), 8 - 2.5 * bold));
 }
-const cdOf = (p, sk) => cooldown(sk) * (1 - p.st.cdr / 100);
+const cdOf = (p, sk) => {
+  const morph = p ? skillMorphFor(p, sk) : null;
+  return cooldown(sk) * (1 - p.st.cdr / 100) * (1 - (morph ? morph.cdPct || 0 : 0) / 100);
+};
 const avg = (d) => (d[0] + d[1]) / 2;
 const critMul = (p) => 1 + (p.st.critChance / 100) * (p.st.critDmg / 100);
 const summonMax = (sk) => sk.m.max || sk.m.n || 1;
@@ -182,8 +186,10 @@ function focusMul(classId, sk) {
 
 /** Damage per second one skill adds when used as often as its cast time, cooldown and mana allow. */
 function skillDps(p, sk, L, crowd = CROWD) {
-  const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, crowd, L) * critMul(p);
-  const period = Math.max(castTime(p, sk), cdOf(p, sk), 0.05);
+  const morph = skillMorphFor(p, sk);
+  const effSk = morph ? applySkillMorph(sk, morph) : sk;
+  const per = avg(p.skillDamage(sk, L)) * hitsPerCast(effSk, crowd, L) * critMul(p);
+  const period = Math.max(castTime(p, effSk), cdOf(p, sk), 0.05);
   const cost = manaCost(sk, L), rage = rageCost(sk);
   const supply = p.st.manaRegen + p.maxMana / 40;
   const sustain = cost ? Math.min(1, supply / (cost / period)) :
@@ -220,19 +226,22 @@ export function buildPower(p, crowd = CROWD, only = null, focus = false) {
   }
   const ref = Math.max(base, 1);
   for (const sk of learned) {
-    const L = effLevel(p, sk), m = sk.m;
+    const morph = skillMorphFor(p, sk);
+    const effSk = morph ? applySkillMorph(sk, morph) : sk;
+    const L = effLevel(p, sk), m = effSk.m;
     if (sk.kind === 'corpse') parts.push({ sk, v: skillDps(p, sk, L, crowd).dps * 0.35, role: 'cd' });
     else if (sk.kind === 'summon') {
       const def = SUMMONS[m.sum] || { dmg: 1, atk: { cd: 1 } };
-      const n = m.sum === 'revive' ? (m.n || 1) * 0.5 : summonMax(sk);
-      const up = m.dur ? Math.min(1, m.dur / Math.max(m.dur, cooldown(sk) * (1 - p.st.cdr / 100), 1)) : 1;
-      const one = avg(p.skillDamage(sk, L)) * (def.dmg || 1) * (1 + (p.st.summonPct || 0) / 100) / ((def.atk && def.atk.cd) || 1);
+      const n = m.sum === 'revive' ? (m.n || 1) * 0.5 : summonMax(effSk);
+      const up = m.dur ? Math.min(1, m.dur / Math.max(m.dur, cdOf(p, sk), 1)) : 1;
+      const sumMul = (1 + (p.st.summonPct || 0) / 100) * (1 + (morph ? morph.summonDmgPct || 0 : 0) / 100);
+      const one = avg(p.skillDamage(sk, L)) * (def.dmg || 1) * sumMul / ((def.atk && def.atk.cd) || 1);
       // under a pet focus every extra minion counts on its own too
-      const pets = focus && PET_CLASSES.has(c.classId) ? ref * 0.12 * petsOf(sk) * up : 0;
+      const pets = focus && PET_CLASSES.has(c.classId) ? ref * 0.12 * petsOf(effSk) * up : 0;
       parts.push({ sk, v: (one * n * up * 0.55 + ref * 0.05) * fm(sk) + pets, role: 'summon' });
     } else if (sk.kind === 'buff') {
-      const amt = buffAmount(sk, L) / 100, dur = skillDuration(sk, L);
-      const up = Math.min(1, dur / Math.max(dur, cooldown(sk) * (1 - p.st.cdr / 100)));
+      const amt = buffAmount(sk, L) / 100, dur = skillDuration(effSk, L);
+      const up = Math.min(1, dur / Math.max(dur, cdOf(p, sk)));
       let v = 0;
       for (const b of m.buff || ['dmg']) v += (b === 'dmg' || b === 'as') ? amt : b === 'crit' ? amt * 0.15 : amt * 0.25;
       if (m.pulse) v += avg(p.skillDamage(sk, L)) * crowd / ref;
@@ -572,6 +581,7 @@ export const Auto = {
     if (c.statPoints > 0 && G.settings.autoStatPoints !== false) { this.spendStats(); dirty = true; }
     if (marksFree() > 0 && G.settings.autoStatPoints !== false && autoSpend()) dirty = true; // Infernal Marks (game/marks.js), spread evenly
     if (c.skillPoints > 0 && G.settings.autoSkillPoints !== false) { if (this.spendSkills()) dirty = true; }
+    if ((c.talentPoints || 0) > 0 && G.settings.autoSkillPoints !== false) { if (this.spendTalents()) dirty = true; }
     const sig = Object.entries(c.skills).map((e) => e.join(':')).join(',') + '|' + c.level;
     if (sig !== this.lastSig) { this.lastSig = sig; this.arrangeBar(); dirty = true; }
     if (this.optimizeGear()) dirty = true;
@@ -604,6 +614,39 @@ export const Auto = {
   /** The Paladin alternates hammers and Shield Throw: hammers cast since his last shield. */
   hammersSince: 1,
   countFocus(sk) { if (sk.m.ricochet) this.hammersSince = 0; else if (isHammer(sk)) this.hammersSince++; },
+
+  /** Spend dedicated Talent Points (awarded 1 every 5 hero levels) on the Passive Talent Tree (T). */
+  spendTalents() {
+    const p = G.player, c = G.char;
+    const tBranches = CLASS_TALENTS[c.classId];
+    if (!tBranches) return false;
+    let spent = false;
+    while ((c.talentPoints || 0) > 0) {
+      const prefBranch = clamp(mainTree(p), 0, tBranches.length - 1);
+      let bestNode = null, bestScore = -Infinity;
+      for (let bIdx = 0; bIdx < tBranches.length; bIdx++) {
+        for (const node of tBranches[bIdx].nodes) {
+          if (!canLearnTalent(c, node)) continue;
+          const gain = simulate(p, () => {
+            c.talents = c.talents || {};
+            c.talents[node.id] = (c.talents[node.id] || 0) + 1;
+            return () => {
+              if (!--c.talents[node.id]) delete c.talents[node.id];
+            };
+          });
+          const score = gain + (bIdx === prefBranch ? 0.04 : 0) + (node.choice ? 0.025 : 0);
+          if (score > bestScore) { bestScore = score; bestNode = node; }
+        }
+      }
+      if (!bestNode || !learnTalent(c, bestNode.id)) break;
+      p.recompute();
+      spent = true;
+      if ((c.talents[bestNode.id] || 0) === 1) {
+        G.ui.log(`Auto-play unlocked talent <b>${escapeHtml(bestNode.name)}</b>.`, '#8fe0ff');
+      }
+    }
+    return spent;
+  },
 
   /** Put each skill point where it raises buildPower most (counting the prerequisites a new skill needs). */
   spendSkills() {
