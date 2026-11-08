@@ -43,6 +43,11 @@ export const UI = {
         this.scheduleHideTip();
       }
     });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.tipEl && !this.tipEl.classList.contains('hidden') && this.isTouchTip) {
+        this.hideTip();
+      }
+    });
     document.addEventListener('pointermove', (e) => {
       if (!this.tipEl.classList.contains('hidden') && e.pointerType === 'mouse' && !this.isTouchTip && !this.isInteractiveTip) {
         this.placeTip(e.clientX, e.clientY);
@@ -293,7 +298,10 @@ export const UI = {
     } else {
       html = content || '';
     }
-    if (!html) return;
+    if (!html) {
+      this.hideTip();
+      return;
+    }
     if (this.tipHideT) { clearTimeout(this.tipHideT); this.tipHideT = 0; }
     this.tipEl.innerHTML = html;
     this.isTouchTip = isTouch;
@@ -317,7 +325,7 @@ export const UI = {
         }
       });
     }
-    if (interactive && anchorEl) this.placeTipAtAnchor(anchorEl);
+    if ((interactive || isTouch) && anchorEl) this.placeTipAtAnchor(anchorEl);
     else this.placeTip(x, y);
   },
   placeTipAtAnchor(anchorEl) {
@@ -372,7 +380,7 @@ export const UI = {
     const fn = typeof html === 'function' ? html : () => html;
     if (opts.key) elm.dataset.tipKey = opts.key;
     elm.addEventListener('pointerenter', (e) => {
-      if (e.pointerType === 'mouse' && !drag.active) {
+      if (e.pointerType === 'mouse' && !drag.active && !this.isTouchTip) {
         if (this.tipHideT) { clearTimeout(this.tipHideT); this.tipHideT = 0; }
         this.showTip(fn(), e.clientX, e.clientY, false, elm, { ...opts, fn });
       }
@@ -384,12 +392,15 @@ export const UI = {
       }
     });
     elm.addEventListener('pointerup', (e) => {
-      if (e.pointerType !== 'mouse' || G.touch) {
-        if (!drag.active) {
-          const content = fn();
-          if (content) {
-            this.showTip(content, e.clientX, e.clientY, true, elm, { ...opts, fn });
+      if (e.button !== undefined && e.button !== 0) return;
+      if (!drag.active) {
+        const content = fn();
+        if (content) {
+          if (this.isTouchTip && this.touchTipTarget === elm && !this.tipEl.classList.contains('hidden')) {
+            this.hideTip();
+            return;
           }
+          this.showTip(content, e.clientX, e.clientY, true, elm, { ...opts, fn });
         }
       }
     });
