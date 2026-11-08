@@ -1372,7 +1372,7 @@ function drawLighting(ctx, world) {
     const r = roofed(l);
     if (r >= 0.99) continue;
     if (add(l.x, l.y, l.radius, l.intensity * 0.85 * (1 - r), l.z ?? 20)) visibleLights++;
-    if (G.touch && visibleLights >= 48) break;
+    if (G.touch && visibleLights >= 64) break;
   }
   // the vignette is baked into the same quarter-res layer, so the screen takes one full-size blit, not two
   const key = lw + 'x' + lh;

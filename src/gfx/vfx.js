@@ -668,11 +668,15 @@ function drawDrips(ctx, t, spr, age) {
 
 // light records are pooled: dozens are added every frame
 const lightPool = [];
-/** A light for this frame; `color` also tints the scene around it (render.js drawLighting's glow pass). */
-export function addLight(x, y, radius, intensity = 1, z = 20, color = null) {
-  if (lights.length >= 48) return;
+/** A light for this frame; `color` also tints the scene around it (render.js drawLighting's glow pass).
+ * `priority` guarantees admission even when combat/loot light counts are high.
+ */
+export function addLight(x, y, radius, intensity = 1, z = 20, color = null, priority = false) {
+  const max = G.touch ? 96 : 128;
+  if (lights.length >= max && !priority) return;
   const l = lightPool[lights.length] || (lightPool[lights.length] = {});
   l.x = x; l.y = y; l.radius = radius; l.intensity = intensity; l.z = z; l.color = color;
+  l.priority = !!priority;
   lights.push(l);
 }
 
