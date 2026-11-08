@@ -46,7 +46,7 @@ export function castleObject(id,category='scatter',palette=null){
  const [px,py]=f.pivot||[f.w/2,f.h];
  const tree=category==='trees';
  const spr={...pageAtlas(imageFor(category))(f.x,f.y),w:f.w,h:f.h,ox:-px,oy:-py,
-  fp:tree ? 0.72 : (f.w > 260 ? 0.7 : 0.42),block:tree,name:f.id,isometric:true,castle:true,
+  fp:tree ? 0.72 : (f.w > 260 ? 0.7 : 0.42),block:tree,tree,name:f.id,isometric:true,castle:true,
   category,connectionMask:f.connection_mask??f.mask??null,orientation:f.orientation||null};
  // scatter re-projected onto the 2:1 grid by tools/isofix.py
  const fix=category==='scatter'&&isoFix('castle',f.id);

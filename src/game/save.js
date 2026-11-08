@@ -150,7 +150,7 @@ export function newCharData(classId, name) {
     tabs: Array(TAB_SLOTS).fill(null), tabAt: 0, // the Bard's Tabs: locked Music Sheets he plays (data/tabs.js)
     gold: 150, potions: { hp: 6, mp: 4, rejuv: 1, fury: 1 },
     depth: 1, deepest: 0, nextBiome: null, biomeBag: [], cleared: {}, overworldMisses: 0, overworldLastVisit: null, seaOfSandRuns: {}, darkForestRuns: {}, breach: { best: 0, cleared: {} },
-    heresy: { on: [] }, rifts: { open: 1, best: 0, cleared: {}, bestTime: {}, runs: 0, fails: 0, deaths: 0 }, keys: 0, unbound: { wins: 0, best: 0 }, // the Endgame (docs/ENDGAME.md)
+    heresy: { on: [] }, rifts: { open: 1, best: 0, cleared: {}, bestTime: {}, runs: 0, fails: 0, deaths: 0 }, keys: 0, unbound: { wins: 0, best: 0 }, unboundExploration: { depth: 1, deepest: 1, cleared: {} }, // the Endgame (docs/ENDGAME.md)
     kills: 0, deaths: 0, created: Date.now(), lastPlayed: Date.now(), tips: {}, wdmg: 1,
   };
   c.equip.weapon = rollItem(1, { slot: 'weapon', base: C.weapon, rarity: 0 });
@@ -299,6 +299,21 @@ export function migrate(c) {
   c.rifts = Object.assign({ open: 1, best: 0, cleared: {}, bestTime: {}, runs: 0, fails: 0, deaths: 0 }, c.rifts); c.rifts.open = Math.max(1, c.rifts.open | 0);
   c.keys = Math.max(0, c.keys | 0);
   c.unbound = Object.assign({ wins: 0, best: 0 }, c.unbound);
+  c.unboundExploration = Object.assign({ depth: 1, deepest: 1, cleared: {} }, c.unboundExploration);
+  c.unboundExploration.depth = Math.min(100, Math.max(1, c.unboundExploration.depth | 0 || 1));
+  c.unboundExploration.deepest = Math.min(100, Math.max(1, c.unboundExploration.deepest | 0 || 1));
+  if (c.marks && typeof c.marks === 'object') {
+    c.marks = {
+      pts: Math.max(0, Math.floor(Number(c.marks.pts) || 0)),
+      xp: Math.max(0, Number(c.marks.xp) || 0),
+      spent: {
+        life: Math.max(0, Math.floor(Number(c.marks.spent?.life) || 0)),
+        crit: Math.max(0, Math.floor(Number(c.marks.spent?.crit) || 0)),
+        mf: Math.max(0, Math.floor(Number(c.marks.spent?.mf) || 0)),
+        rift: Math.max(0, Math.floor(Number(c.marks.spent?.rift) || 0)),
+      }
+    };
+  }
   c.granted = c.granted || {};
   c.skills = c.skills || {};
   c.skillPoints = Math.max(0, c.skillPoints | 0);

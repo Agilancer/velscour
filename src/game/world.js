@@ -1,6 +1,6 @@
 // World: everything that lives in the current level.
 import { augHazard } from './augments.js';
-import { Clutter } from './clutter.js';
+import { Clutter, isTreeProp } from './clutter.js';
 import { G } from '../state.js';
 import { camera, isoX, isoY } from '../core/view.js';
 import { rand, dist2, TAU, chance } from '../core/util.js';
@@ -46,7 +46,12 @@ export class World {
     const W = this.map.w, H = this.map.h;
     if (!this.map.clutter) this.map.clutter = new Uint8Array(W * H);
     for (const pr of this.props) {
-      if ((pr.kind === 'scatter' || pr.kind === 'decor') && !pr.throne && !pr.tree) {
+      if ((pr.kind === 'scatter' || pr.kind === 'decor') && !pr.throne) {
+        if (isTreeProp(pr)) {
+          pr.destructible = false;
+          pr.tree = true;
+          continue;
+        }
         const tx = Math.floor(pr.x), ty = Math.floor(pr.y);
         if (tx >= 0 && tx < W && ty >= 0 && ty < H) {
           const idx = ty * W + tx;

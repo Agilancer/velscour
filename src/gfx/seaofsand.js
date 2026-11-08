@@ -41,7 +41,7 @@ export function seaOfSandObject(name, category = 'scatter') {
   const footprint = category === 'tree' ? 0.72 : frame.w > 190 ? 0.6 : 0.42;
   const fix = category === 'scatter' && isoFix('sea_of_sand', frame.name); // re-projected onto the 2:1 grid
   return { img: images[category], sx:frame.x, sy:frame.y, w:frame.w, h:frame.h,
-    ox:-px, oy:-py, ...fix, fp:footprint, block:category === 'tree', name:frame.name, isometric:true };
+    ox:-px, oy:-py, ...fix, fp:footprint, block:category === 'tree', tree:category === 'tree', name:frame.name, isometric:true };
 }
 
 export function seaOfSandCliff(name) {

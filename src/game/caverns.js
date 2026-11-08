@@ -227,6 +227,7 @@ export function createCaveRun(world, gen, biome, onSuccess) {
     });
   }
   function delveEvents(dt) {
+    if (G.room && !G.game?.isDungeonAuthority(world.depth)) return;
     const p = world.player;
     // things drop out of the dark above, or claw up out of the floor (each needs fresh ground covered since the last)
     if ((run.ambushT -= dt) > 0 || run.wp < run.ambushWp + 10 || run.wp < 6) return;

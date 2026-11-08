@@ -4,8 +4,39 @@ import { spawn, smoke, burst } from '../gfx/vfx.js';
 import { rand, TAU } from '../core/util.js';
 import { G } from '../state.js';
 
+const DARK_FOREST_TREES = new Set([
+  'ancient_black_oak', 'spire_pine', 'twisted_yew', 'dead_crowned_elm',
+  'cathedral_redwood', 'weeping_willow', 'split_lightning_oak',
+  'thornbound_cypress', 'hollow_ash', 'fungal_beech', 'bone_white_birch',
+  'root_fused_twins', 'hanging_moss_fir', 'blighted_chestnut', 'elder_heartwood',
+  'scatter_02_date_palm_sapling', 'scatter_03_bent_desert_palm', 'scatter_04_thorn_acacia', 'scatter_05_dead_snag',
+]);
+
+const TREE_NAME_REGEX = /(^|[_\s])(tree|trees|palm|palms|oak|pine|pines|birch|willow|willows|cedar|cedars|cypress|elm|elms|beech|yew|yews|fir|firs|juniper|acacia|redwood|deadwood|sapling)($|[_\s])/i;
+const EXCLUDE_REGEX = /pew|door|board|crate|barrel|urn|brazier|coffin|chest|stump|pile|stack|remains|skeleton|menhir/i;
+
+export function isTreeProp(pr) {
+  if (!pr) return false;
+  if (pr.tree || pr.spr?.tree) return true;
+  const cat = pr.category || pr.spr?.category;
+  if (cat === 'tree' || cat === 'trees') return true;
+  const name = pr.name || pr.spr?.name || pr.spr?.id || '';
+  if (!name) return false;
+  if (name.startsWith('t_') || name.startsWith('tree_') || name === 'tree') return true;
+  if (DARK_FOREST_TREES.has(name)) return true;
+  if (EXCLUDE_REGEX.test(name)) return false;
+  if (TREE_NAME_REGEX.test(name)) return true;
+  return false;
+}
+
 export class Clutter extends Creature {
   constructor(world, prop) {
+    if (isTreeProp(prop)) {
+      super({ x: prop?.x || 0, y: prop?.y || 0, team: 'enemy', maxHp: 1, hp: 1 });
+      this.dead = true;
+      this.targetable = false;
+      return;
+    }
     super({
       x: prop.x,
       y: prop.y,
@@ -56,15 +87,16 @@ export class Clutter extends Creature {
     return null;
   }
 
-  die() {
+  die(src) {
+    if (isTreeProp(this.prop)) return;
     this.dead = true;
     breakClutter(this);
   }
 }
 
 export function breakClutter(c) {
-  const w = c.world;
-  if (!w) return;
+  const w = c?.world;
+  if (!w || !c || isTreeProp(c.prop)) return;
 
   // 1. Remove prop from world.props
   if (w.props && c.prop) {

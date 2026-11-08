@@ -5,6 +5,33 @@
 export const FINAL_DEPTH = 500;
 /** The hero level cap (game/player.js re-exports it): no item asks for more (data/items.js rollItem). */
 export const MAX_LEVEL = 100;
+
+/** The 5 Thematic Acts of the campaign descent */
+export const ACTS = [
+  { act: 1, name: 'The Fallen Realms', start: 1, end: 100, midBoss: 'valdric', finaleBoss: 'colossus' },
+  { act: 2, name: 'The Scorched Wastes', start: 101, end: 200, midBoss: 'ambrecoil', finaleBoss: 'sekhmun' },
+  { act: 3, name: 'The Frozen Peaks', start: 201, end: 300, midBoss: 'kaela', finaleBoss: 'hollowmere' },
+  { act: 4, name: 'The Empyrean Heights', start: 301, end: 400, midBoss: 'ophaniel', finaleBoss: 'aurion' },
+  { act: 5, name: 'The Infernal Dominion', start: 401, end: 500, midBoss: 'kragmaul', finaleBoss: 'velscour' },
+];
+
+export const getActForDepth = (d) => ACTS.find((a) => d >= a.start && d <= a.end) || ACTS[0];
+
+export const SUPERBOSS_DEPTHS = {
+  50: 'valdric',
+  100: 'colossus',
+  150: 'ambrecoil',
+  200: 'sekhmun',
+  250: 'kaela',
+  300: 'hollowmere',
+  350: 'ophaniel',
+  400: 'aurion',
+  450: 'kragmaul',
+};
+
+export const isSuperbossDepth = (d) => !!SUPERBOSS_DEPTHS[d] || d === FINAL_DEPTH;
+export const superbossForDepth = (d) => SUPERBOSS_DEPTHS[d] || (d === FINAL_DEPTH ? 'velscour' : null);
+
 export const depthLevel = (d) => {
   if (d <= 30) return Math.max(1, d);
   if (d <= FINAL_DEPTH) return Math.min(MAX_LEVEL, Math.round(30 + 70 * Math.pow((d - 30) / (FINAL_DEPTH - 30), 0.85)));

@@ -613,7 +613,7 @@ export function generateCastle(depth,biome,seed,variant=null){
     let p=null;
     if(dfOK&&forest[i]&&(deep||rng.chance(.45))){const spr=darkForestTree(rng.pick(woods));if(spr)p={kind:'scatter',x:px,y:py,spr,k:darkTreeK(rng.range(.62,.82)),flip:rng.chance(.5),tree:true};}
     if(!p){const id=rng.pick(fringeTrees),spr=castleObject(id,'trees',look.trees||null);if(!spr)continue;
-      p={kind:'scatter',x:px,y:py,spr,k:treeH(id)*rng.range(.85,1.15)/spr.h,flip:rng.chance(.5),z:0,fixedK:true};}
+      p={kind:'scatter',x:px,y:py,spr,k:treeH(id)*rng.range(.85,1.15)/spr.h,flip:rng.chance(.5),z:0,fixedK:true,tree:true};}
     trees.push(p);grid[i]=trees.length;map.block[i]=1;
     if(forest[i])mat[i]=n(x,y,5)>.5?MAT.forest:MAT.lush;
   }

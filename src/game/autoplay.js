@@ -11,19 +11,20 @@ import { MEASURE, NOTES, beatsOf } from '../data/notation.js';
 import { bardNoteFor, bardFitGain, bardPerforming } from './bard.js';
 import { SKILLS, CLASS_SKILLS, MAX_SKILL_LEVEL, manaCost, rageCost, cooldown, useTime, skillRange, spearBarrageAreas, buffAmount, curseAmount, skillDuration, effLevel, ricochetCount } from '../data/skills.js';
 import { SUMMONS } from '../data/summons.js';
-import { CLASSES } from '../data/classes.js';
-import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS, powerLevel, goldLvl, canEquipItem, BASE_REQ_STAT, charEffectiveStat } from '../data/items.js';
-import { depthLevel, armorDiv, MAX_LEVEL } from '../data/depth.js';
+import { SLOTS, RING_SLOTS, itemValue, itemName, itemColor, upgradeCost, socketCost, enchantCost, unsocketCost, addAffix, makeGem, RARITY, POTION_PRICE, GEMS, powerLevel, goldLvl, canEquipItem } from '../data/items.js';
+import { depthLevel, armorDiv, FINAL_DEPTH } from '../data/depth.js';
 import { breachLevel } from '../data/breach.js';
 import { riftLevel } from '../data/rifts.js';
 import { riftOpen } from './rifts.js';
 import { endgameUnlocked } from './endgame.js';
+import { hearthReady, useHearth } from './hearth.js';
+import { isUnboundCheckpointFloor, MAX_UNBOUND_DEPTH, canEnterUnbound } from './unbound.js';
 import { heresyAllows } from './heresies.js';
 import { marksFree, autoSpend } from './marks.js';
 import { drawBiome } from '../data/biomes.js';
 import { augHits } from '../data/rings.js';
 import { canLearn } from '../ui/skills.js';
-import { CLASS_TALENTS, canLearnTalent, learnTalent, skillMorphFor, applySkillMorph } from '../data/talents.js';
+import { CLASS_TALENTS, canLearnTalent, learnTalent, talentPointsSpent, skillMorphFor, applySkillMorph } from '../data/talents.js';
 import { equipFromBag, socketGem, dropFromBag, changed } from '../ui/inventory.js';
 import { GLYPHWORDS, glyphOf } from '../data/relics.js';
 import { Vendor, fuseAll } from '../ui/vendor.js';
@@ -128,7 +129,7 @@ function engageRange(sk, t, bold = 0) {
 }
 const cdOf = (p, sk) => {
   const morph = p ? skillMorphFor(p, sk) : null;
-  return cooldown(sk) * (1 - p.st.cdr / 100) * (1 - (morph ? morph.cdPct || 0 : 0) / 100);
+  return cooldown(sk) * (1 - p.st.cdr / 100) * (1 + (morph ? morph.cdPct || 0 : 0) / 100);
 };
 const avg = (d) => (d[0] + d[1]) / 2;
 const critMul = (p) => 1 + (p.st.critChance / 100) * (p.st.critDmg / 100);
@@ -311,17 +312,12 @@ function augScore(p) {
  * `buy`: also count the sockets the jeweler could add now (in town, with the gold). Gems need bag room on the way.
  */
 function movedGems(c, it, old, buy) {
-  if (!old || !old.gems.length || it.uid === old.uid || gemBagFree(c) < old.gems.length || c.gold < unsocketCost(old)) return null;
-  let sockets = it.sockets, gold = c.gold - unsocketCost(old);
-  while (buy && sockets < it.maxSockets && sockets - it.gems.length < old.gems.length) {
-    const cost = socketCost({ ...it, sockets });
-    if (cost > gold * 0.5) break;
-    gold -= cost; sockets++;
-  }
-  const room = sockets - it.gems.length;
+  if (!old || !old.gems || !old.gems.length || it.uid === old.uid) return null;
+  let sockets = Math.max(it.sockets || 0, it.maxSockets || 0);
+  const room = sockets - (it.gems ? it.gems.length : 0);
   if (room <= 0) return null;
   const take = [...old.gems].sort((a, b) => b.tier - a.tier).slice(0, room);
-  return { gems: [...it.gems, ...take], sockets, moved: take.length };
+  return { gems: [...(it.gems || []), ...take], sockets, moved: take.length };
 }
 /**
  * Score with item `it` equipped (a ring tries each ring slot): {s, slot, move}. The worn piece's gems count as moved
@@ -341,14 +337,13 @@ function fitScore(p, it, buy = G.world && G.world.kind === 'town', keep = null) 
       if (move) { it.gems = move.gems; it.sockets = move.sockets; old.gems = []; }
       return () => { c.equip[slot] = old; it.gems = g0; it.sockets = s0; if (old) old.gems = og; };
     });
-    // The aggregate stat score can make an upgraded, socketed low-level item look "good enough"
-    // forever. Give gear a modest progression value so auto-play actually replaces stale pieces.
     const targetIlvl = Math.max(1, c.level, depthLevel(c.depth || 1));
     const freshness = (gear) => gear ? clamp((gear.ilvl || 1) / targetIlvl, 0, 1) : 0;
-    // never a downgrade in rarity for being newer, but an older piece of lower rarity still pays for its age: zeroing
-    // both made the swap back free, and an old Common ring and a newer Uncommon one took turns every tick for hours
-    const age = 0.28 * (freshness(it) - freshness(old)), ageGain = old && it.rarity < old.rarity ? Math.min(0, age) : age;
-    if (s + ageGain > best.s) best = { s: s + ageGain, slot, move };
+    // Tie-breakers: subtle freshness (+0.02 max) and rarity tier bonus (+0.01 per tier difference)
+    const rarityDiff = ((it.rarity || 0) - (old ? old.rarity || 0 : 0)) * 0.01;
+    const age = 0.02 * (freshness(it) - freshness(old));
+    const bonus = (old && it.rarity < old.rarity) ? Math.min(0, age) : (age + rarityDiff);
+    if (s + bonus > best.s) best = { s: s + bonus, slot, move };
   }
   return best;
 }
@@ -376,10 +371,17 @@ function simulate(p, mutate) {
 }
 
 // ================================================================== small helpers
-/** The score a piece must beat to be worn (optimizeGear); buying or picking up by a looser bar sells it again. */
-/** The score a piece must beat to be worn (optimizeGear); buying or picking up by a looser bar sells it again. A fixed
- *  margin: a share of the score (it grows with level) asked a depth 500 hero for ~17% more before a swap. */
-const equipBar = (cur) => cur + 0.05;
+export const isValuableGear = (it) => it && it.type === 'gear' && (
+  (it.rarity || 0) >= 4 || // Legendary (4), Mythic (5), Abyssal (6)
+  it.heirloom ||
+  it.covenant ||
+  it.sigil ||
+  upgraded(it) ||
+  filterKeeps(it)
+);
+
+/** The score a piece must beat to be worn (optimizeGear): genuine stat improvement. */
+const equipBar = (cur) => cur + 0.005;
 /** Settings › "Auto-play manages gear". Off: it never equips, sells, buys, drops, stashes, sockets, upgrades or
  *  enchants anything; in town it only buys potions, and a full bag waits in town for the player (bagWait). */
 const gearOn = () => G.settings.autoGear !== false;
@@ -387,13 +389,16 @@ const gearOn = () => G.settings.autoGear !== false;
 const handsOff = (step) => !gearOn() && step.vendor !== 'alchemist';
 /** Gear upgraded at the blacksmith (+N): auto-play keeps it in the chest, never sells or drops it. */
 const upgraded = (it) => it.type === 'gear' && ((it.upg || 0) > 0 || !!it.relic || !!glyphOf(it)); // +N gear and relics are kept (the chest)
-/** What auto-play puts in the storage chest: gems, the loot filter's keepers, +N gear, and good gear the hero is still
+/** What auto-play puts in the storage chest: gems, valuable gear (Mythic/Legendary/Abyssal), keepers, +N gear, and good gear the hero is still
  *  too low-level to wear. */
-const forChest = (it, c) => !it.sealed && !it.locked && (it.type === 'gem' || filterKeeps(it) || upgraded(it) || (it.type === 'gear' && (it.req || 1) > c.level && it.rarity >= 2));
+const forChest = (it, c) => !it.sealed && !it.locked && (
+  it.type === 'gem' ||
+  isValuableGear(it) ||
+  (it.type === 'gear' && (it.req || 1) > c.level && (it.rarity || 0) >= 2)
+);
 /** Gamble only with this many gambles' worth of gold: a miss sells back for ~5% of its price. */
 const GAMBLE_GOLD = 20;
 function bagFree(c) { return c.bag.reduce((a, b) => a + (b ? 0 : 1), 0); }
-function gemBagFree(c) { return (c.gemBag || []).reduce((a, b) => a + (b ? 0 : 1), 0); }
 /** In town with no free bag slot left after trading (sealed treasures, or nothing auto-play may sell or stash): wait for the player. */
 function bagWait(c) { return bagFree(c) === 0; }
 function sellPrice(it) { return Math.max(1, Math.floor(itemValue(it) / 4)) * (it.type === 'gem' ? (it.count || 1) : 1); }
@@ -434,58 +439,84 @@ export const Auto = {
     if (v && G.world && G.world.kind === 'town' && G.ui && G.char) this.askDest();
   },
 
-  // ---------------------------------------------------------------- THE ETERNAL BREACH (docs/ETERNAL_BREACH.md)
-  /** Turned on in town: which portal to play through, the Standard Adventure Portal or THE ETERNAL BREACH. */
+  // ---------------------------------------------------------------- THE ETERNAL BREACH, ABYSSAL RIFTS, UNBOUND
+  /** Turned on in town: which portal to play through ('standard', 'breach', 'rift', 'unbound'). */
   dest: 'standard',
   askDest() {
     if (G.autoDest) { this.dest = G.autoDest; return; } // tests
     const c = G.char, f = this.breachFloor(), rt = this.riftTier(), rift = endgameUnlocked(c);
+    const unbound = endgameUnlocked(c) && canEnterUnbound(c);
+    const uf = this.unboundFloor();
     if (this.dest === 'rift' && !rift) this.dest = 'standard';
+    if (this.dest === 'unbound' && !unbound) this.dest = 'standard';
     const d = G.ui.dialog({
       title: 'Where to, adventurer?', cls: 'auto-dest',
-      html: `<p>Auto-play is on. Which portal should it take?</p>
-        <div class="pc-row"><button type="button" class="pc-card${this.dest === 'standard' ? ' sel' : ''}" data-d="standard" style="--pc:#ff8040"><i class="pc-swirl"></i><b class="pc-name">Standard Adventure Portal</b><span class="pc-tag">The descent: Depth ${c.depth}</span></button>
-        <button type="button" class="pc-card${this.dest === 'breach' ? ' sel' : ''}" data-d="breach" style="--pc:#b050ff"><i class="pc-swirl"></i><b class="pc-name">THE ETERNAL BREACH</b><span class="pc-tag">Challenge: Floor ${f} (monster level ${breachLevel(f)}, you are ${c.level})</span></button>
-        ${rift ? `<button type="button" class="pc-card${this.dest === 'rift' ? ' sel' : ''}" data-d="rift" style="--pc:#20e0ff"><i class="pc-swirl"></i><b class="pc-name">ABYSSAL RIFT</b><span class="pc-tag">Against the clock: Tier ${rt} (monster level ${riftLevel(rt)}, you are ${c.level})</span></button>` : ''}</div>
+      html: `<p>Auto-play is on. Which path should it take?</p>
+        <div class="pc-row"><button type="button" class="pc-card${this.dest === 'standard' ? ' sel' : ''}" data-d="standard" style="--pc:#ff8040"><i class="pc-swirl"></i><b class="pc-name">Standard Campaign</b><span class="pc-tag">The descent: Depth ${c.depth}</span></button>
+        <button type="button" class="pc-card${this.dest === 'breach' ? ' sel' : ''}" data-d="breach" style="--pc:#b050ff"><i class="pc-swirl"></i><b class="pc-name">THE ETERNAL BREACH</b><span class="pc-tag">Floor ${f} (monster level ${breachLevel(f)})</span></button>
+        ${rift ? `<button type="button" class="pc-card${this.dest === 'rift' ? ' sel' : ''}" data-d="rift" style="--pc:#20e0ff"><i class="pc-swirl"></i><b class="pc-name">ABYSSAL RIFT</b><span class="pc-tag">Tier ${rt} (monster level ${riftLevel(rt)})</span></button>` : ''}
+        ${unbound ? `<button type="button" class="pc-card${this.dest === 'unbound' ? ' sel' : ''}" data-d="unbound" style="--pc:#ff3050"><i class="pc-swirl"></i><b class="pc-name">UNBOUND EXPLORATION</b><span class="pc-tag">Hardmode Floor ${uf}</span></button>` : ''}</div>
         <p class="pc-auto"></p>`,
       closable: false,
-      buttons: [{ label: 'Standard Adventure Portal', fn: () => this.setDest('standard') }, { label: 'THE ETERNAL BREACH', cls: 'red', fn: () => this.setDest('breach') }, ...(rift ? [{ label: 'ABYSSAL RIFT', cls: 'red', fn: () => this.setDest('rift') }] : [])],
+      buttons: [
+        { label: 'Standard Campaign', fn: () => this.setDest('standard') },
+        { label: 'THE ETERNAL BREACH', cls: 'red', fn: () => this.setDest('breach') },
+        ...(rift ? [{ label: 'ABYSSAL RIFT', cls: 'red', fn: () => this.setDest('rift') }] : []),
+        ...(unbound ? [{ label: 'UNBOUND EXPLORATION', cls: 'red', fn: () => this.setDest('unbound') }] : [])
+      ],
     });
     // the cards choose too; with no choice in DEST_WAIT seconds auto-play keeps the portal it took last
     d.box.querySelectorAll('.pc-card').forEach((b) => b.addEventListener('click', () => { sfx('ui'); d.close(); this.setDest(b.dataset.d); }));
     this.destPick = { t: DEST_WAIT, d, el: d.box.querySelector('.pc-auto'), last: '' };
   },
-  /** The Standard/Breach menu's countdown (runs while the dialog pauses the world; game.update). */
+  /** The destination menu's countdown (runs while the dialog pauses the world; game.update). */
   tickDest(dt) {
     const k = this.destPick;
     if (!k) return;
     if (!k.el.isConnected || !this.on) { this.destPick = null; if (k.el.isConnected) k.d.close(); return; }
     if ((k.t -= dt) <= 0) { this.destPick = null; k.d.close(); this.setDest(this.dest); return; }
-    const txt = `Auto-play takes the ${this.dest === 'breach' ? 'Eternal Breach' : this.dest === 'rift' ? 'Abyssal Rift' : 'Standard Adventure Portal'} in ${Math.ceil(k.t)}… tap one to choose.`;
+    const destName = this.dest === 'breach' ? 'Eternal Breach' : this.dest === 'rift' ? 'Abyssal Rift' : this.dest === 'unbound' ? 'Unbound Exploration' : 'Standard Campaign';
+    const txt = `Auto-play takes the ${destName} in ${Math.ceil(k.t)}… tap one to choose.`;
     if (txt !== k.last) { k.last = txt; k.el.innerHTML = txt; }
   },
   setDest(d) {
     this.dest = d; this.town = null; this.destPick = null;
-    G.ui.log(d === 'breach' ? `Auto-play heads for <b style="color:#c080ff">THE ETERNAL BREACH</b> (Floor ${this.breachFloor()}).` : d === 'rift' ? `Auto-play heads for the <b style="color:#20e0ff">Abyssal Rift</b> (Tier ${this.riftTier()}).` : 'Auto-play takes the Standard Adventure Portal.', '#8fe0ff');
+    G.ui.log(
+      d === 'breach' ? `Auto-play heads for <b style="color:#c080ff">THE ETERNAL BREACH</b> (Floor ${this.breachFloor()}).` :
+      d === 'rift' ? `Auto-play heads for the <b style="color:#20e0ff">Abyssal Rift</b> (Tier ${this.riftTier()}).` :
+      d === 'unbound' ? `Auto-play heads for <b style="color:#ff3050">UNBOUND EXPLORATION</b> (Floor ${this.unboundFloor()}).` :
+      'Auto-play takes the Standard Campaign Portal.',
+      '#8fe0ff'
+    );
   },
-  // ---------------------------------------------------------------- ABYSSAL RIFTS (docs/ENDGAME.md)
-  /** Can the hero take rift tier T? Its monsters at most two levels above the hero. */
-  riftReady(T) { return riftLevel(T) <= (G.char?.level || 1) + 2; },
-  /** A rift whose Guardian stirred but has not woken (the hero is not in its arena yet): auto-play makes for it. */
+  // ---------------------------------------------------------------- ABYSSAL RIFTS & UNBOUND (docs/ENDGAME.md)
+  /** Can the hero take rift tier T? */
+  riftReady(T) {
+    const c = G.char;
+    if (!c || !endgameUnlocked(c)) return false;
+    return T <= riftOpen(c);
+  },
+  /** A rift whose Guardian stirred but has not woken: auto-play makes for it. */
   riftRush(w) { const g = w.rift && w.rift.guardian; return !!g && !g.dead && !g.awake && !w.rift.done; },
-  /** The tier auto-play enters: the highest open one the hero is ready for (tier 1 at the least). */
+  /** The tier auto-play enters: the highest open one (tier 1 at least). */
   riftTier() {
-    let t = riftOpen(G.char);
-    while (t > 1 && !this.riftReady(t)) t--;
-    return t;
+    return riftOpen(G.char);
   },
-  /** Can the hero take Breach floor n? Its monsters at most two levels above the hero. */
-  breachReady(n) { return breachLevel(n) <= (G.char?.level || 1) + 2; },
-  /** The floor auto-play enters: the highest open one the hero is ready for (floor 1 at the least). */
+  /** Can the hero take Breach floor n? Max 50 floors. */
+  breachReady(n) { return (n | 0) <= 50; },
+  /** The floor auto-play enters: capped at floor 50. */
   breachFloor() {
-    const top = (G.char?.breach?.best || 0) + 1;
-    let f = top;
-    while (f > 1 && !this.breachReady(f)) f--;
+    const top = Math.min(50, (G.char?.breach?.best || 0) + 1);
+    return top;
+  },
+  /** Checkpoint floor auto-play starts Unbound at */
+  unboundFloor() {
+    const c = G.char;
+    const deepest = Math.min(MAX_UNBOUND_DEPTH, (c?.unboundExploration?.deepest) || 1);
+    let f = 1;
+    for (let ck = 10; ck <= deepest; ck += 10) {
+      if (ck <= deepest) f = ck;
+    }
     return f;
   },
   /** Fell in the Breach: auto-play goes back to the descent until it is turned on again. */
@@ -593,16 +624,8 @@ export const Auto = {
   },
 
   spendStats() {
-    const p = G.player, c = G.char, C = CLASSES[c.classId];
-    const reqStats = C ? [...new Set([BASE_REQ_STAT[C.weapon], C.offhand && BASE_REQ_STAT[C.offhand]].filter(Boolean))] : [];
-    const targetReq = c.level > 1 ? 20 + (Math.min(c.level, MAX_LEVEL) - 1) * 2 : 0;
+    const p = G.player, c = G.char;
     while (c.statPoints > 0) {
-      const needStat = targetReq > 0 ? reqStats.find((stKey) => charEffectiveStat(c, stKey) < targetReq) : null;
-      if (needStat) {
-        c.attrs[needStat]++;
-        c.statPoints--;
-        continue;
-      }
       let best = 'vit', bs = -Infinity;
       for (const k of ['str', 'dex', 'vit', 'int']) {
         const s = simulate(p, () => { c.attrs[k]++; return () => { c.attrs[k]--; }; });
@@ -731,7 +754,7 @@ export const Auto = {
       isHammer(x.sk) && cooldown(x.sk) < 1.2).sort((a, b) => b.v - a.v)[0];
     const signature = c.classId === 'barbarian' ? learned.find((sk) => sk.name === 'Whirlwind') || learned.find((sk) => sk.kind === 'whirl') :
       c.classId === 'lancer' ? learned.find((sk) => sk.m.shields) :
-      c.classId === 'dragoon' ? learned.find((sk) => sk.kind === 'leap') : null;
+        c.classId === 'dragoon' ? learned.find((sk) => sk.kind === 'leap') : null;
     bar[LMB] = signature?.id || hammer?.sk?.id || main?.sk.id || free?.id || c.bar[LMB];
     const lmbSk = SKILLS[bar[LMB]];
     const rmb = free && free.id !== bar[LMB] && (lmbSk && (manaCost(lmbSk, 1) || rageCost(lmbSk) || lmbSk.kind === 'whirl' || lmbSk.kind === 'orbit' || lmbSk.kind === 'leap')) ? free :
@@ -742,8 +765,8 @@ export const Auto = {
     // All learned bar skills participate, including low-ranked gap closers.
     // Put signature and mobility skills before pure damage picks if slots fill.
     const priority = [...focused, ...learned.filter(mobility), ...parts.map((x) => x.sk),
-      ...learned.filter((sk) => OFFENSIVE.has(sk.kind)),
-      ...learned];
+    ...learned.filter((sk) => OFFENSIVE.has(sk.kind)),
+    ...learned];
     const keys = FILL_ORDER.filter((k) => k !== RMB);
     let i = 0;
     for (const sk of priority) {
@@ -772,30 +795,19 @@ export const Auto = {
     if (!gearOn()) return false;
     const placed = new Set(); // what this call put on stays on (a later pass swapped an old ring back over a new one)
     for (let pass = 0; pass < 3; pass++) {
-      const cur = simulate(p, () => () => {});
+      const cur = simulate(p, () => () => { });
       let best = -1, bs = equipBar(cur), bslot = null, bmove = null;
       c.bag.forEach((it, i) => {
         if (!it || it.type !== 'gear' || it.unid || it.sealed || it.locked || !canEquipItem(c, it)) return;
         const f = fitScore(p, it, undefined, placed);
         if (f.s > bs) { bs = f.s; best = i; bslot = f.slot; bmove = f.move; }
       });
-      // a fresh look: body armor or a helm of the same or better rarity that's nearly as strong gets worn anyway
-      if (best < 0) {
-        this.worn = this.worn || new Set();
-        c.bag.forEach((it, i) => {
-          if (best >= 0 || !it || it.type !== 'gear' || it.unid || it.sealed || it.locked || !canEquipItem(c, it) || (it.slot !== 'body' && it.slot !== 'head') || this.worn.has(it.uid)) return;
-          const old = c.equip[it.slot];
-          if (old && (old.locked || it.rarity < old.rarity || it.ilvl < old.ilvl - 4)) return;
-          const f = fitScore(p, it); if (f.s > cur - 0.02) { best = i; bslot = f.slot; bmove = f.move; }
-        });
-      }
       if (best < 0) break;
-      if (this.worn) { this.worn.add(c.bag[best].uid); if (c.equip[bslot]) this.worn.add(c.equip[bslot].uid); }
       const it = c.bag[best], was = c.equip[bslot];
       placed.add(it.uid);
       equipFromBag(best, bslot);
       G.ui.log(`Auto-play equipped <span style="color:${itemColor(it)}">${escapeHtml(itemName(it))}</span>.`, '#8fe0ff');
-      if (bmove && was && was.gems.length) this.moveGems(was, it, bmove.sockets);
+      if (bmove && was && was.gems && was.gems.length) this.moveGems(was, it, bmove.sockets);
       any = true;
     }
     return any;
@@ -804,7 +816,7 @@ export const Auto = {
   /** Pry the gems out of `from` (just taken off) and set the best of them into `to`, adding sockets up to `sockets`. */
   moveGems(from, to, sockets) {
     const c = G.char, cost = unsocketCost(from);
-    if (c.gold < cost || gemBagFree(c) < from.gems.length) return;
+    if (c.gold < cost || bagFree(c) < from.gems.length) return;
     c.gold -= cost;
     for (const g of from.gems) addToBag(c, makeGem(g.gem, g.tier));
     const n = from.gems.length;
@@ -814,13 +826,13 @@ export const Auto = {
     G.ui.log(`Auto-play moved ${n} gem${n > 1 ? 's' : ''} into <span style="color:${itemColor(to)}">${escapeHtml(itemName(to))}</span>.`, '#c8f0ff');
   },
 
-  /** Fill free sockets of equipped gear with the gem-bag/bag gems that help most. */
+  /** Fill free sockets of equipped gear with the bag gems that help most. */
   socketGems() {
     const p = G.player, c = G.char;
     let any = false;
     if (!gearOn()) return false;
     for (let guard = 0; guard < 12; guard++) {
-      let best = null, bs = simulate(p, () => () => {}) + 0.0005;
+      let best = null, bs = simulate(p, () => () => { }) + 0.0005;
       for (const slot of SLOTS) {
         const it = c.equip[slot];
         if (!it || it.locked || it.gems.length >= it.sockets) continue;
@@ -861,22 +873,22 @@ export const Auto = {
     if (g.kind === 'potion') return (c.potions[g.item.kind] || 0) < 30;
     if (g.kind !== 'item') return false;
     const it = g.item, free = bagFree(c), f = activeFilter();
-    if (it.type === 'gem') return filterPasses(it) && (gemBagFree(c) > 0 || (c.gemBag || []).some((b) => b && b.type === 'gem' && b.gem === it.gem && b.tier === it.tier));
-    if (it.type !== 'gear' || it.sealed) return free > 0; // a sealed treasure is Epic or better: always worth a slot
+    const gemFree = (c.gemBag || []).filter(b => !b).length;
+    if (it.type === 'gem') return filterPasses(it) && (gemFree > 0 || (c.gemBag || c.bag).some((b) => b && b.type === 'gem' && b.gem === it.gem && b.tier === it.tier));
+    if (it.type !== 'gear' || it.sealed || isValuableGear(it)) return free > 0 || this.worstBag(itemValue(it)) >= 0;
     if (f) { // the player's loot filter (game/lootfilter.js) decides, plus upgrades to wear unless that's off too
       if (!filterPasses(it) && !(f.upgrades && canEquipItem(c, it) && this.isUpgrade(it))) return false;
       return free > 0 || this.worstBag(itemValue(it)) >= 0;
     }
     const upgrade = canEquipItem(c, it) && this.isUpgrade(it);
     if (upgrade) return true;
-    if ((it.slot === 'body' || it.slot === 'head') && canEquipItem(c, it) && (!c.equip[it.slot] || it.rarity >= c.equip[it.slot].rarity) && free > 0) return true; // new looks
     const minRarity = free > 30 ? 1 : free > 12 ? 2 : 3;
     if (it.rarity < minRarity) return false;
     return free > 0 || this.worstBag(itemValue(it)) >= 0;
   },
   isUpgrade(it) {
     const p = G.player, c = G.char;
-    const cur = simulate(p, () => () => {});
+    const cur = simulate(p, () => () => { });
     return fitScore(p, it).s > equipBar(cur);
   },
   /** Index of the cheapest sellable bag item worth less than `than`, or -1 (always, while the gear is the player's). */
@@ -884,7 +896,7 @@ export const Auto = {
     const c = G.char;
     if (!gearOn()) return -1;
     let wi = -1, wv = than * 0.8;
-    c.bag.forEach((b, i) => { if (b && b.type === 'gear' && !b.sealed && !b.locked && !filterKeeps(b) && !upgraded(b) && sellPrice(b) * 4 < wv) { wv = sellPrice(b) * 4; wi = i; } });
+    c.bag.forEach((b, i) => { if (b && b.type === 'gear' && !b.sealed && !b.locked && !isValuableGear(b) && !filterKeeps(b) && !upgraded(b) && sellPrice(b) * 4 < wv) { wv = sellPrice(b) * 4; wi = i; } });
     return wi;
   },
   makeRoom(it) {
@@ -1234,10 +1246,10 @@ export const Auto = {
     if (p.classId === 'dragoon' && w.time < this.dragoonCastUntil) {
       this.setStatus('Spearstorm!'); p.moveVec = [0, 0]; return;
     }
-    // an Abyssal Rift's Guardian has stirred: on the clock, so auto-play runs for its arena (the chasers follow it in),
-    // and once the rift is closed for the exit (picking up the hoard on the way); it fights only what blocks the way
-    // (no ground gained on the path for 1.5 s: then 4.5 s of fighting, and it tries to run on again)
-    const rush = this.riftRush(w), dash = rush ? w.boss : w.rift && w.rift.done ? w.portals.find((q) => q.type === 'exit') : null;
+    // an Abyssal Rift: Guardian rush, or exit dash once completed (after gathering Piñata loot)
+    const hasPinataLoot = w.rift && w.rift.done && w.loot && w.loot.some((g) => this.wantLoot(g));
+    const rush = this.riftRush(w);
+    const dash = rush ? w.boss : (w.rift && w.rift.done && !hasPinataLoot) ? w.portals.find((q) => q.type === 'exit') : null;
     if (dash) { const nd = this.navDist(dash.x, dash.y); if (!(nd > (this.rushBest ?? Infinity) - 0.5)) { this.rushBest = nd; this.rushT = 0; } else if ((this.rushT = (this.rushT || 0) + dt) > 6) this.rushT = -1.5; }
     else this.rushBest = this.rushT = undefined;
     const blocked = dash && this.rushT > 1.5;
@@ -1247,26 +1259,38 @@ export const Auto = {
     const ct = this.climbTo;
     if (ct && (ct.dead || w.time - this.climbSeen > 12)) this.climbTo = null;
     else if (ct && !foes.includes(ct)) foes.push(ct);
-    // retreat to the town portal when nearly dead with nothing left to heal with
+    // retreat to town when nearly dead with nothing left to heal with
     const healLeft = c.potions.hp + c.potions.rejuv > 0 || this.readySkill((s) => s.kind === 'heal');
-    const sealed = (w.raid && w.raid.sealed) || (w.velscour && w.velscour.phase > 0 && !w.velscour.m.dead); // no way out of a sealed boss room or Velscour's arena
-    if (!this.retreat && p.hp < p.maxHp * stanceOf(c).retreat && !healLeft && foes.length && !sealed) this.retreat = true;
+    const sealed = (w.raid && w.raid.sealed) || (w.Velscour && w.Velscour.phase > 0 && !w.Velscour.m.dead); // no way out of a sealed boss room or Velscour's arena
+    const canHearth = hearthReady();
+    const tp = w.portals.find((q) => q.type === 'town');
+    const canRetreat = canHearth || !!tp;
+    if (!this.retreat && p.hp < p.maxHp * stanceOf(c).retreat && !healLeft && foes.length && !sealed && canRetreat) this.retreat = true;
     if (this.retreat && (p.hp > p.maxHp * 0.75 || !foes.length && p.hp > p.maxHp * 0.5)) this.retreat = false;
     if (this.retreat) {
-      const tp = w.portals.find((q) => q.type === 'town');
-      this.setStatus('Retreating to town!');
-      if (foes.length && p.castLock <= 0) this.combat(foes, true);
-      if (tp && this.goTo(tp.x, tp.y, 1.2, dt)) { this.transitT = 3; G.game.enterTown(); return; }
+      if (canHearth) {
+        this.setStatus('Hearthstone retreat to town!');
+        p.moveVec = [0, 0];
+        useHearth();
+        return;
+      }
+      if (tp) {
+        this.setStatus('Retreating to town portal!');
+        if (foes.length && p.castLock <= 0) this.combat(foes, true);
+        if (this.goTo(tp.x, tp.y, 1.2, dt)) { this.transitT = 3; G.game.enterTown(); return; }
+      } else {
+        this.retreat = false;
+      }
       this.watchStuck(dt);
       return;
     }
-    // a shrine a few steps away is worth grabbing even mid-fight (game/happenings.js)
-    const sh = w.chests.find((ch) => ch.shrine && !ch.opened && !this.giveUp.has(ch) && dist(p.x, p.y, ch.x, ch.y) < 5);
-    if (sh && this.navDist(sh.x, sh.y) < 7) {
+    // a shrine or pylon a few steps away is worth grabbing even mid-fight
+    const sh = w.chests.find((ch) => (ch.shrine || ch.pylon) && !ch.opened && !this.giveUp.has(ch) && dist(p.x, p.y, ch.x, ch.y) < 7);
+    if (sh && this.navDist(sh.x, sh.y) < 9) {
       this.lootFor = sh;
       if ((this.lootT = this.spend(sh, dt)) > 6) this.giveUp.add(sh);
       this.setStatus(`Activating the ${sh.label}`);
-      if (this.goTo(sh.x, sh.y, sh.reach - 0.2, dt)) sh.use();
+      if (this.goTo(sh.x, sh.y, (sh.reach || 1.3) - 0.2, dt)) sh.use();
       this.watchStuck(dt); return;
     }
     // a fight that needs him somewhere (a cache to dig, a relic to break, back inside its ring: game/dunes.js `duty`):
@@ -1326,16 +1350,16 @@ export const Auto = {
       } else if (ow.type === 'escort' && ow.escort && ow.routeIndex < ow.route.length) {
         objective = { x: ow.escort.x, y: ow.escort.y, reach: 3.5 };
       } else if (ow.markers.length && !nearEnemy) {
-        objective = ow.markers.reduce((a,b) =>
-          !a || Math.hypot(b.x-p.x,b.y-p.y) < Math.hypot(a.x-p.x,a.y-p.y) ? b : a, null);
+        objective = ow.markers.reduce((a, b) =>
+          !a || Math.hypot(b.x - p.x, b.y - p.y) < Math.hypot(a.x - p.x, a.y - p.y) ? b : a, null);
       }
       // the Breach's fights keep arriving: after a while fighting with an objective waiting, push through to it
       // (ow.pushObjective: the Pirate Seas, an objective that holds the fight back, game/seabattle.js)
       if (objective && nearEnemy && (w.breach || ow.pushObjective)) { this.objWait = (this.objWait || 0) + dt; if (this.objWait > 10) this.objPush = 4; } else this.objWait = 0;
       if (this.objPush > 0) this.objPush -= dt;
       if (objective && (!nearEnemy || this.objPush > 0)) {
-        this.setStatus('Completing '+ow.title);
-        if (this.goTo(objective.x, objective.y, objective.reach||1.4, dt) && objective.use) objective.use();
+        this.setStatus('Completing ' + ow.title);
+        if (this.goTo(objective.x, objective.y, objective.reach || 1.4, dt) && objective.use) objective.use();
         this.watchStuck(dt); return;
       }
     }
@@ -1418,6 +1442,29 @@ export const Auto = {
   /** Pick up good loot, gold and orbs, and open chests, when they're close. Returns true while busy with it. */
   lootStep(w, dt) {
     const p = G.player, c = G.char;
+    if (w.rift && !w.rift.done) {
+      for (const ch of w.chests) {
+        if (ch.pylon && !ch.opened && !this.giveUp.has(ch)) {
+          const d = this.navDist(ch.x, ch.y);
+          if (d < 18) {
+            this.lootFor = ch;
+            this.setStatus(`Activating ${ch.label}`);
+            if (this.goTo(ch.x, ch.y, (ch.reach || 1.5) - 0.2, dt)) ch.use();
+            return true;
+          }
+        }
+      }
+      if (p.hp < p.maxHp * 0.75) {
+        for (const g of w.loot) {
+          if (g.kind.startsWith('orb') && this.navDist(g.x, g.y) < 10) {
+            this.lootFor = g;
+            this.goTo(g.x, g.y, 0.25, dt);
+            return true;
+          }
+        }
+      }
+      return false;
+    }
     let best = null, bd = 16;
     for (const g of w.loot) {
       if (g.z > 0 || g.t < 0.4 || this.giveUp.has(g)) continue;
@@ -1429,7 +1476,7 @@ export const Auto = {
     for (const ch of w.chests) {
       if (ch.opened || ch.inert || this.giveUp.has(ch)) continue; // (inert: a scenario's goal marker, nothing to use)
       const d = this.navDist(ch.x, ch.y);
-      if (d < (ch.far || 14) && d - (ch.far ? 6 : 0) < bd) { bd = d - (ch.far ? 6 : 0); best = ch; } // shrines and caches are worth a walk
+      if (d < (ch.far || 14) && d - (ch.far ? 6 : 0) < bd) { bd = d - (ch.far ? 6 : 0); best = ch; } // shrines, pylons and caches are worth a walk
     }
     // the last target picked up (gone from the ground) or opened: the looting is getting somewhere
     const lf = this.lootFor;
@@ -1449,13 +1496,30 @@ export const Auto = {
       return false;
     }
     if (best.use) {
-      this.setStatus(best.shrine ? `Activating the ${best.label}` : best.scen ? best.label : best.label ? `Opening the ${best.label}` : 'Opening a chest'); // (a scenario's says what it does)
+      this.setStatus(best.shrine ? `Activating the ${best.label}` : best.pylon ? `Activating ${best.label}` : best.scen ? best.label : best.label ? `Opening the ${best.label}` : 'Opening a chest'); // (a scenario's says what it does)
       if (this.goTo(best.x, best.y, (best.reach || 1.3) - 0.2, dt)) best.use();
       return true;
     }
     this.setStatus(best.kind === 'item' ? `Picking up ${best.label}` : 'Collecting');
-    if (best.kind === 'item' && best.item.type !== 'potion' && best.item.type !== 'gem' && bagFree(c) === 0) {
-      if (!this.makeRoom(best.item)) { this.ignore.add(best.item); return false; }
+    const gemFree = (c.gemBag || []).filter(b => !b).length;
+    if (best.kind === 'item' && best.item.type !== 'potion') {
+      if (best.item.type === 'gem') {
+        if (gemFree === 0 && !(c.gemBag && c.gemBag.some((b) => b && b.type === 'gem' && b.gem === best.item.gem && b.tier === best.item.tier))) {
+          this.ignore.add(best.item);
+          return false;
+        }
+      } else if (bagFree(c) === 0) {
+        if (!this.makeRoom(best.item)) {
+          if (hearthReady()) {
+            G.ui.log('Backpack full of valuable loot. Using Hearthstone to stash and trade.', '#8fe0ff');
+            p.moveVec = [0, 0];
+            useHearth();
+            return true;
+          }
+          this.ignore.add(best.item);
+          return false;
+        }
+      }
     }
     p.lootTarget = best.kind === 'item' || best.kind === 'potion' ? best : null;
     this.goTo(best.x, best.y, 0.25, dt);
@@ -1464,12 +1528,35 @@ export const Auto = {
 
   leaveLevel(w) {
     const c = G.char;
-    const next = w.depth + 1;
+    const next = Math.min(FINAL_DEPTH, w.depth + 1);
     const town = this.needTown();
     this.transitT = 3;
     if (w.breach) { G.game.breachExit(w, { auto: true, town }); return; }
     if (w.rift) { G.game.riftExit(w, { auto: true, town }); return; }
-    if (w.unbound) { G.ui.log('Auto-play heads back to town.', '#8fe0ff'); G.game.enterTown(); return; }
+
+    if (w.unboundExploration) {
+      const uFloor = w.unboundExploration.floor;
+      const isCheckpoint = isUnboundCheckpointFloor(uFloor);
+      if (uFloor >= MAX_UNBOUND_DEPTH || w.unbound) {
+        G.ui.log('Auto-play defeated Velscour Unbound! Returning to town.', '#20e0ff');
+        G.game.enterTown();
+        return;
+      }
+      if (town && isCheckpoint) {
+        G.ui.log(`Auto-play reached Unbound Checkpoint Floor ${uFloor} and heads back to town.`, '#8fe0ff');
+        if (c.unboundExploration) {
+          c.unboundExploration.deepest = Math.max(c.unboundExploration.deepest || 1, uFloor + 1);
+        }
+        G.game.enterTown();
+        return;
+      }
+      // Intermediate floor: descend directly without spending an Abyssal Key!
+      G.ui.log(`Auto-play advances directly into Unbound Floor ${uFloor + 1}…`, '#8fe0ff');
+      G.game.enterUnboundExploration(uFloor + 1, false);
+      return;
+    }
+
+    if (w.unbound || w.depth >= FINAL_DEPTH || w.biome?.id === 'throne' || w.boss?.isVelscour) { G.ui.log('Auto-play heads back to town.', '#8fe0ff'); G.game.enterTown(); return; }
     // the three portals down (game.portalChoice): the player has a few seconds to pick before auto-play does
     if (G.game.portalChoice) { G.game.portalChoice(w, { auto: true, town }); return; }
     c.depth = next;
@@ -1478,7 +1565,10 @@ export const Auto = {
     else G.game.enterDungeon();
   },
   needTown() {
-    const c = G.char;
+    const c = G.char, w = G.world;
+    if (w && w.unboundExploration && !isUnboundCheckpointFloor(w.unboundExploration.floor)) {
+      if (!hearthReady()) return false;
+    }
     this.sinceTown = (this.sinceTown || 0) + 1;
     if (gearOn() && bagFree(c) < BAG_LOW) return true; // hands off the gear: a full bag doesn't stop it (it leaves new gear on the ground)
     if (c.potions.hp < 5 && c.gold > potionPrice('hp', c) * 6 && heresyAllows('potion', c, null)) return true; // (Dry Throat: none to buy)
@@ -1981,7 +2071,7 @@ export const Auto = {
             ax = t.x; ay = t.y;
             break;
           }
-          // fall through for ordinary ranged AoE skills
+        // fall through for ordinary ranged AoE skills
         case 'rain': case 'strike': case 'trap': n = crowdAt(t.x, t.y, 2); ok = d <= Math.min(9.5, skillRange(sk)) && los; break;
         default: ok = d <= reachOf(sk) * 0.92 && los; n = crowdAt(t.x, t.y, 2.2);
       }
@@ -2122,12 +2212,19 @@ export const Auto = {
       }
       T.sealNote = false;
       if (this.townSocial(dt)) return;
-      // done: through the portal (the purple one when auto-play was told to take the Breach, or Hearthstone portal)
-      const breach = this.dest === 'breach' && w.portals.find((q) => q.breach);
-      const rift = this.dest === 'rift' && endgameUnlocked(c) && w.portals.find((q) => q.rift);
-      const hearth = !breach && !rift && w.portals.find((q) => q.hearth);
-      const po = breach || rift || hearth || w.portals[0];
-      this.setStatus(breach ? `To THE ETERNAL BREACH — Floor ${this.breachFloor()}` : rift ? `To the Abyssal Rift — Tier ${this.riftTier()}` : hearth ? 'Returning through Hearthstone portal' : `To the portal — Depth ${c.depth}`);
+      // done: through the portal (Hearthstone return portal has absolute priority to restore progress!)
+      const hearth = w.portals.find((q) => q.hearth);
+      const breach = !hearth && this.dest === 'breach' && w.portals.find((q) => q.breach);
+      const rift = !hearth && this.dest === 'rift' && endgameUnlocked(c) && w.portals.find((q) => q.rift);
+      const unbound = !hearth && !breach && !rift && this.dest === 'unbound' && canEnterUnbound(c);
+      const po = hearth || breach || rift || (unbound ? w.portals[0] : (w.portals.find((q) => !q.hearth && !q.breach && !q.rift) || w.portals[0]));
+      this.setStatus(
+        hearth ? 'Returning through Hearthstone portal' :
+        breach ? `To THE ETERNAL BREACH — Floor ${this.breachFloor()}` :
+        rift ? `To the Abyssal Rift — Tier ${this.riftTier()}` :
+        unbound ? `To Unbound Exploration — Floor ${this.unboundFloor()}` :
+        `To the portal — Depth ${c.depth}`
+      );
       if (this.goTo(po.x, po.y, 1.3, dt)) {
         G.ui.closeAll();
         this.transitT = 4;
@@ -2135,6 +2232,7 @@ export const Auto = {
         if (hearth) po.use();
         else if (breach) G.game.enterBreach(this.breachFloor());
         else if (rift) G.game.enterRift(this.riftTier());
+        else if (unbound) G.game.enterUnboundExploration(this.unboundFloor());
         else G.game.enterDungeon();
       }
       this.watchStuck(dt);
@@ -2235,13 +2333,14 @@ export const Auto = {
     steps.push({ vendor: 'weapons', label: 'Selling loot', want: () => c.bag.some((b) => b && b.type !== 'gem' && b.type !== 'sheet' && !b.sealed && !upgraded(b)) || this.gearGain(Vendor.stock.weapons), fn: () => { this.sellJunk(); if (this.buyGear(Vendor.stock.weapons)) this.sellJunk(); } }); // sell what the new piece replaced too: a nearly full bag has no slot for it
     steps.push({ vendor: 'alchemist', label: 'Buying potions', want: () => this.potionsWanted(), fn: () => this.buyPotions() });
     steps.push({ vendor: 'armor', label: 'Browsing armor', want: gear('armor'), fn: () => { if (this.buyGear(Vendor.stock.armor)) this.sellJunk(); } });
-    const hasGems = () => ((c.gemBag || []).concat(c.bag || [])).some((b) => b && b.type === 'gem');
-    if (hasGems() || c.gold > 2000) steps.push({ vendor: 'gems', label: 'Visiting the gem merchant', fn: () => this.gemShop() });
-    steps.push({ vendor: 'socket', label: 'Visiting the jeweler', want: () => hasGems() || this.equipped().some((it) => it.sockets < it.maxSockets && socketCost(it) <= this.budget(0.3)) || this.gearGain(Vendor.stock.rings), fn: () => this.jeweler() });
+    const hasGems = ((c.gemBag || []).concat(c.bag || [])).some((b) => b && b.type === 'gem');
+    if (hasGems || c.gold > 2000) steps.push({ vendor: 'gems', label: 'Visiting the gem merchant', fn: () => this.gemShop() });
+    steps.push({ vendor: 'socket', label: 'Visiting the jeweler', want: () => hasGems || this.equipped().some((it) => it.sockets < it.maxSockets && socketCost(it) <= this.budget(0.3)) || this.gearGain(Vendor.stock.rings), fn: () => this.jeweler() });
     steps.push({ vendor: 'upgrade', chat: true, label: 'Visiting Homunculus the Proud', want: () => this.equipped().some((it) => (it.upg || 0) < 10 && upgradeCost(it) <= this.budget(0.45)), fn: () => this.blacksmith() });
     steps.push({ vendor: 'enchant', label: 'Enchanting gear', want: () => this.equipped().some((it) => it.rarity >= 1 && enchantCost(it, true) <= this.budget(0.2)), fn: () => this.enchanter() });
     steps.push({ vendor: 'gamble', label: 'Gambling', want: () => c.gold >= Math.round(180 * Math.pow(1.065, goldLvl(Math.max(c.level, depthLevel(c.depth || 1))))) * GAMBLE_GOLD && bagFree(c) >= 3, fn: () => { this.gamble(); this.sellJunk(); } });
-    steps.push({ jewelBox: true, label: 'Stashing gems in the jewel box', want: () => hasGems(), fn: () => this.stashJewels() });
+    // Storage: visit both the jewel box and storage chest
+    steps.push({ jewelBox: true, label: 'Stashing gems in the jewel box', want: () => ((c.gemBag || []).concat(c.bag || [])).some((b) => b && b.type === 'gem'), fn: () => this.stashJewels() });
     steps.push({ stash: true, label: 'Stashing gear in the storage chest', want: () => (c.bag || []).some((b) => b && b.type !== 'gem' && forChest(b, c)), fn: () => this.stashExtras() });
     return steps;
   },
@@ -2253,7 +2352,7 @@ export const Auto = {
   gearGain(list) {
     const p = G.player, c = G.char;
     if (!list || !bagFree(c)) return false;
-    const cur = simulate(p, () => () => {});
+    const cur = simulate(p, () => () => { });
     const bar = Math.max(equipBar(cur), cur + 0.012);
     return list.some((it) => it && it.type === 'gear' && canEquipItem(c, it) && itemValue(it) <= this.budget(0.85) && fitScore(p, it, false).s > bar);
   },
@@ -2262,9 +2361,9 @@ export const Auto = {
     return ['hp', 'mp', 'rejuv'].some((k) => c.potions[k] < (k === 'mp' ? 5 : POT_TARGET[k]) && c.gold >= potionPrice(k, c) && (k === 'hp' || c.gold - potionPrice(k, c) > potionPrice('hp', c) * 4));
   },
   /** Stored gear to take out: an upgrade now, or what auto-play put away until the hero could wear it (to wear or sell).
-   *  What the player stored stays put: auto-play would sell it. */
+   *  What the player stored stays put: auto-play would sell it. Gems remain stored. */
   stashUpgrade(it) { return it.type === 'gear' && !it.sealed && !it.locked && canEquipItem(G.char, it) && ((it.autoStash === true && bagFree(G.char) >= 12) || this.isUpgrade(it)); },
-  /** Storage chest: take out stored gear that's an upgrade now. Gems remain stored. */
+  /** Storage chest: take out stored gear that's an upgrade now. Never pulls out gems or locked/sealed items. */
   unstash() {
     const c = G.char;
     c.stash.forEach((it, i) => {
@@ -2301,12 +2400,14 @@ export const Auto = {
     const c = G.char;
     let n = 0;
     const store = () => {
+      // 1. Store eligible gear and keepers from regular bag
       c.bag.forEach((it, i) => {
         if (!it || !forChest(it, c)) return;
         // future gear comes back out once the hero can wear it; keepers (+N, the loot filter's) only as an upgrade
         if (it.type === 'gear') it.autoStash = filterKeeps(it) || upgraded(it) ? 'keep' : true;
         if (addToStash(c, it)) { c.bag[i] = null; n++; } else delete it.autoStash;
       });
+      // 2. If any gems remain in gemBag (e.g. Jewel Box was full), fallback to storage chest
       if (c.gemBag) {
         c.gemBag.forEach((it, i) => {
           if (!it || !forChest(it, c)) return;
@@ -2316,9 +2417,9 @@ export const Auto = {
     };
     store();
     // a full chest: make room by selling the weakest gear auto-play stored (+N gear last, then lowest rarity and item
-    // level), then store the rest
+    // level), then store the rest; never sell valuable gear (Mythic/Legendary/Abyssal/Covenant)
     if (c.stash.every(Boolean)) {
-      const worst = c.stash.map((b, i) => ({ b, i })).filter(({ b }) => b.type === 'gear' && b.autoStash && !b.locked).sort((a, b) => upgraded(a.b) - upgraded(b.b) || a.b.rarity - b.b.rarity || a.b.ilvl - b.b.ilvl).slice(0, 30);
+      const worst = c.stash.map((b, i) => ({ b, i })).filter(({ b }) => b.type === 'gear' && b.autoStash && !b.locked && !isValuableGear(b)).sort((a, b) => upgraded(a.b) - upgraded(b.b) || a.b.rarity - b.b.rarity || a.b.ilvl - b.b.ilvl).slice(0, 30);
       let gold = 0;
       for (const { b, i } of worst) { gold += sellPrice(b); c.stash[i] = null; }
       c.gold += gold;
@@ -2334,22 +2435,22 @@ export const Auto = {
     return Math.max(0, (c.gold - reserve) * frac);
   },
 
-  /** Sell everything in the bag that isn't an upgrade or a near-future one; gems and sigils are never sold (stored in the jewel box), nor sheets, keepers, or +N gear. */
+  /** Sell everything in the bag that isn't an upgrade or a near-future one; gems and sigils are never sold (stored in the jewel box), nor sheets, keepers, or +N gear, or valuable endgame gear. */
   sellJunk() {
     const p = G.player, c = G.char;
     this.optimizeGear();
     let gold = 0, n = 0;
     const future = {};
     c.bag.forEach((it, i) => {
-      if (!it || it.type === 'gem' || it.sealed || it.locked || it.type === 'sheet' || filterKeeps(it) || upgraded(it)) return; // only the player breaks a seal or sells what's locked; keepers and +N gear go to the chest; gems go to the jewel box
+      if (!it || it.type === 'gem' || it.sealed || it.locked || it.type === 'sheet' || isValuableGear(it) || filterKeeps(it) || upgraded(it)) return; // only the player breaks a seal or sells what's locked; keepers and +N gear go to the chest; gems are never sold; valuable gear is never sold
       if (it.type === 'gear' && (it.req || 1) > c.level && (it.req || 1) <= c.level + 6 && it.rarity >= 2 && !future[it.slot]) {
         const s = fitScore(p, it).s;
-        if (s > simulate(p, () => () => {}) + 0.02) { future[it.slot] = true; return; }
+        if (s > simulate(p, () => () => { }) + 0.02) { future[it.slot] = true; return; }
       }
       // gems socketed in gear we're selling: pry them out when that's cheap compared to their worth
       if (it.type === 'gear' && it.gems.length) {
         const worth = it.gems.reduce((a, g) => a + itemValue(makeGem(g.gem, g.tier)) / 4, 0);
-        if (worth > unsocketCost(it) * 1.5 && c.gold >= unsocketCost(it) && gemBagFree(c) >= it.gems.length) {
+        if (worth > unsocketCost(it) * 1.5 && c.gold >= unsocketCost(it)) {
           c.gold -= unsocketCost(it);
           for (const g of it.gems) addToBag(c, makeGem(g.gem, g.tier));
           it.gems = [];
@@ -2384,7 +2485,7 @@ export const Auto = {
     let n = 0;
     const done = new Set(); // one purchase per slot: a cheap small upgrade bought first would be sold for the big one
     for (let guard = 0; guard < 4; guard++) {
-      const cur = simulate(p, () => () => {}), bar = Math.max(equipBar(cur), cur + 0.012);
+      const cur = simulate(p, () => () => { }), bar = Math.max(equipBar(cur), cur + 0.012);
       let best = -1, bv = 0, bslot = null;
       list.forEach((it, i) => {
         if (!it || it.type !== 'gear' || !canEquipItem(c, it)) return;
@@ -2426,7 +2527,7 @@ export const Auto = {
     for (let k = 0; k < empty; k++) {
       const list = Vendor.stock.gems;
       let best = -1, bv = 0;
-      const cur = simulate(p, () => () => {});
+      const cur = simulate(p, () => () => { });
       const slot = SLOTS.find((s) => c.equip[s] && c.equip[s].gems.length < c.equip[s].sockets);
       if (!slot) break;
       const it = c.equip[slot];
@@ -2435,7 +2536,7 @@ export const Auto = {
         const gain = simulate(p, () => { it.gems.push({ gem: g.gem, tier: g.tier }); return () => { it.gems.pop(); }; }) - cur;
         if (gain > 0.003 && gain / itemValue(g) > bv) { bv = gain / itemValue(g); best = i; }
       });
-      if (best < 0 || (!gemBagFree(c) && !(c.gemBag || []).some((b) => b && b.type === 'gem' && b.gem === list[best].gem && b.tier === list[best].tier))) break;
+      if (best < 0 || !bagFree(c)) break;
       Vendor.buy({ type: 'shop', list, i: best });
       this.socketGems();
     }
@@ -2444,7 +2545,7 @@ export const Auto = {
 
   jeweler() {
     const c = G.char;
-    const spare = ((c.gemBag || []).concat(c.bag || [])).reduce((a, b) => a + (b && b.type === 'gem' ? b.count || 1 : 0), 0);
+    const spare = c.bag.reduce((a, b) => a + (b && b.type === 'gem' ? b.count || 1 : 0), 0);
     let added = 0;
     for (const s of ['weapon', 'body', 'offhand', 'head', 'legs', 'hands', 'feet']) {
       const it = c.equip[s];
@@ -2461,12 +2562,12 @@ export const Auto = {
   },
 
   /**
-   * Write a Glyphword (data/relics.js) when the gem-bag/bag's Sigils spell one: take a plain item of a slot it fits (from the
+   * Write a Glyphword (data/relics.js) when the bag's Sigils spell one: take a plain item of a slot it fits (from the
    * bag, else a shop's), give it exactly that many sockets, set the Sigils in order. optimizeGear then decides whether
    * to wear it; a written word is kept (it's never sold: upgraded-or-relic rule in sellJunk).
    */
   glyphwork() {
-    const c = G.char;
+    const c = G.char, p = G.player;
     if (!gearOn()) return false;
     const have = {};
     for (const b of ((c.gemBag || []).concat(c.bag || []))) if (b && b.type === 'gem' && GEMS[b.gem].sigil) have[b.tier] = (have[b.tier] || 0) + (b.count || 1);
@@ -2508,7 +2609,7 @@ export const Auto = {
   blacksmith() {
     const p = G.player, c = G.char;
     for (let guard = 0; guard < 10; guard++) {
-      const cur = simulate(p, () => () => {});
+      const cur = simulate(p, () => () => { });
       let best = null, bv = 0;
       for (const s of SLOTS) {
         const it = c.equip[s];

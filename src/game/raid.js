@@ -17,7 +17,7 @@ import { ARCH } from '../data/enemies.js';
 import { ART_BY_ID } from '../data/bestiary.js';
 import { bodyR } from '../world/map.js';
 import { makeMonster, monsterBase, Monster } from './monster.js';
-import { riftHold } from '../data/depth.js';
+import { riftHold, isSuperbossDepth } from '../data/depth.js';
 import { dropLoot } from './loot.js';
 import { UI } from '../ui/ui.js';
 import { madnessReady } from './mayhem.js';
@@ -636,8 +636,10 @@ class Raid {
     const g = this.arena.gate;
     if (!this.announced && dist(p.x, p.y, g.x, (g.y0 + g.y1 + 1) / 2) < 9) {
       this.announced = true;
-      UI.centerMsg('BOSS ROOM', `${this.tpl.name}, ${this.tpl.title}, awaits`, 3.2);
-      UI.log(`<b style="color:#ff8050">BOSS ROOM</b> ahead: ${this.tpl.name}. ${this.mods.map((k) => `<b>${RAID_MODS[k].name}</b> (${RAID_MODS[k].desc})`).join(', ')}.`, '#ffc0a0');
+      const isSuper = isSuperbossDepth(this.depth);
+      const label = isSuper ? (this.depth % 100 === 0 ? 'ACT FINALE SUPERBOSS' : 'SUPERBOSS') : 'BOSS ROOM';
+      UI.centerMsg(label, `${this.tpl.name}, ${this.tpl.title}, awaits`, 3.2);
+      UI.log(`<b style="color:#ff8050">${label}</b> ahead: ${this.tpl.name}. ${this.mods.map((k) => `<b>${RAID_MODS[k].name}</b> (${RAID_MODS[k].desc})`).join(', ')}.`, '#ffc0a0');
       sfx('roar', 0.6);
     }
     if (!m.awake) {

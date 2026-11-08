@@ -564,8 +564,9 @@ function removeGemsAction(c, it) {
   };
 }
 
-function getBagActions(idx) {
-  const c = G.char, it = c.bag[idx];
+function getBagActions(idx, where = 'bag') {
+  const c = G.char, container = where === 'gemBag' && c.gemBag ? c.gemBag : c.bag;
+  const it = container[idx];
   if (!it) return [];
   const acts = [];
   if (it.sealed) {
@@ -634,6 +635,9 @@ function getEquipActions(slot) {
   const c = G.char, it = c.equip[slot];
   if (!it) return [];
   const acts = [{ label: 'Unequip', fn: () => unequip(slot) }];
+  if (G.ui.vendor && G.ui.vendor.active) {
+    acts.push({ label: 'Sell', fn: () => unequip(slot) });
+  }
   acts.push({
     label: it.locked ? '🔓 Unlock' : '🔒 Lock',
     keepOpen: true,

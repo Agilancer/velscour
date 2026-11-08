@@ -4,7 +4,7 @@ import { riftgateSpot } from '../gfx/riftgate.js';
 import { input } from '../core/input.js';
 import { camera } from '../core/view.js';
 import { sfx, playMusic, stopMusic, setAmbience, stopAmbience, footsteps } from '../core/audio.js';
-import { rand, pick, randi, clamp, escapeHtml, dist, makeCanvas, fmtInt, swapKey } from '../core/util.js';
+import { rand, pick, randi, escapeHtml, dist, dist2, RNG, makeCanvas, fmtInt, swapKey, hexToRgb, clamp, shuffle } from '../core/util.js';
 import { biomeTileSet, loadBiomeArt, mixedTileSet, keepTileSets } from '../core/assets.js';
 import { loadArtFor, enemyImage, markArtCaches, trimArtCaches } from '../core/enemyart.js';
 import { loadClassArt } from '../core/classart.js';
@@ -18,13 +18,13 @@ import { BREACH_BIOME, BREACH_WALLS } from '../data/biomes.js';
 import { BIOMES, BETA_BIOMES, BIOME_BY_ID, TOWN_BIOME, drawBiome, biomeChoices, takeBiome, mixPartner, recordBiomeVisit } from '../data/biomes.js';
 import { CLASSES } from '../data/classes.js';
 import { generateDungeon, isRaidDepth } from '../world/dungeon.js';
-import { FINAL_DEPTH, depthLevel, blockStart } from '../data/depth.js';
+import { FINAL_DEPTH, depthLevel, blockStart, isSuperbossDepth, superbossForDepth, getActForDepth, ACTS } from '../data/depth.js';
 import { addDefiance, clearDefiance, defianceText, tickBlessing } from './defiance.js';
 import { setupHappenings, announceHappenings, happeningsTick, townHappening, townTick, recordDepth, markNemesis, OMENS, rollOmen, anyOmen, omenable } from './happenings.js';
 import { greedOf, greedPacks, greedWorld, greedCleared, greedDeath } from './greed.js';
 import { spectateTick } from './spectate.js';
-import { toggleSmite } from './smite.js';
-import { hearthTick, useHearth, closeHearthPortals } from './hearth.js';
+import { toggleSmite, getUltimate, executeUltimate } from './smite.js';
+import { hearthTick, useHearth, hearthPortalActive, closeHearthPortals } from './hearth.js';
 import { generateTown, makeTownTiles, rollTownWeather } from '../world/town.js';
 import { generateOverworld } from '../world/overworld.js';
 import { createOverworldScenario } from './overworld.js';
@@ -36,7 +36,7 @@ import { generateDarkForest } from '../world/darkforest.js';
 import { loadDarkForestTrees } from '../gfx/darkforest.js';
 import { generateBreach } from '../world/breach.js';
 import { createBreachRun, chestAt, breachMonster } from './breach.js';
-import { breachDepth, breachLevel, BREACH_ART, BREACH_ARCHS } from '../data/breach.js';
+import { breachDepth, breachLevel, BREACH_ART, BREACH_ARCHS, wyrmVariant, breachCycle, MAX_BREACH_FLOOR } from '../data/breach.js';
 import { useAlpine } from './alpine.js';
 import { castle3dTick } from './castle3d.js';
 import { useTerrain, terrainOf } from '../gfx/terrain.js';
@@ -70,9 +70,10 @@ import { World } from './world.js';
 import { Player } from './player.js';
 import { makeMonster, makeElite, Monster } from './monster.js';
 import { clearRims } from './creature.js';
-import { applyTrait, rollTrait, ambushTick, madnessTick, unleashMadness } from './mayhem.js';
-import { makeRaidBoss } from './raid.js';
-import { dropChest } from './loot.js';
+import { applyTrait, rollTrait, ambushTick, madnessTick, unleashMadness, enter } from './mayhem.js';
+import { hit, kill } from './combat.js';
+import { makeRaidBoss, RAID_BOSSES } from './raid.js';
+import { dropChest, GroundItem } from './loot.js';
 import { fpWanted, fpRelease } from '../gfx/firstperson.js';
 import { renderWorld, renderFirstPerson, drawMinimap, preloadTownSheets, releaseTownSheets, propReach } from './render.js';
 import { controls } from './controls.js';
@@ -98,10 +99,11 @@ import { offerCommissions, setupCommissions, commissionClear, wantedBiomes, LINE
 import { titleScreen, hide as hideScreen, deathScreen, victoryScreen, pauseMenu, helpDialog } from '../ui/screens.js';
 import { LoadingScreen } from '../ui/loading.js';
 // the Endgame (docs/ENDGAME.md): Heresies, Abyssal Rifts, Velscour Unbound, Infernal Marks
-import { endgameUnlocked, unlockEndgame } from './endgame.js';
-import { heresySpawns, heresyWorld, heresyBegin, heresyTick, heresiesOf, worldRank, MARKS_RANK } from './heresies.js';
-import { createRiftRun, riftTick, riftOpen, riftDepth, riftLevel, fmtTime, riftLeave, RIFT_QUOTA, RIFT_DENSITY } from './rifts.js';
-import { unboundReady, spendKeys, keysOf } from './unbound.js';
+import { endgameUnlocked, unlockEndgame, endgame, adoptEndgame } from './endgame.js';
+import { heresySpawns, heresyWorld, heresyBegin, heresyTick, heresiesOf, heresyRank, worldRank, MARKS_RANK } from './heresies.js';
+import { createRiftRun, riftTick, riftOpen, riftDepth, riftLevel, fmtTime, riftLeave, activatePylon, riftDeathPenalty, RIFT_QUOTA, RIFT_DENSITY } from './rifts.js';
+import { PYLONS } from '../data/rifts.js';
+import { unboundReady, spendKeys, keysOf, canEnterUnbound, spendUnboundKey, unboundWaypoints, MAX_UNBOUND_DEPTH, isUnboundCheckpointFloor, unboundDepth } from './unbound.js';
 import { grantMarks, saveMarkXp } from './marks.js';
 import { Heresies } from '../ui/heresies.js';
 import { Rifts } from '../ui/rifts.js';
@@ -434,54 +436,171 @@ export const game = {
    * The town portal's floor picker: a slider (1 .. deepest reached) kept in sync with a number box
    * (typing, its arrow spinners, ArrowUp/Down, PageUp/Down, Home/End) and -/+ steppers.
    */
-  confirmDungeon() {
+  confirmDungeon(initialTab = 'campaign') {
     const c = G.char;
     if (regionNeeds(BIOME_BY_ID[c.nextBiome], c.level)) c.nextBiome = drawBiome(c, c.depth); // a region above his level (game/regions.js)
     const current = Math.max(1, c.depth || 1);
     const maxFloor = Math.max(current, this.maxPortalFloor(c));
     const currentBiome = BIOME_BY_ID[current === FINAL_DEPTH ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
 
+    let mode = initialTab === 'unbound' && endgameUnlocked(c) ? 'unbound' : 'campaign';
+    const canUnbound = endgameUnlocked(c);
+    const keysCount = keysOf(c);
+    const hearthActive = hearthPortalActive();
+    const unboundMax = Math.min(MAX_UNBOUND_DEPTH, Math.max(1, c.unboundExploration?.deepest || 1));
+    const waypoints = unboundWaypoints(c);
+    let unboundValue = Math.min(unboundMax, c.unboundExploration?.currentFloor || unboundMax);
+
     const describe = (d) => {
+      const act = getActForDepth(d);
+      const isSuper = isSuperbossDepth(d);
       let tail = '';
-      if (d === FINAL_DEPTH) tail = '<br><b style="color:#ff4020">Demon Lord Velscour awaits.</b>';
-      if (d === current) {
-        if (d !== FINAL_DEPTH && !currentBiome.overworld && isRaidDepth(d)) tail = '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>';
-        return `<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(currentBiome.name)}</b>.</p><p class="dim">${this.biomeBlurb(currentBiome)}${tail}</p>`;
+      if (d === FINAL_DEPTH) {
+        tail = '<br><b style="color:#ff2000">CAMPAIGN CLIMAX: Demon Lord Velscour awaits on his throne.</b>';
+      } else if (isSuper) {
+        const sId = superbossForDepth(d);
+        const sTpl = sId ? RAID_BOSSES.find((b) => b.id === sId) : null;
+        const sName = sTpl ? `${sTpl.name}, ${sTpl.title}` : 'A Legendary Superboss';
+        tail = `<br><b style="color:#ff4020">${d % 100 === 0 ? 'ACT FINALE SUPERBOSS' : 'SUPERBOSS'}: ${escapeHtml(sName)} awaits.</b>`;
+      } else if (isRaidDepth(d)) {
+        tail = '<br><b style="color:#ff6030">A BOSS ROOM lies at the end of this depth.</b>';
       }
-      if (d !== FINAL_DEPTH && isRaidDepth(d)) tail = '<br><b style="color:#ff6030">This depth may end in a BOSS ROOM.</b>';
-      return `<p>The portal's glow shifts. A fresh path will be drawn into <b style="color:#ffb070">Depth ${d}</b>.</p><p class="dim">Monsters, loot and the biome are rolled for this depth when you step through.${tail}</p>`;
+
+      const actHeader = `<div style="color:#ffd880;font-size:12px;font-weight:bold;margin-bottom:4px;letter-spacing:0.5px;">ACT ${act.act}: ${act.name.toUpperCase()}</div>`;
+      if (d === current) {
+        return `${actHeader}<p>The portal hums. Beyond lies <b style="color:#ffb070">${escapeHtml(currentBiome.name)}</b>.</p><p class="dim">${this.biomeBlurb(currentBiome)}${tail}</p>`;
+      }
+      return `${actHeader}<p>The portal's glow shifts. A fresh path will be drawn into <b style="color:#ffb070">Depth ${d}</b>.</p><p class="dim">Monsters, loot and the biome are rolled for this depth when you step through.${tail}</p>`;
     };
 
+    const describeUnbound = (f) => {
+      const d = unboundDepth(f);
+      let note = '';
+      if (f === MAX_UNBOUND_DEPTH) {
+        note = '<br><b style="color:#ff2000">CLIMAX: Demon Lord Velscour Unbound & The Court of the Abyss await.</b>';
+      } else if (isUnboundCheckpointFloor(f)) {
+        note = `<br><b style="color:#20e0ff">CHECKPOINT MILESTONE: Victory unlocks waypoint F${f} and creates a portal back to town.</b>`;
+      } else {
+        note = `<br><b style="color:#ffa060">INTERMEDIATE FLOOR: Portals plunge directly down to Floor ${f + 1} with no return to town. Use Hearthstone (H) to escape.</b>`;
+      }
+      return `<div style="color:#8fe0ff;font-size:12px;font-weight:bold;margin-bottom:4px;">UNBOUND FLOOR ${f} (Hardmode Depth ${d})</div>` +
+        `<p class="dim" style="font-size:12px;margin:4px 0;">Hardmode endgame dive. Enemies hit harder, move faster, and drop high-tier spoils.${note}</p>`;
+    };
+
+    const roomNote = G.room ? '<p class="dim floor-pick-note">Your whole party follows you to the floor you choose.</p>' : '';
+    const actPillsHtml = `
+      <div class="floor-pick-acts" style="display:flex;gap:5px;justify-content:center;margin-bottom:10px;flex-wrap:wrap;">
+        ${ACTS.map((a) => {
+          const unlocked = maxFloor >= a.start;
+          return `<button type="button" class="btn act-pill" data-act="${a.act}" data-start="${a.start}" style="font-size:11px;padding:3px 8px;min-width:58px;${unlocked ? '' : 'opacity:0.35;'}" ${unlocked ? '' : 'disabled'} title="${escapeHtml(a.name)}">Act ${a.act}</button>`;
+        }).join('')}
+      </div>`;
+
+    const wpPillsHtml = `
+      <div class="floor-pick-wps" style="display:flex;gap:5px;justify-content:center;margin-bottom:10px;flex-wrap:wrap;">
+        ${waypoints.map((f) => `<button type="button" class="btn unbound-wp-pill" data-floor="${f}" style="font-size:11px;padding:3px 8px;min-width:44px;">F${f}</button>`).join('')}
+      </div>`;
     const dialog = UI.dialog({
-      title: 'Enter the Depths',
+      title: 'Portal to the Depths',
       cls: 'floor-pick-dialog',
       html: `
         <div class="floor-pick">
-          <div class="floor-pick-head">
-            <span class="floor-pick-label">Depth</span>
-            <div class="floor-pick-num">
-              <button type="button" class="btn floor-pick-step" data-step="-1" title="Previous floor">&#8722;</button>
-              <input type="number" class="floor-pick-input" min="1" max="${maxFloor}" step="1" value="${current}" inputmode="numeric" aria-label="Depth to enter">
-              <button type="button" class="btn floor-pick-step" data-step="1" title="Next floor">+</button>
-            </div>
-            <span class="floor-pick-max">of ${maxFloor}</span>
+          <div class="portal-mode-tabs" style="display:flex;gap:8px;justify-content:center;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:10px;">
+            <button type="button" class="btn portal-tab-btn tab-campaign" data-mode="campaign" style="flex:1;padding:6px 12px;font-size:12px;font-weight:bold;">Campaign (1–500)</button>
+            <button type="button" class="btn portal-tab-btn tab-unbound" data-mode="unbound" style="flex:1;padding:6px 12px;font-size:12px;font-weight:bold;${canUnbound ? '' : 'opacity:0.4;'}" ${canUnbound ? '' : 'disabled title="Complete Depth 500 Campaign to unlock"'}><span style="color:#20e0ff;">✦</span> Unbound Exploration (1–100)</button>
           </div>
-          <input type="range" class="floor-pick-range" min="1" max="${maxFloor}" step="1" value="${current}" aria-label="Depth slider" ${maxFloor <= 1 ? 'disabled' : ''}>
-          <div class="floor-pick-ticks"><span>1</span><span>Deepest reached: ${maxFloor}</span></div>
-          <div class="floor-pick-desc"></div>
+
+          <div class="portal-pane portal-campaign-pane">
+            ${actPillsHtml}
+            <div class="floor-pick-head">
+              <span class="floor-pick-label">Depth</span>
+              <div class="floor-pick-num">
+                <button type="button" class="btn floor-pick-step" data-step="-1" title="Previous floor">&#8722;</button>
+                <input type="number" class="floor-pick-input" min="1" max="${maxFloor}" step="1" value="${current}" inputmode="numeric" aria-label="Depth to enter">
+                <button type="button" class="btn floor-pick-step" data-step="1" title="Next floor">+</button>
+              </div>
+              <span class="floor-pick-max">of ${maxFloor}</span>
+            </div>
+            <input type="range" class="floor-pick-range" min="1" max="${maxFloor}" step="1" value="${current}" aria-label="Depth slider" ${maxFloor <= 1 ? 'disabled' : ''}>
+            <div class="floor-pick-ticks"><span>1</span><span>Deepest reached: ${maxFloor}</span></div>
+            <div class="floor-pick-desc"></div>
+            ${roomNote}
+          </div>
+
+          <div class="portal-pane portal-unbound-pane" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(32,224,255,0.08);border:1px solid rgba(32,224,255,0.25);border-radius:6px;padding:6px 12px;margin-bottom:10px;font-size:12px;">
+              <span>Keys: <b style="color:#20e0ff;">${keysCount} Abyssal Key${keysCount === 1 ? '' : 's'}</b></span>
+              <span>Cost: <b style="color:#ffd880;">${hearthActive ? 'FREE (Hearthstone)' : '1 Key per Run'}</b></span>
+            </div>
+            ${hearthActive ? '<div style="color:#7fd8ff;font-size:11px;margin-bottom:8px;padding:4px 8px;background:rgba(127,216,255,0.12);border:1px solid #7fd8ff;border-radius:4px;text-align:center;">✦ Hearthstone Recall Portal is active in town — return to where you left off for free!</div>' : ''}
+            <div style="color:#8fe0ff;font-size:11px;font-weight:bold;margin-bottom:4px;letter-spacing:0.5px;">CHECKPOINT WAYPOINTS</div>
+            ${wpPillsHtml}
+            <div class="floor-pick-head">
+              <span class="floor-pick-label" style="color:#20e0ff;">Floor</span>
+              <div class="floor-pick-num">
+                <button type="button" class="btn unbound-floor-step" data-step="-1" title="Previous floor">&#8722;</button>
+                <input type="number" class="unbound-floor-input" min="1" max="${unboundMax}" step="1" value="${unboundValue}" inputmode="numeric" aria-label="Unbound Floor to enter">
+                <button type="button" class="btn unbound-floor-step" data-step="1" title="Next floor">+</button>
+              </div>
+              <span class="floor-pick-max">of ${unboundMax}</span>
+            </div>
+            <input type="range" class="unbound-floor-range" min="1" max="${unboundMax}" step="1" value="${unboundValue}" aria-label="Unbound Floor slider" ${unboundMax <= 1 ? 'disabled' : ''}>
+            <div class="floor-pick-ticks"><span>1</span><span>Deepest reached: Floor ${unboundMax}</span></div>
+            <div class="unbound-floor-desc"></div>
+          </div>
         </div>`,
       buttons: [
         { label: 'Cancel' },
-        { label: 'Enter the Depths', cls: 'red floor-pick-go', fn: () => this.enterDungeonAt(value) },
+        { label: 'Enter', cls: 'red floor-pick-go', fn: () => {
+          if (mode === 'unbound') this.enterUnboundExploration(unboundValue);
+          else this.enterDungeonAt(value);
+        } },
       ],
     });
 
     const box = dialog.box;
+    const tabCampaign = box.querySelector('.tab-campaign');
+    const tabUnbound = box.querySelector('.tab-unbound');
+    const paneCampaign = box.querySelector('.portal-campaign-pane');
+    const paneUnbound = box.querySelector('.portal-unbound-pane');
+
     const range = box.querySelector('.floor-pick-range');
     const num = box.querySelector('.floor-pick-input');
     const desc = box.querySelector('.floor-pick-desc');
     const goBtn = box.querySelector('.floor-pick-go');
+    const actPills = box.querySelectorAll('.act-pill');
+
+    const unboundRange = box.querySelector('.unbound-floor-range');
+    const unboundNum = box.querySelector('.unbound-floor-input');
+    const unboundDesc = box.querySelector('.unbound-floor-desc');
+    const wpPills = box.querySelectorAll('.unbound-wp-pill');
+
     let value = current;
+
+    const setMode = (m) => {
+      mode = m;
+      if (mode === 'campaign') {
+        tabCampaign.classList.add('sel');
+        tabCampaign.style.borderColor = '#ffb070';
+        tabUnbound.classList.remove('sel');
+        tabUnbound.style.borderColor = '';
+        paneCampaign.style.display = '';
+        paneUnbound.style.display = 'none';
+        set(value);
+      } else {
+        tabUnbound.classList.add('sel');
+        tabUnbound.style.borderColor = '#20e0ff';
+        tabCampaign.classList.remove('sel');
+        tabCampaign.style.borderColor = '';
+        paneCampaign.style.display = 'none';
+        paneUnbound.style.display = '';
+        setUnbound(unboundValue);
+      }
+    };
+
+    tabCampaign.addEventListener('click', () => { sfx('ui'); setMode('campaign'); });
+    if (canUnbound) tabUnbound.addEventListener('click', () => { sfx('ui'); setMode('unbound'); });
+
     const set = (v, fromTyping = false) => {
       const n = parseInt(v, 10);
       if (!Number.isFinite(n)) return;
@@ -490,25 +609,86 @@ export const game = {
       if (!fromTyping || String(value) !== num.value) num.value = value;
       range.style.setProperty('--pct', maxFloor > 1 ? `${((value - 1) / (maxFloor - 1)) * 100}%` : '100%');
       desc.innerHTML = describe(value);
-      if (goBtn) goBtn.textContent = `Enter Depth ${value}`;
+      if (mode === 'campaign') {
+        if (goBtn) {
+          goBtn.disabled = false;
+          goBtn.textContent = `Enter Depth ${value}`;
+        }
+      }
+      const curAct = getActForDepth(value);
+      actPills.forEach((p) => {
+        p.classList.toggle('sel', Number(p.dataset.act) === curAct.act);
+        if (Number(p.dataset.act) === curAct.act) p.style.borderColor = '#ffb070';
+        else p.style.borderColor = '';
+      });
     };
+
+    const setUnbound = (v, fromTyping = false) => {
+      const n = parseInt(v, 10);
+      if (!Number.isFinite(n)) return;
+      unboundValue = clamp(n, 1, unboundMax);
+      unboundRange.value = unboundValue;
+      if (!fromTyping || String(unboundValue) !== unboundNum.value) unboundNum.value = unboundValue;
+      unboundRange.style.setProperty('--pct', unboundMax > 1 ? `${((unboundValue - 1) / (unboundMax - 1)) * 100}%` : '100%');
+      unboundDesc.innerHTML = describeUnbound(unboundValue);
+      if (mode === 'unbound') {
+        const canEnter = canEnterUnbound(c);
+        if (goBtn) {
+          if (!canEnter) {
+            goBtn.disabled = true;
+            goBtn.textContent = '1 Abyssal Key Required';
+          } else {
+            goBtn.disabled = false;
+            goBtn.textContent = `Enter Unbound Floor ${unboundValue} ${hearthActive ? '(Free)' : '(1 Key)'}`;
+          }
+        }
+      }
+      wpPills.forEach((p) => {
+        const pf = Number(p.dataset.floor);
+        p.classList.toggle('sel', pf === unboundValue);
+        if (pf === unboundValue) p.style.borderColor = '#20e0ff';
+        else p.style.borderColor = '';
+      });
+    };
+
+    actPills.forEach((p) => p.addEventListener('click', () => {
+      sfx('ui');
+      const start = Number(p.dataset.start);
+      if (maxFloor >= start) set(Math.min(maxFloor, start));
+    }));
     range.addEventListener('input', () => set(range.value));
     num.addEventListener('input', () => { if (num.value !== '') set(num.value, true); });
     num.addEventListener('change', () => set(num.value === '' ? value : num.value));
     num.addEventListener('blur', () => set(num.value === '' ? value : num.value));
     box.querySelectorAll('.floor-pick-step').forEach((b) => b.addEventListener('click', () => { sfx('ui'); set(value + Number(b.dataset.step)); }));
+
+    wpPills.forEach((p) => p.addEventListener('click', () => {
+      sfx('ui');
+      const fl = Number(p.dataset.floor);
+      setUnbound(fl);
+    }));
+    unboundRange.addEventListener('input', () => setUnbound(unboundRange.value));
+    unboundNum.addEventListener('input', () => { if (unboundNum.value !== '') setUnbound(unboundNum.value, true); });
+    unboundNum.addEventListener('change', () => setUnbound(unboundNum.value === '' ? unboundValue : unboundNum.value));
+    unboundNum.addEventListener('blur', () => setUnbound(unboundNum.value === '' ? unboundValue : unboundNum.value));
+    box.querySelectorAll('.unbound-floor-step').forEach((b) => b.addEventListener('click', () => { sfx('ui'); setUnbound(unboundValue + Number(b.dataset.step)); }));
+
     // keyboard: keep keys out of the game while the picker is up; arrows/Page/Home/End step the floor; Enter goes, Escape cancels
     box.addEventListener('keydown', (e) => {
       e.stopPropagation();
       const step = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 10, PageDown: -10 }[e.key];
-      if (step && (e.target === num || e.target === range || e.target === box)) { e.preventDefault(); set(value + step); }
-      else if (e.key === 'Home') { e.preventDefault(); set(1); }
-      else if (e.key === 'End') { e.preventDefault(); set(maxFloor); }
-      else if (e.key === 'Enter') { e.preventDefault(); set(num.value === '' ? value : num.value); goBtn?.click(); }
+      if (step && (e.target === num || e.target === range || e.target === box || e.target === unboundNum || e.target === unboundRange)) {
+        e.preventDefault();
+        if (mode === 'unbound') setUnbound(unboundValue + step);
+        else set(value + step);
+      }
+      else if (e.key === 'Home') { e.preventDefault(); if (mode === 'unbound') setUnbound(1); else set(1); }
+      else if (e.key === 'End') { e.preventDefault(); if (mode === 'unbound') setUnbound(unboundMax); else set(maxFloor); }
+      else if (e.key === 'Enter') { e.preventDefault(); goBtn?.click(); }
       else if (e.key === 'Escape') { e.preventDefault(); dialog.close(); }
     });
-    set(current);
-    setTimeout(() => { num.focus(); num.select(); }, 30);
+    setMode(mode);
+    setTimeout(() => { if (mode === 'unbound') { unboundNum.focus(); unboundNum.select(); } else { num.focus(); num.select(); } }, 30);
   },
 
   /** Step through the town portal onto a chosen floor (1 .. deepest reached). */
@@ -763,6 +943,9 @@ export const game = {
     // fetch this biome's art first (about 1 MB); if that fails the default set stands in
     setTimeout(async () => {
       try {
+        if (G.room && net.connected) {
+          net.requestDungeonState(depth);
+        }
         LoadingScreen.setProgress(25, `Mapping ${biome.name}…`);
         await this.loadLevelArt(biome, mix);
       } catch (e) { console.warn(e); }
@@ -821,14 +1004,30 @@ export const game = {
     const [sx, sy] = gen.start;
     let tp = gen.townPortal || [sx + 1.6, sy - 0.6];
     if (!gen.map.walkable(tp[0], tp[1])) tp = gen.map.randomNear(sx, sy, 2);
+    const unboundFloor = G.unboundExplorationFloor;
+    G.unboundExplorationFloor = null;
+    const isUnboundCheckpoint = unboundFloor ? isUnboundCheckpointFloor(unboundFloor) : false;
     const exit = {
-      x: gen.exit[0], y: gen.exit[1], type: 'exit', active: false, color: '#5a5a60', reach: 1.6, label: 'Sealed Exit', skygate: sky, seagate: sea,
+      x: gen.exit[0], y: gen.exit[1], type: 'exit',
+      active: false,
+      color: '#5a5a60',
+      reach: 1.6,
+      label: 'Sealed Exit',
+      skygate: sky,
+      seagate: sea,
       use: () => this.useExit(world, exit),
     };
-    world.portals = [
-      { x: tp[0], y: tp[1], type: 'town', active: true, color: '#3a8aff', reach: 1.6, label: 'Town Portal', use: () => this.useTownPortal() },
-      exit,
-    ];
+    if (unboundFloor && !isUnboundCheckpoint) {
+      world.portals = [exit];
+    } else {
+      world.portals = [
+        { x: tp[0], y: tp[1], type: 'town', active: true, color: '#3a8aff', reach: 1.6, label: 'Town Portal', use: () => this.useTownPortal() },
+        exit,
+      ];
+    }
+    if (unboundFloor) {
+      world.unboundExploration = { floor: unboundFloor, active: true };
+    }
     // monsters
     const lvl = depthLevel(depth);
     world.unbound = biome.id === 'throne' && !!G.unboundNext; G.unboundNext = false; // Velscour Unbound (game/unbound.js)
@@ -836,7 +1035,9 @@ export const game = {
     const heresies = heresyBegin(world, c); // the Heresies (game/heresies.js): twinned packs now, BOSS ROOM phases, the rest as monsters appear
     for (const s of heresySpawns(greedPacks(gen.spawns, greedOf(c)), heresies)) { // the Greed lever: bigger packs, champion leaders (game/greed.js)
       if (s.rank === 'raid') {
-        const m = makeRaidBoss(world, gen.raid, depth, lvl + 3);
+        const superbossId = superbossForDepth(depth);
+        const tpl = superbossId ? RAID_BOSSES.find((b) => b.id === superbossId) : undefined;
+        const m = makeRaidBoss(world, gen.raid, depth, lvl + 3, { tpl });
         world.add(m);
         world.boss = m;
         world.raid = m.raid;
@@ -1010,10 +1211,20 @@ export const game = {
     }
     if (!biome.beta) recordBiomeVisit(c, biome, depth); // a beta biome leaves the overworld guarantee alone
     c.lastBiome = biome.id;
-    HUD.setArea(world.unbound ? 'Velscour Unbound' : `Depth ${depth}${depth > FINAL_DEPTH ? ' — Endless Torment' : ''}`, (biome.overworld ? `${gen.variant ? gen.variant.name : biome.name} · ${world.overworldScenario.title}` : gen.raid ? `${biome.name} · Boss Room` : biome.name) + (worldRank(world) ? ` · Heresy ${worldRank(world)}` : ''));
+    const uFloor = world.unboundExploration?.floor;
+    HUD.setArea(
+      world.unbound ? 'Velscour Unbound' :
+      uFloor ? `Unbound Floor ${uFloor}` :
+      `Depth ${depth}${depth > FINAL_DEPTH ? ' — Endless Torment' : ''}`,
+      (biome.overworld ? `${gen.variant ? gen.variant.name : biome.name} · ${world.overworldScenario.title}` : gen.raid ? `${biome.name} · Boss Room` : biome.name) + (worldRank(world) ? ` · Heresy ${worldRank(world)}` : '')
+    );
     playMusic('wilds', { delay: 4 + Math.random() * 20 }); setAmbience(sky ? world.sky.v.amb : sea ? world.seaRun.variant.amb : reg?.amb || biome.id);
     const kin = tileset.mixed && BIOME_BY_ID[tileset.mixed];
-    if (!sky && !sea) UI.centerMsg((gen.variant ? gen.variant.name : biome.name).toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);
+    if (uFloor) {
+      UI.centerMsg(`UNBOUND FLOOR ${uFloor}`, isUnboundCheckpointFloor(uFloor) ? 'CHECKPOINT MILESTONE' : `Direct Descent · Hardmode Depth ${depth}`, 2.6);
+    } else if (!sky && !sea) {
+      UI.centerMsg((gen.variant ? gen.variant.name : biome.name).toUpperCase(), `Depth ${depth}${kin ? ` · bleeding into the ${kin.name}` : ''}`, 2.4);
+    }
     if (world.night) UI.log(world.raining ? 'Night has fallen, and the rain with it.' : 'Night has fallen over the land.', '#a0b0d0');
     if (reg) { const t = reg.intro && reg.intro(world, gen); if (t) UI.log(t, '#ffe2a0'); }
     else if (gen.dunes) UI.log(`${gen.variant.name}: ${gen.variant.intro} ${gen.dunes.camps.length} waystones stand between you and its door.`, '#ffe2a0');
@@ -1045,8 +1256,30 @@ export const game = {
     if (!exit.active) { floatText(exit.x, exit.y, 70, world.breach ? 'Sealed — the Breach Heart still beats!' : world.rift ? 'Sealed — the Guardian still stands!' : world.overworldScenario ? 'Sealed — complete the shrine trial!' : 'Sealed — slay the guardian!', '#ff6040', 13, { life: 1.6 }); sfx('error'); return; }
     if (world.breach) this.breachExit(world);
     else if (world.rift) this.riftExit(world);
-    else if (world.unbound) { sfx('portal'); this.enterTown(); }
-    else {
+    else if (world.unboundExploration && world.unboundExploration.floor < MAX_UNBOUND_DEPTH) this.unboundExit(world);
+    else if (world.unbound || world.depth >= FINAL_DEPTH || world.boss?.isVelscour || world.biome?.id === 'throne') {
+      UI.dialog({
+        title: world.unbound ? 'Velscour Unbound Defeated' : 'Demon Lord Velscour Defeated',
+        html: `<p>Demon Lord Velscour has fallen. The descent is complete!</p><p class="dim">The portal behind the throne leads back to town.</p>`,
+        closable: true,
+        cls: 'portal-choice throne-portal-choice',
+        buttons: [
+          {
+            label: 'Return to Town',
+            cls: 'red',
+            fn: () => {
+              sfx('portal');
+              if (c) {
+                c.depth = Math.min(FINAL_DEPTH, c.depth || FINAL_DEPTH);
+                c.deepest = Math.min(FINAL_DEPTH, Math.max(c.deepest || 0, FINAL_DEPTH));
+              }
+              this.enterTown();
+            }
+          },
+          { label: 'Stay in Throne Room' }
+        ],
+      });
+    } else {
       if (c.mountainRuns) delete c.mountainRuns[world.depth];   // the mountains of a depth left behind are done with
       if (c.summitRuns) delete c.summitRuns[world.depth];
       this.portalChoice(world);
@@ -1136,7 +1369,7 @@ export const game = {
     const w = G.world;
     if (w && w.breach) return this.breachDeath(src);
     if (w && w.rift) return this.riftDeath(src);
-    if (w && w.unbound) return this.unboundDeath(src);
+    if (w && (w.unbound || w.unboundExploration)) return this.unboundDeath(src);
     c.deaths = (c.deaths || 0) + 1;
     const depth = w && w.kind === 'dungeon' ? w.depth : c.depth;
     const n = addDefiance(c, depth);
@@ -1166,22 +1399,26 @@ export const game = {
   },
 
   // ------------------------------------------------------------ THE ETERNAL BREACH (docs/ETERNAL_BREACH.md)
-  /** The highest Breach floor the hero may enter: one past the best floor beaten. */
-  breachOpen() { const b = G.char?.breach; return (b?.best || 0) + 1; },
+  /** The highest Breach floor the hero may enter: one past the best floor beaten (capped at MAX_BREACH_FLOOR 50). */
+  breachOpen() { const b = G.char?.breach; return Math.min(MAX_BREACH_FLOOR, (b?.best || 0) + 1); },
 
-  /** The purple portal: pick a floor (any up to one past the best beaten) and step in. */
+  /** The purple portal: pick a floor (any up to one past the best beaten, max 50) and step in. */
   confirmBreach(floor) {
     const c = G.char, top = this.breachOpen(), pick = Math.min(top, Math.max(1, floor || top));
     const opt = (n) => {
       const L = breachLevel(n), won = c.breach?.cleared?.[n] || 0;
-      return `<option value="${n}"${n === pick ? ' selected' : ''}>Floor ${n} — as deadly as Depth ${breachDepth(n)} (monster level ${L})${won ? ` · beaten ${won}x` : n === top ? ' · new' : ''}</option>`;
+      const v = wyrmVariant(n);
+      const isApex = n >= MAX_BREACH_FLOOR;
+      const cycle = breachCycle(n);
+      const wyrmLabel = isApex ? 'APEX WYRM (The Void Convergence)' : `Cycle ${cycle}: ${v.name} (${v.el.toUpperCase()})`;
+      return `<option value="${n}"${n === pick ? ' selected' : ''}>Floor ${n} · ${wyrmLabel} — Depth ${breachDepth(n)} (Lvl ${L})${won ? ` · beaten ${won}x` : n === top ? ' · new' : ''}</option>`;
     };
     const floors = [];
     for (let n = top; n >= 1; n--) floors.push(opt(n));
     const d = UI.dialog({
       title: 'THE ETERNAL BREACH', cls: 'breach-dialog',
       html: `<p>The purple portal opens on <b style="color:#c080ff">a broken world floating in the void</b>: sixteen islands joined by walkways, held by the Breach's own monsters.</p>
-        <p class="dim">Win the shrines on the medium and large islands (scenarios and boss fights), lifting the wards on the walkways as you go; then face the floor's keeper at the Breach Heart. Floor N is as deadly as standard Depth 10&times;N. Falling here costs no Defiance and leaves your descent where it is.</p>
+        <p class="dim">Slay the 7 Elemental Wyrms across 7 Ascensions (Floors 1–49) to face the Apex Ethereal Wyrm at Floor 50. Floor N is as deadly as Depth 10&times;N. Falling here costs no Defiance and leaves your campaign descent untouched.</p>
         <label class="velscour-message-label" for="breach-floor">Floor</label><select id="breach-floor" class="velscour-biome-select">${floors.join('')}</select>
         <p class="breach-warn" id="breach-warn"></p>`,
       buttons: [{ label: 'Not yet' }, { label: 'Enter the Breach', cls: 'red', fn: () => this.enterBreach(+d.box.querySelector('#breach-floor').value) }],
@@ -1349,11 +1586,28 @@ export const game = {
     const c = G.char, old = G.world, depth = riftDepth(tier), lvl = riftLevel(tier);
     const tileset = mix ? mixedTileSet(biome, mix, Math.random() < 0.5) : biomeTileSet(biome);
     keepTileSets(tileset);
-    const gen = generateDungeon(depth, biome, tileset, seed, { raid: true, small: true, density: RIFT_DENSITY });
+    const gen = generateDungeon(depth, biome, tileset, seed, { rift: true, raid: true, small: true, density: RIFT_DENSITY });
     const world = new World('dungeon', { map: gen.map, tileset, biome, depth, props: gen.props, torches: gen.torches, wallHangings: gen.wallHangings, looks: gen.looks, townTiles: null, buildings: [] });
     world.rooms = gen.rooms || [];
     world.riftHold = true; // rift monsters keep the old Endless Torment life (data/depth.js riftHold)
     world.chests = gen.chests.map((ch) => ({ ...ch, opened: false, reach: 1.3, use() { if (this.opened) return; this.opened = true; sfx('chest'); sfx('gold'); dropChest(world, this, depth); sparkle(this.x, this.y, 20, '#ffd060', 20, 0.5); } }));
+    // Spawn 1-2 Pylons in non-start rooms
+    const pylonRooms = (gen.rooms || []).filter((r) => !r.start && r.cx && r.cy);
+    const chosenPylons = shuffle(PYLONS.slice()).slice(0, 2);
+    for (let pi = 0; pi < chosenPylons.length && pi < pylonRooms.length; pi++) {
+      const pdef = chosenPylons[pi];
+      const pr = pylonRooms[pi];
+      world.chests.push({
+        x: pr.cx, y: pr.cy, opened: false, reach: 1.5, dot: pdef.color, pylon: true,
+        label: pdef.name,
+        use() {
+          if (this.opened) return;
+          this.opened = true;
+          this.label = `${pdef.name} (Spent)`;
+          activatePylon(world, pdef);
+        },
+      });
+    }
     const [sx, sy] = gen.start;
     let tp = gen.townPortal || [sx + 1.6, sy - 0.6];
     if (!gen.map.walkable(tp[0], tp[1])) tp = gen.map.randomNear(sx, sy, 2);
@@ -1402,37 +1656,52 @@ export const game = {
   },
   /** Death in a rift: back to town with no Defiance, the descent untouched. */
   riftDeath(src) {
-    const c = G.char, R = G.world.rift;
+    const c = G.char, R = G.world?.rift;
     c.deaths = (c.deaths || 0) + 1;
-    c.rifts.deaths = (c.rifts.deaths || 0) + 1;
-    if (!R.done) R.failed = true;
-    G.smiteArmed = false;
-    const killer = src ? (src.owner ? src.owner.name : src.name) : null;
-    stopMusic();
-    this.autosave();
+    if (c.rifts) c.rifts.deaths = (c.rifts.deaths || 0) + 1;
+    if (R) riftDeathPenalty(G.world);
+    if (!R || R.left <= 0) {
+      if (R && !R.done) R.failed = true;
+      G.smiteArmed = false;
+      const killer = src ? (src.owner ? src.owner.name : src.name) : null;
+      stopMusic();
+      this.autosave();
+      setTimeout(() => {
+        deathScreen(R ? riftDepth(R.tier) : 500, killer, () => {
+          const p = G.player;
+          p.dead = false; p.buffs = []; p.recompute(); p.hp = p.maxHp; p.mana = p.maxMana;
+          this.enterTown();
+          UI.log(`The Rift collapsed. Tier ${R ? R.tier : 1} waits at the gate.`, '#a0f0ff');
+        }, { where: `in Abyssal Rift Tier ${R ? R.tier : 1}`, note: 'The timer ran out from death penalties. Try the tier again, or a lower one.' });
+      }, 1500);
+      return;
+    }
+    // Time remaining: respawn at start with brief invulnerability
+    const p = G.player;
     setTimeout(() => {
-      deathScreen(riftDepth(R.tier), killer, () => {
-        const p = G.player;
-        p.dead = false; p.buffs = []; p.recompute(); p.hp = p.maxHp; p.mana = p.maxMana;
-        this.enterTown();
-        UI.log(`The Rift spat you out. Tier ${R.tier} waits at the gate; your descent still stands at Depth ${c.depth}.`, '#a0f0ff');
-      }, { where: `in Abyssal Rift Tier ${R.tier}`, note: 'Your gear, levels and skills endure, and a Rift takes no toll on your descent. Try the tier again, or a lower one.' });
-    }, 1700);
+      p.dead = false; p.buffs = []; p.recompute(); p.hp = p.maxHp; p.mana = p.maxMana;
+      if (G.world?.gen?.start) {
+        p.x = G.world.gen.start[0];
+        p.y = G.world.gen.start[1];
+      }
+      p.invuln = 4;
+      UI.centerMsg('RESPAWNED', 'Return to the fight before the timer expires', 2.0);
+    }, 1500);
   },
 
-  // ------------------------------------------------------------ VELSCOUR UNBOUND (docs/ENDGAME.md)
-  /** Three Abyssal Keys: the rematch on his throne, at the hero's depth (500 at the least), the hero set down in the arena. */
-  async enterUnbound() {
+  // ------------------------------------------------------------ VELSCOUR UNBOUND & UNBOUND EXPLORATION (docs/ENDGAME.md)
+  /** 1 Abyssal Key (or free when reached via descent / Hearthstone): the rematch on his throne at Floor 100 with the Court of the Abyss. */
+  async enterUnbound(floor = 100, costKey = true) {
     const c = G.char;
-    if (!unboundReady(c)) { UI.log(`<b style="color:#20e0ff">Velscour Unbound</b> needs three Abyssal Keys (you hold ${keysOf(c)})${endgameUnlocked(c) ? '' : ' and Velscour slain at Depth 500'}. Keys drop from BOSS ROOM bosses past Depth 600 under Heresy rank 10, and from Abyssal Rift Guardians from Tier 10.`, '#a0f0ff'); sfx('error'); return false; }
-    if (Auto.on) Auto.toggle(false);
-    spendKeys(c);
-    const depth = Math.max(FINAL_DEPTH, G.world?.kind === 'dungeon' && !G.world.rift ? G.world.depth : c.depth || 1), biome = BIOME_BY_ID.throne;
+    if (costKey && !unboundReady(c)) { UI.log(`<b style="color:#20e0ff">Velscour Unbound</b> needs 1 Abyssal Key (you hold ${keysOf(c)})${endgameUnlocked(c) ? '' : ' and Velscour slain at Depth 500'}. Keys drop from Abyssal Rift Guardians and high Bosses.`, '#a0f0ff'); sfx('error'); return false; }
+    if (costKey) spendUnboundKey(c);
+    if (costKey && hearthPortalActive()) closeHearthPortals();
+    const depth = 500, biome = BIOME_BY_ID.throne;
     LoadingScreen.show({
-      title: 'Velscour Unbound',
-      subtitle: `Depth ${depth}`,
-      text: `Velscour Unbound — Depth ${depth}…`,
-      progress: 15,
+      title: 'VELSCOUR UNBOUND',
+      subtitle: 'Unbound Climax · Floor 100',
+      text: 'Velscour Unbound — Floor 100…',
+      progress: 10
     });
     try {
       LoadingScreen.setProgress(30, 'Unsealing the throne room…');
@@ -1441,6 +1710,7 @@ export const game = {
       LoadingScreen.setProgress(55, 'Rebuilding the court…');
       this.buildDungeon(depth, biome);
       const w = G.world;
+      w.unboundExploration = { floor: 100, active: true };
       LoadingScreen.setProgress(75, 'Awakening the demon lord…');
       await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : []), ...(w.velscour ? w.velscour.courtArt || [] : [])], true).catch((e) => console.warn(e)); // (his court steps in later)
       LoadingScreen.setProgress(90, 'Preparing the battleground…');
@@ -1454,19 +1724,122 @@ export const game = {
         w.map.reveal(x, y, 30);
         camera.follow(x, y, 0, true);
       }
+      UI.log('<b style="color:#ff4020">Velscour Unbound.</b> The key turns; the Demon Lord rises with his court at his side. There is no practice here.', '#ffb0a0');
       LoadingScreen.setProgress(100, 'Arriving…');
-      UI.log('<b style="color:#ff4020">Velscour Unbound.</b> The keys turn; the Demon Lord rises with his court at his side. There is no practice here.', '#ffb0a0');
     } catch (e) {
       console.warn(e); G.unboundNext = false;
-      c.keys += 3; // the keys come back
-      UI.log('The abyss rejected the keys. Try again.', '#ff8060');
+      if (costKey) c.keys = (c.keys || 0) + 1; // the key comes back
+      UI.log('The abyss rejected the key. Try again.', '#ff8060');
     } finally {
       await LoadingScreen.hide();
       this.autosave();
     }
     return true;
   },
-  /** Death in Velscour Unbound: back to town; no Defiance, the keys are spent. */
+
+  /** Step into an Unbound Exploration floor (1..100). costKey is true only when starting or re-entering from town. */
+  async enterUnboundExploration(floor = 1, costKey = true) {
+    const c = G.char;
+    floor = clamp(floor | 0, 1, MAX_UNBOUND_DEPTH);
+    if (floor === MAX_UNBOUND_DEPTH) {
+      return this.enterUnbound(100, costKey);
+    }
+    if (costKey && !canEnterUnbound(c)) {
+      UI.log(`<b style="color:#20e0ff">Unbound Exploration</b> requires 1 Abyssal Key (you hold ${keysOf(c)}). Keys drop from Abyssal Rift Guardians and high Bosses.`, '#a0f0ff');
+      sfx('error');
+      return false;
+    }
+
+    if (costKey) spendUnboundKey(c);
+    if (costKey && hearthPortalActive()) closeHearthPortals();
+
+    const depth = unboundDepth(floor);
+    const biome = drawBiome(c, depth);
+    const mix = mixPartner(biome);
+
+    if (this._enteringDungeon) return;
+    this._enteringDungeon = true;
+    if (this.unsealSfxTimer) { clearTimeout(this.unsealSfxTimer); this.unsealSfxTimer = null; }
+
+    LoadingScreen.show({
+      title: 'UNBOUND EXPLORATION',
+      subtitle: `Floor ${floor} · Hardmode Depth ${depth}`,
+      text: `Descending into Unbound Floor ${floor} — ${biome.name}…`,
+      progress: 10
+    });
+    sfx('portal');
+
+    setTimeout(async () => {
+      try {
+        LoadingScreen.setProgress(25, `Mapping ${biome.name}…`);
+        await this.loadLevelArt(biome, mix);
+      } catch (e) { console.warn(e); }
+      try {
+        LoadingScreen.setProgress(50, 'Forging abyssal labyrinth…');
+        G.unboundExplorationFloor = floor;
+        this.buildDungeon(depth, biome, mix);
+        const w = G.world;
+        LoadingScreen.setProgress(75, 'Summoning inhabitants…');
+        await loadArtFor([...w.creatures.map((m) => m.art), ...(w.looks ? w.looks.ids() : [])], true).catch((e) => console.warn(e));
+        LoadingScreen.setProgress(90, 'Preparing the veil…');
+        await warmLevelArt(w);
+        releaseLevelArt(biome);
+        LoadingScreen.setProgress(100, 'Arrived.');
+      } catch (e) {
+        console.warn(e);
+        G.unboundExplorationFloor = null;
+        if (costKey) c.keys = (c.keys || 0) + 1;
+        UI.log('The abyss rejected your passage.' + (costKey ? ' Key refunded.' : ''), '#ff8060');
+      } finally {
+        await LoadingScreen.hide();
+        this.spawnPlayer(G.world);
+        this._enteringDungeon = false;
+        this.autosave();
+      }
+    }, 40);
+    return true;
+  },
+
+  /** Cleared exit in Unbound Exploration: advance to next floor directly, or offer checkpoint town return */
+  unboundExit(world) {
+    const floor = world.unboundExploration?.floor || 1;
+    const c = G.char;
+    const next = floor + 1;
+    if (c.unboundExploration) {
+      c.unboundExploration.currentFloor = next;
+      c.unboundExploration.deepest = Math.max(c.unboundExploration.deepest || 1, next);
+    }
+    this.autosave();
+
+    if (isUnboundCheckpointFloor(floor)) {
+      UI.dialog({
+        title: `Unbound Checkpoint: Floor ${floor} Cleared`,
+        html: `<p>A resonant checkpoint awakens! Your progress to <b style="color:#20e0ff">Floor ${next}</b> is secured.</p><p class="dim">You may return to town freely or press deeper into the Unbound Depths without spending a key.</p>`,
+        closable: false,
+        cls: 'portal-choice',
+        buttons: [
+          {
+            label: 'Return to Town',
+            fn: () => {
+              sfx('portal');
+              this.enterTown();
+            }
+          },
+          {
+            label: next === MAX_UNBOUND_DEPTH ? 'Face Velscour Unbound (Floor 100)' : `Descend to Floor ${next}`,
+            cls: 'red',
+            fn: () => this.enterUnboundExploration(next, false)
+          }
+        ]
+      });
+    } else {
+      sfx('gate');
+      UI.log(`<b style="color:#20e0ff">Unbound Floor ${floor} Cleared.</b> Descending directly to Floor ${next}…`, '#a0f0ff');
+      this.enterUnboundExploration(next, false);
+    }
+  },
+
+  /** Death in Velscour Unbound / Unbound Exploration: back to town; no Defiance, key is spent. */
   unboundDeath(src) {
     const c = G.char;
     c.deaths = (c.deaths || 0) + 1;
@@ -1474,13 +1847,25 @@ export const game = {
     const killer = src ? (src.owner ? src.owner.name : src.name) : null;
     stopMusic();
     this.autosave();
+    const w = G.world;
+    const isExploration = !!w?.unboundExploration && w?.unboundExploration?.floor < MAX_UNBOUND_DEPTH;
+    const floor = w?.unboundExploration?.floor || 100;
     setTimeout(() => {
-      deathScreen(G.world ? G.world.depth : FINAL_DEPTH, killer, () => {
+      deathScreen(w ? w.depth : FINAL_DEPTH, killer, () => {
         const p = G.player;
         p.dead = false; p.buffs = []; p.recompute(); p.hp = p.maxHp; p.mana = p.maxMana;
         this.enterTown();
-        UI.log('Velscour Unbound keeps his throne. Three more Abyssal Keys buy another try.', '#ffb0a0');
-      }, { where: "on Velscour's throne", note: 'Your gear, levels and skills endure, and your descent is untouched. The three keys are spent.' });
+        if (isExploration) {
+          UI.log(`You fell in Unbound Exploration Floor ${floor}. Return to your last reached checkpoint (or use an active Hearthstone portal) with an Abyssal Key.`, '#ffb0a0');
+        } else {
+          UI.log('Velscour Unbound keeps his throne. An Abyssal Key buys another try.', '#ffb0a0');
+        }
+      }, {
+        where: isExploration ? `in Unbound Exploration Floor ${floor}` : "on Velscour's throne",
+        note: isExploration
+          ? 'Your gear, levels and skills endure. Return to your last reached checkpoint milestone (or use an active Hearthstone portal) with an Abyssal Key.'
+          : 'Your gear, levels and skills endure, and your descent is untouched. The Abyssal Key is spent.'
+      });
     }, 1700);
   },
 

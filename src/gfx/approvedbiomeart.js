@@ -171,20 +171,24 @@ const WILD_TREE_INDICES=Object.freeze({
   t_dusk_cedar:4,t_frost_fir:5,t_gold_aspens:6,t_copper_beech:7,
   t_blight_oak:8,t_wild_apple:9,
 });
-export function approvedOverworldTree(name){
-  const index=WILD_TREE_INDICES[name];
-  if(index!==undefined){
-    const image=sheets.get('wildSupplemental');
-    if(!image)return null;
-    return{img:image,sx:index%WILD_SUPPLEMENTAL.cols*WILD_SUPPLEMENTAL.w,
-      sy:Math.floor(index/WILD_SUPPLEMENTAL.cols)*WILD_SUPPLEMENTAL.h,
-      w:WILD_SUPPLEMENTAL.w,h:WILD_SUPPLEMENTAL.h,ox:-64,oy:-123,name,fp:.4,
-      block:true,isometric:true,pixelScale:1.25};
+export function approvedOverworldTree(name) {
+  const index = WILD_TREE_INDICES[name];
+  if (index !== undefined) {
+    const image = sheets.get('wildSupplemental');
+    if (!image) return null;
+    return {
+      img: image, sx: index % WILD_SUPPLEMENTAL.cols * WILD_SUPPLEMENTAL.w,
+      sy: Math.floor(index / WILD_SUPPLEMENTAL.cols) * WILD_SUPPLEMENTAL.h,
+      w: WILD_SUPPLEMENTAL.w, h: WILD_SUPPLEMENTAL.h, ox: -64, oy: -123, name, fp: .4,
+      block: true, tree: true, isometric: true, pixelScale: 1.25
+    };
   }
-  const image=sheets.get('variants'),column=WILD_TREE_COLUMNS[name];
-  if(!image||column===undefined)return null;
-  return{img:image,sx:column*VARIANT.w,sy:VARIANT.h*2,w:VARIANT.w,h:VARIANT.h,
-    ox:-40,oy:-76,name,fp:.4,block:true,isometric:true,pixelScale:2};
+  const image = sheets.get('variants'), column = WILD_TREE_COLUMNS[name];
+  if (!image || column === undefined) return null;
+  return {
+    img: image, sx: column * VARIANT.w, sy: VARIANT.h * 2, w: VARIANT.w, h: VARIANT.h,
+    ox: -40, oy: -76, name, fp: .4, block: true, tree: true, isometric: true, pixelScale: 2
+  };
 }
 
 const WILD_OBJECT_INDICES=Object.freeze({

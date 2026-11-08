@@ -100,7 +100,7 @@ export function generateOverworld(depth,biome,seed,variant=null) {
       (overworldObject(normalized)||townObject(normalized)):normalized;
     if(!sprite)return false;
     props.push({kind:'scatter',x,y,spr:sprite,k:K*(sprite.pixelScale||1),flip:sprite.isometric?false:(opts.flip??rng.chance(.5)),
-      light:opts.light||0});
+      light:opts.light||0,tree:!!opts.tree||!!sprite.tree});
     return true;
   };
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){
@@ -298,7 +298,7 @@ function generateSeaOfSand(depth,biome,seed) {
     return 0;
   };
   const reserved=(x,y)=>[ENTRY,EXIT,...SAND_SITES].some(p=>dist(x,y,p)<9.5)||onRoute(x,y,3.1);
-  const add=(spr,x,y,options={})=>{if(!spr)return;props.push({kind:'scatter',x,y,spr,k:TW/160*(options.scale||1),flip:false,light:options.light||0});};
+  const add=(spr,x,y,options={})=>{if(!spr)return;props.push({kind:'scatter',x,y,spr,k:TW/160*(options.scale||1),flip:false,light:options.light||0,tree:options.tree||spr.tree||false});};
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){
     const i=I(x,y),cx=x+.5,cy=y+.5;
     map.v[i]=floorAt(cx,cy);
@@ -340,7 +340,7 @@ function generateSeaOfSand(depth,biome,seed) {
   // ruins at the sites, ore at the foot of the rock. (It was all of it at half size anywhere: a well or a market
   // awning alone in the dunes, a shrine dropped at random.)
   const put=(name,x,y,o={})=>{const spr=seaOfSandObject(name,o.tree?'tree':undefined);if(!spr)return false;
-    const h=(SAND_H[name]||40)*rng.range(.9,1.1),k=h/(spr.h*(spr.pixelScale||1)*TW/160);add(spr,x,y,{scale:k,light:o.light});return true;};
+    const h=(SAND_H[name]||40)*rng.range(.9,1.1),k=h/(spr.h*(spr.pixelScale||1)*TW/160);add(spr,x,y,{scale:k,light:o.light,tree:!!o.tree||!!spr.tree});return true;};
   const wash=(x,y)=>map.v[I(x|0,y|0)]===21||[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>map.v[I(Math.min(W-1,Math.max(0,(x|0)+dx)),Math.min(H-1,Math.max(0,(y|0)+dy)))]===21);
   const byRock=(x,y)=>[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>map.block[I((x|0)+dx,(y|0)+dy)]);
   const freeAt=(x,y)=>x>2&&y>2&&x<W-3&&y<H-3&&map.walkable(x,y)&&map.circleFree(x,y,.4);

@@ -89,7 +89,18 @@ export function createMountainRun(world, gen, biome, depth, onSummit) {
       world.ambientFx = b >= mt.snowBand - 1 ? { type: 'snow', color: '#f4f8ff' } : null;
       if (!snowSaid && b >= mt.snowBand) { snowSaid = true; UI.centerMsg('THE SNOW LINE', 'The Snowy Summit looms above', 2.6); }
       if (!halfSaid && run.progress > trail.length / 2) { halfSaid = true; UI.log('Halfway up. The air thins, and the things on the trail grow bolder.', '#cfe0f0'); }
-      for (const l of leaps) if (!l.done && run.progress >= l.ti - 8 && Math.hypot(p.x - l.at[0], p.y - l.at[1]) < 6) leap(l);
+      for (const l of leaps) {
+        if (l.done) continue;
+        const allPlayers = [p];
+        if (G.remotePlayers) {
+          for (const rp of G.remotePlayers.values()) {
+            if (!rp.dead && (rp.world === world || (rp.worldKind === world.kind && rp.depth === world.depth))) {
+              allPlayers.push(rp);
+            }
+          }
+        }
+        if (allPlayers.some(pl => Math.hypot(pl.x - l.at[0], pl.y - l.at[1]) < 6)) leap(l);
+      }
       if (!run.reached && Math.hypot(p.x - sx, p.y - sy) < 9) {
         run.reached = true;
         UI.centerMsg('THE SUMMIT', world.boss ? `${world.boss.name}, its Warden, stirs` : 'Its Warden stirs', 3);
@@ -115,12 +126,14 @@ export function createMountainRun(world, gen, biome, depth, onSummit) {
   /** Things on the cliff top above the trail leap down onto it as the hero passes beneath. */
   function leap(l) {
     l.done = true;
+    if (G.room && !G.game?.isDungeonAuthority(world.depth)) return;
     const p = world.player, h0 = F.H2(l.from[0], l.from[1]);
     for (let i = 0; i < l.n; i++) {
       const [x, y] = map.randomNear(l.at[0] + rand(-1, 1), l.at[1] + rand(-1, 1), 1.4);
       const arch = world.biome.roster[(Math.random() * world.biome.roster.length) | 0];
       const look = gen.looks.pick(arch, Math.random);
       const m = makeMonster(world, arch, world.biome, lvl + (i === 0 ? 1 : 0), i === 0 ? 'champion' : 'normal', x, y, 0, l.snow ? { ...look, swap: { colorize: [200, 0.45], light: 0.08 }, tint: 'Frostbitten' } : look);
+      m.enteringKind = 'drop';
       world.add(m);
       const from = [l.from[0] + rand(-1, 1), l.from[1] + rand(-0.4, 0.4)], to = [x, y], h1 = F.H2(x, y), dur = 0.8 + i * 0.14;
       m.x = from[0]; m.y = from[1]; m.targetable = false; m.awake = true; m.moving = true;

@@ -25,8 +25,13 @@ import { endgameUnlocked, endgame, saveEndgame } from './endgame.js';
 import { makeRaidBoss, RAID_BOSSES } from './raid.js';
 import { dropLoot } from './loot.js';
 import { DMG_MUL, PACE, inArena } from './velscour.js';
+import { hearthPortalActive } from './hearth.js';
 
-export const UNBOUND_KEYS = 3;
+export const UNBOUND_KEYS = 1;
+export const MAX_UNBOUND_DEPTH = 100;
+
+/** Depth scaling for Unbound Exploration floors (Hardmode 502..700) */
+export const unboundDepth = (floor) => Math.round(500 + Math.min(MAX_UNBOUND_DEPTH, Math.max(1, floor)) * 2);
 /** The rematch's dials, tuned with tools/tests/unbound.js (auto-play, depth-500 gear: 6.2-13.5 minutes, mean 8.3; the
  *  plain fight 5-6): his life on top of HP_MUL (he sits at the damage cap, so it mostly sizes his seals, shards and
  *  obelisks), his hits instead of DMG_MUL, the clock, the court's life and hits (of a BOSS ROOM boss's) and cast pace
@@ -41,8 +46,35 @@ const POST = [31, 13]; // the east guard post
 const NOT_COURT = ['organ'];
 
 export const keysOf = (c = G.char) => ((c && c.keys) | 0);
-/** Three keys and the Endgame open: the altar (and the skull's "unbound") may start the rematch. */
-export const unboundReady = (c = G.char) => !!c && keysOf(c) >= UNBOUND_KEYS && endgameUnlocked(c);
+/** One key and the Endgame open: can enter Unbound Exploration. */
+export const unboundReady = (c = G.char) => !!c && (keysOf(c) >= UNBOUND_KEYS || hearthPortalActive()) && endgameUnlocked(c);
+
+/** Checkpoints at Floor 1, and every 10 floors thereafter (10, 20, 30... 100) */
+export const isUnboundCheckpointFloor = (floor) => (floor | 0) % 10 === 0 || (floor | 0) === 1;
+
+/** Unlocked waypoints for Unbound Exploration */
+export function unboundWaypoints(c = G.char) {
+  const deepest = Math.min(MAX_UNBOUND_DEPTH, (c?.unboundExploration?.deepest) || 1);
+  const wps = [1];
+  for (let f = 10; f <= deepest; f += 10) {
+    if (!wps.includes(f)) wps.push(f);
+  }
+  return wps;
+}
+
+/** Check if player can enter Unbound Exploration (needs 1 key unless returning via Hearthstone) */
+export function canEnterUnbound(c = G.char) {
+  if (hearthPortalActive()) return true;
+  return keysOf(c) >= UNBOUND_KEYS;
+}
+
+/** Spend an Abyssal Key to enter Unbound Exploration (free if returning via Hearthstone) */
+export function spendUnboundKey(c = G.char) {
+  if (hearthPortalActive()) return true;
+  if (keysOf(c) < UNBOUND_KEYS) return false;
+  c.keys -= UNBOUND_KEYS;
+  return true;
+}
 /** The chance a slain raid boss drops an Abyssal Key. dropLoot runs three times for a BOSS ROOM boss (combat.kill and
  *  Raid.onDeath twice): only the first roll counts. G.forceKey (tests only) makes a key certain where one can drop. */
 export function keyChance(world, m) {
@@ -50,7 +82,8 @@ export function keyChance(world, m) {
   m._keyRoll = true;
   let k = 0;
   if (world.rift) k = world.rift.tier >= 10 ? clamp(0.12 + 0.005 * world.rift.tier, 0, 0.5) : 0;
-  else if (world.depth > 600 && worldRank(world) >= KEYS_RANK) k = clamp(0.06 + 0.002 * (world.depth - 600), 0, 0.25);
+  else if (world.unboundExploration) k = clamp(0.15 + 0.003 * world.unboundExploration.floor, 0.15, 0.5);
+  else if (world.depth >= 400 && worldRank(world) >= KEYS_RANK) k = clamp(0.08 + 0.002 * (world.depth - 400), 0, 0.3);
   return k > 0 && G.forceKey ? 1 : k;
 }
 /** Spend the keys on the rematch. False if the hero can't. */
@@ -189,4 +222,8 @@ export function unboundSpoils(V, lvl, drop) {
   const E = endgame(); E.unboundWins++; saveEndgame();
   const secs = Math.round(V.t);
   c.unbound.best = c.unbound.best ? Math.min(c.unbound.best, secs) : secs;
+  if (c.unboundExploration) {
+    c.unboundExploration.deepest = Math.max(c.unboundExploration.deepest || 1, 100);
+    c.unboundExploration.completed = true;
+  }
 }

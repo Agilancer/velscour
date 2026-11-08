@@ -635,6 +635,8 @@ export class Monster extends Creature {
         break;
       }
       case 'summonMinions': {
+        this.cd = this.atkCd * 2;
+        if (G.room && !G.game?.isDungeonAuthority(w.depth)) break;
         for (let i = 0; i < 2; i++) {
           const [x, y] = w.map.randomNear(this.x, this.y, 1.5);
           const m = makeMonster(w, 'skeleton', w.biome, this.level, 'normal', x, y);
@@ -643,7 +645,6 @@ export class Monster extends Creature {
           sparkle(x, y, 10, '#b040ff', 10, 0.4);
         }
         sfx('summon');
-        this.cd = this.atkCd * 2;
         break;
       }
       case 'nova': {
@@ -1234,6 +1235,10 @@ export class Monster extends Creature {
         break;
       }
       case 'boss_summon': {
+        if (G.room && !G.game?.isDungeonAuthority(w.depth)) {
+          sfx('summon'); sfx('roar');
+          break;
+        }
         const roster = this.isVelscour ? ['demon', 'imp', 'gargoyle', 'knight'] : w.biome.roster;
         const n = this.isVelscour ? 5 : 3 + (this.phase === 2 ? 2 : 0);
         for (let i = 0; i < n; i++) {

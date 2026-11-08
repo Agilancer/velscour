@@ -44,7 +44,8 @@ export function makeTownTiles() {
 /** A town-pack object (building, tree, scatter) as a draw rect: {img,sx,sy,w,h,ox,oy} (ox/oy native px from its pivot). */
 export function townObject(name) {
   const r = A.town.meta.objects[name], f = r && isoFix('town', name); // re-projected onto the 2:1 grid (gfx/isofix.js)
-  return r && (f ? { ...f, name } : { img: A.town.objects, sx: r[0], sy: r[1], w: r[2], h: r[3], ox: r[4], oy: r[5], name });
+  const isTree = typeof name === 'string' && name.startsWith('t_');
+  return r && (f ? { ...f, name, tree: isTree } : { img: A.town.objects, sx: r[0], sy: r[1], w: r[2], h: r[3], ox: r[4], oy: r[5], name, tree: isTree });
 }
 
 // Buildings: each is the pack's 2 x 2 house drawn BS x (a 3 x 3 footprint). The art puts the door on the +y face, or

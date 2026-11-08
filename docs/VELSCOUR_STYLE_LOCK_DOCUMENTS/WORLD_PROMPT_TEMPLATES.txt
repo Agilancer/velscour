@@ -1,0 +1,243 @@
+# Standalone world prompt templates
+
+Each section is a separate prompt. Fill every blank and attach the actual layout before generation. World/biome templates are not present in this ZIP. Do not invent cell geometry. (added)
+
+## TOWNSFOLK
+
+SHEET: TOWNSFOLK — [SET NAME]
+Attachments: [ACTUAL TEMPLATE], [APPROVED VISUAL MATERIAL SHEET], [CURRENT IDENTITY/SIZE REFERENCE].
+Canvas [WIDTHxHEIGHT], cell layout [ROWS/COLUMNS], AP scale [2x/3x or native biome resolution], bounds/anchors [COPY FROM TEMPLATE]. Resolve these blanks before drawing; never silently resize a template.
+Designs: [adult/child, identity, costume source, material twist, hue pair, silhouette hook].
+
+Character mode, colored 1 AP selective outline; 16 colors including transparency; adults 100-108 AP, children 72-80 AP. Four rows if using the supplied importer NPC format; each row one identity. Frame order: idle 1, idle 2, idle 3, walk 1, walk 2, dying, dead, scream, point, happy, cheer. Knights add attack 1, attack 2. Idle varies by only 1 AP shoulder breathing and small head/hand changes. Same clothing, face, palette and proportions in all frames, pose changes with animation. Plainer wool, linen and leather, expressive faces without comic exaggeration.
+
+VELSCOUR / GRIM NOCTURNE — STANDALONE RULES
+Use original theatrical costume forms with 60% FF6 craft, 25% Diablo II material weight/grime, 15% SotN cold moon rim; do not copy game characters or equipment. Work as deliberate pixel art, not a painting with a pixel filter. One AP is one perfectly flat square at the declared integer scale; every output block must be identical pixels. Broad midtones, 1-2 hard shadow bands, 1 highlight band; no gradients, bloom or soft edges. Character mode has 1 AP material-colored selective outlines broken on lit top-left; manuscript mode has no outline. Light upper-left; hard segmented 1 AP moon rim #9fb4d4 or #d4e2f4 on metal, back-right only. No outer glow, cast shadow, floor, watermark, border, UI, letters or labels in art. Pure #FF00FF outside the art or true transparency; preserve any explicitly protected reference column exactly.
+
+Use palette ramps below as selection pools, never all colors together. Count colors per asset including transparency; shared outline, eye and rim colors are inside the limit. Skin 3 tones, hair 2 if present. Base/secondary/accent proportions 60/30/10; saturated color only in accent. Build clusters of 2+ AP, with only deliberate glints/eye highlights isolated. Dither two colors on rough surfaces only, below 10% sprite area; never skin or metal highlight. No exterior antialiasing; curves use regular 1-1-2-2-3 steps. Armor has 3 major shapes, up to 6 medium shapes, details in 2 focal areas. Rarity is craft, not brightness: Common patched/plain; Uncommon matched/riveted/one motif; Rare fitted/layered/trimmed; Epic engraved or embroidered/one asymmetric statement; Legendary ceremonial/story-bearing/one emissive accent; Mythic impossible material/unique silhouette/contained strong accent.
+
+Before drawing each new design, write its four-line card OUTSIDE the image: costume or creature source; one material twist; one hue contrast; one silhouette hook. No two designs on the sheet share a card line. Fill all card blanks before drawing. Do not treat paired hands or animation frames of one design as separate new characters. Ban skull pauldrons, ubiquitous spikes, glowing red eyes, hooded faceless defaults, generic dark plate or leather-belts rogue, bat-wing armor, decorative chains everywhere, default tribal tattoos, stars-only wizard robes, filigree wallpaper, copied faces, near-duplicate recolors, weapons and shields. Gear may be worn, patched, stained and repaired, with calm areas.
+
+(added) Repeated stitches, rivets, weave and mail use one defined unit and consistent spacing/row offset; perspective deformation follows the supporting surface. Straps pass through buckles, stitches join seams, rivets secure overlap; cloth obeys gravity, hair/fur grow from roots and facets share vertices. Review construction/anatomy, repetition/material/light and technical compliance separately. Revise failures and inspect again, including at game size; do not claim technical compliance without checking. One sheet per request; no unlimited generation loop. The user-approved v3 material sheet sets visual direction, not its inaccurate color counts, background or pixel grid. Added repeat recipes/class allocations are reviewable production choices.
+
+MASTER PALETTE (dark to light)
+| Ramp | Steps (dark -> light) |
+|---|---|
+| Shadow ink (outlines, crevices) | `#07060a` `#100c14` `#1a1220` |
+| Grave steel (cool iron, plate) | `#0e1016` `#1c2230` `#2e3747` `#46526a` `#6a7891` `#98a6bc` `#d0d9e6` |
+| Blackened steel (death knights, cursed) | `#08080c` `#13131c` `#20202e` `#323246` `#4c4c66` `#76769a` |
+| Reliquary gold (aged gilt, brass) | `#1a1006` `#3a240c` `#63401a` `#8e6427` `#b98e3c` `#dcbf6a` `#f4e3a6` |
+| Verdigris bronze | `#0e1412` `#1c2a26` `#2e4640` `#46665c` `#6a8c7e` `#9ab8a6` |
+| Wine / blood cloth | `#12060a` `#2a0c14` `#4a1420` `#6e1e2a` `#962c34` `#c04848` |
+| Night indigo cloth | `#0a0a18` `#161a34` `#242c52` `#34406e` `#4c5c92` `#7084b8` |
+| Moss / ranger green | `#0c1208` `#1a2612` `#2c3e1c` `#44582a` `#62763a` `#8e9c56` |
+| Leather (boiled, oiled) | `#120c08` `#261a10` `#3e2a1a` `#5a3e26` `#7a5636` `#9e7650` |
+| Wool / undyed linen | `#16130f` `#2c2720` `#4a4236` `#6c6252` `#948870` `#bcb096` |
+| Bone / parchment / ivory | `#1c1812` `#3a3226` `#5e5442` `#8a7e66` `#b4a88c` `#ddd2b6` `#f2ecda` |
+| Fur (grey wolf) | `#121212` `#262422` `#3e3a36` `#5c5650` `#827a70` `#aaa094` |
+| Skin, light | `#2a1610` `#5a3020` `#8c5038` `#b8785a` `#dca484` `#f2cdb0` |
+| Skin, medium | `#1e100a` `#42241a` `#6a3c28` `#93583c` `#b87a56` `#d8a07c` |
+| Skin, deep | `#120a08` `#2a1610` `#44261a` `#603826` `#7e4e36` `#9c6a4c` |
+| Undead flesh | `#101410` `#20281e` `#3a4436` `#58624e` `#7a846a` `#a6ac8c` |
+| Hellfire (emissive) | `#2a0800` `#5c1200` `#9a2a00` `#d45208` `#f68a1c` `#ffc458` `#fff2b8` |
+| Arcane violet (emissive) | `#0c0a24` `#20185a` `#3a2c96` `#5c4cd0` `#8a7cf0` `#c4bcff` |
+| Frost (emissive or ice) | `#0a1620` `#16303e` `#285468` `#3e7c94` `#66a8c0` `#a6d8e6` `#e6f6fa` |
+| Poison / bile | `#0e1206` `#1e2a0a` `#36480e` `#56701a` `#80a02a` `#b8d050` |
+| Holy (emissive) | `#2a2008` `#5a4814` `#9a8428` `#d4bc48` `#f2e08a` `#fffae0` |
+| Moonlit rim (signature) | `#6f84a8` `#9fb4d4` `#d4e2f4` |
+| Slime (Slime Lord) | `#04102a` `#082456` `#0e3c8c` `#1a5cc8` `#3c86ec` `#86bcff` `#d8ecff` |
+
+
+Return one sheet and design cards in text. Review every frame for identity/anatomy, construction and repeat logic, light direction, crop size, pixel scale and color count. Correct failures and re-review; state anything still unresolved. Do not run importers or asset builds as part of this prompt. (added)
+
+## ENEMIES
+
+SHEET: ENEMIES — [SET NAME]
+Attachments: [ACTUAL TEMPLATE], [APPROVED VISUAL MATERIAL SHEET], [CURRENT IDENTITY/SIZE REFERENCE].
+Canvas [WIDTHxHEIGHT], cell layout [ROWS/COLUMNS], AP scale [2x/3x or native biome resolution], bounds/anchors [COPY FROM TEMPLATE]. Resolve these blanks before drawing; never silently resize a template.
+Designs: [creature source, role, anatomy, material twist, hue pair, silhouette hook per cell].
+
+Manuscript mode, no outline, 16-24 colors including transparency. Height small 54-72 AP, man-sized 97-104 AP, brute 115-144 AP; select [EXACT HEIGHT] for each creature. Use ornamental strange silhouettes, tattered silk, masks or form-integrated tendrils, grime and hard hue jumps, never soft painted shading. If the actual enemy template uses importer geometry, there are 10 cells in a 5x2 grid; preserve the attached inner margins. Each cell is a distinct creature, not ten recolors.
+
+VELSCOUR / GRIM NOCTURNE — STANDALONE RULES
+Use original theatrical costume forms with 60% FF6 craft, 25% Diablo II material weight/grime, 15% SotN cold moon rim; do not copy game characters or equipment. Work as deliberate pixel art, not a painting with a pixel filter. One AP is one perfectly flat square at the declared integer scale; every output block must be identical pixels. Broad midtones, 1-2 hard shadow bands, 1 highlight band; no gradients, bloom or soft edges. Character mode has 1 AP material-colored selective outlines broken on lit top-left; manuscript mode has no outline. Light upper-left; hard segmented 1 AP moon rim #9fb4d4 or #d4e2f4 on metal, back-right only. No outer glow, cast shadow, floor, watermark, border, UI, letters or labels in art. Pure #FF00FF outside the art or true transparency; preserve any explicitly protected reference column exactly.
+
+Use palette ramps below as selection pools, never all colors together. Count colors per asset including transparency; shared outline, eye and rim colors are inside the limit. Skin 3 tones, hair 2 if present. Base/secondary/accent proportions 60/30/10; saturated color only in accent. Build clusters of 2+ AP, with only deliberate glints/eye highlights isolated. Dither two colors on rough surfaces only, below 10% sprite area; never skin or metal highlight. No exterior antialiasing; curves use regular 1-1-2-2-3 steps. Armor has 3 major shapes, up to 6 medium shapes, details in 2 focal areas. Rarity is craft, not brightness: Common patched/plain; Uncommon matched/riveted/one motif; Rare fitted/layered/trimmed; Epic engraved or embroidered/one asymmetric statement; Legendary ceremonial/story-bearing/one emissive accent; Mythic impossible material/unique silhouette/contained strong accent.
+
+Before drawing each new design, write its four-line card OUTSIDE the image: costume or creature source; one material twist; one hue contrast; one silhouette hook. No two designs on the sheet share a card line. Fill all card blanks before drawing. Do not treat paired hands or animation frames of one design as separate new characters. Ban skull pauldrons, ubiquitous spikes, glowing red eyes, hooded faceless defaults, generic dark plate or leather-belts rogue, bat-wing armor, decorative chains everywhere, default tribal tattoos, stars-only wizard robes, filigree wallpaper, copied faces, near-duplicate recolors, weapons and shields. Gear may be worn, patched, stained and repaired, with calm areas.
+
+(added) Repeated stitches, rivets, weave and mail use one defined unit and consistent spacing/row offset; perspective deformation follows the supporting surface. Straps pass through buckles, stitches join seams, rivets secure overlap; cloth obeys gravity, hair/fur grow from roots and facets share vertices. Review construction/anatomy, repetition/material/light and technical compliance separately. Revise failures and inspect again, including at game size; do not claim technical compliance without checking. One sheet per request; no unlimited generation loop. The user-approved v3 material sheet sets visual direction, not its inaccurate color counts, background or pixel grid. Added repeat recipes/class allocations are reviewable production choices.
+
+MASTER PALETTE (dark to light)
+| Ramp | Steps (dark -> light) |
+|---|---|
+| Shadow ink (outlines, crevices) | `#07060a` `#100c14` `#1a1220` |
+| Grave steel (cool iron, plate) | `#0e1016` `#1c2230` `#2e3747` `#46526a` `#6a7891` `#98a6bc` `#d0d9e6` |
+| Blackened steel (death knights, cursed) | `#08080c` `#13131c` `#20202e` `#323246` `#4c4c66` `#76769a` |
+| Reliquary gold (aged gilt, brass) | `#1a1006` `#3a240c` `#63401a` `#8e6427` `#b98e3c` `#dcbf6a` `#f4e3a6` |
+| Verdigris bronze | `#0e1412` `#1c2a26` `#2e4640` `#46665c` `#6a8c7e` `#9ab8a6` |
+| Wine / blood cloth | `#12060a` `#2a0c14` `#4a1420` `#6e1e2a` `#962c34` `#c04848` |
+| Night indigo cloth | `#0a0a18` `#161a34` `#242c52` `#34406e` `#4c5c92` `#7084b8` |
+| Moss / ranger green | `#0c1208` `#1a2612` `#2c3e1c` `#44582a` `#62763a` `#8e9c56` |
+| Leather (boiled, oiled) | `#120c08` `#261a10` `#3e2a1a` `#5a3e26` `#7a5636` `#9e7650` |
+| Wool / undyed linen | `#16130f` `#2c2720` `#4a4236` `#6c6252` `#948870` `#bcb096` |
+| Bone / parchment / ivory | `#1c1812` `#3a3226` `#5e5442` `#8a7e66` `#b4a88c` `#ddd2b6` `#f2ecda` |
+| Fur (grey wolf) | `#121212` `#262422` `#3e3a36` `#5c5650` `#827a70` `#aaa094` |
+| Skin, light | `#2a1610` `#5a3020` `#8c5038` `#b8785a` `#dca484` `#f2cdb0` |
+| Skin, medium | `#1e100a` `#42241a` `#6a3c28` `#93583c` `#b87a56` `#d8a07c` |
+| Skin, deep | `#120a08` `#2a1610` `#44261a` `#603826` `#7e4e36` `#9c6a4c` |
+| Undead flesh | `#101410` `#20281e` `#3a4436` `#58624e` `#7a846a` `#a6ac8c` |
+| Hellfire (emissive) | `#2a0800` `#5c1200` `#9a2a00` `#d45208` `#f68a1c` `#ffc458` `#fff2b8` |
+| Arcane violet (emissive) | `#0c0a24` `#20185a` `#3a2c96` `#5c4cd0` `#8a7cf0` `#c4bcff` |
+| Frost (emissive or ice) | `#0a1620` `#16303e` `#285468` `#3e7c94` `#66a8c0` `#a6d8e6` `#e6f6fa` |
+| Poison / bile | `#0e1206` `#1e2a0a` `#36480e` `#56701a` `#80a02a` `#b8d050` |
+| Holy (emissive) | `#2a2008` `#5a4814` `#9a8428` `#d4bc48` `#f2e08a` `#fffae0` |
+| Moonlit rim (signature) | `#6f84a8` `#9fb4d4` `#d4e2f4` |
+| Slime (Slime Lord) | `#04102a` `#082456` `#0e3c8c` `#1a5cc8` `#3c86ec` `#86bcff` `#d8ecff` |
+
+
+Return one sheet and design cards in text. Review every frame for identity/anatomy, construction and repeat logic, light direction, crop size, pixel scale and color count. Correct failures and re-review; state anything still unresolved. Do not run importers or asset builds as part of this prompt. (added)
+
+## BOSSES
+
+SHEET: BOSSES — [SET NAME]
+Attachments: [ACTUAL TEMPLATE], [APPROVED VISUAL MATERIAL SHEET], [CURRENT IDENTITY/SIZE REFERENCE].
+Canvas [WIDTHxHEIGHT], cell layout [ROWS/COLUMNS], AP scale [2x/3x or native biome resolution], bounds/anchors [COPY FROM TEMPLATE]. Resolve these blanks before drawing; never silently resize a template.
+Designs: [creature source, single major focal feature, material twist, hue pair, silhouette hook per cell].
+
+Manuscript mode, no outline, maximum 32 colors including transparency; 162-288 AP tall, choose [EXACT HEIGHT] and a fitting cell/scale before drawing. One huge focal feature per boss and calm supporting areas. If using importer boss format, six cells in 3x2 grid; actual AP size must fit its margins. Do not squeeze, clip or downscale to hide an incompatible template.
+
+VELSCOUR / GRIM NOCTURNE — STANDALONE RULES
+Use original theatrical costume forms with 60% FF6 craft, 25% Diablo II material weight/grime, 15% SotN cold moon rim; do not copy game characters or equipment. Work as deliberate pixel art, not a painting with a pixel filter. One AP is one perfectly flat square at the declared integer scale; every output block must be identical pixels. Broad midtones, 1-2 hard shadow bands, 1 highlight band; no gradients, bloom or soft edges. Character mode has 1 AP material-colored selective outlines broken on lit top-left; manuscript mode has no outline. Light upper-left; hard segmented 1 AP moon rim #9fb4d4 or #d4e2f4 on metal, back-right only. No outer glow, cast shadow, floor, watermark, border, UI, letters or labels in art. Pure #FF00FF outside the art or true transparency; preserve any explicitly protected reference column exactly.
+
+Use palette ramps below as selection pools, never all colors together. Count colors per asset including transparency; shared outline, eye and rim colors are inside the limit. Skin 3 tones, hair 2 if present. Base/secondary/accent proportions 60/30/10; saturated color only in accent. Build clusters of 2+ AP, with only deliberate glints/eye highlights isolated. Dither two colors on rough surfaces only, below 10% sprite area; never skin or metal highlight. No exterior antialiasing; curves use regular 1-1-2-2-3 steps. Armor has 3 major shapes, up to 6 medium shapes, details in 2 focal areas. Rarity is craft, not brightness: Common patched/plain; Uncommon matched/riveted/one motif; Rare fitted/layered/trimmed; Epic engraved or embroidered/one asymmetric statement; Legendary ceremonial/story-bearing/one emissive accent; Mythic impossible material/unique silhouette/contained strong accent.
+
+Before drawing each new design, write its four-line card OUTSIDE the image: costume or creature source; one material twist; one hue contrast; one silhouette hook. No two designs on the sheet share a card line. Fill all card blanks before drawing. Do not treat paired hands or animation frames of one design as separate new characters. Ban skull pauldrons, ubiquitous spikes, glowing red eyes, hooded faceless defaults, generic dark plate or leather-belts rogue, bat-wing armor, decorative chains everywhere, default tribal tattoos, stars-only wizard robes, filigree wallpaper, copied faces, near-duplicate recolors, weapons and shields. Gear may be worn, patched, stained and repaired, with calm areas.
+
+(added) Repeated stitches, rivets, weave and mail use one defined unit and consistent spacing/row offset; perspective deformation follows the supporting surface. Straps pass through buckles, stitches join seams, rivets secure overlap; cloth obeys gravity, hair/fur grow from roots and facets share vertices. Review construction/anatomy, repetition/material/light and technical compliance separately. Revise failures and inspect again, including at game size; do not claim technical compliance without checking. One sheet per request; no unlimited generation loop. The user-approved v3 material sheet sets visual direction, not its inaccurate color counts, background or pixel grid. Added repeat recipes/class allocations are reviewable production choices.
+
+MASTER PALETTE (dark to light)
+| Ramp | Steps (dark -> light) |
+|---|---|
+| Shadow ink (outlines, crevices) | `#07060a` `#100c14` `#1a1220` |
+| Grave steel (cool iron, plate) | `#0e1016` `#1c2230` `#2e3747` `#46526a` `#6a7891` `#98a6bc` `#d0d9e6` |
+| Blackened steel (death knights, cursed) | `#08080c` `#13131c` `#20202e` `#323246` `#4c4c66` `#76769a` |
+| Reliquary gold (aged gilt, brass) | `#1a1006` `#3a240c` `#63401a` `#8e6427` `#b98e3c` `#dcbf6a` `#f4e3a6` |
+| Verdigris bronze | `#0e1412` `#1c2a26` `#2e4640` `#46665c` `#6a8c7e` `#9ab8a6` |
+| Wine / blood cloth | `#12060a` `#2a0c14` `#4a1420` `#6e1e2a` `#962c34` `#c04848` |
+| Night indigo cloth | `#0a0a18` `#161a34` `#242c52` `#34406e` `#4c5c92` `#7084b8` |
+| Moss / ranger green | `#0c1208` `#1a2612` `#2c3e1c` `#44582a` `#62763a` `#8e9c56` |
+| Leather (boiled, oiled) | `#120c08` `#261a10` `#3e2a1a` `#5a3e26` `#7a5636` `#9e7650` |
+| Wool / undyed linen | `#16130f` `#2c2720` `#4a4236` `#6c6252` `#948870` `#bcb096` |
+| Bone / parchment / ivory | `#1c1812` `#3a3226` `#5e5442` `#8a7e66` `#b4a88c` `#ddd2b6` `#f2ecda` |
+| Fur (grey wolf) | `#121212` `#262422` `#3e3a36` `#5c5650` `#827a70` `#aaa094` |
+| Skin, light | `#2a1610` `#5a3020` `#8c5038` `#b8785a` `#dca484` `#f2cdb0` |
+| Skin, medium | `#1e100a` `#42241a` `#6a3c28` `#93583c` `#b87a56` `#d8a07c` |
+| Skin, deep | `#120a08` `#2a1610` `#44261a` `#603826` `#7e4e36` `#9c6a4c` |
+| Undead flesh | `#101410` `#20281e` `#3a4436` `#58624e` `#7a846a` `#a6ac8c` |
+| Hellfire (emissive) | `#2a0800` `#5c1200` `#9a2a00` `#d45208` `#f68a1c` `#ffc458` `#fff2b8` |
+| Arcane violet (emissive) | `#0c0a24` `#20185a` `#3a2c96` `#5c4cd0` `#8a7cf0` `#c4bcff` |
+| Frost (emissive or ice) | `#0a1620` `#16303e` `#285468` `#3e7c94` `#66a8c0` `#a6d8e6` `#e6f6fa` |
+| Poison / bile | `#0e1206` `#1e2a0a` `#36480e` `#56701a` `#80a02a` `#b8d050` |
+| Holy (emissive) | `#2a2008` `#5a4814` `#9a8428` `#d4bc48` `#f2e08a` `#fffae0` |
+| Moonlit rim (signature) | `#6f84a8` `#9fb4d4` `#d4e2f4` |
+| Slime (Slime Lord) | `#04102a` `#082456` `#0e3c8c` `#1a5cc8` `#3c86ec` `#86bcff` `#d8ecff` |
+
+
+Return one sheet and design cards in text. Review every frame for identity/anatomy, construction and repeat logic, light direction, crop size, pixel scale and color count. Correct failures and re-review; state anything still unresolved. Do not run importers or asset builds as part of this prompt. (added)
+
+## PETS AND SUMMONS
+
+SHEET: PETS AND SUMMONS — [SET NAME]
+Attachments: [ACTUAL TEMPLATE], [APPROVED VISUAL MATERIAL SHEET], [CURRENT IDENTITY/SIZE REFERENCE].
+Canvas [WIDTHxHEIGHT], cell layout [ROWS/COLUMNS], AP scale [2x/3x or native biome resolution], bounds/anchors [COPY FROM TEMPLATE]. Resolve these blanks before drawing; never silently resize a template.
+Designs: [species, humanoid/beast/summon mode, anatomy, coat/skin, gear, material twist, hue pair, silhouette hook].
+
+Humanoid pet: character mode, 16 colors including transparency (added budget); beast/unnatural summon: manuscript mode, 16-24 colors including transparency. Wolf height 61 AP, bird height 50 AP; specify [HEIGHT] for other species. Maintain one exact design/palette per row as poses change. Land importer row order: rest, spawn 1, spawn 2, spawn 3, run 1, run 2, run 3, attack 1, attack 2. Winged row order: flap 1, flap 2, flap 3, fly 1, fly 2, fly 3. Four rows per importer sheet. Use the actual supplied template rather than guessing cell origins; keep planted feet on its ground line and airborne motion within its bounds.
+
+VELSCOUR / GRIM NOCTURNE — STANDALONE RULES
+Use original theatrical costume forms with 60% FF6 craft, 25% Diablo II material weight/grime, 15% SotN cold moon rim; do not copy game characters or equipment. Work as deliberate pixel art, not a painting with a pixel filter. One AP is one perfectly flat square at the declared integer scale; every output block must be identical pixels. Broad midtones, 1-2 hard shadow bands, 1 highlight band; no gradients, bloom or soft edges. Character mode has 1 AP material-colored selective outlines broken on lit top-left; manuscript mode has no outline. Light upper-left; hard segmented 1 AP moon rim #9fb4d4 or #d4e2f4 on metal, back-right only. No outer glow, cast shadow, floor, watermark, border, UI, letters or labels in art. Pure #FF00FF outside the art or true transparency; preserve any explicitly protected reference column exactly.
+
+Use palette ramps below as selection pools, never all colors together. Count colors per asset including transparency; shared outline, eye and rim colors are inside the limit. Skin 3 tones, hair 2 if present. Base/secondary/accent proportions 60/30/10; saturated color only in accent. Build clusters of 2+ AP, with only deliberate glints/eye highlights isolated. Dither two colors on rough surfaces only, below 10% sprite area; never skin or metal highlight. No exterior antialiasing; curves use regular 1-1-2-2-3 steps. Armor has 3 major shapes, up to 6 medium shapes, details in 2 focal areas. Rarity is craft, not brightness: Common patched/plain; Uncommon matched/riveted/one motif; Rare fitted/layered/trimmed; Epic engraved or embroidered/one asymmetric statement; Legendary ceremonial/story-bearing/one emissive accent; Mythic impossible material/unique silhouette/contained strong accent.
+
+Before drawing each new design, write its four-line card OUTSIDE the image: costume or creature source; one material twist; one hue contrast; one silhouette hook. No two designs on the sheet share a card line. Fill all card blanks before drawing. Do not treat paired hands or animation frames of one design as separate new characters. Ban skull pauldrons, ubiquitous spikes, glowing red eyes, hooded faceless defaults, generic dark plate or leather-belts rogue, bat-wing armor, decorative chains everywhere, default tribal tattoos, stars-only wizard robes, filigree wallpaper, copied faces, near-duplicate recolors, weapons and shields. Gear may be worn, patched, stained and repaired, with calm areas.
+
+(added) Repeated stitches, rivets, weave and mail use one defined unit and consistent spacing/row offset; perspective deformation follows the supporting surface. Straps pass through buckles, stitches join seams, rivets secure overlap; cloth obeys gravity, hair/fur grow from roots and facets share vertices. Review construction/anatomy, repetition/material/light and technical compliance separately. Revise failures and inspect again, including at game size; do not claim technical compliance without checking. One sheet per request; no unlimited generation loop. The user-approved v3 material sheet sets visual direction, not its inaccurate color counts, background or pixel grid. Added repeat recipes/class allocations are reviewable production choices.
+
+MASTER PALETTE (dark to light)
+| Ramp | Steps (dark -> light) |
+|---|---|
+| Shadow ink (outlines, crevices) | `#07060a` `#100c14` `#1a1220` |
+| Grave steel (cool iron, plate) | `#0e1016` `#1c2230` `#2e3747` `#46526a` `#6a7891` `#98a6bc` `#d0d9e6` |
+| Blackened steel (death knights, cursed) | `#08080c` `#13131c` `#20202e` `#323246` `#4c4c66` `#76769a` |
+| Reliquary gold (aged gilt, brass) | `#1a1006` `#3a240c` `#63401a` `#8e6427` `#b98e3c` `#dcbf6a` `#f4e3a6` |
+| Verdigris bronze | `#0e1412` `#1c2a26` `#2e4640` `#46665c` `#6a8c7e` `#9ab8a6` |
+| Wine / blood cloth | `#12060a` `#2a0c14` `#4a1420` `#6e1e2a` `#962c34` `#c04848` |
+| Night indigo cloth | `#0a0a18` `#161a34` `#242c52` `#34406e` `#4c5c92` `#7084b8` |
+| Moss / ranger green | `#0c1208` `#1a2612` `#2c3e1c` `#44582a` `#62763a` `#8e9c56` |
+| Leather (boiled, oiled) | `#120c08` `#261a10` `#3e2a1a` `#5a3e26` `#7a5636` `#9e7650` |
+| Wool / undyed linen | `#16130f` `#2c2720` `#4a4236` `#6c6252` `#948870` `#bcb096` |
+| Bone / parchment / ivory | `#1c1812` `#3a3226` `#5e5442` `#8a7e66` `#b4a88c` `#ddd2b6` `#f2ecda` |
+| Fur (grey wolf) | `#121212` `#262422` `#3e3a36` `#5c5650` `#827a70` `#aaa094` |
+| Skin, light | `#2a1610` `#5a3020` `#8c5038` `#b8785a` `#dca484` `#f2cdb0` |
+| Skin, medium | `#1e100a` `#42241a` `#6a3c28` `#93583c` `#b87a56` `#d8a07c` |
+| Skin, deep | `#120a08` `#2a1610` `#44261a` `#603826` `#7e4e36` `#9c6a4c` |
+| Undead flesh | `#101410` `#20281e` `#3a4436` `#58624e` `#7a846a` `#a6ac8c` |
+| Hellfire (emissive) | `#2a0800` `#5c1200` `#9a2a00` `#d45208` `#f68a1c` `#ffc458` `#fff2b8` |
+| Arcane violet (emissive) | `#0c0a24` `#20185a` `#3a2c96` `#5c4cd0` `#8a7cf0` `#c4bcff` |
+| Frost (emissive or ice) | `#0a1620` `#16303e` `#285468` `#3e7c94` `#66a8c0` `#a6d8e6` `#e6f6fa` |
+| Poison / bile | `#0e1206` `#1e2a0a` `#36480e` `#56701a` `#80a02a` `#b8d050` |
+| Holy (emissive) | `#2a2008` `#5a4814` `#9a8428` `#d4bc48` `#f2e08a` `#fffae0` |
+| Moonlit rim (signature) | `#6f84a8` `#9fb4d4` `#d4e2f4` |
+| Slime (Slime Lord) | `#04102a` `#082456` `#0e3c8c` `#1a5cc8` `#3c86ec` `#86bcff` `#d8ecff` |
+
+
+Return one sheet and design cards in text. Review every frame for identity/anatomy, construction and repeat logic, light direction, crop size, pixel scale and color count. Correct failures and re-review; state anything still unresolved. Do not run importers or asset builds as part of this prompt. (added)
+
+## BIOMES
+
+SHEET: BIOMES — [SET NAME]
+Attachments: [ACTUAL TEMPLATE], [APPROVED VISUAL MATERIAL SHEET], [CURRENT IDENTITY/SIZE REFERENCE].
+Canvas [WIDTHxHEIGHT], cell layout [ROWS/COLUMNS], AP scale [2x/3x or native biome resolution], bounds/anchors [COPY FROM TEMPLATE]. Resolve these blanks before drawing; never silently resize a template.
+Designs: [biome, tile family, surface or structure source, material twist, hue pair, silhouette hook].
+
+Native 160x80 pixel floor diamond at one pixel/world pixel; 2-3 pixel clusters, 8-12 colors per tile family including transparency (added counting convention). Floor/wall values 1-2 ramp steps darker and less saturated than characters. Use shared palette and upper-left light, back-right moon rim only on appropriate wall tops/prop edges. Flat surfaces have subtle nondirectional floor shading, no strong baked spotlight. Follow attached floor/wall/arch/door/prop rules and occlusion anchors. Repeat units regularly; floor borders must tile seamlessly at actual diamond joins. Inspect adjacent copies and prop bases. Do not apply hero pose coordinates to architecture.
+
+VELSCOUR / GRIM NOCTURNE — STANDALONE RULES
+Use original theatrical costume forms with 60% FF6 craft, 25% Diablo II material weight/grime, 15% SotN cold moon rim; do not copy game characters or equipment. Work as deliberate pixel art, not a painting with a pixel filter. One AP is one perfectly flat square at the declared integer scale; every output block must be identical pixels. Broad midtones, 1-2 hard shadow bands, 1 highlight band; no gradients, bloom or soft edges. Character mode has 1 AP material-colored selective outlines broken on lit top-left; manuscript mode has no outline. Light upper-left; hard segmented 1 AP moon rim #9fb4d4 or #d4e2f4 on metal, back-right only. No outer glow, cast shadow, floor, watermark, border, UI, letters or labels in art. Pure #FF00FF outside the art or true transparency; preserve any explicitly protected reference column exactly.
+
+Use palette ramps below as selection pools, never all colors together. Count colors per asset including transparency; shared outline, eye and rim colors are inside the limit. Skin 3 tones, hair 2 if present. Base/secondary/accent proportions 60/30/10; saturated color only in accent. Build clusters of 2+ AP, with only deliberate glints/eye highlights isolated. Dither two colors on rough surfaces only, below 10% sprite area; never skin or metal highlight. No exterior antialiasing; curves use regular 1-1-2-2-3 steps. Armor has 3 major shapes, up to 6 medium shapes, details in 2 focal areas. Rarity is craft, not brightness: Common patched/plain; Uncommon matched/riveted/one motif; Rare fitted/layered/trimmed; Epic engraved or embroidered/one asymmetric statement; Legendary ceremonial/story-bearing/one emissive accent; Mythic impossible material/unique silhouette/contained strong accent.
+
+Before drawing each new design, write its four-line card OUTSIDE the image: costume or creature source; one material twist; one hue contrast; one silhouette hook. No two designs on the sheet share a card line. Fill all card blanks before drawing. Do not treat paired hands or animation frames of one design as separate new characters. Ban skull pauldrons, ubiquitous spikes, glowing red eyes, hooded faceless defaults, generic dark plate or leather-belts rogue, bat-wing armor, decorative chains everywhere, default tribal tattoos, stars-only wizard robes, filigree wallpaper, copied faces, near-duplicate recolors, weapons and shields. Gear may be worn, patched, stained and repaired, with calm areas.
+
+(added) Repeated stitches, rivets, weave and mail use one defined unit and consistent spacing/row offset; perspective deformation follows the supporting surface. Straps pass through buckles, stitches join seams, rivets secure overlap; cloth obeys gravity, hair/fur grow from roots and facets share vertices. Review construction/anatomy, repetition/material/light and technical compliance separately. Revise failures and inspect again, including at game size; do not claim technical compliance without checking. One sheet per request; no unlimited generation loop. The user-approved v3 material sheet sets visual direction, not its inaccurate color counts, background or pixel grid. Added repeat recipes/class allocations are reviewable production choices.
+
+MASTER PALETTE (dark to light)
+| Ramp | Steps (dark -> light) |
+|---|---|
+| Shadow ink (outlines, crevices) | `#07060a` `#100c14` `#1a1220` |
+| Grave steel (cool iron, plate) | `#0e1016` `#1c2230` `#2e3747` `#46526a` `#6a7891` `#98a6bc` `#d0d9e6` |
+| Blackened steel (death knights, cursed) | `#08080c` `#13131c` `#20202e` `#323246` `#4c4c66` `#76769a` |
+| Reliquary gold (aged gilt, brass) | `#1a1006` `#3a240c` `#63401a` `#8e6427` `#b98e3c` `#dcbf6a` `#f4e3a6` |
+| Verdigris bronze | `#0e1412` `#1c2a26` `#2e4640` `#46665c` `#6a8c7e` `#9ab8a6` |
+| Wine / blood cloth | `#12060a` `#2a0c14` `#4a1420` `#6e1e2a` `#962c34` `#c04848` |
+| Night indigo cloth | `#0a0a18` `#161a34` `#242c52` `#34406e` `#4c5c92` `#7084b8` |
+| Moss / ranger green | `#0c1208` `#1a2612` `#2c3e1c` `#44582a` `#62763a` `#8e9c56` |
+| Leather (boiled, oiled) | `#120c08` `#261a10` `#3e2a1a` `#5a3e26` `#7a5636` `#9e7650` |
+| Wool / undyed linen | `#16130f` `#2c2720` `#4a4236` `#6c6252` `#948870` `#bcb096` |
+| Bone / parchment / ivory | `#1c1812` `#3a3226` `#5e5442` `#8a7e66` `#b4a88c` `#ddd2b6` `#f2ecda` |
+| Fur (grey wolf) | `#121212` `#262422` `#3e3a36` `#5c5650` `#827a70` `#aaa094` |
+| Skin, light | `#2a1610` `#5a3020` `#8c5038` `#b8785a` `#dca484` `#f2cdb0` |
+| Skin, medium | `#1e100a` `#42241a` `#6a3c28` `#93583c` `#b87a56` `#d8a07c` |
+| Skin, deep | `#120a08` `#2a1610` `#44261a` `#603826` `#7e4e36` `#9c6a4c` |
+| Undead flesh | `#101410` `#20281e` `#3a4436` `#58624e` `#7a846a` `#a6ac8c` |
+| Hellfire (emissive) | `#2a0800` `#5c1200` `#9a2a00` `#d45208` `#f68a1c` `#ffc458` `#fff2b8` |
+| Arcane violet (emissive) | `#0c0a24` `#20185a` `#3a2c96` `#5c4cd0` `#8a7cf0` `#c4bcff` |
+| Frost (emissive or ice) | `#0a1620` `#16303e` `#285468` `#3e7c94` `#66a8c0` `#a6d8e6` `#e6f6fa` |
+| Poison / bile | `#0e1206` `#1e2a0a` `#36480e` `#56701a` `#80a02a` `#b8d050` |
+| Holy (emissive) | `#2a2008` `#5a4814` `#9a8428` `#d4bc48` `#f2e08a` `#fffae0` |
+| Moonlit rim (signature) | `#6f84a8` `#9fb4d4` `#d4e2f4` |
+| Slime (Slime Lord) | `#04102a` `#082456` `#0e3c8c` `#1a5cc8` `#3c86ec` `#86bcff` `#d8ecff` |
+
+
+Return one sheet and design cards in text. Review every frame for identity/anatomy, construction and repeat logic, light direction, crop size, pixel scale and color count. Correct failures and re-review; state anything still unresolved. Do not run importers or asset builds as part of this prompt. (added)
