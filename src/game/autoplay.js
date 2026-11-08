@@ -1373,10 +1373,22 @@ export const Auto = {
     // loot, chests, then the job at hand
     if (!rush && this.lootStep(w, dt)) { this.watchStuck(dt); return; }
     const exit = w.portals.find((q) => q.type === 'exit');
-    const bossDead = !w.boss || w.boss.dead;
-    if (bossDead && exit && exit.active) {
+    const isBossDead = !w.boss || w.boss.dead;
+    if (exit && (exit.active || isBossDead)) {
+      if (!exit.active && isBossDead && w.kind === 'dungeon' && !w.breach && !w.rift && !w.overworldScenario) {
+        if (G.game.unsealDungeonExit) G.game.unsealDungeonExit(w, w.boss?.name);
+        else {
+          exit.active = true;
+          exit.color = '#40a0ff';
+          exit.label = (w.unbound || w.depth >= FINAL_DEPTH || w.boss?.isVelscour || w.biome?.id === 'throne') ? 'Exit — to town' : 'Exit — continue';
+        }
+      }
+      const reach = exit.reach || 1.6;
+      const d = dist(p.x, p.y, exit.x, exit.y);
       this.setStatus('Heading for the exit');
-      if (this.goTo(exit.x, exit.y, Math.max(1.1, (exit.reach || 1.6) - 0.5), dt)) this.leaveLevel(w);
+      if (d <= reach || this.goTo(exit.x, exit.y, Math.max(1.2, reach - 0.2), dt)) {
+        if (exit.active) this.leaveLevel(w);
+      }
       this.watchStuck(dt);
       return;
     }
@@ -1394,7 +1406,12 @@ export const Auto = {
       const f = this.frontier(w);
       this.setStatus('Exploring');
       if (f) this.goTo(f[0], f[1], 1.2, dt);
-      else if (exit) this.goTo(exit.x, exit.y, 1.1, dt);
+      else if (exit) {
+        const reach = exit.reach || 1.6;
+        if (dist(p.x, p.y, exit.x, exit.y) <= reach || this.goTo(exit.x, exit.y, Math.max(1.2, reach - 0.2), dt)) {
+          if (exit.active) this.leaveLevel(w);
+        }
+      }
     }
     this.watchStuck(dt);
   },
@@ -2225,7 +2242,8 @@ export const Auto = {
         unbound ? `To Unbound Exploration — Floor ${this.unboundFloor()}` :
         `To the portal — Depth ${c.depth}`
       );
-      if (this.goTo(po.x, po.y, 1.3, dt)) {
+      const reach = po.reach || 1.6;
+      if (dist(p.x, p.y, po.x, po.y) <= reach || this.goTo(po.x, po.y, Math.max(1.2, reach - 0.2), dt)) {
         G.ui.closeAll();
         this.transitT = 4;
         this.sinceTown = 0;

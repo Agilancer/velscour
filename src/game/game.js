@@ -1332,7 +1332,7 @@ export const game = {
     // auto-play's own pick: a portal with an omen (more to see, and most of them pay), else any
     const autoPick = () => { const k = cards.findIndex((cd) => cd.comm); if (k >= 0) return k; const o = cards.map((cd, i) => (cd.omen ? i : -1)).filter((i) => i >= 0); return o.length ? o[Math.floor(Math.random() * o.length)] : Math.floor(Math.random() * cards.length); };
     this.pick = {
-      t: PICK_WAIT, el: d.box.querySelector('.pc-auto'), last: '',
+      t: opts.auto ? 2.0 : PICK_WAIT, el: d.box.querySelector('.pc-auto'), last: '',
       choose: () => { d.close(); if (!chosen) sel = autoPick(); go(opts.auto ? opts.town : Auto.needTown()); },
       name: () => (chosen ? cards[sel].biome.name : null),
     };
@@ -1342,7 +1342,14 @@ export const game = {
   tickPick(dt) {
     const pk = this.pick;
     if (!pk) return;
-    if (!pk.el.isConnected) { this.pick = null; return; }
+    if (!pk.el || !pk.el.isConnected) {
+      if (Auto.on) {
+        pk.choose();
+      } else {
+        this.pick = null;
+      }
+      return;
+    }
     let txt = '';
     if (Auto.on && G.char) {
       pk.t -= dt;
