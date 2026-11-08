@@ -308,7 +308,7 @@ function bagSlot(idx) {
     onDropWorld: (data) => (data.where === 'bag' ? dropFromBag(data.idx, 'bag') : false),
   });
   droppable(d, (data) => handleDropOnBag(idx, data), (data) => data.type === 'item' || data.type === 'shop' || data.type === 'stash' || data.type === 'vault' || data.type === 'jewelbox');
-  if (it) UI.tip(d, () => bagTip(idx));
+  if (it) UI.tip(d, () => bagTip(idx), { key: 'bag:' + idx });
   return d;
 }
 
@@ -362,7 +362,7 @@ function gemBagSlot(idx) {
     onDropWorld: (data) => (data.where === 'gemBag' ? dropFromBag(data.idx, 'gemBag') : false),
   });
   droppable(d, (data) => handleDropOnGemBag(idx, data), (data) => data.type === 'item' || data.type === 'shop' || data.type === 'stash' || data.type === 'vault' || data.type === 'jewelbox');
-  if (it) UI.tip(d, () => gemBagTip(idx));
+  if (it) UI.tip(d, () => gemBagTip(idx), { key: 'gemBag:' + idx });
   return d;
 }
 
@@ -481,7 +481,7 @@ function equipSlot(slot) {
       (data.where === 'bag' && G.char.bag[data.idx] && (fitsSlot(G.char.bag[data.idx], slot, c.classId) || G.char.bag[data.idx].type === 'gem'))
     )
   );
-  if (it) UI.tip(d, () => equipTip(slot));
+  if (it) UI.tip(d, () => equipTip(slot), { key: 'equip:' + slot });
   return d;
 }
 
@@ -514,7 +514,7 @@ function vanitySlot(slot) {
     const item = G.char.bag[data.idx];
     return canWearVanity(G.char, item, slot).ok;
   });
-  UI.tip(d, () => vanityTip(slot));
+  UI.tip(d, () => vanityTip(slot), { key: 'vanity:' + slot });
   return d;
 }
 
@@ -595,6 +595,7 @@ function getBagActions(idx) {
   if (it.type === 'gear') {
     acts.push({
       label: it.locked ? '🔓 Unlock' : '🔒 Lock',
+      keepOpen: true,
       fn: () => {
         if (it.locked) delete it.locked; else it.locked = true;
         UI.log(it.locked ? `<b>${escapeHtml(itemName(it))}</b> locked: auto-play won't touch it.` : `<b>${escapeHtml(itemName(it))}</b> unlocked.`, '#ffd860');
@@ -617,7 +618,14 @@ function getGemBagActions(idx) {
   if (G.ui.jewelBox && G.ui.jewelBox.active) acts.push({ label: 'Store in Jewel Box', fn: () => G.ui.jewelBox.store(idx, 'gemBag') });
   if (G.ui.vendor && G.ui.vendor.active) acts.push({ label: `Sell (${fmtInt(Math.max(1, Math.floor(itemValue(it) / 4)))}g)`, fn: () => G.ui.vendor.sell({ where: 'gemBag', idx }) });
   if (G.ui.stash && G.ui.stash.active) acts.push({ label: 'Store', fn: () => G.ui.stash.store(idx, 'gemBag') });
-  acts.push({ label: it.locked ? '🔓 Unlock' : '🔒 Lock', fn: () => { if (it.locked) delete it.locked; else it.locked = true; changed(); } });
+  acts.push({
+    label: it.locked ? '🔓 Unlock' : '🔒 Lock',
+    keepOpen: true,
+    fn: () => {
+      if (it.locked) delete it.locked; else it.locked = true;
+      changed();
+    },
+  });
   acts.push({ label: 'Drop', fn: () => dropFromBag(idx, 'gemBag'), cls: 'small red' });
   return acts;
 }
@@ -628,6 +636,7 @@ function getEquipActions(slot) {
   const acts = [{ label: 'Unequip', fn: () => unequip(slot) }];
   acts.push({
     label: it.locked ? '🔓 Unlock' : '🔒 Lock',
+    keepOpen: true,
     fn: () => {
       if (it.locked) delete it.locked; else it.locked = true;
       UI.log(it.locked ? `<b>${escapeHtml(itemName(it))}</b> locked: auto-play won't touch it or swap it out.` : `<b>${escapeHtml(itemName(it))}</b> unlocked.`, '#ffd860');
