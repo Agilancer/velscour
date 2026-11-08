@@ -128,7 +128,7 @@ export class Monster extends Creature {
     if (this.summon) {
       if (!this.static && this.owner) return this.pickFoe();
       const range = (this.atk && this.atk.range) || 8;
-      if (this.aggro && !this.aggro.dead && this.aggro.team !== this.team && dist(this.x, this.y, this.aggro.x, this.aggro.y) < range + 2) return this.aggro;
+      if (this.aggro && !this.aggro.dead && this.aggro.team !== this.team && !this.aggro.clutter && dist(this.x, this.y, this.aggro.x, this.aggro.y) < range + 2) return this.aggro;
       return w.nearestHostile(this.team, this.x, this.y, range, true);
     }
     // monsters: taunting totems first, then whatever hits them, then the closest of player/minions
@@ -245,7 +245,7 @@ export class Monster extends Creature {
    */
   pickFoe() {
     const w = this.world, o = this.owner, map = w.map;
-    const f = this.foe, live = (e) => e && !e.dead && e.team !== this.team && e.targetable !== false;
+    const f = this.foe, live = (e) => e && !e.dead && e.team !== this.team && e.targetable !== false && !e.clutter;
     if (dist(this.x, this.y, o.x, o.y) > LEASH + 6) return (this.foe = null); // strayed too far: go back first
     if (live(f) && w.time < this.foeT && dist(o.x, o.y, f.x, f.y) < LEASH + 4) return f;
     this.foeT = w.time + rand(0.35, 0.55);
@@ -259,6 +259,7 @@ export class Monster extends Creature {
     let best = null, bs = Infinity;
     const reach = melee ? 0 : this.range || (this.atk && this.atk.range) || 7;
     for (const e of w.hostiles(this.team, o.x, o.y, LEASH)) {
+      if (e.clutter) continue;
       // a foe it can't walk to (or only the long way round) is only worth it to a shooter that already has a shot
       const walk = flow ? map.flowAt(e.x, e.y) : -1;
       if ((walk < 0 || walk > LEASH * 1.6) && !(dist(this.x, this.y, e.x, e.y) < reach && map.los(this.x, this.y, e.x, e.y))) {

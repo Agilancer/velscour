@@ -512,7 +512,7 @@ const FIGHT = {
       let best = null, bs = Infinity;
       for (const e of w.hostiles(m.team, m.x, m.y, 9)) {
         const de = dist(m.x, m.y, e.x, e.y);
-        if (e === t || e.dead || de < 3 || !w.map.los(m.x, m.y, e.x, e.y)) continue;
+        if (e === t || e.dead || e.clutter || de < 3 || !w.map.los(m.x, m.y, e.x, e.y)) continue;
         const sc = de - (o && e.target === o ? 3 : 0);
         if (sc < bs) { bs = sc; best = e; }
       }
@@ -548,7 +548,7 @@ const FIGHT = {
       return;
     }
     if (!(S.cds.roll > 0) && d <= 2.4) { // in a brawl with the roll ready: roll on through the pack to another foe
-      const e = m.world.hostiles(m.team, m.x, m.y, 7).find((c) => !c.dead && c !== t && dist(m.x, m.y, c.x, c.y) > 2.6 && m.world.map.los(m.x, m.y, c.x, c.y));
+      const e = m.world.hostiles(m.team, m.x, m.y, 7).find((c) => !c.dead && !c.clutter && c !== t && dist(m.x, m.y, c.x, c.y) > 2.6 && m.world.map.los(m.x, m.y, c.x, c.y));
       if (e) { t = e; d = dist(m.x, m.y, e.x, e.y); }
     }
     if (!(S.cds.roll > 0) && d > 2.4 && d < 7 && m.world.map.los(m.x, m.y, t.x, t.y)) { // roll through the pack
@@ -662,7 +662,7 @@ const FIGHT = {
   },
   frost(m, S, t, d, dt) {
     const w = m.world;
-    if (!(S.cds.nova > 0) && w.hostiles(m.team, m.x, m.y, 2).length) {
+    if (!(S.cds.nova > 0) && w.hostiles(m.team, m.x, m.y, 2).some((c) => !c.dead && !c.clutter)) {
       S.cds.nova = 7 * cdk(S);
       cast(m, S, 'special', 0.45, 0.2, (mm, SS) => {
         aoe(w, mm, mm.x, mm.y, 2.2, mm.dmg * 1.2, 'cold', { freeze: true, slow: true });
@@ -717,7 +717,7 @@ const FIGHT = {
   charmer(m, S, t, d, dt) {
     const w = m.world;
     if (!(S.cds.charm > 0)) {
-      const c = w.hostiles(m.team, m.x, m.y, 6.5).find((e) => !e.dead && e.rank !== 'boss' && e.rank !== 'unique' && !e.summon && !(e.curses.charm && e.curses.charm.t > 0) && w.map.los(m.x, m.y, e.x, e.y));
+      const c = w.hostiles(m.team, m.x, m.y, 6.5).find((e) => !e.dead && !e.clutter && e.rank !== 'boss' && e.rank !== 'unique' && !e.summon && !(e.curses.charm && e.curses.charm.t > 0) && w.map.los(m.x, m.y, e.x, e.y));
       if (c) {
         S.cds.charm = 10 * cdk(S);
         cast(m, S, 'ability', 0.55, 0.3, (mm, SS) => {

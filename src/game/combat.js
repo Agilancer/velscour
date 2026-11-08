@@ -205,7 +205,7 @@ function applyStatus(src, tgt, dmg, el, o) {
     const w = tgt.world;
     if (w) {
       const team = src ? src.team : 'player';
-      const n = w.hostiles(team, tgt.x, tgt.y, 3.5).filter((c) => c !== tgt)[0];
+      const n = w.hostiles(team, tgt.x, tgt.y, 3.5).filter((c) => c !== tgt && !c.clutter)[0];
       if (n) {
         addEffect(new Bolt(tgt.x, tgt.y, 28, n.x, n.y, 28, '#a8ccff', 0.18, 2));
         hit(src, n, dmg * 0.35, 'light', { noArc: true, silent: false, crit: false });

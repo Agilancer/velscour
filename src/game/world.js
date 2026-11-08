@@ -130,14 +130,14 @@ export class World {
     return out;
   }
   hostiles(team, x, y, r) { return this.query(x, y, r, (c) => c.team !== team && c.targetable !== false); }
-  nearestHostile(team, x, y, r, needLos = false) {
+  nearestHostile(team, x, y, r, needLos = false, allowClutter = false) {
     let best = null, bd = Infinity;
     let bestX = Infinity, bestY = Infinity;
     const x0 = Math.floor((x - r) / CELL), x1 = Math.floor((x + r) / CELL);
     const y0 = Math.floor((y - r) / CELL), y1 = Math.floor((y + r) / CELL);
     const visit = (cell, cx, cy) => {
       for (const c of cell) {
-        if (c.dead || c.team === team || c.targetable === false) continue;
+        if (c.dead || c.team === team || c.targetable === false || (!allowClutter && c.clutter)) continue;
         const d = dist2(x, y, c.x, c.y), rr = r + c.r;
         // Preserve query's row/column tie order even when scanning occupied cells.
         if (d > rr * rr || d > bd || (d === bd && (cy > bestY || (cy === bestY && cx >= bestX)))) continue;
@@ -155,7 +155,7 @@ export class World {
         for (const c of a) {
           const cx = c._gx, cy = c._gy;
           if (cx < x0 || cx > x1 || cy < y0 || cy > y1) continue;
-          if (c.dead || c.targetable === false) continue;
+          if (c.dead || c.targetable === false || (!allowClutter && c.clutter)) continue;
           const d = dist2(x, y, c.x, c.y), rr = r + c.r;
           if (d > rr * rr || d > bd || (d === bd && (cy > bestY || (cy === bestY && cx >= bestX)))) continue;
           if (needLos && !this.map.los(x, y, c.x, c.y)) continue;
