@@ -144,7 +144,7 @@ export class Monster extends Creature {
   update(dt) {
     const w = this.world;
     this.animT += dt;
-    this.lifeT += dt;
+    if (!G.cine) this.lifeT += dt;
     if (this.regenSuppress > 0) this.regenSuppress -= dt;
     if (this.shockCd > 0) this.shockCd -= dt;
     if (this.thornCd > 0) this.thornCd -= dt;
@@ -178,6 +178,18 @@ export class Monster extends Creature {
     if (this.aura) addLight(this.x, this.y, 2.5, 0.5);
     if (this.defAura && chance(dt * 2)) aoe(w, this, this.x, this.y, this.defAura.r, this.dmg * 0.3, this.defAura.el, { dot: true });
     if (!canAct) { this.moving = false; return; }
+    if (G.cine && (this.summon || this.team === 'player')) {
+      this.moving = false;
+      this.moveVec = [0, 0];
+      this.moveTarget = null;
+      this.path = null;
+      this.target = null;
+      this.foe = null;
+      this.action = null;
+      this.state = 'idle';
+      if (this.nav) this.nav.path = null;
+      return;
+    }
     if (this.wardTick) return this.wardTick(dt); // raid warding crystals (game/raid.js)
     this.cd -= dt * (this.partyBuff && this.partyBuff.stats.as ? 1 + this.partyBuff.stats.as / 100 : 1);
     if (this.spell && (this.spellCd -= dt) <= 0) this.castSpell();

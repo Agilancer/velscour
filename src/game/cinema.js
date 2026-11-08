@@ -142,6 +142,27 @@ export const Cine = {
       G.player.attackTarget = null;
       G.player.interact = null;
       G.player.moving = false;
+      if (G.player.sig?.s) {
+        const s = G.player.sig.s;
+        s.idle = 99;
+        s.rest = 1;
+        if (s.fam) { s.fam.act = null; s.fam.trail.length = 0; s.fam.x = G.player.x; s.fam.y = G.player.y; }
+      }
+    }
+    if (G.world?.creatures) {
+      for (const c of G.world.creatures) {
+        if (c.summon || c.team === 'player') {
+          c.moving = false;
+          c.moveVec = [0, 0];
+          c.moveTarget = null;
+          c.path = null;
+          c.target = null;
+          c.foe = null;
+          c.action = null;
+          c.state = 'idle';
+          if (c.nav) c.nav.path = null;
+        }
+      }
     }
   },
   stop() {
@@ -151,6 +172,17 @@ export const Cine = {
       G.player.moveVec = [0, 0];
       G.player.moveTarget = null;
       G.player.path = null;
+    }
+    if (G.world?.creatures) {
+      for (const c of G.world.creatures) {
+        if (c.summon || c.team === 'player') {
+          c.moving = false;
+          c.target = null;
+          c.foe = null;
+          c.action = null;
+          c.state = 'idle';
+        }
+      }
     }
     const f = this.onEnd; this.onEnd = null; if (f) f();
   },

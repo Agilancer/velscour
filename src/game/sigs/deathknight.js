@@ -368,13 +368,14 @@ function hiltOf(F) {
   return [isoX(F.x, F.y) - Math.cos(F.a) * L * F.piv, isoY(F.x, F.y) - F.z - Math.sin(F.a) * L * F.piv, L];
 }
 function famUpdate(p, s, dt) {
+  if (G.cine) return;
   let F = s.fam;
   if (!F || Math.hypot(F.x - p.x, F.y - p.y) > 9) F = s.fam = famInit(p);
   F.clock += dt; F.gcd -= dt; F.say -= dt;
   for (const k in F.cd) F.cd[k] -= dt;
   if (s.swing > 0) { F.act = null; F.trail.length = 0; return; }
   // its own skills, when it is free and there is something to cut
-  if (!(F.act && F.act.pet) && F.gcd <= 0) {
+  if (!G.cine && !(F.act && F.act.pet) && F.gcd <= 0) {
     const ready = PET.filter((q) => (F.cd[q.id] || 0) <= 0).sort(() => Math.random() - 0.5);
     let go = null;
     if (ready.length && foesNear(p, p.x, p.y, 6).length) for (const q of ready) { const tg = q.pick(p); if (tg) { go = [q, tg]; break; } }
@@ -418,7 +419,7 @@ function drawTrail(ctx, F, col) {
 }
 function drawFam(ctx, p, s, t) {
   const F = s.fam, rest = s.rest ?? 1;
-  if (!F || s.swing > 0 || rest >= 1 || p.world?.kind === 'town') return; // swinging, or resting on his back (bladeOnBack)
+  if (!F || s.swing > 0 || rest >= 1 || p.world?.kind === 'town' || G.cine) return; // swinging, or resting on his back (bladeOnBack)
   const col = s.runes.length ? tint(s) : look(p).glow;
   let [hx, hy, L] = hiltOf(F), a = F.a, spin = F.spin, tilt = F.tilt;
   const B = p._bladeBack;
@@ -458,11 +459,12 @@ export default {
       if (s.band !== undefined) { s.flash = 0.5; floatText(p.x, p.y, 110, 'Runeblade reforged: ' + L.name, L.glow, 14, { life: 2.2, vz: 14 }); sfx('cold', 0.6); }
       s.band = L.band; preloadRuneblade(L.skin);
     }
-    if (s.runes.length >= RUNES && s.swing <= 0 && (s.wait = (s.wait || 0) - dt) <= 0) { s.wait = 0.2; if (crowd(p, 4.5)) this.fire(p, s); }
+    if (!G.cine && s.runes.length >= RUNES && s.swing <= 0 && (s.wait = (s.wait || 0) - dt) <= 0) { s.wait = 0.2; if (crowd(p, 4.5)) this.fire(p, s); }
     famUpdate(p, s, dt);
-    if (p.world?.kind === 'town') {
+    if (p.world?.kind === 'town' || G.cine) {
       s.idle = 99;
       s.rest = 1;
+      if (s.fam) { s.fam.act = null; s.fam.trail.length = 0; s.fam.x = p.x; s.fam.y = p.y; }
       return;
     }
     // to his back out of a fight, off it when the fighting starts (he strikes or casts, or the sword fights on its own)
@@ -487,7 +489,7 @@ export default {
   back(ctx, p, s, t) { if (behind(p, s)) drawFam(ctx, p, s, t); },
   ground(ctx, p, s) { // its shadow on the floor, fainter the higher it flies
     const F = s.fam;
-    if (!F || s.swing > 0 || s.rest > 0.5) return;
+    if (!F || s.swing > 0 || s.rest > 0.5 || G.cine) return;
     const [hx, , L] = hiltOf(F), cx = hx + Math.cos(F.a) * L * 0.5, k = clamp01(1 - (F.z - (p.z || 0)) / 160);
     ctx.globalAlpha = 0.28 * k; ctx.fillStyle = '#000';
     ctx.beginPath(); ctx.ellipse(cx, isoY(F.x, F.y), 4 + Math.abs(Math.cos(F.a)) * L * 0.4, 3, 0, 0, TAU); ctx.fill();
