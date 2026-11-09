@@ -24,6 +24,7 @@ const inDungeon = () => !!G.world && G.world.kind === 'dungeon' && !!G.player &&
 export const hearthReady = () => !!G.char && hearthOf() >= 1 && inDungeon();
 export const hearthChanneling = () => !!channel;
 export const hearthPortalActive = () => !!activeHearth;
+export const getActiveHearth = () => activeHearth;
 /** Seconds left until the stone is ready again. */
 export const hearthSecondsLeft = (c = G.char) => Math.max(0, Math.ceil((1 - hearthOf(c)) * HEARTH_FILL));
 
