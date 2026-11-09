@@ -597,8 +597,25 @@ export const Auto = {
     return true;
   },
 
-  /** Click through the death and victory screens. */
+  /** Click through the death, victory, and portal choice dialogs. */
   handleScreens(dt) {
+    const pcDialog = document.querySelector('.portal-choice');
+    if (pcDialog) {
+      this.portalChoiceT = (this.portalChoiceT || 0) + dt;
+      this.setStatus('Choosing portal…');
+      if (this.portalChoiceT > 3.0 || (!G.game?.pick && this.portalChoiceT > 1.0)) {
+        this.portalChoiceT = 0;
+        const btn = pcDialog.querySelector('button.red') || pcDialog.querySelector('button');
+        if (btn) {
+          btn.click();
+          return true;
+        }
+      }
+      return true;
+    } else {
+      this.portalChoiceT = 0;
+    }
+
     const scr = [...document.querySelectorAll('#screens > .screen')].find((x) => x.querySelector('.death-title'));
     if (!scr) { this.screenT = 0; return false; }
     const btn = [...scr.querySelectorAll('button')].find((b) => /Return to Town|Continue/.test(b.textContent));
