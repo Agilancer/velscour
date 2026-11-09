@@ -573,6 +573,7 @@ export const Auto = {
     p.whirlAuto = this.overrideT <= 0;
     if (this.handleScreens(dt)) return;
     if (p.dead) { this.setStatus('Fallen…'); return; }
+    if (this.destPick) { this.setStatus('Choosing destination…'); p.moveVec = [0, 0]; return; }
     if (this.transitT > 0) { this.transitT -= dt; this.setStatus('Travelling…'); return; }
     if (this.overrideT > 0) { p.whirlAuto = false; this.overrideT -= dt; this.setStatus('Manual control'); return; }
     if (this.listen(dt)) return;
@@ -2196,6 +2197,7 @@ export const Auto = {
   // ================================================================ town
   townTick(dt) {
     const p = G.player, w = G.world, c = G.char;
+    if (this.destPick) { this.setStatus('Choosing destination…'); p.moveVec = [0, 0]; return; }
     this.navT -= dt;
     if (!this.nav || this.navT <= 0) this.buildNav();
     if (!this.town) {
@@ -2212,7 +2214,7 @@ export const Auto = {
       // the bag is full of what auto-play can't sell or stash (sealed treasures...): wait here until the player makes
       // room (breaks a seal, sells, drops). A seal broken meanwhile is trade goods: run the errands again for it.
       if (G.autoOpenSeals && bagFree(c) < BAG_LOW && c.bag.some((b) => b && b.sealed)) { for (const b of c.bag) if (b && b.sealed) b.sealed = false; T.i = 0; T.steps = this.townPlan(); return; } // tests: open them and shop again
-      const sealedN = c.bag.filter((b) => b && b.sealed).length;
+      const sealedN = (c.bag || []).filter((b) => b && b.sealed).length;
       this.sealWaiting = gearOn() && bagWait(c);   // hands off the gear: back down with a full bag, gear left on the ground
       if (!gearOn() && !bagFree(c) && !T.fullNote) { T.fullNote = true; G.ui.log('Your bag is full: auto-play goes on and leaves new gear on the ground (gold, potions and gems still come along). Make room whenever you like.', '#ffdf8a'); }
       if (this.sealWaiting) {
@@ -2436,8 +2438,8 @@ export const Auto = {
     store();
     // a full chest: make room by selling the weakest gear auto-play stored (+N gear last, then lowest rarity and item
     // level), then store the rest; never sell valuable gear (Mythic/Legendary/Abyssal/Covenant)
-    if (c.stash.every(Boolean)) {
-      const worst = c.stash.map((b, i) => ({ b, i })).filter(({ b }) => b.type === 'gear' && b.autoStash && !b.locked && !isValuableGear(b)).sort((a, b) => upgraded(a.b) - upgraded(b.b) || a.b.rarity - b.b.rarity || a.b.ilvl - b.b.ilvl).slice(0, 30);
+    if (Array.isArray(c.stash) && c.stash.every(Boolean)) {
+      const worst = (c.stash || []).map((b, i) => ({ b, i })).filter(({ b }) => b && b.type === 'gear' && b.autoStash && !b.locked && !isValuableGear(b)).sort((a, b) => upgraded(a.b) - upgraded(b.b) || a.b.rarity - b.b.rarity || a.b.ilvl - b.b.ilvl).slice(0, 30);
       let gold = 0;
       for (const { b, i } of worst) { gold += sellPrice(b); c.stash[i] = null; }
       c.gold += gold;
@@ -2650,7 +2652,7 @@ export const Auto = {
     for (const s of ['weapon', 'body', 'head', 'offhand', 'hands', 'legs', 'feet']) {
       const it = c.equip[s];
       if (!it || it.locked || it.rarity < 1) continue;
-      const n = it.affixes.filter((a) => !a.implicit).length;
+      const n = (it.affixes || []).filter((a) => !a.implicit).length;
       if (n >= RARITY[it.rarity].affixes[1] + 1) continue;
       const cost = enchantCost(it, true);
       if (cost > this.budget(0.2)) continue;

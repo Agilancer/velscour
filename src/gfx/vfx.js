@@ -455,7 +455,7 @@ export class SkyBolts {
     for (const b of this.bolts) {
       const a = this.t - b.t0;
       if (a < 0 || a > 0.6) continue;
-      if (!b.ends) { this.aim(b); G.flash = Math.max(G.flash || 0, 0.1); }
+      if (!b.ends) { this.aim(b); G.flash = G.settings?.reduceFlashing ? 0 : Math.max(G.flash || 0, 0.05); }
       if ((b.regen -= dt) <= 0) { b.regen = 0.05; b.segs = b.ends.map(([ax, ay, bx, by]) => jag(ax, ay, bx, by)); }
       // its colour lights the dark halfway up the trunk and at the fork
       for (const f of [0.5, 1]) {

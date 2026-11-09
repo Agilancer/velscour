@@ -258,12 +258,13 @@ export function createTowerRun(world, gen, biome, onSuccess) {
     // the stair's drops come up (there's no way back down for them), but its gold goes straight into the purse and the
     // log says where the rest came from: a pile waiting on the roof looked like items left over from an earlier visit
     let gold = 0;
-    const loot = world.loot.filter((l) => {
+    const lootList = Array.isArray(world.loot) ? world.loot : [];
+    const loot = lootList.filter((l) => {
       if (l.x < g.XR) return false;
       if (l.kind === 'gold' && l.amount > 0) { gold += l.amount; return false; }
       return true;
     });
-    world.loot = world.loot.filter((l) => l.x < g.XR || loot.includes(l));
+    world.loot = lootList.filter((l) => l.x < g.XR || loot.includes(l));
     if (gold) { G.char.gold += gold; UI.log(`You gather ${fmtInt(gold)} gold left on the stair.`, '#ffd34a'); }
     const items = loot.filter((l) => l.kind === 'item').length;
     if (items) UI.log(`${items} item${items > 1 ? 's' : ''} you left on the stair ${items > 1 ? 'were' : 'was'} carried up to the roof.`, '#c8b890');

@@ -68,6 +68,9 @@ export const controls = {
       else { tx = p.x + Math.cos(p.facing) * 4; ty = p.y + Math.sin(p.facing) * 4; }
       if (sk.kind === 'melee' && target && dist(p.x, p.y, target.x, target.y) > 7) target = null;
     }
+    if (['blink', 'dash', 'leap'].includes(sk.kind)) {
+      Macros.clearKeep();
+    }
     if (sk.kind === 'melee' && target && !at) return p.tryUseSkill(sk, target.x, target.y, target);
     return p.tryUseSkill(sk, tx, ty, null);
   },

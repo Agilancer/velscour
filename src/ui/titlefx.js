@@ -72,8 +72,7 @@ export function attachTitleFx(screen, logoEl, els = {}) {
       creditsAt = performance.now() - songT * 1000; creditsClockAnchored = true; ts = Math.max(ts, songT);
     }
   }
-  function begin() {   // called inside the tap: show the credits while the title song buffers
-    if (phase !== 'gate') return;
+  function startSequence() {
     phase = 'audio-pending'; priming = true;
     screen.classList.remove('title-gated');
     primeMusic('title').then(() => {
@@ -85,6 +84,18 @@ export function attachTitleFx(screen, logoEl, els = {}) {
       else if (!els.credits) startIntro();
     });
   }
+  function begin() {   // called inside the tap: show the credits while the title song buffers
+    if (phase !== 'gate') return;
+    if (els.onAwaken && !window.VELSCOUR_TEST_MENU) {
+      phase = 'warning';
+      screen.classList.remove('title-gated');
+      els.onAwaken(() => {
+        startSequence();
+      });
+      return;
+    }
+    startSequence();
+  }
   function light(instant) {   // the hit: the logo bursts into flame and the menu appears
     if (phase === 'lit') return;
     phase = 'lit'; burstAt = performance.now();
@@ -94,6 +105,11 @@ export function attachTitleFx(screen, logoEl, els = {}) {
     if (ready) burst();
   }
   function skip() {
+    if (phase === 'lit' || phase === 'warning') return;
+    if (phase === 'gate') {
+      begin();
+      return;
+    }
     if (phase === 'credits') {
       skipAfterCredits = true;
       if (els.credits) for (const card of els.credits.children) card.style.opacity = '0';
@@ -113,6 +129,7 @@ export function attachTitleFx(screen, logoEl, els = {}) {
   // iOS only lets audio start from a touch's *end* (pointerup), never its pointerdown, so a touch opens the gate on
   // release; a mouse button or key opens it on press. Every input also re-tries the unlock.
   const onInput = (e) => {
+    if (phase === 'warning') return;
     if (e.type !== 'keydown' && (e.pointerType === 'mouse') !== (e.type === 'pointerdown')) return;
     initAudio();
     if (phase === 'gate') begin(); else skip();

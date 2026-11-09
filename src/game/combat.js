@@ -120,7 +120,8 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
   if (byHero && src && src.isPlayer && o.sk && !o.dot && showFx) classHitFx(src, tgt, o.sk, el); // the class's own splash (gfx/classfx.js)
   tgt.hp -= dmg;
   if (tgt.isPlayer && !o.dot && src && src !== tgt && tgt.st.procs && tgt.st.procs.length) relicProc(tgt, 'hurt', src, dmg);
-  tgt.flash = 0.12;
+  const shouldFlash = !o.multiHit || o.hitIndex === 0 || o.hitIndex === (o.hitCount - 1);
+  if (shouldFlash) tgt.flash = 0.10;
   if (tgt.team === 'enemy') tgt.regenSuppress = o.dot ? Math.max(tgt.regenSuppress || 0, 3.0) : 6.0;
   if (tgt.onDamaged && !o.dot) tgt.onDamaged(src, dmg);
   tgt.hpShow = 3;
@@ -132,7 +133,12 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     const z = clamp((tgt.artH || tgt.spriteH || 40) * (tgt.scale || 1) * 0.85, 26, 150) + (tgt.fly ? 18 : 0);
     if (tgt.isPlayer) {
       damageText(tgt.x, tgt.y, z, dmg, o.dot ? 'dot' : 'hurt', '#ff4030');
-      if (!o.dot) { sfx('hurt'); G.hurtFlash = Math.min(0.5, (G.hurtFlash || 0) + dmg / tgt.maxHp * 2); camera.shake(Math.min(8, 2 + (dmg / tgt.maxHp) * 30)); }
+      if (!o.dot) {
+        sfx('hurt');
+        const hurtMax = G.settings?.reduceFlashing ? 0.2 : 0.4;
+        G.hurtFlash = Math.min(hurtMax, (G.hurtFlash || 0) + (dmg / tgt.maxHp) * (G.settings?.reduceFlashing ? 0.8 : 1.5));
+        camera.shake(Math.min(G.settings?.shake ? 8 : 0, 2 + (dmg / tgt.maxHp) * 20));
+      }
     } else if (byHero && showNum && dmg > 0) {
       damageText(tgt.x, tgt.y, z, Math.max(1, shownDmg(dmg, tLvl)), crit ? 'crit' : o.dot ? 'dot' : 'hit', elem(el).glow);
     }

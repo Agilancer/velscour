@@ -292,9 +292,9 @@ export function generateCastle(depth,biome,seed,variant=null){
     {id:'great_hall',name:'Great Hall',tiles:grow(room3('great_hall')),floor:GH_F},
   ];
   for(let i=0;i<N;i++){if(!L.bld[i])continue;
-    if(L.kind[i]===K3.floor&&!L.struct[i]){mat[i]=MAT.hall;map.block[i]=0;clear[i]=1;}
+    if((L.kind[i]===K3.floor||L.kind[i]===K3.door)&&!L.solid[i]){mat[i]=MAT.hall;map.block[i]=0;clear[i]=1;}
     else if(L.kind[i]===K3.keep)map.castleRoomWalls[i]=1;}
-  const floorRoom=(t,f)=>rect(t[0],t[1],t[2],t[3],(x,y,i)=>{if(L.bld[i]&&!L.struct[i])map.v[i]=f;});
+  const floorRoom=(t,f)=>rect(t[0],t[1],t[2],t[3],(x,y,i)=>{if(L.bld[i]&&(!L.struct[i]||L.kind[i]===K3.door))map.v[i]=f;});
   floorRoom(room3('keep_hall').tiles,F.slab[0]-1);floorRoom(room3('council').tiles,F.herring[0]-1);floorRoom(room3('armoury').tiles,F.dark[0]-1);
   for(const r of rooms)floorRoom(r.tiles,r.floor);
   // A banner hung flat on a wall face (the pack's hangings are painted face on: castlePanel shears them onto the face):
@@ -766,6 +766,24 @@ export function generateCastle(depth,biome,seed,variant=null){
   for(let k=props.length-1;k>=0;k--){const pr=props[k],i=I(Math.floor(pr.x),Math.floor(pr.y));
     if(inb(Math.floor(pr.x),Math.floor(pr.y))&&(L.solid[i]||(L.struct[i]&&L.kind[i]!==K3.floor))&&!pr.c3&&!pr.banner&&!pr.onWall)props.splice(k,1);}
   const st=castle3dState(V.id);
+  if(st?.base){
+    for(let i=0;i<N;i++)if(L.kind[i]===K3.door)st.base.delete(i);
+    for(const d of L.doors){
+      if(d.kind==='door'&&d.x0!==undefined){
+        const {x0,y0,x1,y1,out}=d,front=[];
+        if(out==='S')for(let x=x0;x<=x1;x++)front.push([x,y1+1]);
+        else if(out==='N')for(let x=x0;x<=x1;x++)front.push([x,y0-1]);
+        else if(out==='E')for(let y=y0;y<=y1;y++)front.push([x1+1,y]);
+        else if(out==='W')for(let y=y0;y<=y1;y++)front.push([x0-1,y]);
+        for(const [tx,ty] of front){
+          if(inb(tx,ty)){
+            const idx=I(tx,ty);
+            if(L.kind[idx]!==K3.stair)st.base.delete(idx);
+          }
+        }
+      }
+    }
+  }
   if(st)for(const r of st.roofs){
     let fx0=W,fy0=H,fx1=0,fy1=0;for(let i=0;i<N;i++)if(L.bld[i]===r.bld){const x=i%W,y=(i/W)|0;fx0=Math.min(fx0,x);fy0=Math.min(fy0,y);fx1=Math.max(fx1,x+1);fy1=Math.max(fy1,y+1);}
     for(const [id,col] of r.strips){
@@ -785,6 +803,7 @@ export function generateCastle(depth,biome,seed,variant=null){
     for(const d of st.moving.doors)mover('door',d.anchor,d.frames,{door:L.doors[d.i]});
   }
   {const D=map.drawbridge;D.tiles=[];rect(D.x0,D.hinge,D.x1-1,D.y1-1,(x,y,i)=>{D.tiles.push(i);map.block[i]=1;});D.down=false;D.lowering=false;
+    D.plankV=WARM+8;D.faceArt=FACE.bridge;D.mat=MAT.plank;
     // route planners (auto-play) may plan across it while it is up: it comes down as the hero nears it
     map.planOpen=(x,y)=>!D.down&&x>=D.x0&&x<D.x1&&y>=D.hinge&&y<D.y1;}
   map.castleKeep={x:KEEP[0],y:KEEP[1]};map.castleGarden=GDN;map.castleSiege=SG;map.castleVillage=[vx,vy];

@@ -868,7 +868,7 @@ export function renderWorld(ctx, world) {
       if (px < vr.x0 - 100 || px > vr.x1 + 100 || y1 < vr.y0 || y1 - 340 > vr.y1) continue;
     } else if (px < vr.x0 - 100 || px > vr.x1 + 100 || py < vr.y0 - 40 || py > vr.y1 + 220) continue;
     enqueue(pr.x + pr.y, 4, pr);
-    if (tall) occludeStatic(pr, propRect(pr, px, py));
+    if (tall && !pr.c3move) occludeStatic(pr, propRect(pr, px, py));
   }
   // the Dark Forest's trees: only the buckets around the view (a tree's base may sit well below it)
   const tc = map.treeCells;
@@ -939,7 +939,7 @@ export function renderWorld(ctx, world) {
           drawProp(ctx, o, Math.min(ra, hides([rx, ry, s.w * o.k, s.h * o.k], it.d) ? 0.32 : 1));
           break;
         }
-        if (o.spr || (o.sprite === 'tree' || o.sprite === 'pine')) {
+        if (!o.c3move && (o.spr || (o.sprite === 'tree' || o.sprite === 'pine'))) {
           const px = isoX(o.x, o.y), py = isoY(o.x, o.y);
           for (const v of views) {
             const fy = v.y1 + 4;
@@ -1032,10 +1032,14 @@ export function renderWorld(ctx, world) {
   if (world.sky) skyFront(ctx, W, H, world, Math.min(0.05, G.dt || 0.016)); // rain, snow, ash, wind, fog, lightning
   drawSeeThrough(ctx, world, camT, hq, tx0, ty0, tx1, ty1);
   if (G.hurtFlash > 0) {
-    ctx.fillStyle = `rgba(160,0,0,${Math.min(0.45, G.hurtFlash)})`;
+    const maxHurt = G.settings?.reduceFlashing ? 0.2 : 0.4;
+    ctx.fillStyle = `rgba(160,0,0,${Math.min(maxHurt, G.hurtFlash)})`;
     ctx.fillRect(0, 0, W, H);
   }
-  if (G.flash > 0) { ctx.fillStyle = `rgba(255,250,230,${Math.min(0.8, G.flash)})`; ctx.fillRect(0, 0, W, H); }
+  if (G.flash > 0 && !G.settings?.reduceFlashing) {
+    ctx.fillStyle = `rgba(255,250,230,${Math.min(0.28, G.flash * 0.4)})`;
+    ctx.fillRect(0, 0, W, H);
+  }
   if (p && p.hp < p.maxHp * 0.3 && !p.dead) {
     ctx.fillStyle = `rgba(120,0,0,${0.15 + Math.sin(G.time * 6) * 0.08})`;
     ctx.fillRect(0, 0, W, H);

@@ -157,7 +157,7 @@ function checkConjunction(p, force) {
   stat('conj');
   p.world.addHazard(new Conjunction(p, 4.5));
   floatText(p.x, p.y, 110, 'GRAND CONJUNCTION', '#ffffff', 20, { life: 2.6, vz: 14 });
-  G.flash = Math.max(G.flash || 0, 0.35);
+  G.flash = Math.max(G.flash || 0, G.settings?.reduceFlashing ? 0 : 0.12);
   sfx('boss', 0.7);
 }
 
@@ -261,7 +261,7 @@ export function astroCast(p, sk, L, tx, ty, c) {
     case 'mirror': startMirror(p, Math.max(2, 3 + 0.3 * (L - 1)), L); return undefined; // the buff still applies
     case 'supernova': {
       addEffect(new Flash(p.x, p.y, 2.2 * (m.r ?? 1) * area));
-      G.flash = Math.max(G.flash || 0, 0.25); camera.shake(8);
+      G.flash = Math.max(G.flash || 0, G.settings?.reduceFlashing ? 0 : 0.12); camera.shake(5);
       for (let i = 0; i < (G.touch ? 18 : 40); i++) { const a = rand(TAU), v = rand(4, 9); spawn({ type: 'glow', x: p.x, y: p.y, z: 30, vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: rand(-30, 60), drag: 2, life: rand(0.5, 1), size: rand(2, 4.5), size1: 0, color: i % 3 ? ASTRO.glow : i % 2 ? '#ffffff' : '#ffd060', add: true }); }
       sfx('explode', 0.8);
       return undefined;
@@ -401,7 +401,7 @@ class Body {
     const z = this.H * (1 - f), x = this.x - (1 - f) * 2, y = this.y - (1 - f) * 2;
     addLight(this.x, this.y, this.r * (1 + 2 * k), 0.6 + k, 20, this.sun ? '#ff9a30' : '#a8d8ff');
     if (chance(dt * 40 * m)) { // embers (or frost) shed as it falls
-      const a = rand(TAU), d = rand(0, this.r * 0.4);
+      const a = rand(TAU), d = rand(0, this.r * (this.sun ? 0.1 : 0.08));
       spawn({ type: this.sun ? 'glow' : 'shard', x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: z + rand(-20, 20), vz: rand(-160, -60), g: this.sun ? 0 : 120, life: rand(0.5, 1), size: rand(2, 5), size1: this.sun ? 0 : undefined, color: this.sun ? (chance(0.5) ? '#ffb040' : '#ff6010') : '#d8f4ff', add: this.sun, rot: rand(TAU) });
     }
     if (k > 0.45 && (this.heatT -= dt) <= 0) { // the heat (or cold) is felt before it lands
@@ -415,21 +415,23 @@ class Body {
     const r = this.r;
     explode(w, this.src, this.x, this.y, r, this.dmg, this.el, { ...this.o, knock: 1.6, sound: true, slow: !this.sun || this.o.slow }, 'nuke');
     for (let i = 0; i < 4; i++) addEffect(new Ring(this.x, this.y, 0.2, r * (1.1 + i * 0.35), 0.5 + i * 0.15, i % 2 ? '#ffffff' : this.sun ? '#ffb040' : '#a8e0ff', 7 - i));
-    addEffect(new Flash(this.x, this.y, r * 1.2, this.sun ? '#fff0b0' : '#e8f6ff'));
+    addEffect(new Flash(this.x, this.y, r * 0.8, this.sun ? '#fff0b0' : '#e8f6ff'));
     for (let i = 0; i < (G.touch ? 30 : 70); i++) {
       const a = rand(TAU), v = rand(3, 9) * (0.6 + r * 0.15);
       spawn({ type: this.sun ? 'glow' : 'shard', x: this.x, y: this.y, z: 10, vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: rand(40, 220), g: 260, drag: 1.2, life: rand(0.6, 1.4), size: rand(2.5, 5), size1: this.sun ? 0.5 : undefined, color: this.sun ? (i % 3 ? '#ff8a20' : '#ffe080') : i % 2 ? '#d8f4ff' : '#ffffff', add: this.sun, rot: a });
     }
     addDecal(this.x, this.y, this.sun ? 'rgba(20,8,2,0.6)' : '#b0e0ff', r * 0.7, this.sun ? 'scorch' : 'frost', 0.65);
     if (this.sun) w.addHazard(new Area({ world: w, src: this.src, x: this.x, y: this.y, r: r * 0.85, dur: 3.5, tick: 0.5, dmg: this.dmg.map((v) => v * 0.12), el: 'fire', fx: 'fire', o: this.o }));
-    G.flash = Math.max(G.flash || 0, 0.55); camera.shake(16);
+    G.flash = Math.max(G.flash || 0, G.settings?.reduceFlashing ? 0 : 0.18); camera.shake(10);
     sfx('boss', 0.8);
     stat(this.sun ? 'sun' : 'moon');
     return false;
   }
   draw(ctx) {
     const f = this.fall(), z = this.H * (1 - f), x = this.x - (1 - f) * 2, y = this.y - (1 - f) * 2;
-    const R = this.r * HW * 0.85 * (0.7 + 0.3 * this.k());
+    // Scale orb: Sun 1/4th (~0.25), Moon 1/5th (~0.20), making them ~22-26px (matching Eclipse R=26), with Moon slightly smaller than Sun
+    const orbScale = this.sun ? 0.25 : 0.20;
+    const R = this.r * HW * 0.85 * (0.7 + 0.3 * this.k()) * orbScale;
     if (this.sun) drawSun(ctx, isoX(x, y), isoY(x, y) - z - R * 0.4, R, this.t, 0.6 + this.k() * 0.6);
     else drawMoon(ctx, isoX(x, y), isoY(x, y) - z - R * 0.4, R, this.t);
   }
@@ -483,7 +485,7 @@ class BlackHole {
     explode(w, this.src, this.x, this.y, this.r * 1.1, this.blast, this.el, { ...this.o, knock: 1.2, sound: true }, 'void');
     addEffect(new Ring(this.x, this.y, this.R * 1.4, 0.1, 0.45, '#ffffff', 6));
     addEffect(new Flash(this.x, this.y, this.r, '#c8b0ff'));
-    if (!this.small) { G.flash = Math.max(G.flash || 0, 0.2); camera.shake(10); }
+    if (!this.small) { G.flash = Math.max(G.flash || 0, G.settings?.reduceFlashing ? 0 : 0.12); camera.shake(7); }
     stat('hole');
     return false;
   }
@@ -596,7 +598,7 @@ class BigBang {
       const a = rand(TAU), v = rand(4, 13);
       spawn({ type: i % 4 ? 'glow' : 'streak', x: this.x, y: this.y, z: 28, vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: rand(-60, 120), drag: 1.4, life: rand(0.6, 1.3), size: rand(2, 4.5), size1: 0, color: this.cols[i % this.cols.length], add: true });
     }
-    G.flash = Math.max(G.flash || 0, 0.7); camera.shake(18);
+    G.flash = Math.max(G.flash || 0, G.settings?.reduceFlashing ? 0 : 0.22); camera.shake(12);
     sfx('boss', 0.9); sfx('explode');
     stat('bang');
     return false;
@@ -622,7 +624,7 @@ class Eclipse {
       this.fired = true;
       aoe(this.world, this.src, this.x, this.y, this.r, roll(this.dmg), this.el, { ...this.o });
       addEffect(new Ring(this.x, this.y, 0.2, this.r * 1.2, 0.6, '#ffffff', 5));
-      G.flash = Math.max(G.flash || 0, 0.2); sfx('holy', 0.7);
+      G.flash = Math.max(G.flash || 0, G.settings?.reduceFlashing ? 0 : 0.1); sfx('holy', 0.7);
     }
     return this.t < this.dur;
   }
@@ -706,11 +708,12 @@ class CometDrop {
 export const cometStrike = (x, y) => addEffect(new CometDrop(x, y));
 /** A white-hot flash sphere (supernova, impacts). */
 class Flash {
-  constructor(x, y, r, color = '#ffffff') { Object.assign(this, { x, y, r, color, t: 0, dur: 0.45, add: true }); }
+  constructor(x, y, r, color = '#ffffff') { Object.assign(this, { x, y, r, color, t: 0, dur: 0.35, add: true }); }
   update(dt) { this.t += dt; return this.t < this.dur; }
   draw(ctx) {
-    const k = this.t / this.dur, px = isoX(this.x, this.y), py = isoY(this.x, this.y) - 24, R = this.r * HW * (0.4 + 1.2 * Math.sqrt(k));
-    ctx.globalAlpha = 1 - k; ctx.drawImage(glowSprite(this.color), px - R, py - R * 0.75, R * 2, R * 1.5); ctx.globalAlpha = 1;
+    if (G.settings?.reduceFlashing) return;
+    const k = this.t / this.dur, px = isoX(this.x, this.y), py = isoY(this.x, this.y) - 24, R = this.r * HW * (0.3 + 0.9 * Math.sqrt(k));
+    ctx.globalAlpha = (1 - k) * 0.55; ctx.drawImage(glowSprite(this.color), px - R, py - R * 0.75, R * 2, R * 1.5); ctx.globalAlpha = 1;
   }
 }
 /** A wormhole mouth on the ground. */

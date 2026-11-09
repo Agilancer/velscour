@@ -184,6 +184,11 @@ function finish() {
 
   if (w.depth) {
     G.char.depth = w.depth;
+    if (w.depth > 1) {
+      G.char.cleared[w.depth - 1] = true;
+      G.char.deepest = Math.max(G.char.deepest || 0, w.depth - 1);
+    }
+    G.game?.autosave?.();
   }
 
   G.game?.enterTown?.();

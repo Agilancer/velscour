@@ -128,8 +128,8 @@ export function skillIcon(sk, size = 64) {
   }
   if (body) { // the special spells show their heavenly body
     const h = size / 2, m = sk.m.astro;
-    if (m === 'sunslam') drawSun(x, h, h, size * 0.24, 1.3, 0.8);
-    else if (m === 'moonfall') drawMoon(x, h, h, size * 0.26, 0.5);
+    if (m === 'sunslam') drawSun(x, h, h, size * 0.25, 1.3, 0.8);
+    else if (m === 'moonfall') drawMoon(x, h, h, size * 0.22, 0.5);
     else if (m === 'blackhole' || m === 'well') drawBlackHole(x, h, h + size * 0.06, size * (m === 'well' ? 0.2 : 0.26), 0.7, 1);
     else if (m === 'eclipse') { drawSun(x, h, h, size * 0.22, 0.4, 0.5); x.fillStyle = '#05040a'; x.beginPath(); x.arc(h + size * 0.05, h, size * 0.22, 0, TAU); x.fill(); }
     else if (m === 'bigbang') { for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; x.strokeStyle = ['#4aa8ff', '#ffd060', '#ff80e0'][i % 3]; x.lineWidth = 2 * s; x.beginPath(); x.moveTo(h + Math.cos(a) * size * 0.08, h + Math.sin(a) * size * 0.08); x.lineTo(h + Math.cos(a) * size * 0.4, h + Math.sin(a) * size * 0.4); x.stroke(); } drawChartStar(x, h, h, 1.3 * s, 0); }

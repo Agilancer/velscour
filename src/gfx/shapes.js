@@ -308,7 +308,7 @@ export function explosionFx(x, y, r, el, fx = 'explosion', opts = {}) {
       }
       smoke(x, y, 6, '#1a1410', 6 + Math.round(r * 3), 10 * r);
       addDecal(x, y, 'rgba(10,6,4,0.75)', r * 0.75, 'scorch', 0.8);
-      if (fx === 'nuke') { addEffect(new Ring(x, y, 0.3, r * 2.2, 1.2, '#ffffff', 10)); G.flash = 0.6; }
+      if (fx === 'nuke') { addEffect(new Ring(x, y, 0.3, r * 2.2, 1.2, '#ffffff', 10)); G.flash = G.settings?.reduceFlashing ? 0 : 0.2; }
       break;
     case 'pillar': case 'holy':
       addEffect(new Column(x, y, E.glow, 0.5, 26 * Math.max(1, r * 0.8), 300));

@@ -425,7 +425,8 @@ export class Creature {
       ctx.drawImage(ti, -w * 0.5, -h, w, h);
       if (this.flash > 0) {
         const f = this.flashImage(img);
-        ctx.globalAlpha = Math.min(1, this.flash * 8) * 0.85;
+        const flashMax = G.settings?.reduceFlashing ? 0.32 : 0.60;
+        ctx.globalAlpha = Math.min(1, this.flash * 8) * flashMax;
         if (f) ctx.drawImage(f, -w * 0.5, -h, w, h);
         else { ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(img, -w * 0.5, -h, w, h); }
       }
@@ -437,7 +438,8 @@ export class Creature {
       } else { this.drawRim(ctx, img, 0, 0, img.width, img.height, dx, dy, w, h * squash); ctx.drawImage(ti, dx, dy, w, h * squash); }
       if (this.flash > 0) {
         const f = this.flashImage(img);
-        ctx.globalAlpha = Math.min(1, this.flash * 8) * 0.85;
+        const flashMax = G.settings?.reduceFlashing ? 0.32 : 0.60;
+        ctx.globalAlpha = Math.min(1, this.flash * 8) * flashMax;
         if (f) {
           if (this.flip) ctx.drawImage(f, 0, 0, w, h * squash); else ctx.drawImage(f, dx, dy, w, h * squash);
         } else {
@@ -482,7 +484,7 @@ export class Creature {
     this.drawRim(ctx, a.img, a.sx, a.sy, a.cw, a.ch, dx, dy, dw, dh);
     ctx.drawImage(img, a.sx, a.sy, a.cw, a.ch, dx, dy, dw, dh);
     if (this.flash > 0) {
-      ctx.globalAlpha = Math.min(1, this.flash * 8) * 0.6;
+      ctx.globalAlpha = Math.min(1, this.flash * 8) * (G.settings?.reduceFlashing ? 0.25 : 0.45);
       ctx.globalCompositeOperation = 'lighter';
       ctx.drawImage(a.img, a.sx, a.sy, a.cw, a.ch, dx, dy, dw, dh);
     }
@@ -547,7 +549,7 @@ export class Creature {
     this.drawRim(ctx, a.img, a.frame * a.cw, 0, a.cw, a.ch, dx, dy, w, h);
     ctx.drawImage(tinted(a.img, this.tintFilter()), a.frame * a.cw, 0, a.cw, a.ch, dx, dy, w, h);
     if (this.flash > 0) {
-      ctx.globalAlpha = Math.min(1, this.flash * 8) * 0.6;
+      ctx.globalAlpha = Math.min(1, this.flash * 8) * (G.settings?.reduceFlashing ? 0.25 : 0.45);
       ctx.globalCompositeOperation = 'lighter';
       ctx.drawImage(a.img, a.frame * a.cw, 0, a.cw, a.ch, dx, dy, w, h);
     }

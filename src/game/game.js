@@ -335,6 +335,15 @@ export const game = {
   enterTown() {
     const old = G.world;
     const c = G.char;
+    if (c) {
+      const highest = Math.max(1, c.depth || 1, this.maxPortalFloor(c));
+      c.depth = Math.max(c.depth || 1, highest);
+      if (highest > 1) {
+        c.cleared[highest - 1] = true;
+        c.deepest = Math.max(c.deepest || 0, highest - 1);
+      }
+      this.autosave();
+    }
     const tileset = biomeTileSet(TOWN_BIOME);
     keepTileSets(null); // the last dungeon's recoloured set: rebuilt behind the loading screen if we go back
     if (!townTiles) townTiles = makeTownTiles();
@@ -370,7 +379,10 @@ export const game = {
     void preloadTownSheets(life.agents.map((a) => a.townsfolkSpriteId));
     world.portals = [{
       x: t.portal.x, y: t.portal.y, active: true, color: '#ff5020', reach: 1.7,
-      get label() { return `Portal — Depth ${G.char.depth}`; },
+      get label() {
+        const highest = Math.max(1, G.char?.depth || 1, G.game?.maxPortalFloor?.(G.char) || 1);
+        return `Portal — Depth ${highest}`;
+      },
       use: () => this.confirmDungeon(),
     }];
     // THE ETERNAL BREACH's purple portal (game.confirmBreach, docs/ETERNAL_BREACH.md)
@@ -438,9 +450,10 @@ export const game = {
    */
   confirmDungeon(initialTab = 'campaign') {
     const c = G.char;
+    const maxFloor = Math.max(1, this.maxPortalFloor(c));
+    const current = maxFloor;
+    c.depth = maxFloor;
     if (regionNeeds(BIOME_BY_ID[c.nextBiome], c.level)) c.nextBiome = drawBiome(c, c.depth); // a region above his level (game/regions.js)
-    const current = Math.max(1, c.depth || 1);
-    const maxFloor = Math.max(current, this.maxPortalFloor(c));
     const currentBiome = BIOME_BY_ID[current === FINAL_DEPTH ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
 
     let mode = initialTab === 'unbound' && endgameUnlocked(c) ? 'unbound' : 'campaign';
@@ -860,7 +873,7 @@ export const game = {
     const c = G.char, old = G.world, biome = BIOME_BY_ID[id];
     if (!c || !old || !biome || this._continuing) return;
     this._continuing = true;
-    const p = G.player, depth = old.depth, carry = p ? old.loot.filter((l) => Math.hypot(l.x - p.x, l.y - p.y) < 14) : [];
+    const p = G.player, depth = old.depth, carry = p && Array.isArray(old.loot) ? old.loot.filter((l) => Math.hypot(l.x - p.x, l.y - p.y) < 14) : [];
     c.nextBiome = id;
     if (id === 'snowy_summit' && c.summitRuns) delete c.summitRuns[depth];   // a fresh range above a fresh summit
     LoadingScreen.show({
@@ -930,6 +943,13 @@ export const game = {
     closeHearthPortals();
     const c = G.char;
     const depth = c.depth;
+    if (c) {
+      if (depth > 1) {
+        c.cleared[depth - 1] = true;
+        c.deepest = Math.max(c.deepest || 0, depth - 1);
+      }
+      this.autosave();
+    }
     if (depth !== FINAL_DEPTH && (!c.nextBiome || c.nextBiome === 'throne' || regionNeeds(BIOME_BY_ID[c.nextBiome], c.level))) c.nextBiome = drawBiome(c, depth);
     const biome = BIOME_BY_ID[depth === FINAL_DEPTH ? 'throne' : c.nextBiome] || BIOME_BY_ID.catacombs;
     const mix = mixPartner(biome); // a like-coloured biome whose tiles this level borrows, or null
@@ -1295,6 +1315,13 @@ export const game = {
   portalChoice(world, opts = {}) {
     if (this.pick) return;
     const c = G.char, next = world.depth + 1;
+    if (c) {
+      c.cleared[world.depth] = true;
+      c.deepest = Math.max(c.deepest || 0, world.depth);
+      c.depth = next;
+      this.brokeThrough(world.depth);
+      this.autosave();
+    }
     const ids = biomeChoices(c, next, 3);
     // a Town Commission waiting for a biome: its portal turns up among the three more often (game/commissions.js)
     const want = wantedBiomes(c).filter((id) => BIOME_BY_ID[id] && !ids.includes(id) && id !== c.lastBiome);
@@ -1313,7 +1340,10 @@ export const game = {
     const go = (town) => {
       this.pick = null;
       const cd = cards[sel];
+      c.cleared[world.depth] = true;
+      c.deepest = Math.max(c.deepest || 0, world.depth);
       c.depth = next; c.nextBiome = cd.id; takeBiome(c, cd.id);
+      this.autosave();
       if (cd.omen !== undefined) c.nextOmen = cd.omen || 'none'; else delete c.nextOmen;
       if (Auto.on) Auto.transitT = 3;
       if (town) { if (opts.auto) UI.log('Auto-play heads back to town to trade.', '#8fe0ff'); sfx('portal'); this.enterTown(); }
@@ -1955,8 +1985,8 @@ export const game = {
     if (!G.cine) camera.follow(p.x, p.y, dt);
     camera.update(dt);
     if (!!G.cine !== hudCine) { hudCine = !!G.cine; HUD.show(!hudCine); if (G.touch) TouchUI.show(!hudCine); }
-    if (G.hurtFlash > 0) G.hurtFlash = Math.max(0, G.hurtFlash - dt * 1.5);
-    if (G.flash > 0) G.flash = Math.max(0, G.flash - dt * 2);
+    if (G.hurtFlash > 0) G.hurtFlash = Math.max(0, G.hurtFlash - dt * 2.5);
+    if (G.flash > 0) G.flash = Math.max(0, G.flash - dt * 3.5);
     HUD.update(dt);
     if (G.touch) TouchUI.update();
     // hovering things -> cursor

@@ -29,9 +29,17 @@ export const Macros = {
   run(i) {
     const m = G.char && G.char.macros && G.char.macros[i];
     if (!m || !m.skills.length || !G.player || G.player.dead) return false;
-    for (const id of m.skills) if (!this.queue.includes(id)) this.queue.push(id);
+    for (const id of m.skills) {
+      if (!this.queue.some((q) => (typeof q === 'string' ? q : q.id) === id)) {
+        this.queue.push({ id, fromKeep: false });
+      }
+    }
     this.age = 0;
     return true;
+  },
+  /** Clear auto-keep queued skills (e.g. after a blink or when foes are no longer near). */
+  clearKeep() {
+    this.queue = this.queue.filter((q) => !q.fromKeep);
   },
   /** Would "Keep up" cast this skill now? A buff that has worn off (or is about to), a cooldown skill that is ready. */
   due(id) {
@@ -50,14 +58,27 @@ export const Macros = {
       this.keepT = 0.25;
       const keep = c.macros.filter((m) => m.keep && m.skills.length);
       if (keep.length && !Auto.on && w.nearestHostile('player', p.x, p.y, 12, true)) {
-        for (const m of keep) for (const id of m.skills) if (!this.queue.includes(id) && this.due(id)) { this.queue.push(id); this.age = 0; }
+        for (const m of keep) for (const id of m.skills) {
+          if (!this.queue.some((q) => (typeof q === 'string' ? q : q.id) === id) && this.due(id)) {
+            this.queue.push({ id, fromKeep: true });
+            this.age = 0;
+          }
+        }
       }
     }
     if (!this.queue.length) return;
     if ((this.age += dt) > 4) { this.queue.length = 0; return; }
     if (p.castLock > 0 || (p.channel && !(p.channel instanceof BeamCh))) return; // the next one goes when this cast ends
     while (this.queue.length) {
-      const sk = SKILLS[this.queue.shift()];
+      const item = this.queue.shift();
+      const id = typeof item === 'string' ? item : item.id;
+      const fromKeep = item && item.fromKeep;
+      // "Keep up" skills only fire while a foe is actively in range at the moment of execution
+      if (fromKeep && !w.nearestHostile('player', p.x, p.y, 12, true)) {
+        this.clearKeep();
+        break;
+      }
+      const sk = SKILLS[id];
       if (sk && p.skillLevel(sk) && G.controls.castSkill(sk)) { this.age = 0; break; }
     }
   },
