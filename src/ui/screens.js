@@ -15,6 +15,7 @@ import { creditsScreen } from './credits.js';
 import { RARITY, shownEquip } from '../data/items.js';
 import { FILTER_ROWS, lootFilter } from '../game/lootfilter.js';
 import { Cloud } from '../game/cloud.js';
+import { isProfaneName, validateCharName } from '../core/profanity.js';
 
 let current = null;
 
@@ -364,8 +365,17 @@ export function classSelect(sel = 'paladin', back = titleScreen) {
     sfx('ui');
     await Cloud.settle();
     const h = heroesByClass()[sel];   // fresh: the cloud may have brought this class's hero in
-    if (h) G.game.loadChar(h);
-    else G.game.newChar(sel, name.value.trim() || CLASSES[sel].name);
+    if (h) {
+      G.game.loadChar(h);
+    } else {
+      const enteredName = name.value.trim() || CLASSES[sel].name;
+      const val = validateCharName(enteredName);
+      if (!val.valid) {
+        UI.alert('Invalid Name', val.error);
+        return;
+      }
+      G.game.newChar(sel, val.name);
+    }
   };
   go.onclick = start;
   name.onkeydown = (e) => { if (e.key === 'Enter') start(); };
