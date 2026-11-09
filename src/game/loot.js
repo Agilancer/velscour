@@ -284,18 +284,19 @@ export function itemIcon(item, size = 48) {
 export function dropLoot(world, m) {
   const p = G.player;
   if (!p) return;
+  const isRiftActive = world.rift && !world.rift.done && !m.isRaid && !m.riftPinata;
   const st = p.st;
   const lvl = m.level;
   const rank = m.rank || 'normal';
   const R = { normal: 1, champion: 3, unique: 5, boss: 10 }[rank];
   const add = (kind, data) => world.addLoot(new GroundItem(m.x + rand(-0.2, 0.2), m.y + rand(-0.2, 0.2), kind, data));
   const q = 1 + (st.drops || 0) / 100, more = (n) => { const x = n * q; return Math.floor(x) + (chance(x % 1) ? 1 : 0); }; // Fortune Marks (game/marks.js)
-  // gold
-  if (chance(rank === 'normal' ? 0.45 : 1)) {
+  // gold (suppressed during active rifts)
+  if (!isRiftActive && chance(rank === 'normal' ? 0.45 : 1)) {
     const n = rank === 'boss' ? 5 : 1;
     for (let i = 0; i < n; i++) add('gold', { amount: Math.max(1, Math.round(goldPile(lvl) * rand(0.6, 1.4) * Math.sqrt(R) * (1 + st.goldFind / 100) * (world.goldMul || 1))) });
   }
-  if (st.legendary.greed && chance(0.15)) for (let i = 0; i < 4; i++) add('gold', { amount: Math.round((2 + lvl) * goldScale(lvl) * (1 + st.goldFind / 100)) });
+  if (!isRiftActive && st.legendary.greed && chance(0.15)) for (let i = 0; i < 4; i++) add('gold', { amount: Math.round((2 + lvl) * goldScale(lvl) * (1 + st.goldFind / 100)) });
   // orbs (none under the Hunger of the Abyss Heresy)
   if (heresyAllows('orb', p.char, world)) {
     // Health orbs: primary recovery in dungeons with natural HP regen removed outside of town.
@@ -318,6 +319,9 @@ export function dropLoot(world, m) {
       if (chance(0.12)) add('orb_mp', {});
     }
   }
+  // active rifts suppress gear/gold drops until the Guardian piñata
+  if (isRiftActive) return;
+
   // potions
   if (chance(0.035 * R)) add('potion', { item: potionItem(pick(['hp', 'hp', 'mp', 'mp', 'rejuv', 'fury'])) });
   // gear

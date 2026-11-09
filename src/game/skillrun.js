@@ -92,12 +92,13 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
           const a = p.aim ? angleTo(p.x, p.y, p.aim[0], p.aim[1]) : ang;
           const targets = arc >= TAU * 0.95 ? w.hostiles(p.team, p.x, p.y, range) : coneTargets(w, p.team, p.x, p.y, a, range + 0.25, arc / 2);
           for (const t of targets) {
-            hit(p, t, roll(dmg), el, { ...o, ang: a, melee: true });
+            hit(p, t, roll(dmg), el, { ...o, ang: a, melee: true, multiHit: strikes > 1, hitIndex: i, hitCount: strikes });
             if (m.gold && chance(0.25)) w.addLoot(new GroundItem(t.x, t.y, 'gold', { amount: Math.round((2 + t.level * 2) * (1 + st.goldFind / 100)) }));
           }
           if (m.chain && targets[0]) chainHit(w, p, targets[0].x, targets[0].y, w.hostiles(p.team, targets[0].x, targets[0].y, 5).find((c) => c !== targets[0]), m.chain, roll(dmg) * 0.6, el, E.glow);
           const fxX = p.x + Math.cos(a) * range * 0.6, fxY = p.y + Math.sin(a) * range * 0.6;
-          if (m.exp) explode(w, p, targets[0] ? targets[0].x : fxX, targets[0] ? targets[0].y : fxY, 1.2 * (m.r ?? 1) * area, dmg.map((v) => v * 0.6), el, o, el === 'fire' ? 'explosion' : 'eruption');
+          // For multi-strike attacks (e.g. Grandmaster Flurry n=10), only trigger the explosion FX on the finishing blow
+          if (m.exp && (strikes === 1 || i === strikes - 1)) explode(w, p, targets[0] ? targets[0].x : fxX, targets[0] ? targets[0].y : fxY, 1.2 * (m.r ?? 1) * area, dmg.map((v) => v * 0.6), el, o, el === 'fire' ? 'explosion' : 'eruption');
           meleeFx(p, a, range, arc, fx, E, i);
           // Barbarian Bash fires five SHORT lightning arcs in a forward fan, never orbiting hammers.
           if (sk.id === 'barbarian.0.0') {
@@ -323,7 +324,8 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       const amt = buffAmount(sk, L), dur = skillDuration(sk, L) * (1 + (morph ? morph.durPct : 0) / 100);
       const stats = {};
       for (const b of m.buff || ['dmg']) stats[b] = amt;
-      const buff = p.addBuff({ id: sk.id, name: sk.name, el, fx, stats, t: dur, max: dur, pulse: m.pulse ? { dmg, acc: 0 } : null, transform: m.transform, slowPulse: m.slow });
+      const buffPayload = { id: sk.id, name: sk.name, el, fx, stats, t: dur, max: dur, pulse: m.pulse ? { dmg, acc: 0 } : null, transform: m.transform, slowPulse: m.slow };
+      const buff = typeof p.addBuff === 'function' ? p.addBuff(buffPayload) : buffPayload;
       if (m.party) for (const c of w.creatures) if (c.summon && c.owner === p && !c.dead) c.partyBuff = { stats, t: dur };
       w.addHazard(new AuraFx({ world: w, src: p, el, buff, transform: m.transform }));
       const isShieldBuff = sk.classId === 'lancer' || fx === 'shield';
@@ -343,7 +345,7 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       addEffect(new Ring(x, y, 0.2, r, 0.6, E.glow, 3, { fill: true }));
       sigil(x, y, r, E);
       if (fx === 'shout') { addEffect(new Ring(x, y, 0.1, r * 1.2, 0.4, '#ffffff', 3)); sfx('roar'); }
-      else if (fx === 'flash') { G.flash = 0.35; sfx('explode', 0.5); }
+      else if (fx === 'flash') { G.flash = G.settings?.reduceFlashing ? 0 : 0.15; sfx('explode', 0.5); }
       else if (fx === 'smoke') smoke(x, y, 6, '#3a3640', 14, 16);
       else if (p.classId !== 'bard') sfx(fx === 'note' || bard >= 0 ? 'note' : 'shadow');
       if (!targets.length && !self) floatText(x, y, 30, 'Cursed ground', E.glow, 11);

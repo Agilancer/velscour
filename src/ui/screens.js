@@ -15,6 +15,7 @@ import { creditsScreen } from './credits.js';
 import { RARITY, shownEquip } from '../data/items.js';
 import { FILTER_ROWS, lootFilter } from '../game/lootfilter.js';
 import { Cloud } from '../game/cloud.js';
+import { isProfaneName, validateCharName } from '../core/profanity.js';
 
 let current = null;
 
@@ -66,7 +67,12 @@ export function titleScreen() {
   const gate = el('div', 'title-gate', G.touch ? 'Tap to awaken' : 'Click to awaken');
   s.appendChild(gate);
   show(s);
-  attachTitleFx(s, s.querySelector('.title-logo'), { tag: s.querySelector('.title-tag'), menu, gate });
+  attachTitleFx(s, s.querySelector('.title-logo'), {
+    tag: s.querySelector('.title-tag'),
+    menu,
+    gate,
+    onAwaken: (proceed) => showSeizureWarningSplash(proceed),
+  });
   Cloud.flush();
   Cloud.sync();
   if (Cloud.conflicts.size) conflictDialogs();
@@ -74,6 +80,71 @@ export function titleScreen() {
     unreadableNoted = true;
     UI.dialog({ title: 'Saved heroes unreadable', html: `<p>The heroes saved in this browser could not be read. VELSCOUR will not write over them: before anything new is saved, the old data is set aside.</p><p class="dim">Settings &gt; Hero backups can download it, so it can be recovered.${Cloud.signedIn ? ' Heroes in your Google cloud save come back on their own once the next save is made.' : ''}</p>`, buttons: [{ label: 'OK' }] });
   }
+}
+
+/** Photosensitive Epilepsy & Seizure Warning splash screen shown upon awakening the game. */
+export function showSeizureWarningSplash(onContinue) {
+  const splash = el('div', 'seizure-warning-splash');
+  const card = el('div', 'seizure-warning-card');
+
+  card.innerHTML = `
+    <div class="seizure-warning-icon">⚠️</div>
+    <h2 class="seizure-warning-title">PHOTOSENSITIVE EPILEPSY &amp; SEIZURE WARNING</h2>
+    <h3 class="seizure-warning-subtitle">WARNING: FLASHING LIGHTS AND VISUAL EFFECTS</h3>
+    <div class="seizure-warning-body">
+      <p>This game contains flashing lights, strobing effects, rapidly changing colors, and visual patterns that may trigger seizures or other adverse reactions in individuals with photosensitive epilepsy or other visual sensitivities.</p>
+      <p>Some individuals may experience seizures when exposed to certain flashing lights or visual patterns, even if they have no prior history of epilepsy or seizures.</p>
+      <p>Stop playing immediately if you experience dizziness, visual disturbances, eye or muscle twitching, involuntary movements, confusion, disorientation, or loss of awareness.</p>
+      <p>If you experience a seizure, seek medical attention. Consult a healthcare professional before playing if you have a history of seizures or photosensitivity.</p>
+      <p class="seizure-warning-advisory">PLAYER DISCRETION IS ADVISED.</p>
+    </div>
+    <div class="seizure-warning-toggle">
+      <label class="seizure-toggle-label">
+        <input type="checkbox" id="seizure-reduce-flashing-checkbox" ${G.settings.reduceFlashing ? 'checked' : ''}>
+        <span>Reduce flashing &amp; strobing visual effects</span>
+      </label>
+    </div>
+    <div class="seizure-warning-prompt">${G.touch ? 'Tap anywhere to continue' : 'Click anywhere to continue'}</div>
+  `;
+
+  splash.appendChild(card);
+  document.body.appendChild(splash);
+
+  const checkbox = card.querySelector('#seizure-reduce-flashing-checkbox');
+  if (checkbox) {
+    checkbox.onchange = (e) => {
+      e.stopPropagation();
+      G.settings.reduceFlashing = !!checkbox.checked;
+      saveSettings();
+    };
+    checkbox.onclick = (e) => e.stopPropagation();
+    checkbox.onpointerdown = (e) => e.stopPropagation();
+  }
+
+  let closed = false;
+  const allowDismissAt = performance.now() + 400; // guard against the awaken tap immediately dismissing
+
+  const dismiss = (e) => {
+    if (closed || performance.now() < allowDismissAt) return;
+    if (e && e.target && (e.target === checkbox || e.target.closest('.seizure-toggle-label'))) return;
+    closed = true;
+    window.removeEventListener('keydown', onKeyDown);
+    splash.classList.add('fading');
+    setTimeout(() => {
+      splash.remove();
+      if (onContinue) onContinue();
+    }, 280);
+  };
+
+  const onKeyDown = (e) => {
+    if (closed || performance.now() < allowDismissAt) return;
+    if (e.key === 'Tab') return;
+    dismiss();
+  };
+
+  splash.addEventListener('click', dismiss);
+  splash.addEventListener('pointerup', dismiss);
+  window.addEventListener('keydown', onKeyDown);
 }
 let unreadableNoted = false;
 if (typeof addEventListener === 'function') addEventListener('velscour-save-blocked', () => {
@@ -294,8 +365,17 @@ export function classSelect(sel = 'paladin', back = titleScreen) {
     sfx('ui');
     await Cloud.settle();
     const h = heroesByClass()[sel];   // fresh: the cloud may have brought this class's hero in
-    if (h) G.game.loadChar(h);
-    else G.game.newChar(sel, name.value.trim() || CLASSES[sel].name);
+    if (h) {
+      G.game.loadChar(h);
+    } else {
+      const enteredName = name.value.trim() || CLASSES[sel].name;
+      const val = validateCharName(enteredName);
+      if (!val.valid) {
+        UI.alert('Invalid Name', val.error);
+        return;
+      }
+      G.game.newChar(sel, val.name);
+    }
   };
   go.onclick = start;
   name.onkeydown = (e) => { if (e.key === 'Enter') start(); };
@@ -363,6 +443,7 @@ export function settingsDialog() {
       <label title="30 draws half the frames: smoother than a frame rate that keeps dipping, and a phone stays cooler (a hot phone slows itself down after a long session)">Frame rate cap</label><select data-k="fpsCap"><option value="0">None</option><option value="30">30 fps (cooler phone)</option></select>
       <label>Gore</label><select data-k="gore"><option value="0">Off</option><option value="1">Bloody</option><option value="2">Extreme</option></select>
       <label>Screen shake</label><input type="checkbox" data-k="shake" ${st.shake ? 'checked' : ''}>
+      <label title="Reduce full-screen flashes, flashbangs, and rapid hit strobing">Reduce flashing effects</label><input type="checkbox" data-k="reduceFlashing" ${st.reduceFlashing ? 'checked' : ''}>
       <label title="The hero, monsters and pets keep a coloured outline over spells, walls and darkness (hidden only behind another creature)">See-through outlines</label><input type="checkbox" data-k="outlines" ${st.outlines !== false ? 'checked' : ''}>
       <label title="A line along the foot of the dungeon's walls, drawn over every spell (not over creatures)">Outline wall bases</label><input type="checkbox" data-k="wallLines" ${st.wallLines ? 'checked' : ''}>
       <label title="The hero holds his weapon and off-hand, each in its own look">Show weapons and off-hands</label><input type="checkbox" data-k="heldGear" ${st.heldGear !== false ? 'checked' : ''}>
@@ -450,21 +531,21 @@ export function settingsDialog() {
 
 /** Settings > Loot filter: the lowest rarity of each item type auto-pickup grabs (game/lootfilter.js). */
 export function lootFilterDialog(onDone) {
-  const f = lootFilter();
+  const f = lootFilter() || {};
   const hue = ['white', 'green', 'blue', 'purple', 'orange', 'red', 'cyan'];
   const opts = `<option value="-1">None</option>` + RARITY.map((r, i) => `<option value="${i}" style="color:${r.color}">${r.name}${i < RARITY.length - 1 ? ' or better' : ''} (${hue[i]})</option>`).join('');
   const gemGradeNames = ['Chipped', 'Flawed', 'Standard', 'Flawless', 'Perfect', 'Royal', 'Imperial', 'Celestial', 'Abyssal', 'Eternal'];
   const gemOpts = `<option value="-1">None</option>` + gemGradeNames.map((name, i) => `<option value="${i}">${name}${i < gemGradeNames.length - 1 ? ' or better' : ''}</option>`).join('');
   const html = `<div class="settings-grid">
     <label><b>Use the loot filter</b></label><input type="checkbox" data-f="on" ${f.on ? 'checked' : ''}>
-    ${FILTER_ROWS.map((r) => `<label>${r.name}</label><select data-f="${r.k}">${opts}</select>`).join('')}
+    ${(FILTER_ROWS || []).map((r) => `<label>${r.name}</label><select data-f="${r.k}">${opts}</select>`).join('')}
     <label>Gems & Runes</label><select data-f="gems">${gemOpts}</select>
     <label>Auto-play also picks up upgrades it will wear</label><input type="checkbox" data-f="upgrades" ${f.upgrades ? 'checked' : ''}>
     <label>Auto-play keeps what passes (stores it in the chest instead of selling it)</label><input type="checkbox" data-f="keep" ${f.keep ? 'checked' : ''}>
   </div><p class="dim" style="font-size:12px;max-width:520px">With the filter on, auto-play and walk-over pickup take only what passes. Clicking or tapping an item still picks it up, and sealed treasures always pass.</p>`;
   const d = UI.dialog({ title: 'Loot Filter', html, buttons: [{ label: 'Done', fn: () => { saveSettings(); onDone && onDone(); } }] });
   d.box.querySelectorAll('[data-f]').forEach((inp) => {
-    if (inp.tagName === 'SELECT') inp.value = String(f[inp.dataset.f]);
+    if (inp.tagName === 'SELECT') inp.value = String(f[inp.dataset.f] ?? 0);
     inp.onchange = () => { f[inp.dataset.f] = inp.type === 'checkbox' ? inp.checked : Number(inp.value); saveSettings(); onDone && onDone(); };
   });
   return d;
@@ -478,17 +559,16 @@ export function helpDialog() {
     <div><kbd>W A S D</kbd> move directly</div>
     <div><kbd>Right click</kbd> right-click skill</div>
     <div><kbd>&#96;</kbd> <kbd>1</kbd>–<kbd>9</kbd> <kbd>0</kbd> <kbd>-</kbd> <kbd>=</kbd> cast skills at the cursor (13 keys + both mouse buttons)</div>
-    <div><kbd>Z</kbd> <kbd>X</kbd> <kbd>R</kbd> <kbd>V</kbd> potions</div>
+    <div><kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd> <kbd>V</kbd> potions</div>
     <div><kbd>R</kbd> <kbd>E</kbd> <kbd>Y</kbd> <kbd>U</kbd> <kbd>O</kbd> macros: several skills on one key, set up from the skill tree's <b>Macros</b> button (or the menu)</div>
-    <div><kbd>C</kbd> character · <kbd>I</kbd> backpack · <kbd>K</kbd> skill tree · <kbd>T</kbd> talents · <kbd>B</kbd> skill book · <kbd>Q</kbd> quest log</div>
+    <div><kbd>C</kbd> character · <kbd>I</kbd> bag · <kbd>K</kbd> skill tree · <kbd>T</kbd> passive talent tree · <kbd>Q</kbd> quest log</div>
     <div><kbd>Tab</kbd>/<kbd>M</kbd> map · <kbd>Esc</kbd> menu · wheel zoom</div>
-    <div>First-person view (Settings): <kbd>A</kbd>/<kbd>D</kbd> turn, <kbd>W</kbd>/<kbd>S</kbd> walk, click the floor to walk there</div>
-    <div><kbd>P</kbd> or the <b>Auto</b> button: auto-play (the hero fights, loots, shops and delves on autopilot)</div>
-    <div><kbd>G</kbd> MADNESS · <kbd>F</kbd> SMITE, then click where it should strike (both fill as you fight) · <kbd>H</kbd> HEARTHSTONE (two-way town portal) · <kbd>F1</kbd> How to Play</div>
+    <div><kbd>Alt</kbd>+<kbd>P</kbd> or the <b>Auto</b> button: auto-play (the hero fights, loots, shops and delves on autopilot)</div>
+    <div><kbd>G</kbd> MADNESS · <kbd>F</kbd> CLASS ULTIMATE (Smite, Cataclysm, Supernova, etc.), then click where it should strike (both fill as you fight) · <kbd>H</kbd> HEARTHSTONE (two-way town portal) · <kbd>F1</kbd> How to Play</div>
     <div><b style="color:#ffe2a0">While the hero plays</b></div>
     <div>Click or tap <b style="color:#ffd040">gilded critters</b> before they get away (follow the red arrows): each is worth a big sum of experience (a Golden Scarab, a pile of gold). Auto-play leaves them to you.</div>
     <div>Now and then an Epic or better drops <b style="color:#ffdf8a">sealed</b>: break the seals from the SEALED button or the inventory. Auto-play waits in town when the bag is full of what it can't sell, until a slot is free.</div>
-    <div><b>Loot filter</b> (Settings): pick which weapons, off-hands, armor, rings (by rarity) and gems &amp; runes (by grade) get picked up, by auto-play and by walking over them.</div>
+    <div><b>Loot filter</b> (Settings): pick which weapons, off-hands, armor and rings (by rarity) and whether gems get picked up, by auto-play and by walking over them.</div>
     <div>Pick one of three portals down at each cleared exit (auto-play picks after 8 seconds). Set auto-play's stance, and pull the <b style="color:#ffc040">Greed</b> lever for tougher depths and richer drops; a death loses the Hoard.</div>
     <div><b style="color:#ffe2a0">Mobile</b></div>
     <div>Left thumb: virtual joystick</div>
@@ -517,8 +597,24 @@ export function pauseMenu() {
       { label: 'Resume' },
       { label: 'Settings', fn: settingsDialog },
       { label: 'Macros', fn: () => G.ui.macros.open() },
-      { label: 'Help', fn: helpDialog },
-      { label: 'Save & Quit', cls: 'red', fn: () => G.game.quitToTitle() },
+      { label: 'How to Play', fn: helpDialog },
+      {
+        label: 'Save & Quit',
+        cls: 'red',
+        keepOpen: true,
+        fn: async (close) => {
+          const btn = d.box.querySelector('button.red');
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+          }
+          try {
+            await G.game.quitToTitle();
+          } finally {
+            close();
+          }
+        },
+      },
     ],
   });
   return d;

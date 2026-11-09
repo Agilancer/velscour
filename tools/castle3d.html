@@ -234,8 +234,16 @@ function dressFace(p, add) {
     add(p.axis === 'x' ? boxGeo(a0, lo, a1, hi, z0, z1) : boxGeo(lo, a0, hi, a1, z0, z1), m);
   };
   const free = (a, w) => a - w > p.a0 + 0.6 && a + w < p.a1 - 0.6 && !(p.skip || []).some(([s0, s1]) => a + w > s0 && a - w < s1);
-  if (p.course) B(p.a0, p.a1, -0.02, 0.14, p.course, p.course + 1, 'ashlar');
-  if (p.course2) B(p.a0, p.a1, -0.02, 0.18, p.course2, p.course2 + 1.2, 'ashlar');
+  const span = (fn) => {
+    let s = p.a0;
+    for (const [s0, s1] of (p.skip || []).slice().sort((a, b) => a[0] - b[0])) {
+      if (s0 > s) fn(s, Math.min(p.a1, s0));
+      s = Math.max(s, s1);
+    }
+    if (s < p.a1) fn(s, p.a1);
+  };
+  if (p.course) span((a0, a1) => B(a0, a1, -0.02, 0.14, p.course, p.course + 1, 'ashlar'));
+  if (p.course2) span((a0, a1) => B(a0, a1, -0.02, 0.18, p.course2, p.course2 + 1.2, 'ashlar'));
   if (p.pilasters) for (let a = Math.ceil(p.a0 / p.pilasters) * p.pilasters; a <= p.a1; a += p.pilasters) if (free(a, 0.45))
     B(a - 0.45, a + 0.45, -0.02, 0.42, 0, p.z1 - 4, 'ashlar');
   if (p.windows) { const w = p.windows;

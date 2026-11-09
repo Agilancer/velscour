@@ -269,7 +269,7 @@ export function drawColumn(ctx, world, i, floorEntry, dress = null, over = false
         const f = floorEntry(world, map.v[i]);
         ctx.drawImage(f.img, f.sx, f.sy, f.w, f.h, px - HW - 0.6, py - 0.6, TW + 1.2, TH + 1.2);
       }
-      if (b !== undefined) drawPiece(ctx, b, gx, gy);
+      if (b !== undefined && map.c3kind?.[i] !== 9) drawPiece(ctx, b, gx, gy);
       if (o !== undefined) drawPiece(ctx, o, gx, gy);
       return;
     }
@@ -304,7 +304,7 @@ export function drawColumn(ctx, world, i, floorEntry, dress = null, over = false
   if (dress) dress(ctx, world, x, y, px, py, f);
   if (c3) {   // masonry reaching over a ground tile (a plinth's batter, a doorway's step)
     const b = c3.base.get(i), o = c3.over.get(i), gx = (x - y) * HW, gy = (x + y) * HH;
-    if (b !== undefined) drawPiece(ctx, b, gx, gy);
+    if (b !== undefined && map.c3kind?.[i] !== 9) drawPiece(ctx, b, gx, gy);
     if (o !== undefined) drawPiece(ctx, o, gx, gy);
   }
   // a higher neighbour behind (NE: y-1, NW: x-1) shades the strip of this top along their shared edge

@@ -81,7 +81,7 @@ export default {
     const c = crowd(p, 9), ang = c ? Math.atan2(c[1] - p.y, c[0] - p.x) : p.facing || 0;
     s.valor = 0; s.busy = 1.4; s.flash = 1;
     p.world.addHazard(new Charge(p, ang));
-    p.addBuff({ id: 'sig_rallied', name: 'Rallied: 15% less damage taken, +40% armor', el: 'light', fx: 'aura', stats: { reduce: 15, armor: 40 }, t: 8, max: 8 });
+    if (typeof p?.addBuff === 'function') p.addBuff({ id: 'sig_rallied', name: 'Rallied: 15% less damage taken, +40% armor', el: 'light', fx: 'aura', stats: { reduce: 15, armor: 40 }, t: 8, max: 8 });
     floatText(p.x, p.y, 110, 'FOR THE ORDER!', SILVER, 19, { life: 1.8, vz: 16 });
     sfx('roar', 0.6); sfx('thud', 0.7);
     stat('lancer', 'fire');

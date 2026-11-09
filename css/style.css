@@ -1550,3 +1550,156 @@ body.portrait .bag { grid-template-columns: repeat(6, clamp(36px, calc((100vw - 
 .floor-pick-ticks { display: flex; justify-content: space-between; font-size: 12px; color: #9a8060; margin-top: -4px; }
 .floor-pick-desc { min-height: 72px; }
 .floor-pick-desc p { margin: 4px 0; }
+
+
+/* ------------------------------------------------------------------ Photosensitive Epilepsy & Seizure Warning Splash */
+.seizure-warning-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 2, 6, 0.96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 20px;
+  opacity: 1;
+  transition: opacity 0.28s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.seizure-warning-splash.fading {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.seizure-warning-card {
+  max-width: 620px;
+  width: 100%;
+  background: rgba(14, 12, 18, 0.97);
+  border: 1px solid rgba(220, 160, 40, 0.38);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 32px rgba(220, 160, 40, 0.12);
+  border-radius: 8px;
+  padding: 26px 28px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.seizure-warning-icon {
+  font-size: 32px;
+  line-height: 1;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 12px rgba(240, 192, 64, 0.5));
+}
+
+.seizure-warning-title {
+  margin: 0 0 4px;
+  font: 700 15px var(--font-head);
+  letter-spacing: 2px;
+  color: #f0c040;
+  text-transform: uppercase;
+}
+
+.seizure-warning-subtitle {
+  margin: 0 0 16px;
+  font: 600 12px var(--font-head);
+  letter-spacing: 1.5px;
+  color: #e05040;
+  text-transform: uppercase;
+}
+
+.seizure-warning-body {
+  font: 400 13px/1.55 var(--font-body, system-ui, sans-serif);
+  color: #cfc8be;
+  text-align: left;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 14px 4px;
+  margin-bottom: 16px;
+}
+
+.seizure-warning-body p {
+  margin: 0 0 10px;
+}
+
+.seizure-warning-body p:last-child {
+  margin-bottom: 0;
+}
+
+.seizure-warning-advisory {
+  text-align: center !important;
+  color: #fff0d0 !important;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  margin-top: 14px !important;
+  font-size: 13.5px;
+}
+
+.seizure-warning-toggle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 14px 0 18px;
+}
+
+.seizure-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font: 500 12.5px var(--font-body, system-ui, sans-serif);
+  color: #e8e0d4;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.seizure-toggle-label:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(240, 192, 64, 0.4);
+}
+
+.seizure-toggle-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #f0c040;
+}
+
+.seizure-warning-prompt {
+  font: 600 13px var(--font-head);
+  letter-spacing: 3px;
+  color: #f0a040;
+  text-transform: uppercase;
+  cursor: pointer;
+  animation: seizurePromptPulse 2s ease-in-out infinite;
+}
+
+@keyframes seizurePromptPulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.99); }
+  50% { opacity: 1; transform: scale(1.01); text-shadow: 0 0 12px rgba(240, 160, 64, 0.6); }
+}
+
+@media (max-width: 600px) {
+  .seizure-warning-card {
+    padding: 18px 16px;
+  }
+  .seizure-warning-title {
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+  .seizure-warning-subtitle {
+    font-size: 11px;
+  }
+  .seizure-warning-body {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .seizure-warning-prompt {
+    font-size: 11.5px;
+  }
+}

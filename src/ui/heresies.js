@@ -72,7 +72,7 @@ export const Heresies = {
     const doors = el('div', 'hx-doors');
     const btn = (cls, label, sub, fn, dis) => { const b = el('button', 'btn hx-door ' + cls, `<b>${label}</b><span>${sub}</span>`); b.disabled = !!dis; b.onclick = () => { sfx('ui'); this.close(); fn(); }; return b; };
     doors.appendChild(btn('hx-rift', 'Abyssal Rift', open ? `Tier ${riftOpen(c)} open` : 'sealed', () => G.game.confirmRift(), !open));
-    doors.appendChild(btn('hx-unbound', 'Velscour Unbound', `${Math.min(UNBOUND_KEYS, keysOf(c))}/${UNBOUND_KEYS} Abyssal Keys`, () => G.game.enterUnbound(), !unboundReady(c)));
+    doors.appendChild(btn('hx-unbound', 'Unbound Exploration', `${Math.min(UNBOUND_KEYS, keysOf(c))}/${UNBOUND_KEYS} Abyssal Keys`, () => G.game.confirmDungeon('unbound'), !unboundReady(c)));
     doors.appendChild(btn('hx-marks', 'Infernal Marks', `${marksTotal()} (${marksFree()} free)`, () => G.ui.marks.open(), false));
     body.appendChild(doors);
     body.scrollTop = scroll;

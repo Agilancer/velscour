@@ -63,7 +63,7 @@ const leave = (world, n, after = 6) => {
   n.onTick = (dt) => { if ((t -= dt) < 1.5) n.alpha = Math.max(0, t / 1.5); if (t <= 0) { const i = world.npcs.indexOf(n); if (i >= 0) world.npcs.splice(i, 1); n.onTick = null; } };
 };
 const buff = (p, id, name, el, stats, t, msg, color) => {
-  p.addBuff({ id, name, el, stats, t, max: t });
+  if (typeof p?.addBuff === 'function') p.addBuff({ id, name, el, stats, t, max: t });
   addEffect(new Ring(p.x, p.y, 0.2, 4, 0.7, color, 6));
   floatText(p.x, p.y, 90, name.toUpperCase(), color, 16, { life: 2 });
   UI.log(`<b style="color:${color}">${name}</b>: ${msg} for ${t} s.`, color);

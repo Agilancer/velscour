@@ -250,8 +250,8 @@ export function castle3d(v) {
     const w = axis === 'x' ? x1 - x0 + 1 : y1 - y0 + 1;
     parts.push(axis === 'x' ? { t: 'arch', axis: 'y', x0, x1: x1 + 1, y0, y1: y1 + 1, z0: floorLv, z1: h, spring: floorLv + 10, apex: floorLv + 14, m: 'ashlar', cover: true }
       : { t: 'arch', axis: 'x', x0: y0, x1: y1 + 1, y0: x0, y1: x1 + 1, z0: floorLv, z1: h, spring: floorLv + 10, apex: floorLv + 14, m: 'ashlar', cover: true });
-    doors.push(axis === 'x' ? { x: x0 + w / 2, y: out === 'S' ? y1 + 1 : y0, axis, w, lv: floorLv, kind: 'door', bld: id, open: out === 'S' ? -1 : 1 }
-      : { x: out === 'E' ? x1 + 1 : x0, y: y0 + w / 2, axis, w, lv: floorLv, kind: 'door', bld: id, open: out === 'E' ? -1 : 1 });
+    doors.push(axis === 'x' ? { x: x0 + w / 2, y: out === 'S' ? y1 + 1 : y0, axis, w, lv: floorLv, kind: 'door', bld: id, open: out === 'S' ? -1 : 1, x0, y0, x1, y1, out }
+      : { x: out === 'E' ? x1 + 1 : x0, y: y0 + w / 2, axis, w, lv: floorLv, kind: 'door', bld: id, open: out === 'E' ? -1 : 1, x0, y0, x1, y1, out });
   };
   // The keep: 50 x 33. The throne room fills the west wing; the entrance hall the south-east; the great tower at the
   // back holds the council chamber and the armoury, its walls rising to KT with a turret on each corner. Laid out at

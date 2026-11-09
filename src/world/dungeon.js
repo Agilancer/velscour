@@ -168,7 +168,7 @@ function generateCastleKeepLayout(depth, biome, tileset, seed, layout) {
 
 /** opts.raid: a BOSS ROOM arena whatever the depth; opts.small: a 4 x 4 chunk maze (Abyssal Rifts, docs/ENDGAME.md). */
 export function generateDungeon(depth, biome, tileset, seed, opts = {}) {
-  if (depth === FINAL_DEPTH || biome.id === 'throne') return generateThrone(biome, tileset, seed); // the throne at any depth: "final boss" practice
+  if (!opts.rift && (depth === FINAL_DEPTH || biome.id === 'throne')) return generateThrone(biome, tileset, seed); // the throne at any depth: "final boss" practice
   const raid = opts.raid ?? isRaidDepth(depth);
   if (biome.id === 'castle_keep' && !raid) {
     const layout = CASTLE_KEEP_LAYOUTS[Math.abs((depth - 1) % CASTLE_KEEP_LAYOUTS.length)];

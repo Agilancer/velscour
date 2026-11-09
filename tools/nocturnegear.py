@@ -45,7 +45,7 @@ C04 = [('rare_a', 'rare_c04a'), ('rare_b', 'rare_c04b'), ('rare_c', 'rare_c04c')
 FW, FH, CROWN, SOLE, PIN, CELL = 128, 192, 75, 183, (45, 63), 40
 HD = 4  # helmet atlas cells are HD x the 40x40 native cell; the game scales them down (crisper when zoomed in)
 PIX, COLORS = 2, 32  # the helmets' pixel art: 2 art px per hero px, 32 colours each
-BARE_SKIN = {'barbarian'}  # classes whose outfits show arms/chest: skin is masked over the whole body
+BARE_SKIN = {'barbarian', 'monk'}  # classes whose outfits show arms/chest: skin is masked over the whole body
 # the exported helmets are wider than the heads: (width, height) scale per class, height kept at the neck
 HELM_SCALE = {c: (.84, .92) for c in CLASSES} | {c: (.8, .92) for c in ('paladin', 'necromancer', 'barbarian', 'death_knight')}
 

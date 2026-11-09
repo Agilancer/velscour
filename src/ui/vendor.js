@@ -220,6 +220,27 @@ export const Vendor = {
     return true;
   },
 
+  /** Sell every gem/rune in the dedicated Gem Bag after confirmation. */
+  sellAllGems() {
+    const c = G.char;
+    if (!c || !Array.isArray(c.gemBag)) return false;
+    const sold = c.gemBag.map((it, i) => ({ it, i })).filter(({ it }) => it && it.type === 'gem' && !it.locked);
+    if (!sold.length) { UI.log('No gems in your Gem Bag to sell.', '#ff8080'); sfx('error'); return false; }
+    const price = (it) => Math.max(1, Math.floor(itemValue(it) / 4)) * (it.count || 1);
+    const total = sold.reduce((a, { it }) => a + price(it), 0);
+    const totalCount = sold.reduce((a, { it }) => a + (it.count || 1), 0);
+    UI.confirm('Sell all gems?', `Sell <b>${totalCount}</b> gem${totalCount > 1 ? 's' : ''} (${sold.length} stack${sold.length > 1 ? 's' : ''}) for <span class="gold-text">${fmtInt(total)} gold</span>?<br><span class="dim">Locked gems are not sold.</span>`, () => {
+      let n = 0, gold = 0;
+      for (const { it, i } of sold) if (c.gemBag[i] === it) { c.gemBag[i] = null; gold += price(it); n += (it.count || 1); }
+      c.gold += gold;
+      if (UI.selected && UI.selected.where === 'gemBag' && !c.gemBag[UI.selected.idx]) UI.selected = null;
+      sfx('gold');
+      UI.log(`Sold ${n} gem${n > 1 ? 's' : ''} for ${fmtInt(gold)} gold.`, '#ffd34a');
+      changed();
+    }, 'Sell all');
+    return true;
+  },
+
   potionBox(body) {
     const c = G.char;
     for (const k of ['hp', 'mp', 'rejuv', 'fury']) {
@@ -316,8 +337,9 @@ export const Vendor = {
         else btn(`Upgrade to +${(it.upg || 0) + 1}`, upgradeCost(it), true, () => { it.upg = (it.upg || 0) + 1; sfx('thud'); UI.log(`${escapeHtml(itemName(it))} upgraded!`, '#ffd34a'); });
         box.appendChild(el('div', 'dim', 'Each upgrade: +10% base damage/armor and +4% to affix values.'));
       } else if (kind === 'enchant') {
-        btn('Reroll all affixes', enchantCost(it, false), it.affixes.some((a) => !a.implicit), () => { rerollAffixes(it); sfx('arcane'); });
-        const n = it.affixes.filter((a) => !a.implicit).length;
+        const affs = Array.isArray(it.affixes) ? it.affixes : (it.affixes = []);
+        btn('Reroll all affixes', enchantCost(it, false), affs.some((a) => !a.implicit), () => { rerollAffixes(it); sfx('arcane'); });
+        const n = affs.filter((a) => !a.implicit).length;
         btn('Add an affix', enchantCost(it, true), n < RARITY[it.rarity].affixes[1] + 1, () => { if (addAffix(it)) sfx('arcane'); });
         box.appendChild(el('div', 'dim', `Max affixes for ${RARITY[it.rarity].name}: ${RARITY[it.rarity].affixes[1] + 1}.`));
       } else if (kind === 'socket') {

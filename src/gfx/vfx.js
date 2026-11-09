@@ -455,7 +455,7 @@ export class SkyBolts {
     for (const b of this.bolts) {
       const a = this.t - b.t0;
       if (a < 0 || a > 0.6) continue;
-      if (!b.ends) { this.aim(b); G.flash = Math.max(G.flash || 0, 0.1); }
+      if (!b.ends) { this.aim(b); G.flash = G.settings?.reduceFlashing ? 0 : Math.max(G.flash || 0, 0.05); }
       if ((b.regen -= dt) <= 0) { b.regen = 0.05; b.segs = b.ends.map(([ax, ay, bx, by]) => jag(ax, ay, bx, by)); }
       // its colour lights the dark halfway up the trunk and at the fork
       for (const f of [0.5, 1]) {
@@ -668,11 +668,15 @@ function drawDrips(ctx, t, spr, age) {
 
 // light records are pooled: dozens are added every frame
 const lightPool = [];
-/** A light for this frame; `color` also tints the scene around it (render.js drawLighting's glow pass). */
-export function addLight(x, y, radius, intensity = 1, z = 20, color = null) {
-  if (lights.length >= 48) return;
+/** A light for this frame; `color` also tints the scene around it (render.js drawLighting's glow pass).
+ * `priority` guarantees admission even when combat/loot light counts are high.
+ */
+export function addLight(x, y, radius, intensity = 1, z = 20, color = null, priority = false) {
+  const max = G.touch ? 96 : 128;
+  if (lights.length >= max && !priority) return;
   const l = lightPool[lights.length] || (lightPool[lights.length] = {});
   l.x = x; l.y = y; l.radius = radius; l.intensity = intensity; l.z = z; l.color = color;
+  l.priority = !!priority;
   lights.push(l);
 }
 

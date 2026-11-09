@@ -107,7 +107,18 @@ export function createSummitRun(world, gen, biome, depth, win) {
         if (e.state === 'idle' && regAt(p.x, p.y) === e.i && Math.hypot(p.x - e.x, p.y - e.y) < e.r * 0.9) startEnc(e);
         if (e.state === 'fight') tickEnc(e, dt);
       }
-      for (const l of leaps) if (!l.done && Math.hypot(p.x - l.at[0], p.y - l.at[1]) < 5.5) climbUp(l);
+      for (const l of leaps) {
+        if (l.done) continue;
+        const allPlayers = [p];
+        if (G.remotePlayers) {
+          for (const rp of G.remotePlayers.values()) {
+            if (!rp.dead && (rp.world === world || (rp.worldKind === world.kind && rp.depth === world.depth))) {
+              allPlayers.push(rp);
+            }
+          }
+        }
+        if (allPlayers.some(pl => Math.hypot(pl.x - l.at[0], pl.y - l.at[1]) < 5.5)) climbUp(l);
+      }
       if (run.phase === 'climb' && Math.hypot(p.x - peak.x, p.y - peak.y) < peak.r + 9) startPeak();
       if (run.phase === 'peak' && peakIn && !run.sealed && run.boss && run.boss.awake && regAt(p.x, p.y) === peak.i) { run.sealed = true; shut(peakIn); }
       if (run.phase === 'peak' && run.boss && run.boss.dead && !run.completed) finishPeak();
@@ -169,6 +180,7 @@ export function createSummitRun(world, gen, biome, depth, win) {
   }
   function onPlateau(e) { return (x, y) => sm.reg[map.tileIdx(x, y)] === e.i; }
   function foe(e, x, y, { arch = pick(biome.roster), rank = 'normal', how = 'burrow', delay = 0 } = {}) {
+    if (G.room && !world._generatingDungeon && !G.game?.isDungeonAuthority(world.depth)) return null;
     const m = makeMonster(world, arch, biome, lvl + (rank === 'normal' ? 0 : 1), rank, x, y, 0, world.looks.pick(arch, Math.random));
     world.add(m); m.hunter = true; m.awake = true;
     if (!how) return e && e.foes.push(m), m;
@@ -187,9 +199,11 @@ export function createSummitRun(world, gen, biome, depth, win) {
   /** Something climbs up out of the cloud onto a ridge (or leaps down onto it): an arc from below the rim. */
   function climbUp(l) {
     l.done = true;
+    if (G.room && !G.game?.isDungeonAuthority(world.depth)) return;
     for (let i = 0; i < l.n; i++) {
       const [x, y] = map.randomNear(l.at[0] + rand(-0.8, 0.8), l.at[1] + rand(-0.8, 0.8), 1.2);
       const arch = pick(biome.roster), m = makeMonster(world, arch, biome, lvl + (i === 0 ? 1 : 0), i === 0 ? 'champion' : 'normal', x, y, 0, world.looks.pick(arch, Math.random));
+      m.enteringKind = 'drop';
       world.add(m); m.hunter = true;
       const from = [l.from[0] + rand(-1, 1), l.from[1] + rand(-1, 1)], to = [x, y], h0 = F.H2(from[0], from[1]) - 0.4, h1 = F.H2(x, y), dur = 0.75 + i * 0.12;
       m.x = from[0]; m.y = from[1]; m.targetable = false; m.awake = true; m.moving = true;

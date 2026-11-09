@@ -167,7 +167,7 @@ export default {
       for (let j = 0; j < 4; j++) spawn({ type: 'streak', x: p.x + rand(-0.3, 0.3), y: p.y + rand(-0.3, 0.3), z: 40 + j * 10, vx: 0, vy: 0, vz: 520, life: 0.5, size: 2.5, color: j ? BLUE : '#ffffff', add: true });
       later(w, 0.45 + i * 0.07, () => { if (!p.dead && p.world === w) w.addHazard(new SkyLance(p, spots[i][0], spots[i][1], i)); });
     }
-    p.addBuff({ id: 'sig_highwind', name: 'Highwind: +25% speed, +20% damage', el: 'light', fx: 'aura', stats: { speed: 40, dmg: 20 }, t: 6, max: 6 });
+    if (typeof p?.addBuff === 'function') p.addBuff({ id: 'sig_highwind', name: 'Highwind: +25% speed, +20% damage', el: 'light', fx: 'aura', stats: { speed: 40, dmg: 20 }, t: 6, max: 6 });
     floatText(p.x, p.y, 104, "HEAVEN'S RAIN", ICE, 19, { life: 1.8, vz: 16 });
     sfx('light', 0.7); sfx('roar', 0.3);
     stat('dragoon', 'fire');

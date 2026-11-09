@@ -6,7 +6,7 @@ import { UI, draggable, droppable } from './ui.js';
 import { itemCell, itemTooltip, rarityClass } from './itemui.js';
 import { changed, renderInventory } from './inventory.js';
 import { addToBag } from '../game/player.js';
-import { itemName } from '../data/items.js';
+import { itemName, GEM_TIERS } from '../data/items.js';
 import { jewelBoxRows, nextJewelBoxRowCost, canBuyJewelBoxRow, buyJewelBoxRow, JEWEL_BOX_MAX_ROWS } from '../data/bag.js';
 
 export const JEWEL_BOX_SIZE = 300;
@@ -28,7 +28,8 @@ export function addToJewelBox(c, item) {
 
 /** Sort the Jewel Box: by kind (Sigils -> Prisms -> Gems -> Tier -> Count) or by grade (Tier -> Kind). */
 export function sortJewelBox(c, by = 'kind') {
-  if (!c.jewelBox) return;
+  if (!c) return;
+  if (!Array.isArray(c.jewelBox)) c.jewelBox = Array(JEWEL_BOX_SIZE).fill(null);
   const gemTypeOrder = (it) => {
     if (!it) return 99;
     if (it.gem === 'sig') return 1;
@@ -36,7 +37,7 @@ export function sortJewelBox(c, by = 'kind') {
     return 3;
   };
 
-  const items = c.jewelBox.filter(Boolean).sort((a, b) => {
+  const items = (c.jewelBox || []).filter(Boolean).sort((a, b) => {
     if (by === 'grade') {
       const td = (b.tier || 0) - (a.tier || 0);
       if (td !== 0) return td;
@@ -127,13 +128,15 @@ export const JewelBox = {
 
   render(body) {
     const c = G.char;
-    if (!c.jewelBox) c.jewelBox = Array(JEWEL_BOX_SIZE).fill(null);
+    if (!c) return;
+    if (!Array.isArray(c.jewelBox)) c.jewelBox = Array(JEWEL_BOX_SIZE).fill(null);
+    const self = this || JewelBox;
 
-    const prevGridScroll = body.querySelector('.stash-grid')?.scrollTop ?? this.lastScrollTop ?? 0;
+    const prevGridScroll = body.querySelector('.stash-grid')?.scrollTop ?? self.lastScrollTop ?? 0;
     const prevBodyScroll = body.scrollTop;
     body.innerHTML = '';
 
-    const used = c.jewelBox.filter(Boolean).length;
+    const used = (c.jewelBox || []).filter(Boolean).length;
     const rows = jewelBoxRows(c);
     const head = el('div', 'row storage-toolbar jewelbox-toolbar', `<strong>${fmtInt(used)} / ${c.jewelBox.length}</strong><span class="dim">gems stored (${rows} rows)</span>`);
 
@@ -141,7 +144,7 @@ export const JewelBox = {
       const b = el('button', 'btn small', label);
       b.onclick = () => {
         sortJewelBox(c, by);
-        this.selected = null;
+        self.selected = null;
         sfx('ui');
         UI.selected = null;
         changed();
@@ -179,11 +182,11 @@ export const JewelBox = {
 
     const tools = el('div', 'storage-filters');
     const kind = el('select', 'storage-select', '<option value="all">All gems & runes</option><option value="sigil">Sigil Stones</option><option value="prism">Prisms</option><option value="standard">Standard Gems</option>');
-    kind.value = this.filter;
+    kind.value = self.filter || 'all';
     const search = el('input', 'storage-search');
     search.type = 'search';
     search.placeholder = 'Search stored gems & runes';
-    search.value = this.query;
+    search.value = self.query || '';
     tools.append(kind, search);
     body.appendChild(tools);
 
@@ -191,8 +194,8 @@ export const JewelBox = {
     droppable(
       transfer,
       (data) => {
-        if (data.type === 'item') return this.store(data.idx, data.where);
-        if (data.type === 'stash') return this.store(data.idx, 'stash');
+        if (data.type === 'item') return self.store(data.idx, data.where);
+        if (data.type === 'stash') return self.store(data.idx, 'stash');
         return false;
       },
       (data) => data.type === 'item' || data.type === 'stash'
@@ -200,11 +203,11 @@ export const JewelBox = {
     body.appendChild(transfer);
 
     const grid = el('div', 'bag stash-grid jewelbox-grid');
-    grid.addEventListener('scroll', () => { this.lastScrollTop = grid.scrollTop; }, { passive: true });
+    grid.addEventListener('scroll', () => { self.lastScrollTop = grid.scrollTop; }, { passive: true });
 
     c.jewelBox.forEach((it, i) => {
       const d = el('div', 'bslot ' + rarityClass(it));
-      if (this.selected === i) d.classList.add('sel');
+      if (self.selected === i) d.classList.add('sel');
       if (it) d.appendChild(itemCell(it));
       d.dataset.kind = it?.gem === 'sig' ? 'sigil' : it?.gem === 'prism' ? 'prism' : it ? 'standard' : 'empty';
       d.dataset.name = it ? itemName(it).toLowerCase() : '';
@@ -215,19 +218,19 @@ export const JewelBox = {
         icon: () => d.querySelector('img') && d.querySelector('img').src,
         onClick: () => {
           if (c.jewelBox[i]) {
-            this.selected = i;
-            this.render(body);
+            self.selected = i;
+            self.render(body);
           }
         },
-        onRight: () => this.take(i),
-        onDouble: () => this.take(i),
+        onRight: () => self.take(i),
+        onDouble: () => self.take(i),
       });
 
       droppable(
         d,
         (data) => {
-          if (data.type === 'item') return this.store(data.idx, data.where);
-          if (data.type === 'stash') return this.store(data.idx, 'stash');
+          if (data.type === 'item') return self.store(data.idx, data.where);
+          if (data.type === 'stash') return self.store(data.idx, 'stash');
           return false;
         },
         (data) => data.type === 'item' || data.type === 'stash'
@@ -238,37 +241,39 @@ export const JewelBox = {
     });
     body.appendChild(grid);
 
-    const selected = c.jewelBox[this.selected];
+    const selected = c.jewelBox[self.selected];
     let detail;
     if (selected) {
       detail = el('div', 'storage-detail', itemTooltip(selected));
       const take = el('button', 'btn small', 'Take to Gem Bag');
-      take.onclick = () => this.take(this.selected);
+      take.onclick = () => self.take(self.selected);
       detail.appendChild(take);
       body.appendChild(detail);
     }
 
     const applyFilter = () => {
-      const filtered = this.filter !== 'all' || !!this.query;
+      const filterMode = self.filter || 'all';
+      const queryStr = self.query || '';
+      const filtered = filterMode !== 'all' || !queryStr;
       for (const cell of grid.children) {
-        const match = cell.dataset.kind !== 'empty' && (this.filter === 'all' || cell.dataset.kind === this.filter) && cell.dataset.name.includes(this.query);
+        const match = cell.dataset.kind !== 'empty' && (filterMode === 'all' || cell.dataset.kind === filterMode) && cell.dataset.name.includes(queryStr);
         cell.hidden = filtered && !match;
       }
       grid.classList.toggle('filtered', filtered);
-      if (detail) {
+      if (detail && selected) {
         detail.hidden = filtered && (
-          (this.filter !== 'all' && (
-            (this.filter === 'sigil' && selected.gem !== 'sig') ||
-            (this.filter === 'prism' && selected.gem !== 'prism') ||
-            (this.filter === 'standard' && (selected.gem === 'sig' || selected.gem === 'prism'))
+          (filterMode !== 'all' && (
+            (filterMode === 'sigil' && selected.gem !== 'sig') ||
+            (filterMode === 'prism' && selected.gem !== 'prism') ||
+            (filterMode === 'standard' && (selected.gem === 'sig' || selected.gem === 'prism'))
           )) ||
-          !itemName(selected).toLowerCase().includes(this.query)
+          !itemName(selected).toLowerCase().includes(queryStr)
         );
       }
     };
 
-    kind.onchange = () => { this.filter = kind.value; applyFilter(); };
-    search.oninput = () => { this.query = search.value.trim().toLowerCase(); applyFilter(); };
+    kind.onchange = () => { self.filter = kind.value; applyFilter(); };
+    search.oninput = () => { self.query = search.value.trim().toLowerCase(); applyFilter(); };
     applyFilter();
 
     if (prevGridScroll > 0) {
@@ -281,3 +286,4 @@ export const JewelBox = {
     }
   },
 };
+

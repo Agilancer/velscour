@@ -128,7 +128,7 @@ export class Monster extends Creature {
     if (this.summon) {
       if (!this.static && this.owner) return this.pickFoe();
       const range = (this.atk && this.atk.range) || 8;
-      if (this.aggro && !this.aggro.dead && this.aggro.team !== this.team && dist(this.x, this.y, this.aggro.x, this.aggro.y) < range + 2) return this.aggro;
+      if (this.aggro && !this.aggro.dead && this.aggro.team !== this.team && !this.aggro.clutter && dist(this.x, this.y, this.aggro.x, this.aggro.y) < range + 2) return this.aggro;
       return w.nearestHostile(this.team, this.x, this.y, range, true);
     }
     // monsters: taunting totems first, then whatever hits them, then the closest of player/minions
@@ -144,7 +144,7 @@ export class Monster extends Creature {
   update(dt) {
     const w = this.world;
     this.animT += dt;
-    this.lifeT += dt;
+    if (!G.cine) this.lifeT += dt;
     if (this.regenSuppress > 0) this.regenSuppress -= dt;
     if (this.shockCd > 0) this.shockCd -= dt;
     if (this.thornCd > 0) this.thornCd -= dt;
@@ -178,6 +178,18 @@ export class Monster extends Creature {
     if (this.aura) addLight(this.x, this.y, 2.5, 0.5);
     if (this.defAura && chance(dt * 2)) aoe(w, this, this.x, this.y, this.defAura.r, this.dmg * 0.3, this.defAura.el, { dot: true });
     if (!canAct) { this.moving = false; return; }
+    if (G.cine && (this.summon || this.team === 'player')) {
+      this.moving = false;
+      this.moveVec = [0, 0];
+      this.moveTarget = null;
+      this.path = null;
+      this.target = null;
+      this.foe = null;
+      this.action = null;
+      this.state = 'idle';
+      if (this.nav) this.nav.path = null;
+      return;
+    }
     if (this.wardTick) return this.wardTick(dt); // raid warding crystals (game/raid.js)
     this.cd -= dt * (this.partyBuff && this.partyBuff.stats.as ? 1 + this.partyBuff.stats.as / 100 : 1);
     if (this.spell && (this.spellCd -= dt) <= 0) this.castSpell();
@@ -245,7 +257,7 @@ export class Monster extends Creature {
    */
   pickFoe() {
     const w = this.world, o = this.owner, map = w.map;
-    const f = this.foe, live = (e) => e && !e.dead && e.team !== this.team && e.targetable !== false;
+    const f = this.foe, live = (e) => e && !e.dead && e.team !== this.team && e.targetable !== false && !e.clutter;
     if (dist(this.x, this.y, o.x, o.y) > LEASH + 6) return (this.foe = null); // strayed too far: go back first
     if (live(f) && w.time < this.foeT && dist(o.x, o.y, f.x, f.y) < LEASH + 4) return f;
     this.foeT = w.time + rand(0.35, 0.55);
@@ -259,6 +271,7 @@ export class Monster extends Creature {
     let best = null, bs = Infinity;
     const reach = melee ? 0 : this.range || (this.atk && this.atk.range) || 7;
     for (const e of w.hostiles(this.team, o.x, o.y, LEASH)) {
+      if (e.clutter) continue;
       // a foe it can't walk to (or only the long way round) is only worth it to a shooter that already has a shot
       const walk = flow ? map.flowAt(e.x, e.y) : -1;
       if ((walk < 0 || walk > LEASH * 1.6) && !(dist(this.x, this.y, e.x, e.y) < reach && map.los(this.x, this.y, e.x, e.y))) {
@@ -635,6 +648,8 @@ export class Monster extends Creature {
         break;
       }
       case 'summonMinions': {
+        this.cd = this.atkCd * 2;
+        if (G.room && !G.game?.isDungeonAuthority(w.depth)) break;
         for (let i = 0; i < 2; i++) {
           const [x, y] = w.map.randomNear(this.x, this.y, 1.5);
           const m = makeMonster(w, 'skeleton', w.biome, this.level, 'normal', x, y);
@@ -643,7 +658,6 @@ export class Monster extends Creature {
           sparkle(x, y, 10, '#b040ff', 10, 0.4);
         }
         sfx('summon');
-        this.cd = this.atkCd * 2;
         break;
       }
       case 'nova': {
@@ -786,7 +800,9 @@ export class Monster extends Creature {
       const stats = { [stat]: amt };
       if (A.as) stats.as = A.as;
       if (A.regen) stats.regen = A.regen * 10;
-      p.addBuff({ id: 'aura_' + this.skillId, name: this.name, el: this.el || 'holy', stats, t: 1.5, max: 1.5, hidden: false, aura: true });
+      if (typeof p?.addBuff === 'function') {
+        p.addBuff({ id: 'aura_' + this.skillId, name: this.name, el: this.el || 'holy', stats, t: 1.5, max: 1.5, hidden: false, aura: true });
+      }
     }
     for (const c of this.world.alliesOf(this.team, this.x, this.y, r)) if (c.summon) c.partyBuff = { stats: { [stat]: amt, ...(A.as ? { as: A.as } : null) }, t: 1.5 };
   }
@@ -1234,6 +1250,10 @@ export class Monster extends Creature {
         break;
       }
       case 'boss_summon': {
+        if (G.room && !G.game?.isDungeonAuthority(w.depth)) {
+          sfx('summon'); sfx('roar');
+          break;
+        }
         const roster = this.isVelscour ? ['demon', 'imp', 'gargoyle', 'knight'] : w.biome.roster;
         const n = this.isVelscour ? 5 : 3 + (this.phase === 2 ? 2 : 0);
         for (let i = 0; i < n; i++) {

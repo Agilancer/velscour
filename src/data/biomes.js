@@ -2,7 +2,7 @@
 import { BREACH_ARCHS } from './breach.js';
 // palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
-import { FINAL_DEPTH } from './depth.js';
+import { FINAL_DEPTH, getActForDepth, ACTS } from './depth.js';
 export const BIOMES = [
   {
     id: 'catacombs', name: 'Skull-Lined Catacombs', palette: null, dark: 0.82, light: 7.5,
@@ -555,6 +555,15 @@ export const BIOME_BY_ID = Object.fromEntries([...BIOMES, ...BETA_BIOMES, BREACH
 /** Overworlds share the regular biome bag, with a hard visit guarantee after three combat dungeons. */
 export const OVERWORLD_BIOME_IDS = BIOMES.filter((b) => b.overworld).map((b) => b.id);
 
+/** Thematic biomes per campaign Act */
+export const ACT_BIOMES = {
+  1: ['catacombs', 'dark_forest', 'castle', 'castle_keep', 'overworld', 'necropolis', 'plague', 'sewers', 'library', 'sunken'],
+  2: ['sea_of_sand', 'desert_temple', 'desert', 'gilded', 'amber', 'serpentine_tower'],
+  3: ['mountainside', 'snowy_summit', 'ice_temple', 'frozen', 'crystal'],
+  4: ['heavenly', 'astral_plane', 'skyship', 'storm', 'shattered', 'cathedral'],
+  5: ['molten', 'hell', 'forge', 'abyss', 'obsidian', 'blood', 'flesh', 'void'],
+};
+
 /**
  * A shuffled pool of biomes for the hero's next depth. An overworld is guaranteed after three
  * actual non-overworld dungeon entries. When forced, choose among all registered overworlds so
@@ -562,17 +571,23 @@ export const OVERWORLD_BIOME_IDS = BIOMES.filter((b) => b.overworld).map((b) => 
  */
 export function drawBiome(c, depth) {
   if (depth === FINAL_DEPTH) return 'throne';
-  const all = BIOMES.filter((b) => b.id !== 'throne').map((b) => b.id);
-  if ((c.overworldMisses || 0) >= 3) {
-    c.biomeBag = (c.biomeBag || []).filter((id) => !OVERWORLD_BIOME_IDS.includes(id) && all.includes(id));
-    let options = OVERWORLD_BIOME_IDS.filter((id) => id !== c.lastBiome);
-    if (!options.length) options = OVERWORLD_BIOME_IDS;
+  const act = depth ? getActForDepth(depth) : null;
+  const actBiomes = act ? (ACT_BIOMES[act.act] || []) : null;
+  const all = (actBiomes && actBiomes.length)
+    ? actBiomes.filter((id) => BIOME_BY_ID[id])
+    : BIOMES.filter((b) => b.id !== 'throne').map((b) => b.id);
+  const overworldIds = all.filter((id) => BIOME_BY_ID[id]?.overworld);
+
+  if ((c.overworldMisses || 0) >= 3 && overworldIds.length) {
+    c.biomeBag = (c.biomeBag || []).filter((id) => !overworldIds.includes(id) && all.includes(id));
+    let options = overworldIds.filter((id) => id !== c.lastBiome);
+    if (!options.length) options = overworldIds;
     return options[Math.floor(Math.random() * options.length)];
   }
   let bag = (c.biomeBag || []).filter((id) => all.includes(id));
   if (!bag.length || (bag.length === 1 && bag[0] === c.lastBiome)) bag = all.slice();
   const pool = bag.filter((id) => id !== c.lastBiome);
-  const id = pool[Math.floor(Math.random() * pool.length)];
+  const id = pool.length ? pool[Math.floor(Math.random() * pool.length)] : all[0];
   c.biomeBag = bag.filter((x) => x !== id);
   return id;
 }
@@ -584,11 +599,17 @@ export function drawBiome(c, depth) {
  */
 export function biomeChoices(c, depth, n = 3) {
   if (depth === FINAL_DEPTH) return ['throne'];
-  const all = BIOMES.filter((b) => b.id !== 'throne').map((b) => b.id);
+  const act = depth ? getActForDepth(depth) : null;
+  const actBiomes = act ? (ACT_BIOMES[act.act] || []) : null;
+  const all = (actBiomes && actBiomes.length)
+    ? actBiomes.filter((id) => BIOME_BY_ID[id])
+    : BIOMES.filter((b) => b.id !== 'throne').map((b) => b.id);
+  const overworldIds = all.filter((id) => BIOME_BY_ID[id]?.overworld);
   const mix = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  if ((c.overworldMisses || 0) >= 3) {
-    const options = OVERWORLD_BIOME_IDS.filter((id) => id !== c.lastBiome);
-    return mix(options.length ? options : OVERWORLD_BIOME_IDS).slice(0, n);
+
+  if ((c.overworldMisses || 0) >= 3 && overworldIds.length) {
+    const options = overworldIds.filter((id) => id !== c.lastBiome);
+    return mix(options.length ? options : (overworldIds.length ? overworldIds : OVERWORLD_BIOME_IDS)).slice(0, n);
   }
   const bag = (c.biomeBag || []).filter((id) => all.includes(id) && id !== c.lastBiome);
   const out = mix(bag).slice(0, n);
@@ -621,3 +642,9 @@ export const TOWN_BIOME = {
   id: 'town', name: 'Herrington Hollow', pack: 'catacombs', palette: { colorize: [30, 0.22], light: 0.12, contrast: 0.95 }, wallPalette: { colorize: [32, 0.2], light: 0.18 },
   dark: 0.45, light: 12, ambient: { type: 'firefly', color: '#ffe890' }, mon: { hue: 0, sat: 1, light: 0 }, blood: '#8a0b08', torch: '#ffb050', fog: '#0a0806',
 };
+export const ACT2_TOWN_BIOME = {
+  id: 'act2_town', name: 'Sunscorch Oasis', pack: 'catacombs', palette: { colorize: [38, 0.35], light: 0.15, contrast: 1.05 }, wallPalette: { colorize: [38, 0.3], light: 0.2 },
+  dark: 0.45, light: 12, ambient: { type: 'sand', color: '#f3c778' }, mon: { hue: 22, sat: 0.92, light: 0.06 }, blood: '#9f361a', torch: '#ffc078', fog: '#120d08',
+  overworld: true, town: true, act: 2,
+};
+BIOME_BY_ID.act2_town = ACT2_TOWN_BIOME;

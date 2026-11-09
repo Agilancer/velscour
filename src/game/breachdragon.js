@@ -24,7 +24,7 @@ import { Delayed, Area } from './hazards.js';
 import { GroundItem } from './loot.js';
 import { rollItem, rarityAt, RARITY, goldLvl } from '../data/items.js';
 import { ARCH } from '../data/enemies.js';
-import { wyrmVariant, wyrmStats, WYRM_NAMES, breachReward } from '../data/breach.js';
+import { wyrmVariant, wyrmStats, WYRM_NAMES, WYRM_VARIANTS, breachReward } from '../data/breach.js';
 import { addEffect, Ring, Telegraph, sparkle, spawn, floatText, addLight, Column, elem } from '../gfx/vfx.js';
 import { preloadWyrm, wyrmR, WYRM_TILE } from '../gfx/breachdragon.js';
 
@@ -38,7 +38,8 @@ const STEP = 0.07;                        // tiles between trail samples
 export function createWyrm(h) {
   const { world, floor, lvl, rng } = h, map = world.map, W = map.w;
   const v = wyrmVariant(floor, rng.fn()), st = wyrmStats(floor);
-  const name = `${WYRM_NAMES[Math.floor(rng.next() * WYRM_NAMES.length)]}, the ${v.name} Wyrm`;
+  const name = v.isApex ? "Xol'theron, the Apex Ethereal Wyrm" : `${WYRM_NAMES[Math.floor(rng.next() * WYRM_NAMES.length)]}, the ${v.name} Wyrm`;
+  let lastApexStep = -1;
   preloadWyrm();
   const n = st.segs, R = wyrmR() * st.scale, sp = (R * 0.78) / WYRM_TILE;   // segment spacing in tiles
   const w = {
@@ -214,6 +215,20 @@ export function createWyrm(h) {
       lastPhase = ph; S.stage = ph + 1; w.rage = ph / 2;
       roar(1); UI.centerMsg(ph === 1 ? 'THE WYRM CALLS ITS BROOD' : 'THE WYRM RAGES', name, 2.4);
       if (st.brood || ph === 2) for (const mm of h.arrive(o, 'coalesce', 2 + Math.floor(floor / 5) + ph, { near: p })) S.foes.push(mm);
+    }
+    if (v.isApex) {
+      const apexStep = Math.min(WYRM_VARIANTS.length - 1, Math.floor((1 - k) * WYRM_VARIANTS.length));
+      if (apexStep !== lastApexStep) {
+        lastApexStep = apexStep;
+        const nextV = WYRM_VARIANTS[apexStep];
+        w.variant = { ...v, body: nextV.body, glow: nextV.glow, el: nextV.el, accent: nextV.accent };
+        m.el = nextV.el;
+        if (lastApexStep > 0) {
+          floatText(m.x, m.y, 85, `CONVERGENCE: ${nextV.name.toUpperCase()}!`, nextV.glow, 16);
+          addEffect(new Ring(m.x, m.y, 0.3, 6, 1, nextV.glow, 8));
+          sfx('boss');
+        }
+      }
     }
     const haste = 1 + w.rage * 0.35;
     const coilR = Math.max(3, o.r - 1.2);

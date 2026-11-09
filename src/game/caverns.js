@@ -196,8 +196,13 @@ export function createCaveRun(world, gen, biome, onSuccess) {
       } else if (run.phase === 'climb') {
         run.cwp = adv(climb, run.cwp);
         climbEvents(dt);
-        if ((r === REG.gallery || r === REG.plateau) && Math.hypot(p.x - cv.plateau.x, p.y - cv.plateau.y) < cv.plateau.r + 1) startSummit();
-      } else if (run.phase === 'summit') summit(dt);
+      }
+      if (run.phase !== 'summit' && run.phase !== 'done' && !run.completed) {
+        if ((r === REG.gallery || r === REG.plateau) || Math.hypot(p.x - cv.plateau.x, p.y - cv.plateau.y) < cv.plateau.r + 3) {
+          startSummit();
+        }
+      }
+      if (run.phase === 'summit') summit(dt);
       dressing(dt);
     },
   };
@@ -227,6 +232,7 @@ export function createCaveRun(world, gen, biome, onSuccess) {
     });
   }
   function delveEvents(dt) {
+    if (G.room && !G.game?.isDungeonAuthority(world.depth)) return;
     const p = world.player;
     // things drop out of the dark above, or claw up out of the floor (each needs fresh ground covered since the last)
     if ((run.ambushT -= dt) > 0 || run.wp < run.ambushWp + 10 || run.wp < 6) return;

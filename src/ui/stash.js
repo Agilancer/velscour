@@ -27,8 +27,10 @@ export function addToStash(c, item) {
 const TYPE_ORDER = ['weapon', 'offhand', 'head', 'body', 'hands', 'legs', 'feet', 'ring'];
 /** Chest order: by type (weapons, off-hands, armor head to feet, rings, then gems by kind), or by rarity first. */
 export function sortStash(c, by = 'type') {
+  if (!c) return;
+  if (!Array.isArray(c.stash)) c.stash = Array(STASH_SIZE).fill(null);
   const kind = (it) => (it.type === 'gear' ? TYPE_ORDER.indexOf(it.slot) + 1 || 9 : it.type === 'gem' ? 10 : 11);
-  const items = c.stash.filter(Boolean).sort((a, b) => {
+  const items = (c.stash || []).filter(Boolean).sort((a, b) => {
     const k = kind(a) - kind(b), r = (b.rarity || 0) - (a.rarity || 0);
     return (by === 'rarity' ? r || k : k || r) || (a.gem || '').localeCompare(b.gem || '') || (b.tier || 0) - (a.tier || 0) || (b.ilvl || 0) - (a.ilvl || 0);
   });
@@ -73,18 +75,82 @@ export const Stash = {
     sfx('pickup'); changed();
     return true;
   },
+  /** Move all unlocked items from backpack (and optionally gemBag) into the storage chest. */
+  stashAll(where = 'auto') {
+    const c = G.char;
+    if (!c) return;
+    let moved = 0;
+    let full = false;
+
+    const moveFrom = (arr) => {
+      if (!Array.isArray(arr)) return;
+      for (let i = 0; i < arr.length; i++) {
+        const it = arr[i];
+        if (!it || it.locked) continue;
+        if (!addToStash(c, it)) {
+          full = true;
+          break;
+        }
+        delete it.autoStash;
+        arr[i] = null;
+        moved++;
+      }
+    };
+
+    if (where === 'gemBag') {
+      moveFrom(c.gemBag);
+    } else if (where === 'bag') {
+      moveFrom(c.bag);
+    } else {
+      // 'auto' or 'all': stash backpack items; if backpack had none, check gemBag too
+      moveFrom(c.bag);
+      if (!full && moved === 0 && Array.isArray(c.gemBag)) {
+        moveFrom(c.gemBag);
+      }
+    }
+
+    if (moved > 0) {
+      sfx('pickup');
+      this.selected = null;
+      UI.selected = null;
+      changed();
+      if (full) {
+        UI.log(`Stored ${moved} item${moved > 1 ? 's' : ''}. Storage chest is full.`, '#ff8080');
+      } else {
+        UI.log(`Stored ${moved} item${moved > 1 ? 's' : ''} in the storage chest.`, '#80ff80');
+      }
+    } else if (full) {
+      UI.log('The storage chest is full.', '#ff8080');
+      sfx('error');
+    } else {
+      const source = where === 'gemBag' ? c.gemBag : c.bag;
+      const hasLocked = Array.isArray(source) && source.some((it) => it && it.locked);
+      if (hasLocked) {
+        UI.log('All items in inventory are locked.', '#ffd860');
+      } else {
+        UI.log('No items in inventory to store.');
+      }
+      sfx('ui');
+    }
+  },
   render(body) {
     const c = G.char;
-    if (!c.stash) c.stash = Array(STASH_SIZE).fill(null);
-    const prevGridScroll = body.querySelector('.stash-grid')?.scrollTop ?? this.lastScrollTop ?? 0;
+    if (!c) return;
+    if (!Array.isArray(c.stash)) c.stash = Array(STASH_SIZE).fill(null);
+    const self = this || Stash;
+    const prevGridScroll = body.querySelector('.stash-grid')?.scrollTop ?? self.lastScrollTop ?? 0;
     const prevBodyScroll = body.scrollTop;
     body.innerHTML = '';
-    const used = c.stash.filter(Boolean).length;
+    const used = (c.stash || []).filter(Boolean).length;
     const rows = stashRows(c);
     const head = el('div', 'row storage-toolbar', `<strong>${fmtInt(used)} / ${c.stash.length}</strong><span class="dim">stored (${rows} rows)</span>`);
+    const stashAllBtn = el('button', 'btn small', 'Stash All');
+    stashAllBtn.title = 'Stash all unlocked items from inventory into the storage chest';
+    stashAllBtn.onclick = () => { sfx('ui'); self.stashAll(); };
+    head.appendChild(stashAllBtn);
     for (const [by, label] of [['type', 'Sort by type'], ['rarity', 'Sort by rarity']]) {
       const b = el('button', 'btn small', label);
-      b.onclick = () => { sortStash(c, by); this.selected = null; sfx('ui'); UI.selected = null; changed(); };
+      b.onclick = () => { sortStash(c, by); self.selected = null; sfx('ui'); UI.selected = null; changed(); };
       head.appendChild(b);
     }
     if (rows < STASH_MAX_ROWS) {
@@ -117,36 +183,36 @@ export const Stash = {
     body.appendChild(head);
     const tools = el('div', 'storage-filters');
     const kind = el('select', 'storage-select', '<option value="all">All items</option><option value="gear">Gear</option><option value="gem">Gems</option>');
-    kind.value = this.filter;
+    kind.value = self.filter || 'all';
     const search = el('input', 'storage-search');
-    search.type = 'search'; search.placeholder = 'Search stored items'; search.value = this.query;
+    search.type = 'search'; search.placeholder = 'Search stored items'; search.value = self.query || '';
     tools.append(kind, search);
     body.appendChild(tools);
     const transfer = el('div', 'storage-dropzone', 'Drop a backpack item here to store it · Right-click a stored item to take it');
     droppable(
       transfer,
       (data) => {
-        if (data.type === 'item') return this.store(data.idx, data.where);
-        if (data.type === 'jewelbox') return this.store(data.idx, 'jewelbox');
+        if (data.type === 'item') return self.store(data.idx, data.where);
+        if (data.type === 'jewelbox') return self.store(data.idx, 'jewelbox');
         return false;
       },
       (data) => data.type === 'item' || data.type === 'jewelbox'
     );
     body.appendChild(transfer);
     const grid = el('div', 'bag stash-grid');
-    grid.addEventListener('scroll', () => { this.lastScrollTop = grid.scrollTop; }, { passive: true });
+    grid.addEventListener('scroll', () => { self.lastScrollTop = grid.scrollTop; }, { passive: true });
     c.stash.forEach((it, i) => {
       const d = el('div', 'bslot ' + rarityClass(it));
-      if (this.selected === i) d.classList.add('sel');
+      if (self.selected === i) d.classList.add('sel');
       if (it) d.appendChild(itemCell(it));
       d.dataset.kind = it?.type || 'empty';
       d.dataset.name = it ? itemName(it).toLowerCase() : '';
-      draggable(d, { key: 'stash:' + i, data: () => (c.stash[i] ? { type: 'stash', idx: i } : null), icon: () => d.querySelector('img') && d.querySelector('img').src, onClick: () => { if (c.stash[i]) { this.selected = i; this.render(body); } }, onRight: () => this.take(i), onDouble: () => this.take(i) });
+      draggable(d, { key: 'stash:' + i, data: () => (c.stash[i] ? { type: 'stash', idx: i } : null), icon: () => d.querySelector('img') && d.querySelector('img').src, onClick: () => { if (c.stash[i]) { self.selected = i; self.render(body); } }, onRight: () => self.take(i), onDouble: () => self.take(i) });
       droppable(
         d,
         (data) => {
-          if (data.type === 'item') return this.store(data.idx, data.where);
-          if (data.type === 'jewelbox') return this.store(data.idx, 'jewelbox');
+          if (data.type === 'item') return self.store(data.idx, data.where);
+          if (data.type === 'jewelbox') return self.store(data.idx, 'jewelbox');
           return false;
         },
         (data) => data.type === 'item' || data.type === 'jewelbox'
@@ -154,32 +220,34 @@ export const Stash = {
       if (it) UI.tip(d, () => {
         const cur = c.stash[i];
         if (!cur) return '';
-        const acts = [{ label: 'Take', fn: () => this.take(i) }];
+        const acts = [{ label: 'Take', fn: () => self.take(i) }];
         return { html: itemTooltip(cur, { hint: 'Right-click or double-tap to take', actions: acts }), actions: acts };
       });
       grid.appendChild(d);
     });
     body.appendChild(grid);
-    const selected = c.stash[this.selected];
+    const selected = c.stash[self.selected];
     let detail;
     if (selected) {
       detail = el('div', 'storage-detail', itemTooltip(selected));
       const take = el('button', 'btn small', 'Take to backpack');
-      take.onclick = () => this.take(this.selected);
+      take.onclick = () => self.take(self.selected);
       detail.appendChild(take);
       body.appendChild(detail);
     }
     const applyFilter = () => {
-      const filtered = this.filter !== 'all' || !!this.query;
+      const filterMode = self.filter || 'all';
+      const queryStr = self.query || '';
+      const filtered = filterMode !== 'all' || !queryStr;
       for (const cell of grid.children) {
-        const match = cell.dataset.kind !== 'empty' && (this.filter === 'all' || cell.dataset.kind === this.filter) && cell.dataset.name.includes(this.query);
+        const match = cell.dataset.kind !== 'empty' && (filterMode === 'all' || cell.dataset.kind === filterMode) && cell.dataset.name.includes(queryStr);
         cell.hidden = filtered && !match;
       }
       grid.classList.toggle('filtered', filtered);
-      if (detail) detail.hidden = filtered && ((this.filter !== 'all' && selected.type !== this.filter) || !itemName(selected).toLowerCase().includes(this.query));
+      if (detail) detail.hidden = filtered && ((filterMode !== 'all' && selected.type !== filterMode) || !itemName(selected).toLowerCase().includes(queryStr));
     };
-    kind.onchange = () => { this.filter = kind.value; applyFilter(); };
-    search.oninput = () => { this.query = search.value.trim().toLowerCase(); applyFilter(); };
+    kind.onchange = () => { self.filter = kind.value; applyFilter(); };
+    search.oninput = () => { self.query = search.value.trim().toLowerCase(); applyFilter(); };
     applyFilter();
     if (prevGridScroll > 0) {
       grid.scrollTop = prevGridScroll;

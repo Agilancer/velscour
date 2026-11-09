@@ -36,7 +36,7 @@ export const sigO = (o = {}) => ({ sig: true, crit: true, ...o });
 export function foesNear(p, x, y, r) {
   const w = p.world;
   if (!w) return [];
-  return w.hostiles(p.team, x, y, r).filter((c) => !c.dead && c.team === 'enemy').sort((a, b) => dist(x, y, a.x, a.y) - dist(x, y, b.x, b.y));
+  return w.hostiles(p.team, x, y, r).filter((c) => !c.dead && c.team === 'enemy' && !c.clutter).sort((a, b) => dist(x, y, a.x, a.y) - dist(x, y, b.x, b.y));
 }
 const RANK = { normal: 0, champion: 1, unique: 2, boss: 3 };
 /** The toughest foe in reach (rank first, then life). */

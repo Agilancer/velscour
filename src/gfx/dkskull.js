@@ -54,16 +54,27 @@ function bake(bone) {
  * bone: the bone colour ('#e8f4ff' or '#bfeaff').
  */
 export function drawDkSkull(ctx, x, y, size, bone = '#e8f4ff', rot = 0) {
-  load();
-  if (!ready) return false;
-  let s = CACHE.get(bone);
-  if (!s) CACHE.set(bone, (s = bake(bone)));
-  const im = size <= 34 ? s.s32 : s.s64, w = size * (im.width / im.height);
-  const sm = ctx.imageSmoothingEnabled;
-  ctx.imageSmoothingEnabled = true;
-  if (rot) { ctx.translate(x, y); ctx.rotate(rot); ctx.drawImage(im, -w / 2, -size / 2, w, size); ctx.rotate(-rot); ctx.translate(-x, -y); }
-  else ctx.drawImage(im, x - w / 2, y - size / 2, w, size);
-  ctx.imageSmoothingEnabled = sm;
-  return true;
+  try {
+    load();
+    if (!ready) return false;
+    let s = CACHE.get(bone);
+    if (!s) {
+      try {
+        s = bake(bone);
+        CACHE.set(bone, s);
+      } catch (err) {
+        return false;
+      }
+    }
+    const im = size <= 34 ? s.s32 : s.s64, w = size * (im.width / im.height);
+    const sm = ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled = true;
+    if (rot) { ctx.translate(x, y); ctx.rotate(rot); ctx.drawImage(im, -w / 2, -size / 2, w, size); ctx.rotate(-rot); ctx.translate(-x, -y); }
+    else ctx.drawImage(im, x - w / 2, y - size / 2, w, size);
+    ctx.imageSmoothingEnabled = sm;
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 export const preloadDkSkull = load;

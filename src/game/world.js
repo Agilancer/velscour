@@ -1,6 +1,6 @@
 // World: everything that lives in the current level.
 import { augHazard } from './augments.js';
-import { Clutter } from './clutter.js';
+import { Clutter, isTreeProp } from './clutter.js';
 import { G } from '../state.js';
 import { camera, isoX, isoY } from '../core/view.js';
 import { rand, dist2, TAU, chance } from '../core/util.js';
@@ -46,7 +46,12 @@ export class World {
     const W = this.map.w, H = this.map.h;
     if (!this.map.clutter) this.map.clutter = new Uint8Array(W * H);
     for (const pr of this.props) {
-      if ((pr.kind === 'scatter' || pr.kind === 'decor') && !pr.throne && !pr.tree) {
+      if ((pr.kind === 'scatter' || pr.kind === 'decor') && !pr.throne) {
+        if (isTreeProp(pr)) {
+          pr.destructible = false;
+          pr.tree = true;
+          continue;
+        }
         const tx = Math.floor(pr.x), ty = Math.floor(pr.y);
         if (tx >= 0 && tx < W && ty >= 0 && ty < H) {
           const idx = ty * W + tx;
@@ -125,14 +130,14 @@ export class World {
     return out;
   }
   hostiles(team, x, y, r) { return this.query(x, y, r, (c) => c.team !== team && c.targetable !== false); }
-  nearestHostile(team, x, y, r, needLos = false) {
+  nearestHostile(team, x, y, r, needLos = false, allowClutter = false) {
     let best = null, bd = Infinity;
     let bestX = Infinity, bestY = Infinity;
     const x0 = Math.floor((x - r) / CELL), x1 = Math.floor((x + r) / CELL);
     const y0 = Math.floor((y - r) / CELL), y1 = Math.floor((y + r) / CELL);
     const visit = (cell, cx, cy) => {
       for (const c of cell) {
-        if (c.dead || c.team === team || c.targetable === false) continue;
+        if (c.dead || c.team === team || c.targetable === false || (!allowClutter && c.clutter)) continue;
         const d = dist2(x, y, c.x, c.y), rr = r + c.r;
         // Preserve query's row/column tie order even when scanning occupied cells.
         if (d > rr * rr || d > bd || (d === bd && (cy > bestY || (cy === bestY && cx >= bestX)))) continue;
@@ -150,7 +155,7 @@ export class World {
         for (const c of a) {
           const cx = c._gx, cy = c._gy;
           if (cx < x0 || cx > x1 || cy < y0 || cy > y1) continue;
-          if (c.dead || c.targetable === false) continue;
+          if (c.dead || c.targetable === false || (!allowClutter && c.clutter)) continue;
           const d = dist2(x, y, c.x, c.y), rr = r + c.r;
           if (d > rr * rr || d > bd || (d === bd && (cy > bestY || (cy === bestY && cx >= bestX)))) continue;
           if (needLos && !this.map.los(x, y, c.x, c.y)) continue;
@@ -177,6 +182,7 @@ export class World {
   update(dt) {
     this.time += dt;
     lights.length = 0; // refilled by this update's addLight calls, drawn by the next render (paused frames keep the last set)
+    this.ambientLights();
     this.pathBudget = 10; // A* searches monsters and minions may run this frame (Monster.navTo), and for at most
     this.pathEnd = performance.now() + 3; // 3 ms of it: a phone a few times slower runs fewer, the rest wait a frame
     const p = this.player;
@@ -257,36 +263,50 @@ export class World {
     }
   }
 
+  /** Ambient environmental lights (torches, braziers, portals) registered first with priority so they are never starved by combat/loot lights. */
+  ambientLights() {
+    const b = this.biome;
+    // torches & lamps: a light reaches ~240px from sconce, so cull by 280px margin (offset by flame height)
+    const lr = camera.viewRect(280);
+    for (const t of this.torches) {
+      const fz = t.flameZ ?? 60;
+      const px = isoX(t.x, t.y), py = isoY(t.x, t.y) - fz;
+      if (px < lr.x0 || px > lr.x1 || py < lr.y0 || py > lr.y1 + 80) continue;
+      addLight(t.x, t.y, 5.5 + Math.sin(this.time * 9 + t.x) * 0.3, 0.9, fz, b.torch || '#ff9a40', true);
+    }
+    const lit = (x, y) => { const px = isoX(x, y), py = isoY(x, y); return px > lr.x0 && px < lr.x1 && py > lr.y0 && py < lr.y1 + 80; };
+    for (const pr of this.props) {
+      if (pr.light && lit(pr.x, pr.y)) addLight(pr.x, pr.y, pr.light + Math.sin(this.time * 7 + pr.x) * 0.15, 0.8, 20 + (pr.z || 0), pr.lightColor || '#ffb050', true);
+    }
+    for (const po of this.portals) {
+      if (po.active && lit(po.x, po.y)) addLight(po.x, po.y, 6, 1, 20, po.color || '#ff6030', true);
+    }
+  }
+
   ambient(dt) {
     const b = this.biome;
     const vr = camera.viewRect(60);
-    // torches & lamps
+    // torch glow motes near the view
     for (const t of this.torches) {
-      const px = isoX(t.x, t.y), py = isoY(t.x, t.y);
+      const fz = t.flameZ ?? 60;
+      const px = isoX(t.x, t.y), py = isoY(t.x, t.y) - fz;
       if (px < vr.x0 || px > vr.x1 || py < vr.y0 || py > vr.y1 + 80) continue;
-      addLight(t.x, t.y, 5.5 + Math.sin(this.time * 9 + t.x) * 0.3, 0.9, t.flameZ ?? 20, b.torch || '#ff9a40');
-      if (chance(dt * 18)) spawn({ type: 'glow', x: t.x + rand(-0.04, 0.04), y: t.y + rand(-0.04, 0.04), z: t.flameZ ?? 40, vz: rand(15, 35), life: rand(0.3, 0.6), size: rand(2, 3.5), size1: 0.5, color: chance(0.5) ? (b.torch || '#ff9a40') : '#fff0a0', add: true });
+      if (chance(dt * 18)) spawn({ type: 'glow', x: t.x + rand(-0.04, 0.04), y: t.y + rand(-0.04, 0.04), z: fz + 20, vz: rand(15, 35), life: rand(0.3, 0.6), size: rand(2, 3.5), size1: 0.5, color: chance(0.5) ? (b.torch || '#ff9a40') : '#fff0a0', add: true });
     }
-    // lit props and portals near the view only: a light reaches about 40 px a unit of radius past its spot, and the
-    // 48 lights a frame (vfx.js) were filling with ones across the map (a Breach floor's 30+ lamps and shrines), so the
-    // ones on screen (spells, the fight at hand) were dropped
-    const lr = camera.viewRect(280);
-    const lit = (x, y) => { const px = isoX(x, y), py = isoY(x, y); return px > lr.x0 && px < lr.x1 && py > lr.y0 && py < lr.y1 + 80; };
+    // lit props and portals near the view only: smoke & glow particles
     for (const pr of this.props) {
-      if (!pr.light && !pr.smoke) continue;
-      if (pr.light && lit(pr.x, pr.y)) addLight(pr.x, pr.y, pr.light + Math.sin(this.time * 7 + pr.x) * 0.15, 0.8, 20 + (pr.z || 0), pr.lightColor || '#ffb050');
-      if (pr.smoke) {
-        // camp fires and chimneys (the Castle): a slow plume drifting downwind, embers off a fire
-        const px = isoX(pr.x, pr.y), py = isoY(pr.x, pr.y);
-        if (px < vr.x0 || px > vr.x1 || py < vr.y0 || py > vr.y1 + 160) continue;
-        if (chance(dt * pr.smoke)) spawn({ type: 'smoke', x: pr.x + rand(-0.15, 0.15), y: pr.y + rand(-0.15, 0.15), z: pr.smokeZ ?? 16, vx: rand(0.05, 0.3), vy: rand(-0.25, 0), vz: rand(12, 22), life: rand(2.4, 3.8), size: rand(4, 7), size1: rand(15, 24), color: '#3b3733', alpha: 0.26 });
-        if (pr.light && chance(dt * 5)) spawn({ type: 'glow', x: pr.x + rand(-0.2, 0.2), y: pr.y + rand(-0.2, 0.2), z: 14, vz: rand(30, 60), life: rand(0.6, 1.2), size: rand(1.5, 2.5), size1: 0.4, color: chance(0.5) ? '#ffb050' : '#ffe0a0', add: true });
-      }
+      if (!pr.smoke) continue;
+      // camp fires and chimneys (the Castle): a slow plume drifting downwind, embers off a fire
+      const px = isoX(pr.x, pr.y), py = isoY(pr.x, pr.y);
+      if (px < vr.x0 || px > vr.x1 || py < vr.y0 || py > vr.y1 + 160) continue;
+      if (chance(dt * pr.smoke)) spawn({ type: 'smoke', x: pr.x + rand(-0.15, 0.15), y: pr.y + rand(-0.15, 0.15), z: pr.smokeZ ?? 16, vx: rand(0.05, 0.3), vy: rand(-0.25, 0), vz: rand(12, 22), life: rand(2.4, 3.8), size: rand(4, 7), size1: rand(15, 24), color: '#3b3733', alpha: 0.26 });
+      if (pr.light && chance(dt * 5)) spawn({ type: 'glow', x: pr.x + rand(-0.2, 0.2), y: pr.y + rand(-0.2, 0.2), z: 14, vz: rand(30, 60), life: rand(0.6, 1.2), size: rand(1.5, 2.5), size1: 0.4, color: chance(0.5) ? '#ffb050' : '#ffe0a0', add: true });
     }
     // portals
+    const lr = camera.viewRect(280);
+    const lit = (x, y) => { const px = isoX(x, y), py = isoY(x, y); return px > lr.x0 && px < lr.x1 && py > lr.y0 && py < lr.y1 + 80; };
     for (const po of this.portals) {
       if (!po.active || !lit(po.x, po.y)) continue;
-      addLight(po.x, po.y, 6, 1, 20, po.color || '#ff6030');
       if (chance(dt * 30)) sparkle(po.x, po.y, rand(10, 60), po.color || '#ff6030', 1, 0.6);
     }
     if (this.raining) {

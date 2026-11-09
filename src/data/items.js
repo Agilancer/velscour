@@ -755,8 +755,9 @@ export function enchantCost(item, add) { return Math.round((add ? 400 : 180) * M
 export function unsocketCost(item) { return Math.round(50 * Math.pow(1.04, goldLvl(item.ilvl))); }
 
 export function rerollAffixes(item) {
-  const keep = item.affixes.filter((a) => a.implicit);
-  const perks = item.affixes.filter((a) => a.perk).length;
+  if (!Array.isArray(item.affixes)) item.affixes = [];
+  const keep = item.affixes.filter((a) => a && a.implicit);
+  const perks = item.affixes.filter((a) => a && a.perk).length;
   const n = item.affixes.length - keep.length - perks;
   item.affixes = keep;
   rollAffixes(item, Math.max(1, n));
@@ -764,7 +765,8 @@ export function rerollAffixes(item) {
 }
 export function addAffix(item) {
   const R = RARITY[item.rarity];
-  const n = item.affixes.filter((a) => !a.implicit).length;
+  if (!Array.isArray(item.affixes)) item.affixes = [];
+  const n = item.affixes.filter((a) => a && !a.implicit).length;
   if (n >= R.affixes[1] + 1) return false;
   rollAffixes(item, 1);
   return true;

@@ -232,7 +232,7 @@ export function glyphOf(it) {
 // ---------------------------------------------------------------- making them
 const nameFor = (base) => base;
 function shapeRelic(it, kind, id, name, lines, maxSock) {
-  it.affixes = it.affixes.filter((a) => a.implicit);
+  it.affixes = (it.affixes || []).filter((a) => a && a.implicit);
   for (const [s, k] of lines) it.affixes.push({ s, v: lineValue(s, it.ilvl, k * TUNE[kind]), relic: true });
   delete it.legendary; delete it.title; delete it.pre; delete it.suf; delete it.rname; delete it.art; delete it.artCls;
   it.relic = kind; it.rid = id; it.uname = nameFor(name);

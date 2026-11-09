@@ -315,7 +315,7 @@ export function generateSiege(depth, biome, seed, variantId = 'keep') {
     for (let s = -7; s <= 7; s += 0.5) { const [x, y] = g.axis === 'x' ? [c, g.line + s] : [g.line + s, c]; reserve(x, y, 2.6); }
   }
   const free = (x, y, r = 0.4) => map.circleFree(x, y, r) && !keep.has(I(Math.floor(x), Math.floor(y)));
-  const put = (spr, x, y, k, o = {}) => { if (!spr) return null; const p = { kind: 'scatter', x, y, spr, k, flip: !!o.flip, z: 0, fixedK: true, light: o.light || 0 }; props.push(p); if (o.solid) map.block[I(Math.floor(x), Math.floor(y))] = 1; return p; };
+  const put = (spr, x, y, k, o = {}) => { if (!spr) return null; const p = { kind: 'scatter', x, y, spr, k, flip: !!o.flip, z: 0, fixedK: true, light: o.light || 0, tree: !!o.tree || !!spr.tree }; props.push(p); if (o.solid) map.block[I(Math.floor(x), Math.floor(y))] = 1; return p; };
   const scat = new Map(castleFrames('scatter').map((f) => [f.id.replace(/^scatter_\d+_/, ''), f.id]));
   const C = (name, x, y, o = {}) => { const spr = scat.has(name) && castleObject(scat.get(name)); return spr && put(spr, x, y, (PH[name] || 30) / spr.h, o); };
   const KP = (name, x, y, o = {}) => { const s = keepSprite(name); return s && put(s.spr, x, y, s.k * (o.scale || 1), o); };

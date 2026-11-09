@@ -27,8 +27,10 @@ export const breachPack = (arch, rnd = Math.random, extra = 0) => { const [a, b]
 /** Big flying monsters that can carry a squad over the void and drop it off (the 'ride' arrival). */
 export const BREACH_CARRIERS = BREACH_ART.filter((a) => a.fly && a.h >= 54).map((a) => a.id);
 
-/** Floor n of the Breach is as hard as standard depth 10n. */
-export const breachDepth = (floor) => Math.max(1, floor) * 10;
+export const MAX_BREACH_FLOOR = 50;
+
+/** Floor n of the Breach is as hard as standard depth 10n (capped at Depth 500). */
+export const breachDepth = (floor) => Math.min(500, Math.max(1, floor) * 10);
 export const breachLevel = (floor) => depthLevel(breachDepth(floor));
 
 /**
@@ -101,21 +103,40 @@ export const WYRM_VARIANTS = [
   { id: 'white', name: 'White', body: '#f0eef8', accent: '#ffffff', glow: '#e4f6ff', el: 'cold', heads: ['ivory', 'bone'], claw: 'bone', w: 1 },
 ];
 export const WYRM_NAMES = ["Ysh'vael", 'Nhalakor', 'Veyrith', 'Ossarune', "Khel'mora", 'Saevrith', 'Umbrathiel', 'Iolanthe', 'Corvaxis', "Thal'zuun", 'Mirrovane', 'Quessadrel'];
-/** A floor's wyrm: floor 1 is always the violet one; after that a weighted draw. */
-export function wyrmVariant(floor, rnd = Math.random) {
-  if (floor <= 1) return WYRM_VARIANTS[0];
-  let r = rnd() * WYRM_VARIANTS.reduce((s, v) => s + v.w, 0);
-  for (const v of WYRM_VARIANTS) if ((r -= v.w) < 0) return v;
-  return WYRM_VARIANTS[0];
+
+export const APEX_WYRM_VARIANT = {
+  id: 'apex', name: 'Apex Ethereal', body: '#8038d8', accent: '#ffffff', glow: '#d860ff',
+  el: 'arcane', heads: ['amethyst', 'obsidian', 'golden'], claw: 'amethyst', w: 1, isApex: true,
+};
+
+/** Get the current cycle (1 to 7) for a Breach floor */
+export const breachCycle = (floor) => Math.min(7, Math.floor((Math.max(1, floor | 0) - 1) / 7) + 1);
+
+/** A floor's wyrm: Floors 1-49 cycle through the 7 elemental wyrms (7 wyrms x 7 cycles); floor 50 is the Apex Wyrm. */
+export function wyrmVariant(floor, _rnd = Math.random) {
+  const f = Math.max(1, floor | 0);
+  if (f >= MAX_BREACH_FLOOR) return APEX_WYRM_VARIANT;
+  const idx = (f - 1) % WYRM_VARIANTS.length;
+  return WYRM_VARIANTS[idx];
 }
+
 /** It grows longer, faster and deadlier floor by floor, and learns new attacks. */
 export function wyrmStats(floor) {
-  const f = Math.max(1, floor);
+  const f = Math.min(MAX_BREACH_FLOOR, Math.max(1, floor | 0));
+  const isApex = f === MAX_BREACH_FLOOR;
   return {
-    segs: Math.min(60, 30 + f * 2), scale: Math.min(1.9, 1.35 + f * 0.03),
-    speed: Math.min(10, 6.4 + f * 0.24), turn: Math.min(2.4, 1.55 + f * 0.04),
-    passes: Math.min(5, 2 + Math.floor(f / 4)), away: [Math.max(18, 40 - f), Math.max(30, 70 - f * 2)],
-    hpMul: 3 + f * 0.15, dmgMul: 1 + f * 0.04,
-    breath: f >= 2, orbs: f >= 4, brood: f >= 3, coil: f >= 6, attackCd: Math.max(2.6, 5 - f * 0.12),
+    segs: isApex ? 60 : Math.min(60, 30 + f * 2),
+    scale: isApex ? 1.9 : Math.min(1.9, 1.35 + f * 0.03),
+    speed: isApex ? 10 : Math.min(10, 6.4 + f * 0.24),
+    turn: isApex ? 2.4 : Math.min(2.4, 1.55 + f * 0.04),
+    passes: isApex ? 5 : Math.min(5, 2 + Math.floor(f / 4)),
+    away: isApex ? [14, 24] : [Math.max(18, 40 - f), Math.max(30, 70 - f * 2)],
+    hpMul: isApex ? 12 : 3 + f * 0.15,
+    dmgMul: isApex ? 3.5 : 1 + f * 0.04,
+    breath: true,
+    orbs: f >= 4,
+    brood: f >= 3,
+    coil: f >= 6,
+    attackCd: isApex ? 2.2 : Math.max(2.6, 5 - f * 0.12),
   };
 }

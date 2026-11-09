@@ -230,7 +230,7 @@ class LanceLeap {
     switch (st.trail) {
       case 'storm':
         for (let i = 0; i < 3; i++) { const a = rand(TAU), d = rand(0.3, 1.4); addEffect(new Bolt(s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 340, s.x, s.y, 0, st.glow, 0.3, 3)); }
-        G.flash = Math.max(G.flash || 0, 0.15);
+        G.flash = G.settings?.reduceFlashing ? 0 : Math.max(G.flash || 0, 0.08);
         break;
       case 'stars': for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; this.addStar(s.x + Math.cos(a) * 1.2, s.y + Math.sin(a) * 1.2, rand(4, 20), 1.3); } break;
       case 'cyclone': addEffect(new Ring(s.x, s.y, 0.3, 2.4, 0.5, '#ffffff', 2)); break;

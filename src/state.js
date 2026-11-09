@@ -23,6 +23,7 @@ export const G = {
     gore: 2, // 0 off, 1 normal, 2 extreme
     dmgNumbers: true,
     shake: true,
+    reduceFlashing: false, // reduce full-screen flashes, flashbangs, and rapid hit strobing
     zoom: 1,
     mobileSkillBar: false, // landscape phones: full 15-slot bar art (off: orbs + potions only, the touch buttons hold the skills)
     lockSkillBar: false, // auto-play only fills empty bar slots

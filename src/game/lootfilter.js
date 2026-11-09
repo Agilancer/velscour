@@ -14,6 +14,7 @@ export const FILTER_DEFAULT = { on: false, weapon: 0, offhand: 0, armor: 0, ring
 
 /** The filter's settings, filled with defaults (old settings have none). */
 export function lootFilter() {
+  if (!G.settings || typeof G.settings !== 'object') G.settings = {};
   const f = G.settings.lootFilter;
   if (!f || typeof f !== 'object') return (G.settings.lootFilter = { ...FILTER_DEFAULT });
   for (const k in FILTER_DEFAULT) if (f[k] === undefined) f[k] = FILTER_DEFAULT[k];
@@ -23,7 +24,7 @@ export function lootFilter() {
   return f;
 }
 /** The filter when it's switched on, else null. */
-export const activeFilter = () => { const f = lootFilter(); return f.on ? f : null; };
+export const activeFilter = () => { const f = lootFilter(); return f && f.on ? f : null; };
 
 /** Does item `it` pass the filter? (Everything passes while it's off.) */
 export function filterPasses(it) {
@@ -37,8 +38,8 @@ export function filterPasses(it) {
     return (it.tier ?? 0) >= minTier;
   }
   if (it.type !== 'gear' || it.sealed) return true;
-  const row = FILTER_ROWS.find((r) => r.test(it));
-  const min = row ? f[row.k] : 0;
+  const row = (FILTER_ROWS || []).find((r) => r.test && r.test(it));
+  const min = row ? (f[row.k] ?? 0) : 0;
   return min >= 0 && (it.rarity || 0) >= min;
 }
 /** Should auto-play keep this item (store it in the chest) rather than sell it? */

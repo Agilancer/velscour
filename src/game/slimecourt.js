@@ -512,7 +512,7 @@ const FIGHT = {
       let best = null, bs = Infinity;
       for (const e of w.hostiles(m.team, m.x, m.y, 9)) {
         const de = dist(m.x, m.y, e.x, e.y);
-        if (e === t || e.dead || de < 3 || !w.map.los(m.x, m.y, e.x, e.y)) continue;
+        if (e === t || e.dead || e.clutter || de < 3 || !w.map.los(m.x, m.y, e.x, e.y)) continue;
         const sc = de - (o && e.target === o ? 3 : 0);
         if (sc < bs) { bs = sc; best = e; }
       }
@@ -548,7 +548,7 @@ const FIGHT = {
       return;
     }
     if (!(S.cds.roll > 0) && d <= 2.4) { // in a brawl with the roll ready: roll on through the pack to another foe
-      const e = m.world.hostiles(m.team, m.x, m.y, 7).find((c) => !c.dead && c !== t && dist(m.x, m.y, c.x, c.y) > 2.6 && m.world.map.los(m.x, m.y, c.x, c.y));
+      const e = m.world.hostiles(m.team, m.x, m.y, 7).find((c) => !c.dead && !c.clutter && c !== t && dist(m.x, m.y, c.x, c.y) > 2.6 && m.world.map.los(m.x, m.y, c.x, c.y));
       if (e) { t = e; d = dist(m.x, m.y, e.x, e.y); }
     }
     if (!(S.cds.roll > 0) && d > 2.4 && d < 7 && m.world.map.los(m.x, m.y, t.x, t.y)) { // roll through the pack
@@ -570,7 +570,7 @@ const FIGHT = {
       const a = rand(TAU), x = o.x + Math.cos(a) * 0.9, y = o.y + Math.sin(a) * 0.9;
       emote(S, 'bang', 0.8);
       startLeap(m, S, canStand(m.world, x, y, m) ? x : m.x, canStand(m.world, x, y, m) ? y : m.y, 34, 0.45, { air: true, land: (mm, SS) => {
-        o.addBuff({ id: 'slime_aegis', name: 'Gilded Aegis', el: 'holy', stats: { reduce: SS.mini ? 12 : 25, armor: SS.mini ? 25 : 50 }, t: 5, max: 5 });
+        if (typeof o.addBuff === 'function') o.addBuff({ id: 'slime_aegis', name: 'Gilded Aegis', el: 'holy', stats: { reduce: SS.mini ? 12 : 25, armor: SS.mini ? 25 : 50 }, t: 5, max: 5 });
         addEffect(new Dome(o, SS.K.color, 5));
         ring(o.x, o.y, 1.6, SS.K.color, 4, { fill: true }); lockAnim(SS, 'ability', 0.6); sfx('block', 0.6); sfx('holy', 0.4);
         floatText(o.x, o.y, 70, 'Gilded Aegis', '#ffe080', 12, { life: 1.1 });
@@ -612,7 +612,7 @@ const FIGHT = {
       S.cds.barrier = 11 * cdk(S);
       cast(m, S, 'ability', 0.7, 0.4, (mm, SS) => {
         if (dist(mm.x, mm.y, o.x, o.y) > 8) return;
-        o.addBuff({ id: 'slime_barrier', name: 'Amber Barrier', el: 'holy', stats: { res: SS.mini ? 10 : 20, reduce: SS.mini ? 6 : 12, regen: SS.mini ? 10 : 20 }, t: 6, max: 6 });
+        if (typeof o.addBuff === 'function') o.addBuff({ id: 'slime_barrier', name: 'Amber Barrier', el: 'holy', stats: { res: SS.mini ? 10 : 20, reduce: SS.mini ? 6 : 12, regen: SS.mini ? 10 : 20 }, t: 6, max: 6 });
         addEffect(new Dome(o, '#ffb020', 6, true));
         addEffect(new Beam(mm.x, mm.y, o.x, o.y, '#ffc040', 3, 0.35, { z: 18 }));
         for (const c of w.alliesOf(mm.team, o.x, o.y, 5)) if (c.slime) c.hp = Math.min(c.maxHp, c.hp + c.maxHp * 0.1);
@@ -662,7 +662,7 @@ const FIGHT = {
   },
   frost(m, S, t, d, dt) {
     const w = m.world;
-    if (!(S.cds.nova > 0) && w.hostiles(m.team, m.x, m.y, 2).length) {
+    if (!(S.cds.nova > 0) && w.hostiles(m.team, m.x, m.y, 2).some((c) => !c.dead && !c.clutter)) {
       S.cds.nova = 7 * cdk(S);
       cast(m, S, 'special', 0.45, 0.2, (mm, SS) => {
         aoe(w, mm, mm.x, mm.y, 2.2, mm.dmg * 1.2, 'cold', { freeze: true, slow: true });
@@ -717,7 +717,7 @@ const FIGHT = {
   charmer(m, S, t, d, dt) {
     const w = m.world;
     if (!(S.cds.charm > 0)) {
-      const c = w.hostiles(m.team, m.x, m.y, 6.5).find((e) => !e.dead && e.rank !== 'boss' && e.rank !== 'unique' && !e.summon && !(e.curses.charm && e.curses.charm.t > 0) && w.map.los(m.x, m.y, e.x, e.y));
+      const c = w.hostiles(m.team, m.x, m.y, 6.5).find((e) => !e.dead && !e.clutter && e.rank !== 'boss' && e.rank !== 'unique' && !e.summon && !(e.curses.charm && e.curses.charm.t > 0) && w.map.los(m.x, m.y, e.x, e.y));
       if (c) {
         S.cds.charm = 10 * cdk(S);
         cast(m, S, 'ability', 0.55, 0.3, (mm, SS) => {
@@ -812,7 +812,10 @@ function serenade(m, S) {
   emote(S, 'note', 1.5);
   cast(m, S, 'ability', 0.9, 0.45, (mm, SS) => {
     const o = mm.owner, w = mm.world;
-    if (o && dist(mm.x, mm.y, o.x, o.y) < 7) { o.addBuff({ id: 'slime_song', name: 'Slime Serenade', el: 'arcane', stats: { dmg: SS.mini ? 8 : 15, as: SS.mini ? 8 : 15 }, t: 7, max: 7 }); o.heal(o.maxHp * 0.03, true); }
+    if (o && dist(mm.x, mm.y, o.x, o.y) < 7) {
+      if (typeof o.addBuff === 'function') o.addBuff({ id: 'slime_song', name: 'Slime Serenade', el: 'arcane', stats: { dmg: SS.mini ? 8 : 15, as: SS.mini ? 8 : 15 }, t: 7, max: 7 });
+      if (typeof o.heal === 'function') o.heal(o.maxHp * 0.03, true);
+    }
     for (const c of w.alliesOf(mm.team, mm.x, mm.y, 6)) if (c.summon) c.partyBuff = { stats: { dmg: 20, as: 15 }, t: 7 };
     addEffect(new Ring(mm.x, mm.y, 0.2, 6, 0.8, '#ff80d0', 2));
     for (let i = 0; i < (G.touch ? 6 : 12); i++) { const a = rand(TAU); spawn({ type: 'glow', x: mm.x, y: mm.y, z: 20, vx: Math.cos(a) * 2.5, vy: Math.sin(a) * 2.5, vz: 30, drag: 1, life: 1, size: 3, size1: 0, color: i % 2 ? '#ffe070' : '#ff80d0', add: true }); }

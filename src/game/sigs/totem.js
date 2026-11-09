@@ -145,7 +145,7 @@ class GreatTotem {
     if (t0 < RISE && t >= RISE) this.deploy();
     if (t0 < this.dur && t >= this.dur) this.sink();
     if (t > this.dur && t < this.dur + SINK) this.rising(dt * 0.45, 1 - (t - this.dur) / SINK, true);
-    if (up && !p.dead) this.faces.forEach((k, i) => { if ((this.cd[i] -= dt) <= 0) { this.cd[i] = 1.2; this.act(k, i); } });
+    if (up && !p.dead && !G.cine) this.faces.forEach((k, i) => { if ((this.cd[i] -= dt) <= 0) { this.cd[i] = 1.2; this.act(k, i); } });
     const b = t - RISE;
     addLight(this.x, this.y, 3.5 + (b > 0 && b < 0.6 ? 4 * (1 - b / 0.6) : 0), t < RISE ? 0.6 : b < 0.6 ? 1.2 : 0.55, 60, '#7affd8');
     return t < this.dur + SINK;

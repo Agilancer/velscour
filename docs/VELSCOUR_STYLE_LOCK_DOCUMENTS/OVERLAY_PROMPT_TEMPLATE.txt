@@ -1,0 +1,65 @@
+SHEET: FIVE HELMETS, FIVE GLOVE PAIRS, FIVE BOOT PAIRS FOR [CLASS]
+USER HELMET CORRECTION: Full-face enclosed helmets only unless a later request changes this. Draw exterior worn surfaces only: no visible interior neck cavity, underside, rear inner collar wall or back-side collar arc. End at the exterior jaw/nape contour; transparency beneath lets the player neck show through. Read HELMET_OVERLAY_ADDENDUM.md for details.
+Attachments: [class overlay template rebuilt with approved master], [approved pose master], [approved visual material sheet]. Class theatre [ ]; motif family [ ]; identity [ ].
+1536x1024 output, 3x delivery, every 3x3 AP block flat. Follow the supplied template exactly. Helmet row five pieces, glove row five pairs (screen-left then screen-right), boot row five pairs. Rarities left-to-right [COMMON, UNCOMMON, RARE, EPIC, LEGENDARY or specify replacements]. Each whole piece/pair uses 8-12 colors including transparency (added counting convention); pair shares its budget across both sides.
+HERO COORDINATES AND IDENTITY
+128x192 AP frame; 108 AP bare-head-to-sole span; 6.75 heads tall. Crown y75, eyes y83, chin y91, shoulders y96, elbows y114, belt y120, crotch y129, fists (37,132)/(87,132), knees (50,154)/(78,154), ankles y178, soles (46,183)/(84,183), head center x65, hip center x64. Stand tall, centered weight, feet wider than shoulders, both soles flat, right foot right-down; three-quarter facing screen right, turned about 30 degrees toward viewer, camera about 30 degrees above; arms a fist-width off torso, empty loosely clenched hands. Draft bible tolerances elbows/knees/ankles/crotch ±1, waist/fists ±2, all other listed lines exact; approved pose/head pixels then never move across armor changes. Bulk can grow up to 8 AP per side; pauldrons/collars at most 6 above shoulders. Nothing on body armor above crown. No headgear, face paint, head/hair/skin/age change, weapon or shield. Hair falls identically across every outfit. Never shift joints to fit equipment.
+
+
+
+Coordinates are top-left plus width/height in the 128x192 AP full-frame coordinate system. Exact glove origins and sheet positions below come from importer constants, not estimates from the generated art.
+
+| Piece | Origin (x,y) AP | Size AP | Fitting requirement |
+|---|---|---|---|
+| Helmet | (45,63) | 40x40 | Match skull; face opening empty; all crests stay in extraction zone |
+| Left glove | (25,120) | 24x24 | Fist center (37,132), same angle |
+| Right glove | (75,120) | 24x24 | Fist center (87,132), same angle |
+| Boots pair | (28,150) | 76x40 | Both shins/feet, soles y=183 |
+
+At 3x, the five set columns begin from x=290 with a 248-pixel step and a 228-pixel allocation. Helmet content starts column+54, row y=140; glove pair starts column+36, row y=340, with two 72x72 cells separated by 12 output pixels; boots start column+0, row y=490 with size 228x120. Helmet cell size is 120x120. These are sheet output coordinates; they are not AP body coordinates. (added transcription of importer geometry)
+
+Draw only the gear. No head, hands or legs beneath it. Open helmets leave facial pixels fully transparent/magenta; closed helmets may cover the face. Each glove/boot pair is one equipment design, not two different designs. Pair color budget is shared across both sides. Composite-test each piece on its approved class master to confirm contact, angle, wrist/cuff joins and sole position. Do not repair a fit error by moving the hero. (added)
+
+VELSCOUR / GRIM NOCTURNE — STANDALONE RULES
+Use original theatrical costume forms with 60% FF6 craft, 25% Diablo II material weight/grime, 15% SotN cold moon rim; do not copy game characters or equipment. Work as deliberate pixel art, not a painting with a pixel filter. One AP is one perfectly flat square at the declared integer scale; every output block must be identical pixels. Broad midtones, 1-2 hard shadow bands, 1 highlight band; no gradients, bloom or soft edges. Character mode has 1 AP material-colored selective outlines broken on lit top-left; manuscript mode has no outline. Light upper-left; hard segmented 1 AP moon rim #9fb4d4 or #d4e2f4 on metal, back-right only. No outer glow, cast shadow, floor, watermark, border, UI, letters or labels in art. Pure #FF00FF outside the art or true transparency; preserve any explicitly protected reference column exactly.
+
+Use palette ramps below as selection pools, never all colors together. Count colors per asset including transparency; shared outline, eye and rim colors are inside the limit. Skin 3 tones, hair 2 if present. Base/secondary/accent proportions 60/30/10; saturated color only in accent. Build clusters of 2+ AP, with only deliberate glints/eye highlights isolated. Dither two colors on rough surfaces only, below 10% sprite area; never skin or metal highlight. No exterior antialiasing; curves use regular 1-1-2-2-3 steps. Armor has 3 major shapes, up to 6 medium shapes, details in 2 focal areas. Rarity is craft, not brightness: Common patched/plain; Uncommon matched/riveted/one motif; Rare fitted/layered/trimmed; Epic engraved or embroidered/one asymmetric statement; Legendary ceremonial/story-bearing/one emissive accent; Mythic impossible material/unique silhouette/contained strong accent.
+
+Before drawing each new design, write its four-line card OUTSIDE the image: costume or creature source; one material twist; one hue contrast; one silhouette hook. No two designs on the sheet share a card line. Fill all card blanks before drawing. Do not treat paired hands or animation frames of one design as separate new characters. Ban skull pauldrons, ubiquitous spikes, glowing red eyes, hooded faceless defaults, generic dark plate or leather-belts rogue, bat-wing armor, decorative chains everywhere, default tribal tattoos, stars-only wizard robes, filigree wallpaper, copied faces, near-duplicate recolors, weapons and shields. Gear may be worn, patched, stained and repaired, with calm areas.
+
+(added) Repeated stitches, rivets, weave and mail use one defined unit and consistent spacing/row offset; perspective deformation follows the supporting surface. Straps pass through buckles, stitches join seams, rivets secure overlap; cloth obeys gravity, hair/fur grow from roots and facets share vertices. Review construction/anatomy, repetition/material/light and technical compliance separately. Revise failures and inspect again, including at game size; do not claim technical compliance without checking. One sheet per request; no unlimited generation loop. The user-approved v3 material sheet sets visual direction, not its inaccurate color counts, background or pixel grid. Added repeat recipes/class allocations are reviewable production choices.
+
+MASTER PALETTE (dark to light)
+| Ramp | Steps (dark -> light) |
+|---|---|
+| Shadow ink (outlines, crevices) | `#07060a` `#100c14` `#1a1220` |
+| Grave steel (cool iron, plate) | `#0e1016` `#1c2230` `#2e3747` `#46526a` `#6a7891` `#98a6bc` `#d0d9e6` |
+| Blackened steel (death knights, cursed) | `#08080c` `#13131c` `#20202e` `#323246` `#4c4c66` `#76769a` |
+| Reliquary gold (aged gilt, brass) | `#1a1006` `#3a240c` `#63401a` `#8e6427` `#b98e3c` `#dcbf6a` `#f4e3a6` |
+| Verdigris bronze | `#0e1412` `#1c2a26` `#2e4640` `#46665c` `#6a8c7e` `#9ab8a6` |
+| Wine / blood cloth | `#12060a` `#2a0c14` `#4a1420` `#6e1e2a` `#962c34` `#c04848` |
+| Night indigo cloth | `#0a0a18` `#161a34` `#242c52` `#34406e` `#4c5c92` `#7084b8` |
+| Moss / ranger green | `#0c1208` `#1a2612` `#2c3e1c` `#44582a` `#62763a` `#8e9c56` |
+| Leather (boiled, oiled) | `#120c08` `#261a10` `#3e2a1a` `#5a3e26` `#7a5636` `#9e7650` |
+| Wool / undyed linen | `#16130f` `#2c2720` `#4a4236` `#6c6252` `#948870` `#bcb096` |
+| Bone / parchment / ivory | `#1c1812` `#3a3226` `#5e5442` `#8a7e66` `#b4a88c` `#ddd2b6` `#f2ecda` |
+| Fur (grey wolf) | `#121212` `#262422` `#3e3a36` `#5c5650` `#827a70` `#aaa094` |
+| Skin, light | `#2a1610` `#5a3020` `#8c5038` `#b8785a` `#dca484` `#f2cdb0` |
+| Skin, medium | `#1e100a` `#42241a` `#6a3c28` `#93583c` `#b87a56` `#d8a07c` |
+| Skin, deep | `#120a08` `#2a1610` `#44261a` `#603826` `#7e4e36` `#9c6a4c` |
+| Undead flesh | `#101410` `#20281e` `#3a4436` `#58624e` `#7a846a` `#a6ac8c` |
+| Hellfire (emissive) | `#2a0800` `#5c1200` `#9a2a00` `#d45208` `#f68a1c` `#ffc458` `#fff2b8` |
+| Arcane violet (emissive) | `#0c0a24` `#20185a` `#3a2c96` `#5c4cd0` `#8a7cf0` `#c4bcff` |
+| Frost (emissive or ice) | `#0a1620` `#16303e` `#285468` `#3e7c94` `#66a8c0` `#a6d8e6` `#e6f6fa` |
+| Poison / bile | `#0e1206` `#1e2a0a` `#36480e` `#56701a` `#80a02a` `#b8d050` |
+| Holy (emissive) | `#2a2008` `#5a4814` `#9a8428` `#d4bc48` `#f2e08a` `#fffae0` |
+| Moonlit rim (signature) | `#6f84a8` `#9fb4d4` `#d4e2f4` |
+| Slime (Slime Lord) | `#04102a` `#082456` `#0e3c8c` `#1a5cc8` `#3c86ec` `#86bcff` `#d8ecff` |
+
+
+DESIGN INPUTS
+Helmet 1 [idea/card]; 2 [idea/card]; 3 [idea/card]; 4 [idea/card]; 5 [idea/card].
+Glove pair 1 [idea/card]; 2 [idea/card]; 3 [idea/card]; 4 [idea/card]; 5 [idea/card].
+Boot pair 1 [idea/card]; 2 [idea/card]; 3 [idea/card]; 4 [idea/card]; 5 [idea/card].
+Write 15 complete unique design cards before drawing. Use additional distinct hue pairs from palette ramps if needed and label new choices (added). Open helms leave face fully empty; closed helms may cover it. Outside the gear stays transparent/magenta; do not include skin/hair/legs or the hero. All crests stay within extraction zone. Hands retain fist angle; boots retain soles y183. No floating pieces or disconnected straps.
+Review the full sheet, individual layers, and each layer composited on the master. Inspect fit, cuff transitions, repeated construction, exact palette/block/cell compliance. Return cards outside image, one sheet, and a concise defect report; correct failures without altering approved master. (added delivery details)

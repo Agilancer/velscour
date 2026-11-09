@@ -41,7 +41,7 @@ export function coneTargets(world, team, x, y, ang, range, half) {
 /** Shield Throw: its finale blast deals this share of a strike's damage to everything in it (data/skills.js describe). */
 export const BLAST_DMG = 0.75;
 /** The Death Knight's own art: his frost skull for Death Coil, his 3D Runeblade for every sword he throws, rains or orbits. */
-const dkFx = (src, fx) => (src && src.classId === 'death_knight' ? (fx === 'skull' ? 'dkskull' : fx === 'blade' ? 'dkblade' : fx) : fx);
+const dkFx = (src, fx) => (src && (src.classId === 'death_knight' || src.classId === 'deathknight') ? (fx === 'skull' ? 'dkskull' : fx === 'blade' ? 'dkblade' : fx) : fx);
 /** n of his 3D Runeblades circling (x, y) at radius r tiles, z px up, edge first (whirls and cyclones). */
 function dkBlades(ctx, x, y, r, t, n, z, E, k) {
   ctx.globalAlpha = k;

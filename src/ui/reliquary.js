@@ -27,6 +27,20 @@ function entryIcon(e) {
   return u;
 }
 
+export function sortVault(tab, by = 'type') {
+  const r = reliquary();
+  const t = r?.tabs?.[tab];
+  if (!Array.isArray(t)) return;
+  const TYPE_ORDER = ['helm', 'chest', 'gloves', 'boots', 'weapon', 'shield', 'ring', 'amulet', 'belt'];
+  const kind = (it) => (it.type === 'gear' ? TYPE_ORDER.indexOf(it.slot) + 1 || 9 : it.type === 'gem' ? 10 : 11);
+  const items = t.filter(Boolean).sort((a, b) => {
+    const k = kind(a) - kind(b), r = (b.rarity || 0) - (a.rarity || 0);
+    return (by === 'rarity' ? r || k : k || r) || (a.gem || '').localeCompare(b.gem || '') || (b.tier || 0) - (a.tier || 0) || (b.ilvl || 0) - (a.ilvl || 0);
+  });
+  r.tabs[tab] = t.map((_, i) => items[i] || null);
+  saveReliquary();
+}
+
 export const Reliquary = {
   active: false,
   tab: 0,
@@ -78,6 +92,78 @@ export const Reliquary = {
     saveReliquary(); sfx('pickup'); changed(); this.refresh();
     return true;
   },
+  /** Move items from inventory to the current vault tab. */
+  stashAll(where = 'all') {
+    const c = G.char;
+    if (!c || this.tab >= openTabs()) return;
+    const r = reliquary();
+    const t = r.tabs[this.tab];
+    if (!Array.isArray(t)) return;
+
+    let moved = 0, full = false;
+    const moveFrom = (arr) => {
+      if (!Array.isArray(arr) || full) return;
+      for (let i = 0; i < arr.length; i++) {
+        const it = arr[i];
+        if (!it || it.locked) continue;
+        if (it.type === 'gem') {
+          const same = t.find((b) => b && b.type === 'gem' && b.gem === it.gem && b.tier === it.tier);
+          if (same) {
+            same.count = (same.count || 1) + (it.count || 1);
+            arr[i] = null;
+            moved++;
+            continue;
+          }
+        }
+        const emptyIdx = t.findIndex((b) => !b);
+        if (emptyIdx < 0) {
+          full = true;
+          break;
+        }
+        delete it.autoStash;
+        t[emptyIdx] = it;
+        arr[i] = null;
+        moved++;
+      }
+    };
+
+    if (where === 'gemBag') {
+      moveFrom(c.gemBag);
+    } else if (where === 'bag') {
+      moveFrom(c.bag);
+    } else {
+      moveFrom(c.bag);
+      if (!full && moved === 0 && Array.isArray(c.gemBag)) {
+        moveFrom(c.gemBag);
+      }
+    }
+
+    if (moved > 0) {
+      saveReliquary();
+      sfx('pickup');
+      this.selected = null;
+      UI.selected = null;
+      changed();
+      this.refresh();
+      if (full) {
+        UI.log(`Stored ${moved} item${moved > 1 ? 's' : ''}. Vault ${ROMAN[this.tab]} is full.`, '#ff8080');
+      } else {
+        UI.log(`Stored ${moved} item${moved > 1 ? 's' : ''} in Vault ${ROMAN[this.tab]}.`, '#80ff80');
+      }
+    } else if (full) {
+      UI.log(`Vault ${ROMAN[this.tab]} is full.`, '#ff8080');
+      sfx('error');
+    } else {
+      const source = where === 'gemBag' ? c.gemBag : c.bag;
+      const hasLocked = Array.isArray(source) && source.some((it) => it && it.locked);
+      if (hasLocked) {
+        UI.log('All items in inventory are locked.', '#ffd860');
+      } else {
+        UI.log('No items in inventory to store.');
+      }
+      sfx('ui');
+    }
+  },
   render(body) {
     const r = reliquary(), n = openTabs(), prog = codexProgress();
     const prevGridScroll = body.querySelector('.rel-grid')?.scrollTop ?? this.lastScrollTop ?? 0;
@@ -104,6 +190,22 @@ export const Reliquary = {
     const t = r.tabs[this.tab];
     const rows = reliquaryTabRows(this.tab);
     const noteRow = el('div', 'row rel-header-row', `<span class="dim rel-note">Shared by all your heroes · Vault ${ROMAN[this.tab]}: <strong>${t.filter(Boolean).length} / ${t.length}</strong> (${rows} rows)</span>`);
+    const headActions = el('div', 'rel-header-actions', '');
+    headActions.style.display = 'flex';
+    headActions.style.gap = '6px';
+    headActions.style.alignItems = 'center';
+
+    const stashAllBtn = el('button', 'btn small', 'Stash All');
+    stashAllBtn.title = `Stash all unlocked items from inventory into Vault ${ROMAN[this.tab]}`;
+    stashAllBtn.onclick = () => { sfx('ui'); this.stashAll(); };
+    headActions.appendChild(stashAllBtn);
+
+    for (const [by, label] of [['type', 'Sort by type'], ['rarity', 'Sort by rarity']]) {
+      const b = el('button', 'btn small', label);
+      b.onclick = () => { sortVault(this.tab, by); this.selected = null; sfx('ui'); UI.selected = null; this.refresh(); };
+      headActions.appendChild(b);
+    }
+
     if (rows < RELIQUARY_MAX_ROWS) {
       const cost = nextReliquaryRowCost(this.tab);
       const can = canBuyReliquaryRow(this.tab);
@@ -128,8 +230,9 @@ export const Reliquary = {
           ],
         });
       };
-      noteRow.appendChild(buyRowBtn);
+      headActions.appendChild(buyRowBtn);
     }
+    noteRow.appendChild(headActions);
     body.appendChild(noteRow);
     const search = el('input', 'storage-search rel-search');
     search.type = 'search'; search.placeholder = 'Search this vault'; search.value = this.query;

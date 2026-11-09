@@ -29,6 +29,7 @@ class Skull {
   }
   get depth() { return this.x + this.y + 0.4; }
   update(dt) {
+    if (G.cine) return true;
     const p = this.p, w = this.world;
     this.t += dt;
     if (this.t > 0.35) { // whirl out, then hunt

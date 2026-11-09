@@ -465,7 +465,7 @@ export class Player extends Creature {
 
   /** Settings > Auto-cast summons: re-raise any summon on the skill bar the moment one of its pets is missing. */
   autoSummon(dt) {
-    if (G.settings.autoSummon === false || G.autoplayOn || !this.world || this.world.kind === 'town' || this.dead) return;
+    if (G.settings.autoSummon === false || G.autoplayOn || G.cine || !this.world || this.world.kind === 'town' || this.dead) return;
     if ((this.autoSumT = (this.autoSumT || 0) - dt) > 0) return;
     this.autoSumT = 0.2;
     if (this.channel) return;
