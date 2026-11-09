@@ -101,7 +101,7 @@ export default {
     const c = crowd(p, 7), ang = c ? Math.atan2(c[1] - p.y, c[0] - p.x) : p.facing || 0;
     s.busy = 2.2; s.vent = 2.2; s.heat = 0;
     p.world.addHazard(new Wake(p, ang));
-    p.addBuff({ id: 'sig_wyrmblood', name: 'Wyrmblood: +25% damage, +30 resistances', el: 'fire', fx: 'aura', stats: { dmg: 25, res: 30 }, t: 7, max: 7 });
+    if (typeof p?.addBuff === 'function') p.addBuff({ id: 'sig_wyrmblood', name: 'Wyrmblood: +25% damage, +30 resistances', el: 'fire', fx: 'aura', stats: { dmg: 25, res: 30 }, t: 7, max: 7 });
     addEffect(new Ring(p.x, p.y, 0.2, 2.5, 0.5, EMBER, 6, { fill: true }));
     floatText(p.x, p.y, 120, 'DRAGONHEART', CORE, 19, { life: 1.8, vz: 16 });
     sfx('roar', 1); sfx('fire', 0.9);

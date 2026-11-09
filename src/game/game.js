@@ -15,7 +15,7 @@ import { preloadBarFx } from '../gfx/artfx.js';
 import { SKILLS } from '../data/skills.js';
 import { setClassItems, setRingContext, SEAL_GAP } from '../data/items.js';
 import { BREACH_BIOME, BREACH_WALLS } from '../data/biomes.js';
-import { BIOMES, BETA_BIOMES, BIOME_BY_ID, TOWN_BIOME, drawBiome, biomeChoices, takeBiome, mixPartner, recordBiomeVisit } from '../data/biomes.js';
+import { BIOMES, BETA_BIOMES, BIOME_BY_ID, TOWN_BIOME, ACT2_TOWN_BIOME, drawBiome, biomeChoices, takeBiome, mixPartner, recordBiomeVisit } from '../data/biomes.js';
 import { CLASSES } from '../data/classes.js';
 import { generateDungeon, isRaidDepth } from '../world/dungeon.js';
 import { FINAL_DEPTH, depthLevel, blockStart, isSuperbossDepth, superbossForDepth, getActForDepth, ACTS } from '../data/depth.js';
@@ -26,6 +26,7 @@ import { spectateTick } from './spectate.js';
 import { toggleSmite, getUltimate, executeUltimate } from './smite.js';
 import { hearthTick, useHearth, hearthPortalActive, closeHearthPortals, getActiveHearth, returnFromHearth } from './hearth.js';
 import { generateTown, makeTownTiles, rollTownWeather } from '../world/town.js';
+import { generateAct2Town, makeAct2TownTiles, ACT2_TOWN_NAME } from '../world/act2town.js';
 import { generateOverworld } from '../world/overworld.js';
 import { createOverworldScenario } from './overworld.js';
 import { addWanderers } from './wanderers.js';
@@ -147,6 +148,7 @@ const VELSCOUR_TAUNT_ENDS = [
 const VELSCOUR_TAUNTS = VELSCOUR_TAUNT_STARTS.flatMap((start) => VELSCOUR_TAUNT_ENDS.map((end) => `${start}? ${end}`));
 
 let townCache = null, townTiles = null;
+let act2TownCache = null, act2TownTiles = null;
 let saveT = 0;
 let automapCanvas = null;
 
@@ -392,6 +394,21 @@ export const game = {
     const rg = t.riftgate || (t.riftgate = riftgateSpot(t));
     if (rg) world.portals.push({ x: rg.x, y: rg.y, active: true, color: '#3a6cff', reach: 1.7, riftgate: true, label: 'The Riftgate: VELSCOUR DEFENSE', use: () => this.confirmRiftgate() });
     if (t.rift) world.portals.push({ x: t.rift.x, y: t.rift.y, rift: true, color: '#20e0ff', reach: 1.7, get active() { return endgameUnlocked(); }, set active(v) {}, get label() { return endgameUnlocked() ? `Abyssal Rift — Tier ${riftOpen()}` : 'Abyssal Rift (sealed)'; }, use: () => this.confirmRift() });
+    // Waypoint Portal to Sunscorch Oasis (Act II Town) once visited or reached Act 2
+    if (c?.visitedAct2Town || c?.depth >= 101) {
+      world.portals.push({
+        x: t.center.x + 3.8,
+        y: t.center.y - 3.8,
+        active: true,
+        color: '#f3c778',
+        reach: 2.0,
+        label: 'Waypoint — Sunscorch Oasis (Act II)',
+        use: () => {
+          sfx('portal');
+          this.enterAct2Town();
+        },
+      });
+    }
     // the hero steps out of the portal, a little way down its road toward the square
     const P = t.portal, C = t.center, l = Math.hypot(C.x - P.x, C.y - P.y) || 1;
     let arrive = [P.x + ((C.x - P.x) / l) * 3.2, P.y + ((C.y - P.y) / l) * 3.2];
@@ -416,6 +433,149 @@ export const game = {
     townHappening(world); // a festival, a blessing, a gift (game/happenings.js)
     p.hp = p.maxHp; p.mana = p.maxMana;
     this.autosave();
+  },
+
+  async enterAct2Town(fromCheat = false) {
+    const old = G.world;
+    const c = G.char;
+    if (c) {
+      c.visitedAct2Town = true;
+      c.lastTown = 'act2';
+      const highest = Math.min(FINAL_DEPTH, Math.max(c.depth || 1, this.maxPortalFloor(c)));
+      c.depth = Math.max(c.depth || 1, highest);
+      if (highest > 1) {
+        c.cleared[highest - 1] = true;
+        c.deepest = Math.max(c.deepest || 0, highest - 1);
+      }
+      this.autosave();
+    }
+    await loadSeaOfSandPack();
+    const tileset = biomeTileSet(ACT2_TOWN_BIOME);
+    keepTileSets(null);
+    if (!act2TownTiles) act2TownTiles = makeAct2TownTiles();
+
+    if (fromCheat || !c?.act2TownSeed) {
+      if (c) c.act2TownSeed = Math.floor(Math.random() * 1e9) + 1;
+    }
+    const seed = c?.act2TownSeed || 1337;
+    if (!act2TownCache || act2TownCache.seed !== seed) {
+      act2TownCache = generateAct2Town(tileset, seed);
+    }
+    const t = act2TownCache;
+    t.map.seen.fill(0);
+    const world = new World('town', {
+      map: t.map,
+      tileset,
+      biome: ACT2_TOWN_BIOME,
+      depth: 0,
+      townTiles: act2TownTiles,
+      townId: 'act2_town',
+      buildings: t.buildings || [],
+      props: t.props,
+      wallHangings: t.wallHangings || [],
+    });
+    world.raining = false;
+    world.ambientFx = { type: 'sand', color: '#f3c778' };
+    world.npcs = t.npcs.map((n) => ({
+      vendor: n.vendor,
+      x: n.x,
+      y: n.y,
+      reach: 1.8,
+      flip: n.flip,
+      use: () => Vendor.open(n.vendor.id),
+    }));
+
+    // Storage Chest, Reliquary, Jewel Box
+    let [x, y] = [t.start[0] + 1.5, t.start[1] - 0.5];
+    if (!t.map.walkable(x, y)) [x, y] = t.map.randomNear(t.start[0], t.start[1], 2.5);
+    world.npcs.push({ stash: true, name: 'Storage Chest', x, y, reach: 1.6, flip: false, use: () => Stash.open() });
+
+    let [rx, ry] = [t.start[0] - 1.5, t.start[1] - 0.5];
+    if (!t.map.walkable(rx, ry) || Math.hypot(rx - x, ry - y) < 1.5) [rx, ry] = t.map.randomNear(t.start[0] - 1, t.start[1], 2.5);
+    world.npcs.push({ stash: true, reliquary: true, name: 'The Reliquary', x: rx, y: ry, reach: 1.6, flip: false, use: () => G.ui.reliquary.open() });
+
+    let [jx, jy] = [t.start[0], t.start[1] - 1.6];
+    if (!t.map.walkable(jx, jy) || Math.hypot(jx - x, jy - y) < 1.2 || Math.hypot(jx - rx, jy - ry) < 1.2) [jx, jy] = t.map.randomNear(t.start[0], t.start[1] - 1, 2.5);
+    world.npcs.push({ stash: true, jewelBox: true, name: 'Jewel Box', x: jx, y: jy, reach: 1.6, flip: false, use: () => JewelBox.open() });
+
+    if (t.altar) {
+      world.npcs.push({ altar: true, name: 'Altar of Heresy', x: t.altar.x, y: t.altar.y, reach: 1.7, flip: false, use: () => Heresies.open() });
+    }
+
+    // Portals
+    world.portals = [
+      {
+        x: t.portal.x,
+        y: t.portal.y,
+        active: true,
+        color: '#ff6020',
+        reach: 2.2,
+        get label() {
+          const highest = Math.min(FINAL_DEPTH, Math.max(G.char?.depth || 1, G.game?.maxPortalFloor?.(G.char) || 1));
+          return `Portal — Depth ${highest}`;
+        },
+        use: () => this.confirmDungeon(),
+      },
+    ];
+
+    // Waypoint Portal to Herrington Hollow (Act 1 Town)
+    if (t.act1Portal) {
+      world.portals.push({
+        x: t.act1Portal.x,
+        y: t.act1Portal.y,
+        active: true,
+        color: '#38bdf8',
+        reach: 2.2,
+        label: 'Waypoint — Return to Herrington Hollow (Act I)',
+        use: () => {
+          if (c) c.lastTown = 'act1';
+          sfx('portal');
+          this.enterTown();
+        },
+      });
+    }
+
+    // The Eternal Breach Portal
+    if (t.breach) {
+      world.portals.push({
+        x: t.breach.x,
+        y: t.breach.y,
+        active: true,
+        breach: true,
+        color: '#a040ff',
+        reach: 2.2,
+        label: 'THE ETERNAL BREACH',
+        use: () => this.confirmBreach(),
+      });
+    }
+
+    // Abyssal Rift Gate
+    if (t.rift) {
+      world.portals.push({
+        x: t.rift.x,
+        y: t.rift.y,
+        rift: true,
+        color: '#20e0ff',
+        reach: 1.7,
+        get active() { return endgameUnlocked(); },
+        get label() { return endgameUnlocked() ? `Abyssal Rift — Tier ${riftOpen()}` : 'Abyssal Rift (sealed)'; },
+        use: () => this.confirmRift(),
+      });
+    }
+
+    const arrive = t.start || [t.center.x, t.center.y];
+    this.setWorld(world, arrive, old);
+    void warmLevelArt(world);
+    HUD.setArea('Sunscorch Oasis', 'Act II Town — Desert Haven');
+    playMusic('town');
+    setAmbience('sea_of_sand');
+    Vendor.restock();
+    const p = G.player;
+    if (p) this.spawnPlayer(world, arrive);
+    p.hp = p.maxHp;
+    p.mana = p.maxMana;
+    this.autosave();
+    UI.log('You step into <b style="color:#f3c778">Sunscorch Oasis</b>, haven of the Scorched Wastes!', '#ffe080');
   },
 
   confirmRiftgate() {
@@ -777,6 +937,9 @@ export const game = {
             close();
             G.sandVariant = 1 + Math.floor(Math.random() * DUNE_VARIANTS.length);   // one of the dune variants, not the flat maze
             this.teleportToBiome(BIOME_BY_ID.sea_of_sand).finally(() => { G.sandVariant = undefined; });
+          } else if (['actiitown', 'act2town', 'act2_town', 'act 2 town', 'act ii town', 'deserttown', 'desert_town'].includes(message.trim().toLowerCase())) {
+            close();
+            this.enterAct2Town(true);
           }
         } },
       ],
@@ -787,7 +950,8 @@ export const game = {
   },
 
   openVelscourTeleport() {
-    const options = [...BETA_BIOMES, ...BIOMES].map((biome) => { const need = regionNeeds(biome, G.char?.level); return `<option value="${escapeHtml(biome.id)}"${need ? ' disabled' : ''}>${escapeHtml(biome.name)}${biome.overworld ? ' · Overworld' : ''}${biome.beta ? ' (Beta)' : ''}${need ? ` · Reach level ${need}` : ''}</option>`; }).join('')
+    const options = `<option value="act2_town">Sunscorch Oasis (Act II Town)</option>`
+      + [...BETA_BIOMES, ...BIOMES].map((biome) => { const need = regionNeeds(biome, G.char?.level); return `<option value="${escapeHtml(biome.id)}"${need ? ' disabled' : ''}>${escapeHtml(biome.name)}${biome.overworld ? ' · Overworld' : ''}${biome.beta ? ' (Beta)' : ''}${need ? ` · Reach level ${need}` : ''}</option>`; }).join('')
       + Object.values(REGIONS).flatMap((r) => { const b = BIOME_BY_ID[r.id], need = regionNeeds(b, G.char?.level); return (r.variants || []).map((v) => `<option value="${escapeHtml(r.id)}:${escapeHtml(v.id)}"${need ? ' disabled' : ''}>${escapeHtml(b.name)}: ${escapeHtml(v.name)}${need ? ` · Reach level ${need}` : ''}</option>`); }).join('')
       + SKY_ALL.map((v) => `<option value="skyship:${v.id}">${escapeHtml(BIOME_BY_ID.skyship.name)}: ${escapeHtml(v.name)} (${escapeHtml(v.weather)})</option>`).join('')
       + SEA_VARIANTS.map((v) => `<option value="pirate_seas:${v.id}">${escapeHtml(BIOME_BY_ID.pirate_seas.name)}: ${escapeHtml(v.name)} (${escapeHtml(v.weatherName)})</option>`).join('');
@@ -799,6 +963,7 @@ export const game = {
         { label: 'Cancel' },
         { label: 'Teleport', cls: 'red', fn: () => {
           let id = dialog.box.querySelector('#velscour-biome').value;
+          if (id === 'act2_town') { this.enterAct2Town(true); return; }
           if (id.startsWith('skyship:')) { G.char.skyVariant = id.slice(8); id = 'skyship'; }
           if (id.startsWith('pirate_seas:')) { G.char.seaVariant = id.slice(12); id = 'pirate_seas'; }
           if (REGIONS[id.split(':')[0]] && id.includes(':')) { (G.regionWant ||= {})[id.split(':')[0]] = id.split(':')[1]; id = id.split(':')[0]; } // a region's variant

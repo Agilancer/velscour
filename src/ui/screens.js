@@ -559,17 +559,16 @@ export function helpDialog() {
     <div><kbd>W A S D</kbd> move directly</div>
     <div><kbd>Right click</kbd> right-click skill</div>
     <div><kbd>&#96;</kbd> <kbd>1</kbd>–<kbd>9</kbd> <kbd>0</kbd> <kbd>-</kbd> <kbd>=</kbd> cast skills at the cursor (13 keys + both mouse buttons)</div>
-    <div><kbd>Z</kbd> <kbd>X</kbd> <kbd>R</kbd> <kbd>V</kbd> potions</div>
+    <div><kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd> <kbd>V</kbd> potions</div>
     <div><kbd>R</kbd> <kbd>E</kbd> <kbd>Y</kbd> <kbd>U</kbd> <kbd>O</kbd> macros: several skills on one key, set up from the skill tree's <b>Macros</b> button (or the menu)</div>
-    <div><kbd>C</kbd> character · <kbd>I</kbd> backpack · <kbd>K</kbd> skill tree · <kbd>T</kbd> talents · <kbd>B</kbd> skill book · <kbd>Q</kbd> quest log</div>
+    <div><kbd>C</kbd> character · <kbd>I</kbd> bag · <kbd>K</kbd> skill tree · <kbd>T</kbd> passive talent tree · <kbd>Q</kbd> quest log</div>
     <div><kbd>Tab</kbd>/<kbd>M</kbd> map · <kbd>Esc</kbd> menu · wheel zoom</div>
-    <div>First-person view (Settings): <kbd>A</kbd>/<kbd>D</kbd> turn, <kbd>W</kbd>/<kbd>S</kbd> walk, click the floor to walk there</div>
-    <div><kbd>P</kbd> or the <b>Auto</b> button: auto-play (the hero fights, loots, shops and delves on autopilot)</div>
-    <div><kbd>G</kbd> MADNESS · <kbd>F</kbd> SMITE, then click where it should strike (both fill as you fight) · <kbd>H</kbd> HEARTHSTONE (two-way town portal) · <kbd>F1</kbd> How to Play</div>
+    <div><kbd>Alt</kbd>+<kbd>P</kbd> or the <b>Auto</b> button: auto-play (the hero fights, loots, shops and delves on autopilot)</div>
+    <div><kbd>G</kbd> MADNESS · <kbd>F</kbd> CLASS ULTIMATE (Smite, Cataclysm, Supernova, etc.), then click where it should strike (both fill as you fight) · <kbd>H</kbd> HEARTHSTONE (two-way town portal) · <kbd>F1</kbd> How to Play</div>
     <div><b style="color:#ffe2a0">While the hero plays</b></div>
     <div>Click or tap <b style="color:#ffd040">gilded critters</b> before they get away (follow the red arrows): each is worth a big sum of experience (a Golden Scarab, a pile of gold). Auto-play leaves them to you.</div>
     <div>Now and then an Epic or better drops <b style="color:#ffdf8a">sealed</b>: break the seals from the SEALED button or the inventory. Auto-play waits in town when the bag is full of what it can't sell, until a slot is free.</div>
-    <div><b>Loot filter</b> (Settings): pick which weapons, off-hands, armor, rings (by rarity) and gems &amp; runes (by grade) get picked up, by auto-play and by walking over them.</div>
+    <div><b>Loot filter</b> (Settings): pick which weapons, off-hands, armor and rings (by rarity) and whether gems get picked up, by auto-play and by walking over them.</div>
     <div>Pick one of three portals down at each cleared exit (auto-play picks after 8 seconds). Set auto-play's stance, and pull the <b style="color:#ffc040">Greed</b> lever for tougher depths and richer drops; a death loses the Hoard.</div>
     <div><b style="color:#ffe2a0">Mobile</b></div>
     <div>Left thumb: virtual joystick</div>
@@ -598,8 +597,24 @@ export function pauseMenu() {
       { label: 'Resume' },
       { label: 'Settings', fn: settingsDialog },
       { label: 'Macros', fn: () => G.ui.macros.open() },
-      { label: 'Help', fn: helpDialog },
-      { label: 'Save & Quit', cls: 'red', fn: () => G.game.quitToTitle() },
+      { label: 'How to Play', fn: helpDialog },
+      {
+        label: 'Save & Quit',
+        cls: 'red',
+        keepOpen: true,
+        fn: async (close) => {
+          const btn = d.box.querySelector('button.red');
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+          }
+          try {
+            await G.game.quitToTitle();
+          } finally {
+            close();
+          }
+        },
+      },
     ],
   });
   return d;

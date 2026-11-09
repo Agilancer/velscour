@@ -84,7 +84,7 @@ export default {
   kill(p, s, tgt) {
     if (tgt !== s.quarry) return;
     s.quarry = null; s.look = 0;
-    p.addBuff({ id: 'sig_focus', name: "Hunter's Focus: +20% crit, +25% damage", el: 'phys', fx: 'aura', stats: { crit: 80, dmg: 25 }, t: 8, max: 8 });
+    if (typeof p?.addBuff === 'function') p.addBuff({ id: 'sig_focus', name: "Hunter's Focus: +20% crit, +25% damage", el: 'phys', fx: 'aura', stats: { crit: 80, dmg: 25 }, t: 8, max: 8 });
     floatText(tgt.x, tgt.y, 70, 'Quarry Taken!', GREEN, 15, { life: 1.6 });
     this.add(s, 1);
     stat('ranger', 'quarry');

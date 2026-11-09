@@ -800,7 +800,9 @@ export class Monster extends Creature {
       const stats = { [stat]: amt };
       if (A.as) stats.as = A.as;
       if (A.regen) stats.regen = A.regen * 10;
-      p.addBuff({ id: 'aura_' + this.skillId, name: this.name, el: this.el || 'holy', stats, t: 1.5, max: 1.5, hidden: false, aura: true });
+      if (typeof p?.addBuff === 'function') {
+        p.addBuff({ id: 'aura_' + this.skillId, name: this.name, el: this.el || 'holy', stats, t: 1.5, max: 1.5, hidden: false, aura: true });
+      }
     }
     for (const c of this.world.alliesOf(this.team, this.x, this.y, r)) if (c.summon) c.partyBuff = { stats: { [stat]: amt, ...(A.as ? { as: A.as } : null) }, t: 1.5 };
   }

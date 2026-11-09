@@ -146,10 +146,12 @@ export function ascend(p, mul = 1, forced = null) {
 }
 function grantBoon(p, key) {
   const Z = ZODIAC[key];
-  p.addBuff({ id: 'astro_' + key, name: `${Z.name}: ${Z.desc}`, el: 'astral', fx: 'aura', stats: { ...Z.stats }, t: BOON_T, max: BOON_T, zodiac: key });
-  if (key === 'scales') p.mana = Math.min(p.maxMana, p.mana + p.maxMana * 0.25);
+  if (typeof p?.addBuff === 'function') {
+    p.addBuff({ id: 'astro_' + key, name: `${Z.name}: ${Z.desc}`, el: 'astral', fx: 'aura', stats: { ...Z.stats }, t: BOON_T, max: BOON_T, zodiac: key });
+  }
+  if (key === 'scales' && p?.mana != null) p.mana = Math.min(p.maxMana, p.mana + p.maxMana * 0.25);
 }
-export const activeBoons = (p) => p.buffs.filter((b) => b.zodiac && b.t > 0).map((b) => b.zodiac);
+export const activeBoons = (p) => (p?.buffs || []).filter((b) => b.zodiac && b.t > 0).map((b) => b.zodiac);
 function checkConjunction(p, force) {
   const ch = chartOf(p);
   if (!force && (ch.conjCd > 0 || activeBoons(p).length < 3)) return;

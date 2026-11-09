@@ -324,7 +324,8 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
       const amt = buffAmount(sk, L), dur = skillDuration(sk, L) * (1 + (morph ? morph.durPct : 0) / 100);
       const stats = {};
       for (const b of m.buff || ['dmg']) stats[b] = amt;
-      const buff = p.addBuff({ id: sk.id, name: sk.name, el, fx, stats, t: dur, max: dur, pulse: m.pulse ? { dmg, acc: 0 } : null, transform: m.transform, slowPulse: m.slow });
+      const buffPayload = { id: sk.id, name: sk.name, el, fx, stats, t: dur, max: dur, pulse: m.pulse ? { dmg, acc: 0 } : null, transform: m.transform, slowPulse: m.slow };
+      const buff = typeof p.addBuff === 'function' ? p.addBuff(buffPayload) : buffPayload;
       if (m.party) for (const c of w.creatures) if (c.summon && c.owner === p && !c.dead) c.partyBuff = { stats, t: dur };
       w.addHazard(new AuraFx({ world: w, src: p, el, buff, transform: m.transform }));
       const isShieldBuff = sk.classId === 'lancer' || fx === 'shield';

@@ -642,3 +642,9 @@ export const TOWN_BIOME = {
   id: 'town', name: 'Herrington Hollow', pack: 'catacombs', palette: { colorize: [30, 0.22], light: 0.12, contrast: 0.95 }, wallPalette: { colorize: [32, 0.2], light: 0.18 },
   dark: 0.45, light: 12, ambient: { type: 'firefly', color: '#ffe890' }, mon: { hue: 0, sat: 1, light: 0 }, blood: '#8a0b08', torch: '#ffb050', fog: '#0a0806',
 };
+export const ACT2_TOWN_BIOME = {
+  id: 'act2_town', name: 'Sunscorch Oasis', pack: 'catacombs', palette: { colorize: [38, 0.35], light: 0.15, contrast: 1.05 }, wallPalette: { colorize: [38, 0.3], light: 0.2 },
+  dark: 0.45, light: 12, ambient: { type: 'sand', color: '#f3c778' }, mon: { hue: 22, sat: 0.92, light: 0.06 }, blood: '#9f361a', torch: '#ffc078', fog: '#120d08',
+  overworld: true, town: true, act: 2,
+};
+BIOME_BY_ID.act2_town = ACT2_TOWN_BIOME;

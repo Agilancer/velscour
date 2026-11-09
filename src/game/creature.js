@@ -203,6 +203,23 @@ export class Creature {
 
   get alive() { return !this.dead; }
 
+  heal(n) {
+    this.hp = Math.min(this.maxHp, this.hp + n);
+  }
+
+  addBuff(b) {
+    if (!this.buffs) this.buffs = [];
+    const old = this.buffs.find((x) => x.id === b.id);
+    if (old) {
+      Object.assign(old, b);
+      if (typeof this.recompute === 'function') this.recompute();
+      return old;
+    }
+    this.buffs.push(b);
+    if (typeof this.recompute === 'function') this.recompute();
+    return b;
+  }
+
   /** Movement speed multiplier from status effects. */
   speedMul() {
     let m = 1;
@@ -248,6 +265,13 @@ export class Creature {
         if (c.acc >= 0.5) { c.acc -= 0.5; onDot && onDot('decay', c.dps * 0.5, c.src); }
       }
       if ((k === 'bomb' || k === 'doom') && c.t <= 0 && c.onExpire) c.onExpire(this);
+    }
+    if (this.buffs && this.buffs.length && !this.isPlayer) {
+      for (let i = this.buffs.length - 1; i >= 0; i--) {
+        const b = this.buffs[i];
+        b.t -= dt;
+        if (b.t <= 0) this.buffs.splice(i, 1);
+      }
     }
     // knockback
     if (this.kbx || this.kby) {

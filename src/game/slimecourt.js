@@ -570,7 +570,7 @@ const FIGHT = {
       const a = rand(TAU), x = o.x + Math.cos(a) * 0.9, y = o.y + Math.sin(a) * 0.9;
       emote(S, 'bang', 0.8);
       startLeap(m, S, canStand(m.world, x, y, m) ? x : m.x, canStand(m.world, x, y, m) ? y : m.y, 34, 0.45, { air: true, land: (mm, SS) => {
-        o.addBuff({ id: 'slime_aegis', name: 'Gilded Aegis', el: 'holy', stats: { reduce: SS.mini ? 12 : 25, armor: SS.mini ? 25 : 50 }, t: 5, max: 5 });
+        if (typeof o.addBuff === 'function') o.addBuff({ id: 'slime_aegis', name: 'Gilded Aegis', el: 'holy', stats: { reduce: SS.mini ? 12 : 25, armor: SS.mini ? 25 : 50 }, t: 5, max: 5 });
         addEffect(new Dome(o, SS.K.color, 5));
         ring(o.x, o.y, 1.6, SS.K.color, 4, { fill: true }); lockAnim(SS, 'ability', 0.6); sfx('block', 0.6); sfx('holy', 0.4);
         floatText(o.x, o.y, 70, 'Gilded Aegis', '#ffe080', 12, { life: 1.1 });
@@ -612,7 +612,7 @@ const FIGHT = {
       S.cds.barrier = 11 * cdk(S);
       cast(m, S, 'ability', 0.7, 0.4, (mm, SS) => {
         if (dist(mm.x, mm.y, o.x, o.y) > 8) return;
-        o.addBuff({ id: 'slime_barrier', name: 'Amber Barrier', el: 'holy', stats: { res: SS.mini ? 10 : 20, reduce: SS.mini ? 6 : 12, regen: SS.mini ? 10 : 20 }, t: 6, max: 6 });
+        if (typeof o.addBuff === 'function') o.addBuff({ id: 'slime_barrier', name: 'Amber Barrier', el: 'holy', stats: { res: SS.mini ? 10 : 20, reduce: SS.mini ? 6 : 12, regen: SS.mini ? 10 : 20 }, t: 6, max: 6 });
         addEffect(new Dome(o, '#ffb020', 6, true));
         addEffect(new Beam(mm.x, mm.y, o.x, o.y, '#ffc040', 3, 0.35, { z: 18 }));
         for (const c of w.alliesOf(mm.team, o.x, o.y, 5)) if (c.slime) c.hp = Math.min(c.maxHp, c.hp + c.maxHp * 0.1);
@@ -812,7 +812,10 @@ function serenade(m, S) {
   emote(S, 'note', 1.5);
   cast(m, S, 'ability', 0.9, 0.45, (mm, SS) => {
     const o = mm.owner, w = mm.world;
-    if (o && dist(mm.x, mm.y, o.x, o.y) < 7) { o.addBuff({ id: 'slime_song', name: 'Slime Serenade', el: 'arcane', stats: { dmg: SS.mini ? 8 : 15, as: SS.mini ? 8 : 15 }, t: 7, max: 7 }); o.heal(o.maxHp * 0.03, true); }
+    if (o && dist(mm.x, mm.y, o.x, o.y) < 7) {
+      if (typeof o.addBuff === 'function') o.addBuff({ id: 'slime_song', name: 'Slime Serenade', el: 'arcane', stats: { dmg: SS.mini ? 8 : 15, as: SS.mini ? 8 : 15 }, t: 7, max: 7 });
+      if (typeof o.heal === 'function') o.heal(o.maxHp * 0.03, true);
+    }
     for (const c of w.alliesOf(mm.team, mm.x, mm.y, 6)) if (c.summon) c.partyBuff = { stats: { dmg: 20, as: 15 }, t: 7 };
     addEffect(new Ring(mm.x, mm.y, 0.2, 6, 0.8, '#ff80d0', 2));
     for (let i = 0; i < (G.touch ? 6 : 12); i++) { const a = rand(TAU); spawn({ type: 'glow', x: mm.x, y: mm.y, z: 20, vx: Math.cos(a) * 2.5, vy: Math.sin(a) * 2.5, vz: 30, drag: 1, life: 1, size: 3, size1: 0, color: i % 2 ? '#ffe070' : '#ff80d0', add: true }); }

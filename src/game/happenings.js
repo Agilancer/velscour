@@ -162,7 +162,7 @@ export function announceHappenings(world) {
     UI.log(`<b style="color:${O.color}">${O.name}</b>: ${O.text}`, O.color);
     sfx(H.omen === 'bloodmoon' ? 'boss' : 'gate', 0.6);
   }, 2600);
-  if (O.hero && G.player) G.player.addBuff({ id: 'omen', name: O.name, el: 'arcane', stats: O.hero, t: 1e6, max: 1e6, aura: true });
+  if (O.hero && G.player && typeof G.player.addBuff === 'function') G.player.addBuff({ id: 'omen', name: O.name, el: 'arcane', stats: O.hero, t: 1e6, max: 1e6, aura: true });
 }
 
 // ------------------------------------------------------------------------------------------------ interactables
@@ -193,7 +193,7 @@ export function addShrine(world, [x, y], key) {
       burst(p.x, p.y, 30, S.el, 30, 5, { up: 2 });
       sfx('levelup', 0.6);
       if (S.heal) { p.hp = p.maxHp; p.mana = p.maxMana; }
-      p.addBuff({ id: 'shrine_' + key, name: S.name, el: S.el, stats: S.buff, t: S.t, max: S.t, storm: S.storm });
+      if (typeof p?.addBuff === 'function') p.addBuff({ id: 'shrine_' + key, name: S.name, el: S.el, stats: S.buff, t: S.t, max: S.t, storm: S.storm });
       floatText(p.x, p.y, 90, S.name.toUpperCase(), S.color, 16, { life: 2 });
       UI.log(`<b style="color:${S.color}">${S.name}</b>: ${S.msg} for ${S.t} s.`, S.color);
     },
