@@ -11,6 +11,7 @@ import {
   itemReqStat, charEffectiveStat, canEquipItem, BASE_REQ_STAT, STAT_NAMES,
 } from '../data/items.js';
 import { CLASSES, ATTRS } from '../data/classes.js';
+import { allocateAttrs } from '../game/attrs.js';
 import { xpToNext, CRIT_OVER, addToBag } from '../game/player.js';
 import { GroundItem } from '../game/loot.js';
 import { classSprite } from '../core/assets.js';
@@ -766,21 +767,7 @@ function attrRespecDialog() {
 }
 
 export function autoAllocate() {
-  const c = G.char, C = CLASSES[c.classId];
-  const reqStats = [...new Set([BASE_REQ_STAT[C.weapon], C.offhand && BASE_REQ_STAT[C.offhand]].filter(Boolean))];
-  const targetReq = c.level > 1 ? 20 + (Math.min(c.level, MAX_LEVEL) - 1) * 2 : 0;
-  while (c.statPoints > 0) {
-    const needStat = targetReq > 0 ? reqStats.find((stKey) => charEffectiveStat(c, stKey) < targetReq) : null;
-    if (needStat) {
-      c.attrs[needStat]++;
-      c.statPoints--;
-      continue;
-    }
-    const r = Math.random();
-    const k = r < 0.55 ? C.primary : r < 0.85 ? 'vit' : C.primary === 'int' ? 'dex' : 'int';
-    c.attrs[k === 'vit' && C.primary === 'vit' ? 'str' : k]++;
-    c.statPoints--;
-  }
+  allocateAttrs(G.char); // the class's plan, as auto-play spends them (game/attrs.js)
   changed();
 }
 

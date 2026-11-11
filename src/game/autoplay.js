@@ -4,6 +4,7 @@
 // gambling) and keeps delving. Toggled by the HUD's Auto button or P. Gear, stats and skills are judged by
 // simulation: apply the change, recompute the hero, score the result with charScore(), undo.
 import { G } from '../state.js';
+import { allocateAttrs } from './attrs.js';
 import { input } from '../core/input.js';
 import { sfx } from '../core/audio.js';
 import { dist, clamp, TAU, fmtInt, escapeHtml, angleDiff, angleTo } from '../core/util.js';
@@ -641,18 +642,10 @@ export const Auto = {
     if (dirty) { p.recompute(); G.ui.refresh(); G.game.autosave(); }
   },
 
+  /** Attribute points by the class's plan (game/attrs.js): its weapon's stat, then its primary attribute and Vitality. */
   spendStats() {
-    const p = G.player, c = G.char;
-    while (c.statPoints > 0) {
-      let best = 'vit', bs = -Infinity;
-      for (const k of ['str', 'dex', 'vit', 'int']) {
-        const s = simulate(p, () => { c.attrs[k]++; return () => { c.attrs[k]--; }; });
-        if (s > bs) { bs = s; best = k; }
-      }
-      c.attrs[best]++;
-      c.statPoints--;
-    }
-    p.recompute();
+    allocateAttrs(G.char);
+    G.player.recompute();
   },
 
   /** The Paladin alternates hammers and Shield Throw: hammers cast since his last shield. */
