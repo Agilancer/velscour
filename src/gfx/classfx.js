@@ -88,6 +88,14 @@ const THEMES = {
     spiral(x, y, 6, '#ffd060', Math.min(12, n / 2), 0.5 * k, 30);
   } },
 };
+THEMES.rogue = { c: ['#ff2a3c', '#ffd0d0', '#5a0000'], fx(x, y, n, k, at) { // drops of blood, a glint of steel
+  for (let i = 0; i < n; i++) fling(x, y, 22, i % 3 ? '#c80f1c' : '#ff6a70', 3 * k, i % 4 ? 'dot' : 'streak', { g: 260, size: rand(1.2, 2.4) * k, add: false });
+  if (at === 'cast') for (let i = 0; i < Math.min(4, n / 4); i++) fling(x, y, 30, '#ffffff', 4 * k, 'streak', { size: 1.2 });
+} };
+THEMES.ninja = { c: ['#7fe6ff', '#ffffff', '#20304a'], fx(x, y, n, k, at) { // slivers of moonlight, a breath of shadow
+  for (let i = 0; i < n; i++) fling(x, y, 24, i % 2 ? '#7fe6ff' : '#ffffff', 4.5 * k, 'streak', { size: 1.3 });
+  if (at === 'cast') smoke(x, y, 6, '#141826', Math.ceil(n / 8), 5 * k);
+} };
 const DEF = THEMES.paladin;
 export const CLASS_THEMES = THEMES;
 

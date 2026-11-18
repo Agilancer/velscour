@@ -412,6 +412,8 @@ export const POSE = {
   planted: { how: 'haft', dir: [-0.1, 1, 0.1], plant: 181, z: 1.5, depth: 'fist', dome: 4.5, roll: 'view', shadow: [1, 1, 0.25] },
   aimed: { how: 'haft', dir: [-0.3, -0.3, 0.9], grip: 0, z: 1.5, depth: 'fist', dome: 4.5, roll: 'view', shadow: [1, 1, 0.3] },
   hang: { how: 'haft', dir: [-0.2, -0.88, 0.42], grip: 0, z: 1.5, depth: 'fist', dome: 4.5, roll: 'view', shadow: [1, 1, 0.3] },
+  ready: { how: 'haft', dir: [0.5, 0.86, 0.1], grip: 0, z: 1.5, depth: 'fist', dome: 4.5, roll: 'view', shadow: [1, 1, 0.3] }, // a blade up and forward across the body
+  belt: { how: 'haft', dir: [0.03, 1, 0.1], grip: 0, z: 2.5, depth: 'front', roll: 'view', at: [-12, -10.5], shadow: [1, 1, 0.3] }, // hung on the belt, inside the fist
   strap: { how: 'euler', yaw: -55, tilt: -12, lean: -5, face: 3, z: 2, depth: 'front', shadow: [1, 2, 0.45] },
   palm: { how: 'euler', yaw: -20, tilt: -15, lean: 0, face: 3.5, z: 2, depth: 'front', shadow: [1, 1, 0.35] },
   clutch: { how: 'euler', yaw: -30, tilt: -15, lean: 0, face: 0, z: 1.5, depth: 'fist', dome: 4.5, shadow: [1, 1, 0.3] },

@@ -14,6 +14,75 @@ Contents
 
 ---
 
+## November 18, 2026 — the Rogue and the Ninja, and the Monk's new sprites (branch `feat/rogue-ninja-monk`)
+
+The user asked for the Monk's sprite set to be changed and for two new classes, the Rogue and the Ninja, from the art in
+`assets/martialarts/` (collection 05: 48 armors a class, empty hands, no helmets): both to stand up to the other classes'
+trees, balance and itemization. The Ninja: katana in the right hand as a three.js model, nunchaku on the belt by their
+cord that move as he moves, fast leaping attacks (Ninja Gaiden), shadow dancing and mirroring (Strider), cuts straight
+through the enemy, the sprite doing real flips, a grappling hook that pulls up to 5 at the highest rank, shuriken and
+caltrops, a special of his own, "one of the fanciest looking classes in the game". The Rogue: reads as a woman, lurks in
+the shadows, dagger AOEs, Combo Points as in World of Warcraft, a lot of blood, three.js daggers that rain, one giant one
+that falls, thrown daggers, daggers out of the ground, a dagger in each hand, placeholder helmets with none drawn on her.
+
+- **Art** (`tools/martialgear.py`): the 144 cutouts go through `tools/nocturnegear.py`'s `native` (crown y75, sole y183,
+  every head matched to the first Common) into `assets/source/gear_nocturne/<class>/` and
+  `assets/sprites/gear/<class>/` (armor.webp, armor_mask.png, gear.json; 48 armors, eight a rarity). Ids 1..26 keep the
+  rarity every other class's ids have, so a saved Monk's looks stay in their rarity; 27..48 are the rest. It also writes
+  the select portraits and the old class sprite. Heads sit at x70 (the Barbarian's).
+- **Helmets:** none of the three has helmet art. The Monk borrows the Barbarian's column of the helmet atlas, as he did
+  (his old sprite's head sat about 6 px left of it; the new one is under it). The Rogue and the Ninja draw no helmet
+  (`NO_HELM` in `src/core/gearart.js`); their helmet items keep their stats and use the Barbarian's art for the icon.
+  When helmet sprites arrive: add the classes to `tools/nocturnegear.py` CLASSES (or a column each) and drop them from
+  `BORROWED_HELMS` / `NO_HELM`.
+- **Classes** (`src/data/classes.js`, `CLASS_IDS`): `rogue` (dex, blood, dagger + dagger) and `ninja` (dex, shadow,
+  katana + nunchaku); `DMG_TUNE` for both. 19 classes x 4 trees x 9 = 684 skills, 456 talent nodes
+  (`src/data/talentdata3.js`). Design and skill tables: `docs/class_overhaul/18_rogue.md`, `19_ninja.md`.
+- **Items** (`src/data/items.js`): weapon base `katana`, off-hand base `nunchaku`; `DUAL_WIELD` (the Barbarian and the
+  Rogue carry a weapon in the off-hand slot); `CLASS_ARMS`: the Rogue holds only daggers and the Ninja only a katana and
+  nunchaku (`armsReason`, checked by `canEquipItem` and `equipFromBag`), and half their weapon drops are their own kind.
+- **Engine hooks:** `castSkill` (`src/game/skillrun.js`) asks `rogueCast` / `ninjaCast` first, as it asks the
+  Astronomer's (true = replaced, false = failed, undefined = adds to the kind's cast); `Player.onHit` and `Player.update`
+  call `rogueHit/ninjaHit` and `rogueUpdate/ninjaUpdate`; `hit()` takes `o.sureCrit`; `Creature.acro` (a somersault) and
+  `Creature.tintAs` (a hero copy as a shadow) in `src/game/creature.js`; `drawShape` fx `dagger3`, `shuriken`, `kunai`,
+  `caltrop`.
+- **three.js steel** (`src/gfx/blades3d.js`): one offscreen WebGL canvas; models built in code (dagger, kunai, shuriken,
+  caltrop, grappling hook) with canvas textures; small pieces cached as sprites per roll/spin step, big ones rendered
+  every frame; `GiantBlade`, `GroundBlades`; `setBladeModel` swaps a kind for another Object3D. Until three.js has loaded
+  the callers draw the old 2D shapes.
+- **Shared effects** (`src/gfx/shadowfx.js`): `drawGhost`, `AfterImage`, `shadowTrail`, `CutLine`, `Crescent`, `Rope`,
+  `bloodCut`, `bloodBurst`.
+- **Held gear** (`tools/weapons3d_eastern.js`, baked into `assets/sprites/held/` and `assets/models/held/`): four sets of
+  50 designs: `katanas` and `stilettos` (free sprites + one three.js JSON model a design, the greatswords' conventions:
+  origin at the grip, blade along +Y, markers `guard`/`tip`/`slot`, units = art px of the 128x192 frame), `nunchakus`,
+  and `offstilettos` (the same 50 daggers in the left fist, point down). Textures: `python tools/weapons3d_textures.py`
+  -> `assets/models/held/textures/`. Fists for the three 48-armor libraries are in `held/index.json`.
+  `src/gfx/ninjagear.js` draws the Ninja's equipped katana live in his right fist (`drawHeldModel3D`: finish, element
+  glow, gems; ready stance, low at a run, trailing in the air, a cut on every `p.lunge`) and hangs the nunchaku from his
+  belt as two verlet pendulums on the cord (state in `p._ninjaGear`); both leave the baked hero image while they draw
+  live (`setHeldLive` in `heldart.js`) and come back for portraits, after-images and until three.js has loaded. The
+  Rogue's daggers are the baked composite, one in each fist; the giant daggers that fall in her skills are her own
+  equipped dagger's model (`ownBlade` in `game/rogue.js`). Test: `tools/tests/ninjagear.js`.
+- **Auto-play fixes found on the way:** `Auto.hurt` went NaN on a zero-length frame (0/0), and a NaN boldness never
+  walked a ranged build into range (the hero stood still at 10-13 tiles until the 12 s watchdog): guarded. Ring
+  projectiles (Fan of Knives, the Monk's Flaming Lotus) are now cast from among the enemy, not from 8 tiles; the Rogue
+  and the Ninja count as melee builds. Teleporting moves (Backstab, Hundred-Cut Reckoning, the hook, Backflip Scatter)
+  only land where the target can be seen, never across a wall.
+- **Balance** (`balance.js <class> 40 6 god`, kills in six game minutes, one run each, wide variance): Rogue 485, Ninja
+  396-641, Monk 322-438, Paladin 604, Ranger 384, Barbarian 261. Mirror Shadows was cut from 30% to 20% a shadow after
+  the first run.
+- **Failing on clean `main` too (not this work):** `data_check.mjs` ('first 41 biomes are not all different'),
+  `flow.js` ('expected town at depth 1'), `ui.js` ('Gem fusion failed').
+- **Signatures and ultimates:** Bloodletting / DEATHMARK and Zanshin (`src/game/sigs/rogue.js`, `ninja.js`); Night's
+  Verdict and Moonless Night (`src/game/martialults.js`, entries and icons in `smite.js`, `icons.js`).
+- **Auto-play:** `focusMul(classId, sk, live)`: in a fight the Rogue builds below four Combo Points and spends at four or
+  five; the Ninja favours his own moves and keeps Mirror Shadows up.
+- **Sparse checkout:** this worktree inherited the repo's sparse-checkout list, which had no `vendor/`: three.js 404'd
+  and every 3D effect fell back to 2D until `git sparse-checkout add vendor`.
+- **Tests:** `tools/tests/martial.js` (rules of both classes, a shot of every move, auto-play),
+  `tools/tests/martial_closeup.js` (zoomed stands and flips); `skills.js`, `signatures.js`, `data_check.mjs`,
+  `test_skill_talent_overhaul.mjs` know the new classes.
+
 ## November 3, 2026 — Mountainside out of beta, and THE SNOWY SUMMIT (branch `claude/mountainside-beta-release-p53gw6`)
 
 The user asked to take the Mountainside out of beta with sloped surfaces and hops, three times larger, a switchback

@@ -8,7 +8,7 @@ import { itemCell, itemTooltip, rarityClass } from './itemui.js';
 import {
   SLOTS, SLOT_NAMES, VANITY_SLOTS, shownEquip, itemName, itemColor, GEMS, gemName,
   itemValue, fitsSlot, slotFor, unsocketCost, makeGem, canWearVanity, itemBaseDisplayName,
-  itemReqStat, charEffectiveStat, canEquipItem, BASE_REQ_STAT, STAT_NAMES,
+  itemReqStat, charEffectiveStat, canEquipItem, armsReason, BASE_REQ_STAT, STAT_NAMES,
 } from '../data/items.js';
 import { CLASSES, ATTRS } from '../data/classes.js';
 import { allocateAttrs } from '../game/attrs.js';
@@ -56,6 +56,8 @@ export function equipFromBag(idx, slot) {
   if (it.sealed) { UI.log('Break the seal first.', '#ffdf8a'); return false; }
   if ((it.req || 1) > c.level) { UI.log(`Requires level ${it.req}.`, '#ff8080'); sfx('error'); return false; }
   const to = slot && fitsSlot(it, slot, c.classId) ? slot : slotFor(c.equip, it, c.classId);
+  const arms = armsReason(c.classId, it, to);
+  if (arms) { UI.log(arms, '#ff8080'); sfx('error'); return false; }
   const reqStat = itemReqStat(it);
   if (reqStat) {
     const cur = charEffectiveStat(c, reqStat.stat, to);

@@ -1,5 +1,5 @@
 import { TREE4 } from './skilltrees4.js';
-// 17 classes x 4 trees x 9 skills = 612 distinct skills (3 rows x 3 columns per tree).
+// 19 classes x 4 trees x 9 skills = 684 distinct skills (3 rows x 3 columns per tree).
 // Each line: "Name|kind|element|fx|mods"
 // Row level requirements: 1, 12, 30 (mapped to tierRow 0, 2, 4 for unified damage & mana curves).
 // pow=: per-skill total damage tuning multiplier.
@@ -674,6 +674,86 @@ export const SKILLDATA = {
       'Inferno Palm|aoe|fire|explosion|r=1.8 dmg=2.2 burn cd=4',
       'Dragon Tempest|cyclone|fire|wind|n=3 dur=5 burn cd=6',
       'Cataclysmic Dragon Slam|aoe|fire|meteor|r=2.4 dmg=3 burn cd=7',
+    ],
+  ],
+  // The Rogue (game/rogue.js): `cp=N` builds N Combo Points when the skill lands, `fin` is a finisher (it spends
+  // them all and hits harder for each), `rog=` names a move of her own. fx dagger3: three.js daggers (gfx/blades3d.js).
+  rogue: [
+    // Tree 0: Assassination (twin daggers: builders, bloody finishers, bleeds and poison)
+    [
+      'Sinister Strike|melee|phys|slash|free wc=1 n=2 dmg=0.6 cp=1 rog=twin',
+      'Eviscerate|melee|blood|slash|fin dmg=1.15 arc=130 rog=eviscerate',
+      'Backstab|blink|shadow|smoke|range=0.85 dmg=2 cp=2 rog=backstab',
+      'Rupture|melee|blood|claw|fin bleed dmg=0.8 arc=150 rog=rupture',
+      'Mutilate|melee|poison|slash|n=2 dmg=0.85 cp=2 poison rog=twin',
+      'Kidney Shot|melee|phys|smash|fin stun dmg=0.9 rog=kidney cd=4',
+      'Envenom|nova|poison|void|fin r=1.25 poison rog=envenom',
+      'Vendetta|buff|blood|aura|buff=crit,dmg amt=34 dur=14 cd=28',
+      'Death from Above|leap|blood|charge|fin r=1.5 dmg=1.5 bleed rog=dfa cd=5',
+    ],
+    // Tree 1: Subtlety (stealth, shadows and openers)
+    [
+      'Shadowstrike|dash|shadow|smoke|range=1.1 cp=1 rog=shadowstrike',
+      'Stealth|buff|shadow|smoke|buff=speed amt=25 dur=8 cd=12 rog=stealth',
+      'Smoke Bomb|curse|shadow|smoke|curse=slow,weaken r=1.4 at=self cd=10 rog=smoke',
+      'Cheap Shot|melee|phys|smash|stun dmg=0.9 cp=2 cd=3',
+      'Shadowstep|blink|shadow|smoke|range=1.3 nova cd=2',
+      'Shadow Dance|buff|shadow|aura|buff=as,crit amt=30 dur=10 cd=30 rog=dance',
+      'Marked for Death|curse|blood|sigil|curse=mark r=1.1 cd=18 rog=mark',
+      'Cloak of Shadows|buff|shadow|shield|buff=res,armor amt=45 dur=8 cd=30',
+      'Secret Technique|strike|shadow|spirit|fin n=4 rog=secret cd=8',
+    ],
+    // Tree 2: Knives (thrown daggers, daggers from the sky, daggers out of the ground)
+    [
+      'Throwing Knife|proj|phys|dagger3|free wc=0.9 spd=1.5 cp=1',
+      'Fan of Knives|proj|phys|dagger3|n=10 ring dmg=1.1 cp=1 cd=1.5',
+      'Ricochet Blade|proj|phys|dagger3|bounce=4 dmg=1.15 cp=1',
+      'Rain of Daggers|rain|blood|dagger3|n=18 r=1.5 bleed cd=3',
+      'Poisoned Volley|proj|poison|dagger3|n=5 spread=40 poison cp=1',
+      'Fangs of the Earth|aoe|blood|dagger3|r=1.4 dmg=1.5 bleed rog=fangs cd=3',
+      'Between the Eyes|proj|phys|dagger3|fin pierce stun dmg=1.5 spd=2 r=1.5 cd=2',
+      'Blade Flurry|buff|phys|aura|buff=as,dmg amt=30 dur=12 cd=26 rog=flurry',
+      "Executioner's Blade|aoe|blood|dagger3|fin r=2.3 dmg=2.4 bleed rog=giant cd=8",
+    ],
+  ],
+  // The Ninja (game/ninja.js): `nin=` names a move of his own (flips, slash-throughs, shadows, the hook).
+  // fx shuriken, kunai, caltrop: three.js models (gfx/blades3d.js).
+  ninja: [
+    // Tree 0: Way of the Blade (the katana: leaping cuts straight through the enemy)
+    [
+      'Crescent Cut|melee|phys|slash|free wc=1 arc=150 r=1.1 nin=crescent',
+      "Swallow's Flight|dash|phys|charge|range=1.25 dmg=1.1 nin=swallow",
+      'Rising Moon|melee|phys|slash|arc=220 r=1.15 knock dmg=1.4 nin=rising',
+      'Iaido|beam|phys|slash|range=0.85 dmg=1.5 nin=iai cd=2',
+      'Crossing Blades|dash|phys|charge|n=3 range=0.9 dmg=0.85 nin=cross',
+      "Heaven's Drop|leap|phys|charge|r=1.3 dmg=1.5 stun nin=drop cd=3",
+      'Flowing Water|buff|phys|wind|buff=as,speed,crit amt=34 dur=14 cd=28',
+      'Falling Petals|whirl|phys|spin|dur=2 dmg=1.1 nin=petals',
+      'Hundred-Cut Reckoning|aoe|phys|slash|r=2.2 n=12 dmg=0.6 nin=hundred cd=9',
+    ],
+    // Tree 1: Shadow Arts (shadows that repeat his cuts, the grappling hook, smoke)
+    [
+      'Shadow Step|blink|shadow|smoke|range=1.2 nova nin=step',
+      'Mirror Shadows|buff|shadow|aura|buff=dmg amt=12 dur=16 cd=22 nin=mirror',
+      'Grappling Hook|chain|phys|chain|n=1 range=0.85 dmg=1.1 stun nin=grapple cd=3',
+      'Smoke Bomb|curse|shadow|smoke|curse=slow,weaken r=1.4 at=self cd=9 nin=smoke',
+      'Shadow Bind|curse|shadow|sigil|curse=stun r=1.2 dur=2.2 cd=8',
+      'Hook Swing|leap|phys|charge|range=1.3 r=1.2 dmg=1.1 knock nin=zip',
+      'Umbral Legion|strike|shadow|spirit|n=6 nin=legion cd=6',
+      'Eclipse Veil|buff|shadow|shield|buff=armor,res,speed amt=36 dur=12 cd=28',
+      'Thousand Shadows|aoe|shadow|void|r=2.4 dmg=2.2 nin=thousand cd=10',
+    ],
+    // Tree 2: Tools of War (shuriken, caltrops, kunai and tags)
+    [
+      'Shuriken|proj|phys|shuriken|free wc=0.85 n=3 spread=24 spd=1.5 dmg=0.75',
+      'Caltrops|zone|phys|caltrop|r=1.1 dur=7 slow bleed nin=caltrops',
+      'Kunai Burst|proj|fire|kunai|n=3 spread=30 exp r=0.9 burn dmg=0.9',
+      'Windmill Shuriken|proj|phys|shuriken|ret pierce r=2.2 dmg=1.5 spd=0.9 cd=2',
+      'Backflip Scatter|leap|phys|caltrop|range=0.7 r=1.2 slow bleed dmg=0.7 nin=backflip cd=4',
+      'Blast Tags|trap|fire|fire|n=3 burn',
+      'Storm of Steel|rain|phys|shuriken|n=24 r=1.7 dur=1.6 nin=steel cd=5',
+      'Poison Darts|proj|poison|kunai|n=8 rand spread=30 poison dmg=0.55 spd=1.7',
+      'Demon Wind Shuriken|orbit|shadow|shuriken|n=4 spiral dur=3.2 r=1.25 dmg=1.5 nin=demon cd=8',
     ],
   ],
 };

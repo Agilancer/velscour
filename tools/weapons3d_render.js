@@ -40,19 +40,20 @@ export async function bakeSet(set) {
     const rel = (m) => [r2(m.x - f[0]), r2(m.y - f[1])], one = (k) => b.marks.find((m) => m.kind === k);
     const mk = (k) => { const m = one(k); return m ? rel(m) : null; };
     const head = one('head'), orbit = one('orbit'), l0 = mk('l0'), l1 = mk('l1');
-    const built = buildDesign(d), icon = bakeIcon(built.g, LIT, { diagonal: !built.grip || set === 'bows' || set === 'quivers', turn: built.grip ? [-0.2, 0.45] : [0.25, 0.5] });
+    const built = buildDesign({ ...d, view: 'icon' }), icon = bakeIcon(built.g, LIT, { diagonal: !built.grip || set === 'bows' || set === 'quivers', turn: built.grip ? [-0.2, 0.45] : [0.25, 0.5] });
     const k = pieces.length;
     pieces.push(crop(b.art, box), crop(b.mask, box), icon.art, icon.mask);
     let free = null, model = null;
     if (S.free || S.models) { // the whole piece upright (sets with free: true) and its three.js model (models: true)
-      const fb = buildDesign(d);
+      const fb = buildDesign({ ...d, view: 'free' });
       fb.g.userData = { set, i: d.i, name: it.label, rarity: d.rarity, element: d.element, form: fb.form, recipe: fb.recipe || null };
       if (S.models) model = modelJSON(fb.g);
       if (S.free) {
         const fr = bakeFree(fb.g, LIT), at = (m) => [r2(m.x), r2(m.y)], one = (kd) => fr.marks.find((m) => m.kind === kd);
         const fl0 = one('l0'), fl1 = one('l1'), fh = one('head'), fo = one('orbit'), ft = one('tip');
         free = { pts: { head: fh ? [...at(fh), r2(fh.r)] : null, tip: ft ? at(ft) : null, line: fl0 && fl1 ? [at(fl0), at(fl1)] : null,
-          orbit: fo ? [...at(fo), r2(fo.r)] : null, slots: fr.marks.filter((m) => m.kind === 'slot').map(at), grip: at(one('grip') || { x: 0, y: 0 }), guard: at(one('guard') || one('grip') || { x: 0, y: 0 }) } };
+          orbit: fo ? [...at(fo), r2(fo.r)] : null, slots: fr.marks.filter((m) => m.kind === 'slot').map(at), grip: at(one('grip') || { x: 0, y: 0 }), guard: at(one('guard') || one('grip') || { x: 0, y: 0 }),
+          ...(one('a0') && { sticks: [[at(one('a0')), at(one('a1'))], [at(one('b0')), at(one('b1'))]], knot: at(one('knot')), cord: fb.recipe?.cord }) } };
         pieces.push(fr.art, fr.mask);
       }
       dispose3(fb.g);

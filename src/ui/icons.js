@@ -1786,6 +1786,62 @@ export function dragonsInfernoIcon(size = 64) {
   return c;
 }
 
+/** The Rogue's ultimate: a great dagger coming down, blood at its point. */
+export function verdictIcon(size = 64) {
+  const key = 'special_verdict|' + size;
+  let c = cache.get(key);
+  if (c) return c;
+  c = makeCanvas(size, size);
+  const x = c.getContext('2d', { willReadFrequently: true }), s = size / 64, h = size / 2;
+  x.save(); x.beginPath(); x.arc(h, h, h - 2 * s, 0, TAU); x.clip();
+  const bg = x.createRadialGradient(h, h * 1.3, 2, h, h, h * 1.15);
+  bg.addColorStop(0, '#6a0a12'); bg.addColorStop(0.55, '#24060a'); bg.addColorStop(1, '#070203');
+  x.fillStyle = bg; x.fillRect(0, 0, size, size);
+  for (let i = 0; i < 9; i++) { // small daggers raining behind
+    const px = (8 + i * 6.3) * s, py = (10 + ((i * 17) % 26)) * s;
+    x.strokeStyle = 'rgba(255,190,190,0.35)'; x.lineWidth = 1.4 * s; x.beginPath(); x.moveTo(px, py - 6 * s); x.lineTo(px, py + 4 * s); x.stroke();
+  }
+  x.translate(h, h);
+  const bl = x.createLinearGradient(-6 * s, 0, 6 * s, 0);
+  bl.addColorStop(0, '#8f98a8'); bl.addColorStop(0.5, '#f4f8ff'); bl.addColorStop(0.52, '#b8c0d0'); bl.addColorStop(1, '#6a7282');
+  x.fillStyle = bl; x.strokeStyle = '#0a0406'; x.lineWidth = 1.2 * s;
+  x.beginPath(); x.moveTo(-6 * s, -10 * s); x.lineTo(6 * s, -10 * s); x.lineTo(4.5 * s, 10 * s); x.lineTo(0, 24 * s); x.lineTo(-4.5 * s, 10 * s); x.closePath(); x.fill(); x.stroke();
+  x.fillStyle = '#c8a040'; x.fillRect(-12 * s, -13 * s, 24 * s, 4 * s); x.strokeRect(-12 * s, -13 * s, 24 * s, 4 * s);
+  x.fillStyle = '#3a1016'; x.fillRect(-3 * s, -25 * s, 6 * s, 12 * s);
+  x.fillStyle = '#ff3040'; x.beginPath(); x.arc(0, -26 * s, 3.4 * s, 0, TAU); x.fill();
+  x.fillStyle = '#d0101c'; // blood at the point
+  x.beginPath(); x.ellipse(0, 25 * s, 11 * s, 3.4 * s, 0, 0, TAU); x.fill();
+  for (const [dx, dy, r] of [[-9, 17, 2], [8, 15, 1.6], [-4, 12, 1.2], [12, 21, 1.4]]) { x.beginPath(); x.arc(dx * s, dy * s, r * s, 0, TAU); x.fill(); }
+  x.restore();
+  cache.set(key, c);
+  return c;
+}
+/** The Ninja's ultimate: a thin moon, crossed by cuts. */
+export function moonlessIcon(size = 64) {
+  const key = 'special_moonless|' + size;
+  let c = cache.get(key);
+  if (c) return c;
+  c = makeCanvas(size, size);
+  const x = c.getContext('2d', { willReadFrequently: true }), s = size / 64, h = size / 2;
+  x.save(); x.beginPath(); x.arc(h, h, h - 2 * s, 0, TAU); x.clip();
+  const bg = x.createRadialGradient(h, h * 0.8, 2, h, h, h * 1.15);
+  bg.addColorStop(0, '#1c2a5a'); bg.addColorStop(0.55, '#0a0e24'); bg.addColorStop(1, '#020308');
+  x.fillStyle = bg; x.fillRect(0, 0, size, size);
+  x.fillStyle = '#eaf8ff'; x.shadowColor = '#7fe6ff'; x.shadowBlur = 10 * s;
+  x.beginPath(); x.arc(h, h - 3 * s, 17 * s, 0.5, 0.5 + Math.PI * 1.3); x.arc(h + 7 * s, h - 6 * s, 14.5 * s, 0.5 + Math.PI * 1.22, 0.58, true); x.closePath(); x.fill();
+  x.shadowBlur = 0;
+  x.fillStyle = '#05070e'; // his shadow under it
+  x.beginPath(); x.moveTo(h - 9 * s, size); x.lineTo(h - 7 * s, h + 15 * s); x.quadraticCurveTo(h, h + 5 * s, h + 7 * s, h + 15 * s); x.lineTo(h + 9 * s, size); x.closePath(); x.fill();
+  x.lineCap = 'round';
+  for (const [a, w, col] of [[-0.5, 3.2, '#7fe6ff'], [0.62, 2.6, '#ffffff'], [2.1, 2, '#7fe6ff']]) {
+    x.strokeStyle = col; x.lineWidth = w * s; x.globalAlpha = 0.9;
+    x.beginPath(); x.moveTo(h - Math.cos(a) * 30 * s, h - Math.sin(a) * 30 * s); x.lineTo(h + Math.cos(a) * 30 * s, h + Math.sin(a) * 30 * s); x.stroke();
+  }
+  x.restore();
+  cache.set(key, c);
+  return c;
+}
+
 export function ultimateIcon(classId, size = 64) {
   switch (classId) {
     case 'paladin': return smiteIcon(size);
@@ -1798,6 +1854,8 @@ export function ultimateIcon(classId, size = 64) {
     case 'necromancer': return graveIcon(size);
     case 'carrion_witch': return crowsIcon(size);
     case 'monk': return nirvanaIcon(size);
+    case 'rogue': return verdictIcon(size);
+    case 'ninja': return moonlessIcon(size);
     case 'dragoon': return skydiveIcon(size);
     case 'totem_master': return totemCataclysmIcon(size);
     case 'death_knight': return glacialOblivionIcon(size);

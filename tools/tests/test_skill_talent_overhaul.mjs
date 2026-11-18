@@ -1,4 +1,4 @@
-// Comprehensive headless Node integration test for the 17-Class Skill Tree Pruning & 5-Tier Talent Morph Overhaul.
+// Comprehensive headless Node integration test for the 19-Class Skill Tree Pruning & 5-Tier Talent Morph Overhaul.
 // Run: node tools/tests/test_skill_talent_overhaul.mjs
 import assert from 'node:assert/strict';
 
@@ -66,13 +66,13 @@ G.game = {
   autosave() {}, onPlayerDeath() {}, isDungeonAuthority: () => true,
 };
 
-console.log('1. Validating 17-Class 3x3 Skill Trees & 5-Tier Talent Trees...');
+console.log('1. Validating 19-Class 3x3 Skill Trees & 5-Tier Talent Trees...');
 const classIds = Object.keys(CLASS_SKILLS);
-assert.equal(classIds.length, 17, 'Expected 17 active classes');
+assert.equal(classIds.length, 19, 'Expected 19 active classes');
 assert.deepEqual(ROW_LEVELS, [1, 12, 30]);
 assert.deepEqual(TALENT_ROW_LEVELS, [1, 10, 20, 30, 45]);
-assert.equal(Object.keys(SKILLS).length, 612, 'Expected 612 total skills');
-assert.equal(Object.keys(TALENTS).length, 408, 'Expected 408 total talent nodes');
+assert.equal(Object.keys(SKILLS).length, 684, 'Expected 684 total skills');
+assert.equal(Object.keys(TALENTS).length, 456, 'Expected 456 total talent nodes');
 
 function makeTestWorld(p) {
   const map = new TileMap(32, 32);
@@ -98,7 +98,7 @@ function makeTestWorld(p) {
   return { w, foe };
 }
 
-console.log('2. Testing Player instantiation, free LMB grant, and casting all 612 skills (Base + Path A + Path B)...');
+console.log('2. Testing Player instantiation, free LMB grant, and casting all 684 skills (Base + Path A + Path B)...');
 let totalCasts = 0;
 for (const cls of classIds) {
   const c = newCharData(cls, 'Test_' + cls);
@@ -163,7 +163,7 @@ for (const cls of classIds) {
     totalCasts++;
   }
 }
-console.log(`   ✔ Executed ${totalCasts} live skill casts across all 17 classes (Base + Path A + Path B) with 0 errors!`);
+console.log(`   ✔ Executed ${totalCasts} live skill casts across all 19 classes (Base + Path A + Path B) with 0 errors!`);
 
 console.log('3. Testing specific live gameplay morphs (sumSwap, el conversion, waveProjs, resetOnKill, talentOnKill, cheatDeath, knightCapPlus)...');
 {

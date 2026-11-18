@@ -156,8 +156,10 @@ export function newCharData(classId, name) {
   c.equip.weapon = rollItem(1, { slot: 'weapon', base: C.weapon, rarity: 0 });
   c.equip.weapon.affixes = c.equip.weapon.affixes.filter((a) => a.implicit);
   if (C.offhand) { c.equip.offhand = rollItem(1, { slot: 'offhand', base: C.offhand, rarity: 0 }); }
+  else if (classId === 'rogue') { c.equip.offhand = rollItem(1, { slot: 'weapon', base: C.weapon, rarity: 0 }); c.equip.offhand.affixes = c.equip.offhand.affixes.filter((x) => x.implicit); } // her second dagger
   c.equip.body = rollItem(1, { slot: 'body', rarity: 0 });
   c.equip.body.affixes = [];
+  if (['monk', 'rogue', 'ninja'].includes(classId)) c.equip.body.look = [1, 0, -1, 2]; // they start as their portraits: the first Common, in its own colours
   c.equip.weapon.sockets = 1;
   c.nextBiome = drawBiome(c, 1); // the first descent is a random biome too
   return c;

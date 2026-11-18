@@ -20,6 +20,8 @@ import { noteTier } from '../data/notation.js';
 import { bardCastFx, bardNoteFor } from './bard.js';
 import { ASTRONOMER, astroCast, mirrorShots, cometStrike } from './astronomer.js';
 import { skillMorphFor, applySkillMorph } from '../data/talents.js';
+import { rogueCast } from './rogue.js';
+import { ninjaCast } from './ninja.js';
 
 const roll = (d) => rand(d[0], d[1]);
 
@@ -79,7 +81,9 @@ export function castSkill(p, sk, L, tx, ty, opts = {}) {
   if (bard >= 0 && m.canon && !opts.echo) later(w, 0.32, () => { if (!p.dead && p.world === w) castSkill(p, baseSk, L, p.aim ? p.aim[0] : tx, p.aim ? p.aim[1] : ty, { echo: true }); });
   p.face(ang);
   // the Astronomer's special spells (`astro=`): true replaced the kind's cast, false failed, undefined adds to it
-  const special = astro ? astroCast(p, sk, L, tx, ty, { dmg, area, o, el, E }) : undefined;
+  // (the Rogue's `rog=` / `cp=` / `fin` and the Ninja's `nin=` moves answer the same way: game/rogue.js, game/ninja.js)
+  const own = astro ? astroCast : sk.classId === 'rogue' ? rogueCast : sk.classId === 'ninja' ? ninjaCast : null;
+  const special = own ? own(p, sk, L, tx, ty, { dmg, area, o, el, E, vis, ang, echo: !!opts.echo }) : undefined;
   if (special === false) return false;
   if (special !== true) switch (sk.kind) {
     case 'melee': {

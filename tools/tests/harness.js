@@ -63,6 +63,6 @@ function report(errors, limit = 40) {
 }
 
 const ALL_CLASSES = ['paladin', 'ranger', 'wizard', 'necromancer', 'barbarian', 'dragoon', 'totem_master', 'death_knight',
-  'arcane_sorcerer', 'carrion_witch', 'bard', 'slime_lord', 'boomerang_knight', 'lancer', 'dragon_knight', 'gunner'];
+  'arcane_sorcerer', 'carrion_witch', 'bard', 'slime_lord', 'boomerang_knight', 'lancer', 'dragon_knight', 'gunner', 'monk', 'rogue', 'ninja'];
 
 module.exports = { openGame, report, ALL_CLASSES, BASE_URL, OUT_DIR };

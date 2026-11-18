@@ -106,7 +106,7 @@ export function canWearVanity(c, item, slot) {
     return { ok: true };
   }
   if (slot === 'offhand') {
-    const isOff = item.slot === 'offhand' || (c.classId === 'barbarian' && item.slot === 'weapon');
+    const isOff = item.slot === 'offhand' || (DUAL_WIELD.has(c.classId) && item.slot === 'weapon');
     if (!isOff) return { ok: false, reason: 'This slot only accepts off-hand items.' };
     const eqO = c.equip?.offhand;
     if (!eqO) return { ok: false, reason: 'Equip an off-hand item first before setting a vanity off-hand look.' };
@@ -135,11 +135,23 @@ export const shownEquip = (c) => {
   if (v?.offhand && e?.offhand && itemBaseType(v.offhand) === itemBaseType(e.offhand)) res.offhand = v.offhand;
   return res;
 };
+/** Classes that carry a second weapon in the off-hand slot: the Barbarian's axes, the Rogue's daggers. */
+export const DUAL_WIELD = new Set(['barbarian', 'rogue']);
+/** The Rogue and the Ninja fight with their own steel only: the bases each may hold, by slot (other classes: anything). */
+export const CLASS_ARMS = { rogue: { weapon: ['dagger'], offhand: ['dagger'] }, ninja: { weapon: ['katana'], offhand: ['nunchaku'] } };
+const ARMS_TEXT = { rogue: 'A Rogue fights with a dagger in each hand, nothing else.', ninja: 'A Ninja carries a katana, and nunchaku on his belt, nothing else.' };
+/** Why class `classId` may not hold `it` in `slot` (null: it may). */
+export function armsReason(classId, it, slot = null) {
+  const A = CLASS_ARMS[classId];
+  if (!A || !it || it.type !== 'gear' || (it.slot !== 'weapon' && it.slot !== 'offhand')) return null;
+  const base = itemBaseType(it), s = slot === 'weapon' || slot === 'offhand' ? slot : it.slot;
+  return (it.slot === 'weapon' ? A.weapon.includes(base) || (s === 'offhand' && A.offhand.includes(base)) : A.offhand.includes(base)) ? null : ARMS_TEXT[classId];
+}
 export const SLOT_NAMES = { weapon: 'Weapon', offhand: 'Off-hand', head: 'Head', body: 'Body', hands: 'Hands', legs: 'Legs', feet: 'Feet', ring: 'Ring', ring1: 'Ring', ring2: 'Ring', ring3: 'Ring', ring4: 'Ring' };
 /** Can item it go in equipment slot `slot`? (A ring fits any of the four ring slots.) */
-export const fitsSlot = (it, slot, classId = null) => !!it && it.type === 'gear' && (it.slot === slot || (it.slot === 'ring' && RING_SLOTS.includes(slot)) || (classId === 'barbarian' && slot === 'offhand' && it.slot === 'weapon'));
+export const fitsSlot = (it, slot, classId = null) => !!it && it.type === 'gear' && (it.slot === slot || (it.slot === 'ring' && RING_SLOTS.includes(slot)) || (DUAL_WIELD.has(classId) && slot === 'offhand' && it.slot === 'weapon'));
 /** The equipment slot an item goes to: its own, or for a ring the first empty ring slot (else the first). */
-export const slotFor = (equip, it, classId = null) => (classId === 'barbarian' && it.slot === 'weapon' && equip.weapon && !equip.offhand ? 'offhand' : it.slot !== 'ring' ? it.slot : RING_SLOTS.find((s) => !equip[s]) || RING_SLOTS[0]);
+export const slotFor = (equip, it, classId = null) => (DUAL_WIELD.has(classId) && it.slot === 'weapon' && equip.weapon && !equip.offhand ? 'offhand' : it.slot !== 'ring' ? it.slot : RING_SLOTS.find((s) => !equip[s]) || RING_SLOTS[0]);
 
 // Stat requirements for weapons and off-hands: archetype enforcement
 // Strength: blunt weapons (maces, hammers), spears/lances, swords, axes, shields
@@ -158,6 +170,8 @@ export const BASE_REQ_STAT = {
   pistol: 'dex',
   lute: 'dex',
   dagger: 'dex',
+  katana: 'dex',
+  nunchaku: 'dex',
   boomerang: 'dex',
   quiver: 'dex',
   drum: 'dex',
@@ -218,6 +232,7 @@ export function charEffectiveStat(c, stat, excludingSlot = null) {
 export function canEquipItem(c, it, slot = null) {
   if (!it || it.type !== 'gear') return false;
   if ((it.req || 1) > (c.level || 1)) return false;
+  if (armsReason(c.classId, it, slot)) return false;
   const reqStat = itemReqStat(it);
   if (reqStat) {
     const cur = charEffectiveStat(c, reqStat.stat, slot || it.slot);
@@ -231,7 +246,7 @@ export const WEAPONS = {
   axe: { names: ['Hatchet', 'War Axe', 'Bearded Axe', 'Battle Axe', 'Executioner'], icon: 'axe', dmg: 1.15, spd: 0.92, critDmg: 12, classes: ['barbarian'] },
   mace: { names: ['Cudgel', 'Mace', 'Flanged Mace', 'Morning Star', 'Sanctified Mace'], icon: 'mace', dmg: 1.08, spd: 0.96, holyPct: 8, classes: ['paladin', 'slime_lord', 'monk'] },
   hammer: { names: ['War Hammer', 'Maul', 'Great Maul', 'Earthbreaker', 'Titan Maul'], icon: 'hammer', dmg: 1.25, spd: 0.85, areaPct: 8, classes: ['paladin', 'barbarian'] },
-  dagger: { names: ['Poignard', 'Dirk', 'Stiletto', 'Kris', 'Ritual Blade'], icon: 'dagger', dmg: 0.80, spd: 1.22, crit: 6, classes: ['bard', 'ranger', 'necromancer', 'carrion_witch', 'monk'] },
+  dagger: { names: ['Poignard', 'Dirk', 'Stiletto', 'Kris', 'Ritual Blade'], icon: 'dagger', dmg: 0.80, spd: 1.22, crit: 6, classes: ['rogue', 'bard', 'ranger', 'necromancer', 'carrion_witch', 'monk'] },
   staff: { names: ['Quarterstaff', 'Gnarled Staff', 'Runed Staff', 'Archon Staff', 'Elder Staff'], icon: 'staff', dmg: 0.95, spd: 1.0, cast: 8, spell: 8, classes: ['wizard', 'carrion_witch', 'totem_master', 'monk'] },
   wand: { names: ['Yew Wand', 'Bone Wand', 'Grim Wand', 'Lich Wand', 'Grave Wand'], icon: 'wand', dmg: 0.85, spd: 1.1, cast: 10, cdr: 4, classes: ['necromancer', 'wizard', 'arcane_sorcerer'] },
   bow: { names: ['Short Bow', "Hunter's Bow", 'Composite Bow', 'Long War Bow', 'Wardwood Bow'], icon: 'bow', dmg: 1.0, spd: 1.06, atkSpeed: 6, classes: ['ranger'] },
@@ -241,6 +256,7 @@ export const WEAPONS = {
   pistol: { names: ['Flintlock', 'Blunderbuss', 'Hand Cannon', 'Repeater', 'Ironclad Pistol'], icon: 'pistol', dmg: 1.0, spd: 1.12, crit: 4, classes: ['gunner'] },
   lute: { names: ['Lute', 'Mandolin', 'War Lyre', 'Skald Harp', 'Choir Lute'], icon: 'lute', dmg: 0.88, spd: 1.1, cast: 6, cdr: 5, classes: ['bard'] },
   boomerang: { names: ['Throwing Stick', 'Boomerang', 'Glaive', 'Chakram', 'Moon Glaive'], icon: 'boomerang', dmg: 0.95, spd: 1.1, crit: 4, classes: ['boomerang_knight'] },
+  katana: { names: ['Wakizashi', 'Katana', 'Uchigatana', 'Nodachi', 'Moonless Edge'], icon: 'sword', dmg: 1.0, spd: 1.14, crit: 5, classes: ['ninja'] },
 };
 export const ACTIVE_WEAPONS = Object.keys(WEAPONS);
 
@@ -256,11 +272,14 @@ export const OFFHANDS = {
   idol: { names: ['Carved Idol', 'Spirit Idol', 'Ancestor Idol', 'Thunder Idol', 'Idol of the First Tribe'], icon: 'orb', armor: 0.4, spell: [8, 16], summon: [6, 12], classes: ['totem_master'] },
   jar: { names: ['Specimen Jar', 'Ooze Flask', 'Gel Reliquary', 'Living Jar', 'Heart of the Mire'], icon: 'orb', armor: 0.6, spell: [6, 14], reduce: [2, 4], classes: ['slime_lord'] },
   rang: { names: ['Throwing Stick', 'Small Rang', 'Twin Rang', 'Glaive', 'Moon Rang'], icon: 'boomerang', armor: 0.25, spell: [6, 14], crit: [4, 8], classes: ['boomerang_knight'] },
+  nunchaku: { names: ['Oak Nunchaku', 'Iron-shod Nunchaku', 'Chain Sticks', 'Dragon Sticks', 'Twin Moons'], icon: 'mace', armor: 0.3, crit: [4, 8], atkSpd: [6, 12], classes: ['ninja'] },
 };
 export const ACTIVE_OFFHANDS = Object.keys(OFFHANDS);
 
 /** A random off-hand base from the active pool: favors the wearer's focus, shields, and caster off-hands. */
 function offhandBase() {
+  const arms = CLASS_ARMS[ringCtx.classId];
+  if (arms && arms.offhand[0] !== arms.weapon[0] && chance(0.55)) return arms.offhand[0]; // the Ninja's nunchaku
   const own = CLASS_FOCUS[ringCtx.classId];
   return chance(0.4) && own ? own : chance(0.35) ? 'shield' : pick(ACTIVE_OFFHANDS);
 }
@@ -584,7 +603,8 @@ export function rollItem(ilvl, opts = {}) {
   const art = opts.generic || slot === 'ring' ? null : classItem(slot, rarity, opts.base);
   if (art) opts = { ...opts, base: art.base };
   if (slot === 'weapon') {
-    item.base = opts.base || pick(ACTIVE_WEAPONS);
+    const arms = CLASS_ARMS[ringCtx.classId]; // the Rogue and the Ninja find their own steel about half the time
+    item.base = opts.base || (arms && chance(0.5) ? arms.weapon[0] : pick(ACTIVE_WEAPONS));
     const W = WEAPONS[item.base] || WEAPONS.sword;
     const avg = (6 + pl * 1.8 + 0.022 * pl * pl) * W.dmg;
     item.dmg = [Math.max(1, Math.round(avg * 0.8)), Math.max(2, Math.round(avg * 1.2))];

@@ -5,6 +5,8 @@
 // and grip take the item's palette finish (PALETTES) and its glowing parts the item's element. Icons for the bag and
 // the ground come from the same designs. Effects (gem dots, rarity particles: src/gfx/heldfx.js) are drawn per frame.
 // Sets baked with free sprites also have each design whole and upright (heldFree), for the Death Knight's flying sword.
+// A piece something else draws live (the Ninja's katana and nunchaku: src/gfx/ninjagear.js, setHeldLive) stays out of the
+// hero image, except in still pictures (the inventory portrait, previews).
 import { G } from '../state.js';
 import { makeCanvas, hexToRgb, randi, chance, pick, clamp } from '../core/util.js';
 import { HELD_PER, HELD_START, heldSetOf, heldElement } from '../data/held.js';
@@ -47,8 +49,8 @@ export async function loadHeld(cls, char = null) {
   for (const n of names) ensureSet(n);
   await Promise.all([...names].map((n) => sets.get(n)?.p));
 }
-const DEFAULTS = { weapon: { paladin: 'mace', ranger: 'bow', wizard: 'staff', necromancer: 'wand', barbarian: 'axe', dragoon: 'spear', totem_master: 'staff', death_knight: 'sword', arcane_sorcerer: 'wand', carrion_witch: 'staff', bard: 'lute', slime_lord: 'mace', boomerang_knight: 'boomerang', lancer: 'spear', dragon_knight: 'sword', gunner: 'pistol', monk: 'staff' } };
-function defaultBase(cls, slot) { return slot === 'weapon' ? DEFAULTS.weapon[cls] : cls === 'barbarian' ? 'axe' : { ranger: 'quiver', wizard: 'tome', necromancer: 'orb', totem_master: 'idol', death_knight: 'skull', arcane_sorcerer: 'orb', carrion_witch: 'lantern', bard: 'drum', slime_lord: 'jar', boomerang_knight: 'rang', gunner: 'bomb', monk: 'tome' }[cls] || 'shield'; }
+const DEFAULTS = { weapon: { paladin: 'mace', ranger: 'bow', wizard: 'staff', necromancer: 'wand', barbarian: 'axe', dragoon: 'spear', totem_master: 'staff', death_knight: 'sword', arcane_sorcerer: 'wand', carrion_witch: 'staff', bard: 'lute', slime_lord: 'mace', boomerang_knight: 'boomerang', lancer: 'spear', dragon_knight: 'sword', gunner: 'pistol', monk: 'staff', rogue: 'dagger', ninja: 'katana' } };
+function defaultBase(cls, slot) { return slot === 'weapon' ? DEFAULTS.weapon[cls] : cls === 'barbarian' ? 'axe' : cls === 'rogue' ? 'dagger' : { ninja: 'nunchaku', ranger: 'quiver', wizard: 'tome', necromancer: 'orb', totem_master: 'idol', death_knight: 'skull', arcane_sorcerer: 'orb', carrion_witch: 'lantern', bard: 'drum', slime_lord: 'jar', boomerang_knight: 'rang', gunner: 'bomb', monk: 'tome' }[cls] || 'shield'; }
 
 // ------------------------------------------------------------------ looks
 function finishFor(R) {
@@ -141,12 +143,12 @@ export function heldIcon(item, size = 48) {
 /**
  * A weapon whole and upright (sets baked with free sprites: the Death Knight's greatswords), for drawing it away from
  * the hand: { img (recoloured, tip up), pts (sprite px: guard, grip, tip, line, head, slots, orbit), rarity, element,
- * gems: [[r, g, b]], set, i, finish }. Null when it has none or its set is still loading.
+ * gems: [[r, g, b]], set, i, finish }. Null when it has none or its set is still loading. slot: where it is worn.
  */
-export function heldFree(item, cls) {
+export function heldFree(item, cls, slot = 'weapon') {
   if (!index) { loadHeldIndex(); return null; }
-  if (!item || item.type !== 'gear' || item.slot !== 'weapon') return null;
-  const pc = pieceOf(item, 'weapon', cls);
+  if (!item || item.type !== 'gear' || (slot === 'weapon' && item.slot !== 'weapon') || !heldSetOf(item.base, slot, cls)) return null;
+  const pc = pieceOf(item, slot, cls);
   if (!pc?.d.free) return null;
   return { img: sprite(pc, 'free'), pts: pc.d.freePts, rarity: pc.rarity, element: pc.element, set: pc.set, i: pc.i, finish: pc.finish, name: pc.d.name,
     gems: (item.gems || []).map((g) => hexToRgb(GEMS[g.gem]?.color || '#ffffff')) };
@@ -176,11 +178,18 @@ export function drawHeldFree(ctx, f, x, y, a, len, spin = 0, rim = null) {
 // ------------------------------------------------------------------ the hero
 /** True when a Death Knight's sword is his flying sword (src/game/sigs/deathknight.js), so it is not in his hand too. */
 const swordFlies = (cls, pc) => cls === 'death_knight' && !!pc.d.free && G.settings.signatures !== false && (G.settings.dkBlade || 'sprite') !== 'runeblade';
+let live = null;
+/** fn(cls, slot, item) -> true while that held piece is drawn live by something else, so the hero image leaves it out. */
+export function setHeldLive(fn) { live = fn; }
+/** The worn armor's fists { R: [x, y], L: [x, y] } (art px), null before the index has loaded. */
+export function heldFists(cls, equip) {
+  const fists = index?.fists?.[cls];
+  return fists ? fists[clamp((equip?.body && itemLook(equip.body, cls)?.[0]) || 1, 1, fists.length) - 1] : null;
+}
 /** The pieces `cls` holds from `equip`, placed at the worn armor's fists (art px). Null while any set still loads. */
 function heldPieces(cls, equip) {
-  const fists = index?.fists?.[cls];
-  if (!fists) return [];
-  const armor = clamp((equip.body && itemLook(equip.body, cls)?.[0]) || 1, 1, fists.length), F = fists[armor - 1];
+  const F = heldFists(cls, equip), still = equip._preview || equip._still;
+  if (!F) return [];
   const out = [];
   for (const slot of ['weapon', 'offhand']) {
     const it = equip[slot];
@@ -188,6 +197,7 @@ function heldPieces(cls, equip) {
     const pc = pieceOf(it, slot, cls);
     if (!pc) return null;
     if (slot === 'weapon' && swordFlies(cls, pc) && !equip._preview) continue; // the Death Knight's sword flies at his side or rests on his back
+    if (!still && live && live(cls, slot, it)) continue; // drawn live over the hero (the Ninja's katana and nunchaku)
     if (out.some((o) => o.hand === pc.hand)) continue; // both pieces want the same hand: the main hand wins
     const f = F[pc.hand], pt = (p) => p && [f[0] + p[0], f[1] + p[1], p[2]];
     const P = pc.d.pts;
@@ -234,7 +244,7 @@ export function heldHero(base, cls, equip) {
 
 /** The inventory portrait args: [the hero holding his gear, its box in art px] (nulls without held gear). */
 export function heldPortraitArgs(base, cls, equip) {
-  const h = base && G.settings.heldGear !== false ? heldHero(base, cls, equip) : null;
+  const h = base && G.settings.heldGear !== false ? heldHero(base, cls, { ...equip, _still: true }) : null;
   if (!h) return [null, null];
   const b = [W, 192, 0, 0];
   for (const p of h.pieces) { b[0] = Math.min(b[0], p.x); b[1] = Math.min(b[1], p.y); b[2] = Math.max(b[2], p.x + p.d.size[0]); b[3] = Math.max(b[3], p.y + p.d.size[1]); }
