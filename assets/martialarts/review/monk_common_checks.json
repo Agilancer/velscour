@@ -1,0 +1,130 @@
+[
+  {
+    "file": "artwork\\monk\\monk_common_01.png",
+    "source_bounds": [
+      109,
+      28,
+      327,
+      485
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      266,
+      505
+    ],
+    "colors": 54886,
+    "sha256": "86815c0bcc076046af6f785c4ac4cdbd299eec48c957a58f45719e14cc92eeae"
+  },
+  {
+    "file": "artwork\\monk\\monk_common_02.png",
+    "source_bounds": [
+      481,
+      28,
+      697,
+      485
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      264,
+      505
+    ],
+    "colors": 50390,
+    "sha256": "d75ab4b0239b95fe14a01d039bdf6a1829b37ce286d30e1d4ba1f2b2e6a2dd3f"
+  },
+  {
+    "file": "artwork\\monk\\monk_common_03.png",
+    "source_bounds": [
+      819,
+      28,
+      1064,
+      485
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      293,
+      505
+    ],
+    "colors": 58250,
+    "sha256": "2fa260cdda721504fa4a1decccb44dd33712d148017648e7c7d69cf4b02ca2fa"
+  },
+  {
+    "file": "artwork\\monk\\monk_common_04.png",
+    "source_bounds": [
+      1219,
+      28,
+      1433,
+      485
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      262,
+      505
+    ],
+    "colors": 50768,
+    "sha256": "879985d1cdb02af6566fc6c17a14b74d0725945d952895ac1fb0becc283213e2"
+  },
+  {
+    "file": "artwork\\monk\\monk_common_05.png",
+    "source_bounds": [
+      112,
+      532,
+      327,
+      993
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      263,
+      509
+    ],
+    "colors": 52108,
+    "sha256": "f5783c68ccf28417cd0d04ed1f975d8704d50f69dd13a06bc27f2bddffa5d49c"
+  },
+  {
+    "file": "artwork\\monk\\monk_common_06.png",
+    "source_bounds": [
+      480,
+      532,
+      697,
+      993
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      265,
+      509
+    ],
+    "colors": 54496,
+    "sha256": "cd43490eb9f7deb7b4e8f1e9ab6e183c6fe7b0f0b368c6f32d3a490b0ab264e6"
+  },
+  {
+    "file": "artwork\\monk\\monk_common_07.png",
+    "source_bounds": [
+      848,
+      532,
+      1065,
+      993
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      265,
+      509
+    ],
+    "colors": 55321,
+    "sha256": "8fc36c1a3da2d49289d49b65577117a516e237768035de998486474e4a694566"
+  },
+  {
+    "file": "artwork\\monk\\monk_common_08.png",
+    "source_bounds": [
+      1205,
+      532,
+      1434,
+      993
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      277,
+      509
+    ],
+    "colors": 57750,
+    "sha256": "e5fb04ede6055857145cde61c7638c2c9f09ec22c2142b4c8d7f986d96ec36d2"
+  }
+]

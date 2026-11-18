@@ -1,0 +1,130 @@
+[
+  {
+    "file": "artwork\\rogue\\rogue_rare_01.png",
+    "source_bounds": [
+      116,
+      18,
+      322,
+      485
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      254,
+      515
+    ],
+    "colors": 35727,
+    "sha256": "b63ca7ca3901ef26a8b476d9d8ba30c63010fe88113324b003705a066337a16c"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_rare_02.png",
+    "source_bounds": [
+      485,
+      18,
+      692,
+      485
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      255,
+      515
+    ],
+    "colors": 40381,
+    "sha256": "f310a8589ad45d33aba58cc690fd63664dc15fa56092b14aa26682e8f4228eb4"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_rare_03.png",
+    "source_bounds": [
+      853,
+      18,
+      1061,
+      485
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      256,
+      515
+    ],
+    "colors": 39198,
+    "sha256": "d0667d71e84e7535b428c5684c7f8a7b5cb36447335c0dcf25e90902769125ae"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_rare_04.png",
+    "source_bounds": [
+      1221,
+      18,
+      1429,
+      485
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      256,
+      515
+    ],
+    "colors": 41613,
+    "sha256": "b60192171641b66168a5382ca9df0391633b909e1f647e0cba3490246af53ed0"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_rare_05.png",
+    "source_bounds": [
+      104,
+      531,
+      322,
+      997
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      266,
+      514
+    ],
+    "colors": 40676,
+    "sha256": "84da27b320412f304cc9ae0b19f1078224736b14108336f5cd969abf584de282"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_rare_06.png",
+    "source_bounds": [
+      484,
+      531,
+      692,
+      998
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      256,
+      515
+    ],
+    "colors": 40592,
+    "sha256": "c5db86b90beabf0cd41388f90d20ed6e101483121163a03bdde9f005ffb73d41"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_rare_07.png",
+    "source_bounds": [
+      853,
+      531,
+      1061,
+      997
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      256,
+      514
+    ],
+    "colors": 38989,
+    "sha256": "154387b9a85fad27a7d16790a796a2536ddf3bcd2fbf7d34b7c2fe4b042937ad"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_rare_08.png",
+    "source_bounds": [
+      1221,
+      531,
+      1430,
+      998
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      257,
+      515
+    ],
+    "colors": 36340,
+    "sha256": "5738df6930f9e1c2b11ff980f3706b7e821f9667698b2977327f0d8ad8daa806"
+  }
+]

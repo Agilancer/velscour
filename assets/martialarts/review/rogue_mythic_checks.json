@@ -1,0 +1,130 @@
+[
+  {
+    "file": "artwork\\rogue\\rogue_mythic_01.png",
+    "source_bounds": [
+      83,
+      21,
+      307,
+      480
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      272,
+      507
+    ],
+    "colors": 47801,
+    "sha256": "ff19120dd1d350df480a68929c911aa83707f728a64f281422d75d5889332aaa"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_mythic_02.png",
+    "source_bounds": [
+      465,
+      21,
+      692,
+      480
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      275,
+      507
+    ],
+    "colors": 51070,
+    "sha256": "4fc392c58157da5b26de525e64b64dac281f381ba4b9876e9635e7e12e0db306"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_mythic_03.png",
+    "source_bounds": [
+      853,
+      21,
+      1076,
+      480
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      271,
+      507
+    ],
+    "colors": 50264,
+    "sha256": "33761c12643a76164187638d628e945304af4f2d86d1080f9008f17eb413faf4"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_mythic_04.png",
+    "source_bounds": [
+      1230,
+      21,
+      1460,
+      480
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      278,
+      507
+    ],
+    "colors": 51530,
+    "sha256": "7f42fc9d2fc842737def0a1a24a10e563787c029c21eabfe201900bf19ccd8d0"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_mythic_05.png",
+    "source_bounds": [
+      73,
+      533,
+      307,
+      992
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      282,
+      507
+    ],
+    "colors": 52327,
+    "sha256": "882df0a47b6a79305a7743cbff9f84be34e368390d1f4cc06da6d0e0b5fa4c08"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_mythic_06.png",
+    "source_bounds": [
+      461,
+      533,
+      692,
+      992
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      279,
+      507
+    ],
+    "colors": 56438,
+    "sha256": "99cb2c25be98b7da118c2f3de164b2b60a22267d5c4bbb48055ae52f544dd575"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_mythic_07.png",
+    "source_bounds": [
+      848,
+      533,
+      1076,
+      992
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      276,
+      507
+    ],
+    "colors": 50788,
+    "sha256": "18f1cc10478f7219b9eb4fa0a7233ec5e280b8df7bca2af8ffe437b3dba0feb7"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_mythic_08.png",
+    "source_bounds": [
+      1226,
+      533,
+      1460,
+      992
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      282,
+      507
+    ],
+    "colors": 47340,
+    "sha256": "e55409732ba93642c818d1abe4c9cd106fab65ac567ce917823df34e985154d7"
+  }
+]

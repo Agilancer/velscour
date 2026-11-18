@@ -1,0 +1,130 @@
+[
+  {
+    "file": "artwork\\monk\\monk_mythic_01.png",
+    "source_bounds": [
+      46,
+      15,
+      328,
+      470
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      330,
+      503
+    ],
+    "colors": 80031,
+    "sha256": "ee62c1662d80c0df9b8847b6982587c319cd75c6d686abf964b6f2909d76526a"
+  },
+  {
+    "file": "artwork\\monk\\monk_mythic_02.png",
+    "source_bounds": [
+      455,
+      14,
+      709,
+      471
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      302,
+      505
+    ],
+    "colors": 64945,
+    "sha256": "c49e1f8ef38f7da587c80e76cfa37b482d9f689c22a2550985039fe1aece4102"
+  },
+  {
+    "file": "artwork\\monk\\monk_mythic_03.png",
+    "source_bounds": [
+      817,
+      14,
+      1093,
+      471
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      324,
+      505
+    ],
+    "colors": 73073,
+    "sha256": "89fecbbf299e12ab531be90ba39a6c8cd052cb526cea96498899589db5ebf361"
+  },
+  {
+    "file": "artwork\\monk\\monk_mythic_04.png",
+    "source_bounds": [
+      1207,
+      15,
+      1478,
+      471
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      319,
+      504
+    ],
+    "colors": 76909,
+    "sha256": "c8a05309285e05958a94e868c13a6ffc63de7410e3f0cc72b5f1dbd4505f6760"
+  },
+  {
+    "file": "artwork\\monk\\monk_mythic_05.png",
+    "source_bounds": [
+      52,
+      527,
+      330,
+      983
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      326,
+      504
+    ],
+    "colors": 74185,
+    "sha256": "b96514f68b5cea9cef2dce7f5912894cea9aeff34319643bfe40ecf461773b49"
+  },
+  {
+    "file": "artwork\\monk\\monk_mythic_06.png",
+    "source_bounds": [
+      434,
+      527,
+      709,
+      983
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      323,
+      504
+    ],
+    "colors": 71488,
+    "sha256": "1818ccb16fca058a71e565396b89fde23e68658c81651b0dc466109a86b95294"
+  },
+  {
+    "file": "artwork\\monk\\monk_mythic_07.png",
+    "source_bounds": [
+      834,
+      527,
+      1093,
+      983
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      307,
+      504
+    ],
+    "colors": 68552,
+    "sha256": "df6366cab7600e8e6eb4c6a031fac2cbb756802d2ab549a66cccf83a5d424a71"
+  },
+  {
+    "file": "artwork\\monk\\monk_mythic_08.png",
+    "source_bounds": [
+      1197,
+      527,
+      1486,
+      983
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      337,
+      504
+    ],
+    "colors": 77607,
+    "sha256": "6f7c854874c1dcd898af08840b6c9fb43e92b784824d0cc50443d43728c11b81"
+  }
+]

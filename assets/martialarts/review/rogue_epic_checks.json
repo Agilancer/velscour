@@ -1,0 +1,130 @@
+[
+  {
+    "file": "artwork\\rogue\\rogue_epic_01.png",
+    "source_bounds": [
+      86,
+      17,
+      311,
+      487
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      273,
+      518
+    ],
+    "colors": 37022,
+    "sha256": "32bbe9f44175dac3646055184d21110647307d91c798b2f9b75364334f9eed21"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_epic_02.png",
+    "source_bounds": [
+      475,
+      17,
+      695,
+      488
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      268,
+      519
+    ],
+    "colors": 42643,
+    "sha256": "b45ed610c327b900271bbca5bbec81911b29b34a437d93b61fcc2bd31871022d"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_epic_03.png",
+    "source_bounds": [
+      868,
+      17,
+      1079,
+      488
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      259,
+      519
+    ],
+    "colors": 41389,
+    "sha256": "86a3c0c12abd16a3d5d5b5a652cfade79fc7da6ec1c5486f62c022a21bf1330c"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_epic_04.png",
+    "source_bounds": [
+      1237,
+      17,
+      1463,
+      488
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      274,
+      519
+    ],
+    "colors": 43809,
+    "sha256": "f4c4c9156d520279a67ab129b864de92bcc32771f48d4eb25dce340d3f6a8153"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_epic_05.png",
+    "source_bounds": [
+      99,
+      530,
+      311,
+      1000
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      260,
+      518
+    ],
+    "colors": 41838,
+    "sha256": "245582315f3db98f52d001db4ab9e095dc3aa6bbca4bc69f1a70f897baaa3393"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_epic_06.png",
+    "source_bounds": [
+      476,
+      530,
+      695,
+      1000
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      267,
+      518
+    ],
+    "colors": 45708,
+    "sha256": "41a7ab526afb88f1147766d1462b6b00559b2b61e12218eb311554f2a136c451"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_epic_07.png",
+    "source_bounds": [
+      861,
+      530,
+      1079,
+      1000
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      266,
+      518
+    ],
+    "colors": 43723,
+    "sha256": "136a9686b24fd1c785a9b42ee932d443e7dd44628f0473e0c952786b553c59c2"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_epic_08.png",
+    "source_bounds": [
+      1239,
+      530,
+      1463,
+      1000
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      272,
+      518
+    ],
+    "colors": 41768,
+    "sha256": "696049d379b72e60dd39d0a7673aad994b4652291440ccf18f6953dfdf815305"
+  }
+]

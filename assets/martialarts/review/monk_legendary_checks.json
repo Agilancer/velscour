@@ -1,0 +1,130 @@
+[
+  {
+    "file": "artwork\\monk\\monk_legendary_01.png",
+    "source_bounds": [
+      68,
+      23,
+      330,
+      491
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      310,
+      516
+    ],
+    "colors": 64922,
+    "sha256": "1707364c7eef260ad1a221537350cfc24cc6bfbddbbd4110728516e5aeed8b7a"
+  },
+  {
+    "file": "artwork\\monk\\monk_legendary_02.png",
+    "source_bounds": [
+      474,
+      23,
+      714,
+      491
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      288,
+      516
+    ],
+    "colors": 58687,
+    "sha256": "e83dc98cc0e155ab851d80665c7bdadc4fd4aa54329bda00098b4b607a058002"
+  },
+  {
+    "file": "artwork\\monk\\monk_legendary_03.png",
+    "source_bounds": [
+      846,
+      23,
+      1098,
+      491
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      300,
+      516
+    ],
+    "colors": 65126,
+    "sha256": "0bd04ba895679a7c52278489a6eb6c5259d52171fa7432718b8a5a8e4db9a6a4"
+  },
+  {
+    "file": "artwork\\monk\\monk_legendary_04.png",
+    "source_bounds": [
+      1229,
+      23,
+      1482,
+      491
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      301,
+      516
+    ],
+    "colors": 66738,
+    "sha256": "73a88602732d72cb67c56b97469079eb74a80f2cc789ebe5ea84ed7e3d83e444"
+  },
+  {
+    "file": "artwork\\monk\\monk_legendary_05.png",
+    "source_bounds": [
+      77,
+      535,
+      330,
+      1003
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      301,
+      516
+    ],
+    "colors": 60199,
+    "sha256": "98700db2880cf874ebcb3c4b7104a32b5e0b09cec2c108e3f108d766fdf43d37"
+  },
+  {
+    "file": "artwork\\monk\\monk_legendary_06.png",
+    "source_bounds": [
+      462,
+      535,
+      714,
+      1003
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      300,
+      516
+    ],
+    "colors": 64649,
+    "sha256": "7a77891c00088276d786007ad7fc6924532c70661a5e95b52eee33bbc0696ec7"
+  },
+  {
+    "file": "artwork\\monk\\monk_legendary_07.png",
+    "source_bounds": [
+      861,
+      535,
+      1098,
+      1003
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      285,
+      516
+    ],
+    "colors": 62823,
+    "sha256": "53f94c5b1cd9c660a13e97af02511078e70d6d5280cfff973286850ff56f4baf"
+  },
+  {
+    "file": "artwork\\monk\\monk_legendary_08.png",
+    "source_bounds": [
+      1223,
+      535,
+      1482,
+      1003
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      307,
+      516
+    ],
+    "colors": 67096,
+    "sha256": "b30cf4e5e27de74b424956b5d3aec3e732d77a6441fba57911784736e749a30e"
+  }
+]

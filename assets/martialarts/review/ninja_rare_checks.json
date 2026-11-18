@@ -1,0 +1,130 @@
+[
+  {
+    "file": "artwork\\ninja\\ninja_rare_01.png",
+    "source_bounds": [
+      90,
+      26,
+      309,
+      488
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      267,
+      510
+    ],
+    "colors": 30499,
+    "sha256": "60f493bd79ede7afa461d8e7f4f16175620ae351b6196854a0b2cdb4fca24759"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_rare_02.png",
+    "source_bounds": [
+      475,
+      26,
+      694,
+      488
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      267,
+      510
+    ],
+    "colors": 35411,
+    "sha256": "3a1ea56aa1745fd6fc060e7026c3a4662d3835a3c25fca99d29e238b38922bd0"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_rare_03.png",
+    "source_bounds": [
+      859,
+      26,
+      1078,
+      488
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      267,
+      510
+    ],
+    "colors": 31231,
+    "sha256": "2fcc5e91a2bdff03be71d001aa90c5dd545b7ca19402c0320bcfd261a4d20429"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_rare_04.png",
+    "source_bounds": [
+      1240,
+      26,
+      1462,
+      488
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      270,
+      510
+    ],
+    "colors": 36966,
+    "sha256": "09553e7864bd952651731d378a59a187cb12090768bdf0a0c6d21a9f50ab1b6d"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_rare_05.png",
+    "source_bounds": [
+      90,
+      538,
+      309,
+      1001
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      267,
+      511
+    ],
+    "colors": 35443,
+    "sha256": "6780e625e111ea349e5fb10dec56c35034b9ea1dc5d02122d7066d1ffa5f98c3"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_rare_06.png",
+    "source_bounds": [
+      474,
+      538,
+      694,
+      1001
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      268,
+      511
+    ],
+    "colors": 33343,
+    "sha256": "709b110e98b17505326abd1658149c006da16403e5254774c31feb30cc4d81b7"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_rare_07.png",
+    "source_bounds": [
+      860,
+      538,
+      1078,
+      1001
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      266,
+      511
+    ],
+    "colors": 38823,
+    "sha256": "3c8b2db4ba1fab8bc3f6adc7b116ae5b522365c2a7540317871aeae66c2a06d5"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_rare_08.png",
+    "source_bounds": [
+      1244,
+      538,
+      1462,
+      1001
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      266,
+      511
+    ],
+    "colors": 33057,
+    "sha256": "d5c8e312444457734b349959811acebd1eb85d42f3226831c308e07a8423da2d"
+  }
+]

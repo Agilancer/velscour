@@ -1,0 +1,130 @@
+[
+  {
+    "file": "artwork\\rogue\\rogue_uncommon_01.png",
+    "source_bounds": [
+      93,
+      16,
+      305,
+      491
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      260,
+      523
+    ],
+    "colors": 39470,
+    "sha256": "64794131cb0833b3c027dc4af8d66c027140e8ac6242b30a8bae695a73d31571"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_uncommon_02.png",
+    "source_bounds": [
+      468,
+      16,
+      689,
+      491
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      269,
+      523
+    ],
+    "colors": 42338,
+    "sha256": "82b959d386ee2a10e826601dacde0a226894c2cac9fe47453ff70de65b75231d"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_uncommon_03.png",
+    "source_bounds": [
+      862,
+      17,
+      1074,
+      491
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      260,
+      522
+    ],
+    "colors": 41555,
+    "sha256": "3b7747be37803644730ad087bd2b71b500ba2ada52e4e797ec8db076a1631b9d"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_uncommon_04.png",
+    "source_bounds": [
+      1235,
+      17,
+      1458,
+      491
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      271,
+      522
+    ],
+    "colors": 43795,
+    "sha256": "48950470bf5d69c28ae222a4d0cd8ba3addea1f99ab4ed3a22e0ecf042fe7de6"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_uncommon_05.png",
+    "source_bounds": [
+      92,
+      529,
+      306,
+      1003
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      262,
+      522
+    ],
+    "colors": 44237,
+    "sha256": "3c5e2d6a7e7986425ec4669b477945326db73fa9ea7fe9cb1cc1a295734d68e1"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_uncommon_06.png",
+    "source_bounds": [
+      476,
+      530,
+      690,
+      1003
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      262,
+      521
+    ],
+    "colors": 42316,
+    "sha256": "ef31bc8072a0aa9a949d9a58300255e06290e65bf9ac8446dd115ca4e853a9b4"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_uncommon_07.png",
+    "source_bounds": [
+      860,
+      530,
+      1074,
+      1003
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      262,
+      521
+    ],
+    "colors": 41208,
+    "sha256": "709a39c600bbf26ff3b744d41daae628f41ce7b5b077712d677fc4a0561b43c1"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_uncommon_08.png",
+    "source_bounds": [
+      1243,
+      529,
+      1458,
+      1003
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      263,
+      522
+    ],
+    "colors": 42040,
+    "sha256": "c597fc5996ad80dd9783d2504881800227ca4aa6bc04b24aed3e0935938113d3"
+  }
+]

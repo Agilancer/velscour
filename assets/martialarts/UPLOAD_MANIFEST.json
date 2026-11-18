@@ -1,0 +1,1638 @@
+{
+  "repository": "Agilancer/velscour",
+  "branch": "main",
+  "directory": "assets/martialarts",
+  "sprites": 144,
+  "classes": [
+    "monk",
+    "rogue",
+    "ninja"
+  ],
+  "per_class": 48,
+  "eight_per_rarity": [
+    "common",
+    "uncommon",
+    "rare",
+    "epic",
+    "legendary",
+    "mythic"
+  ],
+  "source_files": 269,
+  "files": [
+    {
+      "path": "armor_sheets/monk_common_eight.png",
+      "bytes": 1192843,
+      "sha256": "a9dcb5595d983adca66024a69653cb29f9b4fbef6ae9f4966298a911824cf3f5",
+      "git_blob_sha1": "b5b4da332390d078c175bf75f0238ca78bdfc65b"
+    },
+    {
+      "path": "armor_sheets/monk_epic_eight.png",
+      "bytes": 1323208,
+      "sha256": "2f67b04b09a0180ae45742113c1ec902c1d2e289481b429672c630dd2166f325",
+      "git_blob_sha1": "5e74908e566f4c6ea90a53f12158cb1978e26bdc"
+    },
+    {
+      "path": "armor_sheets/monk_legendary_eight.png",
+      "bytes": 1374822,
+      "sha256": "0e09633674bb3dd80dd36c4aea3652f12e28e7a82c5b197a371deb05749f7da6",
+      "git_blob_sha1": "df6390b82e73c27e763dfe44485bec625abf8256"
+    },
+    {
+      "path": "armor_sheets/monk_mythic_eight.png",
+      "bytes": 1664312,
+      "sha256": "97e347d218c3d331eacd4286d9c6c674b5d6adea0b77c87758cec37915ac2840",
+      "git_blob_sha1": "e36f27d17b5a3d2065c3cbaabd37f5916c97dfa2"
+    },
+    {
+      "path": "armor_sheets/monk_rare_eight.png",
+      "bytes": 1229411,
+      "sha256": "961fd4fd2f716b85caa0e939bd635a0e6a7d4e0462ae86403d46e7aa32c6ed84",
+      "git_blob_sha1": "982ae70fa989716d2c412c795cf1c976c8ebaee3"
+    },
+    {
+      "path": "armor_sheets/monk_uncommon_eight.png",
+      "bytes": 1198404,
+      "sha256": "69d7bedd0b55066f914d8119c58d025b9949401b82b3c136cbb89c0423a601f7",
+      "git_blob_sha1": "39c626f8757ef944d4c31cdd860b613be9920ad8"
+    },
+    {
+      "path": "armor_sheets/ninja_common_eight.png",
+      "bytes": 1022635,
+      "sha256": "7f9736fc2d9a90c6b84eb1ddae79eb4c724b7ea6ecf4ece46202df809a6dde53",
+      "git_blob_sha1": "49bce0003823ee5cc71fcb4d05f41a784051e549"
+    },
+    {
+      "path": "armor_sheets/ninja_epic_eight.png",
+      "bytes": 1144630,
+      "sha256": "c298019bfd6b16d3c5dd7a15cf7c6febbcd490cee5e161353f593f65ebb2e51f",
+      "git_blob_sha1": "2246a7ce35d25468ee69687e3e1110874b62a4c3"
+    },
+    {
+      "path": "armor_sheets/ninja_legendary_eight.png",
+      "bytes": 1191556,
+      "sha256": "cf199b5939b2216f94c6729d4a133e4e4f551e157f38a7c816f48a180201b824",
+      "git_blob_sha1": "5d0877053e11dc1f60c802447ecf70c55c9f74f7"
+    },
+    {
+      "path": "armor_sheets/ninja_mythic_eight.png",
+      "bytes": 1311146,
+      "sha256": "112d7d35bdce53501feaa5911ffb7e38e70ba763d66c952f9b3daf8411b97aaf",
+      "git_blob_sha1": "9c299170cb777de10352b5ae518d4b6e117d7f96"
+    },
+    {
+      "path": "armor_sheets/ninja_rare_eight.png",
+      "bytes": 1071333,
+      "sha256": "c031c7ec102d2564944e0b57b2da11cce71b583964fba5fa777c011030636af7",
+      "git_blob_sha1": "851bd2c5c7274b9571ed0165cdf654d548a8d583"
+    },
+    {
+      "path": "armor_sheets/ninja_uncommon_eight.png",
+      "bytes": 1048267,
+      "sha256": "e1d9abd44d7724214dcbc644d082d8515ae36e954ed2a68e5809a671007f5000",
+      "git_blob_sha1": "3f0fa1e7fcd253fc1cbb8247e0ba1c08fa8e2e9f"
+    },
+    {
+      "path": "armor_sheets/rogue_common_eight.png",
+      "bytes": 935664,
+      "sha256": "bc5490894fa1c8873121033a1df0d889faf6c8d5642186da14c9266b35c278f7",
+      "git_blob_sha1": "80532b5b8e2415644a5afaefeef78e01285bb2f4"
+    },
+    {
+      "path": "armor_sheets/rogue_epic_eight.png",
+      "bytes": 1103316,
+      "sha256": "d986c74b40acfbae6ff6b9ee04dfa4e612137379a7f0cd4a21e16ff2903e905d",
+      "git_blob_sha1": "876ecd50deb6edf928e402d2de327a87dbb5e9c5"
+    },
+    {
+      "path": "armor_sheets/rogue_legendary_eight.png",
+      "bytes": 1123411,
+      "sha256": "b11df0003bea937be7e80d821432fd56baf9fb052608b2a06cd505dfb94f7a38",
+      "git_blob_sha1": "3b2b1456f562d1e24f1809ebd442b91bd1429e43"
+    },
+    {
+      "path": "armor_sheets/rogue_mythic_eight.png",
+      "bytes": 1297390,
+      "sha256": "0874fb6ec4599c3eb52e92ed41fb339eadbc01aa64338afd7f0860bf306aa3ad",
+      "git_blob_sha1": "22a49014542693eed403aef36ea0cc30a66cec4a"
+    },
+    {
+      "path": "armor_sheets/rogue_rare_eight.png",
+      "bytes": 1025473,
+      "sha256": "d3b33da192c52b1cce9b8947801f6e422b15650d95d7dc1f11cf3631d7d9f462",
+      "git_blob_sha1": "3f9e508d8b2ecbc28cd6320f01c8b4b4e1010c15"
+    },
+    {
+      "path": "armor_sheets/rogue_uncommon_eight.png",
+      "bytes": 1021836,
+      "sha256": "f257d18741a244004af14f20f064baf8341686d709d53f37091e0bfa03bea041",
+      "git_blob_sha1": "42d6548199e199f3356dfa758ac619c956390fa1"
+    },
+    {
+      "path": "artwork/monk/monk_common_01.png",
+      "bytes": 181685,
+      "sha256": "86815c0bcc076046af6f785c4ac4cdbd299eec48c957a58f45719e14cc92eeae",
+      "git_blob_sha1": "dcf92822af0eb3fdd30630512b703401db72a752"
+    },
+    {
+      "path": "artwork/monk/monk_common_02.png",
+      "bytes": 171336,
+      "sha256": "d75ab4b0239b95fe14a01d039bdf6a1829b37ce286d30e1d4ba1f2b2e6a2dd3f",
+      "git_blob_sha1": "68c89929e74c70ec95cfc2b609d1678e61e732e0"
+    },
+    {
+      "path": "artwork/monk/monk_common_03.png",
+      "bytes": 194021,
+      "sha256": "2fa260cdda721504fa4a1decccb44dd33712d148017648e7c7d69cf4b02ca2fa",
+      "git_blob_sha1": "60cad2f48afab6925eecadb081a94b958b3f945a"
+    },
+    {
+      "path": "artwork/monk/monk_common_04.png",
+      "bytes": 171818,
+      "sha256": "879985d1cdb02af6566fc6c17a14b74d0725945d952895ac1fb0becc283213e2",
+      "git_blob_sha1": "2ac8d6f5519508f1fdeac91f65afcc70052518f1"
+    },
+    {
+      "path": "artwork/monk/monk_common_05.png",
+      "bytes": 173705,
+      "sha256": "f5783c68ccf28417cd0d04ed1f975d8704d50f69dd13a06bc27f2bddffa5d49c",
+      "git_blob_sha1": "99475fa841bfb423fd74bc53e06fbbd7f46d103b"
+    },
+    {
+      "path": "artwork/monk/monk_common_06.png",
+      "bytes": 181319,
+      "sha256": "cd43490eb9f7deb7b4e8f1e9ab6e183c6fe7b0f0b368c6f32d3a490b0ab264e6",
+      "git_blob_sha1": "58702ffcfaff81f6967dd5586f8e38369ab0758f"
+    },
+    {
+      "path": "artwork/monk/monk_common_07.png",
+      "bytes": 180270,
+      "sha256": "8fc36c1a3da2d49289d49b65577117a516e237768035de998486474e4a694566",
+      "git_blob_sha1": "29a32f2a7a734c7145079bbce03b5c8d44c5ffd2"
+    },
+    {
+      "path": "artwork/monk/monk_common_08.png",
+      "bytes": 188905,
+      "sha256": "e5fb04ede6055857145cde61c7638c2c9f09ec22c2142b4c8d7f986d96ec36d2",
+      "git_blob_sha1": "cec324791e151b6306d48330f38115a45e528dd1"
+    },
+    {
+      "path": "artwork/monk/monk_epic_01.png",
+      "bytes": 212798,
+      "sha256": "e7aac6242c5404fe424fe4718c9ad7fa21378bf709061fb4147b6be55579c5a8",
+      "git_blob_sha1": "cede056bdfc390b10b4fc90d0ee85b3836f75bcf"
+    },
+    {
+      "path": "artwork/monk/monk_epic_02.png",
+      "bytes": 200304,
+      "sha256": "e371bfdc07037e2a32e22d305d84ee876d392ef013407f881f86467add3dcd9a",
+      "git_blob_sha1": "ebb5635abbbf2aabe840543dac36ac0113248184"
+    },
+    {
+      "path": "artwork/monk/monk_epic_03.png",
+      "bytes": 218760,
+      "sha256": "96938287cbcd65e7743d1f59af64dc620617bcdb6a20efa2e62dc19b67ca45c8",
+      "git_blob_sha1": "a201ce056f182a8759bc5defe568469578c0e0ca"
+    },
+    {
+      "path": "artwork/monk/monk_epic_04.png",
+      "bytes": 206551,
+      "sha256": "481e79f5ff417c9707e06a9f4158e98e323b3b2dd90d59493ec48a8d905df649",
+      "git_blob_sha1": "096c4ff42550bd4a9392a4a642a386a3e2414937"
+    },
+    {
+      "path": "artwork/monk/monk_epic_05.png",
+      "bytes": 202601,
+      "sha256": "d19c63f67dffc7cd23e4650a8bb2c08cfff06f3eb58778af5fd925cbb50f54ed",
+      "git_blob_sha1": "fdf4c3ce34617e9f592808d2e263750cb96740a8"
+    },
+    {
+      "path": "artwork/monk/monk_epic_06.png",
+      "bytes": 216599,
+      "sha256": "2245f64c5521f14d1ea882f44fe75cfa9d537d33a4fdb18d5d044869d1ff34db",
+      "git_blob_sha1": "660605ada49e722d1bed2a0b9303fd0812d3b617"
+    },
+    {
+      "path": "artwork/monk/monk_epic_07.png",
+      "bytes": 213882,
+      "sha256": "f03fd613903f3e11e7c12d6cc0831be08fe57079331abfdc69b239ea3081a1a6",
+      "git_blob_sha1": "b39de024e883bcdbb7ccdb071d5c756dddc55b78"
+    },
+    {
+      "path": "artwork/monk/monk_epic_08.png",
+      "bytes": 216862,
+      "sha256": "aa809259014bfbbfd6b4d0efcb89d326a5d34df7e4bc1655e57fd82d82a87705",
+      "git_blob_sha1": "e522481c5416999ec6757f93e84a2c56d355b134"
+    },
+    {
+      "path": "artwork/monk/monk_legendary_01.png",
+      "bytes": 217384,
+      "sha256": "1707364c7eef260ad1a221537350cfc24cc6bfbddbbd4110728516e5aeed8b7a",
+      "git_blob_sha1": "09e0911881e74fc7b5b1274bdfe2207f2ffcc4d0"
+    },
+    {
+      "path": "artwork/monk/monk_legendary_02.png",
+      "bytes": 206383,
+      "sha256": "e83dc98cc0e155ab851d80665c7bdadc4fd4aa54329bda00098b4b607a058002",
+      "git_blob_sha1": "4f4b193a34181d9fca2c9d0cf331a4f0581558e0"
+    },
+    {
+      "path": "artwork/monk/monk_legendary_03.png",
+      "bytes": 219593,
+      "sha256": "0bd04ba895679a7c52278489a6eb6c5259d52171fa7432718b8a5a8e4db9a6a4",
+      "git_blob_sha1": "2ab447c4f69d430214c7705f41e68ada26106790"
+    },
+    {
+      "path": "artwork/monk/monk_legendary_04.png",
+      "bytes": 224969,
+      "sha256": "73a88602732d72cb67c56b97469079eb74a80f2cc789ebe5ea84ed7e3d83e444",
+      "git_blob_sha1": "802557bf35dd086ba0a3265b58ac9d0b932f68d5"
+    },
+    {
+      "path": "artwork/monk/monk_legendary_05.png",
+      "bytes": 218897,
+      "sha256": "98700db2880cf874ebcb3c4b7104a32b5e0b09cec2c108e3f108d766fdf43d37",
+      "git_blob_sha1": "73150b284e64388bb12048d643e631679479549b"
+    },
+    {
+      "path": "artwork/monk/monk_legendary_06.png",
+      "bytes": 223784,
+      "sha256": "7a77891c00088276d786007ad7fc6924532c70661a5e95b52eee33bbc0696ec7",
+      "git_blob_sha1": "17b086816a7b25376862bef4f40b821524269e81"
+    },
+    {
+      "path": "artwork/monk/monk_legendary_07.png",
+      "bytes": 210848,
+      "sha256": "53f94c5b1cd9c660a13e97af02511078e70d6d5280cfff973286850ff56f4baf",
+      "git_blob_sha1": "af4ed05a7fa8e9e09c5c10de31cf156957400941"
+    },
+    {
+      "path": "artwork/monk/monk_legendary_08.png",
+      "bytes": 225593,
+      "sha256": "b30cf4e5e27de74b424956b5d3aec3e732d77a6441fba57911784736e749a30e",
+      "git_blob_sha1": "72be2a09dacb7ec8fc9daa017940b2cdb67f70cd"
+    },
+    {
+      "path": "artwork/monk/monk_mythic_01.png",
+      "bytes": 263540,
+      "sha256": "ee62c1662d80c0df9b8847b6982587c319cd75c6d686abf964b6f2909d76526a",
+      "git_blob_sha1": "0d0b0d7aed8c6dc97fdc3e406484a446f521b513"
+    },
+    {
+      "path": "artwork/monk/monk_mythic_02.png",
+      "bytes": 234593,
+      "sha256": "c49e1f8ef38f7da587c80e76cfa37b482d9f689c22a2550985039fe1aece4102",
+      "git_blob_sha1": "0a8affe319d068f351ce8a0d927749536873be83"
+    },
+    {
+      "path": "artwork/monk/monk_mythic_03.png",
+      "bytes": 252812,
+      "sha256": "89fecbbf299e12ab531be90ba39a6c8cd052cb526cea96498899589db5ebf361",
+      "git_blob_sha1": "389d7a749a0f49346db912e076d24bad528005bb"
+    },
+    {
+      "path": "artwork/monk/monk_mythic_04.png",
+      "bytes": 252688,
+      "sha256": "c8a05309285e05958a94e868c13a6ffc63de7410e3f0cc72b5f1dbd4505f6760",
+      "git_blob_sha1": "c263f2960e8cdf4c1ad3c7b0f3bd092c34da37b9"
+    },
+    {
+      "path": "artwork/monk/monk_mythic_05.png",
+      "bytes": 247048,
+      "sha256": "b96514f68b5cea9cef2dce7f5912894cea9aeff34319643bfe40ecf461773b49",
+      "git_blob_sha1": "61507da67715c588237a9414109997f3d9974f37"
+    },
+    {
+      "path": "artwork/monk/monk_mythic_06.png",
+      "bytes": 262271,
+      "sha256": "1818ccb16fca058a71e565396b89fde23e68658c81651b0dc466109a86b95294",
+      "git_blob_sha1": "5ec3a1a679696b6575a8334e7b69735ddf674f4f"
+    },
+    {
+      "path": "artwork/monk/monk_mythic_07.png",
+      "bytes": 233750,
+      "sha256": "df6366cab7600e8e6eb4c6a031fac2cbb756802d2ab549a66cccf83a5d424a71",
+      "git_blob_sha1": "c0aa9f12e86a537e8f03873c195188559038ae3f"
+    },
+    {
+      "path": "artwork/monk/monk_mythic_08.png",
+      "bytes": 264184,
+      "sha256": "6f7c854874c1dcd898af08840b6c9fb43e92b784824d0cc50443d43728c11b81",
+      "git_blob_sha1": "984e451df740d5c62151a7bd75a0d655eb6cd86f"
+    },
+    {
+      "path": "artwork/monk/monk_rare_01.png",
+      "bytes": 186356,
+      "sha256": "6b3e558625ebd53d9f73ab44b01ff0032a22d75aaaed4bfde94b610f8ab054a7",
+      "git_blob_sha1": "38665ed9f28a9acbe08c05d59a94aedb349c36fc"
+    },
+    {
+      "path": "artwork/monk/monk_rare_02.png",
+      "bytes": 185631,
+      "sha256": "1e48c3d6f694ed5ff7ea180343d89f38bb96b5d252c693e4bf4b4d0143d9d552",
+      "git_blob_sha1": "e3383171ab733960612502ae27bc93e675f5c4ea"
+    },
+    {
+      "path": "artwork/monk/monk_rare_03.png",
+      "bytes": 198929,
+      "sha256": "b3eed2e0dfc986cfd9020d4c17da19c43f30bc2a5b1bb86809d869287b63a537",
+      "git_blob_sha1": "49b4e661cf18aff9f4df747bb88d8ea1b9a439e7"
+    },
+    {
+      "path": "artwork/monk/monk_rare_04.png",
+      "bytes": 185784,
+      "sha256": "a4a4babeb3f5f79902a92865015511a734aff2982c1dd96914aa27d73284d8d2",
+      "git_blob_sha1": "cfc5e890d25b29bfc94d790dd14a61ffc7ca296c"
+    },
+    {
+      "path": "artwork/monk/monk_rare_05.png",
+      "bytes": 185175,
+      "sha256": "719e9df4efaacdfea60b718b56de1d5db04afa661583953dbc5c1915e4c6ebdb",
+      "git_blob_sha1": "d213a9f8e08915bd4031207f3876525adeab3e09"
+    },
+    {
+      "path": "artwork/monk/monk_rare_06.png",
+      "bytes": 192327,
+      "sha256": "7043a3069c016bf3aa627393d0b8a5c020e3f3e89b26607733b58246cbef37ec",
+      "git_blob_sha1": "410ff69d7295868e41c0668c8510cf59f123464f"
+    },
+    {
+      "path": "artwork/monk/monk_rare_07.png",
+      "bytes": 189534,
+      "sha256": "396d7d7fa93e8a1538788b2d774a1f942054182e597334a95860ba35cb4629ec",
+      "git_blob_sha1": "bfff3ac9b843525a4f13a146bbe12870dfab61b8"
+    },
+    {
+      "path": "artwork/monk/monk_rare_08.png",
+      "bytes": 202490,
+      "sha256": "febb835f96583d9c52dc744f80ad56827b703151b758ee594a13596e23b2b7f5",
+      "git_blob_sha1": "30f15e882800078d69b9ec24db314fc0f6475ca3"
+    },
+    {
+      "path": "artwork/monk/monk_uncommon_01.png",
+      "bytes": 1402546,
+      "sha256": "1f04ff9183f7f34d89c37f78b4cd9f225e8e444d317fa6f0c29813fac9ef9c46",
+      "git_blob_sha1": "a387b1ba30834f559e42037626e912909354833e"
+    },
+    {
+      "path": "artwork/monk/monk_uncommon_02.png",
+      "bytes": 176582,
+      "sha256": "ea848dcf9f2cf5503631aea61929d39cecc99a4d6f1dc1e5b8dcb5cbc0c950ab",
+      "git_blob_sha1": "9f46715c4a3f6cb261349a9993ac0cdd7e0a5f9d"
+    },
+    {
+      "path": "artwork/monk/monk_uncommon_03.png",
+      "bytes": 189249,
+      "sha256": "224860c4bd2ad0658d232606956b407d12987737fcacf0bee0fac68831b3acd1",
+      "git_blob_sha1": "1d2362e3d51bb27250935619018cb3cef4157697"
+    },
+    {
+      "path": "artwork/monk/monk_uncommon_04.png",
+      "bytes": 188979,
+      "sha256": "a4f1c723adf1aef2a7d4199d1bf71c6358f75f467cff6624e089071fee11a2b8",
+      "git_blob_sha1": "d755829746e175c2b7ca047237acfa2e275406d6"
+    },
+    {
+      "path": "artwork/monk/monk_uncommon_05.png",
+      "bytes": 180257,
+      "sha256": "09166f130c03fb0f25be2b77b51f1cbb235cb5f29e36553c5170f18a49df35a3",
+      "git_blob_sha1": "f058796a8d7f3d4fc6fec75cfed79de0e39f0068"
+    },
+    {
+      "path": "artwork/monk/monk_uncommon_06.png",
+      "bytes": 182792,
+      "sha256": "d8893d12ebc5d6918b3e01b33a6eb9b34201520d689ef82bf13ce23ac1e8def6",
+      "git_blob_sha1": "0991609aea2382999710db2096b60828a0e16832"
+    },
+    {
+      "path": "artwork/monk/monk_uncommon_07.png",
+      "bytes": 178511,
+      "sha256": "d25571a052fbcd434eb25c2a54a3498e26e8959ea1e346c545db836f3279919b",
+      "git_blob_sha1": "151ac80a10f7a963f82292be95b2242a7e52bc2b"
+    },
+    {
+      "path": "artwork/monk/monk_uncommon_08.png",
+      "bytes": 185473,
+      "sha256": "e692ccf181ede7623d688bae63100e191b7c1398134f3e1fc8db8e1627b398a2",
+      "git_blob_sha1": "c7474849ec26d5096c1ebd067c65afa7fc9456ce"
+    },
+    {
+      "path": "artwork/ninja/ninja_common_01.png",
+      "bytes": 151200,
+      "sha256": "4dbb61908cc55e783da35b0d062b12755cf7e3bce1a55029edaf02a69ff9e577",
+      "git_blob_sha1": "c761dd9b511efb03ecb273229e3a5f687accf40c"
+    },
+    {
+      "path": "artwork/ninja/ninja_common_02.png",
+      "bytes": 152989,
+      "sha256": "ad09f181a1589d020cad07367c278d9df30a06a84246fe6b722e4662577de1b9",
+      "git_blob_sha1": "a52b9c5458e1fb4b22a20c8e546d819adaf0b2ed"
+    },
+    {
+      "path": "artwork/ninja/ninja_common_03.png",
+      "bytes": 159356,
+      "sha256": "e342d91622b218ac61b5dbdf44d849fd72c7a60349fc9a59e8815a05f88cf86c",
+      "git_blob_sha1": "cd3afa1c2643948705c711e83bdc224c7f8598a1"
+    },
+    {
+      "path": "artwork/ninja/ninja_common_04.png",
+      "bytes": 149188,
+      "sha256": "54b53f8554d6ecf493d082304e4600e60d542f2499552ea09c79e285ad4feb7a",
+      "git_blob_sha1": "48e08e2c2341c7c598f1ad42c8dd364c5f50f4b1"
+    },
+    {
+      "path": "artwork/ninja/ninja_common_05.png",
+      "bytes": 157068,
+      "sha256": "70172786c45faae919249ed7903f07f2143ee734273782934f9788329783fd67",
+      "git_blob_sha1": "3c17d182f5defebfc260b93749eec156475a3a44"
+    },
+    {
+      "path": "artwork/ninja/ninja_common_06.png",
+      "bytes": 167048,
+      "sha256": "abe1236a5061ef27e87f8e92b264eb90ce17a1e9c07c244f6f76600619d3ea4d",
+      "git_blob_sha1": "a7b9e31e70f0e4ab96c105b590d60c5481abe6a7"
+    },
+    {
+      "path": "artwork/ninja/ninja_common_07.png",
+      "bytes": 156146,
+      "sha256": "3c18f43fce63648423d0fed9b8ee83cf5faf1df984d2f3dc3ec4ae5fc4621b40",
+      "git_blob_sha1": "068d49ba60031e943a211a63d5d480fe977d39db"
+    },
+    {
+      "path": "artwork/ninja/ninja_common_08.png",
+      "bytes": 150500,
+      "sha256": "d4a008bb129432a40927d933b876b7dc214d7f8b309d137732bb3e3a1d8fd82a",
+      "git_blob_sha1": "b94f9f52c0741faf0329bc94c4a4231c8adab95c"
+    },
+    {
+      "path": "artwork/ninja/ninja_epic_01.png",
+      "bytes": 176037,
+      "sha256": "4db1d8c50f14e931a948131a8071a1bac08579c6accf09820ff0dc1000b61e4a",
+      "git_blob_sha1": "40bf65c7a5bf69a5d8616cf76fa073d5c865f815"
+    },
+    {
+      "path": "artwork/ninja/ninja_epic_02.png",
+      "bytes": 171944,
+      "sha256": "7ffa857e1a64b996258b26ed922df3cfc9b67bd33229eb0e68fd9741f727d212",
+      "git_blob_sha1": "ebbfac194b4db7aaf2650e0d7a8bf495b0e47d61"
+    },
+    {
+      "path": "artwork/ninja/ninja_epic_03.png",
+      "bytes": 182784,
+      "sha256": "5b0eb370b2b838e8952ee995c6694735820cf0422dc5ccf862f078a859152dee",
+      "git_blob_sha1": "f8490b5045ee9849a69cb94d87daeed549cae841"
+    },
+    {
+      "path": "artwork/ninja/ninja_epic_04.png",
+      "bytes": 175144,
+      "sha256": "7d31bc66db5d3d55373aba989e8ab6f18e5eeb52907437f2326c4c1b07f2026e",
+      "git_blob_sha1": "e79c7cdbacd395754b816fdf4bd2be1137ac3d4b"
+    },
+    {
+      "path": "artwork/ninja/ninja_epic_05.png",
+      "bytes": 175314,
+      "sha256": "b3d7b3873ff5cd7be21745ec365cd78cd8f7d82b5672ab8d7d4e2b0c3e0f6466",
+      "git_blob_sha1": "12d493d2d3b24d5ae1f2e76e8fee52331f22ee1b"
+    },
+    {
+      "path": "artwork/ninja/ninja_epic_06.png",
+      "bytes": 183821,
+      "sha256": "e7d0e51af58e755fbbbcb1c3a1431a183eb5f0d99eb9248cb280956256424983",
+      "git_blob_sha1": "9e0c98eeb425cb6d523514f9126ebf9b30f88cea"
+    },
+    {
+      "path": "artwork/ninja/ninja_epic_07.png",
+      "bytes": 182275,
+      "sha256": "92fd2cba348b21847c87fd71c95e19886534dabb346dc695abdbde4ed6a29b0d",
+      "git_blob_sha1": "be370f35f34e4248cc0184b1afb46ee45c3b08fe"
+    },
+    {
+      "path": "artwork/ninja/ninja_epic_08.png",
+      "bytes": 180246,
+      "sha256": "88a1df315072f6aad684a0e2b9750f73aaae126351bfcc8bc69097b09c5dcfe5",
+      "git_blob_sha1": "46e3951e048a860da9254b52e79bb61b4566a271"
+    },
+    {
+      "path": "artwork/ninja/ninja_legendary_01.png",
+      "bytes": 185225,
+      "sha256": "c338fa6c9bec25081efff6e64bb269f1cc9b682fa12a7096e5849923edfe4d19",
+      "git_blob_sha1": "ac4a9cdbd8d0b4c1604021e27006d0ee4162ae88"
+    },
+    {
+      "path": "artwork/ninja/ninja_legendary_02.png",
+      "bytes": 188789,
+      "sha256": "5154a320d5952a6a6c0119cf980dbbff416424d155425b1c8c94c7e68593969f",
+      "git_blob_sha1": "3953ff61b977907d85fd7ddd71bab9f7331fbcc4"
+    },
+    {
+      "path": "artwork/ninja/ninja_legendary_03.png",
+      "bytes": 190732,
+      "sha256": "3f41fc729a79bc91a853ca0e869cf769746067ccbaaaf90f037708663854039c",
+      "git_blob_sha1": "815a580f751f8fd17792067f50762f2ef00183a5"
+    },
+    {
+      "path": "artwork/ninja/ninja_legendary_04.png",
+      "bytes": 190239,
+      "sha256": "6a5c6481f64372cdb6fabd02b8f52c9cda98ba74a03f5dae93a42cc34e2e5188",
+      "git_blob_sha1": "3d725a3122b945cd2cd88e1ca18eb247f4f76163"
+    },
+    {
+      "path": "artwork/ninja/ninja_legendary_05.png",
+      "bytes": 192255,
+      "sha256": "02a9d81f1c8e3b46ba8eab2b35e6236b84a9c7cc3ff39d330894ddd7647a1d2f",
+      "git_blob_sha1": "b1c08b70d77f3021928d32aca880384453eb67c0"
+    },
+    {
+      "path": "artwork/ninja/ninja_legendary_06.png",
+      "bytes": 210998,
+      "sha256": "f180ea9eb77538ed771672f583d3ef999e857ef9e0b10b3aad3a3e3e1469b37f",
+      "git_blob_sha1": "ac06f6477077b598df403e796087c629b09bd1fa"
+    },
+    {
+      "path": "artwork/ninja/ninja_legendary_07.png",
+      "bytes": 187045,
+      "sha256": "a2c664d7ac1c71d8776aa057e801d47f0997b3ef0de4af89e8a7edc4c4c42f93",
+      "git_blob_sha1": "70e4ce6f9450bc60a3e6221c2b79b4671a39f18d"
+    },
+    {
+      "path": "artwork/ninja/ninja_legendary_08.png",
+      "bytes": 185539,
+      "sha256": "f3d629a5feaeb8fc9e566c6a4a7559d85082db46afeac4f73682102dab8dfbad",
+      "git_blob_sha1": "b7f5f876e5734132c01877cb44a56c188c14457a"
+    },
+    {
+      "path": "artwork/ninja/ninja_mythic_01.png",
+      "bytes": 207237,
+      "sha256": "fd7502cc81bef0ba54a32e80af7dc8f502a3a9335bcb9fb1ddf0e2f25ee15f7a",
+      "git_blob_sha1": "7b2a4f9f0ce12175fdd10acc98c14759afa9083d"
+    },
+    {
+      "path": "artwork/ninja/ninja_mythic_02.png",
+      "bytes": 205549,
+      "sha256": "56efcbbc2c50b4ac08beed202a46411d4e49b42193c34f8085447e32634e0b91",
+      "git_blob_sha1": "9e3024881fa26df5d002fe937baec4880c379abb"
+    },
+    {
+      "path": "artwork/ninja/ninja_mythic_03.png",
+      "bytes": 203298,
+      "sha256": "ebf24c1207b0955e5da5cbb0bd8398394948d9690b9dd8b9155a30a425c7aaf2",
+      "git_blob_sha1": "8a9b5b149a149dd3e881bd7f2260c815cf3d2c22"
+    },
+    {
+      "path": "artwork/ninja/ninja_mythic_04.png",
+      "bytes": 211457,
+      "sha256": "b0312ce63d0b68ca9ab313e6c9c5dffbff55849eecc47e98f023f0f25bf273b3",
+      "git_blob_sha1": "a1de687e840c59fee3cd289b8e4b32209f4ce215"
+    },
+    {
+      "path": "artwork/ninja/ninja_mythic_05.png",
+      "bytes": 206985,
+      "sha256": "fe05c973b58e1514f2ff2ae9fe089b67d46feda65467ecf7de7ab29add23ab67",
+      "git_blob_sha1": "68516e2e1f3f27fe9404d83ad1ca0b8995469696"
+    },
+    {
+      "path": "artwork/ninja/ninja_mythic_06.png",
+      "bytes": 206382,
+      "sha256": "f02a7b940db9be8efc3513d65ef4a890f451b16810b84ae363da3f656bb40caf",
+      "git_blob_sha1": "d4930c7a4f643e3e2930d2d5b9d2ccdfbc1e6a93"
+    },
+    {
+      "path": "artwork/ninja/ninja_mythic_07.png",
+      "bytes": 205503,
+      "sha256": "2dccc21a5e3485e3dfa68bdb5650eb4d2440e680b7636d02dd30c62612209c7d",
+      "git_blob_sha1": "ea163a0a493727acf667469749ca8a852895a639"
+    },
+    {
+      "path": "artwork/ninja/ninja_mythic_08.png",
+      "bytes": 226062,
+      "sha256": "b5d256cb27916c48a4f214467597752e453176e28c508c84db46c01529f8e290",
+      "git_blob_sha1": "e876d296bf221744fea82b6987bd2a11d6f3224e"
+    },
+    {
+      "path": "artwork/ninja/ninja_rare_01.png",
+      "bytes": 157886,
+      "sha256": "60f493bd79ede7afa461d8e7f4f16175620ae351b6196854a0b2cdb4fca24759",
+      "git_blob_sha1": "d5ad3f8190453d61195abe8189b1bf5c210d3e37"
+    },
+    {
+      "path": "artwork/ninja/ninja_rare_02.png",
+      "bytes": 160994,
+      "sha256": "3a1ea56aa1745fd6fc060e7026c3a4662d3835a3c25fca99d29e238b38922bd0",
+      "git_blob_sha1": "2cc049e74cb44837317a192781c107e77e44bed3"
+    },
+    {
+      "path": "artwork/ninja/ninja_rare_03.png",
+      "bytes": 165760,
+      "sha256": "2fcc5e91a2bdff03be71d001aa90c5dd545b7ca19402c0320bcfd261a4d20429",
+      "git_blob_sha1": "89b434876d923d69615ef35de4ce7e9e0fa5fdb0"
+    },
+    {
+      "path": "artwork/ninja/ninja_rare_04.png",
+      "bytes": 168240,
+      "sha256": "09553e7864bd952651731d378a59a187cb12090768bdf0a0c6d21a9f50ab1b6d",
+      "git_blob_sha1": "ae4a1c97801d8368bfbcd734c5039b5914ac16e5"
+    },
+    {
+      "path": "artwork/ninja/ninja_rare_05.png",
+      "bytes": 162142,
+      "sha256": "6780e625e111ea349e5fb10dec56c35034b9ea1dc5d02122d7066d1ffa5f98c3",
+      "git_blob_sha1": "95b9e7b4f9410c3caff7abc430aa375c958ec981"
+    },
+    {
+      "path": "artwork/ninja/ninja_rare_06.png",
+      "bytes": 164831,
+      "sha256": "709b110e98b17505326abd1658149c006da16403e5254774c31feb30cc4d81b7",
+      "git_blob_sha1": "f8503207ee7a93ea42efe4b1c2d9ec00acca0911"
+    },
+    {
+      "path": "artwork/ninja/ninja_rare_07.png",
+      "bytes": 163706,
+      "sha256": "3c8b2db4ba1fab8bc3f6adc7b116ae5b522365c2a7540317871aeae66c2a06d5",
+      "git_blob_sha1": "4a0edb1099c8987049fb188b9b51f751e949c924"
+    },
+    {
+      "path": "artwork/ninja/ninja_rare_08.png",
+      "bytes": 162788,
+      "sha256": "d5c8e312444457734b349959811acebd1eb85d42f3226831c308e07a8423da2d",
+      "git_blob_sha1": "2343ddd191de121b0554bb92fd859a1cefe1b170"
+    },
+    {
+      "path": "artwork/ninja/ninja_uncommon_01.png",
+      "bytes": 168930,
+      "sha256": "790f2dc03a06ab7934e0599c89ba8ffc984561f95814b7d7076a59b4b9e533d9",
+      "git_blob_sha1": "512a92037fa963ad074636b95cbab2ebb60e6c77"
+    },
+    {
+      "path": "artwork/ninja/ninja_uncommon_02.png",
+      "bytes": 168697,
+      "sha256": "027f175652d735a5cccdd15e4652296c26c06ec2a16e4dc92a8d5b2868fbdff5",
+      "git_blob_sha1": "e8a2b20bced59ced266c3fd0e4f0fcd8b1a9037c"
+    },
+    {
+      "path": "artwork/ninja/ninja_uncommon_03.png",
+      "bytes": 173052,
+      "sha256": "5873a3e139065ddf96e4591ed91bcf52547803c1c55414a1f52b61ee91e1abc9",
+      "git_blob_sha1": "0a05e4a8ef6b0f369e4bac4bba454e21fde31c7d"
+    },
+    {
+      "path": "artwork/ninja/ninja_uncommon_04.png",
+      "bytes": 169172,
+      "sha256": "848c679b2858c98cff9ca052700ad223efec956f7fd6cd63e16054597bb30631",
+      "git_blob_sha1": "76130004638423b02341a2588d291e8f51693132"
+    },
+    {
+      "path": "artwork/ninja/ninja_uncommon_05.png",
+      "bytes": 168587,
+      "sha256": "071a85b73d8139b3d03e2589b1f292e202cad02138aa605cc3095af61abba096",
+      "git_blob_sha1": "95bc8ed1f098e86a9781d9d9cb3cf986c923677e"
+    },
+    {
+      "path": "artwork/ninja/ninja_uncommon_06.png",
+      "bytes": 170827,
+      "sha256": "f76476a8d8901c77d164504c1dd40e28a3b999272e981182baaaec34aef03c3e",
+      "git_blob_sha1": "49a37014b1b7ac06c158b05f11ce939fc57d2590"
+    },
+    {
+      "path": "artwork/ninja/ninja_uncommon_07.png",
+      "bytes": 169764,
+      "sha256": "434f8b997566e3d44d87b5bad2300bcee228883472c579d9ed93e0f3df55b030",
+      "git_blob_sha1": "78fa83d18f21a2ee2293fa9fec441d7f1bacb67e"
+    },
+    {
+      "path": "artwork/ninja/ninja_uncommon_08.png",
+      "bytes": 168175,
+      "sha256": "968db92e9e97024729d0ffb804b230904549a38a3b02abb6b2869ac2b2f2e148",
+      "git_blob_sha1": "bfab952721cbc8ca4ca2297425026ee89b1c4287"
+    },
+    {
+      "path": "artwork/rogue/rogue_common_01.png",
+      "bytes": 142458,
+      "sha256": "f74eba814aa4d695bf7443b3f4aeb62a61d4caedb07b7ae9f11a93d5e7a2d543",
+      "git_blob_sha1": "a3e2b71610a455f4d6f924f159574ed0e9354d1f"
+    },
+    {
+      "path": "artwork/rogue/rogue_common_02.png",
+      "bytes": 145680,
+      "sha256": "265e93ed2db49faf7d4bf59ed5da210abf5e9c6f453f60c190903d1c916ebbd0",
+      "git_blob_sha1": "8d71c06915d06dc7e68a8530fb483d0756b7153f"
+    },
+    {
+      "path": "artwork/rogue/rogue_common_03.png",
+      "bytes": 144750,
+      "sha256": "8ea1d175a1105bf618fc1d5ff42d732c1739a9862aa783b5cabf7c4dbb22ea3e",
+      "git_blob_sha1": "6efe5358158d216df422e6f270b454622b095ce4"
+    },
+    {
+      "path": "artwork/rogue/rogue_common_04.png",
+      "bytes": 150274,
+      "sha256": "f32cae57ca680f00b4dab97d98726711613fe3ea91077ccd2153517bcf165ce8",
+      "git_blob_sha1": "dd77c13265784a55a24fe957347848886ab3c7b5"
+    },
+    {
+      "path": "artwork/rogue/rogue_common_05.png",
+      "bytes": 139788,
+      "sha256": "7a7e17157550ddb3ea81ae6369a86e5aa9ceb8c57f81029ead7614e0df395ef3",
+      "git_blob_sha1": "4280bc75d1ec933d654eeb51f733777fe8e0eca1"
+    },
+    {
+      "path": "artwork/rogue/rogue_common_06.png",
+      "bytes": 149924,
+      "sha256": "87fd13e7f237a2d9823a68dab2f34cc504101d5593795c42eca08a4643ddb6ef",
+      "git_blob_sha1": "5a55b6410a799a8ae823340bca1cdef8f6dc027b"
+    },
+    {
+      "path": "artwork/rogue/rogue_common_07.png",
+      "bytes": 147856,
+      "sha256": "d8d4f08ab734585fda647b1f1a24d124391afaa549609b6a1e3fd0f9247821a3",
+      "git_blob_sha1": "a58a91a12f4940c74512f4d4f8cc62abe60580a3"
+    },
+    {
+      "path": "artwork/rogue/rogue_common_08.png",
+      "bytes": 141920,
+      "sha256": "8684a5b6c763697a54376a0830e4eee76004a0231636847e7fe9925fc8cb6652",
+      "git_blob_sha1": "0b3b38c3a0bfaddaa69d58a8f2c001074f469df2"
+    },
+    {
+      "path": "artwork/rogue/rogue_epic_01.png",
+      "bytes": 171163,
+      "sha256": "32bbe9f44175dac3646055184d21110647307d91c798b2f9b75364334f9eed21",
+      "git_blob_sha1": "2e03945a18a72ed876da93a4215b213349707a42"
+    },
+    {
+      "path": "artwork/rogue/rogue_epic_02.png",
+      "bytes": 169534,
+      "sha256": "b45ed610c327b900271bbca5bbec81911b29b34a437d93b61fcc2bd31871022d",
+      "git_blob_sha1": "2fb842ef0c3cea6652ef9e652863e6ffb24fd8d3"
+    },
+    {
+      "path": "artwork/rogue/rogue_epic_03.png",
+      "bytes": 170058,
+      "sha256": "86a3c0c12abd16a3d5d5b5a652cfade79fc7da6ec1c5486f62c022a21bf1330c",
+      "git_blob_sha1": "448a0c34e8fca0157f9d5916cd52359a260825c0"
+    },
+    {
+      "path": "artwork/rogue/rogue_epic_04.png",
+      "bytes": 177771,
+      "sha256": "f4c4c9156d520279a67ab129b864de92bcc32771f48d4eb25dce340d3f6a8153",
+      "git_blob_sha1": "d1e0f57ff2a1293d7a14c3adb04b0a04311ff7fc"
+    },
+    {
+      "path": "artwork/rogue/rogue_epic_05.png",
+      "bytes": 173720,
+      "sha256": "245582315f3db98f52d001db4ab9e095dc3aa6bbca4bc69f1a70f897baaa3393",
+      "git_blob_sha1": "093ff60e551aea2d5b88c2f344a715de624d5949"
+    },
+    {
+      "path": "artwork/rogue/rogue_epic_06.png",
+      "bytes": 181841,
+      "sha256": "41a7ab526afb88f1147766d1462b6b00559b2b61e12218eb311554f2a136c451",
+      "git_blob_sha1": "643bca060b48539792c97b43878338d3cdc6c381"
+    },
+    {
+      "path": "artwork/rogue/rogue_epic_07.png",
+      "bytes": 175846,
+      "sha256": "136a9686b24fd1c785a9b42ee932d443e7dd44628f0473e0c952786b553c59c2",
+      "git_blob_sha1": "4c005e05dc6f74f271d64505613b6733fe054cf1"
+    },
+    {
+      "path": "artwork/rogue/rogue_epic_08.png",
+      "bytes": 173932,
+      "sha256": "696049d379b72e60dd39d0a7673aad994b4652291440ccf18f6953dfdf815305",
+      "git_blob_sha1": "d2d8fe9b1402db84271705882b2a6b951d8457bf"
+    },
+    {
+      "path": "artwork/rogue/rogue_legendary_01.png",
+      "bytes": 170434,
+      "sha256": "2a5f81ac6f010abad2a8f7a7808f57f97ee38999f9df720daf65f7b4ce9b77b1",
+      "git_blob_sha1": "dc3b99bc6db14febca0d1afa5a414c37b26e9a49"
+    },
+    {
+      "path": "artwork/rogue/rogue_legendary_02.png",
+      "bytes": 174858,
+      "sha256": "1d532faaf0a43cecf38a868e541ac340319d9dba08538cc5d6ee9284f696f911",
+      "git_blob_sha1": "ec7eb3abbff44c333aa0c83190c861aef1f9f545"
+    },
+    {
+      "path": "artwork/rogue/rogue_legendary_03.png",
+      "bytes": 175431,
+      "sha256": "909b45ddfd06ce5f51b036fb22679e42b14d01d57f7dd2707cfaf8ec4ab0ec21",
+      "git_blob_sha1": "1fea08b3bbcfcda204c5063118d1c040d97c39e1"
+    },
+    {
+      "path": "artwork/rogue/rogue_legendary_04.png",
+      "bytes": 176556,
+      "sha256": "72ab12c5ffbbf925108810fc53ce6db35672aafca3fbbd204b5240ea61c3c30e",
+      "git_blob_sha1": "a03401107a9d8e2f947cfc6e35622465d3243010"
+    },
+    {
+      "path": "artwork/rogue/rogue_legendary_05.png",
+      "bytes": 179837,
+      "sha256": "c0dae2416808552f1702244750865b06ed7f96f9759dd12e7150d5b8f7da9ed8",
+      "git_blob_sha1": "839e9456c1a7e9bcc24daeec516645ec5a6d1302"
+    },
+    {
+      "path": "artwork/rogue/rogue_legendary_06.png",
+      "bytes": 182765,
+      "sha256": "57733a68cb21d1d16645e33466f66a326c0a9895bd3167a7708357a3baee1a63",
+      "git_blob_sha1": "21c26abdec3895a172780331b936cfd52697e440"
+    },
+    {
+      "path": "artwork/rogue/rogue_legendary_07.png",
+      "bytes": 179349,
+      "sha256": "a6ad97b7dd835c165f4df13e2d75d917388f1fd9fd4b7dccb8d86d9173c5f11a",
+      "git_blob_sha1": "c9f52fc5722a415387f43906a4bf3892cefed65b"
+    },
+    {
+      "path": "artwork/rogue/rogue_legendary_08.png",
+      "bytes": 183558,
+      "sha256": "9c485d1e98b5ca87fd0f1d38876cfc998ecf8d99ebc4f95db1523c72a64a7257",
+      "git_blob_sha1": "1cff582923110745403258ef7466806e8185d2de"
+    },
+    {
+      "path": "artwork/rogue/rogue_mythic_01.png",
+      "bytes": 193132,
+      "sha256": "ff19120dd1d350df480a68929c911aa83707f728a64f281422d75d5889332aaa",
+      "git_blob_sha1": "aae670258b377f76abc369219c08f9797d7c4184"
+    },
+    {
+      "path": "artwork/rogue/rogue_mythic_02.png",
+      "bytes": 188030,
+      "sha256": "4fc392c58157da5b26de525e64b64dac281f381ba4b9876e9635e7e12e0db306",
+      "git_blob_sha1": "6b2c13c938e03c881970c3ae8db9e6d7b9ce40d0"
+    },
+    {
+      "path": "artwork/rogue/rogue_mythic_03.png",
+      "bytes": 191462,
+      "sha256": "33761c12643a76164187638d628e945304af4f2d86d1080f9008f17eb413faf4",
+      "git_blob_sha1": "c4ff3f02ed5254defb11162863046242a7fc1f68"
+    },
+    {
+      "path": "artwork/rogue/rogue_mythic_04.png",
+      "bytes": 190869,
+      "sha256": "7f42fc9d2fc842737def0a1a24a10e563787c029c21eabfe201900bf19ccd8d0",
+      "git_blob_sha1": "db62c6bb7127999c6674e7f02b9565b31747dd2e"
+    },
+    {
+      "path": "artwork/rogue/rogue_mythic_05.png",
+      "bytes": 196858,
+      "sha256": "882df0a47b6a79305a7743cbff9f84be34e368390d1f4cc06da6d0e0b5fa4c08",
+      "git_blob_sha1": "1c602800a19d69ada0e5b3caccaf5cd27ab4fefc"
+    },
+    {
+      "path": "artwork/rogue/rogue_mythic_06.png",
+      "bytes": 208229,
+      "sha256": "99cb2c25be98b7da118c2f3de164b2b60a22267d5c4bbb48055ae52f544dd575",
+      "git_blob_sha1": "92c9fd070928ce6187c6871ee9be6b0738a784dd"
+    },
+    {
+      "path": "artwork/rogue/rogue_mythic_07.png",
+      "bytes": 195125,
+      "sha256": "18f1cc10478f7219b9eb4fa0a7233ec5e280b8df7bca2af8ffe437b3dba0feb7",
+      "git_blob_sha1": "2e989f7b3151c39a73745bef93c214dc9626f756"
+    },
+    {
+      "path": "artwork/rogue/rogue_mythic_08.png",
+      "bytes": 207624,
+      "sha256": "e55409732ba93642c818d1abe4c9cd106fab65ac567ce917823df34e985154d7",
+      "git_blob_sha1": "fd04f87b6924a782c67aa3862259c736cb73e920"
+    },
+    {
+      "path": "artwork/rogue/rogue_rare_01.png",
+      "bytes": 152284,
+      "sha256": "b63ca7ca3901ef26a8b476d9d8ba30c63010fe88113324b003705a066337a16c",
+      "git_blob_sha1": "2d78bbd975fd045968a2ca1ed649076dd9337769"
+    },
+    {
+      "path": "artwork/rogue/rogue_rare_02.png",
+      "bytes": 156439,
+      "sha256": "f310a8589ad45d33aba58cc690fd63664dc15fa56092b14aa26682e8f4228eb4",
+      "git_blob_sha1": "a94c233bb3ac6ff37e9386b6bbf9de6f55eeb738"
+    },
+    {
+      "path": "artwork/rogue/rogue_rare_03.png",
+      "bytes": 154105,
+      "sha256": "d0667d71e84e7535b428c5684c7f8a7b5cb36447335c0dcf25e90902769125ae",
+      "git_blob_sha1": "d712dad5941d238a82df53c5f8edcdab628e12e9"
+    },
+    {
+      "path": "artwork/rogue/rogue_rare_04.png",
+      "bytes": 160839,
+      "sha256": "b60192171641b66168a5382ca9df0391633b909e1f647e0cba3490246af53ed0",
+      "git_blob_sha1": "6f836b893259fc30c8be4c611d2b4ef64c2e7fb3"
+    },
+    {
+      "path": "artwork/rogue/rogue_rare_05.png",
+      "bytes": 161851,
+      "sha256": "84da27b320412f304cc9ae0b19f1078224736b14108336f5cd969abf584de282",
+      "git_blob_sha1": "29f0c399344dbac3c7dbe89e3213fa708e99e89d"
+    },
+    {
+      "path": "artwork/rogue/rogue_rare_06.png",
+      "bytes": 159693,
+      "sha256": "c5db86b90beabf0cd41388f90d20ed6e101483121163a03bdde9f005ffb73d41",
+      "git_blob_sha1": "ababf13815ddd1d44a991370f7bfd28476ffe736"
+    },
+    {
+      "path": "artwork/rogue/rogue_rare_07.png",
+      "bytes": 159038,
+      "sha256": "154387b9a85fad27a7d16790a796a2536ddf3bcd2fbf7d34b7c2fe4b042937ad",
+      "git_blob_sha1": "da153e3cf37cdc1111f049fc5a072727bb42f1ed"
+    },
+    {
+      "path": "artwork/rogue/rogue_rare_08.png",
+      "bytes": 160104,
+      "sha256": "5738df6930f9e1c2b11ff980f3706b7e821f9667698b2977327f0d8ad8daa806",
+      "git_blob_sha1": "645b5b5c5bd73a4e160a363b14c2c453ea3a3cdf"
+    },
+    {
+      "path": "artwork/rogue/rogue_uncommon_01.png",
+      "bytes": 157587,
+      "sha256": "64794131cb0833b3c027dc4af8d66c027140e8ac6242b30a8bae695a73d31571",
+      "git_blob_sha1": "dac3b5b551daf88b811ac7894a079f4f88f81976"
+    },
+    {
+      "path": "artwork/rogue/rogue_uncommon_02.png",
+      "bytes": 162062,
+      "sha256": "82b959d386ee2a10e826601dacde0a226894c2cac9fe47453ff70de65b75231d",
+      "git_blob_sha1": "5373e327903e8fcef1ce981558981478ab5c8b5f"
+    },
+    {
+      "path": "artwork/rogue/rogue_uncommon_03.png",
+      "bytes": 161091,
+      "sha256": "3b7747be37803644730ad087bd2b71b500ba2ada52e4e797ec8db076a1631b9d",
+      "git_blob_sha1": "701623c553d39f4a6770bf7f1e3d295c0a35b7d7"
+    },
+    {
+      "path": "artwork/rogue/rogue_uncommon_04.png",
+      "bytes": 171967,
+      "sha256": "48950470bf5d69c28ae222a4d0cd8ba3addea1f99ab4ed3a22e0ecf042fe7de6",
+      "git_blob_sha1": "56d5cf4d3e7fed9dd60d8d7c6c2032f60c1fff32"
+    },
+    {
+      "path": "artwork/rogue/rogue_uncommon_05.png",
+      "bytes": 164786,
+      "sha256": "3c5e2d6a7e7986425ec4669b477945326db73fa9ea7fe9cb1cc1a295734d68e1",
+      "git_blob_sha1": "1de5a9d89c8c2caf5154e12ab2575f73d52c8f98"
+    },
+    {
+      "path": "artwork/rogue/rogue_uncommon_06.png",
+      "bytes": 157915,
+      "sha256": "ef31bc8072a0aa9a949d9a58300255e06290e65bf9ac8446dd115ca4e853a9b4",
+      "git_blob_sha1": "f7cdd8d2bc9588c3e44daa693d859f5f651eba79"
+    },
+    {
+      "path": "artwork/rogue/rogue_uncommon_07.png",
+      "bytes": 158559,
+      "sha256": "709a39c600bbf26ff3b744d41daae628f41ce7b5b077712d677fc4a0561b43c1",
+      "git_blob_sha1": "e9d1bbbe9e6b7e3783a0e444a05608c98301592f"
+    },
+    {
+      "path": "artwork/rogue/rogue_uncommon_08.png",
+      "bytes": 165326,
+      "sha256": "c597fc5996ad80dd9783d2504881800227ca4aa6bc04b24aed3e0935938113d3",
+      "git_blob_sha1": "1e9b4dd4b6eae1e3db166e091b0a5b053eed6edd"
+    },
+    {
+      "path": "CLASS_CARDS.md",
+      "bytes": 2213,
+      "sha256": "85e5ea174faa67d3225c260e59c18beac1669bbfb6cf29ae74d090cefe27a35e",
+      "git_blob_sha1": "2ea755858258cb4e9aac892a04b69eef4fd5865e"
+    },
+    {
+      "path": "class_sheets/monk_all_48.png",
+      "bytes": 2143430,
+      "sha256": "bea269ef4522730d291b35efc4383e0aeeb531718a255cea70e7036b87d29b14",
+      "git_blob_sha1": "702fe38cf28f333e62f857fb7be992cc0fd6f651"
+    },
+    {
+      "path": "class_sheets/ninja_all_48.png",
+      "bytes": 1795232,
+      "sha256": "607ba2b06b5b63ef2c33a6cc5e8aa7180de85ba074ffd3f30b89e687003db1cc",
+      "git_blob_sha1": "e72fd75fcf5ea94c35d405e86737dfa8a19a3fc9"
+    },
+    {
+      "path": "class_sheets/rogue_all_48.png",
+      "bytes": 1748811,
+      "sha256": "b3743bdcb1bde24b5fa6fa7cb414670cfeb29ca4316e5a4cfb3cb39104d33945",
+      "git_blob_sha1": "9088a3641777a38529b54cf34cde4707650f4772"
+    },
+    {
+      "path": "COLLECTION_PREVIEW.png",
+      "bytes": 804939,
+      "sha256": "9e56d5113f686dd82738a8f52ffe5a3b808a746132e4b966ba72309613c76a7b",
+      "git_blob_sha1": "8fd863ae323d8a15b05c3b6b0eb3007d49fd05e4"
+    },
+    {
+      "path": "DESIGN_CARDS.json",
+      "bytes": 96713,
+      "sha256": "e60c56afe477287e4289f6095a80dc3add7e13564f8ea0562a8475d91a21de2c",
+      "git_blob_sha1": "b26af9fa90534cc82080d9d70ccb110401b9417f"
+    },
+    {
+      "path": "DESIGN_CARDS.md",
+      "bytes": 53454,
+      "sha256": "3ae72a86955c042da96c9b942c245cd2117c5e4a36f325af77cf4b5f12493648",
+      "git_blob_sha1": "629a23571ebc387e1ea9933307e860cd0def264b"
+    },
+    {
+      "path": "FINAL_FILE_CHECKS.json",
+      "bytes": 60697,
+      "sha256": "842e6f695a7d5c0323e16d93d2721fcbec0362390f4de17f9767262bd6b00f95",
+      "git_blob_sha1": "42471e9064d608abbd97f87d8f637519d9571163"
+    },
+    {
+      "path": "FINAL_LAYOUT_REVIEW.md",
+      "bytes": 2158,
+      "sha256": "152de561c99a3bc90c875f5a76d91b831ef2fd5d5746e444e5e4e57e622a29e6",
+      "git_blob_sha1": "fd42c5fb8f45e357296dd6a4c276249734534eca"
+    },
+    {
+      "path": "GAME_SIZE_READ_60PX.png",
+      "bytes": 523133,
+      "sha256": "e7eee4a0f77ba1705c0a120a918f9657dc251ba3aaec0b21788050bdb0c1966c",
+      "git_blob_sha1": "6e3a08f1c97240b5aa3453d97a23bceb44af942a"
+    },
+    {
+      "path": "identity_anchors/monk_default.png",
+      "bytes": 181685,
+      "sha256": "86815c0bcc076046af6f785c4ac4cdbd299eec48c957a58f45719e14cc92eeae",
+      "git_blob_sha1": "dcf92822af0eb3fdd30630512b703401db72a752"
+    },
+    {
+      "path": "identity_anchors/monk_head.png",
+      "bytes": 24295,
+      "sha256": "9d54423eac38076f782f8ca26eb26d7654765671d88f27cecd7d0cf4524f2ba1",
+      "git_blob_sha1": "b7336f075d2872be0911714c31b6e29c5c392746"
+    },
+    {
+      "path": "identity_anchors/ninja_default.png",
+      "bytes": 151200,
+      "sha256": "4dbb61908cc55e783da35b0d062b12755cf7e3bce1a55029edaf02a69ff9e577",
+      "git_blob_sha1": "c761dd9b511efb03ecb273229e3a5f687accf40c"
+    },
+    {
+      "path": "identity_anchors/ninja_head.png",
+      "bytes": 21038,
+      "sha256": "380d195b2df52d5aad9da5d7625ea23abbe2c147ef4604bfc784cc9450120dbb",
+      "git_blob_sha1": "accd2528714f46a35a80f7388f88ae80cb02b0cb"
+    },
+    {
+      "path": "identity_anchors/rogue_default.png",
+      "bytes": 142458,
+      "sha256": "f74eba814aa4d695bf7443b3f4aeb62a61d4caedb07b7ae9f11a93d5e7a2d543",
+      "git_blob_sha1": "a3e2b71610a455f4d6f924f159574ed0e9354d1f"
+    },
+    {
+      "path": "identity_anchors/rogue_head.png",
+      "bytes": 20753,
+      "sha256": "16880bc7385798129065e734c4971177e27474586df65a7f03b26600910448d8",
+      "git_blob_sha1": "8107bc1848e0bc23891679f6dbe632ba3abc1f5f"
+    },
+    {
+      "path": "MONK_48_PREVIEW.png",
+      "bytes": 1644162,
+      "sha256": "6998cf7b96119ff4b78d5e6e98fe3850b6a827da7d6524bbd45ef335d7645971",
+      "git_blob_sha1": "f6e7edbf3e29447dd939bfbcddebf04521eba79d"
+    },
+    {
+      "path": "NINJA_48_PREVIEW.png",
+      "bytes": 1361425,
+      "sha256": "7fad9b70d352498697700352c2fcd3bc35e4d7db2b803b3019b3e295e458ac93",
+      "git_blob_sha1": "30d3fc4e4541ae693cb16b4aa3a9e9ade52808b1"
+    },
+    {
+      "path": "PRODUCTION_LOCK.md",
+      "bytes": 991,
+      "sha256": "27caa9650cbab129dadfbcde67a28124f801ef9b526b099f6e4ab0f520317f32",
+      "git_blob_sha1": "6e4f0a722a31791fd42826411ea0fb8b65b88059"
+    },
+    {
+      "path": "PRODUCTION_STATUS.md",
+      "bytes": 617,
+      "sha256": "431427b4aa361cd14867d1fe2becaf55ea59d19513081efc1d0268693f8271d4",
+      "git_blob_sha1": "d8138f12361284d619c1e194313c860281381420"
+    },
+    {
+      "path": "prompts/monk_common.txt",
+      "bytes": 5555,
+      "sha256": "89a31bbaff4afef4c523578ad4be14c38bcc77f35804d4b81bc2c0236293d81f",
+      "git_blob_sha1": "76e8f475ce1baf594fcfaca5de95f4bb8681a889"
+    },
+    {
+      "path": "prompts/monk_epic.txt",
+      "bytes": 6194,
+      "sha256": "9a1483a1152e772646fb9bbc5ad5f7cd862ab336714c3f1be1b56870307fdb29",
+      "git_blob_sha1": "df81bed9bcf384ce41b75a2ef799945f6143a3e2"
+    },
+    {
+      "path": "prompts/monk_legendary.txt",
+      "bytes": 6298,
+      "sha256": "a236f2c59f285890de1f1af3cbb21ba6815a1efea677b4751de1970ba19a61cd",
+      "git_blob_sha1": "881fe6bbf23aa901bce2ef805acc2b4ea79a0538"
+    },
+    {
+      "path": "prompts/monk_mythic.txt",
+      "bytes": 7018,
+      "sha256": "0734a2e77a3816837612d588655a13806e6e16556f2ac0811dbd5f4658011d7e",
+      "git_blob_sha1": "66f42b0389130465e90e86b3c83b3a7a6057a037"
+    },
+    {
+      "path": "prompts/monk_rare.txt",
+      "bytes": 6064,
+      "sha256": "27794961f4beb552f3ed361a2fa365a6d72876efedb32087e2e16684beaf6fe1",
+      "git_blob_sha1": "b4e20c9cb2ca19a38b84699b0d4e2d843f0222e2"
+    },
+    {
+      "path": "prompts/monk_uncommon.txt",
+      "bytes": 6145,
+      "sha256": "92d920b454d2632a6d743adafc67c253fce14ed2220f8a629399c24cf466ceb0",
+      "git_blob_sha1": "447dd433f4e40107555a17cc6f8e740d4bcc11ab"
+    },
+    {
+      "path": "prompts/monk_uncommon_01_correction.txt",
+      "bytes": 1121,
+      "sha256": "e5292166a57bec3b54b9aed2fa965e86b78b9b218faebbe2c3efcaa2e1e8d201",
+      "git_blob_sha1": "235bd7646316b5ad336cdcfeef3713e6d4a6cca4"
+    },
+    {
+      "path": "prompts/ninja_common.txt",
+      "bytes": 5888,
+      "sha256": "e1db2b9ce7abb70436ce9cc6ba6400968ebc9a39b8a3fe0b849b76bbd222b779",
+      "git_blob_sha1": "692e29718ccc34695329e72c26c9ad16de3aef5d"
+    },
+    {
+      "path": "prompts/ninja_epic.txt",
+      "bytes": 6473,
+      "sha256": "5670e925f35aff24cd60bd436c56d1d7db9194162cfb94fdc82de3e433a2eb3e",
+      "git_blob_sha1": "9d8804ef01bd3f6f0356cad56fc861e2bf2946ad"
+    },
+    {
+      "path": "prompts/ninja_legendary.txt",
+      "bytes": 6647,
+      "sha256": "a653196e308b3d88083c21cf6b6fee46c10ed511e91b860c739acd8f50b8c520",
+      "git_blob_sha1": "4c31b6a78e4a98c685005cf72171b691b562addf"
+    },
+    {
+      "path": "prompts/ninja_mythic.txt",
+      "bytes": 7364,
+      "sha256": "cb1fec0d4424e0ff3a9fb6547bca5a8d9c9b5efceffaa394ccc0765e4c05a33a",
+      "git_blob_sha1": "c31b045b67ce9aedf499cba45c1467c65c93545c"
+    },
+    {
+      "path": "prompts/ninja_rare.txt",
+      "bytes": 6368,
+      "sha256": "b96fdf0eab5e79f6955a0ee059f87259f67a8d9b396f08b334fe66f274fa921a",
+      "git_blob_sha1": "42acdf6f5199480736acb39622bfcf1d87ba5615"
+    },
+    {
+      "path": "prompts/ninja_uncommon.txt",
+      "bytes": 6483,
+      "sha256": "8d56e72b77dab961312f546f999ff93652871fdeb8664f58f1994f1dfdb2a33a",
+      "git_blob_sha1": "42df796b7a90fa925f55fca6c5c2037d82d126a7"
+    },
+    {
+      "path": "prompts/rogue_common.txt",
+      "bytes": 5565,
+      "sha256": "7e4fe4a94221f6a97189520a51f03d0ed11ea94defcd3cbf643d5184dd9b6cb1",
+      "git_blob_sha1": "89b161a1a0cde53c6ad8645588eababaccc190c0"
+    },
+    {
+      "path": "prompts/rogue_epic.txt",
+      "bytes": 6200,
+      "sha256": "ea6567f4c91f73f1648c421f00873abc1b42c640b5b522a837f64fcf0973edca",
+      "git_blob_sha1": "24ca563f75f79c6b01b98bab055222c6b5951618"
+    },
+    {
+      "path": "prompts/rogue_legendary.txt",
+      "bytes": 6317,
+      "sha256": "0dcbc38bacf6b9dc83316bc55c3de35b5d18778f25ad5022971b6dae68554129",
+      "git_blob_sha1": "4f3c222e70d3c3469445265a7a8cc9d054558758"
+    },
+    {
+      "path": "prompts/rogue_mythic.txt",
+      "bytes": 7045,
+      "sha256": "2d593b197097271d1ea802d949c5338af1ded93b6a2ef88eb3b0fd3b00f8148f",
+      "git_blob_sha1": "61d8c1d757a8f850fe0dc922570f2fd90ad86734"
+    },
+    {
+      "path": "prompts/rogue_rare.txt",
+      "bytes": 6088,
+      "sha256": "1594f2121c9cfb18b115bae26731b39baca678b23e5cf76795d7f43b7d1e1ade",
+      "git_blob_sha1": "8c9910c13577b7015d4ced45ca5e9752a25660fb"
+    },
+    {
+      "path": "prompts/rogue_uncommon.txt",
+      "bytes": 6161,
+      "sha256": "ecbe13781ff1ba759a07872151877c08404fb9b043195610c47a0591533e830a",
+      "git_blob_sha1": "3003b8ddf79fb2e515c67151462723c2a97a62e5"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2395,
+      "sha256": "9837b0910417666455dd84ab7c0f9e6a722f209316b7cb7769f9d3cca3ca6cdc",
+      "git_blob_sha1": "32fb26818d5001c2eef3d3c88329a688cd025cda"
+    },
+    {
+      "path": "review/monk_common_checks.json",
+      "bytes": 2653,
+      "sha256": "50a2c7194dd431a274117378aa3f84f3a2257a47d16a4c3f9aece27165d9091e",
+      "git_blob_sha1": "c08416de66ffe841a4c0ab384fe4a97df85f110b"
+    },
+    {
+      "path": "review/monk_common_review.png",
+      "bytes": 697468,
+      "sha256": "469462dbe6035b24dfc18b72dda58f89793c4fb105ecef93d5f2718853b87902",
+      "git_blob_sha1": "723c80969464b86eb77868ea62423b573ce1f7aa"
+    },
+    {
+      "path": "review/monk_epic_checks.json",
+      "bytes": 2639,
+      "sha256": "a7a992317eab441bcf13d9c66d13d0b2225527578d95018350b8cc9baf67c657",
+      "git_blob_sha1": "042e7a8c7bf64090d7cff4c4310ac60a84a291fc"
+    },
+    {
+      "path": "review/monk_epic_review.png",
+      "bytes": 774103,
+      "sha256": "f588f5ab606db64a7f73d97aef0766e0dfa822fbb9e82b8ed634c93ab5bca152",
+      "git_blob_sha1": "eb92a31e98b00aac154a2b84154411dca36b1aa7"
+    },
+    {
+      "path": "review/monk_legendary_checks.json",
+      "bytes": 2679,
+      "sha256": "f1d8cabf3bebb7020439e1a6e8d73189986a64caa129dd77b46c61ec484dcf15",
+      "git_blob_sha1": "72254ca0a4189f45f7979d3018f6a4ec448dcfe2"
+    },
+    {
+      "path": "review/monk_legendary_review.png",
+      "bytes": 817125,
+      "sha256": "7e34008c4597db1bc9fec0a7a8b3948fd7aa70204054ea76b2fa9ed0c218fc41",
+      "git_blob_sha1": "ed40a24f5a536a87ffc505c4bf96195fdd1036f7"
+    },
+    {
+      "path": "review/monk_mythic_checks.json",
+      "bytes": 2651,
+      "sha256": "32d4afc9acf15760d568c2d9e954e364fadbd009bc86e80a05d08346eaa18b6f",
+      "git_blob_sha1": "8d50efbdcb342c97af8bb6bd63261241a1e03f5e"
+    },
+    {
+      "path": "review/monk_mythic_review.png",
+      "bytes": 979270,
+      "sha256": "2c4e77f31855f4bb0b9b0ee03b9a4080b453f2ff1645f6c79ae92d2317f0dff6",
+      "git_blob_sha1": "3213ef7af6524bd8ad6707b6cb5fcba60387a569"
+    },
+    {
+      "path": "review/monk_rare_checks.json",
+      "bytes": 2637,
+      "sha256": "b7645a782a2f747129f4f13bfc9cad9574e85b388bfe95a25dbfec2f4b229d8f",
+      "git_blob_sha1": "a28d008f91e909f0d99374acf21d78314225a6e6"
+    },
+    {
+      "path": "review/monk_rare_review.png",
+      "bytes": 725100,
+      "sha256": "803e900663421ff7bc9ae9a779574a1d8a9005b0f7bc8b47d4509fc952aefc68",
+      "git_blob_sha1": "a9475fb5cc48ff68c1f31d5e83a4614ddd0a0af6"
+    },
+    {
+      "path": "review/monk_uncommon_checks.json",
+      "bytes": 2783,
+      "sha256": "654b9893ddf7d265441e4a982fd12fe2604c795508feff4a4d9b5f6febf68f23",
+      "git_blob_sha1": "2c674b4db09d6a0c7743f85baad068dca566b373"
+    },
+    {
+      "path": "review/monk_uncommon_review.png",
+      "bytes": 704915,
+      "sha256": "0faf95e8e559eb2471191815e15c2c8af07b2d647efa10094a9d3666cdbae53a",
+      "git_blob_sha1": "7fd8080095d8bfedc58ad8833e94acece2bd809c"
+    },
+    {
+      "path": "review/ninja_common_checks.json",
+      "bytes": 2673,
+      "sha256": "ffff215fe9fa877292bd47a7469cd8c52d8d193ae70e913aa7b8f49acb28c3ac",
+      "git_blob_sha1": "11074a468d373891bb5c4ac766e21f0c956c880a"
+    },
+    {
+      "path": "review/ninja_common_review.png",
+      "bytes": 580198,
+      "sha256": "70de87063aef0f7b2b6abfad65983b1bb5ca5b489d3da0145bf3fa47dc494208",
+      "git_blob_sha1": "41fa3b7218ef95cfa1b0a98a87193680a2ea3e56"
+    },
+    {
+      "path": "review/ninja_epic_checks.json",
+      "bytes": 2652,
+      "sha256": "fd75b0b9c5db8283aace5e5a5c556271fd9215e31ca61baa5297b7c7ef3156a2",
+      "git_blob_sha1": "e4882e454cfbbd562787f44580b393d3e4484224"
+    },
+    {
+      "path": "review/ninja_epic_review.png",
+      "bytes": 661743,
+      "sha256": "d045ad679326464eb66d05f72755fee6714e8618f6570b78414ff9d3edf2f07b",
+      "git_blob_sha1": "00ac1245240a0aaa4f4651c487eb0c05f36025f5"
+    },
+    {
+      "path": "review/ninja_legendary_checks.json",
+      "bytes": 2695,
+      "sha256": "4bf692ffc38f11c43dc74606668bcb78fe11ae23acda19558f13d460e0feb9bb",
+      "git_blob_sha1": "e2558c2624ee60d43c1f4f21e9b597b98e0ba6f2"
+    },
+    {
+      "path": "review/ninja_legendary_review.png",
+      "bytes": 700880,
+      "sha256": "fa4fc32f259aa5e5768b7de179162ce20046e4d03013b6e61c9239b13888a227",
+      "git_blob_sha1": "10c3c4d27ec9b5fdad1379f435d6919afaabd2e2"
+    },
+    {
+      "path": "review/ninja_mythic_checks.json",
+      "bytes": 2671,
+      "sha256": "beccab515d1a312e9c9151ea4e7bf58faf0dfcd5f4141a7187082ef7946469b4",
+      "git_blob_sha1": "d0c2f3d6db077d84fd510b55f79d1fc4a0bc13db"
+    },
+    {
+      "path": "review/ninja_mythic_review.png",
+      "bytes": 757053,
+      "sha256": "bb4441c62659e94713b47bfdfac254b2b9cf29d77f7b273ad7188dee58adc004",
+      "git_blob_sha1": "fa6f8f21870ca4a66a0cbaa23ec4b0f7289ad8e7"
+    },
+    {
+      "path": "review/ninja_rare_checks.json",
+      "bytes": 2655,
+      "sha256": "42b7e977ab211e7e125278b7ae9d81ec4d496a9ed9d5a6f5a4647bcc54164059",
+      "git_blob_sha1": "7391f229cd1118792244bca3900ec25ea47f8f30"
+    },
+    {
+      "path": "review/ninja_rare_review.png",
+      "bytes": 616884,
+      "sha256": "65b3920acff15664c98da27164cd909e57140e95ad11e69a578b014e7acb5a94",
+      "git_blob_sha1": "d1f9ba35dca4975a71f8144a4eb59433e58f6b54"
+    },
+    {
+      "path": "review/ninja_uncommon_checks.json",
+      "bytes": 2687,
+      "sha256": "5a1eb015eee3fd401e3495354c1018bc7fa83cf335c4521505e751747d2bdbd5",
+      "git_blob_sha1": "64bd0d4ce9cdffdfde5d741467332ffd0c148c8e"
+    },
+    {
+      "path": "review/ninja_uncommon_review.png",
+      "bytes": 600164,
+      "sha256": "cbd33650e14f23b97797e0e294c18d8d4e4caccde3c5ee1a4318cb479952c439",
+      "git_blob_sha1": "d8fc6896310037e3a364dc4a6aaafce718fbbf85"
+    },
+    {
+      "path": "review/rogue_common_checks.json",
+      "bytes": 2669,
+      "sha256": "0b12025bda862f46b835347aa2aea8fe64598c036f54184d9d7a75f475317a97",
+      "git_blob_sha1": "7a4e6b6dad9ff7f6eb0fd279059e8ca4c7e034f1"
+    },
+    {
+      "path": "review/rogue_common_review.png",
+      "bytes": 538456,
+      "sha256": "e8c4ac255d9c680107a4aa95e46eabd128f734a2cedada5c076b4d7e67184398",
+      "git_blob_sha1": "8e83fa373ffa69cc7696697cd0a132426d1e9f41"
+    },
+    {
+      "path": "review/rogue_epic_checks.json",
+      "bytes": 2655,
+      "sha256": "dc9caf2bee274e077e667c0cbce16ea4cd6c15d252568df8306630ff61f3484f",
+      "git_blob_sha1": "65d3e21caa263cb9b82ab459359ed6fbc05845e7"
+    },
+    {
+      "path": "review/rogue_epic_review.png",
+      "bytes": 639943,
+      "sha256": "80fbe0be048af448b5fe325dca2ef8d57d82c9c93e9b4f89a70424ad10174319",
+      "git_blob_sha1": "f5d4c156dab7d8c0f4031f1c3ada1fdccf209f63"
+    },
+    {
+      "path": "review/rogue_legendary_checks.json",
+      "bytes": 2691,
+      "sha256": "1e17953212437c52a0b944a1da1eaecb91910ebf5ee2a7be2c2646ef22e477cb",
+      "git_blob_sha1": "5e6d5a4770653bdcb5d6badf503c6df02fac3136"
+    },
+    {
+      "path": "review/rogue_legendary_review.png",
+      "bytes": 647598,
+      "sha256": "2e83614ea5dc70f2d197d743fe058eb63be1fcde540c29896736dffffcd694e4",
+      "git_blob_sha1": "06eaa4d639516fb5d509d251f870d9154e1e6184"
+    },
+    {
+      "path": "review/rogue_mythic_checks.json",
+      "bytes": 2667,
+      "sha256": "43a68c78cdd3577506d0a3a16805783754f04cdc2195dcba39e6c068d19f624e",
+      "git_blob_sha1": "6ae7ab347755893400e4ec584f63b4ec688eedc1"
+    },
+    {
+      "path": "review/rogue_mythic_review.png",
+      "bytes": 742038,
+      "sha256": "3e0988ab321208f726ad01ae8701a22dfe02dfcadd6e26cb671ebb40646d970f",
+      "git_blob_sha1": "87b1832899e45d22f87601b2c788672b31cfe2f2"
+    },
+    {
+      "path": "review/rogue_rare_checks.json",
+      "bytes": 2653,
+      "sha256": "b46a469095c02df687500f3e80b3df3eb1a833adda42b7d1572863d99501c5bf",
+      "git_blob_sha1": "0c1e881ec663e9533926a59b29d4736c39ce84a5"
+    },
+    {
+      "path": "review/rogue_rare_review.png",
+      "bytes": 590046,
+      "sha256": "44f7709544ee014d4c9a5c78a3ec6f0c5fb3a27a8886e209c211ac436d735d41",
+      "git_blob_sha1": "4ae094504ba311c2b2a466d38160bc672fcc6239"
+    },
+    {
+      "path": "review/rogue_uncommon_checks.json",
+      "bytes": 2687,
+      "sha256": "fa6bb8521f711db07d5a2333f96921b398000025ca03ac50d10c4512ac475a4c",
+      "git_blob_sha1": "361d31bcdc815ef92d05e33143e54b31e1e1ff85"
+    },
+    {
+      "path": "review/rogue_uncommon_review.png",
+      "bytes": 584836,
+      "sha256": "9708f3d3b8f32b669310d147394d790df65ac058e2b8a73383c324fa6bfd7997",
+      "git_blob_sha1": "37395280f6c25b35c5560f70a800602ba4e22785"
+    },
+    {
+      "path": "ROGUE_48_PREVIEW.png",
+      "bytes": 1312578,
+      "sha256": "5451a1bd0a447d98557b9d01b8f2b9164a4b2ec5ae6939968597bca31571d6c1",
+      "git_blob_sha1": "ecd81ded8f825b530ce10562e4eedab42f3fb2bd"
+    },
+    {
+      "path": "SAVED_ATLAS_CHECKS.json",
+      "bytes": 112145,
+      "sha256": "a4fd5e45f3a781abcca03c77665aa4a3450c4ebc44b085af94770fb6c557b692",
+      "git_blob_sha1": "465d1680cc3d1491956b1f4994762aa71569e5fc"
+    },
+    {
+      "path": "SOURCE_REFERENCE_USAGE.json",
+      "bytes": 14353,
+      "sha256": "08b28add2b3752a5295fedda8b5f9d2336294c8dd6d8315cdb6b442aa5615a2b",
+      "git_blob_sha1": "57cb86971853a17b4a2cf7983c55123469cbe88c"
+    },
+    {
+      "path": "source_sheets/monk_common.png",
+      "bytes": 2388329,
+      "sha256": "b683a3f12d44e0d41637716be03842cd3614cae4c2309cbe38168bc7f7d43b3c",
+      "git_blob_sha1": "fb095595e7df00a0626eb6418835e21e93726a76"
+    },
+    {
+      "path": "source_sheets/monk_epic.png",
+      "bytes": 2577808,
+      "sha256": "5b184242f36641fbd66260697b449923e090ae79ffcb80e3777364090a2fe156",
+      "git_blob_sha1": "5b22da70ce50c74a16d83f8c36b95970c050a6b1"
+    },
+    {
+      "path": "source_sheets/monk_legendary.png",
+      "bytes": 2597406,
+      "sha256": "2dde357f2ed2a2aef2cd76590d54029c2167b9821513820837365315f5eb059d",
+      "git_blob_sha1": "9b34b1b3cdcb7659ef12b94ab831c0782a6f6780"
+    },
+    {
+      "path": "source_sheets/monk_mythic.png",
+      "bytes": 2808604,
+      "sha256": "1edd90b97da1abe2ced1f40d2f81f0ee3419ad8ff66ea31123462aa2e4cdf536",
+      "git_blob_sha1": "3e216897d65d1ab7b314a1462cdc8f679703b1ba"
+    },
+    {
+      "path": "source_sheets/monk_rare.png",
+      "bytes": 2420515,
+      "sha256": "419ed49303190ac3890fb9a41e30fb829822e5d80975221cc43ff47733548b8d",
+      "git_blob_sha1": "170684a69d9dd1e0d440fca779f69ce4aebb5a3b"
+    },
+    {
+      "path": "source_sheets/monk_uncommon_01_corrected.png",
+      "bytes": 1429591,
+      "sha256": "3d44b489898df3da19b5238cb7d1585ba72ea2cc62c1e4cdee28091518a5d652",
+      "git_blob_sha1": "9b8c0ade0c9d5c1368756074b719af171e90eb40"
+    },
+    {
+      "path": "source_sheets/ninja_common.png",
+      "bytes": 2176455,
+      "sha256": "936673a718839331833f619031ae8014bfac22cc1d7b5e81b6fe8d2301969a26",
+      "git_blob_sha1": "e44f6a28ee0316ac5f305c53d7a2f8910a5d6dd6"
+    },
+    {
+      "path": "source_sheets/ninja_epic.png",
+      "bytes": 2296295,
+      "sha256": "b5e838b9db08397b6d8f493ab4feb3985cc5b063e0d5fb78daa5c435005bcd25",
+      "git_blob_sha1": "3376ba04b85637ac8e002e358937939db9a53712"
+    },
+    {
+      "path": "source_sheets/ninja_legendary.png",
+      "bytes": 2376518,
+      "sha256": "f6d563fd3eeaf0ce37642e8a909d83b844a09eacb31cbe866f62822c2748d4c8",
+      "git_blob_sha1": "4af5c8af0b7bdb0bf2c363eec26aa9caf47aba68"
+    },
+    {
+      "path": "source_sheets/ninja_mythic.png",
+      "bytes": 2449948,
+      "sha256": "f76be6e2da9c63218114fd4d3e2a701b8034f4140892d17840a6d61ec7d9b704",
+      "git_blob_sha1": "0e0995eeb24049b2f905d5dee3026f3fc9774cc6"
+    },
+    {
+      "path": "source_sheets/ninja_rare.png",
+      "bytes": 2203852,
+      "sha256": "95f572c79050bbdb9eb26ab726788283943abd3dd1a46e9ce7bb29c590ed9169",
+      "git_blob_sha1": "8c722045ff85409cfbb135cf36641f68926e05c3"
+    },
+    {
+      "path": "source_sheets/ninja_uncommon.png",
+      "bytes": 2273278,
+      "sha256": "7ac319bc01089ab2e7a64cbe8a1c505b314aacd9e410911b89f8f378751b7257",
+      "git_blob_sha1": "8ba421b1d35047ac57d1fa55d0c4e1ac0b642032"
+    },
+    {
+      "path": "source_sheets/rogue_common.png",
+      "bytes": 2080645,
+      "sha256": "dfeb8c5814e2f82654148a068e3416e2416555bbde49e40782dc08aa8f36cd88",
+      "git_blob_sha1": "96bd703e0f942a5c89d1efba0c216614f674df99"
+    },
+    {
+      "path": "source_sheets/rogue_epic.png",
+      "bytes": 2280476,
+      "sha256": "22a892a7f7a516f84a103ba9a1446e517b5d674057205d057ab8e26cbaef41ae",
+      "git_blob_sha1": "5447d45dbbbe88d42979e672f35b4b8a543e1afe"
+    },
+    {
+      "path": "source_sheets/rogue_legendary.png",
+      "bytes": 2301121,
+      "sha256": "3871747b4bfafb59e23c8c896be65831b51253e7dbc1838de5134495c9828340",
+      "git_blob_sha1": "34b5a0d6209935afe1a099928992a60152df9928"
+    },
+    {
+      "path": "source_sheets/rogue_mythic.png",
+      "bytes": 2468646,
+      "sha256": "e720eaab38a2adfdb92c21be0ab98dbd9dc99988221555601579763fa585b15e",
+      "git_blob_sha1": "d273e047e14275f70cbd2ab2c6c2ae9d9558be89"
+    },
+    {
+      "path": "source_sheets/rogue_rare.png",
+      "bytes": 2172127,
+      "sha256": "00ee7942e560aa0b2134215c32bd0da21dfd2e7b7e49e4876bacbe8de34e6f8b",
+      "git_blob_sha1": "59f6d6254ce4dfbc6efeb68ad9d937c292734634"
+    },
+    {
+      "path": "source_sheets/rogue_uncommon.png",
+      "bytes": 2211447,
+      "sha256": "1ea474183340e63d6aa612916414e8235c906df74f3aa3fa18a5da2fbb4cf054",
+      "git_blob_sha1": "7915a8cf8ca78ced1620278c23d8c36ba18bd5fa"
+    },
+    {
+      "path": "style_lock/ARMOR_PROMPT_TEMPLATE.txt",
+      "bytes": 8269,
+      "sha256": "66765d1f73d8cbea114bb00a52a6327a6142fa35db92d6bbbee769fb3e7d735f",
+      "git_blob_sha1": "b68576e4cb1e31992ac5576adc9095e585aed034"
+    },
+    {
+      "path": "style_lock/CLASS_CARDS.md",
+      "bytes": 53883,
+      "sha256": "7a0ce68e85c9a6f449415b97ceb1d03b92c2ef0c76eb81cbd6c332f4c5b93e60",
+      "git_blob_sha1": "e25bd8ae5ede3568fa3467d3f03c2f83a26b8af2"
+    },
+    {
+      "path": "style_lock/HEAD_AND_FRAMING_CHECK.md",
+      "bytes": 1412,
+      "sha256": "f6ceab1875b46f5e408e31110523143caefa7bd2768578a44edfb809ddafb384",
+      "git_blob_sha1": "3fafcdca9bb987e2b708321207f10ab4481773d7"
+    },
+    {
+      "path": "style_lock/PRODUCTION_LOCK.md",
+      "bytes": 1519,
+      "sha256": "cce07ea5f38f49af5827b818d4e94b2850b2801257c110d40c255c1a0a174fe6",
+      "git_blob_sha1": "429647d7c6e10fc2de7878135866ecb699567797"
+    },
+    {
+      "path": "style_lock/STYLE_LOCK.md",
+      "bytes": 82486,
+      "sha256": "43e93c47d5870440d64411c0630e853e5856b0eda30eef85577a587bd7cea503",
+      "git_blob_sha1": "7800d97f9f71cee6c6ddeb214b8e2aa1c0273988"
+    },
+    {
+      "path": "style_references/bard_common.png",
+      "bytes": 291217,
+      "sha256": "39316a64d4707a086ed13f5ed5c2d6bac489f4cea6d40df643ca87980c11f97c",
+      "git_blob_sha1": "ae292dc17acbaf6de03f2c7a9f53ae2acdec4449"
+    },
+    {
+      "path": "style_references/boomerang_knight_common.png",
+      "bytes": 243388,
+      "sha256": "0def402fa4bb33584602e42fdc592926e47d6a895374a74232aa90745798118a",
+      "git_blob_sha1": "5f1972d5b95ade263f75c77ac149f500b92c7f6f"
+    },
+    {
+      "path": "style_references/death_knight_common.png",
+      "bytes": 271741,
+      "sha256": "f052f36d1d153afc45992d233cba0298e49e945c22b442391aa0400c64e33f75",
+      "git_blob_sha1": "d329a53c4a63f5ce857029a7fb3ccacd0d71d221"
+    },
+    {
+      "path": "style_references/necromancer_common.png",
+      "bytes": 252456,
+      "sha256": "0909686ca6c36a1d338da9e292a2ffd7de4ab1f77ed4ad640cae35ba1712f393",
+      "git_blob_sha1": "4572c80578e6f27cb448f69c6589e5f6c759567e"
+    },
+    {
+      "path": "VISUAL_REVIEW.json",
+      "bytes": 5004,
+      "sha256": "6b9c34b009d91893720428967afd3386ccd288c52e70d920b4c48784d674c96a",
+      "git_blob_sha1": "657959319270519f4cf609d3ba506427362bbeea"
+    }
+  ],
+  "note": "High-quality source artwork and presentation sheets; no runtime import or palette/AP compliance certification."
+}

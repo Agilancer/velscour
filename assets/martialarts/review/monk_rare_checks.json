@@ -1,0 +1,130 @@
+[
+  {
+    "file": "artwork\\monk\\monk_rare_01.png",
+    "source_bounds": [
+      105,
+      18,
+      325,
+      481
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      268,
+      511
+    ],
+    "colors": 56811,
+    "sha256": "6b3e558625ebd53d9f73ab44b01ff0032a22d75aaaed4bfde94b610f8ab054a7"
+  },
+  {
+    "file": "artwork\\monk\\monk_rare_02.png",
+    "source_bounds": [
+      487,
+      18,
+      704,
+      481
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      265,
+      511
+    ],
+    "colors": 54510,
+    "sha256": "1e48c3d6f694ed5ff7ea180343d89f38bb96b5d252c693e4bf4b4d0143d9d552"
+  },
+  {
+    "file": "artwork\\monk\\monk_rare_03.png",
+    "source_bounds": [
+      852,
+      18,
+      1080,
+      481
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      276,
+      511
+    ],
+    "colors": 61304,
+    "sha256": "b3eed2e0dfc986cfd9020d4c17da19c43f30bc2a5b1bb86809d869287b63a537"
+  },
+  {
+    "file": "artwork\\monk\\monk_rare_04.png",
+    "source_bounds": [
+      1234,
+      18,
+      1453,
+      481
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      267,
+      511
+    ],
+    "colors": 56689,
+    "sha256": "a4a4babeb3f5f79902a92865015511a734aff2982c1dd96914aa27d73284d8d2"
+  },
+  {
+    "file": "artwork\\monk\\monk_rare_05.png",
+    "source_bounds": [
+      112,
+      532,
+      325,
+      996
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      261,
+      512
+    ],
+    "colors": 55774,
+    "sha256": "719e9df4efaacdfea60b718b56de1d5db04afa661583953dbc5c1915e4c6ebdb"
+  },
+  {
+    "file": "artwork\\monk\\monk_rare_06.png",
+    "source_bounds": [
+      487,
+      532,
+      704,
+      996
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      265,
+      512
+    ],
+    "colors": 56320,
+    "sha256": "7043a3069c016bf3aa627393d0b8a5c020e3f3e89b26607733b58246cbef37ec"
+  },
+  {
+    "file": "artwork\\monk\\monk_rare_07.png",
+    "source_bounds": [
+      861,
+      532,
+      1082,
+      996
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      269,
+      512
+    ],
+    "colors": 58106,
+    "sha256": "396d7d7fa93e8a1538788b2d774a1f942054182e597334a95860ba35cb4629ec"
+  },
+  {
+    "file": "artwork\\monk\\monk_rare_08.png",
+    "source_bounds": [
+      1220,
+      532,
+      1457,
+      997
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      285,
+      513
+    ],
+    "colors": 62994,
+    "sha256": "febb835f96583d9c52dc744f80ad56827b703151b758ee594a13596e23b2b7f5"
+  }
+]

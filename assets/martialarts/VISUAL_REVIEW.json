@@ -1,0 +1,128 @@
+{
+  "monk_common": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "rogue_common": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "ninja_common": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "monk_uncommon": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "rogue_uncommon": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "ninja_uncommon": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "monk_rare": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "rogue_rare": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "ninja_rare": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "monk_epic": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "rogue_epic": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "ninja_epic": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "monk_legendary": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "rogue_legendary": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "ninja_legendary": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "monk_mythic": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "rogue_mythic": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  },
+  "ninja_mythic": {
+    "anatomy_identity_pose": "reviewed",
+    "construction_repetition_materials": "reviewed",
+    "approved_style_comparison_full_and_60px": "reviewed",
+    "source_framing": "checked before padding",
+    "technical_game_export": "not certified"
+  }
+}

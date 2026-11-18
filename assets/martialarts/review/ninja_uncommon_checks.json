@@ -1,0 +1,130 @@
+[
+  {
+    "file": "artwork\\ninja\\ninja_uncommon_01.png",
+    "source_bounds": [
+      85,
+      14,
+      313,
+      492
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      276,
+      526
+    ],
+    "colors": 34095,
+    "sha256": "790f2dc03a06ab7934e0599c89ba8ffc984561f95814b7d7076a59b4b9e533d9"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_uncommon_02.png",
+    "source_bounds": [
+      470,
+      14,
+      698,
+      492
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      276,
+      526
+    ],
+    "colors": 35407,
+    "sha256": "027f175652d735a5cccdd15e4652296c26c06ec2a16e4dc92a8d5b2868fbdff5"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_uncommon_03.png",
+    "source_bounds": [
+      852,
+      14,
+      1082,
+      492
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      278,
+      526
+    ],
+    "colors": 32278,
+    "sha256": "5873a3e139065ddf96e4591ed91bcf52547803c1c55414a1f52b61ee91e1abc9"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_uncommon_04.png",
+    "source_bounds": [
+      1238,
+      14,
+      1466,
+      492
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      276,
+      526
+    ],
+    "colors": 36168,
+    "sha256": "848c679b2858c98cff9ca052700ad223efec956f7fd6cd63e16054597bb30631"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_uncommon_05.png",
+    "source_bounds": [
+      85,
+      527,
+      314,
+      1004
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      277,
+      525
+    ],
+    "colors": 36323,
+    "sha256": "071a85b73d8139b3d03e2589b1f292e202cad02138aa605cc3095af61abba096"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_uncommon_06.png",
+    "source_bounds": [
+      468,
+      527,
+      698,
+      1004
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      278,
+      525
+    ],
+    "colors": 33163,
+    "sha256": "f76476a8d8901c77d164504c1dd40e28a3b999272e981182baaaec34aef03c3e"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_uncommon_07.png",
+    "source_bounds": [
+      853,
+      527,
+      1082,
+      1004
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      277,
+      525
+    ],
+    "colors": 35669,
+    "sha256": "434f8b997566e3d44d87b5bad2300bcee228883472c579d9ed93e0f3df55b030"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_uncommon_08.png",
+    "source_bounds": [
+      1237,
+      527,
+      1466,
+      1004
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      277,
+      525
+    ],
+    "colors": 31650,
+    "sha256": "968db92e9e97024729d0ffb804b230904549a38a3b02abb6b2869ac2b2f2e148"
+  }
+]

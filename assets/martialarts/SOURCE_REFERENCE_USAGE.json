@@ -1,0 +1,347 @@
+[
+  {
+    "batch": "monk_common",
+    "references": [
+      {
+        "path": "style_references/bard_common.png",
+        "sha256": "39316a64d4707a086ed13f5ed5c2d6bac489f4cea6d40df643ca87980c11f97c",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/necromancer_common.png",
+        "sha256": "0909686ca6c36a1d338da9e292a2ffd7de4ab1f77ed4ad640cae35ba1712f393",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      }
+    ]
+  },
+  {
+    "batch": "monk_uncommon",
+    "references": [
+      {
+        "path": "style_references/bard_common.png",
+        "sha256": "39316a64d4707a086ed13f5ed5c2d6bac489f4cea6d40df643ca87980c11f97c",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/necromancer_common.png",
+        "sha256": "0909686ca6c36a1d338da9e292a2ffd7de4ab1f77ed4ad640cae35ba1712f393",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "identity_anchors\\monk_default.png",
+        "sha256": "86815c0bcc076046af6f785c4ac4cdbd299eec48c957a58f45719e14cc92eeae",
+        "role": "generated identity anchor; not claimed as original user-approved art"
+      }
+    ]
+  },
+  {
+    "batch": "monk_rare",
+    "references": [
+      {
+        "path": "style_references/bard_common.png",
+        "sha256": "39316a64d4707a086ed13f5ed5c2d6bac489f4cea6d40df643ca87980c11f97c",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/necromancer_common.png",
+        "sha256": "0909686ca6c36a1d338da9e292a2ffd7de4ab1f77ed4ad640cae35ba1712f393",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "identity_anchors\\monk_head.png",
+        "sha256": "9d54423eac38076f782f8ca26eb26d7654765671d88f27cecd7d0cf4524f2ba1",
+        "role": "generated identity anchor; not claimed as original user-approved art"
+      }
+    ]
+  },
+  {
+    "batch": "monk_epic",
+    "references": [
+      {
+        "path": "style_references/bard_common.png",
+        "sha256": "39316a64d4707a086ed13f5ed5c2d6bac489f4cea6d40df643ca87980c11f97c",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/necromancer_common.png",
+        "sha256": "0909686ca6c36a1d338da9e292a2ffd7de4ab1f77ed4ad640cae35ba1712f393",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "identity_anchors\\monk_head.png",
+        "sha256": "9d54423eac38076f782f8ca26eb26d7654765671d88f27cecd7d0cf4524f2ba1",
+        "role": "generated identity anchor; not claimed as original user-approved art"
+      }
+    ]
+  },
+  {
+    "batch": "monk_legendary",
+    "references": [
+      {
+        "path": "style_references/bard_common.png",
+        "sha256": "39316a64d4707a086ed13f5ed5c2d6bac489f4cea6d40df643ca87980c11f97c",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/necromancer_common.png",
+        "sha256": "0909686ca6c36a1d338da9e292a2ffd7de4ab1f77ed4ad640cae35ba1712f393",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "identity_anchors\\monk_head.png",
+        "sha256": "9d54423eac38076f782f8ca26eb26d7654765671d88f27cecd7d0cf4524f2ba1",
+        "role": "generated identity anchor; not claimed as original user-approved art"
+      }
+    ]
+  },
+  {
+    "batch": "monk_mythic",
+    "references": [
+      {
+        "path": "style_references/bard_common.png",
+        "sha256": "39316a64d4707a086ed13f5ed5c2d6bac489f4cea6d40df643ca87980c11f97c",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/necromancer_common.png",
+        "sha256": "0909686ca6c36a1d338da9e292a2ffd7de4ab1f77ed4ad640cae35ba1712f393",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "identity_anchors\\monk_head.png",
+        "sha256": "9d54423eac38076f782f8ca26eb26d7654765671d88f27cecd7d0cf4524f2ba1",
+        "role": "generated identity anchor; not claimed as original user-approved art"
+      }
+    ]
+  },
+  {
+    "batch": "rogue_common",
+    "references": [
+      {
+        "path": "style_references/boomerang_knight_common.png",
+        "sha256": "0def402fa4bb33584602e42fdc592926e47d6a895374a74232aa90745798118a",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/death_knight_common.png",
+        "sha256": "f052f36d1d153afc45992d233cba0298e49e945c22b442391aa0400c64e33f75",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      }
+    ]
+  },
+  {
+    "batch": "rogue_uncommon",
+    "references": [
+      {
+        "path": "style_references/boomerang_knight_common.png",
+        "sha256": "0def402fa4bb33584602e42fdc592926e47d6a895374a74232aa90745798118a",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/death_knight_common.png",
+        "sha256": "f052f36d1d153afc45992d233cba0298e49e945c22b442391aa0400c64e33f75",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "identity_anchors\\rogue_head.png",
+        "sha256": "16880bc7385798129065e734c4971177e27474586df65a7f03b26600910448d8",
+        "role": "generated identity anchor; not claimed as original user-approved art"
+      }
+    ]
+  },
+  {
+    "batch": "rogue_rare",
+    "references": [
+      {
+        "path": "style_references/boomerang_knight_common.png",
+        "sha256": "0def402fa4bb33584602e42fdc592926e47d6a895374a74232aa90745798118a",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/death_knight_common.png",
+        "sha256": "f052f36d1d153afc45992d233cba0298e49e945c22b442391aa0400c64e33f75",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "identity_anchors\\rogue_head.png",
+        "sha256": "16880bc7385798129065e734c4971177e27474586df65a7f03b26600910448d8",
+        "role": "generated identity anchor; not claimed as original user-approved art"
+      }
+    ]
+  },
+  {
+    "batch": "rogue_epic",
+    "references": [
+      {
+        "path": "style_references/boomerang_knight_common.png",
+        "sha256": "0def402fa4bb33584602e42fdc592926e47d6a895374a74232aa90745798118a",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/death_knight_common.png",
+        "sha256": "f052f36d1d153afc45992d233cba0298e49e945c22b442391aa0400c64e33f75",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "identity_anchors\\rogue_head.png",
+        "sha256": "16880bc7385798129065e734c4971177e27474586df65a7f03b26600910448d8",
+        "role": "generated identity anchor; not claimed as original user-approved art"
+      }
+    ]
+  },
+  {
+    "batch": "rogue_legendary",
+    "references": [
+      {
+        "path": "style_references/boomerang_knight_common.png",
+        "sha256": "0def402fa4bb33584602e42fdc592926e47d6a895374a74232aa90745798118a",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/death_knight_common.png",
+        "sha256": "f052f36d1d153afc45992d233cba0298e49e945c22b442391aa0400c64e33f75",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "identity_anchors\\rogue_head.png",
+        "sha256": "16880bc7385798129065e734c4971177e27474586df65a7f03b26600910448d8",
+        "role": "generated identity anchor; not claimed as original user-approved art"
+      }
+    ]
+  },
+  {
+    "batch": "rogue_mythic",
+    "references": [
+      {
+        "path": "style_references/boomerang_knight_common.png",
+        "sha256": "0def402fa4bb33584602e42fdc592926e47d6a895374a74232aa90745798118a",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/death_knight_common.png",
+        "sha256": "f052f36d1d153afc45992d233cba0298e49e945c22b442391aa0400c64e33f75",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "identity_anchors\\rogue_head.png",
+        "sha256": "16880bc7385798129065e734c4971177e27474586df65a7f03b26600910448d8",
+        "role": "generated identity anchor; not claimed as original user-approved art"
+      }
+    ]
+  },
+  {
+    "batch": "ninja_common",
+    "references": [
+      {
+        "path": "style_references/death_knight_common.png",
+        "sha256": "f052f36d1d153afc45992d233cba0298e49e945c22b442391aa0400c64e33f75",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/boomerang_knight_common.png",
+        "sha256": "0def402fa4bb33584602e42fdc592926e47d6a895374a74232aa90745798118a",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      }
+    ]
+  },
+  {
+    "batch": "ninja_uncommon",
+    "references": [
+      {
+        "path": "style_references/death_knight_common.png",
+        "sha256": "f052f36d1d153afc45992d233cba0298e49e945c22b442391aa0400c64e33f75",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/boomerang_knight_common.png",
+        "sha256": "0def402fa4bb33584602e42fdc592926e47d6a895374a74232aa90745798118a",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "identity_anchors\\ninja_head.png",
+        "sha256": "380d195b2df52d5aad9da5d7625ea23abbe2c147ef4604bfc784cc9450120dbb",
+        "role": "generated identity anchor; not claimed as original user-approved art"
+      }
+    ]
+  },
+  {
+    "batch": "ninja_rare",
+    "references": [
+      {
+        "path": "style_references/death_knight_common.png",
+        "sha256": "f052f36d1d153afc45992d233cba0298e49e945c22b442391aa0400c64e33f75",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/boomerang_knight_common.png",
+        "sha256": "0def402fa4bb33584602e42fdc592926e47d6a895374a74232aa90745798118a",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "identity_anchors\\ninja_head.png",
+        "sha256": "380d195b2df52d5aad9da5d7625ea23abbe2c147ef4604bfc784cc9450120dbb",
+        "role": "generated identity anchor; not claimed as original user-approved art"
+      }
+    ]
+  },
+  {
+    "batch": "ninja_epic",
+    "references": [
+      {
+        "path": "style_references/death_knight_common.png",
+        "sha256": "f052f36d1d153afc45992d233cba0298e49e945c22b442391aa0400c64e33f75",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/boomerang_knight_common.png",
+        "sha256": "0def402fa4bb33584602e42fdc592926e47d6a895374a74232aa90745798118a",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "identity_anchors\\ninja_head.png",
+        "sha256": "380d195b2df52d5aad9da5d7625ea23abbe2c147ef4604bfc784cc9450120dbb",
+        "role": "generated identity anchor; not claimed as original user-approved art"
+      }
+    ]
+  },
+  {
+    "batch": "ninja_legendary",
+    "references": [
+      {
+        "path": "style_references/death_knight_common.png",
+        "sha256": "f052f36d1d153afc45992d233cba0298e49e945c22b442391aa0400c64e33f75",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/boomerang_knight_common.png",
+        "sha256": "0def402fa4bb33584602e42fdc592926e47d6a895374a74232aa90745798118a",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "identity_anchors\\ninja_head.png",
+        "sha256": "380d195b2df52d5aad9da5d7625ea23abbe2c147ef4604bfc784cc9450120dbb",
+        "role": "generated identity anchor; not claimed as original user-approved art"
+      }
+    ]
+  },
+  {
+    "batch": "ninja_mythic",
+    "references": [
+      {
+        "path": "style_references/death_knight_common.png",
+        "sha256": "f052f36d1d153afc45992d233cba0298e49e945c22b442391aa0400c64e33f75",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "style_references/boomerang_knight_common.png",
+        "sha256": "0def402fa4bb33584602e42fdc592926e47d6a895374a74232aa90745798118a",
+        "role": "original user-approved rendering and pose reference; not new class identity"
+      },
+      {
+        "path": "identity_anchors\\ninja_head.png",
+        "sha256": "380d195b2df52d5aad9da5d7625ea23abbe2c147ef4604bfc784cc9450120dbb",
+        "role": "generated identity anchor; not claimed as original user-approved art"
+      }
+    ]
+  }
+]

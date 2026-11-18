@@ -1,0 +1,130 @@
+[
+  {
+    "file": "artwork\\ninja\\ninja_legendary_01.png",
+    "source_bounds": [
+      88,
+      17,
+      327,
+      492
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      287,
+      523
+    ],
+    "colors": 33107,
+    "sha256": "c338fa6c9bec25081efff6e64bb269f1cc9b682fa12a7096e5849923edfe4d19"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_legendary_02.png",
+    "source_bounds": [
+      450,
+      17,
+      704,
+      492
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      302,
+      523
+    ],
+    "colors": 40805,
+    "sha256": "5154a320d5952a6a6c0119cf980dbbff416424d155425b1c8c94c7e68593969f"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_legendary_03.png",
+    "source_bounds": [
+      830,
+      17,
+      1072,
+      492
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      290,
+      523
+    ],
+    "colors": 37167,
+    "sha256": "3f41fc729a79bc91a853ca0e869cf769746067ccbaaaf90f037708663854039c"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_legendary_04.png",
+    "source_bounds": [
+      1209,
+      17,
+      1453,
+      492
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      292,
+      523
+    ],
+    "colors": 39054,
+    "sha256": "6a5c6481f64372cdb6fabd02b8f52c9cda98ba74a03f5dae93a42cc34e2e5188"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_legendary_05.png",
+    "source_bounds": [
+      97,
+      528,
+      332,
+      1004
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      283,
+      524
+    ],
+    "colors": 41685,
+    "sha256": "02a9d81f1c8e3b46ba8eab2b35e6236b84a9c7cc3ff39d330894ddd7647a1d2f"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_legendary_06.png",
+    "source_bounds": [
+      456,
+      528,
+      707,
+      1003
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      299,
+      523
+    ],
+    "colors": 44836,
+    "sha256": "f180ea9eb77538ed771672f583d3ef999e857ef9e0b10b3aad3a3e3e1469b37f"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_legendary_07.png",
+    "source_bounds": [
+      834,
+      528,
+      1074,
+      1003
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      288,
+      523
+    ],
+    "colors": 37587,
+    "sha256": "a2c664d7ac1c71d8776aa057e801d47f0997b3ef0de4af89e8a7edc4c4c42f93"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_legendary_08.png",
+    "source_bounds": [
+      1219,
+      528,
+      1454,
+      1003
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      283,
+      523
+    ],
+    "colors": 36322,
+    "sha256": "f3d629a5feaeb8fc9e566c6a4a7559d85082db46afeac4f73682102dab8dfbad"
+  }
+]

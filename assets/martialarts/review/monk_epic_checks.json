@@ -1,0 +1,130 @@
+[
+  {
+    "file": "artwork\\monk\\monk_epic_01.png",
+    "source_bounds": [
+      93,
+      18,
+      337,
+      488
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      292,
+      518
+    ],
+    "colors": 63483,
+    "sha256": "e7aac6242c5404fe424fe4718c9ad7fa21378bf709061fb4147b6be55579c5a8"
+  },
+  {
+    "file": "artwork\\monk\\monk_epic_02.png",
+    "source_bounds": [
+      466,
+      18,
+      709,
+      489
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      291,
+      519
+    ],
+    "colors": 58857,
+    "sha256": "e371bfdc07037e2a32e22d305d84ee876d392ef013407f881f86467add3dcd9a"
+  },
+  {
+    "file": "artwork\\monk\\monk_epic_03.png",
+    "source_bounds": [
+      828,
+      18,
+      1084,
+      488
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      304,
+      518
+    ],
+    "colors": 64971,
+    "sha256": "96938287cbcd65e7743d1f59af64dc620617bcdb6a20efa2e62dc19b67ca45c8"
+  },
+  {
+    "file": "artwork\\monk\\monk_epic_04.png",
+    "source_bounds": [
+      1215,
+      18,
+      1465,
+      488
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      298,
+      518
+    ],
+    "colors": 61471,
+    "sha256": "481e79f5ff417c9707e06a9f4158e98e323b3b2dd90d59493ec48a8d905df649"
+  },
+  {
+    "file": "artwork\\monk\\monk_epic_05.png",
+    "source_bounds": [
+      94,
+      529,
+      338,
+      1000
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      292,
+      519
+    ],
+    "colors": 57534,
+    "sha256": "d19c63f67dffc7cd23e4650a8bb2c08cfff06f3eb58778af5fd925cbb50f54ed"
+  },
+  {
+    "file": "artwork\\monk\\monk_epic_06.png",
+    "source_bounds": [
+      465,
+      529,
+      712,
+      1000
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      295,
+      519
+    ],
+    "colors": 63151,
+    "sha256": "2245f64c5521f14d1ea882f44fe75cfa9d537d33a4fdb18d5d044869d1ff34db"
+  },
+  {
+    "file": "artwork\\monk\\monk_epic_07.png",
+    "source_bounds": [
+      844,
+      529,
+      1094,
+      1001
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      298,
+      520
+    ],
+    "colors": 63403,
+    "sha256": "f03fd613903f3e11e7c12d6cc0831be08fe57079331abfdc69b239ea3081a1a6"
+  },
+  {
+    "file": "artwork\\monk\\monk_epic_08.png",
+    "source_bounds": [
+      1213,
+      529,
+      1469,
+      1001
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      304,
+      520
+    ],
+    "colors": 64102,
+    "sha256": "aa809259014bfbbfd6b4d0efcb89d326a5d34df7e4bc1655e57fd82d82a87705"
+  }
+]

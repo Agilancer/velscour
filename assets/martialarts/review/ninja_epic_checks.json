@@ -1,0 +1,130 @@
+[
+  {
+    "file": "artwork\\ninja\\ninja_epic_01.png",
+    "source_bounds": [
+      95,
+      21,
+      342,
+      488
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      295,
+      515
+    ],
+    "colors": 29375,
+    "sha256": "4db1d8c50f14e931a948131a8071a1bac08579c6accf09820ff0dc1000b61e4a"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_epic_02.png",
+    "source_bounds": [
+      474,
+      21,
+      712,
+      488
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      286,
+      515
+    ],
+    "colors": 32409,
+    "sha256": "7ffa857e1a64b996258b26ed922df3cfc9b67bd33229eb0e68fd9741f727d212"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_epic_03.png",
+    "source_bounds": [
+      836,
+      21,
+      1085,
+      487
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      297,
+      514
+    ],
+    "colors": 29924,
+    "sha256": "5b0eb370b2b838e8952ee995c6694735820cf0422dc5ccf862f078a859152dee"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_epic_04.png",
+    "source_bounds": [
+      1212,
+      21,
+      1457,
+      487
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      293,
+      514
+    ],
+    "colors": 29682,
+    "sha256": "7d31bc66db5d3d55373aba989e8ab6f18e5eeb52907437f2326c4c1b07f2026e"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_epic_05.png",
+    "source_bounds": [
+      115,
+      532,
+      342,
+      999
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      275,
+      515
+    ],
+    "colors": 35386,
+    "sha256": "b3d7b3873ff5cd7be21745ec365cd78cd8f7d82b5672ab8d7d4e2b0c3e0f6466"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_epic_06.png",
+    "source_bounds": [
+      471,
+      532,
+      713,
+      999
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      290,
+      515
+    ],
+    "colors": 31095,
+    "sha256": "e7d0e51af58e755fbbbcb1c3a1431a183eb5f0d99eb9248cb280956256424983"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_epic_07.png",
+    "source_bounds": [
+      837,
+      532,
+      1085,
+      999
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      296,
+      515
+    ],
+    "colors": 34450,
+    "sha256": "92fd2cba348b21847c87fd71c95e19886534dabb346dc695abdbde4ed6a29b0d"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_epic_08.png",
+    "source_bounds": [
+      1219,
+      532,
+      1458,
+      999
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      287,
+      515
+    ],
+    "colors": 30532,
+    "sha256": "88a1df315072f6aad684a0e2b9750f73aaae126351bfcc8bc69097b09c5dcfe5"
+  }
+]

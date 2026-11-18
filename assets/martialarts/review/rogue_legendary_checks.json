@@ -1,0 +1,130 @@
+[
+  {
+    "file": "artwork\\rogue\\rogue_legendary_01.png",
+    "source_bounds": [
+      94,
+      15,
+      311,
+      486
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      265,
+      519
+    ],
+    "colors": 40608,
+    "sha256": "2a5f81ac6f010abad2a8f7a7808f57f97ee38999f9df720daf65f7b4ce9b77b1"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_legendary_02.png",
+    "source_bounds": [
+      467,
+      15,
+      695,
+      486
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      276,
+      519
+    ],
+    "colors": 43196,
+    "sha256": "1d532faaf0a43cecf38a868e541ac340319d9dba08538cc5d6ee9284f696f911"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_legendary_03.png",
+    "source_bounds": [
+      862,
+      15,
+      1079,
+      486
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      265,
+      519
+    ],
+    "colors": 44113,
+    "sha256": "909b45ddfd06ce5f51b036fb22679e42b14d01d57f7dd2707cfaf8ec4ab0ec21"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_legendary_04.png",
+    "source_bounds": [
+      1241,
+      15,
+      1463,
+      486
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      270,
+      519
+    ],
+    "colors": 42979,
+    "sha256": "72ab12c5ffbbf925108810fc53ce6db35672aafca3fbbd204b5240ea61c3c30e"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_legendary_05.png",
+    "source_bounds": [
+      83,
+      527,
+      311,
+      998
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      276,
+      519
+    ],
+    "colors": 46932,
+    "sha256": "c0dae2416808552f1702244750865b06ed7f96f9759dd12e7150d5b8f7da9ed8"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_legendary_06.png",
+    "source_bounds": [
+      464,
+      527,
+      695,
+      998
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      279,
+      519
+    ],
+    "colors": 45641,
+    "sha256": "57733a68cb21d1d16645e33466f66a326c0a9895bd3167a7708357a3baee1a63"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_legendary_07.png",
+    "source_bounds": [
+      852,
+      527,
+      1079,
+      998
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      275,
+      519
+    ],
+    "colors": 43891,
+    "sha256": "a6ad97b7dd835c165f4df13e2d75d917388f1fd9fd4b7dccb8d86d9173c5f11a"
+  },
+  {
+    "file": "artwork\\rogue\\rogue_legendary_08.png",
+    "source_bounds": [
+      1241,
+      527,
+      1467,
+      998
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      274,
+      519
+    ],
+    "colors": 42386,
+    "sha256": "9c485d1e98b5ca87fd0f1d38876cfc998ecf8d99ebc4f95db1523c72a64a7257"
+  }
+]

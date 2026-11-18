@@ -1,0 +1,130 @@
+[
+  {
+    "file": "artwork\\ninja\\ninja_mythic_01.png",
+    "source_bounds": [
+      87,
+      19,
+      334,
+      490
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      295,
+      519
+    ],
+    "colors": 39233,
+    "sha256": "fd7502cc81bef0ba54a32e80af7dc8f502a3a9335bcb9fb1ddf0e2f25ee15f7a"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_mythic_02.png",
+    "source_bounds": [
+      450,
+      17,
+      718,
+      490
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      316,
+      521
+    ],
+    "colors": 41297,
+    "sha256": "56efcbbc2c50b4ac08beed202a46411d4e49b42193c34f8085447e32634e0b91"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_mythic_03.png",
+    "source_bounds": [
+      853,
+      17,
+      1103,
+      490
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      298,
+      521
+    ],
+    "colors": 38071,
+    "sha256": "ebf24c1207b0955e5da5cbb0bd8398394948d9690b9dd8b9155a30a425c7aaf2"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_mythic_04.png",
+    "source_bounds": [
+      1228,
+      17,
+      1487,
+      491
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      307,
+      522
+    ],
+    "colors": 39772,
+    "sha256": "b0312ce63d0b68ca9ab313e6c9c5dffbff55849eecc47e98f023f0f25bf273b3"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_mythic_05.png",
+    "source_bounds": [
+      81,
+      530,
+      334,
+      1003
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      301,
+      521
+    ],
+    "colors": 40519,
+    "sha256": "fe05c973b58e1514f2ff2ae9fe089b67d46feda65467ecf7de7ab29add23ab67"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_mythic_06.png",
+    "source_bounds": [
+      458,
+      530,
+      718,
+      1002
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      308,
+      520
+    ],
+    "colors": 36416,
+    "sha256": "f02a7b940db9be8efc3513d65ef4a890f451b16810b84ae363da3f656bb40caf"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_mythic_07.png",
+    "source_bounds": [
+      842,
+      531,
+      1103,
+      1003
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      309,
+      520
+    ],
+    "colors": 38966,
+    "sha256": "2dccc21a5e3485e3dfa68bdb5650eb4d2440e680b7636d02dd30c62612209c7d"
+  },
+  {
+    "file": "artwork\\ninja\\ninja_mythic_08.png",
+    "source_bounds": [
+      1224,
+      530,
+      1487,
+      1003
+    ],
+    "source_edge_contact": false,
+    "dimensions": [
+      311,
+      521
+    ],
+    "colors": 38210,
+    "sha256": "b5d256cb27916c48a4f214467597752e453176e28c508c84db46c01529f8e290"
+  }
+]

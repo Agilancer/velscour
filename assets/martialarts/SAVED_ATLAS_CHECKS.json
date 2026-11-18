@@ -1,0 +1,5219 @@
+{
+  "sheets": 21,
+  "placements": 288,
+  "reopened_from_disk": true,
+  "checks": [
+    {
+      "file": "armor_sheets\\monk_common_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/monk/monk_common_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            98,
+            64,
+            286,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            98,
+            64,
+            286,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_common_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            483,
+            64,
+            668,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            284,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_common_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            854,
+            64,
+            1066,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            86,
+            64,
+            298,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_common_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1252,
+            64,
+            1436,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            100,
+            64,
+            284,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_common_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            101,
+            576,
+            283,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            101,
+            64,
+            283,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_common_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            483,
+            576,
+            668,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            284,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_common_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            867,
+            576,
+            1052,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            284,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_common_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1247,
+            576,
+            1441,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            95,
+            64,
+            289,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\monk_uncommon_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/monk/monk_uncommon_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            100,
+            64,
+            283,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            100,
+            64,
+            283,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_uncommon_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            480,
+            64,
+            672,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            96,
+            64,
+            288,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_uncommon_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            860,
+            64,
+            1060,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            92,
+            64,
+            292,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_uncommon_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1246,
+            64,
+            1442,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            94,
+            64,
+            290,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_uncommon_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            97,
+            576,
+            286,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            97,
+            64,
+            286,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_uncommon_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            480,
+            576,
+            671,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            96,
+            64,
+            287,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_uncommon_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            864,
+            576,
+            1056,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            96,
+            64,
+            288,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_uncommon_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1246,
+            576,
+            1441,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            94,
+            64,
+            289,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\monk_rare_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/monk/monk_rare_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            99,
+            64,
+            285,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            285,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_rare_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            484,
+            64,
+            668,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            100,
+            64,
+            284,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_rare_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            863,
+            64,
+            1056,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            95,
+            64,
+            288,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_rare_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1251,
+            64,
+            1436,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            284,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_rare_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            102,
+            576,
+            282,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            102,
+            64,
+            282,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_rare_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            484,
+            576,
+            667,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            100,
+            64,
+            283,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_rare_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            866,
+            576,
+            1053,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            98,
+            64,
+            285,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_rare_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1243,
+            576,
+            1444,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            91,
+            64,
+            292,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\monk_epic_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/monk/monk_epic_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            90,
+            64,
+            294,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            90,
+            64,
+            294,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_epic_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            474,
+            64,
+            677,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            90,
+            64,
+            293,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_epic_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            852,
+            64,
+            1067,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            84,
+            64,
+            299,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_epic_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1239,
+            64,
+            1448,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            87,
+            64,
+            296,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_epic_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            90,
+            576,
+            294,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            90,
+            64,
+            294,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_epic_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            473,
+            576,
+            679,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            89,
+            64,
+            295,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_epic_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            855,
+            576,
+            1064,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            87,
+            64,
+            296,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_epic_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1237,
+            576,
+            1450,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            85,
+            64,
+            298,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\monk_legendary_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/monk/monk_legendary_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            81,
+            64,
+            302,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            81,
+            64,
+            302,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_legendary_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            475,
+            64,
+            677,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            91,
+            64,
+            293,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_legendary_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            854,
+            64,
+            1066,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            86,
+            64,
+            298,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_legendary_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1237,
+            64,
+            1450,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            85,
+            64,
+            298,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_legendary_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            85,
+            576,
+            299,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            85,
+            64,
+            299,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_legendary_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            469,
+            576,
+            682,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            85,
+            64,
+            298,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_legendary_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            860,
+            576,
+            1060,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            92,
+            64,
+            292,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_legendary_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1234,
+            576,
+            1453,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            82,
+            64,
+            301,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\monk_mythic_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/monk/monk_mythic_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            69,
+            64,
+            315,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            69,
+            64,
+            315,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_mythic_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            466,
+            64,
+            685,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            82,
+            64,
+            301,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_mythic_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            840,
+            64,
+            1079,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            72,
+            64,
+            311,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_mythic_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1226,
+            64,
+            1461,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            74,
+            64,
+            309,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_mythic_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            71,
+            576,
+            312,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            71,
+            64,
+            312,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_mythic_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            457,
+            576,
+            695,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            73,
+            64,
+            311,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_mythic_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            848,
+            576,
+            1072,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            80,
+            64,
+            304,
+            464
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_mythic_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1218,
+            576,
+            1469,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            66,
+            64,
+            317,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "class_sheets\\monk_all_48.png",
+      "dimensions": [
+        1536,
+        1536
+      ],
+      "cell_size": [
+        192,
+        256
+      ],
+      "baseline": 232,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/monk/monk_common_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            49,
+            32,
+            143,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_common_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            241,
+            32,
+            334,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_common_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            427,
+            32,
+            533,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            43,
+            32,
+            149,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_common_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            626,
+            32,
+            718,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_common_05.png",
+          "column": 4,
+          "row": 0,
+          "placed_bounds": [
+            818,
+            32,
+            909,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            141,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_common_06.png",
+          "column": 5,
+          "row": 0,
+          "placed_bounds": [
+            1010,
+            32,
+            1102,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_common_07.png",
+          "column": 6,
+          "row": 0,
+          "placed_bounds": [
+            1202,
+            32,
+            1294,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_common_08.png",
+          "column": 7,
+          "row": 0,
+          "placed_bounds": [
+            1391,
+            32,
+            1488,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            47,
+            32,
+            144,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_uncommon_01.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            50,
+            288,
+            142,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_uncommon_02.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            240,
+            288,
+            336,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            48,
+            32,
+            144,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_uncommon_03.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            430,
+            288,
+            530,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            46,
+            32,
+            146,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_uncommon_04.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            623,
+            288,
+            721,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            47,
+            32,
+            145,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_uncommon_05.png",
+          "column": 4,
+          "row": 1,
+          "placed_bounds": [
+            816,
+            288,
+            911,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            48,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_uncommon_06.png",
+          "column": 5,
+          "row": 1,
+          "placed_bounds": [
+            1008,
+            288,
+            1104,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            48,
+            32,
+            144,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_uncommon_07.png",
+          "column": 6,
+          "row": 1,
+          "placed_bounds": [
+            1200,
+            288,
+            1296,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            48,
+            32,
+            144,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_uncommon_08.png",
+          "column": 7,
+          "row": 1,
+          "placed_bounds": [
+            1391,
+            288,
+            1489,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            47,
+            32,
+            145,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_rare_01.png",
+          "column": 0,
+          "row": 2,
+          "placed_bounds": [
+            49,
+            544,
+            142,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_rare_02.png",
+          "column": 1,
+          "row": 2,
+          "placed_bounds": [
+            242,
+            544,
+            334,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_rare_03.png",
+          "column": 2,
+          "row": 2,
+          "placed_bounds": [
+            431,
+            544,
+            528,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            47,
+            32,
+            144,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_rare_04.png",
+          "column": 3,
+          "row": 2,
+          "placed_bounds": [
+            625,
+            544,
+            718,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_rare_05.png",
+          "column": 4,
+          "row": 2,
+          "placed_bounds": [
+            819,
+            544,
+            909,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            51,
+            32,
+            141,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_rare_06.png",
+          "column": 5,
+          "row": 2,
+          "placed_bounds": [
+            1010,
+            544,
+            1102,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_rare_07.png",
+          "column": 6,
+          "row": 2,
+          "placed_bounds": [
+            1201,
+            544,
+            1294,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_rare_08.png",
+          "column": 7,
+          "row": 2,
+          "placed_bounds": [
+            1390,
+            544,
+            1490,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            46,
+            32,
+            146,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_epic_01.png",
+          "column": 0,
+          "row": 3,
+          "placed_bounds": [
+            45,
+            800,
+            147,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            45,
+            32,
+            147,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_epic_02.png",
+          "column": 1,
+          "row": 3,
+          "placed_bounds": [
+            237,
+            800,
+            339,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            45,
+            32,
+            147,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_epic_03.png",
+          "column": 2,
+          "row": 3,
+          "placed_bounds": [
+            426,
+            800,
+            534,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            42,
+            32,
+            150,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_epic_04.png",
+          "column": 3,
+          "row": 3,
+          "placed_bounds": [
+            619,
+            800,
+            724,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            43,
+            32,
+            148,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_epic_05.png",
+          "column": 4,
+          "row": 3,
+          "placed_bounds": [
+            813,
+            800,
+            915,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            45,
+            32,
+            147,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_epic_06.png",
+          "column": 5,
+          "row": 3,
+          "placed_bounds": [
+            1004,
+            800,
+            1107,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            44,
+            32,
+            147,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_epic_07.png",
+          "column": 6,
+          "row": 3,
+          "placed_bounds": [
+            1195,
+            800,
+            1300,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            43,
+            32,
+            148,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_epic_08.png",
+          "column": 7,
+          "row": 3,
+          "placed_bounds": [
+            1386,
+            800,
+            1493,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            42,
+            32,
+            149,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_legendary_01.png",
+          "column": 0,
+          "row": 4,
+          "placed_bounds": [
+            41,
+            1056,
+            151,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            41,
+            32,
+            151,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_legendary_02.png",
+          "column": 1,
+          "row": 4,
+          "placed_bounds": [
+            237,
+            1056,
+            338,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            45,
+            32,
+            146,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_legendary_03.png",
+          "column": 2,
+          "row": 4,
+          "placed_bounds": [
+            427,
+            1056,
+            533,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            43,
+            32,
+            149,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_legendary_04.png",
+          "column": 3,
+          "row": 4,
+          "placed_bounds": [
+            618,
+            1056,
+            725,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            42,
+            32,
+            149,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_legendary_05.png",
+          "column": 4,
+          "row": 4,
+          "placed_bounds": [
+            810,
+            1056,
+            917,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            42,
+            32,
+            149,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_legendary_06.png",
+          "column": 5,
+          "row": 4,
+          "placed_bounds": [
+            1003,
+            1056,
+            1109,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            43,
+            32,
+            149,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_legendary_07.png",
+          "column": 6,
+          "row": 4,
+          "placed_bounds": [
+            1198,
+            1056,
+            1298,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            46,
+            32,
+            146,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_legendary_08.png",
+          "column": 7,
+          "row": 4,
+          "placed_bounds": [
+            1385,
+            1056,
+            1494,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            41,
+            32,
+            150,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_mythic_01.png",
+          "column": 0,
+          "row": 5,
+          "placed_bounds": [
+            34,
+            1312,
+            157,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            34,
+            32,
+            157,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_mythic_02.png",
+          "column": 1,
+          "row": 5,
+          "placed_bounds": [
+            233,
+            1312,
+            343,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            41,
+            32,
+            151,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_mythic_03.png",
+          "column": 2,
+          "row": 5,
+          "placed_bounds": [
+            420,
+            1312,
+            539,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            36,
+            32,
+            155,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_mythic_04.png",
+          "column": 3,
+          "row": 5,
+          "placed_bounds": [
+            613,
+            1312,
+            730,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            37,
+            32,
+            154,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_mythic_05.png",
+          "column": 4,
+          "row": 5,
+          "placed_bounds": [
+            803,
+            1312,
+            924,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            35,
+            32,
+            156,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_mythic_06.png",
+          "column": 5,
+          "row": 5,
+          "placed_bounds": [
+            996,
+            1312,
+            1115,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            36,
+            32,
+            155,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_mythic_07.png",
+          "column": 6,
+          "row": 5,
+          "placed_bounds": [
+            1192,
+            1312,
+            1304,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            40,
+            32,
+            152,
+            232
+          ]
+        },
+        {
+          "file": "artwork/monk/monk_mythic_08.png",
+          "column": 7,
+          "row": 5,
+          "placed_bounds": [
+            1377,
+            1312,
+            1502,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            33,
+            32,
+            158,
+            232
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\rogue_common_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/rogue/rogue_common_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            105,
+            64,
+            278,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            105,
+            64,
+            278,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_common_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            489,
+            64,
+            662,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            105,
+            64,
+            278,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_common_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            872,
+            64,
+            1047,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            104,
+            64,
+            279,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_common_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1254,
+            64,
+            1434,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            102,
+            64,
+            282,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_common_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            106,
+            576,
+            278,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            106,
+            64,
+            278,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_common_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            490,
+            576,
+            662,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            106,
+            64,
+            278,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_common_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            873,
+            576,
+            1046,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            105,
+            64,
+            278,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_common_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1256,
+            576,
+            1431,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            104,
+            64,
+            279,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\rogue_uncommon_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/rogue/rogue_uncommon_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            104,
+            64,
+            279,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            104,
+            64,
+            279,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_uncommon_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            485,
+            64,
+            667,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            101,
+            64,
+            283,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_uncommon_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            872,
+            64,
+            1047,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            104,
+            64,
+            279,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_uncommon_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1252,
+            64,
+            1436,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            100,
+            64,
+            284,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_uncommon_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            103,
+            576,
+            280,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            103,
+            64,
+            280,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_uncommon_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            487,
+            576,
+            664,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            103,
+            64,
+            280,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_uncommon_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            871,
+            576,
+            1048,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            103,
+            64,
+            280,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_uncommon_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1255,
+            576,
+            1433,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            103,
+            64,
+            281,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\rogue_rare_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/rogue/rogue_rare_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            105,
+            64,
+            278,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            105,
+            64,
+            278,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_rare_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            489,
+            64,
+            662,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            105,
+            64,
+            278,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_rare_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            872,
+            64,
+            1047,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            104,
+            64,
+            279,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_rare_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1257,
+            64,
+            1431,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            105,
+            64,
+            279,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_rare_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            100,
+            576,
+            283,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            100,
+            64,
+            283,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_rare_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            488,
+            576,
+            663,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            104,
+            64,
+            279,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_rare_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            872,
+            576,
+            1047,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            104,
+            64,
+            279,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_rare_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1256,
+            576,
+            1432,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            104,
+            64,
+            280,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\rogue_epic_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/rogue/rogue_epic_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            98,
+            64,
+            286,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            98,
+            64,
+            286,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_epic_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            484,
+            64,
+            667,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            100,
+            64,
+            283,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_epic_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            872,
+            64,
+            1047,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            104,
+            64,
+            279,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_epic_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1249,
+            64,
+            1438,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            97,
+            64,
+            286,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_epic_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            103,
+            576,
+            280,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            103,
+            64,
+            280,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_epic_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            484,
+            576,
+            667,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            100,
+            64,
+            283,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_epic_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            869,
+            576,
+            1051,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            101,
+            64,
+            283,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_epic_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1250,
+            576,
+            1437,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            98,
+            64,
+            285,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\rogue_legendary_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/rogue/rogue_legendary_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            101,
+            64,
+            282,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            101,
+            64,
+            282,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_legendary_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            481,
+            64,
+            671,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            97,
+            64,
+            287,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_legendary_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            869,
+            64,
+            1050,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            101,
+            64,
+            282,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_legendary_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1251,
+            64,
+            1436,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            284,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_legendary_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            97,
+            576,
+            287,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            97,
+            64,
+            287,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_legendary_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            479,
+            576,
+            672,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            95,
+            64,
+            288,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_legendary_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            865,
+            576,
+            1054,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            97,
+            64,
+            286,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_legendary_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1250,
+            576,
+            1438,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            98,
+            64,
+            286,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\rogue_mythic_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/rogue/rogue_mythic_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            96,
+            64,
+            288,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            96,
+            64,
+            288,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_mythic_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            479,
+            64,
+            673,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            95,
+            64,
+            289,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_mythic_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            864,
+            64,
+            1055,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            96,
+            64,
+            287,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_mythic_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1245,
+            64,
+            1442,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            93,
+            64,
+            290,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_mythic_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            92,
+            576,
+            292,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            92,
+            64,
+            292,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_mythic_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            477,
+            576,
+            675,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            93,
+            64,
+            291,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_mythic_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            862,
+            576,
+            1057,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            94,
+            64,
+            289,
+            464
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_mythic_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1244,
+            576,
+            1444,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            92,
+            64,
+            292,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "class_sheets\\rogue_all_48.png",
+      "dimensions": [
+        1536,
+        1536
+      ],
+      "cell_size": [
+        192,
+        256
+      ],
+      "baseline": 232,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/rogue/rogue_common_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            53,
+            32,
+            139,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            53,
+            32,
+            139,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_common_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            245,
+            32,
+            331,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            53,
+            32,
+            139,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_common_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            436,
+            32,
+            523,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            52,
+            32,
+            139,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_common_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            627,
+            32,
+            717,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            51,
+            32,
+            141,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_common_05.png",
+          "column": 4,
+          "row": 0,
+          "placed_bounds": [
+            821,
+            32,
+            907,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            53,
+            32,
+            139,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_common_06.png",
+          "column": 5,
+          "row": 0,
+          "placed_bounds": [
+            1013,
+            32,
+            1099,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            53,
+            32,
+            139,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_common_07.png",
+          "column": 6,
+          "row": 0,
+          "placed_bounds": [
+            1205,
+            32,
+            1291,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            53,
+            32,
+            139,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_common_08.png",
+          "column": 7,
+          "row": 0,
+          "placed_bounds": [
+            1396,
+            32,
+            1484,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            52,
+            32,
+            140,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_uncommon_01.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            52,
+            288,
+            139,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            52,
+            32,
+            139,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_uncommon_02.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            242,
+            288,
+            333,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            141,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_uncommon_03.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            436,
+            288,
+            524,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            52,
+            32,
+            140,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_uncommon_04.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            626,
+            288,
+            718,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_uncommon_05.png",
+          "column": 4,
+          "row": 1,
+          "placed_bounds": [
+            820,
+            288,
+            908,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            52,
+            32,
+            140,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_uncommon_06.png",
+          "column": 5,
+          "row": 1,
+          "placed_bounds": [
+            1011,
+            288,
+            1100,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            51,
+            32,
+            140,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_uncommon_07.png",
+          "column": 6,
+          "row": 1,
+          "placed_bounds": [
+            1203,
+            288,
+            1292,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            51,
+            32,
+            140,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_uncommon_08.png",
+          "column": 7,
+          "row": 1,
+          "placed_bounds": [
+            1395,
+            288,
+            1484,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            51,
+            32,
+            140,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_rare_01.png",
+          "column": 0,
+          "row": 2,
+          "placed_bounds": [
+            53,
+            544,
+            139,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            53,
+            32,
+            139,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_rare_02.png",
+          "column": 1,
+          "row": 2,
+          "placed_bounds": [
+            244,
+            544,
+            331,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            52,
+            32,
+            139,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_rare_03.png",
+          "column": 2,
+          "row": 2,
+          "placed_bounds": [
+            436,
+            544,
+            523,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            52,
+            32,
+            139,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_rare_04.png",
+          "column": 3,
+          "row": 2,
+          "placed_bounds": [
+            628,
+            544,
+            715,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            52,
+            32,
+            139,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_rare_05.png",
+          "column": 4,
+          "row": 2,
+          "placed_bounds": [
+            818,
+            544,
+            910,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_rare_06.png",
+          "column": 5,
+          "row": 2,
+          "placed_bounds": [
+            1012,
+            544,
+            1099,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            52,
+            32,
+            139,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_rare_07.png",
+          "column": 6,
+          "row": 2,
+          "placed_bounds": [
+            1204,
+            544,
+            1291,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            52,
+            32,
+            139,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_rare_08.png",
+          "column": 7,
+          "row": 2,
+          "placed_bounds": [
+            1396,
+            544,
+            1484,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            52,
+            32,
+            140,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_epic_01.png",
+          "column": 0,
+          "row": 3,
+          "placed_bounds": [
+            49,
+            800,
+            143,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_epic_02.png",
+          "column": 1,
+          "row": 3,
+          "placed_bounds": [
+            242,
+            800,
+            334,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_epic_03.png",
+          "column": 2,
+          "row": 3,
+          "placed_bounds": [
+            436,
+            800,
+            523,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            52,
+            32,
+            139,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_epic_04.png",
+          "column": 3,
+          "row": 3,
+          "placed_bounds": [
+            625,
+            800,
+            719,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_epic_05.png",
+          "column": 4,
+          "row": 3,
+          "placed_bounds": [
+            820,
+            800,
+            908,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            52,
+            32,
+            140,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_epic_06.png",
+          "column": 5,
+          "row": 3,
+          "placed_bounds": [
+            1010,
+            800,
+            1101,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            141,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_epic_07.png",
+          "column": 6,
+          "row": 3,
+          "placed_bounds": [
+            1202,
+            800,
+            1293,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            141,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_epic_08.png",
+          "column": 7,
+          "row": 3,
+          "placed_bounds": [
+            1393,
+            800,
+            1487,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_legendary_01.png",
+          "column": 0,
+          "row": 4,
+          "placed_bounds": [
+            51,
+            1056,
+            141,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            51,
+            32,
+            141,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_legendary_02.png",
+          "column": 1,
+          "row": 4,
+          "placed_bounds": [
+            240,
+            1056,
+            335,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            48,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_legendary_03.png",
+          "column": 2,
+          "row": 4,
+          "placed_bounds": [
+            435,
+            1056,
+            525,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            51,
+            32,
+            141,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_legendary_04.png",
+          "column": 3,
+          "row": 4,
+          "placed_bounds": [
+            626,
+            1056,
+            718,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_legendary_05.png",
+          "column": 4,
+          "row": 4,
+          "placed_bounds": [
+            816,
+            1056,
+            911,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            48,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_legendary_06.png",
+          "column": 5,
+          "row": 4,
+          "placed_bounds": [
+            1008,
+            1056,
+            1104,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            48,
+            32,
+            144,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_legendary_07.png",
+          "column": 6,
+          "row": 4,
+          "placed_bounds": [
+            1200,
+            1056,
+            1295,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            48,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_legendary_08.png",
+          "column": 7,
+          "row": 4,
+          "placed_bounds": [
+            1393,
+            1056,
+            1487,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_mythic_01.png",
+          "column": 0,
+          "row": 5,
+          "placed_bounds": [
+            48,
+            1312,
+            144,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            48,
+            32,
+            144,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_mythic_02.png",
+          "column": 1,
+          "row": 5,
+          "placed_bounds": [
+            239,
+            1312,
+            336,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            47,
+            32,
+            144,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_mythic_03.png",
+          "column": 2,
+          "row": 5,
+          "placed_bounds": [
+            432,
+            1312,
+            527,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            48,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_mythic_04.png",
+          "column": 3,
+          "row": 5,
+          "placed_bounds": [
+            623,
+            1312,
+            721,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            47,
+            32,
+            145,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_mythic_05.png",
+          "column": 4,
+          "row": 5,
+          "placed_bounds": [
+            814,
+            1312,
+            914,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            46,
+            32,
+            146,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_mythic_06.png",
+          "column": 5,
+          "row": 5,
+          "placed_bounds": [
+            1006,
+            1312,
+            1105,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            46,
+            32,
+            145,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_mythic_07.png",
+          "column": 6,
+          "row": 5,
+          "placed_bounds": [
+            1199,
+            1312,
+            1297,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            47,
+            32,
+            145,
+            232
+          ]
+        },
+        {
+          "file": "artwork/rogue/rogue_mythic_08.png",
+          "column": 7,
+          "row": 5,
+          "placed_bounds": [
+            1390,
+            1312,
+            1490,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            46,
+            32,
+            146,
+            232
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\ninja_common_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/ninja/ninja_common_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            100,
+            64,
+            283,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            100,
+            64,
+            283,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_common_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            483,
+            64,
+            669,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            285,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_common_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            866,
+            64,
+            1054,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            98,
+            64,
+            286,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_common_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1249,
+            64,
+            1438,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            97,
+            64,
+            286,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_common_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            97,
+            576,
+            286,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            97,
+            64,
+            286,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_common_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            478,
+            576,
+            674,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            94,
+            64,
+            290,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_common_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            864,
+            576,
+            1055,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            96,
+            64,
+            287,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_common_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1248,
+            576,
+            1439,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            96,
+            64,
+            287,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\ninja_uncommon_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/ninja/ninja_uncommon_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            99,
+            64,
+            285,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            285,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_uncommon_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            483,
+            64,
+            669,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            285,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_uncommon_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            865,
+            64,
+            1054,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            97,
+            64,
+            286,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_uncommon_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1250,
+            64,
+            1437,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            98,
+            64,
+            285,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_uncommon_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            98,
+            576,
+            285,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            98,
+            64,
+            285,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_uncommon_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            481,
+            576,
+            670,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            97,
+            64,
+            286,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_uncommon_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            866,
+            576,
+            1054,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            98,
+            64,
+            286,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_uncommon_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1250,
+            576,
+            1438,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            98,
+            64,
+            286,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\ninja_rare_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/ninja/ninja_rare_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            99,
+            64,
+            285,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            285,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_rare_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            483,
+            64,
+            668,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            284,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_rare_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            867,
+            64,
+            1053,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            285,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_rare_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1249,
+            64,
+            1438,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            97,
+            64,
+            286,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_rare_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            99,
+            576,
+            284,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            284,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_rare_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            483,
+            576,
+            669,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            285,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_rare_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            867,
+            576,
+            1052,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            284,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_rare_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1251,
+            576,
+            1436,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            99,
+            64,
+            284,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\ninja_epic_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/ninja/ninja_epic_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            88,
+            64,
+            296,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            88,
+            64,
+            296,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_epic_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            476,
+            64,
+            676,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            92,
+            64,
+            292,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_epic_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            855,
+            64,
+            1065,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            87,
+            64,
+            297,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_epic_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1240,
+            64,
+            1447,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            88,
+            64,
+            295,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_epic_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            96,
+            576,
+            287,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            96,
+            64,
+            287,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_epic_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            474,
+            576,
+            678,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            90,
+            64,
+            294,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_epic_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            855,
+            576,
+            1064,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            87,
+            64,
+            296,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_epic_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1243,
+            576,
+            1444,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            91,
+            64,
+            292,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\ninja_legendary_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/ninja/ninja_legendary_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            93,
+            64,
+            290,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            93,
+            64,
+            290,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_legendary_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            470,
+            64,
+            681,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            86,
+            64,
+            297,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_legendary_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            860,
+            64,
+            1060,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            92,
+            64,
+            292,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_legendary_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1243,
+            64,
+            1445,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            91,
+            64,
+            293,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_legendary_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            95,
+            576,
+            289,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            95,
+            64,
+            289,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_legendary_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            472,
+            576,
+            680,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            88,
+            64,
+            296,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_legendary_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            860,
+            576,
+            1059,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            92,
+            64,
+            291,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_legendary_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1247,
+            576,
+            1441,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            95,
+            64,
+            289,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "armor_sheets\\ninja_mythic_eight.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "cell_size": [
+        384,
+        512
+      ],
+      "baseline": 464,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/ninja/ninja_mythic_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            89,
+            64,
+            295,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            89,
+            64,
+            295,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_mythic_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            464,
+            64,
+            688,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            80,
+            64,
+            304,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_mythic_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            856,
+            64,
+            1064,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            88,
+            64,
+            296,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_mythic_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            1236,
+            64,
+            1451,
+            464
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            84,
+            64,
+            299,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_mythic_05.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            86,
+            576,
+            297,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            86,
+            64,
+            297,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_mythic_06.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            467,
+            576,
+            684,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            83,
+            64,
+            300,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_mythic_07.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            851,
+            576,
+            1069,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            83,
+            64,
+            301,
+            464
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_mythic_08.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            1235,
+            576,
+            1453,
+            976
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            83,
+            64,
+            301,
+            464
+          ]
+        }
+      ]
+    },
+    {
+      "file": "class_sheets\\ninja_all_48.png",
+      "dimensions": [
+        1536,
+        1536
+      ],
+      "cell_size": [
+        192,
+        256
+      ],
+      "baseline": 232,
+      "reopened_from_disk": true,
+      "placements": [
+        {
+          "file": "artwork/ninja/ninja_common_01.png",
+          "column": 0,
+          "row": 0,
+          "placed_bounds": [
+            50,
+            32,
+            142,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_common_02.png",
+          "column": 1,
+          "row": 0,
+          "placed_bounds": [
+            241,
+            32,
+            334,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_common_03.png",
+          "column": 2,
+          "row": 0,
+          "placed_bounds": [
+            433,
+            32,
+            527,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_common_04.png",
+          "column": 3,
+          "row": 0,
+          "placed_bounds": [
+            624,
+            32,
+            719,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            48,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_common_05.png",
+          "column": 4,
+          "row": 0,
+          "placed_bounds": [
+            817,
+            32,
+            911,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_common_06.png",
+          "column": 5,
+          "row": 0,
+          "placed_bounds": [
+            1007,
+            32,
+            1105,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            47,
+            32,
+            145,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_common_07.png",
+          "column": 6,
+          "row": 0,
+          "placed_bounds": [
+            1200,
+            32,
+            1296,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            48,
+            32,
+            144,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_common_08.png",
+          "column": 7,
+          "row": 0,
+          "placed_bounds": [
+            1392,
+            32,
+            1487,
+            232
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            48,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_uncommon_01.png",
+          "column": 0,
+          "row": 1,
+          "placed_bounds": [
+            49,
+            288,
+            142,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_uncommon_02.png",
+          "column": 1,
+          "row": 1,
+          "placed_bounds": [
+            241,
+            288,
+            334,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_uncommon_03.png",
+          "column": 2,
+          "row": 1,
+          "placed_bounds": [
+            433,
+            288,
+            527,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_uncommon_04.png",
+          "column": 3,
+          "row": 1,
+          "placed_bounds": [
+            625,
+            288,
+            719,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_uncommon_05.png",
+          "column": 4,
+          "row": 1,
+          "placed_bounds": [
+            817,
+            288,
+            910,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_uncommon_06.png",
+          "column": 5,
+          "row": 1,
+          "placed_bounds": [
+            1008,
+            288,
+            1103,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            48,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_uncommon_07.png",
+          "column": 6,
+          "row": 1,
+          "placed_bounds": [
+            1201,
+            288,
+            1295,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_uncommon_08.png",
+          "column": 7,
+          "row": 1,
+          "placed_bounds": [
+            1393,
+            288,
+            1487,
+            488
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_rare_01.png",
+          "column": 0,
+          "row": 2,
+          "placed_bounds": [
+            49,
+            544,
+            142,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_rare_02.png",
+          "column": 1,
+          "row": 2,
+          "placed_bounds": [
+            241,
+            544,
+            334,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_rare_03.png",
+          "column": 2,
+          "row": 2,
+          "placed_bounds": [
+            433,
+            544,
+            526,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_rare_04.png",
+          "column": 3,
+          "row": 2,
+          "placed_bounds": [
+            625,
+            544,
+            719,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_rare_05.png",
+          "column": 4,
+          "row": 2,
+          "placed_bounds": [
+            817,
+            544,
+            910,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_rare_06.png",
+          "column": 5,
+          "row": 2,
+          "placed_bounds": [
+            1009,
+            544,
+            1102,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_rare_07.png",
+          "column": 6,
+          "row": 2,
+          "placed_bounds": [
+            1202,
+            544,
+            1294,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            50,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_rare_08.png",
+          "column": 7,
+          "row": 2,
+          "placed_bounds": [
+            1393,
+            544,
+            1486,
+            744
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            49,
+            32,
+            142,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_epic_01.png",
+          "column": 0,
+          "row": 3,
+          "placed_bounds": [
+            44,
+            800,
+            148,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            44,
+            32,
+            148,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_epic_02.png",
+          "column": 1,
+          "row": 3,
+          "placed_bounds": [
+            238,
+            800,
+            338,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            46,
+            32,
+            146,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_epic_03.png",
+          "column": 2,
+          "row": 3,
+          "placed_bounds": [
+            427,
+            800,
+            532,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            43,
+            32,
+            148,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_epic_04.png",
+          "column": 3,
+          "row": 3,
+          "placed_bounds": [
+            620,
+            800,
+            723,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            44,
+            32,
+            147,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_epic_05.png",
+          "column": 4,
+          "row": 3,
+          "placed_bounds": [
+            816,
+            800,
+            911,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            48,
+            32,
+            143,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_epic_06.png",
+          "column": 5,
+          "row": 3,
+          "placed_bounds": [
+            1005,
+            800,
+            1107,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            45,
+            32,
+            147,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_epic_07.png",
+          "column": 6,
+          "row": 3,
+          "placed_bounds": [
+            1195,
+            800,
+            1300,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            43,
+            32,
+            148,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_epic_08.png",
+          "column": 7,
+          "row": 3,
+          "placed_bounds": [
+            1389,
+            800,
+            1490,
+            1000
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            45,
+            32,
+            146,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_legendary_01.png",
+          "column": 0,
+          "row": 4,
+          "placed_bounds": [
+            46,
+            1056,
+            145,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            46,
+            32,
+            145,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_legendary_02.png",
+          "column": 1,
+          "row": 4,
+          "placed_bounds": [
+            235,
+            1056,
+            340,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            43,
+            32,
+            148,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_legendary_03.png",
+          "column": 2,
+          "row": 4,
+          "placed_bounds": [
+            430,
+            1056,
+            530,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            46,
+            32,
+            146,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_legendary_04.png",
+          "column": 3,
+          "row": 4,
+          "placed_bounds": [
+            621,
+            1056,
+            722,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            45,
+            32,
+            146,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_legendary_05.png",
+          "column": 4,
+          "row": 4,
+          "placed_bounds": [
+            815,
+            1056,
+            912,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            47,
+            32,
+            144,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_legendary_06.png",
+          "column": 5,
+          "row": 4,
+          "placed_bounds": [
+            1004,
+            1056,
+            1108,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            44,
+            32,
+            148,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_legendary_07.png",
+          "column": 6,
+          "row": 4,
+          "placed_bounds": [
+            1198,
+            1056,
+            1297,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            46,
+            32,
+            145,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_legendary_08.png",
+          "column": 7,
+          "row": 4,
+          "placed_bounds": [
+            1391,
+            1056,
+            1488,
+            1256
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            47,
+            32,
+            144,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_mythic_01.png",
+          "column": 0,
+          "row": 5,
+          "placed_bounds": [
+            44,
+            1312,
+            147,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            44,
+            32,
+            147,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_mythic_02.png",
+          "column": 1,
+          "row": 5,
+          "placed_bounds": [
+            232,
+            1312,
+            344,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            40,
+            32,
+            152,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_mythic_03.png",
+          "column": 2,
+          "row": 5,
+          "placed_bounds": [
+            428,
+            1312,
+            532,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            44,
+            32,
+            148,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_mythic_04.png",
+          "column": 3,
+          "row": 5,
+          "placed_bounds": [
+            618,
+            1312,
+            726,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            42,
+            32,
+            150,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_mythic_05.png",
+          "column": 4,
+          "row": 5,
+          "placed_bounds": [
+            811,
+            1312,
+            916,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            43,
+            32,
+            148,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_mythic_06.png",
+          "column": 5,
+          "row": 5,
+          "placed_bounds": [
+            1001,
+            1312,
+            1110,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            41,
+            32,
+            150,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_mythic_07.png",
+          "column": 6,
+          "row": 5,
+          "placed_bounds": [
+            1193,
+            1312,
+            1302,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            41,
+            32,
+            150,
+            232
+          ]
+        },
+        {
+          "file": "artwork/ninja/ninja_mythic_08.png",
+          "column": 7,
+          "row": 5,
+          "placed_bounds": [
+            1385,
+            1312,
+            1494,
+            1512
+          ],
+          "reopened_opaque_bounds_in_cell": [
+            41,
+            32,
+            150,
+            232
+          ]
+        }
+      ]
+    }
+  ],
+  "note": "Source-art presentation sheets; not canonical AP/palette/game export certification."
+}
