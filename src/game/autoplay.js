@@ -125,6 +125,7 @@ function engageRange(sk, t, bold = 0) {
     case 'wall': return sk.m.ring ? 2 : 6;
     case 'leap': case 'dash': return Math.min(skillRange(sk), 5);
   }
+  if (sk.kind === 'proj' && sk.m.ring) return 2.2; // thrown in every direction: from the middle of them
   const r = reachOf(sk);
   return Math.max(Math.min(r * 0.8, 2.6), Math.min(r * (0.8 - 0.4 * bold), 8 - 2.5 * bold));
 }
@@ -155,6 +156,8 @@ const focusSkills = (classId) => {
   if (classId === 'lancer') return list.filter((sk) => sk.m.shields || sk.kind === 'leap' || sk.kind === 'dash');
   if (classId === 'dragoon') return list.filter((sk) => sk.kind === 'leap' || sk.kind === 'dash' || sk.m.barrage || sk.m.weave);
   if (classId === 'monk') return list.filter((sk) => sk.kind === 'dash' || sk.kind === 'leap' || sk.kind === 'melee' || sk.kind === 'cyclone');
+  if (classId === 'rogue') return list.filter((sk) => sk.m.cp || sk.m.fin || sk.m.rog === 'dance' || sk.m.rog === 'flurry'); // builders and what they pay for
+  if (classId === 'ninja') return list.filter((sk) => sk.m.nin && sk.kind !== 'curse');
   return null;
 };
 const mobility = (sk) => ['leap', 'dash', 'blink'].includes(sk.kind) ||
@@ -176,12 +179,18 @@ function shieldStep(c, focus) {
   return step && !canLearn(step) ? step : null;
 }
 /** Value multiplier for a skill under the class's build focus. */
-function focusMul(classId, sk) {
+function focusMul(classId, sk, live = false) { // live: in a fight (the Rogue's Combo Points count); else how a build is weighed
   if (classId === 'paladin') return isHammer(sk) ? (sk.kind === 'orbit' || sk.m.ricochet ? 4 : 2.5) : 1; // hammers and Shield Throw
   if (classId === 'barbarian') return sk.kind === 'whirl' ? 6 : mobility(sk) ? 1.8 : 1;
   if (classId === 'lancer') return sk.m.shields ? 5 : mobility(sk) ? 1.8 : 1;
   if (classId === 'dragoon') return sk.m.barrage ? 5 : sk.kind === 'leap' ? 5 : sk.m.weave ? 2.5 : mobility(sk) ? 1.8 : 1;
   if (classId === 'monk') return sk.kind === 'melee' ? 3.5 : mobility(sk) ? 2.2 : 1;
+  if (classId === 'rogue') { // spend at four or five Combo Points, build below that
+    if (!live) return (sk.m.fin || sk.m.cp) ? (sk.kind === 'melee' ? 3 : 1.6) : 1; // her daggers in her hands first
+    const R = G.player && G.player.rogue, cp = R ? R.cp : 0;
+    return sk.m.fin ? (cp >= 4 ? 9 : cp >= 3 ? 1.5 : 0.08) : sk.m.cp ? (cp >= 5 ? 0.25 : 2.6) : sk.m.rog === 'stealth' || sk.m.rog === 'smoke' ? 0.5 : 1;
+  }
+  if (classId === 'ninja') return sk.m.nin === 'mirror' ? 5 : sk.m.nin === 'backflip' ? 0.4 : sk.m.nin ? 2.4 : mobility(sk) ? 1.6 : 1;
   if (PET_CLASSES.has(classId) && sk.kind === 'summon') return sk.m.dur ? 2.5 : 4;
   if (classId === 'bard') return sk.m.dacapo ? 2 : sk.kind === 'proj' || sk.kind === 'orbit' || sk.kind === 'rain' ? 1.5 : 1; // notes in the air
   if (classId === 'arcane_sorcerer') return sk.m.astro ? 2.5 : sk.fx === 'starmissile' ? 1.5 : 1; // the Astronomer: falling suns, black holes, star swarms
@@ -1235,7 +1244,9 @@ export const Auto = {
     const p = G.player, w = G.world, c = G.char;
     this.navT -= dt;
     // life lost per second (share of max), smoothed over a few seconds: how hard the fight is pushing back
-    if (this.lastHp >= 0) this.hurt += (Math.max(0, this.lastHp - p.hp) / p.maxHp / dt - this.hurt) * Math.min(1, dt / 3);
+    // (a zero-length frame would make this 0/0: NaN from then on, and a NaN boldness never walks a ranged build into range)
+    if (!(this.hurt >= 0)) this.hurt = 0;
+    if (this.lastHp >= 0 && dt > 0) this.hurt += (Math.max(0, this.lastHp - p.hp) / p.maxHp / dt - this.hurt) * Math.min(1, dt / 3);
     this.lastHp = p.hp;
     if (!this.nav || this.navT <= 0) this.buildNav();
     this.potions(w);
@@ -1797,7 +1808,7 @@ export const Auto = {
   },
   meleeBuild() {
     const sk = SKILLS[G.char.bar[0]];
-    return ['lancer', 'barbarian', 'dragoon'].includes(G.char.classId) ||
+    return ['lancer', 'barbarian', 'dragoon', 'rogue', 'ninja'].includes(G.char.classId) ||
       !!sk && ['melee', 'whirl', 'leap', 'dash'].includes(sk.kind);
   },
 
@@ -2101,14 +2112,14 @@ export const Auto = {
           }
         // fall through for ordinary ranged AoE skills
         case 'rain': case 'strike': case 'trap': n = crowdAt(t.x, t.y, 2); ok = d <= Math.min(9.5, skillRange(sk)) && los; break;
-        default: ok = d <= reachOf(sk) * 0.92 && los; n = crowdAt(t.x, t.y, 2.2);
+        default: ok = d <= (sk.kind === 'proj' && m.ring ? 3.2 : reachOf(sk) * 0.92) && los; n = crowdAt(t.x, t.y, 2.2);
       }
       if (!ok) continue;
       if (lowMana) continue;
       const per = avg(p.skillDamage(sk, L)) * hitsPerCast(sk, Math.max(1, n), L);
       let score = per / Math.max(0.2, castTime(p, sk));
       if (cooldown(sk) >= 1.2) score *= 1.6; // fire cooldowns whenever they are up
-      score *= focusMul(c.classId, sk); // the build focus: the Paladin swings hammers before anything else
+      score *= focusMul(c.classId, sk, true); // the build focus: the Paladin swings hammers before anything else
       if (sk.m.ricochet && c.classId === 'paladin') score *= this.hammersSince > 0 ? 6 : 0.3; // and throws his shield between them
       if (sk.kind === 'leap' || sk.kind === 'dash') score *= d > 3 ? 2.5 : d > 1.8 ? 1.2 : 0.5;
       if (cost) score *= 1 - 0.35 * clamp(1 - p.mana / p.maxMana, 0, 1);

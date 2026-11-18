@@ -5,6 +5,7 @@ export const TREE4_NAMES = {
   paladin: 'Radiant Ascension', ranger: 'Starshot', wizard: 'Prismatic', barbarian: 'Bloodrage', totem_master: 'Spirit Walk',
   death_knight: 'Runeblade', arcane_sorcerer: 'Constellations', carrion_witch: 'Grave Moon', bard: 'Grand Finale', slime_lord: 'Primordial',
   boomerang_knight: 'Tempest Orbit', lancer: 'Radiant Lance', dragon_knight: 'Wyrmfire Ascendant', gunner: 'Heavy Ordnance', monk: 'Transcendence',
+  rogue: 'Crimson Tempest', ninja: 'Dragon Ninpo',
 };
 
 export const TREE4 = {
@@ -172,5 +173,27 @@ export const TREE4 = {
     'Chakras Open|buff|holy|aura|buff=cdr,as,speed amt=35 dur=14 cd=28',
     'Heavenly Palm|aoe|holy|pillar|r=2.2 dmg=2.7 stun cd=5',
     'Nirvana Flash|nova|holy|holy|n=3 r=2 stun cd=7',
+  ],
+  rogue: [
+    'Hemorrhage|melee|blood|slash|free wc=1 cleave bleed cp=1',
+    'Crimson Tempest|nova|blood|blood|fin r=1.4 bleed rog=tempest',
+    'Blood Dance|whirl|blood|spin|dur=2.2 bleed cp=1',
+    'Exsanguinate|strike|blood|blood|n=5 rog=exsang cd=4',
+    'Blade Vortex|orbit|phys|dagger3|n=5 dur=6 cd=7',
+    'Crimson Vial|heal|blood|light|amt=22 cd=10',
+    'Thousand Cuts|aoe|blood|slash|n=9 r=1.3 dur=1.6 bleed rog=cuts cd=5',
+    'Adrenaline Rush|buff|blood|aura|buff=as,speed,crit amt=36 dur=14 cd=30 rog=rush',
+    'Night of Knives|rain|blood|dagger3|fin n=30 r=2.3 dur=2.4 bleed rog=night cd=10',
+  ],
+  ninja: [
+    'Nunchaku Flurry|melee|phys|smash|free wc=1 n=4 dmg=0.42 nin=chucks',
+    'Art of the Fire Wheels|orbit|fire|fireball|n=4 dur=6 burn cd=7',
+    'Thunder Step|dash|light|charge|range=1.2 chain=3 nin=swallow',
+    'Dragon Flail|whirl|phys|spin|dur=2.4 dmg=1.05 stun nin=flail',
+    'Art of the Inferno|proj|fire|fireball|exp r=1.5 dmg=1.9 burn cd=2.5',
+    'Art of the Piercing Void|proj|shadow|orb|pierce pull r=1.6 dmg=1.7 spd=0.8 cd=4',
+    'Lightning Kick|leap|light|lightning|r=1.5 dmg=1.4 stun nin=kick cd=3.5',
+    'Ninpo Trance|buff|shadow|transform|transform buff=dmg,as,crit amt=42 dur=15 cd=42',
+    'True Dragon Technique|strike|fire|meteor|n=9 r=1.3 nin=dragon cd=9',
   ],
 };

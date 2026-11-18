@@ -12,6 +12,7 @@ import { drawCosmic, cosmicTrail } from './cosmos.js';
 import { drawDkSkull } from './dkskull.js';
 import { drawRuneblade3D, runeblade3DReady, runebladeLook, RUNEBLADE_LEN } from './runeblade3d.js';
 import { drawHammer3D, headingOfScreen } from './hammer3d.js';
+import { drawBlade3D } from './blades3d.js';
 
 function glow(ctx, x, y, r, color, a = 1) {
   ctx.globalCompositeOperation = 'lighter';
@@ -85,6 +86,12 @@ export function drawShape(ctx, fx, x, y, a, s, E, t, extra = {}) {
       fx = 'blade';
     }
     // falls through to the drawn blade while the model loads
+    case 'dagger3': case 'kunai': case 'shuriken': case 'caltrop': // three.js steel (gfx/blades3d.js); the drawn blade until it has loaded
+      if (fx !== 'blade') {
+        if (drawBlade3D(ctx, fx === 'dagger3' ? 'dagger' : fx, 0, 0, a, s, t, { seed: extra && extra.seed })) break;
+        fx = fx === 'shuriken' || fx === 'caltrop' ? 'chakram' : 'blade';
+      }
+    // falls through
     case 'blade': case 'axe': case 'chakram': case 'rang': case 'disc': {
       glow(ctx, 0, 0, 14 * s, E.glow, E.name === 'Physical' ? 0.35 : 0.75);
       ctx.rotate(spin);

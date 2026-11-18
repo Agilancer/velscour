@@ -100,7 +100,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     if (fromPlayer) {
       const st = owner.st;
       if (tgt.rank === 'boss' && st.bossDmg) dmg *= 1 + st.bossDmg / 100;
-      if (src.isPlayer && !o.dot && o.crit !== false && chance(st.critChance / 100)) {
+      if (src.isPlayer && !o.dot && o.crit !== false && (o.sureCrit || chance(st.critChance / 100))) {
         crit = true;
         dmg *= 1 + st.critDmg / 100;
       }

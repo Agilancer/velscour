@@ -5,12 +5,14 @@
 import { CLASSES } from './classes.js';
 import { TALENT_DATA_1 } from './talentdata1.js';
 import { TALENT_DATA_2 } from './talentdata2.js';
+import { TALENT_DATA_3 } from './talentdata3.js';
 
 export const TALENT_ROW_LEVELS = [1, 10, 20, 30, 45];
 
 const RAW_TALENTS = {
   ...TALENT_DATA_1,
   ...TALENT_DATA_2,
+  ...TALENT_DATA_3,
 };
 
 // Build indexed lookup tables

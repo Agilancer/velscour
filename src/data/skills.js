@@ -13,6 +13,7 @@ export const CLASS_SKILLS = {};
 // Skills granted for free as the hero levels up: [character level, tree, index]
 export const GRANTS = [[1, 0, 0], [1, 2, 0], [3, 1, 0], [12, 0, 3], [16, 1, 3], [20, 2, 3], [30, 0, 6], [34, 1, 6], [38, 2, 6]];
 const DRAGOON_GRANTS = [[1, 3, 0], [2, 3, 1], [4, 3, 2]];
+const ROGUE_GRANTS = [[1, 0, 1]]; // Eviscerate: a finisher from the start, or her Combo Points buy nothing
 
 const KIND_DMG = {
   melee: 1.15, proj: 1.0, nova: 0.95, aoe: 1.35, beam: 1.2, chain: 0.95, wall: 0.32, zone: 0.3, orbit: 0.5, cyclone: 0.38,
@@ -25,7 +26,7 @@ const KIND_MANA = {
 };
 const KIND_CD = { summon: 0.6, leap: 0.7, dash: 0.6, blink: 0.4, heal: 4, trap: 0.3 };
 const KIND_USE = { melee: 0.36, proj: 0.32, buff: 0.3, summon: 0.4, curse: 0.35, blink: 0.2, dash: 0.25, leap: 0.25 };
-const ATTACK_FX = new Set(['arrow', 'bullet', 'rang', 'javelin', 'blade', 'axe', 'chakram', 'rock', 'disc', 'pshield', 'tshield', 'bomb', 'rocket']);
+const ATTACK_FX = new Set(['arrow', 'bullet', 'rang', 'javelin', 'blade', 'axe', 'chakram', 'rock', 'disc', 'pshield', 'tshield', 'bomb', 'rocket', 'dagger3', 'shuriken', 'kunai']);
 
 function parseMods(str) {
   const m = {};
@@ -60,7 +61,7 @@ for (const [cls, trees] of Object.entries(SKILLDATA)) {
 }
 
 export function grantedSkillsAt(cls, level) {
-  const grants = cls === 'dragoon' ? [...GRANTS, ...DRAGOON_GRANTS] : GRANTS;
+  const grants = cls === 'dragoon' ? [...GRANTS, ...DRAGOON_GRANTS] : cls === 'rogue' ? [...GRANTS, ...ROGUE_GRANTS] : GRANTS;
   return grants.filter((g) => g[0] <= level).map(([, t, i]) => `${cls}.${t}.${i}`);
 }
 
@@ -153,6 +154,7 @@ const FXNAME = {
   disc: 'shield', pshield: 'shield', tshield: 'shield', bomb: 'bomb', rocket: 'rocket', bolt: 'bolt', orb: 'orb', fireball: 'fireball', hammer: 'hammer', skull: 'spirit skull',
   spear: 'spear', shard: 'shard', crow: 'crow', note: 'note', blob: 'glob', star: 'star', wave: 'wave', missile: 'missile', locust: 'locust',
   wolf: 'ghost wolf', dragon: 'drake', rune: 'rune', tooth: 'tooth', bone: 'bone shard', card: 'card', spark: 'spark', spirit: 'spirit', chain: 'chain',
+  dagger3: 'dagger', shuriken: 'shuriken', kunai: 'kunai', caltrop: 'caltrop',
   feather: 'feather', totem: 'totem', meteor: 'meteor', ice: 'ice shard', acid: 'acid drop', firework: 'firework', blood: 'blood drop',
   starmissile: 'star missile', starfall: 'falling star', stardust: 'stardust mote', moon: 'crescent moon', comet: 'comet', flare: 'solar flare',
   gravorb: 'gravity orb', darkmatter: 'dark matter orb', antimatter: 'antimatter orb', planet: 'planet', zodiac: 'zodiac sign', accretion: 'accretion shard',
@@ -177,6 +179,53 @@ const ASTRO_TEXT = {
   chart: (D) => `Light three stars between you and the target, each a small starfall for ${D}.`,
   ignite: (D) => `Ascend your star chart now, at 25% more power (needs two stars); with fewer, light a star at the target for ${D}.`,
   heavensmap: (D) => `Chart seven stars around the target, then ascend them as the Northern Crown at 50% more power (${D} base).`,
+};
+// the Rogue's (`rog=`) and the Ninja's (`nin=`) own moves (game/rogue.js, game/ninja.js): (D, m, L, s) with s the kind's text
+const ROGUE_TEXT = {
+  twin: (D) => `Slash with both daggers for ${D} each.`,
+  eviscerate: (D) => `Tear the foes in front of you open for ${D}.`,
+  backstab: (D) => `Vanish and appear behind the target with a dagger in its back for ${D}. Always a critical hit.`,
+  rupture: (D) => `Open the foes in front of you for ${D}; they bleed longer and harder for every Combo Point.`,
+  kidney: (D) => `Strike for ${D} and stun the target, longer for every Combo Point.`,
+  envenom: (D) => `Burst the venom on your blades around you for ${D}.`,
+  dfa: (D) => `Somersault onto the target, both points down, for ${D} in an area; daggers stand in the ground where you land.`,
+  shadowstrike: (D) => `Dash through the shadows, striking everything in your path for ${D}.`,
+  stealth: (D, m, L, s) => `Slip into the shadows for ${m.dur}s: enemies cannot see or strike you. Your next strike breaks it as an Ambush: a sure critical hit for 50% more damage, and a builder gains 1 more Combo Point. ${s}`,
+  smoke: (D, m, L, s) => `${s} You vanish from sight for 2.5s.`,
+  dance: (D, m, L, s) => `${s} While it lasts every strike is an Ambush.`,
+  mark: (D, m, L, s) => `${s} You gain full Combo Points at once.`,
+  secret: (D, m) => `Your shadows step out behind the foes around the target and stab for ${D} each: ${m.n} of them, one more for every Combo Point.`,
+  fangs: (D) => `Daggers burst out of the ground under the target for ${D}.`,
+  flurry: (D, m, L, s) => `${s} Your melee blows also strike two more foes nearby for 40%.`,
+  giant: (D) => `One giant dagger falls out of the sky onto the target for ${D} in a wide area.`,
+  tempest: (D) => `Spin a wheel of blood around you for ${D}.`,
+  exsang: (D, m) => `Strike up to ${m.n} foes near the target for ${D}; those already bleeding burst for twice as much.`,
+  cuts: (D, m) => `${m.n} cuts tear through the target area over ${m.dur}s, each dealing ${D} to everything in it.`,
+  rush: (D, m, L, s) => `${s} Builders grant 1 more Combo Point.`,
+  night: (D, m) => `Daggers burst from the ground under the target area, then ${m.n} rain down on it, each dealing ${D}.`,
+};
+const NINJA_TEXT = {
+  crescent: (D) => `Cut a crescent in front of you for ${D}. Every third cut is a somersault that hits 25% harder.`,
+  swallow: (D) => `Somersault straight through the enemy, cutting everything in your path for ${D}.`,
+  rising: (D) => `Backflip with the blade coming up under them: ${D} all around you, hurling enemies back.`,
+  iai: (D) => `Draw and cross the room in one cut: everything on the line is held where it stands, and takes ${D} when the blade is sheathed.`,
+  cross: (D, m) => `Dash ${m.n} times from foe to foe, cutting everything in your path for ${D}.`,
+  drop: (D) => `Seize the target, carry it into the air turning over and over, and bring it down on its head: ${D} to everything where you land, 60% more to the one you took.`,
+  petals: (D, m) => `Cartwheel through the enemy for ${m.dur}s, the blade a wheel around you, for ${D} per tick.`,
+  flail: (D, m) => `Whirl the nunchaku around you for ${m.dur}s for ${D} per tick.`,
+  hundred: (D, m) => `Vanish and cut ${m.n} times through the foes in the target area for ${D} each. When you sheathe the blade every foe you cut takes a last blow, harder for every cut it carries.`,
+  step: (D) => `Step out of one shadow into another at the target, bursting out for ${D}.`,
+  mirror: (D, m, L, s) => `${Math.min(4, 2 + Math.floor((L - 1) / 7))} shadows follow in your footsteps and repeat every strike you make for 20% of its damage (3 at rank 8, 4 at rank 15). ${s}`,
+  grapple: (D, m, L) => { const n = Math.min(5, 1 + Math.floor((Math.max(1, L) - 1) / 4)); return `Throw the hook: it drags ${n} ${n > 1 ? 'foes' : 'foe'} to your feet, stunned, for ${D} (one more every 4 ranks, 5 at rank 17). A guardian too heavy to drag pulls you to it instead.`; },
+  smoke: (D, m, L, s) => `${s} You vanish from sight for 2.5s.`,
+  zip: (D) => `Hook the target spot and swing in feet first for ${D} in an area.`,
+  legion: (D, m) => `${m.n} of your shadows each run a foe near the target through for ${D}.`,
+  thousand: (D) => `Shadows cross the target area from every side, each cutting for a fifth of ${D}; then the dark closes on it for all of it.`,
+  caltrops: (D, m) => `Strew caltrops for ${m.dur}s: foes that cross them are slowed and bleed, taking ${D} per tick.`,
+  backflip: (D) => `Backflip away from the enemy, leaving caltrops where you stood and throwing five shuriken for ${D} each.`,
+  steel: (D, m) => `Spin up into the air and rain ${m.n} shuriken on the target area, each dealing ${D}.`,
+  chucks: (D, m) => `Strike ${m.n} times with the nunchaku for ${D} each; the last blow may stun.`,
+  kick: (D) => `A flying kick: land on the target in a clap of lightning for ${D} in an area.`,
 };
 const BUFFNAME = { dmg: 'Damage', as: 'Attack & Cast Speed', armor: 'Armor', res: 'All Resistances', regen: 'Life Regen', speed: 'Move Speed', crit: 'Critical Chance', thorns: 'Thorns', leech: 'Life Steal', block: 'Block Chance', life: 'Maximum Life', cdr: 'Cooldown Reduction' };
 const CURSENAME = { amp: 'take increased damage', weaken: 'deal less damage', slow: 'are slowed', fear: 'flee in terror', confuse: 'attack each other', charm: 'fight for you', decay: 'rot over time', leech: 'heal you when struck', thorns: 'hurt themselves when attacking', mark: 'are marked for death', stun: 'are stunned', freeze: 'are frozen', bomb: 'explode after a delay', doom: 'suffer a delayed doom' };
@@ -254,6 +303,10 @@ export function describe(sk, L, dmg) {
   if (m.clap) s = `Clap thunder down at the target for ${D}, stunning and hurling enemies back. A beat later lightning strikes every stunned foe for 60% more.`;
   if (m.arcs) s = `Release ${n} expanding rings of lightning around you, each dealing ${D}. The first enemies each ring strikes throw off arcs that leap to ${m.arcs} more.`;
   if (ASTRO_TEXT[m.astro]) s = ASTRO_TEXT[m.astro](D, m) + (sk.kind === 'buff' ? ' ' + s : '');
+  if (ROGUE_TEXT[m.rog]) s = ROGUE_TEXT[m.rog](D, m, L, s);
+  if (NINJA_TEXT[m.nin]) s = NINJA_TEXT[m.nin](D, m, L, s);
+  if (m.cp) flags.push(`Builds ${m.cp} Combo Point${m.cp > 1 ? 's' : ''}`);
+  if (m.fin) flags.push('Finisher: spends every Combo Point, dealing 55% of this with none and 220% with five');
   if (sk.classId === 'arcane_sorcerer' && !['buff', 'heal', 'summon'].includes(sk.kind) && !['chart', 'ignite', 'heavensmap'].includes(m.astro)) flags.push(m.free ? 'Every third cast charts a star' : 'Charts a star where it lands');
   for (const k in NOTE_MODS) if (m[k]) flags.push(NOTE_MODS[k]);
   const N = NOTES[m.note];

@@ -138,14 +138,16 @@ let snap = null; // the last render, copied out of the GL canvas: an image the c
  * screen angle a, turned `spin` round its length and tipped `tilt` toward the viewer. o.rim(img, sx, sy, sw, sh, dx, dy,
  * dw, dh) draws an outline under it (img is redrawn every call: the callee must not keep its old rims). Returns the effect points in ctx
  * units ({ pts: { guard, tip, head, line, orbit, slots }, k: units per model unit, face: 0..1 how square-on }) or null
- * when the model can't draw yet (no WebGL, loading, no model for this piece).
+ * when the model can't draw yet (no WebGL, loading, no model for this piece). o.unit: ctx units per model unit, in place
+ * of len; o.origin: the model's origin (the grip, where the fist holds it) goes to (x, y) and turns there, not the guard.
  */
 export function drawHeldModel3D(ctx, item, cls, x, y, a, len, o = {}) {
-  if (!heldModel3DReady(item, cls) || !R || len <= 0) return null;
+  if (!heldModel3DReady(item, cls) || !R || !(o.unit > 0 || len > 0)) return null;
   const set = heldSetOf(item.base, 'weapon', cls), look = heldLook(item), i = HELD_START[item.rarity | 0] + look[0], f = file(set, i);
   const element = heldElement(item) || f.obj.userData.element || 'cold', gems = (item.gems || []).map((g) => GEMS[g.gem]?.color || '#ffffff');
   const L = dressed(f, `${set}/${i}|${look[1] | 0}|${element}|${gems.join()}`, look[1] | 0, element, gems);
-  const k = len / f.len, half = Math.ceil(L.rad * k + 2);
+  const k = o.unit || len / f.len, half = Math.ceil((L.rad + (o.origin ? f.guard.length() : 0)) * k + 2);
+  if (o.origin) L.obj.position.set(0, 0, 0); else L.obj.position.copy(f.guard).multiplyScalar(-1);
   const { gl, canvas, scene, cam } = R, tf = ctx.getTransform();
   const res = Math.min(Math.max(0.25, Math.hypot(tf.a, tf.b)), MAXC / (half * 2)), w = Math.max(1, Math.ceil(half * 2 * res));
   if (canvas.width < w) { const n = Math.min(MAXC, 1 << Math.ceil(Math.log2(w))); gl.setSize(n, n, false); }

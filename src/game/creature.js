@@ -19,7 +19,7 @@ const FREEZE = 'hue-rotate(180deg) saturate(1.6) brightness(1.2)', CHARM = 'hue-
 const tints = { [FREEZE]: new WeakMap(), [CHARM]: new WeakMap() };
 function tinted(img, f) {
   if (!f) return img;
-  let c = tints[f].get(img);
+  let c = (tints[f] ||= new WeakMap()).get(img);
   if (!c) {
     c = makeCanvas(img.width, img.height);
     const x = c.getContext('2d');
@@ -283,6 +283,7 @@ export class Creature {
     if (this.flash > 0) this.flash -= dt;
     if (this.hpShow > 0) this.hpShow -= dt;
     if (this.lunge > 0) this.lunge = Math.max(0, this.lunge - dt * 4);
+    if (this.acro && (this.acro.t += dt) >= this.acro.dur) this.acro = null;
     if (this.attackAnimT > 0) this.attackAnimT = Math.max(0, this.attackAnimT - dt);
     if (this.cheerT > 0) this.cheerT -= dt;
     this.spawnT += dt;
@@ -335,7 +336,7 @@ export class Creature {
     return this._img;
   }
   tintFilter() {
-    return this.status.freeze && this.status.freeze.t > 0 ? FREEZE : this.curses.charm && this.curses.charm.t > 0 ? CHARM : '';
+    return this.tintAs ? this.tintAs : this.status.freeze && this.status.freeze.t > 0 ? FREEZE : this.curses.charm && this.curses.charm.t > 0 ? CHARM : '';
   }
   flashImage(img) {
     if (img && img._art) return enemyImage(img === this._img ? this._imgSprite : this.riseArt, this.swap, 'flash');
@@ -551,7 +552,11 @@ export class Creature {
       bob = this.moving ? Math.abs(Math.sin(this.animT * 9)) * 2.2 : Math.sin(this.animT * 2) * 0.6;
       sy = this.moving ? 1 + Math.sin(this.animT * 18) * 0.03 : 1;
     }
-    const z = this.z + bob;
+    // acrobatics (this.acro = { t, dur, spins, h, dir }): a somersault through the air, turning about the body's centre
+    const A = this.acro, au = A ? clamp(A.t / A.dur, 0, 1) : 0;
+    const az = A ? (A.h || 0) * 4 * au * (1 - au) : 0;
+    const ar = A ? (A.spins ?? 1) * TAU * (au * au * (3 - 2 * au)) * (A.dir || 1) * (this.flip ? -1 : 1) : 0;
+    const z = this.z + bob + az;
     const w = a.cw * k, h = a.ch * k * (isHero ? 1 : sy);
     ctx.fillStyle = 'rgba(0,0,0,0.38)';
     const sw = 13 * this.scale;
@@ -563,6 +568,12 @@ export class Creature {
     const squash = isHero ? 1 : sy;
     const dx = -a.ax * k, dy = -a.ay * k * squash;
     const where = { img: a.img, x: px + lx, y: py + ly - z, dx, dy, k, sq: squash, flip: this.flip, rot: rot + (this.moving ? lean : 0), sx, sy };
+    const mid = this.spriteH * this.scale * 0.5; // the turn's pivot: half way up the body
+    this.lastArt = { a, x: where.x, y: where.y, k, flip: this.flip, rot: where.rot, ar, mid }; // for after-images (gfx/shadowfx.js)
+    if (ar) { // one transform round the hero and both his layers: his gear turns with him
+      const tuck = 1 - 0.16 * Math.sin(Math.PI * au);
+      ctx.save(); ctx.translate(where.x, where.y - mid); ctx.rotate(ar); ctx.scale(tuck, tuck); ctx.translate(-where.x, -(where.y - mid));
+    }
     if (this.drawArtLayer) this.drawArtLayer(ctx, 'back', where);
     ctx.save();
     if (this.alpha !== undefined) ctx.globalAlpha = this.alpha;
@@ -579,6 +590,7 @@ export class Creature {
     }
     ctx.restore();
     if (this.drawArtLayer) this.drawArtLayer(ctx, 'front', where);
+    if (ar) ctx.restore();
     const top = py - this.spriteH * this.scale - z;
     this.screenTop = top;
     this.drawOverhead(ctx, px, top - 4, w * 0.6);

@@ -2123,6 +2123,20 @@ export const CLASS_TAUNTS = {
     ['dread', 'Inner peace is a brittle glass, monk|The deep knows how to shatter it'],
     ['dread', 'You seek enlightenment in the dark|Only oblivion answers'],
   ],
+  rogue: [
+    ['mock', 'Five little points, then a flourish|Do you count them on your fingers, girl?'],
+    ['cheer', 'Oh, the BLOOD! All over my nice floor!|Do it again, do it again!'],
+    ['dread', 'You hide in the shadows, little knife|They are MY shadows'],
+    ['rage', 'A dagger from the SKY?|WHO TAUGHT YOU THAT? GIVE ME THE NAME!'],
+    ['sulk', 'You never stab ME in the back|I leave it turned for hours'],
+  ],
+  ninja: [
+    ['mock', 'Head over heels, head over heels|You will be sick before you reach me'],
+    ['cheer', 'One of you was a treat|Now there are FOUR, and they ALL flip!'],
+    ['dread', 'You cut them and they do not know it yet|I have done that to you, little shadow'],
+    ['rage', 'STOP dragging my servants on a string!|THEY ARE NOT KITES!'],
+    ['unhinged', 'Caltrops! I trod on one! I have no feet!|I felt it anyway!'],
+  ],
 };
 
 /** Fixed lines for milestone levels, [mood, text]. */

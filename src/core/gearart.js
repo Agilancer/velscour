@@ -16,6 +16,12 @@ const V = '?v=nocturne-8';
 // The hero is composed at HD x its 128x192 frame: armor pixels enlarged as they are, helmets from their HD atlas
 // (tools/nocturnegear.py), so the engine's downscale keeps more helmet detail the closer the camera zooms in.
 export const HD = 4;
+// Collection 05 has no helmet art yet: these classes have no column in the helmet atlas (the Barbarian's stands in for
+// icons), and the Rogue and the Ninja show no helmet on the hero at all until their helmet sprites arrive.
+const BORROWED_HELMS = new Set(['monk', 'rogue', 'ninja']);
+const NO_HELM = new Set(['rogue', 'ninja']);
+// how strongly a finish recolours a class's armor (1 = fully): the Ninja stays in black, the Rogue in black leather
+const FINISH_K = { ninja: 0.35, rogue: 0.5 };
 
 function loadImage(src) {
   return new Promise((res, rej) => {
@@ -78,7 +84,7 @@ async function loadClassGear(cls) {
   if (a.width < meta.cols * fw || a.height < rows * fh || am.width !== a.width || am.height !== a.height) {
     throw new Error(cls + ' armor atlas does not match its gear.json');
   }
-  if (!helmetHelms.meta.classes.includes(cls) && cls !== 'monk') throw new Error('No helmet art for ' + cls);
+  if (!helmetHelms.meta.classes.includes(cls) && !BORROWED_HELMS.has(cls)) throw new Error('No helmet art for ' + cls);
   return { cls, meta, armor: pixels(a), amask: channel(am), helmetHelms };
 }
 
@@ -226,7 +232,7 @@ function armorPixels(id, pi, src = S) {
       const si = (sy + y) * aw + sx + x, o = (y * fw + x) * 4;
       if (!armor.data[si * 4 + 3]) continue;
       out[o] = armor.data[si * 4]; out[o + 1] = armor.data[si * 4 + 1]; out[o + 2] = armor.data[si * 4 + 2]; out[o + 3] = 255;
-      if (L && !amask[si]) recolorPx(out, o, pi, L, pal.k);
+      if (L && !amask[si]) recolorPx(out, o, pi, L, pal.k * (FINISH_K[src.cls] ?? 1));
     }
   }
   return out;
@@ -307,7 +313,7 @@ export function heroLook(cls, body, head, src = null, outCache = looks) {
   const actualSrc = (src && src.cls === cls) ? src : (S.cls === cls && S.meta ? S : classGearCache.get(cls));
   if (!actualSrc || !actualSrc.meta || actualSrc.cls !== cls) return null;
   const bl = (body && itemLook(body, actualSrc)) || [1, 0, -1];
-  const hl = head ? itemLook(head, actualSrc) : null;
+  const hl = head && !NO_HELM.has(cls) ? itemLook(head, actualSrc) : null;
   const set = head ? helmetSet(head) : 'common';
   const key = cls + '|' + bl[0] + '|' + bl[1] + '|' + (hl ? set + '|' + hl[0] + '|' + hl[1] : '-');
   let c = outCache.get(key);

@@ -10,6 +10,7 @@ import { POSE } from './handheld3d_kits.js';
 import { RARITY, PER, ELEMENTS, rng, hash, pick, chance, kitFor, nameOf } from './weapons3d_parts.js';
 import * as F from './weapons3d_families.js';
 import { greatsword } from './weapons3d_greatswords.js';
+import { katana, nunchaku, stiletto } from './weapons3d_eastern.js';
 
 const HOLY = { heater: 1.35, kite: 1.25, round: 1.5, buckler: 1.15, tower: 1.3, oval: 1.3, pavise: 1.3, spiked: 1.4, targe: 1.3 };
 const TOWER = { tower: 1.6, pavise: 1.6, kite: 1.5, oval: 1.5 };
@@ -44,6 +45,9 @@ export const SETS = {
   pistols: { cls: 'gunner', slot: 'weapon', hand: 'R', element: 'fire', build: (r, R, M) => F.pistol(r, R, M), pose: 'hang', p: { scale: 1.4, flip: true } },
   boomerangs: { cls: 'boomerang_knight', slot: 'weapon', hand: 'R', element: null, build: (r, R, M) => F.boomerang(r, R, M), pose: 'clutch', p: { yaw: -15, tilt: -30, lean: 85, scale: 1.1, flip: true, flipY: true } },
   lutes: { cls: 'bard', slot: 'weapon', hand: 'R', element: 'arcane', build: (r, R, M) => F.lute(r, R, M), pose: 'hang', p: { scale: 1.5 } },
+  // the Ninja's katana (the game draws its model live: src/gfx/ninjagear.js) and the Rogue's right-hand dagger, point up
+  katanas: { cls: 'ninja', slot: 'weapon', hand: 'R', element: 'shadow', build: (r, R, M, d) => katana(r, R, M, d), pose: 'ready', p: { scale: 1.1 }, free: true, models: true },
+  stilettos: { cls: 'rogue', slot: 'weapon', hand: 'R', element: 'blood', build: (r, R, M, d) => stiletto(r, R, M, d), pose: 'ready', p: { scale: 1.25 }, free: true, models: true },
   // off hands
   holyshields: { cls: 'paladin', slot: 'offhand', hand: 'L', element: 'holy', build: (r, R, M) => F.shield(r, R, M, 'holy'), pose: 'strap', p: shieldScale(HOLY) },
   dragonshields: { cls: 'dragon_knight', slot: 'offhand', hand: 'L', element: 'fire', build: (r, R, M) => F.shield(r, R, M, 'dragon'), pose: 'strap', p: shieldScale(DRAGON) },
@@ -60,6 +64,10 @@ export const SETS = {
   drums: { cls: 'bard', slot: 'offhand', hand: 'L', element: 'arcane', build: (r, R, M) => F.percussion(r, R, M), pose: 'clutch', p: { yaw: -55, tilt: -15, scale: 1.3 } },
   quivers: { cls: 'ranger', slot: 'offhand', hand: 'R', element: null, build: (r, R, M) => F.arrow(r, R, M), pose: 'hang', p: { grip: -5, scale: 1.55 } },
   rangs: { cls: 'boomerang_knight', slot: 'offhand', hand: 'L', element: null, build: (r, R, M) => F.boomerang(r, R, M), pose: 'clutch', p: { yaw: -15, tilt: -30, lean: 85, scale: 0.75 } },
+  // the Rogue's left-hand dagger in an ice-pick grip (like: the same 50 designs as another set, so a dagger keeps its look in either
+  // hand), and the Ninja's nunchaku over his belt (free: the sticks in a line, for the game to swing)
+  offstilettos: { cls: 'rogue', slot: 'offhand', hand: 'L', element: 'blood', like: 'stilettos', build: (r, R, M, d) => stiletto(r, R, M, { ...d, set: 'stilettos' }), pose: 'hang', p: { dir: [-0.26, -0.94, 0.2], scale: 1.25 } },
+  nunchakus: { cls: 'ninja', slot: 'offhand', hand: 'L', element: 'shadow', build: (r, R, M, d) => nunchaku(r, R, M, d), pose: 'belt', free: true },
 };
 /** Each class's own main-hand and off-hand set. */
 export const CLASS_SETS = {};
@@ -75,7 +83,7 @@ export function designs(set) {
   let i = 0;
   PER.forEach((n, R) => {
     for (let j = 0; j < n; j++, i++) {
-      const seed = hash(set, R, j), r = rng(seed ^ 0x51ed);
+      const seed = hash(S.like || set, R, j), r = rng(seed ^ 0x51ed);
       const base = S.element || pick(r, PHYS);
       const element = R >= 2 && chance(r, 0.45) ? pick(r, ELEMENTS) : base;
       out.push({ set, i, rarity: R, seed, element });
@@ -83,7 +91,8 @@ export function designs(set) {
   });
   return out;
 }
-/** Build a design: { g, grip?, form, name, key } (key: the family's form key, for per-form poses). */
+/** Build a design: { g, grip?, form, name, key } (key: the family's form key, for per-form poses). d.view ('icon' | 'free'):
+ *  the bake's other layouts of a piece that has them (the nunchaku). */
 export function buildDesign(d) {
   const r = rng(d.seed), M = kitFor(r, d.rarity, d.element);
   setLook(4);

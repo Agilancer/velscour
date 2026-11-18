@@ -37,12 +37,12 @@ const RARITIES = [0, 2, 3, 4, 5];
     for (const R of RARITIES) {
       const info = await page.evaluate(async ([cls, R]) => {
         const { G } = window.VELSCOUR;
-        const { rollItem, GEMS } = await import('/src/data/items.js');
+        const { rollItem, GEMS, DUAL_WIELD } = await import('/src/data/items.js');
         const { CLASSES } = await import('/src/data/classes.js');
         const C = CLASSES[cls], gems = Object.keys(GEMS).filter((g) => !GEMS[g].special);
         const sock = (it) => { it.sockets = Math.max(1, Math.min(R + 1, it.maxSockets || 3)); it.gems = Array.from({ length: it.sockets }, (_, i) => ({ gem: gems[(i * 5 + R) % gems.length], tier: 5 })); return it; };
         G.char.equip.weapon = sock(rollItem(60, { slot: 'weapon', base: C.weapon, rarity: R }));
-        G.char.equip.offhand = cls === 'barbarian' ? sock(rollItem(60, { slot: 'weapon', base: 'axe', rarity: R })) : sock(rollItem(60, { slot: 'offhand', base: C.offhand, rarity: R }));
+        G.char.equip.offhand = DUAL_WIELD.has(cls) ? sock(rollItem(60, { slot: 'weapon', base: C.weapon, rarity: R })) : sock(rollItem(60, { slot: 'offhand', base: C.offhand, rarity: R })); // a second weapon in the off hand
         G.char.equip.body = rollItem(60, { slot: 'body', rarity: R }); G.char.equip.head = rollItem(60, { slot: 'head', rarity: R });
         G.player.recompute();
         const { loadHeld } = await import('/src/gfx/heldart.js');
@@ -52,8 +52,8 @@ const RARITIES = [0, 2, 3, 4, 5];
         G.player.flip = false;
         await new Promise((r) => setTimeout(r, 150));
         G.player.artFrame();
-        const h = G.player.heldArt?.held;
-        return { pieces: h ? h.pieces.map((p) => `${p.set}#${p.i} ${p.d.name}`) : null, weapon: G.char.equip.weapon.base, off: G.char.equip.offhand.base };
+        const h = G.player.heldArt?.held, live = G.player._ninjaGear; // the Ninja's two pieces are drawn live (src/gfx/ninjagear.js: tools/tests/ninjagear.js)
+        return { pieces: h ? h.pieces.map((p) => `${p.set}#${p.i} ${p.d.name}`) : live ? ['live'] : null, weapon: G.char.equip.weapon.base, off: G.char.equip.offhand.base };
       }, [cls, R]);
       console.log(cls, 'R' + R, JSON.stringify(info));
       if (!info.pieces || info.pieces.length < 1) fail.push(`${cls} R${R}: nothing held`);
@@ -68,7 +68,7 @@ const RARITIES = [0, 2, 3, 4, 5];
     // the settings: held gear off draws the plain hero, effects off keeps the gear
     const off = await page.evaluate(() => {
       const { G } = window.VELSCOUR;
-      G.settings.heldFx = false; G.player.artFrame(); const fxOff = !!G.player.heldArt.held;
+      G.settings.heldFx = false; G.player.artFrame(); const fxOff = !!G.player.heldArt.held || !!G.player._ninjaGear;
       G.settings.heldGear = false; const a = G.player.artFrame(); const gearOff = a.img === G.player.heldArt.base && !G.player.heldArt.held;
       G.settings.heldGear = true; G.settings.heldFx = true;
       return { fxOff, gearOff };

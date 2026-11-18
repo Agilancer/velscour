@@ -110,8 +110,10 @@ const SOAK = process.argv[3] || 'death_knight', MINUTES = +(process.argv[4] || 8
               return orig.call(this, img, ...r);
             };
             try { game.render(); } finally { proto.drawImage = orig; }
-            const main = drawn.find((d) => d.op === 'source-over');
-            if (a && (!main || main.alpha < 0.5 || main.w < 20 || main.x < 0 || main.y < 0 || main.x > main.cw || main.y > main.ch)) {
+            // (the Ninja's and the Rogue's after-images are faint copies of the same image: the hero is the solid one;
+            //  hidden in Stealth or smoke he is meant to be faint)
+            const main = drawn.find((d) => d.op === 'source-over' && d.alpha >= 0.5) || drawn.find((d) => d.op === 'source-over');
+            if (a && G.player.targetable !== false && (!main || main.alpha < 0.5 || main.w < 20 || main.x < 0 || main.y < 0 || main.x > main.cw || main.y > main.ch)) {
               bad.push(`not on screen: ${JSON.stringify(drawn.slice(0, 3))} ` + where0());
             }
             const look = (it) => it ? JSON.stringify([it.rarity, it.look]) : '-';

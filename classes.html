@@ -1216,7 +1216,17 @@
       'Martial Arts': 'Lightning-fast palm strikes, flying kicks, sweeping roundhouses, and fist flurries.',
       'Spirit & Mantras': 'Inner chi focus, sacred healing chants, defensive mantras, and spiritual harmony.',
       'Dragon & Tiger': 'Ferocious elemental stances, spirit dragon surges, and leaping tiger pounces.',
-      'Transcendence': 'Ascended spiritual enlightenment, ethereal clones, and devastating radiant palm waves.'
+      'Transcendence': 'Ascended spiritual enlightenment, ethereal clones, and devastating radiant palm waves.',
+      // Rogue
+      'Assassination': 'Twin-dagger builders and bloody finishers that spend Combo Points: bleeds, venom, and death from above.',
+      'Subtlety': 'Stealth, ambushes from the shadows, smoke, and shadows of her own that strike with her.',
+      'Knives': 'Thrown daggers, daggers that rain from the sky or burst from the ground, and one giant blade that falls.',
+      'Crimson Tempest': 'Wheels of blood, whirling blades, and bleeding wounds that burst.',
+      // Ninja
+      'Way of the Blade': 'Somersaulting katana cuts straight through the enemy, the draw that crosses a room, a hundred cuts at once.',
+      'Shadow Arts': 'Shadows that follow him and repeat every strike, the grappling hook, smoke, and a legion of shades.',
+      'Tools of War': 'Shuriken, caltrops, kunai, blast tags, and a storm of steel thrown from mid-air.',
+      'Dragon Ninpo': 'Nunchaku flurries, fire wheels, lightning kicks, and the dragon technique.'
     };
 
     const ELEMENT_INFO = {
@@ -1229,10 +1239,11 @@
       arcane: { name: 'Arcane', icon: '✨', color: '#e055ff' },
       holy: { name: 'Holy', icon: '☀️', color: '#fff088' },
       light: { name: 'Light', icon: '⚡', color: '#70c8ff' },
-      acid: { name: 'Acid', icon: '🧪', color: '#a0f020' }
+      acid: { name: 'Acid', icon: '🧪', color: '#a0f020' },
+      blood: { name: 'Blood', icon: '🩸', color: '#e01828' }
     };
 
-    // All 17 classes are playable in single-player
+    // All 19 classes are playable in single-player
     const ALL_CLASSES = CLASS_IDS.map(id => ({ id, ...CLASSES[id], isActive: true }));
 
     // DOM References

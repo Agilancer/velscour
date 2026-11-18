@@ -6,7 +6,7 @@ import { G } from '../state.js';
 import { sfx, levelUpFanfare } from '../core/audio.js';
 import { CLASSES } from '../data/classes.js';
 import { CLASS_SKILLS, MAX_SKILL_LEVEL } from '../data/skills.js';
-import { RARITY, CORE_LINES, AFFIX_BY_STAT, RING_SLOTS, MAX_GEM_TIER, rollItem, affixValue, augTarget, powerLevel, BASE_REQ_STAT, charEffectiveStat } from '../data/items.js';
+import { RARITY, CORE_LINES, AFFIX_BY_STAT, RING_SLOTS, MAX_GEM_TIER, rollItem, affixValue, augTarget, powerLevel, BASE_REQ_STAT, charEffectiveStat, DUAL_WIELD } from '../data/items.js';
 import { AUGMENTS, SCOPE_MUL, augPower } from '../data/rings.js';
 import { FINAL_DEPTH, MAX_LEVEL } from '../data/depth.js';
 import { MAX_MASTERY } from './augments.js';
@@ -94,8 +94,8 @@ export function grantDeathGift() {
   const armorGems = ['ruby', 'diamond', pg, 'bloodstone'];
   const gear = {
     weapon: bestItem(C, 'weapon', C.weapon, ilvl, LEGEND.weapon, ['classgem', 'chainlink', 'bloodstone', pg]),
-    offhand: c.classId === 'barbarian' && !C.offhand
-      ? bestItem(C, 'weapon', 'axe', ilvl, LEGEND.offhand, ['classgem', 'bloodstone', 'jade', pg]) // a second axe
+    offhand: DUAL_WIELD.has(c.classId) && !C.offhand
+      ? bestItem(C, 'weapon', C.weapon, ilvl, LEGEND.offhand, ['classgem', 'bloodstone', 'jade', pg]) // a second axe
       : bestItem(C, 'offhand', offBase, ilvl, LEGEND.offhand, armorGems),
   };
   for (const s of ['head', 'body', 'hands', 'legs', 'feet']) gear[s] = bestItem(C, s, null, ilvl, LEGEND[s], armorGems);

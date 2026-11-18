@@ -22,7 +22,13 @@ const FILES = {
   'MET-09': 'metal/MET-09_Oxide_Stained_Brass', 'MET-10': 'metal/MET-10_Amethyst_Corrosion', 'CLOTH-05': 'sailcloth/CLOTH-05_Deep_Plum_Woven_Sail',
   'WOOD-01': 'wood/WOOD-01_End_Grain_Timber', 'WOOD-02': 'wood/WOOD-02_Scroll_Cut_Blackwood', 'WOOD-03': 'wood/WOOD-03_Rootwood_Grain',
   'WOOD-05': 'wood/WOOD-05_Violet_Streak_Blackwood', 'SHIP-05': 'ship_planks/SHIP-05_Red_Mahogany',
+  // for the Ninja's and the Rogue's gear (tools/weapons3d_eastern.js); '@': a generated one (tools/weapons3d_textures.py)
+  'MET-07': 'metal/MET-07_Black_Chainmail', 'MET-03': 'metal/MET-03_Flaked_Iron',
+  'SHIP-01': 'ship_planks/SHIP-01_Tarblack_Oak', 'SHIP-10': 'ship_planks/SHIP-10_Black_Walnut_Rift_Seam', 'CLOTH-03': 'sailcloth/CLOTH-03_Patched_Dark_Canvas',
+  ...Object.fromEntries([0, 1, 2, 3, 4, 5, 6, 7].map((i) => [`ITO-${i}`, `@ito_${i}`])),
+  HADA: '@hada', SCALE: '@scales', ROPE: '@rope', WRAP: '@wrap', SAME: '@same',
 };
+const HELD_TEX = 'assets/models/held/textures/', texSrc = (f) => (f[0] === '@' ? HELD_TEX + f.slice(1) : TEX + f) + '.png';
 export const D2R = Math.PI / 180, ELEV = 30;
 const W = 128, H = 192;
 export const SS = 4; // render px per art px before the box filter
@@ -30,7 +36,7 @@ export const SS = 4; // render px per art px before the box filter
 const images = {};
 async function loadTextures() {
   const loader = new THREE.TextureLoader();
-  await Promise.all(Object.entries(FILES).map(async ([id, f]) => { images[id] = await loader.loadAsync(TEX + f + '.png'); images[id].userData.src = TEX + f + '.png'; })); // src: modelJSON links the file
+  await Promise.all(Object.entries(FILES).map(async ([id, f]) => { images[id] = await loader.loadAsync(texSrc(f)); images[id].userData.src = texSrc(f); })); // src: modelJSON links the file
 }
 /** A material on texture `id`: one tile per `tile` units, or `rep` repeats for uv 0..1 (cylinders, spheres). */
 export function mat(id, { tile = 30, rep = null, metal = 0.6, rough = 0.5, color = 0xffffff, emissive = 0, ei = 1, env = 0.8, flat = false } = {}) {
@@ -347,6 +353,8 @@ export const HANDS = {
   lancer: { R: [45, 135], L: [92, 135] }, necromancer: { R: [50, 133], L: [91, 132] }, paladin: { R: [48, 133], L: [92, 132] },
   ranger: { R: [46, 134], L: [89, 133] }, slime_lord: { R: [43, 133], L: [88, 132] }, totem_master: { R: [47, 135], L: [93, 134] },
   wizard: { R: [46, 134], L: [91, 133] },
+  // collection 05 (tools/martialgear.py): 48 armors each
+  monk: { R: [51, 132], L: [91, 131] }, rogue: { R: [52, 133], L: [90, 133] }, ninja: { R: [51, 132], L: [91, 132] },
 };
 export const FIST_R = { slime_lord: 5.5 }; // fist radius (art px) where it is not 4.5
 /**
@@ -446,7 +454,7 @@ function fistMask(hero, f) {
  * degrees about the haft ('view': local +Z, a scepter's sun or a hammer's side, turned as far towards the camera as it goes).
  */
 export function holdWeapon(obj, f, p, roll) {
-  const screen = new THREE.Group(); screen.position.set(f[0], -f[1], p.z);
+  const screen = new THREE.Group(); screen.position.set(f[0] + (p.at?.[0] || 0), -f[1] - (p.at?.[1] || 0), p.z); // at: art px off the fist (a piece on the belt)
   const world = new THREE.Group(); world.rotation.x = ELEV * D2R;
   const item = new THREE.Group(), Y = new THREE.Vector3(0, 1, 0);
   const d = new THREE.Vector3(...p.dir).normalize(), q = new THREE.Quaternion().setFromUnitVectors(Y, d);
@@ -610,6 +618,9 @@ export function modelJSON(g) {
   const j = g.toJSON(), src = {};
   for (const t of j.textures || []) if (t.userData?.src) src[t.image] = t.userData.src;
   for (const im of j.images || []) if (src[im.uuid]) im.url = src[im.uuid];
+  // smaller files: no per-curve metadata (the loader ignores it), matrices to 5 places
+  for (const s of j.shapes || []) for (const c of [...(s.curves || []), ...(s.holes || []).flatMap((h) => h.curves || [])]) delete c.metadata;
+  (function round(o) { if (o.matrix) o.matrix = o.matrix.map((v) => Math.round(v * 1e5) / 1e5); (o.children || []).forEach(round); })(j.object);
   return j;
 }
 

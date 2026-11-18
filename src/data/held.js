@@ -5,11 +5,11 @@ export const HELD_PER = [10, 10, 9, 8, 7, 6];
 export const HELD_START = HELD_PER.map((_, R) => HELD_PER.slice(0, R).reduce((a, b) => a + b, 0));
 export const HELD_COUNT = HELD_PER.reduce((a, b) => a + b, 0);
 
-/** Each class's own off-hand base (none for the Barbarian, who swings a second weapon). */
+/** Each class's own off-hand base (none for the Barbarian and the Rogue, who hold a second weapon). */
 export const CLASS_FOCUS = {
   paladin: 'shield', ranger: 'quiver', wizard: 'tome', necromancer: 'orb', dragoon: 'shield', totem_master: 'idol',
   death_knight: 'skull', arcane_sorcerer: 'orb', carrion_witch: 'lantern', bard: 'drum', slime_lord: 'jar',
-  boomerang_knight: 'rang', lancer: 'shield', dragon_knight: 'shield', gunner: 'bomb', monk: 'tome',
+  boomerang_knight: 'rang', lancer: 'shield', dragon_knight: 'shield', gunner: 'bomb', monk: 'tome', ninja: 'nunchaku',
 };
 
 /** The set an item of `base` shows in, in `slot`, held by `cls` (null: no held art). */
@@ -17,13 +17,14 @@ export function heldSetOf(base, slot, cls) {
   if (slot === 'offhand') {
     if (base === 'shield') return { lancer: 'towershields', dragon_knight: 'dragonshields', dragoon: 'bucklers' }[cls] || 'holyshields';
     if (base === 'orb') return cls === 'arcane_sorcerer' ? 'starorbs' : 'darkorbs';
-    const focus = { tome: 'tomes', lantern: 'lanterns', skull: 'frostskulls', idol: 'idols', jar: 'jars', bomb: 'bombs', drum: 'drums', quiver: 'quivers', rang: 'rangs' }[base];
+    const focus = { tome: 'tomes', lantern: 'lanterns', skull: 'frostskulls', idol: 'idols', jar: 'jars', bomb: 'bombs', drum: 'drums', quiver: 'quivers', rang: 'rangs', nunchaku: 'nunchakus' }[base];
     if (focus) return focus;
+    if (base === 'dagger' && cls === 'rogue') return 'offstilettos'; // her second dagger, point down: the same 50 designs as her right hand's
     return base === 'axe' ? 'handaxes' : null; // the Barbarian's second weapon: only an axe has a left-hand set
   }
   return {
-    sword: cls === 'death_knight' ? 'greatswords' : 'swords', axe: 'greataxes', mace: cls === 'slime_lord' ? 'slimemaces' : 'maces', hammer: 'maces',
-    dagger: 'daggers', staff: { totem_master: 'totemstaves', carrion_witch: 'crooks' }[cls] || 'firestaves', wand: cls === 'arcane_sorcerer' ? 'starwands' : 'bonewands',
+    sword: { death_knight: 'greatswords', ninja: 'katanas' }[cls] || 'swords', katana: 'katanas', axe: 'greataxes', mace: cls === 'slime_lord' ? 'slimemaces' : 'maces', hammer: 'maces',
+    dagger: cls === 'rogue' ? 'stilettos' : 'daggers', staff: { totem_master: 'totemstaves', carrion_witch: 'crooks' }[cls] || 'firestaves', wand: cls === 'arcane_sorcerer' ? 'starwands' : 'bonewands',
     bow: 'bows', crossbow: 'crossbows', spear: cls === 'lancer' ? 'lances' : 'spears', scythe: 'scythes', pistol: 'pistols', boomerang: 'boomerangs', lute: 'lutes',
   }[base] || null;
 }
