@@ -19,7 +19,10 @@ const CLASSES = arg === 'all' ? ALL_CLASSES : arg.split(',');
         const meta = await ga.loadGearArt(cid);
         if (!meta) return { issues: ['Missing gear metadata for ' + cid] };
         const [fw, fh] = meta.frame, headTop = meta.headTop;
-        const designs = (await fetch('/assets/sprites/gear/helmets/index.json').then((r) => r.json())).designs;
+        const dir = ['monk', 'rogue', 'ninja'].includes(cid) ? 'helmets_martial' : 'helmets';
+        const designs = (await fetch(`/assets/sprites/gear/${dir}/index.json`).then((r) => r.json())).designs;
+        // a helmet drawn for one armor (helmets_martial) is checked on armor 1 and on that armor: two columns
+        const paired = designs.some((d) => d.armor), column = (a) => (paired ? +(a !== 1) : a - 1);
         const issues = [], stats = [];
         const cv = document.createElement('canvas'); cv.width = fw; cv.height = fh;
         const xx = cv.getContext('2d', { willReadFrequently: true });
@@ -27,7 +30,7 @@ const CLASSES = arg === 'all' ? ALL_CLASSES : arg.split(',');
         const same = (a, b, k) => a[k] === b[k] && a[k + 1] === b[k + 1] && a[k + 2] === b[k + 2] && a[k + 3] === b[k + 3];
         const cell = 48, s = 3, n = meta.armor.n;
         const preview = document.createElement('canvas');
-        preview.id = 'helmqa'; preview.width = n * cell * s; preview.height = designs.length * cell * s;
+        preview.id = 'helmqa'; preview.width = (paired ? 2 : n) * cell * s; preview.height = designs.length * cell * s;
         Object.assign(preview.style, { position: 'fixed', zIndex: 100000, left: '0', top: '0', background: '#26242a' });
         const pv = preview.getContext('2d'); pv.imageSmoothingEnabled = false;
         // the head: armor 1's top rows, then each armor's measured head offset (gear.json armor.head)
@@ -39,6 +42,7 @@ const CLASSES = arg === 'all' ? ALL_CLASSES : arg.split(',');
           const bare = read(ga.heroLook(cid, body, null));
           const [odx, ody] = meta.armor.head?.[a - 1] || [0, 0], cx = Math.round(hx / hn) + odx, top = headTop + ody;
           for (const d of designs) {
+            if (paired && a !== 1 && a !== d.armor) continue;
             const helm = (finish) => ({ type: 'gear', slot: 'head', rarity: d.rarity, look: [d.id, finish, -1, 2] });
             const name = 'armor ' + a + ' + ' + d.catalog.toLowerCase() + ' helm';
             const worn = ga.heroLook(cid, body, helm(0)), w = read(worn);
@@ -53,11 +57,12 @@ const CLASSES = arg === 'all' ? ALL_CLASSES : arg.split(',');
               x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
             }
             stats.push([name, changed, x0, y0, x1, y1, cx, covered / face]);
-            if (changed < 200) { issues.push(name + ': helmet barely visible (' + changed + ' px)'); continue; }
-            if (covered < face * 0.85) issues.push(name + ': face not covered (' + Math.round(100 * covered / face) + '%)');
+            // the martial helms are head-sized, and the Rogue's and the Ninja's leave the chin bare (as drawn)
+            if (changed < (paired ? 120 : 200)) { issues.push(name + ': helmet barely visible (' + changed + ' px)'); continue; }
+            if (covered < face * (paired ? 0.7 : 0.85)) issues.push(name + ': face not covered (' + Math.round(100 * covered / face) + '%)');
             if (y1 > top + 30) issues.push(name + ': helmet reaches the body (down to y ' + y1 + ')');
             // the visor rows span the head on both sides (crests may sweep far back, so not a centre test)
-            if (vx0 > cx - 7 || vx1 < cx + 6) issues.push(name + ': off the head (visor x ' + vx0 + '-' + vx1 + ', head ' + cx + ')');
+            if (vx0 > cx - (paired ? 6 : 7) || vx1 < cx + 6) issues.push(name + ': off the head (visor x ' + vx0 + '-' + vx1 + ', head ' + cx + ')');
             if (a === 1) { // a finish recolours the same silhouette
               const t = read(ga.heroLook(cid, body, helm(20)));
               let tc = 0;
@@ -65,7 +70,7 @@ const CLASSES = arg === 'all' ? ALL_CLASSES : arg.split(',');
               if (Math.abs(tc - changed) > changed * 0.15) issues.push(name + ': palette swap changes the silhouette (' + changed + ' vs ' + tc + ' px)');
             }
             const u = worn._res || 1; pv.imageSmoothingEnabled = true; pv.imageSmoothingQuality = 'high';
-            pv.drawImage(worn, (cx - cell / 2) * u, (top - 10) * u, cell * u, cell * u, (a - 1) * cell * s, (d.id - 1) * cell * s, cell * s, cell * s);
+            pv.drawImage(worn, (cx - cell / 2) * u, (top - 10) * u, cell * u, cell * u, column(a) * cell * s, (d.id - 1) * cell * s, cell * s, cell * s);
           }
         }
         document.body.appendChild(preview);

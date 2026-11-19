@@ -9,7 +9,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import webbrowser
 
 ROOT = Path(__file__).resolve().parents[1]
-SETS = {'helmet': ROOT / 'assets/sprites/gear/helmets'}
+SETS = {'helmet': ROOT / 'assets/sprites/gear/helmets', 'martial': ROOT / 'assets/sprites/gear/helmets_martial'}
 
 
 def validate(data, index):

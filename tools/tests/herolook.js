@@ -44,13 +44,15 @@ const SOAK = process.argv[3] || 'death_knight', MINUTES = +(process.argv[4] || 8
         }
         if (!ga.gearIcon(body(a, 3))) issues.push(`armor ${a}: no icon`);
       }
-      const designs = (await fetch('/assets/sprites/gear/helmets/index.json').then((q) => q.json())).designs;
+      const dir = ['monk', 'rogue', 'ninja'].includes(cls) ? 'helmets_martial' : 'helmets';
+      const designs = (await fetch(`/assets/sprites/gear/${dir}/index.json`).then((q) => q.json())).designs;
       const bare = opaque(ga.heroLook(cls, body(1, 0), null));
       for (const d of designs) for (let f = 0; f < PALETTES.length; f++) {
-        const img = ga.heroLook(cls, body(1, 0), head(d.id, f)); looks++;
+        const img = ga.heroLook(cls, body(1, 0), head(d.id, f, d.rarity)); looks++;
+        if (img && ga.itemLook(head(d.id, f, d.rarity), cls)[0] !== d.id) issues.push(`helmet ${d.id}: its look was rerolled`);
         if (!img) { issues.push(`helmet ${d.id} finish ${f}: no image`); continue; }
         if (opaque(img) < bare) issues.push(`helmet ${d.id} finish ${f}: hero lost pixels`);
-        if (f === 1 && !ga.gearIcon(head(d.id, f))) issues.push(`helmet ${d.id}: no icon`);
+        if (f === 1 && !ga.gearIcon(head(d.id, f, d.rarity))) issues.push(`helmet ${d.id}: no icon`);
       }
       // items as the game rolls them, old saved looks, and the portrait
       for (let rar = 0; rar < 6; rar++) for (const lvl of [1, 30, 90]) for (const slot of ['body', 'head']) {

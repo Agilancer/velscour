@@ -80,10 +80,11 @@ def place(rgb, A, ox, oy):
     return out
 
 
-def native(path, cx=None, ref=None):
+def native(path, cx=None, ref=None, fit=False):
     """High-res cutout -> 128x192 native: premultiplied box filter, binary alpha, crown at y75 and sole at y183.
     With `ref` (a native frame of the same hero) the sole stays at y183 and the scale and x offset are the ones
-    that make the head agree with ref's: wings, pauldrons and spikes can rise above the crown."""
+    that make the head agree with ref's: wings, pauldrons and spikes can rise above the crown.
+    `fit`: also return (k, ox, oy), the artwork px -> native px map (x * k + ox), for layers drawn on the same art."""
     a = np.array(Image.open(path).convert('RGBA')).astype(np.float32) / 255
     ys = np.nonzero((a[..., 3] > 0.5).any(1))[0]
     y0, y1 = ys[0], ys[-1] + 1
@@ -92,7 +93,9 @@ def native(path, cx=None, ref=None):
         rgb, A = resample(a, k0)
         m = A > 0.5
         top = np.nonzero(m.any(1))[0][0]
-        return place(rgb, A, round(cx - np.nonzero(m[top:top + 10])[1].mean()), CROWN - top)
+        ox, oy = round(cx - np.nonzero(m[top:top + 10])[1].mean()), CROWN - top
+        out = place(rgb, A, ox, oy)
+        return (out, (k0, ox, oy)) if fit else out
     rcx = int(round(head_cx(ref)))
     H, W = 20, 18
     rh = ref[CROWN:CROWN + H, rcx - 9:rcx + 9].astype(np.float32)
@@ -122,7 +125,8 @@ def native(path, cx=None, ref=None):
                     best = (score, k, ox, oy)
     _, k, ox, oy = best
     rgb, A = resample(a, k)
-    return place(rgb, A, ox, oy)
+    out = place(rgb, A, ox, oy)
+    return (out, (k, ox, oy)) if fit else out
 
 
 def do_import(src):

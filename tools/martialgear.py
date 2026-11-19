@@ -9,8 +9,7 @@ armor.webp + armor_mask.png + gear.json. Armor ids 1..26 keep the rarity the 16 
 Monk's looks stay in their rarity); 27..48 are the rest. Also written: the class-select portraits and the old
 full-body class sprite (assets/sprites/select/, assets/sprites/classes/).
 
-None of the three has helmet art yet: the Monk borrows the Barbarian's column of the helmet atlas (his head is put where
-the Barbarian's is, so they sit on it), and the Rogue and the Ninja show no helmet at all (src/core/gearart.js NO_HELM).
+Their helmets (48 a class, one drawn on each armor) are built by tools/martialhelms.py into helmets_martial/.
 """
 import json
 import sys
@@ -26,7 +25,7 @@ import nocturnegear as ng  # noqa: E402
 ROOT = ng.ROOT
 ART = ROOT / 'assets/martialarts/artwork'
 CLASSES = ['monk', 'rogue', 'ninja']
-HEAD_X = 70  # where the Barbarian's and the Paladin's heads are: the borrowed helmets fit, the body sits over the feet
+HEAD_X = 70  # where the Barbarian's and the Paladin's heads are: the body sits over the feet
 # ids 1..26 as every other class has them, then the 22 more that make eight of each rarity
 OLD = {'common': [1, 2], 'uncommon': [3, 4], 'rare': [5, 6, 13, 14, 19, 20, 21], 'epic': [7, 8, 15, 22, 23, 24],
        'legendary': [9, 10, 16, 25], 'mythic': [11, 12, 17, 18, 26]}

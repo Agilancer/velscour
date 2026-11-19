@@ -1,26 +1,26 @@
 // Gear art (Grim Nocturne): per class 26 body armors (two to seven per rarity) and one shared atlas of enclosed helmets
 // (three sets), a column per class and a row per design (each design has a rarity). Built by tools/nocturnegear.py.
+// The Monk, the Rogue and the Ninja (Collection 05: 48 armors) have their own atlas of 48 helmets, one drawn on each
+// armor (tools/martialhelms.py). A class's helmets are its src.helmetHelms, whichever atlas they come from.
 import { makeCanvas, hexToRgb, clamp, pick, chance } from './util.js';
 import { RARITY, shownEquip } from '../data/items.js';
 import { PALETTES, GEAR_FX, FX_CHANCE } from '../data/gear.js';
 import { resolveHelmetFit } from './helmetfit.js';
 
 const BASE = 'assets/sprites/gear/';
-const HELMET_DIR = { helmet: BASE + 'helmets/' };
+const HELMET_DIR = { helmet: BASE + 'helmets/', martial: BASE + 'helmets_martial/' };
+const MARTIAL = new Set(['monk', 'rogue', 'ninja']);
+const helmetDirOf = (cls) => (MARTIAL.has(cls) ? 'martial' : 'helmet');
 const S = { list: null, cls: null, meta: null, armor: null, amask: null, helmetHelms: null };
-const helmetPromises = { helmet: null };
+const helmetPromises = { helmet: null, martial: null };
 const LOOK_GEN = 2; // item.look[3]: looks rolled before the Grim Nocturne library are rerolled
 // Bumped with every rebuild of the gear art: a browser that kept an older gear.json beside a newer atlas read armors
 // past the atlas's end, and the hero went invisible once he put one on.
-const V = '?v=nocturne-8';
+const V = '?v=nocturne-9';
 // The hero is composed at HD x its 128x192 frame: armor pixels enlarged as they are, helmets from their HD atlas
 // (tools/nocturnegear.py), so the engine's downscale keeps more helmet detail the closer the camera zooms in.
 export const HD = 4;
-// Collection 05 has no helmet art yet: these classes have no column in the helmet atlas (the Barbarian's stands in for
-// icons), and the Rogue and the Ninja show no helmet on the hero at all until their helmet sprites arrive.
-const BORROWED_HELMS = new Set(['monk', 'rogue', 'ninja']);
-const NO_HELM = new Set(['rogue', 'ninja']);
-// how strongly a finish recolours a class's armor (1 = fully): the Ninja stays in black, the Rogue in black leather
+// how strongly a finish recolours a class's armor and helm (1 = fully): the Ninja stays in black, the Rogue in black leather
 const FINISH_K = { ninja: 0.35, rogue: 0.5 };
 
 function loadImage(src) {
@@ -78,13 +78,13 @@ async function loadClassGear(cls) {
   const dir = BASE + cls + '/';
   const [meta, a, am, helmetHelms] = await Promise.all([
     fetch(dir + 'gear.json' + V).then((r) => { if (!r.ok) throw new Error('gear ' + cls); return r.json(); }),
-    loadImage(dir + 'armor.webp' + V), loadImage(dir + 'armor_mask.png' + V), loadHelmetSet('helmet'),
+    loadImage(dir + 'armor.webp' + V), loadImage(dir + 'armor_mask.png' + V), loadHelmetSet(helmetDirOf(cls)),
   ]);
   const [fw, fh] = meta.frame, rows = Math.ceil(meta.armor.n / meta.cols);
   if (a.width < meta.cols * fw || a.height < rows * fh || am.width !== a.width || am.height !== a.height) {
     throw new Error(cls + ' armor atlas does not match its gear.json');
   }
-  if (!helmetHelms.meta.classes.includes(cls) && !BORROWED_HELMS.has(cls)) throw new Error('No helmet art for ' + cls);
+  if (!helmetHelms.meta.classes.includes(cls)) throw new Error('No helmet art for ' + cls);
   return { cls, meta, armor: pixels(a), amask: channel(am), helmetHelms };
 }
 
@@ -148,11 +148,13 @@ export function itemLook(item, src = S) {
   if (item.slot === 'head') {
     const designs = src.helmetHelms?.meta.designs;
     if (!designs?.length) return Array.isArray(item.look) && item.look[3] === LOOK_GEN ? item.look : null;
-    if (!item.look || item.look[3] !== LOOK_GEN || item.look[0] > designs.length) {
-      // a design of the helm's rarity (three sets each). Sets 02/03 have Mythic in Legendary's place, so a Legendary helm
-      // also rolls those Mythics: three designs, while Mythic keeps its own two.
-      const top = Math.max(...designs.map((d) => d.rarity)), r = Math.min(item.rarity, top);
-      const ok = designs.filter((d) => d.rarity === r || (r === 4 && d.rarity === 5));
+    // a design of the helm's rarity (three sets each). Sets 02/03 have Mythic in Legendary's place, so a Legendary helm
+    // also rolls those Mythics: three designs, while Mythic keeps its own two. The martial atlas has eight of each.
+    const top = Math.max(...designs.map((d) => d.rarity)), r = Math.min(item.rarity, top);
+    const fits = (d) => d && (d.rarity === r || (!src.helmetHelms.meta.exact && r === 4 && d.rarity === 5));
+    // a look from another atlas (a Monk's helm from when he borrowed the Barbarian's) is rerolled in its own rarity
+    if (!item.look || item.look[3] !== LOOK_GEN || item.look[0] > designs.length || !fits(designs[item.look[0] - 1])) {
+      const ok = designs.filter(fits);
       item.look = [pick(ok.length ? ok : designs).id, finishFor(item.rarity, true), -1, LOOK_GEN];
     }
   } else {
@@ -257,7 +259,7 @@ function helmetPixels(cls, id, pi, set, src = S) {
     if (!data.atlas.data[si * 4 + 3]) continue;
     out[o] = data.atlas.data[si * 4]; out[o + 1] = data.atlas.data[si * 4 + 1];
     out[o + 2] = data.atlas.data[si * 4 + 2]; out[o + 3] = data.atlas.data[si * 4 + 3];
-    if (L) recolorPx(out, o, pi, L, pal.k);
+    if (L) recolorPx(out, o, pi, L, pal.k * (FINISH_K[cls] ?? 1)); // the helm keeps to the armor's colours
   }
   result = { px: out, box: data.boxes[(id - 1) * data.meta.cols + col] || [0, 0, cw, ch] };
   if (recolouredHelms.size >= 24) recolouredHelms.delete(recolouredHelms.keys().next().value);
@@ -313,7 +315,7 @@ export function heroLook(cls, body, head, src = null, outCache = looks) {
   const actualSrc = (src && src.cls === cls) ? src : (S.cls === cls && S.meta ? S : classGearCache.get(cls));
   if (!actualSrc || !actualSrc.meta || actualSrc.cls !== cls) return null;
   const bl = (body && itemLook(body, actualSrc)) || [1, 0, -1];
-  const hl = head && !NO_HELM.has(cls) ? itemLook(head, actualSrc) : null;
+  const hl = head ? itemLook(head, actualSrc) : null;
   const set = head ? helmetSet(head) : 'common';
   const key = cls + '|' + bl[0] + '|' + bl[1] + '|' + (hl ? set + '|' + hl[0] + '|' + hl[1] : '-');
   let c = outCache.get(key);
