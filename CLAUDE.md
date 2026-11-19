@@ -101,6 +101,7 @@ node tools/tests/gear.js paladin,wizard            # hero looks: armor+helm per 
 node tools/tests/closed_helms.js all               # all 15 enclosed helmets on all 26 armors: face covered, centred, body untouched
 node tools/tests/herolook.js all death_knight 8      # every armor/helmet/finish loads (3,009 per class) + hero visible every second of a soak
 node tools/tests/heldgear.js [classes|all]         # held weapons/off-hands in play: every rarity, both facings, settings toggles, bag icons, ground drops
+node tools/tests/rogue_daggers.js                  # the Rogue's reverse-grip daggers: pommel above the fist, blades down to her back, the left one behind her
 node tools/weapons3d_bake.js [sets,..|all]         # the game's held gear: 35 sets x 50 procedural designs (tools/weapons3d*.js) -> assets/sprites/held/ (sprites, palette masks, icons, sockets/effect points; lossless WebP via Pillow)
 node tools/weapons3d_shots.js [classes|all] [seed] # review sheets: per class random heroes holding each rarity's designs with effects, art-review/weapons/
 node tools/handheld3d_bake.js [N,..|all|classes]   # the held-gear rig's fitting sheets (tools/handheld3d.js, tools/handheld3d_kits.js): the Paladin attempts, every class's kit, art-review/handheld/

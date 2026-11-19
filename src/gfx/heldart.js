@@ -201,11 +201,19 @@ function heldPieces(cls, equip) {
     if (out.some((o) => o.hand === pc.hand)) continue; // both pieces want the same hand: the main hand wins
     const f = F[pc.hand], pt = (p) => p && [f[0] + p[0], f[1] + p[1], p[2]];
     const P = pc.d.pts;
-    out.push({ ...pc, x: f[0] + pc.d.off[0], y: f[1] + pc.d.off[1], shadow: pc.S.meta.shadow,
+    out.push({ ...pc, x: f[0] + pc.d.off[0], y: f[1] + pc.d.off[1], shadow: pc.S.meta.shadow, behind: +pc.S.meta.behind || 0,
       pts: { head: pt(P.head) || [f[0], f[1], 4], tip: pt(P.tip), line: P.line && [pt(P.line[0]), pt(P.line[1])], orbit: pt(P.orbit), slots: P.slots.map(pt) },
       gems: (it.gems || []).map((g) => hexToRgb(GEMS[g.gem]?.color || '#ffffff')) });
   }
   return out;
+}
+/** A piece held behind the body with only the gem dots on its hilt and guard (those on the blade would float over the hero). */
+function hiltOnly(pc) {
+  const L = pc.pts.line;
+  if (!L) return { ...pc, gems: [] };
+  const n = Math.hypot(L[1][0] - L[0][0], L[1][1] - L[0][1]) || 1, front = (p) => ((p[0] - L[0][0]) * (L[1][0] - L[0][0]) + (p[1] - L[0][1]) * (L[1][1] - L[0][1])) / n <= pc.behind;
+  const slots = pc.pts.slots.filter(front);
+  return { ...pc, gems: slots.length ? pc.gems : [], pts: { ...pc.pts, slots } };
 }
 const composites = new WeakMap(); // hero image -> Map(key -> canvas)
 /**
@@ -224,18 +232,29 @@ export function heldHero(base, cls, equip) {
     const HD = base.width / W;
     c = makeCanvas(base.width, base.height);
     const x = c.getContext('2d');
-    x.drawImage(base, 0, 0);
     x.imageSmoothingEnabled = false;
+    const drawPiece = (p) => { const s = sprite(p, 'held'); x.drawImage(s, p.x * HD, p.y * HD, s.width * HD, s.height * HD); };
+    for (const p of pcs) if (p.behind) drawPiece(p); // held behind the body (the Rogue's left dagger): under the hero
+    x.drawImage(base, 0, 0);
+    for (const p of pcs) if (p.behind && p.pts.line) { // and its hilt and guard over him, up to `behind` px past the blade's root
+      const s = sprite(p, 'held'), t = makeCanvas(s.width, s.height), tx = t.getContext('2d'), [a, b] = p.pts.line;
+      const n = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, u = [(b[0] - a[0]) / n, (b[1] - a[1]) / n];
+      const cx = a[0] + u[0] * p.behind - p.x, cy = a[1] + u[1] * p.behind - p.y, k = s.width + s.height;
+      tx.drawImage(s, 0, 0); tx.globalCompositeOperation = 'destination-out'; tx.beginPath(); // cut away the blade side
+      tx.moveTo(cx - u[1] * k, cy + u[0] * k); tx.lineTo(cx + u[1] * k, cy - u[0] * k);
+      tx.lineTo(cx + (u[0] + u[1]) * k, cy + (u[1] - u[0]) * k); tx.lineTo(cx + (u[0] - u[1]) * k, cy + (u[1] + u[0]) * k); tx.fill();
+      x.drawImage(t, p.x * HD, p.y * HD, s.width * HD, s.height * HD);
+    }
     for (const p of pcs) { // a contact shadow: the piece's silhouette, offset, darkening only the hero under it
       const sh = p.shadow;
-      if (!sh) continue;
+      if (!sh || p.behind) continue;
       const s = sprite(p, 'held'), t = makeCanvas(s.width, s.height), tx = t.getContext('2d');
       tx.drawImage(s, 0, 0); tx.globalCompositeOperation = 'source-in'; tx.fillStyle = '#0c0806'; tx.fillRect(0, 0, t.width, t.height);
       x.globalAlpha = sh[2]; x.globalCompositeOperation = 'source-atop';
       x.drawImage(t, (p.x + sh[0]) * HD, (p.y + sh[1]) * HD, s.width * HD, s.height * HD);
       x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
     }
-    for (const p of pcs) { const s = sprite(p, 'held'); x.drawImage(s, p.x * HD, p.y * HD, s.width * HD, s.height * HD); }
+    for (const p of pcs) if (!p.behind) drawPiece(p);
     if (m.size >= 4) m.delete(m.keys().next().value);
     m.set(key, c);
   }
@@ -286,7 +305,7 @@ export function drawHeldLayer(ctx, p, held, base, where) {
   const s = HD * where.k, t = G.time || 0;
   let top = -1;
   for (const [i, pc] of (held?.pieces || []).entries()) {
-    drawHeldFx(ctx, pc, t, map, s, { fx, seed: i * 13 + 1, size: 1.4, quality: G.lowFx ? 0.5 : 1 });
+    drawHeldFx(ctx, pc.behind ? hiltOnly(pc) : pc, t, map, s, { fx, seed: i * 13 + 1, size: 1.4, quality: G.lowFx ? 0.5 : 1 });
     top = Math.max(top, pc.rarity);
   }
   if (!fx) return;

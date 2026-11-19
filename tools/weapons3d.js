@@ -18,6 +18,10 @@ const DRAGON = { heater: 1.4, kite: 1.3, round: 1.5, spiked: 1.5 };
 const BUCK = { buckler: 1.15, spiked: 1, targe: 1.05 };
 const shieldScale = (map) => (d) => map[d.key] || 1.3;
 const hang = (p = {}) => ({ pose: 'hang', p: { dir: [-0.24, -0.9, 0.36], ...p } });
+// the Rogue's reverse grip: the handle runs up and down through the slot of her closed fist (a little to the inside of
+// the fist centre, `at`), the guard just under the fist, the pommel above it and the blade (+Y) ~33 degrees down to the
+// screen left; scaled so the guard is no wider than her fist
+const RG_DIR = [-0.48, -0.87, 0.1], RG = { grip: 0.8, scale: 1.1 };
 
 /**
  * The sets. build(r, R, M) -> { g, form, grip? }; hand 'R' | 'L'; pose (+ p tweaks, or a function of the design for
@@ -47,7 +51,9 @@ export const SETS = {
   lutes: { cls: 'bard', slot: 'weapon', hand: 'R', element: 'arcane', build: (r, R, M) => F.lute(r, R, M), pose: 'hang', p: { scale: 1.5 } },
   // the Ninja's katana (the game draws its model live: src/gfx/ninjagear.js) and the Rogue's right-hand dagger, point up
   katanas: { cls: 'ninja', slot: 'weapon', hand: 'R', element: 'shadow', build: (r, R, M, d) => katana(r, R, M, d), pose: 'ready', p: { scale: 1.1 }, free: true, models: true },
-  stilettos: { cls: 'rogue', slot: 'weapon', hand: 'R', element: 'blood', build: (r, R, M, d) => stiletto(r, R, M, d), pose: 'ready', p: { scale: 1.25 }, free: true, models: true },
+  // the Rogue holds both daggers reversed: the pommel above the fist, the blade down to the screen left (the hero
+  // image mirrors with facing, so it is down to her back either way)
+  stilettos: { cls: 'rogue', slot: 'weapon', hand: 'R', element: 'blood', build: (r, R, M, d) => stiletto(r, R, M, d), pose: 'hang', p: { dir: RG_DIR, ...RG, at: [1, 0] }, free: true, models: true },
   // off hands
   holyshields: { cls: 'paladin', slot: 'offhand', hand: 'L', element: 'holy', build: (r, R, M) => F.shield(r, R, M, 'holy'), pose: 'strap', p: shieldScale(HOLY) },
   dragonshields: { cls: 'dragon_knight', slot: 'offhand', hand: 'L', element: 'fire', build: (r, R, M) => F.shield(r, R, M, 'dragon'), pose: 'strap', p: shieldScale(DRAGON) },
@@ -66,7 +72,10 @@ export const SETS = {
   rangs: { cls: 'boomerang_knight', slot: 'offhand', hand: 'L', element: null, build: (r, R, M) => F.boomerang(r, R, M), pose: 'clutch', p: { yaw: -15, tilt: -30, lean: 85, scale: 0.75 } },
   // the Rogue's left-hand dagger in an ice-pick grip (like: the same 50 designs as another set, so a dagger keeps its look in either
   // hand), and the Ninja's nunchaku over his belt (free: the sticks in a line, for the game to swing)
-  offstilettos: { cls: 'rogue', slot: 'offhand', hand: 'L', element: 'blood', like: 'stilettos', build: (r, R, M, d) => stiletto(r, R, M, { ...d, set: 'stilettos' }), pose: 'hang', p: { dir: [-0.26, -0.94, 0.2], scale: 1.25 } },
+  // her second dagger the same way (x given mirrored: the left hand's pose is flipped; at is on the screen), the blade
+  // crossing behind her body: the game draws it under the hero from `behind` art px past the blade's root (the hilt
+  // and guard stay in front of her)
+  offstilettos: { cls: 'rogue', slot: 'offhand', hand: 'L', element: 'blood', like: 'stilettos', build: (r, R, M, d) => stiletto(r, R, M, { ...d, set: 'stilettos' }), pose: 'hang', p: { dir: [-RG_DIR[0], RG_DIR[1], -RG_DIR[2]], ...RG, at: [-0.5, 0] }, behind: 1.5 },
   nunchakus: { cls: 'ninja', slot: 'offhand', hand: 'L', element: 'shadow', build: (r, R, M, d) => nunchaku(r, R, M, d), pose: 'belt', free: true },
 };
 /** Each class's own main-hand and off-hand set. */
