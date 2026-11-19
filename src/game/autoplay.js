@@ -1253,9 +1253,10 @@ export const Auto = {
     // danger first: hide from a raid boss's cataclysm, step out of telegraphed attacks and enemy ground effects
     if (this.takeCover(dt)) { this.watchStuck(dt); return; }
     // the Breach's casters can keep him side-stepping all fight long: healthy and barely hurt, he pushes on a while
-    // (so does a rift's clock)
+    // (so does a rift's clock, and the Iron Express: its cars are three tiles wide, so a crowd's telegraphs cover the
+    // floor and the side-steps ran him up and down the train for good)
     if (this.braveT > 0) this.braveT -= dt;
-    const brave = w.breach || w.rift;
+    const brave = w.breach || w.rift || w.map.ghostTrain;
     this.dangerList = null; // (dodgeDanger fills it: goTo waits at the edge of what it holds)
     if (!(this.braveT > 0 && p.hp > p.maxHp * 0.6) && this.dodgeDanger(dt)) {
       if (brave && (this.dodgeRun = (this.dodgeRun || 0) + dt) > (w.rift ? 2 : 6) && p.hp > p.maxHp * 0.7 && this.hurt < 0.02) { this.braveT = w.rift ? 4 : 3; this.dodgeRun = 0; }

@@ -19,6 +19,7 @@ import { skillMorphFor } from '../data/talents.js';
 const LEASH = 10; // minions fight what's within this many tiles of the hero
 const CHASE = 1.3, CHASE_MAX = 4.6; // monsters' pursuit pace: x1.3, up to 4.6 tiles/s (the hero runs 4.2) unless faster already
 const PROJ_FX = { fire: 'fireball', cold: 'shard', light: 'spark', poison: 'blob', shadow: 'skull', arcane: 'orb', holy: 'bolt', blood: 'blob', acid: 'blob', phys: 'rock' };
+const SUMMON_CAP = 4, SUMMON_NEAR = 8; // a summoner's raised dead standing at once; anyone's within 10 tiles
 const POOL_FX = { fire: 'fire', cold: 'frost', poison: 'poison', acid: 'slime', shadow: 'void', arcane: 'void', blood: 'blood', light: 'storm', holy: 'holy', phys: 'poison' };
 
 // When each special move (data/enemies.js ARCH_MOVES) can be used: (monster, target, distance, line of sight), and its
@@ -650,10 +651,14 @@ export class Monster extends Creature {
       case 'summonMinions': {
         this.cd = this.atkCd * 2;
         if (G.room && !G.game?.isDungeonAuthority(w.depth)) break;
-        for (let i = 0; i < 2; i++) {
+        // at most SUMMON_CAP of its raised dead stand at once, SUMMON_NEAR of anyone's round it (uncapped, a crowd of
+        // summoners in a corridor, the Iron Express's cars, raised them without end)
+        let mine = 0, near = 0;
+        for (const c of w.creatures) if (c.raisedBy && !c.dead) { if (c.raisedBy === this) mine++; if (Math.abs(c.x - this.x) < 10 && Math.abs(c.y - this.y) < 10) near++; }
+        for (let i = 0; i < Math.min(2, SUMMON_CAP - mine, SUMMON_NEAR - near); i++) {
           const [x, y] = w.map.randomNear(this.x, this.y, 1.5);
           const m = makeMonster(w, 'skeleton', w.biome, this.level, 'normal', x, y);
-          m.awake = true;
+          m.awake = true; m.raisedBy = this;
           w.add(m);
           sparkle(x, y, 10, '#b040ff', 10, 0.4);
         }

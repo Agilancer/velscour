@@ -391,7 +391,9 @@ export function createGhostTrainRun(world, gen, biome, depth, onSuccess) {
       for (const m of run.boarders) if (m.dead) run.boarders.delete(m);
       if ((run.boardT -= dt) <= 0) {
         run.boardT = rand(22, 32) / (1 + 0.5 * press(depth));   // ~15-21 s from depth 150
-        if (run.boarders.size < 8 && run.cleared < FIGHT_CARS.length) board(2 + Math.min(3, run.cleared >> 2) + Math.floor(press(depth)));   // none once the tender is reached
+        // (none once the tender is reached, nor while a crowd is on him already: a fight that drags on is not fed)
+        const crowd = world.creatures.reduce((n, m) => n + (m.team === 'enemy' && !m.dead && m.awake && Math.abs(m.x - pl.x) < 12 ? 1 : 0), 0);
+        if (run.boarders.size < 8 && crowd < 10 && run.cleared < FIGHT_CARS.length) board(2 + Math.min(3, run.cleared >> 2) + Math.floor(press(depth)));
       }
     }
     // lamplight for the 2D darkness: the cars' lamps near the hero, the firebox, the headlamp, the station's lamps
