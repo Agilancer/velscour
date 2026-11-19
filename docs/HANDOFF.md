@@ -30,11 +30,14 @@ that falls, thrown daggers, daggers out of the ground, a dagger in each hand, pl
   `assets/sprites/gear/<class>/` (armor.webp, armor_mask.png, gear.json; 48 armors, eight a rarity). Ids 1..26 keep the
   rarity every other class's ids have, so a saved Monk's looks stay in their rarity; 27..48 are the rest. It also writes
   the select portraits and the old class sprite. Heads sit at x70 (the Barbarian's).
-- **Helmets:** none of the three has helmet art. The Monk borrows the Barbarian's column of the helmet atlas, as he did
-  (his old sprite's head sat about 6 px left of it; the new one is under it). The Rogue and the Ninja draw no helmet
-  (`NO_HELM` in `src/core/gearart.js`); their helmet items keep their stats and use the Barbarian's art for the icon.
-  When helmet sprites arrive: add the classes to `tools/nocturnegear.py` CLASSES (or a column each) and drop them from
-  `BORROWED_HELMS` / `NO_HELM`.
+- **Helmets** (`tools/martialhelms.py`): 48 a class from `assets/newhelms/`, each drawn by the artist on one of the
+  class's armors (`fitted_layers/` share the frame of `assets/martialarts/artwork/`). The armor's own `native` scale and
+  offset (cached in `gear_nocturne/<class>/armor_fits.json`, checked to reproduce the saved armors exactly) bring the
+  helmet down too, less that armor's head offset, into their own atlas `assets/sprites/gear/helmets_martial/` (columns
+  monk, ninja, rogue; a row per design, eight a rarity, `armor` = the armor it was drawn on; `exact`: a helm rolls only
+  its own rarity). `gearart.js` gives each class its own atlas as `helmetHelms`; a Monk's old borrowed-Barbarian look is
+  rerolled in its rarity. Helm finishes are muted like the armor's (`FINISH_K`). Nudges: `Fit Helmets.cmd`, set
+  "Monk, Rogue, Ninja" (`tools/helmet-fitter/?set=martial&class=rogue`), which shows each helmet on its own armor.
 - **Classes** (`src/data/classes.js`, `CLASS_IDS`): `rogue` (dex, blood, dagger + dagger) and `ninja` (dex, shadow,
   katana + nunchaku); `DMG_TUNE` for both. 19 classes x 4 trees x 9 = 684 skills, 456 talent nodes
   (`src/data/talentdata3.js`). Design and skill tables: `docs/class_overhaul/18_rogue.md`, `19_ninja.md`.

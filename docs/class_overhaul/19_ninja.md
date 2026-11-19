@@ -3,7 +3,8 @@
 The 19th class (id `ninja`). Hooded in black with only an eye slit (art: `assets/martialarts/`, 48 armors,
 `tools/martialgear.py`; finishes only tint him, `FINISH_K` in `src/core/gearart.js`). Dexterity, element Shadow. He holds
 a **katana** (weapon base `katana`) and carries **nunchaku** (off-hand base `nunchaku`) on his belt, and nothing else
-(`CLASS_ARMS` in `src/data/items.js`). No helmet is drawn on him (`NO_HELM`).
+(`CLASS_ARMS` in `src/data/items.js`). He wears his own 48 helmets
+(`assets/sprites/gear/helmets_martial/`, `tools/martialhelms.py`).
 
 ## How he moves (`src/game/ninja.js`, `src/gfx/shadowfx.js`)
 - **Somersaults.** `Creature.acro = { t, dur, spins, h, dir }` turns the hero image about the middle of his body while he

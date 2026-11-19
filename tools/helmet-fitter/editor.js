@@ -47,7 +47,7 @@ function setFit(value, record = true) {
   changed();
 }
 function solidBounds(id) {
-  const key = current + ':' + id;
+  const key = activeSet + ':' + current + ':' + id;
   if (bounds.has(key)) return bounds.get(key);
   const [w, h] = index.frame, col = index.classes.indexOf(current);
   const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -71,8 +71,9 @@ function updateControls() {
   const f = fit();
   for (const [id, value] of Object.entries({ x: round(f.x), y: round(f.y), sx: round(f.scaleX * 100), sy: round(f.scaleY * 100), size: f.scaleX * 100, rotation: round(f.rotation || 0), angle: round(f.rotation || 0) })) $(id).value = value;
   const label = index.designs.find(d => d.id === design());
+  $('armor').disabled = $('paired').checked && !!label.armor; $('armor').value = armorOf();
   $('caption').textContent = `${title(current)} · ${label.catalog} (${label.name})`;
-  $('numbers').textContent = `x=${f.x.toFixed(3)}  y=${f.y.toFixed(3)}  width=${(f.scaleX * 100).toFixed(2)}%  height=${(f.scaleY * 100).toFixed(2)}%  rotation=${(f.rotation || 0).toFixed(1)}°  | armor ${$('armor').value}`;
+  $('numbers').textContent = `x=${f.x.toFixed(3)}  y=${f.y.toFixed(3)}  width=${(f.scaleX * 100).toFixed(2)}%  height=${(f.scaleY * 100).toFixed(2)}%  rotation=${(f.rotation || 0).toFixed(1)}°  | armor ${armorOf()}`;
   const count = Object.values(data.classes).reduce((n, obj) => n + Object.keys(obj).length, 0);
   $('progress').textContent = `${count} / ${index.classes.length * index.designs.length} placements set · ${Object.keys(data.classes[current] || {}).length} / ${index.designs.length} for this class`;
   $('thumbTitle').textContent = `This class · all ${index.designs.length} helmets`;
@@ -89,22 +90,28 @@ function backdrop(x, w, h) {
     for (let y = 0; y < h; y += 16) for (let a = 0; a < w; a += 16) if ((a / 16 + y / 16) % 2) x.fillRect(a, y, 16, 16);
   }
 }
-function body(x) {
-  const [fw, fh] = loaded.meta.frame, id = clamp(Number($('armor').value) || 1, 1, loaded.meta.armor.n) - 1;
+// The body armor shown under helmet `id`: the one it was drawn for (Monk/Rogue/Ninja set) or the chosen one.
+function armorOf(id = design()) {
+  const paired = $('paired').checked && index.designs.find(d => d.id === id)?.armor;
+  return clamp(paired || Number($('armor').value) || 1, 1, loaded.meta.armor.n);
+}
+function body(x, armor) {
+  const [fw, fh] = loaded.meta.frame, id = armor - 1;
   x.drawImage(loaded.image, (id % loaded.meta.cols) * fw, Math.floor(id / loaded.meta.cols) * fh, fw, fh, 0, 0, fw, fh);
 }
-function helmet(x, id, opacity = 1) {
+function helmet(x, id, armor, opacity = 1) {
   const f = fit(id), [w, h] = index.frame, col = index.classes.indexOf(current), b = solidBounds(id);
   const cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
+  const [hx, hy] = loaded.meta.armor.head?.[armor - 1] || [0, 0]; // as in the game: the helmet follows this armor's head
   x.save(); x.globalAlpha = opacity;
-  x.translate(f.x + cx * f.scaleX, f.y + cy * f.scaleY); x.rotate((f.rotation || 0) * Math.PI / 180);
+  x.translate(f.x + hx + cx * f.scaleX, f.y + hy + cy * f.scaleY); x.rotate((f.rotation || 0) * Math.PI / 180);
   x.scale(f.scaleX, f.scaleY); x.drawImage(atlas, col * w, (id - 1) * h, w, h, -cx, -cy, w, h); x.restore();
 }
 function composite(id, opacity = 1, visible = true) {
   // Rasterize at the game's native body-frame resolution before enlarging it.
-  const frame = document.createElement('canvas');
+  const frame = document.createElement('canvas'), armor = armorOf(id);
   [frame.width, frame.height] = loaded.meta.frame;
-  const x = frame.getContext('2d'); body(x); if (visible) helmet(x, id, opacity);
+  const x = frame.getContext('2d'); body(x, armor); if (visible) helmet(x, id, armor, opacity);
   return frame;
 }
 function draw() {
@@ -163,8 +170,14 @@ async function selectSet(next) {
   const max = index.designs.length;
   const chosen = Math.min(Number($('design').value) || 1, max);
   $('design').value = chosen;
-  if (loaded) { updateControls(); draw(); }
-  status(`${index.rarity[0].toUpperCase()}${index.rarity.slice(1)} placements loaded.`);
+  // each set has its own characters
+  const keep = index.classes.includes($('class').value) ? $('class').value : index.classes[0];
+  $('class').replaceChildren(...index.classes.map(cls => new Option(title(cls), cls)));
+  $('class').value = keep;
+  $('paired').parentElement.hidden = !index.designs.some(d => d.armor);
+  if (current !== keep) await selectClass();
+  else if (loaded) { updateControls(); draw(); }
+  status(`${$('set').selectedOptions[0].textContent} placements loaded.`);
 }
 function point(event) {
   const rect = canvas.getBoundingClientRect();
@@ -212,7 +225,7 @@ $('angle').addEventListener('change', () => { angleChanging = false; });
 $('class').addEventListener('change', () => { stopDrag(); selectClass(); });
 $('set').addEventListener('change', () => selectSet($('set').value));
 $('design').addEventListener('change', () => selectDesign(design()));
-for (const id of ['opacity', 'show', 'background', 'armor']) $(id).addEventListener('input', () => { updateControls(); draw(); });
+for (const id of ['opacity', 'show', 'background', 'armor', 'paired']) $(id).addEventListener('input', () => { updateControls(); draw(); });
 $('zoom').addEventListener('input', viewZoom);
 function navigate(delta) {
   const perClass = index.designs.length;
@@ -267,7 +280,7 @@ $('png').onclick = () => {
   x.fillStyle = '#ece7dd'; x.font = 'bold 20px sans-serif'; x.fillText($('caption').textContent, 16, 30);
   const f = fit(); x.font = '15px monospace';
   x.fillText(`x=${f.x.toFixed(4)}  y=${f.y.toFixed(4)}  scaleX=${f.scaleX.toFixed(4)}  scaleY=${f.scaleY.toFixed(4)}  rotation=${(f.rotation || 0).toFixed(2)}°`, 16, 60);
-  x.fillText(`Body armor ${$('armor').value} | ${current} | design ${design()} | full opacity`, 16, 86);
+  x.fillText(`Body armor ${armorOf()} | ${current} | design ${design()} | full opacity`, 16, 86);
   const frame = composite(design()); x.imageSmoothingEnabled = false;
   x.drawImage(frame, camera.x, camera.y, camera.w, camera.h, 16, 110, 480, 576);
   x.drawImage(frame, 520, 110, 256, 384);
@@ -297,15 +310,17 @@ window.addEventListener('beforeunload', event => { if (dirty) { event.preventDef
 
 async function init() {
   $('controls').disabled = true;
-  for (const set of ['helmet']) {
-    const dir = 'helmets/';
-    const [setIndex, setAtlas, setData] = await Promise.all([json(base + dir + 'index.json'), image(base + dir + 'atlas.webp'), json(base + dir + 'placements.json')]);
+  for (const [set, dir] of [['helmet', 'helmets/'], ['martial', 'helmets_martial/']]) {
+    const t = '?t=' + Date.now();
+    const [setIndex, setAtlas, setData] = await Promise.all([json(base + dir + 'index.json'), image(base + dir + 'atlas.webp' + t), json(base + dir + 'placements.json')]);
     index = setIndex; validate(setData);
     sets[set] = { index: setIndex, atlas: setAtlas, data: setData, persisted: JSON.stringify(setData) };
   }
-  index = sets.helmet.index;
-  for (const cls of index.classes) $('class').add(new Option(title(cls), cls));
-  await selectSet('helmet');
-  await selectClass();
+  // ?set=martial&class=rogue opens on that set and character
+  const q = new URLSearchParams(location.search), start = sets[q.get('set')] ? q.get('set') : 'helmet';
+  $('set').value = start;
+  if (q.get('class')) $('class').replaceChildren(new Option(title(q.get('class')), q.get('class')));
+  await selectSet(start);
+  if (!loaded) await selectClass();
 }
 init().catch(e => status('Could not start fitter: ' + e.message));

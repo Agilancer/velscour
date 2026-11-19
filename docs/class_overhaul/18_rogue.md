@@ -2,9 +2,8 @@
 
 The 18th class (id `rogue`). A black-leather knife-fighter with short black hair (art: `assets/martialarts/`, 48 armors,
 `tools/martialgear.py`). Dexterity, element Blood, a dagger in each hand (`DUAL_WIELD`, `CLASS_ARMS` in
-`src/data/items.js`: she can hold nothing but daggers). No helmet is drawn on her yet (`NO_HELM` in
-`src/core/gearart.js`): helmet items keep their stats and show the Barbarian's helmet art as a placeholder icon until her
-helmet sprites arrive.
+`src/data/items.js`: she can hold nothing but daggers). She wears her own 48 helmets
+(`assets/sprites/gear/helmets_martial/`, `tools/martialhelms.py`), which leave her chin bare as drawn.
 
 ## The mechanic (`src/game/rogue.js`)
 - **Combo Points** (after World of Warcraft's Rogue). Builders (`cp=N` in the skill line) add N points when the cast

@@ -228,7 +228,8 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   The hero's look is the Grim Nocturne gear: 26 armors per class (2-7 per rarity) and 15 enclosed helmets per class (three sets),
   69 palette finishes, built by `python tools/nocturnegear.py build` (or `process_assets.py gear`) from the natives in
   `assets/source/gear_nocturne/`; helmet nudges go in `assets/sprites/gear/helmets/placements.json` via
-  `Fit Helmets.cmd`. The old `assets/FinalClasses/<class>.zip` libraries are no longer read. Class art packs (Paladin weapons, ability effects) go in
+  `Fit Helmets.cmd`. The Monk, Rogue and Ninja have 48 helmets each, one per armor, in their own atlas
+  `assets/sprites/gear/helmets_martial/` (`python tools/martialhelms.py` from `assets/newhelms/`; fitter set "Monk, Rogue, Ninja"). The old `assets/FinalClasses/<class>.zip` libraries are no longer read. Class art packs (Paladin weapons, ability effects) go in
   `assets/source/classes/<class>/` and are imported by `python3 tools/process_assets.py classes [class]`; both are in
   [`docs/CLASS_ART.md`](docs/CLASS_ART.md). The animated class-select portraits come from
   `assets/FinalClasses/All 16 Classes.png` (`python3 tools/process_assets.py select`, drawn by `src/ui/heroanim.js`).

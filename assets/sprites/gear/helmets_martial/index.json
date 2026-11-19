@@ -1,0 +1,406 @@
+{
+  "frame": [
+    160,
+    160
+  ],
+  "cols": 3,
+  "classes": [
+    "monk",
+    "ninja",
+    "rogue"
+  ],
+  "exact": true,
+  "designs": [
+    {
+      "id": 1,
+      "rarity": 0,
+      "set": 5,
+      "name": "Common Helm 01",
+      "catalog": "Common 01",
+      "armor": 1
+    },
+    {
+      "id": 2,
+      "rarity": 0,
+      "set": 5,
+      "name": "Common Helm 02",
+      "catalog": "Common 02",
+      "armor": 2
+    },
+    {
+      "id": 3,
+      "rarity": 0,
+      "set": 5,
+      "name": "Common Helm 03",
+      "catalog": "Common 03",
+      "armor": 27
+    },
+    {
+      "id": 4,
+      "rarity": 0,
+      "set": 5,
+      "name": "Common Helm 04",
+      "catalog": "Common 04",
+      "armor": 28
+    },
+    {
+      "id": 5,
+      "rarity": 0,
+      "set": 5,
+      "name": "Common Helm 05",
+      "catalog": "Common 05",
+      "armor": 29
+    },
+    {
+      "id": 6,
+      "rarity": 0,
+      "set": 5,
+      "name": "Common Helm 06",
+      "catalog": "Common 06",
+      "armor": 30
+    },
+    {
+      "id": 7,
+      "rarity": 0,
+      "set": 5,
+      "name": "Common Helm 07",
+      "catalog": "Common 07",
+      "armor": 31
+    },
+    {
+      "id": 8,
+      "rarity": 0,
+      "set": 5,
+      "name": "Common Helm 08",
+      "catalog": "Common 08",
+      "armor": 32
+    },
+    {
+      "id": 9,
+      "rarity": 1,
+      "set": 5,
+      "name": "Uncommon Helm 01",
+      "catalog": "Uncommon 01",
+      "armor": 3
+    },
+    {
+      "id": 10,
+      "rarity": 1,
+      "set": 5,
+      "name": "Uncommon Helm 02",
+      "catalog": "Uncommon 02",
+      "armor": 4
+    },
+    {
+      "id": 11,
+      "rarity": 1,
+      "set": 5,
+      "name": "Uncommon Helm 03",
+      "catalog": "Uncommon 03",
+      "armor": 33
+    },
+    {
+      "id": 12,
+      "rarity": 1,
+      "set": 5,
+      "name": "Uncommon Helm 04",
+      "catalog": "Uncommon 04",
+      "armor": 34
+    },
+    {
+      "id": 13,
+      "rarity": 1,
+      "set": 5,
+      "name": "Uncommon Helm 05",
+      "catalog": "Uncommon 05",
+      "armor": 35
+    },
+    {
+      "id": 14,
+      "rarity": 1,
+      "set": 5,
+      "name": "Uncommon Helm 06",
+      "catalog": "Uncommon 06",
+      "armor": 36
+    },
+    {
+      "id": 15,
+      "rarity": 1,
+      "set": 5,
+      "name": "Uncommon Helm 07",
+      "catalog": "Uncommon 07",
+      "armor": 37
+    },
+    {
+      "id": 16,
+      "rarity": 1,
+      "set": 5,
+      "name": "Uncommon Helm 08",
+      "catalog": "Uncommon 08",
+      "armor": 38
+    },
+    {
+      "id": 17,
+      "rarity": 2,
+      "set": 5,
+      "name": "Rare Helm 01",
+      "catalog": "Rare 01",
+      "armor": 5
+    },
+    {
+      "id": 18,
+      "rarity": 2,
+      "set": 5,
+      "name": "Rare Helm 02",
+      "catalog": "Rare 02",
+      "armor": 6
+    },
+    {
+      "id": 19,
+      "rarity": 2,
+      "set": 5,
+      "name": "Rare Helm 03",
+      "catalog": "Rare 03",
+      "armor": 13
+    },
+    {
+      "id": 20,
+      "rarity": 2,
+      "set": 5,
+      "name": "Rare Helm 04",
+      "catalog": "Rare 04",
+      "armor": 14
+    },
+    {
+      "id": 21,
+      "rarity": 2,
+      "set": 5,
+      "name": "Rare Helm 05",
+      "catalog": "Rare 05",
+      "armor": 19
+    },
+    {
+      "id": 22,
+      "rarity": 2,
+      "set": 5,
+      "name": "Rare Helm 06",
+      "catalog": "Rare 06",
+      "armor": 20
+    },
+    {
+      "id": 23,
+      "rarity": 2,
+      "set": 5,
+      "name": "Rare Helm 07",
+      "catalog": "Rare 07",
+      "armor": 21
+    },
+    {
+      "id": 24,
+      "rarity": 2,
+      "set": 5,
+      "name": "Rare Helm 08",
+      "catalog": "Rare 08",
+      "armor": 39
+    },
+    {
+      "id": 25,
+      "rarity": 3,
+      "set": 5,
+      "name": "Epic Helm 01",
+      "catalog": "Epic 01",
+      "armor": 7
+    },
+    {
+      "id": 26,
+      "rarity": 3,
+      "set": 5,
+      "name": "Epic Helm 02",
+      "catalog": "Epic 02",
+      "armor": 8
+    },
+    {
+      "id": 27,
+      "rarity": 3,
+      "set": 5,
+      "name": "Epic Helm 03",
+      "catalog": "Epic 03",
+      "armor": 15
+    },
+    {
+      "id": 28,
+      "rarity": 3,
+      "set": 5,
+      "name": "Epic Helm 04",
+      "catalog": "Epic 04",
+      "armor": 22
+    },
+    {
+      "id": 29,
+      "rarity": 3,
+      "set": 5,
+      "name": "Epic Helm 05",
+      "catalog": "Epic 05",
+      "armor": 23
+    },
+    {
+      "id": 30,
+      "rarity": 3,
+      "set": 5,
+      "name": "Epic Helm 06",
+      "catalog": "Epic 06",
+      "armor": 24
+    },
+    {
+      "id": 31,
+      "rarity": 3,
+      "set": 5,
+      "name": "Epic Helm 07",
+      "catalog": "Epic 07",
+      "armor": 40
+    },
+    {
+      "id": 32,
+      "rarity": 3,
+      "set": 5,
+      "name": "Epic Helm 08",
+      "catalog": "Epic 08",
+      "armor": 41
+    },
+    {
+      "id": 33,
+      "rarity": 4,
+      "set": 5,
+      "name": "Legendary Helm 01",
+      "catalog": "Legendary 01",
+      "armor": 9
+    },
+    {
+      "id": 34,
+      "rarity": 4,
+      "set": 5,
+      "name": "Legendary Helm 02",
+      "catalog": "Legendary 02",
+      "armor": 10
+    },
+    {
+      "id": 35,
+      "rarity": 4,
+      "set": 5,
+      "name": "Legendary Helm 03",
+      "catalog": "Legendary 03",
+      "armor": 16
+    },
+    {
+      "id": 36,
+      "rarity": 4,
+      "set": 5,
+      "name": "Legendary Helm 04",
+      "catalog": "Legendary 04",
+      "armor": 25
+    },
+    {
+      "id": 37,
+      "rarity": 4,
+      "set": 5,
+      "name": "Legendary Helm 05",
+      "catalog": "Legendary 05",
+      "armor": 42
+    },
+    {
+      "id": 38,
+      "rarity": 4,
+      "set": 5,
+      "name": "Legendary Helm 06",
+      "catalog": "Legendary 06",
+      "armor": 43
+    },
+    {
+      "id": 39,
+      "rarity": 4,
+      "set": 5,
+      "name": "Legendary Helm 07",
+      "catalog": "Legendary 07",
+      "armor": 44
+    },
+    {
+      "id": 40,
+      "rarity": 4,
+      "set": 5,
+      "name": "Legendary Helm 08",
+      "catalog": "Legendary 08",
+      "armor": 45
+    },
+    {
+      "id": 41,
+      "rarity": 5,
+      "set": 5,
+      "name": "Mythic Helm 01",
+      "catalog": "Mythic 01",
+      "armor": 11
+    },
+    {
+      "id": 42,
+      "rarity": 5,
+      "set": 5,
+      "name": "Mythic Helm 02",
+      "catalog": "Mythic 02",
+      "armor": 12
+    },
+    {
+      "id": 43,
+      "rarity": 5,
+      "set": 5,
+      "name": "Mythic Helm 03",
+      "catalog": "Mythic 03",
+      "armor": 17
+    },
+    {
+      "id": 44,
+      "rarity": 5,
+      "set": 5,
+      "name": "Mythic Helm 04",
+      "catalog": "Mythic 04",
+      "armor": 18
+    },
+    {
+      "id": 45,
+      "rarity": 5,
+      "set": 5,
+      "name": "Mythic Helm 05",
+      "catalog": "Mythic 05",
+      "armor": 26
+    },
+    {
+      "id": 46,
+      "rarity": 5,
+      "set": 5,
+      "name": "Mythic Helm 06",
+      "catalog": "Mythic 06",
+      "armor": 46
+    },
+    {
+      "id": 47,
+      "rarity": 5,
+      "set": 5,
+      "name": "Mythic Helm 07",
+      "catalog": "Mythic 07",
+      "armor": 47
+    },
+    {
+      "id": 48,
+      "rarity": 5,
+      "set": 5,
+      "name": "Mythic Helm 08",
+      "catalog": "Mythic 08",
+      "armor": 48
+    }
+  ],
+  "fit": {
+    "scaleX": 0.25,
+    "scaleY": 0.25,
+    "xAnchor": 66.0,
+    "baselineOffset": -7,
+    "sourceBaseline": 0
+  }
+}
