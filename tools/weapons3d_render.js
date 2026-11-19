@@ -76,7 +76,7 @@ export async function bakeSet(set) {
     o.held = r(0); o.mask = r(1); o.icon = r(2); o.iconMask = r(3); if (o.hasFree) { o.free = r(4); o.freeMask = r(5); } delete o.at; delete o.hasFree;
   }
   const p = poseOf({ set }, { key: '' }), models = out.map((o) => { const m = o.model; delete o.model; return m; }).filter(Boolean);
-  return { models, png: atlas.toDataURL('image/png'), meta: { set, cls: S.cls, slot: S.slot, hand: S.hand, fist: [f[0], f[1]], shadow: p.shadow || POSE[S.pose].shadow || null, designs: out } };
+  return { models, png: atlas.toDataURL('image/png'), meta: { set, cls: S.cls, slot: S.slot, hand: S.hand, fist: [f[0], f[1]], ...(S.behind && { behind: S.behind }), shadow: p.shadow || POSE[S.pose].shadow || null, designs: out } };
 }
 
 /** Every class's fists on every armor: { cls: [null, { R: [x, y], L: [x, y] }, ...] } (art px, pixel centres). */
