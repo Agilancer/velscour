@@ -14,6 +14,7 @@ import { markBonuses, grantMarks, riftMarks } from './marks.js';
 import { noteRiftBest, endgame } from './endgame.js';
 import { Board, barred } from './leaderboard.js';
 import { Cloud } from './cloud.js';
+import { heroDamage } from './autoplay.js';
 
 export { RIFT_TIME, RIFT_QUOTA, RIFT_DENSITY, riftDepth, riftLevel, riftJump, riftReward, fmtTime };
 /** The clock a rift gives: the base plus Haste Marks. */
@@ -54,6 +55,9 @@ export function activatePylon(world, def) {
   addEffect(new Column(p.x, p.y, def.color, 1.5, 50, 300));
   sfx('holy'); sfx('boss');
   p.pylonBuff = { id: def.id, timer: def.dur, dur: def.dur, def };
+  // the Conduit's bolt: the hero's average main-attack hit (there is no p.st.attack: its NaN bolts left every monster
+  // they touched, the Guardian too, with NaN life that never reached 0, and the rift could not be finished)
+  if (def.id === 'conduit') { const a = heroDamage(p).atk; p.pylonBuff.zap = a > 0 && isFinite(a) ? a : 0; }
   if (def.id === 'aegis') p.invuln = def.dur;
 }
 
@@ -113,12 +117,10 @@ export function riftTick(world, dt) {
         const target = targets[Math.floor(Math.random() * targets.length)];
         addEffect(new Bolt(p.x, p.y, 25, target.x, target.y, 25, '#30b0ff', 0.15, 4));
         sfx('spark');
-        hit(p, target, p.st.attack * 4.5 * (1 + (R.tier || 1) * 0.1), 'lightning');
+        hit(p, target, (b.zap || 0) * 4.5 * (1 + (R.tier || 1) * 0.1), 'light');
         sparkle(target.x, target.y, 10, '#30b0ff', 12, 0.5);
       }
-    } else if (b.id === 'velocity') {
-      p.speedMul = Math.max(p.speedMul || 1, 1.8);
-    }
+    } // (the Velocity Pylon's speed is in Creature.speedMul: setting p.speedMul here overwrote the method)
     if (b.timer <= 0) {
       UI.log(`<b style="color:${b.def.color}">${b.def.name}</b> has expired.`, '#ccc');
       p.pylonBuff = null;
