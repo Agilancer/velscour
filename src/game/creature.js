@@ -228,6 +228,7 @@ export class Creature {
     if (s.slow && s.slow.t > 0) m *= 1 - s.slow.amt;
     if (this.curses.slow && this.curses.slow.t > 0) m *= 1 - this.curses.slow.amt;
     if (this.isPlayer && G.char && G.char.madT > 0) m *= 2; // MADNESS
+    if (this.pylonBuff && this.pylonBuff.id === 'velocity' && this.pylonBuff.timer > 0) m *= 1.8; // a rift's Velocity Pylon
     if (this.hopGait) m *= this.hopGait; // court slimes move in hops (game/slimecourt.js)
     return Math.max(0.15, m);
   }

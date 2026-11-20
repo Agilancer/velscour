@@ -1396,7 +1396,9 @@ export const Auto = {
     // loot, chests, then the job at hand
     if (!rush && this.lootStep(w, dt)) { this.watchStuck(dt); return; }
     const exit = w.portals.find((q) => q.type === 'exit');
-    const isBossDead = !w.boss || w.boss.dead;
+    // (a rift has no boss until the quota: no boss there is not a dead one, and its exit, in the BOSS ROOM at the far
+    // end of the map, stays sealed until the Guardian falls; walking to it and waiting there was the old rift bug)
+    const isBossDead = w.rift ? w.rift.done : !w.boss || w.boss.dead;
     if (exit && (exit.active || isBossDead)) {
       if (!exit.active && isBossDead && w.kind === 'dungeon' && !w.breach && !w.rift && !w.overworldScenario) {
         if (G.game.unsealDungeonExit) G.game.unsealDungeonExit(w, w.boss?.name);
@@ -1429,7 +1431,16 @@ export const Auto = {
       const f = this.frontier(w);
       this.setStatus('Exploring');
       if (f) this.goTo(f[0], f[1], 1.2, dt);
-      else if (exit) {
+      else if (w.rift && !w.rift.done) {
+        // a rift short of its quota with the map seen and every foe left alone: forgive them and hunt the nearest again
+        // (never wait at the sealed exit while the clock runs)
+        for (const m of w.creatures) if (m.team === 'enemy') { this.shun.delete(m); this.giveUp.delete(m); }
+        this.hunts.clear();
+        const near = w.creatures.filter((m) => !m.dead && m.team === 'enemy' && m.targetable !== false && !m.clutter)
+          .reduce((a, m) => (!a || this.navDist(m.x, m.y) < this.navDist(a.x, a.y) ? m : a), null);
+        this.setStatus('Clearing the rift');
+        if (near) this.goTo(near.x, near.y, 1, dt);
+      } else if (exit) {
         const reach = exit.reach || 1.6;
         if (dist(p.x, p.y, exit.x, exit.y) <= reach || this.goTo(exit.x, exit.y, Math.max(1.2, reach - 0.2), dt)) {
           if (exit.active) this.leaveLevel(w);
@@ -1488,6 +1499,7 @@ export const Auto = {
           const d = this.navDist(ch.x, ch.y);
           if (d < 18) {
             this.lootFor = ch;
+            if (this.spend(ch, dt) > 15) { this.giveUp.add(ch); continue; } // can't get to it: the clock is running
             this.setStatus(`Activating ${ch.label}`);
             if (this.goTo(ch.x, ch.y, (ch.reach || 1.5) - 0.2, dt)) ch.use();
             return true;

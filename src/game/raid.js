@@ -649,6 +649,10 @@ class Raid {
       this.wake();
     }
     if (!this.sealed && this.inside(p, 1.5)) this.seal();
+    // a hero blinked or thrown back out past the seal is locked out for good (auto-play hunted the boss through the
+    // wall of light for minutes): after 3 s outside the gate opens again, and seals once more when he steps back in
+    if (this.sealed && this.gateTiles && !this.inside(p, -0.5)) { if ((this.outT = (this.outT || 0) + dt) > 3) { this.unseal(); this.outT = 0; } }
+    else this.outT = 0;
     this.t += dt;
     this.minHp = Math.min(this.minHp ?? 1, p.hp / p.maxHp);
     // the execute timer: after 3 minutes the boss winds up a killing blow nothing survives (the hero restarts the dungeon)

@@ -1818,14 +1818,17 @@ export const game = {
     world.rooms = gen.rooms || [];
     world.riftHold = true; // rift monsters keep the old Endless Torment life (data/depth.js riftHold)
     world.chests = gen.chests.map((ch) => ({ ...ch, opened: false, reach: 1.3, use() { if (this.opened) return; this.opened = true; sfx('chest'); sfx('gold'); dropChest(world, this, depth); sparkle(this.x, this.y, 20, '#ffd060', 20, 0.5); } }));
-    // Spawn 1-2 Pylons in non-start rooms
-    const pylonRooms = (gen.rooms || []).filter((r) => !r.start && r.cx && r.cy);
+    // Spawn 1-2 Pylons in rooms away from the start (a room's middle in tiles: its cx/cy are the maze chunk's index,
+    // which put every pylon in the map's top corner, often in the wall, and auto-play walked at it for good)
+    const pylonRooms = shuffle((gen.rooms || []).filter((r) => r.mx > 0 && Math.hypot(r.mx - gen.start[0], r.my - gen.start[1]) > 8));
     const chosenPylons = shuffle(PYLONS.slice()).slice(0, 2);
     for (let pi = 0; pi < chosenPylons.length && pi < pylonRooms.length; pi++) {
       const pdef = chosenPylons[pi];
       const pr = pylonRooms[pi];
+      const [px, py] = gen.map.walkable(pr.mx, pr.my) && gen.map.circleFree(pr.mx, pr.my, 0.3) ? [pr.mx, pr.my] : gen.map.randomNear(pr.mx, pr.my, 2.5);
+      if (!gen.map.walkable(px, py)) continue;
       world.chests.push({
-        x: pr.cx, y: pr.cy, opened: false, reach: 1.5, dot: pdef.color, pylon: true,
+        x: px, y: py, opened: false, reach: 1.5, dot: pdef.color, pylon: true,
         label: pdef.name,
         use() {
           if (this.opened) return;
