@@ -132,11 +132,15 @@ export function createCaveRun(world, gen, biome, onSuccess) {
         cr.zoomK = snap ? zk : cr.zoomK + (zk - cr.zoomK) * Math.min(1, dt * 1.6);
         camera.zoomK = cr.zoomK; camera.computeZoom();
       }
-      // a look elsewhere (the falls, when the lake first opens up): the camera leans there and back
+      // a look elsewhere (the falls, when the lake first opens up): the camera leans that way and back, never so far the
+      // hero leaves the middle of the screen, and a hit or a foe closing in ends it at once (a player lost sight of the hero to
+      // things out of the water while the view was on the falls)
+      if (cr.look && cr.lookT > 0 && (p.flash > 0 || world.hostiles('player', p.x, p.y, 6).some((m) => m.awake && m.targetable !== false))) cr.lookT = Math.min(cr.lookT, 0.35);
       if (cr.look && cr.lookT > 0) {
         cr.lookT -= dt;
-        const k = clamp(Math.min(cr.lookT, cr.lookDur - cr.lookT) / 0.8, 0, 1), [lx, ly, lh] = cr.look;
-        camera.leadX = (isoX(lx, ly) - isoX(p.x, p.y)) * k; camera.leadY = (isoY(lx, ly) - lh * VZ - isoY(p.x, p.y)) * k;
+        const k = clamp(Math.min(cr.lookT, cr.lookDur - cr.lookT) / 0.6, 0, 1), [lx, ly, lh] = cr.look;
+        const mx = 0.4 * G.W / 2 / (camera.zoom || 1), my = 0.4 * G.H / 2 / (camera.zoom || 1);
+        camera.leadX = clamp((isoX(lx, ly) - isoX(p.x, p.y)) * k, -mx, mx); camera.leadY = clamp((isoY(lx, ly) - lh * VZ - isoY(p.x, p.y)) * k, -my, my);
       } else { camera.leadX = 0; camera.leadY = 0; }
     },
     draw(ctx) { drawCave3D(ctx, cr); },
@@ -197,8 +201,11 @@ export function createCaveRun(world, gen, biome, onSuccess) {
         run.cwp = adv(climb, run.cwp);
         climbEvents(dt);
       }
-      if (run.phase !== 'summit' && run.phase !== 'done' && !run.completed) {
-        if ((r === REG.gallery || r === REG.plateau) || Math.hypot(p.x - cv.plateau.x, p.y - cv.plateau.y) < cv.plateau.r + 3) {
+      // the top of the falls wakes only for a hero who climbed to it: the plateau stands right over the passage at the
+      // falls' foot, so by x, y alone it woke from below and left the hero shut out of the passage, under a boss that
+      // could never be reached (a player report)
+      if (run.phase === 'climb' && !run.completed && !run.fade) {
+        if (r === REG.gallery || r === REG.plateau || (Math.hypot(p.x - cv.plateau.x, p.y - cv.plateau.y) < cv.plateau.r + 3 && groundT(p.x, p.y) > cv.HP - 1.5)) {
           startSummit();
         }
       }
@@ -211,7 +218,7 @@ export function createCaveRun(world, gen, biome, onSuccess) {
   function lakeReveal() {
     run.lakeSeen = true;
     UI.centerMsg('THE UNDERGROUND LAKE', 'A waterfall pours out of the dark far above', 3.2);
-    cr.look = [cv.plunge[0], cv.plunge[1], (cv.HP - cv.WL) * 0.45]; cr.lookT = cr.lookDur = 3.4;
+    cr.look = [cv.plunge[0], cv.plunge[1], (cv.HP - cv.WL) * 0.45]; cr.lookT = cr.lookDur = 2.4;
     UI.log(`The cave opens on a black lake under a towering waterfall. At its foot, a passage climbs into the cliff.`, '#a8d8ff');
     sfx('cold', 0.6);
     // things rise out of the water to meet the party
