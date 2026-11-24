@@ -128,14 +128,32 @@ export const TRADE = [
 export const VAULT_STEPS = [3, 7, 12];
 export const VAULT_MYTHIC = 0.15;
 // The Sacred Flame's blessing: kneel at it for "Kindled" (XP, gold and magic find) for a while; once an hour.
-export const KINDLE = { minutes: 30, cooldownMin: 60, xp: 10, gf: 15, mf: 15 };
+export const KINDLE = { minutes: 30, cooldownMin: 60, xp: 10, gf: 15, mf: 15, rekindle: 30 };   // rekindle: Embers fed to the Flame to kneel again before the hour is up
 // The War Table: your other heroes go on errands of the keep in real time (minutes) and bring back Embers and spoils.
+// Balance (tools/tests/keep_quests.mjs, the veteran): a hero with every class made has 18 others to send, so the table
+// has SEATS (two, one more every fourth Renown rank), its Embers a DAILY CAP, and the long errands pay best by the hour:
+// a full table of vigils is about a day's bounties, not nine Legendaries a day for no play.
 export const EXPEDITIONS = [
-  { id: 'escort', name: 'Escort the pilgrims', where: 'through the Forsaken Wilds', min: 20, embers: 3, gold: 6, gems: 0, lvl: 1 },
-  { id: 'lamps', name: 'Relight the coast lamps', where: 'for the Lampwardens of Gullwrack', min: 45, embers: 5, gold: 8, gems: 1, lvl: 10 },
-  { id: 'relics', name: 'Bring home the relics', where: 'from the drowned chapels', min: 90, embers: 8, gold: 12, gems: 1, lvl: 25 },
-  { id: 'scout', name: 'Scout the Breach', where: 'at the purple portal\'s edge', min: 180, embers: 13, gold: 18, gems: 2, lvl: 45 },
-  { id: 'vigil', name: 'Keep the long vigil', where: 'on the walls of the Endless Siege', min: 480, embers: 26, gold: 30, gems: 3, lvl: 70 },
+  { id: 'escort', name: 'Escort the pilgrims', where: 'through the Forsaken Wilds', min: 20, embers: 1, gold: 6, gems: 0, lvl: 1 },
+  { id: 'lamps', name: 'Relight the coast lamps', where: 'for the Lampwardens of Gullwrack', min: 45, embers: 2, gold: 8, gems: 1, lvl: 10 },
+  { id: 'relics', name: 'Bring home the relics', where: 'from the drowned chapels', min: 90, embers: 3, gold: 12, gems: 1, lvl: 25 },
+  { id: 'scout', name: 'Scout the Breach', where: 'at the purple portal\'s edge', min: 180, embers: 5, gold: 18, gems: 2, lvl: 45 },
+  { id: 'vigil', name: 'Keep the long vigil', where: 'on the walls of the Endless Siege', min: 480, embers: 8, gold: 30, gems: 3, lvl: 70 },
+];
+export const warSeats = (rank) => 2 + Math.floor(rank / 4);   // 2 at first, 7 at Renown 20
+export const WAR_EMBERS_A_DAY = 60;
+
+// The Long Watch: deeds that never run out, for heroes who have reached the Fiend's throne (FINAL_DEPTH). Each pays its
+// Embers every `every` of its metric, counted from the day it opened (no back pay). A hero playing all day earns about
+// 100 to 120 Embers from these (tools/tests/keep_quests.mjs): with the bounties and the War Table, a Legendary and a
+// bit a day, a Mythic for a chosen slot every week or so. The deep still drops more; the keep lets you aim.
+export const WATCH_MIN_DEPTH = 500;
+export const WATCHES = [
+  { id: 'w_clear', m: 'clear', every: 25, embers: 4, name: 'The Long Descent', text: 'Every {n} depths cleared' },
+  { id: 'w_raid', m: 'raid', every: 5, embers: 4, name: 'Crowns Without End', text: 'Every {n} BOSS ROOM lords broken' },
+  { id: 'w_region', m: 'region', every: 5, embers: 4, name: 'The Roads Kept Open', text: 'Every {n} overworld trials won' },
+  { id: 'w_breach', m: 'breach', every: 5, embers: 4, name: 'The Breach Held', text: 'Every {n} floors of the Eternal Breach won' },
+  { id: 'w_rift', m: 'rift', every: 5, embers: 5, name: 'Rifts Sewn Shut', text: 'Every {n} Abyssal Rifts closed' },
 ];
 
 // ------------------------------------------------------------------ the Sagas
@@ -249,7 +267,7 @@ tiers('Slayer', 'guardians', 'guardian', [5, 25, 100, 300, 1000], 'Warden-Breake
 tiers('Slayer', 'lords', 'raid', [1, 5, 20, 50, 100, 200], 'Crownbreaker', 'Break {n} BOSS ROOM lords.', { 4: { decor: ['banner', 'holy_verdant_cross'] } });
 // the descent
 tiers('Descent', 'depth', 'deepest', [10, 25, 50, 75, 100, 150, 200, 300, 400, 500], 'The Descent', 'Reach Depth {n}.', { 3: { decor: ['banner', 'town_eagle'] }, 9: { trophy: 'night_shield' } });
-tiers('Descent', 'level', 'level', [10, 20, 30, 50, 75, 100, 150, 250, 500, 1000], 'The Ascent', 'Reach hero level {n}.', { 5: { trophy: 'dawn_shield' } });
+tiers('Descent', 'level', 'level', [10, 20, 30, 40, 50, 60, 70, 80, 90, 100], 'The Ascent', 'Reach hero level {n}.', { 9: { trophy: 'dawn_shield' } });   // to the level cap (data/depth.js MAX_LEVEL); the old tiers ran to 1,000
 tiers('Descent', 'clears', 'clear', [10, 50, 150, 400, 1000], 'Delver', 'Clear {n} depths.');
 tiers('Descent', 'bossrooms', 'clearBoss', [3, 15, 50, 120], 'Throne-Taker', 'Clear {n} BOSS ROOMs.');
 // the raid's mechanics, as the old raids taught them (docs/TESSARIELS_KEEP.md names what each borrows from)

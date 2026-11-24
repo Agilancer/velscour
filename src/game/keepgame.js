@@ -100,9 +100,19 @@ function waygate(game) {
 function kneel(world, flame) {
   const c = G.char, p = world.player;
   if (kindled(c)) { floatText(p.x, p.y, 60, 'The Flame already burns in you', EMBER_COLOR, 12); return; }
-  const wait = kindleReadyIn(c);
-  if (wait > 0) { floatText(p.x, p.y, 60, `The Flame rests (${Math.ceil(wait / 60000)} min)`, '#b8c0a0', 12); sfx('error', 0.5); return; }
+  const wait = kindleReadyIn(c), k = keepState(c);
+  if (wait > 0) {
+    // the Flame rests: it can be fed Embers to burn again now (a sink for a hero who plays all day)
+    if (k.embers < KINDLE.rekindle) { floatText(p.x, p.y, 60, `The Flame rests (${Math.ceil(wait / 60000)} min)`, '#b8c0a0', 12); sfx('error', 0.5); return; }
+    UI.dialog({ title: 'The Flame rests', html: `<p>It will burn for you again in <b>${Math.ceil(wait / 60000)} minutes</b>. Fed <b style="color:${EMBER_COLOR}">${KINDLE.rekindle} Embers</b> (you have ${k.embers}), it burns now.</p>`,
+      buttons: [{ label: 'Let it rest' }, { label: `Feed it · ${KINDLE.rekindle}`, cls: 'red', fn: () => { if (kindle(c, true)) blessed(world, flame); } }] });
+    return;
+  }
   kindle(c);
+  blessed(world, flame);
+}
+function blessed(world, flame) {
+  const p = world.player;
   sfx('levelup', 0.6);
   world.flameSurge = 1;
   addEffect(new Ring(flame.x, flame.y, 0.3, 3.2, 1, '#9cff5a', 4)); addEffect(new Ring(flame.x, flame.y, 0.3, 6.5, 1.6, '#e8ffb0', 2));

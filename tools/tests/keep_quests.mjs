@@ -71,7 +71,7 @@ for (const s of K.sagaList(h)) if (s.open) K.takeSaga(s.saga.id, h);
 let embers = 0, hours = 0, legendaryAt = null;
 const steps = [];
 for (let d = 1; d <= 600; d++) {
-  h.deepest = d; h.level = Math.min(3000, Math.round(d * 0.2 + 1 + (d > 100 ? d * 0.1 : 0)));
+  h.deepest = d; h.level = Math.min(100, Math.round(d * 0.2 + 1 + (d > 100 ? d * 0.1 : 0)));
   K.keepEvent('kill', 120); h.kills += 120; K.keepEvent('elite', 5); K.keepEvent('unique', 1); K.keepEvent('guardian', 1); K.keepEvent('gold', 80 * d);
   K.keepEvent('clear', 1); K.keepEvent('clear:' + D.DUNGEON_IDS[d % D.DUNGEON_IDS.length], 1);
   if (d % 5 === 0) { K.keepEvent('raid', 1); K.keepEvent('clearBoss', 1); if (d % 10 === 0) K.keepEvent('raidFast', 1); if (d % 15 === 0) K.keepEvent('raidClean', 1); }
@@ -93,5 +93,65 @@ console.log(steps.join('\n'));
 const legendaries = Math.floor(embers / D.TRADE[2].cost);
 console.log(`a played-through hero earns ${embers} Embers: ${legendaries} Legendary pieces at ${D.TRADE[2].cost}, the first at depth ${legendaryAt}; Renown ${D.renownRank(hk.renown)}`);
 if (legendaries < 8 || legendaries > 60) fail(`the Ember economy is off: ${legendaries} Legendaries over a full game`);
+
+// ---- the veteran: weeks of play behind them (level cap, depth 1,400, millions slain, every endgame door open, all 19
+// classes made), then three more weeks of playing all day. What the keep hands them on the first visit, what a day is
+// worth after that, and that nothing in it out-earns playing.
+{
+  const { MAX_LEVEL, depthLevel } = await import('../../src/data/depth.js');
+  for (const q of D.CHALLENGES) if (q.m === 'level' && q.n > MAX_LEVEL) fail(`deed ${q.id} asks for level ${q.n}, past the cap of ${MAX_LEVEL}`);
+  const v = G.char = { ...fresh(), level: MAX_LEVEL, deepest: 1400, kills: 4200000, gold: 1e12, breach: { best: 62 }, rifts: { best: 140 }, unbound: { wins: 24 } };
+  const vk = K.keepState(v);
+  // their life so far, as the counters would have it had the keep stood from the start
+  Object.assign(vk.st, { kill: 4200000, elite: 160000, unique: 30000, guardian: 9000, raid: 2600, clear: 14000, clearBoss: 2600, region: 900, breach: 700, rift: 500, heresyClear: 800,
+    gold: 1e12, epic: 20000, legendary: 2500, mythic: 220, potion: 9000, socket: 900, upgrade: 700, cleanClear: 5000, fastClear: 7000, blitzClear: 2500, raidFast: 1500, raidClean: 900, velscour: 30 });
+  for (const b of D.DUNGEON_IDS) vk.st['clear:' + b] = 400;
+  for (const r of D.REGION_IDS) vk.st['region:' + r] = 60;
+  // a veteran whose save is older than the keep has only the absolute numbers: what does the door pay them?
+  const old = G.char = { ...fresh(), level: MAX_LEVEL, deepest: 1400, kills: 4200000, breach: { best: 62 }, rifts: { best: 140 }, unbound: { wins: 24 } };
+  K.checkProgress(old); const door = K.claimAll(old)[0];
+  console.log(`a veteran's first step in (a save older than the keep): ${door.n} deeds, ${door.embers} Embers, Renown ${D.renownRank(K.keepState(old).renown)}`);
+  if (door.embers > 1500) fail(`the door pays a veteran ${door.embers} Embers at once`);
+  G.char = v;
+  for (const s of K.sagaList(v)) if (s.open) K.takeSaga(s.saga.id, v);
+  K.checkProgress(v); const first = K.claimAll(v)[0];
+  console.log(`every deed there is, done: ${first.n} deeds, ${first.embers} Embers, Renown ${D.renownRank(vk.renown)} (cap ${D.RENOWN_MAX})`);
+  if (K.tradeLevel(v) !== Math.min(depthLevel(1400), MAX_LEVEL + 20)) fail(`a veteran's trade level is ${K.tradeLevel(v)}, not what their depth drops`);
+  const piece = K.buyArmor(2, 'body', (vk.embers = 150, v)); if (!piece || piece.ilvl !== K.tradeLevel(v)) fail('the veteran\'s Legendary is not their trade level');
+  if (K.vaultOffer((vk.vault.marks = 12, v)).some((it) => it.ilvl > MAX_LEVEL + 20)) fail('the Vault forges above what the deep drops');
+  // the Long Watch pays nothing for the past
+  if (vk.owed.length) fail('the Long Watch paid for the past');
+  // a day of playing all day (16 h): ~20 depths an hour with their lords, a trial now and then, or Rifts all day
+  const day = (rifts) => {
+    const e0 = vk.embers; vk.embers = 0;
+    for (let hr = 0; hr < 16; hr++) {
+      if (rifts) K.keepEvent('rift', 7); else { K.keepEvent('clear', 20); K.keepEvent('raid', 4); K.keepEvent('kill', 2400); K.keepEvent('region', 1); }
+    }
+    const g = K.claimAll(v)[0], watch = g ? g.embers : 0; vk.embers = e0;
+    return watch;
+  };
+  const delve = day(false), rift = day(true), bounties = D.BOUNTIES_A_DAY * D.BOUNTY_REWARD.embers;
+  // the War Table worked as hard as it can be: every seat, the best errand by the hour, collected the minute it ends
+  const seats = D.warSeats(D.renownRank(vk.renown));
+  const perHour = Math.max(...D.EXPEDITIONS.map((E) => E.embers * 60 / E.min)), idle = seats * 3 * D.EXPEDITIONS.at(-1).embers;
+  const war = Math.min(D.WAR_EMBERS_A_DAY, Math.round(seats * perHour * 24));
+  const total = Math.max(delve, rift) + bounties + war, L = D.TRADE[2].cost;
+  console.log(`a veteran's day: the Long Watch ${delve} Embers delving (${rift} in Rifts), bounties ${bounties}, the War Table ${Math.min(idle, D.WAR_EMBERS_A_DAY)} left alone / ${war} at most (${seats} seats) = ${total} Embers: ${(total / L).toFixed(1)} Legendary rolls, a Mythic every ${(L / total / D.TRADE[2].mythic).toFixed(1)} days; three weeks: ${total * 21} Embers`);
+  if (war > D.WAR_EMBERS_A_DAY || war > 3 * bounties) fail(`the War Table out-earns the board: ${war} a day`);
+  if (Math.max(delve, rift) < 60 || Math.max(delve, rift) > 200) fail(`the Long Watch pays ${Math.max(delve, rift)} Embers a day of play (60-200 wanted)`);
+  if (total / L > 2.5) fail(`a veteran forges ${(total / L).toFixed(1)} Legendaries a day`);
+  if (war >= Math.max(delve, rift)) fail('the War Table pays more than playing all day');
+  // the table's rules: seats, the daily cap
+  const sent = ['wizard', 'ranger', 'monk', 'bard', 'rogue', 'ninja', 'gunner', 'lancer'].filter((cls) => K.sendExpedition(cls, 100, 'vigil', v)).length;
+  if (sent !== seats) fail(`sent ${sent} heroes with ${seats} seats`);
+  for (const e of vk.exp) e.end = 0;
+  vk.war = { day: K.today(), embers: D.WAR_EMBERS_A_DAY - 5 };
+  const e1 = vk.embers; K.collectExpedition(vk.exp[0].cls, v); K.collectExpedition(vk.exp[0].cls, v);
+  if (vk.embers - e1 !== 5) fail(`the War Table's daily cap let ${vk.embers - e1} Embers through with 5 left`);
+  // feeding the Flame
+  vk.kindled = { at: Date.now(), until: Date.now() - 1 }; vk.embers = D.KINDLE.rekindle - 1;
+  if (K.kindle(v, true)) fail('rekindled without the Embers');
+  vk.embers = D.KINDLE.rekindle; if (!K.kindle(v, true) || vk.embers !== 0) fail('feeding the Flame did not rekindle it');
+}
 console.log(errs.length ? `${errs.length} FAILED` : 'NO ERRORS');
 process.exit(errs.length ? 1 : 0);

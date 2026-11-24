@@ -149,16 +149,24 @@ Soulcoiler to Ula'tek; The Unbinding of Kith'ix). Sources: Icy Veins raid guides
 ## What it gives (and the balance)
 - **Sacred Embers** (per hero, `c.keep.embers`).
 - **The Ember trade** at the Castellan: **body, head, hands, legs or feet** of the hero's own level (`tradeLevel`: the
-  hero's level, no higher than their deepest depth's drops + 2), **Rare 18, Epic 55, Legendary 150**; a Legendary comes
+  hero's level, no higher than their deepest depth's drops + 2; **at the level cap, what their deepest depth drops**, to
+  item level 120), **Rare 18, Epic 55, Legendary 150**; a Legendary comes
   out **Mythic 1 time in 10** (from item level 50). A rarity is sold only once the hero's item level opens it, as in the
   deep (Epic 15, Legendary 30, Mythic 50).
 - **The Vault of the Flame** (weekly, the treasury chest on the dais): every reward claimed this week is a mark; 3, 7 and
-  12 marks give 1, 2 and 3 choices of one **Legendary** piece of the hero's level + 2 (15% Mythic).
+  12 marks give 1, 2 and 3 choices of one **Legendary** piece of the hero's level + 2 (15% Mythic), never above item
+  level 120.
 - **Renown** (the rewards' Renown points, ranks 1-20, rank r at 3 r (r + 1) / 2): always on, **+1% gold, +1 magic find,
   +0.5% XP a rank** (+20%, +20, +10% at 20). Titles from Pilgrim to Ember Eternal.
-- **Kindled**: kneel at the Sacred Flame: **+10% XP, +15% gold, +15 magic find for 30 minutes, once an hour** (real time).
+- **Kindled**: kneel at the Sacred Flame: **+10% XP, +15% gold, +15 magic find for 30 minutes, once an hour** (real time);
+  while it rests it can be **fed 30 Embers** to burn again at once (`KINDLE.rekindle`: the sink for a hero who plays all day).
 - **The War Table**: send your other heroes on the keep's errands (20 minutes to 8 hours, real time, by their level):
-  Embers (3-26), gold at their level and gems; they leave the hall while away.
+  Embers (1-8, the long errands best by the hour), gold at their level and gems; they leave the hall while away. **Two
+  seats, one more every fourth rank of Renown** (`warSeats`, 7 at rank 20), and its Embers stop at **60 a day**
+  (`WAR_EMBERS_A_DAY`; gold and gems still come).
+- **The Long Watch** (`WATCHES`, on the Bounties tab): five deeds that never run out, open from Depth 500: 4 Embers every
+  25 depths cleared, every 5 lords, every 5 overworld trials, every 5 Breach floors; 5 every 5 Rifts. They count from the
+  day they opened (no back pay) and give no Renown.
 - **The Chronicle of Deeds** (the lectern on the north balcony): every hero's level, depth, kills, Breach and Rift best,
   fastest depth and fastest BOSS ROOM, trophies; and the hall's records, the best of all of them.
 - **The chests** (storage, Reliquary, Jewel Box) by the portal, and the Waygate down.
@@ -166,6 +174,25 @@ Soulcoiler to Ula'tek; The Unbinding of Kith'ix). Sources: Icy Veins raid guides
   about **2,200 Embers over a whole game (~35 hours): 14 Legendary pieces**, the Vault and the War Table on top; Renown
   in the low teens by the end of the campaign, the rest from the daily board and the endgame. The pieces are the hero's
   own level, never above what the deep would drop there, so the keep **targets** a slot rather than out-gearing drops.
+
+### The veteran (the second pass of balance)
+The user asked that the keep hold up for **players who have been at it for weeks without a break**: level 100, far past
+Depth 500, every endgame door open, all 19 classes made. `keep_quests.mjs` models one and found:
+- **The War Table was the whole economy.** With 18 other heroes and no limit, 8-hour vigils three times a day paid
+  **~1,400 Embers a day for no play** (nine Legendaries; clicking 20-minute escorts, 160 an hour), against 24 from the
+  day's bounties. Now: seats, a daily cap of 60, smaller payments. A full table left alone is the cap.
+- **Four Ascent deeds could not be done** (levels 150 to 1,000; the cap is 100). The tiers now run 10 to 100.
+- **The trade forged twenty item levels under their drops** (item level 100; the deep past the throne drops to 120). At
+  the cap it now follows their deepest depth; the Vault no longer forges above 120.
+- **Nothing was left to earn or spend.** With every deed done, three bounties a day was all: the Long Watch and feeding
+  the Flame are for them.
+- **What a day is worth now** (16 hours of play): the Long Watch 110-140 Embers, bounties 24, the War Table at most 60:
+  **about 225 Embers, 1.5 Legendary forgings, a Mythic for a chosen slot about once a week**. The deep drops more; the
+  keep lets them aim at a slot. Renown: 16 with every deed done, the last four ranks from the daily board (months).
+- **A save older than the keep** is paid for the deeds read off the save (level, depth, kills, Breach, Rift, Unbound)
+  on the first step in: 40 deeds, ~1,500 Embers. Once.
+- Keep states are per hero, so the caps are per hero too.
+- State added: `watch` ({ id: { base, paid } }) and `war` ({ day, embers }) in `G.char.keep`; `keepState` fills them in.
 
 ## State
 `G.char.keep` (saved with the hero, so cloud saves carry it): `embers`, `renown`, `st` (counters), `rec` (best times),
@@ -187,7 +214,8 @@ the portal home (`Auto.keepTick`). It never walks in by itself.
 and Kindled in `recompute`), `breach.js`, `rifts.js`, `inventory.js`, `vendor.js`, `autoplay.js`, `quest.js`, `main.js`.
 
 ## Tests
-- `node tools/tests/keep_quests.mjs`: the quests' data, the rules on a save, the Ember economy (no browser).
+- `node tools/tests/keep_quests.mjs`: the quests' data, the rules on a save, the Ember economy over a played-through
+  game, and the veteran's (the door's back pay, a day's Embers, the War Table's seats and cap) (no browser).
 - `node tools/tests/keep.js [noshots] [mobile]`: the portal in town, the hall, the companions walking and talking, the
   stairs to every balcony, every panel tab, a chapter paid, a trade, the Vault, Furnish shown at once, Kindled, an
   expedition, auto-play walking out. Shots in `tools/tests/out/keep_*.png`.

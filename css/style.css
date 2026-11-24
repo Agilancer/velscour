@@ -1795,3 +1795,4 @@ body.in-keep #velscour-skull { display: none !important; }
   .keep-panel .kp-tab { padding: 4px 7px; font-size: 11px; }
   .keep-panel .kp-note { font-size: 11px; margin-bottom: 5px; }
 }
+.kp-title .kp-ember { font-size: 13px; }

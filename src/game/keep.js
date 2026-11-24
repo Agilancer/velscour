@@ -8,6 +8,7 @@ import { sfx } from '../core/audio.js';
 import {
   METRICS, ABS, SAGAS, SAGA_BY_ID, sagaReward, BOUNTIES, BOUNTY_REWARD, BOUNTIES_A_DAY, CHALLENGES, TROPHY_BY_ID, DECOR,
   defaultDecor, renownRank, renownBonus, TRADE, TRADE_SLOTS, VAULT_STEPS, VAULT_MYTHIC, KINDLE, EXPEDITIONS, EMBER_COLOR,
+  warSeats, WAR_EMBERS_A_DAY, WATCHES, WATCH_MIN_DEPTH,
 } from '../data/keep.js';
 import { BIOME_BY_ID } from '../data/biomes.js';
 import { depthLevel, MAX_LEVEL, isRaidDepth } from '../data/depth.js';
@@ -32,6 +33,8 @@ export function keepState(c = G.char) {
     while (k.decor[kind].length < n) k.decor[kind].push(defaultDecor()[kind][k.decor[kind].length]);
   }
   k.exp ||= [];
+  k.watch ||= {};                       // the Long Watch: { id: { base, paid } }
+  k.war ||= { day: -1, embers: 0 };     // Embers the War Table has paid today
   return k;
 }
 
@@ -231,17 +234,35 @@ export function checkProgress(c = G.char, m = null) {
   for (const s of SAGAS) { const st = k.sagas[s.id]; if (st && st.ch < s.ch.length && (!m || s.ch[st.ch].m === m)) checkSaga(c, s); }
   checkBounties(c, m);
   checkChallenges(c, m);
+  checkWatches(c, m);
   if (!outer) return;
   // what this check finished: a line each, or one line for a flood (a veteran's first visit finishes dozens at once)
   const list = pend, w = G.world; pend = null;
   if (!list.length || !G.ui || !w || w.keepTest) return;
   const where = w.keep ? 'Claim from the Castellan.' : `The Castellan holds your reward${list.length > 1 ? 's' : ''} in <b style="color:${EMBER_COLOR}">Tessariel's Keep</b>.`;
-  const tag = (r) => `<b style="color:${r.color || EMBER_COLOR}">${r.kind === 'challenge' ? 'Deed done' : r.kind === 'bounty' ? 'Bounty done' : 'Saga'}:</b> ${escapeHtml(r.name)}`;
+  const tag = (r) => `<b style="color:${r.color || EMBER_COLOR}">${r.kind === 'challenge' ? 'Deed done' : r.kind === 'bounty' ? 'Bounty done' : r.kind === 'watch' ? 'The Long Watch' : 'Saga'}:</b> ${escapeHtml(r.name)}`;
   if (list.length <= 2) for (const r of list) G.ui.log(`${tag(r)}. ${where}`, '#e8f0c0');
   else G.ui.log(`<b style="color:${EMBER_COLOR}">${list.length} deeds done:</b> ${list.slice(0, 2).map((r) => escapeHtml(r.name)).join(', ')} and ${list.length - 2} more. ${where}`, '#e8f0c0');
   if (G.player) sfx('levelup', 0.25);
 }
 let pend = null;   // rewards owed during one checkProgress
+// ------------------------------------------------------------------ the Long Watch (repeatable, past the throne)
+export const watchOpen = (c = G.char) => (c?.deepest || 0) >= WATCH_MIN_DEPTH;
+/** Where each watch stands: [{ w, have, paid }] (have: progress toward the next payment). */
+export function watchList(c = G.char) {
+  const k = keepState(c);
+  return WATCHES.map((w) => { const st = k.watch[w.id]; return { w, have: st ? (metricValue(c, w.m) - st.base) % w.every : 0, paid: st ? st.paid : 0 }; });
+}
+function checkWatches(c, m) {
+  if (!watchOpen(c)) return;
+  const k = keepState(c);
+  for (const w of WATCHES) {
+    const st = k.watch[w.id] || (k.watch[w.id] = { base: metricValue(c, w.m), paid: 0 });   // counts from the day it opened
+    if (m && w.m !== m) continue;
+    const due = Math.floor((metricValue(c, w.m) - st.base) / w.every);
+    for (let n = 0; st.paid < due && n < 40; n++) { st.paid++; owe(c, { kind: 'watch', id: `${w.id}#${st.paid}`, name: w.name, text: w.text.replace('{n}', w.every), embers: w.embers, renown: 0, gold: 2 }); }
+  }
+}
 /** What the Castellan has for the hero: 'claim' (rewards wait), 'new' (a Saga can be taken up), or null. */
 export function castellanMark(c = G.char) {
   const k = c && keepState(c);
@@ -259,7 +280,7 @@ function owe(c, r) {
   const w = G.world;
   if (G.ui && w && !w.keepTest) {
     const where = w.keep ? 'Claim it from the Castellan.' : `The Castellan holds your reward in <b style="color:${EMBER_COLOR}">Tessariel's Keep</b>.`;
-    G.ui.log(`<b style="color:${r.color || EMBER_COLOR}">${r.kind === 'challenge' ? 'Deed done' : r.kind === 'bounty' ? 'Bounty done' : 'Saga'}:</b> ${escapeHtml(r.name)}. ${where}`, '#e8f0c0');
+    G.ui.log(`<b style="color:${r.color || EMBER_COLOR}">${r.kind === 'challenge' ? 'Deed done' : r.kind === 'bounty' ? 'Bounty done' : r.kind === 'watch' ? 'The Long Watch' : 'Saga'}:</b> ${escapeHtml(r.name)}. ${where}`, '#e8f0c0');
   }
   if (G.player && w && !w.keepTest) sfx('levelup', 0.25);
 }
@@ -313,9 +334,12 @@ export function setDecor(kind, slot, id, c = G.char) {
 export const renownOf = (c = G.char) => renownRank(keepState(c)?.renown || 0);
 export const kindled = (c = G.char) => !!c?.keep?.kindled && c.keep.kindled.until > Date.now();
 export function kindleReadyIn(c = G.char) { const t = c?.keep?.kindled?.at || 0; return Math.max(0, t + KINDLE.cooldownMin * 60000 - Date.now()); }
-export function kindle(c = G.char) {
+export function kindle(c = G.char, pay = false) {
   const k = keepState(c);
-  if (kindleReadyIn(c) > 0) return false;
+  if (kindleReadyIn(c) > 0) {   // the Flame rests: fed KINDLE.rekindle Embers, it burns again at once
+    if (!pay || kindled(c) || k.embers < KINDLE.rekindle) return false;
+    k.embers -= KINDLE.rekindle;
+  }
   k.kindled = { at: Date.now(), until: Date.now() + KINDLE.minutes * 60000 };
   if (G.player) G.player.recompute();
   return true;
@@ -331,8 +355,13 @@ export function keepBonuses(c = G.char) {
 // ------------------------------------------------------------------ the Ember trade
 /** The item level the Castellan's smiths work at: the hero's own (never past where their deepest depth drops). */
 export function tradeLevel(c = G.char) {
-  return Math.max(1, Math.min(c.level || 1, depthLevel(Math.max(1, c.deepest || 1)) + 2, MAX_LEVEL + 20));
+  const deep = depthLevel(Math.max(1, c.deepest || 1));
+  // a hero at the level cap past the throne: what their deepest depth drops (to MAX_LEVEL + 20), or the keep's
+  // armour would be twenty item levels under everything they find
+  if ((c.level || 1) >= MAX_LEVEL) return Math.max(MAX_LEVEL, Math.min(deep, ILVL_CAP));
+  return Math.max(1, Math.min(c.level || 1, deep + 2, ILVL_CAP));
 }
+const ILVL_CAP = MAX_LEVEL + 20;   // the deepest item level the deep makes (data/depth.js depthLevel)
 /** Buy armour (rarity of TRADE[i], slot) for Embers: the item, or null. */
 /** Can the smiths forge TRADE[i] yet? A rarity opens at the item level it opens at in the deep (data/items.js). */
 export const tradeOpen = (i, c = G.char) => !!TRADE[i] && rarityAt(tradeLevel(c), TRADE[i].rarity) === TRADE[i].rarity;
@@ -360,7 +389,7 @@ export function vaultOffer(c = G.char) {
   const v = keepState(c).vault, s = vaultState(c);
   if (!s.picks || v.claimed) return [];
   v.offer ||= [];
-  const il = tradeLevel(c) + 2;
+  const il = Math.min(tradeLevel(c) + 2, ILVL_CAP);
   while (v.offer.length < s.picks) {
     let rar = rarityAt(il, 4);
     if (rar === 4 && rarityAt(il, 5) === 5 && Math.random() < VAULT_MYTHIC) rar = 5;
@@ -379,9 +408,11 @@ export function claimVault(i, c = G.char, addToBag = null) {
 // ------------------------------------------------------------------ the War Table (your other heroes' errands)
 /** The current hero's companions: every other class's newest hero (save.js heroesByClass), passed in. */
 export function expeditionsOf(c = G.char) { return keepState(c).exp; }
+/** The War Table today: seats (in use, of), Embers paid and their cap. */
+export function warState(c = G.char) { const k = keepState(c); return { used: k.exp.length, seats: warSeats(renownRank(k.renown)), embers: k.war.day === today() ? k.war.embers : 0, cap: WAR_EMBERS_A_DAY }; }
 export function sendExpedition(heroCls, heroLevel, expId, c = G.char) {
   const k = keepState(c), E = EXPEDITIONS.find((e) => e.id === expId);
-  if (!E || heroLevel < E.lvl || k.exp.some((e) => e.cls === heroCls)) return false;
+  if (!E || heroLevel < E.lvl || k.exp.some((e) => e.cls === heroCls) || k.exp.length >= warSeats(renownRank(k.renown))) return false;
   k.exp.push({ cls: heroCls, id: expId, start: Date.now(), end: Date.now() + E.min * 60000, lvl: heroLevel });
   return true;
 }
@@ -394,10 +425,13 @@ export function collectExpedition(cls, c = G.char, addToBag = null) {
   k.exp.splice(i, 1);
   if (!E) return null;
   const lv = Math.max(1, Math.min(e.lvl, c.level || 1) || 1), gold = Math.round(goldPile(lv) * E.gold);
-  k.embers += E.embers; c.gold += gold;
+  if (k.war.day !== today()) k.war = { day: today(), embers: 0 };
+  const embers = Math.max(0, Math.min(E.embers, WAR_EMBERS_A_DAY - k.war.embers));   // the table's Embers have a daily cap
+  k.war.embers += embers;
+  k.embers += embers; c.gold += gold;
   const gems = [];
   for (let g = 0; g < E.gems; g++) { const gem = rollGem(lv); if (!addToBag || addToBag(c, gem)) gems.push(gem); }
-  return { embers: E.embers, gold, gems, name: E.name };
+  return { embers, gold, gems, name: E.name, capped: embers < E.embers };
 }
 
 /** One line for the Quest Log / HUD: rewards waiting, and the first Saga chapter in hand. */

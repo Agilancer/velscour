@@ -37,6 +37,11 @@ The full account is in docs/TESSARIELS_KEEP.md ("The critics ... and the polish 
   claim ceremony (`claimCeremony` in ui/keep.js), clickable banners and windows (`decorSlot`).
 - **The panel** (`src/ui/keep.js`, css at the end of `css/style.css`): grouped tabs with badges, chapter pips, the trade's
   comparison and confirm.
+- **Balance for veterans** (asked for after the polish; docs/TESSARIELS_KEEP.md "The veteran"): the War Table paid
+  ~1,400 Embers a day for no play to a hero with 18 others (now seats by Renown, 60 Embers a day, smaller payments); the
+  Ascent deeds ran to level 1,000 with a cap of 100; the trade forged at item level 100 under drops of 120; nothing was
+  left to earn or spend once every deed was done (the Long Watch, `WATCHES`; feeding the Flame, `KINDLE.rekindle`).
+  `keep_quests.mjs` now models the veteran and fails if a day's Embers leave the band.
 - Tests run: `keep.js` (desktop, mobile), `keep_quests.mjs`, `flow.js`, `hud.js`, `mobile.js`, `town.js`, `riftgate.js`.
   `tools/tests/out/keeplook.js` (git-ignored, so gone in a new container) was a scratch script for quick shots.
 - Still open: docs/TESSARIELS_KEEP.md "Still open".

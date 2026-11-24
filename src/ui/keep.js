@@ -13,20 +13,20 @@ import { CLASSES } from '../data/classes.js';
 import { RARITY, SLOT_NAMES } from '../data/items.js';
 import {
   SAGAS, CHALLENGES, CHALLENGE_GROUPS, TROPHIES, TROPHY_BY_ID, DECOR, TRADE, TRADE_SLOTS, VAULT_STEPS, EXPEDITIONS, KINDLE,
-  RENOWN_MAX, RENOWN_TITLES, sagaReward, renownNeed, renownRank, renownBonus, EMBER_COLOR, decorSources, trophySources, questCount,
+  RENOWN_MAX, RENOWN_TITLES, sagaReward, WATCH_MIN_DEPTH, renownNeed, renownRank, renownBonus, EMBER_COLOR, decorSources, trophySources, questCount,
 } from '../data/keep.js';
 import {
   keepState, sagaList, takeSaga, progressOf, bountyBoard, bountyText, challengeName, challengeText, metricValue, claimAll, hasDecor,
   setDecor, tradeLevel, tradeOpen, buyArmor, vaultState, vaultOffer, claimVault, sendExpedition, expeditionDone, collectExpedition, kindled,
-  kindleReadyIn, today,
+  kindleReadyIn, today, warState, watchOpen, watchList,
 } from '../game/keep.js';
 import { companionsOf } from '../game/keepfolk.js';
 import { keepArt, trophySprite } from '../gfx/keepart.js';
 import { keepProps } from '../world/keepworld.js';
 
 const TABS = [['Quests', ['sagas', 'Sagas'], ['bounties', 'Bounties'], ['deeds', 'Deeds']], ['Rewards', ['trade', 'Ember Trade'], ['vault', 'Vault']], ['The Hall', ['furnish', 'Furnish'], ['chronicle', 'Chronicle'], ['war', 'War Table']]];
-const bar = (have, need, col = EMBER_COLOR) => `<div class="kp-bar"><div style="width:${Math.min(100, (100 * have) / Math.max(1, need))}%;background:${col}"></div><span>${fmtInt(have)} / ${fmtInt(need)}</span></div>`;
-const fmtT = (s) => (s == null ? '—' : s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m` : s >= 60 ? `${Math.floor(s / 60)}m ${Math.round(s % 60)}s` : `${(Math.round(s * 10) / 10).toFixed(1)}s`);
+const bar = (have, need, col = EMBER_COLOR, label = null) => `<div class="kp-bar"><div style="width:${Math.min(100, (100 * have) / Math.max(1, need))}%;background:${col}"></div><span>${label ?? `${fmtInt(have)} / ${fmtInt(need)}`}</span></div>`;
+const fmtT = (s) => (s == null ? '—' : s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m` : s >= 60 ? `${Math.floor(s / 60)}m ${Math.floor(s % 60)}s` : `${(Math.round(s * 10) / 10).toFixed(1)}s`);
 const ember = (n) => `<b class="kp-ember">${fmtInt(n)}</b>`;
 
 /** A thumbnail canvas of a decoration (atlas rect) or trophy (baked sprite), fitted to w x h. */
@@ -141,6 +141,15 @@ export const KeepUI = {
     for (const b of list) {
       const have = Math.min(b.n, metricValue(c, b.m) - b.base), row = el('div', 'kp-row' + (b.done ? ' done' : ''));
       row.innerHTML = `<div class="kp-title"><b>${b.done ? '✓ ' : ''}${escapeHtml(bountyText(b))}</b></div>${bar(b.done ? b.n : have, b.n, '#c8a050')}`;
+      page.appendChild(row);
+    }
+    // the Long Watch: deeds that never run out, once the hero has reached the throne
+    page.appendChild(el('div', 'kp-note', `<b>The Long Watch</b> · deeds that never run out, for those who have stood at the Fiend's throne (Depth ${WATCH_MIN_DEPTH}). Each pays every time its count comes round, from the day it opened.`));
+    const open = watchOpen(c);
+    for (const { w, have, paid } of watchList(c)) {
+      const row = el('div', 'kp-row slim' + (open ? '' : ' locked'));
+      row.style.setProperty('--kc', '#80e0ff');
+      row.innerHTML = `<div class="kp-title"><b>${escapeHtml(w.name)}</b> <span class="dim">${escapeHtml(w.text.replace('{n}', w.every))}</span> <span class="kp-pay">${ember(w.embers)}</span>${paid ? ` <span class="dim">· paid ${fmtInt(paid)} time${paid > 1 ? 's' : ''}</span>` : ''}</div>${open ? bar(have, w.every, '#80e0ff') : ''}`;
       page.appendChild(row);
     }
     void k;
@@ -265,12 +274,14 @@ export const KeepUI = {
   war(page, c, k) {
     const comps = companionsOf(c), now = Date.now();
     page.appendChild(el('div', 'kp-note', `The War Table: send your other heroes on the keep's errands. They are gone in real time (they leave the hall while away) and bring back Embers, gold and gems. ${comps.length ? '' : '<b>You have no other heroes yet: make one of another class on the hero screen and they will stand in this hall.</b>'}`));
+    const W = warState(c), full = W.used >= W.seats;
+    page.appendChild(el('div', 'kp-row slim', `<div class="kp-title"><b>${W.used} of ${W.seats} seats</b> at the table <span class="dim">· one more every fourth rank of Renown</span> · Embers brought home today: ${ember(W.embers)} of ${W.cap}${W.embers >= W.cap ? ' <span class="dim">(the table pays gold and gems only until tomorrow)</span>' : ''}</div>`));
     for (const h of comps) {
       const e = k.exp.find((q) => q.cls === h.cls), row = el('div', 'kp-row');
       let s = `<div class="kp-title"><b>${escapeHtml(h.name)}</b> <span class="dim">· ${escapeHtml(CLASSES[h.cls]?.name || h.cls)} · level ${h.lvl}</span></div>`;
       if (e) {
         const E = EXPEDITIONS.find((q) => q.id === e.id), done = expeditionDone(e);
-        s += `<div class="kp-text">${escapeHtml(E ? `${E.name}, ${E.where}` : e.id)} — ${done ? '<b style="color:#c8f060">back home</b>' : `back in ${fmtT((e.end - now) / 1000)}`}</div>${bar(Math.min(e.end, now) - e.start, e.end - e.start, '#c8a050')}`;
+        s += `<div class="kp-text">${escapeHtml(E ? `${E.name}, ${E.where}` : e.id)} — ${done ? '<b style="color:#c8f060">back home</b>' : `back in ${fmtT((e.end - now) / 1000)}`}</div>${bar(Math.min(e.end, now) - e.start, e.end - e.start, '#c8a050', done ? 'home' : `${Math.floor((100 * (now - e.start)) / Math.max(1, e.end - e.start))}%`)}`;
         row.innerHTML = s;
         if (done) { const b = el('button', 'btn small red', 'Bring them home'); b.onclick = () => { const r = collectExpedition(h.cls, c, addToBag); if (r) { sfx('gold'); UI.log(`${escapeHtml(h.name)} is back from "${escapeHtml(r.name)}": <b style="color:${EMBER_COLOR}">+${r.embers} Embers</b>, <b style="color:#ffd34a">+${fmtInt(r.gold)} gold</b>${r.gems.length ? `, ${r.gems.length} gem${r.gems.length > 1 ? 's' : ''}` : ''}.`, '#e0f0c0'); changed(); G.game?.autosave?.(); } this.refresh(); }; row.appendChild(b); }
       } else {
@@ -278,7 +289,7 @@ export const KeepUI = {
         const opts = el('div', 'kp-exps');
         for (const E of EXPEDITIONS) {
           const b = el('button', 'btn small', `${E.name} <i>${E.min >= 60 ? E.min / 60 + 'h' : E.min + 'm'} · ${E.embers} Embers</i>`);
-          b.disabled = h.lvl < E.lvl; if (h.lvl < E.lvl) b.title = `Needs level ${E.lvl}`;
+          b.disabled = h.lvl < E.lvl || full; if (h.lvl < E.lvl) b.title = `Needs level ${E.lvl}`; else if (full) b.title = 'Every seat at the table is taken';
           b.onclick = () => { if (sendExpedition(h.cls, h.lvl, E.id, c)) { sfx('ui'); UI.log(`${escapeHtml(h.name)} sets out: ${escapeHtml(E.name)}, ${escapeHtml(E.where)}.`, '#d8d0c0'); hideHero(h.cls); G.game?.autosave?.(); } this.refresh(); };
           opts.appendChild(b);
         }
@@ -287,7 +298,7 @@ export const KeepUI = {
       page.appendChild(row);
     }
     const kin = el('div', 'kp-row');
-    kin.innerHTML = `<div class="kp-title"><b>The Sacred Flame</b> <span class="dim">· kneel at it in the hall</span></div><div class="kp-text">${kindled(c) ? `<b style="color:${EMBER_COLOR}">Kindled</b> for ${fmtT((c.keep.kindled.until - now) / 1000)} more` : kindleReadyIn(c) > 0 ? `Resting: ready in ${fmtT(kindleReadyIn(c) / 1000)}` : 'Ready'}: +${KINDLE.xp}% XP, +${KINDLE.gf}% gold, +${KINDLE.mf} magic find for ${KINDLE.minutes} minutes, once an hour.</div>`;
+    kin.innerHTML = `<div class="kp-title"><b>The Sacred Flame</b> <span class="dim">· kneel at it in the hall</span></div><div class="kp-text">${kindled(c) ? `<b style="color:${EMBER_COLOR}">Kindled</b> for ${fmtT((c.keep.kindled.until - now) / 1000)} more` : kindleReadyIn(c) > 0 ? `Resting: ready in ${fmtT(kindleReadyIn(c) / 1000)}` : 'Ready'}: +${KINDLE.xp}% XP, +${KINDLE.gf}% gold, +${KINDLE.mf} magic find for ${KINDLE.minutes} minutes, once an hour (or at once for ${KINDLE.rekindle} Embers fed to it).</div>`;
     page.appendChild(kin);
     void today;
   },
