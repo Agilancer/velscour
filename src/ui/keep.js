@@ -13,12 +13,12 @@ import { CLASSES } from '../data/classes.js';
 import { RARITY, SLOT_NAMES } from '../data/items.js';
 import {
   SAGAS, CHALLENGES, CHALLENGE_GROUPS, TROPHIES, TROPHY_BY_ID, DECOR, TRADE, TRADE_SLOTS, VAULT_STEPS, EXPEDITIONS, KINDLE,
-  RENOWN_MAX, RENOWN_TITLES, sagaReward, WATCH_MIN_DEPTH, renownNeed, renownRank, renownBonus, EMBER_COLOR, decorSources, trophySources, questCount,
+  RENOWN_MAX, RENOWN_TITLES, sagaReward, WATCH_MIN_DEPTH, MARCHES, renownNeed, renownRank, renownBonus, EMBER_COLOR, decorSources, trophySources, questCount,
 } from '../data/keep.js';
 import {
   keepState, sagaList, takeSaga, progressOf, bountyBoard, bountyText, challengeName, challengeText, metricValue, claimAll, hasDecor,
   setDecor, tradeLevel, tradeOpen, buyArmor, vaultState, vaultOffer, claimVault, sendExpedition, expeditionDone, collectExpedition, kindled,
-  kindleReadyIn, today, warState, watchOpen, watchList,
+  kindleReadyIn, today, warState, watchOpen, watchList, marchOpen,
 } from '../game/keep.js';
 import { companionsOf } from '../game/keepfolk.js';
 import { keepArt, trophySprite } from '../gfx/keepart.js';
@@ -142,6 +142,16 @@ export const KeepUI = {
       const have = Math.min(b.n, metricValue(c, b.m) - b.base), row = el('div', 'kp-row' + (b.done ? ' done' : ''));
       row.innerHTML = `<div class="kp-title"><b>${b.done ? '✓ ' : ''}${escapeHtml(bountyText(b))}</b></div>${bar(b.done ? b.n : have, b.n, '#c8a050')}`;
       page.appendChild(row);
+    }
+    // the March: for heroes still climbing; it ends at the level cap
+    if (marchOpen(c)) {
+      page.appendChild(el('div', 'kp-note', '<b>The March</b> · for heroes still on the way up: a little for every stretch of the road, until the last level.'));
+      for (const { w, have, paid } of watchList(c, MARCHES)) {
+        const row = el('div', 'kp-row slim');
+        row.style.setProperty('--kc', '#e0c890');
+        row.innerHTML = `<div class="kp-title"><b>${escapeHtml(w.name)}</b> <span class="dim">${escapeHtml(w.text.replace('{n}', w.every))}</span> <span class="kp-pay">${ember(w.embers)}</span>${paid ? ` <span class="dim">· paid ${fmtInt(paid)} time${paid > 1 ? 's' : ''}</span>` : ''}</div>${bar(have, w.every, '#e0c890')}`;
+        page.appendChild(row);
+      }
     }
     // the Long Watch: deeds that never run out, once the hero has reached the throne
     page.appendChild(el('div', 'kp-note', `<b>The Long Watch</b> · deeds that never run out, for those who have stood at the Fiend's throne (Depth ${WATCH_MIN_DEPTH}). Each pays every time its count comes round, from the day it opened.`));

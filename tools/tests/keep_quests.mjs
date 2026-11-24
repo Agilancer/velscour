@@ -72,6 +72,7 @@ let embers = 0, hours = 0, legendaryAt = null;
 const steps = [];
 for (let d = 1; d <= 600; d++) {
   h.deepest = d; h.level = Math.min(100, Math.round(d * 0.2 + 1 + (d > 100 ? d * 0.1 : 0)));
+  K.keepLevel(h);
   K.keepEvent('kill', 120); h.kills += 120; K.keepEvent('elite', 5); K.keepEvent('unique', 1); K.keepEvent('guardian', 1); K.keepEvent('gold', 80 * d);
   K.keepEvent('clear', 1); K.keepEvent('clear:' + D.DUNGEON_IDS[d % D.DUNGEON_IDS.length], 1);
   if (d % 5 === 0) { K.keepEvent('raid', 1); K.keepEvent('clearBoss', 1); if (d % 10 === 0) K.keepEvent('raidFast', 1); if (d % 15 === 0) K.keepEvent('raidClean', 1); }
@@ -130,6 +131,7 @@ if (legendaries < 8 || legendaries > 60) fail(`the Ember economy is off: ${legen
     const g = K.claimAll(v)[0], watch = g ? g.embers : 0; vk.embers = e0;
     return watch;
   };
+  for (let d = 0; d < 40; d++) { day(false); day(true); }   // the Sagas they took up late run out first: what is left is the steady day
   const delve = day(false), rift = day(true), bounties = D.BOUNTIES_A_DAY * D.BOUNTY_REWARD.embers;
   // the War Table worked as hard as it can be: every seat, the best errand by the hour, collected the minute it ends
   const seats = D.warSeats(D.renownRank(vk.renown));

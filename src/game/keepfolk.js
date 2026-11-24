@@ -14,7 +14,9 @@ import { GREETS, GREETS_WHEN, MUSINGS, CHATS, CLASS_LINES, CASTELLAN_LINES, CAST
 import { UI } from '../ui/ui.js';
 import { CASTELLAN, KEEP_FOLK } from '../data/keep.js';
 import { keepSpots, TK, CX, CY } from '../world/tkeep.js';
-import { keepState, castellanMark } from './keep.js';
+import { keepState, castellanMark, giverMark, sagaList, takeSaga, progressOf } from './keep.js';
+import { SAGA_BY_ID, sagaReward, EMBER_COLOR } from '../data/keep.js';
+import { escapeHtml, fmtInt } from '../core/util.js';
 
 const SPEED = 1.35, TALK = 3.6;
 /** Fill a line's {fields} for speaker a (a hero record), listener b (or none), and the hero you play. */
@@ -109,11 +111,12 @@ export function startKeepFolk(world, A) {
 
   // the keep's folk at their posts (the friar by the Flame, a knight on the balcony, the priest at the Chronicle...)
   const post = { flame: [A.flame[0] - 2.7, A.flame[1] + 1.2], hall: [A.columns[1][0] + 1.4, A.columns[1][1] - 1.2], balcony: [TK.FR + 1.5, CY],
-    chronicle: [A.chronicle[0] + 1.3, A.chronicle[1] + 0.6], gate: [A.townPortal[0] + 3.2, A.townPortal[1] - 1.2] };
-  for (const [sprite, name, role, where] of KEEP_FOLK) {
+    chronicle: [A.chronicle[0] + 1.3, A.chronicle[1] + 0.6], gate: [A.townPortal[0] + 3.2, A.townPortal[1] - 1.2],
+    envoy: [A.waygate[0] + 2.4, A.waygate[1] - 2.2], arms: [TK.F1 - 2.2, TK.F0 + 14.4] };
+  for (const [sprite, name, role, where, sagas] of KEEP_FOLK) {
     const [x, y] = post[where] || A.start;
-    const f = base({ keepFolk: true, name, role, townsfolkSpriteId: sprite, x, y, home: [x, y], idleH: 172 });
-    f.use = () => { face(f, world.player || f); say(f, next(f, 'line', FOLK_LINES[name] || CASTELLAN_LINES), TALK + 0.6, 3); };   // a word, then the Castellan's book
+    const f = base({ keepFolk: true, name, role, sagas, townsfolkSpriteId: sprite, x, y, home: [x, y], idleH: 172 });
+    f.use = () => { face(f, world.player || f); say(f, next(f, 'line', FOLK_LINES[name] || CASTELLAN_LINES), TALK + 0.6, 3); giverTalk(f); };   // a word, and their Sagas
     f.update = (dt) => {
       upd(f)(dt);
       if (step(world, f, dt)) return;
@@ -226,6 +229,30 @@ function heroCard(n) {
     buttons: [{ label: 'A word', fn: talk }, { label: 'Send on an errand', cls: 'red', fn: () => G.ui.keep.open('war') }, { label: 'Farewell' }],
   });
 }
+/** A quest giver spoken to: each of their Sagas, to take up or to see how it stands. */
+export function giverTalk(f) {
+  const c = G.char, k = keepState(c), mine = sagaList(c).filter((s) => (f.sagas || []).includes(s.saga.id));
+  if (!mine.length) return;
+  const row = (s) => {
+    const S = s.saga, st = k.sagas[S.id];
+    let h = `<div style="border-left:3px solid ${S.color};padding:4px 8px;margin:6px 0;background:rgba(24,18,10,.6)"><b style="color:${S.color}">${escapeHtml(S.name)}</b> <span class="dim">· ${S.ch.length} chapters</span><br>`;
+    if (!s.open) h += `<span class="dim">"Come back when you have reached Depth ${S.min}."</span>`;
+    else if (!s.taken) h += `<i>"${escapeHtml(S.pitch)}"</i>`;
+    else if (s.done) h += '<span class="dim">Every chapter told.</span>';
+    else { const q = S.ch[st.ch], [have, need] = progressOf(c, q, st.base), pay = sagaReward(st.ch, st.ch === S.ch.length - 1); h += `Chapter ${st.ch + 1}: ${escapeHtml(q.text)} <b>${fmtInt(have)} / ${fmtInt(need)}</b> <span class="dim">· <b style="color:${EMBER_COLOR}">${pay.embers}</b> Embers</span>`; }
+    return h + '</div>';
+  };
+  const can = mine.filter((s) => s.open && !s.taken);
+  UI.dialog({
+    title: f.name,
+    html: `<p class="dim" style="margin-top:0">${escapeHtml(f.role || '')}</p>${mine.map(row).join('')}<p class="dim" style="margin-bottom:0">Rewards are paid by the Castellan on the dais.</p>`,
+    buttons: [...(can.length ? [{ label: can.length > 1 ? `Take up ${can.length} Sagas` : 'Take it up', cls: 'red', fn: () => { for (const s of can) takeSaga(s.saga.id, c); G.game?.autosave?.(); say(f, 'Good. Come back with it done.', TALK, 2); } }] : []),
+      { label: "The Castellan's book", fn: () => G.ui.keep.open('sagas') }, { label: 'Farewell' }],
+  });
+}
+/** A giver's mark over their head: 'new' when one of their Sagas can be taken up. */
+export const folkMark = (n) => (n.keepFolk && n.sagas ? giverMark(n.sagas) : null);
+void SAGA_BY_ID;
 /** The hero steps in: the Castellan's welcome, and whoever stands near turns to look. */
 export function keepWelcome(world) {
   const d = world.keepFolk, p = world.player;

@@ -94,6 +94,8 @@ export const CASTELLAN_NEW = ['There is a Saga here with your name on it, {you}.
 export const CASTELLAN_OWED = ['Your rewards are waiting, {you}.', 'Come, {you}. The Chronicle has new lines for you.', 'Embers for the deeds you\'ve done, {you}. Come claim them.'];
 // the keep's own folk, when the hero speaks to them (game/keepfolk.js)
 export const FOLK_LINES = {
+  'Warden Orla': ['The Commodore sends his regards, and a list.', 'The coast lamps are going out one by one. We need a hero, not a prayer.', 'I came by sea. I am not going back without help.'],
+  'Armsmaster Brenna': ['Again. From the top.', 'Levels are only numbers. Show me the footwork.', 'Every knight in this hall was a squire of mine first.', 'You are holding it wrong. Everyone does, at first.'],
   'Brother Cael': ['The Flame wants oil, prayers and company. Mostly oil.', 'Kneel a while. It burns kinder for it.', 'Hearth and Hall, hero: bring the keep what the deep gives up.'],
   'Ser Cassius': ['Every fifth depth a lord sits a stolen throne. Bring me their crowns.', 'The Hollow Crowns: I keep count. You keep breaking them.', 'Steady on the stair, hero.'],
   'Kestrel': ['The free towns send their thanks, and their troubles.', 'Best view in the keep, up here.', 'The Free Towns Saga is mine. Ask the Castellan.'],

@@ -8,7 +8,7 @@ import { sfx } from '../core/audio.js';
 import {
   METRICS, ABS, SAGAS, SAGA_BY_ID, sagaReward, BOUNTIES, BOUNTY_REWARD, BOUNTIES_A_DAY, CHALLENGES, TROPHY_BY_ID, DECOR,
   defaultDecor, renownRank, renownBonus, TRADE, TRADE_SLOTS, VAULT_STEPS, VAULT_MYTHIC, KINDLE, EXPEDITIONS, EMBER_COLOR,
-  warSeats, WAR_EMBERS_A_DAY, WATCHES, WATCH_MIN_DEPTH,
+  warSeats, WAR_EMBERS_A_DAY, WATCHES, WATCH_MIN_DEPTH, MARCHES, CASTELLAN,
 } from '../data/keep.js';
 import { BIOME_BY_ID } from '../data/biomes.js';
 import { depthLevel, MAX_LEVEL, isRaidDepth } from '../data/depth.js';
@@ -107,6 +107,7 @@ export function keepClear(world) {
     if (world.biome?.overworld && (!R.region || t < R.region.t)) R.region = { t: Math.round(t * 10) / 10, depth: world.depth, biome: b };
   }
   bumpMany(c, list);
+  checkProgress(c, 'deepest');   // a new deepest depth: the Descent, the chapters that ask for one
 }
 export function keepBreach(floor) { const c = G.char; if (!c) return; keepEvent('breach', 1); const R = keepState(c).rec; R.breach = Math.max(R.breach || 0, floor); }
 export function keepRift(tier, time) {
@@ -128,6 +129,8 @@ export function keepPotion() { const w = G.world; if (w && w.kind === 'dungeon')
 export function keepSocket() { keepEvent('socket', 1); }
 export function keepUpgrade() { keepEvent('upgrade', 1); }
 export function keepDeath() { keepEvent('death', 1); }
+/** The hero's level went up (Player.gainXp): what reads it (the Ascent, the squire's Sagas, the March). */
+export function keepLevel(c = G.char) { if (c) checkProgress(c, 'level'); }
 
 // ------------------------------------------------------------------ Sagas
 /** The Sagas the hero may take (deep enough), and where each stands. */
@@ -240,7 +243,7 @@ export function checkProgress(c = G.char, m = null) {
   const list = pend, w = G.world; pend = null;
   if (!list.length || !G.ui || !w || w.keepTest) return;
   const where = w.keep ? 'Claim from the Castellan.' : `The Castellan holds your reward${list.length > 1 ? 's' : ''} in <b style="color:${EMBER_COLOR}">Tessariel's Keep</b>.`;
-  const tag = (r) => `<b style="color:${r.color || EMBER_COLOR}">${r.kind === 'challenge' ? 'Deed done' : r.kind === 'bounty' ? 'Bounty done' : r.kind === 'watch' ? 'The Long Watch' : 'Saga'}:</b> ${escapeHtml(r.name)}`;
+  const tag = (r) => `<b style="color:${r.color || EMBER_COLOR}">${r.kind === 'challenge' ? 'Deed done' : r.kind === 'bounty' ? 'Bounty done' : r.kind === 'watch' ? (r.id.startsWith('m_') ? 'The March' : 'The Long Watch') : 'Saga'}:</b> ${escapeHtml(r.name)}`;
   if (list.length <= 2) for (const r of list) G.ui.log(`${tag(r)}. ${where}`, '#e8f0c0');
   else G.ui.log(`<b style="color:${EMBER_COLOR}">${list.length} deeds done:</b> ${list.slice(0, 2).map((r) => escapeHtml(r.name)).join(', ')} and ${list.length - 2} more. ${where}`, '#e8f0c0');
   if (G.player) sfx('levelup', 0.25);
@@ -249,14 +252,16 @@ let pend = null;   // rewards owed during one checkProgress
 // ------------------------------------------------------------------ the Long Watch (repeatable, past the throne)
 export const watchOpen = (c = G.char) => (c?.deepest || 0) >= WATCH_MIN_DEPTH;
 /** Where each watch stands: [{ w, have, paid }] (have: progress toward the next payment). */
-export function watchList(c = G.char) {
+export function watchList(c = G.char, list = WATCHES) {
   const k = keepState(c);
-  return WATCHES.map((w) => { const st = k.watch[w.id]; return { w, have: st ? (metricValue(c, w.m) - st.base) % w.every : 0, paid: st ? st.paid : 0 }; });
+  return list.map((w) => { const st = k.watch[w.id]; return { w, have: st ? (metricValue(c, w.m) - st.base) % w.every : 0, paid: st ? st.paid : 0 }; });
 }
+/** The March pays heroes still below the level cap. */
+export const marchOpen = (c = G.char) => (c?.level || 1) < MAX_LEVEL;
 function checkWatches(c, m) {
-  if (!watchOpen(c)) return;
   const k = keepState(c);
-  for (const w of WATCHES) {
+  for (const w of [...(watchOpen(c) ? WATCHES : []), ...(marchOpen(c) || k.watch.m_level ? MARCHES : [])]) {
+    if (!marchOpen(c) && w.id.startsWith('m_') && w.m !== 'level') continue;   // at the cap only the last levels' payment is still due
     const st = k.watch[w.id] || (k.watch[w.id] = { base: metricValue(c, w.m), paid: 0 });   // counts from the day it opened
     if (m && w.m !== m) continue;
     const due = Math.floor((metricValue(c, w.m) - st.base) / w.every);
@@ -268,7 +273,12 @@ export function castellanMark(c = G.char) {
   const k = c && keepState(c);
   if (!k) return null;
   if (k.owed.length) return 'claim';
-  return sagaList(c).some((s) => s.open && !s.taken) ? 'new' : null;
+  return giverMark(CASTELLAN.sagas, c);
+}
+/** 'new' when one of these Sagas (a giver's own) can be taken up. */
+export function giverMark(ids, c = G.char) {
+  const k = c && keepState(c), deep = c?.deepest || 0;
+  return k && ids && ids.some((id) => SAGA_BY_ID[id] && !k.sagas[id] && deep >= SAGA_BY_ID[id].min) ? 'new' : null;
 }
 
 // ------------------------------------------------------------------ rewards owed (claimed at the Castellan)
@@ -280,7 +290,7 @@ function owe(c, r) {
   const w = G.world;
   if (G.ui && w && !w.keepTest) {
     const where = w.keep ? 'Claim it from the Castellan.' : `The Castellan holds your reward in <b style="color:${EMBER_COLOR}">Tessariel's Keep</b>.`;
-    G.ui.log(`<b style="color:${r.color || EMBER_COLOR}">${r.kind === 'challenge' ? 'Deed done' : r.kind === 'bounty' ? 'Bounty done' : r.kind === 'watch' ? 'The Long Watch' : 'Saga'}:</b> ${escapeHtml(r.name)}. ${where}`, '#e8f0c0');
+    G.ui.log(`<b style="color:${r.color || EMBER_COLOR}">${r.kind === 'challenge' ? 'Deed done' : r.kind === 'bounty' ? 'Bounty done' : r.kind === 'watch' ? (r.id.startsWith('m_') ? 'The March' : 'The Long Watch') : 'Saga'}:</b> ${escapeHtml(r.name)}. ${where}`, '#e8f0c0');
   }
   if (G.player && w && !w.keepTest) sfx('levelup', 0.25);
 }
