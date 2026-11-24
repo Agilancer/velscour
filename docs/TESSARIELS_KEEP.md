@@ -174,6 +174,30 @@ and Kindled in `recompute`), `breach.js`, `rifts.js`, `inventory.js`, `vendor.js
   stairs to every balcony, every panel tab, a chapter paid, a trade, the Vault, Furnish shown at once, Kindled, an
   expedition, auto-play walking out. Shots in `tools/tests/out/keep_*.png`.
 
+## The critics (round 1 of 4)
+Three critics were asked for: an environment/level artist, a quest and systems designer, a hub and narrative UX
+designer. Round 1: **art 6/10, reject**; **hub/UX 6/10, reject**; the systems critic was cut off by the session's usage
+limit before reporting. The user then asked to wrap up, so no second round ran. Fixed after round 1: clicking one of the
+keep's folk threw (they had no `use`; now each has lines of their own), Velscour's skull is hidden in the keep (T never
+near V), the arrival point and town portal moved out of the front balcony's shadow, the front balconies' columns go
+see-through over the hero (`map.cutFront`, render.js), the chests moved out of the Waygate's corner, the front walls got a
+blind arcade, greeting lines that misfired with real numbers rewritten.
+
+**Still open from round 1 (next steps):**
+- Art: lower the front (south/east) balconies to a terrace ~12 levels up joined by short corner stairs (the 24-level front
+  hides about six rows of floor behind it); light the upper walls and wall-heads (they fall into the dark at `dark 0.36`);
+  re-colour the stained glass toward ivory, gold and emerald (its blood-red lower thirds read as Velscour's); a Flame 2-3x
+  taller with a gold core and less bloom; Elder Dragons ~3.5 tiles, trophies ~1.5 tiles with a ghost silhouette and plaque
+  on empty pedestals and plinths; lighter balcony walks and mid-value runners (green-gold); move the columns at y 12 off the
+  stairs' sight lines (y >= 16 for x 13, >= 15 for x 28); chandeliers drawn, not only lit.
+- Hub/UX: a gold "!" over the Castellan (and a minimap mark) when rewards wait or a Saga can be taken; fold the flood of
+  old deeds on a first visit into one log line; a name plate on each companion ("Vael · Death Knight 72"); `when`
+  conditions on stat lines, a shuffle-bag per speaker, 6-8 lines per class, class-pair chats, lines about real events;
+  click a companion for a small menu (talk, send on an errand); a compact panel header on phones and grouped tabs
+  (Quests / Rewards / Hall), each station opening only its own page; click banners and windows in the world to Furnish
+  them; a confirm and a comparison before an Ember trade; permanent faint labels on the stations; keep the keep's folk out
+  of the town's people pool; a training dummy and a coffer shared between heroes.
+
 ## Open issues
 - Real phones: the hall's page decodes to ~63 MB (the Castle's are 30-87 MB); untested on iOS Safari.
 - The companions' look is their saved gear's preview, one image (no walk cycle, like the visiting adventurers in town).

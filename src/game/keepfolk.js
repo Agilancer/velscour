@@ -10,7 +10,7 @@ import { CLASSES } from '../data/classes.js';
 import { heroesByClass } from './save.js';
 import { drawTownSpeech } from './townspeech.js';
 import { drawRim, RIM } from './creature.js';
-import { GREETS, MUSINGS, CHATS, CLASS_LINES, CASTELLAN_LINES, CASTELLAN_OWED } from '../data/keeplines.js';
+import { GREETS, MUSINGS, CHATS, CLASS_LINES, CASTELLAN_LINES, CASTELLAN_OWED, FOLK_LINES } from '../data/keeplines.js';
 import { CASTELLAN, KEEP_FOLK } from '../data/keep.js';
 import { keepSpots, TK, CX, CY } from '../world/tkeep.js';
 import { keepState } from './keep.js';
@@ -73,7 +73,7 @@ function interestSpots(A) {
  */
 export function startKeepFolk(world, A) {
   const L = world.layout, spots = keepSpots(L), interest = interestSpots(A).filter((s) => world.map.walkable(s.x, s.y));
-  const d = { agents: [], heroes: [], chatT: rand(4, 8), greetT: 0, world };
+  const d = { agents: [], heroes: [], chatT: rand(2, 4), greetT: 0, world };
   const base = (o) => ({ x: 0, y: 0, flip: false, animT: rand(0, 5), idleSeed: randi(0, 9), talkText: '', talkT: 0, talkAge: 0, emotion: null, emotionT: 0, iconT: 0, iconAge: 0, reach: 1.6, ...o });
   const upd = (n) => (dt) => { n.talkT = Math.max(0, n.talkT - dt); n.talkAge += dt; n.emotionT = Math.max(0, n.emotionT - dt); n.iconT = Math.max(0, (n.iconT || 0) - dt); };
 
@@ -98,6 +98,7 @@ export function startKeepFolk(world, A) {
   for (const [sprite, name, role, where] of KEEP_FOLK) {
     const [x, y] = post[where] || A.start;
     const f = base({ keepFolk: true, name, role, townsfolkSpriteId: sprite, x, y, home: [x, y], idleH: 172 });
+    f.use = () => { face(f, world.player || f); say(f, pick(FOLK_LINES[name] || CASTELLAN_LINES), TALK + 0.6, 3); };   // a word, then the Castellan's book
     f.update = (dt) => {
       upd(f)(dt);
       if (step(world, f, dt)) return;

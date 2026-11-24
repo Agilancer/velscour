@@ -323,6 +323,7 @@ export const game = {
       world.add(s);
     }
     G.world = world;
+    if (typeof document !== 'undefined') document.body.classList.toggle('in-keep', !!world.keep); // no Velscour's skull in Tessariel's hall (T never near V)
     p.recompute(); // the Heresies in force read the level the hero stands in (game/heresies.js)
     Cine.abort(); // a cut scene belongs to the world it played in
     useTerrain(world.map); // a height map lifts the ground plane (gfx/terrain.js); flat maps clear it

@@ -1768,3 +1768,4 @@ body.portrait .bag { grid-template-columns: repeat(6, clamp(36px, calc((100vw - 
 .kp-exps i { font-style: normal; color: var(--text-dim); font-size: 10px; }
 .q-keep { font-size: 12px; margin: 2px 0 6px; padding: 4px 6px; border-left: 2px solid #c8f060; background: rgba(60,80,20,.2); }
 @media (max-width: 600px) { .kp-title { padding-right: 0; } .kp-row > .btn { position: static; margin-top: 4px; } .kp-tab { padding: 4px 6px; font-size: 11px; } }
+body.in-keep #velscour-skull { display: none !important; }

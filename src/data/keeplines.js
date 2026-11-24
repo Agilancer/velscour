@@ -6,9 +6,9 @@
 export const GREETS = [
   'Ah, {you}. The Flame said you\'d be back.', '{you}! Depth {ydepth} now? I heard.', 'Mind the third stair, {you}. It wobbles.',
   'Back from the deep, {you}? You smell of it.', 'Level {ylvl}, {you}. Don\'t let it go to your head.', 'The Castellan has been asking for you.',
-  'If you see the Fiend, tell him {me} says hello.', 'I kept your seat by the Flame, {you}.', 'Another {ycls}. We\'re a rare breed, us heroes.',
+  'If you see the Fiend, tell him {me} says hello.', 'I kept your seat by the Flame, {you}.', 'A {ycls} and a {mcls}. The Fiend should worry.',
   'You look tired, {you}. Kneel at the Flame. It helps.', 'Still hunting him, {you}? Good.', 'They\'re carving a new trophy. Yours, I think.',
-  '{you}, have you seen my other glove? No? Never mind.', 'Depth {ydepth}! I\'m only at {depth}. For now.', 'You walk like a {ycls}, {you}.',
+  '{you}, have you seen my other glove? No? Never mind.', 'Depth {ydepth} for you, {depth} for me. We keep going.', 'You walk like a {ycls}, {you}.',
   'The Embers are piling up, {you}. Spend them.', 'Sit a while, {you}. The deep will keep.', 'Did you bring anything back for the hall?',
   'Brother Cael says the Flame burns brighter when you\'re here.', 'Look at the banners, {you}. We earned those.',
 ];
@@ -46,7 +46,6 @@ export const CHATS = [
   [[0, 'Brother Cael feeds the Flame with what?'], [1, 'Prayers and lamp oil.'], [0, 'Mostly lamp oil, I bet.']],
   [[0, 'Have you seen {you}\'s trophies?'], [1, 'Hard to miss. They\'re everywhere.'], [0, 'Jealous?'], [1, 'Deeply.']],
   [[0, 'Tell me a story, {other}.'], [1, 'Once there was a Fiend. We\'re going to kill him.'], [0, 'Good story.']],
-  [[0, 'Rain on the roof tonight.'], [1, 'There\'s no roof.'], [0, 'Then where\'s the rain?']],
   [[0, 'I count {kills} kills.'], [1, 'Who\'s counting?'], [0, 'I am. Clearly.']],
 ];
 // a line or two that is each class's own (said now and then, alone or to the hero)
@@ -75,3 +74,11 @@ export const CLASS_LINES = {
 export const CASTELLAN_LINES = ['The Flame keeps us. We keep the Flame.', 'Every trophy in this hall was paid for in blood.', 'The board has new bounties at dawn.',
   'Bring me deeds, hero. I\'ll bring you Embers.', 'Kneel at the Flame before you go down.'];
 export const CASTELLAN_OWED = ['Your rewards are waiting, {you}.', 'Come, {you}. The Chronicle has new lines for you.', 'Embers for the deeds you\'ve done, {you}. Come claim them.'];
+// the keep's own folk, when the hero speaks to them (game/keepfolk.js)
+export const FOLK_LINES = {
+  'Brother Cael': ['The Flame wants oil, prayers and company. Mostly oil.', 'Kneel a while. It burns kinder for it.', 'Hearth and Hall, hero: bring the keep what the deep gives up.'],
+  'Ser Cassius': ['Every fifth depth a lord sits a stolen throne. Bring me their crowns.', 'The Hollow Crowns: I keep count. You keep breaking them.', 'Steady on the stair, hero.'],
+  'Kestrel': ['The free towns send their thanks, and their troubles.', 'Best view in the keep, up here.', 'The Free Towns Saga is mine. Ask the Castellan.'],
+  'Mother Agatha': ['The Chronicle remembers every depth you clear.', 'Saints of the Deep, child: walk the old shrines.', 'Your times are written here. Beat them.'],
+  'Halvard': ['Some doors never close. Someone has to stand at them.', 'The Endless Watch waits for the deep ones.', 'Cold out there. Colder down there.'],
+};

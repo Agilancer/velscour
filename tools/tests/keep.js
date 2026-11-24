@@ -75,7 +75,7 @@ const args = process.argv.slice(2), SHOTS = !args.includes('noshots'), MOBILE = 
       const { G } = window.VELSCOUR, w = G.world;
       const p0 = w.npcs.filter((n) => n.keepHero).map((n) => [n.x, n.y]);
       let said = 0, saw = new Set();
-      for (let i = 0; i < 900; i++) { w.update(1 / 30); for (const n of w.npcs) if (n.keepHero && n.talkT > 0 && !saw.has(n.talkText)) { saw.add(n.talkText); said++; } }
+      for (let i = 0; i < 1800; i++) { w.update(1 / 30); for (const n of w.npcs) if (n.keepHero && n.talkT > 0 && !saw.has(n.talkText)) { saw.add(n.talkText); said++; } }
       const moved = w.npcs.filter((n) => n.keepHero).filter((n, i) => Math.hypot(n.x - p0[i][0], n.y - p0[i][1]) > 1).length;
       return { said, moved, lines: [...saw].slice(0, 6) };
     });

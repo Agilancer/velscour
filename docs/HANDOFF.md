@@ -45,6 +45,8 @@ rounds; then PR and merge. Isometric, locked to the Velscour style. Everything i
 - **State**: `G.char.keep` (filled in on first use by `keepState`; an old save loads as a new keep). Renown and Kindled
   are added in `Player.recompute` (`keepBonuses`).
 - **Auto-play** in the keep claims, takes Sagas, kneels, walks out (`Auto.keepTick`); it never walks in by itself.
+- **Critics**: round 1 only (art 6/10, hub/UX 6/10, both reject; the systems critic hit the usage limit); the user asked to
+  wrap up. What was fixed and the full list still open: docs/TESSARIELS_KEEP.md "The critics". Start there next time.
 - **Tests**: `node tools/tests/keep_quests.mjs` (data, rules, economy: ~2,200 Embers, 14 Legendaries over a full game),
   `node tools/tests/keep.js [noshots] [mobile]`. `flow.js` ('expected town at depth 1') and `data_check.mjs` ('first 41
   biomes...') fail on `main` too; `mobile.js` logs two 404s for the Gunner's missing skill sheets (also on `main`).

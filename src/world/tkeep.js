@@ -110,12 +110,15 @@ export function tkeepLayout() {
   // the front: parapets on the outer edge (blocked), the outer faces dressed as the keep's own wall seen in section
   set(BW, FR + 3, FR + 3, FR + 3, PARA, KK.parapet, { solid: true });
   set(FR + 3, BW, FR + 3, FR + 3, PARA, KK.parapet, { solid: true });
-  box(BW, FR + 3, FR + 4, FR + 4, -14, PARA, 'stone');
-  box(FR + 3, BW, FR + 4, FR + 3, -14, PARA, 'stone');
+  box(BW, FR + 3, FR + 4, FR + 4, -6, PARA, 'stone');
+  box(FR + 3, BW, FR + 4, FR + 3, -6, PARA, 'stone');
   parts.push({ t: 'merlons', axis: 'x', a0: BW, a1: FR + 4, c0: FR + 3, c1: FR + 4, z: PARA, m: 'stone', low: true });
   parts.push({ t: 'merlons', axis: 'y', a0: BW, a1: FR + 3, c0: FR + 3, c1: FR + 4, z: PARA, m: 'stone', low: true });
-  parts.push({ t: 'face', axis: 'x', a0: BW, a1: FR + 4, c: FR + 4, dir: +1, z0: -14, z1: PARA, course: BAL - 1, slits: 4 });
-  parts.push({ t: 'face', axis: 'y', a0: BW, a1: FR + 4, c: FR + 4, dir: +1, z0: -14, z1: PARA, course: BAL - 1, slits: 4 });
+  // their outer faces: a blind arcade under a string course (the keep's own wall, seen in section)
+  parts.push({ t: 'arcade', axis: 'x', a0: BW + 1, a1: FR + 3, c: FR + 4, dir: +1, z0: -6, z1: BAL + 2, bay: 4, m: 'stone2', trim: 'lime' });
+  parts.push({ t: 'arcade', axis: 'y', a0: BW + 1, a1: FR + 3, c: FR + 4, dir: +1, z0: -6, z1: BAL + 2, bay: 4, m: 'stone2', trim: 'lime' });
+  parts.push({ t: 'face', axis: 'x', a0: BW, a1: FR + 4, c: FR + 4, dir: +1, z0: -6, z1: PARA, course: PARA - 3 });
+  parts.push({ t: 'face', axis: 'y', a0: BW, a1: FR + 4, c: FR + 4, dir: +1, z0: -6, z1: PARA, course: PARA - 3 });
 
   // ---------------------------------------------------------------- the dais and the grand stairs (north side)
   const DX0 = F0 + 8, DX1 = F1 - 8, DY1 = F0 + 2;   // dais 17..24 x 9..11
@@ -180,14 +183,14 @@ export function tkeepLayout() {
   // ---------------------------------------------------------------- anchors for the game
   const banner = (axis, a, c, lv0, lv1, w, size) => ({ axis, a, c, z0: lv0, z1: lv1, w, size });
   const anchors = {
-    start: [CX, F1 - 1.2],                 // where the town portal sets the hero down
-    townPortal: [CX, F1 - 0.4],
-    waygate: [F0 + 3.2, F1 - 0.6],         // the dungeon portal
+    start: [CX, F1 - 3.6],                 // where the town portal sets the hero down (clear of the front balcony's shadow)
+    townPortal: [CX, F1 - 2.4],
+    waygate: [F0 + 5.5, F1 - 0.4],         // the dungeon portal, west of the way in
     castellan: [CX, F0 + 1.2, DAIS],
     vault: [DX1 + 0.2, F0 + 0.7, DAIS],    // the Vault of the Flame (treasury chest) on the dais
     chronicle: [CX, BW + 0.9, BAL],        // the Chronicle of Deeds on the north balcony, under the great window
     warTable: [F1 - 5, F1 - 5.5],
-    stash: [F0 + 2.0, F1 - 2.6], reliquary: [F0 + 4.2, F1 - 2.6], jewelBox: [F0 + 1.2, F1 - 4.6],
+    stash: [F1 - 2.5, F1 - 0.5], reliquary: [F1 - 0.5, F1 - 1.2], jewelBox: [F1 - 5, F1 - 0.4],   // the chests in the south-east corner
     dummies: [[F1 - 2.2, F1 - 1.6], [F1 - 4.2, F1 - 0.9], [F1 - 1.4, F1 - 3.8]],
     flame: [CX, CY, 6],
     columns, plinths, pedestals, windows, stairs,

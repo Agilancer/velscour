@@ -28,7 +28,7 @@ import { obelisk } from './happenings.js';
 import { endgameUnlocked } from './endgame.js';
 import { heresyRankOf } from './heresies.js';
 import { addLight } from '../gfx/vfx.js';
-import { drawTerrain, drawColumn, occludersFor, occludersOfRect, occluderObj, clipAdd, hiddenBehind, standKey, hopZ, drawSky, terrainShade, HS } from '../gfx/terrain.js';
+import { terrainOf, drawTerrain, drawColumn, occludersFor, occludersOfRect, occluderObj, clipAdd, hiddenBehind, standKey, hopZ, drawSky, terrainShade, HS } from '../gfx/terrain.js';
 import { hopArc } from './alpine.js';
 import { drawRiftgate } from '../gfx/riftgate.js';
 import { drawKeepGate } from '../gfx/keepgate.js';
@@ -677,6 +677,14 @@ function occludeStatic(o, r, x = o.x, y = o.y, live = false) {
   }
 }
 
+/** Does column i's screen box cover the hero's view (views[0], render's see-through list)? */
+function heroUnder(map, i, views) {
+  const v = views[0];
+  if (!v || !v.hero) return false;
+  const b = terrainOf(map).box, k = i * 4;
+  return v.x + v.hw > b[k] && v.x - v.hw < b[k + 2] && v.y1 > b[k + 1] && v.y0 < b[k + 3];
+}
+
 /** Main world render. */
 // the Castle's roofs: each building's whole roof eases out while the hero is inside it and back in once they leave
 // (real time, so it reads the same at auto-play speed); a[bld] is that roof's opacity
@@ -1001,7 +1009,11 @@ export function renderWorld(ctx, world) {
         // spill over neighbours in front that aren't redrawn)
         const c = o.clip;
         if (c) { ctx.save(); ctx.beginPath(); ctx.rect(c[0], c[1], c[2] - c[0], c[3] - c[1]); ctx.clip(); }
+        // Tessariel's Keep: its front balconies go see-through where they stand over the hero (world/keepworld.js cutFront)
+        const cut = map.cutFront && map.cutFront[o.ti] && heroUnder(map, o.ti, views);
+        if (cut) ctx.globalAlpha = 0.3;
         drawColumn(ctx, world, o.ti, floorEntry, map.castleMat ? castleDress : null, !!o.over);
+        if (cut) ctx.globalAlpha = 1;
         if (c) ctx.restore();
         break;
       }

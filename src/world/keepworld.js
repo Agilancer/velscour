@@ -23,6 +23,9 @@ export function generateKeep() {
   // the grand stairs rise 3 levels a tile; the dais is one step; nothing jumps off the balcony
   map.climb = 4; map.drop = 4; map.walkStep = 4;
   map.c3only = true; map.tallOcclusion = true; map.noSky = true; map.keep = true;
+  // the front (south and east) balconies and parapets: see-through where they stand over the hero (render.js)
+  map.cutFront = new Uint8Array(N);
+  for (let i = 0; i < N; i++) { const x = i % L.W, y = (i / L.W) | 0; if (L.t[i] && (x >= TK.FR || y >= TK.FR) && L.hgt[i] > 4) map.cutFront[i] = 1; }
   let lo = Infinity, hi = -Infinity;
   for (let i = 0; i < N; i++) if (map.t[i] === 1) { lo = Math.min(lo, map.hgt[i]); hi = Math.max(hi, map.hgt[i]); }
   map.minLevel = lo; map.maxLevel = hi; map.baseLevel = lo - 16;
