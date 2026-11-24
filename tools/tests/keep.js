@@ -149,6 +149,34 @@ const args = process.argv.slice(2), SHOTS = !args.includes('noshots'), MOBILE = 
     });
     console.log('auto', JSON.stringify(auto));
     if (!auto.left) fail('auto-play did not leave the keep');
+    // the Standard Campaign from town: a new hero's auto-play calls at the keep, takes up the Sagas from their givers
+    // and the Castellan, comes back to town and goes down
+    const camp = await page.evaluate(async () => {
+      const { G, game } = window.VELSCOUR, { Auto } = await import('/src/game/autoplay.js'), K = await import('/src/game/keep.js');
+      if (G.autoplayOn || Auto.on === true) Auto.toggle(false);
+      await game.newChar('wizard', 'Campaigner'); game.enterTown();
+      Auto.dest = 'standard'; Auto.keepSeen = undefined; Auto.toggle(true); Auto.destPick = null; document.querySelectorAll('.screen .dialog-box').forEach((d) => d.parentNode.remove()); G.ui.modalCount = 0;
+      const seen = { keep: false, status: [], taken: 0, town2: false, dungeon: false };
+      for (let i = 0; i < 20000 && !seen.dungeon; i++) {
+        game.update(1 / 30);
+        if (i % 20 === 0) await new Promise((r) => setTimeout(r, seen.town2 ? 15 : 0));   // (the descent's level loads in real time)
+        if (seen.town2 && i % 300 === 0) seen.last = Auto.status;
+        const w = G.world; if (!w) continue;
+        if (w.keep) { seen.keepSecs = (seen.keepSecs || 0) + 1 / 30; if (Auto.status === 'Leaving the Keep') seen.leaveSecs = (seen.leaveSecs || 0) + 1 / 30; seen.keep = true; const st = Auto.status || ''; if (st && seen.status[seen.status.length - 1] !== st) seen.status.push(st); }
+        else if (seen.keep && w.kind === 'town') seen.town2 = true;
+        else if (seen.keep && w.kind === 'dungeon') seen.dungeon = true;
+      }
+      seen.taken = Object.keys(K.keepState(G.char).sagas).length; seen.open = K.sagaList(G.char).filter((s) => s.open).length; seen.again = Auto.keepWanted(G.char);
+      Auto.toggle(false);
+      return seen;
+    });
+    console.log('campaign', JSON.stringify(camp));
+    if (!camp.keep) fail('the Standard Campaign never went to the keep');
+    if (!camp.taken || camp.taken !== camp.open) fail(`auto-play took ${camp.taken} of ${camp.open} open Sagas`);
+    if (!camp.status.some((s) => /Saga to take up/.test(s))) fail('auto-play did not walk to a giver');
+    if (!camp.town2 || !camp.dungeon) fail('auto-play did not come back to town and go down after the keep');
+    if (camp.keepSecs > 90) fail(`auto-play spent ${Math.round(camp.keepSecs)} s in the keep`);
+    if (camp.again) fail('auto-play wants the keep again at once: ' + camp.again);
   } catch (e) { fail(e.stack || e.message); }
   await browser.close();
   report(errors);
