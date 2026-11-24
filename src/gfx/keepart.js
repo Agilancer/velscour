@@ -256,7 +256,24 @@ export function drawFire(ctx, x, y, t, h, w, pal = 'sacred', seed = 0, sparks = 
   ctx.restore();
 }
 /** Tessariel's green fire over the basin, a gold heart in it. x, y: the rim's centre (world px); k: its size. */
-export function drawSacredFlame(ctx, x, y, t, k = 1) { drawFire(ctx, x, y, t, 104 * k, 24 * k, 'sacred', 0, 26); }
+export function drawSacredFlame(ctx, x, y, t, k = 1) {
+  // a pale pillar of its light going up into the vault, the fire, then motes circling the crown (dim on the far side)
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createLinearGradient(0, y, 0, y - 260 * k);
+  g.addColorStop(0, 'rgba(150,255,120,0.20)'); g.addColorStop(0.5, 'rgba(150,255,120,0.07)'); g.addColorStop(1, 'rgba(150,255,120,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 16 * k, y); ctx.lineTo(x - 30 * k, y - 260 * k); ctx.lineTo(x + 30 * k, y - 260 * k); ctx.lineTo(x + 16 * k, y); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  drawFire(ctx, x, y, t, 112 * k, 22 * k, 'sacred', 0, 30);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 12; i++) {
+    const a = t * (i % 2 ? 0.9 : -0.6) + i * TAU / 12, far = Math.sin(a) < 0, r = i % 2 ? 44 : 34, lift = 14 + (i % 3) * 16 + Math.sin(t * 1.3 + i) * 4;
+    ctx.globalAlpha = (far ? 0.3 : 0.9) * (0.7 + 0.3 * Math.sin(t * 3 + i * 1.7));
+    ctx.drawImage(glowSprite(i % 3 ? '#b8ff70' : '#fff0a0'), x + Math.cos(a) * r * k - 5, y - lift * k + Math.sin(a) * r * 0.45 * k - 5, 10, 10);
+  }
+  ctx.restore();
+}
 /** A candle's flame at (x, y), its tip up. */
 export function drawCandle(ctx, x, y, t, seed = 0) {
   const f = Math.sin(t * 11 + seed * 3) * 0.5 + Math.sin(t * 17 + seed) * 0.3;

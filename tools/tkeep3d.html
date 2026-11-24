@@ -28,7 +28,7 @@ const SUN_DIR = [-0.55, 0.9, 0.45];
 // ------------------------------------------------------------------ materials
 const load = (src) => new Promise((ok, no) => new THREE.TextureLoader().load(src, ok, undefined, no));
 // repeat: world units per texture repeat (a tile is 45 units, a level 4.6)
-const REP = { stone: 150, stone2: 150, lime: 130, plinth: 120, setts: 95, flags: 135, carved: 90, ashlar: 120, tread: 60, marble: 110, walk: 110 };
+const REP = { gilt: 60, slate: 135, bronze: 60, coal: 40, rune: 40, stone: 150, stone2: 150, lime: 130, plinth: 120, setts: 95, flags: 135, carved: 90, ashlar: 120, tread: 60, marble: 110, walk: 110 };
 async function materials() {
   const M = {};
   const tex = async (path) => { const t = await load(path); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; return t; };
@@ -39,17 +39,23 @@ async function materials() {
   const T = (n) => `../assets/source/tkeep/tex/${n}.png`, C = (n) => `../assets/source/castle3d/tex/${n}.png`;
   M.stone = await mk(T('stone'), { color: 0xd8d4cc });
   M.stone2 = await mk(T('stone2'), { color: 0xd0ccc4 });
-  M.lime = await mk(T('lime'), { color: 0xf2ece0, bump: 1.6 });
+  M.lime = await mk(T('lime'), { color: 0xd9d2c4, bump: 2.0 });
   M.plinth = await mk(T('plinth'), { color: 0xb8b2a8 });
   M.walk = await mk(T('setts'), { color: 0xc8c2b8, bump: 1.4 });
   M.flags = await mk(T('flags'), { color: 0xc4c8d0, bump: 1.4 });
-  M.carved = await mk(T('carved'), { color: 0xe8e2d6 });
-  M.tread = await mk(T('ashlar'), { color: 0xf4efe6, bump: 1.2 });
-  M.marble = await mk(C('chapel'), { color: 0xfff8ec, bump: 1.0, rough: 0.55 });
+  M.carved = await mk(T('carved'), { color: 0xd0c9bb });
+  M.tread = await mk(T('ashlar'), { color: 0xc9c2b4, bump: 2.0 });
+  M.marble = await mk(T('ashlar'), { color: 0xddd6c8, bump: 1.6, rough: 0.6 });   // smooth pale ashlar (the chapel's carved marble read as scribbles on the plinth tops)
+  M.slate = await mk(T('flags'), { color: 0x5a6070, bump: 1.4 });
   M.iron = await mk(C('iron'), { color: 0x9a9aa4 });
   M.ironDark = await mk(C('iron'), { color: 0x5a5660, rough: 0.6 });
   M.wood = await mk(C('wood'), { color: 0xb8a890 });
   M.gold = new THREE.MeshStandardMaterial({ color: 0xa88440, roughness: 0.48, metalness: 0.45, emissive: 0x1c1204, emissiveIntensity: 0.3 });
+  // the Flame's brazier: dark bronze, coals that glow Tessariel's green, runes cut in its band
+  M.bronze = new THREE.MeshStandardMaterial({ color: 0x6e5226, roughness: 0.42, metalness: 0.7, emissive: 0x120c02, emissiveIntensity: 0.5 });
+  M.coal = new THREE.MeshStandardMaterial({ color: 0x0a140a, roughness: 0.9, emissive: 0x1fa838, emissiveIntensity: 0.3 });
+  M.gilt = new THREE.MeshStandardMaterial({ color: 0xe0b85a, roughness: 0.38, metalness: 0.2, emissive: 0x3a2806, emissiveIntensity: 0.6 });
+  M.rune = new THREE.MeshStandardMaterial({ color: 0x103018, roughness: 0.5, emissive: 0x7dff6a, emissiveIntensity: 1.6 });
   M.glass = new THREE.MeshStandardMaterial({ color: 0x0a0d16, roughness: 0.3, metalness: 0.1 });
   M.blue = new THREE.MeshStandardMaterial({ color: 0x24305a, roughness: 0.85 });
   for (const k of Object.keys(M)) M[k].userData = { rep: REP[k] || 120 };
@@ -209,16 +215,31 @@ function build(M) {
       add(latheGeo(foot, c - 0.14, [[0, lv0 + 3.7], [0.2, lv0 + 3.7], [0.14, lv0 + 5], [0.22, lv0 + 6], [0, lv0 + 7.5]], 12), 'gold');
     } else if (p.t === 'medallion') {
       // the Flame's floor: bands of limestone and gilt let into the flagstones, eight gilt studs between them
-      const { x, y } = p, ring = (r0, r1, m, z = 0.05) => add(latheGeo(x, y, [[r0, 0], [r0, z], [r1, z], [r1, 0]], 64), m);
-      ring(2.0, 2.5, 'lime'); ring(2.5, 2.62, 'gold', 0.07); ring(2.62, 3.2, 'plinth', 0.04); ring(3.3, 3.75, 'lime'); ring(3.18, 3.3, 'gold', 0.07); ring(3.75, 3.87, 'gold', 0.07);
+      const { x, y } = p, ring = (r0, r1, m, z = 0.05) => add(latheGeo(x, y, [[r1, 0], [r1, z], [r0, z], [r0, 0]], 64), m);   // (outer edge first: the lathe's faces then look up)
+      ring(2.0, 2.5, 'lime'); ring(2.5, 2.62, 'gold', 0.07); ring(2.62, 3.2, 'slate', 0.04); ring(3.3, 3.75, 'lime'); ring(3.18, 3.3, 'gold', 0.07); ring(3.75, 3.87, 'gold', 0.07); ring(3.87, 4.05, 'slate', 0.04);
       for (let k = 0; k < 16; k++) { const a = (k + 0.5) / 16 * Math.PI * 2; add(cylGeo(x + Math.cos(a) * 2.94, y + Math.sin(a) * 2.94, k % 2 ? 0.07 : 0.12, k % 2 ? 0.07 : 0.12, 0, 0.07, 12), k % 2 ? 'lime' : 'gold'); }
     } else if (p.t === 'basin') {
-      // the Sacred Flame's basin: three round steps, a fluted marble bowl, a gilt rim
+      // the Sacred Flame's holder: three round steps with gilt nosings, an eight-sided stem of dark stone banded in
+      // gold, a great bronze bowl of green-glowing coals with runes cut round its band, and a crown of four gilt
+      // blades curving in over the fire (the game's flame burns between them, its foot at level 12)
       const { x, y } = p;
-      add(latheGeo(x, y, [[0, 0], [2.0, 0], [2.0, 0.8], [1.75, 0.8], [1.75, 1.7], [1.5, 1.7], [1.5, 2.6], [0, 2.6]], 48), 'marble');
-      add(latheGeo(x, y, [[0, 2.6], [0.55, 2.6], [0.42, 3.4], [0.7, 4.2], [1.12, 5.4], [1.2, 6.2], [1.02, 6.2], [0.9, 5.6], [0, 5.6]], 48), 'marble');
-      add(latheGeo(x, y, [[1.0, 6.0], [1.24, 6.0], [1.28, 6.55], [1.0, 6.55]], 48), 'gold');
-      add(latheGeo(x, y, [[1.5, 2.55], [1.56, 2.55], [1.56, 2.75], [1.5, 2.75]], 48), 'gold');
+      add(latheGeo(x, y, [[0, 0], [2.0, 0], [2.0, 0.8], [1.75, 0.8], [1.75, 1.7], [1.5, 1.7], [1.5, 2.6], [0, 2.6]], 48), 'lime');
+      for (const [r, z] of [[2.0, 0.8], [1.75, 1.7], [1.5, 2.6]]) add(latheGeo(x, y, [[r - 0.04, z - 0.02], [r + 0.012, z - 0.02], [r + 0.012, z + 0.06], [r - 0.04, z + 0.06]], 48), 'gold');
+      add(latheGeo(x, y, [[0, 2.6], [0.8, 2.6], [0.8, 3.6], [0.6, 4.1], [0.46, 8.6], [0.58, 9.2], [0, 9.2]], 8), 'stone2');
+      for (const [r, z] of [[0.64, 3.9], [0.5, 8.4]]) add(latheGeo(x, y, [[r - 0.06, z], [r + 0.05, z], [r + 0.07, z + 0.3], [r + 0.05, z + 0.6], [r - 0.06, z + 0.6]], 8), 'gold');
+      add(latheGeo(x, y, [[0, 9.2], [0.5, 9.2], [0.7, 10.4], [0.92, 12.4], [1.02, 14.2], [1.05, 15.0], [0.95, 15.0], [0.9, 14.2], [0.8, 13.6], [0, 13.3]], 48), 'bronze');
+      add(latheGeo(x, y, [[0, 13.3], [0.8, 13.6], [0.86, 14.0], [0, 14.3]], 32), 'coal');
+      add(latheGeo(x, y, [[0.93, 14.9], [1.08, 14.9], [1.1, 15.35], [0.93, 15.35]], 48), 'gold');
+      add(latheGeo(x, y, [[0.88, 11.9], [0.94, 11.9], [1.01, 13.3], [0.95, 13.3]], 48), 'gold');
+      for (let k = 0; k < 16; k++) {   // the runes: sixteen lit strokes in the band, alternate tall and short
+        const a = (k + 0.5) / 16 * Math.PI * 2, g = new THREE.BoxGeometry(0.05 * TU, (k % 2 ? 0.6 : 1.0) * LU, 0.02 * TU);
+        g.translate(0, 12.6 * LU, 0.99 * TU); g.rotateY(a); g.translate(x * TU, 0, y * TU); add(g, 'rune');
+      }
+      for (let k = 0; k < 6; k++) {   // the crown: six slim gilt blades off the rim, curving in over the fire like cupped wings
+        const sh = toShape([[0.94, 14.8], [1.12, 16.6], [1.2, 19.4], [1.12, 22.4], [0.92, 25.0], [0.66, 27.4], [0.86, 24.4], [1.0, 21.8], [1.06, 19.2], [1.02, 16.8], [0.9, 14.8]]);
+        const g = new THREE.ExtrudeGeometry(sh, { depth: 0.2 * TU, bevelEnabled: true, bevelThickness: 0.04 * TU, bevelSize: 0.03 * TU, bevelSegments: 1 });
+        g.translate(0, 0, -0.1 * TU); g.rotateY((k + 0.5) / 6 * Math.PI * 2); g.translate(x * TU, 0, y * TU); add(g, 'gilt');
+      }
     } else if (p.t === 'column') {
       const { x, y, r, z0, z1 } = p;
       add(boxGeo(x - 0.48, y - 0.48, x + 0.48, y + 0.48, z0, z0 + 1.8), 'plinth');
@@ -259,19 +280,19 @@ function setup() {
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
   scene = new THREE.Scene();
-  scene.add(new THREE.AmbientLight(0xfff4e6, 0.36 * Math.PI));
+  scene.add(new THREE.AmbientLight(0xfff4e6, 0.3 * Math.PI));
   scene.add(new THREE.HemisphereLight(0xdce4ff, 0x40342a, 0.3 * Math.PI));
-  sun = new THREE.DirectionalLight(0xfff0dc, 1.05 * Math.PI);
+  sun = new THREE.DirectionalLight(0xfff0dc, 0.82 * Math.PI);
   sun.castShadow = true; sun.shadow.mapSize.set(8192, 8192); sun.shadow.bias = -0.0009; sun.shadow.normalBias = 2.2;
   scene.add(sun, sun.target);
   // the Sacred Flame's green light and warm braziers, baked into the stone round them (the game adds its own live glow)
   const A = L.anchors;
   const pl = (x, y, z, col, I, d) => { const l = new THREE.PointLight(col, I, d * TU, 1.6); l.position.copy(V3(x, y, z)); scene.add(l); pointLights.push(l); };
-  pl(A.flame[0], A.flame[1], 16, 0x8cff6a, 130000, 11);
-  for (const [x, y] of A.braziers) pl(x, y, 9, 0xffb060, 60000, 6);
-  for (const [x, y, z] of A.chandeliers) pl(x, y, z - 6, 0xffd090, 70000, 9);
+  pl(A.flame[0], A.flame[1], 30, 0x8cff6a, 42000, 10);
+  for (const [x, y] of A.braziers) pl(x, y, 9, 0xffb060, 26000, 6);
+  for (const [x, y, z] of A.chandeliers) pl(x, y, z - 6, 0xffd090, 34000, 9);
   // the upper walls and the wall-heads: warm light washed up them, so they stand out of the dark
-  for (const s of [TK.F0 + 3, TK.F0 + 12, TK.F1 - 11, TK.F1 - 2]) { pl(s, TK.OW + 7, 58, 0xffe2b8, 36000, 13); pl(TK.OW + 7, s, 58, 0xffe2b8, 36000, 13); }
+  for (const s of [TK.F0 + 3, TK.F0 + 12, TK.F1 - 11, TK.F1 - 2]) { pl(s, TK.OW + 7, 58, 0xffe2b8, 26000, 13); pl(TK.OW + 7, s, 58, 0xffe2b8, 26000, 13); }
 }
 function isoCamera(left, right, top, bottom) {
   const c = new THREE.OrthographicCamera(left, right, top, bottom, -40000, 40000), e = Math.PI / 6;

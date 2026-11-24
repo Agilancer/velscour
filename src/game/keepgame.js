@@ -41,7 +41,9 @@ export async function buildKeep(game) {
   world.npcs = [];
   // the Sacred Flame (kneel: the blessing), the War Table, the Chronicle, the Vault, the pedestals
   const [fx, fy, flv] = A.flame;
-  const flame = { keepFlame: true, name: 'The Sacred Flame', x: fx + 0.02, y: fy + 0.02, lv: flv, reach: 2.3, flip: false,
+  const flame = { keepFlame: true, name: 'The Sacred Flame', x: fx + 0.3, y: fy + 0.3,   // (sorted after the bowl's nearest tile, so nothing of the brazier is drawn over the fire)
+      // sorted behind the brazier's near rim and blades: it burns inside the crown
+    lv: flv, reach: 2.7, flip: false,
     use: () => kneel(world, flame), update: (dt) => keepLights(world, dt) };
   world.npcs.push(flame);
   const mark = (o) => world.npcs.push({ keepMarker: true, reach: 1.7, flip: false, ...o });
@@ -115,7 +117,7 @@ function blessed(world, flame) {
   const p = world.player;
   sfx('levelup', 0.6);
   world.flameSurge = 1;
-  addEffect(new Ring(flame.x, flame.y, 0.3, 3.2, 1, '#9cff5a', 4)); addEffect(new Ring(flame.x, flame.y, 0.3, 6.5, 1.6, '#e8ffb0', 2));
+  addEffect(new Ring(world.anchors.flame[0], world.anchors.flame[1], 0.3, 3.2, 1, '#9cff5a', 4)); addEffect(new Ring(world.anchors.flame[0], world.anchors.flame[1], 0.3, 6.5, 1.6, '#e8ffb0', 2));
   sparkle(p.x, p.y, 40, '#c8f060', 24, 0.8);
   UI.centerMsg('KINDLED', `+${KINDLE.xp}% XP · +${KINDLE.gf}% gold · +${KINDLE.mf} magic find for ${KINDLE.minutes} minutes`, 3);
   UI.log(`Tessariel's fire burns in you: <b style="color:${EMBER_COLOR}">Kindled</b> for ${KINDLE.minutes} minutes.`, '#d8f0a0');
@@ -126,24 +128,26 @@ function blessed(world, flame) {
 function keepLights(world, dt) {
   const A = world.anchors, t = world.time;
   world.flameSurge = Math.max(0, (world.flameSurge || 0) - dt * 0.45);
-  addLight(A.flame[0], A.flame[1], 6.5 + Math.sin(t * 3.1) * 0.4 + (world.flameSurge || 0) * 3, 1, 60, '#7dff5a', true);
+  addLight(A.flame[0], A.flame[1], 7 + (world.flameSurge || 0) * 3, 1, 60, null, true);   // light without colour far out: the stone keeps its own
+  addLight(A.flame[0], A.flame[1], 3.6 + Math.sin(t * 3.1) * 0.3 + (world.flameSurge || 0) * 3, 0.7, 70, '#7dff5a', true);
   // the upper walls and their wall-heads, out of the dark
   for (let s = TK.F0 + 1; s <= TK.F1; s += 5.5) { addLight(s, TK.OW + 2.2, 6, 0.4, 250, null, true); addLight(TK.OW + 2.2, s, 6, 0.4, 250, null, true); }
-  for (const [x, y] of A.braziers) addLight(x, y, 3.2 + Math.sin(t * 7 + x) * 0.2, 0.85, 22, '#ffb060');
-  for (const [x, y, z] of A.chandeliers) { addLight(x, y, 4.6, 0.6, 20, '#ffd090'); addLight(x, y, 2.4, 0.8, z * 4 + 6, '#ffd090'); }
+  for (const [x, y] of A.braziers) { addLight(x, y, 3.4, 0.8, 22, null); addLight(x, y, 1.8 + Math.sin(t * 7 + x) * 0.15, 0.6, 22, '#ffb060'); }
+  for (const [x, y, z] of A.chandeliers) { addLight(x, y, 4.6, 0.6, 20, null); addLight(x, y, 2.2, 0.6, z * 4 + 6, '#ffd090'); }
   for (const w of A.windows) addLight(w.axis === 'x' ? w.a : w.c + 2.2, w.axis === 'x' ? w.c + 2.2 : w.a, w.wide ? 4.6 : 3.2, 0.6, (w.z0 + 6) * 4, null);
-  addLight(A.castellan[0], A.castellan[1] + 0.6, 3.2, 0.7, 30, '#ffe0a0');
-  for (const p of world.portals) addLight(p.x, p.y, 3, 0.8, 30, p.color);
+  addLight(A.castellan[0], A.castellan[1] + 0.6, 3.2, 0.7, 30, null);
+  for (const p of world.portals) { addLight(p.x, p.y, 3, 0.8, 30, null); addLight(p.x, p.y, 1.6, 0.6, 30, p.color); }
   for (const s of [A.stash, A.reliquary]) addLight(s[0], s[1], 2, 0.5, 20, '#ffd070');
   for (const pr of world.props) if (pr.trophy) addLight(pr.x, pr.y, 1.7, 0.6, 40, '#ffe8b0');   // a lamp on every trophy
-  for (const [x, y] of A.frontLights || []) addLight(x, y, 2.6, 0.7, 30, '#ffb060');
+  for (const [x, y] of A.frontLights || []) addLight(x, y, 2.6, 0.7, 30, null);
 }
 
 /** Draw a keep thing render.js handed over (drawNpc): the Flame and the click targets. */
 export function drawKeepNpc(ctx, n, x, y, t) {
   if (n.keepFlame) {
     const k = 1 + renownRank(keepState().renown) * 0.012 + (kindled() ? 0.08 : 0) + (G.world.flameSurge || 0) * 0.45;   // it grows with the hero's Renown, burns higher while Kindled
-    drawSacredFlame(ctx, x, y - 24, t, k);
+    y -= 9.6;   // (its sort point is 0.3 tiles in front of the bowl's middle)
+    drawSacredFlame(ctx, x, y - 36, t, k);   // its foot in the bowl of coals (the rim is 15 levels up; the tile under it 6)
     if (kindled()) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.2 + Math.sin(t * 4) * 0.08; ctx.fillStyle = '#c8f060'; ctx.beginPath(); ctx.ellipse(x, y - 4, 46, 22, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
     n.sbox = [x - 34, y - 130, x + 34, y + 4];
     return true;

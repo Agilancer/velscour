@@ -1497,10 +1497,11 @@ function drawOverheadNames(ctx, world) {
       } else if (n.keepCastellan || n.keepFolk) {
         const mark = n.keepCastellan ? castellanMark() : folkMark(n);
         if (mark) {   // a gold "!" (rewards wait) or a green "?" (a Saga to take up), bobbing over her
-          const by = (sy - (n.talkT > 0 ? 62 : 26) + Math.sin(G.time * 3.2) * 3) * d, col = mark === 'claim' ? '#ffd24a' : '#b8f060';
+          const by = (sy - (n.talkT > 0 ? 62 : 26) + Math.sin(G.time * 3.2) * 3) * d, col = '#ffd24a';
           ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 + Math.sin(G.time * 3.2) * 0.15;
           ctx.drawImage(glowSprite(col), sx * d - 22 * d, by - 26 * d, 44 * d, 44 * d); ctx.restore();
-          drawLabel(ctx, mark === 'claim' ? '!' : '?', sx * d, by, `900 ${Math.round(26 * d)}px Cinzel, Georgia, serif`, col, 4 * d);
+          drawLabel(ctx, mark === 'claim' ? '?' : '!', sx * d, by,   // as quest hubs have it: "!" a quest to take up, "?" one to hand in
+            `900 ${Math.round(26 * d)}px Cinzel, Georgia, serif`, col, 4 * d);
         }
       }
     }
