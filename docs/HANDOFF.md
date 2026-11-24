@@ -14,6 +14,14 @@ Contents
 
 ---
 
+## November 24, 2026 — auto-play's Standard Campaign visits Tessariel's Keep (branch `claude/amazing-mccarthy-ph4dzv`, after PR #268)
+
+The user asked that the auto-play Standard Campaign go to the keep and pick up quests to complete. `Auto.keepWanted` and
+the new `Auto.keepTick` in `src/game/autoplay.js` (docs/TESSARIELS_KEEP.md "Auto-play"); `keep.js` plays a new hero's
+campaign from town: to the keep, a Saga from its giver, the Castellan, the Flame, back to town, down. Tests run: `keep.js`
+(desktop, mobile), `keep_quests.mjs`, `autoplay.js wizard 12`, `autoplay.js paladin 6 mobile`, `autoshop.js`, `stash.js`;
+`autoloops.js` ("Lance Charge started a dash channel") and `flow.js` fail the same way on `main`.
+
 ## November 24, 2026 — Tessariel's Keep, four passes of polish (branch `claude/amazing-mccarthy-ph4dzv`)
 
 The user asked to continue on Tessariel's Keep with several iterations of polish: "make it look and feel AMAZING".

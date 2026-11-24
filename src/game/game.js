@@ -576,7 +576,7 @@ export const game = {
 
     // the portal to Tessariel's Keep from the Oasis too
     const kg2 = t.keepgate || (t.keepgate = keepgateSpot({ ...t, npcs: t.npcs || [], start: t.start || [t.center.x, t.center.y], portal: t.portal, center: t.center }));
-    if (kg2) world.portals.push({ x: kg2.x, y: kg2.y, active: true, keepGate: true, color: '#c8f060', reach: 2.0, label: KEEP_NAME, use: () => { c.lastTown = 'act2'; this.enterKeep(); } });
+    if (kg2) world.portals.push({ x: kg2.x, y: kg2.y, active: true, keepGate: true, color: '#c8f060', reach: 2.0, label: KEEP_NAME, use: () => { c.lastTown = 'act2'; return this.enterKeep(); } });
 
     const arrive = t.start || [t.center.x, t.center.y];
     this.setWorld(world, arrive, old);

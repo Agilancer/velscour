@@ -4,7 +4,7 @@
 // gambling) and keeps delving. Toggled by the HUD's Auto button or P. Gear, stats and skills are judged by
 // simulation: apply the change, recompute the hero, score the result with charScore(), undo.
 import { G } from '../state.js';
-import { sagaList, takeSaga, claimAll, kindle, kindled, kindleReadyIn, keepUpgrade } from './keep.js';
+import { sagaList, takeSaga, claimAll, kindle, kindled, kindleReadyIn, keepUpgrade, keepState, bountyBoard } from './keep.js';
 import { allocateAttrs } from './attrs.js';
 import { input } from '../core/input.js';
 import { sfx } from '../core/audio.js';
@@ -597,22 +597,60 @@ export const Auto = {
     else this.dungeonTick(dt);
   },
 
-  /** In Tessariel's Keep (game/keepgame.js): take what the Castellan offers, claim what is owed, kneel at the Flame,
-   *  then walk back out through the portal to town (the keep has no vendors and no way down auto-play plans for). */
+  /** Does the Standard Campaign have business in Tessariel's Keep? A Saga someone there can give, three or more
+   *  rewards waiting (or any, with the Flame ready to bless), or a new day's bounty board not yet looked at. Not more
+   *  than once in four game minutes, so a hero in and out of town doesn't live in the hall. */
+  keepWanted(c = G.char) {
+    if (!c || this.dest !== 'standard' || G.settings.autoKeep === false) return null;
+    if (this.keepSeen !== undefined && G.time - this.keepSeen < 240 && G.time >= this.keepSeen) return null;
+    const k = keepState(c), owed = k.owed.length, flame = !kindled(c) && kindleReadyIn(c) <= 0;
+    if (sagaList(c).some((s) => s.open && !s.taken)) return 'a new Saga';
+    if (owed >= 3 || (owed && flame)) return `${owed} reward${owed > 1 ? 's' : ''}`;
+    if (k.bounty.day !== Math.floor(Date.now() / 86400000)) return "today's bounties";
+    return null;
+  },
+  /** In Tessariel's Keep (game/keepgame.js): to every giver with a Saga to take up, to the Castellan for what is owed
+   *  (and her own Sagas, and the day's board), to the Sacred Flame to kneel if it is ready, then out by the portal home. */
   keepTick(dt) {
     const p = G.player, w = G.world, c = G.char;
-    const K = this.keepRun || (this.keepRun = { t: 0, done: false });
-    K.t += dt;
-    if (!K.done) {
-      for (const s of sagaList(c)) if (s.open && !s.taken) takeSaga(s.saga.id, c);
-      const got = claimAll(c);
-      if (got.length && got[0].n) G.ui.log(`Auto-play claims ${got[0].n} reward${got[0].n > 1 ? 's' : ''} from the Castellan: <b style="color:#c8f060">+${got[0].embers} Embers</b>.`, '#e0f0c0');
-      if (!kindled(c) && kindleReadyIn(c) <= 0) kindle(c);
-      K.done = true;
+    let K = this.keepRun;
+    if (!K || K.world !== w) {
+      const stops = [];
+      for (const n of w.npcs) if (n.keepFolk && (n.sagas || []).some((id) => sagaList(c).some((s) => s.saga.id === id && s.open && !s.taken))) stops.push({ n, what: 'giver' });
+      const cas = w.npcs.find((n) => n.keepCastellan), flame = w.npcs.find((n) => n.keepFlame);
+      if (cas) stops.push({ n: cas, what: 'castellan' });
+      if (flame && !kindled(c) && kindleReadyIn(c) <= 0) stops.push({ n: flame, what: 'flame' });
+      K = this.keepRun = { world: w, t: 0, stepT: 0, stops, i: 0 };
+    }
+    K.t += dt; K.stepT += dt;
+    this.navT -= dt;
+    if (!this.nav || this.navT <= 0 || K.navFor !== w) { this.buildNav(); K.navFor = w; }   // the hall's own paths (not the town's it came from)
+    const stop = K.stops[K.i];
+    if (stop && K.t < 90) {
+      const n = stop.n, reach = stop.what === 'flame' ? 0.7 : 1.9;
+      // the Flame: kneel on its south side (the way out), a clear two tiles off the brazier
+      const [gx, gy] = stop.what === 'flame' ? [w.anchors.flame[0], w.anchors.flame[1] + 2.6] : [n.x, n.y];
+      this.setStatus(stop.what === 'giver' ? `To ${n.name}: a Saga to take up` : stop.what === 'castellan' ? 'To the Castellan' : 'To the Sacred Flame');
+      if (Math.hypot(p.x - gx, p.y - gy) <= reach || K.stepT > 40 || this.goTo(gx, gy, reach - 0.3, dt)) {
+        if (stop.what === 'giver') {
+          const took = n.sagas.filter((id) => takeSaga(id, c));
+          if (took.length) G.ui.log(`Auto-play takes up ${took.length > 1 ? took.length + ' Sagas' : 'a Saga'} from <b style="color:#ffe9a8">${n.name}</b>.`, '#e0f0c0');
+        } else if (stop.what === 'castellan') {
+          const took = sagaList(c).filter((s) => s.open && !s.taken && takeSaga(s.saga.id, c)).length;   // hers, and any a giver was not reached for
+          if (took) G.ui.log(`Auto-play takes up ${took > 1 ? took + ' Sagas' : 'a Saga'} from the Castellan.`, '#e0f0c0');
+          bountyBoard(c);
+          const got = claimAll(c);
+          if (got.length && got[0].n) G.ui.log(`Auto-play claims ${got[0].n} reward${got[0].n > 1 ? 's' : ''} from the Castellan: <b style="color:#c8f060">+${got[0].embers} Embers</b>.`, '#e0f0c0');
+        } else n.use();
+        G.game.autosave?.();
+        K.i++; K.stepT = 0;
+      }
+      return;
     }
     const gate = w.portals.find((q) => q.keepGate);
     this.setStatus('Leaving the Keep');
-    if (!gate || K.t > 25 || Math.hypot(p.x - gate.x, p.y - gate.y) < 1.6) { this.keepRun = null; G.game.enterTown(); return; }
+    this.keepSeen = G.time;
+    if (!gate || K.t > 120 || Math.hypot(p.x - gate.x, p.y - gate.y) < 1.6) { this.keepRun = null; G.ui.closeAll(); if (gate) gate.use(); else G.game.enterTown(); return; }
     this.goTo(gate.x, gate.y, 0.8, dt);
   },
 
@@ -2288,6 +2326,19 @@ export const Auto = {
       if (this.townSocial(dt)) return;
       // done: through the portal (Hearthstone return portal has absolute priority to restore progress!)
       const hearth = w.portals.find((q) => q.hearth);
+      // the Standard Campaign calls at Tessariel's Keep first when there is business there (keepWanted)
+      const kg = !hearth && w.portals.find((q) => q.keepGate && !w.keep), why = kg && this.keepWanted(c);
+      if (why) {
+        this.setStatus(`To Tessariel's Keep — ${why}`);
+        const reach = kg.reach || 1.8;
+        if (this.keepGoing) return;
+        if (dist(p.x, p.y, kg.x, kg.y) <= reach || this.goTo(kg.x, kg.y, Math.max(1.2, reach - 0.2), dt)) {
+          G.ui.closeAll(); this.transitT = 4; this.keepGoing = true; this.keepSeen = G.time;
+          Promise.resolve(kg.use()).finally(() => { this.keepGoing = false; });
+        }
+        this.watchStuck(dt);
+        return;
+      }
       const breach = !hearth && this.dest === 'breach' && w.portals.find((q) => q.breach);
       const rift = !hearth && this.dest === 'rift' && endgameUnlocked(c) && w.portals.find((q) => q.rift);
       const unbound = !hearth && !breach && !rift && this.dest === 'unbound' && canEnterUnbound(c);

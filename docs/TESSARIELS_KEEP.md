@@ -201,8 +201,14 @@ claimed, offer }), `have` (decorations and trophies earned), `decor` (what hangs
 `keepState()` fills it in on first use; an old save without it loads as a new keep.
 
 ## Auto-play
-In the keep, auto-play takes every open Saga, claims what is owed, kneels at the Flame if it can, and walks out through
-the portal home (`Auto.keepTick`). It never walks in by itself.
+**The Standard Campaign calls at the keep by itself** (`Auto.keepWanted`, checked in town after the errands, before the
+portal down; not the Breach, Rift or Unbound campaigns): when a Saga can be taken up, when three or more rewards wait
+(or any, with the Flame ready), or when the day's bounty board has not been rolled; at most once in four game minutes.
+In the hall (`Auto.keepTick`) it walks to **each giver with a Saga to take up**, then to **the Castellan** (her Sagas,
+the board, every reward owed), then kneels on the south side of **the Sacred Flame** if it is ready, and leaves by the
+portal home; the campaign then goes down as usual. A visit takes about ten seconds. It does not spend Embers, furnish
+or use the War Table: those stay the player's. `G.settings.autoKeep = false` turns the visits off (no settings row yet).
+`keepTick` builds the hall's own navigation (`buildNav`); with the town's left in place the hero wedged on the brazier.
 
 ## Files
 `src/world/tkeep.js` (layout), `src/world/keepworld.js` (map, props, rugs), `src/game/keep.js` (rules), `src/game/keepgame.js`

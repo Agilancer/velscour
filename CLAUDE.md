@@ -41,7 +41,7 @@ node tools/tests/encounters.js [kinds]             # dungeon encounters with peo
 node tools/tests/rings.js                          # ring augments in a live dungeon, skill mastery, ring/forge UI shots
 node tools/tests/flow.js                           # town -> portal -> boss -> exit -> depth 2 -> death -> reload
 node tools/tests/riftgate.js [seeds]               # the Riftgate to VELSCOUR DEFENSE: placed in every town, through it and back
-node tools/tests/keep.js [noshots] [mobile]         # TESSARIEL'S KEEP (docs/TESSARIELS_KEEP.md): the portal, the hall, your heroes walking and talking, stairs, every panel tab, trade, Vault, Furnish, auto-play out
+node tools/tests/keep.js [noshots] [mobile]         # TESSARIEL'S KEEP (docs/TESSARIELS_KEEP.md): the portal, the hall, your heroes walking and talking, the hero walks to the balconies, every panel tab, trade, Vault, Furnish, auto-play's Standard Campaign calls there from town
 node tools/tests/keep_quests.mjs                    # the keep's 387 quests and deeds, their rules on a save, the Ember economy over a full game (no browser)
 node tools/tkeep3d_bake.js [preview x,y|trophies]   # bake the keep's hall + trophies (needs clones of vesperwrithe and bm), then python tools/tkeep3d.py pack
 node defense/tests/defense.js [mobile]             # VELSCOUR DEFENSE (its own game, defense/docs/DEFENSE.md): menus, stages of all 5 acts on auto, modes, zoom, 3D packs
