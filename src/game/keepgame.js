@@ -14,14 +14,14 @@ import { generateKeep, keepProps, keepDressTile } from '../world/keepworld.js';
 import { loadKeepArt, drawSacredFlame } from '../gfx/keepart.js';
 import { startKeepFolk } from './keepfolk.js';
 import { keepState, checkProgress, kindle, kindled, kindleReadyIn } from './keep.js';
-import { KINDLE, TROPHY_BY_ID, KEEP_NAME, EMBER_COLOR, CASTELLAN } from '../data/keep.js';
-import { CX, CY } from '../world/tkeep.js';
+import { KINDLE, TROPHY_BY_ID, KEEP_NAME, EMBER_COLOR, CASTELLAN, renownRank } from '../data/keep.js';
+import { CX, CY, TK } from '../world/tkeep.js';
 import { endgameUnlocked } from './endgame.js';
 
 /** The keep's light and air: an evening hall, cool stone, warm braziers, the green Flame. */
 export const KEEP_BIOME = {
   id: 'tkeep', name: KEEP_NAME, pack: 'catacombs', palette: TOWN_BIOME.palette, wallPalette: TOWN_BIOME.wallPalette,
-  dark: 0.36, light: 11, ambient: { type: 'firefly', color: '#d8ff90' }, mon: { hue: 0, sat: 1, light: 0 }, blood: '#8a0b08', torch: '#ffb050', fog: '#06080a', keep: true,
+  dark: 0.3, light: 11, ambient: { type: 'firefly', color: '#d8ff90' }, mon: { hue: 0, sat: 1, light: 0 }, blood: '#8a0b08', torch: '#ffb050', fog: '#06080a', keep: true,
 };
 
 let gen = null;
@@ -83,7 +83,8 @@ function kneel(world, flame) {
   if (wait > 0) { floatText(p.x, p.y, 60, `The Flame rests (${Math.ceil(wait / 60000)} min)`, '#b8c0a0', 12); sfx('error', 0.5); return; }
   kindle(c);
   sfx('levelup', 0.6);
-  addEffect(new Ring(flame.x, flame.y, 0.3, 3.2, 1, '#9cff5a', 4));
+  world.flameSurge = 1;
+  addEffect(new Ring(flame.x, flame.y, 0.3, 3.2, 1, '#9cff5a', 4)); addEffect(new Ring(flame.x, flame.y, 0.3, 6.5, 1.6, '#e8ffb0', 2));
   sparkle(p.x, p.y, 40, '#c8f060', 24, 0.8);
   UI.centerMsg('KINDLED', `+${KINDLE.xp}% XP · +${KINDLE.gf}% gold · +${KINDLE.mf} magic find for ${KINDLE.minutes} minutes`, 3);
   UI.log(`Tessariel's fire burns in you: <b style="color:${EMBER_COLOR}">Kindled</b> for ${KINDLE.minutes} minutes.`, '#d8f0a0');
@@ -93,9 +94,12 @@ function kneel(world, flame) {
 /** The keep's lights, every frame (world.update clears them first). */
 function keepLights(world, dt) {
   const A = world.anchors, t = world.time;
-  addLight(A.flame[0], A.flame[1], 6.5 + Math.sin(t * 3.1) * 0.4, 1, 34, '#7dff5a', true);
+  world.flameSurge = Math.max(0, (world.flameSurge || 0) - dt * 0.45);
+  addLight(A.flame[0], A.flame[1], 6.5 + Math.sin(t * 3.1) * 0.4 + (world.flameSurge || 0) * 3, 1, 60, '#7dff5a', true);
+  // the upper walls and their wall-heads, out of the dark
+  for (let s = TK.F0 + 1; s <= TK.F1; s += 5.5) for (const z of [190, 320]) { addLight(s, TK.OW + 2.2, 6, 0.6, z, '#ffdcb0', true); addLight(TK.OW + 2.2, s, 6, 0.6, z, '#ffdcb0', true); }
   for (const [x, y] of A.braziers) addLight(x, y, 3.2 + Math.sin(t * 7 + x) * 0.2, 0.85, 22, '#ffb060');
-  for (const [x, y, z] of A.chandeliers) addLight(x, y, 4.2, 0.55, z * 4 - 40, '#ffd090');
+  for (const [x, y, z] of A.chandeliers) { addLight(x, y, 4.6, 0.6, 20, '#ffd090'); addLight(x, y, 2.4, 0.8, z * 4 + 6, '#ffd090'); }
   for (const w of A.windows) addLight(w.axis === 'x' ? w.a : w.c + 2.2, w.axis === 'x' ? w.c + 2.2 : w.a, w.wide ? 4.6 : 3.2, 0.6, (w.z0 + 6) * 4, null);
   addLight(A.castellan[0], A.castellan[1] + 0.6, 3.2, 0.7, 30, '#ffe0a0');
   for (const p of world.portals) addLight(p.x, p.y, 3, 0.8, 30, p.color);
@@ -107,9 +111,10 @@ function keepLights(world, dt) {
 /** Draw a keep thing render.js handed over (drawNpc): the Flame and the click targets. */
 export function drawKeepNpc(ctx, n, x, y, t) {
   if (n.keepFlame) {
-    drawSacredFlame(ctx, x, y - 26, t, 1);
+    const k = 1 + renownRank(keepState().renown) * 0.012 + (kindled() ? 0.08 : 0) + (G.world.flameSurge || 0) * 0.45;   // it grows with the hero's Renown, burns higher while Kindled
+    drawSacredFlame(ctx, x, y - 24, t, k);
     if (kindled()) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.2 + Math.sin(t * 4) * 0.08; ctx.fillStyle = '#c8f060'; ctx.beginPath(); ctx.ellipse(x, y - 4, 46, 22, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
-    n.sbox = [x - 30, y - 62, x + 30, y + 4];
+    n.sbox = [x - 34, y - 130, x + 34, y + 4];
     return true;
   }
   if (n.keepMarker) { n.sbox = [x - 20, y - (n.h || 30) - 10, x + 20, y + 6]; return true; }

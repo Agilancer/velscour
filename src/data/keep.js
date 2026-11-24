@@ -95,7 +95,7 @@ export const TROPHIES = [
   { id: 'lion_shield', art: 'shield_lionsun', name: 'The Lion and Sun', desc: 'For gold beyond counting.' },
   { id: 'north_shield', art: 'shield_north', name: 'The Northstar', desc: 'The Lampwardens\' own: steer by it.' },
   { id: 'skull', art: 'skull', name: 'Skull of the First Lord', desc: 'The skull of the first BOSS ROOM lord you broke.' },
-  { id: 'gem_skull', art: 'skull_gems', name: 'The Jewelled Skull', desc: 'Its eyes are rubies. It still watches.' },
+  { id: 'gem_skull', art: 'skull_gems', name: 'The Gilded Skull', desc: 'Gilt over bone. It still watches.' },
   { id: 'dawn_staff', art: 'staff_dawn', name: "Angels' Dawn", desc: 'A staff that once lit a choir.' },
   { id: 'phoenix_staff', art: 'staff_phoenix', name: 'Phoenix Ascendant', desc: 'Fire that rises again.' },
   { id: 'winter_staff', art: 'staff_winter', name: 'Winterstar', desc: 'Cold light from the Snowy Summit.' },

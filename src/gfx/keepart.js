@@ -98,6 +98,30 @@ export function bannerSprite(id, s, standLv) {
 }
 
 // ------------------------------------------------------------------ stained glass
+/** The glass atlas with its blood reds turned to Tessariel's emerald and its violets to her azure (the hosts under the
+ *  angels were painted in the Fiend's red; nothing of his colour hangs in her hall). Made once. */
+function keepGlass() {
+  if (A.glassT) return A.glassT;
+  const c = makeCanvas(A.glass.width, A.glass.height), x = c.getContext('2d', { willReadFrequently: true });
+  x.drawImage(A.glass, 0, 0);
+  const im = x.getImageData(0, 0, c.width, c.height), d = im.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] < 8) continue;
+    const r = d[i] / 255, g = d[i + 1] / 255, b = d[i + 2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), ch = mx - mn;
+    if (ch < 0.12) continue;
+    let h = mx === r ? ((g - b) / ch + 6) % 6 : mx === g ? (b - r) / ch + 2 : (r - g) / ch + 4;   // 0..6
+    const l = (mx + mn) / 2, sat = ch / (1 - Math.abs(2 * l - 1) + 1e-6);
+    // reds (h near 0 / 6) -> emerald (2.55); magentas and violets (4.6..5.6) -> azure (3.75); oranges and golds stay
+    const red = h < 0.28 || h > 5.6, vio = h >= 4.55 && h <= 5.6;
+    if (!red && !vio) continue;
+    const nh = red ? 2.55 : 3.75, nl = red ? l * 0.92 + 0.03 : l, ns = Math.min(1, sat * (red ? 0.8 : 0.9));
+    const C = (1 - Math.abs(2 * nl - 1)) * ns, X = C * (1 - Math.abs(nh % 2 - 1)), m = nl - C / 2;
+    const [R, G2, B] = nh < 3 ? [0, C, X] : [0, X, C];
+    d[i] = (R + m) * 255; d[i + 1] = (G2 + m) * 255; d[i + 2] = (B + m) * 255;
+  }
+  x.putImageData(im, 0, 0);
+  return (A.glassT = c);
+}
 /** A window's glass laid into its opening (layout anchors.windows), lit from behind; the great window takes two panes. */
 export function glassSprite(id, win, standLv) {
   const m = A && findMeta(A.meta.glass, id);
@@ -108,16 +132,16 @@ export function glassSprite(id, win, standLv) {
   const g = win.axis === 'x' ? ground(win.a, win.c + 0.1, standLv) : ground(win.c + 0.1, win.a, standLv);
   const all = []; for (let p = 0; p < panes; p++) all.push(facePlane(win.axis, win.a - win.w / 2 + pw / 2 + p * (pw + gap), win.c + 0.02, pw, win.z1 + 1.2, win.z0 - 0.2));
   const boxes = all.map(rectOf), box = [Math.min(...boxes.map((b) => b[0])) - 18, Math.min(...boxes.map((b) => b[1])) - 18, Math.max(...boxes.map((b) => b[2])) + 18, Math.max(...boxes.map((b) => b[3])) + 18];
-  const col = avgColour(A.glass, m.r);
+  const G = keepGlass(), col = avgColour(G, m.r);
   const spr = spriteCanvas(box, g, (x, x0, y0) => {
     // a soft bloom of the glass's colour round the opening, the glass, then the glass again added for its light
     const cx = ((box[0] + box[2]) / 2 - x0) * R, cy = ((box[1] + box[3]) / 2 - y0) * R;
     x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.22;
     x.drawImage(glowSprite(col), cx - (box[2] - box[0]) * R * 0.62, cy - (box[3] - box[1]) * R * 0.6, (box[2] - box[0]) * R * 1.24, (box[3] - box[1]) * R * 1.2);
     x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
-    for (const P of all) onFace(x, A.glass, m.r, P, x0, y0);
+    for (const P of all) onFace(x, G, m.r, P, x0, y0);
     x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.28;
-    for (const P of all) onFace(x, A.glass, m.r, P, x0, y0);
+    for (const P of all) onFace(x, G, m.r, P, x0, y0);
     x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
   });
   spr.glow = col;
@@ -147,10 +171,14 @@ export function rugCanvas(id, rect) {
     x.beginPath(); q.forEach(([px, py], i) => (i ? x.lineTo((px - bx0) * R, (py - by0) * R) : x.moveTo((px - bx0) * R, (py - by0) * R))); x.closePath();
   };
   x.fillStyle = 'rgba(0,0,0,0.35)'; poly(-0.05); x.fill();
+  x.filter = 'brightness(1.4) saturate(1.1)';   // the weaves are dark swatches: lifted, a blue runner reads as blue on the floor
   x.fillStyle = pat; poly(0.02); x.fill();
-  x.globalCompositeOperation = 'screen'; x.fillStyle = 'rgba(70,64,52,0.9)'; poly(0.02); x.fill(); x.globalCompositeOperation = 'source-over';   // lifts the dark weaves, so a blue runner reads as blue on the floor
-  x.lineWidth = 2.2 * R; x.strokeStyle = '#a8843c'; poly(0.13); x.stroke();
-  x.lineWidth = 0.8 * R; x.strokeStyle = '#e8cc7a'; poly(0.13); x.stroke();
+  x.filter = 'none';
+  // a gilt border: a broad band, a bright line in it, a fine line inside; a dark edge where the rug lies on the stone
+  x.lineJoin = 'miter';
+  x.lineWidth = 3.4 * R; x.strokeStyle = '#8a6a2c'; poly(0.16); x.stroke();
+  x.lineWidth = 1.5 * R; x.strokeStyle = '#f0d488'; poly(0.16); x.stroke();
+  x.lineWidth = 0.7 * R; x.strokeStyle = 'rgba(240,212,136,0.75)'; poly(0.34); x.stroke();
   x.lineWidth = 1 * R; x.strokeStyle = 'rgba(30,20,8,0.6)'; poly(0.03); x.stroke();
   const out = { img: c, x0: bx0, y0: by0, w: bx1 - bx0, h: by1 - by0, rect };
   A.cache.set(key, out);
@@ -167,8 +195,10 @@ export function drawRugTile(ctx, r, tx, ty, lv) {
 
 // ------------------------------------------------------------------ trophies and furniture
 /** A trophy's baked sprite (data/keepart.js art id), as a prop sprite record and its k. */
-export function trophySprite(art) {
-  const st = castle3dState(), S = st && st.sprites && st.sprites['trophy_' + art];
+export function trophySprite(art) { return bakedSprite('trophy_' + art); }
+/** A sprite of the bake by name, as a prop sprite record and its k. */
+export function bakedSprite(name) {
+  const st = castle3dState(), S = st && st.sprites && st.sprites[name];
   if (!S) return null;
   const [pg, sx, sy, w, h, ox, oy] = S.f[0];
   return { spr: { img: st.imgs[pg], sx, sy, w, h, ox: ox * S.S, oy: oy * S.S }, k: 1 / S.S };
@@ -180,38 +210,77 @@ export function keepProp(name) {
   return { spr: { img: A.scat, sx: s.x, sy: s.y, w: s.w, h: s.h, ox: s.ox, oy: s.oy }, k: 64 / A.pack.tile[0] };
 }
 
-// ------------------------------------------------------------------ the Sacred Flame
-/** Tessariel's green fire over the basin: tongues of flame, embers rising, a pale core. x, y: the rim's centre (world px). */
-export function drawSacredFlame(ctx, x, y, t, k = 1) {
+// ------------------------------------------------------------------ fire: the Sacred Flame, braziers, candles
+const FIRE = {
+  sacred: { out: ['#35d24c', '#0f6a2c'], mid: ['#d6ff84', '#3fe050'], core: ['#fffbe6', '#ffe27a'], glow: '#7dff5a', spark: ['#b8ff70', '#fff4b0'] },
+  ember: { out: ['#f0701c', '#8a2408'], mid: ['#ffc848', '#f0781c'], core: ['#fff6d0', '#ffd860'], glow: '#ff9a40', spark: ['#ffb050', '#fff0b0'] },
+};
+/** One tongue of flame from base (x, y), half-width w, height h: both edges ripple upward and the tip sways. */
+function tongue(ctx, x, y, w, h, t, ph) {
+  const N = 9;
+  ctx.beginPath(); ctx.moveTo(x - w, y);
+  for (let side = -1; side <= 1; side += 2) for (let k = 1; k <= N; k++) {
+    const q = side < 0 ? k / N : 1 - k / N, prof = (q < 0.18 ? 0.8 + q / 0.18 * 0.2 : Math.pow((1 - q) / 0.82, 0.78)) * (1 + 0.2 * Math.sin(q * 8 - t * 9 + ph + side));
+    const sway = Math.sin(t * 2.6 + ph + q * 2.4) * q * w * 0.9 + Math.sin(t * 6.1 + ph * 2 + q * 5) * q * w * 0.32;
+    ctx.lineTo(x + sway + side * w * prof, y - q * h);
+  }
+  ctx.closePath(); ctx.fill();
+}
+/** A fire standing on (x, y): h tall, w its base's half-width; pal 'sacred' (Tessariel's green, a gold heart) or 'ember'. */
+export function drawFire(ctx, x, y, t, h, w, pal = 'sacred', seed = 0, sparks = 0) {
+  const P = FIRE[pal], grad = (c, top) => { const g = ctx.createLinearGradient(0, y, 0, y - top); g.addColorStop(0, c[0]); g.addColorStop(0.7, c[1]); g.addColorStop(1, c[1] + '66'); return g; };
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  ctx.globalAlpha = 0.42 + Math.sin(t * 3.1) * 0.06;
-  ctx.drawImage(glowSprite('#7dff5a'), x - 80 * k, y - 140 * k, 160 * k, 170 * k);
+  ctx.globalAlpha = 0.3 + Math.sin(t * 3.1 + seed) * 0.05;
+  ctx.drawImage(glowSprite(P.glow), x - w * 4.2, y - h * 1.25, w * 8.4, h * 1.55);
   ctx.globalCompositeOperation = 'source-over';
-  // the tongues: layered teardrops, deep green outside, bright green, then gold-white within; drawn solid so they read
-  const tongue = (dx, h, w, col, ph, a) => {
-    const sway = Math.sin(t * 5.2 + ph) * 4 * k, top = y - h * k * (0.84 + 0.16 * Math.sin(t * 7.3 + ph * 2));
-    ctx.globalAlpha = a; ctx.fillStyle = col; ctx.beginPath();
-    ctx.moveTo(x + (dx - w) * k, y);
-    ctx.bezierCurveTo(x + (dx - w * 1.1) * k, y - h * k * 0.35, x + (dx - w * 0.3) * k + sway * 0.5, y - h * k * 0.7, x + dx * k + sway, top);
-    ctx.bezierCurveTo(x + (dx + w * 0.3) * k + sway * 0.5, y - h * k * 0.7, x + (dx + w * 1.1) * k, y - h * k * 0.35, x + (dx + w) * k, y);
-    ctx.closePath(); ctx.fill();
+  const layer = (n, spread, hk, wk, c, a, off) => {
+    ctx.fillStyle = grad(c, h * hk * 1.08); ctx.globalAlpha = a;
+    for (let i = 0; i < n; i++) {
+      const u = n > 1 ? i / (n - 1) * 2 - 1 : 0, ph = seed + off + i * 2.39;
+      tongue(ctx, x + u * w * spread, y, w * wk * (1 - Math.abs(u) * 0.25), h * hk * (1 - Math.abs(u) * 0.42) * (0.9 + 0.1 * Math.sin(t * 5.3 + ph * 1.7)), t, ph);
+    }
   };
-  for (let i = 0; i < 7; i++) tongue((i - 3) * 6, 44 + Math.abs(3 - i) * -5 + (i % 2) * 8, 8, '#1f8a34', i * 1.7, 0.85);
-  for (let i = 0; i < 5; i++) tongue((i - 2) * 5, 40 + (i === 2 ? 14 : 0) - Math.abs(2 - i) * 4, 6.5, '#45d84a', i * 2.3 + 1, 0.9);
-  for (let i = 0; i < 3; i++) tongue((i - 1) * 4, 30 + (i === 1 ? 10 : 0), 4.5, '#b8ff70', i * 1.3 + 2, 0.95);
-  tongue(0, 24, 3.2, '#fbffd8', 0.6, 1);
+  layer(5, 0.6, 1, 0.62, P.out, 0.96, 0);
+  layer(4, 0.42, 0.78, 0.46, P.mid, 0.97, 1.3);
+  layer(3, 0.22, 0.52, 0.36, P.core, 1, 2.1);
   ctx.globalCompositeOperation = 'lighter';
-  ctx.globalAlpha = 0.45;
-  ctx.drawImage(glowSprite('#e8ffb0'), x - 22 * k, y - 50 * k, 44 * k, 52 * k);
-  // embers rising from it
-  for (let i = 0; i < 18; i++) {
-    const f = (t * 0.32 + i / 18) % 1, a = i * 2.39;
-    ctx.globalAlpha = (1 - f) * 0.95;
-    ctx.fillStyle = i % 3 ? '#b8ff70' : '#fff4b0';
-    ctx.fillRect(x + Math.sin(a + t * 1.3) * (10 + f * 16) * k, y - (18 + f * 110) * k, 2 * k, 2 * k);
+  ctx.globalAlpha = 0.5;
+  ctx.drawImage(glowSprite(P.core[1]), x - w * 1.5, y - h * 0.5, w * 3, h * 0.6);
+  for (let i = 0; i < sparks; i++) {   // sparks rising off it, curling as they go
+    const f = (t * (0.22 + (i % 5) * 0.03) + i * 0.618 + seed) % 1, a = i * 2.39 + seed, r = 1 + (i % 3 === 0);
+    ctx.globalAlpha = (1 - f) * (1 - f) * 0.95;
+    ctx.fillStyle = P.spark[i % 3 ? 0 : 1];
+    ctx.fillRect(x + Math.sin(a + t * 1.3 + f * 4) * (w * 0.5 + f * w * 1.6), y - h * (0.3 + f * 1.25), r, r);
   }
   ctx.restore();
+}
+/** Tessariel's green fire over the basin, a gold heart in it. x, y: the rim's centre (world px); k: its size. */
+export function drawSacredFlame(ctx, x, y, t, k = 1) { drawFire(ctx, x, y, t, 104 * k, 24 * k, 'sacred', 0, 26); }
+/** A candle's flame at (x, y), its tip up. */
+export function drawCandle(ctx, x, y, t, seed = 0) {
+  const f = Math.sin(t * 11 + seed * 3) * 0.5 + Math.sin(t * 17 + seed) * 0.3;
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 0.5 + f * 0.1;
+  ctx.drawImage(glowSprite('#ffb050'), x - 13, y - 16, 26, 26);
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.fillStyle = '#ff9a30'; ctx.beginPath(); ctx.ellipse(x, y - 2.6 - f * 0.5, 1.5, 3.2 + f * 0.6, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#fff0a8'; ctx.beginPath(); ctx.ellipse(x, y - 1.8, 0.8, 1.7, 0, 0, TAU); ctx.fill();
+}
+/** The baked chandelier as a prop sprite, and where its candles burn (world px off its ground point). */
+export function chandelierSprite() { const r = bakedSprite('chandelier'); return r && { ...r, candles: castle3dState().idx.candles || [] }; }
+/** A faint grey shade of a trophy's sprite: the Elder not yet carved on its plinth. */
+export function ghostSprite(art) {
+  const r = trophySprite(art);
+  if (!r) return null;
+  const key = 'ghost|' + art;
+  if (A.cache.has(key)) return A.cache.get(key);
+  const s = r.spr, c = makeCanvas(s.w, s.h), x = c.getContext('2d');
+  x.drawImage(s.img, s.sx, s.sy, s.w, s.h, 0, 0, s.w, s.h);
+  x.globalCompositeOperation = 'source-in'; x.fillStyle = '#9fb4c8'; x.fillRect(0, 0, s.w, s.h);
+  const out = { spr: { img: c, sx: 0, sy: 0, w: s.w, h: s.h, ox: s.ox, oy: s.oy }, k: r.k };
+  A.cache.set(key, out);
+  return out;
 }
 
 // ------------------------------------------------------------------ the windows' light
@@ -228,6 +297,15 @@ export function drawLightShafts(ctx, world, t) {
       const gr = ctx.createLinearGradient(q[0][0], q[0][1], q[2][0], q[2][1]);
       gr.addColorStop(0, s.glow.replace('rgb', 'rgba').replace(')', `,${a})`)); gr.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = gr; ctx.beginPath(); q.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath(); ctx.fill();
+      // dust in the light: a few motes drifting down each shaft
+      ctx.fillStyle = '#fff6d8';
+      for (let i = 0; i < 7; i++) {
+        const u = 0.12 + 0.76 * ((i * 0.381 + s.phase * 0.17 + Math.sin(t * 0.21 + i * 1.9) * 0.06) % 1), v = (t * (0.018 + (i % 3) * 0.007) + i * 0.23 + s.phase) % 1;
+        const ax = q[0][0] + (q[1][0] - q[0][0]) * u, ay = q[0][1] + (q[1][1] - q[0][1]) * u, bx = q[3][0] + (q[2][0] - q[3][0]) * u, by = q[3][1] + (q[2][1] - q[3][1]) * u;
+        ctx.globalAlpha = Math.sin(v * Math.PI) * (0.35 + 0.25 * Math.sin(t * 1.7 + i * 2.1));
+        ctx.fillRect(ax + (bx - ax) * v + Math.sin(t * 0.7 + i) * 3, ay + (by - ay) * v, 1.5, 1.5);
+      }
+      ctx.globalAlpha = 1;
     }
   }
   ctx.restore();

@@ -13,14 +13,17 @@ export const TK = Object.freeze({
   BW: 6,             // the back balconies' walk (6, 7) and rail (8)
   F0: 9, F1: 32,     // the hall's floor, 24 x 24
   FR: 33,            // the front rails (33), walks (34, 35) and parapets (36)
-  BAL: 24,           // the balcony's walking level (96 px up: a hero and a half)
+  BAL: 24,           // the back balconies' walking level (96 px up: a hero and a half)
   RAIL: 27,          // a rail tile's top (blocked: its balustrade)
+  BALF: 12,          // the front (south and east) terraces: half as high, so the hall's floor is seen over them
+  FS: 11,            // the front terraces' first tile: three steps (8, 9, 10) come down to it from the back balconies' ends
   WALL: 84,          // the back walls
   PARA: 29,          // the front parapets
   DAIS: 3,           // the Castellan's dais, one step up
   STEP: 3,           // levels a stair tile rises
 });
-const { W, H, OW, BW, F0, F1, FR, BAL, RAIL, WALL, PARA, DAIS, STEP } = TK;
+const { W, H, OW, BW, F0, F1, FR, BAL, RAIL, BALF, FS, WALL, PARA, DAIS, STEP } = TK;
+const RAILF = BALF + 3, PARAF = BALF + 5, UNDER = -16;   // the front rail and parapet; how far down the keep's own wall is shown
 export const KK = Object.freeze({ none: 0, floor: 1, wall: 2, walk: 3, rail: 4, parapet: 5, stair: 6, dais: 7, column: 8, pedestal: 9, plinth: 10, basin: 11, gap: 12, tower: 13, furniture: 14 });
 /** Tile centre (x, y) of the hall's middle. */
 export const CX = (F0 + F1 + 1) / 2, CY = (F0 + F1 + 1) / 2;   // 21, 21
@@ -48,6 +51,9 @@ export function tkeepLayout() {
   box(F0, F0, F1 + 1, F0 + 0.5, -2, 0.02, 'lime'); box(F0, F1 + 0.5, F1 + 1, F1 + 1, -2, 0.02, 'lime');
   box(F0, F0, F0 + 0.5, F1 + 1, -2, 0.02, 'lime'); box(F1 + 0.5, F0, F1 + 1, F1 + 1, -2, 0.02, 'lime');
 
+  // bands of limestone let into the flagstones: down the two colonnades, and across the aisles at every column
+  for (const cx of [F0 + 4.5, F1 - 3.5]) box(cx - 0.16, F0 + 0.5, cx + 0.16, F1 + 0.5, -2, 0.03, 'lime');
+  for (const cy of [F0 + 7.5, F0 + 11.5, F0 + 15.5, F0 + 19.5]) { box(F0 + 0.5, cy - 0.16, F0 + 4.5, cy + 0.16, -2, 0.03, 'lime'); box(F1 - 3.5, cy - 0.16, F1 + 0.5, cy + 0.16, -2, 0.03, 'lime'); }
   // ---------------------------------------------------------------- the back walls (north: y 4-5, west: x 4-5)
   set(OW, OW, F1 + 4, OW + 1, WALL, KK.wall, { solid: true });
   set(OW, OW, OW + 1, F1 + 4, WALL, KK.wall, { solid: true });
@@ -79,46 +85,64 @@ export function tkeepLayout() {
   // back walks (6, 7) on a solid mass over the hall's floor; its face is an arcade of blind arches
   set(BW, BW, F1 + 3, BW + 1, BAL, KK.walk);
   set(BW, BW, BW + 1, F1 + 3, BAL, KK.walk);
-  set(FR + 1, BW, FR + 2, F1 + 3, BAL, KK.walk);
-  set(BW, FR + 1, F1 + 3, FR + 2, BAL, KK.walk);
+  set(FR + 1, FS, FR + 2, F1 + 3, BALF, KK.walk);
+  set(FS, FR + 1, F1 + 3, FR + 2, BALF, KK.walk);
+  // the corner stairs: three steps down from the ends of the back balconies to the front terraces
+  const cornerSteps = [];
+  for (let k = 0; k < 3; k++) {
+    const a = BW + 2 + k, lv = BAL - STEP * (k + 1);
+    set(FR + 1, a, FR + 2, a, lv, KK.stair); set(a, FR + 1, a, FR + 2, lv, KK.stair);
+    cornerSteps.push([a, lv]);
+  }
   box(BW, BW, F1 + 4, BW + 2, -2, BAL, 'plinth', { top: 'walk' });
   box(BW, BW + 2, BW + 2, F1 + 4, -2, BAL, 'plinth', { top: 'walk' });
-  box(FR + 1, BW + 2, FR + 3, F1 + 4, -2, BAL, 'plinth', { top: 'walk' });
-  box(BW + 2, FR + 1, FR + 1, FR + 3, -2, BAL, 'plinth', { top: 'walk' });
+  box(FR + 1, FS, FR + 3, F1 + 4, -2, BALF, 'plinth', { top: 'walk' });
+  box(FS, FR + 1, FR + 1, FR + 3, -2, BALF, 'plinth', { top: 'walk' });
+  for (const [a, lv] of cornerSteps) { box(FR + 1, a, FR + 3, a + 1, -2, lv, 'lime', { top: 'tread' }); box(a, FR + 1, a + 1, FR + 3, -2, lv, 'lime', { top: 'tread' }); }
   // rails: a tile wide, blocked; their mass up to the walk, a moulded balustrade on top
   set(BW + 2, BW + 2, FR, BW + 2, RAIL, KK.rail, { solid: true });
   set(BW + 2, BW + 2, BW + 2, FR, RAIL, KK.rail, { solid: true });
-  set(FR, BW + 2, FR, FR, RAIL, KK.rail, { solid: true });
-  set(BW + 2, FR, FR, FR, RAIL, KK.rail, { solid: true });
+  set(FR, FS, FR, FR, RAILF, KK.rail, { solid: true });
+  set(FS, FR, FR, FR, RAILF, KK.rail, { solid: true });
+  for (const [a, lv] of cornerSteps.slice(1)) { set(FR, a, FR, a, lv + 3, KK.rail, { solid: true }); set(a, FR, a, FR, lv + 3, KK.rail, { solid: true }); }
   // the stair heads: gaps in the north rail at its two ends
   const gaps = [[F0, BW + 2], [F1, BW + 2]];
   for (const [gx, gy] of gaps) set(gx, gy, gx, gy, BAL, KK.gap);
   box(BW + 2, BW + 2, FR + 1, BW + 3, -2, BAL, 'plinth', { top: 'walk' });
   box(BW + 2, BW + 3, BW + 3, FR + 1, -2, BAL, 'plinth', { top: 'walk' });
-  box(FR, BW + 3, FR + 1, FR + 1, -2, BAL, 'plinth', { top: 'walk' });
-  box(BW + 3, FR, FR, FR + 1, -2, BAL, 'plinth', { top: 'walk' });
+  box(FR, FS, FR + 1, FR + 1, -2, BALF, 'plinth', { top: 'walk' });
+  box(FS, FR, FR, FR + 1, -2, BALF, 'plinth', { top: 'walk' });
+  for (const [a, lv] of cornerSteps.slice(1)) {   // the string walls down the corner stairs, stepped and gilt-capped
+    box(FR + 0.2, a, FR + 0.8, a + 1, -2, lv + 3, 'lime'); box(FR + 0.15, a - 0.02, FR + 0.85, a + 1.02, lv + 3, lv + 3.5, 'gold');
+    box(a, FR + 0.2, a + 1, FR + 0.8, -2, lv + 3, 'lime'); box(a - 0.02, FR + 0.15, a + 1.02, FR + 0.85, lv + 3, lv + 3.5, 'gold');
+  }
   const rails = [
     { axis: 'x', a0: BW + 2, a1: FR + 1, c: BW + 2.5, skip: gaps.map(([gx]) => [gx, gx + 1]) },
     { axis: 'y', a0: BW + 3, a1: FR + 1, c: BW + 2.5 },
-    { axis: 'y', a0: BW + 3, a1: FR, c: FR + 0.5 },
-    { axis: 'x', a0: BW + 3, a1: FR, c: FR + 0.5 },
+    { axis: 'y', a0: FS, a1: FR, c: FR + 0.5, z: BALF },
+    { axis: 'x', a0: FS, a1: FR, c: FR + 0.5, z: BALF },
   ];
-  for (const r of rails) parts.push({ t: 'balustrade', ...r, z: BAL, h: 3.6, m: 'lime' });
+  for (const r of rails) parts.push({ t: 'balustrade', z: BAL, ...r, h: 3.6, m: 'lime' });
   // the hall faces of the back balconies: string course at the walk, a blind arcade below, pilasters between
   parts.push({ t: 'arcade', axis: 'x', a0: F0, a1: F1 + 1, c: BW + 3, dir: +1, z0: 0, z1: BAL, bay: 4, m: 'stone', trim: 'lime' });
   parts.push({ t: 'arcade', axis: 'y', a0: F0, a1: F1 + 1, c: BW + 3, dir: +1, z0: 0, z1: BAL, bay: 4, m: 'stone', trim: 'lime' });
   // the front: parapets on the outer edge (blocked), the outer faces dressed as the keep's own wall seen in section
-  set(BW, FR + 3, FR + 3, FR + 3, PARA, KK.parapet, { solid: true });
-  set(FR + 3, BW, FR + 3, FR + 3, PARA, KK.parapet, { solid: true });
-  box(BW, FR + 3, FR + 4, FR + 4, -6, PARA, 'stone');
-  box(FR + 3, BW, FR + 4, FR + 3, -6, PARA, 'stone');
-  parts.push({ t: 'merlons', axis: 'x', a0: BW, a1: FR + 4, c0: FR + 3, c1: FR + 4, z: PARA, m: 'stone', low: true });
-  parts.push({ t: 'merlons', axis: 'y', a0: BW, a1: FR + 3, c0: FR + 3, c1: FR + 4, z: PARA, m: 'stone', low: true });
-  // their outer faces: a blind arcade under a string course (the keep's own wall, seen in section)
-  parts.push({ t: 'arcade', axis: 'x', a0: BW + 1, a1: FR + 3, c: FR + 4, dir: +1, z0: -6, z1: BAL + 2, bay: 4, m: 'stone2', trim: 'lime' });
-  parts.push({ t: 'arcade', axis: 'y', a0: BW + 1, a1: FR + 3, c: FR + 4, dir: +1, z0: -6, z1: BAL + 2, bay: 4, m: 'stone2', trim: 'lime' });
-  parts.push({ t: 'face', axis: 'x', a0: BW, a1: FR + 4, c: FR + 4, dir: +1, z0: -6, z1: PARA, course: PARA - 3 });
-  parts.push({ t: 'face', axis: 'y', a0: BW, a1: FR + 4, c: FR + 4, dir: +1, z0: -6, z1: PARA, course: PARA - 3 });
+  // stepped: full height round the back balconies' ends, down with the corner stairs, low along the terraces
+  const paraAt = (a) => (a < BW + 2 ? PARA : a < FS ? BAL - STEP * (a - BW - 1) + 5 : PARAF);
+  for (let a = BW; a <= FR + 3; a++) {
+    const lv = a === FR + 3 ? PARAF : paraAt(a);
+    set(a, FR + 3, a, FR + 3, lv, KK.parapet, { solid: true }); set(FR + 3, a, FR + 3, a, lv, KK.parapet, { solid: true });
+    if (a < FS) { box(a, FR + 3, a + 1, FR + 4, UNDER, lv, 'stone'); box(FR + 3, a, FR + 4, a + 1, UNDER, lv, 'stone'); box(a - 0.03, FR + 2.95, a + 1.03, FR + 4.05, lv, lv + 0.6, 'lime'); box(FR + 2.95, a - 0.03, FR + 4.05, a + 1.03, lv, lv + 0.6, 'lime'); }
+  }
+  box(FS, FR + 3, FR + 4, FR + 4, UNDER, PARAF, 'stone');
+  box(FR + 3, FS, FR + 4, FR + 3, UNDER, PARAF, 'stone');
+  parts.push({ t: 'merlons', axis: 'x', a0: FS, a1: FR + 4, c0: FR + 3, c1: FR + 4, z: PARAF, m: 'stone', low: true });
+  parts.push({ t: 'merlons', axis: 'y', a0: FS, a1: FR + 3, c0: FR + 3, c1: FR + 4, z: PARAF, m: 'stone', low: true });
+  // their outer faces: the keep's own wall seen in section, a deep blind arcade under a string course, down into the dark
+  parts.push({ t: 'arcade', axis: 'x', a0: FS, a1: FR + 3, c: FR + 4, dir: +1, z0: UNDER, z1: BALF + 2, bay: 4, m: 'stone2', trim: 'lime' });
+  parts.push({ t: 'arcade', axis: 'y', a0: FS, a1: FR + 3, c: FR + 4, dir: +1, z0: UNDER, z1: BALF + 2, bay: 4, m: 'stone2', trim: 'lime' });
+  parts.push({ t: 'face', axis: 'x', a0: FS, a1: FR + 4, c: FR + 4, dir: +1, z0: UNDER, z1: PARAF, course: PARAF - 3 });
+  parts.push({ t: 'face', axis: 'y', a0: FS, a1: FR + 4, c: FR + 4, dir: +1, z0: UNDER, z1: PARAF, course: PARAF - 3 });
 
   // ---------------------------------------------------------------- the dais and the grand stairs (north side)
   const DX0 = F0 + 8, DX1 = F1 - 8, DY1 = F0 + 2;   // dais 17..24 x 9..11
@@ -143,10 +167,11 @@ export function tkeepLayout() {
   // ---------------------------------------------------------------- the hall: the Sacred Flame, columns, plinths
   // the flame's basin in the middle (2 x 2 tiles), on a round of three steps
   set(CX - 1, CY - 1, CX, CY, 6, KK.basin, { solid: true });
+  parts.push({ t: 'medallion', x: CX, y: CY });   // rings of limestone and gilt inlaid in the flagstones round the Flame
   parts.push({ t: 'basin', x: CX, y: CY, r: 1.05, z: 6, m: 'marble', trim: 'gold' });
   // two colonnades of six columns down the hall
   const columns = [];
-  for (const cx of [F0 + 4, F1 - 4]) for (const cy of [F0 + 3, F0 + 8, F0 + 13]) {   // the hall's front half stays open: nothing stands between the camera and the Flame
+  for (const cx of [F0 + 4, F1 - 4]) for (const cy of [F0 + 7, F0 + 11, F0 + 15]) {   // clear of the grand stairs' sight lines (x - y), and of the line from the camera to the Flame
     set(cx, cy, cx, cy, 64, KK.column, { solid: true });
     parts.push({ t: 'column', x: cx + 0.5, y: cy + 0.5, r: 0.36, z0: 0, z1: 64, m: 'lime', trim: 'gold' });
     columns.push([cx + 0.5, cy + 0.5]);
@@ -210,7 +235,7 @@ export function tkeepLayout() {
       { id: 'dais', x0: DX0 + 0.3, y0: F0 + 0.2, x1: DX1 + 0.7, y1: DY1 + 0.8, z: DAIS },
     ],
     // chandeliers over the hall (level of their candles), braziers by the stairs
-    chandeliers: [[CX - 5, CY - 5, 52], [CX + 5, CY - 5, 52], [CX - 5, CY + 5, 52], [CX + 5, CY + 5, 52]],
+    chandeliers: [[CX - 6, CY, 58], [CX, CY - 6, 58], [CX + 6, CY, 58], [CX, CY + 6, 58]],   // off the diagonal through the Flame, so none hangs in front of it
     braziers: [[DX0 - 0.3, DY1 + 1.4], [DX1 + 1.3, DY1 + 1.4], [CX - 2.6, F1 + 0.2], [CX + 2.6, F1 + 0.2]],
   };
   // what isn't part of the keep stays out of the map

@@ -4,7 +4,7 @@
 // Rugs go into the floor itself (map.dressTile, gfx/terrain.js drawColumn).
 import { TileMap } from './map.js';
 import { tkeepLayout, TK, KK } from './tkeep.js';
-import { bannerSprite, glassSprite, rugCanvas, drawRugTile, trophySprite, keepProp, windowShaft } from '../gfx/keepart.js';
+import { bannerSprite, glassSprite, rugCanvas, drawRugTile, trophySprite, keepProp, windowShaft, chandelierSprite, ghostSprite, drawFire, drawCandle } from '../gfx/keepart.js';
 import { TROPHY_BY_ID } from '../data/keep.js';
 
 /** The keep's map: heights, blocking, which tiles are masonry (baked pieces that may hide whoever stands behind). */
@@ -62,12 +62,17 @@ export function keepProps(world, decor, have) {
   for (const p of A.plinths) {
     const T = Object.values(TROPHY_BY_ID).find((t) => t.plinth === p.corner);
     if (T && have.trophy.includes(T.id)) add(p.x, p.y, trophySprite(T.art), { trophy: T.id });
+    else if (T) add(p.x, p.y, ghostSprite(T.art), { ghost: T.id, alpha: 0.2 });   // not yet carved: its shade waits on the plinth
   }
+  // the chandeliers over the hall, their candles lit
+  const ch = chandelierSprite();
+  if (ch) for (const [x, y, z] of A.chandeliers) add(x, y, ch, { z: z * 4, noHide: true, fx: (ctx, px, py, t) => { ch.candles.forEach(([cx, cy], i) => drawCandle(ctx, px + cx, py + cy, t, i + x)); } });
   // furniture (the Castle Keep pack's painted props): armour and candelabra by the dais, lions by the portal,
   // benches under the colonnades, the war table, the Chronicle's lectern, the Vault's chest
   const F = (name, x, y, o = {}) => add(x, y, keepProp(name), o);
   F('empty_suit_of_armor', TK.F0 + 7.5, TK.F0 + 3.4); F('empty_suit_of_armor', TK.F1 - 6.5, TK.F0 + 3.4, { flip: true });
-  F('keep_candelabrum', TK.F0 + 7.6, TK.F0 + 0.6); F('keep_candelabrum', TK.F1 - 6.6, TK.F0 + 0.6);
+  const glow = (ctx, px, py, t) => { for (const [dx, dy] of [[0, -50], [-7, -43], [7, -43], [-11, -38], [11, -38]]) drawCandle(ctx, px + dx, py + dy, t, dx + px); };
+  F('keep_candelabrum', TK.F0 + 7.6, TK.F0 + 0.6, { fx: glow }); F('keep_candelabrum', TK.F1 - 6.6, TK.F0 + 0.6, { fx: glow });
   F('carved_lion_statue', A.townPortal[0] - 2.4, TK.F1 + 0.35); F('carved_lion_statue', A.townPortal[0] + 2.4, TK.F1 + 0.35, { flip: true });
   F('royal_banner_stand', A.waygate[0] + 1.6, TK.F1 + 0.3);
   for (const [cx, cy] of A.columns) F('stone_bench', cx + (cx < 20 ? 1.4 : -1.4), cy + 1.3, { flip: cx > 20 });
@@ -76,12 +81,12 @@ export function keepProps(world, decor, have) {
   F('jeweled_reliquary', A.chronicle[0] - 2.2, A.chronicle[1] - 0.2); F('knight_memorial', A.chronicle[0] + 2.4, A.chronicle[1] - 0.1);
   F('treasury_chest', A.vault[0], A.vault[1]);
   F('shield_rack', TK.F1 - 0.7, TK.F0 + 12.5, { flip: true }); F('weapon_chest', TK.F0 + 0.8, TK.F0 + 12.6);
-  for (const [x, y] of A.braziers) F('brazier_ash', x, y);
+  for (const [x, y] of A.braziers) F('brazier_ash', x, y, { fx: (ctx, px, py, t) => drawFire(ctx, px, py - 13, t, 30, 9, 'ember', x * 7 + y, 8) });
   // the front balconies: candelabra along their parapets, a banner stand at each corner
   A.frontLights = [];
   for (let k = 0; k < 5; k++) {
     const a = TK.F0 + 2 + k * 5.5;
-    F('keep_candelabrum', a, TK.FR + 2.55); F('keep_candelabrum', TK.FR + 2.55, a);
+    F('keep_candelabrum', a, TK.FR + 2.55, { fx: glow }); F('keep_candelabrum', TK.FR + 2.55, a, { fx: glow });
     A.frontLights.push([a, TK.FR + 2.4], [TK.FR + 2.4, a]);
   }
   F('royal_banner_stand', TK.FR + 2.3, TK.FR + 2.3); F('royal_banner_stand', TK.BW + 0.7, TK.FR + 2.3); F('royal_banner_stand', TK.FR + 2.3, TK.BW + 0.7);

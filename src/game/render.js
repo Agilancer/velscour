@@ -257,6 +257,7 @@ function drawProp(ctx, pr, alpha) {
     const s = pr.spr, w = s.w * pr.k, h = s.h * pr.k, dy = y + s.oy * pr.k;
     if (pr.flip) { ctx.save(); ctx.translate(x, 0); ctx.scale(-1, 1); ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, s.ox * pr.k, dy, w, h); ctx.restore(); }
     else ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, x + s.ox * pr.k, dy, w, h);
+    if (pr.fx) pr.fx(ctx, x, y, G.time);   // Tessariel's Keep: live flames on its braziers, candles and chandeliers
   } else if (pr.sprite) {
     const img = pr._img || (pr._img = pixelSprite(pr.sprite, pr.pal || {}, 4));
     const px = pr.px || 2.4;
@@ -954,7 +955,8 @@ export function renderWorld(ctx, world) {
           drawProp(ctx, o, Math.min(ra, hides([rx, ry, s.w * o.k, s.h * o.k], it.d) ? 0.32 : 1));
           break;
         }
-        if (!o.c3move && (o.spr || (o.sprite === 'tree' || o.sprite === 'pine'))) {
+        if (o.alpha != null) a = o.alpha;   // the keep's uncarved Elders: a shade on the plinth
+        else if (!o.c3move && !o.noHide && (o.spr || (o.sprite === 'tree' || o.sprite === 'pine'))) {
           const px = isoX(o.x, o.y), py = isoY(o.x, o.y);
           for (const v of views) {
             const fy = v.y1 + 4;
