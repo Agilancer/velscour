@@ -315,9 +315,11 @@ export function tradeLevel(c = G.char) {
   return Math.max(1, Math.min(c.level || 1, depthLevel(Math.max(1, c.deepest || 1)) + 2, MAX_LEVEL + 20));
 }
 /** Buy armour (rarity of TRADE[i], slot) for Embers: the item, or null. */
+/** Can the smiths forge TRADE[i] yet? A rarity opens at the item level it opens at in the deep (data/items.js). */
+export const tradeOpen = (i, c = G.char) => !!TRADE[i] && rarityAt(tradeLevel(c), TRADE[i].rarity) === TRADE[i].rarity;
 export function buyArmor(i, slot, c = G.char, addToBag = null) {
   const T = TRADE[i], k = keepState(c);
-  if (!T || !TRADE_SLOTS.includes(slot) || k.embers < T.cost) return null;
+  if (!T || !TRADE_SLOTS.includes(slot) || k.embers < T.cost || !tradeOpen(i, c)) return null;
   const il = tradeLevel(c);
   let rar = rarityAt(il, T.rarity);
   if (T.mythic && rar === 4 && rarityAt(il, 5) === 5 && Math.random() < T.mythic) rar = 5;

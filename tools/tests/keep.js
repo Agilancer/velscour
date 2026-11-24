@@ -58,6 +58,12 @@ const args = process.argv.slice(2), SHOTS = !args.includes('noshots'), MOBILE = 
       if (SHOTS) await shot('keep_' + name);
     };
     await view('arrival', 21, 31.2, 1200);
+    if (SHOTS) {   // the whole hall at once (camera.zoomK, as the cut scenes use)
+      await page.evaluate(() => { const { G } = window.VELSCOUR; G.player.x = 21; G.player.y = 21; });
+      await page.evaluate(async () => { const { camera } = await import('/src/core/view.js'); camera.zoomK = 0.5; camera.computeZoom(); });
+      await page.waitForTimeout(900); await shot('keep_overview');
+      await page.evaluate(async () => { const { camera } = await import('/src/core/view.js'); camera.zoomK = 1; camera.computeZoom(); });
+    }
     await view('flame', 21, 25.5);
     await view('dais', 21, 13.5);
     await view('balcony_n', 21, 7.2);

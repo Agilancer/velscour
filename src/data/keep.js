@@ -108,9 +108,9 @@ export const TROPHIES = [
 export const TROPHY_BY_ID = Object.fromEntries(TROPHIES.map((t) => [t.id, t]));
 
 // ------------------------------------------------------------------ Renown, the Ember trade, the Vault
-/** Renown rank from points: rank r needs 5 r (r + 1) / 2 (5, 15, 30, ... 1,050 at 20). */
+/** Renown rank from points: rank r needs 3 r (r + 1) / 2 (3, 9, 18, ... 630 at 20): a played-through game reaches the low teens, the daily bounties and the endgame the rest. */
 export const RENOWN_MAX = 20;
-export const renownNeed = (r) => (5 * r * (r + 1)) / 2;
+export const renownNeed = (r) => (3 * r * (r + 1)) / 2;
 export const renownRank = (pts) => { let r = 0; while (r < RENOWN_MAX && pts >= renownNeed(r + 1)) r++; return r; };
 /** What a rank gives, always on: gold found, magic find, XP (small: the keep helps, it doesn't carry). */
 export const renownBonus = (r) => ({ gf: r, mf: r, xp: r * 0.5 });

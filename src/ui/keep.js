@@ -16,7 +16,7 @@ import {
 } from '../data/keep.js';
 import {
   keepState, sagaList, takeSaga, progressOf, bountyBoard, bountyText, challengeName, challengeText, metricValue, claimAll, hasDecor,
-  setDecor, tradeLevel, buyArmor, vaultState, vaultOffer, claimVault, sendExpedition, expeditionDone, collectExpedition, kindled,
+  setDecor, tradeLevel, tradeOpen, buyArmor, vaultState, vaultOffer, claimVault, sendExpedition, expeditionDone, collectExpedition, kindled,
   kindleReadyIn, today,
 } from '../game/keep.js';
 import { companionsOf } from '../game/keepfolk.js';
@@ -149,8 +149,9 @@ export const KeepUI = {
     const grid = el('div', 'kp-trade');
     for (let i = 0; i < TRADE.length; i++) {
       const T = TRADE[i], R = RARITY[T.rarity], row = el('div', 'kp-trow');
-      row.innerHTML = `<div class="kp-tname" style="color:${R.color}">${R.name}</div><div class="kp-tcost">${ember(T.cost)}</div>`;
-      for (const slot of TRADE_SLOTS) {
+      const open = tradeOpen(i, c);
+      row.innerHTML = `<div class="kp-tname" style="color:${R.color}">${R.name}</div><div class="kp-tcost">${ember(T.cost)}</div>${open ? '' : `<span class="dim">opens at item level ${R.minIlvl} (yours: ${il})</span>`}`;
+      for (const slot of open ? TRADE_SLOTS : []) {
         const bt = el('button', 'btn small', SLOT_NAMES[slot]);
         bt.disabled = k.embers < T.cost;
         bt.onclick = () => {
