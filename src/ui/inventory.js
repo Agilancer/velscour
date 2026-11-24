@@ -1,5 +1,6 @@
 // Split Inventory (Backpack) + Character & Stats sheet.
 import { G } from '../state.js';
+import { keepSocket } from '../game/keep.js';
 import { el, fmtInt, fmtDmg, escapeHtml } from '../core/util.js';
 import { shownWeapon, heroDmgLevel, MAX_LEVEL } from '../data/depth.js';
 import { sfx } from '../core/audio.js';
@@ -162,6 +163,7 @@ export function socketGem(gemIdx, target, fromWhere = null) {
   const was = glyphOf(it);
   it.gems.push({ gem: gem.gem, tier: gem.tier });
   if ((gem.count || 1) > 1) gem.count--; else container[gemIdx] = null;
+  keepSocket(); // Tessariel's Keep counts it (game/keep.js)
   UI.log(`Socketed <span style="color:${itemColor(gem)}">${gemName(gem.gem, gem.tier)}</span> into ${escapeHtml(itemName(it))}.`);
   const gw = glyphOf(it);
   if (gw && !was) {

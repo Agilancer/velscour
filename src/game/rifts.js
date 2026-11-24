@@ -1,5 +1,6 @@
 // Abyssal Rifts (docs/ENDGAME.md, docs/ENDGAME_OVERHAUL.md): the run inside a rift level.
 import { G } from '../state.js';
+import { keepRift } from './keep.js';
 import { rand, chance, pick, escapeHtml } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { addEffect, Ring, Column, Bolt, sparkle, floatText } from '../gfx/vfx.js';
@@ -148,6 +149,7 @@ export function riftWin(world, m) {
   c.rifts.best = Math.max(c.rifts.best || 0, tier);
   c.rifts.open = Math.max(c.rifts.open || 1, tier + jump);
   c.rifts.bestTime[tier] = Math.min(c.rifts.bestTime[tier] || 1e9, Math.round(time * 10) / 10);
+  keepRift(tier, time); // Tessariel's Keep (game/keep.js)
   const marks = grantMarks(riftMarks(tier), `for Tier ${tier}`);
 
   // The Grand Piñata Reward Hoard:

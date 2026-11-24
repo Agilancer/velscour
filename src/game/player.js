@@ -1,5 +1,6 @@
 // The hero.
 import { G } from '../state.js';
+import { keepGold, keepItem, keepPotion, keepBonuses } from './keep.js';
 import { rand, chance, clamp, angleTo, dist, TAU, fmtInt } from '../core/util.js';
 import { sfx, levelUpFanfare } from '../core/audio.js';
 import { camera } from '../core/view.js';
@@ -127,7 +128,7 @@ export class Player extends Creature {
     const hb = heroBonus(c);
     buffDmg += hb.dmg; buffLife += hb.life; buffReduce += hb.reduce; buffMf += hb.mf + (this.codexMf = codexMf()); buffGf += hb.gf; buffXp += hb.xp;
     // the Endgame (docs/ENDGAME.md): Infernal Marks (every hero's) and the Glass Cannon Heresy (this hero's)
-    const mk = this.marks = markBonuses(), hh = heresyHero(c);
+    const mk = this.marks = markBonuses(), hh = heresyHero(c), kb = keepBonuses(c); // kb: Tessariel's Keep's Renown and Kindled (game/keep.js)
     buffLife += hh.life; buffDmg += hh.dmg; // (Marks' life multiplies maxHp below; their Fortune is st.drops, game/loot.js)
     const attr = (k) => c.attrs[k] + (add[k] || 0) + (add.allAttr || 0);
     const str = attr('str'), dex = attr('dex'), vit = attr('vit'), int = attr('int');
@@ -154,10 +155,10 @@ export class Player extends Creature {
       // on the shown scale (combat.js), x Fortitude like life: one affix kills a normal in ~40 reflected blows at any depth,
       // a thorns buff (Vengeance Aura...) in ~8-16 (it was level x 0.2 against raw life: nothing past the first depths)
       thorns: ((add.thorns || 0) + buffThorns * c.level * 0.03) * fortitude(c.level),
-      goldFind: (add.goldFind || 0) + buffGf,
-      magicFind: (add.magicFind || 0) + buffMf,
+      goldFind: (add.goldFind || 0) + buffGf + kb.gf,
+      magicFind: (add.magicFind || 0) + buffMf + kb.mf,
       drops: mk.mf,
-      xpPct: (add.xpPct || 0) + buffXp,
+      xpPct: (add.xpPct || 0) + buffXp + kb.xp,
       reduce: Math.min(60, (add.reduce || 0) + buffReduce),
       fortitude: fortitude(c.level),
       cdr: Math.min(60, (add.cdr || 0) + buffCdr / 2),
@@ -400,7 +401,7 @@ export class Player extends Creature {
     const c = this.char;
     switch (g.kind) {
       case 'gold':
-        c.gold += g.amount; sfx('gold');
+        c.gold += g.amount; sfx('gold'); keepGold(g.amount);
         floatText(this.x, this.y, 46, `+${fmtInt(g.amount)} gold`, '#ffd34a', 12);
         return true;
       case 'orb_hp': {
@@ -430,6 +431,7 @@ export class Player extends Creature {
         return true;
       case 'item': {
         const ok = addToBag(c, g.item);
+        if (ok) keepItem(g.item); // Tessariel's Keep counts the finds (game/keep.js)
         if (!ok) { if (!g.warned) { g.warned = true; floatText(this.x, this.y, 50, g.item.type === 'gem' ? 'Gem Bag full' : 'Inventory full', '#ff8080', 12); sfx('error'); } return false; }
         sfx('pickup');
         if (G.ui) { G.ui.log(`Picked up <span style="color:${g.color}">${g.label}</span>`); G.ui.refresh(); }
@@ -446,6 +448,7 @@ export class Player extends Creature {
     if (!c.potions[kind]) { floatText(this.x, this.y, 50, 'No potions', '#ccc', 11); sfx('error'); return; }
     c.potions[kind]--;
     this.potionCd = 0.9;
+    keepPotion();
     sfx('potion');
     switch (kind) {
       case 'hp': this.potionRegen.push({ hp: this.maxHp * 0.45 / 2, mp: 0, t: 2 }); break;

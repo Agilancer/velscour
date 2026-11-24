@@ -9,6 +9,7 @@
 // The run speaks the overworld scenario API (active/completed/shrine/markers/objective/hud/...) for the HUD, the
 // Quest Log and auto-play.
 import { G } from '../state.js';
+import { keepBreach } from './keep.js';
 import { UI } from '../ui/ui.js';
 import { RNG, rand, chance, TAU, pick, clamp } from '../core/util.js';
 import { sfx } from '../core/audio.js';
@@ -429,6 +430,7 @@ export function createBreachRun(world, gen, biome, floor, onWin) {
     const first = !(record.cleared[floor] > 0);
     record.cleared[floor] = (record.cleared[floor] || 0) + 1;
     record.best = Math.max(record.best || 0, floor);
+    keepBreach(floor); // Tessariel's Keep (game/keep.js)
     const r = breachReward(floor, first), il = lvl + 2, rar = rarityAt(il, r);
     const [hx, hy] = heart.C;
     world.addLoot(new GroundItem(hx + 0.8, hy + 1.6, 'item', { item: rollItem(il, { rarity: rar }) }));

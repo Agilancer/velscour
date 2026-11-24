@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tessariel's Keep 3D</title>
+<!-- Tessariel's Keep (src/world/tkeep.js, docs/TESSARIELS_KEEP.md) in three.js: the great hall's masonry cut into per-tile
+     pieces from the game camera (like tools/castle3d.html and tools/skyship_bake.html), and the trophies (the user's
+     GLB models from vesperwrithe and bm, copied in by tools/tkeep3d_bake.js) as sprites. Only this tool runs three.js;
+     three.js comes from the repo's vendor/ copy (no CDN). Driven by tools/tkeep3d_bake.js; ?view for a preview. -->
+<style>html, body { margin: 0; background: #111; }</style>
+<script type="importmap">
+{ "imports": { "three": "../vendor/three/three.module.min.js", "three/addons/": "../vendor/three/addons/" } }
+</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { tkeepLayout, TK } from '../src/world/tkeep.js';
+import { TROPHY_ART } from '../src/data/keepart.js';
+
+// World units: one screen px at 1x. A tile is 32*sqrt2 across (its edges project to 32 x 16 px), a level is 4 px up.
+const TU = 32 * Math.SQRT2, LU = 4 / Math.cos(Math.PI / 6);
+const L = tkeepLayout(), MAP_W = L.W;
+const SUN_DIR = [-0.55, 0.9, 0.45];
+
+// ------------------------------------------------------------------ materials
+const load = (src) => new Promise((ok, no) => new THREE.TextureLoader().load(src, ok, undefined, no));
+// repeat: world units per texture repeat (a tile is 45 units, a level 4.6)
+const REP = { stone: 150, stone2: 150, lime: 130, plinth: 120, setts: 95, flags: 135, carved: 90, ashlar: 120, tread: 60, marble: 110, walk: 110 };
+async function materials() {
+  const M = {};
+  const tex = async (path) => { const t = await load(path); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; return t; };
+  const mk = async (file, o = {}) => {
+    const map = await tex(file), bump = await tex(file); bump.colorSpace = THREE.NoColorSpace;
+    return new THREE.MeshStandardMaterial({ map, bumpMap: bump, bumpScale: o.bump ?? 2.2, roughness: o.rough ?? 0.9, metalness: 0, color: o.color ?? 0xffffff });
+  };
+  const T = (n) => `../assets/source/tkeep/tex/${n}.png`, C = (n) => `../assets/source/castle3d/tex/${n}.png`;
+  M.stone = await mk(T('stone'), { color: 0xd8d4cc });
+  M.stone2 = await mk(T('stone2'), { color: 0xd0ccc4 });
+  M.lime = await mk(T('lime'), { color: 0xf2ece0, bump: 1.6 });
+  M.plinth = await mk(T('plinth'), { color: 0xb8b2a8 });
+  M.walk = await mk(T('setts'), { color: 0xc8c2b8, bump: 1.4 });
+  M.flags = await mk(T('flags'), { color: 0xc4c8d0, bump: 1.4 });
+  M.carved = await mk(T('carved'), { color: 0xe8e2d6 });
+  M.tread = await mk(T('ashlar'), { color: 0xf4efe6, bump: 1.2 });
+  M.marble = await mk(C('chapel'), { color: 0xfff8ec, bump: 1.0, rough: 0.55 });
+  M.iron = await mk(C('iron'), { color: 0x9a9aa4 });
+  M.wood = await mk(C('wood'), { color: 0xb8a890 });
+  M.gold = new THREE.MeshStandardMaterial({ color: 0xa88440, roughness: 0.48, metalness: 0.45, emissive: 0x1c1204, emissiveIntensity: 0.3 });
+  M.glass = new THREE.MeshStandardMaterial({ color: 0x0a0d16, roughness: 0.3, metalness: 0.1 });
+  M.blue = new THREE.MeshStandardMaterial({ color: 0x24305a, roughness: 0.85 });
+  for (const k of Object.keys(M)) M[k].userData = { rep: REP[k] || 120 };
+  return M;
+}
+
+// ------------------------------------------------------------------ geometry
+const V3 = (x, y, z) => new THREE.Vector3(x * TU, z * LU, y * TU);
+function worldUV(g, rep) {
+  g = g.index ? g.toNonIndexed() : g;
+  g.computeVertexNormals();
+  const p = g.attributes.position, n = g.attributes.normal, uv = new Float32Array(p.count * 2);
+  for (let i = 0; i < p.count; i++) {
+    const X = p.getX(i), Y = p.getY(i), Z = p.getZ(i), nx = n.getX(i), ny = n.getY(i), nz = n.getZ(i);
+    if (Math.abs(ny) >= 0.7) { uv[i * 2] = X / rep; uv[i * 2 + 1] = Z / rep; }
+    else if (Math.abs(nx) > Math.abs(nz)) { uv[i * 2] = Z / rep; uv[i * 2 + 1] = Y / rep; }
+    else { uv[i * 2] = X / rep; uv[i * 2 + 1] = Y / rep; }
+  }
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  return g;
+}
+function boxGeo(x0, y0, x1, y1, z0, z1) {
+  const g = new THREE.BoxGeometry(Math.max(0.001, x1 - x0) * TU, Math.max(0.001, z1 - z0) * LU, Math.max(0.001, y1 - y0) * TU);
+  g.translate((x0 + x1) / 2 * TU, (z0 + z1) / 2 * LU, (y0 + y1) / 2 * TU);
+  return g;
+}
+function cylGeo(x, y, r0, r1, z0, z1, seg = 24) {
+  const g = new THREE.CylinderGeometry(r1 * TU, r0 * TU, (z1 - z0) * LU, seg, 1, false);
+  g.translate(x * TU, (z0 + z1) / 2 * LU, y * TU);
+  return g;
+}
+/** A lathe of (r, z) points (tiles, levels) round (x, y). */
+function latheGeo(x, y, pts, seg = 28) {
+  const g = new THREE.LatheGeometry(pts.map(([r, z]) => new THREE.Vector2(Math.max(0.0001, r) * TU, z * LU)), seg);
+  g.translate(x * TU, 0, y * TU);
+  return g;
+}
+/** A shape drawn on a wall face: local (s along the wall, z up) in tiles/levels, extruded `d` tiles out of the face. */
+function faceShape(shape, axis, c, dir, d0, d1) {
+  const g = new THREE.ExtrudeGeometry(shape, { depth: (d1 - d0) * TU, bevelEnabled: false, curveSegments: 6 });
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const s = p.getX(i), z = p.getY(i), d = p.getZ(i) + d0 * TU, o = c * TU + dir * d;
+    if (axis === 'x') p.setXYZ(i, s, z, o); else p.setXYZ(i, o, z, s);
+  }
+  return g;
+}
+/** A lancet (pointed arch) outline of width w from z0 to the apex z1, round s = a (tiles, levels). */
+function lancetPts(a, w, z0, z1, n = 10) {
+  const hw = w / 2, spring = z1 - w * 1.05 * (TU / LU) * 0.5, pts = [[a - hw, z0]];
+  for (let k = 0; k <= n; k++) { const t = k / n; pts.push([a - hw + hw * (1 - Math.cos(t * Math.PI / 2)) * 1, spring + (z1 - spring) * Math.sin(t * Math.PI / 2)]); }
+  for (let k = n - 1; k >= 0; k--) { const t = k / n; pts.push([a + hw - hw * (1 - Math.cos(t * Math.PI / 2)), spring + (z1 - spring) * Math.sin(t * Math.PI / 2)]); }
+  pts.push([a + hw, z0]);
+  return pts;
+}
+const toShape = (pts, holes = []) => {
+  const sh = new THREE.Shape(pts.map(([s, z]) => new THREE.Vector2(s * TU, z * LU)));
+  for (const h of holes) sh.holes.push(new THREE.Path(h.map(([s, z]) => new THREE.Vector2(s * TU, z * LU))));
+  return sh;
+};
+/** A round arch outline over [s0, s1] springing at `spring` (levels) for a blind arcade. */
+function roundArchPts(s0, s1, z0, spring, n = 12) {
+  const r = (s1 - s0) / 2, m = (s0 + s1) / 2, rise = r * TU / LU, pts = [[s0, z0]];
+  for (let k = 0; k <= n; k++) { const a = Math.PI - k / n * Math.PI; pts.push([m + Math.cos(a) * r, spring + Math.sin(a) * rise]); }
+  pts.push([s1, z0]);
+  return pts;
+}
+
+function build(M) {
+  const buckets = new Map();
+  const add = (g, m) => { if (!buckets.has(m)) buckets.set(m, []); buckets.get(m).push(worldUV(g, M[m].userData.rep)); };
+  // a box against a face: along a0..a1, out o0..o1 from the face plane c (dir), z0..z1
+  const F = (axis, c, dir, a0, a1, o0, o1, z0, z1, m) => {
+    const c0 = c + dir * o0, c1 = c + dir * o1, lo = Math.min(c0, c1), hi = Math.max(c0, c1);
+    add(axis === 'x' ? boxGeo(a0, lo, a1, hi, z0, z1) : boxGeo(lo, a0, hi, a1, z0, z1), m);
+  };
+  for (const p of L.parts) {
+    if (p.t === 'box') {
+      if (p.top) { add(boxGeo(p.x0, p.y0, p.x1, p.y1, p.z0, p.z1 - 0.06), p.m); add(boxGeo(p.x0, p.y0, p.x1, p.y1, p.z1 - 0.06, p.z1), p.top); }
+      else add(boxGeo(p.x0, p.y0, p.x1, p.y1, p.z0, p.z1), p.m);
+    } else if (p.t === 'cyl') {
+      add(cylGeo(p.x, p.y, p.r, p.r, p.z0, p.z1, 40), p.m);
+      if (p.top) { const t = new THREE.CircleGeometry(p.r * TU * 0.98, 40); t.rotateX(-Math.PI / 2); t.translate(p.x * TU, p.z1 * LU + 0.2, p.y * TU); add(t, p.top); }
+    } else if (p.t === 'merlons') {
+      const h0 = p.low ? 2.4 : 4, h1 = p.low ? 4.2 : 9;
+      add(p.axis === 'x' ? boxGeo(p.a0, p.c0, p.a1, p.c1, p.z, p.z + h0) : boxGeo(p.c0, p.a0, p.c1, p.a1, p.z, p.z + h0), p.m);
+      add(p.axis === 'x' ? boxGeo(p.a0, p.c0 - 0.05, p.a1, p.c1 + 0.05, p.z + h0, p.z + h0 + 0.7) : boxGeo(p.c0 - 0.05, p.a0, p.c1 + 0.05, p.a1, p.z + h0, p.z + h0 + 0.7), 'lime');
+      for (let s = Math.ceil(p.a0); s + 0.9 <= p.a1; s += 1.5) {
+        const e0 = s + 0.15, e1 = s + 0.95;
+        add(p.axis === 'x' ? boxGeo(e0, p.c0 + 0.1, e1, p.c1 - 0.1, p.z + h0 + 0.7, p.z + h0 + h1) : boxGeo(p.c0 + 0.1, e0, p.c1 - 0.1, e1, p.z + h0 + 0.7, p.z + h0 + h1), p.m);
+      }
+    } else if (p.t === 'ringMerlons') {
+      add(latheGeo(p.x, p.y, [[p.r - 0.5, p.z], [p.r + 0.12, p.z], [p.r + 0.12, p.z + 4], [p.r - 0.5, p.z + 4]], 40), p.m);
+      const n = Math.max(10, Math.round(Math.PI * 2 * p.r / 1.3));
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2, m = new THREE.BoxGeometry(0.7 * TU, 5 * LU, 0.5 * TU);
+        m.translate(0, (p.z + 6.5) * LU, (p.r - 0.18) * TU); m.rotateY(a); m.translate(p.x * TU, 0, p.y * TU);
+        add(m, p.m);
+      }
+    } else if (p.t === 'band') {
+      add(latheGeo(p.x, p.y, [[p.r - 0.1, p.z0], [p.r, p.z0], [p.r + 0.06, (p.z0 + p.z1) / 2], [p.r, p.z1], [p.r - 0.1, p.z1]], 40), p.m);
+    } else if (p.t === 'balustrade') {
+      const { axis, a0, a1, c, z, h } = p, skip = p.skip || [];
+      const runs = []; let s = a0;
+      for (const [s0, s1] of skip.slice().sort((q, r) => q[0] - r[0])) { if (s0 > s) runs.push([s, s0]); s = Math.max(s, s1); }
+      if (s < a1) runs.push([s, a1]);
+      const B = (b0, b1, w, z0, z1, m) => add(axis === 'x' ? boxGeo(b0, c - w, b1, c + w, z0, z1) : boxGeo(c - w, b0, c + w, b1, z0, z1), m);
+      for (const [r0, r1] of runs) {
+        B(r0, r1, 0.3, z, z + 0.9, 'lime');            // the plinth
+        B(r0, r1, 0.33, z + h - 0.7, z + h, 'lime');   // the handrail
+        B(r0, r1, 0.2, z + h, z + h + 0.22, 'gold');  // its gilt fillet
+        for (let q = r0 + 0.18; q < r1 - 0.1; q += 0.34) {
+          const [bx, by] = axis === 'x' ? [q, c] : [c, q];
+          add(latheGeo(bx, by, [[0, z + 0.9], [0.1, z + 0.9], [0.06, z + 1.4], [0.12, z + 2.1], [0.07, z + 2.6], [0.1, z + h - 0.7], [0, z + h - 0.7]], 10), 'lime');
+        }
+        // newel posts at the ends
+        for (const e of [r0, r1]) { const [nx, ny] = axis === 'x' ? [e, c] : [c, e]; add(boxGeo(nx - 0.22, ny - 0.22, nx + 0.22, ny + 0.22, z, z + h + 1.2), 'lime'); add(boxGeo(nx - 0.26, ny - 0.26, nx + 0.26, ny + 0.26, z + h + 1.2, z + h + 1.6), 'gold'); }
+      }
+    } else if (p.t === 'arcade') {
+      // blind arches on the balcony's hall face: pilasters every `bay`, a moulded round arch between, a recessed panel
+      const { axis, a0, a1, c, dir, z0, z1, bay } = p;
+      F(axis, c, dir, a0, a1, -0.02, 0.16, z1 - 2.4, z1 - 0.6, p.trim);    // the string course under the walk
+      F(axis, c, dir, a0, a1, -0.02, 0.1, z0, z0 + 1.6, 'plinth');          // the base course
+      for (let s = a0; s <= a1 + 0.01; s += bay) F(axis, c, dir, s - 0.3, s + 0.3, -0.02, 0.24, z0, z1 - 2.4, p.m);
+      for (let s = a0; s + bay <= a1 + 0.01; s += bay) {
+        const m0 = s + 0.3, m1 = s + bay - 0.3, spring = z1 - 2.4 - (m1 - m0) / 2 * TU / LU - 0.6;
+        const outer = roundArchPts(m0, m1, z0 + 1.6, spring), inner = roundArchPts(m0 + 0.18, m1 - 0.18, z0 + 1.6, spring);
+        add(faceShape(toShape(outer, [inner.slice().reverse()]), axis, c, dir, 0, 0.12), p.trim);
+        add(faceShape(toShape(inner), axis, c, dir, -0.01, 0.01), 'stone2');
+        // a keystone of gold at the crown
+        const crown = spring + (m1 - m0) / 2 * TU / LU;
+        F(axis, c, dir, (m0 + m1) / 2 - 0.12, (m0 + m1) / 2 + 0.12, 0, 0.16, crown - 0.6, crown + 0.8, 'gold');
+      }
+    } else if (p.t === 'face') {
+      const { axis, a0, a1, c, dir, z0, z1 } = p;
+      if (p.course) F(axis, c, dir, a0, a1, -0.02, 0.14, p.course, p.course + 1, 'lime');
+      if (p.course2) F(axis, c, dir, a0, a1, -0.02, 0.18, p.course2, p.course2 + 1.4, 'lime');
+      if (p.pilasters) for (let s = (p.pilasterOff ?? a0); s <= a1; s += p.pilasters) if (s > a0 + 0.4) F(axis, c, dir, s - 0.35, s + 0.35, -0.02, 0.3, z0, z1 - 8, 'stone2');
+      if (p.slits) for (let s = Math.ceil(a0) + 1; s < a1 - 0.5; s += p.slits) F(axis, c, dir, s - 0.06, s + 0.06, -0.02, 0.02, z0 + 6, z0 + 13, 'glass');
+    } else if (p.t === 'window') {
+      // a tall lancet: a moulded frame proud of the face, the dark opening the game lays its stained glass in, a sill
+      const { axis, a, c, dir, w, z0, z1 } = p;
+      const outer = lancetPts(a, w + 0.5, z0 - 0.6, z1 + 1.6), inner = lancetPts(a, w, z0, z1);
+      add(faceShape(toShape(outer, [inner.slice().reverse()]), axis, c, dir, 0, 0.2), 'lime');
+      add(faceShape(toShape(inner), axis, c, dir, -0.01, 0.015), 'glass');
+      F(axis, c, dir, a - w / 2 - 0.45, a + w / 2 + 0.45, -0.02, 0.3, z0 - 1.6, z0 - 0.4, 'lime');
+      F(axis, c, dir, a - w / 2 - 0.3, a + w / 2 + 0.3, -0.02, 0.34, z0 - 0.4, z0, 'gold');
+    } else if (p.t === 'stairRail') {
+      // a stepped stone string-wall along the open side of the flight, capped, a gilt finial on its foot
+      const { a0, a1, c, side, lv0, lv1 } = p, n = Math.round(a1 - a0);
+      for (let k = 0; k < n; k++) {
+        const x = a0 + k, lv = side < 0 ? lv1 - TK.STEP * k : lv0 + TK.STEP * k;
+        add(boxGeo(x, c - 0.28, x + 1, c, -2, lv + 3.2), p.m);
+        add(boxGeo(x - 0.02, c - 0.33, x + 1.02, c + 0.05, lv + 3.2, lv + 3.7), 'gold');
+      }
+      const foot = side < 0 ? a1 - 0.5 : a0 + 0.5;
+      add(latheGeo(foot, c - 0.14, [[0, lv0 + 3.7], [0.2, lv0 + 3.7], [0.14, lv0 + 5], [0.22, lv0 + 6], [0, lv0 + 7.5]], 12), 'gold');
+    } else if (p.t === 'basin') {
+      // the Sacred Flame's basin: three round steps, a fluted marble bowl, a gilt rim
+      const { x, y } = p;
+      add(latheGeo(x, y, [[0, 0], [2.0, 0], [2.0, 0.8], [1.75, 0.8], [1.75, 1.7], [1.5, 1.7], [1.5, 2.6], [0, 2.6]], 48), 'marble');
+      add(latheGeo(x, y, [[0, 2.6], [0.55, 2.6], [0.42, 3.4], [0.7, 4.2], [1.12, 5.4], [1.2, 6.2], [1.02, 6.2], [0.9, 5.6], [0, 5.6]], 48), 'marble');
+      add(latheGeo(x, y, [[1.0, 6.0], [1.24, 6.0], [1.28, 6.55], [1.0, 6.55]], 48), 'gold');
+      add(latheGeo(x, y, [[1.5, 2.55], [1.56, 2.55], [1.56, 2.75], [1.5, 2.75]], 48), 'gold');
+    } else if (p.t === 'column') {
+      const { x, y, r, z0, z1 } = p;
+      add(boxGeo(x - 0.48, y - 0.48, x + 0.48, y + 0.48, z0, z0 + 1.8), 'plinth');
+      add(latheGeo(x, y, [[0, z0 + 1.8], [r + 0.14, z0 + 1.8], [r + 0.16, z0 + 2.4], [r + 0.05, z0 + 2.9], [r, z0 + 3.1], [0, z0 + 3.1]], 24), 'lime');
+      add(cylGeo(x, y, r, r * 0.9, z0 + 3.1, z1 - 4, 24), p.m);
+      for (const zz of [z0 + 14, z1 - 6]) add(latheGeo(x, y, [[r - 0.02, zz], [r + 0.05, zz], [r + 0.07, zz + 0.5], [r + 0.05, zz + 1], [r - 0.02, zz + 1]], 24), p.trim);
+      add(latheGeo(x, y, [[0, z1 - 4], [r * 0.9, z1 - 4], [r + 0.26, z1 - 1.4], [0, z1 - 1.4]], 24), 'carved');
+      add(boxGeo(x - 0.5, y - 0.5, x + 0.5, y + 0.5, z1 - 1.4, z1), 'lime');
+    } else if (p.t === 'plinth') {
+      const { x0, y0, x1, y1, z } = p;
+      add(boxGeo(x0 + 0.1, y0 + 0.1, x1 - 0.1, y1 - 0.1, 0, 1.2), 'plinth');
+      add(boxGeo(x0 + 0.25, y0 + 0.25, x1 - 0.25, y1 - 0.25, 1.2, z - 1.2), p.m);
+      add(boxGeo(x0 + 0.18, y0 + 0.18, x1 - 0.18, y1 - 0.18, z - 1.2, z - 0.8), p.trim);
+      add(boxGeo(x0 + 0.12, y0 + 0.12, x1 - 0.12, y1 - 0.12, z - 0.8, z), p.top);
+    } else if (p.t === 'pedestal') {
+      const { x, y, z0, z1 } = p;
+      add(boxGeo(x - 0.38, y - 0.38, x + 0.38, y + 0.38, z0, z0 + 0.8), 'plinth');
+      add(latheGeo(x, y, [[0, z0 + 0.8], [0.3, z0 + 0.8], [0.22, z0 + 1.6], [0.2, z1 - 1.2], [0.3, z1 - 0.7], [0, z1 - 0.7]], 16), p.m);
+      add(boxGeo(x - 0.34, y - 0.34, x + 0.34, y + 0.34, z1 - 0.7, z1 - 0.35), p.trim);
+      add(boxGeo(x - 0.31, y - 0.31, x + 0.31, y + 0.31, z1 - 0.35, z1), p.m);
+    }
+  }
+  const group = new THREE.Group();
+  for (const [m, list] of buckets) {
+    const mesh = new THREE.Mesh(mergeGeometries(list.map((g) => { for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k); return g; })), M[m]);
+    mesh.castShadow = mesh.receiveShadow = true;
+    group.add(mesh);
+  }
+  return group;
+}
+
+// ------------------------------------------------------------------ rendering
+let renderer, scene, sun;
+const pointLights = [];
+function setup() {
+  renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(1); renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.body.appendChild(renderer.domElement);
+  scene = new THREE.Scene();
+  scene.add(new THREE.AmbientLight(0xfff4e6, 0.36 * Math.PI));
+  scene.add(new THREE.HemisphereLight(0xdce4ff, 0x40342a, 0.3 * Math.PI));
+  sun = new THREE.DirectionalLight(0xfff0dc, 1.05 * Math.PI);
+  sun.castShadow = true; sun.shadow.mapSize.set(8192, 8192); sun.shadow.bias = -0.0009; sun.shadow.normalBias = 2.2;
+  scene.add(sun, sun.target);
+  // the Sacred Flame's green light and warm braziers, baked into the stone round them (the game adds its own live glow)
+  const A = L.anchors;
+  const pl = (x, y, z, col, I, d) => { const l = new THREE.PointLight(col, I, d * TU, 1.6); l.position.copy(V3(x, y, z)); scene.add(l); pointLights.push(l); };
+  pl(A.flame[0], A.flame[1], 14, 0x8cff6a, 220000, 11);
+  for (const [x, y] of A.braziers) pl(x, y, 9, 0xffb060, 60000, 6);
+  for (const [x, y, z] of A.chandeliers) pl(x, y, z - 6, 0xffd090, 70000, 9);
+}
+function isoCamera(left, right, top, bottom) {
+  const c = new THREE.OrthographicCamera(left, right, top, bottom, -40000, 40000), e = Math.PI / 6;
+  c.position.set(Math.cos(e) * Math.SQRT1_2, Math.sin(e), Math.cos(e) * Math.SQRT1_2).multiplyScalar(10000);
+  c.up.set(0, 1, 0); c.lookAt(0, 0, 0); c.updateMatrixWorld(); c.updateProjectionMatrix();
+  return c;
+}
+/** The sun fixed to the camera; one shadow box over the whole keep (identical tiles, identical shadows). */
+function aimSun(cam) {
+  const d = new THREE.Vector3(...SUN_DIR).normalize().transformDirection(cam.matrixWorld);
+  const c = V3(L.W / 2, L.H / 2, 0), r = L.W * TU * 0.9;
+  sun.position.copy(c).addScaledVector(d, 8000); sun.target.position.copy(c); sun.target.updateMatrixWorld();
+  Object.assign(sun.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 10, far: 20000 });
+  sun.shadow.camera.updateProjectionMatrix();
+}
+function screenRect(obj) {
+  const bb = new THREE.Box3().setFromObject(obj), xs = [], ys = [];
+  for (const x of [bb.min.x, bb.max.x]) for (const y of [bb.min.y, bb.max.y]) for (const z of [bb.min.z, bb.max.z]) {
+    const tx = x / TU, ty = z / TU, lv = y / LU;
+    xs.push((tx - ty) * 32); ys.push((tx + ty) * 16 - lv * 4);
+  }
+  return { x0: Math.floor(Math.min(...xs)) - 6, y0: Math.floor(Math.min(...ys)) - 6, x1: Math.ceil(Math.max(...xs)) + 6, y1: Math.ceil(Math.max(...ys)) + 6, centre: bb.getCenter(new THREE.Vector3()), size: bb.getSize(new THREE.Vector3()).length() };
+}
+const TAG = new THREE.ShaderMaterial({
+  vertexShader: 'varying vec3 wp; varying vec3 wn; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); wp = w.xyz; wn = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }',
+  fragmentShader: `varying vec3 wp; varying vec3 wn;
+    void main(){ float tx = floor(wp.x / ${TU.toFixed(6)} - wn.x * 0.03), ty = floor(wp.z / ${TU.toFixed(6)} - wn.z * 0.03);
+      gl_FragColor = vec4(clamp(tx, 0.0, 254.0) / 255.0, clamp(ty, 0.0, 254.0) / 255.0, 1.0, 1.0); }`,
+  side: THREE.DoubleSide,
+});
+function renderPass(group, cam, w, h, tag) {
+  renderer.setSize(w, h, false);
+  const keep = [];
+  group.traverse((o) => { if (o.isMesh) { keep.push([o, o.material]); if (tag) o.material = TAG; } });
+  for (const l of pointLights) l.visible = !tag;
+  renderer.setClearColor(0x000000, 0);
+  renderer.shadowMap.enabled = !tag;
+  renderer.render(scene, cam);
+  const gl = renderer.getContext(), buf = new Uint8Array(w * h * 4);
+  gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+  for (const [o, m] of keep) o.material = m;
+  return buf;   // bottom-up rows
+}
+
+// ------------------------------------------------------------------ per-tile pieces
+function bakePieces(group, S, VP = 2048) {
+  scene.add(group);
+  const R = screenRect(group), vw = VP / S, pieces = new Map();
+  for (let sy = R.y0; sy < R.y1; sy += vw) for (let sx = R.x0; sx < R.x1; sx += vw) {
+    const cam = isoCamera(sx, sx + vw, -sy, -(sy + vw));
+    aimSun(cam);
+    const tag = renderPass(group, cam, VP, VP, true);
+    let any = false;
+    for (let i = 3; i < tag.length; i += 4) if (tag[i]) { any = true; break; }
+    if (!any) continue;
+    const col = renderPass(group, cam, VP, VP, false), local = new Map();
+    for (let row = 0; row < VP; row++) for (let x = 0; x < VP; x++) {
+      const k = ((VP - 1 - row) * VP + x) * 4;
+      if (!tag[k + 3] || !col[k + 3]) continue;
+      const key = tag[k + 1] * MAP_W + tag[k];
+      let Lc = local.get(key);
+      if (!Lc) local.set(key, (Lc = { x0: x, y0: row, x1: x, y1: row, px: [] }));
+      Lc.x0 = Math.min(Lc.x0, x); Lc.x1 = Math.max(Lc.x1, x); Lc.y0 = Math.min(Lc.y0, row); Lc.y1 = Math.max(Lc.y1, row);
+      Lc.px.push(x, row, k);
+    }
+    const ox = Math.round(sx * S), oy = Math.round(sy * S);
+    for (const [key, Lc] of local) {
+      const w = Lc.x1 - Lc.x0 + 1, h = Lc.y1 - Lc.y0 + 1, data = new Uint8ClampedArray(w * h * 4);
+      for (let i = 0; i < Lc.px.length; i += 3) {
+        const o = ((Lc.px[i + 1] - Lc.y0) * w + (Lc.px[i] - Lc.x0)) * 4, k = Lc.px[i + 2];
+        data[o] = col[k]; data[o + 1] = col[k + 1]; data[o + 2] = col[k + 2]; data[o + 3] = 255;
+      }
+      let P = pieces.get(key);
+      const gx0 = ox + Lc.x0, gy0 = oy + Lc.y0;
+      if (!P) pieces.set(key, (P = { x0: gx0, y0: gy0, x1: gx0 + w, y1: gy0 + h, crops: [] }));
+      P.x0 = Math.min(P.x0, gx0); P.y0 = Math.min(P.y0, gy0); P.x1 = Math.max(P.x1, gx0 + w); P.y1 = Math.max(P.y1, gy0 + h);
+      P.crops.push([gx0, gy0, w, h, data]);
+    }
+  }
+  scene.remove(group);
+  const out = [];
+  for (const [tile, P] of pieces) {
+    const w = P.x1 - P.x0, h = P.y1 - P.y0, data = new Uint8ClampedArray(w * h * 4);
+    for (const [x0, y0, cw, ch, d] of P.crops) for (let y = 0; y < ch; y++) {
+      const src = y * cw * 4, dst = ((y0 - P.y0 + y) * w + (x0 - P.x0)) * 4;
+      for (let k = 0; k < cw * 4; k += 4) if (d[src + k + 3]) { data[dst + k] = d[src + k]; data[dst + k + 1] = d[src + k + 1]; data[dst + k + 2] = d[src + k + 2]; data[dst + k + 3] = 255; }
+    }
+    const tx = tile % MAP_W, ty = (tile / MAP_W) | 0;
+    out.push({ tile, w, h, ox: P.x0 / S - (tx - ty) * 32, oy: P.y0 / S - (tx + ty) * 16, data });
+  }
+  return out;
+}
+
+// ------------------------------------------------------------------ sprites (trophies)
+function bakeSprite(obj, S) {
+  scene.add(obj);
+  for (const l of pointLights) l.visible = false;
+  obj.updateMatrixWorld(true);
+  const R = screenRect(obj), w = Math.ceil((R.x1 - R.x0) * S), h = Math.ceil((R.y1 - R.y0) * S);
+  const cam = isoCamera(R.x0, R.x0 + w / S, -R.y0, -(R.y0 + h / S));
+  const d = new THREE.Vector3(...SUN_DIR).normalize().transformDirection(cam.matrixWorld);
+  sun.position.copy(R.centre).addScaledVector(d, 8000); sun.target.position.copy(R.centre); sun.target.updateMatrixWorld();
+  const r = Math.max(200, R.size * 0.7);
+  Object.assign(sun.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 10, far: 20000 }); sun.shadow.camera.updateProjectionMatrix();
+  const col = renderPass(obj, cam, w, h, false);
+  for (const l of pointLights) l.visible = true;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let row = 0; row < h; row++) for (let x = 0; x < w; x++) if (col[((h - 1 - row) * w + x) * 4 + 3] > 8) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, row); y1 = Math.max(y1, row); }
+  scene.remove(obj);
+  if (x1 < 0) return null;
+  const cw = x1 - x0 + 1, ch = y1 - y0 + 1, data = new Uint8ClampedArray(cw * ch * 4);
+  for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+    const k = ((h - 1 - (y0 + y)) * w + x0 + x) * 4, o = (y * cw + x) * 4, a = col[k + 3];
+    if (a <= 8) continue;
+    data[o] = col[k]; data[o + 1] = col[k + 1]; data[o + 2] = col[k + 2]; data[o + 3] = a > 200 ? 255 : a;
+  }
+  return { w: cw, h: ch, ox: R.x0 + x0 / S, oy: R.y0 + y0 / S, data };
+}
+const gltf = new GLTFLoader();
+const loadGLB = (url) => new Promise((ok, no) => gltf.load(url, (g) => ok(g.scene), undefined, no));
+/** A trophy model stood at the world origin: scaled to `size` tiles (its largest side, or its height with `tall`),
+ *  turned by `yaw` degrees (0 faces the camera when the model faces +z), its base on the ground. */
+function placeModel(root, o) {
+  const holder = new THREE.Group(), inner = new THREE.Group();
+  inner.add(root); holder.add(inner);
+  if (o.pre) inner.rotation.set(...o.pre.map((d) => d * Math.PI / 180));
+  inner.updateMatrixWorld(true);
+  let bb = new THREE.Box3().setFromObject(inner), sz = bb.getSize(new THREE.Vector3());
+  const k = (o.size * TU) / (o.tall ? sz.y : Math.max(sz.x, sz.y, sz.z));
+  inner.scale.setScalar(k);
+  inner.updateMatrixWorld(true);
+  bb = new THREE.Box3().setFromObject(inner);
+  const c = bb.getCenter(new THREE.Vector3());
+  inner.position.set(-c.x, -bb.min.y, -c.z);
+  holder.rotation.y = ((o.yaw ?? 0) + 45) * Math.PI / 180;   // +45: the camera looks down the (1, 1) diagonal
+  root.traverse((m) => {
+    if (!m.isMesh) return;
+    m.castShadow = m.receiveShadow = true;
+    if (m.material) { m.material = m.material.clone(); if (o.tint) m.material.color?.multiply(new THREE.Color(o.tint)); if (o.metal != null) m.material.metalness = o.metal; m.material.envMapIntensity = 0; }
+  });
+  return holder;
+}
+
+// ------------------------------------------------------------------ atlas pages
+function pack(items, PAGE = 4096) {
+  const order = items.map((u, i) => i).sort((a, b) => items[b].h - items[a].h), pages = [];
+  let page = null, x = 0, y = 0, shelf = 0;
+  const newPage = () => { page = document.createElement('canvas'); page.width = PAGE; page.height = 16; page._rows = []; pages.push(page); x = y = shelf = 0; };
+  newPage();
+  for (const i of order) {
+    const u = items[i];
+    if (x + u.w + 1 > PAGE) { x = 0; y += shelf + 1; shelf = 0; }
+    if (y + u.h + 1 > PAGE) newPage();
+    page._rows.push([u, x, y]); u.at = [pages.length - 1, x, y];
+    x += u.w + 1; shelf = Math.max(shelf, u.h);
+  }
+  for (const p of pages) {
+    p.height = Math.max(...p._rows.map(([u, , py]) => py + u.h)) + 1;
+    const g = p.getContext('2d');
+    for (const [u, px, py] of p._rows) g.putImageData(new ImageData(u.data, u.w, u.h), px, py);
+  }
+  return pages;
+}
+
+async function bakeAll(S = 1.5, SPR = 2, models = '../tools/tests/out/tkeep_src/') {
+  const t0 = performance.now();
+  setup();
+  const M = await materials();
+  const pieces = bakePieces(build(M), S);
+  const sprites = {}, items = [];
+  for (const T of TROPHY_ART) {
+    let root;
+    try { root = await loadGLB(models + T.model); } catch (e) { console.warn('trophy model', T.id, T.model, e.message); continue; }
+    const spr = bakeSprite(placeModel(root, T), SPR);
+    if (!spr) continue;
+    sprites['trophy_' + T.id] = { S: SPR, frames: [spr] }; items.push(spr);
+  }
+  const all = [...pieces, ...items], pages = pack(all);
+  const P = (u) => [u.at[0], u.at[1], u.at[2], u.w, u.h, +u.ox.toFixed(2), +u.oy.toFixed(2)];
+  return {
+    S, W: L.W, H: L.H,
+    pages: pages.map((c) => c.toDataURL('image/png')),
+    pieces: pieces.map(P), tiles: pieces.flatMap((u, i) => [u.tile, 0, i]),
+    sprites: Object.fromEntries(Object.entries(sprites).map(([k, v]) => [k, { S: v.S, f: v.frames.map(P) }])),
+    ms: Math.round(performance.now() - t0),
+  };
+}
+
+/** One framed view of the whole keep (or a part: tile x, y at the centre), w x h px at S. */
+async function preview(cx, cy, w = 1600, h = 1000, S = 0.6) {
+  if (!renderer) setup();
+  const M = await materials(), g = build(M);
+  scene.add(g);
+  const sx = (cx - cy) * 32, sy = (cx + cy) * 16 - 30 * 4, vw = w / S, vh = h / S;
+  const cam = isoCamera(sx - vw / 2, sx + vw / 2, -(sy - vh / 2), -(sy + vh / 2));
+  aimSun(cam);
+  renderer.setSize(w, h, false); renderer.setClearColor(0x101014, 1); renderer.shadowMap.enabled = true;
+  renderer.render(scene, cam);
+  scene.remove(g);
+  return renderer.domElement.toDataURL('image/png');
+}
+/** The trophies alone, in a row, for a look at their sizes and turns. */
+async function trophySheet(models = '../tools/tests/out/tkeep_src/') {
+  if (!renderer) setup();
+  const out = [];
+  for (const T of TROPHY_ART) {
+    let root; try { root = await loadGLB(models + T.model); } catch (e) { out.push({ id: T.id, err: e.message }); continue; }
+    const s = bakeSprite(placeModel(root, T), 2);
+    if (!s) { out.push({ id: T.id, err: 'empty' }); continue; }
+    const c = document.createElement('canvas'); c.width = s.w; c.height = s.h; c.getContext('2d').putImageData(new ImageData(s.data, s.w, s.h), 0, 0);
+    out.push({ id: T.id, url: c.toDataURL('image/png'), w: s.w, h: s.h });
+  }
+  return out;
+}
+window.TKEEP = { bakeAll, preview, trophySheet };
+</script>
+</body>
+</html>

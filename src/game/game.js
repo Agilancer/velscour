@@ -113,6 +113,11 @@ import { MacrosUI } from '../ui/macros.js';
 import { REGIONS, regionOf, parseRegionWord, regionNeeds, rollRegionVariant } from './regions.js';
 import './regions/index.js';
 import { Macros } from './macros.js';
+import { buildKeep, KEEP_BIOME } from './keepgame.js';
+import { keepgateSpot } from '../gfx/keepgate.js';
+import { keepClear, keepDeath, keepState } from './keep.js';
+import { releaseKeepArt, KEEP_DIR } from '../gfx/keepart.js';
+import { KEEP_NAME } from '../data/keep.js';
 
 const PICK_WAIT = 8; // seconds auto-play gives the player to choose a portal down (portalChoice)
 
@@ -347,6 +352,7 @@ export const game = {
       this.autosave();
     }
     const tileset = biomeTileSet(TOWN_BIOME);
+    if (old && old.keep) { releaseCastle3D(); releaseKeepArt(); } // the keep's baked hall (~50 MB decoded): it reloads from the cache
     keepTileSets(null); // the last dungeon's recoloured set: rebuilt behind the loading screen if we go back
     if (!townTiles) townTiles = makeTownTiles();
     // every hero has a town of their own: the layout is rolled from c.townSeed
@@ -394,6 +400,9 @@ export const game = {
     const rg = t.riftgate || (t.riftgate = riftgateSpot(t));
     if (rg) world.portals.push({ x: rg.x, y: rg.y, active: true, color: '#3a6cff', reach: 1.7, riftgate: true, label: 'The Riftgate: VELSCOUR DEFENSE', use: () => this.confirmRiftgate() });
     if (t.rift) world.portals.push({ x: t.rift.x, y: t.rift.y, rift: true, color: '#20e0ff', reach: 1.7, get active() { return endgameUnlocked(); }, set active(v) {}, get label() { return endgameUnlocked() ? `Abyssal Rift — Tier ${riftOpen()}` : 'Abyssal Rift (sealed)'; }, use: () => this.confirmRift() });
+    // the portal to TESSARIEL'S KEEP (game/keepgame.js, docs/TESSARIELS_KEEP.md), off the square on one side of the portal road
+    const kg = t.keepgate || (t.keepgate = keepgateSpot(t));
+    if (kg) world.portals.push({ x: kg.x, y: kg.y, active: true, keepGate: true, color: '#c8f060', reach: 1.8, label: KEEP_NAME, use: () => this.enterKeep() });
     // Waypoint Portal to Sunscorch Oasis (Act II Town) once visited or reached Act 2
     if (c?.visitedAct2Town || c?.depth >= 101) {
       world.portals.push({
@@ -450,6 +459,7 @@ export const game = {
       this.autosave();
     }
     await loadSeaOfSandPack();
+    if (old && old.keep) { releaseCastle3D(); releaseKeepArt(); } // the keep's baked hall
     const tileset = biomeTileSet(ACT2_TOWN_BIOME);
     keepTileSets(null);
     if (!act2TownTiles) act2TownTiles = makeAct2TownTiles();
@@ -563,6 +573,10 @@ export const game = {
       });
     }
 
+    // the portal to Tessariel's Keep from the Oasis too
+    const kg2 = t.keepgate || (t.keepgate = keepgateSpot({ ...t, npcs: t.npcs || [], start: t.start || [t.center.x, t.center.y], portal: t.portal, center: t.center }));
+    if (kg2) world.portals.push({ x: kg2.x, y: kg2.y, active: true, keepGate: true, color: '#c8f060', reach: 2.0, label: KEEP_NAME, use: () => { c.lastTown = 'act2'; this.enterKeep(); } });
+
     const arrive = t.start || [t.center.x, t.center.y];
     this.setWorld(world, arrive, old);
     void warmLevelArt(world);
@@ -576,6 +590,35 @@ export const game = {
     p.mana = p.maxMana;
     this.autosave();
     UI.log('You step into <b style="color:#f3c778">Sunscorch Oasis</b>, haven of the Scorched Wastes!', '#ffe080');
+  },
+
+  /** Step through to TESSARIEL'S KEEP (game/keepgame.js): the hall built from its bake and the hero's own choices. */
+  async enterKeep() {
+    const old = G.world, c = G.char;
+    if (!c) return;
+    if (old && old.kind === 'town' && !old.keep && old.biome && old.biome.id === 'act2_town') c.lastTown = 'act2';
+    else if (old && old.kind === 'town' && !old.keep) c.lastTown = 'act1';
+    sfx('portal');
+    LoadingScreen.show({ title: KEEP_NAME, subtitle: 'The hall of the Sacred Flame', text: "Crossing to Tessariel's Keep…", progress: 20 });
+    try {
+      LoadingScreen.setProgress(45, 'Kindling the Flame…');
+      const { world, start } = await buildKeep(this);
+      LoadingScreen.setProgress(80, 'Hanging the banners…');
+      this.setWorld(world, start, old);
+      await warmLevelArt(world);
+      HUD.setArea(KEEP_NAME, 'The hall of the Sacred Flame');
+      playMusic('town'); setAmbience('tkeep');
+      const p = G.player; p.hp = p.maxHp; p.mana = p.maxMana;
+      const k = keepState(c);
+      UI.log(`You step into <b style="color:#c8f060">${KEEP_NAME}</b>.${k.owed.length ? ` <b>${k.owed.length}</b> reward${k.owed.length > 1 ? 's' : ''} wait${k.owed.length > 1 ? '' : 's'} with the Castellan.` : ''}`, '#e0f0c0');
+      LoadingScreen.setProgress(100, 'Arriving…');
+    } catch (e) {
+      console.warn(e);
+      UI.log("The Keep's portal flickers and holds shut. Try again.", '#ff8060');
+    } finally {
+      await LoadingScreen.hide();
+      this.autosave();
+    }
   },
 
   confirmRiftgate() {
@@ -1584,6 +1627,7 @@ export const game = {
   brokeThrough(depth) {
     const c = G.char, had = c.defiance && c.defiance.n;
     commissionClear(G.world);
+    keepClear(G.world); // Tessariel's Keep's counters: clears, BOSS ROOMs, trials, times (game/keep.js)
     greedCleared(G.world, c); // the Greed lever pays into the Hoard (game/greed.js)
     if (worldRank(G.world) >= MARKS_RANK && !G.world.markPaid) { G.world.markPaid = true; grantMarks(1, `for a depth cleared at Heresy rank ${worldRank(G.world)}`); } // (docs/ENDGAME.md)
     if (!clearDefiance(c, depth)) return;
@@ -1594,6 +1638,7 @@ export const game = {
   onPlayerDeath(src) {
     const c = G.char;
     const w = G.world;
+    keepDeath();
     if (w && w.breach) return this.breachDeath(src);
     if (w && w.rift) return this.riftDeath(src);
     if (w && (w.unbound || w.unboundExploration)) return this.unboundDeath(src);

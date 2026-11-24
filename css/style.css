@@ -1703,3 +1703,68 @@ body.portrait .bag { grid-template-columns: repeat(6, clamp(36px, calc((100vw - 
     font-size: 11.5px;
   }
 }
+
+/* Tessariel's Keep (ui/keep.js): the Castellan's panel */
+.keep-panel .panel-head h2 { color: #d8f090; }
+.kp-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 6px 8px; margin-bottom: 8px; border: 1px solid #4a5a28; border-radius: 6px; background: linear-gradient(180deg, rgba(40,52,20,.55), rgba(16,14,8,.6)); }
+.kp-embers { display: flex; flex-direction: column; min-width: 110px; }
+.kp-embers span, .kp-renown span { font: 600 11px var(--font-head, Cinzel, serif); color: #c8c09a; letter-spacing: .04em; }
+.kp-ember { color: #c8f060; font: 700 20px var(--font-head, Cinzel, serif); text-shadow: 0 0 8px rgba(160,240,80,.45); }
+.kp-renown { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 2px; }
+.kp-renown small { color: #a8a080; font-size: 11px; }
+.kp-claim { animation: kpPulse 1.6s ease-in-out infinite; }
+@keyframes kpPulse { 50% { box-shadow: 0 0 14px rgba(200,240,96,.7); } }
+.kp-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.kp-tab { background: rgba(30,24,14,.8); border: 1px solid #4a3a20; color: var(--text-dim); border-radius: 4px; padding: 5px 9px; font: 600 12px var(--font-head, Cinzel, serif); cursor: pointer; }
+.kp-tab.on { color: #1a1406; background: linear-gradient(180deg, #e8d48a, #b8973e); border-color: #f0e0a0; }
+.kp-note { font-size: 12px; color: var(--text-dim); margin: 2px 0 8px; line-height: 1.35; }
+.kp-row { position: relative; padding: 7px 9px; margin-bottom: 6px; border: 1px solid #3a2e1a; border-left: 3px solid var(--kc, #8a7040); border-radius: 5px; background: rgba(24,18,10,.72); }
+.kp-row.slim { padding: 4px 8px; margin-bottom: 4px; }
+.kp-row.done { opacity: .62; }
+.kp-row.locked { filter: grayscale(.8); opacity: .55; }
+.kp-row > .btn { position: absolute; right: 8px; top: 7px; }
+.kp-title { font-size: 13px; padding-right: 92px; }
+.kp-row.slim .kp-title { padding-right: 0; font-size: 12px; }
+.kp-text { font-size: 12px; color: var(--text); margin: 3px 0; }
+.kp-prize { color: #ffe0a0; font-size: 11px; padding: 0 5px; border: 1px solid #6a5426; border-radius: 3px; background: rgba(80,60,20,.4); white-space: nowrap; }
+.kp-pay { font-size: 11px; }
+.kp-pay .kp-ember, .kp-note .kp-ember, .kp-tcost .kp-ember { font-size: 13px; }
+.kp-bar { position: relative; height: 12px; margin-top: 3px; border: 1px solid #3a3020; border-radius: 3px; background: #120e08; overflow: hidden; }
+.kp-bar > div { height: 100%; opacity: .75; }
+.kp-bar > span { position: absolute; inset: 0; text-align: center; font: 600 9px/12px "Alegreya Sans", sans-serif; color: #fff; text-shadow: 0 0 2px #000; }
+.kp-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.kp-chip { background: rgba(30,24,14,.8); border: 1px solid #4a3a20; color: var(--text); border-radius: 12px; padding: 3px 9px; font-size: 12px; cursor: pointer; }
+.kp-chip i { color: var(--text-dim); font-style: normal; font-size: 11px; }
+.kp-chip.on { border-color: #c8f060; color: #d8f090; }
+.kp-trade { display: flex; flex-direction: column; gap: 6px; }
+.kp-trow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 6px 8px; border: 1px solid #3a2e1a; border-radius: 5px; background: rgba(24,18,10,.72); }
+.kp-tname { font: 700 13px var(--font-head, Cinzel, serif); min-width: 86px; }
+.kp-tcost { min-width: 54px; }
+.kp-vault { display: flex; flex-wrap: wrap; gap: 10px; }
+.kp-vcell { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px; border: 1px solid #6a5426; border-radius: 6px; background: rgba(40,30,12,.6); }
+.kp-vcell .itemicon { width: 56px; height: 56px; }
+.kp-slots { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.kp-slot { width: 40px; height: 50px; padding: 2px; border: 1px solid #4a3a20; border-radius: 4px; background: #14100a; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.kp-slot.on { border-color: #c8f060; box-shadow: 0 0 6px rgba(200,240,96,.5); }
+.kp-empty { color: #6a5a40; font-size: 12px; }
+.kp-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
+.kp-choice { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px; border: 1px solid #4a3a20; border-radius: 5px; background: rgba(24,18,10,.8); color: var(--text); font-size: 11px; cursor: pointer; text-align: center; }
+.kp-choice b { font-size: 11px; }
+.kp-choice small { color: var(--text-dim); font-size: 10px; }
+.kp-choice.on { border-color: #c8f060; }
+.kp-choice.locked { opacity: .5; cursor: default; }
+.kp-choice.locked canvas { filter: grayscale(1) brightness(.6); }
+.kp-chron { overflow-x: auto; }
+.kp-chron table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.kp-chron th { font: 600 11px var(--font-head, Cinzel, serif); color: #c8c09a; text-align: left; border-bottom: 1px solid var(--line); padding: 3px 4px; }
+.kp-chron td { padding: 4px; border-bottom: 1px solid #2a2014; }
+.kp-chron tr.me td { background: rgba(80,100,30,.18); }
+.kp-records { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px; margin-top: 10px; }
+.kp-records > div { display: flex; flex-direction: column; padding: 6px 8px; border: 1px solid #5a4a26; border-radius: 5px; background: rgba(40,30,12,.5); }
+.kp-records span { font-size: 11px; color: var(--text-dim); }
+.kp-records b { font: 700 15px var(--font-head, Cinzel, serif); color: #ffe0a0; }
+.kp-records i { font-size: 11px; color: #c8c0a0; font-style: normal; }
+.kp-exps { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.kp-exps i { font-style: normal; color: var(--text-dim); font-size: 10px; }
+.q-keep { font-size: 12px; margin: 2px 0 6px; padding: 4px 6px; border-left: 2px solid #c8f060; background: rgba(60,80,20,.2); }
+@media (max-width: 600px) { .kp-title { padding-right: 0; } .kp-row > .btn { position: static; margin-top: 4px; } .kp-tab { padding: 4px 6px; font-size: 11px; } }

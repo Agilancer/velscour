@@ -1,5 +1,6 @@
 // Quest Log (HUD button "Quest", key Q): this depth's objectives, the road to Velscour, boss rooms conquered.
 import { G } from '../state.js';
+import { keepLogLine } from '../game/keep.js';
 import { el, escapeHtml, fmtInt } from '../core/util.js';
 import { UI } from './ui.js';
 import { BIOME_BY_ID } from '../data/biomes.js';
@@ -20,6 +21,8 @@ export function renderQuest(body) {
   if (!c) return;
   body.innerHTML = '';
   let h = '<div class="q-sec"><h3>Current Quest</h3>';
+  const kl = keepLogLine(c); // Tessariel's Keep: rewards waiting, the Saga in hand (game/keep.js)
+  if (kl) h += `<div class="q-keep">${kl}</div>`;
   if (!w || w.kind === 'town') {
     const b = BIOME_BY_ID[c.depth === FINAL_DEPTH ? 'throne' : c.nextBiome];
     h += `<div class="q-title">Descend to Depth ${c.depth}</div>`;
@@ -35,6 +38,7 @@ export function renderQuest(body) {
     else if (b?.cave) h += step(false, "The Depth's Edge Caverns lie beyond: passages and caverns, a lake under a waterfall, and a long climb to the top of the falls.");
     else if (b?.overworld) h += step(false, 'A Forsaken Wilds scenario shrine guards the way forward.');
     h += step(false, `Or take the <b style="color:#c080ff">purple portal</b> into <b>THE ETERNAL BREACH</b>: Floor ${((c.breach && c.breach.best) || 0) + 1} awaits (each floor as deadly as ten depths).`);
+    h += step(false, `The <b style="color:#c8f060">green-gold portal</b> leads to <b>Tessariel's Keep</b>: Sagas, Bounties and Deeds from the Castellan, Embers for armour, your other heroes, your trophies.`);
   } else {
     const boss = w.boss, slain = !!(boss && boss.dead);
     const raid = boss && boss.raid;

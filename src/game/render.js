@@ -31,6 +31,10 @@ import { addLight } from '../gfx/vfx.js';
 import { drawTerrain, drawColumn, occludersFor, occludersOfRect, occluderObj, clipAdd, hiddenBehind, standKey, hopZ, drawSky, terrainShade, HS } from '../gfx/terrain.js';
 import { hopArc } from './alpine.js';
 import { drawRiftgate } from '../gfx/riftgate.js';
+import { drawKeepGate } from '../gfx/keepgate.js';
+import { drawLightShafts } from '../gfx/keepart.js';
+import { drawKeepHero } from './keepfolk.js';
+import { drawKeepNpc } from './keepgame.js';
 import { fpBegin, fpClip, fpDepth, fpProject, fpScale, fp, PX, EYE } from '../gfx/firstperson.js';
 
 let lightCanvas = null, glowCanvas = null, vignette = null, vigKey = '';
@@ -396,6 +400,7 @@ function drawPortal(ctx, p) {
   if (p.skygate) return drawSkyGate(ctx, p);
   if (p.seagate) return; // the Pirate Seas: the Dawnwake's bell-tower door is the portal, in three.js (gfx/seabattle3d.js)
   if (p.riftgate) return drawRiftgate(ctx, p);
+  if (p.keepGate) return drawKeepGate(ctx, p);
   if (p.type === 'objective' && G.cine && G.world && G.world.seaRun) return; // the Pirate Seas: no gameplay marks in a cut scene
   if (p.type === 'shrine' || p.type === 'objective') return drawScenarioGlyph(ctx, p);
   const x = isoX(p.x, p.y), y = isoY(p.x, p.y);
@@ -438,6 +443,8 @@ function drawCorpse(ctx, c) {
 }
 
 function drawNpc(ctx, n) {
+  if (n.keepHero) { drawKeepHero(ctx, n, isoX(n.x, n.y), isoY(n.x, n.y), G.time); return; }   // your other heroes in Tessariel's Keep
+  if ((n.keepFlame || n.keepMarker) && drawKeepNpc(ctx, n, isoX(n.x, n.y), isoY(n.x, n.y), G.time)) return;
   if (n.altar) { // the Altar of Heresy (docs/ENDGAME.md): a dark obelisk, lit in Velscour's red once the Endgame is open, a skull glow while a Heresy is on
     const x = isoX(n.x, n.y), y = isoY(n.x, n.y), open = endgameUnlocked(), lit = open && heresyRankOf() > 0;
     if (lit) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3 + Math.sin(G.time * 2.5) * 0.12; ctx.drawImage(glowSprite('#ff3020'), x - 48, y - 70, 96, 80); ctx.restore(); }
@@ -1009,6 +1016,7 @@ export function renderWorld(ctx, world) {
     ctx.globalAlpha = 1;
   }
   if (world.tower) world.tower.front(ctx); // the tower's railings and chandeliers over whoever stands behind them
+  if (world.keep) drawLightShafts(ctx, world, G.time); // Tessariel's Keep: the stained glass's light down into the hall
   if (G.debugWalk) {
     // test shots only: blocked tiles red and the tiles a test points at (G.debugMarks) cyan, to check art against collision
     const tile = (tx, ty, c) => {
@@ -1460,11 +1468,12 @@ function drawOverheadNames(ctx, world) {
   if (hero) for (const n of world.npcs) if (!n.vendor && !n.stash && !n.altar && !n.hidden && n.sbox) { const q = Math.hypot(hero.x - n.x, hero.y - n.y); if (q < nd) { nd = q; nearest = n; } }
   for (const n of world.npcs) {
     if (!n.sbox || n.hidden) continue;
-    if (!n.vendor && !n.stash && !n.altar && (n !== nearest || n.talkT > 0)) continue;
+    if (!n.vendor && !n.stash && !n.altar && !n.keepCastellan && (n !== nearest || n.talkT > 0)) continue;
     const x = (n.sbox[0] + n.sbox[2]) / 2;
     const [sx, sy] = camera.toScreen(x, n.sbox[1] - 10);
     const label = n.vendor ? n.vendor.name : n.name;
-    if (label) drawLabel(ctx, label, sx * d, sy * d, nameFont, n.altar ? '#ff8060' : n.vendor || n.stash ? '#ffe090' : '#c8c0b0', 3 * d);
+    if (label) drawLabel(ctx, label, sx * d, sy * d, nameFont, n.altar ? '#ff8060' : n.keepCastellan || n.keepFlame ? '#d8f080' : n.keepHero ? '#ffe9a8' : n.vendor || n.stash ? '#ffe090' : '#c8c0b0', 3 * d);
+    if (n.keepCastellan && n.title) drawLabel(ctx, 'Keeper of the Flame', sx * d, (sy + 12) * d, `${Math.round(10 * d)}px "Alegreya Sans", sans-serif`, '#b0b080', 0);
     if (n.vendor && n.vendor.title) drawLabel(ctx, n.vendor.title, sx * d, (sy + 12) * d, `${Math.round(10 * d)}px "Alegreya Sans", sans-serif`, '#b0a080', 0);
   }
   // portal labels

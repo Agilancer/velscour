@@ -263,7 +263,11 @@ export function drawColumn(ctx, world, i, floorEntry, dress = null, over = false
   if (c3) {
     const gx = (x - y) * HW, gy = (x + y) * HH, b = c3.base.get(i), o = c3.over.get(i);
     if (over) { if (o !== undefined) drawPiece(ctx, o, gx, gy); return; }
-    if (map.c3only) { if (b !== undefined) drawPiece(ctx, b, gx, gy); return; }   // all baked (the Sky Battle's ship): no ground of its own
+    if (map.c3only) {   // all baked (the Sky Battle's ship, Tessariel's Keep): no ground of its own
+      if (b !== undefined) drawPiece(ctx, b, gx, gy);
+      if (map.dressTile && !map.c3struct[i]) map.dressTile(ctx, i);   // the keep's rugs, laid into its floor
+      return;
+    }
     if (map.c3struct[i]) {
       if (map.c3cover?.[i]) {   // a tunnel or doorway: its floor first
         const f = floorEntry(world, map.v[i]);
