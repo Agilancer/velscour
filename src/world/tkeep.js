@@ -66,7 +66,7 @@ export function tkeepLayout() {
   // corner towers: the great tower behind the far corner, drums at the ends of the back walls (tiles under a drum's
   // round are blocked; none reaches the balcony's walk but one corner tile of the east walk)
   const drum = (cx, cy, r, lv) => rect(Math.floor(cx - r), Math.floor(cy - r), Math.floor(cx + r), Math.floor(cy + r), (x, y, i) => {
-    if (Math.hypot(x + 0.5 - cx, y + 0.5 - cy) > r + 0.45) return;
+    if (Math.hypot(Math.max(Math.abs(x + 0.5 - cx) - 0.5, 0), Math.max(Math.abs(y + 0.5 - cy) - 0.5, 0)) > r + 0.2) return;   // every tile its round touches (bands and merlons stand proud of it), or a strip of it has no piece to draw
     hgt[i] = lv; kind[i] = KK.tower; solid[i] = 1; struct[i] = 1; t[i] = 1;
   });
   drum(OW - 0.8, OW - 0.8, 2.5, WALL + 24);

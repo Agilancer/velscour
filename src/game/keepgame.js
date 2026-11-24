@@ -118,7 +118,7 @@ function keepLights(world, dt) {
   world.flameSurge = Math.max(0, (world.flameSurge || 0) - dt * 0.45);
   addLight(A.flame[0], A.flame[1], 6.5 + Math.sin(t * 3.1) * 0.4 + (world.flameSurge || 0) * 3, 1, 60, '#7dff5a', true);
   // the upper walls and their wall-heads, out of the dark
-  for (let s = TK.F0 + 1; s <= TK.F1; s += 5.5) for (const z of [190, 320]) { addLight(s, TK.OW + 2.2, 6, 0.6, z, '#ffdcb0', true); addLight(TK.OW + 2.2, s, 6, 0.6, z, '#ffdcb0', true); }
+  for (let s = TK.F0 + 1; s <= TK.F1; s += 5.5) { addLight(s, TK.OW + 2.2, 6, 0.4, 250, null, true); addLight(TK.OW + 2.2, s, 6, 0.4, 250, null, true); }
   for (const [x, y] of A.braziers) addLight(x, y, 3.2 + Math.sin(t * 7 + x) * 0.2, 0.85, 22, '#ffb060');
   for (const [x, y, z] of A.chandeliers) { addLight(x, y, 4.6, 0.6, 20, '#ffd090'); addLight(x, y, 2.4, 0.8, z * 4 + 6, '#ffd090'); }
   for (const w of A.windows) addLight(w.axis === 'x' ? w.a : w.c + 2.2, w.axis === 'x' ? w.c + 2.2 : w.a, w.wide ? 4.6 : 3.2, 0.6, (w.z0 + 6) * 4, null);

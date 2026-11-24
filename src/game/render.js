@@ -1261,7 +1261,7 @@ function drawWallBases(oc, map, camT, tx0, ty0, tx1, ty1) {
 /** Shading on the perimeter of the map so the world fades seamlessly into the black void. */
 function drawMapEdgeFade(ctx, world, camT, tx0, ty0, tx1, ty1) {
   const map = world.map;
-  if (!map || world.tower || world.cave || world.sky || map.voidFace) return;
+  if (!map || world.tower || world.cave || world.sky || world.keep || map.voidFace) return;   // (Tessariel's Keep: its back walls stand where the fade would fall)
   if (world.kind === 'dungeon' && !world.biome?.overworld) return;
   const W = map.w, H = map.h;
   const F = 6; // fade width in tiles

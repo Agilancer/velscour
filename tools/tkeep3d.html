@@ -187,7 +187,7 @@ function build(M) {
       const { axis, a0, a1, c, dir, z0, z1 } = p;
       if (p.course) F(axis, c, dir, a0, a1, -0.02, 0.14, p.course, p.course + 1, 'lime');
       if (p.course2) F(axis, c, dir, a0, a1, -0.02, 0.18, p.course2, p.course2 + 1.4, 'lime');
-      if (p.pilasters) for (let s = (p.pilasterOff ?? a0); s <= a1; s += p.pilasters) if (s > a0 + 0.4) F(axis, c, dir, s - 0.35, s + 0.35, -0.02, 0.3, z0, z1 - 8, 'stone2');
+      if (p.pilasters) for (let s = (p.pilasterOff ?? a0); s <= a1; s += p.pilasters) if (s > a0 + 0.4) F(axis, c, dir, s - 0.35, s + 0.35, -0.02, 0.3, z0, z1 - 6, 'stone2');   // up under the cornice, so no lit top shows
       if (p.slits) for (let s = Math.ceil(a0) + 1; s < a1 - 0.5; s += p.slits) F(axis, c, dir, s - 0.06, s + 0.06, -0.02, 0.02, z0 + 6, z0 + 13, 'glass');
     } else if (p.t === 'window') {
       // a tall lancet: a moulded frame proud of the face, the dark opening the game lays its stained glass in, a sill
@@ -517,7 +517,18 @@ async function trophySheet(models = '../tools/tests/out/tkeep_src/') {
   }
   return out;
 }
-window.TKEEP = { bakeAll, preview, trophySheet };
+/** Debugging the cut: which tile a world point (tiles, level) is tagged to, and its colour, from the game camera. */
+async function probe(x, y, z) {
+  if (!renderer) setup();
+  const M = await materials(), g = build(M);
+  scene.add(g);
+  const sx = (x - y) * 32, sy = (x + y) * 16 - z * 4, cam = isoCamera(sx - 8, sx + 8, -(sy - 8), -(sy + 8));
+  aimSun(cam);
+  const tag = renderPass(g, cam, 16, 16, true), col = renderPass(g, cam, 16, 16, false), k = (8 * 16 + 8) * 4;
+  scene.remove(g);
+  return { tag: [tag[k], tag[k + 1], tag[k + 2], tag[k + 3]], col: [col[k], col[k + 1], col[k + 2], col[k + 3]] };
+}
+window.TKEEP = { bakeAll, preview, trophySheet, probe };
 </script>
 </body>
 </html>

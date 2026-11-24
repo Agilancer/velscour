@@ -27,16 +27,22 @@ One description, shared by the game and the bake (like the Castle's `world/castl
   camera looks from the south-east, so the north and west walls are seen face on) with **ten tall lancet windows** (the
   middle one of the north wall is the great double window over the dais), string courses, pilasters and a crenellated
   head; a **great tower** behind the far corner and **two drums** at the ends of the back walls;
-- **the balcony**: a walk two tiles wide on all four sides, **24 levels up** (a hero and a half), a moulded **balustrade**
-  on its rail (blocked tiles), the back balconies' hall faces a **blind arcade** of round arches with gilt keystones; the
-  front (south and east) sides are the balcony on the keep's own wall seen in section, with a low crenellated parapet, so
-  the hall is seen over them;
+- **the balcony**: a walk two tiles wide on all four sides, a moulded **balustrade** on its rail (blocked tiles). The
+  back (north and west) balconies are **24 levels up** (a hero and a half), their hall faces a **blind arcade** of round
+  arches with gilt keystones. The front (south and east) sides are **terraces half as high (12 levels)**, so the hall's
+  floor is seen over them; **three steps at the north-east and south-west corners** join them to the back balconies
+  (`TK.BALF`, `TK.FS`); their outer face is the keep's own wall seen in section, a deep blind arcade going down into
+  the dark, under a low crenellated parapet;
 - **two grand stairs** flanking **the Castellan's dais** (one step up, gilt nosing), rising 3 levels a tile to gaps in
   the north rail, each with a stepped string wall and a gilt finial;
-- **the Sacred Flame's basin** in the middle (three round steps, a fluted marble bowl, a gilt rim), **four Elder plinths**
-  round it, **six columns** in two colonnades in the hall's back half (the front half stays open, so nothing stands
-  between the camera and the Flame), **sixteen trophy pedestals** (eight on the floor along the sides, eight on the back
+- **the Sacred Flame's basin** in the middle (three round steps, a fluted marble bowl, a gilt rim) on a **floor
+  medallion** of limestone and gilt rings, **four Elder plinths** round it, **six columns** in two colonnades (at y 16,
+  20, 24: clear of the grand stairs' sight lines and of the line from the camera to the Flame), bands of limestone in
+  the flagstones along the colonnades and across the aisles, **four chandeliers** (baked as a sprite, hung by the game
+  off the diagonal through the Flame, their twelve candles lit live), **sixteen trophy pedestals** (eight on the floor along the sides, eight on the back
   balconies against the wall).
+- The back walls show to their battlements: `drawMapEdgeFade` (the outdoor maps' fade to black at the map's edge) is
+  off in the keep. It used to paint over everything above the windows' sills, so the wall-heads were never seen.
 - The game reads per-tile heights and flags (`map.hgt`, blocked masonry, `c3struct`), every tile draws its baked piece
   (`map.c3only`), the Castle's tall occlusion keeps whoever walks behind a column, a pedestal or the rail visible
   (`map.tallOcclusion`). `src/world/keepworld.js` builds the map and the props.
@@ -82,6 +88,15 @@ any other prop).
   benches by the columns, the war map table, the Chronicle's lectern, a reliquary and a knight's memorial on the north
   balcony, the Vault's treasury chest, a shield rack, braziers, candelabra and banner stands along the front balconies.
 - A new hero's keep: the four T banners in turn, two windows, the blue runners and the gilded dais.
+- **Fire** (`drawFire` in keepart.js): the Sacred Flame is ~105 px of layered tongues (emerald, bright green, a gold-white
+  heart), sparks curling off it; it **grows with the hero's Renown**, burns higher while Kindled, and leaps (`world.flameSurge`)
+  when the hero arrives, kneels or is paid. The braziers burn, the candelabra and chandeliers carry candle flames (`fx`
+  on a prop: drawn right after its sprite, so the depth sort holds).
+- **The glass is re-coloured at load** (`keepGlass`): the painted hosts' blood reds become emerald, the violets azure.
+  Nothing in the Fiend's red hangs in the hall.
+- **The Elders not yet carved** show as a pale shade on their plinths (`ghostSprite`).
+- **Click a banner or a window** in the hall: it lights up under the mouse, names itself, and opens Furnish on that
+  place (`decorSlot` markers in keepgame.js).
 
 ## The people (`src/game/keepfolk.js`, `src/data/keeplines.js`)
 - **Your other heroes**: every other class's hero on this browser (`heroesByClass`), up to twelve, drawn in **the gear
@@ -89,10 +104,13 @@ any other prop).
   balcony (they take the stairs), stop at the Flame, the trophies, the dragons, the windows and the Chronicle and say
   something about it; two of them now and then **walk over to each other and talk** (24 short scripts that use their own
   levels, depths and kills: *"How deep did you get, Vael?" "Depth 140. You?"*); whoever is near you **greets you** with
-  your own numbers or a line of their class's (19 classes). Click one: a line and their card in the log. A hero on an
-  expedition is away from the hall.
+  your own numbers, a line that fits what is true now (`GREETS_WHEN`: rewards waiting, Kindled, who is deeper, the Fiend
+  dead) or one of their class's six (19 classes); every speaker says each of their lines once before any repeats
+  (`next`). A **plate** under each name gives class and level. Click one: a word, and their **card** (level, depth, kills,
+  Breach, Rift, best times) with *A word* / *Send on an errand* (the War Table). A hero on an expedition is away.
 - **Castellan Elsabet of the Ivory Mantle**, Keeper of the Flame (the Ivory Mantle knight's painted sheet), on the dais:
-  click her for the panel. She speaks up when you're near, and tells you when rewards are waiting.
+  click her for the panel. She welcomes you when you step in, speaks up when you're near, and wears **a gold "!"** when
+  rewards wait and **a green "?"** when a Saga can be taken up (`castellanMark`; her dot pulses on the minimap).
 - **The keep's folk** at their posts, now and then a short round: Brother Cael by the Flame, Ser Cassius in the hall,
   Kestrel on the balcony, Mother Agatha at the Chronicle, Halvard by the gate.
 
@@ -174,31 +192,34 @@ and Kindled in `recompute`), `breach.js`, `rifts.js`, `inventory.js`, `vendor.js
   stairs to every balcony, every panel tab, a chapter paid, a trade, the Vault, Furnish shown at once, Kindled, an
   expedition, auto-play walking out. Shots in `tools/tests/out/keep_*.png`.
 
-## The critics (round 1 of 4)
+## The critics (round 1 of 4) and the polish that followed
 Three critics were asked for: an environment/level artist, a quest and systems designer, a hub and narrative UX
 designer. Round 1: **art 6/10, reject**; **hub/UX 6/10, reject**; the systems critic was cut off by the session's usage
-limit before reporting. The user then asked to wrap up, so no second round ran. Fixed after round 1: clicking one of the
-keep's folk threw (they had no `use`; now each has lines of their own), Velscour's skull is hidden in the keep (T never
-near V), the arrival point and town portal moved out of the front balcony's shadow, the front balconies' columns go
-see-through over the hero (`map.cutFront`, render.js), the chests moved out of the Waygate's corner, the front walls got a
-blind arcade, greeting lines that misfired with real numbers rewritten.
+limit before reporting. Fixed after round 1: clicking one of the keep's folk threw, Velscour's skull is hidden in the
+keep, the arrival point moved out of the front balcony's shadow, the front balconies go see-through over the hero
+(`map.cutFront`), the chests moved out of the Waygate's corner, the front walls got a blind arcade.
 
-**Still open from round 1 (next steps):**
-- Art: lower the front (south/east) balconies to a terrace ~12 levels up joined by short corner stairs (the 24-level front
-  hides about six rows of floor behind it); light the upper walls and wall-heads (they fall into the dark at `dark 0.36`);
-  re-colour the stained glass toward ivory, gold and emerald (its blood-red lower thirds read as Velscour's); a Flame 2-3x
-  taller with a gold core and less bloom; Elder Dragons ~3.5 tiles, trophies ~1.5 tiles with a ghost silhouette and plaque
-  on empty pedestals and plinths; lighter balcony walks and mid-value runners (green-gold); move the columns at y 12 off the
-  stairs' sight lines (y >= 16 for x 13, >= 15 for x 28); chandeliers drawn, not only lit.
-- Hub/UX: a gold "!" over the Castellan (and a minimap mark) when rewards wait or a Saga can be taken; fold the flood of
-  old deeds on a first visit into one log line; a name plate on each companion ("Vael · Death Knight 72"); `when`
-  conditions on stat lines, a shuffle-bag per speaker, 6-8 lines per class, class-pair chats, lines about real events;
-  click a companion for a small menu (talk, send on an errand); a compact panel header on phones and grouped tabs
-  (Quests / Rewards / Hall), each station opening only its own page; click banners and windows in the world to Furnish
-  them; a confirm and a comparison before an Ember trade; permanent faint labels on the stations; keep the keep's folk out
-  of the town's people pool; a training dummy and a coffer shared between heroes.
+**The polish session (November 24, 2026, "make it look and feel amazing")** worked through that list in four passes:
+1. *The hall, re-baked*: front terraces at 12 levels with corner stairs; columns moved; the floor medallion and
+   bands; chandeliers; trophies and Elders larger (dragons 3.4 tiles, shields 1.5, staves 2.1); **every shield had been
+   baked showing its black back** (yaw 180 now); vesperwrithe's `skull_gems` model has no usable skin, so the second
+   skull is `skull_03` gilded ("The Gilded Skull"); the new Flame; burning braziers and candles; the Elders' shades; glass
+   in emerald and azure; brighter runners with a gilt border.
+2. *People and feel*: name plates, the hero card, fitting greetings, six lines a class, shuffle bags, the Castellan's
+   welcome and mark, faint names on the stations, the minimap (Flame, Castellan, heroes; not every pedestal), the arrival
+   flourish, the ceremony when rewards are paid (Embers stream, the Flame leaps, each new trophy unveiled), a flood of
+   old deeds folded into one log line (`pend` in `checkProgress`), ambience `tkeep`.
+3. *The panel*: tabs grouped (Quests / Rewards / The Hall) with badges, chapter pips and each chapter's pay, the Ember
+   trade shows what is worn in each slot, marks an upgrade and asks before it forges, click-to-Furnish in the hall, a
+   compact header on phones.
+4. *The walls*: the map edge fade had hidden the upper walls and battlements since the first version (see The hall);
+   the drums' edge tiles had no piece; the wall lights turned down once the walls showed.
+
+**Still open:** a training dummy and a coffer shared between heroes; class-pair chats and lines about the last thing
+that happened; companions still have no walk cycle (one image, bobbing); permanent station pages per station (each
+station already opens its own tab); the keep's folk are painted townsfolk (no art of their own); real phones untested.
 
 ## Open issues
-- Real phones: the hall's page decodes to ~63 MB (the Castle's are 30-87 MB); untested on iOS Safari.
+- Real phones: the hall's page (4096 x 3926) decodes to ~64 MB (the Castle's are 30-87 MB); untested on iOS Safari.
 - The companions' look is their saved gear's preview, one image (no walk cycle, like the visiting adventurers in town).
 - Expeditions and the Flame run on real time (`Date.now()`); a changed clock moves them.
