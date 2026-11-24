@@ -226,10 +226,28 @@ function checkChallenges(c, m) {
 /** Everything a counter might have finished (or everything, with no m: arriving at the keep, a new board). */
 export function checkProgress(c = G.char, m = null) {
   if (!c) return;
-  const k = keepState(c);
+  const k = keepState(c), outer = !pend;
+  if (outer) pend = [];
   for (const s of SAGAS) { const st = k.sagas[s.id]; if (st && st.ch < s.ch.length && (!m || s.ch[st.ch].m === m)) checkSaga(c, s); }
   checkBounties(c, m);
   checkChallenges(c, m);
+  if (!outer) return;
+  // what this check finished: a line each, or one line for a flood (a veteran's first visit finishes dozens at once)
+  const list = pend, w = G.world; pend = null;
+  if (!list.length || !G.ui || !w || w.keepTest) return;
+  const where = w.keep ? 'Claim from the Castellan.' : `The Castellan holds your reward${list.length > 1 ? 's' : ''} in <b style="color:${EMBER_COLOR}">Tessariel's Keep</b>.`;
+  const tag = (r) => `<b style="color:${r.color || EMBER_COLOR}">${r.kind === 'challenge' ? 'Deed done' : r.kind === 'bounty' ? 'Bounty done' : 'Saga'}:</b> ${escapeHtml(r.name)}`;
+  if (list.length <= 2) for (const r of list) G.ui.log(`${tag(r)}. ${where}`, '#e8f0c0');
+  else G.ui.log(`<b style="color:${EMBER_COLOR}">${list.length} deeds done:</b> ${list.slice(0, 2).map((r) => escapeHtml(r.name)).join(', ')} and ${list.length - 2} more. ${where}`, '#e8f0c0');
+  if (G.player) sfx('levelup', 0.25);
+}
+let pend = null;   // rewards owed during one checkProgress
+/** What the Castellan has for the hero: 'claim' (rewards wait), 'new' (a Saga can be taken up), or null. */
+export function castellanMark(c = G.char) {
+  const k = c && keepState(c);
+  if (!k) return null;
+  if (k.owed.length) return 'claim';
+  return sagaList(c).some((s) => s.open && !s.taken) ? 'new' : null;
 }
 
 // ------------------------------------------------------------------ rewards owed (claimed at the Castellan)
@@ -237,6 +255,7 @@ function owe(c, r) {
   const k = keepState(c);
   if (k.owed.some((o) => o.id === r.id)) return;
   k.owed.push(r);
+  if (pend) { pend.push(r); return; }
   const w = G.world;
   if (G.ui && w && !w.keepTest) {
     const where = w.keep ? 'Claim it from the Castellan.' : `The Castellan holds your reward in <b style="color:${EMBER_COLOR}">Tessariel's Keep</b>.`;

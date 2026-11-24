@@ -12,7 +12,7 @@ import { biomeTileSet } from '../core/assets.js';
 import { TOWN_BIOME } from '../data/biomes.js';
 import { generateKeep, keepProps, keepDressTile } from '../world/keepworld.js';
 import { loadKeepArt, drawSacredFlame } from '../gfx/keepart.js';
-import { startKeepFolk } from './keepfolk.js';
+import { startKeepFolk, keepWelcome } from './keepfolk.js';
 import { keepState, checkProgress, kindle, kindled, kindleReadyIn } from './keep.js';
 import { KINDLE, TROPHY_BY_ID, KEEP_NAME, EMBER_COLOR, CASTELLAN, renownRank } from '../data/keep.js';
 import { CX, CY, TK } from '../world/tkeep.js';
@@ -64,6 +64,17 @@ export async function buildKeep(game) {
   ];
   checkProgress(c);
   return { world, start: A.start };
+}
+
+/** The hero has stepped out of the portal: the Flame leaps, light rings out from where they stand, the hall looks up. */
+export function keepArrive(world) {
+  const p = world.player, A = world.anchors;
+  if (!p) return;
+  world.flameSurge = 0.7;
+  addEffect(new Ring(p.x, p.y, 0.2, 2.6, 0.9, '#c8f060', 3));
+  sparkle(p.x, p.y, 30, '#e8ffb0', 22, 0.9);
+  addEffect(new Ring(A.flame[0], A.flame[1], 0.6, 5, 1.4, '#9cff5a', 2));
+  keepWelcome(world);
 }
 
 /** The Waygate: down to the hero's depth, or the Breach, or the Rift, without the walk through town. */

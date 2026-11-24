@@ -418,6 +418,7 @@ const AMB = {
   pirate_seas_fog: ['sea_rain', 'sea'], pirate_seas_blood: ['sea_storm', 'sea'], pirate_seas_day: ['sea', 'beach'],
   skyship_sunset: ['beach', 'sea'], skyship_gale: ['sea_storm', 'beach_storm'], skyship_blizzard: ['cave_storm', 'sea_storm'], skyship_ash: ['torch_loop', 'cave_storm'],
   town: ['forest_night', 'forest_night_rain', 'forest_day'],
+  tkeep: ['inside_night', 'torch_loop', 'inside_day'],   // Tessariel's Keep: a still hall, its fires
   catacombs: ['inside_night', 'cave'], frozen: ['cave_storm', 'forest_night_storm'],
   ice_temple: ['cave_storm', 'inside_night_storm', 'cave'], molten: ['cave', 'torch_loop'],
   fungal: ['cave_rain', 'cave'], sunken: ['sea', 'cave_rain', 'beach_rain'], blood: ['inside_night_rain', 'inside_night'],

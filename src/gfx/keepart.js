@@ -277,7 +277,7 @@ export function ghostSprite(art) {
   if (A.cache.has(key)) return A.cache.get(key);
   const s = r.spr, c = makeCanvas(s.w, s.h), x = c.getContext('2d');
   x.drawImage(s.img, s.sx, s.sy, s.w, s.h, 0, 0, s.w, s.h);
-  x.globalCompositeOperation = 'source-in'; x.fillStyle = '#9fb4c8'; x.fillRect(0, 0, s.w, s.h);
+  x.globalCompositeOperation = 'source-in'; x.fillStyle = '#dfe8f4'; x.fillRect(0, 0, s.w, s.h);
   const out = { spr: { img: c, sx: 0, sy: 0, w: s.w, h: s.h, ox: s.ox, oy: s.oy }, k: r.k };
   A.cache.set(key, out);
   return out;

@@ -62,7 +62,7 @@ export function keepProps(world, decor, have) {
   for (const p of A.plinths) {
     const T = Object.values(TROPHY_BY_ID).find((t) => t.plinth === p.corner);
     if (T && have.trophy.includes(T.id)) add(p.x, p.y, trophySprite(T.art), { trophy: T.id });
-    else if (T) add(p.x, p.y, ghostSprite(T.art), { ghost: T.id, alpha: 0.2 });   // not yet carved: its shade waits on the plinth
+    else if (T) add(p.x, p.y, ghostSprite(T.art), { ghost: T.id, alpha: 0.3 });   // not yet carved: its shade waits on the plinth
   }
   // the chandeliers over the hall, their candles lit
   const ch = chandelierSprite();

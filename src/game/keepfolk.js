@@ -10,10 +10,11 @@ import { CLASSES } from '../data/classes.js';
 import { heroesByClass } from './save.js';
 import { drawTownSpeech } from './townspeech.js';
 import { drawRim, RIM } from './creature.js';
-import { GREETS, MUSINGS, CHATS, CLASS_LINES, CASTELLAN_LINES, CASTELLAN_OWED, FOLK_LINES } from '../data/keeplines.js';
+import { GREETS, GREETS_WHEN, MUSINGS, CHATS, CLASS_LINES, CASTELLAN_LINES, CASTELLAN_OWED, CASTELLAN_WELCOME, CASTELLAN_NEW, FOLK_LINES } from '../data/keeplines.js';
+import { UI } from '../ui/ui.js';
 import { CASTELLAN, KEEP_FOLK } from '../data/keep.js';
 import { keepSpots, TK, CX, CY } from '../world/tkeep.js';
-import { keepState } from './keep.js';
+import { keepState, castellanMark } from './keep.js';
 
 const SPEED = 1.35, TALK = 3.6;
 /** Fill a line's {fields} for speaker a (a hero record), listener b (or none), and the hero you play. */
@@ -24,6 +25,19 @@ function fill(line, a, b) {
     you: c.name || 'hero', ycls: cls(c.classId), ylvl: c.level || 1, ydepth: c.deepest || 0,
     other: b?.name, ocls: cls(b?.cls), olvl: b?.lvl, odepth: b?.deep,
   }[k] ?? m));
+}
+/** The next of `list` for speaker n: every line once, in a shuffled order, before any repeats. */
+function next(n, key, list) {
+  const bags = (n.bags ||= {});
+  let b = bags[key];
+  if (!b || !b.length) { b = bags[key] = list.map((_, i) => i); for (let i = b.length - 1; i > 0; i--) { const j = randi(0, i); [b[i], b[j]] = [b[j], b[i]]; } }
+  return list[b.pop()];
+}
+/** A greeting from companion g: now and then one that fits what is true (rewards waiting, Kindled, who is deeper). */
+function greeting(g) {
+  const c = G.char, k = keepState(c);
+  if (chance(0.45)) { const fit = GREETS_WHEN.filter(([test]) => { try { return test(c, k, g); } catch (e) { return false; } }).map((q) => q[1]); if (fit.length) return next(g, 'when', fit); }
+  return chance(0.3) && CLASS_LINES[g.cls] ? next(g, 'cls', CLASS_LINES[g.cls]) : next(g, 'greet', GREETS);
 }
 export function say(n, text, t = TALK, lines = 2) { n.talkText = text; n.talkT = t; n.talkAge = 0; n.bubbleLines = lines; }
 
@@ -84,8 +98,9 @@ export function startKeepFolk(world, A) {
     cas.lineT = (cas.lineT ?? rand(8, 14)) - dt;
     const p = world.player;
     if (cas.lineT <= 0 && p && near(cas, p, 7)) {
-      const owed = keepState()?.owed?.length;
-      say(cas, fill(owed ? pick(CASTELLAN_OWED) : pick(CASTELLAN_LINES), null, null), 4.2, 3);
+      const mark = castellanMark();
+      say(cas, fill(!cas.welcomed ? pick(CASTELLAN_WELCOME) : mark === 'claim' ? next(cas, 'owed', CASTELLAN_OWED) : mark === 'new' && chance(0.6) ? next(cas, 'new', CASTELLAN_NEW) : next(cas, 'line', CASTELLAN_LINES), null, null), 4.2, 3);
+      cas.welcomed = true;
       cas.lineT = rand(16, 26);
     }
     if (p) face(cas, p);
@@ -98,7 +113,7 @@ export function startKeepFolk(world, A) {
   for (const [sprite, name, role, where] of KEEP_FOLK) {
     const [x, y] = post[where] || A.start;
     const f = base({ keepFolk: true, name, role, townsfolkSpriteId: sprite, x, y, home: [x, y], idleH: 172 });
-    f.use = () => { face(f, world.player || f); say(f, pick(FOLK_LINES[name] || CASTELLAN_LINES), TALK + 0.6, 3); };   // a word, then the Castellan's book
+    f.use = () => { face(f, world.player || f); say(f, next(f, 'line', FOLK_LINES[name] || CASTELLAN_LINES), TALK + 0.6, 3); };   // a word, then the Castellan's book
     f.update = (dt) => {
       upd(f)(dt);
       if (step(world, f, dt)) return;
@@ -119,7 +134,7 @@ export function startKeepFolk(world, A) {
   const list = companionsOf().filter((h) => !away.has(h.cls)).slice(0, 12);
   list.forEach((h, k) => {
     const s = spots[(k * 97 + 13) % spots.length] || A.start;
-    const n = base({ keepHero: true, ...h, x: s[0], y: s[1], img: null, state: 'idle', waitT: rand(1, 6), speed: SPEED * rand(0.9, 1.1) });
+    const n = base({ keepHero: true, ...h, plate: `${CLASSES[h.cls]?.name || h.cls} ${h.lvl}`, x: s[0], y: s[1], img: null, state: 'idle', waitT: rand(1, 6), speed: SPEED * rand(0.9, 1.1) });
     void savedGearPreview(h.cls, h.save.equip || {}).then((img) => { n.img = img || null; }).catch(() => {});
     n.update = (dt) => tickHero(d, n, dt);
     n.use = () => heroCard(n);
@@ -134,7 +149,7 @@ function tickHero(d, n, dt) {
   const w = d.world;
   n.talkT = Math.max(0, n.talkT - dt); n.talkAge += dt;
   if (n.state === 'walk') {
-    if (!step(w, n, dt)) { n.state = 'idle'; n.walking = false; n.waitT = rand(3, 8); if (n.at) { if (n.at.look) face(n, { x: n.at.look[0], y: n.at.look[1] }); if (chance(0.55)) say(n, fill(pick(MUSINGS[n.at.about] || MUSINGS.hall), n)); } }
+    if (!step(w, n, dt)) { n.state = 'idle'; n.walking = false; n.waitT = rand(3, 8); if (n.at) { if (n.at.look) face(n, { x: n.at.look[0], y: n.at.look[1] }); if (chance(0.55)) say(n, fill(next(n, n.at.about, MUSINGS[n.at.about] || MUSINGS.hall), n)); } }
     return;
   }
   n.walking = false; n.animT += dt * 0.6;
@@ -158,7 +173,7 @@ function director(d, dt, interest) {
   if (d.chatT <= 0 && free.length >= 2 && !d.chat) {
     const a = pick(free), b = free.filter((n) => n !== a).sort((u, v) => Math.hypot(u.x - a.x, u.y - a.y) - Math.hypot(v.x - a.x, v.y - a.y))[0];
     const [sx, sy] = w.map.randomNear(a.x, a.y, 1.4) || [a.x + 1, a.y];
-    if (b && walkTo(w, b, sx, sy)) { b.state = 'walk'; b.at = null; a.state = 'chat'; b.partner = a; a.partner = b; d.chat = { a, b, script: pick(CHATS), k: 0, t: 0, ready: false }; }
+    if (b && walkTo(w, b, sx, sy)) { b.state = 'walk'; b.at = null; a.state = 'chat'; b.partner = a; a.partner = b; d.chat = { a, b, script: next(d, 'chat', CHATS), k: 0, t: 0, ready: false }; }
     d.chatT = rand(7, 14);
   }
   if (d.chat) {
@@ -185,8 +200,7 @@ function director(d, dt, interest) {
     const g = H.find((n) => n.state !== 'chat' && near(n, p, 2.6) && (n.greeted || 0) < w.time - 40);
     if (g) {
       g.greeted = w.time; face(g, p);
-      const line = chance(0.25) && CLASS_LINES[g.cls] ? pick(CLASS_LINES[g.cls]) : pick(GREETS);
-      say(g, fill(line, g), TALK + 0.6, 3);
+      say(g, fill(greeting(g), g), TALK + 0.6, 3);
       d.greetT = 3;
     }
   }
@@ -199,9 +213,26 @@ function endChat(d) {
 
 /** Click a companion: a word from them and a card of who they are. */
 function heroCard(n) {
-  const cls = CLASSES[n.cls]?.name || n.cls;
-  say(n, fill(pick(CLASS_LINES[n.cls] || GREETS), n), TALK, 3);
-  G.ui?.log(`<b style="color:#ffe9a8">${n.name}</b>, ${cls} — level ${n.lvl}, deepest depth ${n.deep}, ${n.kills.toLocaleString('en-US')} slain.`, '#d8d0c0');
+  const cls = CLASSES[n.cls]?.name || n.cls, h = n.save || {}, R = (h.keep && h.keep.rec) || {};
+  const talk = () => say(n, fill(next(n, 'cls', CLASS_LINES[n.cls] || GREETS), n), TALK, 3);
+  if (G.world?.player) face(n, G.world.player);
+  talk();
+  const t = (s) => (s == null ? '—' : s >= 60 ? `${Math.floor(s / 60)}m ${Math.round(s % 60)}s` : `${Math.round(s)}s`);
+  const row = (a, b) => `<tr><td class="dim">${a}</td><td style="text-align:right"><b>${b}</b></td></tr>`;
+  UI.dialog({
+    title: n.name,
+    html: `<p class="dim" style="margin-top:0">${cls} · one of your heroes, at rest in the keep</p><table style="width:100%;border-spacing:0 3px">${row('Level', n.lvl)}${row('Deepest depth', n.deep)}${row('Slain', n.kills.toLocaleString('en-US'))}
+      ${row('Eternal Breach', h.breach?.best || '—')}${row('Abyssal Rift', h.rifts?.best || '—')}${row('Fastest depth', t(R.clear?.t))}${row('Fastest BOSS ROOM', t(R.raid?.t))}</table>`,
+    buttons: [{ label: 'A word', fn: talk }, { label: 'Send on an errand', cls: 'red', fn: () => G.ui.keep.open('war') }, { label: 'Farewell' }],
+  });
+}
+/** The hero steps in: the Castellan's welcome, and whoever stands near turns to look. */
+export function keepWelcome(world) {
+  const d = world.keepFolk, p = world.player;
+  if (!d || !p) return;
+  d.castellan.lineT = 1.6; d.castellan.welcomed = false;
+  for (const n of d.heroes) if (near(n, p, 9) && n.state === 'idle') face(n, p);
+  d.greetT = 2.5;
 }
 
 // ------------------------------------------------------------------ drawing a companion (render.js drawNpc)

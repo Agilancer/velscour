@@ -4,6 +4,7 @@
 import { G } from '../state.js';
 import { el, escapeHtml, fmtInt } from '../core/util.js';
 import { sfx } from '../core/audio.js';
+import { addEffect, Ring, sparkle, floatText } from '../gfx/vfx.js';
 import { UI } from './ui.js';
 import { itemCell, itemTooltip } from './itemui.js';
 import { changed } from './inventory.js';
@@ -99,6 +100,7 @@ export const KeepUI = {
       if (r.decor) { const d = DECOR[r.decor[0]].find((q) => q.id === r.decor[1]); UI.log(`A new ${r.decor[0] === 'glass' ? 'window' : r.decor[0]} to hang: <b style="color:#d8e8ff">${escapeHtml(d ? d.name : r.decor[1])}</b> (Furnish).`, '#d8e8ff'); }
     }
     rebuildDecor();
+    claimCeremony(got);
     G.game?.autosave?.(); this.refresh(); UI.refresh();
   },
 
@@ -266,6 +268,27 @@ export const KeepUI = {
     void today;
   },
 };
+
+/** Rewards paid in the hall: Embers stream from the Castellan to the hero, the Flame leaps, every new trophy is
+ *  unveiled in a ring of light with its name over it. */
+function claimCeremony(got) {
+  const w = G.world, p = w && w.player;
+  if (!w || !w.keep || !p) return;
+  const cas = w.keepFolk && w.keepFolk.castellan;
+  w.flameSurge = Math.max(w.flameSurge || 0, 0.8);
+  if (cas) sparkle(cas.x, cas.y, 50, '#c8f060', 26, 1);
+  sparkle(p.x, p.y, 40, '#fff0a0', 30, 1.1);
+  addEffect(new Ring(p.x, p.y, 0.2, 2.2, 0.8, '#c8f060', 3));
+  if (got[0] && got[0].embers) floatText(p.x, p.y, 70, `+${got[0].embers} Embers`, EMBER_COLOR, 15);
+  let i = 0;
+  for (const pr of w.props) {
+    if (!pr.trophy || !got.some((g) => g.trophy === pr.trophy)) continue;
+    addEffect(new Ring(pr.x, pr.y, 0.2, 2.4, 1.2 + i * 0.15, '#ffe8a0', 3));
+    sparkle(pr.x, pr.y, 46, '#ffe8a0', 34, 1.4);
+    floatText(pr.x, pr.y, 96, TROPHY_BY_ID[pr.trophy].name, '#ffe0a0', 13);
+    i++;
+  }
+}
 
 /** The hall shows a change of decoration at once: its props rebuilt, its floor (rugs) baked again. */
 export function rebuildDecor() {

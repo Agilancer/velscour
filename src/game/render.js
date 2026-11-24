@@ -35,6 +35,7 @@ import { drawKeepGate } from '../gfx/keepgate.js';
 import { drawLightShafts } from '../gfx/keepart.js';
 import { drawKeepHero } from './keepfolk.js';
 import { drawKeepNpc } from './keepgame.js';
+import { castellanMark } from './keep.js';
 import { fpBegin, fpClip, fpDepth, fpProject, fpScale, fp, PX, EYE } from '../gfx/firstperson.js';
 
 let lightCanvas = null, glowCanvas = null, vignette = null, vigKey = '';
@@ -1480,6 +1481,30 @@ function drawOverheadNames(ctx, world) {
   const hero = world.player;
   let nearest = null, nd = 2.6;
   if (hero) for (const n of world.npcs) if (!n.vendor && !n.stash && !n.altar && !n.hidden && n.sbox) { const q = Math.hypot(hero.x - n.x, hero.y - n.y); if (q < nd) { nd = q; nearest = n; } }
+  if (world.keep) {
+    // Tessariel's Keep: a plate under every hero of yours' name, faint names on the stations, the Castellan's mark
+    const small = `600 ${Math.round(9.5 * d)}px "Alegreya Sans", sans-serif`;
+    for (const n of world.npcs) {
+      if (!n.sbox || n.hidden) continue;
+      const [sx, sy] = camera.toScreen((n.sbox[0] + n.sbox[2]) / 2, n.sbox[1] - 10);
+      if (n.keepHero && !(n.talkT > 0)) {
+        if (n !== nearest) drawLabel(ctx, n.name, sx * d, sy * d, nameFont, '#e8d8a0', 3 * d);
+        drawLabel(ctx, n.plate, sx * d, (sy + 11) * d, small, '#a8a088', 2 * d);
+      } else if (n.keepMarker && n.pedestal == null && n !== nearest) {
+        ctx.globalAlpha = 0.62; drawLabel(ctx, n.name, sx * d, sy * d, nameFont, '#d8c890', 3 * d); ctx.globalAlpha = 1;
+      } else if (n.keepFlame && n !== nearest) {
+        ctx.globalAlpha = 0.7; drawLabel(ctx, n.name, sx * d, sy * d, nameFont, '#d8f080', 3 * d); ctx.globalAlpha = 1;
+      } else if (n.keepCastellan) {
+        const mark = castellanMark();
+        if (mark) {   // a gold "!" (rewards wait) or a green "?" (a Saga to take up), bobbing over her
+          const by = (sy - (n.talkT > 0 ? 62 : 26) + Math.sin(G.time * 3.2) * 3) * d, col = mark === 'claim' ? '#ffd24a' : '#b8f060';
+          ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 + Math.sin(G.time * 3.2) * 0.15;
+          ctx.drawImage(glowSprite(col), sx * d - 22 * d, by - 26 * d, 44 * d, 44 * d); ctx.restore();
+          drawLabel(ctx, mark === 'claim' ? '!' : '?', sx * d, by, `900 ${Math.round(26 * d)}px Cinzel, Georgia, serif`, col, 4 * d);
+        }
+      }
+    }
+  }
   for (const n of world.npcs) {
     if (!n.sbox || n.hidden) continue;
     if (!n.vendor && !n.stash && !n.altar && !n.keepCastellan && (n !== nearest || n.talkT > 0)) continue;
@@ -1559,7 +1584,15 @@ export function drawMinimap(world, dt, canvas, big = false) {
   const dot = (x, y, col, r) => { const [sx, sy] = toS(x, y); c.fillStyle = col; c.beginPath(); c.arc(sx, sy + s * 0.3, r, 0, TAU); c.fill(); };
   for (const po of world.portals) if (map.seen[Math.floor(po.y) * map.w + Math.floor(po.x)] || world.kind === 'town') dot(po.x, po.y, po.active ? po.color || '#ff5020' : '#888', big ? 6 : 4);
   for (const ch of world.chests) if (!ch.opened && map.seen[Math.floor(ch.y) * map.w + Math.floor(ch.x)]) dot(ch.x, ch.y, ch.dot || '#ffd040', big ? 4 : 2.5);
-  for (const n of world.npcs) dot(n.x, n.y, '#ffe090', big ? 4 : 2.5);
+  if (world.keep) {   // Tessariel's Keep: the Flame, the Castellan (pulsing when she has something for the hero), your heroes; not every pedestal
+    for (const n of world.npcs) {
+      if (n.hidden || n.pedestal != null) continue;
+      if (n.keepFlame) dot(n.x, n.y, '#8cff5a', big ? 6 : 4);
+      else if (n.keepCastellan) { const mk = castellanMark(); dot(n.x, n.y, mk ? '#ffd24a' : '#ffe090', (big ? 5 : 3.2) + (mk ? Math.sin(G.time * 4) * 1 + 1 : 0)); }
+      else if (n.keepHero) dot(n.x, n.y, '#e8d8a0', big ? 3.5 : 2.2);
+      else dot(n.x, n.y, n.keepFolk ? '#a8a088' : '#ffe090', big ? 3 : 2);
+    }
+  } else for (const n of world.npcs) dot(n.x, n.y, '#ffe090', big ? 4 : 2.5);
   for (const m of world.creatures) {
     if (m.dead || m === p || m.clutter) continue;
     const d = Math.hypot(m.x - p.x, m.y - p.y);

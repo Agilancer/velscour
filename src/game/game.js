@@ -113,7 +113,7 @@ import { MacrosUI } from '../ui/macros.js';
 import { REGIONS, regionOf, parseRegionWord, regionNeeds, rollRegionVariant } from './regions.js';
 import './regions/index.js';
 import { Macros } from './macros.js';
-import { buildKeep, KEEP_BIOME } from './keepgame.js';
+import { buildKeep, keepArrive, KEEP_BIOME } from './keepgame.js';
 import { keepgateSpot } from '../gfx/keepgate.js';
 import { keepClear, keepDeath, keepState } from './keep.js';
 import { releaseKeepArt, KEEP_DIR } from '../gfx/keepart.js';
@@ -610,6 +610,7 @@ export const game = {
       HUD.setArea(KEEP_NAME, 'The hall of the Sacred Flame');
       playMusic('town'); setAmbience('tkeep');
       const p = G.player; p.hp = p.maxHp; p.mana = p.maxMana;
+      keepArrive(world);
       const k = keepState(c);
       UI.log(`You step into <b style="color:#c8f060">${KEEP_NAME}</b>.${k.owed.length ? ` <b>${k.owed.length}</b> reward${k.owed.length > 1 ? 's' : ''} wait${k.owed.length > 1 ? '' : 's'} with the Castellan.` : ''}`, '#e0f0c0');
       LoadingScreen.setProgress(100, 'Arriving…');
