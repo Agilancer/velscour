@@ -10,8 +10,8 @@ import {
   defaultDecor, renownRank, renownBonus, TRADE, TRADE_SLOTS, VAULT_STEPS, VAULT_MYTHIC, KINDLE, EXPEDITIONS, EMBER_COLOR,
   warSeats, WAR_EMBERS_A_DAY, WATCHES, WATCH_MIN_DEPTH, MARCHES, CASTELLAN,
 } from '../data/keep.js';
-import { BIOME_BY_ID } from '../data/biomes.js';
-import { depthLevel, MAX_LEVEL, isRaidDepth } from '../data/depth.js';
+import { BIOME_BY_ID, ACT_BIOMES } from '../data/biomes.js';
+import { depthLevel, MAX_LEVEL, isRaidDepth, ACTS, getActForDepth, FINAL_DEPTH } from '../data/depth.js';
 import { rollItem, rarityAt, RARITY, itemName, itemColor, goldPile, rollGem } from '../data/items.js';
 
 const DAY = 86400000, WEEK = DAY * 7;
@@ -70,10 +70,18 @@ function bumpMany(c, list) {
 
 // ------------------------------------------------------------------ hooks the game calls
 const live = (w) => !!w && !G.cine && !(G.world?.keepTest);
+/** Does this level count for the keep? Not a practice fight, and not a depth far beneath the hero: the keep counts
+ *  deeds done where the deep can still hurt (within 15 depths of their deepest, or within 6 monster levels of their
+ *  own), or its repeatables and bounties could be farmed on Depth 5 by a hero of level 100. */
+export function keepWorthy(world, c = G.char) {
+  if (!world || !c || world.practice) return false;
+  if (world.keepWorthy === undefined) { const d = world.depth || 1; world.keepWorthy = d >= (c.deepest || 0) - 15 || depthLevel(d) >= (c.level || 1) - 6; }
+  return world.keepWorthy;
+}
 /** A monster slain (combat.js). */
 export function keepKill(world, m) {
   const c = G.char;
-  if (!c || !live(world) || m.team !== 'enemy' || m.summon || m.critter) return;
+  if (!c || !live(world) || m.team !== 'enemy' || m.summon || m.critter || !keepWorthy(world, c)) return;
   const list = [['kill', 1]];
   if (m.rank === 'champion' || m.rank === 'unique') list.push(['elite', 1]);
   if (m.rank === 'unique') list.push(['unique', 1]);
@@ -85,7 +93,7 @@ export function keepKill(world, m) {
 /** A level the hero just won (game.brokeThrough): a depth cleared, an overworld trial won; its time and potions. */
 export function keepClear(world) {
   const c = G.char;
-  if (!c || !world || world.keepCleared || world.kind !== 'dungeon' || world.breach || world.rift) return;
+  if (!c || !world || world.keepCleared || world.kind !== 'dungeon' || world.breach || world.rift || !keepWorthy(world, c)) return;
   world.keepCleared = true;
   const b = world.biome?.id, t = world.time || 0, pots = world.keepPotions || 0, k = keepState(c);
   const list = [['clear', 1]];
@@ -138,14 +146,18 @@ export function sagaList(c = G.char) {
   const k = keepState(c), deep = c.deepest || 0;
   return SAGAS.map((s) => {
     const st = k.sagas[s.id];
-    return { saga: s, open: deep >= s.min, taken: !!st, ch: st ? st.ch : 0, done: !!st && st.ch >= s.ch.length };
+    return { saga: s, open: sagaOpen(s, c), taken: !!st, ch: st ? st.ch : 0, done: !!st && st.ch >= s.ch.length };
   });
 }
+/** A Saga opens by depth, or (the Armsmaster's) by the hero's level. */
+export const sagaOpen = (s, c = G.char) => (c?.deepest || 0) >= s.min && (c?.level || 1) >= (s.minLevel || 0);
+/** What a locked Saga waits for, in words. */
+export const sagaLock = (s) => (s.minLevel ? `hero level ${s.minLevel}` : `Depth ${s.min}`);
 export function takeSaga(id, c = G.char) {
   const s = SAGA_BY_ID[id], k = keepState(c);
-  if (!s || k.sagas[id] || (c.deepest || 0) < s.min) return false;
+  if (!s || k.sagas[id] || !sagaOpen(s, c)) return false;
   k.sagas[id] = { ch: 0, base: snapshot(c, s.ch[0]) };
-  checkSaga(c, s);
+  checkSaga(c, s, true);
   return true;
 }
 const snapshot = (c, q) => (q && !isAbs(q) ? metricValue(c, q.m) : 0);
@@ -154,13 +166,14 @@ export function progressOf(c, q, base) {
   const v = metricValue(c, q.m), have = isAbs(q) ? v : v - (base || 0);
   return [Math.max(0, Math.min(q.n, have)), q.n];
 }
-function checkSaga(c, s) {
+function checkSaga(c, s, taking = false) {
   const k = keepState(c), st = k.sagas[s.id];
   let moved = false;
   while (st && st.ch < s.ch.length) {
     const q = s.ch[st.ch], [have, need] = progressOf(c, q, st.base);
     if (have < need) break;
     const last = st.ch === s.ch.length - 1, r = sagaReward(st.ch, last);
+    if (taking) r.embers = Math.ceil(r.embers / 2);   // a chapter already behind the hero when the Saga is taken up (a level long since reached) pays half
     owe(c, { kind: 'saga', id: `${s.id}#${st.ch}`, name: `${s.name}: chapter ${st.ch + 1}`, text: q.text, ...r, trophy: q.trophy, decor: q.decor, color: s.color });
     st.ch++;
     st.base = snapshot(c, s.ch[st.ch]);
@@ -174,7 +187,21 @@ const hash = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h
 /** The bounties a hero can do: breach and rifts once open, the dungeons and trials every hero can reach. */
 function bountyPool(c) {
   return BOUNTIES.filter((b) => (b.m !== 'breach' || (c.deepest || 0) >= 20) && (b.m !== 'rift' || (c.rifts?.best || 0) > 0 || (c.deepest || 0) >= 500)
-    && (b.m !== 'region:great_hunt' || (c.level || 1) >= 10) && (b.m !== 'raid' || (c.deepest || 0) >= 4));
+    && (b.m !== 'region:great_hunt' || (c.level || 1) >= 10) && (b.m !== 'raid' || (c.deepest || 0) >= 4) && (!b.m.includes(':') || reachable(b.m, c)));
+}
+/** The act whose depths deal a biome or region ('clear:x' / 'region:x'), or 0: none does (the skull in town takes a
+ *  hero to those: the Velscour teleport). */
+export function actOf(m) { const id = m.split(':')[1]; for (const [a, list] of Object.entries(ACT_BIOMES)) if (list.includes(id)) return +a; return 0; }
+/** Can the hero's own descent bring them there yet (their act or an earlier one), or have they been there before? */
+export function reachable(m, c = G.char) {
+  const a = actOf(m), mine = getActForDepth(Math.min(FINAL_DEPTH, Math.max(1, (c.deepest || 0) + 1))).act;
+  return (a > 0 && a <= mine) || (keepState(c).st[m] || 0) > 0;
+}
+/** For a chapter that asks for a place the hero's descent has not reached: where it is found. '' when it needs none. */
+export function chapterHint(c, q) {
+  if (!q.m.includes(':') || reachable(q.m, c)) return '';
+  const a = actOf(q.m), A = ACTS.find((x) => x.act === a);
+  return A ? `The descent reaches it in Act ${a} (from Depth ${A.start}); the skull in town will take you there sooner.` : 'No act of the descent leads there: ask the skull in town to take you.';
 }
 /** Scale a bounty's count to the hero: gold by their level, the rest as written. */
 function bountyN(c, b) {
@@ -204,7 +231,7 @@ export function bountyText(b) {
 }
 function checkBounties(c, m) {
   const k = keepState(c);
-  if (k.bounty.day !== today()) return;
+  if (k.bounty.day !== today()) bountyBoard(c);   // a new day's board rolls itself (not only when its page is opened)
   for (const b of k.bounty.list) {
     if (b.done || (m && b.m !== m)) continue;
     if (metricValue(c, b.m) - b.base >= b.n) {
@@ -250,18 +277,17 @@ export function checkProgress(c = G.char, m = null) {
 }
 let pend = null;   // rewards owed during one checkProgress
 // ------------------------------------------------------------------ the Long Watch (repeatable, past the throne)
-export const watchOpen = (c = G.char) => (c?.deepest || 0) >= WATCH_MIN_DEPTH;
+export const watchOpen = (c = G.char) => (c?.deepest || 0) >= WATCH_MIN_DEPTH || (c?.level || 1) >= MAX_LEVEL;   // the throne reached, or the last level: one of the two repeatables always runs
 /** Where each watch stands: [{ w, have, paid }] (have: progress toward the next payment). */
 export function watchList(c = G.char, list = WATCHES) {
   const k = keepState(c);
-  return list.map((w) => { const st = k.watch[w.id]; return { w, have: st ? (metricValue(c, w.m) - st.base) % w.every : 0, paid: st ? st.paid : 0 }; });
+  return list.map((w) => { const st = k.watch[w.id]; return { w, have: st ? Math.max(0, metricValue(c, w.m) - st.base) % w.every : 0, paid: st ? st.paid : 0 }; });
 }
 /** The March pays heroes still below the level cap. */
-export const marchOpen = (c = G.char) => (c?.level || 1) < MAX_LEVEL;
+export const marchOpen = (c = G.char) => !watchOpen(c);
 function checkWatches(c, m) {
   const k = keepState(c);
-  for (const w of [...(watchOpen(c) ? WATCHES : []), ...(marchOpen(c) || k.watch.m_level ? MARCHES : [])]) {
-    if (!marchOpen(c) && w.id.startsWith('m_') && w.m !== 'level') continue;   // at the cap only the last levels' payment is still due
+  for (const w of watchOpen(c) ? WATCHES : MARCHES) {
     const st = k.watch[w.id] || (k.watch[w.id] = { base: metricValue(c, w.m), paid: 0 });   // counts from the day it opened
     if (m && w.m !== m) continue;
     const due = Math.floor((metricValue(c, w.m) - st.base) / w.every);
@@ -278,7 +304,8 @@ export function castellanMark(c = G.char) {
 /** 'new' when one of these Sagas (a giver's own) can be taken up. */
 export function giverMark(ids, c = G.char) {
   const k = c && keepState(c), deep = c?.deepest || 0;
-  return k && ids && ids.some((id) => SAGA_BY_ID[id] && !k.sagas[id] && deep >= SAGA_BY_ID[id].min) ? 'new' : null;
+  void deep;
+  return k && ids && ids.some((id) => SAGA_BY_ID[id] && !k.sagas[id] && sagaOpen(SAGA_BY_ID[id], c)) ? 'new' : null;
 }
 
 // ------------------------------------------------------------------ rewards owed (claimed at the Castellan)
@@ -306,7 +333,7 @@ export function claimAll(c = G.char) {
     if (r.trophy && !k.have.trophy.includes(r.trophy)) { k.have.trophy.push(r.trophy); got.push({ trophy: r.trophy }); autoPlaceTrophy(c, r.trophy); }
     if (r.decor) { const [kind, id] = r.decor; if (!k.have[kind].includes(id)) { k.have[kind].push(id); got.push({ decor: r.decor }); } }
     const v = k.vault; if (v.week !== thisWeek()) Object.assign(v, { week: thisWeek(), marks: 0, claimed: false, offer: null });
-    v.marks++;
+    if (r.kind !== 'watch') v.marks++;   // (the March's and the Long Watch's small payments are not marks on the Vault's door)
   }
   const before = renownRank(k.renown);
   k.embers += embers; k.renown += renown; c.gold += gold;

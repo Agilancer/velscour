@@ -18,7 +18,7 @@ import {
 import {
   keepState, sagaList, takeSaga, progressOf, bountyBoard, bountyText, challengeName, challengeText, metricValue, claimAll, hasDecor,
   setDecor, tradeLevel, tradeOpen, buyArmor, vaultState, vaultOffer, claimVault, sendExpedition, expeditionDone, collectExpedition, kindled,
-  kindleReadyIn, today, warState, watchOpen, watchList, marchOpen,
+  kindleReadyIn, today, warState, watchOpen, watchList, marchOpen, sagaLock, chapterHint,
 } from '../game/keep.js';
 import { companionsOf } from '../game/keepfolk.js';
 import { keepArt, trophySprite } from '../gfx/keepart.js';
@@ -117,17 +117,19 @@ export const KeepUI = {
   // ---------------------------------------------------------------- tabs
   sagas(page, c, k) {
     const n = questCount();
-    page.appendChild(el('div', 'kp-note', `The Castellan's Sagas: ${SAGAS.length} lines, ${n.sagas} chapters. A chapter counts from the moment it is taken; finish it anywhere and its reward waits here.`));
-    for (const s of sagaList(c)) {
+    page.appendChild(el('div', 'kp-note', `The keep's Sagas: ${SAGAS.length} lines, ${n.sagas} chapters, each from its giver in the hall (or taken up here). A chapter counts from the moment it is taken; finish it anywhere and its reward waits with the Castellan. Deeds count only where the deep can still hurt you: near your deepest depth or your own level.`));
+    // what the hero can do now first: in hand, then to take up, then locked, the finished last
+    const rank = (s) => (s.done ? 3 : !s.open ? 2 : s.taken ? 0 : 1);
+    for (const s of sagaList(c).sort((a, b) => rank(a) - rank(b))) {
       const S = s.saga, row = el('div', 'kp-row' + (s.open ? '' : ' locked') + (s.done ? ' done' : ''));
       row.style.setProperty('--kc', S.color);
-      let h = `<div class="kp-title"><b>${escapeHtml(S.name)}</b><span class="dim"> · ${escapeHtml(S.giver)} · ${s.done ? 'complete' : s.taken ? `chapter ${s.ch + 1} of ${S.ch.length}` : s.open ? `${S.ch.length} chapters` : `opens at Depth ${S.min}`}</span></div>`;
+      let h = `<div class="kp-title"><b>${escapeHtml(S.name)}</b><span class="dim"> · ${escapeHtml(S.giver)} · ${s.done ? 'complete' : s.taken ? `chapter ${s.ch + 1} of ${S.ch.length}` : s.open ? `${S.ch.length} chapters` : `opens at ${sagaLock(S)}`}</span></div>`;
       if (!s.taken) h += `<div class="kp-text">${escapeHtml(S.pitch)}</div>`;
       else if (!s.done) {
         const st = k.sagas[S.id], q = S.ch[st.ch], [have, need] = progressOf(c, q, st.base);
         const pay = sagaReward(st.ch, st.ch === S.ch.length - 1);
         const prize = (q.trophy ? ` <span class="kp-prize">Trophy: ${escapeHtml(TROPHY_BY_ID[q.trophy].name)}</span>` : '') + (q.decor ? ` <span class="kp-prize">${q.decor[0] === 'glass' ? 'Window' : q.decor[0][0].toUpperCase() + q.decor[0].slice(1)}: ${escapeHtml(DECOR[q.decor[0]].find((d) => d.id === q.decor[1])?.name || '')}</span>` : '');
-        h += `<div class="kp-text">${escapeHtml(q.text)} <span class="kp-pay">${ember(pay.embers)} Embers${pay.renown ? ` · ${pay.renown} Renown` : ''}</span>${prize}</div>${bar(have, need, S.color)}`;
+        h += `<div class="kp-text">${escapeHtml(q.text)} <span class="kp-pay">${ember(pay.embers)} Embers${pay.renown ? ` · ${pay.renown} Renown` : ''}</span>${prize}${chapterHint(c, q) ? `<br><span class="dim">${chapterHint(c, q)}</span>` : ''}</div>${bar(have, need, S.color)}`;
       } else h += '<div class="kp-text dim">Every chapter told. Its trophies stand in the hall.</div>';
       if (s.taken) h += `<div class="kp-pips">${S.ch.map((q, i) => `<i class="${i < s.ch ? 'done' : i === s.ch && !s.done ? 'now' : ''}${q.trophy ? ' prize' : ''}" title="Chapter ${i + 1}${q.trophy ? ': ' + escapeHtml(TROPHY_BY_ID[q.trophy].name) : ''}"></i>`).join('')}</div>`;
       row.innerHTML = h;
@@ -211,11 +213,11 @@ export const KeepUI = {
       grid.appendChild(row);
     }
     page.appendChild(grid);
-    page.appendChild(el('div', 'kp-note dim', 'Embers come from Sagas, Bounties and Deeds, and from the War Table.'));
+    page.appendChild(el('div', 'kp-note dim', 'Embers come from Sagas, Bounties and Deeds, the March (and past the throne the Long Watch), and the War Table.'));
   },
   vault(page, c, k) {
     const v = vaultState(c);
-    page.appendChild(el('div', 'kp-note', `The Vault of the Flame opens once a week. Every reward you claim this week is a mark on its door: ${VAULT_STEPS.map((s, i) => `<b>${s}</b> marks for ${i + 1} choice${i ? 's' : ''}`).join(', ')}. Take one Legendary piece of your level (sometimes Mythic).`));
+    page.appendChild(el('div', 'kp-note', `The Vault of the Flame opens once a week. Every reward you claim this week is a mark on its door: ${VAULT_STEPS.map((s, i) => `<b>${s}</b> marks for ${i + 1} choice${i ? 's' : ''}`).join(', ')}. Take one piece of your level: Legendary once your item level forges it (30), sometimes Mythic (50); below that, the best your level allows.`));
     page.appendChild(el('div', 'kp-row', `<div class="kp-title"><b>${v.marks} mark${v.marks === 1 ? '' : 's'}</b> this week${v.claimed ? ' · <span class="dim">claimed: it opens again next week</span>' : v.next ? ` · <span class="dim">${v.next - v.marks} more for the next choice</span>` : ''}</div>${bar(Math.min(v.marks, VAULT_STEPS[2]), VAULT_STEPS[2], '#e8c870')}`));
     if (!v.claimed && v.picks) {
       const grid = el('div', 'kp-vault');

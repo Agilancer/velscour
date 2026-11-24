@@ -38,7 +38,7 @@ const fresh = () => ({ id: 'qa' + Math.random(), name: 'QA', classId: 'paladin',
 G.char = fresh();
 const c = G.char, k = K.keepState(c);
 for (const s of K.sagaList(c)) if (s.open) K.takeSaga(s.saga.id, c);
-if (Object.keys(k.sagas).length !== D.SAGAS.filter((s) => s.min <= 0).length) fail('took the wrong Sagas at depth 0');
+if (Object.keys(k.sagas).length !== D.SAGAS.filter((s) => s.min <= 0 && !s.minLevel).length) fail('took the wrong Sagas at depth 0');
 for (let i = 0; i < 39; i++) K.keepEvent('kill');
 if (k.owed.some((o) => o.id === 'ember_road#0')) fail('chapter 1 paid at 39 of 40');
 K.keepEvent('kill');
@@ -154,6 +154,40 @@ if (legendaries < 8 || legendaries > 60) fail(`the Ember economy is off: ${legen
   vk.kindled = { at: Date.now(), until: Date.now() - 1 }; vk.embers = D.KINDLE.rekindle - 1;
   if (K.kindle(v, true)) fail('rekindled without the Embers');
   vk.embers = D.KINDLE.rekindle; if (!K.kindle(v, true) || vk.embers !== 0) fail('feeding the Flame did not rekindle it');
+}
+
+// ---- what the quest critic found (round 1): farming far beneath the hero, the board that never rolled, places the
+// hero's act does not reach, the practice fight, the gap between the March and the Long Watch
+{
+  const { MAX_LEVEL } = await import('../../src/data/depth.js');
+  const v = G.char = { ...fresh(), level: MAX_LEVEL, deepest: 900, kills: 0 }, vk = K.keepState(v);
+  K.checkProgress(v); K.claimAll(v);
+  const low = { depth: 5, kind: 'dungeon', biome: { id: 'catacombs' }, time: 30 }, deep = { depth: 890, kind: 'dungeon', biome: { id: 'molten' }, time: 30 };
+  if (K.keepWorthy(low, v)) fail('Depth 5 counts for a level 100 hero at Depth 900');
+  if (!K.keepWorthy(deep, v)) fail('a depth near the hero\'s deepest does not count');
+  const c0 = vk.st.clear || 0; K.keepClear(low); K.keepKill(low, { team: 'enemy', rank: 'raid' });
+  if ((vk.st.clear || 0) !== c0 || vk.st.raid) fail('a trivial depth fed the keep\'s counters');
+  K.keepClear(deep); if ((vk.st.clear || 0) !== c0 + 1) fail('a worthy depth did not count');
+  if (K.keepWorthy({ depth: 890, practice: true }, v)) fail('a practice fight counts');
+  const lowHero = { ...fresh(), level: 9, deepest: 8 };
+  if (!K.keepWorthy({ depth: 3 }, lowHero)) fail('a new hero replaying Depth 3 does not count');
+  // the board rolls itself
+  G.char = lowHero; const lk = K.keepState(lowHero);
+  K.keepEvent('kill', 1, lowHero);
+  if (lk.bounty.day !== K.today() || lk.bounty.list.length !== 3) fail('the board did not roll without its page being opened');
+  // a low hero's board asks only for places their act deals (40 heroes' boards)
+  for (let i = 0; i < 40; i++) { const h = { ...fresh(), level: 9, deepest: 8 }; for (const b of K.bountyBoard(h)) if (b.m.includes(':') && K.actOf(b.m) !== 1) fail(`an Act 1 hero's board asks for ${b.m}`); }
+  if (!K.chapterHint(lowHero, { m: 'clear:cathedral' }) || K.chapterHint(lowHero, { m: 'clear:catacombs' })) fail('chapter hints wrong');
+  // Saints of the Deep: its chapters in the order of the acts
+  const acts = D.SAGA_BY_ID.saints_deep.ch.filter((q) => q.m.includes(':')).map((q) => K.actOf(q.m));
+  if (acts.some((a, i) => !a || (i && a < acts[i - 1]))) fail('Saints of the Deep is not in act order: ' + acts);
+  // one of the March and the Long Watch always runs, never both
+  for (const [lvl, dp] of [[1, 0], [50, 200], [100, 300], [80, 500], [100, 900]]) { const h = { level: lvl, deepest: dp }; if (K.watchOpen(h) === K.marchOpen(h)) fail(`March and Watch both or neither at level ${lvl}, depth ${dp}`); }
+  // the Armsmaster's Sagas open by level
+  if (K.sagaOpen(D.SAGA_BY_ID.veterans_ascent, { level: 59, deepest: 400 }) || !K.sagaOpen(D.SAGA_BY_ID.veterans_ascent, { level: 60, deepest: 0 })) fail('the Veteran\'s Ascent does not open at level 60');
+  // every Saga has a giver in the hall
+  const given = new Set([...D.CASTELLAN.sagas, ...D.KEEP_FOLK.flatMap((f) => f[4])]);
+  for (const sg of D.SAGAS) if (!given.has(sg.id)) fail('no one in the hall gives ' + sg.id);
 }
 console.log(errs.length ? `${errs.length} FAILED` : 'NO ERRORS');
 process.exit(errs.length ? 1 : 0);

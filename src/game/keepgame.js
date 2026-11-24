@@ -129,7 +129,7 @@ function keepLights(world, dt) {
   const A = world.anchors, t = world.time;
   world.flameSurge = Math.max(0, (world.flameSurge || 0) - dt * 0.45);
   addLight(A.flame[0], A.flame[1], 7 + (world.flameSurge || 0) * 3, 1, 60, null, true);   // light without colour far out: the stone keeps its own
-  addLight(A.flame[0], A.flame[1], 3.6 + Math.sin(t * 3.1) * 0.3 + (world.flameSurge || 0) * 3, 0.7, 70, '#7dff5a', true);
+  addLight(A.flame[0], A.flame[1], 2.6 + Math.sin(t * 3.1) * 0.25 + (world.flameSurge || 0) * 3, 0.5, 80, '#7dff5a', true);
   // the upper walls and their wall-heads, out of the dark
   for (let s = TK.F0 + 1; s <= TK.F1; s += 5.5) { addLight(s, TK.OW + 2.2, 6, 0.4, 250, null, true); addLight(TK.OW + 2.2, s, 6, 0.4, 250, null, true); }
   for (const [x, y] of A.braziers) { addLight(x, y, 3.4, 0.8, 22, null); addLight(x, y, 1.8 + Math.sin(t * 7 + x) * 0.15, 0.6, 22, '#ffb060'); }
@@ -149,7 +149,7 @@ export function drawKeepNpc(ctx, n, x, y, t) {
     y -= 9.6;   // (its sort point is 0.3 tiles in front of the bowl's middle)
     drawSacredFlame(ctx, x, y - 36, t, k);   // its foot in the bowl of coals (the rim is 15 levels up; the tile under it 6)
     if (kindled()) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.2 + Math.sin(t * 4) * 0.08; ctx.fillStyle = '#c8f060'; ctx.beginPath(); ctx.ellipse(x, y - 4, 46, 22, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
-    n.sbox = [x - 34, y - 130, x + 34, y + 4];
+    n.sbox = [x - 34, y - 36 - 150 * k, x + 34, y - 20];   // its name stands over the fire
     return true;
   }
   if (n.decorSlot) {

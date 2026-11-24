@@ -23,7 +23,7 @@ export const TK = Object.freeze({
   STEP: 3,           // levels a stair tile rises
 });
 const { W, H, OW, BW, F0, F1, FR, BAL, RAIL, BALF, FS, WALL, PARA, DAIS, STEP } = TK;
-const RAILF = BALF + 3, PARAF = BALF + 5, UNDER = -16;   // the front rail and parapet; how far down the keep's own wall is shown
+const RAILF = BALF + 3, PARAF = BALF + 5, UNDER = -12;   // the front rail and parapet; how far down the keep's own wall is shown
 export const KK = Object.freeze({ none: 0, floor: 1, wall: 2, walk: 3, rail: 4, parapet: 5, stair: 6, dais: 7, column: 8, pedestal: 9, plinth: 10, basin: 11, gap: 12, tower: 13, furniture: 14 });
 /** Tile centre (x, y) of the hall's middle. */
 export const CX = (F0 + F1 + 1) / 2, CY = (F0 + F1 + 1) / 2;   // 21, 21
@@ -98,7 +98,7 @@ export function tkeepLayout() {
   box(BW, BW + 2, BW + 2, F1 + 4, -2, BAL, 'plinth', { top: 'walk' });
   box(FR + 1, FS, FR + 3, F1 + 4, -2, BALF, 'plinth', { top: 'walk' });
   box(FS, FR + 1, FR + 1, FR + 3, -2, BALF, 'plinth', { top: 'walk' });
-  for (const [a, lv] of cornerSteps) { box(FR + 1, a, FR + 3, a + 1, -2, lv, 'lime', { top: 'tread' }); box(a, FR + 1, a + 1, FR + 3, -2, lv, 'lime', { top: 'tread' }); }
+  for (const [a, lv] of cornerSteps) { box(FR + 1, a, FR + 3, a + 1, -2, lv, 'lime', { top: 'tread' }); box(a, FR + 1, a + 1, FR + 3, -2, lv, 'lime', { top: 'tread' }); box(FR + 1, a + 0.9, FR + 3, a + 1, lv - 0.5, lv + 0.04, 'plinth'); box(a + 0.9, FR + 1, a + 1, FR + 3, lv - 0.5, lv + 0.04, 'plinth'); }
   // rails: a tile wide, blocked; their mass up to the walk, a moulded balustrade on top
   set(BW + 2, BW + 2, FR, BW + 2, RAIL, KK.rail, { solid: true });
   set(BW + 2, BW + 2, BW + 2, FR, RAIL, KK.rail, { solid: true });
@@ -139,14 +139,16 @@ export function tkeepLayout() {
   parts.push({ t: 'merlons', axis: 'x', a0: FS, a1: FR + 4, c0: FR + 3, c1: FR + 4, z: PARAF, m: 'stone', low: true });
   parts.push({ t: 'merlons', axis: 'y', a0: FS, a1: FR + 3, c0: FR + 3, c1: FR + 4, z: PARAF, m: 'stone', low: true });
   // their outer faces: the keep's own wall seen in section, a deep blind arcade under a string course, down into the dark
-  parts.push({ t: 'arcade', axis: 'x', a0: FS, a1: FR + 3, c: FR + 4, dir: +1, z0: UNDER, z1: BALF + 2, bay: 4, m: 'stone2', trim: 'lime' });
-  parts.push({ t: 'arcade', axis: 'y', a0: FS, a1: FR + 3, c: FR + 4, dir: +1, z0: UNDER, z1: BALF + 2, bay: 4, m: 'stone2', trim: 'lime' });
+  // (plain masonry under a string course: an arcade here stood half in the dark and read as missing art)
   parts.push({ t: 'face', axis: 'x', a0: FS, a1: FR + 4, c: FR + 4, dir: +1, z0: UNDER, z1: PARAF, course: PARAF - 3 });
   parts.push({ t: 'face', axis: 'y', a0: FS, a1: FR + 4, c: FR + 4, dir: +1, z0: UNDER, z1: PARAF, course: PARAF - 3 });
 
   // ---------------------------------------------------------------- the dais and the grand stairs (north side)
   const DX0 = F0 + 8, DX1 = F1 - 8, DY1 = F0 + 2;   // dais 17..24 x 9..11
   set(DX0, F0, DX1, DY1, DAIS, KK.dais);
+  // the altar of the Flame at the back of the dais: a stone table, a gilt T standing on it
+  set(CX - 1, F0, CX, F0, DAIS + 6, KK.furniture, { solid: true });
+  parts.push({ t: 'altar', x: CX, y: F0 + 0.5, z: DAIS });
   box(DX0, F0, DX1 + 1, DY1 + 1, -2, DAIS, 'marble');
   box(DX0 - 0.15, DY1 + 0.85, DX1 + 1.15, DY1 + 1.12, DAIS - 0.4, DAIS + 0.15, 'gold');   // its gilt nosing
   const stairs = [];
@@ -156,6 +158,7 @@ export function tkeepLayout() {
       const x = side < 0 ? DX0 - 1 - k : DX1 + 1 + k, lv = STEP * (k + 1);
       set(x, F0, x, F0 + 1, lv, KK.stair);
       box(x, F0, x + 1, F0 + 2, -2, lv, 'lime', { top: 'tread' });
+      box(side < 0 ? x + 0.9 : x, F0, side < 0 ? x + 1 : x + 0.1, F0 + 2, lv - 0.5, lv + 0.04, 'plinth');   // a dark nosing: each step reads as a step
       steps.push([x, F0, lv]);
     }
     // the open side: a stone string wall with a balustrade that climbs with the flight
@@ -178,8 +181,10 @@ export function tkeepLayout() {
   }
   // the four Elder plinths round the flame (2 x 2): their dragons are trophies (src/data/keep.js)
   const plinths = [];
-  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-    const x0 = sx < 0 ? CX - 5 : CX + 3, y0 = sy < 0 ? CY - 5 : CY + 3;
+  // a fan of four behind and beside the Flame as the camera sees it: none on the line through it (the dragon that stood
+  // straight behind merged with the fire), none in front of it
+  for (const [sx, sy, dx, dy] of [[-1, -1, -7, -3], [1, -1, -3, -7], [-1, 1, -6, 4], [1, 1, 4, -6]]) {
+    const x0 = CX + dx, y0 = CY + dy;
     set(x0, y0, x0 + 1, y0 + 1, 7, KK.plinth, { solid: true });
     parts.push({ t: 'plinth', x0, y0, x1: x0 + 2, y1: y0 + 2, z: 7, m: 'stone', trim: 'gold', top: 'marble' });
     plinths.push({ x: x0 + 1, y: y0 + 1, z: 7, corner: sx < 0 ? (sy < 0 ? 'nw' : 'sw') : (sy < 0 ? 'ne' : 'se') });
@@ -235,7 +240,7 @@ export function tkeepLayout() {
       { id: 'dais', x0: DX0 + 0.3, y0: F0 + 0.2, x1: DX1 + 0.7, y1: DY1 + 0.8, z: DAIS },
     ],
     // chandeliers over the hall (level of their candles), braziers by the stairs
-    chandeliers: [[CX - 6, CY, 58], [CX, CY - 6, 58], [CX + 6, CY, 58], [CX, CY + 6, 58]],   // off the diagonal through the Flame, so none hangs in front of it
+    chandeliers: [[CX - 5, CY + 1, 58], [CX + 1, CY - 5, 58], [CX + 6, CY, 58], [CX, CY + 6, 58]],   // off the diagonal through the Flame, so none hangs in front of it
     braziers: [[DX0 - 0.3, DY1 + 1.4], [DX1 + 1.3, DY1 + 1.4], [CX - 2.6, F1 + 0.2], [CX + 2.6, F1 + 0.2]],
   };
   // what isn't part of the keep stays out of the map

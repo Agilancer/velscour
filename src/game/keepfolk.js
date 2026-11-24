@@ -14,7 +14,7 @@ import { GREETS, GREETS_WHEN, MUSINGS, CHATS, CLASS_LINES, CASTELLAN_LINES, CAST
 import { UI } from '../ui/ui.js';
 import { CASTELLAN, KEEP_FOLK } from '../data/keep.js';
 import { keepSpots, TK, CX, CY } from '../world/tkeep.js';
-import { keepState, castellanMark, giverMark, sagaList, takeSaga, progressOf } from './keep.js';
+import { keepState, castellanMark, giverMark, sagaList, takeSaga, progressOf, sagaLock, chapterHint } from './keep.js';
 import { SAGA_BY_ID, sagaReward, EMBER_COLOR } from '../data/keep.js';
 import { escapeHtml, fmtInt } from '../core/util.js';
 
@@ -110,7 +110,7 @@ export function startKeepFolk(world, A) {
   world.npcs.push(cas); d.castellan = cas;
 
   // the keep's folk at their posts (the friar by the Flame, a knight on the balcony, the priest at the Chronicle...)
-  const post = { flame: [A.flame[0] - 2.7, A.flame[1] + 1.2], hall: [A.columns[1][0] + 1.4, A.columns[1][1] - 1.2], balcony: [TK.FR + 1.5, CY],
+  const post = { flame: [A.flame[0] - 2.7, A.flame[1] + 1.2], hall: [A.columns[1][0] - 1.6, A.columns[1][1] + 2], balcony: [TK.FR + 1.5, CY],
     chronicle: [A.chronicle[0] + 1.3, A.chronicle[1] + 0.6], gate: [A.townPortal[0] + 3.2, A.townPortal[1] - 1.2],
     envoy: [A.waygate[0] + 2.4, A.waygate[1] - 2.2], arms: [TK.F1 - 2.2, TK.F0 + 14.4] };
   for (const [sprite, name, role, where, sagas] of KEEP_FOLK) {
@@ -235,11 +235,12 @@ export function giverTalk(f) {
   if (!mine.length) return;
   const row = (s) => {
     const S = s.saga, st = k.sagas[S.id];
-    let h = `<div style="border-left:3px solid ${S.color};padding:4px 8px;margin:6px 0;background:rgba(24,18,10,.6)"><b style="color:${S.color}">${escapeHtml(S.name)}</b> <span class="dim">· ${S.ch.length} chapters</span><br>`;
-    if (!s.open) h += `<span class="dim">"Come back when you have reached Depth ${S.min}."</span>`;
+    const total = S.ch.reduce((n, q, i) => n + sagaReward(i, i === S.ch.length - 1).embers, 0), prizes = S.ch.filter((q) => q.trophy).length;
+    let h = `<div style="border-left:3px solid ${S.color};padding:4px 8px;margin:6px 0;background:rgba(24,18,10,.6)"><b style="color:${S.color}">${escapeHtml(S.name)}</b> <span class="dim">· ${S.ch.length} chapters · <b style="color:${EMBER_COLOR}">${total}</b> Embers${prizes ? ` · ${prizes} troph${prizes > 1 ? 'ies' : 'y'}` : ''}</span><br>`;
+    if (!s.open) h += `<span class="dim">"Come back when you have reached ${sagaLock(S)}."</span>`;
     else if (!s.taken) h += `<i>"${escapeHtml(S.pitch)}"</i>`;
     else if (s.done) h += '<span class="dim">Every chapter told.</span>';
-    else { const q = S.ch[st.ch], [have, need] = progressOf(c, q, st.base), pay = sagaReward(st.ch, st.ch === S.ch.length - 1); h += `Chapter ${st.ch + 1}: ${escapeHtml(q.text)} <b>${fmtInt(have)} / ${fmtInt(need)}</b> <span class="dim">· <b style="color:${EMBER_COLOR}">${pay.embers}</b> Embers</span>`; }
+    else { const q = S.ch[st.ch], [have, need] = progressOf(c, q, st.base), pay = sagaReward(st.ch, st.ch === S.ch.length - 1); h += `Chapter ${st.ch + 1}: ${escapeHtml(q.text)} <b>${fmtInt(have)} / ${fmtInt(need)}</b> <span class="dim">· <b style="color:${EMBER_COLOR}">${pay.embers}</b> Embers</span>${chapterHint(c, q) ? `<br><span class="dim">${chapterHint(c, q)}</span>` : ''}`; }
     return h + '</div>';
   };
   const can = mine.filter((s) => s.open && !s.taken);

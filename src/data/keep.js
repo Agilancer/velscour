@@ -1,5 +1,5 @@
 // TESSARIEL'S KEEP (docs/TESSARIELS_KEEP.md): the data. The keep's people, its decorations and trophies, the Ember
-// trade, Renown, and the quests: eight Sagas the Castellan gives chapter by chapter, Bounties on a daily board, and the
+// trade, Renown, and the quests: eleven Sagas their givers in the hall give chapter by chapter, Bounties on a daily board, and the
 // Challenges (deeds, tiers of them) that count on their own. Every objective is a metric (METRICS) and a count; the game
 // keeps the counters (src/game/keep.js keepEvent). Pure data, runs under Node (tools/tests/keep_quests.mjs).
 //
@@ -211,9 +211,10 @@ export const SAGAS = [
   { id: 'saints_deep', name: 'Saints of the Deep', giver: 'Mother Agatha', min: 5, color: '#e8d8ff',
     pitch: 'The Flame had shrines in every deep place once. Walk them, so the Chronicle can name them again.',
     ch: [
-      C('clear:catacombs', 1, 'Clear a depth of the Catacombs.'), C('clear:cathedral', 1, 'Clear a depth of the Cathedral.'), C('clear:library', 1, 'Clear a depth of the Library.'),
-      C('clear:sunken', 1, 'Clear a depth of the Sunken halls.'), C('clear:crystal', 1, 'Clear a depth of the Crystal Caverns.', { decor: ['banner', 'holy_lilies'] }), C('clear:necropolis', 1, 'Clear a depth of the Necropolis.'),
-      C('clear:heavenly', 1, 'Clear a depth of the Empyrean Citadel.'), C('clear:gilded', 1, 'Clear a depth of the Gilded vaults.'), C('clear:astral_plane', 1, 'Clear a depth of the Celestial Expanse.'),
+      // in the order the descent's acts reach them (data/biomes.js ACT_BIOMES): four of the first act, then on down
+      C('clear:catacombs', 1, 'Clear a depth of the Catacombs.'), C('clear:library', 1, 'Clear a depth of the Library.'), C('clear:sunken', 1, 'Clear a depth of the Sunken halls.'),
+      C('clear:necropolis', 1, 'Clear a depth of the Necropolis.'), C('clear:gilded', 1, 'Clear a depth of the Gilded vaults.', { decor: ['banner', 'holy_lilies'] }), C('clear:crystal', 1, 'Clear a depth of the Crystal Caverns.'),
+      C('clear:cathedral', 1, 'Clear a depth of the Cathedral.'), C('clear:heavenly', 1, 'Clear a depth of the Empyrean Citadel.'), C('clear:astral_plane', 1, 'Clear a depth of the Celestial Expanse.'),
       C('clear', 60, 'Clear 60 depths.', { trophy: 'dawn_staff', decor: ['glass', 'glass_d'] }),
     ] },
   { id: 'free_towns', name: 'The Free Towns', giver: 'Kestrel the Dusk Lancer', min: 12, color: '#a8e070',
@@ -249,7 +250,7 @@ export const SAGAS = [
       C('clear', 8, 'Clear 8 depths.'), C('level', 15, 'Reach hero level 15.', { abs: true }), C('guardian', 5, 'Slay 5 guardians.'),
       C('level', 20, 'Reach hero level 20: a squire no longer.', { abs: true }),
     ] },
-  { id: 'journeyman', name: "The Journeyman's Road", giver: 'Armsmaster Brenna', min: 20, color: '#d8b070',
+  { id: 'journeyman', name: "The Journeyman's Road", giver: 'Armsmaster Brenna', min: 0, minLevel: 20, color: '#d8b070',
     pitch: 'You can hold a blade. Now learn to finish things quickly, cleanly, and more than once. Levels 20 to 60.',
     ch: [
       C('level', 25, 'Reach hero level 25.', { abs: true }), C('clear', 20, 'Clear 20 depths.'), C('level', 30, 'Reach hero level 30.', { abs: true }),
@@ -257,7 +258,7 @@ export const SAGAS = [
       C('level', 50, 'Reach hero level 50.', { abs: true }), C('elite', 150, 'Slay 150 champions or uniques.'), C('cleanClear', 15, 'Clear 15 depths without a potion.'),
       C('level', 60, 'Reach hero level 60: a journeyman no longer.', { abs: true }),
     ] },
-  { id: 'veterans_ascent', name: "The Veteran's Ascent", giver: 'Armsmaster Brenna', min: 120, color: '#c89850',
+  { id: 'veterans_ascent', name: "The Veteran's Ascent", giver: 'Armsmaster Brenna', min: 0, minLevel: 60, color: '#c89850',
     pitch: 'The last forty levels are the long ones. I will be here at the end of them. Levels 60 to 100.',
     ch: [
       C('level', 65, 'Reach hero level 65.', { abs: true }), C('region', 10, 'Win 10 overworld trials.'), C('level', 70, 'Reach hero level 70.', { abs: true }),

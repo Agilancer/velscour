@@ -1494,7 +1494,12 @@ function drawOverheadNames(ctx, world) {
         ctx.globalAlpha = 0.62; drawLabel(ctx, n.name, sx * d, sy * d, nameFont, '#d8c890', 3 * d); ctx.globalAlpha = 1;
       } else if (n.keepFlame && n !== nearest) {
         ctx.globalAlpha = 0.7; drawLabel(ctx, n.name, sx * d, sy * d, nameFont, '#d8f080', 3 * d); ctx.globalAlpha = 1;
-      } else if (n.keepCastellan || n.keepFolk) {
+      }
+      if (n.keepFolk && !(n.talkT > 0)) {   // the keep's folk: who they are, always (the Sagas name their givers)
+        if (n !== nearest) drawLabel(ctx, n.name, sx * d, sy * d, nameFont, '#d8d0b8', 3 * d);
+        drawLabel(ctx, n.role, sx * d, (sy + 11) * d, small, '#a8a088', 2 * d);
+      }
+      if (n.keepCastellan || n.keepFolk) {
         const mark = n.keepCastellan ? castellanMark() : folkMark(n);
         if (mark) {   // a gold "!" (rewards wait) or a green "?" (a Saga to take up), bobbing over her
           const by = (sy - (n.talkT > 0 ? 62 : 26) + Math.sin(G.time * 3.2) * 3) * d, col = '#ffd24a';

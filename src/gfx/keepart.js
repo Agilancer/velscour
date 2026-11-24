@@ -171,7 +171,7 @@ export function rugCanvas(id, rect) {
     x.beginPath(); q.forEach(([px, py], i) => (i ? x.lineTo((px - bx0) * R, (py - by0) * R) : x.moveTo((px - bx0) * R, (py - by0) * R))); x.closePath();
   };
   x.fillStyle = 'rgba(0,0,0,0.35)'; poly(-0.05); x.fill();
-  x.filter = 'brightness(1.4) saturate(1.1)';   // the weaves are dark swatches: lifted, a blue runner reads as blue on the floor
+  x.filter = id.startsWith('gold') ? 'brightness(1.05) saturate(0.85)' : 'brightness(1.4) saturate(1.1)';   // (the gold weave is bright already: a deep old gold, not orange)   // the weaves are dark swatches: lifted, a blue runner reads as blue on the floor
   x.fillStyle = pat; poly(0.02); x.fill();
   x.filter = 'none';
   // a gilt border: a broad band, a bright line in it, a fine line inside; a dark edge where the rug lies on the stone
@@ -255,6 +255,46 @@ export function drawFire(ctx, x, y, t, h, w, pal = 'sacred', seed = 0, sparks = 
   }
   ctx.restore();
 }
+// ---- the Sacred Flame as pixel art: a fire field on a coarse grid (2 world px a cell), six flat steps of colour from
+// a dark green rim to a pale heart, its edges broken by noise that scrolls upward and dithered where the steps meet
+const NOISE = (() => { const n = new Float32Array(4096); let s = 90210; for (let i = 0; i < 4096; i++) { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; n[i] = s / 4294967296; } return n; })();
+function noise(x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+  const a = NOISE[((yi & 63) << 6) | (xi & 63)], b = NOISE[((yi & 63) << 6) | ((xi + 1) & 63)], c = NOISE[(((yi + 1) & 63) << 6) | (xi & 63)], d = NOISE[(((yi + 1) & 63) << 6) | ((xi + 1) & 63)];
+  return (a + (b - a) * u) * (1 - v) + (c + (d - c) * u) * v;
+}
+const FW = 54, FH = 72, SACRED = [[6, 52, 28, 215], [12, 104, 42, 255], [34, 178, 64, 255], [112, 234, 86, 255], [206, 255, 128, 255], [255, 252, 216, 255]];
+let fireCv = null, fireImg = null;
+function drawPixelFire(ctx, x, y, t, k) {
+  if (!fireCv) { fireCv = makeCanvas(FW, FH); fireImg = fireCv.getContext('2d').createImageData(FW, FH); }
+  const d = fireImg.data;
+  for (let py = 0; py < FH; py++) {
+    const h = (FH - 1 - py) / FH, w = (h < 0.12 ? 0.62 + h * 3.2 : Math.pow((1 - h) / 0.88, 0.9)) * 0.44, sway = (noise(h * 3.2 + t * 0.9, 7.3) - 0.5) * 0.3 * h;
+    for (let px = 0; px < FW; px++) {
+      const o = (py * FW + px) * 4, u = (px + 0.5) / FW - 0.5, q = Math.abs(u - sway) / (w + 0.001);
+      let I = 0;
+      if (q < 1.3) {
+        const n = noise(px * 0.17, py * 0.12 + t * 5.4) * 0.62 + noise(px * 0.39 + 11, py * 0.27 + t * 9.5) * 0.38;
+        I = (1 - q) * (1.2 - h * 0.78) + (n - 0.5) * (0.42 + h * 1.05) + ((px + py) & 1) * 0.045;
+      }
+      const i = I < 0.17 ? -1 : I < 0.31 ? 0 : I < 0.46 ? 1 : I < 0.63 ? 2 : I < 0.82 ? 3 : I < 1.0 ? 4 : 5;
+      if (i < 0) { d[o + 3] = 0; continue; }
+      const c = SACRED[i]; d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = c[3];
+    }
+  }
+  fireCv.getContext('2d').putImageData(fireImg, 0, 0);
+  const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(fireCv, x - FW * k, y - FH * 2 * k + 4 * k, FW * 2 * k, FH * 2 * k);
+  ctx.imageSmoothingEnabled = sm;
+  // embers: square sparks torn off the tips, rising and drifting
+  for (let i = 0; i < 22; i++) {
+    const f = (t * (0.2 + (i % 5) * 0.035) + i * 0.618) % 1, a = i * 2.39, s = i % 4 === 0 ? 3 : 2;
+    ctx.globalAlpha = (1 - f) * (1 - f);
+    ctx.fillStyle = i % 3 ? '#b8ff70' : '#fff4b0';
+    ctx.fillRect(Math.round(x + Math.sin(a + t * 1.2 + f * 5) * (10 + f * 30) * k), Math.round(y - (60 + f * 140) * k), s, s);
+  }
+  ctx.globalAlpha = 1;
+}
 /** Tessariel's green fire over the basin, a gold heart in it. x, y: the rim's centre (world px); k: its size. */
 export function drawSacredFlame(ctx, x, y, t, k = 1) {
   // a pale pillar of its light going up into the vault, the fire, then motes circling the crown (dim on the far side)
@@ -264,7 +304,9 @@ export function drawSacredFlame(ctx, x, y, t, k = 1) {
   g.addColorStop(0, 'rgba(150,255,120,0.20)'); g.addColorStop(0.5, 'rgba(150,255,120,0.07)'); g.addColorStop(1, 'rgba(150,255,120,0)');
   ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 16 * k, y); ctx.lineTo(x - 30 * k, y - 260 * k); ctx.lineTo(x + 30 * k, y - 260 * k); ctx.lineTo(x + 16 * k, y); ctx.closePath(); ctx.fill();
   ctx.restore();
-  drawFire(ctx, x, y, t, 112 * k, 22 * k, 'sacred', 0, 30);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.26 + Math.sin(t * 3.1) * 0.04;
+  ctx.drawImage(glowSprite('#7dff5a'), x - 80 * k, y - 170 * k, 160 * k, 200 * k); ctx.restore();
+  drawPixelFire(ctx, x, y, t, k);
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   for (let i = 0; i < 12; i++) {
@@ -294,7 +336,8 @@ export function ghostSprite(art) {
   if (A.cache.has(key)) return A.cache.get(key);
   const s = r.spr, c = makeCanvas(s.w, s.h), x = c.getContext('2d');
   x.drawImage(s.img, s.sx, s.sy, s.w, s.h, 0, 0, s.w, s.h);
-  x.globalCompositeOperation = 'source-in'; x.fillStyle = '#dfe8f4'; x.fillRect(0, 0, s.w, s.h);
+  // a statue roughed out of grey stone, not yet finished: the sprite without its colour, flattened
+  x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(150,152,158,0.82)'; x.fillRect(0, 0, s.w, s.h);
   const out = { spr: { img: c, sx: 0, sy: 0, w: s.w, h: s.h, ox: s.ox, oy: s.oy }, k: r.k };
   A.cache.set(key, out);
   return out;
@@ -309,7 +352,7 @@ export function drawLightShafts(ctx, world, t) {
   ctx.globalCompositeOperation = 'lighter';
   for (const s of w) {
     if (!s.glow) continue;
-    const a = 0.06 + 0.02 * Math.sin(t * 0.6 + s.phase);
+    const a = 0.1 + 0.025 * Math.sin(t * 0.6 + s.phase);
     for (const q of s.shaft) {
       const gr = ctx.createLinearGradient(q[0][0], q[0][1], q[2][0], q[2][1]);
       gr.addColorStop(0, s.glow.replace('rgb', 'rgba').replace(')', `,${a})`)); gr.addColorStop(1, 'rgba(0,0,0,0)');
