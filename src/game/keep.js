@@ -8,9 +8,10 @@ import { sfx } from '../core/audio.js';
 import {
   METRICS, ABS, SAGAS, SAGA_BY_ID, sagaReward, BOUNTIES, BOUNTY_REWARD, BOUNTIES_A_DAY, CHALLENGES, TROPHY_BY_ID, DECOR,
   defaultDecor, renownRank, renownBonus, TRADE, TRADE_SLOTS, VAULT_STEPS, VAULT_MYTHIC, KINDLE, EXPEDITIONS, EMBER_COLOR,
+  warSeats, WAR_EMBERS_A_DAY, WATCHES, WATCH_MIN_DEPTH, MARCHES, CASTELLAN,
 } from '../data/keep.js';
-import { BIOME_BY_ID } from '../data/biomes.js';
-import { depthLevel, MAX_LEVEL, isRaidDepth } from '../data/depth.js';
+import { BIOME_BY_ID, ACT_BIOMES } from '../data/biomes.js';
+import { depthLevel, MAX_LEVEL, isRaidDepth, ACTS, getActForDepth, FINAL_DEPTH } from '../data/depth.js';
 import { rollItem, rarityAt, RARITY, itemName, itemColor, goldPile, rollGem } from '../data/items.js';
 
 const DAY = 86400000, WEEK = DAY * 7;
@@ -32,6 +33,8 @@ export function keepState(c = G.char) {
     while (k.decor[kind].length < n) k.decor[kind].push(defaultDecor()[kind][k.decor[kind].length]);
   }
   k.exp ||= [];
+  k.watch ||= {};                       // the Long Watch: { id: { base, paid } }
+  k.war ||= { day: -1, embers: 0 };     // Embers the War Table has paid today
   return k;
 }
 
@@ -67,10 +70,18 @@ function bumpMany(c, list) {
 
 // ------------------------------------------------------------------ hooks the game calls
 const live = (w) => !!w && !G.cine && !(G.world?.keepTest);
+/** Does this level count for the keep? Not a practice fight, and not a depth far beneath the hero: the keep counts
+ *  deeds done where the deep can still hurt (within 15 depths of their deepest, or within 6 monster levels of their
+ *  own), or its repeatables and bounties could be farmed on Depth 5 by a hero of level 100. */
+export function keepWorthy(world, c = G.char) {
+  if (!world || !c || world.practice) return false;
+  if (world.keepWorthy === undefined) { const d = world.depth || 1; world.keepWorthy = d >= (c.deepest || 0) - 15 || depthLevel(d) >= (c.level || 1) - 6; }
+  return world.keepWorthy;
+}
 /** A monster slain (combat.js). */
 export function keepKill(world, m) {
   const c = G.char;
-  if (!c || !live(world) || m.team !== 'enemy' || m.summon || m.critter) return;
+  if (!c || !live(world) || m.team !== 'enemy' || m.summon || m.critter || !keepWorthy(world, c)) return;
   const list = [['kill', 1]];
   if (m.rank === 'champion' || m.rank === 'unique') list.push(['elite', 1]);
   if (m.rank === 'unique') list.push(['unique', 1]);
@@ -82,7 +93,7 @@ export function keepKill(world, m) {
 /** A level the hero just won (game.brokeThrough): a depth cleared, an overworld trial won; its time and potions. */
 export function keepClear(world) {
   const c = G.char;
-  if (!c || !world || world.keepCleared || world.kind !== 'dungeon' || world.breach || world.rift) return;
+  if (!c || !world || world.keepCleared || world.kind !== 'dungeon' || world.breach || world.rift || !keepWorthy(world, c)) return;
   world.keepCleared = true;
   const b = world.biome?.id, t = world.time || 0, pots = world.keepPotions || 0, k = keepState(c);
   const list = [['clear', 1]];
@@ -104,6 +115,7 @@ export function keepClear(world) {
     if (world.biome?.overworld && (!R.region || t < R.region.t)) R.region = { t: Math.round(t * 10) / 10, depth: world.depth, biome: b };
   }
   bumpMany(c, list);
+  checkProgress(c, 'deepest');   // a new deepest depth: the Descent, the chapters that ask for one
 }
 export function keepBreach(floor) { const c = G.char; if (!c) return; keepEvent('breach', 1); const R = keepState(c).rec; R.breach = Math.max(R.breach || 0, floor); }
 export function keepRift(tier, time) {
@@ -125,6 +137,8 @@ export function keepPotion() { const w = G.world; if (w && w.kind === 'dungeon')
 export function keepSocket() { keepEvent('socket', 1); }
 export function keepUpgrade() { keepEvent('upgrade', 1); }
 export function keepDeath() { keepEvent('death', 1); }
+/** The hero's level went up (Player.gainXp): what reads it (the Ascent, the squire's Sagas, the March). */
+export function keepLevel(c = G.char) { if (c) checkProgress(c, 'level'); }
 
 // ------------------------------------------------------------------ Sagas
 /** The Sagas the hero may take (deep enough), and where each stands. */
@@ -132,14 +146,18 @@ export function sagaList(c = G.char) {
   const k = keepState(c), deep = c.deepest || 0;
   return SAGAS.map((s) => {
     const st = k.sagas[s.id];
-    return { saga: s, open: deep >= s.min, taken: !!st, ch: st ? st.ch : 0, done: !!st && st.ch >= s.ch.length };
+    return { saga: s, open: sagaOpen(s, c), taken: !!st, ch: st ? st.ch : 0, done: !!st && st.ch >= s.ch.length };
   });
 }
+/** A Saga opens by depth, or (the Armsmaster's) by the hero's level. */
+export const sagaOpen = (s, c = G.char) => (c?.deepest || 0) >= s.min && (c?.level || 1) >= (s.minLevel || 0);
+/** What a locked Saga waits for, in words. */
+export const sagaLock = (s) => (s.minLevel ? `hero level ${s.minLevel}` : `Depth ${s.min}`);
 export function takeSaga(id, c = G.char) {
   const s = SAGA_BY_ID[id], k = keepState(c);
-  if (!s || k.sagas[id] || (c.deepest || 0) < s.min) return false;
+  if (!s || k.sagas[id] || !sagaOpen(s, c)) return false;
   k.sagas[id] = { ch: 0, base: snapshot(c, s.ch[0]) };
-  checkSaga(c, s);
+  checkSaga(c, s, true);
   return true;
 }
 const snapshot = (c, q) => (q && !isAbs(q) ? metricValue(c, q.m) : 0);
@@ -148,13 +166,14 @@ export function progressOf(c, q, base) {
   const v = metricValue(c, q.m), have = isAbs(q) ? v : v - (base || 0);
   return [Math.max(0, Math.min(q.n, have)), q.n];
 }
-function checkSaga(c, s) {
+function checkSaga(c, s, taking = false) {
   const k = keepState(c), st = k.sagas[s.id];
   let moved = false;
   while (st && st.ch < s.ch.length) {
     const q = s.ch[st.ch], [have, need] = progressOf(c, q, st.base);
     if (have < need) break;
     const last = st.ch === s.ch.length - 1, r = sagaReward(st.ch, last);
+    if (taking) r.embers = Math.ceil(r.embers / 2);   // a chapter already behind the hero when the Saga is taken up (a level long since reached) pays half
     owe(c, { kind: 'saga', id: `${s.id}#${st.ch}`, name: `${s.name}: chapter ${st.ch + 1}`, text: q.text, ...r, trophy: q.trophy, decor: q.decor, color: s.color });
     st.ch++;
     st.base = snapshot(c, s.ch[st.ch]);
@@ -168,7 +187,21 @@ const hash = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h
 /** The bounties a hero can do: breach and rifts once open, the dungeons and trials every hero can reach. */
 function bountyPool(c) {
   return BOUNTIES.filter((b) => (b.m !== 'breach' || (c.deepest || 0) >= 20) && (b.m !== 'rift' || (c.rifts?.best || 0) > 0 || (c.deepest || 0) >= 500)
-    && (b.m !== 'region:great_hunt' || (c.level || 1) >= 10) && (b.m !== 'raid' || (c.deepest || 0) >= 4));
+    && (b.m !== 'region:great_hunt' || (c.level || 1) >= 10) && (b.m !== 'raid' || (c.deepest || 0) >= 4) && (!b.m.includes(':') || reachable(b.m, c)));
+}
+/** The act whose depths deal a biome or region ('clear:x' / 'region:x'), or 0: none does (the skull in town takes a
+ *  hero to those: the Velscour teleport). */
+export function actOf(m) { const id = m.split(':')[1]; for (const [a, list] of Object.entries(ACT_BIOMES)) if (list.includes(id)) return +a; return 0; }
+/** Can the hero's own descent bring them there yet (their act or an earlier one), or have they been there before? */
+export function reachable(m, c = G.char) {
+  const a = actOf(m), mine = getActForDepth(Math.min(FINAL_DEPTH, Math.max(1, (c.deepest || 0) + 1))).act;
+  return (a > 0 && a <= mine) || (keepState(c).st[m] || 0) > 0;
+}
+/** For a chapter that asks for a place the hero's descent has not reached: where it is found. '' when it needs none. */
+export function chapterHint(c, q) {
+  if (!q.m.includes(':') || reachable(q.m, c)) return '';
+  const a = actOf(q.m), A = ACTS.find((x) => x.act === a);
+  return A ? `The descent reaches it in Act ${a} (from Depth ${A.start}); the skull in town will take you there sooner.` : 'No act of the descent leads there: ask the skull in town to take you.';
 }
 /** Scale a bounty's count to the hero: gold by their level, the rest as written. */
 function bountyN(c, b) {
@@ -198,7 +231,7 @@ export function bountyText(b) {
 }
 function checkBounties(c, m) {
   const k = keepState(c);
-  if (k.bounty.day !== today()) return;
+  if (k.bounty.day !== today()) bountyBoard(c);   // a new day's board rolls itself (not only when its page is opened)
   for (const b of k.bounty.list) {
     if (b.done || (m && b.m !== m)) continue;
     if (metricValue(c, b.m) - b.base >= b.n) {
@@ -226,10 +259,53 @@ function checkChallenges(c, m) {
 /** Everything a counter might have finished (or everything, with no m: arriving at the keep, a new board). */
 export function checkProgress(c = G.char, m = null) {
   if (!c) return;
-  const k = keepState(c);
+  const k = keepState(c), outer = !pend;
+  if (outer) pend = [];
   for (const s of SAGAS) { const st = k.sagas[s.id]; if (st && st.ch < s.ch.length && (!m || s.ch[st.ch].m === m)) checkSaga(c, s); }
   checkBounties(c, m);
   checkChallenges(c, m);
+  checkWatches(c, m);
+  if (!outer) return;
+  // what this check finished: a line each, or one line for a flood (a veteran's first visit finishes dozens at once)
+  const list = pend, w = G.world; pend = null;
+  if (!list.length || !G.ui || !w || w.keepTest) return;
+  const where = w.keep ? 'Claim from the Castellan.' : `The Castellan holds your reward${list.length > 1 ? 's' : ''} in <b style="color:${EMBER_COLOR}">Tessariel's Keep</b>.`;
+  const tag = (r) => `<b style="color:${r.color || EMBER_COLOR}">${r.kind === 'challenge' ? 'Deed done' : r.kind === 'bounty' ? 'Bounty done' : r.kind === 'watch' ? (r.id.startsWith('m_') ? 'The March' : 'The Long Watch') : 'Saga'}:</b> ${escapeHtml(r.name)}`;
+  if (list.length <= 2) for (const r of list) G.ui.log(`${tag(r)}. ${where}`, '#e8f0c0');
+  else G.ui.log(`<b style="color:${EMBER_COLOR}">${list.length} deeds done:</b> ${list.slice(0, 2).map((r) => escapeHtml(r.name)).join(', ')} and ${list.length - 2} more. ${where}`, '#e8f0c0');
+  if (G.player) sfx('levelup', 0.25);
+}
+let pend = null;   // rewards owed during one checkProgress
+// ------------------------------------------------------------------ the Long Watch (repeatable, past the throne)
+export const watchOpen = (c = G.char) => (c?.deepest || 0) >= WATCH_MIN_DEPTH || (c?.level || 1) >= MAX_LEVEL;   // the throne reached, or the last level: one of the two repeatables always runs
+/** Where each watch stands: [{ w, have, paid }] (have: progress toward the next payment). */
+export function watchList(c = G.char, list = WATCHES) {
+  const k = keepState(c);
+  return list.map((w) => { const st = k.watch[w.id]; return { w, have: st ? Math.max(0, metricValue(c, w.m) - st.base) % w.every : 0, paid: st ? st.paid : 0 }; });
+}
+/** The March pays heroes still below the level cap. */
+export const marchOpen = (c = G.char) => !watchOpen(c);
+function checkWatches(c, m) {
+  const k = keepState(c);
+  for (const w of watchOpen(c) ? WATCHES : MARCHES) {
+    const st = k.watch[w.id] || (k.watch[w.id] = { base: metricValue(c, w.m), paid: 0 });   // counts from the day it opened
+    if (m && w.m !== m) continue;
+    const due = Math.floor((metricValue(c, w.m) - st.base) / w.every);
+    for (let n = 0; st.paid < due && n < 40; n++) { st.paid++; owe(c, { kind: 'watch', id: `${w.id}#${st.paid}`, name: w.name, text: w.text.replace('{n}', w.every), embers: w.embers, renown: 0, gold: 2 }); }
+  }
+}
+/** What the Castellan has for the hero: 'claim' (rewards wait), 'new' (a Saga can be taken up), or null. */
+export function castellanMark(c = G.char) {
+  const k = c && keepState(c);
+  if (!k) return null;
+  if (k.owed.length) return 'claim';
+  return giverMark(CASTELLAN.sagas, c);
+}
+/** 'new' when one of these Sagas (a giver's own) can be taken up. */
+export function giverMark(ids, c = G.char) {
+  const k = c && keepState(c), deep = c?.deepest || 0;
+  void deep;
+  return k && ids && ids.some((id) => SAGA_BY_ID[id] && !k.sagas[id] && sagaOpen(SAGA_BY_ID[id], c)) ? 'new' : null;
 }
 
 // ------------------------------------------------------------------ rewards owed (claimed at the Castellan)
@@ -237,10 +313,11 @@ function owe(c, r) {
   const k = keepState(c);
   if (k.owed.some((o) => o.id === r.id)) return;
   k.owed.push(r);
+  if (pend) { pend.push(r); return; }
   const w = G.world;
   if (G.ui && w && !w.keepTest) {
     const where = w.keep ? 'Claim it from the Castellan.' : `The Castellan holds your reward in <b style="color:${EMBER_COLOR}">Tessariel's Keep</b>.`;
-    G.ui.log(`<b style="color:${r.color || EMBER_COLOR}">${r.kind === 'challenge' ? 'Deed done' : r.kind === 'bounty' ? 'Bounty done' : 'Saga'}:</b> ${escapeHtml(r.name)}. ${where}`, '#e8f0c0');
+    G.ui.log(`<b style="color:${r.color || EMBER_COLOR}">${r.kind === 'challenge' ? 'Deed done' : r.kind === 'bounty' ? 'Bounty done' : r.kind === 'watch' ? (r.id.startsWith('m_') ? 'The March' : 'The Long Watch') : 'Saga'}:</b> ${escapeHtml(r.name)}. ${where}`, '#e8f0c0');
   }
   if (G.player && w && !w.keepTest) sfx('levelup', 0.25);
 }
@@ -256,7 +333,7 @@ export function claimAll(c = G.char) {
     if (r.trophy && !k.have.trophy.includes(r.trophy)) { k.have.trophy.push(r.trophy); got.push({ trophy: r.trophy }); autoPlaceTrophy(c, r.trophy); }
     if (r.decor) { const [kind, id] = r.decor; if (!k.have[kind].includes(id)) { k.have[kind].push(id); got.push({ decor: r.decor }); } }
     const v = k.vault; if (v.week !== thisWeek()) Object.assign(v, { week: thisWeek(), marks: 0, claimed: false, offer: null });
-    v.marks++;
+    if (r.kind !== 'watch') v.marks++;   // (the March's and the Long Watch's small payments are not marks on the Vault's door)
   }
   const before = renownRank(k.renown);
   k.embers += embers; k.renown += renown; c.gold += gold;
@@ -294,9 +371,12 @@ export function setDecor(kind, slot, id, c = G.char) {
 export const renownOf = (c = G.char) => renownRank(keepState(c)?.renown || 0);
 export const kindled = (c = G.char) => !!c?.keep?.kindled && c.keep.kindled.until > Date.now();
 export function kindleReadyIn(c = G.char) { const t = c?.keep?.kindled?.at || 0; return Math.max(0, t + KINDLE.cooldownMin * 60000 - Date.now()); }
-export function kindle(c = G.char) {
+export function kindle(c = G.char, pay = false) {
   const k = keepState(c);
-  if (kindleReadyIn(c) > 0) return false;
+  if (kindleReadyIn(c) > 0) {   // the Flame rests: fed KINDLE.rekindle Embers, it burns again at once
+    if (!pay || kindled(c) || k.embers < KINDLE.rekindle) return false;
+    k.embers -= KINDLE.rekindle;
+  }
   k.kindled = { at: Date.now(), until: Date.now() + KINDLE.minutes * 60000 };
   if (G.player) G.player.recompute();
   return true;
@@ -312,8 +392,13 @@ export function keepBonuses(c = G.char) {
 // ------------------------------------------------------------------ the Ember trade
 /** The item level the Castellan's smiths work at: the hero's own (never past where their deepest depth drops). */
 export function tradeLevel(c = G.char) {
-  return Math.max(1, Math.min(c.level || 1, depthLevel(Math.max(1, c.deepest || 1)) + 2, MAX_LEVEL + 20));
+  const deep = depthLevel(Math.max(1, c.deepest || 1));
+  // a hero at the level cap past the throne: what their deepest depth drops (to MAX_LEVEL + 20), or the keep's
+  // armour would be twenty item levels under everything they find
+  if ((c.level || 1) >= MAX_LEVEL) return Math.max(MAX_LEVEL, Math.min(deep, ILVL_CAP));
+  return Math.max(1, Math.min(c.level || 1, deep + 2, ILVL_CAP));
 }
+const ILVL_CAP = MAX_LEVEL + 20;   // the deepest item level the deep makes (data/depth.js depthLevel)
 /** Buy armour (rarity of TRADE[i], slot) for Embers: the item, or null. */
 /** Can the smiths forge TRADE[i] yet? A rarity opens at the item level it opens at in the deep (data/items.js). */
 export const tradeOpen = (i, c = G.char) => !!TRADE[i] && rarityAt(tradeLevel(c), TRADE[i].rarity) === TRADE[i].rarity;
@@ -341,7 +426,7 @@ export function vaultOffer(c = G.char) {
   const v = keepState(c).vault, s = vaultState(c);
   if (!s.picks || v.claimed) return [];
   v.offer ||= [];
-  const il = tradeLevel(c) + 2;
+  const il = Math.min(tradeLevel(c) + 2, ILVL_CAP);
   while (v.offer.length < s.picks) {
     let rar = rarityAt(il, 4);
     if (rar === 4 && rarityAt(il, 5) === 5 && Math.random() < VAULT_MYTHIC) rar = 5;
@@ -360,9 +445,11 @@ export function claimVault(i, c = G.char, addToBag = null) {
 // ------------------------------------------------------------------ the War Table (your other heroes' errands)
 /** The current hero's companions: every other class's newest hero (save.js heroesByClass), passed in. */
 export function expeditionsOf(c = G.char) { return keepState(c).exp; }
+/** The War Table today: seats (in use, of), Embers paid and their cap. */
+export function warState(c = G.char) { const k = keepState(c); return { used: k.exp.length, seats: warSeats(renownRank(k.renown)), embers: k.war.day === today() ? k.war.embers : 0, cap: WAR_EMBERS_A_DAY }; }
 export function sendExpedition(heroCls, heroLevel, expId, c = G.char) {
   const k = keepState(c), E = EXPEDITIONS.find((e) => e.id === expId);
-  if (!E || heroLevel < E.lvl || k.exp.some((e) => e.cls === heroCls)) return false;
+  if (!E || heroLevel < E.lvl || k.exp.some((e) => e.cls === heroCls) || k.exp.length >= warSeats(renownRank(k.renown))) return false;
   k.exp.push({ cls: heroCls, id: expId, start: Date.now(), end: Date.now() + E.min * 60000, lvl: heroLevel });
   return true;
 }
@@ -375,10 +462,13 @@ export function collectExpedition(cls, c = G.char, addToBag = null) {
   k.exp.splice(i, 1);
   if (!E) return null;
   const lv = Math.max(1, Math.min(e.lvl, c.level || 1) || 1), gold = Math.round(goldPile(lv) * E.gold);
-  k.embers += E.embers; c.gold += gold;
+  if (k.war.day !== today()) k.war = { day: today(), embers: 0 };
+  const embers = Math.max(0, Math.min(E.embers, WAR_EMBERS_A_DAY - k.war.embers));   // the table's Embers have a daily cap
+  k.war.embers += embers;
+  k.embers += embers; c.gold += gold;
   const gems = [];
   for (let g = 0; g < E.gems; g++) { const gem = rollGem(lv); if (!addToBag || addToBag(c, gem)) gems.push(gem); }
-  return { embers: E.embers, gold, gems, name: E.name };
+  return { embers, gold, gems, name: E.name, capped: embers < E.embers };
 }
 
 /** One line for the Quest Log / HUD: rewards waiting, and the first Saga chapter in hand. */

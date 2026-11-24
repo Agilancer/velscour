@@ -14,6 +14,45 @@ Contents
 
 ---
 
+## November 24, 2026 — Tessariel's Keep, four passes of polish (branch `claude/amazing-mccarthy-ph4dzv`)
+
+The user asked to continue on Tessariel's Keep with several iterations of polish: "make it look and feel AMAZING".
+The full account is in docs/TESSARIELS_KEEP.md ("The critics ... and the polish that followed"). In short:
+- **The hall was re-baked** (`src/world/tkeep.js`, `tools/tkeep3d.html`): the front terraces are half as high (12
+  levels, `TK.BALF`) with three-step corner stairs, so the floor is seen over them; the columns moved off the stairs'
+  sight lines; a floor medallion and limestone bands; four baked chandeliers hung by the game with live candles;
+  trophies and Elders larger. **Two old faults found**: every shield trophy was baked from behind (black), and the
+  **map edge fade painted over the upper walls and battlements**, which had never been visible in-game (now off in the
+  keep, `drawMapEdgeFade`).
+- **The bake needs the user's repos**: `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --filter=blob:none --sparse` of
+  `Agilancer/vesperwrithe` (sparse-checkout `assets/game/items assets/game/weapons/lances`) and `Agilancer/bm`
+  (`art/dragons/rigged`) into `/home/user/agilancer/`; both are public, the cloud proxy serves them. Then
+  `node tools/tkeep3d_bake.js && python tools/tkeep3d.py pack`. `window.TKEEP.probe(x, y, level)` in the bake page says
+  which tile a point is cut to.
+- **Runtime art** (`src/gfx/keepart.js`): `drawFire` (the Sacred Flame, braziers), `drawCandle`, the glass re-coloured at
+  load (reds to emerald), rugs lifted and gilt-bordered, the Elders' shades. Props take `fx` (drawn after the sprite),
+  `alpha` and `noHide` in `drawProp` / the prop pass of `render.js`.
+- **People and feel** (`src/game/keepfolk.js`, `src/data/keeplines.js`, `src/game/keepgame.js`): name plates, hero cards,
+  `GREETS_WHEN`, six lines a class, shuffle bags, the Castellan's mark (`castellanMark` in keep.js), `keepArrive`, the
+  claim ceremony (`claimCeremony` in ui/keep.js), clickable banners and windows (`decorSlot`).
+- **The panel** (`src/ui/keep.js`, css at the end of `css/style.css`): grouped tabs with badges, chapter pips, the trade's
+  comparison and confirm.
+- **Balance for veterans** (asked for after the polish; docs/TESSARIELS_KEEP.md "The veteran"): the War Table paid
+  ~1,400 Embers a day for no play to a hero with 18 others (now seats by Renown, 60 Embers a day, smaller payments); the
+  Ascent deeds ran to level 1,000 with a cap of 100; the trade forged at item level 100 under drops of 120; nothing was
+  left to earn or spend once every deed was done (the Long Watch, `WATCHES`; feeding the Flame, `KINDLE.rekindle`).
+  `keep_quests.mjs` now models the veteran and fails if a day's Embers leave the band.
+- **Third request the same day** (givers in the keep, quests below max level, graphics, the Flame and its holder, two
+  critics until they approve, then merge): docs/TESSARIELS_KEEP.md "The third session". Both critics approved in round 2
+  (8/10 each). New rules to know: `keepWorthy` (deeds count only near the hero's depth or level), `reachable`/`chapterHint`,
+  `sagaOpen` (`minLevel`), `MARCHES`, `giverTalk`. The Flame is `drawPixelFire` in keepart.js; the brazier, altar and
+  medallion are parts in `tools/tkeep3d.html`.
+- `spectate.js` fails on `main` too: "auto-play counts down" (auto-play's `leaveLevel` opens the portal choice with 2 s, the
+  test expects 5-7), and the click after it can then race the closing dialog and crash the run. Not the keep's.
+- Tests run: `keep.js` (desktop, mobile), `keep_quests.mjs`, `flow.js`, `hud.js`, `mobile.js`, `town.js`, `riftgate.js`.
+  `tools/tests/out/keeplook.js` (git-ignored, so gone in a new container) was a scratch script for quick shots.
+- Still open: docs/TESSARIELS_KEEP.md "Still open".
+
 ## November 24, 2026 — TESSARIEL'S KEEP (branch `claude/tessariels-keep-portal-eb63lb`)
 
 The user asked for a portal in town to **Tessariel's Keep**: your other heroes walking about it talking to you and each

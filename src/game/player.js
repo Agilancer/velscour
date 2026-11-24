@@ -1,6 +1,6 @@
 // The hero.
 import { G } from '../state.js';
-import { keepGold, keepItem, keepPotion, keepBonuses } from './keep.js';
+import { keepGold, keepItem, keepPotion, keepBonuses, keepLevel } from './keep.js';
 import { rand, chance, clamp, angleTo, dist, TAU, fmtInt } from '../core/util.js';
 import { sfx, levelUpFanfare } from '../core/audio.js';
 import { camera } from '../core/view.js';
@@ -314,10 +314,12 @@ export class Player extends Creature {
     const gain = Math.round(n * pen * (1 + this.st.xpPct / 100));
     if (c.level >= MAX_LEVEL) { gainMarkXp(gain); return; } // at the cap XP becomes Infernal Marks (game/marks.js)
     c.xp += gain;
+    const was = c.level;
     while (c.level < MAX_LEVEL && c.xp >= xpToNext(c.level)) {
       c.xp -= xpToNext(c.level);
       this.levelUp();
     }
+    if (c.level > was) keepLevel(c);   // Tessariel's Keep: the Sagas and deeds that read the hero's level
     if (c.level >= MAX_LEVEL && c.xp > 0) { gainMarkXp(c.xp); c.xp = 0; } // the last level's spare XP counts too
   }
   levelUp() {

@@ -51,6 +51,14 @@ const args = process.argv.slice(2), SHOTS = !args.includes('noshots'), MOBILE = 
     if (info.heroes.length !== 4) fail('expected 4 companions, saw ' + info.heroes.length);
     if (info.toBalcony < 0) fail('no way up to the north balcony');
     if (info.toFront < 0) fail('no way to the front (south-east) balcony');
+    // the hero walks (no teleport) up the grand stairs to the north balcony, round to the east terrace by the corner
+    // stairs, and back down to the floor
+    for (const [name, x, y, lv] of [['the north balcony', 21, 7.4, 24], ['the east terrace', 34.6, 21, 12], ['the floor', 21, 26, 0]]) {
+      await page.evaluate(([x, y]) => { window.VELSCOUR.G.player.setMoveTarget(x, y); }, [x, y]);
+      let r = null;
+      for (let t = 0; t < 120; t++) { await page.waitForTimeout(500); r = await page.evaluate(([x, y]) => { const { G } = window.VELSCOUR, p = G.player, m = G.world.map; return { d: Math.hypot(p.x - x, p.y - y), lv: m.hgt[m.tileIdx(p.x, p.y)] }; }, [x, y]); if (r.d < 0.8) break; }
+      if (!r || r.d >= 0.8 || r.lv !== lv) fail(`the hero could not walk to ${name}: ${JSON.stringify(r)}`); else console.log('walked to', name);
+    }
     await page.waitForTimeout(2500);   // the heroes' gear previews come in
     const view = async (name, x, y, wait = 700) => {
       await page.evaluate(([x, y]) => { const { G } = window.VELSCOUR; const { camera } = window.VELSCOUR_CAM || {}; G.player.x = x; G.player.y = y; G.player.path = null; }, [x, y]);

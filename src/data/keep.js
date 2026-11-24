@@ -1,5 +1,5 @@
 // TESSARIEL'S KEEP (docs/TESSARIELS_KEEP.md): the data. The keep's people, its decorations and trophies, the Ember
-// trade, Renown, and the quests: eight Sagas the Castellan gives chapter by chapter, Bounties on a daily board, and the
+// trade, Renown, and the quests: eleven Sagas their givers in the hall give chapter by chapter, Bounties on a daily board, and the
 // Challenges (deeds, tiers of them) that count on their own. Every objective is a metric (METRICS) and a count; the game
 // keeps the counters (src/game/keep.js keepEvent). Pure data, runs under Node (tools/tests/keep_quests.mjs).
 //
@@ -8,14 +8,18 @@
 
 export const EMBER_COLOR = '#c8f060';
 export const KEEP_NAME = "Tessariel's Keep";
-export const CASTELLAN = { name: 'Castellan Elsabet', title: 'of the Ivory Mantle, Keeper of the Flame', sprite: '07_knight_ivory_mantle' };
-// the keep's own folk, walking its hall (townsfolk sheets): [sprite, name, role, where]
+export const CASTELLAN = { name: 'Castellan Elsabet', title: 'of the Ivory Mantle, Keeper of the Flame', sprite: '07_knight_ivory_mantle', sagas: ['ember_road', 'four_teeth'] };
+// the keep's own folk at their posts in the hall (townsfolk sheets): [sprite, name, role, where, the Sagas they give].
+// Every Saga's giver stands in the keep: the hero takes it up from them (or from the Castellan's book). The Castellan
+// gives hers on the dais (CASTELLAN.sagas).
 export const KEEP_FOLK = [
-  ['41_friar', 'Brother Cael', 'tends the Flame', 'flame'],
-  ['09_knight_silver_censer', 'Ser Cassius', 'of the Silver Censer', 'hall'],
-  ['14_knight_dusk_lancer', 'Kestrel', 'the Dusk Lancer', 'balcony'],
-  ['42_priest', 'Mother Agatha', 'reads the Chronicle', 'chronicle'],
-  ['13_knight_frostbound', 'Halvard', 'the Frostbound', 'gate'],
+  ['41_friar', 'Brother Cael', 'tends the Flame', 'flame', ['hearth_hall']],
+  ['09_knight_silver_censer', 'Ser Cassius', 'of the Silver Censer', 'hall', ['hollow_crowns']],
+  ['14_knight_dusk_lancer', 'Kestrel', 'the Dusk Lancer', 'balcony', ['free_towns']],
+  ['42_priest', 'Mother Agatha', 'reads the Chronicle', 'chronicle', ['saints_deep']],
+  ['13_knight_frostbound', 'Halvard', 'the Frostbound', 'gate', ['endless_watch']],
+  ['04_river_patrol', 'Warden Orla', 'of the Ninth Bell, Commodore Brask\'s envoy', 'envoy', ['lampwardens']],
+  ['01_militia_veteran', 'Armsmaster Brenna', 'drills the keep\'s squires', 'arms', ['squires_oath', 'journeyman', 'veterans_ascent']],
 ];
 
 // ------------------------------------------------------------------ metrics
@@ -95,7 +99,7 @@ export const TROPHIES = [
   { id: 'lion_shield', art: 'shield_lionsun', name: 'The Lion and Sun', desc: 'For gold beyond counting.' },
   { id: 'north_shield', art: 'shield_north', name: 'The Northstar', desc: 'The Lampwardens\' own: steer by it.' },
   { id: 'skull', art: 'skull', name: 'Skull of the First Lord', desc: 'The skull of the first BOSS ROOM lord you broke.' },
-  { id: 'gem_skull', art: 'skull_gems', name: 'The Jewelled Skull', desc: 'Its eyes are rubies. It still watches.' },
+  { id: 'gem_skull', art: 'skull_gems', name: 'The Gilded Skull', desc: 'Gilt over bone. It still watches.' },
   { id: 'dawn_staff', art: 'staff_dawn', name: "Angels' Dawn", desc: 'A staff that once lit a choir.' },
   { id: 'phoenix_staff', art: 'staff_phoenix', name: 'Phoenix Ascendant', desc: 'Fire that rises again.' },
   { id: 'winter_staff', art: 'staff_winter', name: 'Winterstar', desc: 'Cold light from the Snowy Summit.' },
@@ -128,14 +132,39 @@ export const TRADE = [
 export const VAULT_STEPS = [3, 7, 12];
 export const VAULT_MYTHIC = 0.15;
 // The Sacred Flame's blessing: kneel at it for "Kindled" (XP, gold and magic find) for a while; once an hour.
-export const KINDLE = { minutes: 30, cooldownMin: 60, xp: 10, gf: 15, mf: 15 };
+export const KINDLE = { minutes: 30, cooldownMin: 60, xp: 10, gf: 15, mf: 15, rekindle: 30 };   // rekindle: Embers fed to the Flame to kneel again before the hour is up
 // The War Table: your other heroes go on errands of the keep in real time (minutes) and bring back Embers and spoils.
+// Balance (tools/tests/keep_quests.mjs, the veteran): a hero with every class made has 18 others to send, so the table
+// has SEATS (two, one more every fourth Renown rank), its Embers a DAILY CAP, and the long errands pay best by the hour:
+// a full table of vigils is about a day's bounties, not nine Legendaries a day for no play.
 export const EXPEDITIONS = [
-  { id: 'escort', name: 'Escort the pilgrims', where: 'through the Forsaken Wilds', min: 20, embers: 3, gold: 6, gems: 0, lvl: 1 },
-  { id: 'lamps', name: 'Relight the coast lamps', where: 'for the Lampwardens of Gullwrack', min: 45, embers: 5, gold: 8, gems: 1, lvl: 10 },
-  { id: 'relics', name: 'Bring home the relics', where: 'from the drowned chapels', min: 90, embers: 8, gold: 12, gems: 1, lvl: 25 },
-  { id: 'scout', name: 'Scout the Breach', where: 'at the purple portal\'s edge', min: 180, embers: 13, gold: 18, gems: 2, lvl: 45 },
-  { id: 'vigil', name: 'Keep the long vigil', where: 'on the walls of the Endless Siege', min: 480, embers: 26, gold: 30, gems: 3, lvl: 70 },
+  { id: 'escort', name: 'Escort the pilgrims', where: 'through the Forsaken Wilds', min: 20, embers: 1, gold: 6, gems: 0, lvl: 1 },
+  { id: 'lamps', name: 'Relight the coast lamps', where: 'for the Lampwardens of Gullwrack', min: 45, embers: 2, gold: 8, gems: 1, lvl: 10 },
+  { id: 'relics', name: 'Bring home the relics', where: 'from the drowned chapels', min: 90, embers: 3, gold: 12, gems: 1, lvl: 25 },
+  { id: 'scout', name: 'Scout the Breach', where: 'at the purple portal\'s edge', min: 180, embers: 5, gold: 18, gems: 2, lvl: 45 },
+  { id: 'vigil', name: 'Keep the long vigil', where: 'on the walls of the Endless Siege', min: 480, embers: 8, gold: 30, gems: 3, lvl: 70 },
+];
+export const warSeats = (rank) => 2 + Math.floor(rank / 4);   // 2 at first, 7 at Renown 20
+export const WAR_EMBERS_A_DAY = 60;
+
+// The Long Watch: deeds that never run out, for heroes who have reached the Fiend's throne (FINAL_DEPTH). Each pays its
+// Embers every `every` of its metric, counted from the day it opened (no back pay). A hero playing all day earns about
+// 100 to 120 Embers from these (tools/tests/keep_quests.mjs): with the bounties and the War Table, a Legendary and a
+// bit a day, a Mythic for a chosen slot every week or so. The deep still drops more; the keep lets you aim.
+// The March: the same for heroes still below the level cap (it stops paying at MAX_LEVEL, where the Long Watch takes
+// over): a little for every stretch of depths, champions and levels, so a levelling hero always has something coming.
+export const MARCHES = [
+  { id: 'm_clear', m: 'clear', every: 10, embers: 2, name: "The Day's March", text: 'Every {n} depths cleared' },
+  { id: 'm_elite', m: 'elite', every: 50, embers: 2, name: 'Heads for the Hall', text: 'Every {n} champions or uniques slain' },
+  { id: 'm_level', m: 'level', every: 5, embers: 5, name: 'The Rising Ember', text: 'Every {n} hero levels gained' },
+];
+export const WATCH_MIN_DEPTH = 500;
+export const WATCHES = [
+  { id: 'w_clear', m: 'clear', every: 25, embers: 4, name: 'The Long Descent', text: 'Every {n} depths cleared' },
+  { id: 'w_raid', m: 'raid', every: 5, embers: 4, name: 'Crowns Without End', text: 'Every {n} BOSS ROOM lords broken' },
+  { id: 'w_region', m: 'region', every: 5, embers: 4, name: 'The Roads Kept Open', text: 'Every {n} overworld trials won' },
+  { id: 'w_breach', m: 'breach', every: 5, embers: 4, name: 'The Breach Held', text: 'Every {n} floors of the Eternal Breach won' },
+  { id: 'w_rift', m: 'rift', every: 5, embers: 5, name: 'Rifts Sewn Shut', text: 'Every {n} Abyssal Rifts closed' },
 ];
 
 // ------------------------------------------------------------------ the Sagas
@@ -151,7 +180,7 @@ export const SAGAS = [
       C('upgrade', 1, 'Have Homunculus upgrade an item.'), C('raid', 1, 'Break a BOSS ROOM\'s lord (every fifth depth).'), C('deepest', 20, 'Reach Depth 20.', { abs: true }),
       C('raid', 3, 'Break 3 BOSS ROOM lords.', { trophy: 'ember_shield', decor: ['banner', 'holy_azure_sunburst'] }),
     ] },
-  { id: 'lampwardens', name: "The Lampwardens' Debt", giver: 'Commodore Brask (by letter)', min: 8, color: '#9fd8ff',
+  { id: 'lampwardens', name: "The Lampwardens' Debt", giver: 'Warden Orla, for Commodore Brask', min: 8, color: '#9fd8ff',
     pitch: 'The Lampwardens of the Ninth Bell lent us their light when we had none. Their coast is going dark.',
     ch: [
       C('region', 1, 'Win an overworld trial (any shrine, ship or tower).'), C('region:pirate_seas', 1, 'Hold the Dawnwake in the Pirate Seas.'), C('kill', 300, 'Slay 300 of the Black Tide\'s allies.'),
@@ -182,9 +211,10 @@ export const SAGAS = [
   { id: 'saints_deep', name: 'Saints of the Deep', giver: 'Mother Agatha', min: 5, color: '#e8d8ff',
     pitch: 'The Flame had shrines in every deep place once. Walk them, so the Chronicle can name them again.',
     ch: [
-      C('clear:catacombs', 1, 'Clear a depth of the Catacombs.'), C('clear:cathedral', 1, 'Clear a depth of the Cathedral.'), C('clear:library', 1, 'Clear a depth of the Library.'),
-      C('clear:sunken', 1, 'Clear a depth of the Sunken halls.'), C('clear:crystal', 1, 'Clear a depth of the Crystal Caverns.', { decor: ['banner', 'holy_lilies'] }), C('clear:necropolis', 1, 'Clear a depth of the Necropolis.'),
-      C('clear:heavenly', 1, 'Clear a depth of the Empyrean Citadel.'), C('clear:gilded', 1, 'Clear a depth of the Gilded vaults.'), C('clear:astral_plane', 1, 'Clear a depth of the Celestial Expanse.'),
+      // in the order the descent's acts reach them (data/biomes.js ACT_BIOMES): four of the first act, then on down
+      C('clear:catacombs', 1, 'Clear a depth of the Catacombs.'), C('clear:library', 1, 'Clear a depth of the Library.'), C('clear:sunken', 1, 'Clear a depth of the Sunken halls.'),
+      C('clear:necropolis', 1, 'Clear a depth of the Necropolis.'), C('clear:gilded', 1, 'Clear a depth of the Gilded vaults.', { decor: ['banner', 'holy_lilies'] }), C('clear:crystal', 1, 'Clear a depth of the Crystal Caverns.'),
+      C('clear:cathedral', 1, 'Clear a depth of the Cathedral.'), C('clear:heavenly', 1, 'Clear a depth of the Empyrean Citadel.'), C('clear:astral_plane', 1, 'Clear a depth of the Celestial Expanse.'),
       C('clear', 60, 'Clear 60 depths.', { trophy: 'dawn_staff', decor: ['glass', 'glass_d'] }),
     ] },
   { id: 'free_towns', name: 'The Free Towns', giver: 'Kestrel the Dusk Lancer', min: 12, color: '#a8e070',
@@ -209,6 +239,32 @@ export const SAGAS = [
       C('gold', 5000, 'Gather 5,000 gold.'), C('epic', 3, 'Find 3 Epic or better items.'), C('socket', 5, 'Socket 5 gems.'), C('upgrade', 5, 'Have 5 upgrades done.', { decor: ['rug', 'heraldic'] }),
       C('legendary', 1, 'Find a Legendary item.'), C('gold', 100000, 'Gather 100,000 gold.'), C('legendary', 5, 'Find 5 Legendary or better items.', { decor: ['rug', 'red_gothic'] }),
       C('socket', 25, 'Socket 25 gems.'), C('mythic', 1, 'Find a Mythic item.', { trophy: 'gem_skull' }), C('gold', 5e6, 'Gather 5,000,000 gold.', { trophy: 'lion_shield', decor: ['banner', 'holy_harvest'] }),
+    ] },
+  // ---- for heroes on the way up: Armsmaster Brenna's three, each a stretch of levels. Their level chapters read the
+  // hero's level as it stands, so a hero who is already past one is paid for it when the Saga is taken up.
+  { id: 'squires_oath', name: "The Squire's Oath", giver: 'Armsmaster Brenna', min: 0, color: '#e0c890',
+    pitch: 'Nobody comes to this hall a knight. You come a squire, and I count what you do. Levels 1 to 20.',
+    ch: [
+      C('level', 3, 'Reach hero level 3.', { abs: true }), C('kill', 100, 'Slay 100 monsters.'), C('level', 6, 'Reach hero level 6.', { abs: true }),
+      C('potion', 5, 'Drink 5 potions. (Staying alive is the first lesson.)'), C('elite', 10, 'Slay 10 champions or uniques.'), C('level', 10, 'Reach hero level 10.', { abs: true }),
+      C('clear', 8, 'Clear 8 depths.'), C('level', 15, 'Reach hero level 15.', { abs: true }), C('guardian', 5, 'Slay 5 guardians.'),
+      C('level', 20, 'Reach hero level 20: a squire no longer.', { abs: true }),
+    ] },
+  { id: 'journeyman', name: "The Journeyman's Road", giver: 'Armsmaster Brenna', min: 0, minLevel: 20, color: '#d8b070',
+    pitch: 'You can hold a blade. Now learn to finish things quickly, cleanly, and more than once. Levels 20 to 60.',
+    ch: [
+      C('level', 25, 'Reach hero level 25.', { abs: true }), C('clear', 20, 'Clear 20 depths.'), C('level', 30, 'Reach hero level 30.', { abs: true }),
+      C('raid', 5, 'Break 5 BOSS ROOM lords.'), C('level', 40, 'Reach hero level 40.', { abs: true }), C('fastClear', 10, 'Clear 10 depths in under 90 seconds.'),
+      C('level', 50, 'Reach hero level 50.', { abs: true }), C('elite', 150, 'Slay 150 champions or uniques.'), C('cleanClear', 15, 'Clear 15 depths without a potion.'),
+      C('level', 60, 'Reach hero level 60: a journeyman no longer.', { abs: true }),
+    ] },
+  { id: 'veterans_ascent', name: "The Veteran's Ascent", giver: 'Armsmaster Brenna', min: 0, minLevel: 60, color: '#c89850',
+    pitch: 'The last forty levels are the long ones. I will be here at the end of them. Levels 60 to 100.',
+    ch: [
+      C('level', 65, 'Reach hero level 65.', { abs: true }), C('region', 10, 'Win 10 overworld trials.'), C('level', 70, 'Reach hero level 70.', { abs: true }),
+      C('raid', 20, 'Break 20 BOSS ROOM lords.'), C('level', 80, 'Reach hero level 80.', { abs: true }), C('breach', 5, 'Win 5 floors of the Eternal Breach.'),
+      C('level', 90, 'Reach hero level 90.', { abs: true }), C('unique', 100, 'Slay 100 uniques.'), C('clear', 150, 'Clear 150 depths.'),
+      C('level', 100, 'Reach hero level 100: there is nothing left I can teach you.', { abs: true }),
     ] },
 ];
 export const SAGA_BY_ID = Object.fromEntries(SAGAS.map((s) => [s.id, s]));
@@ -249,7 +305,7 @@ tiers('Slayer', 'guardians', 'guardian', [5, 25, 100, 300, 1000], 'Warden-Breake
 tiers('Slayer', 'lords', 'raid', [1, 5, 20, 50, 100, 200], 'Crownbreaker', 'Break {n} BOSS ROOM lords.', { 4: { decor: ['banner', 'holy_verdant_cross'] } });
 // the descent
 tiers('Descent', 'depth', 'deepest', [10, 25, 50, 75, 100, 150, 200, 300, 400, 500], 'The Descent', 'Reach Depth {n}.', { 3: { decor: ['banner', 'town_eagle'] }, 9: { trophy: 'night_shield' } });
-tiers('Descent', 'level', 'level', [10, 20, 30, 50, 75, 100, 150, 250, 500, 1000], 'The Ascent', 'Reach hero level {n}.', { 5: { trophy: 'dawn_shield' } });
+tiers('Descent', 'level', 'level', [10, 20, 30, 40, 50, 60, 70, 80, 90, 100], 'The Ascent', 'Reach hero level {n}.', { 9: { trophy: 'dawn_shield' } });   // to the level cap (data/depth.js MAX_LEVEL); the old tiers ran to 1,000
 tiers('Descent', 'clears', 'clear', [10, 50, 150, 400, 1000], 'Delver', 'Clear {n} depths.');
 tiers('Descent', 'bossrooms', 'clearBoss', [3, 15, 50, 120], 'Throne-Taker', 'Clear {n} BOSS ROOMs.');
 // the raid's mechanics, as the old raids taught them (docs/TESSARIELS_KEEP.md names what each borrows from)
