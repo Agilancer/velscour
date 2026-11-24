@@ -13,7 +13,7 @@ import { CLASSES } from '../data/classes.js';
 import { RARITY, SLOT_NAMES } from '../data/items.js';
 import {
   SAGAS, CHALLENGES, CHALLENGE_GROUPS, TROPHIES, TROPHY_BY_ID, DECOR, TRADE, TRADE_SLOTS, VAULT_STEPS, EXPEDITIONS, KINDLE,
-  RENOWN_MAX, RENOWN_TITLES, renownNeed, renownRank, renownBonus, EMBER_COLOR, decorSources, trophySources, questCount,
+  RENOWN_MAX, RENOWN_TITLES, sagaReward, renownNeed, renownRank, renownBonus, EMBER_COLOR, decorSources, trophySources, questCount,
 } from '../data/keep.js';
 import {
   keepState, sagaList, takeSaga, progressOf, bountyBoard, bountyText, challengeName, challengeText, metricValue, claimAll, hasDecor,
@@ -24,7 +24,7 @@ import { companionsOf } from '../game/keepfolk.js';
 import { keepArt, trophySprite } from '../gfx/keepart.js';
 import { keepProps } from '../world/keepworld.js';
 
-const TABS = [['sagas', 'Sagas'], ['bounties', 'Bounties'], ['deeds', 'Deeds'], ['trade', 'Ember Trade'], ['vault', 'Vault'], ['furnish', 'Furnish'], ['chronicle', 'Chronicle'], ['war', 'War Table']];
+const TABS = [['Quests', ['sagas', 'Sagas'], ['bounties', 'Bounties'], ['deeds', 'Deeds']], ['Rewards', ['trade', 'Ember Trade'], ['vault', 'Vault']], ['The Hall', ['furnish', 'Furnish'], ['chronicle', 'Chronicle'], ['war', 'War Table']]];
 const bar = (have, need, col = EMBER_COLOR) => `<div class="kp-bar"><div style="width:${Math.min(100, (100 * have) / Math.max(1, need))}%;background:${col}"></div><span>${fmtInt(have)} / ${fmtInt(need)}</span></div>`;
 const fmtT = (s) => (s == null ? '—' : s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m` : s >= 60 ? `${Math.floor(s / 60)}m ${Math.round(s % 60)}s` : `${(Math.round(s * 10) / 10).toFixed(1)}s`);
 const ember = (n) => `<b class="kp-ember">${fmtInt(n)}</b>`;
@@ -52,8 +52,9 @@ export const KeepUI = {
     UI.closeAll();
     this.tab = tab;
     if (opts.pedestal != null) this.sel = { kind: 'pedestal', slot: opts.pedestal };
+    if (opts.slot) this.sel = { kind: opts.slot[0], slot: opts.slot[1] };
     sfx('ui');
-    UI.openPanel('keep', "Tessariel's Keep", (b) => this.render(b), { cls: 'keep-panel', width: 'min(760px, 96vw)', onClose: () => {} });
+    UI.openPanel('keep', "Tessariel's Keep", (b) => this.render(b), { cls: 'keep-panel', width: 'min(860px, 96vw)', onClose: () => {} });
   },
   close() { UI.closePanel('keep'); },
   render(body) {
@@ -74,10 +75,19 @@ export const KeepUI = {
     }
     body.appendChild(head);
     const tabs = el('div', 'kp-tabs');
-    for (const [id, label] of TABS) {
-      const t = el('button', 'kp-tab' + (this.tab === id ? ' on' : ''), label);
-      t.onclick = () => { this.tab = id; this.sel = id === 'furnish' ? this.sel : null; sfx('ui'); this.render(body); };
-      tabs.appendChild(t);
+    // what waits behind each tab: Sagas to take up, a Vault choice, heroes back from an errand
+    const v = vaultState(c), badge = {
+      sagas: sagaList(c).filter((s) => s.open && !s.taken).length,
+      vault: !v.claimed && v.picks ? v.picks : 0, war: k.exp.filter((e) => expeditionDone(e)).length,
+    };
+    for (const [group, ...list] of TABS) {
+      const g = el('div', 'kp-tabgroup'); g.appendChild(el('span', 'kp-tabhead', group));
+      for (const [id, label] of list) {
+        const t = el('button', 'kp-tab' + (this.tab === id ? ' on' : ''), label + (badge[id] ? `<i class="kp-badge">${badge[id]}</i>` : ''));
+        t.onclick = () => { this.tab = id; this.sel = id === 'furnish' ? this.sel : null; sfx('ui'); this.render(body); };
+        g.appendChild(t);
+      }
+      tabs.appendChild(g);
     }
     body.appendChild(tabs);
     const page = el('div', 'kp-page');
@@ -115,10 +125,13 @@ export const KeepUI = {
       if (!s.taken) h += `<div class="kp-text">${escapeHtml(S.pitch)}</div>`;
       else if (!s.done) {
         const st = k.sagas[S.id], q = S.ch[st.ch], [have, need] = progressOf(c, q, st.base);
-        h += `<div class="kp-text">${escapeHtml(q.text)}${q.trophy ? ` <span class="kp-prize">Trophy: ${escapeHtml(TROPHY_BY_ID[q.trophy].name)}</span>` : ''}</div>${bar(have, need, S.color)}`;
+        const pay = sagaReward(st.ch, st.ch === S.ch.length - 1);
+        const prize = (q.trophy ? ` <span class="kp-prize">Trophy: ${escapeHtml(TROPHY_BY_ID[q.trophy].name)}</span>` : '') + (q.decor ? ` <span class="kp-prize">${q.decor[0] === 'glass' ? 'Window' : q.decor[0][0].toUpperCase() + q.decor[0].slice(1)}: ${escapeHtml(DECOR[q.decor[0]].find((d) => d.id === q.decor[1])?.name || '')}</span>` : '');
+        h += `<div class="kp-text">${escapeHtml(q.text)} <span class="kp-pay">${ember(pay.embers)} Embers${pay.renown ? ` · ${pay.renown} Renown` : ''}</span>${prize}</div>${bar(have, need, S.color)}`;
       } else h += '<div class="kp-text dim">Every chapter told. Its trophies stand in the hall.</div>';
+      if (s.taken) h += `<div class="kp-pips">${S.ch.map((q, i) => `<i class="${i < s.ch ? 'done' : i === s.ch && !s.done ? 'now' : ''}${q.trophy ? ' prize' : ''}" title="Chapter ${i + 1}${q.trophy ? ': ' + escapeHtml(TROPHY_BY_ID[q.trophy].name) : ''}"></i>`).join('')}</div>`;
       row.innerHTML = h;
-      if (s.open && !s.taken) { const t = el('button', 'btn small', 'Take it up'); t.onclick = () => { takeSaga(S.id, c); sfx('ui'); G.game?.autosave?.(); this.refresh(); }; row.appendChild(t); }
+      if (s.open && !s.taken) { const t = el('button', 'btn small red', 'Take it up'); t.onclick = () => { takeSaga(S.id, c); sfx('ui'); G.game?.autosave?.(); this.refresh(); }; row.appendChild(t); }
       page.appendChild(row);
     }
   },
@@ -154,15 +167,26 @@ export const KeepUI = {
       const open = tradeOpen(i, c);
       row.innerHTML = `<div class="kp-tname" style="color:${R.color}">${R.name}</div><div class="kp-tcost">${ember(T.cost)}</div>${open ? '' : `<span class="dim">opens at item level ${R.minIlvl} (yours: ${il})</span>`}`;
       for (const slot of open ? TRADE_SLOTS : []) {
-        const bt = el('button', 'btn small', SLOT_NAMES[slot]);
+        const worn = c.equip && c.equip[slot], wr = worn ? RARITY[worn.rarity] : null;
+        const bt = el('button', 'btn small kp-tbtn', `${SLOT_NAMES[slot]}<small style="color:${wr ? wr.color : '#807868'}">${worn ? `worn · ilvl ${worn.ilvl || '?'}` : 'bare'}</small>`);
         bt.disabled = k.embers < T.cost;
-        bt.onclick = () => {
+        const better = !worn || worn.rarity < T.rarity || (worn.rarity === T.rarity && (worn.ilvl || 0) < il);
+        if (better && !bt.disabled) bt.classList.add('up');
+        if (worn) UI.tip(bt, () => itemTooltip(worn));
+        const buy = () => {
           const it = buyArmor(i, slot, c, addToBag);
           if (!it) { UI.log(k.embers < T.cost ? 'Not enough Embers.' : 'Inventory full.', '#ff8080'); sfx('error'); return; }
           sfx('gold'); changed();
           UI.log(`The smiths hand you <b style="color:${RARITY[it.rarity].color}">${escapeHtml(it.title || it.uname || it.baseName || SLOT_NAMES[slot])}</b> (${RARITY[it.rarity].name}, item level ${it.ilvl}).${it.rarity === 5 ? ' It came out of the fire <b>Mythic</b>!' : ''}`, RARITY[it.rarity].color);
           G.game?.autosave?.(); this.refresh();
         };
+        // the smiths ask first: what it costs, what it will be, what the hero wears there now
+        bt.onclick = () => UI.dialog({
+          title: `${R.name} ${SLOT_NAMES[slot]}`,
+          html: `<p>The smiths will forge a <b style="color:${R.color}">${R.name}</b> piece for your <b>${SLOT_NAMES[slot].toLowerCase()}</b> at item level <b>${il}</b> for ${ember(T.cost)} Embers (you have ${ember(k.embers)}).${T.mythic ? ` It may come out <b style="color:${RARITY[5].color}">Mythic</b>.` : ''}</p>
+            <p class="dim">${worn ? `You wear <b style="color:${wr.color}">${escapeHtml(worn.title || worn.uname || worn.baseName || SLOT_NAMES[slot])}</b> there (${wr.name}, item level ${worn.ilvl || '?'}).${better ? '' : ' <b style="color:#ffb060">What you wear is already as good or better.</b>'}` : 'You wear nothing there.'} Its affixes are rolled in the fire: no two come out alike.</p>`,
+          buttons: [{ label: 'Not now' }, { label: `Forge it · ${T.cost}`, cls: 'red', fn: buy }],
+        });
         row.appendChild(bt);
       }
       grid.appendChild(row);

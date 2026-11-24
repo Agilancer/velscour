@@ -14,7 +14,9 @@ import { generateKeep, keepProps, keepDressTile } from '../world/keepworld.js';
 import { loadKeepArt, drawSacredFlame } from '../gfx/keepart.js';
 import { startKeepFolk, keepWelcome } from './keepfolk.js';
 import { keepState, checkProgress, kindle, kindled, kindleReadyIn } from './keep.js';
-import { KINDLE, TROPHY_BY_ID, KEEP_NAME, EMBER_COLOR, CASTELLAN, renownRank } from '../data/keep.js';
+import { KINDLE, TROPHY_BY_ID, KEEP_NAME, EMBER_COLOR, CASTELLAN, DECOR, renownRank } from '../data/keep.js';
+import { input } from '../core/input.js';
+import { camera } from '../core/view.js';
 import { CX, CY, TK } from '../world/tkeep.js';
 import { endgameUnlocked } from './endgame.js';
 
@@ -48,6 +50,14 @@ export async function buildKeep(game) {
   mark({ name: 'The Vault of the Flame', x: A.vault[0], y: A.vault[1], h: 30, use: () => G.ui.keep.open('vault') });
   A.pedestals.forEach((p, i) => world.npcs.push({ keepMarker: true, pedestal: i, x: p.x, y: p.y, h: 26, reach: 1.9, flip: false,
     get name() { const id = keepState().decor.pedestal[i]; return id ? TROPHY_BY_ID[id]?.name : 'An empty pedestal'; }, use: () => G.ui.keep.open('furnish', { pedestal: i }) }));
+  // what hangs on the walls: click a banner or a window to change it (Furnish opens on that place)
+  const hang = (kind, list) => list.forEach((s, i) => {
+    const [x, y] = s.axis === 'x' ? [s.a, s.c + 0.1] : [s.c + 0.1, s.a];
+    world.npcs.push({ keepMarker: true, decorSlot: [kind, i], x: x + 0.012, y: y + 0.012, reach: 2.4, flip: false,
+      get name() { const id = keepState().decor[kind][i], d = id && DECOR[kind].find((q) => q.id === id); return d ? d.name : ''; },
+      use: () => G.ui.keep.open('furnish', { slot: [kind, i] }) });
+  });
+  hang('banner', A.banners); hang('glass', A.windows);
   // the chests every town has, by the portal
   world.npcs.push({ stash: true, name: 'Storage Chest', x: A.stash[0], y: A.stash[1], reach: 1.6, flip: false, use: () => G.ui.stash.open() });
   world.npcs.push({ stash: true, reliquary: true, name: 'The Reliquary', x: A.reliquary[0], y: A.reliquary[1], reach: 1.6, flip: false, use: () => G.ui.reliquary.open() });
@@ -126,6 +136,25 @@ export function drawKeepNpc(ctx, n, x, y, t) {
     drawSacredFlame(ctx, x, y - 24, t, k);
     if (kindled()) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.2 + Math.sin(t * 4) * 0.08; ctx.fillStyle = '#c8f060'; ctx.beginPath(); ctx.ellipse(x, y - 4, 46, 22, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
     n.sbox = [x - 34, y - 130, x + 34, y + 4];
+    return true;
+  }
+  if (n.decorSlot) {
+    // a banner or a window: its click box is its own sprite; under the mouse it lights up and says what it is
+    const w = G.world;
+    if (n._props !== w.props) { n._props = w.props; n._prop = w.props.find((p) => p.slot && p.slot[0] === n.decorSlot[0] && p.slot[1] === n.decorSlot[1]) || null; }
+    const pr = n._prop;
+    if (!pr) { n.sbox = null; return true; }
+    const s = pr.spr, k = pr.k, bx = x + s.ox * k, by = y + s.oy * k, bw = s.w * k, bh = s.h * k;
+    n.sbox = [bx + bw * 0.22, by + bh * 0.12, bx + bw * 0.78, by + bh * 0.88];
+    if (!G.touch && input.mouse.inside && !G.ui?.modalCount) {
+      const [a, b] = camera.toScreen(n.sbox[0], n.sbox[1]), [c, d] = camera.toScreen(n.sbox[2], n.sbox[3]), m = input.mouse;
+      if (m.x >= a && m.x <= c && m.y >= b && m.y <= d) {
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.28 + Math.sin(t * 5) * 0.06;
+        ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, bx, by, bw, bh); ctx.restore();
+        ctx.save(); ctx.font = '700 9px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.fillStyle = '#f0e0a0';
+        const label = `${n.name} · change`; ctx.strokeText(label, bx + bw / 2, by + bh * 0.1); ctx.fillText(label, bx + bw / 2, by + bh * 0.1); ctx.restore();
+      }
+    }
     return true;
   }
   if (n.keepMarker) { n.sbox = [x - 20, y - (n.h || 30) - 10, x + 20, y + 6]; return true; }

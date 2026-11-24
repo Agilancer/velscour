@@ -1480,7 +1480,7 @@ function drawOverheadNames(ctx, world) {
   // townsfolk names: only the one nearest the hero (a crowd of labels hides the crowd)
   const hero = world.player;
   let nearest = null, nd = 2.6;
-  if (hero) for (const n of world.npcs) if (!n.vendor && !n.stash && !n.altar && !n.hidden && n.sbox) { const q = Math.hypot(hero.x - n.x, hero.y - n.y); if (q < nd) { nd = q; nearest = n; } }
+  if (hero) for (const n of world.npcs) if (!n.vendor && !n.stash && !n.altar && !n.hidden && !n.decorSlot && n.sbox) { const q = Math.hypot(hero.x - n.x, hero.y - n.y); if (q < nd) { nd = q; nearest = n; } }
   if (world.keep) {
     // Tessariel's Keep: a plate under every hero of yours' name, faint names on the stations, the Castellan's mark
     const small = `600 ${Math.round(9.5 * d)}px "Alegreya Sans", sans-serif`;
@@ -1490,7 +1490,7 @@ function drawOverheadNames(ctx, world) {
       if (n.keepHero && !(n.talkT > 0)) {
         if (n !== nearest) drawLabel(ctx, n.name, sx * d, sy * d, nameFont, '#e8d8a0', 3 * d);
         drawLabel(ctx, n.plate, sx * d, (sy + 11) * d, small, '#a8a088', 2 * d);
-      } else if (n.keepMarker && n.pedestal == null && n !== nearest) {
+      } else if (n.keepMarker && n.pedestal == null && !n.decorSlot && n !== nearest) {
         ctx.globalAlpha = 0.62; drawLabel(ctx, n.name, sx * d, sy * d, nameFont, '#d8c890', 3 * d); ctx.globalAlpha = 1;
       } else if (n.keepFlame && n !== nearest) {
         ctx.globalAlpha = 0.7; drawLabel(ctx, n.name, sx * d, sy * d, nameFont, '#d8f080', 3 * d); ctx.globalAlpha = 1;
@@ -1586,7 +1586,7 @@ export function drawMinimap(world, dt, canvas, big = false) {
   for (const ch of world.chests) if (!ch.opened && map.seen[Math.floor(ch.y) * map.w + Math.floor(ch.x)]) dot(ch.x, ch.y, ch.dot || '#ffd040', big ? 4 : 2.5);
   if (world.keep) {   // Tessariel's Keep: the Flame, the Castellan (pulsing when she has something for the hero), your heroes; not every pedestal
     for (const n of world.npcs) {
-      if (n.hidden || n.pedestal != null) continue;
+      if (n.hidden || n.pedestal != null || n.decorSlot) continue;
       if (n.keepFlame) dot(n.x, n.y, '#8cff5a', big ? 6 : 4);
       else if (n.keepCastellan) { const mk = castellanMark(); dot(n.x, n.y, mk ? '#ffd24a' : '#ffe090', (big ? 5 : 3.2) + (mk ? Math.sin(G.time * 4) * 1 + 1 : 0)); }
       else if (n.keepHero) dot(n.x, n.y, '#e8d8a0', big ? 3.5 : 2.2);
