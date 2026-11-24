@@ -1,5 +1,6 @@
 // VELSCOUR - entry point.
 import { G, loadSettings } from './state.js';
+import { KeepUI } from './ui/keep.js';
 import { initInput, input } from './core/input.js';
 import { camera } from './core/view.js';
 import { loadAssets } from './core/assets.js';
@@ -287,6 +288,7 @@ async function boot() {
   UI.reliquary = Reliquary;
   UI.heresies = Heresies; UI.rifts = Rifts; UI.marks = Marks; // the Endgame's panels (docs/ENDGAME.md)
   UI.macros = MacrosUI;
+  UI.keep = KeepUI; // Tessariel's Keep's panel (ui/keep.js)
   window.addEventListener('error', (e) => reportError(e.error || e.message));
   window.addEventListener('unhandledrejection', (e) => reportError(e.reason));
   window.addEventListener('beforeunload', () => { if (G.char) game.autosave(); });

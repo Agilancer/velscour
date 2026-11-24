@@ -1,5 +1,6 @@
 // Town vendors and their services.
 import { G } from '../state.js';
+import { keepUpgrade } from '../game/keep.js';
 import { el, fmtInt, escapeHtml, randi, pick, chance } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { UI, draggable, droppable } from './ui.js';
@@ -334,7 +335,7 @@ export const Vendor = {
     else if (it && it.type === 'gear') {
       if (kind === 'upgrade') {
         if ((it.upg || 0) >= 10) box.appendChild(el('div', 'dim', 'This item is fully upgraded (+10).'));
-        else btn(`Upgrade to +${(it.upg || 0) + 1}`, upgradeCost(it), true, () => { it.upg = (it.upg || 0) + 1; sfx('thud'); UI.log(`${escapeHtml(itemName(it))} upgraded!`, '#ffd34a'); });
+        else btn(`Upgrade to +${(it.upg || 0) + 1}`, upgradeCost(it), true, () => { it.upg = (it.upg || 0) + 1; keepUpgrade(); sfx('thud'); UI.log(`${escapeHtml(itemName(it))} upgraded!`, '#ffd34a'); });
         box.appendChild(el('div', 'dim', 'Each upgrade: +10% base damage/armor and +4% to affix values.'));
       } else if (kind === 'enchant') {
         const affs = Array.isArray(it.affixes) ? it.affixes : (it.affixes = []);

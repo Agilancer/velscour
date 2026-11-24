@@ -507,6 +507,16 @@ async function environments() {
     const top = ix.pieces.map((p, i) => [p, i]).sort((a, b) => b[0][3] * b[0][4] - a[0][3] * a[0][4]).slice(0, 48).map(([p]) => [`${dir}/${ix.pages[p[0]]}`, p.slice(1, 5)]);
     add(g, { id: 'castle3d_' + (v || 'ironcrown'), n: `${titleCase(v || 'ironcrown')} castle`, k: '3d', y: 'model', fr: top, c: ix.pieces.length, files: [`${dir}/index.json`] });
   }
+  // Tessariel's Keep (docs/TESSARIELS_KEEP.md): the baked hall, its trophies, and the decorations drawn onto it
+  {
+    const dir = 'assets/tiles/tkeep', ix = json(`${dir}/index.json`), D = json(`${dir}/decor/decor.json`);
+    g = group("Tessariel's Keep", { note: "The great hall baked from three.js (textured with vesperwrithe's Bellmourn/Phobos stone), the trophies baked from the user's bm and vesperwrithe GLB models, and the banners, stained glass and rugs (Bellmourn, vesperwrithe) the hero hangs.", v: 'tools/tkeep3d.html', cmd: 'node tools/tkeep3d_bake.js; python tools/tkeep3d.py pack', doc: 'docs/TESSARIELS_KEEP.md', code: 'src/world/tkeep.js src/gfx/keepart.js', dir: 'assets/source/tkeep' });
+    const top = ix.pieces.map((p) => p).sort((a, b) => b[3] * b[4] - a[3] * a[4]).slice(0, 48).map((p) => [`${dir}/${ix.pages[p[0]]}`, p.slice(1, 5)]);
+    add(g, { id: 'tkeep_hall', n: "Tessariel's Keep: the great hall", k: '3d', y: 'model', fr: top, c: ix.pieces.length, files: [`${dir}/index.json`] });
+    for (const [k, v] of Object.entries(ix.sprites || {})) add(g, { id: 'tkeep_' + k, n: `Keep trophy: ${titleCase(k.replace('trophy_', ''))}`, k: '3d', y: 'model', src: [`${dir}/${ix.pages[v.f[0][0]]}`, v.f[0].slice(1, 5)], files: [`${dir}/index.json`] });
+    for (const [kind, img, label] of [['banners', 'banners.webp', 'banner'], ['glass', 'glass.webp', 'stained glass'], ['rugs', 'rugs.webp', 'rug']])
+      for (const d of D[kind]) add(g, { id: `tkeep_${kind}_${d.id}`, n: `Keep ${label}: ${titleCase(d.id)}`, src: [`${dir}/decor/${img}`, d.r], w: kind === 'banners' ? "From the user's Bellmourn/vesperwrithe banners (no V)." : "From the user's vesperwrithe repo." });
+  }
   g = group('Ships and airships', { note: 'Sky Battle ships are baked; the Pirate Seas fleet is built live in three.js. All textured with the airship pack.', v: 'tools/seaships3d.html', code: 'tools/sea3d.js src/gfx/seabattle3d.js src/gfx/skyship.js', doc: 'docs/PIRATE_SEAS.md', dir: 'assets/source/airship' });
   for (const k of Object.keys(sky.sprites)) add(g, { id: 'sky_' + k, n: `Sky Battle: ${titleCase(k)}`, k: '3d', y: 'model', fr: sky.sprites[k].f.slice(0, 24).map((f) => [`assets/tiles/skyship/${sky.pages[f[0]]}`, f.slice(1, 5)]), files: ['assets/tiles/skyship/index.json'] });
   for (const f of fs.readdirSync('tools').filter((f) => /^seaship3d_.*\.js$/.test(f)).sort()) {

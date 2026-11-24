@@ -4,6 +4,7 @@
 // gambling) and keeps delving. Toggled by the HUD's Auto button or P. Gear, stats and skills are judged by
 // simulation: apply the change, recompute the hero, score the result with charScore(), undo.
 import { G } from '../state.js';
+import { sagaList, takeSaga, claimAll, kindle, kindled, kindleReadyIn, keepUpgrade } from './keep.js';
 import { allocateAttrs } from './attrs.js';
 import { input } from '../core/input.js';
 import { sfx } from '../core/audio.js';
@@ -591,8 +592,28 @@ export const Auto = {
     if (this.thinkT <= 0) { this.thinkT = 1; this.manageHero(); }
     p.moveVec = [0, 0];
     if (this.nav && this.nav.job) this.stepRoadNav(2);   // the next road field, a slice a frame (buildNav)
-    if (w.kind === 'town') this.townTick(dt);
+    if (w.keep) this.keepTick(dt);
+    else if (w.kind === 'town') this.townTick(dt);
     else this.dungeonTick(dt);
+  },
+
+  /** In Tessariel's Keep (game/keepgame.js): take what the Castellan offers, claim what is owed, kneel at the Flame,
+   *  then walk back out through the portal to town (the keep has no vendors and no way down auto-play plans for). */
+  keepTick(dt) {
+    const p = G.player, w = G.world, c = G.char;
+    const K = this.keepRun || (this.keepRun = { t: 0, done: false });
+    K.t += dt;
+    if (!K.done) {
+      for (const s of sagaList(c)) if (s.open && !s.taken) takeSaga(s.saga.id, c);
+      const got = claimAll(c);
+      if (got.length && got[0].n) G.ui.log(`Auto-play claims ${got[0].n} reward${got[0].n > 1 ? 's' : ''} from the Castellan: <b style="color:#c8f060">+${got[0].embers} Embers</b>.`, '#e0f0c0');
+      if (!kindled(c) && kindleReadyIn(c) <= 0) kindle(c);
+      K.done = true;
+    }
+    const gate = w.portals.find((q) => q.keepGate);
+    this.setStatus('Leaving the Keep');
+    if (!gate || K.t > 25 || Math.hypot(p.x - gate.x, p.y - gate.y) < 1.6) { this.keepRun = null; G.game.enterTown(); return; }
+    this.goTo(gate.x, gate.y, 0.8, dt);
   },
 
   /** Someone is talking to the hero (townlife.js heroHears): stand still and face them until the bubble has been
@@ -2676,6 +2697,7 @@ export const Auto = {
       if (!best) break;
       c.gold -= upgradeCost(best);
       best.upg = (best.upg || 0) + 1;
+      keepUpgrade();
       G.ui.log(`Auto-play upgraded ${escapeHtml(itemName(best))}.`, '#ffd34a');
     }
     changed();

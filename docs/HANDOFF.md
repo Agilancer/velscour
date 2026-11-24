@@ -14,6 +14,43 @@ Contents
 
 ---
 
+## November 24, 2026 — TESSARIEL'S KEEP (branch `claude/tessariels-keep-portal-eb63lb`)
+
+The user asked for a portal in town to **Tessariel's Keep**: your other heroes walking about it talking to you and each
+other, hundreds of quests and challenges that unlock decorations for the keep, a ground floor and a balcony round it by
+stairs, places for trophies and time records, an NPC who gives the quests and trades their tokens for armour to
+Legendary (now and then Mythic), balanced with the game, portals back to town, the useful things such hubs have for the
+endgame; banners and assets from the user's bm, vesperwrithe and Bellmourn repos; ideas from the current WoW raid bosses
+and bm's four Elder Dragon dungeon; three critics (level design artists, quest designers) until they approve or four
+rounds; then PR and merge. Isometric, locked to the Velscour style. Everything is in **docs/TESSARIELS_KEEP.md**.
+- **The hall** (`src/world/tkeep.js` layout, `tools/tkeep3d.html` bake, `assets/tiles/tkeep/`): a 24 x 24 great hall,
+  back walls with ten lancet windows, a balcony on all four sides 24 levels up, two grand stairs flanking the Castellan's
+  dais, the Sacred Flame's basin, four Elder plinths, six columns, sixteen trophy pedestals; baked like the Sky Battle's
+  ship (`map.c3only`, every tile its own piece) with the Castle's tall occlusion. three.js for the bake comes from
+  `vendor/three/` (jsDelivr is blocked here); `GLTFLoader` was added there for the trophies.
+- **Decor** (`src/gfx/keepart.js`): banners and stained glass laid onto the wall planes by an affine map (one canvas each,
+  then ordinary prop sprites), rugs drawn into the floor tile by tile (`map.dressTile`, a hook in `gfx/terrain.js`
+  `drawColumn`), trophies from the bake (the user's GLBs: bm's four Elder Dragons, vesperwrithe's T shields, shields,
+  skulls, staves), the Castle Keep pack's painted furniture. T never near V: no V banner, window or trophy.
+- **People** (`src/game/keepfolk.js`, `src/data/keeplines.js`): every other class's hero (`heroesByClass`) in their saved
+  gear (`savedGearPreview`), walking the hall and the balcony, pair conversations with their own numbers, greetings; the
+  Castellan Elsabet on the dais; five of the keep's folk at their posts.
+- **Quests** (`src/data/keep.js`, `src/game/keep.js`): 8 Sagas (86 chapters), 62 daily Bounty kinds (three a day), 239
+  Deeds; counters fed by `keepEvent` hooks (kills in `combat.js`, clears in `game.brokeThrough`, Breach, Rifts, pickups,
+  potions, sockets, upgrades, deaths). Rewards wait at the Castellan: Embers, Renown, gold, trophies, decorations.
+- **Endgame helpers**: the Ember trade (Rare 18 / Epic 55 / Legendary 150, the hero's own item level, 1 in 10 Legendaries
+  Mythic, a rarity only once its item level opens), the weekly Vault of the Flame, Renown (+1% gold, +1 MF, +0.5% XP a
+  rank, 20 ranks), Kindled at the Flame (+10% XP, +15% gold, +15 MF, 30 min, hourly), the War Table (your other heroes'
+  real-time expeditions), the Chronicle of Deeds (every hero's records), the chests, the Waygate down.
+- **State**: `G.char.keep` (filled in on first use by `keepState`; an old save loads as a new keep). Renown and Kindled
+  are added in `Player.recompute` (`keepBonuses`).
+- **Auto-play** in the keep claims, takes Sagas, kneels, walks out (`Auto.keepTick`); it never walks in by itself.
+- **Critics**: round 1 only (art 6/10, hub/UX 6/10, both reject; the systems critic hit the usage limit); the user asked to
+  wrap up. What was fixed and the full list still open: docs/TESSARIELS_KEEP.md "The critics". Start there next time.
+- **Tests**: `node tools/tests/keep_quests.mjs` (data, rules, economy: ~2,200 Embers, 14 Legendaries over a full game),
+  `node tools/tests/keep.js [noshots] [mobile]`. `flow.js` ('expected town at depth 1') and `data_check.mjs` ('first 41
+  biomes...') fail on `main` too; `mobile.js` logs two 404s for the Gunner's missing skill sheets (also on `main`).
+
 ## November 18, 2026 — the Rogue and the Ninja, and the Monk's new sprites (branch `feat/rogue-ninja-monk`)
 
 The user asked for the Monk's sprite set to be changed and for two new classes, the Rogue and the Ninja, from the art in

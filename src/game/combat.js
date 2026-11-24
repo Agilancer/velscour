@@ -16,6 +16,7 @@ import { sigKill } from './signature.js';
 import { armorDiv, depthLevel, shownDmg, dmgScale } from '../data/depth.js';
 import { relicProc } from './relicprocs.js';
 import { commissionKill } from './commissions.js';
+import { keepKill } from './keep.js';
 import { riftKill } from './rifts.js';
 import { SKILLS } from '../data/skills.js';
 import { skillMorphFor } from '../data/talents.js';
@@ -316,7 +317,7 @@ export function kill(tgt, src, info = {}) {
       if (p.chart && tgt.team === 'enemy') astroOnKill(p, tgt); // the fallen may become a star on the Astronomer's chart
       if (p.sig && !info.sig) sigKill(p, tgt, src); // the class signature (game/signature.js); its own kills never feed it
     }
-    if (tgt.team === 'enemy') { dropLoot(world, tgt); commissionKill(world, tgt); if (world.rift) riftKill(world, tgt); }
+    if (tgt.team === 'enemy') { dropLoot(world, tgt); commissionKill(world, tgt); keepKill(world, tgt); if (world.rift) riftKill(world, tgt); }
     if (world.onKill) world.onKill(tgt); // streaks, challenges (game/happenings.js)
   }
   if ((tgt.rank === 'boss' || tgt.rank === 'raid' || tgt === world?.boss) && world) {
