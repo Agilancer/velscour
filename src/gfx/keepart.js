@@ -335,9 +335,9 @@ export function ghostSprite(art) {
   const key = 'ghost|' + art;
   if (A.cache.has(key)) return A.cache.get(key);
   const s = r.spr, c = makeCanvas(s.w, s.h), x = c.getContext('2d');
-  x.drawImage(s.img, s.sx, s.sy, s.w, s.h, 0, 0, s.w, s.h);
-  // a statue roughed out of grey stone, not yet finished: the sprite without its colour, flattened
-  x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(150,152,158,0.82)'; x.fillRect(0, 0, s.w, s.h);
+  // a statue of grey stone, not yet carved fine: the sprite without its colour, its shading kept, a cool stone tint
+  x.filter = 'grayscale(1) contrast(0.8) brightness(1.25)'; x.drawImage(s.img, s.sx, s.sy, s.w, s.h, 0, 0, s.w, s.h); x.filter = 'none';
+  x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(120,128,140,0.28)'; x.fillRect(0, 0, s.w, s.h);
   const out = { spr: { img: c, sx: 0, sy: 0, w: s.w, h: s.h, ox: s.ox, oy: s.oy }, k: r.k };
   A.cache.set(key, out);
   return out;

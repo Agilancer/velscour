@@ -241,7 +241,7 @@ export function tkeepLayout() {
     ],
     // chandeliers over the hall (level of their candles), braziers by the stairs
     chandeliers: [[CX - 5, CY + 1, 58], [CX + 1, CY - 5, 58], [CX + 6, CY, 58], [CX, CY + 6, 58]],   // off the diagonal through the Flame, so none hangs in front of it
-    braziers: [[DX0 - 0.3, DY1 + 1.4], [DX1 + 1.3, DY1 + 1.4], [CX - 2.6, F1 + 0.2], [CX + 2.6, F1 + 0.2]],
+    braziers: [[CX - 2.4, F0 + 0.7], [CX + 2.4, F0 + 0.7], [CX - 2.6, F1 + 0.2], [CX + 2.6, F1 + 0.2]],   // two flank the altar on the dais (clear of the Elders' plinths), two the way in
   };
   // what isn't part of the keep stays out of the map
   cache = { W, H, hgt, kind, solid, struct, t, parts, anchors, stairs };

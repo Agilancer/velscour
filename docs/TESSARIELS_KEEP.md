@@ -114,7 +114,7 @@ any other prop).
 - **The keep's folk** at their posts, now and then a short round: Brother Cael by the Flame, Ser Cassius in the hall,
   Kestrel on the balcony, Mother Agatha at the Chronicle, Halvard by the gate.
 
-## The quests (`src/data/keep.js`, `src/game/keep.js`) — 387
+## The quests (`src/data/keep.js`, `src/game/keep.js`) — 417, and the March and the Long Watch
 Every objective is a **metric** and a count. The game counts (`keepEvent`, called from combat's kill, `game.brokeThrough`
 on every cleared level, the Breach heart, the Rift win, gold and item pickups, potions, the Jeweler's sockets,
 Homunculus's upgrades, deaths); some metrics are read straight off the save (level, deepest depth, kills, Breach best,
@@ -242,6 +242,35 @@ keep, the arrival point moved out of the front balcony's shadow, the front balco
    compact header on phones.
 4. *The walls*: the map edge fade had hidden the upper walls and battlements since the first version (see The hall);
    the drums' edge tiles had no piece; the wall lights turned down once the walls showed.
+
+**The third session (givers, levelling quests, graphics, two critics):**
+- **Every Saga's giver stands in the hall and gives it** (`KEEP_FOLK`'s fifth field, `CASTELLAN.sagas`, `giverTalk` in
+  keepfolk.js): Brother Cael, Ser Cassius, Kestrel, Mother Agatha, Halvard, and two new ones, **Warden Orla** (the
+  Lampwardens' envoy) and **Armsmaster Brenna**. A gold "!" over a giver with a Saga to take up, "?" over the Castellan
+  when rewards wait; name and role plates always on.
+- **Quests for heroes on the way up**: Brenna's three Sagas (*The Squire's Oath* levels 1-20, *The Journeyman's Road*
+  20-60, *The Veteran's Ascent* 60-100; the last two open by hero level, `minLevel`) and **the March** (`MARCHES`:
+  2 Embers every 10 depths and every 50 champions, 5 every 5 levels) until the Long Watch opens (Depth 500 or level 100;
+  exactly one of the two runs). 11 Sagas, 116 chapters now. Levels and new depths count the moment they happen
+  (`keepLevel`, and `keepClear` checks 'deepest').
+- **The balconies**: `keep.js` walks the hero (no teleport) up the grand stair to the north balcony, round to the east
+  terrace by the corner stairs and back down.
+- **Graphics**: the Sacred Flame is **pixel-art fire** (`drawPixelFire`: a noise field on a 2 px grid, six flat colour
+  steps, embers) in a **crowned bronze brazier** on a stone stem (runes, coals, six gilt blades); the Elders' plinths are
+  **fanned off the Flame's axis**; an **altar with a gilt T** on the dais, the dais braziers beside it; a **sunburst
+  medallion** in green stone and slate; textured brass for the gilding, stone copings on the stair walls, dark nosings on
+  every step, darker ashlar on treads and plinth tops (they had blown out to white), the hall's flagstones on the
+  balconies, plain masonry under the terraces, no red-lion banner stands; unearned Elders are grey stone statues;
+  coloured glows kept close to their fires.
+- **The critics (two this time: an environment artist and a quest/hub designer).** Round 1: both 6/10, reject. Round 2:
+  **both 8/10, approve.** What the quest critic found and is now fixed and tested in `keep_quests.mjs`: a level 100 hero
+  could farm Depth 5 for the repeatables (`keepWorthy`: a level counts only within 15 depths of the hero's deepest or 6
+  monster levels of their own; practice fights never); the bounty board only rolled when its tab was opened; bounties
+  and Saints of the Deep asked for biomes the hero's act does not deal (`reachable`, `chapterHint`; the Saga is in act
+  order now); chapters already done when a Saga is taken up pay half; March and Watch payments are not Vault marks.
+- Left from the critics as notes: the hero looks pale on the open terrace (the see-through cut may fire there); the altar
+  is mostly hidden behind the Castellan; several chapters (The Free Towns 4-7, Lampwardens 2) need the skull in town to
+  reach their region, which only the hint says; the veteran's back pay sits 2 Embers under the test's limit.
 
 **Still open:** a training dummy and a coffer shared between heroes; class-pair chats and lines about the last thing
 that happened; companions still have no walk cycle (one image, bobbing); permanent station pages per station (each

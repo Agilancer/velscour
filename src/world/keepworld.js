@@ -72,7 +72,7 @@ export function keepProps(world, decor, have) {
   const F = (name, x, y, o = {}) => add(x, y, keepProp(name), o);
   F('empty_suit_of_armor', TK.F0 + 5.6, TK.F0 + 3.6); F('empty_suit_of_armor', TK.F1 - 4.6, TK.F0 + 3.6, { flip: true });   // clear of the braziers at the dais' corners
   const glow = (ctx, px, py, t) => { for (const [dx, dy] of [[0, -50], [-7, -43], [7, -43], [-11, -38], [11, -38]]) drawCandle(ctx, px + dx, py + dy, t, dx + px); };
-  F('keep_candelabrum', TK.F0 + 7.6, TK.F0 + 0.6, { fx: glow }); F('keep_candelabrum', TK.F1 - 6.6, TK.F0 + 0.6, { fx: glow });
+  F('keep_candelabrum', TK.F0 + 8.5, TK.F0 + 2.5, { fx: glow }); F('keep_candelabrum', TK.F1 - 7.5, TK.F0 + 2.5, { fx: glow });
   F('carved_lion_statue', A.townPortal[0] - 2.4, TK.F1 + 0.35); F('carved_lion_statue', A.townPortal[0] + 2.4, TK.F1 + 0.35, { flip: true });
   for (const [cx, cy] of A.columns) F('stone_bench', cx + (cx < 20 ? -1.5 : 1.5), cy + 0.4, { flip: cx > 20 });   // in the aisles (the Elders' plinths stand inside the colonnades)
   F('war_map_table', A.warTable[0], A.warTable[1]);

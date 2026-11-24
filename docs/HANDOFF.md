@@ -42,6 +42,13 @@ The full account is in docs/TESSARIELS_KEEP.md ("The critics ... and the polish 
   Ascent deeds ran to level 1,000 with a cap of 100; the trade forged at item level 100 under drops of 120; nothing was
   left to earn or spend once every deed was done (the Long Watch, `WATCHES`; feeding the Flame, `KINDLE.rekindle`).
   `keep_quests.mjs` now models the veteran and fails if a day's Embers leave the band.
+- **Third request the same day** (givers in the keep, quests below max level, graphics, the Flame and its holder, two
+  critics until they approve, then merge): docs/TESSARIELS_KEEP.md "The third session". Both critics approved in round 2
+  (8/10 each). New rules to know: `keepWorthy` (deeds count only near the hero's depth or level), `reachable`/`chapterHint`,
+  `sagaOpen` (`minLevel`), `MARCHES`, `giverTalk`. The Flame is `drawPixelFire` in keepart.js; the brazier, altar and
+  medallion are parts in `tools/tkeep3d.html`.
+- `spectate.js` fails on `main` too: "auto-play counts down" (auto-play's `leaveLevel` opens the portal choice with 2 s, the
+  test expects 5-7), and the click after it can then race the closing dialog and crash the run. Not the keep's.
 - Tests run: `keep.js` (desktop, mobile), `keep_quests.mjs`, `flow.js`, `hud.js`, `mobile.js`, `town.js`, `riftgate.js`.
   `tools/tests/out/keeplook.js` (git-ignored, so gone in a new container) was a scratch script for quick shots.
 - Still open: docs/TESSARIELS_KEEP.md "Still open".
