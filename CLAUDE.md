@@ -42,8 +42,9 @@ node tools/tests/rings.js                          # ring augments in a live dun
 node tools/tests/flow.js                           # town -> portal -> boss -> exit -> depth 2 -> death -> reload
 node tools/tests/riftgate.js [seeds]               # the Riftgate to VELSCOUR DEFENSE: placed in every town, through it and back
 node tools/tests/keep.js [noshots] [mobile]         # TESSARIEL'S KEEP (docs/TESSARIELS_KEEP.md): the portal, the hall, your heroes walking and talking, the hero walks to the balconies, every panel tab, trade, Vault, Furnish, auto-play's Standard Campaign calls there from town
+node tools/tests/keep_flame.js [zoom]              # the Sacred Flame close up: its round foot in the bowl, the brazier's near rim and blades drawn over it (small, Renown, Kindled, leaping)
 node tools/tests/keep_quests.mjs                    # the keep's 387 quests and deeds, their rules on a save, the Ember economy over a full game (no browser)
-node tools/tkeep3d_bake.js [preview x,y|trophies]   # bake the keep's hall + trophies (needs clones of vesperwrithe and bm), then python tools/tkeep3d.py pack
+node tools/tkeep3d_bake.js [preview x,y|trophies|front] # bake the keep's hall + trophies (needs clones of vesperwrithe and bm), then python tools/tkeep3d.py pack; `front`: only the Flame brazier's near-half mask (brazier_front.json)
 node defense/tests/defense.js [mobile]             # VELSCOUR DEFENSE (its own game, defense/docs/DEFENSE.md): menus, stages of all 5 acts on auto, modes, zoom, 3D packs
 node defense/tests/iphone.js [portrait|landscape]  # Defense on an iPhone-sized touch screen: every view fits (cards, packs, inspector, battle HUD)
 node defense/tests/balance.mjs [profiles] [days]   # Defense's calendar: casual/dedicated/grinder Commanders play real days of battles, no browser

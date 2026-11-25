@@ -4,7 +4,7 @@
 // drawn into the floor tile by tile (world/keepworld.js dressTile), the trophies' baked sprites, the Castle Keep pack's
 // painted furniture, the Sacred Flame and the windows' light.
 import { G } from '../state.js';
-import { makeCanvas, clamp, TAU } from '../core/util.js';
+import { makeCanvas, clamp, TAU, spriteCanvas as rasterCanvas, frozen } from '../core/util.js';
 import { HW, HH } from '../core/view.js';
 import { loadBaked, castle3dState } from './castle3dart.js';
 import { glowSprite } from './vfx.js';
@@ -27,8 +27,9 @@ export function loadKeepArt() {
     fetch(DECOR_DIR + 'decor.json').then((r) => r.json()),
     loadImg(DECOR_DIR + 'banners.webp'), loadImg(DECOR_DIR + 'glass.webp'), loadImg(DECOR_DIR + 'rugs.webp'),
     loadImg('assets/tiles/castle_keep/scatter.webp'), fetch('assets/tiles/castle_keep/pack.json').then((r) => r.json()),
-  ]).then(([baked, meta, banners, glass, rugs, scat, pack]) => {
-    A = { baked, meta, banners, glass, rugs, scat, pack, cache: new Map() };
+    fetch(KEEP_DIR + 'brazier_front.json').then((r) => r.json()).then((f) => loadImg(f.png).then((img) => ({ ...f, img }))).catch(() => null),
+  ]).then(([baked, meta, banners, glass, rugs, scat, pack, front]) => {
+    A = { baked, meta, banners, glass, rugs, scat, pack, front, cache: new Map() };
     return A;
   }).catch((e) => { loading = null; throw e; });
   return loading;
@@ -259,26 +260,34 @@ export function drawFire(ctx, x, y, t, h, w, pal = 'sacred', seed = 0, sparks = 
   ctx.restore();
 }
 // ---- the Sacred Flame as pixel art: a fire field on a coarse grid (2 world px a cell), six flat steps of colour from
-// a dark green rim to a pale heart, its edges broken by noise that scrolls upward and dithered where the steps meet
+// a dark green rim to a pale heart, its edges broken by noise that scrolls upward and dithered where the steps meet.
+// Its foot is round: below the coals' line it closes in the half of a flat ellipse (a disc of fire on the coals seen
+// from the game's camera, 2:1), sunk in the bowl, so the brazier's near rim and blades drawn after cut across it.
 const NOISE = (() => { const n = new Float32Array(4096); let s = 90210; for (let i = 0; i < 4096; i++) { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; n[i] = s / 4294967296; } return n; })();
 function noise(x, y) {
   const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
   const a = NOISE[((yi & 63) << 6) | (xi & 63)], b = NOISE[((yi & 63) << 6) | ((xi + 1) & 63)], c = NOISE[(((yi + 1) & 63) << 6) | (xi & 63)], d = NOISE[(((yi + 1) & 63) << 6) | ((xi + 1) & 63)];
   return (a + (b - a) * u) * (1 - v) + (c + (d - c) * u) * v;
 }
-const FW = 54, FH = 72, SACRED = [[6, 52, 28, 215], [12, 104, 42, 255], [34, 178, 64, 255], [112, 234, 86, 255], [206, 255, 128, 255], [255, 252, 216, 255]];
+// FW x FH cells over the coals' line, FB under it for the rounded foot
+const FW = 54, FH = 72, FB = 12, SACRED = [[6, 52, 28, 215], [12, 104, 42, 255], [34, 178, 64, 255], [112, 234, 86, 255], [206, 255, 128, 255], [255, 252, 216, 255]];
 let fireCv = null, fireImg = null;
+/** The fire, its foot's middle on the coals at (x, y); k its size. Its foot stays inside the bowl as it grows. */
 function drawPixelFire(ctx, x, y, t, k) {
-  if (!fireCv) { fireCv = makeCanvas(FW, FH); fireImg = fireCv.getContext('2d').createImageData(FW, FH); }
+  if (!fireCv) { fireCv = makeCanvas(FW, FH + FB); fireImg = fireCv.getContext('2d').createImageData(FW, FH + FB); }
   const d = fireImg.data;
-  for (let py = 0; py < FH; py++) {
-    const h = (FH - 1 - py) / FH, w = (h < 0.12 ? 0.62 + h * 3.2 : Math.pow((1 - h) / 0.88, 0.9)) * 0.44, sway = (noise(h * 3.2 + t * 0.9, 7.3) - 0.5) * 0.3 * h;
+  // the foot's half-width (u: a fraction of FW) and its half-height under the line (h: a fraction of FH), 2:1 on screen
+  const w0 = 0.273 * Math.min(1, 1.3 / k), e0 = w0 * FW / 2 / FH;
+  for (let py = 0; py < FH + FB; py++) {
+    const h = (FH - 1 - py) / FH, hh = Math.max(0, h);
+    const w = h < 0 ? w0 : h < 0.12 ? w0 + (0.44 - w0) * h / 0.12 : Math.pow((1 - h) / 0.88, 0.9) * 0.44, sway = (noise(h * 3.2 + t * 0.9, 7.3) - 0.5) * 0.3 * hh;
     for (let px = 0; px < FW; px++) {
-      const o = (py * FW + px) * 4, u = (px + 0.5) / FW - 0.5, q = Math.abs(u - sway) / (w + 0.001);
+      const o = (py * FW + px) * 4, u = (px + 0.5) / FW - 0.5, a = Math.abs(u - sway) / (w + 0.001);
+      const q = h < 0 ? Math.hypot(a, h / e0) : a;   // under the line: out from the foot's middle, round
       let I = 0;
       if (q < 1.3) {
         const n = noise(px * 0.17, py * 0.12 + t * 5.4) * 0.62 + noise(px * 0.39 + 11, py * 0.27 + t * 9.5) * 0.38;
-        I = (1 - q) * (1.2 - h * 0.78) + (n - 0.5) * (0.42 + h * 1.05) + ((px + py) & 1) * 0.045;
+        I = (1 - q) * (1.2 - hh * 0.78) + (n - 0.5) * (h < 0 ? 0.3 : 0.42 + h * 1.05) + ((px + py) & 1) * 0.045;
       }
       const i = I < 0.17 ? -1 : I < 0.31 ? 0 : I < 0.46 ? 1 : I < 0.63 ? 2 : I < 0.82 ? 3 : I < 1.0 ? 4 : 5;
       if (i < 0) { d[o + 3] = 0; continue; }
@@ -287,20 +296,23 @@ function drawPixelFire(ctx, x, y, t, k) {
   }
   fireCv.getContext('2d').putImageData(fireImg, 0, 0);
   const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(fireCv, x - FW * k, y - FH * 2 * k + 4 * k, FW * 2 * k, FH * 2 * k);
+  ctx.drawImage(fireCv, x - FW * k, y - FH * 2 * k, FW * 2 * k, (FH + FB) * 2 * k);
   ctx.imageSmoothingEnabled = sm;
   // embers: square sparks torn off the tips, rising and drifting
   for (let i = 0; i < 22; i++) {
     const f = (t * (0.2 + (i % 5) * 0.035) + i * 0.618) % 1, a = i * 2.39, s = i % 4 === 0 ? 3 : 2;
     ctx.globalAlpha = (1 - f) * (1 - f);
     ctx.fillStyle = i % 3 ? '#b8ff70' : '#fff4b0';
-    ctx.fillRect(Math.round(x + Math.sin(a + t * 1.2 + f * 5) * (10 + f * 30) * k), Math.round(y - (60 + f * 140) * k), s, s);
+    ctx.fillRect(Math.round(x + Math.sin(a + t * 1.2 + f * 5) * (10 + f * 30) * k), Math.round(y - (64 + f * 140) * k), s, s);
   }
   ctx.globalAlpha = 1;
 }
-/** Tessariel's green fire over the basin, a gold heart in it. x, y: the rim's centre (world px); k: its size. */
-export function drawSacredFlame(ctx, x, y, t, k = 1) {
-  // a pale pillar of its light going up into the vault, the fire, then motes circling the crown (dim on the far side)
+/** Tessariel's green fire over the basin, a gold heart in it. x, y: the rim's centre (world px); k: its size. `front`
+ *  draws what stands nearer than the fire (the brazier's near rim and blades: drawBrazierFront), over the fire and the
+ *  far motes, under the near ones. */
+export function drawSacredFlame(ctx, x, y, t, k = 1, front = null) {
+  // a pale pillar of its light going up into the vault, the fire (its foot on the coals, a level under the rim), then
+  // motes circling the crown: the far ones dim and behind the brazier's near blades, the near ones bright and in front
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   const g = ctx.createLinearGradient(0, y, 0, y - 260 * k);
@@ -309,15 +321,47 @@ export function drawSacredFlame(ctx, x, y, t, k = 1) {
   ctx.restore();
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.26 + Math.sin(t * 3.1) * 0.04;
   ctx.drawImage(glowSprite('#7dff5a'), x - 80 * k, y - 170 * k, 160 * k, 200 * k); ctx.restore();
-  drawPixelFire(ctx, x, y, t, k);
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  for (let i = 0; i < 12; i++) {
-    const a = t * (i % 2 ? 0.9 : -0.6) + i * TAU / 12, far = Math.sin(a) < 0, r = i % 2 ? 44 : 34, lift = 14 + (i % 3) * 16 + Math.sin(t * 1.3 + i) * 4;
-    ctx.globalAlpha = (far ? 0.3 : 0.9) * (0.7 + 0.3 * Math.sin(t * 3 + i * 1.7));
-    ctx.drawImage(glowSprite(i % 3 ? '#b8ff70' : '#fff0a0'), x + Math.cos(a) * r * k - 5, y - lift * k + Math.sin(a) * r * 0.45 * k - 5, 10, 10);
+  drawPixelFire(ctx, x, y + 4, t, k);
+  const motes = (far) => {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 12; i++) {
+      const a = t * (i % 2 ? 0.9 : -0.6) + i * TAU / 12, r = i % 2 ? 44 : 34, lift = 14 + (i % 3) * 16 + Math.sin(t * 1.3 + i) * 4;
+      if ((Math.sin(a) < 0) !== far) continue;
+      ctx.globalAlpha = (far ? 0.3 : 0.9) * (0.7 + 0.3 * Math.sin(t * 3 + i * 1.7));
+      ctx.drawImage(glowSprite(i % 3 ? '#b8ff70' : '#fff0a0'), x + Math.cos(a) * r * k - 5, y - lift * k + Math.sin(a) * r * 0.45 * k - 5, 10, 10);
+    }
+    ctx.restore();
+  };
+  motes(true);
+  if (front) front(ctx);
+  motes(false);
+}
+// ---- the brazier's near half over the fire: the baked pieces' own pixels under the mask tools/tkeep3d.html bakeFront
+// makes (assets/tiles/tkeep/brazier_front.json), so they lie exactly on the hall drawn under them
+/** The brazier's stem, bowl, rim, runes and the near blades of its crown as the bake drew them, nearer the camera than
+ *  the fire: { img, x, y, w, h } in world px (absolute, like the pieces). Made once from the loaded pieces, a raster
+ *  sprite where those are on (drawn every frame: a plain canvas would go up to the GPU again each time). */
+export function brazierFront() {
+  const F = A && A.front, st = F && castle3dState();
+  if (!st || st.dir !== KEEP_DIR || st.S !== F.S) return null;   // (a bake at another scale than the mask's: none)
+  if (A.cache.has('front')) return A.cache.get('front');
+  const c = rasterCanvas(F.w, F.h, st.imgs[0]), x = c.getContext('2d'), W = st.idx.W;
+  for (const tile of F.tiles) for (const id of [st.base.get(tile), st.over.get(tile)]) {
+    if (id === undefined) continue;
+    const [pg, sx, sy, w, h, ox, oy] = st.pieces[id], tx = tile % W, ty = (tile / W) | 0;
+    x.drawImage(st.imgs[pg], sx, sy, w, h, Math.round((ox + (tx - ty) * HW) * st.S) - F.x, Math.round((oy + (tx + ty) * HH) * st.S) - F.y, w, h);
   }
-  ctx.restore();
+  x.globalCompositeOperation = 'destination-in';
+  x.drawImage(F.img, 0, 0);
+  const out = { img: frozen(c), x: F.x / st.S, y: F.y / st.S, w: F.w / st.S, h: F.h / st.S };
+  A.cache.set('front', out);
+  return out;
+}
+/** Draw the brazier's near half (brazierFront) where the hall's pieces put it. */
+export function drawBrazierFront(ctx) {
+  const f = brazierFront();
+  if (f) ctx.drawImage(f.img, f.x, f.y, f.w, f.h);
 }
 /** A candle's flame at (x, y), its tip up. */
 export function drawCandle(ctx, x, y, t, seed = 0) {

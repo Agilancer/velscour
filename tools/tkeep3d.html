@@ -287,7 +287,7 @@ function build(M) {
   const group = new THREE.Group();
   for (const [m, list] of buckets) {
     const mesh = new THREE.Mesh(mergeGeometries(list.map((g) => { for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k); return g; })), M[m]);
-    mesh.castShadow = mesh.receiveShadow = true;
+    mesh.castShadow = mesh.receiveShadow = true; mesh.userData.m = m;
     group.add(mesh);
   }
   return group;
@@ -408,6 +408,59 @@ function bakePieces(group, S, VP = 2048) {
   return out;
 }
 
+// ------------------------------------------------------------------ the Flame's brazier, its near half
+/** Which pixels of the baked pieces are the near half of the Flame's brazier: its stem, bowl, rim, runes and the
+ *  blades of its crown nearer the camera than the plane the game's fire stands in (upright through the bowl's axis,
+ *  square to the view), not the coals the fire sits on. The game draws those pixels of the pieces again over the fire
+ *  (gfx/keepart.js brazierFront), so the near blades and rim stand in front of it. The same cameras and pixel grid as
+ *  bakePieces (S, VP), so the mask lies exactly on the pieces. -> { S, x, y, w, h (px at S), tiles, png } */
+function bakeFront(group, S, VP = 2048) {
+  const [fx, fy] = L.anchors.flame, f = (v) => v.toFixed(6);
+  const mask = (on) => new THREE.ShaderMaterial({
+    vertexShader: 'varying vec3 wp; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); wp = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+    fragmentShader: `varying vec3 wp;
+      void main(){ float dx = wp.x / ${f(TU)} - ${f(fx)}, dy = wp.z / ${f(TU)} - ${f(fy)}, lv = wp.y / ${f(LU)};
+        float m = ${on ? '1.0' : '0.0'} * step(0.0, dx + dy) * step(length(vec2(dx, dy)), 1.35) * step(2.7, lv);
+        gl_FragColor = vec4(m, 0.0, 0.0, 1.0); }`,
+    side: THREE.DoubleSide,
+  });
+  const ON = mask(true), OFF = mask(false);
+  scene.add(group);
+  const R = screenRect(group), vw = VP / S, gx = (fx - fy) * 32, gy = (fx + fy) * 16;
+  const box = [gx - 80, gy - 32 * 4, gx + 80, gy + 40];   // round the brazier (world px), level 32 down to the floor
+  const px = [], tiles = new Set();
+  for (let sy = R.y0; sy < R.y1; sy += vw) for (let sx = R.x0; sx < R.x1; sx += vw) {
+    if (sx > box[2] || sx + vw < box[0] || sy > box[3] || sy + vw < box[1]) continue;
+    const cam = isoCamera(sx, sx + vw, -sy, -(sy + vw));
+    aimSun(cam);
+    const tag = renderPass(group, cam, VP, VP, true);
+    const keep = [];
+    group.traverse((o) => { if (o.isMesh) { keep.push([o, o.material]); o.material = o.userData.m === 'coal' ? OFF : ON; } });
+    renderer.setSize(VP, VP, false); renderer.setClearColor(0x000000, 0); renderer.shadowMap.enabled = false;
+    for (const l of pointLights) l.visible = false;
+    renderer.render(scene, cam);
+    const gl = renderer.getContext(), m = new Uint8Array(VP * VP * 4);
+    gl.readPixels(0, 0, VP, VP, gl.RGBA, gl.UNSIGNED_BYTE, m);
+    for (const [o, mt] of keep) o.material = mt;
+    for (const l of pointLights) l.visible = true;
+    const ox = Math.round(sx * S), oy = Math.round(sy * S);
+    for (let row = 0; row < VP; row++) for (let x = 0; x < VP; x++) {
+      const k = ((VP - 1 - row) * VP + x) * 4;
+      if (m[k] < 128 || !tag[k + 3]) continue;
+      px.push(ox + x, oy + row); tiles.add(tag[k + 1] * MAP_W + tag[k]);
+    }
+  }
+  scene.remove(group);
+  if (!px.length) return null;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let i = 0; i < px.length; i += 2) { x0 = Math.min(x0, px[i]); x1 = Math.max(x1, px[i]); y0 = Math.min(y0, px[i + 1]); y1 = Math.max(y1, px[i + 1]); }
+  const w = x1 - x0 + 1, h = y1 - y0 + 1, c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'), im = g.createImageData(w, h);
+  for (let i = 0; i < px.length; i += 2) { const o = ((px[i + 1] - y0) * w + px[i] - x0) * 4; im.data[o] = im.data[o + 1] = im.data[o + 2] = im.data[o + 3] = 255; }
+  g.putImageData(im, 0, 0);
+  return { S, x: x0, y: y0, w, h, tiles: [...tiles].sort((a, b) => a - b), png: c.toDataURL('image/png') };
+}
+
 // ------------------------------------------------------------------ sprites (trophies)
 function bakeSprite(obj, S) {
   scene.add(obj);
@@ -510,8 +563,8 @@ function pack(items, PAGE = 4096) {
 async function bakeAll(S = 1.5, SPR = 2, models = '../tools/tests/out/tkeep_src/') {
   const t0 = performance.now();
   setup();
-  const M = await materials();
-  const pieces = bakePieces(build(M), S);
+  const M = await materials(), group = build(M);
+  const pieces = bakePieces(group, S), front = bakeFront(group, S);
   const sprites = {}, items = [];
   for (const T of TROPHY_ART) {
     let root;
@@ -529,7 +582,7 @@ async function bakeAll(S = 1.5, SPR = 2, models = '../tools/tests/out/tkeep_src/
     pages: pages.map((c) => c.toDataURL('image/png')),
     pieces: pieces.map(P), tiles: pieces.flatMap((u, i) => [u.tile, 0, i]),
     sprites: Object.fromEntries(Object.entries(sprites).map(([k, v]) => [k, { S: v.S, f: v.frames.map(P) }])),
-    candles: ch.userData.candles,
+    candles: ch.userData.candles, front,
     ms: Math.round(performance.now() - t0),
   };
 }
@@ -571,7 +624,12 @@ async function probe(x, y, z) {
   scene.remove(g);
   return { tag: [tag[k], tag[k + 1], tag[k + 2], tag[k + 3]], col: [col[k], col[k + 1], col[k + 2], col[k + 3]] };
 }
-window.TKEEP = { bakeAll, preview, trophySheet, probe };
+/** Only the mask of the brazier's near half (bakeFront), at the pieces' scale: for a change to the brazier alone. */
+async function bakeFrontOnly(S = 1.5) {
+  if (!renderer) setup();
+  return bakeFront(build(await materials()), S);
+}
+window.TKEEP = { bakeAll, bakeFrontOnly, preview, trophySheet, probe };
 </script>
 </body>
 </html>
