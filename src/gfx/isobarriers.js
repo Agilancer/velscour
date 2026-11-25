@@ -1,7 +1,7 @@
 // Correctly joined isometric barrier sprites. The world x and y axes project
 // respectively as (+80,+40) and (-80,+40) at the native 160×80 tile size.
 // A mirrored X fence is NOT a Y fence: both have different depth and endpoints.
-import { makeCanvas } from '../core/util.js';
+import { makeCanvas, spriteCanvas, frozen } from '../core/util.js';
 
 const cache=new Map();
 const STYLES={
@@ -37,7 +37,7 @@ export function isoBarrier(style='rail',axis='x'){
   style=STYLES[style]?style:'rail';axis=axis==='y'?'y':'x';
   const key=style+':'+axis;
   if(cache.has(key))return cache.get(key);
-  const canvas=makeCanvas(160,152),g=canvas.getContext('2d');
+  let canvas=spriteCanvas(160,152);const g=canvas.getContext('2d');
   g.imageSmoothingEnabled=false;
   const [dark,mid,shade,light]=STYLES[style],px=80,py=105;
   const sign=axis==='x'?1:-1;
@@ -65,6 +65,7 @@ export function isoBarrier(style='rail',axis='x'){
     // Spikes obey same tile-space axis and stay inside the fence's bounds.
     diamond(g,x,y-7,4,13,style==='crystal'?light:style==='bone'?'#ddd4b6':dark);
    }
+  canvas=frozen(canvas); // a raster sprite (util.frozen): drawn every frame along every fence
   const sprite={img:canvas,sx:0,sy:0,w:canvas.width,h:canvas.height,
     ox:-px,oy:-py,name:'iso_'+style+'_'+axis,fp:.15,block:true,
     isometric:true,axis,edgeA:[ax-px,ay-py],edgeB:[bx-px,by-py]};

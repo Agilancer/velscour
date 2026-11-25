@@ -8,7 +8,7 @@
 // A piece something else draws live (the Ninja's katana and nunchaku: src/gfx/ninjagear.js, setHeldLive) stays out of the
 // hero image, except in still pictures (the inventory portrait, previews).
 import { G } from '../state.js';
-import { makeCanvas, hexToRgb, randi, chance, pick, clamp } from '../core/util.js';
+import { makeCanvas, hexToRgb, randi, chance, pick, clamp, spriteCanvas, frozen, pixelsOf } from '../core/util.js';
 import { HELD_PER, HELD_START, heldSetOf, heldElement } from '../data/held.js';
 import { PALETTES } from '../data/gear.js';
 import { GEMS, RARITY, shownEquip } from '../data/items.js';
@@ -99,13 +99,14 @@ function sprite(pc, kind) {
   let c = sprites.get(key);
   if (c) return c;
   const [x, y, w, h] = pc.d[RECT[kind][0]], mr = pc.d[RECT[kind][1]];
-  c = makeCanvas(w, h);
+  c = spriteCanvas(w, h, pc.S.img); // a raster sprite where that is on (util.frozen); the CPU canvas it is read on otherwise
   const cx = c.getContext('2d', { willReadFrequently: true });
   cx.drawImage(pc.S.img, x, y, w, h, 0, 0, w, h);
   const im = cx.getImageData(0, 0, w, h), mc = makeCanvas(w, h).getContext('2d', { willReadFrequently: true });
   mc.drawImage(pc.S.img, mr[0], mr[1], w, h, 0, 0, w, h);
   recolor(im.data, mc.getImageData(0, 0, w, h).data, pc.finish, fxColor(pc.element));
   cx.putImageData(im, 0, 0);
+  c = frozen(c);
   if (sprites.size >= 160) sprites.delete(sprites.keys().next().value);
   sprites.set(key, c);
   return c;
@@ -230,14 +231,14 @@ export function heldHero(base, cls, equip) {
   let c = m.get(key);
   if (!c) {
     const HD = base.width / W;
-    c = makeCanvas(base.width, base.height);
-    const x = c.getContext('2d');
+    c = spriteCanvas(base.width, base.height, base); // a raster sprite (util.frozen): drawn every frame, uploaded once
+    const x = c.getContext('2d'), tmp = (w, h) => (c._cpu ? spriteCanvas(w, h) : makeCanvas(w, h));
     x.imageSmoothingEnabled = false;
     const drawPiece = (p) => { const s = sprite(p, 'held'); x.drawImage(s, p.x * HD, p.y * HD, s.width * HD, s.height * HD); };
     for (const p of pcs) if (p.behind) drawPiece(p); // held behind the body (the Rogue's left dagger): under the hero
     x.drawImage(base, 0, 0);
     for (const p of pcs) if (p.behind && p.pts.line) { // and its hilt and guard over him, up to `behind` px past the blade's root
-      const s = sprite(p, 'held'), t = makeCanvas(s.width, s.height), tx = t.getContext('2d'), [a, b] = p.pts.line;
+      const s = sprite(p, 'held'), t = tmp(s.width, s.height), tx = t.getContext('2d'), [a, b] = p.pts.line;
       const n = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, u = [(b[0] - a[0]) / n, (b[1] - a[1]) / n];
       const cx = a[0] + u[0] * p.behind - p.x, cy = a[1] + u[1] * p.behind - p.y, k = s.width + s.height;
       tx.drawImage(s, 0, 0); tx.globalCompositeOperation = 'destination-out'; tx.beginPath(); // cut away the blade side
@@ -248,13 +249,14 @@ export function heldHero(base, cls, equip) {
     for (const p of pcs) { // a contact shadow: the piece's silhouette, offset, darkening only the hero under it
       const sh = p.shadow;
       if (!sh || p.behind) continue;
-      const s = sprite(p, 'held'), t = makeCanvas(s.width, s.height), tx = t.getContext('2d');
+      const s = sprite(p, 'held'), t = tmp(s.width, s.height), tx = t.getContext('2d');
       tx.drawImage(s, 0, 0); tx.globalCompositeOperation = 'source-in'; tx.fillStyle = '#0c0806'; tx.fillRect(0, 0, t.width, t.height);
       x.globalAlpha = sh[2]; x.globalCompositeOperation = 'source-atop';
       x.drawImage(t, (p.x + sh[0]) * HD, (p.y + sh[1]) * HD, s.width * HD, s.height * HD);
       x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
     }
     for (const p of pcs) if (!p.behind) drawPiece(p);
+    c = frozen(c);
     if (m.size >= 4) m.delete(m.keys().next().value);
     m.set(key, c);
   }
@@ -275,7 +277,7 @@ const spots = new WeakMap(); // hero image -> { body, head }: opaque art px of t
 function sparkleSpots(base, cls) {
   let s = spots.get(base);
   if (s) return s;
-  const HD = base.width / W, d = base.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, base.width, base.height).data;
+  const HD = base.width / W, d = pixelsOf(base);
   const neck = (gearMeta(cls)?.headTop ?? 75) + 10, body = [], head = [];
   let seed = 7;
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);

@@ -65,8 +65,7 @@ export function seaOfSandEnemyImage(id, swap = null, mode = '') {
   else {
     const a = [...seaOfSandFrames('monster'), ...seaOfSandFrames('boss')].find((f) => f.id === id.slice(3));
     if (!a) return null;
-    img = swap ? recolor(images[a.category], swap, a.x, a.y, a.w, a.h) : makeCanvas(a.w, a.h);
-    if (!swap) img.getContext('2d').drawImage(images[a.category], a.x, a.y, a.w, a.h, 0, 0, a.w, a.h);
+    img = recolor(images[a.category], swap, a.x, a.y, a.w, a.h, true);
     img._art = { fx:(a.pivot?.[0] ?? a.w/2) };
     cache.set(key, img);
     while (cache.size > 100) cache.delete(cache.keys().next().value);

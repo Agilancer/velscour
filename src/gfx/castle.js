@@ -1,5 +1,6 @@
 // Runtime access to the complete, pivot-preserving CASTLE biome atlas pack.
-import { recolor, pageAtlas } from '../core/util.js';
+import { recolor, pageAtlas, rasterSprites } from '../core/util.js';
+import { gritSamples } from './grit.js';
 import { isoFix, isoFixImage } from './isofix.js';
 const DIR='assets/tiles/castle/';
 let loading=null,meta=null,images=null,ramparts=null;
@@ -11,7 +12,12 @@ export function loadCastlePack(){
  // the pack's atlases, and the masonry the walls are built from (tools/castleramparts.py: ramparts.webp + .json)
  loading=Promise.all([fetch(`${DIR}pack.json`),fetch(`${DIR}ramparts.json`)]).then(([r,q])=>{if(!r.ok||!q.ok)throw new Error('CASTLE metadata missing');return Promise.all([r.json(),q.json()]);})
   .then(async ([m,rp])=>{const categories=Object.keys(m.atlases);const atlases=await Promise.all([...categories,'ramparts'].map(loadImage));meta=m;
-   images=Object.fromEntries(categories.map((k,i)=>[k,atlases[i]]));ramparts={...rp,img:atlases[categories.length]};})
+   images=Object.fromEntries(categories.map((k,i)=>[k,atlases[i]]));ramparts={...rp,img:atlases[categories.length]};
+   // the floor atlases' grit colours now, fresh from the decoder, not a readback mid-frame (gfx/grit.js)
+   if(rasterSprites()){for(const k of FLOOR_CATS)if(images[k])images[k]._grit=gritSamples(images[k],castleFrames(k).map(f=>({x:f.x,y:f.y,w:f.w,h:f.h})));ramparts.img._grit=gritSamples(ramparts.img,Array.from({length:8},(_,j)=>{const [x,y,w,h]=rp.rects['top_'+j];return {x,y,w,h};}));
+    // and the painted planks and carpet with theirs, here behind the loading screen: made at first sight in play, their
+    // grit read waited 110-570 ms on the GPU's queue under auto-play (uncapped; tools/tests/out/diag_castle.js)
+    plankArt();carpetArt();}})
   .catch(e=>{loading=null;throw e;});
  return loading;
 }
@@ -24,20 +30,25 @@ export function castleRampartTops(palette=null){
  if(!ramparts)return [];
  const key='ramparts|'+JSON.stringify(palette),src=ramparts.img;
  return Array.from({length:8},(_,k)=>{const [x,y,w,h]=ramparts.rects['top_'+k],f={sx:x,sy:y,w,h,lum:0.02,seamless:true,name:'castle_rampart_top_'+k+(palette?'_tint':''),castle:true};
+  if(!palette){f.img=src;return f;}
   // a recoloured copy (the halls' limestone) is made on first draw
-  Object.defineProperty(f,'img',{enumerable:true,get:()=>{if(!palette)return src;if(!recolored.has(key))recolored.set(key,recolor(src,palette));return recolored.get(key);}});
+  Object.defineProperty(f,'img',{enumerable:true,get:()=>{if(!recolored.has(key))recolored.set(key,floorAtlas(recolor(src,palette,0,0,undefined,undefined,false,true),Array.from({length:8},(_,j)=>ramparts.rects['top_'+j])));return recolored.get(key);}});
   return f;});
 }
 export function castleFrames(category){return meta?.atlases[category]||[];}
+// recoloured copies are raster sprites (util.frozen): only ever drawn in 2D, uploaded once. Not the floors: they draw
+// 'low' at under half scale, and Chromium uploads a CPU bitmap drawn that way at half resolution (blurred)
+const FLOOR_CATS=new Set(['floors','keep_floors']);
+function floorAtlas(c,rects){if(rasterSprites())c._grit=gritSamples(c,rects.map(([x,y,w,h])=>({x,y,w,h})));delete c._px;return c;} // grit colours read now (gfx/grit.js)
 function imageFor(category,palette){
  const src=images?.[category];if(!src||!palette)return src;
  const key=category+'|'+JSON.stringify(palette);
- if(!recolored.has(key))recolored.set(key,recolor(src,palette));
+ if(!recolored.has(key))recolored.set(key,FLOOR_CATS.has(category)?floorAtlas(recolor(src,palette,0,0,undefined,undefined,false,true),castleFrames(category).map(f=>[f.x,f.y,f.w,f.h])):recolor(src,palette,0,0,undefined,undefined,true));
  return recolored.get(key);
 }
 function fixFor(palette){
  const key='isofix|'+JSON.stringify(palette);
- if(!recolored.has(key))recolored.set(key,recolor(isoFixImage('castle'),palette));
+ if(!recolored.has(key))recolored.set(key,recolor(isoFixImage('castle'),palette,0,0,undefined,undefined,true));
  return recolored.get(key);
 }
 export function castleObject(id,category='scatter',palette=null){
@@ -103,9 +114,17 @@ export function castleCutout(id,category,part){
 // Procedural carpet runner floor tiles (160 x 80 diamonds): [field, trimmed on its -x edge, trimmed on its +x edge],
 // for aisles running along y. The canvas is drawn on first use, so map generation stays canvas-free under Node.
 let carpetCanvas=null;
+// Procedural floor art is painted on a CPU canvas where raster sprites are on: its grit colours are read there, then
+// it is copied to the plain canvas that is drawn (an upload, no readback; a floor is never a raster sprite).
+const paintOpts=()=>rasterSprites()?{willReadFrequently:true}:undefined;
+function paintedFloor(c,cells){
+ if(!rasterSprites())return c;
+ const out=document.createElement('canvas');out.width=c.width;out.height=c.height;out.getContext('2d').drawImage(c,0,0);
+ out._grit=gritSamples(c,cells);return out;
+}
 function carpetArt(){
  if(carpetCanvas)return carpetCanvas;
- const c=document.createElement('canvas');c.width=480;c.height=80;const g=c.getContext('2d');
+ const c=document.createElement('canvas');c.width=480;c.height=80;const g=c.getContext('2d',paintOpts());
  const h=(x,y)=>{let n=Math.imul(x,374761393)+Math.imul(y,668265263)|0;n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296;};
  for(let t=0;t<3;t++)for(let Y=0;Y<80;Y+=2)for(let X=0;X<160;X+=2){
   const u=((X+1-80)/80+(Y+1)/40)/2,v=((Y+1)/40-(X+1-80)/80)/2;if(u<-.02||v<-.02||u>1.02||v>1.02)continue;
@@ -116,13 +135,13 @@ function carpetArt(){
   if(e<.05)col='#3d0b0d';else if(e<.15)col=h(X,Y+3)<.3?'#8a6526':'#b58b3c';else if(e<.19)col='#3d0b0d';
   g.fillStyle=col;g.fillRect(t*160+X,Y,2,2);
  }
- return carpetCanvas=c;
+ return carpetCanvas=paintedFloor(c,[0,1,2].map(t=>({x:t*160,y:0,w:160,h:80})));
 }
 // Procedural drawbridge planks (160 x 80 diamond): oak boards laid along x, tarred seams, two iron straps along y.
 let plankCanvas=null;
 function plankArt(){
  if(plankCanvas)return plankCanvas;
- const c=document.createElement('canvas');c.width=160;c.height=80;const g=c.getContext('2d');
+ const c=document.createElement('canvas');c.width=160;c.height=80;const g=c.getContext('2d',paintOpts());
  const h=(x,y)=>{let n=Math.imul(x,374761393)+Math.imul(y,668265263)|0;n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967296;};
  const wood=[[92,64,38],[84,58,34],[100,70,42],[78,54,32],[96,66,40]];
  for(let Y=0;Y<80;Y+=2)for(let X=0;X<160;X+=2){
@@ -133,7 +152,7 @@ function plankArt(){
   if(Math.abs(u-.22)<.045||Math.abs(u-.78)<.045){col=[48,46,46];if(Math.abs(t-.5)<.14)col=[92,90,86];}   // straps and their rivets
   g.fillStyle=`rgb(${col.map(k=>Math.max(0,Math.min(255,k|0))).join(',')})`;g.fillRect(X,Y,2,2);
  }
- return plankCanvas=c;
+ return plankCanvas=paintedFloor(c,[{x:0,y:0,w:160,h:80}]);
 }
 export function castlePlankTile(){
  const f={sx:0,sy:0,w:160,h:80,lum:0.02,seamless:true,name:'castle_drawbridge',castle:true};

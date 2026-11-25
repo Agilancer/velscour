@@ -1,7 +1,7 @@
 // World renderer: floors, decals, depth-sorted walls/entities, effects, lighting, minimap.
 import { G } from '../state.js';
 import { camera, isoX, isoY, HW, HH, TW, TH, elevationAt } from '../core/view.js';
-import { makeCanvas, TAU, clamp, rgba, shade, hexToRgb, measureCtx } from '../core/util.js';
+import { makeCanvas, TAU, clamp, rgba, shade, hexToRgb, measureCtx, rasterSprites } from '../core/util.js';
 import { drawDecals, drawEffects, drawParticles, drawTexts, lights, glowSprite, stampDecals, bakedDecals } from '../gfx/vfx.js';
 import { orbitShieldDepth } from '../gfx/lancershields.js';
 import { drawWallTorch, wallTorchRect } from '../gfx/walltorches.js';
@@ -738,8 +738,9 @@ export function renderWorld(ctx, world) {
   const camT = ctx.getTransform();
   ctx.imageSmoothingEnabled = true;
   // 'medium' (mipmapped) downscaling of the big floor/wall atlases costs several times 'low' per draw, and those are
-  // most of the frame: tiles and walls always draw 'low'; sprites use 'low' on touch or when resolution is reduced.
-  const hq = G.touch || (G.resScale || 1) < 0.95 ? 'low' : 'medium';
+  // most of the frame: tiles and walls always draw 'low'; sprites use 'low' on touch or when resolution is reduced
+  // (raster sprites, util.js spriteCanvas, cost no more 'medium': where they are on, sprites keep it at any resolution).
+  const hq = G.touch || ((G.resScale || 1) < 0.95 && !rasterSprites()) ? 'low' : 'medium';
   ctx.imageSmoothingQuality = 'low';
   const vr = camera.viewRect(40);
   const map = world.map;
@@ -1090,7 +1091,7 @@ export function renderFirstPerson(ctx, world) {
   if (!fpBegin(ctx, world, (g, x0, y0, x1, y1) => drawFloorTiles(g, world, x0, y0, x1, y1, true))) return false;
   camera.apply(ctx);
   const camT = ctx.getTransform(), z = camera.zoom;
-  const hq = G.touch || (G.resScale || 1) < 0.95 ? 'low' : 'medium';
+  const hq = G.touch || ((G.resScale || 1) < 0.95 && !rasterSprites()) ? 'low' : 'medium';
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = hq;
   const vr = camera.viewRect(40), map = world.map, p = world.player, far = fp.far + 1;
   let n = 0;

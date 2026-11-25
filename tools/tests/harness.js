@@ -22,13 +22,15 @@ const OUT_DIR = process.env.OUT_DIR || path.join(__dirname, 'out');
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 /** Launch Chromium and open the game. Returns { browser, ctx, page, errors, shot }. */
-async function openGame({ width = 1280, height = 720, mobile = false, intro = false } = {}) {
+async function openGame({ width = 1280, height = 720, mobile = false, intro = false, init = null, dpr = 0, url = BASE_URL } = {}) {   // url: another server (e.g. a baseline build to compare with)
   // CHROMIUM_ARGS: extra flags, e.g. '--use-angle=d3d11 --enable-gpu' to measure on the machine's real GPU, not SwiftShader
   const args = (process.env.CHROMIUM_ARGS || '').split(' ').filter(Boolean);
-  const browser = await chromium.launch(fs.existsSync(CHROMIUM_PATH) ? { executablePath: CHROMIUM_PATH, args } : { args });
+  // HEADED=1: a real window on this desktop (frame pacing at the display's own refresh, e.g. fps.js VSYNC=1)
+  const headless = process.env.HEADED !== '1';
+  const browser = await chromium.launch(fs.existsSync(CHROMIUM_PATH) ? { executablePath: CHROMIUM_PATH, args, headless } : { args, headless });
   const ctx = await browser.newContext(mobile
     ? { viewport: { width, height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }
-    : { viewport: { width, height } });
+    : { viewport: { width, height }, ...(dpr ? { deviceScaleFactor: dpr } : {}) });   // dpr: e.g. 1.25/1.5, Windows display scaling
   const page = await ctx.newPage();
   // Optional offline transport for sandboxes that cannot open a loopback port.
   // Still runs real browser ES modules at BASE_URL (including a Pages subpath).
@@ -44,11 +46,12 @@ async function openGame({ width = 1280, height = 720, mobile = false, intro = fa
       await route.fulfill({ status: 200, contentType: mime[path.extname(file)] || 'application/octet-stream', body: fs.readFileSync(file) });
     });
   }
+  if (init) await page.addInitScript(init);   // (code run before the game's own, e.g. a measuring probe)
   if (!intro) await page.addInitScript(() => { window.VELSCOUR_TEST_MENU = true; });   // title buttons take clicks at once
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push('[console] ' + m.text()); });
   page.on('pageerror', (e) => errors.push('[pageerror] ' + e.message + ' ' + (e.stack || '').split('\n').slice(1, 3).join(' | ')));
-  await page.goto(BASE_URL + '/index.html');
+  await page.goto(url + '/index.html');
   await page.waitForFunction(() => window.VELSCOUR && document.querySelector('#loading').classList.contains('hidden'), null, { timeout: 30000 });
   const shot = (name) => page.screenshot({ path: path.join(OUT_DIR, name + '.png'), timeout: 120000 });   // (SwiftShader's 3D scenes can take seconds a frame)
   return { browser, ctx, page, errors, shot };

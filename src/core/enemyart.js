@@ -110,7 +110,7 @@ export function enemyImage(id, swap = null, mode = '') {
   let img = cache.get(key);
   if (img) { cache.delete(key); cache.set(key, img); }
   else {
-    img = recolor(E.sheets[a.sheet], swap, c.x, c.y, c.w, c.h);
+    img = recolor(E.sheets[a.sheet], swap, c.x, c.y, c.w, c.h, true);
     img._art = { fx: c.fx };
     cache.set(key, img);
     while (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);

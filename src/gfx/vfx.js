@@ -3,7 +3,7 @@ import { drawDkSkull } from './dkskull.js';
 import { G } from '../state.js';
 import { A } from '../core/assets.js';
 import { camera, isoX, isoY, HW, HH, screenDirToTile } from '../core/view.js';
-import { makeCanvas, rand, TAU, shade, randi, pick, fmt, shuffle, clamp, colourSprites, measureCtx } from '../core/util.js';
+import { makeCanvas, rand, TAU, shade, randi, pick, fmt, shuffle, clamp, colourSprites, measureCtx, spriteCanvas, frozen, cpuCanvas } from '../core/util.js';
 import { groundHidden } from './terrain.js';
 import { bonesReady, boneDeck, boneLook, drawBoneGib } from './bonegibs.js';
 
@@ -58,7 +58,7 @@ const discSprite = colourSprites(64, 64, (x, r, g, b) => { x.fillStyle = `rgb(${
 const splatMasks = [];
 function makeSplatMasks() {
   for (let i = 0; i < 8; i++) {
-    const c = makeCanvas(64, 64);
+    const c = spriteCanvas(64, 64);
     const x = c.getContext('2d');
     x.fillStyle = '#fff';
     const blobs = randi(5, 11);
@@ -68,7 +68,7 @@ function makeSplatMasks() {
       x.beginPath(); x.arc(32 + Math.cos(a) * d, 32 + Math.sin(a) * d, r, 0, TAU); x.fill();
       if (Math.random() < 0.5) { x.beginPath(); x.arc(32 + Math.cos(a) * (d + r + 3), 32 + Math.sin(a) * (d + r + 3), r * 0.4, 0, TAU); x.fill(); }
     }
-    splatMasks.push(c);
+    splatMasks.push(frozen(c));
   }
 }
 const splatCache = new Map();
@@ -79,14 +79,14 @@ function splatSprite(color, idx) {
   if (c) return c;
   // decals keep their sprite (d.spr), so an evicted one is only dropped from the cache, never repainted
   if (splatCache.size >= 256) splatCache.delete(splatCache.keys().next().value);
-  c = makeCanvas(64, 64);
+  c = spriteCanvas(64, 64, splatMasks[idx]);
   const x = c.getContext('2d');
   x.drawImage(splatMasks[idx], 0, 0);
   x.globalCompositeOperation = 'source-in';
   const grad = x.createRadialGradient(28, 26, 2, 32, 32, 34);
   grad.addColorStop(0, shade(color, 0.12)); grad.addColorStop(1, shade(color, -0.35));
   x.fillStyle = grad; x.fillRect(0, 0, 64, 64);
-  splatCache.set(key, c);
+  splatCache.set(key, (c = frozen(c)));
   return c;
 }
 
@@ -599,8 +599,12 @@ function glyph(gs, ch) {
   } else g.fillStyle = gs.color || '#ffffff';
   g.fillText(ch, o + 2, ty);
   e = { line, fill, adv, w, low: null };
-  if (S.blood) {   // the lowest inked pixel of each column (read once per glyph)
-    const a = line.getContext('2d').getImageData(0, 0, w, h).data, b = g.getImageData(0, 0, w, h).data;
+  if (S.blood) {   // the lowest inked pixel of each column (read once per glyph, off CPU twins: reading the GPU canvases
+    // back stalled the frame for every queued GPU frame, up to half a second with no vsync)
+    const tl = cpuCanvas(w, h), tf = cpuCanvas(w, h);
+    let t = prep(tl); t.lineWidth = o * 2; t.strokeStyle = '#0a0303'; t.strokeText(ch, o + 2, ty);
+    t = prep(tf); t.fillStyle = g.fillStyle; t.fillText(ch, o + 2, ty);
+    const a = tl.getContext('2d').getImageData(0, 0, w, h).data, b = t.getImageData(0, 0, w, h).data;
     e.low = new Int16Array(w).fill(-1);
     for (let x = 0; x < w; x++) for (let y = h - 1; y > gs.cy; y--) { const k = (y * w + x) * 4 + 3; if (a[k] > 200 || b[k] > 200) { e.low[x] = y; break; } }
   }

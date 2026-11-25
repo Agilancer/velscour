@@ -2,8 +2,12 @@
 // in VELSCOUR's original 160×80 iso tile and ground-pivot conventions. The
 // source pack provides approved material grain and proven architectural depth
 // slices, not pre-existing re-labelled sprite geometry.
-import { makeCanvas } from '../core/util.js';
+import { makeCanvas, rasterSprites } from '../core/util.js';
 import { G } from '../state.js';
+import { gritSamples } from './grit.js';
+
+// the atlas's grit colours now, while it is built, not a GPU readback mid-frame (gfx/grit.js)
+const withGrit = (canvas, entries) => { if (rasterSprites()) canvas._grit = gritSamples(canvas, entries.map((e) => ({ x: e.sx, y: e.sy, w: e.w, h: e.h }))); return entries; };
 
 // Town has 6 base materials and 15 transition pairs * 8 masks. Additional
 // source floor cells are APPENDED so every existing transition ID stays intact.
@@ -130,7 +134,7 @@ export function extendedTownFloors(source,meta){
     img:canvas,sx:i%10*162,sy:Math.floor(i/10)*82,w:160,h:80,
     name:'town_accent_'+String(i+1).padStart(2,'0')
   }));
-  townCache={source,entries};
+  townCache={source,entries:withGrit(canvas,entries)};
   return entries;
 }
 // The town and the wilderness share approved source pixel density, but have
@@ -156,7 +160,7 @@ export function extendedOverworldFloors(source,meta){
    img:canvas,sx:i%10*162,sy:Math.floor(i/10)*82,
    w:160,h:80,name:'forsaken_wilds_floor_'+String(i+1).padStart(2,'0'),
  }));
- overworldCache={source,entries};return entries;
+ overworldCache={source,entries:withGrit(canvas,entries)};return entries;
 }
 function drawProp(g,biome,i){
   const p=getPalette(biome,i%5),type=TYPES[i%TYPES.length],v=(i/20)|0;

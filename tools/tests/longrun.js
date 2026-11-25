@@ -4,11 +4,14 @@
 // median cost of a frame.
 //   node tools/tests/longrun.js [class] [game minutes] [renderEvery]     (defaults: wizard 30 2)
 //   LR_FAIL=1.6 ...   fail when the late frame cost or heap is over 1.6x the early one (default: report only)
+//   LR_DESKTOP=1 ...  a 1920x1080 desktop window on the real GPU instead (raster sprites on: util.js spriteCanvas)
 const { openGame, report } = require('./harness');
 const cls = process.argv[2] || 'wizard', minutes = +(process.argv[3] || 30), every = +(process.argv[4] || 2);
 
 (async () => {
-  const { browser, ctx, page, errors, shot } = await openGame({ width: 844, height: 390, mobile: true });
+  const desk = process.env.LR_DESKTOP === '1';
+  if (desk && !process.env.CHROMIUM_ARGS) process.env.CHROMIUM_ARGS = (process.platform === 'win32' ? '--use-angle=d3d11' : '--use-angle=vulkan') + ' --enable-gpu --ignore-gpu-blocklist';
+  const { browser, ctx, page, errors, shot } = await openGame(desk ? { width: 1920, height: 1080 } : { width: 844, height: 390, mobile: true });
   const cdp = await ctx.newCDPSession(page);
   await page.evaluate(() => {
     // count canvases made and timers alive
@@ -47,14 +50,14 @@ const cls = process.argv[2] || 'wizard', minutes = +(process.argv[3] || 30), eve
   for (let min = 1; min <= minutes; min++) {
     const res = await page.evaluate(async (every) => {
       const { G, game } = window.VELSCOUR;
-      let sim = 0, k = 0;
+      let sim = 0, k = 0; const rts = [];
       const t0 = performance.now();
       while (sim < 60) {
         for (let i = 0; i < 10; i++) {
           if (G.mode !== 'game' || !G.world) break;
           G.dt = 1 / 30; G.time += G.dt; G.frame++;
           game.update(1 / 30); sim += 1 / 30;
-          if (++k % every === 0) game.render();
+          if (++k % every === 0) { const a = performance.now(); game.render(); rts.push(performance.now() - a); }
           G.input && G.input.endFrame && G.input.endFrame();
         }
         await new Promise((r) => setTimeout(r, 0));
@@ -80,7 +83,8 @@ const cls = process.argv[2] || 'wizard', minutes = +(process.argv[3] || 30), eve
       walk(G, 'G', 0);
       big.sort((a, b) => b[1] - a[1]);
       const w = G.world;
-      return { sim: Math.round(sim), real: Math.round(performance.now() - t0), where: w ? (w.kind === 'town' ? 'town' : `${(w.biome && w.biome.id) || w.biome || ''}:D${w.depth}`) : '-', lvl: G.char.level,
+      rts.sort((x, y) => x - y);
+      return { p99: rts[Math.floor(rts.length * 0.99)] || 0, max: rts[rts.length - 1] || 0, sim: Math.round(sim), real: Math.round(performance.now() - t0), where: w ? (w.kind === 'town' ? 'town' : `${(w.biome && w.biome.id) || w.biome || ''}:D${w.depth}`) : '-', lvl: G.char.level,
         upd: med(0), rnd: med(1), dom: document.getElementsByTagName('*').length, canv: window.__lr.canv, off: window.__lr.off, iv: window.__lr.iv.size,
         res: G.resScale || 1, live: (() => {
           // live canvas memory by the code that made it
@@ -95,7 +99,7 @@ const cls = process.argv[2] || 'wizard', minutes = +(process.argv[3] || 30), eve
     const liveCanv = await count('HTMLCanvasElement.prototype'), liveOff = await count('OffscreenCanvas.prototype').catch(() => 0);
     const liveBmp = await count('ImageBitmap.prototype').catch(() => 0), liveImg = await count('HTMLImageElement.prototype');
     rows.push({ min, heap, ...res, liveCanv, liveOff });
-    console.log(`[${min}m] ${res.where} L${res.lvl} upd ${res.upd.toFixed(1)} rnd ${res.rnd.toFixed(1)} ms | heap ${heap.toFixed(0)} MB | canvases live ${liveCanv}+${liveOff}off (made ${res.canv}+${res.off}) bmp ${liveBmp} img ${liveImg} | dom ${res.dom} iv ${res.iv} | ${res.real} ms real`);
+    console.log(`[${min}m] ${res.where} L${res.lvl} upd ${res.upd.toFixed(1)} rnd ${res.rnd.toFixed(1)} ms (p99 ${res.p99.toFixed(1)} max ${res.max.toFixed(0)}) | heap ${heap.toFixed(0)} MB | canvases live ${liveCanv}+${liveOff}off (made ${res.canv}+${res.off}) bmp ${liveBmp} img ${liveImg} | dom ${res.dom} iv ${res.iv} | ${res.real} ms real`);
     console.log(`     ${res.big}`);
     if (min % 5 === 0) console.log(`     canvas makers:\n       ${res.by}\n     live canvas memory by maker:\n       ${res.live}`);
     if (min % 10 === 0) await shot(`longrun_${cls}_m${min}`);

@@ -2,7 +2,7 @@
 // node tools/varrowaxe3d_bake.js -> assets/sprites/npc/varrow_axe.webp/json): 32 turns of the axe, the same turns
 // with only its runes (white, tinted here by story chapter and added on top), and the rack. Loads on first use;
 // drawVarrowAxe returns false until then and townprops.js draws its flat axe instead.
-import { makeCanvas } from '../core/util.js';
+import { rasterSprites, decoded, spriteCanvas, frozen } from '../core/util.js';
 
 const TAU = Math.PI * 2;
 let meta = null, img = null, loading = null;
@@ -12,7 +12,8 @@ function load() {
   loading = Promise.all([
     fetch('assets/sprites/npc/varrow_axe.json').then((r) => r.json()),
     new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = 'assets/sprites/npc/varrow_axe.webp'; }),
-  ]).then(([m, im]) => { meta = m; img = im; }).catch((e) => console.warn('varrow axe art', e));
+  ]).then(([m, im]) => Promise.resolve(rasterSprites() ? decoded(im) : im).then((b) => { meta = m; img = b; })) // decoded: Chrome drops an <img>'s pixels and re-decoded it mid-draw
+    .catch((e) => console.warn('varrow axe art', e));
   return loading;
 }
 export const varrowAxeReady = () => (img ? Promise.resolve() : loading || load());
@@ -22,11 +23,11 @@ function tinted(col) {
   let c = tints.get(col);
   if (c) return c;
   const { S, n, frame: [fw, fh] } = meta;
-  c = makeCanvas(n * fw * S, fh * S);
+  c = spriteCanvas(n * fw * S, fh * S, img); // a raster sprite (util.frozen) where that is on
   const g = c.getContext('2d');
   g.drawImage(img, 0, fh * S, n * fw * S, fh * S, 0, 0, n * fw * S, fh * S);
   g.globalCompositeOperation = 'source-in'; g.fillStyle = col; g.fillRect(0, 0, c.width, c.height);
-  tints.set(col, c);
+  tints.set(col, (c = frozen(c)));
   return c;
 }
 

@@ -1,7 +1,7 @@
 // Effects of high rarity body armor (presets: GEAR_FX in data/gear.js): a glow around the hero's outline,
 // lights orbiting the hero, a rune circle at the feet and particle emitters (motes, embers, sparks, frost,
 // smoke, flames, runes). Coloured by the effect, else by the armor's finish, else by its rarity.
-import { TAU, rand, makeCanvas, mixHex } from '../core/util.js';
+import { TAU, rand, makeCanvas, mixHex, spriteCanvas, frozen } from '../core/util.js';
 import { isoX, isoY } from '../core/view.js';
 import { spawn, glowSprite, addLight } from './vfx.js';
 
@@ -12,15 +12,16 @@ function outlineGlow(img, col) {
   let e = glowCache.get(img);
   if (e && e.key === key) return e.c;
   const u = img._res || 1, pad = 8 * u, w = img.width + pad * 2, h = img.height + pad * 2; // u: image px per art px
-  const sil = makeCanvas(img.width, img.height), sx = sil.getContext('2d');
+  const sil = spriteCanvas(img.width, img.height, img), sx = sil.getContext('2d'); // CPU-backed with a raster hero image
   sx.drawImage(img, 0, 0);
   sx.globalCompositeOperation = 'source-in';
   sx.fillStyle = col; sx.fillRect(0, 0, img.width, img.height);
-  const c = makeCanvas(w, h), x = c.getContext('2d');
+  let c = spriteCanvas(w, h, img); const x = c.getContext('2d');
   for (const [r, a] of [[6, 0.12], [4, 0.2], [2, 0.35]]) {
     x.globalAlpha = a;
     for (let i = 0; i < 12; i++) { const t = (i / 12) * TAU; x.drawImage(sil, pad + Math.cos(t) * r * u, pad + Math.sin(t) * r * u); }
   }
+  c = frozen(c); // a raster sprite: drawn every frame, uploaded once
   glowCache.set(img, { key, c });
   if (glowCache.size > 6) glowCache.delete(glowCache.keys().next().value);
   return c;
@@ -30,14 +31,14 @@ const runeCache = new Map();
 function runeImg(col) {
   let c = runeCache.get(col);
   if (c) return c;
-  c = makeCanvas(16, 16);
+  c = spriteCanvas(16, 16);
   const x = c.getContext('2d');
   x.strokeStyle = col; x.lineWidth = 1.6; x.lineCap = 'round';
   x.shadowColor = col; x.shadowBlur = 4;
   x.beginPath();
   x.moveTo(8, 2); x.lineTo(8, 14); x.moveTo(8, 5); x.lineTo(12, 8); x.moveTo(8, 9); x.lineTo(4, 12); x.moveTo(5, 4); x.lineTo(8, 6);
   x.stroke();
-  runeCache.set(col, c);
+  runeCache.set(col, (c = frozen(c)));
   return c;
 }
 

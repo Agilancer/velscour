@@ -2,7 +2,7 @@
 // (three sets), a column per class and a row per design (each design has a rarity). Built by tools/nocturnegear.py.
 // The Monk, the Rogue and the Ninja (Collection 05: 48 armors) have their own atlas of 48 helmets, one drawn on each
 // armor (tools/martialhelms.py). A class's helmets are its src.helmetHelms, whichever atlas they come from.
-import { makeCanvas, hexToRgb, clamp, pick, chance } from './util.js';
+import { makeCanvas, hexToRgb, clamp, pick, chance, spriteCanvas, frozen, pixelsOf } from './util.js';
 import { RARITY, shownEquip } from '../data/items.js';
 import { PALETTES, GEAR_FX, FX_CHANCE } from '../data/gear.js';
 import { resolveHelmetFit } from './helmetfit.js';
@@ -303,7 +303,7 @@ function rotatedHelmetCanvas(px, frame, box, rotation) {
 }
 
 function toCanvas(px, w, h) {
-  const c = makeCanvas(w, h);
+  const c = spriteCanvas(w, h); // CPU-backed where raster sprites are on, so heroLook paints from it without a readback
   c.getContext('2d').putImageData(new ImageData(px, w, h), 0, 0);
   return c;
 }
@@ -321,7 +321,7 @@ export function heroLook(cls, body, head, src = null, outCache = looks) {
   let c = outCache.get(key);
   if (c) return c;
   const { meta } = actualSrc, [fw, fh] = meta.frame;
-  c = makeCanvas(fw * HD, fh * HD);
+  c = spriteCanvas(fw * HD, fh * HD); // a raster sprite (util.frozen): drawn every frame, uploaded once
   const x = c.getContext('2d');
   x.imageSmoothingEnabled = false;
   x.drawImage(toCanvas(armorPixels(bl[0], bl[1], actualSrc), fw, fh), 0, 0, fw * HD, fh * HD);
@@ -337,6 +337,7 @@ export function heroLook(cls, body, head, src = null, outCache = looks) {
     x.scale(place.dw / actualSrc[set + 'Helms'].meta.frame[0], place.dh / actualSrc[set + 'Helms'].meta.frame[1]);
     x.drawImage(toCanvas(hp, ...actualSrc[set + 'Helms'].meta.frame), -cx, -cy); x.restore();
   }
+  c = frozen(c);
   if (outCache.size >= 32) outCache.delete(outCache.keys().next().value);
   outCache.set(key, c);
   return c;
@@ -415,12 +416,12 @@ export function heroPortrait(cls, body, head, w, h, over = null, extra = null) {
 /** A copy of canvas `c` cropped to its opaque pixels (null stays null), so a card can fill its frame with the hero. */
 export function trimCanvas(c, meta = null) {
   if (!c) return c;
-  const { width: w, height: h } = c, d = c.getContext('2d').getImageData(0, 0, w, h).data;
+  const { width: w, height: h } = c, d = pixelsOf(c);
   let x0 = w, y0 = h, x1 = -1, y1 = -1;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     if (d[(y * w + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
   }
-  if (x1 < 0) return c;
+  if (x1 < 0) { x0 = y0 = 0; x1 = w - 1; y1 = h - 1; }   // nothing opaque: a whole copy (still a canvas, never a raster sprite)
   const t = makeCanvas(x1 - x0 + 1, y1 - y0 + 1);
   t.getContext('2d').drawImage(c, -x0, -y0);
   if (meta && meta.frame && meta.feet && meta.headTop) {

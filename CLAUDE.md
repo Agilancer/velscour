@@ -180,6 +180,8 @@ BAL_STANCE=cautious,balanced,reckless BAL_RAID=1 node tools/tests/balance.js wiz
 node tools/tests/endgame.js paladin,wizard [8] [rush|deep] # hero level by depth from dungeon XP (cap 3000 at depth ~6600; deep: depths 500-7500), kill times + % of life per hit (no simulation)
 node tools/tests/happenings.js                     # omens, shrines, treasure imp, cursed chest, challenge, nemesis, town events, Defiance
 node tools/tests/perf.js 6 wizard 1                # frame cost on a phone-sized screen: fps, update/render ms (last arg: CPU throttle)
+node tools/tests/fps.js [scenes|all] [secs] [WxH]  # desktop fps with vsync off on the real GPU (town..peak fights, stress = a fixed load at full res): fps, 1%/0.1% lows, worst frame (SEED, VSYNC=1, HEADED=1, MEM=1 process memory, PROFILE=1)
+node tools/tests/rasterlook.js [scene:zoom:dpr:WxH:from,..] # raster sprites (util.js spriteCanvas/frozen) vs plain canvases: seeded frozen frame, pixel diff, fine-detail ratio + shots (RL_BASE=url: vs another build; RL_PURGE=1 after memory pressure; RL_FALLBACK=1 through the safety valve)
 node tools/tests/longrun.js wizard 30                # long session on a phone layout: heap, live canvases (and who made them), frame cost per game minute
 node tools/tests/levelmem.js 24                     # live canvas memory level after level (town every third), growth charged to the code that made it
 node tools/tests/martial.js [rogue,ninja] [secs] [noshots] [mobile]  # the Rogue (Combo Points, finishers, Stealth) and the Ninja (hook count, shadows, flips): rules, a shot of every move, auto-play
@@ -198,6 +200,18 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
 - Perf numbers: headless Chromium without a GPU renders through SwiftShader, whose frame times are noisy and
   misleading. On a machine with a GPU set `CHROMIUM_ARGS="--use-angle=d3d11 --enable-gpu --ignore-gpu-blocklist"`
   (Windows; `--use-angle=vulkan` on Linux) before `biome_perf.js` / `perf.js`; its 4x CPU throttle is the phone proxy.
+- Desktop frame rate (docs/HANDOFF.md, "the frame-rate pass"): on desktop Chromium sprites are **raster ImageBitmaps**
+  (`spriteCanvas` -> paint -> `frozen` in `src/core/util.js`); a plain canvas drawn with the desktop's mipmapped smoothing is
+  re-uploaded to the GPU on every draw. `frozen` primes each bitmap (a 1:1 draw sent to the GPU at once) so its mip levels
+  are built on the GPU like a canvas's; keep that, or odd-sized sprites get the CPU's softer levels. Never read pixels back from a GPU canvas in play (`getImageData`, or drawing it into a
+  CPU canvas): it waits for the GPU's whole queue (a few ms at vsync, ~0.5 s with vsync off); floor grit colours are
+  read when an atlas is built (`gfx/grit.js` `gritSamples`, `recolor(..., keepPx)`). Read sprites with `pixelsOf`, and give three.js `texSource(img)` (an ImageBitmap
+  ignores flipY). Nothing drawn with `'low'` smoothing (floor and wall atlases, floor chunks) may be a raster sprite: Chromium
+  uploads it at half resolution below half scale (blurred floors). Run `fps.js` and `rasterlook.js` after rendering changes.
+  The safety valve (`util.js` `rasterFallback`, `main.js` `rasterWatch`) draws raster sprites from canvas copies when
+  drawing collapses after critical memory pressure; it must not flip `rasterSprites()`. After touching the main loop,
+  `frozen` or the valve, run `HEADED=1 VSYNC=1 fps.js town,catacombs,purge,town,catacombs,town,town,peak,stress` (lines
+  get `[raster fallback]` after the purge) and `fps.js all` (never).
 
 ## Conventions
 - Match the existing style: ES modules, 2-space indent, single quotes, dense code, short comments only where

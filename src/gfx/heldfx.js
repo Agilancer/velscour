@@ -5,6 +5,8 @@
 // a function of the time and a seed, so nothing is stepped per frame and the review sheets draw the same thing. Points
 // are art px of the hero frame (128x192); map(x, y) turns them into canvas px, s is canvas px per art px and opts.size
 // scales the particles (small views want them bigger than the art). Kept small and translucent: the hero comes first.
+import { spriteCanvas, frozen } from '../core/util.js';
+
 const COL = {
   holy: [255, 216, 96], fire: [255, 106, 32], cold: [122, 208, 255], light: [170, 190, 255], poison: [138, 255, 80],
   shadow: [160, 112, 255], arcane: [74, 168, 255], acid: [80, 255, 144], blood: [255, 48, 64], astral: [200, 210, 255], phys: [255, 216, 160],
@@ -21,10 +23,11 @@ function glowSprite(c) {
   const key = c.join(',');
   let s = sprites.get(key);
   if (s) return s;
-  s = document.createElement('canvas'); s.width = s.height = 32;
+  s = spriteCanvas(32, 32); // a raster sprite (util.frozen): ~90 dots a frame draw it
   const x = s.getContext('2d'), g = x.createRadialGradient(16, 16, 0, 16, 16, 16), p = lighten(c, 0.55);
   g.addColorStop(0, `rgba(${p},1)`); g.addColorStop(0.3, `rgba(${c},0.75)`); g.addColorStop(1, `rgba(${c},0)`);
   x.fillStyle = g; x.fillRect(0, 0, 32, 32);
+  s = frozen(s);
   if (sprites.size > 96) sprites.delete(sprites.keys().next().value);
   sprites.set(key, s);
   return s;

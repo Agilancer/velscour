@@ -1,7 +1,7 @@
 // Base class for every living thing: player, monsters, summons.
 import { G } from '../state.js';
 import { isoX, isoY, screenDirToTile } from '../core/view.js';
-import { TAU, rand, chance, clamp, makeCanvas, drawFiltered } from '../core/util.js';
+import { TAU, rand, chance, clamp, makeCanvas, drawFiltered, spriteCanvas, frozen } from '../core/util.js';
 import { spawn, glowSprite, ELEM } from '../gfx/vfx.js';
 import { pixelSprite } from '../gfx/pixelart.js';
 import { classSprite } from '../core/assets.js';
@@ -21,11 +21,11 @@ function tinted(img, f) {
   if (!f) return img;
   let c = (tints[f] ||= new WeakMap()).get(img);
   if (!c) {
-    c = makeCanvas(img.width, img.height);
+    c = spriteCanvas(img.width, img.height, img);
     const x = c.getContext('2d');
     drawFiltered(x, f, img, 0, 0);
     c._art = img._art;
-    tints[f].set(img, c);
+    tints[f].set(img, (c = frozen(c)));
   }
   return c;
 }
@@ -40,7 +40,7 @@ const RIM_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [0.71, 0.71], [-0.71, 0.71],
 // rim of every look ever seen, ~100 MB after a few levels, more than iOS lets a page hold in canvases. The see-through
 // layer's rings (ringCanvas) share it, so it holds a frame's rim and ring for a screen of monsters and pets.
 const rims = new Map(), rimIds = new WeakMap(), RIM_MAX = 384;
-let rimSeq = 0, rimT = null, rimO = 0, scratch = null;
+let rimSeq = 0, rimT = null, rimO = 0, scratch = null, cpuScratch = null;
 function rimKey(img, sx, sy, sw, sh, col, o) {
   let id = rimIds.get(img);
   if (!id) rimIds.set(img, (id = ++rimSeq));
@@ -59,11 +59,12 @@ function stamp(x, img, sx, sy, sw, sh, p, o, col) {
 function rimCanvas(img, sx, sy, sw, sh, col, o) {
   const key = rimKey(img, sx, sy, sw, sh, col, o);
   if (typeof key !== 'string') return key;
-  const p = Math.ceil(o) + 1, c = makeCanvas(sw + p * 2, sh + p * 2);
+  const p = Math.ceil(o) + 1, c = spriteCanvas(sw + p * 2, sh + p * 2, img);
   stamp(c.getContext('2d'), img, sx, sy, sw, sh, p, o, col);
   c._pad = p;
-  rims.set(key, c);
-  return c;
+  const r = frozen(c);   // (a raster sprite where it can be: util.frozen)
+  rims.set(key, r);
+  return r;
 }
 /** The see-through ring: col 1.4x the rim's thickness o in a dark halo out to 2.4x (both on its 2^(n/4) steps), the
  * body cut out of it, so the layer draws it in one go. */
@@ -71,17 +72,23 @@ function ringCanvas(img, sx, sy, sw, sh, col, o) {
   const key = rimKey(img, sx, sy, sw, sh, 'ring' + col, o);
   if (typeof key !== 'string') return key;
   const dO = Math.min(32, o * 2.378), cO = Math.min(32, o * 1.414), p = Math.ceil(dO) + 1, W = sw + p * 2, H = sh + p * 2;
-  const c = makeCanvas(W, H), x = c.getContext('2d');
+  const c = spriteCanvas(W, H, img), x = c.getContext('2d'), cpu = c._cpu === true;
   stamp(x, img, sx, sy, sw, sh, p, dO, 'rgba(0,0,0,0.8)');
-  if (!scratch || scratch.width < W || scratch.height < H) scratch = makeCanvas(Math.max(W, scratch ? scratch.width : 0), Math.max(H, scratch ? scratch.height : 0));
-  const s = scratch.getContext('2d');
+  // the scratch lives where the ring is painted (a CPU ring from a GPU scratch would be a readback)
+  let sc = cpu ? cpuScratch : scratch;
+  if (!sc || sc.width < W || sc.height < H) {
+    sc = (cpu ? spriteCanvas : makeCanvas)(Math.max(W, sc ? sc.width : 0), Math.max(H, sc ? sc.height : 0));
+    if (cpu) cpuScratch = sc; else scratch = sc;
+  }
+  const s = sc.getContext('2d');
   s.globalCompositeOperation = 'source-over'; s.clearRect(0, 0, W, H);
   stamp(s, img, sx, sy, sw, sh, p, cO, col);
-  x.globalCompositeOperation = 'source-over'; x.drawImage(scratch, 0, 0, W, H, 0, 0, W, H);
+  x.globalCompositeOperation = 'source-over'; x.drawImage(sc, 0, 0, W, H, 0, 0, W, H);
   x.globalCompositeOperation = 'destination-out'; x.drawImage(img, sx, sy, sw, sh, p, p, sw, sh);
   c._pad = p;
-  rims.set(key, c);
-  return c;
+  const r = frozen(c);
+  rims.set(key, r);
+  return r;
 }
 
 /** Forget the rims and rings baked from img (an image redrawn in place, such as a live 3D render). */

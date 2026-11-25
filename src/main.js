@@ -5,7 +5,7 @@ import { initInput, input } from './core/input.js';
 import { camera } from './core/view.js';
 import { loadAssets } from './core/assets.js';
 import { loadEnemyArt, loadPetArt } from './core/enemyart.js';
-import { rand, TAU } from './core/util.js';
+import { rand, TAU, rasterSprites, rasterFallback, rasterFallbackOn } from './core/util.js';
 import { UI, $ } from './ui/ui.js';
 import { HUD } from './ui/hud.js';
 import { TouchUI } from './ui/touch.js';
@@ -178,9 +178,16 @@ function renderTitle(dt) {
 // pixels for frame rate in 2 s windows, and earn them back after 10 s of headroom.
 // Every change re-bakes the floor chunks at the new size, so a phone hovering near the limits used to see-saw
 // (down, 10 s later up, down again): each step back up that has to be undone soon after doubles the wait (to 2 min).
-const ar = { t: 0, n: 0, good: 0, need: 5, upAt: -1e9 };
+const ar = { t: 0, n: 0, good: 0, need: 5, upAt: -1e9, slow: 0, world: null, calm: 0, trial: null, keep: null };
 function adaptRes(raw) {
   if (G.mode !== 'game' || document.hidden) { ar.t = ar.n = 0; return; }
+  // A PC: loading and a new level's build and first frames (art warming) are no reason to blur the next minute of play
+  // at 85%: the count starts over (no slow window carried through a portal) a second after the world changes. (A phone
+  // keeps counting them: a level that paints slowly there is just what it must adapt to.)
+  // (a failed trial's hold ends with its level: ar.keep must not keep the old world and its floor chunks alive)
+  if (!G.touch && (G.loading || ar.world !== G.world)) { if (ar.world !== G.world) ar.keep = null; ar.world = G.world; ar.calm = 1; ar.t = ar.n = ar.slow = ar.good = 0; ar.trial = null; return; }
+  // the grace takes a second and at least 30 frames: one long warm-up frame doesn't use it up
+  if (ar.calm > 0) { ar.calm -= Math.min(raw, 1 / 30); return; }
   // Do not discard very slow frames: that prevented adaptation precisely when
   // biome generation/painting made the phone stall for >250 ms.
   ar.t += Math.min(raw, 0.25); ar.n++;
@@ -190,11 +197,52 @@ function adaptRes(raw) {
   const minScale = G.touch ? 0.7 : 0.75, cap = G.settings.fpsCap || 0;
   // under a frame cap the budget is the cap's, not 60
   const slowFps = cap ? cap * 0.8 : G.touch ? 45 : 50, fastFps = cap ? cap * 0.95 : 57;
-  if (fps < slowFps && s > minScale) {
+  // a PC's step down is a trial: the window after it (a second on, once the floor chunks have re-baked) must run 10%
+  // faster, or the pixels come back and stay for this level (draw calls, not pixels, were what held it back)
+  if (ar.trial) {
+    const t = ar.trial;
+    ar.trial = null;
+    if (fps < t.fps * 1.1) { G.resScale = t.s; ar.keep = G.world; ar.good = ar.slow = 0; ar.calm = 1; resize(); return; }
+  }
+  // a PC lowers it only after two slow windows in a row (4 s): one hitch was enough, and the frame rate there is mostly
+  // the count of draw calls, which fewer pixels don't help
+  if (fps < slowFps && s > minScale && ar.keep !== G.world && (G.touch || ++ar.slow >= 2)) {
+    ar.slow = 0;
     if (now - ar.upAt < 20000) ar.need = Math.min(60, ar.need * 2);
+    if (!G.touch) { ar.trial = { s, fps }; ar.calm = 1; }
     G.resScale = Math.max(minScale, s * 0.85); ar.good = 0; resize();
   } else if (fps > fastFps && s < 1) { if (++ar.good >= ar.need) { G.resScale = Math.min(1, s / 0.85); ar.good = 0; ar.upAt = now; resize(); } }
   else ar.good = 0;
+  if (fps >= slowFps) ar.slow = 0;
+}
+
+// The raster sprites' safety valve (util.js rasterFallback). After critical memory pressure Chromium can stop keeping
+// their GPU copies and send them up again on every draw: a frame's drawing then takes 35-75 ms even in the town (8-30
+// fps; a heavy fight draws in under 10 ms on a PC). Two 2 s windows over 25 ms a frame: the sprites are drawn from plain
+// canvas copies for a trial window, kept if that halves the drawing time, else undone (a slow CPU, not the cache) and
+// not tried again on this level. Kept, it lasts as long as the page.
+const rw = { t: 0, n: 0, ms: 0, bad: 0, world: null, calm: 0, trial: 0, no: null };
+function rasterWatch(raw, ms) {
+  if (G.loading || document.hidden || G.touch || !rasterSprites() || (rasterFallbackOn() && !rw.trial)) { rw.t = rw.n = rw.ms = 0; return; }
+  if (rw.world !== G.world) {   // a new level: start over a second in (a trial in progress is undone)
+    if (rw.trial) { rasterFallback(false); rw.trial = 0; }
+    rw.world = G.world; rw.calm = 1; rw.t = rw.n = rw.ms = rw.bad = 0; rw.no = null;
+    return;
+  }
+  if (rw.calm > 0) { rw.calm -= Math.min(raw, 1 / 30); return; }
+  rw.t += Math.min(raw, 0.25); rw.n++; rw.ms += ms;
+  if (rw.t < 2) return;
+  const avg = rw.ms / rw.n;
+  rw.t = rw.n = rw.ms = 0;
+  if (rw.trial) {
+    const before = rw.trial;
+    rw.trial = 0;
+    if (avg < before * 0.5) console.warn(`raster sprites now drawn from canvas copies: drawing ${before.toFixed(0)} -> ${avg.toFixed(0)} ms a frame`);
+    else { rasterFallback(false); rw.no = G.world; }
+    return;
+  }
+  if (avg > 25 && rw.no !== G.world) { if (++rw.bad >= 2) { rw.bad = 0; rw.trial = avg; rw.calm = 1; rasterFallback(); } }
+  else rw.bad = 0;
 }
 
 let last = performance.now(), lastFrame = 0;   // last: how far the game clock has run; lastFrame: the last animation frame
@@ -217,7 +265,7 @@ function loop(now) {
     try { game.update(dt); } catch (err) { reportError(err); }
   }
   try {
-    if (G.mode === 'game' && G.world) game.render();
+    if (G.mode === 'game' && G.world) { const t0 = performance.now(); game.render(); rasterWatch(raw, performance.now() - t0); }
     else renderTitle(dt);
   } catch (err) {
     reportError(err);
