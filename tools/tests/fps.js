@@ -19,6 +19,8 @@
 //   process's dedicated video memory (raster sprites keep their pixels in the renderer as well as on the GPU)
 //   NORASTER=1: plain canvases for sprites in this build; PROBE=file.js: a script run in the page before the game, and
 //   after each scene window.__probe()'s value is printed (e.g. tools/tests/out/probe_draw.js: drawImage time by source)
+//   MOBILE=1: a phone instead (844x390 unless WxH, DPR 2, touch: the phone path, plain canvases for sprites), and
+//   THROTTLE=n slows the CPU n times while measuring (4 = perf.js's phone proxy), here on the real GPU, not SwiftShader
 const { openGame, report } = require('./harness');
 const { execFileSync } = require('child_process');
 const fs = require('fs');
@@ -39,7 +41,8 @@ if (!process.env.CHROMIUM_ARGS) process.env.CHROMIUM_ARGS = (process.platform ==
 if (process.env.VSYNC !== '1') process.env.CHROMIUM_ARGS += ' --disable-gpu-vsync --disable-frame-rate-limit'; // VSYNC=1: capped at the refresh, CPU ms without GPU back-pressure
 const DEF = 'town,catacombs,cathedral,overworld,castle,dark_forest,sea_of_sand,raid,peak,peaknecro,stress';
 let scenes = (process.argv[2] || 'all').split(',').filter(Boolean).flatMap((s) => (s === 'all' ? DEF.split(',') : [s]));
-const secs = +(process.argv[3] || 6), [W, H] = (process.argv[4] || '1920x1080').split('x').map(Number);
+const MOBILE = process.env.MOBILE === '1', THROTTLE = +(process.env.THROTTLE || 0);
+const secs = +(process.argv[3] || 6), [W, H] = (process.argv[4] || (MOBILE ? '844x390' : '1920x1080')).split('x').map(Number);
 const PROFILE = process.env.PROFILE === '1', TRACE = process.env.TRACE === '1';
 
 (async () => {
@@ -47,9 +50,9 @@ const PROFILE = process.env.PROFILE === '1', TRACE = process.env.TRACE === '1';
   const seed = SEED ? `(() => { let s = ${SEED} >>> 0; Math.random = () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })();` : '';
   // NORASTER=1: this build with plain canvases for sprites (util.js rasterSprites off), for A/Bs inside one build
   const init = (seed + (process.env.NORASTER === '1' ? 'globalThis.VELSCOUR_NO_RASTER = true;' : '') + (process.env.PROBE ? fs.readFileSync(process.env.PROBE, 'utf8') : '')) || undefined;
-  const { browser, ctx, page, errors } = await openGame({ width: W, height: H, init });
+  const { browser, ctx, page, errors } = await openGame({ width: W, height: H, init, mobile: MOBILE });
   const gpu = await page.evaluate(() => { const c = document.createElement('canvas').getContext('webgl'); const e = c && c.getExtension('WEBGL_debug_renderer_info'); return e ? c.getParameter(e.UNMASKED_RENDERER_WEBGL) : 'unknown'; });
-  console.log(`GPU: ${gpu}  window ${W}x${H}`);
+  console.log(`GPU: ${gpu}  window ${W}x${H}${MOBILE ? ' phone (touch, DPR 2)' : ''}${THROTTLE ? `, ${THROTTLE}x CPU throttle while measuring` : ''}`);
   const cdp = await ctx.newCDPSession(page);
   if (PROFILE) { await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 250 }); }
   const summary = [];
@@ -158,6 +161,7 @@ const PROFILE = process.env.PROFILE === '1', TRACE = process.env.TRACE === '1';
     await page.waitForTimeout(3500);   // auto-play gets going, the art warms
     if (PROFILE) await cdp.send('Profiler.start');
     if (TRACE) await browser.startTracing(page, { categories: (process.env.TRACE_CATS || 'toplevel,__metadata').split(',') });
+    if (THROTTLE) await cdp.send('Emulation.setCPUThrottlingRate', { rate: THROTTLE });
     const r = await page.evaluate((secs) => new Promise((res) => {
       const { G, game } = window.VELSCOUR, u = game.update, rd = game.render, s = { u: 0, r: 0, n: 0, nu: 0, gaps: [] };
       game.update = function (dt) { const t = performance.now(); u.call(this, dt); const d = performance.now() - t; s.u += d; s.nu++; if (d > 8) (s.su ||= []).push(+d.toFixed(1)); };
@@ -182,6 +186,7 @@ const PROFILE = process.env.PROFILE === '1', TRACE = process.env.TRACE === '1';
           slowU: (s.su || []).sort((a, b) => b - a).slice(0, 8), slowR: (s.sr || []).sort((a, b) => b - a).slice(0, 8), mobs: w.creatures.length, awake: Math.round(seen.m / Math.max(1, seen.k)), fx: Math.round(seen.e / Math.max(1, seen.k)), parts: Math.round(seen.p / Math.max(1, seen.k)), dpr: G.dpr.toFixed(2), kind: w.kind + (w.biome ? ':' + w.biome.id : '') });
       }, secs * 1000);
     }), secs);
+    if (THROTTLE) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
     let top = [];
     if (TRACE) {
       // how busy each process's main threads were over the window (top-level tasks): is the GPU process the bottleneck?
