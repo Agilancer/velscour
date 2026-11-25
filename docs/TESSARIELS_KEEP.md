@@ -82,8 +82,12 @@ any other prop).
   *Rugs and Carpets 20*, gold-bordered, drawn **into the floor tile by tile** (`map.dressTile`, `gfx/terrain.js`), so
   nothing standing in front is painted over.
 - **Trophies (16 pedestals + 4 plinths)**: 30 trophies, each earned once; any of the 26 small ones on any pedestal (a new
-  one goes on the first empty pedestal), the four **Elder Dragons** on their own plinths round the Flame. A lamp lights
-  every trophy.
+  one goes on the first empty pedestal), the four **Elder Dragons** on their own plinths round the Flame, **each turned
+  to face it** (`yaw` in `src/data/keepart.js`, from its plinth's way to the basin; the grey shades of unearned ones are
+  the same sprites). They were re-baked alone (`node tools/tkeep3d_bake.js elders`, then `python tools/tkeep3d.py
+  elders`: only the `bm` dragon models are needed) onto `assets/tiles/tkeep/elders.webp`, a page beside the hall's; the
+  old front-facing ones still sit unused on `page_0.webp` until the next whole bake, whose `pack` drops `elders.webp`.
+  A lamp lights every trophy.
 - **Furniture**: the Castle Keep pack's painted props: suits of armour and candelabra by the dais, lions by the portal,
   benches by the columns, the war map table, the Chronicle's lectern, a reliquary and a knight's memorial on the north
   balcony, the Vault's treasury chest, a shield rack, braziers, candelabra and banner stands along the front balconies.
@@ -224,8 +228,9 @@ and Kindled in `recompute`), `breach.js`, `rifts.js`, `inventory.js`, `vendor.js
 ## Tests
 - `node tools/tests/keep_quests.mjs`: the quests' data, the rules on a save, the Ember economy over a played-through
   game, and the veteran's (the door's back pay, a day's Embers, the War Table's seats and cap) (no browser).
-- `node tools/tests/keep_flame.js [zoom]`: the Sacred Flame close up (smallest, a high Renown, Kindled, leaping) and the
-  brazier's near-half overlay (made, not empty). Shots in `tools/tests/out/keep_flame_*.png`.
+- `node tools/tests/keep_flame.js [zoom]`: the Sacred Flame close up (smallest, a high Renown, Kindled, leaping), the
+  brazier's near-half overlay (made, not empty), and the four Elders facing the Flame, earned and as shades (drawn from
+  `elders.webp`). Shots in `tools/tests/out/keep_flame_*.png`.
 - `node tools/tests/keep.js [noshots] [mobile]`: the portal in town, the hall, the companions walking and talking, the
   stairs to every balcony, every panel tab, a chapter paid, a trade, the Vault, Furnish shown at once, Kindled, an
   expedition, auto-play walking out. Shots in `tools/tests/out/keep_*.png`.

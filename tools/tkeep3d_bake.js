@@ -7,6 +7,8 @@
 //   node tools/tkeep3d_bake.js preview [x,y[,w,h,S]] # a framed view -> tools/tests/out/tkeep3d_preview_<x>_<y>.png
 //   node tools/tkeep3d_bake.js trophies              # every trophy sprite in a row -> tools/tests/out/tkeep3d_trophies.png
 //   node tools/tkeep3d_bake.js front                 # only the mask of the Flame brazier's near half (the pieces' S)
+//   node tools/tkeep3d_bake.js elders [ids]          # only the Elders' sprites (or those trophies) -> out/elders.png +
+//                                                    # out/elders.json; then `python tools/tkeep3d.py elders` (needs bm only)
 // Both the bake and `front` write assets/tiles/tkeep/brazier_front.json: which pixels of the pieces the game draws again
 // over the Sacred Flame (the near rim and crown blades; gfx/keepart.js brazierFront).
 const fs = require('fs');
@@ -44,7 +46,7 @@ function copyModels() {
 (async () => {
   const args = process.argv.slice(2);
   fs.mkdirSync(OUT, { recursive: true });
-  const front = args[0] === 'front', models = front ? 0 : await copyModels();
+  const front = args[0] === 'front', elders = args[0] === 'elders', models = front ? 0 : await copyModels();
   if (!front) console.log('trophy models:', models);
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--enable-unsafe-swiftshader', ...(process.env.CHROMIUM_ARGS || '').split(' ').filter(Boolean)] });
   const page = await browser.newPage();
@@ -55,6 +57,13 @@ function copyModels() {
   if (front) {
     const S = JSON.parse(fs.readFileSync(path.join(ROOT, 'assets/tiles/tkeep/index.json'), 'utf8')).S;   // the pieces' own scale
     writeFront(await page.evaluate((S) => window.TKEEP.bakeFrontOnly(S), S));
+  } else if (elders) {
+    const ids = args[1] ? args[1].split(',') : null;
+    const r = await page.evaluate((ids) => window.TKEEP.bakeTrophies(ids), ids);
+    const dir = path.join(ROOT, 'assets/source/tkeep/out'); fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'elders.png'), png(r.page));
+    fs.writeFileSync(path.join(dir, 'elders.json'), JSON.stringify({ sprites: r.sprites }));
+    console.log('elders:', Object.entries(r.sprites).map(([k, v]) => `${k} ${v.f[0][3]}x${v.f[0][4]}`).join(', '), '-> assets/source/tkeep/out/elders.*');
   } else if (args[0] === 'preview') {
     const [x, y, w, h, S] = (args[1] || '21,21').split(',').map(Number);
     const u = await page.evaluate(([x, y, w, h, S]) => window.TKEEP.preview(x, y, w || 1600, h || 1000, S || 0.6), [x, y, w, h, S]);

@@ -6,6 +6,8 @@ Tessariel's Keep art (docs/TESSARIELS_KEEP.md).
     python tools/tkeep3d.py decor <bellmourn> <vesperwrithe> # banners, stained glass, rugs -> assets/tiles/tkeep/decor/
     node tools/tkeep3d_bake.js                                # three.js bake -> assets/source/tkeep/out/ (PNG pages + index)
     python tools/tkeep3d.py pack                              # out/ -> assets/tiles/tkeep/ (lossless WebP + index.json)
+    node tools/tkeep3d_bake.js elders                         # only the Elders' sprites -> out/elders.png + elders.json
+    python tools/tkeep3d.py elders                            # -> assets/tiles/tkeep/elders.webp, their index entries on it
 
 <vesperwrithe> and <bellmourn> are clones of the user's other repos (github.com/Agilancer/vesperwrithe, .../Bellmourn);
 only what they lend is kept here. The rule of those games holds here too: T (Tessariel) never stands near V (Velscour),
@@ -151,12 +153,31 @@ def decor(bm, vw):
 def pack():
     os.makedirs(OUT, exist_ok=True)
     idx = json.load(open(os.path.join(OUTSRC, "index.json")))
+    if os.path.exists(os.path.join(OUT, "elders.webp")):   # a whole bake has the Elders on its own pages
+        os.remove(os.path.join(OUT, "elders.webp"))
     for p in idx["pages"]:
         Image.open(os.path.join(OUTSRC, p + ".png")).save(os.path.join(OUT, p + ".webp"), lossless=True, quality=100, method=6)
     idx["pages"] = [p + ".webp" for p in idx["pages"]]
     json.dump(idx, open(os.path.join(OUT, "index.json"), "w"), separators=(",", ":"))
     kb = sum(os.path.getsize(os.path.join(OUT, p)) for p in idx["pages"]) // 1024
     print("tkeep: %d pages (%d KB), %d pieces, %d sprites" % (len(idx["pages"]), kb, len(idx["pieces"]), len(idx.get("sprites", {}))))
+
+
+def elders():
+    """The Elders' sprites re-baked alone (tkeep3d_bake.js elders) onto a page of their own beside the hall's: their
+    entries in index.json point there; the hall's pages and the old sprites' pixels on them stay as they are."""
+    idx = json.load(open(os.path.join(OUT, "index.json")))
+    new = json.load(open(os.path.join(OUTSRC, "elders.json")))["sprites"]
+    name = "elders.webp"
+    Image.open(os.path.join(OUTSRC, "elders.png")).save(os.path.join(OUT, name), lossless=True, quality=100, method=6)
+    if name not in idx["pages"]:
+        idx["pages"].append(name)
+    pg = idx["pages"].index(name)
+    for k, v in new.items():
+        v["f"] = [[pg] + f[1:] for f in v["f"]]
+        idx["sprites"][k] = v
+    json.dump(idx, open(os.path.join(OUT, "index.json"), "w"), separators=(",", ":"))
+    print("tkeep elders: %d sprites on %s (page %d, %d KB)" % (len(new), name, pg, os.path.getsize(os.path.join(OUT, name)) // 1024))
 
 
 if __name__ == "__main__":
@@ -168,5 +189,7 @@ if __name__ == "__main__":
         decor(a[1], a[2])
     elif cmd == "pack":
         pack()
+    elif cmd == "elders":
+        elders()
     else:
         sys.exit(__doc__)

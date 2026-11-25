@@ -48,6 +48,32 @@ const ZOOM = +(process.argv[2] || 3);
     console.log('front overlay', JSON.stringify(ov));
     if (!ov) fail('no brazier front overlay');
     else if (ov.px < 400) fail('the brazier front overlay is (nearly) empty: ' + ov.px + ' px');
+    // the four Elders on their plinths, each turned to face the Flame (re-baked onto elders.webp: tkeep3d_bake.js elders):
+    // all earned, then none (their grey shades are the same sprites)
+    await state({});
+    await page.evaluate(async () => {
+      const { G } = window.VELSCOUR, { camera, isoX, isoY } = await import('/src/core/view.js'), A = G.world.anchors, p = G.player;
+      p.x = A.flame[0] + 1; p.y = A.flame[1] + 9; p.path = null;
+      camera.leadX = isoX(A.flame[0], A.flame[1]) - isoX(p.x, p.y); camera.leadY = isoY(A.flame[0], A.flame[1]) - 100 - isoY(p.x, p.y) + 24;
+      camera.zoomK = 1; camera.computeZoom(); camera.zoomK = 1.3 / camera.zoom; camera.computeZoom(); camera.follow(p.x, p.y, 0, true);
+    });
+    const ELDERS = ['elder_gale', 'elder_hearth', 'elder_cold', 'elder_star'];
+    for (const [name, earned] of [['earned', true], ['shades', false]]) {
+      const r = await page.evaluate(async ([ids, earned]) => {
+        const { G } = window.VELSCOUR, { keepState } = await import('/src/game/keep.js'), { castle3dState } = await import('/src/gfx/castle3dart.js');
+        const have = keepState(G.char).have;
+        have.trophy = have.trophy.filter((t) => !ids.includes(t)).concat(earned ? ids : []);
+        (await import('/src/ui/keep.js')).rebuildDecor();
+        const st = castle3dState(), pg = st.idx.pages.indexOf('elders.webp');
+        const on = G.world.props.filter((p) => ids.includes(p.trophy) || ids.includes(p.ghost));
+        return { pg, n: on.length, onPage: on.filter((p) => p.spr.img === st.imgs[pg]).length };
+      }, [ELDERS, earned]);
+      console.log('elders', name, JSON.stringify(r));
+      if (r.n !== 4) fail(`expected the 4 Elders on their plinths (${name}), saw ${r.n}`);
+      if (earned && (r.pg < 0 || r.onPage !== 4)) fail('the earned Elders are not drawn from elders.webp: ' + JSON.stringify(r));
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: require('path').join(OUT_DIR, 'keep_flame_elders_' + name + '.png') });
+    }
   } catch (e) {
     fail(e.stack || String(e));
   } finally {
