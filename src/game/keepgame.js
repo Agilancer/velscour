@@ -11,7 +11,7 @@ import { HUD } from '../ui/hud.js';
 import { biomeTileSet } from '../core/assets.js';
 import { TOWN_BIOME } from '../data/biomes.js';
 import { generateKeep, keepProps, keepDressTile } from '../world/keepworld.js';
-import { loadKeepArt, drawSacredFlame } from '../gfx/keepart.js';
+import { loadKeepArt, drawSacredFlame, drawBrazierFront } from '../gfx/keepart.js';
 import { startKeepFolk, keepWelcome } from './keepfolk.js';
 import { keepState, checkProgress, kindle, kindled, kindleReadyIn } from './keep.js';
 import { KINDLE, TROPHY_BY_ID, KEEP_NAME, EMBER_COLOR, CASTELLAN, DECOR, renownRank } from '../data/keep.js';
@@ -41,8 +41,9 @@ export async function buildKeep(game) {
   world.npcs = [];
   // the Sacred Flame (kneel: the blessing), the War Table, the Chronicle, the Vault, the pedestals
   const [fx, fy, flv] = A.flame;
-  const flame = { keepFlame: true, name: 'The Sacred Flame', x: fx + 0.3, y: fy + 0.3,   // (sorted after the bowl's nearest tile, so nothing of the brazier is drawn over the fire)
-      // sorted behind the brazier's near rim and blades: it burns inside the crown
+  // (sorted after the bowl's nearest tile; the brazier's near rim and blades are drawn again over the fire, so it burns
+  // inside the crown: keepart.js drawBrazierFront)
+  const flame = { keepFlame: true, name: 'The Sacred Flame', x: fx + 0.3, y: fy + 0.3,
     lv: flv, reach: 2.7, flip: false,
     use: () => kneel(world, flame), update: (dt) => keepLights(world, dt) };
   world.npcs.push(flame);
@@ -147,7 +148,7 @@ export function drawKeepNpc(ctx, n, x, y, t) {
   if (n.keepFlame) {
     const k = 1 + renownRank(keepState().renown) * 0.012 + (kindled() ? 0.08 : 0) + (G.world.flameSurge || 0) * 0.45;   // it grows with the hero's Renown, burns higher while Kindled
     y -= 9.6;   // (its sort point is 0.3 tiles in front of the bowl's middle)
-    drawSacredFlame(ctx, x, y - 36, t, k);   // its foot in the bowl of coals (the rim is 15 levels up; the tile under it 6)
+    drawSacredFlame(ctx, x, y - 36, t, k, drawBrazierFront);   // its foot in the bowl of coals (the rim is 15 levels up; the tile under it 6), the crown's near blades over it
     if (kindled()) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.2 + Math.sin(t * 4) * 0.08; ctx.fillStyle = '#c8f060'; ctx.beginPath(); ctx.ellipse(x, y - 4, 46, 22, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
     n.sbox = [x - 34, y - 36 - 150 * k, x + 34, y - 20];   // its name stands over the fire
     return true;

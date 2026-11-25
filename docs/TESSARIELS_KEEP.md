@@ -222,6 +222,8 @@ and Kindled in `recompute`), `breach.js`, `rifts.js`, `inventory.js`, `vendor.js
 ## Tests
 - `node tools/tests/keep_quests.mjs`: the quests' data, the rules on a save, the Ember economy over a played-through
   game, and the veteran's (the door's back pay, a day's Embers, the War Table's seats and cap) (no browser).
+- `node tools/tests/keep_flame.js [zoom]`: the Sacred Flame close up (smallest, a high Renown, Kindled, leaping) and the
+  brazier's near-half overlay (made, not empty). Shots in `tools/tests/out/keep_flame_*.png`.
 - `node tools/tests/keep.js [noshots] [mobile]`: the portal in town, the hall, the companions walking and talking, the
   stairs to every balcony, every panel tab, a chapter paid, a trade, the Vault, Furnish shown at once, Kindled, an
   expedition, auto-play walking out. Shots in `tools/tests/out/keep_*.png`.
@@ -262,7 +264,14 @@ keep, the arrival point moved out of the front balcony's shadow, the front balco
 - **The balconies**: `keep.js` walks the hero (no teleport) up the grand stair to the north balcony, round to the east
   terrace by the corner stairs and back down.
 - **Graphics**: the Sacred Flame is **pixel-art fire** (`drawPixelFire`: a noise field on a 2 px grid, six flat colour
-  steps, embers) in a **crowned bronze brazier** on a stone stem (runes, coals, six gilt blades); the Elders' plinths are
+  steps, embers) in a **crowned bronze brazier** on a stone stem (runes, coals, six gilt blades). Its **foot is round**
+  (under the coals' line it closes in half a 2:1 ellipse, sunk in the bowl; it stays inside the bowl as the fire grows),
+  and **the brazier's near half is drawn over it** (`drawBrazierFront`): the bake writes a mask of the bowl, rim, runes
+  and the three crown blades nearer the camera than the fire's plane (`tools/tkeep3d.html` `bakeFront`, the pieces' own
+  cameras and pixel grid; `node tools/tkeep3d_bake.js front` alone) to `assets/tiles/tkeep/brazier_front.json`, and the
+  game draws those pixels of the hall's pieces again after the fire, the far motes under them and the near ones over
+  (before, the fire was drawn over the whole brazier: no single place in the depth sort can split its blades, since the
+  side tiles hold a near blade and a far one). `keep_flame.js` shoots it close up. The Elders' plinths are
   **fanned off the Flame's axis**; an **altar with a gilt T** on the dais, the dais braziers beside it; a **sunburst
   medallion** in green stone and slate; textured brass for the gilding, stone copings on the stair walls, dark nosings on
   every step, darker ashlar on treads and plinth tops (they had blown out to white), the hall's flagstones on the
