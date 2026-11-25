@@ -413,7 +413,10 @@ export function heroPortrait(cls, body, head, w, h, over = null, extra = null) {
   return fitCanvas(c, b.map((v) => v * HD), w, h);
 }
 
-/** A copy of canvas `c` cropped to its opaque pixels (null stays null), so a card can fill its frame with the hero. */
+/** A copy of `c` cropped to its opaque pixels (null stays null), so a card can fill its frame with the hero. From a
+ *  raster sprite (heroLook, heldHero) it is a raster sprite too (util.frozen): Tessariel's Keep draws its companions'
+ *  previews and their rims scaled every frame, and a plain canvas drawn so is copied whole into a fresh mipmapped
+ *  texture on each draw (twelve companions halved the hall's frame rate). Only ever drawn, never painted on after. */
 export function trimCanvas(c, meta = null) {
   if (!c) return c;
   const { width: w, height: h } = c, d = pixelsOf(c);
@@ -421,8 +424,8 @@ export function trimCanvas(c, meta = null) {
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     if (d[(y * w + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
   }
-  if (x1 < 0) { x0 = y0 = 0; x1 = w - 1; y1 = h - 1; }   // nothing opaque: a whole copy (still a canvas, never a raster sprite)
-  const t = makeCanvas(x1 - x0 + 1, y1 - y0 + 1);
+  if (x1 < 0) { x0 = y0 = 0; x1 = w - 1; y1 = h - 1; }   // nothing opaque: a whole copy
+  const t = spriteCanvas(x1 - x0 + 1, y1 - y0 + 1, c);   // CPU-backed where c is (no readback), else a plain canvas
   t.getContext('2d').drawImage(c, -x0, -y0);
   if (meta && meta.frame && meta.feet && meta.headTop) {
     const scale = w / meta.frame[0];
@@ -430,7 +433,7 @@ export function trimCanvas(c, meta = null) {
     t._feetFromBottom = Math.max(0, y1 - meta.feet * scale);
     t._centerX = (meta.frame[0] / 2) * scale - x0;
   }
-  return t;
+  return frozen(t);   // (keeps _bodyH, _feetFromBottom, _centerX)
 }
 
 // Independent, sequential save previews: never replace the active game's gear state

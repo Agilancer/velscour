@@ -169,7 +169,9 @@ Soulcoiler to Ula'tek; The Unbinding of Kith'ix). Sources: Icy Veins raid guides
   day they opened (no back pay) and give no Renown.
 - **The Chronicle of Deeds** (the lectern on the north balcony): every hero's level, depth, kills, Breach and Rift best,
   fastest depth and fastest BOSS ROOM, trophies; and the hall's records, the best of all of them.
-- **The chests** (storage, Reliquary, Jewel Box) by the portal, and the Waygate down.
+- **The chests** (storage, Jewel Box, Reliquary), one in each of the west arcade's three southern arches, storage nearest
+  the way in, and the Waygate down. (They stood on the south-east front edge until November 25, 2026, under the
+  cut-away terrace and among the dummies: a poor spot.)
 - **Balance** (`node tools/tests/keep_quests.mjs` plays a hero from depth 1 to 600 in rough proportion to a real run):
   about **2,200 Embers over a whole game (~35 hours): 14 Legendary pieces**, the Vault and the War Table on top; Renown
   in the low teens by the end of the campaign, the rest from the daily board and the endgame. The pieces are the hero's
@@ -225,6 +227,29 @@ and Kindled in `recompute`), `breach.js`, `rifts.js`, `inventory.js`, `vendor.js
 - `node tools/tests/keep.js [noshots] [mobile]`: the portal in town, the hall, the companions walking and talking, the
   stairs to every balcony, every panel tab, a chapter paid, a trade, the Vault, Furnish shown at once, Kindled, an
   expedition, auto-play walking out. Shots in `tools/tests/out/keep_*.png`.
+- `HEADED=1 VSYNC=1 node tools/tests/fps.js keep,keepwalk`: the hall's frame rate at the display's refresh with all
+  twelve companions, standing and walking the balconies (`fps.js keep,keepwalk` without them: uncapped). See below.
+
+## Performance (November 25, 2026)
+The hall dipped below the refresh with your other heroes in it, and stuttered for its first second. What was wrong, and
+what changed (nothing drawn differently: the same sprites, at the same size and smoothing):
+- **The companions' looks** (`savedGearPreview` in `src/core/gearart.js`) were plain canvases trimmed from the composed
+  hero. Drawn scaled with smoothing, Chromium sent each one up to the GPU again in every frame it was drawn (a mipmapped
+  texture rebuilt each draw), twelve a frame. `trimCanvas` now returns a raster sprite (`spriteCanvas` + `frozen`, as
+  every other sprite is), uploaded once. On a phone sprites stay plain canvases, as before.
+- **Arriving**: the previews (each class's atlases loaded and composed, one after another) and each companion's first
+  draw and rim were made in the hall's first second, a missed frame a hero and a 125 ms hitch for the first.
+  `game.enterKeep` now waits for them behind the loading screen ("Gathering your heroes…", capped at 5 s so a slow
+  fetch never holds the door) and `warmKeepHeroes` (`keepfolk.js`) draws each once into a scratch pixel at the camera's
+  zoom, so their rims are baked before the hall shows.
+- **The second visit**: `keepart.js` held its record of the baked hall after the hero left (the pages go with
+  `releaseCastle3D`), so the next visit loaded nothing and the hall drew as bare rock. `releaseKeepArt()` (from
+  `releaseLevelArt`) lets it go, and `loadKeepArt` reloads when the baked set changed.
+- Results (RX 9070 XT, 1920x1080, 144 Hz, seeded, a quiet CPU): before, the hall made 101-104 fps standing with 39-42%
+  of frames late; now it holds 144 standing and walking, 0-0.1% late, 1% low 141. Uncapped it went from about 110 to
+  about 220 fps. The phone path (`MOBILE=1 THROTTLE=4`) holds 60, as before.
+- Left alone: the hero's own rim is baked once a level entry (11-15 ms, game-wide, not the keep's); floor chunks bake
+  lazily under 6 ms; the candles' and braziers' glows are drawn one by one (batching them would change their look).
 
 ## The critics (round 1 of 4) and the polish that followed
 Three critics were asked for: an environment/level artist, a quest and systems designer, a hub and narrative UX

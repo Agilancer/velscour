@@ -8,7 +8,9 @@
 //   every process: the browser's caches let go), town, a biome id (catacombs, cathedral, castle, dark_forest, sea_of_sand, overworld...), raid (a depth 30
 //   BOSS ROOM), peak (a level 100 Wizard deep in a dungeon with 40 extra foes on him), peaknecro (the same with a
 //   Necromancer's army), stress (a fixed load, the same in any build: full resolution held, the world frozen, 40 foes and 20 minions round the
-//   hero, 1,600 Sigil-fire flames + 300 glows + blood, smoke, gibs and numbers from a private seed), 'all' = a sample of everything
+//   hero, 1,600 Sigil-fire flames + 300 glows + blood, smoke, gibs and numbers from a private seed), keep (Tessariel's
+//   Keep with all twelve companions: a hero of every other class is saved first), keepwalk (the same, the hero walking
+//   the stair, the balconies and the terrace round and round; auto-play stays off in both), 'all' = a sample of everything
 //   CLASS=necromancer for the hero of the plain scenes (default wizard), GIFT=1 makes him level 100 with the best gear,
 //   VSYNC=1 keeps the frame cap (upd/rnd are then plain CPU cost, not waits on a saturated GPU process)
 //   SEED=n (default 1; 0 = off) seeds Math.random so two runs (before/after a change) build the same levels and crowds
@@ -80,6 +82,7 @@ const PROFILE = process.env.PROFILE === '1', TRACE = process.env.TRACE === '1';
       const { Auto } = await import('/src/game/autoplay.js');
       if (Auto.on) Auto.toggle(false);
       if (window.__fpsUpd) { game.update = window.__fpsUpd; window.__fpsUpd = null; delete G.resScale; G.resScale = 1; }   // the stress scene froze them
+      if (window.__fpsWalk) { clearInterval(window.__fpsWalk); window.__fpsWalk = null; }   // keepwalk's route
       const until = (f) => new Promise((res) => { const t0 = performance.now(), k = () => (f() || performance.now() - t0 > 60000 ? res() : setTimeout(k, 100)); setTimeout(k, 200); });
       const loaded = () => document.querySelector('#loading').classList.contains('hidden');
       const peak = scene.startsWith('peak'), stress = scene === 'stress';
@@ -93,8 +96,36 @@ const PROFILE = process.env.PROFILE === '1', TRACE = process.env.TRACE === '1';
       G.godMode = true;
       const depth = peak ? 60 : 24;
       G.char.depth = depth;
-      if (G.world && G.world.kind !== 'town') { game.enterTown(); await until(loaded); }
+      if (G.world && (G.world.kind !== 'town' || G.world.keep)) { game.enterTown(); await until(loaded); }
       if (scene === 'town') { if (G.world.kind !== 'town') { game.enterTown(); await until(loaded); } }
+      else if (scene === 'keep' || scene === 'keepwalk') {
+        // Tessariel's Keep with a full roster: a hero of every other class on this browser, in Legendary armour and
+        // Epic arms, so the hall shows its twelve companions; keepwalk walks the hero up the grand stair to the north
+        // balcony, round the east terrace, along the west balcony and back to the Flame, over and over
+        if (!window.__fpsKeepHeroes) {
+          const { newCharData, writeSave } = await import('/src/game/save.js');
+          const { rollItem } = await import('/src/data/items.js');
+          const { CLASSES } = await import('/src/data/classes.js');
+          const ids = (Array.isArray(CLASSES) ? CLASSES.map((k) => k.id) : Object.keys(CLASSES)).filter((id) => id !== G.char.classId);
+          ids.forEach((cls, i) => {
+            const c = newCharData(cls, 'Fps ' + i), lvl = 20 + (i * 7) % 80;
+            c.level = lvl; c.deepest = lvl + 10; c.kills = lvl * 400; c.lastPlayed = Date.now() - 1000 * (i + 1);
+            for (const [slot, rarity] of [['body', 4], ['head', 4], ['hands', 3], ['legs', 3], ['feet', 3], ['weapon', 3], ['offhand', 3]]) c.equip[slot] = rollItem(lvl, { slot, rarity });
+            writeSave(c);
+          });
+          window.__fpsKeepHeroes = true;
+        }
+        await game.enterKeep(); await until(loaded);
+        if (scene === 'keepwalk') {
+          const route = [[21, 7.4], [34.6, 21], [7, 20], [21, 26]];
+          let k = 0;
+          G.player.setMoveTarget(...route[0]);
+          window.__fpsWalk = setInterval(() => {
+            const p = G.player, [x, y] = route[k % route.length];
+            if (Math.hypot(p.x - x, p.y - y) < 0.8 || !p.moveTarget) { k++; p.setMoveTarget(...route[k % route.length]); }
+          }, 250);
+        }
+      }
       else if (scene === 'raid') { G.char.depth = 30; await game.teleportToBiome(BIOME_BY_ID.cathedral); }
       else if (peak || stress) await game.teleportToBiome(BIOME_BY_ID.catacombs);
       else if (BIOME_BY_ID[scene]) await game.teleportToBiome(BIOME_BY_ID[scene]);
@@ -153,7 +184,7 @@ const PROFILE = process.env.PROFILE === '1', TRACE = process.env.TRACE === '1';
         window.__vfx = V;
         return true;
       }
-      Auto.toggle(true);
+      if (!scene.startsWith('keep')) Auto.toggle(true);   // in the keep auto-play would leave by the portal home
       window.__vfx = await import('/src/gfx/vfx.js');
       return true;
     }, [scene, process.env.CLASS || 'wizard', process.env.GIFT === '1']).catch((e) => { console.log(scene, 'setup failed', e.message); return false; });

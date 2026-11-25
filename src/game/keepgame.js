@@ -52,6 +52,11 @@ export async function buildKeep(game) {
   mark({ name: 'The Vault of the Flame', x: A.vault[0], y: A.vault[1], h: 30, use: () => G.ui.keep.open('vault') });
   A.pedestals.forEach((p, i) => world.npcs.push({ keepMarker: true, pedestal: i, x: p.x, y: p.y, h: 26, reach: 1.9, flip: false,
     get name() { const id = keepState().decor.pedestal[i]; return id ? TROPHY_BY_ID[id]?.name : 'An empty pedestal'; }, use: () => G.ui.keep.open('furnish', { pedestal: i }) }));
+  // the chests every town has, in the west arcade's arches (before the banners over them: a click is the first box hit,
+  // and a chest's edge lies under its banner's foot)
+  world.npcs.push({ stash: true, name: 'Storage Chest', x: A.stash[0], y: A.stash[1], reach: 1.6, flip: false, use: () => G.ui.stash.open() });
+  world.npcs.push({ stash: true, reliquary: true, name: 'The Reliquary', x: A.reliquary[0], y: A.reliquary[1], reach: 1.6, flip: false, use: () => G.ui.reliquary.open() });
+  world.npcs.push({ stash: true, jewelBox: true, name: 'Jewel Box', x: A.jewelBox[0], y: A.jewelBox[1], reach: 1.6, flip: false, use: () => G.ui.jewelBox.open() });
   // what hangs on the walls: click a banner or a window to change it (Furnish opens on that place)
   const hang = (kind, list) => list.forEach((s, i) => {
     const [x, y] = s.axis === 'x' ? [s.a, s.c + 0.1] : [s.c + 0.1, s.a];
@@ -60,10 +65,6 @@ export async function buildKeep(game) {
       use: () => G.ui.keep.open('furnish', { slot: [kind, i] }) });
   });
   hang('banner', A.banners); hang('glass', A.windows);
-  // the chests every town has, by the portal
-  world.npcs.push({ stash: true, name: 'Storage Chest', x: A.stash[0], y: A.stash[1], reach: 1.6, flip: false, use: () => G.ui.stash.open() });
-  world.npcs.push({ stash: true, reliquary: true, name: 'The Reliquary', x: A.reliquary[0], y: A.reliquary[1], reach: 1.6, flip: false, use: () => G.ui.reliquary.open() });
-  world.npcs.push({ stash: true, jewelBox: true, name: 'Jewel Box', x: A.jewelBox[0], y: A.jewelBox[1], reach: 1.6, flip: false, use: () => G.ui.jewelBox.open() });
   const folk = startKeepFolk(world, A);
   folk.castellan.use = () => G.ui.keep.open('sagas');
   world.npcs.push({ hidden: true, name: '', x: -9, y: -9, update: (dt) => folk.update(dt) });
