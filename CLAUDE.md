@@ -180,7 +180,7 @@ BAL_STANCE=cautious,balanced,reckless BAL_RAID=1 node tools/tests/balance.js wiz
 node tools/tests/endgame.js paladin,wizard [8] [rush|deep] # hero level by depth from dungeon XP (cap 3000 at depth ~6600; deep: depths 500-7500), kill times + % of life per hit (no simulation)
 node tools/tests/happenings.js                     # omens, shrines, treasure imp, cursed chest, challenge, nemesis, town events, Defiance
 node tools/tests/perf.js 6 wizard 1                # frame cost on a phone-sized screen: fps, update/render ms (last arg: CPU throttle)
-node tools/tests/fps.js [scenes|all] [secs] [WxH]  # desktop fps with vsync off on the real GPU (town..peak fights, stress = a fixed load at full res): fps, 1%/0.1% lows, worst frame (SEED, VSYNC=1, HEADED=1, MEM=1 process memory, PROFILE=1)
+node tools/tests/fps.js [scenes|all] [secs] [WxH]  # desktop fps with vsync off on the real GPU (town..peak fights, stress = a fixed load at full res): fps, 1%/0.1% lows, worst frame (SEED, VSYNC=1, HEADED=1, MEM=1 process memory, PROFILE=1; MOBILE=1 THROTTLE=4 = a phone on the real GPU, CPU 4x slower while measuring)
 node tools/tests/rasterlook.js [scene:zoom:dpr:WxH:from,..] # raster sprites (util.js spriteCanvas/frozen) vs plain canvases: seeded frozen frame, pixel diff, fine-detail ratio + shots (RL_BASE=url: vs another build; RL_PURGE=1 after memory pressure; RL_FALLBACK=1 through the safety valve)
 node tools/tests/longrun.js wizard 30                # long session on a phone layout: heap, live canvases (and who made them), frame cost per game minute
 node tools/tests/levelmem.js 24                     # live canvas memory level after level (town every third), growth charged to the code that made it
