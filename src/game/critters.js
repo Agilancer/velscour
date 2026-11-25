@@ -11,7 +11,7 @@
 // Wiring: game.update -> crittersTick, each critter is a 'top' effect (vfx.js) that moves and draws itself, and
 // spectate.js hit-tests taps against world.critters (catchCritterAt).
 import { G } from '../state.js';
-import { rand, chance, pick, TAU, fmtInt } from '../core/util.js';
+import { rand, chance, pick, TAU, fmtInt, rasterSprites, decoded } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { camera, isoX, isoY } from '../core/view.js';
 import { addEffect, Ring, glowSprite, sparkle, spawn, floatText, addLight } from '../gfx/vfx.js';
@@ -38,6 +38,8 @@ const ART = { img: null, meta: null };
 function loadArt() {
   if (ART.img) return;
   ART.img = new Image(); ART.img.src = 'assets/sprites/critters/critters.webp';
+  // drawn from a decoded copy: Chrome drops an <img>'s pixels and decoded the 2048 px sheet again mid-frame
+  if (rasterSprites()) ART.img.onload = () => decoded(ART.img).then((b) => { if (b !== ART.img) ART.bmp = b; });
   fetch('assets/sprites/critters/critters.json').then((r) => r.json()).then((m) => { ART.meta = m; }).catch(() => {});
 }
 const artReady = () => ART.meta && ART.img.complete && ART.img.naturalWidth > 0;
@@ -161,7 +163,7 @@ class Critter {
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = fade;
     if (sink) { ctx.save(); ctx.beginPath(); ctx.rect(px - w, py - w * 2, w * 2, w * 2 + 2); ctx.clip(); }
-    ctx.drawImage(ART.img, (i % M.cols) * cs, Math.floor(i / M.cols) * cs, cs, cs, px - w / 2, (K.fly ? py - this.z : py + 4) - w / 2 + sink * 16, w, w);
+    ctx.drawImage(ART.bmp || ART.img, (i % M.cols) * cs, Math.floor(i / M.cols) * cs, cs, cs, px - w / 2, (K.fly ? py - this.z : py + 4) - w / 2 + sink * 16, w, w);
     if (sink) ctx.restore();
     ctx.globalCompositeOperation = 'lighter';
     if (K.fly) { ctx.globalAlpha = fade * (0.15 + 0.1 * Math.sin(t * 7 + this.ph)); ctx.drawImage(glowSprite('#ffffff'), px - 7, cy - 7, 14, 14); }

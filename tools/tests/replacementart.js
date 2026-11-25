@@ -25,7 +25,7 @@ const { openGame, report } = require('./harness');
         check(enemyArtReady(a.id), a.id + ' not ready');
         const flash = enemyImage(a.id, null, 'flash'), corpse = enemyImage(a.id, null, 'dark');
         check(flash && corpse && flash.width === img.width && corpse.height === img.height, a.id + ' silhouette dimensions');
-        const d = flash.getContext('2d').getImageData(0, 0, flash.width, flash.height).data;
+        const fc = document.createElement('canvas'); fc.width = flash.width; fc.height = flash.height; const fg = fc.getContext('2d', { willReadFrequently: true }); fg.drawImage(flash, 0, 0); const d = fg.getImageData(0, 0, flash.width, flash.height).data;   // flash may be an ImageBitmap (raster sprites)
         check(d.some((v, i) => i % 4 === 3 && v > 200), a.id + ' empty alpha');
         for (let i = 0; i < d.length; i += 4) if (d[i+3] > 200) { check(d[i] > 250 && d[i+1] > 250 && d[i+2] > 250, a.id + ' flash not white'); break; }
       }

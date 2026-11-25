@@ -136,9 +136,11 @@ export function colourSprites(max, size, paint) {
     const [r, g, b] = cssRgb(col), q = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
     c = byQ.get(q);
     if (!c) {
-      if (byQ.size >= max) { const k = byQ.keys().next().value; c = byQ.get(k); byQ.delete(k); byStr.clear(); c.width = size; }   // (resets the canvas)
-      else c = makeCanvas(size, size);
+      if (byQ.size >= max) { const k = byQ.keys().next().value; c = byQ.get(k); byQ.delete(k); byStr.clear(); }
+      if (c && !rasterSprites()) c.width = size;   // (resets the canvas; a raster sprite is let go and a new one made)
+      else c = spriteCanvas(size, size);
       paint(c.getContext('2d'), (r & ~7) | 4, (g & ~7) | 4, (b & ~7) | 4);
+      c = frozen(c);
       byQ.set(q, c);
     }
     if (byStr.size >= 2048) byStr.clear();
@@ -214,6 +216,118 @@ export function makeCanvas(w, h) {
   return c;
 }
 
+// ------------------------------------------------------------------ raster sprites (Chromium, desktop)
+// Chromium copies a canvas whole into a fresh mipmapped texture every time it is drawn with mipmapped smoothing (the
+// desktop's 'medium' sprite quality), however small the slice drawn, and keeps no copy: a 1080p fight copied up to
+// 50 Mpx a frame of bone sheets, blood splats, glows and monster sprites, ~70% of the GPU process's time. A raster
+// ImageBitmap (painted on a CPU-backed OffscreenCanvas and handed over) is uploaded once and kept, its mip levels built
+// on the GPU as a canvas's are (see prime below), so it draws as fast as 'low' smoothing. What still differs from a
+// canvas is the painting: Skia on the CPU anti-aliases and resamples in its last bits differently from the GPU
+// (tools/tests/rasterlook.js measures it). Phones draw sprites 'low' (no copies) and other browsers are untested, so
+// both keep plain canvases. globalThis.VELSCOUR_NO_RASTER = true (tests, comparisons) or ?noraster in
+// the page's address turns it off.
+let rasterOK;
+export function rasterSprites() {
+  if (rasterOK !== undefined) return rasterOK;
+  try {
+    const touch = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
+    // userAgentData only exists on https/localhost: over plain http (a LAN address) the user-agent string says it
+    const chromium = navigator.userAgentData ? navigator.userAgentData.brands.some((b) => /Chromium/.test(b.brand)) : /\bChrome\/\d/.test(navigator.userAgent);
+    const off = globalThis.VELSCOUR_NO_RASTER || /[?&]noraster\b/.test(location.search);
+    rasterOK = !touch && chromium && !off && typeof OffscreenCanvas === 'function' &&
+      'transferToImageBitmap' in OffscreenCanvas.prototype && !!new OffscreenCanvas(1, 1).getContext('2d', { willReadFrequently: true });
+  } catch (e) { rasterOK = false; }
+  return rasterOK;
+}
+/** Are img's pixels on the CPU (an image, a raster sprite, a CPU canvas)? Then painting from it on the CPU reads
+ *  nothing back from the GPU. A plain canvas is GPU-backed: drawn into a CPU canvas it stalls the GPU process. */
+export function cpuImage(img) {
+  return !!img && (img._cpu === true || img instanceof HTMLImageElement || (typeof ImageBitmap === 'function' && img instanceof ImageBitmap));
+}
+/** A canvas painted and read on the CPU (willReadFrequently), marked so cpuImage() knows it. */
+export function cpuCanvas(w, h) {
+  const c = makeCanvas(w, h);
+  c.getContext('2d', { willReadFrequently: true });
+  c._cpu = true;
+  return c;
+}
+/** img as a source three.js can upload upright: WebGL ignores flipY for an ImageBitmap, so a raster sprite is copied to
+ *  a canvas first (memoised on the sprite). */
+export function texSource(img) {
+  if (!img || typeof ImageBitmap !== 'function' || !(img instanceof ImageBitmap)) return img;
+  if (!img._tex) { const c = makeCanvas(img.width, img.height); c.getContext('2d').drawImage(img, 0, 0); img._tex = c; }
+  return img._tex;
+}
+/** The RGBA pixels of any image or canvas (a raster sprite has no context of its own: it is read through a CPU canvas). */
+export function pixelsOf(img) {
+  const w = img.width, h = img.height;
+  if (typeof img.getContext === 'function') return img.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  const t = cpuCanvas(w, h), x = t.getContext('2d');
+  x.drawImage(img, 0, 0);
+  return x.getImageData(0, 0, w, h).data;
+}
+/** A canvas to paint a sprite on and hand to frozen(): CPU-backed where rasterSprites(), else a plain canvas. from: an
+ *  image it will be painted from; if that one lives on the GPU the sprite stays a plain canvas (no readback). */
+export function spriteCanvas(w, h, from = null) {
+  if (!rasterSprites() || (from && !cpuImage(from))) return makeCanvas(w, h);
+  const c = new OffscreenCanvas(Math.max(1, Math.ceil(w)), Math.max(1, Math.ceil(h)));
+  c.getContext('2d', { willReadFrequently: true });
+  c._cpu = true;
+  return c;
+}
+/** A finished sprite from spriteCanvas: a raster ImageBitmap carrying the canvas's own fields (_art, _pad...), or the
+ *  canvas itself where it is a plain one. Never paint on a sprite after this. */
+export function frozen(c) {
+  if (!c || c._cpu !== true || typeof c.transferToImageBitmap !== 'function') return c;
+  const b = c.transferToImageBitmap();
+  for (const k of Object.keys(c)) if (k !== '_cpu') b[k] = c[k];
+  prime(b);
+  rasters.add(b);
+  return b;
+}
+// A raster sprite uploaded by a draw that needs mip levels has them built on the CPU, and Skia filters a side of odd
+// length more softly there than the GPU does for a canvas: minified, such sprites looked softer (up to ~30% less fine
+// detail). Drawn first at 1:1 (no mips) and handed over at once, it goes to the GPU plain and the GPU builds its mip
+// levels later, exactly as for a canvas (tools/tests/out/bench_mips6: the same pixels at every size and scale), and it
+// draws faster too. ~0.13 ms a sprite. If this fails the sprite keeps the CPU's levels: softer, never broken. So does a
+// sprite whose GPU copy Chromium let go (critical memory pressure) and sent again for a minified draw: 0.95-0.99 of a
+// canvas's fine detail (tools/tests/out/rasterlook_r4_purge.txt), until the safety valve below draws it from a canvas.
+let primer = null;
+function prime(b) {
+  try {
+    const x = (primer ||= new OffscreenCanvas(16, 16)).getContext('2d');
+    if (!x) return;
+    x.imageSmoothingEnabled = false;
+    x.drawImage(b, 0, 0, 1, 1, 0, 0, 1, 1);
+    primer.transferToImageBitmap().close(); // hands the frame over: the draw (and the plain upload) reaches the GPU now
+  } catch (e) { /* unprimed */ }
+}
+// The safety valve (main.js rasterWatch). A raster sprite's GPU copy lives in Chromium's image cache, and after critical
+// memory pressure Chromium may stop keeping it and send the sprite up again on every draw: 8-30 fps even in the town,
+// where plain canvases (textures of their own) hold on (tools/tests/out/purge_play_*.txt). In fallback, a raster sprite
+// drawn into the game canvas is drawn from a plain canvas copy of it, made once: what the game did before raster
+// sprites. Nothing else changes (what is made, how grit is read). rasterFallback(false) undoes it.
+const rasters = new WeakSet();
+let plainDraw = null, copiesMade = 0;
+export function rasterFallback(on = true) {
+  const P = CanvasRenderingContext2D.prototype;
+  if (!on) { if (plainDraw) P.drawImage = plainDraw; plainDraw = null; return; }
+  if (plainDraw) return;
+  const draw = plainDraw = P.drawImage, copies = new WeakMap();
+  let game = null;
+  P.drawImage = function (img, a, b, c, d, e, f, g, h) {
+    if (rasters.has(img) && this.canvas === (game ||= document.getElementById('game'))) {
+      let k = copies.get(img);
+      if (!k) { k = makeCanvas(img.width, img.height); draw.call(k.getContext('2d'), img, 0, 0); copies.set(img, k); copiesMade++; }
+      img = k;
+    }
+    const n = arguments.length;
+    return n === 3 ? draw.call(this, img, a, b) : n === 5 ? draw.call(this, img, a, b, c, d) : draw.call(this, img, a, b, c, d, e, f, g, h);
+  };
+}
+export const rasterFallbackOn = () => !!plainDraw;
+export const rasterFallbackCopies = () => copiesMade;   // for tests
+
 /**
  * A loaded image as a decoded ImageBitmap, for atlases that palette swaps read on the CPU (recolor): Chrome may drop
  * an <img>'s decoded pixels, and every swap of a level then decoded the whole multi-MB sheet again (100+ ms on a
@@ -235,11 +349,11 @@ export function silhouette(img, fill) {
   if (!m) silhouettes.set(img, (m = new Map()));
   let c = m.get(fill);
   if (!c) {
-    c = makeCanvas(img.width, img.height);
+    c = spriteCanvas(img.width, img.height, img);
     const x = c.getContext('2d');
     x.drawImage(img, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = fill; x.fillRect(0, 0, c.width, c.height);
     if (img._art) c._art = img._art;
-    m.set(fill, c);
+    m.set(fill, (c = frozen(c)));
   }
   return c;
 }
@@ -298,10 +412,14 @@ export function pageAtlas(img) {
  *  hue (degrees shift), sat (multiplier), light (-1..1 add), contrast (mult around .5),
  *  tint [r,g,b,amount] blended in after the HSL shift, keepHue (bool: colourize to hue)
  */
-export function recolor(src, params, sx = 0, sy = 0, sw, sh) {
+export function recolor(src, params, sx = 0, sy = 0, sw, sh, sprite = false, keepPx = false) {
+  // sprite: the result is only ever drawn in 2D (a monster look, a prop): a raster sprite where rasterSprites() (frozen
+  // above); not for three.js textures (an ImageBitmap ignores their flipY) or anything painted on afterwards.
+  // keepPx: the recoloured pixels stay on the canvas as `_px` (ImageData) for its caller to read without a GPU
+  // readback (floor atlases' grit colours, gfx/grit.js gritSamples), which then deletes them
   sw = sw ?? src.width; sh = sh ?? src.height;
-  const c = makeCanvas(sw, sh);
-  if (!params) { c.getContext('2d').drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh); return c; }
+  if (!params) { const c = sprite ? spriteCanvas(sw, sh, src) : makeCanvas(sw, sh); c.getContext('2d').drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh); return frozen(c); }
+  const c = sprite ? spriteCanvas(sw, sh) : makeCanvas(sw, sh);
   // read the pixels on a throwaway CPU canvas: a willReadFrequently canvas stays CPU-backed, and drawing from one
   // every frame (tile atlases, monster art) re-uploads it to the GPU each time, which crawls on iOS Safari
   const tmp = makeCanvas(sw, sh), tx = tmp.getContext('2d', { willReadFrequently: true });
@@ -339,7 +457,8 @@ export function recolor(src, params, sx = 0, sy = 0, sw, sh) {
     d[i] = v >> 16; d[i + 1] = (v >> 8) & 255; d[i + 2] = v & 255;
   }
   c.getContext('2d').putImageData(img, 0, 0);
-  return c;
+  if (keepPx && !sprite) c._px = img;
+  return frozen(c);
 }
 
 /** Downscale an image in halving steps for a clean result. */

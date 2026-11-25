@@ -35,7 +35,7 @@ export function heavenlyEnemyImage(id,swap=null,mode=''){
  else{
    image=baseSprite(a);
    if(!image)return null;
-   if(swap)image=recolor(image,swap);
+   if(swap)image=recolor(image,swap,0,0,undefined,undefined,true);
    image._art={fx:80};
    CACHE.set(key,image);
    while(CACHE.size>MAX)CACHE.delete(CACHE.keys().next().value);

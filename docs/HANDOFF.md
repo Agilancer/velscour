@@ -14,6 +14,105 @@ Contents
 
 ---
 
+## November 24, 2026 — the frame-rate pass (branch `perf/framerate`)
+
+The user asked for a much higher frame rate (165+, never under 60 at peak action) with no instability and no loss of
+visual quality, reviewed by two critics. What held the desktop back was not JavaScript but **GPU texture copies**:
+Chromium copies a *canvas* source whole into a new mipmapped texture every time it is drawn with the desktop's
+`imageSmoothingQuality = 'medium'`, and keeps no copy. Every monster recolour, hero look, gib sheet, blood splat and
+glow was a canvas, so a 1080p fight copied up to ~50 Mpx a frame. Readbacks from GPU canvases (getImageData, a GPU
+canvas drawn into a CPU one) stalled the GPU queue for 0.3-1 s.
+- **Raster sprites** (`src/core/util.js`: `rasterSprites`, `spriteCanvas`, `frozen`, `cpuImage`/`cpuCanvas`,
+  `texSource`, `pixelsOf`): sprites are painted on a CPU `OffscreenCanvas` (`willReadFrequently`) and
+  `transferToImageBitmap()`'d; an ImageBitmap is uploaded once and kept (unless memory
+  pressure makes Chromium let it go; see Results), so it draws at 'medium' for the cost of 'low'. `frozen()` **primes** each one: drawn once at 1:1 into a tiny GPU `OffscreenCanvas` whose frame is handed
+  over at once, it reaches the GPU without mip levels, and the GPU builds them later exactly as for a canvas. Left to a
+  minified first draw, Skia builds them on the CPU, and a sprite with a side of odd length came out up to ~30% softer
+  (`tools/tests/out/bench_mips6.js`: unprimed vs primed vs canvas at every size and scale). Primed sprites also draw
+  faster. What still differs from a canvas is the painting (Skia on the CPU anti-aliases and resamples differently in
+  its last bits): `rasterlook.js` finds 95-99% of pixels identical and the same fine detail within 1% in every scene
+  but the town (0.9873 where the frames differ: townsfolk outline edges; not visible at 5x). Desktop Chromium only: phones draw sprites 'low', which copies nothing, so they gain no frame rate from it
+  and keep canvases; other browsers are untested and keep canvases too;
+  `globalThis.VELSCOUR_NO_RASTER = true` or `?noraster` in the address turns it off. Used by the monster recolours
+  (enemyart, replacementart, heavenlymonsters, seaofsand), assets.js scatter/prop/chest recolours, castle props,
+  isobarriers, gearart, heldart, gearfx/heldfx, varrowaxe, critters, bonegibs, creature tints/rims, vfx blood, petart
+  tints, approved/AI biome monsters. A sprite is only raster when what it is painted *from* is on the CPU
+  (`spriteCanvas(w, h, from)`), or painting it would be a readback. **Rules**: no GPU readbacks in play; pixel reads
+  go through `pixelsOf()`; three.js textures made from sprites go through `texSource()` (WebGL ignores flipY for an
+  ImageBitmap); never `close()` a sprite bitmap (decals and corpses keep references); **never make anything drawn
+  with `'low'` smoothing a raster sprite** (floor atlases, wall atlases, floor chunks): Chromium uploads a CPU bitmap
+  drawn 'low' at under half scale at half resolution, so it blurs, and how much depends on what was drawn before.
+  Floors stay plain canvases (`clipFloors` in assets.js, castle `floors`/`keep_floors`/rampart tops); their grit
+  colours are read once when the atlas is built (`gritSamples`, `img._grit`) instead of a readback mid-frame.
+- **The raster safety valve** (`util.js` `rasterFallback`, `main.js` `rasterWatch`). A raster sprite's GPU copy lives in
+  Chromium's image cache (256 MB / 2,000 entries, LRU); a canvas owns its texture. After critical memory pressure (the
+  OS nearly out of RAM; `fps.js` scene `purge` simulates it) Chromium stopped keeping them and sent sprites up again every
+  frame: the town fell to 8-10 fps for a minute where the baseline held ~100. Re-priming did not help. So: on a desktop,
+  two 2 s windows with drawing over 25 ms a frame (normal play: under 10) switch it on as a trial, kept if the next
+  window's drawing time halves, else undone for that level. On, it wraps `CanvasRenderingContext2D.prototype.drawImage`:
+  a raster sprite drawn into the game canvas (`#game`) is drawn from a plain canvas copy of it, made once (the baseline's
+  way; frames bit-identical, `rasterlook.js` `RL_FALLBACK=1`). Nothing else changes, so don't make it flip
+  `rasterSprites()`: grit reads and canvas reuse key off that, and flipping it mid-session brings readbacks back and
+  assigns `width` to bitmaps. After a purge with it on: town 116, catacombs 75, cathedral 61, peak 50, stress 41
+  (baseline after the same purge: 27-106, 10-48, 56, 39-83, 26-32). Check it with
+  `HEADED=1 VSYNC=1 node tools/tests/fps.js town,catacombs,purge,town,catacombs,town,town,peak,stress`: lines get
+  `[raster fallback]` after the purge, never in a plain `fps.js all`.
+- **Readbacks cost the GPU's whole queue.** Any read of GPU pixels (getImageData/toDataURL of a GPU canvas, a GPU canvas
+  or an image Chromium holds decoded on the GPU drawn into a CPU canvas) waits until the GPU has finished everything
+  queued before it: 1-4 ms at vsync, **~0.5 s with vsync off** (the queue runs deep). They made the 0.1% lows of the
+  uncapped runs (1-5 fps on the baseline), and opening a shop with new stock still pays one (item icons go to
+  `toDataURL`: ~0.5 s uncapped here, ~1.2 s on the baseline; a few ms at vsync).
+- **Grit** (`src/gfx/grit.js`): the sampler reads the tile's own pixels (a 1:1 copy, exact from any image or canvas)
+  and samples its 32x16 grid in JS. A shrinking `drawImage` gave different colours for the same tile depending on
+  Chromium's decode cache and the canvas's history, and the colours steer the speck rolls, so the grit's layout
+  changed from one visit (or build) to the next. It is now the same every time, raster sprites on or off. On desktop
+  no floor variant is read on its own mid-frame: the atlases' colours are read when they are built, from the
+  recolour's CPU pixels (`recolor(..., keepPx)` → `_px`; the town/Wilds expansion atlases in `biomeexpansion.js`), and
+  an atlas without them has all the cells the world uses read from one copy the first time any is needed (an image's
+  colours are kept on it for later worlds). Phones use the new 1:1 sampler too, with the old pacing (two new variants a
+  frame, each read on its own). The castle's procedural planks and carpet (`castle.js plankArt/carpetArt`) are painted
+  when the pack loads on desktop: made at first sight, their grit read waited up to ~0.5 s on the GPU's queue under
+  auto-play (uncapped).
+- **Bone gibs** (`src/gfx/bonegibs.js`): each bone kind's cells are packed into a strip of their own, one image per
+  (colours, look, kind), instead of repainting the whole 512x194 sheet for every new kind (~90 sheet uploads a second
+  with a Necromancer's army).
+- **adaptRes** (`src/main.js`): on a PC, loading and the first second of a new level no longer count as slow (every
+  level used to drop to 85% resolution); it steps down only after two slow 2 s windows, and a step that doesn't buy
+  10% is undone for that level (its hold ends with the level). Phones are unchanged. Sprites keep 'medium' smoothing
+  at a lower resScale when raster.
+- **New tools**: `tools/tests/fps.js` (uncapped desktop fps per scene: SEED, VSYNC, HEADED, SLOW, MEM, NORASTER,
+  PROBE (a page script; `tools/tests/out/probe_draw.js` times drawImage/restore/fill by source), 1%/0.1% lows, late%;
+  pseudo-scenes `reload`, `purge` and `fallback`; `[raster fallback]` marks scenes after the valve switched on; `stress`
+  is a fixed load that drops the hero's summons carried from an earlier stress run, since lasting summons follow the
+  hero through portals), `tools/tests/rasterlook.js` (raster vs plain canvases or another build: pixel diff and a
+  fine-detail ratio, at zooms and DPRs; `RL_PURGE`, `RL_FALLBACK`), `perf.js` `SEED`,
+  `harness.js` options `HEADED=1`, `dpr`, `init`; `longrun.js` `LR_DESKTOP=1` (desktop soak with per-minute render p99).
+  Measuring tip: with vsync off, any GPU readback costs ~0.5 s, so a probe that reads pixels mid-frame lies about frame
+  times; and a headed (vsync) browser session gets slower at the heaviest load after a couple of minutes of play (a
+  reload doesn't restore it, a new browser does; see Results), so compare like with like and report both.
+- Results (RX 9070 XT, 1920x1080, seeded; `fps.js`). The fixed `stress` load, 6 runs a build, fresh browsers: uncapped
+  **79 vs 31 fps** (1% low 29 vs 13), headed at ~131 Hz **114.5 vs 29.5** (1% low 61-64 vs 25-26) in a fresh browser,
+  and **73-77 vs 30-34** (1% low 43-44 vs 21-30) a few minutes into a browser session: this build slows there, the
+  baseline is already GPU-bound at ~30; held by the browser process (a reload keeps it), whether this build's uploads
+  add to it is not isolated. Every scene uncapped,
+  one run each, this build vs the baseline: town 441/116, catacombs 158/71, cathedral 123/65, Wilds 423/129, castle
+  465/205, dark forest 374/110, Sea of Sand 221/162, raid 121/115, peak 119/84, Necromancer army 112/46; worst frame in
+  any scene 58 ms (baseline up to 1.1 s, readback stalls); again on the final tree with the safety valve: 426/135/156/
+  406/478/333/351/124/145/98, stress 77, worst 61 ms, the valve never switched on. Headed, the display's refresh is held in town, the castle,
+  the Wilds, the forest and the desert, and in 3 of 4 catacombs/cathedral runs; dungeon fights run 81-127 (raid
+  83-111, peak 124-127, Necromancer army 81-86). Phones: no change (one same-level pair, 17.5 vs 17.5 fps on the
+  4x-throttled desktop proxy, far below 60; no real phone measured). Not met: 165+ in dungeon fights (112-158 uncapped) and a 60 fps 1% low in the heaviest
+  particle storms late in a session (43-45); after critical memory pressure the frame rate drops for the few seconds
+  until the safety valve switches on. Remaining limits: the Canvas2D call count (particles are
+  about half of a peak frame), the Cathedral's glow-heavy frames and a Necromancer army. A WebGL particle layer was
+  considered and left out for **stability**: it is a renderer rewrite, puts another WebGL context beside the three.js
+  scenes (more context-limit and context-loss paths), and needs a compositing redesign (particles are drawn before the
+  lighting pass, which multiplies over them, so a WebGL layer on top would draw them unlit, over the darkness).
+- Tests failing the same way on the untouched baseline: flow ("expected town at depth 1"), hud (10-slot migration),
+  seethrough (Starstorm), heavenly (selection pool), dkblade (model off his back), homunculus (townLife), firstperson
+  (click box), replacementart (18 slime placeholders), rims (target box never shows), legion (random 0-attack
+  skeletons), and exit code 1 everywhere from missing `assets/ui/skills/arcane_sorcerer_*` / `slime_lord_*` icons.
+
 ## November 24, 2026 — auto-play's Standard Campaign visits Tessariel's Keep (branch `claude/amazing-mccarthy-ph4dzv`, after PR #268)
 
 The user asked that the auto-play Standard Campaign go to the keep and pick up quests to complete. `Auto.keepWanted` and

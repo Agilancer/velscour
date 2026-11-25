@@ -47,7 +47,7 @@ export function replacementImage(id, swap = null, mode = '') {
   let image = cache.get(key);
   if (image) { cache.delete(key); cache.set(key, image); }
   else {
-    image = recolor(sheet, swap, cell.x, cell.y, cell.w, cell.h);
+    image = recolor(sheet, swap, cell.x, cell.y, cell.w, cell.h, true);
     image._art = { fx: feetX(id, cell) };
     cache.set(key, image);
     while (cache.size > 192) cache.delete(cache.keys().next().value);

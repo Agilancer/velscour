@@ -1,5 +1,6 @@
 // Asset loading + derived (recoloured / rescaled) sprite caches.
-import { makeCanvas, recolor, scaleImage, pageAtlas } from './util.js';
+import { makeCanvas, recolor, scaleImage, pageAtlas, rasterSprites } from './util.js';
+import { gritSamples } from '../gfx/grit.js';
 import { G } from '../state.js';
 import { preloadWallTorchHolders } from '../gfx/walltorches.js';
 import { preloadWallHangings } from '../gfx/wallhangings.js';
@@ -116,6 +117,8 @@ export function classSprite(id, h, palette = null) {
 /** Floors cut to their diamonds (plus a pixel for the seams): some packs' feature tiles carry a dark slab edge
  * below the diamond that would show over the next tile. Recoloured atlases are cut in place. */
 function clipFloors(img, cells) {
+  // a plain canvas, never a raster sprite (util.frozen): floors draw 'low' at under half scale, and Chromium uploads a
+  // CPU bitmap drawn that way at half resolution, which blurs them
   const c = img instanceof HTMLCanvasElement ? img : makeCanvas(img.width, img.height);
   const g = c.getContext('2d');
   if (c !== img) g.drawImage(img, 0, 0);
@@ -127,6 +130,10 @@ function clipFloors(img, cells) {
   }
   g.fill();
   g.restore();
+  // the grit colours now, not a GPU readback mid-frame (gfx/grit.js), and read from the pixels still on the CPU (the
+  // recolour's, or the pack image): the grit's samples lie well inside each diamond, where the clip changes nothing
+  if (rasterSprites()) c._grit = gritSamples(c._px || c === img ? c : img, cells);
+  delete c._px;
   return c;
 }
 
@@ -150,9 +157,9 @@ export function biomeTileSet(biome) {
   const keys = Object.keys(A.biomeSets).filter((k) => !k.startsWith('town|'));
   while (keys.length >= 2) delete A.biomeSets[keys.shift()]; // a mixed level holds two sets
   const pk = A.packs[id], m = pk.meta, wm = A.packs[wid].meta, pal = biome.palette, wallPal = biome.wallPalette || pal;
-  const floorImg = clipFloors(pal ? recolor(pk.floors, pal) : pk.floors, m.floors);
+  const floorImg = clipFloors(pal ? recolor(pk.floors, pal, 0, 0, undefined, undefined, false, true) : pk.floors, m.floors);
   const wallImg = wallPal ? recolor(A.packs[wid].walls, wallPal) : A.packs[wid].walls;
-  const scatImg = pal ? recolor(pk.scatter, pal) : pk.scatter;
+  const scatImg = pal ? recolor(pk.scatter, pal, 0, 0, undefined, undefined, true) : pk.scatter; // props: raster sprites (util.frozen)
   const wallPage = pageAtlas(wallImg);
   const rect = (img, r) => ({ ...(img === wallImg ? wallPage(r[1], r[2]) : { img, sx: r[1], sy: r[2] }), w: r[3], h: r[4], ox: r[5], oy: r[6] });
   const set = { pack: id, k: TW / m.tile[0], zscale: m.zscale, floors: [], bases: [], features: [], walls: {}, arches: {}, doors: {}, scatter: [], chest: null };
@@ -180,7 +187,7 @@ export function biomeTileSet(biome) {
   }
   // props tools/isofix.py re-projected onto the 2:1 grid come from its atlas (recoloured the same way)
   const scat = (p, img) => {
-    const src = 'pack:' + p.meta.pack_id, fimg = isoFixImage(src), fix = fimg && (pal ? recolor(fimg, pal) : fimg);
+    const src = 'pack:' + p.meta.pack_id, fimg = isoFixImage(src), fix = fimg && (pal ? recolor(fimg, pal, 0, 0, undefined, undefined, true) : fimg);
     return p.meta.scatter.map((s) => {
       const f = fix && isoFix(src, s.name);
       return { img, sx: s.x, sy: s.y, w: s.w, h: s.h, ox: s.ox, oy: s.oy, ...(f && { ...f, img: fix }), fp: s.fp, block: !!(s.block && !walkOverProp(s.name)), name: s.name };
@@ -197,12 +204,12 @@ export function biomeTileSet(biome) {
   }
   if (full) for (const [p, ranges] of biome.morePacks || []) {
     const src = A.packs[p];
-    set.scatter.push(...scat(src, pal ? recolor(src.scatter, pal) : src.scatter).filter((s, i) => inR(ranges, i)));
+    set.scatter.push(...scat(src, pal ? recolor(src.scatter, pal, 0, 0, undefined, undefined, true) : src.scatter).filter((s, i) => inR(ranges, i)));
   }
   // floors borrowed from other packs in the biome's palette: their seamless ones join the pavings, the rest the
   // feature tiles (data/biomes.js moreFloors)
   if (full) for (const [p, ranges] of biome.moreFloors || []) {
-    const src = A.packs[p], cells = src.meta.floors, img = clipFloors(pal ? recolor(src.floors, pal) : src.floors, cells);
+    const src = A.packs[p], cells = src.meta.floors, img = clipFloors(pal ? recolor(src.floors, pal, 0, 0, undefined, undefined, false, true) : src.floors, cells);
     cells.forEach((f, i) => {
       if (!inR(ranges, i)) return;
       (f.seamless ? set.bases : set.features).push(set.floors.length);
@@ -215,7 +222,7 @@ export function biomeTileSet(biome) {
     if (!r) continue;
     const f = isoFix('town', name) || { img: A.town.objects, sx: r[0], sy: r[1], w: r[2], h: r[3], ox: r[4], oy: r[5] };
     const fp = A.town.meta.footprints[name] || [0.5, 0.5];
-    set.scatter.push({ img: recolor(f.img, pal, f.sx, f.sy, f.w, f.h), sx: 0, sy: 0, w: f.w, h: f.h, ox: f.ox, oy: f.oy, fp: fp[0], block: true, name });
+    set.scatter.push({ img: recolor(f.img, pal, f.sx, f.sy, f.w, f.h, true), sx: 0, sy: 0, w: f.w, h: f.h, ox: f.ox, oy: f.oy, fp: fp[0], block: true, name });
   }
   // the temple biomes' approved painted floors and props, unrecoloured, on top of the pack's own; their floors
   // are listed several times so they show about as often as all of the pack's feature tiles together
@@ -226,7 +233,7 @@ export function biomeTileSet(biome) {
     set.scatter.push(...extra.scatter.map((s) => (walkOverProp(s.name) ? { ...s, block: false } : s)));
   }
   if (A.chestImg && A.chestMeta) {
-    const img = pal ? recolor(A.chestImg, pal) : A.chestImg;
+    const img = pal ? recolor(A.chestImg, pal, 0, 0, undefined, undefined, true) : A.chestImg;
     const c = A.chestMeta;
     const e = (r) => ({ img, sx: r.x, sy: r.y, w: r.w, h: r.h });
     set.chest = { closed: e(c.closed), open: e(c.open), rareClosed: e(c.rareClosed), rareOpen: e(c.rareOpen) };

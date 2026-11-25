@@ -9,6 +9,7 @@
 import { G } from '../state.js';
 import { camera, HW, HH } from '../core/view.js';
 import { enemyImage } from '../core/enemyart.js';
+import { texSource } from '../core/util.js';
 import { OX, OY, WL, LV } from '../world/seaship.js';
 
 const SC = HW * Math.SQRT2, VZ = LV * 4;   // world px a tile across the screen; a unit of height (LV levels of 4 px: 39.19)
@@ -203,7 +204,7 @@ const crewTex = (art, swap) => {
   if (S.tex.has(key)) return S.tex.get(key);
   const img = enemyImage(art, swap);
   if (!img) return null;
-  const t = new T.CanvasTexture(img); t.colorSpace = T.SRGBColorSpace; t.magFilter = T.NearestFilter; t.minFilter = T.LinearFilter;
+  const t = new T.CanvasTexture(texSource(img)); t.colorSpace = T.SRGBColorSpace; t.magFilter = T.NearestFilter; t.minFilter = T.LinearFilter;
   t.userData = { fx: img._art ? img._art.fx / img.width : 0.5, ar: img.width / img.height };
   S.tex.set(key, t);
   return t;

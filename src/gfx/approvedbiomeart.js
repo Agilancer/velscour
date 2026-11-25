@@ -1,6 +1,7 @@
 // Approved and generated low-resolution biome / overworld sprite atlases.
 // Small atlases stay shared/lazily decoded; original wall geometry, tile
 // metadata, native indices and collision rules remain authoritative.
+import { spriteCanvas, frozen } from '../core/util.js';
 const ART_DIR = 'assets/tiles/approved_biomes/';
 const ROWS = Object.freeze({
   desert_temple: 0,
@@ -238,13 +239,12 @@ export function approvedHeavenlyMonsterCanvas(family) {
   const index=FAMILIES.indexOf(family),image=sheets.get('monsters');
   if (index<0 || !image) return null;
   if(monsterFrames.has(family)) return monsterFrames.get(family);
-  const canvas=document.createElement('canvas');
-  canvas.width=160;canvas.height=186;
+  let canvas=spriteCanvas(160,186,image); // a raster sprite (util.frozen): drawn every frame, uploaded once
   const g=canvas.getContext('2d');
   g.imageSmoothingEnabled=false;
   g.drawImage(image,(index%4)*MONSTER.w,Math.floor(index/4)*MONSTER.h,
     MONSTER.w,MONSTER.h,8,3,144,180);
   canvas._art={fx:80};
-  monsterFrames.set(family,canvas);
+  monsterFrames.set(family,(canvas=frozen(canvas)));
   return canvas;
 }

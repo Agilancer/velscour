@@ -26,8 +26,10 @@ const path=require('path');
       document.querySelectorAll('.screen').forEach(e=>e.remove());
       G.ui.modalCount=0;G.godMode=true;
       const signature=(image,r)=>{
-        const pixels=image.getContext('2d',{willReadFrequently:true})
-          .getImageData(r.x,r.y,r.w,r.h).data;
+        // sprites are ImageBitmaps on desktop Chromium (util.js spriteCanvas): read them through a CPU canvas
+        const rd=document.createElement('canvas');rd.width=r.w;rd.height=r.h;
+        const rg=rd.getContext('2d',{willReadFrequently:true});rg.drawImage(image,r.x,r.y,r.w,r.h,0,0,r.w,r.h);
+        const pixels=rg.getImageData(0,0,r.w,r.h).data;
         let count=0,h=2166136261;
         for(let i=0;i<pixels.length;i+=4){
           if(pixels[i+3]>80)count++;

@@ -1,3 +1,4 @@
+import { spriteCanvas, frozen } from '../core/util.js';
 const CACHE = new Map();
 
 function loadAtlas(id) {
@@ -23,13 +24,11 @@ export function preloadAIGeneratedHeavenlySprites() {
 
 export function aiHeavenlyMonsterCanvas(index) {
   if (!heavenlyImage || index < 0 || index >= 60) return null;
-  const canvas = document.createElement('canvas');
-  canvas.width = 160;
-  canvas.height = 186;
+  const canvas = spriteCanvas(160, 186, heavenlyImage); // a raster sprite (util.frozen): drawn every frame, uploaded once
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(heavenlyImage, (index % 8) * 64, Math.floor(index / 8) * 64,
     64, 64, 0, 26, 160, 160);
   canvas._art = {fx: 80};
-  return canvas;
+  return frozen(canvas);
 }

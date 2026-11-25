@@ -1,10 +1,13 @@
 // Frame-cost probe on a phone-sized touch screen (844x390, DPR 2, 4x CPU throttle): ms per frame spent in
 // game.update and game.render over a few seconds in a dungeon. Usage: node tools/tests/perf.js [depth] [class] [throttle]
+// SEED=n seeds Math.random, so two runs (two builds) build the same level and crowd.
 const { openGame, report } = require('./harness');
 const depth = +(process.argv[2] || 6), cls = process.argv[3] || 'wizard', rate = +(process.argv[4] || 4);
 
 (async () => {
-  const { browser, ctx, page, errors, shot } = await openGame({ width: 844, height: 390, mobile: true });
+  const SEED = +(process.env.SEED || 0);
+  const init = SEED ? `(() => { let s = ${SEED} >>> 0; Math.random = () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })();` : null;
+  const { browser, ctx, page, errors, shot } = await openGame({ width: 844, height: 390, mobile: true, init });
   await page.evaluate((cls) => window.VELSCOUR.game.newChar(cls, 'Perf'), cls);
   await page.waitForTimeout(1500);
   await page.evaluate((d) => { const { G, game } = window.VELSCOUR; G.char.depth = d; game.enterDungeon(); G.godMode = true; }, depth);
@@ -18,7 +21,8 @@ const depth = +(process.argv[2] || 6), cls = process.argv[3] || 'wizard', rate =
     const t0 = performance.now();
     setTimeout(() => { game.update = u; game.render = rd; res({ res: (window.VELSCOUR.G.resScale || 1).toFixed(2) + ' dpr ' + window.VELSCOUR.G.dpr.toFixed(2), fps: s.n / ((performance.now() - t0) / 1000), update: s.u / s.n, render: s.r / s.n }); }, 5000);
   }));
-  console.log(`depth ${depth} ${cls}: ${r.fps.toFixed(1)} fps, update ${r.update.toFixed(2)} ms, render ${r.render.toFixed(2)} ms per frame (${rate}x CPU throttle, resScale ${r.res})`);
+  const crowd = await page.evaluate(() => { const { G } = window.VELSCOUR; return `${G.world.biome?.id} ${G.world.creatures.length} creatures, ${G.world.creatures.filter((c) => c.awake).length} awake`; });
+  console.log(`depth ${depth} ${cls}: ${r.fps.toFixed(1)} fps, update ${r.update.toFixed(2)} ms, render ${r.render.toFixed(2)} ms per frame (${rate}x CPU throttle, resScale ${r.res}; ${crowd})`);
   await shot('perf');
   report(errors);
   await browser.close();
