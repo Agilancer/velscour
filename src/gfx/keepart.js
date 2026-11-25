@@ -17,6 +17,9 @@ const loadImg = (src) => new Promise((ok, no) => { const i = new Image(); i.onlo
 
 /** Everything the keep draws: the baked set, the decor atlases, the Castle Keep pack's props. Safe to call again. */
 export function loadKeepArt() {
+  // the baked set goes whenever the hero leaves for another level (game.js releaseCastle3D, by the portal home or the
+  // Waygate): kept, this record made the next visit load nothing, and the hall drew as bare rock (slowly)
+  if (A && A.baked !== castle3dState()) { A = null; loading = null; }
   if (A) return Promise.resolve(A);
   if (loading) return loading;
   loading = Promise.all([
@@ -31,8 +34,8 @@ export function loadKeepArt() {
   return loading;
 }
 export const keepArt = () => A;
-/** Let the canvases go when the hero leaves (the baked pages go with releaseCastle3D). */
-export function releaseKeepArt() { if (A) A.cache.clear(); }
+/** Let the art go when the hero leaves (the baked pages go with releaseCastle3D; this record held them as well). */
+export function releaseKeepArt() { if (A) A.cache.clear(); A = null; loading = null; }
 
 // ------------------------------------------------------------------ helpers
 const ground = (x, y, lv) => [(x - y) * HW, (x + y) * HH - lv * 4];

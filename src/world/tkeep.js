@@ -220,7 +220,9 @@ export function tkeepLayout() {
     vault: [DX1 + 0.2, F0 + 0.7, DAIS],    // the Vault of the Flame (treasury chest) on the dais
     chronicle: [CX, BW + 0.9, BAL],        // the Chronicle of Deeds on the north balcony, under the great window
     warTable: [F1 - 5, F1 - 5.5],
-    stash: [F1 - 2.5, F1 - 0.5], reliquary: [F1 - 0.5, F1 - 1.2], jewelBox: [F1 - 5, F1 - 0.4],   // the chests in the south-east corner
+    // the chests, one in each of the west arcade's three arches by the Waygate (storage nearest the way in): in full view
+    // there, clear of the columns in front and of the banners' click boxes (on the front edge the terrace hid them)
+    stash: [F0 + 1.2, F1 - 5], jewelBox: [F0 + 1.2, F1 - 9], reliquary: [F0 + 1.2, F1 - 13],
     dummies: [[F1 - 2.2, F1 - 1.6], [F1 - 4.2, F1 - 0.9], [F1 - 1.4, F1 - 3.8]],
     flame: [CX, CY, 6],
     columns, plinths, pedestals, windows, stairs,

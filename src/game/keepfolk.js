@@ -3,8 +3,8 @@
 // with their own numbers; the Castellan on her dais; and the keep's own folk (painted townsfolk) at their posts.
 // Agents are world.npcs entries with update(dt); render.js draws a hero through drawKeepHero, the rest as townsfolk.
 import { G } from '../state.js';
-import { rand, randi, pick, chance, TAU, clamp } from '../core/util.js';
-import { HW, HH } from '../core/view.js';
+import { rand, randi, pick, chance, TAU, clamp, makeCanvas } from '../core/util.js';
+import { HW, HH, camera, isoX, isoY } from '../core/view.js';
 import { savedGearPreview } from '../core/gearart.js';
 import { CLASSES } from '../data/classes.js';
 import { heroesByClass } from './save.js';
@@ -89,7 +89,7 @@ function interestSpots(A) {
  */
 export function startKeepFolk(world, A) {
   const L = world.layout, spots = keepSpots(L), interest = interestSpots(A).filter((s) => world.map.walkable(s.x, s.y));
-  const d = { agents: [], heroes: [], chatT: rand(2, 4), greetT: 0, world };
+  const d = { agents: [], heroes: [], arts: [], chatT: rand(2, 4), greetT: 0, world };
   const base = (o) => ({ x: 0, y: 0, flip: false, animT: rand(0, 5), idleSeed: randi(0, 9), talkText: '', talkT: 0, talkAge: 0, emotion: null, emotionT: 0, iconT: 0, iconAge: 0, reach: 1.6, ...o });
   const upd = (n) => (dt) => { n.talkT = Math.max(0, n.talkT - dt); n.talkAge += dt; n.emotionT = Math.max(0, n.emotionT - dt); n.iconT = Math.max(0, (n.iconT || 0) - dt); };
 
@@ -138,7 +138,7 @@ export function startKeepFolk(world, A) {
   list.forEach((h, k) => {
     const s = spots[(k * 97 + 13) % spots.length] || A.start;
     const n = base({ keepHero: true, ...h, plate: `${CLASSES[h.cls]?.name || h.cls} ${h.lvl}`, x: s[0], y: s[1], img: null, state: 'idle', waitT: rand(1, 6), speed: SPEED * rand(0.9, 1.1) });
-    void savedGearPreview(h.cls, h.save.equip || {}).then((img) => { n.img = img || null; }).catch(() => {});
+    d.arts.push(savedGearPreview(h.cls, h.save.equip || {}).then((img) => { n.img = img || null; }).catch(() => {}));   // (game.enterKeep waits for these)
     n.update = (dt) => tickHero(d, n, dt);
     n.use = () => heroCard(n);
     world.npcs.push(n); d.heroes.push(n);
@@ -285,5 +285,15 @@ export function drawKeepHero(ctx, n, x, y, t) {
   n.sbox = [x - 16, top, x + 16, y];
   n.viewH = y - top;
   drawTownSpeech(ctx, n, x, top);
+}
+/** Bake every companion's rim now, at the camera's zoom (game.enterKeep, behind the loading screen), by drawing each
+ *  once into a scratch pixel: their first sight in the hall baked it in that frame, a missed refresh a hero at 144 Hz.
+ *  (The rim's thickness depends only on the zoom, not on facing or the walk's sway.) */
+export function warmKeepHeroes(world) {
+  const d = world && world.keepFolk;
+  if (!d) return;
+  const x = makeCanvas(1, 1).getContext('2d');
+  camera.apply(x);
+  for (const n of d.heroes) if (n.img) { drawKeepHero(x, n, isoX(n.x, n.y), isoY(n.x, n.y), G.time); n.sbox = null; }
 }
 export { clamp, HW, HH };

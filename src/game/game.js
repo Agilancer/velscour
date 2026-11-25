@@ -114,6 +114,7 @@ import { REGIONS, regionOf, parseRegionWord, regionNeeds, rollRegionVariant } fr
 import './regions/index.js';
 import { Macros } from './macros.js';
 import { buildKeep, keepArrive, KEEP_BIOME } from './keepgame.js';
+import { warmKeepHeroes } from './keepfolk.js';
 import { keepgateSpot } from '../gfx/keepgate.js';
 import { keepClear, keepDeath, keepState } from './keep.js';
 import { releaseKeepArt, KEEP_DIR } from '../gfx/keepart.js';
@@ -200,6 +201,7 @@ async function warmLevelArt(w) {
 function releaseLevelArt(biome) {
   if (biome?.id !== 'castle' && !regionOf(biome)?.castleArt) releaseCastlePack(); // (a region drawn with its masonry keeps it)
   if (biome?.id !== 'castle' && biome?.id !== 'skyship') releaseCastle3D();
+  releaseKeepArt(); // Tessariel's Keep's decor, and its hold on the baked hall (left by the Waygate)
   if (biome?.id !== 'sea_of_sand') releaseSeaOfSandPack(); // loadArtFor fetches it again for ss_ monsters elsewhere
   if (!biome?.overworld && biome?.id !== 'town') releaseTownSheets();
 }
@@ -607,6 +609,16 @@ export const game = {
       LoadingScreen.setProgress(80, 'Hanging the banners…');
       this.setWorld(world, start, old);
       await warmLevelArt(world);
+      // your other heroes' looks (savedGearPreview: each class's atlases loaded and composed, one hero after another)
+      // and their first draw and rim, here behind the loading screen: arriving in the hall, they made its first second
+      // stutter, a missed frame a hero and a 125 ms hitch for the first. Capped, so a slow fetch never holds the door.
+      const arts = world.keepFolk && world.keepFolk.arts, wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      if (arts && arts.length) {
+        LoadingScreen.setProgress(90, 'Gathering your heroes…');
+        await Promise.race([Promise.all(arts), wait(5000)]);
+        warmKeepHeroes(world);   // and their rims, at this zoom (else each was baked at its first sight in the hall)
+        await Promise.race([new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))), wait(250)]);
+      }
       HUD.setArea(KEEP_NAME, 'The hall of the Sacred Flame');
       playMusic('town'); setAmbience('tkeep');
       const p = G.player; p.hp = p.maxHp; p.mana = p.maxMana;
