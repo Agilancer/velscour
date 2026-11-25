@@ -624,12 +624,28 @@ async function probe(x, y, z) {
   scene.remove(g);
   return { tag: [tag[k], tag[k + 1], tag[k + 2], tag[k + 3]], col: [col[k], col[k + 1], col[k + 2], col[k + 3]] };
 }
+/** Some trophies' sprites alone (by id; the Elders on their plinths when none are named), packed on a page of their own:
+ *  for a change to them that should not re-bake the hall (tools/tkeep3d.py elders puts the page in). */
+async function bakeTrophies(ids = null, SPR = 2, models = '../tools/tests/out/tkeep_src/') {
+  if (!renderer) setup();
+  const sprites = {}, items = [];
+  for (const T of TROPHY_ART.filter((t) => (ids ? ids.includes(t.id) : t.plinth))) {
+    const root = await loadGLB(models + T.model);
+    const spr = bakeSprite(placeModel(root, T), SPR);
+    if (!spr) throw new Error('empty trophy sprite ' + T.id);
+    sprites['trophy_' + T.id] = { S: SPR, frames: [spr] }; items.push(spr);
+  }
+  const pages = pack(items, 1024);   // (a narrow page: the four Elders fit on one row)
+  if (pages.length !== 1) throw new Error('the trophies need ' + pages.length + ' pages');
+  const P = (u) => [u.at[0], u.at[1], u.at[2], u.w, u.h, +u.ox.toFixed(2), +u.oy.toFixed(2)];
+  return { page: pages[0].toDataURL('image/png'), sprites: Object.fromEntries(Object.entries(sprites).map(([k, v]) => [k, { S: v.S, f: v.frames.map(P) }])) };
+}
 /** Only the mask of the brazier's near half (bakeFront), at the pieces' scale: for a change to the brazier alone. */
 async function bakeFrontOnly(S = 1.5) {
   if (!renderer) setup();
   return bakeFront(build(await materials()), S);
 }
-window.TKEEP = { bakeAll, bakeFrontOnly, preview, trophySheet, probe };
+window.TKEEP = { bakeAll, bakeFrontOnly, bakeTrophies, preview, trophySheet, probe };
 </script>
 </body>
 </html>

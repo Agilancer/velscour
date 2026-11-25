@@ -6,11 +6,13 @@
 const SH = (id, model, o = {}) => ({ id, model: 'vw/' + model + '.glb', size: 1.5, tall: true, yaw: o.yaw ?? 180, ...o });
 const ST = (id, model, o = {}) => ({ id, model: 'vw/' + model + '.glb', size: 2.1, tall: true, yaw: 0, ...o });
 export const TROPHY_ART = [
-  // the four Elder Dragon Gods, on the plinths round the Sacred Flame
-  { id: 'dragon_green', model: 'bm/dragon_green.glb', size: 3.4, yaw: 0, plinth: true },
-  { id: 'dragon_red', model: 'bm/dragon_red.glb', size: 3.4, yaw: 0, plinth: true },
-  { id: 'dragon_undead', model: 'bm/dragon_undead.glb', size: 3.4, yaw: 0, plinth: true },
-  { id: 'dragon_black', model: 'bm/dragon_black.glb', size: 3.4, yaw: 0, plinth: true },
+  // the four Elder Dragon Gods, on the plinths round the Sacred Flame (data/keep.js TROPHIES: green nw, red ne, undead
+  // sw, black se), each turned to face the Flame: yaw = atan2(dx, dy) - 45 for the way (dx, dy) in tiles from its
+  // plinth's middle to the basin's (world/tkeep.js: (6, 2), (2, 6), (5, -5), (-5, 5))
+  { id: 'dragon_green', model: 'bm/dragon_green.glb', size: 3.4, yaw: 26.6, plinth: true },
+  { id: 'dragon_red', model: 'bm/dragon_red.glb', size: 3.4, yaw: -26.6, plinth: true },
+  { id: 'dragon_undead', model: 'bm/dragon_undead.glb', size: 3.4, yaw: 90, plinth: true },
+  { id: 'dragon_black', model: 'bm/dragon_black.glb', size: 3.4, yaw: -90, plinth: true },
   // shields: Tessariel's T, the holy orders' and the free towns' devices
   SH('shield_t_blue', 'kite_t_blue'), SH('shield_t_white', 'kite_t_white'), SH('shield_t_red', 'kite_t_red'), SH('shield_t_black', 'kite_t_black'),
   SH('shield_dragon', 'tower_dragon'), SH('shield_tree', 'tower_world_tree'), SH('shield_sun', 'tower_sunburst'), SH('shield_keep', 'tower_keep'),
