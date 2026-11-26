@@ -34,14 +34,20 @@ const ELS = [['fire', /(ember|flame|cinder|brazier|forge|blaze|ash|soot|kiln)/],
 const elOf = (r) => { const s = (r.name + ' ' + r.concept + ' ' + r.at).toLowerCase(); for (const [e, re] of ELS) if (re.test(s)) return e; return null; };
 const UNDEAD = /(bone|skelet|crypt|charnel|grave|ossu|lich|wraith|ghost|drowned|corpse|unburied|rattle|casket|pall|marrow)/;
 // in-game heights (world px): folk a little under a hero, knights a hero's height, creatures by their build, bosses big
-const H = { gray: 54, good: 54, ward: 58, castle: 58, knight: 60, creature: 52, ward_boss: 70, castle_boss: 76, finale: 64 };
-const FORM_H = [64, 78, 92, 108];   // Lord Velscour's four forms (the pack's 1.0x / 1.8x / 3.4x / 6.5x, tamed for the screen)
+// (matched by eye against the hero and the older painted sets: tools/tests/phobos_lineup.js; townsfolk stand as tall as
+// the NPC villagers so a resident who turns keeps his size; bosses as tall as the other sets' bosses, 82-92)
+const H = { gray: 58, good: 58, ward: 58, castle: 58, knight: 60, creature: 54, ward_boss: 82, castle_boss: 86, finale: 84 };
+// creatures by what they are: vermin small, beasts of burden and titans big
+const BIG = /(titan|colossus|behemoth|giant|leviathan|ox|stag|hulk|golem|wyrm|drake|dragon|bull|elephant|mammoth|brute|ogre|troll|juggernaut|siege|wheel)/i;
+const SMALL = /(rat|louse|beetle|mole|imp|gecko|moth|homunculus|swarm|eel|larva|mite|tick|crab|toad|slug|bat|leech|fly|wasp|snail|grub|maggot|skink|newt)/i;
+const sizeOf = (r) => r.cat !== 'creature' ? H[r.cat] : BIG.test(r.name) ? 68 : SMALL.test(r.name) ? 42 : H.creature;
+const FORM_H = [84, 94, 104, 112];   // Lord Velscour's four forms (the pack's 1.0x / 1.8x / 3.4x / 6.5x, tamed for the screen)
 
 export const PHOBOS_ART = PHOBOS_ROSTER.map((r) => {
   const arch = archOf(r), wide = r.aspect < 0.95, form = r.cat === 'finale' ? (+r.id.split('_')[2] - 1) : -1;
   const e = {
     id: 'phx_' + r.id, sheet: r.sheet, i: r.i, arch, name: r.name.split(' — ')[0], title: r.name.split(' — ')[1] || '',
-    h: form >= 0 ? FORM_H[form] : Math.round(H[r.cat] * (r.cat === 'creature' && wide ? 0.85 : 1)),
+    h: form >= 0 ? FORM_H[form] : Math.round(sizeOf(r) * (r.cat === 'creature' && wide ? 0.85 : 1)),
     phobos: true, cat: r.cat, at: r.at, does: r.does, trigger: r.trigger, counter: r.counter, livery: r.livery,
     undead: UNDEAD.test((r.name + ' ' + r.concept).toLowerCase()), gore: /bone|skelet|ossu/.test(r.name.toLowerCase()) ? 'bone' : 'flesh', demon: form >= 1,
   };
@@ -113,3 +119,24 @@ export const FINALE = {
   cathedral: { name: 'The Cathedral of Ruin', forms: PHOBOS_ART.filter((a) => a.form >= 0 && a.sheet.endsWith('cathedral')).sort((a, b) => a.form - b.form).map((a) => a.id) },
 };
 export const FORM_NAMES = ['Lord Velscour', 'Demon Lord Velscour', 'Velscour, the Alpha Being', 'Velscour Omega, Destroyer of Worlds'];
+
+// Where each floor stands, after Bellmourn's layout bible (bm-phobos docs/PHOBOS-LAYOUT.md, "Castle Velscour" and
+// "Velscour's Keep"): five places per wing, two floors each; the Keep's crossings between spires are bridges, its
+// outside ledges the outer stair. The bible's world and crossing bosses guard their floors.
+export const PLACES = {
+  gatehouse: ["The Gatehouse: the Captain's yard", 'The Drill Floor', 'The Barracks', "The Servants' Warren", 'The Gate Captain\'s Walk'],
+  oubliettes: ['The Oubliettes: the pit stair', "The Generals' Crypt", 'The Pit Stair', 'The Crypt Door', 'The Aqueduct'],
+  armoury: ['The Armoury', "The Forge: the idol's mould", "The Quartermaster's Stores", 'The Great Bellows', "The Servants' Warren"],
+  greathall: ['The Great Hall: the long table', 'The Kitchens: the Great Hearth', 'The Portrait Gallery', 'The Horn Galleries', 'The Map Room'],
+  library: ['The Ancient Library', 'The Drowned Archive', 'The Map Room', "The Alchemists' Wing: the still room", 'The Clock Tower: the gear shaft'],
+  menagerie: ['The Menagerie: the cage rows', 'The Conservatory', 'The Sunk Garden', 'The Aqueduct Fall', 'The Menagerie of Chains'],
+  sanctuaries: ['The Sanctuaries: the black nave', 'The Ossuary Chapel', 'The Hall of Mirrors', 'The Treasury', 'The Observatory'],
+  stormspire: ['The Ember Spire: the outside ledges', 'The Storm Bridge (a crossing)', 'The Storm Spire: the outside ledges', 'The Ossein Stair (a crossing)', "The Storm Spire's head"],
+  bonespire: ['The Bone Spire: the marrow shaft', 'The Gloam Balconies (a crossing)', 'The Shadow Spire', 'The Red Span (a crossing)', 'The Blood Spire'],
+  throne: ['The Throne Antechambers', 'The Crown Court', 'The Last Stair', 'The Throne Tower', 'The Throne Above'],
+};
+export function placeOf(floor) { const w = wingOf(floor), L = PLACES[w.id] || [w.name]; return L[Math.min(L.length - 1, ((floor - 1) % 10) >> 1)]; }
+/** The layout a place asks for: a crossing is a bridge between towers, outside ledges the outer stair. */
+export function placeLayout(floor) { const p = placeOf(floor); return /crossing/.test(p) ? 'bridges' : /outside ledges/.test(p) ? 'outerstair' : /marrow shaft|Pit Stair|pit stair/.test(p) ? 'pits' : /Library|Archive/.test(p) && LIBRARY_OK ? 'library' : null; }
+const LIBRARY_OK = true;
+export const BIBLE_BOSSES = { 5: 'The Gate Captain', 35: 'The Feast That Walks', 65: 'The Sexton of the High Ward', 75: 'The Bridge Warden', 85: 'The Balcony Duellist', 95: "Velscour's Herald" };

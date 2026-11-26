@@ -258,7 +258,7 @@ export const WING_RAIDS = {
 };
 
 // ================================================================================== LORD VELSCOUR, four forms
-const FORM_SCALE = [2.1, 2.4, 2.8, 3.3];
+const FORM_SCALE = [2.4, 2.6, 2.8, 3.0];
 PASSIVES.ph_velscour = (R, dt) => {
   const m = R.m, v = R.tpl.variant, forms = FINALE[v].forms;
   if (R.form !== R.pi) {   // he burns and rises in his next form
@@ -275,19 +275,19 @@ PASSIVES.ph_velscour = (R, dt) => {
     if (R.pi === 1 && (R.tide = (R.tide ?? 6) - dt) <= 0) { R.tide = 9; const [x, y] = randFloor(R, 3); const Z = zone(R, { x, y, r: 2.6, dur: 40, color: '#a00010', good: false }); Z.tick = (d) => { if (Z.inside(p) && (Z.h = (Z.h || 0) - d) <= 0) { Z.h = 0.5; hit(m, p, m.dmg * 0.4, 'blood', { force: true, crit: false, dot: true }); } }; }
     if (R.pi === 2) { // the Dynasty's Debt: blows taken stack; a blood font cleanses them
       R.debt = Math.min(10, (R.debt || 0) + dt * 0.6); p.raidTakenMul = 1 + R.debt * 0.06;
-      if (!R.font || R.font.dead || R.font.t > R.font.dur) R.font = zone(R, { ...(([x, y]) => ({ x, y }))(randFloor(R, 4)), r: 1.8, dur: 14, color: '#ff6080', good: true, goal: R.debt > 4 });
-      if (R.font.inside(p) && R.debt > 1) { R.debt = 0; floatText(p.x, p.y, 70, 'DEBT PAID', '#ff90a0', 14); }
+      R.fonts ||= [];
+      for (let k = 0; k < 2; k++) if (!R.fonts[k] || R.fonts[k].dead || R.fonts[k].t > R.fonts[k].dur) { const [x, y] = randFloor(R, 4); R.fonts[k] = zone(R, { x, y, r: 1.8, dur: 14 + k * 7, color: '#ff6080', good: true, goal: R.debt > 4 }); }
+      if (R.fonts.some((F) => F.inside(p)) && R.debt > 1) { R.debt = 0; floatText(p.x, p.y, 70, 'DEBT PAID', '#ff90a0', 14); }
     } else p.raidTakenMul = 1;
     if (R.pi === 3) shrink(R, dt, a, p);
   } else if (v === 'obsidian') {
     if (R.pi === 0 && PASSIVES.vexis) PASSIVES.vexis(R, dt);
     else p.raidDmgMul = 1;
-    if (R.pi === 1 || R.pi === 3) { const d = dist(p.x, p.y, m.x, m.y), pull = (R.pi === 3 ? 1.4 : 0.9) * dt; if (d > 2.5) { const nx = p.x + (m.x - p.x) / d * pull, ny = p.y + (m.y - p.y) / d * pull; if (m.world.map.circleFree(nx, ny, 0.3)) { p.x = nx; p.y = ny; } } if (chance(dt * 8)) addEffect(new Bolt(p.x, p.y, 30, m.x, m.y, 60, '#7020c0', 0.15, 2)); }
+    if ((R.pi === 1 || R.pi === 3) && !p.leaping && !p.dashT && !p.blink) { const d = dist(p.x, p.y, m.x, m.y), pull = (R.pi === 3 ? 1.4 : 0.9) * dt; if (d > 2.5) { const nx = p.x + (m.x - p.x) / d * pull, ny = p.y + (m.y - p.y) / d * pull; if (m.world.map.circleFree(nx, ny, 0.3)) { p.x = nx; p.y = ny; } } if (chance(dt * 8)) addEffect(new Bolt(p.x, p.y, 30, m.x, m.y, 60, '#7020c0', 0.15, 2)); }
     if (R.pi === 2 && (R.ecl = (R.ecl ?? 4) - dt) <= 0) { R.ecl = 18; SIGS.ph_eclipse(R); }
     if (R.pi === 3 && (R.hole = (R.hole ?? 5) - dt) <= 0) { R.hole = 14; mover(R, { x: a.cx, y: a.cy, ang: rand(TAU), speed: 1.4, dur: 12, r: 1.8, color: '#300060', mul: 2.2, teeth: 12, spin: 2 }); UI.centerMsg('EVENT HORIZON', 'Do not touch the black star', 1.6); }
   } else {   // the Cathedral of Ruin: the bell tolls on a beat; glass falls; the nave collapses
-    if ((R.bell = (R.bell ?? 7) - dt) <= 0) { R.bell = 9 - R.pi; const ring = new InRing(R, { x: m.x, y: m.y, r: 2, speed: -4, gap: rand(TAU), gapW: 1, color: '#ffe0a0', mul: 1 }), up = ring.update.bind(ring); ring.update = (d) => up(d) && ring.r < 17; m.world.addHazard(ring); floatText(m.x, m.y, 160, 'THE BELL TOLLS', '#ffe0a0', 16); sfx('bell'); }
-    if (R.pi === 3) shrink(R, dt, a, p, 'The cathedral falls');
+    if ((R.bell = (R.bell ?? 7) - dt) <= 0) { const knell = R.pi === 3; R.bell = knell ? 3.2 : 9 - R.pi; if (knell && !R.knell) { R.knell = true; UI.centerMsg('THE DEATH KNELL', 'The bells ring in quick time: step through each gap', 2.6); } const ring = new InRing(R, { x: m.x, y: m.y, r: 2, speed: knell ? -5 : -4, gap: rand(TAU), gapW: knell ? 0.8 : 1, color: '#ffe0a0', mul: 1 }), up = ring.update.bind(ring); ring.update = (d) => up(d) && ring.r < 17; m.world.addHazard(ring); floatText(m.x, m.y, 160, 'THE BELL TOLLS', '#ffe0a0', 16); sfx('bell'); }
   }
 };
 // the arena closing in (the world ending round the fight): outside the radius burns
@@ -295,7 +295,8 @@ function shrink(R, dt, a, p, text = 'The world unmakes itself') {
   if (!R.wall) { R.wall = Math.min(a.w, a.h) / 2; UI.centerMsg('DESTROYER OF WORLDS', text, 2.6); R.wallHaz = R.m.world.addHazard({ ground: true, t: 0, danger(out) { out.push({ ring: true, x: a.cx, y: a.cy, r0: R.wall, r1: 40 }); }, autoGoal: () => (dist(p.x, p.y, a.cx, a.cy) > R.wall - 1.5 ? { x: a.cx, y: a.cy, r: R.wall - 2 } : null), update() { return live(R); },
     draw(ctx) { ctx.save(); ctx.globalAlpha = 0.55; ctx.strokeStyle = '#ff2010'; ctx.lineWidth = 6; ctx.beginPath(); ctx.ellipse(isoX(a.cx, a.cy), isoY(a.cx, a.cy), R.wall * HW * 1.41, R.wall * HH * 1.41, 0, 0, TAU); ctx.stroke(); ctx.restore(); } }); }
   R.wall = Math.max(6, R.wall - dt * 0.12);
-  if (dist(p.x, p.y, a.cx, a.cy) > R.wall && (R.wh = (R.wh || 0) - dt) <= 0) { R.wh = 0.5; hit(R.m, p, p.maxHp * 0.08, 'fire', { force: true, crit: false, dot: true }); }
+  if (dist(p.x, p.y, a.cx, a.cy) <= R.wall) R.burnN = 0;
+  else if ((R.wh = (R.wh || 0) - dt) <= 0) { R.wh = 0.5; R.burnN = (R.burnN || 0) + 1; hit(R.m, p, p.maxHp * Math.min(0.07, 0.02 + 0.01 * R.burnN), 'fire', { force: true, crit: false, dot: true }); }
 }
 sig('ph_dominion', 'Crimson Dominion', (R) => { const m = R.m; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + R.pi * 0.2; line(R, m.x, m.y, a, 14, 0.6, 1.1, 1.1, '#ff2030', { el: 'blood' }); } sfx('swing'); });
 sig('ph_court', 'The Crimson Court', (R) => { const a = A(R); for (let i = 0; i < 3; i++) add(R, a.cx + Math.cos(i * 2.1) * 6, a.cy + Math.sin(i * 2.1) * 5, { name: 'Dynasty Knight', arch: 'knight', ai: 'melee', hp: 0.035, dmg: 0.5, priority: 4, artH: 60 }); UI.centerMsg('THE CRIMSON COURT', 'His knights kneel no more', 1.8); });
@@ -305,6 +306,18 @@ sig('ph_pillars', 'Falling Pillars', (R) => { const a = A(R); for (let i = 0; i 
 
 const VT = (variant, el, fx, phases, adds) => ({ id: 'ph_velscour_' + variant, variant, name: 'Lord Velscour', title: FINALE[variant].name, art: [FINALE[variant].forms[0]], el, fx, sigs: true, phobos: true,
   passive: 'ph_velscour', hp: 2.6, spd: 0.85, adds, phases });
+// each wing boss is its own fight: its signatures in every phase, growing heavier, and at most two shared patterns, light
+const GENERIC = new Set(['ph_cross', 'ph_rain', 'ph_ring', 'ph_wave', 'ph_orbs', 'ph_soak']);
+for (const T of Object.values(WING_RAIDS)) {
+  const own = [...new Set(T.phases.flatMap((P) => Object.keys(P.pool).filter((k) => !GENERIC.has(k) && k !== 'adds')))];
+  T.phases.forEach((P, i) => {
+    const gen = Object.keys(P.pool).filter((k) => GENERIC.has(k)).slice(0, 2), pool = {};
+    for (const k of own) pool[k] = (P.pool[k] || 2) + Math.floor(i / 2);
+    for (const k of gen) pool[k] = 1;
+    if (P.pool.adds) pool.adds = P.pool.adds;
+    P.pool = pool;
+  });
+}
 export const VELSCOUR_RAIDS = {
   crimson: VT('crimson', 'blood', 'fire', [
     { name: 'The Crimson Dynasty', pool: { ph_dominion: 3, ph_court: 2, ph_cross: 2, ph_soak: 1 } },

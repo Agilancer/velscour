@@ -212,6 +212,7 @@ function drawTransitionParticles(ctx, world, vr) {
 
 function floorEntry(world, v) {
   if (world.townTiles) return world.townTiles[v] || world.townTiles[0];
+  if (v >= 230 && world.extraFloors) return world.extraFloors[v - 230] || world.tileset.floors[0];   // Phobos' road in (world/phobos.js)
   return world.tileset.floors[v] || world.tileset.floors[0];
 }
 

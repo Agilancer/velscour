@@ -68,7 +68,7 @@ const TOWNSFOLK_KNIGHTS = TOWNSFOLK.filter((q) => q.knight).map((q) => q.spriteI
 import { Cine, CINE_FAST } from './cinema.js';
 import { lights, updateVfx } from '../gfx/vfx.js';
 import { World } from './world.js';
-import { setupBellmourn, enterPhobos as phEnterPhobos, enterCastleFloor as phEnterCastle, questTick as phQuestTick, phobosState } from './phobos.js';
+import { setupBellmourn, enterPhobos as phEnterPhobos, enterCastleFloor as phEnterCastle, questTick as phQuestTick, phobosState, clearFlight } from './phobos.js';
 import { Player } from './player.js';
 import { makeMonster, makeElite, Monster } from './monster.js';
 import { clearRims } from './creature.js';
@@ -270,7 +270,7 @@ export const game = {
     if (G.touch) TouchUI.show(true);
     UI.refresh();
     Vendor.restock();
-    this.enterTown();
+    if (c?.lastTown === 'act3' && c.phobos?.bell) this.enterBellmourn(); else this.enterTown();
     if (fresh) {
       setTimeout(() => {
         if (G.world && G.world.kind !== 'town') return;   // (a test or the skull has already taken the hero elsewhere)
@@ -631,10 +631,10 @@ export const game = {
     UI.log('The bells of <b style="color:#c0d0ff">Bellmourn</b> toll for the dead of Phobos.', '#d0dcff');
   },
   async enterPhobos() { if (Auto.on) Auto.toggle(false); await phEnterPhobos(this); HUD.setArea('City State Phobos', 'Act III — the city under the castle'); playMusic('dungeon'); this.autosave(); },
-  async enterCastleFloor(f) { const on = Auto.on; await phEnterCastle(this, f); HUD.setArea('Castle Velscour', `Floor ${G.phobosFloor} · ${G.world?.biome?.name || ''}`); playMusic('boss'); if (on && !Auto.on) Auto.toggle(true); this.autosave(); },
+  async enterCastleFloor(f) { const on = Auto.on; await phEnterCastle(this, f); HUD.setArea('Castle Velscour', `Floor ${G.phobosFloor} · ${G.world?.overworldScenario?.description || G.world?.biome?.name || ''}`); playMusic('boss'); if (on && !Auto.on) Auto.toggle(true); this.autosave(); },
   /** A death in Act III: no Defiance, no depth lost; the hero wakes in Bellmourn and the floor is re-forged. */
   phobosDeath(src) {
-    const c = G.char; c.deaths = (c.deaths || 0) + 1;
+    const c = G.char; c.deaths = (c.deaths || 0) + 1; clearFlight();
     const killer = src ? (src.owner ? src.owner.name : src.name) : null;
     stopMusic(); this.autosave();
     setTimeout(() => deathScreen(G.world?.depth || 0, killer, () => {

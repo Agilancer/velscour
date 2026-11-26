@@ -28,9 +28,11 @@ const rarg=(process.argv.find(a=>a.startsWith('raids='))||'').slice(6).split(','
     console.log('phobos',JSON.stringify(city));
     if(city.gate)errors.push('[PHOBOS] the Castle Gate starts open');
     if(city.lords<12)errors.push('[PHOBOS] only '+city.lords+' ward lords');
-    await T(2500);await shot('phobos_city_sill');
+    await T(2500);await shot('phobos_city_marches');
+    // the road in: the Marches, the Chasm, the Sill, the moat plain (green to dead)
+    for(const x of [30,60,86,100]){await page.evaluate((x)=>{const {G}=window.VELSCOUR,m=G.world.map;for(let d=0;d<40;d++)for(const s of [1,-1]){const y=102+s*d;if(m.walkable(x+0.5,y+0.5)){G.player.x=x+0.5;G.player.y=y+0.5;return;}}},x);await T(1200);await shot('phobos_road_'+x);}
     // walk the King's Mile: a few spots east, monsters cleared so the shots show the streets
-    for(const fx of [0.18,0.35,0.5,0.7,0.9]){
+    for(const fx of [0.4,0.5,0.62,0.78,0.93]){
       await page.evaluate((fx)=>{const {G}=window.VELSCOUR,w=G.world,m=w.map;const y=Math.floor(m.h/2);for(let d=0;d<30;d++)for(const s of [1,-1]){const x=Math.floor(m.w*fx),yy=y+s*d;if(m.walkable(x+0.5,yy+0.5)){G.player.x=x+0.5;G.player.y=yy+0.5;return;}}},fx);
       await T(900);await shot('phobos_city_'+Math.round(fx*100));
     }

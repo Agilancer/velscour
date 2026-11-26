@@ -15,15 +15,19 @@ import { UI } from '../ui/ui.js';
 import { registerRegion } from './regions.js';
 import { BIOME_BY_ID } from '../data/biomes.js';
 import { SHEER } from '../data/sheer.js';
-import { depthLevel, FINAL_DEPTH } from '../data/depth.js';
+import { depthLevel, FINAL_DEPTH, MAX_LEVEL } from '../data/depth.js';
+import { dropChest } from './loot.js';
 import { loadBiomeArt, biomeTileSet } from '../core/assets.js';
 import { loadArtFor } from '../core/enemyart.js';
 import { makeMonster } from './monster.js';
 import { makeRaidBoss } from './raid.js';
-import { DISTRICTS, HUBS, WINGS, CASTLE_FLOORS, wingOf, castleDepth, cityDepth, guardianFor, PHOBOS_FOLK, PHOBOS_BY_ID, FINALE } from '../data/phobos.js';
+import { DISTRICTS, HUBS, WINGS, CASTLE_FLOORS, wingOf, castleDepth, cityDepth, guardianFor, PHOBOS_FOLK, PHOBOS_BY_ID, FINALE, placeOf, placeLayout, BIBLE_BOSSES } from '../data/phobos.js';
 import { generatePhobos, PHOBOS_SEED } from '../world/phobos.js';
 import { generateCastleFloor, LAYOUTS, SHEER_LAYOUTS } from '../world/castlevelscour.js';
 import { WING_RAIDS, VELSCOUR_RAIDS } from './phobosraids.js';
+import { townObject } from '../world/town.js';
+import { A } from '../core/assets.js';
+import { TW } from '../core/view.js';
 
 export const BELLMOURN = 'Bellmourn';
 export function phobosState(c = G.char) {
@@ -60,6 +64,7 @@ function phobosLooks(arts) {
 }
 
 // ------------------------------------------------------------------------------------------- the regions
+let cityCache = null;
 const cityRegion = registerRegion({
   id: 'phobos_city',
   words: ['phobos', 'city state phobos', 'the city state'],
@@ -68,7 +73,8 @@ const cityRegion = registerRegion({
   load: (biome) => Promise.all([loadBiomeArt(biome), loadArtFor(PHOBOS_FOLK.map((a) => a.id))]),
   ready: () => true,
   generate(depth, biome, seed) {
-    const g = generatePhobos(biome, biomeTileSet(biome), PHOBOS_SEED);
+    if (!cityCache) cityCache = generatePhobos(biome, biomeTileSet(biome), PHOBOS_SEED);   // one city for every visit: built once a session
+    const g = cityCache; g.map.seen.fill(0);
     const all = DISTRICTS.flatMap((d) => [...d.foes, ...d.bosses.filter(Boolean)]);
     g.looks = phobosLooks(all);
     for (const a of all) g.looks.add(a.id);
@@ -76,7 +82,7 @@ const cityRegion = registerRegion({
     void seed; return g;
   },
   createRun: (world, gen, biome, depth) => createCityRun(world, gen, biome, depth),
-  intro: () => 'You stand on the Sill. Across the moat plain, the walls of <b>City State Phobos</b>; above them, Castle Velscour.',
+  intro: () => 'You come down out of <b>the Marches</b>, green and quiet. East, through the ridge and the Chasm, the land dies toward the walls of <b>City State Phobos</b>.',
   quest: (sc, step) => sc.questHtml(step),
   winText: null, amb: 'necropolis',
 });
@@ -88,13 +94,40 @@ const castleRegion = {
     const f = G.phobosFloor || 1, w = wingOf(f), layout = G.phobosLayout || w.layouts[(f - 1) % w.layouts.length];
     const looks = phobosLooks(w.foes);
     const raid = f % 10 === 0;
-    for (let k = 0; k < 6; k++) { try { const g = generateCastleFloor(f, layout, biome, biomeTileSet(biome), (seed + k * 7919) >>> 0, { raid, looks }); g.looks = looks; g.roster = [...new Set(w.foes.map((a) => a.arch))]; return g; } catch (e) { if (k === 5) throw e; } }
+    for (let k = 0; k < 6; k++) { try { const g = generateCastleFloor(f, layout, biome, biomeTileSet(biome), (seed + k * 7919) >>> 0, { raid, looks }); dressFloor(g, w); g.looks = looks; g.roster = [...new Set(w.foes.map((a) => a.arch))]; return g; } catch (e) { if (k === 5) throw e; } }
   },
   createRun: (world, gen, biome, depth) => createCastleRun(world, gen, biome, depth),
-  intro: (world, gen) => `${escapeHtml(world.biome.name)} — Floor ${G.phobosFloor}: ${escapeHtml(gen.layoutName || '')}.`,
+  intro: (world, gen) => `${escapeHtml(world.biome.name)} — Floor ${G.phobosFloor}: <b>${escapeHtml(placeOf(G.phobosFloor))}</b> (${escapeHtml(gen.layoutName || '')}).`,
   quest: (sc, step) => sc.questHtml(step), winText: null, amb: 'castle_keep',
 };
 for (const id of Object.keys(BIOMES)) if (id.startsWith('cv_')) registerRegion({ ...castleRegion, id, words: id === 'cv_gatehouse' ? ['castle velscour', 'velscour castle'] : [] });
+
+// each wing's rooms furnished for their use (the town pack's props): stacks in the library, anvils at the forge
+const WING_DRESS = {
+  gatehouse: ['tool_rack', 'crate_stack', 'closed_barrel', 'arrow_milestone'], oubliettes: ['rope_and_hook', 'stone_boundary', 'fieldstone_cluster', 'water_bucket'],
+  armoury: ['anvil_stump', 'cold_forge', 'smith_bellows', 'tool_rack', 'workbench'], greathall: ['market_table', 'market_table', 'stone_bench', 'closed_barrel', 'grain_sacks'],
+  library: ['scroll_rack', 'scroll_rack', 'workbench', 'potion_jars', 'stone_bench'], menagerie: ['hay_bale', 'horse_trough', 'water_barrel', 'rope_and_hook'],
+  sanctuaries: ['stone_bench', 'stone_bench', 'potion_jars', 'scroll_rack'], stormspire: ['crate_stack', 'rope_and_hook'], bonespire: ['fieldstone_cluster', 'stone_boundary'],
+  throne: ['stone_bench', 'cloth_crate', 'potion_jars'],
+};
+function dressFloor(g, w) {
+  const list = WING_DRESS[w.id], m = g.map; if (!list || !A.town || m.sheer) return;
+  const k = TW / A.town.meta.tile[0];
+  for (const r of g.rooms || []) {
+    if (r.w < 6 || r.h < 6 || r === g.raid) continue;
+    const n = Math.min(10, Math.round((r.w + r.h) / 4));
+    for (let j = 0; j < n; j++) {
+      const side = j % 4, u = 1 + Math.random() * (side < 2 ? r.w - 2 : r.h - 2);
+      const x = side < 2 ? r.x + u : side === 2 ? r.x + 1.2 : r.x + r.w - 1.2, y = side < 2 ? (side ? r.y + r.h - 1.2 : r.y + 1.2) : r.y + u;
+      const i = Math.floor(y) * m.w + Math.floor(x), spr = townObject(list[j % list.length]);
+      const tx = Math.floor(x), ty = Math.floor(y);
+      if (!spr || !m.t[i] || m.block[i]) continue;
+      // never in a doorway: no open floor beside it outside the room
+      if ([[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]].some(([dx, dy]) => { const X = tx + dx, Y = ty + dy; return (X < r.x || Y < r.y || X >= r.x + r.w || Y >= r.y + r.h) && m.t[Y * m.w + X]; })) continue;
+      g.props.push({ kind: 'scatter', x, y, spr, k, flip: Math.random() < 0.5 }); m.block[i] = 1;
+    }
+  }
+}
 
 // ------------------------------------------------------------------------------------------- shared run bits
 function townPortalTo(world, game) {
@@ -108,16 +141,23 @@ function spawnFoe(world, biome, art, level, rank, x, y) {
 }
 
 // ------------------------------------------------------------------------------------------- the city
+/** A leap or swing cut short by a portal or a death must not carry into the next world. */
+export function clearFlight() { const p = G.player; if (p) { p.padFly = null; p.leaping = false; p.z = 0; } }
 function createCityRun(world, gen, biome, depth) {
   const c = G.char, S = phobosState(c), game = G.game;
-  townPortalTo(world, game);
+  townPortalTo(world, game); clearFlight();
+  // the road in wears the town pack's ground: grass, meadow, a trampled verge, then dirt, mud and gravel by the moat
+  if (A.town) { const m = A.town.meta, T = m.tile; world.extraFloors = ['grass', 'dense_meadow', 'trampled_verge', 'dirt', 'mud', 'gravel'].map((n) => { const r = m.floors[n] || m.floors.dirt; return { img: A.town.ground, sx: r[0], sy: r[1], w: T[0], h: T[1], name: n, material: n, lum: 0.4 }; }); }
   world.phobos = true;
   world.roster = [...new Set(DISTRICTS.flatMap((d) => d.foes.map((a) => a.arch)))];
   const exit = world.portals.find((p) => p.type === 'exit');
   // the Castle Gate: closed until the wards are broken
+  const live = (get) => ({ get, set() {}, configurable: true, enumerable: true });
+  Object.defineProperties(exit, {
+    active: live(() => S.gate), color: live(() => (S.gate ? '#ff3030' : '#5a3a3a')),
+    label: live(() => (S.gate ? 'The Castle Gate — Castle Velscour' : `The Castle Gate (sealed: ${S.wards.length}/${WARDS_TO_OPEN} ward lords slain)`)),
+  });
   Object.assign(exit, {
-    get active() { return S.gate; }, set active(v) {}, get color() { return S.gate ? '#ff3030' : '#5a3a3a'; }, set color(v) {},
-    get label() { return S.gate ? 'The Castle Gate — Castle Velscour' : `The Castle Gate (sealed: ${S.wards.length}/${WARDS_TO_OPEN} ward lords slain)`; }, set label(v) {},
     use: () => { if (!S.gate) { floatText(exit.x, exit.y, 70, `Sealed — break ${WARDS_TO_OPEN - S.wards.length} more ward lords`, '#ff6040', 13, { life: 1.6 }); sfx('error'); return; } game.enterCastleFloor(Math.max(1, S.floor || 1)); },
   });
   // packs in every district's streets, a district's lords at its square, its folk in its lanes
@@ -131,9 +171,9 @@ function createCityRun(world, gen, biome, depth) {
     d.bosses.filter(Boolean).forEach((art, i) => {
       const a = (i / Math.max(1, d.bosses.length)) * TAU, [x, y] = world.map.randomNear(s.x + Math.cos(a) * 2.5, s.y + Math.sin(a) * 2.5, 2) || [s.x, s.y];
       const key = d.id + ':' + art.id;
-      if (S.wards.includes(key) && chance(0.6)) return;   // a slain lord is often gone a while (they come back)
+      if (!S.gate && S.wards.includes(key)) return;   // a broken lord stays down until the Castle Gate opens; then they all return
       const m = spawnFoe(world, biome, art, lvlOf(d) + 3, 'boss', x, y);
-      m.maxHp *= 1.6; m.hp = m.maxHp; m.scale = (m.scale || 1) * 1.25; m.wardLord = art.id; m.title = `Ward Lord of ${d.name}`;
+      m.maxHp *= 1.6; m.hp = m.maxHp; m.wardLord = art.id; m.title = `Ward Lord of ${d.name}`;
       lords.push(m);
       const prev = m.onDeath; m.onDeath = (src) => { if (prev) prev.call(m, src); wardSlain(art, d, key); };
     });
@@ -179,9 +219,17 @@ function createCityRun(world, gen, biome, depth) {
       }
       // the dead come back: packs refill away from the hero
       if ((respawnT -= dt) <= 0) { respawnT = 45; for (const P of packs) { P.live = P.live.filter((m) => !m.dead); if (!P.live.length && dist(P.at[0], P.at[1], p.x, p.y) > 22 && chance(0.5)) fill(P); } }
+      // the road in: the Chasm, then first sight from the Sill
+      if (!run.chasm && p.x > 46 && p.x < 84) { run.chasm = true; UI.centerMsg('THE CHASM', "Widow's Notch, and the long way down to the Sill", 3); }
+      if (!run.sill && dist(p.x, p.y, gen.sill[0], gen.sill[1]) < 6) { run.sill = true; UI.centerMsg('CITY STATE PHOBOS', 'The Sill: across the dead moat plain, the walls, and above them Castle Velscour', 4.5); sfx('bell'); G.flash = 0.25; }
       // the district the hero walks in
       const k = gen.district[world.map.tileIdx(p.x, p.y)];
-      if (k !== run.lastD && DISTRICTS[k]) { run.lastD = k; const d = DISTRICTS[k]; UI.centerMsg(d.name.toUpperCase(), d.verb, 2.4); }
+      if (k !== run.lastD && DISTRICTS[k]) {
+        run.lastD = k; const d = DISTRICTS[k], first = !(S.seenD ||= []).includes(d.id);
+        const foes = [...new Set(d.foes.map((a) => a.name.split(' ').slice(-1)[0]))].slice(0, 3).join(', ');
+        UI.centerMsg(d.name.toUpperCase(), `${d.verb}${first ? ` · held by ${foes}` : ''}`, first ? 3.4 : 2.2);
+        if (first) { S.seenD.push(d.id); UI.log(`<b>${escapeHtml(d.name)}</b>: ${escapeHtml(d.verb)} Its streets are held by ${escapeHtml(foes)}; ${d.bosses.filter(Boolean).length} ward lords hold its square.${d.hub ? ` A hidden house is somewhere near the square (${escapeHtml(HUBS[d.hub].name)}).` : ''}`, '#e0d0b0'); }
+      }
       questTick(dt);
     },
     questHtml(step) {
@@ -212,13 +260,13 @@ const HUB_LINES = {
 // ------------------------------------------------------------------------------------------- the castle
 function createCastleRun(world, gen, biome, depth) {
   const c = G.char, S = phobosState(c), game = G.game, f = G.phobosFloor || 1, wing = wingOf(f);
-  townPortalTo(world, game);
+  townPortalTo(world, game); clearFlight();
   world.phobos = true; world.castleFloor = f;
   if (!world.roster || !world.roster.length) world.roster = [...new Set(wing.foes.map((a) => a.arch))];
   S.floor = Math.max(S.floor || 0, f);
   const exit = world.portals.find((p) => p.type === 'exit');
   exit.label = 'Sealed Stair — slay the guardian';
-  const lvl = depthLevel(depth);
+  const lvl = Math.min(MAX_LEVEL - 2, depthLevel(depth));   // bosses at most MAX_LEVEL + 2
   // the floor's lord: Velscour (100), a wing's raid boss (every 10th), a castle boss (every 5th), else a captain
   let boss;
   if (f === CASTLE_FLOORS) {
@@ -231,7 +279,7 @@ function createCastleRun(world, gen, biome, depth) {
   } else {
     const art = f % 5 === 0 ? guardianFor(f) : pick(wing.foes), [x, y] = gen.guardian || gen.exit;
     boss = makeMonster(world, art.arch, biome, lvl + 2, 'boss', x, y, 0, { art: art.id, swap: null });
-    boss.name = art.name; if (f % 5 === 0) { boss.scale = (boss.scale || 1) * 1.35; boss.maxHp *= 1.5; boss.hp = boss.maxHp; boss.title = art.title || 'Guardian of the Castle'; }
+    boss.name = BIBLE_BOSSES[f] || art.name; if (f % 5 === 0) { boss.maxHp *= 1.5; boss.hp = boss.maxHp; boss.title = art.title || 'Guardian of the Castle'; }
   }
   if (boss.raid) world.raid = boss.raid;
   world.add(boss); world.boss = boss;
@@ -239,7 +287,7 @@ function createCastleRun(world, gen, biome, depth) {
   const pads = gen.leaps.map((L) => world.addHazard(new Pad(world, L)));
   const route = gen.leaps.filter((L) => !L.back);
   const run = {
-    title: `Castle Velscour — Floor ${f}`, description: wing.name, active: true, completed: false, failed: false, markers: [],
+    title: `Castle Velscour — Floor ${f}`, description: placeOf(f), active: true, completed: false, failed: false, markers: [],
     get objective() {   // auto-play over the gaps: the next pad on the main line the hero hasn't crossed
       if (gen.family !== 'leaps') return undefined;
       const p = G.player; if (!p) return undefined;
@@ -247,9 +295,9 @@ function createCastleRun(world, gen, biome, depth) {
       if (!next) return undefined;
       return { x: next.x, y: next.y, reach: 0.6 };
     },
-    update(dt) { questTick(dt); if (G.player && !G.player.dead) for (const pd of pads) pd.watch(G.player); },
+    update(dt) { questTick(dt); },
     questHtml(step) {
-      let h = `<div class="q-title">Castle Velscour &middot; Floor ${f}/${CASTLE_FLOORS} <span class="dim">(${escapeHtml(wing.name)})</span></div>`;
+      let h = `<div class="q-title">Castle Velscour &middot; Floor ${f}/${CASTLE_FLOORS} <span class="dim">(${escapeHtml(wing.name)})</span></div><div class="dim">${escapeHtml(placeOf(f))} &middot; wing ${((f - 1) % 10) + 1}/10</div>`;
       h += questLogHtml(step);
       h += step(boss.dead, `${f === CASTLE_FLOORS ? '<b style="color:#ff3030">Lord Velscour</b> waits in the Throne Above' : f % 10 === 0 ? `<b style="color:#ff8050">${escapeHtml(boss.raid ? boss.raid.tpl.name : boss.name)}</b> holds this wing's great room` : f % 5 === 0 ? `<b>${escapeHtml(boss.name)}</b> guards the stair` : 'A captain of Velscour\'s own guards the stair'}.`);
       if (gen.leaps.length) h += step(false, '<span class="dim">Glowing stones fling you over the gaps; iron rings swing you across on a chain.</span>');
@@ -264,6 +312,9 @@ function createCastleRun(world, gen, biome, depth) {
     exit.active = true; exit.color = '#ff4040'; exit.label = f === CASTLE_FLOORS ? 'The Throne Above — the balcony' : `Stair up — Floor ${f + 1}`;
     addEffect(new Ring(exit.x, exit.y, 0.2, 3, 1, '#ff4040', 5)); sfx('gate');
     if (first && f % 10 === 0) { c.skillPoints = (c.skillPoints || 0) + 1; UI.log('+1 skill point for breaking a wing of Castle Velscour.', '#ffd860'); }
+    // the hoard: a raid boss always leaves rare chests (more the first time), a castle boss one
+    const hoard = f === CASTLE_FLOORS ? 4 : f % 10 === 0 ? (first ? 3 : 2) : f % 5 === 0 ? 1 : 0;
+    for (let i = 0; i < hoard; i++) { const a = (i / Math.max(1, hoard)) * TAU, [hx, hy] = world.map.randomNear(m.x + Math.cos(a) * 2, m.y + Math.sin(a) * 2, 1.5) || [m.x, m.y]; dropChest(world, { x: hx, y: hy, rare: true }, depth); }
     UI.centerMsg(m.raid ? `${(m.raid.tpl.name || m.name).toUpperCase()} FALLS` : 'GUARDIAN SLAIN', f === CASTLE_FLOORS ? 'The world shudders' : first ? `Floor ${f + 1} opens` : 'The stair is open', 3.5);
     if (f === CASTLE_FLOORS) velscourFalls(m.velscourBattle || 'crimson');
     questTick(); UI.refresh(); game.autosave();
@@ -273,20 +324,24 @@ function createCastleRun(world, gen, biome, depth) {
     if (f === CASTLE_FLOORS) { endingCinematic(game); return; }
     sfx('portal'); game.enterCastleFloor(f + 1);
   };
-  if (f % 10 === 1) UI.centerMsg(wing.name.toUpperCase(), `Floor ${f} · a waypoint in Bellmourn now leads here`, 3.5);
+  UI.centerMsg(placeOf(f).split(':')[0].toUpperCase(), f % 10 === 1 ? `${wing.name} · a waypoint in Bellmourn now leads here` : `Floor ${f} · ${wing.name}`, 3);
   return run;
 }
 
 /** A leap stone or a swing chain: step on it and you are flung across the gap (game/sheer.js reads `leaping`). */
 class Pad {
-  constructor(world, L) { Object.assign(this, { world, L, t: 0, cd: 0, ground: true, x: L.x, y: L.y }); }
-  watch(p) {
+  constructor(world, L) { Object.assign(this, { world, L, t: Math.random() * 3, cd: 0, charge: 0, ground: true, x: L.x, y: L.y }); }
+  // the swing's chain sweeps between this stone and the far one (period 2.4 s); it can be caught only near this side
+  swingPhase() { return 0.5 + 0.5 * Math.cos((this.t * TAU) / 2.4); }   // 1 = at this stone, 0 = at the far one
+  watch(p, dt = 1 / 60) {
     const L = this.L;
-    if (this.cd > 0 || p.leaping || p.padFly) return;
-    if (dist(p.x, p.y, L.x, L.y) > 0.75) return;
-    this.cd = 2;
+    if (this.cd > 0 || p.leaping || p.padFly) { this.charge = 0; return; }
+    if (dist(p.x, p.y, L.x, L.y) > 0.75) { this.charge = Math.max(0, this.charge - dt * 3); return; }
+    if (L.kind === 'swing') { if (this.swingPhase() < 0.9) return; }   // wait for the chain: step on as it comes round
+    else if ((this.charge += dt) < 0.55) return;                           // crouch: the ring fills, then the leap
+    this.cd = 2; this.charge = 0;
     const fly = { t: 0, dur: L.kind === 'swing' ? 1.1 : 0.8, x0: p.x, y0: p.y, x1: L.tx, y1: L.ty, kind: L.kind };
-    p.padFly = fly; p.leaping = true; p.invuln = Math.max(p.invuln || 0, fly.dur + 0.2);
+    p.padFly = fly; p.leaping = true; p.invuln = Math.max(p.invuln || 0, 0.3);   // only the take-off is safe: bolts still find you in the air
     L.crossed = true;
     for (const h of this.world.hazards || []) if (h instanceof Pad && dist(h.L.x, h.L.y, L.tx, L.ty) < 1.5) h.cd = 2.5;  // don't bounce straight back
     sfx(L.kind === 'swing' ? 'swing' : 'jump');
@@ -294,6 +349,7 @@ class Pad {
   update(dt) {
     this.t += dt; this.cd -= dt;
     const p = this.world.player, F = p && p.padFly;
+    if (p && !p.dead) this.watch(p, dt);
     if (F && F.owner === undefined) F.owner = this;
     if (F && F.owner === this) {
       F.t += dt; const k = Math.min(1, F.t / F.dur), e = k * k * (3 - 2 * k);
@@ -314,8 +370,11 @@ class Pad {
     ctx.beginPath(); ctx.ellipse(x, y, HW * 0.7, HH * 0.7, 0, 0, TAU); ctx.stroke();
     // an arrow toward the far side (leap) or a ring on a post with its chain (swing)
     const ax = isoX(L.tx, L.ty), ay = isoY(L.tx, L.ty), a = Math.atan2(ay - y, ax - x);
+    if (this.charge > 0) { ctx.globalAlpha = 1; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y, HW * 0.85, HH * 0.85, 0, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, this.charge / 0.55)); ctx.stroke(); ctx.lineWidth = 2; }
     if (L.kind === 'swing') {
-      const mx = (x + ax) / 2, my = (y + ay) / 2 - 140;
+      const ph = this.swingPhase(), mx = (x + ax) / 2, my = (y + ay) / 2 - 140, hx = ax + (x - ax) * ph, hy = ay + (y - ay) * ph - 30;
+      ctx.globalAlpha = 0.9; ctx.strokeStyle = ph >= 0.9 ? '#80ff80' : '#c8a060'; ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.beginPath(); ctx.arc(hx, hy, 7, 0, TAU); ctx.stroke(); ctx.strokeStyle = col;
       ctx.globalAlpha = 0.5; ctx.strokeStyle = '#8a7050'; ctx.setLineDash([4, 3]);
       ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(x, y - 30); ctx.stroke(); ctx.setLineDash([]);
       ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.arc(mx, my, 6, 0, TAU); ctx.stroke();
@@ -369,7 +428,7 @@ export function enterPhobos(game) {
 }
 export function enterCastleFloor(game, floor) {
   const S = phobosState(); floor = clamp(floor | 0, 1, CASTLE_FLOORS);
-  const w = wingOf(floor), layout = G.phobosLayoutWant || w.layouts[(floor - 1) % w.layouts.length];
+  const w = wingOf(floor), layout = G.phobosLayoutWant || (floor % 10 ? placeLayout(floor) : null) || w.layouts[(floor - 1) % w.layouts.length];
   G.phobosLayoutWant = null;
   G.phobosFloor = floor; G.phobosLayout = layout; G.char.lastTown = 'act3';
   S.floor = Math.max(S.floor || 0, floor);
@@ -388,6 +447,12 @@ export function setupBellmourn(world, t, game) {
   const giver = PHOBOS_FOLK.find((a) => /Ashwarden|bell/i.test(a.name + a.title)) || PHOBOS_FOLK[50];
   const [gx, gy] = at(-3, 2.5);
   world.npcs.push({ name: 'The Bell-Warden of Bellmourn', enemyArt: giver.id, x: gx, y: gy, reach: 2, flip: false, aura: 1, auraCol: '#ffd060', use: () => questDialog() });
+  const [rx, ry] = at(1.5, 1.5);
+  world.npcs.push({ stash: true, reliquary: true, name: 'The Reliquary', x: rx, y: ry, reach: 1.6, flip: false, use: () => G.ui.reliquary.open() });
+  if (!S.greeted) {
+    S.greeted = true;
+    setTimeout(() => UI.dialog({ title: 'The Bell-Warden of Bellmourn', html: `<p>The bells ring for Phobos, stranger. A city of tight streets under <b>Castle Velscour</b>, eleven wards, each held by its own horrors. The few who got out are here.</p><p>The road to the Sill opens when you've proven yourself. Talk to me when you're ready; my quests are in your Quest Log (Q).</p>`, buttons: [{ label: 'I will go', cls: 'red' }] }), 900);
+  }
   // a few of Phobos' good folk who fled here
   PHOBOS_FOLK.filter((a) => a.cat === 'good').slice(0, 6).forEach((a, i) => {
     const [x, y] = at(Math.cos(i * 1.05) * 7, Math.sin(i * 1.05) * 6);
@@ -423,12 +488,12 @@ function castleWaypoints(game) {
 const raidsWon = (c) => Object.keys(c.cleared || {}).filter((d) => +d % 5 === 0 && c.cleared[d]).length;
 export const QUESTS = [
   { id: 'toll', where: 'Herrington Hollow', name: 'A Bell Tolls in the North', text: 'A courier in Bellmourn\'s grey brings word: the bells of Bellmourn ring for the dead of Phobos. Prove yourself: break three BOSS ROOMs.', need: (c) => (c.level || 1) >= 30 || (c.deepest || 0) >= 60,
-    done: (c, a) => raidsWon(c) - a.raids >= 3, prog: (c, a) => `${Math.min(3, raidsWon(c) - a.raids)}/3 BOSS ROOMs` },
-  { id: 'courier', where: 'Sunscorch Oasis', name: "The Courier's Road", text: 'The courier waits at the edge of the Scorched Wastes. Push the descent ten depths deeper.', done: (c, a) => (c.deepest || 0) - a.deepest >= 10, prog: (c, a) => `${Math.min(10, (c.deepest || 0) - a.deepest)}/10 depths` },
+    done: (c, a) => raidsWon(c) - a.raids >= 3 || raidsWon(c) >= 20 || (c.deepest || 0) >= 200, prog: (c, a) => `${Math.min(3, raidsWon(c) - a.raids)}/3 BOSS ROOMs` },
+  { id: 'courier', where: 'Sunscorch Oasis', name: "The Courier's Road", text: 'The courier waits at the edge of the Scorched Wastes. Push the descent ten depths deeper.', done: (c, a) => (c.deepest || 0) - a.deepest >= 10 || (c.deepest || 0) >= 200, prog: (c, a) => `${Math.min(10, (c.deepest || 0) - a.deepest)}/10 depths` },
   { id: 'road', where: 'the descent', name: 'The Road to Bellmourn', text: 'Bellmourn stands where the Frozen Peaks begin. Reach Depth 200, or hero level 60, and the waypoint opens.', done: (c) => (c.deepest || 0) >= 200 || (c.level || 1) >= 60 || phobosState(c).bell, prog: (c) => `Depth ${c.deepest || 0}/200`, then: (c) => { phobosState(c).bell = true; UI.log('<b style="color:#c0d0ff">Bellmourn</b>\'s waypoint opens in Herrington Hollow and Sunscorch Oasis.', '#c0d0ff'); } },
   { id: 'tongue', where: BELLMOURN, name: 'The Bell Without a Tongue', text: 'The Bell-Warden asks you to thin what comes up the roads from Phobos: slay 300 foes.', done: (c, a) => (c.kills || 0) - a.kills >= 300, prog: (c, a) => `${Math.min(300, (c.kills || 0) - a.kills)}/300 slain` },
-  { id: 'smoke', where: BELLMOURN, name: 'Smoke over Phobos', text: 'Break one more BOSS ROOM and the Bell-Warden will open the road to the Sill.', done: (c, a) => raidsWon(c) - a.raids >= 1, prog: (c, a) => `${Math.min(1, raidsWon(c) - a.raids)}/1 BOSS ROOM`, then: (c) => { phobosState(c).city = true; UI.log('The road to <b style="color:#ff6040">City State Phobos</b> opens from Bellmourn.', '#ffb0a0'); } },
-  { id: 'friends', where: 'Phobos', name: 'Friends in Low Places', text: 'Find the city\'s hidden houses: the Pennyless, the Quiet Watch and the Ashwardens.', done: (c) => Object.keys(phobosState(c).hubs).length >= 3, prog: (c) => `${Object.keys(phobosState(c).hubs).length}/3 houses` },
+  { id: 'smoke', where: BELLMOURN, name: 'Smoke over Phobos', text: 'Break one more BOSS ROOM and the Bell-Warden will open the road to the Sill.', done: (c, a) => raidsWon(c) - a.raids >= 1 || (c.deepest || 0) >= 230, prog: (c, a) => `${Math.min(1, raidsWon(c) - a.raids)}/1 BOSS ROOM`, then: (c) => { phobosState(c).city = true; UI.log('The road to <b style="color:#ff6040">City State Phobos</b> opens from Bellmourn.', '#ffb0a0'); } },
+  { id: 'friends', where: 'Phobos', name: 'Friends in Low Places', then: (c) => { c.skillPoints = (c.skillPoints || 0) + 1; UI.log('The hidden houses teach you their tricks: +1 skill point.', '#ffd860'); }, text: 'Find the city\'s hidden houses: the Pennyless, the Quiet Watch and the Ashwardens.', done: (c) => Object.keys(phobosState(c).hubs).length >= 3, prog: (c) => `${Object.keys(phobosState(c).hubs).length}/3 houses` },
   { id: 'wards', where: 'Phobos', name: 'The Wards of Phobos', text: `Break ${WARDS_TO_OPEN} ward lords and the Castle Gate opens.`, done: (c) => phobosState(c).gate, prog: (c) => `${phobosState(c).wards.length}/${WARDS_TO_OPEN} ward lords` },
   ...WINGS.map((w, i) => ({ id: 'wing' + i, where: 'Castle Velscour', name: i === 9 ? 'The Throne Above' : w.name, text: i === 9 ? 'Climb the Keep to Floor 100 and throw Lord Velscour down.' : `Fight through ${w.name} and break its lord on Floor ${(i + 1) * 10}.`,
     done: (c) => !!phobosState(c).cleared[(i + 1) * 10], prog: (c) => `Floor ${Math.max(1, phobosState(c).floor)}/${(i + 1) * 10}` })),
