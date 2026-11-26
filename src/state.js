@@ -23,6 +23,8 @@ export const G = {
     gore: 2, // 0 off, 1 normal, 2 extreme
     dmgNumbers: true,
     shake: true,
+    ticker: true, // messages, quests and WARNINGs crawl along a bar at the top (src/ui/ticker.js); off: centre messages + log
+    tickerSize: 1,
     reduceFlashing: false, // reduce full-screen flashes, flashbangs, and rapid hit strobing
     flashWarning: true, // the photosensitivity warning after "Click to awaken" (its "Don't show this window again" box turns it off)
     zoom: 1,

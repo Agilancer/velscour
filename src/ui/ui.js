@@ -4,6 +4,7 @@ import { onSkillSheetLoad } from './icons.js';
 import { G } from '../state.js';
 import { el, escapeHtml } from '../core/util.js';
 import { sfx } from '../core/audio.js';
+import { tickerOn, tickLine, tickHeadline } from './ticker.js';
 
 export const $ = (s, root = document) => root.querySelector(s);
 
@@ -234,7 +235,8 @@ export const UI = {
   },
 
   // ------------------------------------------------------------- messages
-  log(html, color) {
+  log(html, color, kind) {
+    if (tickerOn()) return tickLine(html, color, kind);
     if (!this.logEl) return;
     const d = el('div', '', html);
     if (color) d.style.color = color;
@@ -246,6 +248,7 @@ export const UI = {
   },
   /** A centred banner; o.top puts it in the band under the boss bar, smaller (a fight's running banners). */
   centerMsg(title, sub = '', dur = 2.6, o = {}) {
+    if (tickerOn()) return tickHeadline(title, sub, o.kind);
     this.msgEl.innerHTML = `${escapeHtml(title)}${sub ? `<small>${escapeHtml(sub)}</small>` : ''}`;
     const lu = this.hud && this.hud.lu;
     this.msgEl.classList.toggle('top', !!o.top);
