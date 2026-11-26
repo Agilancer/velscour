@@ -27,6 +27,8 @@ import { generateCastleFloor, LAYOUTS, SHEER_LAYOUTS } from '../world/castlevels
 import { WING_RAIDS, VELSCOUR_RAIDS } from './phobosraids.js';
 import { applyPhobosKit } from './phobosattacks.js';
 import { applyBossMechanics } from './phobosbosses.js';
+import { setupSpires } from './castlespires.js';
+import { loadSpires3D } from '../gfx/spires3d.js';
 import { setupCityQuests, setupCastleQuests, questObjective } from './phobosquests.js';
 import { townObject } from '../world/town.js';
 import { phobosTalk, makeTalker } from './phobostalk.js';
@@ -93,7 +95,7 @@ const cityRegion = registerRegion({
 });
 const castleRegion = {
   words: [], portal: 'Castle Velscour: a hundred floors climbing to the Throne Above.', townLine: 'The stair climbs on into <b>Castle Velscour</b>.',
-  load: (biome) => { const f = G.phobosFloor || 1, w = wingOf(f); return Promise.all([loadPhobosTex(), loadBiomeArt(biome), loadArtFor([...w.foes.map((a) => a.id), guardianFor(f).id, ...(wingLordFor(f) ? [wingLordFor(f).id] : []), ...(f === CASTLE_FLOORS ? Object.values(FINALE).flatMap((v) => v.forms) : [])])]); },
+  load: (biome) => { const f = G.phobosFloor || 1, w = wingOf(f); return Promise.all([loadPhobosTex(), loadBiomeArt(biome), G.phobosLayout === 'spires' ? loadSpires3D().catch((e) => console.warn('Spires 3D', e)) : null, loadArtFor([...w.foes.map((a) => a.id), guardianFor(f).id, ...(wingLordFor(f) ? [wingLordFor(f).id] : []), ...(f === CASTLE_FLOORS ? Object.values(FINALE).flatMap((v) => v.forms) : [])])]); },
   ready: () => true,
   generate(depth, biome, seed) {
     const f = G.phobosFloor || 1, w = wingOf(f), layout = G.phobosLayout || w.layouts[(f - 1) % w.layouts.length];
@@ -368,6 +370,7 @@ function createCastleRun(world, gen, biome, depth) {
       return h;
     },
   };
+  if (gen.spires) setupSpires(world, gen, run);   // the Broken Spires in three.js: stairs round the towers, the camera turning with the climb
   world.onBossKilled = (m) => {
     if (m.raid && m.raid.court) return;
     const first = !S.cleared[f];
