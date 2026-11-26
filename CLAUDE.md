@@ -141,6 +141,8 @@ node tools/tests/breach.js [town,play,arrive,shots,auto,rules,perf] [floor] # th
 node tools/tests/tower.js [variants] [scenarios] [noauto]  # Serpentine Tower (live three.js): 5 variants, warp/picking, drops/hooks/chargers, 20 roof scenarios + airships, auto-play
 node tools/tests/caverns_map.mjs [seeds]           # Depth's Edge Caverns generator, no browser: 6 variants, route joined, no shortcut up, cap (no rock hides floor), map images
 node tools/tests/caverns.js [variants] [noauto]    # Depth's Edge Caverns (live three.js): every variant, picking, lake, the passage into the shaft, the climb, 1-3 bosses, portal, shots, auto-play
+node tools/tests/phobos.js [floors] [noraid|raids=10,100c] # ACT III (docs/PHOBOS.md): Bellmourn, City State Phobos, Castle Velscour floors, wing raids + Velscour's 3 battles, shots
+node tools/tests/phobos_biomes.js [ids]             # the ten Phobos/castle texture packs on the wall rigs
 node tools/tests/ghosttrain.js [noshots] [noauto]  # The Iron Express (region ghost_train, live three.js): car to car, stations, the chief, auto-play to the Last Stop
 node tools/tests/siege.js [noshots] [noauto] [depth] # The Endless Siege: wall-walk by the stairs only, gates hold, no blows across heights, winches, ballistae, auto-play holds every wave (SIEGE_CLASS, SIEGE_MORTAL)
 node tools/tests/mines.js [seeds] [noauto] [noshots] # The Deep Rail Mines: shafts joined by rail, carts, junction switches, the Bottom, auto-play rides down

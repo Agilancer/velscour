@@ -68,6 +68,7 @@ const TOWNSFOLK_KNIGHTS = TOWNSFOLK.filter((q) => q.knight).map((q) => q.spriteI
 import { Cine, CINE_FAST } from './cinema.js';
 import { lights, updateVfx } from '../gfx/vfx.js';
 import { World } from './world.js';
+import { setupBellmourn, enterPhobos as phEnterPhobos, enterCastleFloor as phEnterCastle, questTick as phQuestTick, phobosState } from './phobos.js';
 import { Player } from './player.js';
 import { makeMonster, makeElite, Monster } from './monster.js';
 import { clearRims } from './creature.js';
@@ -154,6 +155,7 @@ const VELSCOUR_TAUNT_ENDS = [
 const VELSCOUR_TAUNTS = VELSCOUR_TAUNT_STARTS.flatMap((start) => VELSCOUR_TAUNT_ENDS.map((end) => `${start}? ${end}`));
 
 let townCache = null, townTiles = null;
+let bellCache = null;
 let act2TownCache = null, act2TownTiles = null;
 let saveT = 0;
 let automapCanvas = null;
@@ -421,6 +423,7 @@ export const game = {
         },
       });
     }
+    if (phobosState(c)?.bell || (c?.deepest || 0) >= 200) world.portals.push({ x: t.center.x - 3.8, y: t.center.y + 3.8, active: true, color: '#c0d0ff', reach: 2.0, label: 'Waypoint — Bellmourn (Act III)', use: () => { sfx('portal'); this.enterBellmourn(); } });
     // the hero steps out of the portal, a little way down its road toward the square
     const P = t.portal, C = t.center, l = Math.hypot(C.x - P.x, C.y - P.y) || 1;
     let arrive = [P.x + ((C.x - P.x) / l) * 3.2, P.y + ((C.y - P.y) / l) * 3.2];
@@ -580,6 +583,7 @@ export const game = {
     const kg2 = t.keepgate || (t.keepgate = keepgateSpot({ ...t, npcs: t.npcs || [], start: t.start || [t.center.x, t.center.y], portal: t.portal, center: t.center }));
     if (kg2) world.portals.push({ x: kg2.x, y: kg2.y, active: true, keepGate: true, color: '#c8f060', reach: 2.0, label: KEEP_NAME, use: () => { c.lastTown = 'act2'; return this.enterKeep(); } });
 
+    if (phobosState(c)?.bell || (c?.deepest || 0) >= 200) world.portals.push({ x: t.center.x - 3.8, y: t.center.y + 3.8, active: true, color: '#c0d0ff', reach: 2.0, label: 'Waypoint — Bellmourn (Act III)', use: () => { sfx('portal'); this.enterBellmourn(); } });
     const arrive = t.start || [t.center.x, t.center.y];
     this.setWorld(world, arrive, old);
     void warmLevelArt(world);
@@ -593,6 +597,51 @@ export const game = {
     p.mana = p.maxMana;
     this.autosave();
     UI.log('You step into <b style="color:#f3c778">Sunscorch Oasis</b>, haven of the Scorched Wastes!', '#ffe080');
+  },
+
+  /** ACT III's town (game/phobos.js): Bellmourn, under the bells; Herrington's builder on a fixed seed, in the cold. */
+  enterBellmourn() {
+    const old = G.world, c = G.char;
+    const tileset = biomeTileSet(TOWN_BIOME);
+    if (old && old.keep) { releaseCastle3D(); releaseKeepArt(); }
+    keepTileSets(null);
+    if (!townTiles) townTiles = makeTownTiles();
+    if (!bellCache) bellCache = generateTown(tileset, 2301114);
+    const t = bellCache;
+    t.map.seen.fill(0);
+    const world = new World('town', { map: t.map, tileset, biome: TOWN_BIOME, depth: 0, townTiles, buildings: t.buildings, props: t.props, wallHangings: t.wallHangings });
+    world.bellmourn = true; world.raining = false; world.ambientFx = { type: 'snow', color: '#e8f0ff' };
+    world.npcs = t.npcs.map((n) => ({ vendor: n.vendor, x: n.x, y: n.y, reach: 1.8, flip: n.flip, aura: n.aura, auraCol: n.auraCol, use: () => Vendor.open(n.vendor.id) }));
+    let [x, y] = [t.start[0] + 1.5, t.start[1] - 0.5];
+    if (!t.map.walkable(x, y)) [x, y] = t.map.randomNear(t.start[0], t.start[1], 2.5);
+    world.npcs.push({ stash: true, name: 'Storage Chest', x, y, reach: 1.6, flip: false, use: () => Stash.open() });
+    let [jx, jy] = t.map.randomNear(t.start[0] - 1.5, t.start[1] - 0.5, 2.5);
+    world.npcs.push({ stash: true, jewelBox: true, name: 'Jewel Box', x: jx, y: jy, reach: 1.6, flip: false, use: () => JewelBox.open() });
+    world.portals = [{ x: t.portal.x, y: t.portal.y, active: true, color: '#ff5020', reach: 1.7, get label() { return `Portal — Depth ${Math.max(1, G.char?.depth || 1, G.game?.maxPortalFloor?.(G.char) || 1)}`; }, use: () => this.confirmDungeon() }];
+    setupBellmourn(world, t, this);
+    this.setWorld(world, t.start, old);
+    void warmLevelArt(world);
+    void loadArtFor(world.npcs.map((n) => n.enemyArt).filter(Boolean));
+    HUD.setArea('Bellmourn', 'Act III Town — under the bells');
+    playMusic('town'); setAmbience('town');
+    Vendor.restock();
+    const p = G.player; p.hp = p.maxHp; p.mana = p.maxMana;
+    phQuestTick();
+    this.autosave();
+    UI.log('The bells of <b style="color:#c0d0ff">Bellmourn</b> toll for the dead of Phobos.', '#d0dcff');
+  },
+  async enterPhobos() { if (Auto.on) Auto.toggle(false); await phEnterPhobos(this); HUD.setArea('City State Phobos', 'Act III — the city under the castle'); playMusic('dungeon'); this.autosave(); },
+  async enterCastleFloor(f) { const on = Auto.on; await phEnterCastle(this, f); HUD.setArea('Castle Velscour', `Floor ${G.phobosFloor} · ${G.world?.biome?.name || ''}`); playMusic('boss'); if (on && !Auto.on) Auto.toggle(true); this.autosave(); },
+  /** A death in Act III: no Defiance, no depth lost; the hero wakes in Bellmourn and the floor is re-forged. */
+  phobosDeath(src) {
+    const c = G.char; c.deaths = (c.deaths || 0) + 1;
+    const killer = src ? (src.owner ? src.owner.name : src.name) : null;
+    stopMusic(); this.autosave();
+    setTimeout(() => deathScreen(G.world?.depth || 0, killer, () => {
+      const p = G.player; p.dead = false; p.buffs = []; p.recompute(); p.hp = p.maxHp; p.mana = p.maxMana;
+      this.enterBellmourn();
+      UI.log('You wake in Bellmourn, under the bells. Phobos waits.', '#ff8060');
+    }), 1700);
   },
 
   /** Step through to TESSARIEL'S KEEP (game/keepgame.js): the hall built from its bake and the hero's own choices. */
@@ -1312,6 +1361,7 @@ export const game = {
       }
     }
     world.roster = [...new Set(gen.spawns.filter((s) => s.arch && !['raid', 'boss'].includes(s.rank)).map((s) => s.arch))];
+    if (!world.roster.length && gen.roster) world.roster = gen.roster;   // a region with no spawn list of its own (Phobos)
     if (!sky && !sea && biome.id !== 'throne') setupHappenings(world, gen.start, gen); // omens, shrines, treasure imps, cursed chests (game/happenings.js)
     setupCommissions(world, gen.start); // this depth's Town Commission objectives (game/commissions.js)
     greedWorld(world, c); // the Greed lever and its Hoard multiply the omen's loot dials
@@ -1502,7 +1552,7 @@ export const game = {
     UI.dialog({
       title: 'Return to Town?',
       html: `<p>You will return to Herrington Hollow. ${w?.breach ? `Floor ${w.breach.floor} of the Eternal Breach` : w?.rift ? `The Rift (Tier ${w.rift.tier}) collapses behind you; it` : w?.unbound ? 'Velscour Unbound' : `Depth ${G.char.depth}`} will be re-forged when you come back.</p>`,
-      buttons: [{ label: 'Stay' }, { label: 'Return', fn: () => { sfx('portal'); this.enterTown(); } }],
+      buttons: [{ label: 'Stay' }, { label: 'Return', fn: () => { sfx('portal'); if (G.char?.lastTown === 'act3') this.enterBellmourn(); else this.enterTown(); } }],
     });
   },
 
@@ -1653,6 +1703,7 @@ export const game = {
     const c = G.char;
     const w = G.world;
     keepDeath();
+    if (w && w.phobos) return this.phobosDeath(src);
     if (w && w.breach) return this.breachDeath(src);
     if (w && w.rift) return this.riftDeath(src);
     if (w && (w.unbound || w.unboundExploration)) return this.unboundDeath(src);
@@ -2222,7 +2273,8 @@ export const game = {
       if (w.overworldScenario) w.overworldScenario.update(dt);
       if (w.map.c3struct && !w.map.sky) castle3dTick(w, dt);
       ambushTick(w, dt);
-      if (w.kind === 'town') townTick(w, dt); else if (!w.sky && !w.seaRun) happeningsTick(w, dt);
+      phQuestTick(dt);
+      if (w.kind === 'town') { if (!w.bellmourn) townTick(w, dt); } else if (!w.sky && !w.seaRun) happeningsTick(w, dt);
       if (w.rift) riftTick(w, dt); // the Abyssal Rift's clock (game/rifts.js)
       if (w.heresy) heresyTick(w, dt); // the Heresies as monsters appear, the Legion's hellgates (game/heresies.js; the Breach has no happenings tick)
       madnessTick(dt);

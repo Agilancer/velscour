@@ -12,6 +12,7 @@ import { heresyRankOf, heresiesOf, heresyText } from '../game/heresies.js';
 import { riftOpen, fmtTime } from '../game/rifts.js';
 import { marksTotal, marksFree } from '../game/marks.js';
 import { regionOf } from '../game/regions.js';
+import { questLogHtml as actIIIQuest } from '../game/phobos.js';
 
 const step = (done, html) => `<div class="q-step${done ? ' done' : ''}"><i>${done ? '&#10004;' : '&#9670;'}</i><span>${html}</span></div>`;
 const nextRaid = (d) => { let n = Math.max(5, Math.ceil(d / 5) * 5); if (n === FINAL_DEPTH) n += 5; return n; };
@@ -23,6 +24,7 @@ export function renderQuest(body) {
   let h = '<div class="q-sec"><h3>Current Quest</h3>';
   const kl = keepLogLine(c); // Tessariel's Keep: rewards waiting, the Saga in hand (game/keep.js)
   if (kl) h += `<div class="q-keep">${kl}</div>`;
+  if (!w?.phobos) { const a3 = actIIIQuest(step); if (a3) h += `<div class="q-keep">${a3}</div>`; }
   if (!w || w.kind === 'town') {
     const b = BIOME_BY_ID[c.depth === FINAL_DEPTH ? 'throne' : c.nextBiome];
     h += `<div class="q-title">Descend to Depth ${c.depth}</div>`;
