@@ -226,7 +226,7 @@ export function drawStarShadow(ctx, x, gy, lift, s, t, spin = 22) {
   const h = Math.max(0, lift), r = 10 * s * (1 + Math.min(h, 320) / 400), prev = ctx.globalAlpha;
   const ang = Math.round(t * spin / TAU * 24) / 24 * TAU; // the sprite's spin step
   ctx.save(); ctx.translate(x, gy); ctx.scale(r, r * 0.5); ctx.rotate(ang);
-  ctx.globalAlpha = prev * 0.55 * Math.max(0.4, 1 - h / 300); ctx.fillStyle = '#000';
+  ctx.globalAlpha = prev * 0.62 * Math.max(0.35, 1 - h / 300); ctx.fillStyle = '#000';
   ctx.fill(starPath());
   ctx.restore(); ctx.globalAlpha = prev;
 }
