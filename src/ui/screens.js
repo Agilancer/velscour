@@ -71,7 +71,11 @@ export function titleScreen() {
     tag: s.querySelector('.title-tag'),
     menu,
     gate,
-    onAwaken: (proceed) => showSeizureWarningSplash(proceed),
+    onAwaken: (proceed) => {   // once a visit (not again back from a game), never once "Don't show this window again" is ticked
+      if (flashWarned || G.settings.flashWarning === false) return proceed();
+      flashWarned = true;
+      showSeizureWarningSplash(proceed);
+    },
   });
   Cloud.flush();
   Cloud.sync();
@@ -103,6 +107,11 @@ export function showSeizureWarningSplash(onContinue) {
         <input type="checkbox" id="seizure-reduce-flashing-checkbox" ${G.settings.reduceFlashing ? 'checked' : ''}>
         <span>Reduce flashing &amp; strobing visual effects</span>
       </label>
+      <label class="seizure-toggle-label">
+        <input type="checkbox" id="seizure-dont-show-checkbox">
+        <span>Don't show this window again</span>
+      </label>
+      <div class="seizure-warning-hint">Both can be changed later in Settings &gt; Graphics.</div>
     </div>
     <div class="seizure-warning-prompt">${G.touch ? 'Tap anywhere to continue' : 'Click anywhere to continue'}</div>
   `;
@@ -110,15 +119,17 @@ export function showSeizureWarningSplash(onContinue) {
   splash.appendChild(card);
   document.body.appendChild(splash);
 
-  const checkbox = card.querySelector('#seizure-reduce-flashing-checkbox');
-  if (checkbox) {
-    checkbox.onchange = (e) => {
+  // each box saves at once: reduce flashing, and "don't show again" (Settings > Graphics > Flashing-lights warning at start)
+  for (const [id, apply] of [['#seizure-reduce-flashing-checkbox', (on) => { G.settings.reduceFlashing = on; }], ['#seizure-dont-show-checkbox', (on) => { G.settings.flashWarning = !on; }]]) {
+    const box = card.querySelector(id);
+    if (!box) continue;
+    box.onchange = (e) => {
       e.stopPropagation();
-      G.settings.reduceFlashing = !!checkbox.checked;
+      apply(!!box.checked);
       saveSettings();
     };
-    checkbox.onclick = (e) => e.stopPropagation();
-    checkbox.onpointerdown = (e) => e.stopPropagation();
+    box.onclick = (e) => e.stopPropagation();
+    box.onpointerdown = (e) => e.stopPropagation();
   }
 
   let closed = false;
@@ -126,7 +137,7 @@ export function showSeizureWarningSplash(onContinue) {
 
   const dismiss = (e) => {
     if (closed || performance.now() < allowDismissAt) return;
-    if (e && e.target && (e.target === checkbox || e.target.closest('.seizure-toggle-label'))) return;
+    if (e && e.target && e.target.closest && e.target.closest('.seizure-toggle-label')) return;
     closed = true;
     window.removeEventListener('keydown', onKeyDown);
     splash.classList.add('fading');
@@ -146,7 +157,7 @@ export function showSeizureWarningSplash(onContinue) {
   splash.addEventListener('pointerup', dismiss);
   window.addEventListener('keydown', onKeyDown);
 }
-let unreadableNoted = false;
+let unreadableNoted = false, flashWarned = false;
 if (typeof addEventListener === 'function') addEventListener('velscour-save-blocked', () => {
   UI.dialog({ title: 'Not saving', html: '<p>The heroes saved in this browser could not be read, and there was no room to set them aside, so the game is not saving over them. Free some browser storage (or use another browser) and reload.</p>', buttons: [{ label: 'OK' }] });
 });
@@ -444,6 +455,7 @@ export function settingsDialog() {
       <label>Gore</label><select data-k="gore"><option value="0">Off</option><option value="1">Bloody</option><option value="2">Extreme</option></select>
       <label>Screen shake</label><input type="checkbox" data-k="shake" ${st.shake ? 'checked' : ''}>
       <label title="Reduce full-screen flashes, flashbangs, and rapid hit strobing">Reduce flashing effects</label><input type="checkbox" data-k="reduceFlashing" ${st.reduceFlashing ? 'checked' : ''}>
+      <label title="The photosensitive epilepsy warning shown after &quot;Click to awaken&quot; (its &quot;Don't show this window again&quot; box turns this off)">Flashing-lights warning at start</label><input type="checkbox" data-k="flashWarning" ${st.flashWarning !== false ? 'checked' : ''}>
       <label title="The hero, monsters and pets keep a coloured outline over spells, walls and darkness (hidden only behind another creature)">See-through outlines</label><input type="checkbox" data-k="outlines" ${st.outlines !== false ? 'checked' : ''}>
       <label title="A line along the foot of the dungeon's walls, drawn over every spell (not over creatures)">Outline wall bases</label><input type="checkbox" data-k="wallLines" ${st.wallLines ? 'checked' : ''}>
       <label title="The hero holds his weapon and off-hand, each in its own look">Show weapons and off-hands</label><input type="checkbox" data-k="heldGear" ${st.heldGear !== false ? 'checked' : ''}>
