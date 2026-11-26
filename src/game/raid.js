@@ -15,6 +15,7 @@ import { hit } from './combat.js';
 import { Projectile, Delayed, Area, Fissure, explode, coneTargets, lineTargets } from './hazards.js';
 import { ARCH } from '../data/enemies.js';
 import { ART_BY_ID } from '../data/bestiary.js';
+import { isDesert, sandBosses } from '../data/sandkin.js';
 import { bodyR } from '../world/map.js';
 import { makeMonster, monsterBase, Monster } from './monster.js';
 import { riftHold, isSuperbossDepth } from '../data/depth.js';
@@ -580,7 +581,9 @@ export function makeRaidBoss(world, arena, depth, level, opts = {}) {
   const c = G.char;
   const tpl = opts.tpl || pick(RAID_BOSSES.filter((b) => b.id !== (c && c.lastRaid)));
   if (c && !opts.tpl) c.lastRaid = tpl.id;
-  const artId = opts.art || pick(tpl.art.filter((id) => ART_BY_ID[id]));
+  // in the deserts most BOSS ROOMs are a huge boss of the Sea of Sand bestiary (data/sandkin.js) wearing the template
+  // (the signature bosses, whose fights are their own, keep their art)
+  const artId = opts.art || (!opts.court && !tpl.sigs && isDesert(world.biome) && Math.random() < 0.6 && pick(sandBosses()).id) || pick(tpl.art.filter((id) => ART_BY_ID[id]));
   const art = ART_BY_ID[artId];
   const mods = rollMods(depth);
   const fifth = worldHeresies(world).includes('fifth'); // the Fifth Phase Heresy: one more modifier (and a phase, below)
