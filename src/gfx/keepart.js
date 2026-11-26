@@ -4,7 +4,7 @@
 // drawn into the floor tile by tile (world/keepworld.js dressTile), the trophies' baked sprites, the Castle Keep pack's
 // painted furniture, the Sacred Flame and the windows' light.
 import { G } from '../state.js';
-import { makeCanvas, clamp, TAU, spriteCanvas as rasterCanvas, frozen } from '../core/util.js';
+import { makeCanvas, clamp, TAU, spriteCanvas as rasterCanvas, frozen, cpuCanvas } from '../core/util.js';
 import { HW, HH } from '../core/view.js';
 import { loadBaked, castle3dState } from './castle3dart.js';
 import { glowSprite } from './vfx.js';
@@ -40,13 +40,17 @@ export function releaseKeepArt() { if (A) A.cache.clear(); A = null; loading = n
 
 // ------------------------------------------------------------------ helpers
 const ground = (x, y, lv) => [(x - y) * HW, (x + y) * HH - lv * 4];
-/** A canvas covering world-px box [x0, y0, x1, y1] at R, and the sprite record for a prop standing at ground point g. */
+/** A canvas covering world-px box [x0, y0, x1, y1] at R, and the sprite record for a prop standing at ground point g.
+ *  A raster sprite (util.frozen) where those are on: a plain canvas drawn every frame with the desktop's mipmapped
+ *  smoothing went up to the GPU whole on every draw, and the hall's banners, glass, rugs and Elder shades kept the GPU
+ *  busy past the frame (the keep's dropped frames and 24-48 ms hitches; tools/tests/keep_frames.js). */
 function spriteCanvas(box, g, draw) {
   const [x0, y0, x1, y1] = box.map((v, i) => (i < 2 ? Math.floor(v) - 2 : Math.ceil(v) + 2));
-  const c = makeCanvas(Math.max(2, (x1 - x0) * R), Math.max(2, (y1 - y0) * R)), x = c.getContext('2d');
+  const c = rasterCanvas(Math.max(2, (x1 - x0) * R), Math.max(2, (y1 - y0) * R)), x = c.getContext('2d');
   x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
   draw(x, x0, y0);
-  return { img: c, sx: 0, sy: 0, w: c.width, h: c.height, ox: (x0 - g[0]) * R, oy: (y0 - g[1]) * R };
+  const w = c.width, h = c.height;
+  return { img: frozen(c), sx: 0, sy: 0, w, h, ox: (x0 - g[0]) * R, oy: (y0 - g[1]) * R };
 }
 /** The corner, along and down vectors (world px) of a w-wide face rect on plane `axis` = c, from level zt down to zb.
  *  A face along x (plane y = c) faces +y; one along y (plane x = c) faces +x; both read left to right on screen. */
@@ -66,7 +70,7 @@ function onFace(x, img, r, P, x0, y0) {
 const findMeta = (list, id) => list.find((d) => d.id === id);
 /** Average colour of an atlas rect (for a window's glow). */
 function avgColour(img, r) {
-  const c = makeCanvas(8, 8), x = c.getContext('2d'); x.drawImage(img, r[0], r[1], r[2], r[3], 0, 0, 8, 8);
+  const c = cpuCanvas(8, 8), x = c.getContext('2d'); x.drawImage(img, r[0], r[1], r[2], r[3], 0, 0, 8, 8);
   const d = x.getImageData(0, 0, 8, 8).data; let rr = 0, gg = 0, bb = 0, n = 0;
   for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 100) { rr += d[i]; gg += d[i + 1]; bb += d[i + 2]; n++; }
   n ||= 1; const k = 255 / Math.max(1, Math.max(rr, gg, bb) / n);
@@ -106,7 +110,7 @@ export function bannerSprite(id, s, standLv) {
  *  angels were painted in the Fiend's red; nothing of his colour hangs in her hall). Made once. */
 function keepGlass() {
   if (A.glassT) return A.glassT;
-  const c = makeCanvas(A.glass.width, A.glass.height), x = c.getContext('2d', { willReadFrequently: true });
+  const c = cpuCanvas(A.glass.width, A.glass.height), x = c.getContext('2d', { willReadFrequently: true });
   x.drawImage(A.glass, 0, 0);
   const im = x.getImageData(0, 0, c.width, c.height), d = im.data;
   for (let i = 0; i < d.length; i += 4) {
@@ -165,9 +169,9 @@ export function rugCanvas(id, rect) {
   const pts = [ground(x0, y0, z), ground(x1, y0, z), ground(x1, y1, z), ground(x0, y1, z)];
   const bx0 = Math.floor(Math.min(...pts.map((p) => p[0]))) - 2, by0 = Math.floor(Math.min(...pts.map((p) => p[1]))) - 2;
   const bx1 = Math.ceil(Math.max(...pts.map((p) => p[0]))) + 2, by1 = Math.ceil(Math.max(...pts.map((p) => p[1]))) + 2;
-  const c = makeCanvas((bx1 - bx0) * R, (by1 - by0) * R), x = c.getContext('2d');
+  const c = rasterCanvas((bx1 - bx0) * R, (by1 - by0) * R), x = c.getContext('2d');
   // the weave: pattern space (u, v) in tiles -> world px, one 192 px swatch per tile
-  const sw = makeCanvas(m.r[2], m.r[3]); sw.getContext('2d').drawImage(A.rugs, m.r[0], m.r[1], m.r[2], m.r[3], 0, 0, m.r[2], m.r[3]);
+  const sw = cpuCanvas(m.r[2], m.r[3]); sw.getContext('2d').drawImage(A.rugs, m.r[0], m.r[1], m.r[2], m.r[3], 0, 0, m.r[2], m.r[3]);
   const pat = x.createPattern(sw, 'repeat'), s = 1 / m.r[2];
   pat.setTransform(new DOMMatrix([HW * s * R, HH * s * R, -HW * s * R, HH * s * R, (pts[0][0] - bx0) * R, (pts[0][1] - by0) * R]));
   const poly = (inset) => {
@@ -184,7 +188,7 @@ export function rugCanvas(id, rect) {
   x.lineWidth = 1.5 * R; x.strokeStyle = '#f0d488'; poly(0.16); x.stroke();
   x.lineWidth = 0.7 * R; x.strokeStyle = 'rgba(240,212,136,0.75)'; poly(0.34); x.stroke();
   x.lineWidth = 1 * R; x.strokeStyle = 'rgba(30,20,8,0.6)'; poly(0.03); x.stroke();
-  const out = { img: c, x0: bx0, y0: by0, w: bx1 - bx0, h: by1 - by0, rect };
+  const out = { img: frozen(c), x0: bx0, y0: by0, w: bx1 - bx0, h: by1 - by0, rect };
   A.cache.set(key, out);
   return out;
 }
@@ -381,11 +385,11 @@ export function ghostSprite(art) {
   if (!r) return null;
   const key = 'ghost|' + art;
   if (A.cache.has(key)) return A.cache.get(key);
-  const s = r.spr, c = makeCanvas(s.w, s.h), x = c.getContext('2d');
+  const s = r.spr, c = rasterCanvas(s.w, s.h, s.img), x = c.getContext('2d');
   // a statue of grey stone, not yet carved fine: the sprite without its colour, its shading kept, a cool stone tint
   x.filter = 'grayscale(1) contrast(0.8) brightness(1.25)'; x.drawImage(s.img, s.sx, s.sy, s.w, s.h, 0, 0, s.w, s.h); x.filter = 'none';
   x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(120,128,140,0.28)'; x.fillRect(0, 0, s.w, s.h);
-  const out = { spr: { img: c, sx: 0, sy: 0, w: s.w, h: s.h, ox: s.ox, oy: s.oy }, k: r.k };
+  const out = { spr: { img: frozen(c), sx: 0, sy: 0, w: s.w, h: s.h, ox: s.ox, oy: s.oy }, k: r.k };
   A.cache.set(key, out);
   return out;
 }
