@@ -2,7 +2,7 @@
 // of a mountain range, drawn live in three.js (gfx/alpine3d.js) in the Snowy Summit pack's art. The way runs from an
 // arrival camp at the near corner (the bottom of the screen) to the peak at the far one (the top), always gaining
 // height: thin ridgelines two or three tiles wide, their flanks falling away steeply on both sides into a sea of cloud,
-// between four plateaus where groups fight (each sealed on its far side by a frozen iron gate until its fight is won),
+// between four plateaus where groups fight (open ground: nothing walls a plateau in),
 // and the peak, an old shrine where one of five snow-swapped bosses waits. The ridges climb in gentle slopes and here
 // and there a rock step a hop high; the rest of the range's peaks stand round them, behind the way, never in front of it.
 import { TileMap } from './map.js';
@@ -251,56 +251,8 @@ function build(depth, biome, seed) {
   map.losRise = Math.round(1.6 * LV);
   map.losBlocks = true;
 
-  // ---------------------------------------------------------------- gates: a frozen iron gate across each plateau's way
-  // on (open when its fight is won) and its way in (shut behind the hero while it is fought), and the peak's way in
-  const gates = [];
-  const nodeTile = (n) => I(Math.floor(n.x), Math.floor(n.y));
-  /** The first grid line along ridge R (from s, stepping ds) where 2-4 of its tiles cross and blocking them cuts a from b. */
-  const findGate = (R, sFrom, ds, a, b, role) => {
-    const k0 = R.smp.findIndex((q) => q[2] >= sFrom);
-    if (k0 < 0) return null;
-    const half = R.smp.findIndex((q) => q[2] >= (R.s0 + R.s1) / 2);
-    for (let k = k0; k >= 3 && k < R.smp.length - 3 && (ds > 0 ? k <= half : k >= half); k += ds) {
-      const q = R.smp[k], qa = R.smp[k - 3], qb = R.smp[k + 3];
-      const ddx = qb[0] - qa[0], ddy = qb[1] - qa[1], axis = Math.abs(ddx) >= Math.abs(ddy) ? 'y' : 'x';
-      const L = Math.round(axis === 'y' ? q[0] : q[1]), fwd = (axis === 'y' ? Math.sign(ddx) : Math.sign(ddy)) * ds;
-      const col = fwd > 0 ? L : L - 1, c0 = Math.round(axis === 'y' ? q[1] : q[0]);
-      const tiles = [];
-      for (let t = c0 - 4; t <= c0 + 4; t++) { const [x, y] = axis === 'y' ? [col, t] : [t, col]; if (inMap(x, y) && walk[I(x, y)] && reg[I(x, y)] < 0) tiles.push(t); }
-      if (tiles.length < 2 || tiles.length > 5 || tiles[tiles.length - 1] - tiles[0] !== tiles.length - 1) continue;
-      const tIdx = tiles.map((t) => (axis === 'y' ? I(col, t) : I(t, col)));
-      if (tIdx.some((ii) => gates.some((g) => g.tiles.includes(ii)))) continue;
-      const blocked = new Uint8Array(N); for (const ii of tIdx) blocked[ii] = 1;
-      if (reachFrom(W, H, lv, walk, blocked, nodeTile(a), CLIMB, DROP)[nodeTile(b)]) continue;
-      return { node: a.i, role, axis, line: L, a0: tiles[0], a1: tiles[tiles.length - 1] + 1, tiles: tIdx, design: 'frozen_iron_gate' };
-    }
-    return null;
-  };
-  for (const n of nodes) {
-    if (n.kind !== 'plateau' && n.kind !== 'peak') continue;
-    const out = ridges.find((R) => R.A === n), inn = ridges.find((R) => R.B === n && !R.spur);
-    if (out) { const g = findGate(out, out.s0 + 1.5, 1, n, out.B, 'out'); if (!g) return null; gates.push(g); }   // every gate, or another seed
-    if (inn) { const g = findGate(inn, inn.s1 - 1.5, -1, n, inn.A, 'in'); if (!g) return null; g.open = true; gates.push(g); }
-  }
-  // the gates' doors, an arch over the way onto the peak and out of the camp, ruined shrine walls at the peak's back
+  // an arch over the way onto the peak and out of the camp, ruined shrine walls at the peak's back
   map.walls = []; map.doors = [];
-  const gateDoors = [];
-  for (const g of gates) {
-    const doors = [];
-    for (let a = g.a0; a < g.a1; a++) {
-      const first = a === g.a0, dir = g.axis === 'x' ? (first ? 'SE' : 'NW') : (first ? 'SW' : 'NE');
-      const art = set.doors[g.design]?.[dir] || Object.values(set.doors)[0][dir];
-      const [cx, cy] = g.axis === 'x' ? [a + 0.5, g.line] : [g.line, a + 0.5];
-      const door = { kind: 'door', x: cx, y: cy, axis: g.axis, open: !!g.open, locked: true, art };
-      map.doors.push(door); doors.push(door);
-      for (const part of ['L', 'R', 'leaf']) {
-        const sl = art[part === 'leaf' ? 'open' : 'closed'].find((p) => p.part === part);
-        if (sl) map.walls.push({ kind: 'door', door, part, x: cx, y: cy, depth: cx + cy + sl.du + sl.dv });
-      }
-    }
-    if (!g.open) for (const i of g.tiles) map.block[i] = 1;
-    gateDoors.push({ node: g.node, role: g.role, doors, tiles: g.tiles });
-  }
   const archAt = (R, sAt, design) => {
     const k = R.smp.findIndex((q) => q[2] >= sAt);
     if (k < 0) return;
@@ -373,7 +325,6 @@ function build(depth, biome, seed) {
 
   // ---------------------------------------------------------------- props
   const scat = new Map(set.scatter.map((s) => [s.name, s])), props = [], taken = new Uint8Array(N);
-  for (const g of gates) for (const i of g.tiles) taken[i] = 1;
   const hidden = (x, y) => {
     const h0 = F.H2(x, y), fy = (x + y) * 16 - h0 * LV * 4;
     for (let s = 0.25; s < 8; s += 0.25) { const sx = x + s, sy = y + s; if (sx >= W || sy >= H) break; if ((sx + sy) * 16 - F.H2(sx, sy) * LV * 4 < fy - 3) return true; }
@@ -442,14 +393,13 @@ function build(depth, biome, seed) {
   }
 
   // nothing dressed on the way may cut it (a boulder at a ridge's mouth, a marker where the ridge is thinnest): with the
-  // gates open the peak must still be reachable and the way back down too; else the ridges' props stop blocking
+  // the peak must still be reachable and the way back down too; else the ridges' props stop blocking
   const passable = () => {
     const bl = Uint8Array.from(map.block);
-    for (const g of gates) for (const i of g.tiles) bl[i] = 0;
     return reachFrom(W, H, hgt, walk, bl, s0i, CLIMB, DROP)[pki] && reachFrom(W, H, hgt, walk, bl, pki, CLIMB, DROP)[s0i];
   };
   if (!passable()) {
-    for (const pr of props) { const i = I(Math.floor(pr.x), Math.floor(pr.y)); if (reg[i] < 0 || reg[i] === peakI || near[i] === 0) { if (!gates.some((g) => g.tiles.includes(i))) map.block[i] = 0; } }
+    for (const pr of props) { const i = I(Math.floor(pr.x), Math.floor(pr.y)); if (reg[i] < 0 || reg[i] === peakI || near[i] === 0) map.block[i] = 0; }
     if (!passable()) return null;
   }
 
@@ -512,14 +462,14 @@ function build(depth, biome, seed) {
   map.hopDust = '#eef2f6';
   // the pinnacle: a chest and its guard
   const chests = [];
-  if (pinnacle && reach[nodeTile(pinnacle)]) {
+  if (pinnacle && reach[I(Math.floor(pinnacle.x), Math.floor(pinnacle.y))]) {
     chests.push({ x: pinnacle.x, y: pinnacle.y - 0.4, rare: true });
     const arch = rng.pick(['golem', 'gargoyle', 'knight']);
     spawns.push({ x: pinnacle.x + 0.6, y: pinnacle.y + 0.8, arch, n: 1, rank: 'champion', look: looks.pick(arch, rng.fn()), zone: 'pinnacle' });
   }
-  map.summit = { nodes, ridges, gates: gateDoors, route, peak, start, reg, ridgeOf, valley, shrineWall, pinnacle, peakI };
+  map.summit = { nodes, ridges, route, peak, start, reg, ridgeOf, valley, shrineWall, pinnacle, peakI };
   return {
     map, props, buildings: [], wallHangings: [], torches: [], looks, spawns, chests,
-    start: [start.x, start.y], exit: [peak.x, peak.y + 1.5], seed, alpine: av, nodes, ridges, route, gates: gateDoors, leaps, bosses: SUMMIT_BOSSES,
+    start: [start.x, start.y], exit: [peak.x, peak.y + 1.5], seed, alpine: av, nodes, ridges, route, leaps, bosses: SUMMIT_BOSSES,
   };
 }
