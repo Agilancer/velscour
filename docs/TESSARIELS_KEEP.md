@@ -72,6 +72,10 @@ node tools/tkeep3d_bake.js trophies                       # every trophy sprite 
 What the hero hangs is drawn at runtime, so it can change: each choice becomes one canvas, laid onto its wall plane with
 an affine map (so it is iso-exact), then an ordinary prop sprite (the depth sort and the Castle's occlusion treat it like
 any other prop).
+- Each is a **raster sprite** (`util.js` spriteCanvas/frozen: painted on the CPU, uploaded once and kept), as are the
+  rugs and the Elders' shades. As plain canvases, drawn every frame with the desktop's mipmapped smoothing, Chromium sent
+  each one up to the GPU whole on every draw: ~14 a frame kept the GPU busy past the frame, so the keep dropped frames
+  (24-48 ms hitches on a player's PC) where the town did not. `node tools/tests/keep_frames.js` counts such draws.
 - **Banners (14 places)**: on the back balconies' faces and up the walls between the windows. 16 designs: Tessariel's
   four T banners (vesperwrithe `tess_a/b`), and the holy orders' and free towns' twelve from **Bellmourn**
   `assets/textures/banners/` (none of its eight `velscour_*`). Each casts a soft shadow on the stone.

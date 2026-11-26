@@ -42,6 +42,7 @@ node tools/tests/rings.js                          # ring augments in a live dun
 node tools/tests/flow.js                           # town -> portal -> boss -> exit -> depth 2 -> death -> reload
 node tools/tests/riftgate.js [seeds]               # the Riftgate to VELSCOUR DEFENSE: placed in every town, through it and back
 node tools/tests/keep.js [noshots] [mobile]         # TESSARIEL'S KEEP (docs/TESSARIELS_KEEP.md): the portal, the hall, your heroes walking and talking, the hero walks to the balconies, every panel tab, trade, Vault, Furnish, auto-play's Standard Campaign calls there from town
+node tools/tests/keep_frames.js                    # the keep's frame pacing: no plain canvas re-uploaded every frame (banners, glass, rugs, Elder shades are raster sprites), raster vs plain shots
 node tools/tests/keep_flame.js [zoom]              # the Sacred Flame close up: its round foot in the bowl, the brazier's near rim and blades drawn over it (small, Renown, Kindled, leaping); the four Elders facing it
 node tools/tests/keep_quests.mjs                    # the keep's 387 quests and deeds, their rules on a save, the Ember economy over a full game (no browser)
 node tools/tkeep3d_bake.js [preview x,y|trophies|front|elders] # bake the keep's hall + trophies (needs clones of vesperwrithe and bm), then python tools/tkeep3d.py pack; `front`: only the Flame brazier's near-half mask (brazier_front.json); `elders`: only the four Elder dragons (bm only), then python tools/tkeep3d.py elders
