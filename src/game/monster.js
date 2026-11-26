@@ -14,7 +14,10 @@ import { bodyR, aloft } from '../world/map.js';
 import { toughness, danger, densityXp, riftHold, dmgScale } from '../data/depth.js';
 import { attachSlime, slimeUpdate, courtDef } from './slimecourt.js';
 import { ART_BY_ID, REVIVED, greaterSwap, rollLooks, uniqueSwap } from '../data/bestiary.js';
+import { sandCreatures, sandBosses } from '../data/sandkin.js';
 import { skillMorphFor } from '../data/talents.js';
+import { attachKit, kitTick, kitHurt } from './castlekin.js';
+import { SAND_KITS, attachSandKit, sandMoveCalled, bossYell } from './sandkits.js';
 
 const LEASH = 10; // minions fight what's within this many tiles of the hero
 const CHASE = 1.3, CHASE_MAX = 4.6; // monsters' pursuit pace: x1.3, up to 4.6 tiles/s (the hero runs 4.2) unless faster already
@@ -105,7 +108,9 @@ export class Monster extends Creature {
     return d;
   }
 
-  onDamaged(src) {
+  onDamaged(src, dmg) {
+    if (this.kit) kitHurt(this, src, dmg);
+    else if (this.sandArt) bossYell(this); // a desert boss in a BOSS ROOM: shouts but no kit
     this.regenSuppress = 6.0; // Taking direct damage suppresses regeneration for 6 seconds
     if (!this.affixes) return;
     if (this.affixes.includes('shocking') && (this.shockCd || 0) <= 0) {
@@ -150,6 +155,7 @@ export class Monster extends Creature {
     if (this.shockCd > 0) this.shockCd -= dt;
     if (this.thornCd > 0) this.thornCd -= dt;
     if (this.invuln > 0) this.invuln -= dt;
+    if (this.talkT > 0) { this.talkT -= dt; this.talkAge += dt; } // a sand creature's shout (game/sandkits.js yell)
     const canAct = this.tickStatus(dt, (k, amount, src) => hit(src, this, amount, k === 'burn' ? 'fire' : k === 'poison' ? 'poison' : k === 'bleed' ? 'blood' : 'shadow', { dot: true, crit: false }));
     if (this.dead) return;
     if (this.entering) { this.entering(dt); return; } // ambush arrivals (game/mayhem.js)
@@ -204,7 +210,11 @@ export class Monster extends Creature {
     if (this.state === 'windup' || this.state === 'act') { this.runAction(dt); return; }
     if (this.slime) return slimeUpdate(this, dt); // the Slime Lord's court (game/slimecourt.js)
 
-    if (this.ai === 'boss') return this.bossUpdate(dt);
+    if (this.ai === 'boss') {
+      // a castle boss standing guard plays one of the Castle Creatures' mechanics between its patterns
+      if (this.kit && this.awake) { const t = this.pickTarget(); if (t && kitTick(this, dt, t, dist(this.x, this.y, t.x, t.y))) return; }
+      return this.bossUpdate(dt);
+    }
     if (this.ai === 'raid') return this.raid.update(dt);
     const target = this.pickTarget();
     this.target = target;
@@ -212,6 +222,7 @@ export class Monster extends Creature {
     if (!this.summon && !this.awake) { this.awake = true; this.alertPack(); }
     const d = dist(this.x, this.y, target.x, target.y);
     this.trackTarget(target, dt);
+    if (this.kit && kitTick(this, dt, target, d)) return;
     if (this.moves) {
       if (!this.frenzy && this.hp < this.maxHp * 0.4 && this.moves.includes('frenzy')) this.goFrenzy();
       if ((this.moveCd -= dt) <= 0 && this.trySpecial(target, d)) return;
@@ -836,6 +847,10 @@ export class Monster extends Creature {
     return this.world.map.los(this.x, this.y, ax, ay) ? angleTo(this.x, this.y, ax, ay) : angleTo(this.x, this.y, t.x, t.y);
   }
 
+  /** A sand creature's kit (data/sandkits.js) scales its patterns: n x shot counts, its own shot look and speed. */
+  kn(b) { return this.sandKit ? Math.max(1, Math.round(b * this.sandKit.n)) : b; }
+  kproj(P) { const K = this.sandKit; return K ? { ...P, fx: K.fx, speed: (P.speed || 7) * K.spd } : P; }
+
   goFrenzy() {
     this.frenzy = true;
     this.speed *= 1.35; this.atkCd *= 0.7; this.dmg *= 1.15;
@@ -851,7 +866,9 @@ export class Monster extends Creature {
     const k = pick(ok);
     this.moveCd = MOVES[k].cd * rand(0.8, 1.25) * (this.rank === 'normal' ? 1 : 0.75);
     this.face(angleTo(this.x, this.y, t.x, t.y));
-    return this.beginMove(k, t, d) !== false;
+    if (this.beginMove(k, t, d) === false) return false;
+    if (this.sandKit) sandMoveCalled(this);
+    return true;
   }
 
   /** Wind-up and telegraph of a special move; movePerform runs it. Returns false if it can't be done from here. */
@@ -871,7 +888,7 @@ export class Monster extends Creature {
         this.startAction('mv_whirl', 0.55);
         break;
       case 'combo':
-        this.startAction('mv_combo', 0.2, { target: t, n: 3 });
+        this.startAction('mv_combo', 0.2, { target: t, n: this.kn(3) });
         break;
       case 'quake':
         tele({ kind: 'line', x: this.x, y: this.y, ang, len: 6.5, w: 1, reach: 0.85, dur: 0.6 }); // reach: the Fissure's hit, for auto-play
@@ -887,7 +904,7 @@ export class Monster extends Creature {
         this.startAction('mv_' + k, 0.35, { target: t });
         break;
       case 'burst':
-        this.startAction('mv_burst', 0.25, { target: t, n: this.rank === 'normal' ? 3 : 5 });
+        this.startAction('mv_burst', 0.25, { target: t, n: this.kn(this.rank === 'normal' ? 3 : 5) });
         break;
       case 'lob':
         tele({ kind: 'circle', x: t.x, y: t.y, r: 1.2, dur: 0.35 + 0.35 + d * 0.06 });
@@ -966,7 +983,7 @@ export class Monster extends Creature {
 
   movePerform(a) {
     const w = this.world, el = this.el || 'phys', E = elem(el), dmg = this.dmg, big = Math.sqrt(this.scale);
-    const P = this.proj || { fx: PROJ_FX[el], speed: 7 };
+    const P = this.kproj(this.proj || { fx: PROJ_FX[el], speed: 7 }), K = this.sandKit;
     const shot = (ang, o) => w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang, speed: P.speed || 7, range: (this.range || 7) + 2, fx: P.fx, el, dmg: [dmg * 0.75, dmg], ...o }));
     switch (a.kind) {
       case 'mv_lunge': case 'mv_combo': case 'mv_burst': case 'mv_sweep': case 'mv_spiral': case 'mv_cross': case 'mv_rings':
@@ -988,12 +1005,13 @@ export class Monster extends Creature {
         break;
       case 'mv_fan': {
         const base = a.target && !a.target.dead ? angleTo(this.x, this.y, a.target.x, a.target.y) : this.facing;
-        for (let i = 0; i < 5; i++) shot(base + (i - 2) * 0.2);
+        const n = this.kn(5);
+        for (let i = 0; i < n; i++) shot(base + (i - (n - 1) / 2) * 0.2);
         sfx(P.fx === 'arrow' ? 'bow' : E.sfx, 0.5);
         break;
       }
       case 'mv_web':
-        if (a.target && !a.target.dead) shot(this.leadAng(a.target, 8), { speed: 8, fx: 'blob', el: el === 'phys' ? 'poison' : el, o: { slow: true }, size: 1.3 });
+        if (a.target && !a.target.dead) shot(this.leadAng(a.target, 8), { speed: 8, fx: K ? K.fx : 'blob', el: el === 'phys' ? 'poison' : el, o: { slow: true }, size: 1.3 });
         sfx('acid', 0.4);
         break;
       case 'mv_lob': {
@@ -1004,25 +1022,27 @@ export class Monster extends Creature {
         break;
       }
       case 'mv_snipe':
-        w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang: a.ang, speed: 17, range: 13, fx: P.fx || 'arrow', el, dmg: [dmg * 1.8, dmg * 2.2], size: 1.4, pierce: 99 }));
+        w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang: a.ang, speed: 17 * (K ? K.spd : 1), range: 13, fx: P.fx || 'arrow', el, dmg: [dmg * 1.8, dmg * 2.2], size: 1.4, pierce: 99 }));
         sfx(P.fx === 'arrow' ? 'bow' : E.sfx, 0.7);
         break;
       case 'mv_runes': {
         const pts = [[a.tx, a.ty]];
-        for (const off of [2.1, -2.1]) pts.push([a.tx + Math.cos(a.ang + off) * 1.6, a.ty + Math.sin(a.ang + off) * 1.6]);
+        const rn = this.kn(3);
+        for (let j = 1; j < rn; j++) { const off = 2.1 + (j - 1) / Math.max(1, rn - 2) * (TAU - 4.2); pts.push([a.tx + Math.cos(a.ang + off) * 1.6, a.ty + Math.sin(a.ang + off) * 1.6]); }
         pts.forEach(([x, y], i) => { if (w.map.isFloor(x, y)) w.addHazard(new Delayed({ world: w, src: this, x, y, r: 1.1, delay: 0.9 + i * 0.25, fx: 'explosion', el, dmg: [dmg * 1, dmg * 1.3] })); });
         sfx(E.sfx, 0.5);
         break;
       }
       case 'mv_wall': {
         const px = -Math.sin(a.ang), py = Math.cos(a.ang);
-        for (let i = -3; i <= 3; i++) shot(a.ang, { x: this.x + px * i * 0.55, y: this.y + py * i * 0.55, speed: 5, range: 10, size: 1.2 });
+        const wn = this.kn(7);
+        for (let i = 0; i < wn; i++) { const o = i - (wn - 1) / 2; shot(a.ang, { x: this.x + px * o * 0.55, y: this.y + py * o * 0.55, speed: 5 * (K ? K.spd : 1), range: 10, size: 1.2 }); }
         sfx(E.sfx, 0.5);
         break;
       }
       case 'mv_rain': {
         const g = E.glow;
-        for (let i = 0; i < 7; i++) {
+        for (let i = 0, rn = this.kn(7); i < rn; i++) {
           const r = i ? rand(0.8, 3) : 0, an = rand(TAU), x = a.tx + Math.cos(an) * r, y = a.ty + Math.sin(an) * r;
           if (!w.map.isFloor(x, y)) continue;
           w.addHazard(new Delayed({ world: w, src: this, x, y, r: 1, delay: 0.8 + i * 0.18, fx: el === 'phys' ? 'meteor' : 'explosion', el, dmg: [dmg * 0.8, dmg * 1.1] }));
@@ -1032,7 +1052,7 @@ export class Monster extends Creature {
         break;
       }
       case 'mv_homing':
-        for (let i = 0; i < 3; i++) w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang: this.facing + (i - 1) * 1.1, speed: 3.6, range: 13, home: 0.45, fx: PROJ_FX[el] === 'rock' ? 'orb' : PROJ_FX[el], el, dmg: [dmg * 0.7, dmg * 0.9], size: 1.4 }));
+        for (let i = 0, hn = this.kn(3); i < hn; i++) w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang: this.facing + (hn > 1 ? (i - (hn - 1) / 2) * 2.2 / (hn - 1) : 0), speed: 3.6 * (K ? K.spd : 1), range: 13, home: 0.45, fx: K ? K.fx : PROJ_FX[el] === 'rock' ? 'orb' : PROJ_FX[el], el, dmg: [dmg * 0.7, dmg * 0.9], size: 1.4 }));
         sfx('arcane', 0.5);
         break;
       case 'mv_phase':
@@ -1043,7 +1063,7 @@ export class Monster extends Creature {
         break;
       case 'mv_orbs': {
         const a0 = rand(TAU);
-        for (let i = 0; i < 8; i++) w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang: a0 + (i / 8) * TAU, speed: 3.2, range: 7, fx: PROJ_FX[el] === 'rock' ? 'orb' : PROJ_FX[el], el, dmg: [dmg * 0.7, dmg * 0.9], size: 1.3 }));
+        for (let i = 0, on = this.kn(8); i < on; i++) w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang: a0 + (i / on) * TAU, speed: 3.2 * (K ? K.spd : 1), range: 7, fx: K ? K.fx : PROJ_FX[el] === 'rock' ? 'orb' : PROJ_FX[el], el, dmg: [dmg * 0.7, dmg * 0.9], size: 1.3 }));
         sfx(E.sfx, 0.5);
         break;
       }
@@ -1085,7 +1105,7 @@ export class Monster extends Creature {
       }
       case 'mv_burst': {
         if (a.t < a.k * 0.14) break;
-        const t = a.target, P = this.proj || { fx: PROJ_FX[el], speed: 7 };
+        const t = a.target, P = this.kproj(this.proj || { fx: PROJ_FX[el], speed: 7 });
         if (t && !t.dead) {
           w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang: this.leadAng(t, P.speed || 7) + rand(-0.05, 0.05), speed: P.speed || 7, range: (this.range || 7) + 2, fx: P.fx, el, dmg: [dmg * 0.6, dmg * 0.8] }));
           this.face(angleTo(this.x, this.y, t.x, t.y));
@@ -1109,9 +1129,9 @@ export class Monster extends Creature {
         break;
       }
       case 'mv_spiral': case 'mv_cross': case 'mv_rings': {
-        const P = this.proj || { fx: PROJ_FX[el], speed: 7 }, fx = P.fx === 'arrow' || P.fx === 'rock' ? 'orb' : P.fx || 'orb';
-        const fire = (ang, sp) => w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang, speed: sp, range: 9, fx, el, dmg: [dmg * 0.45, dmg * 0.6], size: 1.1 }));
-        const spec = a.kind === 'mv_spiral' ? [0.07, 1.8, 2] : a.kind === 'mv_cross' ? [0.13, 1.7, 4] : [0.32, 1.0, 14];
+        const P = this.proj || { fx: PROJ_FX[el], speed: 7 }, K = this.sandKit, fx = K ? K.fx : P.fx === 'arrow' || P.fx === 'rock' ? 'orb' : P.fx || 'orb';
+        const fire = (ang, sp) => w.addHazard(new Projectile({ world: w, src: this, x: this.x, y: this.y, ang, speed: sp * (K ? K.spd : 1), range: 9, fx, el, dmg: [dmg * 0.45, dmg * 0.6], size: 1.1 }));
+        const spec = a.kind === 'mv_spiral' ? [0.07, 1.8, this.kn(2)] : a.kind === 'mv_cross' ? [0.13, 1.7, 4] : [0.32, 1.0, this.kn(14)];
         if (a.t < a.k * spec[0]) break;
         if (a.kind === 'mv_rings') { for (let i = 0; i < spec[2]; i++) fire(a.a0 + (i + (a.k % 2) * 0.5) / spec[2] * TAU, 3.4); sfx(elem(el).sfx, 0.35); }
         else {
@@ -1344,12 +1364,12 @@ export function lookFor(world, archId, rnd = Math.random) {
  * variant 1 = "greater" breed: own palette and name, tougher. `look` = {art, swap} from the level's bestiary
  * (rollLooks in data/bestiary.js); without one the level picks. Archetypes with no art keep their pixel sprite.
  */
-export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0, y = 0, variant = 0, look = undefined) {
+export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0, y = 0, variant = 0, look = undefined, noKit = false) {
   const A = ARCH[archId];
   const B = monsterBase(level);
   if (world.riftHold) B.hp *= riftHold(level);
   const depth = world.depth || 1;
-  if (A.seaOfSand && biome.id === 'sea_of_sand') look = { art:'ss_'+archId, swap:null };
+  if (A.seaOfSand && biome.id === 'sea_of_sand') look = sandNativeLook(world, archId, A);
   if (look === undefined) look = lookFor(world, archId);
   const art = look && ART_BY_ID[look.art];
   const biomeEl = biome.el && biome.el !== 'phys' ? biome.el : null;
@@ -1417,12 +1437,34 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
     // but all existing AI, projectiles, rank affixes and drops keep working.
     if(foreign)m.name='Wayward '+m.name;
   }
+  if (art?.sandKin) { // the Sea of Sand bestiary: the large ones a little tougher, a mythic a pack's centrepiece
+    const k = art.mythic ? { hp: 2.6, dmg: 1.35, xp: 3, spd: 0.9 } : art.tier === 'large' ? { hp: 1.15, dmg: 1.08, xp: 1.15, spd: 1 } : art.tier === 'small' ? { hp: 0.9, dmg: 0.95, xp: 1, spd: 1.06 } : art.tier === 'djinn' ? { hp: 1.1, dmg: 1.12, xp: 1.15, spd: 1 } : null;
+    if (k) { m.maxHp *= k.hp; m.hp = m.maxHp; m.dmg *= k.dmg; m.xp *= k.xp; m.speed *= k.spd; }
+    if (art.mythic) { m.mythic = true; if (rank === 'normal') m.aura = '#ffb040'; }
+  }
   if (rank !== 'normal') makeElite(m, rank, depth, world);
   if (art && art.heavenlyFamily && rank === 'boss') {
     m.name = art.name.toUpperCase();
     m.aura = '#f5d78d';
   }
+  if (art && art.kit && !noKit) attachKit(m, art.kit); // the Castle Creatures (data/castlekin.js): each its own mechanic
+  if (art?.sandKin && !noKit && SAND_KITS[art.id]) { // the Sea of Sand bestiary: each its own moves, shots and passives (game/sandkits.js)
+    const K = SAND_KITS[art.id];
+    m.moves = rank === 'normal' && !variant ? K.moves.slice(0, 2) : K.moves.slice();
+    m.sandArt = art; attachSandKit(m, K);
+  }
   return m;
+}
+
+/** A Sea of Sand native's look there: its own art, or (for about half of the archetypes, fixed for the level) one of the
+ * Sea of Sand bestiary (data/sandkin.js) that can play its base archetype. */
+function sandNativeLook(world, archId, A) {
+  const own = { art: 'ss_' + archId, swap: null }, m = world.sandLooks || (world.sandLooks = {});
+  if (!(archId in m)) {
+    const boss = A.ai === 'boss', pool = boss ? sandBosses(A.sandBase) : sandCreatures(A.sandBase);
+    m[archId] = pool.length && Math.random() < (boss ? 0.5 : 0.55) ? pool[Math.floor(Math.random() * pool.length)].id : null;
+  }
+  return m[archId] ? { art: m[archId], swap: null } : own;
 }
 
 export function makeElite(m, rank, depth, world) {

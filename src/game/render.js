@@ -1031,6 +1031,7 @@ export function renderWorld(ctx, world) {
         o.viewH = h + (o.fly ? 16 : 0); // next frame's see-through hole
         if (o.talks && o.talkT > 0) drawTownSpeech(ctx, o, isoX(o.x, o.y), isoY(o.x, o.y) - Math.min(130, h + (o.fly ? 16 : 0))); // Phobos's occupiers grumble and taunt (game/phobostalk.js)
         if (o === G.player && o.talkT > 0 && world.kind === 'town') drawTownSpeech(ctx, o, isoX(o.x, o.y), isoY(o.x, o.y) - Math.min(70, h)); // chatting at the forge
+        else if (o.sandArt && o.talkT > 0 && !o.dead) drawTownSpeech(ctx, o, isoX(o.x, o.y), isoY(o.x, o.y) - Math.min(170, h) - (o.fly ? 16 : 0)); // a sand creature's shout (game/sandkits.js)
         break;
       }
       case 7: drawNpc(ctx, o); break;

@@ -122,3 +122,17 @@ The 1,850 generated "biome native" monsters (`bn_`: existing sprites with Canvas
 and so was the Heavenly monsters' Canvas fallback: `hv_` monsters are cut only from their painted sheets
 (`src/gfx/heavenlymonsters.js`, loaded by `loadArtFor` when a level rolls one). A saved nemesis that wore `bn_` art
 takes a fresh look (`migrate()`).
+
+## Castle Creatures and Bosses (the Thanksgiving update)
+60 sprites (50 creatures, 10 bosses), cut by heat map with `python tools/castlekin.py <zip>` into
+`assets/source/enemies/castle/` and packed by `python tools/process_assets.py enemies castle`. They are in the random
+bestiary (favoured: `KIN_SHARE`), each creature has its own mechanic, and the bosses are guardians and raid bosses.
+See [`CASTLE_CREATURES.md`](CASTLE_CREATURES.md).
+
+## The Sea of Sand bestiary (the Thanksgiving update)
+200 desert sprites (50 small, 70 large, 30 mythic, 50 bosses) are cut by heat map with `python tools/sandkin.py <zip>`
+into `assets/source/enemies/sand/`, and packed by `python tools/process_assets.py enemies sand` (one atlas per sheet).
+They only appear in the deserts: dungeon packs, guardians and BOSS ROOMs, the Sea of Sand, and the pyramid dunes.
+The 310 humanoids and djinn (`VELSCOUR_Sea_of_Sand_Humanoids_and_Djinn_310.zip`) go through the same cutter and are
+packed as the `sand2` set. They are mummies, zombies, pharaohs, nomads, desert knights, djinn and their bosses.
+See [`SEA_OF_SAND_BESTIARY.md`](SEA_OF_SAND_BESTIARY.md).

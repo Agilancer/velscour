@@ -368,6 +368,7 @@ export class Area {
         case 'void': smoke(x, y, 4, '#2a0a40', 1, 8); if (chance(0.3)) spawn({ type: 'glow', x, y, z: 4, vz: 20, life: 0.6, size: 2, color: E.glow, add: true }); break;
         case 'slime': spawn({ type: 'glow', x, y, z: 0, vz: rand(5, 20), life: 0.8, size: 2, size1: 3.5, color: E.glow, add: true }); break;
         case 'storm': if (chance(0.25)) addEffect(new Bolt(x, y, 0, x + rand(-0.5, 0.5), y + rand(-0.5, 0.5), 30, E.glow, 0.12, 1.5)); break;
+        case 'sand': smoke(x, y, rand(2, 14), chance(0.5) ? '#c8a060' : '#9a7a50', 1, 10); break;
         case 'blood': spawn({ type: 'blood', x, y, z: 30, vz: 0, g: 260, life: 1, size: 2, color: '#8a0000' }); break;
         case 'thorn': case 'spike': spawn({ type: 'shard', x, y, z: 0, vz: 25, g: 80, life: 0.5, size: 3, color: this.fx === 'thorn' ? '#4a6a20' : '#9a9aa0', rot: rand(-0.3, 0.3) }); break;
         case 'note': spawn({ type: 'glow', x, y, z: rand(10, 30), vz: 25, life: 0.8, size: 2.5, size1: 0, color: E.glow, add: true }); break;
