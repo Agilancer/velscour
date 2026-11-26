@@ -1,16 +1,22 @@
-"""Cut the Sea of Sand bestiary sheets (VELSCOUR_Sea_of_Sand_200_Sprites.zip) into single sprites.
+"""Cut the Sea of Sand bestiary sheets into single sprites.
 
     python tools/sandkin.py <zip | unpacked folder> [--heat out.png]
 
-Twenty RGBA sheets, each 5 x 2 cells in reading order, every sheet with its own cell size (roster.json `cell`):
-01-05 small creatures (50), 06-12 large monsters (70), 13-15 mythic monsters (30), 16-20 huge bosses (50).
+Two packs, told apart by their roster size, each sheet 5 x 2 cells in reading order with its own cell size
+(roster.json `cell`):
+- VELSCOUR_Sea_of_Sand_200_Sprites.zip -> set `sand`: 01-05 small creatures (50), 06-12 large monsters (70),
+  13-15 mythic monsters (30), 16-20 huge bosses (50).
+- VELSCOUR_Sea_of_Sand_Humanoids_and_Djinn_310.zip -> set `sand2`: 01-05 mummies, 06-09 zombies, 10-11 living
+  pharaohs, 12 undead pharaohs, 13 mummified pharaohs, 14-17 nomads, 18-20 desert knights, 21-25 djinn (50),
+  26-29 humanoid bosses (40), 30-31 djinn bosses (20). The roster's `kind` replaces `tier` and `location` is
+  `suggested_location`.
 They are cut by heat map, not by cell: the sheet's alpha is blurred into a heat map, every warm blob is one piece
 of art (a body, a loose wing tip, a floating orb), each blob goes to the cell its alpha mass sits in, the cell keeps
 every blob bigger than a speck, and the sprite is the raw alpha inside those blobs, trimmed. Each cut is checked
 against the roster's art_rect (the zip's own single PNGs are not used). Written to
-assets/source/enemies/sand/NN_<sheet>/NN_<slug>.png, one folder per sheet; `python tools/process_assets.py enemies
-sand` packs each folder as one atlas (cell i = the folder's i-th file). The catalogue is src/data/sandkin.js
-(assets/source/enemies/sand/roster.json keeps the roster's names, tiers, locations and dune variants).
+assets/source/enemies/<set>/NN_<sheet>/NN_<slug>.png, one folder per sheet; `python tools/process_assets.py enemies
+<set>` packs each folder as one atlas (cell i = the folder's i-th file). The catalogue is src/data/sandkin.js
+(assets/source/enemies/<set>/roster.json keeps the roster's names, tiers, locations and dune variants).
 `--heat` writes the heat maps and cut boxes for a look.
 """
 import io, json, os, re, sys, zipfile
@@ -19,8 +25,7 @@ from PIL import Image, ImageDraw
 from scipy import ndimage
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "assets", "source", "enemies", "sand")
-ROSTER = os.path.join(OUT, "roster.json")
+SETS = {200: "sand", 310: "sand2"}   # roster size -> set
 SIGMA = 4          # heat blur (px): joins a creature's loose parts, keeps neighbours apart
 WARM = 0.06        # heat above this is "art"
 SPECK = 0.015      # blobs under this share of a cell's biggest blob are stray pixels
@@ -87,8 +92,9 @@ def main():
     if not args:
         print(__doc__); sys.exit(1)
     sheets, roster = load(args[0])
-    if len(roster) != 200:
-        raise SystemExit("expected 200 sprites in the roster, got %d" % len(roster))
+    if len(roster) not in SETS:
+        raise SystemExit("expected a roster of %s sprites, got %d" % (" or ".join(map(str, SETS)), len(roster)))
+    OUT = os.path.join(ROOT, "assets", "source", "enemies", SETS[len(roster)])
     by_sheet = {}
     for r in roster:
         by_sheet.setdefault(r["sheet"], []).append(r)
@@ -127,8 +133,9 @@ def main():
             img.thumbnail((1000, 400))
             previews.append(img)
     print("largest cut vs roster art_rect: %d px" % worst)
-    keep = [{k: r[k] for k in ("id", "name", "tier", "location", "suggested_dune_variants", "suggested_world_height_px")} for r in roster]
-    with open(ROSTER, "w", encoding="utf-8") as f:
+    keep = [{"id": r["id"], "name": r["name"], "tier": r.get("tier") or r["kind"], "location": r.get("location") or r["suggested_location"],
+             "suggested_dune_variants": r["suggested_dune_variants"], "suggested_world_height_px": r["suggested_world_height_px"]} for r in roster]
+    with open(os.path.join(OUT, "roster.json"), "w", encoding="utf-8") as f:
         f.write("[\n" + ",\n".join(json.dumps(r) for r in keep) + "\n]\n")
     if heat_out:
         H = sum(p.height for p in previews)
