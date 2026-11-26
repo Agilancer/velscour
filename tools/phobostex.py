@@ -22,14 +22,15 @@ FLOORS = {   # name: source (2 x 2 tiles each)
 }
 PROPS = {'bookcase': ('03_17_book_spines', 180), 'jar_shelf': ('03_18_jar_shelves', 150)}
 TONE = 0.74   # brightness
+BRIGHT = {'rutted_setts': 0.95, 'slum_cobbles': 0.95, 'ash_street': 0.9, 'walk_paving': 0.92, 'ward_paving': 0.92, 'wharf_deck': 0.9, 'bone_joint_flags': 0.88, 'bridge_ashlar': 0.88}   # the streets: they read under the night light
 SAT = 0.78    # saturation kept
 
 
-def tex(bm, src, size):
+def tex(bm, src, size, tone=TONE):
     im = Image.open(os.path.join(bm, T + src + '.png')).convert('RGB').resize((size, size), Image.LANCZOS)
     a = np.asarray(im).astype(np.float32) / 255
     g = a.mean(axis=2, keepdims=True)
-    return np.clip((g + (a - g) * SAT) * TONE, 0, 1)
+    return np.clip((g + (a - g) * SAT) * tone, 0, 1)
 
 
 def sample(t, u, v):
@@ -85,7 +86,7 @@ def box(front, wood, hz, ss=3):
 
 def main():
     bm = sys.argv[1] if len(sys.argv) > 1 else '../bm-phobos'
-    tiles = [(f'{n}', q, diamond(tex(bm, s, 512), q % 2, q // 2)) for n, s in FLOORS.items() for q in range(4)]
+    tiles = [(f'{n}', q, diamond(tex(bm, s, 512, BRIGHT.get(n, TONE)), q % 2, q // 2)) for n, s in FLOORS.items() for q in range(4)]
     wood = tex(bm, '02_08_oak_planks', 256)
     props = {n: box(tex(bm, s, 512), wood, hz) for n, (s, hz) in PROPS.items()}
     cols = 8

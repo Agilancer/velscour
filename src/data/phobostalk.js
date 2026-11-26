@@ -24,11 +24,11 @@ const FOE_IDLE = [
   'I bet the hero dies in the Barbican.', 'I\'ve a coin on the hero reaching the castle.', 'the moat plain was green, once.',
   'the Herald talks to the ravens.', 'someone painted a bell on the barracks wall.', 'the Mages\' Rise lights up at midnight.',
   'I swear the cobbles move in {place}.', 'they found another one hanging in the Rookeries.', 'my feet hurt, my back hurts, my soul hurts.',
-  'the Tanners\' Row water is green again.', 'I need a new helmet. This one leaks.', 'the castle kitchens are serving \'meat\'. Just \'meat\'.',
-  'the Balcony Duellist challenged a pigeon.', 'the pigeon won.', 'I\'ve been demoted to \'spare\'.', 'the barracks roof fell in again.',
+  'the Tanners\' Steps water is green again.', 'I need a new helmet. This one leaks.', 'the castle kitchens are serving \'meat\'. Just \'meat\'.',
+  'the Balcony Duellist challenged a pigeon, and lost.', 'I\'ve been demoted to \'spare\'.', 'the barracks roof fell in again.',
   'they say the King\'s Mile used to have a king on it.', 'the chains in Chainmarket rattle by themselves.', 'my mate went into the castle. Came out quieter.',
   'I keep a lucky bone. It\'s not working.', 'they\'ve run out of rope at the gallows.', 'there\'s gold in the Wharf if you don\'t mind eels.',
-  'the Boneyards dig themselves up at night.', 'the drawbridge chain squeals like a pig.', 'the fog in {place} tastes of copper.',
+  'the Bone Yards dig themselves up at night.', 'the drawbridge chain squeals like a pig.', 'the fog in {place} tastes of copper.',
 ];
 // a second voice answering the first
 const FOE_REPLY = ['Shut it.', 'You said that yesterday.', 'Keep your voice down.', 'Aye, and?', 'Don\'t let the sergeant hear.', 'Heh. True enough.',
@@ -36,7 +36,7 @@ const FOE_REPLY = ['Shut it.', 'You said that yesterday.', 'Keep your voice down
   'I heard worse.', 'Pay\'s pay.', 'I don\'t want to know.', 'Watch the street, idiot.', 'Tell it to {lord}.', 'And whose fault is that?',
   'You owe me three coppers.', 'Ha! Good one.', 'Not funny.', 'That\'s the castle for you.', 'Pass the flask.', 'Wake me when it\'s over.',
   'I\'m not paid to think.', 'Shh. Something moved.', 'Who told you that?', 'Lies. All lies.', 'Could be worse. Could be raining.',
-  'It\'s raining.', 'Don\'t say his name.', 'Bet you a copper it\'s true.', 'I\'ll believe it when I see it.', 'Keep walking.'];
+  'Don\'t say his name.', 'Bet you a copper it\'s true.', 'I\'ll believe it when I see it.', 'Keep walking.'];
 // ---------------------------------------------------------------- at the hero
 const TAUNT_OPEN = ['', '', 'Oi!', 'Hah!', 'Fresh meat!', 'There you are!', 'Look lively, lads!', 'Hero!', 'Gotcha!', 'Over here!', 'You!',
   'Come on, then!', 'Ha ha!', 'Ooh, a shiny one!', 'For the castle!', 'For the Herald!', 'Velscour wills it!', 'Hold the line!', 'Get \'em!',
@@ -78,7 +78,7 @@ const GOOD = ['the ward lords stand in the squares. Break them and the gate open
   'the good folk of {place} are with you.', 'they say Velscour was a man, once.', 'the Barbican winch-house lowers the drawbridge.',
   'the Mages\' Rise still has a friend or two.', 'go with the bells, hero.', 'we\'ll light a candle for you tonight.',
   'the Bone Yards are quiet by day. Mostly.', 'there\'s water at the wells, and it\'s clean.', 'don\'t trust the ones who smile in {place}.',
-  'the castle has twenty-four wings. Twenty-four!', 'the Library at the top of the castle holds the old maps.', 'you look tired. Rest a moment.',
+  'the castle has ten wings, a stair between each.', 'the Library, halfway up the castle, holds the old maps.', 'you look tired. Rest a moment.',
   'I mend boots, if you ever need it.', 'the occupiers gamble by the tannery. Easy pickings.', 'every lord you break, we breathe easier.'];
 // two good folk talking to each other: [first, answer]
 const CONVO = [
@@ -113,7 +113,7 @@ export const TALK = {
   questOffer: [[''], QUEST_OFFER], questActive: [[''], QUEST_ACTIVE], questDone: [[''], QUEST_DONE],
 };
 export const CONVOS = CONVO;
-const fill = (s, ctx) => { const t = s.replace(/\{place\}/g, (ctx.place || 'Phobos').replace(/^The /, 'the ')).replace(/\{lord\}/g, ctx.lord || 'the ward lord'); return t.charAt(0).toUpperCase() + t.slice(1); };
+const fill = (s, ctx) => { const t = s.replace(/\{place\}/g, (ctx.place || 'Phobos').replace(/^The /, 'the ')).replace(/\{lord\}/g, (ctx.lord || 'the ward lord').replace(/^The /, 'the ')); return t.charAt(0).toUpperCase() + t.slice(1); };
 /** One line of a kind, for a speaker in a place. */
 export function talkLine(kind, ctx = {}, rnd = Math.random) {
   const [O, L] = TALK[kind], pk = (a) => a[Math.floor(rnd() * a.length)];

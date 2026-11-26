@@ -334,11 +334,20 @@ function buildingRect(b) {
 }
 
 // b.flip: mirrored, which moves the door to the building's other street face (world/town.js)
+const tintCache = new Map();
+/** A building's art toned for its ward (b.tint: a canvas filter, Phobos's districts), cut once and kept. */
+function tintedArt(b) {
+  const s = b.spr, key = `${s.sx},${s.sy},${s.w},${s.h}|${b.tint}`;
+  let c = tintCache.get(key);
+  if (!c) { c = document.createElement('canvas'); c.width = s.w; c.height = s.h; const g = c.getContext('2d'); g.filter = b.tint; g.drawImage(s.img, s.sx, s.sy, s.w, s.h, 0, 0, s.w, s.h); if (s.img.complete !== false) tintCache.set(key, c); }
+  return c;
+}
 function drawBuilding(ctx, b, alpha) {
   const s = b.spr, [x, y, w, h] = buildingRect(b);
+  const [img, sx, sy] = b.tint ? [tintedArt(b), 0, 0] : [s.img, s.sx, s.sy];
   if (alpha < 1) ctx.globalAlpha = alpha;
-  if (b.flip) { ctx.save(); ctx.translate(x + w, y); ctx.scale(-1, 1); ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, 0, 0, w, h); ctx.restore(); }
-  else ctx.drawImage(s.img, s.sx, s.sy, s.w, s.h, x, y, w, h);
+  if (b.flip) { ctx.save(); ctx.translate(x + w, y); ctx.scale(-1, 1); ctx.drawImage(img, sx, sy, s.w, s.h, 0, 0, w, h); ctx.restore(); }
+  else ctx.drawImage(img, sx, sy, s.w, s.h, x, y, w, h);
   if (alpha < 1) ctx.globalAlpha = 1;
 }
 
@@ -993,7 +1002,7 @@ export function renderWorld(ctx, world) {
         const [x, y, w, h] = buildingRect(o);
         // see-through over anyone behind it: the middle of the art, or (a footprint we know: Phobos's 3 x 3 houses) anyone
         // behind the footprint and under the roof's edge
-        const fp = o.fp || 3, back = o.x0 != null && views.some((v) => v.at && v.at[0] < o.x0 + fp + 0.4 && v.at[1] < o.y0 + fp + 0.4 && v.at[0] + v.at[1] < o.x0 + o.y0 + fp * 2 - 0.5 &&v.x > x && v.x < x + w && v.y1 > y && v.y0 < y + h * 0.9);
+        const fp = o.fp || 3, back = o.x0 != null && views.some((v) => v.at && v.at[0] < o.x0 + fp && v.at[1] < o.y0 + fp && v.at[0] + v.at[1] < o.x0 + o.y0 + fp * 2 - 0.5 &&v.x > x && v.x < x + w && v.y1 > y && v.y0 < y + h * 0.9);
         const a = back || hides([x + w * 0.15, y, w * 0.7, h * 0.85], o.depth) ? 0.35 : 1;
         drawBuilding(ctx, o, a);
         break;

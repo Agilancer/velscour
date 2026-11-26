@@ -15,15 +15,18 @@ const VIEW = 15;   // only those near enough to be seen speak
 
 /** Phobos's voices for one world. `placeOf(x, y)` names where a speaker stands ({place}, {lord}); `folk` the townsfolk;
  *  `homes(n)` the street spots a folk walks between. Returns the per-frame update. */
-export function phobosTalk(world, { placeOf, folk = [], homes = () => null, questDistrict = () => null } = {}) {
-  let foeT = 2, convoT = 4; const later = [];   // [seconds, fn]: answers, on game time
+export function phobosTalk(world, { placeOf, folk = [], homes = () => null, questDistrict = () => null, errands = null } = {}) {
+  let foeT = 2, convoT = 4, deathT = 0; const later = [];   // [seconds, fn]: answers, on game time
   const ctxAt = (x, y) => placeOf(x, y) || {};
   // ---- the folk: a walk round home, talk, errands
   for (const n of folk) {
     n.talkText = ''; n.talkT = 0; n.talkAge = 0; n.animT = rand(0, 5); n.walkT = 0; n.home = [n.x, n.y]; n.wanderT = rand(1, 8); n.greetT = 0;
     const good = n.folk?.cat !== 'gray' && !n.hub;
-    if (good && chance(0.45)) n.errand = { state: 'offer', need: 6 + Math.floor(Math.random() * 7), got: 0, district: questDistrict(n) };
-    if (n.errand) n.bounty = n.errand;   // the "!" / "?" over the head (render.js drawNpc)
+    // errands keep across visits (S.errands, by name): one offered, taken or done stays so
+    if (errands && errands[n.name]) n.errand = errands[n.name];
+    else if (good && chance(0.45)) { n.errand = { state: 'offer', need: 6 + Math.floor(Math.random() * 7), got: 0, district: questDistrict(n) }; if (errands) errands[n.name] = n.errand; }
+    // the "!" over the head (render.js drawNpc) while it's on offer or ready to hand in, "?" while it runs
+    if (n.errand) { const e = n.errand; n.bounty = { get state() { return e.state === 'active' && e.got >= e.need ? 'offer' : e.state; } }; }
     const base = n.use;
     n.use = () => {
       const e = n.errand, c = ctxAt(n.x, n.y);
@@ -62,11 +65,12 @@ export function phobosTalk(world, { placeOf, folk = [], homes = () => null, ques
   const near = (x, y, r) => { const p = world.player; return p && dist(p.x, p.y, x, y) < r; };
   return function talk(dt) {
     const p = world.player; if (!p) return;
+    deathT -= dt;
     for (let i = later.length - 1; i >= 0; i--) if ((later[i][0] -= dt) <= 0) { const f = later[i][1]; later.splice(i, 1); f(); }
     // the folk: two neighbours stop and talk
     if ((convoT -= dt) <= 0) {
       convoT = rand(5, 11);
-      const idle = folk.filter((n) => !n.hidden && !busy(n) && near(n.x, n.y, VIEW));
+      const idle = folk.filter((n) => !n.hidden && !busy(n) && n.folk?.cat !== 'gray' && near(n.x, n.y, VIEW));   // (the good folk; the gray keep to themselves)
       for (const a of idle) {
         const b = idle.find((o) => o !== a && dist(o.x, o.y, a.x, a.y) < 6); if (!b) continue;
         const [l1, l2] = convoLines(ctxAt(a.x, a.y)); a.path = b.path = null; a.flip = b.x - a.x - (b.y - a.y) < 0; b.flip = !a.flip;
@@ -77,7 +81,7 @@ export function phobosTalk(world, { placeOf, folk = [], homes = () => null, ques
     for (const m of world.creatures) {
       if (!m.dead || m._counted || m.team === p.team || m.clutter) continue;
       m._counted = true;
-      if (m.talks) { const l = talkLine('death', ctxAt(m.x, m.y)); if (near(m.x, m.y, VIEW) && chance(0.35)) floatText(m.x, m.y, 66, l, '#d8c8a8', 11, { life: 2.2 }); }
+      if (m.talks && deathT <= 0 && near(m.x, m.y, VIEW) && chance(0.35)) { deathT = 0.8; const l = talkLine('death', ctxAt(m.x, m.y)); if (l) floatText(m.x, m.y, 66, l, '#d8c8a8', 11, { life: 2.2 }); }
       const d = m.district;
       if (d != null) for (const n of folk) if (n.errand?.state === 'active' && n.errand.district === d && n.errand.got < n.errand.need && ++n.errand.got === n.errand.need) UI.log(`${n.name}: that's enough of them. Come and see me.`, '#ffd860');
     }
@@ -94,7 +98,7 @@ export function phobosTalk(world, { placeOf, folk = [], homes = () => null, ques
     // on watch: a word to a mate nearby, and their answer
     say(m, talkLine('foeIdle', c), 3.8);
     const mate = cands.find((o) => o !== m && dist(o.x, o.y, m.x, m.y) < 4);
-    if (mate) later.push([2.6, () => { if (!mate.dead) say(mate, talkLine('foeReply', c), 2.8); }]);
+    if (mate) later.push([2.6, () => { if (!mate.dead && world.creatures.filter((o) => o.talkT > 0).length < 4) say(mate, talkLine('foeReply', c), 2.8); }]);
   };
 }
 /** Mark the foes that talk (painted art, not clutter, statues or summons) and where they belong. */

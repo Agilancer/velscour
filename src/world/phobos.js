@@ -9,7 +9,7 @@ import { RNG, clamp } from '../core/util.js';
 import { finishMap, placeObstacles, wallMounts } from './dungeon.js';
 import { wallHangingCount } from '../gfx/wallhangings.js';
 import { DISTRICTS } from '../data/phobos.js';
-import { townObject } from './town.js';
+import { townObject, DOOR_X } from './town.js';
 import { A } from '../core/assets.js';
 import { TW } from '../core/view.js';
 import { PH_V, TOWN_GROUND, floorV } from '../gfx/phobostex.js';
@@ -111,9 +111,9 @@ export function generatePhobos(biome, tileset, seed = PHOBOS_SEED) {
   for (let y = 6; y < H - 8; y += 4) for (let x = gateW[0] + 6; x < W - 8; x += 4) {
     const d = DISTRICTS[dist[I(x, y)]] || DISTRICTS[0];
     const rich = d.ground === 'rich' || d.id === 'dukes', poor = d.ground === 'slums' || d.ground === 'cinder';
-    const w = rng.int(poor ? 4 : 5, rich ? 10 : 8), h = rng.int(poor ? 4 : 5, rich ? 9 : 7), ox = x + rng.int(-1, 1), oy = y + rng.int(-1, 1);
+    const w = 3 * rng.int(1, rich ? 3 : 2), h = 3 * rng.int(1, poor ? 2 : 3), ox = x + rng.int(-1, 1), oy = y + rng.int(-1, 1);
     if (!free(ox, oy, w, h) || (d.id === 'cinder' && rng.chance(0.35)) || (d.id === 'boneyards' && rng.chance(0.4))) continue;
-    const hollow = w >= 6 && h >= 6 && rng.chance(rich ? 0.2 : poor ? 0.12 : 0.15);   // most stand shut: a city of roofs, not of rooms
+    const hollow = false;   // every house stands roofed (a stone room inside a ring of wall read as a dungeon, and its walls as a tile thick)
     if (!hollow) { houses.push({ x: ox, y: oy, w, h, district: d.id, solid: true, rich, poor }); for (let yy = oy; yy < oy + h; yy++) for (let xx = ox; xx < ox + w; xx++) solid[I(xx, yy)] = 1; continue; }
     rect(ox, oy, w, h, 0);
     const hs = { x: ox, y: oy, w, h, district: d.id, hollow };
@@ -155,7 +155,7 @@ export function generatePhobos(biome, tileset, seed = PHOBOS_SEED) {
   for (let j = 0; j < rooms.length; j++) rooms[j] = rotRoom(rooms[j]);
   finishMap(map, tileset, rng, null, rooms, []);
   const props = placeObstacles(map, rooms.filter((r) => r.house && r.w >= 5 && r.h >= 5), tileset, rng, rooms[0]);
-  const mounts = wallMounts(map, rng, biome, () => 0.42, 0.3, wallHangingCount(biome)), wild = (o) => planX(o.mountX ?? o.x, o.mountY ?? o.y) < gateW[0] - 8;
+  const mounts = wallMounts(map, rng, biome, () => 0.42, 0.3, wallHangingCount(biome)), wild = (o) => planX(o.mountX ?? o.x, o.mountY ?? o.y) < gateW[0] + 1;   // (none on the curtain's outer face either)
   const torches = mounts.torches.filter((t) => !wild(t)), wallHangings = mounts.wallHangings.filter((h) => !wild(h));   // no sconces out in the wilds
 
   // ---- the ground: cobbled streets, flagged squares, packed earth yards (one base each), worn gutters by the walls
@@ -183,7 +183,13 @@ export function generatePhobos(biome, tileset, seed = PHOBOS_SEED) {
   void bases; void dark;
   // ---- the solid blocks: rows of the town pack's houses, 3 x 3 apiece, on their own ground
   const buildings = [], k = TW / A.town.meta.tile[0], BS = 1.5;
-  const NAMES = { poor: ['cottage', 'cottage', 'stables', 'bakery'], mid: ['cottage', 'bakery', 'inn', 'socket', 'weapons', 'armor'], rich: ['inn', 'enchant', 'gems', 'alchemist', 'gamble'] };
+  // homes, not Herrington's shop fronts; each ward's walls and roofs toned after Bellmourn's PHOBOS-TEXTURES (smoky brick
+  // in the poor wards, soot in the Cinder, violet-grey ashlar up the hill)
+  const NAMES = { poor: ['cottage', 'cottage', 'stables', 'bakery'], mid: ['cottage', 'cottage', 'bakery', 'inn'], rich: ['inn', 'cottage', 'inn', 'alchemist'] };
+  const TINT = { cinder: 'brightness(0.55) saturate(0.35)', rookeries: 'sepia(0.35) brightness(0.78) saturate(0.7)', wharf: 'hue-rotate(-12deg) brightness(0.8) saturate(0.6)', barbican: 'brightness(0.82) saturate(0.7)',
+    boneyards: 'grayscale(0.6) brightness(0.85)', tanners: 'sepia(0.25) brightness(0.85)', mages: 'hue-rotate(205deg) saturate(0.5) brightness(1.08)', dukes: 'hue-rotate(195deg) saturate(0.45) brightness(1.12)',
+    approach: 'hue-rotate(210deg) saturate(0.4) brightness(1.05)', barracks: 'grayscale(0.35) brightness(0.85)', chainmarket: 'saturate(0.8) brightness(0.92)' };
+  const opn = (mx, my) => mx >= 0 && my >= 0 && mx < MW && my < PW && map.t[my * MW + mx] && !map.block[my * MW + mx];
   for (const b of blocks) {
     for (let yy = b.y; yy < b.y + b.h; yy++) for (let xx = b.x; xx < b.x + b.w; xx++) map.block[I(xx, yy)] = 1;
     const names = NAMES[b.rich ? 'rich' : b.poor ? 'poor' : 'mid'];
@@ -191,8 +197,16 @@ export function generatePhobos(biome, tileset, seed = PHOBOS_SEED) {
       if (b.district === 'cinder' && rng.chance(0.3)) continue;   // burnt-out plots
       const name = rng.pick(names), spr = townObject('b_' + name); if (!spr) continue;
       const [cx, cy] = R(x0 + 1.5, y0 + 1.5);
-      buildings.push({ cx, cy, spr, k: k * BS, depth: cx + cy, flip: rng.chance(0.5), name, sx: rng.chance(0.5), x0: y0, y0: PW - x0 - 3 });
+      buildings.push({ cx, cy, spr, k: k * BS, depth: cx + cy, name, x0: y0, y0: PW - x0 - 3, tint: TINT[b.district] || null });
     }
+  }
+  // the doors: onto whichever of the two faces the art can show (+x or +y on the map) meets the street; the art's own
+  // door side (DOOR_X: +x) mirrored to the other when that is where the street is
+  for (const b of buildings) {
+    const sy = [0, 1, 2].filter((d) => opn(b.x0 + d, b.y0 + 3)).length, sx = [0, 1, 2].filter((d) => opn(b.x0 + 3, b.y0 + d)).length;
+    const onX = DOOR_X.has(b.name), wantX = sx > sy || (sx && !sy);
+    b.flip = onX ? !wantX && sy > 0 : wantX;
+    const doorX = onX !== b.flip; b.door = doorX ? [b.x0 + 3.6, b.y0 + 1.5] : [b.x0 + 1.5, b.y0 + 3.6]; b.street = (doorX ? sx : sy) > 0;
   }
   // ---- set pieces: each square dressed for its ward, the moat plain strewn with the siege's leavings
   const xy = (x, y) => { const [a, b] = R(x, y); return { x: a, y: b }; };
@@ -263,14 +277,16 @@ export function generatePhobos(biome, tileset, seed = PHOBOS_SEED) {
   for (const h of open) { const [mx, my] = R(h.mx, h.my); Object.assign(h, { x: h.y, y: PW - h.x - h.w, w: h.h, h: h.w, mx, my, door: h.door && R(...h.door) }); }
   for (const s of Object.values(squares)) Object.assign(s, xy(s.x, s.y));
   const chests = [];
-  for (const h of open) if (rng.chance(0.18) && map.walkable(h.mx, h.my)) chests.push({ x: h.mx, y: h.my, rare: rng.chance(0.2) });
+  for (const [x, y] of yards) if (rng.chance(0.004)) { const [mx, my] = R(x + 0.5, y + 0.5); if (map.walkable(mx, my)) chests.push({ x: mx, y: my, rare: rng.chance(0.2) }); }   // left in the yards
+  // a ward's hidden house: the front door of a house on the street near its square
   const hubHouse = (dId) => {
-    const s = squares[dId];
-    return open.filter((h) => h.district === dId).sort((a, b) => Math.hypot(a.mx - s.x, a.my - s.y) - Math.hypot(b.mx - s.x, b.my - s.y))[0] || null;
+    const s = squares[dId], k = DISTRICTS.findIndex((d) => d.id === dId);
+    const b = buildings.filter((b) => b.street && map.walkable(...b.door) && dist[map.tileIdx(...b.door)] === k).sort((a, c) => Math.hypot(a.cx - s.x, a.cy - s.y) - Math.hypot(c.cx - s.x, c.cy - s.y))[0];
+    return b ? { mx: b.door[0], my: b.door[1], building: b } : null;
   };
   return {
     map, rooms, props, chests, torches, wallHangings, buildings, spots, squares, houses: open, district: dist, hubHouse,
-    start: R(14.5, CY + 0.5), exit: R(gateE[0] - 0.5, CY + 0.5), castleGate: R(gateE[0] - 0.5, CY + 0.5), gateW: R(...gateW), sill: R(86, CY),
+    start: R(14.5, CY + 0.5), pickets: [R(30, CY + 2), R(57, chasmY(57)), R(72, chasmY(72)), R(95, CY - 3)], exit: R(gateE[0] - 0.5, CY + 0.5), castleGate: R(gateE[0] - 0.5, CY + 0.5), gateW: R(...gateW), sill: R(86, CY),
     spawns: [], seed,
   };
 }

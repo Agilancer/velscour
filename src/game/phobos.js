@@ -27,7 +27,7 @@ import { generateCastleFloor, LAYOUTS, SHEER_LAYOUTS } from '../world/castlevels
 import { WING_RAIDS, VELSCOUR_RAIDS } from './phobosraids.js';
 import { townObject } from '../world/town.js';
 import { phobosTalk, makeTalker } from './phobostalk.js';
-import { loadPhobosTex, phobosFloors, phobosProp, floorV, PH_V } from '../gfx/phobostex.js';
+import { loadPhobosTex, phobosFloors, phobosProp, floorV, PH_V, phobosTexReady } from '../gfx/phobostex.js';
 import { A } from '../core/assets.js';
 import { TW } from '../core/view.js';
 
@@ -141,24 +141,30 @@ const WING_FLOOR = {
 // shelves along the back walls (and, in the Library, rows of stacks): book spines and jar shelves from the same set
 const WING_SHELVES = { library: ['bookcase', 'bookcase', 'bookcase', 'jar_shelf'], sanctuaries: ['bookcase', 'jar_shelf'], greathall: ['jar_shelf'], armoury: [], throne: ['bookcase'] };
 function textureFloor(g, w) {
-  const m = g.map; if (m.sheer || m.hgt) return;
+  const m = g.map; if (m.sheer || m.hgt || !phobosTexReady()) return;   // (no atlas: the biome's own floors)
   const [hall, room] = WING_FLOOR[w.id] || WING_FLOOR.gatehouse, inRoom = new Uint8Array(m.w * m.h);
   for (const r of g.rooms || []) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (x >= 0 && y >= 0 && x < m.w && y < m.h) inRoom[y * m.w + x] = 1;
   for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { const i = y * m.w + x; if (m.t[i]) m.v[i] = floorV(inRoom[i] ? room : hall, x, y); }
   g.phTex = true;
   const kinds = WING_SHELVES[w.id]; if (!kinds || !kinds.length) return;
   const k = TW / 160, doorway = (r, tx, ty) => [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]].some(([dx, dy]) => { const X = tx + dx, Y = ty + dy; return (X < r.x || Y < r.y || X >= r.x + r.w || Y >= r.y + r.h) && m.t[Y * m.w + X]; });
+  // never on the floor's own places (start, exit, guardian, chests, packs, leap stones), and never cutting floor off
+  const keep = [g.start, g.exit, g.guardian, ...(g.chests || []).map((c) => [c.x, c.y]), ...(g.spawns || []).map((s) => [s.x, s.y]), ...(g.leaps || []).flatMap((L) => [[L.x, L.y], [L.tx, L.ty]])].filter(Boolean);
+  const placed = [];
   const shelf = (r, tx, ty, flip, x, y) => {
     const i = ty * m.w + tx, spr = phobosProp(kinds[(tx + ty) % kinds.length]);
-    if (!spr || !m.t[i] || m.block[i] || doorway(r, tx, ty)) return;
-    g.props.push({ kind: 'scatter', x, y, spr, k, flip, fixed: true }); m.block[i] = 1;
+    if (!spr || !m.t[i] || m.block[i] || doorway(r, tx, ty) || keep.some(([a, b]) => Math.abs(a - tx - 0.5) < 2 && Math.abs(b - ty - 0.5) < 2)) return;
+    const pr = { kind: 'scatter', x, y, spr, k, flip, fixed: true }; g.props.push(pr); m.block[i] = 1; placed.push([i, pr]);
   };
+  const reach = () => { const seen = new Uint8Array(m.w * m.h), q = [Math.floor(g.start[1]) * m.w + Math.floor(g.start[0])]; seen[q[0]] = 1; for (let h = 0; h < q.length; h++) { const j = q[h]; for (const n of [j + 1, j - 1, j + m.w, j - m.w]) if (!seen[n] && m.t[n] && !m.block[n]) { seen[n] = 1; q.push(n); } } return q.length; };
+  const before = reach();
   for (const r of g.rooms || []) {
     if (r.w < 6 || r.h < 6 || r === g.raid) continue;
     for (let x = r.x + 1; x < r.x + r.w - 2; x++) shelf(r, x, r.y, false, x + 0.5, r.y + 0.22);    // against the back wall (-y), facing the room
     for (let y = r.y + 1; y < r.y + r.h - 2; y++) shelf(r, r.x, y, true, r.x + 0.22, y + 0.5);      // and the other (-x)
-    if (w.id === 'library') for (let y = r.y + 3; y < r.y + r.h - 3; y += 3) for (let x = r.x + 2; x < r.x + r.w - 2; x++) if ((x - r.x) % 5 !== 4) shelf(r, x, y, false, x + 0.5, y + 0.5);   // the stacks, gaps to walk through
   }
+  // (the Library's own stacks come from its layout: world/castlevelscour.js). Anything sealed off: the shelves go
+  if (reach() < before - placed.length) for (const [i, pr] of placed) { m.block[i] = 0; g.props.splice(g.props.indexOf(pr), 1); }
 }
 
 // ------------------------------------------------------------------------------------------- shared run bits
@@ -179,7 +185,7 @@ function createCityRun(world, gen, biome, depth) {
   const c = G.char, S = phobosState(c), game = G.game;
   townPortalTo(world, game); clearFlight();
   // the road in wears the town pack's ground: grass, meadow, a trampled verge, then dirt, mud and gravel by the moat
-  world.extraFloors = phobosFloors(); world.extraBase = PH_V;
+  world.extraFloors = phobosFloors(); world.extraBase = PH_V;   // (the town pack's ground stands in for Phobos's own if its atlas failed: phobosFloors)
   world.phobos = true;
   world.roster = [...new Set(DISTRICTS.flatMap((d) => d.foes.map((a) => a.arch)))];
   const exit = world.portals.find((p) => p.type === 'exit');
@@ -211,6 +217,8 @@ function createCityRun(world, gen, biome, depth) {
     });
   });
   const fill = (P) => { const n = 2 + Math.floor(Math.random() * 3); for (let i = 0; i < n; i++) { const [x, y] = i ? world.map.randomNear(P.at[0], P.at[1], 1.8) || P.at : P.at; const art = pick(P.d.foes); if (art) P.live.push(makeTalker(spawnFoe(world, biome, art, lvlOf(P.d) + (i === 0 && chance(0.2) ? 1 : 0), i === 0 && chance(0.15) ? 'champion' : 'normal', x, y), P.k)); } };
+  // the occupiers' pickets on the road in: the Marches, the Chasm's two chambers, the Sill (bm PHOBOS-LAYOUT's patrols)
+  for (const at of gen.pickets || []) packs.push({ d: DISTRICTS[0], k: 0, at: world.map.randomNear(at[0], at[1], 2.5) || at, live: [] });
   for (const P of packs) fill(P);
   // the folk: gray residents (peaceable until crossed: one in five turns when you come near) and the good (helpers)
   const folk = [];
@@ -234,7 +242,7 @@ function createCityRun(world, gen, biome, depth) {
   // the streets talk (game/phobostalk.js): folk walk their own lanes, chat and set errands; the occupiers grumble and taunt
   const placeAt = (x, y) => { const k = gen.district[world.map.tileIdx(x, y)], d = DISTRICTS[k]; if (!d) return { place: 'the road in' }; const L = lords.find((m) => !m.dead && m.wardDistrict === k); return { place: d.name, lord: L ? L.name : null }; };
   for (const L of lords) L.wardDistrict = L.district;
-  const talk = phobosTalk(world, { placeOf: placeAt, folk, homes: (n) => gen.spots[DISTRICTS.indexOf(n.district)], questDistrict: (n) => DISTRICTS.indexOf(n.district) });
+  const talk = phobosTalk(world, { placeOf: placeAt, folk, errands: (S.errands ||= {}), homes: (n) => gen.spots[DISTRICTS.indexOf(n.district)], questDistrict: (n) => DISTRICTS.indexOf(n.district) });
   let respawnT = 60;
   const run = {
     title: 'City State Phobos', description: 'Break the ward lords to open the Castle Gate.', active: true, completed: false, failed: false, markers: [], phobosCity: true,
@@ -466,7 +474,7 @@ export async function enterActIII(game, biome, depth, title, sub) {
 }
 export function enterPhobos(game) {
   const S = phobosState(); S.city = true; G.char.lastTown = 'act3';
-  return enterActIII(game, BIOMES.phobos_city, Math.round(cityDepth(0)), 'City State Phobos', 'The Sill, above the moat plain');
+  return enterActIII(game, BIOMES.phobos_city, Math.round(cityDepth(0)), 'City State Phobos', 'The Marches, on the road in');
 }
 export function enterCastleFloor(game, floor) {
   const S = phobosState(); floor = clamp(floor | 0, 1, CASTLE_FLOORS);
@@ -509,11 +517,13 @@ export function setupBellmourn(world, t, game) {
 }
 /** HAIL VELSCOUR!'s Act III destinations (game.js openVelscourTeleport): [value, label, go(game)]. */
 export function act3Destinations() {
+  // a look at a castle floor from the list doesn't count as having climbed to it (the castle's waypoints stay earned)
+  const look = (f) => async (g) => { const S = phobosState(), was = S.floor; await g.enterCastleFloor(f); S.floor = was; };
   return [
-    ['act3:bellmourn', 'Bellmourn: the Act III town, under the bells', (g) => g.enterBellmourn()],
-    ['act3:phobos', 'City State Phobos: the walled city (ward lords, the Castle Gate)', (g) => g.enterPhobos()],
-    ...WINGS.map((w, i) => [`act3:f${i * 10 + 1}`, `Castle Velscour, floors ${i * 10 + 1}-${i * 10 + 10}: ${w.name}`, (g) => g.enterCastleFloor(i * 10 + 1)]),
-    [`act3:f${CASTLE_FLOORS}`, `Castle Velscour, floor ${CASTLE_FLOORS}: Lord Velscour's throne`, (g) => g.enterCastleFloor(CASTLE_FLOORS)],
+    ['act3:bellmourn', 'Bellmourn (Act III town)', (g) => g.enterBellmourn()],
+    ['act3:phobos', 'City State Phobos (the walled city)', (g) => g.enterPhobos()],
+    ...WINGS.map((w, i) => [`act3:f${i * 10 + 1}`, `Castle ${i * 10 + 1}-${i * 10 + 10}: ${w.short || w.name.replace(/^The /, '').split(/ and |:|,/)[0].trim()}`, look(i * 10 + 1)]),
+    [`act3:f${CASTLE_FLOORS}`, `Castle ${CASTLE_FLOORS}: Lord Velscour`, look(CASTLE_FLOORS)],
   ];
 }
 function castleWaypoints(game) {

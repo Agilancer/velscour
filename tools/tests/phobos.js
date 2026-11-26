@@ -67,8 +67,8 @@ const rarg=(process.argv.find(a=>a.startsWith('raids='))||'').slice(6).split(','
     for(const f of floors){
       const r=await page.evaluate(async(f)=>{const {G,game}=window.VELSCOUR;await game.enterCastleFloor(f);const w=G.world,m=w.map,ex=w.portals.find(p=>p.type==='exit');
         const path=m.findPath?m.findPath(G.player.x,G.player.y,ex.x,ex.y,400000):null;
-        return {f,biome:w.biome.id,layout:G.phobosLayout,size:[m.w,m.h],mobs:w.creatures.filter(c=>c.team!==G.player.team).length,boss:w.boss&&w.boss.name,raid:!!w.raid,leaps:(w.hazards||[]).filter(h=>h.L).length,path:path?path.length:null};},f);
-      console.log('floor',JSON.stringify(r));
+        return {f,biome:w.biome.id,layout:G.phobosLayout,size:[m.w,m.h],mobs:w.creatures.filter(c=>c.team!==G.player.team).length,boss:w.boss&&w.boss.name,raid:!!w.raid,leaps:(w.hazards||[]).filter(h=>h.L).length,path:path?path.length:null,startOk:m.walkable(G.player.x,G.player.y)};},f);
+      console.log('floor',JSON.stringify(r));if(!r.startOk)errors.push('[CASTLE] floor '+f+': the hero starts on a blocked tile');if(!r.path&&!r.leaps)errors.push('[CASTLE] floor '+f+': no way to the exit');
       await T(1800);await shot('phobos_floor_'+f);
     }
     // raids: every wing boss + Velscour's three battles, each phase

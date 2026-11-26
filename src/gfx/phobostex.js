@@ -10,8 +10,10 @@ export const PH_FLOORS = ['rutted_setts', 'slum_cobbles', 'ash_street', 'wharf_d
   'scree', 'oxblood_marble', 'bone_checker', 'worn_floorboards', 'mausoleum_marble', 'obsidian', 'bloodstone', 'bridge_ashlar', 'keep_basalt'];
 let img = null, meta = null, loading = null;
 export function loadPhobosTex() {
-  return loading || (loading = Promise.all([loadImage('assets/tiles/phobos/phobos.webp'), fetch('assets/tiles/phobos/phobos.json').then((r) => r.json())]).then(([i, m]) => { img = i; meta = m; }));
+  return loading || (loading = Promise.all([loadImage('assets/tiles/phobos/phobos.webp'), fetch('assets/tiles/phobos/phobos.json').then((r) => r.json())]).then(([i, m]) => { img = i; meta = m; })
+    .catch((e) => { loading = null; console.warn('Phobos textures:', e); }));   // a failed load never blocks the way in; it retries next time
 }
+export const phobosTexReady = () => !!(img && meta);
 /** The map variant for a floor at map tile (mx, my). */
 export function floorV(name, mx, my) {
   const t = TOWN_GROUND.indexOf(name); if (t >= 0) return PH_V + t;
@@ -21,7 +23,8 @@ export function floorV(name, mx, my) {
 export function phobosFloors() {
   const out = [], tm = A.town?.meta, T = tm?.tile || [160, 80];
   for (const n of TOWN_GROUND) { const r = tm?.floors[n] || tm?.floors.dirt || [0, 0]; out.push({ img: A.town?.ground, sx: r[0], sy: r[1], w: T[0], h: T[1], name: n, material: n, lum: 0.4 }); }
-  for (const n of PH_FLOORS) for (let q = 0; q < 4; q++) { const r = meta?.floors[n]?.[q] || [0, 0]; out.push({ img, sx: r[0], sy: r[1], w: 160, h: 80, name: n, material: /board|deck/.test(n) ? 'wood' : /grass|clay|scree/.test(n) ? 'dirt' : 'stone', lum: 0.35 }); }
+  const stand = out[3];   // (no atlas: dirt for every Phobos floor)
+  for (const n of PH_FLOORS) for (let q = 0; q < 4; q++) { const r = meta?.floors[n]?.[q]; out.push(r && img ? { img, sx: r[0], sy: r[1], w: 160, h: 80, name: n, material: /board|deck/.test(n) ? 'wood' : /grass|clay|scree/.test(n) ? 'dirt' : 'stone', lum: 0.35 } : stand); }
   return out;
 }
 /** A bookcase or jar shelf sprite (scatter format: native px, ground pivot). */
