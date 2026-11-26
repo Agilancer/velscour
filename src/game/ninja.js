@@ -357,7 +357,7 @@ class Grapple {
   update(dt) {
     const p = this.p, t = this.tgt, w = this.world;
     this.t += dt;
-    if (p.dead || t.dead) return false;
+    if (p.dead || t.dead) { if (this.heavy) p.z = 0; else if (!t.dead) t.z = 0; return false; }   // (never left hanging in the air)
     if (this.t < 0) { this.hx = p.x; this.hy = p.y; this.hz = 30; return true; }
     if (this.t < this.out) { const u = this.t / this.out; this.hx = p.x + (t.x - p.x) * u; this.hy = p.y + (t.y - p.y) * u; this.hz = 30 - 8 * u; return true; }
     if (!this.bit) { this.bit = true; sparkle(t.x, t.y, 24, WHITE, 5, 0.2); sfx('hit', 0.6); t.status.stun = { t: t.rank === 'boss' ? 0.3 : 1.2 }; this.sx = t.x; this.sy = t.y; }

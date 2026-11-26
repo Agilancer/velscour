@@ -92,6 +92,14 @@ may be a pirate captain), and then **the last boss's airship**. The ship flies i
 roof, lowers a gangplank onto the parapet, and the captain walks down it. The captain fights as a raid boss (the raid
 template fitting the captain; no execute timer; 60% of a BOSS ROOM's life, because the waves came first). When the
 captain falls, the ship burns and sinks, the boats leave, and **the exit portal opens in the middle of the roof**.
+The roof is lit by the open sky, so a dungeon portal's glow barely showed there: the roof's portal is drawn 1.25x (the
+camera is pulled back), gets a three.js light of its colour that swells open over the mosaic and parapet with a halo
+at its foot (`towerPortal` in `gfx/tower3d.js`), and sparks, a light and a pulsing ring each frame (`portalFx`).
+
+Anything left off the roof's floor (knocked, flipped or blinked past the parapet or into the turret) is put back after
+a second, or two if it is in the air: nothing can walk off a tile that isn't floor. The hero is swept too. A Ninja
+whose heavy hook lost its foe mid-pull used to stay hanging in the air, which the sweep then skipped, and he stood
+past the parapet for good after the boss fights (auto-play and by hand).
 
 Waves arrive by `drop` (out of the sky), `climb` (up the outside of the parapet on hooks), `skiff` (down a pirate
 boat's ramp; `skiff2`: two boats at once), `stairs` (out of the turret) or `teleport`. Events while the fight is on:

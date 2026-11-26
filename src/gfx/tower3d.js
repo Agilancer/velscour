@@ -752,6 +752,22 @@ export function tickTower3D(dt, tw) {
   tickTowerFx(dt);
   for (const f of S.flick) f.o.scale.setScalar(f.base * (0.9 + 0.1 * Math.sin(S.t * 11 + f.base * 3)));
   for (const c of S.clouds.list) c.a += c.sp * dt;
+  const po = S.portal;
+  if (po) {   // it swells open over a second, then breathes
+    po.k = Math.min(1, po.k + dt * 0.9);
+    const e = po.k * (2 - po.k), b = 0.85 + 0.15 * Math.sin(S.t * 3.1) * Math.sin(S.t * 1.7 + 1);
+    po.light.intensity = 16 * e * b; po.halo.scale.setScalar(6.5 * e * b);
+  }
+}
+/** The roof's portal (game/tower.js win): a light of its colour washing the deck and parapet, a halo round its foot. */
+export function towerPortal(color) {
+  if (!S || S.portal) return;
+  const c = new T.Color(color).getHex(), y = S.g.roofZ;
+  const light = new T.PointLight(c, 0, 22, 1.1); light.position.set(0, y + 1.6, 0); light.layers.enable(1);
+  const halo = glowSprite(c, 0.1);
+  halo.position.set(0, y + 0.3, 0); halo.material.opacity = 0.45;
+  S.root.add(light, halo);
+  S.portal = { light, halo, k: 0 };
 }
 /**
  * Draw the tower behind the sprites: tw = world.tower (game/tower.js: alpha, clip, roof, focus). The 3D view is
