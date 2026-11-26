@@ -104,6 +104,12 @@ bosses) and `arena` (40, 2 sheets): the last two are `lone` giants for guardians
 `src/data/bestiary3.js` (names printed on the plates are the artist's; the rest are named by look), and
 `tools/set3names.json` (the file names) is written from it.
 
+## Dungeon Horrors (130, Act III only)
+`VELSCOUR_Dungeon_Horrors_130_Sprites.zip` (100 humanoid horrors and 30 bosses, single sprites already cut, native pixel
+art) is unpacked by `python tools/horrorspack.py <zip>` into `assets/source/enemies/dungeon_horrors/<sheet>/` and packed by
+`python tools/process_assets.py enemies dungeon_horrors`. The set is in `NATIVE_SETS`, so its sprites are stored 1:1 rather
+than downscaled. They are Act III's (`phobos: true`, so never in another level's looks); see `docs/PHOBOS.md`.
+
 ## No biome themes: the random bestiary
 `rollLooks(biome)` ignores the biome: each archetype in the level's roster gets up to 4 looks picked at random from
 every painted sheet (sets 1-3, the 60 Heavenly paintings), so any monster can turn up anywhere. The roster still sets

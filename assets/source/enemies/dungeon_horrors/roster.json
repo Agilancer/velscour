@@ -1,0 +1,4032 @@
+[
+  {
+    "id": "dh_01_01_pallbearer_of_hooks",
+    "name": "Pallbearer of Hooks",
+    "kind": "monster",
+    "suggested_dungeon": "Charnel Vaults",
+    "sprite": "sprites/monster/dh_01_01_pallbearer_of_hooks.png",
+    "sheet": "sheets/monster/01_charnel_vaults.png",
+    "cell": [
+      0,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      30,
+      41,
+      99,
+      106
+    ],
+    "sprite_pivot": [
+      24,
+      105
+    ],
+    "sheet_pivot": [
+      54,
+      146
+    ],
+    "native_height_ap": 106,
+    "suggested_world_height_px": 59,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_01_02_rib_ledger_keeper",
+    "name": "Rib Ledger Keeper",
+    "kind": "monster",
+    "suggested_dungeon": "Charnel Vaults",
+    "sprite": "sprites/monster/dh_01_02_rib_ledger_keeper.png",
+    "sheet": "sheets/monster/01_charnel_vaults.png",
+    "cell": [
+      160,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      190,
+      36,
+      99,
+      111
+    ],
+    "sprite_pivot": [
+      17,
+      110
+    ],
+    "sheet_pivot": [
+      207,
+      146
+    ],
+    "native_height_ap": 111,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_01_03_mandible_chanter",
+    "name": "Mandible Chanter",
+    "kind": "monster",
+    "suggested_dungeon": "Charnel Vaults",
+    "sprite": "sprites/monster/dh_01_03_mandible_chanter.png",
+    "sheet": "sheets/monster/01_charnel_vaults.png",
+    "cell": [
+      320,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      351,
+      32,
+      98,
+      115
+    ],
+    "sprite_pivot": [
+      20,
+      114
+    ],
+    "sheet_pivot": [
+      371,
+      146
+    ],
+    "native_height_ap": 115,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_01_04_casket_seam_hand",
+    "name": "Casket Seam Hand",
+    "kind": "monster",
+    "suggested_dungeon": "Charnel Vaults",
+    "sprite": "sprites/monster/dh_01_04_casket_seam_hand.png",
+    "sheet": "sheets/monster/01_charnel_vaults.png",
+    "cell": [
+      480,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      502,
+      38,
+      115,
+      109
+    ],
+    "sprite_pivot": [
+      9,
+      108
+    ],
+    "sheet_pivot": [
+      511,
+      146
+    ],
+    "native_height_ap": 109,
+    "suggested_world_height_px": 61,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_01_05_gravewax_page",
+    "name": "Gravewax Page",
+    "kind": "monster",
+    "suggested_dungeon": "Charnel Vaults",
+    "sprite": "sprites/monster/dh_01_05_gravewax_page.png",
+    "sheet": "sheets/monster/01_charnel_vaults.png",
+    "cell": [
+      640,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      687,
+      43,
+      66,
+      104
+    ],
+    "sprite_pivot": [
+      22,
+      103
+    ],
+    "sheet_pivot": [
+      709,
+      146
+    ],
+    "native_height_ap": 104,
+    "suggested_world_height_px": 58,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_01_06_bone_apron_harrower",
+    "name": "Bone Apron Harrower",
+    "kind": "monster",
+    "suggested_dungeon": "Charnel Vaults",
+    "sprite": "sprites/monster/dh_01_06_bone_apron_harrower.png",
+    "sheet": "sheets/monster/01_charnel_vaults.png",
+    "cell": [
+      0,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      21,
+      188,
+      118,
+      119
+    ],
+    "sprite_pivot": [
+      22,
+      118
+    ],
+    "sheet_pivot": [
+      43,
+      306
+    ],
+    "native_height_ap": 119,
+    "suggested_world_height_px": 66,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_01_07_unburial_scribe",
+    "name": "Unburial Scribe",
+    "kind": "monster",
+    "suggested_dungeon": "Charnel Vaults",
+    "sprite": "sprites/monster/dh_01_07_unburial_scribe.png",
+    "sheet": "sheets/monster/01_charnel_vaults.png",
+    "cell": [
+      160,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      201,
+      199,
+      77,
+      108
+    ],
+    "sprite_pivot": [
+      23,
+      107
+    ],
+    "sheet_pivot": [
+      224,
+      306
+    ],
+    "native_height_ap": 108,
+    "suggested_world_height_px": 60,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_01_08_wicker_sternum_porter",
+    "name": "Wicker Sternum Porter",
+    "kind": "monster",
+    "suggested_dungeon": "Charnel Vaults",
+    "sprite": "sprites/monster/dh_01_08_wicker_sternum_porter.png",
+    "sheet": "sheets/monster/01_charnel_vaults.png",
+    "cell": [
+      320,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      355,
+      186,
+      90,
+      121
+    ],
+    "sprite_pivot": [
+      21,
+      120
+    ],
+    "sheet_pivot": [
+      376,
+      306
+    ],
+    "native_height_ap": 121,
+    "suggested_world_height_px": 67,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_01_09_spine_recess_mourner",
+    "name": "Spine Recess Mourner",
+    "kind": "monster",
+    "suggested_dungeon": "Charnel Vaults",
+    "sprite": "sprites/monster/dh_01_09_spine_recess_mourner.png",
+    "sheet": "sheets/monster/01_charnel_vaults.png",
+    "cell": [
+      480,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      517,
+      195,
+      85,
+      112
+    ],
+    "sprite_pivot": [
+      29,
+      111
+    ],
+    "sheet_pivot": [
+      546,
+      306
+    ],
+    "native_height_ap": 112,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_01_10_shroud_stitch_warden",
+    "name": "Shroud-Stitch Warden",
+    "kind": "monster",
+    "suggested_dungeon": "Charnel Vaults",
+    "sprite": "sprites/monster/dh_01_10_shroud_stitch_warden.png",
+    "sheet": "sheets/monster/01_charnel_vaults.png",
+    "cell": [
+      640,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      666,
+      191,
+      108,
+      116
+    ],
+    "sprite_pivot": [
+      21,
+      115
+    ],
+    "sheet_pivot": [
+      687,
+      306
+    ],
+    "native_height_ap": 116,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_02_01_sluice_mask_drowned",
+    "name": "Sluice Mask Drowned",
+    "kind": "monster",
+    "suggested_dungeon": "Flooded Crypts",
+    "sprite": "sprites/monster/dh_02_01_sluice_mask_drowned.png",
+    "sheet": "sheets/monster/02_flooded_crypts.png",
+    "cell": [
+      0,
+      0,
+      144,
+      160
+    ],
+    "art_rect": [
+      31,
+      41,
+      82,
+      106
+    ],
+    "sprite_pivot": [
+      12,
+      105
+    ],
+    "sheet_pivot": [
+      43,
+      146
+    ],
+    "native_height_ap": 106,
+    "suggested_world_height_px": 59,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_02_02_flood_mark_gaoler",
+    "name": "Flood Mark Gaoler",
+    "kind": "monster",
+    "suggested_dungeon": "Flooded Crypts",
+    "sprite": "sprites/monster/dh_02_02_flood_mark_gaoler.png",
+    "sheet": "sheets/monster/02_flooded_crypts.png",
+    "cell": [
+      144,
+      0,
+      144,
+      160
+    ],
+    "art_rect": [
+      159,
+      36,
+      113,
+      111
+    ],
+    "sprite_pivot": [
+      33,
+      110
+    ],
+    "sheet_pivot": [
+      192,
+      146
+    ],
+    "native_height_ap": 111,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_02_03_waterlogged_crypt_sinner",
+    "name": "Waterlogged Crypt Sinner",
+    "kind": "monster",
+    "suggested_dungeon": "Flooded Crypts",
+    "sprite": "sprites/monster/dh_02_03_waterlogged_crypt_sinner.png",
+    "sheet": "sheets/monster/02_flooded_crypts.png",
+    "cell": [
+      288,
+      0,
+      144,
+      160
+    ],
+    "art_rect": [
+      315,
+      32,
+      89,
+      115
+    ],
+    "sprite_pivot": [
+      7,
+      114
+    ],
+    "sheet_pivot": [
+      322,
+      146
+    ],
+    "native_height_ap": 115,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_02_04_brine_clay_attendant",
+    "name": "Brine Clay Attendant",
+    "kind": "monster",
+    "suggested_dungeon": "Flooded Crypts",
+    "sprite": "sprites/monster/dh_02_04_brine_clay_attendant.png",
+    "sheet": "sheets/monster/02_flooded_crypts.png",
+    "cell": [
+      432,
+      0,
+      144,
+      160
+    ],
+    "art_rect": [
+      461,
+      38,
+      85,
+      109
+    ],
+    "sprite_pivot": [
+      10,
+      108
+    ],
+    "sheet_pivot": [
+      471,
+      146
+    ],
+    "native_height_ap": 109,
+    "suggested_world_height_px": 61,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_02_05_canal_grate_heretic",
+    "name": "Canal Grate Heretic",
+    "kind": "monster",
+    "suggested_dungeon": "Flooded Crypts",
+    "sprite": "sprites/monster/dh_02_05_canal_grate_heretic.png",
+    "sheet": "sheets/monster/02_flooded_crypts.png",
+    "cell": [
+      576,
+      0,
+      144,
+      160
+    ],
+    "art_rect": [
+      593,
+      43,
+      109,
+      104
+    ],
+    "sprite_pivot": [
+      13,
+      103
+    ],
+    "sheet_pivot": [
+      606,
+      146
+    ],
+    "native_height_ap": 104,
+    "suggested_world_height_px": 58,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_02_06_blister_eyed_pilgrim",
+    "name": "Blister-Eyed Pilgrim",
+    "kind": "monster",
+    "suggested_dungeon": "Flooded Crypts",
+    "sprite": "sprites/monster/dh_02_06_blister_eyed_pilgrim.png",
+    "sheet": "sheets/monster/02_flooded_crypts.png",
+    "cell": [
+      0,
+      160,
+      144,
+      160
+    ],
+    "art_rect": [
+      21,
+      188,
+      101,
+      119
+    ],
+    "sprite_pivot": [
+      12,
+      118
+    ],
+    "sheet_pivot": [
+      33,
+      306
+    ],
+    "native_height_ap": 119,
+    "suggested_world_height_px": 66,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_02_07_drowned_tallyman",
+    "name": "Drowned Tallyman",
+    "kind": "monster",
+    "suggested_dungeon": "Flooded Crypts",
+    "sprite": "sprites/monster/dh_02_07_drowned_tallyman.png",
+    "sheet": "sheets/monster/02_flooded_crypts.png",
+    "cell": [
+      144,
+      160,
+      144,
+      160
+    ],
+    "art_rect": [
+      175,
+      199,
+      82,
+      108
+    ],
+    "sprite_pivot": [
+      10,
+      107
+    ],
+    "sheet_pivot": [
+      185,
+      306
+    ],
+    "native_height_ap": 108,
+    "suggested_world_height_px": 60,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_02_08_eel_rib_confessor",
+    "name": "Eel-Rib Confessor",
+    "kind": "monster",
+    "suggested_dungeon": "Flooded Crypts",
+    "sprite": "sprites/monster/dh_02_08_eel_rib_confessor.png",
+    "sheet": "sheets/monster/02_flooded_crypts.png",
+    "cell": [
+      288,
+      160,
+      144,
+      160
+    ],
+    "art_rect": [
+      318,
+      186,
+      83,
+      121
+    ],
+    "sprite_pivot": [
+      10,
+      120
+    ],
+    "sheet_pivot": [
+      328,
+      306
+    ],
+    "native_height_ap": 121,
+    "suggested_world_height_px": 67,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_02_09_cistern_lung_watcher",
+    "name": "Cistern Lung Watcher",
+    "kind": "monster",
+    "suggested_dungeon": "Flooded Crypts",
+    "sprite": "sprites/monster/dh_02_09_cistern_lung_watcher.png",
+    "sheet": "sheets/monster/02_flooded_crypts.png",
+    "cell": [
+      432,
+      160,
+      144,
+      160
+    ],
+    "art_rect": [
+      460,
+      195,
+      88,
+      112
+    ],
+    "sprite_pivot": [
+      26,
+      111
+    ],
+    "sheet_pivot": [
+      486,
+      306
+    ],
+    "native_height_ap": 112,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_02_10_wet_vault_bellhand",
+    "name": "Wet Vault Bellhand",
+    "kind": "monster",
+    "suggested_dungeon": "Flooded Crypts",
+    "sprite": "sprites/monster/dh_02_10_wet_vault_bellhand.png",
+    "sheet": "sheets/monster/02_flooded_crypts.png",
+    "cell": [
+      576,
+      160,
+      144,
+      160
+    ],
+    "art_rect": [
+      592,
+      191,
+      112,
+      116
+    ],
+    "sprite_pivot": [
+      14,
+      115
+    ],
+    "sheet_pivot": [
+      606,
+      306
+    ],
+    "native_height_ap": 116,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_03_01_rackgate_torturer",
+    "name": "Rackgate Torturer",
+    "kind": "monster",
+    "suggested_dungeon": "Gaols and Oubliettes",
+    "sprite": "sprites/monster/dh_03_01_rackgate_torturer.png",
+    "sheet": "sheets/monster/03_gaols_and_oubliettes.png",
+    "cell": [
+      0,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      29,
+      41,
+      101,
+      106
+    ],
+    "sprite_pivot": [
+      28,
+      105
+    ],
+    "sheet_pivot": [
+      57,
+      146
+    ],
+    "native_height_ap": 106,
+    "suggested_world_height_px": 59,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_03_02_hinged_mask_inmate",
+    "name": "Hinged Mask Inmate",
+    "kind": "monster",
+    "suggested_dungeon": "Gaols and Oubliettes",
+    "sprite": "sprites/monster/dh_03_02_hinged_mask_inmate.png",
+    "sheet": "sheets/monster/03_gaols_and_oubliettes.png",
+    "cell": [
+      160,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      199,
+      36,
+      82,
+      111
+    ],
+    "sprite_pivot": [
+      12,
+      110
+    ],
+    "sheet_pivot": [
+      211,
+      146
+    ],
+    "native_height_ap": 111,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_03_03_oubliette_knuckle_man",
+    "name": "Oubliette Knuckle Man",
+    "kind": "monster",
+    "suggested_dungeon": "Gaols and Oubliettes",
+    "sprite": "sprites/monster/dh_03_03_oubliette_knuckle_man.png",
+    "sheet": "sheets/monster/03_gaols_and_oubliettes.png",
+    "cell": [
+      320,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      348,
+      32,
+      104,
+      115
+    ],
+    "sprite_pivot": [
+      29,
+      114
+    ],
+    "sheet_pivot": [
+      377,
+      146
+    ],
+    "native_height_ap": 115,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_03_04_keyhole_face",
+    "name": "Keyhole Face",
+    "kind": "monster",
+    "suggested_dungeon": "Gaols and Oubliettes",
+    "sprite": "sprites/monster/dh_03_04_keyhole_face.png",
+    "sheet": "sheets/monster/03_gaols_and_oubliettes.png",
+    "cell": [
+      480,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      518,
+      38,
+      83,
+      109
+    ],
+    "sprite_pivot": [
+      21,
+      108
+    ],
+    "sheet_pivot": [
+      539,
+      146
+    ],
+    "native_height_ap": 109,
+    "suggested_world_height_px": 61,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_03_05_visorless_turnkey",
+    "name": "Visorless Turnkey",
+    "kind": "monster",
+    "suggested_dungeon": "Gaols and Oubliettes",
+    "sprite": "sprites/monster/dh_03_05_visorless_turnkey.png",
+    "sheet": "sheets/monster/03_gaols_and_oubliettes.png",
+    "cell": [
+      640,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      669,
+      43,
+      101,
+      104
+    ],
+    "sprite_pivot": [
+      21,
+      103
+    ],
+    "sheet_pivot": [
+      690,
+      146
+    ],
+    "native_height_ap": 104,
+    "suggested_world_height_px": 58,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_03_06_tendon_cuff_watchman",
+    "name": "Tendon Cuff Watchman",
+    "kind": "monster",
+    "suggested_dungeon": "Gaols and Oubliettes",
+    "sprite": "sprites/monster/dh_03_06_tendon_cuff_watchman.png",
+    "sheet": "sheets/monster/03_gaols_and_oubliettes.png",
+    "cell": [
+      0,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      35,
+      188,
+      90,
+      119
+    ],
+    "sprite_pivot": [
+      24,
+      118
+    ],
+    "sheet_pivot": [
+      59,
+      306
+    ],
+    "native_height_ap": 119,
+    "suggested_world_height_px": 66,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_03_07_split_pillory_keeper",
+    "name": "Split Pillory Keeper",
+    "kind": "monster",
+    "suggested_dungeon": "Gaols and Oubliettes",
+    "sprite": "sprites/monster/dh_03_07_split_pillory_keeper.png",
+    "sheet": "sheets/monster/03_gaols_and_oubliettes.png",
+    "cell": [
+      160,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      193,
+      199,
+      94,
+      108
+    ],
+    "sprite_pivot": [
+      14,
+      107
+    ],
+    "sheet_pivot": [
+      207,
+      306
+    ],
+    "native_height_ap": 108,
+    "suggested_world_height_px": 60,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_03_08_pitch_blind_interrogator",
+    "name": "Pitch Blind Interrogator",
+    "kind": "monster",
+    "suggested_dungeon": "Gaols and Oubliettes",
+    "sprite": "sprites/monster/dh_03_08_pitch_blind_interrogator.png",
+    "sheet": "sheets/monster/03_gaols_and_oubliettes.png",
+    "cell": [
+      320,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      341,
+      186,
+      117,
+      121
+    ],
+    "sprite_pivot": [
+      19,
+      120
+    ],
+    "sheet_pivot": [
+      360,
+      306
+    ],
+    "native_height_ap": 121,
+    "suggested_world_height_px": 67,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_03_09_chain_hem_inquisitor",
+    "name": "Chain Hem Inquisitor",
+    "kind": "monster",
+    "suggested_dungeon": "Gaols and Oubliettes",
+    "sprite": "sprites/monster/dh_03_09_chain_hem_inquisitor.png",
+    "sheet": "sheets/monster/03_gaols_and_oubliettes.png",
+    "cell": [
+      480,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      502,
+      195,
+      116,
+      112
+    ],
+    "sprite_pivot": [
+      43,
+      111
+    ],
+    "sheet_pivot": [
+      545,
+      306
+    ],
+    "native_height_ap": 112,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_03_10_shaft_ladder_prisoner",
+    "name": "Shaft Ladder Prisoner",
+    "kind": "monster",
+    "suggested_dungeon": "Gaols and Oubliettes",
+    "sprite": "sprites/monster/dh_03_10_shaft_ladder_prisoner.png",
+    "sheet": "sheets/monster/03_gaols_and_oubliettes.png",
+    "cell": [
+      640,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      686,
+      191,
+      68,
+      116
+    ],
+    "sprite_pivot": [
+      6,
+      115
+    ],
+    "sheet_pivot": [
+      692,
+      306
+    ],
+    "native_height_ap": 116,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_04_01_censer_throat_cantor",
+    "name": "Censer-Throat Cantor",
+    "kind": "monster",
+    "suggested_dungeon": "Sacristies",
+    "sprite": "sprites/monster/dh_04_01_censer_throat_cantor.png",
+    "sheet": "sheets/monster/04_sacristies.png",
+    "cell": [
+      0,
+      0,
+      144,
+      160
+    ],
+    "art_rect": [
+      23,
+      41,
+      98,
+      106
+    ],
+    "sprite_pivot": [
+      7,
+      105
+    ],
+    "sheet_pivot": [
+      30,
+      146
+    ],
+    "native_height_ap": 106,
+    "suggested_world_height_px": 59,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_04_02_empty_mitre_clerk",
+    "name": "Empty Mitre Clerk",
+    "kind": "monster",
+    "suggested_dungeon": "Sacristies",
+    "sprite": "sprites/monster/dh_04_02_empty_mitre_clerk.png",
+    "sheet": "sheets/monster/04_sacristies.png",
+    "cell": [
+      144,
+      0,
+      144,
+      160
+    ],
+    "art_rect": [
+      177,
+      36,
+      77,
+      111
+    ],
+    "sprite_pivot": [
+      14,
+      110
+    ],
+    "sheet_pivot": [
+      191,
+      146
+    ],
+    "native_height_ap": 111,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_04_03_hymn_husk",
+    "name": "Hymn Husk",
+    "kind": "monster",
+    "suggested_dungeon": "Sacristies",
+    "sprite": "sprites/monster/dh_04_03_hymn_husk.png",
+    "sheet": "sheets/monster/04_sacristies.png",
+    "cell": [
+      288,
+      0,
+      144,
+      160
+    ],
+    "art_rect": [
+      316,
+      32,
+      88,
+      115
+    ],
+    "sprite_pivot": [
+      16,
+      114
+    ],
+    "sheet_pivot": [
+      332,
+      146
+    ],
+    "native_height_ap": 115,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_04_04_wax_vestment_priest",
+    "name": "Wax Vestment Priest",
+    "kind": "monster",
+    "suggested_dungeon": "Sacristies",
+    "sprite": "sprites/monster/dh_04_04_wax_vestment_priest.png",
+    "sheet": "sheets/monster/04_sacristies.png",
+    "cell": [
+      432,
+      0,
+      144,
+      160
+    ],
+    "art_rect": [
+      451,
+      38,
+      105,
+      109
+    ],
+    "sprite_pivot": [
+      23,
+      108
+    ],
+    "sheet_pivot": [
+      474,
+      146
+    ],
+    "native_height_ap": 109,
+    "suggested_world_height_px": 61,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_04_05_black_tongue_chorister",
+    "name": "Black Tongue Chorister",
+    "kind": "monster",
+    "suggested_dungeon": "Sacristies",
+    "sprite": "sprites/monster/dh_04_05_black_tongue_chorister.png",
+    "sheet": "sheets/monster/04_sacristies.png",
+    "cell": [
+      576,
+      0,
+      144,
+      160
+    ],
+    "art_rect": [
+      605,
+      43,
+      86,
+      104
+    ],
+    "sprite_pivot": [
+      10,
+      103
+    ],
+    "sheet_pivot": [
+      615,
+      146
+    ],
+    "native_height_ap": 104,
+    "suggested_world_height_px": 58,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_04_06_bell_rib_acolyte",
+    "name": "Bell Rib Acolyte",
+    "kind": "monster",
+    "suggested_dungeon": "Sacristies",
+    "sprite": "sprites/monster/dh_04_06_bell_rib_acolyte.png",
+    "sheet": "sheets/monster/04_sacristies.png",
+    "cell": [
+      0,
+      160,
+      144,
+      160
+    ],
+    "art_rect": [
+      17,
+      188,
+      110,
+      119
+    ],
+    "sprite_pivot": [
+      14,
+      118
+    ],
+    "sheet_pivot": [
+      31,
+      306
+    ],
+    "native_height_ap": 119,
+    "suggested_world_height_px": 66,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_04_07_votive_mask_sacristan",
+    "name": "Votive Mask Sacristan",
+    "kind": "monster",
+    "suggested_dungeon": "Sacristies",
+    "sprite": "sprites/monster/dh_04_07_votive_mask_sacristan.png",
+    "sheet": "sheets/monster/04_sacristies.png",
+    "cell": [
+      144,
+      160,
+      144,
+      160
+    ],
+    "art_rect": [
+      170,
+      199,
+      92,
+      108
+    ],
+    "sprite_pivot": [
+      10,
+      107
+    ],
+    "sheet_pivot": [
+      180,
+      306
+    ],
+    "native_height_ap": 108,
+    "suggested_world_height_px": 60,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_04_08_reliquary_cage_sexton",
+    "name": "Reliquary-Cage Sexton",
+    "kind": "monster",
+    "suggested_dungeon": "Sacristies",
+    "sprite": "sprites/monster/dh_04_08_reliquary_cage_sexton.png",
+    "sheet": "sheets/monster/04_sacristies.png",
+    "cell": [
+      288,
+      160,
+      144,
+      160
+    ],
+    "art_rect": [
+      310,
+      186,
+      100,
+      121
+    ],
+    "sprite_pivot": [
+      15,
+      120
+    ],
+    "sheet_pivot": [
+      325,
+      306
+    ],
+    "native_height_ap": 121,
+    "suggested_world_height_px": 67,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_04_09_tallow_vicar",
+    "name": "Tallow Vicar",
+    "kind": "monster",
+    "suggested_dungeon": "Sacristies",
+    "sprite": "sprites/monster/dh_04_09_tallow_vicar.png",
+    "sheet": "sheets/monster/04_sacristies.png",
+    "cell": [
+      432,
+      160,
+      144,
+      160
+    ],
+    "art_rect": [
+      451,
+      195,
+      106,
+      112
+    ],
+    "sprite_pivot": [
+      26,
+      111
+    ],
+    "sheet_pivot": [
+      477,
+      306
+    ],
+    "native_height_ap": 112,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_04_10_incense_pitted_deacon",
+    "name": "Incense-Pitted Deacon",
+    "kind": "monster",
+    "suggested_dungeon": "Sacristies",
+    "sprite": "sprites/monster/dh_04_10_incense_pitted_deacon.png",
+    "sheet": "sheets/monster/04_sacristies.png",
+    "cell": [
+      576,
+      160,
+      144,
+      160
+    ],
+    "art_rect": [
+      598,
+      191,
+      99,
+      116
+    ],
+    "sprite_pivot": [
+      8,
+      115
+    ],
+    "sheet_pivot": [
+      606,
+      306
+    ],
+    "native_height_ap": 116,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_05_01_shoulder_cage_standard_bearer",
+    "name": "Shoulder Cage Standard-Bearer",
+    "kind": "monster",
+    "suggested_dungeon": "Abandoned Barracks",
+    "sprite": "sprites/monster/dh_05_01_shoulder_cage_standard_bearer.png",
+    "sheet": "sheets/monster/05_abandoned_barracks.png",
+    "cell": [
+      0,
+      0,
+      192,
+      160
+    ],
+    "art_rect": [
+      48,
+      41,
+      95,
+      106
+    ],
+    "sprite_pivot": [
+      12,
+      105
+    ],
+    "sheet_pivot": [
+      60,
+      146
+    ],
+    "native_height_ap": 106,
+    "suggested_world_height_px": 59,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_05_02_quiver_rib_deserter",
+    "name": "Quiver Rib Deserter",
+    "kind": "monster",
+    "suggested_dungeon": "Abandoned Barracks",
+    "sprite": "sprites/monster/dh_05_02_quiver_rib_deserter.png",
+    "sheet": "sheets/monster/05_abandoned_barracks.png",
+    "cell": [
+      192,
+      0,
+      192,
+      160
+    ],
+    "art_rect": [
+      246,
+      36,
+      84,
+      111
+    ],
+    "sprite_pivot": [
+      8,
+      110
+    ],
+    "sheet_pivot": [
+      254,
+      146
+    ],
+    "native_height_ap": 111,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_05_03_sundered_gorget_captain",
+    "name": "Sundered Gorget Captain",
+    "kind": "monster",
+    "suggested_dungeon": "Abandoned Barracks",
+    "sprite": "sprites/monster/dh_05_03_sundered_gorget_captain.png",
+    "sheet": "sheets/monster/05_abandoned_barracks.png",
+    "cell": [
+      384,
+      0,
+      192,
+      160
+    ],
+    "art_rect": [
+      423,
+      32,
+      113,
+      115
+    ],
+    "sprite_pivot": [
+      37,
+      114
+    ],
+    "sheet_pivot": [
+      460,
+      146
+    ],
+    "native_height_ap": 115,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_05_04_pike_tendon_mutineer",
+    "name": "Pike Tendon Mutineer",
+    "kind": "monster",
+    "suggested_dungeon": "Abandoned Barracks",
+    "sprite": "sprites/monster/dh_05_04_pike_tendon_mutineer.png",
+    "sheet": "sheets/monster/05_abandoned_barracks.png",
+    "cell": [
+      576,
+      0,
+      192,
+      160
+    ],
+    "art_rect": [
+      596,
+      38,
+      151,
+      109
+    ],
+    "sprite_pivot": [
+      27,
+      108
+    ],
+    "sheet_pivot": [
+      623,
+      146
+    ],
+    "native_height_ap": 109,
+    "suggested_world_height_px": 61,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_05_05_welded_gauntlet_bully",
+    "name": "Welded Gauntlet Bully",
+    "kind": "monster",
+    "suggested_dungeon": "Abandoned Barracks",
+    "sprite": "sprites/monster/dh_05_05_welded_gauntlet_bully.png",
+    "sheet": "sheets/monster/05_abandoned_barracks.png",
+    "cell": [
+      768,
+      0,
+      192,
+      160
+    ],
+    "art_rect": [
+      818,
+      43,
+      92,
+      104
+    ],
+    "sprite_pivot": [
+      12,
+      103
+    ],
+    "sheet_pivot": [
+      830,
+      146
+    ],
+    "native_height_ap": 104,
+    "suggested_world_height_px": 58,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_05_06_broken_badge_musterling",
+    "name": "Broken Badge Musterling",
+    "kind": "monster",
+    "suggested_dungeon": "Abandoned Barracks",
+    "sprite": "sprites/monster/dh_05_06_broken_badge_musterling.png",
+    "sheet": "sheets/monster/05_abandoned_barracks.png",
+    "cell": [
+      0,
+      160,
+      192,
+      160
+    ],
+    "art_rect": [
+      52,
+      188,
+      87,
+      119
+    ],
+    "sprite_pivot": [
+      8,
+      118
+    ],
+    "sheet_pivot": [
+      60,
+      306
+    ],
+    "native_height_ap": 119,
+    "suggested_world_height_px": 66,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_05_07_pavise_skinned_recruit",
+    "name": "Pavise-Skinned Recruit",
+    "kind": "monster",
+    "suggested_dungeon": "Abandoned Barracks",
+    "sprite": "sprites/monster/dh_05_07_pavise_skinned_recruit.png",
+    "sheet": "sheets/monster/05_abandoned_barracks.png",
+    "cell": [
+      192,
+      160,
+      192,
+      160
+    ],
+    "art_rect": [
+      239,
+      199,
+      98,
+      108
+    ],
+    "sprite_pivot": [
+      33,
+      107
+    ],
+    "sheet_pivot": [
+      272,
+      306
+    ],
+    "native_height_ap": 108,
+    "suggested_world_height_px": 60,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_05_08_wound_loom_arbalist",
+    "name": "Wound Loom Arbalist",
+    "kind": "monster",
+    "suggested_dungeon": "Abandoned Barracks",
+    "sprite": "sprites/monster/dh_05_08_wound_loom_arbalist.png",
+    "sheet": "sheets/monster/05_abandoned_barracks.png",
+    "cell": [
+      384,
+      160,
+      192,
+      160
+    ],
+    "art_rect": [
+      414,
+      186,
+      132,
+      121
+    ],
+    "sprite_pivot": [
+      10,
+      120
+    ],
+    "sheet_pivot": [
+      424,
+      306
+    ],
+    "native_height_ap": 121,
+    "suggested_world_height_px": 67,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_05_09_helmet_vice_poltergeist",
+    "name": "Helmet Vice Poltergeist",
+    "kind": "monster",
+    "suggested_dungeon": "Abandoned Barracks",
+    "sprite": "sprites/monster/dh_05_09_helmet_vice_poltergeist.png",
+    "sheet": "sheets/monster/05_abandoned_barracks.png",
+    "cell": [
+      576,
+      160,
+      192,
+      160
+    ],
+    "art_rect": [
+      633,
+      195,
+      78,
+      112
+    ],
+    "sprite_pivot": [
+      8,
+      111
+    ],
+    "sheet_pivot": [
+      641,
+      306
+    ],
+    "native_height_ap": 112,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_05_10_stump_greave_officer",
+    "name": "Stump-Greave Officer",
+    "kind": "monster",
+    "suggested_dungeon": "Abandoned Barracks",
+    "sprite": "sprites/monster/dh_05_10_stump_greave_officer.png",
+    "sheet": "sheets/monster/05_abandoned_barracks.png",
+    "cell": [
+      768,
+      160,
+      192,
+      160
+    ],
+    "art_rect": [
+      799,
+      191,
+      130,
+      116
+    ],
+    "sprite_pivot": [
+      39,
+      115
+    ],
+    "sheet_pivot": [
+      838,
+      306
+    ],
+    "native_height_ap": 116,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_06_01_gill_collared_gatherer",
+    "name": "Gill-Collared Gatherer",
+    "kind": "monster",
+    "suggested_dungeon": "Fungal Passages",
+    "sprite": "sprites/monster/dh_06_01_gill_collared_gatherer.png",
+    "sheet": "sheets/monster/06_fungal_passages.png",
+    "cell": [
+      0,
+      0,
+      176,
+      160
+    ],
+    "art_rect": [
+      48,
+      41,
+      79,
+      106
+    ],
+    "sprite_pivot": [
+      13,
+      105
+    ],
+    "sheet_pivot": [
+      61,
+      146
+    ],
+    "native_height_ap": 106,
+    "suggested_world_height_px": 59,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_06_02_cap_veil_spinner",
+    "name": "Cap Veil Spinner",
+    "kind": "monster",
+    "suggested_dungeon": "Fungal Passages",
+    "sprite": "sprites/monster/dh_06_02_cap_veil_spinner.png",
+    "sheet": "sheets/monster/06_fungal_passages.png",
+    "cell": [
+      176,
+      0,
+      176,
+      160
+    ],
+    "art_rect": [
+      218,
+      36,
+      92,
+      111
+    ],
+    "sprite_pivot": [
+      44,
+      110
+    ],
+    "sheet_pivot": [
+      262,
+      146
+    ],
+    "native_height_ap": 111,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_06_03_mycelium_sleeve_hunter",
+    "name": "Mycelium Sleeve Hunter",
+    "kind": "monster",
+    "suggested_dungeon": "Fungal Passages",
+    "sprite": "sprites/monster/dh_06_03_mycelium_sleeve_hunter.png",
+    "sheet": "sheets/monster/06_fungal_passages.png",
+    "cell": [
+      352,
+      0,
+      176,
+      160
+    ],
+    "art_rect": [
+      390,
+      32,
+      100,
+      115
+    ],
+    "sprite_pivot": [
+      10,
+      114
+    ],
+    "sheet_pivot": [
+      400,
+      146
+    ],
+    "native_height_ap": 115,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_06_04_hollow_truffle_man",
+    "name": "Hollow Truffle Man",
+    "kind": "monster",
+    "suggested_dungeon": "Fungal Passages",
+    "sprite": "sprites/monster/dh_06_04_hollow_truffle_man.png",
+    "sheet": "sheets/monster/06_fungal_passages.png",
+    "cell": [
+      528,
+      0,
+      176,
+      160
+    ],
+    "art_rect": [
+      566,
+      38,
+      99,
+      109
+    ],
+    "sprite_pivot": [
+      22,
+      108
+    ],
+    "sheet_pivot": [
+      588,
+      146
+    ],
+    "native_height_ap": 109,
+    "suggested_world_height_px": 61,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_06_05_sporocarp_widow",
+    "name": "Sporocarp Widow",
+    "kind": "monster",
+    "suggested_dungeon": "Fungal Passages",
+    "sprite": "sprites/monster/dh_06_05_sporocarp_widow.png",
+    "sheet": "sheets/monster/06_fungal_passages.png",
+    "cell": [
+      704,
+      0,
+      176,
+      160
+    ],
+    "art_rect": [
+      740,
+      43,
+      104,
+      104
+    ],
+    "sprite_pivot": [
+      45,
+      103
+    ],
+    "sheet_pivot": [
+      785,
+      146
+    ],
+    "native_height_ap": 104,
+    "suggested_world_height_px": 58,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_06_06_cordyceps_box_keeper",
+    "name": "Cordyceps Box Keeper",
+    "kind": "monster",
+    "suggested_dungeon": "Fungal Passages",
+    "sprite": "sprites/monster/dh_06_06_cordyceps_box_keeper.png",
+    "sheet": "sheets/monster/06_fungal_passages.png",
+    "cell": [
+      0,
+      160,
+      176,
+      160
+    ],
+    "art_rect": [
+      41,
+      188,
+      93,
+      119
+    ],
+    "sprite_pivot": [
+      60,
+      118
+    ],
+    "sheet_pivot": [
+      101,
+      306
+    ],
+    "native_height_ap": 119,
+    "suggested_world_height_px": 66,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_06_07_lantern_gill_wrestler",
+    "name": "Lantern Gill Wrestler",
+    "kind": "monster",
+    "suggested_dungeon": "Fungal Passages",
+    "sprite": "sprites/monster/dh_06_07_lantern_gill_wrestler.png",
+    "sheet": "sheets/monster/06_fungal_passages.png",
+    "cell": [
+      176,
+      160,
+      176,
+      160
+    ],
+    "art_rect": [
+      214,
+      199,
+      100,
+      108
+    ],
+    "sprite_pivot": [
+      30,
+      107
+    ],
+    "sheet_pivot": [
+      244,
+      306
+    ],
+    "native_height_ap": 108,
+    "suggested_world_height_px": 60,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_06_08_puffball_elbow_fencer",
+    "name": "Puffball Elbow Fencer",
+    "kind": "monster",
+    "suggested_dungeon": "Fungal Passages",
+    "sprite": "sprites/monster/dh_06_08_puffball_elbow_fencer.png",
+    "sheet": "sheets/monster/06_fungal_passages.png",
+    "cell": [
+      352,
+      160,
+      176,
+      160
+    ],
+    "art_rect": [
+      366,
+      186,
+      148,
+      121
+    ],
+    "sprite_pivot": [
+      68,
+      120
+    ],
+    "sheet_pivot": [
+      434,
+      306
+    ],
+    "native_height_ap": 121,
+    "suggested_world_height_px": 67,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_06_09_spore_mask_midwife",
+    "name": "Spore Mask Midwife",
+    "kind": "monster",
+    "suggested_dungeon": "Fungal Passages",
+    "sprite": "sprites/monster/dh_06_09_spore_mask_midwife.png",
+    "sheet": "sheets/monster/06_fungal_passages.png",
+    "cell": [
+      528,
+      160,
+      176,
+      160
+    ],
+    "art_rect": [
+      573,
+      195,
+      85,
+      112
+    ],
+    "sprite_pivot": [
+      23,
+      111
+    ],
+    "sheet_pivot": [
+      596,
+      306
+    ],
+    "native_height_ap": 112,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_06_10_rootweft_monk",
+    "name": "Rootweft Monk",
+    "kind": "monster",
+    "suggested_dungeon": "Fungal Passages",
+    "sprite": "sprites/monster/dh_06_10_rootweft_monk.png",
+    "sheet": "sheets/monster/06_fungal_passages.png",
+    "cell": [
+      704,
+      160,
+      176,
+      160
+    ],
+    "art_rect": [
+      740,
+      191,
+      103,
+      116
+    ],
+    "sprite_pivot": [
+      60,
+      115
+    ],
+    "sheet_pivot": [
+      800,
+      306
+    ],
+    "native_height_ap": 116,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_07_01_porcelain_jaw_distiller",
+    "name": "Porcelain Jaw Distiller",
+    "kind": "monster",
+    "suggested_dungeon": "Alchemist Cellars",
+    "sprite": "sprites/monster/dh_07_01_porcelain_jaw_distiller.png",
+    "sheet": "sheets/monster/07_alchemist_cellars.png",
+    "cell": [
+      0,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      36,
+      41,
+      88,
+      106
+    ],
+    "sprite_pivot": [
+      31,
+      105
+    ],
+    "sheet_pivot": [
+      67,
+      146
+    ],
+    "native_height_ap": 106,
+    "suggested_world_height_px": 59,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_07_02_leaded_vessel_carrier",
+    "name": "Leaded Vessel Carrier",
+    "kind": "monster",
+    "suggested_dungeon": "Alchemist Cellars",
+    "sprite": "sprites/monster/dh_07_02_leaded_vessel_carrier.png",
+    "sheet": "sheets/monster/07_alchemist_cellars.png",
+    "cell": [
+      160,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      197,
+      36,
+      85,
+      111
+    ],
+    "sprite_pivot": [
+      10,
+      110
+    ],
+    "sheet_pivot": [
+      207,
+      146
+    ],
+    "native_height_ap": 111,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_07_03_crucible_lung_apothecary",
+    "name": "Crucible Lung Apothecary",
+    "kind": "monster",
+    "suggested_dungeon": "Alchemist Cellars",
+    "sprite": "sprites/monster/dh_07_03_crucible_lung_apothecary.png",
+    "sheet": "sheets/monster/07_alchemist_cellars.png",
+    "cell": [
+      320,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      352,
+      32,
+      95,
+      115
+    ],
+    "sprite_pivot": [
+      19,
+      114
+    ],
+    "sheet_pivot": [
+      371,
+      146
+    ],
+    "native_height_ap": 115,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_07_04_sealed_flask_beggar",
+    "name": "Sealed Flask Beggar",
+    "kind": "monster",
+    "suggested_dungeon": "Alchemist Cellars",
+    "sprite": "sprites/monster/dh_07_04_sealed_flask_beggar.png",
+    "sheet": "sheets/monster/07_alchemist_cellars.png",
+    "cell": [
+      480,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      513,
+      38,
+      93,
+      109
+    ],
+    "sprite_pivot": [
+      28,
+      108
+    ],
+    "sheet_pivot": [
+      541,
+      146
+    ],
+    "native_height_ap": 109,
+    "suggested_world_height_px": 61,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_07_05_mortar_cranium_servant",
+    "name": "Mortar Cranium Servant",
+    "kind": "monster",
+    "suggested_dungeon": "Alchemist Cellars",
+    "sprite": "sprites/monster/dh_07_05_mortar_cranium_servant.png",
+    "sheet": "sheets/monster/07_alchemist_cellars.png",
+    "cell": [
+      640,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      676,
+      43,
+      87,
+      104
+    ],
+    "sprite_pivot": [
+      8,
+      103
+    ],
+    "sheet_pivot": [
+      684,
+      146
+    ],
+    "native_height_ap": 104,
+    "suggested_world_height_px": 58,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_07_06_verdigris_thumb_surgeon",
+    "name": "Verdigris Thumb Surgeon",
+    "kind": "monster",
+    "suggested_dungeon": "Alchemist Cellars",
+    "sprite": "sprites/monster/dh_07_06_verdigris_thumb_surgeon.png",
+    "sheet": "sheets/monster/07_alchemist_cellars.png",
+    "cell": [
+      0,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      25,
+      188,
+      109,
+      119
+    ],
+    "sprite_pivot": [
+      20,
+      118
+    ],
+    "sheet_pivot": [
+      45,
+      306
+    ],
+    "native_height_ap": 119,
+    "suggested_world_height_px": 66,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_07_07_uncorked_eye_broker",
+    "name": "Uncorked Eye Broker",
+    "kind": "monster",
+    "suggested_dungeon": "Alchemist Cellars",
+    "sprite": "sprites/monster/dh_07_07_uncorked_eye_broker.png",
+    "sheet": "sheets/monster/07_alchemist_cellars.png",
+    "cell": [
+      160,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      198,
+      199,
+      84,
+      108
+    ],
+    "sprite_pivot": [
+      11,
+      107
+    ],
+    "sheet_pivot": [
+      209,
+      306
+    ],
+    "native_height_ap": 108,
+    "suggested_world_height_px": 60,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_07_08_filter_mask_fugitive",
+    "name": "Filter Mask Fugitive",
+    "kind": "monster",
+    "suggested_dungeon": "Alchemist Cellars",
+    "sprite": "sprites/monster/dh_07_08_filter_mask_fugitive.png",
+    "sheet": "sheets/monster/07_alchemist_cellars.png",
+    "cell": [
+      320,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      339,
+      186,
+      121,
+      121
+    ],
+    "sprite_pivot": [
+      66,
+      120
+    ],
+    "sheet_pivot": [
+      405,
+      306
+    ],
+    "native_height_ap": 121,
+    "suggested_world_height_px": 67,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_07_09_retort_spine_attendant",
+    "name": "Retort Spine Attendant",
+    "kind": "monster",
+    "suggested_dungeon": "Alchemist Cellars",
+    "sprite": "sprites/monster/dh_07_09_retort_spine_attendant.png",
+    "sheet": "sheets/monster/07_alchemist_cellars.png",
+    "cell": [
+      480,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      508,
+      195,
+      103,
+      112
+    ],
+    "sprite_pivot": [
+      10,
+      111
+    ],
+    "sheet_pivot": [
+      518,
+      306
+    ],
+    "native_height_ap": 112,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_07_10_salt_kiln_anatomist",
+    "name": "Salt Kiln Anatomist",
+    "kind": "monster",
+    "suggested_dungeon": "Alchemist Cellars",
+    "sprite": "sprites/monster/dh_07_10_salt_kiln_anatomist.png",
+    "sheet": "sheets/monster/07_alchemist_cellars.png",
+    "cell": [
+      640,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      669,
+      191,
+      102,
+      116
+    ],
+    "sprite_pivot": [
+      8,
+      115
+    ],
+    "sheet_pivot": [
+      677,
+      306
+    ],
+    "native_height_ap": 116,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_08_01_reflected_neck_page",
+    "name": "Reflected Neck Page",
+    "kind": "monster",
+    "suggested_dungeon": "Glass and Mirror Halls",
+    "sprite": "sprites/monster/dh_08_01_reflected_neck_page.png",
+    "sheet": "sheets/monster/08_glass_and_mirror_halls.png",
+    "cell": [
+      0,
+      0,
+      176,
+      160
+    ],
+    "art_rect": [
+      47,
+      41,
+      81,
+      106
+    ],
+    "sprite_pivot": [
+      21,
+      105
+    ],
+    "sheet_pivot": [
+      68,
+      146
+    ],
+    "native_height_ap": 106,
+    "suggested_world_height_px": 59,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_08_02_broken_prism_courtier",
+    "name": "Broken Prism Courtier",
+    "kind": "monster",
+    "suggested_dungeon": "Glass and Mirror Halls",
+    "sprite": "sprites/monster/dh_08_02_broken_prism_courtier.png",
+    "sheet": "sheets/monster/08_glass_and_mirror_halls.png",
+    "cell": [
+      176,
+      0,
+      176,
+      160
+    ],
+    "art_rect": [
+      212,
+      36,
+      104,
+      111
+    ],
+    "sprite_pivot": [
+      36,
+      110
+    ],
+    "sheet_pivot": [
+      248,
+      146
+    ],
+    "native_height_ap": 111,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_08_03_mirrorglass_mortician",
+    "name": "Mirrorglass Mortician",
+    "kind": "monster",
+    "suggested_dungeon": "Glass and Mirror Halls",
+    "sprite": "sprites/monster/dh_08_03_mirrorglass_mortician.png",
+    "sheet": "sheets/monster/08_glass_and_mirror_halls.png",
+    "cell": [
+      352,
+      0,
+      176,
+      160
+    ],
+    "art_rect": [
+      385,
+      32,
+      110,
+      115
+    ],
+    "sprite_pivot": [
+      35,
+      114
+    ],
+    "sheet_pivot": [
+      420,
+      146
+    ],
+    "native_height_ap": 115,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_08_04_kneeling_silver_facet",
+    "name": "Kneeling Silver Facet",
+    "kind": "monster",
+    "suggested_dungeon": "Glass and Mirror Halls",
+    "sprite": "sprites/monster/dh_08_04_kneeling_silver_facet.png",
+    "sheet": "sheets/monster/08_glass_and_mirror_halls.png",
+    "cell": [
+      528,
+      0,
+      176,
+      160
+    ],
+    "art_rect": [
+      570,
+      38,
+      91,
+      109
+    ],
+    "sprite_pivot": [
+      41,
+      108
+    ],
+    "sheet_pivot": [
+      611,
+      146
+    ],
+    "native_height_ap": 109,
+    "suggested_world_height_px": 61,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_08_05_dull_foil_footman",
+    "name": "Dull Foil Footman",
+    "kind": "monster",
+    "suggested_dungeon": "Glass and Mirror Halls",
+    "sprite": "sprites/monster/dh_08_05_dull_foil_footman.png",
+    "sheet": "sheets/monster/08_glass_and_mirror_halls.png",
+    "cell": [
+      704,
+      0,
+      176,
+      160
+    ],
+    "art_rect": [
+      738,
+      43,
+      107,
+      104
+    ],
+    "sprite_pivot": [
+      18,
+      103
+    ],
+    "sheet_pivot": [
+      756,
+      146
+    ],
+    "native_height_ap": 104,
+    "suggested_world_height_px": 58,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_08_06_leaded_mirror_pilgrim",
+    "name": "Leaded Mirror Pilgrim",
+    "kind": "monster",
+    "suggested_dungeon": "Glass and Mirror Halls",
+    "sprite": "sprites/monster/dh_08_06_leaded_mirror_pilgrim.png",
+    "sheet": "sheets/monster/08_glass_and_mirror_halls.png",
+    "cell": [
+      0,
+      160,
+      176,
+      160
+    ],
+    "art_rect": [
+      35,
+      188,
+      106,
+      119
+    ],
+    "sprite_pivot": [
+      50,
+      118
+    ],
+    "sheet_pivot": [
+      85,
+      306
+    ],
+    "native_height_ap": 119,
+    "suggested_world_height_px": 66,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_08_07_octagonal_eye_host",
+    "name": "Octagonal Eye Host",
+    "kind": "monster",
+    "suggested_dungeon": "Glass and Mirror Halls",
+    "sprite": "sprites/monster/dh_08_07_octagonal_eye_host.png",
+    "sheet": "sheets/monster/08_glass_and_mirror_halls.png",
+    "cell": [
+      176,
+      160,
+      176,
+      160
+    ],
+    "art_rect": [
+      219,
+      199,
+      90,
+      108
+    ],
+    "sprite_pivot": [
+      14,
+      107
+    ],
+    "sheet_pivot": [
+      233,
+      306
+    ],
+    "native_height_ap": 108,
+    "suggested_world_height_px": 60,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_08_08_splinter_spindle_usher",
+    "name": "Splinter Spindle Usher",
+    "kind": "monster",
+    "suggested_dungeon": "Glass and Mirror Halls",
+    "sprite": "sprites/monster/dh_08_08_splinter_spindle_usher.png",
+    "sheet": "sheets/monster/08_glass_and_mirror_halls.png",
+    "cell": [
+      352,
+      160,
+      176,
+      160
+    ],
+    "art_rect": [
+      386,
+      186,
+      107,
+      121
+    ],
+    "sprite_pivot": [
+      34,
+      120
+    ],
+    "sheet_pivot": [
+      420,
+      306
+    ],
+    "native_height_ap": 121,
+    "suggested_world_height_px": 67,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_08_09_crazed_glaze_knight",
+    "name": "Crazed Glaze Knight",
+    "kind": "monster",
+    "suggested_dungeon": "Glass and Mirror Halls",
+    "sprite": "sprites/monster/dh_08_09_crazed_glaze_knight.png",
+    "sheet": "sheets/monster/08_glass_and_mirror_halls.png",
+    "cell": [
+      528,
+      160,
+      176,
+      160
+    ],
+    "art_rect": [
+      564,
+      195,
+      104,
+      112
+    ],
+    "sprite_pivot": [
+      12,
+      111
+    ],
+    "sheet_pivot": [
+      576,
+      306
+    ],
+    "native_height_ap": 112,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_08_10_refraction_mask_duelist",
+    "name": "Refraction Mask Duelist",
+    "kind": "monster",
+    "suggested_dungeon": "Glass and Mirror Halls",
+    "sprite": "sprites/monster/dh_08_10_refraction_mask_duelist.png",
+    "sheet": "sheets/monster/08_glass_and_mirror_halls.png",
+    "cell": [
+      704,
+      160,
+      176,
+      160
+    ],
+    "art_rect": [
+      720,
+      191,
+      144,
+      116
+    ],
+    "sprite_pivot": [
+      78,
+      115
+    ],
+    "sheet_pivot": [
+      798,
+      306
+    ],
+    "native_height_ap": 116,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_09_01_lintel_shoulder_marauder",
+    "name": "Lintel Shoulder Marauder",
+    "kind": "monster",
+    "suggested_dungeon": "Collapsed Masonry",
+    "sprite": "sprites/monster/dh_09_01_lintel_shoulder_marauder.png",
+    "sheet": "sheets/monster/09_collapsed_masonry.png",
+    "cell": [
+      0,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      47,
+      41,
+      65,
+      106
+    ],
+    "sprite_pivot": [
+      7,
+      105
+    ],
+    "sheet_pivot": [
+      54,
+      146
+    ],
+    "native_height_ap": 106,
+    "suggested_world_height_px": 59,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_09_02_grout_lipped_mason",
+    "name": "Grout-Lipped Mason",
+    "kind": "monster",
+    "suggested_dungeon": "Collapsed Masonry",
+    "sprite": "sprites/monster/dh_09_02_grout_lipped_mason.png",
+    "sheet": "sheets/monster/09_collapsed_masonry.png",
+    "cell": [
+      160,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      198,
+      36,
+      83,
+      111
+    ],
+    "sprite_pivot": [
+      10,
+      110
+    ],
+    "sheet_pivot": [
+      208,
+      146
+    ],
+    "native_height_ap": 111,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_09_03_cantilever_hand_creature",
+    "name": "Cantilever Hand Creature",
+    "kind": "monster",
+    "suggested_dungeon": "Collapsed Masonry",
+    "sprite": "sprites/monster/dh_09_03_cantilever_hand_creature.png",
+    "sheet": "sheets/monster/09_collapsed_masonry.png",
+    "cell": [
+      320,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      359,
+      32,
+      82,
+      115
+    ],
+    "sprite_pivot": [
+      42,
+      114
+    ],
+    "sheet_pivot": [
+      401,
+      146
+    ],
+    "native_height_ap": 115,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_09_04_beam_back_vagrant",
+    "name": "Beam Back Vagrant",
+    "kind": "monster",
+    "suggested_dungeon": "Collapsed Masonry",
+    "sprite": "sprites/monster/dh_09_04_beam_back_vagrant.png",
+    "sheet": "sheets/monster/09_collapsed_masonry.png",
+    "cell": [
+      480,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      516,
+      38,
+      87,
+      109
+    ],
+    "sprite_pivot": [
+      35,
+      108
+    ],
+    "sheet_pivot": [
+      551,
+      146
+    ],
+    "native_height_ap": 109,
+    "suggested_world_height_px": 61,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_09_05_crumbling_hood_surveyor",
+    "name": "Crumbling Hood Surveyor",
+    "kind": "monster",
+    "suggested_dungeon": "Collapsed Masonry",
+    "sprite": "sprites/monster/dh_09_05_crumbling_hood_surveyor.png",
+    "sheet": "sheets/monster/09_collapsed_masonry.png",
+    "cell": [
+      640,
+      0,
+      160,
+      160
+    ],
+    "art_rect": [
+      683,
+      43,
+      73,
+      104
+    ],
+    "sprite_pivot": [
+      20,
+      103
+    ],
+    "sheet_pivot": [
+      703,
+      146
+    ],
+    "native_height_ap": 104,
+    "suggested_world_height_px": 58,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_09_06_chalk_mortise_attendant",
+    "name": "Chalk Mortise Attendant",
+    "kind": "monster",
+    "suggested_dungeon": "Collapsed Masonry",
+    "sprite": "sprites/monster/dh_09_06_chalk_mortise_attendant.png",
+    "sheet": "sheets/monster/09_collapsed_masonry.png",
+    "cell": [
+      0,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      34,
+      188,
+      92,
+      119
+    ],
+    "sprite_pivot": [
+      14,
+      118
+    ],
+    "sheet_pivot": [
+      48,
+      306
+    ],
+    "native_height_ap": 119,
+    "suggested_world_height_px": 66,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_09_07_plaster_ear_warden",
+    "name": "Plaster Ear Warden",
+    "kind": "monster",
+    "suggested_dungeon": "Collapsed Masonry",
+    "sprite": "sprites/monster/dh_09_07_plaster_ear_warden.png",
+    "sheet": "sheets/monster/09_collapsed_masonry.png",
+    "cell": [
+      160,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      208,
+      199,
+      64,
+      108
+    ],
+    "sprite_pivot": [
+      12,
+      107
+    ],
+    "sheet_pivot": [
+      220,
+      306
+    ],
+    "native_height_ap": 108,
+    "suggested_world_height_px": 60,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_09_08_keystone_spine_pilgrim",
+    "name": "Keystone Spine Pilgrim",
+    "kind": "monster",
+    "suggested_dungeon": "Collapsed Masonry",
+    "sprite": "sprites/monster/dh_09_08_keystone_spine_pilgrim.png",
+    "sheet": "sheets/monster/09_collapsed_masonry.png",
+    "cell": [
+      320,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      356,
+      186,
+      87,
+      121
+    ],
+    "sprite_pivot": [
+      26,
+      120
+    ],
+    "sheet_pivot": [
+      382,
+      306
+    ],
+    "native_height_ap": 121,
+    "suggested_world_height_px": 67,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_09_09_cairn_knee_excavator",
+    "name": "Cairn Knee Excavator",
+    "kind": "monster",
+    "suggested_dungeon": "Collapsed Masonry",
+    "sprite": "sprites/monster/dh_09_09_cairn_knee_excavator.png",
+    "sheet": "sheets/monster/09_collapsed_masonry.png",
+    "cell": [
+      480,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      500,
+      195,
+      120,
+      112
+    ],
+    "sprite_pivot": [
+      11,
+      111
+    ],
+    "sheet_pivot": [
+      511,
+      306
+    ],
+    "native_height_ap": 112,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_09_10_pulley_neck_salvager",
+    "name": "Pulley Neck Salvager",
+    "kind": "monster",
+    "suggested_dungeon": "Collapsed Masonry",
+    "sprite": "sprites/monster/dh_09_10_pulley_neck_salvager.png",
+    "sheet": "sheets/monster/09_collapsed_masonry.png",
+    "cell": [
+      640,
+      160,
+      160,
+      160
+    ],
+    "art_rect": [
+      684,
+      191,
+      71,
+      116
+    ],
+    "sprite_pivot": [
+      15,
+      115
+    ],
+    "sheet_pivot": [
+      699,
+      306
+    ],
+    "native_height_ap": 116,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_10_01_bellows_sleeved_penitent",
+    "name": "Bellows-Sleeved Penitent",
+    "kind": "monster",
+    "suggested_dungeon": "Sealed Sanctuaries",
+    "sprite": "sprites/monster/dh_10_01_bellows_sleeved_penitent.png",
+    "sheet": "sheets/monster/10_sealed_sanctuaries.png",
+    "cell": [
+      0,
+      0,
+      144,
+      160
+    ],
+    "art_rect": [
+      25,
+      41,
+      94,
+      106
+    ],
+    "sprite_pivot": [
+      25,
+      105
+    ],
+    "sheet_pivot": [
+      50,
+      146
+    ],
+    "native_height_ap": 106,
+    "suggested_world_height_px": 59,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_10_02_unmasked_night_custodian",
+    "name": "Unmasked Night Custodian",
+    "kind": "monster",
+    "suggested_dungeon": "Sealed Sanctuaries",
+    "sprite": "sprites/monster/dh_10_02_unmasked_night_custodian.png",
+    "sheet": "sheets/monster/10_sealed_sanctuaries.png",
+    "cell": [
+      144,
+      0,
+      144,
+      160
+    ],
+    "art_rect": [
+      165,
+      36,
+      101,
+      111
+    ],
+    "sprite_pivot": [
+      35,
+      110
+    ],
+    "sheet_pivot": [
+      200,
+      146
+    ],
+    "native_height_ap": 111,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_10_03_brazier_lung_sacrist",
+    "name": "Brazier Lung Sacrist",
+    "kind": "monster",
+    "suggested_dungeon": "Sealed Sanctuaries",
+    "sprite": "sprites/monster/dh_10_03_brazier_lung_sacrist.png",
+    "sheet": "sheets/monster/10_sealed_sanctuaries.png",
+    "cell": [
+      288,
+      0,
+      144,
+      160
+    ],
+    "art_rect": [
+      317,
+      32,
+      85,
+      115
+    ],
+    "sprite_pivot": [
+      12,
+      114
+    ],
+    "sheet_pivot": [
+      329,
+      146
+    ],
+    "native_height_ap": 115,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_10_04_bone_thread_prophet",
+    "name": "Bone Thread Prophet",
+    "kind": "monster",
+    "suggested_dungeon": "Sealed Sanctuaries",
+    "sprite": "sprites/monster/dh_10_04_bone_thread_prophet.png",
+    "sheet": "sheets/monster/10_sealed_sanctuaries.png",
+    "cell": [
+      432,
+      0,
+      144,
+      160
+    ],
+    "art_rect": [
+      464,
+      38,
+      79,
+      109
+    ],
+    "sprite_pivot": [
+      28,
+      108
+    ],
+    "sheet_pivot": [
+      492,
+      146
+    ],
+    "native_height_ap": 109,
+    "suggested_world_height_px": 61,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_10_05_crowned_shadow_vassal",
+    "name": "Crowned Shadow Vassal",
+    "kind": "monster",
+    "suggested_dungeon": "Sealed Sanctuaries",
+    "sprite": "sprites/monster/dh_10_05_crowned_shadow_vassal.png",
+    "sheet": "sheets/monster/10_sealed_sanctuaries.png",
+    "cell": [
+      576,
+      0,
+      144,
+      160
+    ],
+    "art_rect": [
+      595,
+      43,
+      105,
+      104
+    ],
+    "sprite_pivot": [
+      29,
+      103
+    ],
+    "sheet_pivot": [
+      624,
+      146
+    ],
+    "native_height_ap": 104,
+    "suggested_world_height_px": 58,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_10_06_ink_faced_hermit",
+    "name": "Ink-Faced Hermit",
+    "kind": "monster",
+    "suggested_dungeon": "Sealed Sanctuaries",
+    "sprite": "sprites/monster/dh_10_06_ink_faced_hermit.png",
+    "sheet": "sheets/monster/10_sealed_sanctuaries.png",
+    "cell": [
+      0,
+      160,
+      144,
+      160
+    ],
+    "art_rect": [
+      25,
+      188,
+      93,
+      119
+    ],
+    "sprite_pivot": [
+      15,
+      118
+    ],
+    "sheet_pivot": [
+      40,
+      306
+    ],
+    "native_height_ap": 119,
+    "suggested_world_height_px": 66,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_10_07_hushed_door_servitor",
+    "name": "Hushed Door Servitor",
+    "kind": "monster",
+    "suggested_dungeon": "Sealed Sanctuaries",
+    "sprite": "sprites/monster/dh_10_07_hushed_door_servitor.png",
+    "sheet": "sheets/monster/10_sealed_sanctuaries.png",
+    "cell": [
+      144,
+      160,
+      144,
+      160
+    ],
+    "art_rect": [
+      167,
+      199,
+      97,
+      108
+    ],
+    "sprite_pivot": [
+      22,
+      107
+    ],
+    "sheet_pivot": [
+      189,
+      306
+    ],
+    "native_height_ap": 108,
+    "suggested_world_height_px": 60,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_10_08_soot_stitch_occultist",
+    "name": "Soot Stitch Occultist",
+    "kind": "monster",
+    "suggested_dungeon": "Sealed Sanctuaries",
+    "sprite": "sprites/monster/dh_10_08_soot_stitch_occultist.png",
+    "sheet": "sheets/monster/10_sealed_sanctuaries.png",
+    "cell": [
+      288,
+      160,
+      144,
+      160
+    ],
+    "art_rect": [
+      308,
+      186,
+      103,
+      121
+    ],
+    "sprite_pivot": [
+      36,
+      120
+    ],
+    "sheet_pivot": [
+      344,
+      306
+    ],
+    "native_height_ap": 121,
+    "suggested_world_height_px": 67,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_10_09_hood_of_inward_eyes",
+    "name": "Hood of Inward Eyes",
+    "kind": "monster",
+    "suggested_dungeon": "Sealed Sanctuaries",
+    "sprite": "sprites/monster/dh_10_09_hood_of_inward_eyes.png",
+    "sheet": "sheets/monster/10_sealed_sanctuaries.png",
+    "cell": [
+      432,
+      160,
+      144,
+      160
+    ],
+    "art_rect": [
+      453,
+      195,
+      101,
+      112
+    ],
+    "sprite_pivot": [
+      27,
+      111
+    ],
+    "sheet_pivot": [
+      480,
+      306
+    ],
+    "native_height_ap": 112,
+    "suggested_world_height_px": 62,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_10_10_eleventh_toll_harper",
+    "name": "Eleventh Toll Harper",
+    "kind": "monster",
+    "suggested_dungeon": "Sealed Sanctuaries",
+    "sprite": "sprites/monster/dh_10_10_eleventh_toll_harper.png",
+    "sheet": "sheets/monster/10_sealed_sanctuaries.png",
+    "cell": [
+      576,
+      160,
+      144,
+      160
+    ],
+    "art_rect": [
+      593,
+      191,
+      110,
+      116
+    ],
+    "sprite_pivot": [
+      35,
+      115
+    ],
+    "sheet_pivot": [
+      628,
+      306
+    ],
+    "native_height_ap": 116,
+    "suggested_world_height_px": 64,
+    "palette_limit_including_transparency": 24
+  },
+  {
+    "id": "dh_11_01_the_reliquary_that_kneels",
+    "name": "The Reliquary That Kneels",
+    "kind": "boss",
+    "suggested_dungeon": "Charnel and Drowned Bosses",
+    "sprite": "sprites/boss/dh_11_01_the_reliquary_that_kneels.png",
+    "sheet": "sheets/boss/11_charnel_and_drowned_bosses.png",
+    "cell": [
+      0,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      50,
+      79,
+      235,
+      228
+    ],
+    "sprite_pivot": [
+      125,
+      227
+    ],
+    "sheet_pivot": [
+      175,
+      306
+    ],
+    "native_height_ap": 228,
+    "suggested_world_height_px": 127,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_11_02_harrow_matron_of_the_bone_loom",
+    "name": "Harrow Matron of the Bone Loom",
+    "kind": "boss",
+    "suggested_dungeon": "Charnel and Drowned Bosses",
+    "sprite": "sprites/boss/dh_11_02_harrow_matron_of_the_bone_loom.png",
+    "sheet": "sheets/boss/11_charnel_and_drowned_bosses.png",
+    "cell": [
+      336,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      364,
+      42,
+      280,
+      265
+    ],
+    "sprite_pivot": [
+      166,
+      264
+    ],
+    "sheet_pivot": [
+      530,
+      306
+    ],
+    "native_height_ap": 265,
+    "suggested_world_height_px": 147,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_11_03_the_third_pallbearer",
+    "name": "The Third Pallbearer",
+    "kind": "boss",
+    "suggested_dungeon": "Charnel and Drowned Bosses",
+    "sprite": "sprites/boss/dh_11_03_the_third_pallbearer.png",
+    "sheet": "sheets/boss/11_charnel_and_drowned_bosses.png",
+    "cell": [
+      672,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      720,
+      60,
+      240,
+      247
+    ],
+    "sprite_pivot": [
+      50,
+      246
+    ],
+    "sheet_pivot": [
+      770,
+      306
+    ],
+    "native_height_ap": 247,
+    "suggested_world_height_px": 137,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_11_04_the_altar_beneath_the_meat",
+    "name": "The Altar Beneath the Meat",
+    "kind": "boss",
+    "suggested_dungeon": "Charnel and Drowned Bosses",
+    "sprite": "sprites/boss/dh_11_04_the_altar_beneath_the_meat.png",
+    "sheet": "sheets/boss/11_charnel_and_drowned_bosses.png",
+    "cell": [
+      1008,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      1026,
+      19,
+      299,
+      288
+    ],
+    "sprite_pivot": [
+      131,
+      287
+    ],
+    "sheet_pivot": [
+      1157,
+      306
+    ],
+    "native_height_ap": 288,
+    "suggested_world_height_px": 160,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_11_05_the_hollow_headed_abbot",
+    "name": "The Hollow-Headed Abbot",
+    "kind": "boss",
+    "suggested_dungeon": "Charnel and Drowned Bosses",
+    "sprite": "sprites/boss/dh_11_05_the_hollow_headed_abbot.png",
+    "sheet": "sheets/boss/11_charnel_and_drowned_bosses.png",
+    "cell": [
+      1344,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      1390,
+      67,
+      243,
+      240
+    ],
+    "sprite_pivot": [
+      118,
+      239
+    ],
+    "sheet_pivot": [
+      1508,
+      306
+    ],
+    "native_height_ap": 240,
+    "suggested_world_height_px": 133,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_11_06_gaoler_of_the_upside_down_cistern",
+    "name": "Gaoler of the Upside-Down Cistern",
+    "kind": "boss",
+    "suggested_dungeon": "Charnel and Drowned Bosses",
+    "sprite": "sprites/boss/dh_11_06_gaoler_of_the_upside_down_cistern.png",
+    "sheet": "sheets/boss/11_charnel_and_drowned_bosses.png",
+    "cell": [
+      0,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      35,
+      358,
+      266,
+      269
+    ],
+    "sprite_pivot": [
+      93,
+      268
+    ],
+    "sheet_pivot": [
+      128,
+      626
+    ],
+    "native_height_ap": 269,
+    "suggested_world_height_px": 149,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_11_07_the_drowned_regent_in_his_chair",
+    "name": "The Drowned Regent in His Chair",
+    "kind": "boss",
+    "suggested_dungeon": "Charnel and Drowned Bosses",
+    "sprite": "sprites/boss/dh_11_07_the_drowned_regent_in_his_chair.png",
+    "sheet": "sheets/boss/11_charnel_and_drowned_bosses.png",
+    "cell": [
+      336,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      374,
+      344,
+      260,
+      283
+    ],
+    "sprite_pivot": [
+      134,
+      282
+    ],
+    "sheet_pivot": [
+      508,
+      626
+    ],
+    "native_height_ap": 283,
+    "suggested_world_height_px": 157,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_11_08_the_lantern_that_breathed",
+    "name": "The Lantern That Breathed",
+    "kind": "boss",
+    "suggested_dungeon": "Charnel and Drowned Bosses",
+    "sprite": "sprites/boss/dh_11_08_the_lantern_that_breathed.png",
+    "sheet": "sheets/boss/11_charnel_and_drowned_bosses.png",
+    "cell": [
+      672,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      719,
+      374,
+      241,
+      253
+    ],
+    "sprite_pivot": [
+      36,
+      252
+    ],
+    "sheet_pivot": [
+      755,
+      626
+    ],
+    "native_height_ap": 253,
+    "suggested_world_height_px": 141,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_11_09_the_deluge_undertaker",
+    "name": "The Deluge Undertaker",
+    "kind": "boss",
+    "suggested_dungeon": "Charnel and Drowned Bosses",
+    "sprite": "sprites/boss/dh_11_09_the_deluge_undertaker.png",
+    "sheet": "sheets/boss/11_charnel_and_drowned_bosses.png",
+    "cell": [
+      1008,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      1049,
+      350,
+      254,
+      277
+    ],
+    "sprite_pivot": [
+      93,
+      276
+    ],
+    "sheet_pivot": [
+      1142,
+      626
+    ],
+    "native_height_ap": 277,
+    "suggested_world_height_px": 154,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_11_10_the_cradle_of_ten_floodgates",
+    "name": "The Cradle of Ten Floodgates",
+    "kind": "boss",
+    "suggested_dungeon": "Charnel and Drowned Bosses",
+    "sprite": "sprites/boss/dh_11_10_the_cradle_of_ten_floodgates.png",
+    "sheet": "sheets/boss/11_charnel_and_drowned_bosses.png",
+    "cell": [
+      1344,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      1375,
+      368,
+      274,
+      259
+    ],
+    "sprite_pivot": [
+      81,
+      258
+    ],
+    "sheet_pivot": [
+      1456,
+      626
+    ],
+    "native_height_ap": 259,
+    "suggested_world_height_px": 144,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_12_01_the_rack_that_wore_a_crown",
+    "name": "The Rack That Wore a Crown",
+    "kind": "boss",
+    "suggested_dungeon": "Gaol and Barracks Bosses",
+    "sprite": "sprites/boss/dh_12_01_the_rack_that_wore_a_crown.png",
+    "sheet": "sheets/boss/12_gaol_and_barracks_bosses.png",
+    "cell": [
+      0,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      58,
+      79,
+      219,
+      228
+    ],
+    "sprite_pivot": [
+      67,
+      227
+    ],
+    "sheet_pivot": [
+      125,
+      306
+    ],
+    "native_height_ap": 228,
+    "suggested_world_height_px": 127,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_12_02_governor_of_bent_keys",
+    "name": "Governor of Bent Keys",
+    "kind": "boss",
+    "suggested_dungeon": "Gaol and Barracks Bosses",
+    "sprite": "sprites/boss/dh_12_02_governor_of_bent_keys.png",
+    "sheet": "sheets/boss/12_gaol_and_barracks_bosses.png",
+    "cell": [
+      336,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      383,
+      42,
+      242,
+      265
+    ],
+    "sprite_pivot": [
+      53,
+      264
+    ],
+    "sheet_pivot": [
+      436,
+      306
+    ],
+    "native_height_ap": 265,
+    "suggested_world_height_px": 147,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_12_03_the_hand_at_the_end_of_the_corridor",
+    "name": "The Hand at the End of the Corridor",
+    "kind": "boss",
+    "suggested_dungeon": "Gaol and Barracks Bosses",
+    "sprite": "sprites/boss/dh_12_03_the_hand_at_the_end_of_the_corridor.png",
+    "sheet": "sheets/boss/12_gaol_and_barracks_bosses.png",
+    "cell": [
+      672,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      718,
+      60,
+      243,
+      247
+    ],
+    "sprite_pivot": [
+      93,
+      246
+    ],
+    "sheet_pivot": [
+      811,
+      306
+    ],
+    "native_height_ap": 247,
+    "suggested_world_height_px": 137,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_12_04_the_iron_mercy_warden",
+    "name": "The Iron Mercy Warden",
+    "kind": "boss",
+    "suggested_dungeon": "Gaol and Barracks Bosses",
+    "sprite": "sprites/boss/dh_12_04_the_iron_mercy_warden.png",
+    "sheet": "sheets/boss/12_gaol_and_barracks_bosses.png",
+    "cell": [
+      1008,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      1024,
+      19,
+      304,
+      288
+    ],
+    "sprite_pivot": [
+      97,
+      287
+    ],
+    "sheet_pivot": [
+      1121,
+      306
+    ],
+    "native_height_ap": 288,
+    "suggested_world_height_px": 160,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_12_05_bride_of_the_sealed_gaol",
+    "name": "Bride of the Sealed Gaol",
+    "kind": "boss",
+    "suggested_dungeon": "Gaol and Barracks Bosses",
+    "sprite": "sprites/boss/dh_12_05_bride_of_the_sealed_gaol.png",
+    "sheet": "sheets/boss/12_gaol_and_barracks_bosses.png",
+    "cell": [
+      1344,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      1382,
+      67,
+      260,
+      240
+    ],
+    "sprite_pivot": [
+      106,
+      239
+    ],
+    "sheet_pivot": [
+      1488,
+      306
+    ],
+    "native_height_ap": 240,
+    "suggested_world_height_px": 133,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_12_06_the_split_plate_marshal",
+    "name": "The Split-Plate Marshal",
+    "kind": "boss",
+    "suggested_dungeon": "Gaol and Barracks Bosses",
+    "sprite": "sprites/boss/dh_12_06_the_split_plate_marshal.png",
+    "sheet": "sheets/boss/12_gaol_and_barracks_bosses.png",
+    "cell": [
+      0,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      34,
+      358,
+      268,
+      269
+    ],
+    "sprite_pivot": [
+      58,
+      268
+    ],
+    "sheet_pivot": [
+      92,
+      626
+    ],
+    "native_height_ap": 269,
+    "suggested_world_height_px": 149,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_12_07_oath_brand_general",
+    "name": "Oath-Brand General",
+    "kind": "boss",
+    "suggested_dungeon": "Gaol and Barracks Bosses",
+    "sprite": "sprites/boss/dh_12_07_oath_brand_general.png",
+    "sheet": "sheets/boss/12_gaol_and_barracks_bosses.png",
+    "cell": [
+      336,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      370,
+      344,
+      268,
+      283
+    ],
+    "sprite_pivot": [
+      171,
+      282
+    ],
+    "sheet_pivot": [
+      541,
+      626
+    ],
+    "native_height_ap": 283,
+    "suggested_world_height_px": 157,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_12_08_the_pavise_unmade",
+    "name": "The Pavise Unmade",
+    "kind": "boss",
+    "suggested_dungeon": "Gaol and Barracks Bosses",
+    "sprite": "sprites/boss/dh_12_08_the_pavise_unmade.png",
+    "sheet": "sheets/boss/12_gaol_and_barracks_bosses.png",
+    "cell": [
+      672,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      715,
+      374,
+      250,
+      253
+    ],
+    "sprite_pivot": [
+      80,
+      252
+    ],
+    "sheet_pivot": [
+      795,
+      626
+    ],
+    "native_height_ap": 253,
+    "suggested_world_height_px": 141,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_12_09_the_quiverback_despot",
+    "name": "The Quiverback Despot",
+    "kind": "boss",
+    "suggested_dungeon": "Gaol and Barracks Bosses",
+    "sprite": "sprites/boss/dh_12_09_the_quiverback_despot.png",
+    "sheet": "sheets/boss/12_gaol_and_barracks_bosses.png",
+    "cell": [
+      1008,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      1042,
+      350,
+      267,
+      277
+    ],
+    "sprite_pivot": [
+      44,
+      276
+    ],
+    "sheet_pivot": [
+      1086,
+      626
+    ],
+    "native_height_ap": 277,
+    "suggested_world_height_px": 154,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_12_10_the_last_trumpeter_at_muster",
+    "name": "The Last Trumpeter at Muster",
+    "kind": "boss",
+    "suggested_dungeon": "Gaol and Barracks Bosses",
+    "sprite": "sprites/boss/dh_12_10_the_last_trumpeter_at_muster.png",
+    "sheet": "sheets/boss/12_gaol_and_barracks_bosses.png",
+    "cell": [
+      1344,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      1375,
+      368,
+      273,
+      259
+    ],
+    "sprite_pivot": [
+      37,
+      258
+    ],
+    "sheet_pivot": [
+      1412,
+      626
+    ],
+    "native_height_ap": 259,
+    "suggested_world_height_px": 144,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_13_01_the_orchard_under_the_skin",
+    "name": "The Orchard Under the Skin",
+    "kind": "boss",
+    "suggested_dungeon": "Fungal and Occult Bosses",
+    "sprite": "sprites/boss/dh_13_01_the_orchard_under_the_skin.png",
+    "sheet": "sheets/boss/13_fungal_and_occult_bosses.png",
+    "cell": [
+      0,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      59,
+      79,
+      218,
+      228
+    ],
+    "sprite_pivot": [
+      73,
+      227
+    ],
+    "sheet_pivot": [
+      132,
+      306
+    ],
+    "native_height_ap": 228,
+    "suggested_world_height_px": 127,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_13_02_bride_of_the_spore_bell",
+    "name": "Bride of the Spore Bell",
+    "kind": "boss",
+    "suggested_dungeon": "Fungal and Occult Bosses",
+    "sprite": "sprites/boss/dh_13_02_bride_of_the_spore_bell.png",
+    "sheet": "sheets/boss/13_fungal_and_occult_bosses.png",
+    "cell": [
+      336,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      374,
+      42,
+      259,
+      265
+    ],
+    "sprite_pivot": [
+      107,
+      264
+    ],
+    "sheet_pivot": [
+      481,
+      306
+    ],
+    "native_height_ap": 265,
+    "suggested_world_height_px": 147,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_13_03_the_breathing_lintel_god",
+    "name": "The Breathing Lintel God",
+    "kind": "boss",
+    "suggested_dungeon": "Fungal and Occult Bosses",
+    "sprite": "sprites/boss/dh_13_03_the_breathing_lintel_god.png",
+    "sheet": "sheets/boss/13_fungal_and_occult_bosses.png",
+    "cell": [
+      672,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      722,
+      60,
+      235,
+      247
+    ],
+    "sprite_pivot": [
+      51,
+      246
+    ],
+    "sheet_pivot": [
+      773,
+      306
+    ],
+    "native_height_ap": 247,
+    "suggested_world_height_px": 137,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_13_04_the_kiln_without_a_door",
+    "name": "The Kiln Without a Door",
+    "kind": "boss",
+    "suggested_dungeon": "Fungal and Occult Bosses",
+    "sprite": "sprites/boss/dh_13_04_the_kiln_without_a_door.png",
+    "sheet": "sheets/boss/13_fungal_and_occult_bosses.png",
+    "cell": [
+      1008,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      1026,
+      19,
+      300,
+      288
+    ],
+    "sprite_pivot": [
+      152,
+      287
+    ],
+    "sheet_pivot": [
+      1178,
+      306
+    ],
+    "native_height_ap": 288,
+    "suggested_world_height_px": 160,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_13_05_high_mirror_penitent",
+    "name": "High Mirror Penitent",
+    "kind": "boss",
+    "suggested_dungeon": "Fungal and Occult Bosses",
+    "sprite": "sprites/boss/dh_13_05_high_mirror_penitent.png",
+    "sheet": "sheets/boss/13_fungal_and_occult_bosses.png",
+    "cell": [
+      1344,
+      0,
+      336,
+      320
+    ],
+    "art_rect": [
+      1395,
+      67,
+      234,
+      240
+    ],
+    "sprite_pivot": [
+      92,
+      239
+    ],
+    "sheet_pivot": [
+      1487,
+      306
+    ],
+    "native_height_ap": 240,
+    "suggested_world_height_px": 133,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_13_06_the_sexton_of_false_angles",
+    "name": "The Sexton of False Angles",
+    "kind": "boss",
+    "suggested_dungeon": "Fungal and Occult Bosses",
+    "sprite": "sprites/boss/dh_13_06_the_sexton_of_false_angles.png",
+    "sheet": "sheets/boss/13_fungal_and_occult_bosses.png",
+    "cell": [
+      0,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      37,
+      358,
+      262,
+      269
+    ],
+    "sprite_pivot": [
+      34,
+      268
+    ],
+    "sheet_pivot": [
+      71,
+      626
+    ],
+    "native_height_ap": 269,
+    "suggested_world_height_px": 149,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_13_07_the_inward_facing_crown",
+    "name": "The Inward-Facing Crown",
+    "kind": "boss",
+    "suggested_dungeon": "Fungal and Occult Bosses",
+    "sprite": "sprites/boss/dh_13_07_the_inward_facing_crown.png",
+    "sheet": "sheets/boss/13_fungal_and_occult_bosses.png",
+    "cell": [
+      336,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      370,
+      344,
+      267,
+      283
+    ],
+    "sprite_pivot": [
+      128,
+      282
+    ],
+    "sheet_pivot": [
+      498,
+      626
+    ],
+    "native_height_ap": 283,
+    "suggested_world_height_px": 157,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_13_08_sovereign_of_the_glass_wound",
+    "name": "Sovereign of the Glass Wound",
+    "kind": "boss",
+    "suggested_dungeon": "Fungal and Occult Bosses",
+    "sprite": "sprites/boss/dh_13_08_sovereign_of_the_glass_wound.png",
+    "sheet": "sheets/boss/13_fungal_and_occult_bosses.png",
+    "cell": [
+      672,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      717,
+      374,
+      246,
+      253
+    ],
+    "sprite_pivot": [
+      73,
+      252
+    ],
+    "sheet_pivot": [
+      790,
+      626
+    ],
+    "native_height_ap": 253,
+    "suggested_world_height_px": 141,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_13_09_the_keeper_of_the_twelfth_toll",
+    "name": "The Keeper of the Twelfth Toll",
+    "kind": "boss",
+    "suggested_dungeon": "Fungal and Occult Bosses",
+    "sprite": "sprites/boss/dh_13_09_the_keeper_of_the_twelfth_toll.png",
+    "sheet": "sheets/boss/13_fungal_and_occult_bosses.png",
+    "cell": [
+      1008,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      1037,
+      350,
+      278,
+      277
+    ],
+    "sprite_pivot": [
+      82,
+      276
+    ],
+    "sheet_pivot": [
+      1119,
+      626
+    ],
+    "native_height_ap": 277,
+    "suggested_world_height_px": 154,
+    "palette_limit_including_transparency": 32
+  },
+  {
+    "id": "dh_13_10_the_saint_beneath_the_black_stair",
+    "name": "The Saint Beneath the Black Stair",
+    "kind": "boss",
+    "suggested_dungeon": "Fungal and Occult Bosses",
+    "sprite": "sprites/boss/dh_13_10_the_saint_beneath_the_black_stair.png",
+    "sheet": "sheets/boss/13_fungal_and_occult_bosses.png",
+    "cell": [
+      1344,
+      320,
+      336,
+      320
+    ],
+    "art_rect": [
+      1374,
+      368,
+      275,
+      259
+    ],
+    "sprite_pivot": [
+      121,
+      258
+    ],
+    "sheet_pivot": [
+      1495,
+      626
+    ],
+    "native_height_ap": 259,
+    "suggested_world_height_px": 144,
+    "palette_limit_including_transparency": 32
+  }
+]

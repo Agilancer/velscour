@@ -1,20 +1,21 @@
 // ACT III sprite sizes against the rest of the game: rows of Phobos art (each category: folk, ward foes, castle foes,
 // knights, creatures, ward and castle bosses, Velscour's forms) beside the hero and painted monsters of the older sets,
-// frozen in place on a cleared floor; one shot per row. Usage: node tools/tests/phobos_lineup.js [perRow]
+// frozen in place on a cleared floor; one shot per row. Usage: node tools/tests/phobos_lineup.js [perRow] [cats,...]
+// (the Dungeon Horrors are the rows horror and horror_boss)
 const {openGame,report}=require('./harness');
 const per=+(process.argv[2]||8);
 (async()=>{
   const {browser,page,errors,shot}=await openGame({width:1600,height:900});
   try{
     await page.evaluate(async()=>{const {G,game}=window.VELSCOUR;await game.newChar('paladin','Lineup');document.querySelectorAll('.screen').forEach(s=>s.remove());G.ui.modalCount=0;G.godMode=true;});
-    const rows=await page.evaluate(async(per)=>{
+    const rows=await page.evaluate(async([per,catList])=>{
       const {PHOBOS_ART}=await import('/src/data/phobos.js');const {BESTIARY}=await import('/src/data/bestiary.js');
-      const cats=['gray','good','ward','castle','knight','creature','ward_boss','castle_boss','finale'];
+      const cats=catList.split(',');
       const pickN=(a,n)=>{const out=[],step=Math.max(1,Math.floor(a.length/n));for(let i=0;i<a.length&&out.length<n;i+=step)out.push(a[i]);return out;};
       const old=BESTIARY.filter(a=>!a.phobos&&!a.lone&&!a.boss&&!a.seaOfSand&&!a.breach&&!a.air&&!a.depthsEdge);
       const oldB=BESTIARY.filter(a=>a.boss&&!a.phobos&&!a.seaOfSand);
       return cats.map(c=>({c,ids:pickN(PHOBOS_ART.filter(a=>a.cat===c),per).map(a=>a.id),ref:pickN(c.includes('boss')||c==='finale'?oldB:old,3).map(a=>a.id)}));
-    },per);
+    },[per,process.argv[3]||'gray,good,ward,castle,knight,creature,horror,ward_boss,castle_boss,horror_boss,finale']);
     for(const r of rows){
       const info=await page.evaluate(async(r)=>{
         const {G,game}=window.VELSCOUR;const {BIOME_BY_ID}=await import('/src/data/biomes.js');const {loadBiomeArt}=await import('/src/core/assets.js');

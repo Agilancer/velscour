@@ -21,7 +21,7 @@ import { loadBiomeArt, biomeTileSet } from '../core/assets.js';
 import { loadArtFor } from '../core/enemyart.js';
 import { makeMonster } from './monster.js';
 import { makeRaidBoss } from './raid.js';
-import { DISTRICTS, HUBS, WINGS, CASTLE_FLOORS, wingOf, castleDepth, cityDepth, guardianFor, PHOBOS_FOLK, PHOBOS_BY_ID, FINALE, placeOf, placeLayout, BIBLE_BOSSES } from '../data/phobos.js';
+import { DISTRICTS, HUBS, WINGS, CASTLE_FLOORS, wingOf, castleDepth, cityDepth, guardianFor, wingLordFor, PHOBOS_FOLK, PHOBOS_BY_ID, FINALE, placeOf, placeLayout, BIBLE_BOSSES } from '../data/phobos.js';
 import { generatePhobos, PHOBOS_SEED, planX } from '../world/phobos.js';
 import { generateCastleFloor, LAYOUTS, SHEER_LAYOUTS } from '../world/castlevelscour.js';
 import { WING_RAIDS, VELSCOUR_RAIDS } from './phobosraids.js';
@@ -90,7 +90,7 @@ const cityRegion = registerRegion({
 });
 const castleRegion = {
   words: [], portal: 'Castle Velscour: a hundred floors climbing to the Throne Above.', townLine: 'The stair climbs on into <b>Castle Velscour</b>.',
-  load: (biome) => { const f = G.phobosFloor || 1, w = wingOf(f); return Promise.all([loadPhobosTex(), loadBiomeArt(biome), loadArtFor([...w.foes.map((a) => a.id), guardianFor(f).id, ...(f === CASTLE_FLOORS ? Object.values(FINALE).flatMap((v) => v.forms) : [])])]); },
+  load: (biome) => { const f = G.phobosFloor || 1, w = wingOf(f); return Promise.all([loadPhobosTex(), loadBiomeArt(biome), loadArtFor([...w.foes.map((a) => a.id), guardianFor(f).id, ...(wingLordFor(f) ? [wingLordFor(f).id] : []), ...(f === CASTLE_FLOORS ? Object.values(FINALE).flatMap((v) => v.forms) : [])])]); },
   ready: () => true,
   generate(depth, biome, seed) {
     const f = G.phobosFloor || 1, w = wingOf(f), layout = G.phobosLayout || w.layouts[(f - 1) % w.layouts.length];
@@ -323,9 +323,10 @@ function createCastleRun(world, gen, biome, depth) {
     const tpl = WING_RAIDS[wing.boss] || WING_RAIDS.latch;
     boss = makeRaidBoss(world, gen.raid, depth, lvl + 3, { tpl, art: tpl.art[0] });
   } else {
-    const art = f % 5 === 0 ? guardianFor(f) : pick(wing.foes), [x, y] = gen.guardian || gen.exit;
+    const lord = f % 5 === 0 ? null : wingLordFor(f), art = f % 5 === 0 ? guardianFor(f) : lord || pick(wing.foes), [x, y] = gen.guardian || gen.exit;
     boss = makeMonster(world, art.arch, biome, lvl + 2, 'boss', x, y, 0, { art: art.id, swap: null });
     boss.name = BIBLE_BOSSES[f] || art.name; if (f % 5 === 0) { boss.maxHp *= 1.5; boss.hp = boss.maxHp; boss.title = art.title || 'Guardian of the Castle'; }
+    else if (lord) { boss.maxHp *= 1.3; boss.hp = boss.maxHp; boss.title = 'A Lord of ' + wing.name.replace(/^The /, 'the '); }   // a wing's own horror lord
   }
   if (boss.raid) world.raid = boss.raid;
   world.add(boss); world.boss = boss;
