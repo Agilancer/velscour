@@ -146,6 +146,15 @@ const step = (page, secs) => page.evaluate(async (secs) => {   // run the game f
         return { done: run.completed, steps: [...(run.steps || [])], exit: exit && [+exit.x.toFixed(1), +exit.y.toFixed(1), exit.active], captain: run.captain, scenario: run.scenario.id,
           final: run.top?.final && { name: run.top.final.name, dead: run.top.final.dead } };
       });
+      // a hero left past the parapet (in the air, as a hook whose foe died mid-pull left a Ninja) is put back on the roof
+      const back = await page.evaluate(() => {
+        const { G, game } = window.VELSCOUR, w = G.world, g = w.tower.g, p = w.player;
+        p.x = g.AX + g.RT + 0.8; p.y = g.AY; p.z = 24.6;
+        for (let i = 0; i < 180; i++) { G.time += 1 / 60; game.update(1 / 60); }
+        return { ok: w.map.walkable(p.x, p.y) && !p.z, at: [+p.x.toFixed(1), +p.y.toFixed(1), p.z] };
+      });
+      res.strandedBack = back.ok;
+      if (!back.ok) errors.push(`[scenario ${si}] a hero past the parapet was not put back: ${JSON.stringify(back.at)}`);
       console.log('scenario', si, JSON.stringify(res));
       if (!res.done) errors.push(`[scenario ${si}] never finished: ${res.steps.join(',')}`);
       if (!res.exit || !res.exit[2]) errors.push(`[scenario ${si}] no open portal`);

@@ -11,7 +11,7 @@ import { camera, setWarp, warpMoved, isoX, isoY, HW, HH } from '../core/view.js'
 import { rand, chance, pick, clamp, TAU, shuffle, fmtInt } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { VZ, CUT_N, CUT_C, upCut } from '../world/tower.js';
-import { drawTower3D, drawTowerFront, tickTower3D, buildTower3D, disposeTower3D, spawnShip, loadAirships, airshipsReady } from '../gfx/tower3d.js';
+import { drawTower3D, drawTowerFront, tickTower3D, buildTower3D, disposeTower3D, spawnShip, loadAirships, airshipsReady, towerPortal } from '../gfx/tower3d.js';
 import { makeMonster, monsterBase } from './monster.js';
 import { makeRaidBoss, RAID_BOSSES } from './raid.js';
 import { depthLevel } from '../data/depth.js';
@@ -209,9 +209,20 @@ export function createTowerRun(world, gen, biome, onSuccess) {
         addLight(g.door[0], g.door[1], 6, 1, 70, '#ff8040');
       } else {
         for (const ca of [0, Math.PI / 2, Math.PI]) addLight(g.AX + Math.cos(ca) * g.RT * 0.68, g.AY + Math.sin(ca) * g.RT * 0.68, 7, 1, 80, '#ff9a50');
+        if (run.completed && exit && exit.active) portalFx(dt);
       }
     },
   };
+
+  // the open portal on the roof: the roof is lit by the open sky, so a dungeon portal's glow barely shows there; it gets
+  // a light of its own, sparks rising through it, and a ring that pulses out across the mosaic
+  function portalFx(dt) {
+    const T = run.top || {}, x = exit.x, y = exit.y, col = exit.color;
+    addLight(x, y, 7, 0.8, 30, col);
+    if (chance(dt * 26)) sparkle(x + rand(-0.5, 0.5), y + rand(-0.5, 0.5), rand(4, 70), chance(0.3) ? '#ffffff' : col, 1, 0.25);
+    if (chance(dt * 7)) { const a = rand(TAU), r = rand(1.4, 2.4); sparkle(x + Math.cos(a) * r, y + Math.sin(a) * r, 2, col, 1, 0.1); }
+    if ((T.ringT = (T.ringT ?? 0) - dt) <= 0) { T.ringT = 1.6; addEffect(new Ring(x, y, 0.4, 2.6, 1.4, col, 3)); }
+  }
 
   // ---------------------------------------------------------------- the climb
   function climb(dt) {
@@ -308,6 +319,21 @@ export function createTowerRun(world, gen, biome, onSuccess) {
     if (!T || p.dead) return;
     T.t += dt;
     T.mobs = T.mobs.filter((m) => !m.dead && world.creatures.includes(m));
+    // anything left off the roof's floor (knocked, flipped or blinked past the parapet or into the turret) is put back:
+    // nothing can walk off a tile that isn't floor, so the hero would stand there for good (and a monster there can't be
+    // reached and holds its wave open). One in the air gets two seconds to come down first; a height a skill left behind
+    // (a hook whose foe died mid-pull) no longer keeps him up there
+    if ((T.sweep = (T.sweep || 0) - dt) <= 0) {
+      T.sweep = 0.5;
+      for (const c of world.creatures) {
+        if (c.dead || c.entering || map.walkable(c.x, c.y)) { c.offRoof = 0; continue; }
+        if ((c.offRoof = (c.offRoof || 0) + 1) < (c.z > 0 ? 4 : 2)) continue;
+        c.offRoof = 0; c.z = 0; c.channel = null;
+        [c.x, c.y] = map.nudge(c.x, c.y, 0.4);
+        if (!map.walkable(c.x, c.y)) [c.x, c.y] = c === p ? map.randomNear(g.AX, g.AY + 2, 3) : roofSpot(3, g.RT - 2);
+        c.path = c.nav = c.moveTarget = null;
+      }
+    }
     // nothing on the roof to fight: whatever is on its way hurries (boats, ramps, gangplanks, climbers), so the hero
     // never stands about waiting for the next foe
     T.calm = world.creatures.some((m) => m.team === 'enemy' && !m.dead && m.targetable !== false) ? 0 : (T.calm || 0) + dt;
@@ -553,9 +579,13 @@ export function createTowerRun(world, gen, biome, onSuccess) {
     for (const s of T.ships) s.leave();
     UI.centerMsg('THE TOWER IS TAKEN', 'A portal opens on the roof', 3.5);
     sfx('gate');
-    if (exit) { exit.x = g.AX; exit.y = g.AY; addEffect(new Column(exit.x, exit.y, '#40a0ff', 1.2, 40, 400)); burst(exit.x, exit.y, 30, 'arcane', 30, 5); }
+    if (exit) {
+      exit.x = g.AX; exit.y = g.AY; exit.scale = 1.25;   // (the roof's camera is pulled back: a portal there is drawn larger)
+      addEffect(new Column(exit.x, exit.y, '#40a0ff', 1.2, 40, 400)); burst(exit.x, exit.y, 30, 'arcane', 30, 5);
+    }
     world.raid = null;
     onSuccess();
+    if (exit) towerPortal(exit.color);
     UI.refresh();
   }
   function treasure() {

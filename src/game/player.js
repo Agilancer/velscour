@@ -14,7 +14,7 @@ import { depthLevel, fortitude, logCurve, MAX_LEVEL } from '../data/depth.js';
 import { heroBonus } from './defiance.js';
 import { MAX_MASTERY, masteryNeed, masteryMul, masteryTier, TIER_NAMES } from './augments.js';
 import { castSkill, Timer } from './skillrun.js';
-import { Orbit, Area, BeamCh, Whirl, Leap } from './hazards.js';
+import { Orbit, Area, BeamCh, Whirl } from './hazards.js';
 import { hit, aoe } from './combat.js';
 import { heroLook, heroFrame, gearFxOf, finishOf } from '../core/gearart.js';
 import { castArtFx } from '../gfx/artfx.js';
@@ -690,7 +690,8 @@ export class Player extends Creature {
     if (this.dead) return;
     // a dash, leap or beam whose effect was swept away under him (a level section changing round him: game/caverns.js,
     // dunes.js, tower.js) would hold him channelling for good, unable to move or fight: let it go
-    if (this.channel && this.world && !this.world.hazards.includes(this.channel)) { if (this.channel instanceof Leap) this.z = 0; this.channel = null; }
+    // (any of them may have lifted him: a leap, a flip, Heaven's Drop; he comes down with it)
+    if (this.channel && this.world && !this.world.hazards.includes(this.channel)) { this.z = 0; this.channel = null; }
     // regen: natural baseline HP regen only recovers in town; outside town only gear/buff regen applies
     const inTown = this.world && this.world.kind === 'town';
     const effectiveRegen = heresyAllows('regen', c) ? ((inTown ? Math.max(st.naturalLifeRegen || 0, this.maxHp * 0.25) : 0) + (st.bonusLifeRegen || 0)) : 0;

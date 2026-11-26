@@ -413,7 +413,7 @@ function drawPortal(ctx, p) {
   const t = G.time;
   // floor rune ring and swirling vortex, a free-standing portal drawn 1.3x around its foot
   ctx.save();
-  ctx.translate(x, y); ctx.scale(1.3, 1.3);
+  ctx.translate(x, y); ctx.scale(1.3 * (p.scale || 1), 1.3 * (p.scale || 1));
   ctx.strokeStyle = rgba(col, 0.6); ctx.lineWidth = 2;
   ctx.beginPath(); ctx.ellipse(0, 0, 34, 17, 0, 0, TAU); ctx.stroke();
   ctx.beginPath(); ctx.ellipse(0, 0, 26, 13, 0, t, t + 5); ctx.stroke();
