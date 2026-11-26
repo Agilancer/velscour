@@ -576,10 +576,13 @@ next(n for n in world.node_tree.nodes if n.type == 'BACKGROUND').inputs['Color']
 gbm = bmesh.new(); bmesh.ops.create_grid(gbm, x_segments=1, y_segments=1, size=3.0)
 ground = obj('Ground', gbm, mat('Catcher', (0.5, 0.5, 0.5), 1.0)[0], coll='Ground'); ground.is_shadow_catcher = True
 
-# the whole altar grows by K about the middle of its tile
+# the whole altar grows by K about the middle of its tile and turns 45 degrees clockwise (seen from above), so its
+# square dais sits on the tile diamond like the rest of the isometric art; the sun lights stay put in the world
+SPIN = Matrix.Rotation(radians(-45), 3, 'Z')
 root = bpy.data.objects.new('Root', None); sc.collection.objects.link(root); root.scale = (K, K, K)
+root.rotation_euler = (0, 0, radians(-45))
 for o in list(bpy.data.objects):
-    if o is not root and o.parent is None: o.parent = root
+    if o is not root and o.parent is None and o.name not in ('Key', 'Fill', 'Rim'): o.parent = root
 cam_data = bpy.data.cameras.new('Iso'); cam_data.type = 'ORTHO'; cam_data.sensor_fit = 'VERTICAL'; cam_data.clip_end = 200
 cam = bpy.data.objects.new('Iso', cam_data); sc.collection.objects.link(cam); sc.camera = cam
 cam.rotation_euler = (radians(60), 0, radians(45))
@@ -693,7 +696,7 @@ if ONLY in (None, 'beauty'):   # a close three-quarter look for people (not used
     for o in COLL['Base'].objects: o.is_holdout = False
     bc = bpy.data.cameras.new('Beauty'); bc.lens = 70
     bo = bpy.data.objects.new('Beauty', bc); sc.collection.objects.link(bo)
-    bo.location = W(-1.6, -5.2, 2.1) * K; aim(bo, bo.location - Vector((0, 0, 1.05 * K)))
+    bo.location = SPIN @ W(-1.6, -5.2, 2.1) * K; aim(bo, bo.location - Vector((0, 0, 1.05 * K)))
     sc.camera = bo; rx, ry = sc.render.resolution_x, sc.render.resolution_y
     sc.render.resolution_x, sc.render.resolution_y = 900, 1100
     sc.render.film_transparent = False
@@ -709,7 +712,7 @@ if ONLY in (None, 'beauty'):   # a close three-quarter look for people (not used
 def scr(p): p = Vector(p); return [round(p.dot(RV) * PX, 1), round(-p.dot(UV) * PX, 1)]
 def centre(o): vs = o.data.vertices; return sum((o.matrix_world @ v.co for v in vs), Vector()) / len(vs)
 json.dump({'scale': S, 'size': [WPX, HPX], 'anchor': ANCHOR, 'frames': FRAMES, 'heart': scr((0, 0, HEART * K)), 'k': K,
-           'tips': [scr(t * K) for t in HORN_TIPS], 'flames': [scr(centre(f)) for f in FLAMES],
+           'tips': [scr(SPIN @ (t * K)) for t in HORN_TIPS], 'flames': [scr(centre(f)) for f in FLAMES],
            'eyes': [scr(centre(o)) for o in bpy.data.objects if o.name.startswith('AltarSkullEyes')]},
           open(os.path.join(OUT, 'frame.json'), 'w'))
 if BLEND:
