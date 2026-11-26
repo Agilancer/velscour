@@ -14,6 +14,29 @@ Contents
 
 ---
 
+## November 25, 2026 — the Altar of Heresy, rebuilt in Blender (branch `feat/altar-of-heresy-3d`)
+
+The user asked for "a much cooler version of the Altar of Heresy" made in Blender, shown to them before the PR. The old
+altar was a red `obelisk()` drawn in code. The new one is a full 3D model; see *The altar's art* in
+[`docs/ENDGAME.md`](ENDGAME.md).
+- **Model**: `tools/heresyaltar_blender.py` builds the whole scene in code (no .blend in the repo): a basalt dais of three
+  octagonal tiers, a rune ring, the altar block with a sigil and a skull, the forbidden book, two great ridged horns
+  with chains, obsidian shards, candles, skulls, and a blood crystal turning inside two rune rings. It is rendered in
+  Cycles in the game's isometric view.
+- **Pack**: `python tools/heresyaltar.py` runs Blender headless and packs `assets/sprites/npc/heresy_altar.webp`/`.json`.
+  The pack holds three states that cross-fade (sealed, awake, ablaze), a fire bloom, the heart's 32-frame loop dim and
+  lit, and the effect points.
+- **Game**: `src/gfx/heresyaltar.js` (`drawHeresyAltar`, called from `render.js`; it falls back to the obelisk until
+  the art loads). It handles the state fades, a heartbeat that quickens with the Heresy rank, fire off the horn tips,
+  embers, and a red light.
+- **Town**: `world/town.js` places the altar clear of the vendors, the rift and the start. It blocks the 3 x 3 under
+  the dais only when the 5 x 5 around it is open, and never on a door's approach or a kept path. The altar's reach is
+  2.4. The first-person view clips it wider.
+- **Verified**: `node tools/tests/heresy_altar.js 1,7,1337,42` checks placement, the walk to the panel, all three
+  states, close-ups and first person. `town.js` passed on six seeds, and `heresies.js` passes apart from its
+  pre-existing Unbound key-count check, which also fails on main. `flow.js` has a pre-existing failure on main
+  ("expected town at depth 1").
+
 ## November 25, 2026 — SHEER DROPS: ten dungeons with no walls, only cliffs into the void (branch `feat/sheer-drop-dungeons`)
 
 The user asked for "Sheer drop off" dungeons, generated the same way as the others but with sheer drops into an endless

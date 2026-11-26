@@ -29,6 +29,7 @@ import { obelisk } from './happenings.js';
 import { endgameUnlocked } from './endgame.js';
 import { heresyRankOf } from './heresies.js';
 import { addLight } from '../gfx/vfx.js';
+import { drawHeresyAltar } from '../gfx/heresyaltar.js';
 import { terrainOf, drawTerrain, drawColumn, occludersFor, occludersOfRect, occluderObj, clipAdd, hiddenBehind, standKey, hopZ, drawSky, terrainShade, HS } from '../gfx/terrain.js';
 import { hopArc } from './alpine.js';
 import { drawRiftgate } from '../gfx/riftgate.js';
@@ -448,8 +449,9 @@ function drawCorpse(ctx, c) {
 function drawNpc(ctx, n) {
   if (n.keepHero) { drawKeepHero(ctx, n, isoX(n.x, n.y), isoY(n.x, n.y), G.time); return; }   // your other heroes in Tessariel's Keep
   if ((n.keepFlame || n.keepMarker) && drawKeepNpc(ctx, n, isoX(n.x, n.y), isoY(n.x, n.y), G.time)) return;
-  if (n.altar) { // the Altar of Heresy (docs/ENDGAME.md): a dark obelisk, lit in Velscour's red once the Endgame is open, a skull glow while a Heresy is on
-    const x = isoX(n.x, n.y), y = isoY(n.x, n.y), open = endgameUnlocked(), lit = open && heresyRankOf() > 0;
+  if (n.altar) { // the Altar of Heresy (docs/ENDGAME.md, gfx/heresyaltar.js): sealed stone, awake once the Endgame opens, ablaze while Heresies are on
+    const x = isoX(n.x, n.y), y = isoY(n.x, n.y), open = endgameUnlocked(), rank = open ? heresyRankOf() : 0, lit = rank > 0;
+    if (drawHeresyAltar(ctx, n, x, y, open, rank)) return;
     if (lit) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3 + Math.sin(G.time * 2.5) * 0.12; ctx.drawImage(glowSprite('#ff3020'), x - 48, y - 70, 96, 80); ctx.restore(); }
     obelisk(ctx, x, y, open ? '#ff3020' : '#606070', open, 44);
     if (open) addLight(n.x, n.y, 2.6, lit ? 0.9 : 0.5, 30, '#ff3020');
@@ -1139,7 +1141,7 @@ export function renderFirstPerson(ctx, world) {
     if (c.dead || c === p || c.hidden || c.clutter) continue;
     add(c.x, c.y, 1, c, 50 * (c.scale || 1));
   }
-  for (const nn of world.npcs) { nn.sbox = null; if (!nn.hidden) add(nn.x, nn.y, 2, nn, 40); }
+  for (const nn of world.npcs) { nn.sbox = null; if (!nn.hidden) add(nn.x, nn.y, 2, nn, nn.altar ? 62 : 40); }   // (the Altar of Heresy's horns: gfx/heresyaltar.js)
   for (const l of world.loot) add(l.x, l.y, 3, l, 30);
   for (const c of world.chests) add(c.x, c.y, 4, c, 50);
   for (const po of world.portals) add(po.x, po.y, 5, po, 80);

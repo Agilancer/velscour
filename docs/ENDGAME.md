@@ -35,9 +35,9 @@ its three-way rules for heroes untouched. The fake backend in `tools/tests/cloud
 `users/{uid}/account/endgame`).
 
 ## 1. Heresies (`src/data/heresies.js`, `src/game/heresies.js`, `src/ui/heresies.js`)
-Difficulty modifiers the player switches on at the **Altar of Heresy** in Herrington Hollow (a dark obelisk beside the
-plaza, `world.npcs` entry `{ altar: true, name: 'Altar of Heresy', use: () => Heresies.open() }`, drawn by `drawNpc` with
-`obelisk()` from happenings.js in Velscour's red, a skull glow when any Heresy is on). They are the hero's (`c.heresy =
+Difficulty modifiers the player switches on at the **Altar of Heresy** in Herrington Hollow (a horned basalt altar beside
+the plaza, `world.npcs` entry `{ altar: true, name: 'Altar of Heresy', use: () => Heresies.open() }`, drawn by
+`drawHeresyAltar` in `src/gfx/heresyaltar.js`; see *The altar's art* below). They are the hero's (`c.heresy =
 { on: ['twins', ...] }`, migrate adds `{ on: [] }`), take hold from the next level built, and apply in standard depths,
 the Endless Torment and the Eternal Breach. **Not** in Abyssal Rifts (the clock is the challenge and the honour board
 must compare like with like) and not in Velscour Unbound. The Quest Log and the HUD's area subtitle show the rank.
@@ -76,8 +76,23 @@ description), the milestones, "Renounce all", and the three doors (Abyssal Rift 
 `game.enterUnbound()` with the key count, disabled under three keys, Infernal Marks `G.ui.marks.open()`). A toggle
 autosaves. On a touch screen: one column, 50x28 switches, 48 px doors, the body scrolls. Locked before the Endgame: the
 panel says so, the list is greyed and disabled, the rift door too. The altar itself is `t.altar` from `generateTown`
-(a reachable tile about 5.5 tiles from the plaza's centre), an obelisk grey while locked, red once open, glowing while a
-Heresy is on.
+(a reachable tile about 5.5 tiles from the plaza's centre, clear of the vendors, the rift and the start).
+
+**The altar's art** is a Blender model (`tools/heresyaltar_blender.py`, built entirely in code: three octagonal basalt
+tiers with a rune ring, the altar block with a sigil and a skull, the forbidden book on its slab, two great ridged horns,
+chains, obsidian shards, candles, skulls, and a blood crystal turning inside two rings of runes). `python
+tools/heresyaltar.py` renders it in Blender headless (Cycles, about 10 minutes on a GPU; `--fast` for a quick look,
+`--blend FILE` to keep the scene) and packs `assets/sprites/npc/heresy_altar.webp`/`.json`. The pack holds three states
+of the altar without its heart in one crop, so they cross-fade in place: **sealed** (cold stone, before the Endgame),
+**awake** (runes, book and candles lit) and **ablaze** (a Heresy on: glowing cracks, fire in the horn grooves, the skull's
+eyes). It also holds the fire alone, blurred to a bloom and added on top, the heart's 32-frame loop dim and lit, and the
+points the game lights live (heart, horn tips, candle flames, eyes). Only the sealed layer carries the ground shadow.
+`drawHeresyAltar` eases between states (`n._lvl`: 0, 1, then 1.55 to 2 with the rank), beats a heartbeat that quickens with
+the rank, and throws fire off the horn tips and embers off the dais while ablaze, with a red light. Until the art loads,
+`render.js` draws the old `obelisk()`. The dais is two tiles across: when the 5 x 5 round it is open, `generateTown`
+blocks the 3 x 3 under it (never a door's approach or a kept path) and the altar's reach is 2.4. Run
+`node tools/tests/heresy_altar.js [seeds]` (placement, the walk to the panel, every state, close-ups, first person)
+and `town.js`.
 
 Where they stop: Ambush Weather has no effect in BOSS ROOMs or the Breach (`ambushTick` skips them); **Black Omens only
 reaches omenable depths (below 500)**: `setupHappenings` returns early from Depth 500 on and `omenable` is false there, so
