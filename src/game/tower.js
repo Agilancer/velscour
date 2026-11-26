@@ -11,6 +11,7 @@ import { camera, setWarp, warpMoved, isoX, isoY, HW, HH } from '../core/view.js'
 import { rand, chance, pick, clamp, TAU, shuffle, fmtInt } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { VZ, CUT_N, CUT_C, upCut } from '../world/tower.js';
+import { disposeSpires3D } from '../gfx/spires3d.js';
 import { drawTower3D, drawTowerFront, tickTower3D, buildTower3D, disposeTower3D, spawnShip, loadAirships, airshipsReady, towerPortal } from '../gfx/tower3d.js';
 import { makeMonster, monsterBase } from './monster.js';
 import { makeRaidBoss, RAID_BOSSES } from './raid.js';
@@ -85,7 +86,7 @@ const FLAG = Math.PI, FAR = -Math.PI * 0.75, LEFT = Math.PI * 0.75, RIGHT = -Mat
 export function useTower(world) {
   const tw = world && world.tower;
   setWarp(tw ? tw.warp : null, tw ? tw.pick : null);
-  if (!tw) { camera.leadX = camera.leadY = 0; if (camera.zoomK !== 1) { camera.zoomK = 1; camera.computeZoom(); } disposeTower3D(); return; }
+  if (!tw) { camera.leadX = camera.leadY = 0; if (camera.zoomK !== 1) { camera.zoomK = 1; camera.computeZoom(); } disposeTower3D(); disposeSpires3D(); return; }
   tw.frame(0);
 }
 
