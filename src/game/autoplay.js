@@ -21,6 +21,7 @@ import { riftOpen } from './rifts.js';
 import { endgameUnlocked } from './endgame.js';
 import { hearthReady, useHearth } from './hearth.js';
 import { isUnboundCheckpointFloor, MAX_UNBOUND_DEPTH, canEnterUnbound } from './unbound.js';
+import { climbNext, climbGo, climbTrip, climbLeave } from './climb.js';
 import { heresyAllows } from './heresies.js';
 import { marksFree, autoSpend } from './marks.js';
 import { drawBiome } from '../data/biomes.js';
@@ -1644,6 +1645,7 @@ export const Auto = {
     this.transitT = 3;
     if (w.breach) { G.game.breachExit(w, { auto: true, town }); return; }
     if (w.rift) { G.game.riftExit(w, { auto: true, town }); return; }
+    if (w.phobos) { climbLeave(w, town); return; }   // Act III is a climb of its own (game/climb.js): never off into a random dungeon
 
     if (w.unboundExploration) {
       const uFloor = w.unboundExploration.floor;
@@ -2327,6 +2329,9 @@ export const Auto = {
       if (this.townSocial(dt)) return;
       // done: through the portal (Hearthstone return portal has absolute priority to restore progress!)
       const hearth = w.portals.find((q) => q.hearth);
+      // now and then the Standard Campaign takes up the Act III climb instead (game/climb.js: gear score, climb goals)
+      const climb = !hearth && this.dest === 'standard' && !this.transitT && climbNext(c);
+      if (climb) { G.ui.closeAll(); this.transitT = 4; this.sinceTown = 0; this.setStatus(climb.city ? 'To City State Phobos' : `Climbing Castle Velscour — Floor ${climb.floor}`); climbGo(climb); return; }
       // the Standard Campaign calls at Tessariel's Keep first when there is business there (keepWanted)
       const kg = !hearth && w.portals.find((q) => q.keepGate && !w.keep), why = kg && this.keepWanted(c);
       if (why) {
@@ -2360,7 +2365,7 @@ export const Auto = {
         else if (breach) G.game.enterBreach(this.breachFloor());
         else if (rift) G.game.enterRift(this.riftTier());
         else if (unbound) G.game.enterUnboundExploration(this.unboundFloor());
-        else G.game.enterDungeon();
+        else { climbTrip(); G.game.enterDungeon(); }
       }
       this.watchStuck(dt);
       return;

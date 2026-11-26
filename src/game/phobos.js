@@ -25,6 +25,7 @@ import { DISTRICTS, HUBS, WINGS, CASTLE_FLOORS, wingOf, castleDepth, cityDepth, 
 import { generatePhobos, PHOBOS_SEED, planX } from '../world/phobos.js';
 import { generateCastleFloor, LAYOUTS, SHEER_LAYOUTS } from '../world/castlevelscour.js';
 import { WING_RAIDS, VELSCOUR_RAIDS } from './phobosraids.js';
+import { applyPhobosKit } from './phobosattacks.js';
 import { townObject } from '../world/town.js';
 import { phobosTalk, makeTalker } from './phobostalk.js';
 import { loadPhobosTex, phobosFloors, phobosProp, floorV, PH_V, phobosTexReady } from '../gfx/phobostex.js';
@@ -173,6 +174,7 @@ function townPortalTo(world, game) {
 }
 function spawnFoe(world, biome, art, level, rank, x, y) {
   const m = makeMonster(world, art.arch, biome, level, rank, x, y, 0, { art: art.id, swap: null });
+  applyPhobosKit(m, art);
   if (art.title && rank !== 'normal') m.name = art.name;
   world.add(m);
   return m;
@@ -332,7 +334,7 @@ function createCastleRun(world, gen, biome, depth) {
   world.add(boss); world.boss = boss;
   if (gen.phTex) { world.extraFloors = phobosFloors(); world.extraBase = PH_V; }
   // the castle's garrison talks too (the raid bosses keep their own voices)
-  for (const m of world.creatures) if (m.team === 'enemy' && !m.raid) makeTalker(m);
+  for (const m of world.creatures) if (m.team === 'enemy' && !m.raid) { makeTalker(m); applyPhobosKit(m); }
   const talk = phobosTalk(world, { placeOf: () => ({ place: placeOf(f), lord: boss.name }) });
   // leap stones and swing chains
   const pads = gen.leaps.map((L) => world.addHazard(new Pad(world, L)));
@@ -349,6 +351,8 @@ function createCastleRun(world, gen, biome, depth) {
     update(dt) { questTick(dt); talk(dt); },
     questHtml(step) {
       let h = `<div class="q-title">Castle Velscour &middot; Floor ${f}/${CASTLE_FLOORS} <span class="dim">(${escapeHtml(wing.name)})</span></div><div class="dim">${escapeHtml(placeOf(f))} &middot; wing ${((f - 1) % 10) + 1}/10</div>`;
+      const goal = Math.min(CASTLE_FLOORS, Math.ceil(f / 10) * 10);
+      h += step(!!S.cleared[goal], `<b>Climb goal:</b> clear Floor ${goal}${goal === CASTLE_FLOORS ? ', the Throne Above' : `, ${escapeHtml(wing.name)}'s great room`} <span class="dim">(the stair leads only up; leave by a town portal and the Bellmourn waypoint brings you back)</span>.`);
       h += questLogHtml(step);
       h += step(boss.dead, `${f === CASTLE_FLOORS ? '<b style="color:#ff3030">Lord Velscour</b> waits in the Throne Above' : f % 10 === 0 ? `<b style="color:#ff8050">${escapeHtml(boss.raid ? boss.raid.tpl.name : boss.name)}</b> holds this wing's great room` : f % 5 === 0 ? `<b>${escapeHtml(boss.name)}</b> guards the stair` : 'A captain of Velscour\'s own guards the stair'}.`);
       if (gen.leaps.length) h += step(false, '<span class="dim">Glowing stones fling you over the gaps; iron rings swing you across on a chain.</span>');
