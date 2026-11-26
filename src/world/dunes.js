@@ -18,6 +18,7 @@ import { RNG } from '../core/util.js';
 import { VZ, CAVE_S, vnoise } from './caverns.js';
 import { DUNE_VARIANTS, DUNE_ROSTER } from '../data/dunes.js';
 import { ART_BY_ID } from '../data/bestiary.js';
+import { sandCreatures, sandMythics, sandBosses } from '../data/sandkin.js';
 import { seaOfSandObject } from '../gfx/seaofsand.js';
 import { SAND_H } from './overworld.js';
 
@@ -57,17 +58,28 @@ function curve(pts) {
 export function duneLooks(v, rnd = Math.random) {
   const chosen = new Map(), used = new Set();
   const lookOf = (id) => (rnd() < 0.8 ? { art: id, swap: v.swap, tint: v.tint } : { art: id, swap: null });
+  const sandLook = (id) => (rnd() < 0.35 ? { art: id, swap: v.swap, tint: v.tint } : { art: id, swap: null });   // already sand-coloured
+  // each pyramid's two bosses: the variant's own, or (half the time each) a huge boss the roster suggests for it
+  const huge = sandBosses(null, v.id).map((a) => a.id);
+  const bosses = v.bosses.map((b) => (huge.length && rnd() < 0.5 ? [huge.splice(Math.floor(rnd() * huge.length), 1)[0], b[1], b[2]] : b));
   const looksFor = (arch) => {
     if (chosen.has(arch)) return chosen.get(arch);
     const pool = (v.roster[arch] || v.roster.skeleton).filter((id) => ART_BY_ID[id]), list = [];
-    for (let i = 0; i < 3 && pool.length; i++) { const id = pool.splice(Math.floor(rnd() * pool.length), 1)[0]; list.push(lookOf(id)); used.add(id); }
+    // the Sea of Sand bestiary the roster suggests for this variant (data/sandkin.js): two looks in three, a mythic now and then
+    const sand = sandCreatures(arch, v.id).map((a) => a.id), myth = sandMythics(arch, v.id).map((a) => a.id);
+    for (let i = 0; i < 3; i++) {
+      const from = myth.length && rnd() < 0.04 ? myth : sand.length && (i < 2 || !pool.length) ? sand : pool;
+      if (!from.length) break;
+      const id = from.splice(Math.floor(rnd() * from.length), 1)[0]; list.push(ART_BY_ID[id]?.sandKin ? sandLook(id) : lookOf(id)); used.add(id);
+    }
     chosen.set(arch, list);
     return list;
   };
   return {
     pick(arch, r = rnd) { const l = looksFor(DUNE_ROSTER.includes(arch) ? arch : 'skeleton'); return l[Math.floor(r() * l.length)]; },
-    boss(i = 0) { const [id] = v.bosses[i % v.bosses.length]; used.add(id); return { arch: ART_BY_ID[id]?.arch || 'golem', look: { art: id, swap: v.swap, tint: v.tint } }; },
-    ids() { return [...used, ...v.bosses.map((b) => b[0])]; },
+    bosses,
+    boss(i = 0) { const [id] = bosses[i % bosses.length]; used.add(id); return { arch: ART_BY_ID[id]?.arch || 'golem', look: { art: id, swap: v.swap, tint: v.tint } }; },
+    ids() { return [...used, ...bosses.map((b) => b[0])]; },
   };
 }
 

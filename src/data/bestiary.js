@@ -5,6 +5,7 @@ import { BREACH_ART } from './breach.js';
 import { AIR_ART } from './airpirates.js';
 import { DEPTHS_EDGE } from './depthsedge.js';
 import { CASTLE_KIN } from './castlekin.js';
+import { SAND_KIN, isDesert, sandCreatures, sandMythics, sandBosses } from './sandkin.js';
 import { PHOBOS_ART } from './phobos.js';
 // Monster art catalogue: every monster cut from the sheets in assets/source/enemies/<set>/ (see docs/ENEMY_ART.md).
 // Each entry is one cell of a sheet (i = reading order, left to right then top to bottom) and says which AI
@@ -64,6 +65,7 @@ const bone = { gore: 'bone', undead: true };
 
 export const BESTIARY = [
   ...HEAVENLY_MONSTERS,
+  ...SAND_KIN,
   ...SAND_CREATURES.map(([arch, name], i) => ({ id:`ss_${arch}`, sheet:'sea_of_sand', i, arch, name, h:52+(i%5)*3, homeBiome:'sea_of_sand', seaOfSand:true, nativeVariant:i })),
   ...SAND_BOSSES.map(([arch, name], i) => ({ id:`ss_${arch}`, sheet:'sea_of_sand', i:SAND_CREATURES.length+i, arch, name, h:82+(i%3)*4, homeBiome:'sea_of_sand', seaOfSand:true, nativeVariant:60+i, boss:true, lone:true })),
   // ---- set 1: skeleton warband
@@ -545,21 +547,25 @@ const compat = (a, arch) => a.arch === arch || (a.also && a.also.includes(arch))
  * keep their own creatures). Giants (`lone`) only play guardians and raid bosses. */
 export function artPool(arch) {
   if (BESTIARY.some((a) => a.seaOfSand && a.arch === arch)) return BESTIARY.filter((a) => a.seaOfSand && a.arch === arch);
-  return BESTIARY.filter((a) => !a.lone && !a.seaOfSand && !a.breach && !a.air && !a.depthsEdge && !a.phobos && compat(a, arch));
+  return BESTIARY.filter((a) => !a.lone && !a.seaOfSand && !a.sandKin && !a.breach && !a.air && !a.depthsEdge && !a.phobos && compat(a, arch));
 }
 /** Guardian art for an archetype (giants included). */
-const bossPool = (arch) => BESTIARY.filter((a) => a.boss && !a.seaOfSand && !a.breach && !a.air && !a.depthsEdge && !a.phobos && (!arch || compat(a, arch)));
+const bossPool = (arch) => BESTIARY.filter((a) => a.boss && !a.seaOfSand && !a.sandKin && !a.breach && !a.air && !a.depthsEdge && !a.phobos && (!arch || compat(a, arch)));
 
 // A level draws its looks from at most this many lazily loaded sheets (set 1 is always in), so a random bestiary
 // still only downloads and decodes a few atlases per level.
 const LEVEL_SHEETS = 6;
 const EAGER_SHEET = /^set1\//;
 const SWAP_KEYS = Object.keys(SWAPS);
+const SAND_SWAPS = ['sand', 'gilded', 'bronze', 'rust', 'bone', 'ember', 'pale', 'obsidian'];
 const titleCase = (k) => k[0].toUpperCase() + k.slice(1);
 
 // The Castle Creatures are the newest expansion: a look's first pick comes from them this often (in the Castle
 // overworld most of the time), and a guardian is a castle boss this often.
 const KIN_SHARE = 0.3, KIN_CASTLE = 0.7, KIN_BOSS = 0.25;
+// The Sea of Sand bestiary (data/sandkin.js) lives only in the deserts: there a look's first pick is theirs this often
+// (later picks half as often), one look in this many is a mythic, and a guardian is a desert boss this often (or a mythic).
+const SAND_SHARE = 0.75, SAND_MYTHIC = 0.04, SAND_BOSS = 0.65, SAND_BOSS_MYTHIC = 0.15;
 
 /**
  * A level's bestiary: up to 4 random looks per archetype from the whole catalogue (no biome themes), each with a
@@ -581,16 +587,23 @@ export function rollLooks(biome, rnd = Math.random) {
   };
   const lookOf = (a) => {
     if (a.seaOfSand || rnd() < 1 / 3) return { art: a.id, swap: null };
+    if (a.sandKin) { // the desert bestiary keeps its own sand colours, or wears a desert one
+      if (rnd() < 0.55) return { art: a.id, swap: null };
+      const k = SAND_SWAPS[Math.floor(rnd() * SAND_SWAPS.length)];
+      return { art: a.id, swap: SWAPS[k], tint: titleCase(k) };
+    }
     const k = SWAP_KEYS[Math.floor(rnd() * SWAP_KEYS.length)];
     return { art: a.id, swap: SWAPS[k], tint: titleCase(k) };
   };
-  const chosen = new Map(), bosses = [];
+  const chosen = new Map(), bosses = [], desert = isDesert(biome);
   const looksFor = (arch) => {
     if (chosen.has(arch)) return chosen.get(arch);
     const pool = artPool(arch), ids = [], looks = [], kin = pool.filter((a) => a.castleKin);
     const share = /castle/.test(biome.id || '') ? KIN_CASTLE : KIN_SHARE;
+    const sand = desert ? sandCreatures(arch) : [], myth = desert ? sandMythics(arch) : [];
     for (let i = 0; i < 4; i++) {
-      const a = (kin.length && rnd() < (i ? share * 0.5 : share) && pickArt(kin, ids)) || pickArt(pool, ids);
+      const a = (myth.length && rnd() < SAND_MYTHIC && pickArt(myth, ids)) || (sand.length && rnd() < (i ? SAND_SHARE * 0.5 : SAND_SHARE) && pickArt(sand, ids))
+        || (kin.length && rnd() < (i ? share * 0.5 : share) && pickArt(kin, ids)) || pickArt(pool, ids);
       if (!a) break;
       ids.push(a.id); looks.push(lookOf(a));
     }
@@ -604,8 +617,10 @@ export function rollLooks(biome, rnd = Math.random) {
     boss(roster, r = rnd) {
       const possible = (roster || biome.roster || []).filter((a) => a);
       const arch = possible.length ? possible[Math.floor(r() * possible.length)] : null;
-      const kin = bossPool().filter((b) => b.castleKin);
-      const a = (rnd() < KIN_BOSS && pickArt(kin)) || pickArt(arch && bossPool(arch).length ? bossPool(arch) : bossPool());
+      const kin = bossPool().filter((b) => b.castleKin), r0 = rnd();
+      const sandB = desert && r0 < SAND_BOSS ? (arch && sandBosses(arch).length ? sandBosses(arch) : sandBosses()) : null;
+      const sandM = desert && !sandB && r0 < SAND_BOSS + SAND_BOSS_MYTHIC ? sandMythics() : null;
+      const a = (sandB && pickArt(sandB)) || (sandM && pickArt(sandM)) || (!desert && rnd() < KIN_BOSS && pickArt(kin)) || pickArt(arch && bossPool(arch).length ? bossPool(arch) : bossPool());
       if (a) bosses.push(a.id);
       return a ? { arch: a.arch, look: lookOf(a) } : null;
     },

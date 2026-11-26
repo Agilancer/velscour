@@ -41,6 +41,7 @@ function addSandArchetype(id, name, role, boss = false, bossIndex = 0) {
     hp: base.hp * (boss ? 1.85 + bossIndex * 0.13 : 0.72 + (id.length % 7) * 0.1),
     dmg: base.dmg * (boss ? 1.15 + (bossIndex % 3) * 0.16 : 0.8 + (id.length % 5) * 0.1),
     spd: base.spd * (boss ? 0.84 + (bossIndex % 4) * 0.11 : role === 'tank' || role === 'brute' ? 0.78 : 0.94 + (id.length % 4) * 0.08),
+    sandBase: boss ? SAND_BOSSES[bossIndex][2] : SAND_BASE[role] || 'skeleton',
     pal: { ...base.pal }, names: [name], ...(boss ? { bossName: name, bossPatterns:SAND_BOSSES[bossIndex][4] } : {}), seaOfSand: true,
   };
 }

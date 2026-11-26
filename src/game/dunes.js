@@ -57,7 +57,7 @@ export function useDunes(world) {
 }
 
 export function createDuneRun(world, gen, biome, onSuccess) {
-  const dv = gen.dunes, v = gen.variant, map = world.map, depth = world.depth || 1, lvl = depthLevel(depth), W = map.w, H = map.h;
+  const dv = gen.dunes, v = gen.variant, bosses = gen.looks?.bosses || v.bosses, map = world.map, depth = world.depth || 1, lvl = depthLevel(depth), W = map.w, H = map.h;
   world.ambushT = Infinity;   // the dunes direct their own fights
   const exit = world.portals.find((q) => q.type === 'exit');
   if (exit) { exit.x = exit.y = -100; }   // the portal opens in the burial chamber when its master falls
@@ -587,7 +587,7 @@ export function createDuneRun(world, gen, biome, onSuccess) {
     for (let k = 0; k < 2; k++) { const [x, y] = spotNear(T.cx, T.cy, 0.5, 2.5); if (x != null) foe(null, x, y, { arch: pick(['golem', 'knight', 'scorpion']), rank: 'champion', how: 'teleport', delay: k * 0.4 }); }
   }
   function tombBoss(e) {
-    const [artId, tplId, title] = v.bosses[1] || v.bosses[0], rm = e.rm;
+    const [artId, tplId, title] = bosses[1] || bosses[0], rm = e.rm;
     const arena = { cx: rm.cx, cy: rm.cy, x: rm.x0, y: rm.y0, w: rm.x1 - rm.x0 + 1, h: rm.y1 - rm.y0 + 1, gate: { x: -40, y0: -40, y1: -39 } };
     const m = boss(arena, artId, tplId, title, 0.5, 2.0);
     e.boss = m; e.foes.push(m);
@@ -622,7 +622,7 @@ export function createDuneRun(world, gen, biome, onSuccess) {
     const T = run.top;
     T.t += dt;
     if (!T.boss && T.t > 2.6) {
-      const [artId, tplId, title] = v.bosses[0];
+      const [artId, tplId, title] = bosses[0];
       const arena = { cx: chamber.cx, cy: chamber.cy, x: chamber.x0, y: chamber.y0, w: chamber.x1 - chamber.x0 + 1, h: chamber.y1 - chamber.y0 + 1, gate: { x: -40, y0: -40, y1: -39 } };
       T.boss = boss(arena, artId, tplId, title, 1, 2.6);
       [T.boss.x, T.boss.y] = map.randomNear(chamber.cx + 0.5, chamber.cy + 2.5, 1.5);

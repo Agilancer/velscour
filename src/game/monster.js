@@ -14,6 +14,7 @@ import { bodyR, aloft } from '../world/map.js';
 import { toughness, danger, densityXp, riftHold, dmgScale } from '../data/depth.js';
 import { attachSlime, slimeUpdate, courtDef } from './slimecourt.js';
 import { ART_BY_ID, REVIVED, greaterSwap, rollLooks, uniqueSwap } from '../data/bestiary.js';
+import { sandCreatures, sandBosses } from '../data/sandkin.js';
 import { skillMorphFor } from '../data/talents.js';
 import { attachKit, kitTick, kitHurt } from './castlekin.js';
 
@@ -1356,7 +1357,7 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
   const B = monsterBase(level);
   if (world.riftHold) B.hp *= riftHold(level);
   const depth = world.depth || 1;
-  if (A.seaOfSand && biome.id === 'sea_of_sand') look = { art:'ss_'+archId, swap:null };
+  if (A.seaOfSand && biome.id === 'sea_of_sand') look = sandNativeLook(world, archId, A);
   if (look === undefined) look = lookFor(world, archId);
   const art = look && ART_BY_ID[look.art];
   const biomeEl = biome.el && biome.el !== 'phys' ? biome.el : null;
@@ -1424,6 +1425,11 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
     // but all existing AI, projectiles, rank affixes and drops keep working.
     if(foreign)m.name='Wayward '+m.name;
   }
+  if (art?.sandKin) { // the Sea of Sand bestiary: the large ones a little tougher, a mythic a pack's centrepiece
+    const k = art.mythic ? { hp: 2.6, dmg: 1.35, xp: 3, spd: 0.9 } : art.tier === 'large' ? { hp: 1.15, dmg: 1.08, xp: 1.15, spd: 1 } : art.tier === 'small' ? { hp: 0.9, dmg: 0.95, xp: 1, spd: 1.06 } : null;
+    if (k) { m.maxHp *= k.hp; m.hp = m.maxHp; m.dmg *= k.dmg; m.xp *= k.xp; m.speed *= k.spd; }
+    if (art.mythic) { m.mythic = true; if (rank === 'normal') m.aura = '#ffb040'; }
+  }
   if (rank !== 'normal') makeElite(m, rank, depth, world);
   if (art && art.heavenlyFamily && rank === 'boss') {
     m.name = art.name.toUpperCase();
@@ -1431,6 +1437,17 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
   }
   if (art && art.kit && !noKit) attachKit(m, art.kit); // the Castle Creatures (data/castlekin.js): each its own mechanic
   return m;
+}
+
+/** A Sea of Sand native's look there: its own art, or (for about half of the archetypes, fixed for the level) one of the
+ * Sea of Sand bestiary (data/sandkin.js) that can play its base archetype. */
+function sandNativeLook(world, archId, A) {
+  const own = { art: 'ss_' + archId, swap: null }, m = world.sandLooks || (world.sandLooks = {});
+  if (!(archId in m)) {
+    const boss = A.ai === 'boss', pool = boss ? sandBosses(A.sandBase) : sandCreatures(A.sandBase);
+    m[archId] = pool.length && Math.random() < (boss ? 0.5 : 0.55) ? pool[Math.floor(Math.random() * pool.length)].id : null;
+  }
+  return m[archId] ? { art: m[archId], swap: null } : own;
 }
 
 export function makeElite(m, rank, depth, world) {

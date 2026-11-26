@@ -14,6 +14,18 @@ Contents
 
 ---
 
+## November 26, 2026: the Sea of Sand bestiary, the Thanksgiving update (branch `feat/sea-of-sand-200`)
+- Added 200 desert sprites from `VELSCOUR_Sea_of_Sand_200_Sprites.zip`: 50 small, 70 large, 30 mythic and 50 bosses.
+  [SEA_OF_SAND_BESTIARY.md](SEA_OF_SAND_BESTIARY.md) has everything.
+- `tools/sandkin.py` cuts them by heat map. They are packed as `sand/*` atlases, one per sheet, and the catalogue is
+  `src/data/sandkin.js`.
+- They are desert only (`isDesert`). In desert dungeons they are about half the looks and about 80% of guardians,
+  and a mythic turns up now and then. They are 60% of desert BOSS ROOMs.
+- In the Sea of Sand about half the natives wear one of them. In the pyramid dunes each variant takes the ones the
+  roster suggests for it, and a pyramid boss is a desert boss half the time.
+- Test: `tools/tests/sandkin.js`.
+- Open: they use the shared archetype AIs, with no mechanics of their own yet.
+
 ## November 26, 2026: Castle Creatures and Bosses, the Thanksgiving update (branch `feat/castle-creatures`)
 - Added 60 sprites from `VELSCOUR_Castle_Creatures_and_Bosses.zip` (50 creatures, 10 bosses). They are part of the
   base game, and [CASTLE_CREATURES.md](CASTLE_CREATURES.md) has everything.
