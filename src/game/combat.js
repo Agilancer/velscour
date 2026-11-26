@@ -20,6 +20,7 @@ import { keepKill } from './keep.js';
 import { riftKill } from './rifts.js';
 import { SKILLS } from '../data/skills.js';
 import { skillMorphFor } from '../data/talents.js';
+import { kitTaken, kitHit } from './castlekin.js';
 
 const PLAYER_RES = { fire: 'fire', cold: 'cold', light: 'light', poison: 'poison', acid: 'poison' };
 const LEECH_K = 2; // life/mana leech: a whole monster's life taken returns LEECH_K x leech% of the hero's own
@@ -70,6 +71,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     dmg *= 1 - clamp(res, -100, 75) / 100;
     dmg *= 1 - clamp(st.reduce || 0, 0, 60) / 100;
     if (tgt.raidTakenMul) dmg *= tgt.raidTakenMul; // raid mechanics (game/raidsigs.js): sunder stacks
+    if (tgt.status.hunted && tgt.status.hunted.t > 0) dmg *= 1.15; // a Crown Hound's royal hunt (game/castlekin.js)
     if (src && src.curses && src.curses.weaken && src.curses.weaken.t > 0) dmg *= 1 - src.curses.weaken.amt / 100;
     if (G.godMode) dmg = 0;
     // thorns: the affix's value and the reflected hit are on the shown scale (hero life), so they land as that times
@@ -90,6 +92,13 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     if (C.mark && C.mark.t > 0) dmg *= 1 + C.mark.amt / 100;
     if (tgt.status.shred && tgt.status.shred.t > 0) dmg *= 1 + tgt.status.shred.amt;
     if (tgt.ward !== undefined) dmg *= tgt.ward; // a raid boss behind its warding crystals
+    if (tgt.kit) dmg *= kitTaken(tgt, src, el, o); // Castle Creatures: shells, stone sleep, candles, jaws
+    if (tgt.guardedBy && !o.guarded) {
+      // a Cinder Squire takes half of the blows aimed at its ward
+      const g = tgt.guardedBy;
+      if (!g.dead && g.world === tgt.world && Math.hypot(g.x - tgt.x, g.y - tgt.y) < 6) { hit(src, g, dmg * 0.5, el, { ...o, guarded: true, silent: true }); dmg *= 0.5; }
+      else tgt.guardedBy = null;
+    }
     if (src && src.curses && src.curses.weaken && src.curses.weaken.t > 0 && !fromPlayer) dmg *= 1 - src.curses.weaken.amt / 100;
     if (tgt.reflect && src && src.isPlayer && !o.dot && !o.force) {
       // a raid boss's riposte (game/raidsigs.js): the hero's own blow comes back (minions' don't)
@@ -98,6 +107,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
       return 0;
     }
     if (fromPlayer && owner.raidDmgMul) dmg *= owner.raidDmgMul;
+    if (fromPlayer && owner.status && owner.status.disarm && owner.status.disarm.t > 0) dmg *= 0.5; // a Tongs Fiend has the weapon
     if (fromPlayer) {
       const st = owner.st;
       if (tgt.rank === 'boss' && st.bossDmg) dmg *= 1 + st.bossDmg / 100;
@@ -108,6 +118,8 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
     }
     if (tgt.rank === 'boss' && (o.freeze || o.stun)) { o = { ...o, freeze: false, stun: o.stun && chance(0.15) }; }
   }
+  const rust = tgt.status && tgt.status.rust; // a Rust Pike Revenant's wounds (game/castlekin.js)
+  if (rust && rust.t > 0) dmg *= 1 + rust.amt;
   dmg = tgt.isPlayer && G.godMode ? 0 : Math.max(1, dmg * rand(0.92, 1.08));
   if (tgt.vel) dmg = tgt.vel.absorb(dmg); // Velscour's life gates and damage cap (game/velscour.js)
 
@@ -124,6 +136,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
   const shouldFlash = !o.multiHit || o.hitIndex === 0 || o.hitIndex === (o.hitCount - 1);
   if (shouldFlash) tgt.flash = 0.10;
   if (tgt.team === 'enemy') tgt.regenSuppress = o.dot ? Math.max(tgt.regenSuppress || 0, 3.0) : 6.0;
+  if (src && src.kit && !o.dot && src !== tgt) kitHit(src, tgt, dmg); // a Castle Creature's blow landed (game/castlekin.js)
   if (tgt.onDamaged && !o.dot) tgt.onDamaged(src, dmg);
   tgt.hpShow = 3;
   if (!tgt.isPlayer && !o.dot) tgt.awake = true;

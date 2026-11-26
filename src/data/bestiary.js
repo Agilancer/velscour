@@ -4,6 +4,7 @@ import { SET3 } from './bestiary3.js';
 import { BREACH_ART } from './breach.js';
 import { AIR_ART } from './airpirates.js';
 import { DEPTHS_EDGE } from './depthsedge.js';
+import { CASTLE_KIN } from './castlekin.js';
 import { PHOBOS_ART } from './phobos.js';
 // Monster art catalogue: every monster cut from the sheets in assets/source/enemies/<set>/ (see docs/ENEMY_ART.md).
 // Each entry is one cell of a sheet (i = reading order, left to right then top to bottom) and says which AI
@@ -475,6 +476,7 @@ BESTIARY.push(
     ['obsidian_roc_matron', 'gargoyle', 64, { el: 'shadow', boss: true }],
   ]),
   ...SET3,
+  ...CASTLE_KIN, // the Castle Creatures and Bosses (data/castlekin.js): base game, every creature with its own mechanic
   ...BREACH_ART,
   ...AIR_ART,
   ...PHOBOS_ART, // Act III: Phobos and Castle Velscour's own (data/phobos.js): never in another level's looks
@@ -555,6 +557,10 @@ const EAGER_SHEET = /^set1\//;
 const SWAP_KEYS = Object.keys(SWAPS);
 const titleCase = (k) => k[0].toUpperCase() + k.slice(1);
 
+// The Castle Creatures are the newest expansion: a look's first pick comes from them this often (in the Castle
+// overworld most of the time), and a guardian is a castle boss this often.
+const KIN_SHARE = 0.3, KIN_CASTLE = 0.7, KIN_BOSS = 0.25;
+
 /**
  * A level's bestiary: up to 4 random looks per archetype from the whole catalogue (no biome themes), each with a
  * random palette swap two times in three. A swapped look is named after its swap ("Ember Ashen Maw").
@@ -581,9 +587,10 @@ export function rollLooks(biome, rnd = Math.random) {
   const chosen = new Map(), bosses = [];
   const looksFor = (arch) => {
     if (chosen.has(arch)) return chosen.get(arch);
-    const pool = artPool(arch), ids = [], looks = [];
+    const pool = artPool(arch), ids = [], looks = [], kin = pool.filter((a) => a.castleKin);
+    const share = /castle/.test(biome.id || '') ? KIN_CASTLE : KIN_SHARE;
     for (let i = 0; i < 4; i++) {
-      const a = pickArt(pool, ids);
+      const a = (kin.length && rnd() < (i ? share * 0.5 : share) && pickArt(kin, ids)) || pickArt(pool, ids);
       if (!a) break;
       ids.push(a.id); looks.push(lookOf(a));
     }
@@ -597,7 +604,8 @@ export function rollLooks(biome, rnd = Math.random) {
     boss(roster, r = rnd) {
       const possible = (roster || biome.roster || []).filter((a) => a);
       const arch = possible.length ? possible[Math.floor(r() * possible.length)] : null;
-      const a = pickArt(arch && bossPool(arch).length ? bossPool(arch) : bossPool());
+      const kin = bossPool().filter((b) => b.castleKin);
+      const a = (rnd() < KIN_BOSS && pickArt(kin)) || pickArt(arch && bossPool(arch).length ? bossPool(arch) : bossPool());
       if (a) bosses.push(a.id);
       return a ? { arch: a.arch, look: lookOf(a) } : null;
     },

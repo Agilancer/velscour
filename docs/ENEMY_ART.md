@@ -116,3 +116,9 @@ The 1,850 generated "biome native" monsters (`bn_`: existing sprites with Canvas
 and so was the Heavenly monsters' Canvas fallback: `hv_` monsters are cut only from their painted sheets
 (`src/gfx/heavenlymonsters.js`, loaded by `loadArtFor` when a level rolls one). A saved nemesis that wore `bn_` art
 takes a fresh look (`migrate()`).
+
+## Castle Creatures and Bosses (the Thanksgiving update)
+60 sprites (50 creatures, 10 bosses), cut by heat map with `python tools/castlekin.py <zip>` into
+`assets/source/enemies/castle/` and packed by `python tools/process_assets.py enemies castle`. They are in the random
+bestiary (favoured: `KIN_SHARE`), each creature has its own mechanic, and the bosses are guardians and raid bosses.
+See [`CASTLE_CREATURES.md`](CASTLE_CREATURES.md).

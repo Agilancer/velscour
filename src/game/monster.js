@@ -15,6 +15,7 @@ import { toughness, danger, densityXp, riftHold, dmgScale } from '../data/depth.
 import { attachSlime, slimeUpdate, courtDef } from './slimecourt.js';
 import { ART_BY_ID, REVIVED, greaterSwap, rollLooks, uniqueSwap } from '../data/bestiary.js';
 import { skillMorphFor } from '../data/talents.js';
+import { attachKit, kitTick, kitHurt } from './castlekin.js';
 
 const LEASH = 10; // minions fight what's within this many tiles of the hero
 const CHASE = 1.3, CHASE_MAX = 4.6; // monsters' pursuit pace: x1.3, up to 4.6 tiles/s (the hero runs 4.2) unless faster already
@@ -105,7 +106,8 @@ export class Monster extends Creature {
     return d;
   }
 
-  onDamaged(src) {
+  onDamaged(src, dmg) {
+    if (this.kit) kitHurt(this, src, dmg);
     this.regenSuppress = 6.0; // Taking direct damage suppresses regeneration for 6 seconds
     if (!this.affixes) return;
     if (this.affixes.includes('shocking') && (this.shockCd || 0) <= 0) {
@@ -204,7 +206,11 @@ export class Monster extends Creature {
     if (this.state === 'windup' || this.state === 'act') { this.runAction(dt); return; }
     if (this.slime) return slimeUpdate(this, dt); // the Slime Lord's court (game/slimecourt.js)
 
-    if (this.ai === 'boss') return this.bossUpdate(dt);
+    if (this.ai === 'boss') {
+      // a castle boss standing guard plays one of the Castle Creatures' mechanics between its patterns
+      if (this.kit && this.awake) { const t = this.pickTarget(); if (t && kitTick(this, dt, t, dist(this.x, this.y, t.x, t.y))) return; }
+      return this.bossUpdate(dt);
+    }
     if (this.ai === 'raid') return this.raid.update(dt);
     const target = this.pickTarget();
     this.target = target;
@@ -212,6 +218,7 @@ export class Monster extends Creature {
     if (!this.summon && !this.awake) { this.awake = true; this.alertPack(); }
     const d = dist(this.x, this.y, target.x, target.y);
     this.trackTarget(target, dt);
+    if (this.kit && kitTick(this, dt, target, d)) return;
     if (this.moves) {
       if (!this.frenzy && this.hp < this.maxHp * 0.4 && this.moves.includes('frenzy')) this.goFrenzy();
       if ((this.moveCd -= dt) <= 0 && this.trySpecial(target, d)) return;
@@ -1344,7 +1351,7 @@ export function lookFor(world, archId, rnd = Math.random) {
  * variant 1 = "greater" breed: own palette and name, tougher. `look` = {art, swap} from the level's bestiary
  * (rollLooks in data/bestiary.js); without one the level picks. Archetypes with no art keep their pixel sprite.
  */
-export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0, y = 0, variant = 0, look = undefined) {
+export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0, y = 0, variant = 0, look = undefined, noKit = false) {
   const A = ARCH[archId];
   const B = monsterBase(level);
   if (world.riftHold) B.hp *= riftHold(level);
@@ -1422,6 +1429,7 @@ export function makeMonster(world, archId, biome, level, rank = 'normal', x = 0,
     m.name = art.name.toUpperCase();
     m.aura = '#f5d78d';
   }
+  if (art && art.kit && !noKit) attachKit(m, art.kit); // the Castle Creatures (data/castlekin.js): each its own mechanic
   return m;
 }
 
