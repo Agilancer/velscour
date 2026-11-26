@@ -236,7 +236,8 @@ export async function buildSpires3D(gen) {
       B.add('trim', worldUV(new T.BoxGeometry(0.7, 0.18, 0.3).rotateY(-tau).translate(q[0], q[1] - 0.86, q[2])));
     }
     // string courses round the drum at the foot and the crown
-    for (const hh of [t.foot - 1.6, wallTop - 0.6]) B.add('trim', worldUV(new T.CylinderGeometry(rd + 0.3, rd + 0.3, 0.55, 72, 1, true).translate(t.cx, hh, t.cz)));
+    for (let hh = t.foot - 1.6; hh < wallTop; hh += 6) B.add('trim', worldUV(new T.CylinderGeometry(rd + 0.3, rd + 0.3, 0.55, 72, 1, true).translate(t.cx, hh, t.cz)));   // a string course every storey
+    { const H = wallTop - t.foot + 1.6; for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; B.add('trim', worldUV(new T.BoxGeometry(0.7, H, 0.45).rotateY(-a).translate(t.cx + Math.cos(a) * (rd + 0.2), t.foot - 1.6 + H / 2, t.cz + Math.sin(a) * (rd + 0.2)))); } }   // and pilasters up the drum
     // the crown: machicolations, a cone of slate, a finial, his banners
     B.add('trim', worldUV(new T.CylinderGeometry(rd + 0.7, rd + 0.25, 0.9, 72).translate(t.cx, wallTop + 0.45, t.cz)));
     for (let k = 0; k < 28; k++) { const a = k / 28 * TAU; B.add('trim', worldUV(new T.BoxGeometry(0.5, 0.7, 0.6).rotateY(-a).translate(t.cx + Math.cos(a) * (rd + 0.5), wallTop + 1.25, t.cz + Math.sin(a) * (rd + 0.5)))); }
@@ -260,8 +261,8 @@ export async function buildSpires3D(gen) {
         const sa = a + (b - a) * j / 2, sb = a + (b - a) * (j + 1) / 2;
         const q = [V(sa, -2, hq), V(sa, 2.8, hq), V(sb, 2.8, hq), V(sb, -2, hq)];
         B.quad('floor', ...q, [0, 1, 0], q.map((v) => [v[0] / 1.6, v[2] / 1.6]));
-        B.quad('stone', V(sa, 2.8, hq - 1.35), V(sb, 2.8, hq - 1.35), V(sb, 2.8, hq), V(sa, 2.8, hq), null, [[sa / 1.6, 0], [sb / 1.6, 0], [sb / 1.6, 0.45], [sa / 1.6, 0.45]]);
-        const d = [V(sa, -2, hq - 1.35), V(sa, 2.8, hq - 1.35), V(sb, 2.8, hq - 1.35), V(sb, -2, hq - 1.35)];
+        B.quad('stone', V(sa, 2.8, hq - 2.4), V(sb, 2.8, hq - 2.4), V(sb, 2.8, hq), V(sa, 2.8, hq), null, [[sa / 1.6, 0], [sb / 1.6, 0], [sb / 1.6, 0.45], [sa / 1.6, 0.45]]);
+        const d = [V(sa, -2, hq - 2.4), V(sa, 2.8, hq - 2.4), V(sb, 2.8, hq - 2.4), V(sb, -2, hq - 2.4)];
         B.quad('stone', ...d, [0, -1, 0], d.map((v) => [v[0] / 1.6, v[2] / 1.6]));
       }
       if (Math.abs(hq - hPrev) > 0.01) B.quad('trim', V(a, -2, Math.min(hq, hPrev)), V(a, 2.8, Math.min(hq, hPrev)), V(a, 2.8, Math.max(hq, hPrev)), V(a, -2, Math.max(hq, hPrev)), null, [[0, 0], [3, 0], [3, 0.1], [0, 0.1]]);
@@ -345,7 +346,8 @@ export async function buildSpires3D(gen) {
     { const p = top.attributes.position, uv = top.attributes.uv, g = R3() * TAU, c = Math.cos(g), sn = Math.sin(g); for (let i = 0; i < p.count; i++) { const x = p.getX(i) - cx, z = p.getZ(i) - cz; uv.setXY(i, (x * c - z * sn) / 1.6, (x * sn + z * c) / 1.6); } }
     B.add('floor', top);
     B.add('trim', worldUV(new T.RingGeometry(r - 1.6, r - 0.05, 64).rotateX(-Math.PI / 2).translate(cx, t.top + 0.01, cz)));   // a flagstone border round the rim
-    B.add('trim', worldUV(new T.CircleGeometry(1.4, 32).rotateX(-Math.PI / 2).translate(cx, t.top + 0.015, cz)));            // and a boss at the heart
+    B.add('trim', worldUV(new T.CircleGeometry(2.2, 32).rotateX(-Math.PI / 2).translate(cx, t.top + 0.015, cz)));            // and a boss at the heart
+    B.add('trim', worldUV(new T.RingGeometry(r * 0.45, r * 0.45 + 0.35, 64).rotateX(-Math.PI / 2).translate(cx, t.top + 0.012, cz)));
     B.add('trim', worldUV(new T.CylinderGeometry(r + 0.5, r - 0.1, 1.2, 64).translate(cx, t.top - 0.9, cz)));   // the machicolated course under the rim
     for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + 0.2; const q = [cx + Math.cos(a) * (r - 0.05), t.top - 3.5, cz + Math.sin(a) * (r - 0.05)]; B.add('slit', new T.PlaneGeometry(0.3, 1.5).rotateY(-a + Math.PI / 2).translate(...q)); }
     // the crenellated parapet round the rim, open where the bridge leaves
@@ -393,16 +395,17 @@ export async function buildSpires3D(gen) {
 
   // ---- light: the sky's, a moon, and a pool of point lights moved to the lanterns nearest the hero
   const amb = new T.AmbientLight(st.amb, 0.5), hemi = new T.HemisphereLight(st.hemi[0], st.hemi[1], 0.45);
-  const moon = new T.DirectionalLight(st.moon, 2.0); moon.position.set(-60, 45, 10); moon.target.position.set(0, 0, 0);
-  scene.add(amb, hemi, moon, moon.target);
+  const moon = new T.DirectionalLight(st.moon, 2.0); moon.position.set(-60, 32, 10); moon.target.position.set(0, 0, 0);
+  const rim = new T.DirectionalLight(st.hemi[0], 0.7); rim.position.set(50, 20, -40);   // a cool rim off the void: the deck edges stand out of the sky
+  scene.add(amb, hemi, moon, moon.target, rim);
   const pool = [];
   for (let i = 0; i < (G.touch ? 4 : 7); i++) { const L = new T.PointLight(0xffffff, 0, 10, 1.2); root.add(L); pool.push(L); }
   // ---- the sky: gradient and stars behind all, the skyline, the cloud sea, his eye
   scene.background = skyTexture(st);
   const skyline = skylineGroup(st, M, R3); sky.add(skyline.grp);
   const clouds = cloudLayer(st); root.add(clouds.grp);
-  const eye = eyeSprite(); sky.add(eye.grp);
-  S = { sp, st, M, scene, root, sky, lights, flick, parts, pool, amb, hemi, moon, skyline, clouds, eye, t: 0, flash: 0, nextBolt: 6 + Math.random() * 8 };
+  const eye = eyeSprite();   // (its blink only: the eye is drawn in 2D over the sky, drawSpires3D; in 3D the towers hid it)
+  S = { sp, st, M, scene, root, sky, lights, flick, parts, pool, amb, hemi, moon, skyline, clouds, eye, t: 0, flash: 0, nextBolt: 2 + Math.random() * 3 };
   return S;
 }
 
@@ -667,7 +670,7 @@ function cloudLayer(st) {
   for (let i = 0; i < 30; i++) {
     const s = new T.Sprite(new T.SpriteMaterial({ map: tex[i % 3], transparent: true, opacity: 0.45 + Math.random() * 0.35, depthWrite: false, color: new T.Color(st.sky[2]) }));
     const w = 26 + Math.random() * 30; s.scale.set(w, w / 2, 1); grp.add(s);
-    list.push({ s, x: (Math.random() - 0.5) * 120, z: (Math.random() - 0.5) * 120, y: -12 - Math.random() * 18, sp: 0.4 + Math.random() * 0.8 });
+    list.push({ s, x: (Math.random() - 0.5) * 120, z: (Math.random() - 0.5) * 120, y: -5 - Math.random() * 8, sp: 0.4 + Math.random() * 0.8 });
   }
   return { grp, list };
 }
@@ -745,7 +748,16 @@ export function drawSpires3D(ctx, hook) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false;
   ctx.drawImage(rd.gl.domElement, 0, 0, W, H);
-  if (fl > 0.02) { ctx.globalAlpha = fl * 0.22; ctx.fillStyle = '#e8f0ff'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+  // Velscour's eye over the sky, watching the climb: a slit pupil turned toward the hero, blinking now and then
+  { const bl = e.blink > 0 ? Math.abs(Math.cos(e.blink / 0.28 * Math.PI)) : 1, ex = W * 0.5, ey = H * 0.17, R = W * 0.1;
+    ctx.save(); ctx.globalCompositeOperation = 'screen';
+    let g = ctx.createRadialGradient(ex, ey, 0, ex, ey, W * 0.27); g.addColorStop(0, `rgba(255,40,10,${0.22 + 0.06 * Math.sin(S.t * 1.1)})`); g.addColorStop(1, 'rgba(255,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(ex - W * 0.3, ey - W * 0.3, W * 0.6, W * 0.6);
+    g = ctx.createRadialGradient(ex, ey, 2, ex, ey, R); g.addColorStop(0, 'rgba(255,110,40,0.9)'); g.addColorStop(0.6, 'rgba(200,20,10,0.65)'); g.addColorStop(1, 'rgba(90,0,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(ex, ey, R, R * 0.42 * bl, 0, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = 'rgba(12,0,0,0.6)';
+    ctx.beginPath(); ctx.ellipse(ex - R * 0.06, ey + R * 0.1, R * 0.085 * (0.85 + 0.15 * Math.sin(S.t * 0.7)), R * 0.36 * bl, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+  if (fl > 0.02) { ctx.globalAlpha = fl * 0.35; ctx.fillStyle = '#e8f0ff'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
   ctx.imageSmoothingEnabled = sm;
   return true;
 }
