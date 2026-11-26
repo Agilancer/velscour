@@ -212,7 +212,7 @@ function drawTransitionParticles(ctx, world, vr) {
 
 function floorEntry(world, v) {
   if (world.townTiles) return world.townTiles[v] || world.townTiles[0];
-  if (v >= 230 && world.extraFloors) return world.extraFloors[v - 230] || world.tileset.floors[0];   // Phobos' road in (world/phobos.js)
+  if (world.extraFloors && v >= (world.extraBase ?? 230)) return world.extraFloors[v - (world.extraBase ?? 230)] || world.tileset.floors[0];   // Phobos's own ground (gfx/phobostex.js)
   return world.tileset.floors[v] || world.tileset.floors[0];
 }
 
@@ -991,7 +991,10 @@ export function renderWorld(ctx, world) {
       }
       case 5: {
         const [x, y, w, h] = buildingRect(o);
-        const a = hides([x + w * 0.15, y, w * 0.7, h * 0.85], o.depth) ? 0.4 : 1;
+        // see-through over anyone behind it: the middle of the art, or (a footprint we know: Phobos's 3 x 3 houses) anyone
+        // behind the footprint and under the roof's edge
+        const fp = o.fp || 3, back = o.x0 != null && views.some((v) => v.at && v.at[0] < o.x0 + fp + 0.4 && v.at[1] < o.y0 + fp + 0.4 && v.at[0] + v.at[1] < o.x0 + o.y0 + fp * 2 - 0.5 &&v.x > x && v.x < x + w && v.y1 > y && v.y0 < y + h * 0.9);
+        const a = back || hides([x + w * 0.15, y, w * 0.7, h * 0.85], o.depth) ? 0.35 : 1;
         drawBuilding(ctx, o, a);
         break;
       }
@@ -1017,6 +1020,7 @@ export function renderWorld(ctx, world) {
         const z = camera.zoom;
         o.sbox = [sx - (w / 2) * z, sy - h * z, sx + (w / 2) * z, sy];
         o.viewH = h + (o.fly ? 16 : 0); // next frame's see-through hole
+        if (o.talks && o.talkT > 0) drawTownSpeech(ctx, o, isoX(o.x, o.y), isoY(o.x, o.y) - Math.min(130, h + (o.fly ? 16 : 0))); // Phobos's occupiers grumble and taunt (game/phobostalk.js)
         if (o === G.player && o.talkT > 0 && world.kind === 'town') drawTownSpeech(ctx, o, isoX(o.x, o.y), isoY(o.x, o.y) - Math.min(70, h)); // chatting at the forge
         break;
       }

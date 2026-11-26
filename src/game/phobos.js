@@ -22,10 +22,12 @@ import { loadArtFor } from '../core/enemyart.js';
 import { makeMonster } from './monster.js';
 import { makeRaidBoss } from './raid.js';
 import { DISTRICTS, HUBS, WINGS, CASTLE_FLOORS, wingOf, castleDepth, cityDepth, guardianFor, PHOBOS_FOLK, PHOBOS_BY_ID, FINALE, placeOf, placeLayout, BIBLE_BOSSES } from '../data/phobos.js';
-import { generatePhobos, PHOBOS_SEED } from '../world/phobos.js';
+import { generatePhobos, PHOBOS_SEED, planX } from '../world/phobos.js';
 import { generateCastleFloor, LAYOUTS, SHEER_LAYOUTS } from '../world/castlevelscour.js';
 import { WING_RAIDS, VELSCOUR_RAIDS } from './phobosraids.js';
 import { townObject } from '../world/town.js';
+import { phobosTalk, makeTalker } from './phobostalk.js';
+import { loadPhobosTex, phobosFloors, phobosProp, floorV, PH_V } from '../gfx/phobostex.js';
 import { A } from '../core/assets.js';
 import { TW } from '../core/view.js';
 
@@ -70,7 +72,7 @@ const cityRegion = registerRegion({
   words: ['phobos', 'city state phobos', 'the city state'],
   portal: 'City State Phobos: a walled city of tight streets under Castle Velscour. Eleven wards, each held by its own horrors.',
   townLine: 'The road leads to <b>City State Phobos</b>.',
-  load: (biome) => Promise.all([loadBiomeArt(biome), loadArtFor(PHOBOS_FOLK.map((a) => a.id))]),
+  load: (biome) => Promise.all([loadBiomeArt(biome), loadArtFor(PHOBOS_FOLK.map((a) => a.id)), loadPhobosTex()]),
   ready: () => true,
   generate(depth, biome, seed) {
     if (!cityCache) cityCache = generatePhobos(biome, biomeTileSet(biome), PHOBOS_SEED);   // one city for every visit: built once a session
@@ -88,13 +90,13 @@ const cityRegion = registerRegion({
 });
 const castleRegion = {
   words: [], portal: 'Castle Velscour: a hundred floors climbing to the Throne Above.', townLine: 'The stair climbs on into <b>Castle Velscour</b>.',
-  load: (biome) => { const f = G.phobosFloor || 1, w = wingOf(f); return Promise.all([loadBiomeArt(biome), loadArtFor([...w.foes.map((a) => a.id), guardianFor(f).id, ...(f === CASTLE_FLOORS ? Object.values(FINALE).flatMap((v) => v.forms) : [])])]); },
+  load: (biome) => { const f = G.phobosFloor || 1, w = wingOf(f); return Promise.all([loadPhobosTex(), loadBiomeArt(biome), loadArtFor([...w.foes.map((a) => a.id), guardianFor(f).id, ...(f === CASTLE_FLOORS ? Object.values(FINALE).flatMap((v) => v.forms) : [])])]); },
   ready: () => true,
   generate(depth, biome, seed) {
     const f = G.phobosFloor || 1, w = wingOf(f), layout = G.phobosLayout || w.layouts[(f - 1) % w.layouts.length];
     const looks = phobosLooks(w.foes);
     const raid = f % 10 === 0;
-    for (let k = 0; k < 6; k++) { try { const g = generateCastleFloor(f, layout, biome, biomeTileSet(biome), (seed + k * 7919) >>> 0, { raid, looks }); dressFloor(g, w); g.looks = looks; g.roster = [...new Set(w.foes.map((a) => a.arch))]; return g; } catch (e) { if (k === 5) throw e; } }
+    for (let k = 0; k < 6; k++) { try { const g = generateCastleFloor(f, layout, biome, biomeTileSet(biome), (seed + k * 7919) >>> 0, { raid, looks }); textureFloor(g, w); dressFloor(g, w); g.looks = looks; g.roster = [...new Set(w.foes.map((a) => a.arch))]; return g; } catch (e) { if (k === 5) throw e; } }
   },
   createRun: (world, gen, biome, depth) => createCastleRun(world, gen, biome, depth),
   intro: (world, gen) => `${escapeHtml(world.biome.name)} — Floor ${G.phobosFloor}: <b>${escapeHtml(placeOf(G.phobosFloor))}</b> (${escapeHtml(gen.layoutName || '')}).`,
@@ -129,6 +131,36 @@ function dressFloor(g, w) {
   }
 }
 
+// each wing's floors from Bellmourn's Phobos set (gfx/phobostex.js): [corridors and halls, rooms]
+const WING_FLOOR = {
+  gatehouse: ['walk_paving', 'rutted_setts'], oubliettes: ['scree', 'bone_joint_flags'], armoury: ['keep_basalt', 'walk_paving'],
+  greathall: ['bone_checker', 'worn_floorboards'], library: ['oxblood_marble', 'worn_floorboards'], menagerie: ['ash_clay_ground', 'wharf_deck'],
+  sanctuaries: ['bone_checker', 'mausoleum_marble'], stormspire: ['bridge_ashlar', 'keep_basalt'], bonespire: ['bone_joint_flags', 'bloodstone'],
+  throne: ['oxblood_marble', 'obsidian'],
+};
+// shelves along the back walls (and, in the Library, rows of stacks): book spines and jar shelves from the same set
+const WING_SHELVES = { library: ['bookcase', 'bookcase', 'bookcase', 'jar_shelf'], sanctuaries: ['bookcase', 'jar_shelf'], greathall: ['jar_shelf'], armoury: [], throne: ['bookcase'] };
+function textureFloor(g, w) {
+  const m = g.map; if (m.sheer || m.hgt) return;
+  const [hall, room] = WING_FLOOR[w.id] || WING_FLOOR.gatehouse, inRoom = new Uint8Array(m.w * m.h);
+  for (const r of g.rooms || []) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (x >= 0 && y >= 0 && x < m.w && y < m.h) inRoom[y * m.w + x] = 1;
+  for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) { const i = y * m.w + x; if (m.t[i]) m.v[i] = floorV(inRoom[i] ? room : hall, x, y); }
+  g.phTex = true;
+  const kinds = WING_SHELVES[w.id]; if (!kinds || !kinds.length) return;
+  const k = TW / 160, doorway = (r, tx, ty) => [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]].some(([dx, dy]) => { const X = tx + dx, Y = ty + dy; return (X < r.x || Y < r.y || X >= r.x + r.w || Y >= r.y + r.h) && m.t[Y * m.w + X]; });
+  const shelf = (r, tx, ty, flip, x, y) => {
+    const i = ty * m.w + tx, spr = phobosProp(kinds[(tx + ty) % kinds.length]);
+    if (!spr || !m.t[i] || m.block[i] || doorway(r, tx, ty)) return;
+    g.props.push({ kind: 'scatter', x, y, spr, k, flip, fixed: true }); m.block[i] = 1;
+  };
+  for (const r of g.rooms || []) {
+    if (r.w < 6 || r.h < 6 || r === g.raid) continue;
+    for (let x = r.x + 1; x < r.x + r.w - 2; x++) shelf(r, x, r.y, false, x + 0.5, r.y + 0.22);    // against the back wall (-y), facing the room
+    for (let y = r.y + 1; y < r.y + r.h - 2; y++) shelf(r, r.x, y, true, r.x + 0.22, y + 0.5);      // and the other (-x)
+    if (w.id === 'library') for (let y = r.y + 3; y < r.y + r.h - 3; y += 3) for (let x = r.x + 2; x < r.x + r.w - 2; x++) if ((x - r.x) % 5 !== 4) shelf(r, x, y, false, x + 0.5, y + 0.5);   // the stacks, gaps to walk through
+  }
+}
+
 // ------------------------------------------------------------------------------------------- shared run bits
 function townPortalTo(world, game) {
   for (const p of world.portals) if (p.type === 'town') { p.label = 'Town Portal — Bellmourn'; p.use = () => UI.dialog({ title: 'Return to Bellmourn?', html: '<p>The portal opens on Bellmourn, the town under the bells.</p>', buttons: [{ label: 'Stay' }, { label: 'Return', fn: () => { sfx('portal'); game.enterBellmourn(); } }] }); }
@@ -147,7 +179,7 @@ function createCityRun(world, gen, biome, depth) {
   const c = G.char, S = phobosState(c), game = G.game;
   townPortalTo(world, game); clearFlight();
   // the road in wears the town pack's ground: grass, meadow, a trampled verge, then dirt, mud and gravel by the moat
-  if (A.town) { const m = A.town.meta, T = m.tile; world.extraFloors = ['grass', 'dense_meadow', 'trampled_verge', 'dirt', 'mud', 'gravel'].map((n) => { const r = m.floors[n] || m.floors.dirt; return { img: A.town.ground, sx: r[0], sy: r[1], w: T[0], h: T[1], name: n, material: n, lum: 0.4 }; }); }
+  world.extraFloors = phobosFloors(); world.extraBase = PH_V;
   world.phobos = true;
   world.roster = [...new Set(DISTRICTS.flatMap((d) => d.foes.map((a) => a.arch)))];
   const exit = world.portals.find((p) => p.type === 'exit');
@@ -172,19 +204,20 @@ function createCityRun(world, gen, biome, depth) {
       const a = (i / Math.max(1, d.bosses.length)) * TAU, [x, y] = world.map.randomNear(s.x + Math.cos(a) * 2.5, s.y + Math.sin(a) * 2.5, 2) || [s.x, s.y];
       const key = d.id + ':' + art.id;
       if (!S.gate && S.wards.includes(key)) return;   // a broken lord stays down until the Castle Gate opens; then they all return
-      const m = spawnFoe(world, biome, art, lvlOf(d) + 3, 'boss', x, y);
+      const m = makeTalker(spawnFoe(world, biome, art, lvlOf(d) + 3, 'boss', x, y), k);
       m.maxHp *= 1.6; m.hp = m.maxHp; m.wardLord = art.id; m.title = `Ward Lord of ${d.name}`;
       lords.push(m);
       const prev = m.onDeath; m.onDeath = (src) => { if (prev) prev.call(m, src); wardSlain(art, d, key); };
     });
   });
-  const fill = (P) => { const n = 2 + Math.floor(Math.random() * 3); for (let i = 0; i < n; i++) { const [x, y] = i ? world.map.randomNear(P.at[0], P.at[1], 1.8) || P.at : P.at; const art = pick(P.d.foes); if (art) P.live.push(spawnFoe(world, biome, art, lvlOf(P.d) + (i === 0 && chance(0.2) ? 1 : 0), i === 0 && chance(0.15) ? 'champion' : 'normal', x, y)); } };
+  const fill = (P) => { const n = 2 + Math.floor(Math.random() * 3); for (let i = 0; i < n; i++) { const [x, y] = i ? world.map.randomNear(P.at[0], P.at[1], 1.8) || P.at : P.at; const art = pick(P.d.foes); if (art) P.live.push(makeTalker(spawnFoe(world, biome, art, lvlOf(P.d) + (i === 0 && chance(0.2) ? 1 : 0), i === 0 && chance(0.15) ? 'champion' : 'normal', x, y), P.k)); } };
   for (const P of packs) fill(P);
   // the folk: gray residents (peaceable until crossed: one in five turns when you come near) and the good (helpers)
   const folk = [];
   DISTRICTS.forEach((d, k) => d.folk.forEach((art) => {
     const sp = gen.spots[k]; if (!sp.length) return;
-    const [x, y] = sp[Math.floor(Math.random() * sp.length)];
+    const sq = gen.squares[d.id], by = sp.filter(([x, y]) => dist(x, y, sq.x, sq.y) < 11);   // they live round the square
+    const [x, y] = (by.length ? by : sp)[Math.floor(Math.random() * (by.length || sp.length))];
     const n = { name: art.name, title: art.title, enemyArt: art.id, x, y, reach: 1.8, flip: chance(0.5), folk: art, district: d,
       turns: art.cat === 'gray' && chance(0.2),
       use: () => UI.dialog({ title: `${escapeHtml(art.name)}${art.title ? ' — ' + escapeHtml(art.title) : ''}`, html: `<p>${escapeHtml(art.does || art.title || '')}.</p>${art.cat === 'gray' ? `<p class="dim">Word is you'd lose this one's goodwill if you were to: ${escapeHtml(art.trigger)}</p>` : '<p class="dim">One of the city\'s good folk: they help, even under the occupation.</p>'}`, buttons: [{ label: 'Leave' }] }) };
@@ -198,6 +231,10 @@ function createCityRun(world, gen, biome, depth) {
       use: () => { S.hubs[d.hub] = true; sfx('gold'); UI.dialog({ title: H.name, html: `<p><b>${escapeHtml(H.giver.name)}</b>, ${escapeHtml(H.where)}.</p><p>${escapeHtml(HUB_LINES[d.hub])}</p><p class="dim">${Object.keys(S.hubs).length}/3 of the city's hidden houses know you now.</p>`, buttons: [{ label: 'Farewell' }] }); questTick(); } };
     world.npcs.push(n); hubs.push(n);
   }
+  // the streets talk (game/phobostalk.js): folk walk their own lanes, chat and set errands; the occupiers grumble and taunt
+  const placeAt = (x, y) => { const k = gen.district[world.map.tileIdx(x, y)], d = DISTRICTS[k]; if (!d) return { place: 'the road in' }; const L = lords.find((m) => !m.dead && m.wardDistrict === k); return { place: d.name, lord: L ? L.name : null }; };
+  for (const L of lords) L.wardDistrict = L.district;
+  const talk = phobosTalk(world, { placeOf: placeAt, folk, homes: (n) => gen.spots[DISTRICTS.indexOf(n.district)], questDistrict: (n) => DISTRICTS.indexOf(n.district) });
   let respawnT = 60;
   const run = {
     title: 'City State Phobos', description: 'Break the ward lords to open the Castle Gate.', active: true, completed: false, failed: false, markers: [], phobosCity: true,
@@ -211,23 +248,24 @@ function createCityRun(world, gen, biome, depth) {
     },
     update(dt) {
       const p = world.player; if (!p) return;
+      talk(dt);
       // gray residents who turn
       for (const n of folk) if (n.turns && !n.turned && dist(n.x, n.y, p.x, p.y) < 3) {
         n.turned = true; n.hidden = true;
-        const m = spawnFoe(world, biome, n.folk, lvlOf(n.district) + 1, 'champion', n.x, n.y);
+        const m = makeTalker(spawnFoe(world, biome, n.folk, lvlOf(n.district) + 1, 'champion', n.x, n.y), DISTRICTS.indexOf(n.district));
         m.name = n.name; floatText(m.x, m.y, 80, `${n.name} turns on you!`, '#ff6040', 14, { life: 2 }); sfx('roar', 0.5);
       }
       // the dead come back: packs refill away from the hero
       if ((respawnT -= dt) <= 0) { respawnT = 45; for (const P of packs) { P.live = P.live.filter((m) => !m.dead); if (!P.live.length && dist(P.at[0], P.at[1], p.x, p.y) > 22 && chance(0.5)) fill(P); } }
       // the road in: the Chasm, then first sight from the Sill
-      if (!run.chasm && p.x > 46 && p.x < 84) { run.chasm = true; UI.centerMsg('THE CHASM', "Widow's Notch, and the long way down to the Sill", 3); }
-      if (!run.sill && dist(p.x, p.y, gen.sill[0], gen.sill[1]) < 6) { run.sill = true; UI.centerMsg('CITY STATE PHOBOS', 'The Sill: across the dead moat plain, the walls, and above them Castle Velscour', 4.5); sfx('bell'); G.flash = 0.25; }
+      if (!run.chasm && planX(p.x, p.y) > 46 && planX(p.x, p.y) < 84) { run.chasm = true; UI.centerMsg('THE CHASM', "Widow's Notch, and the long way down to the Sill", 3); }
+      if (!run.sill && dist(p.x, p.y, gen.sill[0], gen.sill[1]) < 6) { run.sill = true; UI.centerMsg('CITY STATE PHOBOS', 'The walls, and Castle Velscour above them', 4.5); sfx('bell'); G.flash = 0.25; }
       // the district the hero walks in
       const k = gen.district[world.map.tileIdx(p.x, p.y)];
       if (k !== run.lastD && DISTRICTS[k]) {
         run.lastD = k; const d = DISTRICTS[k], first = !(S.seenD ||= []).includes(d.id);
         const foes = [...new Set(d.foes.map((a) => a.name.split(' ').slice(-1)[0]))].slice(0, 3).join(', ');
-        UI.centerMsg(d.name.toUpperCase(), `${d.verb}${first ? ` · held by ${foes}` : ''}`, first ? 3.4 : 2.2);
+        UI.centerMsg(d.name.toUpperCase(), d.verb.length > 52 ? d.verb.slice(0, d.verb.lastIndexOf(' ', 50)) + '…' : d.verb, first ? 3.4 : 2.2); void foes;   // (who holds it goes to the log)
         if (first) { S.seenD.push(d.id); UI.log(`<b>${escapeHtml(d.name)}</b>: ${escapeHtml(d.verb)} Its streets are held by ${escapeHtml(foes)}; ${d.bosses.filter(Boolean).length} ward lords hold its square.${d.hub ? ` A hidden house is somewhere near the square (${escapeHtml(HUBS[d.hub].name)}).` : ''}`, '#e0d0b0'); }
       }
       questTick(dt);
@@ -283,6 +321,10 @@ function createCastleRun(world, gen, biome, depth) {
   }
   if (boss.raid) world.raid = boss.raid;
   world.add(boss); world.boss = boss;
+  if (gen.phTex) { world.extraFloors = phobosFloors(); world.extraBase = PH_V; }
+  // the castle's garrison talks too (the raid bosses keep their own voices)
+  for (const m of world.creatures) if (m.team === 'enemy' && !m.raid) makeTalker(m);
+  const talk = phobosTalk(world, { placeOf: () => ({ place: placeOf(f), lord: boss.name }) });
   // leap stones and swing chains
   const pads = gen.leaps.map((L) => world.addHazard(new Pad(world, L)));
   const route = gen.leaps.filter((L) => !L.back);
@@ -295,7 +337,7 @@ function createCastleRun(world, gen, biome, depth) {
       if (!next) return undefined;
       return { x: next.x, y: next.y, reach: 0.6 };
     },
-    update(dt) { questTick(dt); },
+    update(dt) { questTick(dt); talk(dt); },
     questHtml(step) {
       let h = `<div class="q-title">Castle Velscour &middot; Floor ${f}/${CASTLE_FLOORS} <span class="dim">(${escapeHtml(wing.name)})</span></div><div class="dim">${escapeHtml(placeOf(f))} &middot; wing ${((f - 1) % 10) + 1}/10</div>`;
       h += questLogHtml(step);
@@ -464,6 +506,15 @@ export function setupBellmourn(world, t, game) {
   add(6, 1.5, { color: '#c02040', get label() { return S.gate ? `Waypoint — Castle Velscour (Floor ${Math.max(1, S.floor)})` : 'Castle Velscour (the Castle Gate is shut)'; }, use: () => { if (!S.gate) { UI.log('The Castle Gate opens from inside Phobos: break its ward lords.', '#ffb0a0'); return; } castleWaypoints(game); } });
   add(-6, -3, { color: '#38bdf8', label: 'Waypoint — Herrington Hollow (Act I)', use: () => { sfx('portal'); c.lastTown = 'act1'; game.enterTown(); } });
   if (c.visitedAct2Town) add(-6, 2, { color: '#f3c778', label: 'Waypoint — Sunscorch Oasis (Act II)', use: () => { sfx('portal'); game.enterAct2Town(); } });
+}
+/** HAIL VELSCOUR!'s Act III destinations (game.js openVelscourTeleport): [value, label, go(game)]. */
+export function act3Destinations() {
+  return [
+    ['act3:bellmourn', 'Bellmourn: the Act III town, under the bells', (g) => g.enterBellmourn()],
+    ['act3:phobos', 'City State Phobos: the walled city (ward lords, the Castle Gate)', (g) => g.enterPhobos()],
+    ...WINGS.map((w, i) => [`act3:f${i * 10 + 1}`, `Castle Velscour, floors ${i * 10 + 1}-${i * 10 + 10}: ${w.name}`, (g) => g.enterCastleFloor(i * 10 + 1)]),
+    [`act3:f${CASTLE_FLOORS}`, `Castle Velscour, floor ${CASTLE_FLOORS}: Lord Velscour's throne`, (g) => g.enterCastleFloor(CASTLE_FLOORS)],
+  ];
 }
 function castleWaypoints(game) {
   const S = phobosState(), lvl = G.char.level || 1;

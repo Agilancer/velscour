@@ -48,7 +48,7 @@ export class Clutter extends Creature {
     });
     this.world = world;
     this.prop = prop;
-    this.name = prop.spr?.name || 'Clutter';
+    this.name = (prop.spr?.name || 'Clutter').replace(/^(t|b|tree)_/, '').replace(/_/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase());   // 'thorn_bush' reads Thorn Bush
     this.clutter = true;
     this.noLifeBar = true;
     this.targetable = true;

@@ -12,6 +12,7 @@ import { DISTRICTS } from '../data/phobos.js';
 import { townObject } from './town.js';
 import { A } from '../core/assets.js';
 import { TW } from '../core/view.js';
+import { PH_V, TOWN_GROUND, floorV } from '../gfx/phobostex.js';
 
 export const PHOBOS_SEED = 230_1114;
 export const PW = 344, PH = 204;
@@ -19,7 +20,7 @@ export const PW = 344, PH = 204;
 // "The east, west to east"): the green Marches, the ridge at Widow's Notch, the winding Chasm, the Sill, the dead moat
 // plain, the moat and the drawbridge
 const WEST = 96, CX = 128 + WEST, CY = 102, RX = 112, RY = 94;
-export const APPROACH_V = 230;   // floor variants from here up are the town pack's ground (game/phobos.js lays them out)
+export const APPROACH_V = PH_V;   // floor variants from here up: the town pack's ground and Phobos's own (gfx/phobostex.js)
 const chasmY = (x) => CY + 13 * Math.sin(((x - 44) / 40) * Math.PI * 3);   // north, south, north again; level with the road at both ends
 // where each district's square stands (fractions of the wall's radii from its centre), west to east
 const SQUARES = {
@@ -34,8 +35,15 @@ function inWall(x, y, pad = 0) {
   return r <= k;
 }
 
+// The plan is laid out west (the road in) to east (the Castle Gate) on a PW x PH grid, then stood on the map turned a
+// quarter (the map is PH wide, PW tall): the hero arrives in the lower left of the screen and climbs up and to the right
+// to Castle Velscour. I() and R() take plan coordinates to the map's tile index and position.
+export const toMap = (x, y) => [y, PW - x];          // a plan position on the map
+export const planX = (mx, my) => PW - my;            // and back: how far along the road in (west to east)
+export const APPROACH_FLOORS = TOWN_GROUND;
 export function generatePhobos(biome, tileset, seed = PHOBOS_SEED) {
-  const rng = new RNG(seed), W = PW, H = PH, map = new TileMap(W, H), I = (x, y) => y * W + x;
+  const rng = new RNG(seed), W = PW, H = PH, MW = PH, map = new TileMap(MW, PW), I = (x, y) => (PW - 1 - x) * MW + y, R = toMap;
+  const ofI = (i) => [PW - 1 - ((i / MW) | 0), i % MW];   // a map index back to its plan tile
   const inb = (x, y) => x > 1 && y > 1 && x < W - 2 && y < H - 2;
   const set = (x, y, v = 1) => { x |= 0; y |= 0; if (inb(x, y)) map.t[I(x, y)] = v; };
   const rect = (x, y, w, h, v = 1) => { for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) set(xx, yy, v); };
@@ -105,7 +113,7 @@ export function generatePhobos(biome, tileset, seed = PHOBOS_SEED) {
     const rich = d.ground === 'rich' || d.id === 'dukes', poor = d.ground === 'slums' || d.ground === 'cinder';
     const w = rng.int(poor ? 4 : 5, rich ? 10 : 8), h = rng.int(poor ? 4 : 5, rich ? 9 : 7), ox = x + rng.int(-1, 1), oy = y + rng.int(-1, 1);
     if (!free(ox, oy, w, h) || (d.id === 'cinder' && rng.chance(0.35)) || (d.id === 'boneyards' && rng.chance(0.4))) continue;
-    const hollow = w >= 6 && h >= 6 && rng.chance(rich ? 0.35 : poor ? 0.25 : 0.3);
+    const hollow = w >= 6 && h >= 6 && rng.chance(rich ? 0.2 : poor ? 0.12 : 0.15);   // most stand shut: a city of roofs, not of rooms
     if (!hollow) { houses.push({ x: ox, y: oy, w, h, district: d.id, solid: true, rich, poor }); for (let yy = oy; yy < oy + h; yy++) for (let xx = ox; xx < ox + w; xx++) solid[I(xx, yy)] = 1; continue; }
     rect(ox, oy, w, h, 0);
     const hs = { x: ox, y: oy, w, h, district: d.id, hollow };
@@ -130,19 +138,24 @@ export function generatePhobos(biome, tileset, seed = PHOBOS_SEED) {
 
   // ---- keep what the Sill reaches
   const reach = new Uint8Array(W * H), q = [I(8, CY)]; reach[q[0]] = 1;
-  for (let h = 0; h < q.length; h++) { const i = q[h]; for (const j of [i + 1, i - 1, i + W, i - W]) if (!reach[j] && map.t[j]) { reach[j] = 1; q.push(j); } }
+  for (let h = 0; h < q.length; h++) { const i = q[h]; for (const j of [i + 1, i - 1, i + MW, i - MW]) if (!reach[j] && map.t[j]) { reach[j] = 1; q.push(j); } }
   for (let i = 0; i < map.t.length; i++) if (map.t[i] && !reach[i]) map.t[i] = 0;
   const open = houses.filter((h) => h.hollow && reach[I(Math.floor(h.mx), Math.floor(h.my))]);
   const blocks = houses.filter((h) => h.solid && reach[I(h.x, h.y)]);
+  // the road in has no walls: off the way it is rough ground (forest, rock, dead stands), solid but open to the eye
+  const ridge = new Uint8Array(W * H);
+  for (let y = 2; y < H - 2; y++) for (let x = 2; x < gateW[0] - 8; x++) if (!map.t[I(x, y)]) { map.t[I(x, y)] = 1; ridge[I(x, y)] = 1; }
 
   // rooms for the dressing: the squares (themed floors) and the open houses
   const rooms = [
     ...Object.entries(squares).map(([id, s], idx) => ({ type: 'room', idx, x: Math.floor(s.x - s.r), y: Math.floor(s.y - s.r), w: Math.ceil(s.r * 2), h: Math.ceil(s.r * 2), mx: s.x, my: s.y, district: id })),
     ...open.map((h, k) => ({ type: 'room', idx: 20 + k, x: h.x + 1, y: h.y + 1, w: h.w - 2, h: h.h - 2, mx: h.mx, my: h.my, house: h })),
   ];
+  const rotRoom = (r) => { const [mx, my] = R(r.mx, r.my); return { ...r, x: r.y, y: PW - r.x - r.w, w: r.h, h: r.w, mx, my }; };
+  for (let j = 0; j < rooms.length; j++) rooms[j] = rotRoom(rooms[j]);
   finishMap(map, tileset, rng, null, rooms, []);
   const props = placeObstacles(map, rooms.filter((r) => r.house && r.w >= 5 && r.h >= 5), tileset, rng, rooms[0]);
-  const mounts = wallMounts(map, rng, biome, () => 0.42, 0.3, wallHangingCount(biome)), wild = (o) => (o.mountX ?? o.x) < gateW[0] - 8;
+  const mounts = wallMounts(map, rng, biome, () => 0.42, 0.3, wallHangingCount(biome)), wild = (o) => planX(o.mountX ?? o.x, o.mountY ?? o.y) < gateW[0] - 8;
   const torches = mounts.torches.filter((t) => !wild(t)), wallHangings = mounts.wallHangings.filter((h) => !wild(h));   // no sconces out in the wilds
 
   // ---- the ground: cobbled streets, flagged squares, packed earth yards (one base each), worn gutters by the walls
@@ -150,13 +163,24 @@ export function generatePhobos(biome, tileset, seed = PHOBOS_SEED) {
   const lumOf = (i) => tileset.floors[i].lum, dark = F.slice().sort((a, b) => lumOf(a) - lumOf(b)).slice(0, Math.max(1, F.length >> 2));
   const inSq = new Uint8Array(W * H);
   for (const s of Object.values(squares)) for (let yy = Math.floor(s.y - s.r); yy <= s.y + s.r; yy++) for (let xx = Math.floor(s.x - s.r); xx <= s.x + s.r; xx++) if (inb(xx, yy) && Math.hypot(xx + 0.5 - s.x, yy + 0.5 - s.y) <= s.r) inSq[I(xx, yy)] = 1;
-  if (bases.length >= 2) for (let i = 0; i < W * H; i++) {
-    if (!map.t[i]) continue;
-    const x = i % W, y = (i / W) | 0;
-    if (inSq[i]) map.v[i] = rng.chance(0.22) && F.length ? rng.pick(F) : bases[1];
-    else if (road[i]) map.v[i] = (!map.t[i - 1] || !map.t[i + 1] || !map.t[i - W] || !map.t[i + W]) && rng.chance(0.6) ? rng.pick(dark) : bases[0];
-    else if (solid[i] || x < gateW[0] - 1) map.v[i] = bases[2 % bases.length];
+  // a capital's ground, from the town pack (APPROACH_FLOORS): paved and flagged streets with stone kerbs, paved squares,
+  // grass and garden in the yards (packed dirt and mud in the poor wards); only the open houses keep the stone indoors
+  const indoor = new Uint8Array(W * H);
+  for (const h of open) for (let yy = h.y + 1; yy < h.y + h.h - 1; yy++) for (let xx = h.x + 1; xx < h.x + h.w - 1; xx++) indoor[I(xx, yy)] = 1;
+  const V = (n, x, y) => floorV(n, y, PW - 1 - x), RICH = new Set(['mages', 'dukes', 'approach', 'barracks', 'chainmarket']), POOR = new Set(['cinder', 'rookeries', 'wharf', 'barbican']);
+  const yards = [];
+  for (let i = 0; i < W * H; i++) {
+    if (!map.t[i] || indoor[i]) continue;
+    const [x, y] = ofI(i); if (x < gateW[0] - 7) continue;   // (the road in is laid below)
+    const d = DISTRICTS[dist[i]]?.id, rich = RICH.has(d), poor = POOR.has(d), n = 0.5 + 0.5 * Math.sin(x * 0.31 + Math.sin(y * 0.23) * 2) * Math.cos(y * 0.27 - x * 0.05);
+    const kerb = !map.t[i - 1] || !map.t[i + 1] || !map.t[i - MW] || !map.t[i + MW];
+    // (Bellmourn's Phobos set: setts for the rich, slum cobbles for the poor, ash in the Cinder, ward paving in the squares)
+    if (inSq[i]) map.v[i] = V(d === 'boneyards' ? 'bone_joint_flags' : d === 'wharf' ? 'wharf_deck' : d === 'cinder' ? 'ash_street' : rich ? (n > 0.8 ? 'bridge_ashlar' : 'ward_paving') : 'walk_paving', x, y);
+    else if (road[i]) map.v[i] = V(kerb ? 'walk_paving' : d === 'cinder' ? 'ash_street' : rich ? 'rutted_setts' : poor ? 'slum_cobbles' : n > 0.5 ? 'rutted_setts' : 'slum_cobbles', x, y);
+    else if (solid[i]) map.v[i] = V(poor ? 'dirt' : 'trampled_verge', x, y);
+    else { map.v[i] = V(poor ? (n > 0.6 ? 'mud' : n > 0.3 ? 'dirt' : 'trampled_verge') : d === 'cinder' ? 'ash_clay_ground' : d === 'boneyards' ? 'dead_grass' : n > 0.7 ? 'dense_meadow' : n > 0.25 ? 'grass' : 'trampled_verge', x, y); if (!kerb) yards.push([x, y, rich, poor, d]); }
   }
+  void bases; void dark;
   // ---- the solid blocks: rows of the town pack's houses, 3 x 3 apiece, on their own ground
   const buildings = [], k = TW / A.town.meta.tile[0], BS = 1.5;
   const NAMES = { poor: ['cottage', 'cottage', 'stables', 'bakery'], mid: ['cottage', 'bakery', 'inn', 'socket', 'weapons', 'armor'], rich: ['inn', 'enchant', 'gems', 'alchemist', 'gamble'] };
@@ -166,15 +190,16 @@ export function generatePhobos(biome, tileset, seed = PHOBOS_SEED) {
     for (let y0 = b.y; y0 + 3 <= b.y + b.h; y0 += 3) for (let x0 = b.x; x0 + 3 <= b.x + b.w; x0 += 3) {
       if (b.district === 'cinder' && rng.chance(0.3)) continue;   // burnt-out plots
       const name = rng.pick(names), spr = townObject('b_' + name); if (!spr) continue;
-      const cx = x0 + 1.5, cy = y0 + 1.5;
-      buildings.push({ cx, cy, spr, k: k * BS, depth: cx + cy, flip: rng.chance(0.5), name, sx: rng.chance(0.5), x0, y0 });
+      const [cx, cy] = R(x0 + 1.5, y0 + 1.5);
+      buildings.push({ cx, cy, spr, k: k * BS, depth: cx + cy, flip: rng.chance(0.5), name, sx: rng.chance(0.5), x0: y0, y0: PW - x0 - 3 });
     }
   }
   // ---- set pieces: each square dressed for its ward, the moat plain strewn with the siege's leavings
+  const xy = (x, y) => { const [a, b] = R(x, y); return { x: a, y: b }; };
   const tprop = (name, x, y, solidP = true) => {
     const spr = townObject(name), i = I(x | 0, y | 0);
     if (!spr || !map.t[i] || map.block[i] || road[i] && !inSq[i]) return false;
-    props.push({ kind: 'scatter', x, y, spr, k, flip: rng.chance(0.5) }); if (solidP) map.block[i] = 1; return true;
+    props.push({ kind: 'scatter', ...xy(x, y), spr, k, flip: rng.chance(0.5) }); if (solidP) map.block[i] = 1; return true;
   };
   const DRESS = {
     barbican: ['handcart', 'crate_stack', 'cart_debris', 'closed_barrel'], cinder: ['cart_debris', 'tiles_and_bricks', 'firewood_stack', 'cold_forge'],
@@ -192,16 +217,32 @@ export function generatePhobos(biome, tileset, seed = PHOBOS_SEED) {
   // ---- the road in: green to brown to dead, the trees with it (the forest walls in the Marches)
   const green = (x) => 1 - clamp((x - 30) / 60, 0, 1);          // 1 in the Marches, 0 by the moat
   const LIVE = ['t_ancient_oak', 't_mature_ash', 't_tall_elm', 't_twin_birch', 't_crooked_oak', 't_medium_willow'], DEAD = ['t_dead_oak', 't_storm_deadwood', 't_dead_thorn'];
-  const tree = (x, y, g) => { const spr = townObject(rng.chance(g) ? rng.pick(LIVE) : rng.pick(DEAD)); if (spr) { props.push({ kind: 'scatter', x, y, spr, k, flip: rng.chance(0.5) }); map.block[I(x | 0, y | 0)] = 1; } };
+  const tree = (x, y, g) => { const spr = townObject(rng.chance(g) ? rng.pick(LIVE) : rng.pick(DEAD)); if (spr) { props.push({ kind: 'scatter', ...xy(x, y), spr, k, flip: rng.chance(0.5) }); map.block[I(x | 0, y | 0)] = 1; } };
+  // ---- the yards: gardens and trees in the rich wards, sheds and junk in the poor, a little green in all of them
+  const GARDEN = ['wildflowers', 'leafy_shrub', 'wildflowers', 'moss_boulder', 'stone_bench'], JUNK = ['closed_barrel', 'firewood_stack', 'cart_debris', 'water_bucket', 'dry_reeds', 'crate_stack'];
+  for (const [x, y, rich, poor, d] of yards) {
+    const r = rng.next();
+    if (r < (rich ? 0.05 : 0.025)) tree(x + 0.5, y + 0.5, d === 'cinder' || d === 'boneyards' ? 0 : poor ? 0.4 : 1);
+    else if (r < (rich ? 0.12 : 0.07)) tprop(rng.pick(poor ? JUNK : GARDEN), x + 0.5 + rng.range(-0.2, 0.2), y + 0.5 + rng.range(-0.2, 0.2), false);
+  }
   for (let y = 0; y < H; y++) for (let x = 0; x < gateW[0] - 7; x++) {
     const i = I(x, y); if (!map.t[i]) continue;
     // ground in patches, not a checkerboard: two smooth noises pick the grass line and the dead ground's mud and gravel
     const g = green(x), n1 = 0.5 + 0.25 * (Math.sin(x * 0.23 + Math.sin(y * 0.19) * 2.1) + Math.sin(y * 0.21 + x * 0.07)), n2 = 0.5 + 0.5 * Math.sin(x * 0.17 - y * 0.13 + Math.sin(x * 0.05) * 3);
     const gg = g + (n1 - 0.5) * 0.5;
-    map.v[i] = APPROACH_V + (gg > 0.62 ? (n2 > 0.72 ? 1 : 0) : gg > 0.45 ? 2 : x > gateW[0] - 24 && n2 > 0.55 ? 4 : n2 < 0.18 ? 5 : 3);
+    map.v[i] = gg > 0.62 ? APPROACH_V + (n2 > 0.72 ? 1 : 0) : gg > 0.45 ? APPROACH_V + 2 : V(x > gateW[0] - 24 && n2 > 0.55 ? 'ash_clay_ground' : n2 < 0.3 ? 'dead_grass' : gg > 0.3 ? 'dead_grass' : 'ash_clay_ground', x, y);
     // the Marches' edge: a forest wall, thinning to dead stands toward the ridge
     const edge = x < 46 && (Math.abs(y - CY) > 17 + 5 * Math.sin(x / 6) + 3 * Math.sin(x / 2.3) || x < 4) && !(x > 40 && Math.abs(y - chasmY(x)) < 4);
     if (edge) { map.block[i] = 1; if (Math.abs(y - CY) < 40 && (x + y * 3) % 2 === 0 && rng.chance(0.75)) tree(x + 0.5 + rng.range(-0.3, 0.3), y + 0.5 + rng.range(-0.3, 0.3), g); }
+    else if (ridge[i]) {   // the ridge and the plain's margins: rock, scree and dead wood
+      map.block[i] = 1; map.v[i] = g > 0.6 ? APPROACH_V + 1 : V(n2 > 0.5 ? 'scree' : 'ash_clay_ground', x, y);
+      const py = x < 44 ? CY : x < 84 ? chasmY(x) : CY;
+      if (Math.abs(y - py) < 22 && rng.chance(0.3)) {
+        const jx = x + 0.5 + rng.range(-0.25, 0.25), jy = y + 0.5 + rng.range(-0.25, 0.25);
+        if (rng.chance(0.45)) tree(jx, jy, g * 0.8);
+        else { const spr = townObject(g > 0.5 ? rng.pick(['moss_boulder', 'leafy_shrub', 'fieldstone_cluster']) : rng.pick(['fieldstone_cluster', 'fieldstone_cluster', 'thorn_bush', 'dry_reeds', 'stone_boundary'])); if (spr) props.push({ kind: 'scatter', ...xy(jx, jy), spr, k, flip: rng.chance(0.5) }); }
+      }
+    }
   }
   for (let j = 0; j < 260; j++) {   // what grows (or doesn't) along the way, off the road
     const x = rng.range(4, gateW[0] - 9), y = CY + rng.range(-30, 30), cy = x < 44 ? CY : x < 84 ? chasmY(x) : CY, g = green(x);
@@ -210,14 +251,17 @@ export function generatePhobos(biome, tileset, seed = PHOBOS_SEED) {
     if (rng.chance(0.22)) { tree(x, y, g); continue; }
     const pickG = ['wildflowers', 'leafy_shrub', 'moss_boulder', 'wildflowers', 'mushrooms', 'fallen_log'], pickD = ['dry_reeds', 'thorn_bush', 'fieldstone_cluster', 'cart_debris', 'broken_wheel', 'handcart', 'tiles_and_bricks'];
     const name = rng.chance(g) ? rng.pick(pickG) : rng.pick(pickD), spr = townObject(name);
-    if (spr) { props.push({ kind: 'scatter', x, y, spr, k, flip: rng.chance(0.5) }); if (!/flower|reeds|mushroom|shrub|thorn/.test(name)) map.block[i] = 1; }
+    if (spr) { props.push({ kind: 'scatter', ...xy(x, y), spr, k, flip: rng.chance(0.5) }); if (!/flower|reeds|mushroom|shrub|thorn/.test(name)) map.block[i] = 1; }
   }
 
   // street spots per district (for packs, folk and respawns)
   const spots = DISTRICTS.map(() => []);
   for (let y = 4; y < H - 4; y += 3) for (let x = gateW[0] + 6; x < W - 4; x += 3) {
-    const i = I(x, y); if (map.t[i] && !map.block[i] && reach[i] && dist[i] < 255) spots[dist[i]].push([x + 0.5, y + 0.5]);
+    const i = I(x, y); if (map.t[i] && !map.block[i] && reach[i] && dist[i] < 255) spots[dist[i]].push(R(x + 0.5, y + 0.5));
   }
+  // the houses and squares onto the map too
+  for (const h of open) { const [mx, my] = R(h.mx, h.my); Object.assign(h, { x: h.y, y: PW - h.x - h.w, w: h.h, h: h.w, mx, my, door: h.door && R(...h.door) }); }
+  for (const s of Object.values(squares)) Object.assign(s, xy(s.x, s.y));
   const chests = [];
   for (const h of open) if (rng.chance(0.18) && map.walkable(h.mx, h.my)) chests.push({ x: h.mx, y: h.my, rare: rng.chance(0.2) });
   const hubHouse = (dId) => {
@@ -226,7 +270,7 @@ export function generatePhobos(biome, tileset, seed = PHOBOS_SEED) {
   };
   return {
     map, rooms, props, chests, torches, wallHangings, buildings, spots, squares, houses: open, district: dist, hubHouse,
-    start: [8, CY], exit: [gateE[0] - 1, CY], castleGate: [gateE[0] - 1, CY], gateW, sill: [86, CY],
+    start: R(14.5, CY + 0.5), exit: R(gateE[0] - 0.5, CY + 0.5), castleGate: R(gateE[0] - 0.5, CY + 0.5), gateW: R(...gateW), sill: R(86, CY),
     spawns: [], seed,
   };
 }
