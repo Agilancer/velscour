@@ -396,7 +396,7 @@ export async function buildSpires3D(gen) {
   // ---- light: the sky's, a moon, and a pool of point lights moved to the lanterns nearest the hero
   const amb = new T.AmbientLight(st.amb, 0.5), hemi = new T.HemisphereLight(st.hemi[0], st.hemi[1], 0.45);
   const moon = new T.DirectionalLight(st.moon, 2.0); moon.position.set(-60, 32, 10); moon.target.position.set(0, 0, 0);
-  const rim = new T.DirectionalLight(st.hemi[0], 0.7); rim.position.set(50, 20, -40);   // a cool rim off the void: the deck edges stand out of the sky
+  const rim = new T.DirectionalLight(st.hemi[0], 0.9); rim.position.set(50, 20, -40);   // a cool rim off the void: the deck edges stand out of the sky
   scene.add(amb, hemi, moon, moon.target, rim);
   const pool = [];
   for (let i = 0; i < (G.touch ? 4 : 7); i++) { const L = new T.PointLight(0xffffff, 0, 10, 1.2); root.add(L); pool.push(L); }
@@ -749,14 +749,17 @@ export function drawSpires3D(ctx, hook) {
   const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false;
   ctx.drawImage(rd.gl.domElement, 0, 0, W, H);
   // Velscour's eye over the sky, watching the climb: a slit pupil turned toward the hero, blinking now and then
-  { const bl = e.blink > 0 ? Math.abs(Math.cos(e.blink / 0.28 * Math.PI)) : 1, ex = W * 0.5, ey = H * 0.17, R = W * 0.1;
+  { const bl = e.blink > 0 ? Math.abs(Math.cos(e.blink / 0.28 * Math.PI)) : 1, ex = W * (0.5 + 0.02 * Math.sin(S.t * 0.13)), ey = H * (0.17 + 0.01 * Math.sin(S.t * 0.09)), R = W * 0.1;   // drifting as sky does
     ctx.save(); ctx.globalCompositeOperation = 'screen';
     let g = ctx.createRadialGradient(ex, ey, 0, ex, ey, W * 0.27); g.addColorStop(0, `rgba(255,40,10,${0.22 + 0.06 * Math.sin(S.t * 1.1)})`); g.addColorStop(1, 'rgba(255,0,0,0)');
     ctx.fillStyle = g; ctx.fillRect(ex - W * 0.3, ey - W * 0.3, W * 0.6, W * 0.6);
     g = ctx.createRadialGradient(ex, ey, 2, ex, ey, R); g.addColorStop(0, 'rgba(255,110,40,0.9)'); g.addColorStop(0.6, 'rgba(200,20,10,0.65)'); g.addColorStop(1, 'rgba(90,0,0,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(ex, ey, R, R * 0.42 * bl, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,170,80,0.5)'; ctx.lineWidth = Math.max(1, G.dpr); ctx.beginPath(); ctx.ellipse(ex, ey, R * 0.82, R * 0.36 * bl, 0, 0, TAU); ctx.stroke();
     ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = 'rgba(12,0,0,0.6)';
-    ctx.beginPath(); ctx.ellipse(ex - R * 0.06, ey + R * 0.1, R * 0.085 * (0.85 + 0.15 * Math.sin(S.t * 0.7)), R * 0.36 * bl, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+    const hb = G.player && G.player.sbox, hx = hb ? (hb[0] + hb[2]) / 2 * G.dpr : ex, hy = hb ? (hb[1] + hb[3]) / 2 * G.dpr : ey;   // the pupil turns to the hero
+    const k = Math.hypot(hx - ex, hy - ey) || 1, pxo = Math.max(-0.35, Math.min(0.35, (hx - ex) / k * 0.4)) * R, pyo = Math.max(-0.12, Math.min(0.12, (hy - ey) / k * 0.15)) * R;
+    ctx.beginPath(); ctx.ellipse(ex + pxo, ey + pyo, R * 0.085 * (0.85 + 0.15 * Math.sin(S.t * 0.7)), R * 0.36 * bl, 0, 0, TAU); ctx.fill(); ctx.restore(); }
   if (fl > 0.02) { ctx.globalAlpha = fl * 0.35; ctx.fillStyle = '#e8f0ff'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
   ctx.imageSmoothingEnabled = sm;
   return true;
