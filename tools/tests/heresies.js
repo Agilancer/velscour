@@ -120,10 +120,10 @@ async function gear521(page) {
       p.interact = a; let n = 0;
       for (; n < 30 * 40 && !Heresies.active; n++) { G.dt = 1 / 30; G.time += G.dt; G.frame++; window.VELSCOUR.game.update(1 / 30); }
       const body = document.querySelector('.heresy-panel');
-      return { open: Heresies.active, secs: +(n / 30).toFixed(1), d: +Math.hypot(a.x - p.x, a.y - p.y).toFixed(2), locked: !!(body && body.querySelector('.hx-locked')), rows: body ? body.querySelectorAll('.hx-row').length : 0, disabled: body ? [...body.querySelectorAll('.hx-row input')].every((i) => i.disabled) : false, riftBtn: body && body.querySelector('.hx-rift').disabled, unboundBtn: body && body.querySelector('.hx-unbound').disabled };
+      return { open: Heresies.active, secs: +(n / 30).toFixed(1), d: +Math.hypot(a.x - p.x, a.y - p.y).toFixed(2), reach: a.reach, locked: !!(body && body.querySelector('.hx-locked')), rows: body ? body.querySelectorAll('.hx-row').length : 0, disabled: body ? [...body.querySelectorAll('.hx-row input')].every((i) => i.disabled) : false, riftBtn: body && body.querySelector('.hx-rift').disabled, unboundBtn: body && body.querySelector('.hx-unbound').disabled };
     });
     console.log(JSON.stringify(walk));
-    check(walk.open && walk.d <= 1.8, `the hero walks to the altar and it opens the panel (${walk.secs} s)`);
+    check(walk.open && walk.d <= walk.reach + 0.05, `the hero walks to the altar and it opens the panel (${walk.secs} s, ${walk.d} of ${walk.reach} tiles)`);
     check(walk.locked && walk.rows === 12 && walk.disabled, 'locked: "Velscour still sits his throne", twelve rows greyed and disabled');
     check(walk.riftBtn && walk.unboundBtn, 'locked: the Rift and Unbound doors are disabled');
     await page.click('.hx-row[data-id="twins"]', { force: true }).catch(() => {});

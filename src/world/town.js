@@ -478,10 +478,10 @@ function rollTown(tileset, seed, last) {
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = I(x + dx, y + dy); if (map.walkableTile(x + dx, y + dy) && !seen[j]) { seen[j] = 1; q.push(j); } }
   }
   const reach = (x, y) => seen[I(Math.floor(x), Math.floor(y))];
-  const spot = (fx, fy, r0, r1) => {
+  const spot = (fx, fy, r0, r1, ok = null) => {
     let best = null, bd = 99;
     for (let ty = Math.floor(fy - r1); ty <= fy + r1; ty++) for (let tx = Math.floor(fx - r1); tx <= fx + r1; tx++) {
-      if (!inb(tx, ty) || !map.walkableTile(tx, ty) || !seen[I(tx, ty)] || use[I(tx, ty)] === 4) continue;
+      if (!inb(tx, ty) || !map.walkableTile(tx, ty) || !seen[I(tx, ty)] || use[I(tx, ty)] === 4 || (ok && !ok(tx, ty))) continue;
       const d = Math.hypot(tx + 0.5 - fx, ty + 0.5 - fy);
       if (d < r0 || d >= bd || npcs.some((n) => Math.hypot(n.x - tx - 0.5, n.y - ty - 0.5) < 2.5) || Math.hypot(tx + 0.5 - portal.x, ty + 0.5 - portal.y) < 3.5 || Math.hypot(tx + 0.5 - breach.x, ty + 0.5 - breach.y) < 2.6) continue;
       bd = d; best = { x: tx + 0.5, y: ty + 0.5 };
@@ -521,7 +521,24 @@ function rollTown(tileset, seed, last) {
   // and the Altar of Heresy at the plaza's edge; both on walkable, reachable, unbuilt ground
   const toC = Math.atan2(C.y + 0.5 - breach.y, C.x + 0.5 - breach.x);
   const rift = spot(breach.x + Math.cos(toC) * 3.6, breach.y + Math.sin(toC) * 3.6, 0, 2.5) || spot(breach.x, breach.y, 2.7, 4.5);
-  const altar = spot(C.x + 0.5 + Math.cos(aB + 1.3) * 5.5, C.y + 0.5 + Math.sin(aB + 1.3) * 5.5, 0, 3) || spot(C.x + 0.5, C.y + 0.5, 4, 7);
+  // the altar's dais is two tiles across (gfx/heresyaltar.js): it wants the 3 x 3 under it bare and the ring round that
+  // open, clear of the vendors; then the 3 x 3 is solid (the open ring keeps every path, so nothing is cut off). A
+  // cramped town gets it with just its own tile solid, or on any tile.
+  // (what it blocks is never a door's gravel approach, the road or the paths kept open: those stay walkable)
+  const paths = new Set(buildings.flatMap((b) => b.approach.map(([x, y]) => I(x, y))));
+  const under = (x, y) => !keep[I(x, y)] && !paths.has(I(x, y)) && use[I(x, y)] !== 2 && use[I(x, y)] !== 4 && !props.some((p) => Math.abs(p.x - x - 0.5) < 0.9 && Math.abs(p.y - y - 0.5) < 0.9);
+  const bare = (tx, ty, R, r = 1) => { for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) if (!map.walkableTile(tx + i, ty + j) || !seen[I(tx + i, ty + j)] || (Math.abs(i) <= r && Math.abs(j) <= r && !under(tx + i, ty + j))) return false; return true; };
+  const roomy = (tx, ty) => bare(tx, ty, 2) && !npcs.some((n) => Math.hypot(n.x - tx - 0.5, n.y - ty - 0.5) < 3.6)
+    && !(rift && Math.hypot(rift.x - tx - 0.5, rift.y - ty - 0.5) < 3.5) && Math.hypot(start[0] - tx - 0.5, start[1] - ty - 0.5) >= 3.5;
+  const snug = (tx, ty) => bare(tx, ty, 1, 0);
+  const aA = [C.x + 0.5 + Math.cos(aB + 1.3) * 5.5, C.y + 0.5 + Math.sin(aB + 1.3) * 5.5];
+  const altar = spot(...aA, 0, 3, roomy) || spot(C.x + 0.5, C.y + 0.5, 4, 8, roomy) || spot(...aA, 0, 3, snug) || spot(C.x + 0.5, C.y + 0.5, 4, 7, snug)
+    || spot(...aA, 0, 3) || spot(C.x + 0.5, C.y + 0.5, 4, 7);
+  if (altar) {
+    const tx = Math.floor(altar.x), ty = Math.floor(altar.y);
+    altar.solid = roomy(tx, ty) ? 1 : snug(tx, ty) ? 0 : -1;   // the block's radius (-1: none)
+    for (let j = -altar.solid; j <= altar.solid; j++) for (let i = -altar.solid; i <= altar.solid; i++) blockAt(altar.x + i, altar.y + j);
+  }
   return { map, buildings, npcs, props, torches, wallHangings, portal, breach, rift, altar, center: { x: C.x + 0.5, y: C.y + 0.5 }, start };
 }
 

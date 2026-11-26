@@ -382,7 +382,7 @@ export const game = {
       world.npcs.push({ stash: true, jewelBox: true, name: 'Jewel Box', x: jx, y: jy, reach: 1.6, flip: false, use: () => JewelBox.open() });
     }
     // the Altar of Heresy (ui/heresies.js), a dark obelisk at the plaza's edge: the Endgame's door (docs/ENDGAME.md)
-    if (t.altar) world.npcs.push({ altar: true, name: 'Altar of Heresy', x: t.altar.x, y: t.altar.y, reach: 1.7, flip: false, use: () => Heresies.open() });
+    if (t.altar) world.npcs.push({ altar: true, name: 'Altar of Heresy', x: t.altar.x, y: t.altar.y, reach: t.altar.solid > 0 ? 2.4 : 1.7, viewH: 120, flip: false, use: () => Heresies.open() });   // (its dais blocks the 3 x 3 under it: world/town.js)
     c.townVisitCount = (c.townVisitCount || 0) + 1;
     offerCommissions(c); // Town Commissions (game/commissions.js)
     // the townsfolk, visiting adventurers, little set pieces and (about one visit in four) a special event
@@ -512,7 +512,7 @@ export const game = {
     world.npcs.push({ stash: true, jewelBox: true, name: 'Jewel Box', x: jx, y: jy, reach: 1.6, flip: false, use: () => JewelBox.open() });
 
     if (t.altar) {
-      world.npcs.push({ altar: true, name: 'Altar of Heresy', x: t.altar.x, y: t.altar.y, reach: 1.7, flip: false, use: () => Heresies.open() });
+      world.npcs.push({ altar: true, name: 'Altar of Heresy', x: t.altar.x, y: t.altar.y, reach: t.altar.solid > 0 ? 2.4 : 1.7, viewH: 120, flip: false, use: () => Heresies.open() });
     }
 
     // Portals
