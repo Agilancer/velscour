@@ -14,6 +14,31 @@ Contents
 
 ---
 
+## November 25, 2026 — SHEER DROPS: ten dungeons with no walls, only cliffs into the void (branch `feat/sheer-drop-dungeons`)
+
+The user asked for "Sheer drop off" dungeons, generated the same way as the others but with sheer drops into an endless
+void where the walls would be. They asked for ten variants with proper textures (the game's own, or seamless tiles from
+the bm repo): some dark below, some lighter with fog over the lower parts. Flyers and leaps may cross gaps but never
+come to rest over one. Anything that does by accident dies at once, the hero included, and auto-play must prevent it.
+Everything is in [`docs/SHEER_DROPS.md`](SHEER_DROPS.md).
+- **Data**: `src/data/sheer.js` (10 variants: 5 dark, 5 fog, two per Act). Each copies a base biome in
+  `src/data/biomes.js` and joins `ACT_BIOMES`. Cliff textures are ten seamless rock tiles from bm, recoloured by
+  `tools/sheerpack.py` into `assets/tiles/sheer/` (sources in `assets/source/sheer/`).
+- **Layout**: `world/dungeon.js` skips `buildWalls` when `map.sheer` is set, puts lit lamps at the brinks
+  (`brinkLamps`), and turns raid pillars into pits.
+- **Drawing**: `src/gfx/sheer.js`. The abyss replaces the black background (parallax motes, glow or fog layers, storm
+  flashes). Cliff faces are baked into the floor chunks (`render.js` `drawSheerFloor`). Plunges are drawn behind the
+  brink.
+- **Rules**: `src/game/sheer.js` (`sheerUpdate`), plus `map.js` (`aloft`, `flyMove`, `shove`, `solid`, `nearestFloor`,
+  `leapOk`, and void-blind `los`/`rayLength`), `creature.js` (knocks over the brink, auto-play braces),
+  `monster.js` (lunges and flyers over gaps) and `hazards.js` (hero leaps land on floor, shots fly over the void).
+  Monsters that fall die with their loot on the brink. The hero dies to "the Abyss" only from a knock or pull with
+  auto-play off. Bosses and pets are set back.
+- **Verified** by `node tools/tests/sheer.js`: every variant has no walls, has lamps, has its exit reachable and
+  starts every monster on floor (shots `sheer_<id>.png` and `sheer_<id>_wide.png`). The brink rules check passes, and
+  an auto-play soak in Sheer Drops only lets the hero fall 0 times.
+- **Open**: the first-person view and the minimap are not adapted to Sheer Drops.
+
 ## November 24, 2026 — the frame-rate pass (branch `perf/framerate`)
 
 The user asked for a much higher frame rate (165+, never under 60 at peak action) with no instability and no loss of

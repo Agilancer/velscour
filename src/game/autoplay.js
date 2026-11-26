@@ -1916,6 +1916,7 @@ export const Auto = {
    *  within a hop of both ends: never up onto the walls or off them, or across a stair's side. */
   hopLine(x, y) {
     const m = G.world.map, p = G.player;
+    if (m.sheer) return m.isFloor(x, y); // a Sheer Drop: leap at nothing over the void (game/sheer.js)
     if (!m.hgt) return true;
     const H = m.hgt, a = H[m.tileIdx(p.x, p.y)], b = H[m.tileIdx(x, y)], k = m.rampartDeck ? m.climb : m.drop; // (hills: a ledge is fine)
     if (Math.abs(a - b) > k) return false;
@@ -2046,7 +2047,7 @@ export const Auto = {
     }
     if (!reach || d > 10 || this.openSkip > w.time) { this.open = null; return false; }
     const need = reach + p.r + 0.6;
-    const room = (x, y) => { const a = angleTo(t.x, t.y, x, y); return Math.max(m.rayLength(x, y, a + Math.PI / 2, need + 0.3), m.rayLength(x, y, a - Math.PI / 2, need + 0.3)); };
+    const room = (x, y) => { const a = angleTo(t.x, t.y, x, y); return Math.max(m.rayLength(x, y, a + Math.PI / 2, need + 0.3, true), m.rayLength(x, y, a - Math.PI / 2, need + 0.3, true)); };
     if (!o) {
       if (room(p.x, p.y) >= need) return false;
       const at = this.openTile(t, need, room);
@@ -2086,7 +2087,7 @@ export const Auto = {
       if (!m.circleFree(x, y, 0.3) || !m.losWide(p.x, p.y, x, y)) continue;
       let s = 0;
       for (const f of foes) s += Math.min(6, dist(x, y, f.x, f.y));
-      s += m.rayLength(x, y, a, 3) * 0.6; // don't back into corners
+      s += m.rayLength(x, y, a, 3, true) * 0.6; // don't back into corners (or to a brink)
       if (s > bs) { bs = s; best = [x, y]; }
     }
     if (!best) return false;

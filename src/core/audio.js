@@ -5,6 +5,7 @@
 //   setAmbience(key)    a biome id or 'town': a looped ambient bed that drifts louder and softer (the title has none)
 // Songs and beds stream through <audio> elements routed into the Web Audio graph, so they're never fully decoded.
 import { G } from '../state.js';
+import { SHEER } from '../data/sheer.js';
 
 let ac = null, master, sfxBus, musicBus, ambBus, noiseBuf, pulseWave;
 let fanfareEnd = 0;
@@ -123,6 +124,7 @@ const SOUNDS = {
   error: (t) => tone(t, 0.18, { wave: 'square', f0: 130, f1: 110, vol: 0.08 }),
   boss: (t) => { tone(t, 1.2, { wave: 'sawtooth', f0: 90, f1: 40, vol: 0.3, a: 0.1 }); noise(t, 1.2, { f0: 800, f1: 100, vol: 0.4, a: 0.1 }); },
   die: (t) => { tone(t, 1.4, { wave: 'sawtooth', f0: 300, f1: 40, vol: 0.25 }); noise(t, 1.0, { f0: 1000, f1: 50, vol: 0.3 }); },
+  plunge: (t, p) => { tone(t, 1.1, { wave: 'triangle', f0: 620 * p, f1: 90 * p, vol: 0.12, a: 0.02 }); noise(t, 1.2, { type: 'bandpass', f0: 1800, f1: 300, q: 1.5, vol: 0.22, a: 0.08 }); }, // a body over a Sheer Drop's brink, whistling down
   summon: (t, p) => { noise(t, 0.5, { type: 'bandpass', f0: 300 * p, f1: 1500 * p, q: 4, vol: 0.3, a: 0.1 }); tone(t, 0.4, { f0: 200 * p, f1: 600 * p, vol: 0.06 }); },
   heal: (t) => { [660, 880, 1100].forEach((f, i) => tone(t + i * 0.07, 0.4, { f0: f, vol: 0.07 })); },
   buff: (t, p) => { tone(t, 0.5, { f0: 300 * p, f1: 900 * p, vol: 0.1, a: 0.05 }); noise(t, 0.4, { type: 'highpass', f0: 4000, vol: 0.08, a: 0.1 }); },
@@ -414,6 +416,7 @@ export function seekMusic(t) {
 // Each area gets one or more 60 s beds; one plays at a time, drifting between soft and fuller every 10-25 s and now and
 // then crossfading to another of its beds. Beds sit lower while a song plays and come up in the breaks between songs.
 const AMB = {
+  ...Object.fromEntries(SHEER.map((v) => [v.id, v.amb])), // the Sheer Drops (data/sheer.js): wind in the void
   skyship_clear: ['sea', 'beach'], skyship_storm: ['sea_storm', 'forest_day_storm'], skyship_night: ['sea', 'forest_night'], skyship_fog: ['sea_rain', 'sea'],
   pirate_seas_fog: ['sea_rain', 'sea'], pirate_seas_blood: ['sea_storm', 'sea'], pirate_seas_day: ['sea', 'beach'],
   skyship_sunset: ['beach', 'sea'], skyship_gale: ['sea_storm', 'beach_storm'], skyship_blizzard: ['cave_storm', 'sea_storm'], skyship_ash: ['torch_loop', 'cave_storm'],
