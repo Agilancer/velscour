@@ -10,6 +10,7 @@ import { bardProjInit, bardProjUpdate, bardProjHit, bardProjDraw, bardOrbitDraw,
 import { drawLancerOrbitShield, drawLancerThrownShield, drawThrownShield } from '../gfx/lancershields.js';
 import { drawCosmicBeam } from '../gfx/cosmos.js';
 import { drawFlyingRang, drawRang3D, rangSkin, groundHeading } from '../gfx/boomerang3d.js';
+import { drawStarShadow } from '../gfx/blades3d.js';
 import { screenAngle } from '../gfx/vfx.js';
 import { hit, aoe, chainHit, leechHeal } from './combat.js';
 
@@ -251,7 +252,7 @@ export class Projectile {
     if (this.lob) {
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
       ctx.beginPath(); ctx.ellipse(px, isoY(this.x, this.y), 5, 2.5, 0, 0, TAU); ctx.fill();
-    }
+    } else if (this.fx === 'shuriken') drawStarShadow(ctx, px, py + this.z, this.z, this.size, this.t); // a throwing star's shadow skims the ground
     if (this.note) return bardProjDraw(ctx, this, px, py);
     if ((this.fx === 'rang' || this.fx === 'chakram') && drawFlyingRang(ctx, this)) return; // the 3D boomerang
     if (this.fx === 'tshield' && drawLancerThrownShield(ctx, this)) return; // the Lancer's spinning 3D shield
@@ -513,6 +514,7 @@ export class Orbit {
       for (const [x, y, a] of this.pos) drawRang3D(ctx, isoX(x, y), isoY(x, y) - 26, { skin: sk, size: this.size, spin: this.t * 15, head: groundHeading(-Math.sin(a), Math.cos(a)), bank: 0.3, lift: 26 });
       return;
     }
+    if (this.fx === 'shuriken') for (const [x, y] of this.pos) drawStarShadow(ctx, isoX(x, y), isoY(x, y), 24, this.size, this.t);
     const each = this.fx === 'planet' || this.fx === 'zodiac' || this.fx === 'accretion'; // the Astronomer's orbiters differ one by one
     this.pos.forEach(([x, y, a], i) => drawShape(ctx, this.fx, isoX(x, y), isoY(x, y) - 24, screenAngle(a + Math.PI / 2), this.size, this.E, this.t, each ? { i } : this.o));
   }
@@ -981,6 +983,7 @@ export class Rain {
       const k = f.z / 300;
       const x = f.x + f.ox * k * 0.5, y = f.y + f.ox * k * 0.5;
       if (this.fx?.startsWith('n_')) bardRainDraw(ctx, this, f, x, y);
+      if (this.fx === 'shuriken') drawStarShadow(ctx, isoX(x, y), isoY(x, y), f.z, 1, this.t);
       drawShape(ctx, this.fx === 'ice' ? 'shard' : this.fx === 'acid' ? 'blob' : this.fx, isoX(x, y), isoY(x, y) - f.z, Math.PI / 2 + 0.25, this.fx === 'meteor' ? 0.9 : 1, this.E, this.t, this.o);
     }
   }

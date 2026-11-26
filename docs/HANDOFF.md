@@ -260,7 +260,9 @@ that falls, thrown daggers, daggers out of the ground, a dagger in each hand, pl
 - **three.js steel** (`src/gfx/blades3d.js`): one offscreen WebGL canvas; models built in code (dagger, kunai, shuriken,
   caltrop, grappling hook) with canvas textures; small pieces cached as sprites per roll/spin step, big ones rendered
   every frame; `GiantBlade`, `GroundBlades`; `setBladeModel` swaps a kind for another Object3D. Until three.js has loaded
-  the callers draw the old 2D shapes.
+  the callers draw the old 2D shapes. Every flying shuriken casts a star-shaped shadow on the ground (`drawStarShadow`,
+  called by `Projectile`, `Orbit` and `Rain` in `src/game/hazards.js`): wider and fainter the higher it is, so Storm of
+  Steel's shadows close in as the stars fall.
 - **Shared effects** (`src/gfx/shadowfx.js`): `drawGhost`, `AfterImage`, `shadowTrail`, `CutLine`, `Crescent`, `Rope`,
   `bloodCut`, `bloodBurst`.
 - **Held gear** (`tools/weapons3d_eastern.js`, baked into `assets/sprites/held/` and `assets/models/held/`): four sets of

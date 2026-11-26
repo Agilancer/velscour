@@ -207,6 +207,29 @@ export function drawBlade3D(ctx, kind, x, y, a, s, t, o = {}) {
   }
   return true;
 }
+let STAR = null; // the shuriken's outline at radius 1 (as the model's: points at 0.5, waist 0.15)
+function starPath() {
+  if (STAR) return STAR;
+  STAR = new Path2D();
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * TAU, b = a + TAU / 8, c = a + TAU / 4;
+    if (!i) STAR.moveTo(Math.cos(a), Math.sin(a));
+    STAR.quadraticCurveTo(Math.cos(a + 0.5) * 0.4, Math.sin(a + 0.5) * 0.4, Math.cos(b) * 0.3, Math.sin(b) * 0.3);
+    STAR.lineTo(Math.cos(c), Math.sin(c));
+  }
+  return STAR;
+}
+/** A shuriken's shadow on the ground at screen (x, gy), `lift` px below the star, size `s`, age `t` (it turns with the
+ *  star's spin). Spread wider and fainter the higher it flies, so a falling star's shadow closes in under it. */
+export function drawStarShadow(ctx, x, gy, lift, s, t, spin = 22) {
+  if (typeof Path2D === 'undefined') return;
+  const h = Math.max(0, lift), r = 10 * s * (1 + Math.min(h, 320) / 400), prev = ctx.globalAlpha;
+  const ang = Math.round(t * spin / TAU * 24) / 24 * TAU; // the sprite's spin step
+  ctx.save(); ctx.translate(x, gy); ctx.scale(r, r * 0.5); ctx.rotate(ang);
+  ctx.globalAlpha = prev * 0.62 * Math.max(0.35, 1 - h / 300); ctx.fillStyle = '#000';
+  ctx.fill(starPath());
+  ctx.restore(); ctx.globalAlpha = prev;
+}
 /** A big piece rendered now (no cache): centred at (x, y), `len` px long, heading `a`, rolled and pitched. */
 export function drawBigBlade3D(ctx, kind, x, y, a, len, roll, pitch = 0.3) {
   if (!R) { start(); return false; }
