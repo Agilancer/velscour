@@ -14,6 +14,28 @@ Contents
 
 ---
 
+## November 26, 2026: Castle Creatures and Bosses, the Thanksgiving update (branch `feat/castle-creatures`)
+- Added 60 sprites from `VELSCOUR_Castle_Creatures_and_Bosses.zip` (50 creatures, 10 bosses). They are part of the
+  base game, and [CASTLE_CREATURES.md](CASTLE_CREATURES.md) has everything.
+- The sprites are cut by heat map (`tools/castlekin.py`) and packed as `castle/*`. The catalogue is
+  `src/data/castlekin.js`.
+- They are in the random bestiary and favoured there: about 40% of dungeon looks and 55% in the Castle. A castle boss
+  is about 25% of guardians.
+- Each creature has its own mechanic, one of 50 kits in `src/game/castlekin.js`. Examples:
+  - portcullis bars drop behind the hero
+  - a gold thief spills its loot back on death
+  - an imp tears away the hero's weapon
+  - a louse crowns another monster
+  - a ghast swaps places with the hero
+  - a mimic eats the floor loot
+- The kits hook into `Monster.update`, `onDamaged`, `makeMonster` (`noKit`) and `combat.hit` (kit hit/taken, hero
+  `status.rust/disarm/hunted`, `guardedBy`).
+- The 10 bosses are the fourth host of raid bosses (`src/game/castleraids.js`). Each has a fight-long passive and two
+  signatures. As depth guardians they play a creature kit.
+- `mobs.js` leaves out ambushers lying in wait (platters, cages, tapestries): they stand still by design.
+- Open: balance is untuned beyond the test runs. The stealing kits (gold, potions, weapon) and the Matron's locks are
+  the ones to watch in real play. In auto-play the bot loses to the Matron of Keys and the Veiled Seneschal.
+
 ## November 25, 2026 — the Altar of Heresy, rebuilt in Blender (branch `feat/altar-of-heresy-3d`)
 
 The user asked for "a much cooler version of the Altar of Heresy" made in Blender, shown to them before the PR. The old

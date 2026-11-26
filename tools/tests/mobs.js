@@ -44,7 +44,7 @@ const LEVELS = +(process.argv[2] || 10);
       const [hx, hy] = best ? map.randomNear(best.x, best.y, 3) : [p.x, p.y];
       p.x = hx; p.y = hy;
       map.flowFrom = [-9, -9]; map.buildFlow(p.x, p.y, 64);
-      const mobs = w.creatures.filter((c) => !c.isPlayer && c.team === 'enemy' && c.rank !== 'boss' && !c.dead);
+      const mobs = w.creatures.filter((c) => !c.isPlayer && c.team === 'enemy' && c.rank !== 'boss' && !c.dead && !(c.ks && (c.ks.dis || c.ks.mode === 'hung' || c.ks.mode === 'seek'))); // castle ambushers (platters, cages, tapestries) lie in wait by design
       const near = mobs.filter((c) => { const f = map.flowAt(c.x, c.y); return f >= 0 && f <= 30; });
       for (const c of near) { c.awake = true; c.aggro = p; }
       const hist = new Map(near.map((c) => [c, []]));

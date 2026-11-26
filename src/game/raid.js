@@ -23,6 +23,7 @@ import { UI } from '../ui/ui.js';
 import { madnessReady } from './mayhem.js';
 import { SIGS, SIG_NAMES, PASSIVES } from './raidsigs.js';
 import { heresyRaid, worldHeresies } from './heresies.js';
+import { CASTLE_RAIDS } from './castleraids.js';
 
 // ------------------------------------------------------------------------------------------------ the bosses
 // art: bestiary art ids (one is picked); fx: their projectile look; adds: archetypes that come to their aid;
@@ -512,6 +513,8 @@ export const RAID_BOSSES = [
     ],
   },
 ];
+// the fourth host: the Castle's ten bosses, each with its own fight-long rule (game/castleraids.js)
+RAID_BOSSES.push(...CASTLE_RAIDS);
 
 export const RAID_MODS = {
   empowered: { name: 'Empowered', desc: 'deals 25% more damage' },
@@ -584,7 +587,7 @@ export function makeRaidBoss(world, arena, depth, level, opts = {}) {
   if (fifth) { const more = Object.keys(RAID_MODS).filter((k) => !mods.includes(k) && k !== tpl.innate); if (more.length) mods.push(pick(more)); }
   if (tpl.innate && !mods.includes(tpl.innate)) mods.unshift(tpl.innate);
   const has = (k) => mods.includes(k);
-  const m = makeMonster(world, art.arch, world.biome, level, 'boss', arena.cx + 4, arena.cy, 0, { art: artId, swap: null });
+  const m = makeMonster(world, art.arch, world.biome, level, 'boss', arena.cx + 4, arena.cy, 0, { art: artId, swap: null }, true); // no creature kit: the raid passives play its mechanics
   const B = monsterBase(level);
   if (world.riftHold) B.hp *= riftHold(level);
   Object.assign(m, {

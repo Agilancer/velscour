@@ -1185,3 +1185,6 @@ export const PASSIVES = {
 
 /** Raid-wide hero damage multipliers set by passives (Vexis polarity, Leonis sunder). */
 export function raidHeroMul(p, taken) { return taken ? (p.raidTakenMul || 1) : (p.raidDmgMul || 1); }
+
+/** The building blocks, for other hosts of signature bosses (game/castleraids.js). */
+export const SIGKIT = { sig, blast, line, zone, mover, add, randFloor, say, later, hero, live, dmgOf, tele, fxEl, Zone, Mover, InRing, LineStrike };
