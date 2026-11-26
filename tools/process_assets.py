@@ -382,6 +382,8 @@ ENEMY_SCALE = 0.5  # stored size vs. the sheet; monsters are drawn at 30-110 wor
 ENEMY_GRID = {}    # "<set>/<sheet>": (rows, cols) for sheets that are not the usual 2 x 5
 SINGLE_MAX_H = 220  # a folder of single sprites (set2): stored at most this tall (bosses), never above SINGLE_SCALE
 SINGLE_SCALE = 0.85
+# folders stored taller than SINGLE_MAX_H: the Act III finale forms of Lord Velscour (tools/phobospack.py) tower over the arena
+SINGLE_MAX_H_BY = {"phobos/finale_crimson": 520, "phobos/finale_obsidian": 520, "phobos/finale_cathedral": 520, "phobos/cboss_1": 260, "phobos/cboss_2": 260}
 # Pet sheets (familiars/<kind>[_n].jpg) are painted on a flat dark or white background: stored scale per kind.
 SHEET_SCALE = {"blue": 0.28, "elemental": 0.24, "critters": 0.6, "dragons": 0.3, "wolves": 0.36}
 SHEET_TOL = {"blue": 26}  # keying tolerance; dark-furred wolves and black dragons need a tight one
@@ -542,7 +544,7 @@ def process_enemies(only=()):
                     a = np.asarray(img).copy()
                     a[..., 3] = np.where(a[..., 3] < 16, 0, a[..., 3])
                     img = trim(Image.fromarray(a))
-                    pieces.append(enemy_piece(img, k, min(SINGLE_SCALE, SINGLE_MAX_H / img.height)))
+                    pieces.append(enemy_piece(img, k, min(SINGLE_SCALE if key not in SINGLE_MAX_H_BY else 1, SINGLE_MAX_H_BY.get(key, SINGLE_MAX_H) / img.height)))
                 rows, cols = 1, len(files)
             elif fn.lower().endswith((".png", ".jpg")):
                 key = set_id + "/" + fn[:-4]

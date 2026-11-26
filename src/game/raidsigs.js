@@ -1185,3 +1185,6 @@ export const PASSIVES = {
 
 /** Raid-wide hero damage multipliers set by passives (Vexis polarity, Leonis sunder). */
 export function raidHeroMul(p, taken) { return taken ? (p.raidTakenMul || 1) : (p.raidDmgMul || 1); }
+
+// the helpers the Act III raid bosses (game/phobosraids.js) build on
+export { blast, line, zone, mover, add, A, randFloor, later, say, tele, dmgOf, live, hero, InRing, LineStrike, Zone, fxEl };
