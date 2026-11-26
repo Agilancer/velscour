@@ -591,6 +591,7 @@ export function makeRaidBoss(world, arena, depth, level, opts = {}) {
   if (tpl.innate && !mods.includes(tpl.innate)) mods.unshift(tpl.innate);
   const has = (k) => mods.includes(k);
   const m = makeMonster(world, art.arch, world.biome, level, 'boss', arena.cx + 4, arena.cy, 0, { art: artId, swap: null }, true); // no creature kit: the raid passives play its mechanics
+  if (art.sandKin) { m.sandArt = art; m.ks = {}; } // a desert boss still shouts (game/sandkits.js bossYell)
   const B = monsterBase(level);
   if (world.riftHold) B.hp *= riftHold(level);
   Object.assign(m, {

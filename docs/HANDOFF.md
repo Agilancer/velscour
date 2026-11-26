@@ -14,6 +14,31 @@ Contents
 
 ---
 
+## November 26, 2026: every sand creature fights its own way, and shouts (branch `feat/sea-of-sand-humanoids`)
+- Each of the 510 has a kit (`SAND_KITS` in `src/data/sandkits.js`, seeded by id). A kit holds its special moves, the
+  look of its shots, its pattern size (x0.75 to 1.5 shots) and shot speed, one or two passives, and a named signature
+  move. No two kits, move sets or titles are alike.
+- The 12 passives are in `src/game/sandkits.js`. They ride on the Castle Creatures' kit hooks.
+- `Monster.movePerform`/`moveTick` read the kit through `kn()`/`kproj()`.
+- They shout now and then in a speech bubble: 1,200 lines in nine voices (`src/data/sandvoices.js`).
+  - **When:** on first sight, on the first blow they take, when nearly dead, after a special move, and at random.
+  - **Limits:** at most two bubbles at once, one new one every 2.5 s, a monster every 12 s, and no repeats of the
+    last 60 lines.
+- Tests: `tools/tests/sandvoices.mjs` (no browser), and `sandkin.js` now also checks the moves, the passives (with
+  drills) and the shouts.
+
+## November 26, 2026: Sea of Sand humanoids and djinn (branch `feat/sea-of-sand-humanoids`)
+- Added 310 more desert sprites from `VELSCOUR_Sea_of_Sand_Humanoids_and_Djinn_310.zip`, packed as the `sand2` set:
+  - 200 humanoids: 50 mummies, 40 zombies, 40 pharaohs, 40 nomads and 30 desert knights
+  - 50 djinn
+  - 40 humanoid bosses and 20 djinn bosses
+- `tools/sandkin.py` now cuts either pack, telling them apart by roster size.
+- The rows are `SAND_HUMANOIDS` in `src/data/sandkin.js`. A sheet's kind sets the archetype, and the name can make it
+  an archer or a caster. A djinn's element comes from its name.
+- They join `SAND_KIN`, so they appear in the same places: desert dungeons, guardians and BOSS ROOMs, the Sea of Sand
+  natives and the pyramid dunes.
+- `tools/tests/sandkin.js` covers all 510.
+
 ## November 26, 2026: the Sea of Sand bestiary, the Thanksgiving update (branch `feat/sea-of-sand-200`)
 - Added 200 desert sprites from `VELSCOUR_Sea_of_Sand_200_Sprites.zip`: 50 small, 70 large, 30 mythic and 50 bosses.
   [SEA_OF_SAND_BESTIARY.md](SEA_OF_SAND_BESTIARY.md) has everything.

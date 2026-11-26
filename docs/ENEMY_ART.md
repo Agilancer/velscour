@@ -127,4 +127,6 @@ See [`CASTLE_CREATURES.md`](CASTLE_CREATURES.md).
 200 desert sprites (50 small, 70 large, 30 mythic, 50 bosses) are cut by heat map with `python tools/sandkin.py <zip>`
 into `assets/source/enemies/sand/`, and packed by `python tools/process_assets.py enemies sand` (one atlas per sheet).
 They only appear in the deserts: dungeon packs, guardians and BOSS ROOMs, the Sea of Sand, and the pyramid dunes.
+The 310 humanoids and djinn (`VELSCOUR_Sea_of_Sand_Humanoids_and_Djinn_310.zip`) go through the same cutter and are
+packed as the `sand2` set. They are mummies, zombies, pharaohs, nomads, desert knights, djinn and their bosses.
 See [`SEA_OF_SAND_BESTIARY.md`](SEA_OF_SAND_BESTIARY.md).
