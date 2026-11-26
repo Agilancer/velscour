@@ -1188,3 +1188,5 @@ export function raidHeroMul(p, taken) { return taken ? (p.raidTakenMul || 1) : (
 
 /** The building blocks, for other hosts of signature bosses (game/castleraids.js). */
 export const SIGKIT = { sig, blast, line, zone, mover, add, randFloor, say, later, hero, live, dmgOf, tele, fxEl, Zone, Mover, InRing, LineStrike };
+// the helpers the Act III raid bosses (game/phobosraids.js) build on
+export { blast, line, zone, mover, add, A, randFloor, later, say, tele, dmgOf, live, hero, InRing, LineStrike, Zone, fxEl };

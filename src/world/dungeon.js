@@ -826,3 +826,6 @@ function generateThrone(biome, tileset, seed) {
     start: [22, 73], exit: [22, 7], bossRoom: { x: ar.x, y: ar.y, w: ar.w, h: ar.h, mx: 22, my: 17 }, throne: true,
   };
 }
+
+// the pieces the authored Act III levels (world/castlevelscour.js, world/phobos.js) build with
+export { themeDeck, wallMounts, placeObstacles, finishMap, shuffleWith, carveArena };

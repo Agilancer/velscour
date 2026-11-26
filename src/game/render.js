@@ -474,11 +474,11 @@ function drawNpc(ctx, n) {
   if (n.hidden) { n.sbox = null; return; }
   // Vendors retain their existing hand-painted artwork, names and shops.
   // Only visitors/civilians use the animated townsfolk collection; visiting adventurers use their class portrait.
-  const spriteId=n.vendor||n.adv?null:(n.townsfolkSpriteId||n.spriteId||n.townsfolkId);
+  const spriteId=n.vendor||n.adv||n.enemyArt?null:(n.townsfolkSpriteId||n.spriteId||n.townsfolkId);
   const sheet=spriteId?townSprite(spriteId,n.palette||null):null;
   // Painted art for vendors and scenario civilians (n.art); never hue-shifted class sprites (they came out green).
   const hom=n.vendor&&n.vendor.id==='upgrade'?homunculusPose(n.pose||'confident'):null; // Homunculus the Proud's 30 poses
-  const vendorArt=hom?hom.img:n.vendor
+  const vendorArt=hom?hom.img:n.enemyArt?enemyImage(n.enemyArt):n.vendor
     ? replacementImage('npc_'+n.vendor.id) || classSprite(n.vendor.sprite,180)
     : n.adv ? advPortrait(n.adv)
     : !spriteId && (n.art && replacementImage(n.art) || classSprite(n.sprite||'paladin',180));

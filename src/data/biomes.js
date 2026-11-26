@@ -4,6 +4,7 @@ import { BREACH_ARCHS } from './breach.js';
 // mon -> hue/sat/light shift applied to monster palettes.
 import { FINAL_DEPTH, getActForDepth, ACTS } from './depth.js';
 import { SHEER } from './sheer.js';
+import { PHOBOS_BIOME_BY_ID } from './phobosbiomes.js';
 export const BIOMES = [
   {
     id: 'catacombs', name: 'Skull-Lined Catacombs', palette: null, dark: 0.82, light: 7.5,
@@ -558,6 +559,8 @@ export const BREACH_BIOME = {
 export const BREACH_WALLS = { id: 'eternal_breach_veilscar', name: 'The Veilscar March', pack: 'veilscar_march', overworld: true, packArt: true, palette: null, part: null };
 
 export const BIOME_BY_ID = Object.fromEntries([...BIOMES, ...BETA_BIOMES, BREACH_BIOME].map((b) => [b.id, b]));
+// City State Phobos and Castle Velscour (data/phobosbiomes.js): by id only, never in BIOMES, a bag or an Act
+Object.assign(BIOME_BY_ID, PHOBOS_BIOME_BY_ID);
 
 /** Overworlds share the regular biome bag, with a hard visit guarantee after three combat dungeons. */
 export const OVERWORLD_BIOME_IDS = BIOMES.filter((b) => b.overworld).map((b) => b.id);

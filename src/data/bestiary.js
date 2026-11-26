@@ -5,6 +5,7 @@ import { BREACH_ART } from './breach.js';
 import { AIR_ART } from './airpirates.js';
 import { DEPTHS_EDGE } from './depthsedge.js';
 import { CASTLE_KIN } from './castlekin.js';
+import { PHOBOS_ART } from './phobos.js';
 // Monster art catalogue: every monster cut from the sheets in assets/source/enemies/<set>/ (see docs/ENEMY_ART.md).
 // Each entry is one cell of a sheet (i = reading order, left to right then top to bottom) and says which AI
 // archetype it plays (ARCH in enemies.js). `also` lists other archetypes it can stand in for, `h` is its height
@@ -478,6 +479,7 @@ BESTIARY.push(
   ...CASTLE_KIN, // the Castle Creatures and Bosses (data/castlekin.js): base game, every creature with its own mechanic
   ...BREACH_ART,
   ...AIR_ART,
+  ...PHOBOS_ART, // Act III: Phobos and Castle Velscour's own (data/phobos.js): never in another level's looks
   ...DEPTHS_EDGE, // the Depth's Edge Caverns' own creatures (data/depthsedge.js): never in another level's looks
 );
 
@@ -543,10 +545,10 @@ const compat = (a, arch) => a.arch === arch || (a.also && a.also.includes(arch))
  * keep their own creatures). Giants (`lone`) only play guardians and raid bosses. */
 export function artPool(arch) {
   if (BESTIARY.some((a) => a.seaOfSand && a.arch === arch)) return BESTIARY.filter((a) => a.seaOfSand && a.arch === arch);
-  return BESTIARY.filter((a) => !a.lone && !a.seaOfSand && !a.breach && !a.air && !a.depthsEdge && compat(a, arch));
+  return BESTIARY.filter((a) => !a.lone && !a.seaOfSand && !a.breach && !a.air && !a.depthsEdge && !a.phobos && compat(a, arch));
 }
 /** Guardian art for an archetype (giants included). */
-const bossPool = (arch) => BESTIARY.filter((a) => a.boss && !a.seaOfSand && !a.breach && !a.air && !a.depthsEdge && (!arch || compat(a, arch)));
+const bossPool = (arch) => BESTIARY.filter((a) => a.boss && !a.seaOfSand && !a.breach && !a.air && !a.depthsEdge && !a.phobos && (!arch || compat(a, arch)));
 
 // A level draws its looks from at most this many lazily loaded sheets (set 1 is always in), so a random bestiary
 // still only downloads and decodes a few atlases per level.
