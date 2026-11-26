@@ -22,18 +22,18 @@ const loadImg = (src) => IMG.get(src) || IMG.set(src, new Promise((ok, no) => {
 
 // the look of each part of the castle: masonry and its swap, roofs, lamps, the sky, the abyss, Velscour's flesh
 export const STYLES = {
-  storm: { stone: 'ashlar', ss: { colorize: [214, 0.14], light: -0.08, contrast: 1.12 }, trim: 'chapel', ts: { colorize: [212, 0.18], light: 0.04 }, floor: 'slatestone', fs: { colorize: [220, 0.1], light: -0.02 },
+  storm: { stone: 'ashlar', ss: { colorize: [214, 0.1], light: -0.08, contrast: 1.12 }, trim: 'chapel', ts: { colorize: [212, 0.18], light: 0.04 }, floor: 'slatestone', fs: { colorize: [220, 0.1], light: -0.02 },
     roof: 'roof_blue', lamp: 0x9ad8ff, sky: ['#02040a', '#0c1830', '#2a4266'], abyss: '#03060c', amb: 0x5a6a80, hemi: [0x8aa8d8, 0x101820], moon: 0xb8d8ff, flesh: 0xb8b0b4, dark: 0.32, fog: '#151e38', storm: true, motes: '#c8e0ff' },
-  bone: { stone: 'chapel', ss: { colorize: [42, 0.14], light: 0.02, contrast: 1.08 }, trim: 'ashlar', ts: { colorize: [40, 0.18], light: 0.1 }, floor: 'slate', fs: { colorize: [38, 0.1], light: 0.02 },
+  bone: { stone: 'chapel', ss: { colorize: [42, 0.1], light: 0.02, contrast: 1.08 }, trim: 'ashlar', ts: { colorize: [40, 0.18], light: 0.1 }, floor: 'slate', fs: { colorize: [38, 0.1], light: 0.02 },
     roof: 'roof_black', lamp: 0xd8ff80, sky: ['#050404', '#1c1610', '#463826'], abyss: '#060403', amb: 0x6a6250, hemi: [0xd8c8a0, 0x14100a], moon: 0xffeed0, flesh: 0xc8b8a4, dark: 0.34, fog: '#1e1919', motes: '#e8dcc0' },
-  blood: { stone: 'ashlar', ss: { colorize: [356, 0.36], light: -0.14, contrast: 1.12 }, trim: 'brick', ts: { colorize: [6, 0.3], light: -0.1 }, floor: 'basalt', fs: { colorize: [350, 0.2], light: -0.04 },
-    roof: 'roof_char', lamp: 0xff5040, sky: ['#060102', '#2a0408', '#6a1010'], abyss: '#080102', amb: 0x6a3a38, hemi: [0xff9080, 0x180404], moon: 0xffa080, flesh: 0xb89890, dark: 0.36, fog: '#220c12', motes: '#ff6040' },
-  gloam: { stone: 'brick', ss: { colorize: [268, 0.16], light: -0.12, contrast: 1.15 }, trim: 'panel', ts: { colorize: [276, 0.3], light: -0.04 }, floor: 'slate', fs: { colorize: [270, 0.2], light: -0.06 },
+  blood: { stone: 'ashlar', ss: { colorize: [356, 0.1], light: -0.14, contrast: 1.12 }, trim: 'brick', ts: { colorize: [6, 0.25], light: -0.1 }, floor: 'basalt', fs: { colorize: [350, 0.1], light: -0.04 },
+    roof: 'roof_char', lamp: 0xff5040, sky: ['#060102', '#2a0408', '#6a1010'], abyss: '#080102', amb: 0x6a3a38, hemi: [0xc8a098, 0x180404], moon: 0xffa080, flesh: 0xb89890, dark: 0.36, fog: '#220c12', motes: '#ff6040' },
+  gloam: { stone: 'brick', ss: { colorize: [268, 0.1], light: -0.12, contrast: 1.15 }, trim: 'panel', ts: { colorize: [276, 0.25], light: -0.04 }, floor: 'slate', fs: { colorize: [270, 0.1], light: -0.06 },
     roof: 'roof_violet', lamp: 0xc890ff, sky: ['#040208', '#140a26', '#36204e'], abyss: '#040208', amb: 0x4a4060, hemi: [0xb8a0ff, 0x0c0814], moon: 0xe0c8ff, flesh: 0xb0a4b8, dark: 0.36, fog: '#19102a', motes: '#d0b0ff' },
-  ember: { stone: 'basalt', ss: { colorize: [18, 0.2], light: -0.06, contrast: 1.1 }, trim: 'brick', ts: { colorize: [22, 0.34], light: -0.02 }, floor: 'soot', fs: { colorize: [20, 0.16], light: 0.02 },
+  ember: { stone: 'basalt', ss: { colorize: [18, 0.1], light: -0.06, contrast: 1.1 }, trim: 'brick', ts: { colorize: [22, 0.25], light: -0.02 }, floor: 'soot', fs: { colorize: [20, 0.1], light: 0.02 },
     roof: 'roof_terracotta', lamp: 0xff9a40, sky: ['#050202', '#260a04', '#6a2408'], abyss: '#0a0402', amb: 0x6a4a3a, hemi: [0xffb080, 0x180804], moon: 0xffc080, flesh: 0xb8a090, dark: 0.34, fog: '#221312', motes: '#ff9a40', embers: true },
-  throne: { stone: 'basalt', ss: { colorize: [350, 0.12], light: -0.18, contrast: 1.2 }, trim: 'ashlar', ts: { colorize: [44, 0.45], light: 0.04 }, floor: 'slatestone', fs: { colorize: [356, 0.24], light: -0.1 },
-    roof: 'roof_gold', lamp: 0xff4020, sky: ['#040102', '#200208', '#5a0a12'], abyss: '#050102', amb: 0x5a3434, hemi: [0xff8070, 0x100204], moon: 0xff9070, flesh: 0xa89490, dark: 0.36, fog: '#1e0c12', motes: '#ff4030', storm: true },
+  throne: { stone: 'basalt', ss: { colorize: [350, 0.1], light: -0.18, contrast: 1.2 }, trim: 'ashlar', ts: { colorize: [44, 0.25], light: 0.04 }, floor: 'slatestone', fs: { colorize: [356, 0.1], light: -0.1 },
+    roof: 'roof_gold', lamp: 0xff4020, sky: ['#040102', '#200208', '#5a0a12'], abyss: '#050102', amb: 0x5a3434, hemi: [0xc8a098, 0x100204], moon: 0xff9070, flesh: 0xa89490, dark: 0.36, fog: '#1e0c12', motes: '#ff4030', storm: true },
   iron: { stone: 'brick', ss: { colorize: [30, 0.06], light: -0.06, contrast: 1.08 }, trim: 'ashlar', ts: { colorize: [36, 0.14], light: 0.02 }, floor: 'slatestone', fs: { colorize: [30, 0.08], light: -0.02 },
     roof: 'roof_black', lamp: 0xffb060, sky: ['#030304', '#141620', '#34303c'], abyss: '#040406', amb: 0x5a5a60, hemi: [0xc8c0b8, 0x101014], moon: 0xe8e0d0, flesh: 0xb8aca8, dark: 0.32, fog: '#191922', motes: '#d8c8b0' },
 };
@@ -342,8 +342,10 @@ export async function buildSpires3D(gen) {
     { const uv = drum.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * TAU * r / 1.6, uv.getY(i) * H / 3); }
     B.add('stone', drum);
     const top = new T.CircleGeometry(r - 0.05, 64).rotateX(-Math.PI / 2).translate(cx, t.top, cz);
-    { const p = top.attributes.position, uv = top.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / 1.6, p.getZ(i) / 1.6); }
+    { const p = top.attributes.position, uv = top.attributes.uv, g = R3() * TAU, c = Math.cos(g), sn = Math.sin(g); for (let i = 0; i < p.count; i++) { const x = p.getX(i) - cx, z = p.getZ(i) - cz; uv.setXY(i, (x * c - z * sn) / 1.6, (x * sn + z * c) / 1.6); } }
     B.add('floor', top);
+    B.add('trim', worldUV(new T.RingGeometry(r - 1.6, r - 0.05, 64).rotateX(-Math.PI / 2).translate(cx, t.top + 0.01, cz)));   // a flagstone border round the rim
+    B.add('trim', worldUV(new T.CircleGeometry(1.4, 32).rotateX(-Math.PI / 2).translate(cx, t.top + 0.015, cz)));            // and a boss at the heart
     B.add('trim', worldUV(new T.CylinderGeometry(r + 0.5, r - 0.1, 1.2, 64).translate(cx, t.top - 0.9, cz)));   // the machicolated course under the rim
     for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + 0.2; const q = [cx + Math.cos(a) * (r - 0.05), t.top - 3.5, cz + Math.sin(a) * (r - 0.05)]; B.add('slit', new T.PlaneGeometry(0.3, 1.5).rotateY(-a + Math.PI / 2).translate(...q)); }
     // the crenellated parapet round the rim, open where the bridge leaves

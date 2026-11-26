@@ -8,7 +8,7 @@
 //   wards: [ward boss ids slain], hubs: {hub id: true}, vWins: Velscour's falls, vSeen: [battles won] }
 import { G } from '../state.js';
 import { rand, chance, pick, dist, angleTo, clamp, TAU, escapeHtml } from '../core/util.js';
-import { isoX, isoY, HW, HH } from '../core/view.js';
+import { isoX, isoY, HW, HH, camera } from '../core/view.js';
 import { sfx } from '../core/audio.js';
 import { addEffect, Ring, Column, floatText, sparkle, addLight, glowSprite, burst } from '../gfx/vfx.js';
 import { UI } from '../ui/ui.js';
@@ -420,9 +420,9 @@ class Pad {
     if (F && F.owner === this) {
       F.t += dt; const k = Math.min(1, F.t / F.dur), e = k * k * (3 - 2 * k);
       p.x = F.x0 + (F.x1 - F.x0) * e; p.y = F.y0 + (F.y1 - F.y0) * e;
-      p.z = F.kind === 'swing' ? 40 * Math.sin(k * Math.PI) * 0.6 : 70 * Math.sin(k * Math.PI);
+      p.z = F.kind === 'swing' ? -45 * Math.sin(k * Math.PI) : 70 * Math.sin(k * Math.PI);   // the swing drops him into the gap on the chain
       p.path = null; p.moveTarget = null; p.nav = null;
-      if (k >= 1) { p.padFly = null; p.leaping = false; p.z = 0; sparkle(p.x, p.y, 14, '#ffe0a0', 14, 0.4); }
+      if (k >= 1) { p.padFly = null; p.leaping = false; p.z = 0; sparkle(p.x, p.y, 14, '#ffe0a0', 14, 0.4); camera.shake(6); }
     }
     addLight(this.L.x, this.L.y, 3, 0.9 + 0.3 * Math.sin((this.t || 0) * 4), 6);   // a beacon: the stone across reads from the far side
     return true;
