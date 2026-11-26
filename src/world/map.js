@@ -5,6 +5,8 @@
  * (a 2-wide corridor, a gap beside a prop); its sprite and hit radius (`r`) stay as big as they are.
  */
 export const bodyR = (e) => Math.min(e.r * 0.8, 0.42);
+/** Over a Sheer Drop's void (game/sheer.js): a flyer that can still fly, or anything in the middle of a leap. */
+export const aloft = (e) => !!e.leaping || (!!e.voidFly && !(e.disabled && e.disabled()));
 
 export class TileMap {
   constructor(w, h) {
@@ -24,6 +26,8 @@ export class TileMap {
     // `drop`, so a taller step is a wall one way (or both). null on flat maps, where none of this costs anything.
     this.hgt = null;
     this.climb = 2; this.drop = 5;
+    // a Sheer Drop (data/sheer.js): no walls, the void beyond the brink is open to sight, shots and flyers
+    this.sheer = null;
   }
   /** Can a walker step from tile index a onto tile index b (height map only)? */
   stepOk(a, b) { const d = this.hgt[b] - this.hgt[a]; return d <= this.climb && -d <= this.drop; }
@@ -53,7 +57,9 @@ export class TileMap {
   }
 
   /** Move a circle with wall sliding. Returns true if moved at all. */
-  move(e, dx, dy, ghost = false) {
+  move(e, dx, dy, ghost = false, knock = false) {
+    if (this.sheer && aloft(e)) return this.flyMove(e, dx, dy);
+    if (this.sheer && !knock && e.shoveT > 0 && Math.abs(e.kbx) + Math.abs(e.kby) > 1.5) return false; // reeling from a knock toward the drop: no walking out of it
     if (ghost) {
       const nx = e.x + dx, ny = e.y + dy;
       if (this.isFloor(nx, ny)) { e.x = nx; e.y = ny; return true; }
@@ -79,6 +85,49 @@ export class TileMap {
     return moved;
   }
 
+  /** A Sheer Drop: over the void on the wing (or mid-leap), stopped only by props and the map's rim. */
+  flyMove(e, dx, dy) {
+    const nx = e.x + dx, ny = e.y + dy;
+    if (nx < 0.5 || ny < 0.5 || nx > this.w - 0.5 || ny > this.h - 0.5 || this.block[this.tileIdx(nx, ny)]) return false;
+    e.x = nx; e.y = ny; return true;
+  }
+  /** A Sheer Drop: a knock or a pull, which carries a body over the brink (a prop still stops it). */
+  shove(e, dx, dy) {
+    const nx = e.x + dx, ny = e.y + dy, r = bodyR(e);
+    if (nx < 0.5 || ny < 0.5 || nx > this.w - 0.5 || ny > this.h - 0.5) return false;
+    // a prop at any corner: slide along it as usual; only the drop lets the body go
+    const B = this.block, prop = B[this.tileIdx(nx - r, ny - r)] || B[this.tileIdx(nx + r, ny - r)] || B[this.tileIdx(nx - r, ny + r)] || B[this.tileIdx(nx + r, ny + r)];
+    if (prop) return this.move(e, dx, dy, false, true);
+    e.x = nx; e.y = ny; return true;
+  }
+  /** Something in the way of a shot: a wall, or on a Sheer Drop only the map's rim (shots fly over the void). */
+  solid(x, y) { return this.sheer ? !this.inb(Math.floor(x), Math.floor(y)) : !this.isFloor(x, y); }
+  /** The nearest spot within maxR of (x,y) where a body of half-size r stands on floor, or null. */
+  nearestFloor(x, y, r = 0.3, maxR = 3) {
+    if (this.circleFree(x, y, r)) return [x, y];
+    for (let k = 1; k * 0.2 <= maxR; k++) {
+      const d = k * 0.2, n = 8 + k * 3;
+      let best = null, bd = 1e9;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2, nx = x + Math.cos(a) * d, ny = y + Math.sin(a) * d;
+        if (!this.circleFree(nx, ny, r)) continue;
+        const dd = Math.abs(nx - x) + Math.abs(ny - y);
+        if (dd < bd) { bd = dd; best = [nx, ny]; }
+      }
+      if (best) return best;
+    }
+    return null;
+  }
+  /** Can a leap go from (x0,y0) to land at (x1,y1)? A clear wide line; on a Sheer Drop over any gap, onto floor where
+   *  the body fits. */
+  leapOk(x0, y0, x1, y1, r = 0.3) {
+    if (!this.sheer) return this.losWide(x0, y0, x1, y1, r);
+    if (!this.circleFree(x1, y1, r)) return false;
+    const d = Math.hypot(x1 - x0, y1 - y0), n = Math.ceil(d * 4);
+    for (let i = 1; i < n; i++) { const t = i / n; if (this.block[this.tileIdx(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)]) return false; }
+    return true;
+  }
+
   /** Grid ray-march line of sight. */
   los(x0, y0, x1, y1) {
     const dx = x1 - x0, dy = y1 - y0;
@@ -89,17 +138,18 @@ export class TileMap {
     for (let i = 1; i < steps; i++) {
       const t = i / steps;
       const tx = Math.floor(x0 + dx * t), ty = Math.floor(y0 + dy * t);
-      if ((!this.tile(tx,ty) && !this.losOverWater) || (this.losBlocks && this.block[ty*this.w+tx])) return false;   // losOverWater: the Pirate Seas (the sea hides nothing)
+      if ((!this.tile(tx,ty) && !this.losOverWater && !this.sheer) || (this.losBlocks && this.block[ty*this.w+tx])) return false;   // losOverWater: the Pirate Seas (the sea hides nothing); a Sheer Drop's void neither
       if (H && H[ty * this.w + tx] > top) return false;
     }
     return true;
   }
 
-  /** Cast a ray, return the distance until a wall (max len). */
-  rayLength(x0, y0, ang, len) {
-    const c = Math.cos(ang), s = Math.sin(ang);
+  /** Cast a ray, return the distance until a wall (max len). A Sheer Drop's beams cross the void, unless `ground`
+   *  (room to stand: auto-play's footing checks). */
+  rayLength(x0, y0, ang, len, ground = false) {
+    const c = Math.cos(ang), s = Math.sin(ang), open = this.sheer && !ground;
     for (let d = 0.2; d <= len; d += 0.2) {
-      if (!this.isFloor(x0 + c * d, y0 + s * d)) return Math.max(0, d - 0.2);
+      if (open ? this.solid(x0 + c * d, y0 + s * d) : !this.isFloor(x0 + c * d, y0 + s * d)) return Math.max(0, d - 0.2);
     }
     return len;
   }

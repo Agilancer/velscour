@@ -10,6 +10,7 @@ import { petAnimation, petTintImage } from '../core/petart.js';
 import { drawRuneWeapon } from '../gfx/runeweapon.js';
 import { drawSlime } from '../gfx/slimeart.js';
 import { TURRET3D, drawTurret3D } from '../gfx/gunner3d.js';
+import { goesOver, sheerCount } from '../gfx/sheer.js';
 
 let UID = 0;
 
@@ -283,11 +284,17 @@ export class Creature {
     }
     // knockback
     if (this.kbx || this.kby) {
-      if (this.world) this.world.map.move(this, this.kbx * dt, this.kby * dt, this.ghost);
+      const m = this.world && this.world.map;
+      if (m && m.sheer && !this.ghost) { // a Sheer Drop: a knock can carry a body over the brink (game/sheer.js)
+        if (goesOver(this)) { m.shove(this, this.kbx * dt, this.kby * dt); this.shoveT = 0.25; }
+        else if (!m.move(this, this.kbx * dt, this.kby * dt) && this.isPlayer && !this.braceT && !m.isFloor(this.x + this.kbx * 0.08, this.y + this.kby * 0.08)) { this.braceT = 0.5; sheerCount(this.world, 'braced'); } // auto-play: feet planted at the brink
+      } else if (m) m.move(this, this.kbx * dt, this.kby * dt, this.ghost);
       const f = Math.pow(0.0015, dt);
       this.kbx *= f; this.kby *= f;
       if (Math.abs(this.kbx) + Math.abs(this.kby) < 0.05) this.kbx = this.kby = 0;
     }
+    if (this.braceT > 0) this.braceT -= dt;
+    if (this.shoveT > 0) this.shoveT -= dt;
     if (this.flash > 0) this.flash -= dt;
     if (this.hpShow > 0) this.hpShow -= dt;
     if (this.lunge > 0) this.lunge = Math.max(0, this.lunge - dt * 4);

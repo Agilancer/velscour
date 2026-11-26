@@ -2228,7 +2228,7 @@ export const game = {
       madnessTick(dt);
       hearthTick(dt);
       spectateTick(w, dt); // gilded critters, the SMITE reticle (game/spectate.js)
-      footsteps(p, w.kind === 'town' ? 'dirt' : STEP_SURFACE[w.biome && w.biome.id] || 'stone');
+      footsteps(p, w.kind === 'town' ? 'dirt' : STEP_SURFACE[w.biome && w.biome.id] || STEP_SURFACE[w.biome && w.biome.base] || 'stone');
       Meter.tick(dt);
       if (w.kind === 'dungeon' && G.char) G.char.sealT = (G.char.sealT ?? SEAL_GAP) + dt; // the sealed treasure clock (loot.js)
     } else {

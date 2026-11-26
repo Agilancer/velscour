@@ -124,10 +124,10 @@ export class Projectile {
     }
     const nx = this.x + this.vx * dt, ny = this.y + this.vy * dt;
     if (this.returning) { this.x = nx; this.y = ny; }
-    else if (!w.map.isFloor(nx, ny)) {
+    else if (w.map.solid(nx, ny)) {   // (a Sheer Drop's shots fly on over the void)
       if (this.bounce > 0) {
-        if (!w.map.isFloor(nx, this.y)) this.vx = -this.vx;
-        if (!w.map.isFloor(this.x, ny)) this.vy = -this.vy;
+        if (w.map.solid(nx, this.y)) this.vx = -this.vx;
+        if (w.map.solid(this.x, ny)) this.vy = -this.vy;
         this.bounce--; this.hitSet.clear();
       } else if (this.ret) {
         this.turnBack();
@@ -638,12 +638,14 @@ export class Leap {
     this.E = elem(this.el);
     this.src.channel = this;
     this.sx = this.src.x; this.sy = this.src.y;
-    const d = dist(this.sx, this.sy, this.tx, this.ty);
+    const d = dist(this.sx, this.sy, this.tx, this.ty), map = this.world.map;
     // clamp landing to floor along the path
     const a = angleTo(this.sx, this.sy, this.tx, this.ty);
     let best = 0;
-    for (let s = 0; s <= d; s += 0.2) if (this.world.map.walkable(this.sx + Math.cos(a) * s, this.sy + Math.sin(a) * s)) best = s;
+    for (let s = 0; s <= d; s += 0.2) if (map.walkable(this.sx + Math.cos(a) * s, this.sy + Math.sin(a) * s)) best = s;
     this.tx = this.sx + Math.cos(a) * best; this.ty = this.sy + Math.sin(a) * best;
+    // a Sheer Drop: it clears any gap on the way, and comes down with its whole body on floor, never over the drop
+    if (map.sheer) { const f = map.nearestFloor(this.tx, this.ty, 0.3, 1.5); if (f) [this.tx, this.ty] = f; }
     this.src.face(a);
     this.src.invuln = this.dur;
   }
@@ -654,6 +656,7 @@ export class Leap {
     const k = (this.k = Math.min(1, this.t / this.dur));
     s.x = this.sx + (this.tx - this.sx) * k; s.y = this.sy + (this.ty - this.sy) * k;
     s.z = 4 * (this.fx === 'dragon' || this.fx === 'meteor' ? 120 : 70) * k * (1 - k);
+    s.leaping = k < 1; // in the air over a Sheer Drop's gaps (game/sheer.js)
     if (!this.lance && chance(dt * 30)) trail(this.fx === 'dragon' || this.fx === 'meteor' ? 'fireball' : 'bolt', s.x, s.y, s.z + 20, this.E, dt);
     if (k >= 1) {
       s.z = 0; s.channel = null; this.done = true;

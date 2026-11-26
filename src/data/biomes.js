@@ -3,6 +3,7 @@ import { BREACH_ARCHS } from './breach.js';
 // palette -> recolor() params applied to the biome's art (null = as drawn).
 // mon -> hue/sat/light shift applied to monster palettes.
 import { FINAL_DEPTH, getActForDepth, ACTS } from './depth.js';
+import { SHEER } from './sheer.js';
 export const BIOMES = [
   {
     id: 'catacombs', name: 'Skull-Lined Catacombs', palette: null, dark: 0.82, light: 7.5,
@@ -457,6 +458,12 @@ for (const b of BIOMES) {
   if (!b.pack) b.pack = CAT;
   b.wallPack = b.wallPack || null;
 }
+// the ten Sheer Drop biomes (data/sheer.js): their base's floors, props and monsters, cliffs into the void for walls
+for (const v of SHEER) {
+  const B = BIOMES.find((b) => b.id === v.base);
+  BIOMES.splice(BIOMES.indexOf(B) + 1, 0, { ...B, id: v.id, name: v.name, base: v.base, sheer: v, adj: v.adj, dark: v.dark, light: v.light, fog: v.fog,
+    ambient: v.motes.kind === 'gold' || v.motes.kind === 'glint' ? { type: 'glitter', color: v.motes.color } : B.ambient, wallPack: null });
+}
 
 // Colour families: a level can mix its palette with another biome of the same family (mixPartner), e.g. a
 // Frozen Ossuary whose far rooms are paved like the Crystal Caverns.
@@ -563,6 +570,7 @@ export const ACT_BIOMES = {
   4: ['heavenly', 'astral_plane', 'skyship', 'storm', 'shattered', 'cathedral'],
   5: ['molten', 'hell', 'forge', 'abyss', 'obsidian', 'blood', 'flesh', 'void'],
 };
+for (const v of SHEER) ACT_BIOMES[v.act].push(v.id); // two Sheer Drops an Act
 
 /**
  * A shuffled pool of biomes for the hero's next depth. An overworld is guaranteed after three

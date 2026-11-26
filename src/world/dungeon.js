@@ -25,7 +25,7 @@ const STYLES = {
 /** A level's deck of room themes for its biome (data/biomerooms.js): draws cycle through the shuffled list, built
  * rooms and cave chambers separately, so a level repeats no theme until it has shown them all. */
 function themeDeck(biome, rng) {
-  const all = BIOME_ROOMS[biome.id] || [];
+  const all = BIOME_ROOMS[biome.id] || BIOME_ROOMS[biome.base] || [];
   const decks = { built: [], cave: [] };
   return (cave) => {
     const k = cave ? 'cave' : 'built';
@@ -181,6 +181,7 @@ export function generateDungeon(depth, biome, tileset, seed, opts = {}) {
   const CH = opts.small ? 4 : clamp(4 + Math.floor(depth / 18) + rng.int(0, 1), 4, 7);
   const W = CW * S + 2 + (raid ? ARENA_GAP + ARENA_W + 2 : 0), H = Math.max(CH * S + 2, raid ? ARENA_H + 6 : 0);
   const map = new TileMap(W, H);
+  if (biome.sheer) map.sheer = biome.sheer; // a Sheer Drop: no walls, the floor's edges fall away (game/sheer.js)
   const ci = (x, y) => y * CW + x;
 
   // ---- maze over chunks (randomised DFS) + a few loops
@@ -389,6 +390,7 @@ export function generateDungeon(depth, biome, tileset, seed, opts = {}) {
   const inArena = (s) => arena && s.mx >= arena.x - 0.5 && s.mx <= arena.x + arena.w + 0.5 && s.my >= arena.y - 0.5 && s.my <= arena.y + arena.h + 0.5;
   // the rate counts only the edges that may hold a mount (about half of them)
   const { torches, wallHangings } = wallMounts(map, rng, biome, (s) => inArena(s) ? 0.45 : 0.16, 0.2, wallHangingCount(biome));
+  if (map.sheer) brinkLamps(map, rooms, tileset, rng, props, startRoom);
 
   return {
       map, rooms, spawns, props, chests, torches, wallHangings, looks,
@@ -397,6 +399,34 @@ export function generateDungeon(depth, biome, tileset, seed, opts = {}) {
     bossRoom: arena || exitRoom,
     raid: arena,
   };
+}
+
+/**
+ * A Sheer Drop has no walls to hang torches on: lamps stand at the brinks instead, a few to a room (the dark ones get
+ * more), each on a tile with the drop beside it and clear of the routes. Walk-over lamps where the pack has them.
+ */
+function brinkLamps(map, rooms, tileset, rng, props, startRoom) {
+  const lit = tileset.scatter.filter((e) => LIT[e.name]), soft = lit.filter((e) => !e.block);
+  if (!lit.length) return;
+  const W = map.w, taken = props.map((p) => [p.x, p.y]), dark = map.sheer.below === 'dark';
+  const voidBy = (x, y) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => !map.tile(x + dx, y + dy));
+  for (const r of rooms) {
+    const want = (r === startRoom ? 2 : r.type === 'small' ? 0 : 1) + (dark && rng.chance(0.6) ? 1 : 0);
+    const spots = [];
+    for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (map.walkableTile(x, y) && voidBy(x, y)) spots.push([x, y]);
+    for (let k = 0, tries = 0; k < want && tries < 20 && spots.length; tries++) {
+      const [x, y] = rng.pick(spots), cx = x + 0.5, cy = y + 0.5;
+      if (taken.some(([tx, ty]) => Math.hypot(tx - cx, ty - cy) < 3.5)) continue;
+      const e = rng.pick(soft.length ? soft : lit);
+      if (e.block) { // only where the way past stays two tiles wide
+        const inward = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => map.tile(x + dx, y + dy));
+        if (inward.length < 3 || !inward.every(([dx, dy]) => map.walkableTile(x + dx, y + dy))) continue;
+        map.block[y * W + x] = 1;
+      }
+      props.push({ kind: 'scatter', x: cx, y: cy, spr: e, k: tileset.k, flip: rng.chance(0.5), light: LIT[e.name] });
+      taken.push([cx, cy]); k++;
+    }
+  }
 }
 
 /**
@@ -738,7 +768,7 @@ function finishMap(map, tileset, rng, region = null, rooms = [], extra = []) {
   const fams = shuffleWith(tileset.families.slice(), rng);
   const families = [[fams[0], 5], [fams[1 % fams.length], 3], [fams[2 % fams.length], 1.5]];
   for (const o of extra) if (o.kind === 'arch' && !o.design) { const fit = archesFor(tileset, o.a1 - o.a0); o.design = fit.length ? rng.pick(fit) : null; }
-  map.buildWalls(tileset, () => rng.next(), [...findOpenings(map, rooms, tileset, rng), ...extra.filter((o) => o.design)], families);
+  if (!map.sheer) map.buildWalls(tileset, () => rng.next(), [...findOpenings(map, rooms, tileset, rng), ...extra.filter((o) => o.design)], families);
 }
 
 /** Depth FINAL_DEPTH (500): a gauntlet that ends in the demon lord's arena. */
