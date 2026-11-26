@@ -15,6 +15,9 @@ const { openGame, report } = require('./harness');
     console.log(tag, 'start', JSON.stringify(s));
     await shot(`titlefx_${tag}_gate`);
     if (s.phase === 'gate') { await page.mouse.click(w * 0.1, h * 0.9); }
+    // the photosensitivity warning comes up first (flashwarning.js tests it): close it
+    await page.waitForTimeout(600);
+    if (await page.$('.seizure-warning-splash')) { await page.mouse.click(w * 0.5, 8); await page.waitForTimeout(400); }
     const t0 = Date.now();
     const introDeadline = Date.now() + 12000;
     while ((s = await st()).phase !== 'intro' && Date.now() < introDeadline) await page.waitForTimeout(30);

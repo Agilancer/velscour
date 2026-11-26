@@ -153,6 +153,7 @@ node tools/tests/biome_scenarios.js [ids] [noshots] # themed rooms per biome rea
 node tools/tests/biome_looks.js [ids] [depth]      # each biome's biggest themed rooms with the lights up, for art review
 node tools/tests/approved_biome_art.js             # the five temple biomes' approved painted floors and props
 node tools/tests/titlefx.js                        # title intro: click gate, logo fade on the song clock, flame burst on the hit, eyes
+node tools/tests/flashwarning.js [mobile]          # flashing-lights warning: "Don't show this window again", once a visit, Settings > Graphics turns it back on
 node tools/tests/enemies.js                        # monster art line-ups (sets 1-3), corpses, random-bestiary levels + guardians
 node tools/tests/mayhem.js                         # monster traits, ambush arrivals (drop/teleport/burrow/wall), bullet patterns, MADNESS
 node tools/tests/spectate.js [mobile]              # while the hero plays: critter taps, SMITE, sealed treasures + reel, auto-play waits in town, stance, portal choice, Greed

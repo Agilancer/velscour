@@ -1568,6 +1568,7 @@ body.portrait .bag { grid-template-columns: repeat(6, clamp(36px, calc((100vw - 
   transition: opacity 0.28s ease;
   user-select: none;
   -webkit-user-select: none;
+  overflow-y: auto; /* a landscape phone is shorter than the card */
 }
 
 .seizure-warning-splash.fading {
@@ -1583,6 +1584,7 @@ body.portrait .bag { grid-template-columns: repeat(6, clamp(36px, calc((100vw - 
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 32px rgba(220, 160, 40, 0.12);
   border-radius: 8px;
   padding: 26px 28px;
+  margin: auto; /* centred, but scrolls from its top when taller than the screen */
   text-align: center;
   box-sizing: border-box;
 }
@@ -1639,9 +1641,16 @@ body.portrait .bag { grid-template-columns: repeat(6, clamp(36px, calc((100vw - 
 
 .seizure-warning-toggle {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: 8px;
   margin: 14px 0 18px;
+}
+
+.seizure-warning-hint {
+  font: 400 11.5px var(--font-body, system-ui, sans-serif);
+  color: #8f877c;
 }
 
 .seizure-toggle-label {

@@ -24,6 +24,7 @@ export const G = {
     dmgNumbers: true,
     shake: true,
     reduceFlashing: false, // reduce full-screen flashes, flashbangs, and rapid hit strobing
+    flashWarning: true, // the photosensitivity warning after "Click to awaken" (its "Don't show this window again" box turns it off)
     zoom: 1,
     mobileSkillBar: false, // landscape phones: full 15-slot bar art (off: orbs + potions only, the touch buttons hold the skills)
     lockSkillBar: false, // auto-play only fills empty bar slots
