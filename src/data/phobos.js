@@ -181,7 +181,9 @@ export const PLACES = {
   throne: ['The Throne Antechambers', 'The Crown Court', 'The Last Stair', 'The Throne Tower', 'The Throne Above'],
 };
 export function placeOf(floor) { const w = wingOf(floor), L = PLACES[w.id] || [w.name]; return L[Math.min(L.length - 1, ((floor - 1) % 10) >> 1)]; }
-/** The layout a place asks for: a crossing is a bridge between towers, outside ledges the outer stair. */
-export function placeLayout(floor) { const p = placeOf(floor); return /crossing/.test(p) ? 'bridges' : /outside ledges/.test(p) ? 'outerstair' : /marrow shaft|Pit Stair|pit stair/.test(p) ? 'pits' : /Library|Archive/.test(p) && LIBRARY_OK ? 'library' : null; }
+/** The layout a place asks for: the Keep's crossings are the Broken Spires (world/castlespires.js: towers in the void,
+ * bridged and leapt between; their 3D stairs and live crossings are still to come, so only the crossings use them yet),
+ * outside ledges the outer stair, the marrow shaft and pit stairs the pits, the Library its stacks. */
+export function placeLayout(floor) { const p = placeOf(floor); return /crossing/.test(p) ? 'spires' : /outside ledges/.test(p) ? 'outerstair' : /marrow shaft|Pit Stair|pit stair/.test(p) ? 'pits' : /Library|Archive/.test(p) && LIBRARY_OK ? 'library' : null; }
 const LIBRARY_OK = true;
 export const BIBLE_BOSSES = { 5: 'The Gate Captain', 35: 'The Feast That Walks', 65: 'The Sexton of the High Ward', 75: 'The Bridge Warden', 85: 'The Balcony Duellist', 95: "Velscour's Herald" };

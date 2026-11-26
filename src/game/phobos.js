@@ -26,6 +26,8 @@ import { generatePhobos, PHOBOS_SEED, planX } from '../world/phobos.js';
 import { generateCastleFloor, LAYOUTS, SHEER_LAYOUTS } from '../world/castlevelscour.js';
 import { WING_RAIDS, VELSCOUR_RAIDS } from './phobosraids.js';
 import { applyPhobosKit } from './phobosattacks.js';
+import { applyBossMechanics } from './phobosbosses.js';
+import { setupCityQuests, setupCastleQuests, questObjective } from './phobosquests.js';
 import { townObject } from '../world/town.js';
 import { phobosTalk, makeTalker } from './phobostalk.js';
 import { loadPhobosTex, phobosFloors, phobosProp, floorV, PH_V, phobosTexReady } from '../gfx/phobostex.js';
@@ -214,6 +216,7 @@ function createCityRun(world, gen, biome, depth) {
       if (!S.gate && S.wards.includes(key)) return;   // a broken lord stays down until the Castle Gate opens; then they all return
       const m = makeTalker(spawnFoe(world, biome, art, lvlOf(d) + 3, 'boss', x, y), k);
       m.maxHp *= 1.6; m.hp = m.maxHp; m.wardLord = art.id; m.title = `Ward Lord of ${d.name}`;
+      applyBossMechanics(m, art, 'ward');
       lords.push(m);
       const prev = m.onDeath; m.onDeath = (src) => { if (prev) prev.call(m, src); wardSlain(art, d, key); };
     });
@@ -245,10 +248,12 @@ function createCityRun(world, gen, biome, depth) {
   const placeAt = (x, y) => { const k = gen.district[world.map.tileIdx(x, y)], d = DISTRICTS[k]; if (!d) return { place: 'the road in' }; const L = lords.find((m) => !m.dead && m.wardDistrict === k); return { place: d.name, lord: L ? L.name : null }; };
   for (const L of lords) L.wardDistrict = L.district;
   const talk = phobosTalk(world, { placeOf: placeAt, folk, errands: (S.errands ||= {}), homes: (n) => gen.spots[DISTRICTS.indexOf(n.district)], questDistrict: (n) => DISTRICTS.indexOf(n.district) });
+  const pq = setupCityQuests(world, gen, S);
   let respawnT = 60;
   const run = {
     title: 'City State Phobos', description: 'Break the ward lords to open the Castle Gate.', active: true, completed: false, failed: false, markers: [], phobosCity: true,
     get objective() {   // auto-play: the nearest living ward lord, then the hubs it hasn't met, then the gate
+      const qo = questObjective(world); if (qo) return qo;
       const p = G.player; if (!p) return null;
       const L = lords.filter((m) => !m.dead).sort((a, b) => dist(a.x, a.y, p.x, p.y) - dist(b.x, b.y, p.x, p.y))[0];
       if (!S.gate && L) return { x: L.x, y: L.y, reach: 4 };
@@ -258,7 +263,7 @@ function createCityRun(world, gen, biome, depth) {
     },
     update(dt) {
       const p = world.player; if (!p) return;
-      talk(dt);
+      talk(dt); pq.update(dt);
       // gray residents who turn
       for (const n of folk) if (n.turns && !n.turned && dist(n.x, n.y, p.x, p.y) < 3) {
         n.turned = true; n.hidden = true;
@@ -283,7 +288,7 @@ function createCityRun(world, gen, biome, depth) {
     questHtml(step) {
       const d = DISTRICTS[run.lastD ?? 0];
       let h = `<div class="q-title">City State Phobos${d ? ' &middot; ' + escapeHtml(d.name) : ''}</div>`;
-      h += questLogHtml(step);
+      h += questLogHtml(step); h += pq.questHtml(step);
       h += step(S.wards.length >= WARDS_TO_OPEN, `Break the ward lords: <b>${S.wards.length}/${WARDS_TO_OPEN}</b> slain (the Castle Gate opens at ${WARDS_TO_OPEN}).`);
       h += step(Object.keys(S.hubs).length >= 3, `Find the city's hidden houses: the Pennyless, the Quiet Watch, the Ashwardens (<b>${Object.keys(S.hubs).length}/3</b>).`);
       h += step(S.gate, S.gate ? 'The Castle Gate stands open at the east end of the King\'s Mile.' : 'The Castle Gate waits at the east end of the King\'s Mile.');
@@ -329,12 +334,14 @@ function createCastleRun(world, gen, biome, depth) {
     boss = makeMonster(world, art.arch, biome, lvl + 2, 'boss', x, y, 0, { art: art.id, swap: null });
     boss.name = BIBLE_BOSSES[f] || art.name; if (f % 5 === 0) { boss.maxHp *= 1.5; boss.hp = boss.maxHp; boss.title = art.title || 'Guardian of the Castle'; }
     else if (lord) { boss.maxHp *= 1.3; boss.hp = boss.maxHp; boss.title = 'A Lord of ' + wing.name.replace(/^The /, 'the '); }   // a wing's own horror lord
+    applyBossMechanics(boss, art, f % 5 === 0 ? 'guardian' : 'lord');
   }
   if (boss.raid) world.raid = boss.raid;
   world.add(boss); world.boss = boss;
   if (gen.phTex) { world.extraFloors = phobosFloors(); world.extraBase = PH_V; }
   // the castle's garrison talks too (the raid bosses keep their own voices)
   for (const m of world.creatures) if (m.team === 'enemy' && !m.raid) { makeTalker(m); applyPhobosKit(m); }
+  const pq = setupCastleQuests(world, gen, S, f, wing);
   const talk = phobosTalk(world, { placeOf: () => ({ place: placeOf(f), lord: boss.name }) });
   // leap stones and swing chains
   const pads = gen.leaps.map((L) => world.addHazard(new Pad(world, L)));
@@ -342,18 +349,19 @@ function createCastleRun(world, gen, biome, depth) {
   const run = {
     title: `Castle Velscour — Floor ${f}`, description: placeOf(f), active: true, completed: false, failed: false, markers: [],
     get objective() {   // auto-play over the gaps: the next pad on the main line the hero hasn't crossed
-      if (gen.family !== 'leaps') return undefined;
+      const qo = questObjective(world); if (qo) return qo;
+      if (gen.family !== 'leaps' && gen.family !== 'spires') return undefined;
       const p = G.player; if (!p) return undefined;
-      const next = route.find((L) => !L.crossed && L.x > p.x - 4);
+      const next = gen.family === 'spires' ? route.find((L) => !L.crossed) : route.find((L) => !L.crossed && L.x > p.x - 4);   // (spires: the route's own order, tower to tower)
       if (!next) return undefined;
       return { x: next.x, y: next.y, reach: 0.6 };
     },
-    update(dt) { questTick(dt); talk(dt); },
+    update(dt) { questTick(dt); talk(dt); pq.update(dt); },
     questHtml(step) {
       let h = `<div class="q-title">Castle Velscour &middot; Floor ${f}/${CASTLE_FLOORS} <span class="dim">(${escapeHtml(wing.name)})</span></div><div class="dim">${escapeHtml(placeOf(f))} &middot; wing ${((f - 1) % 10) + 1}/10</div>`;
       const goal = Math.min(CASTLE_FLOORS, Math.ceil(f / 10) * 10);
       h += step(!!S.cleared[goal], `<b>Climb goal:</b> clear Floor ${goal}${goal === CASTLE_FLOORS ? ', the Throne Above' : `, ${escapeHtml(wing.name)}'s great room`} <span class="dim">(the stair leads only up; leave by a town portal and the Bellmourn waypoint brings you back)</span>.`);
-      h += questLogHtml(step);
+      h += questLogHtml(step); h += pq.questHtml(step);
       h += step(boss.dead, `${f === CASTLE_FLOORS ? '<b style="color:#ff3030">Lord Velscour</b> waits in the Throne Above' : f % 10 === 0 ? `<b style="color:#ff8050">${escapeHtml(boss.raid ? boss.raid.tpl.name : boss.name)}</b> holds this wing's great room` : f % 5 === 0 ? `<b>${escapeHtml(boss.name)}</b> guards the stair` : 'A captain of Velscour\'s own guards the stair'}.`);
       if (gen.leaps.length) h += step(false, '<span class="dim">Glowing stones fling you over the gaps; iron rings swing you across on a chain.</span>');
       h += step(boss.dead, boss.dead ? 'The stair up is open.' : 'Its fall opens the stair up.');

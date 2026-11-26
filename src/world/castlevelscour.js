@@ -14,6 +14,7 @@ import { finishMap, placeObstacles, wallMounts, themeDeck, shuffleWith } from '.
 import { wallHangingCount } from '../gfx/wallhangings.js';
 import { phobosProp } from '../gfx/phobostex.js';
 import { TW } from '../core/view.js';
+import { generateSpires } from './castlespires.js';
 
 // layout name -> [family, options]
 export const LAYOUTS = {
@@ -40,13 +41,15 @@ export const LAYOUTS = {
   bridges: ['bridges', { n: [12, 16], name: 'Tower Bridges' }],
   outerstair: ['outerstair', { name: 'The Outer Stair' }],
   leaps: ['leaps', { name: 'The Broken Spans' }],
+  spires: ['spires', { name: 'The Broken Spires' }],   // towers in the void, stairs round them, Velscour's crossings (world/castlespires.js)
 };
-export const SHEER_LAYOUTS = new Set(['pits', 'bridges', 'outerstair', 'leaps']);
+export const SHEER_LAYOUTS = new Set(['pits', 'bridges', 'outerstair', 'leaps', 'spires']);
 
 const ARENA_W = 32, ARENA_H = 28;
 
 export function generateCastleFloor(floor, layoutId, biome, tileset, seed, opts = {}) {
   const [family, O] = LAYOUTS[layoutId] || LAYOUTS.gatehouse;
+  if (family === 'spires') return generateSpires(floor, O, biome, tileset, seed, opts);
   const rng = new RNG(seed);
   const W = opts.w || 200, Hh = opts.h || 170;
   const map = new TileMap(W, Hh);

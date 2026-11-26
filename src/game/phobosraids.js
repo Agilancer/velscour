@@ -21,6 +21,7 @@ import { hit } from './combat.js';
 import { UI } from '../ui/ui.js';
 import { SIGS, SIG_NAMES, PASSIVES, blast, line, zone, mover, add, A, randFloor, later, say, live, hero, InRing } from './raidsigs.js';
 import { PHOBOS_BY_ID, FINALE, FORM_NAMES, GUARDIANS } from '../data/phobos.js';
+import { runMech } from './phobosbosses.js';
 
 const sig = (k, name, fn) => { SIG_NAMES[k] = name; SIGS[k] = fn; };
 const artNamed = (re) => (GUARDIANS.find((a) => re.test(a.name)) || GUARDIANS[0]).id;
@@ -234,27 +235,59 @@ sig('ph_eclipse', 'Total Eclipse', (R) => {
   sfx('arcane');
 });
 
+// ================================================================================== WoW signatures (docs/RAID_MECHANICS.md)
+// Each wing lord gains a catalogue mechanic of its own (game/phobosbosses.js MECHS, run by runMech): soaks, an
+// intermission behind a ward, or an energy bar under the boss bar whose 100 fires the big cast (Rasha'nan, Gallywix).
+function energy(R, dt, secs, k) {
+  if (!R.energyLabel) { R.energyLabel = true; const base = R.label; R.label = function () { return `${base.call(this)} · ${SIG_NAMES[k]} ${Math.floor(R.energy || 0)}%`; }; }
+  if (R.inter || !R.m.awake) return;
+  R.energy = Math.min(100, (R.energy || 0) + dt * (100 / secs) * (1 + 0.12 * R.pi));
+  if (R.energy >= 100 && SIGS[k](R)) { R.energy = 0; R.say(k); }
+}
+const mechSig = (k, name, id, o = {}) => sig(k, name, (R) => runMech(R, id, name, o));
+mechSig('ph_latch_soak', 'Weight of the Latch', 'soak');                       // M01 split soak (pets count half)
+mechSig('ph_latch_hold', 'The Last Latch Holds', 'shield', { big: true });     // M39 at 100 energy: break the ward or die
+PASSIVES.ph_latch_e = (R, dt) => energy(R, dt, 34, 'ph_latch_hold');
+mechSig('ph_ballot', 'The Ballot Falls', 'brk', { big: true });                // M35 at 100 energy: the pit floor round him falls
+PASSIVES.ph_elector_e = (R, dt) => energy(R, dt, 32, 'ph_ballot');
+mechSig('ph_ingot', 'Quench the Crown', 'carry', { item: 'Cold Ingot', socket: 'the Quench Trough' });   // M23 carry
+mechSig('ph_servers', 'The Serving Line', 'march', { add: 'Table Servant' });  // M18 marchers to the Marshal
+mechSig('ph_index', 'Index of Ruin', 'combo', { big: true });                  // M12 at 100 energy: a five-glyph string
+mechSig('ph_ink', 'Ink Index', 'pool');                                        // M07 drop the ink at the shelves
+PASSIVES.ph_regent_e = (R, dt) => energy(R, dt, 30, 'ph_index');
+mechSig('ph_pwave', 'The Pennant Wave', 'wave', { big: true });                // M32 a wall with gaps
+mechSig('ph_mass', 'The Black Mass', 'shield');                                // M39 intermission: ward and a long channel
+mechSig('ph_rod', 'Lightning Rod', 'soak');                                    // M01 the rod takes the strike, or the bridge does
+mechSig('ph_well', 'The Umbral Well', 'pull', { big: true });                  // M29 at 100 energy: pulled toward his maw
+mechSig('ph_lance', 'Umbral Lance', 'beam');                                   // M04 intercept the beam before it feeds him
+PASSIVES.ph_eclipse_e = (R, dt) => energy(R, dt, 30, 'ph_well');
+// Lord Velscour: one per form, in every battle
+mechSig('ph_v_edict', "Velscour's Edict", 'combo');                            // M12
+mechSig('ph_v_tithe', 'Tithe of the Damned', 'soak');                          // M01
+mechSig('ph_v_ascend', 'Ascension', 'shield');                                 // M39
+mechSig('ph_v_unmake', 'The World Breaks', 'brk', { big: true });              // M35
+
 // ================================================================================== the wing lords' templates
 const T = (id, re, o) => ({ id: 'ph_' + id, art: [artNamed(re)], sigs: true, phobos: true, hp: 1.15, spd: 0.9, ...o });
 export const WING_RAIDS = {
-  latch: T('latch', /Third Latch/, { name: 'Keeper of the Third Latch', title: 'Warden of the Lower Ward Gate', el: 'phys', fx: 'bone', adds: ['knight'], mech: ['ph_latch'],
-    phases: [{ name: 'The Bent Passage', pool: { ph_latch: 2, ph_roar: 2, ph_cross: 3, ph_rain: 2 } }, { name: 'Murder Holes', pool: { ph_latch: 2, ph_rain: 3, ph_roar: 2, adds: 1 } }, { name: 'Killing Ground', pool: { ph_latch: 2, ph_wave: 2, ph_roar: 2, ph_cross: 2 } }, { name: 'The Last Latch', pool: { ph_latch: 3, ph_roar: 3, ph_rain: 2, ph_wave: 2 } }] }),
-  elector: T('elector', /Oubliette Elector/, { name: 'The Oubliette Elector', title: 'Who Votes Who Falls', el: 'shadow', fx: 'shadow', adds: ['skeleton', 'zombie'], mech: ['ph_chains'],
+  latch: T('latch', /Third Latch/, { name: 'Keeper of the Third Latch', title: 'Warden of the Lower Ward Gate', el: 'phys', fx: 'bone', adds: ['knight'], mech: ['ph_latch', 'ph_latch_soak'], passive: 'ph_latch_e',
+    phases: [{ name: 'The Bent Passage', pool: { ph_latch: 2, ph_latch_soak: 2, ph_roar: 2, ph_cross: 3, ph_rain: 2 } }, { name: 'Murder Holes', pool: { ph_latch: 2, ph_rain: 3, ph_roar: 2, adds: 1 } }, { name: 'Killing Ground', pool: { ph_latch: 2, ph_wave: 2, ph_roar: 2, ph_cross: 2 } }, { name: 'The Last Latch', pool: { ph_latch: 3, ph_roar: 3, ph_rain: 2, ph_wave: 2 } }] }),
+  elector: T('elector', /Oubliette Elector/, { name: 'The Oubliette Elector', title: 'Who Votes Who Falls', el: 'shadow', fx: 'shadow', adds: ['skeleton', 'zombie'], mech: ['ph_chains'], passive: 'ph_elector_e',
     phases: [{ name: 'The Ballot of Chains', pool: { ph_chains: 2, ph_collapse: 2, ph_cross: 2, ph_orbs: 2 } }, { name: 'The Pit Opens', pool: { ph_collapse: 3, ph_chains: 2, ph_rain: 2, adds: 1 } }, { name: 'Forgotten Below', pool: { ph_chains: 2, ph_collapse: 2, ph_ring: 2, ph_orbs: 2 } }, { name: 'The Last Vote', pool: { ph_chains: 3, ph_collapse: 3, ph_ring: 2, ph_cross: 2 } }] }),
-  armourer: T('armourer', /Armourer/, { name: 'Armourer of the Hollow Crown', title: 'Who Tempers in Blood', el: 'fire', fx: 'fireball', adds: ['knight', 'golem'], passive: 'ph_forge',
-    phases: [{ name: 'Banked Coals', pool: { ph_anvil: 3, ph_rain: 2, ph_orbs: 2 } }, { name: 'The Bellows', pool: { ph_anvil: 2, ph_orbs: 3, ph_wave: 2, adds: 1 } }, { name: 'White Heat', pool: { ph_anvil: 3, ph_ring: 2, ph_rain: 2 } }, { name: 'The Crown Is Cast', pool: { ph_anvil: 3, ph_orbs: 2, ph_wave: 2, ph_ring: 2 } }] }),
-  banquet: T('banquet', /Iron Table/, { name: 'The Iron Table Marshal', title: 'and the Brazier Duke', el: 'fire', fx: 'fireball', adds: ['zombie', 'abomination'], passive: 'ph_banquet', mech: ['ph_settings'],
-    phases: [{ name: 'Grace Is Said', pool: { ph_settings: 2, ph_cross: 3, ph_rain: 2 } }, { name: 'The Second Course', pool: { ph_settings: 2, ph_orbs: 2, ph_wave: 2, adds: 1 } }, { name: 'The Feast That Walks', pool: { ph_settings: 2, ph_ring: 2, ph_rain: 3 } }, { name: 'Last Supper', pool: { ph_settings: 3, ph_wave: 2, ph_orbs: 2, ph_soak: 1 } }] }),
-  regent: T('regent', /Long Stacks/, { name: 'The Long Stacks Regent', title: 'Keeper of the Forbidden Index', el: 'arcane', fx: 'shard', adds: ['cultist', 'eye'], mech: ['ph_memory'],
-    phases: [{ name: 'The Reading Room', pool: { ph_memory: 2, ph_pages: 3, ph_cross: 2 } }, { name: 'The Long Stacks', pool: { ph_memory: 2, ph_pages: 2, ph_wave: 2, adds: 1 } }, { name: 'Forbidden Index', pool: { ph_memory: 2, ph_ring: 2, ph_pages: 3 } }, { name: 'Burning Library', pool: { ph_memory: 3, ph_pages: 3, ph_ring: 2, ph_wave: 2 } }] }),
-  pennants: T('pennants', /Iron Pennants/, { name: 'The Queen of Iron Pennants', title: 'Mistress of the Menagerie', el: 'poison', fx: 'poison', adds: ['hound', 'spider'], passive: 'ph_veil',
-    phases: [{ name: 'The Cage Rows', pool: { ph_pennants: 3, ph_orbs: 2, ph_rain: 2 } }, { name: 'The Drowned Glass', pool: { ph_pennants: 2, ph_wave: 2, ph_orbs: 2, adds: 1 } }, { name: 'Into the Veil', pool: { ph_pennants: 3, ph_ring: 2, ph_rain: 2 } }, { name: 'The Pennants Fall', pool: { ph_pennants: 3, ph_wave: 3, ph_orbs: 2 } }] }),
-  chancellor: T('chancellor', /Ash Chancellor/, { name: 'Ash Chancellor of the Sanctuaries', title: 'Voice of the Black Nave', el: 'holy', fx: 'holy', adds: ['cultist', 'wraith'], passive: 'ph_polarity', mech: ['ph_candles'],
-    phases: [{ name: 'Vespers', pool: { ph_candles: 2, ph_cross: 3, ph_orbs: 2 } }, { name: 'The Black Mass', pool: { ph_candles: 2, ph_ring: 2, ph_wave: 2, adds: 1 } }, { name: 'Light and Void', pool: { ph_candles: 2, ph_rain: 2, ph_cross: 3 } }, { name: 'Compline', pool: { ph_candles: 3, ph_ring: 2, ph_wave: 2, ph_soak: 1 } }] }),
-  windward: T('windward', /Windward/, { name: 'The Windward Black Knight', title: 'Who Holds the Storm Bridge', el: 'light', fx: 'spark', adds: ['knight', 'gargoyle'], passive: 'ph_gale',
-    phases: [{ name: 'The Storm Bridge', pool: { ph_storm: 2, ph_cross: 3, ph_rain: 2 } }, { name: 'Crosswinds', pool: { ph_storm: 3, ph_wave: 2, adds: 1 } }, { name: 'Eye of the Storm', pool: { ph_storm: 2, ph_ring: 2, ph_cross: 2 } }, { name: 'The Fall', pool: { ph_storm: 3, ph_rain: 2, ph_ring: 2, ph_wave: 2 } }] }),
-  eclipse: T('eclipse', /Eclipse/, { name: "The High Ward's Eclipse", title: 'Shadow on the Throne Antechambers', el: 'shadow', fx: 'shadow', adds: ['wraith', 'cultist'], mech: ['ph_eclipse', 'ph_beam'],
-    phases: [{ name: 'Penumbra', pool: { ph_beam: 2, ph_eclipse: 2, ph_orbs: 2, ph_cross: 2 } }, { name: 'Umbra', pool: { ph_beam: 2, ph_eclipse: 2, ph_ring: 2, adds: 1 } }, { name: 'Totality', pool: { ph_eclipse: 2, ph_beam: 3, ph_rain: 2 } }, { name: 'The Diamond Ring', pool: { ph_eclipse: 2, ph_beam: 3, ph_ring: 2, ph_orbs: 2 } }] }),
+  armourer: T('armourer', /Armourer/, { name: 'Armourer of the Hollow Crown', title: 'Who Tempers in Blood', el: 'fire', fx: 'fireball', adds: ['knight', 'golem'], passive: 'ph_forge', mech: ['ph_ingot'],
+    phases: [{ name: 'Banked Coals', pool: { ph_anvil: 3, ph_ingot: 2, ph_rain: 2, ph_orbs: 2 } }, { name: 'The Bellows', pool: { ph_anvil: 2, ph_orbs: 3, ph_wave: 2, adds: 1 } }, { name: 'White Heat', pool: { ph_anvil: 3, ph_ring: 2, ph_rain: 2 } }, { name: 'The Crown Is Cast', pool: { ph_anvil: 3, ph_orbs: 2, ph_wave: 2, ph_ring: 2 } }] }),
+  banquet: T('banquet', /Iron Table/, { name: 'The Iron Table Marshal', title: 'and the Brazier Duke', el: 'fire', fx: 'fireball', adds: ['zombie', 'abomination'], passive: 'ph_banquet', mech: ['ph_settings', 'ph_servers'],
+    phases: [{ name: 'Grace Is Said', pool: { ph_settings: 2, ph_servers: 2, ph_cross: 3, ph_rain: 2 } }, { name: 'The Second Course', pool: { ph_settings: 2, ph_orbs: 2, ph_wave: 2, adds: 1 } }, { name: 'The Feast That Walks', pool: { ph_settings: 2, ph_ring: 2, ph_rain: 3 } }, { name: 'Last Supper', pool: { ph_settings: 3, ph_wave: 2, ph_orbs: 2, ph_soak: 1 } }] }),
+  regent: T('regent', /Long Stacks/, { name: 'The Long Stacks Regent', title: 'Keeper of the Forbidden Index', el: 'arcane', fx: 'shard', adds: ['cultist', 'eye'], mech: ['ph_memory'], passive: 'ph_regent_e',
+    phases: [{ name: 'The Reading Room', pool: { ph_memory: 2, ph_ink: 2, ph_pages: 3, ph_cross: 2 } }, { name: 'The Long Stacks', pool: { ph_memory: 2, ph_pages: 2, ph_wave: 2, adds: 1 } }, { name: 'Forbidden Index', pool: { ph_memory: 2, ph_ring: 2, ph_pages: 3 } }, { name: 'Burning Library', pool: { ph_memory: 3, ph_pages: 3, ph_ring: 2, ph_wave: 2 } }] }),
+  pennants: T('pennants', /Iron Pennants/, { name: 'The Queen of Iron Pennants', title: 'Mistress of the Menagerie', el: 'poison', fx: 'poison', adds: ['hound', 'spider'], passive: 'ph_veil', mech: ['ph_pwave'],
+    phases: [{ name: 'The Cage Rows', pool: { ph_pennants: 3, ph_pwave: 2, ph_orbs: 2, ph_rain: 2 } }, { name: 'The Drowned Glass', pool: { ph_pennants: 2, ph_wave: 2, ph_orbs: 2, adds: 1 } }, { name: 'Into the Veil', pool: { ph_pennants: 3, ph_ring: 2, ph_rain: 2 } }, { name: 'The Pennants Fall', pool: { ph_pennants: 3, ph_wave: 3, ph_orbs: 2 } }] }),
+  chancellor: T('chancellor', /Ash Chancellor/, { name: 'Ash Chancellor of the Sanctuaries', title: 'Voice of the Black Nave', el: 'holy', fx: 'holy', adds: ['cultist', 'wraith'], passive: 'ph_polarity', mech: ['ph_candles', 'ph_mass'],
+    phases: [{ name: 'Vespers', pool: { ph_candles: 2, ph_mass: 2, ph_cross: 3, ph_orbs: 2 } }, { name: 'The Black Mass', pool: { ph_candles: 2, ph_ring: 2, ph_wave: 2, adds: 1 } }, { name: 'Light and Void', pool: { ph_candles: 2, ph_rain: 2, ph_cross: 3 } }, { name: 'Compline', pool: { ph_candles: 3, ph_ring: 2, ph_wave: 2, ph_soak: 1 } }] }),
+  windward: T('windward', /Windward/, { name: 'The Windward Black Knight', title: 'Who Holds the Storm Bridge', el: 'light', fx: 'spark', adds: ['knight', 'gargoyle'], passive: 'ph_gale', mech: ['ph_rod'],
+    phases: [{ name: 'The Storm Bridge', pool: { ph_storm: 2, ph_rod: 2, ph_cross: 3, ph_rain: 2 } }, { name: 'Crosswinds', pool: { ph_storm: 3, ph_wave: 2, adds: 1 } }, { name: 'Eye of the Storm', pool: { ph_storm: 2, ph_ring: 2, ph_cross: 2 } }, { name: 'The Fall', pool: { ph_storm: 3, ph_rain: 2, ph_ring: 2, ph_wave: 2 } }] }),
+  eclipse: T('eclipse', /Eclipse/, { name: "The High Ward's Eclipse", title: 'Shadow on the Throne Antechambers', el: 'shadow', fx: 'shadow', adds: ['wraith', 'cultist'], mech: ['ph_eclipse', 'ph_beam'], passive: 'ph_eclipse_e',
+    phases: [{ name: 'Penumbra', pool: { ph_beam: 2, ph_lance: 2, ph_eclipse: 2, ph_orbs: 2, ph_cross: 2 } }, { name: 'Umbra', pool: { ph_beam: 2, ph_eclipse: 2, ph_ring: 2, adds: 1 } }, { name: 'Totality', pool: { ph_eclipse: 2, ph_beam: 3, ph_rain: 2 } }, { name: 'The Diamond Ring', pool: { ph_eclipse: 2, ph_beam: 3, ph_ring: 2, ph_orbs: 2 } }] }),
 };
 
 // ================================================================================== LORD VELSCOUR, four forms
@@ -304,8 +337,9 @@ sig('ph_starfall', 'Starfall', (R) => { const a = A(R); for (let i = 0; i < 12 +
 sig('ph_glass', 'Shattered Glass', (R) => { const a = A(R), off = (Math.random() * 2) | 0; for (let i = 0; i < 7; i++) for (let j = 0; j < 6; j++) if ((i + j + off) % 2 === 0) blast(R, a.x + a.w * (i + 0.5) / 7, a.y + a.h * (j + 0.5) / 6, 1.7, 1.5, 1.1, { el: 'holy', fx: 'explosion' }); UI.centerMsg('SHATTERED GLASS', 'Step onto the dark squares', 1.6); sfx('glass'); });
 sig('ph_pillars', 'Falling Pillars', (R) => { const a = A(R); for (let i = 0; i < 3 + R.pi; i++) { const x = a.x + rand(3, a.w - 3); line(R, x, a.y + 1, Math.PI / 2, a.h - 2, 1.2, 1.4 + i * 0.3, 1.6, '#d0b890'); } sfx('thud'); });
 
+const FORM_SIGS = ['ph_v_edict', 'ph_v_tithe', 'ph_v_ascend', 'ph_v_unmake'];   // one WoW mechanic per form
 const VT = (variant, el, fx, phases, adds) => ({ id: 'ph_velscour_' + variant, variant, name: 'Lord Velscour', title: FINALE[variant].name, art: [FINALE[variant].forms[0]], el, fx, sigs: true, phobos: true,
-  passive: 'ph_velscour', hp: 2.6, spd: 0.85, adds, phases });
+  passive: 'ph_velscour', hp: 2.6, spd: 0.85, adds, mech: [...FORM_SIGS], phases: phases.map((P, i) => ({ ...P, pool: { ...P.pool, [FORM_SIGS[i]]: 2 } })) });
 // each wing boss is its own fight: its signatures in every phase, growing heavier, and at most two shared patterns, light
 const GENERIC = new Set(['ph_cross', 'ph_rain', 'ph_ring', 'ph_wave', 'ph_orbs', 'ph_soak']);
 for (const T of Object.values(WING_RAIDS)) {

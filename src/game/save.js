@@ -293,7 +293,7 @@ export function migrate(c) {
   migrateToLv100Rebalance(c);
   c.potions = Object.assign({ hp: 0, mp: 0, rejuv: 0, fury: 0 }, c.potions);
   c.cleared = c.cleared || {};
-  if (c.phobos) c.phobos = Object.assign({ q: 0, qAt: null, bell: false, city: false, gate: false, floor: 0, cleared: {}, wards: [], hubs: {}, vWins: 0, vSeen: [], seenD: [], errands: {} }, c.phobos);   // ACT III (game/phobos.js)
+  if (c.phobos) c.phobos = Object.assign({ q: 0, qAt: null, bell: false, city: false, gate: false, floor: 0, cleared: {}, wards: [], hubs: {}, vWins: 0, vSeen: [], seenD: [], errands: {}, quests: {} }, c.phobos);   // ACT III (game/phobos.js)
   c.seaOfSandRuns = c.seaOfSandRuns || {};
   c.darkForestRuns = c.darkForestRuns || {};
   c.breach = Object.assign({ best: 0, cleared: {} }, c.breach); // THE ETERNAL BREACH: best floor beaten, clears per floor
