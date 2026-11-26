@@ -12,8 +12,8 @@ It is a region (`src/game/regions/summit.js`, `docs/NEW_REGIONS.md`): `snowy_sum
 
 | File | What |
 |---|---|
-| `src/world/summit.js` | `generateSummit`: the route (camp, four plateaus, peak), ridges as curves with their height profiles and hop steps, the range's rock, gates, arches, the shrine wall, floors, props, ridge packs, climb-ups; `SUMMIT_BOSSES` |
-| `src/game/summit.js` | the run: plateau encounters (`SUMMIT_ENCOUNTERS`), gates, climb-ups, the peak boss, `objective`, the Quest Log |
+| `src/world/summit.js` | `generateSummit`: the route (camp, four plateaus, peak), ridges as curves with their height profiles and hop steps, the range's rock, arches, the shrine wall, floors, props, ridge packs, climb-ups; `SUMMIT_BOSSES` |
+| `src/game/summit.js` | the run: plateau encounters (`SUMMIT_ENCOUNTERS`), climb-ups, the peak boss, `objective`, the Quest Log |
 | `src/world/alpine.js` | shared with the Mountainside: tile heights to the vertex field (ledges, slopes, rounded outlines, the cap) |
 | `src/gfx/alpine3d.js` | shared: the three.js scene (per-tile floor atlas, triplanar rock, snow, the skirt, the sea of cloud, the sky) |
 | `src/game/alpine.js` | shared: `world.cave` (elevation, picking, horizon), hop arcs, `useAlpine` |
@@ -29,7 +29,6 @@ biome template, so its runtime folder is a normal biome pack (`loadBiomeArt` wit
   steps, shrine paving round the peak, sled grooves at the camp, scree and glacier ice on the rock below);
 - **scatter**: boulders, ice spires and crystals on the plateaus' rims, trail markers and cairns along the ridges, pitons
   at the hop steps, the expedition's camp, the shrine's altar, owl idol, basin, braziers, sentinels, bell and candles;
-- **doors**: the `frozen_iron_gate` across each plateau's way on (locked until its fight is won: `door.locked`);
 - **arches**: `slate_pass_gateway` out of the camp, `summit_shrine_portal` onto the peak;
 - **walls**: a run of `summit_shrine_ashlar` along the peak's far rim (the ground behind barred);
 - **materials**: `snow_capped_granite` and `ice_bound_shale` are the cliffs (their snow caps taken back to the stone's
@@ -54,13 +53,11 @@ skirt stands within 3 tiles of its height, and behind it everything falls away a
 ranges show over the shrine; its back third is a **dais** a hop up. The cap (no rock may rise over the line of sight to
 walkable ground behind it) keeps every peak off the near side.
 
-Gates: on each plateau's way on and its way in (and the peak's way in), the first grid line (searched along the near half
-of the ridge) where 2-5 ridge tiles cross
-it and blocking them really cuts the plateau off from the next node (or the last). The way-on gate is shut (`map.block`)
-until the fight is won; the way-in gate stands open and shuts behind the hero when the fight starts (so a plateau is fought
-on the plateau, not from the ridge's choke); both open on the win. Each plateau's fight is chosen here, so its camp
+No gates: the iron gates that once shut each plateau's way on (and way in, and the peak's) are gone, since nothing on
+an open ridge makes a gate stand there, and a hero who reached one before its fight began was left pressing against it.
+The way is open from the camp to the peak. Each plateau's fight is chosen here, so its camp
 (brazier, bedrolls, crates, a broken fence), a lost party's sled and boots, or its three cairns' spots (120° apart) are
-laid out with it. A seed missing any gate is re-rolled. The peak is 10.5 across, its shrine props on the far rim, its
+laid out with it. The peak is 10.5 across, its shrine props on the far rim, its
 middle clear for the boss.
 
 ## The run (`createSummitRun`)
@@ -72,10 +69,11 @@ middle clear for the boss.
   slide down; then kill them), **The Howling Cairns** (three ice cairns raise things out of the snow every 5 s until
   broken; auto-play breaks them first: `raidPriority`, `run.duty`), **The Pack of the Heights** (a unique and its hounds,
   asleep). Placed groups sleep rooted and can't be hit (so they can't be woken or drawn out from the ridge) until the
-  hero steps onto their plateau. Winning leaves a chest and opens the gates.
+  hero steps onto their plateau. Winning leaves a chest. A foe of the fight left where it can't be
+  fought (under the snow after a cut-short burrow) comes back up by the hero after 8 s, so every fight ends.
 - **The peak**: coming near it (the last ridge) brings one of `SUMMIT_BOSSES` to the back of the arena (the camera pans to
   it, on the dais); it wakes when the hero comes onto the peak itself (its `raid.inside` is the peak's tiles, not the
-  raid's square, whose corners reach over the last ridge), and the way in shuts behind him at once. A raid boss on a plain
+  raid's square, whose corners reach over the last ridge). A raid boss on a plain
   template (no signature casts) at 72% life, no execute timer (nor the HUD's countdown), scale 2.5, in its snow swap:
 
 | Art | Template | Title | Swap |
@@ -89,12 +87,12 @@ middle clear for the boss.
   The boss is picked by the seed (`G.summitBoss` forces one for tests). Its fall opens the exit on the peak with two
   rich chests.
 - Every regular monster wears a snow swap (frost, rime or pale) and is "Frostbitten". Snow falls (`ambient: snow`).
-  The camera pulls back a little on the plateaus. The minimap marks the next waypoints and the gates (red shut, blue open).
+  The camera pulls back a little on the plateaus. The minimap marks the next waypoints.
 - **Kept per depth** (`c.summitRuns[depth] = { seed, won }`, the region's `kept`): a town trip comes back to the same
-  range, its won plateaus still won and their gates open, the hero arriving at the last of them. A skull teleport, or a
+  range, its won plateaus still won, the hero arriving at the last of them. A skull teleport, or a
   new Mountainside below, forges a new one.
-- **Auto-play** follows `objective`: the next waypoint of the route (it can't get past a shut gate), inside a fight its
-  cairns, then its nearest foe, then the boss.
+- **Auto-play** follows `objective`: the next waypoint of the route, inside a fight its
+  cairns, then its nearest foe (or, with none to hit, one lying in wait, so a Tapestry Stalker on the cliff springs), then the boss.
 
 ## The look
 - Daylight over snow; the path is the brightest thing on screen: a dark band of bare rock under every walkable edge

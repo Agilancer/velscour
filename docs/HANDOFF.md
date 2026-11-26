@@ -14,6 +14,20 @@ Contents
 
 ---
 
+## November 26, 2026: the Snowy Summit loses its gates (branch `fix/closed-gates`)
+
+- The user found the hero stuck pushing at a shut frozen iron gate on the Summit, and asked for the gates to go: they make
+  no sense on an open ridge. `world/summit.js` no longer lays any (no `map.doors`, no `sm.gates`, no gate tiles blocked,
+  no seed re-rolled for a missing gate); `game/summit.js` drops shutting the way in at a fight, opening the way on at the
+  win, the peak's way in, and the minimap's gate marks. The fights stay: each plateau's group still wakes when the hero
+  steps onto it and leaves a chest.
+- Found on the way, both able to hold a fight open forever: a Tapestry Stalker (Castle Creatures kit) hangs untargetable
+  on a cliff edge until the hero comes within 3.4 tiles, and auto-play only went for foes it could hit. The objective
+  now walks to one lying in wait when nothing else is left. A foe of the fight left untargetable and not arriving for
+  8 s (a cut-short burrow) comes back up out of the snow by the hero.
+- Tests: `summit.js` (gate checks replaced by: no doors, the peak reachable and the way back down), plus an auto-play soak
+  over several summits.
+
 ## November 26, 2026: every sand creature fights its own way, and shouts (branch `feat/sea-of-sand-humanoids`)
 - Each of the 510 has a kit (`SAND_KITS` in `src/data/sandkits.js`, seeded by id). A kit holds its special moves, the
   look of its shots, its pattern size (x0.75 to 1.5 shots) and shot speed, one or two passives, and a named signature

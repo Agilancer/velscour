@@ -1,7 +1,7 @@
 // THE SNOWY SUMMIT (docs/SNOWY_SUMMIT.md): the region the Mountainside's summit leads into (and the skull's "summit").
-// Seeds: start to peak along ridges and four plateaus, every gate shuts its plateau's way on, hop steps on the ridges,
+// Seeds: start to peak along ridges and four plateaus, no gates (nothing walls the way: the peak open from the start), hop steps on the ridges,
 // ridges thin (2-3 tiles), the five bosses' art and templates. Live: every plateau's fight forced and won by a bot (its
-// gate opens, its chest), each of the five bosses comes down on the peak in its snow swap, the exit opens there;
+// chest), each of the five bosses comes down on the peak in its snow swap, the exit opens there;
 // screenshots; then auto-play takes a whole Summit.
 //   node tools/tests/summit.js [shots|noshots] [auto|noauto] [seeds] [mobile]   (start the server first)
 const { openGame, report } = require('./harness');
@@ -42,20 +42,10 @@ const MOBILE = process.argv.includes('mobile');
         ms = Math.max(ms, performance.now() - t0);
         const m = g.map, W = m.w, H = m.h, I = (x, y) => y * W + x, walk = Uint8Array.from(m.t), sm = m.summit;
         const at = (n) => I(Math.floor(n.x), Math.floor(n.y));
-        const s0 = at(sm.start), pk = at(sm.peak), open = new Uint8Array(W * H);
-        for (let i = 0; i < W * H; i++) open[i] = m.block[i];
-        for (const gt of sm.gates) for (const i of gt.tiles) open[i] = 0;
-        if (!reachFrom(W, H, m.hgt, walk, open, s0, CLIMB, DROP)[pk]) bad.push(`seed ${seed}: the peak unreachable with the gates open`);
-        if (!reachFrom(W, H, m.hgt, walk, open, pk, CLIMB, DROP)[s0]) bad.push(`seed ${seed}: no way back down`);
-        if (reachFrom(W, H, m.hgt, walk, m.block, s0, CLIMB, DROP)[pk]) bad.push(`seed ${seed}: the peak reachable with the gates shut`);
-        const outs = sm.gates.filter((g) => g.role === 'out'), ins = sm.gates.filter((g) => g.role === 'in');
-        if (outs.length < 3) bad.push(`seed ${seed}: only ${outs.length} gates on the ways on`);
-        if (ins.length < 3) bad.push(`seed ${seed}: only ${ins.length} gates on the ways in`);
-        for (const gt of outs) if (reachFrom(W, H, m.hgt, walk, m.block, at(sm.nodes[gt.node]), CLIMB, DROP)[pk]) bad.push(`seed ${seed}: the gate out of node ${gt.node} shuts nothing`);
-        for (const gt of ins) {   // shut, it keeps the plateau from the way back
-          const bl = Uint8Array.from(open); for (const i of gt.tiles) bl[i] = 1;
-          if (reachFrom(W, H, m.hgt, walk, bl, at(sm.nodes[gt.node]), CLIMB, DROP)[s0]) bad.push(`seed ${seed}: the gate into node ${gt.node} shuts nothing`);
-        }
+        const s0 = at(sm.start), pk = at(sm.peak);
+        if (!reachFrom(W, H, m.hgt, walk, m.block, s0, CLIMB, DROP)[pk]) bad.push(`seed ${seed}: the peak unreachable`);
+        if (!reachFrom(W, H, m.hgt, walk, m.block, pk, CLIMB, DROP)[s0]) bad.push(`seed ${seed}: no way back down`);
+        if (m.doors.length || sm.gates) bad.push(`seed ${seed}: gates on the way`);
         if (sm.nodes.filter((q) => q.kind === 'plateau').length !== 4) bad.push(`seed ${seed}: ${sm.nodes.filter((q) => q.kind === 'plateau').length} plateaus`);
         if (sm.nodes.filter((q) => q.kind === 'saddle').length !== 5) bad.push(`seed ${seed}: ${sm.nodes.filter((q) => q.kind === 'saddle').length} saddles`);
         if (sm.pinnacle && !g.chests.length) bad.push(`seed ${seed}: the pinnacle has no chest`);
@@ -82,10 +72,10 @@ const MOBILE = process.argv.includes('mobile');
         if (ridgePacks.some((s) => s.n > 2)) bad.push(`seed ${seed}: a ridge pack of more than two`);
         if (ridgePacks.length < 10) bad.push(`seed ${seed}: only ${ridgePacks.length} ridge packs`);
         if (routeLen < 220) bad.push(`seed ${seed}: the way is only ${Math.round(routeLen)} tiles`);
-        stats.push({ routeLen: Math.round(routeLen), pinnacle: sm.pinnacle ? 1 : 0, ridgeTiles, hop: st.hop, gates: sm.gates.length, rise: Math.round((m.maxLevel - m.minLevel) / 9.8), props: g.props.length, packs: ridgePacks.length, leaps: g.leaps.length });
+        stats.push({ routeLen: Math.round(routeLen), pinnacle: sm.pinnacle ? 1 : 0, ridgeTiles, hop: st.hop, rise: Math.round((m.maxLevel - m.minLevel) / 9.8), props: g.props.length, packs: ridgePacks.length, leaps: g.leaps.length });
       }
       const avg = (k) => Math.round(stats.reduce((a, s) => a + s[k], 0) / Math.max(1, stats.length));
-      return { bad, maxMs: Math.round(ms), avg: Object.fromEntries(['routeLen', 'pinnacle', 'ridgeTiles', 'hop', 'gates', 'rise', 'props', 'packs', 'leaps'].map((k) => [k, avg(k)])) };
+      return { bad, maxMs: Math.round(ms), avg: Object.fromEntries(['routeLen', 'pinnacle', 'ridgeTiles', 'hop', 'rise', 'props', 'packs', 'leaps'].map((k) => [k, avg(k)])) };
     }, SEEDS);
     console.log('generation', JSON.stringify(gen));
     for (const b of gen.bad) errors.push('[gen] ' + b);
@@ -106,7 +96,7 @@ const MOBILE = process.argv.includes('mobile');
       await shot('summit_' + name);
     };
 
-    // ------------------------------------------------ every plateau's fight won by a bot; the gates open
+    // ------------------------------------------------ every plateau's fight won by a bot, its chest
     await view('start', 'const s = m.summit.start; return [s.x, s.y];');
     await view('ridge', 'const r = m.summit.route[3]; return [r.x, r.y];');
     const fights = await page.evaluate(async () => {
@@ -124,10 +114,8 @@ const MOBILE = process.argv.includes('mobile');
           for (const c of w.creatures) if (c.team === 'enemy' && !c.dead && Math.hypot(c.x - e.x, c.y - e.y) < e.r + 6 && !c.isRaid) { c.targetable = true; c.static = false; c.entering = null; c.alpha = 1; hit(null, c, c.maxHp * 10, 'phys', { force: true }); }
           step(15); t += 0.5;
         }
-        const shut = [e.gate, e.gateIn].filter(Boolean).reduce((a, g) => a + g.tiles.filter((i) => m.block[i]).length, 0), doors = [e.gate, e.gateIn].filter(Boolean).every((g) => g.doors.every((d) => d.open));
-        out.push({ kind: e.kind, state: e.state, secs: t, gate: !!e.gate, gateIn: !!e.gateIn, shut, doors, chest: w.chests.some((c) => Math.hypot(c.x - e.x, c.y - e.y) < 3) });
+        out.push({ kind: e.kind, state: e.state, secs: t, chest: w.chests.some((c) => Math.hypot(c.x - e.x, c.y - e.y) < 3) });
         if (e.state !== 'done') bad.push(`${e.kind}: not won in 90 s`);
-        if (shut || !doors) bad.push(`${e.kind}: its gate still shut`);
       }
       return { out, bad };
     });
