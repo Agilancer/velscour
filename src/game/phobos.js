@@ -424,7 +424,7 @@ class Pad {
       p.path = null; p.moveTarget = null; p.nav = null;
       if (k >= 1) { p.padFly = null; p.leaping = false; p.z = 0; sparkle(p.x, p.y, 14, '#ffe0a0', 14, 0.4); }
     }
-    addLight(this.L.x, this.L.y, 1.4, 0.5, 6);
+    addLight(this.L.x, this.L.y, 3, 0.9 + 0.3 * Math.sin((this.t || 0) * 4), 6);   // a beacon: the stone across reads from the far side
     return true;
   }
   draw(ctx) {

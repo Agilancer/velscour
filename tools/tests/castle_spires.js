@@ -35,7 +35,7 @@ for (const kind of kinds) {
   // along the climb: up the first stair, at the gap, on the far stair (the 3D route and the camera turning with it)
   for (const [tag, f] of [['stair', 0.18], ['gap', -1], ['far', 0.7]]) {
     await page.evaluate(async ([f]) => { const { G } = window.VELSCOUR, sp = G.world.tower && G.world.tower.sp || G.lastSpires.spires, rb = sp.rb, p = G.player;
-      const c = sp.crossings[sp.crossings.length - 1], s = f < 0 && c ? c.s0 - 1.6 : rb.S * f; p.x = rb.gx(s); p.y = rb.gy(0); G.world.tower && G.world.tower.frame(0); }, [f]);
+      const c = sp.crossings[sp.crossings.length - 1], s = f < 0 ? (c ? c.s0 - 1.6 : rb.S * 0.45) : rb.S * f; p.x = rb.gx(s); p.y = rb.gy(0); G.world.tower && G.world.tower.frame(0); }, [f]);
     await page.waitForTimeout(900); await shot('castle_spires_' + kind + '_' + tag);
   }
 }

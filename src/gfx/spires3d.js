@@ -23,19 +23,19 @@ const loadImg = (src) => IMG.get(src) || IMG.set(src, new Promise((ok, no) => {
 // the look of each part of the castle: masonry and its swap, roofs, lamps, the sky, the abyss, Velscour's flesh
 export const STYLES = {
   storm: { stone: 'ashlar', ss: { colorize: [214, 0.14], light: -0.08, contrast: 1.12 }, trim: 'chapel', ts: { colorize: [212, 0.18], light: 0.04 }, floor: 'slatestone', fs: { colorize: [220, 0.1], light: -0.02 },
-    roof: 'roof_blue', lamp: 0x9ad8ff, sky: ['#02040a', '#0c1830', '#2a4266'], abyss: '#03060c', amb: 0x5a6a80, hemi: [0x8aa8d8, 0x101820], moon: 0xb8d8ff, flesh: 0xb8b0b4, dark: 0.32, fog: '#060a14', storm: true, motes: '#c8e0ff' },
+    roof: 'roof_blue', lamp: 0x9ad8ff, sky: ['#02040a', '#0c1830', '#2a4266'], abyss: '#03060c', amb: 0x5a6a80, hemi: [0x8aa8d8, 0x101820], moon: 0xb8d8ff, flesh: 0xb8b0b4, dark: 0.32, fog: '#151e38', storm: true, motes: '#c8e0ff' },
   bone: { stone: 'chapel', ss: { colorize: [42, 0.14], light: 0.02, contrast: 1.08 }, trim: 'ashlar', ts: { colorize: [40, 0.18], light: 0.1 }, floor: 'slate', fs: { colorize: [38, 0.1], light: 0.02 },
-    roof: 'roof_black', lamp: 0xd8ff80, sky: ['#050404', '#1c1610', '#463826'], abyss: '#060403', amb: 0x6a6250, hemi: [0xd8c8a0, 0x14100a], moon: 0xffeed0, flesh: 0xc8b8a4, dark: 0.34, fog: '#0a0806', motes: '#e8dcc0' },
+    roof: 'roof_black', lamp: 0xd8ff80, sky: ['#050404', '#1c1610', '#463826'], abyss: '#060403', amb: 0x6a6250, hemi: [0xd8c8a0, 0x14100a], moon: 0xffeed0, flesh: 0xc8b8a4, dark: 0.34, fog: '#1e1919', motes: '#e8dcc0' },
   blood: { stone: 'ashlar', ss: { colorize: [356, 0.36], light: -0.14, contrast: 1.12 }, trim: 'brick', ts: { colorize: [6, 0.3], light: -0.1 }, floor: 'basalt', fs: { colorize: [350, 0.2], light: -0.04 },
-    roof: 'roof_char', lamp: 0xff5040, sky: ['#060102', '#2a0408', '#6a1010'], abyss: '#080102', amb: 0x6a3a38, hemi: [0xff9080, 0x180404], moon: 0xffa080, flesh: 0xb89890, dark: 0.36, fog: '#0c0203', motes: '#ff6040' },
+    roof: 'roof_char', lamp: 0xff5040, sky: ['#060102', '#2a0408', '#6a1010'], abyss: '#080102', amb: 0x6a3a38, hemi: [0xff9080, 0x180404], moon: 0xffa080, flesh: 0xb89890, dark: 0.36, fog: '#220c12', motes: '#ff6040' },
   gloam: { stone: 'brick', ss: { colorize: [268, 0.16], light: -0.12, contrast: 1.15 }, trim: 'panel', ts: { colorize: [276, 0.3], light: -0.04 }, floor: 'slate', fs: { colorize: [270, 0.2], light: -0.06 },
-    roof: 'roof_violet', lamp: 0xc890ff, sky: ['#040208', '#140a26', '#36204e'], abyss: '#040208', amb: 0x4a4060, hemi: [0xb8a0ff, 0x0c0814], moon: 0xe0c8ff, flesh: 0xb0a4b8, dark: 0.36, fog: '#08040e', motes: '#d0b0ff' },
+    roof: 'roof_violet', lamp: 0xc890ff, sky: ['#040208', '#140a26', '#36204e'], abyss: '#040208', amb: 0x4a4060, hemi: [0xb8a0ff, 0x0c0814], moon: 0xe0c8ff, flesh: 0xb0a4b8, dark: 0.36, fog: '#19102a', motes: '#d0b0ff' },
   ember: { stone: 'basalt', ss: { colorize: [18, 0.2], light: -0.06, contrast: 1.1 }, trim: 'brick', ts: { colorize: [22, 0.34], light: -0.02 }, floor: 'soot', fs: { colorize: [20, 0.16], light: 0.02 },
-    roof: 'roof_terracotta', lamp: 0xff9a40, sky: ['#050202', '#260a04', '#6a2408'], abyss: '#0a0402', amb: 0x6a4a3a, hemi: [0xffb080, 0x180804], moon: 0xffc080, flesh: 0xb8a090, dark: 0.34, fog: '#0c0503', motes: '#ff9a40', embers: true },
+    roof: 'roof_terracotta', lamp: 0xff9a40, sky: ['#050202', '#260a04', '#6a2408'], abyss: '#0a0402', amb: 0x6a4a3a, hemi: [0xffb080, 0x180804], moon: 0xffc080, flesh: 0xb8a090, dark: 0.34, fog: '#221312', motes: '#ff9a40', embers: true },
   throne: { stone: 'basalt', ss: { colorize: [350, 0.12], light: -0.18, contrast: 1.2 }, trim: 'ashlar', ts: { colorize: [44, 0.45], light: 0.04 }, floor: 'slatestone', fs: { colorize: [356, 0.24], light: -0.1 },
-    roof: 'roof_gold', lamp: 0xff4020, sky: ['#040102', '#200208', '#5a0a12'], abyss: '#050102', amb: 0x5a3434, hemi: [0xff8070, 0x100204], moon: 0xff9070, flesh: 0xa89490, dark: 0.36, fog: '#0a0203', motes: '#ff4030', storm: true },
+    roof: 'roof_gold', lamp: 0xff4020, sky: ['#040102', '#200208', '#5a0a12'], abyss: '#050102', amb: 0x5a3434, hemi: [0xff8070, 0x100204], moon: 0xff9070, flesh: 0xa89490, dark: 0.36, fog: '#1e0c12', motes: '#ff4030', storm: true },
   iron: { stone: 'brick', ss: { colorize: [30, 0.06], light: -0.06, contrast: 1.08 }, trim: 'ashlar', ts: { colorize: [36, 0.14], light: 0.02 }, floor: 'slatestone', fs: { colorize: [30, 0.08], light: -0.02 },
-    roof: 'roof_black', lamp: 0xffb060, sky: ['#030304', '#141620', '#34303c'], abyss: '#040406', amb: 0x5a5a60, hemi: [0xc8c0b8, 0x101014], moon: 0xe8e0d0, flesh: 0xb8aca8, dark: 0.32, fog: '#08080a', motes: '#d8c8b0' },
+    roof: 'roof_black', lamp: 0xffb060, sky: ['#030304', '#141620', '#34303c'], abyss: '#040406', amb: 0x5a5a60, hemi: [0xc8c0b8, 0x101014], moon: 0xe8e0d0, flesh: 0xb8aca8, dark: 0.32, fog: '#191922', motes: '#d8c8b0' },
 };
 const files = (st) => [st.stone, st.trim, st.floor, st.roof, 'iron', 'wood', 'chapel', 'rubble'].map((k) => TEX + k + '.png');
 
@@ -74,7 +74,7 @@ function fogged(m, key) {
     sh.uniforms.uFogY = FOG.y; sh.uniforms.uFogC = FOG.c;
     sh.vertexShader = 'varying float vWY;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n\tvWY = (modelMatrix * vec4(transformed, 1.0)).y;');
     sh.fragmentShader = 'uniform float uFogY; uniform vec3 uFogC; varying float vWY;\n' + sh.fragmentShader.replace('#include <dithering_fragment>',
-      '#include <dithering_fragment>\n\tfloat fogD = clamp((uFogY - vWY - 5.0) / 30.0, 0.0, 1.0), fogU = clamp((vWY - uFogY - 26.0) / 50.0, 0.0, 1.0);\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uFogC, fogD * 0.97 + fogU * 0.35);');
+      '#include <dithering_fragment>\n\tfloat fogD = clamp((uFogY - vWY - 5.0) / 30.0, 0.0, 1.0), fogU = clamp((vWY - uFogY - 26.0) / 50.0, 0.0, 1.0);\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uFogC, fogD * 0.85 + fogU * 0.1);');
   };
   m.customProgramCacheKey = () => key;
   return m;
@@ -87,7 +87,7 @@ async function materials(st) {
     M[k] = fogged(new T.MeshStandardMaterial({ map, bumpMap: bump, bumpScale: o.bump ?? 1.1, roughness: o.rough ?? 0.9, metalness: o.metal ?? 0, color: o.color ?? 0xd8d2ca, side: o.side ?? T.FrontSide }), 'spire' + (o.side ? 'd' : ''));
   };
   await Promise.all([
-    std('stone', st.stone, st.ss), std('trim', st.trim, st.ts, { color: 0xece6dc }), std('floor', st.floor, st.fs, { bump: 0.7, color: 0xe8e2da }),
+    std('stone', st.stone, st.ss, { color: 0x9a948c }), std('trim', st.trim, st.ts, { color: 0xece6dc }), std('floor', st.floor, st.fs, { bump: 0.7, color: 0xe8e2da }),
     std('roof', st.roof, null, { bump: 0.8, color: 0xc8c4c0 }), std('iron', 'iron', { sat: 0.4, light: -0.12 }, { metal: 0.4, rough: 0.55, bump: 0.5 }),
     std('wood', 'wood', { light: -0.12 }, { bump: 0.5 }), std('bone', 'chapel', { colorize: [44, 0.16], light: 0.16, contrast: 0.9 }, { color: 0xfff4e0, bump: 0.6 }),
     std('rubble', 'rubble', st.ss, { bump: 1.2 }), std('flesh', 'chapel', { colorize: [12, 0.3], light: -0.04, contrast: 0.8 }, { color: st.flesh, rough: 0.7, bump: 2.2 }),
@@ -265,7 +265,7 @@ export async function buildSpires3D(gen) {
         B.quad('stone', ...d, [0, -1, 0], d.map((v) => [v[0] / 1.6, v[2] / 1.6]));
       }
       if (Math.abs(hq - hPrev) > 0.01) B.quad('trim', V(a, -2, Math.min(hq, hPrev)), V(a, 2.8, Math.min(hq, hPrev)), V(a, 2.8, Math.max(hq, hPrev)), V(a, -2, Math.max(hq, hPrev)), null, [[0, 0], [3, 0], [3, 0.1], [0, 0.1]]);
-      B.quad('trim', V(a, -2, hq + 0.04), V(a, 2.8, hq + 0.04), V(a + 0.14, 2.8, hq + 0.04), V(a + 0.14, -2, hq + 0.04), [0, 1, 0], [[0, 0], [3, 0], [3, 0.08], [0, 0.08]]);
+      B.quad('trim', V(a, -2, hq + 0.04), V(a, 2.8, hq + 0.04), V(a + 0.3, 2.8, hq + 0.04), V(a + 0.3, -2, hq + 0.04), [0, 1, 0], [[0, 0], [3, 0], [3, 0.08], [0, 0.08]]);
       hPrev = hq;
       if (i % 2 === 0) slab('stone', a + 0.3, a + 0.9, 1.4, 2.7, -2.6, -1.3, hq, 63);   // corbels
       // the parapet, or what's left of it
@@ -390,8 +390,8 @@ export async function buildSpires3D(gen) {
   root.add(statics);
 
   // ---- light: the sky's, a moon, and a pool of point lights moved to the lanterns nearest the hero
-  const amb = new T.AmbientLight(st.amb, 1.05), hemi = new T.HemisphereLight(st.hemi[0], st.hemi[1], 0.75);
-  const moon = new T.DirectionalLight(st.moon, 1.1); moon.position.set(-40, 80, 30); moon.target.position.set(0, 0, 0);
+  const amb = new T.AmbientLight(st.amb, 0.5), hemi = new T.HemisphereLight(st.hemi[0], st.hemi[1], 0.45);
+  const moon = new T.DirectionalLight(st.moon, 2.0); moon.position.set(-60, 45, 10); moon.target.position.set(0, 0, 0);
   scene.add(amb, hemi, moon, moon.target);
   const pool = [];
   for (let i = 0; i < (G.touch ? 4 : 7); i++) { const L = new T.PointLight(0xffffff, 0, 10, 1.2); root.add(L); pool.push(L); }
@@ -657,7 +657,7 @@ function cloudLayer(st) {
     const c = makeCanvas(192, 96), x = c.getContext('2d');
     for (let i = 0; i < 16; i++) {
       const cx = 24 + Math.random() * 144, cy = 50 + Math.random() * 16, r = 14 + Math.random() * 22, gr = x.createRadialGradient(cx, cy - r * 0.3, r * 0.1, cx, cy, r);
-      gr.addColorStop(0, 'rgba(255,255,255,0.10)'); gr.addColorStop(0.4, st.fog + 'c0'); gr.addColorStop(1, st.fog + '00');
+      gr.addColorStop(0, 'rgba(255,255,255,0.35)'); gr.addColorStop(0.4, st.fog + 'c0'); gr.addColorStop(1, st.fog + '00');
       x.fillStyle = gr; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill();
     }
     const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; tex.push(t);
@@ -665,7 +665,7 @@ function cloudLayer(st) {
   for (let i = 0; i < 30; i++) {
     const s = new T.Sprite(new T.SpriteMaterial({ map: tex[i % 3], transparent: true, opacity: 0.45 + Math.random() * 0.35, depthWrite: false, color: new T.Color(st.sky[2]) }));
     const w = 26 + Math.random() * 30; s.scale.set(w, w / 2, 1); grp.add(s);
-    list.push({ s, x: (Math.random() - 0.5) * 120, z: (Math.random() - 0.5) * 120, y: -22 - Math.random() * 26, sp: 0.4 + Math.random() * 0.8 });
+    list.push({ s, x: (Math.random() - 0.5) * 120, z: (Math.random() - 0.5) * 120, y: -12 - Math.random() * 18, sp: 0.4 + Math.random() * 0.8 });
   }
   return { grp, list };
 }
@@ -679,7 +679,7 @@ function eyeSprite() {
     x.strokeStyle = 'rgba(255,160,80,0.5)'; x.lineWidth = 1; for (let i = 0; i < 26; i++) { const a = i / 26 * TAU; x.beginPath(); x.moveTo(64 + Math.cos(a) * 8, 64 + Math.sin(a) * 6); x.lineTo(64 + Math.cos(a) * 30, 64 + Math.sin(a) * 22); x.stroke(); }
   }, 16);
   const pupil = mk((x) => { x.fillStyle = 'rgba(10,0,0,0.95)'; x.beginPath(); x.ellipse(64, 64, 7, 30, 0, 0, TAU); x.fill(); }, 9);
-  const haze = mk((x) => { const g = x.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, 'rgba(255,40,10,0.35)'); g.addColorStop(1, 'rgba(255,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); }, 40);
+  const haze = mk((x) => { const g = x.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, 'rgba(255,40,10,0.35)'); g.addColorStop(1, 'rgba(255,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); }, 110);
   grp.add(haze, ball, pupil);
   return { grp, ball, pupil, haze, blink: 0, next: 5 };
 }
@@ -723,7 +723,7 @@ export function drawSpires3D(ctx, hook) {
   }
   // lightning: the sky and the stone flash
   const fl = S.flash;
-  S.amb.intensity = 1.05 + fl * 2.2; S.hemi.intensity = 0.75 + fl * 2.6;
+  S.amb.intensity = 0.5 + fl * 2.2; S.hemi.intensity = 0.45 + fl * 2.6;
   // the cloud sea follows below the hero; the skyline drifts at its parallax; the eye keeps its place in the sky
   for (const c of S.clouds.list) c.s.position.set(F[0] + c.x * ca - c.z * sa, F[2] + c.y, F[1] + c.x * sa + c.z * ca);
   const v = new T.Vector3(0.6124, 0.5, 0.6124);
@@ -731,12 +731,12 @@ export function drawSpires3D(ctx, hook) {
   for (const s of S.skyline.list) {
     let wx = s.ax - cx * s.par; const span = 3800; wx = ((wx + cx + span / 2) % span + span) % span - span / 2 + cx;
     const p = at(wx, cy * (1 - s.par * 0.5) + s.ay - F[2] * 39.19 * 0.15, s.d); s.g.position.copy(p);
-    if (s.throne) { s.g.position.copy(at(cx + hw * 0.55 - (cx * s.par) % 200, cy + s.ay * 0.18 + hh * 1.0, s.d)); s.fire.material.opacity = 0.45 + 0.15 * Math.sin(S.t * 2.3) + fl * 0.3; }
+    if (s.throne) { s.g.position.copy(at(cx - hw * 0.05 - (cx * s.par) % 200, cy + s.ay * 0.18 + hh * 1.0, s.d)); s.fire.material.opacity = 0.45 + 0.15 * Math.sin(S.t * 2.3) + fl * 0.3; }
   }
-  const e = S.eye, ex = cx + hw * 0.62, ey = cy - hh * 0.62, ep = at(ex, ey + 0, 690);
+  const e = S.eye, ex = cx - hw * 0.3, ey = cy - hh * 0.5, ep = at(ex, ey + 0, 690);
   e.grp.position.copy(ep);
   const bl = e.blink > 0 ? Math.abs(Math.cos(e.blink / 0.28 * Math.PI)) : 1;
-  e.ball.scale.set(16, 16 * bl, 1); e.pupil.scale.set(9 * (0.8 + 0.2 * Math.sin(S.t * 0.7)), 9 * bl, 1);
+  e.ball.scale.set(40, 40 * bl, 1); e.pupil.scale.set(22 * (0.8 + 0.2 * Math.sin(S.t * 0.7)), 22 * bl, 1);
   const lx = -0.55, ly = 0.55; e.pupil.position.set(lx * 0.7 * 0.7071 - 0, ly * 0.4, -lx * 0.7 * 0.7071);   // looking down-left at the hero
   e.haze.material.opacity = 0.7 + 0.3 * Math.sin(S.t * 1.1);
   rd.gl.render(S.scene, cam);

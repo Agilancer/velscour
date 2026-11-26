@@ -1516,13 +1516,18 @@ function drawOverheadNames(ctx, world) {
   ctx.textAlign = 'center';
   const d = G.dpr;
   const nameFont = `700 ${Math.round(11 * d)}px Cinzel, Georgia, serif`;
+  // a champion pack wears one name ("x N"), not a stack of the same label (a unique keeps its own)
+  const tags = [];
   for (const c of world.creatures) {
     if (c.dead || !c.sbox) continue;
     if (c.rank === 'champion' || c.rank === 'unique') {
       const x = (c.sbox[0] + c.sbox[2]) / 2, y = c.barTop != null ? camera.toScreen(0, c.barTop)[1] - 3 : c.sbox[1] - 8; // above its life bar
-      drawLabel(ctx, c.name, x * d, y * d, nameFont, c.rank === 'unique' ? '#ffc040' : '#80b0ff', 3 * d);
+      const t = c.rank === 'champion' && tags.find((q) => q.rank === 'champion' && Math.abs(q.x - x) < 70 && Math.abs(q.y - y) < 70);
+      if (t) { t.n++; t.y = Math.min(t.y, y); continue; }
+      tags.push({ x, y, rank: c.rank, name: c.name, n: 1 });
     }
   }
+  for (const t of tags) drawLabel(ctx, t.n > 1 ? `${t.name} ×${t.n}` : t.name, t.x * d, t.y * d, nameFont, t.rank === 'unique' ? '#ffc040' : '#80b0ff', 3 * d);
   // townsfolk names: only the one nearest the hero (a crowd of labels hides the crowd)
   const hero = world.player;
   let nearest = null, nd = 2.6;
