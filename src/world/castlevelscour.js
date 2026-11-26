@@ -12,6 +12,9 @@ import { RNG, clamp } from '../core/util.js';
 import { ARCH } from '../data/enemies.js';
 import { finishMap, placeObstacles, wallMounts, themeDeck, shuffleWith } from './dungeon.js';
 import { wallHangingCount } from '../gfx/wallhangings.js';
+import { phobosProp } from '../gfx/phobostex.js';
+import { TW } from '../core/view.js';
+import { generateSpires } from './castlespires.js';
 
 // layout name -> [family, options]
 export const LAYOUTS = {
@@ -38,13 +41,15 @@ export const LAYOUTS = {
   bridges: ['bridges', { n: [12, 16], name: 'Tower Bridges' }],
   outerstair: ['outerstair', { name: 'The Outer Stair' }],
   leaps: ['leaps', { name: 'The Broken Spans' }],
+  spires: ['spires', { name: 'The Broken Spires' }],   // towers in the void, stairs round them, Velscour's crossings (world/castlespires.js)
 };
-export const SHEER_LAYOUTS = new Set(['pits', 'bridges', 'outerstair', 'leaps']);
+export const SHEER_LAYOUTS = new Set(['pits', 'bridges', 'outerstair', 'leaps', 'spires']);
 
 const ARENA_W = 32, ARENA_H = 28;
 
 export function generateCastleFloor(floor, layoutId, biome, tileset, seed, opts = {}) {
   const [family, O] = LAYOUTS[layoutId] || LAYOUTS.gatehouse;
+  if (family === 'spires') return generateSpires(floor, O, biome, tileset, seed, opts);
   const rng = new RNG(seed);
   const W = opts.w || 200, Hh = opts.h || 170;
   const map = new TileMap(W, Hh);
@@ -52,6 +57,7 @@ export function generateCastleFloor(floor, layoutId, biome, tileset, seed, opts 
   const I = (x, y) => y * W + x, inb = (x, y) => x > 1 && y > 1 && x < W - 2 && y < Hh - 2;
   const set = (x, y, v = 1) => { x |= 0; y |= 0; if (inb(x, y)) map.t[I(x, y)] = v; };
   const rect = (x, y, w, h, v = 1) => { for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) set(xx, yy, v); };
+  const stackT = [], shelfRun = (x, y, w, h) => { rect(x, y, w, h, 0); for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) stackT.push([xx, yy, h > w]); };   // the library's stacks (bookcases once walled)
   const disc = (cx, cy, r, v = 1, ry = r) => { for (let y = Math.floor(cy - ry); y <= cy + ry; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) if (((x + 0.5 - cx) / r) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1) set(x, y, v); };
   const ring = (cx, cy, r0, r1, v) => { for (let y = Math.floor(cy - r1); y <= cy + r1; y++) for (let x = Math.floor(cx - r1); x <= cx + r1; x++) { const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy); if (d >= r0 && d <= r1) set(x, y, v); } };
   const lineW = (x0, y0, x1, y1, w = 1) => { const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 2) + 1; for (let i = 0; i <= n; i++) { const k = i / n, x = x0 + (x1 - x0) * k, y = y0 + (y1 - y0) * k; rect(Math.round(x - w / 2), Math.round(y - w / 2), w, w); } };
@@ -148,8 +154,8 @@ export function generateCastleFloor(floor, layoutId, biome, tileset, seed, opts 
       rect(r.x, r.y, w, h);
       // the shelves: long one-tile runs with a cross-aisle through the middle and gaps at both ends
       const vertical = rng.chance(0.5);
-      if (vertical) for (let sx = r.x + 3; sx < r.x + w - 3; sx += 3) { rect(sx, r.y + 3, 1, Math.floor(h / 2) - 4, 0); rect(sx, Math.floor(r.my) + 2, 1, Math.floor(h / 2) - 4, 0); }
-      else for (let sy = r.y + 3; sy < r.y + h - 3; sy += 3) { rect(r.x + 3, sy, Math.floor(w / 2) - 4, 1, 0); rect(Math.floor(r.mx) + 2, sy, Math.floor(w / 2) - 4, 1, 0); }
+      if (vertical) for (let sx = r.x + 3; sx < r.x + w - 3; sx += 3) { shelfRun(sx, r.y + 3, 1, Math.floor(h / 2) - 4); shelfRun(sx, Math.floor(r.my) + 2, 1, Math.floor(h / 2) - 4); }
+      else for (let sy = r.y + 3; sy < r.y + h - 3; sy += 3) { shelfRun(r.x + 3, sy, Math.floor(w / 2) - 4, 1); shelfRun(Math.floor(r.mx) + 2, sy, Math.floor(w / 2) - 4, 1); }
       // a reading room off it
       const rr = room({ x: r.x + rng.int(2, w - 10), y: rng.chance(0.5) ? r.y - 10 : r.y + h + 2, w: 8, h: 8 }); rect(rr.x, rr.y, 8, 8); corridor(r, rr, 2);
     }
@@ -265,9 +271,14 @@ export function generateCastleFloor(floor, layoutId, biome, tileset, seed, opts 
   // ------------------------------------------------------------------ dress, wall, light
   const nextTheme = themeDeck(biome, rng);
   for (const r of live) if (r !== start && r !== raid && r.w >= 6 && r.h >= 6 && !r.shape) Object.assign(r, nextTheme(false));
+  // the stacks stand as bookcases (Bellmourn's book spines, gfx/phobostex.js), not walls, where that art has loaded
+  const shelves = [];
+  if (phobosProp('bookcase')) for (const [x, y, flip] of stackT) { const i = I(x, y); if (!map.t[i] && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => map.t[I(x + a, y + b)])) { map.t[i] = 1; shelves.push([x, y, flip]); } }
   finishMap(map, tileset, rng, null, live.filter((r) => r.type === 'room' && !r.shape), extra);
+  for (const [x, y] of shelves) map.block[I(x, y)] = 1;
   const packRooms = live.filter((r) => r !== start && r !== raid && r.w * r.h >= 30);
   const props = map.sheer ? [] : placeObstacles(map, packRooms.filter((r) => !r.shape), tileset, rng, start);
+  for (const [x, y, flip] of shelves) props.push({ kind: 'scatter', x: x + 0.5, y: y + 0.5, spr: phobosProp((x * 7 + y * 3) % 9 ? 'bookcase' : 'jar_shelf'), k: TW / 160, flip, fixed: true });
   const { torches, wallHangings } = map.sheer ? { torches: [], wallHangings: [] } : wallMounts(map, rng, biome, () => 0.3, 0.28, wallHangingCount(biome));
 
   // ------------------------------------------------------------------ who lives here

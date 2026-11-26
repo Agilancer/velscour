@@ -50,7 +50,7 @@ export function townObject(name) {
 
 // Buildings: each is the pack's 2 x 2 house drawn BS x (a 3 x 3 footprint). The art puts the door on the +y face, or
 // on the +x face for DOOR_X; drawn mirrored (b.flip) the door moves to the other face, so a shop can front any street.
-const DOOR_X = new Set(['alchemist', 'gems', 'socket', 'gamble', 'bakery']);
+export const DOOR_X = new Set(['alchemist', 'gems', 'socket', 'gamble', 'bakery']);
 // what lies around each shop's door: [blocking props, small props]
 const SHOP_DRESS = {
   weapons: [['tool_rack', 'crate_stack'], ['water_bucket']], armor: [['closed_barrel', 'cloth_crate'], []],

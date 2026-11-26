@@ -13,6 +13,16 @@ The third act's own content. The design comes from the Bellmourn 3D game's repo 
 - `src/data/phobos.js` turns the roster into bestiary entries (`phx_<id>`, `phobos: true`, so they stay out of the
   random pools). It also holds the 11 DISTRICTS, the 3 HUBS, the 10 WINGS (`wingOf(floor)`), `castleDepth`
   (floor 1 is depth 239, floor 100 is depth 500), the GUARDIANS and FINALE.
+- **The Dungeon Horrors** (`VELSCOUR_Dungeon_Horrors_130_Sprites.zip`: 100 humanoid horrors in ten dungeon themes and 30
+  bosses, native Grim Nocturne pixel art, already cut): `python tools/horrorspack.py <zip>` unpacks them into
+  `assets/source/enemies/dungeon_horrors/<sheet>/` (13 folders) and writes `src/data/horrorsroster.js`; then
+  `python tools/process_assets.py enemies dungeon_horrors` packs 13 atlases stored 1:1 (`NATIVE_SETS`: no resampling).
+  `src/data/phobos.js` catalogues them as `phx_dh_*` (`horror: true`, cat `horror` / `horror_boss`): the arch and element
+  come from the name (`HORROR_RULES`, `HORROR_ELS`) or the theme (`HORROR_THEME`), and the height from the art's own
+  pixel height, so they keep one pixel density: horrors 54-63 world px, bosses 82-92. They hold the districts and wings
+  their themes suit (`HX`/`HN` in DISTRICTS and WINGS). Eleven bosses are ward lords (one more per district), and the
+  other nineteen are the wings' `lords`: `wingLordFor(floor)` puts them on a wing's 3rd, 8th, 6th and 1st floors in
+  place of a captain drawn from the wing's foes.
 - Textures: `tools/phobostex.py` puts the bm repo's textures on the dungeon wall rigs as ten biome packs
   (`assets/tiles/ph_*`, `src/data/phobosbiomes.js`). These biomes are never in a bag.
 

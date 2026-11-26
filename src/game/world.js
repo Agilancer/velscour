@@ -47,7 +47,7 @@ export class World {
     const W = this.map.w, H = this.map.h;
     if (!this.map.clutter) this.map.clutter = new Uint8Array(W * H);
     for (const pr of this.props) {
-      if ((pr.kind === 'scatter' || pr.kind === 'decor') && !pr.throne) {
+      if ((pr.kind === 'scatter' || pr.kind === 'decor') && !pr.throne && !pr.fixed) {   // (fixed: set dressing that stays, Phobos's bookcases)
         if (isTreeProp(pr)) {
           pr.destructible = false;
           pr.tree = true;

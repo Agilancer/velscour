@@ -384,6 +384,8 @@ SINGLE_MAX_H = 220  # a folder of single sprites (set2): stored at most this tal
 SINGLE_SCALE = 0.85
 # folders stored taller than SINGLE_MAX_H: the Act III finale forms of Lord Velscour (tools/phobospack.py) tower over the arena
 SINGLE_MAX_H_BY = {"phobos/finale_crimson": 520, "phobos/finale_obsidian": 520, "phobos/finale_cathedral": 520, "phobos/cboss_1": 260, "phobos/cboss_2": 260}
+# sets of native pixel art (one art pixel per image pixel): stored 1:1, never resampled (tools/horrorspack.py)
+NATIVE_SETS = {"dungeon_horrors"}
 # Pet sheets (familiars/<kind>[_n].jpg) are painted on a flat dark or white background: stored scale per kind.
 SHEET_SCALE = {"blue": 0.28, "elemental": 0.24, "critters": 0.6, "dragons": 0.3, "wolves": 0.36}
 SHEET_TOL = {"blue": 26}  # keying tolerance; dark-furred wolves and black dragons need a tight one
@@ -509,7 +511,7 @@ def blob_objects(rgba, join=8):
 def enemy_piece(img, kind, scale):
     """Downscale one cut-out monster and find its feet's centre column (fx)."""
     w, h = max(1, round(img.width * scale)), max(1, round(img.height * scale))
-    small = img.convert("RGBa").resize((w, h), Image.LANCZOS).convert("RGBA")
+    small = img.convert("RGBA") if (w, h) == img.size else img.convert("RGBa").resize((w, h), Image.LANCZOS).convert("RGBA")
     al = np.asarray(small)[..., 3] > 100
     ys = np.nonzero(al.any(axis=1))[0]
     foot = al[max(0, ys.max() - max(2, h // 7)):ys.max() + 1] if len(ys) else al
@@ -544,7 +546,7 @@ def process_enemies(only=()):
                     a = np.asarray(img).copy()
                     a[..., 3] = np.where(a[..., 3] < 16, 0, a[..., 3])
                     img = trim(Image.fromarray(a))
-                    pieces.append(enemy_piece(img, k, min(SINGLE_SCALE if key not in SINGLE_MAX_H_BY else 1, SINGLE_MAX_H_BY.get(key, SINGLE_MAX_H) / img.height)))
+                    pieces.append(enemy_piece(img, k, 1 if set_id in NATIVE_SETS else min(SINGLE_SCALE if key not in SINGLE_MAX_H_BY else 1, SINGLE_MAX_H_BY.get(key, SINGLE_MAX_H) / img.height)))
                 rows, cols = 1, len(files)
             elif fn.lower().endswith((".png", ".jpg")):
                 key = set_id + "/" + fn[:-4]

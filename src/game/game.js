@@ -68,7 +68,8 @@ const TOWNSFOLK_KNIGHTS = TOWNSFOLK.filter((q) => q.knight).map((q) => q.spriteI
 import { Cine, CINE_FAST } from './cinema.js';
 import { lights, updateVfx } from '../gfx/vfx.js';
 import { World } from './world.js';
-import { setupBellmourn, enterPhobos as phEnterPhobos, enterCastleFloor as phEnterCastle, questTick as phQuestTick, phobosState } from './phobos.js';
+import { climbDied } from './climb.js';
+import { act3Destinations, setupBellmourn, enterPhobos as phEnterPhobos, enterCastleFloor as phEnterCastle, questTick as phQuestTick, phobosState, clearFlight } from './phobos.js';
 import { Player } from './player.js';
 import { makeMonster, makeElite, Monster } from './monster.js';
 import { clearRims } from './creature.js';
@@ -270,7 +271,7 @@ export const game = {
     if (G.touch) TouchUI.show(true);
     UI.refresh();
     Vendor.restock();
-    this.enterTown();
+    if (c?.lastTown === 'act3' && c.phobos?.bell) this.enterBellmourn(); else this.enterTown();
     if (fresh) {
       setTimeout(() => {
         if (G.world && G.world.kind !== 'town') return;   // (a test or the skull has already taken the hero elsewhere)
@@ -630,11 +631,12 @@ export const game = {
     this.autosave();
     UI.log('The bells of <b style="color:#c0d0ff">Bellmourn</b> toll for the dead of Phobos.', '#d0dcff');
   },
-  async enterPhobos() { if (Auto.on) Auto.toggle(false); await phEnterPhobos(this); HUD.setArea('City State Phobos', 'Act III — the city under the castle'); playMusic('dungeon'); this.autosave(); },
-  async enterCastleFloor(f) { const on = Auto.on; await phEnterCastle(this, f); HUD.setArea('Castle Velscour', `Floor ${G.phobosFloor} · ${G.world?.biome?.name || ''}`); playMusic('boss'); if (on && !Auto.on) Auto.toggle(true); this.autosave(); },
+  async enterPhobos() { const on = Auto.on; await phEnterPhobos(this); if (on && !Auto.on) Auto.toggle(true); HUD.setArea('City State Phobos', 'Act III — the city under the castle'); playMusic('dungeon'); this.autosave(); },
+  async enterCastleFloor(f) { const on = Auto.on; await phEnterCastle(this, f); HUD.setArea('Castle Velscour', `Floor ${G.phobosFloor} · ${G.world?.overworldScenario?.description || G.world?.biome?.name || ''}`); playMusic('boss'); if (on && !Auto.on) Auto.toggle(true); this.autosave(); },
   /** A death in Act III: no Defiance, no depth lost; the hero wakes in Bellmourn and the floor is re-forged. */
   phobosDeath(src) {
-    const c = G.char; c.deaths = (c.deaths || 0) + 1;
+    const c = G.char; c.deaths = (c.deaths || 0) + 1; clearFlight();
+    climbDied();
     const killer = src ? (src.owner ? src.owner.name : src.name) : null;
     stopMusic(); this.autosave();
     setTimeout(() => deathScreen(G.world?.depth || 0, killer, () => {
@@ -1056,11 +1058,13 @@ export const game = {
   },
 
   openVelscourTeleport() {
-    const options = `<option value="act2_town">Sunscorch Oasis (Act II Town)</option>`
-      + [...BETA_BIOMES, ...BIOMES].map((biome) => { const need = regionNeeds(biome, G.char?.level); return `<option value="${escapeHtml(biome.id)}"${need ? ' disabled' : ''}>${escapeHtml(biome.name)}${biome.overworld ? ' · Overworld' : ''}${biome.beta ? ' (Beta)' : ''}${need ? ` · Reach level ${need}` : ''}</option>`; }).join('')
+    const act3 = act3Destinations(), hidden = (id) => id.startsWith('cv_') || id === 'phobos_city';   // Act III's places go in their own group, by name
+    const options = `<optgroup label="Act III: Bellmourn, City State Phobos, Castle Velscour">${act3.map(([v, l]) => `<option value="${v}">${escapeHtml(l)}</option>`).join('')}</optgroup><optgroup label="Everywhere else">`
+      + `<option value="act2_town">Sunscorch Oasis (Act II Town)</option>`
+      + [...BETA_BIOMES, ...BIOMES].filter((b) => !hidden(b.id)).map((biome) => { const need = regionNeeds(biome, G.char?.level); return `<option value="${escapeHtml(biome.id)}"${need ? ' disabled' : ''}>${escapeHtml(biome.name)}${biome.overworld ? ' · Overworld' : ''}${biome.beta ? ' (Beta)' : ''}${need ? ` · Reach level ${need}` : ''}</option>`; }).join('')
       + Object.values(REGIONS).flatMap((r) => { const b = BIOME_BY_ID[r.id], need = regionNeeds(b, G.char?.level); return (r.variants || []).map((v) => `<option value="${escapeHtml(r.id)}:${escapeHtml(v.id)}"${need ? ' disabled' : ''}>${escapeHtml(b.name)}: ${escapeHtml(v.name)}${need ? ` · Reach level ${need}` : ''}</option>`); }).join('')
       + SKY_ALL.map((v) => `<option value="skyship:${v.id}">${escapeHtml(BIOME_BY_ID.skyship.name)}: ${escapeHtml(v.name)} (${escapeHtml(v.weather)})</option>`).join('')
-      + SEA_VARIANTS.map((v) => `<option value="pirate_seas:${v.id}">${escapeHtml(BIOME_BY_ID.pirate_seas.name)}: ${escapeHtml(v.name)} (${escapeHtml(v.weatherName)})</option>`).join('');
+      + SEA_VARIANTS.map((v) => `<option value="pirate_seas:${v.id}">${escapeHtml(BIOME_BY_ID.pirate_seas.name)}: ${escapeHtml(v.name)} (${escapeHtml(v.weatherName)})</option>`).join('') + '</optgroup>';
     const dialog = UI.dialog({
       title: 'CHOOSE YOUR DOOM',
       cls: 'velscour-teleport-dialog',
@@ -1070,6 +1074,7 @@ export const game = {
         { label: 'Teleport', cls: 'red', fn: () => {
           let id = dialog.box.querySelector('#velscour-biome').value;
           if (id === 'act2_town') { this.enterAct2Town(true); return; }
+          const a3 = act3.find(([v]) => v === id); if (a3) { a3[2](this); return; }
           if (id.startsWith('skyship:')) { G.char.skyVariant = id.slice(8); id = 'skyship'; }
           if (id.startsWith('pirate_seas:')) { G.char.seaVariant = id.slice(12); id = 'pirate_seas'; }
           if (REGIONS[id.split(':')[0]] && id.includes(':')) { (G.regionWant ||= {})[id.split(':')[0]] = id.split(':')[1]; id = id.split(':')[0]; } // a region's variant
