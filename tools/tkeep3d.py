@@ -4,6 +4,7 @@ Tessariel's Keep art (docs/TESSARIELS_KEEP.md).
 
     python tools/tkeep3d.py textures <vesperwrithe>          # stone, limestone, flagstones -> assets/source/tkeep/tex/
     python tools/tkeep3d.py decor <bellmourn> <vesperwrithe> # banners, stained glass, rugs -> assets/tiles/tkeep/decor/
+    python tools/tkeep3d.py banners <bellmourn>              # only the banners' sheet (after tools/tkeep_sword.py banners)
     node tools/tkeep3d_bake.js                                # three.js bake -> assets/source/tkeep/out/ (PNG pages + index)
     python tools/tkeep3d.py pack                              # out/ -> assets/tiles/tkeep/ (lossless WebP + index.json)
     node tools/tkeep3d_bake.js elders                         # only the Elders' sprites -> out/elders.png + elders.json
@@ -24,6 +25,7 @@ TEX = os.path.join(ROOT, "assets", "source", "tkeep", "tex")
 OUTSRC = os.path.join(ROOT, "assets", "source", "tkeep", "out")
 OUT = os.path.join(ROOT, "assets", "tiles", "tkeep")
 DECOR = os.path.join(OUT, "decor")
+SWORD = os.path.join(ROOT, "assets", "source", "tkeep", "sword")
 
 PV = "assets/citystatephobos"
 TEXTURES = {   # name: (file under vesperwrithe, size)
@@ -37,19 +39,20 @@ TEXTURES = {   # name: (file under vesperwrithe, size)
     "ashlar": (PV + "/Bellmourn_Phobos_Interior_Batch_02/textures/BM_PV_049_chalk_ashlar_Color.png", 512),
 }
 
-# Banners: Tessariel's own (his T on blue and gold), the holy orders' and the free towns'. Bellmourn's eight velscour_*
-# banners and vesperwrithe's V banners stay out.
+# Banners: Tessariel's own (the Sword of Light on blue and on ivory), the holy orders' and the free towns'. Bellmourn's
+# eight velscour_* banners and vesperwrithe's V banners stay out. "sw": the user's banner with its T turned into the
+# Sword of Light by tools/tkeep_sword.py (assets/source/tkeep/sword/<id>.png), Tessariel's four and the six holy orders'.
 BANNERS = [
-    ("tess_a", "vw", "assets/game/glass/tess_a_0.webp", "Tessariel's Azure"),
-    ("tess_a1", "vw", "assets/game/glass/tess_a_1.webp", "Tessariel's Ivory"),
-    ("tess_b", "vw", "assets/game/glass/tess_b_0.webp", "The Ember's Blue"),
-    ("tess_b1", "vw", "assets/game/glass/tess_b_1.webp", "The Ember's White"),
-    ("holy_azure_sunburst", "bm", "assets/textures/banners/holy_azure_sunburst.png", "Azure Sunburst"),
-    ("holy_winged_star", "bm", "assets/textures/banners/holy_winged_star.png", "Winged Star"),
-    ("holy_harvest", "bm", "assets/textures/banners/holy_harvest.png", "Harvest of the Flame"),
-    ("holy_lilies", "bm", "assets/textures/banners/holy_lilies.png", "Lilies of the Ninth Bell"),
-    ("holy_open_hands", "bm", "assets/textures/banners/holy_open_hands.png", "The Open Hands"),
-    ("holy_verdant_cross", "bm", "assets/textures/banners/holy_verdant_cross.png", "Verdant Cross"),
+    ("tess_a", "sw", "tess_a.png", "Tessariel's Azure"),
+    ("tess_a1", "sw", "tess_a1.png", "Tessariel's Ivory"),
+    ("tess_b", "sw", "tess_b.png", "The Ember's Blue"),
+    ("tess_b1", "sw", "tess_b1.png", "The Ember's White"),
+    ("holy_azure_sunburst", "sw", "holy_azure_sunburst.png", "Azure Sunburst"),
+    ("holy_winged_star", "sw", "holy_winged_star.png", "Winged Star"),
+    ("holy_harvest", "sw", "holy_harvest.png", "Harvest of the Flame"),
+    ("holy_lilies", "sw", "holy_lilies.png", "Lilies of the Ninth Bell"),
+    ("holy_open_hands", "sw", "holy_open_hands.png", "The Open Hands"),
+    ("holy_verdant_cross", "sw", "holy_verdant_cross.png", "Verdant Cross"),
     ("town_eagle", "bm", "assets/textures/banners/town_eagle.png", "The White Eagle"),
     ("town_stag", "bm", "assets/textures/banners/town_stag.png", "The Green Stag"),
     ("town_ram", "bm", "assets/textures/banners/town_ram.png", "The Mountain Ram"),
@@ -113,19 +116,31 @@ def trim(im):
     return im.crop(bb) if bb else im
 
 
-def decor(bm, vw):
-    os.makedirs(DECOR, exist_ok=True)
-    meta = {"banners": [], "glass": [], "rugs": []}
-    # banners: 128 x 256 cells (their own aspect kept), trimmed to the cloth
+def banner_sheet(bm, meta):
+    """banners.webp: 128 x 256 cells (their own aspect kept), trimmed to the cloth."""
     items = []
+    meta["banners"] = []
     for bid, src, rel, name in BANNERS:
-        im = Image.open(os.path.join(bm if src == "bm" else vw, rel)).convert("RGBA")
+        im = Image.open(os.path.join(SWORD if src == "sw" else bm, rel)).convert("RGBA")
         items.append((bid, trim(im)))
         meta["banners"].append({"id": bid, "name": name})
     sheet, rects = atlas(items, (128, 256))
     sheet.save(os.path.join(DECOR, "banners.webp"), quality=92, method=6)
     for b in meta["banners"]:
         b["r"] = rects[b["id"]]
+
+
+def banners(bm):
+    meta = json.load(open(os.path.join(DECOR, "decor.json")))
+    banner_sheet(bm, meta)
+    json.dump(meta, open(os.path.join(DECOR, "decor.json"), "w"), separators=(",", ":"))
+    print("banners: %d" % len(meta["banners"]))
+
+
+def decor(bm, vw):
+    os.makedirs(DECOR, exist_ok=True)
+    meta = {"banners": [], "glass": [], "rugs": []}
+    banner_sheet(bm, meta)
     # stained glass: 112 x 232 cells
     items = []
     for gid, rel, name in GLASS:
@@ -152,7 +167,10 @@ def decor(bm, vw):
 
 def pack():
     os.makedirs(OUT, exist_ok=True)
+    import tkeep_sword
+    tkeep_sword.shields(OUTSRC)   # the four T shields' sprites carry the Sword of Light (once per bake)
     idx = json.load(open(os.path.join(OUTSRC, "index.json")))
+    idx.pop("sword", None)
     if os.path.exists(os.path.join(OUT, "elders.webp")):   # a whole bake has the Elders on its own pages
         os.remove(os.path.join(OUT, "elders.webp"))
     for p in idx["pages"]:
@@ -187,6 +205,8 @@ if __name__ == "__main__":
         textures(a[1])
     elif cmd == "decor" and len(a) > 2:
         decor(a[1], a[2])
+    elif cmd == "banners" and len(a) > 1:
+        banners(a[1])
     elif cmd == "pack":
         pack()
     elif cmd == "elders":

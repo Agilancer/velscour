@@ -58,6 +58,10 @@ async function materials() {
   M.coal = new THREE.MeshStandardMaterial({ color: 0x0a140a, roughness: 0.9, emissive: 0x1fa838, emissiveIntensity: 0.3 });
   M.gilt = await mk(T('lime'), { color: 0xe6bc58, bump: 3, rough: 0.42 }); M.gilt.metalness = 0.2; M.gilt.emissive = new THREE.Color(0x3a2806);
   M.rune = new THREE.MeshStandardMaterial({ color: 0x103018, roughness: 0.5, emissive: 0x7dff6a, emissiveIntensity: 1.6 });
+  M.light = new THREE.MeshStandardMaterial({ color: 0xfff0c4, roughness: 0.35, emissive: 0xffe6a8, emissiveIntensity: 0.62 });   // the Sword of Light's blade: its lit side,
+  M.light2 = new THREE.MeshStandardMaterial({ color: 0xd8ac58, roughness: 0.4, emissive: 0xc89438, emissiveIntensity: 0.5 });    // its shaded side,
+  M.ridge = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, emissive: 0xfffbe8, emissiveIntensity: 1.0 });     // its ridge
+  M.gem = new THREE.MeshStandardMaterial({ color: 0x3a8cf0, roughness: 0.2, emissive: 0x2a70e0, emissiveIntensity: 0.9 });       // and the gem at its cross
   M.glass = new THREE.MeshStandardMaterial({ color: 0x0a0d16, roughness: 0.3, metalness: 0.1 });
   M.blue = new THREE.MeshStandardMaterial({ color: 0x24305a, roughness: 0.85 });
   for (const k of Object.keys(M)) M[k].userData = { rep: REP[k] || 120 };
@@ -251,16 +255,30 @@ function build(M) {
         g.translate(0, 0, -0.1 * TU); g.rotateY((k + 0.5) / 6 * Math.PI * 2); g.translate(x * TU, 0, y * TU); add(g, 'gilt');
       }
     } else if (p.t === 'altar') {
-      // the altar at the back of the dais: a stone table on a stepped foot, a gilt T standing on it, two lit bowls
+      // the altar at the back of the dais: a stone table on a stepped foot, the Sword of Light standing on it point down
+      // (Tessariel's device; proportions as tools/tkeep_sword.py EMBLEM), two lit bowls
       const { x, y, z } = p;
       add(boxGeo(x - 1.05, y - 0.42, x + 1.05, y + 0.42, z, z + 0.8), 'plinth');
       add(boxGeo(x - 0.9, y - 0.34, x + 0.9, y + 0.34, z + 0.8, z + 4.6), 'lime');
       add(boxGeo(x - 1.0, y - 0.4, x + 1.0, y + 0.4, z + 4.6, z + 5.3), 'carved');
       add(boxGeo(x - 1.0, y + 0.36, x + 1.0, y + 0.41, z + 4.75, z + 5.15), 'gold');
-      add(boxGeo(x - 0.11, y - 0.18, x + 0.11, y - 0.02, z + 5.3, z + 15), 'gilt');     // the T: its stem
-      add(boxGeo(x - 0.72, y - 0.18, x + 0.72, y - 0.02, z + 15, z + 16.8), 'gilt');    // its bar
-      add(boxGeo(x - 0.72, y - 0.18, x - 0.56, y - 0.02, z + 13.9, z + 15), 'gilt'); add(boxGeo(x + 0.56, y - 0.18, x + 0.72, y - 0.02, z + 13.9, z + 15), 'gilt');   // its serifs
-      add(boxGeo(x - 0.22, y - 0.2, x + 0.22, y + 0.02, z + 5.3, z + 5.9), 'gilt');
+      // every piece is turned an eighth of a turn about the sword's own upright, so its flat faces the camera
+      const ay = y - 0.06, turn = (g) => { g.rotateY(Math.PI / 4); g.translate(x * TU, 0, ay * TU); add(g, turn.m); };
+      const slab = (pts, depth, m, bevel = 0.03) => {   // a flat piece: [across in tiles, level above the dais]
+        const g = new THREE.ExtrudeGeometry(toShape(pts.map(([s, l]) => [s, z + l])), { depth: depth * TU, bevelEnabled: bevel > 0, bevelThickness: bevel * TU, bevelSize: bevel * TU, bevelSegments: 1 });
+        g.translate(0, 0, -depth / 2 * TU); turn.m = m; turn(g);
+      };
+      const lathe = (pts, seg, m) => { turn.m = m; turn(latheGeo(0, 0, pts.map(([r, l]) => [r, z + l]), seg)); };
+      slab([[0, 5.75], [-0.064, 8.6], [-0.088, 14.7], [0, 14.7]], 0.05, 'light', 0);                    // the blade: light itself, its lit side
+      slab([[0, 5.75], [0.064, 8.6], [0.088, 14.7], [0, 14.7]], 0.05, 'light2', 0);                     // ... and its shaded side
+      slab([[0, 6.6], [0.012, 7.2], [0.012, 14.7], [-0.012, 14.7], [-0.012, 7.2]], 0.075, 'ridge', 0);  // the ridge between
+      slab([[-0.5, 13.75], [-0.47, 14.35], [-0.26, 14.75], [0, 14.9], [0.26, 14.75], [0.47, 14.35], [0.5, 13.75], [0.4, 14.75], [0.2, 15.3], [0, 15.45], [-0.2, 15.3], [-0.4, 14.75]], 0.1, 'gold');   // the guard: two wings swept down
+      slab([[0, 14.45], [0.12, 15.15], [0, 15.85], [-0.12, 15.15]], 0.17, 'gold', 0.02);              // the boss where they cross
+      slab([[0, 14.8], [0.05, 15.15], [0, 15.5], [-0.05, 15.15]], 0.2, 'gem', 0);                     // its blue gem
+      lathe([[0, 15.6], [0.052, 15.6], [0.047, 17.7], [0, 17.7]], 10, 'bronze');                       // the grip
+      for (const l of [15.8, 16.45, 17.1, 17.55]) lathe([[0.047, l], [0.066, l + 0.08], [0.047, l + 0.18]], 10, 'gold');
+      lathe([[0, 17.6], [0.07, 17.75], [0.14, 18.5], [0.07, 19.25], [0, 19.5]], 4, 'gold');           // the pommel: a diamond
+      lathe([[0, 5.3], [0.2, 5.3], [0.2, 5.55], [0.1, 5.95], [0, 5.95]], 8, 'gold');                   // the socket its point stands in
       for (const sx of [-0.7, 0.7]) { add(latheGeo(x + sx, y, [[0, z + 5.3], [0.1, z + 5.3], [0.05, z + 6.2], [0.16, z + 6.9], [0.18, z + 7.2], [0, z + 7.1]], 12), 'bronze'); add(latheGeo(x + sx, y, [[0, z + 7.05], [0.14, z + 7.15], [0, z + 7.3]], 10), 'coal'); }
     } else if (p.t === 'column') {
       const { x, y, r, z0, z1 } = p;
