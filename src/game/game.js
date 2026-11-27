@@ -82,7 +82,7 @@ import { renderWorld, renderFirstPerson, drawMinimap, preloadTownSheets, release
 import { controls } from './controls.js';
 import { Auto } from './autoplay.js';
 import { writeSave, newCharData, migrate } from './save.js';
-import { grantDeathGift, DEATH_PHRASE } from './deathgift.js';
+import { grantDeathGift, grantFearPhobos, DEATH_PHRASE, FEAR_PHRASE } from './deathgift.js';
 import { clearVfx, floatText, sparkle, addEffect, Ring } from '../gfx/vfx.js';
 import { Meter } from './dpsmeter.js';
 import { UI } from '../ui/ui.js';
@@ -1008,6 +1008,11 @@ export const game = {
             grantDeathGift();
             if (G.world?.kind !== 'town') this.enterTown(); // the town portal now opens on Depth 500
             else this.autosave();
+          } else if (message.trim().toLowerCase() === FEAR_PHRASE) { // a test cheat: straight to Castle Velscour, Floor 1
+            close();
+            if (Auto.on) Auto.toggle(false);
+            grantFearPhobos();
+            this.enterCastleFloor(1);
           } else if (parseRegionWord(message)) {
             const { region, want } = parseRegionWord(message);
             close();
