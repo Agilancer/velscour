@@ -9,15 +9,22 @@ const SPEED = 12, GAP = 3.4, RUSH = 2.6, MAX_WAIT = 8;
 const KINDS = {
   warn: { tag: 'Warning', bar: 'linear-gradient(#c0170f,#8a0a07 42%,#5c0505)', ink: '#ffd23a', em: '#ffdca0' },
   quest: { tag: 'Quest', bar: 'linear-gradient(#7a5410,#4e3306 50%,#2e1d02)', ink: '#ffe08a', em: '#fff0c0' },
+  loot: { tag: 'Loot', bar: 'linear-gradient(#2a3a1c,#1a2610 50%,#0e1508)', ink: '#c8f08a', em: '#e6ffc0' },
+  auto: { tag: 'Auto', bar: 'linear-gradient(#24303a,#161e26 50%,#0c1116)', ink: '#9fd8e8', em: '#d6f2fa' },
   info: { tag: 'Notice', bar: 'linear-gradient(#2c3346,#1b2030 50%,#0f121c)', ink: '#bcd0ff', em: '#dfe6ff' },
 };
-const RANK = { info: 0, quest: 1, warn: 2 };
-const WARN_RE = /!|\b(beware|warning|incoming|dodge|get (behind|out|away|clear)|stand (in|on|behind)|run\b|move\b|sealed|boss|guardian|ambush|charg|quake|enrag|frenzy|madness|breath|gaze|summon|nemesis|cursed|beam|nova|storm|slam|pull|danger|fire|flood|collapse)/i;
+const RANK = { auto: 0, info: 0, loot: 0, quest: 1, warn: 2 };
+// Settings > HUD: which kinds ride the bar (the rest show the old way, as centre messages and log lines).
+export const TICKER_KINDS = [['warn', 'tkWarn', 'warnings (enemy attack patterns, ambushes, enrages)'], ['quest', 'tkQuest', 'quest, bounty and scenario updates'],
+  ['loot', 'tkLoot', 'loot, gold and trading'], ['auto', 'tkAuto', 'auto-play messages'], ['info', 'tkInfo', 'general messages']];
+const WARN_RE = /\b(beware|incoming|dodge|get (behind|out|away|clear|close)|stand (in|on|behind|near|still)|move (out|away)|run from|spread out|interrupt|ambush|charg(es|ing)|quake|enrag|frenzy|breath|gaze|beam|nova|slam|sealed|nemesis|danger|collapse|break (its|the) shield|look away)/i;
+const LOOT_RE = /\b(\d+ gold|picked up|loot|sold|bought|stash|bag is full|socket|gem|enchant|upgrade)/i;
 const QUEST_RE = /\b(quest|bounty|bounties|scenario|trial|objective|complete|cleared|reward|shrine|depth \d|level up|unlocked|portal|heart|summit|treasure|challenge|paid|victory|defeated|slain)\b/i;
 
 export function tickerKind(text, color) {
-  if (/#ff[0-6][0-9a-f]{3}/i.test(color || '')) return 'warn';
-  return WARN_RE.test(text) ? 'warn' : QUEST_RE.test(text) ? 'quest' : 'info';
+  if (/^auto-play/i.test(text)) return 'auto';
+  if (WARN_RE.test(text) && !/madness/i.test(text)) return 'warn';
+  return QUEST_RE.test(text) ? 'quest' : LOOT_RE.test(text) ? 'loot' : 'info';
 }
 const plain = (html) => { const d = document.createElement('div'); d.innerHTML = String(html || ''); return d.textContent.replace(/\s+/g, ' ').trim(); };
 
@@ -27,14 +34,14 @@ const CSS = `
     box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 2px 0 rgba(0,0,0,.85), 0 0 18px var(--tk-glow, transparent);
     transform: translateY(-115%); transition: transform .22s cubic-bezier(.2,.9,.3,1.15), background .3s; }
   #ticker.on { transform: none; }
-  #ticker.warn { --tk-glow: rgba(255,36,14,.5); animation: tkThrob 1.8s ease-in-out infinite; }
+  #ticker.warn { --tk-glow: rgba(255,36,14,.4); } #ticker.alert { animation: tkThrob 1.8s ease-in-out 2; }
   #ticker::before { content: ''; position: absolute; inset: 0 -2.2em 0 0; opacity: .12; background: repeating-linear-gradient(-45deg,#000 0 .5em,transparent .5em 1em); animation: tkGrain 1.1s linear infinite; }
   #ticker::after { content: ''; position: absolute; inset: 0; opacity: 0; background: linear-gradient(#fff3d8,#ff5a2a 60%,#ff2a10); mix-blend-mode: screen; }
   #ticker.flash::after { animation: tkFlash .95s ease-out; }
   #ticker .tk-tag { position: relative; z-index: 1; flex: none; display: flex; align-items: center; gap: .45em; padding: 0 1.25em 0 .7em; min-width: 6.2em;
     background: linear-gradient(#1a0606,#060101); clip-path: polygon(0 0,calc(100% - .85em) 0,100% 50%,calc(100% - .85em) 100%,0 100%);
     font-size: .74em; letter-spacing: .22em; color: var(--tk-ink); text-transform: uppercase; }
-  #ticker.warn .tk-tag span { animation: tkBlink 1.1s steps(1,end) infinite; }
+  #ticker.alert .tk-tag span { animation: tkBlink 1.1s steps(1,end) 3; }
   #ticker .tk-tag svg { width: 1.5em; height: 1.4em; flex: none; }
   #ticker .tk-lane { position: relative; z-index: 1; flex: 1; min-width: 0; overflow: hidden;
     -webkit-mask-image: linear-gradient(90deg,transparent 0,#000 1.2em,#000 calc(100% - 1.6em),transparent 100%); mask-image: linear-gradient(90deg,transparent 0,#000 1.2em,#000 calc(100% - 1.6em),transparent 100%); }
@@ -58,7 +65,7 @@ class Ticker {
     this.el.innerHTML = `<div class="tk-tag">${SIGN}<span></span></div><div class="tk-lane"></div><div class="tk-said" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)"></div>`;
     this.lane = this.el.querySelector('.tk-lane'); this.tagText = this.el.querySelector('.tk-tag span'); this.said = this.el.querySelector('.tk-said');
     document.body.appendChild(this.el);
-    this.calls = []; this.raf = 0; this.last = 0; this.kind = null;
+    this.calls = []; this.seen = new Map(); this.flashAt = -1e9; this.raf = 0; this.last = 0; this.kind = null;
     this.tick = (now) => this.step(now);
   }
   setKind(k) {
@@ -73,7 +80,9 @@ class Ticker {
     if (!head) return;
     this.el.style.setProperty('--tk-s', G.settings.tickerSize || 1);
     const key = `${head}|${rest}`;
-    if (this.calls.some((c) => c.key === key && c.x > 0)) { if (kind === 'warn') this.flash(); return; }
+    // (The same line again within a few seconds is not run twice.)
+    const now = performance.now(); if ((this.seen.get(key) || -1e9) > now - 6000) return; this.seen.set(key, now);
+    if (this.seen.size > 80) for (const [k, t] of this.seen) if (t < now - 6000) this.seen.delete(k);
     // (A flood of notices never holds back a warning: the oldest waiting notices are dropped.)
     const waiting = this.calls.filter((c) => c.x > (this.lane.clientWidth || 0));
     if (waiting.length >= MAX_WAIT) { const drop = waiting.find((c) => c.kind === 'info'); if (!drop && kind === 'info') return; if (drop) this.drop(drop); }
@@ -115,9 +124,14 @@ class Ticker {
     while (this.calls.length && this.calls[0].x + this.calls[0].w < 0) this.calls.shift().el.remove();
     this.recolor();
     if (this.calls.length) this.raf = requestAnimationFrame(this.tick);
-    else { this.raf = 0; this.el.classList.remove('on', 'flash'); }
+    else { this.raf = 0; this.el.classList.remove('on', 'flash', 'alert'); }
   }
-  flash() { if (G.settings.reduceFlashing) return; this.el.classList.remove('flash'); void this.el.offsetWidth; this.el.classList.add('flash'); }
+  // (A new warning flashes the bar and blinks its tag a few times, at most once every 5 seconds; it never strobes.)
+  flash() {
+    const now = performance.now(); if (now - this.flashAt < 5000) return; this.flashAt = now;
+    this.el.classList.remove('alert', 'flash'); void this.el.offsetWidth; this.el.classList.add('alert');
+    if (!G.settings.reduceFlashing) this.el.classList.add('flash');
+  }
   clear() { for (const c of this.calls) c.el.remove(); this.calls = []; if (this.raf) cancelAnimationFrame(this.raf); this.raf = 0; this.el.classList.remove('on', 'flash'); }
 }
 
@@ -125,8 +139,11 @@ let T = null;
 export const tickerOn = () => G.settings.ticker !== false && typeof document !== 'undefined';
 export function ticker() { return (T ||= new Ticker()); }
 // UI.centerMsg(title, sub): a headline. UI.log(html, color): a line.
-export function tickHeadline(title, sub, kind) { ticker().push(title, sub, kind || tickerKind(`${title} ${sub}`)); }
+const shown = (k) => G.settings[(TICKER_KINDS.find((e) => e[0] === k) || [])[1]] !== false;
+// (false: this kind is switched off for the bar, so the caller shows it the old way)
+export function tickHeadline(title, sub, kind) { kind ||= tickerKind(`${title} ${sub}`); if (!shown(kind)) return false; ticker().push(title, sub, kind); }
 export function tickLine(html, color, kind) {
   const t = plain(html); if (!t) return;
-  ticker().push(t, '', kind || tickerKind(t, color));
+  kind ||= tickerKind(t, color); if (!shown(kind)) return false;
+  ticker().push(t, '', kind);
 }
