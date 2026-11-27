@@ -2,6 +2,9 @@
 // +10, perfect rolls and an extra enchanted line, Eternal gems, max-power ring augments), every skill and mastery
 // maxed, a full potion belt, a fortune in gold, and the way down opened to Depth 500. It is a cheat: the hero is marked
 // for good (c.cheated) and never listed on the Honour Board (game/leaderboard.js).
+// "fear phobos" (FEAR_PHRASE, a test cheat) gives the same arms but no Depth 500: ACT III is played up to the Castle Gate
+// (every quest before the castle done, the ward lords broken, the hidden houses found) and 1,000 Infernal Marks are
+// spent for it, then the hero walks onto Castle Velscour's Floor 1. Also marked as cheated.
 import { G } from '../state.js';
 import { sfx, levelUpFanfare } from '../core/audio.js';
 import { CLASSES } from '../data/classes.js';
@@ -12,8 +15,14 @@ import { FINAL_DEPTH, MAX_LEVEL } from '../data/depth.js';
 import { MAX_MASTERY } from './augments.js';
 import { addToBag } from './player.js';
 import { Board } from './leaderboard.js';
+import { phobosState, QUESTS, WARDS_TO_OPEN } from './phobos.js';
+import { DISTRICTS, HUBS } from '../data/phobos.js';
+import { PHOBOS_QUESTS } from '../data/phobosquests.js';
+import { grantMarks, spendMark, marksFree } from './marks.js';
 
 export const DEATH_PHRASE = 'DEATH IS THE ONLY WAY OUT, MY KIND SIR.';
+export const FEAR_PHRASE = 'fear phobos'; // any case
+const FEAR_MARKS = 1000, FEAR_SPEND = { life: 450, crit: 400, mf: 150 };
 const GIFT_LEVEL = MAX_LEVEL, MYTHIC = 5;
 const SLOT_LETTER = { weapon: 'W', offhand: 'O', head: 'H', body: 'B', hands: 'G', legs: 'L', feet: 'F', ring: 'R' };
 const LEGEND = { weapon: 'crit', offhand: 'echo', head: 'nova', body: 'phoenix', hands: 'vamp', legs: 'giant', feet: 'wraith' };
@@ -61,8 +70,8 @@ function bestRing(C, i, ilvl) {
   return it;
 }
 
-/** Grant the whole gift to the hero playing now. */
-export function grantDeathGift() {
+/** Grant the whole gift to the hero playing now (descent false: no Depth 500, for "fear phobos"). */
+export function grantDeathGift({ descent = true } = {}) {
   const c = G.char, p = G.player;
   if (!c || !p) return;
   const C = CLASSES[c.classId];
@@ -108,16 +117,41 @@ export function grantDeathGift() {
   // the rest of the best: a full belt, a fortune, and the way to Velscour
   c.potions = { ...c.potions, hp: 30, mp: 30, rejuv: 30, fury: 30 };
   c.gold = Math.max(c.gold, 999999999);
-  c.depth = FINAL_DEPTH;
-  c.deepest = Math.max(c.deepest || 0, FINAL_DEPTH - 1);
+  if (descent) { c.depth = FINAL_DEPTH; c.deepest = Math.max(c.deepest || 0, FINAL_DEPTH - 1); }
   p.recompute();
   p.hp = p.maxHp; p.mana = p.maxMana;
   p.levelUpFx();
   sfx('levelup', 1);
-  if (G.ui) {
+  if (G.ui && descent) {
     if (G.ui.hud) G.ui.hud.levelUp(c.level, levelUpFanfare());
     G.ui.log('<b style="color:#ff3020">Velscour answers.</b> Level 100, his finest arms, and the road to Depth 500. Come die properly.', '#ffd860');
     G.ui.log('This hero took Velscour\'s gift: it will never be listed on the Honour Board.', '#ff9070');
+    G.ui.refresh();
+  }
+}
+
+/** "fear phobos": the Death Gift's arms, ACT III done up to the Castle Gate, 1,000 Infernal Marks spent. The caller then
+ * sends the hero to Castle Velscour's Floor 1 (game.enterCastleFloor). */
+export function grantFearPhobos() {
+  const c = G.char; if (!c || !G.player) return;
+  grantDeathGift({ descent: false });
+  c.deepest = Math.max(c.deepest || 0, 230); // Acts I and II as far as the road to Phobos
+  const S = phobosState(c);
+  S.bell = S.city = S.gate = true;
+  for (const id of Object.keys(HUBS)) S.hubs[id] = true;
+  for (const d of DISTRICTS) for (const art of d.bosses.filter(Boolean)) { if (S.wards.length >= WARDS_TO_OPEN) break; const k = d.id + ':' + art.id; if (!S.wards.includes(k)) S.wards.push(k); }
+  S.q = Math.max(S.q || 0, QUESTS.findIndex((q) => q.id === 'wing0')); S.qAt = null;
+  S.floor = Math.max(S.floor || 0, 1);
+  const city = new Set([...DISTRICTS.map((d) => d.id), 'pennyless', 'quietwatch', 'ashwardens']);
+  S.quests ||= {};
+  for (const q of PHOBOS_QUESTS) if (city.has(q.at)) S.quests[q.id] = { ...(S.quests[q.id] || {}), s: 'done', i: 0, n: 0 };
+  grantMarks(FEAR_MARKS, 'from fear of Phobos');
+  for (const [k, n] of Object.entries(FEAR_SPEND)) spendMark(k, Math.min(n, marksFree()));
+  G.player.recompute(); G.player.hp = G.player.maxHp; G.player.mana = G.player.maxMana;
+  if (G.ui) {
+    if (G.ui.hud) G.ui.hud.levelUp(c.level, levelUpFanfare());
+    G.ui.log('<b style="color:#ff3020">Phobos is afraid of you.</b> Level 100, Mythic +10 arms, 1,000 Infernal Marks, and the Castle Gate open. Floor 1 awaits.', '#ffd860');
+    G.ui.log('This hero used a test password: it is marked a cheater and never listed on the Honour Board.', '#ff9070');
     G.ui.refresh();
   }
 }
