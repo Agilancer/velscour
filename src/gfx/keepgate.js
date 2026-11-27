@@ -1,6 +1,6 @@
 // The portal to TESSARIEL'S KEEP (docs/TESSARIELS_KEEP.md), in Herrington Hollow and the Act II town, and its twin in
-// the keep's hall: Tessariel's green-and-gold fire standing in a ring, two wings of light folded over it, a gilt T
-// burning at its heart, and seven ember-stones going round. The dungeon portal's size; no two portals look alike.
+// the keep's hall: Tessariel's green-and-gold fire standing in a ring, two wings of light folded over it, the Sword of
+// Light burning at its heart, and seven ember-stones going round. The dungeon portal's size; no two portals look alike.
 import { G } from '../state.js';
 import { isoX, isoY } from '../core/view.js';
 import { TAU } from '../core/util.js';
@@ -70,11 +70,34 @@ export function drawKeepGate(ctx, p) {
       ctx.fill();
     }
   }
-  // the gilt T at the heart, and sparks rising
-  ctx.globalAlpha = 0.9 + Math.sin(t * 3) * 0.08;
-  ctx.fillStyle = '#fff0b0';
-  ctx.fillRect(-13, -H * 0.2, 26, 5); ctx.fillRect(-2.5, -H * 0.2, 5, 34);
-  ctx.beginPath(); ctx.moveTo(-5, -H * 0.2 + 34); ctx.lineTo(0, -H * 0.2 + 42); ctx.lineTo(5, -H * 0.2 + 34); ctx.fill();
+  // the Sword of Light at the heart, point down (Tessariel's device; tools/tkeep_sword.py EMBLEM): drawn over the glow,
+  // not added to it (the white heart of the fire swallowed the old device), on whole pixels with a thin dark-gold edge,
+  // a gleam running down the blade, and the fire licking over it; then sparks rising
+  const sw = 0.94 + Math.sin(t * 3) * 0.06, bob = Math.round(Math.sin(t * 1.4) * 1.5);
+  const hilt = () => {
+    ctx.beginPath(); ctx.moveTo(0, -50); ctx.lineTo(5, -44); ctx.lineTo(0, -38); ctx.lineTo(-5, -44); ctx.closePath();   // pommel
+    ctx.rect(-2, -39, 4, 11);                                                                                            // grip
+    ctx.moveTo(0, -31); ctx.quadraticCurveTo(12, -30, 19, -20); ctx.quadraticCurveTo(10, -25, 0, -24.5);                 // guard: two wings swept down
+    ctx.quadraticCurveTo(-10, -25, -19, -20); ctx.quadraticCurveTo(-12, -30, 0, -31); ctx.closePath();
+  };
+  const half = (s) => { ctx.beginPath(); ctx.moveTo(0, -26); ctx.lineTo(s * 4.5, -26); ctx.lineTo(s * 3.5, 28); ctx.lineTo(0, 44); ctx.closePath(); };
+  ctx.globalCompositeOperation = 'source-over'; ctx.translate(0, bob); ctx.lineJoin = 'miter';
+  ctx.globalAlpha = sw; ctx.strokeStyle = '#6e4c10'; ctx.lineWidth = 1.5;
+  hilt(); ctx.stroke(); ctx.fillStyle = '#e8b848'; ctx.fill();
+  ctx.fillStyle = '#b8862a'; ctx.beginPath(); ctx.moveTo(0, -27.5); ctx.quadraticCurveTo(11, -27.5, 19, -20); ctx.quadraticCurveTo(10, -25, 0, -24.5); ctx.quadraticCurveTo(-10, -25, -19, -20); ctx.quadraticCurveTo(-11, -27.5, 0, -27.5); ctx.fill();   // the guard's underside, in shade
+  half(-1); ctx.stroke(); half(1); ctx.stroke();
+  half(-1); ctx.fillStyle = '#fff1b8'; ctx.fill();   // the lit side
+  half(1); ctx.fillStyle = '#f0cf78'; ctx.fill();    // the shaded side
+  ctx.fillStyle = '#fffdf0'; ctx.fillRect(-1, -25, 2, 62);   // the ridge: the brightest thing in the fire
+  ctx.fillStyle = '#7ec8ff'; ctx.beginPath(); ctx.moveTo(0, -31); ctx.lineTo(2.5, -27.5); ctx.lineTo(0, -24); ctx.lineTo(-2.5, -27.5); ctx.fill();   // the gem at the cross
+  const gl = (t * 0.55) % 1.6;   // the gleam
+  if (gl < 1) { ctx.globalAlpha = sw * Math.sin(gl * Math.PI) * 0.9; ctx.fillStyle = '#ffffff'; ctx.fillRect(-3, Math.round(-24 + gl * 58), 6, 3); }
+  ctx.translate(0, -bob); ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 3; i++) {   // the fire over the blade
+    const a = t * (1.3 + i * 0.4) + i * 2.1;
+    ctx.globalAlpha = 0.3; ctx.strokeStyle = i % 2 ? 'rgba(150,255,90,0.8)' : 'rgba(255,240,180,0.8)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(0, 4, 16 + i * 5, H * (0.3 + i * 0.05), 0, a, a + 1.1); ctx.stroke();
+  }
   for (let i = 0; i < 16; i++) {
     const f = (t * 0.4 + i / 16) % 1, a = i * 2.4;
     ctx.globalAlpha = 1 - f; ctx.fillStyle = i % 2 ? '#c8ff80' : '#fff4c0';

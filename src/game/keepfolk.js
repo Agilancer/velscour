@@ -79,7 +79,7 @@ function interestSpots(A) {
   for (const p of A.plinths) out.push({ x: p.x + 1.8, y: p.y + 1.8, about: 'dragon', look: [p.x, p.y], plinth: p });
   for (const w of A.windows) out.push({ x: w.axis === 'x' ? w.a : w.c + 1.4, y: w.axis === 'x' ? w.c + 1.4 : w.a, about: 'window', look: w.axis === 'x' ? [w.a, w.c] : [w.c, w.a] });
   out.push({ x: A.chronicle[0], y: A.chronicle[1] + 1.1, about: 'chronicle', look: A.chronicle });
-  for (let k = 0; k < 6; k++) out.push({ x: TK.FR + 1.5, y: TK.F0 + 3 + k * 4, about: 'balcony', look: [CX, TK.F0 + 3 + k * 4] });
+  for (let k = 0; k < 6; k++) out.push({ x: TK.FR + 1.5, y: TK.FSE + 1 + k * 3.6, about: 'balcony', look: [CX, TK.FSE + 1 + k * 3.6] });
   return out;
 }
 
