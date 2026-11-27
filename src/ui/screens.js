@@ -1,5 +1,6 @@
 // Full-screen menus: title, class select, hero save slots, death, victory, settings, help.
 import { G, saveSettings } from '../state.js';
+import { TICKER_KINDS } from './ticker.js';
 import { camera } from '../core/view.js';
 import { el, escapeHtml, fmtInt } from '../core/util.js';
 import { sfx, applyVolumes, initAudio } from '../core/audio.js';
@@ -467,6 +468,7 @@ export function settingsDialog() {
     <div class="settings-grid">
       <label title="Messages, quest updates and WARNINGs for enemy attacks crawl along a bar across the top of the screen. Off: the old centre messages and log lines">Top-of-screen ticker</label><input type="checkbox" data-k="ticker" ${st.ticker !== false ? 'checked' : ''}>
       <label>Ticker size</label><input type="range" min="0.6" max="1.8" step="0.05" value="${st.tickerSize ?? 1}" data-k="tickerSize">
+      ${TICKER_KINDS.map(([, k, n]) => `<label>&nbsp;&nbsp;Ticker shows ${n}</label><input type="checkbox" data-k="${k}" ${st[k] !== false ? 'checked' : ''}>`).join('')}
       <label>Damage numbers</label><input type="checkbox" data-k="dmgNumbers" ${st.dmgNumbers ? 'checked' : ''}>
       <label title="Off: a bar shows only for a moment over a monster you hit, and never over bosses">Life bars over every enemy (bosses too)</label><input type="checkbox" data-k="lifeBars" ${st.lifeBars !== false ? 'checked' : ''}>
       <label>Hero stats plaque (Battle Ledger)</label><input type="checkbox" data-k="showHeroStats" ${st.showHeroStats !== false ? 'checked' : ''}>
