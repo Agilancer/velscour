@@ -32,6 +32,7 @@ export function phobosTalk(world, { placeOf, folk = [], homes = () => null, ques
       const e = n.errand, c = ctxAt(n.x, n.y);
       if (!e || e.state === 'paid') { if (!busy(n)) say(n, talkLine(n.folk?.cat === 'gray' ? 'gray' : 'good', c)); else if (base) base(); return; }
       if (e.state === 'offer') {
+        if (G.autoplayOn) { e.state = 'active'; say(n, 'Bless you. Go!', 2.4); return; }
         UI.dialog({ title: n.name, html: `<p>${talkLine('questOffer', c)}</p><p class="dim">Slay ${e.need} foes in ${c.place || 'this district'}.</p>`,
           buttons: [{ label: 'I\'ll do it', fn: () => { e.state = 'active'; say(n, 'Bless you. Go!', 2.4); sfx('click'); } }, { label: 'Not now' }] });
       } else if (e.got >= e.need) {

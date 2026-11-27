@@ -173,6 +173,8 @@ function textureFloor(g, w) {
 }
 
 // ------------------------------------------------------------------------------------------- shared run bits
+// auto-play doesn't stop for a word: info-only dialogs go to the log instead
+const note = (o) => { if (!G.autoplayOn) return UI.dialog(o); UI.log(`<b>${o.title}</b>`, '#c8b890'); return null; };
 function townPortalTo(world, game) {
   for (const p of world.portals) if (p.type === 'town') { p.label = 'Town Portal — Bellmourn'; p.use = () => UI.dialog({ title: 'Return to Bellmourn?', html: '<p>The portal opens on Bellmourn, the town under the bells.</p>', buttons: [{ label: 'Stay' }, { label: 'Return', fn: () => { sfx('portal'); game.enterBellmourn(); } }] }); }
 }
@@ -235,7 +237,7 @@ function createCityRun(world, gen, biome, depth) {
     const [x, y] = (by.length ? by : sp)[Math.floor(Math.random() * (by.length || sp.length))];
     const n = { name: art.name, title: art.title, enemyArt: art.id, x, y, reach: 1.8, flip: chance(0.5), folk: art, district: d,
       turns: art.cat === 'gray' && chance(0.2),
-      use: () => UI.dialog({ title: `${escapeHtml(art.name)}${art.title ? ' — ' + escapeHtml(art.title) : ''}`, html: `<p>${escapeHtml(art.does || art.title || '')}.</p>${art.cat === 'gray' ? `<p class="dim">Word is you'd lose this one's goodwill if you were to: ${escapeHtml(art.trigger)}</p>` : '<p class="dim">One of the city\'s good folk: they help, even under the occupation.</p>'}`, buttons: [{ label: 'Leave' }] }) };
+      use: () => note({ title: `${escapeHtml(art.name)}${art.title ? ' — ' + escapeHtml(art.title) : ''}`, html: `<p>${escapeHtml(art.does || art.title || '')}.</p>${art.cat === 'gray' ? `<p class="dim">Word is you'd lose this one's goodwill if you were to: ${escapeHtml(art.trigger)}</p>` : '<p class="dim">One of the city\'s good folk: they help, even under the occupation.</p>'}`, buttons: [{ label: 'Leave' }] }) };
     world.npcs.push(n); folk.push(n);
   }));
   // the hubs' givers, in their safe houses
@@ -243,7 +245,7 @@ function createCityRun(world, gen, biome, depth) {
   for (const d of DISTRICTS) if (d.hub) {
     const H = HUBS[d.hub], h = gen.hubHouse(d.id), at = h ? [h.mx, h.my] : [gen.squares[d.id].x + 3, gen.squares[d.id].y];
     const n = { name: `${H.giver.name} (${H.name})`, enemyArt: H.giver.id, x: at[0], y: at[1], reach: 2, flip: false, hub: d.hub, aura: 1, auraCol: '#ffd060',
-      use: () => { S.hubs[d.hub] = true; sfx('gold'); UI.dialog({ title: H.name, html: `<p><b>${escapeHtml(H.giver.name)}</b>, ${escapeHtml(H.where)}.</p><p>${escapeHtml(HUB_LINES[d.hub])}</p><p class="dim">${Object.keys(S.hubs).length}/3 of the city's hidden houses know you now.</p>`, buttons: [{ label: 'Farewell' }] }); questTick(); } };
+      use: () => { S.hubs[d.hub] = true; sfx('gold'); note({ title: H.name, html: `<p><b>${escapeHtml(H.giver.name)}</b>, ${escapeHtml(H.where)}.</p><p>${escapeHtml(HUB_LINES[d.hub])}</p><p class="dim">${Object.keys(S.hubs).length}/3 of the city's hidden houses know you now.</p>`, buttons: [{ label: 'Farewell' }] }); questTick(); } };
     world.npcs.push(n); hubs.push(n);
   }
   // the streets talk (game/phobostalk.js): folk walk their own lanes, chat and set errands; the occupiers grumble and taunt
@@ -461,6 +463,7 @@ function velscourFalls(v) {
 }
 function endingCinematic(game) {
   const S = phobosState();
+  if (G.autoplayOn) { UI.log('<b>The Throne Above</b>: you wake in Bellmourn, under the bells.', '#ffb0a0'); sfx('portal'); G.flash = 1; game.enterBellmourn(); return; }
   UI.dialog({
     title: 'The Throne Above',
     html: `<p>You step out onto the balcony at the top of his tower and look out over the world. A terrible feeling comes over you: that the world has just changed for the worse.</p>
@@ -517,12 +520,12 @@ export function setupBellmourn(world, t, game) {
   world.npcs.push({ stash: true, reliquary: true, name: 'The Reliquary', x: rx, y: ry, reach: 1.6, flip: false, use: () => G.ui.reliquary.open() });
   if (!S.greeted) {
     S.greeted = true;
-    setTimeout(() => UI.dialog({ title: 'The Bell-Warden of Bellmourn', html: `<p>The bells ring for Phobos, stranger. A city of tight streets under <b>Castle Velscour</b>, eleven wards, each held by its own horrors. The few who got out are here.</p><p>The road to the Sill opens when you've proven yourself. Talk to me when you're ready; my quests are in your Quest Log (Q).</p>`, buttons: [{ label: 'I will go', cls: 'red' }] }), 900);
+    setTimeout(() => note({ title: 'The Bell-Warden of Bellmourn', html: `<p>The bells ring for Phobos, stranger. A city of tight streets under <b>Castle Velscour</b>, eleven wards, each held by its own horrors. The few who got out are here.</p><p>The road to the Sill opens when you've proven yourself. Talk to me when you're ready; my quests are in your Quest Log (Q).</p>`, buttons: [{ label: 'I will go', cls: 'red' }] }), 900);
   }
   // a few of Phobos' good folk who fled here
   PHOBOS_FOLK.filter((a) => a.cat === 'good').slice(0, 6).forEach((a, i) => {
     const [x, y] = at(Math.cos(i * 1.05) * 7, Math.sin(i * 1.05) * 6);
-    world.npcs.push({ name: a.name, enemyArt: a.id, x, y, reach: 1.8, flip: chance(0.5), use: () => UI.dialog({ title: escapeHtml(a.name), html: `<p>${escapeHtml(a.does || a.title)}. I came out of Phobos with the last cart before the drawbridge went up.</p>`, buttons: [{ label: 'Farewell' }] }) });
+    world.npcs.push({ name: a.name, enemyArt: a.id, x, y, reach: 1.8, flip: chance(0.5), use: () => note({ title: escapeHtml(a.name), html: `<p>${escapeHtml(a.does || a.title)}. I came out of Phobos with the last cart before the drawbridge went up.</p>`, buttons: [{ label: 'Farewell' }] }) });
   });
   // the waypoints: Phobos, and every wing of Castle Velscour reached
   const add = (dx, dy, o) => { const [x, y] = at(dx, dy); world.portals.push({ x, y, active: true, reach: 2, ...o }); };
@@ -605,7 +608,7 @@ export function questLogHtml(step) {
 }
 function questDialog() {
   const c = G.char, S = phobosState(c), Q = QUESTS[S.q];
-  UI.dialog({ title: 'The Bell-Warden', html: Q ? `<p><b>${escapeHtml(Q.name)}</b></p><p>${escapeHtml(Q.text)}</p>${S.qAt ? `<p class="dim">${Q.prog(c, S.qAt)}</p>` : ''}` : '<p>The bells are quiet. Velscour has fallen — for now.</p>', buttons: [{ label: 'Farewell' }] });
+  note({ title: 'The Bell-Warden', html: Q ? `<p><b>${escapeHtml(Q.name)}</b></p><p>${escapeHtml(Q.text)}</p>${S.qAt ? `<p class="dim">${Q.prog(c, S.qAt)}</p>` : ''}` : '<p>The bells are quiet. Velscour has fallen — for now.</p>', buttons: [{ label: 'Farewell' }] });
   questTick();
 }
 void Column; void glowSprite; void burst; void angleTo; void rand; void FINAL_DEPTH; void LAYOUTS; void PHOBOS_BY_ID; void cityRegion;
