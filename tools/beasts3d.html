@@ -1,0 +1,44 @@
+<!doctype html><meta charset="utf-8"><title>Beasts 3D viewer</title>
+<style>body{margin:0;background:#15131a;color:#ccc;font:12px monospace}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"../vendor/three/three.module.min.js","three/addons/":"../vendor/three/addons/"}}</script>
+<canvas id="c"></canvas>
+<script type="module">
+// Contact sheets and a live turntable of the Blender-built beasts (src/gfx/beasts3d.js).
+//   ?m=<id>&clips=a,b,c&cols=8&k=120&skin=name&yaws=0.4,2.2&cell=220&bg=1&tint=r,g,b&live=1
+import { beast, drawBeast, flushBeasts } from '../src/gfx/beasts3d.js';
+const q = new URLSearchParams(location.search), id = q.get('m'), cols = +(q.get('cols') || 8), cell = +(q.get('cell') || 220);
+const k = +(q.get('k') || 100), skin = q.get('skin') || undefined, live = q.get('live');
+const tint = q.get('tint') ? q.get('tint').split(',').map(Number) : undefined;
+const m = beast(id), cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const wait = () => new Promise((r) => { const f = () => (m.ready || m.failed ? r() : setTimeout(f, 50)); f(); });
+const floor = (x, y, r) => { ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(x, y, r, r / 2, 0, 0, 7); ctx.fill(); };
+await wait();
+const clips = (q.get('clips') || Object.keys(m.clips).join(',')).split(',').filter(Boolean);
+const yaws = (q.get('yaws') || '0.5').split(',').map(Number);
+window.INFO = { clips: m.clips, rad: m.rad, nodes: Object.keys(m.nodes || {}), failed: m.failed };
+if (live) {
+  cv.width = 900; cv.height = 700; let t0 = performance.now(), ci = 0;
+  addEventListener('keydown', () => { ci = (ci + 1) % clips.length; t0 = performance.now(); });
+  const loop = () => { const t = (performance.now() - t0) / 1000; flushBeasts(); ctx.fillStyle = '#2a2630'; ctx.fillRect(0, 0, 900, 700); floor(450, 450, 80);
+    drawBeast(ctx, id, 450, 450, { k: k * 2, clip: clips[ci], t, yaw: t * 0.5, skin, tint }); ctx.fillStyle = '#fff'; ctx.fillText(clips[ci], 10, 20); requestAnimationFrame(loop); };
+  loop();
+} else {
+  const rows = Math.max(1, clips.length) * yaws.length;
+  cv.width = cols * cell + 90; cv.height = rows * cell;
+  const paint = () => {
+    ctx.fillStyle = q.get('bg') === '0' ? '#808080' : '#2a2630'; ctx.fillRect(0, 0, cv.width, cv.height);
+    let r = 0;
+    for (const c of clips.length ? clips : [undefined]) for (const yaw of yaws) {
+      ctx.fillStyle = '#e8d8a0'; ctx.fillText((c || 'rest') + ' ' + (m.clips[c] || 0).toFixed(2) + 's', 4, r * cell + 14); ctx.fillText('yaw ' + yaw, 4, r * cell + 28);
+      for (let i = 0; i < cols; i++) {
+        const x = 90 + i * cell + cell / 2, y = r * cell + cell * (+(q.get('ay') || 0.62));
+        floor(x, y, cell * 0.2);
+        drawBeast(ctx, id, x, y, { key: r + '_' + i, k, clip: c, t: (m.clips[c] || 1) * i / cols, yaw: q.get('spin') ? yaw + i * Math.PI * 2 / cols : yaw, skin, tint, loop: false });
+      }
+      r++;
+    }
+  };
+  paint(); flushBeasts(); paint(); flushBeasts(); paint();
+}
+window.DONE = true;
+</script>

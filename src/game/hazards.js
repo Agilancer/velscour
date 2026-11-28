@@ -12,6 +12,7 @@ import { drawCosmicBeam } from '../gfx/cosmos.js';
 import { drawFlyingRang, drawRang3D, rangSkin, groundHeading } from '../gfx/boomerang3d.js';
 import { drawStarShadow } from '../gfx/blades3d.js';
 import { screenAngle } from '../gfx/vfx.js';
+import { drawCoilWyrms } from '../gfx/dragons3d.js';
 import { hit, aoe, chainHit, leechHeal } from './combat.js';
 
 const roll = (d) => rand(d[0], d[1]);
@@ -515,6 +516,7 @@ export class Orbit {
       for (const [x, y, a] of this.pos) drawRang3D(ctx, isoX(x, y), isoY(x, y) - 26, { skin: sk, size: this.size, spin: this.t * 15, head: groundHeading(-Math.sin(a), Math.cos(a)), bank: 0.3, lift: 26 });
       return;
     }
+    if (this.fx === 'dragon' && drawCoilWyrms(ctx, this)) return; // Wyrm Coil: small 3D wyrms wheel round her
     if (this.fx === 'shuriken') for (const [x, y] of this.pos) drawStarShadow(ctx, isoX(x, y), isoY(x, y), 24, this.size, this.t);
     const each = this.fx === 'planet' || this.fx === 'zodiac' || this.fx === 'accretion'; // the Astronomer's orbiters differ one by one
     this.pos.forEach(([x, y, a], i) => drawShape(ctx, this.fx, isoX(x, y), isoY(x, y) - 24, screenAngle(a + Math.PI / 2), this.size, this.E, this.t, each ? { i } : this.o));

@@ -1,12 +1,16 @@
-// The Ranger's golden phoenix (her class signature, src/game/sigs/ranger.js) as a real 3D model. It is built in code,
-// with no art file: a smooth body, neck and head with glowing eyes, an ivory beak, a three-plume crest, two jointed
-// wings (gold coverts, flame-tipped secondaries and a fan of seven primaries) and five long tail plumes that stream
-// behind and end in flame. Every frame it is posed (the wing beat with the hand lagging the arm, gliding, the wings
-// swept back for the stoop, crest and tail swaying) and drawn with WebGL on one small shared canvas (z-buffer, lit
-// from the top-left front, gold specular, a flame rim, glowing tips), then copied into the 2D frame.
-// phoenixPoints gives the wing and tail tips in the world, so the caller can trail embers from them. Without WebGL
-// drawPhoenix3D returns false and the caller draws the flat bird.
+// The Ranger's golden phoenix (her class signature, src/game/sigs/ranger.js), and the firebird the 'phoenix' summon
+// borrows (src/gfx/birds3d.js). The bird is a Blender-built model (tools/blender/phoenix.py ->
+// assets/models/beasts/phoenix.glb): a raptor's head under a crest of flame, wings of layered feathers, seven long
+// plumes with flame eyes, talons; rigged, with clips to fly, glide, hover, stoop, strike, screech and flare. It is drawn
+// live through gfx/beasts3d.js: drawPhoenix3D turns the caller's flight pose (heading, pitch, bank, wing-beat phase,
+// how hard it beats, how far it has folded for the stoop, its heat) into clips, blends and bone sway, then lays a
+// soft additive copy over it so it burns. phoenixPoints gives the wing tips, plume tips and crest in the world (from
+// the model's own bones), so the caller can trail embers from them.
+// Until the model has loaded the old code-built bird below is drawn in its place (a smooth body, jointed wings and
+// five plumes, posed per frame and drawn by a small WebGL shader of its own); without WebGL drawPhoenix3D returns
+// false and the caller draws the flat bird.
 import { HW } from '../core/view.js';
+import { beast, drawBeast, beastPoint3 } from './beasts3d.js';
 
 const TAU = Math.PI * 2;
 /** World px along a tile edge: the 2:1 iso camera's ground scale. */
@@ -226,7 +230,7 @@ const mul = (A, B) => A.map((r) => [0, 1, 2].map((j) => r[0] * B[0][j] + r[1] * 
 /** Where the wing tips, tail plume tips and crest are, as world offsets from the bird's centre:
  *  { wings: [[dx, dy, dz] x2], tail: [...x5], crest: [dx, dy, dz] }, dx/dy in tiles, dz in game height px.
  *  o: the pose drawPhoenix3D takes (k: px per model unit). */
-export function phoenixPoints(o) {
+function codePoints(o) {
   const B = bodyRot(o), k = o.k || 1, W = wingPose(o);
   const toW = (p) => {
     const x = k * (B[0][0] * p[0] + B[0][1] * p[1] + B[0][2] * p[2]), y = k * (B[1][0] * p[0] + B[1][1] * p[1] + B[1][2] * p[2]), z = k * (B[2][0] * p[0] + B[2][1] * p[1] + B[2][2] * p[2]);
@@ -275,14 +279,7 @@ function initGL() {
 /** True when WebGL works: drawPhoenix3D will draw. */
 export const phoenix3DReady = () => !!initGL();
 
-/**
- * Draw the phoenix with its body centre at (x, y) (current ctx units). o: { yaw (heading along the tiles, radians),
- * pitch (+: nose down), roll (+: the left wing up), flap (wing-beat phase), amp (beat strength 0..1, low = gliding),
- * fold (0 open .. 1 swept back for the stoop), t (seconds, sways the plumes), k (px per model unit; the wingspan is
- * about 55 units), heat (0..1, the plumes and rim burn brighter), lean (radians its back tips toward the camera,
- * default 0.35) }. Returns false when WebGL is missing.
- */
-export function drawPhoenix3D(ctx, x, y, o = {}) {
+function drawCodeBird(ctx, x, y, o = {}) {
   const g = initGL();
   if (!g) return false;
   const count = build(o), k = o.k || 1, R = mul(CAM, bodyRot(o));
@@ -321,4 +318,82 @@ export function drawPhoenix3D(ctx, x, y, o = {}) {
   g.drawArrays(g.TRIANGLES, 0, count);
   ctx.drawImage(glc, 0, 0, w, h, x + bx0, y + by0, bw, bh);
   return true;
+}
+
+// ------------------------------------------------------------------ the Blender-built phoenix
+const MODEL = 'phoenix', UNIT = 20.5;                    // px per model unit for each of the old bird's units: half again its wingspan
+const TIPS = ['tip_L', 'tip_R'], PLUMES = [0, 1, 2, 3, 4, 5, 6].map((i) => 'tailtip' + i), PTS = [...TIPS, ...PLUMES, 'crown'];
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+const qmul = (a, b) => [a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1], a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
+  a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3], a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]];
+/** The old bird's heading, dive (+: nose down), bank and lean toward the camera as drawBeast's yaw, pitch and roll. */
+function facing(o) {
+  const ln = (o.lean ?? LEAN) / 2, y = (Math.PI / 2 - (o.yaw || 0)) / 2, p = (o.pitch || 0) / 2, r = (o.roll || 0) / 2, sl = Math.sin(ln);
+  const q = qmul(qmul([sl * S2, 0, -sl * S2, Math.cos(ln)], [0, Math.sin(y), 0, Math.cos(y)]), qmul([Math.sin(p), 0, 0, Math.cos(p)], [0, 0, Math.sin(r), Math.cos(r)]));
+  const [qx, qy, qz, qw] = q, m23 = 2 * (qy * qz - qw * qx), ex = Math.asin(-Math.max(-1, Math.min(1, m23)));
+  let ey, ez = 0;
+  if (Math.abs(m23) < 0.9999999) { ey = Math.atan2(2 * (qx * qz + qw * qy), 1 - 2 * (qx * qx + qy * qy)); ez = Math.atan2(2 * (qx * qy + qw * qz), 1 - 2 * (qx * qx + qz * qz)); }
+  else ey = Math.atan2(-2 * (qx * qz - qw * qy), 1 - 2 * (qy * qy + qz * qz));
+  return { yaw: Math.PI / 2 - ey, pitch: -ex, roll: ez };
+}
+/** The plumes and the crest streaming on their own clock, over whatever clip plays: bone turns for drawBeast. */
+export function firebirdSway(t, still = 0, into = {}) {
+  const k = 1 - 0.7 * still;
+  for (let i = 0; i < 7; i++) for (let j = 1; j <= 4; j++) {
+    const b = (into['tail' + i + '_' + j] ||= {});
+    b.rx = 0.05 * j * k * Math.sin(t * 2.3 - j * 0.8 + i * 1.3); b.rz = 0.045 * j * k * Math.sin(t * 1.7 - j * 0.7 + i * 2.1);
+  }
+  (into.crest1 ||= {}).rx = 0.1 * k * Math.sin(t * 5.1); (into.crest2 ||= {}).rx = 0.16 * k * Math.sin(t * 6.3 - 1);
+  return into;
+}
+/**
+ * The firebird drawn through drawBeast with opts p (key, k, yaw, clip...), then twice more as light: itself, and a
+ * larger soft halo of itself, brighter with heat (0..1). Returns false until the model has loaded.
+ */
+export function drawFirebird(ctx, x, y, p, heat = 0) {
+  const m = beast(MODEL);
+  if (!m.ready) return false;
+  if (!m.soft) { m.soft = true; for (const mt of m.mats) mt.alphaToCoverage = true; }   // feather edges cut by alpha, softened by the renderer's multisampling
+  p.ember ??= 1 + 0.8 * heat; p.light ??= 0.9; p.rad ??= 3.05;
+  if (!drawBeast(ctx, MODEL, x, y, p)) return false;
+  const a = p.alpha ?? 1;
+  drawBeast(ctx, MODEL, x, y, { ...p, add: true, alpha: a * (0.05 + 0.25 * heat) });
+  ctx.save(); ctx.translate(x, y); ctx.scale(1.07, 1.07);
+  drawBeast(ctx, MODEL, 0, 0, { ...p, add: true, alpha: a * (0.07 + 0.13 * heat) });
+  ctx.restore();
+  return true;
+}
+const SWAY = new Map();
+function modelBird(ctx, x, y, o) {
+  const key = o.key || MODEL, f = facing(o), fold = clamp01(o.fold || 0), amp = clamp01(o.amp ?? 1), t = o.t || 0;
+  const ph = (((o.flap || 0) / TAU) % 1 + 1) % 1;
+  let sw = SWAY.get(key); if (!sw) SWAY.set(key, sw = {});
+  const p = { key, k: (o.k || 1) * UNIT, yaw: f.yaw, pitch: f.pitch, roll: f.roll, points: PTS, bones: firebirdSway(t, fold, sw), alpha: o.alpha };
+  if (o.clip) { p.clip = o.clip; p.t = o.ct || 0; p.loop = false; }
+  else if (fold > 0.01) { p.clip = amp > 0.5 ? 'fly' : 'glide'; p.t = amp > 0.5 ? ph : t; p.clip2 = 'stoop'; p.t2 = t; p.mix = fold; }
+  else { p.clip = 'fly'; p.t = ph; p.clip2 = 'glide'; p.t2 = t; p.mix = 1 - smooth(0.12, 0.9, amp); }
+  return drawFirebird(ctx, x, y, p, clamp01(o.heat || 0));
+}
+
+/**
+ * Draw the phoenix with its body centre at (x, y) (current ctx units). o: { yaw (heading along the tiles, radians),
+ * pitch (+: nose down), roll (+: the left wing up), flap (wing-beat phase: wings up at pi/2), amp (beat strength 0..1,
+ * low = gliding), fold (0 open .. 1 swept back for the stoop), t (seconds, sways the plumes), k (px per unit; the
+ * wingspan is about 90 units), heat (0..1, it burns brighter), lean (radians its back tips toward the camera,
+ * default 0.35), key (a name per bird when several fly), clip + ct (one of the model's own clips at ct seconds:
+ * hover, strike, screech, flare), code: true for the old code-built bird }. Returns false when WebGL is missing.
+ */
+export function drawPhoenix3D(ctx, x, y, o = {}) {
+  return (!o.code && modelBird(ctx, x, y, o)) || drawCodeBird(ctx, x, y, o);
+}
+/** True once the Blender model is what drawPhoenix3D draws (o.key as given to it). */
+export const phoenixModelReady = () => beast(MODEL).ready;
+/** Where the wing tips, tail plume tips and crest are, as world offsets from the bird's centre:
+ *  { wings: [[dx, dy, dz] x2], tail: [...], crest: [dx, dy, dz] }, dx/dy in tiles, dz in game height px. From the
+ *  model's bones as last drawn (o.key), or worked out from the pose o (what drawPhoenix3D takes) before it has been. */
+export function phoenixPoints(o) {
+  const key = o.key || MODEL;
+  if (!beastPoint3(key, 'tip_L')) return codePoints(o);
+  const w = (n) => { const p = beastPoint3(key, n); return [p[0] / PHOENIX_TILE, p[2] / PHOENIX_TILE, p[1] * C30]; };
+  return { wings: TIPS.map(w), tail: PLUMES.map(w), crest: w('crown') };
 }

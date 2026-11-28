@@ -27,6 +27,14 @@ const skillSheets = new Map(); // `${classId}_${kind}` -> { status: 'loading'|'r
 let sheetLoadFn = null, sheetLoadTimer = 0;
 
 /** Register a batched callback invoked whenever a skill or talent PNG sheet finishes loading. */
+const beastIcons = new Map();
+/** A 3D beast's portrait (assets/models/beasts/icons/<name>.webp), or null while it loads. */
+function beastIcon(name) {
+  let e = beastIcons.get(name);
+  if (!e) { e = { img: new Image(), ok: false }; e.img.onload = () => { e.ok = true; }; e.img.src = 'assets/models/beasts/icons/' + name + '.webp'; beastIcons.set(name, e); }
+  return e.ok ? e.img : null;
+}
+
 export function onSkillSheetLoad(fn) { sheetLoadFn = fn; }
 
 function notifySheetLoaded() {
@@ -259,6 +267,11 @@ export function skillIcon(sk, size = 64) {
         break;
       }
       const look = def && def.look;
+      if (look && look.icon3d) { // a portrait of its 3D model (tools/beasts3d_icons.js)
+        const im = beastIcon(look.icon3d);
+        if (im) { x.drawImage(im, -26, -26, 52, 52); break; }
+        keep = false;
+      }
       const art = look && (look.icon || (Array.isArray(look.art) ? look.art[0] : look.art));
       let img = art ? enemyImage(art) : null;
       if (art && !img) keep = false;
