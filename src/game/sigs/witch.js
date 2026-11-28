@@ -17,8 +17,8 @@ import { drawDoll, dollPin, JAB, JAB_HIT } from '../../gfx/voodoodoll3d.js';
 const PINS = 6, HEX = '#b070ff', ROT = '#9ac84a';
 const BEADS = ['#ff4040', '#ffd040', '#9ac84a', '#60c0ff', '#ff70d0', '#ffffff', '#ff9030'];
 
-const dollAt = (p, t) => { const px = isoX(p.x, p.y), py = isoY(p.x, p.y) - (p.z || 0); return [px + 26 * (G.touch ? 0.85 : 1), py - 58 * (p.scale || 1) + Math.sin(t * 2.4) * 2]; };
-const KEY = 'hexpoppet', dollK = (p) => (G.touch ? 38 : 44) * (p.scale || 1);
+const dollAt = (p, t) => { const px = isoX(p.x, p.y), py = isoY(p.x, p.y) - (p.z || 0); return [px + 19 * (G.touch ? 0.85 : 1), py - 50 * (p.scale || 1) + Math.sin(t * 2.4) * 1.5]; };
+const KEY = 'hexpoppet', dollK = (p) => (G.touch ? 21 : 24) * (p.scale || 1);
 /** Where pin i's thread leaves the doll: its wound on the 3D poppet, else the doll's middle. */
 function woundAt(p, i, t) {
   const [dx, dy] = dollAt(p, t), w = dollPin(KEY, i);
@@ -32,7 +32,7 @@ function star(ctx, x, y, r, a, color) { // the glint of a needle going in
 const headOf = (c) => [isoX(c.x, c.y), (c.screenTop ?? isoY(c.x, c.y) - 40) + 4];
 
 function doll(ctx, x, y, pins, rot, wob, squeeze, t) {
-  const sq = 1 - squeeze * 0.35, s = G.touch ? 1.1 : 1.35;
+  const sq = 1 - squeeze * 0.35, s = G.touch ? 0.62 : 0.75;
   ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(t * 1.7) * 0.12 + wob * Math.sin(t * 40) * 0.25); ctx.scale(s * (1 + squeeze * 0.15), s * sq);
   ctx.fillStyle = '#a08860'; ctx.strokeStyle = '#4a3820'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.arc(0, -8, 5, 0, TAU); ctx.fill(); ctx.stroke();           // head
@@ -90,14 +90,14 @@ class Effigy {
   constructor(x, y, n) { Object.assign(this, { x, y, t: 0, dur: 1.9, key: 'effigy' + (Effigy.n = (Effigy.n || 0) + 1) % 4, jabs: Math.min(3, Math.max(1, n)) }); }
   update(dt) { this.t += dt; return this.t < this.dur; }
   draw(ctx) {
-    const t = this.t, sx = isoX(this.x, this.y), sy = isoY(this.x, this.y), k = 104 * (G.touch ? 0.8 : 1), rise = Math.min(1, t / 0.25), fade = Math.min(1, (this.dur - t) / 0.45);
+    const t = this.t, sx = isoX(this.x, this.y), sy = isoY(this.x, this.y), k = 60 * (G.touch ? 0.8 : 1), rise = Math.min(1, t / 0.25), fade = Math.min(1, (this.dur - t) / 0.45);
     const n = Math.min(this.jabs, Math.floor((t - 0.3) / 0.38) + 1), jt = t - 0.3 - (n - 1) * 0.38, slot = Math.max(0, n - 1); // skull, heart, eye
-    const y0 = sy - 30 - 26 * rise + Math.sin(t * 5) * 2;
+    const y0 = sy - 24 - 18 * rise + Math.sin(t * 5) * 1.5;
     glow(ctx, HEX, sx, y0 - k * 0.5, k * 0.75, 0.3 * fade * rise);
     const o = { key: this.key, k, yaw: Math.PI / 4 + Math.sin(t * 3) * 0.35, clip: 'dance', t, pins: Math.max(0, n), add: true, alpha: 0.85 * fade * rise, tint: [0.75, 0.55, 1.15], ember: 3, light: 1.25 };
     if (n > 0 && jt < JAB) { o.clip = 'jab' + (slot + 1); o.t = jt; o.loop = false; o.clip2 = 'dance'; o.t2 = t; o.mix = Math.max(0, 1 - (JAB - jt) / 0.2); }
     if (!drawDoll(ctx, sx, y0, o)) { ctx.save(); ctx.globalAlpha = 0.7 * fade * rise; ctx.globalCompositeOperation = 'lighter'; doll(ctx, sx, y0 - k * 0.5, Math.max(0, n), 0, 1, 0, t); ctx.restore(); return; }
-    if (n > 0 && jt > JAB_HIT && jt < JAB_HIT + 0.2) { const w = dollPin(this.key, slot); if (w) star(ctx, sx + w[0], y0 + w[1], 16 * (1 - (jt - JAB_HIT) / 0.2) + 5, fade, '#ffffff'); }
+    if (n > 0 && jt > JAB_HIT && jt < JAB_HIT + 0.2) { const w = dollPin(this.key, slot); if (w) star(ctx, sx + w[0], y0 + w[1], 10 * (1 - (jt - JAB_HIT) / 0.2) + 4, fade, '#ffffff'); }
   }
 }
 
@@ -160,6 +160,6 @@ export default {
     }
     if (!d3) { doll(ctx, dx, dy, live, s.rot, s.wob, s.squeeze, t); return; }
     const j = s.jab;
-    if (j && j.t > JAB_HIT && j.t < JAB_HIT + 0.18) { const [wx, wy] = woundAt(p, j.slot, t), f = (j.t - JAB_HIT) / 0.18; star(ctx, wx, wy, 4 + 7 * (1 - f), 1 - f, BEADS[j.slot]); }
+    if (j && j.t > JAB_HIT && j.t < JAB_HIT + 0.18) { const [wx, wy] = woundAt(p, j.slot, t), f = (j.t - JAB_HIT) / 0.18; star(ctx, wx, wy, 3 + 5 * (1 - f), 1 - f, BEADS[j.slot]); }
   },
 };

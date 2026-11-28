@@ -10,7 +10,7 @@ import { GRUB_CLIPS, GRUBS } from '../game/carriongrubs.js'; // (a cycle: used o
 import { glowSprite } from './vfx.js';
 
 const LOOPS = new Set(['idle', 'slither', 'slither_fast']);
-export const grubK = () => (G.touch ? 43 : 52);       // px per model unit: a grub is ~2.4 units long, well past the Witch's height
+export const grubK = () => (G.touch ? 21.5 : 26);    // px per model unit: a grub is ~2.4 units long, about as long as the Witch is tall
 const ease = (u) => u * u * (3 - 2 * u), wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const hex = (h) => [parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255];
 
@@ -36,7 +36,7 @@ const SHAPE = (() => {
 })();
 function ring(ctx, px, py, k, col, a) {
   // a ring of its kind's colour on the floor: tells the six apart in a crowd
-  ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.shadowColor = col; ctx.shadowBlur = 6;
+  ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.shadowColor = col; ctx.shadowBlur = 4;
   ctx.beginPath(); ctx.ellipse(px, py, k * 0.62, k * 0.31, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
 }
 function skinOf(kind) { return kind === 'white' ? {} : { skin: kind, eskin: kind + '_glow' }; }
@@ -49,7 +49,7 @@ function drawGrub(ctx, m) {
   const born = Math.min(1, S.bornT / 0.55), px = isoX(m.x, m.y), py = isoY(m.x, m.y);
   const k = grubK() * (m.scale || 1) * (1 + 0.035 * S.fed) * (0.25 + 0.75 * ease(born));
   const clip = S.anim, dur = GRUB_CLIPS[clip] ? GRUB_CLIPS[clip][0] : 1, magic = S.act && ['pulse', 'heal', 'ward'].includes(clip) ? Math.sin(Math.PI * Math.min(1, S.act.t / S.act.dur)) : 0;
-  const lx = m.lunge > 0 ? (Math.cos(m.facing) - Math.sin(m.facing)) * m.lunge * 5 : 0, ly = m.lunge > 0 ? (Math.cos(m.facing) + Math.sin(m.facing)) * m.lunge * 2.5 : 0;
+  const lx = m.lunge > 0 ? (Math.cos(m.facing) - Math.sin(m.facing)) * m.lunge * 3 : 0, ly = m.lunge > 0 ? (Math.cos(m.facing) + Math.sin(m.facing)) * m.lunge * 1.5 : 0;
   shadow(ctx, px, py, k, S.yaw, 0.42 * born);
   if (S.kind !== 'white') ring(ctx, px, py, k, GRUBS[S.kind].glow, 0.55 * born);
   // in front of the Witch and over her on screen: see-through, so she is never lost under her brood

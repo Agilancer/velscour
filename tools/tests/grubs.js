@@ -1,6 +1,6 @@
 // The Carrion Witch's Carrion Grubs (src/game/carriongrubs.js, src/gfx/grubs3d.js, tools/blender/grub.py):
 //  1. the model: every clip of the white grub, and all six hides side by side (model sheets)
-//  2. the brood rule: ten casts bring one of each colour and four whites; an eleventh replaces a white, never a colour
+//  2. the brood rule: three casts bring one of each colour and one more white (seven); a fourth rouses them, none thrown away
 //  3. in play: the brood follows her, fights a pack with every move (each kind's moves counted), heals, eats corpses
 //  4. deaths leave a writhing husk; shots at game size and zoomed
 //   node tools/tests/grubs.js [mobile] [noshots]
@@ -75,11 +75,11 @@ const MOBILE = process.argv.includes('mobile'), SHOTS = !process.argv.includes('
     if (brood.err) throw new Error(brood.err);
     const count = (l, k) => l.filter((x) => x === k).length;
     console.log('  info brood after each cast:', brood.steps.join(' '), '|', brood.ten.join(','));
-    ok(brood.steps[0] === 3 && brood.ten.length === 10, `three hatch a cast, four casts fill the brood (${brood.steps.join(' ')})`);
+    ok(brood.steps[0] === 3 && brood.steps[2] === 7 && brood.ten.length === 7, `three hatch a cast, three casts fill the brood (${brood.steps.join(' ')})`);
     ok(['yellow', 'green', 'orange', 'brown', 'pink'].every((k) => count(brood.ten, k) === 1), 'exactly one of each coloured grub');
-    ok(count(brood.ten, 'white') === 5, `the rest are white (${count(brood.ten, 'white')})`);
+    ok(count(brood.ten, 'white') === 2, `the rest are white (${count(brood.ten, 'white')})`);
     ok(brood.same && brood.roused, 'a cast on a full brood rouses it and throws no grub away');
-    ok(brood.after.length === 10, 'more casts never pass ten');
+    ok(brood.after.length === 7, 'more casts never pass seven');
     await page.waitForTimeout(1500);
     const vp = page.viewportSize();
     if (SHOTS) await page.screenshot({ path: `${OUT_DIR}/grubs_brood.png` });

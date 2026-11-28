@@ -69,8 +69,8 @@ Review sheets: `tools/beasts3d.html` (contact sheets, or `live=1` for a turntabl
 ## The Carrion Grubs
 
 The Carrion Witch's skill **Carrion Grubs** (her fourth tree, `src/data/skilltrees4.js`; it replaced Gravecall) hatches
-huge corpse grubs, three a cast, up to ten: one of each coloured kind and whites for the rest, in the order white,
-orange, pink, yellow, green, brown (`HATCH` in `src/game/carriongrubs.js`). A cast on a full brood throws none away: it
+corpse grubs about as long as the Witch is tall, three a cast, up to seven: one of each coloured kind and a second white, in the order
+white, orange, pink, yellow, green, brown, white (`HATCH` in `src/game/carriongrubs.js`). A cast on a full brood throws none away: it
 rouses them (+20% life, signature magic ready). All six are the same model in another hide, with their own build
 (bone scales, `SHAPE` in `src/gfx/grubs3d.js`) and a ring of their colour on the floor.
 

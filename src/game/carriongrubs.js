@@ -1,5 +1,5 @@
-// The Carrion Witch's brood: huge corpse grubs (her skill Carrion Grubs, data/summons.js `grub`). Up to ten at once:
-// one of each coloured kind, the rest plain white Carrion Grubs. Every grub is the same 3D model in another hide
+// The Carrion Witch's brood: corpse grubs (her skill Carrion Grubs, data/summons.js `grub`). Up to seven at once:
+// one of each coloured kind and one more plain white Carrion Grub. Every grub is the same 3D model in another hide
 // (gfx/grubs3d.js, tools/blender/grub.py) and knows the same twelve moves; what a move does is its colour's:
 //   white   Carrion Grub   the bruiser: bites, slams, tail-whips; eats corpses to heal and swell
 //   yellow  Bile Grub      the spitter: acid bolts, three-shot barrages, lobbed pools that burn; Corrode strips defences
@@ -17,7 +17,7 @@ import { Projectile, Area } from './hazards.js';
 import { SUMMONS } from '../data/summons.js';
 import { drawGrubHusk } from '../gfx/grubs3d.js';
 
-export const GRUB_MAX = 10;
+export const GRUB_MAX = 7;
 export const GRUB_KINDS = ['white', 'yellow', 'green', 'orange', 'brown', 'pink'];
 /** clip seconds and when its blow(s) land, as tools/blender/grub.py animates them */
 export const GRUB_CLIPS = {
@@ -65,7 +65,7 @@ export function attachGrub(m, def) {
   const kind = def.grub;
   m.grub = { kind, K: GRUBS[kind], anim: 'idle', animT: rand(3), act: null, yaw: rand(TAU), glow: 0, grow: 0, bornT: 0, wardT: 0, fed: 0,
     cds: { slam: rand(2, 5), whip: rand(3, 6), spit: rand(0, 1.5), barrage: rand(3, 7), lob: rand(2, 6), pulse: rand(5, 9), heal: rand(3, 6), ward: rand(4, 8), feast: rand(2, 5) } };
-  m.r = 0.5; m.hop = false; m.grubBase = m.dmgReduce || 0;
+  m.r = 0.32; m.hop = false; m.grubBase = m.dmgReduce || 0;
   if (kind === 'orange') m.taunt = true;
   watch(m);
   sfx('gore', 0.45, kind === 'white' ? 0.8 : 1.1); voice(m, 0.5);
