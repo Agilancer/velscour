@@ -27,6 +27,7 @@ import { setupScenario, scenarioTick } from './scenarios.js';
 import { smiteKill } from './smite.js';
 import { greedTick } from './greed.js';
 import { worldHeresies } from './heresies.js';
+import { impDeathFx, impEscapeFx, preloadImp } from '../gfx/treasureimp3d.js';
 
 // ------------------------------------------------------------------------------------------------ omens
 // A level-wide twist, announced on arrival. mon: applied to every enemy as it appears (ambushes too).
@@ -132,7 +133,7 @@ export function setupHappenings(world, start, gen) {
   // people of the Hollow down here: captives, a knight's last stand, a merchant's camp, the wizard, the witch, a Greener
   addEncounters(world, roomSpots(world, start, 4));
   // a treasure imp shows up a while in; Velscour's challenge fires after the first kills
-  if (chance(0.3)) H.impT = rand(25, 70);
+  if (chance(0.3)) { H.impT = rand(25, 70); preloadImp(); }
   if (chance(0.3)) H.challengeAt = randi(12, 30);
   // the horde: extra packs round the level
   if (H.omen === 'horde') {
@@ -339,7 +340,7 @@ export function spawnImp(world) {
   if (!at) return;
   const lvl = depthLevel(world.depth);
   const m = makeMonster(world, 'imp', world.biome, lvl + 1, 'normal', at[0], at[1], 0, null);
-  Object.assign(m, { name: 'Treasure Imp', goblin: true, aura: '#ffd040', scale: 0.9, dmg: 0, xp: m.xp * 8, awake: true, rank: 'unique', affixes: [] });
+  Object.assign(m, { name: 'Treasure Imp', goblin: true, beastKey: 'treasure_imp', aura: '#ffd040', scale: 0.9, dmg: 0, xp: m.xp * 8, awake: true, rank: 'unique', affixes: [] });
   m.maxHp *= 9; m.hp = m.maxHp; m.speed = 3.5; // the hero runs 4.2: it can be caught m.res = { phys: 0.1 };
   m.moves = null; m.summoner = false; m.proj = null; m.aoeCaster = false;
   const base = m.onDamaged.bind(m);
@@ -347,8 +348,9 @@ export function spawnImp(world) {
     base(src, d);
     if (chance(0.45)) world.addLoot(new GroundItem(m.x, m.y, 'gold', { amount: impGold(world, lvl, 10 + lvl * 3) }));
   };
-  m.onDeath = () => {
+  m.onDeath = (src) => {
     sfx('gold'); sfx('chest'); camera.shake(5);
+    if (impDeathFx(m, src)) m.sprite = null; // its 3D tumble is the corpse (gfx/treasureimp3d.js)
     explosionFx(m.x, m.y, 1.6, 'holy', 'eruption');
     for (let i = 0; i < 24; i++) world.addLoot(new GroundItem(m.x + rand(-0.6, 0.6), m.y + rand(-0.6, 0.6), 'gold', { amount: impGold(world, lvl, 25 + lvl * 6) }));
     for (let i = 0; i < randi(3, 5); i++) world.addLoot(new GroundItem(m.x, m.y, 'item', { item: rollItem(lvl + 2, { mf: G.player.st.magicFind, bonus: 1.3 }) }));
@@ -375,6 +377,7 @@ function impTick(world, dt) {
     addEffect(new Ring(m.x, m.y, 2, 0.1, 0.5, '#ffd040', 4)); addEffect(new Column(m.x, m.y, '#ffd040', 0.5, 20, 240));
     floatText(m.x, m.y, 70, 'Escaped!', '#ffd040', 14, { life: 1.6 });
     UI.log('The Treasure Imp escaped through a rift, cackling.', '#c0a060');
+    impEscapeFx(m); // it leaps into the rift (gfx/treasureimp3d.js)
     m.dead = true; H.imp = null; sfx('portal', 0.5);
   }
 }

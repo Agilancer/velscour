@@ -1,4 +1,5 @@
 // Base class for every living thing: player, monsters, summons.
+import { drawBeastLook } from '../gfx/beastlooks.js';
 import { G } from '../state.js';
 import { isoX, isoY, screenDirToTile } from '../core/view.js';
 import { TAU, rand, chance, clamp, makeCanvas, drawFiltered, spriteCanvas, frozen } from '../core/util.js';
@@ -387,6 +388,7 @@ export class Creature {
     if (this.alpha === 0) return;
     if (this.summonKey === 'runeweapon' && drawRuneWeapon(ctx, this)) return; // the Death Knight's 3D Runeblade
     if (TURRET3D.has(this.summonKey) && drawTurret3D(ctx, this)) return; // the Gunner's 3D turrets
+    if ((this.summonKey || this.beastKey) && drawBeastLook(ctx, this)) return; // live 3D beasts (gfx/beastlooks.js)
     const art = this.artFrame && this.artFrame();
     if (art) return this.drawArt(ctx, art);
     if (this.slime && drawSlime(ctx, this)) return;

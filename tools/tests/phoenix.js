@@ -18,46 +18,82 @@ const MOBILE = process.argv.includes('mobile');
   try {
     // 1-2. the model on its own
     const m = await page.evaluate(async () => {
-      const P = await import('/src/gfx/phoenix3d.js');
+      const P = await import('/src/gfx/phoenix3d.js'), B = await import('/src/gfx/beasts3d.js');
       if (!P.phoenix3DReady()) return { gl: false };
+      const scratch = document.createElement('canvas').getContext('2d');
+      // the old code-built bird is what is drawn until the model has loaded, and without it
+      const fb = document.createElement('canvas'); fb.width = fb.height = 160; const fg = fb.getContext('2d'); fg.translate(80, 80); fg.scale(2, 2);
+      const fbDrawn = P.drawPhoenix3D(fg, 0, 0, { yaw: 0.6, flap: 1, k: 1, code: true });
+      const fd = fg.getImageData(0, 0, 160, 160).data; let fbPx = 0; for (let i = 3; i < fd.length; i += 4) if (fd[i] > 128) fbPx++;
+      P.drawPhoenix3D(scratch, 0, 0, { k: 1 });
+      for (let i = 0; i < 400 && !P.phoenixModelReady(); i++) await new Promise((r) => setTimeout(r, 50));
+      const model = P.phoenixModelReady(), info = B.beast('phoenix');
+      const tris = Object.values(info.meshes || {}).reduce((n, o) => n + (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3, 0);
+      let sheets = 0;
+      const sheet = (cols, rows, CW, CH, zoom, cell, bg = '#1c1a22') => {      // a row's cells are asked for, rendered, then drawn
+        const c = document.createElement('canvas'); c.width = 90 + CW * cols; c.height = CH * rows.length;
+        const g = c.getContext('2d'), id = 'sheet' + sheets++ + '_'; let drawn = 0;
+        rows.forEach((row, j) => {
+          for (let pass = 0; pass < 3; pass++) {
+            g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = bg; g.fillRect(0, j * CH, c.width, CH); g.font = '13px monospace'; g.fillStyle = '#e8e0c8';
+            g.fillText(row[0], 6, j * CH + 20);
+            for (let i = 0; i < cols; i++) {
+              g.save(); g.beginPath(); g.rect(90 + i * CW, j * CH, CW, CH); g.clip(); g.translate(90 + i * CW + CW / 2, j * CH + CH * (row[2] || 0.5)); g.scale(zoom, zoom);
+              if (P.drawPhoenix3D(g, 0, 0, { key: id + j + '_' + i, k: 1, ...cell(row, i, j) }) && pass === 2) drawn++;
+              g.restore();
+            }
+            if (pass < 2) B.flushBeasts();
+          }
+        });
+        return { c, g, drawn, id };
+      };
       const rows = [['wings up', { flap: Math.PI / 2 }], ['level', { flap: 0 }], ['wings down', { flap: -Math.PI / 2 }],
         ['gliding', { amp: 0.12, flap: 1 }], ['stoop', { fold: 1, pitch: 0.8 }], ['banked', { flap: 0.6, roll: -0.6 }]];
-      const CW = 170, CH = 150, c = document.createElement('canvas'); c.width = 90 + CW * 8; c.height = CH * rows.length;
-      const g = c.getContext('2d'); g.fillStyle = '#1c1a22'; g.fillRect(0, 0, c.width, c.height);
-      g.font = '13px monospace'; g.fillStyle = '#e8e0c8';
-      let drawn = 0, bad = 0;
-      rows.forEach(([label, o], j) => {
-        g.fillText(label, 6, j * CH + 20);
-        for (let i = 0; i < 8; i++) {
-          g.save(); g.translate(90 + i * CW + CW / 2, j * CH + CH / 2); g.scale(2.2, 2.2);
-          if (P.drawPhoenix3D(g, 0, 0, { yaw: i * Math.PI / 4, t: i * 0.3, k: 1, heat: j === 4 ? 1 : 0.3, ...o })) drawn++;
-          g.restore();
-          const pts = P.phoenixPoints({ yaw: i * Math.PI / 4, k: 1, ...o });
-          if (![...pts.wings, ...pts.tail, pts.crest].flat().every(Number.isFinite)) bad++;
-        }
-      });
-      // the wings mirror each other across the heading; the tail lies behind it
-      const q = P.phoenixPoints({ yaw: 0.7, k: 1, flap: 0.4, lean: 0 }), fx = Math.cos(0.7), fy = Math.sin(0.7);
+      const tt = sheet(8, rows, 190, 170, 1.7, (row, i, j) => ({ yaw: i * Math.PI / 4, t: i * 0.3, heat: j === 4 ? 1 : 0.3, ...row[1] }));
+      let bad = 0;
+      rows.forEach((row, j) => { for (let i = 0; i < 8; i++) { const pts = P.phoenixPoints({ key: tt.id + j + '_' + i }); if (![...pts.wings, ...pts.tail, pts.crest].flat().every(Number.isFinite)) bad++; } });
+      const d = tt.g.getImageData(0, 0, tt.c.width, tt.c.height).data; let gold = 0, fire = 0;
+      for (let i = 0; i < d.length; i += 4) { if (d[i] > 200 && d[i + 1] > 140 && d[i + 1] < 235 && d[i + 2] < 150) gold++; if (d[i] > 180 && d[i + 1] < 110 && d[i + 2] < 80) fire++; }
+      // the tips come from the model's bones: the wings mirror each other across the heading; the plumes lie behind it
+      const tips = (o) => { for (let k = 0; k < 3; k++) { P.drawPhoenix3D(scratch, 0, 0, o); B.flushBeasts(); } return P.phoenixPoints(o); };
+      const q = tips({ key: 'mirror', yaw: 0.7, k: 1, flap: 0.4, lean: 0 }), fx = Math.cos(0.7), fy = Math.sin(0.7);
       const along = (v) => v[0] * fx + v[1] * fy, across = (v) => -v[0] * fy + v[1] * fx;
-      const mirror = Math.abs(along(q.wings[0]) - along(q.wings[1])) < 1e-6 && Math.abs(across(q.wings[0]) + across(q.wings[1])) < 1e-6 && Math.abs(q.wings[0][2] - q.wings[1][2]) < 1e-6;
-      const behind = q.tail.every((v) => along(v) < -0.4);
-      // the pixels: something gold drawn
-      const d = g.getImageData(0, 0, c.width, c.height).data; let gold = 0;
-      for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 1] > 140 && d[i + 1] < 235 && d[i + 2] < 120) gold++;
-      // cost of one draw at game size
-      const s = document.createElement('canvas'); s.width = s.height = 200; const sg = s.getContext('2d'); sg.scale(1.6, 1.6);
-      const t0 = performance.now(); for (let i = 0; i < 60; i++) P.drawPhoenix3D(sg, 60, 60, { yaw: i * 0.1, flap: i * 0.4, k: 1.15, t: i / 60 }); const ms = (performance.now() - t0) / 60;
-      return { gl: true, drawn, bad, mirror, behind, gold, ms, url: c.toDataURL() };
+      const mirror = Math.abs(along(q.wings[0]) - along(q.wings[1])) < 1e-3 && Math.abs(across(q.wings[0]) + across(q.wings[1])) < 1e-3 && Math.abs(q.wings[0][2] - q.wings[1][2]) < 0.05;
+      const span = Math.abs(across(q.wings[0]) - across(q.wings[1])), left = across(q.wings[0]) < 0 ? 'right of' : 'left of';
+      const behind = q.tail.every((v) => along(v) < -0.4), plumes = q.tail.length;
+      const up = tips({ key: 'beat', yaw: 0.7, k: 1, flap: Math.PI / 2, lean: 0 }).wings[0][2], down = tips({ key: 'beat', yaw: 0.7, k: 1, flap: -Math.PI / 2, lean: 0 }).wings[0][2];
+      const open = tips({ key: 'fold', yaw: 0.7, k: 1, flap: 0, lean: 0 }), shut = tips({ key: 'fold', yaw: 0.7, k: 1, flap: 0, fold: 1, lean: 0 });
+      const spanOf = (r) => Math.abs(across(r.wings[0]) - across(r.wings[1]));
+      // every clip the model carries, eight moments of each from two sides, and close up
+      const clips = Object.keys(info.clips || {}).sort();
+      const cs = sheet(8, clips.flatMap((c) => [[c + ' ' + info.clips[c].toFixed(2) + 's', c, 0.5, 2.3], ['', c, 0.5, 0.5]]), 200, 180, 1.5,
+        (row, i) => (row[1] === 'fly' ? { flap: i / 8 * Math.PI * 2, yaw: row[3] } : row[1] === 'glide' ? { amp: 0, t: i / 4, yaw: row[3] } : row[1] === 'stoop' ? { fold: 1, t: i / 12, yaw: row[3], pitch: 0.5 }
+          : { clip: row[1], ct: info.clips[row[1]] * i / 8, yaw: row[3], lean: 0.15 }));
+      const cu = sheet(3, [['glide', { amp: 0, t: 0.4 }, 0.42], ['beat', { flap: 0.9 }, 0.5], ['stoop', { fold: 1, pitch: 0.7, heat: 1 }, 0.5], ['screech', { clip: 'screech', ct: 0.6, lean: 0.1 }, 0.5], ['strike', { clip: 'strike', ct: 0.3, lean: 0.1 }, 0.5]],
+        600, 560, 5, (row, i) => ({ yaw: [0.7, 2.3, 3.9][i], t: 1 + i, heat: 0.4, ...row[1] }), '#24202a');
+      // cost of one bird at game size: its cell rendered and three copies laid into the frame
+      const s = document.createElement('canvas'); s.width = s.height = 260; const sg = s.getContext('2d'); sg.scale(1.6, 1.6);
+      const t0 = performance.now(); for (let i = 0; i < 60; i++) { P.drawPhoenix3D(sg, 80, 80, { key: 'cost', yaw: i * 0.1, flap: i * 0.4, k: 1.3, t: i / 60 }); B.flushBeasts(); } const ms = (performance.now() - t0) / 60;
+      return { gl: true, model, tris, clips, fbDrawn, fbPx, drawn: tt.drawn, bad, mirror, span, left, behind, plumes, up, down, fold: [spanOf(open), spanOf(shut)], gold, fire, ms, clipCells: cs.drawn,
+        url: tt.c.toDataURL(), clipUrl: cs.c.toDataURL(), closeUrl: cu.c.toDataURL() };
     });
     ok(m.gl, 'WebGL available for the 3D phoenix');
     if (m.gl) {
-      save('phoenix_turntable', m.url);
+      save('phoenix_turntable', m.url); save('phoenix_clips', m.clipUrl); save('phoenix_closeup', m.closeUrl);
+      ok(m.fbDrawn && m.fbPx > 300, `the code-built bird still draws while the model loads (${m.fbPx} px)`);
+      ok(m.model, 'the Blender phoenix model loads');
+      ok(m.tris > 3000 && m.tris <= 12000, `model within budget (${m.tris} triangles)`);
+      ok(['fly', 'glide', 'hover', 'stoop', 'strike', 'screech', 'flare'].every((c) => m.clips.includes(c)), `clips: ${m.clips.join(', ')}`);
       ok(m.drawn === 48, `turntable: ${m.drawn}/48 poses drawn`);
+      ok(m.clipCells === m.clips.length * 16, `clip sheet: ${m.clipCells} cells drawn`);
       ok(m.bad === 0, 'phoenixPoints finite in every pose');
-      ok(m.mirror, 'the wing tips mirror each other across the heading');
-      ok(m.behind, 'the tail plume tips trail behind the heading');
-      ok(m.gold > 20000, `gold pixels in the turntable (${m.gold})`);
-      console.log(`  info drawPhoenix3D: ${m.ms.toFixed(2)} ms per call (software GL)`);
+      ok(m.mirror, 'the wing tips (from the bones) mirror each other across the heading');
+      ok(m.span > 1.2, `wingspan ${m.span.toFixed(2)} tiles at k 1`);
+      ok(m.behind && m.plumes === 7, `the ${m.plumes} tail plume tips trail behind the heading`);
+      ok(m.up > m.down + 8, `the wing tips beat: ${m.up.toFixed(1)} px up, ${m.down.toFixed(1)} px down`);
+      ok(m.fold[1] < m.fold[0] * 0.6, `the stoop sweeps the wings back: span ${m.fold[0].toFixed(2)} -> ${m.fold[1].toFixed(2)} tiles`);
+      ok(m.gold > 12000 && m.fire > 6000, `gold and flame pixels in the turntable (${m.gold} gold, ${m.fire} crimson)`);
+      console.log(`  info one phoenix: ${m.ms.toFixed(2)} ms per frame, render + draw (software GL)`);
     }
 
     // 3-4. in play
@@ -131,6 +167,23 @@ const MOBILE = process.argv.includes('mobile');
       for (let i = 0; i < shots.length; i++) { const x = (i % cols) * w, y = Math.floor(i / cols) * h; g.drawImage(await load(shots[i]), x, y); g.fillStyle = '#000a'; g.fillRect(x, y, 120, 20); g.fillStyle = '#ffe8a0'; g.fillText(labels[i], x + 5, y + 15); }
       return c.toDataURL();
     }, { shots: shots.map((b) => b.toString('base64')), w: CW * (MOBILE ? 2 : 1), h: CH * (MOBILE ? 2 : 1), labels });
+    // 5. the same model as the 'phoenix' summon, and the Carrion Witch's ravens (src/gfx/birds3d.js)
+    const birds = async () => page.evaluate(() => { const { G } = window.VELSCOUR; return G.world.creatures.filter((c) => c.b3 && !c.dead).map((c) => ({ key: c.summonKey, ok: !!c.b3.ok, atk: (c.b3.strikes || 0) > 0, mv: c.b3.mv })); });
+    await page.evaluate(async () => {
+      const { G } = window.VELSCOUR, p = G.player, w = G.world, { buildSummon } = await import('/src/game/monster.js'), { SUMMONS } = await import('/src/data/summons.js');
+      p.sig.s.feathers = 0;
+      const add = (key, dx, dy) => { const m = buildSummon(p, SUMMONS[key], key, p.x + dx, p.y + dy, 5, 1e6, 0); w.add(m); return m; };
+      add('phoenix', -1.2, 0.6);
+      for (let i = 0; i < 8; i++) add('raven', Math.cos(i * 0.8) * 1.6, Math.sin(i * 0.8) * 1.6);
+      w.rebuildGrid();
+    });
+    const clip2 = { ...clip, x: Math.min(vp.width - CW, clip.x + CW * 0.35) };   // the foe stands to the right
+    const summons = []; let seen = [], struck = false;
+    for (const n of [4, 14, 16, 30, 40, 40, 40, 40]) { await step(n); summons.push(await page.screenshot({ clip: clip2 })); const b = await birds(); if (b.length) seen = b; struck = struck || b.some((x) => x.atk); }
+    ok(seen.filter((b) => b.key === 'phoenix').length === 1 && seen.filter((b) => b.key === 'raven').length === 8, `the phoenix summon and 8 ravens are out (${seen.length} birds)`);
+    ok(seen.length && seen.every((b) => b.ok), 'every one is drawn as its 3D model');
+    ok(struck, 'they strike at the foe (the strike clip plays)');
+    save('phoenix_summons' + (MOBILE ? '_mobile' : ''), await strip(summons, ['reborn', 'flare', 'wings wide', 'hunting', '', '', '', '']));
     save('phoenix_flight' + (MOBILE ? '_mobile' : ''), await strip(flight, flight.map((_, i) => 'circling ' + (i + 1))));
     save('phoenix_stoop' + (MOBILE ? '_mobile' : ''), await strip(stoop, ['stoop!', 'diving', 'diving', 'strike', 'pull up', 'wheeling']));
   } catch (e) { console.log('ERROR', e); process.exitCode = 1; }

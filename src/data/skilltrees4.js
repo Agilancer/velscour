@@ -91,7 +91,7 @@ export const TREE4 = {
     'Moon Moths|proj|poison|locust|n=4 spread=48 home poison',
     'Witchlight Zone|zone|poison|poison|r=1.3 dur=6 heal',
     'Blood Moon Hex|curse|blood|sigil|curse=amp,leech r=1.5',
-    'Gravecall|summon|shadow|ghoul|sum=ghoul n=2 dur=18 cd=16',
+    'Carrion Grubs|summon|poison|grub|sum=grub max=10 cd=1.2',
     'Lantern Procession|summon|fire|lantern|sum=lantern n=2 dur=16 cd=20',
     'Grave Moon Rising|aoe|shadow|eruption|r=1.9 dmg=2 cd=4',
     'Eclipse of Wings|nova|shadow|crow|n=3 r=2.1 cd=6',

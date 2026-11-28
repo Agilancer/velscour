@@ -192,11 +192,11 @@ export const TALENT_DATA_2 = {
           name: 'Haunted Effigies',
           stats: { summonPct: 8 },
           morph: {
-            skills: ['Effigy Totem', 'Lantern Procession', 'Gravecall'],
+            skills: ['Effigy Totem', 'Lantern Procession'],
             extraN: 1, extraMax: 1, summonHpPct: 30, fear: true,
             label: (r) => `+1 Effigy/Lantern (+${r * 30}% HP) & Terrifies`,
           },
-          desc: (r) => `<b>Morph — Effigy Totem, Lantern Procession & Gravecall:</b> Conjures <b>+1 additional totem/spirit</b> with +${r * 30}% Life.`,
+          desc: (r) => `<b>Morph — Effigy Totem & Lantern Procession:</b> Conjures <b>+1 additional totem/spirit</b> with +${r * 30}% Life.`,
         },
         {
           key: 'witching_echo', row: 2, maxRank: 5, el: 'arcane', fx: 'void',

@@ -1,4 +1,5 @@
 // Monsters and minions: one AI for both teams.
+import { grubUpdate, attachGrub, grubDef, grubToReplace } from './carriongrubs.js';
 import { G } from '../state.js';
 import { rand, chance, TAU, clamp, angleTo, angleDiff, dist, pick, randi, shuffle } from '../core/util.js';
 import { sfx } from '../core/audio.js';
@@ -10,6 +11,7 @@ import { Projectile, Delayed, NovaWave, Area, Fissure, explode, lineTargets, con
 import { ARCH, ARCH_MOVES, ELITE_AFFIXES, bossName, uniqueName } from '../data/enemies.js';
 import { SUMMONS } from '../data/summons.js';
 import { turretMuzzle } from '../gfx/gunner3d.js';
+import { dragonMuzzle } from '../gfx/dragons3d.js';
 import { bodyR, aloft } from '../world/map.js';
 import { toughness, danger, densityXp, riftHold, dmgScale } from '../data/depth.js';
 import { attachSlime, slimeUpdate, courtDef } from './slimecourt.js';
@@ -209,6 +211,7 @@ export class Monster extends Creature {
     }
     if (this.state === 'windup' || this.state === 'act') { this.runAction(dt); return; }
     if (this.slime) return slimeUpdate(this, dt); // the Slime Lord's court (game/slimecourt.js)
+    if (this.grub) return grubUpdate(this, dt); // the Carrion Witch's brood (game/carriongrubs.js)
 
     if (this.ai === 'boss') {
       // a castle boss standing guard plays one of the Castle Creatures' mechanics between its patterns
@@ -733,7 +736,7 @@ export class Monster extends Creature {
         if (!t) return;
         const n = A.n || 1;
         for (let i = 0; i < n; i++) {
-          const ang = angleTo(this.x, this.y, t.x, t.y) + (n > 1 ? (i - (n - 1) / 2) * 0.2 : 0), mz = turretMuzzle(this, ang); // 3D turrets fire from the barrel
+          const ang = angleTo(this.x, this.y, t.x, t.y) + (n > 1 ? (i - (n - 1) / 2) * 0.2 : 0), mz = turretMuzzle(this, ang) || dragonMuzzle(this); // 3D turrets fire from the barrel, 3D dragons from the mouth
           w.addHazard(new Projectile({ world: w, src: this, x: mz ? mz.x : this.x, y: mz ? mz.y : this.y, z: mz ? mz.z : this.fly ? 40 : 26, ang, speed: A.spd || 9, range: (A.range || 7) + 2, fx: A.fx || PROJ_FX[el], el, dmg, home: A.home ? 1 : 0, exp: A.exp || 0, pierce: A.pierce ? 99 : 0, heal: A.heal, o: { slow: A.slow, poison: A.poison } }));
         }
         if (chance(0.4)) sfx(A.fx === 'bullet' ? 'shoot' : A.fx === 'arrow' ? 'bow' : E.sfx, 0.35);
@@ -756,7 +759,7 @@ export class Monster extends Creature {
         break;
       case 'beam': {
         if (!t) return;
-        const ang = angleTo(this.x, this.y, t.x, t.y), mz = turretMuzzle(this, ang); // 3D turrets fire from the barrel
+        const ang = angleTo(this.x, this.y, t.x, t.y), mz = turretMuzzle(this, ang) || dragonMuzzle(this); // 3D turrets fire from the barrel, 3D dragons from the mouth
         if (A.cone) {
           for (const c of coneTargets(w, this.team, this.x, this.y, ang, A.range || 4, 0.5)) hit(this, c, rand(dmg[0], dmg[1]), el, {});
           for (let i = 0; i < 14; i++) { const aa = ang + rand(-0.45, 0.45), sp = rand(5, 8); spawn({ type: 'glow', x: mz ? mz.x : this.x, y: mz ? mz.y : this.y, z: mz ? mz.z : this.fly ? 40 : 22, vx: Math.cos(aa) * sp, vy: Math.sin(aa) * sp, drag: 1.5, life: 0.5, size: 4, size1: 8, color: chance(0.5) ? E.glow : E.core, add: true }); }
@@ -1530,6 +1533,7 @@ export function buildSummon(owner, def, key, x, y, dmg, hp, life) {
     m.hop = !!look.hop; m.idleArt = look.idle && look.idle[art];
   }
   if (def.slime) attachSlime(m, def);
+  if (def.grub) attachGrub(m, def);
   return m;
 }
 
@@ -1537,6 +1541,7 @@ export function createSummon(p, sk, L, x, y, dmgRange, corpse) {
   const w = p.world;
   let key = sk.m.sum, def;
   if (SUMMONS[key] && SUMMONS[key].court) [key, def] = courtDef(key, p); // the Slime Lord's rainbow broods
+  else if (SUMMONS[key] && SUMMONS[key].grubs) [key, def] = grubDef(p); // the Carrion Witch's grubs: one of each colour, the rest white
   else { if (SUMMONS[key] && SUMMONS[key].pool) key = pick(SUMMONS[key].pool); def = SUMMONS[key]; } // Grave Warband, Conclave of Bones
   if (!def) return null;
   const morph = p && p.isPlayer ? skillMorphFor(p, sk) : null;
@@ -1572,7 +1577,7 @@ export function createSummon(p, sk, L, x, y, dmgRange, corpse) {
   // enforce per-skill maximum and a global cap
   const mine = w.creatures.filter((c) => c.summon && c.skillId === sk.id && !c.dead);
   const max = (sk.m.max || (sk.m.dur ? 99 : (sk.m.n || 1))) + (sk.m.grow ? Math.floor((L - 1) / 5) : 0);
-  while (mine.length >= max) { const old = mine.shift(); old.dead = true; burst(old.x, old.y, 20, old.el || 'arcane', 8, 2); }
+  while (mine.length >= max) { const old = def.grub ? grubToReplace(mine) : mine[0]; mine.splice(mine.indexOf(old), 1); old.dead = true; burst(old.x, old.y, 20, old.el || 'arcane', 8, 2); }
   if (key.startsWith('kn_')) { // the Lancer's Knight Order: at most 4 knights in the field (+knightCapPlus with Grand Commander)
     const knCap = 4 + ((p.st && p.st.knightCapPlus) || 0);
     const kn = w.creatures.filter((c) => c.summon && !c.dead && c.owner === p && c.summonKey && c.summonKey.startsWith('kn_'));

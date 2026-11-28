@@ -2,7 +2,8 @@
 // reticle under it, the phoenix wheeling over it). Every arrow that strikes the quarry earns a feather (other hits a
 // little). Six feathers and the phoenix folds its wings and STOOPS: a screaming dive that tears into the quarry and
 // rakes the foes beside it. Taking the quarry down by any means grants Hunter's Focus (crit, damage) and a feather.
-// The phoenix is a 3D model (src/gfx/phoenix3d.js) that banks into its turns, beats and glides, and trails embers.
+// The phoenix is a 3D model (src/gfx/phoenix3d.js, built in Blender) that banks into its turns, beats and glides, and
+// trails embers and licks of flame from its wing tips, its crest and the eyes of its seven tail plumes.
 import { G, stat, power, sigO, toughest, foesNear, headAt, glow, rand, TAU } from './common.js';
 import { isoX, isoY, HW, HH, camera } from '../../core/view.js';
 import { sfx } from '../../core/audio.js';
@@ -12,7 +13,7 @@ import { drawPhoenix3D, phoenixPoints, PHOENIX_TILE } from '../../gfx/phoenix3d.
 
 const FEATHERS = 6, HAWK_Z = 96, GREEN = '#7ccf5a', CREAM = '#f0e6c8', GOLD = '#ffd25a', FLAME = '#ff7a1c';
 const EMBERS = ['#fff0a0', '#ffd050', '#ffa028', '#ff6414'];
-const phoenixK = () => (G.touch ? 1.05 : 1.3);   // px per model unit: a wingspan of ~58 px on phones, ~72 on desktop
+const phoenixK = () => (G.touch ? 1.05 : 1.3);   // px per unit: a wingspan of ~80 px on phones, ~100 on desktop
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
 /** The flat bird for when WebGL is missing, in screen space: wings spread (k = flap) or folded (fold = 1) into a stoop. */
@@ -64,6 +65,7 @@ class Stoop {
       camera.shake(5); sfx('crit', 0.9);
     }
     if (k >= 1) { s.hz += dt * 160; s.dive = null; return this.t < this.dur + 0.4 ? true : false; }
+    spawn({ type: 'flame', x: s.hx + rand(-0.12, 0.12), y: s.hy + rand(-0.12, 0.12), z: s.hz + rand(-4, 4), vz: rand(0, 20), life: rand(0.25, 0.45), size: rand(2.4, 3.6), size1: 0.6, add: true });   // a comet's tail
     if (Math.random() < 0.7) spawn({ type: 'streak', x: s.hx, y: s.hy, z: s.hz, vx: (this.x0 - q.x) * 0.6, vy: (this.y0 - q.y) * 0.6, vz: (this.z0 - 24) * 0.6, life: 0.22, size: 2.5, color: Math.random() < 0.5 ? GOLD : FLAME, add: true });
     return true;
   }
@@ -120,14 +122,15 @@ export default {
     s.amp += ((s.gliding && !s.dive && vz > -40 ? 0.12 : 1) - s.amp) * e(2.5);
     s.flap += dt * (6.5 + 2 * s.amp) * (1 - s.fv);
     // embers off the tail plumes and wing tips, left behind where it flew
-    const heat = s.feathers / FEATHERS, rate = (G.touch ? 26 : 56) * (0.7 + 0.5 * heat) * (s.dive ? 2.2 : 1);
+    const heat = s.feathers / FEATHERS, rate = (G.touch ? 30 : 66) * (0.7 + 0.5 * heat) * (s.dive ? 2.2 : 1);
     s.emit = Math.min(s.emit + dt * rate, 8);
     if (s.emit < 1) return;
     const P = phoenixPoints(this.pose(s, 0));
     for (; s.emit >= 1; s.emit--) {
-      const r = Math.random(), a = r < 0.62 ? P.tail[Math.floor(Math.random() * 5)] : r < 0.9 ? P.wings[r < 0.76 ? 0 : 1] : P.crest;
+      const r = Math.random(), a = r < 0.62 ? P.tail[Math.floor(Math.random() * P.tail.length)] : r < 0.9 ? P.wings[r < 0.76 ? 0 : 1] : P.crest;
       const x = s.hx + a[0], y = s.hy + a[1], z = s.hz + a[2], c = EMBERS[Math.floor(Math.random() * EMBERS.length)];
-      if (Math.random() < 0.55) spawn({ type: 'glow', x, y, z, vx: rand(-0.25, 0.25), vy: rand(-0.25, 0.25), vz: rand(-4, 14), g: -14, drag: 1.5, life: rand(0.45, 0.95), size: rand(1.1, 2.1) * (1 + heat * 0.4), size1: 0.2, color: c, add: true });
+      if (Math.random() < 0.2) spawn({ type: 'flame', x, y, z, vx: rand(-0.2, 0.2), vy: rand(-0.2, 0.2), vz: rand(2, 16), g: -12, drag: 1.5, life: rand(0.3, 0.6), size: rand(1.5, 2.5) * (1 + heat * 0.5), size1: 0.4, add: true });   // a lick of fire
+      else if (Math.random() < 0.55) spawn({ type: 'glow', x, y, z, vx: rand(-0.25, 0.25), vy: rand(-0.25, 0.25), vz: rand(-4, 14), g: -14, drag: 1.5, life: rand(0.45, 0.95), size: rand(1.1, 2.1) * (1 + heat * 0.4), size1: 0.2, color: c, add: true });
       else if (Math.random() < 0.9) spawn({ type: 'dot', x, y, z, vx: rand(-0.4, 0.4), vy: rand(-0.4, 0.4), vz: rand(-12, 22), g: 28, drag: 1.2, life: rand(0.35, 0.8), size: rand(1, 1.8), size1: 0.4, color: c, add: true });
       else spawn({ type: 'shard', x, y, z, vx: rand(-0.3, 0.3), vy: rand(-0.3, 0.3), vz: rand(0, 15), g: 22, drag: 2, life: rand(0.8, 1.3), size: rand(1.4, 2.1), size1: 0.6, color: Math.random() < 0.5 ? GOLD : FLAME, rot: rand(TAU), vr: rand(-5, 5), add: true });
     }
@@ -160,10 +163,12 @@ export default {
     }
     // the phoenix itself, with its shadow on the floor
     const hx = isoX(s.hx, s.hy), hy = isoY(s.hx, s.hy), heat = s.feathers / FEATHERS;
-    ctx.globalAlpha = 0.25; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(hx, hy, 11, 4, 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
-    glow(ctx, FLAME, hx, hy - s.hz, 34, 0.3 + 0.25 * heat + s.flash * 0.4);
+    const near = 1 - 0.5 * Math.min(1, s.hz / HAWK_Z);   // the shadow tightens and darkens as it comes down
+    ctx.globalAlpha = 0.2 + 0.2 * near; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(hx, hy, 18 * (1.4 - near * 0.5), 6.5 * (1.4 - near * 0.5), 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+    glow(ctx, FLAME, hx, hy, 30, 0.1 + 0.12 * heat);   // its firelight on the floor
+    glow(ctx, FLAME, hx, hy - s.hz, 44, 0.28 + 0.25 * heat + s.flash * 0.4);
     if (!drawPhoenix3D(ctx, hx, hy - s.hz, this.pose(s, t))) drawHawk(ctx, hx, hy - s.hz, s.head || 0, s.flap, s.fv, G.touch ? 1.6 : 2);
-    glow(ctx, GOLD, hx, hy - s.hz, 16, 0.15 + 0.2 * heat);
+    glow(ctx, GOLD, hx, hy - s.hz, 18, 0.08 + 0.2 * heat + s.flash * 0.3);
   },
   ground(ctx, p, s, t) {
     const q = s.quarry;

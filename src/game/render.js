@@ -1,4 +1,5 @@
 // World renderer: floors, decals, depth-sorted walls/entities, effects, lighting, minimap.
+import { flushBeasts } from '../gfx/beasts3d.js';
 import { G } from '../state.js';
 import { camera, isoX, isoY, HW, HH, TW, TH, elevationAt } from '../core/view.js';
 import { makeCanvas, TAU, clamp, rgba, shade, hexToRgb, measureCtx, rasterSprites } from '../core/util.js';
@@ -760,6 +761,7 @@ export function propReach(world) {
 }
 
 export function renderWorld(ctx, world) {
+  flushBeasts(); // the live 3D beasts' cells for this frame (gfx/beasts3d.js)
   const W = G.W * G.dpr, H = G.H * G.dpr;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
