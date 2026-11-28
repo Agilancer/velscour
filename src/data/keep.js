@@ -68,7 +68,7 @@ export const RUGS = [
   { id: 'ivory_wool', name: 'Ivory Wool' }, { id: 'plum_wool', name: 'Plum Wool' }, { id: 'wine_wool', name: 'Wine Wool' }, { id: 'red_floral', name: 'Rose Floral' },
 ];
 export const DECOR = { banner: BANNERS, glass: GLASS, rug: RUGS };
-/** A new keep's look: the four T banners round the hall, two windows in turn, the blue runner and the gilded dais. */
+/** A new keep's look: Tessariel's four Sword of Light banners round the hall, two windows in turn, the blue runner and the gilded dais. */
 export function defaultDecor() {
   const tb = ['tess_a', 'tess_b', 'tess_a1', 'tess_b1'], gl = ['glass_a', 'glass_c'];
   return { banner: Array.from({ length: 14 }, (_, i) => tb[i % 4]), glass: Array.from({ length: 10 }, (_, i) => (i === 2 ? 'glass_c' : gl[i % 2])), rug: ['blue_wool', 'blue_wool', 'gold_wool'], pedestal: Array(16).fill(null) };
@@ -82,7 +82,7 @@ export const TROPHIES = [
   { id: 'elder_hearth', art: 'dragon_red', name: 'Kaldurra, the Hearth of the World', desc: 'The red Elder God of the deep fires.', plinth: 'ne' },
   { id: 'elder_cold', art: 'dragon_undead', name: 'Morvekh, Who Remembers the Cold', desc: 'The pale Elder God who will not stay dead.', plinth: 'sw' },
   { id: 'elder_star', art: 'dragon_black', name: 'Nihvaroth, the Hollow Star', desc: 'The black Elder God of the Maw. The other three were its teeth.', plinth: 'se' },
-  { id: 'ember_shield', art: 'shield_t_blue', name: "The Ember's Shield", desc: 'Tessariel\'s T on blue, for the hero who walked the Ember\'s Road.' },
+  { id: 'ember_shield', art: 'shield_t_blue', name: "The Ember's Shield", desc: 'Tessariel\'s Sword of Light on blue, for the hero who walked the Ember\'s Road.' },
   { id: 'ivory_shield', art: 'shield_t_white', name: 'The Ivory Ward', desc: 'Carried by the first of the Flame\'s knights.' },
   { id: 'martyr_shield', art: 'shield_t_red', name: "The Martyr's Shield", desc: 'Red for those the Fiend took. Earned in blood.' },
   { id: 'night_shield', art: 'shield_t_black', name: 'The Night Watch', desc: 'For those who stood watch where the light ends.' },

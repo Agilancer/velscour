@@ -13,7 +13,8 @@ export const TROPHY_ART = [
   { id: 'dragon_red', model: 'bm/dragon_red.glb', size: 3.4, yaw: -26.6, plinth: true },
   { id: 'dragon_undead', model: 'bm/dragon_undead.glb', size: 3.4, yaw: 90, plinth: true },
   { id: 'dragon_black', model: 'bm/dragon_black.glb', size: 3.4, yaw: -90, plinth: true },
-  // shields: Tessariel's T, the holy orders' and the free towns' devices
+  // shields: Tessariel's Sword of Light (the kite_t_* models carry a T; their baked sprites are repainted by
+  // tools/tkeep_sword.py when the bake is packed), the holy orders' and the free towns' devices
   SH('shield_t_blue', 'kite_t_blue'), SH('shield_t_white', 'kite_t_white'), SH('shield_t_red', 'kite_t_red'), SH('shield_t_black', 'kite_t_black'),
   SH('shield_dragon', 'tower_dragon'), SH('shield_tree', 'tower_world_tree'), SH('shield_sun', 'tower_sunburst'), SH('shield_keep', 'tower_keep'),
   SH('shield_elder', 'kite_elder'), SH('shield_crown', 'kite_solar_crown'), SH('shield_stag', 'kite_stag_crown'), SH('shield_radiant', 'kite_radiant'),

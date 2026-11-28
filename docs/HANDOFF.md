@@ -234,6 +234,17 @@ canvas drawn into a CPU one) stalled the GPU queue for 0.3-1 s.
   (click box), replacementart (18 slime placeholders), rims (target box never shows), legion (random 0-attack
   skeletons), and exit code 1 everywhere from missing `assets/ui/skills/arcane_sorcerer_*` / `slime_lord_*` icons.
 
+## November 27, 2026 — Tessariel's device is the Sword of Light, not a T (branch `claude/happy-sagan-g79mdf`)
+
+The user asked for every "T" for Tessariel (banners, shields, the altar, the portal) to become a sword of light by image
+manipulation, blade down and centred, reviewed by the two critics (rejected round 1, approved round 2 at 8/10 each) and
+shown before any push. Everything is in docs/TESSARIELS_KEEP.md "The Sword of Light": `tools/tkeep_sword.py`,
+`assets/source/tkeep/sword/`, the altar in `tools/tkeep3d.html`, `src/gfx/keepgate.js`; a whole re-bake of the keep.
+Then the user asked for the grand stairs to run straight on into the balconies, not turn through a gap in the rail:
+docs/TESSARIELS_KEEP.md "The stairs run straight on" (`TK.FSE`, `heads` in `src/world/tkeep.js`).
+Tests run: `keep.js` (desktop, mobile), `keep_flame.js`, `keep_frames.js`, `keep_quests.mjs`, `flow.js`, `town.js`, `riftgate.js`, `assetmanager.js`
+(`flow.js` logs five 404s on `main` too: not this work's).
+
 ## November 24, 2026 — auto-play's Standard Campaign visits Tessariel's Keep (branch `claude/amazing-mccarthy-ph4dzv`, after PR #268)
 
 The user asked that the auto-play Standard Campaign go to the keep and pick up quests to complete. `Auto.keepWanted` and

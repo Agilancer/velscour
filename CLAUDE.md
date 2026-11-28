@@ -320,7 +320,8 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
 - **Tessariel's Keep** (docs/TESSARIELS_KEEP.md; `src/world/tkeep.js` layout shared with the bake `tools/tkeep3d.html`,
   `src/game/keep.js` rules, `src/game/keepgame.js`, `src/game/keepfolk.js`, `src/gfx/keepart.js`, `src/ui/keep.js`,
   `src/data/keep.js`): run `keep_quests.mjs` and `keep.js`. Changing the layout means a re-bake (`node tools/tkeep3d_bake.js`,
-  `python tools/tkeep3d.py pack`) and the slot counts in `defaultDecor`. T never stands near V: no Velscour banner, window or
+  `python tools/tkeep3d.py pack`) and the slot counts in `defaultDecor`. Tessariel's device is the **Sword of Light**, point down, never the
+  letter T: `tools/tkeep_sword.py` repaints the user's T banners and shields (docs/TESSARIELS_KEEP.md "The Sword of Light"). T never stands near V: no Velscour banner, window or
   trophy in the keep. New counters go through `keepEvent`; the quests only read metrics (METRICS in `src/data/keep.js`).
 - ACT III (docs/PHOBOS.md; `src/world/phobos.js`, `src/world/castlevelscour.js`, `src/game/phobos.js`, `src/gfx/phobostex.js`, the knights and liveries in `src/data/phobos.js`): run `phobos.js` and `phobos_look.js` (look at the shots). The dressing atlas comes from `python tools/phobosdress.py <bm repo>` (and `tools/phobostex.py` for the floors); the knights from `python tools/knightspack.py <zip>` then `process_assets.py enemies hulking_knights`. Its hardness (`HARD`, `tempo`, `velscourLaw`) and the Household sets (`data/relics.js`): also `relics.js`.
 - New regions (the Iron Express, the Endless Siege, the Deep Rail Mines, the Great Hunt) plug in through `src/game/regions.js`

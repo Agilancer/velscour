@@ -16,7 +16,7 @@ banner, no V window, not even as a trophy (`tools/tkeep3d.py` lists what was lef
 
 ## Getting there
 - **Herrington Hollow** and **Sunscorch Oasis** each have a green-and-gold portal off the square (`keepgateSpot`,
-  `drawKeepGate` in `src/gfx/keepgate.js`): Tessariel's fire in a stone ring, wings of light, a gilt T. Clicking it
+  `drawKeepGate` in `src/gfx/keepgate.js`): Tessariel's fire in a stone ring, wings of light, the Sword of Light at its heart. Clicking it
   enters (`game.enterKeep`, a loading screen while the baked hall loads).
 - In the keep: **the portal home** (to the town you came from) and **the Waygate** (the descent at your depth, the Eternal
   Breach, an Abyssal Rift once the Endgame is open). The Quest Log names the keep's portal in town.
@@ -33,7 +33,7 @@ One description, shared by the game and the bake (like the Castle's `world/castl
   floor is seen over them; **three steps at the north-east and south-west corners** join them to the back balconies
   (`TK.BALF`, `TK.FS`); their outer face is the keep's own wall seen in section, a deep blind arcade going down into
   the dark, under a low crenellated parapet;
-- **two grand stairs** flanking **the Castellan's dais** (one step up, gilt nosing), rising 3 levels a tile to gaps in
+- **two grand stairs** flanking **the Castellan's dais** (one step up, gilt nosing), rising 3 levels a tile straight on into the balconies (since November 27: see "The stairs run straight on"; before, to gaps in
   the north rail, each with a stepped string wall and a gilt finial;
 - **the Sacred Flame's basin** in the middle (three round steps, a fluted marble bowl, a gilt rim) on a **floor
   medallion** of limestone and gilt rings, **four Elder plinths** round it, **six columns** in two colonnades (at y 16,
@@ -77,7 +77,7 @@ any other prop).
   each one up to the GPU whole on every draw: ~14 a frame kept the GPU busy past the frame, so the keep dropped frames
   (24-48 ms hitches on a player's PC) where the town did not. `node tools/tests/keep_frames.js` counts such draws.
 - **Banners (14 places)**: on the back balconies' faces and up the walls between the windows. 16 designs: Tessariel's
-  four T banners (vesperwrithe `tess_a/b`), and the holy orders' and free towns' twelve from **Bellmourn**
+  four Sword of Light banners (vesperwrithe `tess_a/b`, their T repainted: "The Sword of Light" below), and the holy orders' and free towns' twelve from **Bellmourn**
   `assets/textures/banners/` (none of its eight `velscour_*`). Each casts a soft shadow on the stone.
 - **Stained glass (10 windows)**: six panes from vesperwrithe `assets/game/glass/` where the angels win (its README:
   `glass_a_1`, `glass_b_1`, `glass_e_1` are Velscour's; `glass_c_1` and the rose put him over the angels too). Each
@@ -90,12 +90,12 @@ any other prop).
   to face it** (`yaw` in `src/data/keepart.js`, from its plinth's way to the basin; the grey shades of unearned ones are
   the same sprites). They were re-baked alone (`node tools/tkeep3d_bake.js elders`, then `python tools/tkeep3d.py
   elders`: only the `bm` dragon models are needed) onto `assets/tiles/tkeep/elders.webp`, a page beside the hall's; the
-  old front-facing ones still sit unused on `page_0.webp` until the next whole bake, whose `pack` drops `elders.webp`.
+  old front-facing ones still sit unused on `page_0.webp` until the next whole bake, whose `pack` drops `elders.webp`
   A lamp lights every trophy.
 - **Furniture**: the Castle Keep pack's painted props: suits of armour and candelabra by the dais, lions by the portal,
   benches by the columns, the war map table, the Chronicle's lectern, a reliquary and a knight's memorial on the north
   balcony, the Vault's treasury chest, a shield rack, braziers, candelabra and banner stands along the front balconies.
-- A new hero's keep: the four T banners in turn, two windows, the blue runners and the gilded dais.
+- A new hero's keep: the four Sword of Light banners in turn, two windows, the blue runners and the gilded dais.
 - **Fire** (`drawFire` in keepart.js): the Sacred Flame is ~105 px of layered tongues (emerald, bright green, a gold-white
   heart), sparks curling off it; it **grows with the hero's Renown**, burns higher while Kindled, and leaps (`world.flameSurge`)
   when the hero arrives, kneels or is paid. The braziers burn, the candelabra and chandeliers carry candle flames (`fx`
@@ -306,7 +306,7 @@ keep, the arrival point moved out of the front balcony's shadow, the front balco
   game draws those pixels of the hall's pieces again after the fire, the far motes under them and the near ones over
   (before, the fire was drawn over the whole brazier: no single place in the depth sort can split its blades, since the
   side tiles hold a near blade and a far one). `keep_flame.js` shoots it close up. The Elders' plinths are
-  **fanned off the Flame's axis**; an **altar with a gilt T** on the dais, the dais braziers beside it; a **sunburst
+  **fanned off the Flame's axis**; an **altar with a gilt T** (since November 27 the Sword of Light) on the dais, the dais braziers beside it; a **sunburst
   medallion** in green stone and slate; textured brass for the gilding, stone copings on the stair walls, dark nosings on
   every step, darker ashlar on treads and plinth tops (they had blown out to white), the hall's flagstones on the
   balconies, plain masonry under the terraces, no red-lion banner stands; unearned Elders are grey stone statues;
@@ -329,3 +329,51 @@ station already opens its own tab); the keep's folk are painted townsfolk (no ar
 - Real phones: the hall's page (4096 x 3926) decodes to ~64 MB (the Castle's are 30-87 MB); untested on iOS Safari.
 - The companions' look is their saved gear's preview, one image (no walk cycle, like the visiting adventurers in town).
 - Expeditions and the Flame run on real time (`Date.now()`); a changed clock moves them.
+
+## The Sword of Light (November 27, 2026)
+
+The user asked that every "T" standing for Tessariel become a **sword of light**, by image manipulation of the art, shown
+before any push; then, mid-work, **"have the blade facing down"** and **"make sure the sword is centered properly"**. Two
+critics as before (the 30-year veteran of 3D and textures, the young designer) reviewed before/after boards: both
+rejected round 1 (6/10: the holy banners and shields still read as a T, pale blades lost on pale cloth, the portal's a
+sticker), both approved round 2 (8/10), and the veteran's two small clean-ups (haze on four holy banners) went in after.
+
+- **One emblem** (`tools/tkeep_sword.py` `EMBLEM`): point down; a diamond pommel, a short wrapped grip, a guard of two
+  wings swept down with a blue gem where they cross, a long two-facet blade with a bright ridge. Light is a glow on dark
+  fields, and a gold contour with a warm shade on pale ones (light cannot be lighter than ivory cloth).
+- **Centred by measurement**: `axis()` finds the x the original T mirrors about, to a tenth of a pixel (eyeballed
+  centres were up to 2.3 px off on the small banners); the emblem is drawn at that sub-pixel offset.
+- **Tessariel's four banners** (vesperwrithe `tess_a/b_0/1`, 474 px wide): the T's thread is masked by colour inside a
+  polygon, the cloth inpainted (Telea) with the weave of a clean patch laid back, and the emblem embroidered in the
+  T's own thread colours (`palette()`), satin stitch and all. `tess_a/a1`: the sword stands in the halo, whose two gaps
+  (where the T's arms crossed it) are stitched shut by `close_ring`, and the star's lower ray is cut short of the pommel.
+  `tess_b/b1`: a glory of thread rays behind the blade.
+- **The six holy banners** (Bellmourn `holy_*`, about 145 x 256, painted): the T's boxes go (the picture flowed through
+  the hole, the foot's cloth by exemplar patches), the emblem is laid in the T's metal with its guard as wide as the
+  bar was, a glory of rays where the arms were. Results: `assets/source/tkeep/sword/<id>.png` (committed; the sources
+  are in the user's other repos), read by `tools/tkeep3d.py decor` and the new `tools/tkeep3d.py banners <Bellmourn>`.
+- **The four T shields** (`kite_t_*`: the T is relief on the model, so the baked 54 x 120 sprites are repainted at 4x):
+  `tkeep3d.py pack` calls `tkeep_sword.shields()` on the fresh bake's pages, once (`index.json` `sword`).
+- **The altar** (`tools/tkeep3d.html` `altar`): a 3D sword standing point down in a gilt socket, turned an eighth of a
+  turn to face the camera; the blade's lit side, shaded side and ridge are three emissive materials. A whole re-bake
+  (the pieces elsewhere came out pixel-identical to the committed ones), then `tkeep3d_bake.js elders` and
+  `tkeep3d.py elders` as before, so the Elders are still on `elders.webp`.
+- **The portal** (`src/gfx/keepgate.js`): the old T was added to the fire's white heart and never showed. The sword is
+  drawn over the glow on whole pixels with a thin dark-gold edge, a gleam running down it and fire arcs across it.
+- Rebuild: `python tools/tkeep_sword.py banners <Bellmourn> <vesperwrithe>`, `python tools/tkeep3d.py banners <Bellmourn>`,
+  `node tools/tkeep3d_bake.js`, `python tools/tkeep3d.py pack`, `node tools/tkeep3d_bake.js elders`, `python tools/tkeep3d.py elders` (needs `pip install opencv-python-headless`).
+- Left as nice-to-haves by the critics: a harder point on the shields' blades, a touch more mid-tone on the altar's blade.
+
+## The stairs run straight on (November 27, 2026)
+
+The user, the same day: "fix the stairs ... have them continue up and go straight into the balcony instead of turning
+and going through that little gap. It looks dumb now." Each grand stair used to top out against the north rail and turn
+through a one-tile gap in it. Now (`src/world/tkeep.js`, a re-bake):
+- **The west flight** runs straight on into the **west balcony**: the west rail is open for its first two tiles
+  (`heads[0]`, the flight's full width) and starts at the flight's own string wall; the north rail has no gap.
+- **The east flight** runs straight on onto a **landing**: the north balcony's east end carried south past the stair
+  (x 33-35, y 8-10 at the balcony's level). The corner stairs down to the east terrace start after it (y 11, 12, 13),
+  so the east terrace starts at `TK.FSE` (14), three tiles after the south one (`TK.FS`, 11); the east parapet steps
+  down three tiles later too. The first candelabrum of the east terrace and the companions' balcony posts
+  (`keepworld.js`, `keepfolk.js`) moved off the new steps.
+- `keep.js` still walks the hero up to the north balcony, round to the east terrace by the corner stairs and down.

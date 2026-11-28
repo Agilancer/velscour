@@ -85,8 +85,9 @@ export function keepProps(world, decor, have) {
   A.frontLights = [];
   for (let k = 0; k < 5; k++) {
     const a = TK.F0 + 2 + k * 5.5;
-    F('keep_candelabrum', a, TK.FR + 2.55, { fx: glow }); F('keep_candelabrum', TK.FR + 2.55, a, { fx: glow });
-    A.frontLights.push([a, TK.FR + 2.4], [TK.FR + 2.4, a]);
+    const e = Math.max(a, TK.FSE + 0.5);   // the east terrace starts three tiles further on (the stair's landing)
+    F('keep_candelabrum', a, TK.FR + 2.55, { fx: glow }); F('keep_candelabrum', TK.FR + 2.55, e, { fx: glow });
+    A.frontLights.push([a, TK.FR + 2.4], [TK.FR + 2.4, e]);
   }
   // (the pack's banner stands fly a red lion: nothing in the Fiend's colour stands in this hall)
   // the rugs, laid into the floor tiles they cover
