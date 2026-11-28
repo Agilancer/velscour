@@ -122,6 +122,7 @@ export function hit(src, tgt, amount, el = 'phys', o = {}) {
   if (rust && rust.t > 0) dmg *= 1 + rust.amt;
   dmg = tgt.isPlayer && G.godMode ? 0 : Math.max(1, dmg * rand(0.92, 1.08));
   if (tgt.vel) dmg = tgt.vel.absorb(dmg); // Velscour's life gates and damage cap (game/velscour.js)
+  if (tgt.pace) dmg = tgt.pace(dmg);      // Act III's lords lose only so much life a second (game/phobos.js tempo)
 
   const byHero = !tgt.isPlayer && tgt.team !== 'player' && (fromPlayer || (src && src.team === 'player'));
   // o.lightFx: a rapid multi-hit (the Lancer's tower-shield rings) shows its full feedback on about one hit in sixteen,

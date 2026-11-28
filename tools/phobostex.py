@@ -22,7 +22,7 @@ FLOORS = {   # name: source (2 x 2 tiles each)
 }
 PROPS = {'bookcase': ('03_17_book_spines', 180), 'jar_shelf': ('03_18_jar_shelves', 150)}
 TONE = 0.74   # brightness
-BRIGHT = {'rutted_setts': 0.95, 'slum_cobbles': 0.95, 'ash_street': 0.9, 'walk_paving': 0.92, 'ward_paving': 0.92, 'wharf_deck': 0.9, 'bone_joint_flags': 0.88, 'bridge_ashlar': 0.88}   # the streets: they read under the night light
+BRIGHT = {'rutted_setts': 1.2, 'slum_cobbles': 1.15, 'ash_street': 1.05, 'walk_paving': 1.25, 'ward_paving': 1.2, 'wharf_deck': 1.0, 'bone_joint_flags': 1.0, 'bridge_ashlar': 1.0}   # the streets: they read under the night light, lighter than the roofs
 SAT = 0.78    # saturation kept
 
 

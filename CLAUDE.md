@@ -146,6 +146,9 @@ node tools/tests/caverns_map.mjs [seeds]           # Depth's Edge Caverns genera
 node tools/tests/caverns.js [variants] [noauto]    # Depth's Edge Caverns (live three.js): every variant, picking, lake, the passage into the shaft, the climb, 1-3 bosses, portal, shots, auto-play
 node tools/tests/phobos.js [floors] [noraid|raids=10,100c] # ACT III (docs/PHOBOS.md): Bellmourn, City State Phobos, Castle Velscour floors, wing raids + Velscour's 3 battles, shots
 node tools/tests/phobos_biomes.js [ids]             # the ten Phobos/castle texture packs on the wall rigs
+node tools/tests/phobos_look.js [city|castle|all] [noshots] # ACT III's dressing: houses on streets, the curtain wall, sanctuary/auditorium/stadium/cloister furniture, V banners, wall variety; shots + plans
+node tools/tests/phobos_lineup.js [n] [cats]        # ACT III sprite sizes beside the hero (hk, hk_boss: the Hulking Castle Knights in the four wing liveries)
+node tools/chest3d_bake.js                         # the Bellmourn chest (assets/source/chest3d/chest.glb) -> assets/sprites/chest3d.webp, eight frames of the lid opening
 node tools/tests/ghosttrain.js [noshots] [noauto]  # The Iron Express (region ghost_train, live three.js): car to car, stations, the chief, auto-play to the Last Stop
 node tools/tests/siege.js [noshots] [noauto] [depth] # The Endless Siege: wall-walk by the stairs only, gates hold, no blows across heights, winches, ballistae, auto-play holds every wave (SIEGE_CLASS, SIEGE_MORTAL)
 node tools/tests/mines.js [seeds] [noauto] [noshots] # The Deep Rail Mines: shafts joined by rail, carts, junction switches, the Bottom, auto-play rides down
@@ -319,6 +322,7 @@ Screenshots are written to `tools/tests/out/` (git-ignored). Look at them, becau
   `src/data/keep.js`): run `keep_quests.mjs` and `keep.js`. Changing the layout means a re-bake (`node tools/tkeep3d_bake.js`,
   `python tools/tkeep3d.py pack`) and the slot counts in `defaultDecor`. T never stands near V: no Velscour banner, window or
   trophy in the keep. New counters go through `keepEvent`; the quests only read metrics (METRICS in `src/data/keep.js`).
+- ACT III (docs/PHOBOS.md; `src/world/phobos.js`, `src/world/castlevelscour.js`, `src/game/phobos.js`, `src/gfx/phobostex.js`, the knights and liveries in `src/data/phobos.js`): run `phobos.js` and `phobos_look.js` (look at the shots). The dressing atlas comes from `python tools/phobosdress.py <bm repo>` (and `tools/phobostex.py` for the floors); the knights from `python tools/knightspack.py <zip>` then `process_assets.py enemies hulking_knights`. Its hardness (`HARD`, `tempo`, `velscourLaw`) and the Household sets (`data/relics.js`): also `relics.js`.
 - New regions (the Iron Express, the Endless Siege, the Deep Rail Mines, the Great Hunt) plug in through `src/game/regions.js`
   (one module each in `src/game/regions/`; docs/NEW_REGIONS.md): run that region's test above, then `flow.js`.
 - Velscour waits at `FINAL_DEPTH` (500, `src/data/depth.js`); monster levels come from `depthLevel(depth)`, never the

@@ -6,6 +6,8 @@ import { drawDecals, drawEffects, drawParticles, drawTexts, lights, glowSprite, 
 import { orbitShieldDepth } from '../gfx/lancershields.js';
 import { drawWallTorch, wallTorchRect } from '../gfx/walltorches.js';
 import { drawWallHanging, wallHangingRect } from '../gfx/wallhangings.js';
+import { drawGroundCover } from '../gfx/phobostex.js';
+import { drawChest3D } from '../gfx/chest3d.js';
 import { replacementImage } from '../core/replacementart.js';
 import { classSprite } from '../core/assets.js';
 import { pixelSprite } from '../gfx/pixelart.js';
@@ -167,7 +169,7 @@ function transitionSprite(color, size) {
 function buildTransitionParticles(world) {
   if (world.transitionParticles) return world.transitionParticles;
   const { map } = world, particles = [];
-  if (map.castleMat || map.hgt) return (world.transitionParticles = particles); // the Castle dresses its own seams; terrain has cliffs   // the Castle dresses its own seams (gfx/castleground.js)
+  if (map.castleMat || map.hgt || map.seam) return (world.transitionParticles = particles); // the Castle dresses its own seams; terrain has cliffs   // the Castle dresses its own seams (gfx/castleground.js)
   const addEdge = (x, y, variant, nx, ny, nextVariant, x1, y1, x2, y2, salt) => {
     if (map.t[ny * map.w + nx] !== 1) return;
     const a = floorMaterial(world, variant), b = floorMaterial(world, nextVariant);
@@ -354,6 +356,9 @@ function drawBuilding(ctx, b, alpha) {
 function drawChest(ctx, c) {
   const x = isoX(c.x, c.y), y = isoY(c.x, c.y);
   if (c.draw) return c.draw(ctx, x, y); // shrines, remains, cursed chests (game/happenings.js)
+  const glowOf = () => { if (c.opened) return; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 + Math.sin(G.time * 3) * 0.15; ctx.drawImage(glowSprite(c.rare ? '#c080ff' : '#ffd060'), x - 28, y - 40, 56, 46); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; };
+  // Act III's chests are the Bellmourn chest, its lid swinging open (gfx/chest3d.js); purple when rare
+  if (G.world && G.world.phobos && drawChest3D(ctx, c, x, y, c.rare ? 'rare' : 'plain')) return glowOf();
   const art = G.world && G.world.tileset && G.world.tileset.chest;
   const s = art && (c.opened ? (c.rare ? art.rareOpen : art.open) : (c.rare ? art.rareClosed : art.closed));
   if (s) {
@@ -367,6 +372,7 @@ function drawChest(ctx, c) {
     }
     return;
   }
+  if (drawChest3D(ctx, c, x, y, c.rare ? 'rare' : 'plain')) return glowOf();   // no pack art in: the baked chest, not boxes drawn in code
   ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(x, y, 16, 7, 0, 0, TAU); ctx.fill();
   const body = c.rare ? '#5a3a6a' : '#5a3a1a', trim = c.rare ? '#e0c0ff' : '#d0a040';
   // box faces
@@ -587,6 +593,7 @@ function drawFloorTiles(ctx, world, x0, y0, x1, y1, force, minD) {
       ctx.drawImage(f.img, f.sx, f.sy, f.w, f.h, px - HW - 0.6, py - 0.6, TW + 1.2, TH + 1.2);
       const gr = gritAt(world, f, map.v[i], tx, ty, force);
       if (gr) ctx.drawImage(gr, px - HW, py);
+      if (map.seam && (map.seam[i] || map.patch[i])) drawGroundCover(ctx, map, i, tx, ty, px, py, HW, TW, TH);   // Phobos: cover over the joins between grounds
       if (map.castleMat) castleTileDressing(ctx, world, tx, ty, px, py, floorEntry);
     }
   }
@@ -988,6 +995,7 @@ export function renderWorld(ctx, world) {
           break;
         }
         if (o.alpha != null) a = o.alpha;   // the keep's uncarved Elders: a shade on the plinth
+        else if (o.rampart) { const sp = o.spr, kk = o.k; a = cutaway([isoX(o.x, o.y) + (o.flip ? -sp.ox - sp.w : sp.ox) * kk, isoY(o.x, o.y) + sp.oy * kk, sp.w * kk, sp.h * kk], it.d); }   // Phobos's curtain wall: a see-through hole like the walls'
         else if (!o.c3move && !o.noHide && (o.spr || (o.sprite === 'tree' || o.sprite === 'pine'))) {
           const px = isoX(o.x, o.y), py = isoY(o.x, o.y);
           for (const v of views) {

@@ -1478,7 +1478,7 @@ export function makeElite(m, rank, depth, world) {
     m.maxHp *= 6; m.dmg *= 1.5; m.xp *= 7; m.aura = '#ffb030'; m.scale = 1.3;
     m.affixes = shuffle(keys).slice(0, depth > 50 ? 3 : 2);
     m.name = uniqueName();
-    if (m.art) m.swap = uniqueSwap();
+    if (m.art && !(m.swap && m.swap.livery)) m.swap = uniqueSwap();   // (a household knight keeps his wing's livery)
   } else if (rank === 'boss') {
     const vel = m.arch === 'velscour';
     if (vel) { m.art = 'va_velscour'; m.artH = 94; m.swap = null; }

@@ -5,6 +5,7 @@
 // Wiring: game.buildDungeon -> setupHappenings, game.update -> happeningsTick, combat kill -> world.onKill,
 // game.enterTown -> townHappening, loot.dropLoot reads world.lootMul / world.goldMul. Shrines, remains and cursed
 // chests live in world.chests (render.drawChest calls their draw()), so auto-play walks to them like chests.
+import { drawChest3D } from '../gfx/chest3d.js';
 import { G } from '../state.js';
 import { rand, randi, chance, pick, TAU, dist } from '../core/util.js';
 import { sfx } from '../core/audio.js';
@@ -242,11 +243,14 @@ export function addCursed(world, [x, y]) {
   const ch = {
     x, y, opened: false, reach: 1.4, far: 30, label: 'Cursed Chest', dot: '#ff3060', waves: 0, waveT: 0, done: false,
     draw(ctx, sx, sy) {
+      // the Bellmourn chest in blood-pink, its lid swinging open when the curse is sprung (gfx/chest3d.js); boxes drawn in code only until its art is in
+      if (!drawChest3D(ctx, this, sx, sy, 'cursed', 1.08)) {
       ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.ellipse(sx, sy, 17, 7, 0, 0, TAU); ctx.fill();
       ctx.fillStyle = '#3a1020'; ctx.beginPath(); ctx.moveTo(sx - 15, sy - 4); ctx.lineTo(sx, sy + 3); ctx.lineTo(sx + 15, sy - 4); ctx.lineTo(sx + 15, sy - 17); ctx.lineTo(sx, sy - 24); ctx.lineTo(sx - 15, sy - 17); ctx.fill();
       ctx.strokeStyle = '#ff4070'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(sx - 15, sy - 11); ctx.lineTo(sx, sy - 4); ctx.lineTo(sx + 15, sy - 11); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(sx, sy + 3); ctx.lineTo(sx, sy - 10); ctx.stroke();
+      }
       if (!this.done) {
         ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 + Math.sin(G.time * 4) * 0.2;
         ctx.drawImage(glowSprite('#ff2050'), sx - 30, sy - 46, 60, 52);

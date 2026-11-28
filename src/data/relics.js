@@ -80,6 +80,11 @@ export const POWERS = {
   gale: { name: 'Gale', desc: '+1 projectile; +{0}% chance for projectiles to split.', stats: [['extraProj', 1], ['splitChance', 30]] },
   herrington: { name: 'Herrington Stands', desc: 'Survive a killing blow every 90 s; attackers take 150% of the damage they deal.', legs: ['phoenix', 'thorns'] },
   midas: { name: 'Cutpurse Fortune', desc: 'Kills sometimes burst into coins; +{0}% magic find.', legs: ['greed'], stats: [['magicFind', 60]] },
+  // The Household sets (Act III: City State Phobos and Castle Velscour only)
+  v_gold: { name: "The Seneschal's Due", desc: '+{0} to All Skills, +{1}% damage to bosses, {2}% damage reduction; survive a killing blow every 90 s.', legs: ['phoenix'], stats: [['skillsAll', 3], ['bossDmg', 40], ['reduce', 12]] },
+  v_red: { name: 'The Crimson Gate Holds', desc: '{0}% damage reduction and +{1}% block; attackers take 150% of the damage they deal; kills heal you 3%.', legs: ['thorns'], stats: [['reduce', 16], ['block', 10]], procs: [{ on: 'kill', chance: 1, fx: 'heal', mult: 0.03 }] },
+  v_blue: { name: 'The Indigo Margin', desc: '{0}% chance to Echo-cast skills and +{1}% critical damage; casts have a 15% chance to call a falling star for 250% of your last hit.', stats: [['echoChance', 22], ['critDmg', 40]], procs: [{ on: 'cast', chance: 0.15, fx: 'meteor', el: 'arcane', mult: 2.5, r: 2 }] },
+  v_green: { name: 'The Menagerie Unchained', desc: '+{0}% movement speed and +{1}% damage; hits have a 12% chance to arc to four foes for 100% of the hit; kills heal you 3%.', legs: ['vamp'], stats: [['moveSpeed', 18], ['dmgPct', 25]], procs: [{ on: 'hit', chance: 0.12, fx: 'chain', el: 'poison', mult: 1, r: 6 }, { on: 'kill', chance: 1, fx: 'heal', mult: 0.03 }] },
   // Glyphword powers
   ignite: { name: 'Kindle', desc: 'Hits have a 10% chance to drop a meteor for 120% of the hit.', procs: [{ on: 'hit', chance: 0.1, fx: 'meteor', el: 'fire', mult: 1.2, r: 1.6 }] },
   vow: { name: 'Ironvow', desc: 'Attackers take 150% of the damage they deal.', legs: ['thorns'] },
@@ -191,6 +196,36 @@ export const COVENANTS = [
     { id: 'purse_ring1', name: "Cutpurse's Signet", slot: 'ring', lines: [['goldFind', 0.85], ['dmgPct', 0.85], ['critChance', 0.85]] },
     { id: 'purse_ring2', name: "Cutpurse's Loaded Band", slot: 'ring', lines: [['magicFind', 0.85], ['life', 0.85], ['critDmg', 0.85]] },
   ] },
+  // The Household sets: Velscour's own liveries, one to a colour of wing. Found only in City State Phobos and Castle
+  // Velscour (phobos: true; game/loot.js asks for the wing's set); their lines are a full 1.0, their powers the strongest.
+  { id: 'v_gold', name: "The Seneschal's Black and Gold", power: 'v_gold', phobos: true, bonus: [['dmgPct', 1], ['critChance', 1], ['allAttr', 1]], pieces: [
+    { id: 'v_gold_head', name: "Seneschal's Gilt Visor", slot: 'head', lines: [['life', 1], ['resAll', 1], ['allAttr', 1]] },
+    { id: 'v_gold_body', name: "Seneschal's Black Cuirass", slot: 'body', lines: [['life', 1], ['armorPct', 1], ['resAll', 1]] },
+    { id: 'v_gold_hands', name: "Seneschal's Gilt Gauntlets", slot: 'hands', lines: [['dmgPct', 1], ['critChance', 1], ['atkSpeed', 1]] },
+    { id: 'v_gold_legs', name: "Seneschal's Black Tassets", slot: 'legs', lines: [['life', 1], ['reduce', 1], ['armor', 1]] },
+    { id: 'v_gold_feet', name: "Seneschal's Gilt Sabatons", slot: 'feet', lines: [['moveSpeed', 1], ['life', 1], ['resAll', 1]] },
+  ] },
+  { id: 'v_red', name: "Plate of the Crimson Gate", power: 'v_red', phobos: true, bonus: [['life', 1], ['armorPct', 1], ['resAll', 1]], pieces: [
+    { id: 'v_red_head', name: "Crimson Gate Barbute", slot: 'head', lines: [['life', 1], ['armor', 1], ['vit', 1]] },
+    { id: 'v_red_body', name: "Crimson Gate Hauberk", slot: 'body', lines: [['life', 1], ['armorPct', 1], ['reduce', 1]] },
+    { id: 'v_red_hands', name: "Crimson Gate Mitons", slot: 'hands', lines: [['atkSpeed', 1], ['life', 1], ['critChance', 1]] },
+    { id: 'v_red_legs', name: "Crimson Gate Cuisses", slot: 'legs', lines: [['armor', 1], ['life', 1], ['resAll', 1]] },
+    { id: 'v_red_feet', name: "Crimson Gate Greaves", slot: 'feet', lines: [['moveSpeed', 1], ['armor', 1], ['life', 1]] },
+  ] },
+  { id: 'v_blue', name: "Vestments of the Indigo Margin", power: 'v_blue', phobos: true, bonus: [['castSpeed', 1], ['cdr', 1], ['dmgPct', 1]], pieces: [
+    { id: 'v_blue_head', name: "Indigo Margin Cowl", slot: 'head', lines: [['mana', 1], ['cdr', 1], ['allAttr', 1]] },
+    { id: 'v_blue_body', name: "Indigo Margin Robe", slot: 'body', lines: [['life', 1], ['resAll', 1], ['mana', 1]] },
+    { id: 'v_blue_hands', name: "Indigo Margin Wraps", slot: 'hands', lines: [['castSpeed', 1], ['critChance', 1], ['dmgPct', 1]] },
+    { id: 'v_blue_legs', name: "Indigo Margin Skirts", slot: 'legs', lines: [['life', 1], ['resAll', 1], ['cdr', 1]] },
+    { id: 'v_blue_feet', name: "Indigo Margin Slippers", slot: 'feet', lines: [['moveSpeed', 1], ['life', 1], ['mana', 1]] },
+  ] },
+  { id: 'v_green', name: "Harness of the Verdigris Menagerie", power: 'v_green', phobos: true, bonus: [['atkSpeed', 1], ['critDmg', 1], ['lifeSteal', 1]], pieces: [
+    { id: 'v_green_head', name: "Verdigris Mask", slot: 'head', lines: [['life', 1], ['critChance', 1], ['allAttr', 1]] },
+    { id: 'v_green_body', name: "Verdigris Brigandine", slot: 'body', lines: [['life', 1], ['resAll', 1], ['armorPct', 1]] },
+    { id: 'v_green_hands', name: "Verdigris Catchgloves", slot: 'hands', lines: [['atkSpeed', 1], ['critDmg', 1], ['dmgPct', 1]] },
+    { id: 'v_green_legs', name: "Verdigris Chaps", slot: 'legs', lines: [['life', 1], ['resAll', 1], ['reduce', 1]] },
+    { id: 'v_green_feet', name: "Verdigris Trackers", slot: 'feet', lines: [['moveSpeed', 1], ['life', 1], ['critChance', 1]] },
+  ] },
 ];
 export const COVENANT_BY_ID = Object.fromEntries(COVENANTS.map((s) => [s.id, s]));
 export const PIECE_BY_ID = Object.fromEntries(COVENANTS.flatMap((s) => s.pieces.map((p) => [p.id, { ...p, set: s.id }])));
@@ -251,7 +286,8 @@ export function makeHeirloom(ilvl, opts = {}) {
 }
 /** A Covenant piece (pieceId, or a random piece of setId / of any set). */
 export function makeCovenant(ilvl, opts = {}) {
-  const pool = Object.values(PIECE_BY_ID).filter((p) => (opts.pieceId ? p.id === opts.pieceId : !opts.setId || p.set === opts.setId) && (!opts.slot || p.slot === opts.slot));
+  // (the Household sets only when asked for by name: Act III's drops)
+  const pool = Object.values(PIECE_BY_ID).filter((p) => (opts.pieceId ? p.id === opts.pieceId : opts.setId ? p.set === opts.setId : !COVENANT_BY_ID[p.set].phobos) && (!opts.slot || p.slot === opts.slot));
   if (!pool.length) return null;
   const P = pick(pool);
   const it = rollItem(ilvl, { slot: P.slot, rarity: 3, base: P.base, generic: true });
@@ -263,8 +299,10 @@ export function makeCovenant(ilvl, opts = {}) {
  * Epics become Heirlooms (when one exists for the slot at that level); one in twenty-five Rare-or-better drops becomes a
  * Covenant piece of its slot (boost: BOSS ROOMs and Velscour triple it).
  */
-export function maybeRelic(it, boost = 1) {
+export function maybeRelic(it, boost = 1, act3 = null) {
   if (!it || it.type !== 'gear' || it.relic) return it;
+  // Act III: a Rare-or-better drop of a slot the wing's Household set has may be a piece of it
+  if (act3 && it.rarity >= 2 && chance(Math.min(0.5, 0.05 * boost))) { const c = makeCovenant(Math.max(it.ilvl, 60), { setId: act3, slot: it.slot }); if (c) return c; }
   if (it.rarity >= 3 && it.ilvl >= 20 && chance((it.rarity >= 4 ? 0.25 : 0.12))) {
     const h = makeHeirloom(it.ilvl, { slot: it.slot });
     if (h) return h;

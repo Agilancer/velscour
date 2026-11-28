@@ -604,7 +604,7 @@ function tagged(scat, tag) {
  * middle, colonnades, props along the walls, in the corners or in a ring, and loose clutter. A step whose tag has no
  * prop in this biome is skipped. Each step keeps to one prop of its tag so a room reads as a set.
  */
-function furnishRoom(r, theme, { scat, rng, put, ok, cells, edge, cx, cy, outer }) {
+function furnishRoom(r, theme, { scat, rng, put, ok, cells, edge, cx, cy, outer, map }) {
   const alongX = r.w >= r.h, len = alongX ? r.w : r.h, wid = alongX ? r.h : r.w;
   // (a, b) -> tile: a along the long axis from the head, b across it from the centre line
   const at = (a, b) => alongX ? [r.x + a, cy + b] : [cx + b, r.y + a];
@@ -617,7 +617,10 @@ function furnishRoom(r, theme, { scat, rng, put, ok, cells, edge, cx, cy, outer 
     if (!e) continue;
     if (kind === 'head') { for (const b of [0, -1, 1]) if (place(1, b, e)) break; }
     else if (kind === 'pairs') { const h = Math.max(2, Math.floor(wid / 2) - 1); place(1, -h, e); place(1, h, e); }
-    else if (kind === 'rows') {
+    else if (kind === 'rows' && map && map.wallMix) {   // Castle Velscour's great rooms: never a field of one prop. Two files down the sides, well spaced
+      const h = Math.max(2, Math.floor(wid / 2) - 2);
+      for (let a = 3; a < len - 2; a += 4) { place(a, -h, e); place(a, h, e); }
+    } else if (kind === 'rows') {
       const h = Math.floor(wid / 2) - 1;
       for (let a = 3; a < len - 1; a += 2) for (let b = -h; b <= h; b++) if (Math.abs(b) >= 1) place(a, b, e);
     } else if (kind === 'aisle') {
@@ -766,7 +769,7 @@ function finishMap(map, tileset, rng, region = null, rooms = [], extra = []) {
     map.v[i] = v + (region && region(i) ? sp : 0);
   }
   const fams = shuffleWith(tileset.families.slice(), rng);
-  const families = [[fams[0], 5], [fams[1 % fams.length], 3], [fams[2 % fams.length], 1.5]];
+  const families = map.wallMix ? fams.map((f) => [f, 1]) : [[fams[0], 5], [fams[1 % fams.length], 3], [fams[2 % fams.length], 1.5]];   // wallMix (Castle Velscour): every family the set has, turn about
   for (const o of extra) if (o.kind === 'arch' && !o.design) { const fit = archesFor(tileset, o.a1 - o.a0); o.design = fit.length ? rng.pick(fit) : null; }
   if (!map.sheer) map.buildWalls(tileset, () => rng.next(), [...findOpenings(map, rooms, tileset, rng), ...extra.filter((o) => o.design)], families);
 }

@@ -87,7 +87,7 @@ async function loadPack(id) {
 const ready = (v) => v && !(v instanceof Promise);
 /** Every pack a biome's tile set draws on: floors and props from `pack`, walls/arches/doors from `wallPack`,
  * more props from `morePacks` and more floors from `moreFloors` ([[pack, 1-based ranges], ...]). */
-const biomePacks = (b) => [...new Set([b.pack || DEFAULT_PACK, b.wallPack, ...[...(b.morePacks || []), ...(b.moreFloors || [])].map((m) => m[0])].filter(Boolean))];
+const biomePacks = (b) => [...new Set([b.pack || DEFAULT_PACK, b.wallPack, ...(b.moreWalls || []), ...[...(b.morePacks || []), ...(b.moreFloors || [])].map((m) => m[0])].filter(Boolean))];
 
 /** Fetch a biome's pack and the monster art. Safe to call repeatedly. */
 export function loadBiomeArt(biome) {
@@ -153,7 +153,7 @@ export function biomeTileSet(biome) {
   // until all of the biome's packs are in, the default pack stands in
   const full = biomePacks(biome).every((p) => ready(A.packs[p]));
   const id = full ? biome.pack || DEFAULT_PACK : DEFAULT_PACK, wid = full ? biome.wallPack || id : id;
-  const key = biome.id + '|' + id + '|' + wid;
+  const key = biome.id + '|' + id + '|' + wid + (full && biome.moreWalls ? '|' + biome.moreWalls.join('+') : '');
   if (A.biomeSets[key]) return A.biomeSets[key];
   // keep memory bounded: each recoloured set is ~25 MB of canvas
   const keys = Object.keys(A.biomeSets).filter((k) => !k.startsWith('town|'));
@@ -172,6 +172,14 @@ export function biomeTileSet(biome) {
   for (const [fam, masks] of Object.entries(wm.walls)) {
     set.walls[fam] = {};
     for (const [mask, vars] of Object.entries(masks)) set.walls[fam][mask] = vars.map((v) => v.map((r) => ({ ...rect(wallImg, r), arm: r[0] })));
+  }
+  // more wall families from other packs (`moreWalls`, Castle Velscour: the stone changes along a wall), each under its pack's name
+  if (full) for (const p of biome.moreWalls || []) {
+    const src = A.packs[p], im = wallPal ? recolor(src.walls, wallPal) : src.walls, page = pageAtlas(im);
+    for (const [fam, masks] of Object.entries(src.meta.walls)) {
+      const o = (set.walls[p + ':' + fam] = {});
+      for (const [mask, vars] of Object.entries(masks)) o[mask] = vars.map((v) => v.map((r) => ({ ...page(r[1], r[2]), w: r[3], h: r[4], ox: r[5], oy: r[6], arm: r[0] })));
+    }
   }
   set.families = Object.keys(set.walls);
   set.archSpan = {};

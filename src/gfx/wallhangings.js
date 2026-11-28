@@ -2,6 +2,8 @@
 // views. The view contract intentionally matches walltorches.js.
 import { isoX, isoY } from '../core/view.js';
 import { drawFiltered } from '../core/util.js';
+import { TW } from '../core/view.js';
+import { drawVBanner, vBannerRect } from './phobostex.js';
 
 const ROOT = 'assets/fx/wall_hangings/';
 const CASTLE_KEEP_ATLAS = 'assets/tiles/castle_keep/wall_hangings.webp';
@@ -95,6 +97,7 @@ export function wallHangingAtBuilding(building, sx, design) {
 }
 
 export function wallHangingRect(item, biome = null) {
+  if (item.vb) { const r = vBannerRect(item, TW / 160), X = isoX(item.mountX, item.mountY), Y = isoY(item.mountX, item.mountY); return r ? [X + r[0], Y + r[1], r[2], r[3]] : [X, Y, 0, 0]; }   // Velscour's V (gfx/phobostex.js)
   const castleKeep = (typeof biome === 'string' ? biome : biome?.id) === 'castle_keep';
   // Castle Keep supplies the two front-facing wall planes only. Use those
   // views for either depth side so its authored art is always player-facing.
@@ -121,6 +124,7 @@ function tintedAtlas(img, sheet, hue) {
 }
 
 export function drawWallHanging(ctx, item, biome, alpha = 1) {
+  if (item && item.vb) return drawVBanner(ctx, item, isoX(item.mountX, item.mountY), isoY(item.mountX, item.mountY), TW / 160, alpha);
   const castleKeep = biome?.id === 'castle_keep';
   const count = castleKeep ? 16 : 50;
   if (!item || !Number.isInteger(item.design) || item.design < 0 || item.design >= count) return;

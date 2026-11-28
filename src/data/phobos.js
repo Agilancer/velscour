@@ -5,6 +5,7 @@
 // (bestiary.js artPool/bossPool skip `phobos`), and Act III levels field nothing else.
 import { PHOBOS_ROSTER } from './phobosroster.js';
 import { HORRORS_ROSTER } from './horrorsroster.js';
+import { KNIGHTS_ROSTER } from './knightsroster.js';
 
 // ---------------------------------------------------------------------------------------------- the bestiary
 const RULES = [   // first match wins: the AI archetype a figure plays, read off its name and concept
@@ -37,7 +38,8 @@ const UNDEAD = /(bone|skelet|crypt|charnel|grave|ossu|lich|wraith|ghost|drowned|
 // in-game heights (world px): folk a little under a hero, knights a hero's height, creatures by their build, bosses big
 // (matched by eye against the hero and the older painted sets: tools/tests/phobos_lineup.js; townsfolk stand as tall as
 // the NPC villagers so a resident who turns keeps his size; bosses as tall as the other sets' bosses, 82-92)
-const H = { gray: 58, good: 58, ward: 58, castle: 58, knight: 60, creature: 54, ward_boss: 82, castle_boss: 86, finale: 84, horror: 58 };
+// Act III's fighting humanoids stand a little over a hero (60), so a hero grown by a skill never towers over them
+const H = { gray: 58, good: 58, ward: 64, castle: 64, knight: 67, creature: 54, ward_boss: 82, castle_boss: 86, finale: 84, horror: 64 };
 // creatures by what they are: vermin small, beasts of burden and titans big
 const BIG = /(titan|colossus|behemoth|giant|leviathan|ox|stag|hulk|golem|wyrm|drake|dragon|bull|elephant|mammoth|brute|ogre|troll|juggernaut|siege|wheel)/i;
 const SMALL = /(rat|louse|beetle|mole|imp|gecko|moth|homunculus|swarm|eel|larva|mite|tick|crab|toad|slug|bat|leech|fly|wasp|snail|grub|maggot|skink|newt)/i;
@@ -94,7 +96,33 @@ const HORROR_ART = HORRORS_ROSTER.map((r) => {
   if (boss) { e.boss = true; e.lone = true; }
   return e;
 });
-export const PHOBOS_ART = [...PACK_ART, ...HORROR_ART];
+// The Hulking Castle Knights (VELSCOUR_Hulking_Castle_Knights_100_Sprites.zip, tools/knightspack.py, data/knightsroster.js):
+// 50 knights and 50 boss knights in five houses, native pixel art stored 1:1. They are Velscour's household guard: every
+// wing fields the houses that suit it, recoloured to the wing's livery (LIVERY: dark with gold, blue, red or green), and
+// a boss knight captains the floors no other lord holds. Heights follow the art's pixel heights: the 122-144 px knights
+// stand 68-76 (a hero is 60), the 228-288 px bosses 76-83 (before a boss's own 1.9x).
+export const LIVERY = {   // util.recolor `livery`: [hue, saturation x, dark with gilt highlights?]
+  gold: { id: 'gold', name: 'black and gold', swap: { livery: [43, 1.1, 1] }, hue: 43, css: '#c9a04a', banner: 'greygold' },
+  blue: { id: 'blue', name: 'blue', swap: { livery: [220, 0.88, 0] }, hue: 220, css: '#3d5fae', banner: 'blue' },
+  red: { id: 'red', name: 'red', swap: { livery: [356, 0.95, 0] }, hue: 356, css: '#a3262a', banner: 'blood' },
+  green: { id: 'green', name: 'green', swap: { livery: [132, 0.7, 0] }, hue: 132, css: '#3f7a48', banner: 'green' },
+};
+const KNIGHT_RULES = [['archer', /(archer|arbalest|crossbow|bow\b|quarrel|bolt)/], ['golem', /(ram|wall|bulwark|pavise|tower|protector|colossus|drawbridge|portcullis)/], ['cultist', /(censer|thurifer|chantry|canon|psalter|lector|codex|scroll|folio)/]];
+const KNIGHT_EL = { 'Lower Ward': null, 'Armoury and Forge': 'fire', 'Ancient Library': 'arcane', 'Conservatory and Menagerie': 'poison', 'Sanctuaries and Ossuary': 'shadow' };
+const knightH = (r) => r.kind === 'boss' ? Math.round(76 + (r.ap - 228) * 0.12) : Math.round(r.suggest * 0.99 - 3);
+const KNIGHT_ART = KNIGHTS_ROSTER.map((r) => {
+  const n = (r.name + ' ' + r.weapon).toLowerCase(), boss = r.kind === 'boss';
+  const arch = boss ? ((/(arbalest|crossbow|bow\b)/.test(n) && 'archer') || 'knight') : (KNIGHT_RULES.find(([, re]) => re.test(n)) || ['knight'])[0];
+  const house = r.wing.replace(/ Castle Bosses?$/, '');
+  const e = { id: 'phx_' + r.id, sheet: r.sheet, i: r.i, arch, name: r.name, title: '', h: knightH(r), phobos: true, hk: true, house,
+    cat: boss ? 'hk_boss' : 'hk', at: r.wing, does: r.weapon, trigger: '', counter: '', livery: r.livery, undead: false, gore: 'flesh', also: ['knight', 'skeleton'] };
+  const el = KNIGHT_EL[house]; if (el) e.el = el;
+  if (boss) { e.boss = true; e.lone = true; }
+  return e;
+});
+export const HULKING = KNIGHT_ART;
+const HK = (re) => KNIGHT_ART.filter((a) => !a.boss && re.test(a.at)), HKB = (re) => KNIGHT_ART.filter((a) => a.boss && re.test(a.at));
+export const PHOBOS_ART = [...PACK_ART, ...HORROR_ART, ...KNIGHT_ART];
 export const PHOBOS_BY_ID = Object.fromEntries(PHOBOS_ART.map((a) => [a.id, a]));
 const of = (cat, at) => PHOBOS_ART.filter((a) => a.cat === cat && (!at || (at instanceof RegExp ? at.test(a.at) : a.at === at)));
 export const PHOBOS_FOLK = PHOBOS_ART.filter((a) => a.cat === 'gray' || a.cat === 'good');
@@ -116,10 +144,10 @@ export const DISTRICTS = [
   { id: 'wharf', name: 'The Drowned Wharf', lv: 7, ground: 'slums', verb: 'Raise the sunk boats with the great sluice wheel.', foes: [...half(W(/Guard Tower/), 1), ...HX(/Flooded/)], bosses: [WB(/Guard Tower/)[2], WB(/Guard Tower/)[5], WB(/Guard Tower/)[7], ...HB('Ten Floodgates')], folk: F(/Wharf/).slice(5) },
   { id: 'tanners', name: "The Tanners' Steps", lv: 7, ground: 'slums', verb: 'Climb the stepped lanes under the dye-vat ambushes.', foes: [...half(W(/Guard Tower/), 0), ...half(W(/Rookeries/), 1), ...half(HX(/Fungal/), 1), ...half(HX(/Alchemist/), 0)], bosses: [WB(/Guard Tower/)[9], WB(/Guard Tower/)[4], ...HB('Orchard Under')], folk: [...F(/Wharf/).slice(0, 5), ...F(/Dye works/)], hub: 'quietwatch' },
   { id: 'boneyards', name: 'The Bone Yards', lv: 9, ground: 'bones', verb: 'The dead rise by rows: break each row\'s marker to still it.', foes: [...W(/Bone Yards/), ...HX(/Charnel/)], bosses: [...WB(/Bone Yards/).slice(0, 4), ...HB('Third Pallbearer')], folk: F(/charnel/), hub: 'ashwardens' },
-  { id: 'barracks', name: 'The Barracks Ward', lv: 11, ground: 'city', verb: 'Keep out of the lantern light, or the curfew alarm pulls the patrol.', foes: [...C(/Armoury/), ...K(/Castle Gate/).slice(0, 5), ...HX(/Barracks/)], bosses: [WB(/Guard Tower/)[1], WB(/Guard Tower/)[6], WB(/Bone Yards/)[6], ...HB('Split-Plate')], folk: F(/Barracks/).slice(0, 5) },
+  { id: 'barracks', name: 'The Barracks Ward', lv: 11, ground: 'city', verb: 'Keep out of the lantern light, or the curfew alarm pulls the patrol.', foes: [...C(/Armoury/), ...K(/Castle Gate/).slice(0, 5), ...HX(/Barracks/), ...half(HK(/Forge/), 0)], bosses: [WB(/Guard Tower/)[1], WB(/Guard Tower/)[6], WB(/Bone Yards/)[6], ...HB('Split-Plate')], folk: F(/Barracks/).slice(0, 5) },
   { id: 'mages', name: "The Mages' Rise", lv: 15, ground: 'rich', verb: 'Find and break each house\'s ward anchor.', foes: [...half(W(/Rookeries/), 1), ...C(/Ancient Library/).slice(0, 5), ...HX(/Alchemist/), ...half(HX(/Sealed Sanctuaries/), 0)], bosses: [WB(/Rookeries/)[0], WB(/Rookeries/)[1], WB(/Rookeries/)[6], WB(/Rookeries/)[7], ...HB('High Mirror')], folk: F(/Mages/) },
   { id: 'dukes', name: "Dukes' Row", lv: 15, ground: 'rich', verb: 'Walled gardens and guard dogs: the heist district.', foes: [...C(/Great Hall/), ...K(/Castle Gate/).slice(5), ...HX(/Glass/)], bosses: [WB(/Rookeries/)[3], WB(/Bone Yards/)[4], WB(/Bone Yards/)[9], ...HB('Glass Wound')], folk: F(/Dukes/).slice(5) },
-  { id: 'approach', name: 'The Castle Approach', lv: 19, ground: 'wall', verb: 'The switchback under arrow fire, to the Castle Gate.', foes: [...C(/Castle Approach/), ...K(/Castle Gate/), ...half(HX(/Barracks/), 1)], bosses: [WB(/Bone Yards/)[5], WB(/Bone Yards/)[7], WB(/Guard Tower/)[3], ...HB('Last Trumpeter')], folk: [] },
+  { id: 'approach', name: 'The Castle Approach', lv: 19, ground: 'wall', verb: 'The switchback under arrow fire, to the Castle Gate.', foes: [...C(/Castle Approach/), ...K(/Castle Gate/), ...half(HX(/Barracks/), 1), ...HK(/Lower Ward/)], bosses: [WB(/Bone Yards/)[5], WB(/Bone Yards/)[7], WB(/Guard Tower/)[3], ...HB('Last Trumpeter')], folk: [] },
 ];
 export const HUBS = {
   pennyless: { name: 'The Pennyless', where: 'under a burnt chandlery in the Cinder Quarter', giver: F(/Ash Lane/)[0] },
@@ -134,16 +162,16 @@ export const HUBS = {
 // biome: the Phobos-textured biome pack its walls wear (data/phobosbiomes.js), with a fallback; sheer: towers and
 // bridges over the void (data/sheer.js) instead of walls; livery: the palette Velscour's own wear there.
 export const WINGS = [
-  { id: 'gatehouse', name: 'The Lower Ward Gatehouse', biome: 'ph_wall', base: 'castle_keep', layouts: ['gatehouse', 'yard', 'barracks', 'arena', 'stairwell'], foes: [...K(/Castle Gate/), ...C(/Castle Approach/), ...HX(/Barracks/)], lords: HB('Pavise Unmade', 'Quiverback'), livery: 'red', boss: 'latch' },
-  { id: 'oubliettes', name: "The Oubliettes and Generals' Crypt", biome: 'ph_bones', base: 'catacombs', layouts: ['pits', 'crypt', 'cells', 'pits', 'crypt'], foes: [...of('creature', /Oubliette|Crypt/), ...C(/Oubliettes/), ...HX(/Gaols|Charnel/)], lords: HB('Upside-Down Cistern', 'Rack That'), livery: 'white', boss: 'elector' },
-  { id: 'armoury', name: 'The Armoury and the Forge', biome: 'ph_castle', base: 'castle_keep', layouts: ['forge', 'arena', 'barracks', 'forge', 'yard'], foes: [...K(/Castle Forge/), ...of('creature', /Armoury/), ...C(/Armoury/), ...HX(/Masonry/)], lords: HB('Iron Mercy', 'Oath-Brand'), livery: 'grey', boss: 'armourer' },
-  { id: 'greathall', name: 'The Great Hall and Kitchens', biome: 'ph_rich', base: 'castle_keep', layouts: ['greathall', 'arena', 'kitchens', 'greathall', 'colosseum'], foes: [...of('creature', /Great Hall/), ...C(/Great Hall/), ...HX(/Glass/)], lords: HB('Altar Beneath'), livery: 'mixed', boss: 'banquet' },
-  { id: 'library', name: 'The Ancient Library', biome: 'ph_castle', base: 'library', layouts: ['library', 'stacks', 'library', 'stairwell', 'stacks'], foes: [...K(/Castle Library/), ...of('creature', /Castle Library/), ...C(/Ancient Library/), ...HN(/Scribe|Ledger|Page|Tallyman|Clerk|Ink-Faced|Surveyor|Mortician|Hermit/), ...HX(/Alchemist/)], lords: HB('Drowned Regent'), livery: 'blue', boss: 'regent' },
-  { id: 'menagerie', name: 'The Menagerie and the Drowned Conservatory', biome: 'ph_sewers', base: 'sewers', layouts: ['sewers', 'cages', 'sewers', 'aqueduct', 'cages'], foes: [...of('creature', /Conservatory|Menagerie/), ...HX(/Fungal|Flooded/)], lords: HB('Deluge Undertaker', 'Spore Bell'), livery: 'green', boss: 'pennants' },
-  { id: 'sanctuaries', name: 'The Sanctuaries and the Ossuary Chapel', biome: 'ph_bones', base: 'cathedral', layouts: ['cathedral', 'nave', 'cathedral', 'crypt', 'nave'], foes: [...of('creature', /Sanctuaries/), ...C(/Sanctuaries/), ...HX(/Sacristies|Sealed Sanctuaries/), ...HN(/Bone|Rib|Spine|Mourner|Shroud/)], lords: HB('Reliquary That', 'Hollow-Headed', 'Twelfth Toll'), livery: 'white', boss: 'chancellor' },
-  { id: 'stormspire', name: 'The Ember and Storm Spires', biome: 'ph_keep', base: 'castle_keep', sheer: 'sheer_gilded', layouts: ['bridges', 'outerstair', 'bridges', 'leaps', 'outerstair'], foes: [...K(/Keep Ember/), ...of('creature', /Ember Spire|Storm Spire|Air Bridges/), ...HN(/Brazier|Soot|Bellows|Censer|Kiln|Lintel|Keystone|Cantilever|Pulley|Cairn/)], lords: HB('Lantern That', 'False Angles'), livery: 'blue', boss: 'windward' },
-  { id: 'bonespire', name: 'The Bone, Blood and Shadow Spires', biome: 'ph_keep', base: 'castle_keep', sheer: 'sheer_ossuary', layouts: ['outerstair', 'leaps', 'bridges', 'outerstair', 'leaps'], foes: [...K(/Keep Bone|Keep Blood/), ...of('creature', /Bone Spire|Blood Spire|Shadow Spire/), ...HN(/Bone|Rib|Spine|Mandible|Sternum|Torturer|Interrogator|Inquisitor|Tendon|Knuckle/)], lords: HB('Bone Loom', 'Black Stair'), livery: 'white', boss: 'eclipse' },
-  { id: 'throne', name: "Velscour's Keep: the Throne Above", biome: 'ph_keep', base: 'castle_keep', layouts: ['antechamber', 'nave', 'colosseum', 'antechamber', 'gatehouse'], foes: [...of('creature', /Throne Antechambers/), ...C(/High Ward/), ...HN(/Crowned|Courtier|Usher|Footman|Duelist|Glaze Knight|Custodian|Servitor/)], lords: HB('Inward-Facing', 'Sealed Gaol'), livery: 'mixed', boss: 'velscour' },
+  { id: 'gatehouse', color: 'red', knights: HK(/Lower Ward/), captains: HKB(/Crimson|Lower/), name: 'The Lower Ward Gatehouse', biome: 'ph_wall', base: 'castle_keep', layouts: ['gatehouse', 'yard', 'barracks', 'stadium', 'stairwell'], foes: [...K(/Castle Gate/), ...C(/Castle Approach/), ...HX(/Barracks/)], lords: HB('Pavise Unmade', 'Quiverback'), livery: 'red', boss: 'latch' },
+  { id: 'oubliettes', color: 'green', knights: [...HK(/Ossuary/), ...half(HK(/Lower Ward/), 0)], captains: HKB(/Ossuary/), name: "The Oubliettes and Generals' Crypt", biome: 'ph_bones', base: 'catacombs', layouts: ['pits', 'crypt', 'cells', 'cloister', 'crypt'], foes: [...of('creature', /Oubliette|Crypt/), ...C(/Oubliettes/), ...HX(/Gaols|Charnel/)], lords: HB('Upside-Down Cistern', 'Rack That'), livery: 'white', boss: 'elector' },
+  { id: 'armoury', color: 'gold', knights: HK(/Forge/), captains: HKB(/Forge/), name: 'The Armoury and the Forge', biome: 'ph_castle', base: 'castle_keep', layouts: ['forge', 'stadium', 'barracks', 'forge', 'arena'], foes: [...K(/Castle Forge/), ...of('creature', /Armoury/), ...C(/Armoury/), ...HX(/Masonry/)], lords: HB('Iron Mercy', 'Oath-Brand'), livery: 'grey', boss: 'armourer' },
+  { id: 'greathall', color: 'red', knights: [...HK(/Lower Ward/), ...half(HK(/Forge/), 1)], captains: HKB(/Crimson|Lower/), name: 'The Great Hall and Kitchens', biome: 'ph_rich', base: 'castle_keep', layouts: ['greathall', 'auditorium', 'kitchens', 'stadium', 'colosseum'], foes: [...of('creature', /Great Hall/), ...C(/Great Hall/), ...HX(/Glass/)], lords: HB('Altar Beneath'), livery: 'mixed', boss: 'banquet' },
+  { id: 'library', color: 'blue', knights: HK(/Library/), captains: HKB(/Library/), name: 'The Ancient Library', biome: 'ph_castle', base: 'library', layouts: ['library', 'stacks', 'auditorium', 'cloister', 'stacks'], foes: [...K(/Castle Library/), ...of('creature', /Castle Library/), ...C(/Ancient Library/), ...HN(/Scribe|Ledger|Page|Tallyman|Clerk|Ink-Faced|Surveyor|Mortician|Hermit/), ...HX(/Alchemist/)], lords: HB('Drowned Regent'), livery: 'blue', boss: 'regent' },
+  { id: 'menagerie', color: 'green', knights: HK(/Conservatory/), captains: HKB(/Conservatory/), name: 'The Menagerie and the Drowned Conservatory', biome: 'ph_sewers', base: 'sewers', layouts: ['sewers', 'cages', 'cloister', 'aqueduct', 'stadium'], foes: [...of('creature', /Conservatory|Menagerie/), ...HX(/Fungal|Flooded/)], lords: HB('Deluge Undertaker', 'Spore Bell'), livery: 'green', boss: 'pennants' },
+  { id: 'sanctuaries', color: 'gold', knights: HK(/Ossuary/), captains: HKB(/Ossuary/), name: 'The Sanctuaries and the Ossuary Chapel', biome: 'ph_bones', base: 'cathedral', layouts: ['sanctuary', 'nave', 'cloister', 'cathedral', 'sanctuary'], foes: [...of('creature', /Sanctuaries/), ...C(/Sanctuaries/), ...HX(/Sacristies|Sealed Sanctuaries/), ...HN(/Bone|Rib|Spine|Mourner|Shroud/)], lords: HB('Reliquary That', 'Hollow-Headed', 'Twelfth Toll'), livery: 'white', boss: 'chancellor' },
+  { id: 'stormspire', color: 'blue', knights: [...HK(/Library/), ...half(HK(/Forge/), 0)], captains: HKB(/Library|Forge/), name: 'The Ember and Storm Spires', biome: 'ph_keep', base: 'castle_keep', sheer: 'sheer_gilded', layouts: ['bridges', 'outerstair', 'bridges', 'leaps', 'outerstair'], foes: [...K(/Keep Ember/), ...of('creature', /Ember Spire|Storm Spire|Air Bridges/), ...HN(/Brazier|Soot|Bellows|Censer|Kiln|Lintel|Keystone|Cantilever|Pulley|Cairn/)], lords: HB('Lantern That', 'False Angles'), livery: 'blue', boss: 'windward' },
+  { id: 'bonespire', color: 'red', knights: [...HK(/Ossuary/), ...half(HK(/Lower Ward/), 1)], captains: HKB(/Ossuary|Crimson|Lower/), name: 'The Bone, Blood and Shadow Spires', biome: 'ph_keep', base: 'castle_keep', sheer: 'sheer_ossuary', layouts: ['outerstair', 'leaps', 'bridges', 'outerstair', 'leaps'], foes: [...K(/Keep Bone|Keep Blood/), ...of('creature', /Bone Spire|Blood Spire|Shadow Spire/), ...HN(/Bone|Rib|Spine|Mandible|Sternum|Torturer|Interrogator|Inquisitor|Tendon|Knuckle/)], lords: HB('Bone Loom', 'Black Stair'), livery: 'white', boss: 'eclipse' },
+  { id: 'throne', color: 'gold', knights: KNIGHT_ART.filter((a) => !a.boss), captains: KNIGHT_ART.filter((a) => a.boss), name: "Velscour's Keep: the Throne Above", biome: 'ph_keep', base: 'castle_keep', layouts: ['antechamber', 'sanctuary', 'stadium', 'auditorium', 'cloister'], foes: [...of('creature', /Throne Antechambers/), ...C(/High Ward/), ...HN(/Crowned|Courtier|Usher|Footman|Duelist|Glaze Knight|Custodian|Servitor/)], lords: HB('Inward-Facing', 'Sealed Gaol'), livery: 'mixed', boss: 'velscour' },
 ];
 export const CASTLE_FLOORS = 100;
 export const wingOf = (floor) => WINGS[Math.min(WINGS.length - 1, Math.floor((floor - 1) / 10))];
@@ -151,6 +179,8 @@ export const wingOf = (floor) => WINGS[Math.min(WINGS.length - 1, Math.floor((fl
  * other captains' floors keep a captain drawn from the wing's foes. */
 const LORD_FLOORS = [3, 8, 6, 1];
 export const wingLordFor = (floor) => { const k = LORD_FLOORS.indexOf(floor % 10); return k >= 0 ? (wingOf(floor).lords || [])[k] || null : null; };
+/** The boss knight who captains a floor no lord, guardian or raid boss holds (the wing's own house, in its livery). */
+export const captainFor = (floor) => { if (floor % 5 === 0 || wingLordFor(floor)) return null; const C = wingOf(floor).captains || []; return C.length ? C[(floor * 7 + Math.floor(floor / 10) * 3) % C.length] : null; };
 /** The effective depth a castle floor scales its monsters to (data/depth.js depthLevel): Act III's 240 to the throne's 500. */
 export const castleDepth = (floor) => Math.min(500, 236 + Math.round(floor * 2.64));
 /** The city's effective depth: Act III's opening, its districts a little deeper the further east. */
