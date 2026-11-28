@@ -14,6 +14,27 @@ Contents
 
 ---
 
+## November 28, 2026: live 3D beasts built in Blender (branch `claude/compassionate-cori-w868v4`)
+
+The user asked for Blender-built 3D models to replace characters that "look bad": the Dragon Knight's wings, dragon and
+sprite dragons; a creepy voodoo doll for the Carrion Witch; a cooler phoenix; and new huge Carrion Grubs for the Carrion
+Witch (white with black trim, plus yellow, green, orange, brown and pink with their own powers; up to ten, one of each
+colour; idle, slither, fast slither, three melee, three ranged and three magic animations). Reviewed by two critics (a
+30-year 3D veteran and a young hit-game designer), up to two rounds. Everything is in [`docs/BEASTS_3D.md`](BEASTS_3D.md).
+- **Pipeline**: Blender 5.3 as a Python module (`pip install bpy`) runs the scripts in `tools/blender/`; GLBs in
+  `assets/models/beasts/`; `src/gfx/beasts3d.js` draws them live in the iso camera through one shared WebGL atlas;
+  `src/gfx/beastlooks.js` routes summons (`summonKey`) and monsters (`beastKey`) to their drawers.
+- **Done**: Carrion Grubs (new skill in her fourth tree, replacing Gravecall), the Dragon Knight's four dragons, wings,
+  Dragonheart spectre and dragon-skill effects, the voodoo doll (signature and curse), the phoenix and the raven
+  summons, the Treasure Imp.
+- **Critics**: round 1 rejected the dragons, the grubs and the imp (artist) and the grubs and the doll (designer). Round 1
+  fixes were applied to the grubs (design and model), the imp, the phoenix and ravens, the doll's model, and part of
+  the dragons; the user then asked to wrap up, so no round 2 review was run. What is still open is listed at the end
+  of docs/BEASTS_3D.md (the skull-lantern model is built but not drawn in the game yet).
+- **Tests**: `grubs.js`, `dragonknight3d.js`, `voodoodoll.js`, `phoenix.js`, `treasureimp.js` pass; `pets.js` and
+  `happenings.js` pass; `flow.js` has only its known failure on main ("expected town at depth 1").
+- The asset manager was rebuilt, but its section rules do not know the new GLBs yet, so they are not listed as custom 3D art.
+
 ## November 26, 2026: the Snowy Summit loses its gates (branch `fix/closed-gates`)
 
 - The user found the hero stuck pushing at a shut frozen iron gate on the Summit, and asked for the gates to go: they make

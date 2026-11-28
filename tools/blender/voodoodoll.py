@@ -2,8 +2,8 @@
 from nothing in Blender. A lumpy stuffed body (a voxel union of blobs, seams pinched in, a coarse weave woven here and
 tinted from bm's cloth_oat), black cross-stitches as real thread, a button eye and a sewn-shut one leaking stuffing, a
 sewn rictus, a red felt heart, straw at the neck, wrists, ankles and a torn seam, a twine noose it dangles from, a pinned
-lock of hair, a tooth on a thread, and eight long needles with glass beads (needle_1..8, on bones pin_1..8) each with a rotten twin (rotten_1..8:
-black bead, rust, green ooze) the game shows by name. Colour (with AO), normals and glow are baked in Cycles from the
+lock of hair, a tooth on a thread, and eight needles (needle_1..8, on bones pin_1..8: tarnished pins with old glass beads,
+rusty coffin nails, bone needles threaded with hex-thread; KINDS) each with a rotten twin (rotten_1..8: rust, black, bile) the game shows by name. Colour (with AO), normals and glow are baked in Cycles from the
 high-poly body and the materials onto one atlas; rigged (root at the rope's top, hang, head, chest, belly, arms, hands,
 legs, feet, tail, hair, charm, one bone per needle) and animated: idle, jab1..jab8, squeeze, dance.
 
@@ -39,6 +39,7 @@ PINS = [('head', (0.04, -0.03, 0.80), (0.42, -0.30, 0.86), 0.30, 0), ('chest', (
         ('hand_L', (0.34, -0.02, 0.29), (0.55, -0.45, 0.70), 0.24, 1), ('leg_R', (-0.095, 0.0, 0.12), (-0.62, -0.72, 0.30), 0.25, 1),
         ('chest', (0.0, 0.03, 0.44), (0.25, 0.80, 0.55), 0.28, 0), ('head', (-0.10, 0.0, 0.72), (-0.86, -0.25, 0.44), 0.28, 0)]
 PIN_R, BEAD_R = 0.0105, 0.04
+KINDS = ['pin', 'pin', 'nail', 'pin', 'bone', 'nail', 'pin', 'bone']           # a few rusty nails and bone needles among the pins
 
 
 # ---------------------------------------------------------------- textures made here
@@ -59,7 +60,7 @@ def weave(n=512, T=24):
     fa = sum(np.roll(fib, k, 0) for k in range(-5, 6)) / 11; fb = sum(np.roll(fib, k, 1) for k in range(-5, 6)) / 11
     shade = shade * (1 + 0.5 * np.where(hw >= hf, fa, fb))
     oat = np.asarray(Image.open(os.path.join(SRC, 'cloth_oat_c.webp')).convert('RGB').resize((n, n)), float) / 255
-    col = oat * 1.55 * (shade * (0.22 + 0.78 * h ** 0.8))[..., None]
+    col = oat * 2.0 * (shade * (0.3 + 0.7 * h ** 0.8))[..., None]          # a pale sack: it has to stand out of dark ground
     Image.fromarray((np.clip(col, 0, 1) * 255).astype(np.uint8)).save(os.path.join(TMP, 'weave_c.png'))
     Image.fromarray((np.clip(h, 0, 1) * 255).astype(np.uint8)).save(os.path.join(TMP, 'weave_h.png'))
     c = bpy.data.images.load(os.path.join(TMP, 'weave_c.png')); hh = bpy.data.images.load(os.path.join(TMP, 'weave_h.png'))
@@ -169,12 +170,12 @@ def burlap(wc, wh):
     def nz(scale, lo, hi, detail=5):
         n = N.new('ShaderNodeTexNoise'); n.inputs['Scale'].default_value = scale; n.inputs['Detail'].default_value = detail; L(tc.outputs['Object'], n.inputs['Vector'])
         r = N.new('ShaderNodeMapRange'); r.inputs['From Min'].default_value = lo; r.inputs['From Max'].default_value = hi; L(n.outputs['Fac'], r.inputs['Value']); return r.outputs['Result']
-    col = mix('MULTIPLY', c.outputs['Color'], (0.55, 0.44, 0.31), nz(3.2, 0.42, 0.72))          # big damp stains
+    col = mix('MULTIPLY', c.outputs['Color'], (0.7, 0.6, 0.46), nz(3.2, 0.42, 0.72))            # big damp stains
     col = mix('MIX', col, (0.045, 0.06, 0.03), nz(11, 0.60, 0.74, 8))                          # mould
     col = mix('MIX', col, (0.9, 0.82, 0.62), mix('MULTIPLY', nz(6, 0.55, 0.8), (0.35, 0.35, 0.35), 1.0))  # sun-bleached patches
     sx = N.new('ShaderNodeSeparateXYZ'); L(tc.outputs['Object'], sx.inputs['Vector'])
     gr = N.new('ShaderNodeMapRange'); gr.inputs['From Min'].default_value = 0.22; gr.inputs['From Max'].default_value = -0.02; L(sx.outputs['Z'], gr.inputs['Value'])
-    col = mix('MULTIPLY', col, (0.45, 0.36, 0.27), gr.outputs['Result'])                         # dragged through the dirt
+    col = mix('MULTIPLY', col, (0.6, 0.5, 0.4), gr.outputs['Result'])                            # dragged through the dirt
     at = N.new('ShaderNodeAttribute'); at.attribute_name = 'vc'; sc = N.new('ShaderNodeSeparateColor'); L(at.outputs['Color'], sc.inputs['Color'])
     col = mix('MIX', col, (0.16, 0.012, 0.01), sc.outputs['Green'])                             # old blood
     col = mix('MIX', col, (0.012, 0.009, 0.008), sc.outputs['Red'])                             # the seams' shadow
@@ -342,6 +343,7 @@ def trim(S):
     for j in range(14): T.face([rr[-1][j], rr[-1][(j + 1) % 14], cc])
     T.use('hexthread', ('bone', 'head'))
     for a in (0.5, 0.5 + math.pi / 2): d = (u * math.cos(a) + w * math.sin(a)) * 0.026; T.tube([p + n * 0.017 - d, p + n * 0.027, p + n * 0.017 + d], 0.0075, 4, False)
+    T.use('glint', ('bone', 'head')); T.ball(p + n * 0.022 + (u - w) * 0.028, 0.012, 1, (1, 1, 0.6))  # a sick green glint: it watches
     # straw and stuffing: at the neck, the wrists, the ankles, the torn seam, the shut eye
     def tuft(o, d, n, ln, spread, bone, r=0.0075):
         o, d = V(o), V(d).normalized()
@@ -416,10 +418,23 @@ def needles(S, mats):
         if thr:                                                                # run through: the point comes out the far side
             x = S.ray(tgt - d, d); depth = ((x - e).length + 0.07) if x else 0.12
         info.append((bone, e, d))
+        kind = KINDS[i]; side = d.cross(V((0, 0, 1))).normalized() if abs(d.z) < 0.95 else V((1, 0, 0))
         for rot in (0, 1):
-            B = Build(); B.use('rust' if rot else 'steel', ('bone', 'pin_%d' % (i + 1)))
-            B.tube([e - d * depth, e - d * (depth - 0.035), e + d * (ln - 0.02), e + d * ln], [0.001, PIN_R * 0.8, PIN_R, PIN_R], 5)
-            B.use('rotbead' if rot else 'bead%d' % i, B.specs[0]); B.ball(e + d * (ln + BEAD_R * 0.6), BEAD_R * (0.92 if rot else 1), 2, lump=0.006 if rot else 0)
+            B = Build(); sp = ('bone', 'pin_%d' % (i + 1))
+            if kind == 'nail':                                                 # a square coffin nail, bent, a hammered head
+                B.use('rust' if rot else 'nail', sp); bend = side * 0.012
+                B.tube([e - d * depth, e - d * (depth - 0.03), e + d * (ln * 0.5) + bend, e + d * ln], [0.0015, 0.011, 0.0135, 0.015], 4)
+                B.tube([e + d * (ln - 0.004), e + d * (ln + 0.016)], [0.037, 0.034], 7)
+            elif kind == 'bone':                                               # a bone needle, its eye threaded with hex-thread
+                B.use('rotbone' if rot else 'bone', sp)
+                B.tube([e - d * depth, e - d * (depth - 0.045), e + d * (ln * 0.55), e + d * (ln + 0.01)], [0.001, 0.0115, 0.016, 0.019], 5)
+                B.ball(e + d * (ln + 0.022), 0.025, 1, (1, 1, 0.8), lump=0.005)
+                B.use('hexthread', sp); q = e + d * (ln - 0.03)
+                B.tube([q - side * 0.02, q + V((0, 0, -0.045)) + side * 0.012, q + V((0, 0, -0.1)) + side * 0.025, q + V((0, 0, -0.15)) + side * 0.01], 0.0055, 3)
+            else:                                                              # a long pin, a glass bead
+                B.use('rust' if rot else 'steel', sp)
+                B.tube([e - d * depth, e - d * (depth - 0.035), e + d * (ln - 0.02), e + d * ln], [0.001, PIN_R * 0.8, PIN_R, PIN_R], 5)
+                B.use('rotbead' if rot else 'bead%d' % i, sp); B.ball(e + d * (ln + BEAD_R * 0.6), BEAD_R * (0.92 if rot else 1), 2, lump=0.006 if rot else 0)
             if rot:                                                            # the wound festers and runs
                 B.use('ooze', B.specs[0]); q, n = S.near(e)
                 B.ball(q + n * 0.004, 0.034, 1, lump=0.01)
@@ -527,13 +542,20 @@ def clips(pininfo):
     def jab(i):
         bone, pt, d = pininfo[i]; push = -d; push.z = 0; om = push.cross(V((0, 0, 1)))  # the blow swings it away from the needle
         def f(t):
-            hit = 0.14; pin = dict(ll=(0, 0.55 if t < 0.05 else 0.55 * (1 - ((t - 0.05) / 0.09) ** 2) if t < hit else -0.03 * e(-22 * (t - hit)), 0), s=(min(1, 0.02 + t / 0.04),) * 3)
-            p = {'pin_%d' % (i + 1): pin}
-            if t >= hit:
-                u = t - hit; k = e(-7 * u); o = k * s(26 * u); q = k * c(26 * u)
-                p['root'] = dict(r=tuple(om * 0.16 * o)); p['hang'] = dict(r=tuple(om * 0.42 * o + V((0, 0, 0.2 * o))))
-                p['head'] = dict(r=tuple(-om * 0.3 * o + V((0.1 * q, 0, 0.12 * o)))); p['belly'] = dict(s=(1 + 0.1 * q, 1 - 0.12 * q, 1 + 0.1 * q))
-                flail(p, 0.8 * k, u, 0.8); p.update(limp(u * 8, 0, 1.4 * k))
+            hit, wind = 0.14, 0.09                                             # drawn back (the doll cringes), then driven in hard
+            ll = 0.62 + 0.3 * s(math.pi / 2 * t / wind) if t < wind else 0.92 * (1 - ((t - wind) / (hit - wind)) ** 2) if t < hit else -0.04 * e(-22 * (t - hit))
+            p = {'pin_%d' % (i + 1): dict(ll=(0, ll, 0), s=(min(1, 0.02 + t / 0.04),) * 3)}
+            if t < hit:
+                a = min(1, t / wind) ** 0.5
+                p['hang'] = dict(r=tuple(om * 0.14 * a)); p['head'] = dict(r=tuple(om * 0.1 * a + V((0.14 * a, 0, 0))))
+                p['belly'] = dict(s=(1 - 0.07 * a, 1 + 0.06 * a, 1 - 0.07 * a))
+                for sd, sg in (('L', 1), ('R', -1)): p['arm_' + sd] = dict(r=(-0.35 * a, -sg * 0.45 * a, 0))
+            else:
+                u = t - hit; k = e(-6 * u); o = k * s(26 * u); q = k * c(26 * u)
+                p['root'] = dict(r=tuple(om * 0.26 * o)); p['hang'] = dict(r=tuple(om * 0.62 * o + V((0, 0, 0.28 * o))))
+                p['head'] = dict(r=tuple(-om * 0.42 * o + V((0.16 * q, 0, 0.16 * o)))); p['belly'] = dict(s=(1 + 0.2 * q, 1 - 0.2 * q, 1 + 0.2 * q))
+                p['chest'] = dict(s=(1 + 0.1 * q, 1 - 0.1 * q, 1 + 0.1 * q))
+                flail(p, 1.05 * k, u, 0.8); p.update(limp(u * 8, 0, 1.6 * k))
             return p
         return f
     out = {'idle': (4.0, idle), 'squeeze': (1.0, squeeze), 'dance': (1.6, dance)}
@@ -666,12 +688,16 @@ MATS = {
     'hair': noisy(principled('hair', rough=0.45), (0.5, 0.11, 0.02), (0.16, 0.03, 0.01), 90),
     'redthread': principled('redthread', (0.6, 0.02, 0.03), 0.8, emit=(0.6, 0.02, 0.03), estr=0.3),
     'tooth': noisy(principled('tooth', rough=0.4), (0.86, 0.8, 0.62), (0.5, 0.36, 0.2), 35),
-    'steel': noisy(principled('steel', rough=0.25), (0.82, 0.86, 0.92), (0.5, 0.54, 0.6), 80),
+    'steel': noisy(principled('steel', rough=0.35), (0.36, 0.35, 0.36), (0.12, 0.11, 0.11), 80),        # old tarnished pins
     'rust': noisy(principled('rust', rough=0.9), (0.25, 0.1, 0.04), (0.05, 0.04, 0.03), 70),
+    'nail': noisy(principled('nail', rough=0.85), (0.4, 0.15, 0.05), (0.09, 0.06, 0.05), 55, bump=0.003),
+    'bone': noisy(principled('bone', rough=0.55), (0.8, 0.74, 0.56), (0.42, 0.33, 0.2), 30, bump=0.002),
+    'rotbone': noisy(principled('rotbone', rough=0.6), (0.3, 0.28, 0.15), (0.07, 0.07, 0.035), 30),
+    'glint': principled('glint', (0.8, 1.0, 0.6), 0.2, emit=(0.6, 1.0, 0.35), estr=1.6),
     'rotbead': noisy(principled('rotbead', rough=0.3, emit=(0.2, 0.5, 0.05), estr=0.12), (0.01, 0.014, 0.008), (0.06, 0.12, 0.03), 60),
-    'ooze': noisy(principled('ooze', rough=0.15, emit=(0.3, 0.75, 0.06), estr=0.9), (0.3, 0.6, 0.06), (0.08, 0.22, 0.03), 45),
+    'ooze': noisy(principled('ooze', rough=0.2, emit=(0.1, 0.26, 0.02), estr=0.45), (0.2, 0.34, 0.03), (0.02, 0.05, 0.01), 45, bump=0.003),  # bile: dark, wet, lit from within only faintly
 }
-for i, h in enumerate(BEADS): MATS['bead%d' % i] = principled('bead%d' % i, hexc(h), 0.12, emit=hexc(h), estr=0.45)
+for i, h in enumerate(BEADS): MATS['bead%d' % i] = principled('bead%d' % i, hexc(h, 0.6), 0.12, emit=hexc(h), estr=0.25)  # old glass, not candy
 
 T, hairp, charmp = trim(S)
 # the button is its own (glossy) mesh: split it from the trim by material
