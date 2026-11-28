@@ -72,9 +72,14 @@ export function heroCanvas(id, cls = 'hero-cv') {
       this.ex += (want - this.ex) * Math.min(1, dt * (want ? 7 : 3));
       const R = this.R, t = this.t, ex = calm ? this.ex * 0.4 : this.ex, idle = calm ? 0.5 : 1;
       if (ex > 0.01) this.hopT += dt * R.hopHz; else this.hopT = 0;
-      // fit: leave headroom for the hop and stretch; the feet sit just above the card's name plaque edge
-      const k = Math.min(cw / (nw * 1.12), ch / (nh * 1.1));
-      const W = nw * k, H = nh * k;
+      // fit by the body (feet to the top of the head), never by the whole picture, so every hero on a card of the
+      // same size is the same size whatever he wears or holds (a tall helmet or a long weapon may leave the card);
+      // headroom for the hop, and the feet sit just above the card's name plaque edge. The class portraits are
+      // trimmed bodies; a saved hero's look (gearart.js trimCanvas) knows its body height, feet and centre.
+      const bodyH = img._bodyH || nh;
+      const k = Math.min(ch * 0.8 / bodyH, cw * 0.92 / (bodyH * 0.62));
+      const W = Math.min(nw, bodyH * 0.6) * k, H = bodyH * k, IH = nh * k;
+      const ax = img._centerX != null ? img._centerX / nw : 0.5, feetOff = (img._feetFromBottom || 0) * k;
       const cx = cw / 2, base = ch - Math.max(2, ch * 0.02);
       const b = Math.sin(t * 6.283 / R.breath + R.ph) * idle;                  // breathing, -1..1
       const s = (Math.sin(t * 6.283 / R.sway + R.ph2) + 0.35 * Math.sin(t * 2.1 + R.ph)) * R.swayAmp * idle;
@@ -104,15 +109,15 @@ export function heroCanvas(id, cls = 'hero-cv') {
       ctx.restore();
       // the body, in strips from the feet up: the chest rises with each breath, the top bends further than the hips
       const strip = Math.max(2, Math.round(2 * dpr));
-      const n = Math.max(8, Math.ceil(H * sy / strip));
-      const srcH = nh / n, sw = nw;
-      const lift = (v) => H * sy * (v + 0.022 * b * Math.max(0, v - 0.45));
+      const n = Math.max(8, Math.ceil(IH * sy / strip));
+      const srcH = nh / n, sw = nw, bot = feet + feetOff * sy;      // the picture's foot (a bow or banner can hang below the feet)
+      const lift = (v) => IH * sy * (v + 0.022 * b * Math.max(0, v - 0.45));
       const jig = R.wobble * 0.02 * (0.5 + ex);
       for (let i = 0; i < n; i++) {
         const v0 = i / n, v1 = (i + 1) / n, vm = (v0 + v1) / 2;
-        const y1 = feet - lift(v1), y0 = feet - lift(v0);
-        const wx = W * sx * (1 + jig * Math.sin(t * 6 + vm * 9));
-        const x = cx - wx / 2 + lean * vm * vm;
+        const y1 = bot - lift(v1), y0 = bot - lift(v0);
+        const wx = nw * k * sx * (1 + jig * Math.sin(t * 6 + vm * 9));
+        const x = cx - wx * ax + lean * vm * vm;
         ctx.drawImage(img, 0, nh - (i + 1) * srcH, sw, srcH, x, y1, wx, y0 - y1 + 0.6);
       }
       // sparks rising off an excited hero

@@ -308,8 +308,8 @@ export function classSelect(sel = 'paladin', back = titleScreen) {
   const showSavedGear = (id, anim) => {
     const h = heroes[id];
     if (!h || !h.equip) return;
-    const look = shownEquip(h);
-    savedGearPreview(id, look.body, look.head).then(art => {
+    const look = shownEquip(h), held = G.settings.heldGear !== false;   // in his hands too, as in play
+    savedGearPreview(id, look.body, look.head, held ? look.weapon : null, held ? look.offhand : null).then(art => {
       if (!art || !s.isConnected || anim.id !== id) return;
       anim.setArt(art);
       anim.canvas.dataset.gearPreview = 'ready';
